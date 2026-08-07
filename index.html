@@ -148,6 +148,7 @@
     <div class="lib-mast">
       <h1 class="lib-title"><small>PATENT ATTORNEY · PAST PAPERS</small>기출 서재</h1>
       <div class="lib-actions">
+        <button class="btn ghost" id="fullBackupBtn" title="시험지 PDF까지 모두 담아 다른 기기로 옮길 때">전체 백업</button>
         <button class="btn ghost" id="backupBtn">필기 백업</button>
         <button class="btn ghost" id="restoreBtn">복원</button>
         <button class="btn primary" id="importBtn">＋ 시험지 담기</button>
@@ -536,31 +537,75 @@ $('#dlgDelete').onclick=async()=>{
   $('#docDlg').close(); toast('삭제했습니다.'); refreshLibrary();
 };
 
-/* ── 필기 백업 / 복원 (JSON) ── */
+/* ── 백업 / 복원 (JSON) ── */
+const blobToB64 = blob => new Promise((res,rej)=>{
+  const fr=new FileReader();
+  fr.onload=()=>res(fr.result.split(',')[1]);
+  fr.onerror=()=>rej(fr.error);
+  fr.readAsDataURL(blob);
+});
+const b64ToBlob = b64 => {
+  const bin=atob(b64), u=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+  return new Blob([u],{type:'application/pdf'});
+};
+const saveJsonFile=(json,label)=>{
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([json],{type:'application/json'}));
+  a.download=`기출서재_${label}_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+};
+/* 필기 백업: 가벼운 평소 백업 */
 $('#backupBtn').onclick=async()=>{
   const strokes=await DB.all('strokes');
   const meta=docs.map(({blob,...rest})=>rest);
-  const data=JSON.stringify({app:'gichul-note',ver:1,exportedAt:new Date().toISOString(),meta,strokes});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
-  a.download=`기출필기백업_${new Date().toISOString().slice(0,10)}.json`;
-  a.click(); URL.revokeObjectURL(a.href);
+  saveJsonFile(JSON.stringify({app:'gichul-note',ver:1,
+    exportedAt:new Date().toISOString(),meta,strokes}),'필기백업');
   toast('필기 백업 파일을 저장했습니다. (PDF 원본은 제외)');
+};
+/* 전체 백업: 시험지 PDF까지 담아 다른 기기·주소로 이사할 때 */
+$('#fullBackupBtn').onclick=async()=>{
+  if(!docs.length){ toast('서재가 비어 있어 백업할 것이 없습니다.'); return; }
+  busy(true);
+  try{
+    const strokes=await DB.all('strokes');
+    const meta=[];
+    for(const d of docs){
+      const {blob,...rest}=d;
+      meta.push({...rest, pdf:await blobToB64(blob)});
+    }
+    saveJsonFile(JSON.stringify({app:'gichul-note',ver:2,full:true,
+      exportedAt:new Date().toISOString(),meta,strokes}),'전체백업');
+    toast(`시험지 ${docs.length}개와 필기를 모두 담은 전체 백업을 저장했습니다.`);
+  }catch(err){ console.error(err); toast('전체 백업 생성에 실패했습니다.'); }
+  busy(false);
 };
 $('#restoreBtn').onclick=()=>$('#restoreInput').click();
 $('#restoreInput').onchange=async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  busy(true);
   try{
     const data=JSON.parse(await f.text());
     if(data.app!=='gichul-note') throw 0;
-    for(const s of data.strokes) await DB.put('strokes',s);
+    let added=0;
     for(const m of data.meta){
       const cur=await DB.get('docs',m.id);
-      if(cur){ Object.assign(cur,{title:m.title,subject:m.subject,year:m.year,stage:m.stage,layers:m.layers});
-        await DB.put('docs',cur); }
+      if(m.pdf){                              // 전체 백업: 시험지 자체를 복원
+        const {pdf,...rest}=m;
+        await DB.put('docs',{...(cur||{}),...rest,blob:b64ToBlob(pdf)});
+        added++;
+      }else if(cur){                          // 필기 백업: 기존 시험지에 정보만 반영
+        Object.assign(cur,{title:m.title,subject:m.subject,year:m.year,
+          stage:m.stage,layers:m.layers});
+        await DB.put('docs',cur);
+      }
     }
-    toast('필기를 복원했습니다.'); refreshLibrary();
-  }catch{ toast('백업 파일을 읽을 수 없습니다.'); }
+    for(const s of data.strokes) await DB.put('strokes',s);
+    toast(added?`시험지 ${added}개와 필기를 모두 복원했습니다.`:'필기를 복원했습니다.');
+    refreshLibrary();
+  }catch(err){ console.error(err); toast('백업 파일을 읽을 수 없습니다.'); }
+  busy(false);
 };
 
 /* ═══════════ 뷰어 ═══════════ */
