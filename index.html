@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>기출 서재 — 변리사 기출문제 필기</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root{
+    --paper:#F7F6F2;        /* 시험지 종이 */
+    --desk:#2B2E35;         /* 고사장 책상 */
+    --ink:#171A1F;          /* 인쇄 잉크 */
+    --line:#C9C6BD;         /* 괘선 */
+    --red:#B5372F;          /* 채점 잉크 */
+    --muted:#6E7178;
+    --panel:#FFFFFF;
+    --serif:"Nanum Myeongjo","AppleMyungjo","Noto Serif KR",serif;
+    --sans:-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overscroll-behavior:none}
+  body{font-family:var(--sans);background:var(--paper);color:var(--ink)}
+  button{font-family:var(--sans);border:none;background:none;cursor:pointer;color:inherit}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+  [hidden]{display:none!important}
+
+  /* ───────── 서재 ───────── */
+  #library{min-height:100%;display:flex;flex-direction:column}
+  .lib-head{padding:max(20px,env(safe-area-inset-top)) 28px 0}
+  .lib-mast{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
+    border-bottom:3px double var(--ink);padding-bottom:14px}
+  .lib-title{font-family:var(--serif);font-weight:800;font-size:30px;letter-spacing:.06em}
+  .lib-title small{display:block;font-family:var(--sans);font-weight:600;font-size:12px;
+    letter-spacing:.32em;color:var(--muted);margin-bottom:6px}
+  .lib-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .btn{border:1.5px solid var(--ink);padding:9px 14px;font-size:14px;font-weight:700;
+    border-radius:2px;background:var(--panel)}
+  .btn.primary{background:var(--ink);color:var(--paper)}
+  .btn.ghost{border-color:var(--line);color:var(--muted);font-weight:600}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:14px 28px 4px;-webkit-overflow-scrolling:touch}
+  .chip{flex:none;border:1px solid var(--line);border-radius:999px;padding:7px 14px;
+    font-size:13px;font-weight:600;color:var(--muted);background:var(--panel)}
+  .chip.on{border-color:var(--red);color:var(--red);background:#FBF1F0}
+  .grid{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+    gap:18px;padding:18px 28px max(28px,env(safe-area-inset-bottom))}
+  /* 시험지 표지 카드 — 이 앱의 서명 요소 */
+  .cover{position:relative;background:var(--panel);border:1.5px solid var(--ink);border-radius:2px;
+    aspect-ratio:3/4.1;padding:14px 14px 12px;display:flex;flex-direction:column;text-align:center;
+    box-shadow:3px 3px 0 rgba(23,26,31,.12);transition:transform .12s ease}
+  .cover:active{transform:translate(2px,2px);box-shadow:1px 1px 0 rgba(23,26,31,.12)}
+  .cover .inner{flex:1;border:1px solid var(--line);display:flex;flex-direction:column;
+    align-items:center;justify-content:space-between;padding:12px 8px 10px}
+  .cover .round{font-size:11px;letter-spacing:.22em;color:var(--muted);font-weight:600}
+  .cover h3{font-family:var(--serif);font-weight:800;font-size:19px;line-height:1.35;
+    word-break:keep-all;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  .cover .rule{width:34px;border-top:2px solid var(--red);margin:2px auto}
+  .cover .meta{font-size:11.5px;color:var(--muted);line-height:1.6}
+  .cover .marks{position:absolute;top:8px;right:8px;font-size:10.5px;font-weight:700;
+    color:var(--red);border:1px solid var(--red);border-radius:2px;padding:2px 6px;background:#fff}
+  .cover .edit{position:absolute;top:6px;left:6px;padding:4px 9px;color:var(--muted);
+    font-size:11px;font-weight:700;line-height:1;border:1px solid var(--line);
+    border-radius:2px;background:#fff}
+  .empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:60px 20px;
+    border:1.5px dashed var(--line);border-radius:4px;font-size:15px;line-height:1.9}
+  .empty b{color:var(--ink)}
+
+  /* ───────── 뷰어 ───────── */
+  #viewer{position:fixed;inset:0;background:var(--desk);display:flex;flex-direction:column}
+  .v-top{display:flex;align-items:center;gap:10px;color:#E8E8E6;
+    padding:max(10px,env(safe-area-inset-top)) 14px 10px;font-size:14px}
+  .v-top .title{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;font-family:var(--serif);letter-spacing:.02em}
+  .tbtn{padding:9px 12px;border-radius:6px;font-weight:700;color:#E8E8E6;font-size:14px}
+  .tbtn.on{background:rgba(255,255,255,.16)}
+  .pageline{display:flex;align-items:center;gap:2px;font-variant-numeric:tabular-nums}
+  .pageline input{width:52px;text-align:center;background:transparent;border:1px solid #555A63;
+    border-radius:6px;color:#fff;font-size:14px;padding:6px 2px}
+  #stage{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;display:grid;place-items:center;padding:14px}
+  #sheet{position:relative;background:#fff;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+  #pdfCanvas,#inkCanvas{position:absolute;inset:0;display:block}
+  #pdfCanvas{position:relative}
+  #inkCanvas{touch-action:none}
+  #sheet.panmode #inkCanvas{pointer-events:none}
+
+  /* 도구 막대 */
+  .toolbar{display:flex;align-items:center;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    background:#1F2126;padding:10px 12px calc(10px + env(safe-area-inset-bottom));color:#DDD}
+  .tool{flex:none;display:flex;align-items:center;justify-content:center;min-width:46px;height:44px;
+    border-radius:8px;font-size:13px;font-weight:700;color:#CFD1D6;gap:6px;padding:0 10px}
+  .tool.on{background:rgba(255,255,255,.14);color:#fff}
+  .dot{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,.55)}
+  .tool.on .dot{border-color:#fff;box-shadow:0 0 0 2px #1F2126,0 0 0 3.5px #fff}
+  .hl .dot{border-radius:5px}
+  .sep{flex:none;width:1px;height:26px;background:rgba(255,255,255,.16);margin:0 4px}
+  .wsel{display:flex;gap:4px}
+  .wsel button{width:38px;height:44px;border-radius:8px;display:grid;place-items:center}
+  .wsel button.on{background:rgba(255,255,255,.14)}
+  .wsel i{display:block;background:#fff;border-radius:99px}
+
+  /* 레이어 패널 */
+  #layerPanel{position:fixed;top:0;right:0;bottom:0;width:min(320px,86vw);background:var(--panel);
+    box-shadow:-8px 0 30px rgba(0,0,0,.35);transform:translateX(105%);transition:transform .2s ease;
+    display:flex;flex-direction:column;z-index:30;
+    padding:max(14px,env(safe-area-inset-top)) 0 env(safe-area-inset-bottom)}
+  #layerPanel.open{transform:none}
+  .lp-head{display:flex;align-items:center;justify-content:space-between;padding:6px 16px 12px;
+    border-bottom:2px solid var(--ink)}
+  .lp-head b{font-family:var(--serif);font-size:17px;letter-spacing:.04em}
+  .lp-list{flex:1;overflow-y:auto;padding:8px 10px}
+  .lp-item{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);
+    border-radius:6px;margin-bottom:8px;background:#fff}
+  .lp-item.active{border-color:var(--red);background:#FBF1F0}
+  .lp-item .nm{flex:1;min-width:0;font-weight:700;font-size:14px;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .lp-item .sub{display:block;font-weight:500;font-size:11px;color:var(--muted);margin-top:2px}
+  .lp-item button{font-size:13px;padding:6px;color:var(--muted)}
+  .lp-item .eye.off{opacity:.3}
+  .lp-foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px}
+  .lp-foot .btn{flex:1;text-align:center}
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:25}
+
+  /* 모달 */
+  dialog{border:1.5px solid var(--ink);border-radius:4px;padding:0;width:min(420px,92vw);
+    box-shadow:6px 6px 0 rgba(23,26,31,.15)}
+  dialog::backdrop{background:rgba(23,26,31,.45)}
+  .dlg{padding:20px}
+  .dlg h3{font-family:var(--serif);font-size:18px;margin-bottom:16px;letter-spacing:.03em}
+  .dlg label{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin:12px 0 5px}
+  .dlg input,.dlg select{width:100%;border:1px solid var(--line);border-radius:4px;
+    padding:11px 12px;font-size:15px;font-family:var(--sans);background:#fff}
+  .dlg-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+  .danger{color:var(--red);border-color:var(--red)}
+  #toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom));transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:13.5px;
+    font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none;z-index:99;white-space:nowrap}
+  #toast.show{opacity:1}
+  #busy{position:fixed;inset:0;background:rgba(23,26,31,.55);display:grid;place-items:center;
+    z-index:100;color:#fff;font-weight:700;font-size:15px;letter-spacing:.05em}
+</style>
+</head>
+<body>
+
+<!-- ═════════ 서재 ═════════ -->
+<div id="library">
+  <div class="lib-head">
+    <div class="lib-mast">
+      <h1 class="lib-title"><small>PATENT ATTORNEY · PAST PAPERS</small>기출 서재</h1>
+      <div class="lib-actions">
+        <button class="btn ghost" id="backupBtn">필기 백업</button>
+        <button class="btn ghost" id="restoreBtn">복원</button>
+        <button class="btn primary" id="importBtn">＋ 시험지 담기</button>
+      </div>
+    </div>
+  </div>
+  <div class="chips" id="stageChips" style="padding-bottom:0"></div>
+  <div class="chips" id="chips"></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- ═════════ 뷰어 ═════════ -->
+<div id="viewer" hidden>
+  <div class="v-top">
+    <button class="tbtn" id="backBtn" aria-label="서재로">‹ 서재</button>
+    <div class="title" id="vTitle"></div>
+    <div class="pageline">
+      <button class="tbtn" id="prevPg" aria-label="이전 페이지">◀</button>
+      <input id="pgInput" inputmode="numeric" aria-label="페이지 번호"><span id="pgTotal" style="opacity:.7">/ 1</span>
+      <button class="tbtn" id="nextPg" aria-label="다음 페이지">▶</button>
+    </div>
+    <button class="tbtn" id="zoomOut" aria-label="축소">－</button>
+    <button class="tbtn" id="zoomIn" aria-label="확대">＋</button>
+    <button class="tbtn" id="rotateBtn" title="페이지 90°씩 회전 (문서별로 저장됩니다)">⟳ 회전</button>
+    <button class="tbtn" id="pencilOnly" title="Apple Pencil로만 필기 (손가락은 스크롤)">✍︎ 펜슬만</button>
+    <button class="tbtn" id="layerBtn">레이어</button>
+  </div>
+
+  <div id="stage"><div id="sheet"><canvas id="pdfCanvas"></canvas><canvas id="inkCanvas"></canvas></div></div>
+
+  <div class="toolbar" id="toolbar">
+    <button class="tool" data-tool="pan" title="이동/스크롤">☰ 이동</button>
+    <span class="sep"></span>
+    <button class="tool" data-tool="pen" data-color="#17181B" title="검정 펜"><span class="dot" style="background:#17181B"></span></button>
+    <button class="tool" data-tool="pen" data-color="#B5372F" title="빨강 펜"><span class="dot" style="background:#B5372F"></span></button>
+    <button class="tool" data-tool="pen" data-color="#1D4ED8" title="파랑 펜"><span class="dot" style="background:#1D4ED8"></span></button>
+    <span class="sep"></span>
+    <button class="tool hl" data-tool="hl" data-color="#FFE24A" title="노랑 형광펜"><span class="dot" style="background:#FFE24A"></span></button>
+    <button class="tool hl" data-tool="hl" data-color="#8CE99A" title="초록 형광펜"><span class="dot" style="background:#8CE99A"></span></button>
+    <button class="tool hl" data-tool="hl" data-color="#FFB3C1" title="분홍 형광펜"><span class="dot" style="background:#FFB3C1"></span></button>
+    <span class="sep"></span>
+    <div class="wsel" id="wsel" role="group" aria-label="굵기">
+      <button data-w="1" title="가늘게"><i style="width:16px;height:2px"></i></button>
+      <button data-w="2" class="on" title="보통"><i style="width:16px;height:3.5px"></i></button>
+      <button data-w="3" title="굵게"><i style="width:16px;height:6px"></i></button>
+    </div>
+    <span class="sep"></span>
+    <button class="tool" data-tool="eraser" title="획 지우개">◱ 지우개</button>
+    <button class="tool" id="undoBtn" title="실행 취소">↩ 취소</button>
+    <span class="sep"></span>
+    <button class="tool" id="clearPage" title="현재 레이어의 이 페이지 필기 지우기">✕ 페이지 비우기</button>
+  </div>
+</div>
+
+<!-- 레이어 패널 -->
+<div class="scrim" id="scrim" hidden></div>
+<div id="layerPanel" aria-label="필기 레이어">
+  <div class="lp-head"><b>필기 레이어</b><button class="tbtn" id="lpClose" style="color:var(--ink)">닫기 ✕</button></div>
+  <div class="lp-list" id="lpList"></div>
+  <div class="lp-foot"><button class="btn primary" id="addLayer">＋ 새 레이어 (깨끗한 시험지)</button></div>
+</div>
+
+<!-- 문서 정보 모달 -->
+<dialog id="docDlg">
+  <form method="dialog" class="dlg" id="docForm">
+    <h3 id="dlgTitle">시험지 정보</h3>
+    <label for="fTitle">제목</label>
+    <input id="fTitle" required placeholder="예: 제63회 2차 특허법">
+    <label for="fStage">시험 구분</label>
+    <select id="fStage">
+      <option value="">미지정</option><option>1차</option><option>2차</option>
+    </select>
+    <label for="fSubject">과목</label>
+    <input id="fSubject" list="subjectList" placeholder="예: 특허법">
+    <datalist id="subjectList">
+      <option>특허법</option><option>상표법</option><option>디보법</option>
+      <option>민소법</option><option>민법</option><option>산재법</option><option>자과</option>
+    </datalist>
+    <label for="fYear">연도 / 회차</label>
+    <input id="fYear" placeholder="예: 2026 · 63회">
+    <div class="dlg-foot">
+      <button class="btn danger" type="button" id="dlgDelete">삭제</button>
+      <button class="btn ghost" type="button" id="dlgCancel">닫기</button>
+      <button class="btn primary" type="button" id="dlgSave">저장</button>
+    </div>
+  </form>
+</dialog>
+
+<input type="file" id="fileInput" accept="application/pdf" multiple hidden>
+<input type="file" id="restoreInput" accept="application/json" hidden>
+<div id="toast" role="status"></div>
+<div id="busy" hidden>불러오는 중…</div>
+
+<script>
+'use strict';
+/* ═══════════ 공통 ═══════════ */
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const $ = s => document.querySelector(s);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const toast = m => { const t=$('#toast'); t.textContent=m; t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2200); };
+const busy = on => { $('#busy').hidden = !on; };
+
+/* ═══════════ IndexedDB ═══════════ */
+const DB = { name:'gichul-note', ver:1, db:null,
+  open(){ return new Promise((res,rej)=>{
+    const rq = indexedDB.open(this.name,this.ver);
+    rq.onupgradeneeded = e => {
+      const d = e.target.result;
+      if(!d.objectStoreNames.contains('docs'))    d.createObjectStore('docs',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('strokes')) d.createObjectStore('strokes',{keyPath:'key'});
+    };
+    rq.onsuccess = e => { this.db=e.target.result; res(); };
+    rq.onerror = () => rej(rq.error);
+  });},
+  tx(store,mode,fn){ return new Promise((res,rej)=>{
+    const t=this.db.transaction(store,mode), s=t.objectStore(store), out=fn(s);
+    t.oncomplete=()=>res(out&&out.result!==undefined?out.result:out);
+    t.onerror=()=>rej(t.error);
+  });},
+  put:(st,v)=>DB.tx(st,'readwrite',s=>s.put(v)),
+  del:(st,k)=>DB.tx(st,'readwrite',s=>s.delete(k)),
+  get(st,k){ return new Promise((res,rej)=>{
+    const r=this.db.transaction(st).objectStore(st).get(k);
+    r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });},
+  all(st){ return new Promise((res,rej)=>{
+    const r=this.db.transaction(st).objectStore(st).getAll();
+    r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });}
+};
+
+/* ═══════════ 서재 ═══════════ */
+let docs=[], filterSubj='전체', filterStage='전체', editingId=null;
+
+async function refreshLibrary(){
+  const yearOf = d => parseInt((d.year||'').match(/(19|20)\d{2}/)?.[0] || 0);
+  docs = (await DB.all('docs')).sort((a,b)=>{
+    const diff = yearOf(b)-yearOf(a);          // 최신 연도 우선, 연도 없는 카드는 맨 뒤
+    return diff !== 0 ? diff : b.addedAt-a.addedAt;
+  });
+  const stages=['전체','1차','2차'];
+  if(docs.some(d=>!d.stage)) stages.push('미지정');
+  $('#stageChips').innerHTML = stages.map(s=>
+    `<button class="chip ${s===filterStage?'on':''}" data-s="${s}">${s==='전체'?'전체 시험':s}</button>`).join('');
+  const stageOk = d => filterStage==='전체' || (d.stage||'미지정')===filterStage;
+  const subjects = ['전체',...new Set(docs.filter(stageOk).map(d=>d.subject||'미분류'))];
+  if(!subjects.includes(filterSubj)) filterSubj='전체';
+  $('#chips').innerHTML = subjects.map(s=>
+    `<button class="chip ${s===filterSubj?'on':''}" data-s="${s}">${s}</button>`).join('');
+  const list = docs.filter(d=>stageOk(d)&&(filterSubj==='전체'||(d.subject||'미분류')===filterSubj));
+  $('#grid').innerHTML = list.length ? list.map(d=>{
+    const marked = d.layers.some(l=>l.hasInk);
+    const round = d.stage ? `제 ${d.stage[0]} 차 시 험` : '국 가 자 격 시 험';
+    return `<button class="cover" data-id="${d.id}" aria-label="${d.title} 열기">
+      ${marked?'<span class="marks">필기중</span>':''}
+      <span class="edit" data-edit="${d.id}" role="button" aria-label="정보 수정">정보 ✎</span>
+      <span class="inner">
+        <span class="round">${round}</span>
+        <h3>${escapeHtml(d.title)}</h3>
+        <span><span class="rule"></span>
+        <span class="meta">${d.stage?escapeHtml(d.stage)+' · ':''}${escapeHtml(d.subject||'미분류')}${d.year?' · '+escapeHtml(d.year):''}<br>
+        ${d.pages}면 · 레이어 ${d.layers.length}</span></span>
+      </span></button>`;
+  }).join('') :
+  `<div class="empty"><b>서재가 비어 있습니다.</b><br>
+   오른쪽 위 <b>“＋ 시험지 담기”</b>로 큐넷에서 받은 기출 PDF를 불러오세요.<br>
+   여러 파일을 한 번에 선택할 수 있고, 한 번 담으면 앱 안에 계속 보관됩니다.</div>`;
+}
+const escapeHtml = s => (s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+$('#chips').addEventListener('click',e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  filterSubj=c.dataset.s; refreshLibrary();
+});
+$('#stageChips').addEventListener('click',e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  filterStage=c.dataset.s; refreshLibrary();
+});
+$('#grid').addEventListener('click',e=>{
+  const ed=e.target.closest('[data-edit]');
+  if(ed){ e.stopPropagation(); openDocDialog(ed.dataset.edit); return; }
+  const c=e.target.closest('.cover'); if(c) openViewer(c.dataset.id);
+});
+
+/* ── PDF 불러오기 ── */
+$('#importBtn').onclick=()=>$('#fileInput').click();
+$('#fileInput').onchange=async e=>{
+  const files=[...e.target.files]; e.target.value='';
+  if(!files.length) return;
+  busy(true);
+  let ok=0, dup=0; const needLabel=[];
+  const seen=new Set(docs.map(d=>d.hash).filter(Boolean));   // 이미 담긴 시험지 지문
+  for(const f of files){
+    try{
+      const buf=await f.arrayBuffer();
+      const hash=await fileHash(buf);
+      if(seen.has(hash)){ dup++; continue; }                 // 같은 내용이면 건너뜀
+      seen.add(hash);
+      const pdf=await pdfjsLib.getDocument({data:buf.slice(0)}).promise;
+      const name=f.name.replace(/\.pdf$/i,'');
+      const sniff=await sniffPdfMeta(pdf);
+      const textOk = !!(sniff.year || sniff.stage || sniff.subject);  // PDF에서 글자를 읽었는가
+      let subject, stage, year, title;
+      if(textOk){
+        /* PDF 내용만 사용 — 파일명 규칙과 섞지 않음 */
+        subject = sniff.subject || '';
+        stage   = sniff.stage   || '';
+        year    = sniff.year    || '';
+      }else{
+        /* 스캔본 등 글자를 못 읽은 경우에만 파일명 규칙 사용 */
+        const q=qnetParse(name);
+        subject = guessSubject(name);
+        stage   = guessStage(name);
+        year    = q ? q.year : guessYear(name);
+      }
+      const doc={
+        id:uid(), title:name, subject, year, stage, hash,
+        pages:pdf.numPages, addedAt:Date.now(), blob:new Blob([buf],{type:'application/pdf'}),
+        layers:[{id:uid(), name:'1회독', visible:true, hasInk:false, createdAt:Date.now()}]
+      };
+      if(textOk || isAutoTitle(doc.title)){
+        if(subject||stage||year) doc.title=buildTitle(doc);
+        else if(qnetParse(name)) doc.title=qnetParse(name).title;
+      }
+      await DB.put('docs',doc);
+      if(!doc.subject || !doc.stage) needLabel.push(doc.id);
+      pdf.destroy(); ok++;
+    }catch(err){ console.error(err); toast(`"${f.name}" 불러오기 실패 — PDF 파일인지 확인해 주세요.`); }
+  }
+  busy(false);
+  const dupMsg = dup ? ` · 이미 담긴 ${dup}개는 건너뜀` : '';
+  if(ok){
+    await refreshLibrary();
+    if(needLabel.length){
+      labelQueue=needLabel;
+      toast(`${ok}개를 담았습니다${dupMsg}. 과목·차수를 차례로 지정해 주세요.`);
+      openNextLabel();
+    } else toast(`${ok}개 시험지를 서재에 담았습니다${dupMsg}.`);
+  } else if(dup){
+    toast(`모두 이미 담긴 시험지입니다. (${dup}개 건너뜀)`);
+  }
+};
+let labelQueue=[];
+function openNextLabel(){ const id=labelQueue.shift(); if(id) openDocDialog(id, labelQueue.length); }
+$('#docDlg').addEventListener('close',()=>{ if(labelQueue.length) setTimeout(openNextLabel,150); });
+/* 과목 분류: 특허법 · 상표법 · 디보법 · 민소법 · 민법 · 산재법 · 자과 */
+const SUBJ_ABBR={'산업재산권법':'산재법','민사소송법':'민소법','디자인보호법':'디보법',
+  '자연과학개론':'자과','자연과학':'자과','민법개론':'민법'};
+const normSubject = s => SUBJ_ABBR[s] || s || '';
+const guessSubject = n=>{
+  const s=n.replace(/\s/g,'');
+  const rules=[
+    [/산업재산권|산재/,'산재법'],
+    [/민사소송|민소/,'민소법'],
+    [/디자인보호|디자인|디보/,'디보법'],
+    [/자연과학|자과/,'자과'],
+    [/민법/,'민법'],
+    [/특허/,'특허법'],
+    [/상표/,'상표법'],
+    [/저작권/,'저작권법'],
+  ];
+  for(const [re,v] of rules) if(re.test(s)) return v;
+  return '';
+};
+const qnetParse = n=>{
+  const m=n.match(/^\d{3,7}_((?:19|20)\d{2})(\d{2})(\d{2})\d*_\d{1,3}$/);
+  if(!m) return null;
+  const y=+m[1], hoe=y-1963;                 // 변리사: 회차 = 연도 - 1963
+  return { year:`${y} · ${hoe}회`, title:`제${hoe}회 시험지` };
+};
+/* 제목이 파일명 그대로이거나 앱이 만든 자동 제목이면 true → 새 정보로 다시 생성 */
+const isAutoTitle = t =>
+  /^\d{3,7}_\d{6,14}(_\d{1,3})?$/.test(t) ||
+  /^제\d{1,3}회 시험지$/.test(t) ||
+  /^((19|20)\d{2}년 )?제\d{1,3}회( 변리사)?( [12]차)?( \S{1,20})?$/.test(t);
+function buildTitle(d){
+  const ym=(d.year||'').match(/(19|20)\d{2}/), hm=(d.year||'').match(/(\d{1,3})\s*회/);
+  const parts=[];
+  if(ym) parts.push(ym[0]+'년');
+  if(hm) parts.push('제'+hm[1]+'회');
+  parts.push('변리사');
+  if(d.stage) parts.push(d.stage);
+  if(d.subject) parts.push(d.subject);
+  return parts.join(' ');
+}
+/* 파일 내용 지문 — 같은 문제지를 이름만 달라도 알아봄 */
+async function fileHash(buf){
+  try{
+    if(crypto?.subtle){
+      const h=await crypto.subtle.digest('SHA-256',buf);
+      return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+  }catch{}
+  /* 보안 컨텍스트가 아닐 때의 폴백: 크기 + 표본 바이트 지문 */
+  const u=new Uint8Array(buf); let h=2166136261;
+  const step=Math.max(1,Math.floor(u.length/4096));
+  for(let i=0;i<u.length;i+=step){ h^=u[i]; h=Math.imul(h,16777619)>>>0; }
+  return 'f'+u.length.toString(16)+'-'+h.toString(16);
+}
+/* PDF 1~2쪽 텍스트에서 시험 정보 추출: "2024년 제61회 변리사 2차 - 민사소송법 - 1교시" 등 */
+async function sniffPdfMeta(pdf){
+  try{
+    let t='';
+    const n=Math.min(2,pdf.numPages);
+    for(let p=1;p<=n;p++){
+      const pg=await pdf.getPage(p);
+      const tc=await pg.getTextContent();
+      t+=' '+tc.items.map(i=>i.str).join(' ');
+    }
+    t=t.replace(/\s+/g,' ');
+    const out={};
+    const yh=t.match(/((?:19|20)\d{2})\s*년(?:도)?\s*제?\s*(\d{1,3})\s*회/);
+    if(yh) out.year=`${yh[1]} · ${yh[2]}회`;
+    else{ const ym=t.match(/((?:19|20)\d{2})\s*년/); if(ym) out.year=yearWithHoe(ym[1]); }
+    const sm=t.match(/변리사\s*(?:시험)?\s*(?:제)?\s*([12])\s*차/)
+          || t.match(/(?:제)?\s*([12])\s*차\s*시험/);
+    if(sm) out.stage=sm[1]+'차';
+    let subj='';
+    const f2=t.match(/[12]\s*차\s*[-–—]\s*([가-힣]{2,12})\s*[-–—]/);          // "2차 - 민사소송법 - 1교시"
+    const f1=t.match(/[12]\s*차\s*시험\s*([가-힣]{2,12})\s*(?:문제지|시험문제)/); // "1차시험 산업재산권법 문제지"
+    if(f2) subj=f2[1]; else if(f1) subj=f1[1];
+    if(subj) out.subject=guessSubject(subj)||normSubject(subj);
+    if(!out.subject){
+      /* 꼬리말이 매 페이지 반복되는 점을 이용한 빈도 판정 */
+      const cand={'산업재산권':'산재법','민사소송':'민소법','디자인보호':'디보법',
+        '자연과학':'자과','민법개론':'민법','특허법':'특허법','상표법':'상표법'};
+      let best='',bc=0,second=0;
+      for(const k in cand){
+        const c=(t.match(new RegExp(k,'g'))||[]).length;
+        if(c>bc){ second=bc; bc=c; best=cand[k]; } else if(c>second) second=c;
+      }
+      if(bc>=2 && bc>second) out.subject=best;
+    }
+    return out;
+  }catch(e){ return {}; }
+}
+const guessStage = n=>{
+  const s=n.replace(/\s/g,'');
+  if(/제?2차|이차/.test(s)) return '2차';
+  if(/제?1차|일차/.test(s)) return '1차';
+  return '';
+};
+/* 변리사 회차 = 연도 - 1963 : 연도만 있으면 회차를 자동으로 붙임 */
+const yearWithHoe = s=>{
+  if(!s) return s||'';
+  const ym=s.match(/(19|20)\d{2}/);
+  if(ym && !/회/.test(s)){
+    const h=+ym[0]-1963;
+    if(h>=1 && h<=150) return `${ym[0]} · ${h}회`;
+  }
+  return s;
+};
+const guessYear = n=>{
+  const m=n.match(/(19|20)\d{2}/); const h=n.match(/제?\s?(\d{2})\s?회/);
+  return yearWithHoe([m?.[0], h?h[1]+'회':null].filter(Boolean).join(' · '));
+};
+
+/* ── 문서 정보 수정/삭제 ── */
+function openDocDialog(id, remaining){
+  editingId=id; const d=docs.find(x=>x.id===id); if(!d) return;
+  $('#dlgTitle').textContent = remaining>0
+    ? `시험지 정보 지정 (이후 ${remaining}개 남음)`
+    : (remaining===0 ? '시험지 정보 지정 (마지막)' : '시험지 정보');
+  $('#fTitle').value=d.title; $('#fSubject').value=d.subject||''; $('#fYear').value=d.year||'';
+  $('#fStage').value=d.stage||'';
+  $('#docDlg').showModal();
+}
+$('#dlgCancel').onclick=()=>$('#docDlg').close();
+$('#docForm').addEventListener('submit',e=>{ e.preventDefault(); $('#dlgSave').click(); });
+$('#dlgSave').onclick=async()=>{
+  const d=docs.find(x=>x.id===editingId); if(!d){ $('#docDlg').close(); return; }
+  let t=$('#fTitle').value.trim()||d.title;
+  d.subject=normSubject($('#fSubject').value.trim()); d.year=yearWithHoe($('#fYear').value.trim());
+  d.stage=$('#fStage').value;
+  if(isAutoTitle(t) && (d.stage||d.subject||d.year)) t=buildTitle(d);
+  d.title=t;
+  await DB.put('docs',d);
+  $('#docDlg').close(); toast('저장했습니다.'); refreshLibrary();
+};
+$('#dlgDelete').onclick=async()=>{
+  const d=docs.find(x=>x.id===editingId); if(!d) return;
+  if(!confirm(`"${d.title}"을(를) 필기와 함께 삭제할까요? 되돌릴 수 없습니다.`)) return;
+  for(const l of d.layers) await DB.del('strokes',`${d.id}:${l.id}`);
+  await DB.del('docs',d.id);
+  $('#docDlg').close(); toast('삭제했습니다.'); refreshLibrary();
+};
+
+/* ── 필기 백업 / 복원 (JSON) ── */
+$('#backupBtn').onclick=async()=>{
+  const strokes=await DB.all('strokes');
+  const meta=docs.map(({blob,...rest})=>rest);
+  const data=JSON.stringify({app:'gichul-note',ver:1,exportedAt:new Date().toISOString(),meta,strokes});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+  a.download=`기출필기백업_${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('필기 백업 파일을 저장했습니다. (PDF 원본은 제외)');
+};
+$('#restoreBtn').onclick=()=>$('#restoreInput').click();
+$('#restoreInput').onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  try{
+    const data=JSON.parse(await f.text());
+    if(data.app!=='gichul-note') throw 0;
+    for(const s of data.strokes) await DB.put('strokes',s);
+    for(const m of data.meta){
+      const cur=await DB.get('docs',m.id);
+      if(cur){ Object.assign(cur,{title:m.title,subject:m.subject,year:m.year,stage:m.stage,layers:m.layers});
+        await DB.put('docs',cur); }
+    }
+    toast('필기를 복원했습니다.'); refreshLibrary();
+  }catch{ toast('백업 파일을 읽을 수 없습니다.'); }
+};
+
+/* ═══════════ 뷰어 ═══════════ */
+const V={ doc:null,pdf:null,page:1,zoom:1,baseScale:1,
+  tool:'pen',color:'#17181B',widthStep:2,pencilOnly:false,
+  strokes:{},          // layerId -> {page:[stroke...]}
+  undoStack:[],
+  vpW:0,vpH:0,dpr:1 };
+const WIDTHS={pen:{1:1.6,2:2.6,3:4.2}, hl:{1:10,2:16,3:24}};
+
+async function openViewer(id){
+  busy(true);
+  try{
+    const d=await DB.get('docs',id); V.doc=d;
+    const buf=await d.blob.arrayBuffer();
+    V.pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    V.page=1; V.zoom=1; V.undoStack=[]; V.strokes={};
+    for(const l of d.layers){
+      const rec=await DB.get('strokes',`${d.id}:${l.id}`);
+      V.strokes[l.id]=rec?rec.pages:{};
+    }
+    $('#vTitle').textContent=d.title;
+    $('#pgTotal').textContent='/ '+d.pages;
+    $('#library').hidden=true; $('#viewer').hidden=false;
+    setTool('pen','#17181B');
+    await renderPage();
+    renderLayerPanel();
+  }catch(err){ console.error(err); toast('시험지를 여는 데 실패했습니다.'); }
+  busy(false);
+}
+$('#backBtn').onclick=async()=>{
+  await flushSave();
+  V.pdf?.destroy(); V.pdf=null; V.doc=null;
+  $('#viewer').hidden=true; $('#library').hidden=false;
+  closeLayers(); refreshLibrary();
+};
+
+/* ── 렌더링 ── */
+async function renderPage(){
+  const pg=await V.pdf.getPage(V.page);
+  const rot=(pg.rotate + (V.doc.rot||0)) % 360;
+  const stageW=$('#stage').clientWidth-28;
+  const raw=pg.getViewport({scale:1, rotation:rot});
+  V.baseScale=Math.min(stageW/raw.width, 1600/raw.width);
+  const vp=pg.getViewport({scale:V.baseScale*V.zoom, rotation:rot});
+  V.dpr=Math.min(Math.max(window.devicePixelRatio||1,2),3);
+  const cssW=Math.round(vp.width), cssH=Math.round(vp.height);
+  V.vpW=cssW; V.vpH=cssH;
+  const sheet=$('#sheet');
+  sheet.style.width=cssW+'px'; sheet.style.height=cssH+'px';
+  for(const cv of [$('#pdfCanvas'),$('#inkCanvas')]){
+    cv.width=cssW*V.dpr; cv.height=cssH*V.dpr;
+    cv.style.width=cssW+'px'; cv.style.height=cssH+'px';
+  }
+  const ctx=$('#pdfCanvas').getContext('2d');
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,$('#pdfCanvas').width,$('#pdfCanvas').height);
+  await pg.render({
+    canvasContext:ctx, viewport:vp,
+    transform:[V.dpr,0,0,V.dpr,0,0]
+  }).promise;
+  $('#pgInput').value=V.page;
+  redrawInk();
+}
+function redrawInk(){
+  const c=$('#inkCanvas'), ctx=c.getContext('2d');
+  ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,c.width,c.height);
+  ctx.setTransform(V.dpr,0,0,V.dpr,0,0);
+  for(const l of V.doc.layers){
+    if(!l.visible) continue;
+    const arr=(V.strokes[l.id]||{})[V.page]||[];
+    for(const s of arr) drawStroke(ctx,s);
+  }
+}
+function drawStroke(ctx,s,live=false){
+  const pts=s.points; if(pts.length<2&&!live) { if(pts.length===1){ // 점
+      ctx.save(); applyStyle(ctx,s);
+      ctx.beginPath(); ctx.arc(pts[0][0]*V.vpW,pts[0][1]*V.vpH,ctx.lineWidth/2,0,7);
+      ctx.fillStyle=ctx.strokeStyle; ctx.fill(); ctx.restore(); } return; }
+  ctx.save(); applyStyle(ctx,s);
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0]*V.vpW,pts[0][1]*V.vpH);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0]*V.vpW,pts[i][1]*V.vpH);
+  ctx.stroke(); ctx.restore();
+}
+function applyStyle(ctx,s){
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.strokeStyle=s.color;
+  ctx.lineWidth=WIDTHS[s.tool][s.w]*(V.baseScale*V.zoom)/V.baseScale; // zoom 비례
+  if(s.tool==='hl'){ ctx.globalAlpha=.42; ctx.globalCompositeOperation='multiply'; ctx.lineCap='butt'; }
+}
+
+/* ── 페이지/줌 ── */
+const clampPage=p=>Math.max(1,Math.min(V.doc.pages,p));
+async function goPage(p){ p=clampPage(p); if(p===V.page) return;
+  await flushSave(); V.page=p; V.undoStack=[]; await renderPage(); }
+$('#prevPg').onclick=()=>goPage(V.page-1);
+$('#nextPg').onclick=()=>goPage(V.page+1);
+$('#pgInput').onchange=e=>goPage(parseInt(e.target.value)||1);
+$('#zoomIn').onclick=()=>{ V.zoom=Math.min(3,V.zoom+.25); renderPage(); };
+$('#zoomOut').onclick=()=>{ V.zoom=Math.max(.5,V.zoom-.25); renderPage(); };
+$('#rotateBtn').onclick=async()=>{
+  const had=V.doc.layers.some(l=>l.hasInk);
+  V.doc.rot=((V.doc.rot||0)+90)%360;
+  await DB.put('docs',V.doc);
+  await renderPage();
+  if(had) toast('방향을 돌렸습니다. 기존 필기는 화면 기준이라 위치가 어긋날 수 있어요.');
+  else toast('이 방향으로 기억해 둘게요.');
+};
+window.addEventListener('resize',()=>{ if(V.pdf) renderPage(); });
+document.addEventListener('keydown',e=>{
+  if($('#viewer').hidden||e.target.tagName==='INPUT') return;
+  if(e.key==='ArrowLeft') goPage(V.page-1);
+  if(e.key==='ArrowRight') goPage(V.page+1);
+  if((e.metaKey||e.ctrlKey)&&e.key==='z'){ e.preventDefault(); undo(); }
+});
+
+/* ── 도구 선택 ── */
+function setTool(tool,color){
+  V.tool=tool; if(color) V.color=color;
+  document.querySelectorAll('#toolbar .tool[data-tool]').forEach(b=>{
+    b.classList.toggle('on', b.dataset.tool===tool &&
+      (!b.dataset.color || b.dataset.color===V.color));
+  });
+  $('#sheet').classList.toggle('panmode', tool==='pan');
+}
+$('#toolbar').addEventListener('click',e=>{
+  const b=e.target.closest('.tool[data-tool]'); if(!b) return;
+  setTool(b.dataset.tool,b.dataset.color||null);
+});
+$('#wsel').addEventListener('click',e=>{
+  const b=e.target.closest('[data-w]'); if(!b) return;
+  V.widthStep=+b.dataset.w;
+  document.querySelectorAll('#wsel button').forEach(x=>x.classList.toggle('on',x===b));
+});
+$('#pencilOnly').onclick=()=>{
+  V.pencilOnly=!V.pencilOnly;
+  $('#pencilOnly').classList.toggle('on',V.pencilOnly);
+  toast(V.pencilOnly?'Apple Pencil로만 필기하고, 손가락으로는 스크롤합니다.':'손가락으로도 필기할 수 있습니다.');
+};
+
+/* ── 필기 (Pointer Events) ── */
+const ink=$('#inkCanvas');
+let drawing=null;
+ink.addEventListener('pointerdown',e=>{
+  if(V.tool==='pan') return;
+  if(V.pencilOnly && e.pointerType!=='pen') return;
+  if(e.pointerType==='touch' && V.pencilOnly) return;
+  const layer=activeLayer();
+  if(!layer){ toast('필기할 레이어가 없습니다. 레이어를 추가하세요.'); return; }
+  if(!layer.visible){ toast(`"${layer.name}" 레이어가 숨겨져 있습니다. 레이어 패널에서 켜 주세요.`); return; }
+  e.preventDefault();
+  ink.setPointerCapture(e.pointerId);
+  const p=norm(e);
+  if(V.tool==='eraser'){ drawing={erase:true,id:e.pointerId}; eraseAt(p); return; }
+  drawing={ id:e.pointerId,
+    stroke:{tool:V.tool,color:V.color,w:V.widthStep,points:[p]} };
+},{passive:false});
+ink.addEventListener('pointermove',e=>{
+  if(!drawing||e.pointerId!==drawing.id) return;
+  e.preventDefault();
+  const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
+  if(drawing.erase){ for(const ev of evs) eraseAt(norm(ev)); return; }
+  const ctx=ink.getContext('2d');
+  for(const ev of evs){
+    const p=norm(ev), pts=drawing.stroke.points, last=pts[pts.length-1];
+    if(Math.hypot((p[0]-last[0])*V.vpW,(p[1]-last[1])*V.vpH)<1.2) continue;
+    pts.push(p);
+    ctx.save(); applyStyle(ctx,drawing.stroke);
+    ctx.beginPath();
+    ctx.moveTo(last[0]*V.vpW,last[1]*V.vpH);
+    ctx.lineTo(p[0]*V.vpW,p[1]*V.vpH);
+    ctx.stroke(); ctx.restore();
+  }
+},{passive:false});
+const endDraw=e=>{
+  if(!drawing||e.pointerId!==drawing.id) return;
+  if(!drawing.erase){
+    const l=activeLayer(), s=drawing.stroke;
+    pageArr(l.id).push(s);
+    V.undoStack.push({type:'add',layerId:l.id,page:V.page});
+    markInk(l); scheduleSave(l.id);
+    if(s.tool==='hl') redrawInk();   // multiply 겹침 보정
+  }
+  drawing=null;
+};
+ink.addEventListener('pointerup',endDraw);
+ink.addEventListener('pointercancel',endDraw);
+
+const norm=e=>{
+  const r=ink.getBoundingClientRect();
+  return [ (e.clientX-r.left)/r.width, (e.clientY-r.top)/r.height ];
+};
+function pageArr(layerId){
+  V.strokes[layerId]=V.strokes[layerId]||{};
+  return V.strokes[layerId][V.page]=V.strokes[layerId][V.page]||[];
+}
+function eraseAt(p){
+  const l=activeLayer(); if(!l) return;
+  const arr=pageArr(l.id), th=14/Math.min(V.vpW,V.vpH);
+  for(let i=arr.length-1;i>=0;i--){
+    if(hitStroke(arr[i],p,th)){
+      const [rm]=arr.splice(i,1);
+      V.undoStack.push({type:'erase',layerId:l.id,page:V.page,stroke:rm,index:i});
+      redrawInk(); scheduleSave(l.id); break;
+    }
+  }
+}
+function hitStroke(s,p,th){
+  const pts=s.points;
+  for(let i=0;i<pts.length-1;i++)
+    if(distSeg(p,pts[i],pts[i+1])<th) return true;
+  return pts.length===1 && Math.hypot(p[0]-pts[0][0],p[1]-pts[0][1])<th;
+}
+function distSeg(p,a,b){
+  const dx=b[0]-a[0],dy=b[1]-a[1],L=dx*dx+dy*dy;
+  let t=L?((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L:0; t=Math.max(0,Math.min(1,t));
+  return Math.hypot(p[0]-(a[0]+t*dx), p[1]-(a[1]+t*dy));
+}
+function undo(){
+  const a=V.undoStack.pop(); if(!a){ toast('되돌릴 필기가 없습니다.'); return; }
+  const arr=(V.strokes[a.layerId]||{})[a.page]||[];
+  if(a.type==='add') arr.pop();
+  else arr.splice(a.index,0,a.stroke);
+  redrawInk(); scheduleSave(a.layerId);
+}
+$('#undoBtn').onclick=undo;
+$('#clearPage').onclick=()=>{
+  const l=activeLayer(); if(!l) return;
+  const arr=pageArr(l.id); if(!arr.length){ toast('이 페이지에는 필기가 없습니다.'); return; }
+  if(!confirm(`"${l.name}" 레이어의 ${V.page}면 필기를 모두 지울까요?`)) return;
+  V.strokes[l.id][V.page]=[]; V.undoStack=[];
+  redrawInk(); scheduleSave(l.id);
+};
+
+/* ── 저장 ── */
+const saveTimers={};
+function scheduleSave(layerId){
+  clearTimeout(saveTimers[layerId]);
+  saveTimers[layerId]=setTimeout(()=>persistLayer(layerId),700);
+}
+async function persistLayer(layerId){
+  if(!V.doc) return;
+  await DB.put('strokes',{key:`${V.doc.id}:${layerId}`,pages:V.strokes[layerId]||{}});
+}
+async function flushSave(){
+  for(const k of Object.keys(saveTimers)){ clearTimeout(saveTimers[k]); await persistLayer(k); }
+  if(V.doc) await DB.put('docs',V.doc);
+}
+function markInk(l){ if(!l.hasInk){ l.hasInk=true; DB.put('docs',V.doc); } }
+window.addEventListener('pagehide',flushSave);
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) flushSave(); });
+
+/* ── 레이어 패널 ── */
+const activeLayer=()=>V.doc?.layers.find(l=>l.id===V.doc.activeLayerId)||V.doc?.layers[0];
+function renderLayerPanel(){
+  if(!V.doc) return;
+  if(!V.doc.activeLayerId) V.doc.activeLayerId=V.doc.layers[0]?.id;
+  $('#lpList').innerHTML=V.doc.layers.map(l=>{
+    const n=Object.values(V.strokes[l.id]||{}).reduce((a,b)=>a+b.length,0);
+    return `<div class="lp-item ${l.id===V.doc.activeLayerId?'active':''}" data-id="${l.id}">
+      <button class="eye ${l.visible?'':'off'}" data-act="eye" aria-label="표시 전환">👁</button>
+      <span class="nm">${escapeHtml(l.name)}
+        <span class="sub">${new Date(l.createdAt).toLocaleDateString('ko-KR')} · 필기 ${n}개</span></span>
+      <button data-act="rename" aria-label="이름 바꾸기">✎</button>
+      <button data-act="del" aria-label="레이어 삭제" style="color:var(--red)">✕</button>
+    </div>`;}).join('');
+}
+$('#lpList').addEventListener('click',async e=>{
+  const item=e.target.closest('.lp-item'); if(!item) return;
+  const l=V.doc.layers.find(x=>x.id===item.dataset.id);
+  const act=e.target.closest('[data-act]')?.dataset.act;
+  if(act==='eye'){ l.visible=!l.visible; }
+  else if(act==='rename'){
+    const nm=prompt('레이어 이름',l.name); if(nm) l.name=nm.trim()||l.name;
+  }
+  else if(act==='del'){
+    if(V.doc.layers.length===1){ toast('마지막 레이어는 삭제할 수 없습니다.'); return; }
+    if(!confirm(`"${l.name}" 레이어와 그 필기를 삭제할까요?`)) return;
+    V.doc.layers=V.doc.layers.filter(x=>x!==l);
+    delete V.strokes[l.id];
+    await DB.del('strokes',`${V.doc.id}:${l.id}`);
+    if(V.doc.activeLayerId===l.id) V.doc.activeLayerId=V.doc.layers[0].id;
+  }
+  else { V.doc.activeLayerId=l.id; }
+  await DB.put('docs',V.doc);
+  renderLayerPanel(); redrawInk();
+});
+$('#addLayer').onclick=async()=>{
+  const nm=prompt('새 레이어 이름','') || `${V.doc.layers.length+1}회독`;
+  const l={id:uid(),name:nm.trim(),visible:true,hasInk:false,createdAt:Date.now()};
+  V.doc.layers.push(l); V.doc.activeLayerId=l.id; V.strokes[l.id]={};
+  await DB.put('docs',V.doc);
+  renderLayerPanel(); redrawInk();
+  toast(`"${l.name}" — 깨끗한 시험지에서 다시 시작합니다. 이전 필기는 그대로 저장되어 있어요.`);
+};
+$('#layerBtn').onclick=()=>{ renderLayerPanel();
+  $('#layerPanel').classList.add('open'); $('#scrim').hidden=false; };
+const closeLayers=()=>{ $('#layerPanel').classList.remove('open'); $('#scrim').hidden=true; };
+$('#lpClose').onclick=closeLayers; $('#scrim').onclick=closeLayers;
+
+/* ═══════════ 시작 ═══════════ */
+(async()=>{
+  try{ await DB.open(); }
+  catch{ document.body.innerHTML='<p style="padding:40px;line-height:1.8">이 브라우저에서는 저장소를 사용할 수 없습니다.<br>Safari의 일반 탭(사파리 개인정보 보호 모드 아님)에서 열어 주세요.</p>'; return; }
+  if(navigator.storage?.persist) navigator.storage.persist();
+  /* 이미 분류를 지정해 둔 카드의 파일명 제목을 자동 정리 */
+  const existing=await DB.all('docs');
+  for(const d of existing){
+    let changed=false;
+    if(!d.hash){ try{ d.hash=await fileHash(await d.blob.arrayBuffer()); changed=true; }catch{} }
+    const ns=normSubject(d.subject);
+    if(ns!==(d.subject||'')){ d.subject=ns; changed=true; }
+    const ny=yearWithHoe(d.year);
+    if(ny!==(d.year||'')){ d.year=ny; changed=true; }
+    if(isAutoTitle(d.title) && (d.stage||d.subject||d.year)){
+      const nt=buildTitle(d);
+      if(nt!==d.title){ d.title=nt; changed=true; }
+    }
+    if(changed) await DB.put('docs',d);
+  }
+  refreshLibrary();
+})();
+</script>
+</body>
+</html>
