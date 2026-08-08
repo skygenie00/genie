@@ -44,6 +44,9 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .spectrum i.O.r1{background:#9CCCBE} .spectrum i.O.r2{background:#5FA695} .spectrum i.O.r3{background:#2E7D6F}
 .spectrum i.X.r1{background:#E4A29A} .spectrum i.X.r2{background:#CD6A5B} .spectrum i.X.r3{background:#8E2A1F}
 .spectrum i.Q.r1{background:#EBCF95} .spectrum i.Q.r2{background:#D8A945} .spectrum i.Q.r3{background:#A8710D}
+#dl{font-size:12px;color:var(--blue);background:#F2F6FB;border:1px solid #C6D2E0;
+  border-radius:8px;padding:7px 11px;margin:2px 0 8px}
+#dl.err{color:var(--red);background:#FDF3F1;border-color:#EBC9C4}
 .legend{display:flex;gap:12px;font-size:11.5px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap}
 .legend b{font-weight:600;color:var(--ink)}
 .dotL{display:inline-block;width:8px;height:8px;border-radius:2px;vertical-align:-1px;margin-right:4px}
@@ -111,7 +114,9 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .histrow .sel button.on[data-m=Q]{background:var(--amber)}
 .histrow .rm{color:#B9BCC1;font-size:16px;padding:0 4px}
 .histrow .sec{font:500 11px/1 var(--mono);color:var(--muted);width:44px;text-align:right}
-.stage{flex:1;overflow:auto;background:#8E8E88;display:flex;justify-content:center;-webkit-overflow-scrolling:touch}
+.stage{flex:1;overflow:auto;background:#8E8E88;display:flex;justify-content:center;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.stage.lock{overflow:hidden}
 .wrap{position:relative;margin:10px auto;box-shadow:0 2px 14px rgba(0,0,0,.25);background:#fff;height:max-content}
 .wrap canvas{display:block;position:absolute;top:0;left:0}
 #inkc{touch-action:none}
@@ -190,6 +195,7 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
       <span class="spacer"></span>
       <button class="iconbtn" id="btnSet">설정</button>
     </div>
+    <div id="dl" class="hide"></div>
     <div class="spectrum" id="spec"></div>
     <div class="legend">
       <span><i class="dotL" style="background:#DEDDD6"></i>안 품 <b id="c0">0</b></span>
@@ -244,6 +250,7 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
       <span class="sep"></span>
       <button class="tl wide" id="tTheory">공식</button>
       <button class="tl wide" id="tAns">답 보기</button>
+      <button class="tl" id="tLock">🔒</button>
       <button class="tl" id="tRot">⟳</button>
       <button class="tl" id="tZoom">＋</button>
       <span class="sep"></span>
@@ -413,6 +420,35 @@ function draw(){
 /* ---------------- PDF 등록 ---------------- */
 async function loadHave(){const k=await keys('pdf');HAVE={};k.forEach(x=>HAVE[x]=1);MERGED=!!HAVE['ALL'];}
 
+/* 저장소에 함께 올려 둔 PDF를 받아 온다 — 기기마다 다시 넣지 않아도 되게 */
+async function tryRemote(url,key){
+  try{
+    const r=await fetch('pdf/'+url+'.pdf',{cache:'no-cache'});
+    if(!r.ok)return 0;
+    const buf=await r.arrayBuffer();
+    const head=String.fromCharCode.apply(null,new Uint8Array(buf.slice(0,5)));
+    if(head.indexOf('%PDF')<0)return 0;          // 404 페이지가 온 경우
+    await put('pdf',key,buf);return 1;
+  }catch(e){return 0}
+}
+async function ensureFiles(force){
+  if(MERGED&&!force)return;
+  const need=FILES.filter(f=>force||!HAVE[f]);
+  const bar=$('#dl');
+  if(!need.length)return;
+  bar.classList.remove('hide','err');
+  let got=0;
+  for(let i=0;i<need.length;i++){
+    bar.textContent=`시험지 받는 중 — ${i+1}/${need.length}`;
+    if(await tryRemote(need[i],need[i]))got++;
+  }
+  if(!got&&!HAVE['ALL']&&await tryRemote('all','ALL'))got++;
+  await loadHave();draw();renderSettings();
+  if(got){bar.textContent=`시험지 ${got}개를 받았습니다`;setTimeout(()=>bar.classList.add('hide'),2500)}
+  else if(force){bar.classList.add('err');bar.textContent='저장소에서 PDF를 찾지 못했습니다 — pdf 폴더에 111.pdf~666.pdf가 있는지 확인하세요'}
+  else bar.classList.add('hide');
+}
+
 async function addFiles(fileList){
   for(const f of fileList){
     let buf;
@@ -535,6 +571,20 @@ function paintInk(){
   });
 }
 
+/* 그리는 중에는 새로 생긴 구간만 덧그린다 — 매번 전체를 다시 그리면 끊긴다 */
+function drawSeg(s,from){
+  const g=$('#inkc').getContext('2d');
+  g.save();
+  g.globalAlpha=1;g.strokeStyle=s.c;g.lineWidth=s.w*RENDER.scale/2;
+  g.lineCap='round';g.lineJoin='round';
+  g.beginPath();
+  for(let i=Math.max(0,from-2);i<s.p.length;i+=2){
+    const[x,y]=toPix(s.p[i],s.p[i+1]);
+    i===Math.max(0,from-2)?g.moveTo(x,y):g.lineTo(x,y);
+  }
+  g.stroke();g.restore();
+}
+
 /* ---------------- 필기 입력 ---------------- */
 let drawing=null;
 const inkc=()=>$('#inkc');
@@ -558,11 +608,23 @@ $('#inkc').addEventListener('pointermove',e=>{
   if(!drawing)return;
   const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
   if(drawing.erase){evs.forEach(ev=>{const[x,y]=local(ev);eraseAt(x,y)});return}
+  const from=drawing.p.length;
   evs.forEach(ev=>{const[x,y]=local(ev);const n=toNorm(x,y);drawing.p.push(n[0],n[1])});
-  paintInk();e.preventDefault();
+  if(drawing.hl)paintInk();else drawSeg(drawing,from);
+  e.preventDefault();
 },{passive:false});
 
 function endDraw(){if(!drawing)return;drawing=null;paintInk();saveInk()}
+
+/* 아이패드: 펜슬이 닿은 동안에는 스크롤을 막고, 손가락일 때만 스크롤을 넘긴다 */
+function stylusGuard(e){
+  const t=e.touches&&e.touches[0];
+  if(!t)return;
+  if(!SET.pencil){e.preventDefault();return}      // 손가락으로 필기하는 모드
+  if(t.touchType==='stylus')e.preventDefault();   // 펜슬 모드: 펜슬만 막고 손가락은 스크롤
+}
+['touchstart','touchmove'].forEach(k=>
+  $('#inkc').addEventListener(k,stylusGuard,{passive:false}));
 $('#inkc').addEventListener('pointerup',endDraw);
 $('#inkc').addEventListener('pointercancel',endDraw);
 
@@ -775,6 +837,9 @@ function go(d){const i=VLIST.indexOf(VNO);const j=i+d;
 $('#vPrev').onclick=()=>go(-1);
 $('#vNext').onclick=()=>go(1);
 $('#vBack').onclick=closeView;
+$('#tLock').onclick=()=>{const on=$('#stage').classList.toggle('lock');
+  $('#tLock').classList.toggle('on',on);
+  toast(on?'화면 고정 — 스크롤이 잠깁니다':'화면 고정 해제')};
 $('#tRot').onclick=async()=>{const id=locate(rec(VNO)).id;
   SET.rot[id]=((SET.rot[id]||0)+90)%360;await put('kv','set',SET);
   await renderPage(locate(rec(VNO)));paintInk();await setupMask(VPAGE)};
@@ -790,6 +855,7 @@ function setTool(mode,color,el){
   $$('.tl').forEach(b=>b.classList.remove('on'));
   (el||$('#tErase')).classList.add('on');
   if(HIDEOLD)$('#tLayerEye').classList.add('on');
+  if($('#stage').classList.contains('lock'))$('#tLock').classList.add('on');
 }
 $('#tW').onchange=()=>{TOOL.w=+$('#tW').value};
 $('#tCode').onclick=async()=>{const c=rec(VNO)[F.CODE];
@@ -866,6 +932,7 @@ $('#btnSet').onclick=()=>{
     <div class="fld"><label>PDF 등록</label>
       <input type="file" id="fi" accept="application/pdf" multiple style="font-size:13px">
       <div class="filelist" id="fl" style="margin-top:10px"></div>
+      <button class="btn" id="bPull" style="margin-top:10px">저장소에서 시험지 받기</button>
       <p style="margin:8px 0 0;font-size:11.5px">파일 이름의 111~666을 보고 자동으로 자리를 잡습니다. 6개를 하나로 합친 통합본(549쪽)도 됩니다.</p>
     </div>
     <div class="fld"><label>필기</label>
@@ -890,6 +957,7 @@ $('#btnSet').onclick=()=>{
   document.body.appendChild(b);renderSettings();
   b.querySelector('#bClose').onclick=()=>{b.remove();setSheet=null;draw()};
   b.querySelector('#fi').onchange=e=>addFiles(e.target.files);
+  b.querySelector('#bPull').onclick=()=>{b.remove();setSheet=null;ensureFiles(true)};
   b.querySelector('#bPen').onclick=async e=>{SET.pencil=!SET.pencil;await put('kv','set',SET);
     e.target.textContent=`애플펜슬로만 필기 — ${SET.pencil?'켬':'끔'}`;$('#inkc').classList.toggle('pen',!!SET.pencil)};
   b.querySelector('#bMask').onclick=async e=>{SET.mask=!SET.mask;await put('kv','set',SET);
@@ -973,6 +1041,7 @@ let rt;window.addEventListener('resize',()=>{if(!VNO)return;clearTimeout(rt);
   await loadHave();
   setTool('pen','#16181B',$$('[data-pen]')[0]);
   draw();
+  await ensureFiles();
   if(!Object.keys(HAVE).length)setTimeout(()=>$('#btnSet').click(),400);
 })();
 </script>
