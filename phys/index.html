@@ -1045,5 +1045,92 @@ let rt;window.addEventListener('resize',()=>{if(!VNO)return;clearTimeout(rt);
   if(!Object.keys(HAVE).length)setTimeout(()=>$('#btnSet').click(),400);
 })();
 </script>
+<script>
+/* ===== 학습로그 요약 (2026-08-11 추가) =====================================
+   오늘 푸었던 문제 기록(status.h 의 t 값)을 모아 요약 텍스트로 만든다.
+   하루의 시작은 새벽 4시. 기존 데이터는 읽기만 한다. ==================== */
+(function () {
+  const DAY_START_HOUR = 4;
+  function dayRange() {
+    const now = new Date();
+    const s = new Date(now); s.setHours(DAY_START_HOUR, 0, 0, 0);
+    if (now.getTime() < s.getTime()) s.setDate(s.getDate() - 1);
+    const e = new Date(s); e.setDate(e.getDate() + 1);
+    return { start: s.getTime(), end: e.getTime(), label: s };
+  }
+  function ymd(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') +
+           '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function collect() {
+    const R = dayRange();
+    const st = (typeof ST === 'object' && ST) ? ST : {};
+    const byMark = {};
+    let n = 0, sec = 0;
+    const nos = [];
+    Object.keys(st).forEach(function (no) {
+      const h = (st[no] && st[no].h) || [];
+      h.forEach(function (rec) {
+        if (!rec || !rec.t) return;
+        if (rec.t < R.start || rec.t >= R.end) return;
+        n++; nos.push(no);
+        sec += (rec.s || 0);
+        const m = rec.m || '?';
+        byMark[m] = (byMark[m] || 0) + 1;
+      });
+    });
+    return { date: ymd(R.label), n: n, sec: sec, byMark: byMark, nos: nos };
+  }
+
+  function buildText(d, memo) {
+    if (!d.n) return d.date + ' — 오늘 풀이 기록이 없습니다.';
+    const mk = Object.keys(d.byMark).map(function (k) { return k + ' ' + d.byMark[k]; }).join(' · ');
+    const lines = ['[물리535 학습로그] ' + d.date];
+    lines.push('- 풀이: ' + d.n + '문항 (' + mk + ')');
+    if (d.sec) lines.push('- 소요: ' + Math.round(d.sec / 60) + '분');
+    if (d.nos.length <= 30) lines.push('- 문항번호: ' + d.nos.join(', '));
+    if (memo && memo.trim()) lines.push('메모: ' + memo.trim());
+    return lines.join('\n');
+  }
+
+  function openPanel() {
+    const data = collect();
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(17,24,39,.7);display:flex;align-items:center;justify-content:center;padding:16px';
+    wrap.innerHTML =
+      '<div style="background:#fff;border-radius:16px;max-width:520px;width:100%;padding:20px;box-shadow:0 20px 40px rgba(0,0,0,.25)">' +
+        '<div style="font-weight:800;font-size:16px;margin-bottom:10px">📝 오늘 학습로그</div>' +
+        '<textarea id="plg-text" style="width:100%;height:160px;font-size:12.5px;line-height:1.6;border:1px solid #e5e7eb;border-radius:10px;padding:10px;font-family:inherit"></textarea>' +
+        '<input id="plg-memo" placeholder="한줄 메모 (깨달은 것·헷갈린 지점)" style="width:100%;margin-top:8px;border:1px solid #e5e7eb;border-radius:10px;padding:9px;font-size:13px">' +
+        '<div style="display:flex;gap:8px;margin-top:12px">' +
+          '<button id="plg-copy" style="flex:1;background:#111827;color:#fff;border:0;border-radius:10px;padding:10px;font-weight:700;cursor:pointer">복사하기</button>' +
+          '<button id="plg-close" style="flex:0 0 90px;background:#f3f4f6;border:0;border-radius:10px;padding:10px;font-weight:700;cursor:pointer">닫기</button>' +
+        '</div>' +
+        '<div id="plg-msg" style="font-size:12px;color:#6b7280;margin-top:8px">복사해서 노션 · 클로드에 붙여넣으세요.</div>' +
+      '</div>';
+    document.body.appendChild(wrap);
+    const ta = wrap.querySelector('#plg-text'), memo = wrap.querySelector('#plg-memo');
+    const render = function () { ta.value = buildText(data, memo.value); };
+    render();
+    memo.addEventListener('input', render);
+    wrap.querySelector('#plg-close').onclick = function () { wrap.remove(); };
+    wrap.addEventListener('click', function (e) { if (e.target === wrap) wrap.remove(); });
+    wrap.querySelector('#plg-copy').onclick = function () {
+      ta.select();
+      const done = function () { wrap.querySelector('#plg-msg').textContent = '복사됐습니다.'; };
+      if (navigator.clipboard) navigator.clipboard.writeText(ta.value).then(done).catch(function () { document.execCommand('copy'); done(); });
+      else { document.execCommand('copy'); done(); }
+    };
+  }
+
+  const btn = document.createElement('button');
+  btn.textContent = '📝 학습로그';
+  btn.style.cssText = 'position:fixed;right:14px;bottom:70px;z-index:99998;background:#111827;color:#fff;border:0;border-radius:999px;padding:11px 16px;font-weight:700;font-size:13px;box-shadow:0 6px 16px rgba(0,0,0,.25);cursor:pointer';
+  btn.onclick = openPanel;
+  if (document.body) document.body.appendChild(btn);
+  else window.addEventListener('DOMContentLoaded', function () { document.body.appendChild(btn); });
+})();
+</script>
 </body>
 </html>
