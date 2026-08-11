@@ -1050,12 +1050,14 @@ let rt;window.addEventListener('resize',()=>{if(!VNO)return;clearTimeout(rt);
    오늘 푸었던 문제 기록(status.h 의 t 값)을 모아 요약 텍스트로 만든다.
    하루의 시작은 새벽 4시. 기존 데이터는 읽기만 한다. ==================== */
 (function () {
-  const DAY_START_HOUR = 4;
-  function dayRange() {
-    const now = new Date();
-    const s = new Date(now); s.setHours(DAY_START_HOUR, 0, 0, 0);
+  var DAY_START_HOUR = 4;
+  /* offset: 0 = 오늘, -1 = 어제, -2 = 그저께 … */
+  function dayRange(offset) {
+    var now = new Date();
+    var s = new Date(now); s.setHours(DAY_START_HOUR, 0, 0, 0);
     if (now.getTime() < s.getTime()) s.setDate(s.getDate() - 1);
-    const e = new Date(s); e.setDate(e.getDate() + 1);
+    s.setDate(s.getDate() + (offset || 0));
+    var e = new Date(s); e.setDate(e.getDate() + 1);
     return { start: s.getTime(), end: e.getTime(), label: s };
   }
   function ymd(d) {
@@ -1063,62 +1065,141 @@ let rt;window.addEventListener('resize',()=>{if(!VNO)return;clearTimeout(rt);
            '-' + String(d.getDate()).padStart(2, '0');
   }
 
-  function collect() {
-    const R = dayRange();
-    const st = (typeof ST === 'object' && ST) ? ST : {};
-    const byMark = {};
-    let n = 0, sec = 0;
-    const nos = [];
+  /* 문제번호 → 교재 행 (단원명을 알아내기 위해) */
+  var ROW = null;
+  function rowOf(no) {
+    if (!ROW) {
+      ROW = {};
+      try { DATA.forEach(function (r) { ROW[String(r[F.NO])] = r; }); } catch (e) {}
+    }
+    return ROW[String(no)] || null;
+  }
+  function secFmt2(x) {
+    x = Math.max(0, Math.round(x || 0));
+    return Math.floor(x / 60) + "'" + String(x % 60).padStart(2, '0') + '"';
+  }
+
+  function collect(offset) {
+    var R = dayRange(offset);
+    var st = (typeof ST === 'object' && ST) ? ST : {};
+    var items = [];
     Object.keys(st).forEach(function (no) {
-      const h = (st[no] && st[no].h) || [];
+      var h = (st[no] && st[no].h) || [];
       h.forEach(function (rec) {
         if (!rec || !rec.t) return;
         if (rec.t < R.start || rec.t >= R.end) return;
-        n++; nos.push(no);
-        sec += (rec.s || 0);
-        const m = rec.m || '?';
-        byMark[m] = (byMark[m] || 0) + 1;
+        var r = rowOf(no);
+        items.push({
+          no: no,
+          m: rec.m || '?',
+          sec: rec.s || 0,
+          t: rec.t,
+          sub: r ? (r[F.SUB] || '') : '',
+          big: r ? (r[F.BIG] || '') : ''
+        });
       });
     });
-    return { date: ymd(R.label), n: n, sec: sec, byMark: byMark, nos: nos };
+    items.sort(function (a, b) { return a.t - b.t; });
+    return { date: ymd(R.label), offset: offset || 0, items: items };
   }
 
-  function buildText(d, memo) {
-    if (!d.n) return d.date + ' — 오늘 풀이 기록이 없습니다.';
-    const mk = Object.keys(d.byMark).map(function (k) { return k + ' ' + d.byMark[k]; }).join(' · ');
-    const lines = ['[물리535 학습로그] ' + d.date];
-    lines.push('- 풀이: ' + d.n + '문항 (' + mk + ')');
-    if (d.sec) lines.push('- 소요: ' + Math.round(d.sec / 60) + '분');
-    if (d.nos.length <= 30) lines.push('- 문항번호: ' + d.nos.join(', '));
+  function buildText(data, memo) {
+    var items = data.items;
+    if (!items.length) return data.date + ' — 오늘 풀이 기록이 없습니다.';
+
+    /* 소단원별로 묶는다 (오늘 푸어본 순서 유지) */
+    var order = [], group = {};
+    items.forEach(function (it) {
+      var key = it.sub || it.big || '미분류';
+      if (!group[key]) { group[key] = []; order.push(key); }
+      group[key].push(it);
+    });
+
+    var lines = ['[물리535 학습로그] ' + data.date];
+    var TO = 0, TQ = 0, TX = 0, TSEC = 0;
+
+    order.forEach(function (key) {
+      var g = group[key];
+      var o = 0, q = 0, x = 0, sec = 0;
+      g.forEach(function (it) {
+        if (it.m === 'O') o++; else if (it.m === 'Q') q++; else if (it.m === 'X') x++;
+        sec += it.sec;
+      });
+      TO += o; TQ += q; TX += x; TSEC += sec;
+      var rate = g.length ? Math.round(o * 100 / g.length) : 0;
+      lines.push('- ' + key + ' : ' + g.length + '문항 (정답률 ' + rate + '% · 헷갈림 ' + q + ')');
+      lines.push('  ' + g.map(function (it) {
+        return it.no + ' ' + it.m + (it.sec ? ' ' + secFmt2(it.sec) : '');
+      }).join(' | '));
+    });
+
+    var total = items.length;
+    lines.push('합계: ' + total + '문항 · O ' + TO + ' · 헷갈림 ' + TQ + ' · X ' + TX +
+               (TSEC ? ' · ' + Math.round(TSEC / 60) + '분' : ''));
+
+    /* 오래 걸린 문항 — 평균의 1.5배 이상이면서 3분 넘는 것 */
+    var timed = items.filter(function (it) { return it.sec > 0; });
+    if (timed.length >= 3) {
+      var avg = timed.reduce(function (s, it) { return s + it.sec; }, 0) / timed.length;
+      var slow = timed.filter(function (it) { return it.sec >= Math.max(180, avg * 1.5); })
+                      .sort(function (a, b) { return b.sec - a.sec; });
+      if (slow.length) {
+        lines.push('오래 걸림(평균 ' + secFmt2(avg) + '): ' +
+                   slow.map(function (it) { return it.no + ' ' + secFmt2(it.sec); }).join(', '));
+      }
+    }
+
     if (memo && memo.trim()) lines.push('메모: ' + memo.trim());
-    return lines.join('\n');
+    return lines.join(String.fromCharCode(10));
   }
 
   function openPanel() {
-    const data = collect();
-    const wrap = document.createElement('div');
+    var offset = 0;
+    var data = collect(offset);
+    var wrap = document.createElement('div');
     wrap.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(17,24,39,.7);display:flex;align-items:center;justify-content:center;padding:16px';
     wrap.innerHTML =
       '<div style="background:#fff;border-radius:16px;max-width:520px;width:100%;padding:20px;box-shadow:0 20px 40px rgba(0,0,0,.25)">' +
-        '<div style="font-weight:800;font-size:16px;margin-bottom:10px">📝 오늘 학습로그</div>' +
-        '<textarea id="plg-text" style="width:100%;height:160px;font-size:12.5px;line-height:1.6;border:1px solid #e5e7eb;border-radius:10px;padding:10px;font-family:inherit"></textarea>' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+          '<div style="font-weight:800;font-size:16px">📝 학습로그</div>' +
+          '<div style="display:flex;align-items:center;gap:6px">' +
+            '<button id="plg-prev" style="background:#f3f4f6;border:0;border-radius:8px;width:30px;height:30px;font-weight:800;cursor:pointer">◀</button>' +
+            '<span id="plg-date" style="font-size:13px;font-weight:700;min-width:104px;text-align:center"></span>' +
+            '<button id="plg-next" style="background:#f3f4f6;border:0;border-radius:8px;width:30px;height:30px;font-weight:800;cursor:pointer">▶</button>' +
+          '</div>' +
+        '</div>' +
+        '<textarea id="plg-text" style="width:100%;height:220px;font-size:12.5px;line-height:1.6;border:1px solid #e5e7eb;border-radius:10px;padding:10px;font-family:inherit"></textarea>' +
         '<input id="plg-memo" placeholder="한줄 메모 (깨달은 것·헷갈린 지점)" style="width:100%;margin-top:8px;border:1px solid #e5e7eb;border-radius:10px;padding:9px;font-size:13px">' +
         '<div style="display:flex;gap:8px;margin-top:12px">' +
           '<button id="plg-copy" style="flex:1;background:#111827;color:#fff;border:0;border-radius:10px;padding:10px;font-weight:700;cursor:pointer">복사하기</button>' +
           '<button id="plg-close" style="flex:0 0 90px;background:#f3f4f6;border:0;border-radius:10px;padding:10px;font-weight:700;cursor:pointer">닫기</button>' +
         '</div>' +
-        '<div id="plg-msg" style="font-size:12px;color:#6b7280;margin-top:8px">복사해서 노션 · 클로드에 붙여넣으세요.</div>' +
+        '<div id="plg-msg" style="font-size:12px;color:#6b7280;margin-top:8px">화살표로 지난 날짜도 볼 수 있어요. 복사해서 노션 · 클로드에 붙여넣으세요.</div>' +
       '</div>';
     document.body.appendChild(wrap);
-    const ta = wrap.querySelector('#plg-text'), memo = wrap.querySelector('#plg-memo');
-    const render = function () { ta.value = buildText(data, memo.value); };
+    var ta = wrap.querySelector('#plg-text'), memo = wrap.querySelector('#plg-memo');
+    var dateEl = wrap.querySelector('#plg-date'), nextBtn = wrap.querySelector('#plg-next');
+    var render = function () {
+      ta.value = buildText(data, memo.value);
+      dateEl.textContent = data.date + (offset === 0 ? ' (오늘)' : offset === -1 ? ' (어제)' : '');
+      nextBtn.disabled = (offset >= 0);
+      nextBtn.style.opacity = (offset >= 0) ? '.35' : '1';
+    };
+    var move = function (d) {
+      if (offset + d > 0) return;
+      offset += d;
+      data = collect(offset);
+      render();
+    };
     render();
     memo.addEventListener('input', render);
+    wrap.querySelector('#plg-prev').onclick = function () { move(-1); };
+    nextBtn.onclick = function () { move(1); };
     wrap.querySelector('#plg-close').onclick = function () { wrap.remove(); };
     wrap.addEventListener('click', function (e) { if (e.target === wrap) wrap.remove(); });
     wrap.querySelector('#plg-copy').onclick = function () {
       ta.select();
-      const done = function () { wrap.querySelector('#plg-msg').textContent = '복사됐습니다.'; };
+      var done = function () { wrap.querySelector('#plg-msg').textContent = '복사됐습니다.'; };
       if (navigator.clipboard) navigator.clipboard.writeText(ta.value).then(done).catch(function () { document.execCommand('copy'); done(); });
       else { document.execCommand('copy'); done(); }
     };
