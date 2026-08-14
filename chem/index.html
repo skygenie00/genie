@@ -249,6 +249,7 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
       <button class="tl" id="tLayerAdd">+회독</button>
       <button class="tl" id="tLayerEye">👁</button>
       <span class="sep"></span>
+      <button class="tl wide" id="tObs">옵시디언</button>
       <button class="tl wide" id="tAns">답 보기</button>
       <button class="tl" id="tLock">🔒</button>
       <button class="tl" id="tRot">⟳</button>
@@ -769,6 +770,31 @@ $('#tAns').onclick=()=>{
     paintSol(VNO,b.querySelector('#solc'),box);
   };
   b.querySelector('#aClose').onclick=()=>b.remove();
+  b.onclick=e=>{if(e.target===b)b.remove()};
+  document.body.appendChild(b);
+};
+
+/* ---------------- 옵시디언 연결 ----------------
+   내용을 앱에 심지 않고 옵시디언을 열어준다 — 노트를 고쳐도 앱을 다시 올릴 필요가 없다.
+   그 기기에 옵시디언이 깔려 있어야 동작한다. */
+const VAULT="PA's archive";
+const NOTE='변리사 시험/자과/화학/화학 목차.md';
+const obsOpen=()=>`obsidian://open?vault=${encodeURIComponent(VAULT)}&file=${encodeURIComponent(NOTE)}`;
+const obsFind=q=>`obsidian://search?vault=${encodeURIComponent(VAULT)}&query=${encodeURIComponent(q)}`;
+$('#tObs').onclick=()=>{
+  const r=rec(VNO);
+  const b=document.createElement('div');b.className='sheet';
+  b.innerHTML=`<div class="panel"><h2>옵시디언에서 보기</h2>
+    <p>${esc(r[F.BIG])} · ${esc(r[F.SUB])}</p>
+    <button class="btn" id="oNote">화학 목차 열기</button>
+    <button class="btn" id="oUnit">이 단원 찾기 — ${esc(r[F.BIG])}</button>
+    <button class="btn" id="oSub">이 주제 찾기 — ${esc(r[F.SUB])}</button>
+    <p style="margin:10px 0 0;font-size:11.5px">앱이 옵시디언을 열어주기만 하므로 노트를 고치면 바로 반영됩니다. 옵시디언이 깔린 기기에서만 동작합니다.</p>
+    <button class="btn pri" id="oClose" style="margin-top:12px">닫기</button></div>`;
+  b.querySelector('#oNote').onclick=()=>{location.href=obsOpen()};
+  b.querySelector('#oUnit').onclick=()=>{location.href=obsFind(r[F.BIG].replace(/^[0-9.]+/,''))};
+  b.querySelector('#oSub').onclick=()=>{location.href=obsFind(r[F.SUB])};
+  b.querySelector('#oClose').onclick=()=>b.remove();
   b.onclick=e=>{if(e.target===b)b.remove()};
   document.body.appendChild(b);
 };
