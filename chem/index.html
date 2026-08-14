@@ -1,0 +1,1170 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>화학 260 서재</title>
+<style>
+:root{
+  --paper:#F6F5F1; --card:#FFFFFF; --ink:#16181B; --muted:#6E7278; --line:#E3E2DC;
+  --blue:#1F3A5F; --teal:#2E7D6F; --red:#B03A2E; --amber:#C8891B; --violet:#5B4B8A;
+  --hi:#F2C230;
+  --r:10px; --pad:14px;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overscroll-behavior:none}
+body{
+  background:var(--paper);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  font-size:15px;line-height:1.45;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.hide{display:none!important}
+
+/* ---------- shell ---------- */
+#lib{max-width:1100px;margin:0 auto;padding:0 var(--pad) 90px}
+.top{position:sticky;top:0;z-index:20;background:var(--paper);padding-top:env(safe-area-inset-top)}
+.brand{display:flex;align-items:baseline;gap:10px;padding:16px 0 8px}
+.brand h1{font-size:19px;margin:0;letter-spacing:-.02em}
+.brand .sub{font-size:12px;color:var(--muted)}
+.brand .spacer{flex:1}
+.iconbtn{padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;background:var(--card)}
+
+/* progress spectrum — 260 cells */
+.spectrum{display:grid;grid-template-columns:repeat(auto-fill,minmax(0,1fr));
+  grid-auto-rows:10px;gap:1px;margin:6px 0 10px;
+  grid-template-columns:repeat(65,1fr)}
+.spectrum i{background:#DEDDD6;border-radius:1px;display:block}
+.spectrum i.O.r1{background:#9CCCBE} .spectrum i.O.r2{background:#5FA695} .spectrum i.O.r3{background:#2E7D6F}
+.spectrum i.X.r1{background:#E4A29A} .spectrum i.X.r2{background:#CD6A5B} .spectrum i.X.r3{background:#8E2A1F}
+.spectrum i.Q.r1{background:#EBCF95} .spectrum i.Q.r2{background:#D8A945} .spectrum i.Q.r3{background:#A8710D}
+#dl{font-size:12px;color:var(--blue);background:#F2F6FB;border:1px solid #C6D2E0;
+  border-radius:8px;padding:7px 11px;margin:2px 0 8px}
+#dl.err{color:var(--red);background:#FDF3F1;border-color:#EBC9C4}
+.legend{display:flex;gap:12px;font-size:11.5px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap}
+.legend b{font-weight:600;color:var(--ink)}
+.dotL{display:inline-block;width:8px;height:8px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+
+/* filters */
+.filters{display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.row{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.row::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap;padding:5px 11px;border:1px solid var(--line);border-radius:999px;
+  background:var(--card);font-size:12.5px;color:var(--muted)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip small{opacity:.6;margin-left:4px;font-size:11px}
+.search{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);font:inherit;font-size:14px}
+.count{font-size:12px;color:var(--muted);padding:10px 2px 6px;display:flex;gap:10px;align-items:center}
+.count .spacer{flex:1}
+
+/* list */
+.item{display:flex;gap:11px;align-items:flex-start;padding:11px 12px;background:var(--card);
+  border:1px solid var(--line);border-radius:var(--r);margin-bottom:6px;cursor:pointer}
+.item:active{background:#FAFAF7}
+.num{font:600 12px/1.5 var(--mono);color:var(--muted);min-width:30px;text-align:right;padding-top:2px}
+.body{flex:1;min-width:0}
+.meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:3px}
+.tag{font-size:10.5px;padding:1.5px 6px;border-radius:5px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag.Ec{color:var(--blue);border-color:#C6D2E0;background:#F2F6FB}
+.tag.Hw{color:var(--violet);border-color:#D3CCE6;background:#F5F3FB}
+.tag.Self{color:var(--muted)}
+.tag.lv상{color:var(--red);border-color:#EBC9C4;background:#FDF3F1}
+.tag.lv중{color:var(--amber);border-color:#EBDBBF;background:#FCF7EC}
+.tag.past{color:var(--teal);border-color:#C3DDD6;background:#F0F7F5}
+.tag.code{font-family:var(--mono);font-size:10px;letter-spacing:.02em}
+.star{color:var(--hi);font-size:12px}
+.sub{font-size:12px;color:var(--muted)}
+.prev{font-size:13px;color:#3A3D42;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mk{display:flex;flex-direction:column;gap:2px;align-items:flex-end;flex:none;margin-top:1px;min-width:24px}
+.mk .h{display:flex;gap:2px;align-items:center}
+.mk .h b{font:600 9px/1 var(--mono);color:#A9ACB1;width:7px;text-align:right}
+.mk .h i{width:15px;height:15px;border-radius:4px;font:600 9.5px/15px -apple-system,sans-serif;
+  text-align:center;font-style:normal;color:#fff}
+.mk .h i.O{background:var(--teal)} .mk .h i.X{background:var(--red)} .mk .h i.Q{background:var(--amber)}
+.mk .add{width:22px;height:22px;border-radius:6px;border:1px dashed var(--line);color:#B9BCC1;
+  font-size:13px;line-height:20px;text-align:center}
+.mk .tm{font:500 9.5px/1 var(--mono);color:#A9ACB1}
+.grouphd{font-size:12px;font-weight:700;color:var(--muted);padding:16px 2px 7px;letter-spacing:.02em}
+.empty{padding:50px 20px;text-align:center;color:var(--muted);font-size:13.5px}
+.empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:6px}
+
+/* ---------- viewer ---------- */
+#view{position:fixed;inset:0;background:#fff;z-index:60;display:flex;flex-direction:column}
+.vtop{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 7px) 10px 7px;
+  border-bottom:1px solid var(--line);background:var(--paper);flex:none}
+.vtop .title{flex:1;min-width:0}
+.vtop .t1{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vtop .t2{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tm{font:600 14px/1 var(--mono);padding:7px 9px;border:1px solid var(--line);border-radius:8px;
+  background:var(--card);min-width:56px;text-align:center}
+#tm.off{color:#B9BCC1;border-style:dashed}
+.histrow{display:flex;align-items:center;gap:8px;padding:9px 2px;border-bottom:1px solid var(--line)}
+.histrow .rn{font:600 12px/1 var(--mono);color:var(--muted);width:38px}
+.histrow .sel{display:flex;gap:5px;flex:1}
+.histrow .sel button{flex:1;padding:6px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;background:var(--card)}
+.histrow .sel button.on{color:#fff;border-color:transparent}
+.histrow .sel button.on[data-m=O]{background:var(--teal)}
+.histrow .sel button.on[data-m=X]{background:var(--red)}
+.histrow .sel button.on[data-m=Q]{background:var(--amber)}
+.histrow .rm{color:#B9BCC1;font-size:16px;padding:0 4px}
+.histrow .sec{font:500 11px/1 var(--mono);color:var(--muted);width:44px;text-align:right}
+.stage{flex:1;overflow:auto;background:#8E8E88;display:flex;justify-content:center;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.stage.lock{overflow:hidden}
+.wrap{position:relative;margin:10px auto;box-shadow:0 2px 14px rgba(0,0,0,.25);background:#fff;height:max-content}
+.wrap canvas{display:block;position:absolute;top:0;left:0}
+#inkc{touch-action:none}
+#inkc.pen{touch-action:auto}
+#pdfc{position:relative!important}
+#mask{position:absolute;background:#EDECE6;border:1px solid #C4C2B9;border-radius:3px;
+  display:grid;place-items:center;font-size:11px;color:#8A8880;cursor:move;z-index:5;
+  touch-action:none;user-select:none}
+#mask.drag{background:#E2E6EC;border-color:var(--blue);opacity:.9}
+#mask .grip{position:absolute;right:-1px;bottom:-1px;width:22px;height:22px;cursor:nwse-resize;
+  background:linear-gradient(135deg,transparent 48%,#9A988F 48%,#9A988F 60%,transparent 60%,transparent 70%,#9A988F 70%,#9A988F 82%,transparent 82%)}
+#mask .lbl{pointer-events:none;font-size:10.5px}
+.vbot{flex:none;background:var(--paper);border-top:1px solid var(--line);
+  padding:7px 8px calc(env(safe-area-inset-bottom) + 7px)}
+.tools{display:flex;gap:5px;align-items:center;overflow-x:auto;scrollbar-width:none}
+.tools::-webkit-scrollbar{display:none}
+.tl{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--card);
+  display:grid;place-items:center;flex:none;font-size:13px}
+.tl.on{border-color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.sw{width:20px;height:20px;border-radius:50%}
+.tl.hl .sw{border-radius:3px;height:11px}
+.sep{width:1px;height:22px;background:var(--line);flex:none;margin:0 3px}
+.tl.wide{width:auto;padding:0 10px;font-size:12px;gap:5px}
+select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-align:center}
+
+/* sheets */
+.sheet{position:fixed;inset:0;z-index:80;background:rgba(20,20,20,.35);display:flex;align-items:flex-end;justify-content:center}
+.sheet .panel{background:var(--card);width:100%;max-width:560px;border-radius:16px 16px 0 0;
+  padding:18px 18px calc(env(safe-area-inset-bottom) + 18px);max-height:86vh;overflow:auto}
+.panel h2{font-size:16px;margin:0 0 4px}
+.panel p{font-size:13px;color:var(--muted);margin:0 0 14px}
+.panel .fld{margin-bottom:14px}
+.panel label{font-size:12px;font-weight:600;display:block;margin-bottom:5px}
+.btn{display:block;width:100%;padding:11px;border-radius:9px;border:1px solid var(--line);
+  background:var(--card);font-size:14px;margin-bottom:7px;text-align:center}
+.btn.pri{background:var(--ink);color:#fff;border-color:var(--ink)}
+.filelist{font-size:12.5px;color:var(--muted);font-family:var(--mono);line-height:1.8}
+.filelist b{color:var(--teal)} .filelist s{color:var(--red);text-decoration:none}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%);
+  background:rgba(22,24,27,.93);color:#fff;padding:9px 16px;border-radius:999px;font-size:13px;z-index:99}
+.thsheet .panel{max-height:92vh;border-radius:16px 16px 0 0}
+.sheet.ans .panel{max-width:900px;max-height:94vh}
+.thtabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 10px;scrollbar-width:none}
+.thtabs::-webkit-scrollbar{display:none}
+.thtabs button{white-space:nowrap;padding:5px 11px;border:1px solid var(--line);border-radius:999px;
+  font-size:12.5px;color:var(--muted);background:var(--card)}
+.thtabs button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.thsec h3{font-size:13px;color:var(--blue);margin:0 0 10px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+.thl{font-size:13.5px;line-height:1.7;padding:1px 0;word-break:break-word}
+.thl.i1{padding-left:14px} .thl.i2{padding-left:28px} .thl.i3{padding-left:42px} .thl.i4{padding-left:56px}
+.thl.star{background:#FDF8E8;border-left:2px solid var(--hi);padding-left:8px;margin-left:-2px;border-radius:0 4px 4px 0}
+.thl.star.i1{padding-left:22px} .thl.star.i2{padding-left:36px} .thl.star.i3{padding-left:50px}
+.thbr{height:9px}
+.thimg,.thref{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:5px;
+  border:1px solid var(--line);color:var(--muted);margin:0 3px;vertical-align:1px}
+.thref{color:var(--blue);border-color:#C6D2E0;background:#F2F6FB;cursor:pointer}
+.thfoot{position:sticky;bottom:0;background:var(--card);padding-top:10px;margin-top:6px;
+  border-top:1px solid var(--line)}
+.katex{font-size:1.02em}
+.ansbox{font-size:14px;padding:10px 12px;background:#F0F7F5;border:1px solid #C3DDD6;border-radius:9px;
+  margin:8px 0 0;word-break:break-all}
+.ansbox b{color:var(--teal)}
+@media (min-width:760px){
+  .item{padding:13px 15px}
+  .stage{padding:0 20px}
+}
+#fBig{flex-wrap:wrap;overflow:visible}
+.solbox{margin-top:12px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+.solbox canvas{display:block;width:100%}
+.solnote{padding:14px;font-size:12.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- ===================== 서재 ===================== -->
+<div id="lib">
+  <div class="top">
+    <div class="brand">
+      <h1>화학 260 서재</h1>
+      <span class="sub">변리사 화학 기출 38~63회 · 문제 단위</span>
+      <span class="spacer"></span>
+      <button class="iconbtn" id="btnSet">설정</button>
+    </div>
+    <div id="dl" class="hide"></div>
+    <div class="spectrum" id="spec"></div>
+    <div class="legend">
+      <span><i class="dotL" style="background:#DEDDD6"></i>안 품 <b id="c0">0</b></span>
+      <span><i class="dotL" style="background:var(--teal)"></i>맞음 <b id="cO">0</b></span>
+      <span><i class="dotL" style="background:var(--amber)"></i>헷갈림 <b id="cQ">0</b></span>
+      <span><i class="dotL" style="background:var(--red)"></i>틀림 <b id="cX">0</b></span>
+    </div>
+    <div class="filters">
+      <input class="search" id="q" placeholder="단원 · 세부주제 · 회차(63) · 번호로 검색">
+      <div class="row" id="fBig"></div>
+      <div class="row" id="fEtc"></div>
+    </div>
+  </div>
+  <div class="count"><span id="cnt"></span><span class="spacer"></span>
+    <button class="chip" id="btnRand">랜덤으로 풀기</button>
+    <button class="chip" id="btnFirst">처음부터 풀기</button>
+  </div>
+  <div id="list"></div>
+</div>
+
+<!-- ===================== 뷰어 ===================== -->
+<div id="view" class="hide">
+  <div class="vtop">
+    <button class="iconbtn" id="vBack">서재</button>
+    <div class="title"><div class="t1" id="vT1"></div><div class="t2" id="vT2"></div></div>
+    <button id="tm">0:00</button>
+    <button class="iconbtn" id="vPrev">◀</button>
+    <button class="iconbtn" id="vNext">▶</button>
+  </div>
+  <div class="stage" id="stage">
+    <div class="wrap" id="wrap">
+      <canvas id="pdfc"></canvas>
+      <canvas id="inkc"></canvas>
+      <div id="mask" class="hide"><span class="lbl">답 가림 · 탭하면 보임 · 끌면 이동</span><span class="grip"></span></div>
+    </div>
+  </div>
+  <div class="vbot">
+    <div class="tools">
+      <button class="tl" data-pen="#16181B"><span class="sw" style="background:#16181B"></span></button>
+      <button class="tl" data-pen="#B03A2E"><span class="sw" style="background:#B03A2E"></span></button>
+      <button class="tl" data-pen="#1F3A5F"><span class="sw" style="background:#1F3A5F"></span></button>
+      <button class="tl hl" data-hl="#F2C230"><span class="sw" style="background:#F2C230"></span></button>
+      <button class="tl hl" data-hl="#7FD1AE"><span class="sw" style="background:#7FD1AE"></span></button>
+      <button class="tl" id="tErase">지우개</button>
+      <button class="tl" id="tUndo">↺</button>
+      <select class="tl" id="tW"><option value="1">가늘게</option><option value="2" selected>보통</option><option value="3.4">굵게</option></select>
+      <span class="sep"></span>
+      <select class="tl" id="tLayer"></select>
+      <button class="tl" id="tLayerAdd">+회독</button>
+      <button class="tl" id="tLayerEye">👁</button>
+      <span class="sep"></span>
+      <button class="tl wide" id="tAns">답 보기</button>
+      <button class="tl" id="tLock">🔒</button>
+      <button class="tl" id="tRot">⟳</button>
+      <button class="tl" id="tZoom">＋</button>
+      <span class="sep"></span>
+      <button class="tl" id="mO" style="color:var(--teal)">O</button>
+      <button class="tl" id="mQ" style="color:var(--amber)">△</button>
+      <button class="tl" id="mX" style="color:var(--red)">X</button>
+      <button class="tl wide" id="tHist">기록</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+const DATA = [[1,8,"Q",1,"3.양론","반응식 완결",1,0,"","CHE0231",38,"회","—","④","다음 화학 반응식을 최소 정수의 계수로 완결할 때 H O의 계수는 얼마인가? 2 CH OH + O → CO + H O 3 2 2 2 ① 1 ② 2 ③ 3 ④ 4 ⑤ 5",1,4],[2,8,"Q",2,"3.양론","제한 시약",2,0,"","CHE0232",38,"회","—","③","5몰의 이산화황, 2몰의 산소, 3몰의 물로 황산을 만들 때 제한 시약(한계반응물)은 어떤 것인가? ① 이산화황 ② 산소 ③ 물 ④ 황산 ⑤ 해당없음 03.",2,4],[3,10,"Q",3,"3.양론","실험식",3,0,"","CHE0243",39,"회","—","①","어떤 탄화수소 화합물은 전체질량의 85%가 탄소로 이루어져 있다. 이때 이 화합물의 실험식은 다음 중에 서 어느 것과 가장 가까운가? ① CH ② CH ③ CH ④ CH ⑤ C H 2 3 4 3",3,4],[4,87,"Q",4,"3.양론","혼합 기체의 몰 퍼센트",33,0,"","CHE0065",43,"회","하","⑤","He기체 1.0kg과 0기체 2.0kg을 혼합하여, 잠수부들이 사용하는 산소통에 채워 넣었다. 이 혼합 기체에서 He기체의 몰 퍼센트는 다음 중 어느 것에 가까운가? CD 20 % ® 25 % ® 33 % @ 67 % @ 80 %",4,4],[5,109,"Q",5,"4.용액양론","기체의 용해도",11,0,"","CHE0081",42,"회","하","③","냉장고에 4°C로 보관해 온 탄산음료 캔과 실온의 찬장에 보관해 온 탄산음료 캔 을 실온에서 동시에 뚜껑을 열었다. 이 경우 어느 캔의 탄산음료에서 이산화탄소 가 더 빨리 날아가는지와 그 이유가 옳게 묶인 것은? ® 냉장고에서 꺼낸 캔, 온도가 낮을수록 기체의 용해도는",1,4],[6,111,"Q",6,"4.용액양론","용액의 조성",16,0,"","CHE0082",45,"회","하","①","증류수가 들어있는 용기에 amol의 용질 A와 bmol의 용질 B를 넣고 완전히 녹 였다. 다음 중 이 수용액의 몰농도(M)를 계산하려고 할 때 추가적으로 필요한 자 료는? （단, A와 B는 서로 반응하지 않으며, 비휘발성인 비전해질 물질이다.) @ 수용액의 밀도와 질",2,4],[7,113,"Q",7,"4.용액양론","용액의 조성",16,0,"","CHE0084",49,"회","하","③","어떤 고체 A 100g을 용매 B 100g에 용해시켰을 때, 용액의 밀도가 1.0g/mL이 었다. 이 용액에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? (단. A와 B의 화학식량은 각각 100과 50이고, A와 B는 서로 반응하지 않는다.) ‘ 1 ",3,4],[8,117,"Q",8,"4.용액양론","용액",11,0,"","CHE0088",60,"회","중","②","25°C에서 밀도가 d1 g/mL인 aM의 A 수용액 lOO mL를 20°C로 냉각하였더니, 밀 A 20°c A 도가 ~ g/mL인 수용액이 되었다. 에서 수용액의 몰농도와 질량 퍼센 트 농도를 각각 M, %라고 할 때, 으는?（단, A의 몰질량은 100 g/mol이고",4,4],[9,8,"Q",9,"5.기체","기체 분자 운동론",5,0,"","CHE0235",38,"회","—","⑤","기체 분자 운동론과 관련된 설명 중 틀린 것을 고르시오. ① 기체 분자는 끊임없이 무질서한 운동을 한다. ② 기체 분자 자체의 부피는 무시할 수 있을 정도로 작다. ③ 기체 분자간 인력과 척력은 무시할수 있을 정도로 작다. ④ 기체 분자의 평균 속도는 절대온도의 제곱근",1,10],[10,85,"Q",10,"5.기체","기체의 반응",14,0,"","CHE0063",41,"회","중","②","질소와 수소를 촉매의 존재 하에 반응시키면 암모니아를 얻을 수 있으며, 화학식 은 아래와 같다. 반응이 완전히 진행되었을 때, 옳은 것을 모두 고른 것은? N2(g) + 3H2(g) 2NH3(g) ~ ‘\" lO 30 기 • L의 질소와 L의 수소를 반응시 키 면 20L",2,10],[11,89,"Q",11,"5.기체","기체 반응",12,0,"","CHE0067",44,"회","중","②","밀폐된 유리 용기 속에 1 기압의 N205 기체를 넣고 일정시간이 지난 후 압력을 측 정하였더니 2 기압이 되었다. 이는 N205의 일부가 N02 기체와 02 기체로 분해되 었기 때문이다. 이 때 생성되는 02의 부분 압력은 얼마인가? ® 1 — 7· ® : 기압 압 ",3,10],[12,89,"Q",12,"5.기체","기체 반응",15,0,"","CHE0068",45,"회","중","③","4L 일정한 온도와 압력에서 lL의 p4 기체와 6L의 수소 기체가 완전히 반응하면 의 포스핀 기체가 생성된다. 이 자료로부터 구한 포스핀 기체의 분자식은? ® ® ® P2 PH2 PH3 @ PH4 @ PH5",4,10],[13,91,"Q",13,"5.기체","기체 분자 운동론",15,0,"","CHE0070",47,"회","하","⑤","그림은 500 K에서 같은 몰수로 존재하는 기체 A와 B의 속력 분포를 나타낸 것이다. 분자수 `` ` ``` B .... ``` `` ` · 。 속력(m/s) 이에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? ‘ 겨 기체 A의 모든 분자는 운동에너지",5,10],[14,93,"Q",14,"5.기체","기체 양론",13,0,"","CHE0072",48,"회","하","④","다음은 계수를 맞추지 않은 프로페인(C3Hs)의 연소 반응식이다. + C3H8(g) 02(g) - co2(g) + H20(g) 273 °C, 1atm에서 0.2mol의 프로페인을 완전히 연소시키기 위해 필요한 산소의 RT= 22.4 최소 부피는? （단. 산소는 이상 기",6,10],[15,95,"Q",15,"5.기체","기체",17,0,"","CHE0073",50,"회","중","①","0.4 0.8 그림 (가)는 메테인(CH4)과 질소(N2)가 각각 기압과 기압인 lL의 강철 용 기 A와 CH4의 압력이 0.1 기압인 2L의 강철 용기 B가 콕으로 연결된 것을, (나) 는 (가)의 콕을 열어 평형에 도달한 상태를 나타낸 것이다. (가) A B CH•",7,10],[16,97,"Q",16,"5.기체","기체의 반응",12,0,"","CHE0075",51,"회","상","③","그림은 밀폐된 용기에서 일어나는 &B와 G의 반응에서 반응 전후의 화학종의 종 류와 양을 나타낸 것이다. k.B(K) 0.8 몰 A2B(g) x 뮬 » AC2(g) y 몰 C2(g) 0.4 B2(g) z 몰 믈 반응전 반응후 이에 대한 설명으로 옳은 것은? （단, 온도",8,10],[17,99,"Q",17,"5.기체","기체 운동 법칙",11,0,"","CHE0076",53,"회","하","③","그림 (가)는 온도가 300K인 실린더 에 He(g)과 Ne(g)이 들어 있는 것을, (나)는 (가)의 피스톤에 추를 올려놓고 200K로 낮춘 것을 나타낸 것이다. 피스톤 / 추 He(g), Nef./;) 二 2L 300K (7~) (나) 이에 관한 설명으로 옳은 것만",9,10],[18,105,"Q",18,"5.기체","기체 양론",11,0,"","CHE0079",61,"회","상","①","그림 (가)는 온도 꺽 K, 외부압력 l atm에서 실린더 에 1 mol He(g)와 1 mol H20 I; 을 넣어 도달한 평형을, （나)는 (가)에서 K, 외부압력을 0.5 atm으로 변화 시 켜 도달한 새로운 평형을 나타낸 것이다. 0.5 atm He(g) H20",10,10],[19,10,"Q",19,"6.열화학","헤스의 법칙",5,0,"","CHE0245",39,"회","—","③","다음에 주어진 반응식들을 이용하여 C(s) + O(g) → CO(g) 반응에 대한 반응 엔탈피 △H를 계산하 2 면 얼마인가? C(s) + O (g) → CO (g) △H = -390 KJ 2 2 2CO(g) + O (g) → 2CO (g) △H = -560 KJ 2 ",1,12],[20,12,"Q",20,"6.열화학","열용량과 엔탈피",1,0,"","CHE0251",40,"회","—","③","기체의 비열은 가열 냉각 조건에 따라 달라진다. 기체의 부피가 일정한 조건에서 가열하는 경우 압력이 일정한 경우보다 기체의 부피 변화에 대한 에너지 공급이 불필요하기 때문에 비열이 작다. 1기압 정압하에서 1몰 He 기체의 온도를 25℃ 에서 85℃ 로 가열하는데 필요",2,12],[21,121,"Q",21,"6.열화학","열화학",18,0,"","CHE0089",41,"회","하","①","다음 그림은 1 bar 상태에서 일어나는 A(g) 一 B(g) 반응의 자유에너 지 L\\Go 값의 온도에 따른 변화를 보여주고 있다. 이 반응의 엔탈피(AH°)와 엔트로피(AS°)에 대하여 맞게 나타낸 것은? （다만, 엔탈피 및 엔트로피는 온도에 거의 무관하다고 가정하자",3,12],[22,121,"Q",22,"6.열화학","개념 확인",11,0,"","CHE0090",44,"회","중","④","다음 〈보기〉에서 바른 설명을 모두 고른 것은? 기. 동일한 계에 가해진 일 에너지와 열 에너지의 합은 계의 상태가 변하는 경로와 무관하며, 계의 처음 상태와 마지막 상태에만 의존한다. 2s 2p L. 탄소 원자의 오비탈과 오비탈의 에너지 준위는 같다. 亡. 자외선 영",4,12],[23,123,"Q",23,"6.열화학","열화학 Hess의 법칙",17,0,"","CHE0091",44,"회","중","①","B晶는 반응성이 매우 큰 화합물로서 다음 화학반응으로 생성된다. — 2B(s) 3H2(g) 十 B2바(g) 아래 임의의 열화학 자료를 이용하여 위 반응의 반응 엔탈피(AH)를 계산하면 얼 마인가? 4H(kJ) 3 —02(g) 2B(s) + ------► B20/s) -",5,12],[24,123,"Q",24,"6.열화학","열화학",13,0,"","CHE0092",46,"회","중","⑤","다음은 Ni의 Mond공정에 이용되는 반응식과 열역학 자료이다. + Ni(s) 4CO(쩌 己 Ni(C0)4（겅 -603 A따(kJ/mol) -111 30 198 S00/K·mol) 이 반응에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? （단, 엔 탈피",6,12],[25,125,"Q",25,"6.열화학","열화학",20,0,"","CHE0093",48,"회","중","④","다음은 산화철(ill)(Fe203(s)）을 열분해하여 철(Fe)을 얻는 화학 반응식과 그와 관 련된 열화학 자료이다. + 2Fe20/s) - 4Fe(s) 302(g) 표준생성 엔탈피 표준 엔트로피 S°(J/K · mol) A따(kJ/mol) Fe(s) 30 。 Fe2아",7,12],[26,125,"Q",26,"6.열화학","열화학",14,0,"","CHE0094",49,"회","중","⑤","다음 열화학 반응식에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것 은? N2(g) + 2H/g) - N2H4(g) L1fli = 95 kJ N2H4(g) + H2(g) - 2NH3(g) L1~ = -187 kJ 4NH3(g) 十 O2(g) ―➔ 2N2H4",8,12],[27,127,"Q",27,"6.열화학","열화학",16,0,"","CHE0096",51,"회","중","②","25 다음은 암모니아 합성에 대한 화학 반응식이다. °C에서의 NH3(g)의 표준 생성 엔 -46kJ/mol, 탈피(L1HJ)와 표준 생성 자유 에너지(L1GJ)는 각각 -16kJ/mol이다. N2(g) 十 3H2(g) ~ 2NH3(g) 이에 대한 설명으로 옳지 않은 ",9,12],[28,129,"Q",28,"6.열화학","열화학",12,0,"","CHE0097",54,"회","중","③","다음은 298K에서 반응 2A(g） -B(g）에 관한 자료이다. (L'.1N;) -110 kJ/mol 표준 반응 엔탈피 (LlH'j) -10 kJ/mol B(쩌의 표준 생성 엔탈피 (LlH;) -750 kJ/mol A(쩌의 표준 연소 엔탈피 298K에서 이에 관한 설명",10,12],[29,131,"Q",29,"6.열화학","열화학 Hess의 법칙",13,0,"","CHE0099",56,"회","중","③","25 다음은 °C에서 산소에 대한 자료이다. 02(g)의 결합 엔탈피 : 498kJ/mol 0 o 02(g) + O(g) ~ 03(g) LlH° = -106 kJ/mol 이 자료로부터 구한 25 °C에서의 03(g)의 표준 생성 엔탈피(L1Fj, kJ/mol)는? 90",11,12],[30,131,"Q",30,"6.열화학","상변화에서의 열화학",13,0,"","CHE0100",58,"회","중","④","그림은 1기압에서 1몰 H20의 가열 곡선이다. 온도 D E 100 •················ 。 열량 상태가 A~E인 1몰 H20에 관한 설명으로 옳은 것은? ® 열용량은 A >C이다. ® 내부 에너지는 B>C이다. ® C>D이다. 엔트로피는 @ D = 깁스 자",12,12],[31,13,"Q",31,"7.원자의전자구조","수소 원자 에너지 준위",8,0,"","CHE0258",40,"회","—","④","수소원자의 이온화 에너지는 313.6 Kcal/mol 이다. 양성자와 전자가 서로 무한히 떨어져 있는 때의 에너 지를 0이라 하면, 전자가 3p로 들떠있는 수소원자의 에너지 값을 Kcal/mol 로 나타낸 것을 고르시오. ① 104.5 ② -104.5 ③ 34.84 ④",1,14],[32,5,"Q",32,"7.원자의전자구조","원자 구조",11,0,"","CHE0001",41,"회","하","③","Ar은 원자번호가 18이며, 질량수가 40인 동위원소가 전체의 99.6%를 차지한다. 93.2 %, K는 원자번호가 19이며, 질량수가 39인 동위원소가 질량수가 41인 동위 원소가 6.8%를 차지한다. 다음 중 옳은 것을 모두 고른 것은? ‘ 기. Ar은 3주기 원소",2,14],[33,9,"Q",33,"7.원자의전자구조","원자구조",11,0,"","CHE0005",48,"회","하","②","다음은 임의의 중성 원자 A~D의 각 전자 껍질에 채워진 전자의 수를 나타낸 것 이다. A : K(2) L(8) B : K(2) L(8) M(l) C : K(2) L(8) M(7) D : K(2) L(8) M(8) N(l) 기체 상태인 바닥상태의 원자 A~D에 대한 설",3,14],[34,9,"Q",34,"7.원자의전자구조","원자구조 Bohr 이론",18,0,"","CHE0006",50,"회","하","①","그림은 수소 원자의 에너지 준위와 전자 전이를 나타낸 것이다. -- n... 843 ---- ll n I ‘tt ll n = 2 n = 1 수소 원자의 바닥상태 전자가 이온화하는데 필요한 에너지의 크기를 E,라고 할 때, 첫 번째 들뜬 상태에서 두 번째 들뜬 상태로 전",4,14],[35,11,"Q",35,"7.원자의전자구조","원자 구조",14,0,"","CHE0007",52,"회","하","⑤","그림은 주기율표의 일부를 나타낸 것이다. —— 1 18 H 2 , He 13 I 14 15 I 16 I 17 Li I Be B I C I N I O I F I Ne Na I Mg 7 Al I Si I P S I Cl l Ar 3 I 4 5 I 6 8 I 9 I 10 I",5,14],[36,11,"Q",36,"7.원자의전자구조","원자 구조",14,0,"","CHE0008",53,"회","하","④","원자의 오비탈은 주양자수(n), 각운동량 양자수(l), 자기 양자수(ml)로 표시할 수 + 있다. 바닥상태 원자 A에 n l = 3인 전자 수가 7일 때, A에 관한 설명으로 옳은 것은? @ 2주기 원소이다. ® 홀전자 수는 2이다. ® + = n l 2인 전자 수는 ",6,14],[37,13,"Q",37,"7.원자의전자구조","원자 구조",15,0,"","CHE0009",54,"회","하","④","원자의 유효 핵전하에 관한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? 겨 ls 전자의 유효 핵전하는 헬륨이 수소의 2배이다. . L. 2p 전자의 유효 핵전하는 산소가 질소보다 크다. ls 2p 亡. 플루오르에서 전자의 유효 핵전하는 전자의 유효 핵전하보",7,14],[38,13,"Q",38,"7.원자의전자구조","원자 구조",11,0,"","CHE0010",56,"회","하","⑤","포타슘의 동위원소 겁K에 관한 설명으로 옳지 않은 것은? ® 원자 번호는 19이다. ® 질량수는 39이다. ® 원자 당 양성자의 개수는 19이댜 @ 원자 당 중성자의 개수는 20이다. ® 중성 원자에서 원자 당 전자의 개수는 20이다.",8,14],[39,15,"Q",39,"7.원자의전자구조","원자의 전자 배치",11,0,"","CHE0011",57,"회","하","⑤","다음은 원자 및 이온의 바닥상태 전자 배치를 나타낸 것이다. 옳은 것만을 〈보기〉 에서 있는 대로 고른 것은? 기 24Cr : 1s22 s22 p63 s23 p6 4s1 3rf' L 25Mn : 1s2 2s22 p63 s23 p64 s2 3rf' 亡 26Fe2+ : l",9,14],[40,15,"Q",40,"7.원자의전자구조","원자 구조",17,0,"","CHE0012",58,"회","하","①","표는 원자 X의 오비탈 A와 B에 관한 자료이다. 오비탈 주양又H= 방사방향마디 수 각마디 수 A y 。 X 2 B y+ l 。 이에 관한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? = x l 겨 이다. = L y 3 이다. 亡 A의 각운동량 양자수(l)",10,14],[41,17,"Q",41,"7.원자의전자구조","원자 구조",16,0,"","CHE0013",59,"회","중","③","그림은 원자 W~Z의 제 1 이온화 에너지(상대값)를 나타낸 것이다. W~Z는 C, N, F, Na 중 하나이다. 급 = L J＿ x 프R 흔) 5 o 0l― tJ x ― ― W X Y Z 이에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? （단. W~",11,14],[42,17,"Q",42,"7.원자의전자구조","원자 구조",16,0,"","CHE0014",60,"회","중","③","A, B, C, Na, Cl, Ne, 다음은 원소 A~D와 관련된 설명이다. D는 Ar을 순서 없이 나타낸 것이다. 이에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? • A는 B, C, D와 다른 주기를 갖는다 . • c-와 D는 등전자 배치를 갖는다",12,14],[43,19,"Q",43,"7.원자의전자구조","원자 구조",15,0,"","CHE0015",61,"회","하","③","그림은 원자 A~D의 제 2 이온화 에너지(상댓값)와 제 1 이온화 에너지(상댓값)을 N, F, Na, Mg 나타낸 것이다. A~D는 각각 중 하나이다. x h 눙( 하접 읽 O 0 l― 잰 J N x_― A B C D K 方 눙 ( 허 효 \" 선1京 3 \"ll~Y !",13,14],[44,21,"Q",44,"7.원자의전자구조","원자 구조",16,0,"이해암기형","CHE0016",62,"회","하","④","표는 바닥상태의 2주기 원자 (가)～（다)에 관한 자료이다. 오비탈에 들어 있t 전자수 원X} 홀전자수 ’ 2s 2p (가) 2 。 。 ’ 2 (나) a 3 ’ 2 6 (다) b 」 이에 관한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? ‘ 겨. a+b=3",14,14],[45,9,"Q",45,"8.주기적성질","원자·이온 반지름",6,0,"","CHE0236",38,"회","—","④","다음에서 원자와 이온의 크기가 올바르게 배열된 것을 고르시오. A. I- > I > I+ B. Ca2+ > Mg2+ > Be2+ C. P3- > S2- > Cl- ① A,B ②B,C ③ A,C ④ A,B,C ⑤ 해당 사항 없음 07.",1,8],[46,10,"Q",46,"8.주기적성질","이온화 에너지",1,0,"","CHE0241",39,"회","—","④","다음 원자들 중에서 1차 이온화 에너지가 가장 큰 것은? ① Be ② B ③ C ④ N ⑤ O 4 5 6 7 8 02.",2,8],[47,12,"Q",47,"8.주기적성질","최외각 전자배치와 족",4,0,"","CHE0254",40,"회","—","②","원자의 화학적 특성은 최외각 전자 배치에 따라 달라지며, 최외각 전자배치가 같은 원자들의 화학적 특성 은 유사하다. 다음에서 화학적으로 가장 비슷한 원자들의 원자 번호끼리 짝지어 놓은 것을 고르시오. ① 1, 2, 3 ② 3, 11, 19 ③ 4, 12, 30 ④ 5,",3,8],[48,5,"Q",48,"8.주기적성질","원자의 주기적 성질",17,0,"","CHE0002",42,"회","상","④","바닥상태에 있는 화학종 Na, Na+, 0, Ne 에서 한 개의 최외각 전자를 떼어내는 데 필요한 최소 에너지가 작은 것부터 큰 순서로 바르게 나열된 것은? CD Na+ < Na < 0 < Ne ® Na < 0 < Na+ < Ne ® < < < 0 Ne Na Na+ @",4,8],[49,7,"Q",49,"8.주기적성질","원자의 주기적 성질",31,0,"","CHE0003",43,"회","하","④","원소 He, Li, Be, B, Ne에서 1차 이온화 에너지가 작은 것부터 순서대로 바르게 나열된 것은? CD He < Li < Be < B < Ne ® Ne < Li < Be < B < He @ Li < Be < B < Ne < He @ Li < B < Be < Ne",5,8],[50,7,"Q",50,"8.주기적성질","원자의 주기적 성질",14,0,"","CHE0004",44,"회","하","③","다음 중 아래의 2주기 원자들을 1차 이온화 에너지 크기가 작은 것부터 순서대로 나열한 것은? CD Li < Be < B < N < 0 < Ne CID Li < B < Be < N < 0 < Ne Li < B < Be < 0 < N < Ne @ @ Li < Be < B",6,8],[51,21,"Q",51,"8.주기적성질","주기적 성질·유효핵전하",20,0,"이해암기형","CHE0230",62,"회","하","⑤","그림은 바닥상태 원자 (가) ~ （라)에 관한 자료이다. (가) ~ （라)는 각각 C, 0, Na, Al 중 하나이 다. — 二 I 二 ,一 一 t― — 『 ' . i―i , , I＇ 曲 c ―― {_ . ― 傷 i — 「 · - ) I ― 一二 . ― K ― 广! 回",7,8],[52,0,"Q",52,"8.주기적성질","할로젠족 주기성·MOT·산의 세기",13,0,"이해암기형","CHE0219",63,"회","하","③","다음은 2∼4주기의 할로젠족 원소들로 이루어진 동핵 이원자 분자들에 관한 설명이다. ○ H 와의 반응성은 A > B 이다. 2 2 2 ○ B 는 ℃에서 적갈색 액체이다. 2 ○ 분자 궤도 함수 이론에 근거한 바닥 상태에서 C 의 최고 점유 분자 궤도함 2 수(HOM",8,8],[53,9,"Q",53,"9.화학결합","VSEPR 결합각",7,0,"","CHE0237",38,"회","—","⑤","원자가 껍질 전자쌍 반발(Valence Shell Electron Pair Repulsion, VSEPR) 이론으로 CH NH 4 3 H O의 결합각을 예측할 때 얻어지는 결과를 고르시오. 2 ① ∠HCH = ∠HNH =∠HOH = 90o 109.5o, 90o ② ∠H",1,25],[54,11,"Q",54,"9.화학결합","이온결합·격자에너지",6,0,"","CHE0246",39,"회","—","⑤","다음의 이온결합 화합물들 중에서 녹는점이 가장 높은 것은? ① NaCl ② LiF ③ KI ④ LiI ⑤ MgO",2,25],[55,27,"Q",55,"9.화학결합","화학 결합",13,0,"","CHE0019",41,"회","하","⑤","다음 중 분자를 구성 단위로 하는 분자성 물질은? @ 다이아몬드 @ NaCl(s) @ Fe(s) ® C6o(s) ® 흑연",3,25],[56,25,"Q",56,"9.화학결합","분자구조 VSEPR",20,0,"","CHE0017",41,"회","하","②","다음 분자 중 선형 구조를 가지지 않는 것은? CD N02+ ® HCN ® CH22+ HClO @ @ CO2",4,25],[57,27,"Q",57,"9.화학결합","분자구조 VSEPR",14,0,"","CHE0020",42,"회","하","④","다음은 원자가껍질 전자쌍 반발 모델에 따른 여러 가지 화합물의 분자 구조를 나 타낸 것이다. 각각의 화합물에 대한 분자구조가 틀린 것을 모두 고른 것은? ‘\" CH4 : (tetrahedral) 기 정 사면체 PF3 : 평 면삼각형 (trigonal planar) L ",5,25],[58,29,"Q",58,"9.화학결합","분자구조 VSEPR",36,0,"","CHE0022",43,"회","하","③","VSEPR 다음 화학종 중 이론을 이용하여 그 구조를 예상할 때 시소(seesaw) 모 양이 되는 것은? CD ® ® XeF4 BrF5 @ SF4 @ PF5 PC14+",6,25],[59,31,"Q",59,"9.화학결합","분자구조 VSEPR",16,0,"","CHE0023",44,"회","하","⑤","다음 분자들 가운데 중심원자의 혼성오비탈(hybrid orbital)이 바르게 표시된 것을 모두 고른 것은? ‘\" sp Be(CH깁2 一 CH3+ Sp2 L BCl3 sp2 亡 H20 sp 己 sp3 NH2- □ ® 겨 L 亡 @ 기 己 □ ® L 亡 口 @ 겨 L 亡",7,25],[60,31,"Q",60,"9.화학결합","분자구조 VSEPR",12,0,"","CHE0024",45,"회","하","①","VSEPR (원자가껍질 전자쌍 반발) 이론을 이용하여 다음 5 가지 화합물의 기하학 적 구조를 예상할 때 나머지 4 개와 구조가 다른 화합물은? so42- XeF4 NH4+ CH4 BF4- CD ® ® S042- ® XeF4 NH4+ @ CH4 BF4-",8,25],[61,33,"Q",61,"9.화학결합","분자구조 VSEPR",16,0,"","CHE0025",46,"회","하","③","다음은 중심원자가 C 또는 N인 세 가지 화합물이다. C2H2 N2F2 N2H4 이 화합물에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? 기 결합각이 가장 작은 것은 N2H4이다. 중심 원자 간 결합 에너지는 C2H2가 N2H4보다 크다. L. 亡. ",9,25],[62,35,"Q",62,"9.화학결합","분자구조 VSEPR",13,0,"","CHE0027",47,"회","하","③","다음은 탄소와 산소로 이루어진 세 가지 화학종이다. co CO2 C032- 이에 대한 설명으로 옳지 않은 것은? （단, C와 0의 원자번호는 각각 6과 8이다.) ® C0의 탄소원자는 Sp 혼성화 되어 있다. ® C어의 영구 쌍극자 모멘트는 0이다. ® C032은 사면",10,25],[63,35,"Q",63,"9.화학결합","분자구조",12,0,"","CHE0028",49,"회","하","④","다음은 세 가지 분자의 루이스 점 구조식을 나타낸 것이다. —-~ : ~=X—안 ?=Y ~=Z=~ X~Z에 대한 설명으로 옳은 것은? （단, X~Z는 각각 C, N, 0 중의 하나를 나타 내는 임의의 원소 기호이다.) @ 전기음성도는 Y가 가장 크다. ® 원자 반지름은",11,25],[64,37,"Q",64,"9.화학결합","분자 구조",17,0,"","CHE0029",51,"회","하","④","다음은 이원자 분자 A~C에 대한 자료이며, A~ C는 CO, NO, 02 중 하나이다. ° A > B 결합 차수: 。 * 분자 궤도함수에 들어 있는 전자 수: C > B 7[ 분자 궤도함수 이론에 근거하여 A~C를 설명한 것으로 옳은 것만을 〈보기〉에서 모두 고른 것",12,25],[65,37,"Q",65,"9.화학결합","분자구조 VSEPR",16,0,"","CHE0030",53,"회","하","②","다음은 scN-(싸이오사이안산 이온)의 서로 다른 3가지 루이스 점 구조식 (가)～ (다)에 관한 설명이다. o (가)에는 단일 결합이 없다. o (나)에서 C의 형식 전하는 0이다. o (다)에서 S의 형식 전하는 ―1이다. 이에 관한 설명으로 옳은 것만을 〈보기〉에",13,25],[66,39,"Q",66,"9.화학결합","분자 구조",16,0,"","CHE0031",54,"회","하","④","다음 화학종에 관한 설명으로 옳은 것은? I+ ClF3 SF4 PBr5 3 CD ClF3는 삼각 평 면 구조이 다. @ SF4는 정사면체 구조이다. ® PBr5은 사각뿔 구조이댜 @ 니은 굽은 구조이다. @ 중심 원자는 모두 같은 혼성 오비탈을 사용한다.",14,25],[67,41,"Q",67,"9.화학결합","분자구조 VSEPR",12,0,"","CHE0033",55,"회","중","③","다음은 질소(N)와 산소(0)로 이루어진 세 가지 화학종이다. N02+ N02 N02- 이에 관한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? （단, N와 0 의 원자 번호는 각각 7과 8이다.) 기 • N02+의 질소 원자는 sp 혼성화 되어 있다. 결합",15,25],[68,41,"Q",68,"9.화학결합","분자 구조",14,0,"","CHE0034",56,"회","하","③","그림은 아데닌(C5H5N5)의 구조식이다. H N- N\\ H 아데닌 한 분자에 관한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? ‘ 기. 고립(비공유) 전자쌍은 5개이다. 시그마(o) 결합은 12개이다. L. 亡 sp2 혼성 궤도함수를 결합에 사용하는 탄소",16,25],[69,43,"Q",69,"9.화학결합","분자 구조: VSEPR",19,0,"","CHE0036",57,"회","하","②","다음에서 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? 기. SF4는 비극성이다. PCh는 사각 피라미드 구조를 가진다. L. 亡 • h의 중심 원자는 dsp3 혼성 궤도함수를 가진다. ® @ ® @ 기 ® 亡 기, L L, 亡 기, L , 亡",17,25],[70,45,"Q",70,"9.화학결합","분자 구조",14,0,"","CHE0037",58,"회","중","③","다음 3가지 탄화수소의 구조식이다. 에틸렌 아세틸린 알렌 이에 관한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? ‘\" sp 기 혼성 궤도함수를 가지는 탄소가 포함된 탄화수소는 2가지이다. H의 질량 백분율이 가장 큰 것은 에틸렌이다. L. 亡. 알렌의 모든",18,25],[71,49,"Q",71,"9.화학결합","분자 구조",15,0,"","CHE0039",59,"회","하","③","다음은 4가지 분자 (가)～（라)를 나타낸 것이다. (가) (나) (다) (라) NH3 CS2 SIH CH2。 루이스 구조와 원자가 껍질 전자쌍 반발 이론에 근거하여 이에 관한 설명으로 옳 지 않은 것은? 공유전자쌍수 @ 는 (가)가 (나)의 3배이다. 비공유전자쌍수 ",19,25],[72,51,"Q",72,"9.화학결합","분자 구조",17,0,"","CHE0040",59,"회","중","⑤","표는 분자 궤도함수 이론에 근거한 바닥상태의 두 가지 화학종에 관한 자료이다. X와 Y는 N과 0중 하나이다. XY+ Y2 3 (7}) 결합차수 자기적 성질 (나) 상자기성 분자 궤도함수 이론에 근거한 다음 화학종에 관한 설명으로 옳지 않은 것은? （단, X와 Y는 임",20,25],[73,53,"Q",73,"9.화학결합","분자구조와 유기 화학",14,0,"","CHE0041",60,"회","중","⑤","다음은 아세틸렌 분자의 구조식이다. 이에 관한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? H-C=C-H 겨 분자의 C 원자 간에는 2개의 결합이 존재한다. . T L 7f-콘쥬게이션(conjugation)된 trans-폴리아세틸렌은 전도성 고분자이다. I",21,25],[74,53,"Q",74,"9.화학결합","분자 구조",18,0,"","CHE0042",60,"회","하","②","다음은 2주기 원소의 동종핵 2원자 분자를 나타낸 것이다. 분자 오비탈(MO) 이론 에 근거하여, 이 분자에 관한 설명으로 옳지 않은 것은?（단, 모든 분자는 바닥 상 태이다.) B2, C2, N2, 02, F2 @ 모든 분자들의 결합 차수 총합은 9이다. ® 상자기성",22,25],[75,55,"Q",75,"9.화학결합","분자 구조",16,0,"","CHE0043",61,"회","중","④","'ZY-. 28. 다음은 분자 궤도함수 이론에 근거한 바닥상태의 3가지 화학종 XY, z22-에 관한 자료이다. X~Z는 각각 C, N, 0중 하나이다. XY의 전자 배치는 (0\"1s)2 (라)2 (0\"2s)2 (O\";J2 (7r2p)4 (0\"2p)2이다. zy-의 결",23,25],[76,57,"Q",76,"9.화학결합","분자",17,0,"","CHE0044",61,"회","중","⑤","그림은 화합물 (가)～（다)의 가장 안정한 루이스 구조에서 중심 원자 아이오딘(I) 비공유 전자쌍 수 의 人 를 나타낸 것이다. (가)～（다)는 각각 IF4-, IBr3, IC問 중 하나 공유 전자쌍 T 이다. 비공유전자쌍수 공유전X性!수 (상댓값) (가) ｛나) ｛다",24,25],[77,59,"Q",77,"9.화학결합","루이스구조·형식전하",19,0,"이해암기형","CHE0229",62,"회","상","③","표는 플루오린(F)이 포함된 3가지 분자 (가)～（다)에 관한 자료이다. X와 Y는 2주 기 원자이고. 분자 내 옥텟 규칙을 만족한다. 구성 원자의 수 분자 공유전자쌍수 비공유전자쌍수 X Y F (71-) 。 2 2 a 2a (나) 。 1 3 3 10 (다) 2 b 3",25,25],[78,25,"Q",78,"10.혼성오비탈,분자오비탈","분자구조 MOT",12,0,"","CHE0018",41,"회","하","③","다음 중 바닥상태(ground state)에서 반자성을 가지는 것은? CD 02 ® 02- ® o?- @ NO ® CN",1,8],[79,243,"Q",79,"10.혼성오비탈,분자오비탈","분자구조",17,0,"","CHE0176",41,"회","중","③","다음 화합물에서 탄소 ®, ® 및 산소 ®, ®의 혼성 궤도함수(혼성 오비탈)를 표 시한 것 중 옳은 것은? C 。 II —H2 —— = H2c= c C c OH H a b d CD sp 2\\ s_ p 3'\\ sp, sp ® sp2,., sp,2 ., sp2 ,., s",2,8],[80,29,"Q",80,"10.혼성오비탈,분자오비탈","분자구조 MO이론",12,0,"","CHE0021",42,"회","하","⑤","다음 중 바닥상태에서 산소-산소 간의 결합 길이가 가장 긴 화학종은? ® ® ® 022+ 0 2+ ® 0 2 @ 02- 022-",3,8],[81,33,"Q",81,"10.혼성오비탈,분자오비탈","분자구조 MO이론",14,0,"","CHE0026",47,"회","하","④","이원자 분자 AB는 2주기 원소 A와 B로 구성되며. A와 B의 원자가전자 수의 합 은 11이다. 다음은 AB의 분자궤도함수를 에너지 준위가 증가하는 순서로 나타낸 것이다. , ., 三,\\\\ ,,':,’:+ ,,'.:,- ,« . \\:::``` —— ” ,_ ·‘ 2p",4,8],[82,39,"Q",82,"10.혼성오비탈,분자오비탈","분자구조 MO이론",13,0,"","CHE0032",55,"회","하","⑤","그림은 AB 분자의 분자 오비탈 에너지 준위의 일부를 나타낸 것이며. A와 B의 원자가 전자(valence electron) 수의 합은 11이 다. , zz - - 、` o · 2. p , ’/:' ..--.-.' ’ `` _＿一~ ``\\ T 2p \\ ` 2p `` -",5,8],[83,43,"Q",83,"10.혼성오비탈,분자오비탈","분자 구조 : MO이론",16,0,"","CHE0035",57,"회","하","⑤","그림은 이핵 이원자 분자 XY의 바닥상태 분자 궤도함수를 나타낸 것이다. 바닥상 태의 XY 화합물에 관한 설명으로 옳지 않은 것은? _- .` ,',- ..L:·' \\\\ ._-_- Is \\ \\ \\\\느 브 .....」 -노.l_ ,• 2p \\ ` \" ', ',' ` ,'",6,8],[84,47,"Q",84,"10.혼성오비탈,분자오비탈","분자 구조 MO 이론",18,0,"","CHE0038",58,"회","하","⑤","분자 궤도함수 이론에 근거하여 바닥 상태 이원자 분자에 관한 설명으로 옳지 않 은 것은? @ 나의 결합 차수는 1이다. @ C2는 반자기성이다. ® 어에는 2개의 홀전자가 있댜 @ N2의 최고 점유 분자 궤도함수(HOMO)는 a 궤도함수이다. ® B2의 최저 비점유 분",7,8],[85,0,"Q",85,"10.혼성오비탈,분자오비탈","MOT 결합차수·혼성·VSEPR",14,0,"이해암기형","CHE0220",63,"회","하","⑤","다음은 분자 궤도 함수 이론에 근거한 2주기 원소 X와 Y로부터 얻어지는 바닥 상 태의 동핵 이원자 분자에 관한 설명이다. ○ X 와 Y 의 결합 차수는 각각 1과 2 이다. 2 2 ○ X 와 Y 의 자기적 성질은 각각 상자기성과 반자기성이다. 2 2 분자 궤도 함수 ",8,8],[86,9,"Q",86,"11.상전이","분자간력과 끓는점",8,0,"","CHE0238",38,"회","—","⑤","끊는점의 순서가 올바른 것을 고르시오. ① 벤젠 > 톨루엔 > 페놀 ② 톨루엔 > 페놀 > 벤젠 ③ 페놀 > 벤젠 > 톨루엔 ④ 톨루엔 > 벤젠 > 페놀 ⑤ 페놀 > 톨루엔 > 벤젠",1,12],[87,11,"Q",87,"11.상전이","면심입방 결정구조",9,0,"","CHE0249",39,"회","—","①","어떤 금속이 면심입방(face-centered cubic) 구조를 이루고 있다. 단위세포(unit cell)의 한변의 길이가 4.0 Å 일 때 금속원자의 반경은 얼마인가? (단, = 1.4 = 1.7 ) ① 1.4 Å ② 1.7 Å ③ 2.0 Å ④ 2.8 Å ⑤ 3.",2,12],[88,11,"Q",88,"11.상전이","물의 상도표",10,0,"","CHE0250",39,"회","—","①","순수한 물의 상도표(phase diagram)에 대한 설명 중 틀린 것은? ① 100oC에서 물의 증기압은 760 torr 이고 0oC에서 물의 증기압은 0 torr이다. ② 압력이 감소하면 끓는점(boilling point)은 감소하고 녹는점(melting point",3,12],[89,13,"Q",89,"11.상전이","수소결합",6,0,"","CHE0256",40,"회","—","④","수소결합은 분자간 뿐만 아니라 분자내부에서도 가능하다. 다음에서 분자간의 수소 결합 때문에 일어나 는 현상이 아닌 것을 고르시오. ① 에탄올은 디메틸에테르보다 끓는점이 높다. ② m-나이트로페놀은 o-나이트로페놀보다 끓는점이 높다. ③ NH 는 PH 보다 녹는점이 높다",4,12],[90,13,"Q",90,"11.상전이","분자간력과 끓는점",7,0,"","CHE0257",40,"회","—","⑤","끓는점은 분자간 상호작용과 깊은 관계가 있다. 일반적으로 분자간 상호작용이 클수록 끓는점은 높다. 다음에서 끓는점이 높은 것에서 낮아지는 순서로 배열한 것을 고르시오. ① NH NO, RbCl, Ne ② RbCl, NO, NH , Ne 3, 3 ③ NH RbCl, NO",5,12],[91,85,"Q",91,"11.상전이","상평형 그림",16,0,"","CHE0064",42,"회","하","⑤","아래의 두 그림 A 와 B 는 고체-액체-기체의 상을 압력과 온도의 관계로 나타낸 상평형 그림(phase diagram)이다. 두 상평형 그림 A 와 B 에 관한 다음 설명 중 틀린 것을 모두 고른 것은? ^ 고체 f o휴ll 琴 「 ?k1| » 드’도 _➔ A B 겨",6,12],[92,87,"Q",92,"11.상전이","액체의 끓는점 비교",34,0,"","CHE0066",43,"회","하","①","02, N2, NO 기체의 끓는점(boiling point)이 낮은 것부터 순서대로 바르게 나열된 것은? CD N2 < 02 < NO ® < N2 < NO 어 @ NO < 02 < N2 @ NO < N2 < 02 02 < NO < N2 @",7,12],[93,91,"Q",93,"11.상전이","고체의 결정 구조",12,0,"","CHE0069",47,"회","하","④","그림은 NaCl 결정구조를 나타낸 것이다. NaCl 결정에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? ‘ 기 N하에 가장 근접한 N하의 개수는 N하에 가장 근접한 Cl-의 개수와 같다. • Cl- L. 가장 근접한 두 N하 사이의 핵간 거리는 가장 ",8,12],[94,93,"Q",94,"11.상전이","화학식 결정",16,0,"","CHE0071",47,"회","중","③","1.16 0 °C, 1 l 분자식이 CxHv인 기체 g은 기압에서 부피가 L이고, 질량 구성비는 C=92.4%, H=7.6%이다. x+y 값은? （단. CxHv는 이상기체이고. C와 H의 원 자량은 각각 12.0과 1.0이다.) ® 2 ® 6 @ 3 ® 4 @ 5",9,12],[95,97,"Q",95,"11.상전이","고체의 결정구조",11,0,"","CHE0074",51,"회","하","③","그림은 입방 격자 구조를 갖는 알루미늄(Al)의 단위세포에서 두 단면 (가)와 (나) 를 나타낸 것이다. (7t) (나) (가) （나) 이 단위세포에 대한 설명으로 옳은 것만을 〈보기〉에서 모두 고른 것은? ‘ 기 . 단위세포 당 원자 수는 4이다. 단위세포에서 원자의",10,12],[96,101,"Q",96,"11.상전이","고체의 결정구조",16,0,"","CHE0077",56,"회","하","④","그림은 M과 X의 이온으로 이루어진 이온 화합물의 결정 구조이다. 그림에서 o는 M의 양이온을 •는 X의 음이온을 나타낸다. M, 이에 관한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? （단, X는 임의의 원소 기호이다.) ‘ 기. 화학식은 M2X7이다. ",11,12],[97,103,"Q",97,"11.상전이","액체의 증기압",11,0,"","CHE0078",59,"회","상","①","16. 표는 X(l)와 Y(l)에 대하여 절대 온도(K)의 역수(—)에 따른 P증가 값을 자연로그의 T 음수 값(-In P증기)으로 나타낸 것이 다. P증기는 평 형 증기 압(atm)이 다. -lnP증?I 上(K-1) T X(l) Y(l) 4a -2b -4b Sa -3",12,12],[98,12,"Q",98,"12.총괄성","묽은 용액의 총괄성",3,0,"","CHE0253",40,"회","—","②","수용액에서 비휘발성 물질을 용해하면 수용액의 여러 가지 물성들이 용질의 수에 비례하여 변화한다. 묽 은 설탕 수용액에 설탕을 더 녹일때 일어나는 변화로 옳지 않은 것을 고르시오. ① 물의 증기압이 낮아진다. ② 삼투압이 낮아진다. ③ 어는점이 낮아진다. ④ 끓는점이 높",1,6],[99,109,"Q",99,"12.총괄성","용액의 삼투압",18,0,"","CHE0080",42,"회","하","③","어떤 단백질 2.00g 이 실온에서 0.100L 의 물에 녹아 있을 때 삼투압이 0.021 atm 이면 이 단백질의 분자량으로 가장 가까운 것은? 단, 이상기체 상수 값은 0.082 L·atm/mol·K이다. CD 2,000 @ 5,000 @ 23,000 @ 43,00",2,6],[100,111,"Q",100,"12.총괄성","용액의 총괄성",19,0,"","CHE0083",48,"회","하","①","500 l atm 그림은 포도당 수용액 g을 상태에서 가열할 때 시간에 따른 수용액의 온도 변화를 나타낸 것이다. c 온도(oc) B 100.131.. ......................... . 20 。 시간 이에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대",3,6],[101,113,"Q",101,"12.총괄성","용액의 증기압",15,0,"","CHE0085",52,"회","하","④","그림은 어떤 온도에서 벤젠의 몰분율(X벤젠)에 따른 용액의 증기 압력을 나타낸 것이 다. （가)는 톨루엔의 증기 압력을, （나)는 벤젠과 톨루엔의 혼합 용액의 전체 증기 + 압력(P벤젠 P톨루엔)을 나타낸 것이다. 벤젠과 톨루엔의 혼합 용액은 이상 용액이다. 600 증",4,6],[102,115,"Q",102,"12.총괄성","용액의 총괄성",12,0,"","CHE0086",53,"회","중","⑤","표는 25 °C에서 에틸렌글리콜(C2Hs02)과 물(H20)을 혼합하여 만든 부동액 (가)～ (다)에 관한 자료이다. 25 °C에서 C2Hs02와 H20의 밀도는 각각 1.1 g/mL와 1.0 g/mL이다. 조Ad 부동액 C2fu02 H2。 (71-) 100ml 500",5,6],[103,115,"Q",103,"12.총괄성","용액의 증기압",20,0,"","CHE0087",57,"회","중","④","T °C에서 부피가 일정한 용기에 두 휘발성 액체 A와 B로만 구성된 혼합 용액이 기체_액체 평형을 이루고 있다. T °C의 평형 상태에서, 기체상에서 A의 몰분율은 액체상에서 A의 몰분율의 2배이다. T °C의 평형 상태에서 순수한 A의 증기압은 400Torr이고 순",6,6],[104,10,"Q",104,"13.반응속도","반응 차수",2,0,"","CHE0242",39,"회","—","②","aA + bB → cC + dD 반응에서, 반응물 B의 농도를 일정하게 하고 반응물 A의 농도를 2배로 증가했을 때 반응속도는 4배로 증가했다. 그리고 반응물 A와 B의 농도를 모두 2배로 증가했을 때 반응속도는 8배 로 증가했다. 이때 반응속도 표현식 v = k[A]",1,23],[105,11,"Q",105,"13.반응속도","반응 메커니즘",7,0,"","CHE0247",39,"회","—","②","오존(O )이 분해되어 산소(O )가 생성되는 반응의 반응 메카니즘은 아래와 같다. 3 2 다음중 반응속도 표현식을 바르게 나타낸 것은? k 1 O (g) ⇄O (g) + O(g) (빠른 평형) 3 2 k -1 k 2 O (g) + O(g) → 2O (g) (느림) 3",2,23],[106,137,"Q",106,"13.반응속도","화학 반응 속도론",16,0,"","CHE0101",41,"회","중","⑤","아래 그림은 A + B P C + D의 화학반응에서 시간에 따른 반응속도의 변화를 나 타낸 것이다. 다만, 반응 초기에 A와 B만 있었고. (가) 및 (나)의 반응에서 반응 온도 및 반응압력 조건은 동일하다. 다음 보기 중 이 반응에 대한 해석으로 옳은 것은? f 반 ",3,23],[107,137,"Q",107,"13.반응속도","화학 반응 속도론",15,0,"","CHE0102",42,"회","하","④","[A]o A 2 초기 농도 인 반응물 가 생성물 P로 될 때 반응차수는 이고 속도 상수는 kOl면 반감기는? ® — 1 1 [A]。 k @ (ln2)k ® 阜 @ ® k[A]。 2k",4,23],[108,139,"Q",108,"13.반응속도","반응 속도 : 촉매",39,0,"","CHE0103",43,"회","하","②","다음 중 촉매에 대한 옳은 설명을 모두 고른 것은? （단. 여기서 촉매란 정촉매를 의미한다.) 기 반응 속도를 증가시 킨다. L 반응물에 비해 소량만 사용하여도 반응 속도에 크게 영향을 미친다. 亡 반웅의 평형상수를 증가시킨다. 己 반응의 활성화 에너지를 낮추지만 반응",5,23],[109,139,"Q",109,"13.반응속도","반응 속도론",18,0,"","CHE0104",44,"회","하","④","다음 〈보기〉의 반응 속도론에 대한 설명 중 옳은 것을 모두 고른 것은? 기. 반응 속도는 음수가 될 수 없다. L. 반응 속도 법칙은 실험으로 결정된다. 戶 순간 반응 속도는 반응이 진행되면서 변할 수 있다. 근. 촉매는 반응 경로에 변화를 주어 반응을 촉진하거나 방",6,23],[110,141,"Q",110,"13.반응속도","화학 반응 속도론",17,0,"","CHE0105",45,"회","하","②","어떤 방사성 원소 X의 반감기:는 5 분이다. X가 2.0X105 개일 때, X의 붕괴 속도 는? （단, X의 반감기 = 이 고, k는 속도 상수이 다. t1/2 O. 93 ) CD 231 개/초 ® 462 개/초 @ 924 개/초 @ 1,848 개/초 ® 3,696 ",7,23],[111,141,"Q",111,"13.반응속도","화학 반응 속도론: 메커니즘",17,0,"","CHE0106",46,"회","하","③","다음은 과산화수소 분해반응의 반응메커니즘을 나타낸 것이다. H202 + Br_ 一 比0 + Bro- （느림) + + + H2아 BrO —- H20 02 Br一 (빠름) 이 반응에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? ‘ 기 Br은 촉매로 작용한",8,23],[112,143,"Q",112,"13.반응속도","화학 반응 속도론",13,0,"","CHE0107",49,"회","상","①","그림은 단일 단계 반응 2A 一 B에서, A의 초기 농도가 2.00M일 때 시간에 따른 생성물 B의 농도를 나타낸 것이다. 0.875-,.………----•••..•••• -·····-···_.• • B _ ••••• 농도(M) 0.500 ........ . 0.250 0",9,23],[113,145,"Q",113,"13.반응속도","화학 반응 속도론",20,0,"","CHE0108",50,"회","중","③","일정한 온도에서 A(g) 十 B(g) - 2C(g) 반응의 실험을 수행하였다. 그림 (가)는 [A]。 ~ [B]0일 때 시간에 따른 蕭層 [B]。 )> [A]0일 때 시간에 따른 [A]를, （나)는 나타낸 것이다. [A]。와 [B]。는 각각 A와 B의 초기 농도이다. ",10,23],[114,149,"Q",114,"13.반응속도","화학 반응 속도론",16,0,"","CHE0110",52,"회","하","⑤","자료는 Cl2와 H2S가 반응하여 S과 HCl가 형성될 때 제안된 반응 메카니즘과 전체 반응의 반응 속도 법칙(v)이다. 그림은 반응 진행에 따른 에너지를 나타낸 것이 며, Eal, Ea2, Ea3는 각각 단계 I , Il , III의 활성화 에너지이다. [반응 메카니",11,23],[115,147,"Q",115,"13.반응속도","화학 반응 속도론",20,0,"","CHE0109",52,"회","상","③","다음은 어떤 평형 반응식과 아레니우스(Arrhenius)식이다. [평형 반응식] k f A + B 2C +===± kr (kf와 kr은 각각 정반응과 역반응의 속도 상수) [아레니우스 식] - Ej RT k = Ae k는 반응 속도 상수, A는 아레니우스 상수, Ea는",12,23],[116,151,"Q",116,"13.반응속도","화학 반응 속도론",13,0,"","CHE0111",53,"회","중","③","다음은 반응 차수가 각각 1차 반응인 (가)와 (나)의 화학 반응식이고, kA와 kB는 반응 속도 상수이다. (가) 쓰 (나) 브 : A P : B P 그림은 절대 온도의 역수(—)에 따른 반응 속도 상수(log10 k)를, 표는 서로 다른 T 실험 조건 I ~l[을 ",13,23],[117,153,"Q",117,"13.반응속도","화학 반응 속도론",13,0,"","CHE0112",54,"회","하","⑤","k 12. 그림은 반응 x ~순 Y에 대한 퍼텐셜 에너지를 나타낸 것이다. 정반응과 역반응은 kr 각각 X와 Y의 1차 반응이며, kf와 kr은 각각 정반응과 역반응의 속도 상수이다. X 퍼텐셜에너지 | 반응의진행 이 반응에 관한 설명으로 옳은 것만을 〈보기〉에서 있는",14,23],[118,155,"Q",118,"13.반응속도","화학 반응 속도론",19,0,"","CHE0113",55,"회","중","④","그림은 A(g)가 B(g)를 생성하는 반응에서 반응 시간에 따른 一—의 변화를 절대 [A] 4 온도 露斗 —껴1서 나타낸 것이다. 이 반응의 활성화 에너지(kJ/mol)는? （단, R 3 = = 는 기체 상수이고, RT 2.5 kJ/mol, ln 2 0.70이다.) —",15,23],[119,155,"Q",119,"13.반응속도","화학 반응 속도론",20,0,"","CHE0114",56,"회","중","③","그림은 반응 (가) A一X와 반응 (나) B 一 2Y의 반응 시간 t에 따른 ln [A] 또는 ln [B]를 나타낸 것이다. ln[A] ln[B] 또는 。 -1 -2 。 이에 관한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? （단. 온도는 일정하다.) ‘ ",16,23],[120,157,"Q",120,"13.반응속도","화학 반응 속도론",18,0,"","CHE0115",57,"회","상","③","다음은 A와 B가 반응하여 C와 D를 생성하는 화학 반응식이다. 2A+B~ C+D 표는 반응 차수가 1차인 반응물 B의 서로 다른 초기 농도([B]。)에서 반응 시간(초) 에 따른 반응물 A의 농도 변화를 나타낸 실험 I과 II의 자료이다. 실험 I에서 [B]。 = 1",17,23],[121,159,"Q",121,"13.반응속도","화학 반응 속도론",12,0,"","CHE0116",58,"회","상","②","표는 기체의 분해 반응 (가)～（다)의 반응 속도 실험 자료이다. 반옹 화학반용식 온도 초기(t=O)의 농도 속도법칙 — d[A] = 1h크 [A] 2A~4B+C T1 [A]。 = lM 가 dt —d [D] = 1M크h크 [D]2 2D-2E+F T2 [D]。 = lM ",18,23],[122,161,"Q",122,"13.반응속도","화학 반응 속도론",12,0,"","CHE0117",59,"회","상","①","다음은 A와 B가 반응하여 C와 D를 생성하는 화학 반응식과 반응 속도 법칙이다. —d[ A] A + 2B C + 2D = k [A][B]m ~ dt (k는 반응 속도 상수, m은 반응 차수) 표는 두 강철 용기에서 온도와 반응물의 초기 농도를 달리하여 반응 시켰을 때",19,23],[123,163,"Q",123,"13.반응속도","화학 반응 속도론",13,0,"","CHE0118",60,"회","중","⑤","다음은 기체 A가 분해되는 반응의 화학 반응식이다. k A(g) 一B(g) + c(g) (k는 반응 속도 상수) 그림은 강철 용기에서 온도를 달리하면서 이 반응을 진행시킬 때 반응 시간에 따 A TK, 른 농도의 역수(—_)를 나타낸 것이며, （가)와 (나)의 온도는 ",20,23],[124,165,"Q",124,"13.반응속도","속도론",13,0,"","CHE0119",61,"회","중","④","다음은 온도 T에서 A(g)와 D(g)가 분해되는 화학 반응식과 반옹 속도 법칙이다. k1과 k2는 온도 T에서의 반응 속도 상수이다. 2A(g) 2B(g) + c(g) = kl [A]2 ~ V1 D(g) 2E(g) v2 = [D]2 ~ ~ 표는 온도 T에서 진공 강철",21,23],[125,167,"Q",125,"13.반응속도","화학 반응 속도론",12,0,"응용계산형","CHE0120",62,"회","상","④","다음은 A(g)로부터 B(g)와 C(g)가 생성되는 반응의 화학 반응식이다. 2A(g) 3B(g) + C(g) ~ 표는 20L의 용기에 A(g)를 넣고 온도 T에서 반응시켰을 때 반응 시간(t)에 따른 용기 속 기체의 압력(P)을 나타낸 것이다. t(min) 5 10 ",22,23],[126,0,"Q",126,"13.반응속도","반응 메커니즘·속도결정단계",15,0,"응용계산형","CHE0221",63,"회","중","①","다음은 두 단일 단계로 기술되는 화학 반응의 반응 메커니즘이다. ○ 단계 1 : A + B ⇄ AB (매우 느림) ○ 단계 2 : AB + C → AC + B (매우 빠름) 표는 A∼C의 초기 농도(M)에 따른 초기 반응 속도( ) 자료이며, 주어진 반응 메  커니",23,23],[127,9,"Q",127,"14.화학평형","평형 이동(분압)",9,0,"","CHE0239",38,"회","—","②","다음 반응에서 질소 기체의 분압을 증가시킬 때 반응이 정반응 방향으로 진행하는 것을 고르시오. A. N H (g) → N (g) + 2H (g) 2 4 2 2 B. N (g) + 3F (g) → 2NF (g) 2 2 3 C. NH NO (s) → N (g) + 2H O",1,18],[128,14,"Q",128,"14.화학평형","평형상수의 의미",10,0,"","CHE0260",40,"회","—","①","물리 화학적 변화 과정에 관한 평형상수는 엄밀하게 말하면 농도가 아닌 활동도로 표시된다. 활동도는 표준 상태와의 비교에 의해 결정되는 단위가 없는 값으로, 순수한 액체와 고체의 활동도는 1이다. 기체의 경우, 활동도는 해당 기체의 분압을 기압(atm) 단위로 표시한 값",2,18],[129,171,"Q",129,"14.화학평형","화학 평형: 르 샤틀리에 원리",20,0,"","CHE0121",44,"회","하","③","S03는 다음 화학 반응식과 같이 S02와 02로부터 합성될 수 있다. 2SO/g) + 02(g) 2S03(g) P LlH0 = -197. 78 kJ 이 반응이 평형 상태에 있을 때, 다음 변화들 중 평형 위치를 오른쪽으로(정반응 방향) 이동하게 하는 조건들을 아래 〈",3,18],[130,173,"Q",130,"14.화학평형","화학 평형",19,0,"","CHE0122",47,"회","중","⑤","다음은 100 °C에서 lL의 밀폐된 용기에 들어 있는 기체 A로부터 기체 B가 생성 a, 될 때의 열화학 반응식이다. （단, b는 균형 화학반응식의 계수이다.) aA(g) bB(g) LlH° < 0 己 그림은 반응 시간에 따른 A와 B의 농도를 나타낸 것이다. 농도 ",4,18],[131,175,"Q",131,"14.화학평형","화학평형",18,0,"","CHE0123",49,"회","중","③","다음은 기체 A와 B가 반응하여 기체 C가 생성되는 화학 반응식이고, x와 y는 반 응계수이다. A(g) + xB(g) yC(g) P A, B, (가)는 반응 시작 전에 용기에 들어 있는 기체 C의 입자수를, （나)와 (다) 는 반옹이 진행되어 평형 상태에 도달하였을 ",5,18],[132,177,"Q",132,"14.화학평형","화학 평형",15,0,"","CHE0124",50,"회","중","②","그림은 온도 穴개서 aA(g) bB(g) 반응을 강철 용기에서 진행시켜 평형 상태에 ,=:::± 도달한 후, tl에서 온도를 2배(21)로 증가시켜 새로운 평형에 도달할 때의 시간에 따른 A와 B의 농도를 나타낸 것이다. l 농도(M) 평형 |I 『 : : : 4.0 ",6,18],[133,177,"Q",133,"14.화학평형","화학평형",20,0,"","CHE0125",51,"회","상","④","다음은 부피가 일정한 용기에서 기체 A로부터 B가 생성되는 반응의 화학 반응식 이다. A(g) 2B(g) +=2 25 50 표는 온도 °C와 °C에서 A의 초기 농도와 반응의 평형상수(Kc)를 나타낸 것 이다. 온도(t) A의 초기 농도(M) 평형싱수 25 1 2 4 ",7,18],[134,179,"Q",134,"14.화학평형","화학 평형",20,0,"","CHE0126",53,"회","상","①","다음은 온도 T에서 기체 A의 화학 반응식과 압력으로 정의되는 평형상수(Kp)이다. 2A(g) 2B(g) + c(g) Kp .==:± 표는 피스톤이 달린 실린더에 기체 A를 넣은 초기 상태와 반응이 진행된 후 평형 상태에 관한 자료이다. 온도(K) 실린더 속 기체 부피",8,18],[135,179,"Q",135,"14.화학평형","화학 평형",11,0,"","CHE0127",54,"회","중","⑤","다음은 AB3(g)가 분해되는 반응의 화학 반응식이다. AB3(g) AB(g) + B2(g) .==t AB3(g) 2.0L 밀폐 용기에 0.10 mol을 넣어 분해 반응시켰더니, AB3(g)가 20 % 분 해되어 평형에 도달하였다. 이 평형 상태에 관한 설명으로 옳지 ",9,18],[136,181,"Q",136,"14.화학평형","화학 평형",20,0,"","CHE0128",55,"회","상","①","다음은 A(g)가 B(g)를 생성하는 반응식과 농도로 정의되는 평형상수(K)이다. A(g) 己 2B(g) K 1 표는 피스톤이 있는 실린더에 기체 A와 B가 들어 있는 초기 상태와 평형 상태 과 2에 대한 자료이다. A의 질량 상태 온도(K) 평형 상수(K) B의 질량",10,18],[137,181,"Q",137,"14.화학평형","화학 평형",15,0,"","CHE0129",56,"회","중","①","다음은 A와 B가 반응하여 C를 생성하는 반응의 화학 반응식과 온도 戶I서 압력 으로 정의되는 평형상수(Kp)이다. A(s ) + B(g) C(g) Kp = 4 .==! 진공 용기에 A(s) 1 몰과 B(g) 1 몰을 넣어 반응시켜 도달한 평형 상태에서 용기 5 속 기",11,18],[138,183,"Q",138,"14.화학평형","화학 평형",17,0,"","CHE0130",57,"회","상","①","다음은 탄소(C)와 C02(g)가 반응하여 CO(g)를 생성하는 평형 반응식과 압력으로 정의되는 평형상수이다. + C (s) CO2 (g) 2CO (g) Kp P I I 40L, T1 40L, Ti C02(g) I ► C02(g), CO(g) 온도증가 C(s) C(s)",12,18],[139,185,"Q",139,"14.화학평형","화학 평형",11,0,"","CHE0131",58,"회","중","③","다음은 온도 T에서 A(s) 분해 반응의 화학 반응식과 압력으로 정의되는 평형상수 (Kp)이다. A(s ) 己B(g) + C(g) Kp T에서, 1기압의 B(g)가 들어 있는 용기에 A(s)를 넣은 후 A(s)의 분해 반응이 일 어나 도달한 평형 상태의 전체 기체 압력",13,18],[140,185,"Q",140,"14.화학평형","화학 평형",13,0,"","CHE0132",59,"회","상","②","다음은 A(g)와 B(g)가 반응하여 C(g)가 생성되는 반응의 평형 반응식과 압력으로 정의되는 평형상수(Kp)이다. A0) + 2B(g) 2C0) Kp P 표는 반응 전 C(g) 1mol만이 들어 있는 피스톤이 달린 실린더에서 반응이 일어날 때, 서로 다른 온도에서 ",14,18],[141,187,"Q",141,"14.화학평형","화학 평형",12,0,"","CHE0133",60,"회","상","④","다음은 기체 A와 B가 반응하여 기체 C가 생성되는 반응의 화학 반응식이다. + aA(g) B(g) .=± cC(g) (a, C는 반응 계수) ~ 표는 이 반응의 평형 (가) （다)에 관한 자료이다. 이에 관한 설명으로 옳은 것 만을 〈보기〉에서 있는 대로 고른 것은?",15,18],[142,189,"Q",142,"14.화학평형","화학 평형",12,0,"","CHE0134",61,"회","상","②","다음은 A(g)가 B(g)를 생성하는 반응식과 압력으로 정의되는 평형상수(Kp)이다. A(g) 2B(g) Kp .==:t I'i 그림은 K에서 닫힌 콕으로 연결되어 있는 실린더 (가)에 A(g)를, （나)에 A(g) 와 B(g)를 각각 넣은 초기 상태를 나타낸 것이다.",16,18],[143,191,"Q",143,"14.화학평형","화학 평형",14,0,"응용계산형","CHE0135",62,"회","중","③","A(g) 다음은 분해 반응의 화학 반응식과 압력으로 정의되는 평형상수(Kp)이다. A(g) 2B(g) Kp 己 이 반응이 일어나 300K에서 평형에 도달하였을 때 A(g)의 부분 압력은 latm이 1.5 400 고, 전체 기체의 압력은 atm이다. 온도를 올려 K에서 ",17,18],[144,0,"Q",144,"14.화학평형","Kp 평형·부피변화",19,0,"응용계산형","CHE0225",63,"회","상","②","다음은 반응하여 생성하는 반응의 화학 반응식과 압력으 로 정의되는 평형 상수( )이다. P A(g) + B(g) ⇄ C(g)  P 표는 반응 전 C(g) mol만이 들어 있는 피스톤이 달린 실린더에서 반응이 일어날 때, 도달한 서로 다른 평형의 자료이다. 실린더 ",18,18],[145,13,"Q",145,"15.산염기1","pH 계산",9,0,"","CHE0259",40,"회","—","②","pH는 수용액에서 일어나는 화학 생리학적 변화에 심대한 영향을 준다. 일정 온도에서 pH가 1.0 과 3.0 인 두 HCl 수용액을 1L씩 섞었다. 이 용액의 pH는 얼마인가? (단, log2는 0.3이고 log3은 0.5이다.) ① 1.0 ② 1.3 ③ 1.5 ④ 1",1,8],[146,199,"Q",146,"15.산염기1","산의 세기",13,0,"","CHE0140",45,"회","중","④","다음 (가)와 (나)에서 산성이 더 강한 물질을 각각 고른 것으로 옳은 것은? (가) (Q) , C5H,o C5Tu (0) CH2FCH2CH2COOH , CH3CH2CHFCOOH (나) (가) (나) @@@@@ C5H10 CH2FCH2CH2COOH C5H10 CH3CH",2,8],[147,199,"Q",147,"15.산염기1","산과 염기",20,0,"","CHE0141",46,"회","중","⑤","다음은 1.0M 약산(HA) 수용액의 평형 반응식과 Ka 상수이다. HA(aq) + H20(aq) .= 比o+(aq) + A-(aq) f<a = 1.8 X 10국 이에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? 기. A은 H20보다 강염기이다. [H",3,8],[148,203,"Q",148,"15.산염기1","산과염기",12,0,"","CHE0144",52,"회","상","⑤",">\\ 9. 다음은 3가지 유기산의 구조이다. :0H o OCH H 。 (71-) (나) (다) 이 유기산의 산성도 세기를 비교한 것으로 옳은 것은? @ （가) > （나) > （다) ® (가) > （다) > （나) ® (나) > （가) > （다) @ > > （나) （다)",4,8],[149,203,"Q",149,"15.산염기1","산과 염기",13,0,"","CHE0145",52,"회","하","⑤","25 °C 25 °C 다음의 수용액 중에서 이온화 백분율(%）이 가장 작은 것은? （단, 수용 1.8X10-5, 액에서 CH3COOH과 HCOOH의 산 이온화 상수(Ka)는 각각 1.7X10-4이 다.) CD 0.01 M HCl @ 0. 01 M HCOOH ® 0. 0",5,8],[150,209,"Q",150,"15.산염기1","산과 염기",20,0,"","CHE0150",58,"회","중","⑤","25 1.0 X 10-s M H\\ 0H, °C에서 염산(HCl(aq)）에 들어 있는 cr의 농도를 비교한 것으로 옳은 것은?（단, 25°C에서 H20의 이온곱 상수(Kw)는 1,0X10-14이다.) ® < [OH-] < [Cl-] [H기 = < [OH-] @ [H기 [",6,8],[151,211,"Q",151,"15.산염기1","산과 염기",20,0,"","CHE0152",60,"회","중","④","어떤 약산 HA의 산 해리 상수(Ka)가 25°C에서 1X10-s일 때, 다음 중 pH가 6에 서 가장 가까운 용액은? （단, 용액의 온도는 25°c로 일정하다.) @ 1% HA가 해리된 용액 @ HA가 9% 해리된 용액 ® HA가 50% 해리된 용액 ® 91% HA가",7,8],[152,211,"Q",152,"15.산염기1","산-염기",20,0,"","CHE0153",61,"회","상","①","다음은 T °C에서 XF2(s)와 HF(aq)에 대한 수용액에서의 평형 반응식과 용해도 곱 상수(Ksp) 및 산 해리 상수(Ka)이다. + XF2(s) .=± X2+(aq) 2F-(aq) = Ksp 8.0 X 10-io HF(aq) H+(aq) + F-(aq) .=± ",8,8],[153,195,"Q",153,"16.산염기2","산과 염기 : 완충용액",15,0,"","CHE0136",41,"회","하","④","pH = 5인 완충 용액을 만들려고 한다. 다음 중 어느 산을 이용하는 것이 가장 좋 겠는가? (D H2C204, = 5 . 9 10-z Ka X = @ K0 5.6 X 10-3 H述S04, 1. @ HC02H, K0 = 77 x 10-4 H3C202H, = 1. 8 ",1,10],[154,195,"Q",154,"16.산염기2","약산의 적정 곡선",13,0,"","CHE0137",42,"회","중","②","다음은 어떤 산-염기 적정 곡선을 나타낸 것이다. pH 적정액소모량 이러한 특성은 다음의 어느 적정으로부터 나타날 수 있는가? （단, 아래의 산, 염 기는 모두 수용액을 의미한다.) @ HCl을 NaOH로 적정할 경우 ® CH3C02H를 NaOH로 적 정 할 경 우 @",2,10],[155,197,"Q",155,"16.산염기2","산과 염기 : 염의 액성",32,0,"","CHE0139",43,"회","중","④","다음 화합물 중 그 수용액이 상온에서 염기성인 것은? ‘ FeCl3 NaN03 NaF 기 • L 亡 NH4NQ3 口 . CaO 己. @ ® @ @ ® 키 L 기 D L 亡 亡 口 己 口",3,10],[156,197,"Q",156,"16.산염기2","약산의 해리",35,0,"","CHE0138",43,"회","하","④","2.0 M acid) 다음 화학종 중에서 상온의 아세트산(acetic 수용액에 가장 많이 존 재할 것으로 예상되는 것은? CD cH3coo @ OH- @ H30+ @ CH3COOH @ CH3COOH2+",4,10],[157,201,"Q",157,"16.산염기2","약산의 pH와 해리도",18,0,"","CHE0143",48,"회","하","②","다음은 25 °C에서 옥살산 칼슘(CaC204)의 용해 평형과 관련된 반응식과 평형상수 이다. CaC204(s) Ca2+(aq)+ C2042-(aq) }<sp = .==± l.3 X 10-8 f<a1 = 5.4 10-2 H2C20iaq) .==± H +( aq)+ HC",5,10],[158,205,"Q",158,"16.산염기2","산염기 평형",18,0,"","CHE0146",54,"회","중","⑤","다음 혼합 수용액 중 완충 용량이 가장 큰 것은? CD + 0. 2 M CH3COOH 1 L 0. 2 M CH3COONa 1 L @ 0.1 M CH3COOH 5 L + O.lM CH3COONa 5 L ® HCl + CH3COONa 0.2 M 1 L 0.2 M 1 L @",6,10],[159,205,"Q",159,"16.산염기2","산염기 평형",17,0,"","CHE0147",55,"회","상","⑤","온도 T에서 산 HA의 농도가 lX10-4M인 수용액 1000mL가 있다. 온도 껴J 때. [A-J 1 = 평형 상태의 수용액에서 －이 되기 위해 제거(증발)시켜야 할 물의 부피 [HA] 4 —5 (mL)는? （단. HA는 비휘발성이며, 온도 戶l서 HA의 해리 상수는",7,10],[160,207,"Q",160,"16.산염기2","산과 염기 완충 용액",17,0,"","CHE0149",56,"회","하","②","다움은 약산 HA의 해리 반응식과 25 °C에서의 산 해리 상수이다. = 1.o x HA (aq) + H20(aq) 己H3o + (aq) + A -(aq) }<a 10- 4 25 °C에서 O.lM HA와 0.05M NaA를 포함하는 수용액의 pH는? （단, log2 =",8,10],[161,213,"Q",161,"16.산염기2","산염기 평형",13,0,"이해암기형+응용계산형","CHE0155",62,"회","중","②","0.010M NaF 온도 T에서 물에 대한 CaF2의 용해도는 2.0X10-4 M이다. T에서 수용액에 대한 CaF의 용해도(M)는? CD 8.0 10-6 X (ID 3. 2 10-7 X ® 8.0 x 10-8 @ 3.2 X 10-9 ® 8.0 x 10-l0",9,10],[162,0,"Q",162,"16.산염기2","산 해리상수 Ka",20,0,"응용계산형","CHE0226",63,"회","상","②","다음은 ℃에서 대한 수용액에서의 평형 반응식과 산 해리 상수()이다. a A H HA ⇄     a 두 개의 용기에 각각 mM HA L가 들어 있다. 표는 용기 1과 용기 2에서 각각 물이 증발하여 도달한 서로 다른 평형에",10,10],[163,201,"Q",163,"17.용해도평형","침전 평형",17,0,"","CHE0142",47,"회","중","②","다음은 약산 HA 수용액의 평형 반응식과 이온화상수(Ka)이다. HA(aq) + H20(aq) H30 +(aq) + A-(aq) I\\, = 1.0 x 10- .=± 6 HA 수용액에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? ‘ 1.0M 기 수용액의",1,5],[164,207,"Q",164,"17.용해도평형","침전 평형",16,0,"","CHE0148",55,"회","중","①","수용액 (가)는 0.10 몰 CaF2(s)를 순수한 물에 녹인 용액 1.0 L로, Ca2+(aq)의 평형 x = 5.0 10-3 농도는 M이다. 수용액 (나)는 0.10몰 CaF2(s)를 [H기 X M인 산성 완충 용액에 녹인 용액 1.0L로, Ca2+(aq)의 평형 ",2,5],[165,209,"Q",165,"17.용해도평형","침전 평형",19,0,"","CHE0151",59,"회","상","④","다음은 T °C의 염기 완충 수용액에서 M(OHh(s)의 용해 평형과 관련된 평형 반응 } 식이고, T °C에서 Ks# K는 각각 용해도곱 상수와 평형상수이다. M(OH)/s) M3+(aq) + 30H-(aq) K,;P = 2.0 x 10-32 .==:t M( OH )",3,5],[166,213,"Q",166,"17.용해도평형","침전 평형",11,0,"응용계산형","CHE0154",62,"회","중","②","25 °C에서 약산 HA의 산 해리 상수(Ka)는 3X10-s이고, NH3의 염기 해리 상수 ~ (Kb)는 2X10-s이다. 25 °C에서 〈보기〉의 용액 기 亡의 pH를 비교한 것으로 옳 은 것은?（단, 25 °C에서 물의 이온화 상수(Kw)는 1X10-14이다.) ",4,5],[167,0,"Q",167,"17.용해도평형","용해도곱·착이온 형성상수",18,0,"응용계산형","CHE0224",63,"회","상","①","다음은 ℃에서 AB의 용해도곱 상수( )와 착이온 생성 반응 sp  의 형성 상수()이다. A B × ○ AB ⇄    sp A  CN ⇄ ACN   × ○  M Na",5,5],[168,13,"Q",168,"18.화학열역학","엔트로피",5,0,"","CHE0255",40,"회","—","⑤","다음 서술 중에서 엔트로피 효과와 관련된 것은 어느 것인가? ㉠ 서로 다른 두 종류의 기체는 혼합된다. ㉡ 열에너지는 온도가 높은 곳에서 낮은 곳으로 전달된다. ㉢ 물과 기름을 한 용기에 넣고 흔들어 혼합하여도 둘은 섞이지 않고 분리된다. ① ㉠ ② ㉡ ③ ㉢ ④ ㉠㉡",1,4],[169,127,"Q",169,"18.화학열역학","열역학",16,0,"","CHE0095",50,"회","상","④","일정한 외부 압력에서 그림과 같은 단열 장치에 이상기체가 들어 있다. 피스톤 실린더 이상기체 고정장치 고정 장치를 풀었더니 이상기체가 팽창하여 피스톤이 오른쪽으로 이동하였다. 이 과정에서 이상기체의 w, LlT, LlS, LlU, LlG로 옳은 것은? （단, 피스톤의 ",2,4],[170,129,"Q",170,"18.화학열역학","열역학",18,0,"","CHE0098",55,"회","중","④","그림은 1몰의 He(g)이 열이 잘 전달되는 금속판으로 분리된 실린더 A와 B에 각각 들어 있는 것을 나타낸 것이고. A와 B에서 기체의 압력(P。)과 절대 온도(%）는 같다. 실린더 B에 열량 셔} 서서히 가하여 평형에 도달하였을 때, 실린더 B의 기 5 체 압력은 ",3,4],[171,133,"Q",171,"18.화학열역학","엔탈피·엔트로피·Hess",15,0,"이해암기형","CHE0227",62,"회","중","⑤","다음은 25 °C에서 H20와 관련된 3가지 열화학 반응식이다. 。 H20(s ) - H20(l) LlH° = a, LlS0= b, LlG0= c H20(s)-H20(g) LlH° = d, LlS0 = e 。 2H20(l) - 2H2(g) + 02(g) AH°=J 。 ",4,4],[172,8,"Q",172,"20.전기화학","산화환원 반응식 완결",3,0,"","CHE0233",38,"회","—","⑤","다음 산화 환원 반응을 최소 정수의 계수들로 완결할 때 철 이온[ Fe (aq)]의 계수를 구하여라. +2 Fe2+(aq) + Cr O 2-(aq) + H+(aq) → Fe3+(aq) + Cr3+(aq) + H O(l) 2 7 2 ① 1 ② 2 ③ 3 ④ 4 ⑤ 6",1,25],[173,8,"Q",173,"20.전기화학","표준 환원 전위·기전력",4,0,"","CHE0234",38,"회","—","④","다음 두 반쪽 전지를 결합하여 전지를 구성할 때 예상되는 기전력은 얼마인가? Fe2+ 2e- Eo + → Fe(s) = -0.44 V Ag+ + e- → Ag(s) Eo = 0.80 V ① -2.04 ② 0.36 V ③ 1.16 V ④ 1.24 V ⑤ 2.04 V 05",2,25],[174,10,"Q",174,"20.전기화학","표준 환원 전위·기전력",4,0,"","CHE0244",39,"회","—","④","다음 두 반쪽전지를 결합하여 전지를 구성할 때, 예상되는 기전력은 얼마인가? Ag+ + e- → Ag (s) Eo = 0.8 V Co2+ + 2e- → Co (s) Eo = -0.3 V ① -1.9 V ② -1.1 V ③ +0.5 V ④ +1.1 V ⑤+1.9 V 05",3,25],[175,12,"Q",175,"20.전기화학","수용액 전기분해",2,0,"","CHE0252",40,"회","—","⑤","염을 포함한 수용액을 전기분해하는 경우 염을 구성하는 물질의 산화환원 반응과 물자체의 산화환원 반 응이 경쟁한다. 소금물의 전기분해 초기에 산화가 일어나는 전극에서는 a 가 생성되고 환원이 일어나는 전극에서는 b 가 생성된다. 여기에서 a 와 b 는 각각 무엇인가? ①",4,25],[176,217,"Q",176,"20.전기화학","전기화학 균형 맞추기",37,0,"","CHE0156",43,"회","중","②","I3- 대기오염 물질인 오존은 다음과 같이 요오드화칼륨과 반응하여 이온을 생성하 U 고, 생성된 이온을 정량하면 오존의 양을 알 수 있다. + + a03(g) + bl-(aq) cH20(l) ~ d02(g) + e l3-(aq) JOH-(aq) 위 화학식에서 계수 a가",5,25],[177,217,"Q",177,"20.전기화학","철의 부식",38,0,"","CHE0157",43,"회","하","②","다음 중 쇠막대의 부식을 막는 방법이 아닌 것을 모두 고른 것은? 기. 용존산소가 제거된 순수한 물 속에 넣는다. L. 쇠막대 표면에 페인트를 칠한다. c. 쇠막대에 구리 덩어리를 접합시킨다. 己 쇠막대에 아연 덩어리를 접합시킨다. 口. 쇠막대를 강한 산과 접촉시킨다.",6,25],[178,219,"Q",178,"20.전기화학","전기화학: 산화 환원 적정",15,0,"","CHE0158",44,"회","하","②","혈중 알코올(C2H50H)의 양을 측정하는 방법 중 하나는 알코올을 Ce4+ 이온을 포 10.0 함하는 용액으로 적정하는 것이며, 그 반응식은 아래와 같다. 혈장시료 mL를 적정하는데 1.2 M의 Ce4+ 용액 10.0mL가 필요하다면 시료 속 알코올의 몰농도는 얼마인",7,25],[179,219,"Q",179,"20.전기화학","전기화학",19,0,"","CHE0159",45,"회","중","③","5 다음은 개의 금속(A~E)을 전극으로 사용하여 만든 화학전지의 실험 결과이다. 이 실험 결과를 근거로 하여 추정할 때 표준 환원 전위의 크기가 가장 큰 금속 은? l 실험결과 전극구성 금속 산화전극 환원전극 A와 B B A A E A와 E D B B와 D E C C",8,25],[180,221,"Q",180,"20.전기화학","전기화학: 균형 맞추기",20,0,"","CHE0160",45,"회","중","④","다음은 산화 · 환원 반응의 화학 반응식이다. aMn2+(aq) +bBi03-(aq) + cH +(aq) ~dMn04-(aq) + e Bi3+(aq) +/H20(l) ~ 완결된 위 반응식에서 c와 a의 비(c/a) 로 옳은 것은? （단, a /는 반응물과 생 성물의 계",9,25],[181,221,"Q",181,"20.전기화학","전기화학 : 균형 맞추기",12,0,"","CHE0161",46,"회","하","④","다음은 중크롬산 이온으로 철 이온을 적정하는 산화_환원 반응식이다. Cr20i -(aq) + aFez+(aq) + bH+(aq)- cCr3+(aq) + dFe3+(aq) + eH20(l) 이 산화-환원 반응에 대한 설명으로 옳은 것은? @ Cr2여는 환원제이다. ® F",10,25],[182,223,"Q",182,"20.전기화학","전기화학 : 전기분해",17,0,"","CHE0162",48,"회","중","⑤","표는 25 °C에서 세 가지 물질의 1.0M 수용액을 각각 그림과 같이 전기 분해하였 을 때 각 전극에서 얻어진 물질을 나타낸 것이다. \\ (＋）전극 (-)전극 (7}) AS04 A BCl H2 Cl2 B2S04 02 H2 이에 대한 설명으로 옳은 것만을 〈보기〉에서 ",11,25],[183,223,"Q",183,"20.전기화학","전기화학 : 균형 맞추기",20,0,"","CHE0163",49,"회","하","⑤","다음은 산화 · 환원 반응에 대한 불균형 화학 반응식이다. + + + HN03 H3As03 - NO H3As04 H20 균형 화학 반응식을 완성하였을 때, 반응물의 반응계수 합(A)과 생성물의 반응계 (A : 수 합(B)의 비 B)는? CD 2 : 3 ® 3 :4 4 ",12,25],[184,225,"Q",184,"20.전기화학","전기화학",19,0,"","CHE0164",50,"회","상","②","그림은 갈바니 전지를 나타낸 것이고, 표는 25°c에서 전극 금속과 관련된 반쪽반 응의 표준 환원 전위(Eo)이다. 도선 환원반쪽반옹 표준 환원 전위 (E°) + Cu+(aq) e- - Cu(s) 0.52V + Cu2+(aq) e_ - cu+(aq) 0.16V + 2e",13,25],[185,227,"Q",185,"20.전기화학","전기화학",14,0,"","CHE0165",51,"회","하","②","그림은 미완성 갈바니 전지를, 표는 25°C에서 표준 환원 전위를 나타낸 것이다. Ag금속 수용액 + e_ - Ag(s) E0 =0.80V Ag+(미 + Cu2+(미 2e_ - Cu(s) E0=0.34V 25 °C에서 전극 A가 산화 전극으로 작동하는 전지를 구성하려 ",14,25],[186,229,"Q",186,"20.전기화학","전기화학",18,0,"","CHE0166",52,"회","중","③","그림은 Zn I Zn2+ (O.lOM) II Cu2+ (0.50M) I Cu 전지를 나타낸 것이고, 자료는 이 전 지와 관련된 반응의 표준 환원 전위(Eo)이다. Cu Zn 염다리 론두 (가) （나) Cu2+(aq) + 2e_ - Cu(s) E0 = +0.34V Zn2",15,25],[187,231,"Q",187,"20.전기화학","전기화학",19,0,"","CHE0167",53,"회","하","②","25 다음은 평형 반응의 반응식과 평형상수(Ki). 관련된 반쪽 반응의 °C에서의 표 준 환원 전위(Eo)이다. o 5Fe2+(aq) + 2Mn2+(aq) + 8H20(l) 2Mn04-(aq) + 5Fe(s) + 16H+(aq) Ki P + o Fe2+(aq) 2e_ ",16,25],[188,231,"Q",188,"20.전기화학","전기화학",19,0,"","CHE0168",54,"회","하","⑤","다음은 2가지 금속과 관련된 반응의 25°C에서의 표준 환원 전위(E°)이다. + Al3+(aq) 3e- ~ Al(s) Eo= V 크.66 + Mg2+(aq) 2e_ Mg(s) = -2.37 V ~ E0 25 °C에서 반응 + + 2Al3+(aq) 3Mg(s) 己 2A",17,25],[189,233,"Q",189,"20.전기화학","전기화학",14,0,"","CHE0169",55,"회","중","④","다음은 에탄올(C2H5QH)이 분해되는 반응의 반쪽 반응식이다. + + 반응 1: C2H50H(aq) 3H20(l) -2C02(g) + 12H +(aq) 12e 2: Cr20i -(aq) + H +(aq) e- -Cr3+(aq) + H20(l) 반웅 十 혈장 시료 50",18,25],[190,233,"Q",190,"20.전기화학","전기화학 표준 환원 전위",18,0,"","CHE0170",56,"회","중","①","다음은 25 °C에서 구리와 관련된 반응의 표준 환원 전위(E°)이다. x는? + = V o Cu2+ (01J) e_ -cu+向) E0 0.16 + = o Cu+向) e- - Cu(s) E0 0. 52 V + = o Cu2+ (미 2e_ -cu(s) E0 X V CD ",19,25],[191,235,"Q",191,"20.전기화학","전기화학",15,0,"","CHE0171",57,"회","상","②","숟가락의 은(Ag) 전기도금에서 숟가락은 환원 전극으로, 순수 은(Ag) 조각은 산화 전극으로 작용한다. 이 둘을 시안화은(AgCN) 용액 속에 담그고 9.65A의 전류를 흐르게 하여 표면적 이 54 cm2인 숟가락의 표면을 40 µm의 평균 두께로 도금하였 다. 전기",20,25],[192,235,"Q",192,"20.전기화학","균형 맞추기",19,0,"","CHE0172",58,"회","중","③","다음의 산화 환원 반응을 염기성 용액에서 균형을 맞추었을 때 OH-(aq)의 반응 b a, 계수는 H20(l)의 반응 계수는 b이다. —는? a Cl207(aq) + Cl02-(aq) + Oz(g) H2아(aq) ~ 5 7 ® — ® — @ 3 @ 2 2 @ 3 2 一",21,25],[193,237,"Q",193,"20.전기화학","전기 화학",20,0,"","CHE0173",59,"회","하","①","다음은 산성 수용액에서 산화 환원 반응의 균형 화학 반응식이다. a~d는 반응 계 수이다. aFe2+(aq) + bH20/aq) + 2H +(aq)-cFe3+(aq) + dH20(l) 이에 관한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? ‘ 기. a+b ",22,25],[194,237,"Q",194,"20.전기화학","10장 전기화학",19,0,"","CHE0174",60,"회","중","①","다음은 금속 A를 이용한 갈바니 전지이고, 이 전지의 전위는 25°c에서 0.82V이 다. A(s) I A 2+(0.001 M) II H +(o.1 M) IH 2( 0.1 atm) 이에 관한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은?（단, 25°C에서 R",23,25],[195,239,"Q",195,"20.전기화학","전기화학",19,0,"","CHE0175",61,"회","하","①","다음은 산화-환원 반응에서 불균형 알짜 이온 반응식을 나타낸 것이다. + + Fe(OHMs) Mn04-(aq) - MnO/s) Fe(OH)3(s) 염기성 수용액에서 이 반응의 균형을 맞추었을 때, lmol의 Fe(OHMs)가 모두 반 응하여 생성되는 OH-(aq)의 양",24,25],[196,0,"Q",196,"20.전기화학","산화-환원 반응식 완결",12,0,"이해암기형","CHE0218",63,"회","하","③","다음은 산화-환원 반응의 불균형 알짜 이온 반응식을 나타낸 것이다. SO MnO SO Mn  →    산성 용액에서 이 반응의 균형을 맞추었을 때, 반응 계수는 Mn가 SO  의 배이고,  m",25,25],[197,11,"Q",197,"21.배위화합물","착이온 산화수",8,0,"","CHE0248",39,"회","—","③","화합물 Na[Co(CO )(H O) Cl ]에서 중심 금속원자 Co의 산화수는? 3 2 2 2 ① +1 ② +2 ③ +3 ④ +4 ⑤ +5",1,21],[198,63,"Q",198,"21.배위화합물","착화합물",19,0,"","CHE0045",41,"회","하","④","다음 중 킬레이트 착화합물을 이루지 못하는 리간드는? (D EDTA, (H02CCH2)zNCH2CH2N(CH2C02H)2 ® acid) , H02CC02H 옥살산(oxalic ® H2NCH2CH2NH2 에틸렌 다이아민, @ 1,4-디메톡시벤젠, 1,4-C5H4(0Me)",2,21],[199,63,"Q",199,"21.배위화합물","착화합물",19,0,"","CHE0046",42,"회","중","④","코발트 착화합물 [Co(NH3)4Ch]＋는 두 가지의 기하 이성질체(geometric isomer)를 갖는다. 이에 대한 설명으로 틀린 것을 모두 고른 것은? 기. 두 가지 이성질체에는 cis-형과 trans-형이 있다. 두 가지 이성질체에서 코발트의 산화수는 동일하다",3,21],[200,65,"Q",200,"21.배위화합물","착화합물의 CFT",18,0,"","CHE0047",45,"회","중","①","다음 배위화합물 중에서 반자기성(diamagnetic) 물질은 몇 개인가? （단, Fe, Co, 26, 27, Cu의 원자 번호는 각각 29이다.) o Cu(H20)『， 저스핀 상태(low spin state) Fe(H20)~+, spin state) o 고스핀 상태(",4,21],[201,65,"Q",201,"21.배위화합물","착화합물",14,0,"","CHE0048",46,"회","중","④","배위화합물 [Co(H2NCH2CH2NH2hCb]+에서 H2NCH2CH2NH2(en)은 강한장 리간드 이며, Co의 원자번호는 27이다. 이 화합물에 대한 설명으로 옳지 않은 것은? @ 중심금속 Co의 산화수는 +3이다. ® 이 배위화합물은 반자성(diamagnetic)",5,21],[202,67,"Q",202,"21.배위화합물","착화합물",18,0,"","CHE0049",47,"회","중","①","배위 화합물 [Zn(H20hCI]Cl에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? （단, 30Zn은 12족 원소이고, 물의 어는점 내림 상수는 Kf = 1.9 °C · kg/mol이 다. ) 기. 배위수는 4이다. 착이온의 구조는 평면 사각형이다. ",6,21],[203,67,"Q",203,"21.배위화합물","착화합물",14,0,"","CHE0050",48,"회","중","⑤","다음은 저스핀인 Co(NH긴;+에서 Co3+이온의 바닥상태에서의 d-전자 배치와 d一d 전이의 흡수선 파장을 나타낸 것이다. Co 착이온 (NH깁~+ eg - - d-전자 배치 -tL tL tL t29 220nm 흡수선파장 고스핀인 CoFJ-에서 Co3+이온의 바닥상태",7,21],[204,69,"Q",204,"21.배위화합물","착화합물",17,0,"","CHE0051",49,"회","하","②","표는 배위화합물 (가)~（다)의 구조식과 착이온의 입체 구조를 나타낸 것이다. 배위화합물 (가) (나) (다) [Co 구조식 K2[MnCl4] Ca[크(CN)』 (NH깁5Cl]S04 착이온의 입체구조 사면체 평면사각형 팔면체 이에 대한 설명으로 옳은 것만을 〈보기〉에서",8,21],[205,69,"Q",205,"21.배위화합물","착화합물",14,0,"","CHE0052",50,"회","중","⑤","배위 화합물 A, B, C는 각각 [Cr(H20)6]Cl3, [Cr(H20)5Cl]Cl2, [Cr(H20)4Cl2]Cl 중 하 나이고, 표는 각 배위 화합물 lmol의 실험 결과를 나타낸 것이다. mol 배위화합물 색깔 수용액에서 AgN03와 반응할 때 침전되는 AgC",9,21],[206,71,"Q",206,"21.배위화합물","착화합물",5,0,"","CHE0053",51,"회","중","②","다음은 착이온 [CoC12L2]+에 대한 자료이다. o ° 홀전자 수: ° 입체 구조: 정사면체나 정팔면체 중 하냐 L: 。 중성 분자 [CoC12L2]＋에 대한 설명으로 옳은 것만을 〈보기〉에서 모두 고른 것은? （단, Co의 원자 번호는 27이다.) 기 . L은 두",10,21],[207,71,"Q",207,"21.배위화합물","착화합물",19,0,"","CHE0054",52,"회","중","①","다음은 백금 배위 화합물의 합성 과정이다. (가) 사염화백금 포타슘(K2PtCl4) 수용액에 적당량의 암모니아수를 침가하여 시 스 이성질체인 배위 화합물 A를 합성한다. (나) A 수용액에 충분한 양의 암모니아수를 첨가하여 배위 화합물 B를 합성한 다. B (다) 수용",11,21],[208,73,"Q",208,"21.배위화합물","착화합물",15,0,"","CHE0055",53,"회","중","⑤","다음은 착이온 CoLn(NH3)Ci2+에 관한 설명이다. 정팔면체 또는 정사면체 입체 구조 중 하나이다. 0 o L은 중성의 두자리 리간드이다. O 반자기성이다. 이에 관한 설명으로 옳지 않은 것은? （단, Co의 원자번호는 27이며, n은 자연수 이다.) @ @ n ",12,21],[209,73,"Q",209,"21.배위화합물","착화합물",17,0,"","CHE0056",54,"회","중","⑤","다음은 Ni2+ 이 암모니아(NH3), 에틸렌디아민(en)과 각각 6배위 착화합물을 생성하 는 반응의 화학 반응식과 착화합물의 구조를 나타낸 것이다. KI와 .'1S0는 각각 25°C에서의 생성 상수와 표준 반응 엔트로피이다. + 6NH/ aq) [3 + 6H20(l)",13,21],[210,75,"Q",210,"21.배위화합물","착화합물",15,0,"","CHE0057",55,"회","중","②","결정장 이론에 근거한 착이온들에 관한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? （단, Cr, Co, Ni의 원자 번호는 각각 24, 27, 28이 다.) 기 z축 상예 중심 금속 이온과 리간드들이 놓여 있는 선형 Ag(NH갑;에서 d겁 궤도 함수가 dx",14,21],[211,77,"Q",211,"21.배위화합물","착화합물",12,0,"","CHE0058",57,"회","하","③","배위화합물 A는 [Co(en)2Cl2]Cl이고, 배위화합물 B는 [Co(en\\ ]Cl3 (en = ethylene— diamine, H2NCH2CH2NH2)이다. 기. A는 기하 이성질체와 광학 이성질체를 가진다. L. B는 광학 이성질체만 가진다. 亡 결정장 갈라짐 ",15,21],[212,77,"Q",212,"21.배위화합물","착화합물",16,0,"","CHE0059",58,"회","중","⑤","H20, Br-, Co(III) 다음은 두자리 리가드 Phen에 배위 결합한 정팔면체 착이온 (가)와 (나)의 화학식이다. phen은 〈R二〉이다. (가) [Co (H20\\ (phen)Br]2+ (나) [Co (H20)2( phen)Br2「 기 (가)의 모든 기하 이성",16,21],[213,79,"Q",213,"21.배위화합물","착화합물",18,0,"","CHE0060",59,"회","중","⑤","표는 결정장 이론에 근거한 바닥상태의 3가지 착이온 (가)～（다)에 관한 자료이다. 각 착이온의 배위 구조는 정사면체, 사각 평면, 정팔면체 중 하나이다. (7t) {나) (다) [Fe (CN)6]4- [CoCl4]2- [Ni(CN\\]2- 회右」식 3 홀전자수 。 。 ",17,21],[214,79,"Q",214,"21.배위화합물","착화합물",17,0,"","CHE0061",60,"회","중","⑤","바닥상태 정사면체 착화합물 [MC14]2―에 관한 설명으로 옳지 않은 것은?（단, M은 원자 번호가 25인 임의의 원소기호이며, At는 정사면체 결정장 갈라짐 에너지이 다.) ® 중심 이온의 산화수는 +2이다. ® 중심 이온의 3dxy 오비탈의 에너지가 3dz2 오비탈",18,21],[215,81,"Q",215,"21.배위화합물","착화합물",18,0,"","CHE0062",61,"회","중","⑤","표는 결정장 이론에 근거한 바닥상태의 3가지 착이온에 대한 자료이다. X~Z는 각각 Fe, Co, Ni 중 하나이다. [XC14]2- [YC14]2- [ZC16]3- 화학식 2 3 5 홀전지수 입체구조 정사면체 정사면체 정팔면체 결정장 이론에 근거하여 바닥상태의 다음 ",19,21],[216,81,"Q",216,"21.배위화합물","CFT·high/low spin",17,0,"이해암기형","CHE0228",62,"회","하","②","바닥상태 정팔면체 착이온 [Fe(CN)5]3-과 [Fe(H20)5]3+에 관한 설명으로 옳지 않은 것은? CD [Fe(CN)군은 저스핀 화합물이다. ® [Fe(H20)6]3+은 반자기 성을 나타낸다. ® CN는 H20보다 강한 장을 형성한다. @ Fe 이온의 산화수는 ",20,21],[217,0,"Q",217,"21.배위화합물","착화합물 이성질체",16,0,"이해암기형","CHE0222",63,"회","하","④","다음의 (가)∼(다)는 전이 금속 이온과 한자리 리간드 혹은 두자리 리간드로 구성 된 착화합물이다. (가) [Pt(H O) Cl Br] (나) [Co(en) Cl ]+ (다) [Co(en)(NH ) Cl]2+ 2 2 3 2 2 3 3 이에 관한 설명으로 옳은 것만을 <",21,21],[218,277,"Q",218,"22.분자분광학","분자 분광학",14,0,"","CHE0203",45,"회","하","②","어떤 300MHz 'H핵자기공명(NMR) 스펙트럼에서 아세톤은 트라이메틸실레인 (TMS) 기준으로부터 화학적 이동 8 값이 2.0 인 단일 공명선(single resonance TMS Hz line)으로 나타났다. 이 아세톤의 단일 공명선은 기준으로부터 몇 떨어져 있는",1,14],[219,279,"Q",219,"22.분자분광학","분자 분광학",11,0,"","CHE0205",46,"회","중","④","그림은 원자번호가 35인 브롬(Br) 원자의 질량스펙트럼이다. 100 존 재 一---------------------------------- 50 비 (%) 。 78 79 80 81 82 질랑수(amu) 브롬 분자에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고",2,14],[220,277,"Q",220,"22.분자분광학","분자 분광학",18,0,"","CHE0204",46,"회","하","②","유기 화합물의 분석 자료와 각 자료로부터 얻을 수 있는 화합물의 정보를 짝지은 것으로 옳지 않은 것은? ® 질량 스펙트럼 _ 분자량 ® _ X선 회절 탄소 원자의 핵 스핀 ® 적외선(IR) 스펙트럼 _ 작용기 — @ lH 핵자기 공명(NMR) 스펙트럼 수소의 화학적 환",3,14],[221,279,"Q",221,"22.분자분광학","분자 분광학 : 질량분석기",16,0,"","CHE0206",48,"회","하","④","다음은 에데인의 수소가 염소로 치환된 어떤 화합물의 1H NMR 스펙트럼이다. Integral = 2 一 W \" Integral a 1 ＿ 5.0 4.0 3.0 2.0 1.0 0 PPM 화학적이동(o) 이에 해당하는 화합물로 옳은 것은? CD CH3CH2Cl @ CHC",4,14],[222,281,"Q",222,"22.분자분광학","분자 분광학",19,0,"","CHE0207",49,"회","중","②","그림은 화학식이 C3H80인 알코올의 ]H NMR 스펙트럼이고. a, b, c, d의 상대면 적(integral) 비는 2 : 1 : 2 : 3이다. d ―삼중선 b 다중선 |_- 삼중선 - , 5 4 3 화학적 이동(8) 이에 대한 설명으로 옳은 것만을 〈보기〉에서 ",5,14],[223,281,"Q",223,"22.분자분광학","분광학",13,0,"","CHE0208",50,"회","하","④","그림은 3가지 화합물 디에틸에터(CH3CH20CH2CH3), 아세톤(CH3COCH3), 일산화탄소 (CO)에 대하여 탄소(C)와 산소(0) 결합의 산축(stretching) 진동의 저분해능 적외 선 분광스펙트럼(low resolution IR spectrum)을 각각 ",6,14],[224,283,"Q",224,"22.분자분광학","분자분광학",18,0,"","CHE0209",51,"회","중","①","다음은 분자식이 C묘802인 어떤 화합물의 며 NMR 스펙트럼 특성이다. 。 1개의 단일선, 1개의 삼중선, 1개의 사중선이 나타난다. > > ° 화학적 이동(&)의 크기 순서는 단일선 사중선 삼중선 이다. 이 화합물로 적절한 것은? 。 II CD CH30CCH2CH3",7,14],[225,285,"Q",225,"22.분자분광학","분자 분광학",17,0,"","CHE0210",52,"회","상","④","C, H, 88 그림은 0로 구성된 어떤 화합물(분자량 = g/mol)의 머_NMR 스펙트럼 을 나타낸 것이다. 스펙트럼 봉우리의 면적비는 A: B : C=2 : 3 : 3이다. B c A 4 3 2 。 화학적 이동(ppm) 이에 관한 설명으로 옳은 것만을 〈보기〉에서",8,14],[226,287,"Q",226,"22.분자분광학","분광학 : 질량 분석기",18,0,"","CHE0211",53,"회","하","②","그림은 동위원소 XA와 YA로 구성된 A2의 전자 이온화 질량 스펙트럼을 나타낸 것 이다. 상 대 세 0.5 기 。 2X 2X+4 질량(m/z) A의 평균 원자량은? （단. 자연계에 존재하는 A의 동위원소는 XA와 YA 뿐이다.) CD ® ® X + 0.5 X+l X ",9,14],[227,287,"Q",227,"22.분자분광학","분자 분광학 NMR",20,0,"","CHE0212",54,"회","상","②","1H-NMRO 스H펙트:H럼을B 다음은 어떤 화합물의 구조와 나 타낸 것이다. HH N0H2A DC (L) (2) (c) (7) 8.0 7.5 7.0 화학적 이동(ppm) ~ HA HA, HB, He, Ho 스펙트럼에서 HD에 해당히는 봉우리를 골라 순서로 옳게 나열한",10,14],[228,289,"Q",228,"22.분자분광학","분자 분광학 : 질량분석기",11,0,"","CHE0213",55,"회","중","⑤","그림은 이원자 분자 A2의 전자 이온화 질량 스펙트럼 중 어미 피크(parent peak) 부분을 나타낸 것이다. 이 때, M은 질량수가 작은 동위원소 A의 원자량이다. 0.9 0605 상 대 세 기 -----------………-········· 0.1--+-......",11,14],[229,289,"Q",229,"22.분자분광학","분자 분광학 IR",19,0,"","CHE0214",56,"회","하","②","다음 화합물의 적외선 흡수 스펙트럼에서 (가)， （나)， （다)에 해당하는 봉우리의 파수(wavenumber)를 비교한 것으로 옳은 것은? ° H H / || (가)\\ （다) C C / \\ / \\ H3C (나) O CH3 : (가) CH2의 C_H 신축운동 : C-0 ",12,14],[230,291,"Q",230,"22.분자분광학","분자 분광학",13,0,"","CHE0215",57,"회","중","⑤","다음은 분자식이 GH60인 유기화합물의 면_NMR 스펙트럼을 나타낸 것이다. A 펙트럼 봉우리의 면적비는 A : B : C = 2 : 1 : 3이다. c B A 5 4 3 2 。 화학적 이동(ppm) 이 화합물과 스펙트럼의 설명으로 옳은 것만을 〈보기〉에서 있는 대로 ",13,14],[231,293,"Q",231,"22.분자분광학","분자 분광학 IR&NMR",15,0,"","CHE0216",58,"회","상","①","C4H100 13C 표는 화학식 이 인 두 이성질체 A와 B의 적외선(IR)과 핵자기 공명 (NMR) 분광학 자료이다. IR 13C NMR ppm) 주요 특성 봉우리(v, cm까 봉우리(8, A 2950, 1130 80, 57, 22 B 3368, 2973, 1202 ",14,14],[232,9,"Q",232,"23.유기화학","구조 이성질체",10,0,"","CHE0240",38,"회","—","③","분자식 C H O 로 표시되는 이성질체는 몇 개인가? 3 8 ① 1 ② 2 ③ 3 ④ 4 ⑤ 5 5 Chapter 01. 2001년 제38회 변리사시험",1,29],[233,243,"Q",233,"23.유기화학","유기화학: 구조 이성질체",20,0,"","CHE0177",42,"회","상","②","다음 설명 중에서 틀린 것을 모두 고른 것은? 기 탄화수소 C5H12의 가능한 구조 이성질체의 수는 모두 4개다. L 탄화수소 C3바의 가능한 구조 이성질체의 수는 모두 3개이다. (C5H3Cb, 亡 방향족 화합물인 트리클로로벤젠 trichlorobenzene)의 가능",2,29],[234,245,"Q",234,"23.유기화학","유기화학",40,0,"","CHE0178",43,"회","상","①","다음 중 〈보기〉와 같은 화학적 성질을 가진 유기물은? 기 Br2를 침가하면 Br2의 적갈색이 빠르게 사라진다. Pd 존재 하에서 H2와 반응하여 환원된다. L 亡 오존과 반응시킨 뒤, 디메틸 황화물(dimethyl sulfide)로 처리하면 두 종 류의 알데하이드(a",3,29],[235,247,"Q",235,"23.유기화학","유기화학 : 광학 활성",13,0,"","CHE0180",44,"회","상","①","탄소원자가 7개인 다음 탄화수소 중 광학 이성질체(거울상 이성질체)를 갖는 것 은? CD CH3CH2CH(CH3) CH2CH2CH산 3-메틸핵산 ® CH3CH2CH2CH2CH2CH2CH3 n-헵탄 @ CH3CH2CH(CH2CH3)CH2CH3 3-에틸펜탄 @ CH3C (",4,29],[236,245,"Q",236,"23.유기화학","유기화학",19,0,"","CHE0179",44,"회","하","⑤","다음의 각 화합물 쌍 중에서 공명 구조 관계가 아닌 것은? 。 ‘ 。 @ » 0-< 0 < ® « » .. ® : o //0` o ' · » 'O·· 』。``o· 빼 o: :O「 @ II .. _ —I .. H-C-N-H » 빼 H C=N-H / : ® ‘ ’",5,29],[237,249,"Q",237,"23.유기화학","유기화학: 명명법",11,0,"","CHE0181",45,"회","중","②","〈보기〉는 화합물의 구조식과 명칭을 나타낸 것이다. IUPAC 명명법에 따라 각 화 합물의 명칭을 옳게 나타낸 것을 모두 고른 것은? \\ 겨 2, 2, 6—trimethylheptane \\ L 2-methyl-4-pentene \\ 亡 3-ethyl-2-methylpen",6,29],[238,251,"Q",238,"23.유기화학","유기화학 : 구조 이성질체",15,0,"","CHE0183",46,"회","중","③","다음 화합물의 구조 이성질체 수를 각각 a, b, c라 할 때, 이들의 크기를 옳게 나 타낸 것은? a : C4H9Cl b : C4H100 c : C5H12 CD a =b > c ® a> b >c ® b >a>c @ b >c> a ® c>a =b",7,29],[239,251,"Q",239,"23.유기화학","유기화학 : 고분자",19,0,"","CHE0182",46,"회","중","①","다음과 같이 1, 3-부타디 엔과 스티 렌을 공중합 반응시 키 면 Styrene-Butadiene S~BR의 구조식+으u로 Rubber(SBR)를 얻는다. 옳은 것은? 一 Styrene-Butadiene Rubber(SBR) ® ® ® @ ® `",8,29],[240,253,"Q",240,"23.유기화학","유기화학 고분자",11,0,"","CHE0185",47,"회","하","②","다음 중 기하 이성질체가 가능한 화합물은? CD 1, 2-dichloroethane ® 1, 2-dichloroethene ® 1, 2—dichloroethyne © 1, 2-dimethylcyclohexene ® 1一chloro-2-methylcyclohexene",9,29],[241,253,"Q",241,"23.유기화학","유기화학 고분자",20,0,"","CHE0184",47,"회","하","⑤","다음 고분자 화합물에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것 은? I I I ‘ 기 수소 결합을 할 수 있다. L 축합 중합 고분자 화합물이다. 亡 가수 분해 반응을 할 수 있다. ® L ® @ ® ® 기 기 亡 L 亡 기 L 亡",10,29],[242,255,"Q",242,"23.유기화학","유기화학",12,0,"","CHE0186",48,"회","하","③","다음은 바닐 린(vanillin)의 구조식 이 다. OCH3 OH 바닐린에 포함되어 있는 작용기로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? 기 알데하이드(aldehyde) L 케톤(ketone) 亡 에스터(ester) 己 에테르(ether) 口 알코올(alcoh",11,29],[243,255,"Q",243,"23.유기화학","유기화학",15,0,"","CHE0187",48,"회","하","①","수용액에서 포도당(D-glucose)은 그림과 같이 시슬형과 고리형으로 존재할 수 있다. I a CHO 0` H T • H OH f 수용액에서 사슬형 포도당이 고리형으로 바뀌면서 새로운 화학 결합이 만들어질 때, 결합하는 탄소(번호)와 산소(알파벳)로 옳은 것은? — ",12,29],[244,259,"Q",244,"23.유기화학","유기화학",11,0,"","CHE0189",49,"회","중","③","그림은 어떤 펩타이드의 구조를 나타낸 것이다. OIIco 。 0 HN HcIc|c|N H N H 2 ― 。 니 \\ 均 |— ― 〈 ― g 다 뱌 | 어 | _ 」 —g 回 〉 이 펩타이드에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? 기 • 세 개 의",13,29],[245,257,"Q",245,"23.유기화학","유기화학",15,0,"","CHE0188",49,"회","상","③","표는 탄화수소 (가)～（다)의 화학식과 각 화합물의 sp2 혼성 탄소 수를 나타낸 것 이다. (71-) 탄화수소 (냐) (다) C3~ C4fu 화5」식 C3바 2 4 s/ 혼성탄소수 。 탄화수소 (가)～다)에 대한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것 ",14,29],[246,261,"Q",246,"23.유기화학","유기화학 고분자 합성",11,0,"","CHE0190",50,"회","하","⑤","다음 중 고분자가 합성될 때 물이 빠져나오면서 형성되는 것은? ® 폴리에틸렌 -+CH2CH2눕 Tl @ 폴리염화비닐 -+CH2CH+n : ® 폴리스티 렌 +CH2CH눅 COOCH3 I @ 폴리아세트산비닐 -+CH2CH~ 0 0 폴리에스터 +0CH2CH20」〔〈〉』+,,",15,29],[247,263,"Q",247,"23.유기화학","유기화학",12,0,"","CHE0191",50,"회","중","④","다음 화합물 중 카이 랄 중심 (chiral center) 이 있으면서 끓는점 이 가장 높은 것 은? CD CH3CH2CHFCl @ CH3CH=CFCl (CH3)3CCH2CHFCl @ @ CH3CH2CH2CH2CH2CHFCl ® (CH3)2CFCH2CH2CH2Cl",16,29],[248,265,"Q",248,"23.유기화학","유기화학",13,0,"","CHE0193",51,"회","중","⑤","분자식이 C4H100이고 알코올인 구조 이성질체의 수와 1차 알코올의 수를 순서대로 옳게 나열한 것은? @ 2, 2 @ 3, 1 @ 3, 2 @ 4, 1 ® 4, 2",17,29],[249,263,"Q",249,"23.유기화학","유기화학",19,0,"","CHE0192",51,"회","하","④","그림은 단량체 A로부터 합성된 중합체의 구조를 나타낸 것이다. A에 대한 설명으로 옳은 것은? ® 분자식은 C9H12이다. ® 카이랄 탄소를 가지고 있다. ® 모든 탄소는 sp2 혼성궤도 함수를 가진댜 @ Br2 첨가 반응을 한다. ® H20가 제거되는 축합반응에 의해",18,29],[250,265,"Q",250,"23.유기화학","유기화학",11,0,"","CHE0194",52,"회","하","④","그림은 분자식이 C3H6인 단량체가 반응하여 생성된 고분자의 구조 일부를 나타낸 것이다. 이 고분자에 관한 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? 겨. 열경화성이다. L. 첨가 중합 반웅으로 형성된다. 亡. 단량체는 프로필렌(CH3CHCH2)이다. ®",19,29],[251,267,"Q",251,"23.유기화학","유기 화학 구조 이성질체",17,0,"","CHE0195",53,"회","중","④","분자식이 CsH120인 화합물의 구조 이성질체 중 2차 알코올의 개수는? (D O ® 1 @ 2 @ 3 @ 4",20,29],[252,267,"Q",252,"23.유기화학","유기 화학 구조 이성질체",14,0,"","CHE0196",54,"회","하","③","분자식이 C6H14인 탄화수소의 구조 이성질체 개수는? CD3 @ 4 ® 5 @ 6 ® 7",21,29],[253,269,"Q",253,"23.유기화학","유기화학 구조 이성질체",12,0,"","CHE0197",56,"회","중","④","분자식이 C5H120인 에테르(ether)의 구조 이성질체 개수는? ® 7 @ 3 @ 4 ® 5 @ 6",22,29],[254,269,"Q",254,"23.유기화학","유기 화학",14,0,"","CHE0198",57,"회","중","①","분자식이 C\"8인 탄화수소의 구조 이성질체에 관한 설명이다. 다음 설명으로 옳은 것만을 〈보기〉에서 있는 대로 고른 것은? ‘ 기. 고리형 탄화수소는 2가지이다. L. 불포화 탄화수소는 2가지이다. 亡 • sp 혼성 궤도함수를 가지는 탄소가 있다. ® L ® @ 기 ®",23,29],[255,271,"Q",255,"23.유기화학","유기화학",14,0,"","CHE0199",59,"회","중","④","분자식이 C5H10인 탄화수소의 구조 이성질체 중 고리형 탄화수소의 개수는? @ 2 ® 3 ® 4 ® 5 ® 6",24,29],[256,271,"Q",256,"23.유기화학","유기 화학",15,0,"","CHE0200",60,"회","상","④","분자식이 C4H80인 화합물의 구조 이성질체 중 알코올을 제외한 고리형 구조 이성 질체의 수는? ® 5 ® 6 ® 8 @ 4 @ 7",25,29],[257,273,"Q",257,"23.유기화학","유기 화학",14,0,"","CHE0201",61,"회","하","⑤","그림은 미녹시딜(C9H15N50)의 구조식이다. H H HH H HH /\\ 이 구조의 미녹시딜 한 분자에는 x개의 고립(비공유) 전자쌍과 y개의 시그마(a) + 결합이 있다. x y는? ® @ 27 @ 28 ® 31 @ 35 38",26,29],[258,273,"Q",258,"23.유기화학","유기화학",18,0,"이해암기형","CHE0202",62,"회","하","①","다음 중 분자식 이 C1H14이 아닌 것은? CD methylenecyclohexane ® cycloheptane @ 1-ethyl- 2-methylcyclobutane @ hept-1-ene ® ethylcyclopentane",27,29],[259,0,"Q",259,"23.유기화학","케톤 구조 이성질체",11,0,"이해암기형","CHE0217",63,"회","하","③","분자식이 C H O인 화합물 중 케톤(ketone)의 구조 이성질체 개수는? 6 12 ① 4 ② 5 ③ 6 ④ 7 ⑤ 8",28,29],[260,0,"Q",260,"23.유기화학","벤젠 친전자성 방향족 치환",17,0,"이해암기형","CHE0223",63,"회","상","②","6 FeCl ○ C H + Cl  A 6 6 2 H SO   ○ C H + HNO B 6 6 3 AlCl ○ C H + CH Cl  C 6 6 3 이 반응에 관한 설명으로 옳은 것만을 <보기>에서 있는 대로 고른 것은? (단, A∼C는 주생성물이고 벤",29,29]];
+const THEORY = {"sec":[],"map":{}};
+</script>
+<script>
+/* =======================================================================
+   화학 260 서재 — 단일 HTML 학습 앱
+   데이터: [no,page,file,fpage,big,sub,localNo,star,type,code,year,src,level,ans,body]
+   ======================================================================= */
+const F={NO:0,PG:1,FILE:2,FPG:3,BIG:4,SUB:5,LNO:6,STAR:7,TYPE:8,CODE:9,YEAR:10,SRC:11,LV:12,ANS:13,BODY:14,UNO:15,UCNT:16};
+const FILES=['Q','S'];
+const PAGES={'Q':260,'S':260};
+const FNAME={'Q':'문제 260쪽 (chem_q_260.pdf)','S':'해설 260쪽 (chem_sol_260.pdf)'};
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+/* ---------------- IndexedDB ---------------- */
+let db;
+function open(){return new Promise((ok,no)=>{
+  const r=indexedDB.open('chem260',1);
+  r.onupgradeneeded=e=>{const d=e.target.result;
+    d.createObjectStore('pdf');d.createObjectStore('ink');d.createObjectStore('kv');};
+  r.onsuccess=e=>{db=e.target.result;ok()};r.onerror=()=>no(r.error);});}
+function tx(s,m){return db.transaction(s,m).objectStore(s)}
+function get(s,k){return new Promise(ok=>{const r=tx(s,'readonly').get(k);r.onsuccess=()=>ok(r.result);r.onerror=()=>ok(null)})}
+function put(s,k,v){return new Promise(ok=>{const r=tx(s,'readwrite').put(v,k);r.onsuccess=()=>ok(1);r.onerror=()=>ok(0)})}
+function del(s,k){return new Promise(ok=>{const r=tx(s,'readwrite').delete(k);r.onsuccess=()=>ok(1);r.onerror=()=>ok(0)})}
+function keys(s){return new Promise(ok=>{const r=tx(s,'readonly').getAllKeys();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>ok([])})}
+function all(s){return new Promise(ok=>{const r=tx(s,'readonly').getAll();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>ok([])})}
+
+/* ---------------- 상태 ---------------- */
+let ST={};            // no -> {h:[{m:'O'|'X'|'Q', t:ts, s:초}]}
+let SET={rot:{},zoom:1,mask:false,maskH:1,pencil:false,timer:true,autoNext:true};
+let MPOS={};          // no -> {u,v,w,h}  가리개 수동 위치
+
+/* 예전 형식({m,r}) → 회독 기록 배열로 옮김 */
+function migrate(){
+  let ch=0;
+  for(const k in ST){const v=ST[k];
+    if(v&&!v.h){const n=Math.max(1,v.r||1),h=[];
+      for(let i=0;i<n;i++)h.push({m:i===n-1?v.m:'O',t:v.t||Date.now()});
+      ST[k]={h};ch=1}}
+  return ch;
+}
+const hist=no=>((ST[no]||{}).h)||[];
+const lastM=no=>{const h=hist(no);return h.length?h[h.length-1].m:''};
+const reps=no=>hist(no).length;
+const lastSec=no=>{const h=hist(no);for(let i=h.length-1;i>=0;i--)if(h[i].s)return h[i].s;return 0};
+const secFmt=x=>Math.floor(x/60)+"'"+String(x%60).padStart(2,'0')+'"';
+const saveST=()=>put('kv','status',ST);
+let HAVE={};          // fileId -> true  (등록된 PDF)
+let MERGED=false;
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const toast=(m,ms=1600)=>{const d=document.createElement('div');d.className='toast';d.textContent=m;
+  document.body.appendChild(d);setTimeout(()=>d.remove(),ms)};
+
+/* ---------------- 필터 ---------------- */
+const BIGS=[...new Set(DATA.map(r=>r[F.BIG]))];
+let FL={big:'',lv:'',type:'',era:'',star:false,mark:'',q:''};
+
+function pass(r){
+  if(FL.big&&r[F.BIG]!==FL.big)return 0;
+  if(FL.lv&&r[F.LV]!==FL.lv)return 0;
+  if(FL.type&&r[F.TYPE]!==FL.type)return 0;
+  if(FL.era==='new'&&r[F.YEAR]<59)return 0;
+  if(FL.era==='old'&&r[F.YEAR]>40)return 0;
+  if(FL.star&&!r[F.STAR])return 0;
+  const m=lastM(r[F.NO]);
+  if(FL.mark==='new'&&m)return 0;
+  if(FL.mark==='again'&&hist(r[F.NO]).filter(x=>x.m==='X').length<2)return 0;
+  if(FL.mark&&FL.mark!=='new'&&FL.mark!=='again'&&m!==FL.mark)return 0;
+  if(FL.q){const s=FL.q.toLowerCase();
+    if(!(r[F.CODE].toLowerCase().includes(s)||r[F.SUB].includes(FL.q)||r[F.BIG].includes(FL.q)
+        ||r[F.BODY].includes(FL.q)||String(r[F.NO])===FL.q||String(r[F.YEAR])===FL.q))return 0;}
+  return 1;
+}
+const filtered=()=>DATA.filter(pass);
+
+/* ---------------- 서재 렌더 ---------------- */
+function chip(label,on,fn,sub){
+  const b=document.createElement('button');b.className='chip'+(on?' on':'');
+  b.innerHTML=label+(sub!=null?` <small>${sub}</small>`:'');b.onclick=fn;return b;}
+
+function drawFilters(){
+  const a=$('#fBig');a.innerHTML='';
+  a.appendChild(chip('전체',!FL.big,()=>{FL.big='';draw()},DATA.length));
+  BIGS.forEach(b=>a.appendChild(chip(b,FL.big===b,()=>{FL.big=FL.big===b?'':b;draw()},DATA.filter(r=>r[F.BIG]===b).length)));
+  const e=$('#fEtc');e.innerHTML='';
+  [['상','lv'],['중','lv'],['하','lv'],['—','lv']].forEach(([v,k])=>
+    e.appendChild(chip(v==='—'?'난이도 없음':v,FL[k]===v,()=>{FL[k]=FL[k]===v?'':v;draw()},
+      DATA.filter(r=>r[F.LV]===v).length)));
+  ['이해암기형','응용계산형'].forEach(v=>e.appendChild(chip(v,FL.type===v,()=>{FL.type=FL.type===v?'':v;draw()},
+    DATA.filter(r=>r[F.TYPE]===v).length)));
+  e.appendChild(chip('최근 5회',FL.era==='new',()=>{FL.era=FL.era==='new'?'':'new';draw()},
+    DATA.filter(r=>r[F.YEAR]>=59).length));
+  e.appendChild(chip('38~40회',FL.era==='old',()=>{FL.era=FL.era==='old'?'':'old';draw()},
+    DATA.filter(r=>r[F.YEAR]<=40).length));
+  e.appendChild(chip('안 푼 것',FL.mark==='new',()=>{FL.mark=FL.mark==='new'?'':'new';draw()}));
+  e.appendChild(chip('틀린 것',FL.mark==='X',()=>{FL.mark=FL.mark==='X'?'':'X';draw()}));
+  e.appendChild(chip('헷갈림',FL.mark==='Q',()=>{FL.mark=FL.mark==='Q'?'':'Q';draw()}));
+  e.appendChild(chip('두 번 이상 틀림',FL.mark==='again',()=>{FL.mark=FL.mark==='again'?'':'again';draw()}));
+}
+
+function drawSpectrum(){
+  const s=$('#spec');
+  if(s.childElementCount!==DATA.length){s.innerHTML='';
+    DATA.forEach(r=>{const i=document.createElement('i');i.title=`${r[F.NO]} ${r[F.SUB]}`;
+      i.onclick=()=>openView(r[F.NO]);s.appendChild(i)});}
+  let c={O:0,X:0,Q:0,z:0};
+  DATA.forEach((r,i)=>{const no=r[F.NO],m=lastM(no),n=Math.min(3,reps(no));
+    s.children[i].className=m?`${m} r${n}`:'';
+    if(m){c[m]++;s.children[i].title=`${no} ${r[F.SUB]} · ${n}회독`}else c.z++;});
+  $('#c0').textContent=c.z;$('#cO').textContent=c.O;$('#cQ').textContent=c.Q;$('#cX').textContent=c.X;
+}
+
+function markBadge(no){
+  const h=hist(no);
+  if(!h.length)return '<div class="mk"><span class="add">+</span></div>';
+  const show=h.slice(-4), off=h.length-show.length;
+  const t=lastSec(no);
+  return '<div class="mk">'+show.map((x,i)=>
+    `<span class="h"><b>${off+i+1}</b><i class="${x.m}">${x.m==='Q'?'△':x.m}</i></span>`).join('')
+    +(t?`<span class="tm">${secFmt(t)}</span>`:'')+'</div>';
+}
+function row(r){
+  const d=document.createElement('div');d.className='item';
+  const rep=reps(r[F.NO]);
+  const past=`<span class="tag past">${r[F.YEAR]}회 ${r[F.LNO]}번</span>`;
+  d.innerHTML=`<div class="num">${r[F.NO]}</div>
+   <div class="body">
+     <div class="meta">
+       ${past}
+       <span class="sub">${r[F.SUB]} · 단원 ${r[F.UNO]}/${r[F.UCNT]}</span>
+       ${r[F.TYPE]?`<span class="tag">${r[F.TYPE]}</span>`:''}
+       <span class="tag lv${r[F.LV]}">난이도 ${r[F.LV]}</span>
+       ${rep?`<span class="tag">${rep}회독</span>`:''}
+     </div>
+     <div class="prev">${esc(r[F.BODY])||'<i style="color:#A9ACB1">그림 문제 — 페이지에서 확인</i>'}</div>
+   </div>
+   ${markBadge(r[F.NO])}`;
+  d.onclick=e=>{ if(e.target.closest('.mk')) histSheet(r[F.NO]); else openView(r[F.NO]); };
+  return d;
+}
+const esc=s=>String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+
+function draw(){
+  drawFilters();drawSpectrum();
+  const L=filtered(),box=$('#list');box.innerHTML='';
+  $('#cnt').textContent=`${L.length}문제`;
+  if(!L.length){box.innerHTML='<div class="empty"><b>조건에 맞는 문제가 없습니다</b>필터를 줄여 보세요.</div>';return}
+  let cur='';const frag=document.createDocumentFragment();
+  L.forEach(r=>{const k=r[F.BIG];
+    if(k!==cur){cur=k;const h=document.createElement('div');h.className='grouphd';h.textContent=k;frag.appendChild(h)}
+    frag.appendChild(row(r))});
+  box.appendChild(frag);
+}
+
+/* ---------------- PDF 등록 ---------------- */
+async function loadHave(){const k=await keys('pdf');HAVE={};k.forEach(x=>HAVE[x]=1);}
+
+/* 저장소에 함께 올려 둔 PDF를 받아 온다 — 기기마다 다시 넣지 않아도 되게 */
+async function tryRemote(url,key){
+  try{
+    const r=await fetch('pdf/'+url+'.pdf',{cache:'no-cache'});
+    if(!r.ok)return 0;
+    const buf=await r.arrayBuffer();
+    const head=String.fromCharCode.apply(null,new Uint8Array(buf.slice(0,5)));
+    if(head.indexOf('%PDF')<0)return 0;          // 404 페이지가 온 경우
+    await put('pdf',key,buf);return 1;
+  }catch(e){return 0}
+}
+async function ensureFiles(force){
+  const need=FILES.filter(f=>force||!HAVE[f]);
+  const bar=$('#dl');
+  if(!need.length)return;
+  bar.classList.remove('hide','err');
+  let got=0;
+  for(let i=0;i<need.length;i++){
+    bar.textContent=`시험지 받는 중 — ${i+1}/${need.length}`;
+    if(await tryRemote(need[i],need[i]))got++;
+  }
+  await loadHave();draw();renderSettings();
+  if(got){bar.textContent=`시험지 ${got}개를 받았습니다`;setTimeout(()=>bar.classList.add('hide'),2500)}
+  else if(force){bar.classList.add('err');bar.textContent='저장소에서 PDF를 찾지 못했습니다 — pdf 폴더에 Q.pdf · S.pdf 가 있는지 확인하세요'}
+  else bar.classList.add('hide');
+}
+
+async function addFiles(fileList){
+  const seen={};
+  for(const f of fileList){
+    let buf;
+    try{buf=await f.arrayBuffer()}catch(e){toast('파일을 읽지 못했습니다');continue}
+    let n=0;
+    try{const d=await pdfjsLib.getDocument({data:buf.slice(0)}).promise;n=d.numPages}catch(e){toast(f.name+' — PDF가 아닙니다');continue}
+    let id=null;
+    const nm=f.name.toLowerCase();
+    if(/sol|해설/.test(nm)) id='S';
+    else if(/q|문제/.test(nm)) id='Q';
+    else if(!HAVE['Q']&&!seen['Q']) id='Q';   // 이름으로 못 가리면 빈 자리에 넣는다
+    else if(!HAVE['S']&&!seen['S']) id='S';
+    if(!id){toast(f.name+' — 문제인지 해설인지 못 알아봤습니다. 이름에 q 또는 sol 을 넣어주세요',3000);continue}
+    seen[id]=1;
+    await put('pdf',id,buf);
+    toast((id==='Q'?'문제':'해설')+' 등록 (' + n + '쪽)');
+  }
+  await loadHave();renderSettings();
+}
+
+function locate(r){return {id:'Q',page:r[F.FPG]}}
+
+/* ---------------- 뷰어 ---------------- */
+let VNO=null, VDOC=null, VDOCID=null, VPAGE=null, VLIST=[];
+let TOOL={mode:'pen',color:'#16181B',w:2};
+let LAYER=0, LAYERS=1, HIDEOLD=false;
+let INK={};   // layerIndex -> [ {c,w,hl,p:[u,v,...]} ]
+let RENDER={W:0,H:0,rot:0,scale:1};
+
+async function openView(no,list){
+  VNO=no;
+  VLIST=list||filtered().map(r=>r[F.NO]);
+  if(!VLIST.includes(no))VLIST=DATA.map(r=>r[F.NO]);
+  $('#view').classList.remove('hide');
+  await showProblem();
+}
+function closeView(){$('#view').classList.add('hide');VNO=null;draw()}
+
+function rec(no){return DATA[no-1]}
+
+async function showProblem(){
+  const r=rec(VNO), loc=locate(r);
+  $('#vT1').textContent=`${r[F.YEAR]}회 ${r[F.LNO]}번 · ${r[F.SUB]}`;
+  $('#vT2').textContent=`${VNO}/260 · ${r[F.BIG]} ${r[F.UNO]}/${r[F.UCNT]} · 난이도 ${r[F.LV]}`+(r[F.TYPE]?` · ${r[F.TYPE]}`:'')+` · ${r[F.CODE]}`;
+  // ink
+  const saved=await get('ink',String(VNO));
+  INK=saved||{0:[]};LAYERS=Math.max(1,Object.keys(INK).length);LAYER=LAYERS-1;
+  fillLayerSel();
+  $('#inkc').classList.toggle('pen',!!SET.pencil);
+  await renderPage(loc);
+  paintInk();
+  await setupMask(VPAGE);
+  syncMarkBtns();
+  tmReset();
+}
+
+async function renderPage(loc){
+  const c=$('#pdfc');
+  if(!HAVE[loc.id]){
+    const ctx=c.getContext('2d');const W=760,H=1080;
+    c.width=W;c.height=H;c.style.width=W/2+'px';c.style.height=H/2+'px';
+    $('#wrap').style.width=W/2+'px';$('#wrap').style.height=H/2+'px';
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#6E7278';ctx.font='600 26px -apple-system,sans-serif';ctx.textAlign='center';
+    ctx.fillText('PDF가 아직 등록되지 않았습니다',W/2,H/2-30);
+    ctx.font='20px -apple-system,sans-serif';
+    ctx.fillText('설정 → PDF 등록에서 chem_q_260.pdf 를 넣어주세요',W/2,H/2+10);
+    const ink=$('#inkc');ink.width=W;ink.height=H;ink.style.width=c.style.width;ink.style.height=c.style.height;
+    RENDER={W,H,rot:0,scale:1};return;
+  }
+  if(VDOCID!==loc.id){
+    const buf=await get('pdf',loc.id);
+    VDOC=await pdfjsLib.getDocument({data:buf.slice(0)}).promise;VDOCID=loc.id;
+  }
+  const page=await VDOC.getPage(Math.min(loc.page,VDOC.numPages));VPAGE=page;
+  const rot=(SET.rot[loc.id]||0);
+  const stage=$('#stage');
+  const avail=Math.min(stage.clientWidth-24, 900)*SET.zoom;
+  const base=page.getViewport({scale:1,rotation:rot});
+  const scale=avail/base.width;
+  const dpr=Math.max(2,Math.min(3,window.devicePixelRatio||1));
+  const vp=page.getViewport({scale:scale*dpr,rotation:rot});
+  const W=Math.round(vp.width),H=Math.round(vp.height);
+  const cssW=Math.round(W/dpr),cssH=Math.round(H/dpr);
+  c.width=W;c.height=H;c.style.width=cssW+'px';c.style.height=cssH+'px';
+  const ink=$('#inkc');ink.width=W;ink.height=H;ink.style.width=cssW+'px';ink.style.height=cssH+'px';
+  $('#wrap').style.width=cssW+'px';$('#wrap').style.height=cssH+'px';
+  await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+  RENDER={W,H,rot,scale:scale*dpr};
+}
+
+/* 좌표: 저장은 항상 회전 전 페이지 기준 정규화(u,v) → 회전해도 필기가 어긋나지 않음 */
+function toNorm(x,y){const{W,H,rot}=RENDER;
+  if(rot===90)return[y/H,1-x/W];
+  if(rot===180)return[1-x/W,1-y/H];
+  if(rot===270)return[1-y/H,x/W];
+  return[x/W,y/H];}
+function toPix(u,v){const{W,H,rot}=RENDER;
+  if(rot===90)return[(1-v)*W,u*H];
+  if(rot===180)return[(1-u)*W,(1-v)*H];
+  if(rot===270)return[v*W,(1-u)*H];
+  return[u*W,v*H];}
+
+function paintInk(){
+  const c=$('#inkc'),g=c.getContext('2d');
+  g.clearRect(0,0,c.width,c.height);
+  Object.keys(INK).map(Number).sort((a,b)=>a-b).forEach(L=>{
+    if(HIDEOLD&&L!==LAYER)return;
+    const old=L<LAYER;
+    (INK[L]||[]).forEach(s=>{
+      g.save();
+      g.globalAlpha=s.hl?0.32:(old?0.30:1);
+      g.strokeStyle=s.c;g.lineWidth=(s.hl?9:s.w)*RENDER.scale/2;
+      g.lineCap=s.hl?'butt':'round';g.lineJoin='round';
+      g.beginPath();
+      for(let i=0;i<s.p.length;i+=2){const[x,y]=toPix(s.p[i],s.p[i+1]);i?g.lineTo(x,y):g.moveTo(x,y)}
+      g.stroke();g.restore();
+    });
+  });
+}
+
+/* 그리는 중에는 새로 생긴 구간만 덧그린다 — 매번 전체를 다시 그리면 끊긴다 */
+function drawSeg(s,from){
+  const g=$('#inkc').getContext('2d');
+  g.save();
+  g.globalAlpha=1;g.strokeStyle=s.c;g.lineWidth=s.w*RENDER.scale/2;
+  g.lineCap='round';g.lineJoin='round';
+  g.beginPath();
+  for(let i=Math.max(0,from-2);i<s.p.length;i+=2){
+    const[x,y]=toPix(s.p[i],s.p[i+1]);
+    i===Math.max(0,from-2)?g.moveTo(x,y):g.lineTo(x,y);
+  }
+  g.stroke();g.restore();
+}
+
+/* ---------------- 필기 입력 ---------------- */
+let drawing=null;
+const inkc=()=>$('#inkc');
+function local(e){const b=inkc().getBoundingClientRect();
+  return[(e.clientX-b.left)/b.width*RENDER.W,(e.clientY-b.top)/b.height*RENDER.H]}
+
+$('#inkc').addEventListener('pointerdown',e=>{
+  if(SET.pencil&&e.pointerType!=='pen')return;
+  if(e.pointerType==='touch'&&!SET.pencil&&e.isPrimary===false)return;
+  if(!HAVE[locate(rec(VNO)).id])return;
+  inkc().setPointerCapture(e.pointerId);
+  const[x,y]=local(e);
+  if(TOOL.mode==='erase'){eraseAt(x,y);drawing={erase:1};return}
+  const s={c:TOOL.color,w:TOOL.w,hl:TOOL.mode==='hl'?1:0,p:[]};
+  const n=toNorm(x,y);s.p.push(n[0],n[1]);
+  (INK[LAYER]=INK[LAYER]||[]).push(s);drawing=s;
+  e.preventDefault();
+},{passive:false});
+
+$('#inkc').addEventListener('pointermove',e=>{
+  if(!drawing)return;
+  const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
+  if(drawing.erase){evs.forEach(ev=>{const[x,y]=local(ev);eraseAt(x,y)});return}
+  const from=drawing.p.length;
+  evs.forEach(ev=>{const[x,y]=local(ev);const n=toNorm(x,y);drawing.p.push(n[0],n[1])});
+  if(drawing.hl)paintInk();else drawSeg(drawing,from);
+  e.preventDefault();
+},{passive:false});
+
+function endDraw(){if(!drawing)return;drawing=null;paintInk();saveInk()}
+
+/* 아이패드: 펜슬이 닿은 동안에는 스크롤을 막고, 손가락일 때만 스크롤을 넘긴다 */
+function stylusGuard(e){
+  const t=e.touches&&e.touches[0];
+  if(!t)return;
+  if(!SET.pencil){e.preventDefault();return}      // 손가락으로 필기하는 모드
+  if(t.touchType==='stylus')e.preventDefault();   // 펜슬 모드: 펜슬만 막고 손가락은 스크롤
+}
+['touchstart','touchmove'].forEach(k=>
+  $('#inkc').addEventListener(k,stylusGuard,{passive:false}));
+$('#inkc').addEventListener('pointerup',endDraw);
+$('#inkc').addEventListener('pointercancel',endDraw);
+
+function eraseAt(x,y){
+  const R=14*RENDER.scale/2, arr=INK[LAYER]||[];
+  for(let i=arr.length-1;i>=0;i--){
+    const s=arr[i];
+    for(let k=0;k<s.p.length;k+=2){const[px,py]=toPix(s.p[k],s.p[k+1]);
+      if(Math.hypot(px-x,py-y)<R){arr.splice(i,1);break}}
+  }
+  paintInk();
+}
+let saveT;function saveInk(){clearTimeout(saveT);saveT=setTimeout(()=>put('ink',String(VNO),INK),300)}
+
+/* ---------------- 레이어 ---------------- */
+function fillLayerSel(){
+  const s=$('#tLayer');s.innerHTML='';
+  Object.keys(INK).map(Number).sort((a,b)=>a-b).forEach(L=>{
+    const o=document.createElement('option');o.value=L;o.textContent=(L+1)+'회독';s.appendChild(o)});
+  s.value=LAYER;
+}
+$('#tLayer').onchange=e=>{LAYER=+e.target.value;paintInk()};
+$('#tLayerAdd').onclick=()=>{const n=Math.max(...Object.keys(INK).map(Number))+1;INK[n]=[];LAYER=n;LAYERS=n+1;
+  fillLayerSel();paintInk();saveInk();toast((n+1)+'회독 레이어를 추가했습니다')};
+$('#tLayerEye').onclick=()=>{HIDEOLD=!HIDEOLD;$('#tLayerEye').classList.toggle('on',HIDEOLD);paintInk();
+  toast(HIDEOLD?'현재 회독만 보기':'모든 회독 겹쳐 보기')};
+
+/* ---------------- 답 가리개 ----------------
+   위치는 회전 전 페이지 기준 정규화 좌표로 다룬다.
+   기본값은 PDF 글자층에서 '답'을 찾아 자동으로 맞추고, 끌어서 옮기면 그 문제에 저장된다. */
+let MASK=null;
+
+function cssDpr(){return RENDER.W/Math.max(1,$('#wrap').clientWidth)}
+function normToCss(u,v){const d=cssDpr(),[x,y]=toPix(u,v);return[x/d,y/d]}
+function cssToNorm(x,y){const d=cssDpr();return toNorm(x*d,y*d)}
+
+async function detectAnswer(page){
+  try{
+    const vp=page.getViewport({scale:1,rotation:0});
+    const tc=await page.getTextContent();
+    let best=null;
+    for(const it of tc.items){
+      if(!it.str||it.str.indexOf('답')<0)continue;
+      const tr=pdfjsLib.Util.transform(vp.transform,it.transform);
+      const h=Math.abs(tr[3])||it.height||10;
+      const x=tr[4],y=tr[5]-h;
+      if(y/vp.height>0.5)continue;
+      if(!best||y<best.y)best={x,y,h};
+    }
+    if(!best)return null;
+    const u=Math.max(0,best.x/vp.width-0.012), v=Math.max(0,best.y/vp.height-0.010);
+    return {u,v,w:1.002-u,h:(best.h/vp.height)*2.6};
+  }catch(e){return null}
+}
+
+async function setupMask(page){
+  MASK = MPOS[VNO] || (page?await detectAnswer(page):null) || {u:0.27,v:0.10,w:0.71,h:0.030};
+  updateMask();
+}
+function updateMask(){
+  const m=$('#mask');
+  if(!SET.mask||!MASK||!VNO||!HAVE[locate(rec(VNO)).id]){m.classList.add('hide');return}
+  m.classList.remove('hide');
+  layoutMask();
+}
+function layoutMask(){
+  const m=$('#mask'),f=MPOS[VNO]?1:SET.maskH;
+  const [ax,ay]=normToCss(MASK.u,MASK.v);
+  const [bx,by]=normToCss(MASK.u+MASK.w,MASK.v+MASK.h*f);
+  m.style.left=Math.round(Math.min(ax,bx))+'px';
+  m.style.top=Math.round(Math.min(ay,by))+'px';
+  m.style.width=Math.round(Math.abs(bx-ax))+'px';
+  m.style.height=Math.round(Math.max(20,Math.abs(by-ay)))+'px';
+}
+
+/* 탭하면 열림 · 끌면 이동 · 오른쪽 아래 모서리로 크기 조절 */
+(function maskDrag(){
+  const m=$('#mask');let st=null;
+  m.addEventListener('pointerdown',e=>{
+    try{m.setPointerCapture(e.pointerId)}catch(_){}
+    st={x:e.clientX,y:e.clientY,l:m.offsetLeft,t:m.offsetTop,
+        w:m.offsetWidth,h:m.offsetHeight,
+        resize:e.target.classList.contains('grip'),moved:false};
+    e.preventDefault();e.stopPropagation();
+  });
+  m.addEventListener('pointermove',e=>{
+    if(!st)return;
+    const dx=e.clientX-st.x,dy=e.clientY-st.y;
+    if(!st.moved&&Math.hypot(dx,dy)<5)return;
+    st.moved=true;m.classList.add('drag');
+    if(st.resize){m.style.width=Math.max(30,st.w+dx)+'px';m.style.height=Math.max(16,st.h+dy)+'px'}
+    else{m.style.left=(st.l+dx)+'px';m.style.top=(st.t+dy)+'px'}
+    e.preventDefault();
+  });
+  const end=async()=>{
+    if(!st)return;
+    const wasMove=st.moved;st=null;m.classList.remove('drag');
+    if(!wasMove){m.classList.add('hide');return}     // 그냥 탭 → 답 보이기
+    const l=m.offsetLeft,t=m.offsetTop,w=m.offsetWidth,h=m.offsetHeight;
+    const a=cssToNorm(l,t), b=cssToNorm(l+w,t+h);
+    MASK={u:Math.min(a[0],b[0]),v:Math.min(a[1],b[1]),
+          w:Math.abs(b[0]-a[0]),h:Math.abs(b[1]-a[1])};
+    MPOS[VNO]=MASK;await put('kv','maskpos',MPOS);
+    toast('이 문제의 가리개 위치를 저장했습니다');
+  };
+  m.addEventListener('pointerup',end);m.addEventListener('pointercancel',end);
+})();
+
+/* 답 팝업 — 정답을 먼저 보여주고, 해설은 눌러야 펼쳐진다 */
+let SDOC=null;
+async function solDoc(){
+  if(SDOC)return SDOC;
+  if(!HAVE['S'])return null;
+  const buf=await get('pdf','S');
+  SDOC=await pdfjsLib.getDocument({data:buf.slice(0)}).promise;
+  return SDOC;
+}
+async function paintSol(no,cv,box){
+  const d=await solDoc();
+  if(!d){box.innerHTML='<p class="solnote">해설 PDF가 아직 없습니다 — 설정에서 chem_sol_260.pdf 를 넣어주세요.</p>';return}
+  const page=await d.getPage(Math.min(no,d.numPages));
+  const avail=Math.min(box.clientWidth||520,900);
+  const base=page.getViewport({scale:1});
+  const dpr=Math.max(2,Math.min(3,window.devicePixelRatio||1));
+  const vp=page.getViewport({scale:avail/base.width*dpr});
+  cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
+  cv.style.width='100%';cv.style.height='auto';
+  await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+}
+$('#tAns').onclick=()=>{
+  const r=rec(VNO);
+  const b=document.createElement('div');b.className='sheet ans';
+  b.innerHTML=`<div class="panel"><h2>${r[F.YEAR]}회 ${r[F.LNO]}번 정답</h2>
+    <p>${r[F.SUB]} · 난이도 ${r[F.LV]} · ${r[F.CODE]}</p>
+    <div class="ansbox"><b>답</b> ${esc(r[F.ANS])||'해설에서 확인'}</div>
+    <button class="btn" id="aSol" style="margin-top:12px">해설 보기</button>
+    <div id="solbox" class="solbox hide"><canvas id="solc"></canvas></div>
+    <button class="btn pri" id="aClose" style="margin-top:12px">닫기</button></div>`;
+  const box=b.querySelector('#solbox');
+  b.querySelector('#aSol').onclick=e=>{
+    box.classList.remove('hide');e.target.remove();
+    paintSol(VNO,b.querySelector('#solc'),box);
+  };
+  b.querySelector('#aClose').onclick=()=>b.remove();
+  b.onclick=e=>{if(e.target===b)b.remove()};
+  document.body.appendChild(b);
+};
+
+/* ---------------- 타이머 ---------------- */
+let TM={sec:0,iv:null};
+const tmFmt=x=>Math.floor(x/60)+':'+String(x%60).padStart(2,'0');
+function tmStop(){clearInterval(TM.iv);TM.iv=null;$('#tm').classList.add('off')}
+function tmRun(){if(TM.iv)return;$('#tm').classList.remove('off');
+  TM.iv=setInterval(()=>{TM.sec++;$('#tm').textContent=tmFmt(TM.sec)},1000)}
+function tmReset(){clearInterval(TM.iv);TM.iv=null;TM.sec=0;
+  $('#tm').textContent='0:00';$('#tm').classList.toggle('hide',!SET.timer);
+  if(SET.timer)tmRun();else tmStop()}
+$('#tm').onclick=()=>{
+  if(TM.iv){tmStop();toast('타이머 멈춤 — 다시 누르면 이어서')}
+  else{tmRun();if(TM.sec)toast('타이머 계속')}
+};
+
+/* ---------------- 뷰어 조작 ---------------- */
+function go(d){const i=VLIST.indexOf(VNO);const j=i+d;
+  if(j<0||j>=VLIST.length){toast(d>0?'마지막 문제입니다':'첫 문제입니다');return}
+  VNO=VLIST[j];showProblem()}
+$('#vPrev').onclick=()=>go(-1);
+$('#vNext').onclick=()=>go(1);
+$('#vBack').onclick=closeView;
+$('#tLock').onclick=()=>{const on=$('#stage').classList.toggle('lock');
+  $('#tLock').classList.toggle('on',on);
+  toast(on?'화면 고정 — 스크롤이 잠깁니다':'화면 고정 해제')};
+$('#tRot').onclick=async()=>{const id=locate(rec(VNO)).id;
+  SET.rot[id]=((SET.rot[id]||0)+90)%360;await put('kv','set',SET);
+  await renderPage(locate(rec(VNO)));paintInk();await setupMask(VPAGE)};
+$('#tZoom').onclick=async()=>{SET.zoom=SET.zoom>=1.8?1:SET.zoom+0.4;await put('kv','set',SET);
+  $('#tZoom').textContent=SET.zoom>1?Math.round(SET.zoom*100)+'%':'＋';
+  await renderPage(locate(rec(VNO)));paintInk();await setupMask(VPAGE)};
+$('#tUndo').onclick=()=>{const a=INK[LAYER];if(a&&a.length){a.pop();paintInk();saveInk()}};
+$('#tErase').onclick=()=>setTool('erase');
+$$('[data-pen]').forEach(b=>b.onclick=()=>setTool('pen',b.dataset.pen,b));
+$$('[data-hl]').forEach(b=>b.onclick=()=>setTool('hl',b.dataset.hl,b));
+function setTool(mode,color,el){
+  TOOL.mode=mode;if(color)TOOL.color=color;TOOL.w=+$('#tW').value;
+  $$('.tl').forEach(b=>b.classList.remove('on'));
+  (el||$('#tErase')).classList.add('on');
+  if(HIDEOLD)$('#tLayerEye').classList.add('on');
+  if($('#stage').classList.contains('lock'))$('#tLock').classList.add('on');
+}
+$('#tW').onchange=()=>{TOOL.w=+$('#tW').value};
+
+
+function syncMarkBtns(){
+  const m=lastM(VNO);
+  ['O','Q','X'].forEach(k=>$('#m'+k).classList.toggle('on',m===k));
+  $('#tHist').textContent=reps(VNO)?reps(VNO)+'회독':'기록';
+}
+async function mark(m){
+  const h=hist(VNO).slice();
+  h.push({m,t:Date.now(),s:TM.sec||0});
+  ST[VNO]={h};await saveST();
+  tmStop();syncMarkBtns();
+  const label=m==='O'?'맞음':m==='X'?'틀림':'헷갈림';
+  toast(`${h.length}회독 · ${label}${TM.sec?' · '+secFmt(TM.sec):''}`);
+  if(SET.autoNext)setTimeout(()=>go(1),380);
+}
+$('#mO').onclick=()=>mark('O');$('#mX').onclick=()=>mark('X');$('#mQ').onclick=()=>mark('Q');
+$('#tHist').onclick=()=>histSheet(VNO);
+
+/* 회독 기록 고치기 — 표시를 바꾸거나 지울 수 있다 */
+function histSheet(no){
+  const b=document.createElement('div');b.className='sheet';
+  const build=()=>{
+    const h=hist(no);
+    b.innerHTML=`<div class="panel"><h2>${no}번 회독 기록</h2>
+      <p>${rec(no)[F.SUB]} · ${rec(no)[F.CODE]}</p>
+      <div id="hl">${h.length?'':'<p style="padding:14px 0">아직 기록이 없습니다.</p>'}</div>
+      <button class="btn" id="hAdd">회독 기록 추가</button>
+      <button class="btn pri" id="hClose">닫기</button></div>`;
+    const box=b.querySelector('#hl');
+    h.forEach((x,i)=>{
+      const r=document.createElement('div');r.className='histrow';
+      r.innerHTML=`<span class="rn">${i+1}회독</span>
+        <span class="sel">
+          <button data-m="O" class="${x.m==='O'?'on':''}">맞음</button>
+          <button data-m="Q" class="${x.m==='Q'?'on':''}">헷갈림</button>
+          <button data-m="X" class="${x.m==='X'?'on':''}">틀림</button>
+        </span>
+        <span class="sec">${x.s?secFmt(x.s):''}</span>
+        <button class="rm">✕</button>`;
+      r.querySelectorAll('.sel button').forEach(btn=>btn.onclick=async()=>{
+        x.m=btn.dataset.m;ST[no]={h};await saveST();build();drawSpectrum();if(VNO===no)syncMarkBtns()});
+      r.querySelector('.rm').onclick=async()=>{
+        h.splice(i,1);h.length?ST[no]={h}:delete ST[no];await saveST();build();drawSpectrum();
+        if(VNO===no)syncMarkBtns()};
+      box.appendChild(r);
+    });
+    b.querySelector('#hAdd').onclick=async()=>{
+      const nh=hist(no).slice();nh.push({m:'O',t:Date.now(),s:0});ST[no]={h:nh};await saveST();build();drawSpectrum()};
+    b.querySelector('#hClose').onclick=()=>{b.remove();if(!$('#view').classList.contains('hide'))syncMarkBtns();else draw()};
+  };
+  build();
+  b.onclick=e=>{if(e.target===b){b.remove();$('#view').classList.contains('hide')?draw():syncMarkBtns()}};
+  document.body.appendChild(b);
+}
+
+/* ---------------- 설정 ---------------- */
+let setSheet=null;
+function renderSettings(){
+  if(!setSheet)return;
+  const fl=setSheet.querySelector('#fl');
+  fl.innerHTML=FILES.map(f=>HAVE[f]?`<b>✓ ${FNAME[f]}</b>`:`<s>${FNAME[f]} — 없음</s>`).join('<br>');
+}
+$('#btnSet').onclick=()=>{
+  const b=document.createElement('div');b.className='sheet';setSheet=b;
+  b.innerHTML=`<div class="panel">
+    <h2>설정</h2><p>PDF는 이 브라우저 안에만 저장됩니다. 기기를 옮길 땐 백업 파일을 쓰세요.</p>
+    <div class="fld"><label>PDF 등록</label>
+      <input type="file" id="fi" accept="application/pdf" multiple style="font-size:13px">
+      <div class="filelist" id="fl" style="margin-top:10px"></div>
+      <button class="btn" id="bPull" style="margin-top:10px">저장소에서 시험지 받기</button>
+      <p style="margin:8px 0 0;font-size:11.5px">문제는 <b>chem_q_260.pdf</b>, 해설은 <b>chem_sol_260.pdf</b>. 이름에 q · sol 이 있으면 자동으로 자리를 잡습니다. 둘 다 넣으면 답 팝업에서 해설이 바로 보입니다.</p>
+    </div>
+    <div class="fld"><label>필기</label>
+      <button class="btn" id="bPen">애플펜슬로만 필기 — ${SET.pencil?'켬':'끔'}</button>
+      <button class="btn" id="bMask">답 자동 가리기 — ${SET.mask?'켬':'끔'}</button>
+      <button class="btn" id="bMaskH">가리개 기본 높이 — ${SET.maskH}줄</button>
+      <button class="btn" id="bMaskR">옮겨 둔 가리개 위치 초기화 (${Object.keys(MPOS).length}개)</button>
+    </div>
+    <div class="fld"><label>풀이</label>
+      <button class="btn" id="bTimer">문제별 타이머 — ${SET.timer?'켬':'끔'}</button>
+      <button class="btn" id="bNext">채점하면 다음 문제로 — ${SET.autoNext?'켬':'끔'}</button>
+    </div>
+    <div class="fld"><label>백업</label>
+      <button class="btn" id="bExpL">필기·진도만 내보내기 (가벼움)</button>
+      <button class="btn" id="bExpF">PDF까지 전부 내보내기 (무거움)</button>
+      <button class="btn" id="bImp">백업 파일 불러오기</button>
+      <input type="file" id="fim" accept="application/json" class="hide">
+    </div>
+    <button class="btn pri" id="bClose">닫기</button>
+  </div>`;
+  b.onclick=e=>{if(e.target===b)b.remove()};
+  document.body.appendChild(b);renderSettings();
+  b.querySelector('#bClose').onclick=()=>{b.remove();setSheet=null;draw()};
+  b.querySelector('#fi').onchange=e=>addFiles(e.target.files);
+  b.querySelector('#bPull').onclick=()=>{b.remove();setSheet=null;ensureFiles(true)};
+  b.querySelector('#bPen').onclick=async e=>{SET.pencil=!SET.pencil;await put('kv','set',SET);
+    e.target.textContent=`애플펜슬로만 필기 — ${SET.pencil?'켬':'끔'}`;$('#inkc').classList.toggle('pen',!!SET.pencil)};
+  b.querySelector('#bMask').onclick=async e=>{SET.mask=!SET.mask;await put('kv','set',SET);
+    e.target.textContent=`답 자동 가리기 — ${SET.mask?'켬':'끔'}`;if(VNO)updateMask()};
+  b.querySelector('#bMaskH').onclick=async e=>{SET.maskH=SET.maskH>=3?1:SET.maskH+1;await put('kv','set',SET);
+    e.target.textContent=`가리개 기본 높이 — ${SET.maskH}줄`;if(VNO)updateMask()};
+  b.querySelector('#bMaskR').onclick=async e=>{MPOS={};await put('kv','maskpos',MPOS);
+    e.target.textContent='옮겨 둔 가리개 위치 초기화 (0개)';
+    if(VNO)await setupMask(VPAGE);toast('가리개를 자동 위치로 되돌렸습니다')};
+  b.querySelector('#bTimer').onclick=async e=>{SET.timer=!SET.timer;await put('kv','set',SET);
+    e.target.textContent=`문제별 타이머 — ${SET.timer?'켬':'끔'}`;if(VNO)tmReset()};
+  b.querySelector('#bNext').onclick=async e=>{SET.autoNext=!SET.autoNext;await put('kv','set',SET);
+    e.target.textContent=`채점하면 다음 문제로 — ${SET.autoNext?'켬':'끔'}`};
+  b.querySelector('#bExpL').onclick=()=>exportData(false);
+  b.querySelector('#bExpF').onclick=()=>exportData(true);
+  b.querySelector('#bImp').onclick=()=>b.querySelector('#fim').click();
+  b.querySelector('#fim').onchange=e=>importData(e.target.files[0]);
+};
+
+async function exportData(withPdf){
+  toast('만드는 중…');
+  const inkKeys=await keys('ink'),inkVals=await all('ink');
+  const out={v:2,at:Date.now(),status:ST,set:SET,maskpos:MPOS,ink:{}};
+  inkKeys.forEach((k,i)=>out.ink[k]=inkVals[i]);
+  if(withPdf){
+    out.pdf={};
+    for(const k of await keys('pdf')){
+      const buf=await get('pdf',k);
+      let s='',u=new Uint8Array(buf);
+      for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));
+      out.pdf[k]=btoa(s);
+    }
+  }
+  const blob=new Blob([JSON.stringify(out)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`화학260_${withPdf?'전체':'필기'}_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  toast('내보냈습니다');
+}
+async function importData(f){
+  if(!f)return;toast('불러오는 중…');
+  try{
+    const j=JSON.parse(await f.text());
+    if(j.status){ST=j.status;await put('kv','status',ST)}
+    if(j.set){SET=Object.assign(SET,j.set);await put('kv','set',SET)}
+    if(j.maskpos){MPOS=j.maskpos;await put('kv','maskpos',MPOS)}
+    if(migrate())await saveST();
+    if(j.ink)for(const k in j.ink)await put('ink',k,j.ink[k]);
+    if(j.pdf)for(const k in j.pdf){
+      const bin=atob(j.pdf[k]),u=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+      await put('pdf',k,u.buffer);
+    }
+    await loadHave();renderSettings();draw();toast('복원했습니다');
+  }catch(e){toast('백업 파일을 읽지 못했습니다')}
+}
+
+/* ---------------- 세션 ---------------- */
+$('#btnRand').onclick=()=>{const L=filtered();if(!L.length)return;
+  const q=L.map(r=>r[F.NO]).sort(()=>Math.random()-.5);openView(q[0],q)};
+$('#btnFirst').onclick=()=>{const L=filtered();if(!L.length)return;openView(L[0][F.NO])};
+$('#q').oninput=e=>{FL.q=e.target.value.trim();draw()};
+
+document.addEventListener('keydown',e=>{
+  if($('#view').classList.contains('hide'))return;
+  if(e.key==='ArrowRight')go(1);if(e.key==='ArrowLeft')go(-1);
+  if(e.key==='Escape')closeView();
+  if(e.key==='1')mark('O');if(e.key==='2')mark('Q');if(e.key==='3')mark('X');
+  if(e.key===' '){e.preventDefault();$('#tm').click()}
+});
+let rt;window.addEventListener('resize',()=>{if(!VNO)return;clearTimeout(rt);
+  rt=setTimeout(async()=>{await renderPage(locate(rec(VNO)));paintInk();await setupMask(VPAGE)},250)});
+
+/* ---------------- 시작 ---------------- */
+(async()=>{
+  await open();
+  ST=(await get('kv','status'))||{};
+  if(migrate())await saveST();
+  SET=Object.assign(SET,(await get('kv','set'))||{});
+  MPOS=(await get('kv','maskpos'))||{};
+  await loadHave();
+  setTool('pen','#16181B',$$('[data-pen]')[0]);
+  draw();
+  await ensureFiles();
+  if(!Object.keys(HAVE).length)setTimeout(()=>$('#btnSet').click(),400);
+})();
+</script>
+<script>
+/* ===== 학습로그 요약 (2026-08-11 추가) =====================================
+   오늘 푸었던 문제 기록(status.h 의 t 값)을 모아 요약 텍스트로 만든다.
+   하루의 시작은 새벽 4시. 기존 데이터는 읽기만 한다. ==================== */
+(function () {
+  var DAY_START_HOUR = 4;
+  /* offset: 0 = 오늘, -1 = 어제, -2 = 그저께 … */
+  function dayRange(offset) {
+    var now = new Date();
+    var s = new Date(now); s.setHours(DAY_START_HOUR, 0, 0, 0);
+    if (now.getTime() < s.getTime()) s.setDate(s.getDate() - 1);
+    s.setDate(s.getDate() + (offset || 0));
+    var e = new Date(s); e.setDate(e.getDate() + 1);
+    return { start: s.getTime(), end: e.getTime(), label: s };
+  }
+  function ymd(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') +
+           '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  /* 문제번호 → 교재 행 (단원명을 알아내기 위해) */
+  var ROW = null;
+  function rowOf(no) {
+    if (!ROW) {
+      ROW = {};
+      try { DATA.forEach(function (r) { ROW[String(r[F.NO])] = r; }); } catch (e) {}
+    }
+    return ROW[String(no)] || null;
+  }
+  function secFmt2(x) {
+    x = Math.max(0, Math.round(x || 0));
+    return Math.floor(x / 60) + "'" + String(x % 60).padStart(2, '0') + '"';
+  }
+
+  function collect(offset) {
+    var R = dayRange(offset);
+    var st = (typeof ST === 'object' && ST) ? ST : {};
+    var items = [];
+    Object.keys(st).forEach(function (no) {
+      var h = (st[no] && st[no].h) || [];
+      h.forEach(function (rec) {
+        if (!rec || !rec.t) return;
+        if (rec.t < R.start || rec.t >= R.end) return;
+        var r = rowOf(no);
+        items.push({
+          no: no,
+          m: rec.m || '?',
+          sec: rec.s || 0,
+          t: rec.t,
+          sub: r ? (r[F.SUB] || '') : '',
+          big: r ? (r[F.BIG] || '') : ''
+        });
+      });
+    });
+    items.sort(function (a, b) { return a.t - b.t; });
+    return { date: ymd(R.label), offset: offset || 0, items: items };
+  }
+
+  function buildText(data, memo) {
+    var items = data.items;
+    if (!items.length) return data.date + ' — 오늘 풀이 기록이 없습니다.';
+
+    /* 소단원별로 묶는다 (오늘 푸어본 순서 유지) */
+    var order = [], group = {};
+    items.forEach(function (it) {
+      var key = it.sub || it.big || '미분류';
+      if (!group[key]) { group[key] = []; order.push(key); }
+      group[key].push(it);
+    });
+
+    var lines = ['[화학260 학습로그] ' + data.date];
+    var TO = 0, TQ = 0, TX = 0, TSEC = 0;
+
+    order.forEach(function (key) {
+      var g = group[key];
+      var o = 0, q = 0, x = 0, sec = 0;
+      g.forEach(function (it) {
+        if (it.m === 'O') o++; else if (it.m === 'Q') q++; else if (it.m === 'X') x++;
+        sec += it.sec;
+      });
+      TO += o; TQ += q; TX += x; TSEC += sec;
+      var rate = g.length ? Math.round(o * 100 / g.length) : 0;
+      lines.push('- ' + key + ' : ' + g.length + '문항 (정답률 ' + rate + '% · 헷갈림 ' + q + ')');
+      lines.push('  ' + g.map(function (it) {
+        return it.no + ' ' + it.m + (it.sec ? ' ' + secFmt2(it.sec) : '');
+      }).join(' | '));
+    });
+
+    var total = items.length;
+    lines.push('합계: ' + total + '문항 · O ' + TO + ' · 헷갈림 ' + TQ + ' · X ' + TX +
+               (TSEC ? ' · ' + Math.round(TSEC / 60) + '분' : ''));
+
+    /* 오래 걸린 문항 — 평균의 1.5배 이상이면서 3분 넘는 것 */
+    var timed = items.filter(function (it) { return it.sec > 0; });
+    if (timed.length >= 3) {
+      var avg = timed.reduce(function (s, it) { return s + it.sec; }, 0) / timed.length;
+      var slow = timed.filter(function (it) { return it.sec >= Math.max(180, avg * 1.5); })
+                      .sort(function (a, b) { return b.sec - a.sec; });
+      if (slow.length) {
+        lines.push('오래 걸림(평균 ' + secFmt2(avg) + '): ' +
+                   slow.map(function (it) { return it.no + ' ' + secFmt2(it.sec); }).join(', '));
+      }
+    }
+
+    if (memo && memo.trim()) lines.push('메모: ' + memo.trim());
+    return lines.join(String.fromCharCode(10));
+  }
+
+  function openPanel() {
+    var offset = 0;
+    var data = collect(offset);
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(17,24,39,.7);display:flex;align-items:center;justify-content:center;padding:16px';
+    wrap.innerHTML =
+      '<div style="background:#fff;border-radius:16px;max-width:520px;width:100%;padding:20px;box-shadow:0 20px 40px rgba(0,0,0,.25)">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+          '<div style="font-weight:800;font-size:16px">📝 학습로그</div>' +
+          '<div style="display:flex;align-items:center;gap:6px">' +
+            '<button id="plg-prev" style="background:#f3f4f6;border:0;border-radius:8px;width:30px;height:30px;font-weight:800;cursor:pointer">◀</button>' +
+            '<span id="plg-date" style="font-size:13px;font-weight:700;min-width:104px;text-align:center"></span>' +
+            '<button id="plg-next" style="background:#f3f4f6;border:0;border-radius:8px;width:30px;height:30px;font-weight:800;cursor:pointer">▶</button>' +
+          '</div>' +
+        '</div>' +
+        '<textarea id="plg-text" style="width:100%;height:220px;font-size:12.5px;line-height:1.6;border:1px solid #e5e7eb;border-radius:10px;padding:10px;font-family:inherit"></textarea>' +
+        '<input id="plg-memo" placeholder="한줄 메모 (깨달은 것·헷갈린 지점)" style="width:100%;margin-top:8px;border:1px solid #e5e7eb;border-radius:10px;padding:9px;font-size:13px">' +
+        '<div style="display:flex;gap:8px;margin-top:12px">' +
+          '<button id="plg-copy" style="flex:1;background:#111827;color:#fff;border:0;border-radius:10px;padding:10px;font-weight:700;cursor:pointer">복사하기</button>' +
+          '<button id="plg-close" style="flex:0 0 90px;background:#f3f4f6;border:0;border-radius:10px;padding:10px;font-weight:700;cursor:pointer">닫기</button>' +
+        '</div>' +
+        '<div id="plg-msg" style="font-size:12px;color:#6b7280;margin-top:8px">화살표로 지난 날짜도 볼 수 있어요. 복사해서 노션 · 클로드에 붙여넣으세요.</div>' +
+      '</div>';
+    document.body.appendChild(wrap);
+    var ta = wrap.querySelector('#plg-text'), memo = wrap.querySelector('#plg-memo');
+    var dateEl = wrap.querySelector('#plg-date'), nextBtn = wrap.querySelector('#plg-next');
+    var render = function () {
+      ta.value = buildText(data, memo.value);
+      dateEl.textContent = data.date + (offset === 0 ? ' (오늘)' : offset === -1 ? ' (어제)' : '');
+      nextBtn.disabled = (offset >= 0);
+      nextBtn.style.opacity = (offset >= 0) ? '.35' : '1';
+    };
+    var move = function (d) {
+      if (offset + d > 0) return;
+      offset += d;
+      data = collect(offset);
+      render();
+    };
+    render();
+    memo.addEventListener('input', render);
+    wrap.querySelector('#plg-prev').onclick = function () { move(-1); };
+    nextBtn.onclick = function () { move(1); };
+    wrap.querySelector('#plg-close').onclick = function () { wrap.remove(); };
+    wrap.addEventListener('click', function (e) { if (e.target === wrap) wrap.remove(); });
+    wrap.querySelector('#plg-copy').onclick = function () {
+      ta.select();
+      var done = function () { wrap.querySelector('#plg-msg').textContent = '복사됐습니다.'; };
+      if (navigator.clipboard) navigator.clipboard.writeText(ta.value).then(done).catch(function () { document.execCommand('copy'); done(); });
+      else { document.execCommand('copy'); done(); }
+    };
+  }
+
+  const btn = document.createElement('button');
+  btn.textContent = '📝 학습로그';
+  btn.style.cssText = 'position:fixed;right:14px;bottom:70px;z-index:99998;background:#111827;color:#fff;border:0;border-radius:999px;padding:11px 16px;font-weight:700;font-size:13px;box-shadow:0 6px 16px rgba(0,0,0,.25);cursor:pointer';
+  btn.onclick = openPanel;
+  if (document.body) document.body.appendChild(btn);
+  else window.addEventListener('DOMContentLoaded', function () { document.body.appendChild(btn); });
+})();
+</script>
+</body>
+</html>
