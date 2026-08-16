@@ -206,7 +206,7 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
       <span><i class="dotL" style="background:var(--red)"></i>틀림 <b id="cX">0</b></span>
     </div>
     <div class="filters">
-      <input class="search" id="q" placeholder="단원 · 세부주제 · 회차(63) · 번호로 검색">
+      <input class="search" id="q" placeholder="단원 · 세부주제 · 회차(62회) · 번호로 검색">
       <div class="row" id="fBig"></div>
       <div class="row" id="fEtc"></div>
     </div>
@@ -321,8 +321,20 @@ const toast=(m,ms=1600)=>{const d=document.createElement('div');d.className='toa
 
 /* ---------------- 필터 ---------------- */
 const BIGS=[...new Set(DATA.map(r=>r[F.BIG]))];
-let FL={big:'',lv:'',type:'',era:'',star:false,mark:'',q:''};
+/* 공부 우선순위 — '1' 1순위 · '2' 차순위 (2026-08-16 사용자 지정) */
+const PRIO={'7.원자의전자구조':'1','8.주기적성질':'1','9.화학결합':'1',
+  '10.혼성오비탈,분자오비탈':'1','21.배위화합물':'1',
+  '20.전기화학':'2','22.분자분광학':'2'};
+const PMARK={'1':'★','2':'☆'};
+/* 연도 = 회차 + 1963 (63회=2026 · 62회=2025 로 확인) */
+const YR=n=>n+1963;
+let FL={big:'',lv:'',type:'',era:'',star:false,mark:'',q:'',prio:''};
 
+/* 「62회」 「62 회」 처럼 회를 붙여 쳐도 회차로 잡는다 */
+const yq=s=>{const t=String(s).trim();
+  let m=t.match(/^(\d{2})\s*회?$/); if(m)return m[1];
+  m=t.match(/^(20\d{2})\s*년?$/); if(m)return String(+m[1]-1963);   // 2025 → 62
+  return ''};
 function pass(r){
   if(FL.big&&r[F.BIG]!==FL.big)return 0;
   if(FL.lv&&r[F.LV]!==FL.lv)return 0;
@@ -330,13 +342,15 @@ function pass(r){
   if(FL.era==='new'&&r[F.YEAR]<59)return 0;
   if(FL.era==='old'&&r[F.YEAR]>40)return 0;
   if(FL.star&&!r[F.STAR])return 0;
+  if(FL.prio&&PRIO[r[F.BIG]]!==FL.prio)return 0;
   const m=lastM(r[F.NO]);
   if(FL.mark==='new'&&m)return 0;
   if(FL.mark==='again'&&hist(r[F.NO]).filter(x=>x.m==='X').length<2)return 0;
   if(FL.mark&&FL.mark!=='new'&&FL.mark!=='again'&&m!==FL.mark)return 0;
   if(FL.q){const s=FL.q.toLowerCase();
     if(!(r[F.CODE].toLowerCase().includes(s)||r[F.SUB].includes(FL.q)||r[F.BIG].includes(FL.q)
-        ||r[F.BODY].includes(FL.q)||String(r[F.NO])===FL.q||String(r[F.YEAR])===FL.q))return 0;}
+        ||r[F.BODY].includes(FL.q)||String(r[F.NO])===FL.q||String(r[F.YEAR])===FL.q
+        ||(yq(FL.q)&&String(r[F.YEAR])===yq(FL.q))))return 0;}
   return 1;
 }
 const filtered=()=>DATA.filter(pass);
@@ -349,7 +363,9 @@ function chip(label,on,fn,sub){
 function drawFilters(){
   const a=$('#fBig');a.innerHTML='';
   a.appendChild(chip('전체',!FL.big,()=>{FL.big='';draw()},DATA.length));
-  BIGS.forEach(b=>a.appendChild(chip(b,FL.big===b,()=>{FL.big=FL.big===b?'':b;draw()},DATA.filter(r=>r[F.BIG]===b).length)));
+  ['1','2'].forEach(p=>a.appendChild(chip(p==='1'?'★ 1순위':'☆ 차순위',FL.prio===p,
+    ()=>{FL.prio=FL.prio===p?'':p;draw()},DATA.filter(r=>PRIO[r[F.BIG]]===p).length)));
+  BIGS.forEach(b=>a.appendChild(chip((PMARK[PRIO[b]]||'')+b,FL.big===b,()=>{FL.big=FL.big===b?'':b;draw()},DATA.filter(r=>r[F.BIG]===b).length)));
   const e=$('#fEtc');e.innerHTML='';
   [['상','lv'],['중','lv'],['하','lv'],['—','lv']].forEach(([v,k])=>
     e.appendChild(chip(v==='—'?'난이도 없음':v,FL[k]===v,()=>{FL[k]=FL[k]===v?'':v;draw()},
@@ -390,12 +406,13 @@ function markBadge(no){
 function row(r){
   const d=document.createElement('div');d.className='item';
   const rep=reps(r[F.NO]);
-  const past=`<span class="tag past">${r[F.YEAR]}회 ${r[F.LNO]}번</span>`;
+  const past=`<span class="tag past">${YR(r[F.YEAR])} · ${r[F.YEAR]}회 ${r[F.LNO]}번</span>`;
   d.innerHTML=`<div class="num">${r[F.NO]}</div>
    <div class="body">
      <div class="meta">
        ${past}
-       <span class="sub">${r[F.SUB]} · 단원 ${r[F.UNO]}/${r[F.UCNT]}</span>
+       <span class="sub">${PMARK[PRIO[r[F.BIG]]]||''}${r[F.SUB]} · 단원 ${r[F.UNO]}/${r[F.UCNT]}</span>
+       <span class="tag code">${r[F.CODE]}</span>
        ${r[F.TYPE]?`<span class="tag">${r[F.TYPE]}</span>`:''}
        <span class="tag lv${r[F.LV]}">난이도 ${r[F.LV]}</span>
        ${rep?`<span class="tag">${rep}회독</span>`:''}
@@ -493,8 +510,8 @@ function rec(no){return DATA[no-1]}
 
 async function showProblem(){
   const r=rec(VNO), loc=locate(r);
-  $('#vT1').textContent=`${r[F.YEAR]}회 ${r[F.LNO]}번 · ${r[F.SUB]}`;
-  $('#vT2').textContent=`${VNO}/260 · ${r[F.BIG]} ${r[F.UNO]}/${r[F.UCNT]} · 난이도 ${r[F.LV]}`+(r[F.TYPE]?` · ${r[F.TYPE]}`:'')+` · ${r[F.CODE]}`;
+  $('#vT1').textContent=`${YR(r[F.YEAR])} · ${r[F.YEAR]}회 ${r[F.LNO]}번 · ${r[F.SUB]}`;
+  $('#vT2').textContent=`${r[F.CODE]} · ${VNO}/260 · ${PMARK[PRIO[r[F.BIG]]]||''}${r[F.BIG]} ${r[F.UNO]}/${r[F.UCNT]} · 난이도 ${r[F.LV]}`+(r[F.TYPE]?` · ${r[F.TYPE]}`:'');
   // ink
   const saved=await get('ink',String(VNO));
   INK=saved||{0:[]};LAYERS=Math.max(1,Object.keys(INK).length);LAYER=LAYERS-1;
