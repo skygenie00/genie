@@ -914,6 +914,41 @@ function histSheet(no){
   document.body.appendChild(b);
 }
 
+/* ---------------- 동기화 사용법 ---------------- */
+function showSyncHelp(){
+  const h=document.createElement('div');h.className='sheet';
+  h.innerHTML=`<div class="panel">
+    <h2>동기화 사용법</h2>
+    <p>이 앱은 <b>백업 파일을 손으로 옮기는 방식</b>입니다. 자동 동기화는 없습니다. 필기·진도·타이머 기록은 이 브라우저 안에만 쌓입니다.</p>
+    <div class="fld"><label>PC 에서 보낼 때</label>
+      <p style="font-size:12.5px;line-height:1.7;margin:0">
+      1. 설정 → <b>필기·진도만 내보내기</b> 를 누릅니다. json 파일이 내려받아집니다.<br>
+      2. 그 파일을 클라우드나 메신저로 다른 기기에 보냅니다.<br>
+      3. 받는 기기에서 설정 → <b>백업 파일 불러오기</b>.
+      </p>
+      <p style="font-size:11.5px;color:#888;margin:8px 0 0">이미 양쪽 기기에 PDF 가 들어 있을 때 쓰는 방법입니다. 파일이 작아서 평소 오가는 용으로 적합합니다.</p>
+    </div>
+    <div class="fld"><label>새 기기에서 처음 열 때</label>
+      <p style="font-size:12.5px;line-height:1.7;margin:0">
+      <b>PDF까지 전부 내보내기</b> 로 한 번에 옮깁니다. 쓰던 기기에서 이걸 누르고, 새 기기에서 <b>백업 파일 불러오기</b> 를 하면 PDF 와 필기가 다 따라옵니다. 수십 MB 라 무겁지만 이사는 이 방법이 깔끔합니다.
+      </p>
+      <p style="font-size:11.5px;color:#888;margin:8px 0 0">그 기기에 교재 PDF 파일이 따로 있다면 설정 → <b>PDF 등록</b> 으로 직접 넣어도 됩니다. 문제는 <b>chem_q_260.pdf</b>, 해설은 <b>chem_sol_260.pdf</b> 입니다.</p>
+      <p style="font-size:11.5px;color:#c0392b;margin:6px 0 0">⚠ <b>「저장소에서 시험지 받기」는 지금 안 됩니다.</b> 앱 저장소가 공개라 교재 PDF 를 올려두지 않았기 때문입니다. 누르면 「찾지 못했습니다」가 뜨는 것을 보게 됩니다.</p>
+    </div>
+    <div class="fld"><label>⚠ 조심할 것</label>
+      <p style="font-size:12.5px;line-height:1.7;margin:0">
+      · <b>사파리의 「사이트 데이터 삭제」를 누르지 마세요.</b> PDF 와 필기가 함께 날아갑니다. 그 전에 반드시 내보내기를 하세요.<br>
+      · <b>주소를 하나로 고정하세요.</b> 여는 경로가 달라지면 기록도 따로 놀게 됩니다.<br>
+      · <b>불러오기는 덮어씁니다.</b> 양쪽 기기에서 따로 풀었으면 나중에 불러온 쪽이 남습니다. 한 쪽에서만 풀고 옮기세요.
+      </p>
+    </div>
+    <button class="btn pri" id="hClose">닫기</button>
+  </div>`;
+  h.onclick=e=>{if(e.target===h)h.remove()};
+  document.body.appendChild(h);
+  h.querySelector('#hClose').onclick=()=>h.remove();
+}
+
 /* ---------------- 설정 ---------------- */
 let setSheet=null;
 function renderSettings(){
@@ -942,6 +977,7 @@ $('#btnSet').onclick=()=>{
       <button class="btn" id="bNext">채점하면 다음 문제로 — ${SET.autoNext?'켬':'끔'}</button>
     </div>
     <div class="fld"><label>백업</label>
+      <button class="btn" id="bHelp">❔ 동기화 사용법</button>
       <button class="btn" id="bExpL">필기·진도만 내보내기 (가벼움)</button>
       <button class="btn" id="bExpF">PDF까지 전부 내보내기 (무거움)</button>
       <button class="btn" id="bImp">백업 파일 불러오기</button>
@@ -970,6 +1006,7 @@ $('#btnSet').onclick=()=>{
   b.querySelector('#bExpL').onclick=()=>exportData(false);
   b.querySelector('#bExpF').onclick=()=>exportData(true);
   b.querySelector('#bImp').onclick=()=>b.querySelector('#fim').click();
+  b.querySelector('#bHelp').onclick=()=>showSyncHelp();
   b.querySelector('#fim').onchange=e=>importData(e.target.files[0]);
 };
 
