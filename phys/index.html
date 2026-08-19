@@ -80,6 +80,11 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .tag.code{font-family:var(--mono);font-size:10px;letter-spacing:.02em}
 .star{color:var(--hi);font-size:12px}
 .sub{font-size:12px;color:var(--muted)}
+.cmt{font-size:14px;font-weight:700;color:#16181B;margin-left:2px;cursor:pointer;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmt.empty{font-size:10.5px;font-weight:500;color:#C2C5CA;border:1px dashed var(--line);
+  border-radius:5px;padding:1.5px 6px}
+.item:hover .cmt.empty{color:#8E9298}
 .prev{font-size:13px;color:#3A3D42;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .mk{display:flex;flex-direction:column;gap:2px;align-items:flex-end;flex:none;margin-top:1px;min-width:24px}
 .mk .h{display:flex;gap:2px;align-items:center}
@@ -287,6 +292,7 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
       <button class="tl" id="mO" style="color:var(--teal)">O</button>
       <button class="tl" id="mQ" style="color:var(--amber)">△</button>
       <button class="tl" id="mX" style="color:var(--red)">X</button>
+      <button class="tl wide" id="tNote">코멘트</button>
       <button class="tl wide" id="tHist">기록</button>
       <button class="tl wide" id="tCode">검색어</button>
     </div>
@@ -327,6 +333,10 @@ function all(s){return new Promise(ok=>{const r=tx(s,'readonly').getAll();r.onsu
 let ST={};            // no -> {h:[{m:'O'|'X'|'Q', t:ts, s:초}]}
 let SET={rot:{},zoom:1,mask:true,maskH:1,pencil:false,timer:true,autoNext:true};
 let MPOS={};          // no -> {u,v,w,h}  가리개 수동 위치
+let CMT={};           // no -> '한줄 코멘트'  (kv/note · 백업에 함께 실린다)
+/* ⚠ 이름은 CMT 다. NOTE 는 아래에서 옵시디언 목차 경로가 이미 쓰고 있다 */
+const noteOf=no=>CMT[no]||'';
+const saveNote=()=>put('kv','note',CMT);
 
 const RENUM_V=2;
 const OLD2NEW={"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"10":10,"11":11,"12":12,"13":13,"14":14,"15":16,"16":17,"17":18,"18":19,"19":20,"20":21,"21":22,"22":23,"23":24,"24":25,"25":26,"26":27,"27":28,"28":29,"29":30,"30":31,"31":32,"32":33,"33":34,"34":35,"35":36,"36":37,"37":38,"38":39,"39":40,"40":41,"41":42,"42":43,"43":44,"44":45,"45":46,"46":47,"47":48,"48":49,"49":50,"50":51,"51":52,"52":53,"53":54,"54":55,"55":58,"56":59,"57":60,"58":61,"59":62,"60":63,"61":64,"62":65,"63":66,"64":67,"65":68,"66":69,"67":70,"68":71,"69":72,"70":73,"71":74,"72":75,"73":76,"74":77,"75":78,"76":79,"77":80,"78":81,"79":82,"80":83,"81":84,"82":85,"83":86,"84":87,"85":88,"86":89,"87":90,"88":91,"89":92,"90":93,"91":95,"92":96,"93":97,"94":98,"95":99,"96":102,"97":103,"98":104,"99":105,"100":106,"101":107,"102":108,"103":109,"104":110,"105":111,"106":112,"107":113,"108":114,"109":115,"110":116,"111":117,"112":118,"113":119,"114":120,"115":121,"116":123,"117":124,"118":125,"119":126,"120":127,"121":128,"122":129,"123":130,"124":131,"125":132,"126":133,"127":136,"128":137,"129":138,"130":139,"131":140,"132":141,"133":142,"134":143,"135":144,"136":145,"137":146,"138":147,"139":148,"140":149,"141":150,"142":151,"143":152,"144":153,"145":155,"146":156,"147":157,"148":158,"149":159,"150":160,"151":162,"152":163,"153":164,"154":165,"155":166,"156":167,"157":168,"158":169,"159":172,"160":173,"161":174,"162":175,"163":176,"164":177,"165":178,"166":179,"167":180,"168":181,"169":182,"170":183,"171":184,"172":185,"173":186,"174":187,"175":188,"176":189,"177":190,"178":191,"179":192,"180":193,"181":194,"182":195,"183":196,"184":197,"185":198,"186":199,"187":200,"188":201,"189":202,"190":203,"191":204,"192":205,"193":206,"194":207,"195":208,"196":209,"197":210,"198":211,"199":212,"200":213,"201":214,"202":215,"203":216,"204":217,"205":218,"206":219,"207":220,"208":221,"209":222,"210":223,"211":224,"212":225,"213":226,"214":227,"215":228,"216":229,"217":230,"218":231,"219":232,"220":233,"221":234,"222":235,"223":236,"224":237,"225":238,"226":239,"227":240,"228":241,"229":242,"230":243,"231":244,"232":245,"233":246,"234":247,"235":248,"236":249,"237":251,"238":252,"239":253,"240":254,"241":255,"242":256,"243":257,"244":258,"245":259,"246":260,"247":261,"248":262,"249":263,"250":264,"251":265,"252":266,"253":267,"254":268,"255":269,"256":270,"257":271,"258":272,"259":273,"260":274,"261":275,"262":276,"263":277,"264":278,"265":279,"266":280,"267":282,"268":283,"269":284,"270":285,"271":286,"272":287,"273":288,"274":289,"275":290,"276":291,"277":292,"278":293,"279":294,"280":295,"281":296,"282":297,"283":298,"284":299,"285":300,"286":301,"287":302,"288":303,"289":304,"290":305,"291":306,"292":308,"293":309,"294":310,"295":311,"296":312,"297":313,"298":314,"299":315,"300":318,"301":319,"302":320,"303":321,"304":322,"305":323,"306":324,"307":326,"308":327,"309":328,"310":329,"311":330,"312":331,"313":332,"314":333,"315":334,"316":335,"317":336,"318":337,"319":338,"320":339,"321":340,"322":341,"323":342,"324":343,"325":344,"326":345,"327":346,"328":347,"329":348,"330":349,"331":350,"332":351,"333":352,"334":353,"335":354,"336":355,"337":356,"338":357,"339":358,"340":359,"341":360,"342":361,"343":362,"344":363,"345":364,"346":365,"347":366,"348":367,"349":368,"350":369,"351":370,"352":371,"353":372,"354":373,"355":374,"356":375,"357":376,"358":377,"359":378,"360":379,"361":380,"362":381,"363":382,"364":384,"365":385,"366":386,"367":387,"368":388,"369":389,"370":390,"371":391,"372":392,"373":394,"374":395,"375":396,"376":397,"377":398,"378":399,"379":400,"380":401,"381":402,"382":403,"383":404,"384":405,"385":406,"386":407,"387":408,"388":409,"389":410,"390":411,"391":412,"392":413,"393":414,"394":415,"395":416,"396":417,"397":418,"398":419,"399":420,"400":421,"401":422,"402":423,"403":424,"404":425,"405":427,"406":428,"407":429,"408":430,"409":431,"410":432,"411":433,"412":434,"413":435,"414":436,"415":437,"416":438,"417":439,"418":440,"419":441,"420":442,"421":443,"422":444,"423":445,"424":446,"425":447,"426":448,"427":449,"428":450,"429":451,"430":452,"431":453,"432":454,"433":455,"434":458,"435":459,"436":460,"437":461,"438":462,"439":463,"440":464,"441":466,"442":467,"443":468,"444":469,"445":470,"446":471,"447":472,"448":473,"449":474,"450":475,"451":476,"452":477,"453":478,"454":479,"455":480,"456":481,"457":482,"458":483,"459":484,"460":485,"461":486,"462":487,"463":488,"464":490,"465":491,"466":492,"467":493,"468":500,"469":501,"470":502,"471":503,"472":504,"473":505,"474":506,"475":507,"476":508,"477":509,"478":510,"479":511,"480":512,"481":513,"482":515,"483":516,"484":517,"485":519,"486":520,"487":522,"488":523,"489":524,"490":525,"491":526,"492":527,"493":528,"494":530,"495":531,"496":532,"497":533,"498":534,"499":535,"500":536,"501":537,"502":539,"503":540,"504":541,"505":542,"506":543,"507":544,"508":545,"509":546,"510":547,"511":548,"512":550,"513":551,"514":552,"515":553,"516":554,"517":555,"518":556,"519":557,"520":558,"521":559,"522":560,"523":561,"524":562,"525":563,"526":564,"527":565,"528":566,"529":567,"530":568,"531":569,"532":570,"533":571,"534":572,"535":573};
@@ -385,7 +395,7 @@ function pass(r){
   if(FL.mark==='again'&&hist(r[F.NO]).filter(x=>x.m==='X').length<2)return 0;
   if(FL.mark&&FL.mark!=='new'&&FL.mark!=='again'&&m!==FL.mark)return 0;
   if(FL.q){const s=FL.q.toLowerCase();
-    if(!(r[F.CODE].toLowerCase().includes(s)||r[F.SUB].includes(FL.q)||r[F.BODY].includes(FL.q)||String(r[F.NO])===FL.q||String(r[F.VLT])===FL.q))return 0;}
+    if(!(r[F.CODE].toLowerCase().includes(s)||r[F.SUB].includes(FL.q)||r[F.BODY].includes(FL.q)||noteOf(r[F.NO]).includes(FL.q)||String(r[F.NO])===FL.q||String(r[F.VLT])===FL.q))return 0;}
   return 1;
 }
 const filtered=()=>DATA.filter(pass);
@@ -453,11 +463,16 @@ function row(r){
        ${r[F.VLT]?`<span class="tag vlt">볼트 ${r[F.VLT]}</span>`:''}
        ${r[F.VLT]&&SOL[r[F.VLT]]?`<span class="tag sol">풀이</span>`:''}
        ${rep?`<span class="tag">${rep}회독</span>`:''}
+       ${(c=>c?`<span class="cmt" data-cmt="${r[F.NO]}">${esc(c)}</span>`
+                :`<span class="cmt empty" data-cmt="${r[F.NO]}">＋한줄</span>`)(noteOf(r[F.NO]))}
      </div>
      <div class="prev">${esc(r[F.BODY])||'<i style="color:#A9ACB1">그림 문제 — 페이지에서 확인</i>'}</div>
    </div>
    ${markBadge(r[F.NO])}`;
-  d.onclick=e=>{ if(e.target.closest('.mk')) histSheet(r[F.NO]); else openView(r[F.NO]); };
+  d.onclick=e=>{ const c=e.target.closest('.cmt');
+    if(c) noteSheet(+c.dataset.cmt);
+    else if(e.target.closest('.mk')) histSheet(r[F.NO]);
+    else openView(r[F.NO]); };
   return d;
 }
 const esc=s=>String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
@@ -561,6 +576,7 @@ async function showProblem(){
   paintInk();
   await setupMask(VPAGE);
   syncMarkBtns();
+  syncNoteBtn();
   tmReset();
 }
 
@@ -671,7 +687,7 @@ function local(e){const b=inkc().getBoundingClientRect();
 $('#inkc').addEventListener('pointerdown',e=>{
   if(SET.pencil&&e.pointerType!=='pen')return;
   if(e.pointerType==='touch'&&!SET.pencil&&e.isPrimary===false)return;
-  if(!HAVE[locate(rec(VNO)).id])return;
+  {const lc=locate(rec(VNO)); if(lc.id!=='IMG'&&!HAVE[lc.id])return;}   /* 이미지 문항(IMG)도 필기 가능 */
   inkc().setPointerCapture(e.pointerId);
   const[x,y]=local(e);
   if(TOOL.mode==='erase'){eraseAt(x,y);drawing={erase:1};return}
@@ -809,6 +825,49 @@ function layoutMask(){
   };
   m.addEventListener('pointerup',end);m.addEventListener('pointercancel',end);
 })();
+
+/* ---------------- 한줄 코멘트 ----------------
+   저장은 kv/note 한 곳. 목록의 칩과 뷰어의 「코멘트」 버튼이 같은 시트를 연다. */
+function noteSheet(no){
+  const r=rec(no);
+  const b=document.createElement('div');b.className='sheet';
+  b.innerHTML=`<div class="panel"><h2>${no}번 한줄 코멘트</h2>
+    <p>${r[F.SUB]} · ${r[F.CODE]}</p>
+    <div class="fld"><input id="ntIn" type="text" maxlength="60"
+      placeholder="예) 근의공식 때문 · 평균속력개념"
+      style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;
+             font-size:15px;font-weight:600;box-sizing:border-box"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" id="ntSave" style="flex:1">저장</button>
+      <button class="btn" id="ntDel" style="flex:none">지우기</button>
+      <button class="btn" id="ntNo" style="flex:none">닫기</button>
+    </div></div>`;
+  document.body.appendChild(b);
+  const inp=b.querySelector('#ntIn');
+  inp.value=noteOf(no);
+  setTimeout(()=>{inp.focus();inp.select()},60);
+  const close=()=>b.remove();
+  const commit=async()=>{
+    const v=inp.value.trim();
+    if(v)CMT[no]=v; else delete CMT[no];
+    await saveNote();
+    close();
+    if($('#view').classList.contains('hide'))draw(); else syncNoteBtn();
+    toast(v?'코멘트를 저장했습니다':'코멘트를 지웠습니다');
+  };
+  b.querySelector('#ntSave').onclick=commit;
+  b.querySelector('#ntDel').onclick=()=>{inp.value='';commit()};
+  b.querySelector('#ntNo').onclick=close;
+  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit()}};
+  b.onclick=e=>{if(e.target===b)close()};
+}
+function syncNoteBtn(){
+  const btn=$('#tNote'); if(!btn||!VNO)return;
+  const c=noteOf(VNO);
+  btn.textContent=c?('코멘트 '+(c.length>6?c.slice(0,6)+'…':c)):'코멘트';
+  btn.style.color=c?'var(--blue)':'';
+}
+$('#tNote').onclick=()=>{if(VNO)noteSheet(VNO)};
 
 $('#tAns').onclick=()=>{
   const r=rec(VNO);
@@ -1200,7 +1259,7 @@ $('#btnSet').onclick=()=>{
 async function exportData(withPdf){
   toast('만드는 중…');
   const inkKeys=await keys('ink'),inkVals=await all('ink');
-  const out={v:2,at:Date.now(),status:ST,set:SET,maskpos:MPOS,ink:{}};
+  const out={v:2,at:Date.now(),status:ST,set:SET,maskpos:MPOS,note:CMT,ink:{}};
   inkKeys.forEach((k,i)=>out.ink[k]=inkVals[i]);
   if(withPdf){
     out.pdf={};
@@ -1224,6 +1283,7 @@ async function importData(f){
     if(j.status){ST=j.status;await put('kv','status',ST)}
     if(j.set){SET=Object.assign(SET,j.set);await put('kv','set',SET)}
     if(j.maskpos){MPOS=j.maskpos;await put('kv','maskpos',MPOS)}
+    if(j.note){CMT=j.note;await saveNote()}
     if(migrate())await saveST();
     if(j.ink)for(const k in j.ink)await put('ink',k,j.ink[k]);
     if(j.pdf)for(const k in j.pdf){
@@ -1258,6 +1318,7 @@ let rt;window.addEventListener('resize',()=>{if(!VNO)return;clearTimeout(rt);
   if(migrate())await saveST();
   SET=Object.assign(SET,(await get('kv','set'))||{});
   MPOS=(await get('kv','maskpos'))||{};
+  CMT=(await get('kv','note'))||{};
   const moved=await renumber();
   if(moved)setTimeout(()=>toast('문항 번호 재배열 — 기록 '+moved+'건을 옮겼습니다'),900);
   await loadHave();
