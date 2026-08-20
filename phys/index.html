@@ -105,6 +105,32 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   font-size:13px;line-height:20px;text-align:center}
 .mk .tm{font:500 9.5px/1 var(--mono);color:#A9ACB1}
 .grouphd{font-size:12px;font-weight:700;color:var(--muted);padding:16px 2px 7px;letter-spacing:.02em}
+.ghbtn{margin-left:8px;padding:1px 9px;font-size:10.5px;border:1px solid rgba(128,128,128,.45);border-radius:9px;background:transparent;color:var(--muted);cursor:pointer;vertical-align:1px}
+.ghbtn:hover{color:var(--teal);border-color:var(--teal)}
+#navTg{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:58;width:24px;height:66px;border:1px solid var(--line);border-left:none;border-radius:0 10px 10px 0;background:var(--card);color:var(--muted);font-size:13px;cursor:pointer;box-shadow:1px 0 6px rgba(0,0,0,.08)}
+#navTg:hover{color:var(--teal)}
+#navdr{position:fixed;left:0;top:0;bottom:0;width:236px;z-index:59;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;box-shadow:2px 0 12px rgba(0,0,0,.14)}
+.ndhead{display:flex;align-items:center;justify-content:space-between;padding:8px 6px 8px 12px;font-size:12px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--line)}
+.ndlist{flex:1;overflow-y:auto;padding:4px 0;overscroll-behavior:contain}
+.ndrow{display:flex;gap:6px;align-items:baseline;padding:5px 10px 5px 10px;font-size:11.5px;cursor:pointer;line-height:1.4;border-left:3px solid transparent}
+.ndrow:hover{background:rgba(128,128,128,.1)}
+.ndrow.cur{background:rgba(46,125,111,.12);border-left-color:var(--teal)}
+.ndno{min-width:24px;text-align:right;color:var(--muted);font-weight:700}
+.ndt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.ndm{font-weight:800;font-size:11px}
+.ndmO{color:var(--teal)}.ndmQ{color:var(--amber)}.ndmX{color:var(--red)}
+.frmpanel{max-height:82vh;overflow-y:auto}
+.frmh{font-size:12.5px;margin:14px 0 6px;color:var(--muted)}
+.frmrow{position:relative;border:1px solid rgba(128,128,128,.28);border-radius:9px;padding:9px 11px;margin:0 0 7px}
+.frmrow.frokay{border-color:var(--teal)}
+.frmrow.frmiss{border-color:var(--red)}
+.frf{font-size:13.5px;line-height:1.55}
+.frc{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.55}
+.frdot{position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%}
+.frdot.frO{background:var(--teal)}
+.frdot.frX{background:var(--red)}
+.mcsvg{border:1px solid rgba(128,128,128,.28);border-radius:9px;padding:8px;background:#fff;margin:0 0 8px}
+.mcsvg svg{max-width:100%;height:auto}
 .empty{padding:50px 20px;text-align:center;color:var(--muted);font-size:13.5px}
 .empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:6px}
 
@@ -293,6 +319,8 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
     <button class="iconbtn" id="vPrev">◀</button>
     <button class="iconbtn" id="vNext">▶</button>
   </div>
+  <div id="navdr" class="hide"><div class="ndhead"><span id="ndHead"></span><button class="iconbtn" id="ndX">✕</button></div><div class="ndlist" id="ndList"></div></div>
+  <button id="navTg" title="문제 목록">▤</button>
   <div class="stage" id="stage">
     <div class="wrap" id="wrap">
       <canvas id="pdfc"></canvas>
@@ -333,6 +361,7 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
       <button class="tl wide" id="tNote">코멘트</button>
       <button class="tl wide" id="tHist">기록</button>
       <button class="tl wide" id="tType">유형</button>
+      <button class="tl wide" id="tCard">암기카드</button>
     </div>
   </div>
 </div>
@@ -655,7 +684,11 @@ function draw(){
   if(!L.length){box.innerHTML='<div class="empty"><b>조건에 맞는 문제가 없습니다</b>필터를 줄여 보세요.</div>';return}
   let cur='';const frag=document.createDocumentFragment();
   L.forEach(r=>{const k=bigLabel(r[F.BIG])+' · '+r[F.SUB];
-    if(k!==cur){cur=k;const h=document.createElement('div');h.className='grouphd';h.textContent=k;frag.appendChild(h)}
+    if(k!==cur){cur=k;const h=document.createElement('div');h.className='grouphd';h.textContent=k;
+      const _s=r[F.SUB];
+      if(frmFor(_s).length){const x=document.createElement('button');x.className='ghbtn';x.textContent='공식';x.onclick=e=>{e.stopPropagation();frmSheet(_s)};h.appendChild(x)}
+      {const x=document.createElement('button');x.className='ghbtn';x.textContent='암기카드'+(cardsFor(null,_s).length?' '+cardsFor(null,_s).length:'');x.onclick=e=>{e.stopPropagation();cardSheet(null,_s,_s)};h.appendChild(x)}
+      frag.appendChild(h)}
     frag.appendChild(row(r))});
   box.appendChild(frag);
 }
@@ -728,6 +761,8 @@ async function openView(no,list){
   VLIST=list||filtered().map(r=>r[F.NO]);
   if(!VLIST.includes(no))VLIST=DATA.map(r=>r[F.NO]);
   $('#view').classList.remove('hide');
+  navBuild();
+  $('#navdr').classList.toggle('hide',!SET.nav);
   await showProblem();
 }
 function closeView(){$('#view').classList.add('hide');VNO=null;draw()}
@@ -736,6 +771,7 @@ function rec(no){return DATA[no-1]}
 
 async function showProblem(){
   const r=rec(VNO), loc=locate(r);
+  navSync();
   $('#vT1').textContent=`${VNO}. ${titleOf(r)} · ${r[F.LNO]}`;
   $('#vT2').textContent=`${bigLabel(r[F.BIG])} › ${r[F.SUB]}`+(r[F.TYPE]?` · ${r[F.TYPE]}`:'')+` · ${r[F.LV]}`+(r[F.YEAR]?` · ${r[F.YEAR]} ${r[F.SRC]}`:'')+` · ${r[F.CODE]}`+(r[F.VLT]?` · 볼트 ${r[F.VLT]}`:'')+` · 교재 ${r[F.PG]}쪽`;
   // ink
@@ -1106,6 +1142,183 @@ function syncTypeBtn(){
   btn.style.color=v.length?(typeFixed(VNO)?'var(--teal)':'#A9ACB1'):'';
 }
 
+
+/* ---------------- 공식시트 · 암기카드 ----------------
+   FRM 원본은 볼트 「1. 역학\0. 공식시트 역학.md」 (D6). 볼트를 고치면 여기도 같이 고친다.
+   행 형식 [공식, 적용 조건, 함정]. 백지인출 결과는 kv/frm (백업에 실린다).
+   MCARDS 는 P6 암기카드 — 카드가 생기면 아래 표시 자리에 추가한다. 지금은 물리 카드 0장. */
+const FRM=[
+{t:'1.1.1 등속·등가속도 운동',u:['등속 운동, 등가속도 운동'],r:[
+['속도 $v=\\frac{S}{t}$ (m/s)','1초 동안 거리 변화','부호는 운동방향'],
+['가속도 $a=\\frac{\\Delta v}{t}$ (m/s²)','1초 동안 속도 변화','부호는 빨라짐/느려짐'],
+['$v=v_0+at$','가속도 일정','부호(방향)를 처음에 정하고 끝까지 유지'],
+['$S=v_0t+\\frac{1}{2}at^2=\\overline{v}t$','가속도 일정','$S$ 는 변위 — 왕복하면 거리와 다르다'],
+['$v^2-v_0^2=2aS$','가속도 일정 · 시간 불필요','$S$ 에 부호 있음 (감속·역행 주의)'],
+['$\\overline{v}=\\frac{v_0+v}{2}$','등가속도에서만','가속도가 변하면 못 쓴다'],
+['v–t 그래프: 기울기 $=a$ · 넓이 $=$ 변위','—','축 아래 넓이는 음의 변위 · 거리는 절댓값 합']]},
+{t:'1.1.2 중력가속도 운동',u:['중력가속도 운동'],r:[
+['$h=\\frac{1}{2}gt^2$ · $v=gt$','자유낙하 (초속 0)','초속 있으면 등가속도 일반식으로'],
+['연직투사 $H=\\frac{v_0^2}{2g}$ · $t=\\frac{v_0}{g}$','공기저항 무시','최고점에서 $v=0$ 이지만 $a=g$ 그대로'],
+['오르는 시간 = 내리는 시간 · 같은 높이 속력 동일','같은 높이 출발·도착','대칭성 — 계산 전에 먼저 써먹을 것']]},
+{t:'1.1.3 힘과 가속도 · 작용반작용',u:['힘과 가속도, 작용반작용','힘의 평형과 등속 운동'],r:[
+['알짜힘 $\\sum F=Ma$ · $M=m_1+m_2+...+m_n$','한 물체(한 계)에 작용하는 최종힘','알짜힘 0 = 등속 (힘이 없다는 뜻 아님)'],
+['연결체 $a=\\frac{F}{m_1+m_2}$ · 장력은 부분계에 F=ma','함께 움직일 때','전체로 a 를 구하고 · 장력은 한 덩어리만 떼어 다시'],
+['수직항력 관계 $N=F+mg+...$','N 과 평형을 이루는 모든 힘의 합','위에서 누르면 + · 위로 당기면 −'],
+['★ 대각힘의 합 $F=\\sqrt{F_x^2+F_y^2}$','서로 수직인 두 힘','—'],
+['작용반작용 $F_A=F_B$ — 크기 같음 · 방향 반대 · 서로 다른 물체','항상 성립 (물체→지면 ↓N₁ / 지면→물체 ↑N₂)','알짜힘에 같이 넣으면 안 된다 — 평형과 혼동 금지']]},
+{t:'벡터의 분해와 합성 ⚠ 약점(8/19 정답률 17%)',u:['벡터의 분해와 합성'],r:[
+['$A_x=A\\cos\\theta$ · $A_y=A\\sin\\theta$','θ 는 기준축에서 잰 각','y축 기준이면 cos·sin 이 뒤바뀐다 — 각의 위치부터 확인'],
+['크기 $v=\\sqrt{v_x^2+v_y^2}$','v 나 성분 둘 중 하나를 알 때','피타고라스 3 : 4 : 5 먼저 의심'],
+['합력 $R=\\sqrt{A^2+B^2+2AB\\cos\\theta}$','θ 는 두 벡터 사이각','같은 크기 둘: 60° → $\\sqrt{3}A$ · 90° → $\\sqrt{2}A$ · 120° → $A$'],
+['경사면 분해: 면방향 $mg\\sin\\theta$ · 면수직 $mg\\cos\\theta$','경사각 θ','헷갈리면 극한 검산 — θ→0 이면 면방향 힘 0'],
+['상대속도 $\\vec{v}_{AB}=\\vec{v}_A-\\vec{v}_B$','B 에서 본 A','빼는 순서 주의 · 강물 문제는 배속도+강물속도 벡터합']]},
+{t:'1.2.6 2차원 운동 (포물선)',u:['2차원 운동'],r:[
+['(x,y) 좌표로 풀기 — 위치 $S(S_x,S_y)$ · 속도 $v(v_x,v_y)$','두 방향 독립','시간 $t$ 만 공유한다 — 항상 t 로 잇는다'],
+['수평 포물체: $v_x=v_0$ 등속 / $v_y=gt$','수평으로 던짐','—'],
+['수평변위 $R=v_0t=v_0\\sqrt{\\frac{2h}{g}}$ · 수직변위 $h=\\frac{1}{2}gt^2$','수평 포물체','t 는 낙하가 정한다 — 수평속도와 무관'],
+['비스듬히: $s=(v_{x0}t,\\ v_{y0}t-\\frac{1}{2}gt^2)$','—','최고점 $v_x=v_0\\cos\\theta$ · $v_y=0$ (속력 0 아님)'],
+['체공 $T=\\frac{2v_0\\sin\\theta}{g}$ · 최고점 $H=\\frac{v_0^2\\sin^2\\theta}{2g}$','발사·착지 높이 동일','높이 다르면 공식 금지 — 연직 등가속도식으로 직접'],
+['사거리 $R=\\frac{v_0^2\\sin(2\\theta)}{g}$','발사·착지 높이 동일','45° 최대도 같은 조건에서만 · θ 와 90°−θ 는 사거리 동일']]},
+{t:'1.2.4 힘의 종류 ⚠ 약점(8/19 정답률 29%)',u:['힘의 종류(중력·장력·탄성력·수직항력·마찰력)'],r:[
+['수학 도구 — $\\sin(2\\theta)=2\\sin\\theta\\cos\\theta$ · $\\cos(2\\theta)=\\cos^2\\theta-\\sin^2\\theta$','사거리·경사 문제','—'],
+['① 중력 $\\vec{F}=W=m\\vec{g}$ — 성분 $(0,-mg)$','—','—'],
+['② 장력 T — 길이 안 변함','방향: 물체를 잡아당기는 방향','같은 줄은 장력이 같다 (질량 무시) — 도르래에 질량 있으면 양쪽이 달라진다'],
+['③ 탄성력 $F=-kx$ — 길이 변함','훅 법칙 범위','− 는 변화 x 의 반대방향 의미'],
+['용수철 $E_u=\\frac{1}{2}kx^2$ · $E_k=\\frac{1}{2}mv^2$ · 주기 $T=2\\pi\\sqrt{\\frac{m}{k}}$','상세는 1.6.18','—'],
+['용수철 직렬 $\\frac{1}{k}=\\frac{1}{k_1}+\\frac{1}{k_2}$ / 병렬 $k=k_1+k_2$','—','직렬인 이유: $x=\\frac{F}{k}$ 라 길이가 더해짐 — 저항 병렬 합성과 같은 꼴이라 헷갈림'],
+['④ 수직항력 N','접촉하면 무조건 · 접촉면에 수직인 모든 힘의 합','N ≠ mg 인 경우 — 경사면 $mg\\cos\\theta$ · 누르거나 당기면 가감 · 엘리베이터 $m(g\\pm a)$'],
+['⑤ 마찰력 $f=\\mu N$ — 물체 운동의 반대방향','운동마찰','정지마찰은 부등식 $f_s\\le\\mu_s N$ — 필요한 만큼만 · $\\mu_k<\\mu_s$'],
+['경사면 미끄러짐 직전 $\\tan\\theta=\\mu_s$','놓인 물체','질량 무관']]},
+{t:'1.3.7 일과 에너지',u:['일과 에너지'],r:[
+['$W=F\\Delta S=maS=\\frac{1}{2}mv^2=E_k$','질량·속도 보이면 에너지부터 생각','힘 일정 · 수직이면 W=0 · 마찰은 음수'],
+['비교 — 충격량은 $F\\Delta t=m\\Delta v$','시간이 주어지면 충격량 · 거리면 일','곱하는 게 t 냐 S 냐로 갈라진다'],
+['에너지보존 $E=E_u+E_k$','보존력만 일할 때','마찰 있으면 $\\Delta E=-fd$ (잃은 만큼 열)'],
+['$E_k=\\frac{1}{2}mv^2$ · $E_u=mgh$ · 탄성 $E_u=\\frac{1}{2}kx^2$','h 기준면 자유','기준면 바꿔도 차이는 동일'],
+['일률 $P=\\frac{W}{t}=Fv$','$Fv$ 는 순간일률','단위 W(와트)']]},
+{t:'1.3.8 충격량·운동량·충돌·분리',u:['충격량과 운동량','충돌 현상과 운동량 보존'],r:[
+['충격량 $F\\Delta t=m\\Delta v$','—','F–t 그래프 넓이 = 충격량 · 방향(벡터) 유지'],
+['운동량 보존 $m_1\\vec{v_1}+m_2\\vec{v_2}=m_1\\vec{v_1^{\\prime}}+m_2\\vec{v_2^{\\prime}}$','외력 0 (충돌·분리·폭발)','속도·방향 고려 — 2차원이면 성분별 · 에너지는 별개'],
+['탄성충돌 ① 운동량 보존 ② 운동E 보존 ③ 속력차 보존 $v_1-v_2=v_2^{\\prime}-v_1^{\\prime}$','탄성계수 $e=1$','같은 질량이면 속도 교환'],
+['반발계수 e = 충돌 후 멀어지는 속도차 ÷ 충돌 전 가까워지는 속도차','충돌 일반','—'],
+['완전비탄성 ① 운동량 보존 ② 운동E 비보존 ③ 한 덩어리 $v^{\\prime}=\\frac{m_1v_1+m_2v_2}{m_1+m_2}$','탄성계수 $e=0$','운동E 최대 손실(전부는 아님) · 분리(폭발)는 운동E 증가']]},
+{t:'1.4.10 등속원운동 · 회전(구름) E보존',u:['등속 원운동','회전 운동과 역학적 에너지 보존'],r:[
+['$f=\\frac{1}{T}$ · $v=\\frac{2\\pi r}{T}$ · $\\omega=\\frac{2\\pi}{T}$ · $v=r\\omega$','—','—'],
+['원운동힘 $F_c=\\frac{mv^2}{r}=mr\\omega^2$ (중심으로)','—','구심력은 합력의 이름 — 장력·중력·마찰·만유인력이 그 역할'],
+['구심가속도 $a=\\frac{v^2}{r}=r\\omega^2$','등속원운동','속력 일정해도 가속도 있음 · 각가속도 $\\alpha=0$ 과 다르다'],
+['cf. 원둘레 $2\\pi R$ · 원면적 $\\pi R^2$ · 구표면적 $4\\pi R^2$ · 구부피 $\\frac{4}{3}\\pi R^3$','—','—'],
+['구름운동(안 미끄러짐): 정지마찰 · 마찰이 한 일 0 · 역학적E 보존','테두리속력 = 질량중심 병진속력','미끄러지면 전부 깨진다'],
+['테두리 $s=r\\theta$ · $v=r\\omega$ · $a=r\\alpha$','회전 일반','—'],
+['$E_k=\\frac{1}{2}mv^2+\\frac{1}{2}I\\omega^2$ (병진+회전)','굴림','경사 경주: $\\frac{I}{mR^2}$ 작은 순 — 구 > 원판 > 고리 (질량·반지름 무관)']]},
+{t:'1.4.11 수직원운동',u:['수직 원운동'],r:[
+['최고점 속도 $v_t=\\sqrt{rg}$ — 알쥐?','최고점 수직항력(장력) N=0','중력만으로 구심력을 채우는 한계 속력'],
+['최저점 속도 $v_b=\\sqrt{5rg}$ — 오,알쥐?','위 조건 + E 보존','—'],
+['최소높이 $h=\\frac{5}{2}r$','E 보존','최고점 높이 $2r$ + $\\frac{r}{2}$'],
+['★ E보존: 맨아래 $E_{k0}$ = 맨위 $U_g$ + 맨위 $E_{k1}$','—','맨위에도 운동E 가 남는다 — 0 으로 놓으면 틀림'],
+['바닥 장력 $T=mg+\\frac{mv^2}{r}$','—','최고점은 $T=\\frac{mv^2}{r}-mg$ — 최저점 장력이 최대']]},
+{t:'1.4.12 회전질량(관성모멘트) · 질량중심',u:['질량과 회전질량'],r:[
+['개념: 질량이 회전축에 모이면 회전질량 작다 = 회전운동 ↑','질량 동일해도','질량이 축에서 멀수록 크다'],
+['고리·점 $I=mr^2$ · 원판 $I=\\frac{1}{2}mr^2$','회전축 명시 필수','고리 > 원판'],
+['막대(중심) $I=\\frac{1}{12}ml^2$ · 막대(끝) $I=\\frac{1}{3}ml^2$','—','축이 끝으로 가면 4배'],
+['꽉찬 구 $I=\\frac{2}{5}mr^2$ · 텅빈 구 $I=\\frac{2}{3}mr^2$','—','구껍질 > 속찬 구'],
+['두꺼운 고리·원통 $I=\\frac{1}{2}mr_1^2+\\frac{1}{2}mr_2^2$','R₁~R₂ 질량 적분','원판에서 빼는 방식은 복잡 — 이 식으로 바로'],
+['평행축정리 $I_h=I_{cm}+mh^2$','질량중심축에서 h 이동','$I_{cm}$ 이 최소'],
+['질량중심 $x=\\frac{m_1x_1+m_2x_2}{m_1+m_2}$','질량×거리 ÷ 질량합','—']]},
+{t:'1.5.15 토크·각가속도 · 회전 평형',u:['회전력과 각가속도, 가속도','회전과 평형상태'],r:[
+['$\\tau=rF_{\\perp}=r_{\\perp}F=I\\alpha$','$F_{\\perp}$ = 접선 성분','접선 성분만 토크에 기여'],
+['부호: 반시계 ↶ +τ · 시계 ↷ −τ','—','부호를 정하고 끝까지 유지'],
+['평형 $\\sum F=0$ 그리고 $\\sum\\tau=0$','정지·등속','축은 아무 데나 — 미지의 힘이 지나는 점을 축으로 잡으면 그 힘이 사라진다'],
+['질량 있는 도르래 — 양쪽 장력 다름 · $\\alpha=\\frac{a}{R}$','미끄럼 없이 감김','장력 같다고 놓으면 틀림']]},
+{t:'1.5.14 각운동량 보존',u:['각운동량 보존법칙'],r:[
+['① 점물체 $L=rmv$','r 은 축까지 수직거리','직선 운동 입자도 축에 대한 L 있음'],
+['② 강체 $L=I\\omega$','—','—'],
+['보존 $I_1\\omega_1=I_2\\omega_2$','외부 토크 0','팔 오므리면 I 감소 → ω 증가 · 회전 운동E 는 증가 — E 보존과 혼동 금지']]},
+{t:'1.6.17 만유인력',u:['만유인력'],r:[
+['★ 만유인력=구심력: $G\\frac{m_1M_2}{r^2}=\\frac{m_2v^2}{r}=m_2r\\omega^2$ — 점전하 전기력 $k\\frac{q_1q_2}{r^2}$ 와 같은 꼴','질량끼리 서로 잡아당김','이 사슬 하나로 궤도 문제 대부분이 풀린다'],
+['표면중력 $G\\frac{m_1M_2}{R^2}$','r 은 중심에서 거리','높이 h 면 $r=R+h$'],
+['내부중력 $G\\frac{m_1M_2}{R^3}r$','중심에서 거리 r (내부)','내부에선 r 에 비례 (바깥 껍질 기여 0)'],
+['원궤도 $v=\\sqrt{\\frac{GM}{r}}$ · $T^2\\propto r^3$','원궤도','궤도가 클수록 느리다 · 주기는 위성 질량 무관'],
+['$U=-\\frac{GMm}{r}$ · 궤도 총E $E=-\\frac{GMm}{2r}$','무한원 기준','항상 음수 · $K=-E$ · $U=2E$'],
+['탈출속도 $v_e=\\sqrt{\\frac{2GM}{R}}=\\sqrt{2gR}$','표면 · 저항 무시','원궤도 속도의 $\\sqrt{2}$ 배']]},
+{t:'1.6.18 단진동 · 파동',u:['단진동 운동'],r:[
+['$F=-kx$ · $a=-\\omega^2 x$','복원력이 변위에 비례','부호 — 항상 평형점 향함 · 끝점에서 $v=0$, $a$ 최대'],
+['변위 $x=A\\sin(\\omega t)$ · $v_{max}=A\\omega$ (평형점) · $a_{max}=A\\omega^2$ (끝점)','—','위치별로 최대인 양이 다르다'],
+['용수철 주기 $T=2\\pi\\sqrt{\\frac{m}{k}}$','g 와 무관','주기는 진폭 무관(등시성) · 연직으로 매달아도 동일'],
+['단진자 주기 $T=2\\pi\\sqrt{\\frac{l}{g}}$','m 과 무관 · 소진폭','g 커지면 빨라진다 (엘리베이터 상승 가속)'],
+['$E=\\frac{1}{2}kA^2$ 일정','마찰 없음','$x=\\frac{A}{\\sqrt{2}}$ 에서 $E_k=E_u$'],
+['파동 $y=A\\sin(kx+\\omega t)$','—','sin 이든 cos 이든 형태만 다름'],
+['파수 $k=\\frac{2\\pi}{\\lambda}$ · 각진동수 $\\omega=\\frac{2\\pi}{T}=2\\pi f$','2π 될 때 한 바퀴','거리 쪽이 파장(k) · 시간 쪽이 주기(ω)'],
+['파동 속도 $v=\\frac{\\omega}{k}=f\\lambda$','—','매질이 정한다 — f 바꿔도 v 그대로, λ 가 변함']]}
+];
+const MCARDS=[
+/* MCARDS_APPEND — 카드가 생기면 이 줄 위에 추가. 형식:
+   {id:'MC-2',t:'카드 제목',u:['소단원명'],q:['PA2403'],svg:'<svg …>'}
+   u = 단원 줄 버튼에 물리는 소단원명 · q = 문항 버튼에 물리는 PA코드. 원본은 볼트 md (P6) */
+];
+let FR={};                                     /* 백지인출 결과 · kv/frm · 키 = 섹션제목|공식 */
+const saveFR=()=>put('kv','frm',FR);
+const frKey=(s,row)=>s.t+'|'+row[0];
+const frmFor=sub=>FRM.filter(s=>s.u.includes(sub));
+const cardsFor=(code,sub)=>MCARDS.filter(c=>(code&&(c.q||[]).includes(code))||(sub&&(c.u||[]).includes(sub)));
+function frmSheet(sub){
+  const secs=frmFor(sub);
+  if(!secs.length){toast('이 소단원 공식시트는 아직 없습니다 — 지금은 역학만 있습니다');return}
+  const b=document.createElement('div');b.className='sheet';
+  b.innerHTML='<div class="panel frmpanel"><h2>공식 — '+esc(sub)+'</h2>'+
+    '<div style="display:flex;gap:6px;margin:0 0 10px"><button class="btn sm pri" id="fmA">시트</button>'+
+    '<button class="btn sm" id="fmB">백지 인출</button></div>'+
+    '<p style="font-size:11.5px;margin:0 0 10px" id="fmHint"></p><div id="fmBody"></div>'+
+    '<button class="btn pri" id="fmX" style="margin-top:12px">닫기</button></div>';
+  document.body.appendChild(b);
+  const body=b.querySelector('#fmBody'),hint=b.querySelector('#fmHint');
+  let blank=false;
+  const rowHtml=(s,row,idx)=>{
+    const g=FR[frKey(s,row)]||'';
+    const dot=g?'<span class="frdot '+(g==='O'?'frO':'frX')+'"></span>':'';
+    if(!blank) return '<div class="frmrow">'+dot+'<div class="frf">'+row[0]+'</div>'+
+      '<div class="frc">조건 — '+row[1]+' &nbsp;·&nbsp; <b>함정</b> — '+row[2]+'</div></div>';
+    return '<div class="frmrow frhide" data-k="'+esc(frKey(s,row))+'">'+dot+
+      '<button class="btn sm" data-rv="1">공개 '+(idx+1)+'</button>'+
+      '<div class="frbody hide"><div class="frf">'+row[0]+'</div>'+
+      '<div class="frc">조건 — '+row[1]+' &nbsp;·&nbsp; <b>함정</b> — '+row[2]+'</div>'+
+      '<div style="margin-top:6px"><button class="btn sm" data-g="O" style="color:var(--teal)">썼다 O</button> '+
+      '<button class="btn sm" data-g="X" style="color:var(--red)">못 썼다 X</button></div></div></div>';
+  };
+  const render=()=>{
+    hint.textContent=blank?'먼저 백지에 이 단원 공식을 전부 쓴 뒤, 한 줄씩 공개해서 O/X 로 자가채점하세요. 결과는 저장되어 백업에 실립니다.'
+                          :'보기 전용. 인출 연습은 「백지 인출」 모드로.';
+    body.innerHTML=secs.map(s=>'<h3 class="frmh">'+esc(s.t)+(blank?' — 공식 '+s.r.length+'개':'')+'</h3>'+
+      s.r.map((row,i)=>rowHtml(s,row,i)).join('')).join('');
+    if(!blank)kx(body);
+  };
+  render();
+  b.querySelector('#fmA').onclick=()=>{blank=false;b.querySelector('#fmA').classList.add('pri');b.querySelector('#fmB').classList.remove('pri');render()};
+  b.querySelector('#fmB').onclick=()=>{blank=true;b.querySelector('#fmB').classList.add('pri');b.querySelector('#fmA').classList.remove('pri');render()};
+  body.onclick=async e=>{
+    const rv=e.target.closest('[data-rv]');
+    if(rv){const w=rv.parentElement.querySelector('.frbody');w.classList.remove('hide');rv.remove();kx(w);return}
+    const g=e.target.closest('[data-g]');
+    if(g){const rowEl=g.closest('.frmrow');FR[rowEl.dataset.k]=g.dataset.g;await saveFR();
+      rowEl.classList.add(g.dataset.g==='O'?'frokay':'frmiss');
+      g.parentElement.innerHTML='<span style="font-size:11.5px;color:var(--muted)">기록됨 — '+(g.dataset.g==='O'?'O':'X (주말 인출에서 다시)')+'</span>';}
+  };
+  b.querySelector('#fmX').onclick=()=>b.remove();
+  b.onclick=e=>{if(e.target===b)b.remove()};
+}
+function cardSheet(code,sub,label){
+  const cards=cardsFor(code,sub);
+  const b=document.createElement('div');b.className='sheet';
+  const inner=cards.length
+    ? cards.map(c=>'<h3 class="frmh">'+esc(c.t)+'</h3><div class="mcsvg">'+c.svg+'</div>').join('')
+    : '<p style="font-size:12.5px;line-height:1.7">연결된 암기카드가 아직 없습니다.<br>'+
+      '카드는 볼트에서 md 로 만들고(원본), 확정되면 앱의 <b>MCARDS</b> 에 등록합니다 — 작업 로그 P6.<br>'+
+      '문항에는 PA코드로, 단원에는 소단원명으로 물립니다.</p>';
+  b.innerHTML='<div class="panel frmpanel"><h2>암기카드 — '+esc(label)+'</h2>'+inner+
+    '<button class="btn pri" id="mcX" style="margin-top:12px">닫기</button></div>';
+  document.body.appendChild(b);
+  b.querySelector('#mcX').onclick=()=>b.remove();
+  b.onclick=e=>{if(e.target===b)b.remove()};
+}
+
 /* ---------------- 한줄 코멘트 ----------------
    저장은 kv/note 한 곳. 목록의 칩과 뷰어의 「코멘트」 버튼이 같은 시트를 연다. */
 function noteSheet(no){
@@ -1181,6 +1394,7 @@ let GP={};            /* no -> 'GPT 풀이 원문'  (붙여넣어 두는 곳) */
 const gptOf=no=>GP[no]||'';
 const saveGP=()=>put('kv','gpt',GP);
 $('#tTwin').onclick=()=>{if(VNO)twinSheet(VNO)};
+$('#tCard').onclick=()=>{if(!VNO)return;const r=rec(VNO);cardSheet(r[F.CODE],r[F.SUB],VNO+'번 · '+r[F.SUB])};
 let CX={};            /* no -> [개념키]  사람이 직접 이은 것 */
 const saveCX=async()=>{const r=await put('kv','conc',CX);buildCQ();return r};
 const conceptKeys=r=>{
@@ -1450,6 +1664,41 @@ function go(d){const i=VLIST.indexOf(VNO);const j=i+d;
 $('#vPrev').onclick=()=>go(-1);
 $('#vNext').onclick=()=>go(1);
 $('#vBack').onclick=closeView;
+/* ---------------- 뷰어 왼쪽 문제 목록 (서랍) ----------------
+   VLIST(지금 열 때의 필터 결과)를 그대로 보여 준다 — 변리사 기출 칩을 켜고 열면 그 목록,
+   전체로 열면 전체. 줄을 누르면 그 문제로 간다. 열림 상태는 SET.nav 로 기기에 남는다. */
+function navBuild(){
+  const L=$('#ndList'); if(!L)return;
+  const frag=document.createDocumentFragment();
+  VLIST.forEach(no=>{
+    const r=rec(no); if(!r)return;
+    const m=lastM(no);
+    const d=document.createElement('div');d.className='ndrow';d.dataset.no=no;
+    d.innerHTML='<span class="ndno">'+no+'</span><span class="ndt">'+esc(r[F.CODE])+esc(r[F.LV])+'-'+esc(titleOf(r))+'</span>'+
+      (m?'<b class="ndm ndm'+m+'">'+(m==='Q'?'\u25B3':m)+'</b>':'');
+    frag.appendChild(d)});
+  L.innerHTML='';L.appendChild(frag);
+}
+function navSync(){
+  const H=$('#ndHead'); if(!H||!VNO)return;
+  const i=VLIST.indexOf(VNO);
+  H.textContent='목록 '+(i+1)+' / '+VLIST.length;
+  document.querySelectorAll('#ndList .ndrow').forEach(x=>{
+    const no=+x.dataset.no, on=no===VNO;
+    x.classList.toggle('cur',on);
+    const m=lastM(no);                       /* 방금 찍은 O/△/X 도 줄에 반영 */
+    let b=x.querySelector('.ndm');
+    if(m){if(!b){b=document.createElement('b');x.appendChild(b)}
+      b.className='ndm ndm'+m;b.textContent=(m==='Q'?'\u25B3':m)}
+    if(on&&!$('#navdr').classList.contains('hide'))x.scrollIntoView({block:'nearest'});
+  });
+}
+$('#ndList').onclick=e=>{const x=e.target.closest('.ndrow');if(!x)return;VNO=+x.dataset.no;showProblem()};
+$('#navTg').onclick=async()=>{const dr=$('#navdr');dr.classList.toggle('hide');
+  SET.nav=!dr.classList.contains('hide');await put('kv','set',SET);
+  if(SET.nav)navSync()};
+$('#ndX').onclick=async()=>{$('#navdr').classList.add('hide');SET.nav=false;await put('kv','set',SET)};
+
 $('#tLock').onclick=()=>{const on=$('#stage').classList.toggle('lock');
   $('#tLock').classList.toggle('on',on);
   toast(on?'화면 고정 — 스크롤이 잠깁니다':'화면 고정 해제')};
@@ -1818,7 +2067,7 @@ $('#btnSet').onclick=()=>{
 async function exportData(withPdf){
   toast('만드는 중…');
   const inkKeys=await keys('ink'),inkVals=await all('ink');
-  const out={v:2,at:Date.now(),status:ST,set:SET,maskpos:MPOS,omrpos:OPOS,note:CMT,qtype:QT,conc:CX,gpt:GP,twin:TW,ansfix:(AFIX||{}),ink:{}};
+  const out={v:2,at:Date.now(),status:ST,set:SET,maskpos:MPOS,omrpos:OPOS,note:CMT,qtype:QT,conc:CX,gpt:GP,twin:TW,ansfix:(AFIX||{}),frm:FR,ink:{}};
   inkKeys.forEach((k,i)=>out.ink[k]=inkVals[i]);
   if(withPdf){
     out.pdf={};
@@ -1849,6 +2098,7 @@ async function importData(f){
     if(j.conc){CX=j.conc;await saveCX()}
     if(j.gpt){GP=j.gpt;await saveGP()}
     if(j.twin){TW=j.twin;await saveTW()}
+    if(j.frm){FR=j.frm;await put('kv','frm',FR)}
     if(migrate())await saveST();
     if(j.ink)for(const k in j.ink)await put('ink',k,j.ink[k]);
     if(j.pdf)for(const k in j.pdf){
@@ -1869,6 +2119,7 @@ $('#q').oninput=e=>{FL.q=e.target.value.trim();draw()};
 document.addEventListener('keydown',e=>{
   const t=e.target;                       /* 입력칸 안에서는 단축키를 꺼 둔다 */
   if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return;
+  if(document.querySelector('.sheet'))return;      /* 팝업이 떠 있으면 O/△/X 오발 방지 */
   if($('#view').classList.contains('hide'))return;
   if(e.key==='ArrowRight')go(1);if(e.key==='ArrowLeft')go(-1);
   if(e.key==='Escape')closeView();
@@ -1893,6 +2144,7 @@ let rt;window.addEventListener('resize',()=>{if(!VNO)return;clearTimeout(rt);
   GP=(await get('kv','gpt'))||{};
   TW=(await get('kv','twin'))||{};
   QT=(await get('kv','qtype'))||{};
+  FR=(await get('kv','frm'))||{};
   const moved=await renumber();
   if(moved)setTimeout(()=>toast('문항 번호 재배열 — 기록 '+moved+'건을 옮겼습니다'),900);
   await loadHave();
