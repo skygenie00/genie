@@ -54,6 +54,12 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 /* filters */
 .filters{display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .row{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+#fBig{flex-wrap:wrap;overflow:visible;align-items:center;align-content:flex-start}
+#fEtc{flex-wrap:wrap;overflow:visible;align-items:center}
+.tag.tw{background:#FDF1E7;border-color:#E8C4A0;color:#A65B12;font-weight:700}
+.row .chip{flex:none}
+#fBig .chip{flex:none;max-width:none}
+.filters{max-height:42vh;overflow-y:auto;overscroll-behavior:contain}
 .row::-webkit-scrollbar{display:none}
 .chip{white-space:nowrap;padding:5px 11px;border:1px solid var(--line);border-radius:999px;
   background:var(--card);font-size:12.5px;color:var(--muted)}
@@ -147,6 +153,12 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   background:rgba(255,255,255,.96);color:#8A8880;font-size:14px;cursor:move;
   box-shadow:0 1px 5px rgba(0,0,0,.18);display:grid;place-items:center;touch-action:none;user-select:none}
 #omrPad.drag .ogrip{background:#E2E6EC;border-color:var(--blue)}
+.brk{flex-basis:100%;height:0;margin:0}
+.tag.vm{padding:1.5px 5px;letter-spacing:1px}
+.tag.vm b{font-weight:700}
+.vmO{color:var(--teal)} .vmX{color:var(--red)} .vmQ{color:var(--amber)}
+.chip.sm{font-size:11.5px;padding:3px 9px;color:var(--muted);border-style:dashed}
+.chip.sm.on{color:var(--paper);border-style:solid}
 #omrPad.cover{background:#EDECE6;border:1px solid #C4C2B9;border-radius:11px;padding:4px}
 #omrPad button.hit{border-color:var(--teal);box-shadow:inset 0 0 0 2px var(--teal)}
 #omrPad button.miss{border-color:var(--red);box-shadow:inset 0 0 0 2px var(--red)}
@@ -193,6 +205,8 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
 .tag.vlt{background:#EEF2FF;color:#4338CA}
  .tag.sol{background:#FFF7ED;color:#C2410C;border-color:#F0D6BC}
  .solpic{width:100%;border:1px solid var(--line);border-radius:8px;display:block;margin:8px 0;background:#fff}
+ .twbox{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;margin-top:10px}
+ .twbox canvas{display:block;width:100%}
  .solmiss{font-size:11.5px;color:var(--muted);border:1px dashed var(--line);border-radius:8px;padding:14px;text-align:center;margin:8px 0}
 .cblk{white-space:pre-wrap;overflow-x:auto;font-size:12.5px;line-height:1.6;margin:0;font-family:inherit;color:var(--ink)}
 .cql{display:flex;flex-direction:column;gap:5px;margin:6px 0 12px}
@@ -314,6 +328,7 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
       <button class="tl" id="mO" style="color:var(--teal)">O</button>
       <button class="tl" id="mQ" style="color:var(--amber)">△</button>
       <button class="tl" id="mX" style="color:var(--red)">X</button>
+      <button class="tl wide" id="tTwin">쌍둥이</button>
       <button class="tl wide" id="tGpt">GPT</button>
       <button class="tl wide" id="tNote">코멘트</button>
       <button class="tl wide" id="tHist">기록</button>
@@ -412,11 +427,14 @@ const toast=(m,ms=1600)=>{const d=document.createElement('div');d.className='toa
 
 /* ---------------- 필터 ---------------- */
 const BIGS=[...new Set(DATA.map(r=>r[F.BIG]))];
-let FL={big:'',lv:'',type:'',past:'',star:false,mark:'',q:'',cp:[],year:''};
+const BIGNO={'역학':'1','유체역학':'2','열역학':'3','파동·광학':'4','전자기학':'5','현대물리학':'6'};
+const bigLabel=b=>(BIGNO[b]?BIGNO[b]+'. ':'')+b;
+let FL={bigs:[],subs:[],lv:'',type:'',past:'',star:false,mark:'',q:'',cp:[],year:''};
 const PYEARS=[...new Set(DATA.filter(r=>r[F.SRC]==='변리사').map(r=>r[F.YEAR]))].sort();
 
 function pass(r){
-  if(FL.big&&r[F.BIG]!==FL.big)return 0;
+  if(FL.bigs.length&&!FL.bigs.includes(r[F.BIG]))return 0;
+  if(FL.subs.length&&!FL.subs.includes(r[F.SUB]))return 0;
   if(FL.lv&&r[F.LV]!==FL.lv)return 0;
   if(FL.type&&r[F.TYPE]!==FL.type)return 0;
   if(FL.past==='y'&&r[F.SRC]!=='변리사')return 0;
@@ -442,8 +460,23 @@ function chip(label,on,fn,sub){
 
 function drawFilters(){
   const a=$('#fBig');a.innerHTML='';
-  a.appendChild(chip('전체',!FL.big,()=>{FL.big='';draw()},DATA.length));
-  BIGS.forEach(b=>a.appendChild(chip(b,FL.big===b,()=>{FL.big=FL.big===b?'':b;draw()},DATA.filter(r=>r[F.BIG]===b).length)));
+  a.appendChild(chip('전체',!FL.bigs.length&&!FL.subs.length,
+    ()=>{FL.bigs=[];FL.subs=[];draw()},DATA.length));
+  const tog=(arr,v)=>arr.includes(v)?arr.filter(x=>x!==v):arr.concat([v]);
+  BIGS.forEach(b=>{
+    a.appendChild(chip(bigLabel(b),FL.bigs.includes(b),()=>{
+      FL.bigs=tog(FL.bigs,b);
+      const live=DATA.filter(r=>FL.bigs.includes(r[F.BIG])).map(r=>r[F.SUB]);
+      FL.subs=FL.subs.filter(x=>live.includes(x));   /* 닫은 대단원의 소단원 선택은 푸다 */
+      draw()},DATA.filter(r=>r[F.BIG]===b).length));
+    if(FL.bigs.includes(b)){             /* 고른 대단원 바로 아래 줄에 소단원 — 여러 개를 동시에 텸 수 있다 */
+      const brk=()=>{const d=document.createElement('div');d.className='brk';return d};
+      [...new Set(DATA.filter(r=>r[F.BIG]===b).map(r=>r[F.SUB]))].forEach(sv=>{
+        const x=chip(sv,FL.subs.includes(sv),()=>{FL.subs=tog(FL.subs,sv);draw()},
+          DATA.filter(r=>r[F.SUB]===sv).length);
+        x.classList.add('sm');a.appendChild(x)});
+      a.appendChild(brk());
+    }});
   const e=$('#fEtc');e.innerHTML='';
   [['상','lv'],['중','lv'],['하','lv']].forEach(([v,k])=>e.appendChild(chip(v,FL[k]===v,()=>{FL[k]=FL[k]===v?'':v;draw()})));
   e.appendChild(chip('변리사 기출',FL.past==='y',()=>{FL.past=FL.past==='y'?'':'y';draw()},
@@ -466,15 +499,18 @@ function drawFilters(){
   kx(e);
 }
 
+/* 히트맵은 아래 목차 선택(대단원·소단원)만 따라간다 — 다른 필터는 무시한다 */
 function drawSpectrum(){
-  const s=$('#spec');
-  if(s.childElementCount!==DATA.length){s.innerHTML='';
-    DATA.forEach(r=>{const i=document.createElement('i');i.title=`${r[F.NO]} ${r[F.SUB]}`;
-      i.onclick=()=>openView(r[F.NO]);s.appendChild(i)});}
+  const s=$('#spec'), L=DATA.filter(r=>!FL.bigs.length||FL.bigs.includes(r[F.BIG]));
+  s.innerHTML='';
   let c={O:0,X:0,Q:0,z:0};
-  DATA.forEach((r,i)=>{const no=r[F.NO],m=lastM(no),n=Math.min(3,reps(no));
-    s.children[i].className=m?`${m} r${n}`:'';
-    if(m){c[m]++;s.children[i].title=`${no} ${r[F.SUB]} · ${n}회독`}else c.z++;});
+  L.forEach(r=>{const no=r[F.NO],m=lastM(no),n=Math.min(3,reps(no));
+    const i=document.createElement('i');
+    i.className=m?`${m} r${n}`:'';
+    i.title=`${no} ${r[F.BIG]} · ${r[F.SUB]}`+(m?` · ${n}회독`:'');
+    i.onclick=()=>openView(no);
+    s.appendChild(i);
+    if(m)c[m]++;else c.z++;});
   $('#c0').textContent=c.z;$('#cO').textContent=c.O;$('#cQ').textContent=c.Q;$('#cX').textContent=c.X;
 }
 
@@ -487,6 +523,96 @@ function markBadge(no){
     `<span class="h"><b>${off+i+1}</b><i class="${x.m}">${x.m==='Q'?'△':x.m}</i></span>`).join('')
     +(t?`<span class="tm">${secFmt(t)}</span>`:'')+'</div>';
 }
+/* 볼트 풀이 노트 파일명 끝의 과거 기록(O X Δ). 예 "PA1508하-PV그래프 XO" → XO */
+function vaultMark(no,vlt){
+  const s=(SOL[vlt]||{}).f||'';
+  const m=s.match(/[OX\u0394]+(?=[^A-Za-z\uAC00-\uD7A3]*$)/);
+  return m?m[0]:'';
+}
+/* 볼트 파일명의 제목. "PA0706중-정지마찰계수,경사 O" → 정지마찰계수,경사 · 없으면 빈값 */
+function vaultTitle(vlt){
+  let s=(SOL[vlt]||{}).f||'';
+  s=s.replace(/^PA\d{4}\s*[\uC0C1\uC911\uD558]?\s*-?\s*/,'');
+  s=s.replace(/\s*[OX\u0394]+(\([^)]*\))?\s*$/,'');
+  return s.trim();
+}
+const titleOf=r=>vaultTitle(r[F.VLT])||r[F.SUB];
+let TW={};            // no -> [쌍둥이 문항번호] · kv/twin · 양방향으로 저장한다
+const twinsOf=no=>(TW[no]||[]).filter(x=>x!==no&&rec(x));
+const saveTW=()=>put('kv','twin',TW);
+async function twinLink(a,b,on){
+  const add=(x,y)=>{const s=new Set(TW[x]||[]);on?s.add(y):s.delete(y);
+    const v=[...s].sort((p,q)=>p-q); v.length?TW[x]=v:delete TW[x];};
+  add(a,b);add(b,a);await saveTW();
+}
+/* 쌍둥이 미리보기 — 그 문제로 옮기지 않고 팝업으로 보여 준다 */
+async function twinPeek(no){
+  const r=rec(no), loc=locate(r);
+  const b=document.createElement('div');b.className='sheet';
+  b.innerHTML=`<div class="panel"><h2>${no}. ${esc(titleOf(r))}</h2>
+    <p>${esc(r[F.CODE])} · ${esc(bigLabel(r[F.BIG]))} › ${esc(r[F.SUB])}${r[F.YEAR]?' · '+r[F.YEAR]+' '+esc(r[F.SRC]):''}</p>
+    <div class="twbox"><canvas id="twc"></canvas></div>
+    <button class="btn" id="twGo" style="margin-top:12px">이 문제로 가기</button>
+    <button class="btn pri" id="twX" style="margin-top:8px">닫기</button></div>`;
+  b.querySelector('#twGo').onclick=()=>{b.remove();openView(no)};
+  b.querySelector('#twX').onclick=()=>b.remove();
+  b.onclick=e=>{if(e.target===b)b.remove()};
+  document.body.appendChild(b);
+  const cv=b.querySelector('#twc'), box=b.querySelector('.twbox');
+  const fail=m=>{box.innerHTML=`<p style="font-size:12px;padding:12px">${m}</p>`};
+  try{
+    if(loc.id==='IMG'){
+      const im=await new Promise(ok=>{const x=new Image();x.onload=()=>ok(x);x.onerror=()=>ok(null);x.src='img/'+loc.img+'.jpg'});
+      if(!im){fail('문제 이미지를 불러오지 못했습니다');return}
+      cv.width=im.naturalWidth;cv.height=im.naturalHeight;
+      cv.getContext('2d').drawImage(im,0,0);return;
+    }
+    const buf=await get('pdf',loc.id);
+    if(!buf){fail('이 문항의 PDF가 아직 등록되지 않았습니다');return}
+    const d=await pdfjsLib.getDocument({data:buf.slice(0)}).promise;
+    const page=await d.getPage(Math.min(loc.page,d.numPages));
+    const avail=Math.min(box.clientWidth||520,900);
+    const base=page.getViewport({scale:1});
+    const dpr=Math.max(2,Math.min(3,window.devicePixelRatio||1));
+    const vp=page.getViewport({scale:avail/base.width*dpr});
+    cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
+    await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+  }catch(e){fail('미리보기를 만들지 못했습니다')}
+}
+function twinSheet(no){
+  const b=document.createElement('div');b.className='sheet';
+  const draw=()=>{
+    const list=twinsOf(no);
+    b.innerHTML=`<div class="panel"><h2>${no}번 쌍둥이 문제</h2>
+      <p>그림이나 내용이 거의 같은 문제를 이어 둔다. 한쪽에서 이으면 반대쪽에도 같이 생긴다.</p>
+      ${list.length?list.map(x=>{const r=rec(x);
+        return `<button class="btn" style="text-align:left" data-go="${x}">${x}. ${esc(titleOf(r))} · ${esc(r[F.CODE])}
+          <span style="float:right;color:var(--red)" data-del="${x}">끊기</span></button>`}).join('')
+        :'<p style="font-size:12px">아직 없다.</p>'}
+      <div class="fld" style="margin-top:12px">
+        <input class="search" id="twq" placeholder="문항번호(514) 또는 코드(PA0309)">
+        <button class="btn" id="twAdd" style="margin-top:8px">이어 붙이기</button>
+      </div>
+      <button class="btn pri" id="twNo" style="margin-top:12px">닫기</button></div>`;
+    b.querySelectorAll('[data-go]').forEach(x=>x.onclick=async e=>{
+      const del=e.target.closest('[data-del]');
+      if(del){await twinLink(no,+del.dataset.del,false);draw();drawList();return}
+      twinPeek(+x.dataset.go);});
+    b.querySelector('#twAdd').onclick=async()=>{
+      const v=b.querySelector('#twq').value.trim();
+      let t=null;
+      if(/^\d+$/.test(v)&&v.length===4&&DATA.find(z=>z[F.CODE]==='PA'+v))t=DATA.find(z=>z[F.CODE]==='PA'+v)[F.NO];
+      else if(/^\d+$/.test(v)&&rec(+v))t=+v;
+      else{const r=DATA.find(z=>String(z[F.CODE]).toLowerCase()===v.toLowerCase());if(r)t=r[F.NO];}
+      if(!t||t===no){toast('문항을 찾지 못했습니다');return}
+      await twinLink(no,t,true);draw();drawList();toast(t+'번과 이었습니다');};
+    b.querySelector('#twNo').onclick=()=>b.remove();
+  };
+  const drawList=()=>{ if($('#view').classList.contains('hide'))window.draw&&window.draw(); };
+  draw();
+  b.onclick=e=>{if(e.target===b)b.remove()};
+  document.body.appendChild(b);
+}
 function row(r){
   const d=document.createElement('div');d.className='item';
   const rep=reps(r[F.NO]);
@@ -495,12 +621,14 @@ function row(r){
    <div class="body">
      <div class="meta">
        ${r[F.STAR]?`<span class="star">${'★'.repeat(r[F.STAR])}</span>`:''}
-       <span class="sub">${r[F.SUB]} · ${r[F.LNO]}</span>
+       <span class="sub">${esc(titleOf(r))} · ${r[F.LNO]}</span>
        <span class="tag lv${r[F.LV]}">${r[F.LV]}</span>
-       ${past}
+       ${r[F.SRC]==='변리사'?past:''}
        <span class="tag code">${r[F.CODE]}</span>
        ${r[F.VLT]?`<span class="tag vlt">볼트 ${r[F.VLT]}</span>`:''}
        ${r[F.VLT]&&SOL[r[F.VLT]]?`<span class="tag sol">풀이</span>`:''}
+       ${(v=>v?`<span class="tag vm" title="볼트 기록">${[...v].map(c=>`<b class="vm${c==='\u0394'?'Q':c}">${c}</b>`).join('')}</span>`:'')(vaultMark(r[F.NO],r[F.VLT]))}
+       ${(v=>v.length?`<span class="tag tw" data-tw="${r[F.NO]}">쌍 ${v.map(x=>esc(rec(x)[F.CODE])).join(' ')}</span>`:'')(twinsOf(r[F.NO]))}
        ${rep?`<span class="tag">${rep}회독</span>`:''}
        ${gptOf(r[F.NO])?'<span class="tag gp">GPT</span>':''}
        ${typeOf(r[F.NO]).map(t=>`<span class="tag qt${typeFixed(r[F.NO])?'':' dr'}">${t}</span>`).join('')}
@@ -511,7 +639,9 @@ function row(r){
    </div>
    ${markBadge(r[F.NO])}`;
   d.onclick=e=>{ const c=e.target.closest('.cmt');
-    if(c) noteSheet(+c.dataset.cmt);
+    const t=e.target.closest('[data-tw]');
+    if(t) twinSheet(+t.dataset.tw);
+    else if(c) noteSheet(+c.dataset.cmt);
     else if(e.target.closest('.mk')) histSheet(r[F.NO]);
     else openView(r[F.NO]); };
   return d;
@@ -524,7 +654,7 @@ function draw(){
   $('#cnt').textContent=`${L.length}문제`;
   if(!L.length){box.innerHTML='<div class="empty"><b>조건에 맞는 문제가 없습니다</b>필터를 줄여 보세요.</div>';return}
   let cur='';const frag=document.createDocumentFragment();
-  L.forEach(r=>{const k=r[F.BIG]+' · '+r[F.SUB];
+  L.forEach(r=>{const k=bigLabel(r[F.BIG])+' · '+r[F.SUB];
     if(k!==cur){cur=k;const h=document.createElement('div');h.className='grouphd';h.textContent=k;frag.appendChild(h)}
     frag.appendChild(row(r))});
   box.appendChild(frag);
@@ -606,8 +736,8 @@ function rec(no){return DATA[no-1]}
 
 async function showProblem(){
   const r=rec(VNO), loc=locate(r);
-  $('#vT1').textContent=`${VNO}. ${r[F.SUB]} · ${r[F.LNO]}`;
-  $('#vT2').textContent=`${r[F.BIG]} · ${r[F.TYPE]} · ${r[F.LV]}`+(r[F.YEAR]?` · ${r[F.YEAR]} ${r[F.SRC]}`:'')+` · ${r[F.CODE]}`+(r[F.VLT]?` · 볼트 ${r[F.VLT]}`:'')+` · 교재 ${r[F.PG]}쪽`;
+  $('#vT1').textContent=`${VNO}. ${titleOf(r)} · ${r[F.LNO]}`;
+  $('#vT2').textContent=`${bigLabel(r[F.BIG])} › ${r[F.SUB]}`+(r[F.TYPE]?` · ${r[F.TYPE]}`:'')+` · ${r[F.LV]}`+(r[F.YEAR]?` · ${r[F.YEAR]} ${r[F.SRC]}`:'')+` · ${r[F.CODE]}`+(r[F.VLT]?` · 볼트 ${r[F.VLT]}`:'')+` · 교재 ${r[F.PG]}쪽`;
   // ink
   const saved=await get('ink',String(VNO));
   INK=saved||{0:[]};LAYERS=Math.max(1,Object.keys(INK).length);LAYER=LAYERS-1;
@@ -1050,6 +1180,7 @@ function buildCQ(){
 let GP={};            /* no -> 'GPT 풀이 원문'  (붙여넣어 두는 곳) */
 const gptOf=no=>GP[no]||'';
 const saveGP=()=>put('kv','gpt',GP);
+$('#tTwin').onclick=()=>{if(VNO)twinSheet(VNO)};
 let CX={};            /* no -> [개념키]  사람이 직접 이은 것 */
 const saveCX=async()=>{const r=await put('kv','conc',CX);buildCQ();return r};
 const conceptKeys=r=>{
@@ -1687,7 +1818,7 @@ $('#btnSet').onclick=()=>{
 async function exportData(withPdf){
   toast('만드는 중…');
   const inkKeys=await keys('ink'),inkVals=await all('ink');
-  const out={v:2,at:Date.now(),status:ST,set:SET,maskpos:MPOS,omrpos:OPOS,note:CMT,qtype:QT,conc:CX,gpt:GP,ansfix:(AFIX||{}),ink:{}};
+  const out={v:2,at:Date.now(),status:ST,set:SET,maskpos:MPOS,omrpos:OPOS,note:CMT,qtype:QT,conc:CX,gpt:GP,twin:TW,ansfix:(AFIX||{}),ink:{}};
   inkKeys.forEach((k,i)=>out.ink[k]=inkVals[i]);
   if(withPdf){
     out.pdf={};
@@ -1717,6 +1848,7 @@ async function importData(f){
     if(j.ansfix){AFIX=j.ansfix;await put('kv','ansfix',AFIX)}
     if(j.conc){CX=j.conc;await saveCX()}
     if(j.gpt){GP=j.gpt;await saveGP()}
+    if(j.twin){TW=j.twin;await saveTW()}
     if(migrate())await saveST();
     if(j.ink)for(const k in j.ink)await put('ink',k,j.ink[k]);
     if(j.pdf)for(const k in j.pdf){
@@ -1735,6 +1867,8 @@ $('#btnFirst').onclick=()=>{const L=filtered();if(!L.length)return;openView(L[0]
 $('#q').oninput=e=>{FL.q=e.target.value.trim();draw()};
 
 document.addEventListener('keydown',e=>{
+  const t=e.target;                       /* 입력칸 안에서는 단축키를 꺼 둔다 */
+  if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return;
   if($('#view').classList.contains('hide'))return;
   if(e.key==='ArrowRight')go(1);if(e.key==='ArrowLeft')go(-1);
   if(e.key==='Escape')closeView();
@@ -1757,6 +1891,7 @@ let rt;window.addEventListener('resize',()=>{if(!VNO)return;clearTimeout(rt);
   CX=(await get('kv','conc'))||{};
   buildCQ();
   GP=(await get('kv','gpt'))||{};
+  TW=(await get('kv','twin'))||{};
   QT=(await get('kv','qtype'))||{};
   const moved=await renumber();
   if(moved)setTimeout(()=>toast('문항 번호 재배열 — 기록 '+moved+'건을 옮겼습니다'),900);
