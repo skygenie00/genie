@@ -137,6 +137,19 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 #mask .grip{position:absolute;right:-1px;bottom:-1px;width:22px;height:22px;cursor:nwse-resize;
   background:linear-gradient(135deg,transparent 48%,#9A988F 48%,#9A988F 60%,transparent 60%,transparent 70%,#9A988F 70%,#9A988F 82%,transparent 82%)}
 #mask .lbl{pointer-events:none;font-size:10.5px}
+#omrPad{position:absolute;display:none;gap:6px;z-index:6;touch-action:manipulation}
+#omrPad.show{display:flex}
+#omrPad button{width:44px;height:44px;border-radius:9px;border:1px solid #C4C2B9;
+  background:rgba(255,255,255,.96);color:var(--ink);font-size:17px;
+  box-shadow:0 1px 5px rgba(0,0,0,.18);display:grid;place-items:center}
+#omrPad button.on{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+#omrPad .ogrip{width:26px;height:44px;border-radius:9px;border:1px solid #C4C2B9;
+  background:rgba(255,255,255,.96);color:#8A8880;font-size:14px;cursor:move;
+  box-shadow:0 1px 5px rgba(0,0,0,.18);display:grid;place-items:center;touch-action:none;user-select:none}
+#omrPad.drag .ogrip{background:#E2E6EC;border-color:var(--blue)}
+#omrPad.cover{background:#EDECE6;border:1px solid #C4C2B9;border-radius:11px;padding:4px}
+#omrPad button.hit{border-color:var(--teal);box-shadow:inset 0 0 0 2px var(--teal)}
+#omrPad button.miss{border-color:var(--red);box-shadow:inset 0 0 0 2px var(--red)}
 .vbot{flex:none;background:var(--paper);border-top:1px solid var(--line);
   padding:7px 8px calc(env(safe-area-inset-bottom) + 7px)}
 .tools{display:flex;gap:5px;align-items:center;overflow-x:auto;scrollbar-width:none}
@@ -271,6 +284,7 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
       <canvas id="pdfc"></canvas>
       <canvas id="inkc"></canvas>
       <div id="mask" class="hide"><span class="lbl">답 가림 · 탭하면 보임 · 끌면 이동</span><span class="grip"></span></div>
+      <div id="omrPad"><span class="ogrip">≡</span><button data-omr="①">①</button><button data-omr="②">②</button><button data-omr="③">③</button><button data-omr="④">④</button><button data-omr="⑤">⑤</button></div>
     </div>
   </div>
   <div class="vbot">
@@ -340,8 +354,9 @@ function all(s){return new Promise(ok=>{const r=tx(s,'readonly').getAll();r.onsu
 
 /* ---------------- 상태 ---------------- */
 let ST={};            // no -> {h:[{m:'O'|'X'|'Q', t:ts, s:초}]}
-let SET={rot:{},zoom:1,mask:true,maskH:1,pencil:false,timer:true,autoNext:false};
+let SET={rot:{},zoom:1,mask:true,maskH:1,pencil:false,timer:true,autoNext:false,omrMask:true};
 let MPOS={};          // no -> {u,v,w,h}  가리개 수동 위치
+let OPOS={};          // no -> {u,v}  OMR 패드 수동 위치 · 'def' 는 다음 문항 기본값
 const TYPES=['공식','계산','함정','개념'];
 const TD={"13": ["계산", "함정"], "65": ["공식", "함정"], "66": ["공식", "계산"], "72": ["계산"], "73": ["계산"], "76": ["공식"], "88": ["함정"], "103": ["계산"], "124": ["공식"], "126": ["계산", "함정"], "140": ["계산", "함정"], "142": ["계산", "함정"], "145": ["계산"], "148": ["공식", "계산"], "157": ["계산", "함정"], "161": ["계산"], "166": ["함정"], "175": ["함정"], "178": ["계산", "함정"], "180": ["공식"], "204": ["계산", "함정"], "201": ["함정"], "207": ["함정"], "256": ["계산", "함정"], "257": ["함정"], "258": ["공식", "계산", "함정"], "269": ["계산", "함정"], "217": ["공식", "계산"], "218": ["계산", "함정"], "223": ["계산", "함정"], "236": ["공식"], "239": ["공식", "함정"], "240": ["함정"], "245": ["함정"], "251": ["함정"], "275": ["함정"], "282": ["계산", "함정"], "289": ["계산", "함정"], "298": ["계산", "함정"], "316": ["개념"], "336": ["공식"], "340": ["함정"], "364": ["함정"], "372": ["함정"], "370": ["함정"], "378": ["함정", "개념"], "389": ["함정"], "412": ["함정"], "413": ["함정"], "417": ["공식", "개념"], "418": ["개념"], "420": ["계산"], "423": ["함정"], "426": ["함정"], "437": ["함정"], "439": ["공식", "개념"], "442": ["함정"], "457": ["공식", "함정"], "447": ["함정"], "450": ["개념"], "459": ["함정"], "460": ["함정"], "476": ["계산"], "481": ["함정"], "485": ["공식"], "495": ["계산", "함정"], "497": ["함정"], "498": ["함정"], "499": ["계산"], "502": ["공식"], "501": ["공식"], "509": ["공식"], "517": ["함정"], "525": ["계산", "함정"], "531": ["계산"], "538": ["공식"], "536": ["계산"], "541": ["공식", "함정"], "546": ["계산"], "549": ["계산"], "554": ["계산"], "559": ["계산"], "556": ["계산"], "552": ["공식"], "561": ["계산"], "567": ["개념"], "575": ["공식"]};
 let QT={};
@@ -363,12 +378,15 @@ async function renumber(){
   const np={};
   for(const k in MPOS){const n=OLD2NEW[k]; if(n) np[n]=MPOS[k];}
   MPOS=np;
+  const op={};
+  for(const k in OPOS){ if(k==='def'){op.def=OPOS.def;continue} const n=OLD2NEW[k]; if(n) op[n]=OPOS[k]; }
+  OPOS=op;
   const ks=await keys('ink'), vs=await all('ink'), buf=[];
   for(let i=0;i<ks.length;i++){const n=OLD2NEW[String(ks[i])]; if(n) buf.push([String(n),vs[i]]);}
   for(const k of ks) await del('ink',k);
   for(const [k,v] of buf) await put('ink',k,v);
   SET.renum=RENUM_V;
-  await saveST(); await put('kv','maskpos',MPOS); await put('kv','set',SET);
+  await saveST(); await put('kv','maskpos',MPOS); await put('kv','omrpos',OPOS); await put('kv','set',SET);
   return buf.length+Object.keys(ST).length;
 }
 /* 예전 형식({m,r}) → 회독 기록 배열로 옮김 */
@@ -394,7 +412,8 @@ const toast=(m,ms=1600)=>{const d=document.createElement('div');d.className='toa
 
 /* ---------------- 필터 ---------------- */
 const BIGS=[...new Set(DATA.map(r=>r[F.BIG]))];
-let FL={big:'',lv:'',type:'',past:'',star:false,mark:'',q:'',cp:[]};
+let FL={big:'',lv:'',type:'',past:'',star:false,mark:'',q:'',cp:[],year:''};
+const PYEARS=[...new Set(DATA.filter(r=>r[F.SRC]==='변리사').map(r=>r[F.YEAR]))].sort();
 
 function pass(r){
   if(FL.big&&r[F.BIG]!==FL.big)return 0;
@@ -403,6 +422,7 @@ function pass(r){
   if(FL.past==='y'&&r[F.SRC]!=='변리사')return 0;
   if(FL.past==='p'&&(!r[F.SRC]||r[F.SRC]==='변리사'))return 0;
   if(FL.past==='n'&&r[F.SRC])return 0;
+  if(FL.year&&!(r[F.SRC]==='변리사'&&String(r[F.YEAR])===FL.year))return 0;
   if(FL.cp.length&&!(CL[r[F.CODE]]||[]).some(k=>FL.cp.includes(k)))return 0;
   if(FL.star&&!r[F.STAR])return 0;
   const m=lastM(r[F.NO]);
@@ -430,6 +450,12 @@ function drawFilters(){
     DATA.filter(r=>r[F.SRC]==='변리사').length));
   e.appendChild(chip('기본',FL.past==='n',()=>{FL.past=FL.past==='n'?'':'n';draw()},
     DATA.filter(r=>!r[F.SRC]).length));
+  if(FL.past==='y'){
+    PYEARS.forEach(y=>e.appendChild(chip(String(y).slice(2)+'년',FL.year===String(y),
+      ()=>{FL.year=FL.year===String(y)?'':String(y);draw()},
+      DATA.filter(r=>r[F.SRC]==='변리사'&&r[F.YEAR]===y).length)));
+    if(FL.year)e.appendChild(chip('📊 '+FL.year+'년 채점표',false,()=>yearSheet(FL.year)));
+  } else if(FL.year){FL.year=''}
   e.appendChild(chip('★중요',FL.star,()=>{FL.star=!FL.star;draw()}));
   e.appendChild(chip('안 푼 것',FL.mark==='new',()=>{FL.mark=FL.mark==='new'?'':'new';draw()}));
   e.appendChild(chip('틀린 것',FL.mark==='X',()=>{FL.mark=FL.mark==='X'?'':'X';draw()}));
@@ -796,7 +822,8 @@ async function setupMask(page){
 }
 function updateMask(){
   const m=$('#mask');
-  if(!SET.mask||!MASK||!VNO||!HAVE[locate(rec(VNO)).id]){m.classList.add('hide');return}
+  layoutOmr();
+  if(SET.omrMask||!SET.mask||!MASK||!VNO||!HAVE[locate(rec(VNO)).id]){m.classList.add('hide');return}
   m.classList.remove('hide');
   layoutMask();
 }
@@ -808,7 +835,68 @@ function layoutMask(){
   m.style.top=Math.round(Math.min(ay,by))+'px';
   m.style.width=Math.round(Math.abs(bx-ax))+'px';
   m.style.height=Math.round(Math.max(20,Math.abs(by-ay)))+'px';
+  layoutOmr();
 }
+
+/* OMR 패드 — 가리개 사각형을 기준점으로만 쓴다. 안에 넣지 않는다.
+   배율을 따로 계산하지 않고 layoutMask 와 같은 normToCss 를 쓰므로 좌표가 밀리지 않는다. */
+function layoutOmr(){
+  const p=$('#omrPad'); if(!p)return;
+  const show = !!VNO && !!MASK && canGrade(VNO) && !$('#view').classList.contains('hide');
+  p.classList.toggle('show',show);
+  if(!show)return;
+  const w=$('#wrap'), pw=p.offsetWidth||280, ph=p.offsetHeight||44;
+  const cover=!!SET.omrMask && !!SET.mask;      // OMR 이 가리개를 겸하는 모드
+  p.classList.toggle('cover',cover);
+  const own=OPOS[VNO]||OPOS.def;
+  let L,T;
+  if(own){ const q=normToCss(own.u,own.v); L=q[0]; T=q[1]; }
+  else{
+    const f=MPOS[VNO]?1:SET.maskH;
+    const a=normToCss(MASK.u,MASK.v), b=normToCss(MASK.u+MASK.w,MASK.v+MASK.h*f);
+    const ax=a[0],ay=a[1],bx=b[0],by=b[1];
+    L=Math.min(ax,bx);
+    if(cover){ T=Math.min(ay,by)-4; }            // 답이 인쇄된 자리를 직접 덮는다
+    else{
+      T=Math.max(ay,by)+8;
+      if(T+ph>w.clientHeight-4)T=Math.min(ay,by)-ph-8;
+    }
+  }
+  T=Math.max(4,Math.min(T,Math.max(4,w.clientHeight-ph-4)));
+  L=Math.max(4,Math.min(L,Math.max(4,w.clientWidth-pw-4)));
+  p.style.left=Math.round(L)+'px';p.style.top=Math.round(T)+'px';
+}
+
+/* OMR 패드를 ≡ 손잡이로 끌어 옮긴다.
+   저장은 회전 전 페이지 기준 정규화 좌표라 확대·회전해도 같은 자리에 붙는다.
+   그 문항과 다음 문항 기본값(def)을 같이 적는다 — 475문항을 하나씩 옮기지 않게 하려는 것 */
+(function omrDrag(){
+  const p=$('#omrPad'), g=p.querySelector('.ogrip'); let st=null;
+  g.addEventListener('pointerdown',e=>{
+    try{g.setPointerCapture(e.pointerId)}catch(_){}
+    st={x:e.clientX,y:e.clientY,l:p.offsetLeft,t:p.offsetTop,moved:false};
+    e.preventDefault();e.stopPropagation();
+  });
+  g.addEventListener('pointermove',e=>{
+    if(!st)return;
+    const dx=e.clientX-st.x, dy=e.clientY-st.y;
+    if(!st.moved&&Math.hypot(dx,dy)<4)return;
+    st.moved=true;p.classList.add('drag');
+    p.style.left=(st.l+dx)+'px';p.style.top=(st.t+dy)+'px';
+    e.preventDefault();
+  });
+  const end=async()=>{
+    if(!st)return;
+    const moved=st.moved; st=null; p.classList.remove('drag');
+    if(!moved||!VNO)return;
+    const q=cssToNorm(p.offsetLeft,p.offsetTop);
+    const pos={u:q[0],v:q[1]};
+    OPOS[VNO]=pos; OPOS.def=pos;
+    await put('kv','omrpos',OPOS);
+    toast('OMR 자리를 저장했습니다 — 다음 문항에도 같은 자리에 그대로 적용됩니다');
+  };
+  g.addEventListener('pointerup',end); g.addEventListener('pointercancel',end);
+})();
 
 /* 탭하면 열림 · 끌면 이동 · 오른쪽 아래 모서리로 크기 조절 */
 (function maskDrag(){
@@ -827,6 +915,8 @@ function layoutMask(){
     st.moved=true;m.classList.add('drag');
     if(st.resize){m.style.width=Math.max(30,st.w+dx)+'px';m.style.height=Math.max(16,st.h+dy)+'px'}
     else{m.style.left=(st.l+dx)+'px';m.style.top=(st.t+dy)+'px'}
+    {const p=$('#omrPad');
+     if(p.classList.contains('show')){p.style.left=m.offsetLeft+'px';p.style.top=(m.offsetTop+m.offsetHeight+8)+'px'}}
     e.preventDefault();
   });
   const end=async()=>{
@@ -838,6 +928,7 @@ function layoutMask(){
     MASK={u:Math.min(a[0],b[0]),v:Math.min(a[1],b[1]),
           w:Math.abs(b[0]-a[0]),h:Math.abs(b[1]-a[1])};
     MPOS[VNO]=MASK;await put('kv','maskpos',MPOS);
+    layoutOmr();
     toast('이 문제의 가리개 위치를 저장했습니다');
   };
   m.addEventListener('pointerup',end);m.addEventListener('pointercancel',end);
@@ -1238,7 +1329,33 @@ $('#tZoom').onclick=async()=>{SET.zoom=SET.zoom>=1.8?1:SET.zoom+0.4;await put('k
   $('#tZoom').textContent=SET.zoom>1?Math.round(SET.zoom*100)+'%':'＋';
   await renderPage(locate(rec(VNO)));paintInk();await setupMask(VPAGE)};
 $('#tUndo').onclick=()=>{const a=INK[LAYER];if(a&&a.length){a.pop();paintInk();saveInk()}};
-$('#tErase').onclick=()=>setTool('erase');
+$('#tErase').onclick=()=>{ if(TOOL.mode==='erase')eraseSheet(); else setTool('erase'); };
+
+/* 지우개를 고른 상태에서 한 번 더 누르면 뜼는 시트.
+   되돌릴 수 없으므로 전체 지우기는 두 번 눌러야 실행된다 */
+function eraseSheet(){
+  if(!VNO)return;
+  const cur=(INK[LAYER]||[]).length;
+  const tot=Object.keys(INK).reduce((s,k)=>s+((INK[k]||[]).length),0);
+  const b=document.createElement('div');b.className='sheet';
+  b.innerHTML=`<div class="panel"><h2>필기 지우기</h2>
+    <p>${VNO}번 · 지금 ${LAYER+1}회독 ${cur}획 · 전체 ${tot}획</p>
+    <button class="btn" id="eL">지금 회독만 지우기 (${cur}획)</button>
+    <button class="btn" id="eA" style="margin-top:8px">이 문항 전체 회독 지우기 (${tot}획)</button>
+    <p style="font-size:11.5px;margin:10px 0 0">되돌릴 수 없습니다. 전체 지우기는 두 번 눌러야 실행됩니다.</p>
+    <button class="btn" id="eN" style="margin-top:12px">닫기</button></div>`;
+  const close=()=>b.remove();
+  b.querySelector('#eL').onclick=()=>{INK[LAYER]=[];paintInk();saveInk();close();toast('지금 회독 필기를 지웠습니다')};
+  let armed=false;
+  b.querySelector('#eA').onclick=e=>{
+    if(!armed){armed=true;e.target.textContent='한 번 더 누르면 전부 지웁니다';return}
+    Object.keys(INK).forEach(k=>INK[k]=[]);
+    paintInk();saveInk();close();toast('이 문항 필기를 모두 지웠습니다');
+  };
+  b.querySelector('#eN').onclick=close;
+  b.onclick=e=>{if(e.target===b)close()};
+  document.body.appendChild(b);
+}
 $$('[data-pen]').forEach(b=>b.onclick=()=>setTool('pen',b.dataset.pen,b));
 $$('[data-hl]').forEach(b=>b.onclick=()=>setTool('hl',b.dataset.hl,b));
 function setTool(mode,color,el){
@@ -1314,6 +1431,116 @@ async function mark(m){
   if(SET.autoNext)setTimeout(()=>go(1),380);
 }
 $('#mO').onclick=()=>mark('O');$('#mX').onclick=()=>mark('X');$('#mQ').onclick=()=>mark('Q');
+
+/* ---------------- OMR 마킹 · 자동 채점 ----------------
+   심판값은 DATA 의 ANS 다. 교재 OCR 산물이라 틀렸을 수 있으므로
+   AFIX(kv/ansfix) 로 덮어쓸 수 있게 해둔다. DATA 는 손대지 않는다(D10). */
+let AFIX=null;                      // no -> '②'  (사용자가 고친 정답)
+const OMR_MULTI={125:['③','⑤']};   // 2014 변리사 복수정답
+const OMR_SKIP={175:'교재 문제오류로 표시된 문항입니다 — 채점하지 않습니다'};
+const CIRC5='①②③④⑤';
+async function loadAfix(){ if(!AFIX) AFIX=(await get('kv','ansfix'))||{}; return AFIX }
+function rawAns(no){ const r=rec(no); return r?String(r[F.ANS]||''):'' }
+function ansOf(no){                 // 채점에 쓸 정답 배열 (없으면 [])
+  if(OMR_SKIP[no])return [];
+  const fx=(AFIX||{})[no];
+  if(fx&&CIRC5.includes(fx))return [fx];
+  if(OMR_MULTI[no])return OMR_MULTI[no];
+  const a=rawAns(no).trim();
+  return (a.length===1&&CIRC5.includes(a))?[a]:[];
+}
+const canGrade=no=>ansOf(no).length>0;
+const pickOf=no=>{const h=hist(no);for(let i=h.length-1;i>=0;i--)if(h[i].a)return h[i].a;return ''};
+
+async function syncOmr(){
+  await loadAfix();
+  const pad=$('#omrPad'); if(!pad||!VNO)return;
+  const p=pickOf(VNO), ok=ansOf(VNO);
+  pad.querySelectorAll('[data-omr]').forEach(b=>{
+    const sel=b.dataset.omr===p;
+    b.classList.toggle('on',sel);
+    b.classList.toggle('hit',sel&&ok.includes(b.dataset.omr));
+    b.classList.toggle('miss',sel&&!ok.includes(b.dataset.omr));
+  });
+  layoutOmr();
+}
+async function omrPick(ch){
+  if(!VNO)return;
+  await loadAfix();
+  if(OMR_SKIP[VNO]){toast(OMR_SKIP[VNO],2600);return}
+  const ok=ansOf(VNO);
+  if(!ok.length){toast('이 문항은 채점할 정답이 없습니다 — 답 보기를 쓰세요',2400);return}
+  const hit=ok.includes(ch);
+  const h=hist(VNO).slice();
+  h.push({m:hit?'O':'X',t:Date.now(),s:TM.sec||0,a:ch});
+  ST[VNO]={h};await saveST();
+  tmStop();syncMarkBtns();
+  omrResult(VNO,ch,hit,ok);
+  if(hit&&SET.autoNext)setTimeout(()=>go(1),900);
+}
+function omrResult(no,ch,hit,ok){
+  const b=document.createElement('div');b.className='sheet';
+  const ansTxt=ok.join(' 또는 ');
+  b.innerHTML=`<div class="panel"><h2 style="color:${hit?'var(--teal)':'var(--red)'}">${hit?'정답입니다':'오답입니다'}</h2>
+    <p>${no}번 · 고른 답 ${ch}</p>
+    <div class="ansbox"><b>정답</b> ${ansTxt}${OMR_MULTI[no]?' <span class="tag">복수정답</span>':''}</div>
+    <p style="margin:12px 0 0;font-size:11.5px">${hit?'회독 기록에 O 로 남겼습니다. 헷갈렸다면 △ 를 누르세요.':'회독 기록에 X 로 남겼습니다.'}</p>
+    <button class="btn" id="omrFix" style="margin-top:12px">이 정답이 틀렸어요</button>
+    <button class="btn" style="margin-top:8px">닫기</button></div>`;
+  b.onclick=e=>{if(e.target===b||(e.target.tagName==='BUTTON'&&e.target.id!=='omrFix'))b.remove()};
+  b.querySelector('#omrFix').onclick=()=>{b.remove();ansFixSheet(no)};
+  document.body.appendChild(b);
+}
+/* 정답 정정 — DATA 가 아니라 AFIX 에 저장한다 */
+function ansFixSheet(no){
+  const b=document.createElement('div');b.className='sheet';
+  const cur=ansOf(no).join(',')||'(없음)';
+  b.innerHTML=`<div class="panel"><h2>${no}번 정답 정정</h2>
+    <p>지금 정답 <b>${cur}</b> · 교재 원값 ${esc(rawAns(no))||'(없음)'}</p>
+    <p style="font-size:11.5px">교재 페이지를 열어 확인한 뒤 고르세요. 교재 파일은 그대로 두고 이 기기에만 저장됩니다.</p>
+    <div style="display:flex;gap:6px;margin:12px 0">${[...CIRC5].map(c=>`<button class="tl" data-af="${c}">${c}</button>`).join('')}</div>
+    <button class="btn" id="afClear">정정 취소(교재 값으로)</button>
+    <button class="btn" id="afClose" style="margin-top:8px">닫기</button></div>`;
+  const close=()=>b.remove();
+  b.querySelectorAll('[data-af]').forEach(x=>x.onclick=async()=>{
+    AFIX[no]=x.dataset.af;await put('kv','ansfix',AFIX);
+    toast(`${no}번 정답을 ${x.dataset.af} 로 고쳤습니다`);close();syncOmr()});
+  b.querySelector('#afClear').onclick=async()=>{
+    delete AFIX[no];await put('kv','ansfix',AFIX);
+    toast('교재 값으로 되돌렸습니다');close();syncOmr()};
+  b.querySelector('#afClose').onclick=close;
+  b.onclick=e=>{if(e.target===b)close()};
+  document.body.appendChild(b);
+}
+/* 연도별 채점표 — 변리사 한 회차 10문항을 실전처럼 모아 본다 */
+function yearSheet(y){
+  const rows=DATA.filter(r=>r[F.SRC]==='변리사'&&String(r[F.YEAR])===String(y))
+                 .sort((a,b)=>String(a[F.CODE]).localeCompare(String(b[F.CODE])));
+  let hit=0,done=0;
+  const body=rows.map(r=>{
+    const no=r[F.NO], pick=pickOf(no), ok=ansOf(no), m=lastM(no);
+    const graded=!!pick&&ok.length>0;
+    if(graded){done++; if(ok.includes(pick))hit++}
+    const st=!pick?'<span class="tag">안 품</span>'
+      :(ok.includes(pick)?'<b style="color:var(--teal)">O</b>':'<b style="color:var(--red)">X</b>');
+    return `<div class="histrow"><span class="rn">${r[F.CODE]}</span>
+      <span class="sel" style="gap:8px">고른 답 ${pick||'—'} · 정답 ${ok.join('/')||'—'}</span>
+      <span class="sec">${st}</span></div>`;
+  }).join('');
+  const b=document.createElement('div');b.className='sheet';
+  b.innerHTML=`<div class="panel"><h2>${y}년 변리사 채점표</h2>
+    <p>${rows.length}문항 · 푼 것 ${done} · <b>${hit} / ${done||0} 맞음</b>${done?` (${Math.round(hit/done*100)}%)`:''}</p>
+    <div>${body}</div>
+    <p style="margin:12px 0 0;font-size:11.5px">목표는 10문항 중 8개입니다. 안 푼 문항은 집계에서 빠졌습니다.</p>
+    <button class="btn pri" style="margin-top:12px">닫기</button></div>`;
+  b.onclick=e=>{if(e.target===b||e.target.tagName==='BUTTON')b.remove()};
+  document.body.appendChild(b);
+}
+$('#omrPad').addEventListener('click',e=>{
+  const b=e.target.closest('[data-omr]'); if(b)omrPick(b.dataset.omr);
+});
+const _syncMarkBtns0=syncMarkBtns;
+syncMarkBtns=function(){_syncMarkBtns0();syncOmr()};
 $('#tHist').onclick=()=>histSheet(VNO);
 
 /* 회독 기록 고치기 — 표시를 바꾸거나 지울 수 있다 */
@@ -1335,7 +1562,7 @@ function histSheet(no){
           <button data-m="Q" class="${x.m==='Q'?'on':''}">헷갈림</button>
           <button data-m="X" class="${x.m==='X'?'on':''}">틀림</button>
         </span>
-        <span class="sec">${x.s?secFmt(x.s):''}</span>
+        <span class="sec">${x.a?x.a+' ':''}${x.s?secFmt(x.s):''}</span>
         <button class="rm">✕</button>`;
       r.querySelectorAll('.sel button').forEach(btn=>btn.onclick=async()=>{
         x.m=btn.dataset.m;ST[no]={h};await saveST();build();drawSpectrum();if(VNO===no)syncMarkBtns()});
@@ -1409,8 +1636,10 @@ $('#btnSet').onclick=()=>{
     <div class="fld"><label>필기</label>
       <button class="btn" id="bPen">애플펜슬로만 필기 — ${SET.pencil?'켬':'끔'}</button>
       <button class="btn" id="bMask">답 자동 가리기 — ${SET.mask?'켬':'끔'}</button>
+      <button class="btn" id="bOmrMask">OMR 이 답 가리개를 겸함 — ${SET.omrMask?'켬':'끔'}</button>
       <button class="btn" id="bMaskH">가리개 기본 높이 — ${SET.maskH}줄</button>
       <button class="btn" id="bMaskR">옮겨 둔 가리개 위치 초기화 (${Object.keys(MPOS).length}개)</button>
+      <button class="btn" id="bOmrR">OMR 자리 초기화 (${Object.keys(OPOS).length}개)</button>
     </div>
     <div class="fld"><label>풀이</label>
       <button class="btn" id="bTimer">문제별 타이머 — ${SET.timer?'켬':'끔'}</button>
@@ -1434,11 +1663,16 @@ $('#btnSet').onclick=()=>{
     e.target.textContent=`애플펜슬로만 필기 — ${SET.pencil?'켬':'끔'}`;$('#inkc').classList.toggle('pen',!!SET.pencil)};
   b.querySelector('#bMask').onclick=async e=>{SET.mask=!SET.mask;await put('kv','set',SET);
     e.target.textContent=`답 자동 가리기 — ${SET.mask?'켬':'끔'}`;if(VNO)updateMask()};
+  b.querySelector('#bOmrMask').onclick=async e=>{SET.omrMask=!SET.omrMask;await put('kv','set',SET);
+    e.target.textContent=`OMR 이 답 가리개를 겸함 — ${SET.omrMask?'켬':'끔'}`;if(VNO)updateMask()};
   b.querySelector('#bMaskH').onclick=async e=>{SET.maskH=SET.maskH>=3?1:SET.maskH+1;await put('kv','set',SET);
     e.target.textContent=`가리개 기본 높이 — ${SET.maskH}줄`;if(VNO)updateMask()};
   b.querySelector('#bMaskR').onclick=async e=>{MPOS={};await put('kv','maskpos',MPOS);
     e.target.textContent='옮겨 둔 가리개 위치 초기화 (0개)';
     if(VNO)await setupMask(VPAGE);toast('가리개를 자동 위치로 되돌렸습니다')};
+  b.querySelector('#bOmrR').onclick=async e=>{OPOS={};await put('kv','omrpos',OPOS);
+    e.target.textContent='OMR 자리 초기화 (0개)';
+    if(VNO)layoutOmr();toast('OMR 자리를 자동 위치로 되돌렸습니다')};
   b.querySelector('#bTimer').onclick=async e=>{SET.timer=!SET.timer;await put('kv','set',SET);
     e.target.textContent=`문제별 타이머 — ${SET.timer?'켬':'끔'}`;if(VNO)tmReset()};
   b.querySelector('#bNext').onclick=async e=>{SET.autoNext=!SET.autoNext;await put('kv','set',SET);
@@ -1453,7 +1687,7 @@ $('#btnSet').onclick=()=>{
 async function exportData(withPdf){
   toast('만드는 중…');
   const inkKeys=await keys('ink'),inkVals=await all('ink');
-  const out={v:2,at:Date.now(),status:ST,set:SET,maskpos:MPOS,note:CMT,qtype:QT,conc:CX,gpt:GP,ink:{}};
+  const out={v:2,at:Date.now(),status:ST,set:SET,maskpos:MPOS,omrpos:OPOS,note:CMT,qtype:QT,conc:CX,gpt:GP,ansfix:(AFIX||{}),ink:{}};
   inkKeys.forEach((k,i)=>out.ink[k]=inkVals[i]);
   if(withPdf){
     out.pdf={};
@@ -1477,8 +1711,10 @@ async function importData(f){
     if(j.status){ST=j.status;await put('kv','status',ST)}
     if(j.set){SET=Object.assign(SET,j.set);await put('kv','set',SET)}
     if(j.maskpos){MPOS=j.maskpos;await put('kv','maskpos',MPOS)}
+    if(j.omrpos){OPOS=j.omrpos;await put('kv','omrpos',OPOS)}
     if(j.note){CMT=j.note;await saveNote()}
     if(j.qtype){QT=j.qtype;await saveQT()}
+    if(j.ansfix){AFIX=j.ansfix;await put('kv','ansfix',AFIX)}
     if(j.conc){CX=j.conc;await saveCX()}
     if(j.gpt){GP=j.gpt;await saveGP()}
     if(migrate())await saveST();
@@ -1516,6 +1752,7 @@ let rt;window.addEventListener('resize',()=>{if(!VNO)return;clearTimeout(rt);
   SET=Object.assign(SET,(await get('kv','set'))||{});
   if(!SET.autoNextReset){SET.autoNext=false;SET.autoNextReset=1;await put('kv','set',SET);}
   MPOS=(await get('kv','maskpos'))||{};
+  OPOS=(await get('kv','omrpos'))||{};
   CMT=(await get('kv','note'))||{};
   CX=(await get('kv','conc'))||{};
   buildCQ();
