@@ -353,6 +353,9 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 /* ══ 필기 (§4) ══ */
 .inkhost{position:relative}
 .inklay{position:absolute;left:0;top:0;z-index:5;pointer-events:none;touch-action:pan-y}
+/* ★ 펜이 닿아 있는 동안만 스크롤을 꺼둔다 — 손가락은 그대로 밀린다 */
+.inklay.penning{touch-action:none}
+body.inkon .inkhost{-webkit-user-select:none;-webkit-touch-callout:none}
 /* ⚠ #app 이 아니라 body 에 건다 — 팝업(2차 셀)은 body 밑이라 #app 밑이 아니다 */
 body.inkon .inklay{pointer-events:auto}
 body.inkon .main,body.inkon .pop{user-select:none}
@@ -1260,11 +1263,22 @@ function inkBind(cv, key){
       inkSet(key, keep); inkDraw(cv, key);
     }
   };
+  /* ★ 애플펜슬로 그을 때 화면이 위아래로 흔들리던 것 (2026-08-26).
+     사파리는 pointerdown 의 preventDefault 로 스크롤을 멈추지 않는다 — 스크롤은
+     touch-action 과 touchmove 가 정한다. 펜슬의 터치만 막고 손가락은 그대로 흘려보낸다. */
+  const stylus = ev => {
+    if (!S.ink) return;
+    const t = ev.touches && ev.touches[0];
+    if (t && t.touchType === 'stylus' && ev.cancelable) ev.preventDefault();
+  };
+  cv.addEventListener('touchstart', stylus, { passive: false });
+  cv.addEventListener('touchmove', stylus, { passive: false });
   cv.addEventListener('pointerdown', ev => {
     if (!S.ink) return;
     if (ev.pointerType === 'touch') return;      // ★ 손가락은 스크롤로 흘려보낸다(T7)
     ev.preventDefault();
-    INKLAST = cv;                                // 되돌리기는 **마지막에 그린 캔버스**를 되돌린다
+    cv.classList.add('penning');                 // 그리는 동안은 touch-action:none
+    INKLAST = cv;                                // 되돌리기는 마지막에 그린 캔버스를 되돌린다
     try{ cv.setPointerCapture(ev.pointerId); }catch(e){}
     if (ev.pointerType === 'eraser' || S.inkErase){ cv._rub = 1; rub(at(ev)); return; }
     cv._cur = { c: S.inkColor, w: S.inkW, p: [at(ev)] };
@@ -1278,6 +1292,7 @@ function inkBind(cv, key){
     inkDraw(cv, key);
   });
   const done = () => {
+    cv.classList.remove('penning');
     if (cv._rub){ cv._rub = 0; return; }
     if (!cv._cur) return;
     const st = cv._cur; cv._cur = null;
