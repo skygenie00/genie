@@ -350,6 +350,30 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .stkgrid{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
 .orphan{background:#fde9e9;color:var(--rule)}
 
+/* ══ 1차객 풀이 · 히트맵 (§7·§9 · 5상태) ══ */
+.hmdot{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:-1px;margin-right:3px}
+.hmdot.s0{background:#D3D1C7}.hmdot.s1{background:#1D9E75}.hmdot.s2{background:#EF9F27}
+.hmdot.s3{background:#E24B4A}.hmdot.s4{background:#F5E06A}
+.hmwrap{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:8px 0;background:#fff}
+.hmhd{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:6px;font-size:11px;color:#666}
+.hmlg{white-space:nowrap}
+.hmcv{width:100%;display:block;cursor:pointer}
+.qwrap.hmhit{outline:2px solid var(--exc);outline-offset:2px}
+/* ══ 같은 판례·조문 · 암기카드 (2026-08-26) ══ */
+.lnkrow{display:flex;align-items:center;gap:6px;padding:5px 2px;border-bottom:1px solid var(--line);
+  cursor:pointer;font-size:12px}
+.lnkrow:hover{background:#f4f7fd}
+.lnkt{color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mcbox{border:1px solid var(--line);border-radius:8px;padding:7px;margin:7px 0;background:#fafafa}
+.mchd{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.mcnm{flex:1;min-width:0;font-size:11.5px;font-weight:700;color:#374151;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mczoom{position:relative;overflow:hidden;background:#fff;border-radius:6px;touch-action:none;cursor:grab}
+.mczin{transform-origin:0 0;will-change:transform}
+.mcdrop{border:2px dashed #93c5fd;border-radius:9px;background:#f8fafc;padding:11px;
+  text-align:center;margin:7px 0}
+.mcdrop.on{background:#eff6ff}
+.mcdt{font-size:12px;font-weight:800;color:#1d4ed8;margin-bottom:3px}
 /* ══ 필기 (§4) ══ */
 .inkhost{position:relative}
 .inklay{position:absolute;left:0;top:0;z-index:5;pointer-events:none;touch-action:pan-y}
@@ -432,7 +456,7 @@ const S={law:'특허법',tab:'jo',jo:null,prec:null,precTab:'요약',
          // ⚠ 탭 바가 사라지던 것은 기본값이 아니라 붙이는 순서 탓이다 — 그쪽을 고쳤다.
          boardKind:'기출',boardView:'board',treeHid:false,listHid:false,
          precSort:'asc',labels:true,joMode:'본문',
-         jimunTab:'ox',mok:null,year:null,
+         jimunTab:'ox',mok:null,year:null,oxFilter:'all',oxQueue:'',
          series:'',yearFilter:'',yearSort:'asc',zoom:0.55,
          // §3 마크업 스티커 편집 모드 · §4 필기 모드 — 둘 다 기본은 꺼짐(T5)
          stick:false,ink:false,inkColor:'#D93B3B',inkW:2,inkErase:false};
@@ -1904,9 +1928,498 @@ function popCell(x,ev,bodies){
   showPop(ev);
 }
 
+/* ══════════ 1차객 풀이 기록 (§7 · §10 · 민법OX 이식 2026-08-26) ══════════
+   단위 = 지문 하나에 O/X 하나. 키는 **JSON 이 실어 온 ID** 다 — 앱이 지어내지 않는다(D10).
+     제7판 지문 → 8자 지문 ID(sid)  ·  리담 지문 → L:문항id#선지번호
+   ★ 5상태 — 0 안품 · 1 맞음 · 2 헷갈림 · 3 틀림 · 4 덜약점(연노랑).
+     사양서 §9-1 의 4상태에 덜약점을 하나 더했다(사용자 확정 8/26 · 민법OX 와 같은 규칙).
+     헷갈림이 빠져나가는 길 = 약점에서 맞히면 덜약점 → 덜약점에서 또 맞히면 헷갈림 해제·졸업.
+     틀리면 어느 자리에서든 약점으로 되돌아간다. */
+const OX_KEY  = REC_PRE + 'ox';
+const RND_KEY = REC_PRE + 'rounds';
+const FIX_KEY = REC_PRE + 'ansfix';
+let OXREC = null, RNDREC = null, FIXREC = null;
+function oxAll(){ if (!OXREC) OXREC = lsRead(OX_KEY); return OXREC; }
+function rndAll(){ if (!RNDREC) RNDREC = lsRead(RND_KEY); return RNDREC; }
+function fixAll(){ if (!FIXREC) FIXREC = lsRead(FIX_KEY); return FIXREC; }
+function oxKeyP7(z){ return z.sid || ('P7:' + z.id); }
+function oxKeyLid(q, z){ return 'L:' + q.id + '#' + z.n; }
+function oxOf(k){ return oxAll()[k] || null; }
+function oxAns(k, raw){ const f = fixAll()[k]; return (f === 'O' || f === 'X') ? f : (raw || ''); }
+function oxFixed(k){ const f = fixAll()[k]; return (f === 'O' || f === 'X') ? f : ''; }
+function oxState(k){
+  const r = oxOf(k);
+  if (!r) return 0;
+  if (r.p && !r.ok) return 3;
+  if (r.sg === 'semi') return 4;
+  if (r.c) return 2;
+  if (r.ok) return 1;
+  return 0;
+}
+function oxPut(k, patch){
+  const A = oxAll(), cur = A[k] || {};
+  A[k] = Object.assign({}, cur, patch, { ts: nowIso() });
+  OXREC = A; lsWrite(OX_KEY, A, '1차객 풀이');
+}
+function oxPick(k, picked, ans){
+  if (!ans){ toast('이 지문은 정오가 없어 채점할 수 없다', 1); return; }
+  const ok = (picked === ans), cur = oxOf(k) || {}, patch = { p: picked, ok: ok };
+  if (S.oxQueue === 'weak'){
+    if (ok && cur.c) patch.sg = 'semi';
+    else patch.sg = '';
+  } else if (S.oxQueue === 'semi'){
+    if (ok){ patch.c = false; patch.sg = ''; }
+    else patch.sg = '';
+  }
+  oxPut(k, patch);
+}
+function oxConfuse(k){ const r = oxOf(k) || {}; oxPut(k, { c: !r.c, sg: r.c ? '' : r.sg }); }
+function oxClear(k){ const A = oxAll(); delete A[k]; OXREC = A; lsWrite(OX_KEY, A, '1차객 풀이'); }
+function oxFix(k, raw){
+  const v = prompt('이 지문의 정오를 직접 넣는다. O 또는 X (비우면 정정 취소)', oxFixed(k) || raw || '');
+  if (v === null) return;
+  const t = String(v).trim().toUpperCase();
+  const F = fixAll();
+  if (t === 'O' || t === 'X') F[k] = t; else delete F[k];
+  FIXREC = F; lsWrite(FIX_KEY, F, '정답 정정');
+  render();
+}
+/* ── 지문 한 줄의 O/X 줄 — 리담·제7판 카드가 같이 쓴다 ── */
+const OXNAME = ['안 품', '맞음', '헷갈림', '틀림', '덜약점'];
+function oxPickRow(row, key, raw, sol){
+  const rec = oxOf(key) || {}, ans = oxAns(key, raw), fixed = oxFixed(key);
+  const pick = el('div', 'oxpick');
+  ['O', 'X'].forEach(v => {
+    const on = rec.p === v;
+    const b = el('button', 'oxbtn' + (on ? ' sel' : '') +
+      (rec.p ? (v === ans ? ' right' : (on ? ' wrong' : '')) : ''));
+    b.appendChild(el('span', 'dot', on ? '◉' : '○'));
+    b.appendChild(el('span', 'lv ' + v, v));
+    b.onclick = () => { oxPick(key, v, ans); render(); };
+    pick.appendChild(b);
+  });
+  row.appendChild(pick);
+  const bar = el('div', 'oxres');
+  const st = oxState(key);
+  bar.appendChild(el('span', 'hmdot s' + st));
+  bar.appendChild(el('span', 'badge', OXNAME[st]));
+  const cb = el('button', 'tool' + (rec.c ? ' on' : ''), '🌀 헷갈림');
+  cb.onclick = () => { oxConfuse(key); render(); };
+  bar.appendChild(cb);
+  const fx = el('button', 'tool' + (fixed ? ' on' : ''), fixed ? ('정정 ' + fixed) : '정오 이상');
+  fx.title = '채점값을 직접 넣는다 — 원장은 안 건드리고 이 기기에만 쌓인다';
+  fx.onclick = () => oxFix(key, raw);
+  bar.appendChild(fx);
+  if (rec.p || rec.c){
+    const cl = el('button', 'tool', '지우개');
+    cl.onclick = () => { oxClear(key); render(); };
+    bar.appendChild(cl);
+  }
+  if (!ans) bar.appendChild(el('span', 'qb warn', '정오 없음 — 채점 불가'));
+  row.appendChild(bar);
+  if (rec.p){
+    const res = el('div', 'oxres');
+    res.appendChild(el('span', 'ansb ' + (ans || ''), '정답 ' + (ans || '미확정') + (fixed ? ' (정정)' : '')));
+    res.appendChild(el('span', 'badge', rec.ok ? '맞음' : '틀림'));
+    row.appendChild(res);
+    row.appendChild(sol ? el('div', 'sol', sol) : el('div', 'cdim', '해설 없음'));
+  } else if (sol){
+    const pv = el('button', 'solpv', '해설 미리보기');
+    pv.onclick = () => { const d = pv.nextSibling; d.style.display = d.style.display === 'none' ? '' : 'none'; };
+    row.appendChild(pv);
+    const d = el('div', 'sol', sol); d.style.display = 'none'; row.appendChild(d);
+  }
+}
+
+/* ── 거르기 · 빠른 실행 큐 ──
+   ★ 큐는 **마디 경계를 넘는다**(사용자 확정 8/26) — 특허 안에서 약점만 모아 풀다. */
+function oxKeep(key){
+  const st = oxState(key);
+  if (S.oxFilter === 'wrong')   return st === 3;
+  if (S.oxFilter === 'confuse') return st === 2 || st === 4;
+  if (S.oxFilter === 'todo')    return st === 0;
+  return true;
+}
+function oxQueueHas(key, kind){
+  const st = oxState(key);
+  if (kind === 'weak') return st === 3 || st === 2;
+  if (kind === 'semi') return st === 4;
+  return false;
+}
+function oxBar(counts){
+  const b = el('div', 'modebar');
+  b.appendChild(el('span', 'pl', '⚡ 빠른 실행'));
+  [['weak', '🔥 약점'], ['semi', '🌤 덜약점']].forEach(([k, t]) => {
+    const x = el('button', 'tool' + (S.oxQueue === k ? ' on' : ''), t + ' ' + (counts[k] || 0));
+    x.onclick = () => { S.oxQueue = (S.oxQueue === k ? '' : k); render(); };
+    b.appendChild(x);
+  });
+  b.appendChild(el('span', 'badge', S.oxQueue
+    ? '마디 경계 없이 특허 전체에서 모았다'
+    : '누르면 마디 상관없이 모아 풀어본다'));
+  b.appendChild(el('span', 'pl', '거르기'));
+  [['all', '전체'], ['wrong', '틀림'], ['confuse', '헷갈림·덜약점'], ['todo', '안 품']].forEach(([k, t]) => {
+    const x = el('button', 'tool' + (S.oxFilter === k ? ' on' : ''), t);
+    x.onclick = () => { S.oxFilter = k; render(); };
+    b.appendChild(x);
+  });
+  return b;
+}
+
+/* ── 회독 ── 마감하면 O/X 선택만 비우고 헷갈림·덜약점은 남긴다 — 다음 회독의 출발선이다 */
+function rndList(scope){ const a = rndAll()[scope]; return Array.isArray(a) ? a : []; }
+function rndClose(scope, keys){
+  const done = keys.filter(k => (oxOf(k) || {}).p).length;
+  if (!done){ toast('이 판에서 풀이한 지문이 없다'); return; }
+  const cnt = [0, 0, 0, 0, 0];
+  keys.forEach(k => cnt[oxState(k)]++);
+  const n = rndList(scope).length + 1;
+  if (!confirm('이 판을 ' + n + '회독으로 마감한다. 풀이한 지문 ' + done + '개 · 맞음 ' + cnt[1] + ' · 틀림 ' + cnt[3] + ' · 헷갈림 ' + cnt[2] + ' · 덜약점 ' + cnt[4])) return;
+  const A = rndAll();
+  const L = rndList(scope);
+  L.push({ n: n, date: nowIso().slice(0, 10), total: keys.length, done: done,
+           right: cnt[1], wrong: cnt[3], confuse: cnt[2], semi: cnt[4] });
+  A[scope] = L;
+  RNDREC = A; lsWrite(RND_KEY, A, '회독');
+  const O = oxAll();
+  keys.forEach(k => { if (O[k]){ delete O[k].p; delete O[k].ok; O[k].ts = nowIso(); } });
+  OXREC = O; lsWrite(OX_KEY, O, '1차객 풀이');
+  render();
+}
+function rndBar(scope, keys){
+  const b = el('div', 'modebar');
+  b.appendChild(el('span', 'pl', '회독'));
+  rndList(scope).forEach(r => {
+    b.appendChild(el('span', 'badge',
+      r.n + '회독 ' + r.date + ' · 🌀' + r.confuse + ' 🌤' + r.semi + ' 🔴' + r.wrong + ' /' + r.done));
+  });
+  const done = keys.filter(k => (oxOf(k) || {}).p).length;
+  const x = el('button', 'tool', '▣ ' + (rndList(scope).length + 1) + '회독 마감 (' + done + '/' + keys.length + ')');
+  x.onclick = () => rndClose(scope, keys);
+  b.appendChild(x);
+  return b;
+}
+
+/* ═════ 히트맵 (§9) ═════
+   한 칸 = 기록 단위(지문) · 8px · 5상태. ★ 캔버스는 자기 clientWidth 로 그린다(§9-2).
+   ⚠ 그린 폭과 놓인 폭이 다르면 오른쪽으로 갈수록 한 칸씩 밀린다 — 민법OX 가 8/18 에 밟은 함정이다. */
+const HM_C = ['#D3D1C7', '#1D9E75', '#EF9F27', '#E24B4A', '#F5E06A'];
+let HMCELL = [];
+function heatBox(cells){
+  HMCELL = cells;
+  const wrap = el('div', 'hmwrap');
+  const hd = el('div', 'hmhd');
+  hd.appendChild(el('span', 'pl', '🗺 히트맵'));
+  const cnt = [0, 0, 0, 0, 0];
+  cells.forEach(c => cnt[oxState(c.k)]++);
+  OXNAME.forEach((n, i) => {
+    const s = el('span', 'hmlg');
+    s.appendChild(el('span', 'hmdot s' + i));
+    s.appendChild(document.createTextNode(' ' + n + ' ' + cnt[i]));
+    hd.appendChild(s);
+  });
+  wrap.appendChild(hd);
+  const cv = el('canvas', 'hmcv');
+  cv.title = '칸을 누르면 그 지문으로 간다';
+  wrap.appendChild(cv);
+  const draw = () => {
+    const w = cv.clientWidth;
+    if (!w) return;
+    const px = 8, gap = 2, step = px + gap;
+    const cols = Math.max(1, Math.floor((w + gap) / step));
+    const h = Math.max(px, Math.ceil(cells.length / cols) * step - gap);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.style.height = h + 'px';
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    const x = cv.getContext('2d');
+    x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    x.clearRect(0, 0, w, h);
+    cells.forEach((c, i) => {
+      x.fillStyle = HM_C[oxState(c.k)];
+      x.fillRect((i % cols) * step, ((i / cols) | 0) * step, px, px);
+    });
+    cv._cols = cols; cv._step = step; cv._w = w;
+  };
+  cv.addEventListener('click', e => {
+    const r = cv.getBoundingClientRect();
+    const sc = (cv._w && r.width) ? (r.width / cv._w) : 1;
+    const c = Math.floor(((e.clientX - r.left) / sc) / cv._step);
+    const rw = Math.floor(((e.clientY - r.top) / sc) / cv._step);
+    if (c < 0 || c >= cv._cols) return;
+    const i = rw * cv._cols + c;
+    if (i < 0 || i >= HMCELL.length) return;
+    const box = document.getElementById(HMCELL[i].dom);
+    if (box){
+      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      box.classList.add('hmhit');
+      setTimeout(() => box.classList.remove('hmhit'), 2000);
+    } else toast('그 지문은 지금 걸러져 화면에 없다 — 거르기를 「전체」로 두면 보인다');
+  });
+  setTimeout(draw, 0);
+  if (window.ResizeObserver){ const ro = new ResizeObserver(draw); ro.observe(cv); INKROS.push(ro); }
+  return wrap;
+}
+
+/* ══════ 같은 판례 · 같은 조문 (민법OX 이식 2026-08-26) ══════
+   민법OX 는 해설 본문에서 판례번호를 뽑아 붙였다. 조판기는 선지에 근거판례·근거조문이
+   열로 이미 있으므로 그대로 쓴다.
+   ⚠ 실측 — 특허 선지 2,525 중 판례 442 · 조문 1,042. 절반 넘게는 둘 다 없어 칩이 안 붙는다.
+   ⚠ 제7판 단독 지문에는 근거 열이 없다 — 리담 지문에만 붙는다. */
+let LNKIDX = null;
+function lnkBuild(JM){
+  const pan = {}, jo = {};
+  (JM.문제 || []).forEach(q => (q.지문 || []).forEach(z => {
+    const p = (z.pan || '').trim();
+    if (p) (pan[p] = pan[p] || []).push({ q: q, z: z });
+    (z.jo || []).forEach(c => (jo[c] = jo[c] || []).push({ q: q, z: z }));
+  }));
+  LNKIDX = { pan: pan, jo: jo };
+  return LNKIDX;
+}
+function lnkPop(kind, key, ev){
+  const bag = ((LNKIDX || {})[kind] || {})[key] || [];
+  const title = (kind === 'pan' ? '🔗 같은 판례 · ' : '⚖ 같은 조문 · ') +
+                (kind === 'jo' ? key.replace(/^[특상디]-/, '제') + '조' : key);
+  const body = popShell('q', title + ' (' + bag.length + '지문)');
+  body.appendChild(el('div', 'cdim', kind === 'pan'
+    ? '같은 판례번호가 근거로 달린 지문이다'
+    : '같은 조문이 근거로 달린 지문이다'));
+  bag.forEach(x => {
+    const k = oxKeyLid(x.q, x.z);
+    const r = el('div', 'lnkrow');
+    r.appendChild(el('span', 'hmdot s' + oxState(k)));
+    r.appendChild(el('span', 'qb n', x.q.연도 + '년 ' + (x.q.시험문번 || x.q.문번) + '번(' + x.z.n + ')'));
+    r.appendChild(el('span', 'lnkt', String(x.z.t || '').slice(0, 70)));
+    r.onclick = () => {
+      const box = document.getElementById('qb-' + x.q.id);
+      if (!box){ toast('그 지문은 지금 화면에 없다 — 거르기·큐를 풀면 보인다'); return; }
+      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      box.classList.add('hmhit');
+      setTimeout(() => box.classList.remove('hmhit'), 2000);
+    };
+    body.appendChild(r);
+  });
+  showPop(ev);
+}
+function lnkChips(q, z, host){
+  const p = (z.pan || '').trim();
+  if (p){
+    const n = (((LNKIDX || {}).pan || {})[p] || []).length;
+    if (n > 1){
+      const b = el('button', 'chip c-quiz', '🔗 같은 판례 ' + (n - 1));
+      b.title = p;
+      b.onclick = ev => { ev.stopPropagation(); lnkPop('pan', p, ev); };
+      host.appendChild(b);
+    }
+  }
+  (z.jo || []).forEach(c => {
+    const n = (((LNKIDX || {}).jo || {})[c] || []).length;
+    const b = el('button', 'chip c-prec', '⚖ ' + c.replace(/^[특상디]-/, '') + (n > 1 ? ' · ' + (n - 1) : ''));
+    b.title = n > 1 ? '같은 조문이 근거인 지문 ' + (n - 1) + '개' : '이 조문이 근거인 지문은 이것뿐';
+    if (n > 1) b.onclick = ev => { ev.stopPropagation(); lnkPop('jo', c, ev); };
+    host.appendChild(b);
+  });
+}
+/* ══════ 🃏 암기카드 (P6 설계 · 민법OX 방식 2026-08-26) ══════
+   결과물은 SVG — 볼트 암기카드결과물 의 md 안 <svg> 를 끌어다 넣는다.
+   ⚠ 조판기에는 래스터 이미지를 담을 IndexedDB 층이 없다 — SVG 만 받는다.
+   자리 — ① 지문 카드의 🃏  ② 마디의 🃏 암기노트. 카드가 없으면 넣는 자리가 자동으로 열린다. */
+const MC_KEY = REC_PRE + 'mcard';
+let MCREC = null;
+function mcAll(){ if (!MCREC) MCREC = lsRead(MC_KEY); return MCREC; }
+function mcOf(k){ const a = mcAll()[k]; return Array.isArray(a) ? a : []; }
+function mcCount(k){ return mcOf(k).length; }
+function mcSave(A){ MCREC = A; return lsWrite(MC_KEY, A, '암기카드'); }
+function mcCleanSvg(txt){
+  const m = String(txt || '').match(/<svg[\s\S]*<\/svg>/i);
+  if (!m) return null;
+  return m[0]
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/javascript:/gi, '');
+}
+function mcFit(svg){
+  let out = String(svg || '');
+  if (!/viewBox\s*=/i.test(out)){
+    const w = (out.match(/<svg[^>]*\swidth\s*=\s*"([\d.]+)/i) || [])[1];
+    const h = (out.match(/<svg[^>]*\sheight\s*=\s*"([\d.]+)/i) || [])[1];
+    if (w && h) out = out.replace(/<svg/i, '<svg viewBox="0 0 ' + w + ' ' + h + '"');
+  }
+  return out.replace(/<svg([^>]*)>/i, (m, a) =>
+    '<svg' + a.replace(/\s(width|height)\s*=\s*"[^"]*"/gi, '') + ' style="width:100%;height:auto;display:block">');
+}
+function mcTitleOf(txt, svg, fb){
+  const h = (String(txt).match(/^#\s+(.+)$/m) || [])[1];
+  const t = (String(svg).match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1];
+  return String(h || t || fb || '암기카드').trim().slice(0, 60);
+}
+function mcAdd(k, txt, name){
+  const svg = mcCleanSvg(txt);
+  if (!svg){ toast('svg 태그를 찾지 못했다 — 볼트 md 나 svg 파일을 넣어라', 1); return false; }
+  if (svg.length > 400000){ toast('SVG 가 너무 크다', 1); return false; }
+  const A = mcAll();
+  if (!Array.isArray(A[k])) A[k] = [];
+  A[k].push({ id: 'mc' + Date.now().toString(36), name: mcTitleOf(txt, svg, name), svg: svg, ts: nowIso() });
+  mcSave(A);
+  return true;
+}
+function mcDel(k, id){
+  if (!confirm('이 카드를 지울까?')) return;
+  const A = mcAll();
+  A[k] = mcOf(k).filter(c => c.id !== id);
+  if (!A[k].length) delete A[k];
+  mcSave(A); mcOpen(k, null, 'edit'); mcChipSync();
+}
+function mcFiles(k, files){
+  let n = 0;
+  const rest = Array.from(files || []);
+  const step = i => {
+    if (i >= rest.length){
+      toast(n ? ('카드 ' + n + '장 추가') : '들어간 카드가 없다', n ? 0 : 1);
+      mcOpen(k, null, 'edit'); mcChipSync();
+      return;
+    }
+    const f = rest[i], rd = new FileReader();
+    rd.onload = () => { if (mcAdd(k, rd.result, f.name.replace(/\.[^.]+$/, ''))) n++; step(i + 1); };
+    rd.onerror = () => step(i + 1);
+    rd.readAsText(f);
+  };
+  step(0);
+}
+function mcChipSync(){
+  document.querySelectorAll('[data-mck]').forEach(b => {
+    const n = mcCount(b.getAttribute('data-mck'));
+    b.textContent = '🃏' + (n ? ' ' + n : '');
+    b.style.opacity = n ? '1' : '.5';
+  });
+}
+function mcChip(k){
+  const n = mcCount(k);
+  const b = el('button', 'qtag', '🃏' + (n ? ' ' + n : ''));
+  b.setAttribute('data-mck', k);
+  b.title = '암기카드 — SVG 를 끌어다 넣는다';
+  b.style.opacity = n ? '1' : '.5';
+  b.onclick = ev => { ev.stopPropagation(); mcOpen(k, ev); };
+  return b;
+}
+function mcBox(c, k, edit){
+  const wrap = el('div', 'mcbox');
+  const hd = el('div', 'mchd');
+  hd.appendChild(el('span', 'mcnm', c.name || '카드'));
+  if (edit){
+    const d = el('button', 'tool', '삭제');
+    d.onclick = () => mcDel(k, c.id);
+    hd.appendChild(d);
+  }
+  wrap.appendChild(hd);
+  const zoom = el('div', 'mczoom');
+  const inner = el('div', 'mczin');
+  inner.innerHTML = mcFit(c.svg);
+  zoom.appendChild(inner);
+  const st = { s: 1, x: 0, y: 0 };
+  const apply = () => { inner.style.transform = 'translate(' + st.x + 'px,' + st.y + 'px) scale(' + st.s + ')'; };
+  const clamp = () => {
+    if (st.s <= 1){ st.s = 1; st.x = 0; st.y = 0; return; }
+    st.x = Math.min(0, Math.max(st.x, zoom.clientWidth - inner.offsetWidth * st.s));
+    st.y = Math.min(0, Math.max(st.y, zoom.clientHeight - inner.offsetHeight * st.s));
+  };
+  const at = (f, px, py) => {
+    const ns = Math.min(8, Math.max(1, st.s * f)), qq = ns / st.s;
+    st.x = px - qq * (px - st.x); st.y = py - qq * (py - st.y); st.s = ns;
+    clamp(); apply();
+  };
+  zoom.addEventListener('wheel', e => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    const r = zoom.getBoundingClientRect();
+    at(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+  let dr = null;
+  const mm = e => { if (!dr) return; st.x = e.clientX - dr.x; st.y = e.clientY - dr.y; clamp(); apply(); };
+  const mu = () => { dr = null; window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+  zoom.addEventListener('mousedown', e => {
+    if (st.s <= 1) return;
+    e.preventDefault(); dr = { x: e.clientX - st.x, y: e.clientY - st.y };
+    window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
+  });
+  let tp = null;
+  zoom.addEventListener('touchstart', e => {
+    if (e.touches.length === 2){
+      const a = e.touches[0], b = e.touches[1], r = zoom.getBoundingClientRect();
+      tp = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+             cx: (a.clientX + b.clientX) / 2 - r.left, cy: (a.clientY + b.clientY) / 2 - r.top };
+    } else if (e.touches.length === 1 && st.s > 1){
+      tp = { one: 1, x: e.touches[0].clientX - st.x, y: e.touches[0].clientY - st.y };
+    } else tp = null;
+  }, { passive: true });
+  zoom.addEventListener('touchmove', e => {
+    if (!tp) return;
+    if (tp.one && e.touches.length === 1){
+      e.preventDefault();
+      st.x = e.touches[0].clientX - tp.x; st.y = e.touches[0].clientY - tp.y; clamp(); apply(); return;
+    }
+    if (e.touches.length === 2){
+      e.preventDefault();
+      const a = e.touches[0], b = e.touches[1];
+      const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      if (tp.d > 0) at(d / tp.d, tp.cx, tp.cy);
+      tp.d = d;
+    }
+  }, { passive: false });
+  zoom.addEventListener('touchend', () => { tp = null; }, { passive: true });
+  zoom.addEventListener('dblclick', () => { st.s = 1; st.x = 0; st.y = 0; apply(); });
+  wrap.appendChild(zoom);
+  return wrap;
+}
+function mcOpen(k, ev, mode){
+  const old = document.getElementById('mcpop-' + k);
+  if (old && old.closest('.pop')) closeOne(old.closest('.pop'));
+  const cards = mcOf(k);
+  const edit = mode ? (mode === 'edit') : !cards.length;
+  const body = popShell('q', '🃏 암기카드 (' + cards.length + ')');
+  body.id = 'mcpop-' + k;
+  const sw = el('button', 'tool', edit ? '넣기 접기' : '＋ 카드 넣기');
+  sw.onclick = () => mcOpen(k, null, edit ? 'view' : 'edit');
+  body.appendChild(sw);
+  if (edit){
+    const dz = el('div', 'mcdrop');
+    dz.appendChild(el('div', 'mcdt', '여기에 카드를 끌어다 놓는다'));
+    dz.appendChild(el('div', 'cdim', '볼트 암기카드결과물 의 .md · .svg — SVG 만 받는다'));
+    const lb = el('label', 'tool', '파일 고르기');
+    const fi = el('input');
+    fi.type = 'file'; fi.accept = '.svg,.md,.txt'; fi.multiple = true;
+    fi.style.display = 'none';
+    fi.onchange = () => { mcFiles(k, fi.files); fi.value = ''; };
+    lb.appendChild(fi);
+    dz.appendChild(lb);
+    dz.ondragover = e => { e.preventDefault(); dz.classList.add('on'); };
+    dz.ondragleave = () => dz.classList.remove('on');
+    dz.ondrop = e => {
+      e.preventDefault(); dz.classList.remove('on');
+      if (e.dataTransfer.files && e.dataTransfer.files.length){ mcFiles(k, e.dataTransfer.files); return; }
+      const t = e.dataTransfer.getData('text/plain') || '';
+      if (mcAdd(k, t, '붙여넣은 카드')){ mcOpen(k, null, 'edit'); mcChipSync(); }
+    };
+    body.appendChild(dz);
+  }
+  if (!cards.length) body.appendChild(el('div', 'cdim', '아직 카드가 없다'));
+  cards.forEach(c => body.appendChild(mcBox(c, k, edit)));
+  showPop(ev);
+}
+function mcChapOpen(label, keys, ev){
+  const body = popShell('q', '🃏 암기노트 · ' + label);
+  let n = 0;
+  keys.forEach(k => mcOf(k).forEach(c => { n++; body.appendChild(mcBox(c, k, false)); }));
+  if (!n) body.appendChild(el('div', 'cdim',
+    '이 마디에는 아직 암기카드가 없다 — 지문 카드의 🃏 로 넣는다'));
+  showPop(ev);
+}
+
 /* ══════════ 1차객 뷰 — 목차 트리 + [OX문제 | 기출문제] ══════════ */
 function qCard(q,mokTitle){
   const card=el('div','qwrap');
+  card.id = 'qb-' + q.id;
   // ── 머리 배지 줄 (민법OX 앱과 같은 구성)
   const h=el('div','qhd');
   h.appendChild(el('span','qb v','변리사 '+String(q.연도).slice(2)));
@@ -1947,31 +2460,10 @@ function qCard(q,mokTitle){
     if(pan&&!z.p7)q1.appendChild(el('span','badge','제7판 대응 없음 — 리담판 표시'));
     if(alt&&alt.미확정)q1.appendChild(el('span','qb warn','제7판 정오 미확정'));
     row.appendChild(q1);
-    // ── O / X 선택 (민법OX 방식). 기록은 저장하지 않는다 — v0 읽기 전용.
-    const pick=el('div','oxpick');
-    ['O','X'].forEach(v=>{
-      const b=el('button','oxbtn'+(z._sel===v?' sel':'')+(z._sel?((v===ox2)?' right':(z._sel===v?' wrong':'')):''),'');
-      b.appendChild(el('span','dot',z._sel===v?'◉':'○'));
-      b.appendChild(el('span','lv '+v,v));
-      b.onclick=()=>{z._sel=(z._sel===v?null:v);render();};
-      pick.appendChild(b);});
-    row.appendChild(pick);
-    if(z._sel){
-      const res=el('div','oxres');
-      res.appendChild(el('span','ansb '+(ox2||''),'정답 '+(ox2||'미확정')));
-      res.appendChild(el('span','badge',z._sel===ox2?'맞음':'틀림'));
-      (z.jo||[]).forEach(c=>res.appendChild(el('span','chip c-prec','⚖ '+c.replace(/^[특상디]-/,''))));
-      if(z.pan)res.appendChild(el('span','chip c-quiz','판례 '+z.pan.slice(0,28)));
-      row.appendChild(res);
-      if(sol2)row.appendChild(el('div','sol',sol2));
-      else row.appendChild(el('div','cdim','해설 없음 — 리담 근거원문이 비어 있다'));
-    }else if(sol2){
-      const pv=el('button','solpv','해설 미리보기');
-      pv.onclick=()=>{const d=pv.nextSibling;
-        d.style.display=d.style.display==='none'?'':'none';};
-      row.appendChild(pv);
-      const d=el('div','sol',sol2);d.style.display='none';row.appendChild(d);
-    }
+    // ── O / X — 누르면 즉시 채점되고 기록이 남는다(§7-2 ① · 8/26)
+    lnkChips(q, z, q1);
+    q1.appendChild(mcChip(oxKeyLid(q, z)));
+    oxPickRow(row, oxKeyLid(q, z), ox2, sol2);
     card.appendChild(row);
   });
   const ft=el('div','qft');
@@ -1987,6 +2479,7 @@ function qCard(q,mokTitle){
 // ── 제7판 「nn 변리」 지문 = 지문 단위 OX (문항 묶음이 없다)
 function p7Card(z){
   const card=el('div','qwrap');
+  card.id = 'qb-' + oxKeyP7(z);
   const h=el('div','qhd');
   h.appendChild(el('span','qb v','제7판'));
   h.appendChild(el('span','qb t',z.태그));
@@ -2000,33 +2493,14 @@ function p7Card(z){
   card.appendChild(h);
   const row=el('div','oxrow');row.style.borderTop='0';
   row.appendChild(el('div','oxq',z.t));
-  // 정오 = 제7판 것 우선, 없으면 리담 것으로 보강(출처를 밝힌다)
-  let ox=z.ox, from='제7판';
+  // 정오 = 원장의 유효정오. 없으면 리담 것으로 보강하되 출처를 밝힌다
+  let ox=z.ox, from='유효정오';
   if(!ox&&z.리담&&z.리담.ox){ox=z.리담.ox;from='리담 보강';}
-  const pick=el('div','oxpick');
-  ['O','X'].forEach(v=>{
-    const b=el('button','oxbtn'+(z._sel===v?' sel':'')+(z._sel?((v===ox)?' right':(z._sel===v?' wrong':'')):''));
-    b.appendChild(el('span','dot',z._sel===v?'◉':'○'));
-    b.appendChild(el('span','lv '+v,v));
-    b.onclick=()=>{z._sel=(z._sel===v?null:v);render();};
-    pick.appendChild(b);});
-  row.appendChild(pick);
-  if(z._sel){
-    const res=el('div','oxres');
-    res.appendChild(el('span','ansb '+(ox||''),'정답 '+(ox||'미확정')));
-    if(ox)res.appendChild(el('span','badge',z._sel===ox?'맞음':'틀림'));
-    res.appendChild(el('span','badge','정오 출처 '+(ox?from:'없음')));
-    if(z.리담)res.appendChild(el('span','chip c-quiz',
-      '리담 '+z.리담.연도+'년 '+z.리담.문항+'번 ('+z.리담.선지+')'));
-    row.appendChild(res);
-    if(z.sol)row.appendChild(el('div','sol',z.sol));
-    else row.appendChild(el('div','cdim','해설 없음'));
-  }else if(z.sol){
-    const pv=el('button','solpv','해설 미리보기');
-    pv.onclick=()=>{const d=pv.nextSibling;d.style.display=d.style.display==='none'?'':'none';};
-    row.appendChild(pv);
-    const d=el('div','sol',z.sol);d.style.display='none';row.appendChild(d);
-  }
+  if(z.리담)row.appendChild(el('span','chip c-quiz',
+    '리담 '+z.리담.연도+'년 '+z.리담.문항+'번 ('+z.리담.선지+')'));
+  if(ox)row.appendChild(el('span','badge','정오 출처 '+from));
+  row.appendChild(mcChip(oxKeyP7(z)));
+  oxPickRow(row, oxKeyP7(z), ox, z.sol);
   card.appendChild(row);
   const ft=el('div','qft');
   const m=el('span','memolink','✏ 메모 및 유사문제 연결');m.title='v0 제외 — 자리만';
@@ -2057,6 +2531,7 @@ async function viewJimun(){
     slot.appendChild(m);return;}
 
   const byId={};JM.문제.forEach(q=>byId[q.id]=q);
+  lnkBuild(JM);              // 같은 판례·조문 색인 (한 번만)
 
   // ── 좌측: OX문제면 목차 트리, 기출문제면 연도 목록
   const tree=el('div','tree'+(S.treeHid?' hid':''));
@@ -2139,6 +2614,43 @@ async function viewJimun(){
     S.jimunTab==='ox'?'목차 마디대로 묶어 본다':'연도별로 본다'));
   main.appendChild(tabs);
 
+  /* ── 빠른 실행 큐 · 거르기 · 회독 · 히트맵 (2026-08-26) ──
+     ★ 큐는 마디 경계를 넘어 특허 전체에서 모은다. */
+  if (S.jimunTab === 'ox'){
+    const P7all = {}; if (P7) P7.지문.forEach(z => P7all[z.id] = z);
+    const pool = [];
+    JM.문제.forEach(q => (q.지문 || []).forEach(z =>
+      pool.push({ k: oxKeyLid(q, z), dom: 'qb-' + q.id, kind: 'L', q: q, z: z })));
+    if (P7) P7.지문.forEach(z =>
+      pool.push({ k: oxKeyP7(z), dom: 'qb-' + oxKeyP7(z), kind: 'P', z: z }));
+    const counts = { weak: 0, semi: 0 };
+    pool.forEach(c => { if (oxQueueHas(c.k, 'weak')) counts.weak++;
+                        if (oxQueueHas(c.k, 'semi')) counts.semi++; });
+    main.appendChild(oxBar(counts));
+
+    if (S.oxQueue){
+      const hit = pool.filter(c => oxQueueHas(c.k, S.oxQueue));
+      main.appendChild(rndBar('queue|' + subj + '|' + S.oxQueue, hit.map(c => c.k)));
+      main.appendChild(heatBox(hit.map(c => ({ k: c.k, dom: c.dom }))));
+      if (!hit.length){
+        main.appendChild(emptyBox('⚡', (S.oxQueue === 'weak' ? '약점' : '덜약점') + ' 큐가 비어 있다',
+          S.oxQueue === 'weak' ? '틀렸거나 헷갈림을 찍은 지문이 여기로 온다'
+                               : '약점에서 다시 풀어 맞힌 지문이 여기로 온다'));
+      } else {
+        main.appendChild(el('div', 'grp', (S.oxQueue === 'weak' ? '🔥 약점' : '🌤 덜약점') + ' ' + hit.length + '지문 — 마디 경계 없음'));
+        const seen = {};
+        hit.forEach(c => {
+          if (c.kind === 'P'){ main.appendChild(p7Card(c.z)); return; }
+          if (seen[c.q.id]) return;
+          seen[c.q.id] = 1; main.appendChild(qCard(c.q));
+        });
+      }
+      slot.appendChild(main);
+      inkBar();
+      return;
+    }
+  }
+
   if(S.jimunTab==='ox'){
     if(S.mok==='__표본'){
       await sampleCards(main);
@@ -2158,6 +2670,11 @@ async function viewJimun(){
         (n.p7&&n.p7.length?`  ·  제7판 차례: ${n.p7.join(' / ')}`:'')+
         (n.쪽?`  ·  인쇄 p.${n.쪽}`:''));
       main.appendChild(bd);
+      const nb = el('button', 'tool', '🃏 암기노트');
+      nb.onclick = ev => mcChapOpen((n.no ? n.no + ' ' : '') + n.제목,
+        lidam.reduce((a, q) => a.concat((q.지문 || []).map(z => oxKeyLid(q, z))), [])
+          .concat(p7l.map(z => oxKeyP7(z))), ev);
+      main.appendChild(nb);
       if(!lidam.length&&!p7l.length)
         main.appendChild(emptyBox('📝','이 마디에 묶인 문항이 없다'));
       if(lidam.length){
