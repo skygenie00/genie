@@ -1974,6 +1974,32 @@ function oxPick(k, picked, ans){
   oxPut(k, patch);
 }
 function oxConfuse(k){ const r = oxOf(k) || {}; oxPut(k, { c: !r.c, sg: r.c ? '' : r.sg }); }
+/* ★ 학습 태그 — v3-B 까지는 자리만 있는 죽은 span 이었다(「기록은 v0 제외」).
+   기록층이 생겼으므로 이제 진짜로 눌린다(8/26 사용자 지적).
+   헷갈림은 5상태와 같은 값(`c`)을 쓴다 — 둘로 나누면 서로 어긋난다. */
+const OXTAGS = [['pin', '📍'], ['confuse', '🌀'], ['fake', '⚠'],
+                ['concept', '💡'], ['memo', '🧠'], ['important', '⭐']];
+function oxTagOn(k, t){
+  const r = oxOf(k) || {};
+  return t === 'confuse' ? !!r.c : !!((r.tg || {})[t]);
+}
+function oxTagToggle(k, t){
+  if (t === 'confuse'){ oxConfuse(k); return; }
+  const r = oxOf(k) || {}, tg = Object.assign({}, r.tg || {});
+  if (tg[t]) delete tg[t]; else tg[t] = 1;
+  oxPut(k, { tg: tg });
+}
+function oxTagBar(k, host){
+  OXTAGS.forEach(([t, ic]) => {
+    const on = oxTagOn(k, t);
+    const b = el('button', 'qtag' + (on ? ' on' : ''), ic);
+    b.title = { pin: '표시', confuse: '헷갈림', fake: '페이크',
+                concept: '개념', memo: '암기', important: '중요' }[t];
+    b.style.opacity = on ? '1' : '.45';
+    b.onclick = ev => { ev.stopPropagation(); oxTagToggle(k, t); render(); };
+    host.appendChild(b);
+  });
+}
 function oxClear(k){ const A = oxAll(); delete A[k]; OXREC = A; lsWrite(OX_KEY, A, '1차객 풀이'); }
 function oxFix(k, raw){
   const v = prompt('이 지문의 정오를 직접 넣는다. O 또는 X (비우면 정정 취소)', oxFixed(k) || raw || '');
@@ -2430,9 +2456,8 @@ function qCard(q,mokTitle){
   h.appendChild(el('span','src '+q.출처,q.출처));
   if(mokTitle)h.appendChild(el('span','chip c-theme',mokTitle));
   const sp=el('span');sp.style.flex='1';h.appendChild(sp);
-  // 학습 태그 — 기록은 kv 라 v0 제외(§3-E). 자리만 보인다.
-  [['📍',''],['🔵','헷갈림'],['⚠','페이크'],['💡','개념'],['🩷','암기'],['⭐','중요']].forEach(([i,t])=>{
-    const g=el('span','qtag',i+(t?' '+t:''));g.title='학습 태그 — 기록은 v0 제외';h.appendChild(g);});
+  // 학습 태그 — 지문이 여러 개인 문항 카드라 첫 지문 키에 달아 둔다
+  if((q.지문||[]).length) oxTagBar(oxKeyLid(q, q.지문[0]), h);
   card.appendChild(h);
 
   // ── 판 토글 — **기출변형에서만**(8/23 사용자 정정). 나머지는 아예 안 보인다.
@@ -2488,8 +2513,7 @@ function p7Card(z){
   if(z.유제)h.appendChild(el('span','src 기출변형','유제'));
   h.appendChild(el('span','qb '+(z.리담?'t':'id'), z.리담?'리담과 같은 지문':'제7판 단독'));
   const sp=el('span');sp.style.flex='1';h.appendChild(sp);
-  [['📍',''],['🔵','헷갈림'],['⚠','페이크'],['💡','개념'],['🩷','암기'],['⭐','중요']].forEach(([i,t])=>{
-    const g=el('span','qtag',i+(t?' '+t:''));g.title='학습 태그 — 기록은 v0 제외';h.appendChild(g);});
+  oxTagBar(oxKeyP7(z), h);
   card.appendChild(h);
   const row=el('div','oxrow');row.style.borderTop='0';
   row.appendChild(el('div','oxq',z.t));
@@ -2559,7 +2583,7 @@ async function viewJimun(){
         const r=el('div','r'+(S.mok===key?' on':'')+(n.장?' ch':''));
         const nm=el('span','nm',(n.no?n.no+' ':'')+n.제목);
         nm.style.paddingLeft=((n.깊이-1)*10)+'px';
-        if(n.출처==='제7판')nm.style.color='#7a3ed0';   // 제7판에만 있는 마디
+        if(n.출처==='제7판')nm.style.color='#b8860b';   // 제7판에만 있는 마디 — 옛은 노랑(사용자 확정 · 보라색 폐기)
         r.appendChild(nm);
         const em=el('em');
         const [a7,al]=roll[i];
@@ -2581,7 +2605,7 @@ async function viewJimun(){
       tree.appendChild(un);
       const lg=el('div','legend');
       lg.innerHTML='📝N = 리담 문항 · 7판N = 제7판 지문<br>'+
-        '<span style="color:#7a3ed0">보라색</span> = 볼트에 없고 제7판 차례에만 있는 마디<br>'+
+        '<span style="color:#b8860b">노란색</span> = 볼트에 없고 제7판 차례에만 있는 마디<br>'+
         '마디에 커서를 올리면 짝지어진 제7판 차례가 보인다';
       tree.appendChild(lg);
     }
@@ -2675,6 +2699,17 @@ async function viewJimun(){
         lidam.reduce((a, q) => a.concat((q.지문 || []).map(z => oxKeyLid(q, z))), [])
           .concat(p7l.map(z => oxKeyP7(z))), ev);
       main.appendChild(nb);
+      // ★ 히트맵은 큐 뿐 아니라 **마디를 볼 때도** 띄운다 (8/26 사용자 지적)
+      {
+        const cells = [];
+        lidam.forEach(q => (q.지문 || []).forEach(z =>
+          cells.push({ k: oxKeyLid(q, z), dom: 'qb-' + q.id })));
+        p7l.forEach(z => cells.push({ k: oxKeyP7(z), dom: 'qb-' + oxKeyP7(z) }));
+        if (cells.length){
+          main.appendChild(rndBar('mok|' + subj + '|' + S.mok, cells.map(c => c.k)));
+          main.appendChild(heatBox(cells));
+        }
+      }
       if(!lidam.length&&!p7l.length)
         main.appendChild(emptyBox('📝','이 마디에 묶인 문항이 없다'));
       if(lidam.length){
