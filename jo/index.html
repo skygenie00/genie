@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>조판기 v0</title>
+<style>
+/* ══ 목업 v2~v5 공통 팔레트 그대로 ══ */
+:root{
+  --ink:#1a1a1a; --sub:#6b675f; --line:#e3e0d8; --paper:#fdfcf9; --panel:#f6f4ef;
+  --rule:#D93B3B;   /* 원칙·강행 */
+  --exc:#2F6FD0;    /* 예외·단서 */
+  --lbl:#c96a10;    /* 조문 라벨 */
+  --hl-y:#ffe9a0; --hl-p:#ffd0e0;
+  --ok:#1d7a3e; --warn:#b06000; --post:#fff3b0;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:#efede7;color:var(--ink);overflow:hidden;
+  font-family:system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+  font-size:13.5px;line-height:1.62}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+#app{display:flex;flex-direction:column;height:100vh;background:#fff}
+
+/* ── 상단 ── */
+.topbar{display:flex;align-items:center;gap:8px;padding:9px 14px;
+  border-bottom:1px solid var(--line);background:var(--panel);flex-shrink:0;flex-wrap:wrap}
+.logo{font-weight:800;font-size:14px;white-space:nowrap}
+.search{flex:1;min-width:150px;display:flex;gap:7px;align-items:center;cursor:text;
+  background:#fff;border:1px solid #d9d6ce;border-radius:9px;padding:5px 11px;color:#999}
+.tab{border-radius:7px;padding:3px 10px;background:#e9e6df;color:#555;font-size:12.5px}
+.tab.on{background:var(--exc);color:#fff}
+.pill{border-radius:8px;padding:2px 10px;font-size:12px;background:#e9e6df;color:#555}
+.pill.on{background:#1a1a1a;color:#fff}
+.pill.wait{color:#aaa;background:#f2f0ea}
+.badge{font-size:11px;border-radius:6px;padding:1px 7px;background:#efece5;color:#777}
+
+/* ── 본문 3단 ── */
+.body2{display:flex;flex:1;min-height:0}
+.rail{width:40px;flex-shrink:0;background:#eceae3;border-right:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:4px;font-size:11px}
+.rail .rb{writing-mode:vertical-rl;padding:9px 4px;border-radius:7px;color:#777;white-space:nowrap}
+.rail .rb b{font-size:10px}
+.rail .rb.on{background:var(--exc);color:#fff}
+.rail .rb[disabled]{opacity:.45;cursor:not-allowed}
+.handle{width:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  border-right:1px solid var(--line);background:#f3f1ec;color:#a5a19a;cursor:pointer;font-size:12px}
+.tree{width:212px;flex-shrink:0;border-right:1px solid var(--line);overflow:auto;
+  background:var(--panel);padding:8px 0;font-size:12.5px}
+.tree.hid{display:none}
+.tree .h{padding:3px 13px;color:#9a958b;font-size:11px}
+.tree .r{padding:5px 13px;display:flex;justify-content:space-between;gap:6px;align-items:center;cursor:pointer}
+.tree .r:hover{background:#efece4}
+.tree .r span.nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree .r em{font-style:normal;color:#a5a19a;font-size:11px;display:inline-flex;gap:5px;align-items:center;flex-shrink:0}
+.tree .r.on{background:#e8effb;border-left:3px solid var(--exc);padding-left:10px}
+.tree .r.on span.nm{color:var(--exc);font-weight:700}
+.tree .r.on em{color:var(--exc)}
+.legend{padding:5px 13px;border-top:1px dashed #ddd;margin-top:6px;font-size:10.5px;color:#9a958b;line-height:1.7}
+.bars{display:inline-flex;gap:2px}
+.bars i{width:9px;height:5px;border-radius:2px;display:inline-block}
+.bx{background:#d6d3cb}
+.main{flex:1;padding:15px 18px 90px;position:relative;min-width:0;overflow:auto}
+
+/* ── 조문 머리 (리담 구조) ── */
+.jt{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.jt b{font-size:16.5px}
+.jt b .sub{font-weight:400;color:#777}
+.jotitle{font-size:25px;font-weight:800;margin:6px 0 2px;line-height:1.3}
+.jotitle .no{color:var(--exc)}
+.sihaeng{color:#9a958b;font-size:12px;margin-bottom:9px}
+.conn{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:9px}
+.conn .k{color:#9a958b;font-size:11.5px;margin-right:3px}
+/* 조문 안의 모드 바 — 빈칸은 갈래가 아니라 이 조문의 모드다 */
+.modebar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  border:1px solid var(--line);border-radius:11px;padding:7px 10px;background:var(--panel)}
+.modebar .mode{border-radius:999px;padding:3px 13px}
+.modebar .mode.on{background:var(--exc);border-color:var(--exc);color:#fff}
+.modebar .mode .n{margin-left:5px;font-size:11px;opacity:.75}
+.box{border:1px solid var(--line);border-radius:11px;padding:11px 14px;margin-top:10px;background:var(--paper)}
+.boxh{font-size:11px;color:#9a958b;margin-bottom:6px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.fold{border-style:dashed;background:#fafaf8;color:#77736b;cursor:pointer}
+.fold .oi{float:right;color:var(--exc);text-decoration:underline;font-size:11.5px}
+.origbody{white-space:pre-wrap;color:#555;font-size:12.8px;margin-top:8px;
+  border-top:1px dashed #ddd;padding-top:8px}
+.ln{margin:3px 0;white-space:pre-wrap;word-break:break-word}
+.ln.ho{padding-left:1.5em}
+.ln.mok{padding-left:3em}
+.ln.hang{margin-top:7px}
+.ln.ref{color:#9a958b;font-size:12px;margin-top:9px}
+.ln.tail{color:#8a867d;font-size:12.5px}
+.ln.fd{color:#77736b;font-size:12.5px;padding-left:1em;border-left:2px solid #e6e3db;margin-left:2px}
+.anchor{color:#c9c5bc;font-size:10px;margin-left:5px}
+mark.y{background:var(--hl-y)} mark.p{background:var(--hl-p)}
+.joLink{color:var(--exc);font-weight:600;background:#eaf1fb;border-radius:4px;
+  padding:0 4px;text-decoration:underline dotted;white-space:nowrap;cursor:pointer}
+.joLink.dead{color:#8a867d;background:#f2f0ea;cursor:default}
+.lbl{color:var(--lbl);background:#fdf1e3;border-radius:4px;padding:0 4px;
+  font-size:11.5px;font-weight:600;white-space:nowrap;cursor:pointer;margin-left:2px}
+.lbl.off{color:#c9c5bc;background:#f2f0ea;font-weight:400;padding:0 5px}
+sup.fn{color:var(--rule);font-size:10px;cursor:pointer;text-decoration:underline dotted}
+.embed{display:inline-block;background:#f2f0ea;border:1px dashed #d9d6ce;border-radius:5px;
+  padding:0 6px;color:#8a867d;font-size:11.5px}
+.chip{display:inline-block;border-radius:14px;padding:2px 10px;font-size:12px;margin:0 4px 4px 0}
+.c-prec{background:#eaf1fb;color:var(--exc)}
+.c-quiz{background:#e9f7ee;color:var(--ok)}
+.c-theme{background:#f3ecfd;color:#7a3ed0}
+.c-card{background:#fff2e0;color:var(--warn)}
+.c-warn{background:#fde9e9;color:var(--rule)}
+.c-src{background:#efece5;color:#777}
+
+/* ── 빈 상태 ── */
+.empty{color:#9a958b;text-align:center;padding:52px 20px;font-size:12.8px}
+.empty .big{font-size:30px;opacity:.4;display:block;margin-bottom:8px}
+
+/* ── 판례 ── */
+.plist{width:262px;flex-shrink:0;border-right:1px solid var(--line);overflow:auto}
+.plist.hid{display:none}
+.prow{padding:9px 12px;border-bottom:1px solid #eeece6;font-size:12.5px;cursor:pointer}
+.prow:hover{background:#faf8f3}
+.prow.on{background:#e8effb}
+.prow .pn{font-weight:700}
+.prow .iss{color:#444;margin:1px 0 3px}
+.tool{border:1px solid #d9d6ce;border-radius:8px;padding:3px 11px;background:#fff;font-size:12.5px;color:#555}
+.tool.on{border-color:var(--exc);background:var(--exc);color:#fff}
+.tool.last{color:#999}
+.tool[disabled]{color:#c2beb6;background:#f4f2ec;border-color:#e5e2da;cursor:not-allowed}
+pre.raw{white-space:pre-wrap;font:12.8px/1.7 inherit;margin:0;color:#333}
+.ctrlbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:7px 12px;
+  border-bottom:1px solid #eeece6;background:var(--panel)}
+select.sel{font:inherit;font-size:12px;padding:2px 7px;border:1px solid #d9d6ce;border-radius:7px;background:#fff;color:#555}
+select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
+
+/* ── 2차 보드 ── */
+.gwrap{overflow:auto;padding:12px 0}
+.grid{display:grid;gap:6px}
+.gh{font-size:11.5px;font-weight:700;color:#666;background:var(--panel);border-radius:7px;
+  padding:4px 8px;text-align:center;position:sticky;top:0;z-index:2}
+.gr{font-size:11.5px;font-weight:700;color:#666;background:var(--panel);border-radius:7px;
+  padding:4px 8px;display:flex;align-items:center;justify-content:center;position:sticky;left:0;z-index:1}
+.cell{border:1px solid var(--line);border-radius:9px;background:#fff;padding:6px 8px;
+  font-size:11.5px;line-height:1.5;color:#333;cursor:pointer}
+.cell:hover{border-color:var(--exc)}
+.cell + .cell{margin-top:5px}
+.cell b{font-size:11.5px}
+.cell .t{color:#9a958b;font-size:10.5px}
+.cell.hot{border-color:#e5a53a;background:#fffaf0}
+.cellnone{border:1px dashed #e8e5dd;border-radius:9px;background:#faf9f6}
+.unpl{margin-top:16px;border:1px solid #e5a53a;background:#fffaf0;border-radius:10px;padding:10px 13px}
+.unpl h4{margin:0 0 6px;font-size:12px;color:#9a6b12}
+.unpl div.u{font-size:11.5px;color:#7a6134;padding:1px 0;cursor:pointer}
+
+/* ── 지문 ── */
+.jimun{border:1px solid var(--line);border-radius:11px;padding:11px 14px;margin-top:10px;background:var(--paper)}
+.jhd{display:flex;gap:7px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.src{font-size:11px;border-radius:6px;padding:1px 8px;font-weight:700}
+.src.기출{background:#eaf1fb;color:var(--exc)}
+.src.기출변형{background:#fdf1e3;color:var(--lbl)}
+.src.제7판{background:#e9f7ee;color:var(--ok)}
+.qt{font-size:13.5px;margin:6px 0}
+.ansb{display:inline-block;border:1px solid #d9d6ce;border-radius:7px;padding:1px 12px;background:#fff;font-weight:700}
+.ansb.O{color:var(--exc)} .ansb.X{color:var(--rule)}
+.sol{color:#555;font-size:12.3px;margin-top:7px;background:#faf8f3;border:1px solid #eeece6;
+  padding:8px 10px;border-radius:8px;white-space:pre-wrap}
+.qmun{font-weight:700;font-size:13.5px;margin:2px 0 8px}
+.sunji{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px dashed #eeece6}
+.sunji .sn{color:#9a958b;font-size:11.5px;flex:0 0 16px;text-align:right}
+.sunji .st{flex:1;min-width:0}
+.ansb.none{color:#c2beb6;font-weight:400}
+.tree .r.ch{background:#eceae3;font-weight:700;color:#6b675f;cursor:default}
+.tree .r.ch:hover{background:#eceae3}
+
+/* ── 빈칸 ── */
+.mode{border:1px solid #d9d6ce;border-radius:8px;padding:3px 10px;background:#fff;font-size:12.5px;color:#555}
+.mode.on{border-color:var(--exc);color:var(--exc);background:#eaf1fb;font-weight:700}
+.mode.dis{color:#bbb;background:#f4f2ec;border-color:#e5e2da;cursor:not-allowed}
+.ctrl{display:flex;gap:7px;align-items:center;flex-wrap:wrap;background:#f2f6fd;
+  border:1px solid #d5e2f6;border-radius:9px;padding:6px 11px;margin-top:10px;font-size:12px;color:#456}
+.cbtn{background:#fff;border:1px solid #c9d7ef;border-radius:7px;padding:2px 9px;color:#345}
+
+/* ── 팝업 ── */
+
+/* ── 검색 ── */
+#sk{position:fixed;inset:0;display:none;z-index:70;background:rgba(40,36,28,.32)}
+#skbox{width:min(620px,92vw);margin:11vh auto 0;background:#fff;border-radius:13px;
+  border:1px solid var(--line);box-shadow:0 20px 50px rgba(30,25,15,.3);overflow:hidden}
+#skin{width:100%;border:0;padding:14px 17px;font-size:15px;outline:none;border-bottom:1px solid var(--line);
+  font-family:inherit;background:#fff;color:var(--ink)}
+#skscope{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 14px;
+  background:var(--panel);border-bottom:1px solid var(--line);font-size:11.5px;color:#888}
+.scope{border:1.5px solid #d9d6ce;border-radius:8px;padding:2px 10px;background:#fff;color:#888;font-size:12.5px}
+.scope.on{border-color:var(--exc);background:#eaf1fb;color:var(--exc);font-weight:700}
+.scope.dis{color:#c2beb6;background:#f4f2ec;border-color:#e5e2da;cursor:not-allowed}
+#skres{max-height:48vh;overflow:auto;padding:8px 12px}
+.grp{font-size:11px;color:#9a958b;margin:8px 0 4px;letter-spacing:.5px}
+.res{padding:7px 11px;border:1px solid #eeece6;border-radius:9px;margin-bottom:5px;
+  display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;cursor:pointer}
+.res:hover,.res.on{background:#e8effb;border-color:#cfdff5}
+.res b{white-space:nowrap;color:var(--exc)}
+.res .x{color:#555;font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
+.res .lawtag{margin-left:auto;font-size:10.5px;color:#999}
+
+/* ── 카드 본문 ── */
+.ctitle{font-weight:700;font-size:11.5px;margin-bottom:3px;line-height:1.35}
+.cbody{font-size:10.5px;line-height:1.45;color:#444;overflow:hidden}
+.cbody .cln{white-space:pre-wrap;word-break:break-word}
+.cdim{color:#b5b1a8;font-size:10px}
+  margin-top:10px;height:calc(100vh - 200px)}
+.cstage{position:relative}
+.cgroup{position:absolute;border:2px solid #cfcabd;border-radius:12px;background:#00000008}
+.cgroup .glabel{position:absolute;top:-11px;left:10px;font-size:11px;font-weight:700;
+  background:#cfcabd;color:#fff;border-radius:6px;padding:1px 9px;white-space:nowrap}
+.ccard{position:absolute;border:1px solid var(--line);border-radius:8px;background:#fff;
+  overflow:hidden;cursor:pointer}
+.ccard:hover{border-color:var(--exc);box-shadow:0 2px 8px rgba(47,111,208,.18)}
+.cinner{transform-origin:0 0;padding:6px 8px;overflow:hidden}
+.cmemo{position:absolute;border:1px solid #e3cf6a;border-radius:8px;background:var(--post);
+  overflow:hidden;font-size:11px;color:#6b5f17}
+.memoslot{margin-top:10px;border:1px dashed #e3cf6a;background:#fffbe8;border-radius:8px;padding:8px 10px}
+.memoslot .mh{font-size:11.5px;font-weight:700;color:#7a6a17;margin-bottom:3px}
+.gr{white-space:pre-line;line-height:1.35}
+
+/* ── OX 카드 (민법OX 방식) ── */
+.qwrap{border:1px solid var(--line);border-radius:11px;background:#fff;margin-top:10px;padding:10px 13px}
+.qhd{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-bottom:7px}
+.qb{font-size:10.5px;border-radius:6px;padding:1px 8px;font-weight:600}
+.qb.v{background:#f3ecfd;color:#7a3ed0}
+.qb.t{background:#eaf1fb;color:var(--exc)}
+.qb.n{background:#efece5;color:#777}
+.qb.id{background:#f4f2ec;color:#a5a19a;font-weight:400}
+.qb.warn{background:#fde9e9;color:var(--rule)}
+.qtag{font-size:10.5px;color:#b5b1a8;border:1px solid #eeece6;border-radius:999px;padding:1px 7px;cursor:not-allowed}
+.pantog{display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#f2f6fd;
+  border:1px solid #d5e2f6;border-radius:9px;padding:5px 10px;margin-bottom:8px}
+.pantog .pl{font-size:11px;color:#456;font-weight:700}
+.qmun{font-weight:700;font-size:13.5px;margin:2px 0 9px}
+.oxrow{border-top:1px dashed #eeece6;padding:9px 0}
+.oxq{font-size:13.3px;line-height:1.6}
+.oxq b{color:var(--exc)}
+.oxpick{display:flex;gap:9px;margin-top:8px}
+.oxbtn{flex:1;border:1px solid #d9d6ce;border-radius:9px;background:#fff;padding:6px 0;
+  display:flex;gap:7px;align-items:center;justify-content:center;font-size:14px}
+.oxbtn:hover{border-color:var(--exc)}
+.oxbtn .dot{color:#b5b1a8}
+.oxbtn .lv{font-weight:800}
+.oxbtn .lv.O{color:var(--exc)} .oxbtn .lv.X{color:var(--rule)}
+.oxbtn.sel{border-color:#1a1a1a}
+.oxbtn.right{border-color:#3fae64;background:#f0faf3}
+.oxbtn.wrong{border-color:var(--rule);background:#fdf0f0}
+.oxres{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:7px}
+.solpv{margin-top:7px;font-size:11.5px;color:var(--exc);text-decoration:underline}
+.qft{display:flex;gap:9px;align-items:center;justify-content:flex-end;
+  border-top:1px dashed #eeece6;margin-top:9px;padding-top:7px}
+.memolink{font-size:11.5px;color:#8a867d;cursor:not-allowed}
+
+.gh.yh{display:flex;flex-direction:column;gap:3px;align-items:stretch;padding:3px 4px}
+.ysort{font-size:11px;font-weight:700;color:#666;padding:2px 0;border-radius:5px;white-space:nowrap}
+.ysort:hover{background:#e8e5dd;color:var(--exc)}
+.ysel{font-size:10.5px;padding:1px 3px;width:100%}
+.gr{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ── 본문 전체 보기(팝업) — 제목 접기 · 단어 메모 ── */
+.rbody{margin-top:8px}
+.rln{white-space:pre-wrap;word-break:break-word;margin:2px 0;line-height:1.6}
+.rh{font-weight:800;margin-top:9px;display:flex;gap:5px;align-items:baseline}
+.rh1{font-size:15.5px} .rh2{font-size:14.5px} .rh3{font-size:13.5px}
+.rh4,.rh5,.rh6{font-size:13px;color:#555}
+.rtog{color:#b5b1a8;font-size:10px;flex:0 0 auto}
+.rtog:hover{color:var(--exc)}
+.pw{cursor:text;border-radius:3px}
+.pw:hover{background:#fff6cf}
+.pword{border-bottom:2px dotted #d9be4a}
+.pmark{display:inline-block;width:8px;height:8px;border-radius:2px;background:#f0d84a;
+  border:1px solid #d9be4a;vertical-align:5px;margin-left:2px}
+.memoin{width:100%;min-height:74px;font:inherit;font-size:12.5px;padding:7px 9px;
+  border:1px solid #d9d6ce;border-radius:8px;resize:vertical;background:#fffdf3}
+.memobtn{display:flex;gap:6px;align-items:center;margin-top:7px;flex-wrap:wrap}
+.cbody .ch1,.cbody .ch2{font-weight:800}
+.cbody .ch3,.cbody .ch4{font-weight:700;color:#333}
+
+.rbody.card{max-height:none}
+.rbody.card .rln{font-size:11px;line-height:1.5;margin:1px 0}
+.rbody.card .rh1{font-size:12.5px} .rbody.card .rh2{font-size:12px}
+.rbody.card .rh3,.rbody.card .rh4{font-size:11.5px}
+.rbody.card .rtog{font-size:9px}
+.rtx{cursor:text}
+.cell{max-height:420px;overflow:auto}
+
+/* ── 콜아웃(문제·원본) — 접힌 상자 → 팝업 ── */
+.callout{display:flex;align-items:center;gap:7px;cursor:pointer;
+  border:1px solid #e3cf6a;background:#fffaeb;border-radius:9px;
+  padding:6px 11px;margin:6px 0}
+.callout:hover{border-color:var(--lbl);background:#fff4d9}
+.callout .ci{font-size:12px}
+.callout .ct{font-weight:800;color:var(--lbl);font-size:12.5px}
+.callout .cn{font-size:10.5px;color:#b09050}
+.callout .cx{margin-left:auto;color:var(--lbl)}
+.callout.co-note{border-color:#d9d6ce;background:#faf9f6}
+.callout.co-note .ct{color:#77736b}
+.callout.co-note .cx{color:#a5a19a}
+.rbody.card .callout{padding:4px 8px;margin:4px 0}
+.rbody.card .callout .ct{font-size:11.5px}
+
+.pop.k-q{border-color:#e3cf6a}
+
+/* ── 팝업(여러 개 · 끌어 옮기기) ── */
+.pop{position:fixed;width:440px;max-height:60vh;overflow:auto;
+  background:#fff;border:1.5px solid var(--exc);border-radius:11px;
+  box-shadow:0 8px 26px rgba(20,40,90,.20);font-size:12.5px}
+.pop .ph{display:flex;align-items:center;gap:7px;background:#eaf1fb;color:var(--exc);
+  font-size:11px;font-weight:700;padding:5px 10px;position:sticky;top:0;cursor:move;
+  user-select:none}
+.pop .ph .pdrag{opacity:.65}
+.pop .ph .pt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pop .ph button{margin-left:auto;color:inherit;font-size:12px;cursor:pointer}
+.pop .pb{padding:9px 12px}
+.pop.k-fn{border-color:#d9be4a}
+.pop.k-fn .ph{background:var(--post);color:#7a6a17}
+.pop.k-cell{border-color:#2f9e57}
+.pop.k-cell .ph{background:#e9f7ee;color:var(--ok)}
+/* 제목 단계 들여쓰기가 눈에 들어오게 세로선 */
+.rbody .rh{border-left:2px solid #eeece6;margin-left:0}
+.rbody .rh1{border-left-color:var(--exc)}
+.rbody .rh2{border-left-color:#c9d7ef}
+.rbody .rh3,.rbody .rh4{border-left-color:#eeece6}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <span class="logo">⚖ 조판기</span>
+    <span id="laws" style="display:flex;gap:4px"></span>
+    <div class="search" id="ksearch">🔍 <span>조문 · 판례 · 지문 · 메모 (Ctrl K)</span></div>
+    <span class="badge" id="lblToggle" style="cursor:pointer">🏷 라벨: 펴짐 ▾</span>
+  </header>
+  <div class="body2">
+    <nav class="rail" id="rail"></nav>
+    <div id="slot" style="display:flex;flex:1;min-width:0"></div>
+  </div>
+</div>
+
+<div id="sk"><div id="skbox">
+  <input id="skin" placeholder="조문번호 · 제목 · 본문">
+  <div id="skscope"><span>범위(다중):</span>
+    <span class="scope on" data-s="jo">📖 조문 ✓</span>
+    <span class="scope dis" data-s="prec">⚖ 판례</span>
+    <span class="scope dis" data-s="jimun">📝 지문</span>
+    <span class="scope dis" data-s="memo">🗒 메모</span>
+    <span class="badge" style="margin-left:auto" id="skLaw"></span>
+  </div>
+  <div id="skres"></div>
+</div></div>
+
+<script>
+"use strict";
+const DATA='data/';
+const LAWS=['특허법','상표법','디자인보호법','민사소송법'];
+const SHORT={'특허법':'특허','상표법':'상표','디자인보호법':'디보','민사소송법':'민소'};
+// 갈래 이동은 **세로 레일 하나만** 한다. 상단 갈래 탭은 없앴다 —
+// 리담 실물이 그렇고(lidamuistructure.md §25) 레일과 3개가 겹쳤다. 8/23 사용자 결정.
+const RAILS=[['jo','조문'],['prec','판례'],['jimun','1차객'],['cha2','2차']];
+// 정본 시행일 — 사양서 §2-1 정본 MST 표
+const SIHAENG={'특허법':'2025-11-11','상표법':'2025-11-11',
+               '디자인보호법':'2025-11-11','민사소송법':'2025-03-01'};
+// 조문 안의 모드 바(리담식). 빈칸은 갈래가 아니라 **이 조문의 모드**다.
+const JOMODES=[['본문','본문'],['내용','✎ 내용 빈칸'],['주체','✎ 주체 빈칸'],
+               ['기간','✎ 기간 빈칸'],['소제목','소제목만']];
+
+const S={law:'특허법',tab:'jo',jo:null,prec:null,precTab:'요약',
+         boardKind:'GS',boardView:'board',treeHid:false,listHid:false,
+         precSort:'asc',labels:true,joMode:'본문',
+         jimunTab:'ox',mok:null,year:null,
+         series:'',yearFilter:'',yearSort:'asc',zoom:0.55};
+const C={};
+const $=(s,r)=>(r||document).querySelector(s);
+const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;
+                   if(x!=null)n.textContent=x;return n;};
+
+async function get(name){
+  if(C[name])return C[name];
+  const r=await fetch(DATA+name);
+  if(!r.ok)throw new Error(name+' '+r.status);
+  return C[name]=await r.json();
+}
+
+/* ══════════ 골격 ══════════ */
+function drawTop(){
+  const lw=$('#laws');lw.innerHTML='';
+  LAWS.forEach(L=>{const b=el('button','pill'+(S.law===L?' on':''),SHORT[L]);
+    b.onclick=()=>{S.law=L;S.jo=null;S.prec=null;
+      if(S.tab==='jimun'&&L==='민사소송법')S.tab='jo';render();};lw.appendChild(b);});
+  const lt=$('#lblToggle');
+  lt.textContent='🏷 라벨: '+(S.labels?'펴짐 ▾':'접힘 ▸');
+  lt.style.display=S.tab==='jo'?'':'none';
+  lt.onclick=()=>{S.labels=!S.labels;render();};
+  $('#skLaw').textContent='법: '+SHORT[S.law];
+}
+function drawRail(){
+  const r=$('#rail');r.innerHTML='';
+  RAILS.forEach(([k,label])=>{
+    // 민소는 1차 지문 갈래가 없다 — 레일에서 숨긴다(사양서 §4-0)
+    if(k==='jimun'&&S.law==='민사소송법')return;
+    const b=el('button','rb'+(S.tab===k?' on':''));
+    b.appendChild(document.createTextNode(label+' '));
+    const n=el('b','','');n.dataset.n=k;b.appendChild(n);
+    b.onclick=()=>{S.tab=k;render();};
+    r.appendChild(b);
+  });
+  railCounts();
+}
+async function railCounts(){
+  const set=(k,v)=>{const n=$(`[data-n="${k}"]`);if(n)n.textContent=v;};
+  try{set('jo',(await get(`jo_${S.law}_목록.json`)).조.length);}catch(e){set('jo','–');}
+  try{const p=await get('prec_과목.json');const m=p[SHORT[S.law]];set('prec',m?m.수:0);}catch(e){set('prec','–');}
+  if(S.law==='민사소송법')set('jimun','—');
+  else{try{const j=await get('jimun_'+SHORT[S.law]+'.json');set('jimun',j.문항);}
+       catch(e){set('jimun','—');}}
+  try{const b=await get('2cha_보드.json');let n=0;
+      Object.keys(b).forEach(k=>{if(k.endsWith('|'+SHORT[S.law]))n+=b[k].총||0;});
+      set('cha2',n.toLocaleString());}catch(e){set('cha2','–');}
+}
+function emptyBox(icon,msg,sub){
+  const d=el('div','empty');
+  d.appendChild(el('span','big',icon));
+  d.appendChild(document.createTextNode(msg));
+  if(sub){const s=el('div','',sub);s.style.cssText='margin-top:6px;font-size:11.5px';d.appendChild(s);}
+  return d;
+}
+function handle(which){
+  const h=el('div','handle',(which==='tree'?S.treeHid:S.listHid)?'›':'‹');
+  h.title='접기/펴기';
+  h.onclick=()=>{if(which==='tree')S.treeHid=!S.treeHid;else S.listHid=!S.listHid;render();};
+  return h;
+}
+
+/* ══════════ 줄 렌더 — 평문 좌표계 위에 요소를 겹친다 ══════════ */
+let JOTITLE={};        // 조키 → 제목 (주황 라벨용)
+function renderLine(row,opt){
+  opt=opt||{};
+  const t=row.t||'', n=t.length;
+  const opens=[],closes=[];
+  const push=(a,i,v)=>{(a[i]=a[i]||[]).push(v);};
+  (row.m||[]).forEach(m=>{push(opens,Math.max(0,m.a),{mk:m});push(closes,Math.min(n,m.b),{mk:m});});
+  (row.e||[]).forEach(e=>{if(e.k==='L'){push(opens,e.a,{ln:e});push(closes,e.b,{ln:e});}});
+  const frag=document.createDocumentFragment();
+  const stack=[frag];
+  const top=()=>stack[stack.length-1];
+  for(let i=0;i<=n;i++){
+    (closes[i]||[]).forEach(c=>{
+      if(stack.length>1)stack.pop();
+      // 링크가 닫히는 자리에 주황 대괄호 라벨을 붙인다(§4-1 · 목업 v2·v3)
+      if(c.ln&&c.ln.j&&opt.label!==false){
+        const title=JOTITLE[c.ln.j];
+        if(title){
+          const g=el('span','lbl'+(S.labels?'':' off'),S.labels?('['+title+']'):'[…]');
+          g.title='클릭해서 접기/펴기';
+          g.onclick=ev=>{ev.stopPropagation();
+            const off=g.classList.toggle('off');
+            g.textContent=off?'[…]':'['+title+']';};
+          top().appendChild(g);
+        }
+      }
+    });
+    (row.e||[]).forEach(e=>{
+      if(e.k==='F'&&e.a===i){
+        const s=el('sup','fn','['+e.id+']');
+        s.onclick=ev=>{ev.stopPropagation();popFoot(e.id,ev);};
+        top().appendChild(s);
+      }
+      if(e.k==='E'&&e.a===i){
+        // 임베드는 해소하지 않는다 — 「⤷ 참조」 표시로 둔다(§3-B)
+        const s=el('span','embed','⤷ '+e.to);
+        s.title='임베드 미해소 — 컴파일러 지시서 2의 몫';
+        top().appendChild(s);
+      }
+    });
+    (opens[i]||[]).forEach(o=>{
+      let node;
+      if(o.ln){
+        node=el('span','joLink'+(o.ln.j?'':' dead'));
+        if(o.ln.j)node.onclick=ev=>{ev.stopPropagation();popJo(S.law,o.ln.j,ev);};
+        else node.title='조문노트가 아닌 볼트 노트 — v0 범위 밖';
+      }else{
+        const m=o.mk;
+        if(m.t==='font'){node=el('span');node.style.color=m.v;}
+        else if(m.t==='span'){
+          const mm=/background\s*:\s*([^;"']+)/.exec(m.v||'');
+          // 형광펜은 목업의 mark 로 — 지정색이 있으면 그 색을 쓴다
+          node=el('mark','y');
+          if(mm)node.style.background=mm[1];
+        }
+        else if(m.t==='u')node=el('u');
+        else if(m.t==='bold')node=el('strong');
+        else if(m.t==='mark'){node=el('mark','y');}
+        else if(m.t==='strike')node=el('s');
+        else if(m.t==='tag'){node=el('span','badge');}
+        else node=el('span');
+      }
+      top().appendChild(node);stack.push(node);
+    });
+    if(i<n)top().appendChild(document.createTextNode(t[i]));
+  }
+  return frag;
+}
+function joClass(k){
+  const h=k[0];
+  if(h==='항')return 'ln hang';
+  if(h==='호')return 'ln ho';
+  if(k.includes('목'))return 'ln mok';
+  if(h==='R')return 'ln ref';
+  if(h==='각주')return 'ln fd';
+  if(h==='꼬리'||h==='두문자')return 'ln tail';
+  return 'ln';
+}
+
+/* ══════════ 조문 뷰 ══════════ */
+async function viewJo(){
+  const slot=$('#slot');slot.innerHTML='';
+  const L=await get(`jo_${S.law}_목록.json`);
+  JOTITLE={};L.조.forEach(j=>{JOTITLE[j.k]=j.t;});
+
+  const tree=el('div','tree'+(S.treeHid?' hid':''));
+  tree.appendChild(el('div','h',SHORT[S.law]+' · 체계도 ↔ 조문'));
+  if(!S.jo&&L.조.length)S.jo=L.조[0].k;
+  L.조.forEach(j=>{
+    const r=el('div','r'+(S.jo===j.k?' on':''));
+    const nm=el('span','nm',j.k+' '+(j.t||''));
+    r.appendChild(nm);
+    const em=el('em');
+    if(j.M)em.appendChild(el('span','','✏'+j.M));
+    if(j.L)em.appendChild(el('span','','🔗'+j.L));
+    if(!j.M&&!j.L){const b=el('span','bars');
+      for(let i=0;i<3;i++)b.appendChild(el('i','bx'));em.appendChild(b);}
+    r.appendChild(em);
+    r.onclick=()=>{S.jo=j.k;render();};
+    tree.appendChild(r);
+  });
+  const lg=el('div','legend');
+  lg.innerHTML='막대 3개 = <b>회독 · 빈칸 통과 · 지문 정답률</b> — v0 미착수<br>'+
+               '✏N 내 형광·마크업 수 · 🔗N 인용 링크 수';
+  tree.appendChild(lg);
+  slot.appendChild(tree);
+  slot.appendChild(handle('tree'));
+
+  const main=el('div','main');
+  const B=await get(`jo_${S.law}_본문.json`);
+  const j=B.조[S.jo];
+  if(!j){main.appendChild(emptyBox('📖','조문을 찾지 못했다',S.jo||''));slot.appendChild(main);return;}
+
+  // ── 머리 (리담 구조: 법 배지 → 큰 제목 → 시행일 → 이 조문 연결 → 모드 바)
+  const idx=await get('jo_링크역인덱스.json').catch(()=>({}));
+  const back=idx[S.law+':'+S.jo]||[];
+
+  main.appendChild(el('span','chip c-prec',S.law));
+  const h1=el('div','jotitle');
+  h1.appendChild(el('span','no',S.jo));
+  if(j.제목)h1.appendChild(document.createTextNode(' '+j.제목));
+  main.appendChild(h1);
+  main.appendChild(el('div','sihaeng','🕐 시행 '+(SIHAENG[S.law]||'—')+'  ·  '+j.파일));
+
+  const link=el('div','conn');
+  link.appendChild(el('span','k','이 조문 연결'));
+  link.appendChild(el('span','chip c-prec','📜 인용하는 조 '+back.length));
+  link.appendChild(el('span','chip c-quiz','📝 지문 — 통합 중'));
+  link.appendChild(el('span','chip c-theme','🧩 테마 — v0 제외'));
+  link.appendChild(el('span','chip c-card','🃏 카드 — v0 제외'));
+  main.appendChild(link);
+
+  // ── 모드 바 — 빈칸은 갈래가 아니라 이 조문의 모드다(§4-4 다중선택)
+  const mb=el('div','modebar');
+  JOMODES.forEach(([k,label])=>{
+    const on=(k==='본문')?(S.joMode==='본문'):(S.joMode===k);
+    const b=el('button','mode'+(on?' on':'')+(k==='본문'?'':' dis'),label);
+    if(k!=='본문'){
+      b.appendChild(el('span','n','—'));
+      b.disabled=true;
+      b.title=(k==='소제목')?'항 소제목 648개 이관 전 — v0 범위 밖'
+                            :'빈칸 재료 준비 중 (§4-4)';
+    }else b.onclick=()=>{S.joMode='본문';render();};
+    mb.appendChild(b);
+  });
+  mb.appendChild(el('span','badge','빈칸·소제목 = 재료 준비 중'));
+  main.appendChild(mb);
+
+  const box=el('div','box');
+  const bh=el('div','boxh');
+  bh.appendChild(el('span','','✏ 내 편집본 — 볼트 md 그대로 렌더'));
+  bh.appendChild(el('span','','마크업 '+(j.행.reduce((a,r)=>a+((r.m||[]).length),0))+' · 링크 '+
+                              (j.행.reduce((a,r)=>a+((r.e||[]).filter(e=>e.k==='L').length),0))));
+  box.appendChild(bh);
+  j.행.forEach(row=>{
+    if(row.k[0]==='H')return;
+    const d=el('div',joClass(row.k));
+    if(row.fd)d.appendChild(el('span','','[^'+row.fd+'] '));
+    d.appendChild(renderLine(row));
+    if(row.b){const a=el('span','anchor','^'+row.b);a.id='b-'+row.b;d.appendChild(a);}
+    box.appendChild(d);
+  });
+  main.appendChild(box);
+
+  if(j.원본&&j.원본.length){
+    const fold=el('div','box fold');
+    const head=el('div');
+    head.appendChild(document.createTextNode('▸ 원문 보기 '));
+    const s=el('span','','(불변 원본층 · 개정 대조용 정본)');s.style.fontSize='11px';
+    head.appendChild(s);
+    const link=el('a','oi','law.go.kr ↗');
+    link.href='https://www.law.go.kr/법령/'+encodeURIComponent(S.law);
+    link.target='_blank';link.rel='noopener';
+    link.onclick=e=>e.stopPropagation();
+    head.appendChild(link);
+    fold.appendChild(head);
+    const body=el('div','origbody',j.원본.join('\n'));
+    body.style.display='none';
+    fold.appendChild(body);
+    fold.onclick=()=>{const open=body.style.display==='none';
+      body.style.display=open?'':'none';
+      head.firstChild.nodeValue=(open?'▾':'▸')+' 원문 보기 ';};
+    main.appendChild(fold);
+  }
+
+  slot.appendChild(main);
+
+  const t=(location.hash.split('#b=')[1]);
+  if(t){const nd=$('#b-'+t);if(nd)nd.scrollIntoView({block:'center'});}
+}
+
+/* ══════════ 팝업 ══════════ */
+/* ══ 팝업 — 여러 개 · 끌어 옮기기 (목업 v3 「팝업은 여러 개, ≡ 로 끌고」)
+   ⚠ 지시서 §3-E 는 「팝업 다중/드래그/고정」을 v0 제외로 뒀다.
+      8/23 사용자 요구로 켰다. 고정(📌)은 아직 없다 — 다중·드래그만. */
+let POPZ = 60, POPS = [];
+function dragify(p, hd){
+  let sx = 0, sy = 0, ox = 0, oy = 0, on = false;
+  hd.addEventListener('mousedown', ev => {
+    if (ev.target.closest('button')) return;
+    on = true; sx = ev.clientX; sy = ev.clientY;
+    ox = parseFloat(p.style.left) || 0; oy = parseFloat(p.style.top) || 0;
+    p.style.zIndex = ++POPZ;
+    ev.preventDefault();
+  });
+  addEventListener('mousemove', ev => {
+    if (!on) return;
+    p.style.left = Math.max(0, Math.min(innerWidth - 60, ox + ev.clientX - sx)) + 'px';
+    p.style.top = Math.max(0, Math.min(innerHeight - 34, oy + ev.clientY - sy)) + 'px';
+  });
+  addEventListener('mouseup', () => { on = false; });
+}
+function popShell(kind, title){
+  const p = el('div', 'pop' + (kind ? ' k-' + kind : ''));
+  p.style.zIndex = ++POPZ;
+  const hd = el('div', 'ph');
+  hd.appendChild(el('span', 'pdrag', '≡'));
+  hd.appendChild(el('span', 'pt', title));
+  const x = el('button', '', '✕');
+  x.onclick = ev => { ev.stopPropagation(); closeOne(p); };
+  hd.appendChild(x);
+  p.appendChild(hd);
+  const body = el('div', 'pb');
+  p.appendChild(body);
+  document.body.appendChild(p);
+  POPS.push(p);
+  dragify(p, hd);
+  p.addEventListener('mousedown', () => { p.style.zIndex = ++POPZ; });
+  return body;
+}
+function closeOne(p){
+  p.remove();
+  POPS = POPS.filter(q => q !== p);
+}
+function closePop(){                    // 맨 위 하나만 닫는다
+  if (POPS.length) closeOne(POPS[POPS.length - 1]);
+}
+function closeAllPops(){
+  POPS.slice().forEach(closeOne);
+}
+function showPop(ev){
+  const p = POPS[POPS.length - 1];
+  if (!p) return;
+  const w = p.offsetWidth || 440, h = p.offsetHeight || 260;
+  // 여러 개를 띄우면 조금씩 어긋나게 쌓는다
+  const k = (POPS.length - 1) % 6;
+  let x = ev ? ev.clientX + 14 : innerWidth - w - 40;
+  let y = ev ? ev.clientY + 14 : 110;
+  x = Math.max(8, Math.min(x + k * 22, innerWidth - w - 8));
+  y = Math.max(8, Math.min(y + k * 20, innerHeight - Math.min(h, 260) - 8));
+  p.style.left = x + 'px';
+  p.style.top = y + 'px';
+}
+
+
+/* ══════════ 판례 뷰 ══════════ */
+async function viewPrec(){
+  const slot=$('#slot');slot.innerHTML='';
+  const subj=SHORT[S.law];
+  const meta=await get('prec_과목.json').catch(()=>({}));
+
+  const tree=el('div','tree'+(S.treeHid?' hid':''));
+  tree.appendChild(el('div','h','과목 · 수집 현황'));
+  ['특허','상표','디보','민소'].forEach(s=>{
+    const m=meta[s]||{상태:'미수집',수:0};
+    const r=el('div','r'+(s===subj?' on':''));
+    r.appendChild(el('span','nm',s));
+    r.appendChild(el('em','',m.수?('⚖'+m.수):m.상태));
+    r.onclick=()=>{const L=LAWS.find(x=>SHORT[x]===s);if(L){S.law=L;S.prec=null;render();}};
+    tree.appendChild(r);
+  });
+  const lg=el('div','legend');
+  lg.innerHTML='⚖N = 수집 건수<br>특허만 볼트 편입 · 상표 285는 수집만(§7 편입 금지)';
+  tree.appendChild(lg);
+  slot.appendChild(tree);
+  slot.appendChild(handle('tree'));
+
+  if(subj!=='특허'){
+    const m=meta[subj]||{상태:'미수집',수:0};
+    const main=el('div','main');
+    main.appendChild(emptyBox('⚖',subj+' 판례 — '+m.상태,
+      m.수?('수집 '+m.수+'건 · 볼트 미편입'):'재료가 아직 없다'));
+    slot.appendChild(main);return;
+  }
+
+  const P=await get('prec_특허_리스트.json');
+  const arr=P.판례.slice().sort((a,c)=>{
+    const x=a.선고||'0',y=c.선고||'0';
+    return S.precSort==='asc'?(x<y?-1:x>y?1:0):(x>y?-1:x<y?1:0);});
+
+  const list=el('div','plist'+(S.listHid?' hid':''));
+  const cb=el('div','ctrlbar');
+  const sel=el('select','sel');
+  [['asc','선고일 빠른순'],['desc','선고일 늦은순']].forEach(([v,t])=>{
+    const o=el('option','',t);o.value=v;if(S.precSort===v)o.selected=true;sel.appendChild(o);});
+  sel.onchange=()=>{S.precSort=sel.value;render();};
+  cb.appendChild(sel);
+  ['시험 1차/2차','법원','카테고리'].forEach(t=>{
+    const s2=el('select','sel');s2.disabled=true;s2.appendChild(el('option','',t));cb.appendChild(s2);});
+  list.appendChild(cb);
+  const cnt=el('div','h');
+  cnt.style.cssText='padding:6px 12px;font-size:11px;color:#9a958b;border-bottom:1px solid #eeece6';
+  cnt.textContent=`수집본 ${P.수집본} + 볼트 요약본 ${P.요약본} = ${P.건수}건`;
+  list.appendChild(cnt);
+  arr.forEach(p=>{
+    const r=el('div','prow'+(S.prec===p.id?' on':''));
+    const pn=el('div','pn',p.사건번호||p.파일);
+    pn.appendChild(el('span','badge',
+      p.선고?p.선고.replace(/(\d{4})(\d{2})(\d{2})/,'$1.$2.$3'):(p.연도폴더||'요약본')));
+    r.appendChild(pn);
+    r.appendChild(el('div','iss',(p.사건명||p.별칭||'').slice(0,60)));
+    r.appendChild(el('span','chip c-src',p.출처));
+    (Array.isArray(p.조문)?p.조문:[]).slice(0,3).forEach(x=>
+      r.appendChild(el('span','chip c-prec','⚖'+x)));
+    if(p.기출&&typeof p.기출==='string')r.appendChild(el('span','chip c-quiz','기출 '+p.기출));
+    r.onclick=()=>{S.prec=p.id;S.precTab=p.출처==='요약본'?'요약':'원문';render();};
+    list.appendChild(r);
+  });
+  slot.appendChild(list);
+  slot.appendChild(handle('list'));
+
+  const main=el('div','main');
+  const cur=arr.find(x=>x.id===S.prec);
+  if(!cur){main.appendChild(emptyBox('⚖','왼쪽에서 판례를 고르면 여기에 열린다',
+    `수집본 ${P.수집본}건 · 볼트 요약본 ${P.요약본}건`));slot.appendChild(main);return;}
+
+  const full=cur.출처==='수집본'?await get('prec_특허_전문.json'):null;
+  const sec=full?(full[cur.id]||{}):{};
+  const hasSum=cur.출처==='요약본', hasRaw=!!(sec.전문||sec.판결요지);
+  const bar=el('div');bar.style.cssText='display:flex;gap:6px;flex-wrap:wrap;align-items:center';
+  [['요약',hasSum],['빈칸',false],['원문',hasRaw]].forEach(([t,ok],i)=>{
+    const b=el('button','tool'+(S.precTab===t?' on':(i===2?' last':'')),t);
+    if(!ok)b.disabled=true;
+    b.onclick=()=>{S.precTab=t;render();};bar.appendChild(b);});
+  main.appendChild(bar);
+
+  const hd=el('div');hd.style.cssText='margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+  if(cur.법원){const c=el('b','',cur.법원);c.style.color='var(--exc)';hd.appendChild(c);}
+  hd.appendChild(el('b','',cur.사건번호||''));
+  if(cur.선고)hd.appendChild(el('span','badge','선고 '+cur.선고.replace(/(\d{4})(\d{2})(\d{2})/,'$1-$2-$3')));
+  hd.appendChild(el('span','badge',cur.출처==='요약본'?('볼트 '+cur.연도폴더):'수집본 202'));
+  if(cur.별칭&&typeof cur.별칭==='string')hd.appendChild(el('span','badge','별칭: '+cur.별칭.slice(0,40)));
+  main.appendChild(hd);
+
+  const chips=el('div');chips.style.marginTop='6px';
+  (Array.isArray(cur.조문)?cur.조문:[]).forEach(x=>chips.appendChild(el('span','chip c-prec','⚖ '+x)));
+  if(cur.기출&&typeof cur.기출==='string')chips.appendChild(el('span','chip c-quiz','📝 기출 '+cur.기출));
+  (Array.isArray(cur.카테고리)?cur.카테고리:[]).forEach(x=>
+    chips.appendChild(el('span','chip c-theme',String(x).slice(0,34))));
+  chips.appendChild(el('span','chip c-card','🃏'));
+  main.appendChild(chips);
+
+  if(S.precTab==='빈칸'||(!hasSum&&!hasRaw)){
+    main.appendChild(emptyBox('🧩','재료 준비 중','판례 빈칸은 v0 범위 밖이다'));
+  }else if(S.precTab==='요약'&&hasSum){
+    const box=el('div','box');
+    const bh=el('div','boxh');
+    bh.appendChild(el('span','','요약본 — 볼트 md 렌더 (임베드는 미해소)'));
+    bh.appendChild(el('span','',cur.요약본||''));
+    box.appendChild(bh);
+    const SUM=await get('prec_특허_요약.json').catch(()=>({}));
+    const s=SUM[cur.id];
+    if(!s||!s.행.length)box.appendChild(el('div','empty','요약본 본문이 비어 있다'));
+    else s.행.forEach(row=>{const d=el('div','ln');d.appendChild(renderLine(row,{label:false}));box.appendChild(d);});
+    main.appendChild(box);
+    if(cur.쟁점)main.appendChild(el('div','badge','쟁점 — '+cur.쟁점));
+  }else{
+    ['판시사항','판결요지','참조조문','참조판례','전문'].forEach(k=>{
+      if(!sec[k])return;
+      const box=el('div','box');
+      const bh=el('div','boxh');bh.appendChild(el('span','',k));box.appendChild(bh);
+      box.appendChild(el('pre','raw',sec[k]));
+      main.appendChild(box);
+    });
+  }
+  slot.appendChild(main);
+}
+
+/* ══════════ 2차 뷰 — 보드 · 목록 · 캔버스 ══════════ */
+let BODY=null,BODYKEY='';
+async function bodyOf(kind,subj){
+  const k=kind+'_'+subj;
+  if(BODYKEY===k)return BODY;
+  try{BODY=await get('2cha_본문_'+k+'.json');BODYKEY=k;}catch(e){BODY={};BODYKEY=k;}
+  return BODY;
+}
+// 카드 본문 미리보기 — 옵시디언 캔버스가 카드에 본문을 렌더하는 것과 같은 자리
+/* ══ 본문 렌더 — 카드·팝업이 **같은 함수**를 쓴다. 옵시디언과 같게:
+      제목은 크기·굵기로 · 제목을 누르면 접힘 · 단어를 누르면 메모.
+   ⚠ 단어마다 span 을 만들면 보드 하나에 수만 개가 생긴다.
+      그래서 평문으로 그리고 **클릭 위치로 단어를 찾는다**(caretRangeFromPoint).
+      메모가 붙은 단어만 span 으로 감싼다. */
+const MEMO_NS='jopangi.memo.';
+function memoLoad(file){
+  try{return JSON.parse(localStorage.getItem(MEMO_NS+file)||'{}');}catch(e){return {};}
+}
+function memoSave(file,m){
+  try{localStorage.setItem(MEMO_NS+file,JSON.stringify(m));}catch(e){toast('메모 저장 실패');}
+}
+function splitWords(t){return (t||'').split(/(\s+)/);}
+// 클릭 지점의 단어 번호 — 렌더와 같은 splitWords 색인을 쓴다
+function wordIndexAt(lineEl,ev,text){
+  let off=0;
+  const r=document.caretRangeFromPoint?document.caretRangeFromPoint(ev.clientX,ev.clientY):null;
+  if(r&&lineEl.contains(r.startContainer)){
+    const w=document.createTreeWalker(lineEl,NodeFilter.SHOW_TEXT);
+    let n,acc=0;
+    while((n=w.nextNode())){
+      if(n===r.startContainer){off=acc+r.startOffset;break;}
+      acc+=n.nodeValue.length;
+    }
+  }
+  const parts=splitWords(text);
+  let pos=0;
+  for(let i=0;i<parts.length;i++){
+    const end=pos+parts[i].length;
+    if(off<end)return parts[i].trim()?i:null;
+    pos=end;
+  }
+  for(let i=parts.length-1;i>=0;i--)if(parts[i].trim())return i;
+  return null;
+}
+function lineContent(r,ri,file,memo){
+  // 메모 붙은 단어만 span — 나머지는 텍스트 노드 하나
+  const frag=document.createDocumentFragment();
+  const parts=splitWords(r.t||'');
+  let buf='';
+  const flush=()=>{if(buf){frag.appendChild(document.createTextNode(buf));buf='';}};
+  parts.forEach((w,wi)=>{
+    const mk=ri+'_'+wi;
+    if(w.trim()&&memo[mk]){
+      flush();
+      const sp=el('span','pword',w);
+      sp.title=memo[mk];
+      sp.appendChild(el('span','pmark'));
+      frag.appendChild(sp);
+    }else buf+=w;
+  });
+  flush();
+  return frag;
+}
+function renderBody(rec,file,opt){
+  opt=opt||{};
+  const wrap=el('div','rbody'+(opt.card?' card':''));
+  if(!rec||!rec.행||!rec.행.length){wrap.appendChild(el('div','cdim','본문 없음'));return wrap;}
+  const memo=memoLoad(file);
+  const rows=[];
+  let curLv=0;
+  rec.행.forEach((r,ri)=>{
+    // 콜아웃(문제·원본)은 **접힌 상자 하나**로 두고, 누르면 팝업으로 뜬다(8/23 사용자)
+    if(r.co){
+      const box=el('div','callout co-'+r.co);
+      box.appendChild(el('span','ci',r.co==='question'?'⑦':'📄'));
+      box.appendChild(el('span','ct',r.t));
+      box.appendChild(el('span','cn',r.rows.length+'줄'));
+      box.appendChild(el('span','cx','›'));
+      box.title='눌러서 전문 보기';
+      box.onclick=ev=>{ev.stopPropagation();popCallout(r,file,ev);};
+      wrap.appendChild(box);rows.push(box);
+      return;
+    }
+    const lv=r.h||0;
+    if(lv)curLv=lv;
+    const d=el('div','rln'+(lv?' rh rh'+Math.min(lv,4):''));
+    // 제목 단계마다 들여쓴다 — Ⅰ. / 1. / (1) 이 세로로 겹치지 않게(8/23 사용자)
+    d.style.paddingLeft=(lv?(lv-1)*15:curLv*15+((r.i||0)*9))+'px';
+    if(lv){
+      const tg=el('button','rtog','▾');
+      tg.title='접기/펴기';
+      tg.onclick=ev=>{
+        ev.stopPropagation();
+        const open=tg.textContent==='▾';
+        tg.textContent=open?'▸':'▾';
+        for(let k=ri+1;k<rows.length;k++){
+          const nl=rec.행[k].h||0;
+          if(nl&&nl<=lv)break;
+          rows[k].style.display=open?'none':'';
+        }
+      };
+      d.appendChild(tg);
+    }
+    const holder=el('span','rtx');
+    if((r.e&&r.e.length)||(r.m&&r.m.length))holder.appendChild(renderLine(r,{label:false}));
+    else holder.appendChild(lineContent(r,ri,file,memo));
+    d.appendChild(holder);
+    // 단어 클릭 = 메모
+    d.onclick=ev=>{
+      if(ev.target.closest('.rtog,a,.joLink'))return;
+      const wi=wordIndexAt(holder,ev,r.t||'');
+      if(wi==null)return;
+      ev.stopPropagation();
+      memoEdit(file,ri+'_'+wi,splitWords(r.t)[wi],ev);
+    };
+    wrap.appendChild(d);rows.push(d);
+  });
+  return wrap;
+}
+function popCallout(co,file,ev){
+  const body=popShell(co.co==='question'?'':'fn',
+    (co.co==='question'?'⑦ ':'📄 ')+co.t);
+  body.appendChild(el('div','cdim','제목을 눌러 접고 편다 · 단어를 눌러 메모를 붙인다'));
+  body.appendChild(renderBody({행:co.rows},file+'::'+co.t));
+  showPop(ev);
+}
+function memoEdit(file,mk,word,ev){
+  const memo=memoLoad(file);
+  const body=popShell('fn','🗒 메모 — 「'+String(word||'').slice(0,18)+'」');
+  const ta=el('textarea','memoin');
+  ta.value=memo[mk]||'';ta.placeholder='이 단어에 붙일 메모';
+  body.appendChild(ta);
+  const row=el('div','memobtn');
+  const ok=el('button','tool on','저장');
+  ok.onclick=()=>{const v=ta.value.trim();
+    if(v)memo[mk]=v;else delete memo[mk];
+    memoSave(file,memo);closePop();render();};
+  const del=el('button','tool','삭제');
+  del.onclick=()=>{delete memo[mk];memoSave(file,memo);closePop();render();};
+  row.appendChild(ok);row.appendChild(del);
+  row.appendChild(el('span','cdim','브라우저에만 저장'));
+  body.appendChild(row);
+  showPop(ev);
+  setTimeout(()=>ta.focus(),30);
+}
+
+async function view2cha(){
+  const slot=$('#slot');slot.innerHTML='';
+  const B=await get('2cha_보드.json');
+  const subj=SHORT[S.law];
+  const main=el('div','main');
+
+  const bar=el('div');bar.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+  ['기출','GS','사례'].forEach(k=>{
+    const d0=B[k+'|'+subj];
+    // ⚠ 기출은 사례 폴더에서 회차-문제가 붙은 것만 뽑은 것이라 폴더 총계와 다르다.
+    const n=d0?(k==='기출'?(d0.배치수||0):(d0.총||0)):0;
+    const b=el('button','pill'+(S.boardKind===k?' on':(n?'':' wait')),k+' '+(n||'—'));
+    b.onclick=()=>{S.boardKind=k;S.series='';S.yearFilter='';render();};bar.appendChild(b);});
+  const sp=el('span');sp.style.flex='1';bar.appendChild(sp);
+  // ⚠ 캔버스 보기는 뺐다 — 「보드 = 캔버스」라 중복(8/23 사용자).
+  //   캔버스 파싱·JSON·뷰를 전부 걷어냈다(8/23 사용자 「아예 지워」).
+  [['board','보드'],['list','목록']].forEach(([v,t])=>{
+    const b=el('button','tool'+(S.boardView===v?' on':''),t);
+    b.onclick=()=>{S.boardView=v;render();};bar.appendChild(b);});
+
+  const key=S.boardKind+'|'+subj;
+  const d=B[key];
+  if(!d||d.상태==='폴더 없음'){
+    main.appendChild(emptyBox('🖋',subj+' · '+S.boardKind+' — 폴더 없음','볼트에 해당 폴더가 없다'));
+    slot.appendChild(main);return;
+  }
+  const cells=d.격자||{},keys=Object.keys(cells);
+  const un=d.미배치||[];
+  const bodies=await bodyOf(S.boardKind==='기출'&&subj!=='민소'?'사례':S.boardKind,subj);
+
+  // ── 강사·시리즈 선택기는 **GS 에서만**(8/23 사용자). 별도 줄 없이 상단에 붙인다.
+  const all=[];keys.forEach(k=>cells[k].forEach(x=>all.push(Object.assign({셀:k},x))));
+  const series=[...new Set(all.map(x=>x.시리즈).filter(Boolean))].sort();
+  if(S.boardKind==='GS'&&series.length){
+    const s1=el('select','sel');
+    const o0=el('option','','강사 전체 ('+series.length+')');o0.value='';s1.appendChild(o0);
+    series.forEach(v=>{const o=el('option','',v);o.value=v;if(S.series===v)o.selected=true;s1.appendChild(o);});
+    s1.onchange=()=>{S.series=s1.value;render();};
+    bar.insertBefore(s1,sp);
+  }else if(S.series){S.series='';}
+  const years=[...new Set(all.map(x=>x.연도).filter(Boolean))].sort((a,b)=>a-b);
+  main.appendChild(bar);
+
+  const pass=x=>(!S.series||x.시리즈===S.series)&&(!S.yearFilter||String(x.연도)===String(S.yearFilter));
+  const shown=all.filter(pass);
+
+  if(S.boardView==='list'){
+    main.appendChild(el('div','badge',
+      `${d.총}개 · 배치 ${d.배치수||0} · 미배치 ${un.length}` +
+      ((S.series||S.yearFilter)?`  ·  필터 적용 ${shown.length}개`:'')));
+    const rows=shown.slice().sort((a,b)=>cmpCell(a,b));
+    rows.forEach(x=>{const r=el('div','prow');
+      r.appendChild(el('div','pn',cellLabel(x)));
+      r.appendChild(el('div','iss',x.파일));
+      r.onclick=e=>popCell(x,e,bodies);main.appendChild(r);});
+    un.forEach(x=>{const r=el('div','prow');
+      r.appendChild(el('div','pn','미배치'));
+      r.appendChild(el('div','iss',x.파일));
+      r.onclick=e=>popCell(x,e,bodies);main.appendChild(r);});
+    slot.appendChild(main);return;
+  }
+
+  // ── 보드(격자)
+  let rows=[...new Set(shown.map(x=>x.셀.split('|')[0]))];
+  rows.sort((a,c)=>{
+    const na=parseFloat(String(a).replace('-','.')),nc=parseFloat(String(c).replace('-','.'));
+    const v=(isNaN(na)||isNaN(nc))?String(a).localeCompare(String(c)):na-nc;
+    return S.yearSort==='desc'?-v:v;});
+  const cols=[...new Set(shown.map(x=>+x.셀.split('|')[1]))].sort((a,c)=>a-c);
+  if(!rows.length||!cols.length){
+    main.appendChild(emptyBox('🖋','필터에 걸리는 문항이 없다','강사·연도 필터를 풀어라'));
+    slot.appendChild(main);return;}
+  const wrap=el('div','gwrap');
+  const g=el('div','grid');
+  g.style.gridTemplateColumns=`64px repeat(${cols.length},minmax(210px,1fr))`;
+  g.style.minWidth=(64+cols.length*218)+'px';
+  // 정렬·연도 필터는 별도 줄이 아니라 **연도·회차 머리칸 안**에 둔다(8/23 사용자)
+  const yh=el('div','gh yh');
+  const sb=el('button','ysort',(S.boardKind==='GS'?'연도-회':'연도·회차')+
+             (S.yearSort==='asc'?' ↑':' ↓'));
+  sb.title='눌러서 빠른순 ↔ 늦은순';
+  sb.onclick=()=>{S.yearSort=S.yearSort==='asc'?'desc':'asc';render();};
+  yh.appendChild(sb);
+  if(years.length){
+    const s2=el('select','sel ysel');
+    const o0=el('option','','전체 '+years.length);o0.value='';s2.appendChild(o0);
+    years.forEach(v=>{const o=el('option','',String(v).slice(2)+'-'+(v-1963));o.value=v;
+      if(String(S.yearFilter)===String(v))o.selected=true;s2.appendChild(o);});
+    s2.onchange=()=>{S.yearFilter=s2.value;render();};
+    yh.appendChild(s2);
+  }
+  g.appendChild(yh);
+  cols.forEach(c=>g.appendChild(el('div','gh','문제 '+c)));
+  const byCell={};shown.forEach(x=>{(byCell[x.셀]=byCell[x.셀]||[]).push(x);});
+  rows.forEach(r=>{
+    const yr=(shown.find(x=>x.셀.split('|')[0]===r)||{}).연도;
+    // 「08-45」 꼴로 짧게(8/23 사용자). GS 는 이미 「24-1」 이라 그대로.
+    g.appendChild(el('div','gr',yr?(String(yr).slice(2)+'-'+r):String(r)));
+    cols.forEach(c=>{
+      const list=byCell[r+'|'+c];
+      if(!list){g.appendChild(el('div','cellnone'));return;}
+      const holder=el('div');
+      list.forEach(x=>{
+        const hot=/⚠|누락/.test(x.논점||'');
+        const cd=el('div','cell'+(hot?' hot':''));
+        if(x.시리즈)cd.appendChild(el('div','t',x.시리즈));
+        const ti=el('div','ctitle',x.논점||x.파일);
+        ti.title='눌러서 크게 보기';
+        ti.onclick=e=>{e.stopPropagation();popCell(x,e,bodies);};
+        cd.appendChild(ti);
+        cd.appendChild(renderBody(bodies[x.파일],x.파일,{card:1}));
+        holder.appendChild(cd);});
+      g.appendChild(holder);
+    });
+  });
+  wrap.appendChild(g);main.appendChild(wrap);
+
+  if(un.length){
+    const u=el('div','unpl');
+    u.appendChild(el('h4','',`미배치 ${un.length}건 — 파일명이 규약에서 벗어났다`));
+    un.forEach(x=>{const r=el('div','u',x.파일);r.onclick=e=>popCell(x,e,bodies);u.appendChild(r);});
+    main.appendChild(u);
+  }
+  main.appendChild(el('div','badge',
+    `폴더 ${d.총}개 = 배치 ${d.배치수} + 미배치 ${un.length}  ·  ${d.폴더||''}`));
+  slot.appendChild(main);
+}
+function cellLabel(x){
+  const [r,c]=x.셀.split('|');
+  return (x.연도?x.연도+'년 ':'')+r+(x.연도?'회':'')+' · 문제 '+c;
+}
+function cmpCell(a,b){
+  const [ra,ca]=a.셀.split('|'),[rb,cb]=b.셀.split('|');
+  const na=parseFloat(String(ra).replace('-','.')),nb=parseFloat(String(rb).replace('-','.'));
+  let v=(isNaN(na)||isNaN(nb))?String(ra).localeCompare(String(rb)):na-nb;
+  if(S.yearSort==='desc')v=-v;
+  return v|| (+ca)-(+cb);
+}
+function popCell(x,ev,bodies){
+  const body=popShell('cell','🖋 '+(x.파일||'').slice(0,44));
+  if(x.시리즈)body.appendChild(el('span','badge',x.시리즈));
+  if(x.셀)body.appendChild(el('span','badge',cellLabel(x)));
+  const rec=(bodies||{})[x.파일];
+  if(rec&&rec.fm&&Object.keys(rec.fm).length){
+    const ch=el('div','chips');
+    Object.entries(rec.fm).forEach(([k,v])=>{if(v)ch.appendChild(el('span','chip c-src',k+': '+String(v).slice(0,24)));});
+    body.appendChild(ch);
+  }
+  body.appendChild(renderBody(rec,x.파일));
+  showPop(ev);
+}
+
+/* ══════════ 1차객 뷰 — 목차 트리 + [OX문제 | 기출문제] ══════════ */
+function qCard(q,mokTitle){
+  const card=el('div','qwrap');
+  // ── 머리 배지 줄 (민법OX 앱과 같은 구성)
+  const h=el('div','qhd');
+  h.appendChild(el('span','qb v','변리사 '+String(q.연도).slice(2)));
+  const typ=(q.유형||'').split('|')[0]||'단답형';
+  h.appendChild(el('span','qb t',typ+(q.조&&q.조.length?(' · 제'+q.조[0].replace(/^[특상디]-/,'')+'조'):'')));
+  h.appendChild(el('span','qb n',q.연도+':'+(q.회차||'')+':'+q.문번));
+  h.appendChild(el('span','qb id','ID '+q.id));
+  h.appendChild(el('span','src '+q.출처,q.출처));
+  if(mokTitle)h.appendChild(el('span','chip c-theme',mokTitle));
+  const sp=el('span');sp.style.flex='1';h.appendChild(sp);
+  // 학습 태그 — 기록은 kv 라 v0 제외(§3-E). 자리만 보인다.
+  [['📍',''],['🔵','헷갈림'],['⚠','페이크'],['💡','개념'],['🩷','암기'],['⭐','중요']].forEach(([i,t])=>{
+    const g=el('span','qtag',i+(t?' '+t:''));g.title='학습 태그 — 기록은 v0 제외';h.appendChild(g);});
+  card.appendChild(h);
+
+  // ── 판 토글 — **기출변형에서만**(8/23 사용자 정정). 나머지는 아예 안 보인다.
+  if(q.출처==='기출변형'){
+    const pt=el('div','pantog');
+    pt.appendChild(el('span','pl','판'));
+    [['리담','리담판'],['제7판','제7판판']].forEach(([v,label])=>{
+      const on=(q._판||'리담')===v;
+      const b=el('button','tool'+(on?' on':''),label);
+      if(v==='제7판'&&!q.두판){b.disabled=true;b.title='이 문항은 제7판 대응 선지가 없다';}
+      b.onclick=()=>{if(v==='제7판'&&!q.두판)return;q._판=v;render();};
+      pt.appendChild(b);});
+    pt.appendChild(el('span','badge',q.두판?('제7판 대응 선지 '+q.n7+'개'):'제7판 대응 없음 — 토글 비활성'));
+    card.appendChild(pt);
+  }
+  if(q.발문)card.appendChild(el('div','qmun',q.발문));
+  const pan=(q.출처==='기출변형'&&(q._판||'리담')==='제7판');
+  (q.지문||[]).forEach(z=>{
+    const alt=pan&&z.p7?z.p7:null;
+    const bon=alt?alt.t:z.t, ox2=alt?alt.ox:z.ox, sol2=alt?alt.sol:z.sol;
+    const row=el('div','oxrow');
+    const q1=el('div','oxq');
+    q1.appendChild(el('b','',q.문번+'번 - ('+z.n+') '));
+    q1.appendChild(document.createTextNode(bon));
+    if(pan&&!z.p7)q1.appendChild(el('span','badge','제7판 대응 없음 — 리담판 표시'));
+    if(alt&&alt.미확정)q1.appendChild(el('span','qb warn','제7판 정오 미확정'));
+    row.appendChild(q1);
+    // ── O / X 선택 (민법OX 방식). 기록은 저장하지 않는다 — v0 읽기 전용.
+    const pick=el('div','oxpick');
+    ['O','X'].forEach(v=>{
+      const b=el('button','oxbtn'+(z._sel===v?' sel':'')+(z._sel?((v===ox2)?' right':(z._sel===v?' wrong':'')):''),'');
+      b.appendChild(el('span','dot',z._sel===v?'◉':'○'));
+      b.appendChild(el('span','lv '+v,v));
+      b.onclick=()=>{z._sel=(z._sel===v?null:v);render();};
+      pick.appendChild(b);});
+    row.appendChild(pick);
+    if(z._sel){
+      const res=el('div','oxres');
+      res.appendChild(el('span','ansb '+(ox2||''),'정답 '+(ox2||'미확정')));
+      res.appendChild(el('span','badge',z._sel===ox2?'맞음':'틀림'));
+      (z.jo||[]).forEach(c=>res.appendChild(el('span','chip c-prec','⚖ '+c.replace(/^[특상디]-/,''))));
+      if(z.pan)res.appendChild(el('span','chip c-quiz','판례 '+z.pan.slice(0,28)));
+      row.appendChild(res);
+      if(sol2)row.appendChild(el('div','sol',sol2));
+      else row.appendChild(el('div','cdim','해설 없음 — 리담 근거원문이 비어 있다'));
+    }else if(sol2){
+      const pv=el('button','solpv','해설 미리보기');
+      pv.onclick=()=>{const d=pv.nextSibling;
+        d.style.display=d.style.display==='none'?'':'none';};
+      row.appendChild(pv);
+      const d=el('div','sol',sol2);d.style.display='none';row.appendChild(d);
+    }
+    card.appendChild(row);
+  });
+  const ft=el('div','qft');
+  const memo=el('span','memolink','✏ 메모 및 유사문제 연결');
+  memo.title='v0 제외 — 자리만(§3-E)';
+  ft.appendChild(memo);
+  ft.appendChild(el('span','cdim','풀이 기록은 저장하지 않는다 — v0 읽기 전용'));
+  card.appendChild(ft);
+  return card;
+}
+
+// ── 제7판 「nn 변리」 지문 = 지문 단위 OX (문항 묶음이 없다)
+function p7Card(z){
+  const card=el('div','qwrap');
+  const h=el('div','qhd');
+  h.appendChild(el('span','qb v','제7판'));
+  h.appendChild(el('span','qb t',z.태그));
+  if(z.쪽)h.appendChild(el('span','qb n','p.'+z.쪽));
+  h.appendChild(el('span','qb id','ID '+z.id));
+  if(z.유제)h.appendChild(el('span','src 기출변형','유제'));
+  h.appendChild(el('span','qb '+(z.리담?'t':'id'), z.리담?'리담과 같은 지문':'제7판 단독'));
+  const sp=el('span');sp.style.flex='1';h.appendChild(sp);
+  [['📍',''],['🔵','헷갈림'],['⚠','페이크'],['💡','개념'],['🩷','암기'],['⭐','중요']].forEach(([i,t])=>{
+    const g=el('span','qtag',i+(t?' '+t:''));g.title='학습 태그 — 기록은 v0 제외';h.appendChild(g);});
+  card.appendChild(h);
+  const row=el('div','oxrow');row.style.borderTop='0';
+  row.appendChild(el('div','oxq',z.t));
+  // 정오 = 제7판 것 우선, 없으면 리담 것으로 보강(출처를 밝힌다)
+  let ox=z.ox, from='제7판';
+  if(!ox&&z.리담&&z.리담.ox){ox=z.리담.ox;from='리담 보강';}
+  const pick=el('div','oxpick');
+  ['O','X'].forEach(v=>{
+    const b=el('button','oxbtn'+(z._sel===v?' sel':'')+(z._sel?((v===ox)?' right':(z._sel===v?' wrong':'')):''));
+    b.appendChild(el('span','dot',z._sel===v?'◉':'○'));
+    b.appendChild(el('span','lv '+v,v));
+    b.onclick=()=>{z._sel=(z._sel===v?null:v);render();};
+    pick.appendChild(b);});
+  row.appendChild(pick);
+  if(z._sel){
+    const res=el('div','oxres');
+    res.appendChild(el('span','ansb '+(ox||''),'정답 '+(ox||'미확정')));
+    if(ox)res.appendChild(el('span','badge',z._sel===ox?'맞음':'틀림'));
+    res.appendChild(el('span','badge','정오 출처 '+(ox?from:'없음')));
+    if(z.리담)res.appendChild(el('span','chip c-quiz',
+      '리담 '+z.리담.연도+'년 '+z.리담.문항+'번 ('+z.리담.선지+')'));
+    row.appendChild(res);
+    if(z.sol)row.appendChild(el('div','sol',z.sol));
+    else row.appendChild(el('div','cdim','해설 없음'));
+  }else if(z.sol){
+    const pv=el('button','solpv','해설 미리보기');
+    pv.onclick=()=>{const d=pv.nextSibling;d.style.display=d.style.display==='none'?'':'none';};
+    row.appendChild(pv);
+    const d=el('div','sol',z.sol);d.style.display='none';row.appendChild(d);
+  }
+  card.appendChild(row);
+  const ft=el('div','qft');
+  const m=el('span','memolink','✏ 메모 및 유사문제 연결');m.title='v0 제외 — 자리만';
+  ft.appendChild(m);ft.appendChild(el('span','cdim','풀이 기록 저장 없음'));
+  card.appendChild(ft);
+  return card;
+}
+async function viewJimun(){
+  const slot=$('#slot');slot.innerHTML='';
+  if(S.law==='민사소송법'){
+    const m=el('div','main');
+    m.appendChild(emptyBox('📝','민소는 1차 지문 갈래가 없다','사양서 §1 · 레일에서도 숨긴다'));
+    slot.appendChild(m);return;}
+  const subj=SHORT[S.law];
+  let JM=null,MK=null,IDX=null;
+  try{JM=await get('jimun_'+subj+'.json');}catch(e){}
+  let P7=null,PT=null,MG=null;
+  if(subj==='특허'){
+    try{MK=await get('mokcha_특허.json');IDX=await get('mokcha_특허_색인.json');}catch(e){}
+    try{P7=await get('jimun_7pan.json');}catch(e){}
+    try{PT=await get('p7_목차.json');}catch(e){}
+    try{MG=await get('mokcha_병합.json');}catch(e){}
+  }
+  if(!JM){
+    const m=el('div','main');
+    m.appendChild(emptyBox('📝',subj+' 1차객 — 데이터 없음','리담 추출 대기'));
+    slot.appendChild(m);return;}
+
+  const byId={};JM.문제.forEach(q=>byId[q.id]=q);
+
+  // ── 좌측: OX문제면 목차 트리, 기출문제면 연도 목록
+  const tree=el('div','tree'+(S.treeHid?' hid':''));
+  if(S.jimunTab==='ox'){
+    tree.appendChild(el('div','h',subj+' · 목차 (볼트 + 제7판 병합)'));
+    if(!MG){
+      tree.appendChild(el('div','h','목차 없음 — 특허만 있다'));
+    }else{
+      const smp=el('div','r'+(S.mok==='__표본'?' on':''));
+      smp.appendChild(el('span','nm','표본 — 판 토글 시연'));
+      smp.appendChild(el('em','','5'));
+      smp.onclick=()=>{S.mok='__표본';render();};
+      tree.appendChild(smp);
+      const M=MG.마디;
+      // 장을 누르면 그 아래까지 함께 — 롤업으로 센다
+      const roll=M.map((n,i)=>{
+        let a=n.지문.length, b=n.리담.length;
+        for(let j=i+1;j<M.length;j++){
+          if(M[j].깊이<=n.깊이)break;
+          a+=M[j].지문.length; b+=M[j].리담.length;
+        }
+        return [a,b];});
+      M.forEach((n,i)=>{
+        const key='__mg'+i;
+        const r=el('div','r'+(S.mok===key?' on':'')+(n.장?' ch':''));
+        const nm=el('span','nm',(n.no?n.no+' ':'')+n.제목);
+        nm.style.paddingLeft=((n.깊이-1)*10)+'px';
+        if(n.출처==='제7판')nm.style.color='#7a3ed0';   // 제7판에만 있는 마디
+        r.appendChild(nm);
+        const em=el('em');
+        const [a7,al]=roll[i];
+        if(al)em.appendChild(el('span','','📝'+al));
+        if(a7)em.appendChild(el('span','','7판'+a7));
+        r.appendChild(em);
+        const tip=[];
+        if(n.p7&&n.p7.length)tip.push('제7판: '+n.p7.join(' / '));
+        if(n.쪽)tip.push('인쇄 p.'+n.쪽);
+        if(n.고정)tip.push('※ 손으로 고정한 대응');
+        if(tip.length)r.title=tip.join(String.fromCharCode(10));
+        if(a7||al)r.onclick=()=>{S.mok=key;render();};
+        tree.appendChild(r);
+      });
+      const un=el('div','r'+(S.mok==='__미분류'?' on':''));
+      un.appendChild(el('span','nm','미분류 (리담)'));
+      un.appendChild(el('em','',String(JM.문제.length-new Set(M.flatMap(n=>n.리담)).size)));
+      un.onclick=()=>{S.mok='__미분류';render();};
+      tree.appendChild(un);
+      const lg=el('div','legend');
+      lg.innerHTML='📝N = 리담 문항 · 7판N = 제7판 지문<br>'+
+        '<span style="color:#7a3ed0">보라색</span> = 볼트에 없고 제7판 차례에만 있는 마디<br>'+
+        '마디에 커서를 올리면 짝지어진 제7판 차례가 보인다';
+      tree.appendChild(lg);
+    }
+  }else{
+    tree.appendChild(el('div','h',subj+' · 연도'));
+    const byY=collect(JM.문제,q=>q.연도);
+    Object.keys(byY).sort().reverse().forEach(y=>{
+      const r=el('div','r'+(S.year===y?' on':''));
+      r.appendChild(el('span','nm',y+'년'+(byY[y][0].회차?'  '+byY[y][0].회차+'회':'')));
+      r.appendChild(el('em','',byY[y].length+''));
+      r.onclick=()=>{S.year=y;render();};
+      tree.appendChild(r);
+    });
+  }
+  slot.appendChild(tree);
+  slot.appendChild(handle('tree'));
+
+  const main=el('div','main');
+  main.appendChild(el('span','chip c-prec',S.law));
+  const h1=el('div','jotitle');h1.appendChild(el('span','no','1차객'));
+  main.appendChild(h1);
+  main.appendChild(el('div','sihaeng',
+    `문항 ${JM.문항} · 선지 ${JM.선지}  ·  리담 실측 추출(_lidam_문항/선지.csv)`));
+
+  const tabs=el('div','modebar');
+  [['ox','OX문제'],['gichul','기출문제']].forEach(([k,t])=>{
+    const b=el('button','mode'+(S.jimunTab===k?' on':''),t);
+    b.onclick=()=>{S.jimunTab=k;render();};tabs.appendChild(b);});
+  tabs.appendChild(el('span','badge',
+    S.jimunTab==='ox'?'목차 마디대로 묶어 본다':'연도별로 본다'));
+  main.appendChild(tabs);
+
+  if(S.jimunTab==='ox'){
+    if(S.mok==='__표본'){
+      await sampleCards(main);
+    }else if(S.mok&&S.mok.startsWith('__mg')&&MG){
+      const i=+S.mok.slice(4), M=MG.마디, n=M[i];
+      let jos=[...n.지문], lids=[...n.리담];
+      for(let j=i+1;j<M.length;j++){
+        if(M[j].깊이<=n.깊이)break;
+        jos=jos.concat(M[j].지문); lids=lids.concat(M[j].리담);
+      }
+      jos=[...new Set(jos)]; lids=[...new Set(lids)];
+      const P7map={};if(P7)P7.지문.forEach(z=>P7map[z.id]=z);
+      const lidam=lids.map(id=>byId[id]).filter(Boolean);
+      const p7l=jos.map(id=>P7map[id]).filter(Boolean);
+      const bd=el('div','badge',
+        `${n.no?n.no+' ':''}${n.제목} — 리담 문항 ${lidam.length} · 제7판 지문 ${p7l.length}`+
+        (n.p7&&n.p7.length?`  ·  제7판 차례: ${n.p7.join(' / ')}`:'')+
+        (n.쪽?`  ·  인쇄 p.${n.쪽}`:''));
+      main.appendChild(bd);
+      if(!lidam.length&&!p7l.length)
+        main.appendChild(emptyBox('📝','이 마디에 묶인 문항이 없다'));
+      if(lidam.length){
+        main.appendChild(el('div','grp','📝 리담 기출 문항 '+lidam.length));
+        lidam.forEach(q=>main.appendChild(qCard(q)));
+      }
+      if(p7l.length){
+        main.appendChild(el('div','grp','📕 제7판 「nn 변리」 지문 '+p7l.length));
+        p7l.forEach(z=>main.appendChild(p7Card(z)));
+      }
+    }else if(!S.mok){
+      main.appendChild(emptyBox('📝','왼쪽 목차에서 마디를 고르면 그 마디 문항이 묶여 나온다',
+        '숫자가 붙은 마디에 문항이 있다'));
+    }else{
+      let list;
+      if(S.mok==='__미분류'){
+        const placed=new Set();
+        (MG?MG.마디:[]).forEach(n=>n.리담.forEach(x=>placed.add(x)));
+        list=JM.문제.filter(q=>!placed.has(q.id));
+        main.appendChild(el('div','badge','미분류 '+list.length+'문항 — 근거조문이 없거나 마디 제목에 조문이 안 적혀 못 붙은 것'));
+      }else{
+        const node=MK.마디.find(n=>n.파일===S.mok);
+        list=((IDX||{})[S.mok]||[]).map(id=>byId[id]).filter(Boolean);
+        const b=el('div','badge',(node?node.제목:'')+' — '+list.length+'문항'+
+          (node&&node.조.length?('  ·  조문 '+node.조.map(c=>c.replace('특-','제')+'조').join(' · ')):''));
+        main.appendChild(b);
+      }
+      if(!list.length)main.appendChild(emptyBox('📝','이 마디에 묶인 문항이 없다',
+        '마디 제목에 조문번호가 없으면 묶이지 않는다'));
+      else list.forEach(q=>main.appendChild(qCard(q)));
+    }
+  }else{
+    const byY=collect(JM.문제,q=>q.연도);
+    const ys=Object.keys(byY).sort().reverse();
+    const y=S.year&&byY[S.year]?S.year:ys[0];
+    S.year=y;
+    main.appendChild(el('div','badge',
+      y+'년 '+(byY[y][0].회차?byY[y][0].회차+'회 ':'')+'· '+byY[y].length+'문항'));
+    byY[y].sort((a,b)=>(+a.문번)-(+b.문번)).forEach(q=>main.appendChild(qCard(q)));
+  }
+  slot.appendChild(main);
+}
+function collect(arr,fn){
+  const o={};arr.forEach(x=>{const k=fn(x);(o[k]=o[k]||[]).push(x);});return o;
+}
+// 판 토글 표본 5건 — 검산 K 대상. 실데이터(_지문대조.csv 일치·정오같음)
+async function sampleCards(main){
+  let J;try{J=await get('jimun_sample.json');}catch(e){
+    main.appendChild(emptyBox('📝','표본 없음'));return;}
+  main.appendChild(el('div','badge',J.라벨));
+  J.지문.forEach(z=>{
+    const st=z._판||'리담';
+    const card=el('div','jimun');
+    const h=el('div','jhd');
+    h.appendChild(el('span','badge','표본'));
+    h.appendChild(el('span','src '+z.출처배지,z.출처배지));
+    h.appendChild(el('span','badge',`${z.연도}년 · ${z.문항}번 · 선지 ${z.선지}`));
+    const sp=el('span');sp.style.flex='1';h.appendChild(sp);
+    [['리담','리담판'],['제7판','제7판판']].forEach(([v,label])=>{
+      const b=el('button','tool'+((z.두판?st===v:v==='리담')?' on':''),label);
+      if(!z.두판&&v==='제7판'){b.disabled=true;b.title='이 지문은 리담판만 있다';}
+      b.onclick=()=>{if(!z.두판)return;z._판=v;render();};
+      h.appendChild(b);});
+    card.appendChild(h);
+    const src=(st==='제7판'&&z.제7판)?z.제7판:z.리담;
+    card.appendChild(el('div','qt',src.본문));
+    card.appendChild(el('span','ansb '+(src.정오||''),'정오 '+(src.정오||'—')));
+    if(src.쪽)card.appendChild(el('span','badge',' 제7판 '+src.쪽+'쪽'));
+    if(src.해설)card.appendChild(el('div','sol',src.해설));
+    if(!z.두판)card.appendChild(el('div','badge','제7판 대응 지문 없음 — 토글 비활성'));
+    main.appendChild(card);
+  });
+}
+
+/* ══════════ 검색 ══════════ */
+let skRows=[],skSel=0;
+function openSk(){$('#sk').style.display='block';$('#skin').value='';$('#skin').focus();
+  $('#skres').innerHTML='';skRows=[];skSel=0;}
+function closeSk(){$('#sk').style.display='none';}
+$('#ksearch').onclick=openSk;
+$('#skin').oninput=async e=>{
+  const q=e.target.value.trim();const box=$('#skres');box.innerHTML='';skRows=[];skSel=0;
+  if(!q)return;
+  const L=await get(`jo_${S.law}_목록.json`);
+  const B=await get(`jo_${S.law}_본문.json`);
+  const out=[];
+  for(const j of L.조){
+    if(out.length>=60)break;
+    if(j.k.includes(q)||(j.t||'').includes(q)){out.push({k:j.k,t:j.t,x:''});continue;}
+    const body=B.조[j.k];if(!body)continue;
+    for(const row of body.행){
+      const i=(row.t||'').indexOf(q);
+      if(i>=0){out.push({k:j.k,t:j.t,x:row.t.slice(Math.max(0,i-22),i+q.length+34)});break;}
+    }
+  }
+  skRows=out;
+  box.appendChild(el('div','grp','📖 조문 — '+out.length+'건'));
+  out.forEach((r,i)=>{
+    const d=el('div','res'+(i===0?' on':''));
+    d.appendChild(el('b','',r.k));
+    if(r.t)d.appendChild(el('span','x',r.t));
+    if(r.x){const x=el('span','x');
+      const p=r.x.split(q);x.appendChild(document.createTextNode(p[0]));
+      x.appendChild(el('mark','y',q));
+      x.appendChild(document.createTextNode(p.slice(1).join(q)));d.appendChild(x);}
+    d.appendChild(el('span','lawtag',SHORT[S.law]));
+    d.onclick=()=>{S.tab='jo';S.jo=r.k;closeSk();render();};
+    box.appendChild(d);
+  });
+  const tip=el('div','grp','↵ 이동 · Esc 닫기 · 판례·지문·메모는 범위에서 꺼져 있다');
+  box.appendChild(tip);
+};
+$('#skin').onkeydown=e=>{
+  if(e.key==='Escape')return closeSk();
+  const rs=$('#skres').querySelectorAll('.res');
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault();if(!rs.length)return;
+    rs[skSel].classList.remove('on');
+    skSel=(skSel+(e.key==='ArrowDown'?1:rs.length-1))%rs.length;
+    rs[skSel].classList.add('on');rs[skSel].scrollIntoView({block:'nearest'});
+  }
+  if(e.key==='Enter'&&rs.length){S.tab='jo';S.jo=skRows[skSel].k;closeSk();render();}
+};
+addEventListener('keydown',e=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea')return;   // 입력칸 포커스 시 단축키 차단
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openSk();}
+  if(e.key==='Escape'){closePop();closeSk();}
+});
+$('#sk').onclick=e=>{if(e.target.id==='sk')closeSk();};
+
+/* ══════════ 딥링크 ══════════ */
+function readHash(){
+  let h=location.hash;
+  try{h=decodeURIComponent(h);}catch(e){}
+  const m=/^#jo=([^:]+):(제[^&#]+)/.exec(h);
+  if(m&&LAWS.includes(m[1])){S.law=m[1];S.tab='jo';S.jo=m[2].split('#')[0];return true;}
+  return false;
+}
+addEventListener('hashchange',()=>{if(readHash())render();});
+
+/* ══════════ 렌더 ══════════ */
+let busy=false;
+async function render(){
+  if(busy)return;busy=true;
+  drawTop();drawRail();
+  try{
+    if(S.tab==='prec')await viewPrec();
+    else if(S.tab==='cha2')await view2cha();
+    else if(S.tab==='jimun')await viewJimun();
+    else await viewJo();
+  }catch(err){
+    const slot=$('#slot');slot.innerHTML='';
+    const m=el('div','main');m.appendChild(emptyBox('⚠','데이터를 읽지 못했다',String(err&&err.message||err)));
+    slot.appendChild(m);console.error(err);
+  }
+  busy=false;
+}
+readHash();
+render();
+</script>
+</body>
+</html>
