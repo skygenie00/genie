@@ -248,6 +248,10 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .qtag.on{color:#1e1913;border-color:var(--exc);background:#eaf1fb;font-weight:700}
 .qlwrap{width:396px;flex-shrink:0;border-right:1px solid var(--line);overflow:auto;font-size:12px}
 .qlwrap.hid{display:none}
+.qlwrap.nonm .qlnm{display:none}
+.qlwrap.nord .qlrd{display:none}
+.qlwrap.nonm{width:168px}
+.qlwrap.nord{width:238px}
 .qlr{display:flex;align-items:stretch;border-bottom:1px solid #f0eee8}
 .qlr.ch{background:#eceae3;border-bottom-color:#e2dfd6}
 .qlr.on{background:#e8effb}
@@ -456,9 +460,9 @@ body.inkon .main,body.inkon .pop{user-select:none}
   <input id="skin" placeholder="조문번호 · 제목 · 본문">
   <div id="skscope"><span>범위(다중):</span>
     <span class="scope on" data-s="jo">📖 조문 ✓</span>
-    <span class="scope dis" data-s="prec">⚖ 판례</span>
-    <span class="scope dis" data-s="jimun">📝 지문</span>
-    <span class="scope dis" data-s="memo">🗒 메모</span>
+    <span class="scope" data-s="prec">⚖ 판례</span>
+    <span class="scope" data-s="jimun">📝 지문</span>
+    <span class="scope dis" data-s="memo" title="메모 기능이 아직 없다 — 검색할 것이 없다">🗒 메모</span>
     <span class="badge" style="margin-left:auto" id="skLaw"></span>
   </div>
   <div id="skres"></div>
@@ -561,6 +565,15 @@ function emptyBox(icon,msg,sub){
   d.appendChild(document.createTextNode(msg));
   if(sub){const s=el('div','',sub);s.style.cssText='margin-top:6px;font-size:11.5px';d.appendChild(s);}
   return d;
+}
+/* ★ 두 칸은 한 컨테이너 안에 있으므로 「열을 숨긴다」가 아니라 「칸을 숨긴다」로 접는다.
+   둘 다 접으면 컨테이너째 사라진다(8/26 사용자 요구 — 각각 닫히게). */
+function qlHandle(which,label){
+  const off=(which==='tree')?S.treeHid:S.listHid;
+  const h=el('div','handle',off?'›':'‹');
+  h.title=label+' 칸 '+(off?'펴기':'접기');
+  h.onclick=()=>{if(which==='tree')S.treeHid=!S.treeHid;else S.listHid=!S.listHid;render();};
+  return h;
 }
 function handle(which){
   const h=el('div','handle',(which==='tree'?S.treeHid:S.listHid)?'›':'‹');
@@ -2540,7 +2553,8 @@ function qlRow(M,i,sel,label,keys,subj,kid,folded){
   return row;
 }
 function qlColumn(MG,JM,byId,P7,subj){
-  const list=el('div','qlwrap'+(S.treeHid?' hid':''));
+  const list=el('div','qlwrap'+(S.treeHid&&S.listHid?' hid':'')+
+    (S.treeHid?' nonm':'')+(S.listHid?' nord':''));
   if(!MG){list.appendChild(el('div','h','목차 없음 — 특허만 있다'));return list;}
   const M=MG.마디,P7map={};
   if(P7)P7.지문.forEach(z=>P7map[z.id]=z);
@@ -2658,18 +2672,18 @@ function p7Jo(sol){
     return m;});
   return out.slice(0,5);
 }
-function joGo(k){ S.tab='jo'; S.jo=k; S.law='특허법'; closeAllPops(); render(); }
+/* ★ 조문은 뷰로 옮겨 가지 않고 **팝업**으로 띄운다(사용자 확정 8/26).
+   `popJo` 는 볼트 본문을 그대로 렌더하고 머리에 「뷰로 이동」을 달아 준다. */
 function joWonBtn(x){
   if(!x.law){
     const d=el('button','jowon dead','⚖ '+x.k);
     d.title='시행규칙은 앱에 데이터가 없다 — 표시만 한다';
     return d;
   }
-  const a=el('a','jowon','⚖ '+x.k+' 원문');
-  a.href='https://www.law.go.kr/법령/특허법/'+encodeURIComponent(x.k);
-  a.target='_blank';a.rel='noopener';
-  a.onclick=e=>e.stopPropagation();
-  return a;
+  const b=el('button','jowon','⚖ '+x.k);
+  b.title='조문 본문을 팝업으로 연다';
+  b.onclick=ev=>{ev.stopPropagation();popJo('특허법',x.k,ev,1);};
+  return b;
 }
 
 // ── 제7판 「nn 변리」 지문 = 지문 단위 OX (문항 묶음이 없다)
@@ -2686,9 +2700,9 @@ function p7Card(z){
   const JOS=p7Jo(z.sol);
   if(JOS.length){
     const jb=el('span','jochip','조문형 · '+JOS.map(x=>x.k).join(' · '));
-    jb.title='해설에서 뽑은 근거 조문 — 누르면 조문 갈래로 간다';
+    jb.title='해설에서 뽑은 근거 조문 — 누르면 팝업으로 연다';
     const first=JOS.find(x=>x.law);
-    if(first)jb.onclick=ev=>{ev.stopPropagation();joGo(first.k);};
+    if(first)jb.onclick=ev=>{ev.stopPropagation();popJo('특허법',first.k,ev,1);};
     else jb.style.cursor='default';
     h.appendChild(jb);
   }
@@ -2744,7 +2758,8 @@ async function viewJimun(){
   // ── 좌측 : OX문제면 「목차+회독」 한 표, 기출문제면 연도 목록
   if(S.jimunTab==='ox'){
     slot.appendChild(qlColumn(MG,JM,byId,P7,subj));
-    slot.appendChild(handle('tree'));
+    slot.appendChild(qlHandle('tree','목차'));
+    slot.appendChild(qlHandle('list','회독'));
   }else{
     const tree=el('div','tree'+(S.treeHid?' hid':''));
     tree.appendChild(el('div','h',subj+' · 연도'));
@@ -2783,7 +2798,7 @@ async function viewJimun(){
 
     if (S.oxQueue){
       const hit = pool.filter(c => oxQueueHas(c.k, S.oxQueue));
-      main.appendChild(rndBar('queue|' + subj + '|' + S.oxQueue, hit.map(c => c.k)));
+      // ★ 큐에는 회독을 두지 않는다(사용자 확정 8/26) — 큐로는 회독을 돌지 않는다
       main.appendChild(heatBox(hit.map(c => ({ k: c.k, dom: c.dom }))));
       if (!hit.length){
         main.appendChild(emptyBox('⚡', (S.oxQueue === 'weak' ? '약점' : '덜약점') + ' 큐가 비어 있다',
@@ -2903,40 +2918,118 @@ async function sampleCards(main){
 /* ══════════ 검색 ══════════ */
 let skRows=[],skSel=0;
 function openSk(){$('#sk').style.display='block';$('#skin').value='';$('#skin').focus();
-  $('#skres').innerHTML='';skRows=[];skSel=0;}
+  $('#skres').innerHTML='';skRows=[];skSel=0;skPaint();}
 function closeSk(){$('#sk').style.display='none';}
 $('#ksearch').onclick=openSk;
-$('#skin').oninput=async e=>{
-  const q=e.target.value.trim();const box=$('#skres');box.innerHTML='';skRows=[];skSel=0;
-  if(!q)return;
-  const L=await get(`jo_${S.law}_목록.json`);
-  const B=await get(`jo_${S.law}_본문.json`);
-  const out=[];
-  for(const j of L.조){
-    if(out.length>=60)break;
-    if(j.k.includes(q)||(j.t||'').includes(q)){out.push({k:j.k,t:j.t,x:''});continue;}
-    const body=B.조[j.k];if(!body)continue;
-    for(const row of body.행){
-      const i=(row.t||'').indexOf(q);
-      if(i>=0){out.push({k:j.k,t:j.t,x:row.t.slice(Math.max(0,i-22),i+q.length+34)});break;}
-    }
-  }
-  skRows=out;
-  box.appendChild(el('div','grp','📖 조문 — '+out.length+'건'));
-  out.forEach((r,i)=>{
-    const d=el('div','res'+(i===0?' on':''));
-    d.appendChild(el('b','',r.k));
-    if(r.t)d.appendChild(el('span','x',r.t));
-    if(r.x){const x=el('span','x');
-      const p=r.x.split(q);x.appendChild(document.createTextNode(p[0]));
-      x.appendChild(el('mark','y',q));
-      x.appendChild(document.createTextNode(p.slice(1).join(q)));d.appendChild(x);}
-    d.appendChild(el('span','lawtag',SHORT[S.law]));
-    d.onclick=()=>{S.tab='jo';S.jo=r.k;closeSk();render();};
-    box.appendChild(d);
+/* ★ 범위 다중선택 (8/26) — 조문·판례·지문. 메모는 기능 자체가 없어 꺼 둔다.
+   ⚠ 결과를 누르면 **뷰를 갈아치우지 않고 팝업으로 연다**(사용자 확정) —
+   찾다가 보던 자리를 잃지 않는 것이 검색의 값이다. */
+const SKON={jo:true,prec:false,jimun:false};
+function skPaint(){
+  document.querySelectorAll('#skscope .scope').forEach(b=>{
+    const k=b.getAttribute('data-s');
+    if(k==='memo')return;
+    const on=!!SKON[k];
+    b.classList.toggle('on',on);
+    b.textContent=b.textContent.replace(/ \u2713$/,'')+(on?' \u2713':'');
   });
-  const tip=el('div','grp','↵ 이동 · Esc 닫기 · 판례·지문·메모는 범위에서 꺼져 있다');
-  box.appendChild(tip);
+}
+document.querySelectorAll('#skscope .scope').forEach(b=>{
+  const k=b.getAttribute('data-s');
+  if(k==='memo')return;
+  b.onclick=()=>{SKON[k]=!SKON[k];skPaint();$('#skin').oninput({target:$('#skin')});};
+});
+function skRow(box,cls,head,tail,tag,open){
+  const d=el('div','res');
+  d.appendChild(el('b','',head));
+  if(tail)d.appendChild(el('span','x',tail));
+  d.appendChild(el('span','lawtag',tag));
+  d.onclick=ev=>open(ev);
+  box.appendChild(d);
+  skRows.push({open:open});
+}
+function skCut(t,q){
+  const i=String(t||'').indexOf(q);
+  if(i<0)return String(t||'').slice(0,60);
+  return String(t).slice(Math.max(0,i-22),i+q.length+34);
+}
+function popJimun(title,body,ev){
+  const b=popShell('q','📝 '+title);
+  body.forEach(x=>b.appendChild(el('div',x[0],x[1])));
+  showPop(ev);
+}
+$('#skin').oninput=async e=>{
+  const q=(e.target.value||'').trim();const box=$('#skres');box.innerHTML='';skRows=[];skSel=0;
+  if(!q)return;
+  if(SKON.jo){
+    try{
+      const L=await get(`jo_${S.law}_목록.json`);
+      const B=await get(`jo_${S.law}_본문.json`);
+      const out=[];
+      for(const j of L.조){
+        if(out.length>=40)break;
+        if(j.k.includes(q)||(j.t||'').includes(q)){out.push({k:j.k,t:j.t,x:''});continue;}
+        const body=B.조[j.k];if(!body)continue;
+        for(const row of body.행){
+          if((row.t||'').indexOf(q)>=0){out.push({k:j.k,t:j.t,x:skCut(row.t,q)});break;}
+        }
+      }
+      box.appendChild(el('div','grp','📖 조문 — '+out.length+'건'));
+      out.forEach(r=>skRow(box,'jo',r.k+(r.t?' '+r.t:''),r.x,SHORT[S.law],
+        ev=>{closeSk();popJo(S.law,r.k,ev,1);}));
+    }catch(err){box.appendChild(el('div','grp','📖 조문 — 읽지 못했다'));}
+  }
+  if(SKON.prec){
+    try{
+      const P=await get('prec_특허_리스트.json');
+      const hit=P.판례.filter(p=>((p.사건번호||'')+(p.사건명||'')+(p.별칭||'')).includes(q)).slice(0,40);
+      box.appendChild(el('div','grp','⚖ 판례 — '+hit.length+'건'+(SHORT[S.law]==='특허'?'':' (특허만 수집돼 있다)')));
+      hit.forEach(p=>skRow(box,'prec',p.사건번호||p.파일,(p.사건명||p.별칭||'').slice(0,50),p.출처,
+        ev=>{closeSk();
+          const b=popShell('','⚖ '+(p.사건번호||p.파일));
+          if(p.사건명||p.별칭)b.appendChild(el('div','',(p.사건명||p.별칭)));
+          if(p.선고)b.appendChild(el('span','badge','선고 '+p.선고));
+          (Array.isArray(p.조문)?p.조문:[]).slice(0,6).forEach(x=>
+            b.appendChild(el('span','chip c-prec','⚖'+x)));
+          const go=el('button','tool on','판례 갈래로 이동 ↗');
+          go.onclick=()=>{S.tab='prec';S.prec=p.id;S.precTab=p.출처==='요약본'?'요약':'원문';closeAllPops();render();};
+          b.appendChild(go);
+          showPop(ev);}));
+    }catch(err){box.appendChild(el('div','grp','⚖ 판례 — 읽지 못했다'));}
+  }
+  if(SKON.jimun){
+    try{
+      const subj=SHORT[S.law];
+      const JM=await get('jimun_'+subj+'.json');
+      const out=[];
+      for(const qq of JM.문제){
+        if(out.length>=30)break;
+        for(const z of (qq.지문||[])){
+          if(String(z.t||'').includes(q)){
+            out.push({h:qq.연도+'년 '+(qq.시험문번||qq.문번)+'번 ('+z.n+')',x:skCut(z.t,q),
+                      t:z.t,ox:z.ox,sol:z.sol,tag:'리담'});break;}
+        }
+      }
+      let P7=null;
+      if(subj==='특허'){try{P7=await get('jimun_7pan.json');}catch(e2){}}
+      if(P7)for(const z of P7.지문){
+        if(out.length>=60)break;
+        if(String(z.t||'').includes(q))
+          out.push({h:'제7판 '+z.태그+' p.'+(z.쪽||'—'),x:skCut(z.t,q),
+                    t:z.t,ox:z.ox,sol:z.sol,tag:'제7판'});
+      }
+      box.appendChild(el('div','grp','📝 지문 — '+out.length+'건'));
+      out.forEach(r=>skRow(box,'jimun',r.h,r.x,r.tag,
+        ev=>{closeSk();
+          const rows=[['',(r.tag==='제7판'?p7Text(r.t):r.t)]];
+          if(r.ox)rows.push(['badge','정오 '+r.ox]);
+          if(r.sol)rows.push(['sol',(r.tag==='제7판'?p7Text(r.sol):r.sol)]);
+          popJimun(r.h,rows,ev);}));
+    }catch(err){box.appendChild(el('div','grp','📝 지문 — 읽지 못했다'));}
+  }
+  const rs=box.querySelectorAll('.res');
+  if(rs.length)rs[0].classList.add('on');
+  box.appendChild(el('div','grp','↵ 열기 · Esc 닫기 · 범위를 눌러 켜고 끈다'));
 };
 $('#skin').onkeydown=e=>{
   if(e.key==='Escape')return closeSk();
@@ -2947,7 +3040,7 @@ $('#skin').onkeydown=e=>{
     skSel=(skSel+(e.key==='ArrowDown'?1:rs.length-1))%rs.length;
     rs[skSel].classList.add('on');rs[skSel].scrollIntoView({block:'nearest'});
   }
-  if(e.key==='Enter'&&rs.length){S.tab='jo';S.jo=skRows[skSel].k;closeSk();render();}
+  if(e.key==='Enter'&&rs.length&&skRows[skSel])skRows[skSel].open(null);
 };
 addEventListener('keydown',e=>{
   const tag=(e.target.tagName||'').toLowerCase();
