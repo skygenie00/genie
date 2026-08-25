@@ -82,8 +82,21 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .boxh{font-size:11px;color:#9a958b;margin-bottom:6px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .fold{border-style:dashed;background:#fafaf8;color:#77736b;cursor:pointer}
 .fold .oi{float:right;color:var(--exc);text-decoration:underline;font-size:11.5px}
-.origbody{white-space:pre-wrap;color:#555;font-size:12.8px;margin-top:8px;
-  border-top:1px dashed #ddd;padding-top:8px}
+/* ── 원문 = 법전 조판 (§2) ──
+   ⚠ 글자 크기를 사용자가 바꿀 수 없다. 필기(§4)가 이 고정에 기대고 있다. */
+.origbody{color:#3a3a3a;margin-top:8px;border-top:1px dashed #ddd;padding-top:10px;
+  overflow-x:auto}
+.bjpage{font-family:"Batang","BatangChe","AppleMyungjo","Nanum Myeongjo","Noto Serif KR",serif;
+  font-size:15px;line-height:1.78;text-align:justify;
+  word-break:break-all;overflow-wrap:anywhere;hyphens:none;margin:0 auto}
+.bjpage .bj{margin:0}
+.bjpage .bj-head{font-weight:800;margin-bottom:.1em}
+.bjpage .bj-jang{text-align:center;font-weight:800;margin:.4em 0}
+.bjpage .bj-hang{margin-top:.15em}
+.bjpage .bj-ho{padding-left:1.7em;text-indent:-1.7em}
+.bjpage .bj-mok{padding-left:3.3em;text-indent:-1.7em}
+.bjpage .bj-note{color:#77736b}
+.bjnote{font-size:11px;color:#a5a19a;margin-top:8px}
 .ln{margin:3px 0;white-space:pre-wrap;word-break:break-word}
 .ln.ho{padding-left:1.5em}
 .ln.mok{padding-left:3em}
@@ -324,6 +337,47 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .rbody .rh1{border-left-color:var(--exc)}
 .rbody .rh2{border-left-color:#c9d7ef}
 .rbody .rh3,.rbody .rh4{border-left-color:#eeece6}
+
+/* ══ 마크업 스티커 (§3) — 편집 모드를 켜야만 잡힌다 ══ */
+.stkon .stk{outline:1px dashed rgba(47,111,208,.55);outline-offset:1px;
+  border-radius:3px;cursor:pointer}
+.stkon .stk:hover{outline-color:var(--exc);background:#eaf1fb}
+.stkon .box .ln{cursor:text}
+.stkbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#f2f6fd;
+  border:1px solid #d5e2f6;border-radius:9px;padding:5px 10px;margin-top:8px;font-size:11.5px;color:#456}
+.swatch{width:19px;height:19px;border-radius:5px;border:1px solid #c9c5bc;display:inline-block;cursor:pointer}
+.swatch.on{outline:2px solid var(--exc);outline-offset:1px}
+.stkgrid{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.orphan{background:#fde9e9;color:var(--rule)}
+
+/* ══ 필기 (§4) ══ */
+.inkhost{position:relative}
+.inklay{position:absolute;left:0;top:0;z-index:5;pointer-events:none;touch-action:pan-y}
+/* ⚠ #app 이 아니라 body 에 건다 — 팝업(2차 셀)은 body 밑이라 #app 밑이 아니다 */
+body.inkon .inklay{pointer-events:auto}
+body.inkon .main,body.inkon .pop{user-select:none}
+.inkbar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:65;
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff;
+  border:1.5px solid var(--exc);border-radius:13px;padding:7px 12px;
+  box-shadow:0 8px 26px rgba(20,40,90,.20);font-size:12px;color:#456;max-width:94vw}
+.inkbar .sep{width:1px;height:18px;background:#e3e0d8}
+.inkw{width:22px;height:22px;border-radius:50%;border:1px solid #d9d6ce;background:#fff;
+  display:flex;align-items:center;justify-content:center;cursor:pointer}
+.inkw.on{border-color:var(--exc);background:#eaf1fb}
+.inkw i{display:block;border-radius:50%;background:#1a1a1a}
+.inkhint{font-size:10.5px;color:#9a958b}
+
+/* ══ 알림 (toast) ══ */
+#toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:70px;z-index:90;
+  display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+.toast{background:#1a1a1a;color:#fff;border-radius:9px;padding:7px 15px;font-size:12.5px;
+  box-shadow:0 6px 18px rgba(0,0,0,.25);max-width:88vw}
+.toast.bad{background:#8a1f1f}
+
+/* ══ 기록 내보내기 (§10) ══ */
+.rectab{width:100%;border-collapse:collapse;font-size:11.5px;margin:6px 0}
+.rectab td,.rectab th{border-bottom:1px solid #eeece6;padding:3px 6px;text-align:left}
+.rectab td.n{text-align:right;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -333,6 +387,8 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
     <span id="laws" style="display:flex;gap:4px"></span>
     <div class="search" id="ksearch">🔍 <span>조문 · 판례 · 지문 · 메모 (Ctrl K)</span></div>
     <span class="badge" id="lblToggle" style="cursor:pointer">🏷 라벨: 펴짐 ▾</span>
+    <span class="badge" id="inkToggle" style="cursor:pointer">✍ 필기</span>
+    <span class="badge" id="recBtn" style="cursor:pointer">⤓ 기록</span>
   </header>
   <div class="body2">
     <nav class="rail" id="rail"></nav>
@@ -351,6 +407,7 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
   </div>
   <div id="skres"></div>
 </div></div>
+<div id="toasts"></div>
 
 <script>
 "use strict";
@@ -368,10 +425,14 @@ const JOMODES=[['본문','본문'],['내용','✎ 내용 빈칸'],['주체','✎
                ['기간','✎ 기간 빈칸'],['소제목','소제목만']];
 
 const S={law:'특허법',tab:'jo',jo:null,prec:null,precTab:'요약',
-         boardKind:'GS',boardView:'board',treeHid:false,listHid:false,
+         // 기본 갈래 = 기출 고정(§6-2 ④). 민소도 예외를 두지 않는다.
+         // ⚠ 탭 바가 사라지던 것은 기본값이 아니라 붙이는 순서 탓이다 — 그쪽을 고쳤다.
+         boardKind:'기출',boardView:'board',treeHid:false,listHid:false,
          precSort:'asc',labels:true,joMode:'본문',
          jimunTab:'ox',mok:null,year:null,
-         series:'',yearFilter:'',yearSort:'asc',zoom:0.55};
+         series:'',yearFilter:'',yearSort:'asc',zoom:0.55,
+         // §3 마크업 스티커 편집 모드 · §4 필기 모드 — 둘 다 기본은 꺼짐(T5)
+         stick:false,ink:false,inkColor:'#D93B3B',inkW:2,inkErase:false};
 const C={};
 const $=(s,r)=>(r||document).querySelector(s);
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;
@@ -391,9 +452,27 @@ function drawTop(){
     b.onclick=()=>{S.law=L;S.jo=null;S.prec=null;
       if(S.tab==='jimun'&&L==='민사소송법')S.tab='jo';render();};lw.appendChild(b);});
   const lt=$('#lblToggle');
-  lt.textContent='🏷 라벨: '+(S.labels?'펴짐 ▾':'접힘 ▸');
+  // ⚠ 라벨 전체 토글도 글자 수를 바꾼다 — 필기가 있으면 잠근다(§4-2)
+  const lock=S.tab==='jo'&&(S.ink||inkHas('jo|'+S.law+':'+S.jo));
+  lt.textContent='🏷 라벨: '+(S.labels?'펴짐 ▾':'접힘 ▸')+(lock?' 🔒':'');
   lt.style.display=S.tab==='jo'?'':'none';
-  lt.onclick=()=>{S.labels=!S.labels;render();};
+  lt.style.opacity=lock?'.5':'';
+  lt.title=lock?'필기가 있어 잠갔다 — 접으면 글자 수가 바뀌어 필기가 어긋난다':'';
+  lt.onclick=lock?(()=>toast('필기 때문에 라벨 토글을 잠갔다'))
+                 :(()=>{S.labels=!S.labels;render();});
+
+  const it=$('#inkToggle');
+  it.textContent=S.ink?'✍ 필기 ON':'✍ 필기';
+  it.style.cssText='cursor:pointer'+(S.ink?';background:var(--exc);color:#fff':'');
+  it.title='애플펜슬로 쓴다 · 손가락은 스크롤 · 기기 사이에는 안 넘어간다(§4-5)';
+  it.onclick=()=>{
+    if(!S.ink&&S.stick){S.stick=false;toast('마크업 편집을 끄고 필기를 켰다 — 둘은 같이 못 켠다');}
+    S.ink=!S.ink;render();};
+
+  const rb=$('#recBtn');
+  rb.textContent='⤓ 기록 '+recTotal();
+  rb.title='내보내기·들여오기 — 사파리가 저장분을 지울 수 있다(§10-2)';
+  rb.onclick=ev=>popRec(ev);
   $('#skLaw').textContent='법: '+SHORT[S.law];
 }
 function drawRail(){
@@ -441,7 +520,8 @@ function renderLine(row,opt){
   const t=row.t||'', n=t.length;
   const opens=[],closes=[];
   const push=(a,i,v)=>{(a[i]=a[i]||[]).push(v);};
-  (row.m||[]).forEach(m=>{push(opens,Math.max(0,m.a),{mk:m});push(closes,Math.min(n,m.b),{mk:m});});
+  // opt.m = 내 스티커 층을 덮어 계산한 마크업(§3-3). 없으면 JSON 것 그대로.
+  (opt.m||row.m||[]).forEach(m=>{push(opens,Math.max(0,m.a),{mk:m});push(closes,Math.min(n,m.b),{mk:m});});
   (row.e||[]).forEach(e=>{if(e.k==='L'){push(opens,e.a,{ln:e});push(closes,e.b,{ln:e});}});
   const frag=document.createDocumentFragment();
   const stack=[frag];
@@ -454,10 +534,17 @@ function renderLine(row,opt){
         const title=JOTITLE[c.ln.j];
         if(title){
           const g=el('span','lbl'+(S.labels?'':' off'),S.labels?('['+title+']'):'[…]');
-          g.title='클릭해서 접기/펴기';
-          g.onclick=ev=>{ev.stopPropagation();
-            const off=g.classList.toggle('off');
-            g.textContent=off?'[…]':'['+title+']';};
+          // ⚠ 라벨을 접으면 **글자 수가 바뀐다** — 필기가 있으면 잠근다(§4-2)
+          if(opt.lockLabel){
+            g.title='필기가 있어 잠갔다 — 접으면 글자 수가 바뀌어 필기가 어긋난다';
+            g.onclick=ev=>{ev.stopPropagation();
+              toast('필기 때문에 라벨 접기를 잠갔다 — 필기를 지우면 풀린다');};
+          }else{
+            g.title='클릭해서 접기/펴기';
+            g.onclick=ev=>{ev.stopPropagation();
+              const off=g.classList.toggle('off');
+              g.textContent=off?'[…]':'['+title+']';};
+          }
           top().appendChild(g);
         }
       }
@@ -465,7 +552,7 @@ function renderLine(row,opt){
     (row.e||[]).forEach(e=>{
       if(e.k==='F'&&e.a===i){
         const s=el('sup','fn','['+e.id+']');
-        s.onclick=ev=>{ev.stopPropagation();popFoot(e.id,ev);};
+        s.onclick=ev=>{ev.stopPropagation();popFoot(e.id,ev,opt.rec,(opt.depth||0)+1);};
         top().appendChild(s);
       }
       if(e.k==='E'&&e.a===i){
@@ -479,23 +566,33 @@ function renderLine(row,opt){
       let node;
       if(o.ln){
         node=el('span','joLink'+(o.ln.j?'':' dead'));
-        if(o.ln.j)node.onclick=ev=>{ev.stopPropagation();popJo(S.law,o.ln.j,ev);};
+        // ★ 팝업 깊이는 2단에서 멈춘다 — 2단 안의 링크는 그 조문 뷰로 이동한다(§5-4)
+        if(o.ln.j)node.onclick=ev=>{ev.stopPropagation();
+          const d=opt.depth||0, law=opt.law||S.law;
+          if(d>=2)goJo(law,o.ln.j); else popJo(law,o.ln.j,ev,d+1);};
+        // 조문노트가 아닌 볼트 노트는 지금처럼 dead 로 둔다(§5-2) — 팝업을 붙이지 않는다
         else node.title='조문노트가 아닌 볼트 노트 — v0 범위 밖';
       }else{
         const m=o.mk;
+        const col=/^(#|rgb|hsl)/i.test(String(m.v||''))?m.v:null;
         if(m.t==='font'){node=el('span');node.style.color=m.v;}
         else if(m.t==='span'){
           const mm=/background\s*:\s*([^;"']+)/.exec(m.v||'');
           // 형광펜은 목업의 mark 로 — 지정색이 있으면 그 색을 쓴다
           node=el('mark','y');
-          if(mm)node.style.background=mm[1];
+          if(mm)node.style.background=mm[1];else if(col)node.style.background=col;
         }
-        else if(m.t==='u')node=el('u');
+        else if(m.t==='u'){node=el('u');if(col)node.style.textDecorationColor=col;}
         else if(m.t==='bold')node=el('strong');
-        else if(m.t==='mark'){node=el('mark','y');}
-        else if(m.t==='strike')node=el('s');
+        else if(m.t==='mark'){node=el('mark','y');if(col)node.style.background=col;}
+        else if(m.t==='strike'){node=el('s');if(col)node.style.color=col;}
         else if(m.t==='tag'){node=el('span','badge');}
         else node=el('span');
+        // ── 스티커 (§3) — bold 는 제외. 편집 모드를 켜야만 잡힌다(T5)
+        if(m.t!=='bold'&&m._k&&opt.stick){
+          node.classList.add('stk');
+          node.onclick=ev=>{ev.stopPropagation();stkEdit(opt.base,row,m,ev);};
+        }
       }
       top().appendChild(node);stack.push(node);
     });
@@ -580,30 +677,83 @@ async function viewJo(){
     }else b.onclick=()=>{S.joMode='본문';render();};
     mb.appendChild(b);
   });
+  // ── ✎ 마크업 = 스티커 편집 모드(§3-2). 꺼진 것이 기본 — 읽다가 잘못 눌리는 것을 막는다.
+  const base=S.law+':'+S.jo;                 // ⚠ 법을 붙인다 — 제33조가 네 법에 다 있다
+  const inkKey='jo|'+base;
+  const pinned=S.ink||inkHas(inkKey);        // 필기가 있으면 본문 높이·폭을 잠근다(§4-2)
+  const stkBtn=el('button','mode'+(S.stick?' on':''),'✎ 마크업');
+  stkBtn.title='켜면 마크업 하나하나가 스티커가 된다 — 지우기·유형 바꾸기·색 고르기';
+  stkBtn.onclick=()=>{
+    if(!S.stick&&S.ink){S.ink=false;toast('필기를 끄고 마크업 편집을 켰다 — 둘은 같이 못 켠다');}
+    S.stick=!S.stick;render();};
+  mb.appendChild(stkBtn);
   mb.appendChild(el('span','badge','빈칸·소제목 = 재료 준비 중'));
   main.appendChild(mb);
 
+  // ⚠ 빈칸 모드는 글자를 가려 폭이 통째로 바뀐다 — 필기는 「본문」 모드에서만 켠다(§4-2)
+  if(S.ink&&S.joMode!=='본문'){S.joMode='본문';toast('필기는 본문 모드에서만 켜진다');}
+
+  // ── 필기가 얹힐 덩어리 = 조 하나(§4-3). 캔버스는 이 덩어리의 clientWidth 로 그린다.
+  const blk=el('div');
+  const ap=mkApply(base,j.행);
   const box=el('div','box');
   const bh=el('div','boxh');
   bh.appendChild(el('span','','✏ 내 편집본 — 볼트 md 그대로 렌더'));
-  bh.appendChild(el('span','','마크업 '+(j.행.reduce((a,r)=>a+((r.m||[]).length),0))+' · 링크 '+
-                              (j.행.reduce((a,r)=>a+((r.e||[]).filter(e=>e.k==='L').length),0))));
+  const nMk=j.행.reduce((a,r)=>a+((r.m||[]).length),0);
+  const nStk=ap.eff.reduce((a,l)=>a+l.filter(m=>m.t!=='bold').length,0);
+  const rt=el('span','');
+  rt.textContent='마크업 '+nMk+'(스티커 '+nStk+') · 링크 '+
+                 (j.행.reduce((a,r)=>a+((r.e||[]).filter(e=>e.k==='L').length),0));
+  bh.appendChild(rt);
   box.appendChild(bh);
-  j.행.forEach(row=>{
+  j.행.forEach((row,ri)=>{
     if(row.k[0]==='H')return;
     const d=el('div',joClass(row.k));
-    if(row.fd)d.appendChild(el('span','','[^'+row.fd+'] '));
-    d.appendChild(renderLine(row));
+    d.dataset.ri=ri;
+    if(row.fd)d.appendChild(el('span','fdmark','[^'+row.fd+'] '));
+    d.appendChild(renderLine(row,{m:ap.eff[ri],rec:j,law:S.law,base:base,
+                                  stick:S.stick,lockLabel:pinned}));
     if(row.b){const a=el('span','anchor','^'+row.b);a.id='b-'+row.b;d.appendChild(a);}
     box.appendChild(d);
   });
-  main.appendChild(box);
+  blk.appendChild(box);
+
+  if(S.stick){
+    const sb=el('div','stkbar');
+    sb.appendChild(el('span','pl','✎ 마크업 편집 중'));
+    sb.appendChild(el('span','','스티커를 누르면 지우기·유형·색 · 본문을 끌어 고르면 새로 칠한다'));
+    const sp2=el('span');sp2.style.flex='1';sb.appendChild(sp2);
+    // ★ 못 찾은 기록은 조용히 버리지 않는다(§3-3 ④ · 검산 T4)
+    sb.appendChild(el('span','badge'+(ap.orphan.length?' orphan':''),
+      '고아 기록 '+ap.orphan.length));
+    if(ap.orphan.length){
+      const b2=el('button','tool','고아 보기');
+      b2.onclick=ev=>{
+        const bd=popShell('','⚠ 고아 기록 '+ap.orphan.length+'건 — 붙일 마크업을 못 찾았다');
+        bd.appendChild(el('div','cdim',
+          '볼트를 고쳐 평문이 바뀌면 이렇게 된다. 버리지 않고 남겨 둔다.'));
+        ap.orphan.forEach(k2=>{
+          const p=k2.split(SEP);
+          bd.appendChild(el('div','cln',p[1]+' · '+p[4]+' · 「'+(p[6]||'').slice(0,26)+'」'));
+        });
+        const rw=el('div','memobtn');
+        const dl=el('button','tool','이 조의 고아 기록 지우기');
+        dl.onclick=()=>{mkAll();ap.orphan.forEach(k2=>delete MKS[k2]);
+          lsWrite(MK_KEY,MKS,'마크업 스티커');closePop();render();};
+        rw.appendChild(dl);bd.appendChild(rw);
+        showPop(ev);};
+      sb.appendChild(b2);
+    }
+    blk.appendChild(sb);
+    stkPick(box,base,j.행);
+  }
 
   if(j.원본&&j.원본.length){
     const fold=el('div','box fold');
     const head=el('div');
-    head.appendChild(document.createTextNode('▸ 원문 보기 '));
-    const s=el('span','','(불변 원본층 · 개정 대조용 정본)');s.style.fontSize='11px';
+    // ★ 필기가 있으면 **펼친 채 잠근다** — 접었다 펴면 높이가 바뀌어 필기가 어긋난다(§4-2)
+    head.appendChild(document.createTextNode((pinned?'▾':'▸')+' 원문 보기 '));
+    const s=el('span','','(불변 원본층 · 개정 대조용 정본 · 법전 조판)');s.style.fontSize='11px';
     head.appendChild(s);
     const link=el('a','oi','law.go.kr ↗');
     link.href='https://www.law.go.kr/법령/'+encodeURIComponent(S.law);
@@ -611,14 +761,27 @@ async function viewJo(){
     link.onclick=e=>e.stopPropagation();
     head.appendChild(link);
     fold.appendChild(head);
-    const body=el('div','origbody',j.원본.join('\n'));
-    body.style.display='none';
+    const body=el('div','origbody');
+    renderBeonjeon(body,j.원본);        // ⚠ 글자를 고치지 않는다 — 조판만 바꾼다(§2-4)
+    body.appendChild(el('div','bjnote',
+      '사진(특허법 33·34쪽) 실측 조판 — 한 행 길이 고정 · 어절 중간에서 끊는다 · 양끝맞춤. '+
+      '글자 크기는 바꿀 수 없다(필기가 이 고정에 기댄다).'));
+    if(pinned){
+      fold.style.cursor='default';
+      head.appendChild(el('span','badge','필기 때문에 펼친 채 잠갔다'));
+      fold.onclick=()=>toast('필기가 있어 원문 접기를 잠갔다 — 필기를 지우면 풀린다');
+    }else{
+      body.style.display='none';
+      fold.onclick=()=>{const open=body.style.display==='none';
+        body.style.display=open?'':'none';
+        head.firstChild.nodeValue=(open?'▾':'▸')+' 원문 보기 ';
+        const pg=body.querySelector('.bjpage');if(pg&&open)bjFit(pg);};
+    }
     fold.appendChild(body);
-    fold.onclick=()=>{const open=body.style.display==='none';
-      body.style.display=open?'':'none';
-      head.firstChild.nodeValue=(open?'▾':'▸')+' 원문 보기 ';};
-    main.appendChild(fold);
+    blk.appendChild(fold);
   }
+  main.appendChild(blk);
+  inkHost(blk,inkKey);                 // 캔버스 한 장 = 조 하나(§4-3)
 
   slot.appendChild(main);
 
@@ -689,6 +852,606 @@ function showPop(ev){
   p.style.top = y + 'px';
 }
 
+/* ══════════ 알림 ══════════
+   ⚠ `toast` 는 `popJo`·`popFoot` 과 똑같이 **정의가 없었다**(`memoSave` 가 부르기만 했다).
+      §10 의 「쓰기가 실패하면 조용히 넘기지 마라」가 실제로는 안 돌고 있었다. */
+function toast(msg, bad){
+  const box = $('#toasts'); if (!box) return;
+  const d = el('div', 'toast' + (bad ? ' bad' : ''), msg);
+  box.appendChild(d);
+  setTimeout(() => d.remove(), bad ? 4200 : 2400);
+}
+
+/* ══════════ 기록층 (§10) ══════════
+   주소가 하나이므로 기록도 하나다(§0-3). 이름공간을 갈래별로 가른다.
+   ⚠ 사파리는 한동안 안 들른 사이트의 localStorage 를 지운다 — 내보내기가 필수다. */
+const REC_PRE = 'jopangi.';
+const MK_KEY  = REC_PRE + 'markup';     // 마크업 스티커 삭제·편집·신규
+const INK_KEY = REC_PRE + 'ink';        // 필기
+const TS_PRE  = REC_PRE + 'ts.';        // 낡은 층(메모)용 갱신시각 짝
+function nowIso(){ return new Date().toISOString(); }
+function lsWrite(key, obj, what){
+  try{ localStorage.setItem(key, JSON.stringify(obj)); return true; }
+  catch(e){ toast('⚠ ' + (what || '기록') + ' 저장 실패 — 저장공간이 찼을 수 있다. 기록을 내보내라', 1);
+            console.error(e); return false; }
+}
+function lsRead(key){
+  try{ return JSON.parse(localStorage.getItem(key) || '{}'); }catch(e){ return {}; }
+}
+// 낡은 층(메모)은 값이 문자열이라 항목마다 시각을 못 넣는다 — 짝 맞춤표에 적는다
+function tsTouch(storeKey, itemKey){
+  const m = lsRead(TS_PRE + storeKey); m[itemKey] = nowIso();
+  try{ localStorage.setItem(TS_PRE + storeKey, JSON.stringify(m)); }catch(e){}
+}
+function recStat(){
+  const out = [];
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if (k.indexOf(REC_PRE) !== 0) continue;
+    if (k.indexOf(TS_PRE) === 0) continue;          // 짝 맞춤표는 세지 않는다
+    let v = null; try{ v = JSON.parse(localStorage.getItem(k)); }catch(e){}
+    let n = 0, note = '';
+    if (v && typeof v === 'object'){
+      const ks = Object.keys(v); n = ks.length;
+      if (k === INK_KEY) note = ks.reduce((a, x) => a + ((v[x].s || []).length), 0) + '획';
+    }
+    out.push({ k: k, n: n, note: note });
+  }
+  out.sort((a, b) => a.k < b.k ? -1 : 1);
+  return out;
+}
+function recTotal(){ return recStat().reduce((a, x) => a + x.n, 0); }
+function recDump(){
+  const 층 = {};
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if (k.indexOf(REC_PRE) !== 0) continue;
+    try{ 층[k] = JSON.parse(localStorage.getItem(k)); }
+    catch(e){ 층[k] = localStorage.getItem(k); }
+  }
+  // GAS 는 다음 지시서다. 다만 「바뀐 것만」 주고받을 수 있게 시각을 같이 담는다(§10-2)
+  return { app: 'jopangi', v: 1, 생성: nowIso(), 건수: recTotal(), 층: 층 };
+}
+function recExport(){
+  const j = JSON.stringify(recDump(), null, 1);
+  const a = el('a');
+  a.href = URL.createObjectURL(new Blob([j], { type: 'application/json' }));
+  a.download = 'jopangi_기록_' + nowIso().slice(0, 19).replace(/[:T]/g, '') + '.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+  toast('기록 ' + recTotal() + '건을 내려받았다');
+}
+function recImport(file, after){
+  const fr = new FileReader();
+  fr.onload = () => {
+    let d = null;
+    try{ d = JSON.parse(fr.result); }catch(e){ toast('⚠ JSON 을 읽지 못했다', 1); return; }
+    if (!d || d.app !== 'jopangi' || !d.층){ toast('⚠ 조판기 기록 파일이 아니다', 1); return; }
+    let m = 0; Object.keys(d.층).forEach(k => {
+      const v = d.층[k];
+      if (k.indexOf(TS_PRE) !== 0 && v && typeof v === 'object') m += Object.keys(v).length; });
+    // ★ 덮어쓰기 전에 개수를 보여주고 확인을 받는다(§10-2)
+    if (!confirm('기록 들여오기\n\n지금 ' + recTotal() + '건  →  파일 ' + m + '건\n\n'
+                 + '같은 이름의 층은 파일 것으로 덮어쓴다. 계속할까?')) return;
+    let ok = 0;
+    Object.keys(d.층).forEach(k => {
+      if (k.indexOf(REC_PRE) !== 0) return;
+      if (lsWrite(k, d.층[k], k)) ok++;
+    });
+    MKS = null; INK = null;
+    toast('층 ' + ok + '개를 들여왔다 — 지금 ' + recTotal() + '건');
+    if (after) after();
+  };
+  fr.readAsText(file);
+}
+function popRec(ev){
+  const body = popShell('cell', '⤓ 기록 — 내보내기 · 들여오기');
+  body.appendChild(el('div', 'cdim',
+    '⚠ 사파리는 한동안 안 들른 사이트의 저장분을 지운다. 아이패드에서 필기했다면 자주 내보내라.'));
+  const tb = el('table', 'rectab');
+  const hr = el('tr'); ['층', '항목', ''].forEach(t => hr.appendChild(el('th', '', t)));
+  tb.appendChild(hr);
+  const st = recStat();
+  if (!st.length){ const r = el('tr'); const c = el('td', '', '아직 기록이 없다');
+                   c.colSpan = 3; r.appendChild(c); tb.appendChild(r); }
+  st.forEach(x => {
+    const r = el('tr');
+    r.appendChild(el('td', '', x.k.slice(REC_PRE.length)));
+    r.appendChild(el('td', 'n', String(x.n)));
+    r.appendChild(el('td', '', x.note));
+    tb.appendChild(r);
+  });
+  body.appendChild(tb);
+  body.appendChild(el('div', 'badge', '모두 ' + recTotal() + '건'));
+  const row = el('div', 'memobtn');
+  const ex = el('button', 'tool on', '⤓ 기록 내보내기');
+  ex.onclick = recExport;
+  const inp = el('input'); inp.type = 'file'; inp.accept = '.json,application/json';
+  inp.style.display = 'none';
+  inp.onchange = () => { if (inp.files && inp.files[0]) recImport(inp.files[0], render); };
+  const im = el('button', 'tool', '⤒ 기록 들여오기');
+  im.onclick = () => inp.click();
+  row.appendChild(ex); row.appendChild(im); row.appendChild(inp);
+  body.appendChild(row);
+  body.appendChild(el('div', 'cdim',
+    'GAS(기기 사이 동기화)는 다음 지시서다 — 지금은 이 브라우저에만 남는다.'));
+  showPop(ev);
+}
+
+/* ══════════ 마크업 스티커 (§3) ══════════
+   화면 = (JSON 레이어) − (내 삭제) + (내 편집) + (내가 새로 칠한 것). **내 층이 이긴다.**
+   ⚠ 좌표만으로 잡지 않는다. 「조키 + 구조키 + a + b + 유형 + 값 + 평문 발췌」가 키다.
+      좌표가 밀렸어도 **같은 구조키 줄 안에서** 같은 글자·같은 유형이면 같은 스티커로 본다.
+   ⚠ 구조키 밖으로 나가서 찾지 않는다 — 8/23 에 끝이 같은 줄 셋이 3중 매칭돼 통째로 버려졌다.
+   ⚠ 못 찾은 기록은 조용히 버리지 않는다 — 「고아」로 세어 화면 구석에 보인다(T4). */
+const SEP = '\u001f';
+const STK_TYPES = [['mark', '형광'], ['u', '밑줄'], ['font', '글자색'],
+                   ['span', '배경'], ['strike', '취소선'], ['tag', '두문자 태그']];
+const STK_COLORS = ['#ff0000', '#2F6FD0', '#7a3ed0', '#1d7a3e', '#b06000', '#1a1a1a'];
+const STK_BACKS  = ['#ffe9a0', '#ffd0e0', '#b1ffff', '#d3f8b6', '#e6d9ff', '#ffd9b3'];
+let MKS = null;
+function mkAll(){ if (!MKS) MKS = lsRead(MK_KEY); return MKS; }
+function mkPut(key, rec){
+  mkAll();
+  if (rec === null) delete MKS[key];
+  else MKS[key] = Object.assign({}, rec, { ts: nowIso() });
+  return lsWrite(MK_KEY, MKS, '마크업 스티커');
+}
+function mkEx(t, a, b){ return String(t || '').slice(Math.max(0, a), Math.max(0, b)); }
+function rowKey(row){ return (Array.isArray(row.k) ? row.k : [row.k]).join('/'); }
+function mkKeyOf(base, row, m){
+  return [base, rowKey(row), m.a, m.b, m.t, m.v || '', mkEx(row.t, m.a, m.b)].join(SEP);
+}
+function mkLooseOf(base, row, m){
+  return [base, rowKey(row), m.t, mkEx(row.t, m.a, m.b)].join(SEP);
+}
+// base = `법:조키`. ⚠ 제33조는 네 법에 다 있다 — 법을 안 붙이면 기록이 섞인다.
+function mkApply(base, rows){
+  const A = mkAll(), used = {};
+  const loose = {};
+  Object.keys(A).forEach(k => {
+    const p = k.split(SEP);
+    if (p[0] !== base || A[k].op === 'new') return;
+    const lk = [p[0], p[1], p[4], p[6]].join(SEP);
+    (loose[lk] = loose[lk] || []).push(k);
+  });
+  const eff = rows.map(row => {
+    const out = [];
+    (row.m || []).forEach(m => {
+      if (m.t === 'bold'){ out.push(m); return; }        // bold 314건은 스티커가 아니다(§3-1)
+      const K = mkKeyOf(base, row, m);
+      let rk = null;
+      if (A[K]) rk = K;
+      else {
+        const c = (loose[mkLooseOf(base, row, m)] || []).filter(x => !used[x]);
+        if (c.length === 1) rk = c[0];                   // 하나로 좁혀질 때만 잡는다
+      }
+      const rec = rk ? A[rk] : null;
+      if (rk) used[rk] = 1;
+      if (rec && rec.op === 'del') return;               // 내가 지운 것
+      const e = { a: m.a, b: m.b, t: m.t, v: m.v, _k: K };
+      if (rec && rec.op === 'edit'){ e.t = rec.t; e.v = rec.v; e._k = rk; e._ed = 1; }
+      out.push(e);
+    });
+    return out;
+  });
+  const rowAt = {}; rows.forEach((r, i) => { if (rowAt[rowKey(r)] == null) rowAt[rowKey(r)] = i; });
+  Object.keys(A).forEach(k => {
+    const r = A[k], p = k.split(SEP);
+    if (p[0] !== base || r.op !== 'new') return;
+    const ri = rowAt[p[1]]; if (ri == null) return;       // 줄이 사라졌다 → 고아
+    const row = rows[ri];
+    let a = +p[2], b = +p[3];
+    if (mkEx(row.t, a, b) !== p[6]){                      // 좌표가 밀렸다 → 발췌로 다시 찾는다
+      const i = String(row.t || '').indexOf(p[6]);
+      if (i < 0 || !p[6]) return;                         // 글자마저 사라졌다 → 고아
+      a = i; b = i + p[6].length;
+    }
+    used[k] = 1;
+    eff[ri].push({ a: a, b: b, t: r.t, v: r.v, _k: k, _new: 1 });
+  });
+  eff.forEach(l => l.sort((x, y) => x.a - y.a || y.b - x.b));
+  const orphan = Object.keys(A).filter(k => k.split(SEP)[0] === base && !used[k]);
+  return { eff: eff, orphan: orphan };
+}
+function stkEdit(base, row, m, ev){
+  const body = popShell('', '✎ 스티커 — 「' + mkEx(row.t, m.a, m.b).slice(0, 20) + '」');
+  body.appendChild(el('div', 'cdim',
+    rowKey(row) + '  ·  ' + m.a + '~' + m.b + (m._new ? '  ·  내가 칠한 것' : '')));
+  const op = m._new ? 'new' : 'edit';
+  const put = (t, v) => {
+    // ⚠ tag(배지)는 폭이 바뀐다 — 필기가 있는 조문에서는 막는다(§4-2)
+    if (t === 'tag' && m.t !== 'tag' && inkHas('jo|' + base)){
+      toast('⚠ 이 조문에 필기가 있다 — 두문자 태그로 바꾸면 폭이 바뀌어 필기가 어긋난다', 1);
+      return;
+    }
+    mkPut(m._k, { op: op, t: t, v: v }); closePop(); render();
+  };
+  body.appendChild(el('div', 'cdim', '유형 바꾸기'));
+  const g1 = el('div', 'stkgrid');
+  STK_TYPES.forEach(([t, label]) => {
+    const b = el('button', 'tool' + (m.t === t ? ' on' : ''), label);
+    b.onclick = () => put(t, m.v || (t === 'font' ? STK_COLORS[0] : STK_BACKS[0]));
+    g1.appendChild(b);
+  });
+  body.appendChild(g1);
+  body.appendChild(el('div', 'cdim', '색 고르기'));
+  const g2 = el('div', 'stkgrid');
+  (m.t === 'font' || m.t === 'u' || m.t === 'strike' ? STK_COLORS : STK_BACKS).forEach(c => {
+    const s = el('span', 'swatch'); s.style.background = c; s.title = c;
+    s.onclick = () => put(m.t, c);
+    g2.appendChild(s);
+  });
+  body.appendChild(g2);
+  const row2 = el('div', 'memobtn');
+  const del = el('button', 'tool', '🗑 지우기');
+  del.onclick = () => {
+    // 내가 칠한 것은 기록째로 지운다. JSON 것은 「지웠다」를 남겨 재컴파일에도 안 돌아온다(§3-3)
+    mkPut(m._k, m._new ? null : { op: 'del' });
+    closePop(); render();
+  };
+  row2.appendChild(del);
+  if (m._ed || m._new){
+    const rv = el('button', 'tool', '↺ 원래대로');
+    rv.onclick = () => { mkPut(m._k, null); closePop(); render(); };
+    row2.appendChild(rv);
+  }
+  row2.appendChild(el('span', 'cdim', '재컴파일(⚙) 뒤에도 이 기록이 다시 덮는다'));
+  body.appendChild(row2);
+  showPop(ev);
+}
+// 새로 칠하기 — 본문을 끌어 고른 뒤 유형을 고른다
+function stkNew(base, row, a, b, ev){
+  const ex = mkEx(row.t, a, b);
+  const body = popShell('', '🖌 새 스티커 — 「' + ex.slice(0, 20) + '」');
+  const put = (t, v) => {
+    const k = [base, rowKey(row), a, b, t, v, ex].join(SEP);
+    mkPut(k, { op: 'new', t: t, v: v }); closePop(); render();
+  };
+  const g1 = el('div', 'stkgrid');
+  STK_TYPES.forEach(([t, label]) => {
+    const b2 = el('button', 'tool', label);
+    b2.onclick = () => put(t, t === 'font' ? STK_COLORS[0] : STK_BACKS[0]);
+    g1.appendChild(b2);
+  });
+  body.appendChild(g1);
+  body.appendChild(el('div', 'cdim', '고른 뒤 스티커를 다시 눌러 색을 바꾼다'));
+  showPop(ev);
+}
+// 렌더된 줄 안에서 평문 좌표를 되찾는다.
+// ⚠ 주황 라벨·각주 위첨자·임베드·앵커는 평문에 없는 글자다 — 세지 않는다.
+function plainSkip(n, root){
+  let p = n.parentNode;
+  while (p && p !== root){
+    if (p.nodeType === 1){
+      const c = p.classList;
+      if (p.tagName === 'SUP') return true;
+      if (c && (c.contains('lbl') || c.contains('embed') || c.contains('anchor')
+                || c.contains('fdmark'))) return true;
+    }
+    p = p.parentNode;
+  }
+  return false;
+}
+function plainLen(root){
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let s = 0, n;
+  while ((n = w.nextNode())) if (!plainSkip(n, root)) s += n.nodeValue.length;
+  return s;
+}
+function stkPick(box, base, rows){
+  const grab = ev => {
+    if (!S.stick) return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    const r = sel.getRangeAt(0);
+    const sn = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentNode;
+    const line = sn && sn.closest ? sn.closest('.ln') : null;
+    if (!line || !line.contains(r.endContainer)) return;   // 한 줄 안에서만(§3-3 ③)
+    const ri = +line.dataset.ri;
+    const row = rows[ri]; if (!row) return;
+    const pre = document.createRange();
+    pre.selectNodeContents(line); pre.setEnd(r.startContainer, r.startOffset);
+    const a = plainLen(pre.cloneContents());
+    const b = a + plainLen(r.cloneContents());
+    sel.removeAllRanges();
+    if (b <= a) return;
+    // ⚠ 구간이 **걸쳐서 겹치면** 렌더가 중첩 구조를 못 만든다(줄이 뒤엉킨다).
+    //    한쪽이 다른 쪽을 온전히 품는 겹침만 받는다.
+    const cross = (mkApply(base, rows).eff[ri] || []).some(m =>
+      (a < m.b && b > m.a) && !(a >= m.a && b <= m.b) && !(m.a >= a && m.b <= b));
+    if (cross){ toast('이미 있는 마크업과 걸쳐서 겹친다 — 구간을 다시 골라라', 1); return; }
+    stkNew(base, row, a, b, ev);
+  };
+  box.addEventListener('mouseup', grab);
+  box.addEventListener('touchend', ev => setTimeout(() => grab(ev), 30));
+}
+
+/* ══════════ 필기 (§4) ══════════
+   캔버스 한 장 = 본문 블록 한 덩어리. ⚠ 캔버스는 **자기 clientWidth** 로 그린다(T9).
+   스트로크는 비율 좌표(0~1)로 저장한다 — 기기 폭이 달라도 같은 자리에 얹힌다.
+   ⚠ 기기 사이에는 안 넘어간다(§4-5). GAS 는 다음 지시서다 — 그래서 내보내기가 필수다. */
+let INK = null, INKROS = [], INKUNDO = {}, INKLAST = null;
+function inkAll(){ if (!INK) INK = lsRead(INK_KEY); return INK; }
+function inkOf(key){ const r = inkAll()[key]; return (r && r.s) || []; }
+function inkHas(key){ return inkOf(key).length > 0; }
+function inkSet(key, arr){
+  const A = inkAll();
+  if (!arr.length) delete A[key]; else A[key] = { s: arr, ts: nowIso() };
+  return lsWrite(INK_KEY, A, '필기');
+}
+function inkPush(key, stroke){
+  const cur = inkOf(key).slice();
+  (INKUNDO[key] = INKUNDO[key] || []).push(cur);
+  if (INKUNDO[key].length > 24) INKUNDO[key].shift();   // 되돌리기 최소 20단계(§4-4)
+  inkSet(key, cur.concat([stroke]));
+}
+function inkUndo(key){
+  const u = INKUNDO[key];
+  if (!u || !u.length){ toast('되돌릴 것이 없다'); return false; }
+  inkSet(key, u.pop()); return true;
+}
+function inkReset(){ INKROS.forEach(r => { try{ r.disconnect(); }catch(e){} }); INKROS = []; }
+function inkDraw(cv, key){
+  const ctx = cv.getContext('2d');
+  const W = parseFloat(cv.style.width) || 1, H = parseFloat(cv.style.height) || 1;
+  const dpr = cv.width / W;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.scale(dpr, dpr);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const one = st => {
+    const p = st.p;
+    ctx.strokeStyle = st.c; ctx.fillStyle = st.c;
+    if (p.length === 1){
+      ctx.beginPath(); ctx.arc(p[0][0] * W, p[0][1] * H, st.w * (p[0][2] || 1) / 2, 0, 6.284);
+      ctx.fill(); return;
+    }
+    for (let i = 1; i < p.length; i++){
+      ctx.beginPath();
+      ctx.lineWidth = st.w * ((p[i][2] || 1) + (p[i - 1][2] || 1)) / 2;
+      ctx.moveTo(p[i - 1][0] * W, p[i - 1][1] * H);
+      ctx.lineTo(p[i][0] * W, p[i][1] * H);
+      ctx.stroke();
+    }
+  };
+  inkOf(key).forEach(one);
+  if (cv._cur) one(cv._cur);
+}
+function inkHost(host, key){
+  if (!host || !key) return;
+  host.classList.add('inkhost');
+  const cv = el('canvas', 'inklay');
+  cv.dataset.key = key;
+  host.appendChild(cv);
+  let lw = 0, lh = 0;
+  const fit = () => {
+    cv.style.display = 'none';
+    const w = host.clientWidth, h = host.scrollHeight;   // ★ 자기 clientWidth (T9·T21 과 같은 함정)
+    cv.style.display = '';
+    if (!w || !h || (w === lw && h === lh)) return;
+    lw = w; lh = h;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.style.width = w + 'px'; cv.style.height = h + 'px';
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    inkDraw(cv, key);
+  };
+  fit();
+  setTimeout(fit, 0);
+  if (window.ResizeObserver){ const ro = new ResizeObserver(fit); ro.observe(host); INKROS.push(ro); }
+  inkBind(cv, key);
+}
+function inkBind(cv, key){
+  const at = ev => {
+    const r = cv.getBoundingClientRect();
+    const pr = (ev.pressure > 0 && ev.pointerType === 'pen')
+               ? Math.max(0.3, Math.min(2, ev.pressure * 2)) : 1;
+    return [(ev.clientX - r.left) / r.width, (ev.clientY - r.top) / r.height, pr];
+  };
+  const rub = p => {
+    const r = cv.getBoundingClientRect();
+    const R = 11 / r.width, RY = 11 / r.height;
+    const cur = inkOf(key);
+    const keep = cur.filter(s => !s.p.some(q =>
+      Math.abs(q[0] - p[0]) < R + s.w / r.width && Math.abs(q[1] - p[1]) < RY + s.w / r.height));
+    if (keep.length !== cur.length){
+      (INKUNDO[key] = INKUNDO[key] || []).push(cur.slice());
+      if (INKUNDO[key].length > 24) INKUNDO[key].shift();
+      inkSet(key, keep); inkDraw(cv, key);
+    }
+  };
+  cv.addEventListener('pointerdown', ev => {
+    if (!S.ink) return;
+    if (ev.pointerType === 'touch') return;      // ★ 손가락은 스크롤로 흘려보낸다(T7)
+    ev.preventDefault();
+    INKLAST = cv;                                // 되돌리기는 **마지막에 그린 캔버스**를 되돌린다
+    try{ cv.setPointerCapture(ev.pointerId); }catch(e){}
+    if (ev.pointerType === 'eraser' || S.inkErase){ cv._rub = 1; rub(at(ev)); return; }
+    cv._cur = { c: S.inkColor, w: S.inkW, p: [at(ev)] };
+    inkDraw(cv, key);
+  });
+  cv.addEventListener('pointermove', ev => {
+    if (cv._rub){ rub(at(ev)); return; }
+    if (!cv._cur) return;
+    ev.preventDefault();
+    cv._cur.p.push(at(ev));
+    inkDraw(cv, key);
+  });
+  const done = () => {
+    if (cv._rub){ cv._rub = 0; return; }
+    if (!cv._cur) return;
+    const st = cv._cur; cv._cur = null;
+    inkPush(key, st); inkDraw(cv, key);
+  };
+  cv.addEventListener('pointerup', done);
+  cv.addEventListener('pointercancel', done);
+  cv.addEventListener('pointerleave', done);
+}
+function inkBar(){
+  const old = $('#inkbar'); if (old) old.remove();
+  if (!S.ink) return;
+  const bar = el('div', 'inkbar'); bar.id = 'inkbar';
+  bar.appendChild(el('span', 'pl', '✍ 필기'));
+  ['#D93B3B', '#2F6FD0', '#1d7a3e', '#1a1a1a'].forEach(c => {
+    const s = el('span', 'swatch' + (S.inkColor === c && !S.inkErase ? ' on' : ''));
+    s.style.background = c;
+    s.onclick = () => { S.inkColor = c; S.inkErase = false; inkBar(); };
+    bar.appendChild(s);
+  });
+  bar.appendChild(el('span', 'sep'));
+  [1.4, 2.4, 4].forEach(w => {
+    const b = el('button', 'inkw' + (S.inkW === w && !S.inkErase ? ' on' : ''));
+    const i = el('i'); i.style.width = i.style.height = Math.round(w * 2.2) + 'px';
+    b.appendChild(i);
+    b.onclick = () => { S.inkW = w; S.inkErase = false; inkBar(); };
+    bar.appendChild(b);
+  });
+  bar.appendChild(el('span', 'sep'));
+  const er = el('button', 'tool' + (S.inkErase ? ' on' : ''), '지우개');
+  er.onclick = () => { S.inkErase = !S.inkErase; inkBar(); };
+  bar.appendChild(er);
+  const un = el('button', 'tool', '↺ 되돌리기');
+  un.onclick = () => {
+    const cv = (INKLAST && INKLAST.isConnected) ? INKLAST : document.querySelector('.inklay');
+    if (!cv){ toast('이 화면에 필기층이 없다'); return; }
+    if (inkUndo(cv.dataset.key)) inkDraw(cv, cv.dataset.key);
+  };
+  bar.appendChild(un);
+  bar.appendChild(el('span', 'sep'));
+  const ex = el('button', 'tool', '⤓ 내보내기');
+  ex.onclick = recExport;
+  bar.appendChild(ex);
+  bar.appendChild(el('span', 'inkhint',
+    '펜슬만 그린다 · 손가락은 스크롤 · 기기 사이에는 안 넘어간다 — 자주 내보내라'));
+  document.body.appendChild(bar);
+}
+
+/* ══════════ 원문 = 법전 조판 (§2) ══════════
+   사진(특허법 33·34쪽) 실측 규칙만 옮긴다 — 추정으로 규칙을 더하지 않는다.
+     ① 한 행 = 사진의 한 행과 같은 길이   ② 어절 중간에서 끊는다(break-all)
+     ③ 양끝맞춤                            ④ 조 제목은 【】 굵게
+     ⑤ 제1항 ①은 제목 뒤에 이어 붙는다     ⑥ 호는 내어쓰기
+     ⑦ 삭제 조는 한 줄                     ⑧ 장 제목은 가운데
+   ⚠ j.원본 은 불변 원본층이다. 글자를 고치지 않는다 — 조판만 바꾼다.
+   ⚠ 조는 이어지지 않는다. 고른 조 하나만 보인다(사용자 확정).
+   ★ 한 행 길이는 **사진의 실제 한 행을 재서** 정한다. em 으로 어림하면 글꼴마다 달라진다. */
+const BJ_SAMPLE = '원서에 첨부된 요약서에 관한 직권보';   // 사진 33쪽에서 그대로 옮긴 한 행
+const BJ_FS = 15;                                          // px · ★ 사용자가 못 바꾼다(§2-3)
+const BJ_FF = '"Batang","BatangChe","AppleMyungjo","Nanum Myeongjo","Noto Serif KR",serif';
+function bjHeadFmt(t){
+  const m = /^(제\d+조(?:의\d+)?)\s*[(（]\s*(.+?)\s*[)）]\s*(.*)$/.exec(t);
+  return m ? (m[1] + '【' + m[2] + '】' + (m[3] ? ' ' + m[3] : '')) : t;
+}
+function bjBlocks(lines){
+  const out = []; let head = null;
+  (lines || []).forEach(raw => {
+    const t = String(raw == null ? '' : raw).trim();
+    if (!t) return;                       // 원본의 줄바꿈은 문단 경계로만 쓴다(§2-4)
+    if (/^제\d+[장절관]/.test(t) && t.length < 42){ out.push({ k: 'jang', t: t }); return; }
+    if (/^제\d+조(의\d+)?\s*[(（]/.test(t) || /^제\d+조(의\d+)?\s*$/.test(t)){
+      head = { k: 'head', t: bjHeadFmt(t) }; out.push(head); return;
+    }
+    if (/^[①-⑳]/.test(t)){
+      const no = t.charAt(0), rest = t.slice(1).trim();
+      // ★ 제1항 ①은 줄을 바꾸지 않고 제목 뒤에 이어 붙는다. ②부터 새 줄.
+      if (no === '①' && head && !head.used){ head.used = 1; head.t += '  ① ' + rest; return; }
+      out.push({ k: 'hang', t: no + ' ' + rest }); return;
+    }
+    if (/^\d+\.(\s|$)/.test(t)){ out.push({ k: 'ho', t: t }); return; }
+    if (/^[가-하]\.(\s|$)/.test(t)){ out.push({ k: 'mok', t: t }); return; }
+    if (/^\[.+\]$/.test(t)){ out.push({ k: 'note', t: t }); return; }
+    out.push({ k: 'body', t: t });
+  });
+  // ⑦ 삭제 조 — 제목과 삭제 표시밖에 없으면 한 줄로 뭉친다
+  if (out.length === 2 && out[0].k === 'head' && /^삭제/.test(out[1].t))
+    return [{ k: 'head', t: out[0].t + ' ' + out[1].t }];
+  return out;
+}
+function bjColWidth(){
+  const s = el('span', '', BJ_SAMPLE);
+  s.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre;'
+                  + 'font-family:' + BJ_FF + ';font-size:' + BJ_FS + 'px';
+  document.body.appendChild(s);
+  const w = s.getBoundingClientRect().width;
+  s.remove();
+  return w > 60 ? Math.ceil(w) + 2 : Math.round(BJ_FS * 17.8);
+}
+function bjFit(page){
+  const host = page.parentNode; if (!host) return;
+  const col = bjColWidth(), gap = Math.round(BJ_FS * 1.7);
+  const avail = (host.clientWidth || col) - 2;
+  let n = Math.max(1, Math.floor((avail + gap) / (col + gap)));
+  n = Math.min(n, 3);
+  // 단이 늘어나 한 단에 두세 줄만 남는 꼴은 막는다 — 그래도 한 행 길이는 그대로다
+  const chars = page.textContent.length;
+  n = Math.max(1, Math.min(n, Math.ceil(chars / (16 * 8))));
+  page.style.columnCount = n;
+  page.style.columnGap = gap + 'px';
+  page.style.width = (n * col + (n - 1) * gap) + 'px';
+}
+function renderBeonjeon(host, orig){
+  const page = el('div', 'bjpage');
+  bjBlocks(orig).forEach(b => page.appendChild(el('div', 'bj bj-' + b.k, b.t)));
+  host.appendChild(page);
+  bjFit(page);
+  setTimeout(() => bjFit(page), 0);
+}
+
+/* ══════════ 조문·각주 팝업 (§5) ══════════
+   ⚠ `popJo`·`popFoot` 은 부르기만 하고 **정의가 아예 없었다**(`:482`·`:468`).
+      누르면 ReferenceError 가 나고 아무 일도 안 일어났다. 껍데기는 popShell 을 다시 쓴다.
+   ★ 깊이는 2단에서 멈춘다 — 2단 안의 링크는 새 팝업을 안 띄우고 **그 조문 뷰로 이동**한다. */
+function goJo(law, k){
+  if (LAWS.indexOf(law) >= 0) S.law = law;
+  S.tab = 'jo'; S.jo = k; closeAllPops(); render();
+}
+async function popJo(law, k, ev, depth){
+  depth = depth || 1;
+  const body = popShell('', '📖 ' + k + ' — 불러오는 중');
+  showPop(ev);
+  const pop = body.parentNode;
+  try{
+    const L = await get('jo_' + law + '_목록.json');
+    const B = await get('jo_' + law + '_본문.json');
+    const ti = (L.조.find(x => x.k === k) || {}).t || '';
+    const pt = pop.querySelector('.pt');
+    if (pt) pt.textContent = '📖 ' + (SHORT[law] || law) + ' ' + k + (ti ? ' ' + ti : '');
+    body.innerHTML = '';
+    const go = el('button', 'tool on', '뷰로 이동 ↗');   // 머리에 「뷰로 이동」(사양서 §4-2)
+    go.onclick = () => goJo(law, k);
+    body.appendChild(go);
+    if (depth >= 2)
+      body.appendChild(el('span', 'badge', '2단 — 여기 링크는 팝업 대신 뷰로 이동한다'));
+    const j = B.조[k];
+    if (!j){ body.appendChild(el('div', 'cdim', '본문을 찾지 못했다 — ' + k)); return; }
+    const ap = mkApply(law + ':' + k, j.행);
+    j.행.forEach((row, ri) => {
+      if (row.k[0] === 'H') return;
+      const d = el('div', joClass(row.k));
+      if (row.fd) d.appendChild(el('span', 'fdmark', '[^' + row.fd + '] '));
+      d.appendChild(renderLine(row, { label: false, depth: depth, rec: j, law: law,
+                                      m: ap.eff[ri] }));
+      body.appendChild(d);
+    });
+  }catch(e){
+    body.innerHTML = '';
+    body.appendChild(el('div', 'cdim', '읽지 못했다 — ' + (e && e.message || e)));
+    console.error(e);
+  }
+}
+function popFoot(id, ev, rec, depth){
+  const body = popShell('fn', '🗒 각주 [' + id + ']');
+  const rows = (rec && rec.행) || [];
+  const hit = rows.filter(r => String(r.fd) === String(id) && r.k[0] === '각주');
+  if (!hit.length)
+    body.appendChild(el('div', 'cdim', '각주 정의를 못 찾았다 — 이 조에 [^' + id + '] 정의 줄이 없다'));
+  else hit.forEach(r => {
+    const d = el('div', 'ln fd');
+    d.appendChild(renderLine(r, { label: false, depth: depth || 1, rec: rec }));
+    body.appendChild(d);
+  });
+  showPop(ev);
+}
 
 /* ══════════ 판례 뷰 ══════════ */
 async function viewPrec(){
@@ -810,6 +1573,7 @@ async function viewPrec(){
       main.appendChild(box);
     });
   }
+  inkHost(main,'prec|'+subj+'|'+cur.id);   // 캔버스 한 장 = 판례 하나(§4-3)
   slot.appendChild(main);
 }
 
@@ -831,8 +1595,9 @@ const MEMO_NS='jopangi.memo.';
 function memoLoad(file){
   try{return JSON.parse(localStorage.getItem(MEMO_NS+file)||'{}');}catch(e){return {};}
 }
-function memoSave(file,m){
-  try{localStorage.setItem(MEMO_NS+file,JSON.stringify(m));}catch(e){toast('메모 저장 실패');}
+function memoSave(file,m,mk){
+  // ⚠ 쓰기가 실패하면 조용히 넘기지 않는다(§10-2). `toast` 는 v3-B 에서 비로소 생겼다.
+  if(lsWrite(MEMO_NS+file,m,'메모')&&mk)tsTouch(MEMO_NS+file,mk);
 }
 function splitWords(t){return (t||'').split(/(\s+)/);}
 // 클릭 지점의 단어 번호 — 렌더와 같은 splitWords 색인을 쓴다
@@ -949,9 +1714,9 @@ function memoEdit(file,mk,word,ev){
   const ok=el('button','tool on','저장');
   ok.onclick=()=>{const v=ta.value.trim();
     if(v)memo[mk]=v;else delete memo[mk];
-    memoSave(file,memo);closePop();render();};
+    memoSave(file,memo,mk);closePop();render();};
   const del=el('button','tool','삭제');
-  del.onclick=()=>{delete memo[mk];memoSave(file,memo);closePop();render();};
+  del.onclick=()=>{delete memo[mk];memoSave(file,memo,mk);closePop();render();};
   row.appendChild(ok);row.appendChild(del);
   row.appendChild(el('span','cdim','브라우저에만 저장'));
   body.appendChild(row);
@@ -979,10 +1744,20 @@ async function view2cha(){
     const b=el('button','tool'+(S.boardView===v?' on':''),t);
     b.onclick=()=>{S.boardView=v;render();};bar.appendChild(b);});
 
+  // ★ 탭 바를 **조기반환보다 먼저** 붙인다(§6-2).
+  //   전에는 붙이는 곳이 조기반환 뒤라 「폴더 없음」이면 버튼까지 통째로 사라져
+  //   다른 갈래로 갈 길이 막혔다. 기본값이 아니라 순서가 원인이었다.
+  main.appendChild(bar);
+
   const key=S.boardKind+'|'+subj;
   const d=B[key];
   if(!d||d.상태==='폴더 없음'){
-    main.appendChild(emptyBox('🖋',subj+' · '+S.boardKind+' — 폴더 없음','볼트에 해당 폴더가 없다'));
+    // 다른 갈래에 몇 개가 있는지 한 줄 덧붙인다(§6-2 ③)
+    const other=['기출','GS','사례'].filter(k=>k!==S.boardKind).map(k=>{
+      const o=B[k+'|'+subj];
+      return k+' '+(o&&o.상태!=='폴더 없음'?(o.총||0):'—');}).join(' · ');
+    main.appendChild(emptyBox('🖋',subj+' · '+S.boardKind+' — 폴더 없음',
+      '볼트에 해당 폴더가 없다  ·  다른 갈래: '+other));
     slot.appendChild(main);return;
   }
   const cells=d.격자||{},keys=Object.keys(cells);
@@ -1000,7 +1775,7 @@ async function view2cha(){
     bar.insertBefore(s1,sp);
   }else if(S.series){S.series='';}
   const years=[...new Set(all.map(x=>x.연도).filter(Boolean))].sort((a,b)=>a-b);
-  main.appendChild(bar);
+  // bar 는 위에서 이미 붙였다 — 강사 선택기는 살아 있는 bar 에 끼워 넣는다(§6-2)
 
   const pass=x=>(!S.series||x.시리즈===S.series)&&(!S.yearFilter||String(x.연도)===String(S.yearFilter));
   const shown=all.filter(pass);
@@ -1107,7 +1882,10 @@ function popCell(x,ev,bodies){
     Object.entries(rec.fm).forEach(([k,v])=>{if(v)ch.appendChild(el('span','chip c-src',k+': '+String(v).slice(0,24)));});
     body.appendChild(ch);
   }
-  body.appendChild(renderBody(rec,x.파일));
+  const blk=el('div');
+  blk.appendChild(renderBody(rec,x.파일));
+  body.appendChild(blk);
+  inkHost(blk,'cell|'+x.파일);              // 캔버스 한 장 = 셀 하나(§4-3)
   showPop(ev);
 }
 
@@ -1187,6 +1965,7 @@ function qCard(q,mokTitle){
   ft.appendChild(memo);
   ft.appendChild(el('span','cdim','풀이 기록은 저장하지 않는다 — v0 읽기 전용'));
   card.appendChild(ft);
+  inkHost(card,'q|'+q.id);                 // 캔버스 한 장 = 문항 카드 하나(§4-3)
   return card;
 }
 
@@ -1238,6 +2017,7 @@ function p7Card(z){
   const m=el('span','memolink','✏ 메모 및 유사문제 연결');m.title='v0 제외 — 자리만';
   ft.appendChild(m);ft.appendChild(el('span','cdim','풀이 기록 저장 없음'));
   card.appendChild(ft);
+  inkHost(card,'q7|'+z.id);                // 캔버스 한 장 = 지문 카드 하나(§4-3)
   return card;
 }
 async function viewJimun(){
@@ -1508,7 +2288,11 @@ addEventListener('hashchange',()=>{if(readHash())render();});
 let busy=false;
 async function render(){
   if(busy)return;busy=true;
-  drawTop();drawRail();
+  inkReset();                       // 앞 화면의 ResizeObserver 를 끊는다
+  // ⚠ body 에 건다 — 팝업(2차 셀 · 조문 팝업)이 #app 밖에 뜬다
+  document.body.classList.toggle('inkon',!!S.ink);
+  document.body.classList.toggle('stkon',!!S.stick);
+  drawTop();drawRail();inkBar();
   try{
     if(S.tab==='prec')await viewPrec();
     else if(S.tab==='cha2')await view2cha();
@@ -1521,6 +2305,14 @@ async function render(){
   }
   busy=false;
 }
+// 폭이 바뀌면 법전 조판의 단 수를 다시 잡는다. ⚠ 한 행 글자 수는 그대로다 — 단만 준다.
+let rsz=null;
+addEventListener('resize',()=>{
+  clearTimeout(rsz);
+  rsz=setTimeout(()=>{
+    document.querySelectorAll('.bjpage').forEach(bjFit);
+  },140);
+});
 readHash();
 render();
 </script>
