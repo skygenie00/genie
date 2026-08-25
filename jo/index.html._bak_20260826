@@ -2046,7 +2046,7 @@ function oxPickRow(row, key, raw, sol){
   const bar = el('div', 'oxres');
   const st = oxState(key);
   /* ★ 8/26 — 「안 품」은 상태 라벨이라 풀기 전에는 감춘다(버튼이 아니다).
-     🌀 헷갈림 버튼은 없앴다 — 위 태그줄의 🌀 와 같은 값(r.c)을 쓰던 중복 입구였다. */
+     🌀 헷갈림 버튼은 없앱다 — 위 태그줄의 🌀 와 같은 값(r.c)을 쓰던 중복 입구였다. */
   if (st){
     bar.appendChild(el('span', 'hmdot s' + st));
     bar.appendChild(el('span', 'badge', OXNAME[st]));
@@ -2458,101 +2458,6 @@ function mcChapOpen(label, keys, ev){
   showPop(ev);
 }
 
-/* ══════════ 가운데 마디 열 (민법OX 이식 · 2026-08-26) ══════════
-   한 행 = 마디 하나. 총문제 · 🃏 암기노트 · 회독 진행중 · 회독수를 그 자리에서 보인다.
-   ★ 회독 scope 는 기존과 같은 `mok|<과목>|__mg<i>` 다 — 이미 쌓인 회독 기록이 그대로 붙는다. */
-let QLJUMP=null;
-function mgRoll(M,i){
-  const n=M[i];let jos=n.지문.slice(),lids=n.리담.slice();
-  for(let j=i+1;j<M.length;j++){
-    if(M[j].깊이<=n.깊이)break;
-    jos=jos.concat(M[j].지문);lids=lids.concat(M[j].리담);
-  }
-  return [Array.from(new Set(jos)),Array.from(new Set(lids))];
-}
-function mgKeys(M,i,byId,P7map){
-  const r=mgRoll(M,i),keys=[];
-  r[1].forEach(id=>{const q=byId[id];if(q)(q.지문||[]).forEach(z=>keys.push(oxKeyLid(q,z)));});
-  r[0].forEach(id=>{const z=P7map[id];if(z)keys.push(oxKeyP7(z));});
-  return keys;
-}
-function qlItem(sel,label,keys,subj,isCh,folded,fold){
-  const scope='mok|'+subj+'|'+sel;
-  const rl=rndList(scope),rn=rl.length;
-  const done=keys.filter(k=>(oxOf(k)||{}).p).length;
-  const cards=keys.reduce((a,k)=>a+mcCount(k),0);
-  const row=el('div',(isCh?'qlgrp':'qlrow')+(S.mok===sel?' on':''));
-  const t1=el('div','qlt1');
-  if(isCh){
-    const ar=el('span','qlar',folded?'▸':'▾');
-    ar.onclick=ev=>{ev.stopPropagation();fold();};
-    t1.appendChild(ar);
-  }
-  t1.appendChild(el('span','qlnm',label));
-  t1.appendChild(el('span','qltot','총 '+keys.length+'문제'));
-  row.appendChild(t1);
-  const t2=el('div','qlt2');
-  const mc=el('button','qtag'+(cards?' on':''),'🃏 암기노트'+(cards?' '+cards:''));
-  mc.onclick=ev=>{ev.stopPropagation();mcChapOpen(label,keys,ev);};
-  t2.appendChild(mc);
-  if(rn){
-    const r=rl[rn-1];
-    t2.appendChild(el('span','qlrd',
-      rn+'회독 🌀'+r.confuse+' 🌤'+r.semi+' 🔴'+r.wrong+' /'+r.done));
-  }
-  if(done)t2.appendChild(el('span','qlrun','▶ '+(rn+1)+'회독 진행중 '+done+'/'+keys.length));
-  if(keys.length){
-    const go=el('button','qlgo'+(done?' cont':''),done?'이어서 풀기':((rn+1)+'회독 시작'));
-    go.onclick=ev=>{ev.stopPropagation();S.mok=sel;render();};
-    t2.appendChild(go);
-  }
-  row.appendChild(t2);
-  if(keys.length)row.onclick=()=>{S.mok=sel;render();};
-  return row;
-}
-function qlColumn(MG,JM,byId,P7,subj){
-  const list=el('div','qlist'+(S.listHid?' hid':''));
-  if(!MG){list.appendChild(el('div','h','목차 없음 — 특허만 있다'));return list;}
-  const M=MG.마디,P7map={};
-  if(P7)P7.지문.forEach(z=>P7map[z.id]=z);
-  let ch=-1;
-  M.forEach((n,i)=>{
-    const keys=mgKeys(M,i,byId,P7map);
-    const label=(n.no?n.no+(n.깊이===1?'. ':' '):'')+n.제목;
-    if(n.깊이===1){
-      ch=i;
-      const folded=!!S.mgFold[i];
-      const g=qlItem('__mg'+i,label,keys,subj,true,folded,
-                     ()=>{S.mgFold[i]=!folded;render();});
-      g.id='qg'+i;
-      list.appendChild(g);
-      return;
-    }
-    if(S.mgFold[ch])return;
-    const r=qlItem('__mg'+i,label,keys,subj,false,false,null);
-    r.style.paddingLeft=(11+(n.깊이-1)*11)+'px';
-    if(n.출처==='제7판')r.querySelector('.qlnm').style.color='#d4b04a';
-    const tip=[];
-    if(n.p7&&n.p7.length)tip.push('제7판: '+n.p7.join(' / '));
-    if(n.쪽)tip.push('인쇄 p.'+n.쪽);
-    if(n.고정)tip.push('※ 손으로 고정한 대응');
-    if(tip.length)r.title=tip.join(String.fromCharCode(10));
-    list.appendChild(r);
-  });
-  const placed=new Set();
-  M.forEach(n=>n.리담.forEach(x=>placed.add(x)));
-  const unk=[];
-  JM.문제.filter(q=>!placed.has(q.id))
-        .forEach(q=>(q.지문||[]).forEach(z=>unk.push(oxKeyLid(q,z))));
-  list.appendChild(qlItem('__미분류','미분류 (리담)',unk,subj,false,false,null));
-  if(QLJUMP!==null){
-    const j=QLJUMP;QLJUMP=null;
-    setTimeout(()=>{const g=document.getElementById('qg'+j);
-      if(g)g.scrollIntoView({block:'start'});},0);
-  }
-  return list;
-}
-
 /* ══════════ 1차객 뷰 — 목차 트리 + [OX문제 | 기출문제] ══════════ */
 function qCard(q,mokTitle){
   const card=el('div','qwrap');
@@ -2606,7 +2511,7 @@ function qCard(q,mokTitle){
   const memo=el('span','memolink','✏ 메모 및 유사문제 연결');
   memo.title='v0 제외 — 자리만(§3-E)';
   ft.appendChild(memo);
-  ft.appendChild(el('span','cdim','풀이 기록은 이 기기에 쌓인다 — ⤓ 기록으로 내보낸다'));
+  ft.appendChild(el('span','cdim','풀이 기록은 이 기기에 쌓인다 — ⤓ 기록으로 내보띸다'));
   card.appendChild(ft);
   inkHost(card,'q|'+q.id);                 // 캔버스 한 장 = 문항 카드 하나(§4-3)
   return card;
@@ -2684,26 +2589,53 @@ async function viewJimun(){
   // ── 좌측: OX문제면 목차 트리, 기출문제면 연도 목록
   const tree=el('div','tree'+(S.treeHid?' hid':''));
   if(S.jimunTab==='ox'){
-    /* ★ 8/26 — 트리에는 장(11개)만 남긴다. 마디는 가운데 열로 옮겼다(판례탭과 같은 두 열).
-       숫자 배지(📝N·7판N)와 표본 행은 사용자 요구로 뺐다 —
-       ⚠ 표본은 검산 K(판 토글)의 진입로였다. 검산은 지우지 말고 INFO 로 내릴 것(지시서 §0-2). */
+    tree.appendChild(el('div','h',subj+' · 목차 (볼트 + 제7판 병합)'));
     if(!MG){
       tree.appendChild(el('div','h','목차 없음 — 특허만 있다'));
     }else{
-      MG.마디.forEach((n,i)=>{
-        if(n.깊이!==1)return;
-        const r=el('div','r'+(S.mok==='__mg'+i?' on':''));
-        r.appendChild(el('span','nm',(n.no?n.no+'. ':'')+n.제목));
-        r.onclick=()=>{S.mgFold[i]=false;QLJUMP=i;S.mok='__mg'+i;render();};
+      const smp=el('div','r'+(S.mok==='__표본'?' on':''));
+      smp.appendChild(el('span','nm','표본 — 판 토글 시연'));
+      smp.appendChild(el('em','','5'));
+      smp.onclick=()=>{S.mok='__표본';render();};
+      tree.appendChild(smp);
+      const M=MG.마디;
+      // 장을 누르면 그 아래까지 함께 — 롤업으로 센다
+      const roll=M.map((n,i)=>{
+        let a=n.지문.length, b=n.리담.length;
+        for(let j=i+1;j<M.length;j++){
+          if(M[j].깊이<=n.깊이)break;
+          a+=M[j].지문.length; b+=M[j].리담.length;
+        }
+        return [a,b];});
+      M.forEach((n,i)=>{
+        const key='__mg'+i;
+        const r=el('div','r'+(S.mok===key?' on':'')+(n.장?' ch':''));
+        const nm=el('span','nm',(n.no?n.no+' ':'')+n.제목);
+        nm.style.paddingLeft=((n.깊이-1)*10)+'px';
+        if(n.출처==='제7판')nm.style.color='#b8860b';   // 제7판에만 있는 마디 — 옛은 노랑(사용자 확정 · 보라색 폐기)
+        r.appendChild(nm);
+        const em=el('em');
+        const [a7,al]=roll[i];
+        if(al)em.appendChild(el('span','','📝'+al));
+        if(a7)em.appendChild(el('span','','7판'+a7));
+        r.appendChild(em);
+        const tip=[];
+        if(n.p7&&n.p7.length)tip.push('제7판: '+n.p7.join(' / '));
+        if(n.쪽)tip.push('인쇄 p.'+n.쪽);
+        if(n.고정)tip.push('※ 손으로 고정한 대응');
+        if(tip.length)r.title=tip.join(String.fromCharCode(10));
+        if(a7||al)r.onclick=()=>{S.mok=key;render();};
         tree.appendChild(r);
       });
       const un=el('div','r'+(S.mok==='__미분류'?' on':''));
       un.appendChild(el('span','nm','미분류 (리담)'));
+      un.appendChild(el('em','',String(JM.문제.length-new Set(M.flatMap(n=>n.리담)).size)));
       un.onclick=()=>{S.mok='__미분류';render();};
       tree.appendChild(un);
       const lg=el('div','legend');
-      lg.innerHTML='장을 누르면 가운데 목록이 그 자리로 간다<br>'+
-        '<span style="color:#d4b04a">노란색</span> = 볼트에 없고 제7판 차례에만 있는 마디';
+      lg.innerHTML='📝N = 리담 문항 · 7판N = 제7판 지문<br>'+
+        '<span style="color:#b8860b">노란색</span> = 볼트에 없고 제7판 차례에만 있는 마디<br>'+
+        '마디에 커서를 올리면 짝지어진 제7판 차례가 보인다';
       tree.appendChild(lg);
     }
   }else{
@@ -2720,17 +2652,19 @@ async function viewJimun(){
   slot.appendChild(tree);
   slot.appendChild(handle('tree'));
 
-  // ★ 가운데 열 — 마디마다 총문제·암기노트·회독 (민법OX 방식 · 8/26)
-  if(S.jimunTab==='ox'){
-    slot.appendChild(qlColumn(MG,JM,byId,P7,subj));
-    slot.appendChild(handle('list'));
-  }
-
   const main=el('div','main');
+  main.appendChild(el('span','chip c-prec',S.law));
+  const h1=el('div','jotitle');h1.appendChild(el('span','no','1차객'));
+  main.appendChild(h1);
+  main.appendChild(el('div','sihaeng',
+    `문항 ${JM.문항} · 선지 ${JM.선지}  ·  리담 실측 추출(_lidam_문항/선지.csv)`));
+
   const tabs=el('div','modebar');
   [['ox','OX문제'],['gichul','기출문제']].forEach(([k,t])=>{
     const b=el('button','mode'+(S.jimunTab===k?' on':''),t);
     b.onclick=()=>{S.jimunTab=k;render();};tabs.appendChild(b);});
+  tabs.appendChild(el('span','badge',
+    S.jimunTab==='ox'?'목차 마디대로 묶어 본다':'연도별로 본다'));
   main.appendChild(tabs);
 
   /* ── 빠른 실행 큐 · 거르기 · 회독 · 히트맵 (2026-08-26) ──
@@ -2807,11 +2741,17 @@ async function viewJimun(){
       }
       if(!lidam.length&&!p7l.length)
         main.appendChild(emptyBox('📝','이 마디에 묶인 문항이 없다'));
-      if(lidam.length)lidam.forEach(q=>main.appendChild(qCard(q)));
-      if(p7l.length)p7l.forEach(z=>main.appendChild(p7Card(z)));
+      if(lidam.length){
+        main.appendChild(el('div','grp','📝 리담 기출 문항 '+lidam.length));
+        lidam.forEach(q=>main.appendChild(qCard(q)));
+      }
+      if(p7l.length){
+        main.appendChild(el('div','grp','📕 제7판 「nn 변리」 지문 '+p7l.length));
+        p7l.forEach(z=>main.appendChild(p7Card(z)));
+      }
     }else if(!S.mok){
-      main.appendChild(emptyBox('📝','가운데 목록에서 마디를 고르면 그 마디 문항이 묶여 나온다',
-        '문제가 있는 마디에만 「총 N문제」가 붙는다'));
+      main.appendChild(emptyBox('📝','왼쪽 목차에서 마디를 고르면 그 마디 문항이 묶여 나온다',
+        '숫자가 붙은 마디에 문항이 있다'));
     }else{
       let list;
       if(S.mok==='__미분류'){
