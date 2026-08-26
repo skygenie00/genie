@@ -2460,11 +2460,11 @@ let VJ = null, OXOMR = null;         // ★ v3-D — 순번·경로 스냅샷(§
 function oxAll(){ if (!OXREC) OXREC = lsRead(OX_KEY); return OXREC; }
 function rndAll(){ if (!RNDREC) RNDREC = lsRead(RND_KEY); return RNDREC; }
 function fixAll(){ if (!FIXREC) FIXREC = lsRead(FIX_KEY); return FIXREC; }
-function oxKeyP7(z){ return z.sid || ('P7:' + z.id); }
-/* ★ 8/26 흡수 — 리담·제7판이 **같은 지문**이면 컴파일러가 `sid` 를 실어 보낸다.
-   그때는 제7판과 **같은 키**를 써서 기록이 한 자리에 모인다(두 번 풀 이유가 없어진다).
-   ⚠ 앱이 sid 를 지어내지 않는다 — 없으면 예전 키 그대로다(민법OX D10 함정). */
-function oxKeyLid(q, z){ return z.sid || ('L:' + q.id + '#' + z.n); }
+function oxKeyP7(z){ return z.uid || ('P7:' + z.id); }
+/* ★ v정정 ③ (8/27) — 키 하나로 = uid. JSON 이 `sid` 대신 `uid` 를 싣는다.
+   리담·제7판이 같은 지문이면 같은 uid 라 기록이 한 자리에 모인다.
+   ⚠ 앱이 uid 를 지어내지 않는다 — 없으면 예전 키 그대로다(민법OX D10 함정). */
+function oxKeyLid(q, z){ return z.uid || ('L:' + q.id + '#' + z.n); }
 function oxOf(k){ return oxAll()[k] || null; }
 function oxAns(k, raw){ const f = fixAll()[k]; return (f === 'O' || f === 'X') ? f : (raw || ''); }
 function oxFixed(k){ const f = fixAll()[k]; return (f === 'O' || f === 'X') ? f : ''; }
@@ -2715,7 +2715,7 @@ function sidFind(sid){
   const m2 = /^P7:(.+)$/.exec(sid);
   if (m2 && VJ.P7map[m2[1]]) return { kind: 'P', z: VJ.P7map[m2[1]] };
   for (const q of (VJ.qs || [])){
-    const z = (q.지문 || []).find(x => x.sid === sid);
+    const z = (q.지문 || []).find(x => x.uid === sid);
     if (z) return { kind: 'L', q: q, z: z };
   }
   for (const id in VJ.P7map){
@@ -3102,14 +3102,14 @@ function sidCardEl(hit, sid, seq){
   if (seq) h.appendChild(el('b', 'oxseq', seq + '번'));
   h.appendChild(el('span', 'qb v', String(hit.q.연도).slice(2) + ' 변리'));
   h.appendChild(el('span', 'qb n', '기출 · ' + hit.q.연도 + '·' + (hit.q.시험문번 || hit.q.문번) + '번'));
-  h.appendChild(el('span', 'qb id', hit.z.sid || sid));
+  h.appendChild(el('span', 'qb id', hit.z.uid || sid));
   const sp = el('span'); sp.style.flex = '1'; h.appendChild(sp);
   pinTag(sid, h);
   oxTagBar(sid, h);
   card.appendChild(h);
   const row = el('div', 'oxrow'); row.style.borderTop = '0';
   const q1 = el('div', 'oxq');
-  q1.appendChild(el('b', '', '(' + hit.z.n + ') '));
+  q1.appendChild(el('b', '', '(' + (hit.z.기호 || hit.z.n) + ') '));   /* ★ v정정 ①-5 — 박스 항목은 기호 */
   q1.appendChild(document.createTextNode(hit.z.t || ''));
   row.appendChild(q1);
   lnkChips(hit.q, hit.z, q1);
@@ -3421,11 +3421,11 @@ function mokCards(i){
   }
   jos = [...new Set(jos)]; lids = [...new Set(lids)];
   const _seen = new Set();
-  lids.forEach(id => { const q = VJ.byId[id]; if (q)(q.지문 || []).forEach(z => { if (z.sid) _seen.add(z.sid); }); });
+  lids.forEach(id => { const q = VJ.byId[id]; if (q)(q.지문 || []).forEach(z => { if (z.uid) _seen.add(z.uid); }); });
   const out = [];
   lids.map(id => VJ.byId[id]).filter(Boolean)
     .forEach(q => out.push({ kind: 'L', q: q, dom: 'qb-' + q.id }));
-  jos.map(id => VJ.P7map[id]).filter(z => z && !(z.병합 && _seen.has(z.sid)))
+  jos.map(id => VJ.P7map[id]).filter(z => z && !(z.병합 && _seen.has(z.uid)))
     .forEach(z => out.push({ kind: 'P', z: z, dom: 'qb-' + oxKeyP7(z) }));
   return out;
 }
@@ -4487,8 +4487,11 @@ function qCard(q,mokTitle,seq){
      「단답형」·문번은 「기출」 단추의 접힌 한 줄로. 좌표는 제7판 꼴 「18 변리」(사용자 확인 대기). */
   const keysL0=(q.지문||[]).map(z=>oxKeyLid(q,z));
   h.appendChild(el('span','qb v',String(q.연도).slice(2)+' 변리'));
-  const sid0=((q.지문||[])[0]||{}).sid||'';
+  const sid0=((q.지문||[])[0]||{}).uid||'';
   h.appendChild(el('span','qb id',sid0?sid0.slice(0,7):('ID '+q.id)));
+  /* ★ v정정 ④ (8/27) — 문번 71~99 = 이 문항의 uid 가 임시라는 뜻(원장 규칙).
+     뒤에 문번이 확정되면 uid 가 바뀐다 — 그때는 기록 이사 장치가 같이 간다. */
+  if(sid0&&+sid0.slice(5,7)>=71)h.appendChild(el('span','qb t','임시'));
   const typ=(q.유형||'').split('|')[0]||'단답형';
   {
     /* ★ v3-F §3 — 리담 머리 유형 칩은 표시만(조·판례 펼침 없음 — 지문 줄 칩이 근거를 맡는다 §6).
@@ -4509,8 +4512,10 @@ function qCard(q,mokTitle,seq){
     /* ★ v3-F §2(02:54) — 기출변형은 유형 없이 · 문번 미확정은 「리담 순번 N (문번 미확정)」.
        변형 원문 대조 표시는 두지 않는다(원장 154 중 0 — 사용자 8/27). */
     const 문번표기=q.시험문번?(q.시험문번+'번'):('리담 순번 '+q.문번+' (문번 미확정)');
+    /* ★ v정정 ⑤ (8/27) — 표지 키 = (특허·연도·회차·시험지문번). 기출변형은 문번 확정
+       문항에만 붙으므로 펼침 줄도 시험 문번으로 말한다(리담 순번 표기는 원인 소멸). */
     sub.textContent=q.출처==='기출변형'
-      ?(q.연도+'년'+(q.회차?' '+q.회차+'회':'')+' · '+문번표기)
+      ?(q.연도+'년'+(q.회차?' '+q.회차+'회':'')+' · 시험 문번 '+(q.시험문번||q.문번)+'번')
       :(q.연도+'년'+(q.회차?' '+q.회차+'회':'')+' '+문번표기+' · '+typ);
     const pb=el('button','src '+q.출처+' qexp',q.출처);
     pb.title='누르면 문번·유형 한 줄이 펼쳐진다';
@@ -4550,7 +4555,7 @@ function qCard(q,mokTitle,seq){
     const bon=alt?alt.t:z.t, ox2=alt?alt.ox:z.ox, sol2=alt?alt.sol:z.sol;
     const row=el('div','oxrow');
     const q1=el('div','oxq');
-    q1.appendChild(el('b','','('+z.n+') '));   // ★ v3-D §0 — 카드 번호는 머리 순번이 맡는다
+    q1.appendChild(el('b','','('+(z.기호||z.n)+') '));   // ★ v3-D §0 — 카드 번호는 머리 순번이 맡는다 · v정정 ①-5 박스 항목은 기호
     q1.appendChild(document.createTextNode(bon));
     if(pan&&!z.p7)q1.appendChild(el('span','badge','제7판 대응 없음 — 리담판 표시'));
     if(alt&&alt.미확정)q1.appendChild(el('span','qb warn','제7판 정오 미확정'));
@@ -4742,7 +4747,7 @@ function p7Card(z,seq){
   /* ★ v3-F §1 — 배지줄 = 좌표(태그) · ID · 유형 · 「제7판」(접기 단추) · 🃏 만.
      초록 리담 칩·「리담과 흡수됨」·「p.쪽」은 「제7판」 단추의 접힌 한 줄로(정보는 버리지 않는다). */
   h.appendChild(el('span','qb v',z.태그));
-  h.appendChild(el('span','qb id',z.sid||('ID '+z.id)));
+  h.appendChild(el('span','qb id',z.uid||('ID '+z.id)));
   const lk=(P7LID||{})[z.id];
   const JOS=p7Jo(z.sol, lk?(lk.z.jo||[]):[]);
   const cases=[];
@@ -5172,13 +5177,11 @@ async function viewJimun(){
     const pool = [];
     JM.문제.forEach(q => (q.지문 || []).forEach(z =>
       pool.push({ k: oxKeyLid(q, z), dom: 'qb-' + q.id, kind: 'L', q: q, z: z })));
-    /* ★ v3-E (8/27 실측) — 병합인데 제7판 sid 가 리담 쪽 sid 와 다른 행이 7건 있다
-       (예: P7-0021 = T0542513 ↔ 리담 2003-40-9(1) = T0340567 · 원장/컴파일러 몫으로 보고).
-       그런 키는 리담 쪽에서 안 세어지므로 여기서 빠뜨리면 풀·채점표·거르기에서 사라진다. */
-    const sidL = new Set();
-    JM.문제.forEach(q => (q.지문 || []).forEach(z => { if (z.sid) sidL.add(z.sid); }));
+    /* ★ v정정 ③ (8/27) — 키가 uid 하나로 통일돼 병합 지문의 리담·제7판 uid 는
+       같은 원장 행에서 나와 항상 같다. 02:15 의 「sid 다름 7건」 우회(sidL)는
+       원인이 없어져 제거했다. */
     if (P7) P7.지문.forEach(z => {
-      if (z.병합 && (!z.sid || sidL.has(z.sid))) return;   // 리담 쪽에서 이미 셌다
+      if (z.병합) return;   // 병합 지문은 리담 쪽에서 세어진다 (uid 동일 보장)
       pool.push({ k: oxKeyP7(z), dom: 'qb-' + oxKeyP7(z), kind: 'P', z: z }); });
     /* ★ v3-C — 채점표 칩·채점기가 키로 카드(dom)·정오를 찾는 표(§3)
        ★ v3-E — kind·id·이름·본문을 실어 🔗 연결 찾기·점프·학습로그가 같이 쓴다 */
@@ -5262,8 +5265,8 @@ async function viewJimun(){
             마디 배치는 리담·제7판이 따로라, 리담 쪽이 이 마디에 없으면
             숨기는 순간 그 지문이 화면에서 통째로 사라진다(실측 19건). */
       const _seen=new Set();
-      lids.forEach(id=>{const q=byId[id];if(q)(q.지문||[]).forEach(z=>{if(z.sid)_seen.add(z.sid);});});
-      const p7l=jos.map(id=>P7map[id]).filter(z=>z&&!(z.병합&&_seen.has(z.sid)));
+      lids.forEach(id=>{const q=byId[id];if(q)(q.지문||[]).forEach(z=>{if(z.uid)_seen.add(z.uid);});});
+      const p7l=jos.map(id=>P7map[id]).filter(z=>z&&!(z.병합&&_seen.has(z.uid)));
       const bd=el('div','badge',
         `${n.no?n.no+' ':''}${n.제목} — 리담 문항 ${lidam.length} · 제7판 단독 지문 ${p7l.length}`+
         (n.p7&&n.p7.length?`  ·  제7판 차례: ${n.p7.join(' / ')}`:'')+
@@ -5649,7 +5652,7 @@ $('#skin').oninput=async e=>{
         if(String(z.t||'').includes(q))
           out.push({h:'제7판 '+z.태그+' p.'+(z.쪽||'—'),x:skCut(z.t,q),
                     t:z.t,ox:z.ox,sol:z.sol,tag:'제7판',
-                    go:{kind:'P',id:z.id,dom:'qb-'+(z.sid||('P7:'+z.id))}});
+                    go:{kind:'P',id:z.id,dom:'qb-'+(z.uid||('P7:'+z.id))}});
       }
       box.appendChild(el('div','grp','📝 지문 — '+out.length+'건'));
       out.forEach(r=>skRow(box,'jimun',r.h,r.x,r.tag,
