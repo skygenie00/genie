@@ -2960,6 +2960,14 @@ function qCard(q,mokTitle){
     q1.appendChild(document.createTextNode(bon));
     if(pan&&!z.p7)q1.appendChild(el('span','badge','제7판 대응 없음 — 리담판 표시'));
     if(alt&&alt.미확정)q1.appendChild(el('span','qb warn','제7판 정오 미확정'));
+    /* ★ 8/26 — `_정오확정.csv` 를 배선하면서 채운 정오는 **역산값**이다(828건).
+       직독값과 화면에서 구별되어야 한다 — 틀렸을 때 「내가 틀린 건지 역산이 틀린 건지」를 가른다.
+       ⚠ 표본 검증을 한 적이 없다(8/23 외부 대조 154/154 는 규칙 검증이지 이 828건이 아니다). */
+    if(z.역산){
+      const b=el('span','qb warn','역산');
+      b.title='해설 누락에서 되짚은 정오다 — 직독값이 아니다'+(z.정오근거?(' · '+z.정오근거):'');
+      q1.appendChild(b);
+    }
     // ★ 흡수된 선지 — 제7판과 같은 지문이다. 기록이 한 자리에 모이고 정오는 제7판이 정본이다
     if(z.병합){
       q1.appendChild(el('span','qb t','제7판 같은 지문'+(z.p7쪽?' p.'+z.p7쪽:'')));
