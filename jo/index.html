@@ -173,6 +173,7 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .src.제7판{background:#e9f7ee;color:var(--ok)}
 .qt{font-size:13.5px;margin:6px 0}
 /* ── 기출뷰 · OMR (과제 7 · 2026-08-26) ── */
+.c-jo{background:#eaf1fb;color:var(--exc)}
 .solx{margin:6px 0 2px}
 .solx summary{font-size:11.5px;color:#7a6134;cursor:pointer}
 .solb{font-size:12px;color:#6b665d;line-height:1.6;white-space:pre-wrap;margin-top:4px;
@@ -2345,6 +2346,31 @@ function lnkPop(kind, key, ev){
   });
   showPop(ev);
 }
+/* ★ 8/26 — 조문 코드를 사람이 읽는 표기로 바꾼다.
+   전엔 `특-29-3` 에서 접두만 떼고 `29-3` 을 찍고 뒤에 「같은 조문 수」를 ` · 21` 로 이어 붙여
+   **`29-3 · 21` 이 조문 번호처럼 보였다**(사용자 지적). 머리 배지의 `제176-1조` 도 같은 원인이다. */
+const JOHANG = ['', '①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮'];
+function joCode(c){                       // 조 단위만 — 팝업 키
+  const g = String(c || '').split('-');
+  if (g.length < 2) return '';
+  return '제' + (g[1].indexOf('의') >= 0 ? g[1].replace('의', '조의') : g[1] + '조');
+}
+function joLabel(c){                      // 제29조③ · 제132조의2① · 제29조① 2호
+  const g = String(c || '').split('-');
+  if (g.length < 2) return String(c || '');
+  let k = joCode(c);
+  if (g[2]) k += (JOHANG[+g[2]] || ('제' + g[2] + '항'));
+  if (g[3]) k += ' ' + g[3] + '호';
+  return k;
+}
+function joChip(c, host){
+  const n = (((LNKIDX || {}).jo || {})[c] || []).length;
+  const b = el('button', 'chip c-jo', '⚖ ' + joLabel(c) + (n > 1 ? ' ·' + (n - 1) : ''));
+  b.title = '누르면 조문 원문' + (n > 1 ? ' · 오른쪽 클릭이면 같은 조문 지문 ' + (n - 1) + '개' : '');
+  b.onclick = ev => { ev.stopPropagation(); const k = joCode(c); if (k) popJo(S.law, k, ev, 1); };
+  b.oncontextmenu = ev => { ev.preventDefault(); ev.stopPropagation(); if (n > 1) lnkPop('jo', c, ev); };
+  host.appendChild(b);
+}
 function lnkChips(q, z, host){
   const p = (z.pan || '').trim();
   if (p){
@@ -2356,13 +2382,24 @@ function lnkChips(q, z, host){
       host.appendChild(b);
     }
   }
-  (z.jo || []).forEach(c => {
-    const n = (((LNKIDX || {}).jo || {})[c] || []).length;
-    const b = el('button', 'chip c-prec', '⚖ ' + c.replace(/^[특상디]-/, '') + (n > 1 ? ' · ' + (n - 1) : ''));
-    b.title = n > 1 ? '같은 조문이 근거인 지문 ' + (n - 1) + '개' : '이 조문이 근거인 지문은 이것뿐';
-    if (n > 1) b.onclick = ev => { ev.stopPropagation(); lnkPop('jo', c, ev); };
-    host.appendChild(b);
-  });
+  const js = z.jo || [];
+  js.slice(0, 3).forEach(c => joChip(c, host));   // ⚠ 선지당 최대 9개까지 붙어 줄이 터졌다
+  if (js.length > 3){
+    const m = el('button', 'chip c-jo', '＋' + (js.length - 3));
+    m.title = js.slice(3).map(joLabel).join(' · ');
+    m.onclick = ev => {
+      ev.stopPropagation();
+      const body = popShell('q', '⚖ 근거 조문 ' + js.length + '개');
+      js.forEach(c => {
+        const r = el('div', 'lnkrow');
+        r.appendChild(el('span', 'qb t', joLabel(c)));
+        r.onclick = e2 => { const k = joCode(c); if (k) popJo(S.law, k, e2, 1); };
+        body.appendChild(r);
+      });
+      showPop(ev);
+    };
+    host.appendChild(m);
+  }
 }
 /* ══════ 🃏 암기카드 (P6 설계 · 민법OX 방식 2026-08-26) ══════
    결과물은 SVG — 볼트 암기카드결과물 의 md 안 <svg> 를 끌어다 넣는다.
@@ -2789,16 +2826,23 @@ function giCard(q, graded){
   const c = el('div', 'jimun'); c.id = 'gi-' + k;
   const h = el('div', 'jhd');
   h.appendChild(el('span', 'qb n', giNo(q) + '번'));
-  if (q.시험문번 && String(q.시험문번) !== String(q.문번))
-    h.appendChild(el('span', 'qb id', '리담 순번 ' + q.문번));
+  // ⚠ 8/26 사용자 — A형 칩·리담 순번 칩은 안 붙인다(머리 배지는 시험 자리만 보인다)
   if (q.출처) h.appendChild(el('span', 'src ' + q.출처, q.출처));
-  if (q.형) h.appendChild(el('span', 'qb t', q.형 + '형'));
+  if (q.갈래) h.appendChild(el('span', 'qb t', q.갈래));
   if (!ans.length) h.appendChild(el('span', 'qb warn', '정답표 없음 · 채점 안 함'));
   else if (ans.length > 1) h.appendChild(el('span', 'qb warn', '복수정답'));
   if (graded && ans.length)
     h.appendChild(el('span', 'qb ' + (rec.ok ? 't' : 'warn'), rec.ok ? '맞음' : '틀림'));
   c.appendChild(h);
   c.appendChild(el('div', 'qt', q.발문 || ''));
+  // 조합형 — 보기 ㄱ~ㅁ 을 선지 위에 둔다(보기도 지문이다)
+  (q.보기 || []).forEach(g => {
+    const r = el('div', 'gich');
+    r.appendChild(el('button', 'ginum', g.보기기호));
+    r.appendChild(el('div', 'gitx', g.보기본문 || ''));
+    if (graded && g.정오) r.appendChild(el('span', 'qb ' + (g.정오 === 'O' ? 't' : 'warn'), g.정오));
+    c.appendChild(r);
+  });
   (q.지문 || []).forEach((z, i) => {
     const n = String(i + 1), sel = String(rec.p || '') === n;
     const row = el('div', 'gich' + (sel ? ' sel' : '') +
@@ -2871,9 +2915,20 @@ function qCard(q,mokTitle){
   const h=el('div','qhd');
   h.appendChild(el('span','qb v','변리사 '+String(q.연도).slice(2)));
   const typ=(q.유형||'').split('|')[0]||'단답형';
-  h.appendChild(el('span','qb t',typ+(q.조&&q.조.length?(' · 제'+q.조[0].replace(/^[특상디]-/,'')+'조'):'')));
-  h.appendChild(el('span','qb n',q.연도+':'+(q.회차||'')+':'+q.문번));
-  h.appendChild(el('span','qb id','ID '+q.id));
+  h.appendChild(el('span','qb t',typ));
+  // ★ 조문형 / 판례형 — 근거에서 산출한 갈래(컴파일러). 63회 약점 분석과 같은 축이다
+  if(q.갈래)h.appendChild(el('span','qb '+(q.갈래==='판례형'?'v':'t'),q.갈래));
+  /* ★ ID 규약 v3 — [법1][연도2][회차2][문번2][지문1] 8자.
+     전엔 `2009:46:5` 와 `ID 2009-46-5` 가 같은 값을 두 번 찍었고 그 `5`는 **리담 순번**이었다
+     (이 문항의 실제 시험문번은 6번이다). 이제 8자 ID 앞 7자(문항 자리)를 보인다. */
+  const sid0=((q.지문||[])[0]||{}).sid||'';
+  if(q.시험문번)h.appendChild(el('span','qb n',q.연도+' '+q.시험문번+'번'));
+  else{
+    const s=el('span','qb n',q.연도+' 순번'+q.문번+'*');
+    s.title='시험 문번이 아직 확정되지 않았다 — 리담 시트 순번이다';
+    h.appendChild(s);
+  }
+  h.appendChild(el('span','qb id',sid0?sid0.slice(0,7):('ID '+q.id)));
   h.appendChild(el('span','src '+q.출처,q.출처));
   if(mokTitle)h.appendChild(el('span','chip c-theme',mokTitle));
   const sp=el('span');sp.style.flex='1';h.appendChild(sp);
@@ -3099,7 +3154,10 @@ async function viewJimun(){
     Object.keys(byY).sort().reverse().forEach(y=>{
       const L=byY[y], g=L.filter(giGradable).length, yr=giYearOf(y)||{};
       const r=el('div','r'+(S.year===y?' on':''));
-      r.appendChild(el('span','nm',y+'년'+(L[0].회차?'  '+L[0].회차+'회':'')+(g?'':'  · 정답표 없음')));
+      const num=L.some(x=>x.시험문번);
+      r.appendChild(el('span','nm',y+'년'+(L[0].회차?'  '+L[0].회차+'회':'')+
+        (g?'':(num?'  · 정답표 없음':'  · 시험 순서 아님'))));
+      if(!num)r.title='이 해는 시험 문번이 확정되지 않았다 — 리담 순번 순서로 늘어놓은 모음이다';
       r.appendChild(el('em','',yr.sub?(yr.right+'/'+yr.n):(L.length+'')));
       r.onclick=()=>{S.year=y;S.omr=false;S.giWrong=false;S.omrCur=0;render();};
       tree.appendChild(r);
@@ -3288,8 +3346,43 @@ function skCut(t,q){
   if(i<0)return String(t||'').slice(0,60);
   return String(t).slice(Math.max(0,i-22),i+q.length+34);
 }
-function popJimun(title,body,ev){
+/* ★ 8/26 — 지문 검색 결과에서 **그 지문 자리로 간다**(남은 항목이었다).
+   제7판 지문이 어느 마디에 걸렸는지 되짚는 역색인이 없어 미뤄 뒀는데,
+   `mokcha_병합.json` 의 마디마다 `지문`(제7판 ID)·`리담`(문항 ID) 목록이 이미 있다 —
+   그걸 뒤집으면 한 번에 만들어진다. */
+let MOKIDX = null;
+async function mokIndex(){
+  if (MOKIDX) return MOKIDX;
+  MOKIDX = { p7: {}, lid: {} };
+  try{
+    const MG = await get('mokcha_병합.json');
+    (MG.마디 || []).forEach((n, i) => {
+      (n.지문 || []).forEach(id => { if (MOKIDX.p7[id] === undefined) MOKIDX.p7[id] = i; });
+      (n.리담 || []).forEach(id => { if (MOKIDX.lid[id] === undefined) MOKIDX.lid[id] = i; });
+    });
+  }catch(e){}
+  return MOKIDX;
+}
+async function gotoJimun(kind, id, dom){
+  const ix = await mokIndex();
+  const i = (kind === 'P' ? ix.p7 : ix.lid)[id];
+  if (i === undefined){ toast('이 지문이 걸린 마디를 찾지 못했다 — 목차에 안 붙은 지문이다'); return; }
+  S.tab = 'jimun'; S.jimunTab = 'ox'; S.oxQueue = ''; S.mok = '__mg' + i;
+  closeAllPops(); await render();
+  setTimeout(() => {
+    const box = document.getElementById(dom);
+    if (!box){ toast('마디는 열었는데 그 카드가 거르기에 걸려 있다'); return; }
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    box.classList.add('hmhit'); setTimeout(() => box.classList.remove('hmhit'), 2000);
+  }, 60);
+}
+function popJimun(title,body,ev,go){
   const b=popShell('q','📝 '+title);
+  if(go){
+    const g=el('button','tool on','그 지문으로 가기 ↗');
+    g.onclick=()=>gotoJimun(go.kind,go.id,go.dom);
+    b.appendChild(g);
+  }
   body.forEach(x=>b.appendChild(el('div',x[0],x[1])));
   showPop(ev);
 }
@@ -3342,7 +3435,8 @@ $('#skin').oninput=async e=>{
         for(const z of (qq.지문||[])){
           if(String(z.t||'').includes(q)){
             out.push({h:qq.연도+'년 '+(qq.시험문번||qq.문번)+'번 ('+z.n+')',x:skCut(z.t,q),
-                      t:z.t,ox:z.ox,sol:z.sol,tag:'리담'});break;}
+                      t:z.t,ox:z.ox,sol:z.sol,tag:'리담',
+                      go:{kind:'L',id:qq.id,dom:'qb-'+qq.id}});break;}
         }
       }
       let P7=null;
@@ -3351,7 +3445,8 @@ $('#skin').oninput=async e=>{
         if(out.length>=60)break;
         if(String(z.t||'').includes(q))
           out.push({h:'제7판 '+z.태그+' p.'+(z.쪽||'—'),x:skCut(z.t,q),
-                    t:z.t,ox:z.ox,sol:z.sol,tag:'제7판'});
+                    t:z.t,ox:z.ox,sol:z.sol,tag:'제7판',
+                    go:{kind:'P',id:z.id,dom:'qb-'+(z.sid||('P7:'+z.id))}});
       }
       box.appendChild(el('div','grp','📝 지문 — '+out.length+'건'));
       out.forEach(r=>skRow(box,'jimun',r.h,r.x,r.tag,
@@ -3359,7 +3454,7 @@ $('#skin').oninput=async e=>{
           const rows=[['',(r.tag==='제7판'?p7Text(r.t):r.t)]];
           if(r.ox)rows.push(['badge','정오 '+r.ox]);
           if(r.sol)rows.push(['sol',(r.tag==='제7판'?p7Text(r.sol):r.sol)]);
-          popJimun(r.h,rows,ev);}));
+          popJimun(r.h,rows,ev,r.go);}));
     }catch(err){box.appendChild(el('div','grp','📝 지문 — 읽지 못했다'));}
   }
   const rs=box.querySelectorAll('.res');
