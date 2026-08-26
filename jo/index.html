@@ -517,7 +517,7 @@ body.inkon .main,body.inkon .pop{user-select:none}
 /* ══ v3-F — 배지줄 정리 · 팝업 카드 · 알약 · 📍 좌표기억 ══ */
 .qsub{font-size:10.5px;color:#8a867d;margin:2px 0 4px;padding-left:4px}
 .qexp{cursor:pointer}
-.pintag{border:1px dashed #b8860b !important;color:#b8860b}
+.pintag{border:1px solid #b8860b !important;color:#b8860b}   /* ★ v3-F3 ② — want 는 이 클래스를 안 쓴다 */
 .pintag.has{border-style:solid !important;background:#fdf1e3}
 .pintag.stale{border-style:solid !important;border-color:var(--rule) !important;color:var(--rule);background:#fdf0f0}
 .oxpill{position:fixed;right:18px;bottom:112px;z-index:56;display:flex;gap:6px;align-items:center;
@@ -602,6 +602,8 @@ const S={law:'특허법',tab:'jo',jo:null,prec:null,precTab:'요약',
          omrPage:1,omrPick:null,   // ★ v3-E §1-3 — 정리OMR 쪽 · 위치 찍기 모드
          // ★ v3-F §8 — 조문 탭 정오문제 패널(조를 바꿔도 열린 채 따라간다)
          joPanel:false,joPanelF:'all',joPanelN:3,joPanelP:0,joPanelW:340,
+         // ★ v3-F3 ④ — 히트맵 범위(마디 바꿔도 유지) · 접기(jopangi_ui 에도 기억)
+         heatScope:'self',heatFold:false,
          series:'',yearFilter:'',yearSort:'asc',zoom:0.55,
          // §3 마크업 스티커 편집 모드 · §4 필기 모드 — 둘 다 기본은 꺼짐(T5)
          stick:false,ink:false,inkColor:'#D93B3B',inkW:2,inkErase:false,
@@ -610,9 +612,9 @@ const S={law:'특허법',tab:'jo',jo:null,prec:null,precTab:'요약',
 const UI_KEY='jopangi_ui';   // ⚠ `jopangi.` 접두가 아니다 — 기록 내보내기·건수에서 빠진다
 try{const u=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if(u.nmw>0)S.qlNmW=u.nmw;if(u.rdw>0)S.qlRdW=u.rdw;
-    if(u.jpw>0)S.joPanelW=u.jpw;}catch(e){}
+    if(u.jpw>0)S.joPanelW=u.jpw;if(u.hfold)S.heatFold=true;}catch(e){}
 function uiSave(){try{localStorage.setItem(UI_KEY,JSON.stringify(
-  {nmw:S.qlNmW,rdw:S.qlRdW,jpw:S.joPanelW}));}catch(e){}}
+  {nmw:S.qlNmW,rdw:S.qlRdW,jpw:S.joPanelW,hfold:S.heatFold?1:0}));}catch(e){}}
 const C={};
 const $=(s,r)=>(r||document).querySelector(s);
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;
@@ -902,6 +904,9 @@ async function viewJo(){
     b.onclick=()=>{S.joPanel=!S.joPanel;S.joPanelP=0;render();};
     link.appendChild(b);
   }
+  /* ★ v3-F3 ③ — 자리표는 남긴다(나중에 쓴다 · 사용자 8/27) — 라벨만 「준비 중」 */
+  link.appendChild(el('span','chip c-theme','🧩 테마 — 준비 중'));
+  link.appendChild(el('span','chip c-card','🃏 카드 — 준비 중'));
   main.appendChild(link);
 
   // ── 모드 바 — 빈칸은 갈래가 아니라 이 조문의 모드다(§4-4 다중선택)
@@ -2874,7 +2879,10 @@ function pinInfo(key){
 function pinTag(key, host){
   if (S.law !== '특허법') return;
   const info = pinInfo(key);
-  const b = el('button', 'qtag pintag' + (info.st === 'has' ? ' has' : (info.st === 'stale' ? ' stale' : '')), '📍');
+  /* ★ v3-F3 ② — 위치 없음(want)은 다른 태그처럼 흐릿하게(주황 점선 폐기 · 사용자 8/27) */
+  const b = el('button', info.st === 'want' ? 'qtag'
+    : ('qtag pintag' + (info.st === 'stale' ? ' stale' : ' has')), '📍');
+  if (info.st === 'want') b.style.opacity = '.6';
   b.title = info.st === 'want' ? '정리OMR 위치 없음 — 누르면 위치 찍기'
           : info.st === 'stale' ? '판이 바뀌어 위치 점검 필요 — 누르면 좌표기억'
           : '좌표기억 — 누르면 그 행 미리보기';
@@ -3072,7 +3080,8 @@ async function joPanelMount(slot){
   const nL = ent.L.length, nP = ent.P.length;
   const shown = items.filter(it =>
     S.joPanelF === 'all' || (S.joPanelF === 'L' ? it.kind === 'L' : it.kind === 'P'));
-  const per = Math.max(1, Math.min(5, S.joPanelN || 3));
+  /* ★ v3-F3 ③ — 한 쪽 = 지문 5개 고정(사용자 8/27 · 「한 번에 N개」 선택 폐기) */
+  const per = 5;
   const nPg = Math.max(1, Math.ceil(shown.length / per));
   if (S.joPanelP >= nPg) S.joPanelP = 0;
   const cur = shown.slice(S.joPanelP * per, (S.joPanelP + 1) * per);
@@ -3084,14 +3093,14 @@ async function joPanelMount(slot){
     cb.appendChild(b);
   });
   pane.appendChild(cb);
+  /* ★ v3-F3 ③ — 쪽 단추 「1 2 3 4 5 …」(지금 쪽 강조) · p/P 표기는 뺀다 */
   const cb2 = el('div', 'ctrlbar');
-  cb2.appendChild(el('span', 'pl', '한 번에'));
-  [1, 2, 3, 4, 5].forEach(n2 => {
-    const b = el('button', 'tool' + (per === n2 ? ' on' : ''), String(n2));
-    b.onclick = () => { S.joPanelN = n2; S.joPanelP = 0; render(); };
+  cb2.appendChild(el('span', 'pl', '쪽'));
+  for (let p2 = 0; p2 < nPg; p2++){
+    const b = el('button', 'tool' + (S.joPanelP === p2 ? ' on' : ''), String(p2 + 1));
+    b.onclick = ((pp) => () => { S.joPanelP = pp; render(); })(p2);
     cb2.appendChild(b);
-  });
-  cb2.appendChild(el('span', 'badge', (S.joPanelP + 1) + ' / ' + nPg));
+  }
   pane.appendChild(cb2);
   if (!shown.length) pane.appendChild(emptyBox('☑', '이 조에 걸린 지문이 없다'));
   cur.forEach((it, ix) => {
@@ -3664,6 +3673,8 @@ function heatBox(cells){
         box.scrollIntoView({ behavior: 'smooth', block: 'center' });
         box.classList.add('hmhit');
         setTimeout(() => box.classList.remove('hmhit'), 2000);
+      } else if (cell.k && typeof linkGo === 'function'){
+        linkGo(cell.k);   // ★ v3-F3 ④ — 다른 마디의 칸이면 그 마디·쪽으로 이동
       } else toast('그 지문은 지금 걸러져 화면에 없다 — 거르기를 「전체」로 두면 보인다');
     };
     if (cell.pg != null && cell.pg !== S.oxPage){
@@ -5169,9 +5180,42 @@ async function viewJimun(){
       const unDone = pgCells.filter(x => oxAns(x.k, x.ans) && !((oxOf(x.k) || {}).p));
       const marked = unDone.filter(x => ((oxOf(x.k) || {}).m));
       if (allCells.length){
-        const hb = heatBox(allCells);
+        /* ★ v3-F3 ④ — 범위 단추(전체/대목차/중목차/소단원 · 이름으로 · S.heatScope 유지) ·
+           「접기」(칸만 접고 머리 줄은 남는다 · jopangi_ui) · 「쪽·마킹」 칩은 알약이 맡는다 */
+        const anc = {};
+        {
+          let d = (VJ.M[i] || {}).깊이 || 9;
+          if (d === 1) anc.top = i; else if (d === 2) anc.mid = i;
+          for (let j = i - 1; j >= 0; j--){
+            const nd = VJ.M[j]; if (!nd) continue;
+            if (nd.깊이 < d){
+              d = nd.깊이;
+              if (d === 2 && anc.mid == null) anc.mid = j;
+              if (d === 1){ if (anc.top == null) anc.top = j; break; }
+            }
+          }
+        }
+        const mokNm = j => ((VJ.M[j].no ? VJ.M[j].no + (VJ.M[j].깊이 === 1 ? '. ' : ' ') : '') + VJ.M[j].제목);
+        const cellsTop = (anc.top != null && anc.top !== i) ? mokCells(mokCards(anc.top)) : null;
+        const cellsMid = (anc.mid != null && anc.mid !== i) ? mokCells(mokCards(anc.mid)) : null;
+        if (!S.heatScope) S.heatScope = 'self';
+        const heatCells = S.heatScope === 'all'
+            ? Object.keys(OXPOOL || {}).map(k => ({ k: k, dom: ((OXPOOL || {})[k] || {}).dom }))
+          : (S.heatScope === 'top' && cellsTop) ? cellsTop
+          : (S.heatScope === 'mid' && cellsMid) ? cellsMid
+          : allCells;
+        const hb = heatBox(heatCells);
         const hh = hb.querySelector('.hmhd');
         if (hh){
+          const scopes = [['all', '전체 ' + Object.keys(OXPOOL || {}).length]];
+          if (cellsTop) scopes.push(['top', mokNm(anc.top) + ' ' + cellsTop.length]);
+          if (cellsMid) scopes.push(['mid', mokNm(anc.mid) + ' ' + cellsMid.length]);
+          scopes.push(['self', '소단원 ' + allCells.length]);
+          scopes.forEach(p2 => {
+            const b = el('button', 'tool' + (S.heatScope === p2[0] ? ' on' : ''), p2[1]);
+            b.onclick = () => { S.heatScope = p2[0]; render(); };
+            hh.appendChild(b);
+          });
           const sbtn = el('button', 'tool', '📊 채점표');
           sbtn.title = '채점 결과 · 회독별 비교';
           sbtn.onclick = ev => rsltPop(scope2, keysAll, mokLabel, ev);
@@ -5183,9 +5227,14 @@ async function viewJimun(){
               ' / 총 ' + allCells.length, ctx, ev);
           };
           hh.appendChild(ob);
-          hh.appendChild(el('span', 'badge',
-            '쪽 ' + (S.oxPage + 1) + '/' + nPg + ' · 마킹 ' + marked.length + '/' + unDone.length));
+          const fold = el('button', 'tool', S.heatFold ? '펴기' : '접기');
+          fold.style.marginLeft = 'auto';
+          fold.title = '히트맵 칸만 접는다 — 머리 줄은 남는다';
+          fold.onclick = () => { S.heatFold = !S.heatFold; uiSave(); render(); };
+          hh.appendChild(fold);
         }
+        const cv2 = hb.querySelector('.hmcv');
+        if (cv2 && S.heatFold) cv2.style.display = 'none';
         main.appendChild(hb);
       }
       if (!CARDS.length)
