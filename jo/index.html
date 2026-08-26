@@ -430,12 +430,25 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .orphan{background:#fde9e9;color:var(--rule)}
 
 /* ══ 1차객 풀이 · 히트맵 (§7·§9 · 5상태) ══ */
-.hmdot{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:-1px;margin-right:3px}
+.hmdot{display:inline-block;width:8px;height:8px;border-radius:2px;vertical-align:-1px;margin-right:3px}
 .hmdot.s0{background:#D3D1C7}.hmdot.s1{background:#1D9E75}.hmdot.s2{background:#EF9F27}
 .hmdot.s3{background:#E24B4A}.hmdot.s4{background:#F5E06A}
 .hmwrap{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:8px 0;background:#fff}
-.hmhd{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:6px;font-size:11px;color:#666}
-.hmlg{white-space:nowrap}
+/* ★ v3-F4 (8/27) — 머리 줄 = 민법OX 「진행 히트맵」 실측 그대로 */
+.hmhd{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;font-size:11px;color:#666}
+.hmhd .pl{font-size:11px;font-weight:800;color:#4b5563}
+.hmlg{white-space:nowrap;font-size:10px;font-weight:700;color:#6b7280}
+.hmlg+.hmlg{margin-left:2px}
+.hmscs{display:flex;flex-wrap:wrap;gap:4px}
+.hmsc{font-size:10px;line-height:1.4;padding:2px 6px;border-radius:4px;border:1px solid #d1d5db;
+  background:#fff;color:#6b7280;font-weight:700;white-space:nowrap}
+.hmsc:hover{border-color:#6b7280}
+.hmsc.on{background:#1f2937;color:#fff;border-color:#1f2937}
+.hmsc b{font-weight:800;color:#1f2937}
+.hmsc.on b{color:#fff}
+.hmsp{flex:1}
+.hmfold{border:0;background:none;padding:0;font-size:10px;font-weight:700;color:#9ca3af;flex-shrink:0}
+.hmfold:hover{color:#4b5563}
 .hmcv{width:100%;display:block;cursor:pointer}
 .qwrap.hmhit{outline:2px solid var(--exc);outline-offset:2px}
 /* ══ 같은 판례·조문 · 암기카드 (2026-08-26) ══ */
@@ -5307,28 +5320,40 @@ async function viewJimun(){
         const hb = heatBox(heatCells);
         const hh = hb.querySelector('.hmhd');
         if (hh){
-          const scopes = [['all', '전체 ' + Object.keys(OXPOOL || {}).length]];
-          if (cellsTop) scopes.push(['top', mokNm(anc.top) + ' ' + cellsTop.length]);
-          if (cellsMid) scopes.push(['mid', mokNm(anc.mid) + ' ' + cellsMid.length]);
-          scopes.push(['self', '소단원 ' + allCells.length]);
+          /* ★ v3-F4 (사용자 8/27 그림) — 머리 줄을 민법OX 「진행 히트맵」과 같은 크기·배열로:
+             라벨 · 작은 범위 단추(전체는 수 없음) · 채점표·OMR · (빈칸) · 범례 · 「접기 ▲」 맨 오른쪽 */
+          const legend = Array.from(hh.querySelectorAll('.hmlg'));
+          const sc = el('div', 'hmscs');
+          const scopes = [['all', '전체', null]];
+          if (cellsTop) scopes.push(['top', mokNm(anc.top), cellsTop.length]);
+          if (cellsMid) scopes.push(['mid', mokNm(anc.mid), cellsMid.length]);
+          scopes.push(['self', '소단원', allCells.length]);
           scopes.forEach(p2 => {
-            const b = el('button', 'tool' + (S.heatScope === p2[0] ? ' on' : ''), p2[1]);
+            const b = el('button', 'hmsc' + (S.heatScope === p2[0] ? ' on' : ''), p2[1]);
+            if (p2[2] != null){
+              b.appendChild(document.createTextNode(' '));
+              b.appendChild(el('b', '', p2[2].toLocaleString()));
+            }
             b.onclick = () => { S.heatScope = p2[0]; render(); };
-            hh.appendChild(b);
+            sc.appendChild(b);
           });
-          const sbtn = el('button', 'tool', '📊 채점표');
+          hh.appendChild(sc);
+          const sc2 = el('div', 'hmscs');
+          const sbtn = el('button', 'hmsc', '📊 채점표');
           sbtn.title = '채점 결과 · 회독별 비교';
           sbtn.onclick = ev => rsltPop(scope2, keysAll, mokLabel, ev);
-          hh.appendChild(sbtn);
-          const ob = el('button', 'tool', '📝 OMR');
+          sc2.appendChild(sbtn);
+          const ob = el('button', 'hmsc', '📝 OMR');
           ob.onclick = ev => {
             const a0 = allCells.indexOf(pgCells[0]) + 1;
             oxOmrOpen(pgCells, 'OMR 마킹 · 문제 ' + a0 + '-' + (a0 + pgCells.length - 1) +
               ' / 총 ' + allCells.length, ctx, ev);
           };
-          hh.appendChild(ob);
-          const fold = el('button', 'tool', S.heatFold ? '펴기' : '접기');
-          fold.style.marginLeft = 'auto';
+          sc2.appendChild(ob);
+          hh.appendChild(sc2);
+          hh.appendChild(el('span', 'hmsp'));
+          legend.forEach(s => hh.appendChild(s));
+          const fold = el('button', 'hmfold', S.heatFold ? '펴기 ▼' : '접기 ▲');
           fold.title = '히트맵 칸만 접는다 — 머리 줄은 남는다';
           fold.onclick = () => { S.heatFold = !S.heatFold; uiSave(); render(); };
           hh.appendChild(fold);
