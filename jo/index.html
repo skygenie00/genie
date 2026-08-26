@@ -249,6 +249,20 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .jdim{opacity:.5}
 .hangchip{float:right;font-size:10px;color:#8a6d00;background:#f5e9c0;border-radius:4px;padding:1px 6px;margin-left:8px;white-space:nowrap}
 .ptchip{font-size:10px;background:#f5e9c0;color:#8a6d00;border-radius:4px;padding:1px 6px;margin-left:6px;white-space:nowrap}
+/* ★ v3-H §4 포스트잇 · §5 테마 */
+.pitw{border-bottom:2px dotted #b8860b;cursor:pointer}
+.pitw.oth{border-bottom-color:#b0aca2}
+.pitline{position:relative;padding-right:15px}
+.pitflag{position:absolute;right:1px;width:9px;height:11px;background:#ffd75e;border:1px solid #d9b23c;border-radius:2px;cursor:pointer}
+.pitflag.oth{background:#f2ecd8;border-color:#cfc9b8}
+.pitflag.orph{background:#eee;border-style:dashed}
+.pitmenu{position:fixed;z-index:99999;background:#fff;border:1px solid #d9b23c;border-radius:8px;padding:5px 11px;box-shadow:0 4px 14px rgba(0,0,0,.15);font-size:12.5px;cursor:pointer}
+.thwrap{margin:8px 0;border:1px solid #e2dfd6;border-radius:10px;padding:10px;background:#fbfaf6}
+.thhd{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.thcols{display:flex;gap:8px;overflow-x:auto;align-items:stretch;margin-top:8px}
+.thcol{min-width:190px;max-width:240px;flex:0 0 auto;border:1px solid #e5e2da;border-radius:8px;background:#fff;padding:8px}
+.thcol.add{border-style:dashed;background:#fdfdfb;color:#999}
+.thcol .bj2{font-size:12px;color:#555;margin-top:5px;line-height:1.45;max-height:3.6em;overflow:hidden}
 
 /* ── 카드 본문 ── */
 .ctitle{font-weight:700;font-size:11.5px;margin-bottom:3px;line-height:1.35}
@@ -937,10 +951,14 @@ async function viewJo(){
     b.onclick=()=>{S.joPanel=!S.joPanel;S.joPanelP=0;render();};
     link.appendChild(b);
   }
-  /* ★ v3-F3 ③ — 자리표는 남긴다(나중에 쓴다 · 사용자 8/27) — 라벨만 「준비 중」 */
-  link.appendChild(el('span','chip c-theme','🧩 테마 — 준비 중'));
+  /* ★ v3-H §5 — 테마 = 3법 비교 자리 + 내가 만드는 비교(단일법도 열 비교 · 사양서 §4-1 개정) */
+  {const n=pitCount('jo|'+S.law+':'+S.jo+SEP);   /* ⚠ base 는 아래(모드바)에서 선언된다 — 여기서 못 쓴다 */
+   if(n)link.appendChild(el('span','chip c-quiz','🗒 메모 '+n));}
+  const thBox=el('div');
+  await thChips(link,thBox);
   link.appendChild(el('span','chip c-card','🃏 카드 — 준비 중'));
   main.appendChild(link);
+  main.appendChild(thBox);
 
   // ── 모드 바 — 빈칸은 갈래가 아니라 이 조문의 모드다(§4-4 다중선택)
   const mb=el('div','modebar');
@@ -992,6 +1010,7 @@ async function viewJo(){
     d.appendChild(renderLine(row,{m:ap.eff[ri],rec:j,law:S.law,base:base,
                                   stick:S.stick,lockLabel:pinned}));
     if(row.b){const a=el('span','anchor','^'+row.b);a.id='b-'+row.b;d.appendChild(a);}
+    pitWire(d,'jo|'+base,rowKey(row),row.t||'');   /* ★ v3-H §4 */
     box.appendChild(d);
   });
   blk.appendChild(box);
@@ -1164,7 +1183,7 @@ const REC_NAMES = { ox:'1차객 풀이 (O/X · 헷갈림 · 태그)', rounds:'1�
 function recLabel(k){
   const t = k.slice(REC_PRE.length);
   if (REC_NAMES[t]) return REC_NAMES[t];
-  if (t.indexOf('memo.') === 0) return '메모 · ' + t.slice(5);
+  if (t.indexOf('memo.') === 0) return '메모(옛 · 포스트잇으로 이사됨) · ' + t.slice(5);
   return t;
 }
 /* 층을 지우거나 들여온 뒤엔 메모리 캐시를 비워야 화면이 새 값을 본다 */
@@ -1430,6 +1449,206 @@ function popRec(ev){
   showPop(ev);
 }
 
+/* ══ v3-H §5 — 🧩 테마(3법 비교) + 내 비교 ══
+   원본 = jo/data/테마.json (조문이 빈 테마는 칩을 안 보인다 · 내용은 사용자 몫 · §7-a).
+   내가 더한 열·내가 만든 비교 = jopangi.compare (내보내기 포함 · 테마.json 무수정). */
+function uiThOpen(){ try{ return JSON.parse(localStorage.getItem('jopangi_ui_th') || '""'); }catch(e){ return ''; } }
+function uiThToggle(id, force){
+  const v = (force || uiThOpen() !== id) ? id : '';
+  try{ localStorage.setItem('jopangi_ui_th', JSON.stringify(v)); }catch(e){}
+}
+async function thChips(link, thBox){
+  let TH = null;
+  try{ TH = await get('테마.json'); }catch(e){}
+  const themes = (TH && TH.테마) || [];
+  themes.forEach(t2 => {
+    const jos = t2.조문 || {};
+    const total = LAWS.reduce((a, l) => a + ((jos[l] || []).length), 0);
+    if (!total) return;                                   // 조문이 빈 테마는 칩 없음
+    if ((jos[S.law] || []).indexOf(S.jo) < 0) return;     // 지금 보는 조가 속한 테마만
+    const nLaw = LAWS.filter(l => (jos[l] || []).length).length;
+    const open = uiThOpen() === 't:' + t2.id;
+    const c = el('button', 'chip c-theme', '🧩 ' + t2.이름 + ' · ' + (nLaw > 1 ? nLaw + '법' : SHORT[S.law]) + (open ? ' ▴' : ' ▾'));
+    c.onclick = () => { uiThToggle('t:' + t2.id); render(); };
+    link.appendChild(c);
+    if (open) thExpand(thBox, { kind: 'theme', th: t2 });
+  });
+  const mine = cmpAll();
+  Object.keys(mine).forEach(id => {
+    const cm = mine[id]; if (!cm || cm.theme) return;
+    if (!(cm.cols || []).some(col => col.law === S.law && col.k === S.jo)) return;
+    const open = uiThOpen() === 'c:' + id;
+    const c = el('button', 'chip c-theme', '🧩 ' + (cm.name || '내 비교') + ' · ' + (SHORT[(cm.cols[0] || {}).law] || '') + (open ? ' ▴' : ' ▸'));
+    c.onclick = () => { uiThToggle('c:' + id); render(); };
+    link.appendChild(c);
+    if (open) thExpand(thBox, { kind: 'mine', cm: cm });
+  });
+  const mk2 = el('button', 'chip c-theme', '＋ 비교 만들기');
+  mk2.style.borderStyle = 'dashed';
+  mk2.title = '같은 법 조문끼리도 열로 비교한다(예: §52 분할 · §52의2 분리 · §53 변경)';
+  mk2.onclick = () => {
+    const id = 'c' + Date.now().toString(36);
+    cmpPut(id, { id: id, name: '새 비교', cols: [{ law: S.law, k: S.jo }] });
+    uiThToggle('c:' + id, true); render(); };
+  link.appendChild(mk2);
+}
+async function thExpand(box, spec){
+  box.innerHTML = '';
+  const wrap = el('div', 'thwrap');
+  const hd = el('div', 'thhd');
+  const cols = [];
+  if (spec.kind === 'theme'){
+    const t2 = spec.th;
+    hd.appendChild(el('b', '', '🧩 ' + t2.이름));
+    LAWS.forEach(l => (((t2.조문 || {})[l]) || []).forEach(k2 => cols.push({ law: l, k: k2 })));
+    const ext = cmpAll()['t:' + t2.id];
+    ((ext && ext.extra) || []).forEach((c2, i2) => cols.push({ law: c2.law, k: c2.k, extra: i2 }));
+  } else {
+    const cm = spec.cm;
+    hd.appendChild(el('b', '', '🧩 ' + (cm.name || '내 비교')));
+    hd.appendChild(el('span', 'badge', '내가 만든 비교'));
+    (cm.cols || []).forEach((c2, i2) => cols.push({ law: c2.law, k: c2.k, mineIx: i2 }));
+    const rn = el('button', 'tool', '✎ 이름');
+    rn.onclick = ev => thRename(cm, ev);
+    hd.appendChild(rn);
+    const dl = el('button', 'tool', '🗑');
+    dl.title = '이 비교를 지운다';
+    dl.onclick = () => { cmpPut(cm.id, null); uiThToggle('', true); render(); };
+    hd.appendChild(dl);
+  }
+  const sp = el('span'); sp.style.flex = '1'; hd.appendChild(sp);
+  const fold = el('button', 'hmfold', '접기 ▲');
+  fold.onclick = () => { uiThToggle('', true); render(); };
+  hd.appendChild(fold);
+  wrap.appendChild(hd);
+  const row = el('div', 'thcols');
+  for (const c2 of cols) row.appendChild(await thCard(c2, spec));
+  row.appendChild(thAddCol(spec));
+  wrap.appendChild(row);
+  box.appendChild(wrap);
+}
+async function thCard(c2, spec){
+  const col = el('div', 'thcol');
+  const hd2 = el('div', 'thhd');
+  hd2.appendChild(el('span', 'qb t', SHORT[c2.law] || c2.law));
+  const tt = el('b', '', c2.k);
+  tt.style.cursor = 'pointer'; tt.title = '누르면 조문 팝업';
+  tt.onclick = ev => popJo(c2.law, c2.k, ev, 1);
+  hd2.appendChild(tt);
+  if (c2.law === S.law && c2.k === S.jo) hd2.appendChild(el('span', 'badge', '→ 이 조'));
+  if (c2.mineIx != null){
+    const gr = el('span', 'qb t', '↔');
+    gr.style.cursor = 'grab'; gr.title = '끌어서 열 순서 바꾸기';
+    gr.addEventListener('pointerdown', ev => thDrag(ev, spec.cm, c2.mineIx, col));
+    hd2.appendChild(gr);
+  }
+  if (c2.mineIx != null || c2.extra != null){
+    const x2 = el('button', 'tool', '✕');
+    x2.title = '이 열만 뺀다';
+    x2.onclick = () => {
+      if (c2.mineIx != null){ spec.cm.cols.splice(c2.mineIx, 1); cmpPut(spec.cm.id, spec.cm); }
+      else { const id = 't:' + spec.th.id; const ext = cmpAll()[id];
+             if (ext){ (ext.extra || []).splice(c2.extra, 1); cmpPut(id, ext); } }
+      render(); };
+    hd2.appendChild(x2);
+  }
+  col.appendChild(hd2);
+  let ti = '', first = '';
+  try{
+    const L2 = await get('jo_' + c2.law + '_목록.json');
+    ti = (((L2.조 || []).find(x => x.k === c2.k)) || {}).t || '';
+    const B2 = await get('jo_' + c2.law + '_본문.json');
+    const j2 = (B2.조 || {})[c2.k];
+    if (j2) for (const r2 of (j2.행 || [])){
+      if (r2.k && r2.k[0] === 'H') continue;
+      if ((r2.t || '').trim()){ first = r2.t; break; }
+    }
+  }catch(e){}
+  if (ti) col.appendChild(el('div', 'cdim', ti));
+  col.appendChild(el('div', 'bj2', first ? first.slice(0, 100) : '(본문 없음 — 조 번호를 확인)'));
+  const ft = el('div', 'thhd');
+  if (c2.law === S.law){
+    const JP = await joPanelIdx();
+    const nq = ((JP || {})[c2.k] || { L: [] }).L.length;
+    if (nq){
+      const qb = el('button', 'chip c-quiz', '📝 지문 ' + nq);
+      qb.title = '누르면 그 조로 가서 오른쪽 정오문제 패널을 연다';
+      qb.onclick = () => { S.jo = c2.k; S.joPanel = true; S.joPanelP = 0; render(); };
+      ft.appendChild(qb);
+    }
+  }
+  const nm2 = pitCount('jo|' + c2.law + ':' + c2.k + SEP);
+  if (nm2) ft.appendChild(el('span', 'chip c-quiz', '🗒 ' + nm2));
+  col.appendChild(ft);
+  return col;
+}
+function thAddCol(spec){
+  const col = el('div', 'thcol add');
+  col.appendChild(el('b', '', '＋ 조문 추가'));
+  let law = S.law;
+  const lr = el('div', 'thhd');
+  LAWS.forEach(l => {
+    const b = el('span', 'lawsc' + (l === law ? ' on' : ''), SHORT[l]);
+    b.onclick = () => { law = l; [...lr.children].forEach(x => x.classList.remove('on')); b.classList.add('on'); };
+    lr.appendChild(b);
+  });
+  col.appendChild(lr);
+  const inp = el('input', 'memoin');
+  inp.placeholder = '제52조 · 52의2 …';
+  inp.style.width = '92%';
+  col.appendChild(inp);
+  const ok = el('button', 'tool on', '넣기');
+  ok.onclick = async () => {
+    let k2 = inp.value.trim(); if (!k2) return;
+    if (!/^제/.test(k2)) k2 = '제' + k2;
+    if (k2.indexOf('조') < 0) k2 = k2.replace(/^제(\d+)(의\d+)?$/, (s2, a2, b2) => '제' + a2 + '조' + (b2 || ''));
+    try{
+      const L2 = await get('jo_' + law + '_목록.json');
+      if (!(L2.조 || []).some(x => x.k === k2)){ toast('그 조가 없다 — ' + SHORT[law] + ' ' + k2); return; }
+    }catch(e){ toast('목록을 읽지 못했다 — ' + SHORT[law]); return; }
+    if (spec.kind === 'theme'){
+      const id = 't:' + spec.th.id;
+      const cur = cmpAll()[id] || { id: id, theme: spec.th.id, extra: [] };
+      cur.extra = (cur.extra || []).concat([{ law: law, k: k2 }]);
+      cmpPut(id, cur);
+    } else {
+      spec.cm.cols = (spec.cm.cols || []).concat([{ law: law, k: k2 }]);
+      cmpPut(spec.cm.id, spec.cm);
+    }
+    render();
+  };
+  col.appendChild(ok);
+  return col;
+}
+function thRename(cm, ev){
+  const body = popShell('fn', '✎ 비교 이름');
+  const inp = el('input', 'memoin');
+  inp.value = cm.name || ''; inp.style.width = '95%';
+  body.appendChild(inp);
+  const ok = el('button', 'tool on', '저장');
+  ok.onclick = () => { cm.name = inp.value.trim() || cm.name; cmpPut(cm.id, cm); closePop(); render(); };
+  body.appendChild(ok);
+  showPop(ev);
+  setTimeout(() => inp.focus(), 30);
+}
+function thDrag(ev, cm, ix, colEl){
+  ev.preventDefault();
+  const rowEl = colEl.parentNode;
+  const move = () => { colEl.style.opacity = .55; };
+  const up = e2 => {
+    document.removeEventListener('pointermove', move);
+    document.removeEventListener('pointerup', up);
+    colEl.style.opacity = '';
+    const cols2 = [...rowEl.querySelectorAll('.thcol')].filter(x => x.className.indexOf('add') < 0);
+    let to = 0;
+    cols2.forEach((x, i2) => { const r2 = x.getBoundingClientRect();
+      if (e2.clientX > r2.left + r2.width / 2) to = Math.min(i2 + 1, cols2.length - 1); });
+    if (to !== ix){ const c3 = cm.cols.splice(ix, 1)[0]; cm.cols.splice(to, 0, c3); cmpPut(cm.id, cm); }
+    render();
+  };
+  document.addEventListener('pointermove', move);
+  document.addEventListener('pointerup', up);
+}
 /* ══════════ 마크업 스티커 (§3) ══════════
    화면 = (JSON 레이어) − (내 삭제) + (내 편집) + (내가 새로 칠한 것). **내 층이 이긴다.**
    ⚠ 좌표만으로 잡지 않는다. 「조키 + 구조키 + a + b + 유형 + 값 + 평문 발췌」가 키다.
@@ -2033,6 +2252,7 @@ async function popJo(law, k, ev, depth, hl){
       if (row.fd) d.appendChild(el('span', 'fdmark', '[^' + row.fd + '] '));
       d.appendChild(renderLine(row, { label: false, depth: depth, rec: j, law: law,
                                       m: ap.eff[ri] }));
+      pitWire(d, 'jo|' + law + ':' + k, rowKey(row), row.t || '');   /* ★ v3-H §4 */
       if (hl && hl.hang && row.k[0] === '항'){
         if (row.k[1] === JOCIRC[hl.hang - 1]){
           d.classList.add('jhl');
@@ -2164,6 +2384,8 @@ async function viewPrec(){
   (Array.isArray(cur.카테고리)?cur.카테고리:[]).forEach(x=>
     chips.appendChild(el('span','chip c-theme',String(x).slice(0,34))));
   chips.appendChild(el('span','chip c-card','🃏'));
+  {const n=pitCount('prec|'+cur.id+SEP);   /* ★ v3-H §4 — 카드 머리 「🗒 메모 N」 */
+   if(n)chips.appendChild(el('span','chip c-quiz','🗒 메모 '+n));}
   main.appendChild(chips);
 
   if(S.precTab==='빈칸'||(!hasSum&&!hasRaw)){
@@ -2177,7 +2399,8 @@ async function viewPrec(){
     const SUM=await get('prec_특허_요약.json').catch(()=>({}));
     const s=SUM[cur.id];
     if(!s||!s.행.length)box.appendChild(el('div','empty','요약본 본문이 비어 있다'));
-    else s.행.forEach(row=>{const d=el('div','ln');d.appendChild(renderLine(row,{label:false}));box.appendChild(d);});
+    else s.행.forEach((row,ri)=>{const d=el('div','ln');d.appendChild(renderLine(row,{label:false}));
+      pitWire(d,'prec|'+cur.id,'sum/'+ri,row.t||'');box.appendChild(d);});   /* ★ v3-H §4 */
     main.appendChild(box);
     if(cur.쟁점)main.appendChild(el('div','badge','쟁점 — '+cur.쟁점));
   }else{
@@ -2207,6 +2430,198 @@ async function bodyOf(kind,subj){
    ⚠ 단어마다 span 을 만들면 보드 하나에 수만 개가 생긴다.
       그래서 평문으로 그리고 **클릭 위치로 단어를 찾는다**(caretRangeFromPoint).
       메모가 붙은 단어만 span 으로 감싼다. */
+/* ══ v3-H §4 — 🗒 포스트잇 = 단어 단위 메모 (조문·판례·지문·2차 공용 · 사양서 §4-3) ══
+   키 = 대상키 + 구조키 + 단어번호 + 단어텍스트 (마크업 키와 같은 사상 — 좌표가 밀려도
+   같은 줄 안 같은 단어면 같은 것 · 같은 줄에서 못 찾으면 「고아」 조각으로 보인다).
+   공유·상대 표시는 GAS 전이라 자리만 — who 기본 「나」 · 건별 🔒 비공개. */
+const PIT_KEY = REC_PRE + 'postit';
+const CMP_KEY = REC_PRE + 'compare';
+let PITREC = null, CMPREC = null;
+function pitAll(){ if (!PITREC) PITREC = lsRead(PIT_KEY); return PITREC; }
+function pitPut(k, rec){
+  pitAll();
+  if (rec === null) delete PITREC[k];
+  else PITREC[k] = Object.assign({}, rec, { ts: nowIso() });
+  return lsWrite(PIT_KEY, PITREC, '🗒 포스트잇');
+}
+function cmpAll(){ if (!CMPREC) CMPREC = lsRead(CMP_KEY); return CMPREC; }
+function cmpPut(id, rec){
+  cmpAll();
+  if (rec === null) delete CMPREC[id];
+  else CMPREC[id] = Object.assign({}, rec, { ts: nowIso() });
+  return lsWrite(CMP_KEY, CMPREC, '🧩 내 비교');
+}
+REC_NAMES.postit = '🗒 포스트잇';
+REC_NAMES.compare = '🧩 내 비교';
+{ const _rdc0 = recDropCache;
+  recDropCache = function(){ _rdc0(); PITREC = null; CMPREC = null; }; }
+function pitKey(target, struct, wi, word){ return [target, struct, wi, word].join(SEP); }
+function pitFor(target, struct){
+  const A = pitAll(), out = [];
+  const pre = target + SEP + struct + SEP;
+  Object.keys(A).forEach(k => { if (k.indexOf(pre) === 0){
+    const p = k.split(SEP);
+    out.push({ wi: +p[2], word: p[3] || '', v: A[k] || {} }); } });
+  return out;
+}
+function pitCount(targetPre){
+  const A = pitAll(); let n = 0;
+  Object.keys(A).forEach(k => { if (k.indexOf(targetPre) === 0) n++; });
+  return n;
+}
+function pitLabel(target, struct, word){
+  let head = skTarget(target);
+  if (target.indexOf('jo|') === 0 && struct){
+    const p = struct.split('/');
+    for (let i = 0; i + 1 < p.length; i += 2){
+      if (p[i] === '항') head += ' ' + p[i + 1];
+      else if (p[i] === '호') head += ' ' + p[i + 1] + '호';
+    }
+  }
+  return '🗒 포스트잇 · ' + head + (word ? ' 「' + String(word).slice(0, 14) + '」' : '');
+}
+function pitEdit(target, struct, wi, word, ev){
+  const key = pitKey(target, struct, wi, word);
+  const cur = pitAll()[key] || null;
+  const body = popShell('fn', pitLabel(target, struct, word));
+  const ta = el('textarea', 'memoin');
+  ta.value = (cur && cur.t) || ''; ta.placeholder = '이 단어에 붙일 포스트잇';
+  body.appendChild(ta);
+  body.appendChild(el('div', 'cdim',
+    ((cur && cur.who) || '나') + ' · ' + ((cur && cur.ts) ? cur.ts.slice(0, 16).replace('T', ' ') : '새 메모') +
+    ' · 기본 공유 — GAS 전이라 지금은 이 기기 안'));
+  const row = el('div', 'memobtn');
+  let priv = !!(cur && cur.priv);
+  const pv = el('button', 'tool' + (priv ? ' on' : ''), '🔒 비공개');
+  pv.title = '건별 비공개 — 켜면 상대에게 안 보인다(GAS 뒤 적용)';
+  pv.onclick = () => { priv = !priv; pv.classList.toggle('on', priv); };
+  const ok = el('button', 'tool on', cur ? '✎ 수정 저장' : '저장');
+  ok.onclick = () => { const v = ta.value.trim();
+    if (v) pitPut(key, { t: v, who: (cur && cur.who) || '나', priv: priv });
+    else pitPut(key, null);
+    closePop(); render(); };
+  const del = el('button', 'tool', '🗑 삭제');
+  del.onclick = () => { pitPut(key, null); closePop(); render(); };
+  row.appendChild(pv); row.appendChild(ok); row.appendChild(del);
+  body.appendChild(row);
+  showPop(ev);
+  setTimeout(() => ta.focus(), 30);
+}
+/* 줄 하나에 표시(밑줄+오른쪽 조각) + 길게 누르면 붙이기.
+   text = 이 줄의 평문(splitWords 색인 기준). 줄 앞에 각주표시 등 다른 글이 있어도
+   pref(여분 글자 수)로 자리를 맞춘다. */
+function pitWire(lineEl, target, struct, text){
+  if (!lineEl || lineEl._pit) return; lineEl._pit = 1;
+  text = String(text || '');
+  const pref = Math.max(0, (lineEl.textContent || '').length - text.length);
+  const list = pitFor(target, struct);
+  if (list.length){
+    lineEl.classList.add('pitline');
+    const parts = splitWords(text);
+    let flagN = 0;
+    list.forEach(e2 => {
+      let wi = e2.wi;
+      if (!(parts[wi] && parts[wi].trim() === e2.word))
+        wi = parts.findIndex(w => w.trim() === e2.word);   // 좌표 밀림 — 같은 줄 안에서만
+      const mine = !e2.v.who || e2.v.who === '나';
+      const flag = el('span', 'pitflag' + (mine ? '' : ' oth') + (wi < 0 ? ' orph' : ''));
+      flag.style.top = (2 + flagN * 13) + 'px'; flagN++;
+      flag.title = (wi < 0 ? '고아 — 이 줄에서 단어를 못 찾았다 · ' : '') +
+        '「' + e2.word + '」 ' + String(e2.v.t || '').slice(0, 44) + (mine ? '' : ' · ' + e2.v.who);
+      flag.onclick = ev => { ev.stopPropagation(); pitEdit(target, struct, e2.wi, e2.word, ev); };
+      lineEl.appendChild(flag);
+      if (wi < 0) return;
+      let off = pref; for (let i2 = 0; i2 < wi; i2++) off += parts[i2].length;
+      const wlen = parts[wi].length;
+      try{
+        /* ⚠ 렌더가 글자를 여러 노드로 쪼갠다(마크업·조판) — 단어가 한 노드에 없으면
+           surroundContents 가 못 감싼다. 시작·끝 노드를 따로 잡아 extractContents 로 감싼다. */
+        const w2 = document.createTreeWalker(lineEl, NodeFilter.SHOW_TEXT);
+        let n2, acc = 0, ns = null, so = 0, ne = null, eo = 0;
+        const end = off + wlen;
+        while ((n2 = w2.nextNode())){
+          const L2 = n2.nodeValue.length;
+          if (ns === null && off >= acc && off < acc + L2){ ns = n2; so = off - acc; }
+          if (ns !== null && end <= acc + L2){ ne = n2; eo = end - acc; break; }
+          acc += L2;
+        }
+        if (ns && ne){
+          const r2 = document.createRange();
+          r2.setStart(ns, so); r2.setEnd(ne, eo);
+          const sp = el('span', 'pitw' + (mine ? '' : ' oth'));
+          sp.onclick = ev => { ev.stopPropagation(); pitEdit(target, struct, e2.wi, e2.word, ev); };
+          sp.appendChild(r2.extractContents());
+          r2.insertNode(sp);
+        }
+      }catch(err){}
+    });
+  }
+  let t0 = null, sx = 0, sy = 0;
+  lineEl.addEventListener('pointerdown', ev => {
+    if (S.ink) return;                        // 애플펜슬 필기 켜진 동안은 안 붙는다
+    sx = ev.clientX; sy = ev.clientY;
+    if (t0) clearTimeout(t0);
+    t0 = setTimeout(() => { t0 = null; pitAsk(lineEl, target, struct, text, pref, ev); }, 500);
+  });
+  const cancel = () => { if (t0){ clearTimeout(t0); t0 = null; } };
+  lineEl.addEventListener('pointerup', cancel);
+  lineEl.addEventListener('pointercancel', cancel);
+  lineEl.addEventListener('pointermove', ev => {
+    if (t0 && (Math.abs(ev.clientX - sx) > 8 || Math.abs(ev.clientY - sy) > 8)) cancel();
+  });
+}
+function pitAsk(lineEl, target, struct, text, pref, ev){
+  // wordIndexAt 은 줄 전체 글자수 기준이다 — 앞 여분(pref)을 뺀 자리로 단어를 찾는다
+  let off = 0;
+  const r = document.caretRangeFromPoint ? document.caretRangeFromPoint(ev.clientX, ev.clientY) : null;
+  if (r && lineEl.contains(r.startContainer)){
+    const w = document.createTreeWalker(lineEl, NodeFilter.SHOW_TEXT);
+    let n, acc = 0;
+    while ((n = w.nextNode())){
+      if (n === r.startContainer){ off = acc + r.startOffset; break; }
+      acc += n.nodeValue.length;
+    }
+  }
+  off = Math.max(0, off - pref);
+  const parts = splitWords(text);
+  let wi = null, pos = 0;
+  for (let i = 0; i < parts.length; i++){
+    const end = pos + parts[i].length;
+    if (off < end){ wi = parts[i].trim() ? i : null; break; }
+    pos = end;
+  }
+  if (wi == null) for (let i = parts.length - 1; i >= 0; i--) if (parts[i].trim()){ wi = i; break; }
+  if (wi == null) return;
+  const word = (parts[wi] || '').trim();
+  if (!word) return;
+  document.querySelectorAll('.pitmenu').forEach(x => x.remove());
+  const m = el('div', 'pitmenu', '🗒 메모 붙이기 — 「' + word.slice(0, 12) + '」');
+  m.style.left = Math.min(ev.clientX, innerWidth - 200) + 'px';
+  m.style.top = (ev.clientY + 12) + 'px';
+  m.onclick = () => { m.remove(); pitEdit(target, struct, wi, word, ev); };
+  document.body.appendChild(m);
+  setTimeout(() => m.remove(), 2600);
+}
+/* 옛 2차 클릭 메모(jopangi.memo.<file>) → 포스트잇 1회 이사. 원본 층은 둔다(§7-c).
+   같은 키가 이미 있으면 건너뛴다 — 표식 없이도 멱등이다. */
+function pitMigrate2(file, rec){
+  const old = memoLoad(file);
+  const ks = Object.keys(old); if (!ks.length) return;
+  const A = pitAll(); let n = 0;
+  ks.forEach(mk2 => {
+    const m2 = /^(\d+)_(\d+)$/.exec(mk2); if (!m2) return;
+    const ri = +m2[1], wi = +m2[2];
+    const row = (rec.행 || [])[ri]; if (!row) return;
+    const word = (splitWords(row.t || '')[wi] || '').trim(); if (!word) return;
+    const key = pitKey(file, String(ri), wi, word);
+    if (A[key]) return;
+    A[key] = { t: String(old[mk2] || ''), who: '나', ts: nowIso(), mig: 1 };
+    n++;
+  });
+  if (n){ PITREC = A; lsWrite(PIT_KEY, A, '🗒 포스트잇');
+    toast('옛 2차 메모 ' + n + '건을 🗒 포스트잇으로 이사했다 — 원본 층은 남긴다');
+    console.log('[pit] migrated', file, n); }
+}
 const MEMO_NS='jopangi.memo.';
 function memoLoad(file){
   try{return JSON.parse(localStorage.getItem(MEMO_NS+file)||'{}');}catch(e){return {};}
@@ -2261,7 +2676,8 @@ function renderBody(rec,file,opt){
   opt=opt||{};
   const wrap=el('div','rbody'+(opt.card?' card':''));
   if(!rec||!rec.행||!rec.행.length){wrap.appendChild(el('div','cdim','본문 없음'));return wrap;}
-  const memo=memoLoad(file);
+  const memo={};   /* ★ v3-H §4 — 옛 클릭 메모 표시는 포스트잇 층이 잇는다(이사 · 원본 층은 둔다) */
+  pitMigrate2(file,rec);
   const rows=[];
   let curLv=0;
   rec.행.forEach((r,ri)=>{
@@ -2301,14 +2717,8 @@ function renderBody(rec,file,opt){
     if((r.e&&r.e.length)||(r.m&&r.m.length))holder.appendChild(renderLine(r,{label:false}));
     else holder.appendChild(lineContent(r,ri,file,memo));
     d.appendChild(holder);
-    // 단어 클릭 = 메모
-    d.onclick=ev=>{
-      if(ev.target.closest('.rtog,a,.joLink'))return;
-      const wi=wordIndexAt(holder,ev,r.t||'');
-      if(wi==null)return;
-      ev.stopPropagation();
-      memoEdit(file,ri+'_'+wi,splitWords(r.t)[wi],ev);
-    };
+    /* ★ v3-H §4 — 클릭=메모 를 같은 장치(포스트잇 · 길게 누르기)로 갈아탄다 */
+    pitWire(holder,file,String(ri),r.t||'');
     wrap.appendChild(d);rows.push(d);
   });
   return wrap;
@@ -4617,7 +5027,8 @@ function qCard(q,mokTitle,seq){
     const row=el('div','oxrow');
     const q1=el('div','oxq');
     q1.appendChild(el('b','','('+(z.기호||z.n)+') '));   // ★ v3-D §0 — 카드 번호는 머리 순번이 맡는다 · v정정 ①-5 박스 항목은 기호
-    q1.appendChild(document.createTextNode(bon));
+    {const bsp=el('span','',bon);q1.appendChild(bsp);   /* ★ v3-H §4 — 지문 줄 포스트잇 */
+     pitWire(bsp,'q|'+oxKeyLid(q,z),'',bon||'');}
     if(pan&&!z.p7)q1.appendChild(el('span','badge','제7판 대응 없음 — 리담판 표시'));
     if(alt&&alt.미확정)q1.appendChild(el('span','qb warn','제7판 정오 미확정'));
     /* ★ 8/26 — `_정오확정.csv` 를 배선하면서 채운 정오는 **역산값**이다(828건).
