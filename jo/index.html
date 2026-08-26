@@ -2667,7 +2667,9 @@ function qlRow(M,i,sel,label,keys,subj,kid,folded){
   /* ★ 대목차(장)는 이름만 있는 머리줄이다(사용자 확정 8/26) — 판례탭과 같은 결.
      지문은 가장 깊은 마디에만 앉으므로 장은 언제나 0이 된다. 그 0을 보여 주는 대신
      수·🃏·회독칸을 통째로 비운다. 판정은 지문 수가 아니라 마디의 `장` 값으로 한다. */
-  const isJang = !!(n && n.장);
+  /* ★ 8/26 화면 확인 — `장` 만으로는 모자랐다. 지문이 가장 깊은 마디에만 앉으므로
+     중간 마디도 전부 0 이 된다. **자기 지문이 0이면 머리줄**로 본다. */
+  const isJang = !!(n && n.장) || !total;
   if(!isJang){
     nm.appendChild(el('span','qltot','총 '+total+'문제'));
     const note=el('button','qlnote'+(cards?' on':''),'🃏'+(cards?' '+cards:''));
@@ -3284,8 +3286,11 @@ async function viewJimun(){
     /* ★ 손잡이를 열 바깥에서 떼어 경계선 위에 세운다(8/26). 동작은 그대로다. */
     const box=el('div','qlbox'+(S.treeHid?' nonm':''));
     box.appendChild(qlColumn(MG,JM,byId,P7,subj));
+    /* ★ 판례탭처럼 열마다 자기 오른쪽에 하나씩(8/26).
+       목차 손잡이는 이름칸 경계(228px)에 띄우고,
+       회독 손잡이는 띄우지 않고 flex 형제로 붙여 회독칸 오른쪽 끝에 세운다. */
     const h1=qlHandle('tree','목차');h1.className='handle qlh a';box.appendChild(h1);
-    const h2=qlHandle('list','회독');h2.className='handle qlh b';box.appendChild(h2);
+    const h2=qlHandle('list','회독');box.appendChild(h2);
     slot.appendChild(box);
   }else{
     const tree=el('div','tree'+(S.treeHid?' hid':''));
