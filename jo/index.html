@@ -173,6 +173,10 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .src.제7판{background:#e9f7ee;color:var(--ok)}
 .qt{font-size:13.5px;margin:6px 0}
 /* ── 기출뷰 · OMR (과제 7 · 2026-08-26) ── */
+.solx{margin:6px 0 2px}
+.solx summary{font-size:11.5px;color:#7a6134;cursor:pointer}
+.solb{font-size:12px;color:#6b665d;line-height:1.6;white-space:pre-wrap;margin-top:4px;
+      border-left:2px solid #e3e0d8;padding-left:9px}
 .gich{display:flex;gap:8px;align-items:flex-start;border:1px solid #eceae3;border-radius:9px;padding:6px 9px;margin:5px 0;background:#fff}
 .gich.sel{border-color:#1a1a1a}
 .gich.ans{border-color:#3fae64;background:#f0faf3}
@@ -2005,7 +2009,10 @@ function oxAll(){ if (!OXREC) OXREC = lsRead(OX_KEY); return OXREC; }
 function rndAll(){ if (!RNDREC) RNDREC = lsRead(RND_KEY); return RNDREC; }
 function fixAll(){ if (!FIXREC) FIXREC = lsRead(FIX_KEY); return FIXREC; }
 function oxKeyP7(z){ return z.sid || ('P7:' + z.id); }
-function oxKeyLid(q, z){ return 'L:' + q.id + '#' + z.n; }
+/* ★ 8/26 흡수 — 리담·제7판이 **같은 지문**이면 컴파일러가 `sid` 를 실어 보낸다.
+   그때는 제7판과 **같은 키**를 써서 기록이 한 자리에 모인다(두 번 풀 이유가 없어진다).
+   ⚠ 앱이 sid 를 지어내지 않는다 — 없으면 예전 키 그대로다(민법OX D10 함정). */
+function oxKeyLid(q, z){ return z.sid || ('L:' + q.id + '#' + z.n); }
 function oxOf(k){ return oxAll()[k] || null; }
 function oxAns(k, raw){ const f = fixAll()[k]; return (f === 'O' || f === 'X') ? f : (raw || ''); }
 function oxFixed(k){ const f = fixAll()[k]; return (f === 'O' || f === 'X') ? f : ''; }
@@ -2250,6 +2257,51 @@ function heatBox(cells){
    ⚠ 실측 — 특허 선지 2,525 중 판례 442 · 조문 1,042. 절반 넘게는 둘 다 없어 칩이 안 붙는다.
    ⚠ 제7판 단독 지문에는 근거 열이 없다 — 리담 지문에만 붙는다. */
 let LNKIDX = null;
+/* ══════════ 제7판 지문의 근거 되살리기 (2026-08-26 · 사용자 지적) ══════════
+   ⚠ 원인은 렌더가 아니라 데이터다 — `jimun_7pan.json` 의 지문에는 `pan`·`jo`
+      **필드 자체가 없다.** 그래서 근거 열만 보던 칩이 붙을 자리가 없었다.
+   길은 둘 — ① 리담 짝이 있으면 그쪽 근거를 물려받는다(정본 · 실측 859건 전건 매칭)
+             ② 없으면 해설 본문에서 뽑는다(사건번호 실측 396지문 · 고유 293) */
+let JOKEY = null, PANIDX = null, P7LID = null;
+const PAN_SRC = '(\\d{2,4})\\s?(재후|재다|카허|후|허|다|도|므|두|마)\\s?(\\d{1,6})';
+function panNo(s){
+  const out = [], seen = {}, rx = new RegExp(PAN_SRC, 'g');
+  let m; while ((m = rx.exec(String(s || '')))){
+    const k = m[1] + m[2] + m[3];
+    if (!seen[k]){ seen[k] = 1; out.push(k); }
+  }
+  return out;
+}
+// 특-132의2-1 → 제132조의2 · 특-99-2 → 제99조
+function joKeyOf(c){
+  const seg = String(c || '').split('-');
+  if (seg.length < 2) return '';
+  return '제' + (seg[1].indexOf('의') >= 0 ? seg[1].replace('의', '조의') : seg[1] + '조');
+}
+function p7Link(JM, P7){
+  P7LID = {};
+  if (!P7) return;
+  const byYN = {};
+  (JM.문제 || []).forEach(q => { byYN[q.연도 + '|' + q.문번] = q; });
+  (P7.지문 || []).forEach(z => {
+    const r = z.리담; if (!r) return;
+    const q = byYN[r.연도 + '|' + r.문항]; if (!q) return;
+    const s = (q.지문 || []).find(x => String(x.n) === String(r.선지));
+    if (s) P7LID[z.id] = { q: q, z: s };
+  });
+}
+function popPrec(p, ev){
+  const b = popShell('', '⚖ ' + (p.사건번호 || p.파일 || ''));
+  if (p.사건명 || p.별칭) b.appendChild(el('div', '', (p.사건명 || p.별칭)));
+  if (p.선고) b.appendChild(el('span', 'badge', '선고 ' + p.선고));
+  (Array.isArray(p.조문) ? p.조문 : []).slice(0, 6).forEach(x =>
+    b.appendChild(el('span', 'chip c-prec', '⚖' + x)));
+  const go = el('button', 'tool on', '판례 갈래로 이동 ↗');
+  go.onclick = () => { S.tab = 'prec'; S.prec = p.id;
+    S.precTab = p.출처 === '요약본' ? '요약' : '원문'; closeAllPops(); render(); };
+  b.appendChild(go);
+  showPop(ev);
+}
 function lnkBuild(JM){
   const pan = {}, jo = {};
   (JM.문제 || []).forEach(q => (q.지문 || []).forEach(z => {
@@ -2257,15 +2309,23 @@ function lnkBuild(JM){
     if (p) (pan[p] = pan[p] || []).push({ q: q, z: z });
     (z.jo || []).forEach(c => (jo[c] = jo[c] || []).push({ q: q, z: z }));
   }));
-  LNKIDX = { pan: pan, jo: jo };
+  // ★ 사건번호만 뽑은 색인 — 리담 pan 은 「대법원 2005. 5. 27. 선고 2003후182」 통짜라
+  //   제7판 해설에서 뽑은 `2003후182` 와 그대로는 안 맞는다(꼬리에 `;` `)` 도 붙는다)
+  const panN = {};
+  (JM.문제 || []).forEach(q => (q.지문 || []).forEach(z => {
+    const p = (z.pan || '').trim();
+    if (p) panNo(p).forEach(c => (panN[c] = panN[c] || []).push({ q: q, z: z }));
+  }));
+  LNKIDX = { pan: pan, jo: jo, panN: panN };
   return LNKIDX;
 }
 function lnkPop(kind, key, ev){
   const bag = ((LNKIDX || {})[kind] || {})[key] || [];
-  const title = (kind === 'pan' ? '🔗 같은 판례 · ' : '⚖ 같은 조문 · ') +
+  const isPan = (kind === 'pan' || kind === 'panN');
+  const title = (isPan ? '🔗 같은 판례 · ' : '⚖ 같은 조문 · ') +
                 (kind === 'jo' ? key.replace(/^[특상디]-/, '제') + '조' : key);
   const body = popShell('q', title + ' (' + bag.length + '지문)');
-  body.appendChild(el('div', 'cdim', kind === 'pan'
+  body.appendChild(el('div', 'cdim', isPan
     ? '같은 판례번호가 근거로 달린 지문이다'
     : '같은 조문이 근거로 달린 지문이다'));
   bag.forEach(x => {
@@ -2845,11 +2905,23 @@ function qCard(q,mokTitle){
     q1.appendChild(document.createTextNode(bon));
     if(pan&&!z.p7)q1.appendChild(el('span','badge','제7판 대응 없음 — 리담판 표시'));
     if(alt&&alt.미확정)q1.appendChild(el('span','qb warn','제7판 정오 미확정'));
+    // ★ 흡수된 선지 — 제7판과 같은 지문이다. 기록이 한 자리에 모이고 정오는 제7판이 정본이다
+    if(z.병합){
+      q1.appendChild(el('span','qb t','제7판 같은 지문'+(z.p7쪽?' p.'+z.p7쪽:'')));
+      if(z.리담ox)q1.appendChild(el('span','qb warn','정오 정정 '+z.리담ox+'→'+z.ox));
+    }
     row.appendChild(q1);
     // ── O / X — 누르면 즉시 채점되고 기록이 남는다(§7-2 ① · 8/26)
     lnkChips(q, z, q1);
     q1.appendChild(mcChip(oxKeyLid(q, z)));
     oxPickRow(row, oxKeyLid(q, z), ox2, sol2);
+    // ★ 해설은 두 벌을 다 남긴다(사용자 확정) — 합치지 않고 나란히 둔다
+    if(z.병합&&(z.p7sol||'').trim()){
+      const d=el('details','solx');
+      d.appendChild(el('summary','','📘 제7판 해설'));
+      d.appendChild(el('div','solb',p7Text(z.p7sol)));
+      row.appendChild(d);
+    }
     card.appendChild(row);
   });
   const ft=el('div','qft');
@@ -2879,16 +2951,26 @@ function p7Text(t){
    해설 있는 1,301개 중 691개에 표기가 있다 — 法 1,121회 · 施規 41회.
    꼴 두 가지 — 「法2조3호 가목」 · 「法197①」 · 「施規106의4」.
    ⚠ 施規(시행규칙)는 앱에도 API에도 데이터가 없다 — 배지만 달고 링크는 걸지 않는다. */
-function p7Jo(sol){
-  const out=[], seen={};
-  String(sol||'').replace(/法\s*(\d+)(?:조)?(?:의\s*(\d+))?/g,(m,a,b)=>{
-    const k='제'+a+'조'+(b?'의'+b:'');
-    if(!seen[k]){seen[k]=1;out.push({k:k,law:true});}
-    return m;});
-  String(sol||'').replace(/施規\s*(\d+)(?:의\s*(\d+))?/g,(m,a,b)=>{
-    const k='施規 '+a+(b?'의'+b:'');
-    if(!seen[k]){seen[k]=1;out.push({k:k,law:false});}
-    return m;});
+/* ★ 8/26 — `제N조` 꼴까지 넓혔다(사용자 확정). 전엔 `法 11` 한자 약물만 잡아
+   `특허법 제11조` 로 적힌 해설 356건이 통째로 칩을 못 받고 있었다.
+   실측 681건 중 — 딴 법 이름이 앞에 붙은 66건 제외 · 특허법 조문 목록 밖 25건 제외 → 590 채택. */
+const JO_OTHER=/(민사소송법|민법|상표법|디자인보호법|실용신안법|저작권법|형법|행정소송법|행정심판법|시행령|시행규칙|조약|협약)\s*$/;
+function p7Jo(sol, extra){
+  const out=[], seen={}, s=String(sol||'');
+  const add=(k,law)=>{if(k&&!seen[k]){seen[k]=1;out.push({k:k,law:law});}};
+  s.replace(/法\s*(\d+)(?:조)?(?:의\s*(\d+))?/g,(m,a,b)=>{
+    add('제'+a+'조'+(b?'의'+b:''),true);return m;});
+  const RX=/제\s?(\d+)조(?:의\s?(\d+))?/g; let m2;
+  while((m2=RX.exec(s))){
+    if(JO_OTHER.test(s.slice(Math.max(0,m2.index-14),m2.index)))continue;
+    const k='제'+m2[1]+'조'+(m2[2]?'의'+m2[2]:'');
+    if(JOKEY&&!JOKEY[k])continue;      // 목록에 없는 번호는 딴 법이거나 삭제조다
+    add(k,true);
+  }
+  s.replace(/施規\s*(\d+)(?:의\s*(\d+))?/g,(m,a,b)=>{
+    add('施規 '+a+(b?'의'+b:''),false);return m;});
+  // 리담 짝에서 물려받은 근거조문 — 해설 파싱보다 이쪽이 정본이다
+  (extra||[]).forEach(c=>{const k=joKeyOf(c);if(!JOKEY||JOKEY[k])add(k,true);});
   return out.slice(0,5);
 }
 /* ★ 조문은 뷰로 옮겨 가지 않고 **팝업**으로 띄운다(사용자 확정 8/26).
@@ -2915,8 +2997,26 @@ function p7Card(z){
   if(z.쪽)h.appendChild(el('span','qb n','p.'+z.쪽));
   h.appendChild(el('span','qb id','ID '+z.id));
   if(z.유제)h.appendChild(el('span','src 기출변형','유제'));
-  h.appendChild(el('span','qb '+(z.리담?'t':'id'), z.리담?'리담과 같은 지문':'제7판 단독'));
-  const JOS=p7Jo(z.sol);
+  h.appendChild(el('span','qb '+(z.리담?'t':'id'),
+    z.병합?'리담과 흡수됨 — 기록 공유':(z.리담?'리담과 같은 지문':'제7판 단독')));
+  const lk=(P7LID||{})[z.id];
+  const JOS=p7Jo(z.sol, lk?(lk.z.jo||[]):[]);
+  /* ★ 판례 칩 — ① 리담 짝의 `pan` 을 물려받고 ② 해설 사건번호를 덧댄다 */
+  {
+    const cases=[];
+    if(lk&&(lk.z.pan||'').trim())panNo(lk.z.pan).forEach(c=>cases.push(c));
+    panNo(z.sol).forEach(c=>{if(cases.indexOf(c)<0)cases.push(c);});
+    cases.slice(0,3).forEach(c=>{
+      const p=(PANIDX||{})[c], n=(((LNKIDX||{}).panN||{})[c]||[]).length;
+      const b=el('button','chip c-prec','⚖ '+c+(n?' · 같은 지문 '+n:''));
+      b.title=p?(p.사건명||p.별칭||'수집본 있음'):'판례 갈래에 수집본이 없다 — 같은 지문만 찾아 준다';
+      b.onclick=ev=>{ev.stopPropagation();
+        if(p)popPrec(p,ev);
+        else if(n)lnkPop('panN',c,ev);
+        else toast('이 사건번호로 걸린 것이 없다');};
+      h.appendChild(b);
+    });
+  }
   if(JOS.length){
     const jb=el('span','jochip','조문형 · '+JOS.map(x=>x.k).join(' · '));
     jb.title='해설에서 뽑은 근거 조문 — 누르면 팝업으로 연다';
@@ -2943,6 +3043,12 @@ function p7Card(z){
     row.appendChild(wb);
   }
   card.appendChild(row);
+  if(z.병합&&(z.리담해설||'').trim()){
+    const d=el('details','solx');
+    d.appendChild(el('summary','','📗 리담 해설'));
+    d.appendChild(el('div','solb',z.리담해설));
+    card.appendChild(d);
+  }
   const ft=el('div','qft');
   const m=el('span','memolink','✏ 메모 및 유사문제 연결');m.title='v0 제외 — 자리만';
   ft.appendChild(m);ft.appendChild(el('span','cdim','풀이 기록은 이 기기에 쌓인다'));
@@ -2963,6 +3069,11 @@ async function viewJimun(){
   if(subj==='특허'){
     try{MK=await get('mokcha_특허.json');IDX=await get('mokcha_특허_색인.json');}catch(e){}
     try{P7=await get('jimun_7pan.json');}catch(e){}
+    // 칩 판정에 쓰는 두 표를 미리 싣는다(캐시라 두 번째부터는 공짜다)
+    try{const JL=await get('jo_특허법_목록.json');JOKEY={};JL.조.forEach(x=>{JOKEY[x.k]=x.t||'';});}catch(e){}
+    try{const PL=await get('prec_특허_리스트.json');PANIDX={};
+        (PL.판례||[]).forEach(p=>{const k=String(p.사건번호||p.id||'').replace(/\s/g,'');
+          if(k&&!PANIDX[k])PANIDX[k]=p;});}catch(e){}
     try{PT=await get('p7_목차.json');}catch(e){}
     try{MG=await get('mokcha_병합.json');}catch(e){}
   }
@@ -2973,6 +3084,7 @@ async function viewJimun(){
 
   const byId={};JM.문제.forEach(q=>byId[q.id]=q);
   lnkBuild(JM);              // 같은 판례·조문 색인 (한 번만)
+  p7Link(JM, P7);            // 제7판 지문 → 리담 선지 짝 (근거 물려받기)
 
   // ── 좌측 : OX문제면 「목차+회독」 한 표, 기출문제면 연도 목록
   if(S.jimunTab==='ox'){
@@ -3010,8 +3122,8 @@ async function viewJimun(){
     const pool = [];
     JM.문제.forEach(q => (q.지문 || []).forEach(z =>
       pool.push({ k: oxKeyLid(q, z), dom: 'qb-' + q.id, kind: 'L', q: q, z: z })));
-    if (P7) P7.지문.forEach(z =>
-      pool.push({ k: oxKeyP7(z), dom: 'qb-' + oxKeyP7(z), kind: 'P', z: z }));
+    if (P7) P7.지문.forEach(z => { if (z.병합) return;   // 리담 쪽에서 이미 셌다
+      pool.push({ k: oxKeyP7(z), dom: 'qb-' + oxKeyP7(z), kind: 'P', z: z }); });
     const counts = { weak: 0, semi: 0 };
     pool.forEach(c => { if (oxQueueHas(c.k, 'weak')) counts.weak++;
                         if (oxQueueHas(c.k, 'semi')) counts.semi++; });
@@ -3053,9 +3165,17 @@ async function viewJimun(){
       jos=[...new Set(jos)]; lids=[...new Set(lids)];
       const P7map={};if(P7)P7.지문.forEach(z=>P7map[z.id]=z);
       const lidam=lids.map(id=>byId[id]).filter(Boolean);
-      const p7l=jos.map(id=>P7map[id]).filter(Boolean);
+      /* ★ 8/26 흡수 — 리담과 **같은 지문**인 제7판 행은 카드로 또 그리지 않는다.
+         민법OX 와 같은 꼴이다: 한 행(=한 지문)에 기출 좌표를 실어 두고
+         오지선다는 좌표로 묶어 그린다 — 선지를 다섯 벌 쌓아 두지 않는다.
+         ⚠ 단 **그 리담 문항이 이 마디에 같이 걸려 있을 때만** 숨긴다.
+            마디 배치는 리담·제7판이 따로라, 리담 쪽이 이 마디에 없으면
+            숨기는 순간 그 지문이 화면에서 통째로 사라진다(실측 19건). */
+      const _seen=new Set();
+      lids.forEach(id=>{const q=byId[id];if(q)(q.지문||[]).forEach(z=>{if(z.sid)_seen.add(z.sid);});});
+      const p7l=jos.map(id=>P7map[id]).filter(z=>z&&!(z.병합&&_seen.has(z.sid)));
       const bd=el('div','badge',
-        `${n.no?n.no+' ':''}${n.제목} — 리담 문항 ${lidam.length} · 제7판 지문 ${p7l.length}`+
+        `${n.no?n.no+' ':''}${n.제목} — 리담 문항 ${lidam.length} · 제7판 단독 지문 ${p7l.length}`+
         (n.p7&&n.p7.length?`  ·  제7판 차례: ${n.p7.join(' / ')}`:'')+
         (n.쪽?`  ·  인쇄 p.${n.쪽}`:''));
       main.appendChild(bd);
