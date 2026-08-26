@@ -859,9 +859,11 @@ async function viewJo(){
     head.appendChild(s);
     /* ★ 조 단위로 연다(사용자 요구 8/26). 법제처 한글주소가 `/법령/법령명/제X조` 를 받는다.
        ⚠ 항·호 단위 주소는 법제처에 없다 — 그 깊이는 앱 안 팝업(popJo)이 이미 보여준다. */
-    const link=el('a','oi','law.go.kr'+(j.k?' · '+j.k:'')+' ↗');
+    /* ★ 조 키는 `j.k` 가 아니라 `S.jo` 다(8/26 실측) — `j` 는 본문 객체라 k 가 없어서
+       링크가 법 전체 첫머리로 떨어졌다. 법제처 한글주소 `/법령/법령명/제X조` 로 바로 간다. */
+    const link=el('a','oi',(S.jo?S.jo+' 원문 · ':'')+'law.go.kr ↗');
     link.href='https://www.law.go.kr/법령/'+encodeURIComponent(S.law)
-              +(j.k?'/'+encodeURIComponent(j.k):'');
+              +(S.jo?'/'+encodeURIComponent(S.jo):'');
     link.target='_blank';link.rel='noopener';
     link.onclick=e=>e.stopPropagation();
     head.appendChild(link);
@@ -3055,9 +3057,15 @@ function joWonBtn(x){
     d.title='시행규칙은 앱에 데이터가 없다 — 표시만 한다';
     return d;
   }
-  const b=el('button','jowon','⚖ '+x.k);
-  b.title='조문 본문을 팝업으로 연다';
-  b.onclick=ev=>{ev.stopPropagation();popJo('특허법',x.k,ev,1);};
+  /* ★ 8/26 사용자 확정 — 이 단추는 **법제처 그 조 원문**으로 나간다.
+     민법OX 의 「제924조 원문」과 같은 자리·같은 행동이다.
+     앱 안에서 보고 싶으면 머리 배지줄의 「조문형 · 제X조」 칩을 누른다. */
+  const b=el('a','jowon','⚖ '+x.k+' 원문');
+  b.href='https://www.law.go.kr/법령/'+encodeURIComponent(S.law)
+         +'/'+encodeURIComponent(x.k);
+  b.target='_blank';b.rel='noopener';
+  b.title='법제처에서 '+x.k+' 원문을 연다';
+  b.onclick=ev=>ev.stopPropagation();
   return b;
 }
 
