@@ -2639,11 +2639,11 @@ function qlRow(M,i,sel,label,keys,subj,kid,folded){
   nm.style.paddingLeft=(9+((n?n.깊이:1)-1)*12)+'px';
   const ar=el('span','qlar'+(kid?' k':''), kid?(folded?'▸':'▾'):'');
   if(kid)ar.onclick=ev=>{ev.stopPropagation();S.mgFold[i]=!folded;render();};
+  nm.appendChild(ar);
   const t=el('span','qlnmt',label);
   if(n&&n.출처==='제7판')t.style.color='#d4b04a';
   nm.appendChild(t);
   nm.appendChild(el('span','qltot','총 '+total+'문제'));
-  nm.appendChild(ar);   // ★ 이름·열접기 손잡이와 붙어 헷갈려서 뒤로 뺐다(8/26)
   const note=el('button','qlnote'+(cards?' on':''),'🃏'+(cards?' '+cards:''));
   note.title='암기노트';
   note.onclick=ev=>{ev.stopPropagation();mcChapOpen(label,keys,ev);};
@@ -3097,11 +3097,22 @@ function p7Card(z){
     });
   }
   if(JOS.length){
-    const jb=el('span','jochip','조문형 · '+JOS.map(x=>x.k).join(' · '));
-    jb.title='해설에서 뽑은 근거 조문 — 누르면 팝업으로 연다';
-    const first=JOS.find(x=>x.law);
-    if(first)jb.onclick=ev=>{ev.stopPropagation();popJo('특허법',first.k,ev,1);};
-    else jb.style.cursor='default';
+    /* ★ 조가 여러 개면 조마다 따로 누른다(8/26 사용자 지적).
+       전엔 통째라 어디를 눌러도 첫 조만 열렸다. */
+    const jb=el('span','jochip');
+    jb.appendChild(document.createTextNode('조문형 · '));
+    JOS.forEach((x,ix)=>{
+      if(ix)jb.appendChild(document.createTextNode(' · '));
+      const a=el('span','',x.k);
+      if(x.law){
+        a.style.textDecoration='underline';a.style.cursor='pointer';
+        a.title=x.k+' 를 팝업으로 연다';
+        a.onclick=ev=>{ev.stopPropagation();popJo('특허법',x.k,ev,1);};
+      }
+      jb.appendChild(a);
+    });
+    jb.title='해설에서 뽑은 근거 조문 — 조를 누르면 그 조가 열린다';
+    jb.style.cursor='default';
     h.appendChild(jb);
   }
   const sp=el('span');sp.style.flex='1';h.appendChild(sp);
