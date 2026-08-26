@@ -484,6 +484,19 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .rectab{width:100%;border-collapse:collapse;font-size:11.5px;margin:6px 0}
 .rectab td,.rectab th{border-bottom:1px solid #eeece6;padding:3px 6px;text-align:left}
 .rectab td.n{text-align:right;font-variant-numeric:tabular-nums}
+/* ══ v3-C — 회독 채점표 · 페이지 바 (2026-08-26 밤) ══ */
+.rchip{display:inline-block;border:1px solid #d9d6ce;border-radius:7px;background:#fff;
+  padding:1px 8px;font-size:11.5px;color:#345;cursor:pointer;margin:0 3px 3px 0}
+.rchip:not(.dead):hover{border-color:var(--exc);color:var(--exc)}
+.rchip.dead{color:#c2beb6;background:#f4f2ec;border-color:#e5e2da;cursor:default}
+.rndblk{border:1px solid var(--line);border-radius:9px;padding:7px 10px;margin:7px 0;background:var(--paper)}
+.rndhd{font-weight:700;font-size:12px;margin-bottom:4px}
+.pgbar{position:sticky;bottom:0;z-index:5;background:var(--panel);
+  box-shadow:0 -4px 12px rgba(0,0,0,.07);margin-top:12px}
+.pgbig{font-weight:700;border-radius:9px;padding:6px 16px;border:1px solid var(--exc);
+  background:var(--exc);color:#fff}
+.pgbig:hover{opacity:.92}
+.oxmiss{outline:2px solid var(--rule);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -536,6 +549,8 @@ const S={law:'특허법',tab:'jo',jo:null,prec:null,precTab:'요약',
          boardKind:'기출',boardView:'board',treeHid:false,listHid:false,
          precSort:'asc',labels:true,joMode:'본문',
          jimunTab:'ox',mok:null,year:null,oxFilter:'all',oxQueue:'',mgFold:{},
+         // ★ v3-C §6-2 — 마디 화면 쪽 번호. null = 마디에 막 들어왔다(첫 미채점 쪽으로)
+         oxPage:null,oxPageJump:false,
          series:'',yearFilter:'',yearSort:'asc',zoom:0.55,
          // §3 마크업 스티커 편집 모드 · §4 필기 모드 — 둘 다 기본은 꺼짐(T5)
          stick:false,ink:false,inkColor:'#D93B3B',inkW:2,inkErase:false,
@@ -1037,6 +1052,31 @@ const REC_PRE = 'jopangi.';
 const MK_KEY  = REC_PRE + 'markup';     // 마크업 스티커 삭제·편집·신규
 const INK_KEY = REC_PRE + 'ink';        // 필기
 const TS_PRE  = REC_PRE + 'ts.';        // 낡은 층(메모)용 갱신시각 짝
+/* ★ 8/26 — 층 이름을 사람 말로. 팝업에 「ox · 2」 만 떠서 필기인지 풀이인지 알 수 없었다. */
+const REC_NAMES = { ox:'1차객 풀이 (O/X · 헷갈림 · 태그)', rounds:'1차객 회독', ansfix:'정답 정정',
+  mcard:'암기카드', gi:'기출 풀이 (오지선다)', 'gi.year':'기출 제출 이력',
+  markup:'마크업 스티커 (형광펜·밑줄)', ink:'필기 (애플펜슬)' };
+function recLabel(k){
+  const t = k.slice(REC_PRE.length);
+  if (REC_NAMES[t]) return REC_NAMES[t];
+  if (t.indexOf('memo.') === 0) return '메모 · ' + t.slice(5);
+  return t;
+}
+/* 층을 지우거나 들여온 뒤엔 메모리 캐시를 비워야 화면이 새 값을 본다 */
+function recDropCache(){
+  MKS = null; INK = null;
+  if (typeof OXREC  !== 'undefined') OXREC = null;
+  if (typeof RNDREC !== 'undefined') RNDREC = null;
+  if (typeof FIXREC !== 'undefined') FIXREC = null;
+  if (typeof MCREC  !== 'undefined') MCREC = null;
+  if (typeof GIREC  !== 'undefined') GIREC = null;
+  if (typeof GIYREC !== 'undefined') GIYREC = null;
+}
+function recDelete(k){
+  try{ localStorage.removeItem(k); }catch(e){}
+  try{ localStorage.removeItem(TS_PRE + k.slice(REC_PRE.length)); }catch(e){}   // 짝 맞춤표도
+  recDropCache();
+}
 function nowIso(){ return new Date().toISOString(); }
 function lsWrite(key, obj, what){
   try{ localStorage.setItem(key, JSON.stringify(obj)); return true; }
@@ -1106,7 +1146,7 @@ function recImport(file, after){
       if (k.indexOf(REC_PRE) !== 0) return;
       if (lsWrite(k, d.층[k], k)) ok++;
     });
-    MKS = null; INK = null;
+    recDropCache();   // ★ 8/26 — 전엔 MKS·INK 만 비워 풀이·회독이 옛 값으로 보였다
     toast('층 ' + ok + '개를 들여왔다 — 지금 ' + recTotal() + '건');
     if (after) after();
   };
@@ -1124,13 +1164,34 @@ function popRec(ev){
                    c.colSpan = 3; r.appendChild(c); tb.appendChild(r); }
   st.forEach(x => {
     const r = el('tr');
-    r.appendChild(el('td', '', x.k.slice(REC_PRE.length)));
+    const nm = el('td', '', recLabel(x.k));
+    const raw = el('span', 'cdim', '  ' + x.k.slice(REC_PRE.length)); raw.style.fontSize = '10.5px';
+    nm.appendChild(raw); r.appendChild(nm);
     r.appendChild(el('td', 'n', String(x.n)));
-    r.appendChild(el('td', '', x.note));
+    const c3 = el('td', '', x.note ? (x.note + ' ') : '');
+    /* ★ 8/26 — 층별 삭제(사용자 요구). 그 층 하나만 지운다 · 다른 층은 그대로 */
+    const del = el('button', 'tool', '🗑');
+    del.title = '이 층만 지운다';
+    del.onclick = ev => { ev.stopPropagation();
+      if (!confirm('「' + recLabel(x.k) + '」 ' + x.n + '건을 지운다.\n\n다른 층은 그대로다. 되돌릴 수 없다 — 먼저 내보내기를 권한다.')) return;
+      recDelete(x.k); toast('「' + recLabel(x.k) + '」 을 지웠다 — 남은 기록 ' + recTotal() + '건');
+      closeOne(body.parentNode); render(); };
+    c3.appendChild(del); r.appendChild(c3);
     tb.appendChild(r);
   });
   body.appendChild(tb);
-  body.appendChild(el('div', 'badge', '모두 ' + recTotal() + '건'));
+  const tot = el('div', 'badge', '모두 ' + recTotal() + '건');
+  body.appendChild(tot);
+  if (st.length){
+    const all = el('button', 'tool', '🗑 모두 지우기');
+    all.style.marginLeft = '8px';
+    all.onclick = () => {
+      if (!confirm('기록 ' + recTotal() + '건을 전부 지운다. 되돌릴 수 없다 — 먼저 내보냈는가?')) return;
+      if (!confirm('정말 전부 지운다?')) return;
+      st.forEach(x => recDelete(x.k));
+      toast('기록을 모두 지웠다'); closeOne(body.parentNode); render(); };
+    tot.appendChild(all);
+  }
   const row = el('div', 'memobtn');
   const ex = el('button', 'tool on', '⤓ 기록 내보내기');
   ex.onclick = recExport;
@@ -1418,7 +1479,8 @@ function inkBind(cv, key){
   };
   const rub = p => {
     const r = cv.getBoundingClientRect();
-    const R = 11 / r.width, RY = 11 / r.height;
+    const er = S.inkEr || 11;                 // ★ 8/26 지우개 크기(작게6·보통11·크게22·아주44)
+    const R = er / r.width, RY = er / r.height;
     const cur = inkOf(key);
     const keep = cur.filter(s => !s.p.some(q =>
       Math.abs(q[0] - p[0]) < R + s.w / r.width && Math.abs(q[1] - p[1]) < RY + s.w / r.height));
@@ -1467,6 +1529,98 @@ function inkBind(cv, key){
   cv.addEventListener('pointercancel', done);
   cv.addEventListener('pointerleave', done);
 }
+/* ══ 필기 찾기 · 점만 지우기 · 이 화면 지우기 (2026-08-26 · 사용자 지적) ══ */
+function inkKeyLabel(key){
+  const i = key.indexOf('|'), h = i < 0 ? key : key.slice(0, i), t = i < 0 ? '' : key.slice(i + 1);
+  const nm = { jo:'조문', prec:'판례', cell:'2차 셀', q:'1차객 문항', q7:'제7판 지문' }[h] || h;
+  return nm + ' · ' + t;
+}
+function inkIsDot(st){
+  const p = st.p || [];
+  if (p.length <= 2) return true;
+  let x0 = 9, x1 = -9, y0 = 9, y1 = -9;
+  p.forEach(q => { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); });
+  return (x1 - x0) < 0.01 && (y1 - y0) < 0.01;
+}
+function inkFlash(cv, key, pred){
+  inkDraw(cv, key);
+  const ctx = cv.getContext('2d');
+  const W = parseFloat(cv.style.width) || 1, H = parseFloat(cv.style.height) || 1;
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.scale(cv.width / W, cv.width / W);
+  ctx.strokeStyle = '#E24B4A'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+  let n = 0;
+  inkOf(key).forEach(st => {
+    if (pred && !pred(st)) return;
+    let x0 = 9, x1 = -9, y0 = 9, y1 = -9;
+    st.p.forEach(q => { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); });
+    ctx.strokeRect(x0 * W - 8, y0 * H - 8, (x1 - x0) * W + 16, (y1 - y0) * H + 16); n++;
+  });
+  ctx.restore();
+  setTimeout(() => { if (cv.isConnected) inkDraw(cv, key); }, 1800);
+  return n;
+}
+function inkCvOf(key){
+  return Array.from(document.querySelectorAll('.inklay')).find(c => c.dataset.key === key) || null;
+}
+function inkReplace(key, arr, why){
+  const cur = inkOf(key);
+  (INKUNDO[key] = INKUNDO[key] || []).push(cur.slice());
+  if (INKUNDO[key].length > 24) INKUNDO[key].shift();
+  inkSet(key, arr);
+  const cv = inkCvOf(key); if (cv){ inkDraw(cv, key); INKLAST = cv; }
+  toast(why + ' — ' + (cur.length - arr.length) + '획 지움 · 되돌리기 됨');
+}
+function inkClearScreen(){
+  const cvs = Array.from(document.querySelectorAll('.inklay')).filter(c => inkHas(c.dataset.key));
+  if (!cvs.length){ toast('이 화면에 필기가 없다'); return; }
+  const n = cvs.reduce((a, c) => a + inkOf(c.dataset.key).length, 0);
+  if (!confirm('이 화면의 필기 ' + n + '획(' + cvs.length + '곳)을 지운다. 되돌리기는 마지막 한 곳만 된다 — 먼저 내보내기를 권한다.')) return;
+  cvs.forEach(c => inkReplace(c.dataset.key, [], '이 화면 지우기'));
+}
+function inkFindPop(ev){
+  const A = inkAll(), keys = Object.keys(A).filter(k => (A[k].s || []).length);
+  const on = k => !!inkCvOf(k);
+  keys.sort((a, b) => (on(b) - on(a)) || (a < b ? -1 : 1));
+  const body = popShell('cell', '🔍 필기가 있는 곳 ' + keys.length);
+  const vis = keys.filter(on), dots = vis.reduce((a, k) => a + inkOf(k).filter(inkIsDot).length, 0);
+  const top = el('div', 'memobtn');
+  top.appendChild(el('span', 'badge', '지금 화면 ' + vis.length + '곳 · 점으로 보이는 획 ' + dots));
+  const sd = el('button', 'tool', '● 점 표시');
+  sd.title = '지금 화면에서 점처럼 찍힌 획을 붉은 점선으로 비춘다';
+  sd.onclick = () => { let n = 0; vis.forEach(k => { n += inkFlash(inkCvOf(k), k, inkIsDot); });
+                       toast(n ? '점 ' + n + '개를 비췄다' : '점으로 보이는 획이 없다'); };
+  top.appendChild(sd);
+  body.appendChild(top);
+  if (!keys.length) body.appendChild(el('div', 'cdim', '필기가 아직 없다'));
+  const tb = el('table', 'rectab');
+  const hr = el('tr'); ['어디', '획', '점', ''].forEach(t => hr.appendChild(el('th', '', t)));
+  tb.appendChild(hr);
+  keys.forEach(k => {
+    const st = inkOf(k), nd = st.filter(inkIsDot).length;
+    const r = el('tr');
+    r.appendChild(el('td', '', (on(k) ? '● ' : '') + inkKeyLabel(k)));
+    r.appendChild(el('td', 'n', String(st.length)));
+    r.appendChild(el('td', 'n', String(nd)));
+    const c = el('td');
+    const go = el('button', 'tool', '보기');
+    go.onclick = () => { const cv = inkCvOf(k);
+      if (!cv){ toast('지금 화면에 없다 — ' + inkKeyLabel(k) + ' 로 가서 열어라'); return; }
+      cv.scrollIntoView({ block: 'center' }); inkFlash(cv, k, null); };
+    c.appendChild(go);
+    if (nd){ const pd = el('button', 'tool', '점만 지우기');
+      pd.onclick = () => { if (!confirm('「' + inkKeyLabel(k) + '」의 점 ' + nd + '개를 지운다')) return;
+        inkReplace(k, st.filter(s => !inkIsDot(s)), '점만 지우기'); closeOne(body.parentNode); };
+      c.appendChild(pd); }
+    const dl = el('button', 'tool', '🗑');
+    dl.title = '이 자리의 필기를 통째로 지운다';
+    dl.onclick = () => { if (!confirm('「' + inkKeyLabel(k) + '」 필기 ' + st.length + '획을 통째로 지운다')) return;
+      inkReplace(k, [], '필기 지우기'); closeOne(body.parentNode); };
+    c.appendChild(dl);
+    r.appendChild(c); tb.appendChild(r);
+  });
+  body.appendChild(tb);
+  showPop(ev);
+}
 function inkBar(){
   const old = $('#inkbar'); if (old) old.remove();
   if (!S.ink) return;
@@ -1490,6 +1644,21 @@ function inkBar(){
   const er = el('button', 'tool' + (S.inkErase ? ' on' : ''), '지우개');
   er.onclick = () => { S.inkErase = !S.inkErase; inkBar(); };
   bar.appendChild(er);
+  /* ★ 8/26 — 지우개 크기 4단 · 이 화면 지우기 · 필기 찾기(사용자 지적) */
+  if (S.inkErase){
+    const cur = S.inkEr || 11;
+    [[6, '작게'], [11, '보통'], [22, '크게'], [44, '아주']].forEach(([w, t]) => {
+      const b = el('button', 'tool' + (cur === w ? ' on' : ''), t);
+      b.onclick = () => { S.inkEr = w; inkBar(); };
+      bar.appendChild(b);
+    });
+  }
+  const clr = el('button', 'tool', '🗑 이 화면 지우기');
+  clr.onclick = inkClearScreen;
+  bar.appendChild(clr);
+  const fd = el('button', 'tool', '🔍 필기 찾기');
+  fd.onclick = ev => inkFindPop(ev);
+  bar.appendChild(fd);
   const un = el('button', 'tool', '↺ 되돌리기');
   un.onclick = () => {
     const cv = (INKLAST && INKLAST.isConnected) ? INKLAST : document.querySelector('.inklay');
@@ -2080,6 +2249,7 @@ const OX_KEY  = REC_PRE + 'ox';
 const RND_KEY = REC_PRE + 'rounds';
 const FIX_KEY = REC_PRE + 'ansfix';
 let OXREC = null, RNDREC = null, FIXREC = null;
+let OXPOOL = null, OXDOMPG = null;   // ★ v3-C — 키→{dom,ans} 표 · dom→쪽 표(§3·§6)
 function oxAll(){ if (!OXREC) OXREC = lsRead(OX_KEY); return OXREC; }
 function rndAll(){ if (!RNDREC) RNDREC = lsRead(RND_KEY); return RNDREC; }
 function fixAll(){ if (!FIXREC) FIXREC = lsRead(FIX_KEY); return FIXREC; }
@@ -2105,17 +2275,43 @@ function oxPut(k, patch){
   A[k] = Object.assign({}, cur, patch, { ts: nowIso() });
   OXREC = A; lsWrite(OX_KEY, A, '1차객 풀이');
 }
-function oxPick(k, picked, ans){
-  if (!ans){ toast('이 지문은 정오가 없어 채점할 수 없다', 1); return; }
-  const ok = (picked === ans), cur = oxOf(k) || {}, patch = { p: picked, ok: ok };
-  if (S.oxQueue === 'weak'){
-    if (ok && cur.c) patch.sg = 'semi';
-    else patch.sg = '';
-  } else if (S.oxQueue === 'semi'){
-    if (ok){ patch.c = false; patch.sg = ''; }
-    else patch.sg = '';
+/* ★ v3-C §6-3 (8/26 밤) — 즉시 채점(oxPick) 폐기. 마킹(m)을 모아 한꺼번에 채점한다.
+   cells = [{k, ans, dom}] — 그 페이지(또는 큐)의 지문들.
+   큐 규칙(약점→덜약점→졸업 · sg 갱신)은 oxPick 에 있던 그대로 여기로 옮겨 왔다. */
+function oxGrade(cells){
+  const A = oxAll();
+  const todo = cells.filter(c => oxAns(c.k, c.ans) && !((A[c.k] || {}).p));
+  if (!todo.length){ toast('채점할 지문이 없다'); return; }
+  const miss = todo.filter(c => !((A[c.k] || {}).m));
+  if (miss.length){
+    // 미응답이 있으면 채점하지 않는다 — 첫 미응답 카드로 데려간다(민법OX 이식)
+    const box = document.getElementById(miss[0].dom);
+    if (box){
+      box.scrollIntoView({ block: 'center' });
+      box.classList.add('oxmiss');
+      setTimeout(() => box.classList.remove('oxmiss'), 1500);
+    }
+    toast('안 푼 지문 ' + miss.length + '개 — 붉은 칸을 먼저', 1);
+    return;
   }
-  oxPut(k, patch);
+  let a = 0, b = 0, firstWrong = null;
+  todo.forEach(c => {
+    const cur = A[c.k] || {};
+    const ok = (cur.m === oxAns(c.k, c.ans));
+    const rec = Object.assign({}, cur, { p: cur.m, ok: ok, ts: nowIso() });
+    delete rec.m;
+    if (S.oxQueue === 'weak'){ rec.sg = (ok && cur.c) ? 'semi' : ''; }
+    else if (S.oxQueue === 'semi'){ if (ok){ rec.c = false; rec.sg = ''; } else rec.sg = ''; }
+    A[c.k] = rec;
+    if (ok) a++; else { b++; if (!firstWrong) firstWrong = c.dom; }
+  });
+  OXREC = A; lsWrite(OX_KEY, A, '1차객 풀이');   // ⚠ 한 번에 고치고 한 번만 쓴다(§6-3 ③)
+  render().then(() => setTimeout(() => {
+    if (!firstWrong) return;
+    const box = document.getElementById(firstWrong);
+    if (box) box.scrollIntoView({ block: 'center' });
+  }, 60));
+  toast('이 페이지 채점 — 맞음 ' + a + ' · 틀림 ' + b);
 }
 function oxConfuse(k){ const r = oxOf(k) || {}; oxPut(k, { c: !r.c, sg: r.c ? '' : r.sg }); }
 /* ★ 학습 태그 — v3-B 까지는 자리만 있는 죽은 span 이었다(「기록은 v0 제외」).
@@ -2157,13 +2353,15 @@ const OXNAME = ['안 품', '맞음', '헷갈림', '틀림', '덜약점'];
 function oxPickRow(row, key, raw, sol){
   const rec = oxOf(key) || {}, ans = oxAns(key, raw), fixed = oxFixed(key);
   const pick = el('div', 'oxpick');
+  /* ★ v3-C §6-1 (8/26 밤) — 즉시 채점 폐기. 누르면 마킹(m)만 하고 채점은 바닥 바가 한다.
+     같은 걸 또 누르면 해제. 채점된 지문(p 있음)은 지금처럼 정오 색을 보이고 단추는 잠근다. */
   ['O', 'X'].forEach(v => {
-    const on = rec.p === v;
+    const on = rec.p ? rec.p === v : rec.m === v;
     const b = el('button', 'oxbtn' + (on ? ' sel' : '') +
       (rec.p ? (v === ans ? ' right' : (on ? ' wrong' : '')) : ''));
     b.appendChild(el('span', 'dot', on ? '◉' : '○'));
     b.appendChild(el('span', 'lv ' + v, v));
-    b.onclick = () => { oxPick(key, v, ans); render(); };
+    if (!rec.p) b.onclick = () => { oxPut(key, { m: rec.m === v ? '' : v }); render(); };
     pick.appendChild(b);
   });
   row.appendChild(pick);
@@ -2179,7 +2377,7 @@ function oxPickRow(row, key, raw, sol){
   fx.title = '채점값을 직접 넣는다 — 원장은 안 건드리고 이 기기에만 쌓인다';
   fx.onclick = () => oxFix(key, raw);
   bar.appendChild(fx);
-  if (rec.p || rec.c){
+  if (rec.p || rec.c || rec.m){
     const cl = el('button', 'tool', '지우개');
     cl.onclick = () => { oxClear(key); render(); };
     bar.appendChild(cl);
@@ -2234,23 +2432,167 @@ function oxBar(counts){
 
 /* ── 회독 ── 마감하면 O/X 선택만 비우고 헷갈림·덜약점은 남긴다 — 다음 회독의 출발선이다 */
 function rndList(scope){ const a = rndAll()[scope]; return Array.isArray(a) ? a : []; }
-function rndClose(scope, keys){
+function rndClose(scope, keys, label){
   const done = keys.filter(k => (oxOf(k) || {}).p).length;
   if (!done){ toast('이 판에서 풀이한 지문이 없다'); return; }
   const cnt = [0, 0, 0, 0, 0];
-  keys.forEach(k => cnt[oxState(k)]++);
+  /* ★ v3-C §1 — 지문별 결과 키 목록을 회독 항목에 남긴다(칩·대조의 바닥).
+     맞은 키까지 담으면 커진다 — right 는 수만 남긴다. */
+  const wrongK = [], confuseK = [], semiK = [];
+  keys.forEach(k => { const st = oxState(k); cnt[st]++;
+    if (st === 3) wrongK.push(k);
+    else if (st === 2) confuseK.push(k);
+    else if (st === 4) semiK.push(k); });
   const n = rndList(scope).length + 1;
   if (!confirm('이 판을 ' + n + '회독으로 마감한다. 풀이한 지문 ' + done + '개 · 맞음 ' + cnt[1] + ' · 틀림 ' + cnt[3] + ' · 헷갈림 ' + cnt[2] + ' · 덜약점 ' + cnt[4])) return;
   const A = rndAll();
   const L = rndList(scope);
   L.push({ n: n, date: nowIso().slice(0, 10), total: keys.length, done: done,
-           right: cnt[1], wrong: cnt[3], confuse: cnt[2], semi: cnt[4] });
+           right: cnt[1], wrong: cnt[3], confuse: cnt[2], semi: cnt[4],
+           wrongK: wrongK, confuseK: confuseK, semiK: semiK });
   A[scope] = L;
   RNDREC = A; lsWrite(RND_KEY, A, '회독');
   const O = oxAll();
   keys.forEach(k => { if (O[k]){ delete O[k].p; delete O[k].ok; O[k].ts = nowIso(); } });
   OXREC = O; lsWrite(OX_KEY, O, '1차객 풀이');
   render();
+  rndPop(scope, keys, label, null);   // ★ v3-C §5 — 마감 직후 채점표를 바로 보인다
+}
+/* ══ v3-C §2~§4 — 📊 회독 비교·채점표 팝업 (민법OX 이식 · 2026-08-26 밤) ══
+   rndClose 가 남긴 wrongK/confuseK/semiK 로 회독마다 지문 칩을 그린다.
+   옛 항목(목록 없음)은 수만 보인다 — 칩을 지어내지 않는다(§1). */
+function oxKeyDisp(k){
+  if (k.indexOf('L:') === 0){ const i = k.indexOf('#'); return i >= 0 ? k.slice(i) : k; }
+  if (k.indexOf('P7:') === 0) return k.slice(3);
+  return k.length === 8 ? k.slice(5) : k;   // sid 8자 → 뒤 3자(문번2+지문1 · 규약 v3)
+}
+function rndGo(scope, k){
+  const info = (OXPOOL || {})[k];
+  if (!info) return;
+  /* ⚠ 병합 지문(8자 sid)은 마디에 따라 리담 카드(qb-<문항id>)로도,
+     제7판 카드(qb-<키>)로도 그려진다 — 지금 마디에 있는 쪽을 잡는다(실측: 주체능력 전부 후자) */
+  const doms = info.dom === ('qb-' + k) ? [info.dom] : [info.dom, 'qb-' + k];
+  const fin = () => {
+    const d = doms.find(x => document.getElementById(x));
+    if (!d){ toast('그 지문 카드가 지금 화면에 없다 — 거르기·큐를 풀면 보인다'); return; }
+    const box = document.getElementById(d);
+    box.scrollIntoView({ block: 'center' });
+    box.classList.add('hmhit');
+    setTimeout(() => box.classList.remove('hmhit'), 1500);
+  };
+  const hop = () => {
+    const d = doms.find(x => (OXDOMPG || {})[x] != null);
+    const pg = d != null ? OXDOMPG[d] : null;
+    if (pg != null && pg !== S.oxPage){
+      S.oxPage = pg; S.oxPageJump = true;
+      render().then(() => setTimeout(fin, 60));
+    } else fin();
+  };
+  const sel = (scope || '').split('|')[2] || '';
+  if (sel && S.mok !== sel){
+    S.mok = sel; S.oxPage = null; S.oxQueue = '';
+    render().then(() => setTimeout(hop, 60));
+  } else hop();
+}
+function rndChip(scope, k){
+  const info = (OXPOOL || {})[k];
+  const b = el('button', 'rchip' + (info ? '' : ' dead'), oxKeyDisp(k));
+  b.title = info ? k : '지금 불러온 데이터에 없는 지문';
+  if (info) b.onclick = () => rndGo(scope, k);
+  return b;
+}
+function rndChipRow(host, scope, label, keys){
+  if (!keys || !keys.length) return;
+  const line = el('div');
+  line.appendChild(el('span', 'badge', label + ' ' + keys.length));
+  keys.forEach(k => line.appendChild(rndChip(scope, k)));
+  host.appendChild(line);
+}
+function rndDelAll(scope){
+  const A = rndAll();
+  if (!Array.isArray(A[scope]) || !A[scope].length){ toast('삭제할 회독 기록이 없다'); return; }
+  if (!confirm('이 마디의 회독 이력 ' + A[scope].length + '개를 모두 지운다.' + String.fromCharCode(10) + '지문별 풀이·태그·메모는 그대로 남는다.')) return;
+  delete A[scope];
+  RNDREC = A; lsWrite(RND_KEY, A, '회독');
+  closePop(); render();
+}
+function rndPop(scope, keys, label, ev){
+  const body = popShell('cell', '📊 ' + (label || scope));
+  // 1) 이번 판(진행중) — 지금 oxState 로 센다
+  const cnt = [0, 0, 0, 0, 0], curW = [], curC = [];
+  keys.forEach(k => { const st = oxState(k); cnt[st]++;
+    if (st === 3) curW.push(k); else if (st === 2) curC.push(k); });
+  const b1 = el('div', 'rndblk');
+  b1.appendChild(el('div', 'rndhd', '이번 판 (진행중)'));
+  const rr = cnt[1] + cnt[3];
+  b1.appendChild(el('div', '', '맞음 ' + cnt[1] + ' · 틀림 ' + cnt[3] + ' · 헷갈림 ' + cnt[2] +
+    ' · 덜약점 ' + cnt[4] + ' · 안 품 ' + cnt[0] + ' / ' + keys.length +
+    '  ·  정답률 ' + (rr ? Math.round(cnt[1] * 100 / rr) + '%' : '—')));
+  rndChipRow(b1, scope, '🔴 틀림', curW);
+  rndChipRow(b1, scope, '🌀 헷갈림', curC);
+  body.appendChild(b1);
+  // 2) 지난 회독 — 최신부터
+  const rl = rndList(scope).slice().reverse();
+  if (!rl.length) body.appendChild(el('div', 'cdim', '아직 마감한 회독이 없다'));
+  rl.forEach(r => {
+    const bk = el('div', 'rndblk');
+    bk.appendChild(el('div', 'rndhd', r.n + '회독 · ' + r.date +
+      ' · 🌀' + r.confuse + ' 🌤' + r.semi + ' 🔴' + r.wrong + ' /' + r.done));
+    if (Array.isArray(r.wrongK) || Array.isArray(r.confuseK) || Array.isArray(r.semiK)){
+      rndChipRow(bk, scope, '🔴 틀림', r.wrongK || []);
+      rndChipRow(bk, scope, '🌀 헷갈림', r.confuseK || []);
+    } else bk.appendChild(el('div', 'cdim', '지문별 기록 없음(옛 회독)'));
+    body.appendChild(bk);
+  });
+  // 3) 이번 판 ↔ 직전 회독 대조 — 민법OX 「번호로 대조」의 조판기 판
+  const prev = rl[0];
+  if (prev && Array.isArray(prev.wrongK)){
+    const pw = {}; prev.wrongK.forEach(k => pw[k] = 1);
+    const again = curW.filter(k => pw[k]);
+    const fixedK = prev.wrongK.filter(k => oxState(k) === 1);
+    const fresh = curW.filter(k => !pw[k]);
+    const bk = el('div', 'rndblk');
+    bk.appendChild(el('div', 'rndhd', '이번 판 ↔ 직전 ' + prev.n + '회독 대조'));
+    rndChipRow(bk, scope, '또 틀림', again);
+    rndChipRow(bk, scope, '고침', fixedK);
+    rndChipRow(bk, scope, '새로 틀림', fresh);
+    if (!again.length && !fixedK.length && !fresh.length)
+      bk.appendChild(el('div', 'cdim', '대조할 것이 없다 — 이번 판을 풀면 여기가 채워진다'));
+    body.appendChild(bk);
+  }
+  // 4) 바닥 — 🗑 삭제(§4) · 닫기
+  const row = el('div', 'memobtn');
+  const del = el('button', 'tool', '🗑 이 마디 회독 기록 전체 삭제');
+  del.title = '회독 이력만 지운다 — 지문별 풀이·태그·메모는 그대로다';
+  del.onclick = () => rndDelAll(scope);
+  const cls = el('button', 'tool', '닫기');
+  cls.onclick = () => closeOne(body.parentNode);
+  row.appendChild(del); row.appendChild(cls);
+  body.appendChild(row);
+  showPop(ev);
+}
+/* ══ v3-C §7 — ⭐ 정답표가 지목한 선지에 중요 태그를 1회 자동으로 켠다 ══
+   플래그 jopangi_auto 는 `jopangi.` 접두가 아니다 — 기록층 밖(내보내기 제외 · 기기마다 1회).
+   사용자가 뒤에 끈 것은 존중한다 — 이 1회 플래그가 재점화를 막는다. */
+const AUTO_KEY = 'jopangi_auto';
+function autoImportant(JM, subj){
+  if (subj !== '특허') return;          // 목차·제7판 짝이 있는 특허 원장에만 돈다
+  try{ if ((JSON.parse(localStorage.getItem(AUTO_KEY) || '{}') || {}).important) return; }
+  catch(e){}
+  const A = oxAll(); let n = 0;
+  (JM.문제 || []).forEach(q => giAns(q).forEach(no => {
+    const z = (q.지문 || []).find(x => String(x.n) === String(no));
+    if (!z) return;
+    const k = oxKeyLid(q, z), cur = A[k] || {};
+    if ((cur.tg || {}).important) return;   // 이미 켜져 있으면 손대지 않는다
+    const tg = Object.assign({}, cur.tg || {}); tg.important = 1;
+    A[k] = Object.assign({}, cur, { tg: tg, ts: nowIso() });
+    n++;
+  }));
+  if (n){ OXREC = A; lsWrite(OX_KEY, A, '1차객 풀이'); }   // ⚠ lsWrite 는 한 번(§7)
+  try{ localStorage.setItem(AUTO_KEY, JSON.stringify({ important: 'v1', at: nowIso() })); }
+  catch(e){}
+  if (n) toast('⭐ 정답표 지목 지문 ' + n + '개에 중요 태그를 켰다(1회)');
 }
 function rndBar(scope, keys){
   const b = el('div', 'modebar');
@@ -2314,12 +2656,20 @@ function heatBox(cells){
     if (c < 0 || c >= cv._cols) return;
     const i = rw * cv._cols + c;
     if (i < 0 || i >= HMCELL.length) return;
-    const box = document.getElementById(HMCELL[i].dom);
-    if (box){
-      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      box.classList.add('hmhit');
-      setTimeout(() => box.classList.remove('hmhit'), 2000);
-    } else toast('그 지문은 지금 걸러져 화면에 없다 — 거르기를 「전체」로 두면 보인다');
+    /* ★ v3-C §6-2 — 히트맵은 마디 전체다. 칸이 다른 쪽이면 쪽을 넘긴 뒤 스크롤한다 */
+    const cell = HMCELL[i];
+    const go = () => {
+      const box = document.getElementById(cell.dom);
+      if (box){
+        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        box.classList.add('hmhit');
+        setTimeout(() => box.classList.remove('hmhit'), 2000);
+      } else toast('그 지문은 지금 걸러져 화면에 없다 — 거르기를 「전체」로 두면 보인다');
+    };
+    if (cell.pg != null && cell.pg !== S.oxPage){
+      S.oxPage = cell.pg; S.oxPageJump = true;
+      render().then(() => setTimeout(go, 60));
+    } else go();
   });
   setTimeout(draw, 0);
   if (window.ResizeObserver){ const ro = new ResizeObserver(draw); ro.observe(cv); INKROS.push(ro); }
@@ -2724,8 +3074,12 @@ function qlRow(M,i,sel,label,keys,subj,kid,folded){
   if(isJang){ row.appendChild(rd); return row; }
   if(rn){
     const r=rl[rn-1];
-    rd.appendChild(el('span','qlb',
-      rn+'회독 🌀'+r.confuse+' 🌤'+r.semi+' 🔴'+r.wrong+' /'+r.done));
+    /* ★ v3-C §2 ⓐ — 배지를 누르면 📊 회독 비교·채점표 팝업 */
+    const bg=el('button','qlb',
+      rn+'회독 🌀'+r.confuse+' 🌤'+r.semi+' 🔴'+r.wrong+' /'+r.done);
+    bg.title='누르면 회독 비교 · 채점표';
+    bg.onclick=ev=>{ev.stopPropagation();rndPop(scope,keys,label,ev);};
+    rd.appendChild(bg);
   }
   if(total){
     /* ★ 회독 「마감」 버튼은 두지 않는다(사용자 확정 8/26) —
@@ -2733,17 +3087,17 @@ function qlRow(M,i,sel,label,keys,subj,kid,folded){
     if(done>0&&done<total){
       rd.appendChild(el('span','qlrun','▶ '+(rn+1)+'회독 진행중 '+done+'/'+total));
       const go=el('button','qlgo cont','이어서 풀기');
-      go.onclick=()=>{S.mok=sel;render();};
+      go.onclick=()=>{S.mok=sel;S.oxPage=null;render();};
       rd.appendChild(go);
     }else if(done>=total){
       rd.appendChild(el('span','qlrun','▶ '+(rn+1)+'회독 다 풀었다 '+done+'/'+total));
       const go=el('button','qlgo',(rn+2)+'회독 시작');
       go.title='이 판을 마감하고 다음 회독을 연다';
-      go.onclick=()=>{S.mok=sel;rndClose(scope,keys);};
+      go.onclick=()=>{S.mok=sel;S.oxPage=null;rndClose(scope,keys,label);};
       rd.appendChild(go);
     }else{
       const go=el('button','qlgo gray',(rn+1)+'회독 시작');
-      go.onclick=()=>{S.mok=sel;render();};
+      go.onclick=()=>{S.mok=sel;S.oxPage=null;render();};
       rd.appendChild(go);
     }
   }else{
@@ -3322,6 +3676,7 @@ async function viewJimun(){
   const byId={};JM.문제.forEach(q=>byId[q.id]=q);
   lnkBuild(JM);              // 같은 판례·조문 색인 (한 번만)
   p7Link(JM, P7);            // 제7판 지문 → 리담 선지 짝 (근거 물려받기)
+  autoImportant(JM, subj);   // ★ v3-C §7 — ⭐ 정답표 지목 지문 1회 자동 태그
 
   // ── 좌측 : OX문제면 「목차+회독」 한 표, 기출문제면 연도 목록
   if(S.jimunTab==='ox'){
@@ -3379,6 +3734,10 @@ async function viewJimun(){
       pool.push({ k: oxKeyLid(q, z), dom: 'qb-' + q.id, kind: 'L', q: q, z: z })));
     if (P7) P7.지문.forEach(z => { if (z.병합) return;   // 리담 쪽에서 이미 셌다
       pool.push({ k: oxKeyP7(z), dom: 'qb-' + oxKeyP7(z), kind: 'P', z: z }); });
+    /* ★ v3-C — 채점표 칩·채점기가 키로 카드(dom)·정오를 찾는 표(§3) */
+    OXPOOL = {}; OXDOMPG = {};
+    pool.forEach(c => { OXPOOL[c.k] = { dom: c.dom,
+      ans: (c.kind === 'P' ? (c.z.ox || ((c.z.리담 || {}).ox || '')) : c.z.ox) || '' }; });
     const counts = { weak: 0, semi: 0 };
     pool.forEach(c => { if (oxQueueHas(c.k, 'weak')) counts.weak++;
                         if (oxQueueHas(c.k, 'semi')) counts.semi++; });
@@ -3400,6 +3759,21 @@ async function viewJimun(){
           if (seen[c.q.id]) return;
           seen[c.q.id] = 1; main.appendChild(qCard(c.q));
         });
+        /* ★ v3-C §6-2 — 큐는 쪽이 없다: 바닥 바의 채점 단추만(큐도 마킹→채점) */
+        const qCells = hit.map(c => ({ k: c.k, dom: c.dom,
+          ans: (c.kind === 'P' ? (c.z.ox || ((c.z.리담 || {}).ox || '')) : c.z.ox) || '' }));
+        const qUn = qCells.filter(x => oxAns(x.k, x.ans) && !((oxOf(x.k) || {}).p));
+        const qMk = qUn.filter(x => ((oxOf(x.k) || {}).m));
+        if (qUn.length){
+          const bar = el('div', 'modebar pgbar');
+          const spL = el('span'); spL.style.flex = '1'; bar.appendChild(spL);
+          bar.appendChild(el('span', 'badge', '마킹 ' + qMk.length + '/' + qUn.length));
+          const spR = el('span'); spR.style.flex = '1'; bar.appendChild(spR);
+          const gb = el('button', 'pgbig', '✅ 채점 (' + qMk.length + '/' + qUn.length + ')');
+          gb.onclick = () => oxGrade(qCells);
+          bar.appendChild(gb);
+          main.appendChild(bar);
+        }
       }
       slot.appendChild(main);
       inkBar();
@@ -3434,19 +3808,71 @@ async function viewJimun(){
         (n.p7&&n.p7.length?`  ·  제7판 차례: ${n.p7.join(' / ')}`:'')+
         (n.쪽?`  ·  인쇄 p.${n.쪽}`:''));
       main.appendChild(bd);
-      // ★ 히트맵은 큐 뿐 아니라 **마디를 볼 때도** 띄운다 (8/26 사용자 지적)
-      {
-        const cells = [];
-        lidam.forEach(q => (q.지문 || []).forEach(z =>
-          cells.push({ k: oxKeyLid(q, z), dom: 'qb-' + q.id })));
-        p7l.forEach(z => cells.push({ k: oxKeyP7(z), dom: 'qb-' + oxKeyP7(z) }));
-        // ★ 회독 줄은 가운데 열이 맡는다(8/26) — 여기서는 히트맵만
-        if (cells.length) main.appendChild(heatBox(cells));
+      /* ★ v3-C §6-2 (8/26 밤) — 카드 = 리담 문항 + 제7판 단독을 한 줄로 이어 센다.
+         10장을 넘으면 쪽을 나눈다. 히트맵은 마디 전체 그대로다(칸 클릭이 쪽을 넘긴다). */
+      const CARDS = lidam.map(q => ({ kind: 'L', q: q, dom: 'qb-' + q.id }))
+        .concat(p7l.map(z => ({ kind: 'P', z: z, dom: 'qb-' + oxKeyP7(z) })));
+      const PGN = 10, nPg = CARDS.length > PGN ? Math.ceil(CARDS.length / PGN) : 1;
+      OXDOMPG = {};
+      CARDS.forEach((c, ci) => { c.pg = nPg > 1 ? ((ci / PGN) | 0) : 0; OXDOMPG[c.dom] = c.pg; });
+      const cellsOf = c => c.kind === 'L'
+        ? (c.q.지문 || []).map(z => ({ k: oxKeyLid(c.q, z), dom: c.dom, pg: c.pg, ans: z.ox || '' }))
+        : [{ k: oxKeyP7(c.z), dom: c.dom, pg: c.pg,
+             ans: (c.z.ox || ((c.z.리담 || {}).ox || '')) }];
+      const allCells = [];
+      CARDS.forEach(c => cellsOf(c).forEach(x => allCells.push(x)));
+      const unGraded = c => cellsOf(c).some(x => oxAns(x.k, x.ans) && !((oxOf(x.k) || {}).p));
+      // 마디에 막 들어왔다(S.oxPage=null) → 채점 안 된 카드가 처음 나오는 쪽(§6-4)
+      if (S.oxPage == null){ const f = CARDS.find(unGraded); S.oxPage = f ? f.pg : 0; }
+      if (!(S.oxPage >= 0) || S.oxPage >= nPg) S.oxPage = 0;
+      const scope2 = 'mok|' + subj + '|' + S.mok;
+      const mokLabel = (n.no ? n.no + ' ' : '') + n.제목;
+      if (allCells.length){
+        const hb = heatBox(allCells);
+        // ★ v3-C §2 ⓑ — 히트맵 머리에 「📊 채점표」
+        const sbtn = el('button', 'tool', '📊 채점표');
+        sbtn.title = '회독 비교 · 채점표';
+        sbtn.onclick = ev => rndPop(scope2, allCells.map(x => x.k), mokLabel, ev);
+        const hh = hb.querySelector('.hmhd'); if (hh) hh.appendChild(sbtn);
+        main.appendChild(hb);
       }
-      if(!lidam.length&&!p7l.length)
+      if (!CARDS.length)
         main.appendChild(emptyBox('📝','이 마디에 묶인 문항이 없다'));
-      if(lidam.length)lidam.forEach(q=>main.appendChild(qCard(q)));
-      if(p7l.length)p7l.forEach(z=>main.appendChild(p7Card(z)));
+      const pageCards = nPg > 1 ? CARDS.filter(c => c.pg === S.oxPage) : CARDS;
+      pageCards.forEach(c => main.appendChild(c.kind === 'L' ? qCard(c.q) : p7Card(c.z)));
+      if (CARDS.length){
+        // ── 바닥 바(§6-2) — 왼쪽 ◀ · 가운데 쪽/마킹 · 오른쪽 큰 단추 하나
+        const pgCells = [];
+        pageCards.forEach(c => cellsOf(c).forEach(x => pgCells.push(x)));
+        const unDone = pgCells.filter(x => oxAns(x.k, x.ans) && !((oxOf(x.k) || {}).p));
+        const marked = unDone.filter(x => ((oxOf(x.k) || {}).m));
+        const bar = el('div', 'modebar pgbar');
+        if (nPg > 1 && S.oxPage > 0){
+          const pv = el('button', 'tool', '◀ 이전');
+          pv.onclick = () => { S.oxPage--; S.oxPageJump = true; render(); };
+          bar.appendChild(pv);
+        }
+        const spL = el('span'); spL.style.flex = '1'; bar.appendChild(spL);
+        bar.appendChild(el('span', 'badge',
+          '쪽 ' + (S.oxPage + 1) + '/' + nPg + ' · 마킹 ' + marked.length + '/' + unDone.length));
+        const spR = el('span'); spR.style.flex = '1'; bar.appendChild(spR);
+        if (unDone.length){
+          const gb = el('button', 'pgbig', '✅ 이 페이지 채점');
+          gb.onclick = () => oxGrade(pgCells);
+          bar.appendChild(gb);
+        } else if (S.oxPage < nPg - 1){
+          const nn = CARDS.filter(c => c.pg === S.oxPage + 1).length;
+          const gb = el('button', 'pgbig', '▶ 다음 ' + nn + '문제 계속 풀기');
+          gb.onclick = () => { S.oxPage++; S.oxPageJump = true; render(); };
+          bar.appendChild(gb);
+        } else {
+          const gb = el('button', 'pgbig', '🏆 ' + (rndList(scope2).length + 1) + '회독 시작');
+          gb.title = '이 판을 마감하고 다음 회독을 연다';
+          gb.onclick = () => rndClose(scope2, allCells.map(x => x.k), mokLabel);
+          bar.appendChild(gb);
+        }
+        main.appendChild(bar);
+      }
     }else if(!S.mok){
       main.appendChild(emptyBox('📝','가운데 목록에서 마디를 고르면 그 마디 문항이 묶여 나온다',
         '문제가 있는 마디에만 「총 N문제」가 붙는다'));
@@ -3466,7 +3892,25 @@ async function viewJimun(){
       }
       if(!list.length)main.appendChild(emptyBox('📝','이 마디에 묶인 문항이 없다',
         '마디 제목에 조문번호가 없으면 묶이지 않는다'));
-      else list.forEach(q=>main.appendChild(qCard(q)));
+      else{
+        list.forEach(q=>main.appendChild(qCard(q)));
+        /* ★ v3-C §6-2 — 미분류·옛 마디 목록은 쪽 없이 채점 단추만 둔다 */
+        const lc=[];
+        list.forEach(q=>(q.지문||[]).forEach(z=>
+          lc.push({k:oxKeyLid(q,z),dom:'qb-'+q.id,ans:z.ox||''})));
+        const lUn=lc.filter(x=>oxAns(x.k,x.ans)&&!((oxOf(x.k)||{}).p));
+        const lMk=lUn.filter(x=>((oxOf(x.k)||{}).m));
+        if(lUn.length){
+          const bar=el('div','modebar pgbar');
+          const spL=el('span');spL.style.flex='1';bar.appendChild(spL);
+          bar.appendChild(el('span','badge','마킹 '+lMk.length+'/'+lUn.length));
+          const spR=el('span');spR.style.flex='1';bar.appendChild(spR);
+          const gb=el('button','pgbig','✅ 채점 ('+lMk.length+'/'+lUn.length+')');
+          gb.onclick=()=>oxGrade(lc);
+          bar.appendChild(gb);
+          main.appendChild(bar);
+        }
+      }
     }
   }else{
     giView(main, JM);   // 과제 7 — 연도별 기출뷰 + OMR (§8)
@@ -3564,8 +4008,11 @@ async function gotoJimun(kind, id, dom){
   const ix = await mokIndex();
   const i = (kind === 'P' ? ix.p7 : ix.lid)[id];
   if (i === undefined){ toast('이 지문이 걸린 마디를 찾지 못했다 — 목차에 안 붙은 지문이다'); return; }
-  S.tab = 'jimun'; S.jimunTab = 'ox'; S.oxQueue = ''; S.mok = '__mg' + i;
+  S.tab = 'jimun'; S.jimunTab = 'ox'; S.oxQueue = ''; S.mok = '__mg' + i; S.oxPage = null;
   closeAllPops(); await render();
+  /* ★ v3-C §6-2 — 목표 카드가 다른 쪽이면 그 쪽으로 넘긴다 */
+  const pg = (OXDOMPG || {})[dom];
+  if (pg != null && pg !== S.oxPage){ S.oxPage = pg; S.oxPageJump = true; await render(); }
   setTimeout(() => {
     const box = document.getElementById(dom);
     if (!box){ toast('마디는 열었는데 그 카드가 거르기에 걸려 있다'); return; }
@@ -3697,6 +4144,7 @@ async function render(){
   ['main','tree','plist','qlwrap'].forEach(c=>{   // ★ 8/26 `qlist` 는 없는 클래스였다
     const n=document.querySelector('#slot .'+c);if(n)SCR[c]=n.scrollTop;});
   const scrBack=()=>Object.keys(SCR).forEach(c=>{
+    if(c==='main'&&S.oxPageJump)return;   // ★ v3-C §6-2 — 쪽을 넘겼다: 맨 위에서 시작
     const n=document.querySelector('#slot .'+c);if(n)n.scrollTop=SCR[c];});
   inkReset();                       // 앞 화면의 ResizeObserver 를 끊는다
   // ⚠ body 에 건다 — 팝업(2차 셀 · 조문 팝업)이 #app 밖에 뜬다
@@ -3714,6 +4162,7 @@ async function render(){
     slot.appendChild(m);console.error(err);
   }
   scrBack();setTimeout(scrBack,0);
+  setTimeout(()=>{S.oxPageJump=false;},0);   // 다음 render 부터는 다시 보존
   busy=false;
 }
 // 폭이 바뀌면 법전 조판의 단 수를 다시 잡는다. ⚠ 한 행 글자 수는 그대로다 — 단만 준다.
