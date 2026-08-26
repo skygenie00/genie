@@ -526,8 +526,11 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .lnkline{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;color:#6b675f;margin-top:4px}
 .lnkline .go{border:1px solid #d9d6ce;border-radius:7px;padding:0 7px;background:#fff;font-size:11px;color:#345}
 .lnkline .go:hover{border-color:var(--exc);color:var(--exc)}
-.omini{position:relative;overflow:hidden;background:#fff;border:1px solid var(--line);border-radius:8px}
-.omini img{position:absolute;display:block}
+.omini{position:relative;overflow:hidden;background:#fff;border:1px solid var(--line);border-radius:8px;
+  touch-action:none;cursor:grab}
+.omini:active{cursor:grabbing}
+.ominiin{position:absolute;left:0;top:0;transform-origin:0 0}
+.omini img{position:absolute;display:block;pointer-events:none;user-select:none}
 .omini .hl{position:absolute;border:2px solid #f0a020;background:rgba(240,160,32,.15);border-radius:3px}
 /* ══ v3-F §8 — 조문 탭 오른쪽 「정오문제」 패널 ══ */
 .jopane{flex-shrink:0;border-left:1px solid var(--line);overflow:auto;
@@ -2902,37 +2905,134 @@ function pinPop(key, ev){
     (info.user ? ' · 손으로 찍음' : ' · 자동 대조')));
   if (info.st === 'stale')
     body.appendChild(el('div', 'qb warn', '위치 점검 — 판이 바뀌었다(다시 지정 권장)'));
+  /* ★ 8/27 사용자 — 정리 탭으로 안 가도 팝업 안에서 확대한다.
+     PC = Ctrl+휠(커서 기준) · 휠 = 세로 · 끌기 = 이동 · 터치 = 핀치/끌기 · 더블클릭 = 원래 크기.
+     확대에 맞춰 타일 단(300/600/900dpi)을 갈아끼우고 보이는 타일만 fetch 한다(정리 뷰어와 같은 수). */
   let page = info.pin.page;
   const box = el('div', 'omini');
+  const inner = el('div', 'ominiin');
+  box.appendChild(inner);
   body.appendChild(box);
+  body.appendChild(el('div', 'cdim',
+    'Ctrl+휠 · 핀치 = 확대 (커서·손가락 기준) · 휠 = 세로 · 끌어 이동 · 두 번 누르면 원래 크기'));
   const nav = el('div', 'memobtn');
-  const paint = () => {
-    box.innerHTML = '';
+  const BOXW = 400;
+  const V = { s: 0, x: 0, y: 0 };
+  const fitOf = () => BOXW / OMRMETA2.pages[page - 1].w;
+  const clampV = () => {
     const pg = OMRMETA2.pages[page - 1];
-    const K = 400 / pg.w;
-    box.style.width = '400px'; box.style.height = Math.round(pg.h * K) + 'px';
-    const tm = ((OMRMETA2.tiles || {})[String(page)] || {})['300'];
-    if (tm){
-      const sc = 72 / 300, tpt = 1024 * sc;
-      for (let ty = 0; ty < tm.rows; ty++) for (let tx = 0; tx < tm.cols; tx++){
-        const im = el('img');
-        im.src = DATA + 'omr/특허/t/' + page + '/300/' + tx + '_' + ty + '.webp';
-        im.style.left = Math.round(tx * tpt * K) + 'px';
-        im.style.top = Math.round(ty * tpt * K) + 'px';
-        im.style.width = Math.ceil(tpt * K) + 'px';
-        box.appendChild(im);
-      }
-    }
+    const fit = fitOf();
+    if (V.s <= fit + 0.0001){ V.s = fit; V.x = 0; V.y = 0; return; }
+    V.x = Math.min(0, Math.max(V.x, box.clientWidth - pg.w * V.s));
+    V.y = Math.min(0, Math.max(V.y, box.clientHeight - pg.h * V.s));
+  };
+  const tilesPaint = () => {
+    const eff = V.s * (window.devicePixelRatio || 1);
+    const dpi = eff <= 4.2 ? 300 : eff <= 8.4 ? 600 : 900;
+    const tm = ((OMRMETA2.tiles || {})[String(page)] || {})[String(dpi)];
+    if (!tm) return;
+    const sc = 72 / dpi, tpt = 1024 * sc;
+    const vx0 = (-V.x) / V.s, vy0 = (-V.y) / V.s;
+    const vx1 = vx0 + box.clientWidth / V.s, vy1 = vy0 + box.clientHeight / V.s;
+    const c0 = Math.max(0, Math.floor(vx0 / tpt)), c1 = Math.min(tm.cols - 1, Math.floor(vx1 / tpt));
+    const r0 = Math.max(0, Math.floor(vy0 / tpt)), r1 = Math.min(tm.rows - 1, Math.floor(vy1 / tpt));
+    const want = {};
+    for (let ty = r0; ty <= r1; ty++)
+      for (let tx = c0; tx <= c1; tx++) want[dpi + '/' + tx + '_' + ty] = [tx, ty];
+    [...inner.querySelectorAll('img')].forEach(im => {
+      if (!want[im.dataset.k]) im.remove(); else delete want[im.dataset.k];
+    });
+    Object.keys(want).forEach(k => {
+      const tx = want[k][0], ty = want[k][1];
+      const im = el('img');
+      im.dataset.k = k;
+      im.src = DATA + 'omr/특허/t/' + page + '/' + dpi + '/' + tx + '_' + ty + '.webp';
+      im.style.left = (tx * tpt) + 'px'; im.style.top = (ty * tpt) + 'px';
+      im.style.width = tpt + 'px';
+      inner.insertBefore(im, inner.firstChild);
+    });
+  };
+  const apply = () => {
+    inner.style.transform = 'translate(' + V.x + 'px,' + V.y + 'px) scale(' + V.s + ')';
+    clearTimeout(apply._t);
+    apply._t = setTimeout(tilesPaint, 90);
+  };
+  const paint = () => {
+    inner.innerHTML = '';
+    const pg = OMRMETA2.pages[page - 1];
+    inner.style.width = pg.w + 'px'; inner.style.height = pg.h + 'px';
+    const fit = fitOf();
+    box.style.width = BOXW + 'px';
+    box.style.height = Math.round(pg.h * fit) + 'px';
+    V.s = fit; V.x = 0; V.y = 0;
     if (page === info.pin.page){
       const hl = el('div', 'hl');
-      hl.style.left = (info.pin.x * K - 2) + 'px';
-      hl.style.top = (info.pin.y * K - 2) + 'px';
-      hl.style.width = Math.max(6, info.pin.w * K) + 'px';
-      hl.style.height = Math.max(5, info.pin.h * K) + 'px';
-      box.appendChild(hl);
+      hl.style.left = (info.pin.x - 2) + 'px';
+      hl.style.top = (info.pin.y - 2) + 'px';
+      hl.style.width = Math.max(6, info.pin.w) + 'px';
+      hl.style.height = Math.max(5, info.pin.h) + 'px';
+      inner.appendChild(hl);
     }
+    apply();
     nav.querySelectorAll('.pgn').forEach(x => x.classList.toggle('on', +x.dataset.p === page));
   };
+  box.addEventListener('wheel', ev => {
+    ev.preventDefault();
+    const r = box.getBoundingClientRect();
+    if (ev.ctrlKey){
+      const cx = ev.clientX - r.left, cy = ev.clientY - r.top;
+      const ns = Math.min(14, Math.max(fitOf(), V.s * (ev.deltaY < 0 ? 1.18 : 1 / 1.18)));
+      const q = ns / V.s;
+      V.x = cx - q * (cx - V.x); V.y = cy - q * (cy - V.y); V.s = ns;
+    } else {
+      V.y -= ev.deltaY;
+    }
+    clampV(); apply();
+  }, { passive: false });
+  const pts = {};
+  let drag = null, pinch = null;
+  box.addEventListener('pointerdown', ev => {
+    pts[ev.pointerId] = [ev.clientX, ev.clientY];
+    const ids = Object.keys(pts);
+    if (ids.length === 2){
+      const a = pts[ids[0]], b2 = pts[ids[1]];
+      pinch = { d: Math.hypot(a[0] - b2[0], a[1] - b2[1]) }; drag = null;
+    } else drag = { x: ev.clientX, y: ev.clientY, ox: V.x, oy: V.y };
+    try{ box.setPointerCapture(ev.pointerId); }catch(e){}
+    ev.preventDefault();
+  });
+  box.addEventListener('pointermove', ev => {
+    if (!(ev.pointerId in pts)) return;
+    pts[ev.pointerId] = [ev.clientX, ev.clientY];
+    const ids = Object.keys(pts);
+    const r = box.getBoundingClientRect();
+    if (pinch && ids.length === 2){
+      const a = pts[ids[0]], b2 = pts[ids[1]];
+      const d = Math.hypot(a[0] - b2[0], a[1] - b2[1]);
+      if (pinch.d > 0){
+        const cx = (a[0] + b2[0]) / 2 - r.left, cy = (a[1] + b2[1]) / 2 - r.top;
+        const ns = Math.min(14, Math.max(fitOf(), V.s * d / pinch.d));
+        const q = ns / V.s;
+        V.x = cx - q * (cx - V.x); V.y = cy - q * (cy - V.y); V.s = ns;
+        clampV(); apply();
+      }
+      pinch.d = d;
+      return;
+    }
+    if (!drag) return;
+    V.x = drag.ox + (ev.clientX - drag.x);
+    V.y = drag.oy + (ev.clientY - drag.y);
+    clampV(); apply();
+  });
+  const pup = ev => {
+    delete pts[ev.pointerId];
+    if (Object.keys(pts).length < 2) pinch = null;
+    if (!Object.keys(pts).length) drag = null;
+  };
+  box.addEventListener('pointerup', pup);
+  box.addEventListener('pointercancel', pup);
+  box.addEventListener('dblclick', () => paint());   // 원래 크기
+
   const pv = el('button', 'tool', '◀');
   pv.onclick = () => { if (page > 1){ page--; paint(); } };
   nav.appendChild(pv);
