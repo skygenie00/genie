@@ -172,6 +172,26 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .src.기출변형{background:#fdf1e3;color:var(--lbl)}
 .src.제7판{background:#e9f7ee;color:var(--ok)}
 .qt{font-size:13.5px;margin:6px 0}
+/* ── 기출뷰 · OMR (과제 7 · 2026-08-26) ── */
+.gich{display:flex;gap:8px;align-items:flex-start;border:1px solid #eceae3;border-radius:9px;padding:6px 9px;margin:5px 0;background:#fff}
+.gich.sel{border-color:#1a1a1a}
+.gich.ans{border-color:#3fae64;background:#f0faf3}
+.gich.bad{border-color:var(--rule);background:#fdf0f0}
+.ginum{border:1px solid #d9d6ce;border-radius:8px;background:#fff;padding:1px 7px;font-size:14px;cursor:pointer;line-height:1.5}
+.gitx{font-size:13px;line-height:1.55;flex:1}
+.gisol{font-size:12px;color:#6b665d;margin:2px 0 8px 34px;white-space:pre-wrap}
+.omrwrap{position:fixed;inset:0;background:rgba(20,18,14,.35);z-index:60;display:flex;align-items:center;justify-content:center}
+.omr{width:420px;max-width:94vw;max-height:76vh;overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:0 10px 34px rgba(0,0,0,.24)}
+.omrhd{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.omrgrid{display:flex;flex-direction:column;gap:3px}
+.omrrow{display:flex;gap:4px;align-items:center;padding:2px 4px;border-radius:7px}
+.omrrow.cur{background:#eaf1fb}
+.omrno{width:34px;text-align:right;font-size:12px;color:#777;cursor:pointer}
+.omrno.blank{color:var(--rule);font-weight:700}
+.omrb{border:1px solid #e0ddd5;border-radius:7px;background:#fff;padding:0 6px;font-size:13px;cursor:pointer;color:#b5b1a8}
+.omrb.on{border-color:#1a1a1a;color:#1a1a1a;font-weight:700}
+.omrb.ans{border-color:#3fae64;background:#f0faf3;color:#2c7a47}
+.omrft{display:flex;gap:8px;align-items:center;margin-top:10px}
 .ansb{display:inline-block;border:1px solid #d9d6ce;border-radius:7px;padding:1px 12px;background:#fff;font-weight:700}
 .ansb.O{color:var(--exc)} .ansb.X{color:var(--rule)}
 .sol{color:#555;font-size:12.3px;margin-top:7px;background:#faf8f3;border:1px solid #eeece6;
@@ -2584,6 +2604,205 @@ function qlColumn(MG,JM,byId,P7,subj){
   return list;
 }
 
+/* ══════════ 과제 7 — 연도별 기출뷰 + OMR (2026-08-26 · 지시서 v3-B §8) ══════════
+   ⚠ 정렬·기록 키는 **A형 시험문번**이다. 리담 `문번`(순번)은 96.3%가 시험문번과 다르다 —
+      순번으로 붙이면 매칭률 100%로 조용히 남의 정답으로 채점된다(8/26 로그).
+   ⚠ 정답표가 없는 해(2026 등)는 **채점하지 않는다는 것을 화면에 밝힌다**(§8-2). */
+const GI_KEY  = REC_PRE + 'gi';        // 문항 풀이 — 키 = 연도:시험문번
+const GIY_KEY = REC_PRE + 'gi.year';   // 연도별 제출 이력
+let GIREC = null, GIYREC = null, GIOMR = null;
+function giAll(){ if (!GIREC) GIREC = lsRead(GI_KEY); return GIREC; }
+function giYAll(){ if (!GIYREC) GIYREC = lsRead(GIY_KEY); return GIYREC; }
+function giNo(q){ return q.시험문번 || q.문번; }
+function giKey(q){ return (q.연도 || '') + ':' + (q.시험문번 ? q.시험문번 : ('r' + q.문번)); }
+function giAns(q){ return String(q.정답 || '').split(',').map(s => s.trim()).filter(Boolean); }
+function giGradable(q){ return giAns(q).length > 0; }
+function giOf(k){ return giAll()[k] || null; }
+function giPut(k, patch){
+  const A = giAll(), cur = A[k] || {};
+  A[k] = Object.assign({}, cur, patch, { ts: nowIso() });
+  GIREC = A; lsWrite(GI_KEY, A, '기출뷰 풀이');
+}
+function giPick(q, n){
+  const k = giKey(q), cur = giOf(k) || {};
+  giPut(k, { p: (String(cur.p || '') === String(n) ? '' : String(n)) });
+}
+function giYearOf(y){ return giYAll()[y] || null; }
+function giYearPut(y, v){
+  const A = giYAll();
+  if (v === null) delete A[y]; else A[y] = Object.assign({}, A[y] || {}, v, { ts: nowIso() });
+  GIYREC = A; lsWrite(GIY_KEY, A, '기출뷰 회차');
+}
+/* 끝까지 풀고 **일괄 채점**한다(§8-1) — 중간에 답을 보여주지 않는다 */
+function giGrade(y, list){
+  const gr = list.filter(giGradable);
+  if (!gr.length){ toast('이 해는 최종정답이 없어 채점할 수 없다', 1); return false; }
+  const blank = gr.filter(q => !(giOf(giKey(q)) || {}).p).length;
+  if (blank && !confirm('안 찍은 문항이 ' + blank + '개 있다. 그대로 제출한다.')) return false;
+  let right = 0;
+  gr.forEach(q => {
+    const k = giKey(q), p = (giOf(k) || {}).p || '';
+    const ok = !!p && giAns(q).indexOf(String(p)) >= 0;
+    if (ok) right++;
+    giPut(k, { ok: ok, g: 1 });
+  });
+  giYearPut(y, { sub: nowIso(), n: gr.length, right: right });
+  toast(y + '년 ' + right + '/' + gr.length + ' 맞음');
+  return true;
+}
+function giReset(y, list){
+  if (!confirm(y + '년 풀이를 지우고 다시 푼다. 찍은 답과 채점 결과가 사라진다.')) return;
+  const A = giAll();
+  list.forEach(q => { delete A[giKey(q)]; });
+  GIREC = A; lsWrite(GI_KEY, A, '기출뷰 풀이');
+  giYearPut(y, null);
+  S.omr = false; S.giWrong = false; render();
+}
+/* ★ 키보드 — 숫자 1~5. ⚠ 입력칸에 포커스가 있으면 그대로 흘려보낸다(§8-2 ·
+      검색창에 숫자를 못 치게 되는 사고를 막는다). */
+document.addEventListener('keydown', ev => {
+  if (!S.omr) return;
+  const t = document.activeElement, tn = t ? (t.tagName || '').toLowerCase() : '';
+  if (tn === 'input' || tn === 'textarea' || (t && t.isContentEditable)) return;
+  if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  const L = GIOMR;
+  if (ev.key === 'Escape'){ S.omr = false; render(); ev.preventDefault(); return; }
+  if (!L || !L.length) return;
+  if (!(S.omrCur >= 0)) S.omrCur = 0;
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowRight'){
+    S.omrCur = Math.min(L.length - 1, S.omrCur + 1); render(); ev.preventDefault(); return; }
+  if (ev.key === 'ArrowUp' || ev.key === 'ArrowLeft'){
+    S.omrCur = Math.max(0, S.omrCur - 1); render(); ev.preventDefault(); return; }
+  if (/^[1-5]$/.test(ev.key)){
+    const q = L[S.omrCur]; if (!q) return;
+    giPut(giKey(q), { p: ev.key });
+    S.omrCur = Math.min(L.length - 1, S.omrCur + 1);
+    render(); ev.preventDefault();
+  }
+});
+const OMARK = ['①', '②', '③', '④', '⑤'];
+/* ── OMR 모달 패드 — 미응답은 붉게 드러난다(§8-2) ── */
+function giOmrPad(y, list){
+  const wrap = el('div', 'omrwrap');
+  wrap.onclick = ev => { if (ev.target === wrap){ S.omr = false; render(); } };
+  const box = el('div', 'omr');
+  const hd = el('div', 'omrhd');
+  hd.appendChild(el('b', '', y + '년 OMR'));
+  hd.appendChild(el('span', 'badge', '숫자 1~5 · ↑↓ 이동 · Esc 닫기'));
+  const cb = el('button', 'tool', '닫기');
+  cb.onclick = () => { S.omr = false; render(); };
+  hd.appendChild(cb);
+  box.appendChild(hd);
+  const g = el('div', 'omrgrid');
+  list.forEach((q, i) => {
+    const rec = giOf(giKey(q)) || {}, ans = giAns(q);
+    const row = el('div', 'omrrow' + (i === S.omrCur ? ' cur' : ''));
+    const nm = el('span', 'omrno' + (rec.p || !ans.length ? '' : ' blank'), giNo(q) + '');
+    nm.onclick = () => { S.omrCur = i; render(); };
+    row.appendChild(nm);
+    ['1', '2', '3', '4', '5'].forEach(n => {
+      const on = String(rec.p || '') === n;
+      const b = el('button', 'omrb' + (on ? ' on' : '') +
+        (rec.g && ans.indexOf(n) >= 0 ? ' ans' : ''), OMARK[+n - 1]);
+      b.onclick = () => { S.omrCur = i; giPick(q, n); render(); };
+      row.appendChild(b);
+    });
+    if (!ans.length) row.appendChild(el('span', 'badge', '정답표 없음'));
+    else if (rec.g) row.appendChild(el('span', 'qb ' + (rec.ok ? 't' : 'warn'), rec.ok ? '○' : '✕'));
+    g.appendChild(row);
+  });
+  box.appendChild(g);
+  const ft = el('div', 'omrft');
+  const gr = list.filter(giGradable);
+  const blank = gr.filter(q => !(giOf(giKey(q)) || {}).p).length;
+  ft.appendChild(el('span', 'badge', '안 찍은 문항 ' + blank + ' / ' + gr.length));
+  const sb = el('button', 'tool on', '제출 · 일괄 채점');
+  sb.onclick = () => { if (giGrade(y, list)){ S.omr = false; S.giWrong = false; render(); } };
+  ft.appendChild(sb);
+  box.appendChild(ft);
+  wrap.appendChild(box);
+  return wrap;
+}
+/* ── 오지선다 문항 카드 — 지문 단위가 아니라 **문항 단위**다(§8-1) ── */
+function giCard(q, graded){
+  const k = giKey(q), rec = giOf(k) || {}, ans = giAns(q);
+  const c = el('div', 'jimun'); c.id = 'gi-' + k;
+  const h = el('div', 'jhd');
+  h.appendChild(el('span', 'qb n', giNo(q) + '번'));
+  if (q.시험문번 && String(q.시험문번) !== String(q.문번))
+    h.appendChild(el('span', 'qb id', '리담 순번 ' + q.문번));
+  if (q.출처) h.appendChild(el('span', 'src ' + q.출처, q.출처));
+  if (q.형) h.appendChild(el('span', 'qb t', q.형 + '형'));
+  if (!ans.length) h.appendChild(el('span', 'qb warn', '정답표 없음 · 채점 안 함'));
+  else if (ans.length > 1) h.appendChild(el('span', 'qb warn', '복수정답'));
+  if (graded && ans.length)
+    h.appendChild(el('span', 'qb ' + (rec.ok ? 't' : 'warn'), rec.ok ? '맞음' : '틀림'));
+  c.appendChild(h);
+  c.appendChild(el('div', 'qt', q.발문 || ''));
+  (q.지문 || []).forEach((z, i) => {
+    const n = String(i + 1), sel = String(rec.p || '') === n;
+    const row = el('div', 'gich' + (sel ? ' sel' : '') +
+      (graded && ans.length ? (ans.indexOf(n) >= 0 ? ' ans' : (sel ? ' bad' : '')) : ''));
+    const b = el('button', 'ginum', OMARK[i] || (i + 1));
+    b.onclick = () => { giPick(q, n); render(); };
+    row.appendChild(b);
+    row.appendChild(el('div', 'gitx', z.t || ''));
+    c.appendChild(row);
+    if (graded && z.sol) c.appendChild(el('div', 'gisol', z.sol));
+  });
+  if (graded && ans.length)
+    c.appendChild(el('div', 'badge', '정답 ' + ans.map(x => OMARK[+x - 1] || x).join('·')));
+  return c;
+}
+/* ── 연도별 기출뷰 본문 ── */
+function giView(main, JM){
+  const byY = collect(JM.문제, q => q.연도);
+  const ys = Object.keys(byY).sort().reverse();
+  const y = (S.year && byY[S.year]) ? S.year : ys[0];
+  S.year = y;
+  // ★ 시험문번으로 정렬한다. 순번(`문번`)은 뒷순위 동률 처리에만 쓴다
+  const list = byY[y].slice().sort((a, b) => ((+giNo(a)) - (+giNo(b))) || ((+a.문번) - (+b.문번)));
+  GIOMR = list;
+  if (!(S.omrCur >= 0)) S.omrCur = 0;
+  if (S.omrCur > list.length - 1) S.omrCur = 0;
+  const gr = list.filter(giGradable), yrec = giYearOf(y) || {}, q0 = list[0] || {};
+  main.appendChild(el('div', 'badge',
+    y + '년 ' + (q0.회차 ? q0.회차 + '회 ' : '') + '· ' + list.length + '문항' +
+    (q0.형 ? ' · ' + q0.형 + '형' : '') + (gr.length ? ' · 채점 가능 ' + gr.length : '')));
+  if (!gr.length)
+    main.appendChild(emptyBox('⚠', y + '년은 최종정답이 아직 없다 — 채점하지 않는다',
+      '문제는 그대로 보고 풀 수 있다. 조용히 오답으로 처리하지 않는다'));
+  else if (gr.length < list.length)
+    main.appendChild(el('div', 'badge', '⚠ 시험문번·정답이 확정된 것은 ' + gr.length +
+      '문항 — 나머지 ' + (list.length - gr.length) + '문항은 채점에서 뺀다'));
+  const bar = el('div', 'modebar');
+  bar.appendChild(el('span', 'pl', '📝 기출'));
+  const ob = el('button', 'tool' + (S.omr ? ' on' : ''), 'OMR');
+  ob.onclick = () => { S.omr = !S.omr; render(); };
+  bar.appendChild(ob);
+  if (yrec.sub){
+    bar.appendChild(el('span', 'badge',
+      '채점됨 ' + yrec.right + '/' + yrec.n + ' · ' + String(yrec.sub).slice(0, 10)));
+    const wb = el('button', 'tool' + (S.giWrong ? ' on' : ''), '오답만 다시');
+    wb.onclick = () => { S.giWrong = !S.giWrong; render(); };
+    bar.appendChild(wb);
+  } else if (gr.length){
+    const sb = el('button', 'tool', '제출 · 일괄 채점');
+    sb.onclick = () => { if (giGrade(y, list)){ S.omr = false; render(); } };
+    bar.appendChild(sb);
+  }
+  const rb = el('button', 'tool', '다시 풀기');
+  rb.onclick = () => giReset(y, list);
+  bar.appendChild(rb);
+  main.appendChild(bar);
+  if (S.omr) main.appendChild(giOmrPad(y, list));
+  let show = list;
+  if (S.giWrong && yrec.sub)
+    show = list.filter(q => { const r = giOf(giKey(q)) || {}; return r.g && !r.ok; });
+  if (!show.length) main.appendChild(emptyBox('🎯', '오답이 없다', '「오답만 다시」를 끄면 전체가 나온다'));
+  else show.forEach(q => main.appendChild(giCard(q, !!yrec.sub)));
+}
+
 /* ══════════ 1차객 뷰 — 목차 트리 + [OX문제 | 기출문제] ══════════ */
 function qCard(q,mokTitle){
   const card=el('div','qwrap');
@@ -2764,11 +2983,13 @@ async function viewJimun(){
     const tree=el('div','tree'+(S.treeHid?' hid':''));
     tree.appendChild(el('div','h',subj+' · 연도'));
     const byY=collect(JM.문제,q=>q.연도);
+    // ★ 연도 줄에 제출 결과를 보인다. 정답표가 없는 해는 그렇다고 밝힌다(§8-2)
     Object.keys(byY).sort().reverse().forEach(y=>{
+      const L=byY[y], g=L.filter(giGradable).length, yr=giYearOf(y)||{};
       const r=el('div','r'+(S.year===y?' on':''));
-      r.appendChild(el('span','nm',y+'년'+(byY[y][0].회차?'  '+byY[y][0].회차+'회':'')));
-      r.appendChild(el('em','',byY[y].length+''));
-      r.onclick=()=>{S.year=y;render();};
+      r.appendChild(el('span','nm',y+'년'+(L[0].회차?'  '+L[0].회차+'회':'')+(g?'':'  · 정답표 없음')));
+      r.appendChild(el('em','',yr.sub?(yr.right+'/'+yr.n):(L.length+'')));
+      r.onclick=()=>{S.year=y;S.omr=false;S.giWrong=false;S.omrCur=0;render();};
       tree.appendChild(r);
     });
     slot.appendChild(tree);
@@ -2873,13 +3094,7 @@ async function viewJimun(){
       else list.forEach(q=>main.appendChild(qCard(q)));
     }
   }else{
-    const byY=collect(JM.문제,q=>q.연도);
-    const ys=Object.keys(byY).sort().reverse();
-    const y=S.year&&byY[S.year]?S.year:ys[0];
-    S.year=y;
-    main.appendChild(el('div','badge',
-      y+'년 '+(byY[y][0].회차?byY[y][0].회차+'회 ':'')+'· '+byY[y].length+'문항'));
-    byY[y].sort((a,b)=>(+a.문번)-(+b.문번)).forEach(q=>main.appendChild(qCard(q)));
+    giView(main, JM);   // 과제 7 — 연도별 기출뷰 + OMR (§8)
   }
   slot.appendChild(main);
 }
