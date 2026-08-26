@@ -271,12 +271,14 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .qtag{font-size:10.5px;color:#b5b1a8;border:1px solid #eeece6;border-radius:999px;padding:1px 7px;cursor:pointer;background:#fff}
 .qtag:hover{border-color:#c9c4b8;background:#faf8f3}
 .qtag.on{color:#1e1913;border-color:var(--exc);background:#eaf1fb;font-weight:700}
-.qlwrap{width:396px;flex-shrink:0;border-right:1px solid var(--line);overflow:auto;font-size:12px}
+/* ★ 너비는 변수다(8/26) — 손잡이를 끌면 .qlbox 인라인 스타일이 덮는다. 기본값 = 옛 고정폭. */
+.qlbox{--nmw:228px;--rdw:168px}
+.qlwrap{width:calc(var(--nmw) + var(--rdw));flex-shrink:0;border-right:1px solid var(--line);overflow:auto;font-size:12px}
 .qlwrap.hid{display:none}
 .qlwrap.nonm .qlnm{display:none}
 .qlwrap.nord .qlrd{display:none}
-.qlwrap.nonm{width:168px}
-.qlwrap.nord{width:238px}
+.qlwrap.nonm{width:var(--rdw)}
+.qlwrap.nord{width:calc(var(--nmw) + 10px)}
 .bjwrap{column-gap:1.4em;column-rule:.5px solid #b4b2a9;text-align:justify;
   text-align-last:left;word-break:break-all;line-height:1.3;
   font-family:'Batang','BatangChe','Nanum Myeongjo',serif}
@@ -289,14 +291,17 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
    `.qlnm` 이 228px 고정이라 그 오른쪽 선이 곧 경계다. 위아래로 꽉 채운다. */
 .qlbox{position:relative;display:flex;flex-shrink:0}
 .qlh{position:absolute;top:0;bottom:0;width:13px;z-index:6}
-.qlh.a{left:228px}
-.qlh.b{left:241px}
+.qlh.a{left:var(--nmw)}
+.qlh.b{left:calc(var(--nmw) + 13px)}
+/* 끌 수 있는 손잡이 — touch-action:none 이라야 아이패드 손가락 끌기가 스크롤로 새지 않는다 */
+.qlbox .handle.drg{cursor:col-resize;touch-action:none}
+.qlbox .handle.drg:hover{background:#e8e4da}
 .qlbox.nonm .qlh.a{left:0}
 .qlbox.nonm .qlh.b{left:13px}
 .qlr{display:flex;align-items:stretch;border-bottom:1px solid #f0eee8}
 .qlr.ch{background:#eceae3;border-bottom-color:#e2dfd6}
 .qlr.on{background:#e8effb}
-.qlnm{width:228px;flex-shrink:0;padding:7px 9px;border-right:1px solid var(--line);
+.qlnm{width:var(--nmw);flex-shrink:0;padding:7px 9px;border-right:1px solid var(--line);
   display:flex;align-items:center;gap:5px;min-width:0}
 .qlnmt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .qlr.ch .qlnmt{font-weight:700;color:#4a463f}
@@ -533,7 +538,13 @@ const S={law:'특허법',tab:'jo',jo:null,prec:null,precTab:'요약',
          jimunTab:'ox',mok:null,year:null,oxFilter:'all',oxQueue:'',mgFold:{},
          series:'',yearFilter:'',yearSort:'asc',zoom:0.55,
          // §3 마크업 스티커 편집 모드 · §4 필기 모드 — 둘 다 기본은 꺼짐(T5)
-         stick:false,ink:false,inkColor:'#D93B3B',inkW:2,inkErase:false};
+         stick:false,ink:false,inkColor:'#D93B3B',inkW:2,inkErase:false,
+         // ★ 1차객 열 너비(8/26) — 손잡이를 끌어 바꾼다. 기기마다 다르므로 기록층 밖에 둔다.
+         qlNmW:228,qlRdW:168};
+const UI_KEY='jopangi_ui';   // ⚠ `jopangi.` 접두가 아니다 — 기록 내보내기·건수에서 빠진다
+try{const u=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
+    if(u.nmw>0)S.qlNmW=u.nmw;if(u.rdw>0)S.qlRdW=u.rdw;}catch(e){}
+function uiSave(){try{localStorage.setItem(UI_KEY,JSON.stringify({nmw:S.qlNmW,rdw:S.qlRdW}));}catch(e){}}
 const C={};
 const $=(s,r)=>(r||document).querySelector(s);
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;
@@ -619,9 +630,40 @@ function emptyBox(icon,msg,sub){
    둘 다 접으면 컨테이너째 사라진다(8/26 사용자 요구 — 각각 닫히게). */
 function qlHandle(which,label){
   const off=(which==='tree')?S.treeHid:S.listHid;
-  const h=el('div','handle',off?'›':'‹');
-  h.title=label+' 칸 '+(off?'펴기':'접기');
-  h.onclick=()=>{if(which==='tree')S.treeHid=!S.treeHid;else S.listHid=!S.listHid;render();};
+  const h=el('div','handle'+(off?'':' drg'),off?'›':'‹');
+  h.title=label+' 칸 '+(off?'펴기':'접기')+(off?'':' · 끌면 너비');
+  /* 끌었으면 뒤따르는 click 을 삼킨다 — 접기는 「안 끌고 뗀」 때만 */
+  h.onclick=()=>{if(h._drag){h._drag=false;return;}
+    if(which==='tree')S.treeHid=!S.treeHid;else S.listHid=!S.listHid;render();};
+  if(off)return h;                                   // 접힌 칸은 끌 것이 없다
+  /* ★ 끌어서 너비(8/26). 목차 손잡이 = 이름칸(--nmw) · 회독 손잡이 = 회독칸(--rdw).
+     .qlbox 인라인 변수만 갈아 끼우므로 끄는 동안 render() 는 안 부른다. */
+  const isNm=(which==='tree'), MIN=isNm?120:100, MAX=isNm?600:900;
+  let x0=0,w0=0,cur=0;
+  h.addEventListener('pointerdown',ev=>{
+    if(ev.button!==0&&ev.pointerType==='mouse')return;
+    x0=ev.clientX;w0=cur=isNm?S.qlNmW:S.qlRdW;h._drag=false;
+    try{h.setPointerCapture(ev.pointerId);}catch(e){}
+  });
+  h.addEventListener('pointermove',ev=>{
+    if(!h.hasPointerCapture||!h.hasPointerCapture(ev.pointerId))return;
+    const dx=ev.clientX-x0;
+    if(!h._drag&&Math.abs(dx)<4)return;
+    h._drag=true;
+    cur=Math.max(MIN,Math.min(MAX,Math.round(w0+dx)));
+    const box=h.parentNode;if(!box)return;
+    box.style.setProperty(isNm?'--nmw':'--rdw',cur+'px');
+  });
+  const end=ev=>{
+    try{h.releasePointerCapture(ev.pointerId);}catch(e){}
+    if(!h._drag)return;
+    if(isNm)S.qlNmW=cur;else S.qlRdW=cur;
+    uiSave();
+    /* click 이 안 오는 경로(터치 취소 등)를 위해 잠깐 뒤 플래그를 내린다 */
+    setTimeout(()=>{h._drag=false;},300);
+  };
+  h.addEventListener('pointerup',end);
+  h.addEventListener('pointercancel',end);
   return h;
 }
 function handle(which){
@@ -3285,6 +3327,8 @@ async function viewJimun(){
   if(S.jimunTab==='ox'){
     /* ★ 손잡이를 열 바깥에서 떼어 경계선 위에 세운다(8/26). 동작은 그대로다. */
     const box=el('div','qlbox'+(S.treeHid?' nonm':''));
+    box.style.setProperty('--nmw',S.qlNmW+'px');   // ★ 끌어 정한 너비(8/26)
+    box.style.setProperty('--rdw',S.qlRdW+'px');
     box.appendChild(qlColumn(MG,JM,byId,P7,subj));
     /* ★ 판례탭처럼 열마다 자기 오른쪽에 하나씩(8/26).
        목차 손잡이는 이름칸 경계(228px)에 띄우고,
@@ -3650,7 +3694,7 @@ async function render(){
   /* ★ 스크롤 보존 (8/26) — slot 을 통째로 다시 그리므로 안 잡아 두면 누를 때마다 맨 위로 튄다.
      태그·O/X 가 「눌러도 아무 일 없다」로 보이던 원인이 이것이다. */
   const SCR={};
-  ['main','tree','plist','qlist'].forEach(c=>{
+  ['main','tree','plist','qlwrap'].forEach(c=>{   // ★ 8/26 `qlist` 는 없는 클래스였다
     const n=document.querySelector('#slot .'+c);if(n)SCR[c]=n.scrollTop;});
   const scrBack=()=>Object.keys(SCR).forEach(c=>{
     const n=document.querySelector('#slot .'+c);if(n)n.scrollTop=SCR[c];});
