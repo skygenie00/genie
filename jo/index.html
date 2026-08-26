@@ -263,6 +263,17 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .thcol{min-width:190px;max-width:240px;flex:0 0 auto;border:1px solid #e5e2da;border-radius:8px;background:#fff;padding:8px}
 .thcol.add{border-style:dashed;background:#fdfdfb;color:#999}
 .thcol .bj2{font-size:12px;color:#555;margin-top:5px;line-height:1.45;max-height:3.6em;overflow:hidden}
+/* ★ v3-I — 조문 목차 장·★ 개정 · 연결 칩 */
+.jtbar{display:flex;gap:5px;flex-wrap:wrap;padding:7px 9px;border-bottom:1px solid var(--line)}
+.jtbar .tool{font-size:11px;padding:2px 7px}
+.tree .r.jhead{background:#f3f1ea;font-weight:700;color:#4a463f}
+.tree .r.jsub{color:#8a857c;font-size:11.5px;padding-left:18px;background:#faf8f3}
+.jrange{font-size:10px;color:#9a958b;white-space:nowrap;font-style:normal}
+.jstarc{color:#c9a400;font-size:10.5px;white-space:nowrap;font-style:normal}
+.tool.jstar{color:#8a6d00}
+.tool.jstar.on{background:#c9a400;border-color:#c9a400;color:#fff}
+.jstarb{background:#fdf6d8;color:#8a6d00;border:1px solid #e5d48a}
+.chip.wait{opacity:.45}
 
 /* ── 카드 본문 ── */
 .ctitle{font-weight:700;font-size:11.5px;margin-bottom:3px;line-height:1.35}
@@ -900,21 +911,90 @@ async function viewJo(){
   JOTITLE={};L.조.forEach(j=>{JOTITLE[j.k]=j.t;});
 
   const tree=el('div','tree'+(S.treeHid?' hid':''));
-  tree.appendChild(el('div','h',SHORT[S.law]+' · 체계도 ↔ 조문'));
+  /* ★ v3-I (8/27) — 머리 라벨 폐기 → 칩 줄 · 편장절 대목차 · ★ 2년 내 개정.
+     장 데이터가 비면(⚙ 전 JSON) 지금처럼 한 줄로 — NG 는 ⚙ 가 막으니 앱은 방어만. */
   if(!S.jo&&L.조.length)S.jo=L.조[0].k;
-  L.조.forEach(j=>{
-    const r=el('div','r'+(S.jo===j.k?' on':''));
-    const nm=el('span','nm',j.k+' '+(j.t||''));
-    r.appendChild(nm);
+  const 장들=L.장||[], 명칭=new Set(L.명칭개정||[]);
+  const _lim=new Date();_lim.setFullYear(_lim.getFullYear()-2);   // 기준일 = 기기의 오늘(§6-a)
+  const starOf=x=>{
+    for(const r2 of (x.r||[])){
+      if(명칭.has(r2))continue;                 // 명칭 일괄 개정(청장→처장)은 뺀다
+      const p2=r2.split('.');
+      if(new Date(+p2[0],+p2[1]-1,+p2[2])>=_lim)return r2;
+    }
+    return '';
+  };
+  const stars={};let nStar=0;
+  L.조.forEach(x=>{const s2=starOf(x);if(s2){stars[x.k]=s2;nStar++;}});
+  const _jfAll=()=>{try{return JSON.parse(localStorage.getItem('jopangi_ui_jofold')||'{}');}catch(e){return {};}};
+  const _jf=_jfAll()[S.law]||{};
+  const _jfSave=f2=>{const a2=_jfAll();a2[S.law]=f2;
+    try{localStorage.setItem('jopangi_ui_jofold',JSON.stringify(a2));}catch(e){}};
+  {
+    const bar2=el('div','jtbar');
+    const c1=el('button','tool'+(S.joStar?'':' on'),'전체 '+L.조.length);
+    c1.onclick=()=>{S.joStar=false;render();};
+    const c2=el('button','tool jstar'+(S.joStar?' on':''),'★ 2년 내 개정 '+nStar);
+    c2.title='최근 2년 안에 개정·신설된 조만 — 명칭 일괄 개정('+([...명칭].join(', ')||'없음')+')은 뺀다';
+    c2.onclick=()=>{S.joStar=!S.joStar;render();};
+    const c3=el('button','tool','모두 접기');
+    c3.onclick=()=>{const f2={};장들.forEach((h,i)=>{if(h.lv===1)f2[i]=1;});_jfSave(f2);render();};
+    bar2.appendChild(c1);bar2.appendChild(c2);bar2.appendChild(c3);
+    tree.appendChild(bar2);
+  }
+  const joRow=x=>{
+    const r=el('div','r'+(S.jo===x.k?' on':''));
+    r.appendChild(el('span','nm',x.k+' '+(x.t||'')));
     const em=el('em');
-    if(j.M)em.appendChild(el('span','','✏'+j.M));
-    if(j.L)em.appendChild(el('span','','🔗'+j.L));
-    if(!j.M&&!j.L){const b=el('span','bars');
+    if(stars[x.k])em.appendChild(el('span','jstarc','★ '+stars[x.k].replace(/^20/,'')));
+    if(x.M)em.appendChild(el('span','','✏'+x.M));
+    if(x.L)em.appendChild(el('span','','🔗'+x.L));
+    if(!x.M&&!x.L&&!stars[x.k]){const b=el('span','bars');
       for(let i=0;i<3;i++)b.appendChild(el('i','bx'));em.appendChild(b);}
     r.appendChild(em);
-    r.onclick=()=>{S.jo=j.k;render();};
-    tree.appendChild(r);
-  });
+    r.onclick=()=>{S.jo=x.k;render();};
+    return r;
+  };
+  if(!장들.length){
+    L.조.forEach(x=>{if(!S.joStar||stars[x.k])tree.appendChild(joRow(x));});
+  }else{
+    const byHead={};const noHead=[];
+    L.조.forEach(x=>{(x.j==null?noHead:(byHead[x.j]=byHead[x.j]||[])).push(x);});
+    const lv1Of=i=>{let i2=i;while(i2>0&&장들[i2].lv!==1)i2--;return i2;};
+    let curJoLv1=null;
+    {const cx=L.조.find(x=>x.k===S.jo);if(cx&&cx.j!=null)curJoLv1=lv1Of(cx.j);}
+    const gStar=i1=>{let n2=0;
+      for(let i=i1;i<장들.length&&(i===i1||장들[i].lv!==1);i++)
+        (byHead[i]||[]).forEach(x=>{if(stars[x.k])n2++;});
+      return n2;};
+    for(let i=0;i<장들.length;i++){
+      const h=장들[i];
+      if(h.lv===1){
+        const k2=gStar(i);
+        if(S.joStar&&!k2)continue;              // ★ 필터: ★ 없는 장은 통째로 숨김
+        const folded=!S.joStar&&i!==curJoLv1&&!!_jf[i];   // ★ 필터·지금 조의 장은 늘 펼침
+        const hr=el('div','r jhead');
+        hr.appendChild(el('span','nm',(folded?'▸ ':'▾ ')+h.no+' '+(h.t||'')));
+        const em2=el('em');
+        em2.appendChild(el('span','jrange',(h.from||'')+'~'+(h.to||'')+(k2?' · ★'+k2:'')));
+        hr.appendChild(em2);
+        {const i0=i;
+         hr.onclick=()=>{const f2=Object.assign({},_jf);
+           if(f2[i0])delete f2[i0];else f2[i0]=1;_jfSave(f2);render();};}
+        tree.appendChild(hr);
+        if(folded){                              // 다음 장(lv1) 전까지 통째로 건너뜀
+          while(i+1<장들.length&&장들[i+1].lv!==1)i++;
+          continue;
+        }
+      }else{
+        const sr=el('div','r jsub');             // 절 = 들여쓴 머리(접기는 장 단위만 · §6-b)
+        sr.appendChild(el('span','nm',h.no+' '+(h.t||'')));
+        tree.appendChild(sr);
+      }
+      (byHead[i]||[]).forEach(x=>{if(!S.joStar||stars[x.k])tree.appendChild(joRow(x));});
+    }
+    noHead.forEach(x=>{if(!S.joStar||stars[x.k])tree.appendChild(joRow(x));});
+  }
   const lg=el('div','legend');
   lg.innerHTML='막대 3개 = <b>회독 · 빈칸 통과 · 지문 정답률</b> — v0 미착수<br>'+
                '✏N 내 형광·마크업 수 · 🔗N 인용 링크 수';
@@ -937,6 +1017,8 @@ async function viewJo(){
   if(j.제목)h1.appendChild(document.createTextNode(' '+j.제목));
   main.appendChild(h1);
   main.appendChild(el('div','sihaeng','🕐 시행 '+(SIHAENG[S.law]||'—')+'  ·  '+j.파일));
+  /* ★ v3-I — 2년 내 개정 조는 본문 머리에도 배지 하나(명칭개정만 있는 조는 없음) */
+  if(stars[S.jo])main.appendChild(el('span','badge jstarb','★ '+stars[S.jo]+' 개정'));
 
   const link=el('div','conn');
   link.appendChild(el('span','k','이 조문 연결'));
@@ -951,6 +1033,8 @@ async function viewJo(){
     b.onclick=()=>{S.joPanel=!S.joPanel;S.joPanelP=0;render();};
     link.appendChild(b);
   }
+  await joPrecChip(link);   /* ★ v3-I §3-2 — ⚖ 연결판례 · 🧾 2차문제 */
+  await jo2chaChip(link);
   /* ★ v3-H §5 — 테마 = 3법 비교 자리 + 내가 만드는 비교(단일법도 열 비교 · 사양서 §4-1 개정) */
   {const n=pitCount('jo|'+S.law+':'+S.jo+SEP);   /* ⚠ base 는 아래(모드바)에서 선언된다 — 여기서 못 쓴다 */
    if(n)link.appendChild(el('span','chip c-quiz','🗒 메모 '+n));}
@@ -1449,6 +1533,118 @@ function popRec(ev){
   showPop(ev);
 }
 
+/* ══ v3-I §3-2 — ⚖ 연결판례 · 🧾 2차문제 (v3-H §5-2 잔여) ══
+   ⚖ 원천 ⓐ ⚙ 역인덱스 '판례' 맵(수집본+요약본 평문 「특허법 제N조」) ⓑ 없으면
+   요약본 조문 칩 폴백. 🧾 = 그 법 2차 본문의 평문 「제N조」 파일 단위 역색인.
+   평문에 없는 연결은 없는 것 — 지어내지 않는다. */
+let JOPREC=null,JOPRECLAW=null,JO2CHA=null,JO2CHALAW=null;
+async function joPrecIdx(){
+  if(JOPREC&&JOPRECLAW===S.law)return JOPREC;
+  JOPRECLAW=S.law;JOPREC={map:{},src:''};
+  if(S.law!=='특허법')return JOPREC;   // 판례 수집이 특허뿐(지금 규칙)
+  try{
+    const idx=await get('jo_링크역인덱스.json');
+    if(idx.판례&&Object.keys(idx.판례).length){
+      JOPREC.map=idx.판례;JOPREC.src='⚙ 역인덱스(수집본+요약본 평문)';return JOPREC;}
+  }catch(e){}
+  try{
+    const P=await get('prec_특허_리스트.json');
+    const map={};
+    (P.판례||[]).forEach(p=>{(Array.isArray(p.조문)?p.조문:[]).forEach(c=>{
+      const m=/(\d+)조(의(\d+))?/.exec(String(c));
+      if(!m)return;
+      const k2='제'+m[1]+'조'+(m[3]?('의'+m[3]):'');
+      (map[k2]=map[k2]||[]).push(p.id);});});
+    JOPREC.map=map;JOPREC.src='요약본 조문 칩만(역인덱스 없음)';
+  }catch(e){}
+  return JOPREC;
+}
+async function joPrecChip(link){
+  const R=await joPrecIdx();
+  const arr=(R.map||{})[S.jo]||[];
+  const c=el('button','chip c-prec'+(arr.length?'':' wait'),'⚖ 연결판례 '+arr.length);
+  c.title=arr.length?('원천: '+R.src):'이 조를 평문으로 짚은 판례가 없다';
+  if(arr.length)c.onclick=ev=>joPrecPop(arr,ev);
+  link.appendChild(c);
+}
+async function joPrecPop(arr,ev){
+  const P=await get('prec_특허_리스트.json');
+  const by={};(P.판례||[]).forEach(p=>{by[p.id]=p;});
+  const body=popShell('','⚖ '+S.jo+' 연결판례 '+arr.length);
+  arr.forEach(id=>{
+    const p=by[id]||{id:id,사건번호:id};
+    const r=el('div','lnkrow');
+    r.appendChild(el('span','qb v',p.사건번호||id));
+    r.appendChild(el('span','lnkt',String(p.별칭||p.사건명||p.쟁점||'').slice(0,46)));
+    r.onclick=ev2=>popPan(p.사건번호||id,null,ev2);
+    body.appendChild(r);
+  });
+  showPop(ev);
+}
+async function jo2chaIdx(){
+  if(JO2CHA&&JO2CHALAW===S.law)return JO2CHA;
+  JO2CHALAW=S.law;JO2CHA={};
+  const subj=SHORT[S.law];
+  for(const kind of ['기출','GS','사례']){
+    let B2=null;
+    try{B2=await get('2cha_본문_'+kind+'_'+subj+'.json');}catch(e){continue;}
+    for(const f in B2){
+      const rec=B2[f];
+      (rec.행||[]).forEach((r2,ri)=>{
+        const t2=r2.t||'';
+        const re2=/제(\d+)조(?:의(\d+))?/g;
+        const seen={};let m2;
+        while((m2=re2.exec(t2))){
+          const k2='제'+m2[1]+'조'+(m2[2]?('의'+m2[2]):'');
+          if(seen[k2])continue;seen[k2]=1;
+          const e2=(JO2CHA[k2]=JO2CHA[k2]||{});
+          const fe=(e2[f]=e2[f]||{kind:kind,rows:[]});
+          if(fe.rows.length<4)
+            fe.rows.push({ri:ri,x:t2.slice(Math.max(0,m2.index-14),m2.index+24)});
+        }
+      });
+    }
+  }
+  return JO2CHA;
+}
+async function jo2chaChip(link){
+  const R=await jo2chaIdx();
+  const files=R[S.jo]||{};
+  const n=Object.keys(files).length;
+  const c=el('button','chip c-quiz'+(n?'':' wait'),'🧾 2차문제 '+n);
+  c.title=n?'이 조를 평문으로 쓴 2차 본문(파일 단위)':'이 조를 쓴 2차 본문이 없다';
+  if(n)c.onclick=ev=>jo2chaPop(files,ev);
+  link.appendChild(c);
+}
+async function jo2chaPop(files,ev){
+  const body=popShell('','🧾 '+S.jo+' · 2차 문제 '+Object.keys(files).length+'건');
+  const subj=SHORT[S.law];
+  Object.keys(files).sort().forEach(f=>{
+    const fe=files[f];
+    const r=el('div','lnkrow');
+    r.appendChild(el('span','qb t',fe.kind));
+    r.appendChild(el('span','lnkt',f.slice(0,32)+' — '+((fe.rows[0]||{}).x||'')));
+    r.onclick=async ev2=>{
+      const B2=await get('2cha_본문_'+fe.kind+'_'+subj+'.json').catch(()=>null);
+      const rec=B2&&B2[f];
+      if(!rec){toast('본문을 못 읽었다 — '+f);return;}
+      const bd=popShell('q','🧾 '+f);
+      const go=el('button','tool on','보드로 이동 ↗');
+      go.onclick=()=>{S.tab='cha2';S.boardKind=fe.kind;closeAllPops();render();};
+      bd.appendChild(go);
+      bd.appendChild(renderBody(rec,f));
+      showPop(ev2);
+      setTimeout(()=>{
+        const host=bd.querySelector('.rbody');
+        const t2=host&&host.children[(fe.rows[0]||{}).ri||0];
+        if(t2){bd.scrollTop=Math.max(0,t2.offsetTop-60);
+          t2.classList.add('jhl');setTimeout(()=>t2.classList.remove('jhl'),2500);}
+      },80);
+    };
+    body.appendChild(r);
+  });
+  showPop(ev);
+}
 /* ══ v3-H §5 — 🧩 테마(3법 비교) + 내 비교 ══
    원본 = jo/data/테마.json (조문이 빈 테마는 칩을 안 보인다 · 내용은 사용자 몫 · §7-a).
    내가 더한 열·내가 만든 비교 = jopangi.compare (내보내기 포함 · 테마.json 무수정). */
