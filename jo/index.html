@@ -578,8 +578,16 @@ async function railCounts(){
   try{set('jo',(await get(`jo_${S.law}_목록.json`)).조.length);}catch(e){set('jo','–');}
   try{const p=await get('prec_과목.json');const m=p[SHORT[S.law]];set('prec',m?m.수:0);}catch(e){set('prec','–');}
   if(S.law==='민사소송법')set('jimun','—');
-  else{try{const j=await get('jimun_'+SHORT[S.law]+'.json');set('jimun',j.문항);}
-       catch(e){set('jimun','—');}}
+  else{try{
+    // ★ 「문제」 = 정답을 넣을 수 있는 지문 하나(사용자 확정 8/26). 문항 묶음이 아니다.
+    //    특허는 제7판 OX 지문 + 리담 전용 지문 — 짝이 붙은 리담 지문은 제7판 쪽에서 세므로 뺀다.
+    const sh=SHORT[S.law], j=await get('jimun_'+sh+'.json');
+    let n=0;
+    (j.문제||[]).forEach(q=>(q.지문||[]).forEach(z=>{if(!(sh==='특허'&&z.병합))n++;}));
+    if(sh==='특허'){try{const P=await get('jimun_7pan.json');
+      n+=(P.지문||[]).filter(z=>z.ox==='O'||z.ox==='X').length;}catch(e){}}
+    set('jimun',n.toLocaleString());
+  }catch(e){set('jimun','—');}}
   try{const b=await get('2cha_보드.json');let n=0;
       Object.keys(b).forEach(k=>{if(k.endsWith('|'+SHORT[S.law]))n+=b[k].총||0;});
       set('cha2',n.toLocaleString());}catch(e){set('cha2','–');}
@@ -849,8 +857,11 @@ async function viewJo(){
     head.appendChild(document.createTextNode((pinned?'▾':'▸')+' 원문 보기 '));
     const s=el('span','','(불변 원본층 · 개정 대조용 정본 · 법전 조판)');s.style.fontSize='11px';
     head.appendChild(s);
-    const link=el('a','oi','law.go.kr ↗');
-    link.href='https://www.law.go.kr/법령/'+encodeURIComponent(S.law);
+    /* ★ 조 단위로 연다(사용자 요구 8/26). 법제처 한글주소가 `/법령/법령명/제X조` 를 받는다.
+       ⚠ 항·호 단위 주소는 법제처에 없다 — 그 깊이는 앱 안 팝업(popJo)이 이미 보여준다. */
+    const link=el('a','oi','law.go.kr'+(j.k?' · '+j.k:'')+' ↗');
+    link.href='https://www.law.go.kr/법령/'+encodeURIComponent(S.law)
+              +(j.k?'/'+encodeURIComponent(j.k):'');
     link.target='_blank';link.rel='noopener';
     link.onclick=e=>e.stopPropagation();
     head.appendChild(link);
@@ -2601,12 +2612,12 @@ function mcChapOpen(label, keys, ev){
    한 행 = 마디 하나. 총문제 · 🃏 암기노트 · 회독 진행중 · 회독수를 그 자리에서 보인다.
    ★ 회독 scope 는 기존과 같은 `mok|<과목>|__mg<i>` 다 — 이미 쌓인 회독 기록이 그대로 붙는다. */
 function mgRoll(M,i){
-  const n=M[i];let jos=n.지문.slice(),lids=n.리담.slice();
-  for(let j=i+1;j<M.length;j++){
-    if(M[j].깊이<=n.깊이)break;
-    jos=jos.concat(M[j].지문);lids=lids.concat(M[j].리담);
-  }
-  return [Array.from(new Set(jos)),Array.from(new Set(lids))];
+  /* ★ 8/26 사용자 확정 — **자기 마디에 직접 붙은 것만** 센다.
+     전엔 하위 마디를 전부 합쳐서 「대목차 39 = 소목차 39」 처럼 같은 수가 두 번 나왔고
+     같은 지문이 부모 화면과 자식 화면에 겹쳐 보였다.
+     차례는 ID 순으로 고정한다 — 제7판 ID 는 교재 차례대로 매겨져 있다. */
+  const n=M[i];
+  return [Array.from(new Set(n.지문)).sort(),Array.from(new Set(n.리담))];
 }
 function mgKeys(M,i,byId,P7map){
   const r=mgRoll(M,i),keys=[];
@@ -2628,11 +2639,11 @@ function qlRow(M,i,sel,label,keys,subj,kid,folded){
   nm.style.paddingLeft=(9+((n?n.깊이:1)-1)*12)+'px';
   const ar=el('span','qlar'+(kid?' k':''), kid?(folded?'▸':'▾'):'');
   if(kid)ar.onclick=ev=>{ev.stopPropagation();S.mgFold[i]=!folded;render();};
-  nm.appendChild(ar);
   const t=el('span','qlnmt',label);
   if(n&&n.출처==='제7판')t.style.color='#d4b04a';
   nm.appendChild(t);
   nm.appendChild(el('span','qltot','총 '+total+'문제'));
+  nm.appendChild(ar);   // ★ 이름·열접기 손잡이와 붙어 헷갈려서 뒤로 뺐다(8/26)
   const note=el('button','qlnote'+(cards?' on':''),'🃏'+(cards?' '+cards:''));
   note.title='암기노트';
   note.onclick=ev=>{ev.stopPropagation();mcChapOpen(label,keys,ev);};
@@ -3058,7 +3069,12 @@ function p7Card(z){
   h.appendChild(el('span','qb v','제7판'));
   h.appendChild(el('span','qb t',z.태그));
   if(z.쪽)h.appendChild(el('span','qb n','p.'+z.쪽));
-  h.appendChild(el('span','qb id','ID '+z.id));
+  /* ★ 배지는 **학습기록이 붙는 고유키**를 보인다(사용자 확정 8/26).
+     전엔 교재 안 자리번호 `P7-0004` 를 보여 줬는데, 같은 지문이 이미
+     `T…` 고유키를 갖고 있어 한 지문에 이름이 둘로 보였다.
+     길이는 그대로 둔다 — 짝 붙은 지문 8자, 제7판 단독 `T…P7` 10자. */
+  h.appendChild(el('span','qb id',z.sid||('ID '+z.id)));
+  h.appendChild(mcChip(oxKeyP7(z)));   // 🃏 — 민법OX 와 같은 자리(머리 배지줄 ID 뒤)
   if(z.유제)h.appendChild(el('span','src 기출변형','유제'));
   h.appendChild(el('span','qb '+(z.리담?'t':'id'),
     z.병합?'리담과 흡수됨 — 기록 공유':(z.리담?'리담과 같은 지문':'제7판 단독')));
@@ -3098,20 +3114,19 @@ function p7Card(z){
   if(!ox&&z.리담&&z.리담.ox){ox=z.리담.ox;from='리담 보강';}
   if(z.리담)row.appendChild(el('span','chip c-quiz',
     '리담 '+z.리담.연도+'년 '+z.리담.문항+'번 ('+z.리담.선지+')'));
-  row.appendChild(mcChip(oxKeyP7(z)));
-  oxPickRow(row, oxKeyP7(z), ox, z.sol);
+  /* ★ 해설을 한 자리로 모은다(사용자 확정 8/26) — 리담 해설을 따로 접어 두지 않고
+     「해설 미리보기」 안에 이어 붙인다. `.sol` 이 pre-wrap 이라 줄바꿈이 그대로 산다. */
+  let sol7=z.sol||'';
+  if(z.병합&&(z.리담해설||'').trim())
+    sol7=(sol7?sol7+'\n\n':'')+'📗 리담 해설\n'+z.리담해설;
+  oxPickRow(row, oxKeyP7(z), ox, sol7);
   if(JOS.length){
     const wb=el('div');
     JOS.forEach(x=>wb.appendChild(joWonBtn(x)));
     row.appendChild(wb);
   }
   card.appendChild(row);
-  if(z.병합&&(z.리담해설||'').trim()){
-    const d=el('details','solx');
-    d.appendChild(el('summary','','📗 리담 해설'));
-    d.appendChild(el('div','solb',z.리담해설));
-    card.appendChild(d);
-  }
+  // 리담 해설은 위 「해설 미리보기」 안으로 들어갔다(8/26) — 따로 접어 두지 않는다.
   const ft=el('div','qft');
   const m=el('span','memolink','✏ 메모 및 유사문제 연결');m.title='v0 제외 — 자리만';
   ft.appendChild(m);ft.appendChild(el('span','cdim','풀이 기록은 이 기기에 쌓인다'));
@@ -3176,7 +3191,14 @@ async function viewJimun(){
 
   const main=el('div','main');
   const tabs=el('div','modebar');
-  [['ox','OX문제'],['gichul','기출문제']].forEach(([k,t])=>{
+  /* ★ 버튼 옆 수 — OX 는 「문제(지문)」, 기출은 「문항」이다(사용자 확정 8/26).
+     짝이 붙은 리담 지문은 제7판 쪽에서 세므로 특허에서만 뺀다 — 두 번 세지 않기 위해서다. */
+  let nJi=0;
+  (JM.문제||[]).forEach(q=>(q.지문||[]).forEach(z=>{if(!(P7&&z.병합))nJi++;}));
+  if(P7)nJi+=(P7.지문||[]).filter(z=>z.ox==='O'||z.ox==='X').length;
+  const nMun=JM.문항||(JM.문제||[]).length;
+  [['ox','OX문제 '+nJi.toLocaleString()],
+   ['gichul','기출문제 '+nMun.toLocaleString()]].forEach(([k,t])=>{
     const b=el('button','mode'+(S.jimunTab===k?' on':''),t);
     b.onclick=()=>{S.jimunTab=k;render();};tabs.appendChild(b);});
   main.appendChild(tabs);
