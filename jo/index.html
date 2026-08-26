@@ -514,6 +514,21 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .omrpin.s2{background:rgba(239,159,39,.18)}
 .omrpin.s3{background:rgba(226,75,74,.18)}
 .omrpin.s4{background:rgba(245,224,106,.22)}
+/* ══ v3-F — 배지줄 정리 · 팝업 카드 · 알약 · 📍 좌표기억 ══ */
+.qsub{font-size:10.5px;color:#8a867d;margin:2px 0 4px;padding-left:4px}
+.qexp{cursor:pointer}
+.pintag{border:1px dashed #b8860b !important;color:#b8860b}
+.pintag.has{border-style:solid !important;background:#fdf1e3}
+.pintag.stale{border-style:solid !important;border-color:var(--rule) !important;color:var(--rule);background:#fdf0f0}
+.oxpill{position:fixed;right:18px;bottom:112px;z-index:56;display:flex;gap:6px;align-items:center;
+  background:#fff;border:1px solid var(--exc);border-radius:999px;padding:4px 12px;
+  font-size:11.5px;color:#345;box-shadow:0 4px 14px rgba(0,0,0,.16)}
+.lnkline{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;color:#6b675f;margin-top:4px}
+.lnkline .go{border:1px solid #d9d6ce;border-radius:7px;padding:0 7px;background:#fff;font-size:11px;color:#345}
+.lnkline .go:hover{border-color:var(--exc);color:var(--exc)}
+.omini{position:relative;overflow:hidden;background:#fff;border:1px solid var(--line);border-radius:8px}
+.omini img{position:absolute;display:block}
+.omini .hl{position:absolute;border:2px solid #f0a020;background:rgba(240,160,32,.15);border-radius:3px}
 /* ══ v3-D — 순번 · OMR · 채점 결과 (2026-08-27) ══ */
 .oxseq{font-size:14px;margin-right:2px}
 .rchip.ok{border-color:#3fae64;color:#1d7a3e;background:#f0faf3}
@@ -2473,7 +2488,9 @@ function oxConfuse(k){ const r = oxOf(k) || {}; oxPut(k, { c: !r.c, sg: r.c ? ''
 /* ★ 학습 태그 — v3-B 까지는 자리만 있는 죽은 span 이었다(「기록은 v0 제외」).
    기록층이 생겼으므로 이제 진짜로 눌린다(8/26 사용자 지적).
    헷갈림은 5상태와 같은 값(`c`)을 쓴다 — 둘로 나누면 서로 어긋난다. */
-const OXTAGS = [['pin', '📍 표시'], ['confuse', '🌀 헷갈림'], ['fake', '⚠ 페이크'],
+/* ★ v3-F §6-1 — 「📍 표시」 태그 폐지: 민법OX 의 📍 는 좌표기억 단추였는데 8/26 에
+   일반 태그로 잘못 옮겼었다. 기록층 tg.pin 은 버린다(뜻이 달라 옮길 수 없음). */
+const OXTAGS = [['confuse', '🌀 헷갈림'], ['fake', '⚠ 페이크'],
                 ['concept', '💡 개념'], ['memo', '🧠 암기'], ['important', '⭐ 중요']];
 function oxTagOn(k, t){
   const r = oxOf(k) || {};
@@ -2551,7 +2568,7 @@ function tyPut(k, v){
   if (v) A[k] = { v: v, ts: nowIso() }; else delete A[k];
   TYREC = A; lsWrite(TY_KEY, A, '🏷 유형 확정');
 }
-const TY_NAME = { jo: '조문형', mix: '혼합', pan: '판례형' };
+const TY_NAME = { jo: '조문형', mix: '조문+판례', pan: '판례형' };   // ★ v3-F §3 — 배지줄 표기
 function linkDisp(k){
   const c = (OXPOOL || {})[k];
   return (c && c.name) ? c.name : oxKeyDisp(k);
@@ -2634,7 +2651,7 @@ function linkListPop(keys, ev){
       r.appendChild(el('span', 'hmdot s' + oxState(b)));
       r.appendChild(el('span', 'qb n', linkDisp(b)));
       r.appendChild(el('span', 'lnkt', c && c.t ? c.t.slice(0, 60) : ''));
-      r.onclick = () => { closePop(); linkGo(b); };
+      r.onclick = ev2 => popCard(b, ev2);   // ★ v3-F §5 — 지문 팝업(화면 이동 없음)
       const x = el('button', 'tool', '✕');
       x.title = '연결 해제';
       x.onclick = ev2 => { ev2.stopPropagation(); lkDel(k, b); closePop(); render(); };
@@ -2646,10 +2663,323 @@ function linkListPop(keys, ev){
   showPop(ev);
 }
 
+/* ══ v3-F §0·§4·§6-1 — 지문 팝업 · 판례 요약 팝업 · ✏ 입구 · 📍 좌표기억 ══ */
+let CARDPOPS = [];                       // 팝업 카드 — render 뒤 다시 그려 본 화면과 맞춘다
+let OMRMETA2 = null, OMRMAP2 = null;     // 정리OMR meta·map (📍 상태 판정용 · viewJimun 이 싣는다)
+function sidFind(sid){
+  if (!VJ) return null;
+  const m1 = /^L:(.+)#(\d+)$/.exec(sid);
+  if (m1 && VJ.byId[m1[1]]){
+    const q = VJ.byId[m1[1]];
+    const z = (q.지문 || []).find(x => String(x.n) === m1[2]);
+    if (z) return { kind: 'L', q: q, z: z };
+  }
+  const m2 = /^P7:(.+)$/.exec(sid);
+  if (m2 && VJ.P7map[m2[1]]) return { kind: 'P', z: VJ.P7map[m2[1]] };
+  for (const q of (VJ.qs || [])){
+    const z = (q.지문 || []).find(x => x.sid === sid);
+    if (z) return { kind: 'L', q: q, z: z };
+  }
+  for (const id in VJ.P7map){
+    if (oxKeyP7(VJ.P7map[id]) === sid) return { kind: 'P', z: VJ.P7map[id] };
+  }
+  return null;
+}
+function popCard(sid, ev){
+  const hit = sidFind(sid);
+  if (!hit){ toast('지금 불러온 데이터에 없는 지문이다 — ' + sid); return; }
+  const body = popShell('q', '📝 지문 ' + sid);
+  const paint = () => {
+    body.innerHTML = '';
+    const go = el('button', 'tool on', '그 마디로 가기 ↗');
+    go.onclick = () => { closeOne(body.parentNode); linkGo(sid); };
+    body.appendChild(go);
+    if (hit.kind === 'P'){
+      const c = p7Card(hit.z);
+      c.removeAttribute('id');            // 본 화면 카드와 dom id 가 겹치면 스크롤이 헷갈린다
+      body.appendChild(c);
+    } else {
+      // 문항 카드 통째가 아니라 **그 지문 한 줄만** 든 카드(§0)
+      const card = el('div', 'qwrap');
+      const h = el('div', 'qhd');
+      h.appendChild(el('span', 'qb v', String(hit.q.연도).slice(2) + ' 변리'));
+      h.appendChild(el('span', 'qb id', hit.z.sid || sid));
+      const sp = el('span'); sp.style.flex = '1'; h.appendChild(sp);
+      pinTag(sid, h);
+      oxTagBar(sid, h);
+      card.appendChild(h);
+      const row = el('div', 'oxrow'); row.style.borderTop = '0';
+      const q1 = el('div', 'oxq');
+      q1.appendChild(el('b', '', '(' + hit.z.n + ') '));
+      q1.appendChild(document.createTextNode(hit.z.t || ''));
+      row.appendChild(q1);
+      lnkChips(hit.q, hit.z, q1);
+      q1.appendChild(mcChip(sid));
+      oxPickRow(row, sid, hit.z.ox, hit.z.sol);
+      card.appendChild(row);
+      body.appendChild(card);
+    }
+  };
+  paint();
+  CARDPOPS.push({ body: body, paint: paint });
+  showPop(ev);
+}
+/* §4 — 판례번호 칩 → 요약본 전문 팝업. 수집 여부로 동작을 가르지 않는다. */
+async function popPan(caseNo, selfKey, ev){
+  const body = popShell('', '⚖ ' + caseNo);
+  showPop(ev);
+  const p = (PANIDX || {})[caseNo] || null;
+  try{
+    if (p){
+      const hd = el('div');
+      hd.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+      if (p.사건명 || p.별칭) hd.appendChild(el('b', '', p.사건명 || p.별칭));
+      if (p.선고) hd.appendChild(el('span', 'badge',
+        '선고 ' + String(p.선고).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')));
+      body.appendChild(hd);
+      if (p.출처 === '요약본'){
+        const SUM = await get('prec_특허_요약.json').catch(() => ({}));
+        const s = SUM[p.id];
+        if (s && s.행 && s.행.length){
+          const bx = el('div', 'box');
+          s.행.forEach(r2 => { const d = el('div', 'ln');
+            d.appendChild(renderLine(r2, { label: false })); bx.appendChild(d); });
+          body.appendChild(bx);
+        } else body.appendChild(el('div', 'cdim', '요약본 본문이 비어 있다'));
+      } else {
+        const F = await get('prec_특허_전문.json').catch(() => ({}));
+        const sec = F[p.id] || {};
+        if (sec.판결요지){ const bx = el('div', 'box');
+          bx.appendChild(el('pre', 'raw', sec.판결요지)); body.appendChild(bx); }
+        else body.appendChild(el('div', 'cdim', '요약이 없다 — 「판례 갈래로 이동」에서 전문을 본다'));
+      }
+      const go = el('button', 'tool on', '판례 갈래로 이동 ↗');
+      go.onclick = () => { S.tab = 'prec'; S.prec = p.id;
+        S.precTab = p.출처 === '요약본' ? '요약' : '원문'; closeAllPops(); render(); };
+      body.appendChild(go);
+    } else {
+      body.appendChild(el('div', 'cdim', '수집본 없음'));
+    }
+  }catch(e){ body.appendChild(el('div', 'cdim', '읽지 못했다 — ' + (e && e.message || e))); }
+  const bag = (((LNKIDX || {}).panN || {})[caseNo] || [])
+    .filter(x => oxKeyLid(x.q, x.z) !== selfKey);        // ★ 자기 자신을 뺀다(§4)
+  body.appendChild(el('div', 'rndhd', '같은 지문 ' + bag.length));
+  bag.forEach(x => {
+    const k = oxKeyLid(x.q, x.z);
+    const r = el('div', 'lnkrow');
+    r.appendChild(el('span', 'hmdot s' + oxState(k)));
+    r.appendChild(el('span', 'qb n', x.q.연도 + '년 ' + (x.q.시험문번 || x.q.문번) + '번(' + x.z.n + ')'));
+    r.appendChild(el('span', 'lnkt', String(x.z.t || '').slice(0, 70)));
+    r.onclick = ev2 => popCard(k, ev2);                  // §0 지문 팝업 — 화면 이동 없음
+    body.appendChild(r);
+  });
+}
+/* §6-1 — ✏ 메모 및 유사문제 연결: 논리 글 칸 + 연결 찾기 + 걸린 연결(해제) 한 팝업 */
+function editPop(key, ev){
+  const body = popShell('fn', '✏ 메모 및 유사문제 연결 — ' + linkDisp(key));
+  body.appendChild(el('div', 'rndhd', '📐 논리'));
+  const ta = el('textarea', 'memoin');
+  ta.value = lgOf(key);
+  ta.placeholder = '이 지문에 대한 내 논리 — 왜 O/X 인가 · 함정은 무엇인가';
+  body.appendChild(ta);
+  const rw = el('div', 'memobtn');
+  const sv = el('button', 'tool on', '논리 저장');
+  sv.onclick = () => { const v = ta.value.trim(); lgPut(key, v);
+    toast(v ? '📐 논리를 저장했다' : '📐 논리를 지웠다'); render(); };
+  rw.appendChild(sv);
+  rw.appendChild(el('span', 'cdim', '있을 때만 카드에 「📐 논리 보기」가 뜬다'));
+  body.appendChild(rw);
+  body.appendChild(el('div', 'rndhd', '🔗 연결할 지문 찾기'));
+  const inp = el('input', 'memoin');
+  inp.style.minHeight = '0'; inp.placeholder = '지문 본문으로 찾는다 (2자 이상)';
+  body.appendChild(inp);
+  const box = el('div'); body.appendChild(box);
+  const cur = el('div'); body.appendChild(cur);
+  const paintCur = () => {
+    cur.innerHTML = '';
+    const f = lkOf(key), b2 = lkBack(key);
+    if (!f.length && !b2.length) return;
+    cur.appendChild(el('div', 'rndhd', '걸린 연결'));
+    f.concat(b2).forEach(t => {
+      const r = el('div', 'lnkrow');
+      r.appendChild(el('span', '', f.indexOf(t) >= 0 ? '🔗' : '↩'));
+      r.appendChild(el('span', 'qb n', linkDisp(t)));
+      r.onclick = ev2 => popCard(t, ev2);
+      const x = el('button', 'tool', '✕');
+      x.title = '연결 해제';
+      x.onclick = ev2 => { ev2.stopPropagation(); lkDel(key, t); paintCur(); render(); };
+      r.appendChild(x);
+      cur.appendChild(r);
+    });
+  };
+  const paintFind = () => {
+    box.innerHTML = '';
+    const q = (inp.value || '').trim();
+    if (q.length < 2) return;
+    let n = 0;
+    Object.keys(OXPOOL || {}).some(k => {
+      if (k === key) return false;
+      const c = OXPOOL[k];
+      if (!c.t || c.t.indexOf(q) < 0) return false;
+      const r = el('div', 'lnkrow');
+      r.appendChild(el('span', 'qb n', c.name || oxKeyDisp(k)));
+      r.appendChild(el('span', 'lnkt', skCut(c.t, q)));
+      r.onclick = () => { if (lkAdd(key, k)){ toast('🔗 연결했다 — ' + linkDisp(k));
+        inp.value = ''; box.innerHTML = ''; paintCur(); render(); } };
+      box.appendChild(r);
+      return (++n) >= 30;
+    });
+    if (!n) box.appendChild(el('div', 'cdim', '맞는 지문이 없다'));
+  };
+  inp.oninput = paintFind;
+  paintCur();
+  showPop(ev);
+  setTimeout(() => ta.focus(), 30);
+}
+/* §6-1 — 지문 글 밑 두 줄(있을 때만): 관련 문제(정방향) · 나를 연결한 문제(역방향) */
+function lnkLines(row, key){
+  const f = lkOf(key), bk = lkBack(key);
+  if (!f.length && !bk.length) return;
+  const mk = (icon, label, arr) => {
+    if (!arr.length) return;
+    const line = el('div', 'lnkline');
+    line.appendChild(el('span', '', icon + ' ' + label));
+    arr.forEach(t => {
+      const b = el('button', 'go', linkDisp(t) + ' 보기');
+      b.title = t;
+      b.onclick = ev => { ev.stopPropagation(); popCard(t, ev); };
+      line.appendChild(b);
+    });
+    row.appendChild(line);
+  };
+  mk('🔗', '관련 문제', f);
+  mk('↩', '나를 연결한 문제', bk);
+}
+/* §6-1 — 📐 논리는 있을 때만 「보기」(해설 미리보기 왼쪽) */
+function logicView(row, key){
+  const t = lgOf(key);
+  if (!t) return;
+  const b = el('button', 'solpv', '📐 논리 보기');
+  const d = el('div', 'sol'); d.style.display = 'none';
+  d.style.whiteSpace = 'pre-wrap'; d.textContent = t;
+  b.onclick = () => { d.style.display = d.style.display === 'none' ? '' : 'none'; };
+  row.appendChild(b); row.appendChild(d);
+}
+/* §6-1 — 📍 좌표기억. 상태 = 점선 want(위치 없음) · 채움 has · 붉음 stale(판 바뀜) */
+function pinInfo(key){
+  const U = omAll();
+  let user = null;
+  Object.keys(U).forEach(id => { if (U[id].ref === key) user = Object.assign({ id: id }, U[id]); });
+  if (user){
+    const stale = OMRMETA2 && user.hash && user.hash !== OMRMETA2.hash;
+    return { st: stale ? 'stale' : 'has', pin: user, user: true };
+  }
+  const m = (OMRMAP2 || {})[key];
+  if (m) return { st: 'has', pin: m, user: false };
+  return { st: 'want', pin: null, user: false };
+}
+function pinTag(key, host){
+  if (S.law !== '특허법') return;
+  const info = pinInfo(key);
+  const b = el('button', 'qtag pintag' + (info.st === 'has' ? ' has' : (info.st === 'stale' ? ' stale' : '')), '📍');
+  b.title = info.st === 'want' ? '정리OMR 위치 없음 — 누르면 위치 찍기'
+          : info.st === 'stale' ? '판이 바뀌어 위치 점검 필요 — 누르면 좌표기억'
+          : '좌표기억 — 누르면 그 행 미리보기';
+  b.onclick = ev => { ev.stopPropagation();
+    if (info.st === 'want') omrJump(key);   // 맵에도 기록에도 없으면 위치 찍기로 바로(§6-1)
+    else pinPop(key, ev); };
+  host.appendChild(b);
+}
+function pinPop(key, ev){
+  const info = pinInfo(key);
+  if (!info.pin){ omrJump(key); return; }
+  if (!OMRMETA2){ toast('정리OMR 산출물이 없다'); return; }
+  const body = popShell('cell', '📍 좌표기억 — ' + linkDisp(key));
+  const c = (OXPOOL || {})[key];
+  body.appendChild(el('div', 'cdim',
+    (c && c.t ? c.t.slice(0, 44) + '… · ' : '') + '26특허해례정리omr p.' + info.pin.page +
+    (info.user ? ' · 손으로 찍음' : ' · 자동 대조')));
+  if (info.st === 'stale')
+    body.appendChild(el('div', 'qb warn', '위치 점검 — 판이 바뀌었다(다시 지정 권장)'));
+  let page = info.pin.page;
+  const box = el('div', 'omini');
+  body.appendChild(box);
+  const nav = el('div', 'memobtn');
+  const paint = () => {
+    box.innerHTML = '';
+    const pg = OMRMETA2.pages[page - 1];
+    const K = 400 / pg.w;
+    box.style.width = '400px'; box.style.height = Math.round(pg.h * K) + 'px';
+    const tm = ((OMRMETA2.tiles || {})[String(page)] || {})['300'];
+    if (tm){
+      const sc = 72 / 300, tpt = 1024 * sc;
+      for (let ty = 0; ty < tm.rows; ty++) for (let tx = 0; tx < tm.cols; tx++){
+        const im = el('img');
+        im.src = DATA + 'omr/특허/t/' + page + '/300/' + tx + '_' + ty + '.webp';
+        im.style.left = Math.round(tx * tpt * K) + 'px';
+        im.style.top = Math.round(ty * tpt * K) + 'px';
+        im.style.width = Math.ceil(tpt * K) + 'px';
+        box.appendChild(im);
+      }
+    }
+    if (page === info.pin.page){
+      const hl = el('div', 'hl');
+      hl.style.left = (info.pin.x * K - 2) + 'px';
+      hl.style.top = (info.pin.y * K - 2) + 'px';
+      hl.style.width = Math.max(6, info.pin.w * K) + 'px';
+      hl.style.height = Math.max(5, info.pin.h * K) + 'px';
+      box.appendChild(hl);
+    }
+    nav.querySelectorAll('.pgn').forEach(x => x.classList.toggle('on', +x.dataset.p === page));
+  };
+  const pv = el('button', 'tool', '◀');
+  pv.onclick = () => { if (page > 1){ page--; paint(); } };
+  nav.appendChild(pv);
+  OMRMETA2.pages.forEach(p2 => {
+    const b = el('button', 'tool pgn' + (p2.n === page ? ' on' : ''), 'p' + p2.n);
+    b.dataset.p = p2.n;
+    b.onclick = () => { page = p2.n; paint(); };
+    nav.appendChild(b);
+  });
+  const nx = el('button', 'tool', '▶');
+  nx.onclick = () => { if (page < OMRMETA2.pages.length){ page++; paint(); } };
+  nav.appendChild(nx);
+  const find = el('button', 'tool', '찾기');
+  find.title = '핀이 있는 쪽으로 돌아가 강조를 보인다';
+  find.onclick = () => { page = info.pin.page; paint(); };
+  nav.appendChild(find);
+  const chk = el('button', 'tool', '위치 점검');
+  chk.onclick = () => toast(info.st === 'stale'
+    ? '판이 바뀌었다 — 「위치 다시 지정」을 권한다'
+    : '판과 일치한다 (hash ' + (OMRMETA2.hash || '').slice(0, 8) + ')');
+  nav.appendChild(chk);
+  body.appendChild(nav);
+  const ft = el('div', 'memobtn');
+  const zb = el('button', 'tool on', '확대해서 보기');
+  zb.onclick = () => { closeOne(body.parentNode); omrJump(key); };
+  ft.appendChild(zb);
+  const rb = el('button', 'tool', '위치 다시 지정');
+  rb.onclick = () => { closeOne(body.parentNode);
+    S.omrPick = { key: key }; S.tab = 'omr'; toast('그 행을 한 번 눌러라'); render(); };
+  ft.appendChild(rb);
+  const db = el('button', 'tool', '삭제');
+  db.title = info.user ? '손으로 찍은 핀을 지운다' : '자동 대조 핀은 지울 수 없다 — 다시 지정으로 덮는다';
+  db.onclick = () => {
+    if (!info.user){ toast('자동 대조 핀은 지울 수 없다 — 「위치 다시 지정」으로 덮는다'); return; }
+    if (!confirm('손으로 찍은 핀을 지울까?')) return;
+    omPut(info.pin.id, null); closeOne(body.parentNode); render();
+  };
+  ft.appendChild(db);
+  body.appendChild(ft);
+  paint();
+  showPop(ev);
+}
+
 /* ── 지문 한 줄의 O/X 줄 — 리담·제7판 카드가 같이 쓴다 ── */
 const OXNAME = ['안 품', '맞음', '헷갈림', '틀림', '덜약점'];
-function oxPickRow(row, key, raw, sol){
+function oxPickRow(row, key, raw, sol, extra){
   const rec = oxOf(key) || {}, ans = oxAns(key, raw), fixed = oxFixed(key);
+  lnkLines(row, key);   // ★ v3-F §6-1 — 관련/나를 연결한 문제(있을 때만 · 지문 글 밑 두 줄)
   const pick = el('div', 'oxpick');
   /* ★ v3-C §6-1 (8/26 밤) — 즉시 채점 폐기. 누르면 마킹(m)만 하고 채점은 바닥 바가 한다.
      같은 걸 또 누르면 해제. 채점된 지문(p 있음)은 지금처럼 정오 색을 보이고 단추는 잠근다. */
@@ -2687,14 +3017,20 @@ function oxPickRow(row, key, raw, sol){
     res.appendChild(el('span', 'ansb ' + (ans || ''), '정답 ' + (ans || '미확정') + (fixed ? ' (정정)' : '')));
     res.appendChild(el('span', 'badge', rec.ok ? '맞음' : '틀림'));
     row.appendChild(res);
-    row.appendChild(sol ? el('div', 'sol', sol) : el('div', 'cdim', '해설 없음'));
+    logicView(row, key);                        // ★ v3-F §6-1 — 논리는 있을 때만 「보기」
+    const sd = sol ? el('div', 'sol', sol) : el('div', 'cdim', '해설 없음');
+    if (extra && sol) sd.appendChild(extra);    // ★ v3-F §3 — 「⚖ 원문」은 해설 안으로
+    row.appendChild(sd);
   } else if (sol){
+    logicView(row, key);
     const pv = el('button', 'solpv', '해설 미리보기');
     pv.onclick = () => { const d = pv.nextSibling; d.style.display = d.style.display === 'none' ? '' : 'none'; };
     row.appendChild(pv);
-    const d = el('div', 'sol', sol); d.style.display = 'none'; row.appendChild(d);
-  }
-  logicBox(row, key);   // ★ v3-E §2 — 📐 논리(자유 글 한 칸) · 해설 아래
+    const d = el('div', 'sol', sol); d.style.display = 'none';
+    if (extra) d.appendChild(extra);
+    row.appendChild(d);
+  } else logicView(row, key);
+  // ★ v3-F §6-1 — 상시 「📐 논리」 접힘 칸(logicBox)은 폐지 · 입구는 ✏ 메모 및 유사문제 연결
 }
 
 /* ── 거르기 · 빠른 실행 큐 ──
@@ -2884,12 +3220,16 @@ function seqChipEl(scope, seq, k, cls){
   return b;
 }
 function rndDelOne(scope, r){
-  if (!confirm(r.n + '회독(' + r.date + ') 기록 하나만 지운다. 지문별 풀이·태그는 그대로다.')) return;
+  /* ★ v3-F §6-1 — 민법OX 그대로: 문구 + 뒤 회독 번호 당김 */
+  if (!confirm(r.n + '회독 기록(' + (r.right != null ? r.right : '–') + '/' +
+      (r.total != null ? r.total : '–') + ')을 삭제할까요?' + String.fromCharCode(10) +
+      '이후 회독 번호가 하나씩 당겨집니다.')) return;
   const A = rndAll();
   const arr = A[scope] || [];
   const i = arr.indexOf(r);
   if (i < 0){ toast('그 회독을 찾지 못했다'); return; }
   arr.splice(i, 1);
+  arr.forEach((x, j) => { x.n = j + 1; });
   if (!arr.length) delete A[scope];
   RNDREC = A; lsWrite(RND_KEY, A, '회독');
   closePop(); render();
@@ -3874,13 +4214,16 @@ function qCard(q,mokTitle,seq){
   // ── 머리 배지 줄 (민법OX 앱과 같은 구성)
   const h=el('div','qhd');
   if(seq)h.appendChild(el('b','oxseq',seq+'번'));   // ★ v3-D §1 — 순번(그릴 때만 · 저장 금지)
-  h.appendChild(el('span','qb v','변리사 '+String(q.연도).slice(2)));
+  /* ★ v3-F §2 — 배지줄 = 좌표 · ID · 유형 · 「기출」(접기 단추) · 🃏 만.
+     「단답형」·문번은 「기출」 단추의 접힌 한 줄로. 좌표는 제7판 꼴 「18 변리」(사용자 확인 대기). */
+  const keysL0=(q.지문||[]).map(z=>oxKeyLid(q,z));
+  h.appendChild(el('span','qb v',String(q.연도).slice(2)+' 변리'));
+  const sid0=((q.지문||[])[0]||{}).sid||'';
+  h.appendChild(el('span','qb id',sid0?sid0.slice(0,7):('ID '+q.id)));
   const typ=(q.유형||'').split('|')[0]||'단답형';
-  h.appendChild(el('span','qb t',typ));
-  // ★ 조문형 / 판례형 — 근거에서 산출한 갈래(컴파일러). 63회 약점 분석과 같은 축이다
-  const keysL0=(q.지문||[]).map(z=>oxKeyLid(q,z));   // ★ v3-E — 이 카드의 지문 키들
   {
-    /* ★ v3-E §4 — 유형: 컴파일러 초안(점선) → 손 확정(실선 · jopangi.type · 키=첫 지문 sid) */
+    /* ★ v3-F §3 — 리담 머리 유형 칩은 표시만(조·판례 펼침 없음 — 지문 줄 칩이 근거를 맡는다 §6).
+       초안(점선)→확정(실선)은 v3-E 그대로 — 누르면 유형 고르기. */
     const tk=keysL0[0]||null, fix=tk?tyOf(tk):'';
     const lbl=fix?TY_NAME[fix]:(q.갈래||'');
     if(tk){
@@ -3891,34 +4234,28 @@ function qCard(q,mokTitle,seq){
       h.appendChild(tb);
     }else if(q.갈래)h.appendChild(el('span','qb '+(q.갈래==='판례형'?'v':'t'),q.갈래));
   }
-  if(keysL0.some(k=>lgOf(k)))h.appendChild(el('span','qb t','📐'));   // ★ v3-E §2
-  {const nL=keysL0.reduce((a,k)=>a+lkBoth(k).length,0);               // ★ v3-E §3 — 정+역
-   if(nL){const cb=el('button','qb t','🔗 연결 '+nL);
-     cb.onclick=ev=>{ev.stopPropagation();linkListPop(keysL0,ev);};
-     h.appendChild(cb);}}
-  if(S.law==='특허법'&&keysL0.length){                                   // ★ v3-E §1-3 — 📍 정리로
-    const pb=el('button','qtag','📍');
-    pb.title='정리OMR 에서 이 지문 자리로 — 맵에 없으면 위치 찍기';
-    pb.onclick=ev=>{ev.stopPropagation();omrJump(keysL0[0]);};
+  // 「기출」/「기출변형」 접기 단추(§2) — 문번·유형은 접힌 한 줄로(정보는 버리지 않는다)
+  const sub=el('div','qsub');sub.style.display='none';
+  {
+    sub.textContent=q.연도+'년'+(q.회차?' '+q.회차+'회':'')+' '+
+      (q.시험문번?(q.시험문번+'번'):('순번 '+q.문번+'*'))+' · '+typ;
+    const pb=el('button','src '+q.출처+' qexp',q.출처);
+    pb.title='누르면 문번·유형 한 줄이 펼쳐진다';
+    pb.onclick=ev=>{ev.stopPropagation();
+      sub.style.display=sub.style.display==='none'?'':'none';};
     h.appendChild(pb);
   }
-  /* ★ ID 규약 v3 — [법1][연도2][회차2][문번2][지문1] 8자.
-     전엔 `2009:46:5` 와 `ID 2009-46-5` 가 같은 값을 두 번 찍었고 그 `5`는 **리담 순번**이었다
-     (이 문항의 실제 시험문번은 6번이다). 이제 8자 ID 앞 7자(문항 자리)를 보인다. */
-  const sid0=((q.지문||[])[0]||{}).sid||'';
-  if(q.시험문번)h.appendChild(el('span','qb n',q.연도+' '+q.시험문번+'번'));
-  else{
-    const s=el('span','qb n',q.연도+' 순번'+q.문번+'*');
-    s.title='시험 문번이 아직 확정되지 않았다 — 리담 시트 순번이다';
-    h.appendChild(s);
-  }
-  h.appendChild(el('span','qb id',sid0?sid0.slice(0,7):('ID '+q.id)));
-  h.appendChild(el('span','src '+q.출처,q.출처));
+  if(keysL0.length)h.appendChild(mcChip(keysL0[0]));   // 🃏 — 태그줄과 같은 규약(첫 지문 키)
+  {const nF=keysL0.reduce((a,k)=>a+lkOf(k).length,0);  // ★ v3-F §6-1 ⓐ — 내가 연결한 수만
+   if(nF){const cb=el('button','qb t','↩ 내가 연결한 '+nF);
+     cb.onclick=ev=>{ev.stopPropagation();editPop(keysL0[0],ev);};
+     h.appendChild(cb);}}
   if(mokTitle)h.appendChild(el('span','chip c-theme',mokTitle));
   const sp=el('span');sp.style.flex='1';h.appendChild(sp);
-  // 학습 태그 — 지문이 여러 개인 문항 카드라 첫 지문 키에 달아 둔다
-  if((q.지문||[]).length) oxTagBar(oxKeyLid(q, q.지문[0]), h);
+  // 태그줄 — 맨 앞 📍 = 좌표기억(§6-1) · 학습 태그는 첫 지문 키
+  if(keysL0.length){pinTag(keysL0[0],h);oxTagBar(keysL0[0],h);}
   card.appendChild(h);
+  card.appendChild(sub);
 
   // ── 판 토글 — **기출변형에서만**(8/23 사용자 정정). 나머지는 아예 안 보인다.
   if(q.출처==='기출변형'){
@@ -3972,17 +4309,17 @@ function qCard(q,mokTitle,seq){
     card.appendChild(row);
   });
   const ft=el('div','qft');
-  /* ★ v3-E §3 — 죽은 자리를 산다: 지문끼리 직접 연결 */
-  const lb=el('button','tool','🔗 지문 연결');
+  /* ★ v3-F §6-1 — 논리 글 + 연결 찾기의 한 입구(자리 그대로) */
+  const lb=el('button','tool','✏ 메모 및 유사문제 연결');
   lb.onclick=ev=>{
-    if(keysL0.length===1)linkFindPop(keysL0[0],ev);
+    if(keysL0.length===1)editPop(keysL0[0],ev);
     else{
-      const b2=popShell('q','🔗 어느 지문에 연결하나');
+      const b2=popShell('q','✏ 어느 지문에 붙이나');
       (q.지문||[]).forEach(z=>{
         const r=el('div','lnkrow');
         r.appendChild(el('span','qb n','('+z.n+')'));
         r.appendChild(el('span','lnkt',String(z.t||'').slice(0,60)));
-        r.onclick=()=>{closePop();linkFindPop(oxKeyLid(q,z),ev);};
+        r.onclick=()=>{closePop();editPop(oxKeyLid(q,z),ev);};
         b2.appendChild(r);});
       showPop(ev);
     }
@@ -4129,101 +4466,93 @@ function p7Card(z,seq){
   card.id = 'qb-' + oxKeyP7(z);
   const h=el('div','qhd');
   if(seq)h.appendChild(el('b','oxseq',seq+'번'));   // ★ v3-D §1 — 순번(지문 번호 없음)
-  h.appendChild(el('span','qb v','제7판'));
-  h.appendChild(el('span','qb t',z.태그));
-  if(z.쪽)h.appendChild(el('span','qb n','p.'+z.쪽));
-  /* ★ 배지는 **학습기록이 붙는 고유키**를 보인다(사용자 확정 8/26).
-     전엔 교재 안 자리번호 `P7-0004` 를 보여 줬는데, 같은 지문이 이미
-     `T…` 고유키를 갖고 있어 한 지문에 이름이 둘로 보였다.
-     길이는 그대로 둔다 — 짝 붙은 지문 8자, 제7판 단독 `T…P7` 10자. */
+  /* ★ v3-F §1 — 배지줄 = 좌표(태그) · ID · 유형 · 「제7판」(접기 단추) · 🃏 만.
+     초록 리담 칩·「리담과 흡수됨」·「p.쪽」은 「제7판」 단추의 접힌 한 줄로(정보는 버리지 않는다). */
+  h.appendChild(el('span','qb v',z.태그));
   h.appendChild(el('span','qb id',z.sid||('ID '+z.id)));
-  h.appendChild(mcChip(oxKeyP7(z)));   // 🃏 — 민법OX 와 같은 자리(머리 배지줄 ID 뒤)
-  if(z.유제)h.appendChild(el('span','src 기출변형','유제'));
-  h.appendChild(el('span','qb '+(z.리담?'t':'id'),
-    z.병합?'리담과 흡수됨 — 기록 공유':(z.리담?'리담과 같은 지문':'제7판 단독')));
   const lk=(P7LID||{})[z.id];
   const JOS=p7Jo(z.sol, lk?(lk.z.jo||[]):[]);
+  const cases=[];
+  if(lk&&(lk.z.pan||'').trim())panNo(lk.z.pan).forEach(c=>cases.push(c));
+  panNo(z.sol).forEach(c=>{if(cases.indexOf(c)<0)cases.push(c);});
+  const tk7=oxKeyP7(z);
+  /* ★ v3-F §3 — 유형 칩은 이름만(조문형/판례형/조문+판례) · 누르면 밑에 조·판례 칩 펼침.
+     초안(점선)→확정(실선)은 v3-E 그대로 · 유형 바꾸기는 펼친 줄 끝에서. */
+  const expand=el('div','qsub');expand.style.display='none';
   {
-    /* ★ v3-E §4 — 유형 칩(초안=점선 · 확정=실선). 카드=지문 하나라 키가 곧 sid 다 */
-    const tk7=oxKeyP7(z), fix=tyOf(tk7);
-    const draft=JOS.length?'조문형':'';
+    const fix=tyOf(tk7);
+    const draft=(JOS.length&&cases.length)?'조문+판례':(JOS.length?'조문형':(cases.length?'판례형':''));
     const lbl=fix?TY_NAME[fix]:draft;
     const tb=el('button','qb '+(lbl==='판례형'?'v':'t'),lbl||'🏷 유형');
     tb.style.border=fix?'1px solid currentColor':'1px dashed currentColor';
-    tb.title=fix?'손으로 확정한 유형 — 누르면 바꾼다':'초안 — 누르면 확정한다';
-    tb.onclick=ev=>{ev.stopPropagation();typePop(tk7,ev);};
+    tb.title='누르면 근거 조문·판례가 펼쳐진다'+(fix?' · 손으로 확정한 유형':' · 컴파일러 초안');
+    tb.onclick=ev=>{ev.stopPropagation();
+      expand.style.display=expand.style.display==='none'?'':'none';};
     h.appendChild(tb);
-    if(lgOf(tk7))h.appendChild(el('span','qb t','📐'));               // ★ v3-E §2
-    const nL=lkBoth(tk7).length;                                       // ★ v3-E §3
-    if(nL){const cb=el('button','qb t','🔗 연결 '+nL);
-      cb.onclick=ev=>{ev.stopPropagation();linkListPop([tk7],ev);};
-      h.appendChild(cb);}
-    const pb=el('button','qtag','📍');                                 // ★ v3-E §1-3 — 📍 정리로
-    pb.title='정리OMR 에서 이 지문 자리로 — 맵에 없으면 위치 찍기';
-    pb.onclick=ev=>{ev.stopPropagation();omrJump(tk7);};
+    JOS.forEach(x=>{
+      const a=el('button','chip c-jo','⚖ '+x.k);
+      if(x.law)a.onclick=ev=>{ev.stopPropagation();popJo('특허법',x.k,ev,1);};
+      else{a.title='시행규칙은 앱에 데이터가 없다 — 표시만';a.style.opacity='.6';}
+      expand.appendChild(a);
+    });
+    cases.forEach(c=>{
+      const bag=(((LNKIDX||{}).panN||{})[c]||[]);
+      const nSame=bag.filter(x=>oxKeyLid(x.q,x.z)!==tk7).length;   // ★ §4 — 자기 자신 제외
+      const b=el('button','chip c-prec',c+(nSame?' · 같은 지문 '+nSame:''));
+      b.onclick=ev=>{ev.stopPropagation();popPan(c,tk7,ev);};      // 수집 여부로 안 가른다
+      expand.appendChild(b);
+    });
+    const ch=el('button','tool','유형 바꾸기');
+    ch.onclick=ev=>{ev.stopPropagation();typePop(tk7,ev);};
+    if(!JOS.length&&!cases.length)expand.appendChild(el('span','cdim','근거 조문·판례가 없다 '));
+    expand.appendChild(ch);
+  }
+  // 「제7판」 접기 단추(§1)
+  const sub=el('div','qsub');sub.style.display='none';
+  {
+    const bits=[];
+    if(z.쪽)bits.push('p.'+z.쪽);
+    if(z.리담)bits.push('리담 '+z.리담.연도+'년 '+z.리담.문항+'번 ('+z.리담.선지+')');
+    bits.push(z.병합?'리담과 흡수됨 — 기록 공유':(z.리담?'리담과 같은 지문':'제7판 단독'));
+    if(z.유제)bits.push('유제');
+    sub.textContent=bits.join(' · ');
+    const pb=el('button','qb v qexp','제7판');
+    pb.title='누르면 출처 정보 한 줄이 펼쳐진다';
+    pb.onclick=ev=>{ev.stopPropagation();
+      sub.style.display=sub.style.display==='none'?'':'none';};
     h.appendChild(pb);
   }
-  /* ★ 판례 칩 — ① 리담 짝의 `pan` 을 물려받고 ② 해설 사건번호를 덧댄다 */
-  {
-    const cases=[];
-    if(lk&&(lk.z.pan||'').trim())panNo(lk.z.pan).forEach(c=>cases.push(c));
-    panNo(z.sol).forEach(c=>{if(cases.indexOf(c)<0)cases.push(c);});
-    cases.slice(0,3).forEach(c=>{
-      const p=(PANIDX||{})[c], n=(((LNKIDX||{}).panN||{})[c]||[]).length;
-      const b=el('button','chip c-prec','⚖ '+c+(n?' · 같은 지문 '+n:''));
-      b.title=p?(p.사건명||p.별칭||'수집본 있음'):'판례 갈래에 수집본이 없다 — 같은 지문만 찾아 준다';
-      b.onclick=ev=>{ev.stopPropagation();
-        if(p)popPrec(p,ev);
-        else if(n)lnkPop('panN',c,ev);
-        else toast('이 사건번호로 걸린 것이 없다');};
-      h.appendChild(b);
-    });
-  }
-  if(JOS.length){
-    /* ★ 조가 여러 개면 조마다 따로 누른다(8/26 사용자 지적).
-       전엔 통째라 어디를 눌러도 첫 조만 열렸다. */
-    const jb=el('span','jochip');
-    jb.appendChild(document.createTextNode('조문형 · '));
-    JOS.forEach((x,ix)=>{
-      if(ix)jb.appendChild(document.createTextNode(' · '));
-      const a=el('span','',x.k);
-      if(x.law){
-        a.style.textDecoration='underline';a.style.cursor='pointer';
-        a.title=x.k+' 를 팝업으로 연다';
-        a.onclick=ev=>{ev.stopPropagation();popJo('특허법',x.k,ev,1);};
-      }
-      jb.appendChild(a);
-    });
-    jb.title='해설에서 뽑은 근거 조문 — 조를 누르면 그 조가 열린다';
-    jb.style.cursor='default';
-    h.appendChild(jb);
-  }
+  h.appendChild(mcChip(tk7));   // 🃏
+  {const nF=lkOf(tk7).length;   // ★ v3-F §6-1 ⓐ — 내가 연결한 수만
+   if(nF){const cb=el('button','qb t','↩ 내가 연결한 '+nF);
+     cb.onclick=ev=>{ev.stopPropagation();editPop(tk7,ev);};
+     h.appendChild(cb);}}
   const sp=el('span');sp.style.flex='1';h.appendChild(sp);
-  oxTagBar(oxKeyP7(z), h);
+  pinTag(tk7,h);                // ★ v3-F §6-1 — 📍 좌표기억(태그줄 맨 앞)
+  oxTagBar(tk7,h);
   card.appendChild(h);
+  card.appendChild(expand);
+  card.appendChild(sub);
   const row=el('div','oxrow');row.style.borderTop='0';
   row.appendChild(el('div','oxq',p7Text(z.t)));
   // 정오 = 원장의 유효정오. 없으면 리담 것으로 보강하되 출처를 밝힌다
   let ox=z.ox, from='유효정오';
   if(!ox&&z.리담&&z.리담.ox){ox=z.리담.ox;from='리담 보강';}
-  if(z.리담)row.appendChild(el('span','chip c-quiz',
-    '리담 '+z.리담.연도+'년 '+z.리담.문항+'번 ('+z.리담.선지+')'));
+  // ★ v3-F §1 — 초록 리담 칩은 「제7판」 단추의 접힌 줄로 들어갔다
   /* ★ 해설을 한 자리로 모은다(사용자 확정 8/26) — 리담 해설을 따로 접어 두지 않고
      「해설 미리보기」 안에 이어 붙인다. `.sol` 이 pre-wrap 이라 줄바꿈이 그대로 산다. */
   let sol7=z.sol||'';
   if(z.병합&&(z.리담해설||'').trim())
     sol7=(sol7?sol7+'\n\n':'')+'📗 리담 해설\n'+z.리담해설;
-  oxPickRow(row, oxKeyP7(z), ox, sol7);
-  if(JOS.length){
-    const wb=el('div');
-    JOS.forEach(x=>wb.appendChild(joWonBtn(x)));
-    row.appendChild(wb);
-  }
+  /* ★ v3-F §3 — 「⚖ 원문」(법제처)은 해설을 펼쳤을 때만(해설 안) */
+  let wb=null;
+  if(JOS.length){wb=el('div');JOS.forEach(x=>wb.appendChild(joWonBtn(x)));}
+  oxPickRow(row, tk7, ox, sol7, wb);
   card.appendChild(row);
   // 리담 해설은 위 「해설 미리보기」 안으로 들어갔다(8/26) — 따로 접어 두지 않는다.
   const ft=el('div','qft');
-  const lb=el('button','tool','🔗 지문 연결');   // ★ v3-E §3 — 죽은 자리를 산다
-  lb.onclick=ev=>linkFindPop(oxKeyP7(z),ev);
+  const lb=el('button','tool','✏ 메모 및 유사문제 연결');   // ★ v3-F §6-1 — 한 입구
+  lb.onclick=ev=>editPop(tk7,ev);
   ft.appendChild(lb);ft.appendChild(el('span','cdim','풀이 기록은 이 기기에 쌓인다'));
   card.appendChild(ft);
   inkHost(card,'q7|'+z.id);                // 캔버스 한 장 = 지문 카드 하나(§4-3)
@@ -4499,6 +4828,9 @@ async function viewJimun(){
           if(k&&!PANIDX[k])PANIDX[k]=p;});}catch(e){}
     try{PT=await get('p7_목차.json');}catch(e){}
     try{MG=await get('mokcha_병합.json');}catch(e){}
+    // ★ v3-F §6-1 — 📍 좌표기억 상태 판정용(want/has/stale)
+    try{OMRMETA2=await get('omr/특허/omr_meta.json');
+        OMRMAP2=(await get('omr/특허/omr_map.json')).map||{};}catch(e){}
   }
   if(!JM){
     const m=el('div','main');
@@ -4743,6 +5075,20 @@ async function viewJimun(){
           bar.appendChild(gb2);
         }
         main.appendChild(bar);
+      }
+      /* ★ v3-F §6-1 — 「쪽·마킹」 알약: 오른쪽에 떠서 스크롤을 따라온다(두 단추 위).
+         마킹은 render 를 부르므로 알약도 그때마다 새 수로 그려진다. */
+      if (CARDS.length){
+        const pill = el('div', 'oxpill'); pill.id = 'oxpill';
+        pill.appendChild(el('span', '', '쪽 ' + (S.oxPage + 1) + '/' + nPg +
+          ' · 마킹 ' + marked.length + '/' + unDone.length));
+        if (unDone.length && marked.length === unDone.length){
+          const gb = el('button', 'pgbig', '✅ 이 페이지 채점');
+          gb.style.padding = '2px 10px';
+          gb.onclick = () => oxGrade(pgCells, ctx);
+          pill.appendChild(gb);
+        }
+        document.body.appendChild(pill);
       }
       /* ★ v3-D §5 — 한 번이라도 채점한 판에서만 떠 있는 두 단추(큐에는 없다) */
       if (CARDS.length && keysAll.some(k => ((oxOf(k) || {}).p))){
@@ -5053,7 +5399,8 @@ async function render(){
     if(c==='main'&&S.oxPageJump)return;   // ★ v3-C §6-2 — 쪽을 넘겼다: 맨 위에서 시작
     const n=document.querySelector('#slot .'+c);if(n)n.scrollTop=SCR[c];});
   inkReset();                       // 앞 화면의 ResizeObserver 를 끊는다
-  {const f=document.getElementById('oxfab');if(f)f.remove();}   // ★ v3-D §5 — 뷰마다 다시 단다
+  {const f=document.getElementById('oxfab');if(f)f.remove();
+   const p=document.getElementById('oxpill');if(p)p.remove();}  // ★ v3-D §5 · v3-F 알약 — 뷰마다 다시 단다
   // ⚠ body 에 건다 — 팝업(2차 셀 · 조문 팝업)이 #app 밖에 뜬다
   document.body.classList.toggle('inkon',!!S.ink);
   document.body.classList.toggle('stkon',!!S.stick);
@@ -5071,6 +5418,9 @@ async function render(){
   }
   scrBack();setTimeout(scrBack,0);
   setTimeout(()=>{S.oxPageJump=false;},0);   // 다음 render 부터는 다시 보존
+  /* ★ v3-F §0 — 떠 있는 지문 팝업을 본 화면과 같은 상태로 다시 그린다(같은 sid 기록 공유) */
+  CARDPOPS=CARDPOPS.filter(p=>p.body&&p.body.isConnected);
+  CARDPOPS.forEach(p=>{try{p.paint();}catch(e){}});
   busy=false;
 }
 // 폭이 바뀌면 법전 조판의 단 수를 다시 잡는다. ⚠ 한 행 글자 수는 그대로다 — 단만 준다.
