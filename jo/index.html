@@ -277,6 +277,14 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .qlwrap.nord .qlrd{display:none}
 .qlwrap.nonm{width:168px}
 .qlwrap.nord{width:238px}
+/* ★ 접기 손잡이는 열 바깥이 아니라 이름칸/회독칸 경계에 선다(8/26 사용자 요구).
+   `.qlnm` 이 228px 고정이라 그 오른쪽 선이 곧 경계다. 위아래로 꽉 채운다. */
+.qlbox{position:relative;display:flex;flex-shrink:0}
+.qlh{position:absolute;top:0;bottom:0;width:13px;z-index:6}
+.qlh.a{left:228px}
+.qlh.b{left:241px}
+.qlbox.nonm .qlh.a{left:0}
+.qlbox.nonm .qlh.b{left:13px}
 .qlr{display:flex;align-items:stretch;border-bottom:1px solid #f0eee8}
 .qlr.ch{background:#eceae3;border-bottom-color:#e2dfd6}
 .qlr.on{background:#e8effb}
@@ -3185,9 +3193,12 @@ async function viewJimun(){
 
   // ── 좌측 : OX문제면 「목차+회독」 한 표, 기출문제면 연도 목록
   if(S.jimunTab==='ox'){
-    slot.appendChild(qlColumn(MG,JM,byId,P7,subj));
-    slot.appendChild(qlHandle('tree','목차'));
-    slot.appendChild(qlHandle('list','회독'));
+    /* ★ 손잡이를 열 바깥에서 떼어 경계선 위에 세운다(8/26). 동작은 그대로다. */
+    const box=el('div','qlbox'+(S.treeHid?' nonm':''));
+    box.appendChild(qlColumn(MG,JM,byId,P7,subj));
+    const h1=qlHandle('tree','목차');h1.className='handle qlh a';box.appendChild(h1);
+    const h2=qlHandle('list','회독');h2.className='handle qlh b';box.appendChild(h2);
+    slot.appendChild(box);
   }else{
     const tree=el('div','tree'+(S.treeHid?' hid':''));
     tree.appendChild(el('div','h',subj+' · 연도'));
