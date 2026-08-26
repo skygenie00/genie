@@ -238,6 +238,17 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .res b{white-space:nowrap;color:var(--exc)}
 .res .x{color:#555;font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
 .res .lawtag{margin-left:auto;font-size:10.5px;color:#999}
+/* ★ v3-H — §1 미확정 점선 · §2 법 칩·결과 아이콘 · §3 항 표시 */
+.tool.unty{border-style:dashed;color:#9ca3af}
+.tool.unty.on{border-style:dashed}
+.lawsc{cursor:pointer;border:1.5px solid #d9d6ce;border-radius:8px;padding:2px 8px;background:#fff;color:#888;font-size:11.5px}
+.lawsc.on{border-color:var(--exc);background:#eaf1fb;color:var(--exc);font-weight:700}
+.skic{margin-right:5px;flex-shrink:0}
+.jhl{background:#fdf6d8;border-left:3px solid #c9a400;padding-left:6px}
+.jhl.jhl2{background:#f6e9a8}
+.jdim{opacity:.5}
+.hangchip{float:right;font-size:10px;color:#8a6d00;background:#f5e9c0;border-radius:4px;padding:1px 6px;margin-left:8px;white-space:nowrap}
+.ptchip{font-size:10px;background:#f5e9c0;color:#8a6d00;border-radius:4px;padding:1px 6px;margin-left:6px;white-space:nowrap}
 
 /* ── 카드 본문 ── */
 .ctitle{font-weight:700;font-size:11.5px;margin-bottom:3px;line-height:1.35}
@@ -583,9 +594,10 @@ body.inkon .main,body.inkon .pop{user-select:none}
     <span class="scope on" data-s="jo">📖 조문 ✓</span>
     <span class="scope" data-s="prec">⚖ 판례</span>
     <span class="scope" data-s="jimun">📝 지문</span>
+    <span class="scope" data-s="memo">🗒 메모</span>
+    <span class="scope" data-s="logic">📐 논리</span>
     <span class="scope" data-s="omr">📖 정리</span>
-    <span class="scope dis" data-s="memo" title="메모 기능이 아직 없다 — 검색할 것이 없다">🗒 메모</span>
-    <span class="badge" style="margin-left:auto" id="skLaw"></span>
+    <span id="skLaws" style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap"></span>
   </div>
   <div id="skres"></div>
 </div></div>
@@ -671,7 +683,9 @@ function drawTop(){
   rb.textContent='⤓ 기록 '+recTotal();
   rb.title='내보내기·들여오기 — 사파리가 저장분을 지울 수 있다(§10-2)';
   rb.onclick=ev=>popRec(ev);
-  $('#skLaw').textContent='법: '+SHORT[S.law];
+  /* ★ v3-H §2 — 갈래 법이 바뀌면 그 법을 검색에도 켠다(다른 켜진 것은 안 끈다) */
+  SKLAW[S.law]=true;
+  skLawPaint();
 }
 function drawRail(){
   const r=$('#rail');r.innerHTML='';
@@ -818,9 +832,12 @@ function renderLine(row,opt){
       if(o.ln){
         node=el('span','joLink'+(o.ln.j?'':' dead'));
         // ★ 팝업 깊이는 2단에서 멈춘다 — 2단 안의 링크는 그 조문 뷰로 이동한다(§5-4)
+        /* ★ v3-H §3 — 표시 글자(「제132조제3항제2호」)에서 항·호를 뽑아 팝업이 그 항을 받는다.
+           `to` 에 `#` 이 있으면 그것도 본다. 항이 없으면 지금 그대로. */
         if(o.ln.j)node.onclick=ev=>{ev.stopPropagation();
           const d=opt.depth||0, law=opt.law||S.law;
-          if(d>=2)goJo(law,o.ln.j); else popJo(law,o.ln.j,ev,d+1);};
+          const hl=joHangOf(node.textContent||'',o.ln.to||'');
+          if(d>=2)goJo(law,o.ln.j,hl); else popJo(law,o.ln.j,ev,d+1,hl);};
         // 조문노트가 아닌 볼트 노트는 지금처럼 dead 로 둔다(§5-2) — 팝업을 붙이지 않는다
         else node.title='조문노트가 아닌 볼트 노트 — v0 범위 밖';
       }else{
@@ -1956,11 +1973,34 @@ function renderBeonjeon(host, orig){
    ⚠ `popJo`·`popFoot` 은 부르기만 하고 **정의가 아예 없었다**(`:482`·`:468`).
       누르면 ReferenceError 가 나고 아무 일도 안 일어났다. 껍데기는 popShell 을 다시 쓴다.
    ★ 깊이는 2단에서 멈춘다 — 2단 안의 링크는 새 팝업을 안 띄우고 **그 조문 뷰로 이동**한다. */
-function goJo(law, k){
+const JOCIRC='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
+function joHangOf(txt, to){
+  /* ★ v3-H §3 — 링크 표시 글자·to 에서 항·호를 뽑는다. 항이 없으면 null. */
+  const s=String(txt||'')+' '+String((String(to||'').split('#')[1])||'');
+  let hang=0,ho=0,m;
+  if((m=/제(\d+)항/.exec(s)))hang=+m[1];
+  else if((m=/[①-⑳]/.exec(s)))hang=JOCIRC.indexOf(m[0])+1;
+  if((m=/제(\d+)호/.exec(s)))ho=+m[1];
+  return (hang>=1&&hang<=20)?{hang:hang,ho:ho}:null;
+}
+function goJo(law, k, hl){
   if (LAWS.indexOf(law) >= 0) S.law = law;
   S.tab = 'jo'; S.jo = k; closeAllPops(); render();
+  if (!hl || !hl.hang) return;
+  /* ★ v3-H §3 — 뷰에서도 그 항으로 스크롤 + 3초 표시 */
+  setTimeout(() => {
+    const rows = [...document.querySelectorAll('#slot .box .ln')];
+    const hit = rows.find(d2 => {
+      const t = (d2.textContent || '').replace(/^\[\^\d+\]\s*/, '').trim();
+      return t.charAt(0) === JOCIRC[hl.hang - 1];
+    });
+    if (!hit) return;
+    hit.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    hit.classList.add('jhl');
+    setTimeout(() => hit.classList.remove('jhl'), 3000);
+  }, 350);
 }
-async function popJo(law, k, ev, depth){
+async function popJo(law, k, ev, depth, hl){
   depth = depth || 1;
   const body = popShell('', '📖 ' + k + ' — 불러오는 중');
   showPop(ev);
@@ -1970,24 +2010,45 @@ async function popJo(law, k, ev, depth){
     const B = await get('jo_' + law + '_본문.json');
     const ti = (L.조.find(x => x.k === k) || {}).t || '';
     const pt = pop.querySelector('.pt');
-    if (pt) pt.textContent = '📖 ' + (SHORT[law] || law) + ' ' + k + (ti ? ' ' + ti : '');
+    if (pt){
+      pt.textContent = '📖 ' + (SHORT[law] || law) + ' ' + k + (ti ? ' ' + ti : '');
+      if (hl && hl.hang)   /* ★ v3-H §3 — 머리 「→ 제N항」 칩 */
+        pt.appendChild(el('span', 'ptchip', '→ 제' + hl.hang + '항' + (hl.ho ? ' 제' + hl.ho + '호' : '')));
+    }
     body.innerHTML = '';
     const go = el('button', 'tool on', '뷰로 이동 ↗');   // 머리에 「뷰로 이동」(사양서 §4-2)
-    go.onclick = () => goJo(law, k);
+    go.onclick = () => goJo(law, k, hl);
     body.appendChild(go);
     if (depth >= 2)
       body.appendChild(el('span', 'badge', '2단 — 여기 링크는 팝업 대신 뷰로 이동한다'));
     const j = B.조[k];
     if (!j){ body.appendChild(el('div', 'cdim', '본문을 찾지 못했다 — ' + k)); return; }
     const ap = mkApply(law + ':' + k, j.행);
+    /* ★ v3-H §3 — 링크한 항 블록(호·목 하위 포함 · k[1] 이 같은 동그라미)을 연노랑+세로 띠로,
+       다른 항은 흐림. 호까지 오면 그 호 줄을 한 번 더 진하게. 다른 항 줄을 누르면 흐림이 걷힌다. */
+    let hlFirst = null;
     j.행.forEach((row, ri) => {
       if (row.k[0] === 'H') return;
       const d = el('div', joClass(row.k));
       if (row.fd) d.appendChild(el('span', 'fdmark', '[^' + row.fd + '] '));
       d.appendChild(renderLine(row, { label: false, depth: depth, rec: j, law: law,
                                       m: ap.eff[ri] }));
+      if (hl && hl.hang && row.k[0] === '항'){
+        if (row.k[1] === JOCIRC[hl.hang - 1]){
+          d.classList.add('jhl');
+          if (hl.ho && row.k[2] === '호' && String(row.k[3]) === String(hl.ho))
+            d.classList.add('jhl2');
+          if (!hlFirst){ hlFirst = d; d.appendChild(el('span', 'hangchip', '🔗 링크한 항')); }
+        } else {
+          d.classList.add('jdim');
+          d.addEventListener('click', () => {
+            body.querySelectorAll('.jdim').forEach(x => x.classList.remove('jdim'));
+          });
+        }
+      }
       body.appendChild(d);
     });
+    if (hlFirst) setTimeout(() => { body.scrollTop = Math.max(0, hlFirst.offsetTop - 50); }, 30);
   }catch(e){
     body.innerHTML = '';
     body.appendChild(el('div', 'cdim', '읽지 못했다 — ' + (e && e.message || e)));
@@ -3302,13 +3363,13 @@ function oxPickRow(row, key, raw, sol, extra){
 
 /* ── 거르기 · 빠른 실행 큐 ──
    ★ 큐는 **마디 경계를 넘는다**(사용자 확정 8/26) — 특허 안에서 약점만 모아 풀다. */
+/* ★ v3-H §1 — 거르기 = 유형만(사용자 8/27). 틀림·헷갈림·안 품·논리 거르기는 폐기 —
+   약점·덜약점 큐가 그 몫이고, 논리는 검색 범위로 갔다. 판정 = tyOf(손 확정만 · 빈 값 = 미확정).
+   옛 값(wrong 등)이 S.oxFilter 에 남아 있어도 어느 분기에도 안 걸려 전체로 동작한다. */
 function oxKeep(key){
-  const st = oxState(key);
-  if (S.oxFilter === 'wrong')   return st === 3;
-  if (S.oxFilter === 'confuse') return st === 2 || st === 4;
-  if (S.oxFilter === 'todo')    return st === 0;
-  if (S.oxFilter === 'logic')   return !!lgOf(key);   // ★ v3-E §2
-  if (S.oxFilter === 'untype')  return !tyOf(key);    // ★ v3-E §4
+  if (S.oxFilter === 'jo' || S.oxFilter === 'pan' || S.oxFilter === 'mix')
+    return tyOf(key) === S.oxFilter;
+  if (S.oxFilter === 'untype')  return !tyOf(key);
   return true;
 }
 function oxQueueHas(key, kind){
@@ -3326,10 +3387,10 @@ function oxBar(counts){
     b.appendChild(x);
   });
   b.appendChild(el('span', 'pl', '거르기'));
-  [['all', '전체'], ['wrong', '틀림'], ['confuse', '헷갈림·덜약점'], ['todo', '안 품'],
-   ['logic', '📐 논리 (' + (counts.logic || 0) + ')'],   // ★ v3-E §2
-   ['untype', '🏷 유형 미확정만']].forEach(([k, t]) => {  // ★ v3-E §4
-    const x = el('button', 'tool' + (S.oxFilter === k ? ' on' : ''), t);
+  /* ★ v3-H §1 — 유형만: 전체 · 조문형 · 판례형 · 조문+판례 · 미확정(점선 테두리·회색 글자) */
+  [['all', '전체'], ['jo', '조문형'], ['pan', '판례형'], ['mix', '조문+판례'],
+   ['untype', '미확정']].forEach(([k, t]) => {
+    const x = el('button', 'tool' + (k === 'untype' ? ' unty' : '') + (S.oxFilter === k ? ' on' : ''), t);
     x.onclick = () => { S.oxFilter = k; render(); };
     b.appendChild(x);
   });
@@ -5192,10 +5253,9 @@ async function viewJimun(){
                             : c.q.연도 + '년 ' + (c.q.시험문번 || c.q.문번) + '번(' + c.z.n + ')'),
       t: String(c.z.t || ''),
       ans: (c.kind === 'P' ? (c.z.ox || ((c.z.리담 || {}).ox || '')) : c.z.ox) || '' }; });
-    const counts = { weak: 0, semi: 0, logic: 0 };
+    const counts = { weak: 0, semi: 0 };   /* ★ v3-H §1 — 논리 수 세기 폐기(거르기가 없어졌다) */
     pool.forEach(c => { if (oxQueueHas(c.k, 'weak')) counts.weak++;
-                        if (oxQueueHas(c.k, 'semi')) counts.semi++;
-                        if (lgOf(c.k)) counts.logic++; });
+                        if (oxQueueHas(c.k, 'semi')) counts.semi++; });
     main.appendChild(oxBar(counts));
 
     if (S.oxQueue){
@@ -5520,11 +5580,12 @@ $('#ksearch').onclick=openSk;
 /* ★ 범위 다중선택 (8/26) — 조문·판례·지문. 메모는 기능 자체가 없어 꺼 둔다.
    ⚠ 결과를 누르면 **뷰를 갈아치우지 않고 팝업으로 연다**(사용자 확정) —
    찾다가 보던 자리를 잃지 않는 것이 검색의 값이다. */
-const SKON={jo:true,prec:false,jimun:false,omr:false};
+/* ★ v3-H §2 — 범위에 🗒 메모(§4 층)·📐 논리 · 법 다중선택(특·상·디·민소).
+   메모는 b 패치가 층을 채우기 전엔 0건이 정상이다. */
+const SKON={jo:true,prec:false,jimun:false,memo:false,logic:false,omr:false};
 function skPaint(){
   document.querySelectorAll('#skscope .scope').forEach(b=>{
     const k=b.getAttribute('data-s');
-    if(k==='memo')return;
     const on=!!SKON[k];
     b.classList.toggle('on',on);
     b.textContent=b.textContent.replace(/ \u2713$/,'')+(on?' \u2713':'');
@@ -5532,11 +5593,38 @@ function skPaint(){
 }
 document.querySelectorAll('#skscope .scope').forEach(b=>{
   const k=b.getAttribute('data-s');
-  if(k==='memo')return;
   b.onclick=()=>{SKON[k]=!SKON[k];skPaint();$('#skin').oninput({target:$('#skin')});};
 });
+const SKLAW={};SKLAW[S.law]=true;
+function skLawPaint(){
+  const holder=$('#skLaws');if(!holder)return;
+  holder.innerHTML='';
+  LAWS.forEach(law=>{
+    const b=el('span','lawsc'+(SKLAW[law]?' on':''),SHORT[law]);
+    b.title='검색할 법을 겹쳐 켠다';
+    b.onclick=()=>{SKLAW[law]=!SKLAW[law];skLawPaint();
+      const i2=$('#skin');if(i2&&i2.oninput)i2.oninput({target:i2});};
+    holder.appendChild(b);
+  });
+}
+const SK_ICON={jo:'📖',prec:'⚖',jimun:'📝',omr:'📖',memo:'🗒',logic:'📐'};
+function skTarget(tk){
+  if(tk.indexOf('jo|')===0){const p=tk.slice(3).split(':');return (SHORT[p[0]]||p[0])+' '+(p[1]||'');}
+  if(tk.indexOf('q|')===0)return '지문 '+tk.slice(2);
+  if(tk.indexOf('prec|')===0)return '판례 '+tk.slice(5);
+  return tk;
+}
+function skMemoGo(tk,ev,r){
+  if(tk.indexOf('jo|')===0){const p=tk.slice(3).split(':');popJo(p[0],p[1],ev,1);return;}
+  if(tk.indexOf('q|')===0){popCard(tk.slice(2),ev);return;}
+  const b=popShell('fn','🗒 포스트잇 — '+skTarget(tk));
+  if(r&&r.word)b.appendChild(el('span','badge','「'+r.word+'」'));
+  b.appendChild(el('div','',(r&&r.t)||''));
+  showPop(ev);
+}
 function skRow(box,cls,head,tail,tag,open){
   const d=el('div','res');
+  if(SK_ICON[cls])d.appendChild(el('span','skic',SK_ICON[cls]));   /* ★ v3-H §2 — 걸린 범위 아이콘 */
   d.appendChild(el('b','',head));
   if(tail)d.appendChild(el('span','x',tail));
   d.appendChild(el('span','lawtag',tag));
@@ -5595,22 +5683,28 @@ function popJimun(title,body,ev,go){
 $('#skin').oninput=async e=>{
   const q=(e.target.value||'').trim();const box=$('#skres');box.innerHTML='';skRows=[];skSel=0;
   if(!q)return;
+  const lawsOn=LAWS.filter(l=>SKLAW[l]);   /* ★ v3-H §2 — 켜진 법마다 읽어 합친다 */
   if(SKON.jo){
     try{
-      const L=await get(`jo_${S.law}_목록.json`);
-      const B=await get(`jo_${S.law}_본문.json`);
       const out=[];
-      for(const j of L.조){
-        if(out.length>=40)break;
-        if(j.k.includes(q)||(j.t||'').includes(q)){out.push({k:j.k,t:j.t,x:''});continue;}
-        const body=B.조[j.k];if(!body)continue;
-        for(const row of body.행){
-          if((row.t||'').indexOf(q)>=0){out.push({k:j.k,t:j.t,x:skCut(row.t,q)});break;}
+      /* 법마다 상한을 나눈다 — 첫 법이 40건을 다 먹으면 뒷 법이 못 낀다 */
+      const capJo=Math.max(12,Math.floor(40/Math.max(1,lawsOn.length)));
+      for(const law of lawsOn){
+        const L=await get(`jo_${law}_목록.json`);
+        const B=await get(`jo_${law}_본문.json`);
+        let nL=0;
+        for(const j of L.조){
+          if(out.length>=40||nL>=capJo)break;
+          if(j.k.includes(q)||(j.t||'').includes(q)){out.push({law:law,k:j.k,t:j.t,x:''});nL++;continue;}
+          const body=B.조[j.k];if(!body)continue;
+          for(const row of body.행){
+            if((row.t||'').indexOf(q)>=0){out.push({law:law,k:j.k,t:j.t,x:skCut(row.t,q)});nL++;break;}
+          }
         }
       }
       box.appendChild(el('div','grp','📖 조문 — '+out.length+'건'));
-      out.forEach(r=>skRow(box,'jo',r.k+(r.t?' '+r.t:''),r.x,SHORT[S.law],
-        ev=>{closeSk();popJo(S.law,r.k,ev,1);}));
+      out.forEach(r=>skRow(box,'jo',r.k+(r.t?' '+r.t:''),r.x,SHORT[r.law],
+        ev=>{closeSk();popJo(r.law,r.k,ev,1);}));
     }catch(err){box.appendChild(el('div','grp','📖 조문 — 읽지 못했다'));}
   }
   if(SKON.prec){
@@ -5633,20 +5727,25 @@ $('#skin').oninput=async e=>{
   }
   if(SKON.jimun){
     try{
-      const subj=SHORT[S.law];
-      const JM=await get('jimun_'+subj+'.json');
       const out=[];
-      for(const qq of JM.문제){
-        if(out.length>=30)break;
-        for(const z of (qq.지문||[])){
-          if(String(z.t||'').includes(q)){
-            out.push({h:qq.연도+'년 '+(qq.시험문번||qq.문번)+'번 ('+z.n+')',x:skCut(z.t,q),
-                      t:z.t,ox:z.ox,sol:z.sol,tag:'리담',
-                      go:{kind:'L',id:qq.id,dom:'qb-'+qq.id}});break;}
+      const lawsJ=lawsOn.filter(l=>l!=='민사소송법');   /* 민소는 1차 지문이 없다 — 지금 규칙 유지 */
+      const capJm=Math.max(10,Math.floor(30/Math.max(1,lawsJ.length)));
+      for(const law of lawsJ){
+        const subj=SHORT[law];
+        const JM=await get('jimun_'+subj+'.json');
+        let nL=0;
+        for(const qq of JM.문제){
+          if(out.length>=30||nL>=capJm)break;
+          for(const z of (qq.지문||[])){
+            if(String(z.t||'').includes(q)){
+              out.push({h:qq.연도+'년 '+(qq.시험문번||qq.문번)+'번 ('+z.n+')',x:skCut(z.t,q),
+                        t:z.t,ox:z.ox,sol:z.sol,tag:subj,
+                        go:{kind:'L',id:qq.id,dom:'qb-'+qq.id}});nL++;break;}
+          }
         }
       }
       let P7=null;
-      if(subj==='특허'){try{P7=await get('jimun_7pan.json');}catch(e2){}}
+      if(SKLAW['특허법']){try{P7=await get('jimun_7pan.json');}catch(e2){}}
       if(P7)for(const z of P7.지문){
         if(out.length>=60)break;
         if(String(z.t||'').includes(q))
@@ -5663,7 +5762,36 @@ $('#skin').oninput=async e=>{
           popJimun(r.h,rows,ev,r.go);}));
     }catch(err){box.appendChild(el('div','grp','📝 지문 — 읽지 못했다'));}
   }
-  if(SKON.omr){
+  if(SKON.memo){
+    /* ★ v3-H §2 — 🗒 메모 = 포스트잇 층(§4 · jopangi.postit). b 패치 전엔 0건이 정상. */
+    const A=lsRead(REC_PRE+'postit');
+    const out=[];
+    for(const k2 of Object.keys(A)){
+      if(out.length>=30)break;
+      const v=A[k2]||{};
+      if(String(v.t||'').indexOf(q)<0)continue;
+      const p=k2.split(SEP);
+      out.push({key:k2,tk:p[0]||'',word:p[3]||'',t:String(v.t||'')});
+    }
+    box.appendChild(el('div','grp','🗒 메모 — '+out.length+'건'));
+    out.forEach(r=>skRow(box,'memo',(r.word?'「'+r.word+'」 ':'')+skTarget(r.tk),skCut(r.t,q),'메모',
+      ev=>{closeSk();skMemoGo(r.tk,ev,r);}));
+  }
+  if(SKON.logic){
+    /* ★ v3-H §2 — 📐 논리(jopangi.logic) 본문 검색 · 결과 = 그 지문 팝업 */
+    const A=lgAll();
+    const out=[];
+    for(const k2 of Object.keys(A)){
+      if(out.length>=30)break;
+      const t2=(A[k2]||{}).t||'';
+      if(t2.indexOf(q)<0)continue;
+      out.push({k:k2,x:skCut(t2,q)});
+    }
+    box.appendChild(el('div','grp','📐 논리 — '+out.length+'건'));
+    out.forEach(r=>skRow(box,'logic',linkDisp(r.k),r.x,'논리',
+      ev=>{closeSk();popCard(r.k,ev);}));
+  }
+  if(SKON.omr&&SKLAW['특허법']){   /* 정리는 특허만 — 지금 규칙 유지 */
     try{
       const W=await get('omr/특허/omr_words.json');
       const out=[];
