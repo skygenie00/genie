@@ -529,6 +529,11 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .omini{position:relative;overflow:hidden;background:#fff;border:1px solid var(--line);border-radius:8px}
 .omini img{position:absolute;display:block}
 .omini .hl{position:absolute;border:2px solid #f0a020;background:rgba(240,160,32,.15);border-radius:3px}
+/* ══ v3-F §8 — 조문 탭 오른쪽 「정오문제」 패널 ══ */
+.jopane{flex-shrink:0;border-left:1px solid var(--line);overflow:auto;
+  background:var(--paper);padding:0 10px 60px}
+.jopane .qwrap{margin-top:8px}
+.jopane .ctrlbar{position:sticky;top:0;z-index:2;margin:0 -10px;background:var(--panel)}
 /* ══ v3-D — 순번 · OMR · 채점 결과 (2026-08-27) ══ */
 .oxseq{font-size:14px;margin-right:2px}
 .rchip.ok{border-color:#3fae64;color:#1d7a3e;background:#f0faf3}
@@ -595,6 +600,8 @@ const S={law:'특허법',tab:'jo',jo:null,prec:null,precTab:'요약',
          // ★ v3-C §6-2 — 마디 화면 쪽 번호. null = 마디에 막 들어왔다(첫 미채점 쪽으로)
          oxPage:null,oxPageJump:false,
          omrPage:1,omrPick:null,   // ★ v3-E §1-3 — 정리OMR 쪽 · 위치 찍기 모드
+         // ★ v3-F §8 — 조문 탭 정오문제 패널(조를 바꿔도 열린 채 따라간다)
+         joPanel:false,joPanelF:'all',joPanelN:3,joPanelP:0,joPanelW:340,
          series:'',yearFilter:'',yearSort:'asc',zoom:0.55,
          // §3 마크업 스티커 편집 모드 · §4 필기 모드 — 둘 다 기본은 꺼짐(T5)
          stick:false,ink:false,inkColor:'#D93B3B',inkW:2,inkErase:false,
@@ -602,8 +609,10 @@ const S={law:'특허법',tab:'jo',jo:null,prec:null,precTab:'요약',
          qlNmW:228,qlRdW:168};
 const UI_KEY='jopangi_ui';   // ⚠ `jopangi.` 접두가 아니다 — 기록 내보내기·건수에서 빠진다
 try{const u=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
-    if(u.nmw>0)S.qlNmW=u.nmw;if(u.rdw>0)S.qlRdW=u.rdw;}catch(e){}
-function uiSave(){try{localStorage.setItem(UI_KEY,JSON.stringify({nmw:S.qlNmW,rdw:S.qlRdW}));}catch(e){}}
+    if(u.nmw>0)S.qlNmW=u.nmw;if(u.rdw>0)S.qlRdW=u.rdw;
+    if(u.jpw>0)S.joPanelW=u.jpw;}catch(e){}
+function uiSave(){try{localStorage.setItem(UI_KEY,JSON.stringify(
+  {nmw:S.qlNmW,rdw:S.qlRdW,jpw:S.joPanelW}));}catch(e){}}
 const C={};
 const $=(s,r)=>(r||document).querySelector(s);
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;
@@ -883,9 +892,16 @@ async function viewJo(){
   const link=el('div','conn');
   link.appendChild(el('span','k','이 조문 연결'));
   link.appendChild(el('span','chip c-prec','📜 인용하는 조 '+back.length));
-  link.appendChild(el('span','chip c-quiz','📝 지문 — 통합 중'));
-  link.appendChild(el('span','chip c-theme','🧩 테마 — v0 제외'));
-  link.appendChild(el('span','chip c-card','🃏 카드 — v0 제외'));
+  /* ★ v3-F §8 — 「☑ 정오문제 N」(N = 이 조 · 항·호 하위 포함 리담 지문 수).
+     테마·카드 v0 자리표는 버린다(사용자 8/27). */
+  {
+    const JP=await joPanelIdx();
+    const e2=(JP||{})[S.jo]||{L:[],P:[]};
+    const b=el('button','chip c-quiz','☑ 정오문제 '+e2.L.length);
+    b.title='이 조를 근거로 단 지문 — 누르면 오른쪽 패널'+(e2.P.length?(' · 제7판 +'+e2.P.length):'');
+    b.onclick=()=>{S.joPanel=!S.joPanel;S.joPanelP=0;render();};
+    link.appendChild(b);
+  }
   main.appendChild(link);
 
   // ── 모드 바 — 빈칸은 갈래가 아니라 이 조문의 모드다(§4-4 다중선택)
@@ -1016,6 +1032,7 @@ async function viewJo(){
   inkHost(blk,inkKey);                 // 캔버스 한 장 = 조 하나(§4-3)
 
   slot.appendChild(main);
+  await joPanelMount(slot);            // ★ v3-F §8 — 오른쪽 정오문제 패널(조를 바꿔도 따라간다)
 
   const t=(location.hash.split('#b=')[1]);
   if(t){const nd=$('#b-'+t);if(nd)nd.scrollIntoView({block:'center'});}
@@ -2694,31 +2711,7 @@ function popCard(sid, ev){
     const go = el('button', 'tool on', '그 마디로 가기 ↗');
     go.onclick = () => { closeOne(body.parentNode); linkGo(sid); };
     body.appendChild(go);
-    if (hit.kind === 'P'){
-      const c = p7Card(hit.z);
-      c.removeAttribute('id');            // 본 화면 카드와 dom id 가 겹치면 스크롤이 헷갈린다
-      body.appendChild(c);
-    } else {
-      // 문항 카드 통째가 아니라 **그 지문 한 줄만** 든 카드(§0)
-      const card = el('div', 'qwrap');
-      const h = el('div', 'qhd');
-      h.appendChild(el('span', 'qb v', String(hit.q.연도).slice(2) + ' 변리'));
-      h.appendChild(el('span', 'qb id', hit.z.sid || sid));
-      const sp = el('span'); sp.style.flex = '1'; h.appendChild(sp);
-      pinTag(sid, h);
-      oxTagBar(sid, h);
-      card.appendChild(h);
-      const row = el('div', 'oxrow'); row.style.borderTop = '0';
-      const q1 = el('div', 'oxq');
-      q1.appendChild(el('b', '', '(' + hit.z.n + ') '));
-      q1.appendChild(document.createTextNode(hit.z.t || ''));
-      row.appendChild(q1);
-      lnkChips(hit.q, hit.z, q1);
-      q1.appendChild(mcChip(sid));
-      oxPickRow(row, sid, hit.z.ox, hit.z.sol);
-      card.appendChild(row);
-      body.appendChild(card);
-    }
+    body.appendChild(sidCardEl(hit, sid));   // ★ v3-F §8 — 패널과 같은 공용 빌더
   };
   paint();
   CARDPOPS.push({ body: body, paint: paint });
@@ -2973,6 +2966,158 @@ function pinPop(key, ev){
   body.appendChild(ft);
   paint();
   showPop(ev);
+}
+
+/* ══ v3-F §8 — 지문 카드 한 장 공용 빌더(popCard·정오문제 패널이 같이 쓴다) ══ */
+function sidCardEl(hit, sid, seq){
+  if (hit.kind === 'P'){
+    const c = p7Card(hit.z, seq);
+    c.removeAttribute('id');   // 본 화면 카드와 dom id 가 겹치면 스크롤이 헷갈린다
+    return c;
+  }
+  // 리담 문항 카드 통째가 아니라 **그 지문 한 줄만** 든 카드(§0)
+  const card = el('div', 'qwrap');
+  const h = el('div', 'qhd');
+  if (seq) h.appendChild(el('b', 'oxseq', seq + '번'));
+  h.appendChild(el('span', 'qb v', String(hit.q.연도).slice(2) + ' 변리'));
+  h.appendChild(el('span', 'qb n', '기출 · ' + hit.q.연도 + '·' + (hit.q.시험문번 || hit.q.문번) + '번'));
+  h.appendChild(el('span', 'qb id', hit.z.sid || sid));
+  const sp = el('span'); sp.style.flex = '1'; h.appendChild(sp);
+  pinTag(sid, h);
+  oxTagBar(sid, h);
+  card.appendChild(h);
+  const row = el('div', 'oxrow'); row.style.borderTop = '0';
+  const q1 = el('div', 'oxq');
+  q1.appendChild(el('b', '', '(' + hit.z.n + ') '));
+  q1.appendChild(document.createTextNode(hit.z.t || ''));
+  row.appendChild(q1);
+  lnkChips(hit.q, hit.z, q1);
+  q1.appendChild(mcChip(sid));
+  oxPickRow(row, sid, hit.z.ox, hit.z.sol);
+  card.appendChild(row);
+  return card;
+}
+/* ══ v3-F §8 — 조코드(제29조) → 걸린 지문 색인. 항·호 하위 키(특-29-3-2)도 조로 접는다.
+   리담 = LNKIDX.jo · 제7판 = 해설 파싱(p7Jo · 병합은 리담 쪽에서 이미 걸렸다). 법 바뀌면 다시. ══ */
+let JOPANE = null, JOPANELAW = '';
+async function joPanelIdx(){
+  if (JOPANE && JOPANELAW === S.law) return JOPANE;
+  JOPANE = {}; JOPANELAW = S.law;
+  try{
+    const subj = SHORT[S.law];
+    const JM = await get('jimun_' + subj + '.json');
+    lnkBuild(JM);
+    Object.keys(LNKIDX.jo).forEach(c => {
+      const k = joCode(c); if (!k) return;
+      const e2 = JOPANE[k] = JOPANE[k] || { L: [], P: [] };
+      LNKIDX.jo[c].forEach(x => {
+        if (!e2.L.some(y => y.q === x.q && y.z === x.z)) e2.L.push(x);
+      });
+    });
+    if (subj === '특허'){
+      const P7 = await get('jimun_7pan.json');
+      if (!JOKEY){
+        const JL = await get('jo_특허법_목록.json');
+        JOKEY = {}; JL.조.forEach(x => { JOKEY[x.k] = x.t || ''; });
+      }
+      p7Link(JM, P7);
+      P7.지문.forEach(z => {
+        if (z.병합) return;
+        const lk = (P7LID || {})[z.id];
+        p7Jo(z.sol, lk ? (lk.z.jo || []) : []).forEach(x => {
+          if (!x.law) return;
+          (JOPANE[x.k] = JOPANE[x.k] || { L: [], P: [] }).P.push(z);
+        });
+      });
+    }
+  }catch(e){}
+  return JOPANE;
+}
+async function joPanelMount(slot){
+  if (!S.joPanel) return;
+  const JP = await joPanelIdx();
+  const ent = (JP || {})[S.jo] || { L: [], P: [] };
+  // 손잡이 — 누르면 접기 · 끌면 너비(qlHandle 과 같은 결 · jopangi_ui 에 기억)
+  const h = el('div', 'handle drg', '›');
+  h.title = '정오문제 패널 — 누르면 접기 · 끌면 너비';
+  let x0 = 0, w0 = 0, curW = 0;
+  h.addEventListener('pointerdown', ev => {
+    if (ev.button !== 0 && ev.pointerType === 'mouse') return;
+    x0 = ev.clientX; w0 = curW = S.joPanelW; h._drag = false;
+    try{ h.setPointerCapture(ev.pointerId); }catch(e){}
+  });
+  h.addEventListener('pointermove', ev => {
+    if (!h.hasPointerCapture || !h.hasPointerCapture(ev.pointerId)) return;
+    const dx = ev.clientX - x0;
+    if (!h._drag && Math.abs(dx) < 4) return;
+    h._drag = true;
+    curW = Math.max(240, Math.min(700, Math.round(w0 - dx)));
+    if (h.nextSibling) h.nextSibling.style.width = curW + 'px';
+  });
+  const end = ev => {
+    try{ h.releasePointerCapture(ev.pointerId); }catch(e){}
+    if (!h._drag) return;
+    S.joPanelW = curW; uiSave();
+    setTimeout(() => { h._drag = false; }, 300);
+  };
+  h.addEventListener('pointerup', end);
+  h.addEventListener('pointercancel', end);
+  h.onclick = () => { if (h._drag){ h._drag = false; return; } S.joPanel = false; render(); };
+  slot.appendChild(h);
+  const pane = el('div', 'jopane');
+  pane.style.width = S.joPanelW + 'px';
+  const items = [];
+  ent.L.forEach(x => items.push({ kind: 'L', q: x.q, z: x.z, sid: oxKeyLid(x.q, x.z) }));
+  ent.P.forEach(z => items.push({ kind: 'P', z: z, sid: oxKeyP7(z) }));
+  const nL = ent.L.length, nP = ent.P.length;
+  const shown = items.filter(it =>
+    S.joPanelF === 'all' || (S.joPanelF === 'L' ? it.kind === 'L' : it.kind === 'P'));
+  const per = Math.max(1, Math.min(5, S.joPanelN || 3));
+  const nPg = Math.max(1, Math.ceil(shown.length / per));
+  if (S.joPanelP >= nPg) S.joPanelP = 0;
+  const cur = shown.slice(S.joPanelP * per, (S.joPanelP + 1) * per);
+  const cb = el('div', 'ctrlbar');
+  cb.appendChild(el('span', 'pl', '☑ 정오문제 ' + shown.length + '건'));
+  [['all', '전체 ' + items.length], ['L', '기출 ' + nL], ['P', '제7판 ' + nP]].forEach(p2 => {
+    const b = el('button', 'tool' + (S.joPanelF === p2[0] ? ' on' : ''), p2[1]);
+    b.onclick = () => { S.joPanelF = p2[0]; S.joPanelP = 0; render(); };
+    cb.appendChild(b);
+  });
+  pane.appendChild(cb);
+  const cb2 = el('div', 'ctrlbar');
+  cb2.appendChild(el('span', 'pl', '한 번에'));
+  [1, 2, 3, 4, 5].forEach(n2 => {
+    const b = el('button', 'tool' + (per === n2 ? ' on' : ''), String(n2));
+    b.onclick = () => { S.joPanelN = n2; S.joPanelP = 0; render(); };
+    cb2.appendChild(b);
+  });
+  cb2.appendChild(el('span', 'badge', (S.joPanelP + 1) + ' / ' + nPg));
+  pane.appendChild(cb2);
+  if (!shown.length) pane.appendChild(emptyBox('☑', '이 조에 걸린 지문이 없다'));
+  cur.forEach((it, ix) => {
+    const c = sidCardEl(it, it.sid, S.joPanelP * per + ix + 1);
+    c.id = 'jp-' + it.sid;                 // ✅ 채점의 붉은 칸·스크롤이 이 id 를 쓴다
+    pane.appendChild(c);
+  });
+  if (shown.length){
+    const ftr = el('div', 'memobtn');
+    const pv = el('button', 'tool', '← 이전');
+    pv.disabled = S.joPanelP <= 0;
+    pv.onclick = () => { S.joPanelP--; render(); };
+    ftr.appendChild(pv);
+    const nx = el('button', 'tool', '다음 →');
+    nx.disabled = S.joPanelP >= nPg - 1;
+    nx.onclick = () => { S.joPanelP++; render(); };
+    ftr.appendChild(nx);
+    const gb = el('button', 'tool on', '✅ 채점');
+    gb.title = '보이는 묶음을 채점한다 — 마킹→채점 규칙 그대로 · 결과 창 없이 toast';
+    gb.onclick = () => oxGrade(cur.map(it => ({ k: it.sid,
+      ans: (it.kind === 'P' ? (it.z.ox || ((it.z.리담 || {}).ox || '')) : it.z.ox) || '',
+      dom: 'jp-' + it.sid })));
+    ftr.appendChild(gb);
+    pane.appendChild(ftr);
+  }
+  slot.appendChild(pane);
 }
 
 /* ── 지문 한 줄의 O/X 줄 — 리담·제7판 카드가 같이 쓴다 ── */
@@ -4237,8 +4382,12 @@ function qCard(q,mokTitle,seq){
   // 「기출」/「기출변형」 접기 단추(§2) — 문번·유형은 접힌 한 줄로(정보는 버리지 않는다)
   const sub=el('div','qsub');sub.style.display='none';
   {
-    sub.textContent=q.연도+'년'+(q.회차?' '+q.회차+'회':'')+' '+
-      (q.시험문번?(q.시험문번+'번'):('순번 '+q.문번+'*'))+' · '+typ;
+    /* ★ v3-F §2(02:54) — 기출변형은 유형 없이 · 문번 미확정은 「리담 순번 N (문번 미확정)」.
+       변형 원문 대조 표시는 두지 않는다(원장 154 중 0 — 사용자 8/27). */
+    const 문번표기=q.시험문번?(q.시험문번+'번'):('리담 순번 '+q.문번+' (문번 미확정)');
+    sub.textContent=q.출처==='기출변형'
+      ?(q.연도+'년'+(q.회차?' '+q.회차+'회':'')+' · '+문번표기)
+      :(q.연도+'년'+(q.회차?' '+q.회차+'회':'')+' '+문번표기+' · '+typ);
     const pb=el('button','src '+q.출처+' qexp',q.출처);
     pb.title='누르면 문번·유형 한 줄이 펼쳐진다';
     pb.onclick=ev=>{ev.stopPropagation();
