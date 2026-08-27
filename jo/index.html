@@ -292,6 +292,20 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .thcol .bj2.open{display:block;-webkit-line-clamp:unset;max-height:none}
 .thcol .bj2more{margin-top:4px;font-size:10.5px;padding:1px 8px}
 .tree .r.jhead em{flex-shrink:1;min-width:0;overflow:hidden}
+/* ★ v3-L — 빈칸 모드(그림 조문_빈칸모드_목업 · 내용 파랑 · 주체 보라 · 기간 주황) */
+.bkln{white-space:pre-wrap;line-height:2.05}
+.bkin{border:0;border-bottom:2px solid #999;background:#fffdf5;font:inherit;text-align:center;
+  padding:0 2px;margin:0 2px;border-radius:4px 4px 0 0;vertical-align:baseline}
+.bkin:focus{outline:none;background:#fff7d6}
+.bkin.ok{color:#15803d;border-color:#15803d !important;background:#f0fdf4;font-weight:700}
+.bkin.bad{color:#b91c1c;border-color:#b91c1c !important;text-decoration:line-through;background:#fef2f2}
+.bkin.reveal{color:#6b21a8;background:#faf5ff}
+.bku{border-bottom:2px solid;padding:0 1px}
+.bkq{cursor:pointer;color:#9ca3af;border:1px dashed #c9c5bb;border-radius:50%;font-size:9px;
+  padding:0 3px;margin-left:1px;vertical-align:super;background:#fff}
+.bkbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:7px 10px;
+  background:#f7f5ef;border-bottom:1px solid var(--line);font-size:12px}
+.bkbar .tool{font-size:11.5px}
 
 /* ── 카드 본문 ── */
 .ctitle{font-weight:700;font-size:11.5px;margin-bottom:3px;line-height:1.35}
@@ -681,14 +695,19 @@ const S={law:'특허법',tab:'jo',jo:null,prec:null,precTab:'요약',
          stick:false,ink:false,inkColor:'#D93B3B',inkW:2,inkErase:false,
          // ★ 1차객 열 너비(8/26) — 손잡이를 끌어 바꾼다. 기기마다 다르므로 기록층 밖에 둔다.
          qlNmW:228,qlRdW:168,
-         treeW:212};   // ★ v3-J §0-2 — 조문·판례 트리 너비(법 무관 하나 · jopangi_ui.trw)
+         treeW:212,   // ★ v3-J §0-2 — 조문·판례 트리 너비(법 무관 하나 · jopangi_ui.trw)
+         // ★ v3-L §1 — 빈칸 모드 다중선택 · ★ 중요 빈칸만(jopangi_ui 에 기억 · 조 바꿔도 유지)
+         joBlank:{내용:false,주체:false,기간:false},joBlankStar:false};
 const UI_KEY='jopangi_ui';   // ⚠ `jopangi.` 접두가 아니다 — 기록 내보내기·건수에서 빠진다
 try{const u=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if(u.nmw>0)S.qlNmW=u.nmw;if(u.rdw>0)S.qlRdW=u.rdw;
     if(u.jpw>0)S.joPanelW=u.jpw;if(u.hfold)S.heatFold=true;
-    if(u.trw>0)S.treeW=u.trw;}catch(e){}   /* ★ v3-J §0-2 */
+    if(u.trw>0)S.treeW=u.trw;   /* ★ v3-J §0-2 */
+    if(u.jbk)S.joBlank=Object.assign({내용:false,주체:false,기간:false},u.jbk);
+    if(u.jbs)S.joBlankStar=true;}catch(e){}   /* ★ v3-L §1 */
 function uiSave(){try{localStorage.setItem(UI_KEY,JSON.stringify(
-  {nmw:S.qlNmW,rdw:S.qlRdW,jpw:S.joPanelW,hfold:S.heatFold?1:0,trw:S.treeW}));}catch(e){}}
+  {nmw:S.qlNmW,rdw:S.qlRdW,jpw:S.joPanelW,hfold:S.heatFold?1:0,trw:S.treeW,
+   jbk:S.joBlank,jbs:S.joBlankStar?1:0}));}catch(e){}}
 const C={};
 const $=(s,r)=>(r||document).querySelector(s);
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;
@@ -967,6 +986,192 @@ function joClass(k){
   return 'ln';
 }
 
+/* ══ ★ v3-L — 빈칸 모드 엔진 ══
+   재료 = blank_<법>.json(v3-K·K2 · 해례판/유시훈판 완성문 + 빈칸 좌표·정답·kind 초안).
+   kind 확정 = kv jopangi.blanktag(키 = 법:조키:행:a · 값 kind|'none' · JSON 무수정).
+   회독 = kv jopangi.blank(키 = 법:조키 · {n,r,pct,ts,modes}).
+   ⚠ w 필드는 안 쓴다 — v3-K 의 w 는 「인용하는 조 수」다(8/27 보고). 중요도 = joPanelIdx
+   (지문→조 색인)에서 그 조의 연결 지문 수 · 그 법 상위 1/3(§6-b · 0건 조는 중요 아님). */
+// ⚠ 리터럴이다 — REC_PRE(기록층 절)는 이 블록보다 아래에 선언돼 여기서 쓰면 TDZ 로 죽는다.
+//   값은 REC_PRE+'blank'/'blanktag' 규약 그대로(내보내기·기록 팝업이 접두로 줍는다).
+const BLK_KEY = 'jopangi.blank';
+const BLT_KEY = 'jopangi.blanktag';
+let BLKREC = null, BLTREC = null, BLKD = {}, BKIMP = null, BKIMPLAW = null;
+const BK_COLOR = { 내용: '#2563eb', 주체: '#7c3aed', 기간: '#f59e0b' };
+function blkAll(){ if (!BLKREC) BLKREC = lsRead(BLK_KEY); return BLKREC; }
+function blkPut(k, rec){ const A = blkAll(); A[k] = rec; BLKREC = A; lsWrite(BLK_KEY, A, '✎ 빈칸 회독'); }
+function bltAll(){ if (!BLTREC) BLTREC = lsRead(BLT_KEY); return BLTREC; }
+function bltPut(k, v){ const A = bltAll();
+  if (v) A[k] = { v: v, ts: nowIso() }; else delete A[k];
+  BLTREC = A; lsWrite(BLT_KEY, A, '✎ 빈칸 태그'); }
+async function blankData(law){
+  const s = SHORT[law] || law;
+  if (s in BLKD) return BLKD[s];
+  try{ BLKD[s] = await get('blank_' + s + '.json'); }catch(e){ BLKD[s] = null; }
+  return BLKD[s];
+}
+function bkKindOf(law, jo, ri, b){
+  const t = bltAll()[law + ':' + jo + ':' + ri + ':' + b.a];
+  return t ? t.v : b.kind;                        // 'none' = 빈칸 아님(확정)
+}
+function bkTagged(law, jo, ri, b){
+  return !!bltAll()[law + ':' + jo + ':' + ri + ':' + b.a];
+}
+function bkNorm(s){ return String(s || '').replace(/[\s·ㆍ()（）.。]/g, ''); }
+async function bkImportant(){
+  if (BKIMP && BKIMPLAW === S.law) return BKIMP;
+  BKIMPLAW = S.law; BKIMP = new Set();
+  try{
+    const JP = await joPanelIdx();
+    const ns = Object.keys(JP)
+      .map(k => [k, ((JP[k].L || []).length) + ((JP[k].P || []).length)])
+      .filter(x => x[1] > 0).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+    ns.slice(0, Math.ceil(ns.length / 3)).forEach(x => BKIMP.add(x[0]));
+  }catch(e){}
+  return BKIMP;
+}
+function bkTagPop(law, jo, ri, b, ev){
+  const body = popShell('fn', '이 빈칸의 갈래 — 「' + String(b.ans || '').slice(0, 14) + '」');
+  const cur = bkKindOf(law, jo, ri, b);
+  body.appendChild(el('div', 'cdim', '자동 태깅은 전부 초안(미확정)이다 — 여기서 확정한다'));
+  [['내용', '내용'], ['주체', '주체'], ['기간', '기간'], ['none', '빈칸 아님 ✕']].forEach(([v, label]) => {
+    const bt = el('button', 'tool' + (cur === v ? ' on' : ''), label);
+    bt.onclick = () => { bltPut(law + ':' + jo + ':' + ri + ':' + b.a, v); closePop(); render(); };
+    body.appendChild(bt);
+  });
+  body.appendChild(el('div', 'cdim',
+    '확정은 이 기기 기록(kv)에만 — JSON 은 안 바뀐다(재컴파일에도 남는다) · 내보내기에 실린다'));
+  showPop(ev);
+}
+async function bkBody(blk, bkJo, bkOn, base){
+  const imp = await bkImportant();
+  const isImp = imp.has(S.jo);
+  const key = S.law + ':' + S.jo;
+  const box = el('div', 'box');
+  const bh = el('div', 'boxh');
+  bh.appendChild(el('span', '', '✎ 빈칸 본문 = 해례판' + (bkJo.별 ? ' ' + '★'.repeat(bkJo.별) : '')));
+  const rt = el('span', '');
+  if (bkJo.어순다름) rt.appendChild(el('span', 'qb warn', '원문과 다름 · 해례판'));
+  if (S.joBlankStar && !isImp) rt.appendChild(el('span', 'badge', '★ 중요 아님 — 밑줄만'));
+  bh.appendChild(rt);
+  box.appendChild(bh);
+  const inputs = [];
+  const kindCnt = {};
+  const judge = inp => {
+    const ok = bkNorm(inp.value) === bkNorm(inp.dataset.ans);
+    inp.classList.remove('ok', 'bad', 'reveal');
+    if (!inp.value){ upd(); return false; }
+    inp.classList.add(ok ? 'ok' : 'bad');
+    if (ok) inp.readOnly = true;
+    upd();
+    return ok;
+  };
+  // 컨트롤 줄(리담 그대로) — 수치 · 정답 보기 · 틀린 곳만 · 다시 · 채점
+  const bar = el('div', 'bkbar');
+  const cnt = el('span', '');
+  bar.appendChild(el('span', 'cdim', '정답을 맞히면 초록 · Enter/Tab 다음'));
+  bar.appendChild(cnt);
+  const upd = () => {
+    let a = 0, bd = 0;
+    inputs.forEach(x => { if (x.classList.contains('ok')) a++;
+                          else if (x.classList.contains('bad')) bd++; });
+    const parts = bkOn.filter(k2 => kindCnt[k2]).map(k2 => k2 + ' ' + kindCnt[k2]);
+    cnt.textContent = (parts.join(' + ') || '빈칸 0') + ' = ' + inputs.length +
+      ' 중 맞음 ' + a + ' · 틀림 ' + bd + ' · 남음 ' + (inputs.length - a - bd);
+  };
+  let shown = false;
+  const eye = el('button', 'tool', '👁 정답 모두 보기');
+  eye.onclick = () => {
+    shown = !shown;
+    eye.textContent = shown ? '👁 정답 숨기기' : '👁 정답 모두 보기';
+    inputs.forEach(x => {
+      if (x.classList.contains('ok')) return;
+      if (shown){ x.dataset.user = x.value; x.value = x.dataset.ans;
+                  x.classList.add('reveal'); x.readOnly = true; }
+      else { x.value = x.dataset.user || ''; x.classList.remove('reveal'); x.readOnly = false; }
+    });
+  };
+  bar.appendChild(eye);
+  const rw = el('button', 'tool', '⚠ 틀린 곳만 다시');
+  rw.onclick = () => inputs.forEach(x => {
+    if (x.classList.contains('bad')){ x.value = ''; x.classList.remove('bad'); } upd(); });
+  bar.appendChild(rw);
+  const rs = el('button', 'tool', '↻ 다시 풀기');
+  rs.onclick = () => { inputs.forEach(x => { x.value = ''; x.readOnly = false;
+    x.classList.remove('ok', 'bad', 'reveal'); delete x.dataset.user; });
+    shown = false; eye.textContent = '👁 정답 모두 보기'; upd(); };
+  bar.appendChild(rs);
+  const sv = el('button', 'tool on', '✅ 이 조 채점 · 회독 저장');
+  sv.onclick = () => {
+    if (!inputs.length){ toast('뚫린 빈칸이 없다'); return; }
+    let okN = 0;
+    inputs.forEach(x => { if (bkNorm(x.value) === bkNorm(x.dataset.ans)) okN++; });
+    const pct = Math.round(100 * okN / inputs.length);
+    const r = pct >= 90 ? 'O' : pct >= 60 ? '△' : 'X';
+    const n = ((blkAll()[key] || {}).n || 0) + 1;
+    blkPut(key, { n: n, r: r, pct: pct, ts: nowIso(), modes: bkOn.slice() });
+    const hb = document.getElementById('bkbadge');
+    if (hb){ hb.textContent = '✎ 회독 ' + n + ' · ' + r; hb.style.display = ''; }
+    toast('빈칸 회독 ' + n + ' 저장 — ' + r + ' (' + pct + '%)');
+    // 저장 뒤 입력은 그대로 둔다(§3) — 다시 풀기는 ↻
+  };
+  bar.appendChild(sv);
+  box.appendChild(bar);
+  // 본문 — 해례판 줄 그대로(원문·정리부 이식 없음 · 사양서) · 켜진 kind 만 <input>
+  bkJo.행.forEach((r, ri) => {
+    const d = el('div', 'ln bkln');
+    const t = String(r.t || '');
+    const bs = (r.b || []).slice().sort((x, y) => x.a - y.a);
+    let pos = 0;
+    bs.forEach(b => {
+      if (b.a > pos) d.appendChild(document.createTextNode(t.slice(pos, b.a)));
+      pos = Math.max(pos, b.b);
+      const kk = bkKindOf(S.law, S.jo, ri, b);
+      if (kk === 'none'){ d.appendChild(document.createTextNode(String(b.ans || ''))); return; }
+      const col = BK_COLOR[kk] || BK_COLOR.내용;
+      const live = bkOn.indexOf(kk) >= 0 && (!S.joBlankStar || isImp);
+      if (live){
+        const inp = el('input', 'bkin');
+        const ln = String(b.ans || '').length;
+        inp.dataset.ans = b.ans;
+        inp.style.width = Math.max(3, ln) + 'em';
+        inp.style.borderBottomColor = col;
+        inp.placeholder = (kk === '주체' ? '누구에게 · ' : '') + ln + '자';
+        inp.addEventListener('keydown', ev => {
+          if (ev.key === 'Enter' || ev.key === 'Tab'){
+            ev.preventDefault();
+            judge(inp);
+            const i2 = inputs.indexOf(inp) + (ev.shiftKey ? -1 : 1);
+            const nx = inputs[i2];
+            if (nx) nx.focus();
+          }
+        });
+        inp.addEventListener('blur', () => { if (inp.value && !inp.readOnly) judge(inp); });
+        inp.addEventListener('input', () => {
+          if (inp.classList.contains('bad')) inp.classList.remove('bad');
+        });
+        d.appendChild(inp);
+        inputs.push(inp);
+        kindCnt[kk] = (kindCnt[kk] || 0) + 1;
+      }else{
+        const u = el('span', 'bku', String(b.ans || ''));   // 꺼진 kind·중요 아님 = 색 밑줄만
+        u.style.borderBottomColor = col;
+        d.appendChild(u);
+      }
+      if (!bkTagged(S.law, S.jo, ri, b)){                   // 미확정 「?」 — 확정하면 사라진다
+        const q = el('sup', 'bkq', '?');
+        q.title = '자동 태깅 초안(' + kk + ') — 누르면 확정';
+        q.onclick = ev => { ev.stopPropagation(); bkTagPop(S.law, S.jo, ri, b, ev); };
+        d.appendChild(q);
+      }
+    });
+    if (pos < t.length) d.appendChild(document.createTextNode(t.slice(pos)));
+    box.appendChild(d);
+  });
+  upd();
+  blk.appendChild(box);
+}
+
 /* ══════════ 조문 뷰 ══════════ */
 async function viewJo(){
   const slot=$('#slot');slot.innerHTML='';
@@ -1014,7 +1219,14 @@ async function viewJo(){
     if(x.M)em.appendChild(el('span','','✏'+x.M));
     if(x.L)em.appendChild(el('span','','🔗'+x.L));
     if(!x.M&&!x.L&&!stars[x.k]){const b=el('span','bars');
-      for(let i=0;i<3;i++)b.appendChild(el('i','bx'));em.appendChild(b);}
+      /* ★ v3-L §3 — 둘째 막대 = 빈칸 통과율(≥80 초록 · ≥50 노랑 · 그 외 빨강 · 없으면 회색) */
+      for(let i=0;i<3;i++){
+        const i2=el('i','bx');
+        if(i===1){const br=blkAll()[S.law+':'+x.k];
+          if(br)i2.style.background=br.pct>=80?'#16a34a':br.pct>=50?'#d97706':'#dc2626';}
+        b.appendChild(i2);
+      }
+      em.appendChild(b);}
     r.appendChild(em);
     r.onclick=()=>{S.jo=x.k;render();};
     return r;
@@ -1072,7 +1284,10 @@ async function viewJo(){
     noHead.forEach(x=>{if(!S.joStar||stars[x.k])tree.appendChild(joRow(x));});
   }
   const lg=el('div','legend');
-  lg.innerHTML='막대 3개 = <b>회독 · 빈칸 통과 · 지문 정답률</b> — v0 미착수<br>'+
+  /* ★ v3-L §3 — 둘째 막대(빈칸 통과)만 산다 · 나머지 둘은 v0 미착수 그대로 */
+  lg.innerHTML='막대 3개 = <b>회독 · 빈칸 통과 · 지문 정답률</b> — 둘째만 산다 '+
+               '(<span style="color:#16a34a">≥80</span>·<span style="color:#d97706">≥50</span>·'+
+               '<span style="color:#dc2626">그 외</span>) · 첫·셋째 = v0 미착수<br>'+
                '✏N 내 형광·마크업 수 · 🔗N 인용 링크 수';
   tree.appendChild(lg);
   slot.appendChild(tree);
@@ -1095,6 +1310,10 @@ async function viewJo(){
   main.appendChild(el('div','sihaeng','🕐 시행 '+(SIHAENG[S.law]||'—')+'  ·  '+j.파일));
   /* ★ v3-I — 2년 내 개정 조는 본문 머리에도 배지 하나(명칭개정만 있는 조는 없음) */
   if(stars[S.jo])main.appendChild(el('span','badge jstarb','★ '+stars[S.jo]+' 개정'));
+  {const br=blkAll()[S.law+':'+S.jo];   /* ★ v3-L §3 — 빈칸 회독 배지(마지막 저장) */
+   const hb=el('span','badge');hb.id='bkbadge';
+   if(br)hb.textContent='✎ 회독 '+br.n+' · '+br.r;else hb.style.display='none';
+   main.appendChild(hb);}
 
   const link=el('div','conn');
   link.appendChild(el('span','k','이 조문 연결'));
@@ -1137,16 +1356,44 @@ async function viewJo(){
   main.appendChild(link);
 
   // ── 모드 바 — 빈칸은 갈래가 아니라 이 조문의 모드다(§4-4 다중선택)
+  /* ★ v3-L §1 — 빈칸 셋 = 다중선택 토글(S.joBlank · jopangi_ui) · N = kind 별 수(확정 태그 반영) ·
+     재료 판정 = blank_<법>.json 파일과 그 조의 존재(법 이름이 아니다 — 디보는 v3-K2 로 켜진다) ·
+     ★ 중요 빈칸만 = 연결 지문 수 상위 1/3(joPanelIdx · w 는 안 쓴다 §0) */
+  const BKD=await blankData(S.law);
+  const bkJo=(BKD&&BKD.조&&BKD.조[S.jo])?BKD.조[S.jo]:null;
+  if(S.ink&&bkJo&&(S.joBlank.내용||S.joBlank.주체||S.joBlank.기간)){
+    S.joBlank={내용:false,주체:false,기간:false};uiSave();
+    toast('필기는 빈칸 모드가 꺼져 있어야 켜진다');   // 옛 「본문 모드에서만」 규칙 그대로(§2)
+  }
+  const bkN={내용:0,주체:0,기간:0};
+  if(bkJo)bkJo.행.forEach((r,ri)=>(r.b||[]).forEach(b=>{
+    const kk=bkKindOf(S.law,S.jo,ri,b);
+    if(bkN[kk]!=null)bkN[kk]++;}));
+  const bkOn=bkJo?['내용','주체','기간'].filter(k2=>S.joBlank[k2]):[];
+  const bkMode=bkOn.length>0;
   const mb=el('div','modebar');
   JOMODES.forEach(([k,label])=>{
-    const on=(k==='본문')?(S.joMode==='본문'):(S.joMode===k);
-    const b=el('button','mode'+(on?' on':'')+(k==='본문'?'':' dis'),label);
-    if(k!=='본문'){
+    if(k==='본문'){
+      const b=el('button','mode'+(bkMode?'':' on'),label);
+      b.onclick=()=>{S.joBlank={내용:false,주체:false,기간:false};uiSave();render();};
+      mb.appendChild(b);return;
+    }
+    if(k==='소제목'){
+      const b=el('button','mode dis',label);
       b.appendChild(el('span','n','—'));
-      b.disabled=true;
-      b.title=(k==='소제목')?'항 소제목 648개 이관 전 — v0 범위 밖'
-                            :'빈칸 재료 준비 중 (§4-4)';
-    }else b.onclick=()=>{S.joMode='본문';render();};
+      b.disabled=true;b.title='항 소제목 648개 이관 전 — v0 범위 밖';
+      mb.appendChild(b);return;
+    }
+    const b=el('button','mode'+(bkJo&&S.joBlank[k]?' on':'')+(bkJo?'':' dis'),label);
+    if(!bkJo){
+      b.appendChild(el('span','n','—'));
+      b.disabled=true;b.title='빈칸 재료 없음';
+    }else{
+      b.appendChild(el('span','n',String(bkN[k])));
+      b.onclick=()=>{
+        if(S.ink){S.ink=false;toast('필기를 끄고 빈칸 모드를 켰다 — 둘은 같이 못 켠다');}
+        S.joBlank[k]=!S.joBlank[k];uiSave();render();};
+    }
     mb.appendChild(b);
   });
   // ── ✎ 마크업 = 스티커 편집 모드(§3-2). 꺼진 것이 기본 — 읽다가 잘못 눌리는 것을 막는다.
@@ -1155,18 +1402,39 @@ async function viewJo(){
   const pinned=S.ink||inkHas(inkKey);        // 필기가 있으면 본문 높이·폭을 잠근다(§4-2)
   const stkBtn=el('button','mode'+(S.stick?' on':''),'✎ 마크업');
   stkBtn.title='켜면 마크업 하나하나가 스티커가 된다 — 지우기·유형 바꾸기·색 고르기';
-  stkBtn.onclick=()=>{
+  if(bkMode){
+    stkBtn.disabled=true;stkBtn.classList.add('dis');
+    stkBtn.title='빈칸 모드에서는 마크업 편집을 잠근다';   // ★ v3-L §2 — 필기·마크업 잠금
+    if(S.stick)S.stick=false;
+  }else stkBtn.onclick=()=>{
     if(!S.stick&&S.ink){S.ink=false;toast('필기를 끄고 마크업 편집을 켰다 — 둘은 같이 못 켠다');}
     S.stick=!S.stick;render();};
   mb.appendChild(stkBtn);
-  mb.appendChild(el('span','badge','빈칸·소제목 = 재료 준비 중'));
+  if(bkJo){
+    const st=el('button','tool jstar'+(S.joBlankStar?' on':''),'★ 중요 빈칸만');
+    st.title='연결 지문 수 상위 1/3 조의 빈칸만 뚫는다 — 나머지 조는 밑줄만';
+    st.onclick=()=>{S.joBlankStar=!S.joBlankStar;uiSave();render();};
+    mb.appendChild(st);
+  }
   main.appendChild(mb);
-
-  // ⚠ 빈칸 모드는 글자를 가려 폭이 통째로 바뀐다 — 필기는 「본문」 모드에서만 켠다(§4-2)
-  if(S.ink&&S.joMode!=='본문'){S.joMode='본문';toast('필기는 본문 모드에서만 켜진다');}
 
   // ── 필기가 얹힐 덩어리 = 조 하나(§4-3). 캔버스는 이 덩어리의 clientWidth 로 그린다.
   const blk=el('div');
+  /* ★ v3-L §2 — 빈칸 모드: 본문 자리에 해례판 줄 + <input>. 편집본·원문 토글·필기는 숨긴다
+     (해례 조판이 달라 좌표 이식 금지 — 사양서). 테마 줄·오른쪽 패널은 그대로 온다. */
+  if(bkMode){
+    await bkBody(blk,bkJo,bkOn,base);
+    main.appendChild(blk);
+    thRow.insertBefore(el('span','k','🧩 테마·비교'),thRow.firstChild);
+    main.appendChild(thRow);
+    main.appendChild(thBox);
+    slot.appendChild(main);
+    await joPanelMount(slot);
+    if(THSCROLL){THSCROLL=false;
+      const t2=document.getElementById('thbot');
+      if(t2)setTimeout(()=>t2.scrollIntoView({block:'start'}),60);}
+    return;
+  }
   const ap=mkApply(base,j.행);
   const box=el('div','box');
   const bh=el('div','boxh');
@@ -1387,7 +1655,8 @@ const REC_NAMES = { ox:'1차객 풀이 (O/X · 헷갈림 · 태그)', rounds:'1�
   mcard:'암기카드', gi:'기출 풀이 (오지선다)', 'gi.year':'기출 제출 이력',
   markup:'마크업 스티커 (형광펜·밑줄)', ink:'필기 (애플펜슬)',
   logic:'📐 논리', link:'🔗 지문 연결', type:'🏷 유형 확정', omr:'📖 정리 핀',
-  sticker:'🏷 스티커 사전 (두문자·줄임말)' };
+  sticker:'🏷 스티커 사전 (두문자·줄임말)',
+  blank:'✎ 빈칸 회독 (O/△/X)', blanktag:'✎ 빈칸 태그 (kind 확정)' };
 function recLabel(k){
   const t = k.slice(REC_PRE.length);
   if (REC_NAMES[t]) return REC_NAMES[t];
@@ -1398,6 +1667,8 @@ function recLabel(k){
 function recDropCache(){
   MKS = null; INK = null;
   if (typeof STKD !== 'undefined') STKD = null;   /* ★ v3-J §2-A */
+  if (typeof BLKREC !== 'undefined') BLKREC = null;   /* ★ v3-L */
+  if (typeof BLTREC !== 'undefined') BLTREC = null;
   if (typeof LGREC !== 'undefined') LGREC = null;
   if (typeof LKREC !== 'undefined') LKREC = null;
   if (typeof TYREC !== 'undefined') TYREC = null;
