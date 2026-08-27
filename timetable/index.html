@@ -332,10 +332,10 @@ function stopTimer(){
  upsertSession(s);run=null;LS.del('tt.run');toast(`저장 ${dur(s.b-s.a)}`);render();
 }
 function elapsed(){return run?Math.max(0,Math.floor((Date.now()-run.at)/1000)):0}
-setInterval(()=>{if(run){const e=document.getElementById('runT');if(e)e.textContent=fmtSec(elapsed());const t=document.getElementById('tmodeT');if(t)t.textContent=fmtSec(elapsed());}},1000);
+setInterval(()=>{if(run){const e=document.getElementById('runT');if(e)e.textContent=fmtSec(elapsed());const t=document.getElementById('tmodeT');if(t)t.textContent=fmtSec(elapsed());if(pipWin&&!pipWin.closed){const p=pipWin.document.getElementById('runT');if(p)p.textContent=fmtSec(elapsed())}}},1000);
 const fmtSec=s=>`${pad(Math.floor(s/3600))}:${pad(Math.floor(s/60)%60)}:${pad(s%60)}`;
-function manualSave(){
- const a=document.getElementById('mA').value,b=document.getElementById('mB').value;if(!form.s||!a||!b){toast('과목·시작·끝을 채워줘');return;}
+function manualSave(doc){doc=doc||document;
+ const a=doc.getElementById('mA').value,b=doc.getElementById('mB').value;if(!form.s||!a||!b){toast('과목·시작·끝을 채워줘');return;}
  const tm=t=>{const[h,m]=t.split(':').map(Number);let v=h*60+m;if(v<dayStart()*60)v+=1440;return v};
  let A=tm(a),B=tm(b);if(B<=A)B+=1440;
  upsertSession({id:uid(),d:curDate(),s:form.s,p:form.p,i:form.i,a:A,b:B,k:form.k});toast('저장됨');render();
@@ -343,7 +343,7 @@ function manualSave(){
 
 /* ---------- 렌더 ---------- */
 const $=id=>document.getElementById(id);
-function render(){renderSide();renderMain();renderPnav();}
+function render(){renderSide();renderMain();renderPnav();if(typeof pipPaint=='function')pipPaint();}
 function dday(){const e=settings.exam?.date;if(!e)return'';const n=Math.ceil((parse(e)-parse(today()))/864e5);return n>=0?`D-${n}`:`D+${-n}`}
 function renderSide(){
  const v=ui.view,dirty=listDirty().length;
@@ -384,7 +384,7 @@ function ttRows(sess,{rows=22,thin=false}={}){
  const now=logicalNow();const isToday=curDate()===now.d;
  for(let r=0;r<rows;r++){
   const a=s0+r*60,b=a+60;let bars='';
-  sess.forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${subjColor(x.s)}" title="${esc(x.s)} ${hmDisp(x.a)}-${hmDisp(x.b)}" onclick="editSession('${x.id}')"></b>`});
+  sess.forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${subjColor(x.s)}" title="${esc(x.s)} ${hmDisp(x.a)}-${hmDisp(x.b)}" onclick="editSession('${x.id}',document)"></b>`});
   if(run&&run.d===curDate()){const L=Math.max(run.a,a),R=Math.min(now.m+(now.d!==run.d?1440:0),b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${subjColor(run.s)};opacity:.5"></b>`}
   if(isToday&&now.m>=a&&now.m<b)bars+=`<i class="now" style="left:${(now.m-a)/60*100}%"></i>`;
   h+=`<span>${(a/60)%24}</span><div class="r">${bars}</div>`;
@@ -396,7 +396,7 @@ function sheetHTML(who,d,sess,{withRun=true}={}){
  const g=groupSess(sess);
  return`<div class="sheet"><div class="ribbon">${d.replace(/-/g,'.')} ${['SUN','MON','TUE','WED','THU','FRI','SAT'][dt.getDay()]}</div><div class="paper">
  <div><div class="hd">Time Table</div><div class="tt">${ttRows(sess)}</div></div>
- <div><div class="hd">Study Time</div><div class="st">${g.map(x=>`<div class="it" onclick="editSession('${x.ids[0]}')"><i class="sw" style="background:${subjColor(x.s)}"></i><span class="nm">${esc(x.s)}</span><span class="pl">${esc([x.p,x.i].filter(Boolean).join(' '))}</span><span class="mk">${esc(x.k)}</span><span>${dur(x.min)}</span></div>`).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
+ <div><div class="hd">Study Time</div><div class="st">${g.map(x=>`<div class="it" onclick="editSession('${x.ids[0]}',document)"><i class="sw" style="background:${subjColor(x.s)}"></i><span class="nm">${esc(x.s)}</span><span class="pl">${esc([x.p,x.i].filter(Boolean).join(' '))}</span><span class="mk">${esc(x.k)}</span><span>${dur(x.min)}</span></div>`).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
  <div class="foot"><div>Start <b>${sess.length?hmDisp(sess[0].a):'--:--'}</b> &nbsp; Stop <b>${sess.length?hmDisp(Math.max(...sess.map(x=>x.b))):'--:--'}</b></div><div>Total <span class="big">${dur(tot)}</span></div></div></div></div></div>`;
 }
 function mbarHTML(){
@@ -409,10 +409,10 @@ function mbarHTML(){
  <input class="item" placeholder="항목 (1-08 물권변동)" value="${esc(form.i)}" oninput="setForm('i',this.value)">
  <div class="mk">${mk}</div></div>
  <div class="ss"><button class="${run?'dis':'go'}" onclick="${run?'':'startTimer()'}">START</button><button class="${run?'go':'dis'}" onclick="${run?'stopTimer()':''}">STOP</button></div>
- <div class="man">수동 <input id="mA" type="time" step="60"> ~ <input id="mB" type="time" step="60"> <button class="btn" onclick="manualSave()">저장</button><span style="margin-left:auto"><button class="btn" onclick="timerMode()">타이머 모드</button> <button class="btn" onclick="pip()">작은 창</button></span></div></div>`;
+ <div class="man">수동 <input id="mA" type="time" step="60"> ~ <input id="mB" type="time" step="60"> <button class="btn" onclick="manualSave(document)">저장</button><span style="margin-left:auto"><button class="btn" onclick="timerMode()">타이머 모드</button> <button class="btn" onclick="pip()">작은 창</button></span></div></div>`;
 }
 function recentPlans(){const set=new Set();[ym(today()),ym(addDays(today(),-30))].forEach(m=>sessionsMonth(cfg.person,m).forEach(s=>{if(s.p)set.add(s.p)}));return[...set].slice(-12)}
-function setForm(k,v){form[k]=v;LS.set('tt.form',form);if(k=='s'){const e=document.querySelector('.mbar .row1 .sw');if(e)e.style.background=subjColor(v)}}
+function setForm(k,v,doc){form[k]=v;LS.set('tt.form',form);if(k=='s'){[document,pipWin&&!pipWin.closed?pipWin.document:null].forEach(D=>{const e=D&&D.querySelector('.mbar .row1 .sw');if(e)e.style.background=subjColor(v)})}}
 function setMark(c){form.k=form.k==c?'':c;LS.set('tt.form',form);render()}
 function threeHTML(){
  const d=curDate(),ds=[addDays(d,-1),d,addDays(d,1)],lab=['어제','오늘','내일'];
@@ -438,21 +438,21 @@ function todoHTML(){return`<div class="ttl"><b>할일</b><div class="r">${navBtn
 function addTodo(d,kind,t){upsertTodo({id:uid(),d,t,kind,done:false,carry:0});render()}
 function toggleTodo(id){const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(t){t.done=!t.done;upsertTodo(t);render()}}
 function delTodo(id){const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(t&&confirm('지울까? '+t.t)){t.del=true;upsertTodo(t);render()}}
-function editTodo(id){const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(!t)return;modal(`<h4>항목 편집</h4><div class="row"><label>내용</label><input id="eT" value="${esc(t.t)}"></div><div class="row"><label>날짜</label><input id="eD" type="date" value="${t.d}"></div><div class="row"><label>종류</label><select id="eK"><option value="study" ${t.kind=='study'?'selected':''}>학습</option><option value="todo" ${t.kind!='study'?'selected':''}>할일</option></select></div>`,()=>{t.t=$('eT').value;t.d=$('eD').value;t.kind=$('eK').value;upsertTodo(t);render()})}
+function editTodo(id){const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(!t)return;modal(`<h4>항목 편집</h4><div class="row"><label>내용</label><input id="eT" value="${esc(t.t)}"></div><div class="row"><label>날짜</label><input id="eD" type="date" value="${t.d}"></div><div class="row"><label>종류</label><select id="eK"><option value="study" ${t.kind=='study'?'selected':''}>학습</option><option value="todo" ${t.kind!='study'?'selected':''}>할일</option></select></div>`,q=>{t.t=q('eT').value;t.d=q('eD').value;t.kind=q('eK').value;upsertTodo(t);render()})}
 function carryAll(from){const to=addDays(from,1);todosOf(cfg.person,from).filter(t=>t.kind=='study'&&!t.done).forEach(t=>{t.d=to;t.carry=(t.carry||0)+1;upsertTodo(t)});toast('이월했어');render()}
 /* 세션 편집 */
-function editSession(id){
+function editSession(id,doc){
  const s=sessFile(cfg.person,ym(curDate())).data.sessions.find(x=>x.id===id)||sessFile(cfg.person,ym(today())).data.sessions.find(x=>x.id===id);if(!s)return;
  const subjOpts=settings.subjects.map(x=>`<option ${s.s==x.n?'selected':''}>${esc(x.n)}</option>`).join('');
  modal(`<h4>세션 편집 · ${s.d}</h4><div class="row"><label>과목</label><select id="eS">${subjOpts}</select></div><div class="row"><label>계획</label><input id="eP" value="${esc(s.p||'')}"></div><div class="row"><label>항목</label><input id="eI" value="${esc(s.i||'')}"></div>
  <div class="row"><label>시간</label><input id="eA" type="time" value="${hmDisp(s.a)}"> ~ <input id="eB" type="time" value="${hmDisp(s.b)}"></div><div class="row"><label>표시</label><select id="eK"><option value="">—</option>${['○','×','△'].map(c=>`<option ${s.k==c?'selected':''}>${c}</option>`).join('')}</select></div>`,
- ()=>{const tm=t=>{const[h,m]=t.split(':').map(Number);let v=h*60+m;if(v<dayStart()*60)v+=1440;return v};let A=tm($('eA').value),B=tm($('eB').value);if(B<=A)B+=1440;Object.assign(s,{s:$('eS').value,p:$('eP').value,i:$('eI').value,a:A,b:B,k:$('eK').value});upsertSession(s);render()},
- ()=>{if(confirm('이 세션을 지울까?')){deleteSession(s);render()}});
+ q=>{const tm=t=>{const[h,m]=t.split(':').map(Number);let v=h*60+m;if(v<dayStart()*60)v+=1440;return v};let A=tm(q('eA').value),B=tm(q('eB').value);if(B<=A)B+=1440;Object.assign(s,{s:q('eS').value,p:q('eP').value,i:q('eI').value,a:A,b:B,k:q('eK').value});upsertSession(s);render()},
+ ()=>{if(confirm('이 세션을 지울까?')){deleteSession(s);render()}},doc);
 }
-function modal(body,onOk,onDel){
- const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box">${body}<div class="acts">${onDel?'<button class="btn d" id="mDel">삭제</button>':''}<button class="btn" id="mNo">취소</button><button class="btn p" id="mOk">저장</button></div></div>`;
- document.body.appendChild(m);const close=()=>m.remove();
- m.querySelector('#mNo').onclick=close;m.querySelector('#mOk').onclick=()=>{onOk();close()};if(onDel)m.querySelector('#mDel').onclick=()=>{onDel();close()};
+function modal(body,onOk,onDel,doc){doc=doc||document;
+ const m=doc.createElement('div');m.className='modal';m.innerHTML=`<div class="box">${body}<div class="acts">${onDel?'<button class="btn d" id="mDel">삭제</button>':''}<button class="btn" id="mNo">취소</button><button class="btn p" id="mOk">저장</button></div></div>`;
+ doc.body.appendChild(m);const close=()=>m.remove();const q=id=>m.querySelector('#'+id);
+ q('mNo').onclick=close;q('mOk').onclick=()=>{onOk(q);close()};if(onDel)q('mDel').onclick=()=>{onDel();close()};
  m.addEventListener('click',e=>{if(e.target===m)close()});
 }
 /* ----- 주간 ----- */
@@ -536,14 +536,23 @@ function timerMode(){
  const paint=()=>{e.innerHTML=`<button class="x" onclick="this.parentNode.remove()">×</button><div class="sub">${run?esc(run.s)+' '+esc([run.p,run.i].filter(Boolean).join(' ')):esc(form.s||'과목 없음')+' '+esc([form.p,form.i].filter(Boolean).join(' '))}</div><div class="big" id="tmodeT">${run?fmtSec(elapsed()):'00:00:00'}</div><button onclick="${run?'stopTimer()':'startTimer()'};document.querySelector('.tmode')&&(document.querySelector('.tmode')._p())">${run?'STOP':'START'}</button>`};
  e._p=paint;paint();document.body.appendChild(e);
 }
+let pipWin=null;
+function pipPaint(){
+ if(!pipWin||pipWin.closed){pipWin=null;return;}
+ const d=curDate();pipWin.document.body.innerHTML=`<div class="pipwrap">${sheetHTML(cfg.person,d,sessionsOf(cfg.person,d))}${mbarHTML()}</div>`;
+}
 async function pip(){
- if(!('documentPictureInPicture' in window)){toast('이 브라우저는 작은 창을 지원하지 않아 (크롬 PC)');return;}
- try{const w=await documentPictureInPicture.requestWindow({width:260,height:150});
-  w.document.body.style.cssText='margin:0;font-family:Malgun Gothic,sans-serif;background:#111;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:6px';
-  const paint=()=>{w.document.body.innerHTML=`<div style="font-size:12px;color:#bbb">${run?esc(run.s)+' '+esc(run.i||run.p||''):esc(form.s||'')}</div><div id="t" style="font-size:40px;font-weight:800;font-variant-numeric:tabular-nums">${run?fmtSec(elapsed()):'00:00:00'}</div><button id="b" style="border:1px solid #666;background:transparent;color:#fff;padding:6px 18px;border-radius:5px;font-weight:700">${run?'STOP':'START'}</button>`;w.document.getElementById('b').onclick=()=>{run?stopTimer():startTimer();paint()}};
-  paint();const iv=setInterval(()=>{if(w.closed){clearInterval(iv);return}const t=w.document.getElementById('t');if(t&&run)t.textContent=fmtSec(elapsed())},1000);
+ if(!('documentPictureInPicture' in window)){toast('이 브라우저는 작은 창을 지원하지 않아 (크롬·엣지 PC 전용)');return;}
+ if(pipWin&&!pipWin.closed){pipWin.focus();return;}
+ try{const w=await documentPictureInPicture.requestWindow({width:540,height:780});pipWin=w;
+  [...document.styleSheets].forEach(s=>{try{const st=w.document.createElement('style');st.textContent=[...s.cssRules].map(r=>r.cssText).join('\n');w.document.head.appendChild(st)}catch(e){}});
+  const st=w.document.createElement('style');st.textContent='body{background:#fff;padding:6px;overflow:auto}.pipwrap{min-width:420px}.mbar .man span{display:none}';w.document.head.appendChild(st);
+  ['startTimer','stopTimer','setForm','setMark','manualSave','editSession','render','curDate','setDate','addDays','today','toast'].forEach(n=>w[n]=window[n]);
+  w.addEventListener('pagehide',()=>{pipWin=null});
+  pipPaint();
  }catch(e){toast('작은 창 실패: '+e.message)}
 }
+setInterval(()=>{if(run&&pipWin&&!pipWin.closed)pipPaint()},60000);
 /* ---------- 시작 ---------- */
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 render();
