@@ -323,6 +323,13 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .bkmk{width:14px;height:14px;font-size:9px;line-height:13px;text-align:center;border:1px solid transparent;
   border-radius:3px;font-style:normal;cursor:pointer;display:inline-block}
 .bkmk.dot{width:8px;height:8px;border-radius:50%;border:0}
+/* ★ v3-N — 읽기 모드 🏷 거품 · 칩 표시 오프셋(§4 점선 연결선) */
+.stkbub{position:fixed;z-index:80;font-size:14px;line-height:1;padding:4px 6px;
+  border:1px solid #d9d6ce;border-radius:8px;background:#fffdf6;
+  box-shadow:0 2px 8px rgba(0,0,0,.18);cursor:pointer}
+.stkoffw{position:relative;display:inline-block}
+.stkoffl{position:absolute;left:50%;top:50%;height:0;border-top:1px dotted #b8b3a8;
+  opacity:.55;transform-origin:0 0;pointer-events:none}
 
 /* ── 카드 본문 ── */
 .ctitle{font-weight:700;font-size:11.5px;margin-bottom:3px;line-height:1.35}
@@ -1582,6 +1589,7 @@ async function viewJo(){
     blk.appendChild(sb);
     stkPick(box,base,j.행);
   }
+  if(!S.stick)stkBubbleWire(box,base,j.행);   /* ★ v3-N §5 — 읽기 모드 긁기 = 🏷 거품 입구 */
 
   if(j.원본&&j.원본.length){
     const fold=el('div','box fold');
@@ -1614,11 +1622,23 @@ async function viewJo(){
       head.appendChild(el('span','badge','필기 때문에 펼친 채 잠갔다'));
       fold.onclick=()=>toast('필기가 있어 원문 접기를 잠갔다 — 필기를 지우면 풀린다');
     }else{
+      /* ★ v3-N §6-2 — 원문 보기 = 팝업(popShell 재사용 · ≡ 끌어 옮기기 :1644 공짜 · 사용자 8/27).
+         필기 있는 조는 위 pinned 분기(인라인 펼침 잠금 + toast)가 그대로 맡는다 — 팝업으로
+         빼면 본문 높이가 바뀌어 필기가 어긋난다(§4-2). 팝업 안 원문은 필기·마크업을 안 받는다. */
       body.style.display='none';
-      fold.onclick=()=>{const open=body.style.display==='none';
-        body.style.display=open?'':'none';
-        head.firstChild.nodeValue=(open?'▾':'▸')+' 원문 보기 ';
-        const pg=body.querySelector('.bjpage');if(pg&&open)bjFit(pg);};
+      fold.onclick=ev=>{
+        const pb=popShell('','⚖ '+S.jo+' 원문');
+        const bx=el('div','origbody');
+        beopjeon(bx,j.원본);               // 사진 실측 조판 그대로 — 한 행 글자 수 고정(v3-B §1)
+        bx.appendChild(el('div','bjnote',
+          '사진(특허법 33·34쪽) 실측 조판 — 한 행 길이 고정 · 어절 중간에서 끊는다 · 양끝맞춤. '+
+          '글자 크기는 바꿀 수 없다(필기가 이 고정에 기댄다).'));
+        pb.appendChild(bx);
+        showPop(ev);
+        const pg=bx.querySelector('.bjpage');if(pg)bjFit(pg);   // 지금 펼침과 같은 자리
+        setTimeout(()=>{const w2=bx.firstElementChild?bx.firstElementChild.offsetWidth:0;
+          if(w2)pb.parentNode.style.width=Math.min(innerWidth-40,w2+46)+'px';},0);
+      };
     }
     fold.appendChild(body);
     blk.appendChild(fold);
@@ -2006,20 +2026,37 @@ function popRec(ev){
    요약본 조문 칩 폴백. 🧾 = 그 법 2차 본문의 평문 「제N조」 파일 단위 역색인.
    평문에 없는 연결은 없는 것 — 지어내지 않는다. */
 /* ══ ★ v3-M — 본문 칩(끌어 옮기기·side)·팔레트 보조 ══ */
+let STKMV0=null;   /* ★ v3-N §4 — 칩 끌기 시작점(off 를 뺀 앵커 원점) */
 function stkChipEl(mk,opt,row){
   const d2=stkdOf(mk.v);
   const ch=el('span','stkchip','🏷 '+(d2?d2.name:'이름 없는 태그'));
   stkdChipCss(ch,d2?d2.color:(/^#[0-9a-fA-F]{6}$/.test(String(mk.v))?mk.v:'#9ca3af'));
   if(d2&&d2.mean)ch.title=d2.mean;
+  const rec4=mk._k?(mkAll()[mk._k]||{}):{};
   if(mk._k&&opt.stick){
     if(d2){
       ch.onclick=ev=>{ev.stopPropagation();stkChipPop(opt.base,row,mk,ev);};
       if(mk._new){
         ch.draggable=true;
-        ch.title=(d2.mean?d2.mean+' · ':'')+'끌어서 다른 낱말 위에 놓으면 자리가 옮겨진다';
-        ch.ondragstart=ev=>{try{ev.dataTransfer.setData('text/stkmv',mk._k);}catch(e){}};
+        ch.title=(d2.mean?d2.mean+' · ':'')+'끌어서 낱말 위 = 자리 옮김 · 빈 곳 = 표시만 이동';
+        ch.ondragstart=ev=>{try{ev.dataTransfer.setData('text/stkmv',mk._k);}catch(e){}
+          const r0=ch.getBoundingClientRect();   /* ★ v3-N §4 — 앵커 원점(현재 off 를 뺀 자리) */
+          STKMV0={k:mk._k,x:r0.left-((rec4.off||{}).dx||0),y:r0.top-((rec4.off||{}).dy||0)};};
       }
     }else ch.onclick=ev=>{ev.stopPropagation();stkEdit(opt.base,row,mk,ev);};
+  }
+  /* ★ v3-N §4 — off 있는 칩: 표시만 이동(앵커 자리 유지) + 1px 점선 연결선(옅게).
+     리플로우면 앵커 낱말을 따라간다 — 오프셋은 그대로라 겹칠 수 있다(허용 · 다시 끌면 됨). */
+  if(rec4.off&&((rec4.off.dx||0)||(rec4.off.dy||0))){
+    const dx=rec4.off.dx||0,dy=rec4.off.dy||0;
+    const w4=el('span','stkoffw');
+    const l4=el('i','stkoffl');
+    l4.style.width=Math.hypot(dx,dy)+'px';
+    l4.style.transform='rotate('+Math.atan2(dy,dx)+'rad)';
+    w4.appendChild(l4);
+    ch.style.position='relative';ch.style.left=dx+'px';ch.style.top=dy+'px';
+    w4.appendChild(ch);
+    return w4;
   }
   return ch;
 }
@@ -2201,7 +2238,9 @@ async function cmp3Col(dst,ent,baseLines,baseR){
     c.slice(0,2).forEach((cc,i2)=>{
       const b2=el('button','tool'+(i2===pk?' on':''),'후보 '+cc[1]+' '+cc[0]);
       b2.onclick=()=>{cmp3Col._pick[base+'|'+dst]=i2;render();};
-      rw.appendChild(b2);});
+      rw.appendChild(b2);
+      const sv=((ent&&ent.src)||{})[cc[0]];   /* ★ v3-N §3 — 원천 배지 */
+      rw.appendChild(el('span','c3src',sv==='both'?'제목·본문':sv==='title'?'제목':'본문'));});
     const okb=el('button','tool on','✓ 이 조');
     okb.onclick=()=>{thfPut(base,dst,cur[0]);render();};
     rw.appendChild(okb);
@@ -2248,10 +2287,11 @@ async function cmp3Chip(link){
     const f=e&&e[dst]?e[dst].fit:'없음';
     if(f==='대응'||f==='후보')n++;
   });
-  if(!n)return;   // 대응/후보가 하나도 없으면 칩 없음(§2)
+  /* ★ v3-N §2 — n=0 도 흐릿 칩(「손으로 지정」 입구 · M2 보완). 숫자 셈 규칙은 무변 */
   const open=uiThOpen()==='c3';
-  const c=el('button','chip c-theme','⇄ 3법 대응 '+n+(open?' ▴':' ▾'));
-  c.title='본문 아래 3법 카드 — 현행 원문 유사도(자동) · 차이는 기계 diff';
+  const c=el('button','chip c-theme'+(n?'':' wait'),'⇄ 3법 대응 '+(n||'—')+(open?' ▴':' ▾'));
+  c.title=n?'본문 아래 3법 카드 — 현행 원문 유사도(자동) · 차이는 기계 diff'
+          :'자동 대응 없음 — 열어서 손으로 지정';
   c.onclick=()=>{const was=uiThOpen()==='c3';uiThToggle('c3');if(!was)THSCROLL=true;render();};
   link.appendChild(c);
 }
@@ -3197,6 +3237,56 @@ function plainLen(root){
   while ((n = w.nextNode())) if (!plainSkip(n, root)) s += n.nodeValue.length;
   return s;
 }
+/* ★ v3-N §5 — 읽기 모드(마크업 편집 꺼짐) 긁기 → 「🏷」 거품 하나 · 탭 = stkAttachPop 진입.
+   키 규약·필기 잠금 toast 는 stkAttachPop 이 그대로 맡는다(입구만 하나 더 · 편집 전환 없음).
+   빈칸 모드는 이 함수가 안 불린다(viewJo 가 그 전에 return) · 편집 모드에선 안 뜬다. */
+function stkBubKill(){ const b = document.getElementById('stkbub'); if (b) b.remove(); }
+function stkBubbleWire(box, base, rows){
+  const grab = ev => {
+    stkBubKill();
+    if (S.stick) return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    const r = sel.getRangeAt(0);
+    const sn = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentNode;
+    const line = sn && sn.closest ? sn.closest('.ln') : null;
+    if (!line || !line.contains(r.endContainer) || !box.contains(line)) return;
+    const ri = +line.dataset.ri;
+    const row = rows[ri]; if (!row) return;
+    const pre = document.createRange();
+    pre.selectNodeContents(line); pre.setEnd(r.startContainer, r.startOffset);
+    const a = plainLen(pre.cloneContents());
+    const b = a + plainLen(r.cloneContents());
+    if (b <= a) return;
+    const er = r.cloneRange(); er.collapse(false);
+    let rc = er.getBoundingClientRect();
+    if (!rc || (!rc.left && !rc.top)) rc = r.getBoundingClientRect();
+    const bub = el('button', 'stkbub', '🏷'); bub.id = 'stkbub';
+    bub.title = '선택한 글에 스티커 붙이기';
+    bub.style.left = Math.min(innerWidth - 40, rc.left + 6) + 'px';
+    bub.style.top = Math.max(4, rc.top - 34) + 'px';
+    bub.onmousedown = ev2 => ev2.preventDefault();      // 거품을 눌러도 selection 이 안 풀리게
+    bub.onclick = ev2 => {
+      ev2.stopPropagation(); stkBubKill();
+      const cross = (mkApply(base, rows).eff[ri] || []).some(m =>
+        (a < m.b && b > m.a) && !(a >= m.a && b <= m.b) && !(m.a >= a && m.b <= b));
+      if (cross){ toast('이미 있는 마크업과 걸쳐서 겹친다 — 구간을 다시 골라라', 1); return; }
+      try{ window.getSelection().removeAllRanges(); }catch(e){}
+      stkAttachPop(base, row, a, b, ev2);
+    };
+    document.body.appendChild(bub);
+  };
+  box.addEventListener('mouseup', ev => setTimeout(() => grab(ev), 0));
+  box.addEventListener('touchend', ev => setTimeout(() => grab(ev), 60));
+  if (!stkBubbleWire._doc){                              // 문서 층 소멸 손잡이는 한 번만
+    stkBubbleWire._doc = 1;
+    document.addEventListener('selectionchange', () => {
+      const s2 = window.getSelection();
+      if (!s2 || s2.isCollapsed) stkBubKill();           // 선택 해제·다른 곳 탭 = 소멸
+    });
+    addEventListener('scroll', stkBubKill, true);        // 스크롤 = 소멸(§6 기본값)
+  }
+}
 function stkPick(box, base, rows){
   const grab = ev => {
     if (!S.stick) return;
@@ -3236,22 +3326,33 @@ function stkPick(box, base, rows){
       toast('⚠ 이 조문에 필기가 있다 — 태그를 붙이면 폭이 바뀌어 필기가 어긋난다', 1);
       return;
     }
+    const offDrop = () => {   /* ★ v3-N §4 — 빈 곳·여백 드랍 = off 저장(앵커 유지 · 카드 안 클램프) */
+      if (!mv || !STKMV0 || STKMV0.k !== mv) return;
+      const om2 = mkAll()[mv]; if (!om2) return;
+      const bx = box.getBoundingClientRect();
+      const x2 = Math.max(bx.left + 4, Math.min(ev.clientX, bx.right - 10));
+      const y2 = Math.max(bx.top + 4, Math.min(ev.clientY, bx.bottom - 10));
+      mkPut(mv, Object.assign({}, om2, { off: { dx: Math.round(x2 - STKMV0.x), dy: Math.round(y2 - STKMV0.y) } }));
+      toast('🏷 표시 자리만 옮겼다 — 앵커는 그대로(점선이 잇는다)');
+      render();
+    };
     const r = document.caretRangeFromPoint
       ? document.caretRangeFromPoint(ev.clientX, ev.clientY) : null;
-    if (!r) return;
+    if (!r){ offDrop(); return; }
     const sn = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentNode;
     const line = sn && sn.closest ? sn.closest('.ln') : null;
-    if (!line) return;
+    if (!line){ offDrop(); return; }
     const ri = +line.dataset.ri;
-    const row = rows[ri]; if (!row) return;
+    const row = rows[ri]; if (!row){ offDrop(); return; }
     const pre = document.createRange();
     pre.selectNodeContents(line); pre.setEnd(r.startContainer, r.startOffset);
     let a = plainLen(pre.cloneContents());
     const t = String(row.t || '');
+    if (mv && !/\S/.test(t.charAt(a) || '')){ offDrop(); return; }   /* ★ v3-N §4 — 낱말 위가 아니다 */
     let b = a;
     while (a > 0 && /\S/.test(t.charAt(a - 1))) a--;
     while (b < t.length && /\S/.test(t.charAt(b))) b++;
-    if (b <= a) return;
+    if (b <= a){ offDrop(); return; }
     const cross = (mkApply(base, rows).eff[ri] || []).some(m =>
       (a < m.b && b > m.a) && !(a >= m.a && b <= m.b) && !(m.a >= a && m.b <= b));
     if (cross){ toast('이미 있는 마크업과 걸쳐서 겹친다 — 다른 자리에 놓아라', 1); return; }
@@ -3941,6 +4042,8 @@ function pitEdit(target, struct, wi, word, ev){
 /* 줄 하나에 표시(밑줄+오른쪽 조각) + 길게 누르면 붙이기.
    text = 이 줄의 평문(splitWords 색인 기준). 줄 앞에 각주표시 등 다른 글이 있어도
    pref(여분 글자 수)로 자리를 맞춘다. */
+let PITCXL = null;   /* ★ v3-N §6 — 진행 중 길게누르기 타이머의 취소 손잡이 */
+document.addEventListener('selectionchange', () => { if (PITCXL) PITCXL(); });
 function pitWire(lineEl, target, struct, text){
   if (!lineEl || lineEl._pit) return; lineEl._pit = 1;
   text = String(text || '');
@@ -3990,9 +4093,12 @@ function pitWire(lineEl, target, struct, text){
   let t0 = null, sx = 0, sy = 0;
   lineEl.addEventListener('pointerdown', ev => {
     if (S.ink) return;                        // 애플펜슬 필기 켜진 동안은 안 붙는다
+    const s0 = window.getSelection();         /* ★ v3-N §6 — 긁는 중(선택 있음)엔 안 붙는다 */
+    if (s0 && !s0.isCollapsed) return;
     sx = ev.clientX; sy = ev.clientY;
     if (t0) clearTimeout(t0);
     t0 = setTimeout(() => { t0 = null; pitAsk(lineEl, target, struct, text, pref, ev); }, 500);
+    PITCXL = cancel;                          /* ★ v3-N §6 — selectionchange 가 나면 취소 */
   });
   const cancel = () => { if (t0){ clearTimeout(t0); t0 = null; } };
   lineEl.addEventListener('pointerup', cancel);
@@ -4657,7 +4763,8 @@ function popCard(sid, ev){
 async function popPan(caseNo, selfKey, ev){
   const body = popShell('', '⚖ ' + caseNo);
   showPop(ev);
-  const p = (PANIDX || {})[caseNo] || null;
+  /* ★ v3-N §1 — 지연 구축 + 조회 쪽도 공백 제거(구축 쪽 :7027 규칙과 대칭) */
+  const p = (await panIdx())[String(caseNo).replace(/\s/g, '')] || null;
   try{
     if (p){
       const hd = el('div');
@@ -4687,7 +4794,7 @@ async function popPan(caseNo, selfKey, ev){
         S.precTab = p.출처 === '요약본' ? '요약' : '원문'; closeAllPops(); render(); };
       body.appendChild(go);
     } else {
-      body.appendChild(el('div', 'cdim', '수집본 없음'));
+      body.appendChild(el('div', 'cdim', '수집본·요약본에 없다'));   /* ★ v3-N §1 */
     }
   }catch(e){ body.appendChild(el('div', 'cdim', '읽지 못했다 — ' + (e && e.message || e))); }
   const bag = (((LNKIDX || {}).panN || {})[caseNo] || [])
@@ -5731,6 +5838,19 @@ let LNKIDX = null;
    길은 둘 — ① 리담 짝이 있으면 그쪽 근거를 물려받는다(정본 · 실측 859건 전건 매칭)
              ② 없으면 해설 본문에서 뽑는다(사건번호 실측 396지문 · 고유 293) */
 let JOKEY = null, PANIDX = null, P7LID = null;
+/* ★ v3-N §1 — PANIDX 지연 구축. 조문 탭으로 직행하면 1차객 로더가 안 돌아 null 이었고,
+   popPan 이 요약본이든 수집본이든 전부 「수집본 없음」을 냈다(실측 :4657·:5733·:7027). */
+async function panIdx(){
+  if (PANIDX) return PANIDX;
+  try{
+    const PL = await get('prec_특허_리스트.json');
+    const M = {};
+    (PL.판례 || []).forEach(p => { const k = String(p.사건번호 || p.id || '').replace(/\s/g, '');
+      if (k && !M[k]) M[k] = p; });
+    PANIDX = M;
+  }catch(e){}
+  return PANIDX || {};
+}
 const PAN_SRC = '(\\d{2,4})\\s?(재후|재다|카허|후|허|다|도|므|두|마)\\s?(\\d{1,6})';
 function panNo(s){
   const out = [], seen = {}, rx = new RegExp(PAN_SRC, 'g');
@@ -7024,9 +7144,7 @@ async function viewJimun(){
     try{P7=await get('jimun_7pan.json');}catch(e){}
     // 칩 판정에 쓰는 두 표를 미리 싣는다(캐시라 두 번째부터는 공짜다)
     try{const JL=await get('jo_특허법_목록.json');JOKEY={};JL.조.forEach(x=>{JOKEY[x.k]=x.t||'';});}catch(e){}
-    try{const PL=await get('prec_특허_리스트.json');PANIDX={};
-        (PL.판례||[]).forEach(p=>{const k=String(p.사건번호||p.id||'').replace(/\s/g,'');
-          if(k&&!PANIDX[k])PANIDX[k]=p;});}catch(e){}
+    await panIdx();   /* ★ v3-N §1 — 같은 헬퍼로(중복 구축 제거 · get() 캐시라 공짜) */
     try{PT=await get('p7_목차.json');}catch(e){}
     try{MG=await get('mokcha_병합.json');}catch(e){}
     // ★ v3-F §6-1 — 📍 좌표기억 상태 판정용(want/has/stale)
