@@ -48,7 +48,7 @@ button{cursor:pointer}
 .stc .st{flex:1;overflow:auto}
 .hd{font-size:10px;color:#666;border-left:3px solid #666;padding-left:4px;margin-bottom:5px;font-weight:700}
 .tt{display:grid;grid-template-columns:22px 1fr;row-gap:1px;font-size:9px;color:#555}
-.tt .r{height:13px;position:relative;border-bottom:1px dotted var(--m8b);background-image:repeating-linear-gradient(90deg,transparent 0 calc(16.66% - 1px),var(--m8a) calc(16.66% - 1px) 16.66%)}
+.tt .r{height:12px;position:relative;border-bottom:1px dotted var(--m8b);background-image:repeating-linear-gradient(90deg,transparent 0 calc(16.66% - 1px),var(--m8a) calc(16.66% - 1px) 16.66%)}
 .tt .r b{position:absolute;top:1px;height:11px;display:block;border-radius:1px;cursor:pointer}
 .tt .tth{position:relative;height:9px;font-size:7px;color:#999}
 .tt .tth i{position:absolute;top:0;transform:translateX(-50%);font-style:normal}
@@ -107,8 +107,8 @@ button{cursor:pointer}
 .wk2{display:grid;grid-template-columns:26px repeat(7,1fr);font-size:9px}
 .wk2 .wh{text-align:center;font-weight:700;padding:3px 0;border-bottom:1px solid var(--m8b);color:#555}
 .wk2 .wh.today{color:var(--blue)}
-.wk2 .wlab{display:grid;grid-template-rows:repeat(22,1fr);color:#888;text-align:right;padding-right:3px;height:374px}
-.wk2 .wcol{position:relative;height:374px;border-left:1px solid var(--m8b);background-image:repeating-linear-gradient(180deg,transparent 0 calc(100%/22 - 1px),var(--m8a) calc(100%/22 - 1px) calc(100%/22))}
+.wk2 .wlab{display:grid;grid-template-rows:repeat(24,1fr);color:#888;text-align:right;padding-right:3px;height:374px}
+.wk2 .wcol{position:relative;height:374px;border-left:1px solid var(--m8b);background-image:repeating-linear-gradient(180deg,transparent 0 calc(100%/24 - 1px),var(--m8a) calc(100%/24 - 1px) calc(100%/24))}
 .wk2 .wcol b{position:absolute;left:1px;right:1px;display:block;border-radius:1px;cursor:pointer}
 .wk2 .wt{text-align:center;font-weight:700;padding:3px 0;border-top:1px solid var(--m8b);color:#333}
 .wk2 .wt.z{color:#bbb;font-weight:400}
@@ -166,7 +166,7 @@ button{cursor:pointer}
 .card .lb{font-size:10.5px;padding:5px 8px;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-between}
 .thumb{width:100%;height:84px;display:grid;grid-template-columns:14px 1fr 30px;gap:3px;position:relative;font-size:7px}
 .thumb .rb{writing-mode:vertical-rl;background:var(--m8);color:#fff;text-align:center;font-weight:700;font-size:7px;letter-spacing:.1em}
-.thumb .rows{display:grid;grid-template-rows:repeat(22,1fr);gap:1px;background:#fff;padding:2px}
+.thumb .rows{display:grid;grid-template-rows:repeat(24,1fr);gap:1px;background:#fff;padding:2px}
 .thumb .rows i{display:block;position:relative;background:#fafafa}
 .thumb .rows i b{position:absolute;left:0;top:0;bottom:0;display:block}
 .thumb .cols{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;background:#fff;padding:2px;grid-column:2/4}
@@ -495,7 +495,15 @@ function stopTimer(){
  upsertSession(s);run=null;LS.del('tt.run');toast(`저장 ${dur(s.b-s.a)}`);render();
 }
 function elapsed(){return run?Math.max(0,Math.floor((Date.now()-run.at)/1000)):0}
-setInterval(()=>{if(run){const e=document.getElementById('runT');if(e)e.textContent=fmtSec(elapsed());if(pipWin&&!pipWin.closed){const p=pipWin.document.getElementById('runT');if(p)p.textContent=fmtSec(elapsed())}}},1000);
+/* 매 초: 경과·선택 줄 시간·Total 갱신. 매 분: 진행 중 블록을 다시 그림 */
+setInterval(()=>{if(!run)return;
+ const em=Math.floor(elapsed()/60);
+ [document,pipWin&&!pipWin.closed?pipWin.document:null].forEach(D=>{if(!D)return;
+  const e=D.getElementById('runT');if(e)e.textContent=fmtSec(elapsed());
+  const rm=D.getElementById('stRunMin');if(rm)rm.textContent=dur((+rm.dataset.base||0)+em);
+  const t2=D.getElementById('stTot');if(t2)t2.textContent=dur((+t2.dataset.base||0)+(run.nt?0:em));});
+ if(elapsed()>0&&elapsed()%60===0)render();
+},1000);
 const fmtSec=s=>`${pad(Math.floor(s/3600))}:${pad(Math.floor(s/60)%60)}:${pad(s%60)}`;
 function manualSave(doc){doc=doc||document;
  const a=doc.getElementById('mA').value,b=doc.getElementById('mB').value;if(!a||!b){toast('시작·끝을 채워줘');return;}
@@ -557,7 +565,7 @@ const navBtns=(prev,next,home)=>`<div class="nav"><button onclick="${prev}">‹<
 function weekNo(d){return pWeekNo(myPlan(),d)} // W1 = plan.weekStart (기본 2026-08-03, 계획 설정에서 변경)
 
 /* ----- 일간 ----- */
-function ttRows(sess,{rows=22,thin=false}={}){
+function ttRows(sess,{rows=24,thin=false}={}){ // 05~04 24행 — 새벽 3~4시(전날 소속)도 보이게 (8/28 사람 확정)
  const s0=dayStart()*60;let h='';
  const now=logicalNow();const isToday=curDate()===now.d;
  for(let r=0;r<rows;r++){
@@ -597,21 +605,23 @@ function dayRows(who,d){
 function sheetHTML(who,d,sess,{withRun=true}={}){
  const dt=parse(d);const tot=mSum(sess);
  const rows=dayRows(who,d);const mine=who===cfg.person;
+ const runMin=mine&&run&&run.d===d?Math.floor(elapsed()/60):0; // 진행 중 경과(분) — 매 초 stRunMin/stTot 로 갱신
  const rowHTML=r=>{
   const on=mine&&stSel&&r.type!=='legacy'&&stSel.type===r.type&&stSel.id===r.id;
+  const isRun=mine&&run&&run.d===d&&r.type!=='legacy'&&((r.type==='item'&&run.plan===r.id)||(r.type==='cat'&&!run.plan&&run.cat===r.id));
   const click=r.type==='legacy'?(r.sess[0]?`editSession('${r.sess[0].id}',document)`:''):(mine?`selRow('${r.type}','${r.id}')`:'');
   const lbl=r.type==='legacy'?r.label:[r.cat?r.cat.name:'',r.label].filter(Boolean).join(' ');
-  return`<div class="it ${on?'selr':''} ${r.done?'done2':''}" onclick="${click}"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl">${esc(lbl)||'—'}</span><span>${dur(r.min)}</span>${on&&r.type==='item'?`<button class="btn" onclick="event.stopPropagation();toggleTodo('${r.id}')">${r.done?'완료 취소':'완료'}</button>`:''}</div>`;
+  return`<div class="it ${on?'selr':''} ${r.done?'done2':''}" onclick="${click}"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl">${esc(lbl)||'—'}</span><span${isRun?` id="stRunMin" data-base="${r.min}"`:''}>${dur(r.min+(isRun?runMin:0))}</span>${on&&r.type==='item'?`<button class="btn" onclick="event.stopPropagation();toggleTodo('${r.id}')">${r.done?'완료 취소':'완료'}</button>`:''}</div>`;
  };
  return`<div class="sheet"><div class="ribbon">${d.replace(/-/g,'.')} ${['SUN','MON','TUE','WED','THU','FRI','SAT'][dt.getDay()]}</div><div class="paper">
  <div><div class="hd">Time Table</div><div class="tt"><span></span><div class="tth">${[1,2,3,4,5].map(n=>`<i style="left:${(n*100/6).toFixed(2)}%">${n*10}</i>`).join('')}</div>${ttRows(sess)}</div></div>
  <div class="stc"><div class="hd">Study Time</div><div class="st">${rows.map(rowHTML).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
- <div class="foot"><div>Start <b>${sess.length?hmDisp(sess[0].a):'--:--'}</b> &nbsp; Stop <b>${sess.length?hmDisp(Math.max(...sess.map(x=>x.b))):'--:--'}</b></div><div>Total <span class="big">${dur(tot)}</span></div></div></div></div></div>`;
+ <div class="foot"><div>Start <b>${sess.length?hmDisp(sess[0].a):(mine&&run&&run.d===d?hmDisp(run.a):'--:--')}</b> &nbsp; Stop <b>${sess.length?hmDisp(Math.max(...sess.map(x=>x.b))):'--:--'}</b></div><div>Total <span class="big"${mine&&run&&run.d===d?` id="stTot" data-base="${tot}"`:''}>${dur(tot+(mine&&run&&run.d===d&&!run.nt?runMin:0))}</span></div></div></div></div></div>`;
 }
 function mbarHTML(){
  const si=selInfo();
  const line=run
-  ?`<div class="run">▶ ${esc(run.s)} ${esc([run.p,run.i].filter(Boolean).join(' '))} · <span id="runT">${fmtSec(elapsed())}</span> · ${hmDisp(run.a)}~</div>`
+  ?`<div class="run">▶ ${esc(run.s)} ${esc([run.p,run.i].filter(Boolean).join(' '))} · <span id="runT">${fmtSec(elapsed())}</span> · 시작 ${hmDisp(run.a)}</div>`
   :(si?`<div class="run" style="color:#333"><i class="plandot" style="background:${subjColor(si.s)}"></i>${esc(si.s)} ${esc([si.catName,si.itemT].filter(Boolean).join(' '))||'—'}</div>`
       :`<div class="run" style="color:#999">Study Time 에서 계획을 골라줘</div>`);
  return`<div class="mbar">${line}
@@ -754,9 +764,9 @@ function weekStart(d){const dt=parse(d);const w=(dt.getDay()+6)%7;dt.setDate(dt.
 function weekHTML(){
  const d=curDate(),ws=weekStart(d);const days=[...Array(7)].map((_,i)=>addDays(ws,i));const s0=dayStart()*60;
  const sessD=days.map(x=>sessionsOf(cfg.person,x));const tots=sessD.map(mSum);const wt=tots.reduce((a,b)=>a+b,0);
- const H=22*60;
+ const H=24*60;
  const cols=days.map((x,i)=>`<div class="wcol">${sessD[i].map(y=>`<b style="top:${((y.a-s0)/H*100).toFixed(2)}%;height:${((y.b-y.a)/H*100).toFixed(2)}%;background:${subjColor(y.s)}${y.nt?NT_HATCH:''}" title="${esc(y.s)} ${hmDisp(y.a)}-${hmDisp(y.b)}" onclick="setDate('${x}');editSession('${y.id}',document)"></b>`).join('')}</div>`).join('');
- const labs=`<div class="wlab">${[...Array(22)].map((_,r)=>`<span>${pad((dayStart()+r)%24)}</span>`).join('')}</div>`;
+ const labs=`<div class="wlab">${[...Array(24)].map((_,r)=>`<span>${pad((dayStart()+r)%24)}</span>`).join('')}</div>`;
  const tf=todoFile(cfg.person);const all=sessD.flat();
  const byCat=new Map();const other={};
  all.forEach(y=>{const cid=sessCatId(y,tf);const m2=y.nt?0:y.b-y.a;if(cid)byCat.set(cid,(byCat.get(cid)||0)+m2);else other[y.s]=(other[y.s]||0)+m2});
@@ -873,7 +883,7 @@ function ddayAt(d){const xs=(settings.exams||[]).filter(x=>!x.del&&x.date).sort(
 function snapMonthStats(who,m){const fd=parse(m+'-01');const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();const t0=today();let tot=0,miss=0;
  for(let i=1;i<=nd;i++){const x=`${m}-${pad(i)}`;const sn=snapOf(who,x);if(sn)tot+=sn.total||0;else if(x<t0)miss++;}
  return{tot,miss}}
-function ttSnap(ss){const s0=dayStart()*60;let h='';for(let r=0;r<22;r++){const a=s0+r*60,b=a+60;let bars='';ss.forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${subjColor(x.s)}${x.nt?NT_HATCH:''}"></b>`});h+=`<span>${pad((a/60)%24)}</span><div class="r">${bars}</div>`}return h}
+function ttSnap(ss){const s0=dayStart()*60;let h='';for(let r=0;r<24;r++){const a=s0+r*60,b=a+60;let bars='';ss.forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${subjColor(x.s)}${x.nt?NT_HATCH:''}"></b>`});h+=`<span>${pad((a/60)%24)}</span><div class="r">${bars}</div>`}return h}
 function snapSess(sn,d){return(sn.ss||[]).map(z=>({s:z[0],a:z[1],b:z[2],nt:z[3],d}))}
 function footBg(t){return t>=settings.redHours*60?'#FBDDE2':t>=settings.skyHours*60?'#DCEBFA':'#F1F1F1'}
 function dayCard(who,x){
@@ -955,9 +965,9 @@ function snapBarHTML(){
 function thumb(sess,weekly){
  const s0=dayStart()*60;
  if(weekly){ // sess = [7][...]
-  const cols=sess.map(day=>'<i>'+day.map(x=>`<b style="top:${(x.a-s0)/1320*100}%;height:${(x.b-x.a)/1320*100}%;background:${subjColor(x.s)}"></b>`).join('')+'</i>').join('');
+  const cols=sess.map(day=>'<i>'+day.map(x=>`<b style="top:${(x.a-s0)/1440*100}%;height:${(x.b-x.a)/1440*100}%;background:${subjColor(x.s)}"></b>`).join('')+'</i>').join('');
   const t=mSum(sess.flat());return`<div class="thumb"><div class="rb">WEEK</div><div class="cols">${cols}</div><span class="tot">${dur(t)}</span></div>`;}
- let rows='';for(let r=0;r<22;r++){const a=s0+r*60,b=a+60;let bar='';sess.forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bar+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${subjColor(x.s)}"></b>`});rows+='<i>'+bar+'</i>'}
+ let rows='';for(let r=0;r<24;r++){const a=s0+r*60,b=a+60;let bar='';sess.forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bar+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${subjColor(x.s)}"></b>`});rows+='<i>'+bar+'</i>'}
  const t=mSum(sess);const names=[...new Set(sess.map(x=>x.s))];
  return`<div class="thumb"><div class="rb">${parseInt(sess[0]?.d.slice(8)||'')}</div><div class="rows">${rows}</div><div class="side2">${names.map(n=>`<span style="color:${subjColor(n)}">■</span> ${esc(n)}`).join('<br>')||'—'}</div><span class="tot">${dur(t)}</span></div>`;
 }
@@ -1255,7 +1265,7 @@ async function pip(){
  if(pipWin&&!pipWin.closed){pipWin.focus();return;}
  try{const w=await documentPictureInPicture.requestWindow({width:520,height:640});pipWin=w;
   [...document.styleSheets].forEach(s=>{try{const st=w.document.createElement('style');st.textContent=[...s.cssRules].map(r=>r.cssText).join('\n');w.document.head.appendChild(st)}catch(e){}});
-  const st=w.document.createElement('style');st.textContent='body{background:#fff;padding:6px;overflow:auto;height:100vh}.pipwrap{min-width:420px;display:flex;flex-direction:column;height:100%}.pipwrap .sheet{flex:1;display:flex;flex-direction:column;min-height:0}.pipwrap .paper{flex:1;min-height:0}.pipwrap .tt .r{height:17px}.pipwrap .paper{grid-template-columns:5fr 6fr!important}.pipwrap .mbar .man{display:none}.pipwrap .st{max-height:none}';w.document.head.appendChild(st);
+  const st=w.document.createElement('style');st.textContent='body{background:#fff;padding:6px;overflow:auto;height:100vh}.pipwrap{min-width:420px;display:flex;flex-direction:column;height:100%}.pipwrap .sheet{flex:1;display:flex;flex-direction:column;min-height:0}.pipwrap .paper{flex:1;min-height:0}.pipwrap .tt .r{height:15px}.pipwrap .paper{grid-template-columns:5fr 6fr!important}.pipwrap .mbar .man{display:none}.pipwrap .st{max-height:none}';w.document.head.appendChild(st);
   ['startTimer','stopTimer','manualSave','editSession','render','curDate','setDate','addDays','today','toast','selRow','toggleTodo','pickTodoItem','pullFromBands'].forEach(n=>w[n]=window[n]);
   w.addEventListener('pagehide',()=>{pipWin=null});
   pipPaint();
