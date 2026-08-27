@@ -44,6 +44,7 @@ button{cursor:pointer}
 .sheet{background:var(--m8);padding:10px;border-radius:6px}
 .ribbon{background:#fff;text-align:center;font-weight:700;font-size:16px;padding:5px;margin:0 60px 8px;clip-path:polygon(0 0,100% 0,96% 50%,100% 100%,0 100%,4% 50%)}
 .paper{background:#fff;border-radius:4px;padding:10px;display:grid;grid-template-columns:5fr 6fr;gap:12px;background-image:linear-gradient(#f0f0f0 1px,transparent 1px),linear-gradient(90deg,#f0f0f0 1px,transparent 1px);background-size:10px 10px}
+.paper>div{min-width:0}
 .stc{display:flex;flex-direction:column;min-height:0}
 .stc .st{flex:1;overflow:auto}
 .hd{font-size:10px;color:#666;border-left:3px solid #666;padding-left:4px;margin-bottom:5px;font-weight:700}
@@ -61,7 +62,7 @@ button{cursor:pointer}
 .st .it .btn{padding:1px 7px;font-size:10px;flex:none}
 .st .sw{width:9px;height:9px;flex:none}
 .st .nm{width:28px;font-weight:700}
-.st .pl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st .pl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .st .mk{color:var(--blue);font-weight:700;width:12px}
 .foot{border-top:1px solid #ddd;margin-top:auto;padding-top:6px;display:flex;justify-content:space-between;font-size:10px;color:#555;align-items:flex-end}
 .foot .big{font-size:22px;font-weight:800;color:#222}
@@ -776,16 +777,13 @@ function weekHTML(){
  Object.entries(other).forEach(([s,m2])=>rows.push({s,n:'기타',m:m2}));
  const ordN=settings.subjects.map(x=>x.n);const oi=s=>{const i=ordN.indexOf(s);return i<0?999:i};
  rows.sort((a,b)=>oi(a.s)-oi(b.s)||b.m-a.m);
- const firstRec=days.find((x,i)=>tots[i]>0);
- const attEnd=today()<days[6]?today():days[6];
- const attDays=firstRec&&firstRec<=attEnd?Math.round((parse(attEnd)-parse(firstRec))/864e5)+1:0;
  return`<div class="ttl"><b>타임테이블 <span>› 주간</span> ${topSel('week')}</b><div class="r">${navBtns("setDate(addDays(curDate(),-7))","setDate(addDays(curDate(),7))","setDate(today())")} W${pad(weekNo(ws))}</div></div>
  <div class="sheet"><div class="ribbon">${ws.replace(/-/g,'.')} ~ ${days[6].replace(/-/g,'.')}</div><div class="paper">
  <div><div class="hd">Time Table</div><div class="wk2"><div class="wh"></div>${days.map(x=>`<div class="wh ${x===today()?'today':''}">${['SUN','MON','TUE','WED','THU','FRI','SAT'][parse(x).getDay()]}</div>`).join('')}
  ${labs}${cols}
  <div class="wt"></div>${tots.map(t2=>`<div class="wt ${t2?'':'z'}">${dur(t2)}</div>`).join('')}</div></div>
  <div class="stc"><div class="hd">Study Time</div><div class="st">${rows.map(r=>`<div class="it"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl">${esc(r.n)}</span><span>${dur(r.m)}</span></div>`).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
- <div class="wstat"><span>Avg <b>${dur(Math.round(wt/7))}</b></span><span>Attn <b>${attDays?dur(Math.round(wt/attDays)):'00:00'}</b></span><span>Total <span class="big">${dur(wt)}</span></span></div></div>
+ <div class="wstat"><span>Avg <b>${dur(Math.round(wt/7))}</b></span><span>Total <span class="big">${dur(wt)}</span></span></div></div>
  </div></div>`;
 }
 function subjTotals(list){const g={};list.forEach(x=>{if(x.nt)return;g[x.s]=(g[x.s]||0)+x.b-x.a});return Object.entries(g).map(([s,min])=>({s,min})).sort((a,b)=>b.min-a.min)}
@@ -806,7 +804,7 @@ function monthHTML(){
    }else row+=`<div class="d out"></div>`;
    cur=addDays(cur,1);
   }
-  cells+=row+`<div class="wsum">${wsum?dur(wsum):''}</div>`;
+  cells+=row+`<div class="wsum" style="${wsum?'':'color:#ccc;font-weight:400'}">${dur(wsum)}</div>`;
  }
  const tot=mSum(allS);
  const tf=todoFile(cfg.person);
@@ -817,10 +815,7 @@ function monthHTML(){
   if(!t2)off++;else if(t2<settings.skyHours*60)c0++;else if(t2<settings.redHours*60)c6++;else c10++;
   const its=itByDay[x];if(its&&its.length&&its.every(z=>z.done))allClear++;
  }
- let firstRec=null;for(let i=1;i<=nd;i++){const x=`${m}-${pad(i)}`;if(dayMin(x)>0){firstRec=x;break}}
- const attEnd=ym(t0)===m?t0:lastD;
- const attDays=firstRec&&firstRec<=attEnd?Math.round((parse(attEnd)-parse(firstRec))/864e5)+1:0;
- const sum=`<div class="mosum"><span>ALL Clear <b>${pad(allClear)}일</b></span><span>OFF <b>${pad(off)}일</b> / 00+ <b>${pad(c0)}일</b></span><span>${pad(settings.skyHours)}+ <b>${pad(c6)}일</b> / ${pad(settings.redHours)}+ <b>${pad(c10)}일</b></span><span>Avg <b>${dur(Math.round(tot/nd))}</b> / Attn <b>${attDays?dur(Math.round(tot/attDays)):'00:00'}</b></span><span class="big">${dur(tot)}</span></div>`;
+ const sum=`<div class="mosum"><span>ALL Clear <b>${pad(allClear)}일</b></span><span>OFF <b>${pad(off)}일</b> / 00+ <b>${pad(c0)}일</b></span><span>${pad(settings.skyHours)}+ <b>${pad(c6)}일</b> / ${pad(settings.redHours)}+ <b>${pad(c10)}일</b></span><span>Avg <b>${dur(Math.round(tot/nd))}</b></span><span class="big">${dur(tot)}</span></div>`;
  /* To do Tracker */
  const catById=new Map(tf.data.cats.map(c=>[c.id,c]));
  const catDays=new Map();const catMin=new Map();
