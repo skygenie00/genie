@@ -181,6 +181,8 @@ button{cursor:pointer}
  .ttl b{font-size:16px}
  .wk .h small{display:none}
 }
+.moretabs{display:none}
+@media (max-width:760px){.moretabs{display:flex}}
 .hidden{display:none!important}
 .toast{position:fixed;left:50%;bottom:78px;transform:translateX(-50%);background:#222;color:#fff;padding:8px 14px;border-radius:20px;font-size:12px;z-index:70;opacity:0;transition:.25s;pointer-events:none}
 .toast.on{opacity:1}
@@ -371,6 +373,7 @@ function renderMain(){
  else if(v=='set')m.innerHTML=setHTML();
  window.scrollTo(0,0);
 }
+const moreTabs=v=>`<div class="views moretabs"><span class="${v=='gal'?'on':''}" onclick="setView('gal')">데일리 모음</span><span class="${v=='set'?'on':''}" onclick="setView('set')">설정</span></div>`;
 const topSel=v=>`<select class="topsel" onchange="setView(this.value)"><option value="day" ${v=='day'?'selected':''}>일간</option><option value="week" ${v=='week'?'selected':''}>주간</option><option value="month" ${v=='month'?'selected':''}>월간</option></select>`;
 const navBtns=(prev,next,home)=>`<div class="nav"><button onclick="${prev}">‹</button><button onclick="${home}">오늘</button><button onclick="${next}">›</button></div>`;
 function weekNo(d){return Math.floor((parse(d)-parse('2026-08-03'))/864e5/7)+1} // 꼬까 시트 W1 = 8/3 기준
@@ -501,14 +504,14 @@ function galHTML(){
  const months=[];for(let i=0;i<6;i++)months.push(ym(shiftMonth(today()+'',-i)).replace(/(\d{4})-(\d{2})/,'$1-$2'));
  const tot=who=>dur(sessionsMonth(who,m).reduce((a,x)=>a+x.b-x.a,0));
  const people=settings.people;
- return`<div class="ttl"><b>데일리 모음</b><div class="r">${navBtns("galMonth(-1)","galMonth(1)","galMonth(0)")} ${m.replace('-','.')}</div></div>
+ return`${moreTabs('gal')}<div class="ttl"><b>데일리 모음</b><div class="r">${navBtns("galMonth(-1)","galMonth(1)","galMonth(0)")} ${m.replace('-','.')}</div></div>
  <div class="views">${months.map(x=>`<span class="${x==m?'on':''}" onclick="ui.galMonth='${x}';LS.set('tt.ui',ui);render()">${x.slice(2).replace('-','.')}월</span>`).join('')}</div>
  <div class="gal">${people.map(p=>`<div><div class="colh">${esc(p)} <small>${tot(p)}</small></div><div class="grid3">${col(p)}</div></div>`).join('')}</div>`;
 }
 function galMonth(n){ui.galMonth=n==0?ym(today()):ym(shiftMonth((ui.galMonth||ym(today()))+'-01',n));LS.set('tt.ui',ui);render();syncAll(true)}
 /* ----- 설정 ----- */
 function setHTML(){
- return`<div class="ttl"><b>설정</b></div><div class="set">
+ return`${moreTabs('set')}<div class="ttl"><b>설정</b></div><div class="set">
  <div class="row"><label>나는</label><select onchange="cfg.person=this.value;LS.set('tt.cfg',cfg);render()">${settings.people.map(p=>`<option ${cfg.person==p?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
  <div class="row"><label>GitHub 토큰</label><input type="password" id="tok" value="${esc(cfg.token)}" placeholder="github_pat_…" autocomplete="off"><button class="btn" onclick="cfg.token=$('tok').value.trim();LS.set('tt.cfg',cfg);toast('저장');syncAll()">저장 후 동기화</button></div>
  <div class="row"><label>저장소</label><span>${REPO} · ${BRANCH} · 이 기기 브라우저에만 저장됨</span></div>
