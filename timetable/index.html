@@ -157,7 +157,7 @@ button{cursor:pointer}
 .gal{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .gal .colh{font-size:13px;font-weight:700;padding:4px 0 8px;border-bottom:2px solid #222;margin-bottom:8px;display:flex;justify-content:space-between}
 .gal .colh small{font-weight:400;color:#888}
-.grid3{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .card{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fafafa;cursor:pointer}
 .card.empty{background:#f4f4f4;border-style:dashed;cursor:default}
 .card .th{height:96px;display:flex;align-items:center;justify-content:center;padding:6px;background:#f6f6f6}
@@ -174,6 +174,15 @@ button{cursor:pointer}
 .thumb .cols i b{position:absolute;left:0;right:0;display:block}
 .thumb .side2{background:#fff;padding:2px;line-height:1.3;overflow:hidden;color:#555}
 .thumb .tot{position:absolute;right:3px;bottom:1px;font-weight:800;font-size:11px}
+/* 데일리 모음 스냅샷 */
+.snapbadge{position:absolute;right:4px;top:4px;font-size:8px;background:#fff;border:1px solid #ddd;border-radius:3px;padding:0 4px;color:#888}
+.snapbadge.mod{background:#c60;border-color:#c60;color:#fff}
+.card .lb b{font-weight:800;font-size:11px}
+.mthumb{width:100%;height:84px;display:grid;grid-template-rows:14px 1fr;gap:2px}
+.mthumb .rb2{background:var(--m8);color:#fff;text-align:center;font-weight:700;font-size:8px;letter-spacing:.15em;line-height:14px}
+.mthumb .mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:#fff;padding:2px}
+.mthumb .mgrid i{display:block;min-height:6px;border:1px solid #f0f0f0}
+.galdot{display:inline-block;width:14px;height:14px;border-radius:50%;border:1.5px solid #222;box-sizing:border-box;flex:none}
 /* settings */
 .set{max-width:560px;font-size:12px}
 .set .row{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap}
@@ -206,7 +215,8 @@ button{cursor:pointer}
  .three{grid-template-columns:1fr;gap:6px}
  .col{min-height:0}
  .gal{grid-template-columns:1fr}
- .grid3{grid-template-columns:repeat(3,1fr)}
+ .grid3{grid-template-columns:repeat(4,1fr)}
+ .cmt .cmby{display:none}
  .ribbon{margin:0 20px 8px}
  .paper{grid-template-columns:1fr}
  .pnav{display:grid;grid-template-columns:repeat(3,1fr);position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);z-index:40;padding-bottom:env(safe-area-inset-bottom)}
@@ -356,6 +366,10 @@ function todoFile(who){const f=loadF(todoPath(who),{v:2,cats:[],items:[]});const
  if(!Array.isArray(d.items))d.items=[];
  d.items.forEach(x=>{if(x.plan&&!x.cat){x.cat=x.plan;delete x.plan}});
  return f}
+const snapPath=(who,m)=>`snaps/${who}/${m}.json`;
+const EMPTY_SNAP=()=>({v:1,days:{},weeks:{},months:{}});
+function snapFileF(who,m){const f=loadF(snapPath(who,m),EMPTY_SNAP());['days','weeks','months'].forEach(k=>{if(!f.data[k])f.data[k]={}});return f}
+function snapOf(who,d){return snapFileF(who,ym(d)).data.days[d]||null}
 function sharedFile(){return loadF('todos/공통.json',{v:1,items:[]})}
 function sharedItems(){return sharedFile().data.items.filter(x=>!x.del)}
 function upsertShared(t){const f=sharedFile();t.u=Date.now();const i=f.data.items.findIndex(x=>x.id===t.id);if(i>=0)f.data.items[i]=t;else f.data.items.push(t);f.dirty=true;saveF('todos/공통.json',f);scheduleSync();}
@@ -404,6 +418,11 @@ function mergeList(a,b){const m=new Map();[...a,...b].forEach(x=>{const o=m.get(
 function mergeFile(path,local,remote){
  if(path.startsWith('sessions/'))return{v:1,sessions:mergeList(local.sessions||[],remote.sessions||[])};
  if(path==='todos/공통.json')return{v:1,items:mergeList(local.items||[],remote.items||[])};
+ if(path.startsWith('snaps/')){ // 날짜·주·달 키 단위로 u(없으면 at) 큰 쪽
+  const out={v:1,days:{},weeks:{},months:{}};
+  ['days','weeks','months'].forEach(k=>{const A=(local||{})[k]||{},B=(remote||{})[k]||{};new Set([...Object.keys(A),...Object.keys(B)]).forEach(key=>{const a=A[key],b=B[key];out[k][key]=!a?b:(!b?a:(((a.u||a.at||0)>=(b.u||b.at||0))?a:b))})});
+  return out;
+ }
  if(path.startsWith('todos/'))return{v:2,cats:mergeList(local.cats||local.plans||[],remote.cats||remote.plans||[]),items:mergeList(local.items||[],remote.items||[])};
  if(path.startsWith('plan/')){ // bands·milestones·units[과목]=id/u/del 병합, 나머지는 pu 큰 쪽 통째
   const A=local||{},B=remote||{};const w=(A.pu||0)>=(B.pu||0)?A:B;
@@ -440,7 +459,8 @@ async function syncAll(silent){
   listDirty().forEach(p=>{const m=p.match(/^sessions\/[^/]+\/(\d{4}-\d{2})/);if(m)months.add(m[1]);});
   await syncFile('settings.json',true,settings);
   await syncFile(planPath(me),true,EMPTY_PLAN());if(peer)await syncFile(planPath(peer),false,EMPTY_PLAN());
-  for(const m of months){await syncFile(sessPath(me,m),true,{v:1,sessions:[]});if(peer)await syncFile(sessPath(peer,m),false,{v:1,sessions:[]});}
+  for(const m of months){await syncFile(sessPath(me,m),true,{v:1,sessions:[]});if(peer)await syncFile(sessPath(peer,m),false,{v:1,sessions:[]});
+   await syncFile(snapPath(me,m),true,EMPTY_SNAP());if(peer)await syncFile(snapPath(peer,m),false,EMPTY_SNAP());}
   await syncFile(todoPath(me),true,{v:2,cats:[],items:[]});if(peer)await syncFile(todoPath(peer),false,{v:2,cats:[],items:[]});
   await syncFile('todos/공통.json',true,{v:1,items:[]});
   cfg.lastSync=Date.now();LS.set('tt.cfg',cfg);logS('완료');if(!silent)toast('동기화됨');
@@ -658,7 +678,7 @@ function cmEdit(id){
 function dayHTML(){
  const d=curDate();const sess=sessionsOf(cfg.person,d);
  return`<div class="ttl"><b>타임테이블 <span>› 일간</span> ${topSel('day')}</b><div class="r">${navBtns("setDate(addDays(curDate(),-1))","setDate(addDays(curDate(),1))","setDate(today())")}<input type="date" value="${d}" onchange="setDate(this.value)" style="border:1px solid #ccc;border-radius:4px;padding:2px 4px"></div></div>
- <div class="dpc"><div>${sheetHTML(cfg.person,d,sess)}${mbarHTML()}</div><div>${threeHTML()}${peerLine()}${sharedTableHTML()}</div></div>`;
+ <div class="dpc"><div>${sheetHTML(cfg.person,d,sess)}${snapBarHTML()}${mbarHTML()}</div><div>${threeHTML()}${peerLine()}${sharedTableHTML()}</div></div>`;
 }
 function todoHTML(){return`<div class="ttl"><b>할일</b><div class="r">${navBtns("setDate(addDays(curDate(),-1))","setDate(addDays(curDate(),1))","setDate(today())")}</div></div>${threeHTML()}${peerLine()}${sharedTableHTML()}`}
 /* 할일 조작 */
@@ -820,7 +840,118 @@ function monthHTML(){
  </div></div>`;
 }
 function shiftMonth(d,n){const dt=parse(d);dt.setDate(1);dt.setMonth(dt.getMonth()+n);return iso(dt)}
-/* ----- 데일리 모음 ----- */
+/* ----- 데일리 모음 = 반영(스냅샷) ----- */
+function takeSnap(d){ // 내 것만. 그 시점 복사본 — 원본을 나중에 고쳐도 칸은 그대로
+ const who=cfg.person;const m=ym(d);const f=snapFileF(who,m);
+ const sess=sessionsOf(who,d);
+ const tf=todoFile(who);const catById=new Map(tf.data.cats.map(c=>[c.id,c]));
+ const items=tf.data.items.filter(x=>!x.del&&x.kind==='study'&&x.d===d);
+ const old=f.data.days[d]||{};
+ f.data.days[d]={at:Date.now(),u:Date.now(),total:mSum(sess),memo:old.memo||'',
+  ss:sess.map(x=>[x.s,x.a,x.b,x.nt?1:0]),
+  it:items.map(x=>{const c=x.cat?catById.get(x.cat):null;return[c?c.s:'기타',[(c?c.name:''),x.t].filter(Boolean).join(' '),x.done?1:0]})};
+ f.dirty=true;saveF(snapPath(who,m),f);scheduleSync();
+}
+function snapDirtyChk(who,d,sn){const su=sn.at||0;
+ if(sessFile(who,ym(d)).data.sessions.some(x=>x.d===d&&(x.u||0)>su))return true;
+ return todoFile(who).data.items.some(x=>x.kind==='study'&&x.d===d&&(x.u||0)>su);
+}
+function snapMode(){return((settings.snapMode||{})[cfg.person])||'manual'} // ⚠ 기본 수동
+function autoSnapCatchup(){ // 자동 모드: 하루가 지나면 전날을 찍고, 밀린 날(최근 30일)은 지금 데이터로
+ if(snapMode()!=='auto')return;
+ const t0=today();let n=0;
+ for(let i=30;i>=1;i--){const d=addDays(t0,-i);if(!snapOf(cfg.person,d)){takeSnap(d);n++;}}
+ if(n)toast('밀린 '+n+'일을 데일리 모음에 반영했어');
+}
+function snapMemoSave(kind,key,val,m){
+ const f=snapFileF(cfg.person,m);
+ if(kind==='days'){const e=f.data.days[key];if(!e)return;e.memo=val;e.u=Date.now();}
+ else{const g=f.data[kind];g[key]=g[key]||{};g[key].memo=val;g[key].u=Date.now();}
+ f.dirty=true;saveF(snapPath(cfg.person,m),f);scheduleSync();
+}
+function ddayAt(d){const xs=(settings.exams||[]).filter(x=>!x.del&&x.date).sort((a,b)=>a.date<b.date?-1:1);const x=xs.find(z=>z.date>=d)||xs[xs.length-1];if(!x)return'';const n=Math.ceil((parse(x.date)-parse(d))/864e5);return n>=0?`D-${n}`:`D+${-n}`}
+function snapMonthStats(who,m){const fd=parse(m+'-01');const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();const t0=today();let tot=0,miss=0;
+ for(let i=1;i<=nd;i++){const x=`${m}-${pad(i)}`;const sn=snapOf(who,x);if(sn)tot+=sn.total||0;else if(x<t0)miss++;}
+ return{tot,miss}}
+function ttSnap(ss){const s0=dayStart()*60;let h='';for(let r=0;r<22;r++){const a=s0+r*60,b=a+60;let bars='';ss.forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${subjColor(x.s)}${x.nt?NT_HATCH:''}"></b>`});h+=`<span>${pad((a/60)%24)}</span><div class="r">${bars}</div>`}return h}
+function snapSess(sn,d){return(sn.ss||[]).map(z=>({s:z[0],a:z[1],b:z[2],nt:z[3],d}))}
+function footBg(t){return t>=settings.redHours*60?'#FBDDE2':t>=settings.skyHours*60?'#DCEBFA':'#F1F1F1'}
+function dayCard(who,x){
+ const sn=snapOf(who,x);const dt=parse(x);const mine=who===cfg.person;
+ const dlab=`${x.slice(2).replace(/-/g,'/')} (${DAYS[dt.getDay()]})`;
+ if(!sn){
+  const isT=x===today();
+  return`<div class="card empty"><div class="th" style="flex-direction:column;gap:6px;position:relative"><span class="snapbadge">미반영</span><span>${isT?(snapMode()==='auto'&&mine?'오늘 · 하루가 지나면 자동 반영':'오늘'):'지난 날'}</span>${mine?`<button class="btn" style="border-color:var(--blue);color:var(--blue)" onclick="takeSnap('${x}');toast('반영했어');render()">${isT&&snapMode()==='auto'?'지금 반영':'데일리 모음에 반영'}</button>`:''}</div><div class="lb"><span>${dlab}</span><span>${ddayAt(x)}</span><b style="margin-left:auto;color:#ccc">--:--</b></div></div>`;
+ }
+ const sess=snapSess(sn,x);
+ const dirty=mine&&snapDirtyChk(who,x,sn);
+ const th=sess.length?thumb(sess):'<div style="font-size:10px;color:#bbb">기록 없음</div>';
+ return`<div class="card" onclick="snapView('${who}','${x}')" style="cursor:pointer"><div class="th" style="position:relative">${th}${dirty?'<span class="snapbadge mod">반영 후 수정됨</span>':''}</div><div class="lb" style="background:${footBg(sn.total||0)};color:#111"><span>${dlab}${sn.memo?' ✎':''}</span><span style="color:#666">${ddayAt(x)}</span><b style="margin-left:auto">${dur(sn.total||0)}</b></div></div>`;
+}
+function weekCard(who,ws){
+ const wplan=planFile(who).data;const w=pWeekNo(wplan,ws);
+ const days=[...Array(7)].map((_,i)=>addDays(ws,i));
+ const wk=days.map(x=>{const sn=snapOf(who,x);return sn?snapSess(sn,x):[]});
+ const miss=days.filter(x=>!snapOf(who,x)).length;
+ const tot=days.reduce((a,x)=>{const sn=snapOf(who,x);return a+(sn?sn.total||0:0)},0);
+ const memo=(snapFileF(who,ym(ws)).data.weeks['W'+pad(w)]||{}).memo;
+ return`<div class="card" onclick="snapViewW('${who}','${ws}')" style="cursor:pointer"><div class="th">${thumb(wk,true)}</div><div class="lb"><span>${ws.slice(2).replace(/-/g,'/')}~${days[6].slice(8)} · W${pad(w)}${memo?' ✎':''}${miss?` <span style="color:#c60">미반영 ${miss}</span>`:''}</span><b style="margin-left:auto">${dur(tot)}</b></div></div>`;
+}
+function monthCard(who,m){
+ const fd=parse(m+'-01');const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();
+ let tot=0,miss=0,cells='<i style="background:transparent;border:0"></i>'.repeat((fd.getDay()+6)%7);
+ for(let i=1;i<=nd;i++){const x=`${m}-${pad(i)}`;const sn=snapOf(who,x);const t2=sn?sn.total||0:0;if(!sn)miss++;tot+=t2;
+  cells+=`<i style="background:${t2>=settings.redHours*60?'#FBDDE2':t2>=settings.skyHours*60?'#DCEBFA':(t2>0?'#eee':'#fff')}"></i>`}
+ const memo=(snapFileF(who,m).data.months[m]||{}).memo;
+ return`<div class="card" onclick="snapViewM('${who}','${m}')" style="cursor:pointer"><div class="th"><div class="mthumb"><div class="rb2">MONTH</div><div class="mgrid">${cells}</div></div></div><div class="lb"><span>${m.slice(2).replace('-','.')} 월간${memo?' ✎':''}${miss?` <span style="color:#c60">미반영 ${miss}</span>`:''}</span><b style="margin-left:auto">${dur(tot)}</b></div></div>`;
+}
+function wideModal(){const b=[...document.querySelectorAll('.modal .box')].pop();if(b)b.style.maxWidth='560px'}
+function snapView(who,d){
+ const sn=snapOf(who,d);const mine=who===cfg.person;
+ if(!sn){if(mine){takeSnap(d);toast('반영했어');render();}return;}
+ const sess=snapSess(sn,d);
+ const bySub={};sess.forEach(x=>{if(!x.nt)bySub[x.s]=(bySub[x.s]||0)+x.b-x.a});
+ modal(`<h4>${d.replace(/-/g,'.')} ${DAYS[parse(d).getDay()]} · ${esc(who)} <small style="font-weight:400;color:#888">반영 ${new Date(sn.at).toLocaleString('ko')}</small></h4>
+ <div class="tt" style="margin-bottom:8px"><span></span><div class="tth">${[1,2,3,4,5].map(n=>`<i style="left:${(n*100/6).toFixed(2)}%">${n*10}</i>`).join('')}</div>${ttSnap(sess)}</div>
+ <div class="st">${(sn.it||[]).map(z=>`<div class="it ${z[2]?'done2':''}"><i class="sw" style="background:${subjColor(z[0])}"></i><span class="nm">${esc(z[0])}</span><span class="pl">${esc(z[1])}</span><span>${z[2]?'✓':''}</span></div>`).join('')}
+ ${Object.entries(bySub).map(([s2,m2])=>`<div class="it"><i class="sw" style="background:${subjColor(s2)}"></i><span class="nm">${esc(s2)}</span><span class="pl" style="color:#999">잰 시간</span><span>${dur(m2)}</span></div>`).join('')}</div>
+ <div style="text-align:right;font-weight:800;font-size:16px;margin:6px 0">Total ${dur(sn.total||0)}</div>
+ <div class="row"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit" ${mine?'':'readonly'}>${esc(sn.memo||'')}</textarea></div>
+ <div class="row" style="justify-content:flex-end;gap:6px"><button class="btn" onclick="this.closest('.modal').remove();setDate('${d}');setView('day')">이 날 일간으로</button>${mine?`<button class="btn" onclick="this.closest('.modal').remove();takeSnap('${d}');toast('다시 반영했어');render()">다시 반영</button>`:''}</div>`,
+ q=>{if(mine)snapMemoSave('days',d,q('snMemo').value,ym(d));render()});
+ wideModal();
+}
+function snapViewW(who,ws){
+ const wplan=planFile(who).data;const w=pWeekNo(wplan,ws);const key='W'+pad(w);
+ const days=[...Array(7)].map((_,i)=>addDays(ws,i));
+ const wk=days.map(x=>{const sn=snapOf(who,x);return sn?snapSess(sn,x):[]});
+ const tots=days.map(x=>{const sn=snapOf(who,x);return sn?sn.total||0:0});
+ const mine=who===cfg.person;
+ const memo=(snapFileF(who,ym(ws)).data.weeks[key]||{}).memo||'';
+ modal(`<h4>주간 W${pad(w)} · ${ws.replace(/-/g,'.')}~${days[6].slice(5).replace('-','.')} · ${esc(who)}</h4>
+ <div style="height:130px">${thumb(wk,true)}</div>
+ <div class="sum" style="font-size:10px">${days.map((x,i)=>`<span>${DAYS[parse(x).getDay()]} <b>${dur(tots[i])}</b></span>`).join('')}</div>
+ <div class="row"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit" ${mine?'':'readonly'}>${esc(memo)}</textarea></div>`,
+ q=>{if(mine)snapMemoSave('weeks',key,q('snMemo').value,ym(ws));render()});
+ wideModal();
+}
+function snapViewM(who,m){
+ const fd=parse(m+'-01');const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();
+ let cells='<i style="background:transparent;border:0"></i>'.repeat((fd.getDay()+6)%7);let tot=0;
+ for(let i=1;i<=nd;i++){const x=`${m}-${pad(i)}`;const sn=snapOf(who,x);const t2=sn?sn.total||0:0;tot+=t2;
+  cells+=`<i style="background:${t2>=settings.redHours*60?'#FBDDE2':t2>=settings.skyHours*60?'#DCEBFA':(t2>0?'#eee':'#fff')};min-height:22px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#666">${i}</i>`}
+ const mine=who===cfg.person;
+ const memo=(snapFileF(who,m).data.months[m]||{}).memo||'';
+ modal(`<h4>${m.replace('-','.')} 월간 · ${esc(who)} <small style="font-weight:400;color:#888">합계 ${dur(tot)}</small></h4>
+ <div class="mgrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px">${cells}</div>
+ <div class="row"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit" ${mine?'':'readonly'}>${esc(memo)}</textarea></div>`,
+ q=>{if(mine)snapMemoSave('months',m,q('snMemo').value,m);render()});
+ wideModal();
+}
+function snapBarHTML(){
+ const d=curDate();const sn=snapOf(cfg.person,d);const dirty=sn&&snapDirtyChk(cfg.person,d,sn);
+ return`<div style="display:flex;gap:8px;align-items:center;font-size:10px;color:#888;margin-top:6px">${sn?`데일리 모음 반영됨 ${new Date(sn.at).toLocaleString('ko')}${dirty?' · <b style="color:#c60">반영 후 수정됨</b>':''}`:'데일리 모음에 아직 반영 안 됨'}<button class="btn" style="margin-left:auto" onclick="takeSnap('${d}');toast('반영했어');render()">${sn?'다시 반영':'데일리 모음에 반영'}</button></div>`;
+}
 function thumb(sess,weekly){
  const s0=dayStart()*60;
  if(weekly){ // sess = [7][...]
@@ -831,18 +962,20 @@ function thumb(sess,weekly){
  return`<div class="thumb"><div class="rb">${parseInt(sess[0]?.d.slice(8)||'')}</div><div class="rows">${rows}</div><div class="side2">${names.map(n=>`<span style="color:${subjColor(n)}">■</span> ${esc(n)}`).join('<br>')||'—'}</div><span class="tot">${dur(t)}</span></div>`;
 }
 function galHTML(){
- const m=ui.galMonth||ym(today());const first=parse(m+'-01');const last=new Date(first.getFullYear(),first.getMonth()+1,0);
- const end=ym(today())===m?parseInt(today().slice(8)):last.getDate();
- const col=who=>{let g='';for(let dd=end;dd>=1;dd--){const x=`${m}-${pad(dd)}`;const s=sessionsOf(who,x);const t=mSum(s);const dt=parse(x);const cls=t>=settings.redHours*60?'red':t>=settings.skyHours*60?'sky':'';
-   if(dt.getDay()===0){const ws=weekStart(x);const wk=[...Array(7)].map((_,i)=>sessionsOf(who,addDays(ws,i)));g+=`<div class="card"><div class="th">${thumb(wk,true)}</div><div class="lb"><span>${x.slice(2).replace(/-/g,'/')} 주간</span><span>W${pad(weekNo(ws))}</span></div></div>`}
-   g+=s.length?`<div class="card ${cls}" onclick="${who===cfg.person?`setDate('${x}');setView('day')`:''}"><div class="th">${thumb(s)}</div><div class="lb"><span>${x.slice(2).replace(/-/g,'/')} (${DAYS[dt.getDay()]})</span><span>${dur(t)}</span></div></div>`:`<div class="card empty"><div class="th">기록 없음</div><div class="lb"><span>${x.slice(2).replace(/-/g,'/')} (${DAYS[dt.getDay()]})</span></div></div>`;
+ const m=ui.galMonth||ym(today());const t0=today();const first=parse(m+'-01');const last=new Date(first.getFullYear(),first.getMonth()+1,0);
+ const end=ym(t0)===m?parseInt(t0.slice(8)):last.getDate();
+ const monthOver=m<ym(t0);
+ const col=who=>{let g='';
+  if(monthOver)g+=monthCard(who,m); // 월 마지막 날이 지나면 그 달 맨 앞에
+  for(let dd=end;dd>=1;dd--){const x=`${m}-${pad(dd)}`;const dt=parse(x);
+   if(dt.getDay()===0&&x<t0)g+=weekCard(who,weekStart(x)); // 일요일이 지나면 그 주(월~일) 칸
+   g+=dayCard(who,x);
   }return g};
- const months=[];for(let i=0;i<6;i++)months.push(ym(shiftMonth(today()+'',-i)).replace(/(\d{4})-(\d{2})/,'$1-$2'));
- const tot=who=>dur(mSum(sessionsMonth(who,m)));
+ const months=[];for(let i=0;i<6;i++)months.push(ym(shiftMonth(t0+'',-i)));
  const people=settings.people;
  return`${moreTabs('gal')}<div class="ttl"><b>데일리 모음</b><div class="r">${navBtns("galMonth(-1)","galMonth(1)","galMonth(0)")} ${m.replace('-','.')}</div></div>
- <div class="views">${months.map(x=>`<span class="${x==m?'on':''}" onclick="ui.galMonth='${x}';LS.set('tt.ui',ui);render()">${x.slice(2).replace('-','.')}월</span>`).join('')}</div>
- <div class="gal">${people.map(p=>`<div><div class="colh">${esc(p)} <small>${tot(p)}</small></div><div class="grid3">${col(p)}</div></div>`).join('')}</div>`;
+ <div class="views">${months.map(x=>{const mo=parseInt(x.slice(5));return`<span class="${x==m?'on':''}" onclick="ui.galMonth='${x}';LS.set('tt.ui',ui);render()" style="display:inline-flex;align-items:center;gap:4px"><i class="galdot" style="background:conic-gradient(#222 ${(mo/12*360).toFixed(0)}deg,#fff 0)"></i>${x.slice(2,4)}.${mo}월</span>`}).join('')}</div>
+ <div class="gal">${people.map(p=>{const st=snapMonthStats(p,m);return`<div><div class="colh">${esc(p)} <small>${parseInt(m.slice(5))}월 ${dur(st.tot)}${st.miss?` · 미반영 ${st.miss}`:''}</small></div><div class="grid3">${col(p)}</div></div>`}).join('')}</div>`;
 }
 function galMonth(n){ui.galMonth=n==0?ym(today()):ym(shiftMonth((ui.galMonth||ym(today()))+'-01',n));LS.set('tt.ui',ui);render();syncAll(true)}
 /* ----- 계획 엔진 ----- */
@@ -1085,6 +1218,7 @@ function setHTML(){
  <h4>데일리 색</h4><div class="row"><span style="white-space:nowrap">분홍(시간≥) <input id="rH" type="number" value="${settings.redHours}" style="max-width:70px;min-width:0;flex:none"></span><span style="white-space:nowrap">하늘(시간≥) <input id="sH" type="number" value="${settings.skyHours}" style="max-width:70px;min-width:0;flex:none"></span></div>
  <h4>달별 색 <small style="font-weight:400;color:#888">시트·격자·썸네일이 「보는 달」의 색을 씀</small></h4><div class="sub"><div class="row" style="flex-wrap:wrap">${[...Array(12)].map((_,i)=>`<span style="white-space:nowrap;font-size:10px">${i+1}월 <input type="color" id="mc${i}" value="${monthColor(i+1)}" style="flex:none;min-width:0;width:30px;padding:0;height:22px"></span>`).join('')}</div></div>
  <h4>시간</h4><div class="row"><label>하루 시작</label><span style="white-space:nowrap"><input id="dS" type="number" value="${dayStart()}" style="max-width:70px;min-width:0;flex:none"> 시</span></div>
+ <h4>데일리 모음</h4><div class="row"><label>반영</label><select id="snapM" style="flex:0 0 100px;min-width:0"><option value="manual" ${snapMode()==='manual'?'selected':''}>수동</option><option value="auto" ${snapMode()==='auto'?'selected':''}>자동</option></select><span style="font-size:10px;color:#888">자동 = 하루가 지나면 전날 시트를 자동으로 찍음 · 사람별(${esc(cfg.person)})</span></div>
  <h4>과목·색 <small style="font-weight:400;color:#888">둘이 공용 (settings.json)</small></h4><div class="sub" id="subjList">${settings.subjects.map((x,i)=>`<div class="row"><input value="${esc(x.n)}" data-i="${i}" data-k="n"><input type="color" value="${x.c}" data-i="${i}" data-k="c"><button class="btn" onclick="settings.subjects.splice(${i},1);render()">×</button></div>`).join('')}<button class="btn" onclick="settings.subjects.push({n:'새 과목',c:'#999999'});render()">+ 과목</button></div>
  <div class="row"><button class="btn p" onclick="applySettings()">설정 저장 (둘 다 반영)</button></div>
  <h4>계획 <small style="font-weight:400;color:#888">사람별 (plan/${esc(cfg.person)}.json)</small></h4>
@@ -1099,6 +1233,7 @@ function applySettings(){
  document.querySelectorAll('#examList input[data-xi]').forEach(e=>{const x=settings.exams.find(z=>z.id===e.dataset.xi);if(x&&x[e.dataset.xk]!==e.value){x[e.dataset.xk]=e.value;x.u=Date.now()}});
  settings.redHours=+$('rH').value||10;settings.skyHours=+$('sH').value||6;settings.dayStart=+$('dS').value||5;
  settings.monthColors=[...Array(12)].map((_,i)=>($('mc'+i)&&$('mc'+i).value)||DEF_SETTINGS.monthColors[i]);
+ if($('snapM'))settings.snapMode=Object.assign({},settings.snapMode,{[cfg.person]:$('snapM').value});
  document.querySelectorAll('#subjList input[data-i]').forEach(e=>{settings.subjects[+e.dataset.i][e.dataset.k]=e.value.trim()||e.value});
  saveSettings();toast('저장');render();
 }
@@ -1130,6 +1265,7 @@ setInterval(()=>{if(run&&pipWin&&!pipWin.closed)pipPaint()},60000);
 /* ---------- 시작 ---------- */
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 maybeAutoBaseline(); // 매달 1일 첫 실행 때 기준선 자동 고정
+autoSnapCatchup();   // 반영 자동 모드면 밀린 날을 찍음
 render();
 if(cfg.token)syncAll(true);
 </script>
