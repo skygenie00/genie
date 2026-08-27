@@ -849,13 +849,21 @@ function shiftMonth(d,n){const dt=parse(d);dt.setDate(1);dt.setMonth(dt.getMonth
 function takeSnap(d){ // 내 것만. 그 시점 복사본 — 원본을 나중에 고쳐도 칸은 그대로
  const who=cfg.person;const m=ym(d);const f=snapFileF(who,m);
  const sess=sessionsOf(who,d);
- const tf=todoFile(who);const catById=new Map(tf.data.cats.map(c=>[c.id,c]));
- const items=tf.data.items.filter(x=>!x.del&&x.kind==='study'&&x.d===d);
+ const rows=dayRows(who,d); // Study Time 줄을 그대로 저장 (it = [과목, 라벨, 완료, 줄 시간(분), 분류명])
  const old=f.data.days[d]||{};
  f.data.days[d]={at:Date.now(),u:Date.now(),total:mSum(sess),memo:old.memo||'',
   ss:sess.map(x=>[x.s,x.a,x.b,x.nt?1:0]),
-  it:items.map(x=>{const c=x.cat?catById.get(x.cat):null;return[c?c.s:'기타',[(c?c.name:''),x.t].filter(Boolean).join(' '),x.done?1:0]})};
+  it:rows.map(r=>[r.s,(r.type==='legacy'?r.label:[r.cat?r.cat.name:'',r.label].filter(Boolean).join(' ')),r.done?1:0,r.min,r.cat?r.cat.name:''])};
  f.dirty=true;saveF(snapPath(who,m),f);scheduleSync();
+}
+/* 스냅샷을 일간 시트 모양 그대로 렌더 (확대 보기용 · 옛 스냅샷은 줄 시간이 없어 빈칸 — 다시 반영으로 채움) */
+function snapSheetHTML(d,sn){
+ const dt=parse(d);const sess=snapSess(sn,d);
+ const rows=(sn.it||[]).map(z=>({s:z[0],label:z[1],done:!!z[2],min:z[3]}));
+ return`<div class="sheet"><div class="ribbon">${d.replace(/-/g,'.')} ${['SUN','MON','TUE','WED','THU','FRI','SAT'][dt.getDay()]}</div><div class="paper">
+ <div><div class="hd">Time Table</div><div class="tt"><span></span><div class="tth">${[1,2,3,4,5].map(n=>`<i style="left:${(n*100/6).toFixed(2)}%">${n*10}</i>`).join('')}</div>${ttSnap(sess)}</div></div>
+ <div class="stc"><div class="hd">Study Time</div><div class="st">${rows.map(r=>`<div class="it ${r.done?'done2':''}"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl">${esc(r.label)||'—'}</span><span>${r.min!=null?dur(r.min):''}</span></div>`).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
+ <div class="foot"><div>Start <b>${sess.length?hmDisp(Math.min(...sess.map(x=>x.a))):'--:--'}</b> &nbsp; Stop <b>${sess.length?hmDisp(Math.max(...sess.map(x=>x.b))):'--:--'}</b></div><div>Total <span class="big">${dur(sn.total||0)}</span></div></div></div></div></div>`;
 }
 function snapDirtyChk(who,d,sn){const su=sn.at||0;
  if(sessFile(who,ym(d)).data.sessions.some(x=>x.d===d&&(x.u||0)>su))return true;
@@ -910,17 +918,13 @@ function monthCard(who,m){
  const memo=(snapFileF(who,m).data.months[m]||{}).memo;
  return`<div class="card" onclick="snapViewM('${who}','${m}')" style="cursor:pointer"><div class="th"><div class="mthumb"><div class="rb2">MONTH</div><div class="mgrid">${cells}</div></div></div><div class="lb"><span>${m.slice(2).replace('-','.')} 월간${memo?' ✎':''}${miss?` <span style="color:#c60">미반영 ${miss}</span>`:''}</span><b style="margin-left:auto">${dur(tot)}</b></div></div>`;
 }
-function wideModal(){const b=[...document.querySelectorAll('.modal .box')].pop();if(b)b.style.maxWidth='560px'}
+function wideModal(){const b=[...document.querySelectorAll('.modal .box')].pop();if(b)b.style.maxWidth='640px'}
 function snapView(who,d){
  const sn=snapOf(who,d);const mine=who===cfg.person;
  if(!sn){if(mine){takeSnap(d);toast('반영했어');render();}return;}
- const sess=snapSess(sn,d);
- const bySub={};sess.forEach(x=>{if(!x.nt)bySub[x.s]=(bySub[x.s]||0)+x.b-x.a});
- modal(`<h4>${d.replace(/-/g,'.')} ${DAYS[parse(d).getDay()]} · ${esc(who)} <small style="font-weight:400;color:#888">반영 ${new Date(sn.at).toLocaleString('ko')}</small></h4>
- <div class="tt" style="margin-bottom:8px"><span></span><div class="tth">${[1,2,3,4,5].map(n=>`<i style="left:${(n*100/6).toFixed(2)}%">${n*10}</i>`).join('')}</div>${ttSnap(sess)}</div>
- <div class="st">${(sn.it||[]).map(z=>`<div class="it ${z[2]?'done2':''}"><i class="sw" style="background:${subjColor(z[0])}"></i><span class="nm">${esc(z[0])}</span><span class="pl">${esc(z[1])}</span><span>${z[2]?'✓':''}</span></div>`).join('')}
- ${Object.entries(bySub).map(([s2,m2])=>`<div class="it"><i class="sw" style="background:${subjColor(s2)}"></i><span class="nm">${esc(s2)}</span><span class="pl" style="color:#999">잰 시간</span><span>${dur(m2)}</span></div>`).join('')}</div>
- <div style="text-align:right;font-weight:800;font-size:16px;margin:6px 0">Total ${dur(sn.total||0)}</div>
+ modal(`<h4 style="margin-bottom:6px">${esc(who)} · 데일리 모음</h4>
+ ${snapSheetHTML(d,sn)}
+ <p style="font-size:10px;color:#888;margin:6px 0">반영 ${new Date(sn.at).toLocaleString('ko')}</p>
  <div class="row"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit" ${mine?'':'readonly'}>${esc(sn.memo||'')}</textarea></div>
  <div class="row" style="justify-content:flex-end;gap:6px"><button class="btn" onclick="this.closest('.modal').remove();setDate('${d}');setView('day')">이 날 일간으로</button>${mine?`<button class="btn" onclick="this.closest('.modal').remove();takeSnap('${d}');toast('다시 반영했어');render()">다시 반영</button>`:''}</div>`,
  q=>{if(mine)snapMemoSave('days',d,q('snMemo').value,ym(d));render()});
@@ -929,27 +933,44 @@ function snapView(who,d){
 function snapViewW(who,ws){
  const wplan=planFile(who).data;const w=pWeekNo(wplan,ws);const key='W'+pad(w);
  const days=[...Array(7)].map((_,i)=>addDays(ws,i));
- const wk=days.map(x=>{const sn=snapOf(who,x);return sn?snapSess(sn,x):[]});
- const tots=days.map(x=>{const sn=snapOf(who,x);return sn?sn.total||0:0});
+ const s0=dayStart()*60;const H=24*60;
+ const cols=days.map(x=>{const sn=snapOf(who,x);const ss=sn?snapSess(sn,x):[];
+  return`<div class="wcol">${ss.map(y=>`<b style="top:${((y.a-s0)/H*100).toFixed(2)}%;height:${((y.b-y.a)/H*100).toFixed(2)}%;background:${subjColor(y.s)}${y.nt?NT_HATCH:''}"></b>`).join('')}</div>`}).join('');
+ const labs=`<div class="wlab">${[...Array(24)].map((_,r)=>`<span>${pad((dayStart()+r)%24)}</span>`).join('')}</div>`;
+ const tots=days.map(x=>{const sn=snapOf(who,x);return sn?sn.total||0:0});const wt=tots.reduce((a,b)=>a+b,0);
+ const g=new Map(); // it 줄을 과목+분류명으로 묶어 주간 합
+ days.forEach(x=>{const sn=snapOf(who,x);((sn&&sn.it)||[]).forEach(z=>{const nm=(z[4]!=null&&z[4]!=='')?z[4]:(z[1]||'기타');const k=z[0]+'|'+nm;const o=g.get(k)||{s:z[0],n:nm,m:0};o.m+=z[3]||0;g.set(k,o)})});
+ const rows=[...g.values()].sort((a,b)=>b.m-a.m);
  const mine=who===cfg.person;
  const memo=(snapFileF(who,ym(ws)).data.weeks[key]||{}).memo||'';
- modal(`<h4>주간 W${pad(w)} · ${ws.replace(/-/g,'.')}~${days[6].slice(5).replace('-','.')} · ${esc(who)}</h4>
- <div style="height:130px">${thumb(wk,true)}</div>
- <div class="sum" style="font-size:10px">${days.map((x,i)=>`<span>${DAYS[parse(x).getDay()]} <b>${dur(tots[i])}</b></span>`).join('')}</div>
- <div class="row"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit" ${mine?'':'readonly'}>${esc(memo)}</textarea></div>`,
+ modal(`<h4 style="margin-bottom:6px">${esc(who)} · 주간 W${pad(w)}</h4>
+ <div class="sheet"><div class="ribbon">${ws.replace(/-/g,'.')} ~ ${days[6].replace(/-/g,'.')}</div><div class="paper">
+ <div><div class="hd">Time Table</div><div class="wk2"><div class="wh"></div>${days.map(x=>`<div class="wh">${['SUN','MON','TUE','WED','THU','FRI','SAT'][parse(x).getDay()]}</div>`).join('')}${labs}${cols}<div class="wt"></div>${tots.map(t2=>`<div class="wt ${t2?'':'z'}">${dur(t2)}</div>`).join('')}</div></div>
+ <div class="stc"><div class="hd">Study Time</div><div class="st">${rows.map(r=>`<div class="it"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl">${esc(r.n)}</span><span>${dur(r.m)}</span></div>`).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
+ <div class="wstat"><span>Avg <b>${dur(Math.round(wt/7))}</b></span><span>Total <span class="big">${dur(wt)}</span></span></div></div></div></div>
+ <div class="row" style="margin-top:6px"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit" ${mine?'':'readonly'}>${esc(memo)}</textarea></div>`,
  q=>{if(mine)snapMemoSave('weeks',key,q('snMemo').value,ym(ws));render()});
  wideModal();
 }
 function snapViewM(who,m){
  const fd=parse(m+'-01');const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();
- let cells='<i style="background:transparent;border:0"></i>'.repeat((fd.getDay()+6)%7);let tot=0;
- for(let i=1;i<=nd;i++){const x=`${m}-${pad(i)}`;const sn=snapOf(who,x);const t2=sn?sn.total||0:0;tot+=t2;
-  cells+=`<i style="background:${t2>=settings.redHours*60?'#FBDDE2':t2>=settings.skyHours*60?'#DCEBFA':(t2>0?'#eee':'#fff')};min-height:22px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#666">${i}</i>`}
+ const first=m+'-01';const lastD=`${m}-${pad(nd)}`;
+ let cells='';let cur=addDays(first,-((fd.getDay()+6)%7));let tot=0;
+ while(cur<=lastD){let row='';let wsum=0;
+  for(let i=0;i<7;i++){const x=cur;
+   if(ym(x)===m){const sn=snapOf(who,x);const t2=sn?sn.total||0:0;wsum+=t2;tot+=t2;const dow=parse(x).getDay();
+    const cls=t2>=settings.redHours*60?'red':t2>=settings.skyHours*60?'sky':'';
+    row+=`<div class="d ${cls}"><div class="n ${dow===0?'sun':''}">${parseInt(x.slice(8))}</div><div class="v ${t2?'':'off'}">${t2?dur(t2):(sn?'OFF':'미반영')}</div></div>`;
+   }else row+=`<div class="d out"></div>`;
+   cur=addDays(cur,1);}
+  cells+=row+`<div class="wsum" style="${wsum?'':'color:#ccc;font-weight:400'}">${dur(wsum)}</div>`;}
  const mine=who===cfg.person;
  const memo=(snapFileF(who,m).data.months[m]||{}).memo||'';
- modal(`<h4>${m.replace('-','.')} 월간 · ${esc(who)} <small style="font-weight:400;color:#888">합계 ${dur(tot)}</small></h4>
- <div class="mgrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px">${cells}</div>
- <div class="row"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit" ${mine?'':'readonly'}>${esc(memo)}</textarea></div>`,
+ modal(`<h4 style="margin-bottom:6px">${esc(who)} · ${m.replace('-','.')} 월간</h4>
+ <div class="sheet"><div class="ribbon">${first.replace(/-/g,'.')} ~ ${lastD.replace(/-/g,'.')}</div><div style="background:#fff;border-radius:4px;padding:10px">
+ <div class="mo2"><div class="h">MON</div><div class="h">TUE</div><div class="h">WED</div><div class="h">THU</div><div class="h">FRI</div><div class="h">SAT</div><div class="h sun">SUN</div><div class="h">+</div>${cells}</div>
+ <div style="text-align:right;font-weight:800;font-size:16px;margin-top:6px">Total ${dur(tot)}</div></div></div>
+ <div class="row" style="margin-top:6px"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit" ${mine?'':'readonly'}>${esc(memo)}</textarea></div>`,
  q=>{if(mine)snapMemoSave('months',m,q('snMemo').value,m);render()});
  wideModal();
 }
