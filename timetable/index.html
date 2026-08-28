@@ -486,6 +486,30 @@ button{cursor:pointer}
 .mx{font-size:8px;flex:none;margin-left:1px}
 .mst{font-size:8px;color:#888;margin-left:3px;white-space:nowrap;flex:none}
 .mst .lt{color:#c33;font-weight:700}
+/* feedback10: 부하 줄 · 미배치 트레이 · 몸통 이동 · 리스트 편집 · 계획관리 정리 · 생활 */
+.pbload{background:#fcfcfd!important;font-size:10px;color:#666;padding:2px 6px;display:flex;align-items:center;gap:3px}
+.pbload small{color:#aaa;font-size:8.5px}
+.pbloadc{background:#fff;min-height:0;padding:2px 4px;display:flex;flex-direction:column;justify-content:flex-end}
+.pbloadc.cur{background:#f4f8ff}
+.pbloadc .lh{font-size:9px;color:#888;text-align:center;line-height:1.15}
+.pbloadc .lh.w{color:#d97706;font-weight:700}
+.pbloadc .lbar{display:flex;height:9px;border-radius:3px;overflow:hidden;border:1px solid #eee}
+.pbloadc .lbar i{display:block;height:100%}
+.tray{display:flex;gap:6px;align-items:center;flex-wrap:wrap;border:1px dashed #ccc;border-radius:6px;padding:6px 8px;background:#fcfcfd;margin-bottom:8px}
+.trayb{display:inline-flex;align-items:center;gap:4px;border:1.5px solid;border-radius:6px;background:#fff;padding:2px 8px;font-size:10.5px;cursor:grab;touch-action:none;user-select:none}
+.bsel{font-style:normal;cursor:pointer;color:var(--blue);margin-right:2px}
+.bmoving{outline:2px dashed var(--blue)!important;opacity:.8;z-index:5}
+.borddrop{outline:2px dashed var(--blue);outline-offset:-2px;background:#f4f8ff!important}
+.lsx{color:#ccc;cursor:pointer;text-align:center}
+tr:hover .lsx{color:#c33}
+.lsnew td{background:#fcfcfd}
+.lsnew input,.lsnew select{border:1px solid #ddd;border-radius:4px;padding:3px 5px;font-size:11px}
+.pmbtn{position:absolute;left:8px;top:8px;z-index:5;font-size:10px;padding:2px 7px;background:#fff}
+.pm .tw{color:#999;font-size:10px}
+.pm .rowx{margin-left:auto;color:#ddd;cursor:pointer;padding:0 4px}
+.pm .pln:hover .rowx,.pm .itm:hover .rowx{color:#c33}
+.pm .itm .tx{cursor:pointer}
+.pm .itm.done .tx{color:#aaa;text-decoration:line-through}
 </style>
 </head>
 <body>
@@ -602,7 +626,7 @@ function planFile(who){const f=loadF(planPath(who),EMPTY_PLAN());let p=f.data||{
  p=migratePlanData(p);
  if(!Array.isArray(p.projects))p.projects=[];p.projects.forEach(normProject);
  if(typeof p.cur!=='string')p.cur='';
- if(!p.units||typeof p.units!=='object')p.units={};if(!Array.isArray(p.daily)||p.daily.length!==7)p.daily=[1,1,1,1,1,1,1];if(!p.goals)p.goals={};
+ if(!p.units||typeof p.units!=='object')p.units={};if(!Array.isArray(p.daily)||p.daily.length!==7)p.daily=[1,1,1,1,1,1,1];if(!p.goals)p.goals={};if(!Array.isArray(p.lifePlan))p.lifePlan=[];
  f.data=p;
  if(wasV1&&who===cfg.person){f.dirty=true;saveF(planPath(who),f);scheduleSync();} // 환산본을 저장소로 밀어 올림
  return f}
@@ -691,7 +715,7 @@ function mergeFile(path,local,remote){
   if((A.v||1)>CUR_PLAN_V||(B.v||1)>CUR_PLAN_V)return((A.v||0)>=(B.v||0))?A:B; // 더 새 스키마 쪽을 통째 보존 (구버전 앱이 부수지 않게)
   A=migratePlanData(A);B=migratePlanData(B);
   const w=(A.pu||0)>=(B.pu||0)?A:B;
-  const out={v:2,cur:w.cur||'',daily:Array.isArray(w.daily)&&w.daily.length===7?w.daily:[1,1,1,1,1,1,1],goals:w.goals||{},pu:w.pu||0};
+  const out={v:2,cur:w.cur||'',daily:Array.isArray(w.daily)&&w.daily.length===7?w.daily:[1,1,1,1,1,1,1],goals:w.goals||{},lifePlan:Array.isArray(w.lifePlan)?w.lifePlan:[],pu:w.pu||0};
   out.units={};new Set([...Object.keys(A.units||{}),...Object.keys(B.units||{})]).forEach(s=>{out.units[s]=mergeList((A.units||{})[s]||[],(B.units||{})[s]||[])});
   const ids=[...new Set([...(A.projects||[]).map(x=>x.id),...(B.projects||[]).map(x=>x.id)])];
   out.projects=ids.map(id=>{const a=(A.projects||[]).find(x=>x.id===id),b=(B.projects||[]).find(x=>x.id===id);
@@ -746,8 +770,13 @@ setInterval(()=>{if(listDirty().length)syncAll(true)},90000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncAll(true)});
 
 /* ---------- 선택 · 타이머 ---------- */
-function selInfo(){ // 선택된 Study Time 줄 → {s,catId,itemId,catName,itemT,nt,done}
+function selInfo(){ // 선택된 Study Time 줄 → {s,catId,itemId,catName,itemT,nt,done[,unit,band]}
  if(!stSel)return null;
+ if(stSel.type==='unit'){ // §6 세부계획 직결 선택
+  const i2=String(stSel.id).indexOf('|');const bid=String(stSel.id).slice(0,i2),uid2=String(stSel.id).slice(i2+1);
+  const p=myPlan();const b=p.bands.find(x=>x.id===bid&&!x.del);if(!b)return null;
+  const u=((p.units||{})[b.s]||[]).find(x=>x.id===uid2&&!x.del);if(!u)return null;
+  return{itemId:'',catId:'',s:b.s,catName:b.name,itemT:u.id+' '+u.n,nt:false,done:!!(u.done&&u.done[b.id]),unit:u.id,band:b.id};}
  const tf=todoFile(cfg.person);
  if(stSel.type==='item'){const it=tf.data.items.find(x=>x.id===stSel.id&&!x.del);if(!it)return null;const c=it.cat?tf.data.cats.find(z=>z.id===it.cat&&!z.del):null;return{itemId:it.id,catId:c?c.id:'',s:c?c.s:'기타',catName:c?c.name:'',itemT:it.t||'',nt:!!(c&&c.noTimer),done:!!it.done};}
  const c=tf.data.cats.find(z=>z.id===stSel.id&&!z.del);if(!c)return null;
@@ -757,16 +786,55 @@ function selRow(type,id){stSel=(stSel&&stSel.type===type&&stSel.id===id)?null:{t
 function pickTodoItem(id){selRow('item',id)} // 오늘 칸 학습 항목 클릭 = 같은 줄 선택
 function startTimer(){
  const si=selInfo();if(!si){toast('Study Time 에서 활동을 골라줘');return;}
- const n=logicalNow();run={s:si.s,p:si.catName,i:si.itemT,cat:si.catId,plan:si.itemId,nt:si.nt,d:n.d,a:n.m,at:Date.now()};LS.set('tt.run',run);render();
+ const n=logicalNow();run={s:si.s,p:si.catName,i:si.itemT,cat:si.catId,plan:si.itemId,unit:si.unit||'',band:si.band||'',nt:si.nt,d:n.d,a:n.m,at:Date.now()};LS.set('tt.run',run);render();
 }
 function stopTimer(){
  if(!run)return;const n=logicalNow();let b=n.m;let d=run.d;
  if(n.d!==run.d){ b=n.m+1440*Math.round((parse(n.d)-parse(run.d))/864e5); } // 날짜 넘어가면 이어붙임
  if(b<=run.a)b=run.a+1;
- const s={id:uid(),d,s:run.s,p:run.p,i:run.i,a:run.a,b,plan:run.plan||'',cat:run.cat||'',nt:!!run.nt}; // ○×△(k) 폐지 — 완료는 「완료」 버튼으로
+ const s={id:uid(),d,s:run.s,p:run.p,i:run.i,a:run.a,b,plan:run.plan||'',cat:run.cat||'',un:run.unit||'',bd:run.band||'',life:run.life?1:0,nt:!!run.nt}; // un/bd = 세부계획 직결(§6) · life = 생활(§7)
  upsertSession(s);
  run=null;LS.del('tt.run');toast(`저장 ${dur(s.b-s.a)}`);render();
 }
+/* §7 생활 블록: 즉시 시작(종류는 나중에) · nt+life 라 Total·부하·주월계획 어디에도 안 들어감 · 표시 = 빗금 회색 */
+function startLife(){if(run){toast('이미 타이머가 돌고 있어 — STOP 먼저');return}
+ const n=logicalNow();run={life:1,s:'생활',p:'',i:'',cat:'',plan:'',unit:'',band:'',nt:1,d:n.d,a:n.m,at:Date.now()};LS.set('tt.run',run);render();}
+function findSess(id){return sessFile(cfg.person,ym(curDate())).data.sessions.find(x=>x.id===id)||sessFile(cfg.person,ym(today())).data.sessions.find(x=>x.id===id)}
+function lifeModal(s,doc){
+ const pre=['밥','산책','샤워','이동'];const customs=Array.isArray(settings.lifeTypes)?settings.lifeTypes:[];
+ modal(`<h4>생활 블록</h4>
+ <div class="row"><label>시간</label><span>${hmDisp(s.a)} ~ ${hmDisp(s.b)} (${dur(s.b-s.a)})</span></div>
+ <div class="row" style="align-items:flex-start"><label>종류</label><div style="flex:1;display:flex;gap:4px;flex-wrap:wrap">
+  ${[...pre,...customs].map(n=>`<span class="pjpk ${s.p===n?'on':''}" onclick="lifeSetType('${s.id}','${encodeURIComponent(n)}')">${esc(n)}${customs.includes(n)?` <i onclick="event.stopPropagation();lifeDelType('${encodeURIComponent(n)}')" title="프리셋에서 삭제(과거 블록 라벨은 유지)">×</i>`:''}</span>`).join('')}
+  <span class="pjpk ${!s.p?'on':''}" onclick="lifeSetType('${s.id}','')">미지정</span>
+  <span class="pjpk dash" onclick="lifeAddType('${s.id}')">＋ 직접 추가</span></div></div>
+ <p style="font-size:10px;color:#888">공부 시간 합산·부하·주월계획에 안 들어가는 블록이야.</p>`,
+ q=>{},()=>{if(confirm('이 생활 블록을 지울까?')){deleteSession(s);render()}},doc);
+}
+function lifeSetType(id,encN){const s=findSess(id);if(!s)return;s.p=decodeURIComponent(encN);upsertSession(s);
+ const m=[...document.querySelectorAll('.modal')].pop();if(m)m.remove();render();}
+function lifeAddType(id){const n=(prompt('생활 종류 이름 (예: 앱작업)')||'').trim();if(!n)return;
+ settings.lifeTypes=Array.isArray(settings.lifeTypes)?settings.lifeTypes:[];
+ if(!settings.lifeTypes.includes(n))settings.lifeTypes.push(n);saveSettings();
+ lifeSetType(id,encodeURIComponent(n));}
+function lifeDelType(encN){const n=decodeURIComponent(encN);if(!confirm(`프리셋 「${n}」 을 지울까? (과거 블록 라벨은 그대로)`))return;
+ settings.lifeTypes=(settings.lifeTypes||[]).filter(x=>x!==n);saveSettings();
+ const m=[...document.querySelectorAll('.modal')].pop();if(m)m.remove();render();}
+function lifePlanned(who,d){ // 반복 생활 계획 블록 (plan.lifePlan · 그리기만)
+ const p=planView(who);const wd=dayIdx(d);
+ return(p.lifePlan||[]).filter(x=>!x.del&&x.days&&x.days[wd]).map(x=>{const[h,m2]=(x.hm||'12:00').split(':').map(Number);let a=h*60+(m2||0);if(a<dayStart()*60)a+=1440;return{a,b:a+(+x.len||60),label:x.label||'생활'}});
+}
+function lifePlanModal(){
+ const lp=(myPlan().lifePlan||[]).filter(x=>!x.del);
+ modal(`<h4>생활 계획 블록 <small style="color:#888;font-weight:400">반복 · 그리기만(합산 없음)</small></h4>
+ ${lp.map(x=>`<div class="row" style="font-size:11px"><span style="flex:1">${esc(x.label||'생활')} · ${['월','화','수','목','금','토','일'].filter((n,i)=>x.days&&x.days[i]).join('')||'—'} ${esc(x.hm||'')} · ${x.len||60}분</span><button class="btn d" onclick="this.closest('.modal').remove();lifePlanDel('${x.id}')">✕</button></div>`).join('')||'<p style="color:#888;font-size:11px">아직 없음 — 아래로 추가</p>'}
+ <div class="row"><label>이름</label><input id="lpN" placeholder="점심"></div>
+ <div class="row"><label>요일</label><div style="display:flex;gap:4px;flex-wrap:wrap">${['월','화','수','목','금','토','일'].map((n,i)=>`<label style="width:auto;white-space:nowrap">${n}<input type="checkbox" id="lpD${i}" checked></label>`).join('')}</div></div>
+ <div class="row"><label>시각</label><input id="lpT" type="time" value="12:00" style="flex:0 0 110px;min-width:0"><label style="width:auto">길이</label><input id="lpL" type="number" value="60" style="flex:0 0 64px;min-width:0"> 분</div>`,
+ q=>{const label=q('lpN').value.trim();if(!label)return;
+  planMut(p=>{p.lifePlan=p.lifePlan||[];p.lifePlan.push({id:uid(),label,days:[0,1,2,3,4,5,6].map(i=>q('lpD'+i).checked?1:0),hm:q('lpT').value||'12:00',len:Math.max(5,+q('lpL').value||60),del:false})},true);render()});
+}
+function lifePlanDel(id){planMut(p=>{const x=(p.lifePlan||[]).find(z=>z.id===id);if(x)x.del=true},true);render()}
 function elapsed(){return run?Math.max(0,Math.floor((Date.now()-run.at)/1000)):0}
 /* 매 초: 경과·선택 줄 시간·Total 갱신. 매 분: 진행 중 블록을 다시 그림 */
 setInterval(()=>{if(!run)return;
@@ -783,14 +851,14 @@ function manualSave(doc){doc=doc||document;
  const si=selInfo();
  const tm=t=>{const[h,m]=t.split(':').map(Number);let v=h*60+m;if(v<dayStart()*60)v+=1440;return v};
  let A=tm(a),B=tm(b);if(B<=A)B+=1440;
- if(si){upsertSession({id:uid(),d:curDate(),s:si.s,p:si.catName,i:si.itemT,a:A,b:B,plan:si.itemId,cat:si.catId,nt:si.nt});toast('저장됨');}
+ if(si){upsertSession({id:uid(),d:curDate(),s:si.s,p:si.catName,i:si.itemT,a:A,b:B,plan:si.itemId,cat:si.catId,un:si.unit||'',bd:si.band||'',nt:si.nt});toast('저장됨');}
  else{upsertSession({id:uid(),d:curDate(),s:'기타',p:'',i:'',a:A,b:B,plan:'',cat:''});toast('선택이 없어 「기타」로 저장');}
  render();
 }
 
 /* ---------- 렌더 ---------- */
 const $=id=>document.getElementById(id);
-function render(){applyMonthColor();renderSide();renderMain();renderPnav();fitMinis();planAfterRender();if(typeof pipPaint=='function')pipPaint();if(typeof zoomSt!=='undefined'&&zoomSt)zoomRender();}
+function render(){applyMonthColor();renderSide();renderMain();renderPnav();fitMinis();planAfterRender();if(typeof pipPaint=='function')pipPaint();if(typeof zoomSt!=='undefined'&&zoomSt)zoomRender();if(typeof pmPopSync=='function')pmPopSync();}
 function dday(){const x=nextExam();if(!x)return'';const n=Math.ceil((parse(x.date)-parse(today()))/864e5);return n>=0?`D-${n}`:`D+${-n}`}
 function monthColor(mm){const def=DEF_SETTINGS.monthColors;const a=Array.isArray(settings.monthColors)&&settings.monthColors.length===12?settings.monthColors:def;const i=(+String(mm).slice(-2)||1)-1;return a[i]||def[i]}
 /* 보고 있는 달의 색을 --m8 로 (시트·격자·썸네일 전부 이 변수를 씀) */
@@ -834,12 +902,13 @@ const navBtns=(prev,next,home)=>`<div class="nav"><button onclick="${prev}">‹<
 function weekNo(d){return wLabelOf(myPlan(),d)} // 현재 프로젝트 셀법의 주 라벨 (범위 밖·프로젝트 없음 = null)
 
 /* ----- 일간 ----- */
-function ttRows(sess,{rows=24,thin=false}={}){ // 05~04 24행 — 새벽 3~4시(전날 소속)도 보이게 (8/28 사람 확정)
+function ttRows(sess,{rows=24,thin=false,lp=null}={}){ // 05~04 24행 · lp = 생활 계획 블록(옅은 빗금 · §7)
  const s0=dayStart()*60;let h='';
  const now=logicalNow();const isToday=curDate()===now.d;
  for(let r=0;r<rows;r++){
   const a=s0+r*60,b=a+60;let bars='';
-  sess.forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${subjColor(x.s)}${x.nt?NT_HATCH:''}" title="${esc(x.s)} ${hmDisp(x.a)}-${hmDisp(x.b)}" onclick="editSession('${x.id}',document)"></b>`});
+  (lp||[]).forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:repeating-linear-gradient(45deg,#eef0f2 0 4px,#e2e4e7 4px 8px);opacity:.9" title="계획 · ${esc(x.label)}"></b>`});
+  sess.forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${x.life?'#c9ccd1':subjColor(x.s)}${x.nt?NT_HATCH:''}" title="${esc(x.life?('생활'+(x.p?' · '+x.p:'')):x.s)} ${hmDisp(x.a)}-${hmDisp(x.b)}" onclick="editSession('${x.id}',document)"></b>`});
   if(run&&run.d===curDate()){const L=Math.max(run.a,a),R=Math.min(now.m+(now.d!==run.d?1440:0),b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${subjColor(run.s)};opacity:.5"></b>`}
   if(isToday&&now.m>=a&&now.m<b)bars+=`<i class="now" style="left:${(now.m-a)/60*100}%"></i>`;
   h+=`<span>${pad((a/60)%24)}</span><div class="r">${bars}</div>`;
@@ -867,7 +936,7 @@ function dayRows(who,d){
   ss.forEach(x=>used.add(x.id));
   rows.push({type:'cat',id:c.id,s:c.s,cat:c,label:'',done:false,min:mSum(ss),sess:ss});
  });
- const g={};sess.filter(x=>!used.has(x.id)).forEach(x=>{const k=x.s+'|'+(x.p||'')+'|'+(x.i||'');const o=(g[k]=g[k]||{type:'legacy',id:k,s:x.s,cat:null,label:[x.p,x.i].filter(Boolean).join(' '),done:false,min:0,sess:[]});o.min+=x.nt?0:(x.b-x.a);o.sess.push(x)});
+ const g={};sess.filter(x=>!used.has(x.id)&&!x.life).forEach(x=>{const k=x.s+'|'+(x.p||'')+'|'+(x.i||'');const o=(g[k]=g[k]||{type:'legacy',id:k,s:x.s,cat:null,label:[x.p,x.i].filter(Boolean).join(' '),done:false,min:0,sess:[]});o.min+=x.nt?0:(x.b-x.a);o.sess.push(x)}); // 생활 블록은 Study Time 줄에서 제외 (§7)
  rows.push(...Object.values(g));
  return rows;
 }
@@ -882,8 +951,8 @@ function sheetHTML(who,d,sess,{withRun=true}={}){
   const lbl=r.type==='legacy'?r.label:[r.cat?r.cat.name:'',r.label].filter(Boolean).join(' ');
   return`<div class="it ${on?'selr':''} ${r.done?'done2':''}" onclick="${click}"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl">${esc(lbl)||'—'}</span><span${isRun?` id="stRunMin" data-base="${r.min}"`:''}>${dur(r.min+(isRun?runMin:0))}</span>${on&&r.type==='item'?`<button class="btn" onclick="event.stopPropagation();toggleTodo('${r.id}')">${r.done?'완료 취소':'완료'}</button>`:''}</div>`;
  };
- return`<div class="sheet"><div class="ribbon">${d.replace(/-/g,'.')} ${['SUN','MON','TUE','WED','THU','FRI','SAT'][dt.getDay()]}</div><div class="paper">
- <div><div class="hd">Time Table</div><div class="tt"><span></span><div class="tth">${[1,2,3,4,5].map(n=>`<i style="left:${(n*100/6).toFixed(2)}%">${n*10}</i>`).join('')}</div>${ttRows(sess)}</div></div>
+ return`<div class="sheet" style="position:relative"><button class="btn pmbtn" onclick="pmPopup(this.ownerDocument)" title="계획관리 팝업 — 화면 이동 없이 편집 (§9)">📋 계획관리</button><div class="ribbon">${d.replace(/-/g,'.')} ${['SUN','MON','TUE','WED','THU','FRI','SAT'][dt.getDay()]}</div><div class="paper">
+ <div><div class="hd">Time Table</div><div class="tt"><span></span><div class="tth">${[1,2,3,4,5].map(n=>`<i style="left:${(n*100/6).toFixed(2)}%">${n*10}</i>`).join('')}</div>${ttRows(sess,{lp:lifePlanned(who,d)})}</div></div>
  <div class="stc"><div class="hd">Study Time</div><div class="st">${rows.map(rowHTML).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
  <div class="foot"><div>Start <b>${sess.length?hmDisp(sess[0].a):(mine&&run&&run.d===d?hmDisp(run.a):'--:--')}</b> &nbsp; Stop <b>${sess.length?hmDisp(Math.max(...sess.map(x=>x.b))):'--:--'}</b></div><div>Total <span class="big"${mine&&run&&run.d===d?` id="stTot" data-base="${tot}"`:''}>${dur(tot+(mine&&run&&run.d===d&&!run.nt?runMin:0))}</span></div></div></div></div></div>`;
 }
@@ -895,7 +964,7 @@ function mbarHTML(){
       :`<div class="run" style="color:#999">Study Time 에서 활동을 골라줘</div>`);
  return`<div class="mbar">${line}
  <div class="ss"><button class="${run?'dis':'go'}" onclick="${run?'':'startTimer()'}">START</button><button class="${run?'go':'dis'}" onclick="${run?'stopTimer()':''}">STOP</button></div>
- <div class="man">수동 <input id="mA" type="time" step="60"> ~ <input id="mB" type="time" step="60"> <button class="btn" onclick="manualSave(document)">저장</button><span style="margin-left:auto"><button class="btn" onclick="pip()">작은 창</button></span></div></div>`;
+ <div class="man">수동 <input id="mA" type="time" step="60"> ~ <input id="mB" type="time" step="60"> <button class="btn" onclick="manualSave(document)">저장</button><span style="margin-left:auto;display:flex;gap:4px"><button class="btn" onclick="startLife()" title="생활 블록 즉시 시작 — 종류는 블록 클릭으로 나중에 (§7)">생활 ▶</button><button class="btn" onclick="lifePlanModal()" title="반복 생활 계획 블록">생활 계획</button><button class="btn" onclick="pip()">작은 창</button></span></div></div>`;
 }
 function dueBadge(due){const n=Math.ceil((parse(due)-parse(today()))/864e5);return`<span class="dd ${n<0?'late':''}">${n>0?'D-'+n:n===0?'D-day':'D+'+(-n)}</span>`}
 function sharedForCol(x,i){
@@ -910,18 +979,19 @@ function threeHTML(){
  const tf=todoFile(cfg.person);const catById=new Map(tf.data.cats.filter(c=>!c.del).map(c=>[c.id,c]));
  const t0=today();
  return`<div class="three">${ds.map((x,i)=>{
-  const dt=parse(x);const items=todosOf(cfg.person,x);const st=items.filter(t=>t.kind=='study');
+  const dt=parse(x);const items=todosOf(cfg.person,x);
+  const auto=PLAN_ITEMS_DIRECT?autoUnitTexts(x,i):null;
+  const st=items.filter(t=>t.kind=='study'&&!(auto&&auto.has((t.t||'').trim()))); // 자동 줄과 겹치는 옛 복사 할일 숨김 (⚠)
   let td=items.filter(t=>t.kind!='study');
   if(x===t0)td=td.concat(tf.data.items.filter(t=>!t.del&&t.kind!=='study'&&t.due&&!t.done&&t.d!==x)); // 기한 있는 미완료는 매일 오늘 칸에
   td=td.slice().sort((a,b)=>(a.due||'9999')<(b.due||'9999')?-1:1);
   const late=i==0?st.filter(t=>!t.done):[];
-  const pc=i==1?pullCandidates(x).length:0;
   const li=t=>{const c=t.cat?catById.get(t.cat):null;const pn=c?c.name:'';const cur=t.kind=='study'&&run&&(run.plan===t.id||(!run.plan&&run.i&&run.i===t.t));
    const dd2=t.kind!='study'&&t.due?dueBadge(t.due):'';
    return`<li class="${t.done?'done':''} ${i==0&&!t.done&&t.kind=='study'?'late':''}"><span class="cb ${t.done?'on':''}" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</span><span onclick="${t.kind=='study'?`pickTodoItem('${t.id}')`:`editTodo('${t.id}')`}" style="flex:1;cursor:pointer">${t.kind=='study'?`<i class="plandot" style="background:${subjColor(c?c.s:'기타')}"></i>`:''}${esc(t.t)}${cur?' <b style="color:var(--blue);font-size:9px">▶ 진행 중</b>':''}</span>${dd2}${pn?`<span class="m">${esc(pn)}</span>`:''}<span class="m">${t.carry?'이월 '+t.carry:''}</span>${t.kind=='study'?`<span class="x" onclick="editTodo('${t.id}')" title="편집">✎</span>`:''}<span class="x" onclick="delTodo('${t.id}')">×</span></li>`};
   const cm=sharedForCol(x,i).map(s=>`<li class="${s.done?'done':''}"><span class="cb ${s.done?'on':''}" onclick="toggleShared('${s.id}')">${s.done?'✓':''}</span><span onclick="cmEdit('${s.id}')" style="flex:1;cursor:pointer"><b style="color:var(--blue);font-size:9px;border:1px solid var(--blue);border-radius:3px;padding:0 3px">공통</b> ${esc(s.t)}</span>${s.due?dueBadge(s.due):''}</li>`).join('');
   return`<div class="col ${i==1?'today':''}"><h5>${lab[i]} <small>${dt.getMonth()+1}/${dt.getDate()} ${DAYS[dt.getDay()]}${i==1&&weekNo(x)>=1?' · W'+pad(weekNo(x)):''}</small></h5>
-  <div class="sec">학습${i==0?' · 미완료는 이월 가능':i==1?' · 타이머에 붙음':''}<span class="rgt">${i==0&&late.length?`<button class="btn" onclick="carryAll('${x}')">오늘로 이월 ${late.length}건</button>`:''}${pc?`<button class="btn" onclick="pullFromBands('${x}')">활동에서 가져오기 ${pc}</button>`:''}</span></div>${PLAN_ITEMS_DIRECT?planColHTML(x,i):''}<ul>${st.map(li).join('')}</ul>
+  <div class="sec">학습${i==0?' · 미완료는 이월 가능':i==1?' · 체크 = 완료 · 클릭 = 타이머':''}<span class="rgt">${i==0&&late.length?`<button class="btn" onclick="carryAll('${x}')">오늘로 이월 ${late.length}건</button>`:''}</span></div>${PLAN_ITEMS_DIRECT?planColHTML(x,i):''}<ul>${st.map(li).join('')}</ul>
   <input class="add" placeholder="+ 학습 추가" onkeydown="if(event.key=='Enter'&&this.value.trim()){addTodo('${x}','study',this.value.trim());this.value=''}">
   <div class="sec">할일</div><ul>${td.map(li).join('')}${cm}</ul>
   <div style="display:flex;gap:4px;align-items:center"><input class="add" placeholder="+ 할일 추가" style="flex:1" onkeydown="if(event.key=='Enter'&&this.value.trim()){addTodo('${x}','todo',this.value.trim(),document.getElementById('due_${i}').value);this.value='';document.getElementById('due_${i}').value=''}"><input type="date" id="due_${i}" title="기한(선택)" style="border:0;border-bottom:1px dashed #ddd;font-size:10px;width:110px;background:transparent"></div></div>`}).join('')}</div>`;
@@ -1068,28 +1138,19 @@ function syncBandDone(t){
 function delTodo(id){const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(t&&confirm('지울까? '+t.t)){t.del=true;upsertTodo(t);render()}}
 function editTodo(id){const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(!t)return;const catOpts=catsOf(cfg.person).map(p=>`<option value="${p.id}" ${t.cat==p.id?'selected':''}>${esc(p.s)} ${esc(p.name)}</option>`).join('');modal(`<h4>항목 편집</h4><div class="row"><label>내용</label><input id="eT" value="${esc(t.t)}"></div><div class="row"><label>날짜</label><input id="eD" type="date" value="${t.d}"></div><div class="row"><label>종류</label><select id="eK"><option value="study" ${t.kind=='study'?'selected':''}>학습</option><option value="todo" ${t.kind!='study'?'selected':''}>할일</option></select></div><div class="row"><label>활동</label><select id="eP2"><option value="">활동 없음</option>${catOpts}</select></div><div class="row"><label>기한</label><input id="eDue" type="date" value="${t.due||''}"><span style="font-size:10px;color:#888">할일만 · 선택</span></div>`,q=>{t.t=q('eT').value;t.d=q('eD').value;t.kind=q('eK').value;t.cat=q('eP2').value||'';t.due=t.kind!=='study'?(q('eDue').value||''):'';upsertTodo(t);render()})}
 function carryAll(from){const to=addDays(from,1);todosOf(cfg.person,from).filter(t=>t.kind=='study'&&!t.done).forEach(t=>{t.d=to;t.carry=(t.carry||0)+1;upsertTodo(t)});toast('이월했어');render()}
-/* 띠 → 오늘 칸: 직접 넣지 않고(사람 확정 「일단은」 — 뒤집으려면 이 상수만) 「띠에서 가져오기」로 복사 */
-const PLAN_ITEMS_DIRECT=false;
-function pullCandidates(d){
- const plan=myPlan();if(!(plan.bands||[]).some(b=>!b.del))return[];
- const have=new Set(todosOf(cfg.person,d).filter(t=>t.kind==='study').map(t=>(t.t||'').trim()));
- const out=[];plan.bands.filter(b=>!b.del).forEach(b=>{bandListFor(plan,b,d).forEach(u=>{const t=u.id+' '+u.n;if(!have.has(t))out.push({b,u,t})})});
+/* §6 (feedback10 · 8/28 확정 뒤집음): 세부계획이 어제·오늘·내일 칸에 자동 표시 — 「활동에서 가져오기」 버튼 폐지 · 복사본 안 만듦 */
+const PLAN_ITEMS_DIRECT=true;
+function autoUnitTexts(d,idx){ // 옛 pullFromBands 복사 할일과의 이중 표시 방지용(⚠) — 자동 줄과 같은 문구의 학습 항목은 숨김
+ const plan=myPlan();const out=new Set();
+ plan.bands.filter(b=>!b.del).forEach(b=>{(idx===2?bandListTomorrow(plan,b,addDays(d,-1),d):bandListFor(plan,b,d)).forEach(u=>out.add((u.id+' '+u.n).trim()))});
  return out;
-}
-function pullFromBands(d){
- const plan=myPlan();const cs=pullCandidates(d);if(!cs.length){toast('가져올 세부계획이 없어');return;}
- cs.forEach(c=>{
-  let pl=catsOf(cfg.person).find(p=>p.s===c.b.s&&p.name===c.b.name);
-  if(!pl){pl={id:uid(),s:c.b.s,name:c.b.name,d1:pWeekDate(plan,bO1(plan,c.b)),d2:pWeekDate(plan,bO2(plan,c.b),6),del:false};upsertCat(pl);}
-  upsertTodo({id:uid(),d,t:c.t,kind:'study',cat:pl.id,done:false,carry:0});
- });
- toast(cs.length+'건 가져옴');render();
 }
 /* 세션 편집 */
 const sessDT=(d,m)=>{let dd=d,mm=m;while(mm>=1440){dd=addDays(dd,1);mm-=1440}return dd+'T'+pad(Math.floor(mm/60))+':'+pad(mm%60)};
 function dtToLogical(v){const[ds,ts]=v.split('T');const[h,mi]=ts.split(':').map(Number);let m2=h*60+mi;let d2=ds;if(m2<dayStart()*60){d2=addDays(ds,-1);m2+=1440}return{d:d2,m:m2}}
 function editSession(id,doc){
- const s=sessFile(cfg.person,ym(curDate())).data.sessions.find(x=>x.id===id)||sessFile(cfg.person,ym(today())).data.sessions.find(x=>x.id===id);if(!s)return;
+ const s=findSess(id);if(!s)return;
+ if(s.life){lifeModal(s,doc);return} // §7 생활 블록 = 종류 지정 모달
  const rows=dayRows(cfg.person,s.d).filter(r=>r.type!=='legacy');
  const curVal=s.plan?('item:'+s.plan):(s.cat?('cat:'+s.cat):'');
  const opts=[`<option value="">기타 ${esc([s.s,s.p,s.i].filter(Boolean).join(' '))||''}</option>`].concat(rows.map(r=>{const v=r.type+':'+r.id;const lbl=[r.s,r.cat?r.cat.name:'',r.label].filter(Boolean).join(' ');return`<option value="${v}" ${curVal===v?'selected':''}>${esc(lbl)}</option>`})).join('');
@@ -1125,11 +1186,11 @@ function weekCardHTML(ws){ // MiMi 주간 카드 — feedback5 그대로 · 폭 
  const days=[...Array(7)].map((_,i)=>addDays(ws,i));const s0=dayStart()*60;
  const sessD=days.map(x=>sessionsOf(cfg.person,x));const tots=sessD.map(mSum);const wt=tots.reduce((a,b)=>a+b,0);
  const H=24*60;
- const cols=days.map((x,i)=>`<div class="wcol">${sessD[i].map(y=>`<b style="top:${((y.a-s0)/H*100).toFixed(2)}%;height:${((y.b-y.a)/H*100).toFixed(2)}%;background:${subjColor(y.s)}${y.nt?NT_HATCH:''}" title="${esc(y.s)} ${hmDisp(y.a)}-${hmDisp(y.b)}" onclick="setDate('${x}');editSession('${y.id}',document)"></b>`).join('')}</div>`).join('');
+ const cols=days.map((x,i)=>`<div class="wcol">${sessD[i].map(y=>`<b style="top:${((y.a-s0)/H*100).toFixed(2)}%;height:${((y.b-y.a)/H*100).toFixed(2)}%;background:${y.life?'#c9ccd1':subjColor(y.s)}${y.nt?NT_HATCH:''}" title="${esc(y.life?('생활'+(y.p?' · '+y.p:'')):y.s)} ${hmDisp(y.a)}-${hmDisp(y.b)}" onclick="setDate('${x}');editSession('${y.id}',document)"></b>`).join('')}</div>`).join('');
  const labs=`<div class="wlab">${[...Array(24)].map((_,r)=>`<span>${pad((dayStart()+r)%24)}</span>`).join('')}</div>`;
  const tf=todoFile(cfg.person);const all=sessD.flat();
  const byCat=new Map();const other={};
- all.forEach(y=>{const cid=sessCatId(y,tf);const m2=y.nt?0:y.b-y.a;if(cid)byCat.set(cid,(byCat.get(cid)||0)+m2);else other[y.s]=(other[y.s]||0)+m2});
+ all.forEach(y=>{if(y.life)return;const cid=sessCatId(y,tf);const m2=y.nt?0:y.b-y.a;if(cid)byCat.set(cid,(byCat.get(cid)||0)+m2);else other[y.s]=(other[y.s]||0)+m2});
  tf.data.cats.filter(c=>!c.del&&(c.d1||c.d2)&&(!c.d1||c.d1<=days[6])&&(!c.d2||c.d2>=days[0])).forEach(c=>{if(!byCat.has(c.id))byCat.set(c.id,0)});
  const rows=[]; // 줄 순서 = 분류 만든 순(cats 배열 순 · MiMi 와 같게)
  tf.data.cats.forEach(c=>{if(!c.del&&byCat.has(c.id))rows.push({s:c.s,n:c.name,m:byCat.get(c.id)})});
@@ -1393,15 +1454,15 @@ function pjDistCfg(plan){const pj=plan.__pj;const d=(pj&&pj.dist)||{};
 function distWeights(plan,s){return distWeightsOf((plan.__pj||{}).dist,s)}
 function weekQuotasW(w,per){const W=w.reduce((a,b)=>a+(+b||0),0);per=+per||0;if(!W||!per)return[0,0,0,0,0,0,0];let prev=0,acc=0;const out=[];for(let i=0;i<7;i++){acc+=(+w[i]||0);const c=Math.round(per*acc/W);out.push(c-prev);prev=c}return out}
 function weekQuotas(plan,band){return weekQuotasW(distWeights(plan,band.s),band.per)}
-function bandQuota(plan,band,d){const o=pWeekNo(plan,d);if(o<bO1(plan,band)||o>bO2(plan,band))return 0;return weekQuotas(plan,band)[dayIdx(d)]}
+function bandQuota(plan,band,d){if(!bandPlaced(band))return 0;const o=pWeekNo(plan,d);if(o<bO1(plan,band)||o>bO2(plan,band))return 0;return weekQuotas(plan,band)[dayIdx(d)]}
 function bandUnits(plan,band){const m=unitMap(plan,band.s);return(band.units||[]).map(id=>m.get(id)).filter(Boolean)}
 function bandDone(plan,band){return bandUnits(plan,band).filter(u=>u.done&&u.done[band.id]).length}
 function bandCursor(plan,band){const us=bandUnits(plan,band);for(let i=0;i<us.length;i++)if(!(us[i].done&&us[i].done[band.id]))return i;return us.length}
-function plannedThrough(plan,band,d){const s=pWeekDate(plan,bO1(plan,band));if(d<s)return 0;const e=pWeekDate(plan,bO2(plan,band),6);const end=d<e?d:e;const q=weekQuotas(plan,band);let tot=0;for(let x=s;x<=end;x=addDays(x,1))tot+=q[dayIdx(x)];return tot}
+function plannedThrough(plan,band,d){if(!bandPlaced(band))return 0;const s=pWeekDate(plan,bO1(plan,band));if(d<s)return 0;const e=pWeekDate(plan,bO2(plan,band),6);const end=d<e?d:e;const q=weekQuotas(plan,band);let tot=0;for(let x=s;x<=end;x=addDays(x,1))tot+=q[dayIdx(x)];return tot}
 function late(plan,band,d){const us=bandUnits(plan,band);if(!us.length)return 0;return Math.max(0,Math.min(plannedThrough(plan,band,d),us.length)-bandDone(plan,band))}
 /* d 날짜 몫 = 그 날 quota + 그 전날까지의 밀림. 완료는 순서 무관(건너뛴 것도 done 이면 done) */
 function bandListFor(plan,band,d){
- const us=bandUnits(plan,band);if(!us.length)return[];
+ const us=bandUnits(plan,band);if(!us.length||!bandPlaced(band))return[];
  const o=pWeekNo(plan,d);if(o<bO1(plan,band)||o>bO2(plan,band))return[];
  const notDone=us.filter(u=>{const x=u.done&&u.done[band.id];return!x||x>=d});
  const doneBefore=us.length-notDone.length;
@@ -1410,7 +1471,7 @@ function bandListFor(plan,band,d){
 }
 /* 내일 열: 오늘(t) 다 끝났다고 치고 내일(tmr) quota 만 */
 function bandListTomorrow(plan,band,t,tmr){
- const us=bandUnits(plan,band);if(!us.length)return[];
+ const us=bandUnits(plan,band);if(!us.length||!bandPlaced(band))return[];
  const o=pWeekNo(plan,tmr);if(o<bO1(plan,band)||o>bO2(plan,band))return[];
  const notDone=us.filter(u=>{const x=u.done&&u.done[band.id];return!x||x>=t});
  const ot=pWeekNo(plan,t);const skip=(ot>=bO1(plan,band)&&ot<=bO2(plan,band))?bandListFor(plan,band,t).length:0;
@@ -1421,10 +1482,13 @@ function endDate(plan,band){const us=bandUnits(plan,band);if(!us.length)return n
 function examWeek(plan){const g=pjGrid(plan.__pj);return g&&g.o2?g.o2:9999} // 프로젝트 종료(시험) 주의 서수 · 미정이면 없음
 function subjOrderAll(plan){const names=plan.__pj?plan.subjects.slice():settings.subjects.map(x=>x.n);const extra=[...new Set(plan.bands.filter(b=>!b.del).map(b=>b.s))].filter(s=>!names.includes(s));return[...names,...extra]}
 function yieldOrder(plan){const base=(plan.yield&&plan.yield.length?plan.yield:(plan.__pj?plan.subjects.slice():settings.subjects.map(x=>x.n)));const extra=[...new Set(plan.bands.filter(b=>!b.del).map(b=>b.s))].filter(s=>!base.includes(s));return[...base,...extra]}
-function extendBand(plan,band){const dl=wDirL(plan);const oldO2=bO2(plan,band);band.w2+=dl;band.u=Date.now();plan.bands.forEach(b=>{if(b!==band&&!b.del&&b.s===band.s&&bO1(plan,b)>oldO2){b.w1+=dl;b.w2+=dl;b.u=Date.now()}})}
+function extendBand(plan,band){const dl=wDirL(plan);const oldO2=bO2(plan,band);band.w2+=dl;band.u=Date.now();
+ plan.bands.forEach(b=>{if(b!==band&&!b.del&&b.s===band.s&&bandPlaced(b)&&bO1(plan,b)>oldO2){b.w1+=dl;b.w2+=dl;b.u=Date.now();syncBaselineFor(plan,b)}});
+ syncBaselineFor(plan,band)}
 function extendBandById(id,n){let warn=false,nm='',perNote='';planMut(p=>{const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;nm=b.name;for(let i=0;i<Math.max(1,n||1);i++)extendBand(p,b);
- const wk=bO2(p,b)-bO1(p,b)+1;if((b.units||[]).length&&wk>0){const np=Math.ceil(b.units.length/wk);if(np!==+(b.per||0)){b.per=np;perNote=' · 주당 '+np+'개로 다시 제안'}} // §2-2 ⚠ 재제안 자동 적용
- warn=p.bands.some(x=>!x.del&&x.s===b.s&&bO2(p,x)>examWeek(p))});render();toast(warn?`${nm} 늘림 — ⚠ 시험 주를 넘는 활동이 있어`:`${nm} +${Math.max(1,n||1)}주${perNote}`);rebaseAsk(false)}
+ const wk=bO2(p,b)-bO1(p,b)+1;if((b.units||[]).length&&wk>0){const np=Math.ceil(b.units.length/wk);if(np!==+(b.per||0)){b.per=np;perNote=' · 주당 '+np+'개로 다시 제안'}} // 재제안 자동 적용
+ syncBaselineFor(p,b); // §3-3 완료 0 = 원계획 갱신 · 완료 있음 = 밀림
+ warn=p.bands.some(x=>!x.del&&x.s===b.s&&bandPlaced(x)&&bO2(p,x)>examWeek(p))});render();toast(warn?`${nm} 늘림 — ⚠ 시험 주를 넘는 활동이 있어`:`${nm} +${Math.max(1,n||1)}주${perNote}`)}
 function fixBaseline(dateStr){planMut(p=>{ // feedback8 §3-1 보강: 날짜 배치 재현에 필요한 units·dist·pins 스냅 포함
  const rem={};p.bands.filter(b=>!b.del).forEach(b=>{const us=bandUnits(p,b);if(us.length)rem[b.s]=(rem[b.s]||0)+us.length-bandDone(p,b)});
  const pj=p.__pj;
@@ -1461,7 +1525,7 @@ function rebalanceApply(){
    const ext=Math.ceil(L/(+b.per));for(let i=0;i<ext;i++)extendBand(p,b);
   })});
  });
- render();toast('재배치를 적용했어');rebaseAsk(false);
+ render();toast('재배치를 적용했어');
 }
 function maybeAutoBaseline(){ // feedback8 §3-1: 활동 깔린 프로젝트에 원계획이 없으면 v1 자동 확정 (매달 1일 재고정은 폐지 — 갱신은 ⟳·§3-3 질문으로)
  const p=myPlan();if(!p.__pj)return;if(!(p.bands||[]).some(b=>!b.del))return;if((p.baselines||[]).length)return;
@@ -1487,21 +1551,26 @@ function planColHTML(d,idx){
   const list=idx===2?bandListTomorrow(plan,b,addDays(d,-1),d):bandListFor(plan,b,d);
   list.forEach(u=>{
    const done=u.done&&u.done[b.id]===d;
-   const cur=run&&run.s===b.s&&run.i===(u.id+' '+u.n);
-   rows.push(`<li class="${done?'done':''}"><span class="cb ${done?'on':''}" onclick="togglePlanDone('${b.id}','${u.id}','${d}')">${done?'✓':''}</span><span style="flex:1;cursor:pointer" onclick="${idx===1?`pickPlanItem('${b.id}','${u.id}')`:''}"><i class="plandot" style="background:${subjColor(b.s)}"></i>${esc(u.id)} ${esc(u.n)}${cur?' <b style="color:var(--blue);font-size:9px">▶ 진행 중</b>':''}</span><span class="m">${esc(b.name)}</span></li>`);
+   const cur=run&&run.band===b.id&&run.unit===u.id;
+   const on=stSel&&stSel.type==='unit'&&stSel.id===b.id+'|'+u.id;
+   rows.push(`<li class="${done?'done':''}" style="${on?'background:var(--now);border-radius:3px':''}"><span class="cb ${done?'on':''}" onclick="togglePlanDone('${b.id}','${u.id}','${d}')" title="체크 = 세부계획 완료 (주월계획 직결)">${done?'✓':''}</span><span style="flex:1;cursor:pointer" onclick="${idx===1?`selUnit('${b.id}','${encodeURIComponent(u.id)}')`:''}"><i class="plandot" style="background:${subjColor(b.s)}"></i>${esc(u.id)} ${esc(u.n)}${cur?' <b style="color:var(--blue);font-size:9px">▶ 진행 중</b>':''}</span><span class="m">${esc(b.name)}</span></li>`);
   });
  });
+ const CAP=25;
+ if(rows.length>CAP&&!ui.dayAutoAll)return`<ul>${rows.slice(0,CAP).join('')}<li style="color:#888;cursor:pointer" onclick="ui.dayAutoAll=1;LS.set('tt.ui',ui);render()">… +${rows.length-CAP} 더 보기</li></ul>`; // 밀림 폭주 대비 ⚠
+ if(rows.length>CAP)return`<ul>${rows.join('')}<li style="color:#888;cursor:pointer" onclick="ui.dayAutoAll=0;LS.set('tt.ui',ui);render()">접기 ▴</li></ul>`;
  return rows.length?`<ul>${rows.join('')}</ul>`:'';
 }
 function togglePlanDone(bandId,unitId,d){planMut(p=>{const b=p.bands.find(x=>x.id===bandId);if(!b)return;const u=((p.units||{})[b.s]||[]).find(x=>x.id===unitId&&!x.del);if(!u)return;u.done=u.done||{};if(u.done[bandId]===d)delete u.done[bandId];else u.done[bandId]=d;u.u=Date.now();});render();}
-function pickPlanItem(bandId,unitId){toast('「활동에서 가져오기」로 복사해서 써')} // 직접 삽입 경로(PLAN_ITEMS_DIRECT) 전용 — 지금은 꺼져 있음
+function selUnit(bandId,encU){const id=bandId+'|'+decodeURIComponent(encU); // §6 세부계획을 타이머 선택 줄로 직결
+ stSel=(stSel&&stSel.type==='unit'&&stSel.id===id)?null:{type:'unit',id};LS.set('tt.sel',stSel);render();}
 /* ===== 세부계획 캘린더 엔진 (feedback8 §2) =====
    배치는 저장하지 않고 즉석 계산 — 저장은 세부계획 done 과 프로젝트 pins(고정)뿐. */
 function pjPins(plan,bandId){const pj=plan.__pj;if(!pj)return{};return(pj.pins||{})[bandId]||{}}
 function prunePins(p){ // 활동 기간 밖·활동에서 빠진 세부계획의 고정 해제 (§2-4) — 해제 수 반환
  const pj=p.__pj;if(!pj||!pj.pins)return 0;let n=0;
  Object.keys(pj.pins).forEach(bid=>{const b=p.bands.find(x=>x.id===bid&&!x.del);const g=pj.pins[bid]||{};
-  if(!b){n+=Object.keys(g).length;delete pj.pins[bid];return}
+  if(!b||!bandPlaced(b)){n+=Object.keys(g).length;delete pj.pins[bid];return}
   const d1=pWeekDate(p,bO1(p,b)),d2=pWeekDate(p,bO2(p,b),6);
   Object.keys(g).forEach(uid2=>{const d=g[uid2];if(d<d1||d>d2||!(b.units||[]).includes(uid2)){delete g[uid2];n++}});
   if(!Object.keys(g).length)delete pj.pins[bid];});
@@ -1510,7 +1579,7 @@ function pinUnit(bandId,unitId,date){planMut(p=>{const pj=p.__pj;if(!pj)return;p
 function unpinUnit(bandId,encU){planMut(p=>{const pj=p.__pj;const g=pj&&pj.pins&&pj.pins[bandId];const u2=decodeURIComponent(encU);if(g&&g[u2])delete g[u2];},true);toast('고정 해제 — 자동 배치로 돌아감');render()}
 function bandPlanDatesW(plan,band,weights){ // 완료·고정 무시한 순수 계획 날짜: 세부계획 id → 날짜 (스냅샷 활동 객체도 받음)
  const ids=(band.units||[]).slice();const out=new Map();const per=+band.per||0;
- if(!ids.length||!per)return out;
+ if(!ids.length||!per||!bandPlaced(band))return out;
  const q=weekQuotasW(weights,per);
  const o1=bO1(plan,band);
  let i=0;
@@ -1520,6 +1589,7 @@ function bandPlanDatesW(plan,band,weights){ // 완료·고정 무시한 순수 �
  return out;}
 function bandPlanDates(plan,band){return bandPlanDatesW(plan,band,distWeights(plan,band.s))}
 function bandChips(plan,band){ // 이 활동의 칩(세부계획×날짜): 완료 = 완료한 날 · 고정 = 그 날 · 나머지 = 자동 배정(과거 몫 = 오늘로 밀림·빨강)
+ if(!bandPlaced(band))return[]; // 미배치 = 캘린더·일간 계산 제외 (§3-4)
  const us=bandUnits(plan,band);if(!us.length)return[];
  const t=today();const per=+band.per||0;
  const pins=pjPins(plan,band.id);
@@ -1715,7 +1785,7 @@ function planHTML(){
  ${dd!=null&&dd>=0?`<span class="ddayb">D-${dd}</span>`:''}
  ${ro?`<span class="ddayb" style="background:#888">보관됨 · 읽기 전용</span>`:''}</span>
  ${ro?`<span class="r"><button class="btn" onclick="pjRestore('${pj.id}')">복원</button><button class="btn" onclick="ui.pjView=null;LS.set('tt.ui',ui);render()">닫기</button></span>`
-     :`<div class="r"><button class="btn" onclick="pjSettings()">⚙ 설정</button><button class="btn" onclick="rebalancePreview()">밀린 것 재배치</button><button class="btn" onclick="newBand()">+ 활동</button><button class="btn" onclick="newMilestone()">+ 이정표</button></div>`}</div>
+     :`<div class="r"><button class="btn" onclick="pjSettings()">⚙ 설정</button><button class="btn" onclick="rebalancePreview()">밀린 것 재배치</button><button class="btn" onclick="newBand()">+ 활동</button>${(tab==='week'||tab==='active')?(selMode?`<button class="btn d" onclick="bandSelDel()">선택 삭제 (${selSet.size})</button><button class="btn" onclick="bandSelAll()">전체 선택</button><button class="btn" onclick="bandSelMode(false)">취소</button>`:`<button class="btn" onclick="bandSelMode(true)">☑ 선택</button>`):''}</div>`}</div>
  <div class="views"><span class="${tab=='week'?'on':''}" onclick="planTab('week')">주차별</span><span class="${tab=='monthly'?'on':''}" onclick="planTab('monthly')">월간별</span><span class="${tab=='active'?'on':''}" onclick="planTab('active')">진행중</span><span class="${tab=='list'?'on':''}" onclick="planTab('list')">리스트</span><span class="${tab=='ach'?'on':''}" onclick="planTab('ach')">달성</span><span style="margin-left:auto;padding:0">${tab=='week'||tab=='active'?`<button class="btn" onclick="planCur()">현재</button>`:''}</span></div>`;
  if(tab==='list')return`${moreTabs('plan')}${head}${blocked}${planListHTML(plan)}`;
  if(tab==='ach')return`${moreTabs('plan')}${head}${blocked}${achTabHTML(plan)}`;
@@ -1729,21 +1799,79 @@ function emptyBoardHTML(){ // ⚠ 기본값: 오늘 주 앞 1·뒤 6 칸 — 라
  h+=`<div class="pbsj"><span class="pbsjin" style="color:#999;font-weight:400">＋ 새 프로젝트로 과목·분류를 세팅하면 여기에 줄이 생겨</span></div>`;
  h+='</div></div>';return h;
 }
+function bandPlaced(b){return b&&b.w1!=null&&b.w2!=null&&b.w1!==''&&b.w2!==''} // §3-4 미배치 = 주차 없음
+/* §5 주차 부하: 활동 주당 개수 × 세부계획 1개당 평균 시간(타이머 실측 · 유닛 연결 세션 기준) — 실측 없으면 전과목 평균 → 기본 30분 (⚠) */
+function loadAvgMin(){
+ const months=[ym(today()),ym(addDays(today(),-30))];
+ const seen={},tot={};
+ [...new Set(months)].forEach(m=>{sessionsMonth(cfg.person,m).forEach(x=>{if(!x.un||x.nt||x.life)return;
+  (seen[x.s]=seen[x.s]||new Set()).add(x.un);tot[x.s]=(tot[x.s]||0)+(x.b-x.a);})});
+ const bySubj={};let sumT=0,sumN=0;
+ Object.keys(tot).forEach(s=>{const n2=seen[s].size;if(n2){bySubj[s]=tot[s]/n2;sumT+=tot[s];sumN+=n2}});
+ return{bySubj,all:sumN?sumT/sumN:30};
+}
+function weekLoads(plan,oL,oR){ // 서수 → {tot(분), subj:{과목:분}} · 미배치 제외
+ const avg=loadAvgMin();const out={};
+ plan.bands.filter(b=>!b.del&&bandPlaced(b)).forEach(b=>{
+  const per=+b.per||0;if(!per)return;
+  const a=avg.bySubj[b.s]||avg.all||30;
+  for(let o=Math.max(bO1(plan,b),oL);o<=Math.min(bO2(plan,b),oR);o++){
+   const e=(out[o]=out[o]||{tot:0,subj:{}});const min2=per*a;e.tot+=min2;e.subj[b.s]=(e.subj[b.s]||0)+min2;}});
+ return out;
+}
+/* §3-3 원계획 vs 밀림 (사용자 확정): 완료 0 활동의 기간·주당·구성 변경 = 곧 원계획(마지막 baseline 의 그 활동 항목을 제자리 갱신) · 완료 ≥1 = 밀림/조정(baseline 무변) */
+function syncBaselineFor(p,b){
+ if(!b||b.del)return;
+ const bl=lastBaseline(p);if(!bl)return;
+ if(bandDone(p,b)>0)return;
+ if(!bandPlaced(b)){const i=(bl.bands||[]).findIndex(x=>x.id===b.id);if(i>=0)bl.bands.splice(i,1);return} // 미배치 = 원계획에서도 빠짐
+ const e=(bl.bands||[]).find(x=>x.id===b.id);
+ if(e){e.w1=b.w1;e.w2=b.w2;e.per=b.per||0;e.units=(b.units||[]).slice()}
+ else (bl.bands=bl.bands||[]).push({id:b.id,w1:b.w1,w2:b.w2,per:b.per||0,units:(b.units||[]).slice()});
+}
+/* §3-1 ⋮ 왼쪽 끌기 = −N주 줄임 (최소 1주 · 주당 재제안 동일) */
+function shrinkBandById(id,n){let nm='',perNote='';planMut(p=>{const b=p.bands.find(x=>x.id===id&&!x.del);if(!b||!bandPlaced(b))return;nm=b.name;
+ const wk=bO2(p,b)-bO1(p,b)+1;const cut=Math.min(Math.max(1,n||1),wk-1);if(cut<=0)return;
+ const dl=wDirL(p);b.w2-=dl*cut;b.u=Date.now(); // 끝을 시간순으로 −cut 주
+ const wk2=bO2(p,b)-bO1(p,b)+1;
+ if((b.units||[]).length&&wk2>0){const np=Math.ceil(b.units.length/wk2);if(np!==+(b.per||0)){b.per=np;perNote=' · 주당 '+np+'개로 다시 제안'}}
+ syncBaselineFor(p,b)});
+ render();toast(`${nm} −${Math.max(1,n||1)}주${perNote}`)}
+/* §3-2 몸통 끌기 = 시작 주 이동 (기간 길이 유지) */
+function moveBandById(id,shift){if(!shift)return;let nm='';planMut(p=>{const b=p.bands.find(x=>x.id===id&&!x.del);if(!b||!bandPlaced(b))return;nm=b.name;
+ const o1=bO1(p,b);let sh=shift;if(o1+sh<1)sh=1-o1; // 첫 주 앞으로는 못 감
+ if(!sh)return;
+ const dl=wDirL(p);b.w1+=dl*sh;b.w2+=dl*sh;b.u=Date.now();
+ syncBaselineFor(p,b)});
+ render();toast(`${nm} ${shift>0?'+':''}${shift}주 이동`)}
+/* §3-4 미배치 배치 (트레이 → 칸 드랍 · 시작 주 = 놓은 주 · 기간 1주) */
+function placeBandAt(id,o){planMut(p=>{const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;
+ const L=pLab(p,Math.max(1,o));b.w1=L;b.w2=L;b.u=Date.now();syncBaselineFor(p,b)});
+ render();toast('배치했어 — ⋮ 로 기간 조정')}
 function planBoardHTML(plan,activeOnly,ro){
  const t=today();const curO=pWeekNo(plan,t);const g=pjGrid(plan.__pj);const yd=addDays(t,-1);
  const oL=1;let oR=g&&g.o2?g.o2:Math.max(curO+8,8); // 확정 = W1(시험 주)까지 전부 · 미정 = 현재+8주 (⚠)
- plan.bands.forEach(b=>{if(!b.del&&bO2(plan,b)>oR)oR=bO2(plan,b)});
- plan.milestones.forEach(m2=>{if(!m2.del&&pOrdL(plan,m2.w)>oR)oR=pOrdL(plan,m2.w)});
+ plan.bands.forEach(b=>{if(!b.del&&bandPlaced(b)&&bO2(plan,b)>oR)oR=bO2(plan,b)});
  const NW=oR-oL+1;
  const fmtRange=o=>{const a=pWeekDate(plan,o),b=pWeekDate(plan,o,6);const am=+a.slice(5,7),ad=+a.slice(8),bm=+b.slice(5,7),bd=+b.slice(8);return am===bm?`${am}/${ad}-${bd}`:`${am}/${ad}-${bm}/${bd}`};
- let h=`<div class="pbwrap" id="pbwrap"><div class="pb pb2" style="grid-template-columns:150px repeat(${NW},${PB_COL}px)">`;
+ let h='';
+ const unpl=plan.bands.filter(b=>!b.del&&!bandPlaced(b)); // 미배치 트레이 (§3-4 · ⚠ 보드 위 한 줄)
+ if(unpl.length||selMode)h+=`<div class="tray">${unpl.length?`<span style="font-size:10.5px;color:#888;flex:none">미배치 ${unpl.length}</span>`:''}${unpl.map(b=>`<span class="trayb" data-band="${b.id}" style="border-color:${subjColor(b.s)}" onclick="if(!window.__bandDragged)editBand('${b.id}')" title="${esc(b.s)} ${esc(b.name)} — 끌어서 보드 칸에 놓으면 배치(1주) · 클릭 = 편집">${selMode?`<i class="bsel" onclick="event.stopPropagation();bandSelTgl('${b.id}')">${selSet.has(b.id)?'☑':'☐'}</i>`:''}${esc(b.s)} ${esc(b.name)}</span>`).join('')}${unpl.length?`<span style="font-size:9.5px;color:#aaa">밀림·부하·일간 계산 제외 · 끌어서 배치</span>`:''}</div>`;
+ h+=`<div class="pbwrap" id="pbwrap"><div class="pb pb2" style="grid-template-columns:150px repeat(${NW},${PB_COL}px)">`;
  h+=`<div class="pbh pbfix" style="z-index:4"></div>`;
- for(let o=oL;o<=oR;o++)h+=`<div class="pbh ${o===curO?'cur':''}">${fmtW(plan,o)} <small>${fmtRange(o)}${o===curO?' · 현재':''}${g&&g.o2&&o===g.o2?' · 시험':''}</small></div>`;
+ for(let o=oL;o<=oR;o++)h+=`<div class="pbh ${o===curO?'cur':''}" data-ord="${o}">${fmtW(plan,o)} <small>${fmtRange(o)}${o===curO?' · 현재':''}${g&&g.o2&&o===g.o2?' · 시험':''}</small></div>`;
+ /* 부하 줄 (§5): 주차별 과목 스택 바 + 시간 라벨 · 평균 1.5배 초과 = ⚠ */
+ const loads=weekLoads(plan,oL,oR);
+ const loadVals=Object.values(loads).map(x=>x.tot).filter(x=>x>0);
+ const loadAvg=loadVals.length?loadVals.reduce((a,b)=>a+b,0)/loadVals.length:0;
+ const ordSubs=subjOrderAll(plan);
+ h+=`<div class="pbl pbload pbfix" style="z-index:3">부하 <small>시간/주</small></div>`;
+ for(let o=oL;o<=oR;o++){const e=loads[o];const warn=e&&loadAvg&&e.tot>loadAvg*1.5;
+  h+=`<div class="pbloadc ${o===curO?'cur':''}" data-ord="${o}" title="${e?ordSubs.filter(s=>e.subj[s]).map(s=>`${s} ${(e.subj[s]/60).toFixed(1)}h`).join(' · '):''}">${e?`<div class="lh ${warn?'w':''}">${warn?'⚠ ':''}${Math.round(e.tot/60)}h</div><div class="lbar">${ordSubs.filter(s=>e.subj[s]).map(s=>`<i style="width:${(e.subj[s]/e.tot*100).toFixed(1)}%;background:${subjColor(s)}"></i>`).join('')}</div>`:''}</div>`;}
  const fold=ui.pbFold||{};
  subjOrderAll(plan).forEach(s=>{
-  let bandsS=plan.bands.filter(b=>!b.del&&b.s===s);
+  let bandsS=plan.bands.filter(b=>!b.del&&b.s===s&&bandPlaced(b));
   if(activeOnly)bandsS=bandsS.filter(b=>curO>=bO1(plan,b)&&curO<=bO2(plan,b));
-  const ms=plan.milestones.filter(m=>!m.del&&m.s===s&&pOrdL(plan,m.w)>=oL&&pOrdL(plan,m.w)<=oR);
   const goals=(plan.catGoal||{})[s]||{};
   const cats=((plan.cats||{})[s]||[]).slice(); // 줄 = 프로젝트.cats[과목] 순서 (§1-5)
   const extraTags=[...new Set(bandsS.map(b=>b.tag||'').filter(tg=>!cats.includes(tg)))]; // 목록 밖 tag = 「기타」 안전망
@@ -1751,10 +1879,6 @@ function planBoardHTML(plan,activeOnly,ro){
   const isF=!!fold[s];const encS=encodeURIComponent(s);
   h+=`<div class="pbsj" onclick="pbFold('${encS}')"><span class="pbsjin"><span class="tri">${isF?'▶':'▼'}</span><i class="plandot" style="background:${subjColor(s)}"></i>${esc(s)}<span class="n2">활동 ${bandsS.length}</span></span></div>`;
   if(isF)return;
-  if(ms.length){
-   h+=`<div class="pbl pbcatl"></div>`;
-   for(let o=oL;o<=oR;o++){const mm=ms.filter(m=>pOrdL(plan,m.w)===o);h+=`<div class="pbsc ${o===curO?'cur':''}">${mm.map(m=>`<span class="pbm" onclick="event.stopPropagation();${ro?'':`editMilestone('${m.id}')`}" title="${esc(m.name)} · ${parseInt(pWeekDate(plan,pOrdL(plan,m.w)).slice(5,7))}/${parseInt(pWeekDate(plan,pOrdL(plan,m.w)).slice(8))}">◆</span>`).join('')}</div>`}
-  }
   rows.forEach(row=>{ // 분류 0 이면 줄 없음(4-4) — + 활동 입구 = 분류 행 빈 칸 클릭으로 일원화
    const encT=row.extra?'':encodeURIComponent(row.tag);
    const tb=(row.extra?bandsS.filter(b=>!cats.includes(b.tag||'')):bandsS.filter(b=>(b.tag||'')===row.tag)).sort((a,b)=>bO1(plan,a)-bO1(plan,b)||bO2(plan,a)-bO2(plan,b));
@@ -1762,39 +1886,99 @@ function planBoardHTML(plan,activeOnly,ro){
    if(!layers.length)layers.push([]);
    layers.forEach((Lb,li)=>{
     const gl=row.extra?'':(goals[row.tag]||'');
-    h+=`<div class="pbl pbcatl">${li===0?`<span>${esc(row.extra?'기타':(row.tag||'기타'))}</span>${row.extra||ro?'':`<span class="pbgoal ${gl?'':'empty'}" title="클릭해서 목표치 입력" onclick="event.stopPropagation();editCatGoal('${encS}','${encT}')">${esc(gl)||'+'}</span>`}`:''}</div>`;
+    h+=`<div class="pbl pbcatl">${li===0?`<span>${esc(row.extra?'기타':(row.tag||'기타'))}</span>${row.extra||ro?'':`<span class="pbgoal ${gl?'':'empty'}" title="클릭해서 목표치 입력 (「5회독」 = 활동 자동 생성)" onclick="event.stopPropagation();editCatGoal('${encS}','${encT}')">${esc(gl)||'+'}</span>`}`:''}</div>`;
     let o=oL;
     Lb.forEach(b=>{
      const c1=Math.max(bO1(plan,b),oL),c2=Math.min(bO2(plan,b),oR);
-     for(;o<c1;o++)h+=`<div class="pbc2 ${o===curO?'cur':''}" ${ro||row.extra?'':`onclick="newBandAt('${encS}','${encT}',${o})" title="+ 활동 (${esc(s)} · ${fmtW(plan,o)})"`}></div>`;
+     for(;o<c1;o++)h+=`<div class="pbc2 ${o===curO?'cur':''}" data-ord="${o}" ${ro||row.extra?'':`onclick="newBandAt('${encS}','${encT}',${o})" title="+ 활동 (${esc(s)} · ${fmtW(plan,o)})"`}></div>`;
      const L=late(plan,b,yd);const hasU=(b.units||[]).length>0;const per=+b.per||0;
      let cells='';
      for(let x=c1;x<=c2;x++){const ext=b.orig&&x>pOrdL(plan,b.orig.w2);const wd=weekDoneCount(plan,b,x);
-      cells+=`<div class="pbw2 ${x===curO?'cur':''} ${ext?'ext':''}">${x===c1?`<b>${esc(b.name)} <small>W${pad(b.w1)}–W${pad(b.w2)}</small></b>`:''}<span class="dn"><i class="${hasU&&per&&wd>=per?'on':''}"></i>${hasU?`${wd}/${per||'—'}`:(per||'')}${x===curO&&L?`<b class="lt">밀림 ${L}</b>`:''}</span></div>`}
-     h+=`<div class="pband2" style="grid-column:span ${c2-c1+1};--sc:${subjColor(b.s)}" onclick="bandPopup('${b.id}')" title="${esc(b.name)} W${pad(b.w1)}–W${pad(b.w2)} · 몸통 = 세부계획 리스트${ro?'':' · ⋮ 탭 = 편집 · ⋮ 끌기 = 늘리기'}">${cells}${ro?'':`<span class="grip" data-band="${b.id}" onclick="event.stopPropagation()" title="끌어서 +N주 · 탭 = 활동 편집">⋮</span>`}</div>`;
+      cells+=`<div class="pbw2 ${x===curO?'cur':''} ${ext?'ext':''}" data-ord="${x}">${x===c1?`<b>${selMode?`<i class="bsel" onclick="event.stopPropagation();bandSelTgl('${b.id}')">${selSet.has(b.id)?'☑':'☐'}</i>`:''}${esc(b.name)} <small>W${pad(b.w1)}–W${pad(b.w2)}</small></b>`:''}<span class="dn"><i class="${hasU&&per&&wd>=per?'on':''}"></i>${hasU?`${wd}/${per||'—'}`:(per||'')}${x===curO&&L?`<b class="lt">밀림 ${L}</b>`:''}</span></div>`}
+     h+=`<div class="pband2" data-bmove="${ro?'':b.id}" style="grid-column:span ${c2-c1+1};--sc:${subjColor(b.s)}" onclick="bandPopup('${b.id}')" title="${esc(b.name)} W${pad(b.w1)}–W${pad(b.w2)} · 클릭 = 세부계획${ro?'':' · 끌기 = 시작 주 이동 · ⋮ 탭 = 편집 · ⋮ 끌기 = ±N주'}">${cells}${ro?'':`<span class="grip" data-band="${b.id}" onclick="event.stopPropagation()" title="오른쪽 = +N주 · 왼쪽 = −N주 · 탭 = 활동 편집">⋮</span>`}</div>`;
      o=c2+1;
     });
-    for(;o<=oR;o++)h+=`<div class="pbc2 ${o===curO?'cur':''}" ${ro||row.extra?'':`onclick="newBandAt('${encS}','${encT}',${o})" title="+ 활동 (${esc(s)} · ${fmtW(plan,o)})"`}></div>`;
+    for(;o<=oR;o++)h+=`<div class="pbc2 ${o===curO?'cur':''}" data-ord="${o}" ${ro||row.extra?'':`onclick="newBandAt('${encS}','${encT}',${o})" title="+ 활동 (${esc(s)} · ${fmtW(plan,o)})"`}></div>`;
    });
   });
  });
  h+='</div></div>';
  return h;
 }
+/* §2-2 다중선택 삭제 */
+let selMode=false,selSet=new Set();
+function bandSelMode(on){selMode=!!on;selSet=new Set();render()}
+function bandSelTgl(id){if(selSet.has(id))selSet.delete(id);else selSet.add(id);render()}
+function bandSelAll(){const p=boardPlan();selSet=new Set(p.bands.filter(b=>!b.del).map(b=>b.id));render()}
+function bandSelDel(){if(!selSet.size){toast('지울 활동을 체크해줘');return}
+ if(!confirm(`선택한 활동 ${selSet.size}개를 지울까? (소프트 삭제 — 병합 안전)`))return;
+ planMut(p=>{p.bands.forEach(b=>{if(selSet.has(b.id)){b.del=true;b.u=Date.now()}})});
+ bandSelMode(false);toast('삭제했어')}
 function newBandAt(sEnc,tEnc,o){const p=boardPlan();const L=pLab(p,o);bandModal({id:'',s:decodeURIComponent(sEnc),name:'',tag:decodeURIComponent(tEnc),w1:L,w2:L,per:0,units:[],note:''})}
 function pbFold(sEnc){const s=decodeURIComponent(sEnc);ui.pbFold=ui.pbFold||{};ui.pbFold[s]=!ui.pbFold[s];LS.set('tt.ui',ui);planScrollPending=false;render();}
 function editCatGoal(sEnc,tEnc){const s=decodeURIComponent(sEnc),tag=decodeURIComponent(tEnc);
  const cur=(((myPlan().catGoal||{})[s])||{})[tag]||'';
- const v=prompt(`${s} › ${tag||'기타'} 목표치 (예: 1회독 · 6회 · -)`,cur);
+ const v=prompt(`${s} › ${tag||'기타'} 목표치 (예: 5회독 · 6회 — 숫자가 있으면 활동 자동 생성을 물어봄)`,cur);
  if(v===null)return;
- planMut(p=>{p.catGoal=p.catGoal||{};p.catGoal[s]=p.catGoal[s]||{};const vv=v.trim();if(vv)p.catGoal[s][tag]=vv;else delete p.catGoal[s][tag];},true);render();
+ planMut(p=>{p.catGoal=p.catGoal||{};p.catGoal[s]=p.catGoal[s]||{};const vv=v.trim();if(vv)p.catGoal[s][tag]=vv;else delete p.catGoal[s][tag];},true);
+ /* §4 (a안): 목표치 선행 숫자 N → 「분류명+i+단위」 활동 N개를 미배치로 자동 생성 (중복 이름은 건너뜀 · 단위 못 읽으면 「회독」 ⚠) */
+ const mm=/^(\d+)\s*(회독|회)?/.exec(v.trim());
+ if(mm&&tag){const N=Math.min(20,+mm[1]);const unit=mm[2]||'회독';
+  const p0=myPlan();const have=new Set(p0.bands.filter(b=>!b.del&&b.s===s).map(b=>b.name));
+  const names=[];for(let i=1;i<=N;i++){const nm=tag+i+unit;if(!have.has(nm))names.push(nm)}
+  if(names.length&&confirm(`「${v.trim()}」 — 활동 ${names.length}개(${names[0]}${names.length>1?' … '+names[names.length-1]:''})를 미배치로 자동 생성할까?`)){
+   planMut(p=>{names.forEach(nm=>{p.bands.push({id:uid(),s,tag,name:nm,w1:null,w2:null,per:0,units:[],note:'',u:Date.now(),del:false})})});
+   toast('활동 '+names.length+'개 생성 — 미배치 트레이에서 끌어 배치');
+  }}
+ render();
 }
+/* 리스트 탭 (feedback10 §2-3): 정렬 · 인라인 수정 · ✕ 삭제 · 맨 아래 새 활동 입력 */
+function lsSortSet(k){const cur=ui.lsSort||{};ui.lsSort={k,dir:cur.k===k?-(cur.dir||1):1};LS.set('tt.ui',ui);render()}
+function lsInline(ev,id,k){ev.stopPropagation();const td=ev.currentTarget;const p=myPlan();const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;
+ if(td.querySelector('input,select'))return;
+ if(k==='name')td.innerHTML=`<input value="${esc(b.name)}" style="width:120px" onclick="event.stopPropagation()" onkeydown="if(event.key=='Enter')this.blur()" onblur="lsSet('${id}','name',this.value)">`;
+ else if(k==='per')td.innerHTML=`<input type="number" value="${b.per||0}" style="width:54px" onclick="event.stopPropagation()" onkeydown="if(event.key=='Enter')this.blur()" onblur="lsSet('${id}','per',this.value)">`;
+ else if(k==='tag'){const cs=((p.cats||{})[b.s]||[]).slice();if(b.tag&&!cs.includes(b.tag))cs.push(b.tag);
+  td.innerHTML=`<select onchange="lsSet('${id}','tag',this.value)" onclick="event.stopPropagation()"><option value="">기타</option>${cs.map(c2=>`<option ${((b.tag||'')===c2)?'selected':''}>${esc(c2)}</option>`).join('')}</select>`;}
+ else if(k==='w')td.innerHTML=`<input value="${bandPlaced(b)?b.w1+'~'+b.w2:''}" placeholder="예 26~24 · 빈칸 = 미배치" style="width:96px" onclick="event.stopPropagation()" onkeydown="if(event.key=='Enter')this.blur()" onblur="lsSet('${id}','w',this.value)">`;
+ const inp=td.querySelector('input,select');if(inp){inp.focus();if(inp.select)inp.select()}
+}
+function lsParseW(p,v){const s2=String(v||'').trim();if(!s2)return{w1:null,w2:null};
+ const mm=s2.match(/(\d+)\s*[~\-–]?\s*(\d+)?/);if(!mm)return null;
+ let L1=+mm[1],L2=mm[2]?+mm[2]:L1;if(pOrdL(p,L1)>pOrdL(p,L2)){const t2=L1;L1=L2;L2=t2}return{w1:L1,w2:L2}}
+function lsSet(id,k,v){planMut(p=>{const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;
+ if(k==='name'){const n=(v||'').trim();if(n)b.name=n}
+ else if(k==='per')b.per=Math.max(0,+v||0);
+ else if(k==='tag')b.tag=v;
+ else if(k==='w'){const r=lsParseW(p,v);if(r){b.w1=r.w1;b.w2=r.w2}}
+ b.u=Date.now();syncBaselineFor(p,b)});render()}
+function lsDel(id){const b=myPlan().bands.find(x=>x.id===id&&!x.del);if(!b)return;
+ if(confirm('이 활동을 지울까? '+b.name)){planMut(p=>{const x=p.bands.find(z=>z.id===id);if(x){x.del=true;x.u=Date.now()}});render()}}
+function lsNewAdd(){
+ const s=document.getElementById('lsNS').value;const tag=(document.getElementById('lsNT').value||'').trim();
+ const name=(document.getElementById('lsNN').value||'').trim();const wv=(document.getElementById('lsNW').value||'').trim();const per=+document.getElementById('lsNP').value||0;
+ if(!name){toast('활동 이름을 적어줘');return}
+ planMut(p=>{const r=lsParseW(p,wv)||{w1:null,w2:null};
+  const x={id:uid(),s,tag,name,w1:r.w1,w2:r.w2,per,units:[],note:'',u:Date.now(),del:false};
+  p.bands.push(x);syncBaselineFor(p,x)});
+ render();toast('활동 추가'+(wv?'':' (미배치)'))}
 function planListHTML(plan){
  const t=today();const ord=subjOrderAll(plan);const oi=s=>{const i=ord.indexOf(s);return i<0?999:i};
- const bs=plan.bands.filter(b=>!b.del).sort((a,b)=>oi(a.s)-oi(b.s)||bO1(plan,a)-bO1(plan,b)||bO2(plan,a)-bO2(plan,b));
- const rows=bs.map(b=>{const us=bandUnits(plan,b);const L=late(plan,b,addDays(t,-1));const ed=endDate(plan,b);
-  return`<tr onclick="editBand('${b.id}')" style="cursor:pointer"><td><i class="plandot" style="background:${subjColor(b.s)}"></i>${esc(b.s)}</td><td>${esc(b.name)}</td><td>${esc(b.tag||'')}</td><td>W${pad(b.w1)}–W${pad(b.w2)}${b.orig&&b.orig.w2!==b.w2?` <small style="color:var(--blue)">(원 W${pad(b.orig.w1)}–W${pad(b.orig.w2)})</small>`:''}</td><td style="text-align:right">${b.per||''}</td><td style="text-align:right">${us.length?bandDone(plan,b)+'/'+us.length:'—'}</td><td style="text-align:right">${L?`<b style="color:#c33">${L}</b>`:''}</td><td>${ed?ed.slice(5).replace('-','/'):'—'}</td></tr>`}).join('');
- return`<div style="overflow-x:auto"><table class="pltab"><thead><tr><th>과목</th><th>활동</th><th>분류</th><th>주차</th><th>주당</th><th>완료/전체</th><th>밀림</th><th>예상 종료</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+ const st2=ui.lsSort||{k:'s',dir:1};
+ const lateOf=b=>late(plan,b,addDays(t,-1));
+ const keyf={s:b=>oi(b.s),tag:b=>b.tag||'',name:b=>b.name||'',w:b=>bandPlaced(b)?bO1(plan,b):1e9,late:b=>lateOf(b)};
+ const bs=plan.bands.filter(b=>!b.del).sort((a,b)=>{
+  const ka=keyf[st2.k]?keyf[st2.k](a):0,kb=keyf[st2.k]?keyf[st2.k](b):0;
+  const c=(ka<kb?-1:ka>kb?1:0)*(st2.dir||1);
+  return c||oi(a.s)-oi(b.s)||keyf.w(a)-keyf.w(b)});
+ const ic=k=>st2.k===k?(st2.dir>0?'▲':'▼'):'↕';
+ const th=(k,n)=>`<th onclick="lsSortSet('${k}')" style="cursor:pointer">${n} <span style="color:var(--blue);font-size:9px">${ic(k)}</span></th>`;
+ const rows=bs.map(b=>{const us=bandUnits(plan,b);const L=lateOf(b);const ed=bandPlaced(b)?endDate(plan,b):null;
+  return`<tr><td onclick="editBand('${b.id}')" style="cursor:pointer" title="클릭 = 활동 편집"><i class="plandot" style="background:${subjColor(b.s)}"></i>${esc(b.s)}</td><td onclick="lsInline(event,'${b.id}','tag')" style="cursor:text">${esc(b.tag||'')||'<span style=color:#ccc>기타</span>'}</td><td onclick="lsInline(event,'${b.id}','name')" style="cursor:text">${esc(b.name)}</td><td onclick="lsInline(event,'${b.id}','w')" style="cursor:text">${bandPlaced(b)?`W${pad(b.w1)}–W${pad(b.w2)}${b.orig&&b.orig.w2!==b.w2?` <small style="color:var(--blue)">(원 W${pad(b.orig.w1)}–W${pad(b.orig.w2)})</small>`:''}`:'<span style="color:#c60">미배치</span>'}</td><td onclick="lsInline(event,'${b.id}','per')" style="text-align:right;cursor:text">${b.per||''}</td><td style="text-align:right">${us.length?bandDone(plan,b)+'/'+us.length:'—'}</td><td style="text-align:right">${L?`<b style="color:#c33">${L}</b>`:''}</td><td>${ed?ed.slice(5).replace('-','/'):'—'}</td><td class="lsx" onclick="lsDel('${b.id}')" title="삭제">✕</td></tr>`}).join('');
+ const subs=plan.subjects.length?plan.subjects:settings.subjects.map(x=>x.n);
+ const newRow=`<tr class="lsnew"><td><select id="lsNS">${subs.map(s=>`<option>${esc(s)}</option>`).join('')}</select></td><td><input id="lsNT" placeholder="분류" style="width:70px" list="lsCatL"><datalist id="lsCatL">${[...new Set(Object.values(plan.cats||{}).flat())].map(c2=>`<option value="${esc(c2)}">`).join('')}</datalist></td><td><input id="lsNN" placeholder="활동 이름 입력 후 Enter" style="width:140px" onkeydown="if(event.key=='Enter')lsNewAdd()"></td><td><input id="lsNW" placeholder="주차(빈=미배치)" style="width:96px" onkeydown="if(event.key=='Enter')lsNewAdd()"></td><td><input id="lsNP" type="number" placeholder="주당" style="width:54px" onkeydown="if(event.key=='Enter')lsNewAdd()"></td><td>—</td><td>—</td><td></td><td onclick="lsNewAdd()" style="color:var(--blue);cursor:pointer">＋</td></tr>`;
+ return`<div style="overflow-x:auto"><table class="pltab"><thead><tr>${th('s','과목')}${th('tag','분류')}${th('name','활동')}${th('w','주차')}<th>주당</th><th>완료/전체</th>${th('late','밀림')}<th>예상 종료</th><th></th></tr></thead><tbody>${rows}${newRow}</tbody></table></div>
+ <p style="font-size:10px;color:#888;margin-top:4px">머리 클릭 = 정렬 · 칸 클릭 = 그 자리 수정(과목 칸 = 활동 편집 모달) · ✕ = 삭제 · 맨 아래 줄 = 새 활동(주차 비우면 미배치)</p>`;
 }
 /* ----- 주월계획 「월간별」 탭 (feedback9 §2) — 월 간략 달력 · 문법: 색 = 과목 · 진하기 = 회독수 · 선/모양 = 분류 ----- */
 const CAT_MARKS=[['solid','─','실선'],['dash','╌','파선'],['dot','┄','점선'],['c','●','●'],['t','▲','▲'],['s','■','■'],['d','◆','◆'],['star','★','★']];
@@ -1813,14 +1997,12 @@ function planMonthlyHTML(plan){
  const pj=plan.__pj;if(!pj)return'<p style="color:#888">프로젝트가 없어 — 「＋ 새 프로젝트」로 시작.</p>';
  const g=pjGrid(pj);const t=today();const curO=pWeekNo(plan,t);
  let oR=g&&g.o2?g.o2:Math.max(curO+8,8);
- plan.bands.forEach(b=>{if(!b.del&&bO2(plan,b)>oR)oR=bO2(plan,b)});
- plan.milestones.forEach(m2=>{if(!m2.del&&pOrdL(plan,m2.w)>oR)oR=pOrdL(plan,m2.w)});
+ plan.bands.forEach(b=>{if(!b.del&&bandPlaced(b)&&bO2(plan,b)>oR)oR=bO2(plan,b)});
  const monthOf=o=>ym(pWeekDate(plan,o,3)); // 주의 소속 달 = 목요일이 든 달
  const months=[];const byM={};
  for(let o=1;o<=oR;o++){const m=monthOf(o);if(!byM[m]){byM[m]=[];months.push(m)}byM[m].push(o)}
  const ord=subjOrderAll(plan);const oi=s=>{const i=ord.indexOf(s);return i<0?999:i};
- const bands=plan.bands.filter(b=>!b.del).sort((a,b)=>oi(a.s)-oi(b.s)||bO1(plan,a)-bO1(plan,b)||(a.id<b.id?-1:a.id>b.id?1:0));
- const msAll=plan.milestones.filter(m2=>!m2.del);
+ const bands=plan.bands.filter(b=>!b.del&&bandPlaced(b)).sort((a,b)=>oi(a.s)-oi(b.s)||bO1(plan,a)-bO1(plan,b)||(a.id<b.id?-1:a.id>b.id?1:0));
  let h=`<div class="mbchips">${months.map(m=>`<span class="btn ${m===ym(t)?'p':''}" onclick="const el=document.getElementById('mb_${m}');if(el)el.scrollIntoView({behavior:'smooth',block:'start'})">${parseInt(m.slice(5))}월</span>`).join('')}</div>
  <p style="font-size:10px;color:#888;margin:4px 0 8px">색 = 과목 · 진하기 = 회독수 · 선/모양 = 분류(프로젝트 ⚙ 설정의 분류 칩에서 지정) · 칩·꼬리 클릭 = 세부계획 리스트 · 편집·기간 끌기는 주차별 탭</p>
  <div class="mbgrid">`;
@@ -1829,7 +2011,6 @@ function planMonthlyHTML(plan){
   h+=`<div class="mbmon" id="mb_${m}"><h4>${m.replace('-','. ')} <small>${fmtW(plan,oss[0])}–${fmtW(plan,oss[oss.length-1])}</small></h4><div class="mbcal">`;
   oss.forEach(o=>{
    const ws=pWeekDate(plan,o);
-   const msW=msAll.filter(x=>pOrdL(plan,x.w)===o);
    const days=[...Array(7)].map((_,i)=>{const d=addDays(ws,i);const inM=ym(d)===m;
     return`<span class="${d===t?'t':(inM?'':'dim')}">${parseInt(d.slice(8))}</span>`}).join('');
    const rows=bands.filter(b=>bO1(plan,b)<=o&&o<=bO2(plan,b)).map(b=>{
@@ -1841,7 +2022,7 @@ function planMonthlyHTML(plan){
      if(us.length||per)st.push(`<span class="mst">☐${wd}/${per||'—'}${L?` <b class="lt">밀림${L}</b>`:''}</span>`);}
     return`<div class="mln" onclick="bandPopup('${b.id}')" title="${esc(b.s)} ${esc(b.name)} · ${esc(b.tag||'기타')} · W${pad(b.w1)}–W${pad(b.w2)}">${isSt?`<span class="mchip" style="background:${tone.bg};border-color:${tone.bd};color:${tone.tx};border-width:${(1+0.5*(lvl-1)).toFixed(1)}px">${esc(b.s)} ${esc(b.name)}</span>`:''}${mbTailHTML(plan,b,!isSt)}${st.join('')}</div>`;
    }).join('');
-   h+=`<div class="mbwk ${o===curO?'cur':''}"><div class="mbwl">${fmtW(plan,o)}</div><div class="mbwb"><div class="mbdays">${days}${msW.length?`<span class="mbms" title="${esc(msW.map(x=>x.s+' '+x.name).join(' · '))}">◆</span>`:''}</div>${rows}</div></div>`;
+   h+=`<div class="mbwk ${o===curO?'cur':''}"><div class="mbwl">${fmtW(plan,o)}</div><div class="mbwb"><div class="mbdays">${days}</div>${rows}</div></div>`;
   });
   h+='</div></div>';
  });
@@ -1852,11 +2033,9 @@ function planPhoneHTML(plan,ro){
  if(!plan.__pj)return'<p style="color:#888">프로젝트가 없어 — 「＋ 새 프로젝트」로 시작.</p>';
  const t=today();const curO=pWeekNo(plan,t);const o=ui.planPhW??curO;
  const a=pWeekDate(plan,o),b2=pWeekDate(plan,o,6);
- const bands=plan.bands.filter(x=>!x.del&&o>=bO1(plan,x)&&o<=bO2(plan,x));
- const ms=plan.milestones.filter(m=>!m.del&&pOrdL(plan,m.w)===o);
+ const bands=plan.bands.filter(x=>!x.del&&bandPlaced(x)&&o>=bO1(plan,x)&&o<=bO2(plan,x));
  const bys={};bands.forEach(x=>(bys[x.s]=bys[x.s]||[]).push(x));
  let h=`<div class="pbnav" style="justify-content:space-between"><button class="btn" onclick="planPh(-1)">‹ ${fmtW(plan,o-1)}</button><b>${fmtW(plan,o)} · ${a.slice(5).replace('-','/')}–${b2.slice(5).replace('-','/')}${o===curO?' · 현재':''}</b><button class="btn" onclick="planPh(1)">${fmtW(plan,o+1)} ›</button></div>`;
- if(ms.length)h+=`<p style="font-size:11px;margin-bottom:6px">${ms.map(m=>`<span class="pbm" onclick="${ro?'':`editMilestone('${m.id}')`}">◆</span> ${esc(m.s)} ${esc(m.name)}`).join(' · ')}</p>`;
  const subs=subjOrderAll(plan).filter(s=>bys[s]);
  h+=subs.map(s=>`<div class="phb"><h6><i class="plandot" style="background:${subjColor(s)}"></i>${esc(s)}</h6>${bys[s].sort((x,y)=>bO1(plan,x)-bO1(plan,y)).map(b=>{
   const us=bandUnits(plan,b);const per=+b.per||0;const wd=weekDoneCount(plan,b,o);const L=late(plan,b,addDays(t,-1));
@@ -1889,27 +2068,30 @@ function bandModal(b){
  const fixed=!!(pjGrid(p.__pj)||{}).o2;
  modal(`<h4>${b.id?'활동 편집':'+ 활동'}</h4>
  <div class="row"><label>과목</label><select id="bS" onchange="bandCatRefill(this)">${subjOpts}</select></div>
- <div class="row"><label>이름</label><input id="bN" value="${esc(b.name)}" placeholder="객1회독"></div>
  <div class="row"><label>분류</label><select id="bT">${catOpts}</select></div>
- <div class="row"><label>주차</label><input id="bW1" type="number" value="${b.w1}" style="flex:0 0 64px"> ~ <input id="bW2" type="number" value="${b.w2}" style="flex:0 0 64px"> 주</div>
+ <div class="row"><label>활동</label><input id="bN" value="${esc(b.name)}" placeholder="객1회독"></div>
+ <div class="row"><label>주차</label><input id="bW1" type="number" value="${b.w1??''}" style="flex:0 0 64px"> ~ <input id="bW2" type="number" value="${b.w2??''}" style="flex:0 0 64px"> 주 <span style="font-size:9.5px;color:#888">(비우면 미배치)</span></div>
  <div class="row"><label>주당</label><input id="bP" type="number" value="${b.per||0}" style="flex:0 0 64px"> 개</div>
  <div class="row"><label>메모</label><input id="bM" value="${esc(b.note||'')}"></div>
  <p style="font-size:10px;color:#888">${fixed?'주 숫자 = 시험까지 남은 주 (큰 수 = 이른 주). ':''}세부계획 넣고 빼기는 활동 몸통 클릭 → 「✎ 고르기」.</p>`,
- q=>{const s=q('bS').value;const oldRange=b.id?(b.w1+'~'+b.w2):null;let newRange=null;
+ q=>{const s=q('bS').value;
   planMut(p2=>{
    let x=b.id?p2.bands.find(z=>z.id===b.id):null;
    if(!x){x={id:uid(),units:[],u:0,del:false};p2.bands.push(x)}
    x.s=s;x.name=q('bN').value.trim();x.tag=q('bT').value;
-   let L1=+q('bW1').value||1,L2=+q('bW2').value||L1;
-   if(pOrdL(p2,L1)>pOrdL(p2,L2)){const t2=L1;L1=L2;L2=t2} // 시간순 정규화 (w1 = 이른 쪽 라벨)
-   x.w1=L1;x.w2=L2;newRange=L1+'~'+L2;
-   x.per=Math.max(0,+q('bP').value||0);x.note=q('bM').value;x.u=Date.now()});render();
-  if(oldRange&&newRange&&oldRange!==newRange)rebaseAsk(false)},
+   const v1=q('bW1').value.trim(),v2=q('bW2').value.trim();
+   if(!v1&&!v2){x.w1=null;x.w2=null} // §3-4 미배치
+   else{let L1=+(v1||v2)||1,L2=+(v2||v1)||L1;
+    if(pOrdL(p2,L1)>pOrdL(p2,L2)){const t2=L1;L1=L2;L2=t2} // 시간순 정규화 (w1 = 이른 쪽 라벨)
+    x.w1=L1;x.w2=L2;}
+   x.per=Math.max(0,+q('bP').value||0);x.note=q('bM').value;x.u=Date.now();
+   syncBaselineFor(p2,x)});render()},
  b.id?()=>{if(confirm('이 활동을 지울까? '+b.name)){planMut(p2=>{const x=p2.bands.find(z=>z.id===b.id);if(x){x.del=true;x.u=Date.now()}});render()}}:null);
 }
 /* 팝업 A (§2-1): 활동 몸통 클릭 = 세부계획 리스트(체크 모드) · ✎ 고르기 = 같은 창에서 과목 세부계획 전체 중 이 활동 것 고르기 */
 let bpSt=null;
-function bandPopup(id){const p=boardPlan();const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;
+function bandPopup(id){if(window.__bandDragged)return; // 몸통 끌기 직후의 click 무시 (§3-2)
+ const p=boardPlan();const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;
  bpSt={id,pick:false,sel:new Set(b.units||[]),init:new Set(b.units||[]),last:-1,ro:!!p.arch};
  const m=document.createElement('div');m.className='modal';m.id='bpModal';
  m.addEventListener('click',e=>{if(e.target===m)bpClose()});
@@ -1919,10 +2101,10 @@ function bpClose(){const m=document.getElementById('bpModal');if(m)m.remove();bp
 function bpMode(pick){if(!bpSt)return;if(pick&&bpSt.ro){toast('보관된 프로젝트 — 읽기 전용');return}
  const b=boardPlan().bands.find(x=>x.id===bpSt.id);if(!b)return;
  bpSt.pick=pick;bpSt.sel=new Set(b.units||[]);bpSt.init=new Set(b.units||[]);bpSt.last=-1;bpRender()}
-function unitPlanLab(p,b,idx){const per=+b.per||0;if(!per)return'';const o=Math.min(bO1(p,b)+Math.floor(idx/per),bO2(p,b));return fmtW(p,o)} // 계획상 그 세부계획의 주
+function unitPlanLab(p,b,idx){const per=+b.per||0;if(!per||!bandPlaced(b))return'';const o=Math.min(bO1(p,b)+Math.floor(idx/per),bO2(p,b));return fmtW(p,o)} // 계획상 그 세부계획의 주
 function bpRender(){const m=document.getElementById('bpModal');if(!m||!bpSt)return;
  const p=boardPlan();const b=p.bands.find(x=>x.id===bpSt.id&&!x.del);if(!b){bpClose();return}
- const meta=`${esc(b.s)} · ${esc(b.tag||'기타')} · W${pad(b.w1)}–W${pad(b.w2)}`;
+ const meta=`${esc(b.s)} · ${esc(b.tag||'기타')} · ${bandPlaced(b)?`W${pad(b.w1)}–W${pad(b.w2)}`:'미배치'}`;
  let body='';
  if(!bpSt.pick){
   const us=bandUnits(p,b);const dn=us.filter(u=>u.done&&u.done[b.id]).length;
@@ -1970,22 +2152,12 @@ function bpSave(){if(!bpSt)return;const st=bpSt;let perNote='';
    const nu=(ob.units||[]).filter(uu=>!taken.has(uu));
    if(nu.length!==(ob.units||[]).length){ob.units=nu;ob.u=Date.now()}}); // 흐림 줄을 가져옴 = 저쪽에서 빠짐 (⚠)
   b.units=ids;
-  const wk=bO2(p,b)-bO1(p,b)+1;
+  const wk=bandPlaced(b)?bO2(p,b)-bO1(p,b)+1:0;
   if(ids.length&&wk>0){const np=Math.ceil(ids.length/wk);if(np!==+(b.per||0)){b.per=np;perNote=' · 주당 '+np+'개로 다시 제안'}}
-  b.u=Date.now()});
+  b.u=Date.now();syncBaselineFor(p,b)}); // §3-3 완료 0 = 원계획 갱신
  toast('세부계획 '+st.sel.size+'개 저장'+perNote);st.pick=false;render();bpRender();
- if(st.sel.size!==st.init.size)rebaseAsk(false); // §3-3 세부계획 수가 바뀌면 1회 질문
 }
-function newMilestone(){const p=myPlan();if(!p.__pj){newProjectModal();return}
- msModal({id:'',s:(p.subjects[0]||(settings.subjects[0]||{}).n||''),name:'',w:pLab(p,Math.max(1,pWeekNo(p,today())))})}
-function editMilestone(id){const m=myPlan().milestones.find(x=>x.id===id&&!x.del);if(m)msModal(m)}
-function msModal(m){
- const p=myPlan();const subjects=p.subjects.length?p.subjects:settings.subjects.map(x=>x.n);
- const subjOpts=subjects.map(n=>`<option ${m.s==n?'selected':''}>${esc(n)}</option>`).join('');
- modal(`<h4>${m.id?'이정표':'+ 이정표'}</h4><div class="row"><label>과목</label><select id="mS">${subjOpts}</select></div><div class="row"><label>이름</label><input id="mN" value="${esc(m.name)}" placeholder="모의고사1"></div><div class="row"><label>주차</label><input id="mW" type="number" value="${m.w}" style="flex:0 0 64px"> 주</div>`,
- q=>{planMut(p2=>{let x=m.id?p2.milestones.find(z=>z.id===m.id):null;if(!x){x={id:uid(),del:false};p2.milestones.push(x)}x.s=q('mS').value;x.name=q('mN').value.trim();x.w=+q('mW').value||1;x.u=Date.now()});render()},
- m.id?()=>{if(confirm('이 이정표를 지울까? '+m.name)){planMut(p2=>{const x=p2.milestones.find(z=>z.id===m.id);if(x){x.del=true;x.u=Date.now()}});render()}}:null);
-}
+/* 이정표 기능 폐지 (feedback10 §1) — milestones 데이터는 스키마·병합에 남겨두되(무해 · 과거 데이터 보존) 읽지도 그리지도 않음 */
 /* ---- 프로젝트 전환·만들기·설정·보관 (§1-3~§1-6) ---- */
 function pjSwitch(id){planMut(p=>{p.cur=id},true);ui.pjView=null;LS.set('tt.ui',ui);planScrollPending=true;render()}
 function pjMenu(){const raw=planFile(cfg.person).data;const act=(raw.projects||[]).filter(x=>!x.arch&&!x.del);const nArch=(raw.projects||[]).filter(x=>x.arch&&!x.del).length;
@@ -2103,16 +2275,61 @@ function reanchorPj(pj,nd1,nd2){ // 기간(앵커) 변경: 밴드·이정표·�
  (pj.milestones||[]).forEach(m=>{m.w=cv(m.w);m.u=Date.now()});
  (pj.baselines||[]).forEach(x=>{(x.bands||[]).forEach(b=>{b.w1=cv(b.w1);b.w2=cv(b.w2)})});
 }
-/* 손잡이: 끌면 열 폭 단위 스냅 → 놓는 즉시 +N주(창 없음) · 안 움직이고 놓으면(탭) = 활동 편집(팝업 B) — §2-2·§2-3 */
+/* 손잡이(⋮): 오른쪽 = +N주 · 왼쪽 = −N주(§3-1) · 탭 = 활동 편집. 몸통: 클릭 = 팝업 A · 8px 이상 끌기 = 시작 주 이동(§3-2) */
 let gripSt=null;
 document.addEventListener('pointerdown',e=>{const g=e.target.closest?e.target.closest('.grip'):null;if(!g)return;e.preventDefault();e.stopPropagation();const el=g.parentElement;const cell=el.querySelector('.pbw,.pbw2');gripSt={id:g.dataset.band,x:e.clientX,cw:cell?Math.max(24,cell.getBoundingClientRect().width):PB_COL,add:0,moved:0,g,el};try{g.setPointerCapture(e.pointerId)}catch(x){}});
-document.addEventListener('pointermove',e=>{if(!gripSt)return;const dx=e.clientX-gripSt.x;gripSt.moved=Math.max(gripSt.moved,Math.abs(dx));const d=Math.max(0,Math.round(dx/gripSt.cw));if(d!==gripSt.add){gripSt.add=d;gripSt.g.textContent=d?('+'+d):'⋮';gripSt.el.style.outline=d?'2px dashed var(--blue)':''}});
-document.addEventListener('pointerup',e=>{if(!gripSt)return;const st=gripSt;gripSt=null;st.g.textContent='⋮';st.el.style.outline='';if(st.add>0)extendBandById(st.id,st.add);else if(st.moved<8)editBand(st.id)});
+document.addEventListener('pointermove',e=>{if(!gripSt)return;const dx=e.clientX-gripSt.x;gripSt.moved=Math.max(gripSt.moved,Math.abs(dx));const d=Math.round(dx/gripSt.cw);if(d!==gripSt.add){gripSt.add=d;gripSt.g.textContent=d>0?('+'+d):(d<0?('−'+(-d)):'⋮');gripSt.el.style.outline=d?'2px dashed var(--blue)':''}});
+document.addEventListener('pointerup',e=>{if(!gripSt)return;const st=gripSt;gripSt=null;st.g.textContent='⋮';st.el.style.outline='';if(st.add>0)extendBandById(st.id,st.add);else if(st.add<0)shrinkBandById(st.id,-st.add);else if(st.moved<8)editBand(st.id)});
 document.addEventListener('pointercancel',()=>{if(gripSt){gripSt.g.textContent='⋮';gripSt.el.style.outline='';gripSt=null}});
+let bmSt=null; // 몸통 이동 · 트레이 배치 끌기
+document.addEventListener('pointerdown',e=>{
+ if(e.target.closest&&(e.target.closest('.grip')||e.target.closest('.bsel')))return;
+ const tr=e.target.closest?e.target.closest('.trayb'):null;
+ const bd=!tr&&e.target.closest?e.target.closest('.pband2[data-bmove]'):null;
+ if(!tr&&(!bd||!bd.dataset.bmove))return;
+ const id=tr?tr.dataset.band:bd.dataset.bmove;if(!id)return;
+ const cell=bd?bd.querySelector('.pbw2'):null;
+ bmSt={id,tray:!!tr,x:e.clientX,y:e.clientY,el:tr||bd,cw:cell?Math.max(24,cell.getBoundingClientRect().width):PB_COL,moved:false,sh:0};
+});
+document.addEventListener('pointermove',e=>{if(!bmSt)return;
+ const dx=e.clientX-bmSt.x;
+ if(!bmSt.moved){if(Math.hypot(dx,e.clientY-bmSt.y)<8)return;bmSt.moved=true;bmSt.el.classList.add('bmoving');}
+ if(bmSt.tray){
+  document.querySelectorAll('.borddrop').forEach(x=>x.classList.remove('borddrop'));
+  const el=document.elementFromPoint(e.clientX,e.clientY);const c=el&&el.closest?el.closest('[data-ord]'):null;
+  if(c)c.classList.add('borddrop');
+ }else{
+  const sh=Math.round(dx/bmSt.cw);
+  if(sh!==bmSt.sh){bmSt.sh=sh;bmSt.el.style.transform=`translateX(${sh*bmSt.cw}px)`;}
+ }
+ e.preventDefault();
+});
+document.addEventListener('pointerup',e=>{if(!bmSt)return;const st=bmSt;bmSt=null;
+ st.el.classList.remove('bmoving');st.el.style.transform='';
+ document.querySelectorAll('.borddrop').forEach(x=>x.classList.remove('borddrop'));
+ if(!st.moved)return;
+ window.__bandDragged=true;setTimeout(()=>{window.__bandDragged=false},60); // 끌기 뒤 따라오는 click 무시 (클릭 = 팝업 A 유지)
+ if(st.tray){const el=document.elementFromPoint(e.clientX,e.clientY);const c=el&&el.closest?el.closest('[data-ord]'):null;
+  if(c)placeBandAt(st.id,+c.dataset.ord);else toast('보드 칸 위에 놓아줘');}
+ else if(st.sh)moveBandById(st.id,st.sh);
+});
+document.addEventListener('pointercancel',()=>{if(bmSt){bmSt.el.classList.remove('bmoving');bmSt.el.style.transform='';bmSt=null}});
 /* ----- 계획관리 (MiMi식 · 데이터 = todos 파일 plans+items · 주차계획 띠와 별개) ----- */
 let pmSel=null;
 function pmSelect(type,id){pmSel=(pmSel&&pmSel.type===type&&pmSel.id===id)?null:{type,id};render()}
-function pmHTML(){
+/* §8: 완료 ○● 토글 제거(완료는 타임테이블 일간 칸에서만 · done 은 N/M 표시용) · 과목/활동 접기 · 인라인 ✕ 삭제 */
+function pmFoldTgl(kind,encId){ui.pmFold=ui.pmFold||{s:{},c:{}};if(!ui.pmFold[kind])ui.pmFold[kind]={};const id=decodeURIComponent(encId);ui.pmFold[kind][id]=!ui.pmFold[kind][id];LS.set('tt.ui',ui);render()}
+function pmDelCat2(id){const p=catsOf(cfg.person).find(x=>x.id===id);if(!p)return;
+ const its=todoFile(cfg.person).data.items.filter(x=>!x.del&&x.cat===id);
+ if(!confirm(`활동 「${p.name}」 을 지울까?`))return;
+ const delItems=its.length?confirm(`세부계획 ${its.length}개도 같이 지울까?\n확인 = 같이 삭제 · 취소 = 「활동 없음」으로 남김`):false;
+ p.del=true;upsertCat(p);
+ if(delItems)its.forEach(t=>{t.del=true;upsertTodo(t)});
+ if(pmSel&&pmSel.id===id)pmSel=null;
+ render()}
+function pmDelItem2(id){const t=todoFile(cfg.person).data.items.find(x=>x.id===id&&!x.del);if(!t)return;
+ if(confirm('지울까? '+t.t)){t.del=true;upsertTodo(t);render()}}
+function pmCoreHTML(){ // 계획관리 본문 — 페이지와 📋 팝업(§9)이 같이 씀
  const t=today();const cats=catsOf(cfg.person);
  const all=todoFile(cfg.person).data.items.filter(x=>!x.del&&x.kind==='study');
  const showEnd=!!ui.pmEnded,showFut=!!ui.pmFuture;
@@ -2120,37 +2337,50 @@ function pmHTML(){
  const catIds=new Set(cats.map(p=>p.id));
  const orphan=all.filter(x=>!x.cat||!catIds.has(x.cat)).sort((a,b)=>a.d<b.d?-1:1);
  const names=settings.subjects.map(x=>x.n);const extra=[...new Set(vis.map(p=>p.s))].filter(s=>!names.includes(s));
- const itemLi=x=>`<div class="itm ${x.done?'done':''} ${pmSel&&pmSel.type==='item'&&pmSel.id===x.id?'on2':''}"><span class="ob" onclick="toggleTodo('${x.id}')">${x.done?'●':'○'}</span><span class="tx" onclick="pmSelect('item','${x.id}')">${esc(x.t)}</span><span class="dt" onclick="pmDateEdit(event,'${x.id}')">${(x.d||'').slice(5).replace('-','/')}</span></div>`;
+ const fold=Object.assign({s:{},c:{}},ui.pmFold||{});
+ const itemLi=x=>`<div class="itm ${x.done?'done':''}"><span class="tx" onclick="editTodo('${x.id}')">${esc(x.t)}</span><span class="dt" onclick="pmDateEdit(event,'${x.id}')">${(x.d||'').slice(5).replace('-','/')}</span><span class="rowx" onclick="pmDelItem2('${x.id}')" title="삭제">✕</span></div>`;
  const subjBlock=s=>{
   const ps=vis.filter(p=>p.s===s).sort((a,b)=>(a.d1||'')<(b.d1||'')?-1:1);
   if(!ps.length)return'';
-  return`<div class="sb" style="border-color:${subjColor(s)}"><div class="sbh">${esc(s)}</div>${ps.map(p=>{
+  const sf=!!(fold.s||{})[s];const encS2=encodeURIComponent(s);
+  return`<div class="sb" style="border-color:${subjColor(s)}"><div class="sbh" style="cursor:pointer" onclick="pmFoldTgl('s','${encS2}')"><span class="tw">${sf?'▸':'▾'}</span>${esc(s)}<small style="color:#999;font-weight:400"> 활동 ${ps.length}</small></div>${sf?'':ps.map(p=>{
    const its=all.filter(x=>x.cat===p.id).sort((a,b)=>a.d<b.d?-1:1);
    const done=its.filter(x=>x.done).length;
-   return`<div class="pln ${pmSel&&pmSel.type==='cat'&&pmSel.id===p.id?'on2':''}" onclick="pmSelect('cat','${p.id}')"><b>${esc(p.name)}</b><small>시작: ${p.d1||'—'} / 종료: ${p.d2||'—'}${its.length?` · ${done}/${its.length}`:''}${p.noTimer?' · <b style="color:#c60">합산 제외</b>':''}</small></div>${its.map(itemLi).join('')}`}).join('')}</div>`};
+   const cf=!!(fold.c||{})[p.id];
+   return`<div class="pln ${pmSel&&pmSel.type==='cat'&&pmSel.id===p.id?'on2':''}"><span class="tw" style="cursor:pointer" onclick="pmFoldTgl('c','${p.id}')">${cf?'▸':'▾'}</span><b style="cursor:pointer" onclick="pmSelect('cat','${p.id}')">${esc(p.name)}</b><small onclick="pmSelect('cat','${p.id}')" style="cursor:pointer">시작 ${p.d1||'—'} · 종료 ${p.d2||'—'}${its.length?` · ${done}/${its.length}`:''}${p.noTimer?' · <b style="color:#c60">합산 제외</b>':''}</small><span class="tw" style="cursor:pointer" onclick="pmCatModal(catsOf(cfg.person).find(z=>z.id==='${p.id}'))" title="활동 수정">✎</span><span class="rowx" onclick="pmDelCat2('${p.id}')" title="활동 삭제 (세부계획 처리 물음)">✕</span></div>${cf?'':its.map(itemLi).join('')}`}).join('')}</div>`};
+ return`${[...names,...extra].map(subjBlock).join('')||'<p style="color:#888">활동이 없어. 「+ 활동」으로 시작.</p>'}
+ ${orphan.length?`<div class="sb" style="border-color:#bbb"><div class="sbh">활동 없음</div>${orphan.map(itemLi).join('')}</div>`:''}`;
+}
+function pmHTML(){
+ const showEnd=!!ui.pmEnded,showFut=!!ui.pmFuture;
  return`${moreTabs('pm')}<div class="ttl"><b>계획관리 <span>› ${esc(cfg.person)}</span></b></div><div class="pm">
  <div class="tgl"><label><input type="checkbox" ${showEnd?'checked':''} onchange="ui.pmEnded=this.checked;LS.set('tt.ui',ui);render()"> 종료된 활동 보이기</label><label><input type="checkbox" ${showFut?'checked':''} onchange="ui.pmFuture=this.checked;LS.set('tt.ui',ui);render()"> 미시작 활동 보이기</label></div>
- ${[...names,...extra].map(subjBlock).join('')||'<p style="color:#888">활동이 없어. 「+ 활동」이나 오늘 칸의 「활동에서 가져오기」로 시작.</p>'}
- ${orphan.length?`<div class="sb" style="border-color:#bbb"><div class="sbh">활동 없음</div>${orphan.map(itemLi).join('')}</div>`:''}
- <div class="btns"><button class="btn" onclick="pmCatModal()">+ 활동</button><button class="btn" onclick="pmEditCat()">활동 수정</button><button class="btn d" onclick="pmDelCat()">활동 삭제</button><button class="btn" onclick="pmAddItem()">+ 세부계획</button><button class="btn" onclick="pmEditItem()">세부계획 수정</button><button class="btn d" onclick="pmDelItem()">세부계획 삭제</button></div></div>
+ ${pmCoreHTML()}
+ <div class="btns"><button class="btn" onclick="pmCatModal()">+ 활동</button><button class="btn" onclick="pmAddItem()">+ 세부계획</button><span style="font-size:10px;color:#888;align-self:center">완료 체크 = 타임테이블 일간 칸에서 · 수정 = ✎/줄 클릭 · 삭제 = 줄의 ✕</span></div></div>
  <h4 style="margin:16px 0 4px;font-size:12px">세부계획 DB <small style="color:#888;font-weight:400">과목 지식 · 프로젝트를 넘어 재사용 — 여기서 편집 · 활동에 넣기 = 주월계획의 활동 몸통 → ✎ 고르기 · 기간(주차) 조작은 주월계획</small></h4>
  ${unitsDBHTML(myPlan())}`;
+}
+/* §9 계획관리 팝업 — 타임테이블 시트·PiP 의 📋 버튼에서 · 화면 이동 없이 편집 */
+function pmPopup(doc){doc=doc||document;
+ if(doc.getElementById('pmPop'))return;
+ const m=doc.createElement('div');m.className='modal';m.id='pmPop';
+ m.innerHTML=`<div class="box" style="max-width:480px;max-height:82vh;overflow:auto"><div style="display:flex;gap:6px;align-items:center;margin-bottom:8px"><b style="font-size:12px">📋 계획관리</b><small style="color:#888">구조 편집 — 완료는 일간 칸에서</small><span style="margin-left:auto;cursor:pointer;color:#888" onclick="this.closest('.modal').remove()">✕</span></div><div id="pmPopBody" class="pm" style="max-width:none">${pmCoreHTML()}</div><div style="display:flex;gap:6px;margin-top:8px"><button class="btn" onclick="pmCatModal()">+ 활동</button><button class="btn" onclick="pmAddItem()">+ 세부계획</button></div></div>`;
+ m.addEventListener('click',e=>{if(e.target===m)m.remove()});
+ doc.body.appendChild(m);
+}
+function pmPopSync(){ // 팝업이 열려 있으면 내용만 갱신 (본창 + PiP)
+ [document,(typeof pipWin!=='undefined'&&pipWin&&!pipWin.closed)?pipWin.document:null].forEach(D=>{if(!D)return;const b=D.getElementById('pmPopBody');if(b)b.innerHTML=pmCoreHTML();});
 }
 function pmDateEdit(ev,id){ev.stopPropagation();const el=ev.target;const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(!t)return;el.outerHTML=`<input type="date" value="${t.d}" style="font-size:10px" onchange="pmSetDate('${id}',this.value)" onclick="event.stopPropagation()">`;}
 function pmSetDate(id,d){const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(t&&d){t.d=d;upsertTodo(t);}render();}
 function pmSelCat(){return pmSel&&pmSel.type==='cat'?catsOf(cfg.person).find(p=>p.id===pmSel.id):null}
-function pmSelItem(){return pmSel&&pmSel.type==='item'?todoFile(cfg.person).data.items.find(x=>x.id===pmSel.id&&!x.del):null}
 function pmCatModal(p){
  p=p||{id:'',s:(settings.subjects[0]||{}).n||'',name:'',d1:today(),d2:today(),noTimer:false};
  const subjOpts=settings.subjects.map(x=>`<option ${p.s==x.n?'selected':''}>${esc(x.n)}</option>`).join('');
  modal(`<h4>${p.id?'활동 수정':'+ 활동'}</h4><div class="row"><label>과목</label><select id="pS">${subjOpts}</select></div><div class="row"><label>활동명</label><input id="pN" value="${esc(p.name)}" placeholder="객1회독 · 중급강의"></div><div class="row"><label>시작</label><input id="pD1" type="date" value="${p.d1||''}"></div><div class="row"><label>종료</label><input id="pD2" type="date" value="${p.d2||''}"></div><div class="row"><label></label><label style="width:auto"><input type="checkbox" id="pNT" ${p.noTimer?'checked':''}> 타이머 시간 합산하지 않기</label></div>`,
  q=>{const o=p.id?p:{id:uid(),del:false};o.s=q('pS').value;o.name=q('pN').value.trim();o.d1=q('pD1').value;o.d2=q('pD2').value;o.noTimer=q('pNT').checked;upsertCat(o);render()});
 }
-function pmEditCat(){const p=pmSelCat();if(!p){toast('활동 줄을 먼저 골라줘');return;}pmCatModal(p)}
-function pmDelCat(){const p=pmSelCat();if(!p){toast('활동 줄을 먼저 골라줘');return;}if(confirm('이 활동을 지울까? '+p.name+' (세부계획은 「활동 없음」으로 남아)')){p.del=true;upsertCat(p);pmSel=null;render()}}
-function pmAddItem(){const p=pmSelCat();if(!p){toast('활동 줄을 먼저 골라줘');return;}modal(`<h4>+ 세부계획 · ${esc(p.name)}</h4><div class="row"><label>내용</label><input id="iT" placeholder="1-08 물권변동"></div><div class="row"><label>날짜</label><input id="iD" type="date" value="${today()}"></div>`,q=>{if(q('iT').value.trim()){upsertTodo({id:uid(),d:q('iD').value||today(),t:q('iT').value.trim(),kind:'study',cat:p.id,done:false,carry:0});render()}})}
-function pmEditItem(){const x=pmSelItem();if(!x){toast('세부계획 줄을 먼저 골라줘');return;}editTodo(x.id)}
-function pmDelItem(){const x=pmSelItem();if(!x){toast('세부계획 줄을 먼저 골라줘');return;}if(confirm('지울까? '+x.t)){x.del=true;upsertTodo(x);pmSel=null;render()}}
+function pmAddItem(){const p=pmSelCat();if(!p){toast('활동 줄(이름)을 먼저 골라줘');return;}modal(`<h4>+ 세부계획 · ${esc(p.name)}</h4><div class="row"><label>내용</label><input id="iT" placeholder="1-08 물권변동"></div><div class="row"><label>날짜</label><input id="iD" type="date" value="${today()}"></div>`,q=>{if(q('iT').value.trim()){upsertTodo({id:uid(),d:q('iD').value||today(),t:q('iT').value.trim(),kind:'study',cat:p.id,done:false,carry:0});render()}})}
 /* ----- 월간(계획) ----- */
 function revShift(n){const m=ui.revMonth||ym(today());ui.revMonth=n===0?ym(today()):ym(shiftMonth(m+'-01',n));LS.set('tt.ui',ui);render()}
 function revMore(s){s=decodeURIComponent(s);ui.unitsOpen=ui.unitsOpen||{};ui.unitsOpen[s]=!ui.unitsOpen[s];LS.set('tt.ui',ui);render()}
@@ -2317,6 +2547,7 @@ function exportLocal(){const o={};Object.keys(localStorage).filter(k=>k.startsWi
 let pipWin=null;
 function pipPaint(){
  if(!pipWin||pipWin.closed){pipWin=null;return;}
+ if(pipWin.document.querySelector('.modal'))return; // 계획관리 팝업 등이 열려 있으면 통째 재그리기 보류 (§9)
  applyMonthColor(pipWin.document);
  const d=curDate();pipWin.document.body.innerHTML=`<div class="pipwrap">${sheetHTML(cfg.person,d,sessionsOf(cfg.person,d))}${mbarHTML()}</div>`;
 }
@@ -2326,7 +2557,7 @@ async function pip(){
  try{const w=await documentPictureInPicture.requestWindow({width:520,height:640});pipWin=w;
   [...document.styleSheets].forEach(s=>{try{const st=w.document.createElement('style');st.textContent=[...s.cssRules].map(r=>r.cssText).join('\n');w.document.head.appendChild(st)}catch(e){}});
   const st=w.document.createElement('style');st.textContent='body{background:#fff;padding:6px;overflow:auto;height:100vh}.pipwrap{min-width:420px;display:flex;flex-direction:column;height:100%}.pipwrap .sheet{flex:1;display:flex;flex-direction:column;min-height:0}.pipwrap .paper{flex:1;min-height:0}.pipwrap .tt .r{height:15px}.pipwrap .paper{grid-template-columns:5fr 6fr!important}.pipwrap .mbar .man{display:none}.pipwrap .st{max-height:none}';w.document.head.appendChild(st);
-  ['startTimer','stopTimer','manualSave','editSession','render','curDate','setDate','addDays','today','toast','selRow','toggleTodo','pickTodoItem','pullFromBands'].forEach(n=>w[n]=window[n]);
+  ['startTimer','stopTimer','manualSave','editSession','render','curDate','setDate','addDays','today','toast','selRow','toggleTodo','pickTodoItem','selUnit','togglePlanDone','startLife','lifeModal','lifeSetType','lifeAddType','lifeDelType','lifePlanModal','lifePlanDel','pmPopup','pmFoldTgl','pmDelCat2','pmDelItem2','pmCatModal','pmAddItem','pmSelect','pmDateEdit','pmSetDate','editTodo','catsOf','cfg'].forEach(n=>w[n]=window[n]);
   w.addEventListener('pagehide',()=>{pipWin=null});
   pipPaint();
  }catch(e){toast('작은 창 실패: '+e.message)}
