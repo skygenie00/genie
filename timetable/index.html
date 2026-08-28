@@ -63,7 +63,6 @@ button{cursor:pointer}
 .st .sw{width:9px;height:9px;flex:none}
 .st .nm{width:28px;font-weight:700}
 .st .pl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.st .mk{color:var(--blue);font-weight:700;width:12px}
 .foot{border-top:1px solid #ddd;margin-top:auto;padding-top:6px;display:flex;justify-content:space-between;font-size:10px;color:#555;align-items:flex-end}
 .foot .big{font-size:22px;font-weight:800;color:#222}
 /* MiMi bar */
@@ -72,10 +71,6 @@ button{cursor:pointer}
 .mbar select,.mbar input{border:1px solid #ddd;border-radius:3px;padding:4px 6px;font-size:11.5px;min-width:0}
 .mbar .subj{font-weight:700;width:76px}
 .mbar .pl{flex:1 1 90px}.mbar .item{flex:2 1 120px}
-.mbar .mk{display:flex;gap:8px;font-size:10px;color:#555}
-.mbar .mk span{display:flex;flex-direction:column;align-items:center;cursor:pointer}
-.mbar .mk i{width:14px;height:14px;border:1.5px solid #333;border-radius:50%;display:block;margin-bottom:2px}
-.mbar .mk i.on{border-width:4px;border-color:var(--blue)}
 .mbar .ss{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .mbar .ss button{text-align:center;border:1px solid #bbb;padding:9px;font-weight:800;font-size:15px;letter-spacing:.08em;border-radius:4px;background:#fff}
 .mbar .ss button.dis{color:#bbb;border-color:#ddd;cursor:default}
@@ -135,7 +130,7 @@ button{cursor:pointer}
 .trk{display:grid;font-size:8px;align-items:center}
 .trk .th{text-align:center;color:#888;padding:2px 0}
 .trk .th.sun{color:#c33}
-.trk .lbl{position:sticky;left:0;background:#fff;font-size:9px;padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid #f0f0f0}
+.trk .lbl{position:sticky;left:0;background:#fff;font-size:9px;padding:2px 4px;white-space:normal;line-height:1.25;max-height:2.6em;overflow:hidden;word-break:break-all;border-top:1px solid #f0f0f0}
 .trk .c2{text-align:center;border-top:1px solid #f0f0f0;padding:3px 0}
 .trk .c2.wk{border-left:1px dotted #ddd}
 .trk .dot{display:inline-block;width:7px;height:7px;border-radius:50%;cursor:pointer}
@@ -239,7 +234,9 @@ button{cursor:pointer}
 /* plan v2 */
 .plan-ph{display:none}
 .pbnav{display:flex;gap:8px;align-items:center;font-size:11px;margin-bottom:8px;flex-wrap:wrap}
-.pb{display:grid;gap:1px;background:#eee;border:1px solid var(--line);border-radius:6px;overflow:hidden;font-size:10px}
+.pbwrap{overflow-x:auto;overscroll-behavior-x:contain;border:1px solid var(--line);border-radius:6px}
+.pb{display:grid;gap:1px;background:#eee;font-size:10px;width:max-content;min-width:100%}
+.pb .pbl,.pb .pbs,.pbh.pbfix{position:sticky;left:0;z-index:2;border-right:2px solid #fff}
 .pb>div{background:#fff;min-height:18px}
 .pbh{background:#f7f7f7!important;text-align:center;font-weight:700;padding:4px 2px}
 .pbh small{display:block;font-weight:400;color:#888;font-size:8px}
@@ -384,7 +381,7 @@ function logicalNow(){const d=new Date();const mins=d.getHours()*60+d.getMinutes
 function today(){return logicalNow().d}
 function curDate(){return ui.date||today()}
 function setDate(d){ui.date=d;LS.set('tt.ui',ui);render()}
-function setView(v){ui.view=v;LS.set('tt.ui',ui);render()}
+function setView(v){if(v==='plan'&&ui.view!=='plan')planScrollPending=true;ui.view=v;LS.set('tt.ui',ui);render()}
 
 /* ---------- 파일 캐시 (localStorage) ----------
    key: tt.f.<path>  → {data, sha, dirty}
@@ -532,9 +529,8 @@ function stopTimer(){
  if(!run)return;const n=logicalNow();let b=n.m;let d=run.d;
  if(n.d!==run.d){ b=n.m+1440*Math.round((parse(n.d)-parse(run.d))/864e5); } // 날짜 넘어가면 이어붙임
  if(b<=run.a)b=run.a+1;
- const s={id:uid(),d,s:run.s,p:run.p,i:run.i,a:run.a,b,k:run.k||'',plan:run.plan||'',cat:run.cat||'',nt:!!run.nt};
+ const s={id:uid(),d,s:run.s,p:run.p,i:run.i,a:run.a,b,plan:run.plan||'',cat:run.cat||'',nt:!!run.nt}; // ○×△(k) 폐지 — 완료는 「완료」 버튼으로
  upsertSession(s);
- if(s.k==='○'&&s.plan){const t=todoFile(cfg.person).data.items.find(x=>x.id===s.plan&&!x.del);if(t&&!t.done){t.done=true;upsertTodo(t);syncBandDone(t);}} // ⚠ 표시 ○일 때만 자동 완료 — 지금 바에는 ○ 입력이 없어 사실상 대기 상태
  run=null;LS.del('tt.run');toast(`저장 ${dur(s.b-s.a)}`);render();
 }
 function elapsed(){return run?Math.max(0,Math.floor((Date.now()-run.at)/1000)):0}
@@ -553,14 +549,14 @@ function manualSave(doc){doc=doc||document;
  const si=selInfo();
  const tm=t=>{const[h,m]=t.split(':').map(Number);let v=h*60+m;if(v<dayStart()*60)v+=1440;return v};
  let A=tm(a),B=tm(b);if(B<=A)B+=1440;
- if(si){upsertSession({id:uid(),d:curDate(),s:si.s,p:si.catName,i:si.itemT,a:A,b:B,k:'',plan:si.itemId,cat:si.catId,nt:si.nt});toast('저장됨');}
- else{upsertSession({id:uid(),d:curDate(),s:'기타',p:'',i:'',a:A,b:B,k:'',plan:'',cat:''});toast('선택이 없어 「기타」로 저장');}
+ if(si){upsertSession({id:uid(),d:curDate(),s:si.s,p:si.catName,i:si.itemT,a:A,b:B,plan:si.itemId,cat:si.catId,nt:si.nt});toast('저장됨');}
+ else{upsertSession({id:uid(),d:curDate(),s:'기타',p:'',i:'',a:A,b:B,plan:'',cat:''});toast('선택이 없어 「기타」로 저장');}
  render();
 }
 
 /* ---------- 렌더 ---------- */
 const $=id=>document.getElementById(id);
-function render(){applyMonthColor();renderSide();renderMain();renderPnav();fitMinis();if(typeof pipPaint=='function')pipPaint();}
+function render(){applyMonthColor();renderSide();renderMain();renderPnav();fitMinis();planAfterRender();if(typeof pipPaint=='function')pipPaint();}
 function dday(){const x=nextExam();if(!x)return'';const n=Math.ceil((parse(x.date)-parse(today()))/864e5);return n>=0?`D-${n}`:`D+${-n}`}
 function monthColor(mm){const def=DEF_SETTINGS.monthColors;const a=Array.isArray(settings.monthColors)&&settings.monthColors.length===12?settings.monthColors:def;const i=(+String(mm).slice(-2)||1)-1;return a[i]||def[i]}
 /* 보고 있는 달의 색을 --m8 로 (시트·격자·썸네일 전부 이 변수를 씀) */
@@ -694,7 +690,7 @@ function threeHTML(){
    const dd2=t.kind!='study'&&t.due?dueBadge(t.due):'';
    return`<li class="${t.done?'done':''} ${i==0&&!t.done&&t.kind=='study'?'late':''}"><span class="cb ${t.done?'on':''}" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</span><span onclick="${t.kind=='study'?`pickTodoItem('${t.id}')`:`editTodo('${t.id}')`}" style="flex:1;cursor:pointer">${t.kind=='study'?`<i class="plandot" style="background:${subjColor(c?c.s:'기타')}"></i>`:''}${esc(t.t)}${cur?' <b style="color:var(--blue);font-size:9px">▶ 진행 중</b>':''}</span>${dd2}${pn?`<span class="m">${esc(pn)}</span>`:''}<span class="m">${t.carry?'이월 '+t.carry:''}</span>${t.kind=='study'?`<span class="x" onclick="editTodo('${t.id}')" title="편집">✎</span>`:''}<span class="x" onclick="delTodo('${t.id}')">×</span></li>`};
   const cm=sharedForCol(x,i).map(s=>`<li class="${s.done?'done':''}"><span class="cb ${s.done?'on':''}" onclick="toggleShared('${s.id}')">${s.done?'✓':''}</span><span onclick="cmEdit('${s.id}')" style="flex:1;cursor:pointer"><b style="color:var(--blue);font-size:9px;border:1px solid var(--blue);border-radius:3px;padding:0 3px">공통</b> ${esc(s.t)}</span>${s.due?dueBadge(s.due):''}</li>`).join('');
-  return`<div class="col ${i==1?'today':''}"><h5>${lab[i]} <small>${dt.getMonth()+1}/${dt.getDate()} ${DAYS[dt.getDay()]}${i==1?' · W'+pad(weekNo(x)):''}</small></h5>
+  return`<div class="col ${i==1?'today':''}"><h5>${lab[i]} <small>${dt.getMonth()+1}/${dt.getDate()} ${DAYS[dt.getDay()]}${i==1&&weekNo(x)>=1?' · W'+pad(weekNo(x)):''}</small></h5>
   <div class="sec">학습${i==0?' · 미완료는 이월 가능':i==1?' · 타이머에 붙음':''}<span class="rgt">${i==0&&late.length?`<button class="btn" onclick="carryAll('${x}')">오늘로 이월 ${late.length}건</button>`:''}${pc?`<button class="btn" onclick="pullFromBands('${x}')">띠에서 가져오기 ${pc}</button>`:''}</span></div>${PLAN_ITEMS_DIRECT?planColHTML(x,i):''}<ul>${st.map(li).join('')}</ul>
   <input class="add" placeholder="+ 학습 추가" onkeydown="if(event.key=='Enter'&&this.value.trim()){addTodo('${x}','study',this.value.trim());this.value=''}">
   <div class="sec">할일</div><ul>${td.map(li).join('')}${cm}</ul>
@@ -785,14 +781,14 @@ function editSession(id,doc){
  modal(`<h4>세션 편집</h4>
  <div class="row"><label>시작</label><input id="eA2" type="datetime-local" value="${sessDT(s.d,s.a)}"></div>
  <div class="row"><label>끝</label><input id="eB2" type="datetime-local" value="${sessDT(s.d,s.b)}"></div>
- <div class="row"><label>계획</label><select id="eRow">${opts}</select><select id="eK" style="flex:0 0 52px;min-width:0"><option value="">—</option>${['○','×','△'].map(c=>`<option ${s.k==c?'selected':''}>${c}</option>`).join('')}</select></div>
+ <div class="row"><label>계획</label><select id="eRow">${opts}</select></div>
  <p style="font-size:10px;color:#888">새벽 ${pad(dayStart())}:00 전은 전날로 저장돼.</p>`,
  q=>{
   const A=dtToLogical(q('eA2').value||sessDT(s.d,s.a));
   const Bv=q('eB2').value||sessDT(s.d,s.b);const bp=Bv.split('T');const bt=bp[1].split(':').map(Number);
   let b=bt[0]*60+bt[1]+1440*Math.round((parse(bp[0])-parse(A.d))/864e5);
   if(b<=A.m)b=A.m+1;
-  const origD=s.d;s.d=A.d;s.a=A.m;s.b=b;s.k=q('eK').value;
+  const origD=s.d;s.d=A.d;s.a=A.m;s.b=b;
   const rv=q('eRow').value;const tf=todoFile(cfg.person);
   if(rv){const ty=rv.split(':')[0],rid=rv.slice(rv.indexOf(':')+1);
    if(ty==='item'){const it=tf.data.items.find(x=>x.id===rid);const c=it&&it.cat?tf.data.cats.find(z=>z.id===it.cat):null;s.plan=rid;s.cat=c?c.id:'';s.s=c?c.s:'기타';s.p=c?c.name:'';s.i=it?(it.t||''):'';s.nt=!!(c&&c.noTimer);}
@@ -852,7 +848,7 @@ function weekHTML(){
  <div class="wstat"><span>Avg <b>${dur(Math.round(wt/7))}</b></span><span>Total <span class="big">${dur(wt)}</span></span></div></div>
  </div></div>`;
 }
-function gotoBand(id){const p=myPlan();const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;ui.planW0=b.w1-1;ui.planTab='week';LS.set('tt.ui',ui);setView('plan');}
+function gotoBand(id){const p=myPlan();const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;ui.planTab='week';ui.view='plan';LS.set('tt.ui',ui);planScrollPending=false;planScroll=Math.max(0,(b.w1-2)*PB_COL);render();}
 function subjTotals(list){const g={};list.forEach(x=>{if(x.nt)return;g[x.s]=(g[x.s]||0)+x.b-x.a});return Object.entries(g).map(([s,min])=>({s,min})).sort((a,b)=>b.min-a.min)}
 /* ----- 월간 ----- */
 function monthHTML(){
@@ -966,13 +962,14 @@ function dayCard(who,x){
  const dirty=mine&&snapDirtyChk(who,x,sn);
  return`<div class="card" onclick="snapView('${who}','${x}')" style="cursor:pointer"><div class="th full" style="position:relative">${miniSheet(snapSheetHTML(x,sn))}${dirty?'<span class="snapbadge mod">반영 후 수정됨</span>':''}</div><div class="lb" style="background:${footBg(sn.total||0)};color:#111"><span>${dlab}${sn.memo?' ✎':''}</span><span style="color:#666">${ddayAt(x)}</span><b style="margin-left:auto">${dur(sn.total||0)}</b></div></div>`;
 }
+function weekKey(plan,ws){const w=pWeekNo(plan,ws);return w>=1?'W'+pad(w):ws} // W1 이전 주는 날짜 키 (음수 W 라벨 폐지)
 function weekCard(who,ws){
  const wplan=planFile(who).data;const w=pWeekNo(wplan,ws);
  const days=[...Array(7)].map((_,i)=>addDays(ws,i));
  const miss=days.filter(x=>!snapOf(who,x)).length;
  const tot=days.reduce((a,x)=>{const sn=snapOf(who,x);return a+(sn?sn.total||0:0)},0);
- const memo=(snapFileF(who,ym(ws)).data.weeks['W'+pad(w)]||{}).memo;
- return`<div class="card" onclick="snapViewW('${who}','${ws}')" style="cursor:pointer"><div class="th full">${miniSheet(snapWeekSheetHTML(who,ws))}</div><div class="lb"><span>${ws.slice(2).replace(/-/g,'/')}~${days[6].slice(8)} · W${pad(w)}${memo?' ✎':''}${miss?` <span style="color:#c60">미반영 ${miss}</span>`:''}</span><b style="margin-left:auto">${dur(tot)}</b></div></div>`;
+ const memo=(snapFileF(who,ym(ws)).data.weeks[weekKey(wplan,ws)]||{}).memo;
+ return`<div class="card" onclick="snapViewW('${who}','${ws}')" style="cursor:pointer"><div class="th full">${miniSheet(snapWeekSheetHTML(who,ws))}</div><div class="lb"><span>${ws.slice(2).replace(/-/g,'/')}~${days[6].slice(8)} 주간${w>=1?' · W'+pad(w):''}${memo?' ✎':''}${miss?` <span style="color:#c60">미반영 ${miss}</span>`:''}</span><b style="margin-left:auto">${dur(tot)}</b></div></div>`;
 }
 function monthCard(who,m){
  const fd=parse(m+'-01');const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();
@@ -1009,10 +1006,10 @@ function snapWeekSheetHTML(who,ws){
  <div class="wstat"><span>Avg <b>${dur(Math.round(wt/7))}</b></span><span>Total <span class="big">${dur(wt)}</span></span></div></div></div></div>`;
 }
 function snapViewW(who,ws){
- const wplan=planFile(who).data;const w=pWeekNo(wplan,ws);const key='W'+pad(w);
+ const wplan=planFile(who).data;const w=pWeekNo(wplan,ws);const key=weekKey(wplan,ws);
  const mine=who===cfg.person;
  const memo=(snapFileF(who,ym(ws)).data.weeks[key]||{}).memo||'';
- modal(`<h4 style="margin-bottom:6px">${esc(who)} · 주간 W${pad(w)}</h4>
+ modal(`<h4 style="margin-bottom:6px">${esc(who)} · 주간 ${w>=1?'W'+pad(w):ws.replace(/-/g,'.')+'~'}</h4>
  ${snapWeekSheetHTML(who,ws)}
  <div class="row" style="margin-top:6px"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit" ${mine?'':'readonly'}>${esc(memo)}</textarea></div>`,
  q=>{if(mine)snapMemoSave('weeks',key,q('snMemo').value,ym(ws));render()});
@@ -1178,23 +1175,36 @@ function togglePlanDone(bandId,unitId,d){planMut(p=>{const b=p.bands.find(x=>x.i
 function pickPlanItem(bandId,unitId){toast('「띠에서 가져오기」로 복사해서 써')} // 직접 삽입 경로(PLAN_ITEMS_DIRECT) 전용 — 지금은 꺼져 있음
 /* ----- 주차계획 ----- */
 function planTab(t){ui.planTab=t;LS.set('tt.ui',ui);render()}
-function planShift(n){const curW=pWeekNo(myPlan(),today());ui.planW0=(ui.planW0??(curW-2))+n;LS.set('tt.ui',ui);render()}
 function planPh(n){ui.planPhW=(ui.planPhW??pWeekNo(myPlan(),today()))+n;LS.set('tt.ui',ui);render()}
-function planHome(){const curW=pWeekNo(myPlan(),today());ui.planW0=curW-2;ui.planPhW=curW;LS.set('tt.ui',ui);render()}
+/* 보드 가로 스크롤 상태 — 재렌더에도 자리 유지, 「현재」는 현재 주를 둘째 열로 */
+let planScroll=0,planScrollPending=true;
+const PB_COL=56; // 주차 열 폭(px)
+function planCur(){ui.planPhW=pWeekNo(myPlan(),today());LS.set('tt.ui',ui);planScrollPending=true;render()}
+function planAfterRender(){
+ const w=document.getElementById('pbwrap');if(!w)return;
+ w.addEventListener('wheel',ev=>{if(!gripSt&&Math.abs(ev.deltaY)>Math.abs(ev.deltaX)){w.scrollLeft+=ev.deltaY;ev.preventDefault();}},{passive:false});
+ w.addEventListener('scroll',()=>{planScroll=w.scrollLeft});
+ if(planScrollPending){const curW=pWeekNo(myPlan(),today());w.scrollLeft=Math.max(0,(curW-2)*PB_COL);planScrollPending=false;}
+ else w.scrollLeft=planScroll;
+ planScroll=w.scrollLeft;
+}
 function planHTML(){
  const plan=myPlan();const tab=ui.planTab||'week';
  const head=`<div class="ttl"><b onclick="switchPerson()" style="cursor:pointer">${esc(cfg.person)} 주차계획 <span>▾</span></b>
  <div class="r"><button class="btn" onclick="rebalancePreview()">밀린 것 재배치</button><button class="btn" onclick="newBand()">+ 띠</button><button class="btn" onclick="newMilestone()">+ 이정표</button></div></div>
- <div class="views"><span class="${tab=='week'?'on':''}" onclick="planTab('week')">주차별</span><span class="${tab=='active'?'on':''}" onclick="planTab('active')">진행중</span><span class="${tab=='list'?'on':''}" onclick="planTab('list')">리스트</span></div>`;
+ <div class="views"><span class="${tab=='week'?'on':''}" onclick="planTab('week')">주차별</span><span class="${tab=='active'?'on':''}" onclick="planTab('active')">진행중</span><span class="${tab=='list'?'on':''}" onclick="planTab('list')">리스트</span><span style="margin-left:auto;padding:0"><button class="btn" onclick="planCur()">현재</button></span></div>`;
  if(!(plan.bands||[]).some(b=>!b.del))return`${moreTabs('plan')}${head}<p style="color:#888">아직 띠가 없어. 「+ 띠」로 시작하거나, 동기화가 plan/${esc(cfg.person)}.json 을 받아올 때까지 기다려.</p>`;
  if(tab==='list')return`${moreTabs('plan')}${head}${planListHTML(plan)}`;
  return`${moreTabs('plan')}${head}<div class="plan-pc">${planBoardHTML(plan,tab==='active')}</div><div class="plan-ph">${planPhoneHTML(plan)}</div>`;
 }
 function planBoardHTML(plan,activeOnly){
- const t=today();const curW=pWeekNo(plan,t);const W0=ui.planW0??(curW-2);const NW=11;const wL=W0,wR=W0+NW-1;const ew=examWeek(plan);
- let h=`<div class="pbnav"><button class="btn" onclick="planShift(-1)">‹</button><span>W${pad(wL)} ~ W${pad(wR)} · W1=${planWeekStart(plan)} 주</span><button class="btn" onclick="planShift(1)">›</button><button class="btn" onclick="planHome()">현재</button><span style="color:#888">띠 오른쪽 손잡이 = 끌어서(또는 눌러서) +1주</span></div>`;
- h+=`<div style="overflow-x:auto"><div class="pb" style="grid-template-columns:110px repeat(${NW},minmax(56px,1fr))">`;
- h+=`<div class="pbh"></div>`;
+ const t=today();const curW=pWeekNo(plan,t);const ew=examWeek(plan);
+ const wL=1;let wR=ew<9000?ew:Math.max(curW+8,1); // W1 ~ 시험 주 열 전부
+ plan.bands.forEach(b=>{if(!b.del&&b.w2>wR)wR=b.w2});
+ plan.milestones.forEach(m2=>{if(!m2.del&&m2.w>wR)wR=m2.w});
+ const NW=wR-wL+1;
+ let h=`<div class="pbwrap" id="pbwrap"><div class="pb" style="grid-template-columns:110px repeat(${NW},${PB_COL}px)">`;
+ h+=`<div class="pbh pbfix" style="z-index:4"></div>`;
  for(let w=wL;w<=wR;w++)h+=`<div class="pbh ${w===curW?'cur':''}">W${pad(w)}<small>${w===curW?'현재':pWeekDate(plan,w).slice(5).replace('-','/')}${w===ew?' · 시험':''}</small></div>`;
  subjOrderAll(plan).forEach(s=>{
   let bands=plan.bands.filter(b=>!b.del&&b.s===s&&b.w2>=wL&&b.w1<=wR).sort((a,b)=>a.w1-b.w1||a.w2-b.w2);
@@ -1202,7 +1212,7 @@ function planBoardHTML(plan,activeOnly){
   const ms=plan.milestones.filter(m=>!m.del&&m.s===s&&m.w>=wL&&m.w<=wR);
   if(!bands.length&&!ms.length)return;
   h+=`<div class="pbs"><i class="plandot" style="background:${subjColor(s)}"></i>${esc(s)}</div>`;
-  for(let w=wL;w<=wR;w++){const mm=ms.filter(m=>m.w===w);h+=`<div class="pbsc ${w===curW?'cur':''}">${mm.map(m=>`<span class="pbm" onclick="editMilestone('${m.id}')" title="${esc(m.name)}">◆</span>`).join('')}</div>`}
+  for(let w=wL;w<=wR;w++){const mm=ms.filter(m=>m.w===w);h+=`<div class="pbsc ${w===curW?'cur':''}">${mm.map(m=>`<span class="pbm" onclick="editMilestone('${m.id}')" title="${esc(m.name)} · ${parseInt(pWeekDate(plan,m.w).slice(5,7))}/${parseInt(pWeekDate(plan,m.w).slice(8))}">◆</span>`).join('')}</div>`}
   bands.forEach(b=>{
    const c1=Math.max(b.w1,wL),c2=Math.min(b.w2,wR);
    const L=late(plan,b,addDays(t,-1));const hasU=(b.units||[]).length>0;const per=+b.per||0;
