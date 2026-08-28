@@ -510,6 +510,31 @@ tr:hover .lsx{color:#c33}
 .pm .pln:hover .rowx,.pm .itm:hover .rowx{color:#c33}
 .pm .itm .tx{cursor:pointer}
 .pm .itm.done .tx{color:#aaa;text-decoration:line-through}
+/* ----- 기록통합 v1 (records_v1) ----- */
+.card.hist{cursor:default;background:#fafafa}
+.card.hist .th{background:#fbfbfb}
+.recsec{background:#fff;border:1px solid #eee;border-radius:4px;padding:7px 9px;margin-top:6px}
+.recsec .hd2{font-size:10.5px;font-weight:700;border-left:3px solid #444;padding-left:6px;margin-bottom:4px}
+.recsec .qrow{display:flex;gap:5px;align-items:center;font-size:11px;padding:1px 0}
+.recsec .qrow .m2{margin-left:auto;color:#777;font-size:10px}
+.recsec .qsub{font-size:10px;color:#888;padding-left:13px}
+.hz{color:#d97706}
+.recln{font-size:10px;color:#555;margin:2px 0 4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.gph2{border:1px solid #eee;border-radius:6px;background:#fff;padding:7px 9px;margin-top:8px}
+.gph2 .t{font-size:10.5px;font-weight:700;margin-bottom:4px}.gph2 .t small{font-weight:400;color:#999}
+.bars2{display:flex;align-items:flex-end;gap:2px;overflow-x:auto}
+.bars2 .bc{display:flex;flex-direction:column;align-items:center;gap:1px;flex:none}
+.bars2 .bs{display:flex;flex-direction:column-reverse;width:13px}
+.bars2 .bs i{display:block;width:100%;background:#5b6675;border-radius:2px 2px 0 0}
+.bars2 .bs i.hist{opacity:.32;border-radius:0}
+.bars2 .bc span{font-size:8px;color:#999}
+.gph3{border:1px solid #eee;border-radius:6px;background:#fff;padding:7px 9px}
+.gph3 .t{font-size:10.5px;font-weight:700;margin-bottom:4px;display:flex;gap:4px;align-items:center}.gph3 .t small{font-weight:400;color:#999}
+.bars3{display:flex;align-items:flex-end;gap:3px;overflow-x:auto}
+.bars3 .bc{display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;flex:none}
+.bars3 .bc b{display:block;width:14px;border-radius:2px 2px 0 0}
+.bars3 .bc i.hz2{display:block;width:14px;background:#f3b04d}
+.bars3 .bc span{font-size:8px;color:#999}
 </style>
 </head>
 <body>
@@ -661,6 +686,26 @@ function sharedItems(){return sharedFile().data.items.filter(x=>!x.del)}
 function upsertShared(t){const f=sharedFile();t.u=Date.now();const i=f.data.items.findIndex(x=>x.id===t.id);if(i>=0)f.data.items[i]=t;else f.data.items.push(t);f.dirty=true;saveF('todos/공통.json',f);scheduleSync();}
 function toggleShared(id){const t=sharedFile().data.items.find(x=>x.id===id);if(t){t.done=!t.done;t.doneAt=t.done?today():null;upsertShared(t);render()}}
 function listDirty(){return Object.keys(localStorage).filter(k=>k.startsWith('tt.f.')).map(k=>k.slice(5)).filter(p=>{const f=LS.get(fkey(p));return f&&f.dirty})}
+/* ----- 기록통합 v1 (records_v1 §0): 문항층 records/<사람>.json · 시간층 history/<사람>.json -----
+   문항층 항목 키 = d|app|unit (재가져오기 = 덮어씀 · mergeList u 규칙 그대로).
+   시간층은 노션 1회 이전분 — 앱은 읽기만. 그래프·월 합계 표시에만 쓰고 밀림·부하·달성엔 불산입. */
+const recPath=who=>`records/${who}.json`;
+const histPath=who=>`history/${who}.json`;
+function recFile(who){return loadF(recPath(who),{v:1,items:[]})}
+function recsOf(who,d){return recFile(who).data.items.filter(r=>r.d===d&&!r.del)}
+function upsertRecs(list){
+ const p=recPath(cfg.person);const f=recFile(cfg.person);const now=Date.now();
+ list.forEach(r=>{r.id=r.d+'|'+r.app+'|'+r.unit;r.u=now;
+  const i=f.data.items.findIndex(x=>x.id===r.id);if(i>=0)f.data.items[i]=r;else f.data.items.push(r)});
+ f.dirty=true;saveF(p,f);scheduleSync();}
+function histDaysOf(who){const f=loadF(histPath(who),{v:1,days:{}});return f.data.days||{}}
+function histOf(who,d){const h=histDaysOf(who)[d];return(h&&h.min)?h:null}
+/* 기록 앱 목록 — 새 앱(조판기 등) 추가 = 여기 한 줄 (§2-b 하드코딩 금지) · subj = §4 과목 매핑도 이 한 곳 */
+const REC_APPS=[
+ {app:'민법OX',subj:'민법',paste:'ox'},
+ {app:'물리535',subj:'물리',paste:'phys',origin:{db:'phys535',store:'kv',key:'status',page:'../phys/index.html',btn:'🔬 물리535 기록 읽기'}},
+];
+const recSubj=a=>{const x=REC_APPS.find(z=>z.app===a);return x?x.subj:'기타'};
 
 /* 세션 CRUD (자기 것만) */
 function sessionsOf(who,d){const f=sessFile(who,ym(d));return f.data.sessions.filter(s=>s.d===d&&!s.del).sort((a,b)=>a.a-b.a)}
@@ -710,6 +755,9 @@ function mergeFile(path,local,remote){
   return out;
  }
  if(path.startsWith('todos/'))return{v:2,cats:mergeList(local.cats||local.plans||[],remote.cats||remote.plans||[]),items:mergeList(local.items||[],remote.items||[])};
+ if(path.startsWith('records/'))return{v:1,items:mergeList((local||{}).items||[],(remote||{}).items||[])};
+ if(path.startsWith('history/')){const out={v:1,days:{}};const A=(local||{}).days||{},B=(remote||{}).days||{};
+  new Set([...Object.keys(A),...Object.keys(B)]).forEach(k=>{const a=A[k],b=B[k];out.days[k]=!a?b:(!b?a:(((a.u||0)>=(b.u||0))?a:b))});return out;}
  if(path.startsWith('plan/')){ // v2: projects 는 id 로 맞추고 안의 bands·milestones 는 id·u 병합, 프로젝트 나머지 필드는 u 큰 쪽, plan 층은 pu 큰 쪽
   let A=local||{},B=remote||{};
   if((A.v||1)>CUR_PLAN_V||(B.v||1)>CUR_PLAN_V)return((A.v||0)>=(B.v||0))?A:B; // 더 새 스키마 쪽을 통째 보존 (구버전 앱이 부수지 않게)
@@ -759,6 +807,8 @@ async function syncAll(silent){
    await syncFile(snapPath(me,m),true,EMPTY_SNAP());if(peer)await syncFile(snapPath(peer,m),false,EMPTY_SNAP());}
   await syncFile(todoPath(me),true,{v:2,cats:[],items:[]});if(peer)await syncFile(todoPath(peer),false,{v:2,cats:[],items:[]});
   await syncFile('todos/공통.json',true,{v:1,items:[]});
+  await syncFile(recPath(me),true,{v:1,items:[]});if(peer)await syncFile(recPath(peer),false,{v:1,items:[]});
+  await syncFile(histPath(me),false,{v:1,days:{}});if(peer)await syncFile(histPath(peer),false,{v:1,days:{}}); // 시간층은 앱이 안 씀 — pull 만
   cfg.lastSync=Date.now();LS.set('tt.cfg',cfg);logS('완료');if(!silent)toast('동기화됨');
  }catch(e){logS('✗ '+e.message);if(!silent)toast('동기화 실패: '+e.message);}
  syncing=false;render();
@@ -991,7 +1041,7 @@ function threeHTML(){
    return`<li class="${t.done?'done':''} ${i==0&&!t.done&&t.kind=='study'?'late':''}"><span class="cb ${t.done?'on':''}" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</span><span onclick="${t.kind=='study'?`pickTodoItem('${t.id}')`:`editTodo('${t.id}')`}" style="flex:1;cursor:pointer">${t.kind=='study'?`<i class="plandot" style="background:${subjColor(c?c.s:'기타')}"></i>`:''}${esc(t.t)}${cur?' <b style="color:var(--blue);font-size:9px">▶ 진행 중</b>':''}</span>${dd2}${pn?`<span class="m">${esc(pn)}</span>`:''}<span class="m">${t.carry?'이월 '+t.carry:''}</span>${t.kind=='study'?`<span class="x" onclick="editTodo('${t.id}')" title="편집">✎</span>`:''}<span class="x" onclick="delTodo('${t.id}')">×</span></li>`};
   const cm=sharedForCol(x,i).map(s=>`<li class="${s.done?'done':''}"><span class="cb ${s.done?'on':''}" onclick="toggleShared('${s.id}')">${s.done?'✓':''}</span><span onclick="cmEdit('${s.id}')" style="flex:1;cursor:pointer"><b style="color:var(--blue);font-size:9px;border:1px solid var(--blue);border-radius:3px;padding:0 3px">공통</b> ${esc(s.t)}</span>${s.due?dueBadge(s.due):''}</li>`).join('');
   return`<div class="col ${i==1?'today':''}"><h5>${lab[i]} <small>${dt.getMonth()+1}/${dt.getDate()} ${DAYS[dt.getDay()]}${i==1&&weekNo(x)>=1?' · W'+pad(weekNo(x)):''}</small></h5>
-  <div class="sec">학습${i==0?' · 미완료는 이월 가능':i==1?' · 체크 = 완료 · 클릭 = 타이머':''}<span class="rgt">${i==0&&late.length?`<button class="btn" onclick="carryAll('${x}')">오늘로 이월 ${late.length}건</button>`:''}</span></div>${PLAN_ITEMS_DIRECT?planColHTML(x,i):''}<ul>${st.map(li).join('')}</ul>
+  <div class="sec">학습${i==0?' · 미완료는 이월 가능':i==1?' · 체크 = 완료 · 클릭 = 타이머':''}<span class="rgt">${i==0&&late.length?`<button class="btn" onclick="carryAll('${x}')">오늘로 이월 ${late.length}건</button>`:''}</span></div>${PLAN_ITEMS_DIRECT?planColHTML(x,i):''}<ul>${st.map(li).join('')}</ul>${recLineHTML(x)}
   <input class="add" placeholder="+ 학습 추가" onkeydown="if(event.key=='Enter'&&this.value.trim()){addTodo('${x}','study',this.value.trim());this.value=''}">
   <div class="sec">할일</div><ul>${td.map(li).join('')}${cm}</ul>
   <div style="display:flex;gap:4px;align-items:center"><input class="add" placeholder="+ 할일 추가" style="flex:1" onkeydown="if(event.key=='Enter'&&this.value.trim()){addTodo('${x}','todo',this.value.trim(),document.getElementById('due_${i}').value);this.value='';document.getElementById('due_${i}').value=''}"><input type="date" id="due_${i}" title="기한(선택)" style="border:0;border-bottom:1px dashed #ddd;font-size:10px;width:110px;background:transparent"></div></div>`}).join('')}</div>`;
@@ -1087,7 +1137,7 @@ function weekSecBody(plan,ws){ // MiMi 주간 카드(무변·폭 500) + 캘린�
  const hasPj=!!plan.__pj;
  const cd=hasPj?calData(plan,ws,addDays(ws,6)):null;
  return`<div class="row2">${weekCardHTML(ws)}
- <div class="wrt2">${hasPj?`${baseBarHTML(plan,ws)}${weekCalHTML(plan,ws,cd)}${achSummaryHTML(plan)}${projGraphHTML(plan)}`:'<p style="color:#888;font-size:11px">프로젝트가 없어 — 주월계획에서 「＋ 새 프로젝트」로 시작하면 세부계획 캘린더가 여기 생겨.</p>'}</div></div>`;
+ <div class="wrt2">${hasPj?`${baseBarHTML(plan,ws)}${weekCalHTML(plan,ws,cd)}${achSummaryHTML(plan)}${projGraphHTML(plan)}`:'<p style="color:#888;font-size:11px">프로젝트가 없어 — 주월계획에서 「＋ 새 프로젝트」로 시작하면 세부계획 캘린더가 여기 생겨.</p>'}${timeTrendHTML()}</div></div>`;
 }
 function monthSecBody(plan,m){ // MiMi 월간 점 카드(점은 여기만) + 세부계획 월간 캘린더(주간과 같은 칩) + 그래프
  const hasPj=!!plan.__pj;
@@ -1095,7 +1145,7 @@ function monthSecBody(plan,m){ // MiMi 월간 점 카드(점은 여기만) + 세
  const from=weekStart(first),to=addDays(weekStart(`${m}-${pad(nd)}`),6);
  const cd=hasPj?calData(plan,from,to):null;
  return`<div class="row2">${monthCardHTML(m)}
- <div class="wrt2">${hasPj?`<div style="display:flex;justify-content:flex-end;margin-bottom:4px"><button class="btn" onclick="calZoom('month')">⤢ 확대</button></div>${monthCalHTML(plan,m,cd)}${projGraphHTML(plan)}`:''}</div></div>`;
+ <div class="wrt2">${hasPj?`<div style="display:flex;justify-content:flex-end;margin-bottom:4px"><button class="btn" onclick="calZoom('month')">⤢ 확대</button></div>${monthCalHTML(plan,m,cd)}${projGraphHTML(plan)}`:''}${timeTrendHTML()}</div></div>`;
 }
 /* 캘린더 ⤢ 확대 모달 (feedback9 §3-3) — 90% 폭 · 칩 확대 · +N 없이 전부 · 체크·끌기·📌 동일 · ESC/✕ */
 let zoomSt=null;
@@ -1301,7 +1351,9 @@ function snapMemoSave(kind,key,val,m){
 }
 function ddayAt(d){const xs=(settings.exams||[]).filter(x=>!x.del&&x.date).sort((a,b)=>a.date<b.date?-1:1);const x=xs.find(z=>z.date>=d)||xs[xs.length-1];if(!x)return'';const n=Math.ceil((parse(x.date)-parse(d))/864e5);return n>=0?`D-${n}`:`D+${-n}`}
 function snapMonthStats(who,m){const fd=parse(m+'-01');const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();const t0=today();let tot=0,miss=0;
- for(let i=1;i<=nd;i++){const x=`${m}-${pad(i)}`;const sn=snapOf(who,x);if(sn)tot+=sn.total||0;else if(x<t0)miss++;}
+ for(let i=1;i<=nd;i++){const x=`${m}-${pad(i)}`;const sn=snapOf(who,x);
+  if(sn)tot+=sn.total||0;
+  else{const hs=histOf(who,x);if(hs&&!sessionsOf(who,x).length)tot+=hs.min;else if(x<t0)miss++;}} // 시간층 날짜 = 합계에만 · 미반영 아님
  return{tot,miss}}
 function ttSnap(ss){const s0=dayStart()*60;let h='';for(let r=0;r<24;r++){const a=s0+r*60,b=a+60;let bars='';ss.forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${subjColor(x.s)}${x.nt?NT_HATCH:''}"></b>`});h+=`<span>${pad((a/60)%24)}</span><div class="r">${bars}</div>`}return h}
 function snapSess(sn,d){return(sn.ss||[]).map(z=>({s:z[0],a:z[1],b:z[2],nt:z[3],d}))}
@@ -1310,6 +1362,10 @@ function dayCard(who,x){
  const sn=snapOf(who,x);const dt=parse(x);const mine=who===cfg.person;
  const dlab=`${x.slice(2).replace(/-/g,'/')} (${DAYS[dt.getDay()]})`;
  if(!sn){
+  const hs=histOf(who,x);
+  if(hs&&!sessionsOf(who,x).length){ // 시간층만 있는 날짜 — 시각 정보가 없으니 썸네일 없이 빈 칸 + Total · est 는 ≈ · 앱 세션 있으면 앱 실측 우선(시간층 무시)
+   return`<div class="card hist" title="${esc('노션 이전분 ('+(hs.q==='est'?'시간대 어림':hs.q==='gas'?'GAS 분':'정확')+')'+(hs.raw?' · '+hs.raw:''))}"><div class="th"></div><div class="lb" style="background:${footBg(hs.min)};color:#111"><span>${dlab}</span><span style="color:#666">${ddayAt(x)}</span><b style="margin-left:auto">${hs.q==='est'?'≈':''}${dur(hs.min)}</b></div></div>`;
+  }
   const isT=x===today();
   return`<div class="card empty"><div class="th" style="flex-direction:column;gap:6px;position:relative"><span class="snapbadge">미반영</span><span>${isT?(snapMode()==='auto'&&mine?'오늘 · 하루가 지나면 자동 반영':'오늘'):'지난 날'}</span>${mine?`<button class="btn" style="border-color:var(--blue);color:var(--blue)" onclick="takeSnap('${x}');toast('반영했어');render()">${isT&&snapMode()==='auto'?'지금 반영':'데일리 모음에 반영'}</button>`:''}</div><div class="lb"><span>${dlab}</span><span>${ddayAt(x)}</span><b style="margin-left:auto;color:#ccc">--:--</b></div></div>`;
  }
@@ -1320,15 +1376,18 @@ function weekKey(plan,ws){const L=wLabelOf(plan,ws);return L!=null?'W'+pad(L):ws
 function weekCard(who,ws){
  const wplan=planView(who);const wl=wLabelOf(wplan,ws);
  const days=[...Array(7)].map((_,i)=>addDays(ws,i));
- const miss=days.filter(x=>!snapOf(who,x)).length;
- const tot=days.reduce((a,x)=>{const sn=snapOf(who,x);return a+(sn?sn.total||0:0)},0);
+ const hOnly=x=>{const hs=histOf(who,x);return hs&&!snapOf(who,x)&&!sessionsOf(who,x).length?hs:null}; // 시간층만 있는 날
+ const miss=days.filter(x=>!snapOf(who,x)&&!hOnly(x)).length;
+ const tot=days.reduce((a,x)=>{const sn=snapOf(who,x);if(sn)return a+(sn.total||0);const hs=hOnly(x);return a+(hs?hs.min:0)},0);
  const memo=(snapFileF(who,ym(ws)).data.weeks[weekKey(wplan,ws)]||{}).memo;
  return`<div class="card" onclick="snapViewW('${who}','${ws}')" style="cursor:pointer"><div class="th full">${miniSheet(snapWeekSheetHTML(who,ws))}</div><div class="lb"><span>${ws.slice(2).replace(/-/g,'/')}~${days[6].slice(8)} 주간${wl!=null?' · W'+pad(wl):''}${memo?' ✎':''}${miss?` <span style="color:#c60">미반영 ${miss}</span>`:''}</span><b style="margin-left:auto">${dur(tot)}</b></div></div>`;
 }
 function monthCard(who,m){
  const fd=parse(m+'-01');const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();
  let tot=0,miss=0;
- for(let i=1;i<=nd;i++){const x=`${m}-${pad(i)}`;const sn=snapOf(who,x);if(!sn)miss++;else tot+=sn.total||0}
+ for(let i=1;i<=nd;i++){const x=`${m}-${pad(i)}`;const sn=snapOf(who,x);
+  if(sn)tot+=sn.total||0;
+  else{const hs=histOf(who,x);if(hs&&!sessionsOf(who,x).length)tot+=hs.min;else miss++}}
  const memo=(snapFileF(who,m).data.months[m]||{}).memo;
  return`<div class="card" onclick="snapViewM('${who}','${m}')" style="cursor:pointer"><div class="th full">${miniSheet(snapMonthSheetHTML(who,m))}</div><div class="lb"><span>${m.slice(2).replace('-','.')} 월간${memo?' ✎':''}${miss?` <span style="color:#c60">미반영 ${miss}</span>`:''}</span><b style="margin-left:auto">${dur(tot)}</b></div></div>`;
 }
@@ -1338,6 +1397,7 @@ function snapView(who,d){
  if(!sn){if(mine){takeSnap(d);toast('반영했어');render();}return;}
  modal(`<h4 style="margin-bottom:6px">${esc(who)} · 데일리 모음</h4>
  ${snapSheetHTML(d,sn)}
+ ${recSecHTML(who,d)}
  <p style="font-size:10px;color:#888;margin:6px 0">반영 ${new Date(sn.at).toLocaleString('ko')}</p>
  <div class="row"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit" ${mine?'':'readonly'}>${esc(sn.memo||'')}</textarea></div>
  <div class="row" style="justify-content:flex-end;gap:6px"><button class="btn" onclick="this.closest('.modal').remove();setDate('${d}');setView('day')">이 날 일간으로</button>${mine?`<button class="btn" onclick="this.closest('.modal').remove();takeSnap('${d}');toast('다시 반영했어');render()">다시 반영</button>`:''}</div>`,
@@ -1375,9 +1435,11 @@ function snapMonthSheetHTML(who,m){
  let cells='';let cur=addDays(first,-((fd.getDay()+6)%7));let tot=0;
  while(cur<=lastD){let row='';let wsum=0;
   for(let i=0;i<7;i++){const x=cur;
-   if(ym(x)===m){const sn=snapOf(who,x);const t2=sn?sn.total||0:0;wsum+=t2;tot+=t2;const dow=parse(x).getDay();
+   if(ym(x)===m){const sn=snapOf(who,x);let t2=sn?sn.total||0:0;let hq='';
+    if(!sn){const hs=histOf(who,x);if(hs&&!sessionsOf(who,x).length){t2=hs.min;hq=hs.q}} // 시간층 날짜 = 합계 표시에만
+    wsum+=t2;tot+=t2;const dow=parse(x).getDay();
     const cls=t2>=settings.redHours*60?'red':t2>=settings.skyHours*60?'sky':'';
-    row+=`<div class="d ${cls}"><div class="n ${dow===0?'sun':''}">${parseInt(x.slice(8))}</div><div class="v ${t2?'':'off'}">${t2?dur(t2):(sn?'OFF':'미반영')}</div></div>`;
+    row+=`<div class="d ${cls}"><div class="n ${dow===0?'sun':''}">${parseInt(x.slice(8))}</div><div class="v ${t2?'':'off'}"${hq?' style="color:#888"':''}>${t2?(hq==='est'?'≈':'')+dur(t2):(sn?'OFF':'미반영')}</div></div>`;
    }else row+=`<div class="d out"></div>`;
    cur=addDays(cur,1);}
   cells+=row+`<div class="wsum" style="${wsum?'':'color:#ccc;font-weight:400'}">${dur(wsum)}</div>`;}
@@ -2507,7 +2569,199 @@ function achTabHTML(plan){ // 주월계획 「달성」 탭 (feedback9 §1-3·1-
  <div><div class="goalbox" onclick="goalEdit('${m}')"><b>${parseInt(m.slice(5))}월 목표</b>${esc(g.text||'')||'<span style="color:#aaa">(클릭해서 적기)</span>'}${g.prio?`<div class="p">📌 ${esc(g.prio)}</div>`:''}</div></div>
  <div class="rvbox"><h4>달성 <small>계획한 세부계획 대비 완료 · 이 달</small></h4>
  ${rows.length?`<div style="overflow-x:auto"><table class="rvtab"><thead><tr><th>과목</th><th>세부계획</th><th>완료</th><th></th><th>시간</th><th>밀림</th><th>예상 종료</th></tr></thead><tbody>${rowsA}${sumRow}</tbody></table></div>`:'<p style="color:#888;font-size:11px">이 달에 걸친 활동이 없어.</p>'}</div>
- </div>`;
+ </div>
+ ${recAnalysisHTML(plan)}`;
+}
+/* ----- 기록통합 v1 (records_v1 §2~§4): 가져오기·표시·분석 ----- */
+/* §2-a 붙여넣기 파서: 「[OX 학습로그]」·「[물리535 학습로그]」 머리 · 여러 날짜 블록 허용 · 못 읽는 줄 = bad */
+function parseRecLog(txt){
+ const lines=String(txt||'').split(/\r?\n/);
+ const blocks=[];let cur=null;const bad=[];
+ const detail=(it,ln)=>{ // 물리 상세 줄 「  17 O 0'45" | 21 X …」 — 있으면 정오·분을 실측으로
+  const parts=ln.trim().split('|').map(s=>s.trim()).filter(Boolean);
+  let o=0,q=0,x=0,sec=0,n=0;
+  for(const p of parts){const m=/^(\S+)\s+([OQX])(?:\s+(\d+)'(\d+)")?/.exec(p);if(!m)return false;
+   n++;if(m[2]==='O')o++;else if(m[2]==='Q')q++;else x++;if(m[3])sec+=(+m[3])*60+(+m[4]);}
+  if(n!==it.n)return false;
+  it.o=o;it.q=q;it.x=x;if(sec)it.min=Math.round(sec/60);return true;
+ };
+ for(let i=0;i<lines.length;i++){const t=lines[i].trim();if(!t)continue;
+  let m=/^\[(.+?)\s*학습로그\]\s*(\d{4}-\d{2}-\d{2})/.exec(t);
+  if(m){const nm=m[1]==='OX'?'민법OX':m[1];cur={app:nm,subj:recSubj(nm),d:m[2],items:[]};blocks.push(cur);continue}
+  if(!cur){bad.push(t);continue}
+  if(/^합계\s*[:：]/.test(t)){ // 물리 합계 줄의 분 — 상세 줄로 못 채운 항목에 문항수 비례 배분(끝수 보정)
+   const mm=/(\d+)\s*분/.exec(t);
+   if(mm&&cur.app==='물리535'){const un=cur.items.filter(x=>x.min==null);const S=un.reduce((a,b)=>a+b.n,0);
+    const tot=Math.max(0,(+mm[1])-cur.items.reduce((a,b)=>a+(b.min||0),0)); // 상세 줄로 이미 채운 분은 빼고 배분
+    if(S&&tot){let acc=0,prev=0;un.forEach(it=>{acc+=it.n;const c=Math.round(tot*acc/S);it.min=c-prev;prev=c;});}}
+   continue}
+  if(/^(메모|오래 걸림)/.test(t))continue;
+  if(cur.app==='물리535'){
+   m=/^-\s*(.+?)\s*:\s*(\d+)\s*문항\s*\(\s*정답률\s*(\d+)\s*%\s*·\s*헷갈림\s*(\d+)\s*\)/.exec(t);
+   if(m){const n=+m[2],o=Math.round(n*(+m[3])/100),q=+m[4];
+    const it={unit:m[1],n,o,q,x:Math.max(0,n-o-q),min:null};cur.items.push(it);
+    if(i+1<lines.length&&/^\s{2,}\S+\s+[OQX]/.test(lines[i+1])&&detail(it,lines[i+1]))i++;
+    continue}
+  }else{
+   m=/^-\s*(.*?)\s*:\s*(\d+)\s*문항\s*,\s*정답\s*(\d+)\s*·\s*오답\s*(\d+)\s*·\s*헷갈림\s*(\d+)/.exec(t);
+   if(m){let u=m[1];
+    if(/빠른실행/.test(u))u='약점큐';
+    else{const sl=u.indexOf('/');if(sl>=0)u=u.slice(sl+1).trim();u=u.replace(/\s*\([^)]*\)\s*$/,'').trim()} // unit = 장 · (출처) 떼기
+    cur.items.push({unit:u,n:+m[2],o:+m[3],x:+m[4],q:+m[5]});continue}
+  }
+  bad.push(t);
+ }
+ blocks.forEach(b=>b.items.forEach(it=>{if(it.min==null)delete it.min}));
+ return{blocks:blocks.filter(b=>b.items.length),bad};
+}
+/* §2-b 물리535 직접 읽기 — 순수 집계(하니스용 분리): ST[no].h=[{m,t,s}] → (날짜×단원) · 하루 경계 새벽 4시(물리 앱과 동일) · min = s초 합 */
+function physGroup(ST,unitOf){
+ const g=new Map();
+ Object.keys(ST||{}).forEach(no=>{const h=(ST[no]||{}).h||[];h.forEach(rec=>{
+  if(!rec||!rec.t)return;
+  const d=iso(new Date(rec.t-4*3600e3));
+  const u=unitOf(no)||'미분류';const k=d+'|'+u;
+  const o=g.get(k)||{d,unit:u,n:0,o:0,x:0,q:0,sec:0};
+  o.n++;if(rec.m==='O')o.o++;else if(rec.m==='Q')o.q++;else if(rec.m==='X')o.x++;
+  o.sec+=rec.s||0;g.set(k,o);});});
+ return[...g.values()].sort((a,b)=>a.d<b.d?-1:1).map(o=>{
+  const r={d:o.d,app:'물리535',subj:'물리',unit:o.unit,n:o.n,o:o.o,x:o.x,q:o.q,src:'origin'};
+  if(o.sec)r.min=Math.round(o.sec/60);return r});
+}
+async function physUnitMap(page){ // 문항번호 → 소단원 (물리 앱 페이지의 DATA 행 · NO=0 · BIG=4 · SUB=5)
+ try{
+  const t=await(await fetch(page,{cache:'no-cache'})).text();
+  const i=t.indexOf('const DATA = [');if(i<0)return()=>'';
+  const j=t.indexOf('];',i);if(j<0)return()=>'';
+  const arr=(new Function('return '+t.slice(i+13,j+1)))();
+  const m={};arr.forEach(r=>{m[String(r[0])]=r[5]||r[4]||''});return no=>m[String(no)]||'';
+ }catch(e){return()=>''}
+}
+let recPrev=null; // 미리보기 승인 대기분 — 「가져오기」를 눌러야 저장 (§2)
+function recImportModal(){
+ recPrev=null;
+ const ob=REC_APPS.filter(a=>a.origin).map(a=>`<button class="btn" onclick="recOriginRead('${a.app}')">${a.origin.btn}</button>`).join(' ');
+ const m=document.createElement('div');m.className='modal';m.id='recImpM';
+ m.innerHTML=`<div class="box" style="max-width:560px"><h4>📥 학습기록 가져오기</h4>
+ <div class="row" style="align-items:flex-start"><label>ⓐ 붙여넣기</label><textarea id="recTx" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:110px;font:10.5px/1.5 Consolas,monospace" placeholder="[OX 학습로그] 2026-08-25 … / [물리535 학습로그] … — 형식 자동 인식 · 여러 날짜 한 번에"></textarea></div>
+ <div class="row" style="justify-content:flex-end"><button class="btn" onclick="recParse()">인식</button></div>
+ <div id="recPv" style="font-size:10.5px;color:#555;border:1px dashed #ccc;border-radius:4px;padding:6px;margin:4px 0;display:none"></div>
+ <div class="row" style="align-items:flex-start"><label>ⓑ 직접 읽기</label><div style="flex:1;display:flex;gap:6px;flex-wrap:wrap;align-items:center">${ob}<span style="font-size:10px;color:#888">같은 기기·같은 주소의 앱만. 민법OX(로컬 파일)는 ⓐ 붙여넣기가 정공.</span></div></div>
+ <p style="font-size:10px;color:#888">저장 = records/${esc(cfg.person)}.json · 같은 (날짜·앱·단원)은 덮어씀 · push 로 기기 간 공유</p>
+ <div class="acts"><button class="btn" onclick="document.getElementById('recImpM').remove()">닫기</button><button class="btn p" id="recGo" disabled onclick="recImportGo()">가져오기</button></div></div>`;
+ m.addEventListener('click',e=>{if(e.target===m)m.remove()});
+ document.body.appendChild(m);
+}
+function recParse(){
+ const r=parseRecLog(document.getElementById('recTx').value);
+ const pv=document.getElementById('recPv');pv.style.display='block';
+ if(!r.blocks.length){pv.innerHTML='읽을 수 있는 블록이 없어 — 머리줄 「[OX 학습로그] YYYY-MM-DD」·「[물리535 학습로그] …」 확인';recPrev=null;document.getElementById('recGo').disabled=true;return}
+ const list=[];r.blocks.forEach(b=>b.items.forEach(it=>list.push(Object.assign({d:b.d,app:b.app,subj:b.subj,src:'paste'},it))));
+ recPrev={list};
+ pv.innerHTML=r.blocks.map(b=>`✓ <b>${esc(b.app)}</b> · ${b.d} · ${b.items.length}줄 · ${b.items.reduce((a,x)=>a+x.n,0)}문항`).join('<br>')
+  +(r.bad.length?`<br><span style="color:#c60">못 읽음 ${r.bad.length}줄(건너뜀):</span><br><span style="color:#999">${r.bad.slice(0,8).map(esc).join('<br>')}${r.bad.length>8?'<br>…':''}</span>`:'');
+ document.getElementById('recGo').disabled=false;
+}
+async function recOriginRead(app){
+ const A=REC_APPS.find(x=>x.app===app);if(!A||!A.origin)return;
+ const pv=document.getElementById('recPv');pv.style.display='block';pv.textContent='읽는 중…';
+ document.getElementById('recGo').disabled=true;recPrev=null;
+ try{
+  const ST=await new Promise((ok,no)=>{const r=indexedDB.open(A.origin.db);
+   r.onerror=()=>no(new Error('저장소 열기 실패'));
+   r.onupgradeneeded=()=>{r.transaction.abort();no(new Error('이 기기에 '+app+' 데이터가 없어'))};
+   r.onsuccess=()=>{const db=r.result;
+    if(!db.objectStoreNames.contains(A.origin.store)){db.close();no(new Error('이 기기에 '+app+' 데이터가 없어'));return}
+    const g=db.transaction(A.origin.store,'readonly').objectStore(A.origin.store).get(A.origin.key);
+    g.onsuccess=()=>{db.close();ok(g.result||{})};g.onerror=()=>{db.close();no(new Error('읽기 실패'))};};});
+  const unitOf=await physUnitMap(A.origin.page);
+  const list=physGroup(ST,unitOf);
+  if(!list.length)throw new Error('풀이 기록이 없어');
+  const have=new Set(recFile(cfg.person).data.items.filter(r=>!r.del&&r.app===app).map(r=>r.d));
+  const dates=[...new Set(list.map(r=>r.d))];
+  const nw=dates.filter(d=>!have.has(d)).length;
+  recPrev={list};
+  pv.innerHTML=`✓ <b>${esc(app)}</b> · 날짜 ${dates.length}일(새 날짜 ${nw}) · ${list.reduce((a,x)=>a+x.n,0)}문항 — 「가져오기」로 저장`;
+  document.getElementById('recGo').disabled=false;
+ }catch(e){pv.innerHTML='<span style="color:#c60">'+esc(e.message)+'</span>';}
+}
+function recImportGo(){
+ if(!recPrev||!recPrev.list.length)return;
+ upsertRecs(recPrev.list);
+ toast('가져왔어 — '+recPrev.list.length+'항목');
+ const m=document.getElementById('recImpM');if(m)m.remove();recPrev=null;render();
+}
+/* §3 표시 — 정답률 = 정답/문항(물리 Q 는 오답도 정답도 아님 · n 분모) */
+function recRate(rs){const n=rs.reduce((a,x)=>a+x.n,0);const o=rs.reduce((a,x)=>a+(x.o||0),0);return n?Math.round(o*100/n):0}
+function recSecHTML(who,d){ // 확대 모달 「푼 문제」 — 카드 아래·메모 위 (사용자 확정 위치) · 분은 표시만(Total 불산입)
+ const rs=recsOf(who,d);if(!rs.length)return'';
+ const apps=[...new Set(rs.map(r=>r.app))];
+ return`<div class="recsec"><div class="hd2">푼 문제</div>${apps.map(a=>{
+  const g=rs.filter(r=>r.app===a);const n=g.reduce((s,x)=>s+x.n,0);const q=g.reduce((s,x)=>s+(x.q||0),0);const mn=g.reduce((s,x)=>s+(x.min||0),0);
+  return`<div class="qrow"><i class="plandot" style="background:${subjColor(recSubj(a))}"></i><b>${esc(a)}</b>&nbsp;${n}문항<span class="m2">정답률 ${recRate(g)}%${q?` · <span class="hz">헷갈림 ${q}</span>`:''}${mn?` · ${mn}분`:''}</span></div>
+  <div class="qsub">${g.map(x=>`${esc(x.unit)} ${x.n}`).join(' · ')}</div>`}).join('')}
+ <p style="font-size:9.5px;color:#999;margin:2px 0 0">분은 표시만 — Total(타이머 실측)에는 안 합쳐</p></div>`;
+}
+function recLineHTML(d){ // 어제·오늘·내일 칸 학습 절 밑 한 줄 — 기록 없으면 줄 없음
+ const rs=recsOf(cfg.person,d);if(!rs.length)return'';
+ const apps=[...new Set(rs.map(r=>r.app))];
+ return`<p class="recln">${apps.map(a=>{const g=rs.filter(r=>r.app===a);const q=g.reduce((s,x)=>s+(x.q||0),0);
+  return`<span><i class="plandot" style="background:${subjColor(recSubj(a))}"></i>${esc(a)} ${g.reduce((s,x)=>s+x.n,0)} · ${recRate(g)}%${q?` · 헷갈림 ${q}`:''}</span>`}).join('')}</p>`;
+}
+/* §3 시간층: 공부시간 추이(월별) — 이전분(시간층)은 옅은 톤 · 앱 세션 있는 날짜는 앱 실측 우선(시간층 무시) */
+function histMonthMin(who,m){
+ const hd=histDaysOf(who);let min=0,est=0;const raws=[];
+ const sd=new Set(sessFile(who,m).data.sessions.filter(s=>!s.del).map(s=>s.d));
+ Object.keys(hd).forEach(d=>{if(ym(d)!==m)return;if(sd.has(d))return;const h=hd[d];if(!h.min)return;
+  min+=h.min;if(h.q==='est'){est++;if(raws.length<6)raws.push(d.slice(5)+' '+(h.raw||''))}});
+ return{min,est,raws};
+}
+function timeTrendHTML(){
+ const who=cfg.person;const hd=histDaysOf(who);
+ const pre='tt.f.sessions/'+who+'/';
+ const sm=Object.keys(localStorage).filter(k=>k.startsWith(pre)).map(k=>k.slice(pre.length).slice(0,7));
+ const all=[...new Set([...Object.keys(hd).map(ym),...sm])].filter(x=>/^\d{4}-\d{2}$/.test(x)).sort();
+ if(!all.length)return'';
+ const m1=ym(today());const months=[];let c=all[0]+'-01';
+ while(ym(c)<=m1&&months.length<80){months.push(ym(c));c=shiftMonth(c,1)}
+ const rows=months.map(m=>({m,app:mSum(sessionsMonth(who,m).filter(s=>!s.life)),h:histMonthMin(who,m)}));
+ if(!rows.some(r=>r.app+r.h.min))return'';
+ const mx=Math.max(1,...rows.map(r=>r.app+r.h.min));const H=64;
+ return`<div class="gph2"><div class="t">공부시간 추이 <small>월별 · <span style="opacity:.5">옅음 = 노션 이전분(시간층)</span> · ≈ = 어림 · 표시만(밀림·부하·달성 무관)</small></div>
+ <div class="bars2" style="height:${H+14}px">${rows.map((r,i)=>{
+  const hh=Math.round(r.h.min/mx*H),ah=Math.round(r.app/mx*H);
+  const tip=`${r.m}${r.app?` · 실측 ${dur(r.app)}`:''}${r.h.min?` · 이전분 ${r.h.est?'≈':''}${dur(r.h.min)}${r.h.est?` (est ${r.h.est}일)`:''}`:''}${r.h.raws.length?'\n'+r.h.raws.join('\n'):''}`;
+  const lab=(i===0||r.m.slice(5)==='01')?r.m.slice(2).replace('-','.'):String(parseInt(r.m.slice(5)));
+  return`<div class="bc" title="${esc(tip)}"><div class="bs">${hh?`<i class="hist" style="height:${hh}px"></i>`:''}${ah?`<i style="height:${ah}px"></i>`:''}</div><span>${lab}</span></div>`}).join('')}</div></div>`;
+}
+/* §4 분석 — 과목별 주별 정답률·헷갈림 (문항층 · 주 = 현재 프로젝트 주차 라벨 · 범위 밖은 날짜) · 자리 = 주월계획 달성 탭 안 절 */
+function recWeeksData(plan,subj){
+ const rs=recFile(cfg.person).data.items.filter(r=>!r.del&&r.subj===subj);
+ const g=new Map();
+ rs.forEach(r=>{const ws=weekStart(r.d);const o=g.get(ws)||{ws,n:0,o:0,q:0};o.n+=r.n;o.o+=r.o||0;o.q+=r.q||0;g.set(ws,o)});
+ return[...g.values()].sort((a,b)=>a.ws<b.ws?-1:1).map(o=>{const L=wLabelOf(plan,o.ws);
+  return{ws:o.ws,lab:L!=null?'W'+pad(L):o.ws.slice(5).replace('-','/'),rate:o.n?Math.round(o.o*100/o.n):0,n:o.n,q:o.q}});
+}
+function recAnalysisHTML(plan){
+ const subs=[...new Set(recFile(cfg.person).data.items.filter(r=>!r.del).map(r=>r.subj))];
+ if(!subs.length)return'';
+ return`<div class="rvbox" style="margin-top:8px"><h4>문항 기록 <small>주별 정답률·헷갈림 · 막대 클릭 = 그 주 단원별 표</small></h4>
+ <div style="display:flex;gap:18px;flex-wrap:wrap">${subs.map(s=>{
+  const W=recWeeksData(plan,s);if(!W.length)return'';
+  const mq=Math.max(1,...W.map(w=>w.q));
+  return`<div class="gph3"><div class="t"><i class="plandot" style="background:${subjColor(s)}"></i>${esc(s)} <small>막대 = 정답률 % · 아랫단 주황 = 헷갈림</small></div>
+  <div class="bars3">${W.map(w=>`<div class="bc" title="${w.lab} · ${w.n}문항 · 정답률 ${w.rate}% · 헷갈림 ${w.q}" onclick="recWeekModal('${encodeURIComponent(s)}','${w.ws}')"><b style="height:${Math.max(2,Math.round(w.rate*0.56))}px;background:${subjColor(s)}"></b><i class="hz2" style="height:${Math.round((w.q||0)/mq*14)}px"></i><span>${w.lab}</span></div>`).join('')}</div></div>`}).join('')}</div></div>`;
+}
+function recWeekModal(sEnc,ws){
+ const s=decodeURIComponent(sEnc);const we=addDays(ws,6);
+ const rs=recFile(cfg.person).data.items.filter(r=>!r.del&&r.subj===s&&r.d>=ws&&r.d<=we);
+ const g=new Map();rs.forEach(r=>{const o=g.get(r.unit)||{unit:r.unit,n:0,o:0,q:0};o.n+=r.n;o.o+=r.o||0;o.q+=r.q||0;g.set(r.unit,o)});
+ const rows=[...g.values()].sort((a,b)=>b.n-a.n);
+ const L=wLabelOf(myPlan(),ws);
+ modal(`<h4>${esc(s)} · ${L!=null?'W'+pad(L)+' · ':''}${ws.slice(5).replace('-','/')}~${we.slice(5).replace('-','/')} 단원별</h4>
+ <div style="overflow-x:auto"><table class="rvtab"><thead><tr><th>단원</th><th>문항</th><th>정답률</th><th>헷갈림</th></tr></thead><tbody>
+ ${rows.map(r=>`<tr><td>${esc(r.unit)}</td><td>${r.n}</td><td>${r.n?Math.round(r.o*100/r.n):0}%</td><td>${r.q||''}</td></tr>`).join('')}
+ </tbody></table></div>`,q=>{});
 }
 /* ----- 설정 ----- */
 function setHTML(){
@@ -2527,6 +2781,8 @@ function setHTML(){
  <h4>계획 <small style="font-weight:400;color:#888">사람별 (plan/${esc(cfg.person)}.json) · 주차는 프로젝트 기간이 정함(주월계획 ⚙ 설정)</small></h4>
  <div class="row"><label>요일별 배분</label><span style="font-size:10px;color:#888">타임테이블 주간 캘린더 위 ⚙(자동 분배)로 이사 — 프로젝트별 균등/요일 가중치/과목별 요일</span></div>
  <div class="row"><label>밀림 양보 순서</label><div style="flex:1">${yieldChips()}</div></div>
+ <h4>학습기록 <small style="font-weight:400;color:#888">민법OX·물리535 문항 기록 → records/${esc(cfg.person)}.json (기기 간 공유)</small></h4>
+ <div class="row"><button class="btn" onclick="recImportModal()">📥 학습기록 가져오기</button><span style="font-size:10px;color:#888">붙여넣기(학습로그 텍스트) 또는 같은 주소의 앱에서 직접 읽기</span></div>
  <h4>기기</h4><div class="row"><button class="btn" onclick="exportLocal()">이 기기 데이터 내보내기(JSON)</button><button class="btn d" onclick="if(confirm('이 기기의 로컬 데이터를 지울까? 동기화 안 된 건 사라져.')){Object.keys(localStorage).filter(k=>k.startsWith('tt.')).forEach(k=>localStorage.removeItem(k));location.reload()}">로컬 초기화</button></div>
  <div class="warn">토큰은 각자 본인 것. 브라우저 저장소에만 두고 저장소에는 절대 올리지 않는다. 사람별 파일이라 충돌은 없고, 같은 사람이 두 기기에서 쓰면 세션 id 기준으로 합쳐진다.</div></div>`;
 }
