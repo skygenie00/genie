@@ -258,6 +258,46 @@ button{cursor:pointer}
 .grip{position:absolute;right:-2px;top:0;bottom:0;width:14px;cursor:ew-resize;touch-action:none;background:linear-gradient(90deg,transparent,rgba(0,0,0,.18));border-radius:0 4px 4px 0;font-size:8px;color:#222;display:flex;align-items:center;justify-content:center;user-select:none}
 .pbsh{background:repeating-linear-gradient(45deg,#f5f5f5 0 4px,#e6e6e6 4px 8px)!important;color:#888;font-size:8.5px;padding:1px 6px;border-radius:3px;margin:0 1px 1px;white-space:nowrap;overflow:hidden}
 .pbc{min-height:0}
+/* 보드 v3: 줄 = 과목›분류 · 띠 = 이어진 한 장 (feedback5 §3~7) */
+.pb2 .pbh{text-align:left;padding:5px 8px}
+.pb2 .pbh small{display:inline;font-size:8.5px;color:#999;font-weight:400}
+.pb2 .pbh.cur{color:var(--blue)}
+.pbsj{grid-column:1/-1;background:#f5f5f5!important;border-bottom:1px solid #e5e5e5;cursor:pointer;padding:5px 8px;min-height:0}
+.pbsjin{position:sticky;left:8px;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:12px}
+.pbsj .tri{font-size:9px;color:#888;width:10px}
+.pbsj .n2{color:#888;font-weight:400;font-size:10px;margin-left:4px}
+.pbcatl{padding:6px 8px;color:#555;font-size:11px;display:flex;align-items:center;min-height:40px}
+.pbgoal{margin-left:auto;font-weight:700;color:#8a1f1f;font-size:10.5px;cursor:pointer;padding:1px 4px;border-radius:3px}
+.pbgoal.empty{color:#bbb;font-weight:400}
+.pbgoal:hover{background:#f3e6e6}
+.pbc2{background:#fff;min-height:40px}
+.pbc2.cur{background:#f4f8ff!important}
+.pband2{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:#fff;border:1px solid #e3e3e3;border-top:3px solid var(--sc);border-radius:6px;margin:3px 2px;box-shadow:0 1px 2px rgba(0,0,0,.06);cursor:pointer;min-height:38px}
+.pband2 .pbw2{padding:3px 14px 3px 6px;border-left:1px dotted #eee;min-width:0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:1px}
+.pband2 .pbw2:first-child{border-left:0}
+.pband2 .pbw2.cur{background:rgba(47,111,224,.06)}
+.pband2 .pbw2.ext{background:repeating-linear-gradient(45deg,transparent 0 5px,rgba(47,111,224,.08) 5px 10px);outline:1px dashed #9db9e8;outline-offset:-2px}
+.pband2 b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+.pband2 b small{color:#aaa;font-weight:400;font-size:9px}
+.pband2 .dn{display:flex;align-items:center;gap:3px;color:#666;font-size:9.5px;min-width:0}
+.pband2 .dn i{width:9px;height:9px;border:1px solid #555;border-radius:2px;display:inline-block;flex:none}
+.pband2 .dn i.on{background:#555}
+.pband2 .dn .lt{color:#c33;font-size:9px;margin-left:auto;flex:none}
+.pband2 .grip{position:absolute;right:-2px;top:0;bottom:0;width:13px;cursor:ew-resize;touch-action:none;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:11px;border-radius:0 6px 6px 0;user-select:none;background:transparent}
+.pband2 .grip:hover{background:rgba(0,0,0,.06)}
+/* 주간: 카드 500 고정 + 별개 분석 패널 */
+.wkwrap{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.an{flex:1;min-width:420px;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:#fff}
+.an h3{margin:0 0 2px;font-size:12px}
+.an .sub{color:#888;font-size:10px;margin-bottom:8px}
+.antab{border-collapse:collapse;width:100%;font-size:10.5px}
+.antab th{font-size:9.5px;color:#888;text-align:left;font-weight:400;padding:3px 4px;border-bottom:1px solid #ddd}
+.antab td{padding:4px;border-bottom:1px solid #f4f4f4;white-space:nowrap}
+.bar3{background:#eee;height:7px;border-radius:3px;min-width:70px;position:relative}
+.bar3 i{position:absolute;left:0;top:0;bottom:0;background:var(--blue);border-radius:3px;max-width:100%}
+.bar3 u{position:absolute;top:-3px;bottom:-3px;left:100%;width:1px;background:#c33}
+.anfoot{border-top:1px solid #ddd;margin-top:6px;padding-top:5px;color:#555;font-size:10.5px}
+@media (max-width:760px){.an{min-width:0;width:100%}}
 .pltab{border-collapse:collapse;font-size:11px;width:100%}
 .pltab th,.pltab td{border:1px solid #eee;padding:4px 6px;text-align:left;white-space:nowrap}
 .pltab th{background:#f7f7f7;font-size:10px;color:#666}
@@ -395,7 +435,7 @@ const sessPath=(who,m)=>`sessions/${who}/${m}.json`;
 const todoPath=who=>`todos/${who}.json`;
 const planPath=who=>`plan/${who}.json`;
 const EMPTY_PLAN=()=>({v:1,weekStart:'2026-08-03',bands:[],milestones:[],units:{},daily:[1,1,1,1,1,1,1],goals:{},baselines:[],yield:[],pu:0});
-function planFile(who){const f=loadF(planPath(who),EMPTY_PLAN());const p=f.data||{};['bands','milestones','baselines','yield'].forEach(k=>{if(!Array.isArray(p[k]))p[k]=[]});if(!p.units||typeof p.units!=='object')p.units={};if(!Array.isArray(p.daily)||p.daily.length!==7)p.daily=[1,1,1,1,1,1,1];if(!p.goals)p.goals={};if(!p.weekStart)p.weekStart='2026-08-03';f.data=p;return f}
+function planFile(who){const f=loadF(planPath(who),EMPTY_PLAN());const p=f.data||{};['bands','milestones','baselines','yield'].forEach(k=>{if(!Array.isArray(p[k]))p[k]=[]});if(!p.units||typeof p.units!=='object')p.units={};if(!Array.isArray(p.daily)||p.daily.length!==7)p.daily=[1,1,1,1,1,1,1];if(!p.goals)p.goals={};if(!p.catGoal)p.catGoal={};if(!p.weekStart)p.weekStart='2026-08-03';f.data=p;return f}
 function myPlan(){return planFile(cfg.person).data}
 function planMut(fn,wholesale){const f=planFile(cfg.person);fn(f.data);if(wholesale)f.data.pu=Date.now();f.dirty=true;saveF(planPath(cfg.person),f);scheduleSync();}
 function sessFile(who,m){return loadF(sessPath(who,m),{v:1,sessions:[]})}
@@ -464,7 +504,7 @@ function mergeFile(path,local,remote){
  if(path.startsWith('todos/'))return{v:2,cats:mergeList(local.cats||local.plans||[],remote.cats||remote.plans||[]),items:mergeList(local.items||[],remote.items||[])};
  if(path.startsWith('plan/')){ // bands·milestones·units[과목]=id/u/del 병합, 나머지는 pu 큰 쪽 통째
   const A=local||{},B=remote||{};const w=(A.pu||0)>=(B.pu||0)?A:B;
-  const out={v:1,weekStart:w.weekStart||'2026-08-03',daily:Array.isArray(w.daily)&&w.daily.length===7?w.daily:[1,1,1,1,1,1,1],goals:w.goals||{},baselines:w.baselines||[],yield:w.yield||[],pu:w.pu||0};
+  const out={v:1,weekStart:w.weekStart||'2026-08-03',daily:Array.isArray(w.daily)&&w.daily.length===7?w.daily:[1,1,1,1,1,1,1],goals:w.goals||{},baselines:w.baselines||[],yield:w.yield||[],catGoal:w.catGoal||{},pu:w.pu||0};
   out.bands=mergeList(A.bands||[],B.bands||[]);
   out.milestones=mergeList(A.milestones||[],B.milestones||[]);
   out.units={};new Set([...Object.keys(A.units||{}),...Object.keys(B.units||{})]).forEach(s=>{out.units[s]=mergeList((A.units||{})[s]||[],(B.units||{})[s]||[])});
@@ -575,7 +615,7 @@ function renderSide(){
  <div class="i ${['day','week','month'].includes(v)?'on':''}" onclick="setView('day')">타임테이블</div>
  <div class="i sub ${v=='day'?'on':''}" onclick="setView('day')">일간</div><div class="i sub ${v=='week'?'on':''}" onclick="setView('week')">주간</div><div class="i sub ${v=='month'?'on':''}" onclick="setView('month')">월간</div>
  <div class="i ${v=='gal'?'on':''}" onclick="setView('gal')">데일리 모음</div>
- <div class="grp">계획</div><div class="i ${v=='pm'?'on':''}" onclick="setView('pm')">계획관리</div><div class="i ${v=='plan'?'on':''}" onclick="setView('plan')">주차계획</div><div class="i ${v=='review'?'on':''}" onclick="setView('review')">월간 <small>계획</small></div>
+ <div class="grp">계획</div><div class="i ${v=='pm'?'on':''}" onclick="setView('pm')">계획관리</div><div class="i ${v=='plan'?'on':''}" onclick="setView('plan')">주차계획</div><div class="i ${v=='review'?'on':''}" onclick="setView('review')">월간계획</div>
  <div class="grp">기타</div><div class="i ${v=='set'?'on':''}" onclick="setView('set')">설정</div>
  <div class="st ${dirty?'dirty':''}" onclick="syncAll()" style="cursor:pointer">${stat}<br>${esc((nextExam()||{}).name||'')} ${dday()}</div>`;
 }
@@ -598,7 +638,7 @@ function renderMain(){
  else if(v=='set')m.innerHTML=setHTML();
  window.scrollTo(0,0);
 }
-const moreTabs=v=>`<div class="views moretabs"><span class="${v=='gal'?'on':''}" onclick="setView('gal')">데일리 모음</span><span class="${v=='pm'?'on':''}" onclick="setView('pm')">계획관리</span><span class="${v=='plan'?'on':''}" onclick="setView('plan')">주차계획</span><span class="${v=='review'?'on':''}" onclick="setView('review')">월간(계획)</span><span class="${v=='set'?'on':''}" onclick="setView('set')">설정</span></div>`;
+const moreTabs=v=>`<div class="views moretabs"><span class="${v=='gal'?'on':''}" onclick="setView('gal')">데일리 모음</span><span class="${v=='pm'?'on':''}" onclick="setView('pm')">계획관리</span><span class="${v=='plan'?'on':''}" onclick="setView('plan')">주차계획</span><span class="${v=='review'?'on':''}" onclick="setView('review')">월간계획</span><span class="${v=='set'?'on':''}" onclick="setView('set')">설정</span></div>`;
 const topSel=v=>`<select class="topsel" onchange="setView(this.value)"><option value="day" ${v=='day'?'selected':''}>일간</option><option value="week" ${v=='week'?'selected':''}>주간</option><option value="month" ${v=='month'?'selected':''}>월간</option></select>`;
 const navBtns=(prev,next,home)=>`<div class="nav"><button onclick="${prev}">‹</button><button onclick="${home}">오늘</button><button onclick="${next}">›</button></div>`;
 function weekNo(d){return pWeekNo(myPlan(),d)} // W1 = plan.weekStart (기본 2026-08-03, 계획 설정에서 변경)
@@ -819,34 +859,50 @@ function weekHTML(){
  const rows=[]; // 줄 순서 = 분류 만든 순(cats 배열 순 · MiMi 와 같게)
  tf.data.cats.forEach(c=>{if(!c.del&&byCat.has(c.id))rows.push({s:c.s,n:c.name,m:byCat.get(c.id)})});
  Object.entries(other).forEach(([s,m2])=>rows.push({s,n:'기타',m:m2}));
- /* 주차계획 분석 — 그 주에 걸친 띠 (W1 이전 주는 생략) */
- const plan=myPlan();const wNo=pWeekNo(plan,ws);let anal='';
- if(wNo>=1){
-  const ordN=settings.subjects.map(x=>x.n);const oi=s=>{const i=ordN.indexOf(s);return i<0?999:i};
-  const bandsW=plan.bands.filter(b=>!b.del&&b.w1<=wNo&&wNo<=b.w2).sort((a,b)=>oi(a.s)-oi(b.s)||a.w1-b.w1);
-  if(bandsW.length){
-   const yd=addDays(today(),-1);let planSum=0,doneSum=0,lateSum=0;
-   const trs=bandsW.map(b=>{
-    const us=bandUnits(plan,b);const per=+b.per||0;const wd=weekDoneCount(plan,b,wNo);const L=late(plan,b,yd);
-    planSum+=per;doneSum+=wd;lateSum+=L;
-    const dn=bandDone(plan,b);const pr=us.length?Math.round(dn/us.length*100):0;
-    const oe=pWeekDate(plan,(b.orig?b.orig.w2:b.w2),6);const ce=us.length?endDate(plan,b):null;
-    const oeS=oe.slice(5).replace('-','/');const ceS=ce?ce.slice(5).replace('-','/'):null;
-    const endTxt=ce?(ce>oe?`원 ${oeS} → <span class="lateT">${ceS}</span>`:(ceS===oeS?`${oeS} 그대로`:`원 ${oeS} → ${ceS}`)):`~${pWeekDate(plan,b.w2,6).slice(5).replace('-','/')}`;
-    return`<tr onclick="gotoBand('${b.id}')"><td><i class="plandot" style="background:${subjColor(b.s)}"></i>${esc(b.s)}</td><td>${esc(b.name)}${b.tag?` <small style="color:#999">${esc(b.tag)}</small>`:''}</td><td>${us.length?`${wd}/${per||'—'}`:(per||'—')}</td><td><div class="bar2"><i style="width:${pr}%"></i></div></td><td>${L?`<b class="lateT">밀림 ${L}</b>`:''}</td><td>${us.length?dn+'/'+us.length:'—'}</td><td>${endTxt}</td></tr>`;
-   }).join('');
-   anal=`<div class="hd" style="margin-top:8px">주차계획 분석</div><div class="pananal"><table><thead><tr><th>과목</th><th>띠</th><th>이번 주</th><th></th><th>밀림</th><th>누적</th><th>예상 종료</th></tr></thead><tbody>${trs}</tbody></table><div class="pansum">이번 주 계획 ${planSum} · 끝냄 ${doneSum} · 밀림 ${lateSum} · 시간 ${dur(wt)}</div></div>`;
-  }
- }
+ const plan=myPlan();const wNo=pWeekNo(plan,ws);
  return`<div class="ttl"><b>타임테이블 <span>› 주간</span> ${topSel('week')}</b><div class="r">${navBtns("setDate(addDays(curDate(),-7))","setDate(addDays(curDate(),7))","setDate(today())")} ${wNo>=1?'W'+pad(wNo):ws.slice(5).replace('-','/')+'~'+days[6].slice(5).replace('-','/')}</div></div>
- <div class="sheet"><div class="ribbon">${ws.replace(/-/g,'.')} ~ ${days[6].replace(/-/g,'.')}</div><div class="paper">
+ <div class="wkwrap">
+ <div class="sheet" style="width:500px;max-width:100%;flex:none"><div class="ribbon">${ws.replace(/-/g,'.')} ~ ${days[6].replace(/-/g,'.')}</div><div class="paper">
  <div><div class="hd">Time Table</div><div class="wk2"><div class="wh"></div>${days.map(x=>`<div class="wh ${x===today()?'today':''}">${['SUN','MON','TUE','WED','THU','FRI','SAT'][parse(x).getDay()]}</div>`).join('')}
  ${labs}${cols}
  <div class="wt"></div>${tots.map(t2=>`<div class="wt ${t2?'':'z'}">${dur(t2)}</div>`).join('')}</div></div>
- <div class="stc"><div class="hd">Study Time</div><div class="st${anal?' stmini':''}">${rows.map(r=>`<div class="it"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl">${esc(r.n)}</span><span>${dur(r.m)}</span></div>`).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
- ${anal}
+ <div class="stc"><div class="hd">Study Time</div><div class="st">${rows.map(r=>`<div class="it"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl">${esc(r.n)}</span><span>${dur(r.m)}</span></div>`).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
  <div class="wstat"><span>Avg <b>${dur(Math.round(wt/7))}</b></span><span>Total <span class="big">${dur(wt)}</span></span></div></div>
- </div></div>`;
+ </div></div>
+ ${weekAnalHTML(plan,ws,wNo)}
+ </div>`;
+}
+/* 월간계획 대비 패널 — 기준선(원계획) 기준으로 이번 주 띠 대조 · 타임테이블 세션과 무관 (feedback5 §1) */
+function weekAnalHTML(plan,ws,wNo){
+ if(wNo<1)return'';
+ const sun=pWeekDate(plan,wNo,6);const t=today();const ref=t<sun?t:sun;
+ const prevSun=pWeekDate(plan,wNo-1,6);
+ const bl=(plan.baselines||[]).slice(-1)[0];const blMap=new Map((bl?bl.bands||[]:[]).map(x=>[x.id,x]));
+ const ordN=settings.subjects.map(x=>x.n);const oi=s2=>{const i=ordN.indexOf(s2);return i<0?999:i};
+ const bandsW=plan.bands.filter(b=>!b.del&&b.w1<=wNo&&wNo<=b.w2).sort((a,b)=>oi(a.s)-oi(b.s)||a.w1-b.w1);
+ if(!bandsW.length)return'';
+ let sumP=0,sumA=0,sumD=0;
+ const trs=bandsW.map(b=>{
+  const o=blMap.get(b.id);
+  const vb=o?Object.assign({},b,{w1:o.w1,w2:o.w2,per:o.per!=null?o.per:b.per}):b;
+  const p0=plannedThrough(plan,vb,prevSun);
+  const p1=plannedThrough(plan,vb,sun);
+  const planN=Math.max(0,p1-p0);
+  const us=bandUnits(plan,b);
+  const dPrev=us.filter(u=>{const x=u.done&&u.done[b.id];return x&&x<=prevSun}).length;
+  const dNow=us.filter(u=>{const x=u.done&&u.done[b.id];return x&&x<=ref}).length;
+  const actN=Math.max(0,dNow-dPrev);
+  const per=+(vb.per)||(+b.per)||0;
+  const lateU=us.length?Math.max(0,Math.min(plannedThrough(plan,vb,ref),us.length)-dNow):0;
+  const days2=lateU&&per?Math.ceil(lateU/(per/7)):0;
+  const pr=planN?Math.min(130,Math.round(actN/planN*100)):0;
+  const ce=us.length?endDate(plan,b):null;
+  sumP+=planN;sumA+=actN;sumD+=days2;
+  return`<tr onclick="gotoBand('${b.id}')" style="cursor:pointer"><td><i class="plandot" style="background:${subjColor(b.s)}"></i>${esc(b.s)}</td><td>${esc(b.name)}</td><td>${planN?`${p0+1}~${p1}`:'—'}</td><td>${actN?`${dPrev+1}~${dNow}`:'—'}</td><td><div class="bar3"><i style="width:${pr}%"></i><u></u></div></td><td class="${days2?'lateT':'okT'}">${days2?'+'+days2+'일':'—'}</td><td>${ce?'~'+ce.slice(5).replace('-','/'):'~'+pWeekDate(plan,b.w2,6).slice(5).replace('-','/')}</td></tr>`;
+ }).join('');
+ return`<div class="an"><h3>월간계획 대비 · 이번 주</h3><div class="sub">${bl?parseInt(bl.at.slice(5,7))+'월 원계획(기준선)':'현재 계획(기준선 없음)'} 기준 — 이 주에 걸친 띠만 · 타임테이블과 무관</div>
+ <div style="overflow-x:auto"><table class="antab"><thead><tr><th>과목</th><th>띠</th><th>원계획(단원)</th><th>실제</th><th>진행</th><th>밀림</th><th>예상 종료</th></tr></thead><tbody>${trs}</tbody></table></div>
+ <div class="anfoot">이번 주 원계획 ${sumP}단원 · 실제 ${sumA} · 밀림 +${sumD}일</div></div>`;
 }
 function gotoBand(id){const p=myPlan();const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;ui.planTab='week';ui.view='plan';LS.set('tt.ui',ui);planScrollPending=false;planScroll=Math.max(0,(b.w1-2)*PB_COL);render();}
 function subjTotals(list){const g={};list.forEach(x=>{if(x.nt)return;g[x.s]=(g[x.s]||0)+x.b-x.a});return Object.entries(g).map(([s,min])=>({s,min})).sort((a,b)=>b.min-a.min)}
@@ -1178,7 +1234,7 @@ function planTab(t){ui.planTab=t;LS.set('tt.ui',ui);render()}
 function planPh(n){ui.planPhW=(ui.planPhW??pWeekNo(myPlan(),today()))+n;LS.set('tt.ui',ui);render()}
 /* 보드 가로 스크롤 상태 — 재렌더에도 자리 유지, 「현재」는 현재 주를 둘째 열로 */
 let planScroll=0,planScrollPending=true;
-const PB_COL=56; // 주차 열 폭(px)
+const PB_COL=140; // 주차 열 폭(px) — 띠 카드에 이름이 들어가는 폭 (시안 156 근사 ⚠)
 function planCur(){ui.planPhW=pWeekNo(myPlan(),today());LS.set('tt.ui',ui);planScrollPending=true;render()}
 function planAfterRender(){
  const w=document.getElementById('pbwrap');if(!w)return;
@@ -1198,39 +1254,61 @@ function planHTML(){
  return`${moreTabs('plan')}${head}<div class="plan-pc">${planBoardHTML(plan,tab==='active')}</div><div class="plan-ph">${planPhoneHTML(plan)}</div>`;
 }
 function planBoardHTML(plan,activeOnly){
- const t=today();const curW=pWeekNo(plan,t);const ew=examWeek(plan);
+ const t=today();const curW=pWeekNo(plan,t);const ew=examWeek(plan);const yd=addDays(t,-1);
  const wL=1;let wR=ew<9000?ew:Math.max(curW+8,1); // W1 ~ 시험 주 열 전부
  plan.bands.forEach(b=>{if(!b.del&&b.w2>wR)wR=b.w2});
  plan.milestones.forEach(m2=>{if(!m2.del&&m2.w>wR)wR=m2.w});
  const NW=wR-wL+1;
- let h=`<div class="pbwrap" id="pbwrap"><div class="pb" style="grid-template-columns:110px repeat(${NW},${PB_COL}px)">`;
+ const fmtRange=w=>{const a=pWeekDate(plan,w),b=pWeekDate(plan,w,6);const am=+a.slice(5,7),ad=+a.slice(8),bm=+b.slice(5,7),bd=+b.slice(8);return am===bm?`${am}/${ad}-${bd}`:`${am}/${ad}-${bm}/${bd}`};
+ let h=`<div class="pbwrap" id="pbwrap"><div class="pb pb2" style="grid-template-columns:150px repeat(${NW},${PB_COL}px)">`;
  h+=`<div class="pbh pbfix" style="z-index:4"></div>`;
- for(let w=wL;w<=wR;w++)h+=`<div class="pbh ${w===curW?'cur':''}">W${pad(w)}<small>${w===curW?'현재':pWeekDate(plan,w).slice(5).replace('-','/')}${w===ew?' · 시험':''}</small></div>`;
+ for(let w=wL;w<=wR;w++)h+=`<div class="pbh ${w===curW?'cur':''}">W${pad(w)} <small>${fmtRange(w)}${w===curW?' · 현재':''}${w===ew?' · 시험':''}</small></div>`;
+ const fold=ui.pbFold||{};
  subjOrderAll(plan).forEach(s=>{
-  let bands=plan.bands.filter(b=>!b.del&&b.s===s&&b.w2>=wL&&b.w1<=wR).sort((a,b)=>a.w1-b.w1||a.w2-b.w2);
-  if(activeOnly)bands=bands.filter(b=>curW>=b.w1&&curW<=b.w2);
+  let bandsS=plan.bands.filter(b=>!b.del&&b.s===s);
+  if(activeOnly)bandsS=bandsS.filter(b=>curW>=b.w1&&curW<=b.w2);
   const ms=plan.milestones.filter(m=>!m.del&&m.s===s&&m.w>=wL&&m.w<=wR);
-  if(!bands.length&&!ms.length)return;
-  h+=`<div class="pbs"><i class="plandot" style="background:${subjColor(s)}"></i>${esc(s)}</div>`;
-  for(let w=wL;w<=wR;w++){const mm=ms.filter(m=>m.w===w);h+=`<div class="pbsc ${w===curW?'cur':''}">${mm.map(m=>`<span class="pbm" onclick="editMilestone('${m.id}')" title="${esc(m.name)} · ${parseInt(pWeekDate(plan,m.w).slice(5,7))}/${parseInt(pWeekDate(plan,m.w).slice(8))}">◆</span>`).join('')}</div>`}
-  bands.forEach(b=>{
-   const c1=Math.max(b.w1,wL),c2=Math.min(b.w2,wR);
-   const L=late(plan,b,addDays(t,-1));const hasU=(b.units||[]).length>0;const per=+b.per||0;
-   h+=`<div class="pbl" onclick="editBand('${b.id}')" title="${esc(b.name)}">${esc(b.name)}<small>${esc(b.tag||'')}</small></div>`;
-   for(let w=wL;w<c1;w++)h+=`<div class="pbc ${w===curW?'cur':''}"></div>`;
-   let cells='';
-   for(let w=c1;w<=c2;w++){const ext=b.orig&&w>b.orig.w2;const wd=weekDoneCount(plan,b,w);
-    cells+=`<div class="pbw ${w===curW?'cur':''} ${ext?'ext':''}" onclick="editBand('${b.id}')">${hasU?`${per&&wd>=per?'☑':'☐'} ${wd}/${per||'—'}`:(per||'')}${w===curW&&L?`<b class="lt">밀림 ${L}</b>`:''}${ext?'<small>늘림</small>':''}</div>`}
-   h+=`<div class="pband" style="grid-column:span ${c2-c1+1};background:${subjColor(s)}1f;border-color:${subjColor(s)}">${cells}<span class="grip" data-band="${b.id}" title="+1주"></span></div>`;
-   for(let w=c2+1;w<=wR;w++)h+=`<div class="pbc ${w===curW?'cur':''}"></div>`;
-   if(b.orig&&(b.orig.w1!==b.w1||b.orig.w2!==b.w2)){
-    const o1=Math.max(b.orig.w1,wL),o2=Math.min(b.orig.w2,wR);
-    if(o2>=o1){h+=`<div class="pbl sh"></div>`;for(let w=wL;w<o1;w++)h+=`<div class="pbc"></div>`;h+=`<div class="pbsh" style="grid-column:span ${o2-o1+1}">원계획 W${pad(b.orig.w1)}–W${pad(b.orig.w2)}</div>`;for(let w=o2+1;w<=wR;w++)h+=`<div class="pbc"></div>`;}
-   }
+  const goals=(plan.catGoal||{})[s]||{};
+  const tags=[...new Set([...bandsS.map(b=>b.tag||''),...Object.keys(goals)])];
+  if(!bandsS.length&&!ms.length&&!tags.length)return;
+  const isF=!!fold[s];
+  h+=`<div class="pbsj" onclick="pbFold('${encodeURIComponent(s)}')"><span class="pbsjin"><span class="tri">${isF?'▶':'▼'}</span><i class="plandot" style="background:${subjColor(s)}"></i>${esc(s)}<span class="n2">띠 ${bandsS.length}</span></span></div>`;
+  if(isF)return;
+  if(ms.length){
+   h+=`<div class="pbl pbcatl"></div>`;
+   for(let w=wL;w<=wR;w++){const mm=ms.filter(m=>m.w===w);h+=`<div class="pbsc ${w===curW?'cur':''}">${mm.map(m=>`<span class="pbm" onclick="event.stopPropagation();editMilestone('${m.id}')" title="${esc(m.name)} · ${parseInt(pWeekDate(plan,m.w).slice(5,7))}/${parseInt(pWeekDate(plan,m.w).slice(8))}">◆</span>`).join('')}</div>`}
+  }
+  tags.forEach(tag=>{
+   const tb=bandsS.filter(b=>(b.tag||'')===tag).sort((a,b)=>a.w1-b.w1||a.w2-b.w2);
+   const layers=[];tb.forEach(b=>{const li=layers.findIndex(Lr=>Lr[Lr.length-1].w2<b.w1);if(li<0)layers.push([b]);else layers[li].push(b);});
+   if(!layers.length)layers.push([]);
+   layers.forEach((Lb,li)=>{
+    const gl=goals[tag]||'';
+    h+=`<div class="pbl pbcatl">${li===0?`${esc(tag||'기타')}<span class="pbgoal ${gl?'':'empty'}" title="클릭해서 목표치 입력" onclick="event.stopPropagation();editCatGoal('${encodeURIComponent(s)}','${encodeURIComponent(tag)}')">${esc(gl)||'+'}</span>`:''}</div>`;
+    let w=wL;
+    Lb.forEach(b=>{
+     const c1=Math.max(b.w1,wL),c2=Math.min(b.w2,wR);
+     for(;w<c1;w++)h+=`<div class="pbc2 ${w===curW?'cur':''}"></div>`;
+     const L=late(plan,b,yd);const hasU=(b.units||[]).length>0;const per=+b.per||0;
+     let cells='';
+     for(let x=c1;x<=c2;x++){const ext=b.orig&&x>b.orig.w2;const wd=weekDoneCount(plan,b,x);
+      cells+=`<div class="pbw2 ${x===curW?'cur':''} ${ext?'ext':''}">${x===c1?`<b>${esc(b.name)} <small>W${pad(b.w1)}–W${pad(b.w2)}</small></b>`:''}<span class="dn"><i class="${hasU&&per&&wd>=per?'on':''}"></i>${hasU?`${wd}/${per||'—'}`:(per||'')}${x===curW&&L?`<b class="lt">밀림 ${L}</b>`:''}</span></div>`}
+     h+=`<div class="pband2" style="grid-column:span ${c2-c1+1};--sc:${subjColor(b.s)}" onclick="editBand('${b.id}')" title="${esc(b.name)} W${pad(b.w1)}–W${pad(b.w2)}">${cells}<span class="grip" data-band="${b.id}" onclick="event.stopPropagation()" title="끌어서 +N주 · 탭 = +1주">⋮</span></div>`;
+     w=c2+1;
+    });
+    for(;w<=wR;w++)h+=`<div class="pbc2 ${w===curW?'cur':''}"></div>`;
+   });
   });
  });
  h+='</div></div>';
  return h;
+}
+function pbFold(sEnc){const s=decodeURIComponent(sEnc);ui.pbFold=ui.pbFold||{};ui.pbFold[s]=!ui.pbFold[s];LS.set('tt.ui',ui);planScrollPending=false;render();}
+function editCatGoal(sEnc,tEnc){const s=decodeURIComponent(sEnc),tag=decodeURIComponent(tEnc);
+ const cur=(((myPlan().catGoal||{})[s])||{})[tag]||'';
+ const v=prompt(`${s} › ${tag||'기타'} 목표치 (예: 1회독 · 6회 · -)`,cur);
+ if(v===null)return;
+ planMut(p=>{p.catGoal=p.catGoal||{};p.catGoal[s]=p.catGoal[s]||{};const vv=v.trim();if(vv)p.catGoal[s][tag]=vv;else delete p.catGoal[s][tag];},true);render();
 }
 function planListHTML(plan){
  const t=today();const ord=subjOrderAll(plan);const oi=s=>{const i=ord.indexOf(s);return i<0?999:i};
@@ -1297,10 +1375,10 @@ function msModal(m){
 }
 /* 손잡이 끌기: 열 폭 단위 스냅, 놓으면 extendBand. 안 움직이고 놓으면 +1주 */
 let gripSt=null;
-document.addEventListener('pointerdown',e=>{const g=e.target.closest?e.target.closest('.grip'):null;if(!g)return;e.preventDefault();e.stopPropagation();const el=g.parentElement;const cell=el.querySelector('.pbw');gripSt={id:g.dataset.band,x:e.clientX,cw:cell?Math.max(24,cell.getBoundingClientRect().width):56,add:0,moved:0,g,el};try{g.setPointerCapture(e.pointerId)}catch(x){}});
-document.addEventListener('pointermove',e=>{if(!gripSt)return;const dx=e.clientX-gripSt.x;gripSt.moved=Math.max(gripSt.moved,Math.abs(dx));const d=Math.max(0,Math.round(dx/gripSt.cw));if(d!==gripSt.add){gripSt.add=d;gripSt.g.textContent=d?('+'+d):'';gripSt.el.style.outline=d?'2px dashed var(--blue)':''}});
-document.addEventListener('pointerup',e=>{if(!gripSt)return;const st=gripSt;gripSt=null;st.g.textContent='';st.el.style.outline='';if(st.add>0)extendBandById(st.id,st.add);else if(st.moved<8)extendBandById(st.id,1)});
-document.addEventListener('pointercancel',()=>{if(gripSt){gripSt.g.textContent='';gripSt.el.style.outline='';gripSt=null}});
+document.addEventListener('pointerdown',e=>{const g=e.target.closest?e.target.closest('.grip'):null;if(!g)return;e.preventDefault();e.stopPropagation();const el=g.parentElement;const cell=el.querySelector('.pbw,.pbw2');gripSt={id:g.dataset.band,x:e.clientX,cw:cell?Math.max(24,cell.getBoundingClientRect().width):PB_COL,add:0,moved:0,g,el};try{g.setPointerCapture(e.pointerId)}catch(x){}});
+document.addEventListener('pointermove',e=>{if(!gripSt)return;const dx=e.clientX-gripSt.x;gripSt.moved=Math.max(gripSt.moved,Math.abs(dx));const d=Math.max(0,Math.round(dx/gripSt.cw));if(d!==gripSt.add){gripSt.add=d;gripSt.g.textContent=d?('+'+d):'⋮';gripSt.el.style.outline=d?'2px dashed var(--blue)':''}});
+document.addEventListener('pointerup',e=>{if(!gripSt)return;const st=gripSt;gripSt=null;st.g.textContent='⋮';st.el.style.outline='';if(st.add>0)extendBandById(st.id,st.add);else if(st.moved<8)extendBandById(st.id,1)});
+document.addEventListener('pointercancel',()=>{if(gripSt){gripSt.g.textContent='⋮';gripSt.el.style.outline='';gripSt=null}});
 /* ----- 계획관리 (MiMi식 · 데이터 = todos 파일 plans+items · 주차계획 띠와 별개) ----- */
 let pmSel=null;
 function pmSelect(type,id){pmSel=(pmSel&&pmSel.type===type&&pmSel.id===id)?null:{type,id};render()}
