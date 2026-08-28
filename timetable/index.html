@@ -993,20 +993,26 @@ function applyMonthColor(doc){
  (doc||document).documentElement.style.setProperty('--m8',c);
  if(!doc){const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=c;}
 }
+/* §1(fb14) 메뉴 목록은 여기 한 곳 — PC 사이드바·좁은 화면 moreTabs·아래 탭이 전부 이 상수에서 렌더된다.
+   탭을 늘릴 때 여기만 고치면 한쪽만 빠지는 사고가 안 난다(fb13 에서 Archive·Share 가 사이드바에 빠졌던 사고). */
+const NAV=[
+ {group:'기록',items:[['day','타임테이블'],['gal','데일리 모음']]},
+ {group:'계획',items:[['pm','계획관리'],['plan','주월계획']]},
+ {group:'보관',items:[['arch','Archive'],['share','Share']]},
+ {group:'기타',items:[['set','설정']]},
+];
+const NAV_KEYS=NAV.flatMap(g=>g.items.map(x=>x[0]));
+const MORE_KEYS=NAV_KEYS.filter(k=>k!=='day'); // 「더보기」 묶음 = 타임테이블 말고 전부
 function renderSide(){
  const v=ui.view,dirty=listDirty().length;
  const ago=cfg.lastSync?Math.round((Date.now()-cfg.lastSync)/60000):null;
  const stat=syncing?'⟳ 동기화 중':cfg.token?(dirty?`● 대기 ${dirty}건`:`● 동기화됨${ago!=null?' '+(ago<1?'방금':ago<60?ago+'분 전':Math.round(ago/60)+'시간 전'):''}`):'○ 토큰 없음';
  $('side').innerHTML=`<div class="who" onclick="switchPerson()">${esc(cfg.person)} <span>▾</span></div>
- <div class="grp">기록</div>
- <div class="i ${v=='day'?'on':''}" onclick="setView('day')">타임테이블</div>
- <div class="i ${v=='gal'?'on':''}" onclick="setView('gal')">데일리 모음</div>
- <div class="grp">계획</div><div class="i ${v=='pm'?'on':''}" onclick="setView('pm')">계획관리</div><div class="i ${v=='plan'?'on':''}" onclick="setView('plan')">주월계획</div>
- <div class="grp">기타</div><div class="i ${v=='set'?'on':''}" onclick="setView('set')">설정</div>
+ ${NAV.map(g=>`<div class="grp">${g.group}</div>${g.items.map(([k,n])=>`<div class="i ${v==k?'on':''}" onclick="setView('${k}')">${n}</div>`).join('')}`).join('')}
  <div class="st ${dirty?'dirty':''}" onclick="syncAll()" style="cursor:pointer">${stat}<br>${esc((nextExam()||{}).name||'')} ${dday()}</div>`;
 }
 function renderPnav(){
- const v=ui.view;const tab=v=='todo'?'todo':['gal','set','plan','pm','review'].includes(v)?'more':'tt';
+ const v=ui.view;const tab=v=='todo'?'todo':(MORE_KEYS.includes(v)||v=='review')?'more':'tt'; // §1(fb14) 같은 상수 — arch·share 도 「더보기」로 잡힘
  const nb=sharedItems().filter(x=>!x.done&&(x.who||[]).includes(cfg.person)).length;
  $('pnav').innerHTML=`<div class="${tab=='tt'?'on':''}" onclick="setView('day')">타임테이블</div><div class="${tab=='todo'?'on':''}" onclick="setView('todo')">할일${nb?` <b class="bdg">${nb}</b>`:''}</div><div class="${tab=='more'?'on':''}" onclick="setView(ui.view=='set'?'set':'gal')">더보기</div>`;
 }
@@ -1024,7 +1030,7 @@ function renderMain(){
  else if(v=='set')m.innerHTML=setHTML();
  window.scrollTo(0,0);lastView=v;
 }
-const moreTabs=v=>`<div class="views moretabs"><span class="${v=='gal'?'on':''}" onclick="setView('gal')">데일리 모음</span><span class="${v=='pm'?'on':''}" onclick="setView('pm')">계획관리</span><span class="${v=='plan'?'on':''}" onclick="setView('plan')">주월계획</span><span class="${v=='arch'?'on':''}" onclick="setView('arch')">Archive</span><span class="${v=='share'?'on':''}" onclick="setView('share')">Share</span><span class="${v=='set'?'on':''}" onclick="setView('set')">설정</span></div>`;
+const moreTabs=v=>`<div class="views moretabs">${MORE_KEYS.map(k=>{const n=NAV.flatMap(g=>g.items).find(x=>x[0]===k)[1];return`<span class="${v==k?'on':''}" onclick="setView('${k}')">${n}</span>`}).join('')}</div>`; // §1(fb14) NAV 한 곳에서
 const navBtns=(prev,next,home)=>`<div class="nav"><button onclick="${prev}">‹</button><button onclick="${home}">오늘</button><button onclick="${next}">›</button></div>`;
 function weekNo(d){return wLabelOf(myPlan(),d)} // 현재 프로젝트 셀법의 주 라벨 (범위 밖·프로젝트 없음 = null)
 
