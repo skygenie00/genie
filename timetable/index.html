@@ -273,6 +273,41 @@ button{cursor:pointer}
 .phb .bar i{display:block;height:100%}
 .plandot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;flex:none}
 @media (max-width:760px){.plan-pc{display:none}.plan-ph{display:block}}
+/* 월간(계획) review */
+.rvgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.rvgrid{grid-template-columns:1fr}}
+.rvbox{border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:#fff}
+.rvbox h4{font-size:12px;margin-bottom:8px;display:flex;justify-content:space-between;color:#333}
+.rvbox h4 small{font-weight:400;color:#888}
+.goalbox{background:#faf6f1;border-radius:6px;padding:10px 12px;font-size:11.5px;line-height:1.6;cursor:pointer}
+.goalbox b{display:block;margin-bottom:4px}
+.goalbox .p{margin-top:6px;color:#555}
+.rvtab{border-collapse:collapse;width:100%;font-size:11px}
+.rvtab th{font-weight:700;color:#666;text-align:left;padding:4px 6px;border-bottom:1px solid var(--line);font-size:10px}
+.rvtab td{padding:5px 6px;border-bottom:1px solid #f0f0f0;vertical-align:middle;white-space:nowrap}
+.bar2{height:7px;background:#eee;border-radius:4px;position:relative;overflow:hidden;min-width:70px}
+.bar2 i{position:absolute;left:0;top:0;height:100%;background:var(--blue);border-radius:4px}
+.lateT{color:#c33;font-weight:700}.okT{color:#2a8a4a;font-weight:700}
+.units2{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:14px}
+.ub{border:1px solid var(--line);border-radius:6px;padding:8px;font-size:10.5px;background:#fff}
+.ub h5{font-size:11.5px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;gap:4px}
+.ub h5 small{color:#888;font-weight:400}
+.ub .u{display:flex;gap:5px;align-items:center;padding:2px 0;border-bottom:1px dotted #eee;cursor:pointer}
+.ub .u .n2{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ub .u .c{font-size:9.5px;color:#666;width:24px;text-align:right;flex:none}
+.ub .u .w{color:#c33;font-size:9px;flex:none}
+.ub .u .ck{width:11px;height:11px;border:1px solid #333;border-radius:2px;display:inline-block;flex:none}
+.ub .u .ck.on{background:#333}
+.ub .more{color:#999;padding:3px 0;cursor:pointer}
+/* 주간 오른쪽: Study Time 접기 + 주차계획 분석 */
+.stc .st.stmini{flex:0 1 auto;max-height:132px;overflow:auto}
+.st.stmini .it{padding:2px 0;font-size:10.5px;border-bottom:1px solid #f7f7f7}
+.pananal{flex:1;overflow:auto;min-height:0;margin-top:4px}
+.pananal table{border-collapse:collapse;width:100%;font-size:10.5px}
+.pananal th{font-size:9.5px;color:#888;text-align:left;padding:3px 4px;border-bottom:1px solid var(--line);font-weight:400}
+.pananal td{padding:4px;border-bottom:1px solid #f4f4f4;white-space:nowrap;cursor:pointer}
+.pananal .bar2{min-width:46px}
+.pansum{font-size:10.5px;color:#555;padding:5px 4px;border-top:1px solid var(--line);margin-top:2px}
 /* 계획관리 (pm) */
 .pm{max-width:560px}
 .pm .tgl{display:flex;gap:14px;font-size:11px;color:#555;margin-bottom:10px;flex-wrap:wrap}
@@ -498,7 +533,9 @@ function stopTimer(){
  if(n.d!==run.d){ b=n.m+1440*Math.round((parse(n.d)-parse(run.d))/864e5); } // 날짜 넘어가면 이어붙임
  if(b<=run.a)b=run.a+1;
  const s={id:uid(),d,s:run.s,p:run.p,i:run.i,a:run.a,b,k:run.k||'',plan:run.plan||'',cat:run.cat||'',nt:!!run.nt};
- upsertSession(s);run=null;LS.del('tt.run');toast(`저장 ${dur(s.b-s.a)}`);render();
+ upsertSession(s);
+ if(s.k==='○'&&s.plan){const t=todoFile(cfg.person).data.items.find(x=>x.id===s.plan&&!x.del);if(t&&!t.done){t.done=true;upsertTodo(t);syncBandDone(t);}} // ⚠ 표시 ○일 때만 자동 완료 — 지금 바에는 ○ 입력이 없어 사실상 대기 상태
+ run=null;LS.del('tt.run');toast(`저장 ${dur(s.b-s.a)}`);render();
 }
 function elapsed(){return run?Math.max(0,Math.floor((Date.now()-run.at)/1000)):0}
 /* 매 초: 경과·선택 줄 시간·Total 갱신. 매 분: 진행 중 블록을 다시 그림 */
@@ -663,7 +700,13 @@ function threeHTML(){
   <div class="sec">할일</div><ul>${td.map(li).join('')}${cm}</ul>
   <div style="display:flex;gap:4px;align-items:center"><input class="add" placeholder="+ 할일 추가" style="flex:1" onkeydown="if(event.key=='Enter'&&this.value.trim()){addTodo('${x}','todo',this.value.trim(),document.getElementById('due_${i}').value);this.value='';document.getElementById('due_${i}').value=''}"><input type="date" id="due_${i}" title="기한(선택)" style="border:0;border-bottom:1px dashed #ddd;font-size:10px;width:110px;background:transparent"></div></div>`}).join('')}</div>`;
 }
-function peerLine(){const p=other();if(!p)return'';const s=sessionsOf(p,curDate());const tot=mSum(s);const late=todosOf(p,addDays(curDate(),-1)).filter(t=>t.kind=='study'&&!t.done).length;const cm=sharedItems().filter(x=>!x.done).length;return`<p class="peer">${esc(p)} ${curDate()==today()?'오늘':curDate()} <b>${dur(tot)}</b>${late?` · 어제 미완료 ${late}건`:''}${cm?` · 공통 할일 미완료 ${cm}`:''}</p>`}
+function peerLine(){const p=other();if(!p)return'';const s=sessionsOf(p,curDate());const tot=mSum(s);
+ const yd=addDays(curDate(),-1);
+ const lateN=todosOf(p,yd).filter(t=>t.kind=='study'&&!t.done).length;
+ const pp=planFile(p).data;const wy=pWeekNo(pp,yd);
+ let planLate=0;pp.bands.forEach(b=>{if(!b.del&&wy>=b.w1&&wy<=b.w2)planLate+=late(pp,b,yd)}); // 상대 plan 의 밀림 합
+ const cm=sharedItems().filter(x=>!x.done).length;
+ return`<p class="peer">${esc(p)} ${curDate()==today()?'오늘':curDate()} <b>${dur(tot)}</b>${(lateN+planLate)?` · 어제 미완료 ${lateN+planLate}건`:''}${cm?` · 공통 할일 미완료 ${cm}`:''}</p>`}
 /* 공통 할일 (todos/공통.json — 둘이 같이 보고 같이 고침) */
 function sharedTableHTML(){
  const view=ui.cmView||'open';const t0=today();const P=settings.people;
@@ -777,20 +820,39 @@ function weekHTML(){
  const byCat=new Map();const other={};
  all.forEach(y=>{const cid=sessCatId(y,tf);const m2=y.nt?0:y.b-y.a;if(cid)byCat.set(cid,(byCat.get(cid)||0)+m2);else other[y.s]=(other[y.s]||0)+m2});
  tf.data.cats.filter(c=>!c.del&&(c.d1||c.d2)&&(!c.d1||c.d1<=days[6])&&(!c.d2||c.d2>=days[0])).forEach(c=>{if(!byCat.has(c.id))byCat.set(c.id,0)});
- const catById=new Map(tf.data.cats.map(c=>[c.id,c]));
- const rows=[];[...byCat.entries()].forEach(([cid,m2])=>{const c=catById.get(cid);if(c)rows.push({s:c.s,n:c.name,m:m2})});
+ const rows=[]; // 줄 순서 = 분류 만든 순(cats 배열 순 · MiMi 와 같게)
+ tf.data.cats.forEach(c=>{if(!c.del&&byCat.has(c.id))rows.push({s:c.s,n:c.name,m:byCat.get(c.id)})});
  Object.entries(other).forEach(([s,m2])=>rows.push({s,n:'기타',m:m2}));
- const ordN=settings.subjects.map(x=>x.n);const oi=s=>{const i=ordN.indexOf(s);return i<0?999:i};
- rows.sort((a,b)=>oi(a.s)-oi(b.s)||b.m-a.m);
- return`<div class="ttl"><b>타임테이블 <span>› 주간</span> ${topSel('week')}</b><div class="r">${navBtns("setDate(addDays(curDate(),-7))","setDate(addDays(curDate(),7))","setDate(today())")} W${pad(weekNo(ws))}</div></div>
+ /* 주차계획 분석 — 그 주에 걸친 띠 (W1 이전 주는 생략) */
+ const plan=myPlan();const wNo=pWeekNo(plan,ws);let anal='';
+ if(wNo>=1){
+  const ordN=settings.subjects.map(x=>x.n);const oi=s=>{const i=ordN.indexOf(s);return i<0?999:i};
+  const bandsW=plan.bands.filter(b=>!b.del&&b.w1<=wNo&&wNo<=b.w2).sort((a,b)=>oi(a.s)-oi(b.s)||a.w1-b.w1);
+  if(bandsW.length){
+   const yd=addDays(today(),-1);let planSum=0,doneSum=0,lateSum=0;
+   const trs=bandsW.map(b=>{
+    const us=bandUnits(plan,b);const per=+b.per||0;const wd=weekDoneCount(plan,b,wNo);const L=late(plan,b,yd);
+    planSum+=per;doneSum+=wd;lateSum+=L;
+    const dn=bandDone(plan,b);const pr=us.length?Math.round(dn/us.length*100):0;
+    const oe=pWeekDate(plan,(b.orig?b.orig.w2:b.w2),6);const ce=us.length?endDate(plan,b):null;
+    const oeS=oe.slice(5).replace('-','/');const ceS=ce?ce.slice(5).replace('-','/'):null;
+    const endTxt=ce?(ce>oe?`원 ${oeS} → <span class="lateT">${ceS}</span>`:(ceS===oeS?`${oeS} 그대로`:`원 ${oeS} → ${ceS}`)):`~${pWeekDate(plan,b.w2,6).slice(5).replace('-','/')}`;
+    return`<tr onclick="gotoBand('${b.id}')"><td><i class="plandot" style="background:${subjColor(b.s)}"></i>${esc(b.s)}</td><td>${esc(b.name)}${b.tag?` <small style="color:#999">${esc(b.tag)}</small>`:''}</td><td>${us.length?`${wd}/${per||'—'}`:(per||'—')}</td><td><div class="bar2"><i style="width:${pr}%"></i></div></td><td>${L?`<b class="lateT">밀림 ${L}</b>`:''}</td><td>${us.length?dn+'/'+us.length:'—'}</td><td>${endTxt}</td></tr>`;
+   }).join('');
+   anal=`<div class="hd" style="margin-top:8px">주차계획 분석</div><div class="pananal"><table><thead><tr><th>과목</th><th>띠</th><th>이번 주</th><th></th><th>밀림</th><th>누적</th><th>예상 종료</th></tr></thead><tbody>${trs}</tbody></table><div class="pansum">이번 주 계획 ${planSum} · 끝냄 ${doneSum} · 밀림 ${lateSum} · 시간 ${dur(wt)}</div></div>`;
+  }
+ }
+ return`<div class="ttl"><b>타임테이블 <span>› 주간</span> ${topSel('week')}</b><div class="r">${navBtns("setDate(addDays(curDate(),-7))","setDate(addDays(curDate(),7))","setDate(today())")} ${wNo>=1?'W'+pad(wNo):ws.slice(5).replace('-','/')+'~'+days[6].slice(5).replace('-','/')}</div></div>
  <div class="sheet"><div class="ribbon">${ws.replace(/-/g,'.')} ~ ${days[6].replace(/-/g,'.')}</div><div class="paper">
  <div><div class="hd">Time Table</div><div class="wk2"><div class="wh"></div>${days.map(x=>`<div class="wh ${x===today()?'today':''}">${['SUN','MON','TUE','WED','THU','FRI','SAT'][parse(x).getDay()]}</div>`).join('')}
  ${labs}${cols}
  <div class="wt"></div>${tots.map(t2=>`<div class="wt ${t2?'':'z'}">${dur(t2)}</div>`).join('')}</div></div>
- <div class="stc"><div class="hd">Study Time</div><div class="st">${rows.map(r=>`<div class="it"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl">${esc(r.n)}</span><span>${dur(r.m)}</span></div>`).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
+ <div class="stc"><div class="hd">Study Time</div><div class="st${anal?' stmini':''}">${rows.map(r=>`<div class="it"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl">${esc(r.n)}</span><span>${dur(r.m)}</span></div>`).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
+ ${anal}
  <div class="wstat"><span>Avg <b>${dur(Math.round(wt/7))}</b></span><span>Total <span class="big">${dur(wt)}</span></span></div></div>
  </div></div>`;
 }
+function gotoBand(id){const p=myPlan();const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;ui.planW0=b.w1-1;ui.planTab='week';LS.set('tt.ui',ui);setView('plan');}
 function subjTotals(list){const g={};list.forEach(x=>{if(x.nt)return;g[x.s]=(g[x.s]||0)+x.b-x.a});return Object.entries(g).map(([s,min])=>({s,min})).sort((a,b)=>b.min-a.min)}
 /* ----- 월간 ----- */
 function monthHTML(){
@@ -1053,9 +1115,37 @@ function extendBand(plan,band){const old2=band.w2;band.w2+=1;band.u=Date.now();p
 function extendBandById(id,n){let warn=false,nm='';planMut(p=>{const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;nm=b.name;for(let i=0;i<Math.max(1,n||1);i++)extendBand(p,b);const ew=examWeek(p);warn=p.bands.some(x=>!x.del&&x.s===b.s&&x.w2>ew)});render();toast(warn?`${nm} 늘림 — ⚠ 시험 주를 넘는 띠가 있어`:`${nm} +${Math.max(1,n||1)}주`)}
 function fixBaseline(dateStr){planMut(p=>{
  const rem={};p.bands.filter(b=>!b.del).forEach(b=>{const us=bandUnits(p,b);if(us.length)rem[b.s]=(rem[b.s]||0)+us.length-bandDone(p,b)});
- p.baselines.push({at:dateStr,bands:p.bands.filter(b=>!b.del).map(b=>({id:b.id,w1:b.w1,w2:b.w2})),remaining:rem});
+ p.baselines.push({at:dateStr,bands:p.bands.filter(b=>!b.del).map(b=>({id:b.id,w1:b.w1,w2:b.w2,per:b.per||0})),remaining:rem});
  p.bands.forEach(b=>{if(!b.del){b.orig={w1:b.w1,w2:b.w2};b.u=Date.now()}});
 },true)}
+/* 날짜별 남은 단원: 실제선 = 완료 누적 · 기준선 = 마지막 baseline 의 w1/w2/per 로 계획대로 갔을 때 */
+function remainingSeries(plan,subject,from,to){
+ const bands=plan.bands.filter(b=>!b.del&&(b.units||[]).length&&(!subject||b.s===subject));
+ const bl=(plan.baselines||[]).slice(-1)[0];
+ const blMap=new Map((bl?bl.bands||[]:[]).map(x=>[x.id,x]));
+ const days=[],act=[],base=[];
+ for(let d=from;d<=to;d=addDays(d,1)){
+  let a=0,bse=0;
+  bands.forEach(b=>{
+   const us=bandUnits(plan,b);
+   a+=us.filter(u=>{const x=u.done&&u.done[b.id];return!x||x>d}).length;
+   const o=blMap.get(b.id);
+   const vb=o?Object.assign({},b,{w1:o.w1,w2:o.w2,per:o.per!=null?o.per:b.per}):b;
+   bse+=Math.max(0,us.length-plannedThrough(plan,vb,d));
+  });
+  days.push(d);act.push(a);base.push(bse);
+ }
+ return{days,act,base};
+}
+function rebalanceApply(){
+ planMut(p=>{const y=addDays(today(),-1);
+  yieldOrder(p).forEach(s=>{p.bands.filter(b=>!b.del&&b.s===s).sort((a,b)=>a.w1-b.w1).forEach(b=>{
+   const L=late(p,b,y);if(!L||!(+b.per))return;
+   const ext=Math.ceil(L/(+b.per));for(let i=0;i<ext;i++)extendBand(p,b);
+  })});
+ });
+ render();toast('재배치를 적용했어');
+}
 function maybeAutoBaseline(){const d=today();if(d.slice(8)!=='01')return;const p=myPlan();if(!(p.bands||[]).some(b=>!b.del))return;if((p.baselines||[]).some(b=>ym(b.at)===ym(d)))return;fixBaseline(d);toast('이 달 기준선 고정됨')}
 function rebalancePreview(){
  const plan=JSON.parse(JSON.stringify(myPlan()));const y=addDays(today(),-1);const rows=[];
@@ -1067,7 +1157,8 @@ function rebalancePreview(){
  })});
  modal(`<h4>밀린 것 재배치 — 미리보기</h4>
  ${rows.length?rows.map(r=>`<div class="row" style="font-size:11px"><i class="sw" style="background:${subjColor(r.s)};width:8px;height:8px;flex:none"></i><span style="flex:1">${esc(r.s)} ${esc(r.name)} · 밀림 ${r.late}</span><span>${r.from} → ${r.to}${r.over?' <b style="color:#c33">시험 주 초과</b>':''}</span></div>`).join(''):'<p style="color:#888;font-size:11px">밀린 띠가 없어.</p>'}
- <p style="font-size:10px;color:#888;margin-top:8px">양보 순서: ${yieldOrder(plan).map(esc).join(' → ')} · 규칙: 밀림÷주당 만큼 주 수 늘림(뒤 띠는 밀려남)<br><b>적용은 B단계에서 들어와 — 지금은 미리보기만. 저장을 눌러도 바뀌지 않아.</b></p>`,()=>{});
+ <p style="font-size:10px;color:#888;margin-top:8px">양보 순서: ${yieldOrder(plan).map(esc).join(' → ')} · 규칙: 밀림÷주당 만큼 주 수 늘림(뒤 띠는 밀려남)<br><b>「저장」 = 이대로 적용.</b> 취소하면 바뀌지 않아.</p>`,
+ ()=>{if(rows.length)rebalanceApply()});
 }
 /* ----- 오늘 학습(계획 항목) ----- */
 function planColHTML(d,idx){
@@ -1240,8 +1331,135 @@ function pmDelCat(){const p=pmSelCat();if(!p){toast('분류 줄을 먼저 골라
 function pmAddItem(){const p=pmSelCat();if(!p){toast('분류 줄을 먼저 골라줘');return;}modal(`<h4>+ 계획 · ${esc(p.name)}</h4><div class="row"><label>내용</label><input id="iT" placeholder="1-08 물권변동"></div><div class="row"><label>날짜</label><input id="iD" type="date" value="${today()}"></div>`,q=>{if(q('iT').value.trim()){upsertTodo({id:uid(),d:q('iD').value||today(),t:q('iT').value.trim(),kind:'study',cat:p.id,done:false,carry:0});render()}})}
 function pmEditItem(){const x=pmSelItem();if(!x){toast('계획 줄을 먼저 골라줘');return;}editTodo(x.id)}
 function pmDelItem(){const x=pmSelItem();if(!x){toast('계획 줄을 먼저 골라줘');return;}if(confirm('지울까? '+x.t)){x.del=true;upsertTodo(x);pmSel=null;render()}}
-/* ----- 월간(계획) — B단계 자리 ----- */
-function reviewHTML(){return`${moreTabs('review')}<div class="ttl"><b>월간 <span>› 계획</span></b></div><p style="color:#888">월간(계획) 화면은 B단계에서 들어와. 목표·달성 표·원계획 대비 그래프·단원 DB·기준선 고정이 여기 붙는다.</p>`}
+/* ----- 월간(계획) ----- */
+function revShift(n){const m=ui.revMonth||ym(today());ui.revMonth=n===0?ym(today()):ym(shiftMonth(m+'-01',n));LS.set('tt.ui',ui);render()}
+function revMore(s){s=decodeURIComponent(s);ui.unitsOpen=ui.unitsOpen||{};ui.unitsOpen[s]=!ui.unitsOpen[s];LS.set('tt.ui',ui);render()}
+function goalEdit(m){const g=(myPlan().goals||{})[m]||{};
+ modal(`<h4>${m.replace('-','.')} 목표</h4><div class="row"><label>목표</label><textarea id="gT" style="flex:1;min-height:70px;border:1px solid #ddd;border-radius:3px;padding:5px;font:inherit">${esc(g.text||'')}</textarea></div><div class="row"><label>우선순위</label><textarea id="gP" style="flex:1;min-height:44px;border:1px solid #ddd;border-radius:3px;padding:5px;font:inherit">${esc(g.prio||'')}</textarea></div>`,
+ q=>{planMut(p=>{p.goals=p.goals||{};p.goals[m]={text:q('gT').value,prio:q('gP').value};},true);render()});}
+function unitModal(sEnc,idEnc){
+ const s=decodeURIComponent(sEnc);const id=decodeURIComponent(idEnc||'');
+ const plan=myPlan();const u=id?((plan.units[s]||[]).find(x=>x.id===id&&!x.del)):null;
+ modal(`<h4>${u?'단원 편집':'+ 단원'} · ${esc(s)}</h4>
+ <div class="row"><label>id</label><input id="uI" value="${esc(u?u.id:'')}" ${u?'readonly':''} placeholder="1-08"></div>
+ <div class="row"><label>이름</label><input id="uN" value="${esc(u?u.n:'')}"></div>
+ <div class="row"><label>예상분</label><input id="uE" type="number" value="${u?(u.est||60):60}" style="flex:0 0 80px;min-width:0"></div>
+ <div class="row"><label>회독</label><input id="uR" type="number" value="${u?(u.reads||0):0}" style="flex:0 0 80px;min-width:0"><label style="width:auto"><input type="checkbox" id="uW" ${u&&u.weak?'checked':''}> 약점</label></div>`,
+ q=>{const nid=q('uI').value.trim();if(!nid){toast('id 를 적어줘');return;}
+  if(!u&&((myPlan().units[s]||[]).some(z=>z.id===nid&&!z.del))){toast('id 중복');return;}
+  planMut(p=>{p.units[s]=p.units[s]||[];let x=u?p.units[s].find(z=>z.id===u.id):null;
+   if(!x){x={id:nid,done:{},del:false};p.units[s].push(x);}
+   x.n=q('uN').value.trim();x.est=+q('uE').value||60;x.reads=+q('uR').value||0;x.weak=q('uW').checked;x.u=Date.now();});render()},
+ u?()=>{if(confirm('이 단원을 지울까? '+u.id)){planMut(p=>{const x=(p.units[s]||[]).find(z=>z.id===u.id);if(x){x.del=true;x.u=Date.now()}});render()}}:null);
+}
+function unitPaste(sEnc){const s=decodeURIComponent(sEnc);
+ modal(`<h4>붙여넣기 · ${esc(s)}</h4><p style="font-size:10px;color:#888">한 줄에 「1-08 물권변동」 — id 중복은 건너뜀</p><div class="row"><textarea id="uP" style="flex:1;min-height:120px;border:1px solid #ddd;border-radius:3px;padding:5px;font:inherit"></textarea></div>`,
+ q=>{const lines=q('uP').value.split('\n').map(x=>x.trim()).filter(Boolean);let n=0;
+  planMut(p=>{p.units[s]=p.units[s]||[];const has=new Set(p.units[s].filter(z=>!z.del).map(z=>z.id));
+   lines.forEach(L=>{const sp=L.indexOf(' ');const id=sp>0?L.slice(0,sp):L;const nm=sp>0?L.slice(sp+1).trim():'';
+    if(!id||has.has(id))return;has.add(id);p.units[s].push({id,n:nm,est:60,weak:false,reads:0,done:{},u:Date.now(),del:false});n++;});
+  });toast(n+'개 추가');render()});
+}
+function revGraphHTML(plan,m,first,lastD){
+ const bands=plan.bands.filter(b=>!b.del&&(b.units||[]).length);
+ if(!bands.length)return'<p style="color:#888;font-size:11px">단원이 있는 띠가 없어 그래프를 못 그림 — 주차계획에서 띠에 단원을 연결해줘.</p>';
+ const t0=today();
+ const bl=(plan.baselines||[]).slice(-1)[0];
+ const from=bl&&bl.at&&bl.at<first?bl.at:first;
+ let rem=0,per7=0,rec=0;
+ bands.forEach(b=>{const us=bandUnits(plan,b);rem+=us.length-bandDone(plan,b);per7+=(+b.per||0)/7;
+  rec+=us.filter(u=>{const d2=u.done&&u.done[b.id];return d2&&d2>addDays(t0,-14)&&d2<=t0}).length;});
+ const rate=rec>0?rec/14:per7;
+ const projEnd=rate>0?addDays(t0,Math.ceil(rem/Math.max(rate,.01))):lastD;
+ const blW=new Map((bl?bl.bands||[]:[]).map(x=>[x.id,x]));
+ let baseEnd=first;bands.forEach(b=>{const o=blW.get(b.id);const e=pWeekDate(plan,(o?o.w2:(b.orig?b.orig.w2:b.w2)),6);if(e>baseEnd)baseEnd=e});
+ let to=lastD;if(projEnd>to)to=projEnd;if(baseEnd>to)to=baseEnd;
+ if(Math.round((parse(to)-parse(from))/864e5)>220)to=addDays(from,220);
+ const S=remainingSeries(plan,null,from,to);
+ const N=S.days.length;if(N<2)return'';
+ const maxV=Math.max(1,...S.act,...S.base);
+ const L2=30,R2=10,T2=10,B2=16,W2=520,H2=190;
+ const X=i=>L2+(i/(N-1))*(W2-L2-R2);
+ const Y=v=>T2+(1-v/maxV)*(H2-T2-B2);
+ const iToday=Math.min(N-1,Math.max(0,Math.round((parse(t0)-parse(from))/864e5)));
+ const basePts=S.days.map((d2,i)=>`${X(i).toFixed(1)},${Y(S.base[i]).toFixed(1)}`).join(' ');
+ const actPts=S.days.slice(0,iToday+1).map((d2,i)=>`${X(i).toFixed(1)},${Y(S.act[i]).toFixed(1)}`).join(' ');
+ const iProj=Math.min(N-1,Math.max(iToday,Math.round((parse(projEnd)-parse(from))/864e5)));
+ const md=x=>parseInt(x.slice(5,7))+'/'+parseInt(x.slice(8));
+ const gap=S.act[iToday]-S.base[iToday];
+ const gapDays=gap>0&&rate>0?Math.ceil(gap/rate):0;
+ return`<svg viewBox="0 0 520 190" style="width:100%;height:190px;display:block">
+ <g font-size="9" fill="#888"><text x="4" y="14">${maxV}</text><text x="10" y="${(Y(0)+3).toFixed(0)}">0</text>
+ <text x="${L2}" y="188">${md(from)}</text><text x="${(X(N-1)-24).toFixed(0)}" y="188">${md(to)}</text></g>
+ <line x1="${L2}" y1="${T2}" x2="${L2}" y2="${Y(0).toFixed(1)}" stroke="#ddd"/><line x1="${L2}" y1="${Y(0).toFixed(1)}" x2="${W2-R2}" y2="${Y(0).toFixed(1)}" stroke="#ddd"/>
+ <polyline points="${basePts}" fill="none" stroke="#bbb" stroke-width="2"/>
+ <polyline points="${actPts}" fill="none" stroke="var(--blue)" stroke-width="2.5"/>
+ ${iProj>iToday?`<line x1="${X(iToday).toFixed(1)}" y1="${Y(S.act[iToday]).toFixed(1)}" x2="${X(iProj).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="var(--blue)" stroke-width="1.5" stroke-dasharray="4 3"/>`:''}
+ <line x1="${X(iToday).toFixed(1)}" y1="${T2}" x2="${X(iToday).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="#f0b" stroke-dasharray="2 3"/><text x="${(X(iToday)+3).toFixed(0)}" y="20" font-size="9" fill="#c36">오늘</text>
+ </svg>
+ <p style="font-size:10.5px;margin-top:4px">${gap>0?`<b class="lateT">밀림 +${gap}단원${gapDays?` ≈ ${gapDays}일`:''}</b> · ${md(projEnd)} 예상`:`<b class="okT">계획대로거나 앞서 있음</b> · ${md(projEnd)} 예상`}</p>`;
+}
+function revUnitsHTML(plan,m,bandsM){
+ const ordN=settings.subjects.map(x=>x.n);const oi=s=>{const i=ordN.indexOf(s);return i<0?999:i};
+ const subs=[...new Set([...Object.keys(plan.units||{}),...plan.bands.filter(b=>!b.del).map(b=>b.s)])].sort((a,b)=>oi(a)-oi(b));
+ if(!subs.length)return'';
+ const mo=parseInt(m.slice(5));
+ const cards=subs.map(s=>{
+  const us=((plan.units||{})[s]||[]).filter(u=>!u.del);
+  const hasBand=bandsM.some(b=>b.s===s);
+  const weakN=us.filter(u=>u.weak).length;
+  const open=ui.unitsOpen&&ui.unitsOpen[s];
+  const list=open?us:us.slice(0,5);
+  const enc=encodeURIComponent(s);
+  const rows2=list.map(u=>{const done=u.done&&Object.keys(u.done).length>0;
+   return`<div class="u" onclick="unitModal('${enc}','${encodeURIComponent(u.id)}')"><span class="ck ${done?'on':''}"></span><span class="n2">${esc(u.id)} ${esc(u.n)}</span><span class="c">${u.reads||0}회</span>${u.weak?'<span class="w">약점</span>':''}</div>`}).join('');
+  return`<div class="ub"><h5><span style="white-space:nowrap"><i class="sw" style="background:${subjColor(s)}"></i>${esc(s)}</span><small>${us.length?`${us.length}단원 · 약점 ${weakN}`:''}</small><span style="margin-left:auto;display:flex;gap:3px;flex:none"><button class="btn" style="padding:0 5px;font-size:9px" onclick="unitModal('${enc}','')">+ 단원</button><button class="btn" style="padding:0 5px;font-size:9px" onclick="unitPaste('${enc}')">붙여넣기</button></span></h5>
+  ${rows2}
+  ${us.length>5?`<div class="more" onclick="revMore('${enc}')">${open?'접기 ▴':`… ${us.length-5} 더`}</div>`:''}
+  ${!us.length?`<div class="more">단원 없음 — 「붙여넣기」로 채우기</div>`:''}
+  ${us.length&&!hasBand?`<div class="more">${mo}월 계획 없음 · 단원 DB만 있는 상태</div>`:''}</div>`;
+ }).join('');
+ return`<div class="units2">${cards}</div>`;
+}
+function reviewHTML(){
+ const plan=myPlan();const m=ui.revMonth||ym(today());
+ const fd=parse(m+'-01');const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();
+ const first=m+'-01';const lastD=`${m}-${pad(nd)}`;
+ const g=(plan.goals||{})[m]||{};
+ const wA=pWeekNo(plan,first),wB=pWeekNo(plan,lastD);
+ const bandsM=plan.bands.filter(b=>!b.del&&b.w1<=wB&&b.w2>=wA);
+ const dRef=(()=>{const y=addDays(today(),-1);return y<lastD?y:lastD})();
+ const stMap=new Map(subjTotals(sessionsMonth(cfg.person,m)).map(x=>[x.s,x.min]));
+ const ordN=settings.subjects.map(x=>x.n);const oi=s=>{const i=ordN.indexOf(s);return i<0?999:i};
+ const subs=[...new Set(bandsM.map(b=>b.s))].sort((a,b)=>oi(a)-oi(b));
+ let tq=0,tdn=0,tmin=0;
+ const md=x=>x?parseInt(x.slice(5,7))+'/'+parseInt(x.slice(8)):'';
+ const rowsA=subs.map(s=>{
+  const bs=bandsM.filter(b=>b.s===s);
+  let q=0,dn=0,L=0,perSum=0,oe=null,ce=null;
+  bs.forEach(b=>{
+   q+=Math.max(0,plannedThrough(plan,b,lastD)-plannedThrough(plan,b,addDays(first,-1)));
+   const us=bandUnits(plan,b);
+   dn+=us.filter(u=>{const x=u.done&&u.done[b.id];return x&&x>=first&&x<=lastD}).length;
+   L+=late(plan,b,dRef);perSum+=(+b.per||0);
+   const o=pWeekDate(plan,(b.orig?b.orig.w2:b.w2),6);if(!oe||o>oe)oe=o;
+   if(us.length){const e=endDate(plan,b);if(e&&(!ce||e>ce))ce=e;}
+  });
+  const min2=stMap.get(s)||0;tq+=q;tdn+=dn;tmin+=min2;
+  const days=L&&perSum?Math.ceil(L/(perSum/7)):0;
+  const endTxt=ce?(ce>oe?`원 ${md(oe)} → <span class="lateT">${md(ce)}</span>`:(md(ce)===md(oe)?`${md(oe)} 그대로`:`원 ${md(oe)} → ${md(ce)}`)):(oe?`~${md(oe)}`:'');
+  return`<tr><td><i class="sw" style="background:${subjColor(s)}"></i>${esc(s)}</td><td>${q}</td><td>${dn}</td><td><div class="bar2"><i style="width:${q?Math.min(100,Math.round(dn/q*100)):0}%"></i></div></td><td>${min2?dur(min2):''}</td><td class="${days?'lateT':'okT'}">${days?'+'+days+'일':'0'}</td><td>${endTxt}</td></tr>`;
+ }).join('');
+ const sumRow=subs.length?`<tr><td style="color:#999">합계</td><td>${tq}</td><td>${tdn}</td><td><div class="bar2"><i style="width:${tq?Math.min(100,Math.round(tdn/tq*100)):0}%"></i></div></td><td>${tmin?dur(tmin):''}</td><td></td><td></td></tr>`:'';
+ return`${moreTabs('review')}<div class="ttl"><b>${m.replace('-','년 ')}월 <span>› 계획</span></b><div class="r"><button class="btn" onclick="revShift(-1)">‹</button><button class="btn" onclick="revShift(0)">이번 달</button><button class="btn" onclick="revShift(1)">›</button><button class="btn" onclick="if(confirm('원계획 기준선을 지금 상태로 다시 고정할까? 이전 기준선은 이력에 남아.')){fixBaseline(today());toast('기준선 고정');render()}">원계획 기준선 다시 고정</button></div></div>
+ <div class="rvgrid">
+ <div><div class="goalbox" onclick="goalEdit('${m}')"><b>${parseInt(m.slice(5))}월 목표</b>${esc(g.text||'')||'<span style="color:#aaa">(클릭해서 적기)</span>'}${g.prio?`<div class="p">📌 ${esc(g.prio)}</div>`:''}</div>
+ <div class="rvbox" style="margin-top:10px"><h4>달성 <small>계획 단원 대비 완료</small></h4>
+ ${subs.length?`<div style="overflow-x:auto"><table class="rvtab"><thead><tr><th>과목</th><th>계획</th><th>완료</th><th></th><th>시간</th><th>밀림</th><th>예상 종료</th></tr></thead><tbody>${rowsA}${sumRow}</tbody></table></div>`:'<p style="color:#888;font-size:11px">이 달에 걸친 띠가 없어.</p>'}</div></div>
+ <div class="rvbox"><h4>원계획 대비 <small>남은 단원 수 · 회색 = 기준선</small></h4>${revGraphHTML(plan,m,first,lastD)}<p style="font-size:10px;color:#666;margin-top:6px">기준선은 매달 1일 자동 고정. 계획을 크게 바꿨을 때만 다시 고정 — 이전 것은 이력에 남는다.</p></div>
+ </div>
+ ${revUnitsHTML(plan,m,bandsM)}`;
+}
 /* ----- 설정 ----- */
 function setHTML(){
  return`${moreTabs('set')}<div class="ttl"><b>설정</b></div><div class="set">
