@@ -583,6 +583,28 @@ tr:hover .lsx{color:#c33}
 .pmarch .arow .nm2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pmarch .arow .dt{margin-left:auto;font-size:9px;color:#999;flex:none}
 .ustash{border:1px dashed #ddd;border-radius:8px;padding:6px 9px;font-size:10.5px;color:#888;background:#fcfcfd;cursor:pointer;margin-top:6px}
+/* ----- feedback13 ----- */
+.gph2 .t{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:8px}
+.fcard{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;cursor:pointer}
+.fcard img{width:100%;height:120px;object-fit:cover;display:block;background:#f6f6f6}
+.fcard .noimg{height:120px;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:10px;background:#fafafa}
+.fcard .fl{display:flex;gap:5px;align-items:center;font-size:10.5px;padding:5px 7px;border-top:1px solid var(--line)}
+.fcard .fl b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.fcard .fl span{color:#999;font-size:9px;flex:none}
+.shrow{display:flex;gap:6px;align-items:flex-start;font-size:11px;padding:6px 4px;border-bottom:1px solid #f0f0f1}
+.shrow .tx{flex:1;min-width:0;white-space:pre-wrap;word-break:break-all;max-height:60px;overflow:hidden}
+.shrow .ops{display:flex;gap:4px;flex:none}
+.pmini{display:grid;grid-template-columns:18px 1fr;font-size:6.5px;color:#aaa;line-height:1}
+.pmini span{text-align:right;padding-right:2px;height:6.5px}
+.pmini em{position:relative;display:block;height:6.5px;border-bottom:1px solid #f4f4f5;font-style:normal}
+.pmini em b{position:absolute;top:0;bottom:0}
+.pmini em .nw{position:absolute;top:-1px;bottom:-1px;width:1px;background:#f0b}
+.piptl{display:flex;gap:6px;align-items:center;padding:5px 6px;font-size:11px;border-top:1px solid #eee}
+.piptl b{font-size:15px;font-variant-numeric:tabular-nums;flex:none}
+.piptl .lb2{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#555}
+.piptl .btn.gob{background:#111;color:#fff;border-color:#111;font-weight:800}
+.piptl .btn.stopb{background:#c9372c;color:#fff;border-color:#c9372c;font-weight:800}
 </style>
 </head>
 <body>
@@ -806,6 +828,7 @@ function mergeFile(path,local,remote){
  }
  if(path.startsWith('todos/'))return{v:2,cats:mergeList(local.cats||local.plans||[],remote.cats||remote.plans||[]),items:mergeList(local.items||[],remote.items||[])};
  if(path.startsWith('records/'))return{v:1,items:mergeList((local||{}).items||[],(remote||{}).items||[])};
+ if(path==='food/food.json'||path==='share/share.json')return{v:1,items:mergeList((local||{}).items||[],(remote||{}).items||[])}; // fb13 §4·§5 공용(사람 구분 없음)
  if(path.startsWith('history/')){const out={v:1,days:{}};const A=(local||{}).days||{},B=(remote||{}).days||{};
   new Set([...Object.keys(A),...Object.keys(B)]).forEach(k=>{const a=A[k],b=B[k];out.days[k]=!a?b:(!b?a:(((a.u||0)>=(b.u||0))?a:b))});return out;}
  if(path.startsWith('plan/')){ // v2: projects 는 id 로 맞추고 안의 bands·milestones 는 id·u 병합, 프로젝트 나머지 필드는 u 큰 쪽, plan 층은 pu 큰 쪽
@@ -859,6 +882,8 @@ async function syncAll(silent){
   await syncFile('todos/공통.json',true,{v:1,items:[]});
   await syncFile(recPath(me),true,{v:1,items:[]});if(peer)await syncFile(recPath(peer),false,{v:1,items:[]});
   await syncFile(histPath(me),false,{v:1,days:{}});if(peer)await syncFile(histPath(peer),false,{v:1,days:{}}); // 시간층은 앱이 안 씀 — pull 만
+  if(ui.view==='arch'||listDirty().includes('food/food.json'))await syncFile('food/food.json',true,{v:1,items:[]}); // fb13 §4 — 보는 중·대기분 있을 때만
+  if(ui.view==='share'||listDirty().includes('share/share.json'))await syncFile('share/share.json',true,{v:1,items:[]}); // fb13 §5
   cfg.lastSync=Date.now();LS.set('tt.cfg',cfg);logS('완료');if(!silent)toast('동기화됨');
  }catch(e){logS('✗ '+e.message);if(!silent)toast('동기화 실패: '+e.message);}
  syncing=false;render();
@@ -994,10 +1019,12 @@ function renderMain(){
  else if(v=='todo')m.innerHTML=todoHTML();
  else if(v=='plan')m.innerHTML=planHTML();
  else if(v=='pm')m.innerHTML=pmHTML();
+ else if(v=='arch'){m.innerHTML=archHTML();fillImgs(m)}
+ else if(v=='share'){m.innerHTML=shareHTML();fillImgs(m)}
  else if(v=='set')m.innerHTML=setHTML();
  window.scrollTo(0,0);lastView=v;
 }
-const moreTabs=v=>`<div class="views moretabs"><span class="${v=='gal'?'on':''}" onclick="setView('gal')">데일리 모음</span><span class="${v=='pm'?'on':''}" onclick="setView('pm')">계획관리</span><span class="${v=='plan'?'on':''}" onclick="setView('plan')">주월계획</span><span class="${v=='set'?'on':''}" onclick="setView('set')">설정</span></div>`;
+const moreTabs=v=>`<div class="views moretabs"><span class="${v=='gal'?'on':''}" onclick="setView('gal')">데일리 모음</span><span class="${v=='pm'?'on':''}" onclick="setView('pm')">계획관리</span><span class="${v=='plan'?'on':''}" onclick="setView('plan')">주월계획</span><span class="${v=='arch'?'on':''}" onclick="setView('arch')">Archive</span><span class="${v=='share'?'on':''}" onclick="setView('share')">Share</span><span class="${v=='set'?'on':''}" onclick="setView('set')">설정</span></div>`;
 const navBtns=(prev,next,home)=>`<div class="nav"><button onclick="${prev}">‹</button><button onclick="${home}">오늘</button><button onclick="${next}">›</button></div>`;
 function weekNo(d){return wLabelOf(myPlan(),d)} // 현재 프로젝트 셀법의 주 라벨 (범위 밖·프로젝트 없음 = null)
 
@@ -1532,9 +1559,9 @@ function galHTML(){
    if(dt.getDay()===0&&x<t0)g+=weekCard(who,weekStart(x)); // 일요일이 지나면 그 주(월~일) 칸
    g+=dayCard(who,x);
   }return g};
- const months=[];for(let i=0;i<6;i++)months.push(ym(shiftMonth(t0+'',-i)));
+ const months=[];for(let i=0;i<12;i++)months.push(ym(shiftMonth(t0+'',-i))); // §3(fb13) 탭 = 최근 12달
  const people=settings.people;
- return`${moreTabs('gal')}<div class="ttl"><b>데일리 모음</b><div class="r">${navBtns("galMonth(-1)","galMonth(1)","galMonth(0)")} ${m.replace('-','.')}</div></div>
+ return`${moreTabs('gal')}<div class="ttl"><b>데일리 모음</b><div class="r"><button class="btn" onclick="recImportModal()" title="민법OX·물리535 문항 기록 가져오기 (§1 fb13 — 설정에서 이사)">📥 학습기록 가져오기</button>${navBtns("galMonth(-1)","galMonth(1)","galMonth(0)")} ${m.replace('-','.')}</div></div>
  <div class="views" style="position:relative">${months.map(x=>{const mo=parseInt(x.slice(5));return`<span class="${x==m?'on':''}" onclick="ui.galMonth='${x}';LS.set('tt.ui',ui);render()" style="display:inline-flex;align-items:center;gap:4px"><i class="galdot" style="background:conic-gradient(#222 ${(mo/12*360).toFixed(0)}deg,#fff 0)"></i>${x.slice(2,4)}.${mo}월</span>`}).join('')}<span class="galddw"><span onclick="galMonthModal()" title="과거 달 찾기 — 기록 있는 달만 (§8 fb12 가운데 팝업)" style="cursor:pointer">🔍 지난 달</span></span></div>
  <div class="gal">${people.map(p=>{const st=snapMonthStats(p,m);return`<div><div class="colh">${esc(p)} <small>${parseInt(m.slice(5))}월 ${dur(st.tot)}${st.miss?` · 미반영 ${st.miss}`:''}</small></div><div class="grid3">${col(p)}</div></div>`}).join('')}</div>`;
 }
@@ -1552,18 +1579,15 @@ function galRecMonths(){
  });
  return[...set].sort().reverse(); // 최신 → 옛날
 }
-function galMonthModal(){
- const all=galRecMonths();
- const cut=ym(shiftMonth(today(),-5));
- const rec=all.filter(x=>x>=cut),older=all.filter(x=>x<cut);
+function galMonthModal(){ // §3(fb13): 탭이 최근 12달을 맡으니 팝업 = 그 이전(옛날) 달 전용
+ const cut=ym(shiftMonth(today(),-11));
+ const older=galRecMonths().filter(x=>x<cut);
  const item=x=>{const mo=parseInt(x.slice(5));return`<div class="gi" data-m="${x}" onclick="galPick('${x}')"><i class="galdot" style="background:conic-gradient(#222 ${(mo/12*360).toFixed(0)}deg,#fff 0)"></i>${x.slice(2,4)}.${mo}월</div>`};
  const m=document.createElement('div');m.className='modal';m.id='galDD';
- m.innerHTML=`<div class="box" style="max-width:340px;display:flex;flex-direction:column;max-height:76vh"><h4 style="flex:none">지난 달 찾기 <small style="color:#888;font-weight:400">기록 있는 달만</small></h4>
+ m.innerHTML=`<div class="box" style="max-width:340px;display:flex;flex-direction:column;max-height:76vh"><h4 style="flex:none">지난 달 찾기 <small style="color:#888;font-weight:400">탭(최근 12달) 이전 · 기록 있는 달만</small></h4>
  <input class="gq" placeholder="달 검색 (예: 24.11 · 23)" oninput="galDDFilter(this.value)" style="flex:none;border:1px solid #ddd;border-radius:5px;padding:5px 7px;font-size:11px;margin-bottom:6px">
  <div style="flex:1;min-height:0;overflow:auto">
- ${rec.length?`<div class="gh">최근 6개월</div><div class="gigrid">${rec.map(item).join('')}</div>`:''}
- ${older.length?`<div class="gh">지난 기록 (최신 → 옛날)</div><div class="gigrid">${older.map(item).join('')}</div>`:''}
- ${all.length?'':'<div class="gh">기록 있는 달이 없어</div>'}
+ ${older.length?`<div class="gh">지난 기록 (최신 → 옛날)</div><div class="gigrid">${older.map(item).join('')}</div>`:'<div class="gh">탭 이전의 기록 있는 달이 없어</div>'}
  </div>
  <div class="acts" style="flex:none"><button class="btn" onclick="document.getElementById('galDD').remove()">닫기</button></div></div>`;
  m.addEventListener('click',e=>{if(e.target===m)m.remove()});
@@ -2650,29 +2674,32 @@ function pmCoreHTML(){ // 계획관리 본문 — 페이지와 📋 팝업(§9)�
  const names=settings.subjects.map(x=>x.n);const extra=[...new Set([...vis.map(p=>p.s),...plan.bands.filter(b=>!b.del).map(b=>b.s)])].filter(s=>!names.includes(s));
  const fold=Object.assign({s:{},c:{}},ui.pmFold||{});
  const itemLi=x=>`<div class="itm ${x.done?'done':''}"><span class="tx" onclick="editTodo('${x.id}')">${esc(x.t)}</span><span class="dt" onclick="pmDateEdit(event,'${x.id}')">${(x.d||'').slice(5).replace('-','/')}</span><span class="rowx" onclick="pmDelItem2('${x.id}')" title="삭제">✕</span></div>`;
- const bandBlock=b=>{ // 주월계획 유래 — 배지 구분 · 읽기 전용(✕ 만)
+ const bandBlock=(b,mc)=>{ // 주월계획 유래 · mc = 동명 todos 활동(§7 fb13 표시 병합 — 주차·진행·시작·종료·세부계획을 한 줄에)
   const us=bandUnits(plan,b);const dn=bandDone(plan,b);
+  const mIts=mc?all.filter(x=>x.cat===mc.id).sort((a,b2)=>a.d<b2.d?-1:1):[];
   const key='b'+b.id;const cf=(fold.c||{})[key]===undefined?true:!!(fold.c||{})[key];
-  return`<div class="pln"><span class="tw" style="cursor:pointer" onclick="pmBandTgl('${key}')">${cf?'▸':'▾'}</span><b style="cursor:pointer" onclick="pmGoBand('${b.id}')" title="구조 편집은 주월계획에서 — 클릭 = 이동">${esc(b.name)}</b><small><span class="pmsrc">주월계획</span> ${bandPlaced(b)?`W${pad(b.w1)}–W${pad(b.w2)}`:'미배치'}${us.length?` · ${dn}/${us.length}`:''}</small><span class="rowx" onclick="pmDelBand('${b.id}')" title="활동 삭제 (소프트)">✕</span></div>${cf?'':us.map(u=>{const dd2=u.done&&u.done[b.id];return`<div class="itm ${dd2?'done':''}"><span class="tx" style="cursor:default">${dd2?'✓ ':''}${esc(u.id)} ${esc(u.n)}</span><span class="dt">${dd2?dd2.slice(5).replace('-','/'):''}</span></div>`}).join('')}`};
+  return`<div class="pln"><span class="tw" style="cursor:pointer" onclick="pmBandTgl('${key}')">${cf?'▸':'▾'}</span><b style="cursor:pointer" onclick="pmGoBand('${b.id}')" title="구조 편집은 주월계획에서 — 클릭 = 이동">${esc(b.name)}</b><small><span class="pmsrc">주월계획</span> ${bandPlaced(b)?`W${pad(b.w1)}–W${pad(b.w2)}`:'미배치'}${us.length?` · ${dn}/${us.length}`:''}${mc?` · 시작 ${mc.d1||'—'} · 종료 ${mc.d2||'—'}${mc.noTimer?' · <b style="color:#c60">합산 제외</b>':''}`:''}</small>${mc?`<span class="tw" style="cursor:pointer" onclick="pmCatModal(catsOf(cfg.person).find(z=>z.id==='${mc.id}'))" title="기간·이름 수정 (병합된 활동 카드)">✎</span>`:''}<span class="rowx" onclick="pmDelBand('${b.id}')" title="활동 삭제 (소프트)">✕</span></div>${cf?'':us.map(u=>{const dd2=u.done&&u.done[b.id];return`<div class="itm ${dd2?'done':''}"><span class="tx" style="cursor:default">${dd2?'✓ ':''}${esc(u.id)} ${esc(u.n)}</span><span class="dt">${dd2?dd2.slice(5).replace('-','/'):''}</span></div>`}).join('')+mIts.map(itemLi).join('')}`};
  const bState=b=>!bandPlaced(b)?'un':(bO2(plan,b)<curO?'end':(bO1(plan,b)>curO?'fut':'run')); // §12 상태
  const subjBlock=s=>{
-  const ps=vis.filter(p=>p.s===s).sort((a,b)=>(a.d1||'')<(b.d1||'')?-1:1);
+  let ps=vis.filter(p=>p.s===s).sort((a,b)=>(a.d1||'')<(b.d1||'')?-1:1);
   const bnds=plan.bands.filter(b=>!b.del&&b.s===s&&(bState(b)==='run'||bState(b)==='un'||(showFut&&bState(b)==='fut'))); // 종료 = 🗃 · 미시작 = 체크 시 · 미배치 = 항상(⚠ 재량)
+  const pair=new Map();const used=new Set(); // §7(fb13) 동명 병합(표시층 — 데이터는 안 합침): 같은 과목·같은 이름 = 한 줄
+  bnds.forEach(b=>{const mc=ps.find(p2=>p2.name===b.name&&!used.has(p2.id));if(mc){pair.set(b.id,mc);used.add(mc.id)}});
+  ps=ps.filter(p2=>!used.has(p2.id));
   if(!ps.length&&!bnds.length)return'';
   const sf=!!(fold.s||{})[s];const encS2=encodeURIComponent(s);
-  return`<div class="sb" style="border-color:${subjColor(s)}"><div class="sbh" style="cursor:pointer" onclick="pmFoldTgl('s','${encS2}')"><span class="tw">${sf?'▸':'▾'}</span>${esc(s)}<small style="color:#999;font-weight:400"> 활동 ${ps.length+bnds.length}</small></div>${sf?'':bnds.map(bandBlock).join('')}${sf?'':ps.map(p=>{
+  return`<div class="sb" style="border-color:${subjColor(s)}"><div class="sbh" style="cursor:pointer" onclick="pmFoldTgl('s','${encS2}')"><span class="tw">${sf?'▸':'▾'}</span>${esc(s)}<small style="color:#999;font-weight:400"> 활동 ${ps.length+bnds.length}</small></div>${sf?'':bnds.map(b=>bandBlock(b,pair.get(b.id))).join('')}${sf?'':ps.map(p=>{
    const its=all.filter(x=>x.cat===p.id).sort((a,b)=>a.d<b.d?-1:1);
    const done=its.filter(x=>x.done).length;
    const cf=!!(fold.c||{})[p.id];
    return`<div class="pln ${pmSel&&pmSel.type==='cat'&&pmSel.id===p.id?'on2':''}"><span class="tw" style="cursor:pointer" onclick="pmFoldTgl('c','${p.id}')">${cf?'▸':'▾'}</span><b style="cursor:pointer" onclick="pmSelect('cat','${p.id}')">${esc(p.name)}</b><small onclick="pmSelect('cat','${p.id}')" style="cursor:pointer">시작 ${p.d1||'—'} · 종료 ${p.d2||'—'}${its.length?` · ${done}/${its.length}`:''}${p.noTimer?' · <b style="color:#c60">합산 제외</b>':''}</small><span class="tw" style="cursor:pointer" onclick="pmCatModal(catsOf(cfg.person).find(z=>z.id==='${p.id}'))" title="활동 수정">✎</span><span class="rowx" onclick="pmDelCat2('${p.id}')" title="활동 삭제 (세부계획 처리 물음)">✕</span></div>${cf?'':its.map(itemLi).join('')}`}).join('')}</div>`};
- return`${[...names,...extra].map(subjBlock).join('')||'<p style="color:#888">활동이 없어. 「+ 활동」으로 시작.</p>'}
- ${orphan.length?`<div class="sb" style="border-color:#bbb"><div class="sbh">활동 없음</div>${orphan.map(itemLi).join('')}</div>`:''}`;
+ return`${pmArchHTML(plan)}${[...names,...extra].map(subjBlock).join('')||'<p style="color:#888">활동이 없어. 「+ 활동」으로 시작.</p>'}
+ ${orphan.length?`<div class="sb" style="border-color:#bbb"><div class="sbh">활동 없음</div>${orphan.map(itemLi).join('')}</div>`:''}`; // 🗃 = pmCoreHTML 안 — 팝업(fb10 §9)도 본창과 같은 렌더(§7 fb13)
 }
 function pmHTML(){ // §5(fb12): 왼쪽 = 계획관리 · 오른쪽 좁은 열 = 세부계획 DB(좁은 화면은 아래로)
  const showFut=!!ui.pmFuture;
  return`${moreTabs('pm')}<div class="ttl"><b>계획관리 <span>› ${esc(cfg.person)}</span></b></div>
  <div class="pm2"><div>
- ${pmArchHTML(myPlan())}
  <div class="pm">
  <div class="tgl"><label><input type="checkbox" ${showFut?'checked':''} onchange="ui.pmFuture=this.checked;LS.set('tt.ui',ui);render()"> 미시작 활동 보이기</label><span style="font-size:10px;color:#888">기본 = 진행 중만 · 종료는 위 🗃</span></div>
  ${pmCoreHTML()}
@@ -2987,12 +3014,15 @@ function timeTrendHTML(){
  const sm=Object.keys(localStorage).filter(k=>k.startsWith(pre)).map(k=>k.slice(pre.length).slice(0,7));
  const all=[...new Set([...Object.keys(hd).map(ym),...sm])].filter(x=>/^\d{4}-\d{2}$/.test(x)).sort();
  if(!all.length)return'';
- const m1=ym(today());const months=[];let c=all[0]+'-01';
+ const m1=ym(today());let months=[];let c=all[0]+'-01';
  while(ym(c)<=m1&&months.length<80){months.push(ym(c));c=shiftMonth(c,1)}
+ const rng=ui.ttTrend||'12'; // §2(fb13) 기본 = 최근 12개월 · 「전체」 토글
+ if(rng==='12')months=months.slice(-12);
  const rows=months.map(m=>({m,app:mSum(sessionsMonth(who,m).filter(s=>!s.life)),h:histMonthMin(who,m)}));
  if(!rows.some(r=>r.app+r.h.min))return'';
  const mx=Math.max(1,...rows.map(r=>r.app+r.h.min));const H=64;
- return`<div class="gph2"><div class="t">공부시간 추이 <small>월별 · <span style="opacity:.5">옅음 = 노션 이전분(시간층)</span> · ≈ = 어림 · 표시만(밀림·부하·달성 무관)</small></div>
+ const tg=[['12','12개월'],['all','전체']].map(([k,n])=>`<span onclick="ui.ttTrend='${k}';LS.set('tt.ui',ui);render()" style="cursor:pointer;padding:1px 6px;border-radius:3px;${rng===k?'background:#eee;color:#111;font-weight:700':'color:#999'}">${n}</span>`).join('');
+ return`<div class="gph2"><div class="t">공부시간 추이 <small>월별 · <span style="opacity:.5">옅음 = 노션 이전분(시간층)</span> · ≈ = 어림 · 표시만(밀림·부하·달성 무관)</small><span style="margin-left:auto;display:flex;gap:2px;font-weight:400;font-size:10px">${tg}</span></div>
  <div class="bars2" style="height:${H+14}px">${rows.map((r,i)=>{
   const hh=Math.round(r.h.min/mx*H),ah=Math.round(r.app/mx*H);
   const tip=`${r.m}${r.app?` · 실측 ${dur(r.app)}`:''}${r.h.min?` · 이전분 ${r.h.est?'≈':''}${dur(r.h.min)}${r.h.est?` (est ${r.h.est}일)`:''}`:''}${r.h.raws.length?'\n'+r.h.raws.join('\n'):''}`;
@@ -3028,6 +3058,156 @@ function recWeekModal(sEnc,ws){
  ${rows.map(r=>`<tr><td>${esc(r.unit)}</td><td>${r.n}</td><td>${r.n?Math.round(r.o*100/r.n):0}%</td><td>${r.q||''}</td></tr>`).join('')}
  </tbody></table></div>`,q=>{});
 }
+/* ===== fb13 §4·§5 — Archive(Food diary)·Share : 공용 데이터(사람 구분 없음) · 이미지 = studyplandata 저장 ===== */
+const IMG_CACHE=new Map(); // path → dataURL (세션 메모리 캐시 · ⚠ 비공개 저장소라 토큰 fetch → dataURL)
+async function ghImg(path){
+ if(IMG_CACHE.has(path))return IMG_CACHE.get(path);
+ const r=await fetch(`https://api.github.com/repos/${REPO}/contents/${encodeURI(path)}?ref=${BRANCH}`,{headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json'}});
+ if(!r.ok)throw new Error('img '+r.status);
+ const j=await r.json();const u='data:image/jpeg;base64,'+(j.content||'').replace(/\n/g,'');
+ IMG_CACHE.set(path,u);return u;
+}
+function fillImgs(scope){[...(scope||document).querySelectorAll('img[data-img]')].forEach(async el=>{const p=el.dataset.img;el.removeAttribute('data-img');try{el.src=await ghImg(p)}catch(e){el.alt='×';el.style.background='#f4f4f4'}})}
+async function ghPutRaw(path,b64,msg){ // 바이너리 push (이미지) — 있으면 덮어씀
+ let sha=null;
+ try{const r0=await fetch(`https://api.github.com/repos/${REPO}/contents/${encodeURI(path)}?ref=${BRANCH}`,{headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json'}});if(r0.ok)sha=(await r0.json()).sha}catch(e){}
+ const body={message:msg||`${cfg.person} · ${path}`,content:b64,branch:BRANCH};if(sha)body.sha=sha;
+ const r=await fetch(`https://api.github.com/repos/${REPO}/contents/${encodeURI(path)}`,{method:'PUT',headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+ if(!r.ok)throw new Error(`PUT ${path} ${r.status}`);
+}
+function imgCompress(file,long,q){ // §4 클라이언트 압축 파이프라인(canvas 재인코딩) — 업로드·이관과 같은 규격
+ return new Promise((ok,no)=>{const fr=new FileReader();
+  fr.onload=()=>{const im=new Image();
+   im.onload=()=>{try{
+    let w=im.naturalWidth,h=im.naturalHeight;const L=Math.max(w,h);
+    if(L>long){w=Math.round(w*long/L);h=Math.round(h*long/L)}
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    c.getContext('2d').drawImage(im,0,0,w,h);
+    ok(c.toDataURL('image/jpeg',q).split(',')[1]);
+   }catch(e){no(e)}};
+   im.onerror=()=>no(new Error('이미지 해독 실패'));im.src=fr.result;};
+  fr.onerror=()=>no(new Error('파일 읽기 실패'));fr.readAsDataURL(file);});
+}
+/* ---- §4 Food diary ---- */
+function foodFile(){return loadF('food/food.json',{v:1,items:[]})}
+function foodItems(){return foodFile().data.items.filter(x=>!x.del).sort((a,b)=>(a.date||'')<(b.date||'')?1:-1)}
+function upsertFood(t){const f=foodFile();t.u=Date.now();const i=f.data.items.findIndex(x=>x.id===t.id);if(i>=0)f.data.items[i]=t;else f.data.items.push(t);f.dirty=true;saveF('food/food.json',f);scheduleSync();}
+function archHTML(){ // Archive 묶음 — 첫 탭 Food diary (다른 보관물이 들어올 자리)
+ const tab=ui.archTab||'food';
+ return`${moreTabs('arch')}<div class="ttl"><b>Archive</b><div class="r"><button class="btn p" onclick="foodAddModal()">＋ 새 항목</button></div></div>
+ <div class="views">${[['food','🍚 Food diary']].map(([k,n])=>`<span class="${tab===k?'on':''}" onclick="ui.archTab='${k}';LS.set('tt.ui',ui);render()">${n}</span>`).join('')}</div>
+ ${tab==='food'?foodHTML():''}`;
+}
+function foodHTML(){
+ const its=foodItems();
+ if(!its.length)return'<p style="color:#888;font-size:11px;margin-top:10px">아직 없어 — 「＋ 새 항목」으로 시작. (목록이 안 보이면 잠깐 뒤 새로고침 — 동기화 중)</p>';
+ return`<div class="fgrid">${its.map(x=>{
+  const th=x.thumb||(x.imgs&&x.imgs[0])||'';
+  return`<div class="fcard" onclick="foodView('${x.id}')">${th?`<img data-img="${esc(th)}" alt="">`:'<div class="noimg">사진 없음</div>'}<div class="fl"><b>${esc(x.name)}</b><span>${esc(x.date||'')}</span></div></div>`}).join('')}</div>
+ <p style="font-size:10px;color:#888;margin-top:6px">둘이 같이 쓰는 기록(사람 구분 없음) · 노션 Food diary 이관분 포함 · 카드 클릭 = 사진·레시피</p>`;
+}
+function foodView(id){
+ const x=foodFile().data.items.find(z=>z.id===id&&!z.del);if(!x)return;
+ const m=document.createElement('div');m.className='modal';m.id='foodV';
+ m.innerHTML=`<div class="box" style="max-width:560px;max-height:86vh;overflow:auto"><h4 style="display:flex;gap:6px;align-items:center">${esc(x.name)} <small style="color:#888;font-weight:400">${esc(x.date||'')}</small><span style="margin-left:auto;display:flex;gap:4px"><button class="btn" onclick="foodEdit('${x.id}')">✎</button><button class="btn d" onclick="foodDel('${x.id}')">삭제</button><span style="cursor:pointer;color:#888;padding:0 4px" onclick="document.getElementById('foodV').remove()">✕</span></span></h4>
+ ${(x.imgs||[]).map(p=>`<img data-img="${esc(p)}" style="width:100%;border-radius:6px;margin-bottom:6px;min-height:60px;background:#f6f6f6" alt="">`).join('')||'<p style="color:#aaa;font-size:11px">사진 없음</p>'}
+ ${x.recipe?`<div style="font-size:11.5px;white-space:pre-wrap;background:#fafafa;border:1px solid #eee;border-radius:5px;padding:8px">${esc(x.recipe)}</div>`:''}</div>`;
+ m.addEventListener('click',e=>{if(e.target===m)m.remove()});
+ document.body.appendChild(m);fillImgs(m);
+}
+function foodEdit(id){
+ const x=foodFile().data.items.find(z=>z.id===id&&!z.del);if(!x)return;
+ const fv=document.getElementById('foodV');if(fv)fv.remove();
+ modal(`<h4>항목 편집</h4><div class="row"><label>이름</label><input id="fdN" value="${esc(x.name)}"></div><div class="row"><label>날짜</label><input id="fdD" type="date" value="${x.date||''}"></div><div class="row" style="align-items:flex-start"><label>레시피</label><textarea id="fdR" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:70px;font:inherit">${esc(x.recipe||'')}</textarea></div>`,
+ q=>{x.name=q('fdN').value.trim()||x.name;x.date=q('fdD').value||x.date;x.recipe=q('fdR').value;upsertFood(x);render()});
+}
+function foodDel(id){const x=foodFile().data.items.find(z=>z.id===id&&!z.del);if(!x)return;
+ if(confirm('이 항목을 지울까? '+x.name+' (사진 파일은 저장소에 남음)')){x.del=true;upsertFood(x);const fv=document.getElementById('foodV');if(fv)fv.remove();render()}}
+function foodAddModal(){
+ modal(`<h4>🍚 새 Food diary</h4>
+ <div class="row"><label>이름</label><input id="fdN" placeholder="간장라면"></div>
+ <div class="row"><label>날짜</label><input id="fdD" type="date" value="${today()}"></div>
+ <div class="row" style="align-items:flex-start"><label>레시피</label><textarea id="fdR" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:70px;font:inherit"></textarea></div>
+ <div class="row"><label>사진</label><input id="fdF" type="file" accept="image/*" multiple style="flex:1;border:0"></div>
+ <p style="font-size:10px;color:#888">사진은 기기에서 압축(긴 변 1800 · 품질 85) 후 저장소로 올라가 — 저장을 누르면 업로드까지 한 번에.</p>`,
+ q=>{foodSave(q('fdN').value.trim(),q('fdD').value,q('fdR').value,q('fdF').files)});
+}
+async function foodSave(name,date,recipe,files){
+ if(!name){toast('이름을 적어줘');return}
+ if(!cfg.token){toast('설정에서 토큰을 먼저 넣어줘');return}
+ const id=uid();const imgs=[];let thumb='';
+ try{
+  const fl=[...(files||[])];
+  for(let i=0;i<fl.length;i++){
+   toast(`사진 ${i+1}/${fl.length} 압축·업로드…`);
+   const b64=await imgCompress(fl[i],1800,0.85);
+   const p=`food/img/${id}_${i+1}.jpg`;
+   await ghPutRaw(p,b64,`${cfg.person} · food 사진`);imgs.push(p);
+   if(i===0){const tb=await imgCompress(fl[i],360,0.8);const tp=`food/thumb/${id}.jpg`;await ghPutRaw(tp,tb,`${cfg.person} · food 썸네일`);thumb=tp;}
+  }
+ }catch(e){toast('사진 업로드 실패: '+e.message+' — 항목은 텍스트만 저장');}
+ upsertFood({id,name,date:date||today(),recipe:recipe||'',imgs,thumb,by:cfg.person,del:false});
+ toast('저장했어');render();
+}
+/* ---- §5 Share ---- */
+function shareFile(){return loadF('share/share.json',{v:1,items:[]})}
+function shareItems(ty){return shareFile().data.items.filter(x=>!x.del&&x.ty===ty).sort((a,b)=>(b.at||0)-(a.at||0))}
+function upsertShare2(t){const f=shareFile();t.u=Date.now();const i=f.data.items.findIndex(x=>x.id===t.id);if(i>=0)f.data.items[i]=t;else f.data.items.push(t);f.dirty=true;saveF('share/share.json',f);scheduleSync();}
+function shareHTML(){
+ const tab=ui.shareTab||'img';
+ let body='';
+ if(tab==='img'){
+  const its=shareItems('img');
+  body=`<div class="row" style="margin:6px 0"><input id="shF" type="file" accept="image/*" multiple style="flex:1;border:0"><button class="btn p" onclick="shareAddImg()">올리기</button></div>
+  <div class="fgrid">${its.map(x=>`<div class="fcard" onclick="shareView('${x.id}')"><img data-img="${esc(x.thumb||x.img)}" alt=""><div class="fl"><span class="chip ${x.by===settings.people[0]?'h':'k'}">${esc(x.by||'')}</span><span>${new Date(x.at||0).toLocaleDateString('ko')}</span><span class="x" style="margin-left:auto" onclick="event.stopPropagation();shareDel('${x.id}')">×</span></div></div>`).join('')||'<p style="color:#888;font-size:11px">아직 없어</p>'}</div>`;
+ }else{
+  const its=shareItems('txt');
+  body=`<div class="row" style="margin:6px 0;align-items:flex-start"><textarea id="shT" placeholder="글·링크 붙여넣기" style="flex:1;border:1px solid #ddd;border-radius:4px;padding:6px;min-height:52px;font:inherit"></textarea><button class="btn p" onclick="shareAddText()">올리기</button></div>
+  ${its.map(x=>{const isU=/^https?:\/\/\S+$/i.test((x.text||'').trim());
+   return`<div class="shrow"><span class="chip ${x.by===settings.people[0]?'h':'k'}">${esc(x.by||'')}</span><span class="tx">${esc(x.text||'')}</span><span class="ops">${isU?`<a class="btn" href="${esc(x.text.trim())}" target="_blank" rel="noopener">열기</a>`:''}<button class="btn" onclick="shareCopy('${x.id}',this)">복사</button><button class="btn" onclick="shareDel('${x.id}')">×</button></span></div>`}).join('')||'<p style="color:#888;font-size:11px">아직 없어</p>'}`;
+ }
+ return`${moreTabs('share')}<div class="ttl"><b>Share</b><div class="r" style="font-size:10px;color:#888">둘이 같이 보는 임시 공유 · 자동 만료 없음(손 삭제)</div></div>
+ <div class="views">${[['img','🖼 Image'],['txt','📝 Text']].map(([k,n])=>`<span class="${tab===k?'on':''}" onclick="ui.shareTab='${k}';LS.set('tt.ui',ui);render()">${n}</span>`).join('')}</div>${body}`;
+}
+async function shareAddImg(){
+ const inp=document.getElementById('shF');const fl=[...((inp&&inp.files)||[])];
+ if(!fl.length){toast('사진을 골라줘');return}
+ if(!cfg.token){toast('설정에서 토큰을 먼저 넣어줘');return}
+ try{
+  for(let i=0;i<fl.length;i++){
+   toast(`업로드 ${i+1}/${fl.length}…`);
+   const id=uid();
+   const b64=await imgCompress(fl[i],1800,0.85);const p=`share/img/${id}.jpg`;
+   await ghPutRaw(p,b64,`${cfg.person} · share 이미지`);
+   const tb=await imgCompress(fl[i],360,0.8);const tp=`share/img/${id}_t.jpg`;await ghPutRaw(tp,tb,`${cfg.person} · share 썸네일`);
+   upsertShare2({id,ty:'img',img:p,thumb:tp,by:cfg.person,at:Date.now(),del:false});
+  }
+  toast('올렸어');render();
+ }catch(e){toast('업로드 실패: '+e.message)}
+}
+function shareAddText(){
+ const el=document.getElementById('shT');const t=(el&&el.value||'').trim();
+ if(!t){toast('내용을 붙여넣어줘');return}
+ upsertShare2({id:uid(),ty:'txt',text:t,by:cfg.person,at:Date.now(),del:false});
+ toast('올렸어');render();
+}
+async function shareView(id){
+ const x=shareFile().data.items.find(z=>z.id===id&&!z.del);if(!x||x.ty!=='img')return;
+ const m=document.createElement('div');m.className='modal';m.id='shV';
+ m.innerHTML=`<div class="box" style="max-width:640px;max-height:88vh;overflow:auto"><h4 style="display:flex;gap:6px;align-items:center"><span class="chip ${x.by===settings.people[0]?'h':'k'}">${esc(x.by||'')}</span><small style="color:#888;font-weight:400">${new Date(x.at||0).toLocaleString('ko')}</small><span style="margin-left:auto;display:flex;gap:4px"><a class="btn" id="shDl" download="share_${x.id}.jpg">⬇ 다운로드</a><button class="btn d" onclick="shareDel('${x.id}');document.getElementById('shV').remove()">삭제</button><span style="cursor:pointer;color:#888;padding:0 4px" onclick="document.getElementById('shV').remove()">✕</span></span></h4>
+ <img data-img="${esc(x.img)}" style="width:100%;border-radius:6px;min-height:80px;background:#f6f6f6" alt=""></div>`;
+ m.addEventListener('click',e=>{if(e.target===m)m.remove()});
+ document.body.appendChild(m);fillImgs(m);
+ try{document.getElementById('shDl').href=await ghImg(x.img)}catch(e){}
+}
+function shareCopy(id,btn){
+ const x=shareFile().data.items.find(z=>z.id===id);if(!x)return;
+ const done=()=>{if(btn)btn.textContent='복사됨';setTimeout(()=>{if(btn)btn.textContent='복사'},1200)};
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(x.text||'').then(done,()=>toast('복사 실패'));
+ else{const ta=document.createElement('textarea');ta.value=x.text||'';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done()}catch(e){toast('복사 실패')}ta.remove();}
+}
+function shareDel(id){const x=shareFile().data.items.find(z=>z.id===id&&!z.del);if(!x)return;
+ if(confirm('지울까?'+(x.ty==='txt'?' '+(x.text||'').slice(0,30):' (이미지 파일은 저장소에 남음)'))){x.del=true;upsertShare2(x);render()}}
 /* ----- 설정 ----- */
 function setHTML(){
  return`${moreTabs('set')}<div class="ttl"><b>설정</b></div><div class="set">
@@ -3046,8 +3226,6 @@ function setHTML(){
  <h4>계획 <small style="font-weight:400;color:#888">사람별 (plan/${esc(cfg.person)}.json) · 주차는 프로젝트 기간이 정함(주월계획 ⚙ 설정)</small></h4>
  <div class="row"><label>요일별 배분</label><span style="font-size:10px;color:#888">타임테이블 주간 캘린더 위 ⚙(자동 분배)로 이사 — 프로젝트별 균등/요일 가중치/과목별 요일</span></div>
  <div class="row"><label>밀림 양보 순서</label><div style="flex:1">${yieldChips()}</div></div>
- <h4>학습기록 <small style="font-weight:400;color:#888">민법OX·물리535 문항 기록 → records/${esc(cfg.person)}.json (기기 간 공유)</small></h4>
- <div class="row"><button class="btn" onclick="recImportModal()">📥 학습기록 가져오기</button><span style="font-size:10px;color:#888">붙여넣기(학습로그 텍스트) 또는 같은 주소의 앱에서 직접 읽기</span></div>
  <h4>기기</h4><div class="row"><button class="btn" onclick="exportLocal()">이 기기 데이터 내보내기(JSON)</button><button class="btn d" onclick="if(confirm('이 기기의 로컬 데이터를 지울까? 동기화 안 된 건 사라져.')){Object.keys(localStorage).filter(k=>k.startsWith('tt.')).forEach(k=>localStorage.removeItem(k));location.reload()}">로컬 초기화</button></div>
  <div class="warn">토큰은 각자 본인 것. 브라우저 저장소에만 두고 저장소에는 절대 올리지 않는다. 사람별 파일이라 충돌은 없고, 같은 사람이 두 기기에서 쓰면 세션 id 기준으로 합쳐진다.</div></div>`;
 }
@@ -3066,23 +3244,35 @@ function yieldMove(i,n){planMut(p=>{const ys=yieldOrder(p);const j=i+n;if(j<0||j
 function exportLocal(){const o={};Object.keys(localStorage).filter(k=>k.startsWith('tt.f.')).forEach(k=>o[k.slice(5)]=LS.get(k).data);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(o,null,1)],{type:'application/json'}));a.download=`timetable_${cfg.person}_${today()}.json`;a.click()}
 /* ----- 작은 창 ----- */
 let pipWin=null;
-/* §7(fb11) PiP = 오늘 계획 리스트 + 원탭 START (시트 통째 표시는 폐기 · 시안 ①) · §9 「생활」 고정 줄 */
+/* §6(fb13) PiP 리스트 — 활동명을 앞쪽에(같은 단원이 두 활동에 있어도 구분) · 원탭 START·생활 고정 줄 = fb11 그대로 */
 function pipListHTML(){
  const d=today();const plan=myPlan();
  const rows=[];
  todosOf(cfg.person,d).filter(x=>x.kind==='study').forEach(x=>{
   const c=x.cat?catsOf(cfg.person).find(z=>z.id===x.cat):null;
   const cur=run&&!run.life&&run.plan===x.id;
-  rows.push(`<div class="prow ${cur?'on':''} ${x.done?'dn':''}" onclick="pipTap('item','${x.id}')"><i class="plandot" style="background:${subjColor(c?c.s:'기타')}"></i><span class="t">${esc(x.t)}</span><span class="m">${esc(c?c.name:'')}${cur?' · 진행 중':''}</span></div>`);
+  rows.push(`<div class="prow ${cur?'on':''} ${x.done?'dn':''}" onclick="pipTap('item','${x.id}')"><i class="plandot" style="background:${subjColor(c?c.s:'기타')}"></i><span class="t">${c?`<b>${esc(c.name)}</b> · `:''}${esc(x.t)}</span><span class="m">${cur?'진행 중':''}</span></div>`);
  });
  dayPlanRows(plan,d).forEach(e=>{
   if(e.done)return;
   const cur=run&&run.band===e.b.id&&run.unit===e.u.id;
-  rows.push(`<div class="prow ${cur?'on':''}" onclick="pipTap('unit','${e.b.id}|${encodeURIComponent(e.u.id)}')"><i class="plandot" style="background:${subjColor(e.b.s)}"></i><span class="t">${esc(e.u.id)} ${esc(e.u.n)}</span><span class="m">${esc(e.b.name)}${cur?' · 진행 중':''}${e.late?' · 밀림':''}</span></div>`);
+  rows.push(`<div class="prow ${cur?'on':''}" onclick="pipTap('unit','${e.b.id}|${encodeURIComponent(e.u.id)}')"><i class="plandot" style="background:${subjColor(e.b.s)}"></i><span class="t"><b>${esc(e.b.name)}</b> · ${esc(e.u.id)} ${esc(e.u.n)}</span><span class="m">${cur?'진행 중':''}${e.late?' 밀림':''}</span></div>`);
  });
  const CAP=30;
  return`<div class="pipl">${rows.slice(0,CAP).join('')}${rows.length>CAP?`<div class="prow" style="color:#888">… +${rows.length-CAP}</div>`:''}
  <div class="prow life ${run&&run.life?'on':''}" onclick="pipTap('life','')"><i class="sw hsw" style="flex:none"></i><b>생활</b><span class="m">밥·산책·… 나중 지정${run&&run.life?' · 진행 중':''}</span></div></div>`;
+}
+/* §6(fb13) 미니 시트 — 본창 카드 재사용 금지: 격자+블록+시간 라벨만(오렌지 프레임·배너·목록·Total 없음) · 스크롤 없이 한눈 */
+function pipMiniHTML(){
+ const d=today();const sess=sessionsOf(cfg.person,d);const s0=dayStart()*60;const n=logicalNow();
+ let rows='';
+ for(let r=0;r<24;r++){const a=s0+r*60,b=a+60;let bars='';
+  sess.forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${x.life?'#c9ccd1':subjColor(x.s)}${x.nt?NT_HATCH:''}"></b>`});
+  if(run&&run.d===d){const L=Math.max(run.a,a),R=Math.min(n.m,b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${run.life?'#c9ccd1':subjColor(run.s)};opacity:.5"></b>`}
+  if(d===n.d&&n.m>=a&&n.m<b)bars+=`<i class="nw" style="left:${(n.m-a)/60*100}%"></i>`;
+  rows+=`<span>${pad((a/60)%24)}</span><em>${bars}</em>`;
+ }
+ return`<div class="pmini">${rows}</div>`;
 }
 function pipTap(type,arg){ // 원탭 = 붙이기+START 한 번에 · 진행 중이면 STOP 후 즉시 전환(확인 없음 · stopTimer 의 저장 toast)
  if(run)stopTimer();
@@ -3091,29 +3281,25 @@ function pipTap(type,arg){ // 원탭 = 붙이기+START 한 번에 · 진행 중�
  else stSel={type:'item',id:arg};
  LS.set('tt.sel',stSel);startTimer();
 }
-function pipPaint(){
+function pipPaint(){ // §6(fb13) 컴팩트 재구성: ① 미니 시트(본창 카드 재사용 금지) ② 타이머 한 줄(표시 1곳) ③ 리스트(만 스크롤)
  if(!pipWin||pipWin.closed){pipWin=null;return;}
  if(pipWin.document.querySelector('.modal'))return; // 계획관리 팝업 등이 열려 있으면 통째 재그리기 보류 (§9)
  applyMonthColor(pipWin.document);
  const si=selInfo();
- const cur=run?`▶ ${esc(run.life?('생활'+(run.p?' · '+run.p:'')):run.s+' '+[run.p,run.i].filter(Boolean).join(' '))} · 시작 ${hmDisp(run.a)}`
-  :(si?`선택: ${esc(si.s)} ${esc([si.catName,si.itemT].filter(Boolean).join(' '))} — START 또는 항목 탭`:'항목을 탭하면 바로 시작');
- const d=curDate(); // §7(fb12) 시트 복원: 시트(축소) 위 + 리스트 아래 — 리스트는 추가지 대체가 아니었음
+ const lbl=run?esc(run.life?('생활'+(run.p?' · '+run.p:'')):run.s+' '+[run.p,run.i].filter(Boolean).join(' '))
+  :(si?esc(si.s+' '+[si.catName,si.itemT].filter(Boolean).join(' ')):'항목을 탭하면 바로 시작');
  pipWin.document.body.innerHTML=`<div class="pipwrap2">
- <div class="piptm"><span id="runT">${fmtSec(elapsed())}</span></div>
- <div class="pipcur">${cur}</div>
- <div class="pipsh">${sheetHTML(cfg.person,d,sessionsOf(cfg.person,d))}</div>
+ ${pipMiniHTML()}
+ <div class="piptl"><b id="runT">${fmtSec(elapsed())}</b><span class="lb2">${run?'▶ ':''}${lbl}</span><button class="btn ${run?'stopb':'gob'}" onclick="${run?'stopTimer()':'startTimer()'}">${run?'STOP':'START'}</button></div>
  ${pipListHTML()}
- <div class="pipst"><button class="${run?'dis':'go'}" onclick="${run?'':'startTimer()'}">START</button><button class="${run?'go':'dis'}" onclick="${run?'stopTimer()':''}">STOP</button></div>
- <div style="display:flex;justify-content:flex-end;padding:2px 8px 6px"><button class="btn" onclick="pmPopup(this.ownerDocument)" style="font-size:10px">📋 계획관리</button></div>
  </div>`;
 }
 async function pip(){
  if(!('documentPictureInPicture' in window)){toast('이 브라우저는 작은 창을 지원하지 않아 (크롬·엣지 PC 전용)');return;}
  if(pipWin&&!pipWin.closed){pipWin.focus();return;}
- try{const w=await documentPictureInPicture.requestWindow({width:470,height:760});pipWin=w; // §7(fb12) 시트가 읽힐 크기
+ try{const w=await documentPictureInPicture.requestWindow({width:300,height:600});pipWin=w; // §6(fb13) 컴팩트
   [...document.styleSheets].forEach(s=>{try{const st=w.document.createElement('style');st.textContent=[...s.cssRules].map(r=>r.cssText).join('\n');w.document.head.appendChild(st)}catch(e){}});
-  const st=w.document.createElement('style');st.textContent='body{background:#fff;padding:4px;overflow:auto;height:100vh}.pipwrap2{display:flex;flex-direction:column;min-height:100%}.pipwrap2 .pipsh{min-width:420px}.pipwrap2 .pipsh .tt .r{height:11px}.pipwrap2 .pipsh .paper{grid-template-columns:5fr 6fr!important}.pipwrap2 .pipsh .st{max-height:150px;overflow:auto}.pipwrap2 .pipl{border-top:1px solid #eee}';w.document.head.appendChild(st);
+  const st=w.document.createElement('style');st.textContent='body{background:#fff;padding:4px;overflow:hidden;height:100vh}.pipwrap2{display:flex;flex-direction:column;height:100%}.pipwrap2 .pipl{flex:1;min-height:0;overflow:auto;border-top:1px solid #f0f0f0}';w.document.head.appendChild(st);
   ['startTimer','stopTimer','manualSave','editSession','render','curDate','setDate','addDays','today','toast','selRow','toggleTodo','pickTodoItem','selUnit','togglePlanDone','startLife','lifeModal','lifeSetType','lifeAddType','lifeDelType','lifePlanModal','lifePlanDel','pmPopup','pmFoldTgl','pmBandTgl','pmDelCat2','pmDelItem2','pmDelBand','pmGoBand','pmCatModal','pmAddItem','pmSelect','pmDateEdit','pmSetDate','editTodo','catsOf','cfg','pipTap'].forEach(n=>w[n]=window[n]);
   w.addEventListener('pagehide',()=>{pipWin=null});
   pipPaint();
