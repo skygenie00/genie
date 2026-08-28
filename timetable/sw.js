@@ -1,5 +1,5 @@
 /* 타임테이블 PWA — 오프라인용. 앱 껍데기만 캐시, GitHub API 는 캐시하지 않음 */
-const V='tt-v15';
+const V='tt-v16';
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(['./','./index.html','./manifest.webmanifest','./icon.svg'])));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==V).map(k=>caches.delete(k)))));self.clients.claim()});
 self.addEventListener('fetch',e=>{

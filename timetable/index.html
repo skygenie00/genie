@@ -394,6 +394,51 @@ button{cursor:pointer}
 .pjcr{display:flex;flex-wrap:wrap;gap:2px;align-items:center;margin-bottom:5px}
 .pjcr b{min-width:34px;font-size:10.5px;flex:none}
 .pjci{border:1px dashed #ccc;border-radius:12px;padding:3px 9px;font-size:10px;width:110px}
+/* feedback8: 타임테이블 한 페이지 · 세부계획 캘린더 */
+.pjhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-width:0}
+.ttbar{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center;padding:6px 2px;z-index:20;margin-bottom:6px;flex-wrap:wrap}
+.ttbar b{font-size:15px}
+.ttbar .anc{display:flex;border:1px solid #ddd;border-radius:6px;overflow:hidden;font-size:11px}
+.ttbar .anc span{padding:4px 14px;cursor:pointer}
+.ttbar .anc span.on{background:#333;color:#fff}
+.ttbar .nav{margin-left:auto}
+.ttsec{padding:8px 0 14px;border-bottom:5px solid #f3f3f3;margin-bottom:8px}
+.ttsh{display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:8px}
+.ttsh .tag2{background:#333;color:#fff;border-radius:4px;font-size:9.5px;padding:2px 8px}
+.ttsh .fold{margin-left:auto;color:#999;cursor:pointer;font-size:10px}
+.row2{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.wrt2{flex:1;min-width:340px}
+.cbase{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:5px 10px;margin-bottom:6px;font-size:10.5px;flex-wrap:wrap}
+.wcal2{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid #eee;border-top:1px solid #eee}
+.wd2{border-right:1px solid #eee;border-bottom:1px solid #eee;min-height:110px;padding:3px 4px;min-width:0}
+.wd2 h6{margin:0 0 3px;font-size:9px;color:#888;font-weight:400;display:flex;gap:3px}
+.wd2 h6 .pl{margin-left:auto;color:#bbb}
+.wd2.today{background:#f4f8ff}.wd2.today h6{color:var(--blue);font-weight:700}
+.wd2.dim .wc,.md3.dim .wc{opacity:.55}
+.wc{display:flex;gap:4px;align-items:center;font-size:9.5px;padding:2px 4px;border:1px solid #eee;border-radius:4px;margin-bottom:2px;background:#fff;min-width:0}
+.wc[data-drag]{cursor:grab;touch-action:none}
+.wc .cb{width:11px;height:11px;border:1px solid #999;border-radius:2px;flex:none;font-size:7px;text-align:center;line-height:10px;cursor:pointer}
+.wc.on .cb{background:var(--blue);border-color:var(--blue);color:#fff}
+.wc.on .nm{color:#aaa;text-decoration:line-through}
+.wc.late{border-color:#e8b4b4;color:#c33}
+.wc .dot{width:5px;height:5px;border-radius:50%;flex:none}
+.wc .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wc .pinx{flex:none;font-size:8px;cursor:pointer}
+.wc .mv{flex:none;color:var(--blue);font-size:8px}
+.gh2{border:1px dashed #ddd;border-radius:4px;color:#ccc;font-size:8.5px;text-align:center;padding:1px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.cap2{font-size:8.5px;margin-top:3px;border-top:1px dashed #eee;padding-top:2px;color:#999}
+.mcal2{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid #eee;border-top:1px solid #eee}
+.mch{padding:3px 4px;font-size:9px;color:#888;background:#fafafa;border-right:1px solid #eee;border-bottom:1px solid #eee;text-align:center}
+.mcw{grid-column:1/-1;padding:1px 6px;font-size:8.5px;color:#aaa;background:#fbfbfb;border-right:1px solid #eee;border-bottom:1px solid #eee}
+.md3{border-right:1px solid #eee;border-bottom:1px solid #eee;min-height:64px;padding:2px 3px;min-width:0}
+.md3 .n{font-size:8.5px;color:#999}
+.md3.today{background:#f4f8ff}.md3.today .n{color:var(--blue);font-weight:700}
+.md3.out{background:#fafafa}
+.more2{font-size:9px;color:#999;padding-left:3px;cursor:pointer}
+.caldrop{outline:2px dashed var(--blue);outline-offset:-2px}
+.gdet{border:1px solid var(--line);border-radius:6px;padding:6px 10px;margin-top:8px;background:#fff}
+.gdet summary{font-size:11px;font-weight:700;cursor:pointer}
+@media (max-width:760px){.wrt2{min-width:0;width:100%}.wcal2{grid-template-columns:repeat(7,minmax(86px,1fr));overflow-x:auto}.ttbar .nav{margin-left:0}}
 </style>
 </head>
 <body>
@@ -443,6 +488,7 @@ function migrateSettings(raw){
 migrateSettings(LS.get('tt.settings',{}));
 function nextExam(){const t=today();const xs=(settings.exams||[]).filter(x=>!x.del&&x.date).sort((a,b)=>a.date<b.date?-1:1);return xs.find(x=>x.date>=t)||xs[xs.length-1]||null}
 let ui=LS.get('tt.ui',{view:'day',date:null,galMonth:null});
+if(ui.view==='week'||ui.view==='month')ui.view='day'; // feedback8 §1: 일간/주간/월간 = 한 페이지
 let run=LS.get('tt.run',null);            // 진행 중 타이머 {s,p,i,cat,plan,nt,d,a,at}
 let stSel=LS.get('tt.sel',null);          // Study Time 선택 줄 {type:'item'|'cat',id}
 let syncLog=[];let syncing=false;
@@ -455,7 +501,9 @@ function logicalNow(){const d=new Date();const mins=d.getHours()*60+d.getMinutes
 function today(){return logicalNow().d}
 function curDate(){return ui.date||today()}
 function setDate(d){ui.date=d;LS.set('tt.ui',ui);render()}
-function setView(v){if(v==='plan'&&ui.view!=='plan')planScrollPending=true;ui.view=v;LS.set('tt.ui',ui);render()}
+function setView(v){
+ if(v==='week'||v==='month'){const was=ui.view;ui.view='day';LS.set('tt.ui',ui);if(was!=='day')render();ttGo(v);return} // 옛 주간/월간 = 한 페이지의 절 (feedback8 §1)
+ if(v==='plan'&&ui.view!=='plan')planScrollPending=true;ui.view=v;LS.set('tt.ui',ui);render()}
 
 /* ---------- 파일 캐시 (localStorage) ----------
    key: tt.f.<path>  → {data, sha, dirty}
@@ -499,7 +547,7 @@ function migratePlanData(p){ // v1(평면 bands) → v2(프로젝트) 1회 환�
  out.cur=MIG_PJ.id;
  return out;
 }
-function normProject(pj){['subjects','bands','milestones','baselines','yield'].forEach(k=>{if(!Array.isArray(pj[k]))pj[k]=[]});if(!pj.cats||typeof pj.cats!=='object')pj.cats={};if(!pj.catGoal)pj.catGoal={};pj.arch=!!pj.arch;return pj}
+function normProject(pj){['subjects','bands','milestones','baselines','yield'].forEach(k=>{if(!Array.isArray(pj[k]))pj[k]=[]});if(!pj.cats||typeof pj.cats!=='object')pj.cats={};if(!pj.catGoal)pj.catGoal={};if(!pj.pins||typeof pj.pins!=='object')pj.pins={};pj.arch=!!pj.arch;return pj}
 function planFile(who){const f=loadF(planPath(who),EMPTY_PLAN());let p=f.data||{};
  if((p.v||1)>CUR_PLAN_V){if(who===cfg.person)planBlocked=true;f.data=p;return f}
  const wasV1=(p.v||1)<2;
@@ -513,7 +561,7 @@ function planFile(who){const f=loadF(planPath(who),EMPTY_PLAN());let p=f.data||{
 /* 파사드: plan 을 「현재(또는 지정) 프로젝트」 시점으로 — bands·milestones·catGoal 등은 프로젝트 것, units·daily·goals·cur 는 plan 층 */
 const PJ_KEYS=['name','d1','d2','subjects','cats','bands','milestones','catGoal','baselines','yield','arch'];
 const PJ_EMPTY={subjects:[],cats:{},bands:[],milestones:[],catGoal:{},baselines:[],yield:[]};
-function pvOf(data,pjId){const pj=(data.projects||[]).find(x=>x.id===(pjId||data.cur))||null;
+function pvOf(data,pjId){const pj=(data.projects||[]).find(x=>x.id===(pjId||data.cur)&&!x.del)||null;
  return new Proxy(data,{get:(t,k)=>{if(k==='__raw')return t;if(k==='__pj')return pj;
    if(PJ_KEYS.includes(k))return pj?pj[k]:PJ_EMPTY[k];
    return t[k]},
@@ -523,6 +571,7 @@ function planView(who){return pvOf(planFile(who).data)}
 function projectsOf(plan){return((plan&&plan.__raw?plan.__raw:plan)||{}).projects||[]}
 function planMut(fn,wholesale){if(planBlocked){toast('계획 데이터가 더 새 스키마야 — 새로고침으로 앱을 갱신해줘 (쓰기 중단)');return}
  const f=planFile(cfg.person);const pv=pvOf(f.data);fn(pv);
+ try{const pr=prunePins(pv);if(pr)toast('활동 기간 밖 고정 '+pr+'개 해제');}catch(e){} // §2-4 고정 유지 규칙
  if(wholesale){f.data.pu=Date.now();if(pv.__pj)pv.__pj.u=Date.now();}
  f.dirty=true;saveF(planPath(cfg.person),f);scheduleSync();}
 function sessFile(who,m){return loadF(sessPath(who,m),{v:1,sessions:[]})}
@@ -602,8 +651,8 @@ function mergeFile(path,local,remote){
    const pj=Object.assign({},(a.u||0)>=(b.u||0)?a:b);
    pj.bands=mergeList(a.bands||[],b.bands||[]);
    pj.milestones=mergeList(a.milestones||[],b.milestones||[]);
-   const bm=new Map();[...(a.baselines||[]),...(b.baselines||[])].forEach(x=>{if(x&&x.at&&!bm.has(x.at))bm.set(x.at,x)});
-   pj.baselines=[...bm.values()].sort((x,y)=>x.at<y.at?-1:1);
+   const bm=new Map();[...(a.baselines||[]),...(b.baselines||[])].forEach(x=>{if(!x||!x.at)return;const k=(x.v||0)+'|'+x.at;if(!bm.has(k))bm.set(k,x)});
+   pj.baselines=[...bm.values()].sort((x,y)=>(x.v||0)-(y.v||0)||(x.at<y.at?-1:1));
    return pj});
   return out;
  }
@@ -709,8 +758,7 @@ function renderSide(){
  const stat=syncing?'⟳ 동기화 중':cfg.token?(dirty?`● 대기 ${dirty}건`:`● 동기화됨${ago!=null?' '+(ago<1?'방금':ago<60?ago+'분 전':Math.round(ago/60)+'시간 전'):''}`):'○ 토큰 없음';
  $('side').innerHTML=`<div class="who" onclick="switchPerson()">${esc(cfg.person)} <span>▾</span></div>
  <div class="grp">기록</div>
- <div class="i ${['day','week','month'].includes(v)?'on':''}" onclick="setView('day')">타임테이블</div>
- <div class="i sub ${v=='day'?'on':''}" onclick="setView('day')">일간</div><div class="i sub ${v=='week'?'on':''}" onclick="setView('week')">주간</div><div class="i sub ${v=='month'?'on':''}" onclick="setView('month')">월간</div>
+ <div class="i ${v=='day'?'on':''}" onclick="setView('day')">타임테이블</div>
  <div class="i ${v=='gal'?'on':''}" onclick="setView('gal')">데일리 모음</div>
  <div class="grp">계획</div><div class="i ${v=='pm'?'on':''}" onclick="setView('pm')">계획관리</div><div class="i ${v=='plan'?'on':''}" onclick="setView('plan')">주차계획</div><div class="i ${v=='review'?'on':''}" onclick="setView('review')">월간계획</div>
  <div class="grp">기타</div><div class="i ${v=='set'?'on':''}" onclick="setView('set')">설정</div>
@@ -719,24 +767,22 @@ function renderSide(){
 function renderPnav(){
  const v=ui.view;const tab=v=='todo'?'todo':['gal','set','plan','pm','review'].includes(v)?'more':'tt';
  const nb=sharedItems().filter(x=>!x.done&&(x.who||[]).includes(cfg.person)).length;
- $('pnav').innerHTML=`<div class="${tab=='tt'?'on':''}" onclick="setView(ui.view=='week'||ui.view=='month'?ui.view:'day')">타임테이블</div><div class="${tab=='todo'?'on':''}" onclick="setView('todo')">할일${nb?` <b class="bdg">${nb}</b>`:''}</div><div class="${tab=='more'?'on':''}" onclick="setView(ui.view=='set'?'set':'gal')">더보기</div>`;
+ $('pnav').innerHTML=`<div class="${tab=='tt'?'on':''}" onclick="setView('day')">타임테이블</div><div class="${tab=='todo'?'on':''}" onclick="setView('todo')">할일${nb?` <b class="bdg">${nb}</b>`:''}</div><div class="${tab=='more'?'on':''}" onclick="setView(ui.view=='set'?'set':'gal')">더보기</div>`;
 }
 function switchPerson(){const p=settings.people;const i=p.indexOf(cfg.person);cfg.person=p[(i+1)%p.length];LS.set('tt.cfg',cfg);toast(cfg.person+' 로 전환 — 토큰은 본인 것으로');render();}
 function renderMain(){
  const v=ui.view;const m=$('main');
- if(v=='day')m.innerHTML=dayHTML();
- else if(v=='week')m.innerHTML=weekHTML();
- else if(v=='month')m.innerHTML=monthHTML();
- else if(v=='gal')m.innerHTML=galHTML();
+ const keep=(v==='day'&&lastView==='day')?window.scrollY:0; // 한 페이지: 같은 화면 재렌더는 스크롤 유지
+ if(v=='day'){m.innerHTML=ttPageHTML();window.scrollTo(0,keep);lastView=v;ttTrack();return}
+ if(v=='gal')m.innerHTML=galHTML();
  else if(v=='todo')m.innerHTML=todoHTML();
  else if(v=='plan')m.innerHTML=planHTML();
  else if(v=='pm')m.innerHTML=pmHTML();
  else if(v=='review')m.innerHTML=reviewHTML();
  else if(v=='set')m.innerHTML=setHTML();
- window.scrollTo(0,0);
+ window.scrollTo(0,0);lastView=v;
 }
 const moreTabs=v=>`<div class="views moretabs"><span class="${v=='gal'?'on':''}" onclick="setView('gal')">데일리 모음</span><span class="${v=='pm'?'on':''}" onclick="setView('pm')">계획관리</span><span class="${v=='plan'?'on':''}" onclick="setView('plan')">주차계획</span><span class="${v=='review'?'on':''}" onclick="setView('review')">월간계획</span><span class="${v=='set'?'on':''}" onclick="setView('set')">설정</span></div>`;
-const topSel=v=>`<select class="topsel" onchange="setView(this.value)"><option value="day" ${v=='day'?'selected':''}>일간</option><option value="week" ${v=='week'?'selected':''}>주간</option><option value="month" ${v=='month'?'selected':''}>월간</option></select>`;
 const navBtns=(prev,next,home)=>`<div class="nav"><button onclick="${prev}">‹</button><button onclick="${home}">오늘</button><button onclick="${next}">›</button></div>`;
 function weekNo(d){return wLabelOf(myPlan(),d)} // 현재 프로젝트 셀법의 주 라벨 (범위 밖·프로젝트 없음 = null)
 
@@ -867,10 +913,57 @@ function cmEdit(id){
  q=>{x.t=q('cT').value;x.due=q('cD').value||'';const w=P.filter((n,i)=>q('cW'+i)&&q('cW'+i).checked);if(w.length)x.who=w;upsertShared(x);render()},
  ()=>{if(confirm('지울까? '+x.t)){x.del=true;upsertShared(x);render()}});
 }
-function dayHTML(){
+function dayBodyHTML(){ // 일간 절 본문 — 지금 일간 화면 통째 무변 (feedback8 §1-2 · 배치만 절 안으로)
  const d=curDate();const sess=sessionsOf(cfg.person,d);
- return`<div class="ttl"><b>타임테이블 <span>› 일간</span> ${topSel('day')}</b><div class="r">${navBtns("setDate(addDays(curDate(),-1))","setDate(addDays(curDate(),1))","setDate(today())")}<input type="date" value="${d}" onchange="setDate(this.value)" style="border:1px solid #ccc;border-radius:4px;padding:2px 4px"></div></div>
- <div class="dpc"><div>${sheetHTML(cfg.person,d,sess)}${snapBarHTML()}${mbarHTML()}</div><div>${threeHTML()}${peerLine()}${sharedTableHTML()}</div></div>`;
+ return`<div class="dpc"><div>${sheetHTML(cfg.person,d,sess)}${snapBarHTML()}${mbarHTML()}</div><div>${threeHTML()}${peerLine()}${sharedTableHTML()}</div></div>`;
+}
+/* ----- 타임테이블 한 페이지 (feedback8 §1): 일간→주간→월간 세로 스크롤 · 앵커 · 절 접기 ----- */
+let ttActive='day',lastView=null;
+function ttFoldSt(){return Object.assign({day:false,week:false,month:true},ui.ttFold||{})} // 월간 기본 접힘
+function ttFold(k){const f=ttFoldSt();f[k]=!f[k];ui.ttFold=f;LS.set('tt.ui',ui);render()}
+function ttGo(k){const f=ttFoldSt();
+ if(f[k]){f[k]=false;ui.ttFold=f;LS.set('tt.ui',ui);render();}
+ setTimeout(()=>{const el=document.getElementById('sec_'+k);if(el)el.scrollIntoView({behavior:'smooth',block:'start'})},30);}
+function ttNav(n){const k=ttActive;
+ if(k==='week')setDate(addDays(curDate(),7*n));
+ else if(k==='month')setDate(shiftMonth(curDate(),n));
+ else setDate(addDays(curDate(),n));}
+function ttGoDate(x){setDate(x);ttGo('day')}
+function ttTrack(){if(ui.view!=='day')return;
+ let act='day';['day','week','month'].forEach(k=>{const el=document.getElementById('sec_'+k);if(el&&el.getBoundingClientRect().top<=130)act=k});
+ if(act!==ttActive){ttActive=act;document.querySelectorAll('.ttbar .anc span').forEach(sp=>sp.classList.toggle('on',sp.dataset.k===act));}}
+window.addEventListener('scroll',ttTrack,{passive:true});
+function ttSecHTML(k,label,sub,folded,body){
+ return`<div class="ttsec" id="sec_${k}"><h3 class="ttsh"><span class="tag2">${label}</span><span style="font-weight:400;color:#555">${sub}</span><span class="fold" onclick="ttFold('${k}')">${folded?'펼치기 ▼':'접기 ▲'}</span></h3>${folded?'':body}</div>`;
+}
+function ttPageHTML(){
+ const d=curDate();const ws=weekStart(d);const m=ym(d);const dt=parse(d);
+ const plan=myPlan();
+ const f=ttFoldSt();
+ const wl=weekNo(d);const wlW=wLabelOf(plan,ws);
+ let h=`<div class="ttbar"><b>타임테이블</b>
+  <div class="anc">${[['day','일'],['week','주'],['month','월']].map(([k,n])=>`<span data-k="${k}" class="${k===ttActive?'on':''}" onclick="ttGo('${k}')">${n}</span>`).join('')}</div>
+  <div class="nav"><button onclick="ttNav(-1)">‹</button><button onclick="setDate(today())">오늘</button><button onclick="ttNav(1)">›</button></div>
+  <input type="date" value="${d}" onchange="setDate(this.value)" style="border:1px solid #ccc;border-radius:4px;padding:2px 4px;font-size:11px">
+ </div>`;
+ h+=ttSecHTML('day','일간',`${parseInt(d.slice(5,7))}/${parseInt(d.slice(8))} ${DAYS[dt.getDay()]}${wl!=null&&wl>=1?' · W'+pad(wl):''}`,f.day,f.day?'':dayBodyHTML());
+ h+=ttSecHTML('week','주간',`${ws.slice(5).replace('-','/')} ~ ${addDays(ws,6).slice(5).replace('-','/')}${wlW!=null?' · W'+pad(wlW):''}`,f.week,f.week?'':weekSecBody(plan,ws));
+ h+=ttSecHTML('month','월간',`${m.replace('-','년 ')}월`,f.month,f.month?'':monthSecBody(plan,m));
+ return h;
+}
+function weekSecBody(plan,ws){ // MiMi 주간 카드(무변·폭 500) + 세부계획 주간 캘린더(§2) + 대비 줄(§3-4) + 그래프(§3-5) — 옛 「월간계획 대비」 표는 제거(§1-4)
+ const hasPj=!!plan.__pj;
+ const cd=hasPj?calData(plan,ws,addDays(ws,6)):null;
+ return`<div class="row2">${weekCardHTML(ws)}
+ <div class="wrt2">${hasPj?`${baseBarHTML(plan,ws)}${weekCalHTML(plan,ws,cd)}${projGraphHTML(plan)}`:'<p style="color:#888;font-size:11px">프로젝트가 없어 — 주차계획에서 「＋ 새 프로젝트」로 시작하면 세부계획 캘린더가 여기 생겨.</p>'}</div></div>`;
+}
+function monthSecBody(plan,m){ // MiMi 월간 점 카드(점은 여기만) + 세부계획 월간 캘린더(주간과 같은 칩) + 그래프
+ const hasPj=!!plan.__pj;
+ const first=m+'-01';const fd=parse(first);const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();
+ const from=weekStart(first),to=addDays(weekStart(`${m}-${pad(nd)}`),6);
+ const cd=hasPj?calData(plan,from,to):null;
+ return`<div class="row2">${monthCardHTML(m)}
+ <div class="wrt2">${hasPj?`${monthCalHTML(plan,m,cd)}${projGraphHTML(plan)}`:''}</div></div>`;
 }
 function todoHTML(){return`<div class="ttl"><b>할일</b><div class="r">${navBtns("setDate(addDays(curDate(),-1))","setDate(addDays(curDate(),1))","setDate(today())")}</div></div>${threeHTML()}${peerLine()}${sharedTableHTML()}`}
 /* 할일 조작 */
@@ -888,7 +981,7 @@ function syncBandDone(t){
  planMut(p=>{const u=((p.units||{})[pl.s]||[]).find(x=>x.id===uid1&&!x.del);if(!u)return;u.done=u.done||{};if(t.done)u.done[b.id]=t.d;else if(u.done[b.id]===t.d)delete u.done[b.id];u.u=Date.now();});
 }
 function delTodo(id){const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(t&&confirm('지울까? '+t.t)){t.del=true;upsertTodo(t);render()}}
-function editTodo(id){const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(!t)return;const catOpts=catsOf(cfg.person).map(p=>`<option value="${p.id}" ${t.cat==p.id?'selected':''}>${esc(p.s)} ${esc(p.name)}</option>`).join('');modal(`<h4>항목 편집</h4><div class="row"><label>내용</label><input id="eT" value="${esc(t.t)}"></div><div class="row"><label>날짜</label><input id="eD" type="date" value="${t.d}"></div><div class="row"><label>종류</label><select id="eK"><option value="study" ${t.kind=='study'?'selected':''}>학습</option><option value="todo" ${t.kind!='study'?'selected':''}>할일</option></select></div><div class="row"><label>분류</label><select id="eP2"><option value="">분류 없음</option>${catOpts}</select></div><div class="row"><label>기한</label><input id="eDue" type="date" value="${t.due||''}"><span style="font-size:10px;color:#888">할일만 · 선택</span></div>`,q=>{t.t=q('eT').value;t.d=q('eD').value;t.kind=q('eK').value;t.cat=q('eP2').value||'';t.due=t.kind!=='study'?(q('eDue').value||''):'';upsertTodo(t);render()})}
+function editTodo(id){const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(!t)return;const catOpts=catsOf(cfg.person).map(p=>`<option value="${p.id}" ${t.cat==p.id?'selected':''}>${esc(p.s)} ${esc(p.name)}</option>`).join('');modal(`<h4>항목 편집</h4><div class="row"><label>내용</label><input id="eT" value="${esc(t.t)}"></div><div class="row"><label>날짜</label><input id="eD" type="date" value="${t.d}"></div><div class="row"><label>종류</label><select id="eK"><option value="study" ${t.kind=='study'?'selected':''}>학습</option><option value="todo" ${t.kind!='study'?'selected':''}>할일</option></select></div><div class="row"><label>활동</label><select id="eP2"><option value="">활동 없음</option>${catOpts}</select></div><div class="row"><label>기한</label><input id="eDue" type="date" value="${t.due||''}"><span style="font-size:10px;color:#888">할일만 · 선택</span></div>`,q=>{t.t=q('eT').value;t.d=q('eD').value;t.kind=q('eK').value;t.cat=q('eP2').value||'';t.due=t.kind!=='study'?(q('eDue').value||''):'';upsertTodo(t);render()})}
 function carryAll(from){const to=addDays(from,1);todosOf(cfg.person,from).filter(t=>t.kind=='study'&&!t.done).forEach(t=>{t.d=to;t.carry=(t.carry||0)+1;upsertTodo(t)});toast('이월했어');render()}
 /* 띠 → 오늘 칸: 직접 넣지 않고(사람 확정 「일단은」 — 뒤집으려면 이 상수만) 「띠에서 가져오기」로 복사 */
 const PLAN_ITEMS_DIRECT=false;
@@ -943,8 +1036,8 @@ function modal(body,onOk,onDel,doc){doc=doc||document;
 }
 /* ----- 주간 ----- */
 function weekStart(d){const dt=parse(d);const w=(dt.getDay()+6)%7;dt.setDate(dt.getDate()-w);return iso(dt)}
-function weekHTML(){
- const d=curDate(),ws=weekStart(d);const days=[...Array(7)].map((_,i)=>addDays(ws,i));const s0=dayStart()*60;
+function weekCardHTML(ws){ // MiMi 주간 카드 — feedback5 그대로 · 폭 500 (한 페이지 주간 절에서 사용)
+ const days=[...Array(7)].map((_,i)=>addDays(ws,i));const s0=dayStart()*60;
  const sessD=days.map(x=>sessionsOf(cfg.person,x));const tots=sessD.map(mSum);const wt=tots.reduce((a,b)=>a+b,0);
  const H=24*60;
  const cols=days.map((x,i)=>`<div class="wcol">${sessD[i].map(y=>`<b style="top:${((y.a-s0)/H*100).toFixed(2)}%;height:${((y.b-y.a)/H*100).toFixed(2)}%;background:${subjColor(y.s)}${y.nt?NT_HATCH:''}" title="${esc(y.s)} ${hmDisp(y.a)}-${hmDisp(y.b)}" onclick="setDate('${x}');editSession('${y.id}',document)"></b>`).join('')}</div>`).join('');
@@ -956,56 +1049,19 @@ function weekHTML(){
  const rows=[]; // 줄 순서 = 분류 만든 순(cats 배열 순 · MiMi 와 같게)
  tf.data.cats.forEach(c=>{if(!c.del&&byCat.has(c.id))rows.push({s:c.s,n:c.name,m:byCat.get(c.id)})});
  Object.entries(other).forEach(([s,m2])=>rows.push({s,n:'기타',m:m2}));
- const plan=myPlan();const wNo=pWeekNo(plan,ws);const wl=wLabelOf(plan,ws);
- return`<div class="ttl"><b>타임테이블 <span>› 주간</span> ${topSel('week')}</b><div class="r">${navBtns("setDate(addDays(curDate(),-7))","setDate(addDays(curDate(),7))","setDate(today())")} ${wl!=null?'W'+pad(wl):ws.slice(5).replace('-','/')+'~'+days[6].slice(5).replace('-','/')}</div></div>
- <div class="wkwrap">
- <div class="sheet" style="width:500px;max-width:100%;flex:none"><div class="ribbon">${ws.replace(/-/g,'.')} ~ ${days[6].replace(/-/g,'.')}</div><div class="paper">
+ return`<div class="sheet" style="width:500px;max-width:100%;flex:none"><div class="ribbon">${ws.replace(/-/g,'.')} ~ ${days[6].replace(/-/g,'.')}</div><div class="paper">
  <div><div class="hd">Time Table</div><div class="wk2"><div class="wh"></div>${days.map(x=>`<div class="wh ${x===today()?'today':''}">${['SUN','MON','TUE','WED','THU','FRI','SAT'][parse(x).getDay()]}</div>`).join('')}
  ${labs}${cols}
  <div class="wt"></div>${tots.map(t2=>`<div class="wt ${t2?'':'z'}">${dur(t2)}</div>`).join('')}</div></div>
  <div class="stc"><div class="hd">Study Time</div><div class="st">${rows.map(r=>`<div class="it"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl">${esc(r.n)}</span><span>${dur(r.m)}</span></div>`).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
  <div class="wstat"><span>Avg <b>${dur(Math.round(wt/7))}</b></span><span>Total <span class="big">${dur(wt)}</span></span></div></div>
- </div></div>
- ${weekAnalHTML(plan,ws,wNo)}
- </div>`;
-}
-/* 월간계획 대비 패널 — 기준선(원계획) 기준으로 이번 주 활동 대조 · 타임테이블 세션과 무관 (feedback5 §1) · wNo = 서수 */
-function weekAnalHTML(plan,ws,wNo){
- if(wNo<1)return'';
- const sun=pWeekDate(plan,wNo,6);const t=today();const ref=t<sun?t:sun;
- const prevSun=pWeekDate(plan,wNo-1,6);
- const bl=(plan.baselines||[]).slice(-1)[0];const blMap=new Map((bl?bl.bands||[]:[]).map(x=>[x.id,x]));
- const ordN=subjOrderAll(plan);const oi=s2=>{const i=ordN.indexOf(s2);return i<0?999:i};
- const bandsW=plan.bands.filter(b=>!b.del&&bO1(plan,b)<=wNo&&wNo<=bO2(plan,b)).sort((a,b)=>oi(a.s)-oi(b.s)||bO1(plan,a)-bO1(plan,b));
- if(!bandsW.length)return'';
- let sumP=0,sumA=0,sumD=0;
- const trs=bandsW.map(b=>{
-  const o=blMap.get(b.id);
-  const vb=o?Object.assign({},b,{w1:o.w1,w2:o.w2,per:o.per!=null?o.per:b.per}):b;
-  const p0=plannedThrough(plan,vb,prevSun);
-  const p1=plannedThrough(plan,vb,sun);
-  const planN=Math.max(0,p1-p0);
-  const us=bandUnits(plan,b);
-  const dPrev=us.filter(u=>{const x=u.done&&u.done[b.id];return x&&x<=prevSun}).length;
-  const dNow=us.filter(u=>{const x=u.done&&u.done[b.id];return x&&x<=ref}).length;
-  const actN=Math.max(0,dNow-dPrev);
-  const per=+(vb.per)||(+b.per)||0;
-  const lateU=us.length?Math.max(0,Math.min(plannedThrough(plan,vb,ref),us.length)-dNow):0;
-  const days2=lateU&&per?Math.ceil(lateU/(per/7)):0;
-  const pr=planN?Math.min(130,Math.round(actN/planN*100)):0;
-  const ce=us.length?endDate(plan,b):null;
-  sumP+=planN;sumA+=actN;sumD+=days2;
-  return`<tr onclick="gotoBand('${b.id}')" style="cursor:pointer"><td><i class="plandot" style="background:${subjColor(b.s)}"></i>${esc(b.s)}</td><td>${esc(b.name)}</td><td>${planN?`${p0+1}~${p1}`:'—'}</td><td>${actN?`${dPrev+1}~${dNow}`:'—'}</td><td><div class="bar3"><i style="width:${pr}%"></i><u></u></div></td><td class="${days2?'lateT':'okT'}">${days2?'+'+days2+'일':'—'}</td><td>${ce?'~'+ce.slice(5).replace('-','/'):'~'+pWeekDate(plan,bO2(plan,b),6).slice(5).replace('-','/')}</td></tr>`;
- }).join('');
- return`<div class="an"><h3>월간계획 대비 · 이번 주</h3><div class="sub">${bl?parseInt(bl.at.slice(5,7))+'월 원계획(기준선)':'현재 계획(기준선 없음)'} 기준 — 이 주에 걸친 활동만 · 타임테이블과 무관</div>
- <div style="overflow-x:auto"><table class="antab"><thead><tr><th>과목</th><th>활동</th><th>원계획(세부계획)</th><th>실제</th><th>진행</th><th>밀림</th><th>예상 종료</th></tr></thead><tbody>${trs}</tbody></table></div>
- <div class="anfoot">이번 주 원계획 ${sumP}개 · 실제 ${sumA} · 밀림 +${sumD}일</div></div>`;
+ </div></div>`;
 }
 function gotoBand(id){const p=myPlan();const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;ui.planTab='week';ui.view='plan';LS.set('tt.ui',ui);planScrollPending=false;planScroll=Math.max(0,(bO1(p,b)-2)*PB_COL);render();}
 function subjTotals(list){const g={};list.forEach(x=>{if(x.nt)return;g[x.s]=(g[x.s]||0)+x.b-x.a});return Object.entries(g).map(([s,min])=>({s,min})).sort((a,b)=>b.min-a.min)}
 /* ----- 월간 ----- */
-function monthHTML(){
- const d=curDate(),m=ym(d);const first=m+'-01';const fd=parse(first);const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();
+function monthCardHTML(m){ // MiMi 월간 점 카드(Study Time 그리드 + To do Tracker) — 점 축약은 여기만 (feedback8 §1-5)
+ const first=m+'-01';const fd=parse(first);const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();
  const lastD=`${m}-${pad(nd)}`;const t0=today();
  const allS=sessionsMonth(cfg.person,m);
  const byDay={};allS.forEach(x=>(byDay[x.d]=byDay[x.d]||[]).push(x));
@@ -1016,7 +1072,7 @@ function monthHTML(){
   for(let i=0;i<7;i++){const x=cur;
    if(ym(x)===m){const t2=dayMin(x);wsum+=t2;const dow=parse(x).getDay();
     const cls=t2>=settings.redHours*60?'red':t2>=settings.skyHours*60?'sky':'';
-    row+=`<div class="d ${cls} ${x===t0?'today':''}" onclick="setDate('${x}');setView('day')"><div class="n ${dow===0?'sun':''}">${parseInt(x.slice(8))}</div><div class="v ${t2?'':'off'}">${t2?dur(t2):'OFF'}</div></div>`;
+    row+=`<div class="d ${cls} ${x===t0?'today':''}" onclick="ttGoDate('${x}')"><div class="n ${dow===0?'sun':''}">${parseInt(x.slice(8))}</div><div class="v ${t2?'':'off'}">${t2?dur(t2):'OFF'}</div></div>`;
    }else row+=`<div class="d out"></div>`;
    cur=addDays(cur,1);
   }
@@ -1047,12 +1103,11 @@ function monthHTML(){
   const ds2=catDays.get(c.id);
   for(let i=1;i<=nd;i++){const x=`${m}-${pad(i)}`;const mon=(parse(x).getDay()+6)%7===0;
    const has=ds2.has(x);const act=(c.d1||c.d2)&&catActive(c,x);
-   trk+=`<div class="c2 ${mon?'wk':''}">${has?`<span class="dot" style="background:${subjColor(c.s)}" onclick="setDate('${x}');setView('day')"></span>`:(act?`<span class="dot hollow" onclick="setDate('${x}');setView('day')"></span>`:'')}</div>`}
+   trk+=`<div class="c2 ${mon?'wk':''}">${has?`<span class="dot" style="background:${subjColor(c.s)}" onclick="ttGoDate('${x}')"></span>`:(act?`<span class="dot hollow" onclick="ttGoDate('${x}')"></span>`:'')}</div>`}
   trk+=`<div class="tm">${dur(catMin.get(c.id)||0)}</div>`;
  });
  trk+='</div>';
- return`<div class="ttl"><b>타임테이블 <span>› 월간</span> ${topSel('month')}</b><div class="r">${navBtns("setDate(shiftMonth(curDate(),-1))","setDate(shiftMonth(curDate(),1))","setDate(today())")} ${m.replace('-','년 ')}월</div></div>
- <div class="sheet"><div class="ribbon">${first.replace(/-/g,'.')} ~ ${lastD.replace(/-/g,'.')}</div><div style="background:#fff;border-radius:4px;padding:10px">
+ return`<div class="sheet" style="width:500px;max-width:100%;flex:none"><div class="ribbon">${first.replace(/-/g,'.')} ~ ${lastD.replace(/-/g,'.')}</div><div style="background:#fff;border-radius:4px;padding:10px">
  <div class="hd">Study Time</div>
  <div class="mo2"><div class="h">MON</div><div class="h">TUE</div><div class="h">WED</div><div class="h">THU</div><div class="h">FRI</div><div class="h">SAT</div><div class="h sun">SUN</div><div class="h">+</div>${cells}</div>
  ${sum}
@@ -1243,7 +1298,16 @@ function fmtW(plan,o){return'W'+pad(pLab(plan,o))}
 function wLabelOf(plan,d){const g=pjGrid(plan.__pj);if(!g)return null;const o=pWeekNo(plan,d);if(o<1||(g.o2&&o>g.o2))return null;return pLab(plan,o)}
 function dayIdx(d){return(parse(d).getDay()+6)%7}
 function unitMap(plan,s){const m=new Map();((plan.units||{})[s]||[]).forEach(u=>{if(!u.del)m.set(u.id,u)});return m}
-function weekQuotas(plan,band){const w=Array.isArray(plan.daily)&&plan.daily.length===7?plan.daily:[1,1,1,1,1,1,1];const W=w.reduce((a,b)=>a+(+b||0),0);const per=+band.per||0;if(!W||!per)return[0,0,0,0,0,0,0];let prev=0,acc=0;const out=[];for(let i=0;i<7;i++){acc+=(+w[i]||0);const c=Math.round(per*acc/W);out.push(c-prev);prev=c}return out}
+/* 자동 분배 가중치 (feedback8 §2-3): 프로젝트 dist = {mode:'even'|'daily', daily[7], subjDays{과목:[7]}} · 과목별 요일 선택이 있으면 그 과목은 그것 우선 */
+function distWeightsOf(d,s){d=d||{};const sd=(d.subjDays||{})[s];
+ if(Array.isArray(sd)&&sd.length===7&&sd.some(x=>x))return sd.map(x=>x?1:0);
+ if(d.mode==='daily'&&Array.isArray(d.daily)&&d.daily.length===7)return d.daily.map(x=>Math.max(0,+x||0));
+ return[1,1,1,1,1,1,1]}
+function pjDistCfg(plan){const pj=plan.__pj;const d=(pj&&pj.dist)||{};
+ return{mode:d.mode==='daily'?'daily':'even',daily:Array.isArray(d.daily)&&d.daily.length===7?d.daily.map(x=>Math.max(0,+x||0)):[1,1,1,1,1,1,1],subjDays:d.subjDays&&typeof d.subjDays==='object'?d.subjDays:{}}}
+function distWeights(plan,s){return distWeightsOf((plan.__pj||{}).dist,s)}
+function weekQuotasW(w,per){const W=w.reduce((a,b)=>a+(+b||0),0);per=+per||0;if(!W||!per)return[0,0,0,0,0,0,0];let prev=0,acc=0;const out=[];for(let i=0;i<7;i++){acc+=(+w[i]||0);const c=Math.round(per*acc/W);out.push(c-prev);prev=c}return out}
+function weekQuotas(plan,band){return weekQuotasW(distWeights(plan,band.s),band.per)}
 function bandQuota(plan,band,d){const o=pWeekNo(plan,d);if(o<bO1(plan,band)||o>bO2(plan,band))return 0;return weekQuotas(plan,band)[dayIdx(d)]}
 function bandUnits(plan,band){const m=unitMap(plan,band.s);return(band.units||[]).map(id=>m.get(id)).filter(Boolean)}
 function bandDone(plan,band){return bandUnits(plan,band).filter(u=>u.done&&u.done[band.id]).length}
@@ -1275,10 +1339,15 @@ function yieldOrder(plan){const base=(plan.yield&&plan.yield.length?plan.yield:(
 function extendBand(plan,band){const dl=wDirL(plan);const oldO2=bO2(plan,band);band.w2+=dl;band.u=Date.now();plan.bands.forEach(b=>{if(b!==band&&!b.del&&b.s===band.s&&bO1(plan,b)>oldO2){b.w1+=dl;b.w2+=dl;b.u=Date.now()}})}
 function extendBandById(id,n){let warn=false,nm='',perNote='';planMut(p=>{const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;nm=b.name;for(let i=0;i<Math.max(1,n||1);i++)extendBand(p,b);
  const wk=bO2(p,b)-bO1(p,b)+1;if((b.units||[]).length&&wk>0){const np=Math.ceil(b.units.length/wk);if(np!==+(b.per||0)){b.per=np;perNote=' · 주당 '+np+'개로 다시 제안'}} // §2-2 ⚠ 재제안 자동 적용
- warn=p.bands.some(x=>!x.del&&x.s===b.s&&bO2(p,x)>examWeek(p))});render();toast(warn?`${nm} 늘림 — ⚠ 시험 주를 넘는 활동이 있어`:`${nm} +${Math.max(1,n||1)}주${perNote}`)}
-function fixBaseline(dateStr){planMut(p=>{
+ warn=p.bands.some(x=>!x.del&&x.s===b.s&&bO2(p,x)>examWeek(p))});render();toast(warn?`${nm} 늘림 — ⚠ 시험 주를 넘는 활동이 있어`:`${nm} +${Math.max(1,n||1)}주${perNote}`);rebaseAsk(false)}
+function fixBaseline(dateStr){planMut(p=>{ // feedback8 §3-1 보강: 날짜 배치 재현에 필요한 units·dist·pins 스냅 포함
  const rem={};p.bands.filter(b=>!b.del).forEach(b=>{const us=bandUnits(p,b);if(us.length)rem[b.s]=(rem[b.s]||0)+us.length-bandDone(p,b)});
- p.baselines.push({at:dateStr,bands:p.bands.filter(b=>!b.del).map(b=>({id:b.id,w1:b.w1,w2:b.w2,per:b.per||0})),remaining:rem});
+ const pj=p.__pj;
+ p.baselines.push({v:(p.baselines||[]).length+1,at:dateStr,
+  bands:p.bands.filter(b=>!b.del).map(b=>({id:b.id,w1:b.w1,w2:b.w2,per:b.per||0,units:(b.units||[]).slice()})),
+  dist:pj&&pj.dist?JSON.parse(JSON.stringify(pj.dist)):null,
+  pins:pj&&pj.pins?JSON.parse(JSON.stringify(pj.pins)):{},
+  remaining:rem});
  p.bands.forEach(b=>{if(!b.del){b.orig={w1:b.w1,w2:b.w2};b.u=Date.now()}});
 },true)}
 /* 날짜별 남은 단원: 실제선 = 완료 누적 · 기준선 = 마지막 baseline 의 w1/w2/per 로 계획대로 갔을 때 */
@@ -1307,9 +1376,11 @@ function rebalanceApply(){
    const ext=Math.ceil(L/(+b.per));for(let i=0;i<ext;i++)extendBand(p,b);
   })});
  });
- render();toast('재배치를 적용했어');
+ render();toast('재배치를 적용했어');rebaseAsk(false);
 }
-function maybeAutoBaseline(){const d=today();if(d.slice(8)!=='01')return;const p=myPlan();if(!(p.bands||[]).some(b=>!b.del))return;if((p.baselines||[]).some(b=>ym(b.at)===ym(d)))return;fixBaseline(d);toast('이 달 기준선 고정됨')}
+function maybeAutoBaseline(){ // feedback8 §3-1: 활동 깔린 프로젝트에 원계획이 없으면 v1 자동 확정 (매달 1일 재고정은 폐지 — 갱신은 ⟳·§3-3 질문으로)
+ const p=myPlan();if(!p.__pj)return;if(!(p.bands||[]).some(b=>!b.del))return;if((p.baselines||[]).length)return;
+ fixBaseline(today());toast('원계획 v1 자동 확정 — 캘린더의 ⟳ 로 언제든 다시 세울 수 있어');}
 function rebalancePreview(){
  const plan=pvOf(JSON.parse(JSON.stringify(myPlan().__raw)));const y=addDays(today(),-1);const rows=[];
  yieldOrder(plan).forEach(s=>{plan.bands.filter(b=>!b.del&&b.s===s).sort((a,b)=>bO1(plan,a)-bO1(plan,b)).forEach(b=>{
@@ -1339,6 +1410,184 @@ function planColHTML(d,idx){
 }
 function togglePlanDone(bandId,unitId,d){planMut(p=>{const b=p.bands.find(x=>x.id===bandId);if(!b)return;const u=((p.units||{})[b.s]||[]).find(x=>x.id===unitId&&!x.del);if(!u)return;u.done=u.done||{};if(u.done[bandId]===d)delete u.done[bandId];else u.done[bandId]=d;u.u=Date.now();});render();}
 function pickPlanItem(bandId,unitId){toast('「활동에서 가져오기」로 복사해서 써')} // 직접 삽입 경로(PLAN_ITEMS_DIRECT) 전용 — 지금은 꺼져 있음
+/* ===== 세부계획 캘린더 엔진 (feedback8 §2) =====
+   배치는 저장하지 않고 즉석 계산 — 저장은 세부계획 done 과 프로젝트 pins(고정)뿐. */
+function pjPins(plan,bandId){const pj=plan.__pj;if(!pj)return{};return(pj.pins||{})[bandId]||{}}
+function prunePins(p){ // 활동 기간 밖·활동에서 빠진 세부계획의 고정 해제 (§2-4) — 해제 수 반환
+ const pj=p.__pj;if(!pj||!pj.pins)return 0;let n=0;
+ Object.keys(pj.pins).forEach(bid=>{const b=p.bands.find(x=>x.id===bid&&!x.del);const g=pj.pins[bid]||{};
+  if(!b){n+=Object.keys(g).length;delete pj.pins[bid];return}
+  const d1=pWeekDate(p,bO1(p,b)),d2=pWeekDate(p,bO2(p,b),6);
+  Object.keys(g).forEach(uid2=>{const d=g[uid2];if(d<d1||d>d2||!(b.units||[]).includes(uid2)){delete g[uid2];n++}});
+  if(!Object.keys(g).length)delete pj.pins[bid];});
+ return n;}
+function pinUnit(bandId,unitId,date){planMut(p=>{const pj=p.__pj;if(!pj)return;pj.pins=pj.pins||{};pj.pins[bandId]=pj.pins[bandId]||{};pj.pins[bandId][unitId]=date;},true);render()}
+function unpinUnit(bandId,encU){planMut(p=>{const pj=p.__pj;const g=pj&&pj.pins&&pj.pins[bandId];const u2=decodeURIComponent(encU);if(g&&g[u2])delete g[u2];},true);toast('고정 해제 — 자동 배치로 돌아감');render()}
+function bandPlanDatesW(plan,band,weights){ // 완료·고정 무시한 순수 계획 날짜: 세부계획 id → 날짜 (스냅샷 활동 객체도 받음)
+ const ids=(band.units||[]).slice();const out=new Map();const per=+band.per||0;
+ if(!ids.length||!per)return out;
+ const q=weekQuotasW(weights,per);
+ const o1=bO1(plan,band);
+ let i=0;
+ for(let o=o1;i<ids.length&&o<=o1+520;o++){ // 몫이 남으면 기간을 넘어 계속 뒤로 (§2-5)
+  for(let dow=0;dow<7&&i<ids.length;dow++){let c=q[dow];while(c-->0&&i<ids.length){out.set(ids[i],pWeekDate(plan,o,dow));i++;}}
+ }
+ return out;}
+function bandPlanDates(plan,band){return bandPlanDatesW(plan,band,distWeights(plan,band.s))}
+function bandChips(plan,band){ // 이 활동의 칩(세부계획×날짜): 완료 = 완료한 날 · 고정 = 그 날 · 나머지 = 자동 배정(과거 몫 = 오늘로 밀림·빨강)
+ const us=bandUnits(plan,band);if(!us.length)return[];
+ const t=today();const per=+band.per||0;
+ const pins=pjPins(plan,band.id);
+ const chips=[];const rest=[];let doneCnt=0;
+ us.forEach(u=>{const dd=u.done&&u.done[band.id];
+  if(dd){chips.push({b:band,u,d:dd,done:1});doneCnt++;return}
+  const pd=pins[u.id];
+  if(pd){if(pd<t)chips.push({b:band,u,d:t,late:1,pin:1});else chips.push({b:band,u,d:pd,pin:1});return}
+  rest.push(u)});
+ if(!per||!rest.length)return chips;
+ const naive=bandPlanDates(plan,band);
+ const q=weekQuotas(plan,band);
+ const pinLoad={};chips.forEach(c=>{if(c.pin)pinLoad[c.d]=(pinLoad[c.d]||0)+1});
+ const o1=bO1(plan,band);
+ let ri=0,pastCap=0,blDone=false;
+ for(let o=o1;o<=o1+520&&ri<rest.length;o++){
+  for(let dow=0;dow<7&&ri<rest.length;dow++){
+   const d=pWeekDate(plan,o,dow);
+   let c=Math.max(0,q[dow]-(pinLoad[d]||0));
+   if(d<t){pastCap+=c;continue} // 지나간 몫 — 오늘부터 소화
+   if(!blDone){blDone=true;let bl=Math.max(0,pastCap-doneCnt); // 밀림 = 지나간 몫 − 완료 (late 산식과 일치)
+    while(bl-->0&&ri<rest.length)chips.push({b:band,u:rest[ri++],d:t,late:1});}
+   while(c-->0&&ri<rest.length){const u=rest[ri++];const nd=naive.get(u.id);chips.push({b:band,u,d,moved:nd&&nd!==d?1:0});}
+  }
+ }
+ while(ri<rest.length)chips.push({b:band,u:rest[ri++],d:today(),late:1}); // 안전망
+ return chips;}
+/* ----- 원계획(기준선) 날짜 배치 (feedback8 §3) ----- */
+function lastBaseline(plan){const bl=plan.baselines||[];return bl.length?bl[bl.length-1]:null}
+function baselineDates(plan){ // 마지막 원계획의 날짜별 예정: {날짜:[{bandId,s,uid,n}]} · 스냅에 units 없으면(구판) 그 활동은 생략
+ const bl=lastBaseline(plan);if(!bl)return null;
+ const map={};
+ (bl.bands||[]).forEach(sb=>{
+  if(!(sb.units||[]).length)return;
+  const live=plan.bands.find(b=>b.id===sb.id);if(!live)return;
+  const um=unitMap(plan,live.s);
+  const dm=bandPlanDatesW(plan,{w1:sb.w1,w2:sb.w2,per:sb.per,units:sb.units},distWeightsOf(bl.dist,live.s));
+  dm.forEach((d,uid2)=>{const u=um.get(uid2);(map[d]=map[d]||[]).push({bandId:sb.id,s:live.s,uid:uid2,n:u?u.n:''})});
+ });
+ return map;}
+function calData(plan,d1,d2){ // 캘린더 한 판 데이터: 칩·유령칸(원계획 자리)·날짜별 원계획 예정 수
+ const chips={},act={};
+ const ord=subjOrderAll(plan);const oi=s=>{const i=ord.indexOf(s);return i<0?999:i};
+ plan.bands.filter(b=>!b.del).forEach(b=>{bandChips(plan,b).forEach(c=>{act[b.id+'|'+c.u.id]=c.d;if(c.d>=d1&&c.d<=d2)(chips[c.d]=chips[c.d]||[]).push(c)})});
+ Object.values(chips).forEach(a=>a.sort((x,y)=>oi(x.b.s)-oi(y.b.s)||(x.b.id<y.b.id?-1:x.b.id>y.b.id?1:0)));
+ const bd=baselineDates(plan)||{};
+ const ghosts={},planned={};
+ Object.keys(bd).forEach(d=>{planned[d]=bd[d].length;
+  if(d<d1||d>d2)return;
+  bd[d].forEach(g=>{if(act[g.bandId+'|'+g.uid]!==d)(ghosts[d]=ghosts[d]||[]).push(g)});});
+ return{chips,ghosts,planned,hasBl:!!lastBaseline(plan)};}
+function rebaseAsk(direct){ // §3-2 ⟳ 버튼(direct) · §3-3 큰 변경 뒤 1회 질문
+ const p=myPlan();if(!p.__pj||!(p.bands||[]).some(b=>!b.del))return;
+ const has=(p.baselines||[]).length;
+ if(!direct&&!has)return;
+ const msg=direct?`지금 배치를 새 원계획(v${has+1})으로 확정할까? 이전 판은 이력에 남아.`:'배치가 크게 바뀌었어 — 원계획도 갱신할까? (아니오 = 원계획은 그대로 · 차이는 밀림으로 보임)';
+ if(confirm(msg)){fixBaseline(today());toast('원계획 v'+((planFile(cfg.person).data.projects.find(x=>x.id===(ui.pjView||planFile(cfg.person).data.cur))||{baselines:[]}).baselines||[]).length+' 확정');render();}}
+function blHistory(){const p=myPlan();const bls=p.baselines||[];
+ modal(`<h4>원계획 이력</h4>${bls.slice().reverse().map((b,i)=>`<div class="row" style="font-size:11px"><b>v${bls.length-i}</b><span style="color:#888">${esc(b.at)} · 활동 ${(b.bands||[]).length}${(b.bands||[]).some(x=>(x.units||[]).length)?'':' · (구판 — 날짜 배치 없음)'}</span><span style="margin-left:auto;color:#888;font-size:10px">${i===0?'현재 기준':''}</span></div>`).join('')||'<p style="color:#888;font-size:11px">아직 원계획이 없어.</p>'}
+ <p style="font-size:10px;color:#888">자동: 프로젝트에 활동을 깐 뒤 처음 열린 날 v1 확정 · 「⟳ 다시 세우기」 = 지금 배치를 새 기준으로 · 이력은 지워지지 않아.</p>`,()=>{});}
+/* ----- 캘린더 렌더 (주간·월간 절 · feedback8 §2) ----- */
+function chipHTML(c){
+ return`<div class="wc ${c.done?'on':''} ${c.late?'late':''}" ${c.done?'':'data-drag="1"'} data-band="${c.b.id}" data-unit="${esc(c.u.id)}" title="${esc(c.b.s)} ${esc(c.b.name)} · ${esc(c.u.id)} ${esc(c.u.n)}${c.pin?' · 📌 고정':''}${c.late?' · 밀림':''}${c.done?'':' — 끌면 그 날에 고정'}"><span class="cb" onclick="calToggle('${c.b.id}','${encodeURIComponent(c.u.id)}')">${c.done?'✓':''}</span><span class="dot" style="background:${subjColor(c.b.s)}"></span><span class="nm">${esc(c.u.id)} ${esc(c.u.n)}</span>${c.pin?`<span class="pinx" onclick="unpinUnit('${c.b.id}','${encodeURIComponent(c.u.id)}')" title="누르면 고정 해제">📌</span>`:''}${c.moved?'<span class="mv">↻</span>':''}</div>`;}
+function calToggle(bandId,encU){const uid2=decodeURIComponent(encU); // 체크 = 완료 — 팝업 A·보드 칸 ☐ 와 같은 데이터
+ planMut(p=>{const b=p.bands.find(x=>x.id===bandId&&!x.del);if(!b)return;
+  const u=((p.units||{})[b.s]||[]).find(x=>x.id===uid2&&!x.del);if(!u)return;
+  u.done=u.done||{};if(u.done[b.id])delete u.done[b.id];else u.done[b.id]=today();u.u=Date.now();});
+ render();}
+function baseBarHTML(plan,ws){ // §3-4 대비 줄
+ const bl=lastBaseline(plan);const t=today();const we=addDays(ws,6);
+ const bd=baselineDates(plan)||{};
+ let planN=0;Object.keys(bd).forEach(d=>{if(d>=ws&&d<=we)planN+=bd[d].length});
+ let doneN=0;plan.bands.filter(b=>!b.del).forEach(b=>{doneN+=bandUnits(plan,b).filter(u=>{const x=u.done&&u.done[b.id];return x&&x>=ws&&x<=we}).length});
+ const yd=addDays(t,-1);let lateN=0;plan.bands.filter(b=>!b.del).forEach(b=>{lateN+=late(plan,b,yd)});
+ const vi=(plan.baselines||[]).length;
+ return`<div class="cbase">원계획 대비 — 이번 주 예정 <b style="color:var(--blue)">${planN}</b> · 끝냄 <b>${doneN}</b> · <b style="color:#c33">밀림 ${lateN}</b>
+  <span style="color:#999;font-size:9.5px">${bl?`기준: v${vi} (${esc(bl.at)})`:'원계획 없음 — ⟳ 로 확정'}</span>
+  <span style="margin-left:auto;display:flex;gap:4px;flex:none"><button class="btn" onclick="distModal()" title="자동 분배 설정 (§2-3)">⚙</button><button class="btn" onclick="blHistory()">이력</button><button class="btn" onclick="rebaseAsk(true)">⟳ 원계획 다시 세우기</button></span></div>`;}
+function weekCalHTML(plan,ws,cd){
+ const t=today();let h='<div class="wcal2">';const CAP=10; // 칸 폭주 방지 — 넘치면 +N (클릭 = 그 날 목록)
+ for(let i=0;i<7;i++){const d=addDays(ws,i);const dt=parse(d);
+  const chips=cd.chips[d]||[];const gh=cd.ghosts[d]||[];const pl=cd.planned[d]||0;
+  const dn=chips.filter(c=>c.done).length;
+  const show=chips.slice(0,CAP);const ghShow=gh.slice(0,Math.max(0,CAP-show.length));
+  const over=chips.length+gh.length-show.length-ghShow.length;
+  h+=`<div class="wd2 ${d===t?'today':''} ${d<t?'dim':''}" data-caldate="${d}"><h6>${DAYS[dt.getDay()]} ${parseInt(d.slice(5,7))}/${parseInt(d.slice(8))}${d===t?' · 오늘':''}<span class="pl">${pl?'예정 '+pl:''}</span></h6>
+   ${show.map(chipHTML).join('')}${ghShow.map(g=>`<div class="gh2" title="원계획에는 이 날 몫이었던 자리">원계획 자리 (${esc(g.uid)})</div>`).join('')}
+   ${over>0?`<div class="more2" onclick="calDayModal('${d}')">+${over}</div>`:''}
+   <div class="cap2">${chips.length?`${dn}/${chips.length}`:(pl?'':'—')}</div></div>`;}
+ return h+'</div>';}
+function monthCalHTML(plan,m,cd){ // 주간과 똑같은 칩 (점 축약 아님) · 넘치면 +N
+ const first=m+'-01';const fd=parse(first);const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();const lastD=`${m}-${pad(nd)}`;const t=today();
+ let h='<div class="mcal2">'+['월','화','수','목','금','토','일'].map(x=>`<div class="mch">${x}</div>`).join('');
+ let cur=weekStart(first);const CAP=4;
+ while(cur<=lastD){
+  const wl2=wLabelOf(plan,cur);
+  h+=`<div class="mcw">${wl2!=null?'W'+pad(wl2)+' · ':''}${parseInt(cur.slice(5,7))}/${parseInt(cur.slice(8))}~</div>`;
+  for(let i=0;i<7;i++){const d=addDays(cur,i);const inM=ym(d)===m;
+   const chips=inM?(cd.chips[d]||[]):[];const gh=inM?(cd.ghosts[d]||[]):[];
+   const show=chips.slice(0,CAP);const ghShow=gh.slice(0,Math.max(0,CAP-show.length));
+   const over=chips.length+gh.length-show.length-ghShow.length;
+   h+=`<div class="md3 ${d===t?'today':''} ${inM&&d<t?'dim':''} ${inM?'':'out'}" ${inM?`data-caldate="${d}"`:''}><span class="n">${inM?parseInt(d.slice(8)):''}</span>
+    ${show.map(chipHTML).join('')}${ghShow.map(g=>`<div class="gh2">원계획 (${esc(g.uid)})</div>`).join('')}
+    ${over>0?`<div class="more2" onclick="calDayModal('${d}')">+${over}</div>`:''}</div>`;}
+  cur=addDays(cur,7);}
+ return h+'</div>';}
+function calDayModal(d){const plan=myPlan();const cd=calData(plan,d,d);
+ modal(`<h4>${d} 세부계획 ${(cd.chips[d]||[]).length?`<small style="color:#888;font-weight:400">${(cd.chips[d]||[]).length}개</small>`:''}</h4><div style="max-height:55vh;overflow:auto">${(cd.chips[d]||[]).map(chipHTML).join('')||'<p style="color:#888;font-size:11px">없음</p>'}${(cd.ghosts[d]||[]).map(g=>`<div class="gh2">원계획 자리 (${esc(g.uid)} ${esc(g.n||'')})</div>`).join('')}</div>`,()=>{});}
+function distModal(){const p=myPlan();const pj=p.__pj;if(!pj){toast('먼저 프로젝트를 만들어줘');return}
+ const d=pjDistCfg(p);
+ modal(`<h4>자동 분배 · ${esc(pj.name)}</h4>
+ <div class="row"><label>방식</label><label style="width:auto"><input type="radio" name="dm" id="dmE" ${d.mode!=='daily'?'checked':''}> 균등</label><label style="width:auto"><input type="radio" name="dm" id="dmD" ${d.mode==='daily'?'checked':''}> 요일 가중치</label></div>
+ <div class="row"><label>가중치</label><div style="display:flex;gap:4px;flex-wrap:wrap">${['월','화','수','목','금','토','일'].map((n,i)=>`<span style="font-size:10px;white-space:nowrap">${n}<input id="dw${i}" type="number" step="0.5" min="0" value="${d.daily[i]}" style="width:44px;min-width:0;flex:none;padding:3px"></span>`).join('')}</div></div>
+ <p style="font-size:10px;color:#888">0 = 쉬는 날 · 0.5 = 절반 — 「요일 가중치」를 골랐을 때 공통 적용.</p>
+ <div class="row" style="align-items:flex-start"><label>과목별 요일</label><div style="flex:1">${pj.subjects.map(s=>{const sd=d.subjDays[s]||[];return`<div style="display:flex;gap:5px;align-items:center;font-size:10px;margin:2px 0;flex-wrap:wrap"><b style="min-width:36px">${esc(s)}</b>${['월','화','수','목','금','토','일'].map((n,i)=>`<label style="width:auto;white-space:nowrap">${n}<input type="checkbox" data-sd="${encodeURIComponent(s)}" data-di="${i}" ${sd[i]?'checked':''}></label>`).join('')}</div>`}).join('')||'<span style="color:#999;font-size:10px">과목 없음</span>'}</div></div>
+ <p style="font-size:10px;color:#888">요일을 하나라도 체크한 과목은 그 요일에만 배정(가중치보다 우선) · 전부 해제 = 공통 규칙.</p>`,
+ q=>{const sdMap={};document.querySelectorAll('.modal input[data-sd]').forEach(cb=>{const s=decodeURIComponent(cb.dataset.sd);sdMap[s]=sdMap[s]||[0,0,0,0,0,0,0];sdMap[s][+cb.dataset.di]=cb.checked?1:0});
+  Object.keys(sdMap).forEach(s=>{if(!sdMap[s].some(x=>x))delete sdMap[s]});
+  planMut(p2=>{const pj2=p2.__pj;if(!pj2)return;pj2.dist={mode:q('dmD').checked?'daily':'even',daily:[0,1,2,3,4,5,6].map(i=>Math.max(0,+q('dw'+i).value||0)),subjDays:sdMap}},true);
+  render()});
+ wideModal();}
+function projGraphHTML(plan){ // §3-5: revGraph 렌더러 재사용 · 범위 = 프로젝트 전체 · 범례 명기 · 접기 가능
+ const pj=plan.__pj;if(!pj)return'';
+ const first=pj.d1||today();const lastD=pj.d2||addDays(today(),56);
+ const g=revGraphHTML(plan,null,first,lastD);
+ if(!g)return'';
+ return`<details class="gdet" open><summary>원계획 대비 <small style="color:#999;font-weight:400">남은 세부계획 수 · 프로젝트 전체 · 접기</small></summary>${g}
+ <p style="font-size:9.5px;color:#888;margin-top:2px">회색 = 원계획 · 파란 실선 = 실제 · 파란 점선 = 지금 속도 예상 · 분홍 = 오늘</p></details>`;}
+/* 칩 끌기 = 고정 (§2-4) — 포인터 기반 (아이패드 겸용) */
+let calDrag=null;
+document.addEventListener('pointerdown',e=>{const c=e.target.closest?e.target.closest('.wc[data-drag]'):null;if(!c)return;
+ if(e.target.closest('.cb')||e.target.closest('.pinx'))return;
+ calDrag={band:c.dataset.band,unit:c.dataset.unit,x:e.clientX,y:e.clientY,el:c,moved:false,ghost:null};});
+document.addEventListener('pointermove',e=>{if(!calDrag)return;
+ if(!calDrag.moved){if(Math.hypot(e.clientX-calDrag.x,e.clientY-calDrag.y)<8)return;calDrag.moved=true;
+  const g=calDrag.el.cloneNode(true);g.style.cssText='position:fixed;z-index:99;pointer-events:none;opacity:.85;width:'+calDrag.el.offsetWidth+'px';document.body.appendChild(g);calDrag.ghost=g;calDrag.el.style.opacity='.35';
+  try{calDrag.el.setPointerCapture&&calDrag.el.setPointerCapture(e.pointerId)}catch(x){}}
+ calDrag.ghost.style.left=(e.clientX+6)+'px';calDrag.ghost.style.top=(e.clientY+6)+'px';
+ document.querySelectorAll('.caldrop').forEach(x=>x.classList.remove('caldrop'));
+ const el=document.elementFromPoint(e.clientX,e.clientY);const day=el&&el.closest?el.closest('[data-caldate]'):null;
+ if(day)day.classList.add('caldrop');
+ e.preventDefault();});
+document.addEventListener('pointerup',e=>{if(!calDrag)return;const st=calDrag;calDrag=null;
+ if(st.ghost)st.ghost.remove();st.el.style.opacity='';
+ document.querySelectorAll('.caldrop').forEach(x=>x.classList.remove('caldrop'));
+ if(!st.moved)return;
+ const el=document.elementFromPoint(e.clientX,e.clientY);const day=el&&el.closest?el.closest('[data-caldate]'):null;
+ if(!day)return;
+ const d=day.dataset.caldate;
+ const p=myPlan();const b=p.bands.find(x=>x.id===st.band&&!x.del);if(!b)return;
+ const d1=pWeekDate(p,bO1(p,b)),d2=pWeekDate(p,bO2(p,b),6);
+ if(d<d1||d>d2){toast(`활동 기간(W${pad(b.w1)}–W${pad(b.w2)}) 밖이야`);return}
+ pinUnit(st.band,st.unit,d);toast('📌 '+d.slice(5).replace('-','/')+' 에 고정 — 나머지는 자동 재배치');});
 /* ----- 주차계획 ----- */
 function planTab(t){ui.planTab=t;LS.set('tt.ui',ui);render()}
 function planPh(n){ui.planPhW=(ui.planPhW??pWeekNo(myPlan(),today()))+n;LS.set('tt.ui',ui);render()}
@@ -1357,7 +1606,7 @@ function planAfterRender(){
 }
 function planHTML(){
  const raw=planFile(cfg.person).data;
- if(ui.pjView&&!(raw.projects||[]).some(x=>x.id===ui.pjView)){ui.pjView=null;LS.set('tt.ui',ui)}
+ if(ui.pjView&&!(raw.projects||[]).some(x=>x.id===ui.pjView&&!x.del)){ui.pjView=null;LS.set('tt.ui',ui)}
  const plan=boardPlan();const pj=plan.__pj;const tab=ui.planTab||'week';
  const blocked=planBlocked?`<div class="set" style="margin-bottom:8px"><div class="warn">계획 데이터가 이 앱보다 새 스키마라 계획 쓰기를 멈췄어. 새로고침해서 앱을 갱신해줘.</div></div>`:'';
  if(!pj){ // 프로젝트 0 (§1-7) — 주차 머리줄은 그래도 보여주고 만들기로 안내
@@ -1370,13 +1619,13 @@ function planHTML(){
  const dd=pj.d2?Math.ceil((parse(pj.d2)-parse(t))/864e5):null;
  const meta=g.o2?`${pj.d1} ~ ${pj.d2} · 시험 주 = W1 로 역산 · 총 ${g.o2}주`:`${pj.d1} ~ (미정) · W1 부터 차례로`;
  const ro=!!pj.arch;
- const head=`<div class="ttl"><b onclick="switchPerson()" style="cursor:pointer;font-size:13px">${esc(cfg.person)}<span style="color:#888;font-weight:400">▾</span></b>
- <b onclick="pjMenu()" style="cursor:pointer">${esc(pj.name)} <span>▾</span></b>
- <span class="pjmeta">${meta}${lab!=null?` · <b style="color:var(--blue)">W${pad(lab)}${g.o2?'(시험까지 '+lab+'주)':''}</b>`:''}</span>
+ const head=`<div class="ttl"><span class="pjhead"><b onclick="switchPerson()" style="cursor:pointer;font-size:13px">${esc(cfg.person)}<i style="color:#888;font-style:normal;font-weight:400">▾</i></b>
+ <b onclick="pjMenu()" style="cursor:pointer;font-size:15px">${esc(pj.name)} <i style="font-style:normal;font-weight:400;color:#888">▾</i></b>
+ <span class="pjmeta">${meta}${lab!=null?` · <span style="color:var(--blue);font-weight:700">W${pad(lab)}${g.o2?'(시험까지 '+lab+'주)':''}</span>`:''}</span>
  ${dd!=null&&dd>=0?`<span class="ddayb">D-${dd}</span>`:''}
- ${ro?`<span class="ddayb" style="background:#888">보관됨 · 읽기 전용</span><span class="r"><button class="btn" onclick="pjRestore('${pj.id}')">복원</button><button class="btn" onclick="ui.pjView=null;LS.set('tt.ui',ui);render()">닫기</button></span>`
-     :`<span style="font-size:10.5px;color:#666;cursor:pointer;border:1px solid #ddd;border-radius:4px;padding:2px 7px" onclick="pjSettings()">⚙ 설정</span>
- <div class="r"><button class="btn" onclick="rebalancePreview()">밀린 것 재배치</button><button class="btn" onclick="newBand()">+ 활동</button><button class="btn" onclick="newMilestone()">+ 이정표</button></div>`}</div>
+ ${ro?`<span class="ddayb" style="background:#888">보관됨 · 읽기 전용</span>`:''}</span>
+ ${ro?`<span class="r"><button class="btn" onclick="pjRestore('${pj.id}')">복원</button><button class="btn" onclick="ui.pjView=null;LS.set('tt.ui',ui);render()">닫기</button></span>`
+     :`<div class="r"><button class="btn" onclick="pjSettings()">⚙ 설정</button><button class="btn" onclick="rebalancePreview()">밀린 것 재배치</button><button class="btn" onclick="newBand()">+ 활동</button><button class="btn" onclick="newMilestone()">+ 이정표</button></div>`}</div>
  <div class="views"><span class="${tab=='week'?'on':''}" onclick="planTab('week')">주차별</span><span class="${tab=='active'?'on':''}" onclick="planTab('active')">진행중</span><span class="${tab=='list'?'on':''}" onclick="planTab('list')">리스트</span><span style="margin-left:auto;padding:0"><button class="btn" onclick="planCur()">현재</button></span></div>`;
  if(tab==='list')return`${moreTabs('plan')}${head}${blocked}${planListHTML(plan)}`;
  return`${moreTabs('plan')}${head}${blocked}<div class="plan-pc">${planBoardHTML(plan,tab==='active',ro)}</div><div class="plan-ph">${planPhoneHTML(plan,ro)}</div>`;
@@ -1414,9 +1663,7 @@ function planBoardHTML(plan,activeOnly,ro){
    h+=`<div class="pbl pbcatl"></div>`;
    for(let o=oL;o<=oR;o++){const mm=ms.filter(m=>pOrdL(plan,m.w)===o);h+=`<div class="pbsc ${o===curO?'cur':''}">${mm.map(m=>`<span class="pbm" onclick="event.stopPropagation();${ro?'':`editMilestone('${m.id}')`}" title="${esc(m.name)} · ${parseInt(pWeekDate(plan,pOrdL(plan,m.w)).slice(5,7))}/${parseInt(pWeekDate(plan,pOrdL(plan,m.w)).slice(8))}">◆</span>`).join('')}</div>`}
   }
-  if(!rows.length){h+=`<div class="pbl pbcatl" style="color:#bbb">분류 없음 — ⚙ 설정에서 추가</div>`;
-   for(let o=oL;o<=oR;o++)h+=`<div class="pbc2 ${o===curO?'cur':''}" ${ro?'':`onclick="newBandAt('${encS}','',${o})" title="+ 활동 (${esc(s)} · ${fmtW(plan,o)})"`}></div>`;}
-  rows.forEach(row=>{
+  rows.forEach(row=>{ // 분류 0 이면 줄 없음(4-4) — + 활동 입구 = 분류 행 빈 칸 클릭으로 일원화
    const encT=row.extra?'':encodeURIComponent(row.tag);
    const tb=(row.extra?bandsS.filter(b=>!cats.includes(b.tag||'')):bandsS.filter(b=>(b.tag||'')===row.tag)).sort((a,b)=>bO1(plan,a)-bO1(plan,b)||bO2(plan,a)-bO2(plan,b));
    const layers=[];tb.forEach(b=>{const li=layers.findIndex(Lr=>bO2(plan,Lr[Lr.length-1])<bO1(plan,b));if(li<0)layers.push([b]);else layers[li].push(b);});
@@ -1504,14 +1751,16 @@ function bandModal(b){
  <div class="row"><label>주당</label><input id="bP" type="number" value="${b.per||0}" style="flex:0 0 64px"> 개</div>
  <div class="row"><label>메모</label><input id="bM" value="${esc(b.note||'')}"></div>
  <p style="font-size:10px;color:#888">${fixed?'주 숫자 = 시험까지 남은 주 (큰 수 = 이른 주). ':''}세부계획 넣고 빼기는 활동 몸통 클릭 → 「✎ 고르기」.</p>`,
- q=>{const s=q('bS').value;planMut(p2=>{
+ q=>{const s=q('bS').value;const oldRange=b.id?(b.w1+'~'+b.w2):null;let newRange=null;
+  planMut(p2=>{
    let x=b.id?p2.bands.find(z=>z.id===b.id):null;
    if(!x){x={id:uid(),units:[],u:0,del:false};p2.bands.push(x)}
    x.s=s;x.name=q('bN').value.trim();x.tag=q('bT').value;
    let L1=+q('bW1').value||1,L2=+q('bW2').value||L1;
    if(pOrdL(p2,L1)>pOrdL(p2,L2)){const t2=L1;L1=L2;L2=t2} // 시간순 정규화 (w1 = 이른 쪽 라벨)
-   x.w1=L1;x.w2=L2;
-   x.per=Math.max(0,+q('bP').value||0);x.note=q('bM').value;x.u=Date.now()});render()},
+   x.w1=L1;x.w2=L2;newRange=L1+'~'+L2;
+   x.per=Math.max(0,+q('bP').value||0);x.note=q('bM').value;x.u=Date.now()});render();
+  if(oldRange&&newRange&&oldRange!==newRange)rebaseAsk(false)},
  b.id?()=>{if(confirm('이 활동을 지울까? '+b.name)){planMut(p2=>{const x=p2.bands.find(z=>z.id===b.id);if(x){x.del=true;x.u=Date.now()}});render()}}:null);
 }
 /* 팝업 A (§2-1): 활동 몸통 클릭 = 세부계획 리스트(체크 모드) · ✎ 고르기 = 같은 창에서 과목 세부계획 전체 중 이 활동 것 고르기 */
@@ -1581,6 +1830,7 @@ function bpSave(){if(!bpSt)return;const st=bpSt;let perNote='';
   if(ids.length&&wk>0){const np=Math.ceil(ids.length/wk);if(np!==+(b.per||0)){b.per=np;perNote=' · 주당 '+np+'개로 다시 제안'}}
   b.u=Date.now()});
  toast('세부계획 '+st.sel.size+'개 저장'+perNote);st.pick=false;render();bpRender();
+ if(st.sel.size!==st.init.size)rebaseAsk(false); // §3-3 세부계획 수가 바뀌면 1회 질문
 }
 function newMilestone(){const p=myPlan();if(!p.__pj){newProjectModal();return}
  msModal({id:'',s:(p.subjects[0]||(settings.subjects[0]||{}).n||''),name:'',w:pLab(p,Math.max(1,pWeekNo(p,today())))})}
@@ -1594,7 +1844,7 @@ function msModal(m){
 }
 /* ---- 프로젝트 전환·만들기·설정·보관 (§1-3~§1-6) ---- */
 function pjSwitch(id){planMut(p=>{p.cur=id},true);ui.pjView=null;LS.set('tt.ui',ui);planScrollPending=true;render()}
-function pjMenu(){const raw=planFile(cfg.person).data;const act=(raw.projects||[]).filter(x=>!x.arch);const nArch=(raw.projects||[]).length-act.length;
+function pjMenu(){const raw=planFile(cfg.person).data;const act=(raw.projects||[]).filter(x=>!x.arch&&!x.del);const nArch=(raw.projects||[]).filter(x=>x.arch&&!x.del).length;
  modal(`<h4>프로젝트</h4>${act.map(x=>{const pv2=pvOf(raw,x.id);const g=pjGrid(x);const lab=wLabelOf(pv2,today());const o=pWeekNo(pv2,today());
   const st=g&&g.o2?(lab!=null?`진행 중 · W${pad(lab)}(시험까지 ${lab}주)`:(o>g.o2?'기간 지남':'시작 전')):(lab!=null?`진행 중 · W${pad(lab)}`:'시작 전');
   return`<div class="row" style="cursor:pointer" onclick="this.closest('.modal').remove();pjSwitch('${x.id}')"><b style="${x.id===raw.cur?'':'font-weight:400'}">${x.id===raw.cur?'● ':''}${esc(x.name)}</b><span style="margin-left:auto;color:#888;font-size:10px">${st}</span></div>`}).join('')||'<p style="color:#888;font-size:11px">진행 중 프로젝트가 없어.</p>'}
@@ -1602,18 +1852,25 @@ function pjMenu(){const raw=planFile(cfg.person).data;const act=(raw.projects||[
  <div class="row" style="cursor:pointer;color:var(--blue)" onclick="this.closest('.modal').remove();newProjectModal()">＋ 새 프로젝트</div>
  <div class="row" style="cursor:pointer;color:#888" onclick="this.closest('.modal').remove();archModal()">🗄 보관함 (${nArch})</div>`,()=>{});
 }
-function archModal(){const raw=planFile(cfg.person).data;const as=(raw.projects||[]).filter(x=>x.arch);
+function archModal(){const raw=planFile(cfg.person).data;const as=(raw.projects||[]).filter(x=>x.arch&&!x.del);
  modal(`<h4>보관함</h4>${as.map(x=>{const pv2=pvOf(raw,x.id);const nb=(x.bands||[]).filter(b=>!b.del).length;
   let tot=0,dn=0;(x.bands||[]).filter(b=>!b.del).forEach(b=>{const us=bandUnits(pv2,b);tot+=us.length;dn+=us.filter(u=>u.done&&u.done[b.id]).length});
-  return`<div class="row"><b>${esc(x.name)}</b><span style="color:#888;font-size:10px;flex:1">${esc(x.d1||'')} ~ ${esc(x.d2||'미정')} · 활동 ${nb}${tot?` · 완료 ${Math.round(dn/tot*100)}%`:''}</span><button class="btn" onclick="this.closest('.modal').remove();ui.pjView='${x.id}';LS.set('tt.ui',ui);planScrollPending=true;render()">열어보기</button><button class="btn" onclick="this.closest('.modal').remove();pjRestore('${x.id}')">복원</button></div>`}).join('')||'<p style="color:#888;font-size:11px">보관된 프로젝트가 없어.</p>'}`,()=>{});
+  return`<div class="row"><b>${esc(x.name)}</b><span style="color:#888;font-size:10px;flex:1">${esc(x.d1||'')} ~ ${esc(x.d2||'미정')} · 활동 ${nb}${tot?` · 완료 ${Math.round(dn/tot*100)}%`:''}</span><button class="btn" onclick="this.closest('.modal').remove();ui.pjView='${x.id}';LS.set('tt.ui',ui);planScrollPending=true;render()">열어보기</button><button class="btn" onclick="this.closest('.modal').remove();pjRestore('${x.id}')">복원</button><button class="btn d" onclick="this.closest('.modal').remove();pjDelete('${x.id}')">삭제</button></div>`}).join('')||'<p style="color:#888;font-size:11px">보관된 프로젝트가 없어.</p>'}`,()=>{});
 }
 function pjRestore(id){planMut(p=>{const x=projectsOf(p).find(z=>z.id===id);if(x){x.arch=false;x.u=Date.now();p.cur=id}},true);ui.pjView=null;LS.set('tt.ui',ui);toast('복원했어');render()}
+function pjDelete(id){const raw=planFile(cfg.person).data;const x=(raw.projects||[]).find(z=>z.id===id&&!z.del);if(!x)return;
+ const nb=(x.bands||[]).filter(b=>!b.del).length;
+ if(!confirm(`「${x.name}」 을 삭제할까? 활동 ${nb}개가 같이 사라지고 복구는 없어.`))return;
+ planMut(p=>{const z=projectsOf(p).find(q2=>q2.id===id);if(z){z.del=true;z.u=Date.now()}
+  if(p.cur===id){const nxt=projectsOf(p).find(q2=>!q2.arch&&!q2.del);p.cur=nxt?nxt.id:''}},true);
+ if(ui.pjView===id){ui.pjView=null;LS.set('tt.ui',ui)}
+ toast('삭제했어');render()}
 function pjArchive(){const pj=myPlan().__pj;if(!pj)return;
  if(!confirm(`「${pj.name}」 을 보관할까? 기록은 그대로 남고 읽기 전용이 돼.`))return;
  planMut(p2=>{const x=projectsOf(p2).find(z=>z.id===pj.id);if(x){x.arch=true;x.u=Date.now()}
-  const nxt=projectsOf(p2).find(z=>!z.arch);p2.cur=nxt?nxt.id:''},true);
+  const nxt=projectsOf(p2).find(z=>!z.arch&&!z.del);p2.cur=nxt?nxt.id:''},true);
  render();
- if(!projectsOf(planFile(cfg.person).data).some(z=>!z.arch)){toast('진행 중 프로젝트가 없어 — 새로 만들어줘');newProjectModal()}}
+ if(!projectsOf(planFile(cfg.person).data).some(z=>!z.arch&&!z.del)){toast('진행 중 프로젝트가 없어 — 새로 만들어줘');newProjectModal()}}
 let pjmSt=null; // 프로젝트 모달 임시 상태 {id, name, d1, d2, subs[], cats{}}
 function newProjectModal(){pjmSt={id:'',name:'',d1:today(),d2:'',subs:[],cats:{}};pjModal()}
 function pjSettings(){const pj=myPlan().__pj;if(!pj)return;
@@ -1625,7 +1882,7 @@ function pjModal(){
  <div id="pjPrevEl" style="background:#fafafa;border:1px solid #eee;border-radius:5px;padding:7px 9px;font-size:10px;color:#666;margin:6px 0"></div>
  <div class="row" style="align-items:flex-start"><label>과목</label><div style="flex:1" id="pjSubs"></div></div>
  <div class="row" style="align-items:flex-start"><label>분류</label><div style="flex:1" id="pjCats"></div></div>
- ${pjmSt.id?`<div class="row"><label></label><button class="btn" onclick="this.closest('.modal').remove();pjArchive()">🗄 이 프로젝트 보관하기</button></div>`:''}
+ ${pjmSt.id?`<div class="row"><label></label><button class="btn" onclick="this.closest('.modal').remove();pjArchive()">🗄 이 프로젝트 보관하기</button><button class="btn d" onclick="const id=pjmSt.id;this.closest('.modal').remove();pjDelete(id)">삭제</button></div>`:''}
  <p style="font-size:10px;color:#888">종료일을 비우면 기간 미정. 분류는 이 프로젝트 안에서만 쓰는 자유 입력 — 순서 = 입력 순.${pjmSt.id?' 분류 이름 클릭 = 바꾸기(활동 태그 일괄) · × = 삭제(활동은 기타로).':''}</p>`,
  q=>pjSave(q));
  wideModal();pjPrev();pjFill();
@@ -1718,10 +1975,10 @@ function pmHTML(){
    const done=its.filter(x=>x.done).length;
    return`<div class="pln ${pmSel&&pmSel.type==='cat'&&pmSel.id===p.id?'on2':''}" onclick="pmSelect('cat','${p.id}')"><b>${esc(p.name)}</b><small>시작: ${p.d1||'—'} / 종료: ${p.d2||'—'}${its.length?` · ${done}/${its.length}`:''}${p.noTimer?' · <b style="color:#c60">합산 제외</b>':''}</small></div>${its.map(itemLi).join('')}`}).join('')}</div>`};
  return`${moreTabs('pm')}<div class="ttl"><b>계획관리 <span>› ${esc(cfg.person)}</span></b></div><div class="pm">
- <div class="tgl"><label><input type="checkbox" ${showEnd?'checked':''} onchange="ui.pmEnded=this.checked;LS.set('tt.ui',ui);render()"> 종료된 분류 보이기</label><label><input type="checkbox" ${showFut?'checked':''} onchange="ui.pmFuture=this.checked;LS.set('tt.ui',ui);render()"> 미시작 분류 보이기</label></div>
- ${[...names,...extra].map(subjBlock).join('')||'<p style="color:#888">분류가 없어. 「+ 분류」나 오늘 칸의 「활동에서 가져오기」로 시작.</p>'}
- ${orphan.length?`<div class="sb" style="border-color:#bbb"><div class="sbh">분류 없음</div>${orphan.map(itemLi).join('')}</div>`:''}
- <div class="btns"><button class="btn" onclick="pmCatModal()">+ 분류</button><button class="btn" onclick="pmEditCat()">분류 수정</button><button class="btn d" onclick="pmDelCat()">분류 삭제</button><button class="btn" onclick="pmAddItem()">+ 활동</button><button class="btn" onclick="pmEditItem()">활동 수정</button><button class="btn d" onclick="pmDelItem()">활동 삭제</button></div></div>`;
+ <div class="tgl"><label><input type="checkbox" ${showEnd?'checked':''} onchange="ui.pmEnded=this.checked;LS.set('tt.ui',ui);render()"> 종료된 활동 보이기</label><label><input type="checkbox" ${showFut?'checked':''} onchange="ui.pmFuture=this.checked;LS.set('tt.ui',ui);render()"> 미시작 활동 보이기</label></div>
+ ${[...names,...extra].map(subjBlock).join('')||'<p style="color:#888">활동이 없어. 「+ 활동」이나 오늘 칸의 「활동에서 가져오기」로 시작.</p>'}
+ ${orphan.length?`<div class="sb" style="border-color:#bbb"><div class="sbh">활동 없음</div>${orphan.map(itemLi).join('')}</div>`:''}
+ <div class="btns"><button class="btn" onclick="pmCatModal()">+ 활동</button><button class="btn" onclick="pmEditCat()">활동 수정</button><button class="btn d" onclick="pmDelCat()">활동 삭제</button><button class="btn" onclick="pmAddItem()">+ 세부계획</button><button class="btn" onclick="pmEditItem()">세부계획 수정</button><button class="btn d" onclick="pmDelItem()">세부계획 삭제</button></div></div>`;
 }
 function pmDateEdit(ev,id){ev.stopPropagation();const el=ev.target;const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(!t)return;el.outerHTML=`<input type="date" value="${t.d}" style="font-size:10px" onchange="pmSetDate('${id}',this.value)" onclick="event.stopPropagation()">`;}
 function pmSetDate(id,d){const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(t&&d){t.d=d;upsertTodo(t);}render();}
@@ -1730,14 +1987,14 @@ function pmSelItem(){return pmSel&&pmSel.type==='item'?todoFile(cfg.person).data
 function pmCatModal(p){
  p=p||{id:'',s:(settings.subjects[0]||{}).n||'',name:'',d1:today(),d2:today(),noTimer:false};
  const subjOpts=settings.subjects.map(x=>`<option ${p.s==x.n?'selected':''}>${esc(x.n)}</option>`).join('');
- modal(`<h4>${p.id?'분류 수정':'+ 분류'}</h4><div class="row"><label>과목</label><select id="pS">${subjOpts}</select></div><div class="row"><label>분류명</label><input id="pN" value="${esc(p.name)}" placeholder="객1회독 · 중급강의"></div><div class="row"><label>시작</label><input id="pD1" type="date" value="${p.d1||''}"></div><div class="row"><label>종료</label><input id="pD2" type="date" value="${p.d2||''}"></div><div class="row"><label></label><label style="width:auto"><input type="checkbox" id="pNT" ${p.noTimer?'checked':''}> 타이머 시간 합산하지 않기</label></div>`,
+ modal(`<h4>${p.id?'활동 수정':'+ 활동'}</h4><div class="row"><label>과목</label><select id="pS">${subjOpts}</select></div><div class="row"><label>활동명</label><input id="pN" value="${esc(p.name)}" placeholder="객1회독 · 중급강의"></div><div class="row"><label>시작</label><input id="pD1" type="date" value="${p.d1||''}"></div><div class="row"><label>종료</label><input id="pD2" type="date" value="${p.d2||''}"></div><div class="row"><label></label><label style="width:auto"><input type="checkbox" id="pNT" ${p.noTimer?'checked':''}> 타이머 시간 합산하지 않기</label></div>`,
  q=>{const o=p.id?p:{id:uid(),del:false};o.s=q('pS').value;o.name=q('pN').value.trim();o.d1=q('pD1').value;o.d2=q('pD2').value;o.noTimer=q('pNT').checked;upsertCat(o);render()});
 }
-function pmEditCat(){const p=pmSelCat();if(!p){toast('분류 줄을 먼저 골라줘');return;}pmCatModal(p)}
-function pmDelCat(){const p=pmSelCat();if(!p){toast('분류 줄을 먼저 골라줘');return;}if(confirm('이 분류를 지울까? '+p.name+' (활동은 「분류 없음」으로 남아)')){p.del=true;upsertCat(p);pmSel=null;render()}}
-function pmAddItem(){const p=pmSelCat();if(!p){toast('분류 줄을 먼저 골라줘');return;}modal(`<h4>+ 활동 · ${esc(p.name)}</h4><div class="row"><label>내용</label><input id="iT" placeholder="1-08 물권변동"></div><div class="row"><label>날짜</label><input id="iD" type="date" value="${today()}"></div>`,q=>{if(q('iT').value.trim()){upsertTodo({id:uid(),d:q('iD').value||today(),t:q('iT').value.trim(),kind:'study',cat:p.id,done:false,carry:0});render()}})}
-function pmEditItem(){const x=pmSelItem();if(!x){toast('활동 줄을 먼저 골라줘');return;}editTodo(x.id)}
-function pmDelItem(){const x=pmSelItem();if(!x){toast('활동 줄을 먼저 골라줘');return;}if(confirm('지울까? '+x.t)){x.del=true;upsertTodo(x);pmSel=null;render()}}
+function pmEditCat(){const p=pmSelCat();if(!p){toast('활동 줄을 먼저 골라줘');return;}pmCatModal(p)}
+function pmDelCat(){const p=pmSelCat();if(!p){toast('활동 줄을 먼저 골라줘');return;}if(confirm('이 활동을 지울까? '+p.name+' (세부계획은 「활동 없음」으로 남아)')){p.del=true;upsertCat(p);pmSel=null;render()}}
+function pmAddItem(){const p=pmSelCat();if(!p){toast('활동 줄을 먼저 골라줘');return;}modal(`<h4>+ 세부계획 · ${esc(p.name)}</h4><div class="row"><label>내용</label><input id="iT" placeholder="1-08 물권변동"></div><div class="row"><label>날짜</label><input id="iD" type="date" value="${today()}"></div>`,q=>{if(q('iT').value.trim()){upsertTodo({id:uid(),d:q('iD').value||today(),t:q('iT').value.trim(),kind:'study',cat:p.id,done:false,carry:0});render()}})}
+function pmEditItem(){const x=pmSelItem();if(!x){toast('세부계획 줄을 먼저 골라줘');return;}editTodo(x.id)}
+function pmDelItem(){const x=pmSelItem();if(!x){toast('세부계획 줄을 먼저 골라줘');return;}if(confirm('지울까? '+x.t)){x.del=true;upsertTodo(x);pmSel=null;render()}}
 /* ----- 월간(계획) ----- */
 function revShift(n){const m=ui.revMonth||ym(today());ui.revMonth=n===0?ym(today()):ym(shiftMonth(m+'-01',n));LS.set('tt.ui',ui);render()}
 function revMore(s){s=decodeURIComponent(s);ui.unitsOpen=ui.unitsOpen||{};ui.unitsOpen[s]=!ui.unitsOpen[s];LS.set('tt.ui',ui);render()}
@@ -1862,8 +2119,8 @@ function reviewHTML(){
  <div class="rvgrid">
  <div><div class="goalbox" onclick="goalEdit('${m}')"><b>${parseInt(m.slice(5))}월 목표</b>${esc(g.text||'')||'<span style="color:#aaa">(클릭해서 적기)</span>'}${g.prio?`<div class="p">📌 ${esc(g.prio)}</div>`:''}</div>
  <div class="rvbox" style="margin-top:10px"><h4>달성 <small>계획한 세부계획 대비 완료</small></h4>
- ${subs.length?`<div style="overflow-x:auto"><table class="rvtab"><thead><tr><th>과목</th><th>활동</th><th>완료</th><th></th><th>시간</th><th>밀림</th><th>예상 종료</th></tr></thead><tbody>${rowsA}${sumRow}</tbody></table></div>`:'<p style="color:#888;font-size:11px">이 달에 걸친 활동이 없어.</p>'}</div></div>
- <div class="rvbox"><h4>원계획 대비 <small>남은 세부계획 수 · 회색 = 기준선</small></h4>${revGraphHTML(plan,m,first,lastD)}<p style="font-size:10px;color:#666;margin-top:6px">기준선은 매달 1일 자동 고정. 계획을 크게 바꿨을 때만 다시 고정 — 이전 것은 이력에 남는다.</p></div>
+ ${subs.length?`<div style="overflow-x:auto"><table class="rvtab"><thead><tr><th>과목</th><th>세부계획</th><th>완료</th><th></th><th>시간</th><th>밀림</th><th>예상 종료</th></tr></thead><tbody>${rowsA}${sumRow}</tbody></table></div>`:'<p style="color:#888;font-size:11px">이 달에 걸친 활동이 없어.</p>'}</div></div>
+ <div class="rvbox"><h4>원계획 대비 <small>남은 세부계획 수 · 회색 = 원계획</small></h4>${revGraphHTML(plan,m,first,lastD)}<p style="font-size:10px;color:#666;margin-top:6px">원계획은 활동을 깐 뒤 첫 열림에 v1 자동 확정 · 갱신은 타임테이블 주간 캘린더의 「⟳ 원계획 다시 세우기」나 큰 변경 때 질문으로 — 이전 판은 이력에 남는다.</p></div>
  </div>
  ${revUnitsHTML(plan,m,bandsM)}`;
 }
@@ -1883,9 +2140,8 @@ function setHTML(){
  <h4>과목·색 <small style="font-weight:400;color:#888">둘이 공용 (settings.json)</small></h4><div class="sub" id="subjList">${settings.subjects.map((x,i)=>`<div class="row"><input value="${esc(x.n)}" data-i="${i}" data-k="n"><input type="color" value="${x.c}" data-i="${i}" data-k="c"><button class="btn" onclick="settings.subjects.splice(${i},1);render()">×</button></div>`).join('')}<button class="btn" onclick="settings.subjects.push({n:'새 과목',c:'#999999'});render()">+ 과목</button></div>
  <div class="row"><button class="btn p" onclick="applySettings()">설정 저장 (둘 다 반영)</button></div>
  <h4>계획 <small style="font-weight:400;color:#888">사람별 (plan/${esc(cfg.person)}.json) · 주차는 프로젝트 기간이 정함(주차계획 ⚙ 설정)</small></h4>
- <div class="row"><label>요일별 처리량</label>${['월','화','수','목','금','토','일'].map((n,i)=>`<span style="font-size:10px">${n} <input id="pd${i}" type="number" min="0" value="${(myPlan().daily||[1,1,1,1,1,1,1])[i]}" style="width:44px;min-width:0;flex:none;padding:3px"></span>`).join('')}<span style="font-size:10px;color:#888">0 = 쉬는 날 · 주당 처리량을 이 비율로 나눔</span></div>
+ <div class="row"><label>요일별 배분</label><span style="font-size:10px;color:#888">타임테이블 주간 캘린더 위 ⚙(자동 분배)로 이사 — 프로젝트별 균등/요일 가중치/과목별 요일</span></div>
  <div class="row"><label>밀림 양보 순서</label><div style="flex:1">${yieldChips()}</div></div>
- <div class="row"><button class="btn p" onclick="applyPlanSettings()">계획 설정 저장 (${esc(cfg.person)})</button></div>
  <h4>기기</h4><div class="row"><button class="btn" onclick="exportLocal()">이 기기 데이터 내보내기(JSON)</button><button class="btn d" onclick="if(confirm('이 기기의 로컬 데이터를 지울까? 동기화 안 된 건 사라져.')){Object.keys(localStorage).filter(k=>k.startsWith('tt.')).forEach(k=>localStorage.removeItem(k));location.reload()}">로컬 초기화</button></div>
  <div class="warn">토큰은 각자 본인 것. 브라우저 저장소에만 두고 저장소에는 절대 올리지 않는다. 사람별 파일이라 충돌은 없고, 같은 사람이 두 기기에서 쓰면 세션 id 기준으로 합쳐진다.</div></div>`;
 }
@@ -1901,7 +2157,6 @@ function addExam(){settings.exams.push({id:uid(),name:'새 시험',date:today(),
 function delExam(id){const x=settings.exams.find(z=>z.id===id);if(x&&confirm('시험을 지울까? '+x.name)){x.del=true;x.u=Date.now();render()}}
 function yieldChips(){const ys=yieldOrder(myPlan());return ys.map((s,i)=>`<span style="display:inline-flex;align-items:center;gap:2px;border:1px solid #ddd;border-radius:10px;padding:1px 4px 1px 8px;margin:1px;font-size:10.5px"><i class="plandot" style="background:${subjColor(s)};width:7px;height:7px"></i>${esc(s)}<button class="btn" style="padding:0 4px;border:0" onclick="yieldMove(${i},-1)">↑</button><button class="btn" style="padding:0 4px;border:0" onclick="yieldMove(${i},1)">↓</button></span>`).join('')}
 function yieldMove(i,n){planMut(p=>{const ys=yieldOrder(p);const j=i+n;if(j<0||j>=ys.length)return;const t=ys[i];ys[i]=ys[j];ys[j]=t;p.yield=ys},true);render()}
-function applyPlanSettings(){planMut(p=>{p.daily=[0,1,2,3,4,5,6].map(i=>Math.max(0,+$('pd'+i).value||0))},true);toast('계획 설정 저장 ('+cfg.person+')');render()}
 function exportLocal(){const o={};Object.keys(localStorage).filter(k=>k.startsWith('tt.f.')).forEach(k=>o[k.slice(5)]=LS.get(k).data);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(o,null,1)],{type:'application/json'}));a.download=`timetable_${cfg.person}_${today()}.json`;a.click()}
 /* ----- 작은 창 ----- */
 let pipWin=null;
