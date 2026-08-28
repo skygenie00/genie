@@ -270,6 +270,11 @@ button{cursor:pointer}
 .pbgoal{margin-left:auto;font-weight:700;color:#8a1f1f;font-size:10.5px;cursor:pointer;padding:1px 4px;border-radius:3px}
 .pbgoal.empty{color:#bbb;font-weight:400}
 .pbgoal:hover{background:#f3e6e6}
+.pbcatn{cursor:pointer;border-radius:3px;padding:1px 3px}
+.pbcatn:hover{background:#f0f0f0}
+.pbadd{grid-column:1/-1;background:#fff;padding:4px 8px;min-height:0;border-bottom:1px solid #f0f0f0}
+.pbaddin{position:sticky;left:8px;display:inline-block;color:var(--blue);cursor:pointer;font-size:10.5px}
+.pbc2{cursor:pointer}
 .pbc2{background:#fff;min-height:40px}
 .pbc2.cur{background:#f4f8ff!important}
 .pband2{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:#fff;border:1px solid #e3e3e3;border-top:3px solid var(--sc);border-radius:6px;margin:3px 2px;box-shadow:0 1px 2px rgba(0,0,0,.06);cursor:pointer;min-height:38px}
@@ -1270,25 +1275,27 @@ function planBoardHTML(plan,activeOnly){
   const ms=plan.milestones.filter(m=>!m.del&&m.s===s&&m.w>=wL&&m.w<=wR);
   const goals=(plan.catGoal||{})[s]||{};
   const tags=[...new Set([...bandsS.map(b=>b.tag||''),...Object.keys(goals)])];
-  if(!bandsS.length&&!ms.length&&!tags.length)return;
-  const isF=!!fold[s];
-  h+=`<div class="pbsj" onclick="pbFold('${encodeURIComponent(s)}')"><span class="pbsjin"><span class="tri">${isF?'▶':'▼'}</span><i class="plandot" style="background:${subjColor(s)}"></i>${esc(s)}<span class="n2">띠 ${bandsS.length}</span></span></div>`;
+  const inSet=settings.subjects.some(x=>x.n===s);
+  if(!inSet&&!bandsS.length&&!ms.length&&!tags.length)return; // settings 과목은 띠 0 이어도 보임
+  const isF=!!fold[s];const encS=encodeURIComponent(s);
+  h+=`<div class="pbsj" onclick="pbFold('${encS}')"><span class="pbsjin"><span class="tri">${isF?'▶':'▼'}</span><i class="plandot" style="background:${subjColor(s)}"></i>${esc(s)}<span class="n2">띠 ${bandsS.length}</span></span></div>`;
   if(isF)return;
   if(ms.length){
    h+=`<div class="pbl pbcatl"></div>`;
    for(let w=wL;w<=wR;w++){const mm=ms.filter(m=>m.w===w);h+=`<div class="pbsc ${w===curW?'cur':''}">${mm.map(m=>`<span class="pbm" onclick="event.stopPropagation();editMilestone('${m.id}')" title="${esc(m.name)} · ${parseInt(pWeekDate(plan,m.w).slice(5,7))}/${parseInt(pWeekDate(plan,m.w).slice(8))}">◆</span>`).join('')}</div>`}
   }
   tags.forEach(tag=>{
+   const encT=encodeURIComponent(tag);
    const tb=bandsS.filter(b=>(b.tag||'')===tag).sort((a,b)=>a.w1-b.w1||a.w2-b.w2);
    const layers=[];tb.forEach(b=>{const li=layers.findIndex(Lr=>Lr[Lr.length-1].w2<b.w1);if(li<0)layers.push([b]);else layers[li].push(b);});
    if(!layers.length)layers.push([]);
    layers.forEach((Lb,li)=>{
     const gl=goals[tag]||'';
-    h+=`<div class="pbl pbcatl">${li===0?`${esc(tag||'기타')}<span class="pbgoal ${gl?'':'empty'}" title="클릭해서 목표치 입력" onclick="event.stopPropagation();editCatGoal('${encodeURIComponent(s)}','${encodeURIComponent(tag)}')">${esc(gl)||'+'}</span>`:''}</div>`;
+    h+=`<div class="pbl pbcatl">${li===0?`<span class="pbcatn" title="클릭 = 이름 바꾸기·삭제" onclick="editCatName('${encS}','${encT}')">${esc(tag||'기타')}</span><span class="pbgoal ${gl?'':'empty'}" title="클릭해서 목표치 입력" onclick="event.stopPropagation();editCatGoal('${encS}','${encT}')">${esc(gl)||'+'}</span>`:''}</div>`;
     let w=wL;
     Lb.forEach(b=>{
      const c1=Math.max(b.w1,wL),c2=Math.min(b.w2,wR);
-     for(;w<c1;w++)h+=`<div class="pbc2 ${w===curW?'cur':''}"></div>`;
+     for(;w<c1;w++)h+=`<div class="pbc2 ${w===curW?'cur':''}" onclick="newBandAt('${encS}','${encT}',${w})" title="+ 띠 (${esc(s)} · W${pad(w)})"></div>`;
      const L=late(plan,b,yd);const hasU=(b.units||[]).length>0;const per=+b.per||0;
      let cells='';
      for(let x=c1;x<=c2;x++){const ext=b.orig&&x>b.orig.w2;const wd=weekDoneCount(plan,b,x);
@@ -1296,13 +1303,44 @@ function planBoardHTML(plan,activeOnly){
      h+=`<div class="pband2" style="grid-column:span ${c2-c1+1};--sc:${subjColor(b.s)}" onclick="editBand('${b.id}')" title="${esc(b.name)} W${pad(b.w1)}–W${pad(b.w2)}">${cells}<span class="grip" data-band="${b.id}" onclick="event.stopPropagation()" title="끌어서 +N주 · 탭 = +1주">⋮</span></div>`;
      w=c2+1;
     });
-    for(;w<=wR;w++)h+=`<div class="pbc2 ${w===curW?'cur':''}"></div>`;
+    for(;w<=wR;w++)h+=`<div class="pbc2 ${w===curW?'cur':''}" onclick="newBandAt('${encS}','${encT}',${w})" title="+ 띠 (${esc(s)} · W${pad(w)})"></div>`;
    });
   });
+  h+=`<div class="pbadd"><span class="pbaddin" onclick="addCatRow('${encS}')">+ 분류</span></div>`;
  });
+ h+=`<div class="pbadd" style="background:#fafafa"><span class="pbaddin" onclick="addSubjBoard()">+ 과목</span></div>`;
  h+='</div></div>';
  return h;
 }
+function addSubjBoard(){
+ const n=(prompt('새 과목 이름')||'').trim();if(!n)return;
+ if(settings.subjects.some(x=>x.n===n)){toast('이미 있는 과목이야');return;}
+ const used=new Set(settings.subjects.map(x=>(x.c||'').toLowerCase()));
+ const pal=['#E57373','#BA68C8','#7986CB','#4FC3F7','#4DB6AC','#AED581','#FFD54F','#FF8A65','#A1887F','#90A4AE','#9575CD','#F06292'];
+ const c=pal.find(x=>!used.has(x.toLowerCase()))||('#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0'));
+ settings.subjects.push({n,c});saveSettings();toast(n+' 추가 — 색은 설정에서 바꿀 수 있어(둘 공용)');render();
+}
+function addCatRow(sEnc){
+ const s=decodeURIComponent(sEnc);
+ const sugg=[...new Set(catsOf(cfg.person).filter(c=>c.s===s).map(c=>c.name))]; // 계획관리 분류 자동완성 제안 (어휘는 별개)
+ modal(`<h4>+ 분류 · ${esc(s)}</h4><div class="row"><label>이름</label><input id="cN" list="catSugg" placeholder="기본서 · 객 · 문풀…"><datalist id="catSugg">${sugg.map(n=>`<option value="${esc(n)}">`).join('')}</datalist></div><p style="font-size:10px;color:#888">계획관리 분류 이름이 제안으로 뜸 — 어휘는 별개.</p>`,
+ q=>{const n=q('cN').value.trim();if(!n)return;planMut(p=>{p.catGoal=p.catGoal||{};p.catGoal[s]=p.catGoal[s]||{};if(!(n in p.catGoal[s]))p.catGoal[s][n]='';},true);render()});
+}
+function editCatName(sEnc,tEnc){
+ const s=decodeURIComponent(sEnc),tag=decodeURIComponent(tEnc);
+ const cnt=myPlan().bands.filter(b=>!b.del&&b.s===s&&(b.tag||'')===tag).length;
+ modal(`<h4>분류 · ${esc(s)} › ${esc(tag||'기타')}</h4><div class="row"><label>이름</label><input id="cN" value="${esc(tag)}"></div><p style="font-size:10px;color:#888">이름을 바꾸면 이 분류의 띠 ${cnt}개 태그도 같이 바뀜. 삭제하면 띠는 「기타」로 감(띠 삭제 아님).</p>`,
+ q=>{const n=q('cN').value.trim();if(!n||n===tag)return;
+  planMut(p=>{
+   p.bands.forEach(b=>{if(!b.del&&b.s===s&&(b.tag||'')===tag){b.tag=n;b.u=Date.now()}});
+   p.catGoal=p.catGoal||{};const g=p.catGoal[s]||{};p.catGoal[s]=g;
+   if(Object.prototype.hasOwnProperty.call(g,tag)){const v=g[tag];delete g[tag];if(!(n in g))g[n]=v;}
+   else if(!(n in g))g[n]='';
+  },true);render()},
+ ()=>{if(cnt&&!confirm(`띠 ${cnt}개의 태그가 「기타」로 가 — 계속?`))return;
+  planMut(p=>{p.bands.forEach(b=>{if(!b.del&&b.s===s&&(b.tag||'')===tag){b.tag='';b.u=Date.now()}});if(p.catGoal&&p.catGoal[s])delete p.catGoal[s][tag];},true);render()});
+}
+function newBandAt(sEnc,tEnc,w){bandModal({id:'',s:decodeURIComponent(sEnc),name:'',tag:decodeURIComponent(tEnc),w1:w,w2:w,per:0,units:[],note:''})}
 function pbFold(sEnc){const s=decodeURIComponent(sEnc);ui.pbFold=ui.pbFold||{};ui.pbFold[s]=!ui.pbFold[s];LS.set('tt.ui',ui);planScrollPending=false;render();}
 function editCatGoal(sEnc,tEnc){const s=decodeURIComponent(sEnc),tag=decodeURIComponent(tEnc);
  const cur=(((myPlan().catGoal||{})[s])||{})[tag]||'';
