@@ -83,7 +83,10 @@ button{cursor:pointer}
 .mbar .ss button.go{background:#222;color:#fff;border-color:#222}
 .mbar .run{font-size:11px;color:var(--blue);font-weight:700;margin:-2px 0 6px}
 .mbar .man{display:flex;gap:6px;align-items:center;margin-top:8px;font-size:11px;color:#666;flex-wrap:wrap}
-.mbar .man input{width:64px}
+.mbar .man input{width:120px} /* §3-1(fb18) type=time 이 시·분·오전오후를 못 담아 흐르던 폭 */
+.mbar .man.hl{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px} /* §2(fb18) START 차단 시 강조 */
+.ribbon.rbtn{cursor:pointer}
+.tt .r b .lifetag{position:absolute;left:2px;top:0;bottom:0;display:flex;align-items:center;font-size:8px;line-height:1;color:#555;font-style:normal;white-space:nowrap;overflow:hidden;max-width:calc(100% - 3px);pointer-events:none} /* §5(fb18) */
 /* three columns */
 .three{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:8px}
 .col{border:1px solid var(--line);border-radius:6px;padding:8px;font-size:11px;min-height:290px}
@@ -423,6 +426,9 @@ button{cursor:pointer}
 .wd2.dim .wc,.md3.dim .wc{opacity:.55}
 .wc{display:flex;gap:4px;align-items:center;font-size:9.5px;padding:2px 4px;border:1px solid #eee;border-radius:4px;margin-bottom:2px;background:#fff;min-width:0}
 .wc[data-drag]{cursor:grab;touch-action:none}
+.dgh{cursor:grab;touch-action:none;color:#ccc;font-size:10px;flex:none;padding:0 2px} /* §6(fb18) 줄 끌기 손잡이 — 끌 수 있는 줄에만 붙는다 */
+.dgh:hover{color:var(--blue)}
+.three .col.caldrop{outline:2px dashed var(--blue);outline-offset:-2px;border-radius:6px}
 .wc .cb{width:11px;height:11px;border:1px solid #999;border-radius:2px;flex:none;font-size:7px;text-align:center;line-height:10px;cursor:pointer}
 .wc.on .cb{background:var(--blue);border-color:var(--blue);color:#fff}
 .wc.on .nm{color:#aaa;text-decoration:line-through}
@@ -908,13 +914,40 @@ function fitStMore(){
    else if(!cut&&has)nx.remove();
    if(on)el.parentElement.classList.add('exr');});});
 }
+/* §1(fb18) 리본 클릭 = 날짜 이동 + 하루 시작. 축(day/week/month)마다 고치는 값이 다르다 — 서로 안 따라간다(fb9 §3-2). */
+function ribbonModal(axis,doc){doc=doc||document;
+ axis=axis||'day';
+ const cur=axis==='week'?ttWkD():curDate();
+ const lab=axis==='week'?'주 (그 날이 든 주)':axis==='month'?'월':'날짜';
+ const inp=axis==='month'?`<input id="rbD" type="month" value="${ttMoM()}">`:`<input id="rbD" type="date" value="${cur}">`;
+ modal(`<h4>${axis==='week'?'주간':axis==='month'?'월간':'일간'} 이동</h4>
+ <div class="row"><label>${lab}</label>${inp}</div>
+ <div class="row"><label>하루 시작</label><span style="white-space:nowrap"><input id="rbS" type="number" min="0" max="12" value="${dayStart()}" style="max-width:70px;min-width:0;flex:none"> 시</span><span style="font-size:10px;color:#888">시트 24행의 시작 · 그 전 시각은 전날</span></div>
+ <div class="row" style="justify-content:flex-end"><button class="btn" onclick="ribbonGo('${axis}','today',this.ownerDocument)">오늘</button></div>`,
+ q=>{const v=(q('rbD')||{}).value||'';const s=+((q('rbS')||{}).value)||dayStart();
+  if(s!==dayStart()){settings.dayStart=Math.max(0,Math.min(12,s));saveSettings();}
+  if(v)ribbonGo(axis,v);else render();},null,doc);
+}
+function ribbonGo(axis,v,doc){
+ if(v==='today'){const m=[...(doc||document).querySelectorAll('.modal')].pop();if(m)m.remove();
+  if(axis==='week')ttWkToday();else if(axis==='month')ttMoToday();else setDate(today());return}
+ if(axis==='week')ttWkPick(v);else if(axis==='month')ttMoPick(v);else setDate(v);
+}
 function stCatTgl(){ui.stCat=!ui.stCat;LS.set('tt.ui',ui);render()} // §2(fb17) 활동만 있는 줄 보이기
 function selRow(type,id){stSel=(stSel&&stSel.type===type&&stSel.id===id)?null:{type,id};LS.set('tt.sel',stSel);render();}
 /* §1(fb17) 원탭 폐지 — 줄 클릭 = 선택만(본창·PiP 동일 · 시작은 START 버튼).
    fb16 §4 의 tapRow(클릭 = 즉시 시작)는 삭제. 「진행 중이어도 전환」 취지는 START·생활 ▶ 경로에 남긴다. */
 function pickRow(type,encId){selRow(type,decodeURIComponent(encId))}
 function pickTodoItem(id){selRow('item',id)} // 오늘 칸 학습 항목 클릭 = 같은 줄 선택
+/* §2(fb18) 오늘이 아닌 시트에서 START 를 눌렀을 때 — 막고 「이날기록추가」 칸을 알려준다(우회로 없음) */
+function startBlocked(doc){doc=doc||document;
+ toast('오늘이 아닌 날이야 — 아래 「이날기록추가」로 넣어줘');
+ const box=doc.getElementById('manBox');if(!box)return;
+ box.classList.add('hl');setTimeout(()=>box.classList.remove('hl'),1800);
+ const a=doc.getElementById('mA');if(a&&a.focus)a.focus();
+}
 function startTimer(){
+ if(curDate()!==today()){startBlocked();return} // §2(fb18) 보고 있는 날이 오늘이 아니면 시작 금지
  const si=selInfo();if(!si){toast('Study Time 에서 활동을 골라줘');return;}
  if(run)stopTimer(); // §1(fb17) 진행 중에 다른 줄 고르고 START = 앞 세션 저장하고 전환 (확인창 없음)
  if(si.life){startLife();return}
@@ -935,13 +968,16 @@ function findSess(id){return sessFile(cfg.person,ym(curDate())).data.sessions.fi
 function lifeModal(s,doc){
  const pre=['밥','산책','샤워','이동'];const customs=Array.isArray(settings.lifeTypes)?settings.lifeTypes:[];
  modal(`<h4>생활 블록</h4>
- <div class="row"><label>시간</label><span>${hmDisp(s.a)} ~ ${hmDisp(s.b)} (${dur(s.b-s.a)})</span></div>
+ <div class="row"><label>시작</label><input id="lA" type="datetime-local" value="${sessDT(s.d,s.a)}"></div>
+ <div class="row"><label>끝</label><input id="lB" type="datetime-local" value="${sessDT(s.d,s.b)}"></div>
+ <div class="row"><label></label><span style="font-size:10px;color:#888">지금 ${hmDisp(s.a)} ~ ${hmDisp(s.b)} (${dur(s.b-s.a)}) · 새벽 ${pad(dayStart())}:00 전은 전날로 저장돼</span></div>
  <div class="row" style="align-items:flex-start"><label>종류</label><div style="flex:1;display:flex;gap:4px;flex-wrap:wrap">
   ${[...pre,...customs].map(n=>`<span class="pjpk ${s.p===n?'on':''}" onclick="lifeSetType('${s.id}','${encodeURIComponent(n)}')">${esc(n)}${customs.includes(n)?` <i onclick="event.stopPropagation();lifeDelType('${encodeURIComponent(n)}')" title="프리셋에서 삭제(과거 블록 라벨은 유지)">×</i>`:''}</span>`).join('')}
   <span class="pjpk ${!s.p?'on':''}" onclick="lifeSetType('${s.id}','')">미지정</span>
   <span class="pjpk dash" onclick="lifeAddType('${s.id}')">＋ 직접 추가</span></div></div>
  <p style="font-size:10px;color:#888">공부 시간 합산·부하·주월계획에 안 들어가는 블록이야.</p>`,
- q=>{},()=>{if(confirm('이 생활 블록을 지울까?')){deleteSession(s);render()}},doc);
+ q=>{sessSaveTimes(s,q('lA').value,q('lB').value);upsertSession(s);render()}, // §4(fb18) 시간 편집 = 세션 편집과 같은 경로
+ ()=>{if(confirm('이 생활 블록을 지울까?')){deleteSession(s);render()}},doc);
 }
 function lifeSetType(id,encN){const s=findSess(id);if(!s)return;s.p=decodeURIComponent(encN);upsertSession(s);
  const m=[...document.querySelectorAll('.modal')].pop();if(m)m.remove();render();}
@@ -952,6 +988,17 @@ function lifeAddType(id){const n=(prompt('생활 종류 이름 (예: 앱작업)'
 function lifeDelType(encN){const n=decodeURIComponent(encN);if(!confirm(`프리셋 「${n}」 을 지울까? (과거 블록 라벨은 그대로)`))return;
  settings.lifeTypes=(settings.lifeTypes||[]).filter(x=>x!==n);saveSettings();
  const m=[...document.querySelectorAll('.modal')].pop();if(m)m.remove();render();}
+/* §5(fb18) 생활 블록에 종류 표시 — 기본 4종은 이모지 · 직접 추가한 종류는 이름 전체(폭 모자라면 잘림 · 툴팁엔 전체).
+   ⚠ 블록의 첫 조각에만(시간별 루프가 한 블록을 잘라 그리므로) · 좁은 블록엔 생략(실렌더 1분 ≈ 3px 기준: 이모지 5분·이름 10분) ·
+   글자는 pointer-events:none 이라 블록 클릭(편집)을 안 가로챈다. */
+const LIFE_ICON={'밥':'🍚','산책':'🚶','샤워':'🚿','이동':'🚗'};
+function lifeTag(x){
+ const n=(x.p||'').trim();if(!n)return''; // 미지정 = 표시 없음(색만)
+ const min=(x.b||0)-(x.a||0);
+ const ic=LIFE_ICON[n];
+ if(ic)return min>=5?`<i class="lifetag">${ic}</i>`:'';
+ return min>=10?`<i class="lifetag">${esc(n)}</i>`:'';
+}
 function lifePlanned(who,d){ // 반복 생활 계획 블록 (plan.lifePlan · 그리기만)
  const p=planView(who);const wd=dayIdx(d);
  return(p.lifePlan||[]).filter(x=>!x.del&&x.days&&x.days[wd]).map(x=>{const[h,m2]=(x.hm||'12:00').split(':').map(Number);let a=h*60+(m2||0);if(a<dayStart()*60)a+=1440;return{a,b:a+(+x.len||60),label:x.label||'생활'}});
@@ -1049,7 +1096,7 @@ function ttRows(sess,{rows=24,thin=false,lp=null}={}){ // 05~04 24행 · lp = �
  for(let r=0;r<rows;r++){
   const a=s0+r*60,b=a+60;let bars='';
   (lp||[]).forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:repeating-linear-gradient(45deg,#eef0f2 0 4px,#e2e4e7 4px 8px);opacity:.9" title="계획 · ${esc(x.label)}"></b>`});
-  sess.forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${x.life?'#c9ccd1':subjColor(x.s)}${x.nt?NT_HATCH:''}" title="${esc(x.life?('생활'+(x.p?' · '+x.p:'')):x.s)} ${hmDisp(x.a)}-${hmDisp(x.b)}" onclick="editSession('${x.id}',document)"></b>`});
+  sess.forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${x.life?'#c9ccd1':subjColor(x.s)}${x.nt?NT_HATCH:''}" title="${esc(x.life?('생활'+(x.p?' · '+x.p:'')):x.s)} ${hmDisp(x.a)}-${hmDisp(x.b)}" onclick="editSession('${x.id}',this.ownerDocument)">${(x.life&&x.a>=a&&x.a<b)?lifeTag(x):''}</b>`});
   if(run&&run.d===curDate()){const L=Math.max(run.a,a),R=Math.min(now.m+(now.d!==run.d?1440:0),b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${subjColor(run.s)};opacity:.5"></b>`}
   if(isToday&&now.m>=a&&now.m<b)bars+=`<i class="now" style="left:${(now.m-a)/60*100}%"></i>`;
   h+=`<span>${pad((a/60)%24)}</span><div class="r">${bars}</div>`;
@@ -1093,8 +1140,11 @@ function dayRows(who,d){
  rows.push(...Object.values(g));
  return rows;
 }
-function sheetHTML(who,d,sess,{withRun=true}={}){
+function sheetHTML(who,d,sess,{withRun=true,axis='day'}={}){
  const dt=parse(d);const tot=mSum(sess);
+ const rlab=axis==='week'?`${weekStart(d).replace(/-/g,'.')} ~ ${addDays(weekStart(d),6).replace(/-/g,'.')}`
+  :axis==='month'?`${(ym(d)+'-01').replace(/-/g,'.')} ~ ${(ym(d)+'-'+pad(new Date(parse(d).getFullYear(),parse(d).getMonth()+1,0).getDate())).replace(/-/g,'.')}`
+  :`${d.replace(/-/g,'.')} ${['SUN','MON','TUE','WED','THU','FRI','SAT'][dt.getDay()]}`;
  let rows=dayRows(who,d);const mine=who===cfg.person;
  /* §2(fb17) 「활동만 있는 줄」(= 걸친 분류 갈래 · 세부계획 없이 활동 단위로 재는 용도) = 기본 숨김 · 머리 토글로 켠다.
     그날 잰 시간이 있거나 지금 고른 줄은 숨기지 않는다(기록이 사라져 보이면 안 된다). */
@@ -1111,20 +1161,21 @@ function sheetHTML(who,d,sess,{withRun=true}={}){
   const badge=r.type==='unit'?carryBadge(r,sm):'';
   return`<div class="it ${on?'selr':''} ${r.done?'done2':''} ${r.dim?'dim2':''}" onclick="${click}"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl${(ui.stMore||{})[r.type+'|'+r.id]?' ex':''}" data-more="${esc(r.type+'|'+r.id)}">${esc(lbl)||'—'}</span>${badge}<span${isRun?` id="stRunMin" data-base="${r.min}"`:''}>${dur(r.min+(isRun?runMin:0))}</span>${on&&r.type==='item'?`<button class="btn" onclick="event.stopPropagation();toggleTodo('${r.id}')">${r.done?'완료 취소':'완료'}</button>`:''}${on&&r.type==='unit'?`<button class="btn" onclick="event.stopPropagation();togglePlanDone('${(r.band||{}).id}','${(r.unit||{}).id}','${d}')">${r.done?'완료 취소':'완료'}</button>`:''}</div>`;
  };
- return`<div class="sheet" style="position:relative"><button class="btn pmbtn" onclick="pmPopup(this.ownerDocument)" title="계획관리 팝업 — 화면 이동 없이 편집 (§9)">📋 계획관리</button><div class="ribbon">${d.replace(/-/g,'.')} ${['SUN','MON','TUE','WED','THU','FRI','SAT'][dt.getDay()]}</div><div class="paper">
+ return`<div class="sheet" style="position:relative"><button class="btn pmbtn" onclick="pmPopup(this.ownerDocument)" title="계획관리 팝업 — 화면 이동 없이 편집 (§9)">📋 계획관리</button><div class="ribbon rbtn" onclick="ribbonModal('${axis}',this.ownerDocument)" title="클릭 = 날짜 이동 · 하루 시작 (§1 fb18)">${rlab}</div><div class="paper">
  <div><div class="hd">Time Table</div><div class="tt"><span></span><div class="tth">${[1,2,3,4,5].map(n=>`<i style="left:${(n*100/6).toFixed(2)}%">${n*10}</i>`).join('')}</div>${ttRows(sess,{lp:lifePlanned(who,d)})}</div></div>
  <div class="stc"><div class="hd">Study Time${mine&&catRows.length?`<span class="sttgl" onclick="stCatTgl()" title="세부계획 없이 활동 단위로 재는 줄 — 켜면 목록에 나온다">활동 줄 ${catRows.length} ${showCat?'▾':'▸'}</span>`:''}</div><div class="st">${rows.map(rowHTML).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}${(()=>{const lm=sess.filter(x=>x.life).reduce((a,x)=>a+(x.b-x.a),0);return`<div class="it liferow" ${mine?`onclick="pickRow('life','')" title="클릭 = 선택 · START 로 시작 — 종류는 블록 클릭으로 나중에 지정 (합산 없음)"`:''}><i class="sw hsw"></i><span class="nm">생활</span><span class="pl" style="color:#aaa">${mine?'밥·산책·… 나중 지정':''}</span><span>${lm?dur(lm):''}</span></div>`})()}</div>
  <div class="foot"><div>Start <b>${sess.length?hmDisp(sess[0].a):(mine&&run&&run.d===d?hmDisp(run.a):'--:--')}</b> &nbsp; Stop <b>${sess.length?hmDisp(Math.max(...sess.map(x=>x.b))):'--:--'}</b></div><div>Total${sess.some(x=>x.life)?'<i style="font-style:normal;font-size:9px;color:#999"> (생활 제외)</i>':''} <span class="big"${mine&&run&&run.d===d?` id="stTot" data-base="${tot}"`:''}>${dur(tot+(mine&&run&&run.d===d&&!run.nt?runMin:0))}</span></div></div></div></div></div>`;
 }
 function mbarHTML(){
  const si=selInfo();
+ const past=curDate()!==today(); // §2(fb18) 보고 있는 날이 오늘이 아니면 START 차단(STOP 은 안 막는다)
  const line=run
   ?`<div class="run">▶ ${esc(run.s)} ${esc([run.p,run.i].filter(Boolean).join(' '))} · <span id="runT">${fmtSec(elapsed())}</span> · 시작 ${hmDisp(run.a)}</div>`
   :(si?`<div class="run" style="color:#333"><i class="plandot" style="background:${subjColor(si.s)}"></i>${esc(si.s)} ${esc([si.catName,si.itemT].filter(Boolean).join(' '))||'—'}</div>`
       :`<div class="run" style="color:#999">Study Time 에서 활동을 골라줘</div>`);
  return`<div class="mbar">${line}
- <div class="ss"><button class="go" onclick="startTimer()" title="${run?'진행 중 — 고른 줄로 전환(앞 세션은 저장)':'고른 줄로 시작'}">START</button><button class="${run?'go':'dis'}" onclick="${run?'stopTimer()':''}">STOP</button></div>
- <div class="man">수동 <input id="mA" type="time" step="60"> ~ <input id="mB" type="time" step="60"> <button class="btn" onclick="manualSave(document)">저장</button><span style="margin-left:auto;display:flex;gap:4px"><button class="btn" onclick="startLife()" title="생활 블록 즉시 시작 — 종류는 블록 클릭으로 나중에 (§7)">생활 ▶</button><button class="btn" onclick="lifePlanModal()" title="반복 생활 계획 블록">생활 계획</button><button class="btn" onclick="pip()">작은 창</button></span></div></div>`;
+ <div class="ss"><button class="${past?'dis':'go'}" onclick="${past?'startBlocked(this.ownerDocument)':'startTimer()'}" title="${past?'오늘이 아닌 날 — 아래 이날기록추가로 넣어줘':(run?'진행 중 — 고른 줄로 전환(앞 세션은 저장)':'고른 줄로 시작')}">START</button><button class="${run?'go':'dis'}" onclick="${run?'stopTimer()':''}">STOP</button></div>
+ <div class="man" id="manBox">이날기록추가 <input id="mA" type="time" step="60"> ~ <input id="mB" type="time" step="60"> <button class="btn" onclick="manualSave(this.ownerDocument)">저장</button><span style="margin-left:auto;display:flex;gap:4px"><button class="btn" onclick="lifePlanModal()" title="반복 생활 계획 블록">생활 계획</button><button class="btn" onclick="pip()">작은 창</button></span></div></div>`;
 }
 function dueBadge(due){const n=Math.ceil((parse(due)-parse(today()))/864e5);return`<span class="dd ${n<0?'late':''}">${n>0?'D-'+n:n===0?'D-day':'D+'+(-n)}</span>`}
 function sharedForCol(x,i){
@@ -1148,9 +1199,10 @@ function threeHTML(){
   const late=i==0?st.filter(t=>!t.done):[];
   const li=t=>{const c=t.cat?catById.get(t.cat):null;const pn=c?c.name:'';const cur=t.kind=='study'&&run&&(run.plan===t.id||(!run.plan&&run.i&&run.i===t.t));
    const dd2=t.kind!='study'&&t.due?dueBadge(t.due):'';
-   return`<li class="${t.done?'done':''} ${i==0&&!t.done&&t.kind=='study'?'late':''}"><span class="cb ${t.done?'on':''}" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</span><span onclick="${t.kind=='study'?`pickTodoItem('${t.id}')`:`editTodo('${t.id}')`}" style="flex:1;cursor:pointer">${t.kind=='study'?`<i class="plandot" style="background:${subjColor(c?c.s:'기타')}"></i>`:''}${esc(t.t)}${cur?' <b style="color:var(--blue);font-size:9px">▶ 진행 중</b>':''}</span>${dd2}${pn?`<span class="m">${esc(pn)}</span>`:''}${t.carry?`<span class="carry" title="원래 ${addDays(t.d,-t.carry).slice(5).replace('-','/')} 몫 — ${t.carry}일 밀렸다(하루씩 이월 ${t.carry}회)">+${t.carry}</span>`:''}${t.kind=='study'?`<span class="x" onclick="editTodo('${t.id}')" title="편집">✎</span>`:''}<span class="x" onclick="delTodo('${t.id}')">×</span></li>`};
+   const drg=!t.done&&t.d===x; // §6(fb18) 미완료 + 이 칸이 제 날짜인 줄만(기한 때문에 오늘 칸에 얹힌 남의 날짜 항목 제외)
+   return`<li class="${t.done?'done':''} ${i==0&&!t.done&&t.kind=='study'?'late':''}" ${drg?`data-drag3="todo" data-tid="${t.id}"`:''}><span class="cb ${t.done?'on':''}" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</span><span onclick="${t.kind=='study'?`pickTodoItem('${t.id}')`:`editTodo('${t.id}')`}" style="flex:1;cursor:pointer">${t.kind=='study'?`<i class="plandot" style="background:${subjColor(c?c.s:'기타')}"></i>`:''}${esc(t.t)}${cur?' <b style="color:var(--blue);font-size:9px">▶ 진행 중</b>':''}</span>${dd2}${pn?`<span class="m">${esc(pn)}</span>`:''}${t.carry?`<span class="carry" title="원래 ${addDays(t.d,-t.carry).slice(5).replace('-','/')} 몫 — ${t.carry}일 밀렸다(하루씩 이월 ${t.carry}회)">+${t.carry}</span>`:''}${t.kind=='study'?`<span class="x" onclick="editTodo('${t.id}')" title="편집">✎</span>`:''}<span class="x" onclick="delTodo('${t.id}')">×</span>${drg?'<span class="dgh" title="끌어서 다른 날로">⠿</span>':''}</li>`};
   const cm=sharedForCol(x,i).map(s=>`<li class="${s.done?'done':''}"><span class="cb ${s.done?'on':''}" onclick="toggleShared('${s.id}')">${s.done?'✓':''}</span><span onclick="cmEdit('${s.id}')" style="flex:1;cursor:pointer"><b style="color:var(--blue);font-size:9px;border:1px solid var(--blue);border-radius:3px;padding:0 3px">공통</b> ${esc(s.t)}</span>${s.due?dueBadge(s.due):''}</li>`).join('');
-  return`<div class="col ${i==1?'today':''}"><h5>${lab[i]} <small>${dt.getMonth()+1}/${dt.getDate()} ${DAYS[dt.getDay()]}${i==1&&weekNo(x)>=1?' · W'+pad(weekNo(x)):''}</small></h5>
+  return`<div class="col ${i==1?'today':''}" data-caldate="${x}"><h5>${lab[i]} <small>${dt.getMonth()+1}/${dt.getDate()} ${DAYS[dt.getDay()]}${i==1&&weekNo(x)>=1?' · W'+pad(weekNo(x)):''}</small></h5>
   <div class="sec">학습${i==0?' · 미완료는 이월 가능':i==1?' · 체크 = 완료 · 클릭 = 타이머':''}<span class="rgt">${i==0&&late.length?`<button class="btn" onclick="carryAll('${x}')">오늘로 이월 ${late.length}건</button>`:''}</span></div>${PLAN_ITEMS_DIRECT?planColHTML(x,i):''}<ul>${st.map(li).join('')}</ul>${recLineHTML(x)}
   <input class="add" placeholder="+ 학습 추가" onkeydown="if(event.key=='Enter'&&this.value.trim()){addTodo('${x}','study',this.value.trim());this.value=''}">
   <div class="sec">할일</div><ul>${td.map(li).join('')}${cm}</ul>
@@ -1309,6 +1361,17 @@ function autoUnitTexts(d,idx){ // 옛 pullFromBands 복사 할일과의 이중 �
 /* 세션 편집 */
 const sessDT=(d,m)=>{let dd=d,mm=m;while(mm>=1440){dd=addDays(dd,1);mm-=1440}return dd+'T'+pad(Math.floor(mm/60))+':'+pad(mm%60)};
 function dtToLogical(v){const[ds,ts]=v.split('T');const[h,mi]=ts.split(':').map(Number);let m2=h*60+mi;let d2=ds;if(m2<dayStart()*60){d2=addDays(ds,-1);m2+=1440}return{d:d2,m:m2}}
+/* §4(fb18) 세션 시간 저장 = 한 벌 — editSession·lifeModal 이 같이 쓴다(복사해 두면 한쪽만 고쳐지는 사고가 난다).
+   datetime-local 두 값 → 논리 날짜·분 보정(dtToLogical · b<=a 면 +1 · 달이 바뀌면 옛 달 파일에서 삭제 표식). */
+function sessSaveTimes(s,aVal,bVal){
+ const A=dtToLogical(aVal||sessDT(s.d,s.a));
+ const Bv=bVal||sessDT(s.d,s.b);const bp=Bv.split('T');const bt=bp[1].split(':').map(Number);
+ let b=bt[0]*60+bt[1]+1440*Math.round((parse(bp[0])-parse(A.d))/864e5);
+ if(b<=A.m)b=A.m+1;
+ const origD=s.d;s.d=A.d;s.a=A.m;s.b=b;
+ if(ym(s.d)!==ym(origD)){const pOld=sessPath(cfg.person,ym(origD));const fO=loadF(pOld,{v:1,sessions:[]});const iO=fO.data.sessions.findIndex(x=>x.id===s.id);if(iO>=0){fO.data.sessions[iO]=Object.assign({},fO.data.sessions[iO],{del:true,u:Date.now()});fO.dirty=true;saveF(pOld,fO);}}
+ return s;
+}
 function editSession(id,doc){
  const s=findSess(id);if(!s)return;
  if(s.life){lifeModal(s,doc);return} // §7 생활 블록 = 종류 지정 모달
@@ -1321,17 +1384,12 @@ function editSession(id,doc){
  <div class="row"><label>활동</label><select id="eRow">${opts}</select></div>
  <p style="font-size:10px;color:#888">새벽 ${pad(dayStart())}:00 전은 전날로 저장돼.</p>`,
  q=>{
-  const A=dtToLogical(q('eA2').value||sessDT(s.d,s.a));
-  const Bv=q('eB2').value||sessDT(s.d,s.b);const bp=Bv.split('T');const bt=bp[1].split(':').map(Number);
-  let b=bt[0]*60+bt[1]+1440*Math.round((parse(bp[0])-parse(A.d))/864e5);
-  if(b<=A.m)b=A.m+1;
-  const origD=s.d;s.d=A.d;s.a=A.m;s.b=b;
+  sessSaveTimes(s,q('eA2').value,q('eB2').value); // §4(fb18) 공용 경로
   const rv=q('eRow').value;const tf=todoFile(cfg.person);
   if(rv){const ty=rv.split(':')[0],rid=rv.slice(rv.indexOf(':')+1);
    if(ty==='item'){const it=tf.data.items.find(x=>x.id===rid);const c=it&&it.cat?tf.data.cats.find(z=>z.id===it.cat):null;s.plan=rid;s.cat=c?c.id:'';s.s=c?c.s:'기타';s.p=c?c.name:'';s.i=it?(it.t||''):'';s.nt=!!(c&&c.noTimer);}
    else{const c=tf.data.cats.find(z=>z.id===rid);s.plan='';s.cat=rid;if(c){s.s=c.s;s.p=c.name;s.i='';s.nt=!!c.noTimer;}}
   }else{s.plan='';s.cat='';}
-  if(ym(s.d)!==ym(origD)){const pOld=sessPath(cfg.person,ym(origD));const fO=loadF(pOld,{v:1,sessions:[]});const iO=fO.data.sessions.findIndex(x=>x.id===s.id);if(iO>=0){fO.data.sessions[iO]=Object.assign({},fO.data.sessions[iO],{del:true,u:Date.now()});fO.dirty=true;saveF(pOld,fO);}}
   upsertSession(s);render()},
  ()=>{if(confirm('이 세션을 지울까?')){deleteSession(s);render()}},doc);
 }
@@ -1356,7 +1414,7 @@ function weekCardHTML(ws){ // MiMi 주간 카드 — feedback5 그대로 · 폭 
  const rows=[]; // 줄 순서 = 분류 만든 순(cats 배열 순 · MiMi 와 같게)
  tf.data.cats.forEach(c=>{if(!c.del&&byCat.has(c.id))rows.push({s:c.s,n:c.name,m:byCat.get(c.id)})});
  Object.entries(other).forEach(([s,m2])=>rows.push({s,n:'기타',m:m2}));
- return`<div class="sheet" style="width:500px;max-width:100%;flex:none"><div class="ribbon">${ws.replace(/-/g,'.')} ~ ${days[6].replace(/-/g,'.')}</div><div class="paper">
+ return`<div class="sheet" style="width:500px;max-width:100%;flex:none"><div class="ribbon rbtn" onclick="ribbonModal('week',this.ownerDocument)" title="클릭 = 주 이동 · 하루 시작">${ws.replace(/-/g,'.')} ~ ${days[6].replace(/-/g,'.')}</div><div class="paper">
  <div><div class="hd">Time Table</div><div class="wk2"><div class="wh"></div>${days.map(x=>`<div class="wh ${x===today()?'today':''}">${['SUN','MON','TUE','WED','THU','FRI','SAT'][parse(x).getDay()]}</div>`).join('')}
  ${labs}${cols}
  <div class="wt"></div>${tots.map(t2=>`<div class="wt ${t2?'':'z'}">${dur(t2)}</div>`).join('')}</div></div>
@@ -1414,7 +1472,7 @@ function monthCardHTML(m){ // MiMi 월간 점 카드(Study Time 그리드 + To d
   trk+=`<div class="tm">${dur(catMin.get(c.id)||0)}</div>`;
  });
  trk+='</div>';
- return`<div class="sheet" style="width:500px;max-width:100%;flex:none"><div class="ribbon">${first.replace(/-/g,'.')} ~ ${lastD.replace(/-/g,'.')}</div><div style="background:#fff;border-radius:4px;padding:10px">
+ return`<div class="sheet" style="width:500px;max-width:100%;flex:none"><div class="ribbon rbtn" onclick="ribbonModal('month',this.ownerDocument)" title="클릭 = 월 이동 · 하루 시작">${first.replace(/-/g,'.')} ~ ${lastD.replace(/-/g,'.')}</div><div style="background:#fff;border-radius:4px;padding:10px">
  <div class="hd">Study Time</div>
  <div class="mo2"><div class="h">MON</div><div class="h">TUE</div><div class="h">WED</div><div class="h">THU</div><div class="h">FRI</div><div class="h">SAT</div><div class="h sun">SUN</div><div class="h">+</div>${cells}</div>
  ${sum}
@@ -1820,7 +1878,7 @@ function planColHTML(d,idx){
   const cur=run&&run.band===b.id&&run.unit===u.id;
   const on=stSel&&stSel.type==='unit'&&stSel.id===b.id+'|'+u.id;
   const badge=carryBadge(e,sm);
-  return`<li class="${done?'done':''} ${e.dim?'dim2':''}" style="${on?'background:var(--now);border-radius:3px':''}"><span class="cb ${done?'on':''}" onclick="togglePlanDone('${b.id}','${u.id}','${d}')" title="체크 = 세부계획 완료 (주월계획 직결)${e.dim?' — 뒤늦게 완료 처리 가능':''}">${done?'✓':''}</span><span style="flex:1;cursor:pointer" onclick="${idx===1&&!past?`selUnit('${b.id}','${encodeURIComponent(u.id)}')`:''}"><i class="plandot" style="background:${subjColor(b.s)}"></i>${esc(u.id)} ${esc(u.n)}${cur?' <b style="color:var(--blue);font-size:9px">▶ 진행 중</b>':''}</span>${badge}<span class="m">${esc(b.name)}</span></li>`;
+  return`<li class="${done?'done':''} ${e.dim?'dim2':''}" style="${on?'background:var(--now);border-radius:3px':''}"><span class="cb ${done?'on':''}" onclick="togglePlanDone('${b.id}','${u.id}','${d}')" title="체크 = 세부계획 완료 (주월계획 직결)${e.dim?' — 뒤늦게 완료 처리 가능':''}">${done?'✓':''}</span><span style="flex:1;cursor:pointer" onclick="${idx===1&&!past?`selUnit('${b.id}','${encodeURIComponent(u.id)}')`:''}"><i class="plandot" style="background:${subjColor(b.s)}"></i>${esc(u.id)} ${esc(u.n)}${cur?' <b style="color:var(--blue);font-size:9px">▶ 진행 중</b>':''}</span>${badge}<span class="m">${esc(b.name)}</span>${(!done&&!e.dim)?`<span class="dgh" data-drag3="unit" data-band="${b.id}" data-unit="${esc(u.id)}" title="끌어서 다른 날로 (📌 고정)">⠿</span>`:''}</li>`; // §6(fb18) 완료·dim 은 못 끈다
  });
  const CAP=25;
  if(rows.length>CAP&&!ui.dayAutoAll)return`<ul>${rows.slice(0,CAP).join('')}<li style="color:#888;cursor:pointer" onclick="ui.dayAutoAll=1;LS.set('tt.ui',ui);render()">… +${rows.length-CAP} 더 보기</li></ul>`; // 밀림 폭주 대비 ⚠
@@ -2004,9 +2062,16 @@ function projGraphHTML(plan){ // 원계획 대비 그래프 — 높이 100 · �
  <p style="font-size:9.5px;color:#888;margin-top:2px">회색 = 원계획 · 파란 실선 = 실제 · 파란 점선 = 지금 속도 예상 · 분홍 = 오늘</p></details>`;}
 /* 칩 끌기 = 고정 (§2-4) — 포인터 기반 (아이패드 겸용) */
 let calDrag=null;
-document.addEventListener('pointerdown',e=>{const c=e.target.closest?e.target.closest('.wc[data-drag]'):null;if(!c)return;
+document.addEventListener('pointerdown',e=>{
+ /* §6(fb18) 세 칸(어제·오늘·내일) 줄 끌기 — 캘린더 칩과 같은 포인터 엔진(아이패드 겸용) · 손잡이(.dgh)에서만 시작 */
+ const h=e.target.closest?e.target.closest('.dgh'):null;
+ if(h){const src=h.dataset.drag3?h:h.closest('[data-drag3]');if(src){
+  const li=h.closest('li')||src;
+  calDrag={kind:src.dataset.drag3,band:src.dataset.band,unit:src.dataset.unit,tid:src.dataset.tid,x:e.clientX,y:e.clientY,el:li,moved:false,ghost:null};
+  e.preventDefault();return}}
+ const c=e.target.closest?e.target.closest('.wc[data-drag]'):null;if(!c)return;
  if(e.target.closest('.cb')||e.target.closest('.pinx'))return;
- calDrag={band:c.dataset.band,unit:c.dataset.unit,x:e.clientX,y:e.clientY,el:c,moved:false,ghost:null};});
+ calDrag={kind:'unit',band:c.dataset.band,unit:c.dataset.unit,x:e.clientX,y:e.clientY,el:c,moved:false,ghost:null};});
 document.addEventListener('pointermove',e=>{if(!calDrag)return;
  if(!calDrag.moved){if(Math.hypot(e.clientX-calDrag.x,e.clientY-calDrag.y)<8)return;calDrag.moved=true;
   const g=calDrag.el.cloneNode(true);g.style.cssText='position:fixed;z-index:99;pointer-events:none;opacity:.85;width:'+calDrag.el.offsetWidth+'px';document.body.appendChild(g);calDrag.ghost=g;calDrag.el.style.opacity='.35';
@@ -2023,6 +2088,10 @@ document.addEventListener('pointerup',e=>{if(!calDrag)return;const st=calDrag;ca
  const el=document.elementFromPoint(e.clientX,e.clientY);const day=el&&el.closest?el.closest('[data-caldate]'):null;
  if(!day)return;
  const d=day.dataset.caldate;
+ if(st.kind==='todo'){ // §6(fb18) 손 할일 = t.d 만 바꾼다(carry 무변 — 손으로 옮긴 것은 밀린 게 아니다)
+  const it=todoFile(cfg.person).data.items.find(x=>x.id===st.tid&&!x.del);if(!it)return;
+  if(it.d===d)return;
+  it.d=d;upsertTodo(it);toast(d.slice(5).replace('-','/')+' 로 옮겼어');render();return}
  const p=myPlan();const b=p.bands.find(x=>x.id===st.band&&!x.del);if(!b)return;
  const d1=pWeekDate(p,bO1(p,b)),d2=pWeekDate(p,bO2(p,b),6);
  if(d<d1||d>d2){toast(`활동 기간(W${pad(b.w1)}–W${pad(b.w2)}) 밖이야`);return}
@@ -3337,7 +3406,6 @@ function setHTML(){
  <h4>시험 <small style="font-weight:400;color:#888">D-day·시험 주 경고는 다음 시험 기준 · 지난 시험은 옅게</small></h4><div class="sub" id="examList">${settings.exams.filter(x=>!x.del).sort((a,b)=>(a.date||'')<(b.date||'')?-1:1).map(x=>`<div class="row" style="${x.date&&x.date<today()?'opacity:.5':''}"><input value="${esc(x.name)}" data-xi="${x.id}" data-xk="name"><input type="date" value="${x.date||''}" data-xi="${x.id}" data-xk="date" style="flex:0 0 140px;min-width:0"><button class="btn" onclick="delExam('${x.id}')">×</button></div>`).join('')}<button class="btn" onclick="addExam()">+ 시험</button></div>
  <h4>데일리 색</h4><div class="row"><span style="white-space:nowrap">분홍(시간≥) <input id="rH" type="number" value="${settings.redHours}" style="max-width:70px;min-width:0;flex:none"></span><span style="white-space:nowrap">하늘(시간≥) <input id="sH" type="number" value="${settings.skyHours}" style="max-width:70px;min-width:0;flex:none"></span></div>
  <h4>달별 색 <small style="font-weight:400;color:#888">시트·격자·썸네일이 「보는 달」의 색을 씀</small></h4><div class="sub"><div class="row" style="flex-wrap:wrap">${[...Array(12)].map((_,i)=>`<span style="white-space:nowrap;font-size:10px">${i+1}월 <input type="color" id="mc${i}" value="${monthColor(i+1)}" style="flex:none;min-width:0;width:30px;padding:0;height:22px"></span>`).join('')}</div></div>
- <h4>시간</h4><div class="row"><label>하루 시작</label><span style="white-space:nowrap"><input id="dS" type="number" value="${dayStart()}" style="max-width:70px;min-width:0;flex:none"> 시</span></div>
  <h4>데일리 모음</h4><div class="row"><label>반영</label><select id="snapM" style="flex:0 0 100px;min-width:0"><option value="manual" ${snapMode()==='manual'?'selected':''}>수동</option><option value="auto" ${snapMode()==='auto'?'selected':''}>자동</option></select><span style="font-size:10px;color:#888">자동 = 하루가 지나면 전날 시트를 자동으로 찍음 · 사람별(${esc(cfg.person)})</span></div>
  <h4>과목·색 <small style="font-weight:400;color:#888">둘이 공용 (settings.json) · ⠿ 끌어서 순서 변경 = 앱 전체 과목 순서</small></h4><div class="sub" id="subjList" data-ds="subj" data-dax="y">${settings.subjects.map((x,i)=>`<div class="row" data-di="${i}"><span class="dragh" title="끌어서 순서 변경" onclick="event.stopPropagation()">⠿</span><input value="${esc(x.n)}" data-i="${i}" data-k="n"><input type="color" value="${x.c}" data-i="${i}" data-k="c"><button class="btn" onclick="settings.subjects.splice(${i},1);render()">×</button></div>`).join('')}<button class="btn" onclick="settings.subjects.push({n:'새 과목',c:'#999999'});render()">+ 과목</button></div>
  <div class="row"><button class="btn p" onclick="applySettings()">설정 저장 (둘 다 반영)</button></div>
@@ -3351,7 +3419,7 @@ function setHTML(){
 }
 function applySettings(){
  document.querySelectorAll('#examList input[data-xi]').forEach(e=>{const x=settings.exams.find(z=>z.id===e.dataset.xi);if(x&&x[e.dataset.xk]!==e.value){x[e.dataset.xk]=e.value;x.u=Date.now()}});
- settings.redHours=+$('rH').value||10;settings.skyHours=+$('sH').value||6;settings.dayStart=+$('dS').value||5;
+ settings.redHours=+$('rH').value||10;settings.skyHours=+$('sH').value||6; // §1(fb18) 하루 시작 입구 = 리본 팝업(값은 settings.dayStart 그대로)
  settings.monthColors=[...Array(12)].map((_,i)=>($('mc'+i)&&$('mc'+i).value)||DEF_SETTINGS.monthColors[i]);
  if($('snapM'))settings.snapMode=Object.assign({},settings.snapMode,{[cfg.person]:$('snapM').value});
  document.querySelectorAll('#subjList input[data-i]').forEach(e=>{settings.subjects[+e.dataset.i][e.dataset.k]=e.value.trim()||e.value});
@@ -3380,20 +3448,32 @@ function exportLocal(){const o={};Object.keys(localStorage).filter(k=>k.startsWi
 let pipWin=null;
 /* §1(fb16) PiP = f684591(tt-v18) 원상 복구 — 본창 시트(sheetHTML)+바(mbarHTML) 재사용이 정답.
    fb11~fb13 이 넣은 pipMiniHTML·pipListHTML·pipTap·전용 CSS 는 전부 삭제(원본을 안 보고 쓴 묘사였음). */
+/* §7(fb18) PiP 화면 전환 = §0-2 의 명시적 예외 — 창이 좁아 세 절을 동시에 못 그리는 구조 제약.
+   그리는 내용은 본창 renderer(sheetHTML·weekCardHTML·monthCardHTML) 그대로 · 예외는 내비 방식 하나뿐 · 본창에는 이 버튼을 안 단다(A안). */
+function pipView(v){ui.pipView=v;LS.set('tt.ui',ui);pipPaint()}
 function pipPaint(){
  if(!pipWin||pipWin.closed){pipWin=null;return;}
  if(pipWin.document.querySelector('.modal'))return; // 계획관리 팝업 등이 열려 있으면 통째 재그리기 보류 (§9)
  applyMonthColor(pipWin.document);
- const d=curDate();pipWin.document.body.innerHTML=`<div class="pipwrap">${sheetHTML(cfg.person,d,sessionsOf(cfg.person,d))}${mbarHTML()}</div>`;
- fitStMore(); // §7-3(fb17) PiP 도 같은 측정(전용 분기 아님 · §0-2)
+ const v=ui.pipView||'day';
+ const body=v==='week'?weekCardHTML(weekStart(ttWkD()))
+  :v==='month'?monthCardHTML(ttMoM())
+  :sheetHTML(cfg.person,curDate(),sessionsOf(cfg.person,curDate()));
+ pipWin.document.body.innerHTML=`<div class="pipwrap">${body}${mbarHTML()}</div>`;
+ const sh=pipWin.document.querySelector('.pipwrap .sheet');
+ if(sh){const nav=pipWin.document.createElement('div');nav.className='pipanc';
+  nav.innerHTML=[['day','일간'],['week','주간'],['month','월간']].map(([k,n])=>`<span class="${k===v?'on':''}" onclick="pipView('${k}')">${n}</span>`).join('');
+  sh.appendChild(nav);}
+ fitStMore(); // §7-3(fb17) PiP 도 같은 측정
 }
 async function pip(){
  if(!('documentPictureInPicture' in window)){toast('이 브라우저는 작은 창을 지원하지 않아 (크롬·엣지 PC 전용)');return;}
  if(pipWin&&!pipWin.closed){pipWin.focus();return;}
  try{const w=await documentPictureInPicture.requestWindow({width:520,height:640});pipWin=w;
   [...document.styleSheets].forEach(s=>{try{const st=w.document.createElement('style');st.textContent=[...s.cssRules].map(r=>r.cssText).join('\n');w.document.head.appendChild(st)}catch(e){}});
-  const st=w.document.createElement('style');st.textContent='body{background:#fff;padding:6px;overflow:auto;height:100vh}.pipwrap{min-width:420px;display:flex;flex-direction:column;height:100%}.pipwrap .sheet{flex:1;display:flex;flex-direction:column;min-height:0}.pipwrap .paper{flex:1;min-height:0}.pipwrap .tt .r{height:15px}.pipwrap .paper{grid-template-columns:5fr 6fr!important}.pipwrap .mbar .man{display:none}.pipwrap .st{max-height:none}';w.document.head.appendChild(st);
-  ['startTimer','stopTimer','manualSave','editSession','render','curDate','setDate','addDays','today','toast','selRow','toggleTodo','pickTodoItem','selUnit','togglePlanDone','startLife','lifeModal','lifeSetType','lifeAddType','lifeDelType','lifePlanModal','lifePlanDel','pmPopup','pmFoldTgl','pmDelCat2','pmDelItem2','pmCatModal','pmAddItem','pmSelect','pmDateEdit','pmSetDate','editTodo','catsOf','cfg','pmBandTgl','pmDelBand','pmGoBand','pickRow','stCatTgl','stMoreTgl'].forEach(n=>w[n]=window[n]);
+  const st=w.document.createElement('style');st.textContent='body{background:#fff;padding:6px;overflow:auto;height:100vh}.pipwrap{min-width:420px;display:flex;flex-direction:column;height:100%}.pipwrap .sheet{flex:1;display:flex;flex-direction:column;min-height:0;position:relative;width:auto!important}.pipwrap .paper{flex:1;min-height:0}.pipwrap .tt .r{height:15px}.pipwrap .paper{grid-template-columns:5fr 6fr!important}.pipwrap .mbar .man{display:none}.pipwrap .st{max-height:none}'
+ +'.pipwrap .pipanc{position:absolute;right:8px;top:6px;display:flex;gap:2px;z-index:6}.pipwrap .pipanc span{font-size:10px;padding:1px 6px;border:1px solid #ddd;border-radius:10px;background:#fff;color:#666;cursor:pointer}.pipwrap .pipanc span.on{background:#222;color:#fff;border-color:#222}.pipwrap .ribbon{padding-right:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}';w.document.head.appendChild(st);
+  ['startTimer','stopTimer','manualSave','editSession','render','curDate','setDate','addDays','today','toast','selRow','toggleTodo','pickTodoItem','selUnit','togglePlanDone','startLife','lifeModal','lifeSetType','lifeAddType','lifeDelType','lifePlanModal','lifePlanDel','pmPopup','pmFoldTgl','pmDelCat2','pmDelItem2','pmCatModal','pmAddItem','pmSelect','pmDateEdit','pmSetDate','editTodo','catsOf','cfg','pmBandTgl','pmDelBand','pmGoBand','pickRow','stCatTgl','stMoreTgl','pipView','ribbonModal','ribbonGo','startBlocked','ttWkPick','ttMoPick','ttWkToday','ttMoToday','settings'].forEach(n=>w[n]=window[n]);
   w.addEventListener('pagehide',()=>{pipWin=null});
   pipPaint();
  }catch(e){toast('작은 창 실패: '+e.message)}
