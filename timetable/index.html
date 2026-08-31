@@ -540,6 +540,16 @@ tr:hover .lsx{color:#c33}
 .recsec .qrow{display:flex;gap:5px;align-items:center;font-size:11px;padding:1px 0}
 .recsec .qrow .m2{margin-left:auto;color:#777;font-size:10px}
 .recsec .qsub{font-size:10px;color:#888;padding-left:13px}
+.recsec .qapp{margin:0}
+.recsec .qapp>summary{list-style:none;cursor:pointer}
+.recsec .qapp>summary::-webkit-details-marker{display:none}
+.recsec .cav{flex:none;color:#bbb;font-size:8px;width:8px}
+.recsec .qapp[open]>summary .cav::before{content:'▾'}
+.recsec .qapp:not([open])>summary .cav::before{content:'▸'}
+.recsec .qitems{font-size:10px;color:#666;padding-left:22px;font-family:Consolas,monospace;
+  word-break:break-all;line-height:1.6}
+.recsec .qsum{font-size:10px;color:#555;padding-left:13px;font-weight:700;margin-top:2px}
+.recsec .qslow{font-size:10px;color:#c60;padding-left:13px}
 .hz{color:#d97706}
 .recln{font-size:10px;color:#555;margin:2px 0 4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .gph2{border:1px solid #eee;border-radius:6px;background:#fff;padding:7px 9px;margin-top:8px}
@@ -566,6 +576,7 @@ tr:hover .lsx{color:#c33}
 .ub .none2{color:#c60;background:#fffaf3;border:1px dashed #f0d9bd;border-radius:5px;padding:5px 7px;font-size:10px}
 .carry{flex:none;font-size:9px;color:var(--blue);white-space:nowrap} /* §6·§11 → 오늘 · 이어서/이월 */
 .carry.go2{color:#1a9a52}
+.carry.late2{color:#c33} /* §4 `+N`(밀림)만 빨강 — .lateT 와 같은 빨강 · 「→ 오늘」은 파랑 그대로 */
 .pmsrc{display:inline-block;border:1px solid var(--blue);color:var(--blue);border-radius:3px;font-size:8.5px;padding:0 3px;vertical-align:1px} /* §8 주월계획 유래 배지 */
 .pbcat{cursor:pointer;text-decoration:underline dotted #bbb;text-underline-offset:2px} /* §1 분류 라벨 */
 .lsgs td,.lsgc td{background:#f8f8f9;border-top:1px solid #e8e8ea}
@@ -1233,7 +1244,7 @@ function threeHTML(){
   const li=t=>{const c=t.cat?catById.get(t.cat):null;const pn=c?c.name:'';const cur=t.kind=='study'&&run&&(run.plan===t.id||(!run.plan&&run.i&&run.i===t.t));
    const dd2=t.kind!='study'&&t.due?dueBadge(t.due):'';
    const drg=!t.done&&t.d===x; // §6(fb18) 미완료 + 이 칸이 제 날짜인 줄만(기한 때문에 오늘 칸에 얹힌 남의 날짜 항목 제외)
-   return`<li class="${t.done?'done':''} ${i==0&&!t.done&&t.kind=='study'?'late':''}" ${drg?`data-drag3="todo" data-tid="${t.id}"`:''}><span class="cb ${t.done?'on':''}" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</span><span onclick="${t.kind=='study'?`pickTodoItem('${t.id}')`:`editTodo('${t.id}')`}" style="flex:1;cursor:pointer">${t.kind=='study'?`<i class="plandot" style="background:${subjColor(c?c.s:'기타')}"></i>`:''}${esc(t.t)}${cur?' <b style="color:var(--blue);font-size:9px">▶ 진행 중</b>':''}</span>${dd2}${pn?`<span class="m">${esc(pn)}</span>`:''}${t.carry?`<span class="carry" title="원래 ${addDays(t.d,-t.carry).slice(5).replace('-','/')} 몫 — ${t.carry}일 밀렸다(하루씩 이월 ${t.carry}회)">+${t.carry}</span>`:''}${t.kind=='study'?`<span class="x" onclick="editTodo('${t.id}')" title="편집">✎</span>`:''}<span class="x" onclick="delTodo('${t.id}')">×</span>${drg?'<span class="dgh" title="끌어서 다른 날로">⠿</span>':''}</li>`};
+   return`<li class="${t.done?'done':''} ${i==0&&!t.done&&t.kind=='study'?'late':''}" ${drg?`data-drag3="todo" data-tid="${t.id}"`:''}><span class="cb ${t.done?'on':''}" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</span><span onclick="${t.kind=='study'?`pickTodoItem('${t.id}')`:`editTodo('${t.id}')`}" style="flex:1;cursor:pointer">${t.kind=='study'?`<i class="plandot" style="background:${subjColor(c?c.s:'기타')}"></i>`:''}${esc(t.t)}${cur?' <b style="color:var(--blue);font-size:9px">▶ 진행 중</b>':''}</span>${dd2}${pn?`<span class="m">${esc(pn)}</span>`:''}${t.carry?`<span class="${carryCls('+'+t.carry)}" title="원래 ${addDays(t.d,-t.carry).slice(5).replace('-','/')} 몫 — ${t.carry}일 밀렸다(하루씩 이월 ${t.carry}회)">+${t.carry}</span>`:''}${t.kind=='study'?`<span class="x" onclick="editTodo('${t.id}')" title="편집">✎</span>`:''}<span class="x" onclick="delTodo('${t.id}')">×</span>${drg?'<span class="dgh" title="끌어서 다른 날로">⠿</span>':''}</li>`};
   const cm=sharedForCol(x,i).map(s=>`<li class="${s.done?'done':''}"><span class="cb ${s.done?'on':''}" onclick="toggleShared('${s.id}')">${s.done?'✓':''}</span><span onclick="cmEdit('${s.id}')" style="flex:1;cursor:pointer"><b style="color:var(--blue);font-size:9px;border:1px solid var(--blue);border-radius:3px;padding:0 3px">공통</b> ${esc(s.t)}</span>${s.due?dueBadge(s.due):''}</li>`).join('');
   return`<div class="col ${i==1?'today':''}" data-caldate="${x}"><h5>${lab[i]} <small>${dt.getMonth()+1}/${dt.getDate()} ${DAYS[dt.getDay()]}${i==1&&weekNo(x)>=1?' · W'+pad(weekNo(x)):''}</small></h5>
   <div class="sec">학습${i==0?' · 미완료는 이월 가능':i==1?' · 체크 = 완료 · 클릭 = 타이머':''}<span class="rgt">${i==0&&late.length?`<button class="btn" onclick="carryAll('${x}')">오늘로 이월 ${late.length}건</button>`:''}</span></div>${PLAN_ITEMS_DIRECT?planColHTML(x,i):''}<ul>${st.map(li).join('')}</ul>${recLineHTML(x)}
@@ -1532,7 +1543,7 @@ function snapSheetHTML(d,sn){
  const rows=(sn.it||[]).map(z=>({s:z[0],label:z[1],done:!!z[2],min:z[3],carry:z[5]||'',ntMin:z[6]||0})); // 옛 스냅샷은 z[5] 가 없어 배지 없이 그려짐(무해)
  return`<div class="sheet"><div class="ribbon">${d.replace(/-/g,'.')} ${['SUN','MON','TUE','WED','THU','FRI','SAT'][dt.getDay()]}</div><div class="paper">
  <div><div class="hd">Time Table</div><div class="tt"><span></span><div class="tth">${[1,2,3,4,5].map(n=>`<i style="left:${(n*100/6).toFixed(2)}%">${n*10}</i>`).join('')}</div>${ttSnap(sess)}</div></div>
- <div class="stc"><div class="hd">Study Time</div><div class="st">${rows.map(r=>`<div class="it ${r.done?'done2':''}"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl">${esc(r.label)||'—'}</span>${r.carry?`<span class="carry">${esc(r.carry)}</span>`:''}<span${r.ntMin?` style="color:#999" title="합산 제외 — 잰 시간은 이 값이고 Total 에는 안 들어간다"`:''}>${r.min!=null?dur(r.min):''}</span></div>`).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
+ <div class="stc"><div class="hd">Study Time</div><div class="st">${rows.map(r=>`<div class="it ${r.done?'done2':''}"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl">${esc(r.label)||'—'}</span>${r.carry?`<span class="${carryCls(r.carry)}">${esc(r.carry)}</span>`:''}<span${r.ntMin?` style="color:#999" title="합산 제외 — 잰 시간은 이 값이고 Total 에는 안 들어간다"`:''}>${r.min!=null?dur(r.min):''}</span></div>`).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
  <div class="foot"><div>Start <b>${sess.length?hmDisp(Math.min(...sess.map(x=>x.a))):'--:--'}</b> &nbsp; Stop <b>${sess.length?hmDisp(Math.max(...sess.map(x=>x.b))):'--:--'}</b></div><div>Total <span class="big">${dur(sn.total||0)}</span></div></div></div></div></div>`;
 }
 function snapDirtyChk(who,d,sn){const su=sn.at||0;
@@ -1918,6 +1929,10 @@ function rebalanceDrop(id){
 /* §7(fb17) 이월 배지 = 숫자만(일수) · 「이어서」 표시는 뺀다(unitSessMap 계산·데이터는 그대로 · 툴팁에만 남김).
    산식 = 「원래 배정일 → 오늘」 일수 — 주월계획 유래 = 📌 날짜 or 자동 배분 원래 날짜(e.orig) · 손 할일 = carry(하루씩 이월이라 일수와 같음). */
 function dayDiff(a,b){return Math.round((parse(b)-parse(a))/864e5)}
+/* §4 이월 배지 색 — `+N`(밀림)만 빨강, 「→ 오늘」은 파랑.
+   ⚠ 네 자리(오늘 칸 할일 · 시트 줄 · 스냅샷 Study Time · 확대 모달)가 **이 한 함수**를 쓴다.
+     fb16 「오늘 칸과 Study Time 배지 일치」 — 한 곳만 고치지 마라. */
+const carryCls=txt=>'carry'+(/^\+/.test(String(txt||''))?' late2':'');
 function carryText(e){ // 화면·스냅샷이 같이 쓰는 배지 글자
  if(e.dim)return'→ 오늘';
  if(e.late){const n=e.orig?dayDiff(e.orig,today()):0;return '+'+(n>0?n:0)}
@@ -1928,9 +1943,9 @@ function carryBadge(e,sm){
  const txt=carryText(e);if(!txt)return'';
  const si=sm&&sm.get?sm.get(b.id+'|'+u.id):null;
  const acc=si?' · 지금까지 '+dur(si.min)+'('+si.first.slice(5).replace('-','/')+'부터)':'';
- if(e.dim)return'<span class="carry" title="이 날 몫인데 아직 안 끝났어 — 오늘 칸으로 넘어가'+acc+'">'+txt+'</span>';
+ if(e.dim)return'<span class="'+carryCls(txt)+'" title="이 날 몫인데 아직 안 끝났어 — 오늘 칸으로 넘어가'+acc+'">'+txt+'</span>';
  const n=e.orig?dayDiff(e.orig,today()):0;
- return'<span class="carry" title="원래 '+(e.orig?e.orig.slice(5).replace('-','/'):'?')+' 몫 — '+n+'일 밀렸다'+acc+'">'+txt+'</span>';
+ return'<span class="'+carryCls(txt)+'" title="원래 '+(e.orig?e.orig.slice(5).replace('-','/'):'?')+' 몫 — '+n+'일 밀렸다'+acc+'">'+txt+'</span>';
 }
 function planColHTML(d,idx){
  const plan=myPlan();if(!(plan.bands||[]).some(b=>!b.del))return'';
@@ -3278,8 +3293,12 @@ function oxGroup(hist,tags){
       ⚠ q 가 오답 수를 넘는 칸은 그래도 눈에 남긴다(경고만 · 값은 안 건드린다). */
    const x=Math.max(0,n-o);
    if(n-o-q<0)warn.push(d+' '+key+' — 헷갈림이 오답보다 많다 (n'+n+' o'+o+' q'+q+')');
+   const raw=parts[0]+' / '+parts[1]+(parts[2]?' ('+parts[2]+')':'');
+   /* `unit` 은 **손대지 않는다** — upsertRecs 의 id 이고 붙여넣기 갈래와 한 벌이어야 한다.
+      `ulabel` 은 **화면에만** 쓰는 긴 이름(민법 학습로그의 `과목 / 단원 (출처)` 그대로).
+      붙여넣기로 들어온 옛 행에는 없다 — 없으면 `unit` 으로 되돌아간다. */
    rows.push({d,app:'민법OX',subj:'민법',
-    unit:oxUnitLabel(parts[0]+' / '+parts[1]+(parts[2]?' ('+parts[2]+')':'')),
+    unit:oxUnitLabel(raw),ulabel:raw,
     n,o,x,q,src:'remote'});
   });
  });
@@ -3306,12 +3325,19 @@ function physGroup(ST,unitOf,src){
   if(!rec||!rec.t)return;
   const d=iso(new Date(rec.t-4*3600e3));
   const u=unitOf(no)||'미분류';const k=d+'|'+u;
-  const o=g.get(k)||{d,unit:u,n:0,o:0,x:0,q:0,sec:0};
+  const o=g.get(k)||{d,unit:u,n:0,o:0,x:0,q:0,sec:0,t0:rec.t,its:[]};
   o.n++;if(rec.m==='O')o.o++;else if(rec.m==='Q')o.q++;else if(rec.m==='X')o.x++;
-  o.sec+=rec.s||0;g.set(k,o);});});
- return[...g.values()].sort((a,b)=>a.d<b.d?-1:1).map(o=>{
+  o.sec+=rec.s||0;
+  if(rec.t<o.t0)o.t0=rec.t;
+  o.its.push({no:String(no),m:rec.m||'?',s:rec.s||0,t:rec.t});   /* §1 낱개 문항 — 버리지 않는다 */
+  g.set(k,o);});});
+ /* 단원 차례도 물리앱 로그와 같게 — 그 날 **처음 푼 시각** 순 (로그는 푼 순서를 지킨다) */
+ return[...g.values()].sort((a,b)=>a.d<b.d?-1:(a.d>b.d?1:a.t0-b.t0)).map(o=>{
   const r={d:o.d,app:'물리535',subj:'물리',unit:o.unit,n:o.n,o:o.o,x:o.x,q:o.q,src:src||'origin'};
-  if(o.sec)r.min=Math.round(o.sec/60);return r});
+  if(o.sec)r.min=Math.round(o.sec/60);
+  /* 푼 순서 그대로. `t` 는 담지 않는다 — 칸당 25바이트를 지키려고. */
+  r.items=o.its.sort((a,b)=>a.t-b.t).map(it=>{const e={no:it.no,m:it.m};if(it.s)e.s=it.s;return e});
+  return r});
 }
 async function physUnitMap(page){ // 문항번호 → 소단원 (물리 앱 페이지의 DATA 행 · NO=0 · BIG=4 · SUB=5)
  try{
@@ -3406,14 +3432,60 @@ function recImportGo(){
 }
 /* §3 표시 — 정답률 = 정답/문항(물리 Q 는 오답도 정답도 아님 · n 분모) */
 function recRate(rs){const n=rs.reduce((a,x)=>a+x.n,0);const o=rs.reduce((a,x)=>a+(x.o||0),0);return n?Math.round(o*100/n):0}
+/* 물리앱 secFmt2(`phys/index.html` 2542행)와 **같은 모양** — 분'초" · 초는 두 자리 */
+const secFmt2=x=>{x=Math.max(0,Math.round(x||0));return Math.floor(x/60)+"'"+String(x%60).padStart(2,'0')+'"'};
+/* 「오래 걸림」 — 값을 나르지 않고 **식을 옮겼다.**
+   ★ 이 식은 `phys/index.html` 2606~2613행의 사본이다.
+     **한쪽을 고치면 다른 쪽도 고쳐야 한다.**
+   값을 rec 행에 담지 않는 이유가 이것이다 — 담으면 두 벌이 되고
+   물리앱이 규칙을 바꿔도 tt 는 옛 규칙으로 남는다. */
+function physSlow(items){
+ const timed=(items||[]).filter(it=>it&&it.s>0);
+ if(timed.length<3)return null;
+ const avg=timed.reduce((s,it)=>s+it.s,0)/timed.length;
+ const slow=timed.filter(it=>it.s>=Math.max(180,avg*1.5)).sort((a,b)=>b.s-a.s);
+ return slow.length?{avg,slow}:null;
+}
+/* §3 앱마다 **그 앱의 「📝 학습로그」와 같은 층**으로 그린다.
+   ★ 원본이 두 벌이 되는 것은 사용자가 감수하기로 확정했다(2026-09-01).
+     **정본은 각 앱이고 tt 는 사본이다 — 어긋나면 앱을 믿는다.**
+   ⚠ 물리와 민법은 **형식이 다르다.** 하나로 통일하지 마라 — 각 앱 로그와
+     같아야 한다는 것이 요구다. 민법에는 낱개 문항 줄도 분도 없다.
+   앱이 늘면 REC_APPS 에 한 줄, 형식이 새로울 때만 여기 한 갈래 (§2-b 하드코딩 금지) */
+const REC_LOG={
+ phys:g=>{
+  const T=g.reduce((s,x)=>s+x.n,0),O=g.reduce((s,x)=>s+(x.o||0),0),
+        Q=g.reduce((s,x)=>s+(x.q||0),0),X=g.reduce((s,x)=>s+(x.x||0),0),
+        MN=g.reduce((s,x)=>s+(x.min||0),0);
+  const all=[];g.forEach(r=>(r.items||[]).forEach(it=>all.push(it)));
+  const sl=physSlow(all);
+  return g.map(r=>{
+   const rate=r.n?Math.round((r.o||0)*100/r.n):0;
+   /* ⚠ 옛 행에는 items 가 없다 — 그때는 낱개 줄을 안 그린다(오류를 내지 않는다) */
+   const its=(r.items||[]).map(x=>`${esc(x.no)} ${esc(x.m)}${x.s?' '+secFmt2(x.s):''}`).join(' | ');
+   return`<div class="qsub">- ${esc(r.unit)} : ${r.n}문항 (정답률 ${rate}% · 헷갈림 ${r.q||0})</div>`
+    +(its?`<div class="qitems">${its}</div>`:'');
+  }).join('')
+  +`<div class="qsum">합계: ${T}문항 · O ${O} · 헷갈림 ${Q} · X ${X}${MN?` · ${MN}분`:''}</div>`
+  +(sl?`<div class="qslow">오래 걸림(평균 ${secFmt2(sl.avg)}): ${sl.slow.map(x=>`${esc(x.no)} ${secFmt2(x.s)}`).join(', ')}</div>`:'');
+ },
+ ox:g=>{
+  const T=g.reduce((s,x)=>s+x.n,0),S=g.reduce((s,x)=>s+(x.o||0),0),C=g.reduce((s,x)=>s+(x.q||0),0);
+  return g.map(r=>`<div class="qsub">- ${esc(r.ulabel||r.unit)} : ${r.n}문항, 정답 ${r.o||0} · 오답 ${r.x||0} · 헷갈림 ${r.q||0}</div>`).join('')
+   +`<div class="qsum">합계: ${T}문항 · 정답 ${S} · 오답 ${T-S} · 헷갈림 ${C}</div>`;
+ }
+};
+const recFmt=a=>{const A=REC_APPS.find(x=>x.app===a);return A&&REC_LOG[A.paste]?A.paste:null};
 function recSecHTML(who,d){ // 확대 모달 「푼 문제」 — 카드 아래·메모 위 (사용자 확정 위치) · 분은 표시만(Total 불산입)
  const rs=recsOf(who,d);if(!rs.length)return'';
  const apps=[...new Set(rs.map(r=>r.app))];
  return`<div class="recsec"><div class="hd2">푼 문제</div>${apps.map(a=>{
   const g=rs.filter(r=>r.app===a);const n=g.reduce((s,x)=>s+x.n,0);const q=g.reduce((s,x)=>s+(x.q||0),0);const mn=g.reduce((s,x)=>s+(x.min||0),0);
-  return`<div class="qrow"><i class="plandot" style="background:${subjColor(recSubj(a))}"></i><b>${esc(a)}</b>&nbsp;${n}문항<span class="m2">정답률 ${recRate(g)}%${q?` · <span class="hz">헷갈림 ${q}</span>`:''}${mn?` · ${mn}분`:''}</span></div>
-  <div class="qsub">${g.map(x=>`${esc(x.unit)} ${x.n}`).join(' · ')}</div>`}).join('')}
- <p style="font-size:9.5px;color:#999;margin:2px 0 0">분은 표시만 — Total(타이머 실측)에는 안 합쳐</p></div>`;
+  const f=recFmt(a);
+  /* 접기 — 낱개 줄이 길어질 수 있어서. **기본은 펼침**(「똑같이 보이게」가 요구다) */
+  return`<details class="qapp" open><summary class="qrow"><span class="cav"></span><i class="plandot" style="background:${subjColor(recSubj(a))}"></i><b>${esc(a)}</b>&nbsp;${n}문항<span class="m2">정답률 ${recRate(g)}%${q?` · <span class="hz">헷갈림 ${q}</span>`:''}${mn?` · ${mn}분`:''}</span></summary>
+  ${f?REC_LOG[f](g):`<div class="qsub">${g.map(x=>`${esc(x.unit)} ${x.n}`).join(' · ')}</div>`}</details>`}).join('')}
+ <p style="font-size:9.5px;color:#999;margin:2px 0 0">분은 표시만 — Total(타이머 실측)에는 안 합쳐 · 정본은 각 앱의 「📝 학습로그」</p></div>`;
 }
 function recLineHTML(d){ // 어제·오늘·내일 칸 학습 절 밑 한 줄 — 기록 없으면 줄 없음
  const rs=recsOf(cfg.person,d);if(!rs.length)return'';
