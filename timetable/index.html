@@ -3251,6 +3251,8 @@ function oxUnitLabel(raw){
    ⚠ 날짜가 ISO 가 아니라 '2026. 8. 4.' 로케일 문자열이다 —
      민법앱 학습로그 sameDay() 와 **같은 방식**(숫자만 뽑기)으로 읽는다.
    ⚠ 옛 회차에는 `confuse` 가 없다 — 그때는 붙여넣기 갈래와 같이 `ox_q_tags` 로 센다.
+   ⚠ `x`(오답) = **n-o**. 붙여넣기 OX 행이 그 뜻이라 맞췄다(2026-09-01 사용자 확정).
+     `n-o-q` 가 아니다 — 헷갈림은 오답과 겹치는 별개 수다.
    ⚠ **min(분)은 넣지 않는다.** 민법 회독에는 시간이 없다(붙여넣기 OX 행과 같은 모양). */
 function oxDate(s){
  const n=String(s||'').match(/[0-9]+/g);
@@ -3271,8 +3273,11 @@ function oxGroup(hist,tags){
    const o=att.score||0;
    let q=att.confuse;
    if(typeof q!=='number'){q=0;ids.forEach(id=>{const t=(tags||{})[id];if(t&&t.confuse)q++})}
-   let x=n-o-q;
-   if(x<0){warn.push(d+' '+key+' (n'+n+' o'+o+' q'+q+')');x=0}
+   /* x = n-o — **붙여넣기로 들어온 OX 행과 같은 뜻**(2026-09-01 사용자 확정).
+      q(헷갈림)는 x 와 겹치는 별개 수다 — 맞혔어도 헷갈릴 수 있다. 빼지 않는다.
+      ⚠ q 가 오답 수를 넘는 칸은 그래도 눈에 남긴다(경고만 · 값은 안 건드린다). */
+   const x=Math.max(0,n-o);
+   if(n-o-q<0)warn.push(d+' '+key+' — 헷갈림이 오답보다 많다 (n'+n+' o'+o+' q'+q+')');
    rows.push({d,app:'민법OX',subj:'민법',
     unit:oxUnitLabel(parts[0]+' / '+parts[1]+(parts[2]?' ('+parts[2]+')':'')),
     n,o,x,q,src:'remote'});
