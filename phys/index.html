@@ -707,10 +707,17 @@ function draw(){
 /* ---------------- PDF 등록 ---------------- */
 async function loadHave(){const k=await keys('pdf');HAVE={};k.forEach(x=>HAVE[x]=1);MERGED=!!HAVE['ALL'];}
 
-/* 저장소에 함께 올려 둔 PDF를 받아 온다 — 기기마다 다시 넣지 않아도 되게 */
+/* 저장소에 함께 올려 둔 PDF를 받아 온다 — 기기마다 다시 넣지 않아도 되게
+   ⚠ 교재 PDF 는 **비공개** `zzikkaplan/studyplandata` 에 있다. 공개 genie 에는 못 올린다.
+     그래서 Pages 의 상대경로가 아니라 Contents API + 토큰으로 받는다.
+   ⚠ Accept 는 반드시 `vnd.github.raw` — `vnd.github+json` 은 1MB 를 넘으면 `content` 가
+     안 온다(민법 2026-08-31 실측 1,116바이트). 여섯 개가 다 6MB 이상이다. */
+const PDF_DIR='phys/pdf/';
+const PDF_META=PDF_DIR+'시험지메타.json';
 async function tryRemote(url,key){
   try{
-    const r=await fetch('pdf/'+url+'.pdf',{cache:'no-cache'});
+    const r=await fetch(ghUrl(PDF_DIR+url+'.pdf'),
+      {headers:{Authorization:'Bearer '+recToken(),Accept:'application/vnd.github.raw'},cache:'no-store'});
     if(!r.ok)return 0;
     const buf=await r.arrayBuffer();
     const head=String.fromCharCode.apply(null,new Uint8Array(buf.slice(0,5)));
@@ -718,21 +725,47 @@ async function tryRemote(url,key){
     await put('pdf',key,buf);return 1;
   }catch(e){return 0}
 }
+/* 딱지 — 파일별 md5·크기·시각. **바뀐 것만** 받는다(정리OMR pageHash 와 같은 수법).
+   ⚠ 이게 없으면 「받기」를 누를 때마다 61MB 를 통째로 다시 받는다. */
+async function remoteMeta(){
+  try{const t=await ghRaw(PDF_META);return t?JSON.parse(t):null}catch(e){return null}
+}
 async function ensureFiles(force){
   if(MERGED&&!force)return;
-  const need=FILES.filter(f=>force||!HAVE[f]);
   const bar=$('#dl');
-  if(!need.length)return;
+  /* ⚠ 토큰이 없으면 받을 길이 아예 없다 — 공개 genie 에는 PDF 가 없다.
+     여섯 번 헛걸음하고 401 을 받지 말고 여기서 멈춘다. */
+  if(!recToken()){
+    if(force){bar.classList.remove('hide');bar.classList.add('err');
+      bar.textContent='🔑 토큰이 없습니다 — 설정에서 넣으세요';
+      setTimeout(()=>bar.classList.add('hide'),3000)}
+    return;
+  }
+  const meta=await remoteMeta();
+  const seen=(await get('kv','pdfhash'))||{};
+  const mf=(meta&&meta.files)||null;
+  const changed=f=>!!(mf&&mf[f]&&seen[f]!==mf[f].md5);
+  /* 딱지가 있으면 「바뀐 것 + 없는 것」만. 딱지를 못 읽었을 때만 옛 방식(force=전부) */
+  const need=FILES.filter(f=>!HAVE[f]||changed(f)||(force&&!mf));
+  if(!need.length){
+    if(force){bar.classList.remove('hide','err');
+      bar.textContent='받아 둔 시험지가 모두 최신입니다';
+      setTimeout(()=>bar.classList.add('hide'),2500)}
+    return;
+  }
   bar.classList.remove('hide','err');
   let got=0;
   for(let i=0;i<need.length;i++){
     bar.textContent=`시험지 받는 중 — ${i+1}/${need.length}`;
-    if(await tryRemote(need[i],need[i]))got++;
+    if(await tryRemote(need[i],need[i])){got++;
+      if(mf&&mf[need[i]])seen[need[i]]=mf[need[i]].md5;}
   }
   if(!got&&!HAVE['ALL']&&await tryRemote('all','ALL'))got++;
+  if(got)await put('kv','pdfhash',seen);
   await loadHave();draw();renderSettings();
   if(got){bar.textContent=`시험지 ${got}개를 받았습니다`;setTimeout(()=>bar.classList.add('hide'),2500)}
-  else if(force){bar.classList.add('err');bar.textContent='저장소에서 PDF를 찾지 못했습니다 — pdf 폴더에 111.pdf~666.pdf가 있는지 확인하세요'}
+  else if(force){bar.classList.add('err');
+    bar.textContent='저장소에서 시험지를 받지 못했습니다 — 토큰 권한과 phys/pdf 폴더를 확인하세요';}
   else bar.classList.add('hide');
 }
 
@@ -1976,27 +2009,37 @@ function showSyncHelp(){
   const h=document.createElement('div');h.className='sheet';
   h.innerHTML=`<div class="panel">
     <h2>동기화 사용법</h2>
-    <p>이 앱은 <b>백업 파일을 손으로 옮기는 방식</b>입니다. 자동 동기화는 없습니다. 필기·진도·타이머 기록은 이 브라우저 안에만 쌓입니다.</p>
-    <div class="fld"><label>PC 에서 보낼 때</label>
+    <p><b>학습기록은 저절로 오갑니다.</b> 풀이 이력·메모·유형·가리개 자리는 3분마다 저장소를 거쳐 기기 사이를 오갑니다. 기기·브라우저가 달라도 됩니다. <b>필기(펜)와 PDF 만</b> 손으로 옮깁니다.</p>
+    <div class="fld"><label>처음 한 번 — 🔑 토큰</label>
       <p style="font-size:12.5px;line-height:1.7;margin:0">
-      1. 설정 → <b>필기·진도만 내보내기</b> 를 누릅니다. json 파일이 내려받아집니다.<br>
-      2. 그 파일을 클라우드나 메신저로 다른 기기에 보냅니다.<br>
-      3. 받는 기기에서 설정 → <b>백업 파일 불러오기</b>.
+      설정 → <b>🔑 토큰 · 기록 동기화</b> 칸에 토큰을 한 번 붙여넣고 <b>토큰 저장하고 동기화</b> 를 누릅니다.<br>
+      기기마다 한 번씩 해야 합니다. 홈화면에 얹은 웹앱은 <b>따로 한 번 더</b> 넣어야 합니다 — 사파리에서 열 때와 저장 칸이 갈립니다.
       </p>
-      <p style="font-size:11.5px;color:#888;margin:8px 0 0">이미 양쪽 기기에 PDF 가 들어 있을 때 쓰는 방법입니다. 파일이 작아서 평소 오가는 용으로 적합합니다.</p>
+      <p style="font-size:11.5px;color:#888;margin:8px 0 0">타임테이블·민법OX 와 같은 토큰 칸을 씁니다. 거기 이미 넣었다면 이 앱은 그걸 그대로 씁니다.</p>
     </div>
-    <div class="fld"><label>새 기기에서 처음 열 때</label>
+    <div class="fld"><label>머리 위 칩 읽는 법</label>
       <p style="font-size:12.5px;line-height:1.7;margin:0">
-      <b>PDF까지 전부 내보내기</b> 로 한 번에 옮깁니다. 쓰던 기기에서 이걸 누르고, 새 기기에서 <b>백업 파일 불러오기</b> 를 하면 PDF 와 필기가 다 따라옵니다. 수십 MB 라 무겁지만 이사는 이 방법이 깔끔합니다.
+      · <b>⟳ 동기화 중</b> — 지금 오가는 중입니다.<br>
+      · <b>● 동기화됨 N분 전</b> — 다 맞춰진 상태입니다.<br>
+      · <b>● 대기 N건</b> — 바뀐 것이 N칸 있고 아직 안 올라갔습니다. 3분 안에 저절로 갑니다. 칩을 누르면 지금 갑니다.<br>
+      · <b>○ 토큰 없음</b> — 아직 토큰을 안 넣었습니다. 이 상태면 <b>아무것도 오가지 않습니다.</b>
       </p>
-      <p style="font-size:11.5px;color:#888;margin:8px 0 0">그 기기에 교재 PDF 파일이 따로 있다면 설정 → <b>PDF 등록</b> 으로 직접 넣어도 됩니다. 파일 이름의 111~666 을 보고 자동으로 자리를 잡습니다.</p>
-      <p style="font-size:11.5px;color:#c0392b;margin:6px 0 0">⚠ <b>「저장소에서 시험지 받기」는 지금 안 됩니다.</b> 앱 저장소가 공개라 교재 PDF 를 올려두지 않았기 때문입니다. 누르면 「찾지 못했습니다」가 뜨는 것을 보게 됩니다.</p>
+      <p style="font-size:11.5px;color:#888;margin:8px 0 0">○ 오프라인 · ○ 동기화 실패 도 같은 자리에 뜹니다. 눌러서 다시 시도할 수 있습니다.</p>
+    </div>
+    <div class="fld"><label>필기·PDF 를 다른 기기로</label>
+      <p style="font-size:12.5px;line-height:1.7;margin:0">
+      <b>필기는 자동이 아닙니다.</b> 옮기려면 설정 → <b>필기·진도만 내보내기 (가벼움)</b> 로 json 을 내려받아 다른 기기에서 <b>백업 파일 불러오기</b> 를 합니다.<br>
+      PDF 까지 옮기려면 <b>PDF까지 전부 내보내기 (무거움)</b> 입니다. 수십 MB 라 무겁습니다.
+      </p>
+      <p style="font-size:11.5px;color:#888;margin:8px 0 0">새 기기라면 설정 → <b>저장소에서 시험지 받기</b> 가 더 쉽습니다. 토큰만 넣었으면 교재 PDF 6개를 저장소에서 받아 옵니다. 이미 받아 둔 것은 다시 받지 않고 <b>바뀐 것만</b> 받습니다.</p>
+      <p style="font-size:11.5px;color:#888;margin:6px 0 0">그 기기에 교재 PDF 파일이 따로 있다면 설정 → <b>PDF 등록</b> 으로 직접 넣어도 됩니다. 파일 이름의 111~666 을 보고 자동으로 자리를 잡습니다.</p>
     </div>
     <div class="fld"><label>⚠ 조심할 것</label>
       <p style="font-size:12.5px;line-height:1.7;margin:0">
-      · <b>사파리의 「사이트 데이터 삭제」를 누르지 마세요.</b> PDF 와 필기가 함께 날아갑니다. 그 전에 반드시 내보내기를 하세요.<br>
-      · <b>주소를 하나로 고정하세요.</b> 여는 경로가 달라지면 기록도 따로 놀게 됩니다.<br>
-      · <b>불러오기는 덮어씁니다.</b> 양쪽 기기에서 따로 풀었으면 나중에 불러온 쪽이 남습니다. 한 쪽에서만 풀고 옮기세요.
+      · <b>한 문항을 두 기기에서 같이 풀지 마세요.</b> 문항 단위로 나중 것만 남습니다. 다른 문항을 각각 푸는 것은 둘 다 남으니 괜찮습니다.<br>
+      · <b>사파리의 「사이트 데이터 삭제」를 누르지 마세요.</b> <b>PDF 와 필기가</b> 날아갑니다. 학습기록은 저장소에서 되살아나지만 그 둘은 아닙니다.<br>
+      · <b>주소를 하나로 고정하세요.</b> 필기와 PDF 는 여는 경로마다 따로 쌓입니다.<br>
+      · <b>백업 파일 불러오기는 덮어씁니다.</b> 옛 백업을 불러오면 그 안의 기록이 지금 것을 덮고, 그대로 다른 기기로 퍼집니다.
       </p>
     </div>
     <button class="btn pri" id="hClose">닫기</button>
@@ -2005,7 +2048,6 @@ function showSyncHelp(){
   document.body.appendChild(h);
   h.querySelector('#hClose').onclick=()=>h.remove();
 }
-
 /* ---------------- 설정 ---------------- */
 let setSheet=null;
 function renderSettings(){
@@ -2022,7 +2064,7 @@ $('#btnSet').onclick=()=>{
       <input type="file" id="fi" accept="application/pdf" multiple style="font-size:13px">
       <div class="filelist" id="fl" style="margin-top:10px"></div>
       <button class="btn" id="bPull" style="margin-top:10px">저장소에서 시험지 받기</button>
-      <p style="margin:8px 0 0;font-size:11.5px">파일 이름의 111~666을 보고 자동으로 자리를 잡습니다. 6개를 하나로 합친 통합본(549쪽)도 됩니다.</p>
+      <p style="margin:8px 0 0;font-size:11.5px">파일 이름의 111~666을 보고 자동으로 자리를 잡습니다. 6개를 하나로 합친 통합본(549쪽)도 됩니다.<br>「저장소에서 시험지 받기」는 🔑 토큰이 있어야 하고, <b>바뀐 것만</b> 받습니다.</p>
     </div>
     <div class="fld"><label>필기</label>
       <button class="btn" id="bPen">애플펜슬로만 필기 — ${SET.pencil?'켬':'끔'}</button>
