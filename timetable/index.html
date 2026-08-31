@@ -639,7 +639,8 @@ const ym=s=>s.slice(0,7);
 const hm=m=>`${pad(Math.floor(m/60))}:${pad(m%60)}`;           // 분 → HH:MM (24 넘는 시간 허용)
 const hmDisp=m=>hm(m>=1440?m-1440:m);                          // 표시용은 24 접기
 const dur=m=>`${pad(Math.floor(m/60))}:${pad(m%60)}`;            // 어디서나 시:분 두 자리 (06:18)
-const mSum=list=>list.reduce((a,x)=>a+(x.nt?0:(x.b-x.a)),0);      // nt(합산 제외) 세션 빼고 합
+const mSum=list=>list.reduce((a,x)=>a+(x.nt?0:(x.b-x.a)),0);      // nt(합산 제외) 세션 빼고 합 — ★합산 전용. 줄 표시에 쓰지 마라
+const mRaw=list=>list.reduce((a,x)=>a+(x.b-x.a),0);               // 실제로 잰 시간 — nt 를 안 본다(줄 표시용 · fb20 §1-1)
 const NT_HATCH=';background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.55) 0 2px,transparent 2px 5px)';
 const toast=(t)=>{const e=document.getElementById('toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),1800)};
 
@@ -1131,7 +1132,7 @@ function dayRows(who,d){
   const ss=sess.filter(x=>{if(used.has(x.id))return false;return x.bd===e.b.id&&x.un===e.u.id});
   ss.forEach(x=>used.add(x.id));
   rows.push({type:'unit',id:e.b.id+'|'+e.u.id,s:e.b.s,cat:null,band:e.b,unit:e.u,label:(e.u.id+' '+e.u.n).trim(),catName:e.b.name,
-   done:!!e.done,dim:!!e.dim,late:!!e.late,orig:e.orig||null,min:mSum(ss),sess:ss});
+   done:!!e.done,dim:!!e.dim,late:!!e.late,orig:e.orig||null,min:mRaw(ss),ntMin:mRaw(ss)-mSum(ss),sess:ss});
  });
  const items=tf.data.items.filter(x=>!x.del&&x.kind==='study'&&x.d===d&&!autoTx.has((x.t||'').trim()));
  items.forEach(it=>{
@@ -1141,20 +1142,23 @@ function dayRows(who,d){
    if(x.cat)return false;
    return!!c&&x.p===c.name&&x.i===(it.t||'')&&x.s===c.s;});
   ss.forEach(x=>used.add(x.id));
-  rows.push({type:'item',id:it.id,s:c?c.s:'기타',cat:c||null,label:it.t||'',done:!!it.done,min:mSum(ss),sess:ss});
+  rows.push({type:'item',id:it.id,s:c?c.s:'기타',cat:c||null,label:it.t||'',done:!!it.done,min:mRaw(ss),ntMin:mRaw(ss)-mSum(ss),sess:ss});
  });
  cats.filter(c=>(c.d1||c.d2)&&catActive(c,d)).forEach(c=>{
   if(rows.some(r=>r.cat&&r.cat.id===c.id))return;
   const ss=sess.filter(x=>{if(used.has(x.id))return false;if(x.plan)return false;if(x.cat)return x.cat===c.id;return x.p===c.name&&!x.i&&x.s===c.s;});
   ss.forEach(x=>used.add(x.id));
-  rows.push({type:'cat',id:c.id,s:c.s,cat:c,label:'',done:false,min:mSum(ss),sess:ss});
+  rows.push({type:'cat',id:c.id,s:c.s,cat:c,label:'',done:false,min:mRaw(ss),ntMin:mRaw(ss)-mSum(ss),sess:ss});
  });
- const g={};sess.filter(x=>!used.has(x.id)&&!x.life).forEach(x=>{const k=x.s+'|'+(x.p||'')+'|'+(x.i||'');const o=(g[k]=g[k]||{type:'legacy',id:k,s:x.s,cat:null,label:[x.p,x.i].filter(Boolean).join(' '),done:false,min:0,sess:[]});o.min+=x.nt?0:(x.b-x.a);o.sess.push(x)}); // 생활 블록은 Study Time 줄에서 제외 (§7)
+ const g={};sess.filter(x=>!used.has(x.id)&&!x.life).forEach(x=>{const k=x.s+'|'+(x.p||'')+'|'+(x.i||'');const o=(g[k]=g[k]||{type:'legacy',id:k,s:x.s,cat:null,label:[x.p,x.i].filter(Boolean).join(' '),done:false,min:0,ntMin:0,sess:[]});o.min+=(x.b-x.a);o.ntMin+=(x.nt?(x.b-x.a):0);o.sess.push(x)}); // 생활 블록은 Study Time 줄에서 제외 (§7)
  rows.push(...Object.values(g));
  return rows;
 }
 function sheetHTML(who,d,sess,{withRun=true,axis='day'}={}){
  const dt=parse(d);const tot=mSum(sess);
+ // fb20 §1-4 — 생활과 「합산 제외」를 갈라 적는다. 생활은 이미 nt:1 이라 !x.life 로 겹침을 막는다
+ const exL=sess.some(x=>x.life),exN=sess.some(x=>x.nt&&!x.life);
+ const exTxt=[exL&&'생활',exN&&'합산 제외'].filter(Boolean).join('·');
  const rlab=axis==='week'?`${weekStart(d).replace(/-/g,'.')} ~ ${addDays(weekStart(d),6).replace(/-/g,'.')}`
   :axis==='month'?`${(ym(d)+'-01').replace(/-/g,'.')} ~ ${(ym(d)+'-'+pad(new Date(parse(d).getFullYear(),parse(d).getMonth()+1,0).getDate())).replace(/-/g,'.')}`
   :`${d.replace(/-/g,'.')} ${['SUN','MON','TUE','WED','THU','FRI','SAT'][dt.getDay()]}`;
@@ -1172,12 +1176,12 @@ function sheetHTML(who,d,sess,{withRun=true,axis='day'}={}){
   const click=r.type==='legacy'?(r.sess[0]?`editSession('${r.sess[0].id}',document)`:''):(mine?`pickRow('${r.type}','${encodeURIComponent(r.id)}')`:''); // §1(fb17) 클릭 = 선택만
   const lbl=r.type==='unit'?[r.catName,r.label].filter(Boolean).join(' '):(r.type==='legacy'?r.label:[r.cat?r.cat.name:'',r.label].filter(Boolean).join(' '));
   const badge=r.type==='unit'?carryBadge(r,sm):'';
-  return`<div class="it ${on?'selr':''} ${r.done?'done2':''} ${r.dim?'dim2':''}" onclick="${click}"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl${(ui.stMore||{})[r.type+'|'+r.id]?' ex':''}" data-more="${esc(r.type+'|'+r.id)}">${esc(lbl)||'—'}</span>${badge}<span${isRun?` id="stRunMin" data-base="${r.min}"`:''}>${dur(r.min+(isRun?runMin:0))}</span>${on&&r.type==='item'?`<button class="btn" onclick="event.stopPropagation();toggleTodo('${r.id}')">${r.done?'완료 취소':'완료'}</button>`:''}${on&&r.type==='unit'?`<button class="btn" onclick="event.stopPropagation();togglePlanDone('${(r.band||{}).id}','${(r.unit||{}).id}','${d}')">${r.done?'완료 취소':'완료'}</button>`:''}</div>`;
+  return`<div class="it ${on?'selr':''} ${r.done?'done2':''} ${r.dim?'dim2':''}" onclick="${click}"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl${(ui.stMore||{})[r.type+'|'+r.id]?' ex':''}" data-more="${esc(r.type+'|'+r.id)}">${esc(lbl)||'—'}</span>${badge}<span${isRun?` id="stRunMin" data-base="${r.min}"`:''}${r.ntMin?` style="color:#999" title="합산 제외 — 잰 시간은 이 값이고 Total 에는 안 들어간다"`:''}>${dur(r.min+(isRun?runMin:0))}</span>${on&&r.type==='item'?`<button class="btn" onclick="event.stopPropagation();toggleTodo('${r.id}')">${r.done?'완료 취소':'완료'}</button>`:''}${on&&r.type==='unit'?`<button class="btn" onclick="event.stopPropagation();togglePlanDone('${(r.band||{}).id}','${(r.unit||{}).id}','${d}')">${r.done?'완료 취소':'완료'}</button>`:''}</div>`;
  };
  return`<div class="sheet" style="position:relative"><button class="btn pmbtn" onclick="pmPopup(this.ownerDocument)" title="계획관리 팝업 — 화면 이동 없이 편집 (§9)">📋 계획관리</button><div class="ribbon rbtn" onclick="ribbonModal('${axis}',this.ownerDocument)" title="클릭 = 날짜 이동 · 하루 시작 (§1 fb18)">${rlab}</div><div class="paper">
  <div><div class="hd">Time Table</div><div class="tt"><span></span><div class="tth">${[1,2,3,4,5].map(n=>`<i style="left:${(n*100/6).toFixed(2)}%">${n*10}</i>`).join('')}</div>${ttRows(sess,{lp:lifePlanned(who,d)})}</div></div>
  <div class="stc"><div class="hd">Study Time${mine&&catRows.length?`<span class="sttgl" onclick="stCatTgl()" title="세부계획 없이 활동 단위로 재는 줄 — 켜면 목록에 나온다">활동 줄 ${catRows.length} ${showCat?'▾':'▸'}</span>`:''}</div><div class="st">${rows.map(rowHTML).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}${(()=>{const lm=sess.filter(x=>x.life).reduce((a,x)=>a+(x.b-x.a),0);return`<div class="it liferow" ${mine?`onclick="pickRow('life','')" title="클릭 = 선택 · START 로 시작 — 종류는 블록 클릭으로 나중에 지정 (합산 없음)"`:''}><i class="sw hsw"></i><span class="nm">생활</span><span class="pl" style="color:#aaa">${mine?'밥·산책·… 나중 지정':''}</span><span>${lm?dur(lm):''}</span></div>`})()}</div>
- <div class="foot"><div>Start <b>${sess.length?hmDisp(sess[0].a):(mine&&run&&run.d===d?hmDisp(run.a):'--:--')}</b> &nbsp; Stop <b>${sess.length?hmDisp(Math.max(...sess.map(x=>x.b))):'--:--'}</b></div><div>Total${sess.some(x=>x.life)?'<i style="font-style:normal;font-size:9px;color:#999"> (생활 제외)</i>':''} <span class="big"${mine&&run&&run.d===d?` id="stTot" data-base="${tot}"`:''}>${dur(tot+(mine&&run&&run.d===d&&!run.nt?runMin:0))}</span></div></div></div></div></div>`;
+ <div class="foot"><div>Start <b>${sess.length?hmDisp(sess[0].a):(mine&&run&&run.d===d?hmDisp(run.a):'--:--')}</b> &nbsp; Stop <b>${sess.length?hmDisp(Math.max(...sess.map(x=>x.b))):'--:--'}</b></div><div>Total${exTxt?`<i style="font-style:normal;font-size:9px;color:#999"> (${exTxt}${exN?' 뺀 값':' 제외'})</i>`:''} <span class="big"${mine&&run&&run.d===d?` id="stTot" data-base="${tot}"`:''}>${dur(tot+(mine&&run&&run.d===d&&!run.nt?runMin:0))}</span></div></div></div></div></div>`;
 }
 function mbarHTML(){
  const si=selInfo();
@@ -1195,7 +1199,8 @@ function sharedForCol(x,i){
  const me=cfg.person;const list=sharedItems();
  if(i===0)return list.filter(s=>s.doneAt===x);
  if(i===2)return list.filter(s=>!s.done&&s.due===x);
- if(x===today())return list.filter(s=>!s.done&&(s.who||[]).includes(me)).sort((a,b)=>(a.due||'9999')<(b.due||'9999')?-1:1);
+ // fb20 §2-1 — 기한이 미래면 오늘 칸에 두지 않는다(기한 없음·오늘·지난 것은 그대로 남는다)
+ if(x===today())return list.filter(s=>!s.done&&(s.who||[]).includes(me)&&(!s.due||s.due<=x)).sort((a,b)=>(a.due||'9999')<(b.due||'9999')?-1:1);
  return list.filter(s=>!s.done&&s.due===x);
 }
 function threeHTML(){
@@ -1207,7 +1212,7 @@ function threeHTML(){
   const auto=PLAN_ITEMS_DIRECT?autoUnitTexts(x,i):null;
   const st=items.filter(t=>t.kind=='study'&&!(auto&&auto.has((t.t||'').trim()))); // 자동 줄과 겹치는 옛 복사 할일 숨김 (⚠)
   let td=items.filter(t=>t.kind!='study');
-  if(x===t0)td=td.concat(tf.data.items.filter(t=>!t.del&&t.kind!=='study'&&t.due&&!t.done&&t.d!==x)); // 기한 있는 미완료는 매일 오늘 칸에
+  if(x===t0)td=td.concat(tf.data.items.filter(t=>!t.del&&t.kind!=='study'&&t.due&&!t.done&&t.d!==x&&t.due<=t0)); // 기한이 오늘이거나 지난 미완료는 매일 오늘 칸에 (fb20 §2-2)
   td=td.slice().sort((a,b)=>(a.due||'9999')<(b.due||'9999')?-1:1);
   const late=i==0?st.filter(t=>!t.done):[];
   const li=t=>{const c=t.cat?catById.get(t.cat):null;const pn=c?c.name:'';const cur=t.kind=='study'&&run&&(run.plan===t.id||(!run.plan&&run.i&&run.i===t.t));
@@ -1503,16 +1508,16 @@ function takeSnap(d){ // 내 것만. 그 시점 복사본 — 원본을 나중�
  const old=f.data.days[d]||{};
  f.data.days[d]={at:Date.now(),u:Date.now(),total:mSum(sess),memo:old.memo||'',
   ss:sess.map(x=>[x.s,x.a,x.b,x.nt?1:0,x.life?1:0]),
-  it:rows.map(r=>[r.s,(r.type==='unit'?[r.catName,r.label].filter(Boolean).join(' '):(r.type==='legacy'?r.label:[r.cat?r.cat.name:'',r.label].filter(Boolean).join(' '))),r.done?1:0,r.min,r.cat?r.cat.name:(r.catName||''),carryText(r)||''])};
+  it:rows.map(r=>[r.s,(r.type==='unit'?[r.catName,r.label].filter(Boolean).join(' '):(r.type==='legacy'?r.label:[r.cat?r.cat.name:'',r.label].filter(Boolean).join(' '))),r.done?1:0,r.min,r.cat?r.cat.name:(r.catName||''),carryText(r)||'',r.ntMin||0])};
  f.dirty=true;saveF(snapPath(who,m),f);scheduleSync();
 }
 /* 스냅샷을 일간 시트 모양 그대로 렌더 (확대 보기용 · 옛 스냅샷은 줄 시간이 없어 빈칸 — 다시 반영으로 채움) */
 function snapSheetHTML(d,sn){
  const dt=parse(d);const sess=snapSess(sn,d);
- const rows=(sn.it||[]).map(z=>({s:z[0],label:z[1],done:!!z[2],min:z[3],carry:z[5]||''})); // 옛 스냅샷은 z[5] 가 없어 배지 없이 그려짐(무해)
+ const rows=(sn.it||[]).map(z=>({s:z[0],label:z[1],done:!!z[2],min:z[3],carry:z[5]||'',ntMin:z[6]||0})); // 옛 스냅샷은 z[5] 가 없어 배지 없이 그려짐(무해)
  return`<div class="sheet"><div class="ribbon">${d.replace(/-/g,'.')} ${['SUN','MON','TUE','WED','THU','FRI','SAT'][dt.getDay()]}</div><div class="paper">
  <div><div class="hd">Time Table</div><div class="tt"><span></span><div class="tth">${[1,2,3,4,5].map(n=>`<i style="left:${(n*100/6).toFixed(2)}%">${n*10}</i>`).join('')}</div>${ttSnap(sess)}</div></div>
- <div class="stc"><div class="hd">Study Time</div><div class="st">${rows.map(r=>`<div class="it ${r.done?'done2':''}"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl">${esc(r.label)||'—'}</span>${r.carry?`<span class="carry">${esc(r.carry)}</span>`:''}<span>${r.min!=null?dur(r.min):''}</span></div>`).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
+ <div class="stc"><div class="hd">Study Time</div><div class="st">${rows.map(r=>`<div class="it ${r.done?'done2':''}"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl">${esc(r.label)||'—'}</span>${r.carry?`<span class="carry">${esc(r.carry)}</span>`:''}<span${r.ntMin?` style="color:#999" title="합산 제외 — 잰 시간은 이 값이고 Total 에는 안 들어간다"`:''}>${r.min!=null?dur(r.min):''}</span></div>`).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}</div>
  <div class="foot"><div>Start <b>${sess.length?hmDisp(Math.min(...sess.map(x=>x.a))):'--:--'}</b> &nbsp; Stop <b>${sess.length?hmDisp(Math.max(...sess.map(x=>x.b))):'--:--'}</b></div><div>Total <span class="big">${dur(sn.total||0)}</span></div></div></div></div></div>`;
 }
 function snapDirtyChk(who,d,sn){const su=sn.at||0;
@@ -3535,7 +3540,7 @@ function setHTML(){
  <h4>과목·색 <small style="font-weight:400;color:#888">둘이 공용 (settings.json) · ⠿ 끌어서 순서 변경 = 앱 전체 과목 순서</small></h4><div class="sub" id="subjList" data-ds="subj" data-dax="y">${settings.subjects.map((x,i)=>`<div class="row" data-di="${i}"><span class="dragh" title="끌어서 순서 변경" onclick="event.stopPropagation()">⠿</span><input value="${esc(x.n)}" data-i="${i}" data-k="n"><input type="color" value="${x.c}" data-i="${i}" data-k="c"><button class="btn" onclick="settings.subjects.splice(${i},1);render()">×</button></div>`).join('')}<button class="btn" onclick="settings.subjects.push({n:'새 과목',c:'#999999'});render()">+ 과목</button></div>
  <div class="row"><button class="btn p" onclick="applySettings()">설정 저장 (둘 다 반영)</button></div>
  <h4>계획 <small style="font-weight:400;color:#888">사람별 (plan/${esc(cfg.person)}.json) · 주차는 프로젝트 기간이 정함(주월계획 ⚙ 설정)</small></h4>
- <div class="row"><label>요일별 배분</label><span style="font-size:10px;color:#888">타임테이블 주간 캘린더 위 ⚙(자동 분배)로 이사 — 프로젝트별 균등/요일 가중치/과목별 요일</span></div>
+ <div class="row"><label>요일별 배분</label><span style="font-size:10px;color:#888">주월계획 ⚙(자동 분배)로 이사 — 프로젝트별 균등/요일 가중치/과목별 요일</span></div>
  <h4>앱 버전 <small style="font-weight:400;color:#888">화면이 예전 같으면 캐시부터 의심 (§5 fb16)</small></h4>
  <div class="row"><label>버전</label><span id="swV" style="font-size:11px">확인 중…</span><button class="btn" onclick="hardReload()" title="서비스워커·캐시를 걷어내고 최신본을 받아옴">🔄 최신으로 새로고침</button></div>
  <h4>기기</h4><div class="row"><button class="btn" onclick="exportLocal()">이 기기 데이터 내보내기(JSON)</button><button class="btn d" onclick="if(confirm('이 기기의 로컬 데이터를 지울까? 동기화 안 된 건 사라져.')){Object.keys(localStorage).filter(k=>k.startsWith('tt.')).forEach(k=>localStorage.removeItem(k));location.reload()}">로컬 초기화</button></div>
