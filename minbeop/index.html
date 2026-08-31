@@ -25,6 +25,8 @@
                 <h1 class="text-lg font-extrabold text-gray-900">📖 26민공연OX</h1>
                 <span id="data-label" class="text-[11px] font-bold text-gray-500"></span>
                 <span class="flex-1"></span>
+                <span id="exam-chip" onclick="loadExamSettings()" title="다음 시험까지 — zzikkaTT 의 settings.json 을 읽는다(앱에 날짜를 박지 않는다)" class="text-[11px] font-extrabold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded cursor-pointer" style="display:none"></span>
+                <span id="rec-chip" onclick="syncRecords(true)" title="기록 동기화 — 누르면 지금 맞춘다" class="text-[11px] font-bold text-gray-500 cursor-pointer"></span>
                 <span id="sync-status" class="text-[11px] text-gray-500 font-semibold"></span>
                 <button onclick="toggleTools()" id="tools-toggle" class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-2.5 py-1 rounded font-bold transition">⚙ 데이터·동기화</button>
             </div>
@@ -49,6 +51,8 @@
                         ⬆ 불러오기
                         <input type="file" accept=".json,.gz,application/json,application/gzip" onchange="importProgress(event)" class="hidden">
                     </label>
+                    <button onclick="recForcePush()" title="이 기기 기록으로 원격을 덮는다 — 첫 판·사고 복구용" class="text-[11px] bg-white hover:bg-gray-50 text-amber-700 px-2.5 py-1 rounded font-bold transition border border-amber-300">⬆ 강제 올리기</button>
+                    <button onclick="recForcePull()" title="원격 기록으로 이 기기를 덮는다 — 첫 판·사고 복구용" class="text-[11px] bg-white hover:bg-gray-50 text-amber-700 px-2.5 py-1 rounded font-bold transition border border-amber-300">⬇ 강제 받기</button>
                     <button id="pick-folder-btn" onclick="chooseSaveFolder()" class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded font-bold transition border border-gray-300">📂 저장폴더 지정</button>
                     <span id="folder-label" onclick="clearSaveFolder()" title="클릭하면 폴더 지정 해제" class="text-[10px] font-bold text-gray-400 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded cursor-pointer">📁 폴더 미지정</span>
                 </div>
@@ -1005,7 +1009,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            localStorage는 기기별로 분리되어 있어 자동 동기화가 되지 않습니다.
            내보낸 JSON을 볼트에 저장하면 옵시디언 Sync가 다른 기기로 옮겨주고,
            그 기기에서 '불러오기'로 병합합니다. */
-        const SYNC_KEYS = ['ox_q_history', 'ox_q_tags', 'ox_q_memos', 'ox_q_logic', 'ox_q_links', 'ox_q_marks', 'ox_chap_history', 'ox_in_progress', 'ox_q_coords', 'ox_omr_docs', 'ox_q_last', 'ox_q_type', 'ox_weak_stage', 'ox_mem_cards'];
+        /* ★ 2026-08-31 — `ox_q_fix`(정정)를 여기 넣었다. 8/29 의 「동기화 안 함」은
+           **「마스터 엑셀에 자동 반영하지 않는다」** 쪽이 확정된 것이고(2026-08-31 사용자 확인),
+           기기 사이에 보이는 것은 별개다. 옛 백업 파일도 이 목록으로 읽히므로 호환이 유지된다. */
+        const SYNC_KEYS = ['ox_q_history', 'ox_q_tags', 'ox_q_memos', 'ox_q_logic', 'ox_q_links', 'ox_q_marks', 'ox_chap_history', 'ox_in_progress', 'ox_q_coords', 'ox_omr_docs', 'ox_q_last', 'ox_q_type', 'ox_weak_stage', 'ox_mem_cards', 'ox_q_fix'];
 
         function syncStatus(msg, tone) {
             const el = document.getElementById('sync-status');
@@ -1014,6 +1021,273 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             el.className = `text-[11px] font-bold ${tone === 'err' ? 'text-red-600' : 'text-green-700'}`;
             clearTimeout(syncStatus._t);
             syncStatus._t = setTimeout(() => { el.textContent = ''; }, 6000);
+        }
+
+        /* ══════════════ 기록 자동 동기화 (2026-08-31) ══════════════
+           비공개 `zzikkaplan/studyplandata` 의 `minbeop/기록.json` 한 파일에 15+1키를 담는다.
+           실측 236KB — 1MB 넘는 키가 없어 쪼개지 않는다.
+
+           ★ 기존 키의 **값 모양을 한 글자도 바꾸지 않는다.** 시각·묘비는 **옆에 따로** 쌓는다.
+             ox_sync_u      "키|칸" → 마지막으로 만진 시각
+             ox_sync_gone   "키|칸" → 지운 시각 (묘비)
+             ox_sync_shadow 직전 도장 때의 값 사본 (대조용)
+             ox_sync_meta   { lastSync, remoteSha }
+           이 넷은 **기기별로 산다** — SYNC_KEYS 에 넣지 않는다.
+
+           ⚠ 칸 이름에 `|` 가 들어갈 수 있다(단원키). **첫 `|` 에서만** 자른다. */
+        const REC_PATH = 'minbeop/기록.json';
+        const SET_PATH = 'settings.json';
+        const U_KEY = 'ox_sync_u', GONE_KEY = 'ox_sync_gone',
+              SHADOW_KEY = 'ox_sync_shadow', SMETA_KEY = 'ox_sync_meta';
+        const lsObj = k => { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch (e) { return {}; } };
+        const lsPut = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+        const ckey = (k, c) => k + '|' + c;
+        const csplit = s => { const i = s.indexOf('|'); return [s.slice(0, i), s.slice(i + 1)]; };
+        const recWho = () => { try { return (JSON.parse(localStorage.getItem('tt.cfg') || '{}')).person || '알수없음'; } catch (e) { return '알수없음'; } };
+
+        /* ---------- A-2 도장 찍기 ----------
+           저장하는 자리를 하나도 고치지 않는다. 그림자와 대조해 여기 한 곳에서 찍는다.
+           ⚠ 알려진 한계 — 도장은 「바꾼 순간」이 아니라 최대 10초 뒤다. */
+        function stampAll() {
+            const now = Date.now();
+            const u = lsObj(U_KEY), gone = lsObj(GONE_KEY), shadow = lsObj(SHADOW_KEY);
+            const qlast = lsObj('ox_q_last');
+            let n = 0;
+            for (const k of SYNC_KEYS) {
+                const cur = lsObj(k), old = shadow[k] || {};
+                for (const c in cur) {
+                    if (JSON.stringify(cur[c]) !== JSON.stringify(old[c])) {
+                        /* A-3 회독만 예외 — 진짜 시각(ox_q_last)이 이미 있다 */
+                        u[ckey(k, c)] = (k === 'ox_q_history' && qlast[c]) ? qlast[c] : now;
+                        delete gone[ckey(k, c)]; n++;
+                    }
+                }
+                for (const c in old) {
+                    if (!(c in cur)) { gone[ckey(k, c)] = now; delete u[ckey(k, c)]; n++; }
+                }
+                shadow[k] = cur;
+            }
+            lsPut(U_KEY, u); lsPut(GONE_KEY, gone); lsPut(SHADOW_KEY, shadow);
+            return n;
+        }
+
+        /* ---------- §B 병합 — 칸 단위 최신 승 · 무승부는 원격 ---------- */
+        function recMerge(remote) {
+            const u = lsObj(U_KEY), gone = lsObj(GONE_KEY);
+            const rU = remote.u || {}, rG = remote.gone || {}, rD = remote.data || {};
+            const byKey = {};
+            const add = (s) => { const [k, c] = csplit(s); if (!byKey[k]) byKey[k] = new Set(); byKey[k].add(c); };
+            Object.keys(rU).forEach(add); Object.keys(rG).forEach(add);
+            let took = 0, kept = 0, del = 0;
+            for (const k of SYNC_KEYS) {
+                const cur = lsObj(k);
+                const cells = byKey[k] || new Set();
+                Object.keys(rD[k] || {}).forEach(c => cells.add(c));
+                for (const c of cells) {
+                    const ck = ckey(k, c);
+                    const mine = Math.max(u[ck] || 0, gone[ck] || 0);
+                    const theirs = Math.max(rU[ck] || 0, rG[ck] || 0);
+                    if (theirs === 0 || theirs < mine) { kept++; continue; }   /* 내 쪽이 이긴다 */
+                    if ((rG[ck] || 0) >= (rU[ck] || 0) && (rG[ck] || 0) > 0) {
+                        /* 원격이 지웠다 — ★ 지운 것이 되살아나면 안 된다 */
+                        if (c in cur) { delete cur[c]; del++; }
+                        gone[ck] = rG[ck]; delete u[ck];
+                    } else if (rD[k] && Object.prototype.hasOwnProperty.call(rD[k], c)) {
+                        cur[c] = rD[k][c]; u[ck] = rU[ck]; delete gone[ck]; took++;
+                    }
+                }
+                lsPut(k, cur);
+            }
+            lsPut(U_KEY, u); lsPut(GONE_KEY, gone);
+            /* ★ 그림자도 같이 갱신한다 — 안 하면 다음 stampAll 이
+               「원격에서 받은 것」을 「내가 바꾼 것」으로 오인해 도장을 새로 찍는다. */
+            const shadow = {}; SYNC_KEYS.forEach(k => shadow[k] = lsObj(k)); lsPut(SHADOW_KEY, shadow);
+            return { took, kept, del };
+        }
+
+        function recPayload() {
+            const data = {}; SYNC_KEYS.forEach(k => data[k] = lsObj(k));
+            return { v: 1, savedAt: new Date().toISOString(), by: recWho(),
+                     data: data, u: lsObj(U_KEY), gone: lsObj(GONE_KEY) };
+        }
+        function recPending() {
+            const last = (lsObj(SMETA_KEY)).lastSync || 0;
+            const u = lsObj(U_KEY), g = lsObj(GONE_KEY);
+            let n = 0;
+            for (const x in u) if (u[x] > last) n++;
+            for (const x in g) if (g[x] > last) n++;
+            return n;
+        }
+
+        /* ---------- GitHub — 문항 fetch 와 같은 저장소·같은 토큰 ---------- */
+        const b64enc = str => btoa(unescape(encodeURIComponent(str)));
+        function ghUrl(path) {
+            return `https://api.github.com/repos/${MB_REPO}/contents/${encodeURI(path)}?ref=${MB_BRANCH}&t=${Date.now()}`;
+        }
+        async function ghRaw(path) {
+            const r = await fetch(ghUrl(path), { headers: { Authorization: 'Bearer ' + mbToken(), Accept: 'application/vnd.github.raw' }, cache: 'no-store' });
+            if (r.status === 404) return null;
+            if (!r.ok) throw new Error('GET ' + path + ' ' + r.status);
+            return await r.text();
+        }
+        async function ghSha(path) {
+            /* 236KB 라 1MB 미만 — 이쪽은 content 가 정상적으로 온다(문항 JSON 때와 다르다) */
+            const r = await fetch(ghUrl(path), { headers: { Authorization: 'Bearer ' + mbToken(), Accept: 'application/vnd.github+json' }, cache: 'no-store' });
+            if (r.status === 404) return null;
+            if (!r.ok) throw new Error('SHA ' + path + ' ' + r.status);
+            return (await r.json()).sha;
+        }
+        async function ghPutJson(path, text, sha) {
+            const body = { message: recWho() + ' · ' + path, content: b64enc(text), branch: MB_BRANCH };
+            if (sha) body.sha = sha;
+            const r = await fetch(`https://api.github.com/repos/${MB_REPO}/contents/${encodeURI(path)}`,
+                { method: 'PUT', headers: { Authorization: 'Bearer ' + mbToken(), Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            if (r.status === 409 || r.status === 422) return 'conflict';
+            if (!r.ok) throw new Error('PUT ' + path + ' ' + r.status);
+            return (await r.json()).content.sha;
+        }
+
+        /* ---------- A-5 동기화 ---------- */
+        let recBusy = false;
+        async function syncRecords(force) {
+            if (recBusy) return;
+            if (!mbToken()) { recPaint(); return; }
+            if (navigator.onLine === false) { recPaint(); return; }
+            recBusy = true; recPaint();
+            try {
+                stampAll();
+                let sha = await ghSha(REC_PATH);
+                if (sha) {
+                    const txt = await ghRaw(REC_PATH);
+                    if (txt) { try { recMerge(JSON.parse(txt)); } catch (e) { console.warn('원격 기록 파싱 실패', e); } }
+                }
+                stampAll();
+                let res = await ghPutJson(REC_PATH, JSON.stringify(recPayload()), sha);
+                if (res === 'conflict') {           /* 한 번만 재시도 */
+                    sha = await ghSha(REC_PATH);
+                    const txt2 = await ghRaw(REC_PATH);
+                    if (txt2) { try { recMerge(JSON.parse(txt2)); } catch (e) {} }
+                    stampAll();
+                    res = await ghPutJson(REC_PATH, JSON.stringify(recPayload()), sha);
+                    if (res === 'conflict') throw new Error('두 번 다 충돌');
+                }
+                lsPut(SMETA_KEY, { lastSync: Date.now(), remoteSha: res });
+            } catch (e) {
+                console.warn('기록 동기화 건너뜀:', e.message);   /* ⚠ 오류창 금지 */
+            }
+            recBusy = false; recPaint();
+        }
+
+        /* ---------- §C 첫 판 — 사람이 한 번 민다 ---------- */
+        async function recForcePush() {
+            if (!mbToken()) { mbTokenPrompt(); return; }
+            const cnt = SYNC_KEYS.reduce((a, k) => a + Object.keys(lsObj(k)).length, 0);
+            if (!confirm('이 기기의 기록으로 원격을 **덮습니다**.\n되돌릴 수 없습니다.\n\n이 기기 기록 ' + cnt + '칸 (' + SYNC_KEYS.length + '개 키)\n\n계속할까요?')) return;
+            /* 도장이 없는 기존 기록에 도장을 찍는다 — 회독은 ox_q_last, 나머지는 지금 */
+            const now = Date.now(), u = {}, qlast = lsObj('ox_q_last');
+            SYNC_KEYS.forEach(k => { const cur = lsObj(k); for (const c in cur) u[ckey(k, c)] = (k === 'ox_q_history' && qlast[c]) ? qlast[c] : now; });
+            lsPut(U_KEY, u); lsPut(GONE_KEY, {});
+            const shadow = {}; SYNC_KEYS.forEach(k => shadow[k] = lsObj(k)); lsPut(SHADOW_KEY, shadow);
+            recBusy = true; recPaint();
+            try {
+                const sha = await ghSha(REC_PATH);
+                const res = await ghPutJson(REC_PATH, JSON.stringify(recPayload()), sha);
+                if (res === 'conflict') throw new Error('충돌 — 다시 눌러 주세요');
+                lsPut(SMETA_KEY, { lastSync: Date.now(), remoteSha: res });
+                syncStatus('원격을 이 기기 기록으로 덮었습니다 (' + cnt + '칸)', 'ok');
+            } catch (e) { syncStatus('강제 올리기 실패: ' + e.message, 'err'); alert('강제 올리기에 실패했습니다.\n\n' + e.message); }
+            recBusy = false; recPaint();
+        }
+        async function recForcePull() {
+            if (!mbToken()) { mbTokenPrompt(); return; }
+            recBusy = true; recPaint();
+            try {
+                const txt = await ghRaw(REC_PATH);
+                if (!txt) { syncStatus('원격에 기록 파일이 없습니다', 'err'); alert('원격에 `' + REC_PATH + '` 이 없습니다.\n\nPC 에서 「⬆ 강제 올리기」를 먼저 눌러 주세요.'); recBusy = false; recPaint(); return; }
+                const remote = JSON.parse(txt);
+                const cnt = SYNC_KEYS.reduce((a, k) => a + Object.keys((remote.data || {})[k] || {}).length, 0);
+                if (!confirm('원격 기록으로 이 기기를 **덮습니다**.\n되돌릴 수 없습니다.\n\n원격 기록 ' + cnt + '칸 · 저장 ' + (remote.savedAt || '?') + ' · ' + (remote.by || '?') + '\n\n계속할까요?')) { recBusy = false; recPaint(); return; }
+                SYNC_KEYS.forEach(k => lsPut(k, (remote.data || {})[k] || {}));
+                lsPut(U_KEY, remote.u || {}); lsPut(GONE_KEY, remote.gone || {});
+                const shadow = {}; SYNC_KEYS.forEach(k => shadow[k] = lsObj(k)); lsPut(SHADOW_KEY, shadow);
+                lsPut(SMETA_KEY, { lastSync: Date.now(), remoteSha: await ghSha(REC_PATH) });
+                syncStatus('원격 기록으로 덮었습니다 (' + cnt + '칸)', 'ok');
+                clearWrongCache(); applyAutoImportant(); renderDashboard(); refreshModeCounts();
+            } catch (e) { syncStatus('강제 받기 실패: ' + e.message, 'err'); alert('강제 받기에 실패했습니다.\n\n' + e.message); }
+            recBusy = false; recPaint();
+        }
+
+        /* ---------- §D-2 시험 D-day — 날짜를 앱에 박지 않는다 ---------- */
+        let RECSET = null;
+        async function loadExamSettings() {
+            if (!mbToken()) return null;
+            try { const t = await ghRaw(SET_PATH); RECSET = t ? JSON.parse(t) : null; }
+            catch (e) { RECSET = null; }
+            recPaint(); return RECSET;
+        }
+        /* zzikkaTT 의 logicalNow() 와 같다 — dayStart 이전이면 전날로 친다.
+           ⚠ 이걸 안 맞추면 새벽에 두 앱의 D- 가 하루 어긋난다. */
+        function recLogicalYmd() {
+            const ds = (RECSET && typeof RECSET.dayStart === 'number') ? RECSET.dayStart : 5;
+            const d = new Date();
+            if (d.getHours() < ds) d.setDate(d.getDate() - 1);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
+        function recNextExam() {
+            if (!RECSET || !Array.isArray(RECSET.exams)) return null;
+            const ex = RECSET.exams.filter(e => e && !e.del && e.date).sort((a, b) => a.date < b.date ? -1 : (a.date > b.date ? 1 : 0));
+            if (!ex.length) return null;
+            const t = recLogicalYmd();
+            const p = n => (n < 10 ? '0' : '') + n;
+            const ymd = t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
+            return ex.find(e => e.date >= ymd) || ex[ex.length - 1];
+        }
+        function recExamText() {
+            const e = recNextExam(); if (!e) return '';
+            const t = recLogicalYmd();
+            const d = new Date(e.date + 'T00:00:00');
+            const n = Math.ceil((d - t) / 864e5);
+            return (e.name || '시험') + ' ' + (n >= 0 ? 'D-' + n : 'D+' + (-n));
+        }
+
+        /* ---------- §D-1 헤더 칩 ---------- */
+        function recPaint() {
+            const el = document.getElementById('rec-chip');
+            if (el) {
+                let t;
+                if (recBusy) t = '⟳ 동기화 중';
+                else if (!mbToken()) t = '○ 토큰 없음';
+                else if (navigator.onLine === false) t = '○ 오프라인';
+                else {
+                    const p = recPending();
+                    if (p) t = '● 대기 ' + p + '건';
+                    else {
+                        const last = (lsObj(SMETA_KEY)).lastSync || 0;
+                        const ago = last ? Math.round((Date.now() - last) / 60000) : null;
+                        t = '● 동기화됨' + (ago != null ? ' ' + (ago < 1 ? '방금' : ago < 60 ? ago + '분 전' : Math.round(ago / 60) + '시간 전') : '');
+                    }
+                }
+                el.textContent = t;
+            }
+            const ex = document.getElementById('exam-chip');
+            if (ex) { const t = recExamText(); ex.textContent = t; ex.style.display = t ? '' : 'none'; }
+        }
+
+        /* ---------- 시동 ---------- */
+        function recBoot() {
+            recPaint();
+            stampAll();
+            syncRecords();
+            loadExamSettings();
+            setInterval(() => { if (document.visibilityState === 'visible') { stampAll(); recPaint(); } }, 10000);
+            setInterval(() => { if (document.visibilityState === 'visible') syncRecords(); }, 180000);
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') syncRecords();
+                else stampAll();
+            });
+            window.addEventListener('online', recPaint);
+            window.addEventListener('offline', recPaint);
         }
 
         /* 저장 폴더 핸들을 IndexedDB에 보관 (localStorage에는 핸들을 넣을 수 없음) */
@@ -1179,11 +1453,6 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 catch (e) { payload.data[k] = {}; }
             });
 
-            /* §6 ox_q_fix(정정) — SYNC_KEYS 에는 안 넣기로 했으므로(기기 간 동기화 안 함)
-               백업 파일에만 따로 태운다. 사람이 판단해 쌓은 자산이라 유실되면 안 된다. */
-            try { payload.data.ox_q_fix = JSON.parse(localStorage.getItem('ox_q_fix') || '{}'); }
-            catch (e) { payload.data.ox_q_fix = {}; }
-
             /* v2: 문항 데이터(IndexedDB)도 함께 담는다 → 파일 하나로 기기 간 완전 이동 */
             try {
                 const rows = await dbGet('rows');
@@ -1324,14 +1593,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     localStorage.setItem(k, JSON.stringify(cur));
                 });
 
-                /* §6 ox_q_fix(정정) 복원 — SYNC_KEYS 밖이라 따로 병합한다.
-                   같은 uid 는 불러온 쪽이 우선(위 병합 규칙과 같다). */
-                if (payload.data && payload.data.ox_q_fix) {
-                    let curFix;
-                    try { curFix = JSON.parse(localStorage.getItem('ox_q_fix') || '{}'); } catch (e) { curFix = {}; }
-                    Object.entries(payload.data.ox_q_fix).forEach(([qk, v]) => { curFix[qk] = v; merged++; });
-                    localStorage.setItem('ox_q_fix', JSON.stringify(curFix));
-                }
+                /* ox_q_fix 는 2026-08-31 부터 SYNC_KEYS 안에 있어 위 일반 갈래가 처리한다.
+                   옛 백업 파일(`payload.data.ox_q_fix`)도 같은 자리에서 읽히므로 호환은 그대로다. */
 
                 /* v2 파일: 문항 데이터(IndexedDB)까지 복원 → 이 기기에서 엑셀을 다시 이식할 필요가 없다 */
                 let qMsg = '';
@@ -1406,6 +1669,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const btn = document.getElementById('pick-folder-btn');
             if (btn && !canPickFolder()) btn.classList.add('hide');
             idbHandle('get').then(dir => updateFolderLabel(dir ? dir.name : null));
+            try { recBoot(); } catch (e) { console.warn('기록 동기화 시동 실패', e); }
         };
 
         function renderDashboard() {
@@ -2481,6 +2745,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             } catch (e) {}
             /* weak -> semi -> graduate */
             try { if (typeof applyWeakStage === 'function') applyWeakStage(typeof pageResults !== 'undefined' ? pageResults : results); } catch (e) {}
+            /* 채점 직후 도장·동기화 (2026-08-31) */
+            try { stampAll(); syncRecords(); } catch (e) {}
             currentSessionScore += pageScore;
 
             const actionBtn = document.getElementById('action-btn');
@@ -2661,7 +2927,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         };
         function loadQTypes() { try { return JSON.parse(localStorage.getItem('ox_q_type') || '{}'); } catch (e) { return {}; } }
         /* ---------- 정정(ox_q_fix) — 2026-08-29 · loadQTypes 와 같은 방식(uid 기준 · 엑셀 재이식에 안 날아감).
-           ⚠ SYNC_KEYS 에는 넣지 않는다(기기 간 동기화 안 함 · 사용자 확정). 백업/복원에는 별도로 태운다. */
+           ★ 2026-08-31 동기화에 편입했다(SYNC_KEYS 안). **마스터 엑셀 자동 반영은 여전히 안 한다**
+             — 8/29 확정 중 살아 있는 부분은 그쪽이다. 「엑셀 반영함」 도장은 사람이 손으로 찍는다. */
         function loadQFix() { try { return JSON.parse(localStorage.getItem('ox_q_fix') || '{}'); } catch (e) { return {}; } }
         function saveQFix(all) { localStorage.setItem('ox_q_fix', JSON.stringify(all)); }
         function qFixOf(id) { return loadQFix()[id] || null; }
@@ -3643,6 +3910,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             } catch (e) {}
             /* weak -> semi -> graduate */
             try { if (typeof applyWeakStage === 'function') applyWeakStage(typeof pageResults !== 'undefined' ? pageResults : results); } catch (e) {}
+            /* 채점 직후 도장·동기화 (2026-08-31) */
+            try { stampAll(); syncRecords(); } catch (e) {}
 
             // 현재 페이지에 보이는 문항은 결과 상태로 갱신
             renderQuizPage();
