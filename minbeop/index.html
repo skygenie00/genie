@@ -25,6 +25,7 @@
                 <h1 class="text-lg font-extrabold text-gray-900">📖 26민공연OX</h1>
                 <span id="data-label" class="text-[11px] font-bold text-gray-500"></span>
                 <span class="flex-1"></span>
+                <span id="newdata-chip" onclick="mbLoadNew()" title="서버에 새 문항이 올라왔다 — 눌러서 불러온다" class="text-[11px] font-extrabold text-teal-700 bg-teal-50 border border-teal-300 px-2 py-0.5 rounded cursor-pointer" style="display:none"></span>
                 <span id="exam-chip" onclick="loadExamSettings()" title="다음 시험까지 — zzikkaTT 의 settings.json 을 읽는다(앱에 날짜를 박지 않는다)" class="text-[11px] font-extrabold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded cursor-pointer" style="display:none"></span>
                 <span id="rec-chip" onclick="syncRecords(true)" title="기록 동기화 — 누르면 지금 맞춘다" class="text-[11px] font-bold text-gray-500 cursor-pointer"></span>
                 <span id="sync-status" class="text-[11px] text-gray-500 font-semibold"></span>
@@ -562,6 +563,66 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             await applyRows(j.rows, { fileName: nm.source || '서버 문항', server: true,
                                       masterMd5: nm.masterMd5 || '', builtAt: nm.builtAt || '' },
                             { overwrite: false });
+        }
+
+        /* ---------- 📥 새 문항 알림 (2026-08-31) ----------
+           마스터 엑셀을 고친 뒤 `mb_push.cmd` 로 올리면 **다른 기기가 그걸 알아야 한다.**
+           ★ 8.6MB 를 매번 받지 않으려고 **딱지(`문항메타.json`, 수백 바이트)만** 받아 견준다.
+             딱지의 내용은 `문항마스터.json` 의 `meta` **그 자체**다(`mingong/_json_build.py` 가 둘을 같이 쓴다).
+
+           ⚠ **자동으로 갈아 끼우지 않는다.** 풀던 중에 문항이 통째로 바뀌면 안 된다 —
+             `bootData()` 가 「IndexedDB 에 문항이 있으면 서버를 안 읽는다」로 돼 있는 것과 같은 이유다.
+             **알림까지가 자동이고 누르는 것은 사람이다.** 누르면 지금 있는 `loadServerData()` 를 그대로 부른다
+             (확인창과 회독 보존 `overwrite:false` 가 이미 그 안에 있다 — 새로 만들지 않는다).
+           ⚠ 토큰이 없거나 못 받으면 **조용히 넘어간다.** 오류창을 띄우지 않는다(문항 fetch 와 같은 태도). */
+        const MB_META_PATH = 'minbeop/문항메타.json';
+
+        async function fetchServerMeta() {
+            const tk = mbToken();
+            if (!tk) return null;
+            const url = `https://api.github.com/repos/${MB_REPO}/contents/${encodeURI(MB_META_PATH)}`
+                      + `?ref=${MB_BRANCH}&t=${Date.now()}`;
+            const r = await fetch(url, {
+                headers: { Authorization: 'Bearer ' + tk, Accept: 'application/vnd.github.raw' },
+                cache: 'no-store'
+            });
+            if (!r.ok) return null;
+            const m = await r.json();
+            return (m && m.masterMd5) ? m : null;
+        }
+
+        function mbNewText(m) {
+            const n = Number(m.count || 0).toLocaleString();
+            const d = new Date(m.builtAt || '');
+            let when = '';
+            if (m.builtAt && !isNaN(d.getTime())) {
+                const p = x => (x < 10 ? '0' : '') + x;
+                when = ' · ' + (d.getMonth() + 1) + '/' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+            }
+            return '📥 새 문항 ' + n + when;
+        }
+
+        /* 켜질 때 · 화면을 다시 볼 때 · 10분마다 — 딱지만 받아 견준다. */
+        async function mbCheckNew() {
+            const el = document.getElementById('newdata-chip');
+            if (!el) return;
+            let m = null;
+            try { m = await fetchServerMeta(); } catch (e) { m = null; }   /* ← 조용히 */
+            if (!m) return;                          /* 토큰 없음·못 받음 — 칩을 건드리지 않는다 */
+            const cur = (await dbGet('meta')) || {};
+            /* ⚠ 견줄 값이 없는 기기(옛 엑셀 경로로 넣은 기기)는 매번 「새것」이 돼 버린다 — 안 그린다 */
+            if (!cur.masterMd5 || cur.masterMd5 === m.masterMd5) { el.style.display = 'none'; return; }
+            el.textContent = mbNewText(m);
+            el.title = '서버에 새 문항이 올라왔다 — 눌러서 불러온다'
+                     + '\n서버 md5 ' + m.masterMd5 + '\n지금 md5 ' + cur.masterMd5;
+            el.style.display = '';
+        }
+
+        /* 칩을 누르면 — 지금 있는 불러오기를 그대로 부르고, 끝나면 다시 견줘 칩을 지운다.
+           ★ 사람이 확인창에서 취소하면 `meta` 가 그대로라 칩이 다시 뜨는다 — 그게 맞다. */
+        async function mbLoadNew() {
+            await loadServerData();
+            await mbCheckNew();
         }
 
         /* 엑셀의 메모·태그를 localStorage에 반영
@@ -1280,10 +1341,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             stampAll();
             syncRecords();
             loadExamSettings();
+            mbCheckNew();                                    /* 📥 새 문항 알림 — 딱지만 받는다 */
             setInterval(() => { if (document.visibilityState === 'visible') { stampAll(); recPaint(); } }, 10000);
             setInterval(() => { if (document.visibilityState === 'visible') syncRecords(); }, 180000);
+            setInterval(() => { if (document.visibilityState === 'visible') mbCheckNew(); }, 600000);
             document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible') syncRecords();
+                if (document.visibilityState === 'visible') { syncRecords(); mbCheckNew(); }
                 else stampAll();
             });
             window.addEventListener('online', recPaint);
