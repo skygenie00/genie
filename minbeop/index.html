@@ -625,6 +625,90 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             await mbCheckNew();
         }
 
+        /* ---------- 📥 정리OMR 그림 받아 오기 (2026-08-31) ----------
+           지금까지 정리OMR 그림은 **동기화 대상이 아니었다.** PC 에서 PDF 를 등록해도
+           폰에서 다시 등록해야 했다. 그림을 비공개 저장소에 두고 여기서 받아 그 칸을 메운다.
+
+           ★ 넣는 길은 **새로 만들지 않는다.** 지금 「⬆ 불러오기」가 쓰는 `importProgress()` 의
+             `_type === 'ox-omr'` 갈래를 **그대로 부른다**(가짜 이벤트로 File 을 물려준다).
+             그 갈래가 `omrasset:<id>` 의 쪽 배열을 채우고 `ox_omr_docs` 까지 손봐 준다.
+
+           ⚠ **앱이 켜질 때 받지 않는다.** 25MB 다. 정리OMR 을 여는 `openViewer()` 에서만 부른다.
+           ⚠ 토큰이 없거나 못 받으면 **조용히 넘어간다.** 지금 안내문이 그대로 뜨면 된다.
+           ⚠ **`ox_q_coords`(핀)는 건드리지 않는다** — 그건 15키 동기화가 이미 나른다.
+             이 조각이 옮기는 것은 **그림뿐**이다. */
+        const MB_OMR_ID = 'minbeopOMR';
+        const MB_OMR_DIR = 'minbeop/omr';
+        const MB_OMR_TAG = MB_OMR_DIR + '/omr메타.json';
+        /* 어느 쪽을 어느 판으로 갖고 있는지 — 이게 있어야 **바뀐 쪽만** 받는다.
+           없으면(옛 경로로 넣은 기기) 전부 받는다 — 282dpi 를 400dpi 로 올리는 자리이므로 그게 맞다. */
+        const MB_OMR_HKEY = 'omrhash:' + MB_OMR_ID;
+        let mbOmrBusy = false;
+
+        async function mbGhGet(path, kind) {
+            const tk = mbToken();
+            if (!tk) return null;
+            const url = `https://api.github.com/repos/${MB_REPO}/contents/${encodeURI(path)}`
+                      + `?ref=${MB_BRANCH}&t=${Date.now()}`;
+            const r = await fetch(url, {
+                headers: { Authorization: 'Bearer ' + tk, Accept: 'application/vnd.github.raw' },
+                cache: 'no-store'
+            });
+            if (!r.ok) return null;
+            return kind === 'buf' ? await r.arrayBuffer() : await r.json();
+        }
+
+        /* ★ 지금 있는 불러오기 갈래를 그대로 태운다. 끝났는지는 IndexedDB 를 보고 안다
+             (`importProgress` 가 약속을 돌려주지 않으므로). 쪽마다 **차례로** 넣어야 한다 —
+             그 갈래가 `omrasset` 을 읽고-고쳐-쓰기 때문에 한꺼번에 넣으면 서로 덮는다. */
+        async function mbPutOmrPage(buf, fname, page) {
+            const f = new File([buf], fname, { type: 'application/gzip' });
+            importProgress({ target: { files: [f], value: '' } });
+            for (let i = 0; i < 400; i++) {
+                await new Promise(r => setTimeout(r, 100));
+                let a = null;
+                try { a = await dbGet('omrasset:' + MB_OMR_ID); } catch (e) { a = null; }
+                if (a && Array.isArray(a.pages) && a.pages[page - 1]) return true;
+            }
+            return false;
+        }
+
+        async function mbSyncOmr(onStep) {
+            if (mbOmrBusy || !mbToken()) return;
+            mbOmrBusy = true;
+            const say = o => { try { onStep && onStep(o); } catch (e) { } };
+            try {
+                let tag = null;
+                try { tag = await mbGhGet(MB_OMR_TAG); } catch (e) { tag = null; }
+                if (!tag || tag.id !== MB_OMR_ID || !Array.isArray(tag.pageHash)) return;   /* 조용히 */
+                let rec = null, asset = null;
+                try { rec = await dbGet(MB_OMR_HKEY); } catch (e) { rec = null; }
+                try { asset = await dbGet('omrasset:' + MB_OMR_ID); } catch (e) { asset = null; }
+                const pages = (asset && Array.isArray(asset.pages)) ? asset.pages : [];
+                const mine = (rec && Array.isArray(rec.pageHash)) ? rec.pageHash : [];
+                const want = [];
+                for (let i = 0; i < tag.pageHash.length; i++) {
+                    if (!pages[i] || mine[i] !== tag.pageHash[i]) want.push(i + 1);
+                }
+                if (!want.length) { say({ finished: true, msg: '' }); return; }
+                say({ done: 0, total: want.length, msg: `정리OMR ${want.length}쪽 받는 중…` });
+                const got = mine.slice();
+                for (let k = 0; k < want.length; k++) {
+                    const p = want[k];
+                    let buf = null;
+                    try { buf = await mbGhGet(`${MB_OMR_DIR}/ox_omr_${MB_OMR_ID}_p${p}.json.gz`, 'buf'); }
+                    catch (e) { buf = null; }
+                    if (!buf) break;                                   /* 조용히 멈춘다 */
+                    if (!(await mbPutOmrPage(buf, `ox_omr_${MB_OMR_ID}_p${p}.json.gz`, p))) break;
+                    got[p - 1] = tag.pageHash[p - 1];
+                    try { await dbPut(MB_OMR_HKEY, { dpi: tag.dpi, hash: tag.hash, pageHash: got }); } catch (e) { }
+                    say({ page: p, done: k + 1, total: want.length,
+                          msg: `정리OMR ${k + 1}/${want.length}쪽 받는 중…` });
+                }
+                say({ finished: true, msg: '' });
+            } finally { mbOmrBusy = false; }
+        }
+
         /* 엑셀의 메모·태그를 localStorage에 반영
            overwrite=false → 보충만 (엑셀에서 켠 것만 켜고, 빈 메모는 건드리지 않음)
            overwrite=true  → 엑셀 값 그대로 (엑셀에서 지운 태그·메모는 앱에서도 지워짐) */
@@ -4422,6 +4506,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   }
 
   var DOCCACHE = {};
+  var MB_ID = 'minbeopOMR';   /* 📥 받아 오기 대상 문서 id */
   /* ---------- 자동 불러오기 (기기별 등록 없애기) ----------
      앱이 볼트 안 HTML로 돌아가므로, 같은 폴더(또는 omr/ · pdf/)에 PDF를
      두면 옵시디언 Sync가 모든 기기로 옮겨준다. 처음 열 때 그걸 직접 받아
@@ -4702,6 +4787,21 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     wrap.addEventListener('click', function (e) { if (e.target === wrap) closeViewer(); });
 
     await draw();
+
+    /* 📥 그림 받아 오기 — **여기서만** 부른다(앱 시동에 25MB 를 받지 않으려는 것).
+       ⚠ await 하지 않는다 — 화면을 막으면 안 된다. 쪽이 올 때마다 캐시를 버리고 다시 그린다. */
+    if (typeof window.mbSyncOmr === 'function') {
+      window.mbSyncOmr(function (o) {
+        if (!V) return;
+        if (o && typeof o.msg === 'string' && (o.msg || o.finished)) V.bar.textContent = o.msg;
+        if (!o || !o.page) return;
+        delete DOCCACHE[MB_ID]; delete ASSETS[MB_ID];
+        if (V_HAVE.indexOf(MB_ID) < 0) V_HAVE = V_HAVE.concat([MB_ID]);
+        fillSel();
+        if (!V.docId) { V.docId = MB_ID; sel.value = MB_ID; V.page = 1; }
+        if (o.finished || V.docId !== MB_ID || o.page === V.page) draw();
+      });
+    }
   }
 
   var RENDER = { W: 1, H: 1 };
