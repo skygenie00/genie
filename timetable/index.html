@@ -776,10 +776,15 @@ function upsertRecs(list){
  f.dirty=true;saveF(p,f);scheduleSync();}
 function histDaysOf(who){const f=loadF(histPath(who),{v:1,days:{}});return f.data.days||{}}
 function histOf(who,d){const h=histDaysOf(who)[d];return(h&&h.min)?h:null}
-/* 기록 앱 목록 — 새 앱(조판기 등) 추가 = 여기 한 줄 (§2-b 하드코딩 금지) · subj = §4 과목 매핑도 이 한 곳 */
+/* 기록 앱 목록 — 새 앱(조판기 등) 추가 = 여기 한 줄 (§2-b 하드코딩 금지) · subj = §4 과목 매핑도 이 한 곳
+   remote = 비공개 저장소의 기록 파일(기기·브라우저 상관없음 · 🔑 토큰 필요) — **먼저 이걸 읽는다**
+   origin = 같은 기기 IndexedDB 직접 읽기(물러날 길) · fmt 는 REC_READERS 의 갈래 이름 */
 const REC_APPS=[
- {app:'민법OX',subj:'민법',paste:'ox'},
- {app:'물리535',subj:'물리',paste:'phys',origin:{db:'phys535',store:'kv',key:'status',page:'../phys/index.html',btn:'🔬 물리535 기록 읽기'}},
+ {app:'민법OX',subj:'민법',paste:'ox',btn:'📕 민법OX 기록 읽기',
+  remote:{path:'minbeop/기록.json',fmt:'ox'}},
+ {app:'물리535',subj:'물리',paste:'phys',btn:'🔬 물리535 기록 읽기',page:'../phys/index.html',
+  remote:{path:'phys/기록.json',fmt:'phys'},
+  origin:{db:'phys535',store:'kv',key:'status'}},
 ];
 const recSubj=a=>{const x=REC_APPS.find(z=>z.app===a);return x?x.subj:'기타'};
 
@@ -813,6 +818,16 @@ async function ghGet(path){
  if(r.status===404)return null;
  if(!r.ok)throw new Error(`GET ${path} ${r.status}`);
  const j=await r.json();return{sha:j.sha,data:JSON.parse(b64d(j.content))};
+}
+/* 기록 파일은 raw 로 받는다.
+   ⚠ vnd.github+json 은 1MB 를 넘으면 content 가 안 온다(민법 2026-08-31 실측 1,116바이트).
+     minbeop/기록.json 이 이미 524KB 라 곧 넘는다. */
+async function ghGetRaw(path){
+ const r=await fetch(`https://api.github.com/repos/${REPO}/contents/${encodeURI(path)}?ref=${BRANCH}&t=${Date.now()}`,
+  {headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github.raw'},cache:'no-store'});
+ if(r.status===404)return null;
+ if(!r.ok)throw new Error(`GET ${path} ${r.status}`);
+ return await r.text();
 }
 async function ghPut(path,data,sha){
  const body={message:`${cfg.person} · ${path}`,content:b64e(JSON.stringify(data,null,1)),branch:BRANCH};if(sha)body.sha=sha;
@@ -3213,18 +3228,74 @@ function parseRecLog(txt){
     continue}
   }else{
    m=/^-\s*(.*?)\s*:\s*(\d+)\s*문항\s*,\s*정답\s*(\d+)\s*·\s*오답\s*(\d+)\s*·\s*헷갈림\s*(\d+)/.exec(t);
-   if(m){let u=m[1];
-    if(/빠른실행/.test(u))u='약점큐';
-    else{const sl=u.indexOf('/');if(sl>=0)u=u.slice(sl+1).trim();u=u.replace(/\s*\([^)]*\)\s*$/,'').trim()} // unit = 장 · (출처) 떼기
-    cur.items.push({unit:u,n:+m[2],o:+m[3],x:+m[4],q:+m[5]});continue}
+   if(m){
+    cur.items.push({unit:oxUnitLabel(m[1]),n:+m[2],o:+m[3],x:+m[4],q:+m[5]});continue}
   }
   bad.push(t);
  }
  blocks.forEach(b=>b.items.forEach(it=>{if(it.min==null)delete it.min}));
  return{blocks:blocks.filter(b=>b.items.length),bad};
 }
-/* §2-b 물리535 직접 읽기 — 순수 집계(하니스용 분리): ST[no].h=[{m,t,s}] → (날짜×단원) · 하루 경계 새벽 4시(물리 앱과 동일) · min = s초 합 */
-function physGroup(ST,unitOf){
+/* OX 단원 이름 — 붙여넣기 갈래와 저장소 갈래가 **같은 글자**를 내야 한다.
+   두 벌로 두면 같은 회독이 서로 다른 행으로 앉는다. 여기 한 곳만 고친다.
+   `과목 / 장 > 절 (출처)` → `장 > 절` · 빠른실행은 약점큐 */
+function oxUnitLabel(raw){
+ let u=String(raw||'');
+ if(/빠른실행/.test(u))return'약점큐';
+ const sl=u.indexOf('/');if(sl>=0)u=u.slice(sl+1).trim();
+ return u.replace(/\s*\([^)]*\)\s*$/,'').trim();
+}
+/* §C-2 민법OX 집계 — `minbeop/기록.json` 의 `ox_chap_history`
+   ⚠ **칸 값이 객체 하나가 아니라 회차 배열이다**(2026-09-01 실물 확인).
+     `⚡빠른실행||…` 칸에 8/19·8/25 두 회차가 들어 있다 ⇒ **회차마다 한 행**.
+   ⚠ 날짜가 ISO 가 아니라 '2026. 8. 4.' 로케일 문자열이다 —
+     민법앱 학습로그 sameDay() 와 **같은 방식**(숫자만 뽑기)으로 읽는다.
+   ⚠ 옛 회차에는 `confuse` 가 없다 — 그때는 붙여넣기 갈래와 같이 `ox_q_tags` 로 센다.
+   ⚠ **min(분)은 넣지 않는다.** 민법 회독에는 시간이 없다(붙여넣기 OX 행과 같은 모양). */
+function oxDate(s){
+ const n=String(s||'').match(/[0-9]+/g);
+ if(!n||n.length<3)return null;
+ let y=+n[0];if(y<100)y+=2000;
+ const p=x=>String(x).padStart(2,'0');
+ return y+'-'+p(+n[1])+'-'+p(+n[2]);
+}
+function oxGroup(hist,tags){
+ const rows=[],warn=[];
+ Object.keys(hist||{}).forEach(key=>{
+  (hist[key]||[]).forEach(att=>{
+   if(!att)return;
+   const d=oxDate(att.date);if(!d)return;
+   const parts=String(key).split('||');
+   const ids=Object.keys(att.marks||{});
+   const n=att.total||ids.length;if(!n)return;
+   const o=att.score||0;
+   let q=att.confuse;
+   if(typeof q!=='number'){q=0;ids.forEach(id=>{const t=(tags||{})[id];if(t&&t.confuse)q++})}
+   let x=n-o-q;
+   if(x<0){warn.push(d+' '+key+' (n'+n+' o'+o+' q'+q+')');x=0}
+   rows.push({d,app:'민법OX',subj:'민법',
+    unit:oxUnitLabel(parts[0]+' / '+parts[1]+(parts[2]?' ('+parts[2]+')':'')),
+    n,o,x,q,src:'remote'});
+  });
+ });
+ /* 같은 (날짜·단원)은 합친다 — upsertRecs 의 id 가 (날짜·앱·단원)이라
+    안 합치면 마지막 회차만 남고 앞엣것이 사라진다. */
+ const m=new Map();
+ rows.forEach(r=>{const k=r.d+'|'+r.unit,p=m.get(k);
+  if(!p)m.set(k,r);else{p.n+=r.n;p.o+=r.o;p.x+=r.x;p.q+=r.q}});
+ return{list:[...m.values()].sort((a,b)=>a.d<b.d?-1:1),warn};
+}
+/* 저장소 기록 파일 → 행 목록. 앱이 늘면 REC_APPS 에 한 줄,
+   **형식이 새로울 때만** 여기 한 갈래 (§2-b 하드코딩 금지) */
+const REC_READERS={
+ phys:async(A,D)=>physGroup(D.status||{},await physUnitMap(A.page),'remote'),
+ ox:async(A,D)=>{const g=oxGroup(D.ox_chap_history||{},D.ox_q_tags||{});
+  if(g.warn.length)console.warn('OX — 헷갈림이 문항수를 넘은 칸',g.warn);
+  return g.list}
+};
+/* §2-b 물리535 직접 읽기 — 순수 집계(하니스용 분리): ST[no].h=[{m,t,s}] → (날짜×단원) · 하루 경계 새벽 4시(물리 앱과 동일) · min = s초 합
+   ⚠ src 만 다르고 집계는 **저장소 갈래와 한 벌을 쓴다**(§C-3 — 두 벌로 만들지 마라) */
+function physGroup(ST,unitOf,src){
  const g=new Map();
  Object.keys(ST||{}).forEach(no=>{const h=(ST[no]||{}).h||[];h.forEach(rec=>{
   if(!rec||!rec.t)return;
@@ -3234,7 +3305,7 @@ function physGroup(ST,unitOf){
   o.n++;if(rec.m==='O')o.o++;else if(rec.m==='Q')o.q++;else if(rec.m==='X')o.x++;
   o.sec+=rec.s||0;g.set(k,o);});});
  return[...g.values()].sort((a,b)=>a.d<b.d?-1:1).map(o=>{
-  const r={d:o.d,app:'물리535',subj:'물리',unit:o.unit,n:o.n,o:o.o,x:o.x,q:o.q,src:'origin'};
+  const r={d:o.d,app:'물리535',subj:'물리',unit:o.unit,n:o.n,o:o.o,x:o.x,q:o.q,src:src||'origin'};
   if(o.sec)r.min=Math.round(o.sec/60);return r});
 }
 async function physUnitMap(page){ // 문항번호 → 소단원 (물리 앱 페이지의 DATA 행 · NO=0 · BIG=4 · SUB=5)
@@ -3249,13 +3320,13 @@ async function physUnitMap(page){ // 문항번호 → 소단원 (물리 앱 페�
 let recPrev=null; // 미리보기 승인 대기분 — 「가져오기」를 눌러야 저장 (§2)
 function recImportModal(){
  recPrev=null;
- const ob=REC_APPS.filter(a=>a.origin).map(a=>`<button class="btn" onclick="recOriginRead('${a.app}')">${a.origin.btn}</button>`).join(' ');
+ const ob=REC_APPS.filter(a=>a.remote||a.origin).map(a=>`<button class="btn" onclick="recAppRead('${a.app}')">${a.btn}</button>`).join(' ');
  const m=document.createElement('div');m.className='modal';m.id='recImpM';
  m.innerHTML=`<div class="box" style="max-width:560px"><h4>📥 학습기록 가져오기</h4>
- <div class="row" style="align-items:flex-start"><label>ⓐ 붙여넣기</label><textarea id="recTx" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:110px;font:10.5px/1.5 Consolas,monospace" placeholder="[OX 학습로그] 2026-08-25 … / [물리535 학습로그] … — 형식 자동 인식 · 여러 날짜 한 번에"></textarea></div>
- <div class="row" style="justify-content:flex-end"><button class="btn" onclick="recParse()">인식</button></div>
+ <div class="row" style="align-items:flex-start"><label>ⓑ 직접 읽기</label><div style="flex:1;display:flex;gap:6px;flex-wrap:wrap;align-items:center">${ob}<span style="font-size:10px;color:#888">저장소에서 읽어 · 기기·브라우저 상관없음 · 🔑 토큰 필요 — <b>평소에는 이걸 써</b></span></div></div>
  <div id="recPv" style="font-size:10.5px;color:#555;border:1px dashed #ccc;border-radius:4px;padding:6px;margin:4px 0;display:none"></div>
- <div class="row" style="align-items:flex-start"><label>ⓑ 직접 읽기</label><div style="flex:1;display:flex;gap:6px;flex-wrap:wrap;align-items:center">${ob}<span style="font-size:10px;color:#888">같은 기기·같은 주소의 앱만. 민법OX(로컬 파일)는 ⓐ 붙여넣기가 정공.</span></div></div>
+ <div class="row" style="align-items:flex-start"><label>ⓐ 붙여넣기</label><textarea id="recTx" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:110px;font:10.5px/1.5 Consolas,monospace" placeholder="[OX 학습로그] 2026-08-25 … / [물리535 학습로그] … — 형식 자동 인식 · 여러 날짜 한 번에"></textarea></div>
+ <div class="row" style="justify-content:flex-end"><span style="font-size:10px;color:#888;margin-right:auto">대비책 — 토큰·인터넷이 없을 때, 옛 로그를 밀어 넣을 때</span><button class="btn" onclick="recParse()">인식</button></div>
  <p style="font-size:10px;color:#888">저장 = records/${esc(cfg.person)}.json · 같은 (날짜·앱·단원)은 덮어씀 · push 로 기기 간 공유</p>
  <div class="acts"><button class="btn" onclick="document.getElementById('recImpM').remove()">닫기</button><button class="btn p" id="recGo" disabled onclick="recImportGo()">가져오기</button></div></div>`;
  m.addEventListener('click',e=>{if(e.target===m)m.remove()});
@@ -3271,28 +3342,56 @@ function recParse(){
   +(r.bad.length?`<br><span style="color:#c60">못 읽음 ${r.bad.length}줄(건너뜀):</span><br><span style="color:#999">${r.bad.slice(0,8).map(esc).join('<br>')}${r.bad.length>8?'<br>…':''}</span>`:'');
  document.getElementById('recGo').disabled=false;
 }
-async function recOriginRead(app){
- const A=REC_APPS.find(x=>x.app===app);if(!A||!A.origin)return;
+/* 이 기기 IndexedDB 직접 읽기 — **물러날 길**(저장소를 못 읽을 때) */
+async function recReadOrigin(A){
+ const ST=await new Promise((ok,no)=>{const r=indexedDB.open(A.origin.db);
+  r.onerror=()=>no(new Error('저장소 열기 실패'));
+  r.onupgradeneeded=()=>{r.transaction.abort();no(new Error('이 기기에 '+A.app+' 데이터가 없어'))};
+  r.onsuccess=()=>{const db=r.result;
+   if(!db.objectStoreNames.contains(A.origin.store)){db.close();no(new Error('이 기기에 '+A.app+' 데이터가 없어'));return}
+   const g=db.transaction(A.origin.store,'readonly').objectStore(A.origin.store).get(A.origin.key);
+   g.onsuccess=()=>{db.close();ok(g.result||{})};g.onerror=()=>{db.close();no(new Error('읽기 실패'))};};});
+ const unitOf=await physUnitMap(A.page);
+ return physGroup(ST,unitOf,'origin');
+}
+async function recReadRemote(A){
+ const txt=await ghGetRaw(A.remote.path);
+ if(txt==null)throw new Error('저장소에 '+A.remote.path+' 이 아직 없어');
+ const F=JSON.parse(txt);
+ const rd=REC_READERS[A.remote.fmt];
+ if(!rd)throw new Error('읽는 법을 모르는 형식 — '+A.remote.fmt);
+ return await rd(A,F.data||{});
+}
+/* §C-1 **저장소 먼저 → 실패하면 이 기기 IndexedDB.**
+   ⚠ 토큰이 없을 때 조용히 실패하지 않는다 — 무엇을 해야 하는지 미리보기 칸에 띄운다. */
+async function recAppRead(app){
+ const A=REC_APPS.find(x=>x.app===app);if(!A)return;
  const pv=document.getElementById('recPv');pv.style.display='block';pv.textContent='읽는 중…';
  document.getElementById('recGo').disabled=true;recPrev=null;
+ let list=null,via='',why='';
  try{
-  const ST=await new Promise((ok,no)=>{const r=indexedDB.open(A.origin.db);
-   r.onerror=()=>no(new Error('저장소 열기 실패'));
-   r.onupgradeneeded=()=>{r.transaction.abort();no(new Error('이 기기에 '+app+' 데이터가 없어'))};
-   r.onsuccess=()=>{const db=r.result;
-    if(!db.objectStoreNames.contains(A.origin.store)){db.close();no(new Error('이 기기에 '+app+' 데이터가 없어'));return}
-    const g=db.transaction(A.origin.store,'readonly').objectStore(A.origin.store).get(A.origin.key);
-    g.onsuccess=()=>{db.close();ok(g.result||{})};g.onerror=()=>{db.close();no(new Error('읽기 실패'))};};});
-  const unitOf=await physUnitMap(A.origin.page);
-  const list=physGroup(ST,unitOf);
-  if(!list.length)throw new Error('풀이 기록이 없어');
-  const have=new Set(recFile(cfg.person).data.items.filter(r=>!r.del&&r.app===app).map(r=>r.d));
-  const dates=[...new Set(list.map(r=>r.d))];
-  const nw=dates.filter(d=>!have.has(d)).length;
-  recPrev={list};
-  pv.innerHTML=`✓ <b>${esc(app)}</b> · 날짜 ${dates.length}일(새 날짜 ${nw}) · ${list.reduce((a,x)=>a+x.n,0)}문항 — 「가져오기」로 저장`;
-  document.getElementById('recGo').disabled=false;
- }catch(e){pv.innerHTML='<span style="color:#c60">'+esc(e.message)+'</span>';}
+  if(A.remote){
+   if(!cfg.token)why='🔑 토큰이 없습니다 — 설정에서 넣으세요';
+   else{try{list=await recReadRemote(A);if(list.length)via='저장소'}
+        catch(e){why='저장소를 못 읽었어 — '+e.message}}
+  }
+  if((!list||!list.length)&&A.origin){
+   list=await recReadOrigin(A);
+   if(list.length){via='이 기기';if(!why)why=''}
+  }
+  if(!list||!list.length)throw new Error(why||'풀이 기록이 없어');
+ }catch(e){
+  pv.innerHTML='<span style="color:#c60">'+esc(why||e.message)+'</span>'
+   +(A.origin?'':'<br><span style="color:#888">ⓐ 붙여넣기로도 넣을 수 있어</span>');
+  return;
+ }
+ const have=new Set(recFile(cfg.person).data.items.filter(r=>!r.del&&r.app===app).map(r=>r.d));
+ const dates=[...new Set(list.map(r=>r.d))];
+ const nw=dates.filter(d=>!have.has(d)).length;
+ recPrev={list};
+ pv.innerHTML=`✓ <b>${esc(app)}</b> · ${esc(via)} · 날짜 ${dates.length}일(새 날짜 ${nw}) · ${list.reduce((a,x)=>a+x.n,0)}문항 — 「가져오기」로 저장`
+  +(why?`<br><span style="color:#c60">${esc(why)} — 이 기기 것으로 읽었어</span>`:'');
+ document.getElementById('recGo').disabled=false;
 }
 function recImportGo(){
  if(!recPrev||!recPrev.list.length)return;
