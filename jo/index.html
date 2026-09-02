@@ -4410,11 +4410,26 @@ function pfGet(){ const f = S.precFilter || (S.precFilter = {}); PF_KEYS.forEach
 function pfEmpty(f){ return PF_KEYS.every(k => !f[k].length); }
 function precNorm(s){ return String(s == null ? '' : s).replace(/[\s·]/g, ''); }
 function precMadi(p){ const vs = (Array.isArray(p.마디) ? p.마디 : []).map(m => m.v); return vs.length ? vs : ['미분류']; }
+/* ★ add2 — 행의 조문키 → 거르기 값 집합. 특허법 조 = `제29조` · 구법은 cur 가 확정된 것만 현행 조로 · 미확정 구법 = `__gu` · 타법 = `__other` · law 없음 = 안 냄 */
+function precJoSet(p){
+  const s = new Set();
+  (Array.isArray(p.조문키) ? p.조문키 : []).forEach(k => {
+    if (k.law === '특허법' && k.jo) s.add(k.jo);
+    else if (k.law === '구특허법'){ if (k.cur && k.cur.jo) s.add(k.cur.jo); else s.add('__gu'); }
+    else if (k.law) s.add('__other');
+  });
+  return s;
+}
+function precJoHang(k){ const d = (k.cur && k.cur.detail) || k.detail || ''; const m = /^([①-⑳])/.exec(d); return m ? m[1] : ''; }
+function precJoChip(k){
+  if (k.law === '구특허법' && k.cur && k.cur.jo) return k.raw + ' → ' + k.cur.jo.replace(/^제|조$/g, '') + (k.cur.detail || '');
+  return k.raw;
+}
 function precPass(p, f, skip){
   if (skip !== 'gichul' && f.gichul.length){ const g = Array.isArray(p.기출차) ? p.기출차 : []; const w = f.gichul[0];
     if (w === 'both' ? g.length !== 2 : g.indexOf(w) < 0) return false; }
   if (skip !== 'madi' && f.madi.length){ const vs = precMadi(p); if (!f.madi.some(v => vs.indexOf(v) >= 0)) return false; }
-  if (skip !== 'jo' && f.jo.length){ const js = Array.isArray(p.조문) ? p.조문 : []; if (!f.jo.some(v => js.indexOf(v) >= 0)) return false; }
+  if (skip !== 'jo' && f.jo.length){ const js = precJoSet(p); if (!f.jo.some(v => js.has(v))) return false; }   /* ★ add2 — 조 단위 · 구법(확정) 합침 · 묶음 둘 */
   if (skip !== 'type' && f.type.length){ if (f.type.indexOf(p.사건유형 || '미상') < 0) return false; }
   if (skip !== 'court' && f.court.length){ const c = p.법원 || '미상';
     if (!f.court.some(v => v === '전원합의체' ? !!p.전합 : v === c)) return false; }
@@ -4560,15 +4575,33 @@ function precFilterUI(tree, P, f){
     });
     item('madi', { v: '미분류', name: '미분류', test: (p => precMadi(p)[0] === '미분류') }, false);
   });
-  /* 3 조문별 — 값 빈도순 · 상위 30 + 「더」 */
+  /* 3 조문별(add2) — 특허법 조만 · 조문 레일 순서(조문 목록 JSON) · `제29조 특허요건` · 조 단위 수(항·호 합침 · 확정 구법 포함) ·
+     오른쪽 회색 항 분포 · 판례 0 인 조는 숨김(「0 인 조도」 스위치) · 맨 아래 접힌 묶음 「구법(미확정) N」「타법 N」 */
   group('jo', '조문별', null, false, () => {
-    const fq = {}; all.forEach(p => (Array.isArray(p.조문) ? p.조문 : []).forEach(x => { fq[x] = (fq[x] || 0) + 1; }));
-    let ks = Object.keys(fq).sort((a, c) => (fq[c] - fq[a]) || (a < c ? -1 : 1));
-    const more = !!f.fold['jo:more'];
-    const shown = (more || q) ? ks : ks.slice(0, 30);
-    shown.forEach(x => item('jo', { v: x, name: x, test: (p => has(p, '조문', x)) }, false));
-    if (ks.length > 30 && !q){ const r = el('div', 'r fitem'); r.appendChild(el('span', 'nm', more ? '접기' : ('더 … (' + (ks.length - 30) + ')')));
-      r.onclick = () => { f.fold['jo:more'] = !more; uiSave(); render(); }; tree.appendChild(r); }
+    const JL = (P.조문목록 && P.조문목록.조) || [];
+    const cntJo = {}, hang = {};
+    all.forEach(p => { const seen = new Set();
+      (Array.isArray(p.조문키) ? p.조문키 : []).forEach(k => { let jo = null;
+        if (k.law === '특허법' && k.jo) jo = k.jo; else if (k.law === '구특허법' && k.cur && k.cur.jo) jo = k.cur.jo;
+        if (!jo) return; if (!seen.has(jo)){ seen.add(jo); cntJo[jo] = (cntJo[jo] || 0) + 1; }
+        const h = precJoHang(k); if (h){ hang[jo] = hang[jo] || {}; hang[jo][h] = (hang[jo][h] || 0) + 1; } }); });
+    const zero = !!f.fold['jo:zero'];
+    const sw = el('div', 'r fitem'); sw.appendChild(el('span', 'nm', (zero ? '☑ ' : '☐ ') + '0 인 조도 보이기')); sw.appendChild(el('em', '', String(JL.length)));
+    sw.onclick = () => { f.fold['jo:zero'] = !zero; uiSave(); render(); }; tree.appendChild(sw);
+    JL.forEach(j => { const n0 = cntJo[j.k] || 0; if (!n0 && !zero) return;
+      const name = j.k + ' ' + (j.t || '');
+      if (q && name.indexOf(q) < 0) return;
+      const on = f.jo.indexOf(j.k) >= 0, n = cnt('jo', p => precJoSet(p).has(j.k));
+      const r = el('div', 'r fitem' + (on ? ' on' : '') + (n ? '' : ' zero'));
+      const nm = el('span', 'nm', (on ? '☑ ' : '☐ ') + name);
+      const hd = hang[j.k] ? Object.keys(hang[j.k]).sort().map(h => h + hang[j.k][h]).join(' ') : '';
+      if (hd){ const s2 = el('span', 'cdim', ' ' + hd); s2.style.marginLeft = '4px'; nm.appendChild(s2); }
+      r.appendChild(nm); r.appendChild(el('em', '', String(n)));
+      r.onclick = () => { if (on) f.jo = f.jo.filter(x => x !== j.k); else f.jo.push(j.k); uiSave(); render(); };
+      tree.appendChild(r); });
+    const nGu = all.filter(p => precJoSet(p).has('__gu')).length, nOt = all.filter(p => precJoSet(p).has('__other')).length;
+    item('jo', { v: '__gu', name: '구법(미확정)', test: (p => precJoSet(p).has('__gu')) }, false);
+    item('jo', { v: '__other', name: '타법', test: (p => precJoSet(p).has('__other')) }, false);
   });
   /* 4 심판종류별 — 사건유형 정규화 값 · '' 는 「미상」 */
   group('type', '심판종류별', null, false, () => {
@@ -4624,6 +4657,7 @@ async function viewPrec(){
 
   const P=await get('prec_특허_리스트.json');
   const CITE=await get('prec_특허_인용.json').catch(()=>({}));
+  P.조문목록=await get('jo_특허법_목록.json').catch(()=>({조:[]}));   /* ★ add2 — 1단 조문별 토글 = 조문 레일 순서·제목 */
   const f=pfGet();
   precFilterUI(tree,P,f);   /* ★ 판 3 §3-1 — 1단 거르기(비활성 select 셋의 자리를 맡는다) */
   const hit=await precSearch(P,S.precQ);   /* ★ 판 3 §3-2 — 2단 검색 */
@@ -4662,8 +4696,8 @@ async function viewPrec(){
     r.appendChild(precDescEl(p,false));   /* ★ add1 — 노란 별칭 칩 · 설명줄(안 자름) · 기출 칩 */
     if(p.원본)r.appendChild(el('span','chip c-src','원본'));
     if(p.요약본)r.appendChild(el('span','chip c-quiz','요약본'));
-    (Array.isArray(p.조문)?p.조문:[]).slice(0,3).forEach(x=>
-      r.appendChild(el('span','chip c-prec','⚖'+x)));
+    (Array.isArray(p.조문키)&&p.조문키.length?p.조문키.map(precJoChip):(Array.isArray(p.조문)?p.조문:[])).slice(0,3).forEach(x=>
+      r.appendChild(el('span','chip c-prec','⚖'+x)));   /* ★ add2 — 확정 구법은 `구특허법42조③ → 42④` */
     if(p.기출&&typeof p.기출==='string')r.appendChild(el('span','chip c-quiz','기출 '+p.기출));
     if(hit){const h=hit.get(p.id);
       if(h.num)r.appendChild(el('span','chip c-warn','번호 일치'));
