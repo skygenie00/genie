@@ -182,6 +182,8 @@ mark.cj{background:#fff3a3;outline:2px solid #e0a800}
 .embx .emhead{display:none;color:#9a958b;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .embx.fold .emhead{display:block} .embx.fold .embody{display:none}
 .embx .ln{margin:1px 0}
 .embed.dead{opacity:.5;cursor:default;border-style:dashed;color:#9a958b}
+.lkrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap} .lkrow .why{color:#6b675f;font-size:11.5px} .lkrow .tool{padding:1px 6px;font-size:11px}
+.lkform input{width:100%;box-sizing:border-box;margin:3px 0} .lkform .res{cursor:pointer}   /* ★ 판 4 add4 §2·§4 */
 .pop .prsz{position:sticky;bottom:0;display:block;width:16px;height:16px;margin:-16px 0 0 auto;cursor:nwse-resize;background:linear-gradient(135deg,transparent 55%,#b5b1a8 55%);border-radius:0 0 9px 0;touch-action:none;z-index:2}
 .pop.sized{max-height:none}
 .ln.blkhl{background:#fff3a3;outline:2px solid #e0a800;border-radius:4px}
@@ -992,8 +994,15 @@ function renderLine(row,opt){
     if(e.k==='P'){push(opens,e.a,{pl:e});push(closes,e.b,{pl:e});}});   /* ★ 판 4 — <사건번호> 인라인 링크 */
   /* ★ 판 4 §2-1 — md 꾸밈을 같은 좌표계 위에 얹는다(글자를 지우지 않는다 · 흐린 span 으로 감싼다) */
   if(opt.md!==false){
-    const mh=/^(\s*#{1,3})(\s)/.exec(t);
-    if(mh){push(opens,0,{md:'mdhash'});push(closes,mh[1].length,{md:'mdhash'});}
+    const mh=/^(\s*#{1,6})(\s)/.exec(t);   /* ★ 판 4 add4 §1 — 4~6단은 본문 굵게만 */
+    if(mh){push(opens,0,{md:'mdhash'});push(closes,mh[1].length,{md:'mdhash'});
+      if(mh[1].trim().length>=4){push(opens,mh[0].length,{md:'mdbold'});push(closes,n,{md:'mdbold'});}}
+    /* ★ 판 4 add4 §1 — <font color="…">…</font> 은 ** 와 같은 식(태그 구간 mdmark · 안 글자 그 색) · ![[…]] 원문 구간도 mdmark(칩·상자는 그대로) */
+    {const rf=/<font\b[^>]*?color\s*=\s*["']?([^"'\s>]+)["']?[^>]*>|<\/font\s*>/gi;let fm,fopen=null;
+     while((fm=rf.exec(t))){push(opens,fm.index,{md:'mdmark'});push(closes,fm.index+fm[0].length,{md:'mdmark'});
+       if(fm[1]!=null)fopen={at:fm.index+fm[0].length,color:fm[1]};
+       else if(fopen){if(fm.index>fopen.at){push(opens,fopen.at,{md:'mdcolor',color:fopen.color});push(closes,fm.index,{md:'mdcolor'});}fopen=null;}}
+     (row.e||[]).forEach(e=>{if(e.k==='E'&&e.b>e.a){push(opens,e.a,{md:'mdmark'});push(closes,e.b,{md:'mdmark'});}});}
     const mb=/\s*\^[0-9a-f]{6}\s*$/.exec(t);
     if(mb){push(opens,mb.index,{md:'blockid'});push(closes,n,{md:'blockid'});}
     let pos=t.indexOf('**');
@@ -1040,7 +1049,10 @@ function renderLine(row,opt){
         s.onclick=ev=>{ev.stopPropagation();popFoot(e.id,ev,opt.rec,(opt.depth||0)+1);};
         top().appendChild(s);
       }
-      if(e.k==='E'&&e.a===i){
+      if(e.k==='E'&&e.a===i&&e.miss){   /* ★ 판 4 add4 §1 — ⚙ 가 못 찾은 임베드(ⓑ 블록 없음 · ⓒ 파일 밖) = 흐린 칩 · 클릭 없음 */
+        const s=el('span','embed dead','⤷ 못 찾음 · '+e.to); s.title=(e.miss==='c'?'대상 파일이 특허목차 70 밖':'파일은 있으나 블록 ^id 가 없다')+' — _임베드_미해결.csv';
+        top().appendChild(s); EMBMISS[e.to]=1; }
+      else if(e.k==='E'&&e.a===i){
         /* ★ 판 4 §2-2 — `⤷ 파일#^id` = 목차노트 팝업 진입(깊이 ①) · 깊이 3 안에서는 팝업을 갈아 끼운다(깊이 4 없음) */
         const s=el('span','embed live','⤷ '+e.to);
         const tf=String(e.to||'').split('#')[0],tid=(String(e.to||'').split('#^')[1]||'').trim();
@@ -1056,7 +1068,7 @@ function renderLine(row,opt){
       if(o.mk&&o.mk.t==='tag'&&o.mk.v&&((mkAll()[o.mk._k]||{}).side)==='pre')
         top().appendChild(stkChipEl(o.mk,opt,row));
       let node;
-      if(o.md){node=o.md==='mdbold'?el('strong'):el('span',o.md);}   /* ★ 판 4 §2-1 */
+      if(o.md){node=o.md==='mdbold'?el('strong'):el('span',o.md);if(o.md==='mdcolor'&&o.color)node.style.color=o.color;}   /* ★ 판 4 §2-1 · add4 색 */
       else if(o.pl){node=el('span','plink'+(o.pl.j?'':' dead'));   /* ★ 판 4 §2-2 — <사건번호> → ③ 판례 팝업 · 깊이 3 이면 3단으로 */
         if(o.pl.j){const pid=o.pl.j;node.onclick=ev=>{ev.stopPropagation();const d=opt.depth||0;
           if(d>=3){closeAllPops();S.tab='prec';S.prec=pid;S.precTab='요약';render();}else popPrec4(pid,ev,d+1);};}
@@ -1859,7 +1871,7 @@ const REC_NAMES = { ox:'1차객 풀이 (O/X · 헷갈림 · 태그)', rounds:'1�
   logic:'📐 논리', link:'🔗 지문 연결', type:'🏷 유형 확정', omr:'📖 정리 핀',
   sticker:'🏷 스티커 사전 (두문자·줄임말)',
   blank:'✎ 빈칸 회독 (O/△/X)', blanktag:'✎ 빈칸 태그 (kind 확정)',
-  themefix:'⇄ 3법 대응 확정', precimp:'★ 판례 내 중요도', editq:'✎ 수정 큐 (볼트 고칠 자리)' };   /* ★ 판 3 §9-2 · recsync §E */
+  themefix:'⇄ 3법 대응 확정', precimp:'★ 판례 내 중요도', editq:'✎ 수정 큐 (볼트 고칠 자리)', preclink:'🔗 내가 이은 판례·2차' };   /* ★ 판 3 §9-2 · recsync §E · 판 4 add4 */
 function recLabel(k){
   const t = k.slice(REC_PRE.length);
   if (REC_NAMES[t]) return REC_NAMES[t];
@@ -1884,6 +1896,7 @@ function recDropCache(){
   if (typeof GIREC  !== 'undefined') GIREC = null;
   if (typeof GIYREC !== 'undefined') GIYREC = null;
   if (typeof EQREC !== 'undefined') EQREC = null;   /* ★ recsync §E — 병합·강제 받기 뒤 큐 캐시 */
+  if (typeof PLREC !== 'undefined') PLREC = null;   /* ★ 판 4 add4 — 내가 이은 판례·2차 */
 }
 function recDelete(k){
   try{ localStorage.removeItem(k); }catch(e){}
@@ -1959,7 +1972,7 @@ function recExport(){
 const SYNC_REPO = 'zzikkaplan/studyplandata', SYNC_BRANCH = 'main', SYNC_PATH = 'jopangi/기록.json';
 const SYNC_SKIP = ['ink' /* 캔버스 · 크다 */ ];
 const SYNC_KEYS = ['ox', 'rounds', 'ansfix', 'mcard', 'gi', 'gi.year', 'markup', 'logic', 'link', 'type', 'omr',
-  'sticker', 'blank', 'blanktag', 'themefix', 'postit', 'compare', 'precimp', 'editq']
+  'sticker', 'blank', 'blanktag', 'themefix', 'postit', 'compare', 'precimp', 'editq', 'preclink']   /* ★ 판 4 add4 §2 — 내가 이은 판례·2차 (19→20) */
   .filter(k => SYNC_SKIP.indexOf(k) < 0).map(k => REC_PRE + k);
 const SU_KEY = 'jopangi_sync_u', SG_KEY = 'jopangi_sync_gone', SS_KEY = 'jopangi_sync_shadow', SM_KEY = 'jopangi_sync_meta';
 const EQ_KEY = REC_PRE + 'editq';
@@ -2325,7 +2338,7 @@ function precJoChipEl(k, big){
   else { c.style.opacity = '.5'; c.title = k.law === '구특허법' ? '구법 — 현행 환산 미확정(확정표)' : (k.law ? k.law + ' — 조문 팝업 없음' : '규칙 밖 값'); }
   return c;
 }
-function giChipEl(g){
+function giChipEl(g, p){
   const c = el('span', 'chip c-gi', g);
   const m1 = /^(?:★\s*)?1차\s+(\d{4})(?:-(\d+)-(\d+))?$/.exec(g), m2 = /^(?:★\s*)?2차\s+(\d{4})/.exec(g);
   if (m1){ c.style.cursor = 'pointer';
@@ -2335,8 +2348,8 @@ function giChipEl(g){
     else if (JM && !q){ c.style.opacity = '.5'; c.title = '문번 미확정 — ' + m1[1] + '년 ' + m1[2] + '회 ' + m1[3] + '번은 시험문번 확정 문항에 없다'; }
     else c.title = '1차객 기출뷰 ' + m1[1] + '년 ' + m1[2] + '회 ' + m1[3] + '번';
     c.onclick = ev => { ev.stopPropagation(); giGoTo(m1[1], m1[2], m1[3]); }; }
-  else if (m2){ c.style.cursor = 'pointer'; c.title = '2차 레일 기출 ' + m2[1] + '년';
-    c.onclick = ev => { ev.stopPropagation(); closeAllPops(); S.law = '특허법'; S.tab = 'cha2'; S.boardKind = '기출'; S.boardView = 'board'; S.series = ''; S.yearFilter = m2[1]; render(); }; }
+  else if (m2){ c.style.cursor = 'pointer'; c.title = '2차 기출 ' + m2[1] + '년 — 이 판례에 이어진 2차 카드 목록';   /* ★ 판 4 add4 §4 — 레일 이동 대신 목록 팝업(그해로 거름) */
+    c.onclick = ev => { ev.stopPropagation(); const pp = p || (S.tab === 'prec' && S.prec && C['prec_특허_리스트.json'] ? (C['prec_특허_리스트.json'].판례 || []).find(x => x.id === S.prec) : null); if (pp) popCardList(pp, '기출', m2[1], ev, 0); else toast('판례 행이 없다'); }; }
   return c;
 }
 async function giGoTo(year, round, no){
@@ -4577,7 +4590,7 @@ async function embedInline(chip, file, id, to, opt){
   let N = null; try{ N = await get('note_특허.json'); }catch(e){ N = null; }
   const rec = N && N[file];
   const blk = rec ? noteBlockRows(rec, id) : null;
-  if (!blk){ chip.classList.add('dead'); chip.title = '대상 없음 — ' + to + (rec ? ' (블록 ^' + id + ' 없음)' : ' (특허목차 밖이거나 색인)'); EMBMISS[to] = 1; return; }
+  if (!blk){ chip.classList.add('dead'); chip.classList.remove('live'); chip.textContent = '⤷ 못 찾음 · ' + to; chip.onclick = null; chip.title = '대상 없음 — ' + to + (rec ? ' (블록 ^' + id + ' 없음)' : ' (특허목차 밖이거나 색인)'); EMBMISS[to] = 1; return; }   /* ★ add4 §1 */
   const folded = !!(S.embFold || {})[to];
   const box = el('div', 'embx' + (folded ? ' fold' : ''));
   const tools = el('div', 'emtools');
@@ -4586,7 +4599,7 @@ async function embedInline(chip, file, id, to, opt){
   const fo = el('span', '', folded ? '⌄' : '⌃'); fo.title = '접기/펴기(기억)';
   fo.onclick = ev => { ev.stopPropagation(); const f = !box.classList.contains('fold'); box.classList.toggle('fold', f); fo.textContent = f ? '⌄' : '⌃'; S.embFold = S.embFold || {}; if (f) S.embFold[to] = 1; else delete S.embFold[to]; uiSave(); };
   tools.appendChild(op); tools.appendChild(fo); box.appendChild(tools);
-  const first = String(blk[0][1].t || '').replace(/^\s*#{1,3}\s*/, '').slice(0, 30);
+  const first = String(blk[0][1].t || '').replace(/^\s*#{1,6}\s*/, '').slice(0, 30);   /* ★ add4 §1 */
   box.appendChild(el('div', 'emhead', '⤷ ' + to + ' … ' + first));
   const body = el('div', 'embody'); const ents = [];
   blk.forEach(([j, row]) => { const d = mdLine(el('div', 'ln'), row);
@@ -4700,7 +4713,7 @@ async function popNoteList(label,key,items,ev,depth){
         d.onclick=e2=>{ if(depth>=3){closeAllPops();S.tab='prec';S.prec=v;S.precTab=p.요약본?'요약':'원문';render();} else popPrec4(v,e2,depth+1); }; }
       else if(kind==='노트'){ const f=v.split('#')[0],id=(v.split('#^')[1]||''); d.appendChild(el('b','',f.slice(0,30))); if(id)d.appendChild(el('span','x','^'+id));
         { const rec=NN[f.split('/').pop()]; const bk=(rec&&id)?noteBlockRows(rec,id):null;   /* ★ 판 4 add3 — 미리보기 = 문단 전체(blk) */
-          if(bk){ const pv=bk.map(x=>String(x[1].t||'').replace(/\s*\^[0-9a-f]{6}\s*$/,'').replace(/^\s*#{1,3}\s*/,'').trim()).filter(Boolean).join(' ⏎ ');
+          if(bk){ const pv=bk.map(x=>String(x[1].t||'').replace(/\s*\^[0-9a-f]{6}\s*$/,'').replace(/^\s*#{1,6}\s*/,'').trim()).filter(Boolean).join(' ⏎ ');   /* ★ add4 §1 */
             const q=el('div','cdim blkpv',pv.slice(0,120)+(pv.length>120?'…':'')); q.style.fontSize='11px'; d.appendChild(q); } }
         d.onclick=e2=>{ if(depth>=3){closeAllPops();popNote(f,id,e2,1);} else popNote(f,id,e2,depth+1); }; }
       else { d.appendChild(el('b','',String(v).slice(0,50))); d.appendChild(el('span','lawtag',kind));
@@ -4751,7 +4764,7 @@ async function popSumToc(p,ev){
     rows.forEach((r,ri)=>{ if(!r.h)return; const lv=Math.min(r.h,3);
       if(lv===3){ let up=ri-1; while(up>=0&&!(rows[up].h&&rows[up].h<3))up--; if(up>=0&&!open[up])return; }
       const th=el('div','th l'+lv); const tg=el('span','tg',open[ri]?'▾':'›'); tg.onclick=e2=>{e2.stopPropagation();open[ri]=!open[ri];draw();};
-      const tx=el('span','tx',r.t.replace(/^\s*#{1,3}\s*/,'')); tx.onclick=()=>goRow(ri); tx.title='3단 요약 탭 그 헤딩으로';
+      const tx=el('span','tx',r.t.replace(/^\s*#{1,6}\s*/,'')); tx.onclick=()=>goRow(ri); tx.title='3단 요약 탭 그 헤딩으로';   /* ★ add4 §1 */
       th.appendChild(tg); th.appendChild(tx); toc.appendChild(th);
       if(open[ri]){ const sec=el('div','sec'); const ents=[]; for(let k=ri+1;k<rows.length;k++){ const nl=rows[k].h||0; if(nl&&nl<=lv)break; const d=mdLine(el('div','ln'),rows[k]); d.appendChild(renderLine(rows[k],{label:false,depth:1})); d.onclick=()=>goRow(k); ents.push({ri:k,row:rows[k],el:d}); sec.appendChild(d); } hfoldWire(ents,'prec|'+p.id); toc.appendChild(sec); } });
     if(!toc.childNodes.length)toc.appendChild(el('div','cdim','헤딩이 없다 — 3단 요약 탭으로'));
@@ -4876,7 +4889,7 @@ function precDescEl(p, head){
   const line = p.설명줄 || p.사건명 || va || '';
   if (line) w.appendChild(el('div', head ? 'row' : '', line));
   const gs = Array.isArray(p.기출표시) ? p.기출표시 : [];
-  if (gs.length){ const r = el('div', head ? 'row' : ''); gs.forEach(g => r.appendChild(giChipEl(g))); w.appendChild(r); }   /* ★ 판 4 add1 §2 — 기출 칩 → 기출뷰 */
+  if (gs.length){ const r = el('div', head ? 'row' : ''); gs.forEach(g => r.appendChild(giChipEl(g, p))); w.appendChild(r); }   /* ★ 판 4 add1 §2 — 기출 칩 → 기출뷰 · add4 2차 칩 → 카드 목록 */
   return w;
 }
 function precCtxEl(z, q){
@@ -4887,10 +4900,77 @@ function precCtxEl(z, q){
   else d.appendChild(document.createTextNode('…'));
   return d;
 }
-function precCitePop(cur, C, P, ev){
+/* ★ 판 4 add4 §2·§4 — 내가 이은 판례·2차 카드. kv jopangi.preclink = { "<id>": [ {k:'prec',to,why,t} | {k:'card',kind,ck,why,t} ] } · k 없는 옛 항목 = prec.
+   저장은 A 쪽 한 번 · B 의 팝업에는 「← A 에서」 로 뒤집어 보인다 · ⚙ 산출(이차카드)과 따로 살아 ⚙ 재실행에 안 지워진다. */
+const LINK_KEY = REC_PRE + 'preclink';
+let PLREC = null;
+function plAll(){ if (!PLREC) PLREC = lsRead(LINK_KEY); return PLREC; }
+function plSave(R){ PLREC = R; lsWrite(LINK_KEY, R, '🔗 내가 이은 판례'); }
+function plOwn(id){ return (plAll()[id] || []).map((x, i) => Object.assign({ k: x.k || 'prec', _i: i, _from: id }, x)); }
+function plIn(id){ const R = plAll(), out = []; Object.keys(R).forEach(a => { if (a === id) return; (R[a] || []).forEach((x, i) => { if ((x.k || 'prec') === 'prec' && x.to === id) out.push(Object.assign({ k: 'prec', _i: i, _from: a, _in: true }, x)); }); }); return out; }
+function plAdd(id, item){ const R = plAll(); const A = (R[id] || []).slice(); A.push(Object.assign({ t: Date.now() }, item)); R[id] = A; plSave(R); }
+function plEdit(from, i, why){ const R = plAll(); if (!R[from] || !R[from][i]) return; R[from] = R[from].slice(); R[from][i] = Object.assign({}, R[from][i], { why: why, t: Date.now() }); plSave(R); }
+function plDel(from, i){ const R = plAll(); if (!R[from]) return; R[from] = R[from].filter((_, j) => j !== i); if (!R[from].length) delete R[from]; plSave(R); }
+function plCount(id){ return plOwn(id).filter(x => x.k === 'prec').length + plIn(id).length; }
+function cardLinksOf(p){ const out = (Array.isArray(p.이차카드) ? p.이차카드 : []).map(x => ({ kind: x.kind, ck: x.ck, auto: true }));
+  plOwn(p.id).forEach(x => { if (x.k === 'card') out.push({ kind: x.kind, ck: x.ck, why: x.why || '', manual: true, _i: x._i, _from: x._from }); }); return out; }
+function plWhyForm(host, init, onOk){ const f = el('div', 'lkform'); const inp = el('input'); inp.placeholder = '이유 한 줄 (비워도 된다)'; inp.value = init || '';
+  const ok = el('button', 'tool on', '저장'), cx = el('button', 'tool', '취소'); const bar = el('div', 'memobtn'); bar.appendChild(ok); bar.appendChild(cx);
+  f.appendChild(inp); f.appendChild(bar); ok.onclick = e2 => { e2.stopPropagation(); onOk(inp.value.trim()); }; cx.onclick = e2 => { e2.stopPropagation(); f.remove(); };
+  ['click', 'pointerdown', 'keydown'].forEach(nm => f.addEventListener(nm, e2 => e2.stopPropagation())); host.appendChild(f); setTimeout(() => inp.focus(), 30); return f; }
+function plRowTools(row, x, redraw){
+  const ed = el('button', 'tool', '✎'); ed.title = '이유 고치기'; ed.onclick = e2 => { e2.stopPropagation(); if (row.querySelector('.lkform')) return; plWhyForm(row, x.why || '', why => { plEdit(x._from, x._i, why); redraw(); }); };
+  const del = el('button', 'tool', '✕'); del.title = '잇기 풀기'; del.onclick = e2 => { e2.stopPropagation(); if (!confirm('이 잇기를 푼다?')) return; plDel(x._from, x._i); redraw(); };
+  row.appendChild(ed); row.appendChild(del); }
+/* 리스트 안 검색(사건번호·별칭·설명별칭·사건명 · 판 3 precNorm) — 전문 검색은 안 돈다(잇기엔 과하다) */
+function plPrecSearchBox(host, P, exclude, onPick){
+  const f = el('div', 'lkform'); const inp = el('input'); inp.placeholder = '사건번호·별칭으로 찾기'; const box = el('div'); f.appendChild(inp); f.appendChild(box);
+  const draw = () => { box.innerHTML = ''; const qn = precNorm(inp.value); if (!qn){ box.appendChild(el('div', 'cdim', '두 글자 이상')); return; }
+    const hits = (P.판례 || []).filter(p => p.id !== exclude && (precNorm(p.id).indexOf(qn) >= 0 || precNorm(p.사건번호).indexOf(qn) >= 0 || precNorm(p.별칭).indexOf(qn) >= 0 || precNorm(p.설명별칭).indexOf(qn) >= 0 || precNorm(p.사건명).indexOf(qn) >= 0)).slice(0, 20);
+    if (!hits.length) box.appendChild(el('div', 'cdim', '없다'));
+    hits.forEach(p => { const d = el('div', 'res'); d.appendChild(el('b', '', p.사건번호 || p.id)); d.appendChild(el('span', 'x', (p.설명별칭 || p.별칭 || p.사건명 || '').slice(0, 40))); d.onclick = e2 => { e2.stopPropagation(); onPick(p); }; box.appendChild(d); }); };
+  inp.oninput = draw; ['click', 'pointerdown', 'keydown'].forEach(nm => f.addEventListener(nm, e2 => e2.stopPropagation())); host.appendChild(f); setTimeout(() => inp.focus(), 30); draw(); return f; }
+/* §4 — 2차 카드 목록 팝업(popNoteList 꼴) · kind 갈래 · year 로 거름 · 항목 = popCard4 · 「+ 2차 잇기」 */
+async function popCardList(p, kind, year, ev, depth){
+  depth = depth || 0;
+  const body = popShell('cell', '🧾 ' + kind + ' — ' + (p.사건번호 || p.id) + (year ? ' · ' + year + '년' : ''));
+  showPop(ev); popSizable(body, 'list');
+  const name = { 사례: '사례_특허', 기출: '기출_특허', GS: 'GS_특허' }[kind] || '사례_특허';
+  const CC = await get('2cha_본문_' + name + '.json').catch(() => null);
+  const box = el('div'); body.appendChild(box);
+  const draw = () => { box.innerHTML = '';
+    let items = cardLinksOf(p).filter(x => x.kind === kind);
+    if (year) items = items.filter(x => String(x.ck).indexOf(year) >= 0 || (CC && CC[x.ck] && String((CC[x.ck].fm || {}).기출 || '').indexOf(year.slice(2)) >= 0) || x.manual);
+    box.appendChild(el('div', 'grp', kind + ' — ' + items.length + '건' + (year ? ' (' + year + '년으로 거름)' : '')));
+    if (!CC) box.appendChild(el('div', 'cdim', '2cha_본문_' + name + '.json 이 없다 — ⚙ 가 그 갈래 카드를 아직 안 낸다(칩 수는 ⚙ 이차카드 + 내가 이은 것)'));
+    if (!items.length) box.appendChild(el('div', 'cdim', '없다'));
+    items.forEach(x => { const d = el('div', 'res lkrow'); d.appendChild(el('b', '', String(x.ck).slice(0, 50))); d.appendChild(el('span', 'lawtag', kind));
+      if (x.manual){ d.appendChild(el('span', 'why', '내가 이음' + (x.why ? ' · ' + x.why : ''))); plRowTools(d, x, draw); }
+      d.onclick = e2 => { e2.stopPropagation(); if (depth >= 3){ closeAllPops(); popCard4(kind, x.ck, e2, 1); } else popCard4(kind, x.ck, e2, depth + 1); };
+      box.appendChild(d); });
+    const add = el('button', 'tool', '+ 2차 잇기'); add.onclick = e2 => { e2.stopPropagation(); if (box.querySelector('.lkform')) return;
+      const f = el('div', 'lkform'); const sel = el('select', 'sel'); ['사례', '기출', 'GS'].forEach(k => { const o = el('option', '', k); o.value = k; if (k === kind) o.selected = true; sel.appendChild(o); });
+      const inp = el('input'); inp.placeholder = '카드 제목·키로 찾기'; const rs = el('div'); f.appendChild(sel); f.appendChild(inp); f.appendChild(rs);
+      let CK = CC, ckind = kind;
+      const drawR = () => { rs.innerHTML = ''; const qn = precNorm(inp.value); if (!CK){ rs.appendChild(el('div', 'cdim', '그 갈래 카드 JSON 이 없다')); return; }
+        const keys = Object.keys(CK).filter(k => !qn || precNorm(k).indexOf(qn) >= 0 || precNorm((CK[k].fm || {}).별칭).indexOf(qn) >= 0).slice(0, 20);
+        if (!keys.length) rs.appendChild(el('div', 'cdim', '없다'));
+        keys.forEach(k => { const d = el('div', 'res'); d.appendChild(el('b', '', k.slice(0, 50))); d.onclick = e3 => { e3.stopPropagation(); rs.innerHTML = '';
+          plWhyForm(rs, '', why => { plAdd(p.id, { k: 'card', kind: ckind, ck: k, why: why }); f.remove(); toast('🔗 2차 카드를 이었다'); draw(); render(); }); }; rs.appendChild(d); }); };
+      sel.onchange = async () => { ckind = sel.value; const nm = { 사례: '사례_특허', 기출: '기출_특허', GS: 'GS_특허' }[ckind]; CK = await get('2cha_본문_' + nm + '.json').catch(() => null); drawR(); };
+      inp.oninput = drawR; ['click', 'pointerdown', 'keydown'].forEach(nm => f.addEventListener(nm, e3 => e3.stopPropagation())); box.appendChild(f); drawR(); setTimeout(() => inp.focus(), 30); };
+    box.appendChild(add);
+    if (kind === '기출'){ const go = el('button', 'tool', '2차 레일 기출' + (year ? ' ' + year : '') + ' ↗'); go.style.marginLeft = '6px';
+      go.onclick = e2 => { e2.stopPropagation(); closeAllPops(); S.law = '특허법'; S.tab = 'cha2'; S.boardKind = '기출'; S.boardView = 'board'; S.series = ''; if (year) S.yearFilter = year; render(); }; box.appendChild(go); }
+  };
+  draw();
+}
+function precCitePop(cur, C, P, ev, depth){
+  depth = depth || 0;   /* ★ 판 4 add4 §2 — 항목 = popPrec4 깊이 +1 · 「바로 이동」 없음 */
   const body = popShell('', '🔗 ' + (cur.사건번호 || cur.id) + ' — 인용 관계');
   showPop(ev);
   const by = {}; P.판례.forEach(p => { by[p.id] = p; });
+  const openPrec = (id, e2) => { if (depth >= 3){ closeAllPops(); popPrec4(id, e2, 1); } else popPrec4(id, e2, depth + 1); };
   [['이 판례가 인용', C.인용 || []], ['이 판례를 인용 (피인용)', C.피인용 || []]].forEach(([t, ids]) => {
     body.appendChild(el('div', 'grp', t + ' — ' + ids.length + '건'));
     ids.forEach(id => { const p = by[id] || { id: id }; const d = el('div', 'res');
@@ -4898,10 +4978,26 @@ function precCitePop(cur, C, P, ev){
       if (p.전합) d.appendChild(el('span', 'badge jh', '전합'));
       d.appendChild(el('span', 'x', (p.사건명 || p.별칭 || '').slice(0, 40)));
       const z = (C.자리 || {})[id]; if (z && z.length) d.appendChild(el('span', 'lawtag', '×' + z.length));
-      d.onclick = () => { S.prec = id; S.precTab = p.요약본 ? '요약' : '원문'; closeAllPops(); render(); };
+      d.onclick = e2 => openPrec(id, e2);
       body.appendChild(d); });
   });
   if (C.밖 && C.밖.length) body.appendChild(el('div', 'cdim', '리스트 밖 인용 ' + C.밖.length + '건 — ' + C.밖.slice(0, 12).join(', ') + (C.밖.length > 12 ? ' …' : '')));
+  /* ★ 판 4 add4 §2 — 셋째 묶음 「🔗 내가 이은 판례」 (내 것 + 「← A 에서」 뒤집힌 것) · + 판례 잇기 */
+  const mine = el('div'); body.appendChild(mine);
+  const draw = () => { mine.innerHTML = '';
+    const own = plOwn(cur.id).filter(x => x.k === 'prec'), inn = plIn(cur.id);
+    mine.appendChild(el('div', 'grp', '🔗 내가 이은 판례 — ' + (own.length + inn.length) + '건'));
+    own.concat(inn).forEach(x => { const oid = x._in ? x._from : x.to; const p = by[oid] || { id: oid }; const d = el('div', 'res lkrow');
+      d.appendChild(el('b', '', p.사건번호 || oid)); if (p.전합) d.appendChild(el('span', 'badge jh', '전합'));
+      d.appendChild(el('span', 'x', (p.설명별칭 || p.별칭 || p.사건명 || '').slice(0, 36)));
+      d.appendChild(el('span', 'why', (x._in ? '← ' + (p.사건번호 || oid) + ' 에서' : '→') + (x.why ? ' · ' + x.why : '')));
+      plRowTools(d, x, () => { draw(); render(); });
+      d.onclick = e2 => openPrec(oid, e2); mine.appendChild(d); });
+    const add = el('button', 'tool', '+ 판례 잇기'); add.onclick = e2 => { e2.stopPropagation(); if (mine.querySelector('.lkform')) return;
+      plPrecSearchBox(mine, P, cur.id, p2 => { const host = mine.querySelector('.lkform'); host.innerHTML = ''; host.appendChild(el('div', 'cdim', '→ ' + (p2.사건번호 || p2.id) + ' — 이유'));
+        plWhyForm(host, '', why => { plAdd(cur.id, { k: 'prec', to: p2.id, why: why }); host.remove(); toast('🔗 판례를 이었다 — ' + (p2.사건번호 || p2.id)); draw(); render(); }); }); };
+    mine.appendChild(add); };
+  draw();
 }
 /* 1단 거르기 트리 — 토글 여섯 · 사이 AND · 안 OR · 항목 수 = 다른 토글 조건을 적용한 뒤의 수 */
 function precFilterUI(tree, P, f){
@@ -5142,7 +5238,7 @@ async function viewPrec(){
 
   const chips=el('div');chips.style.marginTop='6px';
   (Array.isArray(cur.조문키)&&cur.조문키.length?cur.조문키:(Array.isArray(cur.조문)?cur.조문:[]).map(x=>({law:'',jo:'',detail:'',raw:x,cur:null}))).forEach(k=>chips.appendChild(precJoChipEl(k,true)));   /* ★ 판 4 add1 §2 */
-  if(cur.기출&&typeof cur.기출==='string')chips.appendChild(el('span','chip c-quiz','📝 기출 '+cur.기출));
+  /* ★ 판 4 add4 §3 — 「📝 기출」 칩은 뺐다: 볼트 `기출` 문자열은 ⚙ 기출표시(1차 20NN-회-문번)에 전부 옮겨 간다(K1 어긋남 0) */
   (Array.isArray(cur.카테고리)?cur.카테고리:[]).forEach(x=>
     chips.appendChild(el('span','chip c-theme',String(x).slice(0,34))));
   chips.appendChild(el('span','chip c-card','🃏'));
@@ -5150,9 +5246,16 @@ async function viewPrec(){
    if(n)chips.appendChild(el('span','chip c-quiz','🗒 메모 '+n));}
   eqHeadBtn('prec|'+subj+'|'+cur.id,chips);   /* ★ recsync §E · 판 4 add3 — ✎ 대기 수 칩(통째 버튼은 없앴다) */
   {const Cc=CITE[cur.id]||{};const ni=(Cc.인용||[]).length,no=(Cc.피인용||[]).length;   /* ★ 판 3 §3-3 — 인용 N · 피인용 N (1단 팝업) */
-   const c=el('span','chip c-prec','🔗 인용 '+ni+' · 피인용 '+no);
-   if(ni||no||(Cc.밖&&Cc.밖.length)){c.style.cursor='pointer';c.onclick=ev=>precCitePop(cur,Cc,P,ev);}
+   const nm=plCount(cur.id);   /* ★ 판 4 add4 §2 — · 내 N */
+   const c=el('span','chip c-prec','🔗 인용 '+ni+' · 피인용 '+no+(nm?' · 내 '+nm:''));
+   c.style.cursor='pointer';c.onclick=ev=>precCitePop(cur,Cc,P,ev,0);
    chips.appendChild(c);}
+  {const cs=cardLinksOf(cur);   /* ★ 판 4 add4 §4 — 🧾 기출·사례·GS N (⚙ 이차카드 + 내가 이은 것) · 클릭 = 목록 팝업 */
+   ['기출','사례','GS'].forEach(kind=>{const n=cs.filter(x=>x.kind===kind).length;if(!n)return;
+     const c=el('span','chip c-quiz','🧾 '+kind+' '+n);c.style.cursor='pointer';c.title='이 판례에 이어진 2차 '+kind+' 카드';
+     c.onclick=ev=>{ev.stopPropagation();popCardList(cur,kind,null,ev,0);};chips.appendChild(c);});
+   if(!cs.length){const c=el('span','chip c-quiz','🧾 + 2차 잇기');c.style.opacity='.6';c.style.cursor='pointer';c.title='⚙ 짝 0 — 손으로 2차 카드를 잇는다';
+     c.onclick=ev=>{ev.stopPropagation();popCardList(cur,'사례',null,ev,0);};chips.appendChild(c);}}
   main.appendChild(chips);
   main.appendChild(precDescEl(cur,true));   /* ★ add1 — 3단 머리 「쟁점 — …」 대신 같은 셋 */
 
