@@ -185,6 +185,7 @@ mark.cj{background:#fff3a3;outline:2px solid #e0a800}
 .pop .prsz{position:sticky;bottom:0;display:block;width:16px;height:16px;margin:-16px 0 0 auto;cursor:nwse-resize;background:linear-gradient(135deg,transparent 55%,#b5b1a8 55%);border-radius:0 0 9px 0;touch-action:none;z-index:2}
 .pop.sized{max-height:none}
 .ln.blkhl{background:#fff3a3;outline:2px solid #e0a800;border-radius:4px}
+.ntrow .ln.blkhl{outline:none;border-radius:0;box-shadow:inset 3px 0 0 #e0a800}   /* ★ 판 4 add3 — 노트 팝업 강조 = 문단 전체(여러 줄이 한 덩이로) */
 .ntrow{display:flex;gap:6px;align-items:flex-start} .ntrow .ln{flex:1;min-width:0} .ntbl{flex-shrink:0;display:flex;gap:3px;flex-wrap:wrap;max-width:46%;justify-content:flex-end}
 .ntbl .chip{font-size:10.5px;padding:0 7px;margin:0;cursor:pointer}
 .plink{color:var(--exc);text-decoration:underline dotted;cursor:pointer}
@@ -1481,7 +1482,7 @@ async function viewJo(){
   if(j.제목)h1.appendChild(document.createTextNode(' '+j.제목));
   main.appendChild(h1);
   main.appendChild(el('div','sihaeng','🕐 시행 '+(SIHAENG[S.law]||'—')+'  ·  '+j.파일));
-  {const eqc=el('div');eqc.style.marginTop='4px';eqHeadBtn('jo|'+S.law+'|'+S.jo,eqc);main.appendChild(eqc);}   /* ★ recsync §E — ✎ 이 문서 통째 */
+  {const eqc=el('div');eqc.style.marginTop='4px';eqHeadBtn('jo|'+S.law+'|'+S.jo,eqc);main.appendChild(eqc);}   /* ★ recsync §E · 판 4 add3 — ✎ 대기 수 칩(통째 버튼은 없앴다) */
   /* ★ v3-I — 2년 내 개정 조는 본문 머리에도 배지 하나(명칭개정만 있는 조는 없음) */
   if(stars[S.jo])main.appendChild(el('span','badge jstarb','★ '+stars[S.jo]+' 개정'));
   {const br=blkAll()[S.law+':'+S.jo];   /* ★ v3-L §3 — 빈칸 회독 배지(마지막 저장) */
@@ -2209,8 +2210,9 @@ function eqFileOf(target){
 }
 function eqRail(target){ const g = target.split('|')[0]; return { prec: '판례', jo: '조문', cha2: '2차', jimun: '원장', note: '노트' }[g] || g; }
 function eqAdd(target, part, quote, ev, existing){
-  /* ★ 판 4 add1 §1 — 머리 「✎ 통째」 전용(문서 단위 지시 · before '' · after 자유 글). 줄은 eqEditLine 이 맡는다. 갈래 select 없음. */
+  /* ★ 판 4 add1 §1 — 문서 단위 항목(before '' · after 자유 글)의 「다시 고치기」 전용. ★ add3 (9/2 밤) — 머리 「✎ 통째」 새로 만들기는 없앴다(existing 없으면 돌아감) · 이미 큐에 든 통째 항목만 그대로. 줄은 eqEditLine 이 맡는다. */
   target = eqNorm(target);
+  if (!existing){ toast('머리 ✎ 통째는 없앴다 — 글줄을 길게 눌러 ✎ 수정'); return; }
   const body = popShell('', (existing ? '✎ 수정 — 다시 고치기' : '✎ 수정 — 이 문서 통째') + ' · ' + eqRail(target));
   body.classList.add('eqform');
   body.appendChild(el('div', 'cdim', target + (part ? ' · ' + part : ' · (문서 통째)') + (existing ? '' : ' · ' + (eqFileOf(target) || '(파일은 채팅이 대상키로 되찾는다)'))));
@@ -2288,9 +2290,11 @@ function eqFlagWire(lineEl, target, part, text){
 function eqHeadBtn(target, chips){
   target = eqNorm(target);
   const n = eqAll().filter(x => x.target === target && x.st === '대기').length;
-  const b = el('span', 'chip c-card', '✎' + (n ? ' ' + n : ''));
-  b.title = '✎ 수정 — 이 문서 통째(줄 없음) 지시를 적어 둔다' + (n ? ' · 대기 ' + n : ''); b.style.cursor = 'pointer';
-  b.onclick = ev => { ev.stopPropagation(); if (n){ popEq(ev, target); } else eqAdd(target, '', '', ev); };
+  /* ★ 판 4 add3 — 머리 「✎ 통째」 버튼 제거 · 대기 수 칩(줄 단위 큐)만 · 누르면 이 문서의 큐 · 0 이면 아무것도 안 그린다 */
+  if (!n) return;
+  const b = el('span', 'chip c-card', '✎ ' + n);
+  b.title = '✎ 수정 큐 — 이 문서 대기 ' + n + ' · 줄을 고치려면 글줄을 길게 눌러 ✎ 수정'; b.style.cursor = 'pointer';
+  b.onclick = ev => { ev.stopPropagation(); popEq(ev, target); };
   chips.appendChild(b);
 }
 function eqGo(x){
@@ -2356,7 +2360,7 @@ function popEq(ev, onlyTarget){
   const box = el('div'); body.appendChild(box);
   function draw(){ box.innerHTML = '';
     const L = A.filter(x => (!onlyTarget || x.target === onlyTarget) && (!f.rail || eqRail(x.target) === f.rail) && (!f.st || x.st === f.st) && (!f.kind || (x.kind || (typeof x.after === 'string' ? (x.before ? (x.after === '' ? '삭제' : '고침') : '통째') : '')) === f.kind));
-    if (!L.length){ box.appendChild(el('div', 'cdim', '항목이 없다 — 글줄을 길게 누르고 ✎ 로 고치거나 3단 머리 ✎ 로 적는다')); return; }
+    if (!L.length){ box.appendChild(el('div', 'cdim', '항목이 없다 — 글줄을 길게 누르고 ✎ 수정으로 고친다')); return; }
     L.forEach(x => { const d = el('div', 'eqrow st' + x.st);
       const isLine = typeof x.after === 'string' && typeof x.before === 'string' && x.before !== '';
       const kind = isLine ? (x.after === '' ? '삭제' : '고침') : (typeof x.after === 'string' ? '문서 통째' : (x.kind || ''));
@@ -4563,6 +4567,8 @@ function noteBlockRows(rec, id){
   if (ri < 0) return null;
   const base = rows[ri]; const out = [[ri, base]];
   if (!id){ for (let j = 1; j < rows.length; j++) out.push([j, rows[j]]); return out; }
+  /* ★ 판 4 add3 — ⚙ blk {a,b} = ^id 가 속한 문단 전체(헤딩이면 절) · 앱은 그것만 쓴다 · 없으면(옛 데이터) 아래 옛 규칙 */
+  if (base.blk && base.blk.a != null && base.blk.b != null){ out.length = 0; for (let j = base.blk.a; j <= base.blk.b && j < rows.length; j++) out.push([j, rows[j]]); return out; }
   if (base.h){ const lv = base.h; for (let j = ri + 1; j < rows.length; j++){ if (rows[j].h && rows[j].h <= lv) break; out.push([j, rows[j]]); } }
   else { const bi = base.i || 0; for (let j = ri + 1; j < rows.length; j++){ if (rows[j].h || (rows[j].i || 0) <= bi) break; out.push([j, rows[j]]); } }
   return out;
@@ -4665,14 +4671,15 @@ async function popNote(file,blockId,ev,depth){
   hd.appendChild(fc); if(depth>=2)hd.appendChild(el('span','badge',depth+'단'));
   body.appendChild(hd);
   const box=el('div','box'); let hl=null; const ents=[];   /* ★ 판 4 add2 §2 헤딩 접기 */
+  let hlA=-1,hlB=-1; if(blockId){ const bi=(rec.행||[]).findIndex(r=>r.id===blockId); if(bi>=0){ const bk=rec.행[bi].blk; hlA=(bk&&bk.a!=null)?bk.a:bi; hlB=(bk&&bk.b!=null)?bk.b:bi; } }   /* ★ 판 4 add3 — 강조 = 문단 전체(blk) */
   (rec.행||[]).forEach((row,ri)=>{
     const wrap=el('div','ntrow'); ents.push({ri:ri,row:row,el:wrap});
     const d=mdLine(el('div','ln'),row);
     d.appendChild(renderLine(row,{label:false,depth:depth}));
     pitWire(d,'note|특허|'+file,String(ri),row.t||'');   /* 포스트잇·✎ 수정 큐 대상키 note|특허|<파일> · 구조키 = 줄번호 */
     wrap.appendChild(d);
-    if(row.id){ const bl=el('div','ntbl'); noteBlChips(file+'#^'+row.id,B,bl,depth,ev); wrap.appendChild(bl);
-      if(blockId&&row.id===blockId){ d.classList.add('blkhl'); hl=wrap; } }
+    if(ri>=hlA&&ri<=hlB){ d.classList.add('blkhl'); if(!hl)hl=wrap; }   /* ★ 판 4 add3 — 문단 전체 강조 · 스크롤은 첫 줄로 */
+    if(row.id){ const bl=el('div','ntbl'); noteBlChips(file+'#^'+row.id,B,bl,depth,ev); wrap.appendChild(bl); }
     box.appendChild(wrap);
   });
   hfoldWire(ents,'note|'+file);
@@ -4685,12 +4692,16 @@ async function popNoteList(label,key,items,ev,depth){
   const arr=(items||[]).map(x=>typeof x==='string'?{kind:label,v:x}:x);
   const groups={}; arr.forEach(x=>{(groups[x.kind]=groups[x.kind]||[]).push(x.v);});
   const P=await get('prec_특허_리스트.json').catch(()=>({판례:[]})); const by={}; (P.판례||[]).forEach(p=>{by[p.id]=p;});
+  const NN=await get('note_특허.json').catch(()=>({}));   /* ★ 판 4 add3 — 노트 항목 미리보기 = blk 문단 */
   Object.keys(groups).forEach(kind=>{
     body.appendChild(el('div','grp',kind+' — '+groups[kind].length+'건'));
     groups[kind].forEach(v=>{ const d=el('div','res');
       if(kind==='판례'){ const p=by[v]||{id:v}; d.appendChild(el('b','',p.사건번호||v)); if(p.전합)d.appendChild(el('span','badge jh','전합')); d.appendChild(el('span','x',(p.설명별칭||p.사건명||p.별칭||'').slice(0,44)));
         d.onclick=e2=>{ if(depth>=3){closeAllPops();S.tab='prec';S.prec=v;S.precTab=p.요약본?'요약':'원문';render();} else popPrec4(v,e2,depth+1); }; }
       else if(kind==='노트'){ const f=v.split('#')[0],id=(v.split('#^')[1]||''); d.appendChild(el('b','',f.slice(0,30))); if(id)d.appendChild(el('span','x','^'+id));
+        { const rec=NN[f.split('/').pop()]; const bk=(rec&&id)?noteBlockRows(rec,id):null;   /* ★ 판 4 add3 — 미리보기 = 문단 전체(blk) */
+          if(bk){ const pv=bk.map(x=>String(x[1].t||'').replace(/\s*\^[0-9a-f]{6}\s*$/,'').replace(/^\s*#{1,3}\s*/,'').trim()).filter(Boolean).join(' ⏎ ');
+            const q=el('div','cdim blkpv',pv.slice(0,120)+(pv.length>120?'…':'')); q.style.fontSize='11px'; d.appendChild(q); } }
         d.onclick=e2=>{ if(depth>=3){closeAllPops();popNote(f,id,e2,1);} else popNote(f,id,e2,depth+1); }; }
       else { d.appendChild(el('b','',String(v).slice(0,50))); d.appendChild(el('span','lawtag',kind));
         d.onclick=e2=>{ if(depth>=3){closeAllPops();S.tab='cha2';S.boardKind=kind==='사례'?'사례':kind;render();} else popCard4(kind,v,e2,depth+1); }; }
@@ -5137,7 +5148,7 @@ async function viewPrec(){
   chips.appendChild(el('span','chip c-card','🃏'));
   {const n=pitCount('prec|'+cur.id+SEP);   /* ★ v3-H §4 — 카드 머리 「🗒 메모 N」 */
    if(n)chips.appendChild(el('span','chip c-quiz','🗒 메모 '+n));}
-  eqHeadBtn('prec|'+subj+'|'+cur.id,chips);   /* ★ recsync §E — ✎ 이 문서 통째 */
+  eqHeadBtn('prec|'+subj+'|'+cur.id,chips);   /* ★ recsync §E · 판 4 add3 — ✎ 대기 수 칩(통째 버튼은 없앴다) */
   {const Cc=CITE[cur.id]||{};const ni=(Cc.인용||[]).length,no=(Cc.피인용||[]).length;   /* ★ 판 3 §3-3 — 인용 N · 피인용 N (1단 팝업) */
    const c=el('span','chip c-prec','🔗 인용 '+ni+' · 피인용 '+no);
    if(ni||no||(Cc.밖&&Cc.밖.length)){c.style.cursor='pointer';c.onclick=ev=>precCitePop(cur,Cc,P,ev);}
