@@ -151,6 +151,11 @@ mark.cj{background:#fff3a3;outline:2px solid #e0a800}
 .eqrow.st보류{opacity:.7} .eqrow.st반영됨{opacity:.5;text-decoration:line-through}
 .eqform textarea{width:100%;box-sizing:border-box;min-height:70px;font:inherit;font-size:12.5px;padding:5px 7px;border:1px solid #d9d6ce;border-radius:7px}
 .eqform .q{font-size:11.5px;color:#6b665d;background:#faf8f3;border-radius:6px;padding:4px 7px;margin:4px 0;white-space:pre-wrap}
+/* ★ 판 4 add1 — 줄 직접 고치기 · 겹층 · 큐 diff */
+.eqedit{margin:2px 0} .eqta{width:100%;box-sizing:border-box;font:inherit;font-size:12.5px;line-height:1.5;padding:4px 6px;border:1px solid #d98a1c;border-radius:6px;min-height:44px}
+.eqov{white-space:pre-wrap} .badge.eqpend{background:#fff2e0;color:var(--warn);font-size:10px;margin-left:6px;vertical-align:middle}
+.ln.eqlocked{background:#fffaf0} .eqflag.stale{background:#f2ecd8;border-style:dashed} .eqflag.done{opacity:.35}
+.eqrow .bf{color:var(--rule);text-decoration:line-through;white-space:pre-wrap;font-size:11.5px} .eqrow .af{color:var(--ok);white-space:pre-wrap;font-size:12px}
 /* ★ 판 3 add1 — 리담 화면 그대로: 노란 별칭 칩 · 설명줄(안 자름) · 기출 칩 */
 .chip.c-alias{background:#fde68a;color:#5b4300;font-weight:700}
 .chip.c-gi{background:#eaf1fb;color:var(--exc);font-size:11px;padding:1px 8px}
@@ -2188,36 +2193,81 @@ function eqFileOf(target){
 }
 function eqRail(target){ const g = target.split('|')[0]; return { prec: '판례', jo: '조문', cha2: '2차', jimun: '원장', note: '노트' }[g] || g; }
 function eqAdd(target, part, quote, ev, existing){
+  /* ★ 판 4 add1 §1 — 머리 「✎ 통째」 전용(문서 단위 지시 · before '' · after 자유 글). 줄은 eqEditLine 이 맡는다. 갈래 select 없음. */
   target = eqNorm(target);
-  const body = popShell('', (existing ? '✎ 수정 — 고치기' : '✎ 수정 — 적어 두기') + ' · ' + eqRail(target));
+  const body = popShell('', (existing ? '✎ 수정 — 다시 고치기' : '✎ 수정 — 이 문서 통째') + ' · ' + eqRail(target));
   body.classList.add('eqform');
   body.appendChild(el('div', 'cdim', target + (part ? ' · ' + part : ' · (문서 통째)') + (existing ? '' : ' · ' + (eqFileOf(target) || '(파일은 채팅이 대상키로 되찾는다)'))));
-  if (quote) body.appendChild(el('div', 'q', '원문: ' + quote));
-  const sel = el('select', 'sel'); EQ_KINDS.forEach(k => { const o = el('option', '', k); o.value = k; if (existing && existing.kind === k) o.selected = true; sel.appendChild(o); });
-  body.appendChild(el('div', 'grp', '갈래')); body.appendChild(sel);
-  body.appendChild(el('div', 'grp', '바꿀 내용 (필수)'));
-  const ta = el('textarea'); ta.value = existing ? (existing.note || '') : ''; ta.placeholder = '어떻게 고칠지 — 채팅이 이 글로 볼트 지시서를 만든다'; body.appendChild(ta);
+  if (existing && typeof existing.before === 'string' && existing.before) body.appendChild(el('div', 'q', '원문: ' + existing.before));
+  else if (quote) body.appendChild(el('div', 'q', '원문: ' + quote));
+  body.appendChild(el('div', 'grp', existing && typeof existing.before === 'string' && existing.before ? '고친 줄(after)' : '지시 (필수 · 채팅이 이 글로 볼트를 고친다)'));
+  const ta = el('textarea'); ta.value = existing ? (typeof existing.after === 'string' ? existing.after : (existing.note || '')) : ''; body.appendChild(ta);
   const row = el('div', 'memobtn');
   const ok = el('button', 'tool on', existing ? '고침' : '적어 두기');
-  ok.onclick = () => { const note = ta.value.trim(); if (!note){ toast('⚠ 바꿀 내용을 적어라', 1); return; }
+  ok.onclick = () => { const after = ta.value.replace(/\r/g, ''); if (!after.trim() && !(existing && typeof existing.before === 'string' && existing.before)){ toast('⚠ 지시를 적어라', 1); return; }
     const A = eqAll().slice();
-    if (existing){ const i = A.findIndex(x => x.k === existing.k); if (i >= 0) A[i] = Object.assign({}, A[i], { kind: sel.value, note: note, at: nowIso().slice(0, 16) }); }
+    if (existing){ const i = A.findIndex(x => x.k === existing.k); if (i >= 0){ const y = Object.assign({}, A[i], { after: after, at: nowIso().slice(0, 16), st: '대기' }); delete y.note; delete y.kind; A[i] = y; } }
     else A.unshift({ k: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), at: nowIso().slice(0, 16), who: '나',
-      target: target, part: part || '', file: eqFileOf(target), quote: quote || '', kind: sel.value, note: note, st: '대기' });
+      target: target, part: part || '', file: eqFileOf(target), before: '', after: after, st: '대기' });
     eqSave(A); closeOne(body.parentNode); toast('✎ 수정 큐에 ' + (existing ? '고쳤다' : '적었다') + ' — 동기화되면 채팅이 읽는다'); render(); };
   row.appendChild(ok);
-  if (existing){ const del = el('button', 'tool', '🗑 지우기'); del.onclick = () => { if (!confirm('이 수정 항목을 지운다?')) return; eqSave(eqAll().filter(x => x.k !== existing.k)); closeOne(body.parentNode); render(); }; row.appendChild(del);
+  if (existing){ const del = el('button', 'tool', '↩ 되돌리기(삭제)'); del.onclick = () => { if (!confirm('이 수정 항목을 지운다? (화면은 원문으로 돌아간다)')) return; eqSave(eqAll().filter(x => x.k !== existing.k)); closeOne(body.parentNode); render(); }; row.appendChild(del);
     const stb = el('select', 'sel'); ['대기', '보류', '반영됨'].forEach(s => { const o = el('option', '', s); o.value = s; if (existing.st === s) o.selected = true; stb.appendChild(o); });
     stb.onchange = () => { const A = eqAll().slice(); const i = A.findIndex(x => x.k === existing.k); if (i >= 0){ A[i] = Object.assign({}, A[i], { st: stb.value }); eqSave(A); } }; row.appendChild(stb); }
   body.appendChild(row); showPop(ev); setTimeout(() => ta.focus(), 50);
 }
-/* 글줄의 ✎ 표식 — 포스트잇 🗒 와 나란히 · 누르면 편집/삭제 */
-function eqFlagWire(lineEl, target, part){
+/* ★ 판 4 add1 §1 — 글줄 ✎ = 그 줄이 편집 칸으로 바뀐다(원문 t 채워짐). 저장 = {before: 원문 줄, after: 고친 줄} · 줄 추가 = after 에 개행으로 · 삭제 = after '' */
+function eqEditLine(lineEl, target, part, text, ev, existing){
+  target = eqNorm(target);
+  if (lineEl._eqedit) return;
+  const cur = existing ? (typeof existing.after === 'string' ? existing.after : String(text || '')) : String(text || '');
+  const ta = el('textarea', 'eqta'); ta.value = cur; ta.rows = Math.max(2, Math.min(8, cur.split('\n').length + 1));
+  const bar = el('div', 'memobtn');
+  const ok = el('button', 'tool on', '고침 저장'), cx = el('button', 'tool', '취소');
+  bar.appendChild(ok); bar.appendChild(cx); bar.appendChild(el('span', 'cdim', '줄 추가 = 개행으로 이어 쓰기 · 삭제 = 비우기 · 저장 즉시 화면에(볼트 반영 전)'));
+  const box = el('div', 'eqedit'); box.appendChild(ta); box.appendChild(bar);
+  const saved = Array.from(lineEl.childNodes); lineEl._eqedit = 1; lineEl.innerHTML = ''; lineEl.appendChild(box);
+  const restore = () => { lineEl._eqedit = 0; lineEl.innerHTML = ''; saved.forEach(n => lineEl.appendChild(n)); };
+  const inPop = !!lineEl.closest('.pop');
+  cx.onclick = e2 => { e2.stopPropagation(); restore(); };
+  ok.onclick = e2 => { e2.stopPropagation(); const after = ta.value.replace(/\r/g, '');
+    if (after === String(text || '') && !existing){ toast('바뀐 것이 없다'); restore(); return; }
+    const A = eqAll().slice(); let item;
+    if (existing){ const i = A.findIndex(x => x.k === existing.k); item = Object.assign({}, A[i >= 0 ? i : 0], { after: after, at: nowIso().slice(0, 16), st: '대기' }); delete item.note; delete item.kind; if (i >= 0) A[i] = item; else A.unshift(item); }
+    else { item = { k: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), at: nowIso().slice(0, 16), who: '나', target: target, part: part || '', file: eqFileOf(target), before: String(text || ''), after: after, st: '대기' }; A.unshift(item); }
+    eqSave(A); toast('✎ 고쳤다 — 화면엔 바로 · 볼트엔 채팅이 반영한다');
+    if (inPop){ restore(); lineEl._eqlock = 0; lineEl.querySelectorAll('.eqflag,.eqpend').forEach(x => x.remove()); eqApplyOverlay(lineEl, item); eqFlagsOn(lineEl, target, part, String(text || '')); }
+    else render(); };
+  ['click', 'pointerdown', 'pointerup', 'keydown'].forEach(n => box.addEventListener(n, e2 => e2.stopPropagation()));
+  setTimeout(() => ta.focus(), 30);
+}
+function eqApplyOverlay(lineEl, item){
+  const keep = Array.from(lineEl.querySelectorAll('.pitflag,.eqflag'));
+  lineEl.textContent = '';
+  lineEl.appendChild(el('span', 'eqov', item.after === '' ? '(삭제)' : item.after));
+  lineEl.appendChild(el('span', 'badge eqpend', '볼트 반영 전'));
+  keep.forEach(k => lineEl.appendChild(k));
+  lineEl.classList.add('eqlocked'); lineEl._eqlock = 1;
+}
+function eqFlagsOn(lineEl, target, part, cur){
+  const list = eqFor(target, part);
+  list.forEach((e2, i) => {
+    const isLine = typeof e2.after === 'string' && typeof e2.before === 'string' && e2.before !== '';
+    const stale = isLine && e2.st === '대기' && e2.before !== cur;
+    const f = el('span', 'eqflag' + (e2.st !== '대기' ? ' done' : (stale ? ' stale' : ''))); f.style.top = (2 + i * 13) + 'px';
+    f.title = '✎ ' + (isLine ? (e2.after === '' ? '삭제' : '고침') : (typeof e2.after === 'string' ? '문서 지시' : (e2.kind || ''))) + ' · ' + e2.st + (stale ? ' · ⚠ 원문 바뀜' : '');
+    f.onclick = ev => { ev.stopPropagation(); if (isLine) eqEditLine(lineEl, target, part, cur, ev, e2); else eqAdd(target, part, e2.quote, ev, e2); };
+    lineEl.appendChild(f); });
+}
+/* 글줄의 ✎ 표식 + 겹층 — 대기 항목의 before 가 지금 t 와 글자 단위 같으면 after 로 그린다(그 줄 잠금) · 다르면 겹층 없이 ⚠ 원문 바뀜 */
+function eqFlagWire(lineEl, target, part, text){
   target = eqNorm(target);
   const list = eqFor(target, part); if (!list.length) return;
   lineEl.classList.add('pitline');
-  list.forEach((e2, i) => { const f = el('span', 'eqflag'); f.style.top = (2 + i * 13) + 'px'; f.title = '✎ ' + e2.kind + ' · ' + String(e2.note || '').slice(0, 44) + ' · ' + e2.st;
-    f.onclick = ev => { ev.stopPropagation(); eqAdd(target, part, e2.quote, ev, e2); }; lineEl.appendChild(f); });
+  const cur = String(text || '');
+  const live = list.find(x => x.st === '대기' && typeof x.after === 'string' && typeof x.before === 'string' && x.before !== '' && x.before === cur);
+  if (live) eqApplyOverlay(lineEl, live);
+  eqFlagsOn(lineEl, target, part, cur);
 }
 function eqHeadBtn(target, chips){
   target = eqNorm(target);
@@ -2235,6 +2285,49 @@ function eqGo(x){
   else { toast('이 갈래는 자리 이동을 아직 안 만들었다 — ' + x.target); return; }
   closeAllPops(); render();
 }
+
+/* ★ 판 4 add1 — 큐 화면의 「⚠ 원문 바뀜」 판정용: 대상키·구조키로 지금 줄 t 를 되찾는다(판례 요약본 · 노트만 · 그 밖 null) */
+async function eqCurText(x){
+  try{ const p = String(x.target || '').split('|');
+    if (p[0] === 'prec' && /^sum\//.test(x.part || '')){ const S2 = await get('prec_특허_요약.json'); const r = (S2[p[2]] || {}).행 || []; const row = r[+x.part.slice(4)]; return row ? row.t : null; }
+    if (p[0] === 'note'){ const N = await get('note_특허.json'); const r = ((N[p[2]] || {}).행 || [])[+x.part]; return r ? r.t : null; }
+  }catch(e){}
+  return null;
+}
+/* ★ 판 4 add1 §2 — 머리·행 칩 클릭. 조문 = popJo(항·호 강조) · 타법·미확정 구법 흐림 · 기출 = 1차객 기출뷰 그 문항 / 2차 레일 기출 */
+function precJoChipEl(k, big){
+  const c = el('span', 'chip c-prec', (big ? '⚖ ' : '⚖') + precJoChip(k));
+  let jo = null, detail = '';
+  if (k.law === '특허법'){ jo = k.jo; detail = k.detail || ''; } else if (k.law === '구특허법' && k.cur && k.cur.jo){ jo = k.cur.jo; detail = k.cur.detail || ''; }
+  if (jo){ let hl = null; const m = /^([①-⑳])(\d+)?/.exec(detail); if (m) hl = { hang: JOCIRC.indexOf(m[1]) + 1, ho: m[2] ? +m[2] : 0 };
+    c.style.cursor = 'pointer'; c.title = '특허법 ' + jo + (hl ? ' 제' + hl.hang + '항' : '') + ' 팝업';
+    c.onclick = ev => { ev.stopPropagation(); popJo('특허법', jo, ev, 1, hl); }; }
+  else { c.style.opacity = '.5'; c.title = k.law === '구특허법' ? '구법 — 현행 환산 미확정(확정표)' : (k.law ? k.law + ' — 조문 팝업 없음' : '규칙 밖 값'); }
+  return c;
+}
+function giChipEl(g){
+  const c = el('span', 'chip c-gi', g);
+  const m1 = /^(?:★\s*)?1차\s+(\d{4})(?:-(\d+)-(\d+))?$/.exec(g), m2 = /^(?:★\s*)?2차\s+(\d{4})/.exec(g);
+  if (m1){ c.style.cursor = 'pointer';
+    const JM = C['jimun_특허.json'];
+    const q = (JM && m1[2]) ? (JM.문제 || []).find(x => String(x.연도) === m1[1] && String(x.회차) === m1[2] && String(x.시험문번) === m1[3]) : null;
+    if (!m1[2]){ c.style.opacity = '.6'; c.title = '1차객 기출뷰 ' + m1[1] + '년 (문항 미상 — 연도만)'; }
+    else if (JM && !q){ c.style.opacity = '.5'; c.title = '문번 미확정 — ' + m1[1] + '년 ' + m1[2] + '회 ' + m1[3] + '번은 시험문번 확정 문항에 없다'; }
+    else c.title = '1차객 기출뷰 ' + m1[1] + '년 ' + m1[2] + '회 ' + m1[3] + '번';
+    c.onclick = ev => { ev.stopPropagation(); giGoTo(m1[1], m1[2], m1[3]); }; }
+  else if (m2){ c.style.cursor = 'pointer'; c.title = '2차 레일 기출 ' + m2[1] + '년';
+    c.onclick = ev => { ev.stopPropagation(); closeAllPops(); S.law = '특허법'; S.tab = 'cha2'; S.boardKind = '기출'; S.boardView = 'board'; S.series = ''; S.yearFilter = m2[1]; render(); }; }
+  return c;
+}
+async function giGoTo(year, round, no){
+  closeAllPops();
+  let q = null;
+  try{ const JM = await get('jimun_특허.json'); if (no) q = (JM.문제 || []).find(x => String(x.연도) === String(year) && String(x.회차) === String(round) && String(x.시험문번) === String(no)); }catch(e){}
+  if (no && !q) toast('문번 미확정 — ' + year + '년 ' + round + '회 ' + no + '번은 시험문번 확정 문항에 없다 · 그 해 기출뷰로', 1);
+  S.law = '특허법'; S.tab = 'jimun'; S.jimunTab = 'gichul'; S.year = String(year); S.omr = false; S.giWrong = false;
+  await render();
+  if (q){ const n = document.getElementById('gi-' + giKey(q)); if (n){ n.scrollIntoView({ block: 'center' }); n.classList.add('blkhl'); setTimeout(() => n.classList.remove('blkhl'), 2500); } }
+}
 function popEq(ev, onlyTarget){
   const body = popShell('cell', '✎ 수정 큐 — 볼트에서 고칠 자리');
   const A = eqAll().slice().sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
@@ -2242,22 +2335,26 @@ function popEq(ev, onlyTarget){
   const bar = el('div', 'memobtn');
   const mk = (label, vals, key) => { const s = el('select', 'sel'); const o0 = el('option', '', label); o0.value = ''; s.appendChild(o0);
     vals.forEach(v => { const o = el('option', '', v); o.value = v; s.appendChild(o); }); s.onchange = () => { f[key] = s.value; draw(); }; bar.appendChild(s); };
-  mk('레일 전부', ['판례', '조문', '2차', '원장', '노트'], 'rail'); mk('상태 전부', ['대기', '보류', '반영됨'], 'st'); mk('갈래 전부', EQ_KINDS, 'kind');
+  mk('레일 전부', ['판례', '조문', '2차', '원장', '노트'], 'rail'); mk('상태 전부', ['대기', '보류', '반영됨'], 'st'); mk('갈래 전부', ['고침', '삭제', '통째'], 'kind');
   body.appendChild(bar);
   const box = el('div'); body.appendChild(box);
   function draw(){ box.innerHTML = '';
-    const L = A.filter(x => (!onlyTarget || x.target === onlyTarget) && (!f.rail || eqRail(x.target) === f.rail) && (!f.st || x.st === f.st) && (!f.kind || x.kind === f.kind));
-    if (!L.length){ box.appendChild(el('div', 'cdim', '항목이 없다 — 글줄을 길게 누르거나 3단 머리 ✎ 로 적는다')); return; }
+    const L = A.filter(x => (!onlyTarget || x.target === onlyTarget) && (!f.rail || eqRail(x.target) === f.rail) && (!f.st || x.st === f.st) && (!f.kind || (x.kind || (typeof x.after === 'string' ? (x.before ? (x.after === '' ? '삭제' : '고침') : '통째') : '')) === f.kind));
+    if (!L.length){ box.appendChild(el('div', 'cdim', '항목이 없다 — 글줄을 길게 누르고 ✎ 로 고치거나 3단 머리 ✎ 로 적는다')); return; }
     L.forEach(x => { const d = el('div', 'eqrow st' + x.st);
-      d.appendChild(el('div', 'eqk', x.at + ' · ' + eqRail(x.target) + ' · ' + x.target + (x.part ? ' · ' + x.part : ' · 문서 통째') + ' · ' + x.kind + ' · ' + x.st));
-      if (x.quote) d.appendChild(el('div', 'q', '원문: ' + String(x.quote).slice(0, 80)));
-      d.appendChild(el('div', 'eqn', x.note || ''));
+      const isLine = typeof x.after === 'string' && typeof x.before === 'string' && x.before !== '';
+      const kind = isLine ? (x.after === '' ? '삭제' : '고침') : (typeof x.after === 'string' ? '문서 통째' : (x.kind || ''));
+      d.appendChild(el('div', 'eqk', x.at + ' · ' + eqRail(x.target) + ' · ' + x.target + (x.part ? ' · ' + x.part : ' · 문서 통째') + ' · ' + kind + ' · ' + x.st));
+      if (isLine){ d.appendChild(el('div', 'bf', '− ' + x.before)); d.appendChild(el('div', 'af', '+ ' + (x.after === '' ? '(삭제)' : x.after)));
+        eqCurText(x).then(t => { if (t != null && t !== x.before && x.st === '대기') d.appendChild(el('span', 'badge', '⚠ 원문 바뀜 — 겹층 안 씌움')); }); }
+      else { if (x.quote) d.appendChild(el('div', 'q', '원문: ' + String(x.quote).slice(0, 80))); d.appendChild(el('div', 'eqn', typeof x.after === 'string' ? x.after : (x.note || ''))); }
       const r = el('div', 'memobtn');
       const go = el('button', 'tool', '↗ 그 자리'); go.onclick = e2 => { e2.stopPropagation(); eqGo(x); };
-      const ed = el('button', 'tool', '✎ 고치기'); ed.onclick = e2 => { e2.stopPropagation(); eqAdd(x.target, x.part, x.quote, e2, x); };
+      const ed = el('button', 'tool', '✎ 다시 고치기'); ed.onclick = e2 => { e2.stopPropagation(); eqAdd(x.target, x.part, x.quote, e2, x); };
+      const rv = el('button', 'tool', '↩ 되돌리기'); rv.title = '항목 삭제 = 화면이 원문으로'; rv.onclick = e2 => { e2.stopPropagation(); if (!confirm('되돌린다? (항목 삭제 · 화면은 원문으로)')) return; eqSave(eqAll().filter(y => y.k !== x.k)); closeOne(body.parentNode); render(); };
       const sts = el('select', 'sel'); ['대기', '보류', '반영됨'].forEach(s => { const o = el('option', '', s); o.value = s; if (x.st === s) o.selected = true; sts.appendChild(o); });
       sts.onclick = e2 => e2.stopPropagation(); sts.onchange = () => { const B = eqAll().slice(); const i = B.findIndex(y => y.k === x.k); if (i >= 0){ B[i] = Object.assign({}, B[i], { st: sts.value }); eqSave(B); x.st = sts.value; draw(); } };
-      r.appendChild(go); r.appendChild(ed); r.appendChild(sts); d.appendChild(r);
+      r.appendChild(go); r.appendChild(ed); r.appendChild(rv); r.appendChild(sts); d.appendChild(r);
       d.onclick = () => eqGo(x); box.appendChild(d); });
   }
   draw();
@@ -4668,7 +4765,7 @@ function precDescEl(p, head){
   const line = p.설명줄 || p.사건명 || va || '';
   if (line) w.appendChild(el('div', head ? 'row' : '', line));
   const gs = Array.isArray(p.기출표시) ? p.기출표시 : [];
-  if (gs.length){ const r = el('div', head ? 'row' : ''); gs.forEach(g => r.appendChild(el('span', 'chip c-gi', g))); w.appendChild(r); }
+  if (gs.length){ const r = el('div', head ? 'row' : ''); gs.forEach(g => r.appendChild(giChipEl(g))); w.appendChild(r); }   /* ★ 판 4 add1 §2 — 기출 칩 → 기출뷰 */
   return w;
 }
 function precCtxEl(z, q){
@@ -4882,8 +4979,8 @@ async function viewPrec(){
     r.appendChild(precDescEl(p,false));   /* ★ add1 — 노란 별칭 칩 · 설명줄(안 자름) · 기출 칩 */
     if(p.원본){const c=el('span','chip c-src','원본 ▸');c.title='원본 5절 머리';c.onclick=ev=>{ev.stopPropagation();popRawToc(p,ev);};r.appendChild(c);}   /* ★ 판 4 §2-4 */
     if(p.요약본){const c=el('span','chip c-quiz sumc','요약본 ▸');c.title='요약본 목차(헤딩만 접힌 미리보기)';c.onclick=ev=>{ev.stopPropagation();popSumToc(p,ev);};r.appendChild(c);}
-    (Array.isArray(p.조문키)&&p.조문키.length?p.조문키.map(precJoChip):(Array.isArray(p.조문)?p.조문:[])).slice(0,3).forEach(x=>
-      r.appendChild(el('span','chip c-prec','⚖'+x)));   /* ★ add2 — 확정 구법은 `구특허법42조③ → 42④` */
+    (Array.isArray(p.조문키)&&p.조문키.length?p.조문키:(Array.isArray(p.조문)?p.조문:[]).map(x=>({law:'',jo:'',detail:'',raw:x,cur:null}))).slice(0,3).forEach(k=>
+      r.appendChild(precJoChipEl(k,false)));   /* ★ add2 · 판 4 add1 §2 — 누르면 조문 팝업 */
     if(p.기출&&typeof p.기출==='string')r.appendChild(el('span','chip c-quiz','기출 '+p.기출));
     if(hit){const h=hit.get(p.id);
       if(h.num)r.appendChild(el('span','chip c-warn','번호 일치'));
@@ -4933,7 +5030,7 @@ async function viewPrec(){
   main.appendChild(hd);
 
   const chips=el('div');chips.style.marginTop='6px';
-  (Array.isArray(cur.조문)?cur.조문:[]).forEach(x=>chips.appendChild(el('span','chip c-prec','⚖ '+x)));
+  (Array.isArray(cur.조문키)&&cur.조문키.length?cur.조문키:(Array.isArray(cur.조문)?cur.조문:[]).map(x=>({law:'',jo:'',detail:'',raw:x,cur:null}))).forEach(k=>chips.appendChild(precJoChipEl(k,true)));   /* ★ 판 4 add1 §2 */
   if(cur.기출&&typeof cur.기출==='string')chips.appendChild(el('span','chip c-quiz','📝 기출 '+cur.기출));
   (Array.isArray(cur.카테고리)?cur.카테고리:[]).forEach(x=>
     chips.appendChild(el('span','chip c-theme',String(x).slice(0,34))));
@@ -5086,7 +5183,8 @@ document.addEventListener('selectionchange', () => { if (PITCXL) PITCXL(); });
 function pitWire(lineEl, target, struct, text){
   if (!lineEl || lineEl._pit) return; lineEl._pit = 1;
   text = String(text || '');
-  if (typeof eqFlagWire === 'function') eqFlagWire(lineEl, target, struct);   /* ★ recsync §E — ✎ 표식 */
+  if (typeof eqFlagWire === 'function') eqFlagWire(lineEl, target, struct, text);   /* ★ recsync §E · 판 4 add1 — ✎ 표식 + 겹층 */
+  if (lineEl._eqlock) return;   /* 겹층 줄은 잠근다 — 포스트잇·마크업 좌표는 before 기준 그대로 */
   const pref = Math.max(0, (lineEl.textContent || '').length - text.length);
   const list = pitFor(target, struct);
   if (list.length){
@@ -5175,9 +5273,8 @@ function pitAsk(lineEl, target, struct, text, pref, ev){
   const m = el('div', 'pitmenu');
   const m1 = el('span', 'mi', '🗒 메모 붙이기 — 「' + word.slice(0, 12) + '」');
   m1.onclick = () => { m.remove(); pitEdit(target, struct, wi, word, ev); };
-  const m2 = el('span', 'mi', '✎ 수정 — 볼트에서 고칠 자리로 적어 둔다');   /* ★ recsync §E · editq §2 */
-  m2.onclick = () => { m.remove(); const s0 = window.getSelection(); const q = (s0 && !s0.isCollapsed && lineEl.contains(s0.anchorNode)) ? s0.toString().trim() : word;
-    eqAdd(target, struct, q, ev); };
+  const m2 = el('span', 'mi', '✎ 수정 — 이 줄을 직접 고친다');   /* ★ recsync §E · 판 4 add1 §1 */
+  m2.onclick = () => { m.remove(); eqEditLine(lineEl, target, struct, text, ev); };
   m.appendChild(m1); m.appendChild(m2);
   m.style.left = Math.min(ev.clientX, innerWidth - 240) + 'px';
   m.style.top = (ev.clientY + 12) + 'px';
