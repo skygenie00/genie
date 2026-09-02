@@ -140,6 +140,13 @@ input.pq{font:inherit;font-size:12px;padding:2px 7px;border:1px solid #d9d6ce;bo
 .prow .ctx:hover{color:var(--exc)}
 .prow .ctx b{color:var(--rule)}
 mark.cj{background:#fff3a3;outline:2px solid #e0a800}
+/* ★ 판 3 add1 — 리담 화면 그대로: 노란 별칭 칩 · 설명줄(안 자름) · 기출 칩 */
+.chip.c-alias{background:#fde68a;color:#5b4300;font-weight:700}
+.chip.c-gi{background:#eaf1fb;color:var(--exc);font-size:11px;padding:1px 8px}
+.badge.ty{background:#f3ecfd;color:#7a3ed0}
+.prow .iss.full{white-space:pre-wrap;word-break:break-word;margin:2px 0 3px}
+.pdesc{margin-top:6px;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.pdesc .row{margin-top:3px}
 
 /* ── 빈 상태 ── */
 .empty{color:#9a958b;text-align:center;padding:52px 20px;font-size:12.8px}
@@ -4066,7 +4073,8 @@ async function precSearch(P, q){
   P.판례.forEach(p => {
     const r = { num: false, name: false, n: 0, ctx: [] };
     if (jh ? !!p.전합 : (precNorm(p.id).indexOf(qn) >= 0 || precNorm(p.사건번호).indexOf(qn) >= 0 || precNorm(p.별칭).indexOf(qn) >= 0)) r.num = true;
-    if (precNorm(p.사건명).indexOf(qn) >= 0 || precNorm(p.쟁점).indexOf(qn) >= 0) r.name = true;
+    if (precNorm(p.사건명).indexOf(qn) >= 0 || precNorm(p.쟁점).indexOf(qn) >= 0
+        || precNorm(p.설명별칭).indexOf(qn) >= 0 || precNorm(p.설명줄).indexOf(qn) >= 0) r.name = true;   /* ★ add1 */
     const Z = qid && CITE[p.id] && CITE[p.id].자리 && CITE[p.id].자리[qid.id];
     if (Z){ Z.forEach(z => { r.n++; if (r.ctx.length < 2) r.ctx.push(z); }); }
     else {
@@ -4077,6 +4085,22 @@ async function precSearch(P, q){
     if (r.num || r.name || r.n) hit.set(p.id, r);
   });
   return hit;
+}
+/* ★ 판 3 add1 — 리담 화면 그대로 셋: [노란 칩 설명별칭] · 설명줄(없으면 사건명 → 볼트 별칭 · 안 자른다) · 기출표시 칩.
+   볼트 요약본 별칭은 설명별칭과 다르면 회색 칩으로 남긴다. 2단 행·3단 머리가 같은 함수를 쓴다. */
+function precDescEl(p, head){
+  const w = el('div', head ? 'pdesc' : 'iss full');
+  const alias = p.설명별칭 || '';
+  const va = (p.별칭 && typeof p.별칭 === 'string') ? p.별칭 : '';
+  if (alias || (va && va !== alias)){ const r = el('div', head ? 'row' : '');
+    if (alias) r.appendChild(el('span', 'chip c-alias', alias));
+    if (va && va !== alias) r.appendChild(el('span', 'chip c-src', va));
+    w.appendChild(r); }
+  const line = p.설명줄 || p.사건명 || va || '';
+  if (line) w.appendChild(el('div', head ? 'row' : '', line));
+  const gs = Array.isArray(p.기출표시) ? p.기출표시 : [];
+  if (gs.length){ const r = el('div', head ? 'row' : ''); gs.forEach(g => r.appendChild(el('span', 'chip c-gi', g))); w.appendChild(r); }
+  return w;
 }
 function precCtxEl(z, q){
   const d = el('div', 'ctx');
@@ -4256,8 +4280,9 @@ async function viewPrec(){
     pn.appendChild(el('span','badge',
       p.선고?p.선고.replace(/(\d{4})(\d{2})(\d{2})/,'$1.$2.$3'):(p.연도폴더||'요약본')));
     {const m=impOf(p);if(m)pn.appendChild(el('span','badge imp','★'+m));}
+    if(p.사건유형)pn.appendChild(el('span','badge ty',p.사건유형));   /* ★ add1 — 사건유형 칩 */
     r.appendChild(pn);
-    r.appendChild(el('div','iss',(p.사건명||p.별칭||'').slice(0,60)));
+    r.appendChild(precDescEl(p,false));   /* ★ add1 — 노란 별칭 칩 · 설명줄(안 자름) · 기출 칩 */
     if(p.원본)r.appendChild(el('span','chip c-src','원본'));
     if(p.요약본)r.appendChild(el('span','chip c-quiz','요약본'));
     (Array.isArray(p.조문)?p.조문:[]).slice(0,3).forEach(x=>
@@ -4323,6 +4348,7 @@ async function viewPrec(){
    if(ni||no||(Cc.밖&&Cc.밖.length)){c.style.cursor='pointer';c.onclick=ev=>precCitePop(cur,Cc,P,ev);}
    chips.appendChild(c);}
   main.appendChild(chips);
+  main.appendChild(precDescEl(cur,true));   /* ★ add1 — 3단 머리 「쟁점 — …」 대신 같은 셋 */
 
   if(S.precTab==='빈칸'||(!hasSum&&!hasRaw)){
     main.appendChild(emptyBox('🧩','재료 준비 중','판례 빈칸은 v0 범위 밖이다'));
@@ -4338,7 +4364,6 @@ async function viewPrec(){
     else s.행.forEach((row,ri)=>{const d=el('div','ln');d.appendChild(renderLine(row,{label:false}));
       pitWire(d,'prec|'+cur.id,'sum/'+ri,row.t||'');box.appendChild(d);});   /* ★ v3-H §4 */
     main.appendChild(box);
-    if(cur.쟁점)main.appendChild(el('div','badge','쟁점 — '+cur.쟁점));
   }else{
     const J=S.precJump;S.precJump=null;   /* ★ 판 3 §3-2 — 인용 줄에서 왔으면 그 절·그 자리로 스크롤+강조 */
     ['판시사항','판결요지','참조조문','참조판례','전문'].forEach(k=>{
