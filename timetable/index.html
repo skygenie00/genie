@@ -1393,7 +1393,7 @@ function syncBandDone(t){
  planMut(p=>{const u=((p.units||{})[pl.s]||[]).find(x=>x.id===uid1&&!x.del);if(!u)return;u.done=u.done||{};if(t.done)u.done[b.id]=t.d;else if(u.done[b.id]===t.d)delete u.done[b.id];u.u=Date.now();});
 }
 function delTodo(id){const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(t&&confirm('지울까? '+t.t)){t.del=true;upsertTodo(t);render()}}
-function editTodo(id){const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(!t)return;const catOpts=catsOf(cfg.person).map(p=>`<option value="${p.id}" ${t.cat==p.id?'selected':''}>${esc(p.s)} ${esc(p.name)}</option>`).join('');modal(`<h4>항목 편집</h4><div class="row"><label>내용</label><input id="eT" value="${esc(t.t)}"></div><div class="row"><label>날짜</label><input id="eD" type="date" value="${t.d}"></div><div class="row"><label>종류</label><select id="eK"><option value="study" ${t.kind=='study'?'selected':''}>학습</option><option value="todo" ${t.kind!='study'?'selected':''}>할일</option></select></div><div class="row"><label>활동</label><select id="eP2"><option value="">활동 없음</option>${catOpts}</select></div><div class="row"><label>기한</label><input id="eDue" type="date" value="${t.due||''}"><span style="font-size:10px;color:#888">할일만 · 선택</span></div>`,q=>{t.t=q('eT').value;t.d=q('eD').value;t.kind=q('eK').value;t.cat=q('eP2').value||'';t.due=t.kind!=='study'?(q('eDue').value||''):'';upsertTodo(t);render()})}
+function editTodo(id,doc){const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(!t)return;const catOpts=catsOf(cfg.person).map(p=>`<option value="${p.id}" ${t.cat==p.id?'selected':''}>${esc(p.s)} ${esc(p.name)}</option>`).join('');modal(`<h4>항목 편집</h4><div class="row"><label>내용</label><input id="eT" value="${esc(t.t)}"></div><div class="row"><label>날짜</label><input id="eD" type="date" value="${t.d}"></div><div class="row"><label>종류</label><select id="eK"><option value="study" ${t.kind=='study'?'selected':''}>학습</option><option value="todo" ${t.kind!='study'?'selected':''}>할일</option></select></div><div class="row"><label>활동</label><select id="eP2"><option value="">활동 없음</option>${catOpts}</select></div><div class="row"><label>기한</label><input id="eDue" type="date" value="${t.due||''}"><span style="font-size:10px;color:#888">할일만 · 선택</span></div>`,q=>{t.t=q('eT').value;t.d=q('eD').value;t.kind=q('eK').value;t.cat=q('eP2').value||'';t.due=t.kind!=='study'?(q('eDue').value||''):'';upsertTodo(t);render()},null,doc)}
 function carryAll(from){const to=addDays(from,1);todosOf(cfg.person,from).filter(t=>t.kind=='study'&&!t.done).forEach(t=>{t.d=to;t.carry=(t.carry||0)+1;upsertTodo(t)});toast('이월했어');render()}
 /* §6 (feedback10 · 8/28 확정 뒤집음): 세부계획이 어제·오늘·내일 칸에 자동 표시 — 「활동에서 가져오기」 버튼 폐지 · 복사본 안 만듦 */
 const PLAN_ITEMS_DIRECT=true;
@@ -2877,20 +2877,20 @@ let pmSel=null;
 function pmSelect(type,id){pmSel=(pmSel&&pmSel.type===type&&pmSel.id===id)?null:{type,id};render()}
 /* §8: 완료 ○● 토글 제거(완료는 타임테이블 일간 칸에서만 · done 은 N/M 표시용) · 과목/활동 접기 · 인라인 ✕ 삭제 */
 function pmFoldTgl(kind,encId){ui.pmFold=ui.pmFold||{s:{},c:{}};if(!ui.pmFold[kind])ui.pmFold[kind]={};const id=decodeURIComponent(encId);ui.pmFold[kind][id]=!ui.pmFold[kind][id];LS.set('tt.ui',ui);render()}
-function pmDelCat2(id){const p=catsOf(cfg.person).find(x=>x.id===id);if(!p)return;
+function pmDelCat2(id,doc){const w=(doc&&doc.defaultView)||window;const p=catsOf(cfg.person).find(x=>x.id===id);if(!p)return;
  const its=todoFile(cfg.person).data.items.filter(x=>!x.del&&x.cat===id);
- if(!confirm(`활동 「${p.name}」 을 지울까?`))return;
- const delItems=its.length?confirm(`세부계획 ${its.length}개도 같이 지울까?\n확인 = 같이 삭제 · 취소 = 「활동 없음」으로 남김`):false;
+ if(!w.confirm(`활동 「${p.name}」 을 지울까?`))return;
+ const delItems=its.length?w.confirm(`세부계획 ${its.length}개도 같이 지울까?\n확인 = 같이 삭제 · 취소 = 「활동 없음」으로 남김`):false;
  p.del=true;upsertCat(p);
  if(delItems)its.forEach(t=>{t.del=true;upsertTodo(t)});
  if(pmSel&&pmSel.id===id)pmSel=null;
  render()}
-function pmDelItem2(id){const t=todoFile(cfg.person).data.items.find(x=>x.id===id&&!x.del);if(!t)return;
- if(confirm('지울까? '+t.t)){t.del=true;upsertTodo(t);render()}}
+function pmDelItem2(id,doc){const t=todoFile(cfg.person).data.items.find(x=>x.id===id&&!x.del);if(!t)return;
+ if(((doc&&doc.defaultView)||window).confirm('지울까? '+t.t)){t.del=true;upsertTodo(t);render()}}
 /* §8(fb11) 주월계획 유래 활동 자동 표시 — 완료 토글 없음(완료는 타임테이블에서만) · 여기선 읽기+✕ 삭제만 · 구조 편집 = 이름 클릭으로 주월계획 이동 */
 function pmBandTgl(key){ui.pmFold=Object.assign({s:{},c:{}},ui.pmFold||{});ui.pmFold.c[key]=(ui.pmFold.c[key]===undefined)?false:!ui.pmFold.c[key];LS.set('tt.ui',ui);render()} // 기본 접힘
-function pmDelBand(id){const b=myPlan().bands.find(x=>x.id===id&&!x.del);if(!b)return;
- if(confirm('주월계획 활동을 지울까? '+b.name+' (소프트 삭제 · 세부계획 DB 는 남음)')){planMut(p=>{const x=p.bands.find(z=>z.id===id);if(x){x.del=true;x.u=Date.now()}});render()}}
+function pmDelBand(id,doc){const b=myPlan().bands.find(x=>x.id===id&&!x.del);if(!b)return;
+ if(((doc&&doc.defaultView)||window).confirm('주월계획 활동을 지울까? '+b.name+' (소프트 삭제 · 세부계획 DB 는 남음)')){planMut(p=>{const x=p.bands.find(z=>z.id===id);if(x){x.del=true;x.u=Date.now()}});render()}}
 function pmGoBand(id,doc){const m=(doc||document).getElementById('pmPop');if(m)m.remove();gotoBand(id)} // §1-2(fb19) 그 창 기준
 /* §6·§12(fb12) 종료된 활동 = 맨 위 🗃 섹션(기본 접힘 · 과목별 · MiMi 이관 cats 포함) — 「종료 보이기」 체크 갈음 */
 function pmArchHTML(plan){
@@ -2916,12 +2916,12 @@ function pmCoreHTML(){ // 계획관리 본문 — 페이지와 📋 팝업(§9)�
  const orphan=all.filter(x=>!x.cat||!catIds.has(x.cat)).sort((a,b)=>a.d<b.d?-1:1);
  const names=settings.subjects.map(x=>x.n);const extra=[...new Set([...vis.map(p=>p.s),...plan.bands.filter(b=>!b.del).map(b=>b.s)])].filter(s=>!names.includes(s));
  const fold=Object.assign({s:{},c:{}},ui.pmFold||{});
- const itemLi=x=>`<div class="itm ${x.done?'done':''}"><span class="tx" onclick="editTodo('${x.id}')">${esc(x.t)}</span><span class="dt" onclick="pmDateEdit(event,'${x.id}')">${(x.d||'').slice(5).replace('-','/')}</span><span class="rowx" onclick="pmDelItem2('${x.id}')" title="삭제">✕</span></div>`;
+ const itemLi=x=>`<div class="itm ${x.done?'done':''}"><span class="tx" onclick="editTodo('${x.id}',this.ownerDocument)">${esc(x.t)}</span><span class="dt" onclick="pmDateEdit(event,'${x.id}')">${(x.d||'').slice(5).replace('-','/')}</span><span class="rowx" onclick="pmDelItem2('${x.id}',this.ownerDocument)" title="삭제">✕</span></div>`;
  const bandBlock=(b,mc)=>{ // 주월계획 유래 · mc = 동명 todos 활동(§7 fb13 표시 병합 — 주차·진행·시작·종료·세부계획을 한 줄에)
   const us=bandUnits(plan,b);const dn=bandDone(plan,b);
   const mIts=mc?all.filter(x=>x.cat===mc.id).sort((a,b2)=>a.d<b2.d?-1:1):[];
   const key='b'+b.id;const cf=(fold.c||{})[key]===undefined?true:!!(fold.c||{})[key];
-  return`<div class="pln"><span class="tw" style="cursor:pointer" onclick="pmBandTgl('${key}')">${cf?'▸':'▾'}</span><b style="cursor:pointer" onclick="pmGoBand('${b.id}',this.ownerDocument)" title="구조 편집은 주월계획에서 — 클릭 = 이동">${esc(b.name)}</b><small><span class="pmsrc">주월계획</span> ${bandPlaced(b)?`W${pad(b.w1)}–W${pad(b.w2)}`:'미배치'}${us.length?` · ${dn}/${us.length}`:''}${mc?` · 시작 ${mc.d1||'—'} · 종료 ${mc.d2||'—'}${mc.noTimer?' · <b style="color:#c60">합산 제외</b>':''}`:''}</small>${mc?`<span class="tw" style="cursor:pointer" onclick="pmCatModal(catsOf(cfg.person).find(z=>z.id==='${mc.id}'))" title="기간·이름 수정 (병합된 활동 카드)">✎</span>`:''}<span class="rowx" onclick="pmDelBand('${b.id}')" title="활동 삭제 (소프트)">✕</span></div>${cf?'':us.map(u=>{const dd2=u.done&&u.done[b.id];return`<div class="itm ${dd2?'done':''}"><span class="tx" style="cursor:default">${dd2?'✓ ':''}${esc(u.id)} ${esc(u.n)}</span><span class="dt">${dd2?dd2.slice(5).replace('-','/'):''}</span></div>`}).join('')+mIts.map(itemLi).join('')}`};
+  return`<div class="pln"><span class="tw" style="cursor:pointer" onclick="pmBandTgl('${key}')">${cf?'▸':'▾'}</span><b style="cursor:pointer" onclick="pmGoBand('${b.id}',this.ownerDocument)" title="구조 편집은 주월계획에서 — 클릭 = 이동">${esc(b.name)}</b><small><span class="pmsrc">주월계획</span> ${bandPlaced(b)?`W${pad(b.w1)}–W${pad(b.w2)}`:'미배치'}${us.length?` · ${dn}/${us.length}`:''}${mc?` · 시작 ${mc.d1||'—'} · 종료 ${mc.d2||'—'}${mc.noTimer?' · <b style="color:#c60">합산 제외</b>':''}`:''}</small>${mc?`<span class="tw" style="cursor:pointer" onclick="pmCatModal(catsOf(cfg.person).find(z=>z.id==='${mc.id}'),this.ownerDocument)" title="기간·이름 수정 (병합된 활동 카드)">✎</span>`:''}<span class="rowx" onclick="pmDelBand('${b.id}',this.ownerDocument)" title="활동 삭제 (소프트)">✕</span></div>${cf?'':us.map(u=>{const dd2=u.done&&u.done[b.id];return`<div class="itm ${dd2?'done':''}"><span class="tx" style="cursor:default">${dd2?'✓ ':''}${esc(u.id)} ${esc(u.n)}</span><span class="dt">${dd2?dd2.slice(5).replace('-','/'):''}</span></div>`}).join('')+mIts.map(itemLi).join('')}`};
  const bState=b=>!bandPlaced(b)?'un':(bO2(plan,b)<curO?'end':(bO1(plan,b)>curO?'fut':'run')); // §12 상태
  const subjBlock=s=>{
   let ps=vis.filter(p=>p.s===s).sort((a,b)=>(a.d1||'')<(b.d1||'')?-1:1);
@@ -2935,7 +2935,7 @@ function pmCoreHTML(){ // 계획관리 본문 — 페이지와 📋 팝업(§9)�
    const its=all.filter(x=>x.cat===p.id).sort((a,b)=>a.d<b.d?-1:1);
    const done=its.filter(x=>x.done).length;
    const cf=!!(fold.c||{})[p.id];
-   return`<div class="pln ${pmSel&&pmSel.type==='cat'&&pmSel.id===p.id?'on2':''}"><span class="tw" style="cursor:pointer" onclick="pmFoldTgl('c','${p.id}')">${cf?'▸':'▾'}</span><b style="cursor:pointer" onclick="pmSelect('cat','${p.id}')">${esc(p.name)}</b><small onclick="pmSelect('cat','${p.id}')" style="cursor:pointer">시작 ${p.d1||'—'} · 종료 ${p.d2||'—'}${its.length?` · ${done}/${its.length}`:''}${p.noTimer?' · <b style="color:#c60">합산 제외</b>':''}</small><span class="tw" style="cursor:pointer" onclick="pmCatModal(catsOf(cfg.person).find(z=>z.id==='${p.id}'))" title="활동 수정">✎</span><span class="rowx" onclick="pmDelCat2('${p.id}')" title="활동 삭제 (세부계획 처리 물음)">✕</span></div>${cf?'':its.map(itemLi).join('')}`}).join('')}</div>`};
+   return`<div class="pln ${pmSel&&pmSel.type==='cat'&&pmSel.id===p.id?'on2':''}"><span class="tw" style="cursor:pointer" onclick="pmFoldTgl('c','${p.id}')">${cf?'▸':'▾'}</span><b style="cursor:pointer" onclick="pmSelect('cat','${p.id}')">${esc(p.name)}</b><small onclick="pmSelect('cat','${p.id}')" style="cursor:pointer">시작 ${p.d1||'—'} · 종료 ${p.d2||'—'}${its.length?` · ${done}/${its.length}`:''}${p.noTimer?' · <b style="color:#c60">합산 제외</b>':''}</small><span class="tw" style="cursor:pointer" onclick="pmCatModal(catsOf(cfg.person).find(z=>z.id==='${p.id}'),this.ownerDocument)" title="활동 수정">✎</span><span class="rowx" onclick="pmDelCat2('${p.id}',this.ownerDocument)" title="활동 삭제 (세부계획 처리 물음)">✕</span></div>${cf?'':its.map(itemLi).join('')}`}).join('')}</div>`};
  return`${pmArchHTML(plan)}${[...names,...extra].map(subjBlock).join('')||'<p style="color:#888">활동이 없어. 「+ 활동」으로 시작.</p>'}
  ${orphan.length?`<div class="sb" style="border-color:#bbb"><div class="sbh">활동 없음</div>${orphan.map(itemLi).join('')}</div>`:''}`; // 🗃 = pmCoreHTML 안 — 팝업(fb10 §9)도 본창과 같은 렌더(§7 fb13)
 }
@@ -2946,7 +2946,7 @@ function pmHTML(){ // §5(fb12): 왼쪽 = 계획관리 · 오른쪽 좁은 열 =
  <div class="pm">
  <div class="tgl"><label><input type="checkbox" ${showFut?'checked':''} onchange="ui.pmFuture=this.checked;LS.set('tt.ui',ui);render()"> 미시작·미배치 활동 보이기</label><span style="font-size:10px;color:#888">기본 = 진행 중만 · 종료는 위 🗃 · 미배치는 주월계획 보드 트레이에도 있어</span></div>
  ${pmCoreHTML()}
- <div class="btns"><button class="btn" onclick="pmCatModal()">+ 활동</button><button class="btn" onclick="pmAddItem()">+ 세부계획</button><span style="font-size:10px;color:#888;align-self:center">완료 체크 = 타임테이블 일간 칸에서 · 수정 = ✎/줄 클릭 · 삭제 = 줄의 ✕</span></div></div>
+ <div class="btns"><button class="btn" onclick="pmCatModal(null,this.ownerDocument)">+ 활동</button><button class="btn" onclick="pmAddItem(this.ownerDocument)">+ 세부계획</button><span style="font-size:10px;color:#888;align-self:center">완료 체크 = 타임테이블 일간 칸에서 · 수정 = ✎/줄 클릭 · 삭제 = 줄의 ✕</span></div></div>
  </div><div>
  <h4 style="margin:0 0 4px;font-size:12px">세부계획 DB <small style="color:#888;font-weight:400">과목 지식 · 프로젝트를 넘어 재사용 · 활동에 넣기 = 주월계획 활동 몸통 → ✎ 고르기</small></h4>
  ${unitsDBHTML(myPlan())}
@@ -2956,7 +2956,7 @@ function pmHTML(){ // §5(fb12): 왼쪽 = 계획관리 · 오른쪽 좁은 열 =
 function pmPopup(doc){doc=doc||document;
  if(doc.getElementById('pmPop'))return;
  const m=doc.createElement('div');m.className='modal';m.id='pmPop';
- m.innerHTML=`<div class="box" style="max-width:480px;max-height:82vh;overflow:auto"><div style="display:flex;gap:6px;align-items:center;margin-bottom:8px"><b style="font-size:12px">📋 계획관리</b><small style="color:#888">구조 편집 — 완료는 일간 칸에서</small><span style="margin-left:auto;cursor:pointer;color:#888" onclick="this.closest('.modal').remove()">✕</span></div><div id="pmPopBody" class="pm" style="max-width:none">${pmCoreHTML()}</div><div style="display:flex;gap:6px;margin-top:8px"><button class="btn" onclick="pmCatModal()">+ 활동</button><button class="btn" onclick="pmAddItem()">+ 세부계획</button></div></div>`;
+ m.innerHTML=`<div class="box" style="max-width:480px;max-height:82vh;overflow:auto"><div style="display:flex;gap:6px;align-items:center;margin-bottom:8px"><b style="font-size:12px">📋 계획관리</b><small style="color:#888">구조 편집 — 완료는 일간 칸에서</small><span style="margin-left:auto;cursor:pointer;color:#888" onclick="this.closest('.modal').remove()">✕</span></div><div id="pmPopBody" class="pm" style="max-width:none">${pmCoreHTML()}</div><div style="display:flex;gap:6px;margin-top:8px"><button class="btn" onclick="pmCatModal(null,this.ownerDocument)">+ 활동</button><button class="btn" onclick="pmAddItem(this.ownerDocument)">+ 세부계획</button></div></div>`;
  m.addEventListener('click',e=>{if(e.target===m)m.remove()});
  doc.body.appendChild(m);
 }
@@ -2966,13 +2966,13 @@ function pmPopSync(){ // 팝업이 열려 있으면 내용만 갱신 (본창 + P
 function pmDateEdit(ev,id){ev.stopPropagation();const el=ev.target;const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(!t)return;el.outerHTML=`<input type="date" value="${t.d}" style="font-size:10px" onchange="pmSetDate('${id}',this.value)" onclick="event.stopPropagation()">`;}
 function pmSetDate(id,d){const t=todoFile(cfg.person).data.items.find(x=>x.id===id);if(t&&d){t.d=d;upsertTodo(t);}render();}
 function pmSelCat(){return pmSel&&pmSel.type==='cat'?catsOf(cfg.person).find(p=>p.id===pmSel.id):null}
-function pmCatModal(p){
+function pmCatModal(p,doc){
  p=p||{id:'',s:(settings.subjects[0]||{}).n||'',name:'',d1:today(),d2:today(),noTimer:false};
  const subjOpts=settings.subjects.map(x=>`<option ${p.s==x.n?'selected':''}>${esc(x.n)}</option>`).join('');
  modal(`<h4>${p.id?'활동 수정':'+ 활동'}</h4><div class="row"><label>과목</label><select id="pS">${subjOpts}</select></div><div class="row"><label>활동명</label><input id="pN" value="${esc(p.name)}" placeholder="객1회독 · 중급강의"></div><div class="row"><label>시작</label><input id="pD1" type="date" value="${p.d1||''}"></div><div class="row"><label>종료</label><input id="pD2" type="date" value="${p.d2||''}"></div><div class="row"><label></label><label style="width:auto"><input type="checkbox" id="pNT" ${p.noTimer?'checked':''}> 타이머 시간 합산하지 않기</label></div>`,
- q=>{const o=p.id?p:{id:uid(),del:false};o.s=q('pS').value;o.name=q('pN').value.trim();o.d1=q('pD1').value;o.d2=q('pD2').value;o.noTimer=q('pNT').checked;upsertCat(o);render()});
+ q=>{const o=p.id?p:{id:uid(),del:false};o.s=q('pS').value;o.name=q('pN').value.trim();o.d1=q('pD1').value;o.d2=q('pD2').value;o.noTimer=q('pNT').checked;upsertCat(o);render()},null,doc);
 }
-function pmAddItem(){const p=pmSelCat();if(!p){toast('활동 줄(이름)을 먼저 골라줘');return;}modal(`<h4>+ 세부계획 · ${esc(p.name)}</h4><div class="row"><label>내용</label><input id="iT" placeholder="1-08 물권변동"></div><div class="row"><label>날짜</label><input id="iD" type="date" value="${today()}"></div>`,q=>{if(q('iT').value.trim()){upsertTodo({id:uid(),d:q('iD').value||today(),t:q('iT').value.trim(),kind:'study',cat:p.id,done:false,carry:0});render()}})}
+function pmAddItem(doc){const p=pmSelCat();if(!p){toast('활동 줄(이름)을 먼저 골라줘');return;}modal(`<h4>+ 세부계획 · ${esc(p.name)}</h4><div class="row"><label>내용</label><input id="iT" placeholder="1-08 물권변동"></div><div class="row"><label>날짜</label><input id="iD" type="date" value="${today()}"></div>`,q=>{if(q('iT').value.trim()){upsertTodo({id:uid(),d:q('iD').value||today(),t:q('iT').value.trim(),kind:'study',cat:p.id,done:false,carry:0});render()}},null,doc)}
 /* ----- 월간(계획) ----- */
 function revShift(n){const m=ui.revMonth||ym(today());ui.revMonth=n===0?ym(today()):ym(shiftMonth(m+'-01',n));LS.set('tt.ui',ui);render()}
 function revMore(s){s=decodeURIComponent(s);ui.unitsOpen=ui.unitsOpen||{};ui.unitsOpen[s]=!ui.unitsOpen[s];LS.set('tt.ui',ui);render()}
@@ -3599,20 +3599,27 @@ function foodHTML(){
   return`<div class="fcard" onclick="foodView('${x.id}')">${th?`<img data-img="${esc(th)}" alt="">`:'<div class="noimg">사진 없음</div>'}<div class="fl"><b>${esc(x.name)}</b><span>${esc(x.date||'')}</span></div></div>`}).join('')}</div>
  <p style="font-size:10px;color:#888;margin-top:6px">둘이 같이 쓰는 기록(사람 구분 없음) · 노션 Food diary 이관분 포함 · 카드 클릭 = 사진·레시피</p>`;
 }
+/* §B-1(fb20) Food diary 본문 칸 — 「재료」(recipe) · 「만드는 법」(note).
+   ⚠ 데이터 키는 안 바꾼다. recipe 는 재료 목록(노션 속성), note 는 조리 순서(노션 페이지 본문)라 서로 다르다.
+   기본은 둘 다 펼침 · 빈 칸은 아예 안 그린다 · 접은 상태는 기억하지 않는다
+   (ui 에 키를 더하면 15키 동기화까지 얽힌다 — 창을 닫으면 초기화). */
+function fdPeek(t){const s=(String(t||'').split('\n').find(z=>z.trim())||'').trim();return s.length>40?s.slice(0,40)+'…':s}
+function fdDet(title,txt){if(!String(txt||'').trim())return'';
+ return`<details open style="margin-bottom:6px"><summary style="font-size:11px;font-weight:700;color:#555;cursor:pointer">${esc(title)} <span style="font-weight:400;color:#aaa">${esc(fdPeek(txt))}</span></summary><div style="font-size:11.5px;white-space:pre-wrap;background:#fafafa;border:1px solid #eee;border-radius:5px;padding:8px;margin-top:4px">${esc(txt)}</div></details>`}
 function foodView(id){
  const x=foodFile().data.items.find(z=>z.id===id&&!z.del);if(!x)return;
  const m=document.createElement('div');m.className='modal';m.id='foodV';
  m.innerHTML=`<div class="box" style="max-width:560px;max-height:86vh;overflow:auto"><h4 style="display:flex;gap:6px;align-items:center">${esc(x.name)} <small style="color:#888;font-weight:400">${esc(x.date||'')}</small><span style="margin-left:auto;display:flex;gap:4px"><button class="btn" onclick="foodEdit('${x.id}')">✎</button><button class="btn d" onclick="foodDel('${x.id}')">삭제</button><span style="cursor:pointer;color:#888;padding:0 4px" onclick="document.getElementById('foodV').remove()">✕</span></span></h4>
  ${(x.imgs||[]).map(p=>`<img data-img="${esc(p)}" style="width:100%;border-radius:6px;margin-bottom:6px;min-height:60px;background:#f6f6f6" alt="">`).join('')||'<p style="color:#aaa;font-size:11px">사진 없음</p>'}
- ${x.recipe?`<div style="font-size:11.5px;white-space:pre-wrap;background:#fafafa;border:1px solid #eee;border-radius:5px;padding:8px">${esc(x.recipe)}</div>`:''}</div>`;
+ ${fdDet('재료',x.recipe)}${fdDet('만드는 법',x.note)}</div>`;
  m.addEventListener('click',e=>{if(e.target===m)m.remove()});
  document.body.appendChild(m);fillImgs(m);
 }
 function foodEdit(id){
  const x=foodFile().data.items.find(z=>z.id===id&&!z.del);if(!x)return;
  const fv=document.getElementById('foodV');if(fv)fv.remove();
- modal(`<h4>항목 편집</h4><div class="row"><label>이름</label><input id="fdN" value="${esc(x.name)}"></div><div class="row"><label>날짜</label><input id="fdD" type="date" value="${x.date||''}"></div><div class="row" style="align-items:flex-start"><label>레시피</label><textarea id="fdR" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:70px;font:inherit">${esc(x.recipe||'')}</textarea></div>`,
- q=>{x.name=q('fdN').value.trim()||x.name;x.date=q('fdD').value||x.date;x.recipe=q('fdR').value;upsertFood(x);render()});
+ modal(`<h4>항목 편집</h4><div class="row"><label>이름</label><input id="fdN" value="${esc(x.name)}"></div><div class="row"><label>날짜</label><input id="fdD" type="date" value="${x.date||''}"></div><div class="row" style="align-items:flex-start"><label>재료</label><textarea id="fdR" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:70px;font:inherit">${esc(x.recipe||'')}</textarea></div><div class="row" style="align-items:flex-start"><label>만드는 법</label><textarea id="fdNote" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:90px;font:inherit">${esc(x.note||'')}</textarea></div>`,
+ q=>{x.name=q('fdN').value.trim()||x.name;x.date=q('fdD').value||x.date;x.recipe=q('fdR').value;x.note=q('fdNote').value;upsertFood(x);render()});
 }
 function foodDel(id){const x=foodFile().data.items.find(z=>z.id===id&&!z.del);if(!x)return;
  if(confirm('이 항목을 지울까? '+x.name+' (사진 파일은 저장소에 남음)')){x.del=true;upsertFood(x);const fv=document.getElementById('foodV');if(fv)fv.remove();render()}}
@@ -3620,12 +3627,13 @@ function foodAddModal(){
  modal(`<h4>🍚 새 Food diary</h4>
  <div class="row"><label>이름</label><input id="fdN" placeholder="간장라면"></div>
  <div class="row"><label>날짜</label><input id="fdD" type="date" value="${today()}"></div>
- <div class="row" style="align-items:flex-start"><label>레시피</label><textarea id="fdR" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:70px;font:inherit"></textarea></div>
+ <div class="row" style="align-items:flex-start"><label>재료</label><textarea id="fdR" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:70px;font:inherit"></textarea></div>
+ <div class="row" style="align-items:flex-start"><label>만드는 법</label><textarea id="fdNote" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:90px;font:inherit"></textarea></div>
  <div class="row"><label>사진</label><input id="fdF" type="file" accept="image/*" multiple style="flex:1;border:0"></div>
  <p style="font-size:10px;color:#888">사진은 기기에서 압축(긴 변 1800 · 품질 85) 후 저장소로 올라가 — 저장을 누르면 업로드까지 한 번에.</p>`,
- q=>{foodSave(q('fdN').value.trim(),q('fdD').value,q('fdR').value,q('fdF').files)});
+ q=>{foodSave(q('fdN').value.trim(),q('fdD').value,q('fdR').value,q('fdF').files,q('fdNote').value)});
 }
-async function foodSave(name,date,recipe,files){
+async function foodSave(name,date,recipe,files,note){
  if(!name){toast('이름을 적어줘');return}
  if(!cfg.token){toast('설정에서 토큰을 먼저 넣어줘');return}
  const id=uid();const imgs=[];let thumb='';
@@ -3639,7 +3647,7 @@ async function foodSave(name,date,recipe,files){
    if(i===0){const tb=await imgCompress(fl[i],360,0.8);const tp=`food/thumb/${id}.jpg`;await ghPutRaw(tp,tb,`${cfg.person} · food 썸네일`);thumb=tp;}
   }
  }catch(e){toast('사진 업로드 실패: '+e.message+' — 항목은 텍스트만 저장');}
- upsertFood({id,name,date:date||today(),recipe:recipe||'',imgs,thumb,by:cfg.person,del:false});
+ upsertFood({id,name,date:date||today(),recipe:recipe||'',note:note||'',imgs,thumb,by:cfg.person,del:false});
  toast('저장했어');render();
 }
 /* ---- §5 Share ---- */
