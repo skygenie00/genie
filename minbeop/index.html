@@ -4411,6 +4411,42 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   function docs() { return J(DOC_KEY, '{}'); }
   function saveDocs(o) { localStorage.setItem(DOC_KEY, JSON.stringify(o)); }
 
+  /* ---------- 좌표기억: 한 문항에 자리 여럿 (2026-09-02) ----------
+     스키마 = { 문항id: [ {k,doc,page,r,num,fp,pad,hash,ts,label}, … ] }
+     ⚠ 일괄 변환을 하지 않는다. 15키로 옛 판 기기와 오갈 수 있고 한 번 갈아엎으면
+        되돌릴 수 없다(638줄·1259줄의 「핀은 절대 지우지 않는다」 규약과 같은 이유).
+        읽을 때만 감싸고, 쓸 때는 언제나 배열로 쓴다.
+     ⚠ k 는 암기카드가 가리키는 값이다(ox_mem_cards 의 ck). 한 번 준 k 는 바꾸지 않는다. */
+  function legacyKey(qid) { return 'co_legacy_' + qid; }
+  function newCoordKey(qid) {
+    return 'co_' + qid + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  }
+  /* 화면용 — 옛 객체꼴은 사본으로 감싸 돌려준다(원본을 건드리지 않는다) */
+  function coordsOf(qid) {
+    var v = coords()[qid];
+    if (Array.isArray(v)) return v;
+    if (v && typeof v === 'object') return [Object.assign({ k: legacyKey(qid), label: '' }, v)];
+    return [];
+  }
+  /* 쓰기용 — 넘겨받은 all 안의 실체를 그대로 돌려준다.
+     여기서 고친 값은 saveCoords(all) 로 그대로 저장된다(옛 객체꼴도 변환 없이). */
+  function slotsRef(all, qid) {
+    var v = (all || {})[qid];
+    if (Array.isArray(v)) return v;
+    if (v && typeof v === 'object') return [v];
+    return [];
+  }
+  /* 저장된 자리 전부를 {qid, k, i, c} 로 편다 — c 는 all 안의 실체다 */
+  function coordsFlat(all) {
+    var out = [];
+    Object.keys(all || {}).forEach(function (id) {
+      slotsRef(all, id).forEach(function (c, i) {
+        if (c && c.r) out.push({ qid: id, k: c.k || legacyKey(id), i: i, c: c });
+      });
+    });
+    return out;
+  }
+
   function pdfPut(id, rec) { return window.dbPut('omrpdf:' + id, rec); }
   function pdfGet(id) { return window.dbGet('omrpdf:' + id); }
 
@@ -4661,6 +4697,74 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     return DOCCACHE[id];
   }
 
+  /* ---------- 좌표 오려내기 (2026-09-02 신설) ----------
+     등록할 때 만들어 둔 쪽 그림(WebP)에서 좌표 칸만 잘라 dataURL 로 돌려준다.
+     ⚠ pdf.js 를 부르지 않는다 — 이미 래스터로 갖고 있는 그림이다.
+     ⚠ 자산이 없으면 예외를 던지지 말고 null 을 돌려준다.
+        부르는 쪽이 「그림이 없다」와 「자리가 지워졌다」를 갈라 써야 한다.
+     쪽마다 Image 를 하나만 만들어 p._im 에 캐시한다(assetDoc 의 render 와 같은 칸). */
+  var CROP_PAD = { x: 0.02, y: 0.012 };
+  function cropImageOf(p) {
+    return new Promise(function (res) {
+      if (!p || !p.img) return res(null);
+      if (p._im && p._im.complete && p._im.naturalWidth) return res(p._im);
+      var done = false;
+      function fin(v) { if (!done) { done = true; res(v); } }
+      setTimeout(function () { fin(null); }, 8000);
+      var im = new Image();
+      im.onload = function () { p._im = im; fin(im); };
+      im.onerror = function () { fin(null); };
+      im.src = p.img;
+    });
+  }
+  async function crop(docId, page, r, opt) {
+    if (!r || r.length < 4) return null;
+    opt = opt || {};
+    try {
+      var a = await getAsset(docId);
+      if (!a || !a.pages) return null;
+      var p = a.pages[(page || 1) - 1];
+      if (!p) return null;
+      var im = await cropImageOf(p);
+      if (!im) return null;
+      var pw = p.w || im.naturalWidth, ph = p.h || im.naturalHeight;
+      if (!pw || !ph) return null;
+      var px = opt.padX != null ? opt.padX : CROP_PAD.x;
+      var py = opt.padY != null ? opt.padY : CROP_PAD.y;
+      var x0 = Math.max(0, Math.min(r[0], r[2]) - px), y0 = Math.max(0, Math.min(r[1], r[3]) - py);
+      var x1 = Math.min(1, Math.max(r[0], r[2]) + px), y1 = Math.min(1, Math.max(r[1], r[3]) + py);
+      if (x1 - x0 <= 0 || y1 - y0 <= 0) return null;
+      var sx = Math.round(x0 * pw), sy = Math.round(y0 * ph);
+      var sw = Math.round((x1 - x0) * pw), sh = Math.round((y1 - y0) * ph);
+      if (sx + sw > pw) sw = pw - sx;
+      if (sy + sh > ph) sh = ph - sy;
+      if (sw < 2 || sh < 2) return null;
+      var k = Math.min(1, (opt.maxW || 900) / sw);
+      var cw = Math.max(2, Math.round(sw * k)), ch = Math.max(2, Math.round(sh * k));
+      var cv = document.createElement('canvas');
+      cv.width = cw; cv.height = ch;
+      var g = cv.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch);
+      g.drawImage(im, sx, sy, sw, sh, 0, 0, cw, ch);
+      /* 찾은 낱말을 노란 테두리로 — 화면의 V.found 와 같은 색(#facc15) */
+      if (opt.mark && opt.mark.length >= 4) {
+        var m = opt.mark;
+        var mx = (Math.min(m[0], m[2]) - x0) / (x1 - x0) * cw;
+        var my = (Math.min(m[1], m[3]) - y0) / (y1 - y0) * ch;
+        var mw = Math.max(3, Math.abs(m[2] - m[0]) / (x1 - x0) * cw);
+        var mh = Math.max(3, Math.abs(m[3] - m[1]) / (y1 - y0) * ch);
+        g.fillStyle = 'rgba(250,204,21,.26)';
+        g.fillRect(mx, my, mw, mh);
+        g.strokeStyle = '#facc15';
+        g.lineWidth = Math.max(2, Math.round(ch / 90));
+        g.strokeRect(mx, my, mw, mh);
+      }
+      var out = cv.toDataURL('image/webp', 0.82);
+      if (out.slice(0, 15) !== 'data:image/webp') out = cv.toDataURL('image/jpeg', 0.82);
+      return out;
+    } catch (e) { return null; }
+  }
+
   /* ---------- PDF 등록 ---------- */
   async function registerFiles(list) {
     var lib = await loadPdfjs(), meta = docs(), added = [], warned = 0;
@@ -4773,7 +4877,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     });
   }
 
-  async function openViewer(qid, mode) {
+  async function openViewer(qid, mode, k) {
     if (typeof window.dbPut !== 'function') { alert('앱 초기화 전입니다. 잠시 후 다시 눌러주세요.'); return; }
     var meta = docs();
     var have = await assetIds();
@@ -4781,7 +4885,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     have.forEach(function (id) { if (!meta[id]) { meta[id] = { name: id + '.pdf', file: id + '.pdf' }; } });
     saveDocs(meta);                                    // 실물만 있던 것도 목록에 올린다
     var ids = Object.keys(meta);
-    var c = coords()[qid];
+    var arr0 = coordsOf(qid), ci0 = 0;
+    if (k) {
+      var f0 = arr0.findIndex(function (x) { return x.k === k; });
+      if (f0 >= 0) ci0 = f0;
+    }
+    var c = arr0[ci0] || null;                        // k 가 없으면 첫 자리
     var docId = null;
     if (c && c.doc && meta[c.doc]) {
       docId = c.doc;                                   // 좌표가 가리키는 문서가 우선
@@ -4798,14 +4907,14 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     var head = el('div', 'flex:0 0 auto;padding:8px 10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:#111827;color:#fff');
     head.innerHTML =
       '<span style="font-weight:800;font-size:13px">📍 좌표기억</span>' +
-      '<select id="cd-doc" style="font-size:12px;padding:4px 6px;border-radius:8px;border:0;max-width:150px"></select>' +
+      '<select id="cd-doc" style="font-size:12px;padding:4px 6px;border-radius:8px;border:0;max-width:150px;color:#111827;background:#fff"></select>' +
       '<button id="cd-forget" title="이 문서를 목록에서 뺍니다 — 이 기기의 그림도 지웁니다 (좌표 핀은 그대로)" style="background:#374151;color:#fff;border:0;border-radius:8px;padding:5px 8px;font-size:12px">🗑</button>' +
       '<button id="cd-prev" style="background:#374151;color:#fff;border:0;border-radius:8px;width:28px;height:28px;font-weight:800">◀</button>' +
       '<span id="cd-pg" style="font-size:12px;min-width:46px;text-align:center"></span>' +
       '<button id="cd-next" style="background:#374151;color:#fff;border:0;border-radius:8px;width:28px;height:28px;font-weight:800">▶</button>' +
       '<label style="font-size:12px;background:#374151;padding:5px 9px;border-radius:8px;cursor:pointer">📄 PDF 등록' +
       '<input id="cd-file" type="file" accept="application/pdf,.pdf" multiple style="display:none"></label>' +
-      '<input id="cd-q" placeholder="정리OMR 검색 (타이핑 글자만)" style="font-size:12px;padding:5px 9px;border-radius:8px;border:0;width:170px">' +
+      '<input id="cd-q" placeholder="정리OMR 검색 (타이핑 글자만)" style="font-size:12px;padding:5px 9px;border-radius:8px;border:0;width:170px;color:#111827;background:#fff">' +
       '<button id="cd-find" style="background:#374151;color:#fff;border:0;border-radius:8px;padding:5px 9px;font-size:12px">찾기</button>' +
       '<button id="cd-check" style="background:#374151;color:#fff;border:0;border-radius:8px;padding:5px 9px;font-size:12px">위치 점검</button>' +
       '<button id="cd-close" style="margin-left:auto;background:#374151;color:#fff;border:0;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700">닫기</button>';
@@ -4821,7 +4930,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 
     V = { wrap: wrap, stage: stage, holder: holder, canvas: canvas, layer: layer, foot: foot, bar: bar,
           docId: docId, page: (c && c.page) || 1, mode: mode, qid: qid, rect: (c && c.r) || null, zoom: false, pages: 1,
-          zoomLevel: 'fit', pan: true };
+          zoomLevel: 'fit', pan: true, ci: ci0, editK: null };
 
     var sel = head.querySelector('#cd-doc');
     function fillSel() {
@@ -4965,14 +5074,22 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     L.onpointerdown = L.onpointermove = L.onpointerup = L.onpointercancel = null;
     L.style.width = RENDER.W + 'px'; L.style.height = RENDER.H + 'px';
     L.style.pointerEvents = (V.mode === 'view') ? 'none' : 'auto';
-    var c = coords()[V.qid];
-    var others = coords();
+    var mineArr = coordsOf(V.qid);
+    if (!mineArr.length) V.ci = 0;
+    else if (V.ci == null || V.ci < 0 || V.ci >= mineArr.length) V.ci = Math.max(0, Math.min(V.ci || 0, mineArr.length - 1));
+    var c = mineArr[V.ci] || null;
+    var others = coordsFlat(coords());
 
-    /* 같은 문서·같은 쪽의 다른 좌표를 옅게 */
-    Object.keys(others).forEach(function (id) {
-      var o = others[id];
-      if (id === V.qid || o.doc !== V.docId || o.page !== V.page) return;
-      L.appendChild(el('div', boxCss(o.r) + 'border:1px dashed rgba(59,130,246,.55);border-radius:3px'));
+    /* 같은 문서·같은 쪽의 다른 좌표를 옅게.
+       ★ 내 문항의 다른 자리(진한 파랑)와 남의 문항 것(옅은 회색)을 가른다 —
+          안 가르면 내 것과 남의 것을 못 가린다. */
+    others.forEach(function (o) {
+      var oc = o.c;
+      if (oc.doc !== V.docId || oc.page !== V.page) return;
+      var isMine = (o.qid === V.qid);
+      if (isMine && o.i === V.ci && V.mode === 'view' && V.rect) return;   // 지금 보는 자리는 주황으로 따로 그린다
+      L.appendChild(el('div', boxCss(oc.r) + 'border:1px dashed ' +
+        (isMine ? 'rgba(59,130,246,.55)' : 'rgba(148,163,184,.35)') + ';border-radius:3px'));
     });
 
     /* 검색으로 찾은 자리를 노란 테두리로 표시 */
@@ -4986,26 +5103,46 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       L.appendChild(box);
       var dm = docs()[V.docId] || {};
       var stale = c && c.hash && dm.hash && c.hash !== dm.hash;
+      var nSlot = mineArr.length;
+      var lab = (c && c.label) ? c.label : '';
       V.bar.innerHTML = '<b>' + esc(qPreview(V.qid)) + '</b>' +
         ' <span style="color:#9ca3af">· ' + esc(dm.name || V.docId) + ' ' + V.page + '쪽' +
+        (nSlot > 1 ? ' · 자리 ' + (V.ci + 1) + ' / ' + nSlot : '') +
+        (lab ? ' · ' + esc(lab) : '') +
         (c && c.num ? ' · 문항 ' + esc(c.num) : '') + '</span>' +
         (stale ? ' <b style="color:#fca5a5">· 문서가 바뀌었습니다 — 위치 점검 필요</b>' : '');
       V.foot.innerHTML =
+        (nSlot > 1 ? '<button id="cd-pv" style="flex:0 0 38px;background:#374151;color:#fff;border:0;border-radius:10px;padding:10px;font-weight:800">◀</button>' +
+                     '<button id="cd-nx" style="flex:0 0 38px;background:#374151;color:#fff;border:0;border-radius:10px;padding:10px;font-weight:800">▶</button>' : '') +
         '<button id="cd-zoom" style="flex:1;background:#374151;color:#fff;border:0;border-radius:10px;padding:10px;font-weight:700">' + (V.zoom ? '전체 보기' : '확대해서 보기') + '</button>' +
         '<button id="cd-re" style="flex:1;background:#4f46e5;color:#fff;border:0;border-radius:10px;padding:10px;font-weight:700">위치 다시 지정</button>' +
-        '<button id="cd-del" style="flex:0 0 84px;background:#7f1d1d;color:#fff;border:0;border-radius:10px;padding:10px;font-weight:700">삭제</button>';
+        '<button id="cd-add" style="flex:0 0 100px;background:#0f766e;color:#fff;border:0;border-radius:10px;padding:10px;font-weight:700">+ 자리 추가</button>' +
+        '<button id="cd-del" style="flex:0 0 70px;background:#7f1d1d;color:#fff;border:0;border-radius:10px;padding:10px;font-weight:700">삭제</button>';
+      if (nSlot > 1) {
+        V.foot.querySelector('#cd-pv').onclick = function () { V.ci = (V.ci - 1 + nSlot) % nSlot; gotoSlot(); };
+        V.foot.querySelector('#cd-nx').onclick = function () { V.ci = (V.ci + 1) % nSlot; gotoSlot(); };
+      }
       V.foot.querySelector('#cd-zoom').onclick = function () { V.zoom = !V.zoom; draw().then(scrollToRect); };
-      V.foot.querySelector('#cd-re').onclick = function () { V.mode = 'pick'; V.zoom = false; V.rect = null; V.pan = true; V.zoomLevel = 'fit'; draw(); };
-      V.foot.querySelector('#cd-del').onclick = function () {
-        var o = coords(); delete o[V.qid]; saveCoords(o); refreshPins(); closeViewer();
+      /* ★ 「위치 다시 지정」은 지금 자리를 교체하고, 「+ 자리 추가」는 새로 담는다 */
+      V.foot.querySelector('#cd-re').onclick = function () {
+        V.editK = c ? (c.k || legacyKey(V.qid)) : null;
+        V.mode = 'pick'; V.zoom = false; V.rect = null; V.pan = true; V.zoomLevel = 'fit'; draw();
       };
+      V.foot.querySelector('#cd-add').onclick = function () {
+        V.editK = null;
+        V.mode = 'pick'; V.zoom = false; V.rect = null; V.pan = true; V.zoomLevel = 'fit'; draw();
+      };
+      V.foot.querySelector('#cd-del').onclick = function () { askDelete(nSlot); };
       scrollToRect();
     } else {
       var zl = (!V.zoomLevel || V.zoomLevel === 'fit') ? 'fit' : V.zoomLevel;
       var on = 'background:#4f46e5;color:#fff', off = 'background:#374151;color:#d1d5db';
       var bs = 'border:0;border-radius:9px;padding:9px 10px;font-weight:700;font-size:12.5px;cursor:pointer;';
       L.style.pointerEvents = V.pan ? 'none' : 'auto';
-      V.bar.innerHTML = '<b>' + esc(qPreview(V.qid)) + '</b> <span style="color:#9ca3af">· ' +
+      var pickWhat = !mineArr.length ? ''
+        : (V.editK ? ' <b style="color:#a5b4fc">[자리 ' + (V.ci + 1) + ' 위치 다시 지정]</b>'
+                   : ' <b style="color:#6ee7b7">[자리 추가 — ' + (mineArr.length + 1) + '번째]</b>');
+      V.bar.innerHTML = '<b>' + esc(qPreview(V.qid)) + '</b>' + pickWhat + ' <span style="color:#9ca3af">· ' +
         (V.pan ? '확대해서 둘러보세요. 기억해둘 자리를 찾으면 <b style="color:#a5b4fc">⬚ 영역 지정</b>을 누르세요'
                 : '그 자리를 드래그해서 감싸주세요') + '</span>';
       V.foot.innerHTML =
@@ -5015,6 +5152,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         '<button id="cd-fit" style="' + bs + (zl === 'fit' ? on : off) + '">전체</button>' +
         '<button id="cd-z6" style="' + bs + (zl === 0.6 ? on : off) + '">60%</button>' +
         '<button id="cd-z10" style="' + bs + (zl === 1 ? on : off) + '">100%</button>' +
+        (mineArr.length ? '<button id="cd-name" style="' + bs + 'background:#374151;color:#d1d5db">이름</button>' : '') +
         '<button id="cd-save" style="flex:1;' + bs + 'background:#059669;color:#fff;' + (V.rect ? '' : 'opacity:.4') + '"' + (V.rect ? '' : ' disabled') + '>이 위치 저장</button>' +
         '<button id="cd-cancel" style="' + bs + 'background:#374151;color:#fff">취소</button>';
       var keep = function () {
@@ -5036,9 +5174,69 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       V.foot.querySelector('#cd-z10').onclick = function () { setZoom(1); };
       V.foot.querySelector('#cd-cancel').onclick = closeViewer;
       V.foot.querySelector('#cd-save').onclick = saveRect;
+      var nmBtn = V.foot.querySelector('#cd-name');
+      if (nmBtn) nmBtn.onclick = function () { renameSlot(); };
       if (V.rect) drawPickBox();
       if (!V.pan) bindDrag();
     }
+  }
+
+  /* ---------- 자리 옮겨다니기 · 지우기 · 이름 (2026-09-02) ---------- */
+  function gotoSlot() {
+    if (!V) return;
+    var arr = coordsOf(V.qid), c = arr[V.ci];
+    if (!c) { draw(); return; }
+    V.editK = null;
+    V.page = c.page || 1;
+    V.rect = c.r || null;
+    V.mode = 'view';
+    if (c.doc && c.doc !== V.docId) {
+      V.docId = c.doc;
+      var sel = V.wrap && V.wrap.querySelector('#cd-doc');
+      if (sel) sel.value = V.docId;
+    }
+    draw().then(scrollToRect);
+  }
+  /* 「이 자리만」이 기본이다. 마지막 한 자리를 지우면 키째 지운다.
+     새 창을 만들지 않고 아래 단추 줄에서 갈라 묻는다. */
+  function askDelete(n) {
+    if (n <= 1) { dropSlot(true); return; }
+    V.foot.innerHTML =
+      '<span style="flex:1 1 100%;font-size:12px;font-weight:700;color:#fca5a5">저장된 자리가 ' + n + '곳입니다 — 무엇을 지울까요?</span>' +
+      '<button id="cd-d1" style="flex:1;background:#7f1d1d;color:#fff;border:0;border-radius:10px;padding:10px;font-weight:700">이 자리만 (자리 ' + (V.ci + 1) + ')</button>' +
+      '<button id="cd-dall" style="flex:1;background:#991b1b;color:#fff;border:0;border-radius:10px;padding:10px;font-weight:700">전부 ' + n + '곳</button>' +
+      '<button id="cd-dc" style="flex:0 0 70px;background:#374151;color:#fff;border:0;border-radius:10px;padding:10px;font-weight:700">취소</button>';
+    V.foot.querySelector('#cd-dc').onclick = function () { paint(); };
+    V.foot.querySelector('#cd-d1').onclick = function () { dropSlot(false); };
+    V.foot.querySelector('#cd-dall').onclick = function () {
+      if (!confirm('이 문항의 저장된 자리 ' + n + '곳을 모두 지웁니다. 계속할까요?')) return;
+      dropSlot(true);
+    };
+  }
+  function dropSlot(all) {
+    var o = coords();
+    if (all) {
+      delete o[V.qid]; saveCoords(o); refreshPins(); closeViewer(); return;
+    }
+    var arr = coordsOf(V.qid).slice();
+    arr.splice(V.ci, 1);
+    if (!arr.length) { delete o[V.qid]; saveCoords(o); refreshPins(); closeViewer(); return; }
+    o[V.qid] = arr; saveCoords(o); refreshPins();
+    V.ci = Math.min(V.ci, arr.length - 1);
+    gotoSlot();
+  }
+  /* 저장할 때는 이름을 묻지 않는다(§2-2). 여기서만 고친다. */
+  function renameSlot() {
+    var arr = coordsOf(V.qid).slice();
+    var at = V.editK ? arr.findIndex(function (x) { return x.k === V.editK; }) : V.ci;
+    if (at < 0) at = V.ci;
+    var cur = arr[at];
+    if (!cur) { V.bar.textContent = '먼저 자리를 저장한 뒤에 이름을 붙일 수 있습니다.'; return; }
+    var v = prompt('이 자리의 이름 (비우면 「자리 ' + (at + 1) + '」)', cur.label || '');
+    if (v === null) return;
+    arr[at] = Object.assign({}, cur, { k: cur.k || legacyKey(V.qid), label: String(v).trim().slice(0, 40) });
+    var o = coords(); o[V.qid] = arr; saveCoords(o);
+    V.bar.textContent = arr[at].label ? '이름을 「' + arr[at].label + '」로 바꿨습니다.' : '이름을 비웠습니다.';
   }
 
   function boxCss(r) {
@@ -5091,29 +5289,43 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       var items = await pageItems(page, page.getViewport({ scale: 1 }));
       sig = fingerprint(items, V.rect);
     } catch (e) { }
+    /* ★ V.editK 가 있으면 그 자리를 교체하고, 없으면 새 자리를 push 한다.
+       ⚠ 교체할 때 label 을 잃지 마라 — 자리를 옮긴 것이지 이름을 지운 것이 아니다.
+       ⚠ 한 번 준 k 는 바꾸지 않는다 — 암기카드가 그 값을 가리킨다. */
+    var arr = coordsOf(V.qid).slice();
+    var at = V.editK ? arr.findIndex(function (x) { return x.k === V.editK; }) : -1;
+    var keep = at >= 0 ? arr[at] : null;
+    var rec = { k: (keep && keep.k) || V.editK || newCoordKey(V.qid),
+                doc: V.docId, page: V.page, r: V.rect.map(function (n) { return Math.round(n * 1e4) / 1e4; }),
+                num: sig.num, fp: sig.fp, pad: sig.pad, hash: meta.hash || '', ts: Date.now(),
+                label: (keep && keep.label) || '' };
+    if (at >= 0) arr[at] = rec; else arr.push(rec);
     var o = coords();
-    o[V.qid] = { doc: V.docId, page: V.page, r: V.rect.map(function (n) { return Math.round(n * 1e4) / 1e4; }),
-                 num: sig.num, fp: sig.fp, pad: sig.pad, hash: meta.hash || '', ts: Date.now() };
+    o[V.qid] = arr;
     saveCoords(o);
     localStorage.setItem(LAST_KEY, V.docId);
     refreshPins();
+    V.ci = at >= 0 ? at : arr.length - 1;
+    V.editK = null;
     V.mode = 'view'; V.zoom = true;
     await draw(); scrollToRect();
-    V.bar.innerHTML = '저장했습니다 — 이 자리로 항상 되돌아옵니다.' + (sig.num ? ' <span style="color:#9ca3af">문항번호 ' + esc(sig.num) + '</span>' : '');
+    V.bar.innerHTML = '저장했습니다 — 자리 ' + (V.ci + 1) + ' / ' + arr.length + '.' +
+      (sig.num ? ' <span style="color:#9ca3af">문항번호 ' + esc(sig.num) + '</span>' : '');
   }
 
   /* ---------- 위치 점검 (문서 갱신 시 지문 대조) ---------- */
   async function runCheck() {
     if (!V || !V.docId) return;
     var meta = docs()[V.docId] || {}, all = coords();
-    var mine = Object.keys(all).filter(function (id) { return all[id].doc === V.docId; });
+    /* 한 문항이 여러 건 나올 수 있다. c 는 all 안의 실체라 고치면 그대로 저장된다. */
+    var mine = coordsFlat(all).filter(function (x) { return x.c.doc === V.docId; });
     if (!mine.length) { V.bar.textContent = '이 문서에 저장된 위치가 없습니다.'; return; }
-    var stale = mine.filter(function (id) { return all[id].hash && meta.hash && all[id].hash !== meta.hash; });
+    var stale = mine.filter(function (x) { return x.c.hash && meta.hash && x.c.hash !== meta.hash; });
     if (!stale.length) { V.bar.textContent = '이상 없음 — 저장된 위치 ' + mine.length + '개, 문서 버전 동일.'; return; }
     V.bar.textContent = '문서가 바뀌었습니다. 같은 자리의 글자를 대조하는 중… (' + stale.length + '개)';
     var doc = await openDoc(V.docId), cache = {}, ok = 0, bad = [];
     for (var i = 0; i < stale.length; i++) {
-      var id = stale[i], c = all[id];
+      var it = stale[i], c = it.c;
       if (!cache[c.page]) {
         var pg = await doc.getPage(Math.min(c.page, doc.numPages));
         cache[c.page] = await pageItems(pg, pg.getViewport({ scale: 1 }));
@@ -5121,20 +5333,32 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       var now = fingerprint(cache[c.page], c.r, c.pad != null ? c.pad : 0.008);
       var sim = jaccard(c.fp, now.fp);
       if (c.fp && sim >= 0.75) { c.hash = meta.hash; c.fp = now.fp; ok++; }
-      else bad.push({ id: id, sim: Math.round(sim * 100) });
+      else bad.push({ id: it.qid, k: it.k, i: it.i, sim: Math.round(sim * 100) });
     }
     saveCoords(all);
     refreshPins();
     if (!bad.length) { V.bar.innerHTML = '점검 완료 — ' + ok + '개 모두 제자리입니다.'; return; }
     V.bar.innerHTML = '점검 완료 — 제자리 ' + ok + '개 / <b style="color:#fca5a5">확인 필요 ' + bad.length + '개</b>: ' +
       bad.map(function (b) {
-        return '<button data-go="' + esc(b.id) + '" style="background:#7c2d12;color:#fff;border:0;border-radius:6px;padding:2px 6px;margin:2px;font-size:11px">' +
-               esc(b.id) + ' (' + b.sim + '%)</button>';
+        return '<button data-go="' + esc(b.id) + '" data-k="' + esc(b.k) + '" style="background:#7c2d12;color:#fff;border:0;border-radius:6px;padding:2px 6px;margin:2px;font-size:11px">' +
+               esc(b.id) + (b.i ? ' 자리' + (b.i + 1) : '') + ' (' + b.sim + '%)</button>';
       }).join('');
     V.bar.querySelectorAll('[data-go]').forEach(function (b) {
       b.onclick = function () {
-        var id = b.getAttribute('data-go'), cc = coords()[id];
-        V.qid = id; V.rect = cc.r; V.page = cc.page; V.mode = 'view'; V.zoom = true; draw();
+        var id = b.getAttribute('data-go'), kk = b.getAttribute('data-k');
+        var arr = coordsOf(id);
+        var at = arr.findIndex(function (x) { return x.k === kk; });
+        if (at < 0) at = 0;
+        var cc = arr[at];
+        if (!cc) return;
+        V.qid = id; V.ci = at; V.editK = null;
+        V.rect = cc.r; V.page = cc.page; V.mode = 'view'; V.zoom = true;
+        if (cc.doc && cc.doc !== V.docId) {
+          V.docId = cc.doc;
+          var s2 = V.wrap && V.wrap.querySelector('#cd-doc');
+          if (s2) s2.value = V.docId;
+        }
+        draw();
       };
     });
   }
@@ -5184,9 +5408,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         var L = idx[i], at = L.txt.indexOf(q);
         while (at >= 0 && hits.length < 60) {
           var p0 = L.pos[at], p1 = L.pos[Math.min(at + q.length - 1, L.pos.length - 1)];
+          var from = Math.max(0, at - 40);
           hits.push({
             page: n, x: p0.x, y: p0.y, x2: p1.x,
-            ctx: L.txt.slice(Math.max(0, at - 14), at + q.length + 14)
+            ctx: L.txt.slice(from, at + q.length + 40), cx: at - from
           });
           at = L.txt.indexOf(q, at + 1);
         }
@@ -5196,21 +5421,70 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       V.bar.innerHTML = '<b>' + esc(q) + '</b> — 찾지 못했습니다. <span style="color:#9ca3af">필기로 쓴 내용은 검색되지 않습니다.</span>';
       return;
     }
+    V.hits = hits; V.hitQ = q;
+    if (V.hitPad == null) V.hitPad = 1;
+    V.hitShown = 12;
+    renderHits();
+  }
+
+  /* ---------- 검색 결과 = 오린 그림 + 글자 맥락 (2026-09-02 신설) ----------
+     ⚠ 찾는 로직(hits)도 V.found 값도 바뀌지 않는다. 보여 주는 방식만 바뀐다.
+     ⚠ 여전히 타이핑된 글자만 검색된다 — 그림에는 필기가 보여도 검색으로는 안 걸린다. */
+  var HIT_PADS = [{ x: 0.05, y: 0.012, t: '좁게' }, { x: 0.10, y: 0.020, t: '보통' }, { x: 0.18, y: 0.032, t: '넓게' }];
+  var HIT_MAX = 24;
+  /* 예전 5212줄에 있던 식을 그대로 옮긴 것 — 값이 달라지면 안 된다.
+     화면의 노란 테두리(V.found)와 오린 그림의 노란 테두리가 같은 자리를 짚어야 한다. */
+  function foundRect(h) {
+    return [Math.max(0, h.x - 0.008), Math.max(0, h.y - 0.006),
+            Math.min(1, Math.max(h.x2, h.x) + 0.03), Math.min(1, h.y + 0.012)];
+  }
+  function hitCtxHTML(h, q) {
+    var t = h.ctx || '';
+    var at = (h.cx != null && h.cx >= 0) ? h.cx : t.indexOf(q);
+    if (at < 0) return esc(t);
+    return esc(t.slice(0, at)) +
+      '<span style="background:#facc15;color:#111827;border-radius:2px;padding:0 1px;font-weight:700">' +
+      esc(t.slice(at, at + q.length)) + '</span>' + esc(t.slice(at + q.length));
+  }
+  function renderHits() {
+    if (!V || !V.hits || !V.hits.length) return;
+    var hits = V.hits, q = V.hitQ, pad = HIT_PADS[V.hitPad] || HIT_PADS[1];
     var byPage = {};
     hits.forEach(function (h) { byPage[h.page] = (byPage[h.page] || 0) + 1; });
+    var show = Math.min(V.hitShown || 12, hits.length, HIT_MAX);
     var head = '<b>' + esc(q) + '</b> ' + hits.length + '건 · ' +
-      Object.keys(byPage).map(function (p) { return p + '쪽 ' + byPage[p]; }).join(' / ') + '<br>';
-    V.bar.innerHTML = head + hits.slice(0, 24).map(function (h, i) {
-      return '<button data-hit="' + i + '" style="background:#374151;color:#e5e7eb;border:0;border-radius:6px;' +
-        'padding:3px 7px;margin:2px;font-size:11px;cursor:pointer;max-width:280px;overflow:hidden;' +
-        'text-overflow:ellipsis;white-space:nowrap">' + h.page + '쪽 · ' + esc(h.ctx) + '</button>';
-    }).join('');
+      Object.keys(byPage).map(function (p) { return p + '쪽 ' + byPage[p]; }).join(' / ') +
+      ' <span style="margin-left:8px">' + HIT_PADS.map(function (p, i) {
+        return '<button data-pad="' + i + '" style="border:0;border-radius:6px;padding:2px 8px;margin-right:3px;' +
+          'font-size:11px;font-weight:700;cursor:pointer;' +
+          (i === V.hitPad ? 'background:#4f46e5;color:#fff' : 'background:#374151;color:#d1d5db') + '">' + p.t + '</button>';
+      }).join('') + '</span>';
+    var rows = '';
+    for (var i = 0; i < show; i++) {
+      var h = hits[i];
+      rows += '<div data-hit="' + i + '" style="display:flex;gap:8px;align-items:flex-start;padding:6px 2px;' +
+        'border-top:1px solid #374151;cursor:pointer">' +
+        '<div id="cd-hi-' + i + '" style="flex:0 0 200px;min-height:24px;background:#0f172a;border-radius:5px;overflow:hidden"></div>' +
+        '<div style="flex:1 1 auto;min-width:0;font-size:11.5px;line-height:1.55;color:#e5e7eb;word-break:break-all">' +
+        '<span style="color:#9ca3af">' + h.page + '쪽</span> ' + hitCtxHTML(h, q) + '</div></div>';
+    }
+    var rest = Math.min(hits.length, HIT_MAX) - show;
+    var more = rest > 0
+      ? '<button id="cd-more" style="margin-top:6px;width:100%;background:#374151;color:#e5e7eb;border:0;' +
+        'border-radius:7px;padding:6px;font-size:11.5px;font-weight:700;cursor:pointer">더 보기 (' + rest + '건)</button>'
+      : '';
+    V.bar.innerHTML = head + '<div style="max-height:46vh;overflow:auto;margin-top:4px">' + rows + more + '</div>';
+
+    V.bar.querySelectorAll('[data-pad]').forEach(function (b) {
+      b.onclick = function (e) { e.stopPropagation(); V.hitPad = +b.getAttribute('data-pad'); renderHits(); };
+    });
+    var mb = V.bar.querySelector('#cd-more');
+    if (mb) mb.onclick = function (e) { e.stopPropagation(); V.hitShown = HIT_MAX; renderHits(); };
     V.bar.querySelectorAll('[data-hit]').forEach(function (b) {
       b.onclick = function () {
         var h = hits[+b.getAttribute('data-hit')];
         V.page = h.page;
-        V.found = [Math.max(0, h.x - 0.008), Math.max(0, h.y - 0.006),
-                   Math.min(1, Math.max(h.x2, h.x) + 0.03), Math.min(1, h.y + 0.012)];
+        V.found = foundRect(h);
         V.zoomLevel = 1; V.pan = true;
         draw().then(function () {
           if (!V || !V.found) return;
@@ -5220,6 +5494,19 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         });
       };
     });
+    /* 그림은 뒤따라 채운다 — 자산이 없으면 그림칸만 비우고 글자 줄은 그대로 둔다 */
+    var docId = V.docId;
+    for (var j = 0; j < show; j++) (function (j) {
+      var h = hits[j], box = V.bar.querySelector('#cd-hi-' + j);
+      if (!box) return;
+      var fr = foundRect(h);
+      crop(docId, h.page, fr, { padX: pad.x, padY: pad.y, mark: fr, maxW: 480 }).then(function (u) {
+        if (!box.isConnected) return;
+        box.innerHTML = u
+          ? '<img src="' + u + '" style="width:100%;height:auto;display:block">'
+          : '<div style="font-size:10.5px;color:#9ca3af;padding:5px 6px;line-height:1.4">이 기기에 그림이 아직 없습니다</div>';
+      });
+    })(j);
   }
 
   /* ---------- 문항 카드의 📍 버튼 ---------- */
@@ -5234,19 +5521,34 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     if (state === 'want') return 'bg-white text-amber-700 border-amber-400 border-dashed font-bold';
     return 'bg-gray-50 text-gray-400 border-gray-200 font-semibold';
   }
+  /* 하나라도 stale 이면 stale, 하나라도 있으면 has */
   function pinState(id, co, tags) {
-    var c = co[id];
-    if (c) return isStale(c) ? 'stale' : 'has';
+    var arr = slotsRef(co, id);
+    if (arr.length) {
+      for (var i = 0; i < arr.length; i++) if (isStale(arr[i])) return 'stale';
+      return 'has';
+    }
     return (tags[id] || {}).confuse ? 'want' : 'none';
+  }
+  /* 여럿이면 개수를 붙인다 — 암기카드 「🃏 2」 칩과 같은 꼴이다 */
+  function pinInner(id, co) {
+    var n = slotsRef(co, id).length;
+    return '📍' + (n > 1 ? ' ' + n : '');
+  }
+  function pinTitle(id, co, st) {
+    var arr = slotsRef(co, id);
+    if (st === 'stale') return '문서가 바뀌었습니다 — 위치 확인 필요';
+    if (st !== 'has') return '정리OMR에서 이 문항의 자리를 지정';
+    if (arr.length > 1) return '정리OMR 저장된 자리 ' + arr.length + '곳';
+    return '정리OMR 위치 보기 (' + (arr[0].doc || '') + ' ' + arr[0].page + '쪽)';
   }
   function refreshPins() {
     var co = coords(), tags = J('ox_q_tags', '{}');
     document.querySelectorAll('[id^="tag-coord-"]').forEach(function (b) {
       var id = b.id.slice('tag-coord-'.length), st = pinState(id, co, tags);
       b.className = 'tag-btn text-[10px] px-1.5 py-0.5 rounded border ' + pinStyle(st);
-      b.title = st === 'stale' ? '문서가 바뀌었습니다 — 위치 확인 필요'
-              : st === 'has' ? '정리OMR 위치 보기 (' + (co[id].doc || '') + ' ' + co[id].page + '쪽)'
-              : '정리OMR에서 이 문항의 자리를 지정';
+      b.textContent = pinInner(id, co);
+      b.title = pinTitle(id, co, st);
     });
   }
   function injectPins() {
@@ -5257,11 +5559,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       var id = btn.id.slice(PREFIX.length);
       var b = document.createElement('button');
       b.id = 'tag-coord-' + id;
-      b.textContent = '📍';
+      b.textContent = pinInner(id, co);
       b.className = 'tag-btn text-[10px] px-1.5 py-0.5 rounded border ' + pinStyle(pinState(id, co, tags));
+      b.title = pinTitle(id, co, pinState(id, co, tags));
       b.onclick = function (e) {
         e.preventDefault(); e.stopPropagation();
-        openViewer(id, coords()[id] ? 'view' : 'pick');
+        openViewer(id, coordsOf(id).length ? 'view' : 'pick');
       };
       btn.parentNode.insertBefore(b, btn);
       btn.addEventListener('click', function () { setTimeout(refreshPins, 30); });
@@ -5272,7 +5575,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
   schedule();
 
-  window.oxCoord = { open: openViewer, coords: coords, docs: docs };
+  /* ★ coordsOf 와 crop 을 더 내보낸다 — 암기카드의 coord 갈래가 쓴다.
+     openDoc·getAsset 이 이 클로저 안이라 밖에서는 부를 수 없다. */
+  window.oxCoord = { open: openViewer, coords: coords, coordsOf: coordsOf, docs: docs, crop: crop };
 })();
 </script>
 
@@ -5682,6 +5987,86 @@ function mcTitleFrom(txt, svg, fallback) {
     return String(h || t || fallback || '암기카드').trim().slice(0, 60);
 }
 function mcNewKey(id) { return 'mc_' + id + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6); }
+/* 🃏 좌표 참조 카드 (2026-09-02 신설) ----------------------------------------
+   { k, kind:'coord', name, qid, ck, ts } — 그림을 담지 않고 좌표의 k(=ck)만 가리킨다.
+   ★ k = 카드 자신의 키, ck = 가리키는 좌표의 키. 헷갈리지 마라.
+   30바이트라 ox_mem_cards 에 들어가도 용량 걱정이 없고 15키로 다른 기기까지 따라간다.
+   ⚠ 카드는 좌표를 가리킬 뿐이다 — 카드를 지워도 좌표기억 핀은 그대로 남고,
+      좌표를 지우면 카드가 빈다. 의도한 동작이다. */
+function mcCoordApi() {
+    const a = window.oxCoord;
+    return (a && typeof a.coordsOf === 'function' && typeof a.crop === 'function') ? a : null;
+}
+async function mcCoordInner(c, fallbackQid) {
+    const miss = t => '<div style="font-size:11px;color:#dc2626;padding:8px;line-height:1.5">[' + escHtml(t) + ']</div>';
+    const api = mcCoordApi();
+    if (!api) return miss('좌표기억을 아직 불러오지 못했습니다 — 잠시 뒤 다시 열어주세요');
+    const qid = c.qid || fallbackQid;
+    const hit = (api.coordsOf(qid) || []).find(x => x.k === c.ck);
+    /* ★ 원인이 다르고 사람이 할 일이 다르다 — 한 문구로 뭉뚱그리지 않는다 */
+    if (!hit) return miss('가리키던 자리가 지워졌습니다');
+    const url = await api.crop(hit.doc, hit.page, hit.r, {});
+    if (url) return '<img src="' + url + '" style="width:100%;height:auto;display:block">';
+    const nm = ((api.docs() || {})[hit.doc] || {}).name || hit.doc || '정리OMR';
+    return miss('이 기기에 ' + nm + ' 이(가) 없습니다 — 좌표기억을 한 번 열면 받아 옵니다');
+}
+function mcCoordPickSync(id) {
+    const n = document.querySelectorAll('[data-ckfor="' + id + '"]:checked').length;
+    const b = document.getElementById('mc-ckbtn-' + id);
+    if (b) b.textContent = n ? '고른 ' + n + '장 카드로 넣기' : '고른 자리를 카드로 넣기';
+}
+/* 고른 2장 = 카드 2장. 한 장에 두 자리를 담지 않는다. 이름은 묻지 않는다. */
+function mcAddCoords(id) {
+    const api = mcCoordApi();
+    const slots = api ? (api.coordsOf(id) || []) : [];
+    const picked = Array.from(document.querySelectorAll('[data-ckfor="' + id + '"]'))
+        .filter(x => x.checked).map(x => x.value);
+    if (!picked.length) { mcStat(id, '넣을 자리를 먼저 골라주세요'); return; }
+    const all = mcLoad();
+    if (!Array.isArray(all[id])) all[id] = [];
+    const used = {};
+    all[id].forEach(c => { if (c.kind === 'coord' && c.ck) used[c.ck] = 1; });
+    let n = 0;
+    picked.forEach(ck => {
+        if (used[ck]) return;                       // 같은 ck 를 두 번 넣지 않는다
+        const at = slots.findIndex(x => x.k === ck);
+        if (at < 0) return;
+        const sl = slots[at];
+        all[id].push({ k: mcNewKey(id), kind: 'coord', name: sl.label || ('자리 ' + (at + 1)),
+                       qid: id, ck: ck, ts: Date.now() });
+        used[ck] = 1; n++;
+    });
+    if (!n) { mcStat(id, '이미 넣은 자리입니다'); return; }
+    mcSave(all);
+    mcRefresh(id, '좌표 카드 ' + n + '장 추가');
+}
+function mcCoordPickHTML(id, cards) {
+    const api = mcCoordApi();
+    const slots = api ? (api.coordsOf(id) || []) : [];
+    if (!slots.length) {
+        return '<div style="border:1px solid #e5e7eb;border-radius:10px;background:#fff;padding:10px;'
+            + 'margin-bottom:10px;font-size:11.5px;color:#6b7280">먼저 📍 로 자리를 지정하세요</div>';
+    }
+    const used = {};
+    cards.forEach(c => { if (c.kind === 'coord' && c.ck) used[c.ck] = 1; });
+    const rows = slots.map((sl, i) => {
+        const lab = escHtml('자리 ' + (i + 1) + ' · ' + (sl.page || 1) + '쪽' + (sl.label ? ' · ' + sl.label : ''));
+        return used[sl.k]
+            ? '<div style="font-size:11.5px;color:#9ca3af;padding:2px 0">' + lab
+              + ' <span style="font-weight:700">— 이미 넣음</span></div>'
+            : '<label style="display:block;font-size:11.5px;color:#374151;padding:2px 0;cursor:pointer">'
+              + '<input type="checkbox" data-ckfor="' + escHtml(id) + '" value="' + escHtml(sl.k) + '"'
+              + ' onchange="mcCoordPickSync(\'' + id + '\')" style="margin-right:5px">' + lab + '</label>';
+    }).join('');
+    return '<div style="border:1px solid #ddd6fe;border-radius:10px;background:#faf5ff;padding:10px;margin-bottom:10px">'
+        + '<div style="font-size:11.5px;font-weight:800;color:#6d28d9;margin-bottom:4px">📍 좌표기억에서 카드로 넣기</div>'
+        + rows
+        + '<button id="mc-ckbtn-' + id + '" onclick="mcAddCoords(\'' + id + '\')" style="margin-top:7px;font-size:11px;'
+        + 'font-weight:700;color:#fff;background:#7c3aed;border:none;border-radius:6px;padding:4px 11px;cursor:pointer">'
+        + '고른 자리를 카드로 넣기</button>'
+        + '<div style="font-size:10.5px;color:#9ca3af;margin-top:5px;line-height:1.45">그림이 아니라 자리를 가리킵니다 — 다른 기기까지 따라갑니다</div>'
+        + '</div>';
+}
 function mcStat(id, text) {
     const el = document.getElementById('mc-stat-' + id);
     if (el) el.textContent = text || '';
@@ -5796,6 +6181,7 @@ async function mcFill(id) {
     for (const c of cards) {
         let inner;
         if (c.kind === 'svg') inner = mcSvgFit(c.svg);
+        else if (c.kind === 'coord') inner = await mcCoordInner(c, id);
         else {
             const url = await imgObjectUrl(c.k);
             inner = url
@@ -5805,14 +6191,15 @@ async function mcFill(id) {
         list += '<div style="border:1px solid #e5e7eb;border-radius:9px;padding:9px;margin-bottom:9px;background:#fafafa">'
             + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'
             + '<span style="font-size:11.5px;font-weight:800;color:#374151;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(c.name || '카드') + '</span>'
-            + (edit ? '<span style="font-size:10px;color:#9ca3af">' + (c.kind === 'svg' ? 'SVG' : 'IMG') + '</span>'
+            + (edit ? '<span style="font-size:10px;color:#9ca3af">' + (c.kind === 'svg' ? 'SVG' : c.kind === 'coord' ? '좌표' : 'IMG') + '</span>'
                     + '<button onclick="mcDel(\'' + id + '\',\'' + c.k + '\')" style="font-size:10.5px;font-weight:700;color:#b91c1c;border:1px solid #fecaca;background:#fff;border-radius:5px;padding:1px 6px;cursor:pointer">삭제</button>' : '')
             + '</div>' + mcZoomHTML(inner) + '</div>';
     }
     if (!cards.length) list = '<div style="font-size:12px;color:#9ca3af;text-align:center;padding:16px 0">아직 카드가 없습니다</div>';
     let head = '';
     if (edit) {
-        head = '<div ondragover="event.preventDefault();this.style.background=\'#eff6ff\'" ondragleave="this.style.background=\'#f8fafc\'" ondrop="this.style.background=\'#f8fafc\';mcDrop(event,\'' + id + '\')"'
+        head = mcCoordPickHTML(id, cards)
+            + '<div ondragover="event.preventDefault();this.style.background=\'#eff6ff\'" ondragleave="this.style.background=\'#f8fafc\'" ondrop="this.style.background=\'#f8fafc\';mcDrop(event,\'' + id + '\')"'
             + ' style="border:2px dashed #93c5fd;border-radius:10px;background:#f8fafc;padding:12px;text-align:center;margin-bottom:10px">'
             + '<div style="font-size:12px;font-weight:800;color:#1d4ed8;margin-bottom:3px">여기에 카드를 끌어다 놓으세요</div>'
             + '<div style="font-size:10.5px;color:#6b7280;line-height:1.5">볼트 암기카드결과물 의 md · svg 파일, 또는 이미지<br>SVG 는 다른 기기로 따라갑니다 · 이미지는 이 기기에만 남습니다</div>'
@@ -5953,6 +6340,7 @@ async function openChapCards(subject, chapLabel) {
         for (const c of cards) {
             let inner;
             if (c.kind === 'svg') inner = mcSvgFit(c.svg);
+            else if (c.kind === 'coord') inner = await mcCoordInner(c, id);
             else {
                 const url = await imgObjectUrl(c.k);
                 inner = url ? '<img src="' + url + '" style="width:100%;height:auto;display:block">'
