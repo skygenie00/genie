@@ -2453,7 +2453,7 @@ async function joPrecIdx(){
       }
     });
   }catch(e){}
-  JOPREC.map=map;JOPREC.src='⚙ 맵 + 요약 조문 열 + 수집본 전문 (합집합 · v3-M)';
+  JOPREC.map=map;JOPREC.src='⚙ 맵 + 요약 조문 열 + 원본 전문 (합집합 · v3-M)';
   return JOPREC;
 }
 async function joPrecChip(link){
@@ -4037,7 +4037,7 @@ async function viewPrec(){
   list.appendChild(cb);
   const cnt=el('div','h');
   cnt.style.cssText='padding:6px 12px;font-size:11px;color:#9a958b;border-bottom:1px solid #eeece6';
-  cnt.textContent=`수집본 ${P.수집본} + 볼트 요약본 ${P.요약본} = ${P.건수}건`;
+  cnt.textContent=`원본 ${P.원본} · 요약본 ${P.요약본수} (둘 다 ${P.둘다}) = ${P.건수}건`;
   list.appendChild(cnt);
   arr.forEach(p=>{
     const r=el('div','prow'+(S.prec===p.id?' on':''));
@@ -4046,11 +4046,12 @@ async function viewPrec(){
       p.선고?p.선고.replace(/(\d{4})(\d{2})(\d{2})/,'$1.$2.$3'):(p.연도폴더||'요약본')));
     r.appendChild(pn);
     r.appendChild(el('div','iss',(p.사건명||p.별칭||'').slice(0,60)));
-    r.appendChild(el('span','chip c-src',p.출처));
+    if(p.원본)r.appendChild(el('span','chip c-src','원본'));
+    if(p.요약본)r.appendChild(el('span','chip c-quiz','요약본'));
     (Array.isArray(p.조문)?p.조문:[]).slice(0,3).forEach(x=>
       r.appendChild(el('span','chip c-prec','⚖'+x)));
     if(p.기출&&typeof p.기출==='string')r.appendChild(el('span','chip c-quiz','기출 '+p.기출));
-    r.onclick=()=>{S.prec=p.id;S.precTab=p.출처==='요약본'?'요약':'원문';render();};
+    r.onclick=()=>{S.prec=p.id;S.precTab=p.요약본?'요약':'원문';render();};
     list.appendChild(r);
   });
   slot.appendChild(list);
@@ -4059,11 +4060,11 @@ async function viewPrec(){
   const main=el('div','main');
   const cur=arr.find(x=>x.id===S.prec);
   if(!cur){main.appendChild(emptyBox('⚖','왼쪽에서 판례를 고르면 여기에 열린다',
-    `수집본 ${P.수집본}건 · 볼트 요약본 ${P.요약본}건`));slot.appendChild(main);return;}
+    `원본 ${P.원본}건 · 요약본 ${P.요약본수}건`));slot.appendChild(main);return;}
 
-  const full=cur.출처==='수집본'?await get('prec_특허_전문.json'):null;
+  const full=await get('prec_특허_전문.json').catch(()=>({}));
   const sec=full?(full[cur.id]||{}):{};
-  const hasSum=cur.출처==='요약본', hasRaw=!!(sec.전문||sec.판결요지);
+  const hasSum=!!cur.요약본, hasRaw=Object.keys(sec).length>0;
   const bar=el('div');bar.style.cssText='display:flex;gap:6px;flex-wrap:wrap;align-items:center';
   [['요약',hasSum],['빈칸',false],['원문',hasRaw]].forEach(([t,ok],i)=>{
     const b=el('button','tool'+(S.precTab===t?' on':(i===2?' last':'')),t);
@@ -4075,7 +4076,8 @@ async function viewPrec(){
   if(cur.법원){const c=el('b','',cur.법원);c.style.color='var(--exc)';hd.appendChild(c);}
   hd.appendChild(el('b','',cur.사건번호||''));
   if(cur.선고)hd.appendChild(el('span','badge','선고 '+cur.선고.replace(/(\d{4})(\d{2})(\d{2})/,'$1-$2-$3')));
-  hd.appendChild(el('span','badge',cur.출처==='요약본'?('볼트 '+cur.연도폴더):'수집본 202'));
+  if(cur.요약본)hd.appendChild(el('span','badge','볼트 '+cur.연도폴더));
+  if(cur.원본)hd.appendChild(el('span','badge','원본 '+cur.원본));
   if(cur.별칭&&typeof cur.별칭==='string')hd.appendChild(el('span','badge','별칭: '+cur.별칭.slice(0,40)));
   main.appendChild(hd);
 
@@ -4942,7 +4944,7 @@ async function popPan(caseNo, selfKey, ev){
       if (p.선고) hd.appendChild(el('span', 'badge',
         '선고 ' + String(p.선고).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')));
       body.appendChild(hd);
-      if (p.출처 === '요약본'){
+      if (p.요약본){
         const SUM = await get('prec_특허_요약.json').catch(() => ({}));
         const s = SUM[p.id];
         if (s && s.행 && s.행.length){
@@ -4960,10 +4962,10 @@ async function popPan(caseNo, selfKey, ev){
       }
       const go = el('button', 'tool on', '판례 갈래로 이동 ↗');
       go.onclick = () => { S.tab = 'prec'; S.prec = p.id;
-        S.precTab = p.출처 === '요약본' ? '요약' : '원문'; closeAllPops(); render(); };
+        S.precTab = p.요약본 ? '요약' : '원문'; closeAllPops(); render(); };
       body.appendChild(go);
     } else {
-      body.appendChild(el('div', 'cdim', '수집본·요약본에 없다'));   /* ★ v3-N §1 */
+      body.appendChild(el('div', 'cdim', '원본·요약본에 없다'));   /* ★ v3-N §1 */
     }
   }catch(e){ body.appendChild(el('div', 'cdim', '읽지 못했다 — ' + (e && e.message || e))); }
   const bag = (((LNKIDX || {}).panN || {})[caseNo] || [])
@@ -6055,7 +6057,7 @@ function popPrec(p, ev){
     b.appendChild(el('span', 'chip c-prec', '⚖' + x)));
   const go = el('button', 'tool on', '판례 갈래로 이동 ↗');
   go.onclick = () => { S.tab = 'prec'; S.prec = p.id;
-    S.precTab = p.출처 === '요약본' ? '요약' : '원문'; closeAllPops(); render(); };
+    S.precTab = p.요약본 ? '요약' : '원문'; closeAllPops(); render(); };
   b.appendChild(go);
   showPop(ev);
 }
@@ -7862,7 +7864,7 @@ $('#skin').oninput=async e=>{
       const P=await get('prec_특허_리스트.json');
       const hit=P.판례.filter(p=>((p.사건번호||'')+(p.사건명||'')+(p.별칭||'')).includes(q)).slice(0,40);
       box.appendChild(el('div','grp','⚖ 판례 — '+hit.length+'건'+(SHORT[S.law]==='특허'?'':' (특허만 수집돼 있다)')));
-      hit.forEach(p=>skRow(box,'prec',p.사건번호||p.파일,(p.사건명||p.별칭||'').slice(0,50),p.출처,
+      hit.forEach(p=>skRow(box,'prec',p.사건번호||p.파일,(p.사건명||p.별칭||'').slice(0,50),p.원본?'원본':'요약본',
         ev=>{closeSk();
           const b=popShell('','⚖ '+(p.사건번호||p.파일));
           if(p.사건명||p.별칭)b.appendChild(el('div','',(p.사건명||p.별칭)));
@@ -7870,7 +7872,7 @@ $('#skin').oninput=async e=>{
           (Array.isArray(p.조문)?p.조문:[]).slice(0,6).forEach(x=>
             b.appendChild(el('span','chip c-prec','⚖'+x)));
           const go=el('button','tool on','판례 갈래로 이동 ↗');
-          go.onclick=()=>{S.tab='prec';S.prec=p.id;S.precTab=p.출처==='요약본'?'요약':'원문';closeAllPops();render();};
+          go.onclick=()=>{S.tab='prec';S.prec=p.id;S.precTab=p.요약본?'요약':'원문';closeAllPops();render();};
           b.appendChild(go);
           showPop(ev);}));
     }catch(err){box.appendChild(el('div','grp','⚖ 판례 — 읽지 못했다'));}
