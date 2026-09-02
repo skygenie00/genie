@@ -140,6 +140,17 @@ input.pq{font:inherit;font-size:12px;padding:2px 7px;border:1px solid #d9d6ce;bo
 .prow .ctx:hover{color:var(--exc)}
 .prow .ctx b{color:var(--rule)}
 mark.cj{background:#fff3a3;outline:2px solid #e0a800}
+/* ★ recsync (2026-09-02) — 동기화 칩 · ✎ 수정 큐 */
+#syncChip.ok{background:#e9f7ee;color:var(--ok)} #syncChip.busy{background:#eaf1fb;color:var(--exc)}
+#syncChip.off{background:#f2f0ea;color:#9a958b} #syncChip.bad{background:#fde9e9;color:var(--rule)}
+#eqBtn.has{background:#fff2e0;color:var(--warn)}
+.eqflag{position:absolute;right:12px;width:9px;height:11px;background:#ffb347;border:1px solid #d98a1c;border-radius:50%;cursor:pointer}
+.pitmenu .mi{display:block;padding:2px 0} .pitmenu .mi+.mi{border-top:1px dashed #e6e3db}
+.eqrow{padding:6px 9px;border:1px solid #eeece6;border-radius:8px;margin-bottom:5px;font-size:12px;cursor:pointer}
+.eqrow:hover{background:#faf8f3} .eqrow .eqk{color:#9a958b;font-size:10.5px} .eqrow .eqn{margin-top:2px;white-space:pre-wrap}
+.eqrow.st보류{opacity:.7} .eqrow.st반영됨{opacity:.5;text-decoration:line-through}
+.eqform textarea{width:100%;box-sizing:border-box;min-height:70px;font:inherit;font-size:12.5px;padding:5px 7px;border:1px solid #d9d6ce;border-radius:7px}
+.eqform .q{font-size:11.5px;color:#6b665d;background:#faf8f3;border-radius:6px;padding:4px 7px;margin:4px 0;white-space:pre-wrap}
 /* ★ 판 3 add1 — 리담 화면 그대로: 노란 별칭 칩 · 설명줄(안 자름) · 기출 칩 */
 .chip.c-alias{background:#fde68a;color:#5b4300;font-weight:700}
 .chip.c-gi{background:#eaf1fb;color:var(--exc);font-size:11px;padding:1px 8px}
@@ -687,6 +698,8 @@ body.inkon .main,body.inkon .pop{user-select:none}
     <span class="badge" id="lblToggle" style="cursor:pointer">🏷 라벨: 펴짐 ▾</span>
     <span class="badge" id="inkToggle" style="cursor:pointer">✍ 필기</span>
     <span class="badge" id="recBtn" style="cursor:pointer">⤓ 기록</span>
+    <span class="badge" id="eqBtn" style="cursor:pointer" title="✎ 수정 큐 — 볼트에서 고칠 자리를 적어 둔 것">✎ 수정 0</span>
+    <span class="badge" id="syncChip" style="cursor:pointer" title="기록 동기화 — 누르면 지금 · 길게(우클릭) = 강제 올리기/받기">– 토큰 없음</span>
   </header>
   <div class="body2">
     <nav class="rail" id="rail"></nav>
@@ -1406,6 +1419,7 @@ async function viewJo(){
   if(j.제목)h1.appendChild(document.createTextNode(' '+j.제목));
   main.appendChild(h1);
   main.appendChild(el('div','sihaeng','🕐 시행 '+(SIHAENG[S.law]||'—')+'  ·  '+j.파일));
+  {const eqc=el('div');eqc.style.marginTop='4px';eqHeadBtn('jo|'+S.law+'|'+S.jo,eqc);main.appendChild(eqc);}   /* ★ recsync §E — ✎ 이 문서 통째 */
   /* ★ v3-I — 2년 내 개정 조는 본문 머리에도 배지 하나(명칭개정만 있는 조는 없음) */
   if(stars[S.jo])main.appendChild(el('span','badge jstarb','★ '+stars[S.jo]+' 개정'));
   {const br=blkAll()[S.law+':'+S.jo];   /* ★ v3-L §3 — 빈칸 회독 배지(마지막 저장) */
@@ -1782,7 +1796,7 @@ const REC_NAMES = { ox:'1차객 풀이 (O/X · 헷갈림 · 태그)', rounds:'1�
   logic:'📐 논리', link:'🔗 지문 연결', type:'🏷 유형 확정', omr:'📖 정리 핀',
   sticker:'🏷 스티커 사전 (두문자·줄임말)',
   blank:'✎ 빈칸 회독 (O/△/X)', blanktag:'✎ 빈칸 태그 (kind 확정)',
-  themefix:'⇄ 3법 대응 확정', precimp:'★ 판례 내 중요도' };   /* ★ 판 3 §9-2 */
+  themefix:'⇄ 3법 대응 확정', precimp:'★ 판례 내 중요도', editq:'✎ 수정 큐 (볼트 고칠 자리)' };   /* ★ 판 3 §9-2 · recsync §E */
 function recLabel(k){
   const t = k.slice(REC_PRE.length);
   if (REC_NAMES[t]) return REC_NAMES[t];
@@ -1806,6 +1820,7 @@ function recDropCache(){
   if (typeof MCREC  !== 'undefined') MCREC = null;
   if (typeof GIREC  !== 'undefined') GIREC = null;
   if (typeof GIYREC !== 'undefined') GIYREC = null;
+  if (typeof EQREC !== 'undefined') EQREC = null;   /* ★ recsync §E — 병합·강제 받기 뒤 큐 캐시 */
 }
 function recDelete(k){
   try{ localStorage.removeItem(k); }catch(e){}
@@ -1814,7 +1829,9 @@ function recDelete(k){
 }
 function nowIso(){ return new Date().toISOString(); }
 function lsWrite(key, obj, what){
-  try{ localStorage.setItem(key, JSON.stringify(obj)); return true; }
+  try{ localStorage.setItem(key, JSON.stringify(obj));
+       if (key.indexOf(REC_PRE) === 0 && typeof recTouch === 'function') recTouch();   /* ★ recsync A-5 — 기록 쓰기 직후 */
+       return true; }
   catch(e){ toast('⚠ ' + (what || '기록') + ' 저장 실패 — 저장공간이 찼을 수 있다. 기록을 내보내라', 1);
             console.error(e); return false; }
 }
@@ -1863,6 +1880,359 @@ function recExport(){
   document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
   toast('기록 ' + recTotal() + '건을 내려받았다');
+}
+
+/* ══════════ 기록 자동 동기화 (recsync · 2026-09-02 · _task_jo_recsync_editq.md §2~§5) ══════════
+   민법OX(8/31) §A~§B 를 그대로 옮겼다 — 다른 것은 키 목록·원격 경로·헤더 자리뿐.
+   비공개 zzikkaplan/studyplandata 의 jopangi/기록.json 한 파일에 SYNC_KEYS 를 담는다.
+   ★ 기존 `jopangi.` 키의 값 모양을 한 글자도 바꾸지 않는다. 시각·묘비는 옆에 따로 쌓는다.
+     jopangi_sync_u      "키|칸" → 마지막으로 만진 시각
+     jopangi_sync_gone   "키|칸" → 지운 시각(묘비)
+     jopangi_sync_shadow 직전 도장 때의 값 사본(대조용)
+     jopangi_sync_meta   { lastSync, remoteSha }
+   이 넷은 기기별로 산다(`jopangi.` 접두 아님 — 자기 자신을 실으면 안 된다).
+   ⚠ 칸 열쇠에 `|` 가 든다(`prec|특허|…`). "키|칸" 은 **첫 `|` 에서만** 자른다. split('|') 금지.
+   ⚠ `jopangi.ink`(필기 캔버스)는 동기화하지 않는다. `mcard` 는 census 결과대로(SYNC_SKIP). */
+const SYNC_REPO = 'zzikkaplan/studyplandata', SYNC_BRANCH = 'main', SYNC_PATH = 'jopangi/기록.json';
+const SYNC_SKIP = ['ink' /* 캔버스 · 크다 */ ];
+const SYNC_KEYS = ['ox', 'rounds', 'ansfix', 'mcard', 'gi', 'gi.year', 'markup', 'logic', 'link', 'type', 'omr',
+  'sticker', 'blank', 'blanktag', 'themefix', 'postit', 'compare', 'precimp', 'editq']
+  .filter(k => SYNC_SKIP.indexOf(k) < 0).map(k => REC_PRE + k);
+const SU_KEY = 'jopangi_sync_u', SG_KEY = 'jopangi_sync_gone', SS_KEY = 'jopangi_sync_shadow', SM_KEY = 'jopangi_sync_meta';
+const EQ_KEY = REC_PRE + 'editq';
+const sObj = k => { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch (e) { return {}; } };
+const sPut = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+const ckey = (k, c) => k + '|' + c;
+const csplit = s => { const i = s.indexOf('|'); return [s.slice(0, i), s.slice(i + 1)]; };
+/* 칸 사상 — 객체 키는 최상위 열쇠 그대로 · 수정 큐(배열)는 항목 k 가 칸 */
+function cellsOf(k){
+  let v = null; try { v = JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { v = null; }
+  if (k === EQ_KEY){ const o = {}; (Array.isArray(v) ? v : []).forEach(it => { if (it && it.k) o[it.k] = it; }); return o; }
+  return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+}
+function cellsPut(k, cells){
+  if (k === EQ_KEY){ const arr = Object.keys(cells).map(x => cells[x]).sort((a, b) => String(b.at || '').localeCompare(String(a.at || ''))); sPut(k, arr); EQREC = null; return; }
+  sPut(k, cells);
+}
+function syncToken(){ try { return String((JSON.parse(localStorage.getItem('tt.cfg') || '{}')).token || '').trim(); } catch (e) { return ''; } }
+function syncSetToken(t){ let c = {}; try { c = JSON.parse(localStorage.getItem('tt.cfg') || '{}') || {}; } catch (e) { c = {}; }
+  c.token = String(t || '').trim(); localStorage.setItem('tt.cfg', JSON.stringify(c)); }
+function syncWho(){ let p = ''; try { p = (JSON.parse(localStorage.getItem('tt.cfg') || '{}')).person || ''; } catch (e) {}
+  const ua = navigator.userAgent || ''; const dev = /iPad|Macintosh/.test(ua) && 'ontouchend' in document ? '아이패드' : /iPhone|Android/.test(ua) ? '폰' : 'PC';
+  return (p || '?') + dev; }
+/* A-3 회독만 예외 — 진짜 시각(ts)이 이미 있다 */
+function realStamp(k, c, val){
+  if (k === REC_PRE + 'rounds' && Array.isArray(val)){ let m = 0; val.forEach(x => { const t = Date.parse(x && x.ts || ''); if (t > m) m = t; }); return m || 0; }
+  return 0;
+}
+/* ---------- A-2 도장 찍기 — 저장하는 자리를 하나도 고치지 않는다. 그림자와 대조해 여기 한 곳에서 찍는다. ---------- */
+function stampAll(){
+  const now = Date.now();
+  const u = sObj(SU_KEY), gone = sObj(SG_KEY), shadow = sObj(SS_KEY);
+  let n = 0;
+  for (const k of SYNC_KEYS){
+    const cur = cellsOf(k), old = shadow[k] || {};
+    for (const c in cur){
+      if (JSON.stringify(cur[c]) !== JSON.stringify(old[c])){
+        u[ckey(k, c)] = realStamp(k, c, cur[c]) || now; delete gone[ckey(k, c)]; n++; }
+    }
+    for (const c in old){ if (!(c in cur)){ gone[ckey(k, c)] = now; delete u[ckey(k, c)]; n++; } }
+    shadow[k] = cur;
+  }
+  sPut(SU_KEY, u); sPut(SG_KEY, gone); sPut(SS_KEY, shadow);
+  return n;
+}
+/* ---------- §B 병합 — 칸 단위 최신 승 · 무승부는 원격 · 묘비 · 그림자 갱신 (민법OX 글자 그대로) ---------- */
+function recMerge(remote){
+  const u = sObj(SU_KEY), gone = sObj(SG_KEY);
+  const rU = remote.u || {}, rG = remote.gone || {}, rD = remote.data || {};
+  const byKey = {};
+  const add = s => { const [k, c] = csplit(s); if (!byKey[k]) byKey[k] = new Set(); byKey[k].add(c); };
+  Object.keys(rU).forEach(add); Object.keys(rG).forEach(add);
+  let took = 0, kept = 0, del = 0;
+  for (const k of SYNC_KEYS){
+    const cur = cellsOf(k);
+    const cells = byKey[k] || new Set();
+    const rd = (k === EQ_KEY && Array.isArray(rD[k])) ? (() => { const o = {}; rD[k].forEach(it => { if (it && it.k) o[it.k] = it; }); return o; })() : (rD[k] || {});
+    Object.keys(rd).forEach(c => cells.add(c));
+    let changed = false;
+    for (const c of cells){
+      const ck = ckey(k, c);
+      const mine = Math.max(u[ck] || 0, gone[ck] || 0);
+      const theirs = Math.max(rU[ck] || 0, rG[ck] || 0);
+      if (theirs === 0 || theirs < mine){ kept++; continue; }   /* 내 쪽이 이긴다 */
+      if ((rG[ck] || 0) >= (rU[ck] || 0) && (rG[ck] || 0) > 0){
+        /* 원격이 지웠다 — ★ 지운 것이 되살아나면 안 된다 */
+        if (c in cur){ delete cur[c]; del++; changed = true; }
+        gone[ck] = rG[ck]; delete u[ck];
+      } else if (Object.prototype.hasOwnProperty.call(rd, c)){
+        cur[c] = rd[c]; u[ck] = rU[ck]; delete gone[ck]; took++; changed = true;
+      }
+    }
+    if (changed) cellsPut(k, cur);
+  }
+  sPut(SU_KEY, u); sPut(SG_KEY, gone);
+  /* ★ 그림자도 같이 갱신한다 — 안 하면 다음 stampAll 이 「원격에서 받은 것」을 「내가 바꾼 것」으로 오인한다 */
+  const shadow = {}; SYNC_KEYS.forEach(k => { shadow[k] = cellsOf(k); }); sPut(SS_KEY, shadow);
+  if (took || del) recDropCache();
+  return { took, kept, del };
+}
+function recPayload(){
+  const data = {}; SYNC_KEYS.forEach(k => { let v = null; try { v = JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) {}
+    data[k] = (k === EQ_KEY) ? (Array.isArray(v) ? v : []) : ((v && typeof v === 'object') ? v : {}); });
+  return { v: 1, savedAt: new Date().toISOString(), by: syncWho(), data: data, u: sObj(SU_KEY), gone: sObj(SG_KEY) };
+}
+function recPending(){
+  const last = (sObj(SM_KEY)).lastSync || 0; const u = sObj(SU_KEY), g = sObj(SG_KEY); let n = 0;
+  for (const x in u) if (u[x] > last) n++;
+  for (const x in g) if (g[x] > last) n++;
+  return n;
+}
+/* ---------- A-4 GitHub — 민법OX 와 같은 저장소·같은 토큰 ---------- */
+const b64enc = str => btoa(unescape(encodeURIComponent(str)));
+const ghUrl = path => 'https://api.github.com/repos/' + SYNC_REPO + '/contents/' + encodeURI(path) + '?ref=' + SYNC_BRANCH + '&t=' + Date.now();
+async function ghRaw(path){
+  const r = await fetch(ghUrl(path), { headers: { Authorization: 'Bearer ' + syncToken(), Accept: 'application/vnd.github.raw' }, cache: 'no-store' });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error('GET ' + path + ' ' + r.status);
+  return await r.text();
+}
+async function ghSha(path){
+  const r = await fetch(ghUrl(path), { headers: { Authorization: 'Bearer ' + syncToken(), Accept: 'application/vnd.github+json' }, cache: 'no-store' });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error('SHA ' + path + ' ' + r.status);
+  return (await r.json()).sha;
+}
+async function ghPutJson(path, text, sha){
+  const body = { message: syncWho() + ' · ' + path, content: b64enc(text), branch: SYNC_BRANCH };
+  if (sha) body.sha = sha;
+  const r = await fetch('https://api.github.com/repos/' + SYNC_REPO + '/contents/' + encodeURI(path),
+    { method: 'PUT', headers: { Authorization: 'Bearer ' + syncToken(), Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (r.status === 409 || r.status === 422) return 'conflict';
+  if (!r.ok) throw new Error('PUT ' + path + ' ' + r.status);
+  return (await r.json()).content.sha;
+}
+/* ---------- A-5 동기화 ---------- */
+let recBusy = false, recLastErr = '';
+async function syncRecords(){
+  if (recBusy) return;
+  if (!syncToken()){ recPaint(); return; }
+  if (navigator.onLine === false){ recPaint(); return; }
+  recBusy = true; recLastErr = ''; recPaint();
+  try{
+    stampAll();
+    let sha = await ghSha(SYNC_PATH);
+    if (sha){ const txt = await ghRaw(SYNC_PATH); if (txt){ try { recMerge(JSON.parse(txt)); } catch (e) { console.warn('원격 기록 파싱 실패', e); } } }
+    stampAll();
+    let res = await ghPutJson(SYNC_PATH, JSON.stringify(recPayload()), sha);
+    if (res === 'conflict'){            /* 한 번만 재시도 */
+      sha = await ghSha(SYNC_PATH);
+      const txt2 = await ghRaw(SYNC_PATH);
+      if (txt2){ try { recMerge(JSON.parse(txt2)); } catch (e) {} }
+      stampAll();
+      res = await ghPutJson(SYNC_PATH, JSON.stringify(recPayload()), sha);
+      if (res === 'conflict') throw new Error('두 번 다 충돌');
+    }
+    sPut(SM_KEY, { lastSync: Date.now(), remoteSha: res });
+  }catch(e){ recLastErr = e.message || String(e); console.warn('기록 동기화 건너뜀:', recLastErr); }   /* ⚠ 오류창 금지 */
+  recBusy = false; recPaint();
+}
+let recTouchT = null;
+function recTouch(){ clearTimeout(recTouchT); recTouchT = setTimeout(() => { stampAll(); recPaint(); syncRecords(); }, 4000); }
+/* ---------- §C 첫 판 · 사고 복구 — 사람이 한 번 민다 ---------- */
+async function recForcePush(){
+  if (!syncToken()){ syncTokenPrompt(); return; }
+  const cnt = SYNC_KEYS.reduce((a, k) => a + Object.keys(cellsOf(k)).length, 0);
+  if (!confirm('이 기기의 기록으로 원격을 덮습니다.\n되돌릴 수 없습니다.\n\n이 기기 기록 ' + cnt + '칸 (' + SYNC_KEYS.length + '개 층)\n\n계속할까요?')) return;
+  const now = Date.now(), u = {};
+  SYNC_KEYS.forEach(k => { const cur = cellsOf(k); for (const c in cur) u[ckey(k, c)] = realStamp(k, c, cur[c]) || now; });
+  sPut(SU_KEY, u); sPut(SG_KEY, {});
+  const shadow = {}; SYNC_KEYS.forEach(k => { shadow[k] = cellsOf(k); }); sPut(SS_KEY, shadow);
+  recBusy = true; recPaint();
+  try{
+    const sha = await ghSha(SYNC_PATH);
+    const res = await ghPutJson(SYNC_PATH, JSON.stringify(recPayload()), sha);
+    if (res === 'conflict') throw new Error('충돌 — 다시 눌러 주세요');
+    sPut(SM_KEY, { lastSync: Date.now(), remoteSha: res });
+    toast('원격을 이 기기 기록으로 덮었다 (' + cnt + '칸)');
+  }catch(e){ recLastErr = e.message; toast('⚠ 강제 올리기 실패 — ' + e.message, 1); }
+  recBusy = false; recPaint();
+}
+async function recForcePull(){
+  if (!syncToken()){ syncTokenPrompt(); return; }
+  recBusy = true; recPaint();
+  try{
+    const txt = await ghRaw(SYNC_PATH);
+    if (!txt){ toast('⚠ 원격에 ' + SYNC_PATH + ' 이 없다 — PC 에서 「⬆ 강제 올리기」를 먼저', 1); recBusy = false; recPaint(); return; }
+    const remote = JSON.parse(txt);
+    const cnt = SYNC_KEYS.reduce((a, k) => { const v = (remote.data || {})[k]; return a + (Array.isArray(v) ? v.length : Object.keys(v || {}).length); }, 0);
+    if (!confirm('원격 기록으로 이 기기를 덮습니다.\n되돌릴 수 없습니다.\n\n원격 기록 ' + cnt + '칸 · 저장 ' + (remote.savedAt || '?') + ' · ' + (remote.by || '?') + '\n\n계속할까요?')){ recBusy = false; recPaint(); return; }
+    SYNC_KEYS.forEach(k => { const v = (remote.data || {})[k]; sPut(k, v == null ? (k === EQ_KEY ? [] : {}) : v); });
+    sPut(SU_KEY, remote.u || {}); sPut(SG_KEY, remote.gone || {});
+    const shadow = {}; SYNC_KEYS.forEach(k => { shadow[k] = cellsOf(k); }); sPut(SS_KEY, shadow);
+    sPut(SM_KEY, { lastSync: Date.now(), remoteSha: await ghSha(SYNC_PATH) });
+    recDropCache(); toast('원격 기록으로 덮었다 (' + cnt + '칸)'); render();
+  }catch(e){ recLastErr = e.message; toast('⚠ 강제 받기 실패 — ' + e.message, 1); }
+  recBusy = false; recPaint();
+}
+function syncTokenPrompt(){
+  const has = !!syncToken();
+  const t = prompt((has ? '토큰이 이미 저장돼 있다.\n바꾸려면 새 토큰을 넣고, 지우려면 빈 칸으로.' : '기록 동기화는 비공개 저장소에 쓴다.\nGitHub fine-grained 토큰을 넣어라.')
+    + '\n\n· 저장소 ' + SYNC_REPO + ' 읽기·쓰기 권한\n· zzikkaTT·민법OX 와 같은 칸(tt.cfg)이라 거기 넣어 두었으면 이미 들어 있다\n· 이 기기의 브라우저에만 저장된다(홈화면 웹앱은 따로)', '');
+  if (t === null) return;
+  syncSetToken(t); toast(t.trim() ? '토큰을 저장했다' : '토큰을 지웠다'); recPaint();
+  if (t.trim()) syncRecords();
+}
+/* ---------- §D 헤더 칩 ---------- */
+function recPaint(){
+  const c = document.getElementById('syncChip'); if (!c) return;
+  let t, cls;
+  if (recBusy){ t = '◐ 올리는 중'; cls = 'busy'; }
+  else if (!syncToken()){ t = '– 토큰 없음'; cls = 'off'; }
+  else if (navigator.onLine === false){ t = '○ 오프라인'; cls = 'off'; }
+  else if (recLastErr){ t = '⚠ 실패(' + recLastErr.slice(0, 18) + ')'; cls = 'bad'; }
+  else { const p = recPending(); const last = (sObj(SM_KEY)).lastSync || 0;
+    if (p) { t = '● 대기 ' + p + '건'; cls = 'ok'; }
+    else { const d = last ? new Date(last) : null; const hm = d ? (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes() : '';
+      t = '● 동기화 됨' + (hm ? ' ' + hm : ''); cls = 'ok'; } }
+  c.textContent = t; c.className = 'badge ' + cls;
+  const q = document.getElementById('eqBtn'); if (q){ const n = eqAll().filter(x => x.st === '대기').length; q.textContent = '✎ 수정 ' + n; q.className = 'badge' + (n ? ' has' : ''); }
+}
+function syncForceMenu(ev){
+  const body = popShell('', '🔄 기록 동기화 — 강제 올리기 / 받기');
+  body.appendChild(el('div', 'cdim', '⚠ 평상시에는 쓰지 마라 — 첫 판·사고 복구용. 서버가 비었는데 「강제 받기」를 누르면 이 기기 기록이 빈 것으로 덮인다.'));
+  const row = el('div', 'memobtn');
+  const up = el('button', 'tool', '⬆ 강제 올리기'); up.onclick = () => { closeAllPops(); recForcePush(); };
+  const dn = el('button', 'tool', '⬇ 강제 받기'); dn.onclick = () => { closeAllPops(); recForcePull(); };
+  const tk = el('button', 'tool', '🔑 토큰'); tk.onclick = () => { closeAllPops(); syncTokenPrompt(); };
+  row.appendChild(up); row.appendChild(dn); row.appendChild(tk); body.appendChild(row);
+  body.appendChild(el('div', 'cdim', '원격 = ' + SYNC_REPO + ' · ' + SYNC_PATH + ' · 층 ' + SYNC_KEYS.length + ' (필기 ink 제외)'));
+  showPop(ev);
+}
+function recBoot(){
+  const c = document.getElementById('syncChip');
+  if (c){ c.onclick = () => syncRecords();
+    c.oncontextmenu = ev => { ev.preventDefault(); syncForceMenu(ev); };
+    let t0 = null; c.addEventListener('pointerdown', ev => { t0 = setTimeout(() => { t0 = null; syncForceMenu(ev); }, 600); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => c.addEventListener(n, () => { if (t0){ clearTimeout(t0); t0 = null; } })); }
+  const q = document.getElementById('eqBtn'); if (q) q.onclick = ev => popEq(ev);
+  recPaint(); stampAll(); syncRecords();
+  setInterval(() => { if (document.visibilityState === 'visible'){ stampAll(); recPaint(); } }, 10000);
+  setInterval(() => { if (document.visibilityState === 'visible') syncRecords(); }, 180000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncRecords(); else stampAll(); });
+  window.addEventListener('online', recPaint); window.addEventListener('offline', recPaint);
+}
+/* ══════════ ✎ 수정 큐 (§E · _task_jo_editq.md v2 §1·§2·§3·§6·§7) ══════════
+   앱 = 적는 곳 · 볼트 = 고치는 곳 · 채팅 = 옮기는 사람. 앱은 볼트를 안 건드린다.
+   항목 = { k, at, who, target, part, file, quote, kind, note, st }  · st 대기 → 반영됨 → 보류 · 칸 = k */
+let EQREC = null;
+function eqAll(){ if (!EQREC){ let v = null; try { v = JSON.parse(localStorage.getItem(EQ_KEY) || 'null'); } catch (e) {} EQREC = Array.isArray(v) ? v : []; } return EQREC; }
+function eqSave(arr){ EQREC = arr; lsWrite(EQ_KEY, arr, '✎ 수정 큐'); recPaint(); }
+/* 대상키 정규화 — 글줄(pitWire)은 `prec|<id>`·`jo|법:조` 를 쓰고 editq 규약은 `prec|특허|<id>`·`jo|법|조` 다. 한 모양으로 맞춘다. */
+function eqNorm(target){
+  const p = String(target || '').split('|');
+  if (p[0] === 'prec' && p.length === 2) return 'prec|' + (SHORT[S.law] || '특허') + '|' + p[1];
+  if (p[0] === 'jo' && p.length === 2 && p[1].indexOf(':') > 0){ const i = p[1].indexOf(':'); return 'jo|' + p[1].slice(0, i) + '|' + p[1].slice(i + 1); }
+  return target;
+}
+function eqFor(target, part){ target = eqNorm(target); return eqAll().filter(x => x.target === target && (x.part || '') === (part || '')); }
+const EQ_KINDS = ['오타', '내용 정정', '추가', '삭제', '옮기기', '그 밖'];
+/* file — ⚙ 가 JSON 에 실어 둔 볼트 경로만 쓴다. 없는 갈래는 '' (채팅이 대상키로 되찾는다). 지어내지 않는다. */
+function eqFileOf(target){
+  const p = target.split('|');
+  if (p[0] === 'prec' && C['prec_특허_리스트.json']){ const r = C['prec_특허_리스트.json'].판례.find(x => x.id === p[2]);
+    if (!r) return ''; return r.요약본 ? ('판례\\' + r.연도폴더 + '\\' + r.요약본 + '.md') : (r.원본 ? ('판례\\특허판례원본\\' + r.id + '.md') : ''); }
+  if (p[0] === 'jo'){ const B = C['jo_' + p[1] + '_본문.json']; const j = B && B.조 && B.조[p[2]]; return (j && j.파일) ? j.파일 : ''; }
+  return '';
+}
+function eqRail(target){ const g = target.split('|')[0]; return { prec: '판례', jo: '조문', cha2: '2차', jimun: '원장', note: '노트' }[g] || g; }
+function eqAdd(target, part, quote, ev, existing){
+  target = eqNorm(target);
+  const body = popShell('', (existing ? '✎ 수정 — 고치기' : '✎ 수정 — 적어 두기') + ' · ' + eqRail(target));
+  body.classList.add('eqform');
+  body.appendChild(el('div', 'cdim', target + (part ? ' · ' + part : ' · (문서 통째)') + (existing ? '' : ' · ' + (eqFileOf(target) || '(파일은 채팅이 대상키로 되찾는다)'))));
+  if (quote) body.appendChild(el('div', 'q', '원문: ' + quote));
+  const sel = el('select', 'sel'); EQ_KINDS.forEach(k => { const o = el('option', '', k); o.value = k; if (existing && existing.kind === k) o.selected = true; sel.appendChild(o); });
+  body.appendChild(el('div', 'grp', '갈래')); body.appendChild(sel);
+  body.appendChild(el('div', 'grp', '바꿀 내용 (필수)'));
+  const ta = el('textarea'); ta.value = existing ? (existing.note || '') : ''; ta.placeholder = '어떻게 고칠지 — 채팅이 이 글로 볼트 지시서를 만든다'; body.appendChild(ta);
+  const row = el('div', 'memobtn');
+  const ok = el('button', 'tool on', existing ? '고침' : '적어 두기');
+  ok.onclick = () => { const note = ta.value.trim(); if (!note){ toast('⚠ 바꿀 내용을 적어라', 1); return; }
+    const A = eqAll().slice();
+    if (existing){ const i = A.findIndex(x => x.k === existing.k); if (i >= 0) A[i] = Object.assign({}, A[i], { kind: sel.value, note: note, at: nowIso().slice(0, 16) }); }
+    else A.unshift({ k: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), at: nowIso().slice(0, 16), who: '나',
+      target: target, part: part || '', file: eqFileOf(target), quote: quote || '', kind: sel.value, note: note, st: '대기' });
+    eqSave(A); closeOne(body.parentNode); toast('✎ 수정 큐에 ' + (existing ? '고쳤다' : '적었다') + ' — 동기화되면 채팅이 읽는다'); render(); };
+  row.appendChild(ok);
+  if (existing){ const del = el('button', 'tool', '🗑 지우기'); del.onclick = () => { if (!confirm('이 수정 항목을 지운다?')) return; eqSave(eqAll().filter(x => x.k !== existing.k)); closeOne(body.parentNode); render(); }; row.appendChild(del);
+    const stb = el('select', 'sel'); ['대기', '보류', '반영됨'].forEach(s => { const o = el('option', '', s); o.value = s; if (existing.st === s) o.selected = true; stb.appendChild(o); });
+    stb.onchange = () => { const A = eqAll().slice(); const i = A.findIndex(x => x.k === existing.k); if (i >= 0){ A[i] = Object.assign({}, A[i], { st: stb.value }); eqSave(A); } }; row.appendChild(stb); }
+  body.appendChild(row); showPop(ev); setTimeout(() => ta.focus(), 50);
+}
+/* 글줄의 ✎ 표식 — 포스트잇 🗒 와 나란히 · 누르면 편집/삭제 */
+function eqFlagWire(lineEl, target, part){
+  target = eqNorm(target);
+  const list = eqFor(target, part); if (!list.length) return;
+  lineEl.classList.add('pitline');
+  list.forEach((e2, i) => { const f = el('span', 'eqflag'); f.style.top = (2 + i * 13) + 'px'; f.title = '✎ ' + e2.kind + ' · ' + String(e2.note || '').slice(0, 44) + ' · ' + e2.st;
+    f.onclick = ev => { ev.stopPropagation(); eqAdd(target, part, e2.quote, ev, e2); }; lineEl.appendChild(f); });
+}
+function eqHeadBtn(target, chips){
+  target = eqNorm(target);
+  const n = eqAll().filter(x => x.target === target && x.st === '대기').length;
+  const b = el('span', 'chip c-card', '✎' + (n ? ' ' + n : ''));
+  b.title = '✎ 수정 — 이 문서 통째(줄 없음) 지시를 적어 둔다' + (n ? ' · 대기 ' + n : ''); b.style.cursor = 'pointer';
+  b.onclick = ev => { ev.stopPropagation(); if (n){ popEq(ev, target); } else eqAdd(target, '', '', ev); };
+  chips.appendChild(b);
+}
+function eqGo(x){
+  const p = x.target.split('|');
+  if (p[0] === 'prec'){ S.tab = 'prec'; S.prec = p[2]; S.precTab = (x.part || '').indexOf('sum/') === 0 ? '요약' : ((x.part || '').indexOf('raw/') === 0 ? '원문' : S.precTab); }
+  else if (p[0] === 'jo'){ S.tab = 'jo'; if (LAWS.indexOf(p[1]) >= 0) S.law = p[1]; S.jo = p[2]; }
+  else if (p[0] === 'cha2'){ S.tab = 'cha2'; }
+  else { toast('이 갈래는 자리 이동을 아직 안 만들었다 — ' + x.target); return; }
+  closeAllPops(); render();
+}
+function popEq(ev, onlyTarget){
+  const body = popShell('cell', '✎ 수정 큐 — 볼트에서 고칠 자리');
+  const A = eqAll().slice().sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
+  const f = { rail: '', st: '', kind: '' };
+  const bar = el('div', 'memobtn');
+  const mk = (label, vals, key) => { const s = el('select', 'sel'); const o0 = el('option', '', label); o0.value = ''; s.appendChild(o0);
+    vals.forEach(v => { const o = el('option', '', v); o.value = v; s.appendChild(o); }); s.onchange = () => { f[key] = s.value; draw(); }; bar.appendChild(s); };
+  mk('레일 전부', ['판례', '조문', '2차', '원장', '노트'], 'rail'); mk('상태 전부', ['대기', '보류', '반영됨'], 'st'); mk('갈래 전부', EQ_KINDS, 'kind');
+  body.appendChild(bar);
+  const box = el('div'); body.appendChild(box);
+  function draw(){ box.innerHTML = '';
+    const L = A.filter(x => (!onlyTarget || x.target === onlyTarget) && (!f.rail || eqRail(x.target) === f.rail) && (!f.st || x.st === f.st) && (!f.kind || x.kind === f.kind));
+    if (!L.length){ box.appendChild(el('div', 'cdim', '항목이 없다 — 글줄을 길게 누르거나 3단 머리 ✎ 로 적는다')); return; }
+    L.forEach(x => { const d = el('div', 'eqrow st' + x.st);
+      d.appendChild(el('div', 'eqk', x.at + ' · ' + eqRail(x.target) + ' · ' + x.target + (x.part ? ' · ' + x.part : ' · 문서 통째') + ' · ' + x.kind + ' · ' + x.st));
+      if (x.quote) d.appendChild(el('div', 'q', '원문: ' + String(x.quote).slice(0, 80)));
+      d.appendChild(el('div', 'eqn', x.note || ''));
+      const r = el('div', 'memobtn');
+      const go = el('button', 'tool', '↗ 그 자리'); go.onclick = e2 => { e2.stopPropagation(); eqGo(x); };
+      const ed = el('button', 'tool', '✎ 고치기'); ed.onclick = e2 => { e2.stopPropagation(); eqAdd(x.target, x.part, x.quote, e2, x); };
+      const sts = el('select', 'sel'); ['대기', '보류', '반영됨'].forEach(s => { const o = el('option', '', s); o.value = s; if (x.st === s) o.selected = true; sts.appendChild(o); });
+      sts.onclick = e2 => e2.stopPropagation(); sts.onchange = () => { const B = eqAll().slice(); const i = B.findIndex(y => y.k === x.k); if (i >= 0){ B[i] = Object.assign({}, B[i], { st: sts.value }); eqSave(B); x.st = sts.value; draw(); } };
+      r.appendChild(go); r.appendChild(ed); r.appendChild(sts); d.appendChild(r);
+      d.onclick = () => eqGo(x); box.appendChild(d); });
+  }
+  draw();
+  body.appendChild(el('div', 'cdim', '동기화되면 채팅이 studyplandata\\jopangi\\기록.json 에서 대기 항목을 읽는다. 채팅에 「수정 큐 봐」 라고 하면 된다. (⤓ 기록 내보내기도 그대로 쓸 수 있다)'));
+  const row = el('div', 'memobtn');
+  const inp = el('input'); inp.type = 'file'; inp.accept = '.json,application/json'; inp.style.display = 'none';
+  inp.onchange = () => { if (!inp.files || !inp.files[0]) return; const fr = new FileReader();
+    fr.onload = () => { let d = null; try { d = JSON.parse(fr.result); } catch (e) { toast('⚠ JSON 을 읽지 못했다', 1); return; }
+      if (!d || typeof d !== 'object'){ toast('⚠ applied 파일이 아니다', 1); return; }
+      const B = eqAll().slice(); let n = 0;
+      B.forEach((x, i) => { const a = d[x.k]; if (a && typeof a === 'object'){ B[i] = Object.assign({}, x, { st: a.st || '반영됨', appliedAt: a.at || nowIso().slice(0, 16), memo: a.memo || '' }); n++; } });
+      eqSave(B); toast('가져오기 — ' + n + '건을 짝지어 상태를 덮었다'); closeOne(body.parentNode); render(); };
+    fr.readAsText(inp.files[0]); };
+  const im = el('button', 'tool', '⤒ 가져오기 (applied.json)'); im.onclick = () => inp.click();
+  row.appendChild(im); row.appendChild(inp); body.appendChild(row);
+  showPop(ev);
 }
 function recImport(file, after){
   const fr = new FileReader();
@@ -2051,8 +2421,15 @@ function popRec(ev){
   slb.onclick = ev2 => studyLogPop(ev2);
   row.appendChild(slb);
   body.appendChild(row);
-  body.appendChild(el('div', 'cdim',
-    'GAS(기기 사이 동기화)는 다음 지시서다 — 지금은 이 브라우저에만 남는다.'));
+  /* ★ recsync §C·§D — 동기화는 헤더 칩이 한다 · 여기엔 토큰 칸과 사고 복구용 강제 버튼 */
+  body.appendChild(el('div', 'grp', '🔄 기록 동기화 — ' + SYNC_REPO + ' · ' + SYNC_PATH + ' (필기 ink 제외 · 3분 · 칸 단위 최신 승)'));
+  const srow = el('div', 'memobtn');
+  const tkb = el('button', 'tool', (syncToken() ? '🔑 토큰 바꾸기' : '🔑 토큰 넣기')); tkb.onclick = () => { closeOne(body.parentNode); syncTokenPrompt(); };
+  const syb = el('button', 'tool on', '🔄 지금 동기화'); syb.onclick = () => { closeOne(body.parentNode); syncRecords(); };
+  const up = el('button', 'tool', '⬆ 강제 올리기'); up.title = '이 기기 기록으로 원격을 덮는다 — 첫 판·사고 복구용'; up.onclick = () => { closeOne(body.parentNode); recForcePush(); };
+  const dn = el('button', 'tool', '⬇ 강제 받기'); dn.title = '원격 기록으로 이 기기를 덮는다 — 첫 판·사고 복구용'; dn.onclick = () => { closeOne(body.parentNode); recForcePull(); };
+  srow.appendChild(tkb); srow.appendChild(syb); srow.appendChild(up); srow.appendChild(dn); body.appendChild(srow);
+  body.appendChild(el('div', 'cdim', '⚠ 강제 버튼은 평상시에 쓰지 마라. 첫 판 = PC 에서 ⬆ 강제 올리기 한 번 → 다른 기기에서 ⬇ 강제 받기 한 번. 서버가 비었는데 「강제 받기」를 누르면 그 기기 기록이 빈 것으로 덮인다.'));
   showPop(ev);
 }
 
@@ -4343,6 +4720,7 @@ async function viewPrec(){
   chips.appendChild(el('span','chip c-card','🃏'));
   {const n=pitCount('prec|'+cur.id+SEP);   /* ★ v3-H §4 — 카드 머리 「🗒 메모 N」 */
    if(n)chips.appendChild(el('span','chip c-quiz','🗒 메모 '+n));}
+  eqHeadBtn('prec|'+subj+'|'+cur.id,chips);   /* ★ recsync §E — ✎ 이 문서 통째 */
   {const Cc=CITE[cur.id]||{};const ni=(Cc.인용||[]).length,no=(Cc.피인용||[]).length;   /* ★ 판 3 §3-3 — 인용 N · 피인용 N (1단 팝업) */
    const c=el('span','chip c-prec','🔗 인용 '+ni+' · 피인용 '+no);
    if(ni||no||(Cc.밖&&Cc.밖.length)){c.style.cursor='pointer';c.onclick=ev=>precCitePop(cur,Cc,P,ev);}
@@ -4484,6 +4862,7 @@ document.addEventListener('selectionchange', () => { if (PITCXL) PITCXL(); });
 function pitWire(lineEl, target, struct, text){
   if (!lineEl || lineEl._pit) return; lineEl._pit = 1;
   text = String(text || '');
+  if (typeof eqFlagWire === 'function') eqFlagWire(lineEl, target, struct);   /* ★ recsync §E — ✎ 표식 */
   const pref = Math.max(0, (lineEl.textContent || '').length - text.length);
   const list = pitFor(target, struct);
   if (list.length){
@@ -4569,12 +4948,17 @@ function pitAsk(lineEl, target, struct, text, pref, ev){
   const word = (parts[wi] || '').trim();
   if (!word) return;
   document.querySelectorAll('.pitmenu').forEach(x => x.remove());
-  const m = el('div', 'pitmenu', '🗒 메모 붙이기 — 「' + word.slice(0, 12) + '」');
-  m.style.left = Math.min(ev.clientX, innerWidth - 200) + 'px';
+  const m = el('div', 'pitmenu');
+  const m1 = el('span', 'mi', '🗒 메모 붙이기 — 「' + word.slice(0, 12) + '」');
+  m1.onclick = () => { m.remove(); pitEdit(target, struct, wi, word, ev); };
+  const m2 = el('span', 'mi', '✎ 수정 — 볼트에서 고칠 자리로 적어 둔다');   /* ★ recsync §E · editq §2 */
+  m2.onclick = () => { m.remove(); const s0 = window.getSelection(); const q = (s0 && !s0.isCollapsed && lineEl.contains(s0.anchorNode)) ? s0.toString().trim() : word;
+    eqAdd(target, struct, q, ev); };
+  m.appendChild(m1); m.appendChild(m2);
+  m.style.left = Math.min(ev.clientX, innerWidth - 240) + 'px';
   m.style.top = (ev.clientY + 12) + 'px';
-  m.onclick = () => { m.remove(); pitEdit(target, struct, wi, word, ev); };
   document.body.appendChild(m);
-  setTimeout(() => m.remove(), 2600);
+  setTimeout(() => m.remove(), 3600);
 }
 /* 옛 2차 클릭 메모(jopangi.memo.<file>) → 포스트잇 1회 이사. 원본 층은 둔다(§7-c).
    같은 키가 이미 있으면 건너뛴다 — 표식 없이도 멱등이다. */
@@ -8326,6 +8710,7 @@ addEventListener('resize',()=>{
 });
 readHash();
 render();
+try{ recBoot(); }catch(e){ console.warn('recsync boot', e); }   /* ★ recsync — 시작 1회 · 10초 도장 · 3분 동기화 */
 </script>
 </body>
 </html>
