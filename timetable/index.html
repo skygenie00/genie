@@ -615,6 +615,12 @@ tr:hover .lsx{color:#c33}
 .fcard .fl{display:flex;gap:5px;align-items:center;font-size:10.5px;padding:5px 7px;border-top:1px solid var(--line)}
 .fcard .fl b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 .fcard .fl span{color:#999;font-size:9px;flex:none}
+.fsrch{display:flex;gap:6px;align-items:center;margin-top:8px}
+.fsrch input{flex:1;min-width:0;border:1px solid #ddd;border-radius:5px;padding:5px 7px;font-size:11px;font:inherit}
+.fsrch .fx{border:1px solid #ddd;border-radius:5px;background:#fff;padding:2px 7px;font-size:11px;cursor:pointer;color:#888;flex:none}
+.fsrch .fn{font-size:10px;color:#888;flex:none;min-width:34px;text-align:right}
+.fgrid mark{background:#fff3a0;color:inherit;padding:0 1px;border-radius:2px}
+.fcard .fq{font-size:9.5px;color:#777;padding:0 7px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .shrow{display:flex;gap:6px;align-items:flex-start;font-size:11px;padding:6px 4px;border-bottom:1px solid #f0f0f1}
 .shrow .tx{flex:1;min-width:0;white-space:pre-wrap;word-break:break-all;max-height:60px;overflow:hidden}
 .shrow .ops{display:flex;gap:4px;flex:none}
@@ -3591,12 +3597,37 @@ function archHTML(){ // Archive 묶음 — 첫 탭 Food diary (다른 보관물�
  <div class="views">${[['food','🍚 Food diary']].map(([k,n])=>`<span class="${tab===k?'on':''}" onclick="ui.archTab='${k}';LS.set('tt.ui',ui);render()">${n}</span>`).join('')}</div>
  ${tab==='food'?foodHTML():''}`;
 }
-function foodHTML(){
- const its=foodItems();
- if(!its.length)return'<p style="color:#888;font-size:11px;margin-top:10px">아직 없어 — 「＋ 새 항목」으로 시작. (목록이 안 보이면 잠깐 뒤 새로고침 — 동기화 중)</p>';
- return`<div class="fgrid">${its.map(x=>{
+/* Food diary 검색 (_task_food_search 9/3) */
+/* 검색어는 메모리(foodQv)만 — ui·localStorage·15키 동기화 무접촉(창 닫으면 초기화 · 9/2 접은 상태 규칙과 같음).
+   대상 = 항목의 글자 칸 전부(name·date·recipe·note·by) · 공백으로 나눈 낱말 AND · 대소문자 무시 · 자모 분해 없음.
+   입력 즉시 150ms 디바운스로 카드 격자만 다시 그린다(render() 안 부름 — 입력칸이 안 지워진다). doc 은 this.ownerDocument. */
+let foodQv='',foodQt=null;
+function foodWords(q){return String(q||'').toLowerCase().split(/\s+/).filter(Boolean)}
+function foodText(x){return[x.name,x.date,x.recipe,x.note,x.by].map(v=>String(v||'')).join('\n')}
+function foodSearch(its,q){const ws=foodWords(q);if(!ws.length)return its;return its.filter(x=>{const t=foodText(x).toLowerCase();return ws.every(w=>t.includes(w))})}
+function foodHl(s,ws){s=String(s||'');if(!ws.length)return esc(s);const rx=new RegExp('('+ws.map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')','gi');return s.split(rx).map((p,i)=>i%2?'<mark>'+esc(p)+'</mark>':esc(p)).join('')}
+function foodSnip(x,ws){ // 카드에 안 보이는 칸(재료·만드는 법)에서 맞은 자리 앞뒤를 한 줄
+ if(!ws.length)return'';
+ for(const[lab,v]of[['재료',x.recipe],['만드는 법',x.note]]){const t=String(v||'').replace(/\s+/g,' ');const low=t.toLowerCase();const w=ws.find(z=>low.includes(z));if(!w)continue;
+  const i=low.indexOf(w),s=Math.max(0,i-14),e=Math.min(t.length,i+w.length+24);
+  return`<div class="fq">${lab} · ${s>0?'…':''}${foodHl(t.slice(s,e),ws)}${e<t.length?'…':''}</div>`}
+ return''}
+function foodCards(its,ws){return its.map(x=>{
   const th=x.thumb||(x.imgs&&x.imgs[0])||'';
-  return`<div class="fcard" onclick="foodView('${x.id}')">${th?`<img data-img="${esc(th)}" alt="">`:'<div class="noimg">사진 없음</div>'}<div class="fl"><b>${esc(x.name)}</b><span>${esc(x.date||'')}</span></div></div>`}).join('')}</div>
+  return`<div class="fcard" onclick="foodView('${x.id}')">${th?`<img data-img="${esc(th)}" alt="">`:'<div class="noimg">사진 없음</div>'}<div class="fl"><b>${foodHl(x.name,ws)}</b><span>${foodHl(x.date||'',ws)}</span></div>${foodSnip(x,ws)}</div>`}).join('')
+  ||'<p style="color:#888;font-size:11px;grid-column:1/-1">맞는 항목이 없어</p>'}
+function foodQ(v,doc){clearTimeout(foodQt);foodQt=setTimeout(()=>foodApply(v,doc),150)}
+function foodClear(doc){const D=doc||document;const q=D.getElementById('fdQ');if(q){q.value='';q.focus()}foodApply('',D)}
+function foodApply(v,doc){const D=doc||document;foodQv=String(v||'');const all=foodItems(),ws=foodWords(foodQv),its=foodSearch(all,foodQv);
+ const g=D.getElementById('fdGrid');if(g){g.innerHTML=foodCards(its,ws);fillImgs(g)}
+ const n=D.getElementById('fdN');if(n)n.textContent=its.length+'/'+all.length;
+ const x=D.getElementById('fdX');if(x)x.style.visibility=ws.length?'':'hidden'}
+function foodHTML(){
+ const all=foodItems();
+ if(!all.length)return'<p style="color:#888;font-size:11px;margin-top:10px">아직 없어 — 「＋ 새 항목」으로 시작. (목록이 안 보이면 잠깐 뒤 새로고침 — 동기화 중)</p>';
+ const ws=foodWords(foodQv),its=foodSearch(all,foodQv);
+ return`<div class="fsrch"><input id="fdQ" type="search" value="${esc(foodQv)}" placeholder="검색 — 이름 · 재료 · 만드는 법 · 날짜 (낱말 여럿 = 모두 포함)" oninput="foodQ(this.value,this.ownerDocument)" autocomplete="off"><span class="fx" id="fdX" style="${ws.length?'':'visibility:hidden'}" onclick="foodClear(this.ownerDocument)" title="비우기">✕</span><span class="fn" id="fdN">${its.length}/${all.length}</span></div>
+ <div class="fgrid" id="fdGrid">${foodCards(its,ws)}</div>
  <p style="font-size:10px;color:#888;margin-top:6px">둘이 같이 쓰는 기록(사람 구분 없음) · 노션 Food diary 이관분 포함 · 카드 클릭 = 사진·레시피</p>`;
 }
 /* §B-1(fb20) Food diary 본문 칸 — 「재료」(recipe) · 「만드는 법」(note).
