@@ -2098,15 +2098,22 @@ function imgFetch(name){ if(VIMG.cache.has(name))return VIMG.cache.get(name);
     const b=await r.blob(); return {url:URL.createObjectURL(b),w:rec.w,h:rec.h,bytes:rec.bytes}; })();
   VIMG.cache.set(name,p); p.catch(()=>VIMG.cache.delete(name)); return p; }
 function vimgEl(name){ const w=el('span','vimg'); w.dataset.vimg=name; w.title=name; w.appendChild(el('span','vimg-ph','🖼 '+name)); return w; }
+/* ★ 상표 판 5 add1 — 원문 외부 그림 */
+function vimgUrlEl(url,alt){ const w=el('span','vimg'); w.dataset.vurl=url; w.title=alt||url;
+  const im=el('img','vimg-img'); im.referrerPolicy='no-referrer'; im.loading='lazy'; im.alt=alt||''; im.src=url;
+  im.onerror=()=>{ w.innerHTML=''; const c=el('span','embed dead','🖼 못 받음: '+(alt||url.slice(-30))); c.title=url; w.appendChild(c); };
+  im.onclick=ev=>{ ev.stopPropagation(); vimgPop(alt||'대법원 그림',{url:url,w:im.naturalWidth,h:im.naturalHeight},ev); };
+  w.appendChild(im); return w; }
 async function vimgLoad(w){ if(w._vl)return; w._vl=1; const name=w.dataset.vimg;
   if(!syncToken()){ w.innerHTML=''; const c=el('span','embed dead','🔑 토큰 · '+name); c.title='설정의 토큰(tt.cfg)이 있어야 비공개 저장소의 그림을 받는다'; w.appendChild(c); w._vl=0; return; }
   try{ const r=await imgFetch(name); w.innerHTML=''; const im=el('img','vimg-img'); im.src=r.url; im.alt=name; im.title=name+(r.w?' · '+r.w+'×'+r.h:'');
     im.onclick=ev=>{ ev.stopPropagation(); vimgPop(name,r,ev); }; w.appendChild(im); }
   catch(e){ w.innerHTML=''; const c=el('span','embed dead','🖼 못 받음: '+name); c.title=String(e.message||e); w.appendChild(c); w._vl=0; } }
-function vimgScan(root){ (root||document).querySelectorAll('.vimg:not([data-vl])').forEach(w=>{ w.dataset.vl='1'; vimgLoad(w); }); }
+function vimgScan(root){ (root||document).querySelectorAll('.vimg[data-vimg]:not([data-vl])').forEach(w=>{ w.dataset.vl='1'; vimgLoad(w); }); }
 new MutationObserver(ms=>{ let hit=false; ms.forEach(m=>m.addedNodes.forEach(n=>{ if(n.nodeType===1&&(n.matches&&n.matches('.vimg')||n.querySelector&&n.querySelector('.vimg')))hit=true; })); if(hit)vimgScan(document); }).observe(document.documentElement,{childList:true,subtree:true});
 function vimgPop(name,r,ev){ const body=popShell('cell','🖼 '+name+(r.w?' · '+r.w+'×'+r.h:'')); const im=el('img','vimg-full'); im.src=r.url; im.alt=name; body.appendChild(im); showPop(ev); popSizable(body,'img'); }
-function rawFill(pre,t){ /* 원본 전문 안 `![[x.png]]` 도 같은 자리 */
+function rawFill(pre,t,evs){ /* 원본 전문 안 `![[x.png]]` 도 같은 자리 · add1: 외부 그림 이벤트(a·b) 우선 */
+  if(evs&&evs.length){ let i=0; evs.forEach(e=>{ if(e.a<i)return; pre.appendChild(document.createTextNode(t.slice(i,e.a))); pre.appendChild(e.src==='url'?vimgUrlEl(e.img,e.alt):vimgEl(e.img)); i=e.b; }); pre.appendChild(document.createTextNode(t.slice(i))); return; }
   const rx=/!\[\[([^\]\|#]+?\.(?:png|jpe?g|gif|webp|svg))(?:[|#][^\]]*)?\]\]/gi; let i=0,m,any=false;
   while((m=rx.exec(t))){ any=true; pre.appendChild(document.createTextNode(t.slice(i,m.index))); pre.appendChild(vimgEl(m[1].trim())); i=m.index+m[0].length; }
   if(!any){ pre.textContent=t; return; } pre.appendChild(document.createTextNode(t.slice(i))); }
@@ -5282,6 +5289,7 @@ async function viewPrec(){
 
   const full=await get(PF('전문')).catch(()=>({}));
   const sec=full?(full[cur.id]||{}):{};
+  const gim=(PLAW()==='상표')?((await get(PF('원문그림')).catch(()=>({})))||{}):{}; const gsec=gim[cur.id]||{};   /* ★ 상표 판 5 add1 — 원문 외부 그림 */
   const hasSum=!!cur.요약본, hasRaw=Object.keys(sec).length>0;
   const bar=el('div');bar.style.cssText='display:flex;gap:6px;flex-wrap:wrap;align-items:center';
   [['요약',hasSum],['빈칸',false],['원문',hasRaw]].forEach(([t,ok],i)=>{
@@ -5361,7 +5369,7 @@ async function viewPrec(){
         const mk=el('mark','cj',t.slice(J.at,J.at+L));pre.appendChild(mk);
         pre.appendChild(document.createTextNode(t.slice(J.at+L)));
         setTimeout(()=>{try{mk.scrollIntoView({block:'center'});}catch(e){}},40);}
-      else rawFill(pre,sec[k]);   /* ★ 상표 판 5 §2-4 — 볼트 그림 */
+      else rawFill(pre,sec[k],gsec[k]);   /* ★ 상표 판 5 §2-4 — 볼트 그림 · add1 외부 그림 */
       box.appendChild(pre);
       main.appendChild(box);
     });
