@@ -764,6 +764,10 @@ body.inkon .main,body.inkon .pop{user-select:none}
 const DATA='data/';
 const LAWS=['특허법','상표법','디자인보호법','민사소송법'];
 const SHORT={'특허법':'특허','상표법':'상표','디자인보호법':'디보','민사소송법':'민소'};
+/* ★ 상표 판 3 (2026-09-03 · _task_sang_prec_app.md) — 판례 갤리 데이터 파일명은 S.law 로 짠다(특허 갤리 코드 그대로 · 상표 = 같은 꼴 JSON) */
+const PLAW=()=>SHORT[S.law]||'특허';
+const PF=n=>'prec_'+PLAW()+'_'+n+'.json', NF=()=>'note_'+PLAW()+'.json', JMF=()=>'jimun_'+PLAW()+'.json', CHF=k=>'2cha_본문_'+(k||'사례')+'_'+PLAW()+'.json';
+const PREC_RAWDIR={특허:'특허판례원본',상표:'상표판례원본',디보:'디자인판례원본',민소:'민소판례원본'};
 // 갈래 이동은 **세로 레일 하나만** 한다. 상단 갈래 탭은 없앴다 —
 // 리담 실물이 그렇고(lidamuistructure.md §25) 레일과 3개가 겹쳤다. 8/23 사용자 결정.
 const RAILS=[['jo','조문'],['prec','판례'],['jimun','1차객'],['cha2','2차'],
@@ -2217,8 +2221,8 @@ const EQ_KINDS = ['오타', '내용 정정', '추가', '삭제', '옮기기', '�
 /* file — ⚙ 가 JSON 에 실어 둔 볼트 경로만 쓴다. 없는 갈래는 '' (채팅이 대상키로 되찾는다). 지어내지 않는다. */
 function eqFileOf(target){
   const p = target.split('|');
-  if (p[0] === 'prec' && C['prec_특허_리스트.json']){ const r = C['prec_특허_리스트.json'].판례.find(x => x.id === p[2]);
-    if (!r) return ''; return r.요약본 ? ('판례\\' + r.연도폴더 + '\\' + r.요약본 + '.md') : (r.원본 ? ('판례\\특허판례원본\\' + r.id + '.md') : ''); }
+  if (p[0] === 'prec' && C['prec_' + p[1] + '_리스트.json']){ const r = C['prec_' + p[1] + '_리스트.json'].판례.find(x => x.id === p[2]);   /* ★ 상표 판 3 — 대상키의 법 */
+    if (!r) return ''; return r.요약본 ? ('판례\\' + r.연도폴더 + '\\' + r.요약본 + '.md') : (r.원본 ? ('판례\\' + (PREC_RAWDIR[p[1]] || '특허판례원본') + '\\' + r.id + '.md') : ''); }
   if (p[0] === 'jo'){ const B = C['jo_' + p[1] + '_본문.json']; const j = B && B.조 && B.조[p[2]]; return (j && j.파일) ? j.파일 : ''; }
   if (p[0] === 'card'){   /* ★ 판 4 add5 §2 — card|<kind>|<파일> → 2차 폴더(2cha_보드.json 폴더 · 사례는 기출과 같은 폴더) */
     const B = C['2cha_보드.json']; const subj = SHORT[S.law] || '특허';
@@ -2328,8 +2332,8 @@ function eqGo(x){
 /* ★ 판 4 add1 — 큐 화면의 「⚠ 원문 바뀜」 판정용: 대상키·구조키로 지금 줄 t 를 되찾는다(판례 요약본 · 노트만 · 그 밖 null) */
 async function eqCurText(x){
   try{ const p = String(x.target || '').split('|');
-    if (p[0] === 'prec' && /^sum\//.test(x.part || '')){ const S2 = await get('prec_특허_요약.json'); const r = (S2[p[2]] || {}).행 || []; const row = r[+x.part.slice(4)]; return row ? row.t : null; }
-    if (p[0] === 'note'){ const N = await get('note_특허.json'); const r = ((N[p[2]] || {}).행 || [])[+x.part]; return r ? r.t : null; }
+    if (p[0] === 'prec' && /^sum\//.test(x.part || '')){ const S2 = await get('prec_' + (p[1] || '특허') + '_요약.json'); const r = (S2[p[2]] || {}).행 || []; const row = r[+x.part.slice(4)]; return row ? row.t : null; }
+    if (p[0] === 'note'){ const N = await get('note_' + (p[1] || '특허') + '.json'); const r = ((N[p[2]] || {}).행 || [])[+x.part]; return r ? r.t : null; }
   }catch(e){}
   return null;
 }
@@ -2337,10 +2341,11 @@ async function eqCurText(x){
 function precJoChipEl(k, big){
   const c = el('span', 'chip c-prec', (big ? '⚖ ' : '⚖') + precJoChip(k));
   let jo = null, detail = '';
-  if (k.law === '특허법'){ jo = k.jo; detail = k.detail || ''; } else if (k.law === '구특허법' && k.cur && k.cur.jo){ jo = k.cur.jo; detail = k.cur.detail || ''; }
+  let jlaw = '특허법';   /* ★ 상표 판 3 — 조문키의 법(특허법·상표법)대로 팝업 · 구법 환산은 특허만 */
+  if (k.law && LAWS.indexOf(k.law) >= 0){ jo = k.jo; detail = k.detail || ''; jlaw = k.law; } else if (k.law === '구특허법' && k.cur && k.cur.jo){ jo = k.cur.jo; detail = k.cur.detail || ''; }
   if (jo){ let hl = null; const m = /^([①-⑳])(\d+)?/.exec(detail); if (m) hl = { hang: JOCIRC.indexOf(m[1]) + 1, ho: m[2] ? +m[2] : 0 };
-    c.style.cursor = 'pointer'; c.title = '특허법 ' + jo + (hl ? ' 제' + hl.hang + '항' : '') + ' 팝업';
-    c.onclick = ev => { ev.stopPropagation(); popJo('특허법', jo, ev, 1, hl); }; }
+    c.style.cursor = 'pointer'; c.title = jlaw + ' ' + jo + (hl ? ' 제' + hl.hang + '항' : '') + ' 팝업';
+    c.onclick = ev => { ev.stopPropagation(); popJo(jlaw, jo, ev, 1, hl); }; }
   else { c.style.opacity = '.5'; c.title = k.law === '구특허법' ? '구법 — 현행 환산 미확정(확정표)' : (k.law ? k.law + ' — 조문 팝업 없음' : '규칙 밖 값'); }
   return c;
 }
@@ -2351,7 +2356,7 @@ function giChipEl(g, p){
   if (m){ cha = m[1]; yr = '20' + m[2]; rd = m[3] || ''; no = m[4] || ''; }
   else { m = /^(?:★\s*)?([12])차\s+(\d{4})(?:-(\d+))?(?:-(\d+))?$/.exec(g); if (m){ cha = m[1]; yr = m[2]; rd = m[3] || ''; no = m[4] || ''; } }
   if (m && cha === '1'){ c.style.cursor = 'pointer';
-    const JM = C['jimun_특허.json'];
+    const JM = C[JMF()];
     const q = (JM && rd && no) ? (JM.문제 || []).find(x => String(x.연도) === yr && String(x.회차) === rd && String(x.시험문번) === no) : null;
     if (!rd){ c.style.opacity = '.6'; c.title = '1차객 기출뷰 ' + yr + '년 (회차·문항 미상 — 연도만)'; }
     else if (!no){ c.style.opacity = '.6'; c.title = '1차객 기출뷰 ' + yr + '년 ' + rd + '회 (문번 미상)'; }
@@ -2359,15 +2364,15 @@ function giChipEl(g, p){
     else c.title = '1차객 기출뷰 ' + yr + '년 ' + rd + '회 ' + no + '번';
     c.onclick = ev => { ev.stopPropagation(); giGoTo(yr, rd, no); }; }
   else if (m){ c.style.cursor = 'pointer'; c.title = '2차 기출 ' + yr + '년' + (rd ? ' ' + rd + '회' : '') + (no ? ' 문제 ' + no : '') + ' — 이 판례에 이어진 2차 카드 목록';   /* add4 §4 · add5: 그 문제(회차-N)로 거름 */
-    c.onclick = ev => { ev.stopPropagation(); const pp = p || (S.tab === 'prec' && S.prec && C['prec_특허_리스트.json'] ? (C['prec_특허_리스트.json'].판례 || []).find(x => x.id === S.prec) : null); if (pp) popCardList(pp, '기출', { yr: yr, rd: rd, no: no }, ev, 0); else toast('판례 행이 없다'); }; }
+    c.onclick = ev => { ev.stopPropagation(); const pp = p || (S.tab === 'prec' && S.prec && C[PF('리스트')] ? (C[PF('리스트')].판례 || []).find(x => x.id === S.prec) : null); if (pp) popCardList(pp, '기출', { yr: yr, rd: rd, no: no }, ev, 0); else toast('판례 행이 없다'); }; }
   return c;
 }
 async function giGoTo(year, round, no){
   closeAllPops();
   let q = null;
-  try{ const JM = await get('jimun_특허.json'); if (no) q = (JM.문제 || []).find(x => String(x.연도) === String(year) && String(x.회차) === String(round) && String(x.시험문번) === String(no)); }catch(e){}
+  try{ const JM = await get(JMF()); if (no) q = (JM.문제 || []).find(x => String(x.연도) === String(year) && String(x.회차) === String(round) && String(x.시험문번) === String(no)); }catch(e){}
   if (no && !q) toast('문번 미확정 — ' + year + '년 ' + round + '회 ' + no + '번은 시험문번 확정 문항에 없다 · 그 해 기출뷰로', 1);
-  S.law = '특허법'; S.tab = 'jimun'; S.jimunTab = 'gichul'; S.year = String(year); S.omr = false; S.giWrong = false;
+  S.tab = 'jimun'; S.jimunTab = 'gichul'; S.year = String(year); S.omr = false; S.giWrong = false;   /* ★ 상표 판 3 — 법은 그대로(상표 기출뷰) */
   await render();
   if (q){ const n = document.getElementById('gi-' + giKey(q)); if (n){ n.scrollIntoView({ block: 'center' }); n.classList.add('blkhl'); setTimeout(() => n.classList.remove('blkhl'), 2500); } }
 }
@@ -3008,16 +3013,16 @@ const JP_OTHER=/(실용신안법|상표법|디자인보호법|민사소송법|�
 async function joPrecIdx(){
   if(JOPREC&&JOPRECLAW===S.law)return JOPREC;
   JOPRECLAW=S.law;JOPREC={map:{},src:''};
-  if(S.law!=='특허법')return JOPREC;   // 판례 수집이 특허뿐(지금 규칙)
+  if(S.law!=='특허법'&&S.law!=='상표법')return JOPREC;   // 판례 갤리 = 특허·상표(판 3 상표 9/3)
   const map={};
   const add=(k2,id,tag)=>{if(!id)return;
     const e2=(map[k2]=map[k2]||{});(e2[id]=e2[id]||{})[tag]=1;};
   try{
     const idx=await get('jo_링크역인덱스.json');
-    Object.keys(idx.판례||{}).forEach(k2=>(idx.판례[k2]||[]).forEach(id=>add(k2,id,'a')));
+    const IK=S.law==='특허법'?'판례':'판례_'+PLAW(); Object.keys(idx[IK]||{}).forEach(k2=>(idx[IK][k2]||[]).forEach(id=>add(k2,id,'a')));   /* ★ 상표 판 3 */
   }catch(e){}
   try{
-    const P=await get('prec_특허_리스트.json');
+    const P=await get(PF('리스트'));
     (P.판례||[]).forEach(p=>{(Array.isArray(p.조문)?p.조문:[]).forEach(c=>{
       const s=String(c);
       if(JP_OTHER.test(s))return;               // 「실용신안법4조·33조」 — 항목째 그 법 것
@@ -3026,7 +3031,7 @@ async function joPrecIdx(){
     });});
   }catch(e){}
   try{
-    const F=await get('prec_특허_전문.json');
+    const F=await get(PF('전문'));
     Object.keys(F).forEach(id=>{
       const txt=Object.values(F[id]||{}).filter(x=>typeof x==='string').join('\n');
       const rx=/제(\d+)조(의(\d+))?/g;let m;const seen={};
@@ -3052,7 +3057,7 @@ async function joPrecChip(link){
   link.appendChild(c);
 }
 async function joPrecPop(ent,ev){
-  const P=await get('prec_특허_리스트.json');
+  const P=await get(PF('리스트'));
   const by={};(P.판례||[]).forEach(p=>{by[p.id]=p;});
   const ids=Object.keys(ent).sort((x,y)=>{
     const bx=ent[x].b?0:1,byy=ent[y].b?0:1;   // 요약본(조문 열) 먼저(M13)
@@ -4599,13 +4604,13 @@ function noteBlockRows(rec, id){
 /* ★ 판 4 add5 §1·§2 — 임베드 대상 = 노트 70 + 2차 카드(사례_특허) + 판례 요약본 · {rec, layer, open(ev,depth), pit(대상키)} */
 async function embedTarget(file, id){
   file = String(file || '').split('/').pop().replace(/\.md$/, '');
-  let N = null; try{ N = await get('note_특허.json'); }catch(e){}
-  if (N && N[file]) return { rec: N[file], layer: '노트', pit: 'note|특허|' + file, open: (ev, d) => popNote(file, id, ev, d) };
-  let CH = null; try{ CH = await get('2cha_본문_사례_특허.json'); }catch(e){}
+  let N = null; try{ N = await get(NF()); }catch(e){}
+  if (N && N[file]) return { rec: N[file], layer: '노트', pit: 'note|' + PLAW() + '|' + file, open: (ev, d) => popNote(file, id, ev, d) };
+  let CH = null; try{ CH = await get(CHF('사례')); }catch(e){}
   if (CH && CH[file]) return { rec: CH[file], layer: '2차', pit: 'card|사례|' + file, open: (ev, d) => popCard4('사례', file, ev, d, id) };
-  let P = null; try{ P = await get('prec_특허_리스트.json'); }catch(e){}
+  let P = null; try{ P = await get(PF('리스트')); }catch(e){}
   const pr = P && (P.판례 || []).find(x => x.요약본 === file);
-  if (pr){ let SM = null; try{ SM = await get('prec_특허_요약.json'); }catch(e){}
+  if (pr){ let SM = null; try{ SM = await get(PF('요약')); }catch(e){}
     if (SM && SM[pr.id]) return { rec: SM[pr.id], layer: '요약본', pit: 'prec|' + pr.id, open: (ev, d) => popPrec4(pr.id, ev, d) }; }
   return null;
 }
@@ -4682,7 +4687,7 @@ function popSizable(body, kind){
     hd.addEventListener('pointerup', tend); hd.addEventListener('pointercancel', tend);
   }
 }
-async function noteData(){ const N=await get('note_특허.json').catch(()=>({})); const B=await get('note_backlink.json').catch(()=>({})); return {N,B}; }
+async function noteData(){ const N=await get(NF()).catch(()=>({})); const B=await get('note_backlink.json').catch(()=>({})); return {N,B}; }
 function noteBlChips(key,B,host,depth,ev0){
   const b=B[key]||{}; const kinds=[['판례','판례'],['사례','사례'],['기출','기출'],['GS','GS'],['노트','노트']];
   kinds.forEach(([k,label])=>{ const arr=b[k]||[]; if(!arr.length)return;
@@ -4715,7 +4720,7 @@ async function popNote(file,blockId,ev,depth){
     const wrap=el('div','ntrow'); ents.push({ri:ri,row:row,el:wrap});
     const d=mdLine(el('div','ln'),row);
     d.appendChild(renderLine(row,{label:false,depth:depth}));
-    pitWire(d,'note|특허|'+file,String(ri),row.t||'');   /* 포스트잇·✎ 수정 큐 대상키 note|특허|<파일> · 구조키 = 줄번호 */
+    pitWire(d,'note|'+PLAW()+'|'+file,String(ri),row.t||'');   /* 포스트잇·✎ 수정 큐 대상키 note|<법>|<파일> · 구조키 = 줄번호 · ★ 상표 판 3 */
     wrap.appendChild(d);
     if(ri>=hlA&&ri<=hlB){ d.classList.add('blkhl'); if(!hl)hl=wrap; }   /* ★ 판 4 add3 — 문단 전체 강조 · 스크롤은 첫 줄로 */
     if(row.id){ const bl=el('div','ntbl'); noteBlChips(file+'#^'+row.id,B,bl,depth,ev); wrap.appendChild(bl); }
@@ -4730,8 +4735,8 @@ async function popNoteList(label,key,items,ev,depth){
   showPop(ev); popSizable(body,'list');   /* ★ 판 4 add2 §3 */
   const arr=(items||[]).map(x=>typeof x==='string'?{kind:label,v:x}:x);
   const groups={}; arr.forEach(x=>{(groups[x.kind]=groups[x.kind]||[]).push(x.v);});
-  const P=await get('prec_특허_리스트.json').catch(()=>({판례:[]})); const by={}; (P.판례||[]).forEach(p=>{by[p.id]=p;});
-  const NN=await get('note_특허.json').catch(()=>({}));   /* ★ 판 4 add3 — 노트 항목 미리보기 = blk 문단 */
+  const P=await get(PF('리스트')).catch(()=>({판례:[]})); const by={}; (P.판례||[]).forEach(p=>{by[p.id]=p;});
+  const NN=await get(NF()).catch(()=>({}));   /* ★ 판 4 add3 — 노트 항목 미리보기 = blk 문단 */
   Object.keys(groups).forEach(kind=>{
     body.appendChild(el('div','grp',kind+' — '+groups[kind].length+'건'));
     groups[kind].forEach(v=>{ const d=el('div','res');
@@ -4751,13 +4756,13 @@ async function popNoteList(label,key,items,ev,depth){
 /* ③ 판례 팝업 — 3단과 같은 요약/원문 렌더(크기만 팝업) · 안의 링크·⤷ 는 3단으로 */
 async function popPrec4(id,ev,depth){
   depth=depth||3;
-  const P=await get('prec_특허_리스트.json').catch(()=>({판례:[]})); const p=(P.판례||[]).find(x=>x.id===id);
+  const P=await get(PF('리스트')).catch(()=>({판례:[]})); const p=(P.판례||[]).find(x=>x.id===id);
   const body=popShell('cell','⚖ '+(p?(p.사건번호||id):id)+(p&&p.전합?' [전합]':''));
   showPop(ev); popSizable(body,'prec');   /* ★ 판 4 add2 §3 */
   if(!p){ body.appendChild(el('div','cdim','리스트에 없는 판례 — '+id)); return; }
   const hd=el('div','memobtn'); const go=el('button','tool on','3단으로 ↗'); go.onclick=()=>{closeAllPops();S.tab='prec';S.prec=id;S.precTab=p.요약본?'요약':'원문';render();}; hd.appendChild(go);
   if(p.설명별칭)hd.appendChild(el('span','chip c-alias',p.설명별칭)); hd.appendChild(el('span','cdim',(p.설명줄||p.사건명||'').slice(0,80))); body.appendChild(hd);
-  const SUM=await get('prec_특허_요약.json').catch(()=>({})); const F=await get('prec_특허_전문.json').catch(()=>({}));
+  const SUM=await get(PF('요약')).catch(()=>({})); const F=await get(PF('전문')).catch(()=>({}));
   const s=SUM[id], sec=F[id]||{};
   const bar=el('div','memobtn'); const cont=el('div'); let tab=(s&&s.행&&s.행.length)?'요약':'원문';
   const draw=()=>{ cont.innerHTML='';
@@ -4769,8 +4774,8 @@ async function popPrec4(id,ev,depth){
 }
 /* ③ 2차 카드 팝업 — renderBody 카드 재사용 */
 async function popCard4(kind,ck,ev,depth,blockId){
-  const name={사례:'사례_특허',기출:'기출_특허',GS:'GS_특허'}[kind]||('사례_특허');
-  const C=await get('2cha_본문_'+name+'.json').catch(()=>({})); const rec=C[ck];
+  const name=(kind||'사례')+'_'+PLAW();   /* ★ 상표 판 3 */
+  const C=await get(CHF(kind)).catch(()=>({})); const rec=C[ck];
   const body=popShell('cell','🧾 '+kind+' · '+String(ck).slice(0,40)+(blockId?' · ^'+blockId:'')); showPop(ev); popSizable(body,'list');
   if(!rec){ body.appendChild(el('div','cdim','본문 JSON 에 없다 — '+name+' / '+ck)); return; }
   const go=el('button','tool on','2차 레일로 ↗'); go.onclick=()=>{closeAllPops();S.tab='cha2';S.boardKind=kind;render();}; body.appendChild(go);
@@ -4781,7 +4786,7 @@ async function popCard4(kind,ck,ev,depth,blockId){
 }
 /* §2-4 요약본 목차 팝업 — 헤딩만 접힌 목록 · › 절 펴기 · 헤딩 글자 클릭 = 3단 요약 탭 그 줄 */
 async function popSumToc(p,ev){
-  const SUM=await get('prec_특허_요약.json').catch(()=>({})); const s=SUM[p.id];
+  const SUM=await get(PF('요약')).catch(()=>({})); const s=SUM[p.id];
   const body=popShell('cell','📑 '+(p.사건번호||p.id)+' — 요약본 목차'); showPop(ev); popSizable(body,'toc');   /* ★ 판 4 add2 §3 */
   const hd=el('div'); hd.appendChild(el('span','cdim',(p.요약본||'')+(p.연도폴더?' · '+p.연도폴더:'')));
   /* ★ 판 4 add2 §4 — 보라 카테고리 칩은 안 그린다(머리 = 사건번호 · 설명줄) */
@@ -4801,7 +4806,7 @@ async function popSumToc(p,ev){
   draw(); body.appendChild(toc);
 }
 async function popRawToc(p,ev){
-  const F=await get('prec_특허_전문.json').catch(()=>({})); const sec=F[p.id]||{};
+  const F=await get(PF('전문')).catch(()=>({})); const sec=F[p.id]||{};
   const body=popShell('cell','📑 '+(p.사건번호||p.id)+' — 원본 5절'); showPop(ev); popSizable(body,'toc');   /* ★ 판 4 add2 §3 */
   const toc=el('div','sumtoc'); let n=0;
   ['판시사항','판결요지','참조조문','참조판례','전문'].forEach(k=>{ if(!sec[k])return; n++; const th=el('div','th l1'); th.appendChild(el('span','tg','›')); const tx=el('span','tx',k+' ('+sec[k].length+'자)'); th.appendChild(tx);
@@ -4880,10 +4885,10 @@ async function precSearch(P, q){
   const qn = precNorm(q); if (!qn) return null;
   const jh = (qn === '전합' || qn === '전원합의체');
   const rx = new RegExp(jh ? '전합|전원합의체' : qn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-  if (!C['prec_특허_전문.json']) toast('전문 5.8MB 를 불러오는 중…');
-  const FULL = await get('prec_특허_전문.json').catch(() => ({}));
-  const SUMM = await get('prec_특허_요약.json').catch(() => ({}));
-  const CITE = await get('prec_특허_인용.json').catch(() => ({}));
+  if (!C[PF('전문')]) toast('전문 5.8MB 를 불러오는 중…');
+  const FULL = await get(PF('전문')).catch(() => ({}));
+  const SUMM = await get(PF('요약')).catch(() => ({}));
+  const CITE = await get(PF('인용')).catch(() => ({}));
   const qid = P.판례.find(p => precNorm(p.id) === qn || precNorm(p.사건번호) === qn);
   const hit = new Map();
   const scan = (r, k, t) => { let m; rx.lastIndex = 0;
@@ -4937,7 +4942,7 @@ function plAll(){ if (!PLREC) PLREC = lsRead(LINK_KEY); return PLREC; }
 function plSave(R){ PLREC = R; lsWrite(LINK_KEY, R, '🔗 내가 이은 판례'); }
 function plOwn(id){ return (plAll()[id] || []).map((x, i) => Object.assign({ k: x.k || 'prec', _i: i, _from: id }, x)); }
 function plIn(id){ const R = plAll(), out = []; Object.keys(R).forEach(a => { if (a === id) return; (R[a] || []).forEach((x, i) => { if ((x.k || 'prec') === 'prec' && x.to === id) out.push(Object.assign({ k: 'prec', _i: i, _from: a, _in: true }, x)); }); }); return out; }
-function plAdd(id, item){ const R = plAll(); const A = (R[id] || []).slice(); A.push(Object.assign({ t: Date.now() }, item)); R[id] = A; plSave(R); }
+function plAdd(id, item){ const R = plAll(); const A = (R[id] || []).slice(); A.push(Object.assign({ t: Date.now(), law: PLAW() }, item)); R[id] = A; plSave(R); }   /* ★ 상표 판 3 — 법 표시(옛 항목 = 특허) */
 function plEdit(from, i, why){ const R = plAll(); if (!R[from] || !R[from][i]) return; R[from] = R[from].slice(); R[from][i] = Object.assign({}, R[from][i], { why: why, t: Date.now() }); plSave(R); }
 function plDel(from, i){ const R = plAll(); if (!R[from]) return; R[from] = R[from].filter((_, j) => j !== i); if (!R[from].length) delete R[from]; plSave(R); }
 function plCount(id){ return plOwn(id).filter(x => x.k === 'prec').length + plIn(id).length; }
@@ -4965,8 +4970,7 @@ async function popCardList(p, kind, year, ev, depth){
   const ylab = (year && typeof year === 'object') ? (year.yr + '년' + (year.rd ? ' ' + year.rd + '회' : '') + (year.no ? ' 문제 ' + year.no : '')) : (year ? year + '년' : '');   /* ★ add5 */
   const body = popShell('cell', '🧾 ' + kind + ' — ' + (p.사건번호 || p.id) + (ylab ? ' · ' + ylab : ''));
   showPop(ev); popSizable(body, 'list');
-  const name = { 사례: '사례_특허', 기출: '기출_특허', GS: 'GS_특허' }[kind] || '사례_특허';
-  const CC = await get('2cha_본문_' + name + '.json').catch(() => null);
+  const CC = await get(CHF(kind)).catch(() => null);   /* ★ 상표 판 3 — 법별 카드 JSON */
   const box = el('div'); body.appendChild(box);
   const draw = () => { box.innerHTML = '';
     let items = cardLinksOf(p).filter(x => x.kind === kind);
@@ -4977,7 +4981,7 @@ async function popCardList(p, kind, year, ev, depth){
       return ck.indexOf(yq.yr) >= 0 || fm.indexOf(yq.yr.slice(2)) >= 0 || x.manual; });
     year = yq ? yq.yr : year;
     box.appendChild(el('div', 'grp', kind + ' — ' + items.length + '건' + (year ? ' (' + year + '년으로 거름)' : '')));
-    if (!CC) box.appendChild(el('div', 'cdim', '2cha_본문_' + name + '.json 이 없다 — ⚙ 가 그 갈래 카드를 아직 안 낸다(칩 수는 ⚙ 이차카드 + 내가 이은 것)'));
+    if (!CC) box.appendChild(el('div', 'cdim', CHF(kind) + ' 이 없다 — ⚙ 가 그 갈래 카드를 아직 안 낸다(칩 수는 ⚙ 이차카드 + 내가 이은 것)'));
     if (!items.length) box.appendChild(el('div', 'cdim', '없다'));
     items.forEach(x => { const d = el('div', 'res lkrow'); d.appendChild(el('b', '', String(x.ck).slice(0, 50))); d.appendChild(el('span', 'lawtag', kind));
       if (x.manual){ d.appendChild(el('span', 'why', '내가 이음' + (x.why ? ' · ' + x.why : ''))); plRowTools(d, x, draw); }
@@ -4992,11 +4996,11 @@ async function popCardList(p, kind, year, ev, depth){
         if (!keys.length) rs.appendChild(el('div', 'cdim', '없다'));
         keys.forEach(k => { const d = el('div', 'res'); d.appendChild(el('b', '', k.slice(0, 50))); d.onclick = e3 => { e3.stopPropagation(); rs.innerHTML = '';
           plWhyForm(rs, '', why => { plAdd(p.id, { k: 'card', kind: ckind, ck: k, why: why }); f.remove(); toast('🔗 2차 카드를 이었다'); draw(); render(); }); }; rs.appendChild(d); }); };
-      sel.onchange = async () => { ckind = sel.value; const nm = { 사례: '사례_특허', 기출: '기출_특허', GS: 'GS_특허' }[ckind]; CK = await get('2cha_본문_' + nm + '.json').catch(() => null); drawR(); };
+      sel.onchange = async () => { ckind = sel.value; CK = await get(CHF(ckind)).catch(() => null); drawR(); };
       inp.oninput = drawR; ['click', 'pointerdown', 'keydown'].forEach(nm => f.addEventListener(nm, e3 => e3.stopPropagation())); box.appendChild(f); drawR(); setTimeout(() => inp.focus(), 30); };
     box.appendChild(add);
     if (kind === '기출'){ const go = el('button', 'tool', '2차 레일 기출' + (year ? ' ' + year : '') + ' ↗'); go.style.marginLeft = '6px';
-      go.onclick = e2 => { e2.stopPropagation(); closeAllPops(); S.law = '특허법'; S.tab = 'cha2'; S.boardKind = '기출'; S.boardView = 'board'; S.series = ''; if (year) S.yearFilter = year; render(); }; box.appendChild(go); }
+      go.onclick = e2 => { e2.stopPropagation(); closeAllPops(); S.tab = 'cha2'; S.boardKind = '기출'; S.boardView = 'board'; S.series = ''; if (year) S.yearFilter = year; render(); }; box.appendChild(go); }
   };
   draw();
 }
@@ -5163,22 +5167,21 @@ async function viewPrec(){
     tree.appendChild(r);
   });
   const lg=el('div','legend');
-  lg.innerHTML='⚖N = 수집 건수<br>특허만 볼트 편입 · 상표 285는 수집만(§7 편입 금지)';
+  lg.innerHTML='⚖N = 볼트 편입 건수(원본 ∪ 요약본)<br>특허·상표 = 볼트 갤리 · 디보·민소는 아직';   /* ★ 상표 판 3 */
   tree.appendChild(lg);
   slot.appendChild(tree);
   slot.appendChild(handle('tree'));
 
-  if(subj!=='특허'){
+  if(!(meta[subj]&&meta[subj].상태==='수집완료')){   /* ★ 상표 판 3 — 볼트 갤리가 있는 법(특허·상표)만 3단 */
     const m=meta[subj]||{상태:'미수집',수:0};
     const main=el('div','main');
-    main.appendChild(emptyBox('⚖',subj+' 판례 — '+m.상태,
-      m.수?('수집 '+m.수+'건 · 볼트 미편입'):'재료가 아직 없다'));
+    main.appendChild(emptyBox('⚖',subj+' 판례 — '+m.상태,'재료가 아직 없다'));
     slot.appendChild(main);return;
   }
 
-  const P=await get('prec_특허_리스트.json');
-  const CITE=await get('prec_특허_인용.json').catch(()=>({}));
-  P.조문목록=await get('jo_특허법_목록.json').catch(()=>({조:[]}));   /* ★ add2 — 1단 조문별 토글 = 조문 레일 순서·제목 */
+  const P=await get(PF('리스트'));
+  const CITE=await get(PF('인용')).catch(()=>({}));
+  P.조문목록=await get('jo_'+S.law+'_목록.json').catch(()=>({조:[]}));   /* ★ 상표 판 3 — 법별 조문 목록 */   /* ★ add2 — 1단 조문별 토글 = 조문 레일 순서·제목 */
   const f=pfGet();
   precFilterUI(tree,P,f);   /* ★ 판 3 §3-1 — 1단 거르기(비활성 select 셋의 자리를 맡는다) */
   const hit=await precSearch(P,S.precQ);   /* ★ 판 3 §3-2 — 2단 검색 */
@@ -5245,7 +5248,7 @@ async function viewPrec(){
   if(!cur){main.appendChild(emptyBox('⚖','왼쪽에서 판례를 고르면 여기에 열린다',
     `원본 ${P.원본}건 · 요약본 ${P.요약본수}건 · 거른 ${arr.length}`));slot.appendChild(main);return;}
 
-  const full=await get('prec_특허_전문.json').catch(()=>({}));
+  const full=await get(PF('전문')).catch(()=>({}));
   const sec=full?(full[cur.id]||{}):{};
   const hasSum=!!cur.요약본, hasRaw=Object.keys(sec).length>0;
   const bar=el('div');bar.style.cssText='display:flex;gap:6px;flex-wrap:wrap;align-items:center';
@@ -5302,7 +5305,7 @@ async function viewPrec(){
     bh.appendChild(el('span','','요약본 — 볼트 md 렌더 (임베드는 미해소)'));
     bh.appendChild(el('span','',cur.요약본||''));
     box.appendChild(bh);
-    const SUM=await get('prec_특허_요약.json').catch(()=>({}));
+    const SUM=await get(PF('요약')).catch(()=>({}));
     const s=SUM[cur.id];
     if(!s||!s.행.length)box.appendChild(el('div','empty','요약본 본문이 비어 있다'));
     else{const JR=S.precJumpRow;S.precJumpRow=null;let jd=null;
@@ -6142,7 +6145,7 @@ async function popPan(caseNo, selfKey, ev){
         '선고 ' + String(p.선고).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')));
       body.appendChild(hd);
       if (p.요약본){
-        const SUM = await get('prec_특허_요약.json').catch(() => ({}));
+        const SUM = await get(PF('요약')).catch(() => ({}));
         const s = SUM[p.id];
         if (s && s.행 && s.행.length){
           const bx = el('div', 'box');
@@ -6151,7 +6154,7 @@ async function popPan(caseNo, selfKey, ev){
           body.appendChild(bx);
         } else body.appendChild(el('div', 'cdim', '요약본 본문이 비어 있다'));
       } else {
-        const F = await get('prec_특허_전문.json').catch(() => ({}));
+        const F = await get(PF('전문')).catch(() => ({}));
         const sec = F[p.id] || {};
         if (sec.판결요지){ const bx = el('div', 'box');
           bx.appendChild(el('pre', 'raw', sec.판결요지)); body.appendChild(bx); }
@@ -7209,13 +7212,13 @@ let JOKEY = null, PANIDX = null, P7LID = null;
 /* ★ v3-N §1 — PANIDX 지연 구축. 조문 탭으로 직행하면 1차객 로더가 안 돌아 null 이었고,
    popPan 이 요약본이든 수집본이든 전부 「수집본 없음」을 냈다(실측 :4657·:5733·:7027). */
 async function panIdx(){
-  if (PANIDX) return PANIDX;
+  if (PANIDX && PANIDX._law === S.law) return PANIDX;
   try{
-    const PL = await get('prec_특허_리스트.json');
+    const PL = await get(PF('리스트'));
     const M = {};
     (PL.판례 || []).forEach(p => { const k = String(p.사건번호 || p.id || '').replace(/\s/g, '');
       if (k && !M[k]) M[k] = p; });
-    PANIDX = M;
+    M._law = S.law; PANIDX = M;   /* ★ 상표 판 3 — 법별 캐시 */
   }catch(e){}
   return PANIDX || {};
 }
@@ -9058,9 +9061,9 @@ $('#skin').oninput=async e=>{
   }
   if(SKON.prec){
     try{
-      const P=await get('prec_특허_리스트.json');
+      const P=await get(PF('리스트'));
       const hit=P.판례.filter(p=>((p.사건번호||'')+(p.사건명||'')+(p.별칭||'')).includes(q)).slice(0,40);
-      box.appendChild(el('div','grp','⚖ 판례 — '+hit.length+'건'+(SHORT[S.law]==='특허'?'':' (특허만 수집돼 있다)')));
+      box.appendChild(el('div','grp','⚖ 판례 — '+hit.length+'건'+(['특허','상표'].indexOf(SHORT[S.law])>=0?'':' (이 법은 판례 갤리가 아직 없다)')));
       hit.forEach(p=>skRow(box,'prec',(p.사건번호||p.파일)+(p.전합?' [전합]':''),(p.사건명||p.별칭||'').slice(0,50),p.원본?'원본':'요약본',
         ev=>{closeSk();
           const b=popShell('','⚖ '+(p.사건번호||p.파일));
