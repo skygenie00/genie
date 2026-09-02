@@ -182,6 +182,9 @@ mark.cj{background:#fff3a3;outline:2px solid #e0a800}
 .embx .emhead{display:none;color:#9a958b;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .embx.fold .emhead{display:block} .embx.fold .embody{display:none}
 .embx .ln{margin:1px 0}
 .embed.dead{opacity:.5;cursor:default;border-style:dashed;color:#9a958b}
+.vimg{display:block;margin:4px 0}.vimg .vimg-ph{display:inline-block;font-size:11px;color:#9a958b;background:#f6f5f1;border:1px dashed #d9d6ce;border-radius:5px;padding:2px 6px}
+.vimg .vimg-img{max-width:100%;height:auto;border-radius:6px;border:1px solid #e6e3dc;cursor:zoom-in;background:#fafaf8}
+.vimg-full{display:block;max-width:none}
 .lkrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap} .lkrow .why{color:#6b675f;font-size:11.5px} .lkrow .tool{padding:1px 6px;font-size:11px}
 .lkform input{width:100%;box-sizing:border-box;margin:3px 0} .lkform .res{cursor:pointer}   /* ★ 판 4 add4 §2·§4 */
 .pop .prsz{position:sticky;bottom:0;display:block;width:16px;height:16px;margin:-16px 0 0 auto;cursor:nwse-resize;background:linear-gradient(135deg,transparent 55%,#b5b1a8 55%);border-radius:0 0 9px 0;touch-action:none;z-index:2}
@@ -1055,7 +1058,9 @@ function renderLine(row,opt){
         s.onclick=ev=>{ev.stopPropagation();popFoot(e.id,ev,opt.rec,(opt.depth||0)+1);};
         top().appendChild(s);
       }
-      if(e.k==='E'&&e.a===i&&e.miss){   /* ★ 판 4 add4 §1 — ⚙ 가 못 찾은 임베드(ⓑ 블록 없음 · ⓒ 파일 밖) = 흐린 칩 · 클릭 없음 */
+      if(e.k==='E'&&e.a===i&&e.img){   /* ★ 상표 판 5 §2-4 — 볼트 그림 */ /* 임베드가 그림이면 <img> 자리(지연 로드) */
+        top().appendChild(vimgEl(e.img)); }
+      else if(e.k==='E'&&e.a===i&&e.miss){   /* ★ 판 4 add4 §1 — ⚙ 가 못 찾은 임베드(ⓑ 블록 없음 · ⓒ 파일 밖) = 흐린 칩 · 클릭 없음 */
         const s=el('span','embed dead','⤷ 못 찾음 · '+e.to); s.title=(e.miss==='c'?'대상 파일이 특허목차 70 밖':'파일은 있으나 블록 ^id 가 없다')+' — _임베드_미해결.csv';
         top().appendChild(s); EMBMISS[e.to]=1; }
       else if(e.k==='E'&&e.a===i){
@@ -2078,6 +2083,33 @@ async function ghRaw(path){
   if (!r.ok) throw new Error('GET ' + path + ' ' + r.status);
   return await r.text();
 }
+/* ★ 상표 판 5 §2-4 — 볼트 그림 */
+/* 원천 = 비공개 studyplandata `jopangi/img/<sha16>.<ext>` + `jopangi/img_map.json`({원래파일명:{p,w,h,bytes}}) · 공개 genie 에는 그림 없음(D11).
+   민법OX·기록 동기화와 같은 토큰 칸(tt.cfg)·같은 contents API. 세션 캐시만(Map) · IndexedDB 에 저장하지 않는다 · 재방문은 다시 받는다. */
+const VIMG={map:null,mapP:null,cache:new Map()};
+function vimgMap(){ if(VIMG.map)return Promise.resolve(VIMG.map);
+  if(!VIMG.mapP)VIMG.mapP=ghRaw('jopangi/img_map.json').then(t=>{ if(!t)throw new Error('img_map.json 없음'); VIMG.map=JSON.parse(t); return VIMG.map; }).catch(e=>{ VIMG.mapP=null; throw e; });
+  return VIMG.mapP; }
+function imgFetch(name){ if(VIMG.cache.has(name))return VIMG.cache.get(name);
+  const p=(async()=>{ const m=await vimgMap(); const rec=m[name];
+    if(!rec||!rec.p)throw new Error(rec&&rec.skip?rec.skip:'img_map 에 없음');
+    const r=await fetch(ghUrl(rec.p),{headers:{Authorization:'Bearer '+syncToken(),Accept:'application/vnd.github.raw'},cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const b=await r.blob(); return {url:URL.createObjectURL(b),w:rec.w,h:rec.h,bytes:rec.bytes}; })();
+  VIMG.cache.set(name,p); p.catch(()=>VIMG.cache.delete(name)); return p; }
+function vimgEl(name){ const w=el('span','vimg'); w.dataset.vimg=name; w.title=name; w.appendChild(el('span','vimg-ph','🖼 '+name)); return w; }
+async function vimgLoad(w){ if(w._vl)return; w._vl=1; const name=w.dataset.vimg;
+  if(!syncToken()){ w.innerHTML=''; const c=el('span','embed dead','🔑 토큰 · '+name); c.title='설정의 토큰(tt.cfg)이 있어야 비공개 저장소의 그림을 받는다'; w.appendChild(c); w._vl=0; return; }
+  try{ const r=await imgFetch(name); w.innerHTML=''; const im=el('img','vimg-img'); im.src=r.url; im.alt=name; im.title=name+(r.w?' · '+r.w+'×'+r.h:'');
+    im.onclick=ev=>{ ev.stopPropagation(); vimgPop(name,r,ev); }; w.appendChild(im); }
+  catch(e){ w.innerHTML=''; const c=el('span','embed dead','🖼 못 받음: '+name); c.title=String(e.message||e); w.appendChild(c); w._vl=0; } }
+function vimgScan(root){ (root||document).querySelectorAll('.vimg:not([data-vl])').forEach(w=>{ w.dataset.vl='1'; vimgLoad(w); }); }
+new MutationObserver(ms=>{ let hit=false; ms.forEach(m=>m.addedNodes.forEach(n=>{ if(n.nodeType===1&&(n.matches&&n.matches('.vimg')||n.querySelector&&n.querySelector('.vimg')))hit=true; })); if(hit)vimgScan(document); }).observe(document.documentElement,{childList:true,subtree:true});
+function vimgPop(name,r,ev){ const body=popShell('cell','🖼 '+name+(r.w?' · '+r.w+'×'+r.h:'')); const im=el('img','vimg-full'); im.src=r.url; im.alt=name; body.appendChild(im); showPop(ev); popSizable(body,'img'); }
+function rawFill(pre,t){ /* 원본 전문 안 `![[x.png]]` 도 같은 자리 */
+  const rx=/!\[\[([^\]\|#]+?\.(?:png|jpe?g|gif|webp|svg))(?:[|#][^\]]*)?\]\]/gi; let i=0,m,any=false;
+  while((m=rx.exec(t))){ any=true; pre.appendChild(document.createTextNode(t.slice(i,m.index))); pre.appendChild(vimgEl(m[1].trim())); i=m.index+m[0].length; }
+  if(!any){ pre.textContent=t; return; } pre.appendChild(document.createTextNode(t.slice(i))); }
 async function ghSha(path){
   const r = await fetch(ghUrl(path), { headers: { Authorization: 'Bearer ' + syncToken(), Accept: 'application/vnd.github+json' }, cache: 'no-store' });
   if (r.status === 404) return null;
@@ -5090,13 +5122,13 @@ function precFilterUI(tree, P, f){
         const nm = el('span', 'nm', (folded ? '▸ ' : '▾ ') + m.name.replace(/==/g, ''));
         nm.onclick = ev => { ev.stopPropagation(); f.fold['madi:' + m.v] = !folded; uiSave(); render(); };
         r.appendChild(nm);
-        { const ic = el('span', 'cdim', '📄'); ic.title = '목차 노트 팝업 — ' + m.name; ic.style.cssText = 'cursor:pointer;font-size:12px;margin-right:4px';   /* ★ 판 4 §2-2 진입 ④ */
+        if(!/^T\d/.test(m.v)){ const ic = el('span', 'cdim', '📄'); ic.title = '목차 노트 팝업 — ' + m.name; ic.style.cssText = 'cursor:pointer;font-size:12px;margin-right:4px';   /* ★ 판 4 §2-2 진입 ④ · 상표 판 5 — 「교재 7판」 뿌리(T)는 노트가 없어 📄 없음 */
           ic.onclick = ev => { ev.stopPropagation(); popNote(m.name, null, ev, 1); }; r.appendChild(ic); }
         r.appendChild(el('em', '', String(n)));
         r.onclick = () => { if (on) f.madi = f.madi.filter(x => x !== m.v); else f.madi.push(m.v); uiSave(); render(); };
         tree.appendChild(r); return; }
       if (folded && !q) return;
-      item('madi', { v: m.v, name: m.name, note: m.name, test: (p => precMadi(p).indexOf(m.v) >= 0) }, false, 'fsub');   /* ★ 판 4 — 마디 이름 = 노트 파일 */
+      item('madi', { v: m.v, name: m.name, note: (/^T\d/.test(m.v) ? null : m.name), test: (p => precMadi(p).indexOf(m.v) >= 0) }, false, 'fsub');   /* ★ 판 4 — 마디 이름 = 노트 파일 · 상표 판 5 — 교재 7판 장(T)은 노트 없음 */
     });
     item('madi', { v: '미분류', name: '미분류', test: (p => precMadi(p)[0] === '미분류') }, false);
   });
@@ -5329,7 +5361,7 @@ async function viewPrec(){
         const mk=el('mark','cj',t.slice(J.at,J.at+L));pre.appendChild(mk);
         pre.appendChild(document.createTextNode(t.slice(J.at+L)));
         setTimeout(()=>{try{mk.scrollIntoView({block:'center'});}catch(e){}},40);}
-      else pre.textContent=sec[k];
+      else rawFill(pre,sec[k]);   /* ★ 상표 판 5 §2-4 — 볼트 그림 */
       box.appendChild(pre);
       main.appendChild(box);
     });
