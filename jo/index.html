@@ -185,6 +185,7 @@ mark.cj{background:#fff3a3;outline:2px solid #e0a800}
 .vimg{display:block;margin:4px 0}.vimg .vimg-ph{display:inline-block;font-size:11px;color:#9a958b;background:#f6f5f1;border:1px dashed #d9d6ce;border-radius:5px;padding:2px 6px}
 .vimg .vimg-img{max-width:100%;height:auto;border-radius:6px;border:1px solid #e6e3dc;cursor:zoom-in;background:#fafaf8}
 .vimg-full{display:block;max-width:none}
+a.mdlink{color:#1a5fb4;text-decoration:underline dotted;cursor:pointer}a.mdlink:visited{color:#1a5fb4}
 .lkrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap} .lkrow .why{color:#6b675f;font-size:11.5px} .lkrow .tool{padding:1px 6px;font-size:11px}
 .lkform input{width:100%;box-sizing:border-box;margin:3px 0} .lkform .res{cursor:pointer}   /* ★ 판 4 add4 §2·§4 */
 .pop .prsz{position:sticky;bottom:0;display:block;width:16px;height:16px;margin:-16px 0 0 auto;cursor:nwse-resize;background:linear-gradient(135deg,transparent 55%,#b5b1a8 55%);border-radius:0 0 9px 0;touch-action:none;z-index:2}
@@ -1011,7 +1012,8 @@ function renderLine(row,opt){
      while((fm=rf.exec(t))){push(opens,fm.index,{md:'mdmark'});push(closes,fm.index+fm[0].length,{md:'mdmark'});
        if(fm[1]!=null)fopen={at:fm.index+fm[0].length,color:fm[1]};
        else if(fopen){if(fm.index>fopen.at){push(opens,fopen.at,{md:'mdcolor',color:fopen.color});push(closes,fm.index,{md:'mdcolor'});}fopen=null;}}
-     (row.e||[]).forEach(e=>{if(e.k==='E'&&e.b>e.a){push(opens,e.a,{md:'mdmark'});push(closes,e.b,{md:'mdmark'});}});}
+     (row.e||[]).forEach(e=>{if(e.k==='E'&&e.b>e.a){push(opens,e.a,{md:'mdmark'});push(closes,e.b,{md:'mdmark'});}
+       if(e.k==='U'&&e.b>e.a){push(opens,e.a,{md:'mdmark'});push(closes,e.la,{md:'mdmark'});push(opens,e.la,{md:'mdlink',href:e.to});push(closes,e.lb,{md:'mdlink'});push(opens,e.lb,{md:'mdmark'});push(closes,e.b,{md:'mdmark'});}});}   /* ★ 상표 판 5 add1 §1b — 요약본 외부 그림·링크 */
     const mb=/\s*\^[0-9a-f]{6}\s*$/.exec(t);
     if(mb){push(opens,mb.index,{md:'blockid'});push(closes,n,{md:'blockid'});}
     let pos=t.indexOf('**');
@@ -1059,7 +1061,7 @@ function renderLine(row,opt){
         top().appendChild(s);
       }
       if(e.k==='E'&&e.a===i&&e.img){   /* ★ 상표 판 5 §2-4 — 볼트 그림 */ /* 임베드가 그림이면 <img> 자리(지연 로드) */
-        top().appendChild(vimgEl(e.img)); }
+        top().appendChild(e.src==='url'?vimgUrlEl(e.img,e.alt):vimgEl(e.img)); }   /* ★ 상표 판 5 add1 §1b — 요약본 외부 그림·링크 */
       else if(e.k==='E'&&e.a===i&&e.miss){   /* ★ 판 4 add4 §1 — ⚙ 가 못 찾은 임베드(ⓑ 블록 없음 · ⓒ 파일 밖) = 흐린 칩 · 클릭 없음 */
         const s=el('span','embed dead','⤷ 못 찾음 · '+e.to); s.title=(e.miss==='c'?'대상 파일이 특허목차 70 밖':'파일은 있으나 블록 ^id 가 없다')+' — _임베드_미해결.csv';
         top().appendChild(s); EMBMISS[e.to]=1; }
@@ -1078,7 +1080,8 @@ function renderLine(row,opt){
       if(o.mk&&o.mk.t==='tag'&&o.mk.v&&((mkAll()[o.mk._k]||{}).side)==='pre')
         top().appendChild(stkChipEl(o.mk,opt,row));
       let node;
-      if(o.md){node=o.md==='mdbold'?el('strong'):el('span',o.md);if(o.md==='mdcolor'&&o.color)node.style.color=o.color;}   /* ★ 판 4 §2-1 · add4 색 */
+      if(o.md==='mdlink'){node=el('a','mdlink');node.href=o.href;node.target='_blank';node.rel='noopener';node.title=o.href;node.onclick=ev=>ev.stopPropagation();}   /* ★ 상표 판 5 add1 §1b — 요약본 외부 그림·링크 */
+      else if(o.md){node=o.md==='mdbold'?el('strong'):el('span',o.md);if(o.md==='mdcolor'&&o.color)node.style.color=o.color;}   /* ★ 판 4 §2-1 · add4 색 */
       else if(o.pl){node=el('span','plink'+(o.pl.j?'':' dead'));   /* ★ 판 4 §2-2 — <사건번호> → ③ 판례 팝업 · 깊이 3 이면 3단으로 */
         if(o.pl.j){const pid=o.pl.j;node.onclick=ev=>{ev.stopPropagation();const d=opt.depth||0;
           if(d>=3){closeAllPops();S.tab='prec';S.prec=pid;S.precTab='요약';render();}else popPrec4(pid,ev,d+1);};}
@@ -2113,7 +2116,7 @@ function vimgScan(root){ (root||document).querySelectorAll('.vimg[data-vimg]:not
 new MutationObserver(ms=>{ let hit=false; ms.forEach(m=>m.addedNodes.forEach(n=>{ if(n.nodeType===1&&(n.matches&&n.matches('.vimg')||n.querySelector&&n.querySelector('.vimg')))hit=true; })); if(hit)vimgScan(document); }).observe(document.documentElement,{childList:true,subtree:true});
 function vimgPop(name,r,ev){ const body=popShell('cell','🖼 '+name+(r.w?' · '+r.w+'×'+r.h:'')); const im=el('img','vimg-full'); im.src=r.url; im.alt=name; body.appendChild(im); showPop(ev); popSizable(body,'img'); }
 function rawFill(pre,t,evs){ /* 원본 전문 안 `![[x.png]]` 도 같은 자리 · add1: 외부 그림 이벤트(a·b) 우선 */
-  if(evs&&evs.length){ let i=0; evs.forEach(e=>{ if(e.a<i)return; pre.appendChild(document.createTextNode(t.slice(i,e.a))); pre.appendChild(e.src==='url'?vimgUrlEl(e.img,e.alt):vimgEl(e.img)); i=e.b; }); pre.appendChild(document.createTextNode(t.slice(i))); return; }
+  if(evs&&evs.length){ let i=0; evs.forEach(e=>{ if(e.a<i)return; pre.appendChild(document.createTextNode(t.slice(i,e.a))); if(e.src==='link'){ const a=el('a','mdlink',t.slice(e.la,e.lb)); a.href=e.to; a.target='_blank'; a.rel='noopener'; a.title=e.to; pre.appendChild(a); } else pre.appendChild(e.src==='url'?vimgUrlEl(e.img,e.alt):vimgEl(e.img)); i=e.b; }); pre.appendChild(document.createTextNode(t.slice(i))); return; }   /* ★ 상표 판 5 add1 §1b — 요약본 외부 그림·링크 */
   const rx=/!\[\[([^\]\|#]+?\.(?:png|jpe?g|gif|webp|svg))(?:[|#][^\]]*)?\]\]/gi; let i=0,m,any=false;
   while((m=rx.exec(t))){ any=true; pre.appendChild(document.createTextNode(t.slice(i,m.index))); pre.appendChild(vimgEl(m[1].trim())); i=m.index+m[0].length; }
   if(!any){ pre.textContent=t; return; } pre.appendChild(document.createTextNode(t.slice(i))); }
