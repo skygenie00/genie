@@ -4907,12 +4907,13 @@ async function popCard4(kind,ck,ev,depth,blockId,tab){   /* ★ 2차 탭 판 1 �
   const pop=body.parentNode;
   S.cha2Sel='card|'+kind+'|'+ck; try{ c2Mark(S.cha2Sel,false); }catch(e){}   /* 열린 카드 = 보드·목록 상시 강조(메모 add1 §3 준용) */
   if(!rec&&!gv){ body.appendChild(el('div','cdim','본문 JSON 에 없다 — '+name+' / '+ck)); return; }
+  if(rec&&rec.fm&&Object.keys(rec.fm).length){ const ch=el('div','chips'); Object.entries(rec.fm).forEach(([k,v])=>{ if(k==='해설')return; const s=Array.isArray(v)?v.join(' · '):String(v||''); if(s)ch.appendChild(el('span','chip c-src',k+': '+s.slice(0,40))); }); if(ch.childNodes.length)body.appendChild(ch); }   /* ★ 2차 탭 판 1 add1 — §11 fm 칩(배열은 · 로 이어) · 해설은 위 링크 칩으로 */
   const top=el('div'); top.style.cssText='display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px';
   const go=el('button','tool on','2차 레일로 ↗'); go.onclick=()=>{closeAllPops();S.tab='cha2';S.boardKind=kind;S.cha2Sel='card|'+kind+'|'+ck;render();}; top.appendChild(go);
   const r0=gv?gv.회차[gv.회차.length-1]:null;
   if(r0){ top.appendChild(el('span','chip c-alias',(c2Bp(r0)||'?')+'점')); if(r0.기출)top.appendChild(el('span','chip c-quiz',r0.기출)); else if(r0.번호)top.appendChild(el('span','chip c-quiz','['+r0.번호+']'));
-    const pdf=c2PdfChip((r0.해설링크||[])[0]||((rec&&rec.fm&&rec.fm.해설)||'')); if(pdf)top.appendChild(pdf); }
-  else if(rec&&rec.fm&&rec.fm.해설){ const pdf=c2PdfChip(rec.fm.해설); if(pdf)top.appendChild(pdf); }
+  }
+  c2PdfChips(c2PdfList(rec&&rec.fm,r0)).forEach(a=>top.appendChild(a));   /* ★ 2차 탭 판 1 add1 — §11 fm.해설 ∪ 채점표 해설링크 */
   const tabs=el('div','gtabs'); const cont=el('div'); let pm=null;
   const draw=t=>{ tabs.querySelectorAll('.tool').forEach(b=>b.classList.toggle('on',b.dataset.t===t)); cont.innerHTML='';
     if(t==='문제'){ if(!rec){ cont.appendChild(el('div','cdim','본문 JSON 에 없다 — '+name+' / '+ck)); return; }
@@ -4920,7 +4921,7 @@ async function popCard4(kind,ck,ev,depth,blockId,tab){   /* ★ 2차 탭 판 1 �
       let hlA=null,hlB=null; if(blockId){ const bi=(rec.행||[]).findIndex(r=>r.id===blockId); if(bi>=0){ const bk2=rec.행[bi].blk; hlA=(bk2&&bk2.a!=null)?bk2.a:bi; hlB=(bk2&&bk2.b!=null)?bk2.b:bi; } }
       const bd=renderBody(rec,ck,{card:true,kind:kind,depth:depth||1,hlA:hlA,hlB:hlB}); cont.appendChild(bd);
       const hl=bd.querySelector('.blkhl'); if(hl)setTimeout(()=>{try{hl.scrollIntoView({block:'center'});}catch(e){}},60); return; }
-    if(t==='해설'){ const w=el('div','cdim','…'); cont.appendChild(w); (pm?Promise.resolve(pm):c2PrecIds()).then(m=>{pm=m; cont.innerHTML=''; cont.appendChild(c2ExplainEl(gv,depth||1,pm));}); return; }
+    if(t==='해설'){ const w=el('div','cdim','…'); cont.appendChild(w); (pm?Promise.resolve(pm):c2PrecIds()).then(m=>{pm=m; cont.innerHTML=''; cont.appendChild(c2ExplainEl(gv,depth||1,pm,rec&&rec.fm));}); return; }
     cont.appendChild(el('div','cdim','…')); c2GradeEl(gv,depth||1).then(n=>{ cont.innerHTML=''; cont.appendChild(n); }); };
   pop._setTab=draw;
   ['문제','해설','채점'].forEach(t=>{const b=el('button','tool',t);b.dataset.t=t;b.onclick=ev2=>{ev2.stopPropagation();draw(t);};tabs.appendChild(b);});
@@ -5926,13 +5927,13 @@ function c2UnitCmp(a,b){const x=parseInt(a,10),y=parseInt(b,10);if(isNaN(x)!==is
 function c2XItems(rec){const out=[];const pool=[];(rec.설문||[]).forEach(q=>(q.항목||[]).forEach(it=>pool.push(it)));(rec.항목||[]).forEach(it=>pool.push(it));
   pool.forEach(it=>{const jd=it.판정||{};const ps=Object.keys(jd).filter(p=>jd[p]&&jd[p].m);if(ps.length&&ps.every(p=>jd[p].m==='X'))out.push(it);});return out;}
 function c2Bp(rec){if(rec.배점)return rec.배점;return (rec.설문||[]).reduce((a,q)=>a+(q.배점||0),0);}
-function c2Info(G,ck){const v=G&&G[ck];const recs=(v&&v.회차)||[];
-  if(!recs.length)return {graded:false,n:0,recs:recs,per:{},pct:null,rev:false,x:0,xmax:0,xp:false,xj:false,who:[],date:'',pdf:'',bp:0};
+function c2Info(G,ck,card){const v=G&&G[ck];const recs=(v&&v.회차)||[];const fm=(card&&card.fm)||{};   /* ★ 2차 탭 판 1 add1 — §11 card(본문 JSON 레코드) 의 fm.해설 */
+  if(!recs.length){const pl=c2PdfList(fm,null);return {graded:false,n:0,recs:recs,per:{},pct:null,rev:false,x:0,xmax:0,xp:false,xj:false,who:[],date:'',pdf:pl[0]||'',pdfs:pl,bp:0};}
   const r=recs[recs.length-1];const bp=c2Bp(r);const per={};let sum=0,cnt=0,xmax=0;
   (r.사람||[]).forEach(p=>{const h=(r.합계||{})[p]||{};const s=(h.점수!=null)?h.점수:null;const pct=(s!=null&&bp)?Math.round(s/bp*100):null;const x=(r.X수||{})[p]||0;per[p]={s:s,pct:pct,bo:h.보완,rg:h.범위,x:x};if(pct!=null){sum+=pct;cnt++;}xmax=Math.max(xmax,x);});
   const xi=c2XItems(r);
   return {graded:true,n:recs.length,recs:recs,rec:r,per:per,bp:bp,pct:cnt?Math.round(sum/cnt):null,rev:recs.some(z=>z.결론반대),x:xi.length,xmax:xmax,
-    xp:xi.some(it=>(it.링크||[]).some(l=>l.k==='prec')),xj:xi.some(it=>(it.링크||[]).some(l=>l.k==='jo')),who:r.사람||[],date:r.채점일||'',pdf:(r.해설링크||[])[0]||''};}
+    xp:xi.some(it=>(it.링크||[]).some(l=>l.k==='prec')),xj:xi.some(it=>(it.링크||[]).some(l=>l.k==='jo')),who:r.사람||[],date:r.채점일||'',pdf:c2PdfList(fm,r)[0]||'',pdfs:c2PdfList(fm,r)};}
 function c2Who(i){const f=c2fGet();const w=f.who[0];if(w&&w!=='both'&&i.per[w])return w;return i.who[0]||'햄찌';}
 function c2Pass(c,f,skip){const i=c.info;
   if(skip!=='grade'&&f.grade.length){if(!f.grade.some(v=>v==='none'?!i.graded:v==='done'?i.graded:v==='rev'?i.rev:v==='multi'?i.n>=2:false))return false;}
@@ -5974,7 +5975,13 @@ function c2ScoreChip(c){const i=c.info;let s,cls='chip c-score';
   else{const w=c2Who(i);const p=i.per[w]||{};s=(p.s!=null?p.s:'?')+'/'+i.bp+(p.pct!=null?' · '+p.pct+'%':'')+(i.n>1?' · '+i.n+'회':'')+(i.rev?' · 결론⚠':'')+(p.x?' · X '+p.x:'');if(p.pct!=null&&p.pct<60)cls+=' low';}
   const ch=el('span',cls,s);ch.title=(i.graded?Object.keys(i.per).map(p=>p+' '+i.per[p].s+'/'+i.bp+(i.per[p].bo!=null?' (보완 '+i.per[p].bo+')':'')).join(' · ')+' — ':'채점표 없음 — ')+'클릭 = 채점 탭';
   ch.onclick=ev=>{ev.stopPropagation();popCard4(S.boardKind,c.file,ev,1,null,'채점');};return ch;}
-function c2PdfChip(u){if(!u)return null;const a=el('a','chip c-pdf','해설 PDF ↗');a.href=u;a.target='_blank';a.rel='noopener';a.title=u+' — 새 창(마이박스 뷰어)';a.onclick=ev=>ev.stopPropagation();return a;}
+const C2_PDFWARN={};
+function c2PdfList(fm,rec){const out=[];const add=v=>{(Array.isArray(v)?v:(v?[v]:[])).forEach(u=>{u=String(u||'').trim();if(!u)return;
+    if(!/^https?:\/\/(naver\.me|mybox\.naver\.com)\//i.test(u)){if(!C2_PDFWARN[u]){C2_PDFWARN[u]=1;console.warn('해설 링크 도메인 밖 — 칩 안 만듦:',u);}return;}
+    if(out.indexOf(u)<0)out.push(u);});};
+  add(fm&&fm.해설);add(rec&&rec.해설링크);return out;}   /* ★ 2차 탭 판 1 add1 — §11 fm.해설(문자열·배열) ∪ 채점표 해설링크 · 도메인 검사 */
+function c2PdfChips(list){return (list||[]).map((u,i)=>c2PdfChip(u,i?('해설 '+(i+1)+' ↗'):'해설 PDF ↗')).filter(Boolean);}
+function c2PdfChip(u,label){if(!u)return null;const a=el('a','chip c-pdf',label||'해설 PDF ↗');a.href=u;a.target='_blank';a.rel='noopener';a.title=u+' — 새 창(마이박스 뷰어)';a.onclick=ev=>ev.stopPropagation();return a;}
 function c2Mark(ck,scroll){document.querySelectorAll('#slot .cell.sel,#slot .prow.sel').forEach(n=>n.classList.remove('sel'));
   const cd=[...document.querySelectorAll('#slot .cell[data-ck]')].find(n=>n.dataset.ck===ck),pr=[...document.querySelectorAll('#slot .prow[data-ck]')].find(n=>n.dataset.ck===ck);
   if(cd)cd.classList.add('sel');if(pr)pr.classList.add('sel');
@@ -5983,7 +5990,7 @@ function c2Mark(ck,scroll){document.querySelectorAll('#slot .cell.sel,#slot .pro
   if(pr){try{pr.scrollIntoView({block:'nearest'});}catch(e){}}}
 let C2IO=null;
 function c2CellEl(c,bodies){const hot=/⚠|누락/.test(c.x.논점||'');const cd=el('div','cell'+(hot?' hot':'')+(c.pass?'':' dim')+(S.cha2Sel===c.ck?' sel':''));cd.dataset.ck=c.ck;
-  const hd=el('div','chd');hd.appendChild(el('span','t',c.series||c.label));hd.appendChild(c2ScoreChip(c));const pdf=c2PdfChip(c.info.pdf);if(pdf)hd.appendChild(pdf);cd.appendChild(hd);
+  const hd=el('div','chd');hd.appendChild(el('span','t',c.series||c.label));hd.appendChild(c2ScoreChip(c));c2PdfChips(c.info.pdfs).forEach(a=>hd.appendChild(a));cd.appendChild(hd);   /* ★ 2차 탭 판 1 add1 — §11 칩 여럿 */
   const ti=el('div','ctitle',c.title);ti.title='눌러서 크게 보기';ti.onclick=e=>{e.stopPropagation();popCard4(S.boardKind,c.file,e,1);};cd.appendChild(ti);
   const ph=el('div','cdim','…');ph.style.minHeight='180px';cd.appendChild(ph);
   cd._lazy=()=>{if(cd._done)return;cd._done=1;try{ph.replaceWith(renderBody(bodies[c.file],c.file,{card:1,kind:S.boardKind}));}catch(e){ph.textContent='본문 렌더 실패';}};   /* 보이는 카드만 본문(사례 171·514 한꺼번에 안 그림) */
@@ -6035,7 +6042,7 @@ async function view2cha(){
       cards.push({file:x.파일,ck:'card|'+S.boardKind+'|'+x.파일,x:Object.assign({셀:k},x),row:r,col:+c,unit:S.boardKind==='GS'?(x.시리즈||''):'',series:x.시리즈||'',yr:x.연도,label:(x.연도?String(x.연도).slice(2)+'-':'')+r+' · '+c,title:x.논점||x.파일});}));
     /* 미배치(회차 토큰 없는 파일 — 기출 갈래에선 사례 파일 94)는 카드·목록에 안 넣는다 · 보드 아래 미배치 상자 그대로 */
   }
-  cards.forEach(c=>{c.info=c2Info(G,c.ck);c.pass=c2Pass(c,f);});
+  cards.forEach(c=>{c.info=c2Info(G,c.ck,bodies[c.file]);c.pass=c2Pass(c,f);});   /* ★ 2차 탭 판 1 add1 — §11 */
   const nGraded=cards.filter(c=>c.info.graded).length;
 
   // ── 강사·시리즈 선택기는 **GS 에서만**(8/23 사용자). 별도 줄 없이 상단에 붙인다.
@@ -6192,9 +6199,10 @@ async function c2GradeEl(gv,depth){const box=el('div');const recs=(gv&&gv.회차
     box.appendChild(el('div','cdim','원본 = 볼트 '+(r.원본||'')));});
   box.appendChild(el('div','cdim','빨간 행 = 있는 사람 전부 X → 판례 레일 「채점 누락 ×N」 · 자동중요도 +2'));
   return box;}
-function c2ExplainEl(gv,depth,pm){const w=el('div');const recs=(gv&&gv.회차)||[];
+function c2ExplainEl(gv,depth,pm,fm){const w=el('div');const recs=(gv&&gv.회차)||[];   /* ★ 2차 탭 판 1 add1 — §11 fm 을 받아 맨 위 칩 */
+  c2PdfChips(c2PdfList(fm,recs.length?recs[recs.length-1]:null)).forEach(a=>w.appendChild(a));
   if(!recs.length){w.appendChild(el('div','cdim','해설 — 지금은 채점표의 해설 목차 항목 모음 · 채점표가 없어 비어 있다(볼트에 해설 콜아웃이 들어오면 그 본문)'));return w;}
-  const r=recs[recs.length-1];const pdf=c2PdfChip((r.해설링크||[])[0]);if(pdf)w.appendChild(pdf);
+  const r=recs[recs.length-1];
   w.appendChild(el('div','cdim','채점표 해설 목차 항목 모음(채점 탭 첫 열) — 볼트에 해설 콜아웃이 들어오면 그 본문으로'));
   const put=(title,items)=>{if(!items.length)return;w.appendChild(el('div','gh5',title));items.forEach(it=>{const d=el('div','ln rln');const td=c2ItemTd(it,pm,depth);while(td.firstChild)d.appendChild(td.firstChild);d.style.padding='1px 0';w.appendChild(d);});};
   (r.설문||[]).forEach(q=>put(q.제목+(q.배점?' ('+q.배점+'점)':''),q.항목||[]));put('누락 항목(설문 미배정)',r.항목||[]);
@@ -6218,7 +6226,7 @@ function popCell(x,ev,bodies){
   const rec=(bodies||{})[x.파일];
   if(rec&&rec.fm&&Object.keys(rec.fm).length){
     const ch=el('div','chips');
-    Object.entries(rec.fm).forEach(([k,v])=>{if(v)ch.appendChild(el('span','chip c-src',k+': '+String(v).slice(0,24)));});
+    Object.entries(rec.fm).forEach(([k,v])=>{const s=Array.isArray(v)?v.join(' · '):String(v||'');if(s)ch.appendChild(el('span','chip c-src',k+': '+s.slice(0,24)));});   /* ★ 2차 탭 판 1 add1 — §11 배열 값 */
     body.appendChild(ch);
   }
   const blk=el('div');
