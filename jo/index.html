@@ -35,6 +35,10 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .pill.on{background:#1a1a1a;color:#fff}
 .pill.wait{color:#aaa;background:#f2f0ea}
 .badge{font-size:11px;border-radius:6px;padding:1px 7px;background:#efece5;color:#777}
+.badge.autob{cursor:pointer;border-bottom:1px dotted #999}/* ★ 손질 8 — 자동 중요도 칩 · 근거 표 */
+.autotbl{border-collapse:collapse;font-size:12px;width:100%;margin:4px 0}.autotbl th,.autotbl td{border-bottom:1px solid #eeece6;padding:4px 6px;text-align:left;vertical-align:top}
+.autotbl th{font-size:11px;color:#9a958b;font-weight:500}.autotbl td.num{white-space:nowrap;text-align:right}.autotbl tr.sum td{font-weight:600}.autotbl .chip{cursor:pointer}
+.res.hasctx{flex-wrap:wrap}.res .skctx{flex:1 0 100%;display:block;font-size:11px;color:#6b665d;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}/* ★ 손질 8 — 통합 검색 문맥 줄 */
 
 /* ── 본문 3단 ── */
 .body2{display:flex;flex:1;min-height:0}
@@ -775,6 +779,7 @@ const LAWS=['특허법','상표법','디자인보호법','민사소송법'];
 const SHORT={'특허법':'특허','상표법':'상표','디자인보호법':'디보','민사소송법':'민소'};
 /* ★ 상표 판 3 (2026-09-03 · _task_sang_prec_app.md) — 판례 갤리 데이터 파일명은 S.law 로 짠다(특허 갤리 코드 그대로 · 상표 = 같은 꼴 JSON) */
 const PLAW=()=>SHORT[S.law]||'특허';
+const PFL=(law,n)=>'prec_'+(SHORT[law]||PLAW())+'_'+n+'.json';   /* ★ 손질 8 — §2 법을 주는 PF */
 const PF=n=>'prec_'+PLAW()+'_'+n+'.json', NF=()=>'note_'+PLAW()+'.json', JMF=()=>'jimun_'+PLAW()+'.json', CHF=k=>'2cha_본문_'+(k||'사례')+'_'+PLAW()+'.json';
 const PREC_RAWDIR={특허:'특허판례원본',상표:'상표판례원본',디보:'디자인판례원본',민소:'민소판례원본'};
 // 갈래 이동은 **세로 레일 하나만** 한다. 상단 갈래 탭은 없앴다 —
@@ -4984,14 +4989,15 @@ function precSortFn(mode){
 }
 /* 2단 검색 — 대상 = id·사건번호·별칭(번호 일치) · 사건명·쟁점(사건명 일치) · 전문 5절 + 요약본 행(본문에서 인용 ×N).
    질의가 리스트의 판례면 인용 JSON 의 자리를 쓰고, 아니면 즉석으로 훑는다. 「전합」은 전합 || 전원합의체. */
-async function precSearch(P, q){
-  const qn = precNorm(q); if (!qn) return null;
+let PQEL = null;   /* ★ 손질 8 — §3 2단 검색 입력칸 — 재구성하지 않는다 */
+async function precSearch(P, q, law){   /* ★ 손질 8 — §2 law 를 주면 그 법의 전문·요약·인용(통합 검색) */
+  const F = n => law ? PFL(law, n) : PF(n); const qn = precNorm(q); if (!qn) return null;
   const jh = (qn === '전합' || qn === '전원합의체');
   const rx = new RegExp(jh ? '전합|전원합의체' : qn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-  if (!C[PF('전문')]) toast('전문 5.8MB 를 불러오는 중…');
-  const FULL = await get(PF('전문')).catch(() => ({}));
-  const SUMM = await get(PF('요약')).catch(() => ({}));
-  const CITE = await get(PF('인용')).catch(() => ({}));
+  if (!C[F('전문')]) toast('전문 5.8MB 를 불러오는 중…');
+  const FULL = await get(F('전문')).catch(() => ({}));
+  const SUMM = await get(F('요약')).catch(() => ({}));
+  const CITE = await get(F('인용')).catch(() => ({}));
   const qid = P.판례.find(p => precNorm(p.id) === qn || precNorm(p.사건번호) === qn);
   const hit = new Map();
   const scan = (r, k, t) => { let m; rx.lastIndex = 0;
@@ -5014,6 +5020,35 @@ async function precSearch(P, q){
   });
   return hit;
 }
+/* ★ 손질 8 — §1 자동 중요도 산출 근거 표 — 호버(마우스) = 열고 떠나면 닫힘 · 탭·클릭 = 고정 토글 · 바깥 클릭 닫힘 · 근거 이름 클릭 = 실물 */
+function autoImpKey(p){ return 'auto|' + PLAW() + '|' + p.id; }
+function autoImpGoEl(kind, name){ const s = el('span', 'chip ' + (kind === 'q' ? 'c-quiz' : kind === 'card' ? 'c-card' : 'c-src'), name);
+  if (kind === 'pair'){ s.title = '기출 차·연도 짝 — 실물 없음(볼트 기출 · 리담 기출칩)'; s.style.cursor = 'default'; return s; }
+  if (kind === 'q'){ const m = /^(\d{4})-(\d+)-(\d+)$/.exec(name);
+    if (!m){ s.title = '1차 원장 행 — 회차·문번 없음(연도만)'; s.style.cursor = 'default'; return s; }
+    s.title = '1차 ' + m[1] + '년 ' + m[2] + '회 문항 ' + m[3] + ' — 클릭 = 카드'; s.onclick = ev => { ev.stopPropagation(); giPopQid(name, ev); }; return s; }
+  s.title = '2차 사례 카드 — 클릭 = 카드'; s.onclick = ev => { ev.stopPropagation(); popCard4('사례', name, ev, 1); }; return s; }
+function autoImpOutside(pop){ const h = e2 => { if (POPS.indexOf(pop) < 0){ document.removeEventListener('pointerdown', h, true); return; }
+    if (!pop.contains(e2.target)){ closeOne(pop); document.removeEventListener('pointerdown', h, true); } };
+  setTimeout(() => document.addEventListener('pointerdown', h, true), 0); }
+function autoImpLeave(p){ const pop = POPS.find(x => x._pk === autoImpKey(p)); if (!pop || !pop._hover) return;
+  clearTimeout(pop._t); pop._t = setTimeout(() => { if (pop._hover && POPS.indexOf(pop) >= 0) closeOne(pop); }, 300); }
+function autoImpPop(p, ev, tap){ const key = autoImpKey(p); const open = POPS.find(x => x._pk === key);
+  if (open){ if (!tap) return; if (open._hover){ open._hover = false; clearTimeout(open._t); autoImpOutside(open); } else closeOne(open); return; }
+  const body = popShell('fn', '🧮 자동 중요도 ' + (p.자동중요도 || 0) + ' — ' + (p.사건번호 || p.id), key); const pop = body.parentNode;
+  const G = Array.isArray(p.자동근거) ? p.자동근거 : [];
+  if (!G.length) body.appendChild(el('div', 'cdim', '⚙ `자동근거` 열이 없다 — 데이터가 옛 것'));
+  const tb = el('table', 'autotbl'); const th = el('tr'); ['항목', '근거', 'n × w = 점'].forEach(t => th.appendChild(el('th', '', t))); tb.appendChild(th);
+  G.forEach(g => { const tr = el('tr'); tr.appendChild(el('td', '', g.항목 || '')); const td = el('td');
+    (g.근거 || []).forEach(nm => td.appendChild(autoImpGoEl(g.kind, String(nm)))); if (!(g.근거 || []).length) td.appendChild(el('span', 'cdim', '—')); tr.appendChild(td);
+    tr.appendChild(el('td', 'num', (g.n || 0) + ' × ' + (g.w || 0) + ' = ' + (g.점 || 0))); tb.appendChild(tr); });
+  const sum = G.reduce((a, g) => a + (g.점 || 0), 0); const tf = el('tr', 'sum'); tf.appendChild(el('td', '', '합'));
+  tf.appendChild(el('td', '', sum === (p.자동중요도 || 0) ? '= 자동중요도' : '≠ 자동중요도 ' + (p.자동중요도 || 0))); tf.appendChild(el('td', 'num', String(sum))); tb.appendChild(tf);
+  body.appendChild(tb); body.appendChild(el('div', 'cdim', '산식(⚙ jo_build · 무변) = 1차 원장 연결 ×1 + 기출 차·연도 짝 ×3 + 2차 카드 ×2 · 볼트 중요도는 안 더한다'));
+  showPop(ev);
+  if (tap){ pop._hover = false; autoImpOutside(pop); }
+  else { pop._hover = true; pop.addEventListener('pointerenter', () => clearTimeout(pop._t)); pop.addEventListener('pointerleave', () => autoImpLeave(p)); }
+  return pop; }
 /* ★ 판 3 add1 — 리담 화면 그대로 셋: [노란 칩 설명별칭] · 설명줄(없으면 사건명 → 볼트 별칭 · 안 자른다) · 기출표시 칩.
    볼트 요약본 별칭은 설명별칭과 다르면 회색 칩으로 남긴다. 2단 행·3단 머리가 같은 함수를 쓴다. */
 function precDescEl(p, head){
@@ -5309,9 +5344,16 @@ async function viewPrec(){
     const o=el('option','',t);o.value=v;if(S.precSort===v)o.selected=true;sel.appendChild(o);});
   sel.onchange=()=>{S.precSort=sel.value;uiSave();render();};
   cb.appendChild(sel);
-  const pq=el('input','pq');pq.id='precq';pq.placeholder='🔍 사건번호 · 사건명 · 본문 (전합)';pq.value=S.precQ||'';
-  pq.oninput=()=>{clearTimeout(pq._t);pq._t=setTimeout(()=>{S.precQ=pq.value;render().then(()=>{const n=document.getElementById('precq');
-    if(n){n.focus();try{n.setSelectionRange(n.value.length,n.value.length);}catch(e){}}});},300);};
+  /* ★ 손질 8 — §3 입력칸 재구성 금지 — 같은 법이면 있던 요소(PQEL) 그대로 다시 붙인다 · IME 조합 중엔 타이머 안 걸고 compositionend 에서 한 번 · isComposing input 무시 */
+  const pqOld=(PQEL&&PQEL._law===S.law)?PQEL:null;
+  const pq=pqOld||el('input','pq');
+  if(!pqOld){pq.id='precq';pq.placeholder='🔍 사건번호 · 사건명 · 본문 (전합)';pq._law=S.law;PQEL=pq;
+    const fire=()=>{clearTimeout(pq._t);pq._t=setTimeout(()=>{if(pq._comp)return;if(pq.value===(S.precQ||''))return;S.precQ=pq.value;const had=document.activeElement===pq;
+      render().then(()=>{if(had){pq.focus();try{pq.setSelectionRange(pq.value.length,pq.value.length);}catch(e){}}});},300);};
+    pq.addEventListener('compositionstart',()=>{pq._comp=true;clearTimeout(pq._t);});
+    pq.addEventListener('compositionend',()=>{pq._comp=false;fire();});
+    pq.oninput=ev=>{if(pq._comp||(ev&&ev.isComposing))return;fire();};}
+  if(document.activeElement!==pq)pq.value=S.precQ||'';
   cb.appendChild(pq);
   list.appendChild(cb);
   const cnt=el('div','h');
@@ -5384,7 +5426,10 @@ async function viewPrec(){
    for(let i=1;i<=5;i++){const s=el('span',i<=m?'on':'','★');s.dataset.v=i;
      s.onclick=ev=>{ev.stopPropagation();impSet(cur.id,impOf(cur)===i?0:i);render();};st.appendChild(s);}
    hd.appendChild(st);
-   if(cur.자동중요도)hd.appendChild(el('span','badge','자동 '+cur.자동중요도));}
+   if(cur.자동중요도){const ab=el('span','badge autob','자동 '+cur.자동중요도);ab.title='자동 중요도 — 호버·탭 = 산출 근거';   /* ★ 손질 8 — §1 호버·탭 = 근거 표 */
+     ab.onpointerenter=ev=>{if(ev.pointerType!=='mouse')return;autoImpPop(cur,ev,false);};
+     ab.onpointerleave=ev=>{if(ev.pointerType!=='mouse')return;autoImpLeave(cur);};
+     ab.onclick=ev=>{ev.stopPropagation();autoImpPop(cur,ev,true);};hd.appendChild(ab);}}
   main.appendChild(hd);
 
   const chips=el('div');chips.style.marginTop='6px';
@@ -9190,7 +9235,7 @@ function skRow(box,cls,head,tail,tag,open){
   d.appendChild(el('b','',head));
   if(tail)d.appendChild(el('span','x',tail));
   d.appendChild(el('span','lawtag',tag));
-  d.onclick=ev=>open(ev);
+  d.onclick=ev=>open(ev);d._sko=open;   /* ★ 손질 8 — §2 「더 보기」 뒤 DOM 순서로 다시 세운다 */
   box.appendChild(d);
   skRows.push({open:open});
 }
@@ -9242,7 +9287,18 @@ function popJimun(title,body,ev,go){
   body.forEach(x=>b.appendChild(el('div',x[0],x[1])));
   showPop(ev);
 }
-$('#skin').oninput=async e=>{
+/* ★ 손질 8 — §2 통합 검색 판례 팝업(법을 안다 · 이동 시 그 법으로) */
+function skPrecPop(p,law,ev){
+  const _pk49=('')+'|'+('⚖ '+(p.사건번호||p.파일)); if(popToggle(_pk49))return; const b=popShell('', '⚖ '+(p.사건번호||p.파일), _pk49);
+  if(p.사건명||p.별칭)b.appendChild(el('div','',(p.사건명||p.별칭)));
+  if(p.선고)b.appendChild(el('span','badge','선고 '+p.선고));
+  b.appendChild(el('span','badge',SHORT[law]||law));
+  (Array.isArray(p.조문)?p.조문:[]).slice(0,6).forEach(x=>b.appendChild(el('span','chip c-prec','⚖'+x)));
+  const go=el('button','tool on','판례 갈래로 이동 ↗');
+  go.onclick=()=>{S.law=law;S.tab='prec';S.prec=p.id;S.precTab=p.요약본?'요약':'원문';closeAllPops();render();};
+  b.appendChild(go);
+  showPop(ev);}
+const skRun=async e=>{   /* ★ 손질 8 — §2 300ms 디바운스 — 아래 $('#skin').oninput 이 부른다 */
   const q=(e.target.value||'').trim();const box=$('#skres');box.innerHTML='';skRows=[];skSel=0;
   if(!q)return;
   const lawsOn=LAWS.filter(l=>SKLAW[l]);   /* ★ v3-H §2 — 켜진 법마다 읽어 합친다 */
@@ -9269,22 +9325,38 @@ $('#skin').oninput=async e=>{
         ev=>{closeSk();popJo(r.law,r.k,ev,1);}));
     }catch(err){box.appendChild(el('div','grp','📖 조문 — 읽지 못했다'));}
   }
-  if(SKON.prec){
+  if(SKON.prec){   /* ★ 손질 8 — §2 판례 갈래 = 2단 검색(precSearch)과 같은 범위 · 켜진 법마다 · 전건(40 씩 더 보기) · 문맥 한 줄 */
     try{
-      const P=await get(PF('리스트'));
-      const ql=String(q||'').toLowerCase(); const hit=P.판례.filter(p=>((p.사건번호||'')+(p.사건명||'')+(p.별칭||'')).toLowerCase().includes(ql)).slice(0,40);   /* ★ 상표 손질 5 */
-      box.appendChild(el('div','grp','⚖ 판례 — '+hit.length+'건'+(['특허','상표'].indexOf(SHORT[S.law])>=0?'':' (이 법은 판례 갤리가 아직 없다)')));
-      hit.forEach(p=>skRow(box,'prec',(p.사건번호||p.파일)+(p.전합?' [전합]':''),(p.사건명||p.별칭||'').slice(0,50),p.원본?'원본':'요약본',
-        ev=>{closeSk();
-          const _pk49=('')+'|'+('⚖ '+(p.사건번호||p.파일)); if(popToggle(_pk49))return; const b=popShell('', '⚖ '+(p.사건번호||p.파일), _pk49);   /* ★ 상표 손질 6 — 키 종류|제목 */
-          if(p.사건명||p.별칭)b.appendChild(el('div','',(p.사건명||p.별칭)));
-          if(p.선고)b.appendChild(el('span','badge','선고 '+p.선고));
-          (Array.isArray(p.조문)?p.조문:[]).slice(0,6).forEach(x=>
-            b.appendChild(el('span','chip c-prec','⚖'+x)));
-          const go=el('button','tool on','판례 갈래로 이동 ↗');
-          go.onclick=()=>{S.tab='prec';S.prec=p.id;S.precTab=p.요약본?'요약':'원문';closeAllPops();render();};
-          b.appendChild(go);
-          showPop(ev);}));
+      const lawsP=lawsOn.filter(l=>['특허법','상표법'].indexOf(l)>=0);
+      const all=[];
+      for(const law of lawsP){
+        const P=await get(PFL(law,'리스트'));
+        const hit=await precSearch(P,q,law);
+        if(!hit)continue;
+        const rows=P.판례.filter(p=>hit.has(p.id)).map(p=>({p:p,law:law,h:hit.get(p.id)}));
+        const rank=x=>x.h.num?0:x.h.n?1:2;
+        rows.sort((a,c)=>{const ra=rank(a),rc=rank(c);if(ra!==rc)return ra-rc;return ra===1?(c.h.n-a.h.n):0;});
+        all.push(...rows);
+      }
+      const noGal=lawsOn.filter(l=>lawsP.indexOf(l)<0).map(l=>SHORT[l]);
+      box.appendChild(el('div','grp','⚖ 판례 — '+all.length+'건'+(noGal.length?' ('+noGal.join('·')+'는 판례 갤리가 아직 없다)':'')));
+      const qraw=String(q||'').trim();
+      let shown=0;const step=40;
+      const more=el('div','grp skmore');more.style.cursor='pointer';
+      const drawMore=()=>{const end=Math.min(all.length,shown+step);
+        all.slice(shown,end).forEach(x=>{const p=x.p,h=x.h;
+          skRow(box,'prec',(p.사건번호||p.파일)+(p.전합?' [전합]':''),(p.설명별칭||p.사건명||p.별칭||'').slice(0,50),
+            SHORT[x.law]+' · '+(p.원본?'원본':'요약본')+(h.num?' · 번호 일치':h.n?' · 인용 ×'+h.n:' · 사건명·쟁점'),
+            ev=>{closeSk();skPrecPop(p,x.law,ev);});
+          const d=box.lastChild;
+          if(h.ctx&&h.ctx.length){const c=precCtxEl(h.ctx[0],qraw);c.classList.add('skctx');d.classList.add('hasctx');d.appendChild(c);}
+          if(more.parentNode===box)box.insertBefore(d,more);});
+        shown=end;
+        if(shown<all.length){more.textContent='▾ 더 보기 ('+(all.length-shown)+' 남음)';if(more.parentNode!==box)box.appendChild(more);}
+        else if(more.parentNode)more.remove();
+        skRows=[...box.querySelectorAll('.res')].map(x=>({open:x._sko||(()=>{})}));};
+      more.onclick=ev=>{ev.stopPropagation();drawMore();};
+      drawMore();
     }catch(err){box.appendChild(el('div','grp','⚖ 판례 — 읽지 못했다'));}
   }
   if(SKON.jimun){
@@ -9393,6 +9465,7 @@ $('#skin').oninput=async e=>{
   if(rs.length)rs[0].classList.add('on');
   box.appendChild(el('div','grp','↵ 열기 · Esc 닫기 · 범위를 눌러 켜고 끈다'));
 };
+let SKT=null;$('#skin').oninput=e=>{clearTimeout(SKT);SKT=setTimeout(()=>skRun(e),300);};   /* ★ 손질 8 — §2 디바운스 */
 $('#skin').onkeydown=e=>{
   if(e.key==='Escape')return closeSk();
   const rs=$('#skres').querySelectorAll('.res');
