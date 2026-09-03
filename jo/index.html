@@ -261,7 +261,8 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .gisol{font-size:12px;color:#6b665d;margin:2px 0 8px 34px;white-space:pre-wrap}
 .omrwrap{position:fixed;inset:0;background:rgba(20,18,14,.35);z-index:60;display:flex;align-items:center;justify-content:center}
 .omr{width:420px;max-width:94vw;max-height:76vh;overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:0 10px 34px rgba(0,0,0,.24)}
-.omrhd{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.omrhd{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;user-select:none}
+.sol table,.gisol table{border-collapse:collapse;font-size:11.5px;margin:4px 0;max-width:100%}.sol td,.sol th,.gisol td,.gisol th{border:1px solid var(--line);padding:2px 6px;vertical-align:top;text-align:left}.sol th,.gisol th{background:#f6f5f1;font-weight:700}   /* ★ 기출뷰 손질 3 */
 .omrgrid{display:flex;flex-direction:column;gap:3px}
 .omrrow{display:flex;gap:4px;align-items:center;padding:2px 4px;border-radius:7px}
 .omrrow.cur{background:#eaf1fb}
@@ -817,13 +818,14 @@ try{const u=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if(u.prec_sort)S.precSort=u.prec_sort;
     if(u.lsw>0)S.listW=u.lsw;if(u.prec_ygroups&&typeof u.prec_ygroups==='object')S.precYG=u.prec_ygroups;   /* ★ 판 4 */
     if(u.md_fold&&typeof u.md_fold==='object')S.mdFold=u.md_fold;if(u.embed_fold&&typeof u.embed_fold==='object')S.embFold=u.embed_fold;
-    ['note','list','prec','toc'].forEach(k=>{if(u['pop_'+k]&&typeof u['pop_'+k]==='object')S.popCfg[k]=u['pop_'+k];});   /* ★ 판 4 add2 */}catch(e){}   /* ★ v3-L §1 */
+    ['note','list','prec','toc'].forEach(k=>{if(u['pop_'+k]&&typeof u['pop_'+k]==='object')S.popCfg[k]=u['pop_'+k];});   /* ★ 판 4 add2 */
+    if(u.omr&&typeof u.omr==='object')S.omrPos=u.omr;   /* ★ 기출뷰 손질 3 — OMR 자리 */}catch(e){}   /* ★ v3-L §1 */
 function uiSave(){try{localStorage.setItem(UI_KEY,JSON.stringify(
   {nmw:S.qlNmW,rdw:S.qlRdW,jpw:S.joPanelW,hfold:S.heatFold?1:0,trw:S.treeW,
    jbk:S.joBlank,jbs:S.joBlankStar?1:0,
    prec_filter:S.precFilter||{},prec_sort:S.precSort,
    lsw:S.listW,prec_ygroups:S.precYG||{},
-   md_fold:S.mdFold||{},embed_fold:S.embFold||{},pop_note:S.popCfg.note||null,pop_list:S.popCfg.list||null,pop_prec:S.popCfg.prec||null,pop_toc:S.popCfg.toc||null}));}catch(e){}}   /* ★ 판 3 §3-4 · 판 4 · add2 */
+   md_fold:S.mdFold||{},embed_fold:S.embFold||{},pop_note:S.popCfg.note||null,pop_list:S.popCfg.list||null,pop_prec:S.popCfg.prec||null,pop_toc:S.popCfg.toc||null,omr:S.omrPos||null}));}catch(e){}}   /* ★ 판 3 §3-4 · 판 4 · add2 */
 const C={};
 const $=(s,r)=>(r||document).querySelector(s);
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;
@@ -6742,7 +6744,7 @@ function oxPickRow(row, key, raw, sol, extra){
     res.appendChild(el('span', 'badge', rec.ok ? '맞음' : '틀림'));
     row.appendChild(res);
     logicView(row, key);                        // ★ v3-F §6-1 — 논리는 있을 때만 「보기」
-    const sd = sol ? el('div', 'sol', sol) : el('div', 'cdim', '해설 없음');
+    const sd = sol ? solEl(sol) : el('div', 'cdim', '해설 없음');   /* ★ 기출뷰 손질 3 */
     if (extra && sol) sd.appendChild(extra);    // ★ v3-F §3 — 「⚖ 원문」은 해설 안으로
     row.appendChild(sd);
   } else if (sol){
@@ -6750,7 +6752,7 @@ function oxPickRow(row, key, raw, sol, extra){
     const pv = el('button', 'solpv', '해설 미리보기');
     pv.onclick = () => { const d = pv.nextSibling; d.style.display = d.style.display === 'none' ? '' : 'none'; };
     row.appendChild(pv);
-    const d = el('div', 'sol', sol); d.style.display = 'none';
+    const d = solEl(sol); d.style.display = 'none';   /* ★ 기출뷰 손질 3 */
     if (extra) d.appendChild(extra);
     row.appendChild(d);
   } else logicView(row, key);
@@ -7751,10 +7753,38 @@ function qlColumn(MG,JM,byId,P7,subj){
 const GI_KEY  = REC_PRE + 'gi';        // 문항 풀이 — 키 = 연도:시험문번
 const GIY_KEY = REC_PRE + 'gi.year';   // 연도별 제출 이력
 let GIREC = null, GIYREC = null, GIOMR = null;
+/* ★ 기출뷰 손질 3 — 옛 키(법 없음 · `2026:1` · `2026`) → 특허로 한 번 이관(사용자 9/3) · 백업 한 벌 뒤에만 · 멱등(옛 키 없으면 무동작) · 다른 기기에서 동기화로 들어온 옛 키도 시작 때 같은 규칙 */
+const GI_BAK = REC_PRE + 'gi.bak_20260903', GIY_BAK = REC_PRE + 'gi.year.bak_20260903';
+function giMigrate(){
+  let moved = 0, movedY = 0;
+  try{
+    const A = lsRead(GI_KEY); const old = Object.keys(A).filter(k => /^\d{4}:/.test(k));
+    if (old.length){
+      if (!localStorage.getItem(GI_BAK)) localStorage.setItem(GI_BAK, JSON.stringify(A));   /* 백업이 없을 때만 — 처음 상태를 지킨다 */
+      old.forEach(k => { const nk = '특허:' + k; const a = A[k], b = A[nk];
+        if (!b || String(a.ts || '') >= String(b.ts || '')) A[nk] = a;   /* 새 키에 이미 있으면 더 새 것 */
+        delete A[k]; moved++; });
+      GIREC = A; lsWrite(GI_KEY, A, '기출 풀이 이관');
+      try{ const g = sObj(SG_KEY), u = sObj(SU_KEY), now = Date.now();   /* 동기화 칸 도장 — 옛 칸 = 지움(gone) · 새 칸 = 씀(u) · 병합 규칙 그대로 */
+        old.forEach(k => { g[ckey(GI_KEY, k)] = now; delete u[ckey(GI_KEY, k)]; u[ckey(GI_KEY, '특허:' + k)] = now; }); sPut(SG_KEY, g); sPut(SU_KEY, u); }catch(e){}
+    }
+    const Y = lsRead(GIY_KEY); const oldY = Object.keys(Y).filter(k => /^\d{4}$/.test(k));
+    if (oldY.length){
+      if (!localStorage.getItem(GIY_BAK)) localStorage.setItem(GIY_BAK, JSON.stringify(Y));
+      oldY.forEach(k => { const nk = '특허:' + k; const a = Y[k], b = Y[nk];
+        if (!b || String(a.ts || '') >= String(b.ts || '')) Y[nk] = a; delete Y[k]; movedY++; });
+      GIYREC = Y; lsWrite(GIY_KEY, Y, '기출 회차 이관');
+      try{ const g = sObj(SG_KEY), u = sObj(SU_KEY), now = Date.now();
+        oldY.forEach(k => { g[ckey(GIY_KEY, k)] = now; delete u[ckey(GIY_KEY, k)]; u[ckey(GIY_KEY, '특허:' + k)] = now; }); sPut(SG_KEY, g); sPut(SU_KEY, u); }catch(e){}
+    }
+  }catch(e){ console.error('giMigrate', e); }
+  return { moved, movedY };
+}
+const GI_MIG = giMigrate();
 function giAll(){ if (!GIREC) GIREC = lsRead(GI_KEY); return GIREC; }
 function giYAll(){ if (!GIYREC) GIYREC = lsRead(GIY_KEY); return GIYREC; }
 function giNo(q){ return q.시험문번 || q.문번; }
-function giKey(q){ return (q.연도 || '') + ':' + (q.시험문번 ? q.시험문번 : ('r' + q.문번)); }
+function giKey(q){ return PLAW() + ':' + (q.연도 || '') + ':' + (q.시험문번 ? q.시험문번 : ('r' + q.문번)); }   /* ★ 기출뷰 손질 3 — 키 = 법:연도:문번 — 특허·상표·디보 칸 분리 */
 function giAns(q){ return String(q.정답 || '').split(',').map(s => s.trim()).filter(Boolean); }
 function giGradable(q){ return giAns(q).length > 0; }
 function giOf(k){ return giAll()[k] || null; }
@@ -7767,10 +7797,11 @@ function giPick(q, n){
   const k = giKey(q), cur = giOf(k) || {};
   giPut(k, { p: (String(cur.p || '') === String(n) ? '' : String(n)) });
 }
-function giYearOf(y){ return giYAll()[y] || null; }
+function giYKey(y){ return PLAW() + ':' + y; }   /* ★ 기출뷰 손질 3 — 회차 이력도 법별 */
+function giYearOf(y){ return giYAll()[giYKey(y)] || null; }
 function giYearPut(y, v){
-  const A = giYAll();
-  if (v === null) delete A[y]; else A[y] = Object.assign({}, A[y] || {}, v, { ts: nowIso() });
+  const A = giYAll(); const yk = giYKey(y);
+  if (v === null) delete A[yk]; else A[yk] = Object.assign({}, A[yk] || {}, v, { ts: nowIso() });
   GIYREC = A; lsWrite(GIY_KEY, A, '기출뷰 회차');
 }
 /* 끝까지 풀고 **일괄 채점**한다(§8-1) — 중간에 답을 보여주지 않는다 */
@@ -7822,9 +7853,42 @@ document.addEventListener('keydown', ev => {
 });
 const OMARK = ['①', '②', '③', '④', '⑤'];
 /* ── OMR 모달 패드 — 미응답은 붉게 드러난다(§8-2) ── */
+/* ★ 기출뷰 손질 3 — OMR 패드 끌기 — 팝업 dragify 그대로(머리 잡고 · 화면 안 clamp) + 터치 · 자리 = jopangi_ui.omr(기기별 · 기록층 밖) · 머리 더블클릭 = 가운데로 */
+function omrDrag(wrap, box, hd){
+  hd.style.cursor = 'move'; hd.title = '끌어서 옮기기 · 더블클릭 = 가운데';
+  const place = (x, y) => { box.style.position = 'fixed'; box.style.margin = '0';
+    box.style.left = Math.max(0, Math.min(innerWidth - 60, x)) + 'px'; box.style.top = Math.max(0, Math.min(innerHeight - 34, y)) + 'px'; };
+  const fix = () => { if (box.style.position !== 'fixed'){ const r = box.getBoundingClientRect(); place(r.left, r.top); } };
+  const save = () => { S.omrPos = { x: Math.round(parseFloat(box.style.left) || 0), y: Math.round(parseFloat(box.style.top) || 0) }; uiSave(); };
+  if (S.omrPos && typeof S.omrPos === 'object') place(S.omrPos.x || 0, S.omrPos.y || 0);
+  hd.addEventListener('mousedown', ev => { if (ev.target.closest('button')) return; fix(); wrap._drag = true; });   /* dragify 보다 먼저 — 가운데 정렬을 좌표로 바꾼다 */
+  dragify(box, hd);
+  addEventListener('mouseup', () => { if (wrap._drag && box.isConnected){ save(); } });
+  let t0 = null;
+  hd.addEventListener('touchstart', ev => { if (ev.target.closest('button')) return; fix(); const t = ev.touches[0]; t0 = { x: t.clientX, y: t.clientY, l: parseFloat(box.style.left) || 0, t: parseFloat(box.style.top) || 0 }; wrap._drag = true; }, { passive: true });
+  hd.addEventListener('touchmove', ev => { if (!t0) return; const t = ev.touches[0]; place(t0.l + t.clientX - t0.x, t0.t + t.clientY - t0.y); ev.preventDefault(); }, { passive: false });
+  hd.addEventListener('touchend', () => { if (t0){ t0 = null; save(); } });
+  hd.addEventListener('dblclick', ev => { if (ev.target.closest('button')) return; box.style.position = ''; box.style.left = ''; box.style.top = ''; box.style.margin = ''; S.omrPos = null; uiSave(); });
+}
+/* ★ 기출뷰 손질 3 — 해설 = 허용 태그만 렌더(table thead tbody tr th td b strong i em br p ul ol li sup sub span[class] · table[class]) · 그 밖 태그·속성은 글자로 · 태그 없으면 글자 그대로(pre-wrap) · 새 md 파서 없음(census: ** · - 목록 0) */
+const SOL_OK = { table: 1, thead: 1, tbody: 1, tr: 1, th: 1, td: 1, b: 1, strong: 1, i: 1, em: 1, br: 1, p: 1, ul: 1, ol: 1, li: 1, sup: 1, sub: 1, span: 1 };
+function solEl(sol, cls){
+  const d = el('div', cls || 'sol'); const s = String(sol == null ? '' : sol);
+  if (!/<[a-zA-Z]/.test(s)){ d.textContent = s; if (s.indexOf('\n') >= 0) d.style.whiteSpace = 'pre-wrap'; return d; }
+  let doc = null; try{ doc = new DOMParser().parseFromString('<div>' + s + '</div>', 'text/html'); }catch(e){ doc = null; }
+  if (!doc){ d.textContent = s; return d; }
+  const walk = (src, dst) => { src.childNodes.forEach(n => {
+    if (n.nodeType === 3){ dst.appendChild(document.createTextNode(n.nodeValue)); return; }
+    if (n.nodeType !== 1) return;
+    const tg = n.tagName.toLowerCase();
+    if (SOL_OK[tg]){ const e2 = document.createElement(tg); const c = n.getAttribute('class'); if (c && (tg === 'span' || tg === 'table')) e2.className = c.replace(/[^\w\- ]/g, ''); walk(n, e2); dst.appendChild(e2); }
+    else { dst.appendChild(document.createTextNode('<' + tg + '>')); walk(n, dst); dst.appendChild(document.createTextNode('</' + tg + '>')); } }); };
+  walk(doc.body.firstChild, d);
+  return d;
+}
 function giOmrPad(y, list){
   const wrap = el('div', 'omrwrap');
-  wrap.onclick = ev => { if (ev.target === wrap){ S.omr = false; render(); } };
+  wrap.onclick = ev => { if (ev.target === wrap && !wrap._drag){ S.omr = false; render(); } wrap._drag = false; };   /* ★ 기출뷰 손질 3 — 끌다 놓은 클릭은 닫기 아님 */
   const box = el('div', 'omr');
   const hd = el('div', 'omrhd');
   hd.appendChild(el('b', '', y + '년 OMR'));
@@ -7833,6 +7897,7 @@ function giOmrPad(y, list){
   cb.onclick = () => { S.omr = false; render(); };
   hd.appendChild(cb);
   box.appendChild(hd);
+  omrDrag(wrap, box, hd);   /* ★ 기출뷰 손질 3 — 머리 끌기 · 자리 기억 */
   const g = el('div', 'omrgrid');
   list.forEach((q, i) => {
     const rec = giOf(giKey(q)) || {}, ans = giAns(q);
@@ -7895,7 +7960,7 @@ function giCard(q, graded){
     row.appendChild(b);
     row.appendChild(el('div', 'gitx', z.t || ''));
     c.appendChild(row);
-    if (graded && z.sol) c.appendChild(el('div', 'gisol', z.sol));
+    if (graded && z.sol) c.appendChild(solEl(z.sol, 'gisol'));   /* ★ 기출뷰 손질 3 */
   });
   if (graded && ans.length)
     c.appendChild(el('div', 'badge', '정답 ' + ans.map(x => OMARK[+x - 1] || x).join('·')));
@@ -8981,7 +9046,7 @@ async function sampleCards(main){
     card.appendChild(el('div','qt',src.본문));
     card.appendChild(el('span','ansb '+(src.정오||''),'정오 '+(src.정오||'—')));
     if(src.쪽)card.appendChild(el('span','badge',' 제7판 '+src.쪽+'쪽'));
-    if(src.해설)card.appendChild(el('div','sol',src.해설));
+    if(src.해설)card.appendChild(solEl(src.해설));   /* ★ 기출뷰 손질 3 */
     if(!z.두판)card.appendChild(el('div','badge','제7판 대응 지문 없음 — 토글 비활성'));
     main.appendChild(card);
   });
