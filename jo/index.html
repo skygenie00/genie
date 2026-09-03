@@ -403,6 +403,8 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
   border:1px solid #d9d6ce;border-radius:8px;background:#fffdf6;
   box-shadow:0 2px 8px rgba(0,0,0,.18);cursor:pointer}
 .stkoffw{position:relative;display:inline-block}
+.stkanc{position:relative;display:inline-block;width:0;height:0;overflow:visible;vertical-align:baseline}
+.stkanc>.stkchip,.stkanc>.stkoffw{position:absolute;left:0;bottom:.9em;transform:translateX(-50%);margin:0;z-index:3;white-space:nowrap}   /* ★ 칩 자유이동 */
 .stkoffl{position:absolute;left:50%;top:50%;height:0;border-top:1px dotted #b8b3a8;
   opacity:.55;transform-origin:0 0;pointer-events:none}
 
@@ -1001,7 +1003,8 @@ function renderLine(row,opt){
   const opens=[],closes=[];
   const push=(a,i,v)=>{(a[i]=a[i]||[]).push(v);};
   // opt.m = 내 스티커 층을 덮어 계산한 마크업(§3-3). 없으면 JSON 것 그대로.
-  (opt.m||row.m||[]).forEach(m=>{push(opens,Math.max(0,m.a),{mk:m});push(closes,Math.min(n,m.b),{mk:m});});
+  (opt.m||row.m||[]).forEach(m=>{push(opens,Math.max(0,m.a),{mk:m});push(closes,Math.min(n,m.b),{mk:m});
+    if(m.t==='tag'&&m.v){const rec=(mkAll()[m._k]||{});push(opens,Math.min(n,Math.max(0,m.a)+stkAt(rec,m)),{anc:m});}});   /* ★ 칩 자유이동 — 태그 칩 = 구간 안 at 자리의 폭 0 앵커(본문 흐름 밖) */
   (row.e||[]).forEach(e=>{if(e.k==='L'){push(opens,e.a,{ln:e});push(closes,e.b,{ln:e});}
     if(e.k==='P'){push(opens,e.a,{pl:e});push(closes,e.b,{pl:e});}});   /* ★ 판 4 — <사건번호> 인라인 링크 */
   /* ★ 판 4 §2-1 — md 꾸밈을 같은 좌표계 위에 얹는다(글자를 지우지 않는다 · 흐린 span 으로 감싼다) */
@@ -1024,7 +1027,7 @@ function renderLine(row,opt){
       push(opens,pos+2,{md:'mdbold'});push(closes,q,{md:'mdbold'});
       push(opens,q,{md:'mdmark'});push(closes,q+2,{md:'mdmark'});pos=t.indexOf('**',q+2);}
   }
-  const frag=document.createDocumentFragment();
+  const frag=document.createDocumentFragment();const ancN={};   /* ★ 칩 자유이동 — 같은 앵커 칩 수 */
   const stack=[frag];
   const top=()=>stack[stack.length-1];
   for(let i=0;i<=n;i++){
@@ -1033,7 +1036,7 @@ function renderLine(row,opt){
       /* ★ v3-J §2-C — tag 가 닫히는 자리 뒤에 칩 「🏷 이름」. v = 사전 id 면 이름·색이
          사전을 따라간다(색을 바꾸면 전부 변경) · 옛 색 문자열 = 「이름 없는 태그」 ·
          빈 값(볼트 #태그 줄 자체)은 칩 없음. */
-      if(c.mk&&c.mk.t==='tag'&&c.mk.v&&(((mkAll()[c.mk._k]||{}).side)||'post')!=='pre'){
+      if(false){   /* ★ 칩 자유이동 — 옛 인라인(뒤) 삽입 끔 — 앵커(o.anc)로 */
         top().appendChild(stkChipEl(c.mk,opt,row));   /* ★ v3-M M8⑦ — side='pre' 는 여는 자리에 */
       }
       // 링크가 닫히는 자리에 주황 대괄호 라벨을 붙인다(§4-1 · 목업 v2·v3)
@@ -1079,8 +1082,7 @@ function renderLine(row,opt){
     });
     (opens[i]||[]).forEach(o=>{
       /* ★ v3-M M8⑦ — 「구간 앞」 확정 칩은 여는 자리 바로 앞에 */
-      if(o.mk&&o.mk.t==='tag'&&o.mk.v&&((mkAll()[o.mk._k]||{}).side)==='pre')
-        top().appendChild(stkChipEl(o.mk,opt,row));
+      if(o.anc){const anc=el('span','stkanc');const ch=stkChipEl(o.anc,opt,row);anc.appendChild(ch);const nn=(ancN[i]=(ancN[i]||0)+1)-1;if(nn)ch.style.bottom=(0.9+nn*1.5)+'em';top().appendChild(anc);return;}   /* 같은 앵커의 칩은 위로 쌓는다(겹침 0) */   /* ★ 칩 자유이동 — 폭 0 앵커 + 절대 위치 칩 */
       let node;
       if(o.md==='mdlink'){node=el('a','mdlink');node.href=o.href;node.target='_blank';node.rel='noopener';node.title=o.href;node.onclick=ev=>ev.stopPropagation();}   /* ★ 상표 판 5 add1 §1b — 요약본 외부 그림·링크 */
       else if(o.md){node=o.md==='mdbold'?el('strong'):el('span',o.md);if(o.md==='mdcolor'&&o.color)node.style.color=o.color;}   /* ★ 판 4 §2-1 · add4 색 */
@@ -2679,6 +2681,12 @@ function popRec(ev){
    평문에 없는 연결은 없는 것 — 지어내지 않는다. */
 /* ══ ★ v3-M — 본문 칩(끌어 옮기기·side)·팔레트 보조 ══ */
 let STKMV0=null;   /* ★ v3-N §4 — 칩 끌기 시작점(off 를 뺀 앵커 원점) */
+/* ★ 칩 자유이동 — at 읽기(옛 side 호환) · 낱말 경계 스냅 */
+function stkAt(rec,m){ const L=Math.max(0,(m.b||0)-(m.a||0)); if(rec&&typeof rec.at==='number')return Math.max(0,Math.min(L,Math.round(rec.at)));
+  return (rec&&rec.side==='pre')?0:L; }
+function stkSnap(t,a,b,idx){ const L=b-a; let x=Math.max(0,Math.min(L,idx)); const ok=i=>i===0||i===L||/\s/.test(t.charAt(a+i-1))||/\s/.test(t.charAt(a+i));
+  if(ok(x))return x; let lo=x,hi=x; while(lo>0&&!ok(lo))lo--; while(hi<L&&!ok(hi))hi++; return (x-lo<=hi-x)?lo:hi; }
+function stkKeyAB(k){ const p=String(k||'').split(SEP); return {base:p[0],rk:p[1],a:+p[2],b:+p[3]}; }
 let STKATT=null;   /* ★ v3-O §1 — 팝오버 칩 끌어 놓기(앵커 = 선택 구간) */
 function stkChipEl(mk,opt,row){
   const d2=stkdOf(mk.v);
@@ -2727,17 +2735,15 @@ function stkChipRead(base,row,mk,ev){
   const d2=stkdOf(mk.v);
   const body=popShell('fn','🏷 '+(d2?d2.name:'이름 없는 태그'));
   const rec=mkAll()[mk._k]||{};
-  const lock=()=>{ if(!inkHas('jo|'+base))return false;
-    toast('⚠ 이 조문에 필기가 있다 — 폭이 바뀌는 편집은 잠근다(필기를 지우면 풀린다)',1);
-    return true; };
-  const rw=el('div','memobtn');
-  [['pre','칩을 구간 앞에'],['post','칩을 구간 뒤에']].forEach(([v,label])=>{
-    const b2=el('button','tool'+(((rec.side||'post')===v)?' on':''),label);
-    b2.onclick=()=>{if(lock())return;
-      mkPut(mk._k,Object.assign({},rec,{side:v}));closePop();render();};
+  const lock=()=>false;   /* ★ 칩 자유이동 — 칩은 본문 흐름 밖(폭 0) — 앞/뒤·삭제·숨김 모두 폭 무변 → 잉크 잠금 없음(실측 C-4) */
+  const rw=el('div','memobtn'); const L=Math.max(0,(mk.b||0)-(mk.a||0)), cur=stkAt(rec,mk);
+  [['pre','◀ 구간 앞',0],['post','▶ 구간 뒤',L]].forEach(([v,label,at])=>{
+    const b2=el('button','tool'+((cur===at)?' on':''),label);
+    b2.onclick=()=>{ const r2=Object.assign({},rec,{at:at}); delete r2.side; mkPut(mk._k,r2);closePop();render();};
     rw.appendChild(b2);});
+  rw.appendChild(el('span','cdim','끌어서 아무 데나'));
   const del=el('button','tool',mk._new?'🗑 삭제':'🗑 숨김');
-  del.onclick=()=>{if(lock())return;
+  del.onclick=()=>{
     mkPut(mk._k,mk._new?null:Object.assign({},rec,{op:'del'}));closePop();render();};
   rw.appendChild(del);
   const ed=el('button','tool','✎ 마크업 편집 열기');
@@ -2747,17 +2753,17 @@ function stkChipRead(base,row,mk,ev){
   rw.appendChild(ed);
   body.appendChild(rw);
   body.appendChild(el('div','cdim',mk._new
-    ?'끌면 표시 자리만 옮겨진다 — 앵커(낱말) 이동은 ✎ 편집 모드에서'
-    :'볼트 칩 — md 가 정본이라 숨김만 된다(팔레트·사전에는 남는다) · 끌면 표시 자리만'));
+    ?'끌면 구간 안 낱말 사이로 옮겨진다 · 앵커(구간) 자체 바꾸기는 ✎ 편집 모드'
+    :'볼트 칩 — md 가 정본이라 숨김만 된다(팔레트·사전에는 남는다) · 끌면 구간 안 낱말 사이로'));   /* ★ 칩 자유이동 */
   showPop(ev);
 }
 function stkChipPop(base,row,mk,ev){
   /* ★ M8⑦ — 칩 팝오버: 구간 앞/뒤 · 🗑 (사전 칩 전용 · 색·이름은 팔레트에서) */
   const body=popShell('fn','🏷 '+((stkdOf(mk.v)||{}).name||''));
   const rec=mkAll()[mk._k]||{};
-  const rw=el('div','memobtn');
-  [['pre','칩을 구간 앞에'],['post','칩을 구간 뒤에']].forEach(([v,label])=>{
-    const b2=el('button','tool'+(((rec.side||'post')===v)?' on':''),label);
+  const rw=el('div','memobtn'); const L5=Math.max(0,(mk.b||0)-(mk.a||0)), cur5=stkAt(rec,mk);   /* ★ 칩 자유이동 — 편집 팝오버도 at */
+  [['pre','◀ 구간 앞',0],['post','▶ 구간 뒤',L5]].forEach(([v,label,at5])=>{
+    const b2=el('button','tool'+((cur5===at5)?' on':''),label);
     b2.onclick=()=>{mkPut(mk._k,Object.assign({},rec,{side:v}));closePop();render();};
     rw.appendChild(b2);});
   const del=el('button','tool','🗑 지우기');
@@ -4085,7 +4091,14 @@ function stkDropWire(box, base, rows){
     let a = plainLen(pre.cloneContents());
     const t = String(row.t || '');
     /* ★ v3-O §2 — 앵커 이동(낱말 드랍)은 편집 모드만 · 읽기 모드 mv = 항상 표시 이동 */
-    if (mv && (!S.stick || !/\S/.test(t.charAt(a) || ''))){ offDrop(); return; }
+    if (mv && !S.stick){   /* ★ 칩 자유이동 — 읽기 모드 = at 이동(낱말 경계 스냅 · 구간 밖은 끝) + 세로 잔여 off · 앵커 구간 무변 · mkPut 1회 */
+      const om3 = mkAll()[mv] || {}; const kk = stkKeyAB(mv);
+      if (kk.rk !== rowKey(row) || !(kk.b > kk.a)){ offDrop(); return; }   /* 다른 줄에 놓았다 → 표시만 이동(옛 규칙) */
+      const at = stkSnap(t, kk.a, kk.b, a - kk.a);
+      const dy0 = STKMV0 ? Math.round(ev.clientY - STKMV0.y) : 0; const dy = Math.abs(dy0) < 8 ? 0 : dy0;
+      const rec3 = Object.assign({}, om3, { at: at }); delete rec3.side; if (dy) rec3.off = { dx: 0, dy: dy }; else delete rec3.off;
+      mkPut(mv, rec3); toast('🏷 구간 안 자리를 옮겼다(' + at + '/' + (kk.b - kk.a) + ')'); render(); return; }
+    if (mv && !/\S/.test(t.charAt(a) || '')){ offDrop(); return; }
     let b = a;
     while (a > 0 && /\S/.test(t.charAt(a - 1))) a--;
     while (b < t.length && /\S/.test(t.charAt(b))) b++;
@@ -4101,7 +4114,7 @@ function stkDropWire(box, base, rows){
     const rec = { op: 'new', t: 'tag', v: id };
     if (mv){
       const om = mkAll()[mv];
-      if (om && om.side) rec.side = om.side;   // side 유지 · 옛 키 삭제(M8⑦)
+      if (om && typeof om.at === 'number') rec.at = om.at; else if (om && om.side) rec.side = om.side;   // at 유지(옛 side 도) · 옛 키 삭제(M8⑦)   /* ★ 칩 자유이동 */
       mkPut(mv, null);
     }
     mkPut(k, rec);
