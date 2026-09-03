@@ -1818,8 +1818,10 @@ function dragify(p, hd){
   });
   addEventListener('mouseup', () => { on = false; });
 }
-function popShell(kind, title){
-  const p = el('div', 'pop' + (kind ? ' k-' + kind : ''));
+/* ★ 상표 손질 5 — 같은 키 팝업은 다시 열면 닫는다(토글) · 다른 키는 겹침 · 위치·크기 규칙 무접촉 */
+function popToggle(key){ if (!key) return false; const q = POPS.find(x => x._pk === key); if (q){ closeOne(q); return true; } return false; }
+function popShell(kind, title, key){
+  const p = el('div', 'pop' + (kind ? ' k-' + kind : '')); p._pk = key || null;
   p.style.zIndex = ++POPZ;
   const hd = el('div', 'ph');
   hd.appendChild(el('span', 'pdrag', '≡'));
@@ -2404,11 +2406,19 @@ function giChipEl(g, p){
     else if (!no){ c.style.opacity = '.6'; c.title = '1차객 기출뷰 ' + yr + '년 ' + rd + '회 (문번 미상)'; }
     else if (JM && !q){ c.style.opacity = '.5'; c.title = '문번 미확정 — ' + yr + '년 ' + rd + '회 ' + no + '번은 시험문번 확정 문항에 없다'; }
     else c.title = '1차객 기출뷰 ' + yr + '년 ' + rd + '회 ' + no + '번';
-    c.onclick = ev => { ev.stopPropagation(); giGoTo(yr, rd, no); }; }
+    c.onclick = ev => { ev.stopPropagation(); if (rd && no) giPopQ(yr, rd, no, ev); else giGoTo(yr, rd, no); }; }   /* ★ 상표 손질 5 — 확정 문항이면 카드 팝업(이동 없음) · 아니면 기존 이동 */
   else if (m){ c.style.cursor = 'pointer'; c.title = '2차 기출 ' + yr + '년' + (rd ? ' ' + rd + '회' : '') + (no ? ' 문제 ' + no : '') + ' — 이 판례에 이어진 2차 카드 목록';   /* add4 §4 · add5: 그 문제(회차-N)로 거름 */
     c.onclick = ev => { ev.stopPropagation(); const pp = p || (S.tab === 'prec' && S.prec && C[PF('리스트')] ? (C[PF('리스트')].판례 || []).find(x => x.id === S.prec) : null); if (pp) popCardList(pp, '기출', { yr: yr, rd: rd, no: no }, ev, 0); else toast('판례 행이 없다'); }; }
   return c;
 }
+/* ★ 상표 손질 5 — 1차 칩 → 문항 카드 팝업(기출뷰 카드 부품 giCard 그대로 · popShell 안 · 탭 이동 없음 · 다른 팝업 안 닫음 · 같은 문항 다시 클릭 = 닫힘) */
+async function giPopQ(year, round, no, ev){ let q = null;
+  try{ const JM = await get(JMF()); q = (JM.문제 || []).find(x => String(x.연도) === String(year) && String(x.회차) === String(round) && String(x.시험문번) === String(no)); }catch(e){}
+  if (!q){ giGoTo(year, round, no); return; }
+  const key = 'gi|' + PLAW() + '|' + giKey(q); if (popToggle(key)) return;
+  const body = popShell('cell', '📝 1차 ' + year + '년 ' + round + '회 ' + no + '번', key); showPop(ev); popSizable(body, 'gi');
+  try{ body.appendChild(giCard(q, false)); }catch(e){ body.appendChild(el('div', 'cdim', '카드를 못 그렸다 — ' + (e.message || e))); } }
+function giTags(p){ return (Array.isArray(p.기출) ? p.기출 : []).map(String).filter(g => !/^\d\d-\d+(-\d+)?$/.test(g)); }
 async function giGoTo(year, round, no){
   closeAllPops();
   let q = null;
@@ -4555,7 +4565,8 @@ function goJo(law, k, hl){
 }
 async function popJo(law, k, ev, depth, hl){
   depth = depth || 1;
-  const body = popShell('', '📖 ' + k + ' — 불러오는 중');
+  if (popToggle('jo|' + law + '|' + k)) return;   /* ★ 상표 손질 5 */
+  const body = popShell('', '📖 ' + k + ' — 불러오는 중', 'jo|' + law + '|' + k);
   showPop(ev);
   const pop = body.parentNode;
   try{
@@ -4745,9 +4756,10 @@ function noteBlChips(key,B,host,depth,ev0){
 }
 async function popNote(file,blockId,ev,depth){
   depth=depth||1; file=String(file||'').split('/').pop();   /* 전체 경로 임베드(`…/특허목차/7. ==청범해석==`)도 파일명으로 */
+  if(popToggle('note|'+PLAW()+'|'+file+'|'+(blockId||'')))return;   /* ★ 상표 손질 5 */
   const {N,B}=await noteData();
   const rec=N[file];
-  const body=popShell('cell','📄 '+file+(blockId?' · ^'+blockId:''));
+  const body=popShell('cell','📄 '+file+(blockId?' · ^'+blockId:''),'note|'+PLAW()+'|'+file+'|'+(blockId||''));
   showPop(ev); popSizable(body,'note');   /* ★ 판 4 add2 §3 */
   if(!rec){ body.appendChild(el('div','cdim','목차 노트에 없다 — '+file+' (특허목차 70 밖이거나 색인 파일)')); return; }
   const fw=rec.정방향||{판례:[],노트:[]};
@@ -4798,8 +4810,9 @@ async function popNoteList(label,key,items,ev,depth){
 /* ③ 판례 팝업 — 3단과 같은 요약/원문 렌더(크기만 팝업) · 안의 링크·⤷ 는 3단으로 */
 async function popPrec4(id,ev,depth){
   depth=depth||3;
+  if(popToggle('prec|'+PLAW()+'|'+id))return;   /* ★ 상표 손질 5 */
   const P=await get(PF('리스트')).catch(()=>({판례:[]})); const p=(P.판례||[]).find(x=>x.id===id);
-  const body=popShell('cell','⚖ '+(p?(p.사건번호||id):id)+(p&&p.전합?' [전합]':''));
+  const body=popShell('cell','⚖ '+(p?(p.사건번호||id):id)+(p&&p.전합?' [전합]':''),'prec|'+PLAW()+'|'+id);
   showPop(ev); popSizable(body,'prec');   /* ★ 판 4 add2 §3 */
   if(!p){ body.appendChild(el('div','cdim','리스트에 없는 판례 — '+id)); return; }
   const hd=el('div','memobtn'); const go=el('button','tool on','3단으로 ↗'); go.onclick=()=>{closeAllPops();S.tab='prec';S.prec=id;S.precTab=p.요약본?'요약':'원문';render();}; hd.appendChild(go);
@@ -4882,15 +4895,16 @@ const PF_KEYS = ['gichul', 'madi', 'jo', 'type', 'court', 'imp'];
 function pfGet(){ const f = S.precFilter || (S.precFilter = {}); PF_KEYS.forEach(k => { if (!Array.isArray(f[k])) f[k] = []; });
   if (!f.fold || typeof f.fold !== 'object') f.fold = {}; return f; }
 function pfEmpty(f){ return PF_KEYS.every(k => !f[k].length); }
-function precNorm(s){ return String(s == null ? '' : s).replace(/[\s·]/g, ''); }
+function precNorm(s){ return String(s == null ? '' : s).replace(/[\s·]/g, '').toLowerCase(); }   /* ★ 상표 손질 5 — 양쪽 소문자 */
 function precMadi(p){ const vs = (Array.isArray(p.마디) ? p.마디 : []).map(m => m.v); return vs.length ? vs : ['미분류']; }
 /* ★ add2 — 행의 조문키 → 거르기 값 집합. 특허법 조 = `제29조` · 구법은 cur 가 확정된 것만 현행 조로 · 미확정 구법 = `__gu` · 타법 = `__other` · law 없음 = 안 냄 */
 function precJoSet(p){
   const s = new Set();
   (Array.isArray(p.조문키) ? p.조문키 : []).forEach(k => {
-    if (k.law === '특허법' && k.jo) s.add(k.jo);
-    else if (k.law === '구특허법'){ if (k.cur && k.cur.jo) s.add(k.cur.jo); else s.add('__gu'); }
+    if (k.law === S.law && k.jo) s.add(k.jo);   /* ★ 상표 손질 5 — 법 일반화(특허법·상표법) · 규칙 밖(law 없음 · raw 만) = __etc */
+    else if (k.law === '구' + S.law){ if (k.cur && k.cur.jo) s.add(k.cur.jo); else s.add('__gu'); }
     else if (k.law) s.add('__other');
+    else if (k.raw && S.law === '상표법') s.add('__etc');   /* 상표만 — 특허 조문별 무변(T-4) */
   });
   return s;
 }
@@ -4901,7 +4915,8 @@ function precJoChip(k){
 }
 function precPass(p, f, skip){
   if (skip !== 'gichul' && f.gichul.length){ const g = Array.isArray(p.기출차) ? p.기출차 : []; const w = f.gichul[0];
-    if (w === 'both' ? g.length !== 2 : g.indexOf(w) < 0) return false; }
+    if (w !== '1차' && w !== '2차' && w !== 'both'){ if ((Array.isArray(p.기출) ? p.기출 : []).indexOf(w) < 0) return false; }   /* ★ 상표 손질 5 — 태그 알약 = 기출 배열에 그 값 */
+    else if (w === 'both' ? g.length !== 2 : g.indexOf(w) < 0) return false; }
   if (skip !== 'madi' && f.madi.length){ const vs = precMadi(p); if (!f.madi.some(v => vs.indexOf(v) >= 0)) return false; }
   if (skip !== 'jo' && f.jo.length){ const js = precJoSet(p); if (!f.jo.some(v => js.has(v))) return false; }   /* ★ add2 — 조 단위 · 구법(확정) 합침 · 묶음 둘 */
   if (skip !== 'type' && f.type.length){ if (f.type.indexOf(p.사건유형 || '미상') < 0) return false; }
@@ -4940,7 +4955,8 @@ async function precSearch(P, q){
     const r = { num: false, name: false, n: 0, ctx: [] };
     if (jh ? !!p.전합 : (precNorm(p.id).indexOf(qn) >= 0 || precNorm(p.사건번호).indexOf(qn) >= 0 || precNorm(p.별칭).indexOf(qn) >= 0)) r.num = true;
     if (precNorm(p.사건명).indexOf(qn) >= 0 || precNorm(p.쟁점).indexOf(qn) >= 0
-        || precNorm(p.설명별칭).indexOf(qn) >= 0 || precNorm(p.설명줄).indexOf(qn) >= 0) r.name = true;   /* ★ add1 */
+        || precNorm(p.설명별칭).indexOf(qn) >= 0 || precNorm(p.설명줄).indexOf(qn) >= 0
+        || precNorm((Array.isArray(p.기출) ? p.기출 : []).join(' ')).indexOf(qn) >= 0) r.name = true;   /* ★ add1 · 손질 5: 기출 값(24-61 · 대법판례해설) */
     const Z = qid && CITE[p.id] && CITE[p.id].자리 && CITE[p.id].자리[qid.id];
     if (Z){ Z.forEach(z => { r.n++; if (r.ctx.length < 2) r.ctx.push(z); }); }
     else {
@@ -4960,12 +4976,13 @@ function precDescEl(p, head){
   const va = (p.별칭 && typeof p.별칭 === 'string') ? p.별칭 : '';
   if (alias || (va && va !== alias)){ const r = el('div', head ? 'row' : '');
     if (alias) r.appendChild(el('span', 'chip c-alias', alias));
-    if (va && va !== alias) r.appendChild(el('span', 'chip c-src', va));
+    if (va && va !== alias) r.appendChild(el('span', (!alias && PLAW() === '상표') ? 'chip c-alias' : 'chip c-src', va));   /* ★ 상표 손질 5 — 상표 = 설명별칭 없음 → 볼트 별칭이 특허 별칭 칩 색 */
     w.appendChild(r); }
   const line = p.설명줄 || p.사건명 || va || '';
   if (line) w.appendChild(el('div', head ? 'row' : '', line));
   const gs = Array.isArray(p.기출표시) ? p.기출표시 : [];
   if (gs.length){ const r = el('div', head ? 'row' : ''); gs.forEach(g => r.appendChild(giChipEl(g, p))); w.appendChild(r); }   /* ★ 판 4 add1 §2 — 기출 칩 → 기출뷰 · add4 2차 칩 → 카드 목록 */
+  const tags = giTags(p); if (tags.length){ const r = el('div', head ? 'row' : ''); tags.forEach(g => { const c = el('span', 'chip c-theme', g); c.title = '볼트 기출 태그'; r.appendChild(c); }); w.appendChild(r); }   /* ★ 상표 손질 5 — 태그 칩(회차 코드 아닌 값 · 클릭 없음) */
   return w;
 }
 function precCtxEl(z, q){
@@ -5010,7 +5027,8 @@ function plPrecSearchBox(host, P, exclude, onPick){
 async function popCardList(p, kind, year, ev, depth){
   depth = depth || 0;
   const ylab = (year && typeof year === 'object') ? (year.yr + '년' + (year.rd ? ' ' + year.rd + '회' : '') + (year.no ? ' 문제 ' + year.no : '')) : (year ? year + '년' : '');   /* ★ add5 */
-  const body = popShell('cell', '🧾 ' + kind + ' — ' + (p.사건번호 || p.id) + (ylab ? ' · ' + ylab : ''));
+  if (popToggle('cards|' + kind + '|' + p.id + '|' + ylab)) return;   /* ★ 상표 손질 5 */
+  const body = popShell('cell', '🧾 ' + kind + ' — ' + (p.사건번호 || p.id) + (ylab ? ' · ' + ylab : ''), 'cards|' + kind + '|' + p.id + '|' + ylab);
   showPop(ev); popSizable(body, 'list');
   const CC = await get(CHF(kind)).catch(() => null);   /* ★ 상표 판 3 — 법별 카드 JSON */
   const box = el('div'); body.appendChild(box);
@@ -5117,7 +5135,9 @@ function precFilterUI(tree, P, f){
   group('gichul', '기출', [
     { v: '1차', name: '1차기출', test: p => has(p, '기출차', '1차') },
     { v: '2차', name: '2차기출', test: p => has(p, '기출차', '2차') },
-    { v: 'both', name: '1·2차 다', test: p => (p.기출차 || []).length === 2 }], true);
+    { v: 'both', name: '1·2차 다', test: p => (p.기출차 || []).length === 2 },
+    { v: '6개년', name: '6개년', test: p => has(p, '기출', '6개년') }, { v: '대법판례해설', name: '대법판례해설', test: p => has(p, '기출', '대법판례해설') },
+    { v: '중요판례평석', name: '중요판례평석', test: p => has(p, '기출', '중요판례평석') }, { v: '전년도시험이후', name: '전년도시험이후', test: p => has(p, '기출', '전년도시험이후') }], true);   /* ★ 상표 손질 5 — 태그 알약(실측 4종) */
   /* 2 단원별 — 대응표 V01~V70 순서 · 대분류(==…==) 헤더 접기 · 0 인 마디도 보인다 · 맨 아래 미분류 */
   group('madi', '단원별', null, false, () => {
     const tab = Array.isArray(P.마디표) ? P.마디표 : [];
@@ -5149,7 +5169,7 @@ function precFilterUI(tree, P, f){
     const cntJo = {}, hang = {};
     all.forEach(p => { const seen = new Set();
       (Array.isArray(p.조문키) ? p.조문키 : []).forEach(k => { let jo = null;
-        if (k.law === '특허법' && k.jo) jo = k.jo; else if (k.law === '구특허법' && k.cur && k.cur.jo) jo = k.cur.jo;
+        if (k.law === S.law && k.jo) jo = k.jo; else if (k.law === '구' + S.law && k.cur && k.cur.jo) jo = k.cur.jo;   /* ★ 상표 손질 5 */
         if (!jo) return; if (!seen.has(jo)){ seen.add(jo); cntJo[jo] = (cntJo[jo] || 0) + 1; }
         const h = precJoHang(k); if (h){ hang[jo] = hang[jo] || {}; hang[jo][h] = (hang[jo][h] || 0) + 1; } }); });
     const zero = !!f.fold['jo:zero'];
@@ -5169,6 +5189,7 @@ function precFilterUI(tree, P, f){
     const nGu = all.filter(p => precJoSet(p).has('__gu')).length, nOt = all.filter(p => precJoSet(p).has('__other')).length;
     item('jo', { v: '__gu', name: '구법(미확정)', test: (p => precJoSet(p).has('__gu')) }, false);
     item('jo', { v: '__other', name: '타법', test: (p => precJoSet(p).has('__other')) }, false);
+    if (S.law === '상표법') item('jo', { v: '__etc', name: '기타(규칙 밖)', test: (p => precJoSet(p).has('__etc')) }, false);   /* ★ 상표 손질 5 */
   });
   /* 4 심판종류별 — 사건유형 정규화 값 · '' 는 「미상」 */
   group('type', '심판종류별', null, false, () => {
@@ -9105,7 +9126,7 @@ $('#skin').oninput=async e=>{
   if(SKON.prec){
     try{
       const P=await get(PF('리스트'));
-      const hit=P.판례.filter(p=>((p.사건번호||'')+(p.사건명||'')+(p.별칭||'')).includes(q)).slice(0,40);
+      const ql=String(q||'').toLowerCase(); const hit=P.판례.filter(p=>((p.사건번호||'')+(p.사건명||'')+(p.별칭||'')).toLowerCase().includes(ql)).slice(0,40);   /* ★ 상표 손질 5 */
       box.appendChild(el('div','grp','⚖ 판례 — '+hit.length+'건'+(['특허','상표'].indexOf(SHORT[S.law])>=0?'':' (이 법은 판례 갤리가 아직 없다)')));
       hit.forEach(p=>skRow(box,'prec',(p.사건번호||p.파일)+(p.전합?' [전합]':''),(p.사건명||p.별칭||'').slice(0,50),p.원본?'원본':'요약본',
         ev=>{closeSk();
