@@ -241,6 +241,20 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .cell .t{color:#9a958b;font-size:10.5px}
 .cell.hot{border-color:#e5a53a;background:#fffaf0}
 .cellnone{border:1px dashed #e8e5dd;border-radius:9px;background:#faf9f6}
+/* ★ 2차 탭 판 1 — §4 보드 흐림·강조 · 머리줄 칩 · 2단 점수 줄 · 팝업 탭·표 · §10 팝업 머리 터치 끌기 */
+.cell.dim{opacity:.4}.cell.sel{border-color:#d4a72c;box-shadow:0 0 0 2px #fff7d6}
+.cell .chd{display:flex;align-items:center;gap:4px;flex-wrap:wrap;color:#9a958b;font-size:10.5px;margin-bottom:2px}.cell .chd .t{flex-shrink:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip.c-score{background:#dcfce7;color:#166534;font-size:10.5px;padding:0 7px;cursor:pointer;margin:0;white-space:nowrap}.chip.c-score.low{background:#fee2e2;color:#991b1b}.chip.c-score.none{background:#f1f3f5;color:#9ca3af}
+.chip.c-pdf{background:#efece5;color:#555;font-size:10.5px;padding:0 7px;margin:0;text-decoration:none;white-space:nowrap}.chip.c-pdf:hover{color:var(--exc)}
+.prow.dim{opacity:.4}.prow .sc{font-size:11px;color:#555}.prow .sc b{font-weight:700}.prow .sc .w{color:#a33333}.prow .sc .n{color:#9ca3af}
+.tree .legend,.plist .legend{font-size:10.5px;color:#9a958b;padding:6px 13px 10px}
+.gtabs{display:flex;gap:4px;margin:4px 0 8px}.gtabs .tool.on{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.gsum{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin:4px 0 6px;align-items:center}.gsum b{font-size:15px}
+.ghist{display:flex;gap:6px;align-items:flex-end;height:32px;margin:2px 0 8px}.ghist i{display:block;min-width:30px;padding:0 3px;background:#bfdbfe;border-radius:2px 2px 0 0;font-style:normal;font-size:10px;text-align:center;color:#1e3a8a;white-space:nowrap}.ghist i.cur{background:#2563eb;color:#fff}.ghist i.bo{background:#e5e7eb;color:#6b7280}
+table.gtbl{border-collapse:collapse;width:100%;font-size:12px;margin-bottom:8px}.gtbl th,.gtbl td{border-bottom:1px solid #eeece6;padding:3px 6px;text-align:left;vertical-align:top}.gtbl th{color:#777;font-weight:700;font-size:11px}
+.gtbl td.m{text-align:center;min-width:44px;white-space:normal}.gtbl td.m.o{color:#16a34a}.gtbl td.m.x{color:#e11d48;font-weight:700}.gtbl td.m.d{color:#d4a72c}.gtbl tr.miss{background:#fff1f2}.gtbl .note{color:#777;font-size:10.5px;font-weight:400;display:block;text-align:left}
+.gcm{color:#374151;background:#faf9f6;padding:5px 8px;border-radius:4px;font-size:12px;margin:2px 0 8px}.gh5{margin:8px 0 3px;font-size:12px;font-weight:700}
+.pop .ph{touch-action:none}   /* §10 — 사파리가 손가락 몇 px 에 스크롤로 가져가며 pointercancel 을 쏘던 것(.prsz 는 이미 있음 · preventDefault 는 안 넣는다) */
 .unpl{margin-top:16px;border:1px solid #e5a53a;background:#fffaf0;border-radius:10px;padding:10px 13px}
 .unpl h4{margin:0 0 6px;font-size:12px;color:#9a6b12}
 .unpl div.u{font-size:11.5px;color:#7a6134;padding:1px 0;cursor:pointer}
@@ -798,7 +812,7 @@ const JOMODES=[['본문','본문'],['내용','✎ 내용 빈칸'],['주체','✎
 const S={law:'특허법',tab:'jo',jo:null,prec:null,precTab:'요약',
          // 기본 갈래 = 기출 고정(§6-2 ④). 민소도 예외를 두지 않는다.
          // ⚠ 탭 바가 사라지던 것은 기본값이 아니라 붙이는 순서 탓이다 — 그쪽을 고쳤다.
-         boardKind:'기출',boardView:'board',treeHid:false,listHid:false,
+         boardKind:'기출',treeHid:false,listHid:false,
          precSort:'asc',precQ:'',precFilter:{},precJump:null,labels:true,joMode:'본문',   /* ★ 판 3 §3-4 */
          listW:262,precYG:{},precJumpRow:null,   /* ★ 판 4 — 2단 폭 · 연도 묶음 접힘 · 요약 줄 점프 */
          mdFold:{},embFold:{},popCfg:{},   /* ★ 판 4 add2 — 헤딩 접힘(jopangi_ui.md_fold) · 임베드 접힘(embed_fold) · 팝업 크기(pop_<종류>) */
@@ -830,13 +844,14 @@ try{const u=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if(u.lsw>0)S.listW=u.lsw;if(u.prec_ygroups&&typeof u.prec_ygroups==='object')S.precYG=u.prec_ygroups;   /* ★ 판 4 */
     if(u.md_fold&&typeof u.md_fold==='object')S.mdFold=u.md_fold;if(u.embed_fold&&typeof u.embed_fold==='object')S.embFold=u.embed_fold;
     ['note','list','prec','toc'].forEach(k=>{if(u['pop_'+k]&&typeof u['pop_'+k]==='object')S.popCfg[k]=u['pop_'+k];});   /* ★ 판 4 add2 */
-    if(u.omr&&typeof u.omr==='object')S.omrPos=u.omr;   /* ★ 기출뷰 손질 3 — OMR 자리 */}catch(e){}   /* ★ v3-L §1 */
+    if(u.omr&&typeof u.omr==='object')S.omrPos=u.omr;   /* ★ 기출뷰 손질 3 — OMR 자리 */
+    if(u.cha2_filter&&typeof u.cha2_filter==='object')S.cha2Filter=u.cha2_filter;if(u.cha2_sort)S.cha2Sort=u.cha2_sort;   /* ★ 2차 탭 판 1 — §4-2 필터·정렬 = 표시층(jopangi_ui) */}catch(e){}   /* ★ v3-L §1 */
 function uiSave(){try{localStorage.setItem(UI_KEY,JSON.stringify(
   {nmw:S.qlNmW,rdw:S.qlRdW,jpw:S.joPanelW,hfold:S.heatFold?1:0,trw:S.treeW,
    jbk:S.joBlank,jbs:S.joBlankStar?1:0,
    prec_filter:S.precFilter||{},prec_sort:S.precSort,
    lsw:S.listW,prec_ygroups:S.precYG||{},
-   md_fold:S.mdFold||{},embed_fold:S.embFold||{},pop_note:S.popCfg.note||null,pop_list:S.popCfg.list||null,pop_prec:S.popCfg.prec||null,pop_toc:S.popCfg.toc||null,omr:S.omrPos||null}));}catch(e){}}   /* ★ 판 3 §3-4 · 판 4 · add2 */
+   md_fold:S.mdFold||{},embed_fold:S.embFold||{},pop_note:S.popCfg.note||null,pop_list:S.popCfg.list||null,pop_prec:S.popCfg.prec||null,pop_toc:S.popCfg.toc||null,omr:S.omrPos||null,cha2_filter:S.cha2Filter||{},cha2_sort:S.cha2Sort||''}));}catch(e){}}   /* ★ 판 3 §3-4 · 판 4 · add2 */
 const C={};
 const $=(s,r)=>(r||document).querySelector(s);
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;
@@ -4881,16 +4896,35 @@ async function popPrec4(id,ev,depth){
   body.appendChild(bar); body.appendChild(cont); draw();
 }
 /* ③ 2차 카드 팝업 — renderBody 카드 재사용 */
-async function popCard4(kind,ck,ev,depth,blockId){
-  const name=(kind||'사례')+'_'+PLAW();   /* ★ 상표 판 3 */
-  const C=await get(CHF(kind)).catch(()=>({})); const rec=C[ck];
-  const _pk24=('cell')+'|'+('🧾 '+kind+' · '+String(ck).slice(0,40)+(blockId?' · ^'+blockId:'')); if(popToggle(_pk24))return; const body=popShell('cell', '🧾 '+kind+' · '+String(ck).slice(0,40)+(blockId?' · ^'+blockId:''), _pk24); showPop(ev); popSizable(body,'list');   /* ★ 상표 손질 6 — 키 종류|제목 */
-  if(!rec){ body.appendChild(el('div','cdim','본문 JSON 에 없다 — '+name+' / '+ck)); return; }
-  const go=el('button','tool on','2차 레일로 ↗'); go.onclick=()=>{closeAllPops();S.tab='cha2';S.boardKind=kind;render();}; body.appendChild(go);
-  /* ★ 판 4 add5 §2 — 카드 팝업·보드·목록 한 함수(renderBody) · blockId 면 blk 문단 전체 강조(add3) */
-  let hlA=null,hlB=null; if(blockId){ const bi=(rec.행||[]).findIndex(r=>r.id===blockId); if(bi>=0){ const bk=rec.행[bi].blk; hlA=(bk&&bk.a!=null)?bk.a:bi; hlB=(bk&&bk.b!=null)?bk.b:bi; } }
-  const bd=renderBody(rec,ck,{card:true,kind:kind,depth:depth||1,hlA:hlA,hlB:hlB}); body.appendChild(bd);
-  const hl=bd.querySelector('.blkhl'); if(hl)setTimeout(()=>{try{hl.scrollIntoView({block:'center'});}catch(e){}},60);
+async function popCard4(kind,ck,ev,depth,blockId,tab){   /* ★ 2차 탭 판 1 §4-5 — 탭 셋(문제/해설/채점) · tab 을 주면 열린 팝업은 탭만 바꾼다 */
+  kind=kind||'사례'; const subj=PLAW(); const name=kind+'_'+subj;
+  const bk=(kind==='기출'&&subj!=='민소')?'사례':kind;   /* 기출|특허·상표 = 사례 본문을 빌린다(bodyOf 와 같음) */
+  const C=await get(CHF(bk)).catch(()=>({})); const rec=C[ck];
+  const G=await gradeOf(subj); const gv=G['card|'+kind+'|'+ck]||G['card|'+(kind==='사례'?'기출':'사례')+'|'+ck]||null;
+  const _pk24=('cell')+'|'+('🧾 '+kind+' · '+String(ck).slice(0,40)+(blockId?' · ^'+blockId:''));
+  { const open=POPS.find(x=>x._pk===_pk24); if(open){ if(tab&&open._setTab){ open._setTab(tab); return; } closeOne(open); return; } }
+  const body=popShell('cell', '🧾 '+kind+' · '+String(ck).slice(0,40)+(blockId?' · ^'+blockId:''), _pk24); showPop(ev); popSizable(body,'list');   /* ★ 상표 손질 6 — 키 종류|제목 */
+  const pop=body.parentNode;
+  S.cha2Sel='card|'+kind+'|'+ck; try{ c2Mark(S.cha2Sel,false); }catch(e){}   /* 열린 카드 = 보드·목록 상시 강조(메모 add1 §3 준용) */
+  if(!rec&&!gv){ body.appendChild(el('div','cdim','본문 JSON 에 없다 — '+name+' / '+ck)); return; }
+  const top=el('div'); top.style.cssText='display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px';
+  const go=el('button','tool on','2차 레일로 ↗'); go.onclick=()=>{closeAllPops();S.tab='cha2';S.boardKind=kind;S.cha2Sel='card|'+kind+'|'+ck;render();}; top.appendChild(go);
+  const r0=gv?gv.회차[gv.회차.length-1]:null;
+  if(r0){ top.appendChild(el('span','chip c-alias',(c2Bp(r0)||'?')+'점')); if(r0.기출)top.appendChild(el('span','chip c-quiz',r0.기출)); else if(r0.번호)top.appendChild(el('span','chip c-quiz','['+r0.번호+']'));
+    const pdf=c2PdfChip((r0.해설링크||[])[0]||((rec&&rec.fm&&rec.fm.해설)||'')); if(pdf)top.appendChild(pdf); }
+  else if(rec&&rec.fm&&rec.fm.해설){ const pdf=c2PdfChip(rec.fm.해설); if(pdf)top.appendChild(pdf); }
+  const tabs=el('div','gtabs'); const cont=el('div'); let pm=null;
+  const draw=t=>{ tabs.querySelectorAll('.tool').forEach(b=>b.classList.toggle('on',b.dataset.t===t)); cont.innerHTML='';
+    if(t==='문제'){ if(!rec){ cont.appendChild(el('div','cdim','본문 JSON 에 없다 — '+name+' / '+ck)); return; }
+      /* ★ 판 4 add5 §2 — 카드 팝업·보드·목록 한 함수(renderBody) · blockId 면 blk 문단 전체 강조(add3) */
+      let hlA=null,hlB=null; if(blockId){ const bi=(rec.행||[]).findIndex(r=>r.id===blockId); if(bi>=0){ const bk2=rec.행[bi].blk; hlA=(bk2&&bk2.a!=null)?bk2.a:bi; hlB=(bk2&&bk2.b!=null)?bk2.b:bi; } }
+      const bd=renderBody(rec,ck,{card:true,kind:kind,depth:depth||1,hlA:hlA,hlB:hlB}); cont.appendChild(bd);
+      const hl=bd.querySelector('.blkhl'); if(hl)setTimeout(()=>{try{hl.scrollIntoView({block:'center'});}catch(e){}},60); return; }
+    if(t==='해설'){ const w=el('div','cdim','…'); cont.appendChild(w); (pm?Promise.resolve(pm):c2PrecIds()).then(m=>{pm=m; cont.innerHTML=''; cont.appendChild(c2ExplainEl(gv,depth||1,pm));}); return; }
+    cont.appendChild(el('div','cdim','…')); c2GradeEl(gv,depth||1).then(n=>{ cont.innerHTML=''; cont.appendChild(n); }); };
+  pop._setTab=draw;
+  ['문제','해설','채점'].forEach(t=>{const b=el('button','tool',t);b.dataset.t=t;b.onclick=ev2=>{ev2.stopPropagation();draw(t);};tabs.appendChild(b);});
+  body.appendChild(top); body.appendChild(tabs); body.appendChild(cont); draw(tab||'문제');
 }
 /* §2-4 요약본 목차 팝업 — 헤딩만 접힌 목록 · › 절 펴기 · 헤딩 글자 클릭 = 3단 요약 탭 그 줄 */
 async function popSumToc(p,ev){
@@ -5031,6 +5065,8 @@ function autoImpGoEl(kind, name){ const s = el('span', 'chip ' + (kind === 'q' ?
   if (kind === 'q'){ const m = /^(\d{4})-(\d+)-(\d+)$/.exec(name);
     if (!m){ s.title = '1차 원장 행 — 회차·문번 없음(연도만)'; s.style.cursor = 'default'; return s; }
     s.title = '1차 ' + m[1] + '년 ' + m[2] + '회 문항 ' + m[3] + ' — 클릭 = 카드'; s.onclick = ev => { ev.stopPropagation(); giPopQid(name, ev); }; return s; }
+  if (kind === 'grade'){ const m = /^card\|([^|]+)\|(.*)$/.exec(name); s.className = 'chip c-warn'; s.textContent = m ? (m[1] + ' · ' + m[2].slice(0, 30)) : name;   /* ★ 2차 탭 판 1 — §4-6 채점 누락 근거 = 카드키 · 클릭 = 그 카드 채점 탭 */
+    s.title = '채점 누락(있는 사람 전부 X 인 항목) — 클릭 = 그 카드 채점 탭'; s.onclick = ev => { ev.stopPropagation(); if (m) popCard4(m[1], m[2], ev, 1, null, '채점'); }; return s; }
   s.title = '2차 사례 카드 — 클릭 = 카드'; s.onclick = ev => { ev.stopPropagation(); popCard4('사례', name, ev, 1); }; return s; }
 function autoImpOutside(pop){ const h = e2 => { if (POPS.indexOf(pop) < 0){ document.removeEventListener('pointerdown', h, true); return; }
     if (!pop.contains(e2.target)){ closeOne(pop); document.removeEventListener('pointerdown', h, true); } };
@@ -5048,7 +5084,7 @@ function autoImpPop(p, ev, tap){ const key = autoImpKey(p); const open = POPS.fi
     tr.appendChild(el('td', 'num', (g.n || 0) + ' × ' + (g.w || 0) + ' = ' + (g.점 || 0))); tb.appendChild(tr); });
   const sum = G.reduce((a, g) => a + (g.점 || 0), 0); const tf = el('tr', 'sum'); tf.appendChild(el('td', '', '합'));
   tf.appendChild(el('td', '', sum === (p.자동중요도 || 0) ? '= 자동중요도' : '≠ 자동중요도 ' + (p.자동중요도 || 0))); tf.appendChild(el('td', 'num', String(sum))); tb.appendChild(tf);
-  body.appendChild(tb); body.appendChild(el('div', 'cdim', '산식(⚙ jo_build · 무변) = 1차 원장 연결 ×1 + 기출 차·연도 짝 ×3 + 2차 카드 ×2 · 볼트 중요도는 안 더한다'));
+  body.appendChild(tb); body.appendChild(el('div', 'cdim', '산식(⚙ jo_build) = 1차 원장 연결 ×1 + 기출 차·연도 짝 ×3 + 2차 카드 ×2 + 채점 누락 ×2 · 볼트 중요도는 안 더한다'));
   showPop(ev);
   if (tap){ pop._hover = false; autoImpOutside(pop); }
   else { pop._hover = true; pop.addEventListener('pointerenter', () => clearTimeout(pop._t)); pop.addEventListener('pointerleave', () => autoImpLeave(p)); }
@@ -5145,7 +5181,7 @@ async function popCardList(p, kind, year, ev, depth){
       inp.oninput = drawR; ['click', 'pointerdown', 'keydown'].forEach(nm => f.addEventListener(nm, e3 => e3.stopPropagation())); box.appendChild(f); drawR(); setTimeout(() => inp.focus(), 30); };
     box.appendChild(add);
     if (kind === '기출'){ const go = el('button', 'tool', '2차 레일 기출' + (year ? ' ' + year : '') + ' ↗'); go.style.marginLeft = '6px';
-      go.onclick = e2 => { e2.stopPropagation(); closeAllPops(); S.tab = 'cha2'; S.boardKind = '기출'; S.boardView = 'board'; S.series = ''; if (year) S.yearFilter = year; render(); }; box.appendChild(go); }
+      go.onclick = e2 => { e2.stopPropagation(); closeAllPops(); S.tab = 'cha2'; S.boardKind = '기출'; S.series = ''; if (year) S.yearFilter = year; render(); }; box.appendChild(go); }
   };
   draw();
 }
@@ -5874,6 +5910,84 @@ function memoEdit(file,mk,word,ev){
   setTimeout(()=>ta.focus(),30);
 }
 
+/* ★ 2차 탭 판 1 (2026-09-03 · _task_cha2_grade.md §4) — 보드 본판 · 1단 필터 서랍 · 2단 정렬+목록 서랍 · 카드 머리줄 점수 칩 · 채점 JSON(⚙ 배달)은 읽기만 · SYNC_KEYS 무접촉 */
+const C2F_KEYS=['grade','pct','miss','who','year','no','unit'];
+function c2fGet(){const f=S.cha2Filter||(S.cha2Filter={});C2F_KEYS.forEach(k=>{if(!Array.isArray(f[k]))f[k]=[];});if(!f.fold||typeof f.fold!=='object')f.fold={};return f;}
+function c2fEmpty(f){return C2F_KEYS.every(k=>!f[k].length);}
+async function gradeOf(subj){return await get('2cha_채점_'+subj+'.json').catch(()=>({}));}   /* 상표 = 파일 없음 → {} */
+const C2_NUMRX=/^(?:특사례|상사례|사\s*례)\s*(\d+(?:-\d+)*[a-zA-Z]?)(?=[-\s(]|$)/;
+function c2Num(file){const m=C2_NUMRX.exec(file||'');return m?m[1]:'';}
+function c2NatKey(file){const n=c2Num(file);if(!n)return [[1e6,file]];return n.split('-').map(x=>{const m=/^(\d+)([a-zA-Z]?)$/.exec(x);return m?[+m[1],m[2]]:[1e6,x];});}
+function c2Cmp(a,b){const ka=c2NatKey(a),kb=c2NatKey(b);for(let i=0;i<Math.max(ka.length,kb.length);i++){if(!ka[i])return -1;if(!kb[i])return 1;if(ka[i][0]!==kb[i][0])return ka[i][0]-kb[i][0];if(ka[i][1]!==kb[i][1])return ka[i][1]<kb[i][1]?-1:1;}return a<b?-1:a>b?1:0;}
+function c2Title(file,x){if(x&&x.논점)return x.논점;if(!c2Num(file))return file;const t=file.replace(C2_NUMRX,'').replace(/^-/,'').trim();return t||file;}
+function c2RowCmp(a,b){const na=parseFloat(String(a).replace('-','.')),nb=parseFloat(String(b).replace('-','.'));if(isNaN(na)||isNaN(nb))return String(a).localeCompare(String(b));return na-nb;}
+function c2UnitCmp(a,b){const x=parseInt(a,10),y=parseInt(b,10);if(isNaN(x)!==isNaN(y))return isNaN(x)?1:-1;if(!isNaN(x)&&x!==y)return x-y;return String(a).localeCompare(String(b));}
+/* 채점 레코드 → 카드 지표 — 최근 회차 기준 · 점수율 = 있는 사람 평균(%) · X 항목 = 있는 사람 전부 X 인 항목(꼴 A 표 칸 · B/C 는 사람별 누락) */
+function c2XItems(rec){const out=[];const pool=[];(rec.설문||[]).forEach(q=>(q.항목||[]).forEach(it=>pool.push(it)));(rec.항목||[]).forEach(it=>pool.push(it));
+  pool.forEach(it=>{const jd=it.판정||{};const ps=Object.keys(jd).filter(p=>jd[p]&&jd[p].m);if(ps.length&&ps.every(p=>jd[p].m==='X'))out.push(it);});return out;}
+function c2Bp(rec){if(rec.배점)return rec.배점;return (rec.설문||[]).reduce((a,q)=>a+(q.배점||0),0);}
+function c2Info(G,ck){const v=G&&G[ck];const recs=(v&&v.회차)||[];
+  if(!recs.length)return {graded:false,n:0,recs:recs,per:{},pct:null,rev:false,x:0,xmax:0,xp:false,xj:false,who:[],date:'',pdf:'',bp:0};
+  const r=recs[recs.length-1];const bp=c2Bp(r);const per={};let sum=0,cnt=0,xmax=0;
+  (r.사람||[]).forEach(p=>{const h=(r.합계||{})[p]||{};const s=(h.점수!=null)?h.점수:null;const pct=(s!=null&&bp)?Math.round(s/bp*100):null;const x=(r.X수||{})[p]||0;per[p]={s:s,pct:pct,bo:h.보완,rg:h.범위,x:x};if(pct!=null){sum+=pct;cnt++;}xmax=Math.max(xmax,x);});
+  const xi=c2XItems(r);
+  return {graded:true,n:recs.length,recs:recs,rec:r,per:per,bp:bp,pct:cnt?Math.round(sum/cnt):null,rev:recs.some(z=>z.결론반대),x:xi.length,xmax:xmax,
+    xp:xi.some(it=>(it.링크||[]).some(l=>l.k==='prec')),xj:xi.some(it=>(it.링크||[]).some(l=>l.k==='jo')),who:r.사람||[],date:r.채점일||'',pdf:(r.해설링크||[])[0]||''};}
+function c2Who(i){const f=c2fGet();const w=f.who[0];if(w&&w!=='both'&&i.per[w])return w;return i.who[0]||'햄찌';}
+function c2Pass(c,f,skip){const i=c.info;
+  if(skip!=='grade'&&f.grade.length){if(!f.grade.some(v=>v==='none'?!i.graded:v==='done'?i.graded:v==='rev'?i.rev:v==='multi'?i.n>=2:false))return false;}
+  if(skip!=='pct'&&f.pct.length){if(i.pct==null)return false;if(!f.pct.some(v=>v==='lt60'?i.pct<60:v==='60_80'?(i.pct>=60&&i.pct<80):v==='ge80'?i.pct>=80:false))return false;}
+  if(skip!=='miss'&&f.miss.length){if(!f.miss.some(v=>v==='x3'?i.x>=3:v==='prec'?i.xp:v==='jo'?i.xj:false))return false;}
+  if(skip!=='who'&&f.who.length){const w=f.who[0];if(w==='both'?!(i.who.indexOf('햄찌')>=0&&i.who.indexOf('꼬까')>=0):i.who.indexOf(w)<0)return false;}
+  if(skip!=='year'&&f.year.length&&f.year.indexOf(c.row)<0)return false;
+  if(skip!=='no'&&f.no.length&&f.no.indexOf(String(c.col))<0)return false;
+  if(skip!=='unit'&&f.unit.length&&f.unit.indexOf(c.unit)<0)return false;
+  return true;}
+function c2FilterUI(tree,cards,f){
+  const cnt=(k,test)=>cards.reduce((n,c)=>n+((c2Pass(c,f,k)&&test(c))?1:0),0);
+  const item=(key,it,single)=>{const on=f[key].indexOf(it.v)>=0,n=cnt(key,it.test);const r=el('div','r fitem'+(on?' on':'')+(n?'':' zero'));
+    r.appendChild(el('span','nm',(on?'☑ ':'☐ ')+it.name));r.appendChild(el('em','',String(n)));
+    r.onclick=()=>{if(single)f[key]=on?[]:[it.v];else if(on)f[key]=f[key].filter(x=>x!==it.v);else f[key].push(it.v);uiSave();render();};tree.appendChild(r);};
+  const group=(key,title,items,single)=>{const fold=!!f.fold[key];const hd=el('div','r ftog');hd.appendChild(el('span','nm',(fold?'▸ ':'▾ ')+title));
+    hd.appendChild(el('em','',f[key].length?('✓'+f[key].length):''));hd.onclick=()=>{f.fold[key]=!fold;uiSave();render();};tree.appendChild(hd);if(fold)return;items.forEach(it=>item(key,it,single));};
+  tree.appendChild(el('div','h','1단 · 필터 — 보드·목록 둘 다 · 안 걸리면 흐림'));
+  group('grade','채점',[{v:'none',name:'미채점',test:c=>!c.info.graded},{v:'done',name:'채점됨',test:c=>c.info.graded},{v:'rev',name:'결론반대 ⚠',test:c=>c.info.rev},{v:'multi',name:'2회 이상',test:c=>c.info.n>=2}],false);
+  group('pct','점수율(중간값)',[{v:'lt60',name:'60% 미만',test:c=>c.info.pct!=null&&c.info.pct<60},{v:'60_80',name:'60~80',test:c=>c.info.pct!=null&&c.info.pct>=60&&c.info.pct<80},{v:'ge80',name:'80 이상',test:c=>c.info.pct!=null&&c.info.pct>=80}],false);
+  group('miss','누락(X) 항목',[{v:'x3',name:'X 3개 이상',test:c=>c.info.x>=3},{v:'prec',name:'판례 누락',test:c=>c.info.xp},{v:'jo',name:'조문 누락',test:c=>c.info.xj}],false);
+  group('who','사람',[{v:'햄찌',name:'햄찌',test:c=>c.info.who.indexOf('햄찌')>=0},{v:'꼬까',name:'꼬까',test:c=>c.info.who.indexOf('꼬까')>=0},{v:'both',name:'둘 다',test:c=>c.info.who.indexOf('햄찌')>=0&&c.info.who.indexOf('꼬까')>=0}],true);
+  const rows=[...new Set(cards.map(c=>c.row).filter(Boolean))].sort(c2RowCmp);
+  if(rows.length)group('year',S.boardKind==='GS'?'연도-회':'연도·회차',rows.map(r=>{const c0=cards.find(c=>c.row===r);return {v:r,name:(c0&&c0.yr?String(c0.yr).slice(2)+'-':'')+r,test:c=>c.row===r};}),false);
+  const cols=[...new Set(cards.map(c=>c.col).filter(x=>x!=null))].sort((a,b)=>a-b);
+  if(cols.length)group('no','문제 번호',cols.map(c=>({v:String(c),name:'문제 '+c,test:x=>String(x.col)===String(c)})),false);
+  const units=[...new Set(cards.map(c=>c.unit).filter(Boolean))].sort(c2UnitCmp);
+  if(units.length)group('unit',S.boardKind==='GS'?'강사':'단원(번호 첫 마디)',units.map(u=>({v:u,name:u,test:c=>c.unit===u})),false);
+  if(!c2fEmpty(f)){const r=el('div','r');r.appendChild(el('span','nm','✕ 전부 지우기'));r.onclick=()=>{C2F_KEYS.forEach(k=>{f[k]=[];});uiSave();render();};tree.appendChild(r);}
+}
+function c2SortFn(mode){const byOrder=(a,b)=>{if(a.row!==b.row)return c2RowCmp(a.row,b.row);if((a.col||0)!==(b.col||0))return (a.col||0)-(b.col||0);return c2Cmp(a.file,b.file);};
+  if(mode==='pct')return (a,b)=>{const x=a.info.pct,y=b.info.pct;if((x==null)!==(y==null))return x==null?1:-1;return ((x||0)-(y||0))||byOrder(a,b);};
+  if(mode==='recent')return (a,b)=>{const x=a.info.date||'',y=b.info.date||'';if(!x!==!y)return x?-1:1;return (y<x?-1:y>x?1:0)||byOrder(a,b);};
+  if(mode==='miss')return (a,b)=>(b.info.x-a.info.x)||byOrder(a,b);
+  if(mode==='year')return (a,b)=>{if(a.row!==b.row)return -c2RowCmp(a.row,b.row);return ((a.col||0)-(b.col||0))||c2Cmp(a.file,b.file);};
+  return byOrder;}
+function c2ScoreChip(c){const i=c.info;let s,cls='chip c-score';
+  if(!i.graded){s='미채점';cls+=' none';}
+  else{const w=c2Who(i);const p=i.per[w]||{};s=(p.s!=null?p.s:'?')+'/'+i.bp+(p.pct!=null?' · '+p.pct+'%':'')+(i.n>1?' · '+i.n+'회':'')+(i.rev?' · 결론⚠':'')+(p.x?' · X '+p.x:'');if(p.pct!=null&&p.pct<60)cls+=' low';}
+  const ch=el('span',cls,s);ch.title=(i.graded?Object.keys(i.per).map(p=>p+' '+i.per[p].s+'/'+i.bp+(i.per[p].bo!=null?' (보완 '+i.per[p].bo+')':'')).join(' · ')+' — ':'채점표 없음 — ')+'클릭 = 채점 탭';
+  ch.onclick=ev=>{ev.stopPropagation();popCard4(S.boardKind,c.file,ev,1,null,'채점');};return ch;}
+function c2PdfChip(u){if(!u)return null;const a=el('a','chip c-pdf','해설 PDF ↗');a.href=u;a.target='_blank';a.rel='noopener';a.title=u+' — 새 창(마이박스 뷰어)';a.onclick=ev=>ev.stopPropagation();return a;}
+function c2Mark(ck,scroll){document.querySelectorAll('#slot .cell.sel,#slot .prow.sel').forEach(n=>n.classList.remove('sel'));
+  const cd=[...document.querySelectorAll('#slot .cell[data-ck]')].find(n=>n.dataset.ck===ck),pr=[...document.querySelectorAll('#slot .prow[data-ck]')].find(n=>n.dataset.ck===ck);
+  if(cd)cd.classList.add('sel');if(pr)pr.classList.add('sel');
+  if(scroll){const main=document.querySelector('#slot .main');if(main)main._prog=Date.now();
+    if(cd){const go=()=>{try{cd.scrollIntoView({block:'center',inline:'center'});}catch(e){}};go();setTimeout(go,300);setTimeout(go,800);}}   /* 지연 렌더로 위 카드 높이가 바뀌므로 두 번 더 맞춘다 */
+  if(pr){try{pr.scrollIntoView({block:'nearest'});}catch(e){}}}
+let C2IO=null;
+function c2CellEl(c,bodies){const hot=/⚠|누락/.test(c.x.논점||'');const cd=el('div','cell'+(hot?' hot':'')+(c.pass?'':' dim')+(S.cha2Sel===c.ck?' sel':''));cd.dataset.ck=c.ck;
+  const hd=el('div','chd');hd.appendChild(el('span','t',c.series||c.label));hd.appendChild(c2ScoreChip(c));const pdf=c2PdfChip(c.info.pdf);if(pdf)hd.appendChild(pdf);cd.appendChild(hd);
+  const ti=el('div','ctitle',c.title);ti.title='눌러서 크게 보기';ti.onclick=e=>{e.stopPropagation();popCard4(S.boardKind,c.file,e,1);};cd.appendChild(ti);
+  const ph=el('div','cdim','…');ph.style.minHeight='180px';cd.appendChild(ph);
+  cd._lazy=()=>{if(cd._done)return;cd._done=1;try{ph.replaceWith(renderBody(bodies[c.file],c.file,{card:1,kind:S.boardKind}));}catch(e){ph.textContent='본문 렌더 실패';}};   /* 보이는 카드만 본문(사례 171·514 한꺼번에 안 그림) */
+  if(C2IO)C2IO.observe(cd);return cd;}
 async function view2cha(){
   const slot=$('#slot');slot.innerHTML='';
   const B=await get('2cha_보드.json');
@@ -5888,24 +6002,20 @@ async function view2cha(){
     const b=el('button','pill'+(S.boardKind===k?' on':(n?'':' wait')),k+' '+(n||'—'));
     b.onclick=()=>{S.boardKind=k;S.series='';S.yearFilter='';render();};bar.appendChild(b);});
   const sp=el('span');sp.style.flex='1';bar.appendChild(sp);
-  // ⚠ 캔버스 보기는 뺐다 — 「보드 = 캔버스」라 중복(8/23 사용자).
-  //   캔버스 파싱·JSON·뷰를 전부 걷어냈다(8/23 사용자 「아예 지워」).
-  [['board','보드'],['list','목록']].forEach(([v,t])=>{
-    const b=el('button','tool'+(S.boardView===v?' on':''),t);
-    b.onclick=()=>{S.boardView=v;render();};bar.appendChild(b);});
-
-  // ★ 탭 바를 **조기반환보다 먼저** 붙인다(§6-2).
-  //   전에는 붙이는 곳이 조기반환 뒤라 「폴더 없음」이면 버튼까지 통째로 사라져
-  //   다른 갈래로 갈 길이 막혔다. 기본값이 아니라 순서가 원인이었다.
+  /* 보드/목록 토글은 없앴다(§4-1) — 목록은 2단 서랍이다 */
   main.appendChild(bar);
 
   const key=S.boardKind+'|'+subj;
   const d=B[key];
+  const tree=el('div','tree'+(S.treeHid?' hid':''));
+  slot.appendChild(tree);slot.appendChild(handle('tree'));
+  const list=el('div','plist'+(S.listHid?' hid':''));
+  slot.appendChild(list);slot.appendChild(handle('list'));
   if(!d||d.상태==='폴더 없음'){
-    // 다른 갈래에 몇 개가 있는지 한 줄 덧붙인다(§6-2 ③)
     const other=['기출','GS','사례'].filter(k=>k!==S.boardKind).map(k=>{
       const o=B[k+'|'+subj];
       return k+' '+(o&&o.상태!=='폴더 없음'?(o.총||0):'—');}).join(' · ');
+    tree.appendChild(el('div','h','1단 · 필터 — 폴더 없음'));list.appendChild(el('div','h','2단 · 목록 — 없음'));
     main.appendChild(emptyBox('🖋',subj+' · '+S.boardKind+' — 폴더 없음',
       '볼트에 해당 폴더가 없다  ·  다른 갈래: '+other));
     slot.appendChild(main);return;
@@ -5913,9 +6023,23 @@ async function view2cha(){
   const cells=d.격자||{},keys=Object.keys(cells);
   const un=d.미배치||[];
   const bodies=await bodyOf(S.boardKind==='기출'&&subj!=='민소'?'사례':S.boardKind,subj);
+  const G=await gradeOf(subj);
+  const f=c2fGet();
+
+  /* 카드 목록 — 격자 셀(기출·GS) 또는 미배치(사례 = 번호 첫 마디 열) */
+  const cards=[];
+  if(S.boardKind==='사례'){
+    un.forEach(x=>{const n=c2Num(x.파일);cards.push({file:x.파일,ck:'card|사례|'+x.파일,x:x,row:'',col:null,unit:n?n.split('-')[0]:'기타',series:'',label:n||x.파일,title:c2Title(x.파일,null)});});
+  }else{
+    keys.forEach(k=>cells[k].forEach(x=>{const [r,c]=k.split('|');
+      cards.push({file:x.파일,ck:'card|'+S.boardKind+'|'+x.파일,x:Object.assign({셀:k},x),row:r,col:+c,unit:S.boardKind==='GS'?(x.시리즈||''):'',series:x.시리즈||'',yr:x.연도,label:(x.연도?String(x.연도).slice(2)+'-':'')+r+' · '+c,title:x.논점||x.파일});}));
+    /* 미배치(회차 토큰 없는 파일 — 기출 갈래에선 사례 파일 94)는 카드·목록에 안 넣는다 · 보드 아래 미배치 상자 그대로 */
+  }
+  cards.forEach(c=>{c.info=c2Info(G,c.ck);c.pass=c2Pass(c,f);});
+  const nGraded=cards.filter(c=>c.info.graded).length;
 
   // ── 강사·시리즈 선택기는 **GS 에서만**(8/23 사용자). 별도 줄 없이 상단에 붙인다.
-  const all=[];keys.forEach(k=>cells[k].forEach(x=>all.push(Object.assign({셀:k},x))));
+  const all=cards.filter(c=>c.row).map(c=>c.x);
   const series=[...new Set(all.map(x=>x.시리즈).filter(Boolean))].sort();
   if(S.boardKind==='GS'&&series.length){
     const s1=el('select','sel');
@@ -5925,92 +6049,157 @@ async function view2cha(){
     bar.insertBefore(s1,sp);
   }else if(S.series){S.series='';}
   const years=[...new Set(all.map(x=>x.연도).filter(Boolean))].sort((a,b)=>a-b);
-  // bar 는 위에서 이미 붙였다 — 강사 선택기는 살아 있는 bar 에 끼워 넣는다(§6-2)
+  const pass0=c=>(!S.series||c.series===S.series)&&(!S.yearFilter||String(c.yr)===String(S.yearFilter));
 
-  const pass=x=>(!S.series||x.시리즈===S.series)&&(!S.yearFilter||String(x.연도)===String(S.yearFilter));
-  const shown=all.filter(pass);
+  /* ── 1단 필터 */
+  c2FilterUI(tree,cards,f);
+  tree.appendChild(el('div','legend','걸림 '+cards.filter(c=>c.pass).length+' / '+cards.length+' · 채점 '+nGraded+' · 안 걸리는 카드는 흐리게(빈 칸 없음)'));
 
-  if(S.boardView==='list'){
-    main.appendChild(el('div','badge',
-      `${d.총}개 · 배치 ${d.배치수||0} · 미배치 ${un.length}` +
-      ((S.series||S.yearFilter)?`  ·  필터 적용 ${shown.length}개`:'')));
-    const rows=shown.slice().sort((a,b)=>cmpCell(a,b));
-    rows.forEach(x=>{const r=el('div','prow');
-      r.appendChild(el('div','pn',cellLabel(x)));
-      r.appendChild(el('div','iss',x.파일));
-      r.onclick=e=>popCell(x,e,bodies);main.appendChild(r);});
-    un.forEach(x=>{const r=el('div','prow');
-      r.appendChild(el('div','pn','미배치'));
-      r.appendChild(el('div','iss',x.파일));
-      r.onclick=e=>popCell(x,e,bodies);main.appendChild(r);});
-    slot.appendChild(main);return;
-  }
+  /* ── 2단 정렬 + 목록 */
+  const cb=el('div','ctrlbar');const sel=el('select','sel');
+  [['order','해례·회차 순'],['pct','점수율↑'],['recent','최근 채점'],['miss','누락↓'],['year','연도·회차↓']].forEach(([v,t])=>{const o=el('option','',t);o.value=v;if((S.cha2Sort||'order')===v)o.selected=true;sel.appendChild(o);});
+  sel.onchange=()=>{S.cha2Sort=sel.value;uiSave();render();};cb.appendChild(sel);list.appendChild(cb);
+  const cnt=el('div','h');cnt.style.cssText='padding:6px 12px;font-size:11px;color:#9a958b;border-bottom:1px solid #eeece6';
+  cnt.textContent='걸림 '+cards.filter(c=>c.pass&&pass0(c)).length+' / '+cards.length+' · 채점 '+nGraded+(c2fEmpty(f)?'':' · 필터 켜짐');list.appendChild(cnt);
+  cards.slice().sort(c2SortFn(S.cha2Sort||'order')).forEach(c=>{
+    if(!pass0(c))return;
+    const r=el('div','prow'+(c.pass?'':' dim')+(S.cha2Sel===c.ck?' sel':''));r.dataset.ck=c.ck;
+    r.appendChild(el('div','pn',c.label));r.appendChild(el('div','iss',c.title));
+    const sc=el('div','sc');const i=c.info;
+    if(!i.graded)sc.appendChild(el('span','n','미채점'));
+    else{const w=c2Who(i),p=i.per[w]||{};const b=el('b','',(p.s!=null?p.s:'?')+'/'+i.bp);sc.appendChild(b);
+      sc.appendChild(document.createTextNode((p.pct!=null?' '+p.pct+'%':'')+(i.n>1?' · '+i.n+'회':'')+(Object.keys(i.per).length>1?' · '+Object.keys(i.per).filter(q=>q!==w).map(q=>q+' '+i.per[q].s).join(' '):'')));
+      if(i.rev){sc.appendChild(document.createTextNode(' · '));sc.appendChild(el('span','w','결론⚠'));}
+      if(p.x){sc.appendChild(document.createTextNode(' · '));sc.appendChild(el('span','w','X '+p.x));}
+      if(p.bo!=null){sc.appendChild(document.createTextNode(' · '));sc.appendChild(el('span','n','보완 '+p.bo));}}
+    r.appendChild(sc);
+    r.onclick=()=>{S.cha2Sel=c.ck;c2Mark(c.ck,true);};
+    list.appendChild(r);});
+  list.appendChild(el('div','legend','행 클릭 → 보드 그 카드로(가운데) · 보드 스크롤 → 목록 선택이 따라온다'));
 
-  // ── 보드(격자)
-  let rows=[...new Set(shown.map(x=>x.셀.split('|')[0]))];
-  rows.sort((a,c)=>{
-    const na=parseFloat(String(a).replace('-','.')),nc=parseFloat(String(c).replace('-','.'));
-    const v=(isNaN(na)||isNaN(nc))?String(a).localeCompare(String(c)):na-nc;
-    return S.yearSort==='desc'?-v:v;});
-  const cols=[...new Set(shown.map(x=>+x.셀.split('|')[1]))].sort((a,c)=>a-c);
-  if(!rows.length||!cols.length){
-    main.appendChild(emptyBox('🖋','필터에 걸리는 문항이 없다','강사·연도 필터를 풀어라'));
-    slot.appendChild(main);return;}
+  /* ── 보드(격자) — 기출·GS = 연도·회차 × 문제 · 사례 = 번호 첫 마디 열 */
+  const shown=cards.filter(pass0);
+  C2IO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){if(e.target._lazy)e.target._lazy();C2IO.unobserve(e.target);}}),{root:main,rootMargin:'500px'});
   const wrap=el('div','gwrap');
   const g=el('div','grid');
-  g.style.gridTemplateColumns=`64px repeat(${cols.length},minmax(210px,1fr))`;
-  g.style.minWidth=(64+cols.length*218)+'px';
-  // 정렬·연도 필터는 별도 줄이 아니라 **연도·회차 머리칸 안**에 둔다(8/23 사용자)
-  const yh=el('div','gh yh');
-  const sb=el('button','ysort',(S.boardKind==='GS'?'연도-회':'연도·회차')+
-             (S.yearSort==='asc'?' ↑':' ↓'));
-  sb.title='눌러서 빠른순 ↔ 늦은순';
-  sb.onclick=()=>{S.yearSort=S.yearSort==='asc'?'desc':'asc';render();};
-  yh.appendChild(sb);
-  if(years.length){
-    const s2=el('select','sel ysel');
-    const o0=el('option','','전체 '+years.length);o0.value='';s2.appendChild(o0);
-    years.forEach(v=>{const o=el('option','',String(v).slice(2)+'-'+(v-1963));o.value=v;
-      if(String(S.yearFilter)===String(v))o.selected=true;s2.appendChild(o);});
-    s2.onchange=()=>{S.yearFilter=s2.value;render();};
-    yh.appendChild(s2);
-  }
-  g.appendChild(yh);
-  cols.forEach(c=>g.appendChild(el('div','gh','문제 '+c)));
-  const byCell={};shown.forEach(x=>{(byCell[x.셀]=byCell[x.셀]||[]).push(x);});
-  rows.forEach(r=>{
-    const yr=(shown.find(x=>x.셀.split('|')[0]===r)||{}).연도;
-    // 「08-45」 꼴로 짧게(8/23 사용자). GS 는 이미 「24-1」 이라 그대로.
-    g.appendChild(el('div','gr',yr?(String(yr).slice(2)+'-'+r):String(r)));
-    cols.forEach(c=>{
-      const list=byCell[r+'|'+c];
-      if(!list){g.appendChild(el('div','cellnone'));return;}
-      const holder=el('div');
-      list.forEach(x=>{
-        const hot=/⚠|누락/.test(x.논점||'');
-        const cd=el('div','cell'+(hot?' hot':''));
-        if(x.시리즈)cd.appendChild(el('div','t',x.시리즈));
-        const ti=el('div','ctitle',x.논점||x.파일);
-        ti.title='눌러서 크게 보기';
-        ti.onclick=e=>{e.stopPropagation();popCell(x,e,bodies);};
-        cd.appendChild(ti);
-        cd.appendChild(renderBody(bodies[x.파일],x.파일,{card:1,kind:S.boardKind}));   /* ★ add5 */
-        holder.appendChild(cd);});
-      g.appendChild(holder);
+  if(S.boardKind==='사례'){
+    const units=[...new Set(shown.map(c=>c.unit))].sort(c2UnitCmp);
+    if(!units.length){main.appendChild(emptyBox('🖋','사례 카드가 없다',''));slot.appendChild(main);return;}
+    g.style.gridTemplateColumns=`64px repeat(${units.length},minmax(210px,1fr))`;
+    g.style.minWidth=(64+units.length*218)+'px';
+    const yh=el('div','gh yh','번호 첫 마디 →');yh.title='열 = 사례 번호 첫 마디(해례 장 · 기출 연도 · 기타) · 열 안 = 번호 순 · 규칙은 볼트 정리 뒤 다시 잡는다';g.appendChild(yh);
+    units.forEach(u=>g.appendChild(el('div','gh',u+' ('+shown.filter(c=>c.unit===u).length+')')));
+    g.appendChild(el('div','gr','사례'));
+    units.forEach(u=>{const holder=el('div');shown.filter(c=>c.unit===u).sort((a,b)=>c2Cmp(a.file,b.file)).forEach(c=>holder.appendChild(c2CellEl(c,bodies)));g.appendChild(holder);});
+  }else{
+    let rows=[...new Set(shown.filter(c=>c.row).map(c=>c.row))];
+    rows.sort((a,c)=>{const v=c2RowCmp(a,c);return S.yearSort==='desc'?-v:v;});
+    const cols=[...new Set(shown.filter(c=>c.row).map(c=>c.col))].sort((a,c)=>a-c);
+    if(!rows.length||!cols.length){
+      main.appendChild(emptyBox('🖋','필터에 걸리는 문항이 없다','강사·연도 필터를 풀어라'));
+      slot.appendChild(main);return;}
+    g.style.gridTemplateColumns=`64px repeat(${cols.length},minmax(210px,1fr))`;
+    g.style.minWidth=(64+cols.length*218)+'px';
+    // 정렬·연도 필터는 별도 줄이 아니라 **연도·회차 머리칸 안**에 둔다(8/23 사용자)
+    const yh=el('div','gh yh');
+    const sb=el('button','ysort',(S.boardKind==='GS'?'연도-회':'연도·회차')+(S.yearSort==='asc'?' ↑':' ↓'));
+    sb.title='눌러서 빠른순 ↔ 늦은순';
+    sb.onclick=()=>{S.yearSort=S.yearSort==='asc'?'desc':'asc';render();};
+    yh.appendChild(sb);
+    if(years.length){
+      const s2=el('select','sel ysel');
+      const o0=el('option','','전체 '+years.length);o0.value='';s2.appendChild(o0);
+      years.forEach(v=>{const o=el('option','',String(v).slice(2)+'-'+(v-1963));o.value=v;
+        if(String(S.yearFilter)===String(v))o.selected=true;s2.appendChild(o);});
+      s2.onchange=()=>{S.yearFilter=s2.value;render();};
+      yh.appendChild(s2);
+    }
+    g.appendChild(yh);
+    cols.forEach(c=>g.appendChild(el('div','gh','문제 '+c)));
+    rows.forEach(r=>{
+      const yr=(shown.find(c=>c.row===r)||{}).yr;
+      g.appendChild(el('div','gr',yr?(String(yr).slice(2)+'-'+r):String(r)));
+      cols.forEach(c=>{
+        const lst=shown.filter(x=>x.row===r&&x.col===c);
+        if(!lst.length){g.appendChild(el('div','cellnone'));return;}
+        const holder=el('div');lst.forEach(x=>holder.appendChild(c2CellEl(x,bodies)));g.appendChild(holder);
+      });
     });
-  });
+  }
   wrap.appendChild(g);main.appendChild(wrap);
 
-  if(un.length){
+  if(S.boardKind!=='사례'&&un.length){
     const u=el('div','unpl');
-    u.appendChild(el('h4','',`미배치 ${un.length}건 — 파일명이 규약에서 벗어났다`));
-    un.forEach(x=>{const r=el('div','u',x.파일);r.onclick=e=>popCell(x,e,bodies);u.appendChild(r);});
+    u.appendChild(el('h4','',`미배치 ${un.length}건 — 파일명이 규약에서 벗어났다(목록·필터 밖)`));
+    un.forEach(x=>{const r=el('div','u',x.파일);r.onclick=e=>popCard4(S.boardKind,x.파일,e,1);u.appendChild(r);});
     main.appendChild(u);
   }
   main.appendChild(el('div','badge',
-    `폴더 ${d.총}개 = 배치 ${d.배치수} + 미배치 ${un.length}  ·  ${d.폴더||''}`));
+    `폴더 ${d.총}개 = 배치 ${d.배치수||0} + 미배치 ${un.length}  ·  채점 ${nGraded}  ·  ${d.폴더||''}`));
+  /* 보드 스크롤 → 목록 선택 따라감(가운데에 가장 가까운 카드 · 행 클릭 뒤 0.8초는 쉼) */
+  main.addEventListener('scroll',()=>{if(main._prog&&Date.now()-main._prog<800)return;clearTimeout(main._t);main._t=setTimeout(()=>{
+    const cs=[...main.querySelectorAll('.cell[data-ck]')];if(!cs.length)return;const R=main.getBoundingClientRect();const cy=R.top+R.height/2,cx=R.left+R.width/2;let best=null,bd=1e9;
+    cs.forEach(n=>{const r=n.getBoundingClientRect();if(r.bottom<R.top||r.top>R.bottom)return;const dd=Math.abs((r.top+r.bottom)/2-cy)+Math.abs((r.left+r.right)/2-cx)*0.5;if(dd<bd){bd=dd;best=n;}});
+    if(best&&best.dataset.ck!==S.cha2Sel){S.cha2Sel=best.dataset.ck;c2Mark(S.cha2Sel,false);}},120);});
   slot.appendChild(main);
 }
+/* ── 카드 팝업 채점·해설 탭 재료 */
+async function c2PrecIds(){const P=await get(PF('리스트')).catch(()=>null);if(!P)return null;const m=new Map();
+  (P.판례||[]).forEach(p=>{m.set(p.id,p.id);const b=String(p.id).replace(/전합$/,'');if(!m.has(b))m.set(b,p.id);if(p.사건번호&&!m.has(p.사건번호))m.set(p.사건번호,p.id);});return m;}
+function c2LinkEl(l,depth,pm){const d=(depth||1)+1;
+  if(l.k==='note'){const f=String(l.file||'').split('/').pop();const s=el('span','chip c-src','📄 '+f.slice(0,22)+(l.id?' ^'+l.id:''));s.title='목차 노트 팝업 — '+f+(l.id?' #^'+l.id:'');s.onclick=ev=>{ev.stopPropagation();popNote(f,l.id||null,ev,d);};return s;}
+  if(l.k==='prec'){const id=pm&&pm.get(l.v);const s=el('span','chip c-prec'+(id?'':' wait'),'⚖ '+l.v);if(id){s.title='판례 팝업 — '+id;s.onclick=ev=>{ev.stopPropagation();popPrec4(id,ev,d);};}else s.title='리스트에 없는 판례 — '+l.v;return s;}
+  if(l.k==='jo'){const s=el('span','chip c-prec','⚖ '+(l.raw||l.v));const hl=l.h?{hang:JOCIRC.indexOf(l.h)+1,ho:0}:null;s.title=(SHORT[S.law]||'')+' '+l.v+(hl&&hl.hang>0?' 제'+hl.hang+'항':'')+' 팝업';s.onclick=ev=>{ev.stopPropagation();popJo(S.law,l.v,ev,d,(hl&&hl.hang>0)?hl:null);};return s;}
+  return null;}
+function c2ItemTd(it,pm,depth){const td=el('td');const t=String(it.t||'').replace(/\*\*/g,'');const rx=/\[\[([^\[\]|#]+)(?:#\^([0-9a-f]{6}))?(?:\|[^\]]*)?\]\]/g;let last=0,m;
+  while((m=rx.exec(t))){if(m.index>last)td.appendChild(document.createTextNode(t.slice(last,m.index)));const ch=c2LinkEl({k:'note',file:m[1].trim(),id:m[2]||''},depth,pm);if(ch)td.appendChild(ch);last=m.index+m[0].length;}
+  if(last<t.length)td.appendChild(document.createTextNode(t.slice(last)));
+  const seen=new Set();(it.링크||[]).forEach(l=>{if(l.k==='note')return;const k=l.k+'|'+l.v;if(seen.has(k))return;seen.add(k);const ch=c2LinkEl(l,depth,pm);if(ch){ch.style.marginLeft='4px';td.appendChild(ch);}});
+  return td;}
+function c2TblEl(title,items,ppl,pm,depth){const w=el('div');if(title)w.appendChild(el('div','gh5',title));const tb=el('table','gtbl');const th=el('tr');th.appendChild(el('th','','해설 목차 (= 채점 항목)'));ppl.forEach(p=>th.appendChild(el('th','',p)));tb.appendChild(th);
+  items.forEach(it=>{const tr=el('tr');const jd=it.판정||{};const ps=ppl.filter(p=>jd[p]&&jd[p].m);if(ps.length&&ps.every(p=>jd[p].m==='X'))tr.classList.add('miss');
+    tr.appendChild(c2ItemTd(it,pm,depth));
+    ppl.forEach(p=>{const j=jd[p];const td=el('td','m'+(j&&j.m==='O'?' o':j&&j.m==='X'?' x':j&&j.m==='△'?' d':''));td.appendChild(document.createTextNode(j&&j.m?j.m:'—'));if(j&&j.결론반대)td.appendChild(document.createTextNode(' ⚠'));if(j&&j.note)td.appendChild(el('span','note',String(j.note).slice(0,140)));tr.appendChild(td);});
+    tb.appendChild(tr);});
+  w.appendChild(tb);return w;}
+function c2CmEl(who,c){const t=[c.잘된점?'잘된 점: '+c.잘된점:'',c.고칠점?'고칠 점: '+c.고칠점:'',(Array.isArray(c.결론반대)&&c.결론반대.length)?'🚨 '+c.결론반대.join(' / '):'',c.표지?'('+c.표지+')':''].filter(Boolean).join('\n');if(!t)return null;const d=el('div','gcm',who+' — '+t);d.style.whiteSpace='pre-wrap';return d;}
+function c2QEl(q,r,pm,depth){const w=el('div');const ppl=r.사람||[];
+  const exp=ppl.map(p=>{const e=(q.예상||{})[p];return e?(p+' '+(e[0]===e[1]?e[0]:e[0]+'~'+e[1])):'';}).filter(Boolean).join(' · ');
+  const bo=(q.보완&&Object.keys(q.보완).length)?' · 보완 '+ppl.map(p=>q.보완[p]!=null?p+' '+q.보완[p]:'').filter(Boolean).join(' '):'';
+  w.appendChild(el('div','gh5',q.제목+(q.배점?' ('+q.배점+'점)':'')+(exp?' · 예상 '+exp:'')+bo+((q.결론반대&&Object.keys(q.결론반대).some(p=>q.결론반대[p]))?' ⚠ 결론반대':'')));
+  if(q.정답)w.appendChild(el('div','cdim','정답: '+q.정답));
+  if((q.항목||[]).length)w.appendChild(c2TblEl(null,q.항목,ppl,pm,depth));
+  if(typeof q.코멘트==='string'&&q.코멘트)w.appendChild(el('div','gcm',q.코멘트));
+  else if(q.코멘트&&typeof q.코멘트==='object')Object.keys(q.코멘트).forEach(p=>{const d=c2CmEl(p,q.코멘트[p]||{});if(d)w.appendChild(d);});
+  return w;}
+async function c2GradeEl(gv,depth){const box=el('div');const recs=(gv&&gv.회차)||[];
+  if(!recs.length){box.appendChild(el('div','cdim','채점표 없음 — 볼트 채점표(`*채점*.md`)에 이 카드가 오면 ⚙ 가 싣는다 · 앱은 읽기만(입력 UI 없음)'));return box;}
+  const pm=await c2PrecIds();
+  recs.forEach((r,ri)=>{const bp=c2Bp(r);
+    box.appendChild(el('div','gh5',(recs.length>1?('회차 '+(ri+1)+' · '):'')+(r.채점일||'')+(r.기준?' · 기준: '+String(r.기준).slice(0,70):'')+(r.꼴?' · 꼴 '+r.꼴:'')));
+    const sum=el('div','gsum');(r.사람||[]).forEach(p=>{const h=(r.합계||{})[p]||{};const sp=el('span');sp.appendChild(document.createTextNode(p+' '));sp.appendChild(el('b','',h.점수!=null?String(h.점수):'?'));
+      sp.appendChild(document.createTextNode('/'+bp+((h.범위&&h.범위[0]!==h.범위[1])?' ('+h.범위[0]+'~'+h.범위[1]+')':'')+((bp&&h.점수!=null)?' · '+Math.round(h.점수/bp*100)+'%':'')+(h.보완!=null?' · 보완 시 '+h.보완:'')));sum.appendChild(sp);});
+    if(r.결론반대)sum.appendChild(el('span','chip c-warn','결론반대 ⚠'));
+    if(r.총점){Object.keys(r.총점).forEach(p=>{const t=r.총점[p];if(t)sum.appendChild(el('span','cdim',p+' 총점 '+(t.범위?t.범위[0]+'~'+t.범위[1]:'')+(t.중앙!=null?' ≈'+t.중앙:'')+(t.보완!=null?' · 보완 ≈'+t.보완:'')+'/'+(t.배점||100)));});}
+    box.appendChild(sum);
+    const hist=el('div','ghist');(r.사람||[]).forEach(p=>{const h=(r.합계||{})[p]||{};if(h.점수==null||!bp)return;const i=el('i','cur',p.slice(0,1)+' '+h.점수);i.style.height=Math.max(8,Math.round(h.점수/bp*30))+'px';i.title=p+' '+h.점수+'/'+bp;hist.appendChild(i);
+      if(h.보완!=null){const j=el('i','bo',String(h.보완));j.style.height=Math.max(8,Math.round(h.보완/bp*30))+'px';j.title=p+' 보완 시 '+h.보완;hist.appendChild(j);}});
+    if(hist.childNodes.length)box.appendChild(hist);
+    (r.설문||[]).forEach(q=>box.appendChild(c2QEl(q,r,pm,depth)));
+    if((r.항목||[]).length)box.appendChild(c2TblEl('누락 항목(설문 미배정 · 사람별)',r.항목,r.사람||[],pm,depth));
+    if(r.코멘트&&typeof r.코멘트==='object')Object.keys(r.코멘트).forEach(p=>{const d=c2CmEl(p,r.코멘트[p]||{});if(d)box.appendChild(d);});
+    if(r.해설결론)box.appendChild(el('div','cdim','해설 결론: '+r.해설결론));
+    box.appendChild(el('div','cdim','원본 = 볼트 '+(r.원본||'')));});
+  box.appendChild(el('div','cdim','빨간 행 = 있는 사람 전부 X → 판례 레일 「채점 누락 ×N」 · 자동중요도 +2'));
+  return box;}
+function c2ExplainEl(gv,depth,pm){const w=el('div');const recs=(gv&&gv.회차)||[];
+  if(!recs.length){w.appendChild(el('div','cdim','해설 — 지금은 채점표의 해설 목차 항목 모음 · 채점표가 없어 비어 있다(볼트에 해설 콜아웃이 들어오면 그 본문)'));return w;}
+  const r=recs[recs.length-1];const pdf=c2PdfChip((r.해설링크||[])[0]);if(pdf)w.appendChild(pdf);
+  w.appendChild(el('div','cdim','채점표 해설 목차 항목 모음(채점 탭 첫 열) — 볼트에 해설 콜아웃이 들어오면 그 본문으로'));
+  const put=(title,items)=>{if(!items.length)return;w.appendChild(el('div','gh5',title));items.forEach(it=>{const d=el('div','ln rln');const td=c2ItemTd(it,pm,depth);while(td.firstChild)d.appendChild(td.firstChild);d.style.padding='1px 0';w.appendChild(d);});};
+  (r.설문||[]).forEach(q=>put(q.제목+(q.배점?' ('+q.배점+'점)':''),q.항목||[]));put('누락 항목(설문 미배정)',r.항목||[]);
+  return w;}
+
 function cellLabel(x){
   const [r,c]=x.셀.split('|');
   return (x.연도?x.연도+'년 ':'')+r+(x.연도?'회':'')+' · 문제 '+c;
