@@ -2403,14 +2403,11 @@ function giChipEl(g, p){
   let m = /^(?:★\s*)?([12])차(\d{2})(?:-(\d+))?(?:-(\d+))?$/.exec(g), yr, rd, no, cha;
   if (m){ cha = m[1]; yr = '20' + m[2]; rd = m[3] || ''; no = m[4] || ''; }
   else { m = /^(?:★\s*)?([12])차\s+(\d{4})(?:-(\d+))?(?:-(\d+))?$/.exec(g); if (m){ cha = m[1]; yr = m[2]; rd = m[3] || ''; no = m[4] || ''; } }
-  if (m && cha === '1'){ c.style.cursor = 'pointer';
-    const JM = C[JMF()];
-    const q = (JM && rd && no) ? (JM.문제 || []).find(x => String(x.연도) === yr && String(x.회차) === rd && String(x.시험문번) === no) : null;
-    if (!rd){ c.style.opacity = '.6'; c.title = '1차객 기출뷰 ' + yr + '년 (회차·문항 미상 — 연도만)'; }
-    else if (!no){ c.style.opacity = '.6'; c.title = '1차객 기출뷰 ' + yr + '년 ' + rd + '회 (문번 미상)'; }
-    else if (JM && !q){ c.style.opacity = '.5'; c.title = '문번 미확정 — ' + yr + '년 ' + rd + '회 ' + no + '번은 시험문번 확정 문항에 없다'; }
-    else c.title = '1차객 기출뷰 ' + yr + '년 ' + rd + '회 ' + no + '번';
-    c.onclick = ev => { ev.stopPropagation(); if (rd && no) giPopQ(yr, rd, no, ev); else giGoTo(yr, rd, no); }; }   /* ★ 상표 손질 5 — 확정 문항이면 카드 팝업(이동 없음) · 아니면 기존 이동 */
+  if (m && cha === '1'){ c.style.cursor = 'pointer';   /* ★ 손질 7 — 기출문항 열(⚙) 로 그 연도 인용 문항 → 1 카드 팝업 · 여럿 목록 팝업 · 0 기출뷰 이동 */
+    const qs = (p && Array.isArray(p.기출문항) ? p.기출문항 : []).filter(x => String(x.yr) === yr && (!rd || String(x.rd || '') === rd) && (!no || String(x.no || '') === no));
+    c.title = '1차 ' + yr + '년' + (rd ? ' ' + rd + '회' : '') + (no ? ' ' + no + '번' : '') + ' · 이 판례를 인용한 문항 ' + qs.length + (qs.length ? '' : ' — 기출뷰로 이동');
+    if (!qs.length) c.style.opacity = '.6';
+    c.onclick = ev => { ev.stopPropagation(); if (qs.length === 1) giPopQid(qs[0].id, ev); else if (qs.length > 1) giPopQList(p, yr, qs, ev); else giGoTo(yr, rd, no); }; }   /* ★ 상표 손질 5 — 확정 문항이면 카드 팝업(이동 없음) · 아니면 기존 이동 */
   else if (m){ c.style.cursor = 'pointer'; c.title = '2차 기출 ' + yr + '년' + (rd ? ' ' + rd + '회' : '') + (no ? ' 문제 ' + no : '') + ' — 이 판례에 이어진 2차 카드 목록';   /* add4 §4 · add5: 그 문제(회차-N)로 거름 */
     c.onclick = ev => { ev.stopPropagation(); const pp = p || (S.tab === 'prec' && S.prec && C[PF('리스트')] ? (C[PF('리스트')].판례 || []).find(x => x.id === S.prec) : null); if (pp) popCardList(pp, '기출', { yr: yr, rd: rd, no: no }, ev, 0); else toast('판례 행이 없다'); }; }
   return c;
@@ -2422,6 +2419,20 @@ async function giPopQ(year, round, no, ev){ let q = null;
   const key = 'gi|' + PLAW() + '|' + giKey(q); if (popToggle(key)) return;
   const body = popShell('cell', '📝 1차 ' + year + '년 ' + round + '회 ' + no + '번', key); showPop(ev); popSizable(body, 'gi');
   try{ body.appendChild(giCard(q, false)); }catch(e){ body.appendChild(el('div', 'cdim', '카드를 못 그렸다 — ' + (e.message || e))); } }
+/* ★ 손질 7 — id 로 문항 카드 팝업 · 여럿이면 목록 팝업(같은 giCard · 토글) */
+async function giPopQid(qid, ev){ let q = null;
+  try{ const JM = await get(JMF()); q = (JM.문제 || []).find(x => String(x.id) === String(qid)); }catch(e){}
+  if (!q){ toast('문항 ' + qid + ' 을 문항 JSON 에서 못 찾았다', 1); return; }
+  const key = 'gi|' + PLAW() + '|' + giKey(q); if (popToggle(key)) return;
+  const body = popShell('cell', '📝 1차 ' + (q.연도 || '') + '년 ' + (q.회차 || '') + '회 ' + giNo(q) + '번', key); showPop(ev); popSizable(body, 'gi');
+  try{ body.appendChild(giCard(q, false)); }catch(e){ body.appendChild(el('div', 'cdim', '카드를 못 그렸다 — ' + (e.message || e))); } }
+async function giPopQList(p, yr, qs, ev){
+  const key = 'gi|' + PLAW() + '|' + yr + '|' + (p ? p.id : ''); if (popToggle(key)) return;
+  const body = popShell('cell', '📝 1차 ' + yr + '년 · ' + (p ? (p.사건번호 || p.id) : '') + ' 인용 문항 ' + qs.length, key); showPop(ev); popSizable(body, 'gi');
+  let JM = null; try{ JM = await get(JMF()); }catch(e){}
+  qs.forEach(x => { const q = JM && (JM.문제 || []).find(z => String(z.id) === String(x.id));
+    if (!q){ body.appendChild(el('div', 'cdim', '문항 ' + x.id + ' — 문항 JSON 에 없다')); return; }
+    try{ body.appendChild(giCard(q, false)); }catch(e){ body.appendChild(el('div', 'cdim', x.id + ' 카드를 못 그렸다')); } }); }
 function giTags(p){ return (Array.isArray(p.기출) ? p.기출 : []).map(String).filter(g => !/^\d\d-\d+(-\d+)?$/.test(g)); }
 async function giGoTo(year, round, no){
   closeAllPops();
@@ -3527,6 +3538,17 @@ function stkdTop5(){
    실물 꼴 — k[0]='두문자' 줄(태그 「#특허/두문자」)이 오고, 두문자 글은 그 다음
    k[0]='꼬리' 줄들에 있다(각주 줄은 같은 글이 한 번 더 온다 — 건너뛴다). */
 let STKSEEDED = {};
+let PALSEL = null;   /* ★ 손질 7 — 팔레트 붙일 곳(구간) — 붙이기 팝업에서 열었을 때만 */
+function palAttach(at, id){
+  if (!at || !at.row){ toast('붙일 곳이 없다 — 본문 글을 먼저 긁어라', 1); return false; }
+  if (inkHas('jo|' + at.base)){ toast('⚠ 이 조문에 필기가 있다 — 태그를 붙이면 필기가 어긋날 수 있어 잠근다', 1); return false; }
+  const d = stkdOf(id); if (!d){ toast('사전에 없는 스티커', 1); return false; }
+  const k = [at.base, rowKey(at.row), at.a, at.b, 'tag', id, mkEx(at.row.t, at.a, at.b)].join(SEP);
+  if (mkAll()[k] && mkAll()[k].op !== 'del'){ toast('「' + d.name + '」 은 이미 이 구간에 붙어 있다'); return false; }
+  mkPut(k, { op: 'new', t: 'tag', v: id }); stkdPut(id, {});
+  toast('🏷 「' + d.name + '」 을 「' + mkEx(at.row.t, at.a, at.b).slice(0, 12) + '」 에 붙였다'); render(); return true;
+}
+function stkdVaultId(nm){ let h = 5381; for (let i = 0; i < nm.length; i++) h = ((h * 33) ^ nm.charCodeAt(i)) >>> 0; return 'v' + h.toString(36); }
 async function stkdSeed(law){
   /* ★ v3-M M9 — 사전 청소 한 번: 오검출로 담긴 vault 항목(「[전문개정 …]」류)을 지운다.
      블록 끝 규칙도 고쳤으니(아래) 재시드로 되살아나지 않는다. */
@@ -3561,7 +3583,7 @@ async function stkdSeed(law){
       const m = /^[<〈]([^>〉]+)[>〉]\s*(.*)$/.exec(raw);
       if (m && m[2].trim()){ mn = m[1].trim(); nm = m[2].trim(); }
       if (stkdByName(nm)) return;                  // 같은 이름 = 같은 항목(중복 0)
-      const id = stkdNewId() + added.toString(36);
+      const id = stkdVaultId(nm);   /* ★ 손질 7 — 볼트 시드 id = 이름 해시 — 기기마다 같아 동기화로 중복 안 생김 */
       A[id] = { id: id, name: nm, mean: mn, color: STKD_COLORS[2],
                 kind: '두문자', vault: 1, ts: nowIso() };
       STKD = A; added++;
@@ -3610,7 +3632,7 @@ function stkAttachPop(base, row, a, b, ev){
   const ln2 = el('div', 'cdim');
   const l1 = el('span', '', '🏷 팔레트');
   l1.style.cssText = 'cursor:pointer;color:#2F6FD0';
-  l1.onclick = ev2 => stkdPalPop(ev2);
+  l1.onclick = ev2 => stkdPalPop(ev2, null, { base: base, row: row, a: a, b: b });   /* ★ 손질 7 — 팔레트에 구간을 넘긴다(PALSEL) */
   const l2 = el('span', '', '다른 마크업 ▸');
   l2.style.cssText = 'cursor:pointer;color:#2F6FD0;margin-left:10px';
   l2.onclick = ev2 => { closePop(); stkNew(base, row, a, b, ev2); };
@@ -3696,7 +3718,10 @@ async function stkdPalPop(ev, preset, attach){
      오른쪽 끝 「첫 자리 · 붙임 N」 · 맨 아래 인라인 새 스티커 편집기(별도 팝업 아님).
      attach = 팝오버 「＋ 새로」에서 온 경우 — 저장하자마자 그 구간에 붙인다. */
   await stkdSeed(S.law);
-  const _pk18=('cell')+'|'+('🏷 스티커 팔레트'); if(popToggle(_pk18))return; const body=popShell('cell', '🏷 스티커 팔레트', _pk18);   /* ★ 상표 손질 6 — 키 종류|제목 */
+  PALSEL = attach || null;   /* ★ 손질 7 — 붙일 곳 — 「선택한 글에 붙이기」에서 열었을 때만 */
+  const _pk18=('cell')+'|'+('🏷 스티커 팔레트'); if(popToggle(_pk18))return; const body=popShell('cell', '🏷 스티커 팔레트', _pk18);
+  if (attach){ const hd7 = el('div', 'cdim', '붙일 곳: 「' + mkEx(attach.row.t, attach.a, attach.b).slice(0, 24) + '」 — 칩 클릭·끌어 놓기 = 이 구간에 붙임(연달아 됨)'); hd7.style.cssText = 'color:#2F6FD0;margin-bottom:4px'; body.appendChild(hd7);
+    body.addEventListener('dragover', e7 => { e7.preventDefault(); }); body.addEventListener('drop', e7 => { let id7 = ''; try{ id7 = e7.dataTransfer.getData('text/stkd'); }catch(e){} if (id7){ e7.preventDefault(); if (palAttach(attach, id7)) paint(); } }); }   /* ★ 상표 손질 6 — 키 종류|제목 */
   const si = el('input', 'memoin');
   si.placeholder = '이름 · 뜻 · 붙인 조로 거른다';
   si.style.minHeight = '0'; si.style.width = '95%';
@@ -3711,12 +3736,15 @@ async function stkdPalPop(ev, preset, attach){
     [['두문자', '두문자 (' + (SHORT[S.law] || '') + ' · 볼트 #두문자 ' + vaultN + ' + 내 것)'],
      ['줄임말', '줄임말 (내가 자주 쓰는 것)']].forEach(([kind, label]) => {
       list.appendChild(el('div', 'stksec', label));
-      const ids = Object.keys(A).filter(id => (A[id].kind || '두문자') === kind);
-      ids.sort((x, y) => (A[x].name || '') < (A[y].name || '') ? -1 : 1);
+      const ids0 = Object.keys(A).filter(id => (A[id].kind || '두문자') === kind);
+      /* ★ 손질 7 — 표시는 이름(갈래) 기준 하나 — 같은 이름 다른 id 는 원천(볼트/내 것)이 다를 때만 「이름 (원천)」 */
+      const grp = {}; ids0.forEach(id => { const nm = A[id].name || ''; const src = A[id].vault ? '볼트' : '내 것'; (grp[nm] = grp[nm] || {})[src] = (grp[nm][src] || []).concat(id); });
+      const ents = []; Object.keys(grp).forEach(nm => { const srcs = Object.keys(grp[nm]); srcs.forEach(src => ents.push({ id: grp[nm][src][0], ids: grp[nm][src], label: nm + (srcs.length > 1 ? ' (' + src + ')' : '') })); });
+      ents.sort((x, y) => (x.label || '') < (y.label || '') ? -1 : 1);
       let shown = 0;
-      ids.forEach(id => {
+      ents.forEach(ent => { const id = ent.id;
         const d = A[id];
-        const uses = stkdUses(id);
+        const uses = [].concat(...ent.ids.map(stkdUses));
         if (q && (d.name || '').indexOf(q) < 0 && (d.mean || '').indexOf(q) < 0
               && !uses.some(u => stkdUseDisp(u).indexOf(q) >= 0)) return;
         shown++;
@@ -3725,10 +3753,10 @@ async function stkdPalPop(ev, preset, attach){
         r2.draggable = true;
         r2.title = '클릭 = 편집(🗑·붙인 자리) · 끌어서 본문에 놓으면 붙는다';
         r2.ondragstart = ev2 => { try{ ev2.dataTransfer.setData('text/stkd', id); }catch(e){} };
-        r2.onclick = ev2 => stkdEditPop(id, ev2);
+        r2.onclick = ev2 => { if (attach){ if (palAttach(attach, id)) paint(); } else stkdEditPop(id, ev2); };   /* ★ 손질 7 — 붙일 곳 있으면 클릭 = 붙임 */
         const dot = el('span', 'stkdot'); dot.style.background = d.color || STKD_COLORS[2];
         r2.appendChild(dot);
-        const nmc = el('span', 'nmc', d.name || '(이름 없음)');
+        const nmc = el('span', 'nmc', ent.label || '(이름 없음)');   /* ★ 손질 7 — 라벨(원천 구분) */
         nmc.style.color = stkdTone(d.color || STKD_COLORS[2]);
         r2.appendChild(nmc);
         r2.appendChild(el('span', 'cdim', d.mean || ''));
@@ -4059,7 +4087,7 @@ function stkDropWire(box, base, rows){
       return;
     }
     if (mv){ const om = mkAll()[mv]; id = om ? om.v : ''; }   /* ★ v3-M M8⑦ — 칩 자리 옮기기 */
-    if (!mv && !S.stick) return;               /* 팔레트 칩은 편집 모드만(v3-O §2) */
+    if (!mv && !S.stick){ if (id && PALSEL && stkdOf(id)){ ev.preventDefault(); palAttach(PALSEL, id); render(); } return; }   /* ★ 손질 7 — 읽기 모드 팔레트 칩 드랍 = 붙일 곳(PALSEL)에 붙임 · 없으면 무동작 */
     if (!id || !stkdOf(id)) return;
     ev.preventDefault();
     /* ★ v3-O §2 — 필기 잠금은 폭이 바뀌는 것만(새 부착·앵커 이동) · off 이동은 안전(§2 ⚠) */
