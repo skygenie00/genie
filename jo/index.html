@@ -159,6 +159,8 @@ mark.cj{background:#fff3a3;outline:2px solid #e0a800}
 /* ★ 판 3 add1 — 리담 화면 그대로: 노란 별칭 칩 · 설명줄(안 자름) · 기출 칩 */
 .chip.c-alias{background:#fde68a;color:#5b4300;font-weight:700}
 .chip.c-gi{background:#eaf1fb;color:var(--exc);font-size:11px;padding:1px 8px}
+.chip.c-memo{background:#eaf1fb;color:var(--exc);font-size:10px;padding:0 6px;cursor:pointer;margin-left:4px}.chip.who{font-size:9px;padding:0 4px;margin-left:2px;height:auto}
+sup.pitwho{font-size:8px;padding:0 3px;margin-left:1px;height:auto;vertical-align:super;line-height:1}   /* ★ 메모 손질 */
 .badge.ty{background:#f3ecfd;color:#7a3ed0}
 .prow .iss.full{white-space:pre-wrap;word-break:break-word;margin:2px 0 3px}
 .pdesc{margin-top:6px;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
@@ -4934,7 +4936,7 @@ function impAll(){ if (!IMPREC) IMPREC = lsRead(IMP_KEY); return IMPREC; }
 function impOf(p){ const R = impAll(); if (Object.prototype.hasOwnProperty.call(R, p.id)) return +R[p.id] || 0;
   const b = parseInt(p.중요도, 10); return b > 0 ? b : 0; }
 function impSet(id, v){ const R = impAll(); R[id] = v > 0 ? v : 0; IMPREC = R; lsWrite(IMP_KEY, R, '★ 내 중요도'); }
-const PF_KEYS = ['gichul', 'madi', 'jo', 'type', 'court', 'imp'];
+const PF_KEYS = ['gichul', 'madi', 'jo', 'type', 'court', 'imp', 'memo'];   /* ★ 메모 손질 — 메모 묶음 */
 function pfGet(){ const f = S.precFilter || (S.precFilter = {}); PF_KEYS.forEach(k => { if (!Array.isArray(f[k])) f[k] = []; });
   if (!f.fold || typeof f.fold !== 'object') f.fold = {}; return f; }
 function pfEmpty(f){ return PF_KEYS.every(k => !f[k].length); }
@@ -4960,6 +4962,7 @@ function precPass(p, f, skip){
   if (skip !== 'gichul' && f.gichul.length){ const g = Array.isArray(p.기출차) ? p.기출차 : []; const w = f.gichul[0];
     if (w !== '1차' && w !== '2차' && w !== 'both'){ if ((Array.isArray(p.기출) ? p.기출 : []).indexOf(w) < 0) return false; }   /* ★ 상표 손질 5 — 태그 알약 = 기출 배열에 그 값 */
     else if (w === 'both' ? g.length !== 2 : g.indexOf(w) < 0) return false; }
+  if (skip !== 'memo' && f.memo && f.memo.length){ const pm = pitByPrec()[p.id] || []; if (!f.memo.some(v => v === 'has' ? pm.length > 0 : pm.some(m => m.who === v))) return false; }   /* ★ 메모 손질 — 메모 있음 · 사람 */
   if (skip !== 'madi' && f.madi.length){ const vs = precMadi(p); if (!f.madi.some(v => vs.indexOf(v) >= 0)) return false; }
   if (skip !== 'jo' && f.jo.length){ const js = precJoSet(p); if (!f.jo.some(v => js.has(v))) return false; }   /* ★ add2 — 조 단위 · 구법(확정) 합침 · 묶음 둘 */
   if (skip !== 'type' && f.type.length){ if (f.type.indexOf(p.사건유형 || '미상') < 0) return false; }
@@ -5174,6 +5177,8 @@ function precFilterUI(tree, P, f){
     if (sub) sub(); else items.forEach(it => item(key, it, single));
   };
   const has = (p, k, v) => (Array.isArray(p[k]) ? p[k] : []).indexOf(v) >= 0;
+  { const whos = new Set(['햄찌', '꼬까']); Object.values(pitByPrec()).forEach(l => l.forEach(m => { if (m.who && m.who !== '미상') whos.add(m.who); }));   /* ★ 메모 손질 — 필터 「메모」 = 메모 있음 · 사람들 */
+    group('memo', '메모', [{ v: 'has', name: '메모 있음', test: p => (pitByPrec()[p.id] || []).length > 0 }].concat([...whos].map(w => ({ v: w, name: w, test: p => (pitByPrec()[p.id] || []).some(m => m.who === w) }))), false); }
   /* 1 기출 — 알약 택일 */
   group('gichul', '기출', [
     { v: '1차', name: '1차기출', test: p => has(p, '기출차', '1차') },
@@ -5326,6 +5331,7 @@ async function viewPrec(){
       p.선고?p.선고.replace(/(\d{4})(\d{2})(\d{2})/,'$1.$2.$3'):(p.연도폴더||'요약본')));
     {const m=impOf(p);if(m)pn.appendChild(el('span','badge imp','★'+m));}
     if(p.사건유형)pn.appendChild(el('span','badge ty',p.사건유형));   /* ★ add1 — 사건유형 칩 */
+    {const pm=pitByPrec()[p.id]||[]; if(pm.length){ const c=el('span','chip c-memo','🗒 '+pm.length); c.title='이 판례 메모 '+pm.length+' — 클릭 = 목록'; [...new Set(pm.map(m=>m.who).filter(w=>w&&w!=='미상'))].forEach(w=>c.appendChild(pitWhoBadge(w))); c.onclick=ev=>{ev.stopPropagation();popPitList(p,ev);}; pn.appendChild(c);} }   /* ★ 메모 손질 — 종류 칩 옆 메모 칩 */
     r.appendChild(pn);
     r.appendChild(precDescEl(p,false));   /* ★ add1 — 노란 별칭 칩 · 설명줄(안 자름) · 기출 칩 */
     if(p.원본){const c=el('span','chip c-src','원본 ▸');c.title='원본 5절 머리';c.onclick=ev=>{ev.stopPropagation();popRawToc(p,ev);};r.appendChild(c);}   /* ★ 판 4 §2-4 */
@@ -5467,10 +5473,39 @@ const PIT_KEY = REC_PRE + 'postit';
 const CMP_KEY = REC_PRE + 'compare';
 let PITREC = null, CMPREC = null;
 function pitAll(){ if (!PITREC) PITREC = lsRead(PIT_KEY); return PITREC; }
+/* ★ 메모 손질 — 붙인 사람 · 판례별 메모 색인 */
+function pitWho(){ let p = ''; try{ p = (JSON.parse(localStorage.getItem('tt.cfg') || '{}') || {}).person || ''; }catch(e){} return String(p || '').trim(); }   /* tt.cfg person 그대로(기기 표시 없이) */
+function pitWhoOf(rec){ const w = rec && rec.who ? String(rec.who).trim() : ''; return (w && w !== '나') ? w : '미상'; }
+function pitWhoCls(name){ const cls = ['c-alias', 'c-quiz', 'c-theme', 'c-card']; let h = 0; for (const ch of String(name || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return cls[h % cls.length]; }
+function pitWhoBadge(name){ const b = el('span', 'chip who ' + pitWhoCls(name), name); return b; }
+function pitFmt(ts){ const s = String(ts || ''); return s.length >= 16 ? (s.slice(5, 7) + '.' + s.slice(8, 10) + ' ' + s.slice(11, 16)) : ''; }
+let PITIDX = { rec: null, n: -1, map: {} };
+function pitByPrec(){ const A = pitAll(); const n = Object.keys(A).length; if (PITIDX.rec === A && PITIDX.n === n) return PITIDX.map;
+  const map = {}; Object.keys(A).forEach(k => { const p = k.split(SEP); if (String(p[0] || '').indexOf('prec|') !== 0) return; const id = p[0].slice(5); const v = A[k] || {};
+    (map[id] = map[id] || []).push({ key: k, tk: p[0], struct: p[1] || '', wi: p[2], word: p[3] || '', t: String(v.t || ''), who: pitWhoOf(v), ts: v.ts || '' }); });
+  PITIDX = { rec: A, n: n, map: map }; return map; }
+function popPitList(p, ev){ const key = 'pitlist|' + PLAW() + '|' + p.id; if (popToggle(key)) return;
+  const body = popShell('fn', '🗒 메모 — ' + (p.사건번호 || p.id), key); const pm = pitByPrec()[p.id] || [];
+  pm.forEach(m => { const d = el('div', 'res'); d.appendChild(el('b', '', (m.word ? '「' + m.word + '」 ' : '') + m.t.slice(0, 60))); if (m.who !== '미상') d.appendChild(pitWhoBadge(m.who)); d.appendChild(el('span', 'cdim', ' ' + pitFmt(m.ts)));
+    d.onclick = ev2 => { ev2.stopPropagation(); skMemoGo(m.tk, ev2, { key: m.key, word: m.word, t: m.t, who: m.who }); }; body.appendChild(d); });
+  if (!pm.length) body.appendChild(el('div', 'cdim', '메모 없음'));
+  showPop(ev); }
+async function precMemoGo(id, word){
+  let P = null; try{ P = await get(PF('리스트')); }catch(e){}
+  let law = S.law;
+  if (!P || !(P.판례 || []).find(x => x.id === id)){ for (const lw of ['특허법', '상표법']){ if (lw === S.law) continue; try{ const P2 = await get('prec_' + (SHORT[lw] || '') + '_리스트.json'); if ((P2.판례 || []).find(x => x.id === id)){ law = lw; P = P2; break; } }catch(e){} } }
+  const p = (P && P.판례 || []).find(x => x.id === id); if (!p){ toast('리스트에 없는 판례 — ' + id, 1); return; }
+  const f = pfGet(); const passes = precPass(p, f);
+  S.law = law; S.tab = 'prec'; S.prec = id; S.precTab = p.요약본 ? '요약' : '원문'; await render();
+  if (!passes) toast('거르기 밖 판례 — 2단엔 없고 3단만 열었다');
+  if (word){ setTimeout(() => { const w = String(word).trim(); const el2 = [...document.querySelectorAll('#slot .ln, #slot pre.raw')].find(x => x.textContent.indexOf(w) >= 0);
+    if (el2){ try{ el2.scrollIntoView({ block: 'center' }); }catch(e){} el2.classList.add('blkhl'); setTimeout(() => el2.classList.remove('blkhl'), 2000); } }, 150); }
+}
 function pitPut(k, rec){
   pitAll();
   if (rec === null) delete PITREC[k];
   else PITREC[k] = Object.assign({}, rec, { ts: nowIso() });
+  try{ PITIDX.rec = null; }catch(e){}   /* ★ 메모 손질 — 색인 무효화 → 칩·건수 즉시 갱신 */
   return lsWrite(PIT_KEY, PITREC, '🗒 포스트잇');
 }
 function cmpAll(){ if (!CMPREC) CMPREC = lsRead(CMP_KEY); return CMPREC; }
@@ -5512,12 +5547,12 @@ function pitLabel(target, struct, word){
 function pitEdit(target, struct, wi, word, ev){
   const key = pitKey(target, struct, wi, word);
   const cur = pitAll()[key] || null;
-  const _pk28=('fn')+'|'+(pitLabel(target, struct, word)); if(popToggle(_pk28))return; const body=popShell('fn', pitLabel(target, struct, word), _pk28);   /* ★ 상표 손질 6 — 키 종류|제목 */
+  const _pk28=('fn')+'|'+(pitLabel(target, struct, word)); if(popToggle(_pk28))return; const body=popShell('fn', pitLabel(target, struct, word) + (cur ? ' [' + pitWhoOf(cur) + '] ' + pitFmt(cur.ts) : ''), _pk28);   /* ★ 메모 손질 — 머리 [사람] 시각 */   /* ★ 상표 손질 6 — 키 종류|제목 */
   const ta = el('textarea', 'memoin');
   ta.value = (cur && cur.t) || ''; ta.placeholder = '이 단어에 붙일 포스트잇';
   body.appendChild(ta);
   body.appendChild(el('div', 'cdim',
-    ((cur && cur.who) || '나') + ' · ' + ((cur && cur.ts) ? cur.ts.slice(0, 16).replace('T', ' ') : '새 메모') +
+    (cur ? pitWhoOf(cur) : (pitWho() || '나')) + ' · ' + ((cur && cur.ts) ? cur.ts.slice(0, 16).replace('T', ' ') : '새 메모') +
     ' · 기본 공유 — GAS 전이라 지금은 이 기기 안'));
   const row = el('div', 'memobtn');
   let priv = !!(cur && cur.priv);
@@ -5526,7 +5561,7 @@ function pitEdit(target, struct, wi, word, ev){
   pv.onclick = () => { priv = !priv; pv.classList.toggle('on', priv); };
   const ok = el('button', 'tool on', cur ? '✎ 수정 저장' : '저장');
   ok.onclick = () => { const v = ta.value.trim();
-    if (v) pitPut(key, { t: v, who: (cur && cur.who) || '나', priv: priv });
+    if (v) pitPut(key, { t: v, who: ((cur && cur.who && cur.who !== '나') ? cur.who : (pitWho() || '나')), at: (cur && cur.at) || nowIso(), priv: priv });   /* ★ 메모 손질 — who = 기기 사용자(tt.cfg person) · at · 옛 메모는 지어 넣지 않음 */
     else pitPut(key, null);
     closePop(); render(); };
   const del = el('button', 'tool', '🗑 삭제');
@@ -5584,6 +5619,7 @@ function pitWire(lineEl, target, struct, text){
           const sp = el('span', 'pitw' + (mine ? '' : ' oth'));
           sp.onclick = ev => { ev.stopPropagation(); pitEdit(target, struct, e2.wi, e2.word, ev); };
           sp.appendChild(r2.extractContents());
+          if (e2 && e2.v && pitWhoOf(e2.v) !== '미상'){ const bd = el('sup', 'stkchip pitwho ' + pitWhoCls(pitWhoOf(e2.v)), pitWhoOf(e2.v)); sp.appendChild(bd); }   /* ★ 메모 손질 — 앵커 옆 사람 배지(stkchip 클래스 = 좌표 셈에서 제외) */
           r2.insertNode(sp);
         }
       }catch(err){}
@@ -9140,10 +9176,13 @@ function skTarget(tk){
 function skMemoGo(tk,ev,r){
   if(tk.indexOf('jo|')===0){const p=tk.slice(3).split(':');popJo(p[0],p[1],ev,1);return;}
   if(tk.indexOf('q|')===0){popCard(tk.slice(2),ev);return;}
-  const _pk47=('fn')+'|'+('🗒 포스트잇 — '+skTarget(tk)); if(popToggle(_pk47))return; const b=popShell('fn', '🗒 포스트잇 — '+skTarget(tk), _pk47);   /* ★ 상표 손질 6 — 키 종류|제목 */
+  const rec0=(r&&r.key&&pitAll()[r.key])||null; const who0=rec0?pitWhoOf(rec0):((r&&r.who)||'');
+  const _pk47=('fn')+'|'+('🗒 포스트잇 — '+skTarget(tk)+((r&&r.word)?' 「'+r.word+'」':'')); if(popToggle(_pk47))return;   /* ★ 메모 손질 — 같은 메모 두 번 = 닫힘(낱말까지 키) */
+  const b=popShell('fn', '🗒 포스트잇 — '+skTarget(tk)+((who0&&who0!=='미상')?' ['+who0+']':'')+((rec0&&rec0.ts)?' '+pitFmt(rec0.ts):''), _pk47);
   if(r&&r.word)b.appendChild(el('span','badge','「'+r.word+'」'));
   b.appendChild(el('div','',(r&&r.t)||''));
   showPop(ev);
+  if(tk.indexOf('prec|')===0) precMemoGo(tk.slice(5), r&&r.word);   /* ★ 메모 손질 — 그 판례 3단 열고 앵커 낱말로 */
 }
 function skRow(box,cls,head,tail,tag,open){
   const d=el('div','res');
@@ -9294,10 +9333,10 @@ $('#skin').oninput=async e=>{
       const v=A[k2]||{};
       if(String(v.t||'').indexOf(q)<0)continue;
       const p=k2.split(SEP);
-      out.push({key:k2,tk:p[0]||'',word:p[3]||'',t:String(v.t||'')});
+      out.push({key:k2,tk:p[0]||'',word:p[3]||'',t:String(v.t||''),who:pitWhoOf(v),ts:v.ts||''});   /* ★ 메모 손질 */
     }
     box.appendChild(el('div','grp','🗒 메모 — '+out.length+'건'));
-    out.forEach(r=>skRow(box,'memo',(r.word?'「'+r.word+'」 ':'')+skTarget(r.tk),skCut(r.t,q),'메모',
+    out.forEach(r=>skRow(box,'memo',(r.word?'「'+r.word+'」 ':'')+skTarget(r.tk),skCut(r.t,q),'메모'+((r.who&&r.who!=='미상')?' · '+r.who:''),   /* ★ 메모 손질 — 줄 끝 사람 */
       ev=>{closeSk();skMemoGo(r.tk,ev,r);}));
   }
   if(SKON.logic){
