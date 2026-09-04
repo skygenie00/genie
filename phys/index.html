@@ -425,20 +425,27 @@ select.rsel{padding:4px 8px;border:1px solid var(--line);border-radius:999px;bac
 .trqh{padding:6px 12px;font-size:11px;font-weight:700;color:var(--muted)}
 .trqr{display:flex;gap:6px;align-items:baseline;padding:4px 10px;cursor:pointer;border-left:3px solid transparent}
 .trqr.cur{background:rgba(46,125,111,.12);border-left-color:var(--teal)}
-/* 서브노트 한 판 */
-#sub{position:fixed;inset:0;z-index:80;background:#DFE3E7;display:block;overflow:hidden}
+/* 서브노트 = 떠 있는 창(판 2 · §7) — #sub 는 투명 껍데기(pointer-events 없음) · .panel 만 잡힌다 · 기본 = 뷰포트 60%×70% 오른쪽 아래 · 폰은 전체 화면(⤢ 로 축소 .mini) */
+#sub{position:fixed;inset:0;z-index:80;background:transparent;display:block;overflow:visible;pointer-events:none}
+#sub.sheet{display:block;background:transparent;align-items:stretch;justify-content:flex-start}
+#sub .panel{pointer-events:auto;position:fixed;right:8px;bottom:8px;left:auto;top:auto;width:60vw;height:70vh;max-width:none;max-height:none;padding:0;margin:0;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.3);overflow:hidden;display:flex;flex-direction:column;background:#DFE3E7}
+#sub .panel.float{overflow:hidden;padding:0}
+#sub .panel .twgrip{position:absolute;right:0;bottom:0;z-index:3}
+@media (max-width:480px){#sub .panel:not(.float){left:0;top:0;right:0;bottom:0;width:auto;height:auto;border-radius:0} #sub .panel.mini:not(.float){left:auto;top:auto;right:6px;bottom:6px;width:70vw;height:60vh;border-radius:12px}}
 #sub .shead{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 6px) 12px 6px;background:#fff;border-bottom:1px solid var(--line);height:auto}
 #sub .shead b{font-size:14px}
 #schips{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;flex:1}
 #schips span{border:1px solid var(--line);background:#FAFAFA;border-radius:12px;padding:2px 9px;font-size:11.5px;cursor:pointer;white-space:nowrap;user-select:none}
 #schips span.ch{font-weight:700;background:var(--sea-soft);border-color:var(--sea);color:var(--sea)} #schips span.no{opacity:.4}
 #sinfo{font-size:11px;color:var(--muted);white-space:nowrap}
-#svp{position:absolute;top:46px;left:0;right:0;bottom:0;overflow:hidden;cursor:grab;touch-action:none}
+#svp{position:relative;flex:1;min-height:0;overflow:hidden;cursor:grab;touch-action:none}
 #svp.panning{cursor:grabbing} #svp.pen{cursor:crosshair}
 #sworld{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
 #stiles{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none}
+#sover{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none;will-change:transform}   /* 판 2: 잉크 덧층(타일 위) */
+.spgo{position:absolute}
 .spg{position:absolute;width:1191px;height:842px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18)}
-.spg .sink{position:absolute;left:0;top:0;pointer-events:none}
+.spg .sink,.spgo .sink{position:absolute;left:0;top:0;pointer-events:none}
 .scol{position:absolute;top:0;height:842px;border-right:1px dashed rgba(31,95,139,.25);cursor:pointer}
 .scol.on{outline:3px solid var(--sea);outline-offset:-3px}
 .szoom{position:absolute;right:14px;bottom:14px;display:flex;flex-direction:column;gap:4px;align-items:flex-end;z-index:2}
@@ -449,8 +456,65 @@ select.rsel{padding:4px 8px;border:1px solid var(--line);border-radius:999px;bac
 .stools{position:absolute;right:14px;top:56px;display:flex;gap:4px;z-index:2}
 .stools span{border:1px solid var(--line);background:#fff;border-radius:5px;padding:3px 9px;font-size:12px;cursor:pointer;user-select:none}
 .stools span.on{background:var(--sea);border-color:var(--sea);color:#fff}
+
+/* ═══ 교재 모드 (판 2 · _task_jihak_app_pan2.md) ═══ */
+#btnBook.on{background:var(--sea);color:#fff;border-color:var(--sea)}
+#book{position:fixed;inset:0;z-index:70;background:#DFE3E7;display:flex;align-items:stretch;justify-content:flex-start}
+#book.sheet{display:flex;background:#DFE3E7;align-items:stretch;justify-content:flex-start}
+#book.hide{display:none!important}
+/* 목차 서랍 — 조판기식 세로 손잡이(누르면 접기 · 끌면 너비 160~420 · SET.bkw 기기별) · 폰도 같은 서랍(시트 아님) */
+#bktoc{position:relative;width:var(--bkw,260px);flex:none;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+#bktoc.fold{width:13px} #bktoc.fold .bkth,#bktoc.fold #bklist{display:none}
+.bkth{display:flex;align-items:center;gap:4px;padding:calc(env(safe-area-inset-top) + 8px) 18px 8px 10px;font-size:12px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--line)}
+.bkth button{padding:3px 7px;border:1px solid var(--line);border-radius:6px;font-size:11px;background:var(--card)}
+#bklist{flex:1;overflow-y:auto;padding:4px 13px 4px 0;font-size:12px;overscroll-behavior:contain}
+#bklist>div{padding:3px 8px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bkch{font-weight:700;margin-top:6px} .bksec{padding-left:16px!important;font-weight:600;color:#33404D} .bkit{padding-left:30px!important;color:#4A5661;display:flex;gap:6px}
+.bkch b,.bksec b{display:inline-block;width:12px;color:var(--muted);font-weight:400}
+.bkchb.off,.bksecb.off{display:none}
+.bkit .n{margin-left:auto;font-size:10.5px;color:var(--muted)}
+.bkit.cur{background:var(--sea-soft);color:var(--sea);font-weight:700}
+#bkGrip{position:absolute;right:0;top:0;bottom:0;width:13px;border-left:1px solid var(--line);background:var(--paper);display:grid;place-items:center;color:var(--muted);font-size:13px;cursor:ew-resize;touch-action:none;user-select:none;-webkit-user-select:none}
+#bkGrip:hover{color:var(--teal);background:rgba(46,125,111,.08)}
+#bkmain{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+.bkbar{display:flex;align-items:center;gap:6px;padding:calc(env(safe-area-inset-top) + 6px) 10px 6px;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap;font-size:12.5px}
+.bkbar button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 9px;font:inherit;font-size:12px;cursor:pointer}
+.bkbar #bkInfo{font-weight:700;color:var(--sea);white-space:nowrap}
+#bktools{position:static;display:flex;gap:4px}
+#bkvp{flex:1;position:relative;overflow:hidden;touch-action:none;cursor:grab;min-height:0}
+#bkvp.panning{cursor:grabbing} #bkvp.pen{cursor:crosshair}
+#bkworld{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+#bktiles{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none}
+#bkover{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none;will-change:transform}   /* 덧층 = 잉크·텍스트·칩(타일 위) */
+.bkpg{position:absolute;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.bkpgo{background:transparent;box-shadow:none}
+.bkpg .bkink{position:absolute;left:0;top:0;pointer-events:none}
+.bktx{position:absolute;inset:0;overflow:hidden;line-height:1;pointer-events:none}
+#bkvp.view .bktx{pointer-events:auto}
+.bktx span{position:absolute;white-space:pre;color:transparent;transform-origin:0 0;user-select:text;-webkit-user-select:text;cursor:text}
+.bktx span::selection,.bktx span *::selection{background:rgba(31,95,139,.35)}
+.pitw{position:relative;border-bottom:2px dotted var(--sea);color:transparent}
+.pitchip{position:absolute;left:0;top:-1.05em;font-size:.75em;line-height:1;background:#FFF3B0;border:1px solid #E2C044;border-radius:3px;padding:0 2px;color:#5A4500;cursor:pointer;pointer-events:auto;font-style:normal}
+.pitchip::after{content:'🗒'}
+.pitchip.orph{position:static;font-size:11px;padding:1px 3px}
+.bkorph{position:absolute;right:4px;top:4px;display:flex;gap:3px;flex-wrap:wrap;max-width:45%;pointer-events:auto;justify-content:flex-end}
+.bknext{position:absolute;left:0;text-align:center;font-size:14px;padding:12px;color:var(--sea);cursor:pointer;background:rgba(255,255,255,.75);border:1px dashed var(--sea);border-radius:8px}
+.bknext.end{color:var(--muted);border-color:var(--line);cursor:default}
+#bkmsg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:13px;color:var(--muted);pointer-events:none;background:rgba(255,255,255,.8);padding:4px 10px;border-radius:6px} #bkmsg:empty{display:none}
+/* 이 쪽의 문항 팝업 — makeFloat · 뒤 교재는 계속 쓸 수 있다 */
+#bkq{position:fixed;inset:0;z-index:74;background:transparent;pointer-events:none;display:block}
+#bkq.sheet{display:block;background:transparent}
+#bkq .panel{pointer-events:auto;position:fixed;right:10px;top:56px;left:auto;width:min(420px,92vw);height:50vh;max-width:none;max-height:none;padding:0;margin:0;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.3);overflow:hidden;display:flex;flex-direction:column}
+#bkq .panel.float{padding:0;overflow:hidden}
+.bkqh{display:flex;align-items:center;gap:6px;padding:8px 10px;font-size:12.5px;font-weight:700;border-bottom:1px solid var(--line);background:var(--card)}
+.bkqh button{margin-left:auto;padding:3px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);font-size:12px}
+#bkqList{flex:1;overflow:auto;padding:8px 10px;font-size:12.5px}
+#bkqList h5{margin:0 0 6px;font-size:12px;color:var(--muted);font-weight:600}
+#bkqList div{display:flex;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line);cursor:pointer;align-items:center}
+#bkqList .me{color:var(--sea);font-weight:700}
+#bkpit .panel textarea{width:100%;min-height:90px;font:inherit}
 /* 층 게이트(2026-09-04 병합 · add1) — PDF 층(물리)에는 카드 층 조각이 없고, 카드 층(지학·생물)에는 물리 전용 도구가 없다 */
-body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #tree,body[data-layer="pdf"] #sub,body[data-layer="pdf"] #btnTree,body[data-layer="pdf"] #tBook,body[data-layer="pdf"] #tSub,body[data-layer="pdf"] #tMatch{display:none!important}
+body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #tree,body[data-layer="pdf"] #sub,body[data-layer="pdf"] #btnTree,body[data-layer="pdf"] #tBook,body[data-layer="pdf"] #tSub,body[data-layer="pdf"] #tMatch,body[data-layer="pdf"] #btnBook,body[data-layer="pdf"] #book,body[data-layer="pdf"] #bkq{display:none!important}
 /* 과목 탭 셀(add1) — 현재 과목 .on · 준비 안 된 과목 .off */
 #subjTabs{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;vertical-align:middle;background:var(--card)}
 #subjTabs button{padding:6px 9px;border:0;border-right:1px solid var(--line);background:none;font:inherit;font-size:12.5px;color:inherit;cursor:pointer;white-space:nowrap;line-height:1.2}
@@ -476,7 +540,7 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #tree,body[data-layer="pdf"
             title="기록 동기화 — 누르면 지금 맞춘다"></span>
       
       
-      <!--EARTH:html_chip--><span class="segs" id="subjTabs" title="과목 — 저장하고 새로고침"></span><button class="iconbtn" id="btnTree">목차</button><!--/EARTH:html_chip-->
+      <!--EARTH:html_chip--><span class="segs" id="subjTabs" title="과목 — 저장하고 새로고침"></span><button class="iconbtn" id="btnTree">목차</button><button class="iconbtn" id="btnBook" title="교재 모드">📖 교재</button><!--/EARTH:html_chip-->
       <button class="iconbtn" id="btnSet">설정</button>
     </div>
     <div id="dl" class="hide"></div>
@@ -512,15 +576,28 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #tree,body[data-layer="pdf"
   <div id="trq"></div>
 </div>
 <div id="sub" class="hide">
-  <div class="shead"><b>지학 서브노트</b><div id="schips"></div><span id="sinfo"></span><button class="iconbtn" id="sBack">← 문항으로</button><button class="iconbtn" id="sX">✕</button></div>
+  <div class="panel">
+  <div class="shead"><b>지학 서브노트</b><div id="schips"></div><span id="sinfo"></span><button class="iconbtn" id="sMax" title="크기 바꾸기">⤢</button><button class="iconbtn" id="sX">✕</button></div>
   <div id="svp">
     <div id="sworld"></div>
     <div id="stiles"></div>
+    <div id="sover"></div>
     <div class="stools" id="stools"><span class="on" data-tool="view">보기</span><span data-tool="pen">펜</span><span data-tool="hl">형광</span><span data-tool="erase">지우개</span><span id="sUndo">↺</span><span id="sUp">올리기</span><input type="file" id="sFile" accept="application/pdf" class="hide"></div>
     <div class="smini" id="smini"></div>
     <div class="szoom"><span class="pct" id="spct">100%</span><div class="btns"><button id="sOut">−</button><button id="sIn">＋</button><button class="w" id="sFit">맞춤</button><button class="w" id="s100">100%</button></div></div>
   </div>
+  </div>
 </div>
+<div id="book" class="sheet hide">
+  <div id="bktoc"><div class="bkth">목차<span class="sp"></span><button id="bkPrevU" title="이전 항목">◀</button><button id="bkNextU" title="다음 항목">▶</button></div><div id="bklist"></div><div id="bkGrip" title="누르면 접기 · 끌면 너비">‹</div></div>
+  <div id="bkmain">
+    <div class="bkbar"><button id="bkX" title="문항 모드로">✕</button><span id="bkInfo"></span><span class="sp"></span>
+      <div class="stools" id="bktools"><span class="on" data-tool="view">보기</span><span data-tool="pen">펜</span><span data-tool="hl">형광</span><span data-tool="erase">지우개</span><span id="bkUndo">↺</span></div>
+      <button id="bkSub">🗒 서브노트</button><button id="bkQ">문항 <b id="bkQn">0</b></button></div>
+    <div id="bkvp"><div id="bkworld"></div><div id="bktiles"></div><div id="bkover"></div><div id="bkmsg"></div></div>
+  </div>
+</div>
+<div id="bkq" class="sheet hide"><div class="panel"><div class="bkqh">이 쪽의 문항 · <b></b><button id="bkqX">✕</button></div><div id="bkqList"></div></div></div>
 <!--/EARTH:html_tree-->
 <!-- ===================== 뷰어 ===================== -->
 <div id="view" class="hide">
@@ -540,7 +617,7 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #tree,body[data-layer="pdf"
     <div id="cardwrap"><div id="card"></div></div>
     <div id="bookpane">
       <div class="btabs"><b class="on" data-t="book">교재</b><b data-t="sub">🗒 서브노트</b><button id="bpX">✕</button></div>
-      <div class="pgbar"><button id="bpPrev">‹</button><input id="bpPg" inputmode="numeric"><small id="bpInfo"></small><button id="bpNext">›</button><span class="sp"></span><button id="bpSub">🗒 이 쪽의 서브노트</button></div>
+      <div class="pgbar"><button id="bpPrev">‹</button><input id="bpPg" inputmode="numeric"><small id="bpInfo"></small><button id="bpNext">›</button><span class="sp"></span><button id="bpSub">🗒 이 쪽의 서브노트</button><button id="bpBig" title="현재 쪽으로 교재 모드">📖 크게</button></div>
       <div id="bpview"><canvas id="bpc"></canvas><div id="bpMsg"></div></div>
       <div id="bpList"></div>
     </div>
@@ -607,11 +684,12 @@ const SUBJ={
   /* 생물 자리(add1) — 데이터가 오면 ready:true 한 줄만. LAYER:true = 지학과 같은 층(카드 O△X·목차 트리·교재 패널·서브노트·매칭) */
   bio:{DB:'bio1', PDF_DIR:'bio/pdf/', IMG_DIR:'bio/img/', DATA_PATH:'bio/문항.json', TOC_PATH:'bio/목차.json',
         REC_PATH:'bio/기록.json', SYNC_PREFIX:'bio_sync_', NOTE_REPO:'zzikkaplan/notes', NOTE_PATH:'bio/', NOTE_DIR:'bio/note/',
-        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit'],
+        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit'],
         TITLE:'생물 기출 서재', LOG:'생물', NAME:'생물', LAYER:true, ready:false},
   earth:{DB:'earth1', PDF_DIR:'earth/pdf/', IMG_DIR:'earth/img/', DATA_PATH:'earth/문항.json', TOC_PATH:'earth/목차.json',
         REC_PATH:'earth/기록.json', SYNC_PREFIX:'earth_sync_', NOTE_REPO:'zzikkaplan/notes', NOTE_PATH:'earth/', NOTE_DIR:'earth/note/',
-        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit'],
+        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit'],   /* 판 2: bpit = 교재 포스트잇(14째) */
+        BOOK_PDF_ADD:11,   /* 교재 모드 툴바 「(PDF NNN)」 = 인쇄쪽 + 11 (하이엔드 전체 PDF) */
         TITLE:'지학 기출 서재', LOG:'지학', NAME:'지학', LAYER:true, ready:true}
 };
 const SUBJ_ORDER=['phys','bio','earth'];   /* 탭 셀 순서 */
@@ -2561,11 +2639,11 @@ let rt;window.addEventListener('resize',()=>{if(!VNO)return;clearTimeout(rt);
      찍혀야 하는데 IndexedDB 쓰기는 그때 끝나지 못한다. localStorage 는 동기적이다. */
 const REC_REPO='zzikkaplan/studyplandata', REC_BRANCH='main';
 const REC_PATH=CUR.REC_PATH, REC_SET_PATH='settings.json';
-const SYNC_KEYS=CARD_LAYER?CUR.SYNC_KEYS:SUBJ.phys.SYNC_KEYS;   /* 과목별 표 — 물리 11 · 카드 층(지학·생물) 13(+bogi·unit) · SUBJ 블록 참조 */
+const SYNC_KEYS=CARD_LAYER?CUR.SYNC_KEYS:SUBJ.phys.SYNC_KEYS;   /* 과목별 표 — 물리 11 · 카드 층(지학·생물) 14(+bogi·unit·bpit) · SUBJ 블록 참조 */
 /* 키 → 이 앱의 전역. 열 개 다 「문항번호 → 값」 dict 다(실측 확인).
    ⚠ `ansfix` 만 늦게 읽힌다(loadAfix) — null 이면 건너뛴다. */
 let MC={};            // no -> {w,h,s:[{c,w,hl,p:[u,v,… 1/1000 정수]}]}  손필기 암기카드 · kv/mcard · 카드 20KB 상한
-let BG={},UN={};      // 지학: bogi = uid→{ㄱ:'O'|'Q'|'X'} · unit = uid→'n.n.n' (물리 SYNC_KEYS 엔 없다)
+let BG={},UN={},BP={};   // 지학: bogi = uid→{ㄱ:'O'|'Q'|'X'} · unit = uid→'n.n.n' · bpit = 교재 포스트잇 (물리 SYNC_KEYS 엔 없다)
 const SYNC_REF={
   status :{g:()=>ST,   s:v=>{ST=v}},
   note   :{g:()=>CMT,  s:v=>{CMT=v}},
@@ -2579,7 +2657,8 @@ const SYNC_REF={
   omrpos :{g:()=>OPOS, s:v=>{OPOS=v}},
   mcard  :{g:()=>MC,   s:v=>{MC=v}},
   bogi   :{g:()=>BG,   s:v=>{BG=v}},
-  unit   :{g:()=>UN,   s:v=>{UN=v}}
+  unit   :{g:()=>UN,   s:v=>{UN=v}},
+  bpit   :{g:()=>BP,   s:v=>{BP=v}}
 };
 const U_KEY=CUR.SYNC_PREFIX+'u', GONE_KEY=CUR.SYNC_PREFIX+'gone',
       SHADOW_KEY=CUR.SYNC_PREFIX+'shadow', SMETA_KEY=CUR.SYNC_PREFIX+'meta';
@@ -2845,7 +2924,7 @@ function recBoot(){
   QT=(await get('kv','qtype'))||{};
   FR=(await get('kv','frm'))||{};
   MC=(await get('kv','mcard'))||{};
-  if(CARD_LAYER){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};}
+  if(CARD_LAYER){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};BP=(await get('kv','bpit'))||{};}
   const moved=await renumber();
   if(moved)setTimeout(()=>toast('문항 번호 재배열 — 기록 '+moved+'건을 옮겼습니다'),900);
   await loadHave();
@@ -3363,12 +3442,15 @@ bookOpen=async function(page,show){
     msg.textContent='';
   }catch(e){msg.textContent='쪽을 그리지 못했습니다 — '+(e.message||e)}
 }
-function bookList(page){
-  const L=DATA.filter(r=>r[F.BPAGE]===page||(isC(r)&&r[F.PG]===page)||(!isC(r)&&r[F.SOLPG]===page));
-  const box=$('#bpList');
+var bookRows=page=>DATA.filter(r=>r[F.BPAGE]===page||(isC(r)&&r[F.PG]===page)||(!isC(r)&&r[F.SOLPG]===page));
+function bookList(page){bookListInto(page,$('#bpList'),null)}
+/* 판 2: 같은 목록을 교재 패널(#bpList)과 교재 모드 팝업(#bkqList)에 그린다 · onPick = 문항 열기 전에 할 일(팝업은 교재 모드 닫기) */
+function bookListInto(page,box,onPick){
+  const L=bookRows(page);
   box.innerHTML=`<h5>이 쪽에서 나온 문항 (${L.length})</h5>`+L.map(r=>{const no=r[F.NO],m=lastM(no);
     return `<div class="${no===VNO?'me':''}" data-no="${no}"><span class="tag ${isC(r)?'tc':'tg'}">${isC(r)?'확인':'기출'}</span><span>${esc(titleOf(r))}</span><span class="sp"></span><span>${no===VNO?'지금':(m?MG[m]:'·')}</span></div>`}).join('');
-  box.querySelectorAll('[data-no]').forEach(el=>el.onclick=()=>{VNO=+el.dataset.no;if(!VLIST.includes(VNO))VLIST=filtered().map(r=>r[F.NO]).concat(VLIST.includes(VNO)?[]:[VNO]);BOOK.follow=false;showProblem().then(()=>{BOOK.follow=true})});
+  box.querySelectorAll('[data-no]').forEach(el=>el.onclick=()=>{if(onPick)onPick();VNO=+el.dataset.no;if(!VLIST.includes(VNO))VLIST=filtered().map(r=>r[F.NO]).concat(VLIST.includes(VNO)?[]:[VNO]);BOOK.follow=false;
+    (VNO&&$('#view').classList.contains('hide')?openView(VNO):showProblem()).then(()=>{BOOK.follow=true})});
 }
 function bookTab(t){$$('#bookpane .btabs b').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
   if(t==='sub'){const r=VNO?rec(VNO):null;subOpen(r&&unitOf(VNO)?secOf(unitOf(VNO)):'',true);bookTab('book')}}
@@ -3397,6 +3479,16 @@ function renderSettings(){
   if(!setSheet)return;const fl=setSheet.querySelector('#fl');if(!fl)return;
   const files=Object.values(PIECES).map(v=>v.file);
   fl.innerHTML=`교재 조각 ${files.filter(f=>HAVE[f]).length}/${files.length} 받아 둠 · 처음 여는 쪽의 조각을 그때그때 받는다`;
+  /* 판 2: 교재 필기(bink · 기기별 · SYNC 밖)는 따로 파일로 — 물리 exportData 무접촉 */
+  let row=setSheet.querySelector('#bkio');
+  if(!row){row=document.createElement('div');row.id='bkio';row.className='fld';
+    row.innerHTML='<label>교재 모드 필기(bink · 이 기기)</label><button class="btn" id="bkExp">⤓ 내보내기</button> <button class="btn" id="bkImp">⤒ 가져오기</button><input type="file" id="bkImpF" accept="application/json" class="hide">';
+    fl.parentNode.insertBefore(row,fl.nextSibling);
+    row.querySelector('#bkExp').onclick=async()=>{const o=await bkExportObj();const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(o)],{type:'application/json'}));
+      a.download=CUR.LOG+'_교재필기_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);toast('내보냈습니다 — '+Object.keys(o.bink).length+'쪽')};
+    row.querySelector('#bkImp').onclick=()=>row.querySelector('#bkImpF').click();
+    row.querySelector('#bkImpF').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const n=await bkImportObj(JSON.parse(await f.text()));toast(n+'쪽 필기를 가져왔습니다')}catch(err){toast('파일을 읽지 못했습니다')}e.target.value=''};
+  }
 }
 
 /* ───────────── 확인문제 수동 매칭 ───────────── */
@@ -3430,11 +3522,109 @@ function matchSheet(no){
   document.body.appendChild(b);
 }
 
-/* ───────────── 서브노트 한 판 ───────────── */
-var SUB={S:1,X:0,Y:0,MIN:.1,MAX:8,pages:[],cols:{},pen:false,tool:'pen',color:'#243a5e',w:1.6,ready:false,repo:null};
+/* ───────────── 확대·타일·잉크 엔진 (판 2 · 서브노트 SUB 와 교재 모드 BK 가 같은 함수를 쓴다 — 상태 객체 Z 로 가른다) ─────────────
+   Z = {vp,world,tiles,S,X,Y,MIN,MAX,gen,tile,rt,ready,pen,tool,color,w,hlw,ink,pages(),pdfPage(p),svgOf(p),inkKey(p),wheelCtrl,textSel,ignore,clamp(),onApply()}
+   쪽 p = {i,key,w,h,x,y} — 월드 좌표(쪽 단위 pt) · 잉크는 쪽마다 0~1 정규화 4자리(서브노트 SPW/SPH 나누기와 같은 사상) */
+function zApply(Z){
+  const tf=`translate(${Z.X}px,${Z.Y}px) scale(${Z.S})`;$(Z.world).style.transform=tf;if(Z.over&&$(Z.over))$(Z.over).style.transform=tf;   /* 덧층(잉크·텍스트·칩)은 타일 위 · 월드와 같은 변환 */
+  if(Z.pct&&$(Z.pct))$(Z.pct).textContent=Math.round(Z.S*100)+'%';
+  const t=Z.tile;if(t)$(Z.tiles).style.transform=`translate(${Z.X-t.X*Z.S/t.S}px,${Z.Y-t.Y*Z.S/t.S}px) scale(${Z.S/t.S})`;
+  if(Z.onApply)Z.onApply();
+  clearTimeout(Z.rt);Z.rt=setTimeout(()=>zRender(Z),140);
+}
+function zSetZoom(Z,s,cx,cy){const vp=$(Z.vp);cx=cx??vp.clientWidth/2;cy=cy??vp.clientHeight/2;s=Math.max(Z.MIN,Math.min(Z.MAX,s));
+  Z.X=cx-(cx-Z.X)*(s/Z.S);Z.Y=cy-(cy-Z.Y)*(s/Z.S);Z.S=s;if(Z.clamp)Z.clamp();zApply(Z)}
+/* 보이는 영역만 현재 배율로 타일 렌더 — 쪽 전체 캔버스 금지(아이패드 사파리 한도 4096) */
+zRender=async function(Z){
+  if(!Z.ready)return;const my=++Z.gen;
+  const vp=$(Z.vp),W=vp.clientWidth,H=vp.clientHeight,dpr=Math.min(2,window.devicePixelRatio||1);
+  const S=Z.S,X=Z.X,Y=Z.Y;const tiles=$(Z.tiles);
+  const frag=[];
+  for(const p of Z.pages()){
+    const sx=X+p.x*S,sy=Y+p.y*S,sw=p.w*S,sh=p.h*S;
+    const vx0=Math.max(0,sx),vy0=Math.max(0,sy),vx1=Math.min(W,sx+sw),vy1=Math.min(H,sy+sh);
+    if(vx1<=vx0||vy1<=vy0)continue;
+    frag.push({p,px0:(vx0-sx)/S,py0:(vy0-sy)/S,px1:(vx1-sx)/S,py1:(vy1-sy)/S,vx0,vy0});   /* 쪽 좌표(pt) */
+  }
+  const out=[];
+  for(const t of frag){
+    let pg;try{pg=await Z.pdfPage(t.p)}catch(e){continue}
+    if(my!==Z.gen)return;
+    if(Z.ink[t.p.key]===undefined)await zInkLoad(Z,t.p);
+    const cw=Math.min(4096,Math.round((t.px1-t.px0)*S*dpr)),chh=Math.min(4096,Math.round((t.py1-t.py0)*S*dpr));
+    if(cw<2||chh<2)continue;
+    const cv=document.createElement('canvas');cv.width=cw;cv.height=chh;
+    cv.style.cssText=`position:absolute;left:${t.vx0}px;top:${t.vy0}px;width:${(t.px1-t.px0)*S}px;height:${(t.py1-t.py0)*S}px`;
+    const base=pg.getViewport({scale:1});const k=S*dpr*(t.p.w/base.width);
+    const vpv=pg.getViewport({scale:k,offsetX:-t.px0*S*dpr,offsetY:-t.py0*S*dpr});
+    try{await pg.render({canvasContext:cv.getContext('2d'),viewport:vpv}).promise}catch(e){continue}
+    if(my!==Z.gen)return;
+    out.push(cv);
+  }
+  if(my!==Z.gen)return;
+  tiles.innerHTML='';out.forEach(c=>tiles.appendChild(c));tiles.style.transform='';Z.tile={S,X,Y};
+}
+/* 포인터 — 핀치(두 손가락) · 끌기(보기) · 펜/형광/지우개(펜 툴 · 애플펜슬만 옵션은 물리 SET.pencil) · 휠(wheelCtrl 이면 Ctrl+휠만 확대 · 맨 휠은 이동) */
+function zWire(Z){
+  const vp=$(Z.vp);let ptrs=new Map(),drag=null,pinch=null,stroke=null;
+  vp.addEventListener('wheel',e=>{e.preventDefault();const r=vp.getBoundingClientRect();
+    if(Z.wheelCtrl&&!e.ctrlKey){Z.X-=e.deltaX;Z.Y-=e.deltaY;if(Z.clamp)Z.clamp();zApply(Z);return}
+    zSetZoom(Z,Z.S*Math.exp(-e.deltaY*0.0015),e.clientX-r.left,e.clientY-r.top)},{passive:false});
+  const toPage=(cx,cy)=>{const r=vp.getBoundingClientRect();const wx=(cx-r.left-Z.X)/Z.S,wy=(cy-r.top-Z.Y)/Z.S;
+    for(const p of Z.pages()){if(wx>=p.x&&wx<=p.x+p.w&&wy>=p.y&&wy<=p.y+p.h)return {i:p.i,p,x:wx-p.x,y:wy-p.y}}return null};
+  Z.toPage=toPage;
+  vp.addEventListener('pointerdown',e=>{if(Z.ignore&&e.target.closest(Z.ignore))return;
+    if(!Z.pen&&Z.textSel&&e.pointerType==='mouse'&&e.target.closest(Z.textSel))return;   /* 보기 툴 + 마우스 = 텍스트 선택에 맡긴다 */
+    try{vp.setPointerCapture(e.pointerId)}catch(_){}ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(ptrs.size===2){if(Z.pen&&Z.strictView){stroke=null;return}   /* 교재 모드(§4): 핀치·끌기는 「보기」 툴에서만 */
+      const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),s:Z.S,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,X:Z.X,Y:Z.Y};drag=null;stroke=null;return}
+    if(Z.pen&&(e.pointerType==='pen'||!SET.pencil)){const p=toPage(e.clientX,e.clientY);if(!p)return;
+      if(Z.tool==='erase'){zInkErase(Z,p);return}
+      stroke={i:p.i,c:Z.tool==='hl'?'#F2C230':Z.color,w:Z.tool==='hl'?Z.hlw:Z.w,hl:Z.tool==='hl',p:[p.x,p.y]};zInkDraw(Z,stroke,true);return}
+    if(Z.pen&&Z.strictView)return;
+    drag={ox:e.clientX,oy:e.clientY,X:Z.X,Y:Z.Y};vp.classList.add('panning')});
+  vp.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);const r=vp.getBoundingClientRect();const cx=(a.x+b.x)/2-r.left,cy=(a.y+b.y)/2-r.top;const ns=Math.max(Z.MIN,Math.min(Z.MAX,pinch.s*d/pinch.d));
+      Z.X=cx-(pinch.cx-r.left-pinch.X)*(ns/pinch.s);Z.Y=cy-(pinch.cy-r.top-pinch.Y)*(ns/pinch.s);Z.S=ns;if(Z.clamp)Z.clamp();zApply(Z);return}
+    if(stroke){const p=toPage(e.clientX,e.clientY);if(p&&p.i===stroke.i){stroke.p.push(p.x,p.y);zInkDraw(Z,stroke,false)}return}
+    if(!drag)return;Z.X=drag.X+(e.clientX-drag.ox);Z.Y=drag.Y+(e.clientY-drag.oy);if(Z.clamp)Z.clamp();zApply(Z)});
+  const up=async e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;if(stroke&&ptrs.size===0){if(stroke.p.length>=4)await zInkCommit(Z,stroke);else zInkDraw(Z,null,true);stroke=null}if(ptrs.size===0){drag=null;vp.classList.remove('panning')}};
+  vp.addEventListener('pointerup',up);vp.addEventListener('pointercancel',up);
+  if(window.ResizeObserver)new ResizeObserver(()=>{if(vp.clientWidth&&vp.clientHeight&&Z.ready&&!vp.closest('.hide')){if(Z.clamp)Z.clamp();zApply(Z)}}).observe(vp);
+}
+/* 잉크 — 쪽 좌표(pt) 정규화 · SVG 벡터라 배율마다 선명 · 기기별(IndexedDB ink · SYNC 밖) */
+var pathD=(p,w,h)=>{let d='M'+(p[0]*w).toFixed(1)+' '+(p[1]*h).toFixed(1);for(let k=2;k<p.length;k+=2)d+=' L'+(p[k]*w).toFixed(1)+' '+(p[k+1]*h).toFixed(1);return d};
+zInkLoad=async function(Z,p){Z.ink[p.key]=(await get('ink',p.key))||{s:[]};zInkPaint(Z,p)}
+function zInkPaint(Z,p){const svg=Z.svgOf(p);if(!svg)return;const S=(Z.ink[p.key]||{s:[]}).s||[];
+  svg.innerHTML=S.map((s,j)=>`<path data-j="${j}" d="${pathD(s.p,p.w,p.h)}" stroke="${s.c}" stroke-width="${s.w}" fill="none" stroke-linecap="round" stroke-linejoin="round"${s.hl?' opacity=".45"':''}/>`).join('')+'<path class="zlive" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'}
+function zInkDraw(Z,st,reset){
+  if(reset&&!st){$$(Z.world+' .zlive').forEach(x=>x.setAttribute('d',''));return}
+  const p=Z.pages()[st.i];const live=p&&Z.svgOf(p)?Z.svgOf(p).querySelector('.zlive'):null;if(!live)return;
+  live.setAttribute('stroke',st.c);live.setAttribute('stroke-width',st.w);if(st.hl)live.setAttribute('opacity','.45');
+  let d='M'+st.p[0].toFixed(1)+' '+st.p[1].toFixed(1);for(let k=2;k<st.p.length;k+=2)d+=' L'+st.p[k].toFixed(1)+' '+st.p[k+1].toFixed(1);live.setAttribute('d',d)}
+zInkCommit=async function(Z,st){const p=Z.pages()[st.i];if(!p)return;if(Z.ink[p.key]===undefined)Z.ink[p.key]=(await get('ink',p.key))||{s:[]};
+  const q=[];for(let k=0;k<st.p.length;k+=2)q.push(+(st.p[k]/p.w).toFixed(4),+(st.p[k+1]/p.h).toFixed(4));
+  Z.ink[p.key].s.push({c:st.c,w:st.w,hl:st.hl,p:q});Z.last=p.key;await put('ink',p.key,Z.ink[p.key]);zInkPaint(Z,p)}
+zInkErase=async function(Z,pt){const p=pt.p||Z.pages()[pt.i];const K=Z.ink[p.key];if(!K)return;const S=K.s;let best=-1,bd=9;
+  S.forEach((s,j)=>{for(let k=0;k<s.p.length;k+=2){const d=Math.hypot(s.p[k]*p.w-pt.x,s.p[k+1]*p.h-pt.y);if(d<bd){bd=d;best=j}}});
+  if(best>=0){S.splice(best,1);await put('ink',p.key,K);zInkPaint(Z,p)}}
+zInkUndo=async function(Z){const P=Z.pages();let p=Z.last?P.find(x=>x.key===Z.last&&Z.ink[x.key]&&Z.ink[x.key].s.length):null;
+  if(!p){const vis=P.filter(x=>Z.ink[x.key]&&Z.ink[x.key].s.length);if(!vis.length)return;p=vis[vis.length-1]}
+  Z.ink[p.key].s.pop();await put('ink',p.key,Z.ink[p.key]);zInkPaint(Z,p)}
+function zTools(Z,sel,vpSel){$$(sel+' span[data-tool]').forEach(b=>b.onclick=()=>{const t=b.dataset.tool;Z.pen=t!=='view';Z.tool=t==='view'?'pen':t;$$(sel+' span[data-tool]').forEach(x=>x.classList.toggle('on',x===b));$(vpSel).classList.toggle('pen',Z.pen);$(vpSel).classList.toggle('view',!Z.pen)})}
+
+/* ───────────── 서브노트 한 판 (엔진은 위 · 여기는 A3 여섯 쪽 배치 · 열 머리 · 팝업) ───────────── */
+var SUB={S:1,X:0,Y:0,MIN:.1,MAX:8,pages:[],cols:{},pen:false,tool:'pen',color:'#243a5e',w:1.6,hlw:12,ready:false,repo:null,
+  vp:'#svp',world:'#sworld',tiles:'#stiles',over:'#sover',pct:'#spct',gen:0,tile:null,rt:0,ink:{},wheelCtrl:false,textSel:'',ignore:'.szoom,.smini,.stools,#schips',last:null};
 var SPW=1191,SPH=842,SGAP=40;
 var spos=i=>({x:(i%3)*(SPW+SGAP),y:Math.floor(i/3)*(SPH+SGAP)});
 var SB={r:3*SPW+2*SGAP,b:2*SPH+SGAP};
+var SUB_PAGES=[0,1,2,3,4,5].map(i=>({i,key:'note:'+(i+1),w:SPW,h:SPH,x:spos(i).x,y:spos(i).y}));
+SUB.pages=()=>SUB_PAGES;   /* ⚠ SUB.pages 는 판 1 에서 배열이었다(pages[i].doc) — 문서 캐시는 SUB.docs 로 */
+SUB.docs=[];
+SUB.pdfPage=async p=>(await noteDoc(p.i+1)).getPage(1);
+SUB.svgOf=p=>$('#sover .spgo[data-i="'+p.i+'"] .sink');   /* 판 2: 잉크는 타일 위 덧층(#sover)에 — 캔버스에 가려지지 않는다 */
+SUB.onApply=()=>smini();
 notePath=async function(i){
   if(SUB.repo===null){
     SUB.repo='';
@@ -3445,7 +3635,7 @@ notePath=async function(i){
   return SUB.repo?{repo:SUB.repo,path:CUR.NOTE_PATH+'서브노트_'+i+'.pdf'}:{repo:REC_REPO,path:CUR.NOTE_DIR+'서브노트_'+i+'.pdf'};
 }
 noteDoc=async function(i){
-  if(SUB.pages[i-1]&&SUB.pages[i-1].doc)return SUB.pages[i-1].doc;
+  if(SUB.docs[i-1])return SUB.docs[i-1];
   let buf=await get('pdf','note:'+i);
   if(!buf){
     const np=await notePath(i);
@@ -3454,16 +3644,11 @@ noteDoc=async function(i){
     if(!r.ok)throw new Error('서브노트 '+i+' '+r.status);
     buf=await r.arrayBuffer();await put('pdf','note:'+i,buf);
   }
-  return (await pdfjsLib.getDocument({data:buf.slice(0)}).promise);
+  return SUB.docs[i-1]=(await pdfjsLib.getDocument({data:buf.slice(0)}).promise);
 }
-function sapply(){
-  $('#sworld').style.transform=`translate(${SUB.X}px,${SUB.Y}px) scale(${SUB.S})`;
-  $('#spct').textContent=Math.round(SUB.S*100)+'%';
-  const t=SUB.tile;if(t)$('#stiles').style.transform=`translate(${SUB.X-t.X*SUB.S/t.S}px,${SUB.Y-t.Y*SUB.S/t.S}px) scale(${SUB.S/t.S})`;
-  smini();clearTimeout(SUB.rt);SUB.rt=setTimeout(srender,140);
-}
-function ssetZoom(s,cx,cy){const vp=$('#svp');cx=cx??vp.clientWidth/2;cy=cy??vp.clientHeight/2;s=Math.max(SUB.MIN,Math.min(SUB.MAX,s));
-  SUB.X=cx-(cx-SUB.X)*(s/SUB.S);SUB.Y=cy-(cy-SUB.Y)*(s/SUB.S);SUB.S=s;sapply()}
+var sapply=()=>zApply(SUB);
+var ssetZoom=(s,cx,cy)=>zSetZoom(SUB,s,cx,cy);
+var srender=()=>zRender(SUB);
 function sfit(){const vp=$('#svp'),pad=30;const s=Math.min((vp.clientWidth-pad*2)/SB.r,(vp.clientHeight-pad*2)/SB.b);
   SUB.S=Math.max(SUB.MIN,Math.min(SUB.MAX,s));SUB.X=(vp.clientWidth-SB.r*SUB.S)/2;SUB.Y=(vp.clientHeight-SB.b*SUB.S)/2;sapply();$$('#sworld .scol').forEach(c=>c.classList.remove('on'))}
 function szoomTo(rect,anim){
@@ -3481,43 +3666,12 @@ function szoomSec(sec,anim){
 function smini(){const m=$('#smini');if(!m)return;const W=m.clientWidth,H=m.clientHeight;const sc=Math.min(W/(SB.r+60),H/(SB.b+60));const ox=(W-SB.r*sc)/2,oy=(H-SB.b*sc)/2;
   let h='';for(let i=0;i<6;i++){const p=spos(i);h+=`<i style="left:${p.x*sc+ox}px;top:${p.y*sc+oy}px;width:${SPW*sc}px;height:${SPH*sc}px"></i>`}
   const vp=$('#svp');h+=`<div class="view" style="left:${(-SUB.X/SUB.S)*sc+ox}px;top:${(-SUB.Y/SUB.S)*sc+oy}px;width:${vp.clientWidth/SUB.S*sc}px;height:${vp.clientHeight/SUB.S*sc}px"></div>`;m.innerHTML=h}
-/* 보이는 영역만 현재 배율로 타일 렌더 — 쪽 전체 캔버스 금지(아이패드 사파리 한도) */
-var SRENDER=0;
-srender=async function(){
-  if(!SUB.ready)return;const my=++SRENDER;
-  const vp=$('#svp'),W=vp.clientWidth,H=vp.clientHeight,dpr=Math.min(2,window.devicePixelRatio||1);
-  const S=SUB.S,X=SUB.X,Y=SUB.Y;const tiles=$('#stiles');
-  const frag=[];
-  for(let i=0;i<6;i++){
-    const p=spos(i);const sx=X+p.x*S,sy=Y+p.y*S,sw=SPW*S,sh=SPH*S;
-    const vx0=Math.max(0,sx),vy0=Math.max(0,sy),vx1=Math.min(W,sx+sw),vy1=Math.min(H,sy+sh);
-    if(vx1<=vx0||vy1<=vy0)continue;
-    const px0=(vx0-sx)/S,py0=(vy0-sy)/S,px1=(vx1-sx)/S,py1=(vy1-sy)/S;   /* 쪽 좌표(pt) */
-    frag.push({i,px0,py0,px1,py1,vx0,vy0});
-  }
-  const out=[];
-  for(const t of frag){
-    let doc;try{doc=await noteDoc(t.i+1)}catch(e){continue}
-    if(my!==SRENDER)return;
-    const pg=await doc.getPage(1);
-    const cw=Math.min(4096,Math.round((t.px1-t.px0)*S*dpr)),chh=Math.min(4096,Math.round((t.py1-t.py0)*S*dpr));
-    if(cw<2||chh<2)continue;
-    const cv=document.createElement('canvas');cv.width=cw;cv.height=chh;
-    cv.style.cssText=`position:absolute;left:${t.vx0}px;top:${t.vy0}px;width:${(t.px1-t.px0)*S}px;height:${(t.py1-t.py0)*S}px`;
-    const base=pg.getViewport({scale:1});const k=S*dpr*(SPW/base.width);
-    const vpv=pg.getViewport({scale:k,offsetX:-t.px0*S*dpr,offsetY:-t.py0*S*dpr});
-    try{await pg.render({canvasContext:cv.getContext('2d'),viewport:vpv}).promise}catch(e){continue}
-    if(my!==SRENDER)return;
-    out.push(cv);
-  }
-  if(my!==SRENDER)return;
-  tiles.innerHTML='';out.forEach(c=>tiles.appendChild(c));tiles.style.transform='';SUB.tile={S,X,Y};
-}
 subBuild=async function(){
-  const w=$('#sworld');w.innerHTML='';
+  const w=$('#sworld'),ov=$('#sover');w.innerHTML='';ov.innerHTML='';
   for(let i=0;i<6;i++){const p=spos(i);
-    const d=document.createElement('div');d.className='spg';d.style.left=p.x+'px';d.style.top=p.y+'px';d.dataset.i=i;
-    d.innerHTML=`<svg class="sink" viewBox="0 0 ${SPW} ${SPH}" width="${SPW}" height="${SPH}"></svg>`;w.appendChild(d)}
+    const d=document.createElement('div');d.className='spg';d.style.left=p.x+'px';d.style.top=p.y+'px';d.dataset.i=i;w.appendChild(d);
+    const o=document.createElement('div');o.className='spgo';o.style.cssText=`left:${p.x}px;top:${p.y}px;width:${SPW}px;height:${SPH}px`;o.dataset.i=i;
+    o.innerHTML=`<svg class="sink" viewBox="0 0 ${SPW} ${SPH}" width="${SPW}" height="${SPH}"></svg>`;ov.appendChild(o)}
   SUB.cols={};
   for(let i=0;i<6;i++){
     try{const doc=await noteDoc(i+1);const pg=await doc.getPage(1);const base=pg.getViewport({scale:1});const tc=await pg.getTextContent();
@@ -3535,51 +3689,27 @@ subBuild=async function(){
   for(let i=1;i<=6;i++)await inkLoad(i);
   SUB.ready=true;$('#sinfo').textContent='열 머리 '+Object.keys(SUB.cols).length+'개 · A3×6 · '+(SUB.repo?'notes 저장소':'임시 저장소');
 }
+/* 팝업(판 2 · §7) — 교재 모드·문항 모드 둘 다 떠 있는 창 · 물리 makeFloat(제목줄 끌기 · 모서리 크기 · WIN.sub 세션 전역) · 뒤 교재는 계속 스크롤·필기 */
 subOpen=async function(sec,anim){
   const el=$('#sub');el.classList.remove('hide');el.classList.add('sheet');   /* 열려 있을 때만 .sheet — 물리 키 1~4 차단 규칙을 그때만 탄다 */
   if(!SUB.ready){$('#sinfo').textContent='서브노트 받는 중…';await subBuild()}
   if(sec&&SUB.cols[sec])szoomSec(sec,false);else sfit();
 }
-$('#sX').onclick=()=>{$('#sub').classList.add('hide');$('#sub').classList.remove('sheet');SRENDER++};
+$('#sX').onclick=()=>{$('#sub').classList.add('hide');$('#sub').classList.remove('sheet');SUB.gen++};
+$('#sMax').onclick=()=>{const p=$('#sub .panel');p.classList.toggle('mini');p.classList.remove('float');p.style.cssText='';delete WIN['sub'];sapply()};
 $('#sFit').onclick=sfit;$('#s100').onclick=()=>ssetZoom(1);$('#sIn').onclick=()=>ssetZoom(SUB.S*1.25);$('#sOut').onclick=()=>ssetZoom(SUB.S/1.25);
-(function(){
-  const vp=$('#svp');let ptrs=new Map(),drag=null,pinch=null,stroke=null;
-  vp.addEventListener('wheel',e=>{e.preventDefault();const r=vp.getBoundingClientRect();ssetZoom(SUB.S*Math.exp(-e.deltaY*0.0015),e.clientX-r.left,e.clientY-r.top)},{passive:false});
-  const toPage=(cx,cy)=>{const r=vp.getBoundingClientRect();const wx=(cx-r.left-SUB.X)/SUB.S,wy=(cy-r.top-SUB.Y)/SUB.S;
-    for(let i=0;i<6;i++){const p=spos(i);if(wx>=p.x&&wx<=p.x+SPW&&wy>=p.y&&wy<=p.y+SPH)return {i,x:wx-p.x,y:wy-p.y}}return null};
-  vp.addEventListener('pointerdown',e=>{if(e.target.closest('.szoom,.smini,.stools,#schips'))return;vp.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),s:SUB.S,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,X:SUB.X,Y:SUB.Y};drag=null;stroke=null;return}
-    if(SUB.pen&&(e.pointerType==='pen'||!SET.pencil)){const p=toPage(e.clientX,e.clientY);if(!p)return;
-      if(SUB.tool==='erase'){inkErase(p);return}
-      stroke={i:p.i,c:SUB.tool==='hl'?'#F2C230':SUB.color,w:SUB.tool==='hl'?12:SUB.w,hl:SUB.tool==='hl',p:[p.x,p.y]};inkDraw(stroke,true);return}
-    drag={ox:e.clientX,oy:e.clientY,X:SUB.X,Y:SUB.Y};vp.classList.add('panning')});
-  vp.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);const r=vp.getBoundingClientRect();const cx=(a.x+b.x)/2-r.left,cy=(a.y+b.y)/2-r.top;const ns=Math.max(SUB.MIN,Math.min(SUB.MAX,pinch.s*d/pinch.d));
-      SUB.X=cx-(pinch.cx-r.left-pinch.X)*(ns/pinch.s);SUB.Y=cy-(pinch.cy-r.top-pinch.Y)*(ns/pinch.s);SUB.S=ns;sapply();return}
-    if(stroke){const p=toPage(e.clientX,e.clientY);if(p&&p.i===stroke.i){stroke.p.push(p.x,p.y);inkDraw(stroke,false)}return}
-    if(!drag)return;SUB.X=drag.X+(e.clientX-drag.ox);SUB.Y=drag.Y+(e.clientY-drag.oy);sapply()});
-  const up=async e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;if(stroke&&ptrs.size===0){if(stroke.p.length>=4)await inkCommit(stroke);else inkDraw(null,true);stroke=null}if(ptrs.size===0){drag=null;vp.classList.remove('panning')}};
-  vp.addEventListener('pointerup',up);vp.addEventListener('pointercancel',up);
-  window.addEventListener('resize',()=>{if(!$('#sub').classList.contains('hide'))sapply()});
-})();
-/* 잉크 — 쪽 좌표(pt) 정규화 · SVG 벡터라 배율마다 선명 · 기기별(IndexedDB ink · SYNC 밖) */
-var SINK={};
+makeFloat($('#sub'),$('#sub .shead'),'sub');
+zWire(SUB);
+/* 판 1 이름 그대로(올리기 · 하네스가 부른다) — SINK[i]·inkKey(i)·inkLoad(i)·inkCommit(st)·inkErase(pt)·inkUndo() · i = 1~6 · st.i = 0~5 */
+var SINK=SUB.ink;
 var inkKey=i=>'note:'+i;
-inkLoad=async function(i){SINK[i]=(await get('ink',inkKey(i)))||{s:[]};inkPaint(i)}
-function pathD(p){let d='M'+(p[0]*SPW).toFixed(1)+' '+(p[1]*SPH).toFixed(1);for(let k=2;k<p.length;k+=2)d+=' L'+(p[k]*SPW).toFixed(1)+' '+(p[k+1]*SPH).toFixed(1);return d}
-function inkPaint(i){const svg=$('#sworld .spg[data-i="'+(i-1)+'"] .sink');if(!svg)return;
-  svg.innerHTML=(SINK[i].s||[]).map((s,j)=>`<path data-j="${j}" d="${pathD(s.p)}" stroke="${s.c}" stroke-width="${s.w}" fill="none" stroke-linecap="round" stroke-linejoin="round"${s.hl?' opacity=".45"':''}/>`).join('')+'<path id="slive" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'}
-function inkDraw(st,reset){const i=st?st.i:null;const live=st?$('#sworld .spg[data-i="'+i+'"] #slive'):null;
-  if(reset&&!st){$$('#slive').forEach(x=>x.setAttribute('d',''));return}
-  if(!live)return;live.setAttribute('stroke',st.c);live.setAttribute('stroke-width',st.w);if(st.hl)live.setAttribute('opacity','.45');
-  let d='M'+st.p[0].toFixed(1)+' '+st.p[1].toFixed(1);for(let k=2;k<st.p.length;k+=2)d+=' L'+st.p[k].toFixed(1)+' '+st.p[k+1].toFixed(1);live.setAttribute('d',d)}
-inkCommit=async function(st){const i=st.i+1;const p=[];for(let k=0;k<st.p.length;k+=2)p.push(+(st.p[k]/SPW).toFixed(4),+(st.p[k+1]/SPH).toFixed(4));
-  SINK[i].s.push({c:st.c,w:st.w,hl:st.hl,p});await put('ink',inkKey(i),SINK[i]);inkPaint(i)}
-inkErase=async function(pt){const i=pt.i+1;const S=SINK[i].s;let best=-1,bd=9;
-  S.forEach((s,j)=>{for(let k=0;k<s.p.length;k+=2){const d=Math.hypot(s.p[k]*SPW-pt.x,s.p[k+1]*SPH-pt.y);if(d<bd){bd=d;best=j}}});
-  if(best>=0){S.splice(best,1);await put('ink',inkKey(i),SINK[i]);inkPaint(i)}}
-inkUndo=async function(){for(let i=6;i>=1;i--){}const vis=[];for(let i=1;i<=6;i++)if(SINK[i]&&SINK[i].s.length)vis.push(i);if(!vis.length)return;const i=vis[vis.length-1];SINK[i].s.pop();await put('ink',inkKey(i),SINK[i]);inkPaint(i)}
-$$('#stools span[data-tool]').forEach(b=>b.onclick=()=>{const t=b.dataset.tool;SUB.pen=t!=='view';SUB.tool=t==='view'?'pen':t;$$('#stools span[data-tool]').forEach(x=>x.classList.toggle('on',x===b));$('#svp').classList.toggle('pen',SUB.pen)});
+var inkLoad=i=>zInkLoad(SUB,SUB_PAGES[i-1]);
+var inkPaint=i=>zInkPaint(SUB,SUB_PAGES[i-1]);
+var inkDraw=(st,reset)=>zInkDraw(SUB,st,reset);
+var inkCommit=st=>zInkCommit(SUB,st);
+var inkErase=pt=>zInkErase(SUB,pt);
+var inkUndo=()=>zInkUndo(SUB);
+zTools(SUB,'#stools','#svp');
 $('#sUndo').onclick=inkUndo;
 /* 올리기 — 쪽별로 갈라 저장소 PUT · 100MB 넘는 쪽은 거부 */
 $('#sUp').onclick=()=>$('#sFile').click();
@@ -3593,7 +3723,7 @@ $('#sFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;
       if(bytes.length>100*1048576){toast((i+1)+'쪽이 100MB 를 넘습니다 — 굿노트에서 줄여서 다시');return}
       const np=await notePath(i+1);$('#sinfo').textContent=`올리는 중 ${i+1}/${Math.min(n,6)}…`;
       await ghPutBin(np.repo,np.path,bytes);await del('pdf','note:'+(i+1));
-      if(SUB.pages[i])SUB.pages[i].doc=null;
+      SUB.docs[i]=null;   /* 판 2: 문서 캐시는 SUB.docs */
     }
     SUB.ready=false;toast('서브노트를 올렸습니다');await subOpen('',false);
   }catch(err){toast('올리기 실패 — '+(err.message||err))}
@@ -3608,6 +3738,175 @@ ghPutBin=async function(repo,path,bytes){
   if(!r.ok)throw new Error('PUT '+path+' '+r.status);
 }
 
+
+/* ───────────── 교재 모드 (판 2 · _task_jihak_app_pan2.md) — 한 조각의 쪽을 세로로 이어 붙인 뷰 · 핀치 확대 · 기기별 필기(bink) · 목차 서랍 · 포스트잇(bpit · SYNC) ───────────── */
+var BK={S:1,X:0,Y:0,MIN:.1,MAX:8,vp:'#bkvp',world:'#bkworld',tiles:'#bktiles',over:'#bkover',gen:0,tile:null,rt:0,ready:false,pen:false,tool:'pen',color:'#243a5e',w:1.2,hlw:9,
+  wheelCtrl:true,strictView:true,textSel:'.bktx',ignore:'.bknext,.bkorph,.pitchip,.pitw',ink:{},pgs:[],pcs:[],loading:false,open:false,last:null,GAP:24,tocBuilt:false};
+BK.pages=()=>BK.pgs;
+BK.pdfPage=async p=>p.pg||(p.pg=await p.doc.getPage(p.k));
+BK.svgOf=p=>p.el.querySelector('.bkink');
+var BK_KEY=SUBJ_ID+'_book';   /* localStorage · 기기별 · SYNC 밖 — 마지막 쪽·배율·목차 서랍 */
+function bkState(){try{return JSON.parse(localStorage.getItem(BK_KEY)||'{}')||{}}catch(e){return {}}}
+function bkSave(){const p=bkCurPage();if(!p)return;try{localStorage.setItem(BK_KEY,JSON.stringify({page:p.pr,S:+BK.S.toFixed(3),toc:!$('#bktoc').classList.contains('fold')}))}catch(e){}}
+var piecesOrdered=()=>Object.values(PIECES).slice().sort((a,b)=>a.인쇄시작-b.인쇄시작);
+function bkWorldSize(){const last=BK.pgs[BK.pgs.length-1];return {w:BK.pgs.reduce((m,p)=>Math.max(m,p.w),0),h:last?last.y+last.h:0}}
+BK.clamp=function(){const vp=$('#bkvp'),W=vp.clientWidth,H=vp.clientHeight,ws=bkWorldSize();const cw=ws.w*BK.S,ch=ws.h*BK.S,pad=40;
+  if(cw<=W)BK.X=(W-cw)/2;else BK.X=Math.min(0,Math.max(W-cw,BK.X));
+  const minY=Math.min(pad,H-ch-pad-72);BK.Y=Math.max(minY,Math.min(pad,BK.Y))};
+BK.onApply=function(){bkInfo();bkTextVisible();bkNextCheck();clearTimeout(BK.st);BK.st=setTimeout(bkSave,300)};
+/* 현재 쪽 = 뷰포트 세로 가운데를 지나는 쪽 */
+function bkCurPage(){if(!BK.pgs.length)return null;const vp=$('#bkvp');const wy=(vp.clientHeight/2-BK.Y)/BK.S;
+  for(const p of BK.pgs){if(wy<p.y+p.h+BK.GAP/2)return p}return BK.pgs[BK.pgs.length-1]}
+/* 목차 항목 순서(115) + 부록 조각(목차 5장 밖 · 항목 코드 없음) — 「이전/다음 항목」·툴바 표시·서랍 .cur */
+var BKITEMS=null;
+function bkItems(){if(BKITEMS)return BKITEMS;const L=[];
+  TOC.list.forEach(c=>c.절.forEach(s=>s.항목.forEach(u=>L.push({code:u.코드,name:u.이름,p:+u.쪽,sec:s.절,ch:c.장}))));
+  piecesOrdered().forEach(v=>{if(!TOC.sec[v.절])L.push({code:'',name:String(v.file).replace(/\.pdf$/,''),p:v.인쇄시작,end:v.인쇄끝,ch:'부록'})});
+  L.sort((a,b)=>a.p-b.p);return BKITEMS=L}
+function bkItemAt(pr){let cur=null;for(const it of bkItems()){if(it.p<=pr)cur=it;else break}return cur}
+function bkInfo(){const p=bkCurPage();if(!p){$('#bkInfo').textContent='';return}const it=bkItemAt(p.pr);
+  $('#bkInfo').textContent=(it?(it.code||it.name)+' · ':'')+p.pr+'쪽'+(CUR.BOOK_PDF_ADD?' (PDF '+(p.pr+CUR.BOOK_PDF_ADD)+')':'');
+  $('#bkQn').textContent=bookRows(p.pr).length;bkTocCur(it)}
+/* ── 목차 서랍(조판기식 손잡이) ── */
+function bkTocBuild(){const box=$('#bklist');let h='';
+  TOC.list.forEach(c=>{h+=`<div class="bkch" data-ch="${c.장}"><b>▾</b> ${c.장}. ${esc(c.이름)}</div><div class="bkchb">`;
+    c.절.forEach(s=>{h+=`<div class="bksec" data-sec="${s.절}"><b>▾</b> ${s.절} ${esc(s.이름)}</div><div class="bksecb">`;
+      s.항목.forEach(u=>{h+=`<div class="bkit" data-p="${u.쪽}" data-code="${u.코드}">${u.코드} ${esc(u.이름)}<span class="n">${u.쪽}</span></div>`});h+='</div>'});h+='</div>'});
+  const ap=bkItems().filter(it=>!it.code);
+  if(ap.length){h+=`<div class="bkch" data-ch="부록"><b>▾</b> 부록</div><div class="bkchb">`;ap.forEach(it=>{h+=`<div class="bkit" data-p="${it.p}" data-code="">${esc(it.name)}<span class="n">${it.p}~${it.end}</span></div>`});h+='</div>'}
+  box.innerHTML=h;
+  box.querySelectorAll('.bkch,.bksec').forEach(el=>el.onclick=()=>{const b=el.nextElementSibling;const off=b.classList.toggle('off');el.querySelector('b').textContent=off?'▸':'▾'});
+  box.querySelectorAll('.bkit').forEach(el=>el.onclick=()=>bkGoto(+el.dataset.p));
+  BK.tocBuilt=true;
+}
+function bkTocCur(it){$$('#bklist .bkit.cur').forEach(x=>x.classList.remove('cur'));if(!it)return;
+  const el=$$('#bklist .bkit').find(x=>x.dataset.code===(it.code||'')&&+x.dataset.p===it.p);if(!el)return;el.classList.add('cur');
+  const b=el.closest('.bksecb');if(b)b.classList.remove('off');const c=el.closest('.bkchb');if(c)c.classList.remove('off');
+  try{el.scrollIntoView({block:'nearest'})}catch(e){}}
+function bkSetW(w){w=Math.max(160,Math.min(Math.min(420,window.innerWidth-60),Math.round(w)));$('#book').style.setProperty('--bkw',w+'px');return w}
+function bkTocFold(on){$('#bktoc').classList.toggle('fold',on);$('#bkGrip').textContent=on?'›':'‹'}
+(function(){const dr=$('#bktoc'),g=$('#bkGrip');let d=null;
+  g.addEventListener('pointerdown',e=>{d={x:e.clientX,w:dr.getBoundingClientRect().width,moved:false};try{g.setPointerCapture(e.pointerId)}catch(_){}e.preventDefault()},{passive:false});
+  g.addEventListener('pointermove',e=>{if(!d)return;const dx=e.clientX-d.x;if(Math.abs(dx)>=4)d.moved=true;if(d.moved&&!dr.classList.contains('fold'))bkSetW(d.w+dx)});
+  const up=async()=>{if(!d)return;const was=d;d=null;
+    if(!was.moved){bkTocFold(!dr.classList.contains('fold'));bkSave();if(BK.clamp)BK.clamp();zApply(BK);return}
+    if(dr.classList.contains('fold'))return;SET.bkw=Math.round(dr.getBoundingClientRect().width);await put('kv','set',SET)};
+  g.addEventListener('pointerup',up);g.addEventListener('pointercancel',up);
+})();
+/* ── 조각 받아 쪽 잇기 ── */
+bkLoadPiece=async function(pc){
+  const doc=await pieceDoc(pc.file);const n=Math.min(doc.numPages,pc.인쇄끝-pc.pdf_offset);const w=$('#bkworld');
+  const last=BK.pgs[BK.pgs.length-1];let y=last?last.y+last.h+BK.GAP:0;
+  if(BK.pcs.some(x=>x.file===pc.file))return;   /* 이미 붙은 조각 */
+  for(let k=1;k<=n;k++){
+    const pg=await doc.getPage(k);const base=pg.getViewport({scale:1});const pr=pc.pdf_offset+k;
+    const bg=document.createElement('div');bg.className='bkpg';bg.dataset.pr=pr;bg.style.cssText=`left:0;top:${y}px;width:${base.width}px;height:${base.height}px`;w.appendChild(bg);
+    /* 덧층(타일 위): 잉크 SVG · 텍스트층 · 고아 칩 — p.el 은 이 덧층 */
+    const el=document.createElement('div');el.className='bkpg bkpgo';el.dataset.pr=pr;el.style.cssText=`left:0;top:${y}px;width:${base.width}px;height:${base.height}px`;
+    el.innerHTML=`<svg class="bkink" viewBox="0 0 ${base.width} ${base.height}" width="${base.width}" height="${base.height}"></svg><div class="bktx"></div><div class="bkorph"></div>`;
+    $('#bkover').appendChild(el);BK.pgs.push({i:BK.pgs.length,key:'bink:'+pr,pr,pc,doc,k,pg,w:base.width,h:base.height,x:0,y,el,bg});y+=base.height+BK.GAP;
+  }
+  BK.pcs.push(pc);bkNextBand();
+}
+function bkNextPiece(){const last=BK.pcs[BK.pcs.length-1];if(!last)return null;return piecesOrdered().find(v=>v.인쇄시작>last.인쇄끝)||null}
+function bkNextBand(){let b=$('#bkworld .bknext');if(!b){b=document.createElement('div');b.className='bknext';$('#bkworld').appendChild(b);b.onclick=()=>bkAppend()}
+  const ws=bkWorldSize(),nx=bkNextPiece();b.style.top=(ws.h+BK.GAP)+'px';b.style.width=ws.w+'px';
+  b.textContent=nx?`다음 절 → ${nx.절} (${nx.인쇄시작}~${nx.인쇄끝}쪽) — 누르거나 끝까지 내리면 이어 붙는다`:'끝 — 다음 조각 없음';b.classList.toggle('end',!nx)}
+bkAppend=async function(){const nx=bkNextPiece();if(!nx||BK.loading)return;if(BK.pcs.some(x=>x.file===nx.file))return;BK.loading=true;$('#bkmsg').textContent=nx.file+' 받는 중…';
+  try{await bkLoadPiece(nx);$('#bkmsg').textContent=''}catch(e){$('#bkmsg').textContent='조각을 받지 못했다 — '+(e.message||e)}
+  BK.loading=false;if(BK.clamp)BK.clamp();zApply(BK)}
+function bkNextCheck(){const b=$('#bkworld .bknext');if(!b||BK.loading||!bkNextPiece())return;const vp=$('#bkvp');const sy=BK.Y+parseFloat(b.style.top)*BK.S;if(sy<vp.clientHeight+80)bkAppend()}
+bkReset=async function(pc){BK.gen++;$('#bkworld').innerHTML='';$('#bkover').innerHTML='';$('#bktiles').innerHTML='';BK.pgs=[];BK.pcs=[];BK.ink={};BK.tile=null;BK.ready=false;await bkLoadPiece(pc);BK.ready=true}
+/* 쪽 이동 — 조각 안이면 스크롤 · 다른 조각이면 받아서(뒤 조각은 이어 붙이고 앞 조각은 새로) */
+var bkIdle=async()=>{let n=0;while(BK.loading&&n++<400)await new Promise(r=>setTimeout(r,25))};   /* 끝까지 내려 자동으로 받는 중이면 기다린다 — 같은 조각을 두 번 붙이지 않게 */
+bkGoto=async function(pr){pr=+pr;if(!pr)return;await bkIdle();let p=BK.pgs.find(x=>x.pr===pr);
+  if(!p){const pc=pieceFor(pr);if(!pc){toast('이 쪽은 조각에 없다');return}
+    $('#bkmsg').textContent=pc.file+' 받는 중…';BK.loading=true;
+    try{const last=BK.pcs[BK.pcs.length-1];if(last&&pc.인쇄시작===last.인쇄끝+1)await bkLoadPiece(pc);else await bkReset(pc);$('#bkmsg').textContent=''}
+    catch(e){$('#bkmsg').textContent='조각을 받지 못했다 — '+(e.message||e);BK.loading=false;return}
+    BK.loading=false;p=BK.pgs.find(x=>x.pr===pr);if(!p)return}
+  BK.Y=-(p.y*BK.S)+8;BK.clamp();zApply(BK)}
+function bkStep(d){const p=bkCurPage();if(!p)return;const L=bkItems();let i=L.indexOf(bkItemAt(p.pr));i=Math.max(0,Math.min(L.length-1,i+d));bkGoto(L[i].p)}
+/* ── 열고 닫기 ── */
+bkOpen=async function(pr){const st=bkState();const b=$('#book');b.classList.remove('hide');BK.open=true;$('#btnBook').classList.add('on');
+  bkTocFold(st.toc===undefined?window.innerWidth<=480:!st.toc);if(SET.bkw)bkSetW(SET.bkw);
+  if(!BK.tocBuilt)bkTocBuild();
+  pr=+pr||+st.page||(bkItems()[0]||{}).p||1;
+  if(!BK.pgs.length){$('#bkmsg').textContent='조각 받는 중…';
+    try{await bkReset(pieceFor(pr)||piecesOrdered()[0])}catch(e){$('#bkmsg').textContent='조각을 받지 못했다 — '+(e.message||e);return}
+    $('#bkmsg').textContent='';const vp=$('#bkvp');BK.S=st.S||Math.max(BK.MIN,Math.min(BK.MAX,(vp.clientWidth-24)/BK.pgs[0].w));}
+  await bkGoto(pr);bkSave()}
+function bkClose(){$('#book').classList.add('hide');BK.open=false;BK.gen++;$('#btnBook').classList.remove('on');$('#bkq').classList.add('hide');bkSave()}
+$('#btnBook').onclick=()=>{BK.open?bkClose():bkOpen()};
+$('#bkX').onclick=bkClose;$('#bkPrevU').onclick=()=>bkStep(-1);$('#bkNextU').onclick=()=>bkStep(1);
+$('#bpBig').onclick=()=>bkOpen(BOOK.page||undefined);
+$('#bkSub').onclick=()=>{const p=bkCurPage();const pc=p?p.pc:null;subOpen(pc&&/^\d+\.\d+$/.test(String(pc.절))?pc.절:'',true)};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&BK.open&&!$$('.sheet').some(x=>!['book','sub','bkq'].includes(x.id)&&!x.classList.contains('hide')))bkClose()});
+zWire(BK);zTools(BK,'#bktools','#bkvp');$('#bkvp').classList.add('view');$('#bkUndo').onclick=()=>zInkUndo(BK);
+/* ── 텍스트층(쪽마다 한 번 · pdf.js getTextContent → 투명 span · 「보기」 툴일 때만 잡힌다) ── */
+function bkTextVisible(){const vp=$('#bkvp'),H=vp.clientHeight;for(const p of BK.pgs){const sy=BK.Y+p.y*BK.S;if(sy<H+400&&sy+p.h*BK.S>-400&&!p.txt)bkText(p)}}
+bkText=async function(p){if(p.txt)return;p.txt=1;
+  let pg,tc;try{pg=await BK.pdfPage(p);tc=await pg.getTextContent()}catch(e){return}   /* 텍스트층 없는 쪽(그림 쪽)은 비어도 오류 아님 */
+  const vp=pg.getViewport({scale:1});const box=p.el.querySelector('.bktx');let h='';
+  tc.items.forEach((it,j)=>{if(!it.str||!it.str.trim())return;const tx=pdfjsLib.Util.transform(vp.transform,it.transform);const fh=Math.hypot(tx[2],tx[3]);if(!fh)return;const ang=Math.atan2(tx[1],tx[0]);
+    h+=`<span data-j="${j}" data-t="${esc(it.str)}" data-w="${(it.width*vp.scale).toFixed(1)}" style="left:${tx[4].toFixed(1)}px;top:${(tx[5]-fh).toFixed(1)}px;font-size:${fh.toFixed(1)}px${Math.abs(ang)>0.01?`;transform:rotate(${ang.toFixed(3)}rad)`:''}">${esc(it.str)}</span>`});
+  box.innerHTML=h;
+  box.querySelectorAll('span').forEach(sp=>{const w=sp.getBoundingClientRect().width/BK.S,tw=+sp.dataset.w;if(w>0&&tw>0)sp.style.transform=(sp.style.transform||'')+' scaleX('+(tw/w).toFixed(3)+')'});
+  bkPitPaint(p);
+}
+/* ── 포스트잇(조판기 §4 꼴) — 단어 길게 누르기(500ms · 8px 움직이면 취소 · 선택 중이면 안 붙음) · 키 = 쪽|span|단어번호|단어 · kv bpit · SYNC ── */
+var bpitKeyOf=(pr,j,wi,word)=>[pr,j,wi,word].join('|');
+function bkWordAt(span,ev){const text=span.dataset.t||'';let off=-1;
+  const r=document.caretRangeFromPoint?document.caretRangeFromPoint(ev.clientX,ev.clientY):null;
+  if(r&&span.contains(r.startContainer)){const w=document.createTreeWalker(span,NodeFilter.SHOW_TEXT);let n,acc=0;while((n=w.nextNode())){if(n===r.startContainer){off=acc+r.startOffset;break}acc+=n.nodeValue.length}}
+  const parts=text.split(/(\s+)/);let pos=0,wi=0,first=null;
+  for(const pt of parts){if(!pt)continue;if(/^\s+$/.test(pt)){pos+=pt.length;continue}if(first===null)first={wi,word:pt};if(off>=pos&&off<=pos+pt.length)return {wi,word:pt};pos+=pt.length;wi++}
+  return first}
+function bkPitAsk(p,span,ev){const w=bkWordAt(span,ev);if(!w)return;bkPitEdit(bpitKeyOf(p.pr,span.dataset.j,w.wi,w.word))}
+function bkPitEdit(key){const [pr,,,word]=key.split('|');const cur=BP[key]||null;const old=$('#bkpit');if(old)old.remove();
+  const b=document.createElement('div');b.className='sheet';b.id='bkpit';
+  b.innerHTML=`<div class="panel"><h2>🗒 포스트잇 · ${esc(pr)}쪽 「${esc(word)}」</h2>
+    <div class="fld"><textarea id="bkpitT" class="tokin" rows="5" placeholder="이 단어에 붙일 메모">${esc(cur?cur.t:'')}</textarea></div>
+    <p class="cdim">${cur?new Date(cur.ts).toLocaleString():'새 메모'} · 저장 자리 kv bpit(기록 동기화)</p>
+    <button class="btn pri" id="bkpitOk">${cur?'✎ 수정 저장':'저장'}</button> <button class="btn" id="bkpitDel">🗑 지우기</button> <button class="btn" id="bkpitX">닫기</button></div>`;
+  const done=async(v)=>{if(v===null||!v)delete BP[key];else BP[key]={t:v,ts:Date.now()};await saveBP();b.remove();const p=BK.pgs.find(x=>String(x.pr)===pr);if(p)bkPitPaint(p);toast(v?'포스트잇 저장':'포스트잇 지움')};
+  b.querySelector('#bkpitOk').onclick=()=>done(b.querySelector('#bkpitT').value.trim());
+  b.querySelector('#bkpitDel').onclick=()=>done(null);
+  b.querySelector('#bkpitX').onclick=()=>b.remove();b.onclick=e=>{if(e.target===b)b.remove()};
+  document.body.appendChild(b);setTimeout(()=>{try{b.querySelector('#bkpitT').focus()}catch(e){}},30)}
+var saveBP=()=>put('kv','bpit',BP);
+function bkPitPaint(p){const box=p.el.querySelector('.bktx'),orph=p.el.querySelector('.bkorph');if(!box)return;orph.innerHTML='';
+  box.querySelectorAll('span[data-pit]').forEach(sp=>{sp.textContent=sp.dataset.t;delete sp.dataset.pit});
+  const mine=Object.keys(BP).filter(k=>k.split('|')[0]===String(p.pr));if(!mine.length)return;
+  const byJ={};mine.forEach(k=>{const j=k.split('|')[1];(byJ[j]=byJ[j]||[]).push(k)});
+  Object.keys(byJ).forEach(j=>{const sp=box.querySelector('span[data-j="'+j+'"]');const text=sp?sp.dataset.t:'';const parts=text.split(/(\s+)/);const idx=[];parts.forEach((pt,n)=>{if(pt&&!/^\s+$/.test(pt))idx.push(n)});
+    const hit={};
+    byJ[j].forEach(key=>{const [,,wi,word]=key.split('|');let n=idx[+wi];if(!(n!==undefined&&parts[n]===word))n=idx.find(x=>parts[x]===word);   /* 좌표 밀림 — 같은 span 안 같은 단어 */
+      if(n!==undefined&&!hit[n])hit[n]=key;else{const c=document.createElement('i');c.className='pitchip orph';c.dataset.key=key;c.title='고아 — 「'+word+'」 '+String(BP[key].t).slice(0,40);orph.appendChild(c)}});
+    if(sp&&Object.keys(hit).length){sp.innerHTML=parts.map((x,n)=>hit[n]?`<b class="pitw" data-key="${esc(hit[n])}" title="${esc(String(BP[hit[n]].t).slice(0,60))}">${esc(x)}<i class="pitchip"></i></b>`:esc(x)).join('');sp.dataset.pit='1'}});
+}
+(function(){const vp=$('#bkvp');let t0=null,sx=0,sy=0,cxl=null;
+  const cancel=()=>{if(t0){clearTimeout(t0);t0=null}};
+  vp.addEventListener('pointerdown',ev=>{const sp=ev.target.closest('.bktx span[data-j]');if(!sp||BK.pen)return;
+    const s0=window.getSelection();if(s0&&!s0.isCollapsed)return;
+    const p=BK.pgs.find(x=>x.el.contains(sp));if(!p)return;sx=ev.clientX;sy=ev.clientY;cancel();
+    const cx=ev.clientX,cy=ev.clientY;t0=setTimeout(()=>{t0=null;bkPitAsk(p,sp,{clientX:cx,clientY:cy})},500)},true);
+  vp.addEventListener('pointerup',cancel,true);vp.addEventListener('pointercancel',cancel,true);
+  vp.addEventListener('pointermove',ev=>{if(t0&&(Math.abs(ev.clientX-sx)>8||Math.abs(ev.clientY-sy)>8))cancel()},true);
+  document.addEventListener('selectionchange',cancel);
+  vp.addEventListener('click',ev=>{const c=ev.target.closest('.pitchip,.pitw');if(!c)return;const key=c.dataset.key||(c.closest('.pitw')||{}).dataset.key;if(key){ev.stopPropagation();bkPitEdit(key)}});
+})();
+/* ── 이 쪽의 문항 팝업(§8) — makeFloat · WIN.bklist ── */
+function bkQOpen(){const p=bkCurPage();if(!p)return;const el=$('#bkq');el.classList.remove('hide');$('#bkq .bkqh b').textContent=p.pr+'쪽';
+  bookListInto(p.pr,$('#bkqList'),()=>{bkClose()})}
+$('#bkQ').onclick=()=>$('#bkq').classList.contains('hide')?bkQOpen():$('#bkq').classList.add('hide');
+$('#bkqX').onclick=()=>$('#bkq').classList.add('hide');
+makeFloat($('#bkq'),$('#bkq .bkqh'),'bklist');
+/* ── 교재 필기(bink) 내보내기/가져오기 — 물리 exportData 무접촉 · 쪽 단위 병합(가져온 쪽이 덮음) ── */
+bkExportObj=async function(){const ks=(await keys('ink')).filter(k=>String(k).startsWith('bink:'));const o={v:1,subj:SUBJ_ID,at:Date.now(),bink:{}};for(const k of ks)o.bink[k]=await get('ink',k);return o}
+bkImportObj=async function(j){let n=0;for(const k in ((j&&j.bink)||{})){if(!String(k).startsWith('bink:'))continue;await put('ink',k,j.bink[k]);n++;delete BK.ink[k]}
+  for(const p of BK.pgs)if(BK.ink[p.key]===undefined)await zInkLoad(BK,p);return n}
+
 /* ───────────── 시동 뒤 ───────────── */
 /* 토큰을 처음 넣으면 다시 켜지 않아도 데이터를 받는다 · 데이터가 없으면 목록 자리에 안내 */
 var _rst0=recSaveToken;
@@ -3618,7 +3917,6 @@ $('#btnRand').onclick=()=>{const L=filtered().map(r=>r[F.NO]);if(!L.length)retur
 $('#btnFirst').onclick=()=>{const L=filtered().map(r=>r[F.NO]);if(L.length)openView(L[0],L)};
 window.addEventListener('resize',()=>{if(VNO&&BOOK.page&&bookVisible())bookOpen(BOOK.page)});
 
-$('#sBack').onclick=()=>{$('#sub').classList.add('hide');$('#sub').classList.remove('sheet')};
 $('#sub .shead b').textContent=CUR.NAME+' 서브노트';
 
 }
