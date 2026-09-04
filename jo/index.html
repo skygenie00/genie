@@ -4409,7 +4409,7 @@ async function inkGo(key){
       S.tab = 'cha2'; S.boardKind = seg[0];
       if (L2[seg[1]]) S.law = L2[seg[1]];
       await render();
-      const bodies = await bodyOf(seg[0] === '기출' && seg[1] !== '민소' ? '사례' : seg[0], seg[1]);
+      const bodies = await bodyOf(seg[0], seg[1]);   /* ★ 2차 기출 폴더 판(9/4) — 기출은 언제나 기출 본문(특례 제거) */
       popCell(found, null, bodies);            // 캔버스는 이 팝업 안에 산다
       setTimeout(() => { const cv = inkCvOf(key);
         if (cv){ cv.scrollIntoView({ block: 'center' }); inkFlash(cv, key, null); } }, 250);
@@ -4898,7 +4898,7 @@ async function popPrec4(id,ev,depth){
 /* ③ 2차 카드 팝업 — renderBody 카드 재사용 */
 async function popCard4(kind,ck,ev,depth,blockId,tab){   /* ★ 2차 탭 판 1 §4-5 — 탭 셋(문제/해설/채점) · tab 을 주면 열린 팝업은 탭만 바꾼다 */
   kind=kind||'사례'; const subj=PLAW(); const name=kind+'_'+subj;
-  const bk=(kind==='기출'&&subj!=='민소')?'사례':kind;   /* 기출|특허·상표 = 사례 본문을 빌린다(bodyOf 와 같음) */
+  const bk=kind;   /* ★ 2차 기출 폴더 판(9/4) — 특례 제거 · 기출은 CHF('기출') */
   const C=await get(CHF(bk)).catch(()=>({})); const rec=C[ck];
   const G=await gradeOf(subj); const gv=G['card|'+kind+'|'+ck]||G['card|'+(kind==='사례'?'기출':'사례')+'|'+ck]||null;
   const _pk24=('cell')+'|'+('🧾 '+kind+' · '+String(ck).slice(0,40)+(blockId?' · ^'+blockId:''));
@@ -6029,7 +6029,7 @@ async function view2cha(){
   }
   const cells=d.격자||{},keys=Object.keys(cells);
   const un=d.미배치||[];
-  const bodies=await bodyOf(S.boardKind==='기출'&&subj!=='민소'?'사례':S.boardKind,subj);
+  const bodies=await bodyOf(S.boardKind,subj);   /* ★ 2차 기출 폴더 판(9/4) — 특례 제거 */
   const G=await gradeOf(subj);
   const f=c2fGet();
 
@@ -6039,7 +6039,7 @@ async function view2cha(){
     un.forEach(x=>{const n=c2Num(x.파일);cards.push({file:x.파일,ck:'card|사례|'+x.파일,x:x,row:'',col:null,unit:n?n.split('-')[0]:'기타',series:'',label:n||x.파일,title:c2Title(x.파일,null)});});
   }else{
     keys.forEach(k=>cells[k].forEach(x=>{const [r,c]=k.split('|');
-      cards.push({file:x.파일,ck:'card|'+S.boardKind+'|'+x.파일,x:Object.assign({셀:k},x),row:r,col:+c,unit:S.boardKind==='GS'?(x.시리즈||''):'',series:x.시리즈||'',yr:x.연도,label:(x.연도?String(x.연도).slice(2)+'-':'')+r+' · '+c,title:x.논점||x.파일});}));
+      cards.push({file:x.파일,ck:'card|'+S.boardKind+'|'+x.파일,x:Object.assign({셀:k},x),row:r,col:+c,unit:S.boardKind==='GS'?(x.시리즈||''):'',series:x.시리즈||'',yr:x.연도,label:(x.연도?String(x.연도).slice(2)+'-':'')+r+' · '+c,title:x.논점||x.파일,num:String(((bodies[x.파일]||{}).fm||{}).사례번호||'')});}));   /* ★ 9/4 사례번호(표시용 · 키 아님) */
     /* 미배치(회차 토큰 없는 파일 — 기출 갈래에선 사례 파일 94)는 카드·목록에 안 넣는다 · 보드 아래 미배치 상자 그대로 */
   }
   cards.forEach(c=>{c.info=c2Info(G,c.ck,bodies[c.file]);c.pass=c2Pass(c,f);});   /* ★ 2차 탭 판 1 add1 — §11 */
@@ -6071,7 +6071,7 @@ async function view2cha(){
   cards.slice().sort(c2SortFn(S.cha2Sort||'order')).forEach(c=>{
     if(!pass0(c))return;
     const r=el('div','prow'+(c.pass?'':' dim')+(S.cha2Sel===c.ck?' sel':''));r.dataset.ck=c.ck;
-    r.appendChild(el('div','pn',c.label));r.appendChild(el('div','iss',c.title));
+    r.appendChild(el('div','pn',c.label));r.appendChild(el('div','iss',c.title));if(c.num){const nc=el('span','chip c-src','사례 '+c.num);nc.style.cssText='pointer-events:none;opacity:.75;margin-left:4px';r.appendChild(nc);}   /* ★ 9/4 사례번호 칩 */
     const sc=el('div','sc');const i=c.info;
     if(!i.graded)sc.appendChild(el('span','n','미채점'));
     else{const w=c2Who(i),p=i.per[w]||{};const b=el('b','',(p.s!=null?p.s:'?')+'/'+i.bp);sc.appendChild(b);
@@ -9770,6 +9770,31 @@ addEventListener('resize',()=>{
 readHash();
 render();
 try{ recBoot(); }catch(e){ console.warn('recsync boot', e); }   /* ★ recsync — 시작 1회 · 10초 도장 · 3분 동기화 */
+
+/* ★ 2차 기출 폴더 판(9/4 · _task_jo_2cha_gichul_folder.md §4-2) — 기록 키 1회 이사(멱등 · 옛 키는 둔다 · jopangi.migr 표시)
+   표 = ⚙ 2cha_이름표.json(옛 stem → 새 stem) · 포스트잇 card|사례|<옛>␟… → card|기출|<새>␟… · 필기 cell|<옛> → cell|<새> · 마크업 card|사례|<옛>… 도 같은 규칙
+   채점은 ⚙ JSON(card|기출|<새>) 이라 이사할 것이 없다 · 동기화 기록(기록.json)은 이 로컬 키가 다음 동기화에 실린다 */
+const MIGR_KEY = REC_PRE + 'migr';
+async function c2Migrate(){
+  let done = {}; try{ done = lsRead(MIGR_KEY) || {}; }catch(e){}
+  if (done.gichul2) return done.gichul2;
+  let T = null; try{ T = await get('2cha_이름표.json'); }catch(e){ return null; }
+  const mp = (T && T['옛→새']) || {}; const olds = Object.keys(mp); if (!olds.length) return null;
+  const moved = {};
+  const mv = (store, label, mk) => { let A; try{ A = lsRead(store) || {}; }catch(e){ return 0; } let n = 0;
+    Object.keys(A).forEach(k => { for (const o of olds){ const pr = mk(o, mp[o]); if (!pr) continue; const [p1, p2] = pr;
+      if (k === p1 || k.indexOf(p1 + SEP) === 0 || (p1.slice(-1) === SEP && k.indexOf(p1) === 0)){ const nk = p2 + k.slice(p1.length); if (A[nk] === undefined){ A[nk] = (A[k] && typeof A[k] === 'object' && !Array.isArray(A[k])) ? Object.assign({}, A[k], { mig: 'gichul2' }) : A[k]; n++; } break; } } });
+    if (n) lsWrite(store, A, label); moved[store] = n; return n; };
+  mv(PIT_KEY, '🗒 포스트잇', (o, nw) => ['card|사례|' + o + SEP, 'card|기출|' + nw + SEP]);
+  mv(MK_KEY, '마크업 스티커', (o, nw) => ['card|사례|' + o + SEP, 'card|기출|' + nw + SEP]);
+  mv(INK_KEY, '필기', (o, nw) => ['cell|' + o, 'cell|' + nw]);
+  const total = Object.values(moved).reduce((a, b) => a + b, 0);
+  done.gichul2 = { at: nowIso(), n: total, moved: moved, rows: olds.length };
+  try{ lsWrite(MIGR_KEY, done, '기록 키 이사'); }catch(e){}
+  if (total) toast('2차 기출 폴더 이사 — 기록 ' + total + '건의 키를 새 카드로 옮겼다(옛 키는 남긴다)');
+  return done.gichul2;
+}
+setTimeout(() => { c2Migrate().catch(e => console.warn('[migr]', e)); }, 1200);
 </script>
 </body>
 </html>
