@@ -501,7 +501,10 @@ select.rsel{padding:4px 8px;border:1px solid var(--line);border-radius:999px;bac
 .bkpg{position:absolute;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18)}
 .bkpgo{background:transparent;box-shadow:none}
 .bkpg .bkink{position:absolute;left:0;top:0;pointer-events:none}
-.bktx{position:absolute;inset:0;overflow:hidden;line-height:1;pointer-events:none}
+.bktx{position:absolute;inset:0;overflow:hidden;line-height:1;pointer-events:none;contain:strict}
+/* add1: 끄는 동안·관성 중엔 텍스트층을 숨긴다(밑줄도 같이) · 포스트잇 칩과 잉크는 보인다 */
+#bkvp.moving .bktx{visibility:hidden} #bkvp.moving .bktx .pitchip{visibility:visible}
+.ztl{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform} .ztile{position:absolute}
 #bkvp.view .bktx{pointer-events:auto}
 .bktx span{position:absolute;white-space:pre;color:transparent;transform-origin:0 0;user-select:text;-webkit-user-select:text;cursor:text}
 .bktx span::selection,.bktx span *::selection{background:rgba(31,95,139,.35)}
@@ -3555,70 +3558,101 @@ function matchSheet(no){
 /* ───────────── 확대·타일·잉크 엔진 (판 2 · 서브노트 SUB 와 교재 모드 BK 가 같은 함수를 쓴다 — 상태 객체 Z 로 가른다) ─────────────
    Z = {vp,world,tiles,S,X,Y,MIN,MAX,gen,tile,rt,ready,pen,tool,color,w,hlw,ink,pages(),pdfPage(p),svgOf(p),inkKey(p),wheelCtrl,textSel,ignore,clamp(),onApply()}
    쪽 p = {i,key,w,h,x,y} — 월드 좌표(쪽 단위 pt) · 잉크는 쪽마다 0~1 정규화 4자리(서브노트 SPW/SPH 나누기와 같은 사상) */
+/* ── add1(2026-09-04 · 스크롤 버벅임): 타일 캐시(쪽 좌표 격자 512pt · 배율 버킷 1.25^k · LRU) · 끄는 동안 렌더 금지(transform 만) · 관성 · pointermove rAF 합치기 ──
+   타일 키 = 쪽|col|row|버킷 · 캐시 상한 64장 또는 4천만 픽셀 · 버킷 층(.ztl) 은 world 와 같은 이동 + scale(S/버킷) · 새 버킷이 다 그려지면 옛 버킷 층을 뗀다 */
+var Z_TILE=512, Z_BUCKET=1.25, Z_TILE_MAX=64, Z_PX_BUDGET=40e6, Z_FRICTION=0.95, Z_IDLE=120, Z_VMIN=0.05;
+var zBucket=S=>Math.pow(Z_BUCKET,Math.round(Math.log(S)/Math.log(Z_BUCKET)));
+var zDpr=()=>Math.min(2,window.devicePixelRatio||1);
+var zTileSize=(b,dpr)=>Math.min(Z_TILE,2048/(b*dpr));   /* 타일 캔버스 한 변 ≤ 2048px(아이패드 4096 한도의 절반) */
+function zInit(Z){if(Z.cache)return;Z.cache=new Map();Z.px=0;Z.layers=[];Z.stats={rendered:0,hits:0,renders:0,applies:0};Z.pending=0;Z.vel=null;Z.samples=[];Z.moving=false}
+function zTransform(Z){const tf=`translate(${Z.X}px,${Z.Y}px) scale(${Z.S})`;$(Z.world).style.transform=tf;if(Z.over&&$(Z.over))$(Z.over).style.transform=tf;
+  (Z.layers||[]).forEach(L=>{L.el.style.transform=`translate(${Z.X}px,${Z.Y}px) scale(${Z.S/L.b})`})}
 function zApply(Z){
-  const tf=`translate(${Z.X}px,${Z.Y}px) scale(${Z.S})`;$(Z.world).style.transform=tf;if(Z.over&&$(Z.over))$(Z.over).style.transform=tf;   /* 덧층(잉크·텍스트·칩)은 타일 위 · 월드와 같은 변환 */
+  zInit(Z);Z.stats.applies++;zTransform(Z);
   if(Z.pct&&$(Z.pct))$(Z.pct).textContent=Math.round(Z.S*100)+'%';
-  const t=Z.tile;if(t)$(Z.tiles).style.transform=`translate(${Z.X-t.X*Z.S/t.S}px,${Z.Y-t.Y*Z.S/t.S}px) scale(${Z.S/t.S})`;
   if(Z.onApply)Z.onApply();
-  clearTimeout(Z.rt);Z.rt=setTimeout(()=>zRender(Z),140);
+  clearTimeout(Z.rt);if(!Z.moving&&!Z.vel)Z.rt=setTimeout(()=>zRender(Z),Z_IDLE);   /* 끄는 동안·관성 중엔 렌더 안 함 — 멈춘 뒤 120ms */
 }
 function zSetZoom(Z,s,cx,cy){const vp=$(Z.vp);cx=cx??vp.clientWidth/2;cy=cy??vp.clientHeight/2;s=Math.max(Z.MIN,Math.min(Z.MAX,s));
   Z.X=cx-(cx-Z.X)*(s/Z.S);Z.Y=cy-(cy-Z.Y)*(s/Z.S);Z.S=s;if(Z.clamp)Z.clamp();zApply(Z)}
-/* 보이는 영역만 현재 배율로 타일 렌더 — 쪽 전체 캔버스 금지(아이패드 사파리 한도 4096) */
+function zCachePut(Z,key,cv){Z.cache.set(key,cv);Z.px+=cv.width*cv.height;
+  while((Z.cache.size>Z_TILE_MAX||Z.px>Z_PX_BUDGET)&&Z.cache.size>1){const k0=Z.cache.keys().next().value;const c0=Z.cache.get(k0);Z.cache.delete(k0);Z.px-=c0.width*c0.height;
+    if(c0.parentNode)c0.parentNode.removeChild(c0);Z.layers.forEach(l=>l.keys.delete(k0))}}
+zTileRender=async function(Z,n,b,ts,dpr){const p=n.p;const pg=await Z.pdfPage(p);const base=pg.getViewport({scale:1});
+  const x0=n.c*ts,y0=n.r*ts,w=Math.min(ts,p.w-x0),h=Math.min(ts,p.h-y0);const cw=Math.min(4096,Math.ceil(w*b*dpr)),ch=Math.min(4096,Math.ceil(h*b*dpr));if(cw<2||ch<2)return null;
+  const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;cv.className='ztile';cv.dataset.key=n.key;cv.style.cssText=`position:absolute;left:${(p.x+x0)*b}px;top:${(p.y+y0)*b}px;width:${w*b}px;height:${h*b}px`;
+  const k=b*dpr*(p.w/base.width);const vpv=pg.getViewport({scale:k,offsetX:-x0*b*dpr,offsetY:-y0*b*dpr});
+  await pg.render({canvasContext:cv.getContext('2d'),viewport:vpv}).promise;return cv}
+/* 보이는 타일만 — 캐시에 있으면 붙이고 없는 것만 그린다 · 화면 밖 타일은 DOM 에서 떼되 캐시에 둔다 · 통째 교체 없음 */
 zRender=async function(Z){
-  if(!Z.ready)return;const my=++Z.gen;
-  const vp=$(Z.vp),W=vp.clientWidth,H=vp.clientHeight,dpr=Math.min(2,window.devicePixelRatio||1);
-  const S=Z.S,X=Z.X,Y=Z.Y;const tiles=$(Z.tiles);
-  const frag=[];
-  for(const p of Z.pages()){
-    const sx=X+p.x*S,sy=Y+p.y*S,sw=p.w*S,sh=p.h*S;
-    const vx0=Math.max(0,sx),vy0=Math.max(0,sy),vx1=Math.min(W,sx+sw),vy1=Math.min(H,sy+sh);
-    if(vx1<=vx0||vy1<=vy0)continue;
-    frag.push({p,px0:(vx0-sx)/S,py0:(vy0-sy)/S,px1:(vx1-sx)/S,py1:(vy1-sy)/S,vx0,vy0});   /* 쪽 좌표(pt) */
-  }
-  const out=[];
-  for(const t of frag){
-    let pg;try{pg=await Z.pdfPage(t.p)}catch(e){continue}
-    if(my!==Z.gen)return;
-    if(Z.ink[t.p.key]===undefined)await zInkLoad(Z,t.p);
-    const cw=Math.min(4096,Math.round((t.px1-t.px0)*S*dpr)),chh=Math.min(4096,Math.round((t.py1-t.py0)*S*dpr));
-    if(cw<2||chh<2)continue;
-    const cv=document.createElement('canvas');cv.width=cw;cv.height=chh;
-    cv.style.cssText=`position:absolute;left:${t.vx0}px;top:${t.vy0}px;width:${(t.px1-t.px0)*S}px;height:${(t.py1-t.py0)*S}px`;
-    const base=pg.getViewport({scale:1});const k=S*dpr*(t.p.w/base.width);
-    const vpv=pg.getViewport({scale:k,offsetX:-t.px0*S*dpr,offsetY:-t.py0*S*dpr});
-    try{await pg.render({canvasContext:cv.getContext('2d'),viewport:vpv}).promise}catch(e){continue}
-    if(my!==Z.gen)return;
-    out.push(cv);
-  }
-  if(my!==Z.gen)return;
-  tiles.innerHTML='';out.forEach(c=>tiles.appendChild(c));tiles.style.transform='';Z.tile={S,X,Y};
+  zInit(Z);if(!Z.ready)return;const my=++Z.gen;Z.stats.renders++;Z.busy=my;   /* busy = 진행 중인 렌더 번호(검산·디버그용) */
+  try{await zRenderBody(Z,my)}finally{if(Z.busy===my)Z.busy=0}}
+zRenderBody=async function(Z,my){
+  if(Z.onSettle)Z.onSettle();
+  const vp=$(Z.vp),W=vp.clientWidth,H=vp.clientHeight,dpr=zDpr();const S=Z.S,X=Z.X,Y=Z.Y;const b=zBucket(S),ts=zTileSize(b,dpr);
+  let L=Z.layers.find(l=>l.b===b);
+  if(!L){L={b,el:document.createElement('div'),keys:new Set()};L.el.className='ztl';L.el.dataset.b=b;$(Z.tiles).appendChild(L.el);Z.layers.push(L)}
+  Z.layers.forEach(l=>{l.el.style.zIndex=l===L?2:1});zTransform(Z);
+  const vx0=(-X)/S,vy0=(-Y)/S,vx1=(W-X)/S,vy1=(H-Y)/S;   /* 뷰포트의 월드 좌표 */
+  const need=[];
+  for(const p of Z.pages()){if(p.x>vx1||p.x+p.w<vx0||p.y>vy1||p.y+p.h<vy0)continue;
+    if(Z.ink[p.key]===undefined){await zInkLoad(Z,p);if(my!==Z.gen)return}
+    const c0=Math.max(0,Math.floor((vx0-p.x)/ts)),c1=Math.min(Math.ceil(p.w/ts)-1,Math.floor((vx1-p.x)/ts)),r0=Math.max(0,Math.floor((vy0-p.y)/ts)),r1=Math.min(Math.ceil(p.h/ts)-1,Math.floor((vy1-p.y)/ts));
+    for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)need.push({p,c,r,key:p.key+'|'+c+'|'+r+'|'+b})}
+  const needKeys=new Set(need.map(n=>n.key));
+  for(const k of [...L.keys])if(!needKeys.has(k)){const cv=Z.cache.get(k);if(cv&&cv.parentNode===L.el)L.el.removeChild(cv);L.keys.delete(k)}
+  for(const n of need){if(L.keys.has(n.key))continue;let cv=Z.cache.get(n.key);
+    if(cv){Z.cache.delete(n.key);Z.cache.set(n.key,cv);Z.stats.hits++}
+    else{try{cv=await zTileRender(Z,n,b,ts,dpr)}catch(e){(Z.stats.errs=Z.stats.errs||[]).push(String(e&&e.message||e).slice(0,80));continue}if(my!==Z.gen){Z.stats.cancelA=(Z.stats.cancelA||0)+1;return}if(!cv)continue;zCachePut(Z,n.key,cv);Z.stats.rendered++}
+    if(my!==Z.gen){Z.stats.cancelB=(Z.stats.cancelB||0)+1;return}if(cv.parentNode!==L.el)L.el.appendChild(cv);L.keys.add(n.key)}
+  Z.layers.filter(l=>l!==L).forEach(l=>l.el.remove());Z.layers=[L];zTransform(Z);Z.tile={S,X,Y,b};
 }
-/* 포인터 — 핀치(두 손가락) · 끌기(보기) · 펜/형광/지우개(펜 툴 · 애플펜슬만 옵션은 물리 SET.pencil) · 휠(wheelCtrl 이면 Ctrl+휠만 확대 · 맨 휠은 이동) */
+/* 포인터 — 핀치(두 손가락) · 끌기(보기) · 펜/형광/지우개 · 휠 · pointermove 는 한 프레임에 한 번(rAF) · 뗄 때 마지막 80ms 속도로 관성 */
 function zWire(Z){
-  const vp=$(Z.vp);let ptrs=new Map(),drag=null,pinch=null,stroke=null;
-  vp.addEventListener('wheel',e=>{e.preventDefault();const r=vp.getBoundingClientRect();
-    if(Z.wheelCtrl&&!e.ctrlKey){Z.X-=e.deltaX;Z.Y-=e.deltaY;if(Z.clamp)Z.clamp();zApply(Z);return}
+  zInit(Z);const vp=$(Z.vp);let ptrs=new Map(),drag=null,pinch=null,stroke=null;
+  const flush=()=>{Z.pending=0;if(Z.clamp)Z.clamp();zApply(Z)};
+  const schedule=()=>{if(!Z.pending)Z.pending=requestAnimationFrame(flush)};
+  const moveOn=()=>{Z.moving=true;vp.classList.add('moving')};
+  const settle=()=>{Z.moving=false;vp.classList.remove('moving');vp.classList.remove('panning');if(Z.pending){cancelAnimationFrame(Z.pending);Z.pending=0}if(Z.clamp)Z.clamp();zTransform(Z);if(Z.onApply)Z.onApply();zRender(Z)};
+  const stopInertia=()=>{if(Z.vel){cancelAnimationFrame(Z.vel.raf);Z.vel=null}};
+  Z.stop=()=>{stopInertia();settle()};
+  const startInertia=()=>{const now=performance.now();const s=Z.samples.filter(x=>now-x.t<=80);Z.samples=[];
+    if(s.length<2)return false;const a=s[0],z=s[s.length-1];const dt=Math.max(1,z.t-a.t);let vx=(z.x-a.x)/dt,vy=(z.y-a.y)/dt;
+    if(Math.hypot(vx,vy)<Z_VMIN)return false;
+    Z.vel={vx,vy,t:now,raf:0};vp.classList.add('moving');
+    const run=t=>{if(!Z.vel)return;const dt=Math.min(50,Math.max(1,t-Z.vel.t));Z.vel.t=t;Z.X+=Z.vel.vx*dt;Z.Y+=Z.vel.vy*dt;const bx=Z.X,by=Z.Y;if(Z.clamp)Z.clamp();if(Z.X!==bx)Z.vel.vx=0;if(Z.Y!==by)Z.vel.vy=0;
+      const f=Math.pow(Z_FRICTION,dt/16.7);Z.vel.vx*=f;Z.vel.vy*=f;zApply(Z);
+      if(Math.hypot(Z.vel.vx,Z.vel.vy)<Z_VMIN){Z.vel=null;settle();return}Z.vel.raf=requestAnimationFrame(run)};
+    Z.vel.raf=requestAnimationFrame(run);return true};
+  vp.addEventListener('wheel',e=>{e.preventDefault();stopInertia();const r=vp.getBoundingClientRect();
+    if(Z.wheelCtrl&&!e.ctrlKey){Z.X-=e.deltaX;Z.Y-=e.deltaY;schedule();return}
     zSetZoom(Z,Z.S*Math.exp(-e.deltaY*0.0015),e.clientX-r.left,e.clientY-r.top)},{passive:false});
   const toPage=(cx,cy)=>{const r=vp.getBoundingClientRect();const wx=(cx-r.left-Z.X)/Z.S,wy=(cy-r.top-Z.Y)/Z.S;
     for(const p of Z.pages()){if(wx>=p.x&&wx<=p.x+p.w&&wy>=p.y&&wy<=p.y+p.h)return {i:p.i,p,x:wx-p.x,y:wy-p.y}}return null};
   Z.toPage=toPage;
   vp.addEventListener('pointerdown',e=>{if(Z.ignore&&e.target.closest(Z.ignore))return;
-    if(!Z.pen&&Z.textSel&&e.pointerType==='mouse'&&e.target.closest(Z.textSel))return;   /* 보기 툴 + 마우스 = 텍스트 선택에 맡긴다 */
+    const wasVel=!!Z.vel;stopInertia();if(wasVel){Z.moving=false;vp.classList.remove('moving')}
+    if(!Z.pen&&Z.textSel&&e.pointerType==='mouse'&&e.target.closest(Z.textSel)){if(wasVel)settle();return}   /* 보기 툴 + 마우스 = 텍스트 선택에 맡긴다 */
     try{vp.setPointerCapture(e.pointerId)}catch(_){}ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(ptrs.size===2){if(Z.pen&&Z.strictView){stroke=null;return}   /* 교재 모드(§4): 핀치·끌기는 「보기」 툴에서만 */
-      const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),s:Z.S,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,X:Z.X,Y:Z.Y};drag=null;stroke=null;return}
-    if(Z.pen&&(e.pointerType==='pen'||!SET.pencil)){const p=toPage(e.clientX,e.clientY);if(!p)return;
+      const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),s:Z.S,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,X:Z.X,Y:Z.Y};drag=null;stroke=null;moveOn();return}
+    if(Z.pen&&(e.pointerType==='pen'||!SET.pencil)){const p=toPage(e.clientX,e.clientY);if(!p){if(wasVel)settle();return}
       if(Z.tool==='erase'){zInkErase(Z,p);return}
       stroke={i:p.i,c:Z.tool==='hl'?'#F2C230':Z.color,w:Z.tool==='hl'?Z.hlw:Z.w,hl:Z.tool==='hl',p:[p.x,p.y]};zInkDraw(Z,stroke,true);return}
-    if(Z.pen&&Z.strictView)return;
-    drag={ox:e.clientX,oy:e.clientY,X:Z.X,Y:Z.Y};vp.classList.add('panning')});
+    if(Z.pen&&Z.strictView){if(wasVel)settle();return}
+    drag={ox:e.clientX,oy:e.clientY,X:Z.X,Y:Z.Y};Z.samples=[{t:performance.now(),x:Z.X,y:Z.Y}];vp.classList.add('panning');moveOn()});
   vp.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);const r=vp.getBoundingClientRect();const cx=(a.x+b.x)/2-r.left,cy=(a.y+b.y)/2-r.top;const ns=Math.max(Z.MIN,Math.min(Z.MAX,pinch.s*d/pinch.d));
-      Z.X=cx-(pinch.cx-r.left-pinch.X)*(ns/pinch.s);Z.Y=cy-(pinch.cy-r.top-pinch.Y)*(ns/pinch.s);Z.S=ns;if(Z.clamp)Z.clamp();zApply(Z);return}
+      Z.X=cx-(pinch.cx-r.left-pinch.X)*(ns/pinch.s);Z.Y=cy-(pinch.cy-r.top-pinch.Y)*(ns/pinch.s);Z.S=ns;schedule();return}
     if(stroke){const p=toPage(e.clientX,e.clientY);if(p&&p.i===stroke.i){stroke.p.push(p.x,p.y);zInkDraw(Z,stroke,false)}return}
-    if(!drag)return;Z.X=drag.X+(e.clientX-drag.ox);Z.Y=drag.Y+(e.clientY-drag.oy);if(Z.clamp)Z.clamp();zApply(Z)});
-  const up=async e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;if(stroke&&ptrs.size===0){if(stroke.p.length>=4)await zInkCommit(Z,stroke);else zInkDraw(Z,null,true);stroke=null}if(ptrs.size===0){drag=null;vp.classList.remove('panning')}};
+    if(!drag)return;Z.X=drag.X+(e.clientX-drag.ox);Z.Y=drag.Y+(e.clientY-drag.oy);
+    const now=performance.now();Z.samples.push({t:now,x:Z.X,y:Z.Y});while(Z.samples.length>12)Z.samples.shift();schedule()});
+  const up=async e=>{ptrs.delete(e.pointerId);
+    if(pinch&&ptrs.size<2)pinch=null;
+    if(stroke&&ptrs.size===0){if(stroke.p.length>=4)await zInkCommit(Z,stroke);else zInkDraw(Z,null,true);stroke=null}
+    if(drag&&ptrs.size===0){drag=null;Z.moving=false;vp.classList.remove('panning');if(Z.pending){cancelAnimationFrame(Z.pending);Z.pending=0;if(Z.clamp)Z.clamp();zTransform(Z)}
+      if(!startInertia())settle();return}
+    if(ptrs.size===0&&Z.moving)settle();   /* 핀치 손가락을 하나씩 떼도 moving 을 풀고 렌더(안 풀리면 멈춤 렌더가 영영 안 돈다 · 9/4 실측) */};
   vp.addEventListener('pointerup',up);vp.addEventListener('pointercancel',up);
   if(window.ResizeObserver)new ResizeObserver(()=>{if(vp.clientWidth&&vp.clientHeight&&Z.ready&&!vp.closest('.hide')){if(Z.clamp)Z.clamp();zApply(Z)}}).observe(vp);
 }
@@ -3783,7 +3817,8 @@ function bkWorldSize(){const last=BK.pgs[BK.pgs.length-1];return {w:BK.pgs.reduc
 BK.clamp=function(){const vp=$('#bkvp'),W=vp.clientWidth,H=vp.clientHeight,ws=bkWorldSize();const cw=ws.w*BK.S,ch=ws.h*BK.S,pad=40;
   if(cw<=W)BK.X=(W-cw)/2;else BK.X=Math.min(0,Math.max(W-cw,BK.X));
   const minY=Math.min(pad,H-ch-pad-72);BK.Y=Math.max(minY,Math.min(pad,BK.Y))};
-BK.onApply=function(){bkInfo();bkTextVisible();bkNextCheck();clearTimeout(BK.st);BK.st=setTimeout(bkSave,300)};
+BK.onApply=function(){bkInfo();bkTextVisible(false);bkNextCheck();clearTimeout(BK.st);BK.st=setTimeout(bkSave,300)};
+BK.onSettle=function(){bkTextVisible(true)};   /* add1: 텍스트층은 멈춘 뒤에만 만든다 */
 /* 현재 쪽 = 뷰포트 세로 가운데를 지나는 쪽 */
 function bkCurPage(){if(!BK.pgs.length)return null;const vp=$('#bkvp');const wy=(vp.clientHeight/2-BK.Y)/BK.S;
   for(const p of BK.pgs){if(wy<p.y+p.h+BK.GAP/2)return p}return BK.pgs[BK.pgs.length-1]}
@@ -3846,7 +3881,7 @@ bkAppend=async function(){const nx=bkNextPiece();if(!nx||BK.loading)return;if(BK
   try{await bkLoadPiece(nx);$('#bkmsg').textContent=''}catch(e){$('#bkmsg').textContent='조각을 받지 못했다 — '+(e.message||e)}
   BK.loading=false;if(BK.clamp)BK.clamp();zApply(BK)}
 function bkNextCheck(){const b=$('#bkworld .bknext');if(!b||BK.loading||!bkNextPiece())return;const vp=$('#bkvp');const sy=BK.Y+parseFloat(b.style.top)*BK.S;if(sy<vp.clientHeight+80)bkAppend()}
-bkReset=async function(pc){BK.gen++;$('#bkworld').innerHTML='';$('#bkover').innerHTML='';$('#bktiles').innerHTML='';BK.pgs=[];BK.pcs=[];BK.ink={};BK.tile=null;BK.ready=false;await bkLoadPiece(pc);BK.ready=true}
+bkReset=async function(pc){BK.gen++;if(BK.stop&&BK.vel)BK.stop();$('#bkworld').innerHTML='';$('#bkover').innerHTML='';$('#bktiles').innerHTML='';BK.layers=[];BK.pgs=[];BK.pcs=[];BK.ink={};BK.tile=null;BK.ready=false;await bkLoadPiece(pc);BK.ready=true}
 /* 쪽 이동 — 조각 안이면 스크롤 · 다른 조각이면 받아서(뒤 조각은 이어 붙이고 앞 조각은 새로) */
 var bkIdle=async()=>{let n=0;while(BK.loading&&n++<400)await new Promise(r=>setTimeout(r,25))};   /* 끝까지 내려 자동으로 받는 중이면 기다린다 — 같은 조각을 두 번 붙이지 않게 */
 bkGoto=async function(pr){pr=+pr;if(!pr)return;await bkIdle();let p=BK.pgs.find(x=>x.pr===pr);
@@ -3866,7 +3901,7 @@ bkOpen=async function(pr){const st=bkState();const b=$('#book');b.classList.remo
     try{await bkReset(pieceFor(pr)||piecesOrdered()[0])}catch(e){$('#bkmsg').textContent='조각을 받지 못했다 — '+(e.message||e);return}
     $('#bkmsg').textContent='';const vp=$('#bkvp');BK.S=st.S||Math.max(BK.MIN,Math.min(BK.MAX,(vp.clientWidth-24)/BK.pgs[0].w));}
   await bkGoto(pr);bkSave()}
-function bkClose(){$('#book').classList.add('hide');BK.open=false;BK.gen++;$('#btnBook').classList.remove('on');$('#bkq').classList.add('hide');bkSave()}
+function bkClose(){if(BK.vel&&BK.stop)BK.stop();$('#book').classList.add('hide');BK.open=false;BK.gen++;$('#btnBook').classList.remove('on');$('#bkq').classList.add('hide');bkSave()}
 $('#btnBook').onclick=()=>{BK.open?bkClose():bkOpen()};
 $('#bkX').onclick=bkClose;$('#bkPrevU').onclick=()=>bkStep(-1);$('#bkNextU').onclick=()=>bkStep(1);
 $('#bpBig').onclick=()=>bkOpen(BOOK.page||undefined);
@@ -3874,15 +3909,25 @@ $('#bkSub').onclick=()=>{const p=bkCurPage();const pc=p?p.pc:null;subOpen(pc&&/^
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&BK.open&&!$$('.sheet').some(x=>!['book','sub','bkq'].includes(x.id)&&!x.classList.contains('hide')))bkClose()});
 zWire(BK);zTools(BK,'#bktools','#bkvp');$('#bkvp').classList.add('view');$('#bkUndo').onclick=()=>zInkUndo(BK);
 /* ── 텍스트층(쪽마다 한 번 · pdf.js getTextContent → 투명 span · 「보기」 툴일 때만 잡힌다) ── */
-function bkTextVisible(){const vp=$('#bkvp'),H=vp.clientHeight;for(const p of BK.pgs){const sy=BK.Y+p.y*BK.S;if(sy<H+400&&sy+p.h*BK.S>-400&&!p.txt)bkText(p)}}
-bkText=async function(p){if(p.txt)return;p.txt=1;
-  let pg,tc;try{pg=await BK.pdfPage(p);tc=await pg.getTextContent()}catch(e){return}   /* 텍스트층 없는 쪽(그림 쪽)은 비어도 오류 아님 */
+/* add1 §2-5: 보이는 쪽 ± 1 쪽만 텍스트층을 두고 나머지는 뗀다(포스트잇 칩은 다시 만들 때 같이) · build=false 면 떼기만 */
+function bkTextRange(){const vp=$('#bkvp'),H=vp.clientHeight;const vis=BK.pgs.filter(p=>{const sy=BK.Y+p.y*BK.S;return sy<H&&sy+p.h*BK.S>0});
+  if(!vis.length)return null;return [Math.max(0,vis[0].i-1),Math.min(BK.pgs.length-1,vis[vis.length-1].i+1)]}
+function bkTextClear(p){const box=p.el.querySelector('.bktx');if(box)box.innerHTML='';const o=p.el.querySelector('.bkorph');if(o)o.innerHTML='';p.txt=0}
+function bkTextVisible(build){const rg=bkTextRange();if(!rg)return;const [lo,hi]=rg;
+  for(const p of BK.pgs){const keep=p.i>=lo&&p.i<=hi;
+    if(!keep&&p.txt)bkTextClear(p);
+    else if(keep&&!p.txt&&build)bkText(p)}}
+/* add1: 만드는 중엔 약속(txtP)으로 겹침을 막고, 다 만든 뒤에만 txt=1 — 떼기와 엇갈려 빈 텍스트층이 txt=1 로 남던 경합 수정 */
+function bkText(p){if(p.txt)return Promise.resolve();if(p.txtP)return p.txtP;p.txtP=bkTextBuild(p).finally(()=>{p.txtP=null});return p.txtP}
+bkTextBuild=async function(p){
+  let pg,tc;try{pg=await BK.pdfPage(p);tc=await pg.getTextContent()}catch(e){p.txterr=String(e&&e.message||e);return}   /* 텍스트층 없는 쪽(그림 쪽)은 비어도 오류 아님 · 실패하면 다음에 다시 */
   const vp=pg.getViewport({scale:1});const box=p.el.querySelector('.bktx');let h='';
   tc.items.forEach((it,j)=>{if(!it.str||!it.str.trim())return;const tx=pdfjsLib.Util.transform(vp.transform,it.transform);const fh=Math.hypot(tx[2],tx[3]);if(!fh)return;const ang=Math.atan2(tx[1],tx[0]);
     h+=`<span data-j="${j}" data-t="${esc(it.str)}" data-w="${(it.width*vp.scale).toFixed(1)}" style="left:${tx[4].toFixed(1)}px;top:${(tx[5]-fh).toFixed(1)}px;font-size:${fh.toFixed(1)}px${Math.abs(ang)>0.01?`;transform:rotate(${ang.toFixed(3)}rad)`:''}">${esc(it.str)}</span>`});
   box.innerHTML=h;
   box.querySelectorAll('span').forEach(sp=>{const w=sp.getBoundingClientRect().width/BK.S,tw=+sp.dataset.w;if(w>0&&tw>0)sp.style.transform=(sp.style.transform||'')+' scaleX('+(tw/w).toFixed(3)+')'});
-  bkPitPaint(p);
+  bkPitPaint(p);p.txt=1;
+  const rg=bkTextRange();if(rg&&(p.i<rg[0]||p.i>rg[1]))bkTextClear(p);   /* 만드는 사이 화면 밖으로 나갔으면 바로 뗀다 */
 }
 /* ── 포스트잇(조판기 §4 꼴) — 단어 길게 누르기(500ms · 8px 움직이면 취소 · 선택 중이면 안 붙음) · 키 = 쪽|span|단어번호|단어 · kv bpit · SYNC ── */
 var bpitKeyOf=(pr,j,wi,word)=>[pr,j,wi,word].join('|');
