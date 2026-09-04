@@ -556,8 +556,9 @@ const EARTH={
   TOC_PATH:'earth/목차.json',
   REC_PATH:'earth/기록.json',       /* 물리 열 개 키 + bogi + unit = 12 키 */
   SYNC_PREFIX:'earth_sync_',
-  NOTE_REPO:'zzikkaplan/notes',    /* 있으면 쓰고 없으면 studyplandata earth/note/ (임시) */
-  NOTE_DIR:'earth/note/'
+  NOTE_REPO:'zzikkaplan/notes',    /* 비공개 notes 저장소(2026-09-04 사용자 생성) · earth/서브노트_n.pdf */
+  NOTE_PATH:'earth/',
+  NOTE_DIR:'earth/note/'           /* notes 저장소를 못 볼 때만 studyplandata 임시 자리 */
 };
 </script>
 <script>
@@ -3394,7 +3395,8 @@ async function notePath(i){
     try{const r=await fetch('https://api.github.com/repos/'+EARTH.NOTE_REPO,{headers:{Authorization:'Bearer '+recToken(),Accept:'application/vnd.github+json'},cache:'no-store'});
       if(r.ok)SUB.repo=EARTH.NOTE_REPO}catch(e){}
   }
-  return {repo:SUB.repo||REC_REPO,path:(SUB.repo?'':'')+EARTH.NOTE_DIR+'서브노트_'+i+'.pdf'};
+  /* notes 저장소가 있으면 earth/서브노트_n.pdf · 없으면 studyplandata earth/note/ (임시) */
+  return SUB.repo?{repo:SUB.repo,path:EARTH.NOTE_PATH+'서브노트_'+i+'.pdf'}:{repo:REC_REPO,path:EARTH.NOTE_DIR+'서브노트_'+i+'.pdf'};
 }
 async function noteDoc(i){
   if(SUB.pages[i-1]&&SUB.pages[i-1].doc)return SUB.pages[i-1].doc;
@@ -3485,7 +3487,7 @@ async function subBuild(){
   TOC.list.forEach(c=>{const s=document.createElement('span');s.className='ch';s.textContent=c.장+'장';s.onclick=()=>{const p=spos(Object.values(SUB.cols).find(x=>x&&TOC.sec[c.절[0].절]&&true)?(c.절[0]&&SUB.cols[c.절[0].절]?SUB.cols[c.절[0].절].page:0):0);szoomTo({x:p.x,y:p.y,w:SPW,h:SPH},true)};chips.appendChild(s);
     c.절.forEach(sc=>{const x=document.createElement('span');x.textContent=sc.절;x.className=SUB.cols[sc.절]?'':'no';x.onclick=()=>szoomSec(sc.절,true);chips.appendChild(x)})});
   for(let i=1;i<=6;i++)await inkLoad(i);
-  SUB.ready=true;$('#sinfo').textContent='열 머리 '+Object.keys(SUB.cols).length+'개 · A3×6'+(SUB.repo?'':' · 임시 저장소');
+  SUB.ready=true;$('#sinfo').textContent='열 머리 '+Object.keys(SUB.cols).length+'개 · A3×6 · '+(SUB.repo?'notes 저장소':'임시 저장소');
 }
 async function subOpen(sec,anim){
   const el=$('#sub');el.classList.remove('hide');
