@@ -118,9 +118,14 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .ghbtn:hover{color:var(--teal);border-color:var(--teal)}
 #navTg{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:58;width:24px;height:66px;border:1px solid var(--line);border-left:none;border-radius:0 10px 10px 0;background:var(--card);color:var(--muted);font-size:13px;cursor:pointer;box-shadow:1px 0 6px rgba(0,0,0,.08)}
 #navTg:hover{color:var(--teal)}
-#navdr{position:fixed;left:0;top:0;bottom:0;width:236px;z-index:59;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;box-shadow:2px 0 12px rgba(0,0,0,.14)}
+#navdr{position:fixed;left:0;top:0;bottom:0;width:var(--ndw,236px);z-index:59;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;box-shadow:2px 0 12px rgba(0,0,0,.14)}
 .ndhead{display:flex;align-items:center;justify-content:space-between;padding:8px 6px 8px 12px;font-size:12px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--line)}
-.ndlist{flex:1;overflow-y:auto;padding:4px 0;overscroll-behavior:contain}
+.ndlist{flex:1;overflow-y:auto;padding:4px 0 4px 0;margin-right:13px;overscroll-behavior:contain}
+/* 조판기식 세로 손잡이(2026-09-04) — 누르면 접기 · 끌면 너비 160~420 · SET.ndw 기기별 */
+#ndGrip{position:absolute;right:0;top:0;bottom:0;width:13px;border-left:1px solid var(--line);background:var(--paper);display:grid;place-items:center;
+  color:var(--muted);font-size:13px;cursor:ew-resize;touch-action:none;user-select:none;-webkit-user-select:none}
+#ndGrip:hover{color:var(--teal);background:rgba(46,125,111,.08)}
+@media (min-width:900px){#view.ndopen .stage{padding-left:var(--ndw,236px)}}
 .ndrow{display:flex;gap:6px;align-items:baseline;padding:5px 10px 5px 10px;font-size:11.5px;cursor:pointer;line-height:1.4;border-left:3px solid transparent}
 .ndrow:hover{background:rgba(128,128,128,.1)}
 .ndrow.cur{background:rgba(46,125,111,.12);border-left-color:var(--teal)}
@@ -225,6 +230,36 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
 .sheet{position:fixed;inset:0;z-index:80;background:rgba(20,20,20,.35);display:flex;align-items:flex-end;justify-content:center}
 .sheet .panel{background:var(--card);width:100%;max-width:560px;border-radius:16px 16px 0 0;
   padding:18px 18px calc(env(safe-area-inset-bottom) + 18px);max-height:86vh;overflow:auto}
+/* 떠 있는 창(2026-09-04 · 쌍둥이 미리보기 · 손필기 암기카드) — 제목줄 끌기 · 오른쪽 아래 모서리 크기 · 세션 동안 자리 기억 */
+.sheet .panel.float{position:fixed;margin:0;max-width:none;max-height:none;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.3);overflow:auto;padding-bottom:18px}
+.twhandle{cursor:move;touch-action:none;user-select:none}
+.twgrip{position:sticky;bottom:0;display:block;margin-left:auto;width:22px;height:22px;cursor:nwse-resize;touch-action:none;border-radius:0 0 10px 0;
+  background:linear-gradient(135deg,transparent 48%,#9A988F 48%,#9A988F 60%,transparent 60%,transparent 70%,#9A988F 70%,#9A988F 82%,transparent 82%)}
+.sheet.twin .twbox img,.sheet.twin .twbox canvas{width:100%}
+/* 손필기 암기카드 */
+.mcwin .panel{width:380px;max-width:92vw}
+.mch{display:flex;gap:6px;align-items:center;font-size:14px}
+.mcc{font-size:11px;color:var(--muted);font-weight:500}
+.mch .iconbtn{margin-left:auto;padding:3px 8px}
+.mcnote{font-size:12px;color:#4A5661;background:#FFFDF3;border:1px dashed var(--line);border-radius:6px;padding:6px 8px;margin:6px 0}
+.mccv{height:220px;position:relative;border:1px solid var(--line);border-radius:6px;overflow:hidden;
+  background:repeating-linear-gradient(0deg,transparent 0 21px,#EEF1F4 21px 22px),repeating-linear-gradient(90deg,transparent 0 21px,#EEF1F4 21px 22px),#fff}
+.mccv.big{height:60vh}
+.mccv canvas{display:block;touch-action:none}
+.mct{display:flex;gap:4px;margin-top:6px;font-size:11.5px;align-items:center}
+.mct span{border:1px solid var(--line);border-radius:5px;padding:2px 8px;cursor:pointer;background:var(--card)}
+.mct span.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.mct .r{margin-left:auto;border:0;color:var(--muted);font-size:11px;cursor:default}
+.mcgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mcard{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;cursor:pointer;user-select:none;-webkit-user-select:none}
+.mcard .t{display:flex;gap:6px;align-items:center;padding:6px 9px;font-size:12px;border-bottom:1px solid var(--line);background:#F7F8F9;white-space:nowrap;overflow:hidden}
+.mcard .t b{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.mcard .m{margin-left:auto;flex:none;font-size:10.5px;padding:0 6px;border-radius:8px;background:#E8F5EE;color:#1F8A55;font-weight:800}
+.mcard .mX{background:#FBE9E7;color:var(--red)} .mcard .mQ{background:#FFF4D6;color:var(--amber)} .mcard .mP{background:#EEE;color:var(--ink)}
+.mcard .c{padding:5px 9px;font-size:11px;color:#4A5661;background:#FFFDF3;border-bottom:1px dashed var(--line);min-height:26px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcard .k{height:150px;position:relative;background:repeating-linear-gradient(0deg,transparent 0 21px,#EEF1F4 21px 22px),repeating-linear-gradient(90deg,transparent 0 21px,#EEF1F4 21px 22px),#fff}
+.mcard.empty .k{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;background:#FAFAFA;text-align:center;padding:8px}
+.mcfoot{display:flex;gap:6px;margin-top:12px;align-items:center} .mcfoot .sp{flex:1}
 .panel h2{font-size:16px;margin:0 0 4px}
 .panel p{font-size:13px;color:var(--muted);margin:0 0 14px}
 .panel .fld{margin-bottom:14px}
@@ -358,7 +393,7 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
     <button class="iconbtn" id="vPrev">◀</button>
     <button class="iconbtn" id="vNext">▶</button>
   </div>
-  <div id="navdr" class="hide"><div class="ndhead"><span id="ndHead"></span><button class="iconbtn" id="ndX">✕</button></div><div class="ndlist" id="ndList"></div></div>
+  <div id="navdr" class="hide"><div class="ndhead"><span id="ndHead"></span></div><div class="ndlist" id="ndList"></div><div id="ndGrip" title="누르면 접기 · 끌면 너비">‹</div></div>
   <button id="navTg" title="문제 목록">▤</button>
   <div class="stage" id="stage">
     <div class="wrap" id="wrap">
@@ -642,7 +677,7 @@ async function twinLink(a,b,on){
 /* 쌍둥이 · 코멘트 검색 결과가 같이 쓴다 — 그림 + 코멘트 전문 + 마지막 마크. onGo = 「이 문제로 가기」 직전에 부른다(코멘트 시트 닫기) */
 async function twinPeek(no,onGo){
   const r=rec(no), loc=locate(r), m=lastM(no), c=noteOf(no);
-  const b=document.createElement('div');b.className='sheet';
+  const b=document.createElement('div');b.className='sheet twin';
   b.innerHTML=`<div class="panel"><h2>${no}. ${esc(titleOf(r))}${m?` <span class="tag vm" style="vertical-align:2px"><b class="vm${m}">${mGlyph(m)}</b> ${MLABEL[m]||m}</span>`:''}</h2>
     <p>${esc(r[F.CODE])} · ${esc(bigLabel(r[F.BIG]))} › ${esc(r[F.SUB])}${r[F.YEAR]?' · '+r[F.YEAR]+' '+esc(r[F.SRC]):''}</p>
     ${c?`<div class="twnote" id="twNote">🗒 ${esc(c)}</div>`:''}
@@ -653,6 +688,7 @@ async function twinPeek(no,onGo){
   b.querySelector('#twX').onclick=()=>b.remove();
   b.onclick=e=>{if(e.target===b)b.remove()};
   document.body.appendChild(b);
+  makeFloat(b,b.querySelector('h2'),'twin');   /* §2 제목줄 끌기 · 모서리 크기 */
   const cv=b.querySelector('#twc'), box=b.querySelector('.twbox');
   const fail=m=>{box.innerHTML=`<p style="font-size:12px;padding:12px">${m}</p>`};
   try{
@@ -660,18 +696,22 @@ async function twinPeek(no,onGo){
       const im=await new Promise(ok=>{const x=new Image();x.onload=()=>ok(x);x.onerror=()=>ok(null);x.src='img/'+loc.img+'.jpg'});
       if(!im){fail('문제 이미지를 불러오지 못했습니다');return}
       cv.width=im.naturalWidth;cv.height=im.naturalHeight;
-      cv.getContext('2d').drawImage(im,0,0);return;
+      cv.getContext('2d').drawImage(im,0,0);
+      await peekInk(no,cv,{W:cv.width,H:cv.height,rot:0,scale:cv.width/im.naturalWidth});   /* §1 그림 문항 필기 */
+      return;
     }
     const buf=await get('pdf',loc.id);
     if(!buf){fail('이 문항의 PDF가 아직 등록되지 않았습니다');return}
     const d=await pdfjsLib.getDocument({data:buf.slice(0)}).promise;
     const page=await d.getPage(Math.min(loc.page,d.numPages));
     const avail=Math.min(box.clientWidth||520,900);
-    const base=page.getViewport({scale:1});
+    const rot=(SET.rot[loc.id]||0);                       /* §1 뷰어와 같은 회전으로 그린 뒤 필기를 얹는다 */
+    const base=page.getViewport({scale:1,rotation:rot});
     const dpr=Math.max(2,Math.min(3,window.devicePixelRatio||1));
-    const vp=page.getViewport({scale:avail/base.width*dpr});
+    const vp=page.getViewport({scale:avail/base.width*dpr,rotation:rot});
     cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
     await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    await peekInk(no,cv,{W:cv.width,H:cv.height,rot,scale:avail/base.width*dpr});
   }catch(e){fail('미리보기를 만들지 못했습니다')}
 }
 function twinSheet(no){
@@ -753,7 +793,7 @@ function draw(){
     if(k!==cur){cur=k;const h=document.createElement('div');h.className='grouphd';h.textContent=k;
       const _s=r[F.SUB];
       if(frmFor(_s).length){const x=document.createElement('button');x.className='ghbtn';x.textContent='공식';x.onclick=e=>{e.stopPropagation();frmSheet(_s)};h.appendChild(x)}
-      {const x=document.createElement('button');x.className='ghbtn';x.textContent='암기카드'+(cardsFor(null,_s).length?' '+cardsFor(null,_s).length:'');x.onclick=e=>{e.stopPropagation();cardSheet(null,_s,_s)};h.appendChild(x)}
+      {const x=document.createElement('button');x.className='ghbtn';const _n=DATA.filter(r=>r[F.SUB]===_s&&MC[r[F.NO]]).length;x.textContent='암기카드'+(_n?' '+_n:'');x.onclick=e=>{e.stopPropagation();mcardSheet(_s,_s)};h.appendChild(x)}   /* §4-3 손필기 카드 수 · 볼트 카드는 시트 아래 줄 */
       frag.appendChild(h)}
     frag.appendChild(row(r))});
   box.appendChild(frag);
@@ -861,7 +901,7 @@ async function openView(no,list){
   if(!VLIST.includes(no))VLIST=DATA.map(r=>r[F.NO]);
   $('#view').classList.remove('hide');
   navBuild();
-  $('#navdr').classList.toggle('hide',!SET.nav);
+  $('#navdr').classList.toggle('hide',!SET.nav);$('#view').classList.toggle('ndopen',!!SET.nav);
   await showProblem();
 }
 function closeView(){$('#view').classList.add('hide');ndPopClose();VNO=null;draw()}
@@ -1515,7 +1555,7 @@ let GP={};            /* no -> 'GPT 풀이 원문'  (붙여넣어 두는 곳) */
 const gptOf=no=>GP[no]||'';
 const saveGP=()=>put('kv','gpt',GP);
 $('#tTwin').onclick=()=>{if(VNO)twinSheet(VNO)};
-$('#tCard').onclick=()=>{if(!VNO)return;const r=rec(VNO);cardSheet(r[F.CODE],r[F.SUB],VNO+'번 · '+r[F.SUB])};
+$('#tCard').onclick=()=>{if(!VNO)return;mcardWin(VNO)};   /* §4-1 이 문항의 손필기 카드 창 · 볼트 카드는 단원 시트 아래 줄로 */
 let CX={};            /* no -> [개념키]  사람이 직접 이은 것 */
 const saveCX=async()=>{const r=await put('kv','conc',CX);buildCQ();return r};
 const conceptKeys=r=>{
@@ -1838,9 +1878,19 @@ function ndPopToggle(no,chip){
 }
 document.addEventListener('click',e=>{if(NDP!==null&&!e.target.closest('#ndPop')&&!e.target.closest('.ndc'))ndPopClose()});
 $('#navTg').onclick=async()=>{const dr=$('#navdr');dr.classList.toggle('hide');ndPopClose();
-  SET.nav=!dr.classList.contains('hide');await put('kv','set',SET);
+  SET.nav=!dr.classList.contains('hide');$('#view').classList.toggle('ndopen',SET.nav);await put('kv','set',SET);
   if(SET.nav)navSync()};
-$('#ndX').onclick=async()=>{$('#navdr').classList.add('hide');ndPopClose();SET.nav=false;await put('kv','set',SET)};
+/* §3 손잡이 — 탭(이동 4px 미만) = 접기 · 끌기 = 너비 160~420(폰은 화면−60) · SET.ndw 기기별 · SYNC 밖 */
+function ndSetW(w){w=Math.max(160,Math.min(Math.min(420,window.innerWidth-60),Math.round(w)));$('#view').style.setProperty('--ndw',w+'px');return w}
+(function(){
+  const dr=$('#navdr'),g=$('#ndGrip');let d=null;
+  g.addEventListener('pointerdown',e=>{d={x:e.clientX,w:dr.getBoundingClientRect().width,moved:false};try{g.setPointerCapture(e.pointerId)}catch(_){}ndPopClose();e.preventDefault()},{passive:false});
+  g.addEventListener('pointermove',e=>{if(!d)return;const dx=e.clientX-d.x;if(Math.abs(dx)>=4)d.moved=true;if(d.moved)ndSetW(d.w+dx)});
+  const up=async()=>{if(!d)return;const was=d;d=null;
+    if(!was.moved){dr.classList.add('hide');$('#view').classList.remove('ndopen');SET.nav=false;await put('kv','set',SET);return}
+    SET.ndw=Math.round(dr.getBoundingClientRect().width);await put('kv','set',SET)};
+  g.addEventListener('pointerup',up);g.addEventListener('pointercancel',up);
+})();
 
 $('#tLock').onclick=()=>{const on=$('#stage').classList.toggle('lock');
   $('#tLock').classList.toggle('on',on);
@@ -2323,9 +2373,10 @@ let rt;window.addEventListener('resize',()=>{if(!VNO)return;clearTimeout(rt);
      찍혀야 하는데 IndexedDB 쓰기는 그때 끝나지 못한다. localStorage 는 동기적이다. */
 const REC_REPO='zzikkaplan/studyplandata', REC_BRANCH='main';
 const REC_PATH='phys/기록.json', REC_SET_PATH='settings.json';
-const SYNC_KEYS=['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos'];
+const SYNC_KEYS=['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard'];   /* 열한째 mcard = 손필기 암기카드(2026-09-04) */
 /* 키 → 이 앱의 전역. 열 개 다 「문항번호 → 값」 dict 다(실측 확인).
    ⚠ `ansfix` 만 늦게 읽힌다(loadAfix) — null 이면 건너뛴다. */
+let MC={};            // no -> {w,h,s:[{c,w,hl,p:[u,v,… 1/1000 정수]}]}  손필기 암기카드 · kv/mcard · 카드 20KB 상한
 const SYNC_REF={
   status :{g:()=>ST,   s:v=>{ST=v}},
   note   :{g:()=>CMT,  s:v=>{CMT=v}},
@@ -2336,7 +2387,8 @@ const SYNC_REF={
   ansfix :{g:()=>AFIX, s:v=>{AFIX=v}},
   frm    :{g:()=>FR,   s:v=>{FR=v}},
   maskpos:{g:()=>MPOS, s:v=>{MPOS=v}},
-  omrpos :{g:()=>OPOS, s:v=>{OPOS=v}}
+  omrpos :{g:()=>OPOS, s:v=>{OPOS=v}},
+  mcard  :{g:()=>MC,   s:v=>{MC=v}}
 };
 const U_KEY='phys_sync_u', GONE_KEY='phys_sync_gone',
       SHADOW_KEY='phys_sync_shadow', SMETA_KEY='phys_sync_meta';
@@ -2590,6 +2642,7 @@ function recBoot(){
   if(migrate())await saveST();
   SET=Object.assign(SET,(await get('kv','set'))||{});
   if(!SET.autoNextReset){SET.autoNext=false;SET.autoNextReset=1;await put('kv','set',SET);}
+  if(SET.ndw)ndSetW(SET.ndw);   /* 서랍 너비(기기별) */
   MPOS=(await get('kv','maskpos'))||{};
   OPOS=(await get('kv','omrpos'))||{};
   CMT=(await get('kv','note'))||{};
@@ -2599,6 +2652,7 @@ function recBoot(){
   TW=(await get('kv','twin'))||{};
   QT=(await get('kv','qtype'))||{};
   FR=(await get('kv','frm'))||{};
+  MC=(await get('kv','mcard'))||{};
   const moved=await renumber();
   if(moved)setTimeout(()=>toast('문항 번호 재배열 — 기록 '+moved+'건을 옮겼습니다'),900);
   await loadHave();
@@ -2609,6 +2663,130 @@ function recBoot(){
   await ensureFiles();
   if(!Object.keys(HAVE).length)setTimeout(()=>$('#btnSet').click(),400);
 })();
+/* ═══════ 쌍둥이 미리보기 필기 · 떠 있는 창 · 손필기 암기카드 (2026-09-04 · _task_phys_twin_drawer.md) ═══════ */
+/* §1 미리보기 캔버스 위에 그 문항의 필기(ink)를 그린다 — paintInk 와 같은 규칙(옛 층 0.30 · 형광 0.32 · 굵기 (hl?9:w)*scale/2 · HIDEOLD 존중) · 읽기 전용 */
+async function peekInk(no,cv,R){
+  const ink=await get('ink',String(no)); if(!ink)return 0;
+  const layers=Object.keys(ink).map(Number).sort((a,b)=>a-b); if(!layers.length)return 0;
+  const cur=layers[layers.length-1], g=cv.getContext('2d'); let n=0;
+  const px=(u,v)=>{const{W,H,rot}=R; if(rot===90)return[(1-v)*W,u*H]; if(rot===180)return[(1-u)*W,(1-v)*H]; if(rot===270)return[v*W,(1-u)*H]; return[u*W,v*H]};
+  layers.forEach(L=>{ if(HIDEOLD&&L!==cur)return; const old=L<cur;
+    (ink[L]||[]).forEach(s=>{ if(!s.p||s.p.length<2)return; n++;
+      g.save(); g.globalAlpha=s.hl?0.32:(old?0.30:1); g.strokeStyle=s.c; g.lineWidth=(s.hl?9:s.w)*R.scale/2; g.lineCap=s.hl?'butt':'round'; g.lineJoin='round'; g.beginPath();
+      for(let i=0;i<s.p.length;i+=2){const[x,y]=px(s.p[i],s.p[i+1]);i?g.lineTo(x,y):g.moveTo(x,y)} g.stroke(); g.restore(); }); });
+  return n;
+}
+/* §2 떠 있는 창 — 제목줄 = 손잡이(펜슬·손가락·마우스) · 오른쪽 아래 모서리 = 크기(280×200 ~ 화면−16) · 자리·크기는 세션 동안 WIN[key] 에(저장 안 함) */
+const WIN={};
+function makeFloat(sheet,handle,key){
+  const p=sheet.querySelector('.panel'); if(!p||!handle)return;
+  const g=document.createElement('div');g.className='twgrip';p.appendChild(g);
+  handle.classList.add('twhandle');
+  const clamp=st=>{st.w=Math.max(280,Math.min(window.innerWidth-16,st.w));st.h=Math.max(200,Math.min(window.innerHeight-16,st.h));
+    st.l=Math.max(0,Math.min(window.innerWidth-st.w,st.l));st.t=Math.max(0,Math.min(window.innerHeight-st.h,st.t));return st};
+  const apply=st=>{p.classList.add('float');p.style.left=st.l+'px';p.style.top=st.t+'px';p.style.width=st.w+'px';p.style.height=st.h+'px'};
+  if(WIN[key])apply(clamp(WIN[key]));
+  const start=()=>{if(WIN[key])return WIN[key];const r=p.getBoundingClientRect();return WIN[key]=clamp({l:r.left,t:r.top,w:r.width,h:r.height})};
+  let d=null;
+  handle.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;const st=start();d={x:e.clientX,y:e.clientY,l:st.l,t:st.t};try{handle.setPointerCapture(e.pointerId)}catch(_){}apply(st);e.preventDefault()},{passive:false});
+  handle.addEventListener('pointermove',e=>{if(!d)return;const st=WIN[key];st.l=d.l+(e.clientX-d.x);st.t=d.t+(e.clientY-d.y);apply(clamp(st))});
+  const up=()=>{d=null};handle.addEventListener('pointerup',up);handle.addEventListener('pointercancel',up);
+  let z=null;
+  g.addEventListener('pointerdown',e=>{const st=start();z={x:e.clientX,y:e.clientY,w:st.w,h:st.h};try{g.setPointerCapture(e.pointerId)}catch(_){}apply(st);e.preventDefault();e.stopPropagation()},{passive:false});
+  g.addEventListener('pointermove',e=>{if(!z)return;const st=WIN[key];st.w=z.w+(e.clientX-z.x);st.h=z.h+(e.clientY-z.y);apply(clamp(st))});
+  const zup=()=>{z=null};g.addEventListener('pointerup',zup);g.addEventListener('pointercancel',zup);
+}
+/* §4 손필기 암기카드 — 새 키 mcard(SYNC 열한째) · 칸 기준 정규화 1/1000 정수 · 카드 20KB 상한 · 문항 필기(ink)와 저장소 따로 */
+const MC_MAX=20000;
+const saveMC=()=>put('kv','mcard',MC);
+function mcPaint(cv,card,live){
+  const g=cv.getContext('2d'),W=cv.width,H=cv.height; g.clearRect(0,0,W,H);
+  ((card&&card.s)||[]).concat(live?[live]:[]).forEach(s=>{ if(!s.p||s.p.length<2)return;
+    g.save(); g.globalAlpha=s.hl?0.32:1; g.strokeStyle=s.c; g.lineWidth=(s.hl?9:s.w)*(W/360); g.lineCap=s.hl?'butt':'round'; g.lineJoin='round'; g.beginPath();
+    for(let i=0;i<s.p.length;i+=2){const x=s.p[i]/1000*W,y=s.p[i+1]/1000*H;i?g.lineTo(x,y):g.moveTo(x,y)} g.stroke(); g.restore(); });
+}
+function mcErase(no,u,v){const card=MC[no];if(!card)return;const R=30;
+  for(let i=card.s.length-1;i>=0;i--){const s=card.s[i];for(let k=0;k<s.p.length;k+=2){if(Math.hypot(s.p[k]-u,s.p[k+1]-v)<R){card.s.splice(i,1);break}}}
+  if(!card.s.length)delete MC[no]}
+async function mcSave(no,st){await saveMC();if(st)st(MC[no]?`저장됨 · ${Math.round(JSON.stringify(MC[no]).length/1024*10)/10}KB · 기기 간 동기화`:'')}
+let MCW=null;
+function mcardWin(no){
+  if(MCW){MCW.remove();MCW=null}
+  const r=rec(no); if(!r)return;
+  const b=document.createElement('div');b.className='sheet mcwin';MCW=b;
+  b.innerHTML=`<div class="panel"><h2 class="mch">🃏 ${no}. ${esc(titleOf(r))} <span class="mcc">${esc(r[F.CODE])}</span><button class="iconbtn" id="mcX">✕</button></h2>
+    <div class="mcnote">${noteOf(no)?'🗒 '+esc(noteOf(no)):'<span style="color:var(--muted)">🗒 코멘트 없음</span>'}</div>
+    <div class="mccv"><canvas id="mcc"></canvas></div>
+    <div class="mct"><span class="on" data-t="pen">펜</span><span data-t="hl">형광</span><span data-t="erase">지우개</span><span id="mcClear">전체 지움</span><span class="r" id="mcSt"></span></div></div>`;
+  document.body.appendChild(b);
+  const cv=b.querySelector('#mcc'),box=b.querySelector('.mccv');let tool='pen';
+  const st=t=>{const el=b.querySelector('#mcSt');if(el)el.textContent=t};
+  const size=()=>{const dpr=Math.max(1,Math.min(3,window.devicePixelRatio||1));const w=box.clientWidth,h=box.clientHeight;if(!w||!h)return;
+    cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.width=w+'px';cv.style.height=h+'px';mcPaint(cv,MC[no])};
+  size();try{new ResizeObserver(size).observe(box)}catch(e){}
+  st(MC[no]?`${Math.round(JSON.stringify(MC[no]).length/1024*10)/10}KB · 기기 간 동기화`:'');
+  b.querySelectorAll('.mct [data-t]').forEach(x=>x.onclick=()=>{tool=x.dataset.t;b.querySelectorAll('.mct [data-t]').forEach(y=>y.classList.toggle('on',y===x))});
+  b.querySelector('#mcClear').onclick=async()=>{if(!MC[no])return;if(!confirm('이 카드를 전부 지울까요?'))return;delete MC[no];await saveMC();mcPaint(cv,null);st('지웠습니다')};
+  b.querySelector('#mcX').onclick=()=>{b.remove();MCW=null};
+  makeFloat(b,b.querySelector('h2'),'mcard');
+  b.onclick=e=>{if(e.target===b){b.remove();MCW=null}};
+  let live=null;
+  const pt=e=>{const rc=cv.getBoundingClientRect();return[Math.max(0,Math.min(1000,Math.round((e.clientX-rc.left)/rc.width*1000))),Math.max(0,Math.min(1000,Math.round((e.clientY-rc.top)/rc.height*1000)))]};
+  cv.addEventListener('pointerdown',e=>{ if(SET.pencil&&e.pointerType!=='pen')return; try{cv.setPointerCapture(e.pointerId)}catch(_){} const[u,v]=pt(e);
+    if(tool==='erase'){mcErase(no,u,v);mcPaint(cv,MC[no]);live={erase:1};return}
+    live={c:tool==='hl'?'#F2C230':TOOL.color,w:TOOL.w,hl:tool==='hl'?1:0,p:[u,v]};e.preventDefault()},{passive:false});
+  cv.addEventListener('pointermove',e=>{ if(!live)return; const evs=(e.getCoalescedEvents&&e.getCoalescedEvents().length)?e.getCoalescedEvents():[e];
+    if(live.erase){evs.forEach(ev=>{const[u,v]=pt(ev);mcErase(no,u,v)});mcPaint(cv,MC[no]);return}
+    evs.forEach(ev=>{const[u,v]=pt(ev);const n=live.p.length;if(n<2||live.p[n-2]!==u||live.p[n-1]!==v)live.p.push(u,v)});mcPaint(cv,MC[no],live);e.preventDefault()},{passive:false});
+  const end=async()=>{ if(!live)return; const s=live; live=null;
+    if(s.erase){await mcSave(no,st);return}
+    if(s.p.length<4){mcPaint(cv,MC[no]);return}
+    const card=MC[no]||{w:box.clientWidth,h:box.clientHeight,s:[]}; card.s.push(s);
+    if(JSON.stringify(card).length>MC_MAX){card.s.pop();toast('너무 많이 그렸다 — 카드 하나 20KB 상한');mcPaint(cv,MC[no]);return}
+    MC[no]=card;mcPaint(cv,card);await mcSave(no,st)};
+  cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+  ['touchstart','touchmove'].forEach(k=>cv.addEventListener(k,e=>{const t=e.touches&&e.touches[0];if(!t)return;if(!SET.pencil||t.touchType==='stylus')e.preventDefault()},{passive:false}));
+}
+/* 문항을 넘기면 카드 창은 닫는다(그 문항의 카드니까) */
+const _showProblem_mc=showProblem;
+showProblem=async function(){if(MCW){MCW.remove();MCW=null}return _showProblem_mc()};
+/* §4-3 단원줄 「암기카드 N」 시트 — 그 소단원 문항마다 문제명(마크) · 코멘트 · 내 필기 · 누르면 크게 · 길게 누르면 그 문제로 · 볼트 카드는 아래 줄 */
+function mcardSheet(sub,label){
+  const b=document.createElement('div');b.className='sheet';let sort='no';
+  const draw=()=>{
+    let qs=DATA.filter(r=>r[F.SUB]===sub);
+    if(sort==='mark'){const ord={X:0,Q:1,'':2,P:3,O:4};qs=qs.slice().sort((a,z)=>(ord[lastM(a[F.NO])]??2)-(ord[lastM(z[F.NO])]??2)||a[F.NO]-z[F.NO])}
+    const n=qs.filter(r=>MC[r[F.NO]]).length;
+    b.innerHTML=`<div class="panel frmpanel"><h2>암기카드 — ${esc(label)}</h2><p>내가 쓴 카드 ${n}장 · 문항마다 문제명 · 코멘트 · 필기. 카드를 누르면 크게 · 길게 누르면 그 문제로.</p>
+      <div class="mcgrid">${qs.map(r=>{const no=r[F.NO],m=lastM(no),c=MC[no];
+        return `<div class="mcard${c?'':' empty'}" data-no="${no}"><div class="t"><b>${no}. ${esc(titleOf(r))}</b><span class="mcc">${esc(r[F.CODE])}</span>${m?`<span class="m m${m}">${mGlyph(m)}</span>`:''}</div>
+          <div class="c">${noteOf(no)?'🗒 '+esc(noteOf(no)):'<span style="color:var(--muted)">🗒 (코멘트 없음)</span>'}</div>
+          <div class="k">${c?`<canvas data-cv="${no}"></canvas>`:'카드 없음 · 문제에서 「암기카드」'}</div></div>`}).join('')}</div>
+      <div class="mcfoot"><button class="chip" id="mcVault">볼트 카드 ${cardsFor(null,sub).length}장</button><button class="chip" id="mcSort">순서: ${sort==='no'?'문항번호':'마크순'} ▾</button><span class="sp"></span><button class="btn sm pri" id="mcClose">닫기</button></div></div>`;
+    b.querySelectorAll('canvas[data-cv]').forEach(cv=>{const no=+cv.dataset.cv,k=cv.parentElement;cv.width=Math.max(2,k.clientWidth*2);cv.height=Math.max(2,k.clientHeight*2);cv.style.width='100%';cv.style.height='100%';mcPaint(cv,MC[no])});
+    b.querySelectorAll('.mcard').forEach(el=>{const no=+el.dataset.no;let tm=null,long=false;
+      el.onpointerdown=()=>{long=false;tm=setTimeout(()=>{long=true;b.remove();openView(no)},420)};
+      el.onpointerup=el.onpointerleave=el.onpointercancel=()=>clearTimeout(tm);
+      el.onclick=()=>{if(long){long=false;return}mcardBig(no)}});
+    b.querySelector('#mcVault').onclick=()=>cardSheet(null,sub,label);
+    b.querySelector('#mcSort').onclick=()=>{sort=sort==='no'?'mark':'no';draw()};
+    b.querySelector('#mcClose').onclick=()=>b.remove();
+  };
+  b.onclick=e=>{if(e.target===b)b.remove()};
+  document.body.appendChild(b);draw();
+}
+function mcardBig(no){
+  const r=rec(no);const b=document.createElement('div');b.className='sheet';
+  b.innerHTML=`<div class="panel"><h2 class="mch">🃏 ${no}. ${esc(titleOf(r))} <span class="mcc">${esc(r[F.CODE])}</span></h2>
+    <div class="mcnote">${noteOf(no)?'🗒 '+esc(noteOf(no)):'<span style="color:var(--muted)">🗒 코멘트 없음</span>'}</div>
+    <div class="mccv big"><canvas id="mcb"></canvas></div>
+    <button class="btn" id="mcEdit" style="margin-top:10px">이 문제로 가서 쓰기</button><button class="btn pri" id="mcBX" style="margin-top:8px">닫기</button></div>`;
+  document.body.appendChild(b);
+  const cv=b.querySelector('#mcb'),k=cv.parentElement;cv.width=Math.max(2,k.clientWidth*2);cv.height=Math.max(2,k.clientHeight*2);cv.style.width='100%';cv.style.height='100%';mcPaint(cv,MC[no]);
+  b.querySelector('#mcEdit').onclick=()=>{document.querySelectorAll('.sheet').forEach(x=>x.remove());openView(no).then(()=>mcardWin(no))};
+  b.querySelector('#mcBX').onclick=()=>b.remove();b.onclick=e=>{if(e.target===b)b.remove()};
+}
+
 </script>
 <script>
 /* ===== 학습로그 요약 (2026-08-11 추가) =====================================
