@@ -345,8 +345,8 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
 /* ═══════ 지학 층 (2026-09-04) ═══════ */
 :root{--sea:#1F5F8B;--sea-soft:#E3EEF6;--sand:#B9853A;--sand-soft:#FBF3E6;--lav:#D9D2EE}
 /* 물리 전용 도구는 숨긴다 — 문항 카드에는 PDF·필기·가리개·OMR 이 없다 */
-body[data-subj="earth"] .stage,body[data-subj="earth"] #navdr,body[data-subj="earth"] #tLayer,body[data-subj="earth"] #tLayerAdd,body[data-subj="earth"] #tLayerEye,body[data-subj="earth"] #tTheory,body[data-subj="earth"] #tConcept,body[data-subj="earth"] #tSol,body[data-subj="earth"] #tAns,body[data-subj="earth"] #tLock,body[data-subj="earth"] #tRot,body[data-subj="earth"] #tZoom,body[data-subj="earth"] #tTwin,body[data-subj="earth"] #tGpt,body[data-subj="earth"] #tType,body[data-subj="earth"] #tErase,body[data-subj="earth"] #tUndo,body[data-subj="earth"] #tW,body[data-subj="earth"] .tools [data-pen],body[data-subj="earth"] .tools [data-hl],body[data-subj="earth"] #btnFormula,body[data-subj="earth"] #btnConcept,body[data-subj="earth"] #mask,body[data-subj="earth"] #omrPad{display:none!important}
-body[data-subj="earth"] .tools .sep:first-of-type,body[data-subj="earth"] .tools .sep:nth-of-type(2){display:none}
+body[data-layer="card"] .stage,body[data-layer="card"] #navdr,body[data-layer="card"] #tLayer,body[data-layer="card"] #tLayerAdd,body[data-layer="card"] #tLayerEye,body[data-layer="card"] #tTheory,body[data-layer="card"] #tConcept,body[data-layer="card"] #tSol,body[data-layer="card"] #tAns,body[data-layer="card"] #tLock,body[data-layer="card"] #tRot,body[data-layer="card"] #tZoom,body[data-layer="card"] #tTwin,body[data-layer="card"] #tGpt,body[data-layer="card"] #tType,body[data-layer="card"] #tErase,body[data-layer="card"] #tUndo,body[data-layer="card"] #tW,body[data-layer="card"] .tools [data-pen],body[data-layer="card"] .tools [data-hl],body[data-layer="card"] #btnFormula,body[data-layer="card"] #btnConcept,body[data-layer="card"] #mask,body[data-layer="card"] #omrPad{display:none!important}
+body[data-layer="card"] .tools .sep:first-of-type,body[data-layer="card"] .tools .sep:nth-of-type(2){display:none}
 /* 목록 배지 · 색 */
 .item.eg .num{color:var(--teal)} .item.ec .num{color:var(--muted)}
 .tag.tg{background:#E6F2EE;color:#1B7F4B;border-color:#BFE0D2} .tag.tc{background:#F0F0EE;color:#6E7278}
@@ -449,9 +449,15 @@ select.rsel{padding:4px 8px;border:1px solid var(--line);border-radius:999px;bac
 .stools{position:absolute;right:14px;top:56px;display:flex;gap:4px;z-index:2}
 .stools span{border:1px solid var(--line);background:#fff;border-radius:5px;padding:3px 9px;font-size:12px;cursor:pointer;user-select:none}
 .stools span.on{background:var(--sea);border-color:var(--sea);color:#fff}
-/* 과목 게이트(2026-09-04 병합) — 물리에서는 지학 조각이 없고, 지학에서는 물리 전용 도구가 없다 */
-body[data-subj="phys"] #ebody,body[data-subj="phys"] #tree,body[data-subj="phys"] #sub,body[data-subj="phys"] #btnTree,body[data-subj="phys"] #tBook,body[data-subj="phys"] #tSub,body[data-subj="phys"] #tMatch{display:none!important}
-#subjChip b{color:var(--teal)}
+/* 층 게이트(2026-09-04 병합 · add1) — PDF 층(물리)에는 카드 층 조각이 없고, 카드 층(지학·생물)에는 물리 전용 도구가 없다 */
+body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #tree,body[data-layer="pdf"] #sub,body[data-layer="pdf"] #btnTree,body[data-layer="pdf"] #tBook,body[data-layer="pdf"] #tSub,body[data-layer="pdf"] #tMatch{display:none!important}
+/* 과목 탭 셀(add1) — 현재 과목 .on · 준비 안 된 과목 .off */
+#subjTabs{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;vertical-align:middle;background:var(--card)}
+#subjTabs button{padding:6px 9px;border:0;border-right:1px solid var(--line);background:none;font:inherit;font-size:12.5px;color:inherit;cursor:pointer;white-space:nowrap;line-height:1.2}
+#subjTabs button:last-child{border-right:0}
+#subjTabs button.on{background:var(--teal);color:#fff;font-weight:700}
+#subjTabs button.off{color:var(--muted);opacity:.55;cursor:default}
+@media (max-width:480px){#subjTabs button{padding:6px 7px;font-size:12px}}
 /*/EARTH:css*/
 </style>
 </head>
@@ -470,7 +476,7 @@ body[data-subj="phys"] #ebody,body[data-subj="phys"] #tree,body[data-subj="phys"
             title="기록 동기화 — 누르면 지금 맞춘다"></span>
       
       
-      <!--EARTH:html_chip--><button class="iconbtn" id="subjChip" title="과목 전환 — 저장하고 새로고침">물리 ⇄ 지학</button><button class="iconbtn" id="btnTree">목차</button><!--/EARTH:html_chip-->
+      <!--EARTH:html_chip--><span class="segs" id="subjTabs" title="과목 — 저장하고 새로고침"></span><button class="iconbtn" id="btnTree">목차</button><!--/EARTH:html_chip-->
       <button class="iconbtn" id="btnSet">설정</button>
     </div>
     <div id="dl" class="hide"></div>
@@ -597,22 +603,31 @@ body[data-subj="phys"] #ebody,body[data-subj="phys"] #tree,body[data-subj="phys"
 const SUBJ={
   phys:{DB:'phys535', PDF_DIR:'phys/pdf/', REC_PATH:'phys/기록.json', SYNC_PREFIX:'phys_sync_',
         SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard'],
-        TITLE:'물리 535 서재', LOG:'물리535', DATA:'인라인 DATA'},
+        TITLE:'물리 535 서재', LOG:'물리535', DATA:'인라인 DATA', NAME:'물리', ready:true},
+  /* 생물 자리(add1) — 데이터가 오면 ready:true 한 줄만. LAYER:true = 지학과 같은 층(카드 O△X·목차 트리·교재 패널·서브노트·매칭) */
+  bio:{DB:'bio1', PDF_DIR:'bio/pdf/', IMG_DIR:'bio/img/', DATA_PATH:'bio/문항.json', TOC_PATH:'bio/목차.json',
+        REC_PATH:'bio/기록.json', SYNC_PREFIX:'bio_sync_', NOTE_REPO:'zzikkaplan/notes', NOTE_PATH:'bio/', NOTE_DIR:'bio/note/',
+        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit'],
+        TITLE:'생물 기출 서재', LOG:'생물', NAME:'생물', LAYER:true, ready:false},
   earth:{DB:'earth1', PDF_DIR:'earth/pdf/', IMG_DIR:'earth/img/', DATA_PATH:'earth/문항.json', TOC_PATH:'earth/목차.json',
         REC_PATH:'earth/기록.json', SYNC_PREFIX:'earth_sync_', NOTE_REPO:'zzikkaplan/notes', NOTE_PATH:'earth/', NOTE_DIR:'earth/note/',
         SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit'],
-        TITLE:'지학 기출 서재', LOG:'지학'}
+        TITLE:'지학 기출 서재', LOG:'지학', NAME:'지학', LAYER:true, ready:true}
 };
-/* 현재 과목 = localStorage['subj'](기기별 · SYNC 밖 · 기본 phys) · ?subj=earth 쿼리가 있으면 그걸로 세팅(earth/index.html 넘김 페이지가 쓴다) */
-(function(){try{const q=new URLSearchParams(location.search).get('subj');if(q&&SUBJ[q])localStorage.setItem('subj',q)}catch(e){}})();
-const SUBJ_ID=(function(){try{const v=localStorage.getItem('subj');return SUBJ[v]?v:'phys'}catch(e){return 'phys'}})();
-const CUR=SUBJ[SUBJ_ID], EARTH=SUBJ.earth;
-document.body.dataset.subj=SUBJ_ID;
+const SUBJ_ORDER=['phys','bio','earth'];   /* 탭 셀 순서 */
+/* 현재 과목 = localStorage['subj'](기기별 · SYNC 밖 · 기본 phys) · ?subj=earth 쿼리가 있으면 그걸로 세팅(earth/index.html 넘김 페이지가 쓴다) · ready:false 과목은 저장·쿼리 모두 무시 → phys */
+function subjResolve(v){return SUBJ[v]&&SUBJ[v].ready!==false?v:'phys'}
+(function(){try{const q=new URLSearchParams(location.search).get('subj');if(q&&subjResolve(q)===q)localStorage.setItem('subj',q)}catch(e){}})();
+const SUBJ_ID=(function(){try{return subjResolve(localStorage.getItem('subj'))}catch(e){return 'phys'}})();
+const CUR=SUBJ[SUBJ_ID], EARTH=SUBJ.earth, CARD_LAYER=!!CUR.LAYER;   /* CARD_LAYER = 카드 층 과목(지학·생물) · 물리는 PDF 뷰어 */
+document.body.dataset.subj=SUBJ_ID;document.body.dataset.layer=CARD_LAYER?'card':'pdf';
 if(SUBJ_ID!=='phys'){document.title=CUR.TITLE;const h=document.querySelector('.brand h1');if(h)h.textContent=CUR.TITLE}
-/* 과목 전환 = 저장하고 새로고침(상태를 뒤섞지 않는 가장 단순한 길). reload=false 는 검산용 */
-function subjSwitchTo(id,reload){if(!SUBJ[id])return;try{localStorage.setItem('subj',id)}catch(e){}if(reload!==false)location.replace(location.pathname)}
-(function(){const c=document.getElementById('subjChip');if(!c)return;
-  c.innerHTML=SUBJ_ID==='earth'?'<b>지학</b> ⇄ 물리':'<b>물리</b> ⇄ 지학';c.onclick=()=>subjSwitchTo(SUBJ_ID==='earth'?'phys':'earth')})();
+/* 과목 전환 = 저장하고 새로고침(상태를 뒤섞지 않는 가장 단순한 길). reload=false 는 검산용. ready:false 과목은 「준비 중」 토스트 · 전환 없음 */
+function subjSwitchTo(id,reload){if(!SUBJ[id])return false;if(SUBJ[id].ready===false){if(typeof toast==='function')toast(SUBJ[id].NAME+' — 준비 중');return false}try{localStorage.setItem('subj',id)}catch(e){}if(reload!==false)location.replace(location.pathname);return true}
+/* 탭 셀 「물리 │ 생물 │ 지학」 — 현재 과목 = .on · ready:false = .off(회색) */
+(function(){const c=document.getElementById('subjTabs');if(!c)return;
+  c.innerHTML=SUBJ_ORDER.map(id=>'<button type="button" data-subj="'+id+'" class="'+(id===SUBJ_ID?'on':SUBJ[id].ready===false?'off':'')+'"'+(SUBJ[id].ready===false?' aria-disabled="true" title="준비 중"':'')+'>'+SUBJ[id].NAME+'</button>').join('');
+  c.onclick=e=>{const b=e.target.closest('button[data-subj]');if(!b||b.dataset.subj===SUBJ_ID)return;subjSwitchTo(b.dataset.subj)}})();
 /*/EARTH:subj*/
 </script>
 <script>
@@ -660,7 +675,7 @@ let CMT={};           // no -> '한줄 코멘트'  (kv/note · 백업에 함께 
 const noteOf=no=>CMT[no]||'';
 const saveNote=()=>put('kv','note',CMT);
 
-const RENUM_V=SUBJ_ID==='earth'?0:2;   /* 지학은 번호 재배열 없음 */
+const RENUM_V=CARD_LAYER?0:2;   /* 지학은 번호 재배열 없음 */
 const OLD2NEW={"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"10":10,"11":11,"12":12,"13":13,"14":14,"15":16,"16":17,"17":18,"18":19,"19":20,"20":21,"21":22,"22":23,"23":24,"24":25,"25":26,"26":27,"27":28,"28":29,"29":30,"30":31,"31":32,"32":33,"33":34,"34":35,"35":36,"36":37,"37":38,"38":39,"39":40,"40":41,"41":42,"42":43,"43":44,"44":45,"45":46,"46":47,"47":48,"48":49,"49":50,"50":51,"51":52,"52":53,"53":54,"54":55,"55":58,"56":59,"57":60,"58":61,"59":62,"60":63,"61":64,"62":65,"63":66,"64":67,"65":68,"66":69,"67":70,"68":71,"69":72,"70":73,"71":74,"72":75,"73":76,"74":77,"75":78,"76":79,"77":80,"78":81,"79":82,"80":83,"81":84,"82":85,"83":86,"84":87,"85":88,"86":89,"87":90,"88":91,"89":92,"90":93,"91":95,"92":96,"93":97,"94":98,"95":99,"96":102,"97":103,"98":104,"99":105,"100":106,"101":107,"102":108,"103":109,"104":110,"105":111,"106":112,"107":113,"108":114,"109":115,"110":116,"111":117,"112":118,"113":119,"114":120,"115":121,"116":123,"117":124,"118":125,"119":126,"120":127,"121":128,"122":129,"123":130,"124":131,"125":132,"126":133,"127":136,"128":137,"129":138,"130":139,"131":140,"132":141,"133":142,"134":143,"135":144,"136":145,"137":146,"138":147,"139":148,"140":149,"141":150,"142":151,"143":152,"144":153,"145":155,"146":156,"147":157,"148":158,"149":159,"150":160,"151":162,"152":163,"153":164,"154":165,"155":166,"156":167,"157":168,"158":169,"159":172,"160":173,"161":174,"162":175,"163":176,"164":177,"165":178,"166":179,"167":180,"168":181,"169":182,"170":183,"171":184,"172":185,"173":186,"174":187,"175":188,"176":189,"177":190,"178":191,"179":192,"180":193,"181":194,"182":195,"183":196,"184":197,"185":198,"186":199,"187":200,"188":201,"189":202,"190":203,"191":204,"192":205,"193":206,"194":207,"195":208,"196":209,"197":210,"198":211,"199":212,"200":213,"201":214,"202":215,"203":216,"204":217,"205":218,"206":219,"207":220,"208":221,"209":222,"210":223,"211":224,"212":225,"213":226,"214":227,"215":228,"216":229,"217":230,"218":231,"219":232,"220":233,"221":234,"222":235,"223":236,"224":237,"225":238,"226":239,"227":240,"228":241,"229":242,"230":243,"231":244,"232":245,"233":246,"234":247,"235":248,"236":249,"237":251,"238":252,"239":253,"240":254,"241":255,"242":256,"243":257,"244":258,"245":259,"246":260,"247":261,"248":262,"249":263,"250":264,"251":265,"252":266,"253":267,"254":268,"255":269,"256":270,"257":271,"258":272,"259":273,"260":274,"261":275,"262":276,"263":277,"264":278,"265":279,"266":280,"267":282,"268":283,"269":284,"270":285,"271":286,"272":287,"273":288,"274":289,"275":290,"276":291,"277":292,"278":293,"279":294,"280":295,"281":296,"282":297,"283":298,"284":299,"285":300,"286":301,"287":302,"288":303,"289":304,"290":305,"291":306,"292":308,"293":309,"294":310,"295":311,"296":312,"297":313,"298":314,"299":315,"300":318,"301":319,"302":320,"303":321,"304":322,"305":323,"306":324,"307":326,"308":327,"309":328,"310":329,"311":330,"312":331,"313":332,"314":333,"315":334,"316":335,"317":336,"318":337,"319":338,"320":339,"321":340,"322":341,"323":342,"324":343,"325":344,"326":345,"327":346,"328":347,"329":348,"330":349,"331":350,"332":351,"333":352,"334":353,"335":354,"336":355,"337":356,"338":357,"339":358,"340":359,"341":360,"342":361,"343":362,"344":363,"345":364,"346":365,"347":366,"348":367,"349":368,"350":369,"351":370,"352":371,"353":372,"354":373,"355":374,"356":375,"357":376,"358":377,"359":378,"360":379,"361":380,"362":381,"363":382,"364":384,"365":385,"366":386,"367":387,"368":388,"369":389,"370":390,"371":391,"372":392,"373":394,"374":395,"375":396,"376":397,"377":398,"378":399,"379":400,"380":401,"381":402,"382":403,"383":404,"384":405,"385":406,"386":407,"387":408,"388":409,"389":410,"390":411,"391":412,"392":413,"393":414,"394":415,"395":416,"396":417,"397":418,"398":419,"399":420,"400":421,"401":422,"402":423,"403":424,"404":425,"405":427,"406":428,"407":429,"408":430,"409":431,"410":432,"411":433,"412":434,"413":435,"414":436,"415":437,"416":438,"417":439,"418":440,"419":441,"420":442,"421":443,"422":444,"423":445,"424":446,"425":447,"426":448,"427":449,"428":450,"429":451,"430":452,"431":453,"432":454,"433":455,"434":458,"435":459,"436":460,"437":461,"438":462,"439":463,"440":464,"441":466,"442":467,"443":468,"444":469,"445":470,"446":471,"447":472,"448":473,"449":474,"450":475,"451":476,"452":477,"453":478,"454":479,"455":480,"456":481,"457":482,"458":483,"459":484,"460":485,"461":486,"462":487,"463":488,"464":490,"465":491,"466":492,"467":493,"468":500,"469":501,"470":502,"471":503,"472":504,"473":505,"474":506,"475":507,"476":508,"477":509,"478":510,"479":511,"480":512,"481":513,"482":515,"483":516,"484":517,"485":519,"486":520,"487":522,"488":523,"489":524,"490":525,"491":526,"492":527,"493":528,"494":530,"495":531,"496":532,"497":533,"498":534,"499":535,"500":536,"501":537,"502":539,"503":540,"504":541,"505":542,"506":543,"507":544,"508":545,"509":546,"510":547,"511":548,"512":550,"513":551,"514":552,"515":553,"516":554,"517":555,"518":556,"519":557,"520":558,"521":559,"522":560,"523":561,"524":562,"525":563,"526":564,"527":565,"528":566,"529":567,"530":568,"531":569,"532":570,"533":571,"534":572,"535":573};
 async function renumber(){
   if((SET.renum||0)>=RENUM_V) return 0;
@@ -2546,7 +2561,7 @@ let rt;window.addEventListener('resize',()=>{if(!VNO)return;clearTimeout(rt);
      찍혀야 하는데 IndexedDB 쓰기는 그때 끝나지 못한다. localStorage 는 동기적이다. */
 const REC_REPO='zzikkaplan/studyplandata', REC_BRANCH='main';
 const REC_PATH=CUR.REC_PATH, REC_SET_PATH='settings.json';
-const SYNC_KEYS=SUBJ_ID==='earth'?SUBJ.earth.SYNC_KEYS:SUBJ.phys.SYNC_KEYS;   /* 과목별 표 — 물리 11 · 지학 13(+bogi·unit) · SUBJ 블록 참조 */
+const SYNC_KEYS=CARD_LAYER?CUR.SYNC_KEYS:SUBJ.phys.SYNC_KEYS;   /* 과목별 표 — 물리 11 · 카드 층(지학·생물) 13(+bogi·unit) · SUBJ 블록 참조 */
 /* 키 → 이 앱의 전역. 열 개 다 「문항번호 → 값」 dict 다(실측 확인).
    ⚠ `ansfix` 만 늦게 읽힌다(loadAfix) — null 이면 건너뛴다. */
 let MC={};            // no -> {w,h,s:[{c,w,hl,p:[u,v,… 1/1000 정수]}]}  손필기 암기카드 · kv/mcard · 카드 20KB 상한
@@ -2696,9 +2711,7 @@ async function ghPutJson(path,text,sha){
 let recBusy=false, recErr='';
 function recAfterMerge(res){
   if(!res||!res.dirty.length)return;
-  if(SUBJ_ID==='earth'&&typeof refreshUnits==='function'&&DATA.length)refreshUnits();
-  if(SUBJ_ID==='earth'&&typeof refreshUnits==='function'&&DATA.length)refreshUnits();
-  if(SUBJ_ID==='earth'&&typeof refreshUnits==='function'&&DATA.length)refreshUnits();
+  if(CARD_LAYER&&typeof refreshUnits==='function'&&DATA.length)refreshUnits();
   if(res.dirty.indexOf('conc')>=0)buildCQ();
   try{draw();renderSettings()}catch(e){}
 }
@@ -2832,19 +2845,17 @@ function recBoot(){
   QT=(await get('kv','qtype'))||{};
   FR=(await get('kv','frm'))||{};
   MC=(await get('kv','mcard'))||{};
-  if(SUBJ_ID==='earth'){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};}
-  if(SUBJ_ID==='earth'){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};}
-  if(SUBJ_ID==='earth'){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};}
+  if(CARD_LAYER){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};}
   const moved=await renumber();
   if(moved)setTimeout(()=>toast('문항 번호 재배열 — 기록 '+moved+'건을 옮겼습니다'),900);
   await loadHave();
   await loadAfix();          /* ⚠ 동기화보다 먼저 — AFIX 가 null 이면 빈 ansfix 로 원격을 깎는다 */
   setTool('pen','#16181B',$$('[data-pen]')[0]);
-  if(SUBJ_ID==='earth')await loadEarthData();
+  if(CARD_LAYER)await loadEarthData();
   draw();
   try{recBoot()}catch(e){console.warn('기록 동기화 시동 실패',e)}
   await ensureFiles();
-  if(SUBJ_ID==='phys'&&!Object.keys(HAVE).length)setTimeout(()=>$('#btnSet').click(),400);
+  if(!CARD_LAYER&&!Object.keys(HAVE).length)setTimeout(()=>$('#btnSet').click(),400);
 })();
 /* ═══════ 쌍둥이 미리보기 필기 · 떠 있는 창 · 손필기 암기카드 (2026-09-04 · _task_phys_twin_drawer.md) ═══════ */
 /* §1 미리보기 캔버스 위에 그 문항의 필기(ink)를 그린다 — paintInk 와 같은 규칙(옛 층 0.30 · 형광 0.32 · 굵기 (hl?9:w)*scale/2 · HIDEOLD 존중) · 읽기 전용 */
@@ -2971,12 +2982,12 @@ function mcardBig(no){
 }
 
 /*EARTH:js*/
-/* ═══ 지학 층 — 과목이 earth 일 때만 돈다. 같은 이름의 함수 선언은 물리 것을 갈아 끼운다(Annex B 블록 함수 → 전역). ═══ */
-if(SUBJ_ID==='earth'){
+/* ═══ 카드 층(지학 · 생물 자리) — CARD_LAYER 과목일 때만 돈다. 같은 이름의 함수 선언은 물리 것을 갈아 끼운다(Annex B 블록 함수 → 전역). 과목 값은 CUR 로. ═══ */
+if(CARD_LAYER){
 /* ═══════════════════════════ 지학 층 (2026-09-04 · _task_earth_app_pan1.md) ═══════════════════════════
    물리 앱 골격(IndexedDB · 마크 ST · 코멘트 · 필터 칩 · 동기화) 위에 지학 것을 얹는다.
    물리 함수는 여기서 같은 이름으로 다시 정의해 갈아 끼운다(뒤 스크립트가 이긴다). 물리 데이터 배열은 빌드가 비웠다.
-   문항 본문은 HTML 에 없다 — 비공개 저장소 earth/문항.json 을 토큰으로 받아 IndexedDB kv 에 캐시한다(D11). */
+   문항 본문은 HTML 에 없다 — 비공개 저장소 <과목>/문항.json(CUR.DATA_PATH) 을 토큰으로 받아 IndexedDB kv 에 캐시한다(D11). add1: 과목 값은 전부 CUR — 생물(SUBJ.bio) 도 이 층을 그대로 쓴다. */
 
 Object.assign(F,{UNIT:16,BPAGE:17,CH:18,BOGI:19,SOL:20,SOLPG:21,ROUND:22,CAND:23,NOTE:24,ORIG:25});
 var TOC={ch:{},sec:{},unit:{},list:[]};      // 목차 — ch['3']={name,secs[]} · sec['3.4']={name,ch,units[]} · unit['3.4.5']={name,p,sec,ch}
@@ -2994,17 +3005,17 @@ var MG={O:'O',Q:'△',X:'X',P:'P'};
 
 /* ───────────── 데이터 적재 ───────────── */
 loadEarthData=async function(){
-  let j=await get('kv','earthdata');
+  let j=await get('kv',SUBJ_ID+'data');
   const tok=recToken();
   if(tok){
     try{
-      const sha=await ghSha(EARTH.DATA_PATH);
+      const sha=await ghSha(CUR.DATA_PATH);
       if(sha&&(!j||j.sha!==sha)){
         $('#dl').classList.remove('hide','err');$('#dl').textContent='문항 데이터 받는 중…';
-        const items=JSON.parse(await ghRaw(EARTH.DATA_PATH));
-        const toc=JSON.parse(await ghRaw(EARTH.TOC_PATH));
-        const pieces=JSON.parse((await ghRaw(EARTH.PDF_DIR+'index.json'))||'{}');
-        j={sha,items,toc,pieces,at:Date.now()};await put('kv','earthdata',j);
+        const items=JSON.parse(await ghRaw(CUR.DATA_PATH));
+        const toc=JSON.parse(await ghRaw(CUR.TOC_PATH));
+        const pieces=JSON.parse((await ghRaw(CUR.PDF_DIR+'index.json'))||'{}');
+        j={sha,items,toc,pieces,at:Date.now()};await put('kv',SUBJ_ID+'data',j);
         $('#dl').classList.add('hide');
       }
     }catch(e){console.warn('earth data',e);$('#dl').classList.add('hide')}
@@ -3140,7 +3151,7 @@ imgUrl=async function(uid){
   let buf=await get('pdf','img:'+uid);
   if(!buf){
     if(!recToken())return '';
-    try{const r=await fetch(ghUrl(EARTH.IMG_DIR+'q'+uid+'.jpg'),{headers:{Authorization:'Bearer '+recToken(),Accept:'application/vnd.github.raw'},cache:'no-store'});
+    try{const r=await fetch(ghUrl(CUR.IMG_DIR+'q'+uid+'.jpg'),{headers:{Authorization:'Bearer '+recToken(),Accept:'application/vnd.github.raw'},cache:'no-store'});
       if(!r.ok)return '';buf=await r.arrayBuffer();await put('pdf','img:'+uid,buf)}catch(e){return ''}
   }
   return IMGURL[uid]=URL.createObjectURL(new Blob([buf],{type:'image/jpeg'}));
@@ -3320,7 +3331,7 @@ pieceDoc=async function(file){
   if(!buf){
     if(!recToken())throw new Error('토큰 없음');
     const bar=$('#bpMsg');bar.textContent=file+' 받는 중…';
-    const r=await fetch(ghUrl(EARTH.PDF_DIR+file),{headers:{Authorization:'Bearer '+recToken(),Accept:'application/vnd.github.raw'},cache:'no-store'});
+    const r=await fetch(ghUrl(CUR.PDF_DIR+file),{headers:{Authorization:'Bearer '+recToken(),Accept:'application/vnd.github.raw'},cache:'no-store'});
     if(!r.ok)throw new Error('GET '+file+' '+r.status);
     buf=await r.arrayBuffer();
     if(String.fromCharCode.apply(null,new Uint8Array(buf.slice(0,5))).indexOf('%PDF')<0)throw new Error('PDF 아님');
@@ -3427,11 +3438,11 @@ var SB={r:3*SPW+2*SGAP,b:2*SPH+SGAP};
 notePath=async function(i){
   if(SUB.repo===null){
     SUB.repo='';
-    try{const r=await fetch('https://api.github.com/repos/'+EARTH.NOTE_REPO,{headers:{Authorization:'Bearer '+recToken(),Accept:'application/vnd.github+json'},cache:'no-store'});
-      if(r.ok)SUB.repo=EARTH.NOTE_REPO}catch(e){}
+    try{const r=await fetch('https://api.github.com/repos/'+CUR.NOTE_REPO,{headers:{Authorization:'Bearer '+recToken(),Accept:'application/vnd.github+json'},cache:'no-store'});
+      if(r.ok)SUB.repo=CUR.NOTE_REPO}catch(e){}
   }
   /* notes 저장소가 있으면 earth/서브노트_n.pdf · 없으면 studyplandata earth/note/ (임시) */
-  return SUB.repo?{repo:SUB.repo,path:EARTH.NOTE_PATH+'서브노트_'+i+'.pdf'}:{repo:REC_REPO,path:EARTH.NOTE_DIR+'서브노트_'+i+'.pdf'};
+  return SUB.repo?{repo:SUB.repo,path:CUR.NOTE_PATH+'서브노트_'+i+'.pdf'}:{repo:REC_REPO,path:CUR.NOTE_DIR+'서브노트_'+i+'.pdf'};
 }
 noteDoc=async function(i){
   if(SUB.pages[i-1]&&SUB.pages[i-1].doc)return SUB.pages[i-1].doc;
@@ -3608,6 +3619,7 @@ $('#btnFirst').onclick=()=>{const L=filtered().map(r=>r[F.NO]);if(L.length)openV
 window.addEventListener('resize',()=>{if(VNO&&BOOK.page&&bookVisible())bookOpen(BOOK.page)});
 
 $('#sBack').onclick=()=>{$('#sub').classList.add('hide');$('#sub').classList.remove('sheet')};
+$('#sub .shead b').textContent=CUR.NAME+' 서브노트';
 
 }
 /*/EARTH:js*/
