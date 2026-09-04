@@ -213,7 +213,7 @@ a.mdlink{color:#1a5fb4;text-decoration:underline dotted;cursor:pointer}a.mdlink:
 .prow{padding:9px 12px;border-bottom:1px solid #eeece6;font-size:12.5px;cursor:pointer}
 .prow:hover{background:#faf8f3}
 .prow.on{background:#e8effb}
-.prow.sel{background:#e8effb;box-shadow:inset 3px 0 0 #2f6fed}.prow .badge.outf{background:#fbe9e9;color:#a33333;margin-left:4px}.chip.who.unk{background:#efece5;color:#888;border:1px dashed #bbb;cursor:pointer}#whoChip.off{color:#b5b0a6}   /* ★ 메모 add1 — §3 상시 강조 · 거르기 밖 · 미상 배지 */
+.prow.sel{background:#d6e4fb;box-shadow:inset 5px 0 0 #1f5fd6}.prow.sel .pn{font-weight:700;color:#173f8a}   /* ★ 손질 9(9/5) — 3단에 열린 판례 = 2단 상시 표시(깜빡임 없음) */.prow .badge.outf{background:#fbe9e9;color:#a33333;margin-left:4px}.chip.who.unk{background:#efece5;color:#888;border:1px dashed #bbb;cursor:pointer}#whoChip.off{color:#b5b0a6}   /* ★ 메모 add1 — §3 상시 강조 · 거르기 밖 · 미상 배지 */
 .prow .pn{font-weight:700}
 .prow .iss{color:#444;margin:1px 0 3px}
 .tool{border:1px solid #d9d6ce;border-radius:8px;padding:3px 11px;background:#fff;font-size:12.5px;color:#555}
@@ -4876,16 +4876,16 @@ async function popNoteList(label,key,items,ev,depth){
   if(!arr.length)body.appendChild(el('div','cdim','없다'));
 }
 /* ③ 판례 팝업 — 3단과 같은 요약/원문 렌더(크기만 팝업) · 안의 링크·⤷ 는 3단으로 */
-async function popPrec4(id,ev,depth){
-  depth=depth||3;
-  if(popToggle('prec|'+PLAW()+'|'+id))return;   /* ★ 상표 손질 5 */
-  const P=await get(PF('리스트')).catch(()=>({판례:[]})); const p=(P.판례||[]).find(x=>x.id===id);
-  const body=popShell('cell','⚖ '+(p?(p.사건번호||id):id)+(p&&p.전합?' [전합]':''),'prec|'+PLAW()+'|'+id);
+async function popPrec4(id,ev,depth,law,q){   /* ★ 손질 9(9/5) — law = 다른 법 판례(검색 결과)도 그 법 파일로 · q = 검색어(요약본 첫 일치 줄 강조) */
+  depth=depth||3; const lawX=(law&&LAWS.indexOf(law)>=0)?law:S.law; const LK=SHORT[lawX]||PLAW();
+  if(popToggle('prec|'+LK+'|'+id))return;   /* ★ 상표 손질 5 */
+  const P=await get(PFL(lawX,'리스트')).catch(()=>({판례:[]})); const p=(P.판례||[]).find(x=>x.id===id);
+  const body=popShell('cell','⚖ '+(p?(p.사건번호||id):id)+(p&&p.전합?' [전합]':'')+(lawX!==S.law?' · '+LK:''),'prec|'+LK+'|'+id);
   showPop(ev); popSizable(body,'prec');   /* ★ 판 4 add2 §3 */
   if(!p){ body.appendChild(el('div','cdim','리스트에 없는 판례 — '+id)); return; }
-  const hd=el('div','memobtn'); const go=el('button','tool on','3단으로 ↗'); go.onclick=()=>{closeAllPops();S.tab='prec';S.prec=id;S.precTab=p.요약본?'요약':'원문';render();}; hd.appendChild(go);
+  const hd=el('div','memobtn'); const go=el('button','tool on','판례 갈래로 이동 ↗'); go.onclick=()=>{closeAllPops();precGo(id,lawX,p.요약본?'요약':'원문');render();}; hd.appendChild(go);   /* ★ 손질 9 — 문구 통일 · 깃발 */
   if(p.설명별칭)hd.appendChild(el('span','chip c-alias',p.설명별칭)); hd.appendChild(el('span','cdim',(p.설명줄||p.사건명||'').slice(0,80))); body.appendChild(hd);
-  const SUM=await get(PF('요약')).catch(()=>({})); const F=await get(PF('전문')).catch(()=>({}));
+  const SUM=await get(PFL(lawX,'요약')).catch(()=>({})); const F=await get(PFL(lawX,'전문')).catch(()=>({}));
   const s=SUM[id], sec=F[id]||{};
   const bar=el('div','memobtn'); const cont=el('div'); let tab=(s&&s.행&&s.행.length)?'요약':'원문';
   const draw=()=>{ cont.innerHTML='';
@@ -4894,6 +4894,7 @@ async function popPrec4(id,ev,depth){
     [...bar.querySelectorAll('button.tab')].forEach(b=>b.classList.toggle('on',b.textContent===tab)); };
   [['요약',!!(s&&s.행&&s.행.length)],['원문',Object.keys(sec).length>0]].forEach(([t,ok])=>{ const b=el('button','tool tab'+(t===tab?' on':''),t); if(!ok)b.disabled=true; b.onclick=()=>{tab=t;draw();}; bar.appendChild(b); });
   body.appendChild(bar); body.appendChild(cont); draw();
+  if(q&&tab==='요약'){ const qn=String(q).trim(); const hit=[...cont.querySelectorAll('.ln')].find(d=>(d.textContent||'').indexOf(qn)>=0); if(hit){ hit.classList.add('blkhl'); setTimeout(()=>{try{hit.scrollIntoView({block:'center'});}catch(e){}},60); } }   /* ★ 손질 9 — 검색어 첫 일치 줄 */
 }
 /* ③ 2차 카드 팝업 — renderBody 카드 재사용 */
 async function popCard4(kind,ck,ev,depth,blockId,tab){   /* ★ 2차 탭 판 1 §4-5 — 탭 셋(문제/해설/채점) · tab 을 주면 열린 팝업은 탭만 바꾼다 */
@@ -5028,6 +5029,14 @@ function precSortFn(mode){
 /* 2단 검색 — 대상 = id·사건번호·별칭(번호 일치) · 사건명·쟁점(사건명 일치) · 전문 5절 + 요약본 행(본문에서 인용 ×N).
    질의가 리스트의 판례면 인용 JSON 의 자리를 쓰고, 아니면 즉석으로 훑는다. 「전합」은 전합 || 전원합의체. */
 let PREC_LAST = null;   /* ★ 메모 add1 — §3 직전 렌더의 열린 판례 — 바뀌었을 때만 스크롤·펼침 */
+/* ★ 손질 9(9/5 · _task_jo_search_fix.md §1-3) — 판례로 가는 모든 길은 S.precScroll 깃발을 든다 · 2단 목록 렌더가 끝난 뒤 그 줄이 DOM 에 있을 때 가운데로 스크롤하고 깃발을 지운다
+   (렌더가 두 번 돌아도 깃발이 남아 둘째 렌더가 잡는다 · 60·300·800ms 재시도 · 끝내 없으면 거르기에 걸린 것 → 토스트) · 2단에서 직접 누른 줄(이미 보임)은 S.precNoScroll */
+function precScrollKick(){ if(!S.precScroll||S.tab!=='prec')return; const want=S.precScroll;
+  const tryS=k=>{ if(S.precScroll!==want)return; const list=document.querySelector('#slot .plist'); const n=list&&list.querySelector('.prow.sel');
+    if(n&&n.isConnected){ try{n.scrollIntoView({block:'center'});}catch(e){} S.precScroll=null; return; }
+    if(k<3)setTimeout(()=>tryS(k+1),[60,300,800][k]); else { S.precScroll=null; toast('그 판례가 거르기에 걸려 있다'); } };
+  setTimeout(()=>tryS(0),60); }
+function precGo(id, law, tab){ if (law && LAWS.indexOf(law) >= 0) S.law = law; S.tab = 'prec'; S.prec = id; if (tab) S.precTab = tab; S.precScroll = id; S.precNoScroll = false; }
 let PQEL = null;   /* ★ 손질 8 — §3 2단 검색 입력칸 — 재구성하지 않는다 */
 async function precSearch(P, q, law){   /* ★ 손질 8 — §2 law 를 주면 그 법의 전문·요약·인용(통합 검색) */
   const F = n => law ? PFL(law, n) : PF(n); const qn = precNorm(q); if (!qn) return null;
@@ -5145,27 +5154,37 @@ function plPrecSearchBox(host, P, exclude, onPick){
     if (!hits.length) box.appendChild(el('div', 'cdim', '없다'));
     hits.forEach(p => { const d = el('div', 'res'); d.appendChild(el('b', '', p.사건번호 || p.id)); d.appendChild(el('span', 'x', (p.설명별칭 || p.별칭 || p.사건명 || '').slice(0, 40))); d.onclick = e2 => { e2.stopPropagation(); onPick(p); }; box.appendChild(d); }); };
   inp.oninput = draw; ['click', 'pointerdown', 'keydown'].forEach(nm => f.addEventListener(nm, e2 => e2.stopPropagation())); host.appendChild(f); setTimeout(() => inp.focus(), 30); draw(); return f; }
-/* §4 — 2차 카드 목록 팝업(popNoteList 꼴) · kind 갈래 · year 로 거름 · 항목 = popCard4 · 「+ 2차 잇기」 */
+/* ★ 손질 9(9/5 · §1-0) — 판례에 이어진 2차 카드 = ⓐ cardLinksOf(⚙ 이차카드 + 내가 이은 것) ∪ ⓑ 본문 JSON 전체에서 fm.기출(YY-회-N · 회만·연도만도) 또는 파일 이름 토큰이 맞는 카드
+   ⓑ 가 있어야 리담 기출표시 칩(★2차26-63-1)이 ⚙ 짝 없이도 문제를 연다 · 겹치면 하나 */
+function c2ItemsFor(p, kind, yq, CC){
+  let items = cardLinksOf(p).filter(x => x.kind === kind);
+  const tok = yq ? (String(yq.yr).slice(2) + (yq.rd ? '-' + yq.rd : '') + (yq.rd && yq.no ? '-' + yq.no : '')) : '';
+  const tokOf = ck => { const m = /^(?:특|상|민)기출 (\d\d-\d\d(?:-\d)?)/.exec(String(ck)); return m ? m[1] : ''; };
+  const fmOf = ck => { const fm = CC && CC[ck] && (CC[ck].fm || {}).기출; return Array.isArray(fm) ? fm.map(String) : (fm ? [String(fm)] : []); };
+  const match = v => { v = String(v || ''); return !!tok && (v === tok || v.indexOf(tok + '-') === 0); };
+  if (yq) items = items.filter(x => x.manual || fmOf(x.ck).some(match) || match(tokOf(x.ck)) || (!fmOf(x.ck).length && !tokOf(x.ck) && String(x.ck).indexOf(yq.rd ? yq.rd + '-' : String(yq.yr)) >= 0));
+  if (CC && tok) Object.keys(CC).forEach(ck => { if (items.some(x => x.ck === ck)) return; if (fmOf(ck).some(match) || match(tokOf(ck))) items.push({ kind: kind, ck: ck, fmhit: true }); });
+  return items; }
+/* §4 — 2차 카드 목록 팝업(popNoteList 꼴) · kind 갈래 · year 로 거름 · 항목 = popCard4 · 「+ 2차 잇기」 · ★ 손질 9: 딱 하나면 목록 없이 popCard4 바로 */
 async function popCardList(p, kind, year, ev, depth){
   depth = depth || 0;
   const ylab = (year && typeof year === 'object') ? (year.yr + '년' + (year.rd ? ' ' + year.rd + '회' : '') + (year.no ? ' 문제 ' + year.no : '')) : (year ? year + '년' : '');   /* ★ add5 */
+  const CC = await get(CHF(kind)).catch(() => null);   /* ★ 상표 판 3 — 법별 카드 JSON · ★ 손질 9: 기출도 CHF('기출')(2차 기출 폴더 판) */
+  const yq0 = (year && typeof year === 'object') ? year : (year ? { yr: String(year), rd: '', no: '' } : null);
+  { const one = c2ItemsFor(p, kind, yq0, CC); if (one.length === 1 && !(ev && ev.__list)){ popCard4(kind, one[0].ck, ev, depth + 1); return; } }   /* ★ 손질 9 — 딱 하나 = 그 자리에서 문제 통째로 */
   if (popToggle('cards|' + kind + '|' + p.id + '|' + ylab)) return;   /* ★ 상표 손질 5 */
   const body = popShell('cell', '🧾 ' + kind + ' — ' + (p.사건번호 || p.id) + (ylab ? ' · ' + ylab : ''), 'cards|' + kind + '|' + p.id + '|' + ylab);
   showPop(ev); popSizable(body, 'list');
-  const CC = await get(CHF(kind)).catch(() => null);   /* ★ 상표 판 3 — 법별 카드 JSON */
   const box = el('div'); body.appendChild(box);
   const draw = () => { box.innerHTML = '';
-    let items = cardLinksOf(p).filter(x => x.kind === kind);
     const yq = (year && typeof year === 'object') ? year : (year ? { yr: String(year), rd: '', no: '' } : null);   /* ★ add5 §0-1 — {yr,rd,no} 로 거름 */
-    if (yq) items = items.filter(x => { const ck = String(x.ck); const fm = (CC && CC[x.ck] && (CC[x.ck].fm || {}).기출) ? String(CC[x.ck].fm.기출) : '';
-      if (yq.rd && yq.no) return ck.indexOf(yq.rd + '-' + yq.no) >= 0 || fm.indexOf(yq.yr.slice(2) + '-' + yq.rd + '-' + yq.no) >= 0 || x.manual;
-      if (yq.rd) return ck.indexOf(yq.rd + '-') >= 0 || fm.indexOf('-' + yq.rd + '-') >= 0 || x.manual;
-      return ck.indexOf(yq.yr) >= 0 || fm.indexOf(yq.yr.slice(2)) >= 0 || x.manual; });
+    let items = c2ItemsFor(p, kind, yq, CC);
     year = yq ? yq.yr : year;
     box.appendChild(el('div', 'grp', kind + ' — ' + items.length + '건' + (year ? ' (' + year + '년으로 거름)' : '')));
     if (!CC) box.appendChild(el('div', 'cdim', CHF(kind) + ' 이 없다 — ⚙ 가 그 갈래 카드를 아직 안 낸다(칩 수는 ⚙ 이차카드 + 내가 이은 것)'));
     if (!items.length) box.appendChild(el('div', 'cdim', '없다'));
     items.forEach(x => { const d = el('div', 'res lkrow'); d.appendChild(el('b', '', String(x.ck).slice(0, 50))); d.appendChild(el('span', 'lawtag', kind));
+      if (x.fmhit) d.appendChild(el('span', 'why', 'fm 기출 일치'));   /* ★ 손질 9 ⓑ */
       if (x.manual){ d.appendChild(el('span', 'why', '내가 이음' + (x.why ? ' · ' + x.why : ''))); plRowTools(d, x, draw); }
       d.onclick = e2 => { e2.stopPropagation(); if (depth >= 3){ closeAllPops(); popCard4(kind, x.ck, e2, 1); } else popCard4(kind, x.ck, e2, depth + 1); };
       box.appendChild(d); });
@@ -5404,7 +5423,9 @@ async function viewPrec(){
   list.appendChild(cnt);
   const qraw=(S.precQ||'').trim();
   /* ★ 메모 add1 — §3 3단에 열린 판례 = 2단 카드 상시 — 거르기·검색 밖이면 정렬 자리에 끼움(검색 중엔 끝) · 「거른 N」엔 안 셈 · 중복 0 */
-  let outCard=null;const precNew=!!(S.prec&&S.prec!==PREC_LAST);
+  if(S.prec&&S.prec!==PREC_LAST&&!S.precScroll&&!S.precNoScroll)S.precScroll=S.prec;   /* ★ 손질 9 — 깃발 없이 바뀐 길(트리·레일·딥링크)도 잡는다 */
+  S.precNoScroll=false;
+  let outCard=null;const precNew=!!(S.prec&&(S.prec!==PREC_LAST||S.precScroll===S.prec));
   if(S.prec&&!arr.some(p=>p.id===S.prec)){const cur0=P.판례.find(x=>x.id===S.prec);
     if(cur0){outCard=cur0;if(hit)arr.push(cur0);else{const cmp=precSortFn(S.precSort);let i=arr.findIndex(x=>cmp(cur0,x)<0);if(i<0)i=arr.length;arr.splice(i,0,cur0);}}}
   const YG=precYearGroups(arr,hit);   /* ★ 판 4 §2-3 — 선고일순일 때만 연도 묶음 · 검색·중요도순은 평평 */
@@ -5434,17 +5455,17 @@ async function viewPrec(){
       if(h.n)r.appendChild(el('span','chip c-prec','본문에서 인용 ×'+h.n));
       if(!h.num&&!h.n&&h.name)r.appendChild(el('span','chip c-src','사건명·쟁점 일치'));
       h.ctx.slice(0,2).forEach(z=>{const d=precCtxEl(z,qraw);
-        d.onclick=ev=>{ev.stopPropagation();S.prec=p.id;
+        d.onclick=ev=>{ev.stopPropagation();S.prec=p.id;S.precNoScroll=true;
           if(z.절==='요약본'){S.precTab='요약';S.precJump=null;}
           else{S.precTab='원문';S.precJump={절:z.절,at:z.at,len:z.len||qraw.length||1};}
           render();};
         r.appendChild(d);});}
-    r.onclick=()=>{S.prec=p.id;S.precTab=p.요약본?'요약':'원문';render();};
+    r.onclick=()=>{S.prec=p.id;S.precNoScroll=true;S.precTab=p.요약본?'요약':'원문';render();};   /* ★ 손질 9 — 이미 보이는 줄 · .sel 표시만 */
     list.appendChild(r);
   });
   slot.appendChild(list);
   slot.appendChild(handle('list'));
-  if(precNew)setTimeout(()=>{const n=list.querySelector('.prow.sel');if(n){try{n.scrollIntoView({block:'center'});}catch(e){}}},40);   /* ★ 메모 add1 — §3 열 때 가운데로(scrBack 뒤) */
+  /* ★ 손질 9 — 2단 스크롤은 render() 끝(scrBack 뒤)의 precScrollKick() 이 한다 · 여기서 하면 렌더 끝의 scrBack 이 0 으로 되돌린다(9/5 실측 · 실제 원인) */
   PREC_LAST=S.prec||null;
 
   const main=el('div','main');
@@ -6574,8 +6595,7 @@ async function popPan(caseNo, selfKey, ev){
         else body.appendChild(el('div', 'cdim', '요약이 없다 — 「판례 갈래로 이동」에서 전문을 본다'));
       }
       const go = el('button', 'tool on', '판례 갈래로 이동 ↗');
-      go.onclick = () => { S.tab = 'prec'; S.prec = p.id;
-        S.precTab = p.요약본 ? '요약' : '원문'; closeAllPops(); render(); };
+      go.onclick = () => { precGo(p.id, null, p.요약본 ? '요약' : '원문'); closeAllPops(); render(); };   /* ★ 손질 9 — 깃발 */
       body.appendChild(go);
     } else {
       body.appendChild(el('div', 'cdim', '원본·요약본에 없다'));   /* ★ v3-N §1 */
@@ -7662,18 +7682,7 @@ function p7Link(JM, P7){
     if (s) P7LID[z.id] = { q: q, z: s };
   });
 }
-function popPrec(p, ev){
-  const _pk41=('')+'|'+('⚖ ' + (p.사건번호 || p.파일 || '')); if(popToggle(_pk41))return; const b=popShell('', '⚖ ' + (p.사건번호 || p.파일 || ''), _pk41);   /* ★ 상표 손질 6 — 키 종류|제목 */
-  if (p.사건명 || p.별칭) b.appendChild(el('div', '', (p.사건명 || p.별칭)));
-  if (p.선고) b.appendChild(el('span', 'badge', '선고 ' + p.선고));
-  (Array.isArray(p.조문) ? p.조문 : []).slice(0, 6).forEach(x =>
-    b.appendChild(el('span', 'chip c-prec', '⚖' + x)));
-  const go = el('button', 'tool on', '판례 갈래로 이동 ↗');
-  go.onclick = () => { S.tab = 'prec'; S.prec = p.id;
-    S.precTab = p.요약본 ? '요약' : '원문'; closeAllPops(); render(); };
-  b.appendChild(go);
-  showPop(ev);
-}
+/* ★ 손질 9 — popPrec(짧은 카드 · 호출처 0)은 지웠다 */
 function lnkBuild(JM){
   const pan = {}, jo = {};
   (JM.문제 || []).forEach(q => (q.지문 || []).forEach(z => {
@@ -9402,7 +9411,7 @@ async function sampleCards(main){
 /* ══════════ 검색 ══════════ */
 let skRows=[],skSel=0;
 function openSk(){$('#sk').style.display='block';$('#skin').value='';$('#skin').focus();
-  $('#skres').innerHTML='';skRows=[];skSel=0;skPaint();}
+  $('#skres').innerHTML='';skRows=[];skSel=0;skonLoad();skPaint();}   /* ★ 손질 9 — 열 때 마지막 범위 되읽음 */
 function closeSk(){$('#sk').style.display='none';}
 $('#ksearch').onclick=openSk;
 /* ★ 범위 다중선택 (8/26) — 조문·판례·지문. 메모는 기능 자체가 없어 꺼 둔다.
@@ -9410,7 +9419,10 @@ $('#ksearch').onclick=openSk;
    찾다가 보던 자리를 잃지 않는 것이 검색의 값이다. */
 /* ★ v3-H §2 — 범위에 🗒 메모(§4 층)·📐 논리 · 법 다중선택(특·상·디·민소).
    메모는 b 패치가 층을 채우기 전엔 0건이 정상이다. */
-const SKON={jo:true,prec:false,jimun:false,memo:false,logic:false,omr:false,stk:false};
+const SKON={jo:false,prec:false,jimun:false,memo:false,logic:false,omr:false,stk:false};   /* ★ 손질 9 — 처음은 전부 꺼짐(사용자 확정) */
+const SKON_KEY='jopangi_skon';   /* 기기별 · `jopangi.` 접두를 안 써 기록 내보내기·동기화 밖(UI_KEY 와 같은 이유) */
+function skonLoad(){ try{ const j=JSON.parse(localStorage.getItem(SKON_KEY)||'null'); if(j&&typeof j==='object') Object.keys(SKON).forEach(k=>{ SKON[k]=!!j[k]; }); }catch(e){} }
+function skonSave(){ try{ localStorage.setItem(SKON_KEY, JSON.stringify(SKON)); }catch(e){} }
 function skPaint(){
   document.querySelectorAll('#skscope .scope').forEach(b=>{
     const k=b.getAttribute('data-s');
@@ -9421,7 +9433,7 @@ function skPaint(){
 }
 document.querySelectorAll('#skscope .scope').forEach(b=>{
   const k=b.getAttribute('data-s');
-  b.onclick=()=>{SKON[k]=!SKON[k];skPaint();$('#skin').oninput({target:$('#skin')});};
+  b.onclick=()=>{SKON[k]=!SKON[k];skonSave();skPaint();$('#skin').oninput({target:$('#skin')});};   /* ★ 손질 9 — 범위 저장 */
 });
 const SKLAW={};SKLAW[S.law]=true;
 function skLawPaint(){
@@ -9513,19 +9525,11 @@ function popJimun(title,body,ev,go){
   showPop(ev);
 }
 /* ★ 손질 8 — §2 통합 검색 판례 팝업(법을 안다 · 이동 시 그 법으로) */
-function skPrecPop(p,law,ev){
-  const _pk49=('')+'|'+('⚖ '+(p.사건번호||p.파일)); if(popToggle(_pk49))return; const b=popShell('', '⚖ '+(p.사건번호||p.파일), _pk49);
-  if(p.사건명||p.별칭)b.appendChild(el('div','',(p.사건명||p.별칭)));
-  if(p.선고)b.appendChild(el('span','badge','선고 '+p.선고));
-  b.appendChild(el('span','badge',SHORT[law]||law));
-  (Array.isArray(p.조문)?p.조문:[]).slice(0,6).forEach(x=>b.appendChild(el('span','chip c-prec','⚖'+x)));
-  const go=el('button','tool on','판례 갈래로 이동 ↗');
-  go.onclick=()=>{S.law=law;S.tab='prec';S.prec=p.id;S.precTab=p.요약본?'요약':'원문';closeAllPops();render();};
-  b.appendChild(go);
-  showPop(ev);}
+/* ★ 손질 9 — skPrecPop(짧은 카드)은 지웠다 · 검색 결과는 popPrec4(law) */
 const skRun=async e=>{   /* ★ 손질 8 — §2 300ms 디바운스 — 아래 $('#skin').oninput 이 부른다 */
   const q=(e.target.value||'').trim();const box=$('#skres');box.innerHTML='';skRows=[];skSel=0;
   if(!q)return;
+  if(!Object.keys(SKON).some(k=>SKON[k])){box.appendChild(el('div','grp','범위를 골라라 — 위의 범위(조문·판례·지문·메모·논리·기출·스티커) 중 하나 이상을 켜야 찾는다'));return;}   /* ★ 손질 9 — 0건 침묵 금지 */
   const lawsOn=LAWS.filter(l=>SKLAW[l]);   /* ★ v3-H §2 — 켜진 법마다 읽어 합친다 */
   if(SKON.jo){
     try{
@@ -9572,7 +9576,7 @@ const skRun=async e=>{   /* ★ 손질 8 — §2 300ms 디바운스 — 아래 $
         all.slice(shown,end).forEach(x=>{const p=x.p,h=x.h;
           skRow(box,'prec',(p.사건번호||p.파일)+(p.전합?' [전합]':''),(p.설명별칭||p.사건명||p.별칭||'').slice(0,50),
             SHORT[x.law]+' · '+(p.원본?'원본':'요약본')+(h.num?' · 번호 일치':h.n?' · 인용 ×'+h.n:' · 사건명·쟁점'),
-            ev=>{closeSk();skPrecPop(p,x.law,ev);});
+            ev=>{closeSk();popPrec4(p.id,ev,1,x.law,qraw);});   /* ★ 손질 9 — 전문 팝업(요약/원문 탭 · 크기 조절) · 그 법 파일로 */
           const d=box.lastChild;
           if(h.ctx&&h.ctx.length){const c=precCtxEl(h.ctx[0],qraw);c.classList.add('skctx');d.classList.add('hasctx');d.appendChild(c);}
           if(more.parentNode===box)box.insertBefore(d,more);});
@@ -9753,6 +9757,7 @@ async function render(){
     slot.appendChild(m);console.error(err);
   }
   scrBack();setTimeout(scrBack,0);
+  precScrollKick();   /* ★ 손질 9 — S.precScroll 깃발이 있으면 scrBack 뒤에 2단 그 줄을 가운데로 */
   setTimeout(()=>{S.oxPageJump=false;},0);   // 다음 render 부터는 다시 보존
   /* ★ v3-F §0 — 떠 있는 지문 팝업을 본 화면과 같은 상태로 다시 그린다(같은 sid 기록 공유) */
   CARDPOPS=CARDPOPS.filter(p=>p.body&&p.body.isConnected);
