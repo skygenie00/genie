@@ -4767,7 +4767,7 @@ async function embedInline(chip, file, id, to, opt){
 }
 /* 헤딩 접기 — › / ˅ · 그 헤딩 아래(같거나 위 단계 헤딩 전까지) 숨김 · jopangi_ui.md_fold[문서키|줄] */
 function hfoldWire(ents, docKey, opts){
-  const F = (opts && opts.save === false) ? {} : (S.mdFold || (S.mdFold = {}));   /* ★ add5 — 2차 카드는 접힘을 저장하지 않는다(지금과 같음) */
+  const F = (opts && opts.save === false) ? ((opts && opts.init) || {}) : (S.mdFold || (S.mdFold = {}));   /* ★ add5 — 2차 카드는 접힘을 저장하지 않는다(지금과 같음) · add1: init = 처음 접어 둘 헤딩(뼈대) */
   const save = () => { if (!(opts && opts.save === false)) uiSave(); };
   const apply = () => { let hideUntil = -1, lv = 0;
     ents.forEach(e => { const h = e.row.h || 0;
@@ -5904,7 +5904,8 @@ function renderBody(rec,file,opt){
     ents.push({ri:ri,row:r,el:d});
     wrap.appendChild(d);
   });
-  hfoldWire(ents,target,{save:false});
+  let init=null; if(opt.skel){init={}; ents.forEach(e=>{if((e.row.h||0)>=2)init[target+'|'+e.ri]=1;});}   /* add1 뼈대: 설문 헤딩(h1)·번호 줄(h2)은 보이고 그 아래((1)급·문단)는 접힌 채 › */
+  hfoldWire(ents,target,{save:false,init:init});
   return wrap;
 }
 function popCallout(co,file,ev,kind,depth){
@@ -6015,18 +6016,22 @@ function c2Mark(ck,scroll){document.querySelectorAll('#slot .cell.sel,#slot .pro
     if(cd){const go=()=>{try{cd.scrollIntoView({block:'center',inline:'center'});}catch(e){}};go();setTimeout(go,300);setTimeout(go,800);}}   /* 지연 렌더로 위 카드 높이가 바뀌므로 두 번 더 맞춘다 */
   if(pr){try{pr.scrollIntoView({block:'nearest'});}catch(e){}}}
 let C2IO=null;
-const C2FOLD_KEY='jopangi_c2fold';   /* 9/5 B-6 — 2차 카드 본문 접힘(전 기기 기본 1 · 기기별 · SYNC 밖) */
-function c2Folded(){try{const v=localStorage.getItem(C2FOLD_KEY);return v===null?true:v==='1';}catch(e){return true;}}
+const C2FOLD_KEY='jopangi_c2fold';   /* 9/5 B-6 — 2차 카드 본문 접힘(기기별 · SYNC 밖) · add1: 값 셋 skel(뼈대 · 기본) / title(제목만 · 폰 기본) / all(전부) · 옛 '1'=title · '0'=all */
+const C2FOLD_MODES=['skel','title','all'], C2FOLD_LABEL={skel:'본문 뼈대 ▾',title:'본문 제목만 ▾',all:'본문 펼침 ▴'};
+function c2FoldMode(){let v=null;try{v=localStorage.getItem(C2FOLD_KEY);}catch(e){}
+  if(C2FOLD_MODES.indexOf(v)>=0)return v; if(v==='1')return 'title'; if(v==='0')return 'all'; return innerWidth<=480?'title':'skel';}
+function c2Folded(){return c2FoldMode()==='title';}   /* 호환 — 「제목만」 */
 function c2CellEl(c,bodies){const hot=/⚠|누락/.test(c.x.논점||'');const cd=el('div','cell'+(hot?' hot':'')+(c.pass?'':' dim')+(S.cha2Sel===c.ck?' sel':''));cd.dataset.ck=c.ck;
   const hd=el('div','chd');hd.appendChild(el('span','t',c.series||c.label));hd.appendChild(c2ScoreChip(c));c2PdfChips(c.info.pdfs).forEach(a=>hd.appendChild(a));cd.appendChild(hd);   /* ★ 2차 탭 판 1 add1 — §11 칩 여럿 */
   const ti=el('div','ctitle',c.title);ti.title='눌러서 크게 보기';ti.onclick=e=>{e.stopPropagation();popCard4(S.boardKind,c.file,e,1);};cd.appendChild(ti);
-  if(c2Folded()){   /* 9/5 B-6 — 접힘: 문제 콜아웃 머리(있으면) + 「본문 ▾」 · 누르면 그때 본문(그림도) */
+  const fm=c2FoldMode();
+  if(fm==='title'){   /* 9/5 B-6 — 「제목만」: 문제 콜아웃 머리(있으면) + 「본문 ▾」 · 누르면 그때 본문(그림도) */
     const rec=bodies[c.file];const q=rec&&rec.행?rec.행.find(r=>r.co==='question'):null;
     const fl=el('div','cfold');if(q)fl.appendChild(el('span','cq','⑦ '+q.t));
     const bt=el('button','cmore','본문 ▾');bt.onclick=e=>{e.stopPropagation();if(cd._done)return;cd._done=1;try{fl.replaceWith(renderBody(rec,c.file,{card:1,kind:S.boardKind}));}catch(err){fl.textContent='본문 렌더 실패';}};fl.appendChild(bt);cd.appendChild(fl);
     cd._lazy=()=>{};return cd;}
   const ph=el('div','cdim','…');ph.style.minHeight='180px';cd.appendChild(ph);
-  cd._lazy=()=>{if(cd._done)return;cd._done=1;try{ph.replaceWith(renderBody(bodies[c.file],c.file,{card:1,kind:S.boardKind}));}catch(e){ph.textContent='본문 렌더 실패';}};   /* 보이는 카드만 본문(사례 171·514 한꺼번에 안 그림) */
+  cd._lazy=()=>{if(cd._done)return;cd._done=1;try{ph.replaceWith(renderBody(bodies[c.file],c.file,{card:1,kind:S.boardKind,skel:fm==='skel'}));}catch(e){ph.textContent='본문 렌더 실패';}};   /* 보이는 카드만 본문(사례 171·514 한꺼번에 안 그림) · add1: 뼈대 = h2 아래 접은 채 */
   if(C2IO)C2IO.observe(cd);return cd;}
 async function view2cha(){
   const slot=$('#slot');slot.innerHTML='';
@@ -6042,7 +6047,7 @@ async function view2cha(){
     const b=el('button','pill'+(S.boardKind===k?' on':(n?'':' wait')),k+' '+(n||'—'));
     b.onclick=()=>{S.boardKind=k;S.series='';S.yearFilter='';render();};bar.appendChild(b);});
   const sp=el('span');sp.style.flex='1';bar.appendChild(sp);
-  {const fb=el('button','pill',c2Folded()?'본문 접힘 ▾':'본문 펼침 ▴');fb.title='카드 본문을 접어 두면 스크롤이 가볍다(기기별 · 기본 접힘)';fb.onclick=()=>{try{localStorage.setItem(C2FOLD_KEY,c2Folded()?'0':'1');}catch(e){}render();};bar.appendChild(fb);}   /* 9/5 B-6 */
+  {const fm0=c2FoldMode();const fb=el('button','pill',C2FOLD_LABEL[fm0]);fb.dataset.fold=fm0;fb.title='카드 본문 접힘 — 뼈대(콜아웃 + 설문 헤딩 + 번호 줄 · 기본) / 제목만(폰 기본) / 전부 · 기기별';fb.onclick=()=>{try{localStorage.setItem(C2FOLD_KEY,C2FOLD_MODES[(C2FOLD_MODES.indexOf(fm0)+1)%3]);}catch(e){}render();};bar.appendChild(fb);}   /* 9/5 B-6 · add1 값 셋 */
   /* 보드/목록 토글은 없앴다(§4-1) — 목록은 2단 서랍이다 */
   main.appendChild(bar);
 
