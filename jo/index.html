@@ -237,6 +237,8 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
   font-size:11.5px;line-height:1.5;color:#333;cursor:pointer}
 .cell:hover{border-color:var(--exc)}
 .cell + .cell{margin-top:5px}
+.crow{display:grid;grid-template-columns:repeat(auto-fill,minmax(max(210px,calc(20% - 5px)),1fr));gap:6px;align-items:start;min-width:0}.crow .cell+.cell{margin-top:0}   /* 9/5 B-9 사례 행 · 한 줄 ≤5 */
+.cell .cfold{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px}.cell .cfold .cq{color:#666;font-size:11px}.cell .cmore{margin-left:auto;font-size:11px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;background:var(--panel);cursor:pointer}   /* 9/5 B-6 접힘 */
 .cell b{font-size:11.5px}
 .cell .t{color:#9a958b;font-size:10.5px}
 .cell.hot{border-color:#e5a53a;background:#fffaf0}
@@ -1089,8 +1091,8 @@ function renderLine(row,opt){
         s.onclick=ev=>{ev.stopPropagation();popFoot(e.id,ev,opt.rec,(opt.depth||0)+1);};
         top().appendChild(s);
       }
-      if(e.k==='E'&&e.a===i&&e.img){   /* ★ 상표 판 5 §2-4 — 볼트 그림 */ /* 임베드가 그림이면 <img> 자리(지연 로드) */
-        top().appendChild(e.src==='url'?vimgUrlEl(e.img,e.alt):vimgEl(e.img)); }   /* ★ 상표 판 5 add1 §1b — 요약본 외부 그림·링크 */
+      if(e.k==='E'&&e.a===i&&(e.img||imgNameOf(e.to))){   /* ★ 상표 판 5 §2-4 — 볼트 그림 · 9/5 2차 기출 그림: 대상이 그림 파일(![[…png]])이면 img 표시 없이도 같은 자리 */
+        top().appendChild(e.src==='url'?vimgUrlEl(e.img,e.alt):vimgEl(e.img||imgNameOf(e.to))); }   /* ★ 상표 판 5 add1 §1b — 요약본 외부 그림·링크 */
       else if(e.k==='E'&&e.a===i&&e.miss){   /* ★ 판 4 add4 §1 — ⚙ 가 못 찾은 임베드(ⓑ 블록 없음 · ⓒ 파일 밖) = 흐린 칩 · 클릭 없음 */
         const s=el('span','embed dead','⤷ 못 찾음 · '+e.to); s.title=(e.miss==='c'?'대상 파일이 특허목차 70 밖':'파일은 있으나 블록 ^id 가 없다')+' — _임베드_미해결.csv';
         top().appendChild(s); EMBMISS[e.to]=1; }
@@ -2130,6 +2132,7 @@ function imgFetch(name){ if(VIMG.cache.has(name))return VIMG.cache.get(name);
     if(!r.ok)throw new Error('HTTP '+r.status);
     const b=await r.blob(); return {url:URL.createObjectURL(b),w:rec.w,h:rec.h,bytes:rec.bytes}; })();
   VIMG.cache.set(name,p); p.catch(()=>VIMG.cache.delete(name)); return p; }
+const IMGTO_RX=/\.(png|jpe?g|gif|webp|svg)$/i; function imgNameOf(to){ const n=String(to||'').split('#')[0].split('|')[0].trim(); return IMGTO_RX.test(n)?n:''; }   /* 9/5 2차 기출 그림 — 임베드 대상 이름이 그림 파일인가 */
 function vimgEl(name){ const w=el('span','vimg'); w.dataset.vimg=name; w.title=name; w.appendChild(el('span','vimg-ph','🖼 '+name)); return w; }
 /* ★ 상표 판 5 add1 — 원문 외부 그림 */
 function vimgUrlEl(url,alt){ const w=el('span','vimg'); w.dataset.vurl=url; w.title=alt||url;
@@ -5938,6 +5941,8 @@ function c2fGet(){const f=S.cha2Filter||(S.cha2Filter={});C2F_KEYS.forEach(k=>{i
 function c2fEmpty(f){return C2F_KEYS.every(k=>!f[k].length);}
 async function gradeOf(subj){return await get('2cha_채점_'+subj+'.json').catch(()=>({}));}   /* 상표 = 파일 없음 → {} */
 const C2_NUMRX=/^(?:특사례|상사례|사\s*례)\s*(\d+(?:-\d+)*[a-zA-Z]?)(?=[-\s(]|$)/;
+let C2MK=null;   /* 9/5 B-9 — 사례 행 머리 이름용 특허 목차(mokcha_특허.json · 사례 보드가 열릴 때 한 번 싣는다 · 지문 탭의 MK 와 별개) */
+function c2ChapName(u){try{if(C2MK&&C2MK.마디&&PLAW()==='특허'){const n=C2MK.마디.find(m=>m.장&&String(m.no)===String(u));return n?(n.제목||''):'';}}catch(e){}return '';}   /* 9/5 B-9 행 머리 이름(특허 목차 트리 L) */
 function c2Num(file){const m=C2_NUMRX.exec(file||'');return m?m[1]:'';}
 function c2NatKey(file){const n=c2Num(file);if(!n)return [[1e6,file]];return n.split('-').map(x=>{const m=/^(\d+)([a-zA-Z]?)$/.exec(x);return m?[+m[1],m[2]]:[1e6,x];});}
 function c2Cmp(a,b){const ka=c2NatKey(a),kb=c2NatKey(b);for(let i=0;i<Math.max(ka.length,kb.length);i++){if(!ka[i])return -1;if(!kb[i])return 1;if(ka[i][0]!==kb[i][0])return ka[i][0]-kb[i][0];if(ka[i][1]!==kb[i][1])return ka[i][1]<kb[i][1]?-1:1;}return a<b?-1:a>b?1:0;}
@@ -6010,9 +6015,16 @@ function c2Mark(ck,scroll){document.querySelectorAll('#slot .cell.sel,#slot .pro
     if(cd){const go=()=>{try{cd.scrollIntoView({block:'center',inline:'center'});}catch(e){}};go();setTimeout(go,300);setTimeout(go,800);}}   /* 지연 렌더로 위 카드 높이가 바뀌므로 두 번 더 맞춘다 */
   if(pr){try{pr.scrollIntoView({block:'nearest'});}catch(e){}}}
 let C2IO=null;
+const C2FOLD_KEY='jopangi_c2fold';   /* 9/5 B-6 — 2차 카드 본문 접힘(전 기기 기본 1 · 기기별 · SYNC 밖) */
+function c2Folded(){try{const v=localStorage.getItem(C2FOLD_KEY);return v===null?true:v==='1';}catch(e){return true;}}
 function c2CellEl(c,bodies){const hot=/⚠|누락/.test(c.x.논점||'');const cd=el('div','cell'+(hot?' hot':'')+(c.pass?'':' dim')+(S.cha2Sel===c.ck?' sel':''));cd.dataset.ck=c.ck;
   const hd=el('div','chd');hd.appendChild(el('span','t',c.series||c.label));hd.appendChild(c2ScoreChip(c));c2PdfChips(c.info.pdfs).forEach(a=>hd.appendChild(a));cd.appendChild(hd);   /* ★ 2차 탭 판 1 add1 — §11 칩 여럿 */
   const ti=el('div','ctitle',c.title);ti.title='눌러서 크게 보기';ti.onclick=e=>{e.stopPropagation();popCard4(S.boardKind,c.file,e,1);};cd.appendChild(ti);
+  if(c2Folded()){   /* 9/5 B-6 — 접힘: 문제 콜아웃 머리(있으면) + 「본문 ▾」 · 누르면 그때 본문(그림도) */
+    const rec=bodies[c.file];const q=rec&&rec.행?rec.행.find(r=>r.co==='question'):null;
+    const fl=el('div','cfold');if(q)fl.appendChild(el('span','cq','⑦ '+q.t));
+    const bt=el('button','cmore','본문 ▾');bt.onclick=e=>{e.stopPropagation();if(cd._done)return;cd._done=1;try{fl.replaceWith(renderBody(rec,c.file,{card:1,kind:S.boardKind}));}catch(err){fl.textContent='본문 렌더 실패';}};fl.appendChild(bt);cd.appendChild(fl);
+    cd._lazy=()=>{};return cd;}
   const ph=el('div','cdim','…');ph.style.minHeight='180px';cd.appendChild(ph);
   cd._lazy=()=>{if(cd._done)return;cd._done=1;try{ph.replaceWith(renderBody(bodies[c.file],c.file,{card:1,kind:S.boardKind}));}catch(e){ph.textContent='본문 렌더 실패';}};   /* 보이는 카드만 본문(사례 171·514 한꺼번에 안 그림) */
   if(C2IO)C2IO.observe(cd);return cd;}
@@ -6030,6 +6042,7 @@ async function view2cha(){
     const b=el('button','pill'+(S.boardKind===k?' on':(n?'':' wait')),k+' '+(n||'—'));
     b.onclick=()=>{S.boardKind=k;S.series='';S.yearFilter='';render();};bar.appendChild(b);});
   const sp=el('span');sp.style.flex='1';bar.appendChild(sp);
+  {const fb=el('button','pill',c2Folded()?'본문 접힘 ▾':'본문 펼침 ▴');fb.title='카드 본문을 접어 두면 스크롤이 가볍다(기기별 · 기본 접힘)';fb.onclick=()=>{try{localStorage.setItem(C2FOLD_KEY,c2Folded()?'0':'1');}catch(e){}render();};bar.appendChild(fb);}   /* 9/5 B-6 */
   /* 보드/목록 토글은 없앴다(§4-1) — 목록은 2단 서랍이다 */
   main.appendChild(bar);
 
@@ -6113,12 +6126,13 @@ async function view2cha(){
   if(S.boardKind==='사례'){
     const units=[...new Set(shown.map(c=>c.unit))].sort(c2UnitCmp);
     if(!units.length){main.appendChild(emptyBox('🖋','사례 카드가 없다',''));slot.appendChild(main);return;}
-    g.style.gridTemplateColumns=`64px repeat(${units.length},minmax(210px,1fr))`;
-    g.style.minWidth=(64+units.length*218)+'px';
-    const yh=el('div','gh yh','번호 첫 마디 →');yh.title='열 = 사례 번호 첫 마디(해례 장 · 기출 연도 · 기타) · 열 안 = 번호 순 · 규칙은 볼트 정리 뒤 다시 잡는다';g.appendChild(yh);
-    units.forEach(u=>g.appendChild(el('div','gh',u+' ('+shown.filter(c=>c.unit===u).length+')')));
-    g.appendChild(el('div','gr','사례'));
-    units.forEach(u=>{const holder=el('div');shown.filter(c=>c.unit===u).sort((a,b)=>c2Cmp(a.file,b.file)).forEach(c=>holder.appendChild(c2CellEl(c,bodies)));g.appendChild(holder);});
+    /* 9/5 B-9 — 장(번호 첫 마디)이 세로 행 · 행 안에서 사례번호 순으로 왼→오른쪽 · 한 줄 최대 5장(폭 좁으면 자동 4·3·…) · 행 머리 = 장 번호 + 이름(특허 목차 트리 · 없으면 번호만) */
+    if(PLAW()==='특허'&&!C2MK){try{C2MK=await get('mokcha_특허.json');}catch(e){C2MK={};}}   /* 9/5 B-9 행 머리 이름 */
+    g.style.gridTemplateColumns='92px 1fr';g.style.minWidth='0';
+    const yh=el('div','gh yh','장 ↓');yh.title='행 = 사례 번호 첫 마디(해례 장 · 기출 연도 · 기타) · 행 안 = 사례번호 순 · 한 줄 5장';g.appendChild(yh);
+    g.appendChild(el('div','gh','사례 · 왼→오른쪽 · 한 줄 5장'));
+    units.forEach(u=>{const nm=c2ChapName(u);const h=el('div','gr',u+(nm?' '+nm:'')+'\n('+shown.filter(c=>c.unit===u).length+')');h.title=nm||u;g.appendChild(h);
+      const holder=el('div','crow');shown.filter(c=>c.unit===u).sort((a,b)=>c2Cmp(a.file,b.file)).forEach(c=>holder.appendChild(c2CellEl(c,bodies)));g.appendChild(holder);});
   }else{
     let rows=[...new Set(shown.filter(c=>c.row).map(c=>c.row))];
     rows.sort((a,c)=>{const v=c2RowCmp(a,c);return S.yearSort==='desc'?-v:v;});
