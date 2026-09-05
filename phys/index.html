@@ -366,6 +366,14 @@ body[data-layer="card"] .tools .sep:first-of-type,body[data-layer="card"] .tools
 .tag.page{background:var(--sand-soft);color:#7A5520;border-color:#E9D5B5;cursor:pointer}
 .tag.match{background:#FFF7D6;color:#7A5520;border-color:#E9D5B5;cursor:pointer} .tag.match.sm{padding:1px 5px}
 .tag.sub{cursor:pointer}
+/* 생물(앱 판 1) — 유형 셋 태그(타기출·예상) · 교재쪽 대기 배지 · 해설 탭 · 보기 설명 · 교재쪽 매칭 목록 */
+.tag.tt{background:#EEF1FB;color:#3F51B5;border-color:#C9D2F0} .tag.te{background:#FBEFF3;color:#B03A5B;border-color:#EFC5D2}
+.tag.wait{background:#FFF3B0;color:#6B5200;border-color:#E2C044;cursor:pointer;font-weight:700} .tag.ok{background:#E6F2EE;color:#1B7F4B;border-color:#BFE0D2;cursor:pointer}
+.item .meta i.wait{font-style:normal;background:#FFF3B0;color:#6B5200;border:1px solid #E2C044;border-radius:4px;padding:0 4px;font-size:10.5px}
+.soltabs{display:flex;gap:4px;margin-bottom:6px} .soltabs button{padding:3px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:12px;cursor:pointer} .soltabs button.on{background:var(--sea);border-color:var(--sea);color:#fff}
+.tag.sl{margin-right:6px} .tag.nosol{color:var(--muted)}
+.bexp{display:block;margin-top:4px;font-size:12.5px;color:var(--muted);line-height:1.5;font-weight:400}
+.bpgl{max-height:40vh;overflow:auto;border:1px solid var(--line);border-radius:6px;margin-top:4px} .bpgl div{padding:6px 8px;border-bottom:1px dashed var(--line);cursor:pointer;font-size:12.5px} .bpgl div:hover{background:var(--sea-soft)} .bpgl b{color:var(--sea);margin-right:6px}
 select.rsel{padding:4px 8px;border:1px solid var(--line);border-radius:999px;background:var(--card);font:inherit;font-size:11px;font-weight:700;color:var(--muted)}
 .num{min-width:58px;font-size:11px}
 /* 뷰어 = 카드 + 교재 패널 */
@@ -697,11 +705,12 @@ const SUBJ={
   phys:{DB:'phys535', PDF_DIR:'phys/pdf/', REC_PATH:'phys/기록.json', SYNC_PREFIX:'phys_sync_',
         SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard'],
         TITLE:'물리 535 서재', LOG:'물리535', DATA:'인라인 DATA', NAME:'물리', ready:true},
-  /* 생물 자리(add1) — 데이터가 오면 ready:true 한 줄만. LAYER:true = 지학과 같은 층(카드 O△X·목차 트리·교재 패널·서브노트·매칭) */
+  /* 생물(앱 판 1 · 2026-09-05 · ready:true) — LAYER:true = 지학과 같은 층 · 지학 가정 여섯은 아래 과목 값(NCH_MAX·CH_LIST·KINDS·BOOK_ROWS·SOL_LABELS·SENT_PATH · BOOK_PDF_ADD 없음 = 인쇄쪽만)으로 푼다 */
   bio:{DB:'bio1', PDF_DIR:'bio/pdf/', IMG_DIR:'bio/img/', DATA_PATH:'bio/문항.json', TOC_PATH:'bio/목차.json',
         REC_PATH:'bio/기록.json', SYNC_PREFIX:'bio_sync_', NOTE_REPO:'zzikkaplan/notes', NOTE_PATH:'bio/', NOTE_DIR:'bio/note/',
-        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit'],
-        TITLE:'생물 기출 서재', LOG:'생물', NAME:'생물', LAYER:true, ready:false},
+        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg'],   /* 앱 판 1: bpg = 교재쪽 수동 매칭(15째) */
+        NCH_MAX:8, CH_LIST:['1','2','3','4','5','6','7','8','9','10','11','12'], KINDS:['G','T','E'], BOOK_ROWS:'bpage', SOL_LABELS:true, SENT_PATH:'bio/교재문장.json',   /* 선택지 최대 8(T299·T309) · 장 12 · 유형 셋 · 「이 쪽의 문항」 = 교재쪽만 · 해설 탭(크리티컬/SYNAPSE) · 교재 문장 목록 */
+        TITLE:'생물 기출 서재', LOG:'생물', NAME:'생물', LAYER:true, ready:true},
   earth:{DB:'earth1', PDF_DIR:'earth/pdf/', IMG_DIR:'earth/img/', DATA_PATH:'earth/문항.json', TOC_PATH:'earth/목차.json',
         REC_PATH:'earth/기록.json', SYNC_PREFIX:'earth_sync_', NOTE_REPO:'zzikkaplan/notes', NOTE_PATH:'earth/', NOTE_DIR:'earth/note/',
         SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit'],   /* 판 2: bpit = 교재 포스트잇(14째) */
@@ -2655,11 +2664,11 @@ let rt;window.addEventListener('resize',()=>{if(!VNO)return;clearTimeout(rt);
      찍혀야 하는데 IndexedDB 쓰기는 그때 끝나지 못한다. localStorage 는 동기적이다. */
 const REC_REPO='zzikkaplan/studyplandata', REC_BRANCH='main';
 const REC_PATH=CUR.REC_PATH, REC_SET_PATH='settings.json';
-const SYNC_KEYS=CARD_LAYER?CUR.SYNC_KEYS:SUBJ.phys.SYNC_KEYS;   /* 과목별 표 — 물리 11 · 카드 층(지학·생물) 14(+bogi·unit·bpit) · SUBJ 블록 참조 */
+const SYNC_KEYS=CARD_LAYER?CUR.SYNC_KEYS:SUBJ.phys.SYNC_KEYS;   /* 과목별 표 — 물리 11 · 카드 층(지학·생물) 지학 14(+bogi·unit·bpit) · 생물 15(+bpg) · SUBJ 블록 참조 */
 /* 키 → 이 앱의 전역. 열 개 다 「문항번호 → 값」 dict 다(실측 확인).
    ⚠ `ansfix` 만 늦게 읽힌다(loadAfix) — null 이면 건너뛴다. */
 let MC={};            // no -> {w,h,s:[{c,w,hl,p:[u,v,… 1/1000 정수]}]}  손필기 암기카드 · kv/mcard · 카드 20KB 상한
-let BG={},UN={},BP={};   // 지학: bogi = uid→{ㄱ:'O'|'Q'|'X'} · unit = uid→'n.n.n' · bpit = 교재 포스트잇 (물리 SYNC_KEYS 엔 없다)
+let BG={},UN={},BP={},BPG={};   // 지학·생물: bogi = uid→{ㄱ:'O'|'Q'|'X'} · unit = uid→'n.n.n' · bpit = 교재 포스트잇 · bpg = 교재쪽 수동 매칭(생물) (물리 SYNC_KEYS 엔 없다)
 const SYNC_REF={
   status :{g:()=>ST,   s:v=>{ST=v}},
   note   :{g:()=>CMT,  s:v=>{CMT=v}},
@@ -2674,7 +2683,8 @@ const SYNC_REF={
   mcard  :{g:()=>MC,   s:v=>{MC=v}},
   bogi   :{g:()=>BG,   s:v=>{BG=v}},
   unit   :{g:()=>UN,   s:v=>{UN=v}},
-  bpit   :{g:()=>BP,   s:v=>{BP=v}}
+  bpit   :{g:()=>BP,   s:v=>{BP=v}},
+  bpg    :{g:()=>BPG,  s:v=>{BPG=v}}
 };
 const U_KEY=CUR.SYNC_PREFIX+'u', GONE_KEY=CUR.SYNC_PREFIX+'gone',
       SHADOW_KEY=CUR.SYNC_PREFIX+'shadow', SMETA_KEY=CUR.SYNC_PREFIX+'meta';
@@ -2940,7 +2950,7 @@ function recBoot(){
   QT=(await get('kv','qtype'))||{};
   FR=(await get('kv','frm'))||{};
   MC=(await get('kv','mcard'))||{};
-  if(CARD_LAYER){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};BP=(await get('kv','bpit'))||{};}
+  if(CARD_LAYER){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};BP=(await get('kv','bpit'))||{};BPG=(await get('kv','bpg'))||{};}
   const moved=await renumber();
   if(moved)setTimeout(()=>toast('문항 번호 재배열 — 기록 '+moved+'건을 옮겼습니다'),900);
   await loadHave();
@@ -3101,7 +3111,7 @@ if(CARD_LAYER){
    물리 함수는 여기서 같은 이름으로 다시 정의해 갈아 끼운다(뒤 스크립트가 이긴다). 물리 데이터 배열은 빌드가 비웠다.
    문항 본문은 HTML 에 없다 — 비공개 저장소 <과목>/문항.json(CUR.DATA_PATH) 을 토큰으로 받아 IndexedDB kv 에 캐시한다(D11). add1: 과목 값은 전부 CUR — 생물(SUBJ.bio) 도 이 층을 그대로 쓴다. */
 
-Object.assign(F,{UNIT:16,BPAGE:17,CH:18,BOGI:19,SOL:20,SOLPG:21,ROUND:22,CAND:23,NOTE:24,ORIG:25});
+Object.assign(F,{UNIT:16,BPAGE:17,CH:18,BOGI:19,SOL:20,SOLPG:21,ROUND:22,CAND:23,NOTE:24,ORIG:25,SOL2:26,BSENT:27,BSRC:28,SYNPG:29});   /* 26~29 = 생물 열(해설2·교재문장·문장근거·SYNAPSE쪽 · 지학 행은 빈값) */
 var TOC={ch:{},sec:{},unit:{},list:[]};      // 목차 — ch['3']={name,secs[]} · sec['3.4']={name,ch,units[]} · unit['3.4.5']={name,p,sec,ch}
 var PIECES={};                                   // earth/pdf/index.json
 var isC=r=>r[F.SRC]==='확인';
@@ -3114,6 +3124,27 @@ var secOf=c=>c.split('.').slice(0,2).join('.');
 var chOf=c=>c.split('.')[0];
 var stemOf=r=>String(r[F.BODY]).split(' ⏎ ')[0];
 var MG={O:'O',Q:'△',X:'X',P:'P'};
+/* ── 생물 앱 판 1(2026-09-05 · _task_bio_app_pan1.md) — 지학 가정 여섯을 과목 값으로 푼다. 지학·물리 값은 한 글자도 안 바뀐다 ──
+   유형: kindOf(r) ∈ G(기출)·C(확인 · 지학)·T(타기출)·E(예상) — SRC 열(변리사/확인/타기출/예상)에서 · isC 는 그대로(지학 20곳 무변) · 지시서의 typeOf 는 물리 typeOf(no · 문항 유형)와 이름이 겹쳐 kindOf 로
+   필터: CUR.KINDS 가 있으면(생물) FL.types 집합(기본 {G}) · 없으면(지학) FL.past 둘 그대로
+   선택지: CIRC 8자 · nch = 선택지 배열 길이(⑥⑦⑧ 로 붙은 OCR 줄은 expandChoices 가 가른다) · 정답 6·7 표시
+   교재쪽: bpgOf(r) = kv bpg[uid].p(사용자 수동 매칭 · SYNC 15째) 없으면 BPAGE · 「절시작·대기」 = bpgWait */
+var KIND_LAB={G:'기출',C:'확인',T:'타기출',E:'예상'},KIND_CLS={G:'tg',C:'tc',T:'tt',E:'te'};
+var kindOf=r=>({'변리사':'G','확인':'C','타기출':'T','예상':'E'})[r[F.SRC]]||'G';
+var kindTag=r=>{const k=kindOf(r);return `<span class="tag ${KIND_CLS[k]}">${KIND_LAB[k]}</span>`};
+if(!FL.types)FL.types=new Set(['G']);   /* 데이터 적재 전에 draw() 가 먼저 돌아도 칩이 산다 */
+var showKind=r=>CUR.KINDS?FL.types.has(kindOf(r)):(FL.past==='p'?isC(r):!isC(r));
+var CIRC='①②③④⑤⑥⑦⑧';
+function expandChoices(a){const out=[];
+  (a||[]).forEach(t=>{String(t||'').replace(/\s*SYNAPSE 7\.0\s*$/,'').split(/\s*[⑥⑦⑧]\s*/).forEach((x,j)=>{x=x.trim();if(x.length>60&&j>0)x='';if(j===0||x)out.push(x)})});
+  while(out.length&&!out[out.length-1])out.pop();return out.slice(0,CIRC.length)}
+var bpgOf=r=>{const o=BPG[r[F.CODE]];return o&&+o.p?+o.p:(r[F.BPAGE]||0)};
+var bpgWait=r=>r[F.BSRC]==='절시작·대기'&&!BPG[r[F.CODE]];
+var bookChip=r=>{const bp=bpgOf(r);if(!CUR.KINDS)return r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">교재 ${r[F.BPAGE]}쪽</span>`:'';
+  const o=BPG[r[F.CODE]];return (bp?`<span class="tag page" data-page="${bp}" title="${esc(String(r[F.BSENT]||'').slice(0,40))}">📖 p${bp}</span>`:'')+
+    (bpgWait(r)?`<span class="tag wait" id="cBpg" title="교재쪽 수동 매칭">대기</span>`:`<span class="tag ${o?'ok':'match'} sm" id="cBpg" title="교재쪽 고치기">${o?'✓':'✎'}</span>`)};
+var bookChipSm=r=>{const bp=bpgOf(r);if(!CUR.KINDS)return r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">${r[F.BPAGE]}쪽</span>`:'';
+  return (bp?`<span class="tag page" data-page="${bp}">📖 p${bp}</span>`:'')+(bpgWait(r)?'<i class="wait">대기</i>':'')};
 
 /* ───────────── 데이터 적재 ───────────── */
 loadEarthData=async function(){
@@ -3150,13 +3181,14 @@ function buildData(items,toc,pieces){
   DATA.length=0;
   items.forEach((it,i)=>{
     const G=it.유형==='기출';
-    const row=[i+1,+it.문제쪽||0,it.그림?'IMG':'TXT',0,'','',+it.문번||it.문번,0,'',it.uid,G?(+it.연도||''):'',G?'변리사':'확인','',String(it.정답||''),
-      it.문항||'','',(it.단원==='미분류'?'':it.단원)||(G?'':it.uid[1]),+it.교재쪽||0,it.선택지||[],it.보기||[],it.해설||'',+it.해설쪽||0,+it.회차||'',it.단원후보||'',it.비고||'',it.원형회차||''];
+    const row=[i+1,+it.문제쪽||0,it.그림?'IMG':'TXT',0,'','',+it.문번||it.문번,0,'',it.uid,G?(+it.연도||''):'',G?'변리사':(it.유형==='확인'?'확인':it.유형),'',String(it.정답||''),
+      it.문항||'','',(it.단원==='미분류'?'':it.단원)||(it.유형==='확인'?it.uid[1]:''),+it.교재쪽||0,CUR.KINDS?expandChoices(it.선택지):(it.선택지||[]),it.보기||[],it.해설||'',+it.해설쪽||0,+it.회차||'',it.단원후보||'',it.비고||'',it.원형회차||'',
+      it.해설2||'',it.교재문장||'',it.문장근거||'',it.SYNAPSE쪽||''];
     DATA.push(row);
   });
   refreshUnits();
-  BIGS.length=0;['1','2','3','4','5'].forEach(c=>BIGS.push(c+'. '+(TOC.ch[c]||{}).name));
-  FL.past='y';FL.unit='';FL.round='';SET.nav=false;
+  BIGS.length=0;(CUR.CH_LIST||['1','2','3','4','5']).forEach(c=>BIGS.push(c+'. '+(TOC.ch[c]||{}).name));
+  FL.past='y';FL.types=new Set(['G']);FL.unit='';FL.round='';SET.nav=false;
 }
 /* 단원(사용자 매칭 우선)에서 장·절 라벨을 다시 매긴다 — 필터·그룹 머리가 이걸 본다 */
 function refreshUnits(){
@@ -3168,11 +3200,14 @@ function refreshUnits(){
     r[F.SUB]=sec?sec+' '+((TOC.sec[sec]||{}).name||''):(isC(r)?'(미매칭)':'(미분류)');
   });
 }
-titleOf=r=>(isC(r)?r[F.CODE][1]+'장 확인문제 '+r[F.LNO]+'번':r[F.ROUND]+'회 '+r[F.LNO]+'번');
+titleOf=r=>{const k=kindOf(r);if(k==='C')return r[F.CODE][1]+'장 확인문제 '+r[F.LNO]+'번';if(!CUR.KINDS)return r[F.ROUND]+'회 '+r[F.LNO]+'번';
+  if(k==='G')return r[F.YEAR]+'년 자과 '+r[F.LNO]+'번';
+  if(k==='T'){const m=/출처 \[([^\]]*)\]/.exec(r[F.NOTE]||'');return '타기출 · '+(m?m[1].replace(/\s+/g,' ').trim():'SYNAPSE p'+r[F.PG])}
+  return '예상 · SYNAPSE p'+r[F.PG]};
 
 /* ───────────── 필터 ───────────── */
 function pass(r){
-  if(FL.past==='p'?!isC(r):isC(r))return 0;                       /* 기본 = 기출만 · 확인문제는 토글 */
+  if(!showKind(r))return 0;                                        /* 기본 = 기출만 · 확인문제(지학)/타기출·예상(생물)은 토글 */
   if(FL.bigs.length&&!FL.bigs.includes(r[F.BIG]))return 0;
   if(FL.subs.length&&!FL.subs.includes(r[F.SUB]))return 0;
   if(FL.unit){const u=unitOf(r[F.NO]);if(!(u===FL.unit||u.startsWith(FL.unit+'.')))return 0}
@@ -3191,7 +3226,7 @@ function pass(r){
 }
 function drawFilters(){
   const a=$('#fBig');a.innerHTML='';
-  const T=DATA.filter(r=>FL.past==='p'?isC(r):!isC(r));
+  const T=DATA.filter(showKind);
   a.appendChild(chip('전체',!FL.bigs.length&&!FL.subs.length&&!FL.unit,()=>{FL.bigs=[];FL.subs=[];FL.unit='';draw()},T.length));
   const tog=(arr,v)=>arr.includes(v)?arr.filter(x=>x!==v):arr.concat([v]);
   BIGS.forEach(b=>{
@@ -3204,10 +3239,12 @@ function drawFilters(){
     }});
   if(FL.unit)a.appendChild(chip('단원 '+unitLabel(FL.unit)+' ✕',true,()=>{FL.unit='';draw()},T.filter(r=>pass(r)).length));
   const e=$('#fEtc');e.innerHTML='';
+  if(CUR.KINDS){CUR.KINDS.forEach(k=>e.appendChild(chip(KIND_LAB[k],FL.types.has(k),()=>{if(FL.types.has(k)){if(FL.types.size>1)FL.types.delete(k)}else FL.types.add(k);FL.round='';draw()},DATA.filter(r=>kindOf(r)===k).length)))}
+  else{
   e.appendChild(chip('기출',FL.past!=='p',()=>{FL.past='y';FL.round='';draw()},DATA.filter(r=>!isC(r)).length));
-  e.appendChild(chip('확인문제',FL.past==='p',()=>{FL.past='p';FL.round='';draw()},DATA.filter(isC).length));
-  if(FL.past!=='p'){
-    const rounds=[...new Set(DATA.filter(r=>!isC(r)).map(r=>r[F.ROUND]))].sort((p,q)=>p-q);
+  e.appendChild(chip('확인문제',FL.past==='p',()=>{FL.past='p';FL.round='';draw()},DATA.filter(isC).length));}
+  if(CUR.KINDS?FL.types.has('G'):FL.past!=='p'){
+    const rounds=[...new Set(DATA.filter(r=>kindOf(r)==='G').map(r=>r[F.ROUND]))].sort((p,q)=>p-q);
     const sel=document.createElement('select');sel.className='chip rsel';
     sel.innerHTML='<option value="">회차 전체</option>'+rounds.map(x=>`<option value="${x}"${FL.round===String(x)?' selected':''}>${x}회 (${x+1963})</option>`).join('');
     sel.onchange=()=>{FL.round=sel.value;draw()};e.appendChild(sel);
@@ -3224,7 +3261,7 @@ function drawFilters(){
 }
 /* 히트맵 — 기출/확인 토글을 따른다(섞지 않는다) · 장 필터만 따라간다 */
 function drawSpectrum(){
-  const s=$('#spec'), L=DATA.filter(r=>(FL.past==='p'?isC(r):!isC(r))&&(!FL.bigs.length||FL.bigs.includes(r[F.BIG])));
+  const s=$('#spec'), L=DATA.filter(r=>showKind(r)&&(!FL.bigs.length||FL.bigs.includes(r[F.BIG])));
   s.innerHTML='';let c={O:0,X:0,Q:0,P:0,z:0,weak:0,less:0};
   L.forEach(r=>{const no=r[F.NO],m=lastM(no),n=Math.min(3,reps(no)),w=weakState(no);
     const i=document.createElement('i');i.className=w==='less'?'W':(m?`${m} r${n}`:'');
@@ -3238,10 +3275,10 @@ function row(r){
   const no=r[F.NO],rep=reps(no),u=unitOf(no);
   d.innerHTML=`<div class="num">${esc(r[F.CODE])}</div>
    <div class="body"><div class="meta">
-     <span class="tag ${isC(r)?'tc':'tg'}">${isC(r)?'확인':'기출'}</span>
+     ${kindTag(r)}
      <span class="sub">${esc(titleOf(r))}</span>
      <span class="tag unit" data-unit="${esc(u)}">${esc(u?unitLabel(u):(isC(r)?'미매칭':'미분류'))}</span>
-     ${r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">${r[F.BPAGE]}쪽</span>`:''}
+     ${bookChipSm(r)}
      ${r[F.FILE]==='IMG'?'<span class="tag">그림</span>':''}
      ${rep?`<span class="tag">${rep}회독</span>`:''}
      ${(c=>c?`<span class="cmt" data-cmt="${no}">${esc(c)}</span>`:`<span class="cmt empty" data-cmt="${no}">＋한줄</span>`)(noteOf(no))}
@@ -3279,36 +3316,36 @@ showProblem=async function(){
   navSync();
   const u=unitOf(VNO);
   $('#vT1').textContent=`${r[F.CODE]} · ${titleOf(r)}`+(r[F.YEAR]?` (${r[F.YEAR]})`:'');
-  $('#vT2').textContent=`${r[F.BIG]} › ${unitLabel(u)} · 교재 ${r[F.BPAGE]||'?'}쪽`+(r[F.ORIG]?` · 변시 ${r[F.ORIG]}회 원형`:'');
+  $('#vT2').textContent=`${r[F.BIG]} › ${unitLabel(u)} · 교재 ${bpgOf(r)||'?'}쪽`+(r[F.ORIG]?` · 변시 ${r[F.ORIG]}회 원형`:'');
   CARD.open=false;
   renderCard(r);
   syncMarkBtns();syncNoteBtn();tmReset();
-  if(bookVisible()&&r[F.BPAGE]&&BOOK.follow)bookOpen(r[F.BPAGE]);
+  if(bookVisible()&&bpgOf(r)&&BOOK.follow)bookOpen(bpgOf(r));
 }
 function renderCard(r){
   const no=r[F.NO],uid=r[F.CODE],u=unitOf(no),bg=bogiOf(uid),pick=lastPick(no),ox=hasOX(r);
-  const ch=(r[F.CH]||[]);
-  const sol=String(r[F.SOL]||'').split('⏎').map(esc).join('<br>');
+  const ch=(r[F.CH]||[]).slice();if(CUR.KINDS){const n=Math.max(ch.length,+r[F.ANS]||0);while(ch.length<n)ch.push('')}   /* 정답이 ⑥·⑦인데 선택지 글이 모자라면 빈 단추 */
+  const sol=String(r[F.SOL]||'').split('⏎').map(esc).join('<br>'),sol2=String(r[F.SOL2]||'').split('⏎').map(esc).join('<br>');
   const c=$('#card');
   c.innerHTML=`<div class="cmeta">
-      <span class="tag ${isC(r)?'tc':'tg'}">${isC(r)?'확인':'기출'}</span><span class="tag">${esc(titleOf(r))}</span>
+      ${kindTag(r)}<span class="tag">${esc(titleOf(r))}</span>
       <span class="tag unit" id="cUnit" title="누르면 목차에서 표시">${esc(u?unitLabel(u):(isC(r)?'미매칭':'미분류'))}</span>
       ${isC(r)||!u?`<span class="tag match" id="cMatch">매칭</span>`:`<span class="tag match sm" id="cMatch" title="단원 고치기">✎</span>`}
-      ${r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">교재 ${r[F.BPAGE]}쪽</span>`:''}
+      ${bookChip(r)}
       <span class="tag sub" id="cSub">🗒 서브노트</span>
       <span class="sp"></span><span class="cmark">${(()=>{const m=lastM(no);return m?`<b class="vm${m}">${MG[m]}</b> ${MLABEL[m]}`:'마크 없음'})()}</span>
     </div>
     <div class="q">${esc(stemOf(r))}</div>
     ${r[F.FILE]==='IMG'?`<div class="fig" id="cFig"><span class="ld">그림 받는 중…</span></div>`:''}
     ${(r[F.BOGI]||[]).length?`<div class="bogi">${r[F.BOGI].map(b=>`<div class="row" data-k="${b.키}" data-ans="${b.정오}">
-        <span class="k">${b.키}.</span><span class="t">${esc(b.내용||bogiLineText(r,b.키))}</span>
+        <span class="k">${b.키}.</span><span class="t">${esc(b.내용||bogiLineText(r,b.키))}${CUR.SOL_LABELS&&b.설명?`<span class="bexp" hidden>${esc(b.설명)}</span>`:''}</span>
         ${ox&&b.정오?`<div class="ox">${['O','Q','X'].map(v=>`<button class="${v}${bg[b.키]===v?' on':''}" data-v="${v}">${MG[v]}</button>`).join('')}</div>`:''}
       </div>`).join('')}</div>`:''}
-    ${ch.some(x=>x)?`<div class="choices">${ch.map((t,i)=>`<button data-c="${i+1}" class="${pick===String(i+1)?'pick':''}">${'①②③④⑤'[i]} ${esc(t)}</button>`).join('')}</div>`:''}
-    <details id="cDet"><summary>정답 · 해설${r[F.SOLPG]?` (부록 ${r[F.SOLPG]}쪽)`:''}</summary>
-      <div class="sol"><b>정답 ${r[F.ANS]?'①②③④⑤'[+r[F.ANS]-1]||r[F.ANS]:'—'}</b>${sol?'<div class="soltx">'+sol+'</div>':''}
-        <div class="jump">${r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">교재 ${r[F.BPAGE]}쪽 ${esc(unitName(u))}</span>`:''}
-        ${r[F.SOLPG]?`<span class="tag page" data-page="${r[F.SOLPG]}">부록 ${r[F.SOLPG]}쪽</span>`:''}</div>
+    ${ch.some(x=>x)?`<div class="choices">${ch.map((t,i)=>`<button data-c="${i+1}" class="${pick===String(i+1)?'pick':''}">${CIRC[i]} ${esc(t)}</button>`).join('')}</div>`:''}
+    <details id="cDet"><summary>정답 · 해설${r[F.SOLPG]&&!CUR.KINDS?` (부록 ${r[F.SOLPG]}쪽)`:''}</summary>
+      <div class="sol"><b>정답 ${r[F.ANS]?CIRC[+r[F.ANS]-1]||r[F.ANS]:'—'}</b>${solHtml(r,sol,sol2)}
+        <div class="jump">${(bp=>bp?`<span class="tag page" data-page="${bp}">교재 ${bp}쪽 ${esc(unitName(u))}</span>`:'')(bpgOf(r))}
+        ${r[F.SOLPG]&&!CUR.KINDS?`<span class="tag page" data-page="${r[F.SOLPG]}">부록 ${r[F.SOLPG]}쪽</span>`:''}</div>
         ${r[F.NOTE]?`<div class="cnote">${esc(r[F.NOTE])}</div>`:''}</div></details>
     <div class="cnav"><button id="cPrev">← 이전</button><span>${VLIST.indexOf(VNO)+1} / ${VLIST.length}</span><button id="cNext">다음 →</button></div>`;
   c.scrollTop=0;
@@ -3328,10 +3365,18 @@ function renderCard(r){
   $('#cDet').ontoggle=()=>{CARD.open=$('#cDet').open;markWrong();markAns()};
   $('#cUnit').onclick=()=>{treeOpen();treeHit(u)};
   $('#cMatch').onclick=()=>matchSheet(no);
+  const cb=$('#cBpg');if(cb)cb.onclick=()=>bpgSheet(no);
+  c.querySelectorAll('.soltabs button').forEach(b=>b.onclick=()=>{c.querySelectorAll('.soltabs button').forEach(x=>x.classList.toggle('on',x===b));c.querySelectorAll('.soltx[data-st]').forEach(x=>x.hidden=x.dataset.st!==b.dataset.st)});
   $('#cSub').onclick=()=>subOpen(u?secOf(u):'',true);
   $('#cPrev').onclick=()=>go(-1);$('#cNext').onclick=()=>go(1);
   markWrong();markAns();
 }
+/* 해설 칸 — 생물(CUR.SOL_LABELS): 기출 = 크리티컬(SOL) + SYNAPSE(SOL2) 탭 둘 · 타기출·예상 = SYNAPSE(SOL) 하나 · 없으면 「해설 없음」 칩 · 지학은 그대로 */
+function solHtml(r,sol,sol2){if(!CUR.SOL_LABELS)return sol?'<div class="soltx">'+sol+'</div>':'';
+  const k=kindOf(r);const L=[];if(sol)L.push([k==='G'?'크리티컬':'SYNAPSE',sol]);if(sol2)L.push(['SYNAPSE',sol2]);
+  if(!L.length)return ' <span class="tag nosol">해설 없음</span>';
+  if(L.length===1)return `<div class="soltx"><span class="tag sl">${L[0][0]}</span>${L[0][1]}</div>`;
+  return `<div class="soltabs">${L.map((x,i)=>`<button type="button" class="${i?'':'on'}" data-st="${i}">${x[0]}</button>`).join('')}</div>${L.map((x,i)=>`<div class="soltx" data-st="${i}"${i?' hidden':''}>${x[1]}</div>`).join('')}`}
 /* 보기 내용이 비어 있으면(OCR 줄 수 불일치) 문항 글의 보기 줄에서 찾아 쓴다 */
 function bogiLineText(r,k){
   const parts=String(r[F.BODY]).split(' ⏎ ').slice(1);
@@ -3344,6 +3389,7 @@ function markWrong(){
     const v=bg[el.dataset.k],a=el.dataset.ans;
     el.classList.toggle('wrong',CARD.open&&!!v&&v!=='Q'&&!!a&&v!==a);
     el.classList.toggle('right',CARD.open&&!!v&&v!=='Q'&&!!a&&v===a);
+    el.querySelectorAll('.bexp').forEach(x=>{x.hidden=!CARD.open});   /* 생물: 보기 설명은 해설을 열면 */
   });
 }
 function markAns(){
@@ -3387,7 +3433,7 @@ function dotClass(m){return m==='O'?'g':m==='Q'?'y':m==='X'?'r':m==='P'?'k':''}
 function navBuild(){buildTree()}
 function buildTree(){
   const box=$('#trlist');if(!box)return;
-  const T=DATA.filter(r=>FL.past==='p'?isC(r):!isC(r));
+  const T=DATA.filter(showKind);
   const cur=VNO?unitOf(VNO):FL.unit;
   let h='';
   TOC.list.forEach(c=>{
@@ -3396,13 +3442,13 @@ function buildTree(){
     if(FL.past==='p'){const un=T.filter(r=>unitOf(r[F.NO])===c.장).length;
       h+=`<div class="trit unm${cur===c.장?' hit':''}" data-u="${c.장}"><i class="dot"></i>미매칭<span class="n">${un}</span></div>`}
     c.절.forEach(s=>{const ss=unitStats(s.절,T);
-      h+=`<div class="trsec" data-u="${s.절}"><i class="dot ${dotClass(ss.m)}"></i>${s.절} ${esc(s.이름)}<span class="n">${ss.n}</span></div>`;
-      s.항목.forEach(u=>{const us=unitStats(u.코드,T);
+      h+=`<div class="trsec${cur===s.절?' hit':''}" data-u="${s.절}"><i class="dot ${dotClass(ss.m)}"></i>${s.절} ${esc(s.이름)}<span class="n">${ss.n}</span></div>`;
+      s.항목.forEach(u=>{if(u.코드===s.절)return;const us=unitStats(u.코드,T);   /* 생물 목차는 2단(항목 = 절 자신) — 같은 키면 한 줄 */
         h+=`<div class="trit${cur===u.코드?' hit':''}" data-u="${u.코드}"><i class="dot ${dotClass(us.m)}"></i>${u.코드} ${esc(u.이름)}<span class="n">${u.쪽} · ${us.n}</span></div>`})});
   });
   box.innerHTML=h;
   box.querySelectorAll('[data-u]').forEach(el=>el.onclick=()=>treePick(el.dataset.u));
-  $('#trTog').textContent=FL.past==='p'?'확인문제 보는 중 · 기출로':'기출 보는 중 · 확인문제로';
+  $('#trTog').textContent=CUR.KINDS?[...CUR.KINDS].filter(k=>FL.types.has(k)).map(k=>KIND_LAB[k]).join('·')+' 보는 중 · 다음':(FL.past==='p'?'확인문제 보는 중 · 기출로':'기출 보는 중 · 확인문제로');
   treeList();
 }
 function treePick(code){
@@ -3431,7 +3477,7 @@ function treeClose(){$('#tree').classList.add('hide')}
 $('#navTg').onclick=()=>{$('#tree').classList.contains('hide')?treeOpen():treeClose()};
 $('#btnTree').onclick=()=>{$('#tree').classList.contains('hide')?treeOpen():treeClose()};
 $('#trX').onclick=treeClose;
-$('#trTog').onclick=()=>{FL.past=FL.past==='p'?'y':'p';FL.round='';if(VNO){const L=filtered().map(r=>r[F.NO]);if(L.length){VLIST=L;if(!VLIST.includes(VNO))VNO=VLIST[0];showProblem()}}else draw();buildTree()};
+$('#trTog').onclick=()=>{if(CUR.KINDS){const seq=[['G'],['G','T'],['G','T','E']],cur=[...FL.types].sort().join();const i=seq.findIndex(s=>s.slice().sort().join()===cur);FL.types=new Set(seq[(i+1)%seq.length])}else FL.past=FL.past==='p'?'y':'p';FL.round='';if(VNO){const L=filtered().map(r=>r[F.NO]);if(L.length){VLIST=L;if(!VLIST.includes(VNO))VNO=VLIST[0];showProblem()}}else draw();buildTree()};
 
 /* ───────────── 교재 패널 ───────────── */
 var BOOK={page:null,file:null,follow:true,docs:{}};
@@ -3460,7 +3506,7 @@ bookOpen=async function(page,show){
   const info=$('#bpInfo');
   if(!pc){info.textContent='이 쪽은 조각에 없다';$('#bpMsg').textContent='';bookList(page);return}
   BOOK.file=pc.file;const k=page-pc.pdf_offset;
-  info.textContent=`${pc.file} ${k}/${pc.인쇄끝-pc.인쇄시작+1}쪽 · PDF ${page+11}`;
+  info.textContent=`${pc.file} ${k}/${pc.인쇄끝-pc.인쇄시작+1}쪽`+(CUR.BOOK_PDF_ADD?` · PDF ${page+CUR.BOOK_PDF_ADD}`:'');
   bookList(page);
   const cv=$('#bpc'),msg=$('#bpMsg');
   try{
@@ -3475,13 +3521,13 @@ bookOpen=async function(page,show){
     msg.textContent='';
   }catch(e){msg.textContent='쪽을 그리지 못했습니다 — '+(e.message||e)}
 }
-var bookRows=page=>DATA.filter(r=>r[F.BPAGE]===page||(isC(r)&&r[F.PG]===page)||(!isC(r)&&r[F.SOLPG]===page));
+var bookRows=page=>DATA.filter(r=>CUR.BOOK_ROWS==='bpage'?bpgOf(r)===page:(r[F.BPAGE]===page||(isC(r)&&r[F.PG]===page)||(!isC(r)&&r[F.SOLPG]===page)));   /* 생물 = 교재쪽(bpg 덮어쓰기)만 · 지학 = 교재쪽 ∪ 확인 문제쪽 ∪ 기출 부록쪽 */
 function bookList(page){bookListInto(page,$('#bpList'),null)}
 /* 판 2: 같은 목록을 교재 패널(#bpList)과 교재 모드 팝업(#bkqList)에 그린다 · onPick = 문항 열기 전에 할 일(팝업은 교재 모드 닫기) */
 function bookListInto(page,box,onPick){
   const L=bookRows(page);
   box.innerHTML=`<h5>이 쪽에서 나온 문항 (${L.length})</h5>`+L.map(r=>{const no=r[F.NO],m=lastM(no);
-    return `<div class="${no===VNO?'me':''}" data-no="${no}"><span class="tag ${isC(r)?'tc':'tg'}">${isC(r)?'확인':'기출'}</span><span>${esc(titleOf(r))}</span><span class="sp"></span><span>${no===VNO?'지금':(m?MG[m]:'·')}</span></div>`}).join('');
+    return `<div class="${no===VNO?'me':''}" data-no="${no}">${kindTag(r)}<span>${esc(titleOf(r))}</span><span class="sp"></span><span>${no===VNO?'지금':(m?MG[m]:'·')}</span></div>`}).join('');
   box.querySelectorAll('[data-no]').forEach(el=>el.onclick=()=>{if(onPick)onPick();VNO=+el.dataset.no;if(!VLIST.includes(VNO))VLIST=filtered().map(r=>r[F.NO]).concat(VLIST.includes(VNO)?[]:[VNO]);BOOK.follow=false;
     (VNO&&$('#view').classList.contains('hide')?openView(VNO):showProblem()).then(()=>{BOOK.follow=true})});
 }
@@ -3489,10 +3535,10 @@ function bookTab(t){$$('#bookpane .btabs b').forEach(x=>x.classList.toggle('on',
   if(t==='sub'){const r=VNO?rec(VNO):null;subOpen(r&&unitOf(VNO)?secOf(unitOf(VNO)):'',true);bookTab('book')}}
 $('#bpPrev').onclick=()=>bookOpen((BOOK.page||1)-1);$('#bpNext').onclick=()=>bookOpen((BOOK.page||0)+1);
 $('#bpPg').onchange=()=>bookOpen(+$('#bpPg').value);
-$('#bpSub').onclick=()=>{const pc=BOOK.page?pieceFor(BOOK.page):null;subOpen(pc&&pc.절&&/^\d\.\d$/.test(pc.절)?pc.절:'',true)};
+$('#bpSub').onclick=()=>{const pc=BOOK.page?pieceFor(BOOK.page):null;subOpen(pc&&pc.절&&/^\d+\.\d+$/.test(pc.절)?pc.절:'',true)};
 $('#bpX').onclick=()=>$('#bookpane').classList.remove('open');
 $$('#bookpane .btabs b').forEach(x=>x.onclick=()=>bookTab(x.dataset.t));
-$('#tBook').onclick=()=>{const p=$('#bookpane');p.classList.toggle('open');if(p.classList.contains('open')){const r=rec(VNO);if(r&&r[F.BPAGE])bookOpen(BOOK.page||r[F.BPAGE])}};
+$('#tBook').onclick=()=>{const p=$('#bookpane');p.classList.toggle('open');if(p.classList.contains('open')){const r=rec(VNO);if(r&&bpgOf(r))bookOpen(BOOK.page||bpgOf(r))}};
 $('#tSub').onclick=()=>{const u=VNO?unitOf(VNO):'';subOpen(u?secOf(u):'',true)};
 $('#tMatch').onclick=()=>{if(VNO)matchSheet(VNO)};
 /* 조각 미리 받기(설정) — 물리 ensureFiles 자리 */
@@ -3524,6 +3570,28 @@ function renderSettings(){
   }
 }
 
+/* ───────────── 교재쪽 수동 매칭(생물 · bpg · SYNC 15째) — 그 절의 교재 문장 목록 + 쪽 직접 · 되돌리기 = kv 삭제 ───────────── */
+var saveBPG=()=>put('kv','bpg',BPG);
+var SENTS=null;
+loadSents=async function(){if(SENTS)return SENTS;let j=await get('kv',SUBJ_ID+'sent');
+  if(!j&&recToken()&&CUR.SENT_PATH){try{j={items:JSON.parse(await ghRaw(CUR.SENT_PATH)),at:Date.now()};await put('kv',SUBJ_ID+'sent',j)}catch(e){console.warn('sents',e)}}
+  return SENTS=(j&&j.items)||[]}
+bpgSheet=async function(no){const r=rec(no),uid=r[F.CODE],u=unitOf(no),sec=u?secOf(u):'',cur=BPG[uid]||null;
+  const S=(await loadSents()).map((x,i)=>Object.assign({i},x)).filter(x=>x.절===sec).sort((a,b)=>(a.연도-b.연도)||(a.인쇄쪽-b.인쇄쪽));
+  const old=$('#bpgSheet');if(old)old.remove();
+  const b=document.createElement('div');b.className='sheet';b.id='bpgSheet';
+  b.innerHTML=`<div class="panel"><h2>${esc(uid)} 교재쪽 매칭</h2>
+    <p>지금: <b>p${bpgOf(r)||'?'}</b> ${cur?'(사용자 값'+(cur.s!==undefined?' · 문장 #'+cur.s:'')+')':'(자동 · '+esc(r[F.BSRC]||'없음')+')'}${r[F.BSENT]?'<br><small>'+esc(String(r[F.BSENT]).slice(0,60))+'</small>':''}</p>
+    <div class="fld"><label>${esc(sec||'절 없음')} 절의 교재 문장 ${S.length}</label><div class="bpgl">${S.map(x=>`<div data-i="${x.i}" data-p="${x.인쇄쪽}"><b>【${x.연도}】 p${x.인쇄쪽}</b>${esc(String(x.문장).slice(0,60))}</div>`).join('')||'<i>없음</i>'}</div></div>
+    <div class="fld"><label>쪽만 직접</label><input id="bpgP" class="tokin" inputmode="numeric" value="${bpgOf(r)||''}"> <button class="btn" id="bpgSet">이 쪽으로</button></div>
+    ${cur?'<button class="btn" id="bpgAuto">자동값으로</button> ':''}<button class="btn" id="bpgX">닫기</button></div>`;
+  const done=async v=>{if(v)BPG[uid]=v;else delete BPG[uid];await saveBPG();b.remove();if(VNO===no)showProblem();else draw();toast(v?'교재쪽 = p'+v.p:'자동값으로')};
+  b.querySelectorAll('.bpgl [data-i]').forEach(el=>el.onclick=()=>done({p:+el.dataset.p,s:+el.dataset.i}));
+  b.querySelector('#bpgSet').onclick=()=>{const p=+b.querySelector('#bpgP').value;if(p>0)done({p});else toast('쪽 번호를 넣으세요')};
+  const au=b.querySelector('#bpgAuto');if(au)au.onclick=()=>done(null);
+  b.querySelector('#bpgX').onclick=()=>b.remove();b.onclick=e=>{if(e.target===b)b.remove()};
+  document.body.appendChild(b);
+}
 /* ───────────── 확인문제 수동 매칭 ───────────── */
 var saveUN=()=>put('kv','unit',UN);
 function matchSheet(no){
@@ -3835,7 +3903,8 @@ function bkInfo(){const p=bkCurPage();if(!p){$('#bkInfo').textContent='';return}
 /* ── 목차 서랍(조판기식 손잡이) ── */
 function bkTocBuild(){const box=$('#bklist');let h='';
   TOC.list.forEach(c=>{h+=`<div class="bkch" data-ch="${c.장}"><b>▾</b> ${c.장}. ${esc(c.이름)}</div><div class="bkchb">`;
-    c.절.forEach(s=>{h+=`<div class="bksec" data-sec="${s.절}"><b>▾</b> ${s.절} ${esc(s.이름)}</div><div class="bksecb">`;
+    c.절.forEach(s=>{if(s.항목.length===1&&s.항목[0].코드===s.절){const u=s.항목[0];h+=`<div class="bkit bkone" data-p="${u.쪽}" data-code="${u.코드}">${u.코드} ${esc(u.이름)}<span class="n">${u.쪽}</span></div>`;return}
+      h+=`<div class="bksec" data-sec="${s.절}"><b>▾</b> ${s.절} ${esc(s.이름)}</div><div class="bksecb">`;
       s.항목.forEach(u=>{h+=`<div class="bkit" data-p="${u.쪽}" data-code="${u.코드}">${u.코드} ${esc(u.이름)}<span class="n">${u.쪽}</span></div>`});h+='</div>'});h+='</div>'});
   const ap=bkItems().filter(it=>!it.code);
   if(ap.length){h+=`<div class="bkch" data-ch="부록"><b>▾</b> 부록</div><div class="bkchb">`;ap.forEach(it=>{h+=`<div class="bkit" data-p="${it.p}" data-code="">${esc(it.name)}<span class="n">${it.p}~${it.end}</span></div>`});h+='</div>'}
