@@ -648,6 +648,11 @@ table.mdt td,table.mdt th{white-space:normal;vertical-align:top;min-width:40px}t
 .anasqb.hastoc{display:grid;grid-template-columns:200px 1fr;gap:10px}.anatoc{font-size:11px;border:1px dashed #cbd5e8;border-radius:4px;padding:6px 8px;background:#fafbff;align-self:start}.anatoc .anatoch{font-weight:700;color:#345;margin-bottom:4px}.anatoc .t1{margin:3px 0 1px}.anatoc .t2{padding-left:12px;color:#555}
 .anared{margin-top:10px;border-left:4px solid #c33;background:#fff2f2;padding:6px 10px;font-size:12px;color:#822}.anared ul{margin:4px 0 0 16px}
 .stcards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}.stcard{border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;background:#fff}.stcard h5{margin:0 0 6px;font-size:12px}.stbar{height:10px;background:#eee;border-radius:5px;overflow:hidden}.stbar i{display:block;height:100%;background:var(--m8)}
+.stcardw{border:1px solid var(--line);border-radius:6px;margin:6px 0 10px;background:#fff}.stsum{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;font-size:12px}.stsum .tri::before{content:'▸';color:#999;font-size:11px}.stcardw.open .stsum .tri::before{content:'▾'}.stsum small{margin-left:auto;color:#888}
+.stcardw .stcards{margin:0;padding:0 10px 10px;border-top:1px solid #f0f0f0}.stcards.c1{grid-template-columns:1fr 2fr}.stcards.c2{grid-template-columns:1fr}.stcard.st2{display:grid;grid-template-columns:repeat(3,auto);gap:16px;justify-content:start;align-items:start}
+.stgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px 10px;font-size:12px}.stgrid b{color:var(--blue)}.stgame{color:#888;font-size:11px}
+.stcuts{display:flex;gap:6px;flex-wrap:wrap}.stcuts span{display:inline-flex;flex-direction:column;align-items:center;font-size:11px;border:1px solid var(--line);border-radius:4px;padding:2px 6px;line-height:1.3}.stcuts small{color:#888}.stneg{color:#c33}table.stpred{width:auto}table.stpred td,table.stpred th{padding:2px 8px}.stlayer,.stsubj{margin:4px 0 6px}.stsrc{margin-top:12px}.anatext{margin-top:10px}
+@media (max-width:760px){.stcards.c1{grid-template-columns:1fr}.stgrid{grid-template-columns:repeat(2,1fr)}.stcard.st2{grid-template-columns:1fr}}
 @media (max-width:760px){.anacols{grid-template-columns:1fr}.anasqb.hastoc{grid-template-columns:1fr}.stcards{grid-template-columns:1fr}.anaadd{display:none}}
 /* add1 */ .exs tr.exsr td:first-child{padding-left:16px;color:#555}.exs tr.exsr td:first-child::before{content:'└ ';color:#bbb}.exs tr.ext1 td{border-top:2px solid #ddd}.exic{cursor:pointer}.exic:empty::before{content:'…';color:#ccc}.exlink{color:var(--blue);cursor:pointer;text-decoration:underline dotted}.exie{font:inherit;font-size:11px;border:1px solid var(--blue);border-radius:3px;padding:1px 3px;max-width:130px;background:#fff}.exskip{font-size:10px;margin-left:6px;font-weight:400}.exsblk[hidden]{display:none}.exgl{font-size:11px;color:#666;margin:0 2px 0 6px}
 .modal .box.exwide{max-width:760px;max-height:88vh;overflow:auto}.ext.exin input{width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:3px;padding:3px 5px;font:inherit}
@@ -3823,7 +3828,7 @@ function mdInline(s,opt){opt=opt||{};let h=esc(s);
  if(opt.paren)h=h.replace(/(\([^()<>]{2,}\))/g,'<span class="mdparen">$1</span>');
  return h.replace(/★/g,'<b class="mdstar">★</b>')}
 function mdParse(md){const L=String(md||'').replace(/\r\n/g,'\n').split('\n');let title='',lead='',pre=[],secs=[],cur=null,i=0,meta={};
- for(;i<L.length;i++){const ln=L[i];const mm=ln.match(/^(사람|예측|채점기준):\s*(.+)$/);if(mm){meta[mm[1]]=mm[2].trim();continue}
+ for(;i<L.length;i++){const ln=L[i];const mm=ln.match(/^(사람|예측|채점기준|문항별):\s*(.+)$/);if(mm){meta[mm[1]]=mm[2].trim();continue}
   if(!title&&/^# /.test(ln)){title=ln.slice(2).trim();continue}
   if(/^## /.test(ln)){cur={title:ln.slice(3).trim(),lines:[]};secs.push(cur);continue}
   if(cur)cur.lines.push(ln);else pre.push(ln)}
@@ -3870,23 +3875,32 @@ function anaSum(md,me){const P=mdParse(md);const sec=P.secs.find(x=>/^요소/.te
   out.push({n:cur.n,text:parts.join(' · ')||(mi>0?'ok':'—'),star:/★/.test(memo)});cur=null};
  sec.lines.forEach(ln=>{const m=ln.match(/^### 설\((\d)\)/);if(m){flush();cur={n:+m[1],t:[]};return}if(cur&&/^\s*\|/.test(ln))cur.t.push(ln)});flush();return out}
 function anaProbFiles(it){const o={};(it.files||[]).forEach(f=>{const m=f.name.match(/^([특상디민])문(\d)\.md$/);if(m)o[ANA_SUBJ[m[1]]+m[2]]=f});return o}
-function ana2HTML(it){const me=ANA_ME[it.who]||it.who;const x=examGet(exId(it.no,2,it.who));const pf=anaProbFiles(it);const head=it.files.find(f=>f.kind==='head');
+/* add23 */ /* add2(9/6) — 과목 단위 md(예측 꼴 「<과목>_<사람>.md」 · 「문항별: a / b / c / d」 = 원점수) · 그 밖의 글 md(61회 「글.md」)는 격자 아래 토글 */
+function anaSubjFiles(it){const o={};(it.files||[]).forEach(f=>{const m=f.name.match(/^(특허|상표|디보|민소)_[^\/]*\.md$/);if(m)o[m[1]]=f});return o}
+function anaExtraFiles(it){const pf=anaProbFiles(it),sf=anaSubjFiles(it);const used=new Set([...Object.values(pf),...Object.values(sf)]);return (it.files||[]).filter(f=>f.kind!=='head'&&!used.has(f))}
+function anaQvals(P){const v=String(P.meta['문항별']||'').split('/').map(x=>parseFloat(x.trim()));return v.length===4&&v.every(x=>!isNaN(x))?v:null}
+function ana2HTML(it){const me=ANA_ME[it.who]||it.who;const x=examGet(exId(it.no,2,it.who));const pf=anaProbFiles(it),sf=anaSubjFiles(it),xf=anaExtraFiles(it);const head=it.files.find(f=>f.kind==='head');
  let h='';if(head){const md=anaNeed(head.path,head.md5);h+=md==null?anaLoading():`<div class="anahead">${mdHTML(md,'a2h|'+it.id)}</div>`}
  /* 격자 */
- const cell=(subj,i)=>{const f=pf[subj+(i+1)];const mine=x&&x.subj&&x.subj[subj]&&x.subj[subj].q?x.subj[subj].q[i]:null;let md=f?anaNeed(f.path,f.md5):null;let sc=null,cls='',tag='',sum='';
-  if(f&&md){const P=mdParse(md);sc=anaScores(P.title);const my=sc[me];const vals=Object.values(sc);if(f.pred){cls='pred';tag=`<small class="anapred">예측</small>`;if(mine!=null&&my!=null)tag=`<small class="anapred">예측 ${my} → 실제 ${mine}(${mine-my>=0?'+':''}${r1(mine-my)})</small>`}
-   else if(f.kind==='table'&&my!=null&&vals.length>1){if(my>=Math.max(...vals))cls='max';else if(my<=Math.min(...vals))cls='min'}   /* 글 꼴은 점수만(색·요약 없음 · B-4) */
-   if(f.kind==='table'){const S=anaSum(md,me);if(S)sum=S.map(s=>`<span class="${s.star?'star':''}">설(${s.n}) ${esc(s.text)}</span>`).join(' | ')}}
-  const shown=f&&f.pred?(sc&&sc[me]!=null?sc[me]:mine):(mine!=null?mine:(sc&&sc[me]!=null?sc[me]:null));
-  const on=ui.ana.prob===subj+(i+1);
-  return`<td class="anac ${cls}${f?' has':''}${on?' on':''}" ${f?`onclick="anaUI('prob',ui.ana.prob==='${subj}${i+1}'?'':'${subj}${i+1}')"`:''}><b>${shown!=null?r1(shown):'—'}</b>${tag}${sum?`<div class="anasum">${sum}</div>`:''}</td>`};
- h+=`<div class="extbl"><table class="ext anagrid"><tr><th></th>${[1,2,3,4].map(i=>`<th>문${i}</th>`).join('')}<th>합</th></tr>${EX_S2.map(subj=>{const v=x&&x.subj?x.subj[subj]:null;return`<tr><td>${subj}${subj==='디보'?' <small>(점수만)</small>':''}</td>${[0,1,2,3].map(i=>cell(subj,i)).join('')}<td><b>${v&&exNum(v.score)!=null?r1(exNum(v.score)):'—'}</b></td></tr>`}).join('')}</table></div>
- <p class="exdim">칸 = 내 점수(exam JSON 문제별 · 없으면 md 머리의 내 점수) · <span class="sw max"></span> 5인 중 최대 · <span class="sw min"></span> 최소 · <span class="sw pred"></span> 예측 · 아래 줄 = 요소 표 내 열(${esc(me)})에서 답틀·누락 · ★ 있으면 굵게 · 칸 클릭 → 문제 md</p>`;
- if(ui.ana.prob&&pf[ui.ana.prob]){const f=pf[ui.ana.prob];const md=anaNeed(f.path,f.md5);h+=md==null?anaLoading():anaProbHTML(it,f,md,me)}
+ const cell=(subj,i)=>{const key=subj+(i+1);const isS=!pf[key]&&!!sf[subj];const f=pf[key]||sf[subj];const mine=x&&x.subj&&x.subj[subj]&&x.subj[subj].q?x.subj[subj].q[i]:null;let md=f?anaNeed(f.path,f.md5):null;let cls='',tag='',sum='',my=null;
+  if(f&&md){const P=mdParse(md);
+   if(isS){const qv=anaQvals(P);my=qv?qv[i]:null;cls='pred';tag=`<small class="anapred">예측 · 원점수</small>`;if(mine!=null&&my!=null)tag=`<small class="anapred">예측 ${my} → 실제 ${mine}(${mine-my>=0?'+':''}${r1(mine-my)})</small>`}
+   else{const sc=anaScores(P.title);my=sc[me];const vals=Object.values(sc);
+    if(f.pred){cls='pred';tag=`<small class="anapred">예측</small>`;if(mine!=null&&my!=null)tag=`<small class="anapred">예측 ${my} → 실제 ${mine}(${mine-my>=0?'+':''}${r1(mine-my)})</small>`}
+    else if(f.kind==='table'&&my!=null&&vals.length>1){if(my>=Math.max(...vals))cls='max';else if(my<=Math.min(...vals))cls='min'}   /* 글 꼴은 점수만(색·요약 없음 · B-4) */
+    if(f.kind==='table'){const S=anaSum(md,me);if(S)sum=S.map(s=>`<span class="${s.star?'star':''}">설(${s.n}) ${esc(s.text)}</span>`).join(' | ')}}}
+  const shown=f&&(f.pred||isS)?(my!=null?my:mine):(mine!=null?mine:my);
+  const on=ui.ana.prob===key;
+  return`<td class="anac ${cls}${f?' has':''}${on?' on':''}" ${f?`onclick="anaUI('prob',ui.ana.prob==='${key}'?'':'${key}')"`:''}><b>${shown!=null?r1(shown):'—'}</b>${tag}${sum?`<div class="anasum">${sum}</div>`:''}</td>`};
+ h+=`<div class="extbl"><table class="ext anagrid"><tr><th></th>${[1,2,3,4].map(i=>`<th>문${i}</th>`).join('')}<th>합</th></tr>${EX_S2.map(subj=>{const v=x&&x.subj?x.subj[subj]:null;return`<tr><td>${subj}${subj==='디보'&&!sf[subj]?' <small>(점수만)</small>':''}</td>${[0,1,2,3].map(i=>cell(subj,i)).join('')}<td><b>${v&&exNum(v.score)!=null?r1(exNum(v.score)):'—'}</b></td></tr>`}).join('')}</table></div>
+ <p class="exdim">칸 = 내 점수(exam JSON 문제별 · 없으면 md 머리의 내 점수) · <span class="sw max"></span> 5인 중 최대 · <span class="sw min"></span> 최소 · <span class="sw pred"></span> 예측(「원점수」 = 채점표 원점수 · 실점 환산은 md 본문) · 아래 줄 = 요소 표 내 열(${esc(me)})에서 답틀·누락 · ★ 있으면 굵게 · 칸 클릭 → md</p>`;
+ xf.forEach(f=>{const md=anaNeed(f.path,f.md5);h+=md==null?anaLoading():`<div class="anatext">${mdHTML(md,'a2t|'+f.path)}</div>`});   /* 61회 글 꼴 — 격자 아래 md 토글 그대로 */
+ const pk=ui.ana.prob;const pfile=pk?(pf[pk]||sf[pk.replace(/\d$/,'')]):null;
+ if(pfile){const md=anaNeed(pfile.path,pfile.md5);h+=md==null?anaLoading():anaProbHTML(it,pfile,md,me)}
  return`<div class="ana2">${h}</div>`}
 /* 문제 md 두 열 · 강사 층 */
 function anaCrit(no,subj){return anaIdx().criteria.filter(c=>c.no===no&&c.cha===2&&c.subj===subj)}
-function anaProbHTML(it,f,md,me){const P=mdParse(md);const m=f.name.match(/^([특상디민])문(\d)/);const subj=ANA_SUBJ[m[1]],qn=+m[2];const pts=anaSubPts(P.title);const per=(innerWidth<=760)?(ui.ana.per||me):'';
+function anaProbHTML(it,f,md,me){const P=mdParse(md);const m=f.name.match(/^([특상디민])문(\d)/);const ms=m?null:f.name.match(/^(특허|상표|디보|민소)_/);const subj=m?ANA_SUBJ[m[1]]:(ms?ms[1]:'');const qn=m?+m[2]:0;const pts=anaSubPts(P.title);const per=(innerWidth<=760)?(ui.ana.per||me):'';
  const kind=f.kind==='table'&&P.secs.some(x=>/^요소/.test(x.title));
  const crit=anaCrit(it.no,subj);const defBy=((P.meta['채점기준']||'').match(/(\S+?)\(기본\)/)||[])[1]||(crit[0]&&crit[0].by);const by=ui.ana['by'+subj]||defBy;const cj=crit.find(c=>c.by===by);const CJ=cj?anaJSON(cj.path):null;
  const chips=crit.length?`<div class="anachips">채점기준: ${crit.map(c=>`<span class="pill ${c.by===by?'on':''}" onclick="anaUI('by${subj}','${esc(c.by)}')">${esc(c.by)}</span>`).join('')}${cj&&!CJ?'<small class="exdim">불러오는 중…</small>':''}</div>`:'';
@@ -3902,13 +3916,49 @@ function anaProbHTML(it,f,md,me){const P=mdParse(md);const m=f.name.match(/^([�
   const toc=cs?`<div class="anatoc"><div class="anatoch">해설 목차 · ${esc(by)}${cs.pts!=null?` · ${r1(cs.pts)}점`:''}</div>${cs.toc.map(t=>`<div class="t1">${esc(t.no?t.no+'. ':'')}${esc(t.t)}</div>${(t.sub||[]).map(u=>`<div class="t2">${esc(u.no)} ${esc(u.t)}</div>`).join('')}`).join('')||'<div class="exdim">목차 없음</div>'}</div>`:'';
   return`<div class="anasq"><h5>설(${sb.n})${pts[sb.n-1]!=null?` · ${pts[sb.n-1]}점`:''} <span>${mdInline(sb.t)}</span></h5>${hs}<div class="anasqb${toc?' hastoc':''}">${toc}<div class="anatbl">${mdBlock(lines,{mark:true,me,per})}</div></div></div>`};
  return`<div class="anaprob">${head}${chips}${perBar}<div class="anacols"><div class="analeft"><h4>${mdInline(mine?mine.title:'내 복기')}</h4>${mdBlock(mine?mine.lines:[],{paren:true})}</div><div class="anaright"><h4>${mdInline(el.title)}</h4>${mdBlock(el.lines.slice(0,el.lines.findIndex(l=>/^### /.test(l))<0?el.lines.length:el.lines.findIndex(l=>/^### /.test(l))),{})}${subs.map(subHTML).join('')}</div></div>${warn?`<div class="anared"><b>${mdInline(warn.title)}</b>${mdBlock(warn.lines,{})}</div>`:''}</div>`}
-/* ---- 시험전략 ---- */
+/* ---- 시험전략 (add3 · 9/6) — 층(1차/2차) 칩 + 과목 칩 · 고정 절 접힘 · 상단 카드 접힘(ui.stratCard) · 절 기억(ui.stratOpen) ---- */
+const ST_SUBJ=/^(산재|물리|생물|지학|화학|민법|민소|특허|상표|디보)/;
+function stratLayers(md){const L=String(md||'').replace(/\r\n/g,'\n').split('\n');const out=[];let cur=null;L.forEach(ln=>{if(/^# /.test(ln)){cur={lines:[ln]};out.push(cur);return}if(!cur){cur={lines:[]};out.push(cur)}cur.lines.push(ln)});
+ return out.map(l=>{const P=mdParse(l.lines.join('\n'));P.cha=/^1차/.test(P.title)?1:/^2차/.test(P.title)?2:0;return P})}
+function stratChip(t){return t.replace(/\s*\([^)]*\)/g,'').split(/\s[—–]\s/)[0].replace(/\s*·\s*/g,'·').trim()}
+function stratTgl(el){const sec=el.parentNode;sec.classList.toggle('open');ui.stratOpen=ui.stratOpen||{};ui.stratOpen[sec.dataset.k]=sec.classList.contains('open');LS.set('tt.ui',ui);render()}
+function stratPick(cha,idx){ui.stratOpen=ui.stratOpen||{};const P=stratLayers(anaText('exam/strategy.md')||'').find(l=>l.cha===cha);if(!P)return;P.secs.forEach((s,i)=>{if(ST_SUBJ.test(s.title))ui.stratOpen['st|'+cha+'|'+i]=(i===idx)});LS.set('tt.ui',ui);render()}
+function stratUI(k,v){ui[k]=v;LS.set('tt.ui',ui);render()}
+function stratCard1(P){const me=cfg.person;const last=examItems(me).filter(x=>x.cha===1).sort((a,b)=>b.no-a.no)[0];const c=last?ex1Calc(last):null;const ok=c?Object.values(c.per).reduce((a,p)=>a+(p.ok||0),0):null;
+ const gsec=P&&P.secs.find(s=>/^목표/.test(s.title));const gm=gsec&&gsec.title.match(/(\d+)\s*\/\s*(\d+)/);const goal=gm?+gm[1]:102,full=gm?+gm[2]:120;
+ const T=gsec?mdTable(gsec.lines):{head:[],rows:[]};const gi=T.head.findIndex(x=>/게임/.test(x)),ti=T.head.findIndex(x=>/목표/.test(x));
+ const grid=T.rows.length?`<div class="stgrid">${T.rows.map(r=>`<div><span>${esc(r[0]||'')}</span> <b>${mdInline(r[ti>0?ti:1]||'')}</b><div class="stgame">${mdInline(r[gi>0?gi:r.length-1]||'')}</div></div>`).join('')}</div>`:'';
+ const cut=last&&exNum(last.cut);const diff=c&&cut!=null?c.total-cut:null;
+ const sum=`목표 ${goal}/${full}${ok!=null?` · ${last.no}회 ${ok}`:''}`;
+ const body=`<div class="stcard"><h5>🎯 목표 ${goal}/${full}${gsec?` <small>${esc(gsec.title.replace(/^목표\s*\S+\s*/,''))}</small>`:''}</h5>${ok!=null?`<div class="stbar"><i style="width:${Math.min(100,ok/goal*100)}%"></i></div><p><small>직전 회차 맞음 수</small> ${last.no}회 <b>${ok}</b> / 목표 ${goal}${c?` · ${last.no}회 ${r1(c.total)}${cut!=null?` → 컷 ${r1(cut)} <span class="${diff<0?'stneg':''}">${diff>=0?'+':'−'}${r1(Math.abs(diff))}</span>`:''}`:''}</p>`:'<p class="exdim">1차 기록이 오면 진도 막대</p>'}</div>${grid?`<div class="stcard">${grid}</div>`:''}`;
+ return{sum,body}}
+function stratCard2(P){const sec=P&&P.secs.find(s=>/합격선|진단/.test(s.title));const lines=sec?sec.lines:[];const txt=lines.join('\n');
+ const cutLine=lines.find(l=>/컷/.test(l)&&/\d{2}회\s+\d/.test(l))||'';const cuts=[...cutLine.matchAll(/(\d{2})회\s+(\d+(?:\.\d+)?)/g)].map(m=>[m[1],m[2]]);const ann=cutLine.match(/(\d{2})회\s*=\s*([\d\/]+)\s*발표/)||[];
+ const my=txt.match(/컷\s*(\d+(?:\.\d+)?)\s*에\s*([−\-+]\d+(?:\.\d+)?)/);const myno=txt.match(/\*\*(\d{2})회\s*(\S+)\*\*/)||[];
+ const pr=[...txt.matchAll(/(민소|특허|상표|디보)\s+햄찌\s+(≈?\d+(?:\.\d+)?)\s*·\s*꼬까\s+(≈?\d+(?:\.\d+)?)/g)].map(m=>[m[1],m[2],m[3]]);
+ const lastCut=cuts.length?cuts[cuts.length-1]:null;const pno=ann[1]||'';
+ const sum=[lastCut?`컷 ${lastCut[1]}`:'',my?`${myno[1]?myno[1]+'회 ':''}${my[2]}`:'',pr.length?`${pno?pno+'회 ':''}예측 ${pr.map(p=>`${p[0].slice(0,1)} ${p[1]}/${p[2]}`).join(' · ')}`:''].filter(Boolean).join(' · ')||'2차';
+ const body=`<div class="stcard st2"><div><h5>컷 추이</h5><div class="stcuts">${cuts.map(c=>`<span><small>${c[0]}회</small><b>${c[1]}</b></span>`).join('')}${ann[1]?`<span><small>${ann[1]}회</small><b>${esc(ann[2])} 발표</b></span>`:''}</div></div>${my?`<div><h5>${myno[1]?myno[1]+'회 ':''}${esc(myno[2]||'')}</h5><p>컷 ${my[1]} 에 <b class="stneg">${my[2]}</b></p></div>`:''}${pr.length?`<div><h5>${pno?pno+'회 ':''}예측 <small>원점수(채점표)</small></h5><table class="ext stpred"><tr><th></th><th>햄찌</th><th>꼬까</th></tr>${pr.map(p=>`<tr><td>${p[0]}</td><td>${p[1]}</td><td>${p[2]}</td></tr>`).join('')}</table></div>`:''}</div>`;
+ return{sum,body}}
 function stratHTML(){const idx=anaIdx();const path='exam/strategy.md';const md=idx.strategy?anaNeed(path):anaText(path);
- const me=cfg.person;const last=examItems(me).filter(x=>x.cha===1).sort((a,b)=>b.no-a.no)[0];const c=last?ex1Calc(last):null;const ok=c?Object.values(c.per).reduce((a,p)=>a+(p.ok||0),0):null;
- const P=md?mdParse(md):null;const pick=re=>{const sec=P&&P.secs.find(x=>re.test(x.title));return sec?mdBlock(sec.lines.slice(0,6),{}):'<p class="exdim">strategy.md 에 절을 두면 뜬다</p>'};
- const cards=`<div class="stcards"><div class="stcard"><h5>🎯 목표 102/120</h5>${ok!=null?`<div class="stbar"><i style="width:${Math.min(100,ok/102*100)}%"></i></div><p><b>${ok}</b>/102 · ${last.no}회 1차 맞음 수(${r1(ok/102*100)}%)</p>`:'<p class="exdim">1차 기록이 오면 진도 막대</p>'}</div><div class="stcard"><h5>📚 과목별 전략</h5>${pick(/과목별/)}</div><div class="stcard"><h5>🩺 진단 · 합격선</h5>${pick(/진단|합격선/)}</div></div>`;
- if(!md)return`<div class="strat">${cards}<p class="exdim">🎯 시험전략 — 준비 중 · exam/strategy.md 를 두면 뜬다(역대 합격선 표도 md 안)</p></div>`;
- return`<div class="strat">${cards}${mdHTML(md,'strat')}</div>`}
+ const nx=nextExam();const defCha=nx&&/2차/.test(nx.name||'')?2:1;const cha=ui.stratCha||defCha;ui.stratOpen=ui.stratOpen||{};
+ const open=ui.stratCard!=null?ui.stratCard:innerWidth>760;   /* 기본 = 폰 접힘 · PC 펼침 */
+ const layers=md?stratLayers(md):[];const P=layers.find(l=>l.cha===cha)||null;const pre=layers.find(l=>l.cha===0);
+ const card=cha===1?stratCard1(P):stratCard2(P);
+ const cardH=`<div class="stcardw${open?' open':''}"><div class="stsum" onclick="stratUI('stratCard',${!open})"><span class="tri"></span><b>${esc(card.sum)}</b><small>${open?'접기':'펼치기'}</small></div>${open?`<div class="stcards ${cha===1?'c1':'c2'}">${card.body}</div>`:''}</div>`;
+ const LS2=layers.filter(l=>l.cha).length?layers.filter(l=>l.cha):[{cha:1,title:'1차'},{cha:2,title:'2차'}];
+ const chips=`<div class="exbar stlayer">${LS2.map(l=>`<span class="pill ${l.cha===cha?'on':''}" onclick="stratUI('stratCha',${l.cha})">${esc(l.title.replace(/^(\d)차\s*[—–]\s*/,'$1차 · '))}</span>`).join('')}</div>`;
+ if(!md)return`<div class="strat">${chips}${cardH}<p class="exdim">🎯 시험전략 — 준비 중 · exam/strategy.md 를 두면 뜬다(층 = 「# 1차 …」「# 2차 …」 · 과목 절 = ##)</p></div>`;
+ if(!P)return`<div class="strat">${chips}${cardH}<p class="exdim">${cha}차 층이 md 에 없다(「# ${cha}차 …」 머리 아래 ## 절)</p></div>`;
+ const subjIdx=P.secs.map((s,i)=>ST_SUBJ.test(s.title)?i:-1).filter(i=>i>=0);const first=subjIdx.length?subjIdx[0]:P.secs.length;
+ const isOpen=i=>{const k='st|'+cha+'|'+i;return ui.stratOpen[k]!=null?ui.stratOpen[k]:(i===first)};
+ const sec=(s,i)=>`<div class="mdsec stsec ${ST_SUBJ.test(s.title)?'subj':'fixed'}${isOpen(i)?' open':''}" data-k="st|${cha}|${i}"><div class="mdh" onclick="stratTgl(this)"><span class="tri"></span>${mdInline(s.title)}</div><div class="mdb">${mdBlock(s.lines,{})}</div></div>`;
+ const top=P.secs.map((s,i)=>i<first&&!ST_SUBJ.test(s.title)?sec(s,i):'').join('');
+ const subjChips=subjIdx.length?`<div class="exbar stsubj">${subjIdx.map(i=>`<span class="pill ${isOpen(i)?'on':''}" onclick="stratPick(${cha},${i})">${esc(stratChip(P.secs[i].title))}</span>`).join('')}</div>`:'';
+ const body=P.secs.map((s,i)=>ST_SUBJ.test(s.title)?sec(s,i):'').join('');
+ const bottom=P.secs.map((s,i)=>i>first&&!ST_SUBJ.test(s.title)?sec(s,i):'').join('');
+ return`<div class="strat">${chips}${cardH}${top}${subjChips}${body}${bottom}${pre&&pre.lead?`<p class="exdim stsrc">${mdInline(pre.lead)}</p>`:''}</div>`}
+
 function exDbHTML(){const cha=ui.exCha||1,who=ui.exWho||cfg.person;const L=examItems(who).filter(x=>x.cha===cha);
  const bar=`<div class="exbar">${[1,2].map(c=>`<span class="pill ${cha===c?'on':''}" onclick="ui.exSel='';exUI('exCha',${c})">${c}차</span>`).join('')}<span class="sep"></span>${settings.people.map(p=>`<span class="pill ${who===p?'on':''}" onclick="ui.exSel='';exUI('exWho','${esc(p)}')">${esc(p)}</span>`).join('')}<span style="flex:1"></span><button class="btn p" onclick="exAddModal()">＋ 회차</button></div>`;
  const head=cha===1?'<tr><th>회차</th><th>날짜</th><th>점수</th><th>합격컷</th><th>결과</th><th>산재</th><th>민법</th><th>자과</th><th>비고</th></tr>':'<tr><th>회차</th><th>날짜</th><th>평균</th><th>합격컷</th><th>결과</th><th>특허</th><th>상표</th><th>디보</th><th>민소</th><th>비고</th></tr>';
