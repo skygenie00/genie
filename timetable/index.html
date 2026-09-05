@@ -624,6 +624,16 @@ tr:hover .lsx{color:#c33}
 .shrow{display:flex;gap:6px;align-items:flex-start;font-size:11px;padding:6px 4px;border-bottom:1px solid #f0f0f1}
 .shrow .tx{flex:1;min-width:0;white-space:pre-wrap;word-break:break-all;max-height:60px;overflow:hidden}
 .shrow .ops{display:flex;gap:4px;flex:none}
+/* 시험기록 판 1(9/5) — Archive 📊 · 토큰 칩 */
+.exbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 8px}.exbar .pill{border:1px solid #ddd;border-radius:9px;padding:2px 9px;font-size:11px;cursor:pointer;background:#fff}.exbar .pill.on{background:#eee;font-weight:700}.exbar .sep{width:1px;height:16px;background:#ddd;margin:0 4px}
+.extbl{overflow-x:auto}table.ext{border-collapse:collapse;font-size:11px;width:100%}table.ext th,table.ext td{border-bottom:1px solid #eee;padding:4px 6px;text-align:left;white-space:nowrap}table.ext th{color:#666;font-weight:600;background:#fafafa}table.ext tr.exr{cursor:pointer}table.ext tr.exr:hover{background:#f6f6f6}table.ext tr.sel{background:color-mix(in srgb,var(--m8) 18%,#fff)}table.ext td.ok{color:#1b7f4b;font-weight:700}table.ext td.no{color:#c33;font-weight:700}table.ext small{color:#888;font-size:10px}.exmock{color:#b06;font-size:9px}
+.exdet{margin-top:12px;border-top:2px solid var(--line);padding-top:8px}.exgrid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(320px,1.6fr);gap:12px}@media(max-width:760px){.exgrid{grid-template-columns:1fr}}
+.ext.exq tr.wrong td{color:#c33}table.ext tr.exgh td{background:#f3f3f3;font-weight:700}table.ext tr.exg td{font-weight:700;background:#fcfcfc}table.ext .exredo{padding:0 5px;font-size:10px;margin-right:2px}table.ext .exredo.on{background:var(--blue);color:#fff;border-color:var(--blue)}.exchips{margin-bottom:6px}
+.exdim{font-size:10px;color:#888;margin:6px 0}.exnote{font-size:11px;margin-top:6px}.exdt b span{font-size:12px}
+.ex5{display:inline-flex;gap:2px}.ex5 b{width:20px;height:20px;line-height:20px;text-align:center;border:1px solid #ddd;border-radius:3px;font-weight:400;cursor:pointer;font-size:11px;user-select:none}.ex5 b.on{background:var(--blue);color:#fff;border-color:var(--blue)}.ex5 b.ans.on{background:#1b7f4b;border-color:#1b7f4b}
+.exqrow{display:flex;gap:6px;align-items:center;padding:2px 0;font-size:11px}.exqrow .n{width:24px;color:#666;text-align:right}.exsh{font-weight:700;margin:8px 0 2px;font-size:12px}
+.modal .box.exwide{max-width:760px;max-height:88vh;overflow:auto}.ext.exin input{width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:3px;padding:3px 5px;font:inherit}
+.tokchip{display:inline-block;background:#FFF3B0;border:1px solid #e2c044;border-radius:9px;padding:2px 8px;font-size:11px;cursor:pointer;margin:4px 0}.tokchip.over{background:#fde2e1;border-color:#e99;color:#c33;font-weight:700}.tokbar{margin-bottom:6px}.toksteps{font-size:11.5px;line-height:1.6;padding-left:18px}.toksteps li{margin:4px 0}
 </style>
 </head>
 <body>
@@ -863,7 +873,7 @@ function mergeFile(path,local,remote){
   return out;
  }
  if(path.startsWith('todos/'))return{v:2,cats:mergeList(local.cats||local.plans||[],remote.cats||remote.plans||[]),items:mergeList(local.items||[],remote.items||[])};
- if(path.startsWith('records/'))return{v:1,items:mergeList((local||{}).items||[],(remote||{}).items||[])};
+ if(path.startsWith('records/')||path.startsWith('exam/'))return{v:1,items:mergeList((local||{}).items||[],(remote||{}).items||[])};   /* exam/ 도 같은 병합(시험기록 판 1) */
  if(path==='food/food.json'||path==='share/share.json')return{v:1,items:mergeList((local||{}).items||[],(remote||{}).items||[])}; // fb13 §4·§5 공용(사람 구분 없음)
  if(path.startsWith('history/')){const out={v:1,days:{}};const A=(local||{}).days||{},B=(remote||{}).days||{};
   new Set([...Object.keys(A),...Object.keys(B)]).forEach(k=>{const a=A[k],b=B[k];out.days[k]=!a?b:(!b?a:(((a.u||0)>=(b.u||0))?a:b))});return out;}
@@ -916,6 +926,7 @@ async function syncAll(silent){
   await syncFile(todoPath(me),true,{v:2,cats:[],items:[]});if(peer)await syncFile(todoPath(peer),false,{v:2,cats:[],items:[]});
   await syncFile('todos/공통.json',true,{v:1,items:[]});
   await syncFile(recPath(me),true,{v:1,items:[]});if(peer)await syncFile(recPath(peer),false,{v:1,items:[]});
+  await syncFile(examPath(me),true,{v:1,items:[]});if(peer)await syncFile(examPath(peer),false,{v:1,items:[]});   /* 시험기록 판 1(9/5) — records 옆 · 같은 규칙(90초 · 4초 debounce · dirty 큐) */
   await syncFile(histPath(me),false,{v:1,days:{}});if(peer)await syncFile(histPath(peer),false,{v:1,days:{}}); // 시간층은 앱이 안 씀 — pull 만
   if(ui.view==='arch'||listDirty().includes('food/food.json'))await syncFile('food/food.json',true,{v:1,items:[]}); // fb13 §4 — 보는 중·대기분 있을 때만
   if(ui.view==='share'||listDirty().includes('share/share.json'))await syncFile('share/share.json',true,{v:1,items:[]}); // fb13 §5
@@ -1110,7 +1121,7 @@ function renderSide(){
  const stat=syncing?'⟳ 동기화 중':cfg.token?(dirty?`● 대기 ${dirty}건`:`● 동기화됨${ago!=null?' '+(ago<1?'방금':ago<60?ago+'분 전':Math.round(ago/60)+'시간 전'):''}`):'○ 토큰 없음';
  $('side').innerHTML=`<div class="who" onclick="switchPerson()">${esc(cfg.person)} <span>▾</span></div>
  ${NAV.map(g=>`<div class="grp">${g.group}</div>${g.items.map(([k,n])=>`<div class="i ${v==k?'on':''}" onclick="setView('${k}')">${n}</div>`).join('')}`).join('')}
- <div class="st ${dirty?'dirty':''}" onclick="syncAll()" style="cursor:pointer">${stat}<br>${esc((nextExam()||{}).name||'')} ${dday()}</div>`;
+ <div class="st ${dirty?'dirty':''}" onclick="syncAll()" style="cursor:pointer">${stat}<br>${esc((nextExam()||{}).name||'')} ${dday()}</div>${tokChipHTML()}`;
 }
 function renderPnav(){
  const v=ui.view;const tab=v=='todo'?'todo':(MORE_KEYS.includes(v)||v=='review')?'more':'tt'; // §1(fb14) 같은 상수 — arch·share 도 「더보기」로 잡힘
@@ -1121,7 +1132,7 @@ function switchPerson(){const p=settings.people;const i=p.indexOf(cfg.person);cf
 function renderMain(){
  const v=ui.view;const m=$('main');
  const keep=(v==='day'&&lastView==='day')?window.scrollY:0; // 한 페이지: 같은 화면 재렌더는 스크롤 유지
- if(v=='day'){m.innerHTML=ttPageHTML();window.scrollTo(0,keep);lastView=v;ttTrack();return}
+ if(v=='day'){m.innerHTML=ttPageHTML();if(tokDue())m.insertAdjacentHTML('afterbegin',`<div class="tokbar">${tokChipHTML()}</div>`);window.scrollTo(0,keep);lastView=v;ttTrack();return}   /* 시험기록 판 1 B-5 — 만료 30일 전부터만 띠 */
  if(v=='gal')m.innerHTML=galHTML();
  else if(v=='todo')m.innerHTML=todoHTML();
  else if(v=='plan')m.innerHTML=planHTML();
@@ -3593,9 +3604,9 @@ function foodItems(){return foodFile().data.items.filter(x=>!x.del).sort((a,b)=>
 function upsertFood(t){const f=foodFile();t.u=Date.now();const i=f.data.items.findIndex(x=>x.id===t.id);if(i>=0)f.data.items[i]=t;else f.data.items.push(t);f.dirty=true;saveF('food/food.json',f);scheduleSync();}
 function archHTML(){ // Archive 묶음 — 첫 탭 Food diary (다른 보관물이 들어올 자리)
  const tab=ui.archTab||'food';
- return`${moreTabs('arch')}<div class="ttl"><b>Archive</b><div class="r"><button class="btn p" onclick="foodAddModal()">＋ 새 항목</button></div></div>
- <div class="views">${[['food','🍚 Food diary']].map(([k,n])=>`<span class="${tab===k?'on':''}" onclick="ui.archTab='${k}';LS.set('tt.ui',ui);render()">${n}</span>`).join('')}</div>
- ${tab==='food'?foodHTML():''}`;
+ return`${moreTabs('arch')}<div class="ttl"><b>Archive</b><div class="r">${tab==='food'?'<button class="btn p" onclick="foodAddModal()">＋ 새 항목</button>':''}</div></div>
+ <div class="views">${[['food','🍚 Food diary'],['exam','📊 시험기록'],['strat','🎯 시험전략']].map(([k,n])=>`<span class="${tab===k?'on':''}" onclick="ui.archTab='${k}';LS.set('tt.ui',ui);render()">${n}</span>`).join('')}</div>
+ ${tab==='food'?foodHTML():tab==='exam'?examHTML():tab==='strat'?'<p class="exdim">🎯 시험전략 — 준비 중(판 2)</p>':''}`;   /* 시험기록 판 1(9/5) — 탭 둘 추가 · 시험전략은 자리만 */
 }
 /* Food diary 검색 (_task_food_search 9/3) */
 /* 검색어는 메모리(foodQv)만 — ui·localStorage·15키 동기화 무접촉(창 닫으면 초기화 · 9/2 접은 상태 규칙과 같음).
@@ -3740,11 +3751,123 @@ function shareCopy(id,btn){
 }
 function shareDel(id){const x=shareFile().data.items.find(z=>z.id===id&&!z.del);if(!x)return;
  if(confirm('지울까?'+(x.ty==='txt'?' '+(x.text||'').slice(0,30):' (이미지 파일은 저장소에 남음)'))){x.del=true;upsertShare2(x);render()}}
+/* ===== 시험기록 판 1 (2026-09-05 · _task_tt_exam_pan1.md §B) — Archive 「📊 시험기록」 = 실제시험 DB(1차·2차 · 회차 목록 → 상세 · 오답 복구 우선순 · 입력) + 「시험분석」 자리
+   데이터 exam/<사람>.json {v:1,items:[회차…]} · 동기화 = records 옆(90초 push/pull · 저장 4초 뒤 · 오프라인 dirty 큐) · 노션 「실제시험 기록」 이관분 = timetable/exam_import.py(264행 · 9/5)
+   1차 = mode 'q'(문항 120: s·i·my·ans·ok·type·why·rate·note·redo) 또는 'sum'(과목 8 점수·틀림) · 괄호 = 과목 맞음/문항(특허 20 · 상표 10 · 디보 10 · 민법 40 · 자과 각 10) · 군 점수 = Σ맞음/Σ문항×100 · 총점 = 세 군 평균(= 총 정답률) · 결과 = 총점 ≥ 합격컷
+   2차 = subj{특허·상표·디보·민소:{score,avg,note}} · 평균 = 특허·상표·민소 3과목(디보 제외 · 노션 수식 · 9/5 채팅 ②) · 결과 = 평균 ≥ 합격컷 */
+const EX_S1=[['특허',20],['상표',10],['디보',10],['민법',40],['물리',10],['화학',10],['생물',10],['지학',10]];
+const EX_G1={산재:['특허','상표','디보'],민법:['민법'],자과:['물리','화학','생물','지학']};
+const EX_S2=['특허','상표','디보','민소'], EX_AVG2=['특허','상표','민소'];
+const EX_TYPES=['조문','판례','조문+판례'], EX_WHY=['개념부족','암기흐림','함정','실수','시간부족','포기'];
+const examPath=who=>`exam/${who}.json`;
+function examFile(who){return loadF(examPath(who),{v:1,items:[]})}
+function examItems(who){return examFile(who).data.items.filter(x=>!x.del).sort((a,b)=>(b.no-a.no)||(b.cha-a.cha))}
+function examGet(id){for(const w of settings.people){const x=examFile(w).data.items.find(y=>y.id===id&&!y.del);if(x)return x}return null}
+function upsertExam(x){const f=examFile(x.who);x.u=Date.now();const i=f.data.items.findIndex(y=>y.id===x.id);if(i>=0)f.data.items[i]=x;else f.data.items.push(x);f.dirty=true;saveF(examPath(x.who),f);scheduleSync()}
+const exId=(no,cha,who)=>`${no}-${cha}-${who}`;
+const exNum=v=>{const n=parseFloat(String(v==null?'':v).replace('%',''));return isNaN(n)?null:n};
+const r1=n=>n==null?'—':String(Math.round(n*100)/100);
+function ex1Calc(x){const per={};EX_S1.forEach(([s,n])=>{per[s]={n,ok:null,wrong:null,score:null}});
+ if(x.mode==='q'){(x.q||[]).forEach(r=>{const p=per[r.s];if(!p)return;p.ok=(p.ok||0)+(r.ok?1:0);p.wrong=(p.wrong||0)+(r.ok?0:1)});
+  EX_S1.forEach(([s])=>{const p=per[s];if(p.ok!=null)p.score=p.ok/p.n*100;else p.n=0})}
+ else{EX_S1.forEach(([s,n])=>{const v=(x.sum||{})[s]||{};const p=per[s];const sc=exNum(v.score),wr=exNum(v.wrong);
+  if(sc!=null){p.score=sc;p.wrong=wr!=null?wr:Math.round(n-n*sc/100);p.ok=n-p.wrong}else if(wr!=null){p.wrong=wr;p.ok=n-wr;p.score=p.ok/n*100}else p.n=0})}
+ const grp={};Object.entries(EX_G1).forEach(([g,ss])=>{let ok=0,n=0;ss.forEach(s=>{const p=per[s];if(p.n&&p.score!=null){ok+=p.score*p.n/100;n+=p.n}});grp[g]=n?{ok,n,score:ok/n*100}:null});
+ const gs=Object.values(grp).filter(Boolean).map(g=>g.score);const total=gs.length?gs.reduce((a,b)=>a+b,0)/gs.length:null;
+ return {per,grp,total,pass:(total!=null&&x.cut!=null)?total>=x.cut:null}}
+function ex2Calc(x){const sc=s=>exNum(((x.subj||{})[s]||{}).score);const vs=EX_AVG2.map(sc).filter(v=>v!=null);const mine=vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null;return {mine,pass:(mine!=null&&x.cut!=null)?mine>=x.cut:null}}
+function exWrong(x){const ord=EX_S1.map(z=>z[0]);return (x.q||[]).map((r,i)=>Object.assign({i0:i},r)).filter(r=>!r.ok).sort((a,b)=>(ord.indexOf(a.s)-ord.indexOf(b.s))||((b.rate||0)-(a.rate||0))||(a.i-b.i))}
+const exUI=(k,v)=>{ui[k]=v;LS.set('tt.ui',ui);render()};
+function examHTML(){const tab=ui.exTab||'db';
+ return`<div class="views exsub">${[['db','실제시험 DB'],['ana','시험분석']].map(([k,n])=>`<span class="${tab===k?'on':''}" onclick="exUI('exTab','${k}')">${n}</span>`).join('')}</div>${tab==='db'?exDbHTML():exAnaHTML()}`}
+function exAnaHTML(){const c=ui.exAna||1;return`<div class="exbar">${[1,2].map(k=>`<span class="pill ${c===k?'on':''}" onclick="exUI('exAna',${k})">${k}차</span>`).join('')}</div><div class="excards"><p class="exdim">${c}차 시험분석 — 자리만(md 카드 목록은 판 2)</p></div>`}
+function exDbHTML(){const cha=ui.exCha||1,who=ui.exWho||cfg.person;const L=examItems(who).filter(x=>x.cha===cha);
+ const bar=`<div class="exbar">${[1,2].map(c=>`<span class="pill ${cha===c?'on':''}" onclick="ui.exSel='';exUI('exCha',${c})">${c}차</span>`).join('')}<span class="sep"></span>${settings.people.map(p=>`<span class="pill ${who===p?'on':''}" onclick="ui.exSel='';exUI('exWho','${esc(p)}')">${esc(p)}</span>`).join('')}<span style="flex:1"></span><button class="btn p" onclick="exAddModal()">＋ 회차</button></div>`;
+ const head=cha===1?'<tr><th>회차</th><th>날짜</th><th>점수</th><th>합격컷</th><th>결과</th><th>산재</th><th>민법</th><th>자과</th><th>비고</th></tr>':'<tr><th>회차</th><th>날짜</th><th>평균</th><th>합격컷</th><th>결과</th><th>특허</th><th>상표</th><th>디보</th><th>민소</th><th>비고</th></tr>';
+ const res=p=>`<td class="${p==null?'':p?'ok':'no'}">${p==null?'—':p?'합':'불'}</td>`;
+ const rows=L.map(x=>{const sel=ui.exSel===x.id;const kind=x.kind==='모의'?' <small class="exmock">모의</small>':'';const tr=`<tr class="exr${sel?' sel':''}" data-id="${esc(x.id)}" onclick="exUI('exSel',ui.exSel==='${x.id}'?'':'${x.id}')">`;
+  if(cha===1){const c=ex1Calc(x);const sub=s=>{const p=c.per[s];return p.n&&p.ok!=null?(x.mode==='q'?`${s.slice(0,1)} ${p.ok}/${p.n}`:`${s.slice(0,1)} 틀림 ${p.wrong}`):`${s.slice(0,1)} —`};
+   const gc=(k,ss)=>c.grp[k]?`${r1(c.grp[k].score)} <small>(${ss.map(sub).join(' · ')})</small>`:'—';
+   return tr+`<td>${x.no}회${kind}</td><td>${esc(x.date||'—')}</td><td><b>${r1(c.total)}</b></td><td>${r1(x.cut)}</td>${res(c.pass)}<td>${gc('산재',['특허','상표','디보'])}</td><td>${gc('민법',['민법'])}</td><td>${gc('자과',['물리','화학','생물','지학'])}</td><td>${x.note?'📝':''}${x.mode!=='q'?' <small>요약</small>':''}</td></tr>`}
+  const c=ex2Calc(x);const sc=s=>{const v=exNum(((x.subj||{})[s]||{}).score);return v==null?'—':r1(v)};
+  return tr+`<td>${x.no}회${kind}</td><td>${esc(x.date||'—')}</td><td><b>${r1(c.mine)}</b></td><td>${r1(x.cut)}</td>${res(c.pass)}${EX_S2.map(s=>`<td>${sc(s)}</td>`).join('')}<td>${(x.note||EX_S2.some(s=>((x.subj||{})[s]||{}).note))?'📝':''}</td></tr>`}).join('');
+ const sel=ui.exSel?L.find(x=>x.id===ui.exSel):null;
+ return bar+`<div class="extbl"><table class="ext exl">${head}${rows||'<tr><td colspan="10" class="exdim">기록 없음 — 「＋ 회차」</td></tr>'}</table></div>`+(sel?(cha===1?ex1DetailHTML(sel):ex2DetailHTML(sel)):'')+
+  `<p class="exdim">저장 = exam/${esc(who)}.json(동기화) · 노션 「실제시험 기록」 이관분 포함 · 1차 괄호 = 과목 맞음/문항(특허 20 · 상표 10 · 디보 10 · 민법 40 · 자과 각 10) · 2차 평균 = 특허·상표·민소 3과목(디보 제외)</p>`}
+function ex1DetailHTML(x){const c=ex1Calc(x);
+ const hd=`<div class="ttl exdt"><b>${x.no}회 1차 <span>${esc(x.who)} · ${esc(x.date||'날짜 없음')} · ${esc(x.kind||'정규')}${x.mode!=='q'?' · 요약 입력':''}</span></b><div class="r"><button class="btn" onclick="exEditModal('${x.id}')">✎ 편집</button><button class="btn" onclick="exQModal('${x.id}')">${x.mode==='q'?'문항 고치기':'문항 입력'}</button><button class="btn d" onclick="exDel('${x.id}')">🗑 삭제</button></div></div>`;
+ const st={};EX_S1.forEach(([s])=>{st[s]={t:{},w:{}}});(x.q||[]).forEach(r=>{if(r.ok||!st[r.s])return;if(r.type)st[r.s].t[r.type]=(st[r.s].t[r.type]||0)+1;if(r.why)st[r.s].w[r.why]=(st[r.s].w[r.why]||0)+1});
+ const cnt=o=>Object.entries(o).map(([k,v])=>k+' '+v).join(' · ')||'—';
+ const sub=`<table class="ext exs"><tr><th>과목</th><th>맞음/문항</th><th>점수</th><th>응시자 평균</th><th>유형별 오답</th><th>틀린이유</th></tr>`+EX_S1.map(([s])=>{const p=c.per[s];const av=exNum(((x.sum||{})[s]||{}).avg);
+   return`<tr><td>${s}</td><td>${p.n&&p.ok!=null?`${p.ok}/${p.n}`:'—'}</td><td>${p.n&&p.score!=null?r1(p.score):'—'}</td><td>${av==null?'—':r1(av)}</td><td>${cnt(st[s].t)}</td><td>${cnt(st[s].w)}</td></tr>`}).join('')
+  +Object.entries(EX_G1).map(([g])=>{const v=c.grp[g];return`<tr class="exg"><td>${g}</td><td>${v?`${Math.round(v.ok)}/${v.n}`:'—'}</td><td>${v?r1(v.score):'—'}</td><td colspan="3"></td></tr>`}).join('')
+  +`<tr class="exg"><td>총점</td><td></td><td>${r1(c.total)}</td><td colspan="3">합격컷 ${r1(x.cut)} → ${c.pass==null?'—':c.pass?'합격':'불합격'}</td></tr></table>`;
+ let q;if(x.mode!=='q'||!(x.q||[]).length)q=`<p class="exdim">문항 기록 없음 · 요약만 — 「문항 입력」으로 120칸을 채우면 요약은 문항에서 다시 계산</p>`;
+ else{const chip=ui.exChip||'all';const chips=`<div class="views exchips">${[['all','전체'],['wrong','❌ 오답만 · 복구 우선순'],['type','유형'],['why','틀린이유']].map(([k,n])=>`<span class="${chip===k?'on':''}" onclick="exUI('exChip','${k}')">${n}</span>`).join('')}</div>`;
+  let rows;if(chip==='wrong')rows=exWrong(x);else{rows=(x.q||[]).map((r,i)=>Object.assign({i0:i},r));if(chip==='type')rows=rows.filter(r=>r.type);if(chip==='why')rows=rows.filter(r=>r.why)}
+  let last='';q=chips+`<div class="extbl"><table class="ext exq"><tr><th>과목</th><th>#</th><th>내답</th><th>정답</th><th>맞음</th><th>유형</th><th>틀린이유</th><th>평균정답률</th><th>다시 풂</th><th>비고</th></tr>`+rows.map(r=>{const gh=(chip==='wrong'&&r.s!==last)?`<tr class="exgh"><td colspan="10">${r.s}</td></tr>`:'';last=r.s;
+   return gh+`<tr class="exqr${r.ok?'':' wrong'}" data-i="${r.i0}" onclick="exQEdit('${x.id}',${r.i0})"><td>${r.s}</td><td>${r.i}</td><td>${esc(r.my||'')}</td><td>${esc(r.ans||'')}</td><td>${r.ok?'O':'✗'}</td><td>${esc(r.type||'')}</td><td>${esc(r.why||'')}</td><td>${r.rate!=null?r.rate+'%':''}</td><td onclick="event.stopPropagation()">${['O','X'].map(v=>`<button class="btn exredo${r.redo===v?' on':''}" onclick="exRedo('${x.id}',${r.i0},'${v}')">${v}</button>`).join('')}</td><td>${r.note?'📝 '+esc(r.note):''}</td></tr>`}).join('')+'</table></div>'}
+ return`<div class="exdet">${hd}<div class="exgrid"><div>${sub}</div><div>${q}</div></div>${x.note?`<p class="exnote">📝 ${esc(x.note)}</p>`:''}</div>`}
+function ex2DetailHTML(x){const c=ex2Calc(x);
+ return`<div class="exdet"><div class="ttl exdt"><b>${x.no}회 2차 <span>${esc(x.who)} · ${esc(x.date||'날짜 없음')} · ${esc(x.kind||'정규')}</span></b><div class="r"><button class="btn" onclick="exEditModal('${x.id}')">✎ 편집</button><button class="btn d" onclick="exDel('${x.id}')">🗑 삭제</button></div></div>
+ <table class="ext exs"><tr><th>과목</th><th>득점</th><th>응시자 평균</th><th>비고</th></tr>${EX_S2.map(s=>{const v=(x.subj||{})[s]||{};return`<tr><td>${s}${s==='디보'?' <small>(평균 제외)</small>':''}</td><td>${r1(exNum(v.score))}</td><td>${r1(exNum(v.avg))}</td><td>${esc(v.note||'')}</td></tr>`}).join('')}
+ <tr class="exg"><td>평균(특허·상표·민소)</td><td>${r1(c.mine)}</td><td colspan="2">합격컷 ${r1(x.cut)} → ${c.pass==null?'—':c.pass?'합격':'불합격'}${x.avg!=null&&x.avg!==''?' · 응시자 평균 '+r1(exNum(x.avg)):''}</td></tr></table>${x.note?`<p class="exnote">📝 ${esc(x.note)}</p>`:''}</div>`}
+function exRedo(id,i,v){const x=examGet(id);if(!x||!x.q||!x.q[i])return;x.q[i].redo=x.q[i].redo===v?'':v;upsertExam(x);render()}
+function exQEdit(id,i){const x=examGet(id);if(!x||!x.q||!x.q[i])return;const r=x.q[i];const opt=(list,cur)=>`<option value="">—</option>`+list.map(v=>`<option ${cur===v?'selected':''}>${v}</option>`).join('');
+ modal(`<h4>${x.no}회 1차 · ${esc(r.s)} ${r.i}번</h4><div class="row"><label>내답</label><select id="exMy">${opt(['1','2','3','4','5'],r.my)}</select><label>정답</label><select id="exAns">${opt(['1','2','3','4','5'],r.ans)}</select></div>
+  <div class="row"><label>유형</label><select id="exTy">${opt(EX_TYPES,r.type)}</select></div><div class="row"><label>틀린이유</label><select id="exWhy">${opt(EX_WHY,r.why)}</select></div>
+  <div class="row"><label>정답률</label><input id="exRate" inputmode="decimal" value="${r.rate!=null?r.rate:''}" placeholder="%"></div><div class="row"><label>비고</label><input id="exNote" value="${esc(r.note||'')}"></div>`,
+  q=>{r.my=q('exMy').value;r.ans=q('exAns').value;r.ok=!!(r.my&&r.ans&&r.my===r.ans);r.type=q('exTy').value;r.why=q('exWhy').value;r.rate=exNum(q('exRate').value);r.note=q('exNote').value.trim();upsertExam(x);render()})}
+function exDel(id){const x=examGet(id);if(!x)return;if(!confirm(`${x.no}회 ${x.cha}차(${x.who}) 기록을 지울까?`))return;x.del=true;upsertExam(x);ui.exSel='';LS.set('tt.ui',ui);render();toast('지웠어')}
+function exAddModal(){const who=ui.exWho||cfg.person,cha=ui.exCha||1;const nos=[];for(let n=56;n<=64;n++)nos.push(n);const used=new Set(examItems(who).filter(x=>x.cha===cha).map(x=>x.no));const def=nos.filter(n=>!used.has(n)).pop()||64;
+ modal(`<h4>＋ 회차</h4><div class="row"><label>회차</label><select id="exNo">${nos.map(n=>`<option value="${n}" ${n===def?'selected':''}>${n}회</option>`).join('')}</select><select id="exCha"><option value="1" ${cha===1?'selected':''}>1차</option><option value="2" ${cha===2?'selected':''}>2차</option></select></div>
+  <div class="row"><label>날짜</label><input id="exDate" type="month"></div><div class="row"><label>사람</label><select id="exWho">${settings.people.map(p=>`<option ${p===who?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
+  <div class="row"><label>종류</label><select id="exKind"><option>정규시험</option><option>모의고사</option></select></div>
+  <div class="row"><label>1차 입력</label><select id="exMode"><option value="sum">요약(과목 8 점수·틀린 개수)</option><option value="q">문항(120칸)</option></select></div><p class="exdim">2차는 과목 넷 득점 · 응시자 평균 · 합격컷 · 비고</p>`,
+  q=>{const no=+q('exNo').value,c=+q('exCha').value,w=q('exWho').value;const id=exId(no,c,w);if(examGet(id)){toast('이미 있는 회차 — 목록에서 고쳐');return}
+   const x={id,no,cha:c,who:w,date:q('exDate').value||'',kind:q('exKind').value==='모의고사'?'모의':'정규',cut:null,note:'',del:false};
+   if(c===1){x.mode=q('exMode').value;x.q=[];x.sum={}}else x.subj={};
+   upsertExam(x);ui.exCha=c;ui.exWho=w;ui.exSel=id;LS.set('tt.ui',ui);
+   if(c===2)exEditModal(id);else if(x.mode==='q')exQModal(id);else exEditModal(id);render()})}
+function exEditModal(id){const x=examGet(id);if(!x)return;const base=`<div class="row"><label>날짜</label><input id="exDate" type="month" value="${esc(x.date||'')}"><select id="exKind"><option ${x.kind!=='모의'?'selected':''}>정규시험</option><option ${x.kind==='모의'?'selected':''}>모의고사</option></select></div><div class="row"><label>합격컷</label><input id="exCut" inputmode="decimal" value="${x.cut!=null?x.cut:''}"></div>`;
+ let body;if(x.cha===1){body=`<h4>${x.no}회 1차 · ${esc(x.who)}${x.mode!=='q'?' · 요약 입력':''}</h4>`+base+(x.mode!=='q'?`<table class="ext exin"><tr><th>과목</th><th>점수</th><th>틀린 개수</th><th>응시자 평균</th></tr>${EX_S1.map(([s,n])=>{const v=(x.sum||{})[s]||{};return`<tr><td>${s} <small>/${n}</small></td><td><input id="exS_${s}" inputmode="decimal" value="${v.score!=null&&v.score!==''?v.score:''}"></td><td><input id="exW_${s}" inputmode="numeric" value="${v.wrong!=null&&v.wrong!==''?v.wrong:''}"></td><td><input id="exA_${s}" inputmode="decimal" value="${v.avg!=null&&v.avg!==''?v.avg:''}"></td></tr>`}).join('')}</table><p class="exdim">점수만 넣으면 틀린 개수는 문항 수로 환산 · 틀린 개수만 넣어도 됨 · 산재/민법/자과·총점은 앱이 계산</p>`:`<table class="ext exin"><tr><th>과목</th><th>응시자 평균</th></tr>${EX_S1.map(([s])=>{const v=(x.sum||{})[s]||{};return`<tr><td>${s}</td><td><input id="exA_${s}" inputmode="decimal" value="${v.avg!=null&&v.avg!==''?v.avg:''}"></td></tr>`}).join('')}</table>`)+`<div class="row"><label>비고</label><input id="exNote" value="${esc(x.note||'')}"></div>`}
+ else{body=`<h4>${x.no}회 2차 · ${esc(x.who)}</h4>`+base+`<div class="row"><label>응시자 평균</label><input id="exAvg" inputmode="decimal" value="${x.avg!=null&&x.avg!==''?x.avg:''}"></div><table class="ext exin"><tr><th>과목</th><th>득점</th><th>응시자 평균</th><th>비고</th></tr>${EX_S2.map(s=>{const v=(x.subj||{})[s]||{};return`<tr><td>${s}</td><td><input id="exS_${s}" inputmode="decimal" value="${v.score!=null&&v.score!==''?v.score:''}"></td><td><input id="exA_${s}" inputmode="decimal" value="${v.avg!=null&&v.avg!==''?v.avg:''}"></td><td><input id="exN_${s}" value="${esc(v.note||'')}"></td></tr>`}).join('')}</table><div class="row"><label>비고</label><input id="exNote" value="${esc(x.note||'')}"></div>`}
+ modal(body,q=>{x.date=q('exDate').value||'';x.kind=q('exKind').value==='모의고사'?'모의':'정규';x.cut=exNum(q('exCut').value);x.note=q('exNote').value.trim();
+  if(x.cha===1){x.sum=x.sum||{};EX_S1.forEach(([s])=>{const v=x.sum[s]||{};const a=q('exA_'+s);if(a)v.avg=a.value.trim();if(x.mode!=='q'){v.score=q('exS_'+s).value.trim();v.wrong=q('exW_'+s).value.trim()}x.sum[s]=v})}
+  else{x.avg=q('exAvg').value.trim();x.subj=x.subj||{};EX_S2.forEach(s=>{x.subj[s]={score:q('exS_'+s).value.trim(),avg:q('exA_'+s).value.trim(),note:q('exN_'+s).value.trim()}})}
+  upsertExam(x);render()});document.querySelector('.modal:last-child .box').classList.add('exwide')}
+function exPick(el){const g=el.parentNode;[...g.children].forEach(b=>b.classList.toggle('on',b===el&&!el.classList.contains('on')))}
+function exQModal(id){const x=examGet(id);if(!x||x.cha!==1)return;
+ if(x.mode!=='q'&&!confirm('문항을 넣으면 요약(손입력 점수·틀린 개수)은 문항에서 다시 계산해 덮어써 — 계속?'))return;
+ const cur={};(x.q||[]).forEach(r=>{cur[r.s+'|'+r.i]=r});
+ const five=(k,s,i,v)=>`<span class="ex5" data-k="${k}" data-s="${s}" data-i="${i}">${['1','2','3','4','5'].map(n=>`<b class="${k==='ans'?'ans':''}${v===n?' on':''}" onclick="exPick(this)">${n}</b>`).join('')}</span>`;
+ let rows='';EX_S1.forEach(([s,n])=>{rows+=`<div class="exsh">${s} <small>${n}문항</small></div>`;for(let i=1;i<=n;i++){const r=cur[s+'|'+i]||{};rows+=`<div class="exqrow"><span class="n">${i}</span>내답 ${five('my',s,i,r.my||'')} <span style="width:8px"></span>정답 ${five('ans',s,i,r.ans||'')}</div>`}});
+ modal(`<h4>${x.no}회 1차 · 문항 120 <small style="font-weight:400;color:#888">내답·정답 탭(같은 것 다시 탭 = 지움) · 맞음·요약은 자동</small></h4><div id="exQwrap">${rows}</div>
+  <div class="row" style="align-items:flex-start"><label>정답률</label><textarea id="exRates" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:60px;font:inherit" placeholder="발표 뒤 평균정답률 120개 — 과목 순(특허 20 · 상표 10 · 디보 10 · 민법 40 · 물리·화학·생물·지학 각 10) · 탭/줄바꿈/쉼표 구분">${esc((x.q||[]).length===120?x.q.map(r=>r.rate!=null?r.rate:'').join('\n'):'')}</textarea></div>
+  <div class="row"><label>합격컷</label><input id="exCut" inputmode="decimal" value="${x.cut!=null?x.cut:''}"></div>`,
+  q=>{const rates=q('exRates').value.split(/[\s,]+/).filter(Boolean).map(exNum);const groups=[...q('exQwrap').querySelectorAll('.ex5')];const pick={};groups.forEach(g=>{const on=g.querySelector('b.on');pick[g.dataset.k+'|'+g.dataset.s+'|'+g.dataset.i]=on?on.textContent:''});
+   const nq=[];let k=0;EX_S1.forEach(([s,n])=>{for(let i=1;i<=n;i++){const o=cur[s+'|'+i]||{};const my=pick['my|'+s+'|'+i],ans=pick['ans|'+s+'|'+i];nq.push({s,i,my,ans,ok:!!(my&&ans&&my===ans),type:o.type||'',why:o.why||'',rate:rates.length===120?rates[k]:(o.rate!=null?o.rate:null),note:o.note||'',redo:o.redo||''});k++}});
+   x.mode='q';x.q=nq;x.cut=exNum(q('exCut').value);EX_S1.forEach(([s])=>{if(x.sum&&x.sum[s]){delete x.sum[s].score;delete x.sum[s].wrong}});upsertExam(x);render();toast('문항 120 저장 · 요약은 문항에서 계산')});
+ document.querySelector('.modal:last-child .box').classList.add('exwide')}
+/* ---- B-5 토큰 만료 칩 · 백업(D16) — 만료일 사람별 cfg.tokenExp[사람](기기별 · SYNC 밖 · 기본 2027-08-28) · 마지막 백업 cfg.lastBackup · 30일 전부터 칩 · 지나면 빨강 ---- */
+const TOK_DEF='2027-08-28';
+function tokExp(){return ((cfg.tokenExp||{})[cfg.person])||TOK_DEF}
+function tokSetExp(v){if(!v)return;cfg.tokenExp=Object.assign({},cfg.tokenExp||{},{[cfg.person]:v});LS.set('tt.cfg',cfg);render()}
+function tokDays(){return Math.ceil((parse(tokExp())-parse(today()))/864e5)}
+function tokDue(){return tokDays()<=30}
+function tokChipHTML(){if(!tokDue())return'';const n=tokDays();return`<span class="tokchip${n<0?' over':''}" onclick="tokSheet()">🔑 토큰 갱신 · 백업 ${n>=0?'D-'+n:'D+'+(-n)+' · 만료'}</span>`}
+function tokRenew(){const d=parse(tokExp());d.setFullYear(d.getFullYear()+1);tokSetExp(iso(d));toast('토큰 만료 '+iso(d))}
+function tokBackupDone(){cfg.lastBackup=today();LS.set('tt.cfg',cfg);toast('마지막 백업 '+cfg.lastBackup);render()}
+function tokSheet(){modal(`<h4>🔑 토큰 갱신 · 백업 <small style="font-weight:400;color:#888">만료 ${esc(tokExp())} · 마지막 백업 ${esc(cfg.lastBackup||'없음')}</small></h4>
+ <ol class="toksteps"><li>GitHub → Settings → Developer settings → Fine-grained tokens → <b>study-app-phone</b> 재발급(1년) → 이 앱 설정 「GitHub 토큰」에 붙여넣기(자과 서재·민법OX 도 같은 칸을 읽음)</li>
+ <li><code>N:\\개인\\claude\\tt_backup.cmd</code> 더블클릭 → <code>_백업\\tt_YYYYMMDD.zip</code>(records·exam·계획·설정·food 그림 · 교재 조각 제외) → 아래 「백업 완료」</li></ol>
+ <div class="row"><button class="btn" onclick="tokBackupDone()">백업 완료(오늘)</button></div>`,q=>tokRenew(),null,document,'올해 완료(만료 +1년)')}
 /* ----- 설정 ----- */
 function setHTML(){
  return`${moreTabs('set')}<div class="ttl"><b>설정</b></div><div class="set">
  <div class="row"><label>나는</label><select onchange="cfg.person=this.value;LS.set('tt.cfg',cfg);render()">${settings.people.map(p=>`<option ${cfg.person==p?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
  <div class="row"><label>GitHub 토큰</label><input type="password" id="tok" value="${esc(cfg.token)}" placeholder="github_pat_…" autocomplete="off"><button class="btn" onclick="cfg.token=$('tok').value.trim();LS.set('tt.cfg',cfg);toast('저장');syncAll()">저장 후 동기화</button></div>
+ <div class="row"><label>토큰 만료</label><input type="date" value="${esc(tokExp())}" onchange="tokSetExp(this.value)" style="flex:0 0 140px"><span style="font-size:11px">마지막 백업 ${esc(cfg.lastBackup||'없음')}</span><button class="btn" onclick="tokBackupDone()">백업 완료</button><button class="btn" onclick="tokSheet()">🔑 갱신 안내</button></div>
  <div class="row"><label>저장소</label><span>${REPO} · ${BRANCH} · 이 기기 브라우저에만 저장됨</span></div>
  <div class="row"><label>상태</label><span>${cfg.lastSync?'마지막 동기화 '+new Date(cfg.lastSync).toLocaleString('ko'):'아직 없음'} · 대기 ${listDirty().length}건 <button class="btn" onclick="syncAll()">지금 동기화</button></span></div>
  <div class="log">${syncLog.map(esc).join('\n')||'(로그 없음)'}</div>
