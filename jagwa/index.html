@@ -131,6 +131,11 @@ body[data-layer="card"] #tLink,body[data-layer="card"] #vLink,body[data-layer="c
 #ndGrip{position:absolute;right:0;top:0;bottom:0;width:13px;border-left:1px solid var(--line);background:var(--paper);display:grid;place-items:center;
   color:var(--muted);font-size:13px;cursor:ew-resize;touch-action:none;user-select:none;-webkit-user-select:none}
 #ndGrip:hover{color:var(--teal);background:rgba(46,125,111,.08)}
+/* 첫 화면 목차 서랍 손잡이(세 층 공통 · 2026-09-05 필터 add1) — 너비·접힘 규칙은 층 CSS(#tree) · 여기는 손잡이와 본문 여백 */
+#trGrip{position:absolute;right:0;top:0;bottom:0;width:13px;border-left:1px solid var(--line);background:var(--paper);display:grid;place-items:center;color:var(--muted);font-size:13px;cursor:ew-resize;touch-action:none;user-select:none;-webkit-user-select:none}
+#trGrip:hover{color:var(--teal);background:rgba(46,125,111,.08)}
+@media (min-width:900px){body.tropen{padding-left:var(--trw,272px)} body.tropen.trfold{padding-left:13px}}
+body[data-layer="pdf"] #trTog{display:none!important}   /* 물리 서랍엔 기출/확인 토글 없음 */
 @media (min-width:900px){#view.ndopen .stage{padding-left:var(--ndw,236px)}}
 .ndrow{display:flex;gap:6px;align-items:baseline;padding:5px 10px 5px 10px;font-size:11.5px;cursor:pointer;line-height:1.4;border-left:3px solid transparent}
 .ndrow:hover{background:rgba(128,128,128,.1)}
@@ -435,7 +440,10 @@ select.rsel{padding:4px 8px;border:1px solid var(--line);border-radius:999px;bac
   #bookpane.open{transform:none} #bookpane .btabs button{display:block}
 }
 /* 목차 트리 서랍 */
-#tree{position:fixed;left:0;top:0;bottom:0;width:272px;z-index:62;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;box-shadow:2px 0 12px rgba(0,0,0,.14)}
+#tree{position:fixed;left:0;top:0;bottom:0;width:var(--trw,272px);z-index:62;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;box-shadow:2px 0 12px rgba(0,0,0,.14)}
+/* 세 층 공통 손잡이(#trGrip · 핵심 gripWire · 2026-09-05 필터 add1) — 접힘 = 손잡이 13px 만 · 내용은 손잡이 폭만큼 비운다 */
+#tree.fold{width:13px} #tree.fold .trhead,#tree.fold #trlist,#tree.fold #trq{display:none}
+#tree .trhead,#tree #trlist,#tree #trq{margin-right:13px}
 #tree .trhead{display:flex;align-items:center;gap:6px;padding:calc(env(safe-area-inset-top) + 8px) 8px 8px 12px;font-size:12px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--line)}
 #tree .trhead button{padding:4px 8px;border:1px solid var(--line);border-radius:6px;font-size:11px;background:var(--card)}
 #trlist{flex:1;overflow-y:auto;padding:4px 0;font-size:12px;overscroll-behavior:contain}
@@ -622,7 +630,7 @@ select.rsel{padding:4px 8px;border:1px solid var(--line);border-radius:999px;bac
 .snt{margin-left:4px;cursor:pointer;font-style:normal;font-size:11px} .snt.none{opacity:.35}
 #bkSn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 9px;font:inherit;font-size:12px;cursor:pointer}
 /* 층 게이트(2026-09-04 병합 · add1) — PDF 층(물리)에는 카드 층 조각이 없고, 카드 층(지학·생물)에는 물리 전용 도구가 없다 */
-body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #tree,body[data-layer="pdf"] #sub,body[data-layer="pdf"] #btnTree,body[data-layer="pdf"] #tBook,body[data-layer="pdf"] #tSub,body[data-layer="pdf"] #tMatch,body[data-layer="pdf"] #btnBook,body[data-layer="pdf"] #book,body[data-layer="pdf"] #bkq,body[data-layer="pdf"] #snw{display:none!important}
+body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #sub,body[data-layer="pdf"] #tBook,body[data-layer="pdf"] #tSub,body[data-layer="pdf"] #tMatch,body[data-layer="pdf"] #btnBook,body[data-layer="pdf"] #book,body[data-layer="pdf"] #bkq,body[data-layer="pdf"] #snw{display:none!important}
 /* 과목 탭 셀(add1) — 현재 과목 .on · 준비 안 된 과목 .off */
 #subjTabs{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;vertical-align:middle;background:var(--card)}
 #subjTabs button{padding:6px 9px;border:0;border-right:1px solid var(--line);background:none;font:inherit;font-size:12.5px;color:inherit;cursor:pointer;white-space:nowrap;line-height:1.2}
@@ -684,6 +692,7 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #tree,body[data-layer="pdf"
   <div class="trhead"><span>목차 · 쪽 · 문항 수 · 마지막 마크</span><span class="sp"></span><button id="trTog"></button><button id="trX">✕</button></div>
   <div id="trlist"></div>
   <div id="trq"></div>
+  <div id="trGrip" title="누르면 접기 · 끌면 너비">‹</div>
 </div>
 <div id="sub" class="hide">
   <div class="panel">
@@ -2324,15 +2333,44 @@ $('#navTg').onclick=async()=>{const dr=$('#navdr');dr.classList.toggle('hide');n
   if(SET.nav)navSync()};
 /* §3 손잡이 — 탭(이동 4px 미만) = 접기 · 끌기 = 너비 160~420(폰은 화면−60) · SET.ndw 기기별 · SYNC 밖 */
 function ndSetW(w){w=Math.max(160,Math.min(Math.min(420,window.innerWidth-60),Math.round(w)));$('#view').style.setProperty('--ndw',w+'px');return w}
-(function(){
-  const dr=$('#navdr'),g=$('#ndGrip');let d=null;
-  g.addEventListener('pointerdown',e=>{d={x:e.clientX,w:dr.getBoundingClientRect().width,moved:false};try{g.setPointerCapture(e.pointerId)}catch(_){}ndPopClose();e.preventDefault()},{passive:false});
-  g.addEventListener('pointermove',e=>{if(!d)return;const dx=e.clientX-d.x;if(Math.abs(dx)>=4)d.moved=true;if(d.moved)ndSetW(d.w+dx)});
-  const up=async()=>{if(!d)return;const was=d;d=null;
-    if(!was.moved){dr.classList.add('hide');$('#view').classList.remove('ndopen');SET.nav=false;await put('kv','set',SET);return}
-    SET.ndw=Math.round(dr.getBoundingClientRect().width);await put('kv','set',SET)};
-  g.addEventListener('pointerup',up);g.addEventListener('pointercancel',up);
-})();
+/* 공통 손잡이(2026-09-05 · 필터 add1 B-2) — #ndGrip·#bkGrip(층)·#trGrip 셋이 이 함수 하나: 탭(이동 4px 미만) = onTap · 끌기 = setW(폭) · 뗄 때 onDrop(폭) · folded() 면 끌기·onDrop 무시 · before = 누를 때(팝업 닫기 등) */
+function gripWire(dr,g,o){let d=null;
+  g.addEventListener('pointerdown',e=>{d={x:e.clientX,w:dr.getBoundingClientRect().width,moved:false};try{g.setPointerCapture(e.pointerId)}catch(_){}if(o.before)o.before();e.preventDefault()},{passive:false});
+  g.addEventListener('pointermove',e=>{if(!d)return;const dx=e.clientX-d.x;if(Math.abs(dx)>=4)d.moved=true;if(d.moved&&!(o.folded&&o.folded()))o.setW(d.w+dx)});
+  const up=async()=>{if(!d)return;const was=d;d=null;if(!was.moved){await o.onTap();return}if(o.folded&&o.folded())return;await o.onDrop(Math.round(dr.getBoundingClientRect().width))};
+  g.addEventListener('pointerup',up);g.addEventListener('pointercancel',up)}
+gripWire($('#navdr'),$('#ndGrip'),{before:()=>ndPopClose(),setW:ndSetW,
+  onTap:async()=>{$('#navdr').classList.add('hide');$('#view').classList.remove('ndopen');SET.nav=false;await put('kv','set',SET)},
+  onDrop:async w=>{SET.ndw=w;await put('kv','set',SET)}});   /* 동작 = 옛 IIFE 그대로 */
+
+/* ═══ 첫 화면 목차 서랍(물리 · 2026-09-05 _task_phys_filter_fix_add1.md B-1) — 지학·생물과 같은 #tree(층 마커 HTML · 물리는 게이트만 풀었다) · 줄 = 대단원(F.BIG) → 소단원(F.SUB) · 수 = 「변리사 기출/기본」 칩(specPast) 기준 · 마지막 마크 · 카드 층에서는 층의 buildTree/treePick/treeHit/treeOpen/treeClose 가 갈아 끼운다 ═══ */
+const trDot=m=>m==='O'?'g':m==='Q'?'y':m==='X'?'r':m==='P'?'k':'';
+function trStats(rows){let last=null;rows.forEach(r=>{const h=hist(r[F.NO]);if(h.length&&(!last||(h[h.length-1].t||0)>(last.t||0)))last=h[h.length-1]});return {n:rows.length,m:last?last.m:''}}
+function buildTree(){const box=$('#trlist');if(!box)return;const T=DATA.filter(specPast);let h='';
+  BIGS.forEach(b=>{const rows=T.filter(r=>r[F.BIG]===b);const bs=trStats(rows);
+    h+=`<div class="trch${FL.bigs.includes(b)&&!FL.subs.length?' hit':''}" data-b="${esc(b)}"><i class="dot ${trDot(bs.m)}"></i>${esc(bigLabel(b))}<span class="n">${bs.n}</span></div>`;
+    [...new Set(DATA.filter(r=>r[F.BIG]===b).map(r=>r[F.SUB]))].forEach(sv=>{const ss=trStats(rows.filter(r=>r[F.SUB]===sv));
+      h+=`<div class="trsec${FL.subs.includes(sv)?' hit':''}" data-b="${esc(b)}" data-s="${esc(sv)}"><i class="dot ${trDot(ss.m)}"></i>${esc(sv)}<span class="n">${ss.n}</span></div>`})});
+  box.innerHTML=h;const hd=$('#tree .trhead span');if(hd)hd.textContent='목차 · 문항 수 · 마지막 마크 · '+(FL.past==='y'?'변리사 기출':FL.past==='n'?'기본':FL.past==='p'?'타기출':'전체');
+  box.querySelectorAll('[data-b]').forEach(el=>el.onclick=()=>treePick(el.dataset.b,el.dataset.s||''));
+  const q=$('#trq');if(q)q.innerHTML='';}
+function treePick(big,sub){FL.bigs=[big];FL.subs=sub?[sub]:[];draw();
+  const key=bigLabel(big)+' · '+(sub||'');const hd=[...document.querySelectorAll('#list .grouphd')].find(x=>sub?(x.firstChild&&x.firstChild.textContent===key):true);
+  if(hd){const top=$('#lib .top');const y=hd.getBoundingClientRect().top+window.scrollY-((top?top.getBoundingClientRect().height:0)+8);window.scrollTo({top:Math.max(0,y),behavior:'smooth'})}
+  if(window.innerWidth<900)treeClose()}
+function treeHit(sub){buildTree();const el=[...document.querySelectorAll('#trlist [data-s]')].find(x=>x.dataset.s===sub);if(el)el.scrollIntoView({block:'center'})}
+function treeOpen(){$('#tree').classList.remove('hide');document.body.classList.add('tropen');buildTree()}
+function treeClose(){$('#tree').classList.add('hide');document.body.classList.remove('tropen')}
+$('#btnTree').onclick=()=>{$('#tree').classList.contains('hide')?treeOpen():treeClose()};
+$('#trX').onclick=()=>treeClose();
+{const _drawT=draw;draw=function(){_drawT();if(!CARD_LAYER&&!$('#tree').classList.contains('hide'))buildTree()}}   /* 필터·칩이 바뀌면 열린 서랍의 수도 따라간다 */
+/* 세 층 공통 손잡이 #trGrip(층 마커 HTML) — 탭 = 접기(손잡이만 남김 · SET.tro) · 끌기 = 너비 160~420(폰 화면−60 · SET.trw) · 기기별 · SYNC 밖 · 데스크톱(≥900) 열려 있을 때 본문 왼쪽 여백 = body.tropen padding · 폰은 fixed 덮개 */
+function trSetW(w){w=Math.max(160,Math.min(Math.min(420,window.innerWidth-60),Math.round(w)));document.documentElement.style.setProperty('--trw',w+'px');return w}
+function trFold(on){on=!!on;$('#tree').classList.toggle('fold',on);document.body.classList.toggle('trfold',on);const g=$('#trGrip');if(g)g.textContent=on?'›':'‹';return on}
+(function(){const dr=$('#tree'),g=$('#trGrip');if(!dr||!g)return;
+  gripWire(dr,g,{folded:()=>dr.classList.contains('fold'),setW:trSetW,
+    onTap:async()=>{SET.tro=trFold(!dr.classList.contains('fold'))?1:0;await put('kv','set',SET)},
+    onDrop:async w=>{SET.trw=w;await put('kv','set',SET)}})})();
 
 /* 🔒 화면 고정 · ⟳ 회전 · ＋ 확대 단추는 뺐다(2026-09-05 필터 손질 B-4) — SET.rot·SET.zoom 은 시동 때 한 번 되돌린다(SET.p3reset) · renderPage 는 그대로 SET 을 읽는다 */
 $('#tUndo').onclick=()=>{const a=INK[LAYER];if(a&&a.length){a.pop();paintInk();saveInk()}};
@@ -3084,6 +3122,7 @@ function recBoot(){
   if(!SET.autoNextReset){SET.autoNext=false;SET.autoNextReset=1;await put('kv','set',SET);}
   if(!SET.p3reset){SET.rot={};SET.zoom=1;SET.p3reset=1;await put('kv','set',SET);}   /* 2026-09-05 필터 손질: ⟳＋ 단추를 떼며 회전·확대를 한 번 맞춤(회전 0 · 배율 1)으로 */
   if(SET.ndw)ndSetW(SET.ndw);   /* 서랍 너비(기기별) */
+  if(SET.trw)trSetW(SET.trw);trFold(!!SET.tro);   /* 목차 서랍 너비·접힘(기기별 · 세 층 공통 · 필터 add1) */
   MPOS=(await get('kv','maskpos'))||{};
   OPOS=(await get('kv','omrpos'))||{};
   CMT=(await get('kv','note'))||{};
@@ -3620,8 +3659,8 @@ function treeList(){
   const c=box.querySelector('.cur');if(c)c.scrollIntoView({block:'nearest'});
 }
 function navSync(){if(!$('#tree').classList.contains('hide'))buildTree();else treeList()}
-function treeOpen(){$('#tree').classList.remove('hide');buildTree()}
-function treeClose(){$('#tree').classList.add('hide')}
+function treeOpen(){$('#tree').classList.remove('hide');document.body.classList.add('tropen');buildTree()}   /* 필터 add1: 데스크톱 여백 동행(body.tropen · 핵심 CSS) */
+function treeClose(){$('#tree').classList.add('hide');document.body.classList.remove('tropen')}
 $('#navTg').onclick=()=>{$('#tree').classList.contains('hide')?treeOpen():treeClose()};
 $('#btnTree').onclick=()=>{$('#tree').classList.contains('hide')?treeOpen():treeClose()};
 $('#trX').onclick=treeClose;
@@ -4067,14 +4106,9 @@ function bkTocCur(it){$$('#bklist .bkit.cur').forEach(x=>x.classList.remove('cur
   try{el.scrollIntoView({block:'nearest'})}catch(e){}}
 function bkSetW(w){w=Math.max(160,Math.min(Math.min(420,window.innerWidth-60),Math.round(w)));$('#book').style.setProperty('--bkw',w+'px');return w}
 function bkTocFold(on){$('#bktoc').classList.toggle('fold',on);$('#bkGrip').textContent=on?'›':'‹'}
-(function(){const dr=$('#bktoc'),g=$('#bkGrip');let d=null;
-  g.addEventListener('pointerdown',e=>{d={x:e.clientX,w:dr.getBoundingClientRect().width,moved:false};try{g.setPointerCapture(e.pointerId)}catch(_){}e.preventDefault()},{passive:false});
-  g.addEventListener('pointermove',e=>{if(!d)return;const dx=e.clientX-d.x;if(Math.abs(dx)>=4)d.moved=true;if(d.moved&&!dr.classList.contains('fold'))bkSetW(d.w+dx)});
-  const up=async()=>{if(!d)return;const was=d;d=null;
-    if(!was.moved){bkTocFold(!dr.classList.contains('fold'));bkSave();if(BK.clamp)BK.clamp();zApply(BK);return}
-    if(dr.classList.contains('fold'))return;SET.bkw=Math.round(dr.getBoundingClientRect().width);await put('kv','set',SET)};
-  g.addEventListener('pointerup',up);g.addEventListener('pointercancel',up);
-})();
+gripWire($('#bktoc'),$('#bkGrip'),{folded:()=>$('#bktoc').classList.contains('fold'),setW:bkSetW,
+  onTap:async()=>{const dr=$('#bktoc');bkTocFold(!dr.classList.contains('fold'));bkSave();if(BK.clamp)BK.clamp();zApply(BK)},
+  onDrop:async w=>{SET.bkw=w;await put('kv','set',SET)}});   /* 필터 add1: 공통 gripWire(핵심) 로 갈아탐 · 동작 무변(탭 = 접기 · 4px 끌기 · 접힌 채 끌기 무시 · SET.bkw) */
 /* ── 조각 받아 쪽 잇기 ── */
 bkLoadPiece=async function(pc){
   const doc=await pieceDoc(pc.file);const n=Math.min(doc.numPages,pc.인쇄끝-pc.pdf_offset);const w=$('#bkworld');
