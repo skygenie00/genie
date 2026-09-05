@@ -3865,7 +3865,7 @@ function anaSubPts(title){const m=(title||'').match(/\(([\d·.]+)\)/);return m?m
 /* 요소 표 내 열 → 설문별 요약(답 ✘ → 답틀 · 요소 ✘ → a·c 누락 · 메모 ★ → 굵게) */
 function anaSum(md,me){const P=mdParse(md);const sec=P.secs.find(x=>/^요소/.test(x.title));if(!sec)return null;const out=[];let cur=null;
  const flush=()=>{if(!cur)return;const T=mdTable(cur.t);const mi=T.head.indexOf(me);const miss=[];let ans='',memo='';
-  if(mi>0)T.rows.forEach(r=>{const k=r[0]||'',v=r[mi]||'';if(/^답/.test(k))ans=v;else if(/^메모/.test(k))memo=v;else if(/^[a-z]\b/.test(k)&&/^[✘X]/.test(v))miss.push(k[0])});
+  if(mi>0)T.rows.forEach(r=>{const k=r[0]||'',v=r[mi]||'';if(/^답/.test(k))ans=v;else if(/^메모/.test(k))memo=v;else if(/^★?[a-z]\b/.test(k)&&/^[✘X]/.test(v))miss.push(k.replace(/^★/,'')[0])});
   const parts=[];if(/^[✘X]/.test(ans))parts.push('답틀');if(miss.length)parts.push(miss.join('·')+' 누락');
   out.push({n:cur.n,text:parts.join(' · ')||(mi>0?'ok':'—'),star:/★/.test(memo)});cur=null};
  sec.lines.forEach(ln=>{const m=ln.match(/^### 설\((\d)\)/);if(m){flush();cur={n:+m[1],t:[]};return}if(cur&&/^\s*\|/.test(ln))cur.t.push(ln)});flush();return out}
