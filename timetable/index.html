@@ -624,6 +624,13 @@ tr:hover .lsx{color:#c33}
 .shrow{display:flex;gap:6px;align-items:flex-start;font-size:11px;padding:6px 4px;border-bottom:1px solid #f0f0f1}
 .shrow .tx{flex:1;min-width:0;white-space:pre-wrap;word-break:break-all;max-height:60px;overflow:hidden}
 .shrow .ops{display:flex;gap:4px;flex:none}
+.shrow .at{color:#888;font-size:10px;flex:none;padding-top:1px}
+/* 가져오기 날짜별 미리보기(9/6 share_import §B-2) */
+.recdt{display:flex;gap:6px;align-items:center;padding:3px 0;border-bottom:1px dashed #eee;cursor:pointer}
+.recdt.same{color:#999}
+.recdl{padding:2px 0 4px 22px;color:#666}.recdl div{display:flex;gap:8px;align-items:center}
+.recst{border-radius:3px;padding:0 4px;font-size:9.5px;white-space:nowrap}
+.recst.new{background:#e6f4ea;color:#1e7b3a}.recst.chg{background:#fff3b0;color:#8a6d00}.recst.same{background:#eee;color:#777}
 /* 시험기록 판 1(9/5) — Archive 📊 · 토큰 칩 */
 .exbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 8px}.exbar .pill{border:1px solid #ddd;border-radius:9px;padding:2px 9px;font-size:11px;cursor:pointer;background:#fff}.exbar .pill.on{background:#eee;font-weight:700}.exbar .sep{width:1px;height:16px;background:#ddd;margin:0 4px}
 .extbl{overflow-x:auto}table.ext{border-collapse:collapse;font-size:11px;width:100%}table.ext th,table.ext td{border-bottom:1px solid #eee;padding:4px 6px;text-align:left;white-space:nowrap}table.ext th{color:#666;font-weight:600;background:#fafafa}table.ext tr.exr{cursor:pointer}table.ext tr.exr:hover{background:#f6f6f6}table.ext tr.sel{background:color-mix(in srgb,var(--m8) 18%,#fff)}table.ext td.ok{color:#1b7f4b;font-weight:700}table.ext td.no{color:#c33;font-weight:700}table.ext small{color:#888;font-size:10px}.exmock{color:#b06;font-size:9px}
@@ -3399,7 +3406,7 @@ function recImportModal(){
  <div id="recPv" style="font-size:10.5px;color:#555;border:1px dashed #ccc;border-radius:4px;padding:6px;margin:4px 0;display:none"></div>
  <div class="row" style="align-items:flex-start"><label>ⓐ 붙여넣기</label><textarea id="recTx" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:110px;font:10.5px/1.5 Consolas,monospace" placeholder="[OX 학습로그] 2026-08-25 … / [물리535 학습로그] … — 형식 자동 인식 · 여러 날짜 한 번에"></textarea></div>
  <div class="row" style="justify-content:flex-end"><span style="font-size:10px;color:#888;margin-right:auto">대비책 — 토큰·인터넷이 없을 때, 옛 로그를 밀어 넣을 때</span><button class="btn" onclick="recParse()">인식</button></div>
- <p style="font-size:10px;color:#888">저장 = records/${esc(cfg.person)}.json · 같은 (날짜·앱·단원)은 덮어씀 · push 로 기기 간 공유</p>
+ <p style="font-size:10px;color:#888">저장 = records/${esc(cfg.person)}.json · <b>체크한 날짜만</b> · 같은 (날짜·앱·단원)은 덮어씀(앱 값이 이김) · push 로 기기 간 공유</p>
  <div class="acts"><button class="btn" onclick="document.getElementById('recImpM').remove()">닫기</button><button class="btn p" id="recGo" disabled onclick="recImportGo()">가져오기</button></div></div>`;
  m.addEventListener('click',e=>{if(e.target===m)m.remove()});
  document.body.appendChild(m);
@@ -3409,10 +3416,8 @@ function recParse(){
  const pv=document.getElementById('recPv');pv.style.display='block';
  if(!r.blocks.length){pv.innerHTML='읽을 수 있는 블록이 없어 — 머리줄 「[OX 학습로그] YYYY-MM-DD」·「[물리535 학습로그] …」 확인';recPrev=null;document.getElementById('recGo').disabled=true;return}
  const list=[];r.blocks.forEach(b=>b.items.forEach(it=>list.push(Object.assign({d:b.d,app:b.app,subj:b.subj,src:'paste'},it))));
- recPrev={list};
- pv.innerHTML=r.blocks.map(b=>`✓ <b>${esc(b.app)}</b> · ${b.d} · ${b.items.length}줄 · ${b.items.reduce((a,x)=>a+x.n,0)}문항`).join('<br>')
-  +(r.bad.length?`<br><span style="color:#c60">못 읽음 ${r.bad.length}줄(건너뜀):</span><br><span style="color:#999">${r.bad.slice(0,8).map(esc).join('<br>')}${r.bad.length>8?'<br>…':''}</span>`:'');
- document.getElementById('recGo').disabled=false;
+ recPreviewSet(list,r.blocks.map(b=>`✓ <b>${esc(b.app)}</b> · ${b.d} · ${b.items.length}줄 · ${b.items.reduce((a,x)=>a+x.n,0)}문항`).join('<br>')
+  +(r.bad.length?`<br><span style="color:#c60">못 읽음 ${r.bad.length}줄(건너뜀):</span><br><span style="color:#999">${r.bad.slice(0,8).map(esc).join('<br>')}${r.bad.length>8?'<br>…':''}</span>`:''));
 }
 /* 이 기기 IndexedDB 직접 읽기 — **물러날 길**(저장소를 못 읽을 때) */
 async function recReadOrigin(A){
@@ -3457,18 +3462,41 @@ async function recAppRead(app){
    +(A.origin?'':'<br><span style="color:#888">ⓐ 붙여넣기로도 넣을 수 있어</span>');
   return;
  }
- const have=new Set(recFile(cfg.person).data.items.filter(r=>!r.del&&r.app===app).map(r=>r.d));
- const dates=[...new Set(list.map(r=>r.d))];
- const nw=dates.filter(d=>!have.has(d)).length;
- recPrev={list};
- pv.innerHTML=`✓ <b>${esc(app)}</b> · ${esc(via)} · 날짜 ${dates.length}일(새 날짜 ${nw}) · ${list.reduce((a,x)=>a+x.n,0)}문항 — 「가져오기」로 저장`
-  +(why?`<br><span style="color:#c60">${esc(why)} — 이 기기 것으로 읽었어</span>`:'');
- document.getElementById('recGo').disabled=false;
+ recPreviewSet(list,`✓ <b>${esc(app)}</b> · ${esc(via)}`+(why?` · <span style="color:#c60">${esc(why)} — 이 기기 것으로 읽었어</span>`:''));
 }
+/* 변경분 판정(9/6 _task_tt_share_import §B-2) — 키 d|app|unit(= id · 자기 것만) · 상태 새/바뀜/같음
+   비교 = n·o·x·q 항상 · min·items 는 **들어오는 행에 있으면**(기존에 없으면 바뀜 = 보강 · 둘 다 있으면 값 대조 · items 는 [no,m,s] 순서 그대로) · 들어오는 행에 없으면 무시(붙여넣기 행 보호)
+   덮어쓰기 규칙(9/1 「정본은 각 앱 · tt 는 사본」)은 그대로 — 체크한 날짜의 행을 upsertRecs 로 덮어쓴다 */
+function recSame(a,b){
+ for(const k of['n','o','x','q'])if((a[k]||0)!==(b[k]||0))return false;
+ if(b.min!=null){if(a.min==null||(a.min||0)!==(b.min||0))return false}
+ if(Array.isArray(b.items)){if(!Array.isArray(a.items))return false;const f=L=>JSON.stringify(L.map(i=>[String(i.no),i.m||'',i.s||0]));if(f(a.items)!==f(b.items))return false}
+ return true}
+function recDiff(list){
+ const ex=new Map(recFile(cfg.person).data.items.filter(r=>!r.del).map(r=>[r.id||(r.d+'|'+r.app+'|'+r.unit),r]));
+ const rows=list.map(r=>{const o=ex.get(r.d+'|'+r.app+'|'+r.unit);return{r,st:!o?'new':(recSame(o,r)?'same':'chg')}});
+ const byD={};rows.forEach(x=>{const b=byD[x.r.d]||(byD[x.r.d]={rows:[],n:0,new:0,chg:0,same:0});b.rows.push(x);b.n+=x.r.n||0;b[x.st]++});
+ Object.values(byD).forEach(b=>{b.st=b.same===b.rows.length?'same':(b.new===b.rows.length?'new':'chg')});
+ return{rows,byD}}
+function recPreviewSet(list,head){ // 저장소·이 기기·붙여넣기 세 갈래가 다 여기로 온다(한 벌)
+ const d=recDiff(list);const dates=Object.keys(d.byD).sort();
+ recPrev={list,rows:d.rows,byD:d.byD,dates,chk:new Set(dates.filter(x=>d.byD[x].st!=='same')),open:new Set(),head:head||''};
+ recPvPaint()}
+function recPvPaint(){
+ const P=recPrev,pv=document.getElementById('recPv');if(!P||!pv)return;
+ const D=P.dates,c=k=>D.filter(x=>P.byD[x].st===k).length;const M=P.list.reduce((a,x)=>a+(x.n||0),0);const lab={new:'새',chg:'바뀜',same:'같음'};
+ pv.innerHTML=(P.head?P.head+'<br>':'')+`날짜 <b>${D.length}일</b> · 새 ${c('new')}일 · 바뀜 ${c('chg')}일 · 같음 ${c('same')}일 · ${M}문항 — 체크한 날짜만 가져와`
+  +D.map(x=>{const b=P.byD[x];return`<div class="recdt ${b.st}" onclick="recExp('${x}')"><input type="checkbox" ${P.chk.has(x)?'checked':''} onclick="event.stopPropagation();recTog('${x}')"> <b>${x}</b> · 단원 ${b.rows.length} · 문항 ${b.n} · <span class="recst new">새 ${b.new}</span><span class="recst chg">바뀜 ${b.chg}</span><span class="recst same">같음 ${b.same}</span><span style="margin-left:auto;color:#999">${P.open.has(x)?'▴':'▾'}</span></div>`
+   +(P.open.has(x)?`<div class="recdl">${b.rows.map(y=>`<div><span class="recst ${y.st}">${lab[y.st]}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(y.r.app)} · ${esc(y.r.ulabel||y.r.unit)}</span><span>${y.r.n||0}문항</span></div>`).join('')}</div>`:'')}).join('');
+ const g=document.getElementById('recGo');if(g)g.disabled=P.chk.size===0}
+function recTog(d){if(!recPrev)return;recPrev.chk.has(d)?recPrev.chk.delete(d):recPrev.chk.add(d);recPvPaint()}
+function recExp(d){if(!recPrev)return;recPrev.open.has(d)?recPrev.open.delete(d):recPrev.open.add(d);recPvPaint()}
 function recImportGo(){
- if(!recPrev||!recPrev.list.length)return;
- upsertRecs(recPrev.list);
- toast('가져왔어 — '+recPrev.list.length+'항목');
+ if(!recPrev||!recPrev.rows||!recPrev.chk||!recPrev.chk.size)return;
+ const sel=recPrev.rows.filter(x=>recPrev.chk.has(x.r.d));if(!sel.length)return;
+ upsertRecs(sel.map(x=>x.r));
+ const M=sel.reduce((a,x)=>a+(x.r.n||0),0),a=sel.filter(x=>x.st==='new').length,b=sel.filter(x=>x.st==='chg').length;
+ toast('가져왔어 — 날짜 '+recPrev.chk.size+' · 문항 '+M+'(새 '+a+' · 바뀜 '+b+')');
  const m=document.getElementById('recImpM');if(m)m.remove();recPrev=null;render();
 }
 /* §3 표시 — 정답률 = 정답/문항(물리 Q 는 오답도 정답도 아님 · n 분모) */
@@ -3720,18 +3748,21 @@ async function foodSave(name,date,recipe,files,note){
 function shareFile(){return loadF('share/share.json',{v:1,items:[]})}
 function shareItems(ty){return shareFile().data.items.filter(x=>!x.del&&x.ty===ty).sort((a,b)=>(b.at||0)-(a.at||0))}
 function upsertShare2(t){const f=shareFile();t.u=Date.now();const i=f.data.items.findIndex(x=>x.id===t.id);if(i>=0)f.data.items[i]=t;else f.data.items.push(t);f.dirty=true;saveF('share/share.json',f);scheduleSync();}
+/* Share 시각 표시·편집(9/6 _task_tt_share_import §B-1) — `at` 하나로 표시·정렬·편집(새 필드 없음) */
+const shareTime=ms=>{const d=new Date(ms||0);return pad(d.getMonth()+1)+'/'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())};
+const dtLocalVal=ms=>{const d=new Date(ms||Date.now());return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes())};
 function shareHTML(){
  const tab=ui.shareTab||'img';
  let body='';
  if(tab==='img'){
   const its=shareItems('img');
   body=`<div class="row" style="margin:6px 0"><input id="shF" type="file" accept="image/*" multiple style="flex:1;border:0"><button class="btn p" onclick="shareAddImg()">올리기</button></div>
-  <div class="fgrid">${its.map(x=>`<div class="fcard" onclick="shareView('${x.id}')"><img data-img="${esc(x.thumb||x.img)}" alt=""><div class="fl"><span class="chip ${x.by===settings.people[0]?'h':'k'}">${esc(x.by||'')}</span><span>${new Date(x.at||0).toLocaleDateString('ko')}</span><span class="x" style="margin-left:auto" onclick="event.stopPropagation();shareDel('${x.id}')">×</span></div></div>`).join('')||'<p style="color:#888;font-size:11px">아직 없어</p>'}</div>`;
+  <div class="fgrid">${its.map(x=>`<div class="fcard" onclick="shareView('${x.id}')"><img data-img="${esc(x.thumb||x.img)}" alt=""><div class="fl"><span class="chip ${x.by===settings.people[0]?'h':'k'}">${esc(x.by||'')}</span><span>${shareTime(x.at)}</span><span class="x" style="margin-left:auto" onclick="event.stopPropagation();shareEdit('${x.id}')">✎</span><span class="x" onclick="event.stopPropagation();shareDel('${x.id}')">×</span></div></div>`).join('')||'<p style="color:#888;font-size:11px">아직 없어</p>'}</div>`;
  }else{
   const its=shareItems('txt');
   body=`<div class="row" style="margin:6px 0;align-items:flex-start"><textarea id="shT" placeholder="글·링크 붙여넣기" style="flex:1;border:1px solid #ddd;border-radius:4px;padding:6px;min-height:52px;font:inherit"></textarea><button class="btn p" onclick="shareAddText()">올리기</button></div>
   ${its.map(x=>{const isU=/^https?:\/\/\S+$/i.test((x.text||'').trim());
-   return`<div class="shrow"><span class="chip ${x.by===settings.people[0]?'h':'k'}">${esc(x.by||'')}</span><span class="tx">${esc(x.text||'')}</span><span class="ops">${isU?`<a class="btn" href="${esc(x.text.trim())}" target="_blank" rel="noopener">열기</a>`:''}<button class="btn" onclick="shareCopy('${x.id}',this)">복사</button><button class="btn" onclick="shareDel('${x.id}')">×</button></span></div>`}).join('')||'<p style="color:#888;font-size:11px">아직 없어</p>'}`;
+   return`<div class="shrow"><span class="chip ${x.by===settings.people[0]?'h':'k'}">${esc(x.by||'')}</span><small class="at">${shareTime(x.at)}</small><span class="tx">${esc(x.text||'')}</span><span class="ops">${isU?`<a class="btn" href="${esc(x.text.trim())}" target="_blank" rel="noopener">열기</a>`:''}<button class="btn" onclick="shareCopy('${x.id}',this)">복사</button><button class="btn" onclick="shareEdit('${x.id}')">✎</button><button class="btn" onclick="shareDel('${x.id}')">×</button></span></div>`}).join('')||'<p style="color:#888;font-size:11px">아직 없어</p>'}`;
  }
  return`${moreTabs('share')}<div class="ttl"><b>Share</b><div class="r" style="font-size:10px;color:#888">둘이 같이 보는 임시 공유 · 자동 만료 없음(손 삭제)</div></div>
  <div class="views">${[['img','🖼 Image'],['txt','📝 Text']].map(([k,n])=>`<span class="${tab===k?'on':''}" onclick="ui.shareTab='${k}';LS.set('tt.ui',ui);render()">${n}</span>`).join('')}</div>${body}`;
@@ -3775,6 +3806,15 @@ function shareCopy(id,btn){
 }
 function shareDel(id){const x=shareFile().data.items.find(z=>z.id===id&&!z.del);if(!x)return;
  if(confirm('지울까?'+(x.ty==='txt'?' '+(x.text||'').slice(0,30):' (이미지 파일은 저장소에 남음)'))){x.del=true;upsertShare2(x);render()}}
+/* ✎ 편집(9/6 §B-1) — 날짜·시간(`at` 갱신 = 정렬 키 그대로) · txt 는 본문도 · by 무변 · 이미지 파일·썸네일 무변 · 저장 = upsertShare2(u 갱신 → mergeList 최신 u 승) */
+function shareEdit(id){
+ const x=shareFile().data.items.find(z=>z.id===id&&!z.del);if(!x)return;
+ modal(`<h4>✎ Share 편집</h4><div class="row"><label>시각</label><input id="shAt" type="datetime-local" value="${dtLocalVal(x.at)}"></div>`
+  +(x.ty==='txt'?`<div class="row" style="align-items:flex-start"><label>본문</label><textarea id="shTx" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:90px;font:inherit">${esc(x.text||'')}</textarea></div>`:`<p style="font-size:10px;color:#888">이미지 파일·썸네일은 그대로 · 시각만 바꿔</p>`),
+  q=>{const v=q('shAt').value;const ms=v?new Date(v).getTime():NaN;if(!isNaN(ms))x.at=ms;
+   if(x.ty==='txt'){const tx=(q('shTx').value||'').trim();if(tx)x.text=tx;}
+   upsertShare2(x);toast('고쳤어');render()});
+}
 /* ===== 시험기록 판 1 (2026-09-05 · _task_tt_exam_pan1.md §B) — Archive 「📊 시험기록」 = 실제시험 DB(1차·2차 · 회차 목록 → 상세 · 오답 복구 우선순 · 입력) + 「시험분석」 자리
    데이터 exam/<사람>.json {v:1,items:[회차…]} · 동기화 = records 옆(90초 push/pull · 저장 4초 뒤 · 오프라인 dirty 큐) · 노션 「실제시험 기록」 이관분 = timetable/exam_import.py(264행 · 9/5)
    1차 = mode 'q'(문항 120: s·i·my·ans·ok·type·why·rate·note·redo) 또는 'sum'(과목 8 점수·틀림) · 괄호 = 과목 맞음/문항(특허 20 · 상표 10 · 디보 10 · 민법 40 · 자과 각 10) · 군 점수 = Σ맞음/Σ문항×100 · 총점 = 세 군 평균(= 총 정답률) · 결과 = 총점 ≥ 합격컷
