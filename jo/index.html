@@ -2431,9 +2431,13 @@ function giChipEl(g, p){
   let m = /^(?:★\s*)?([12])차(\d{2})(?:-(\d+))?(?:-(\d+))?$/.exec(g), yr, rd, no, cha;
   if (m){ cha = m[1]; yr = '20' + m[2]; rd = m[3] || ''; no = m[4] || ''; }
   else { m = /^(?:★\s*)?([12])차\s+(\d{4})(?:-(\d+))?(?:-(\d+))?$/.exec(g); if (m){ cha = m[1]; yr = m[2]; rd = m[3] || ''; no = m[4] || ''; } }
+  /* ★ 짝 판 §B-5(2026-09-06) — 규약 꼴 `차수-과-YY-회-문번`(5필드 · 4필드 = 문번 미상). 1차 문번은 **원장 문번**(`r8` 꼴 · 시험문번과 다름)이라 문항 고르기는 연도·회차까지만 한다. */
+  let ledNo = '';
+  if (!m){ m = /^([12])차-[특상디민]-(\d{2})-(\d+)(?:-([0-9A-Za-z가-힣]+))?$/.exec(g);
+    if (m){ cha = m[1]; yr = '20' + m[2]; rd = m[3] || ''; no = m[4] || ''; if (cha === '1'){ ledNo = no; no = ''; } } }
   if (m && cha === '1'){ c.style.cursor = 'pointer';   /* ★ 손질 7 — 기출문항 열(⚙) 로 그 연도 인용 문항 → 1 카드 팝업 · 여럿 목록 팝업 · 0 기출뷰 이동 */
     const qs = (p && Array.isArray(p.기출문항) ? p.기출문항 : []).filter(x => String(x.yr) === yr && (!rd || String(x.rd || '') === rd) && (!no || String(x.no || '') === no));
-    c.title = '1차 ' + yr + '년' + (rd ? ' ' + rd + '회' : '') + (no ? ' ' + no + '번' : '') + ' · 이 판례를 인용한 문항 ' + qs.length + (qs.length ? '' : ' — 기출뷰로 이동');
+    c.title = '1차 ' + yr + '년' + (rd ? ' ' + rd + '회' : '') + (no ? ' ' + no + '번' : '') + (ledNo ? ' 원장 문번 ' + ledNo : '') + ' · 이 판례를 인용한 문항 ' + qs.length + (qs.length ? '' : ' — 기출뷰로 이동');
     if (!qs.length) c.style.opacity = '.6';
     c.onclick = ev => { ev.stopPropagation(); if (qs.length === 1) giPopQid(qs[0].id, ev); else if (qs.length > 1) giPopQList(p, yr, qs, ev); else giGoTo(yr, rd, no); }; }   /* ★ 상표 손질 5 — 확정 문항이면 카드 팝업(이동 없음) · 아니면 기존 이동 */
   else if (m){ c.style.cursor = 'pointer'; c.title = '2차 기출 ' + yr + '년' + (rd ? ' ' + rd + '회' : '') + (no ? ' 문제 ' + no : '') + ' — 이 판례에 이어진 2차 카드 목록';   /* add4 §4 · add5: 그 문제(회차-N)로 거름 */
