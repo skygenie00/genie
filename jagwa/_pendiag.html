@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>필기 진단 · 자과앱</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;background:#F6F5F1;color:#16181B}
+h1{font-size:15px;margin:10px 12px 6px}
+#pad{position:relative;height:44vh;margin:0 12px;background:#fff;border:1px solid #E3E2DC;border-radius:10px;overflow:hidden;touch-action:none;cursor:crosshair}
+#pad svg{position:absolute;left:0;top:0;pointer-events:none}
+#hint{position:absolute;left:12px;top:10px;color:#6E7278;font-size:12px}
+#out{margin:10px 12px;background:#fff;border:1px solid #E3E2DC;border-radius:10px;padding:10px;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap}
+b.ok{color:#2E7D6F} b.no{color:#B03A2E}
+#log{margin:0 12px 14px;background:#fff;border:1px solid #E3E2DC;border-radius:10px;padding:10px;font:11.5px/1.4 ui-monospace,Menlo,monospace;height:22vh;overflow:auto;white-space:pre-wrap}
+button{font:inherit;padding:6px 12px;border:1px solid #E3E2DC;background:#fff;border-radius:8px;margin:0 12px 10px}
+</style></head><body>
+<h1>필기 진단 — 아래 흰 칸에 <b>한 획</b> 그으세요(펜슬·손가락 둘 다)</h1>
+<div id="pad"><div id="hint">여기에 그어 보세요</div><svg id="sv"><path id="live" fill="none" stroke="#1F3A5F" stroke-width="2" stroke-linecap="round"/></svg></div>
+<div id="out">읽는 중…</div>
+<button id="again">기록 지우고 다시</button>
+<div id="log"></div>
+<script>
+var L=[],logEl=document.getElementById('log');
+function log(s){L.push(s);if(L.length>200)L.shift();logEl.textContent=L.join('\n');logEl.scrollTop=logEl.scrollHeight}
+var out=document.getElementById('out');
+function line(k,v,ok){return k+' : '+(ok===undefined?v:'<b class="'+(ok?'ok':'no')+'">'+v+'</b>')}
+
+/* ── 1. 자과앱과 같은 origin 이라 같은 IndexedDB 를 그대로 읽는다 (지학 DB = earth1) ── */
+var R={};
+function idb(){return new Promise(function(ok){
+  var r=indexedDB.open('earth1');
+  r.onsuccess=function(e){ok(e.target.result)};
+  r.onerror=function(){ok(null)};
+  r.onblocked=function(){ok(null)};
+});}
+function one(db,store,key){return new Promise(function(ok){
+  try{var r=db.transaction(store,'readonly').objectStore(store).get(key);
+    r.onsuccess=function(){ok({v:r.result})};r.onerror=function(){ok({err:'request error'})}}
+  catch(e){ok({err:String(e&&e.name||e)})}});}
+function cnt(db,store){return new Promise(function(ok){
+  try{var r=db.transaction(store,'readonly').objectStore(store).getAllKeys();
+    r.onsuccess=function(){ok({v:r.result||[]})};r.onerror=function(){ok({err:'request error'})}}
+  catch(e){ok({err:String(e&&e.name||e)})}});}
+function wr(db){return new Promise(function(ok){
+  try{var r=db.transaction('ink','readwrite').objectStore('ink').put({t:Date.now()},'diag:test');
+    r.onsuccess=function(){ok({v:1})};r.onerror=function(){ok({err:String(r.error&&r.error.name)})}}
+  catch(e){ok({err:String(e&&e.name||e)})}});}
+
+(async function(){
+  var rows=[];
+  rows.push(line('브라우저 통','홈화면 앱 = '+(navigator.standalone===true?'예':'아니오(사파리)')));
+  rows.push(line('화면',''+innerWidth+'×'+innerHeight+' · dpr '+(devicePixelRatio||1)));
+  rows.push(line('UA',''+navigator.userAgent.slice(0,90)));
+  var db=await idb();
+  if(!db){rows.push(line('IndexedDB earth1','열지 못함',false));out.innerHTML=rows.join('\n');return}
+  rows.push(line('IndexedDB earth1','열림 · 스토어 '+Array.prototype.join.call(db.objectStoreNames,','),true));
+  var st=await one(db,'kv','set');
+  if(st.err)rows.push(line('kv set 읽기',st.err,false));
+  else{
+    var S=st.v||{};
+    R.pencil=!!S.pencil;
+    rows.push(line('★ SET.pencil 저장값',(R.pencil?'true (애플펜슬로만 = 켬)':'false (끔)'),!R.pencil));
+    rows.push(line('  같이 저장된 값','mask='+S.mask+' zoom='+S.zoom+' timer='+S.timer));
+  }
+  var ik=await cnt(db,'ink');
+  if(ik.err)rows.push(line('ink 스토어 읽기',ik.err,false));
+  else{
+    var bk=ik.v.filter(function(k){return String(k).indexOf('bink:')===0});
+    rows.push(line('ink 저장된 쪽','전체 '+ik.v.length+' · 교재(bink:) '+bk.length,true));
+  }
+  var w=await wr(db);
+  rows.push(w.err?line('★ ink 쓰기 시험',w.err,false):line('★ ink 쓰기 시험','성공(저장 됨)',true));
+  if(navigator.storage&&navigator.storage.estimate){
+    try{var es=await navigator.storage.estimate();
+      rows.push(line('저장 공간','쓴 양 '+Math.round((es.usage||0)/1048576)+'MB / 한도 '+Math.round((es.quota||0)/1048576)+'MB'));}catch(e){}
+  }
+  out.innerHTML=rows.join('\n');
+})();
+
+/* ── 2. 자과앱 교재와 똑같은 방식으로 한 획 — pointer 이벤트 · SVG live path ── */
+var pad=document.getElementById('pad'),sv=document.getElementById('sv'),live=document.getElementById('live');
+function fit(){var r=pad.getBoundingClientRect();sv.setAttribute('width',r.width);sv.setAttribute('height',r.height);sv.setAttribute('viewBox','0 0 '+r.width+' '+r.height)}
+fit();addEventListener('resize',fit);
+var ptrs=new Map(),stroke=null,seq=0;
+function xy(e){var r=pad.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]}
+pad.addEventListener('pointerdown',function(e){
+  seq++;
+  try{pad.setPointerCapture(e.pointerId)}catch(err){log('#'+seq+' setPointerCapture 실패: '+err.name)}
+  ptrs.set(e.pointerId,1);
+  log('#'+seq+' down  type='+e.pointerType+' id='+e.pointerId+' primary='+e.isPrimary+' 눌린 수='+ptrs.size+' 필압='+(e.pressure||0).toFixed(2));
+  if(ptrs.size===2)log('   ⚠ 두 개로 세어짐 — 자과앱이라면 여기서 필기가 막힌다');
+  var p=xy(e);stroke={d:'M'+p[0].toFixed(1)+' '+p[1].toFixed(1),n:1};live.setAttribute('d',stroke.d);
+},false);
+pad.addEventListener('pointermove',function(e){
+  if(!stroke||!ptrs.has(e.pointerId))return;
+  var p=xy(e);stroke.d+=' L'+p[0].toFixed(1)+' '+p[1].toFixed(1);stroke.n++;live.setAttribute('d',stroke.d);
+  if(stroke.n===2||stroke.n===20)log('   move '+stroke.n+'점 (선이 보이면 그리기 정상)');
+},false);
+function end(e,why){
+  ptrs.delete(e.pointerId);
+  log('#'+seq+' '+why+'  점 '+(stroke?stroke.n:0)+(why==='cancel'?'  ⚠ 취소됨 — 자과앱이라면 획이 버려진다':''));
+  if(why==='cancel')log('   → 이게 원인이면: 그리는 도중 iPadOS 가 제스처를 가져갔다는 뜻');
+  if(stroke&&stroke.n<2)log('   ⚠ 점이 2개 미만 — 자과앱은 4좌표 미만이면 저장하지 않는다');
+  stroke=null;
+}
+pad.addEventListener('pointerup',function(e){end(e,'up')},false);
+pad.addEventListener('pointercancel',function(e){end(e,'cancel')},false);
+pad.addEventListener('lostpointercapture',function(e){log('   lostpointercapture id='+e.pointerId)},false);
+document.getElementById('again').onclick=function(){L=[];logEl.textContent='';live.setAttribute('d','');ptrs.clear();stroke=null;seq=0};
+</script>
+</body></html>

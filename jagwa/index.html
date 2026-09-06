@@ -1460,7 +1460,7 @@ function local(e){const b=inkc().getBoundingClientRect();
 $('#inkc').addEventListener('pointerdown',e=>{
   if(SET.pencil&&e.pointerType!=='pen')return;
   if(e.pointerType==='touch'&&!SET.pencil&&e.isPrimary===false)return;
-  {const lc=locate(rec(VNO)); if(lc.id!=='IMG'&&!HAVE[lc.id])return;}   /* 이미지 문항(IMG)도 필기 가능 */
+  {const lc=locate(rec(VNO)); if(!CARD_LAYER&&lc.id!=='IMG'&&!HAVE[lc.id])return;}   /* 이미지 문항(IMG)도 필기 가능 · 카드 층(지학·생물)은 HAVE 로 막지 않는다(9/7) */
   inkc().setPointerCapture(e.pointerId);
   const[x,y]=local(e);
   if(TOOL.mode==='erase'){eraseAt(x,y);drawing={erase:1};return}
@@ -3913,7 +3913,44 @@ function zWire(Z){
 }
 /* 잉크 — 쪽 좌표(pt) 정규화 · SVG 벡터라 배율마다 선명 · 기기별(IndexedDB ink · SYNC 밖) */
 var pathD=(p,w,h)=>{let d='M'+(p[0]*w).toFixed(1)+' '+(p[1]*h).toFixed(1);for(let k=2;k<p.length;k+=2)d+=' L'+(p[k]*w).toFixed(1)+' '+(p[k+1]*h).toFixed(1);return d};
-zInkLoad=async function(Z,p){Z.ink[p.key]=(await get('ink',p.key))||{s:[]};zInkPaint(Z,p)}
+/* ── 잉크 형식 가드(2026-09-07 · gigu/_task_jagwa_ink_guard.md §2) ──
+   기록이 있는데 판 1/옛 꼴이면 .s 가 없어 zInkCommit 의 .s.push 가 죽었다(획이 저장도 표시도 안 됨).
+   알아본 꼴만 {s:[…]} 로 옮기고, 못 알아본 꼴은 ink_orphan:<원래키> 로 복사해 두고 그 키만 새로 시작한다 — 원본은 안 지운다.
+   좌표는 0~1 정규화가 정본 · 0~1 밖이면 쪽 크기(p.w·p.h)로 나눈다(판 1 은 쪽 좌표 pt 로 쌓았다).
+   쪽 크기를 모르는데 0~1 밖이면 변환을 포기하고 orphan 으로 남긴다 — 추측해서 망가뜨리지 않는다. */
+var INKMV=0,INKORPH=0;   /* 세션 중 옮긴 기록 수 · 남긴 orphan 수(하네스·결정 로그용) */
+function inkNormArr(a,p){const out=[];let need=false;
+  for(const s of (a||[])){
+    if(!s||typeof s!=='object'||!Array.isArray(s.p)||s.p.length<2)continue;
+    const q=s.p.map(Number);if(q.some(v=>!isFinite(v)))continue;
+    const st={c:s.c||'#243a5e',w:+s.w||1.2,hl:s.hl?1:0};
+    if(q.some(v=>v>1.0001||v<-0.0001)){const w=(p&&p.w)||0,h=(p&&p.h)||0;
+      if(!w||!h){need=true;continue}
+      st.p=q.map((v,i)=>+(v/(i%2?h:w)).toFixed(4))}
+    else st.p=q;
+    out.push(st)}
+  return {a:out,need:need}}
+function inkNorm(v,p){
+  if(v===null||v===undefined)return {val:{s:[]},moved:false,orphan:false};
+  if(Array.isArray(v)){const r=inkNormArr(v,p);return r.need?{val:{s:[]},moved:false,orphan:true}:{val:{s:r.a},moved:true,orphan:false}}   /* 순배열 */
+  if(typeof v!=='object')return {val:{s:[]},moved:false,orphan:true};
+  if(Array.isArray(v.s))return {val:v,moved:false,orphan:false};                                                                            /* 새 꼴 — 그대로 */
+  const ks=Object.keys(v);
+  if(!ks.length)return {val:{s:[]},moved:true,orphan:false};
+  if(ks.every(k=>/^[0-9]+$/.test(k)&&Array.isArray(v[k]))){                                                                                 /* 옛 층 꼴 {0:[…],1:[…]} */
+    const all=[];let need=false;
+    ks.map(Number).sort((x,y)=>x-y).forEach(k=>{const r=inkNormArr(v[String(k)],p);if(r.need)need=true;r.a.forEach(s=>all.push(s))});
+    return need?{val:{s:[]},moved:false,orphan:true}:{val:{s:all},moved:true,orphan:false}}
+  return {val:{s:[]},moved:false,orphan:true}}                                                                                              /* 모르는 꼴 */
+async function inkOrphan(key,raw){let k='ink_orphan:'+key;                                                                                  /* 덮지 않는다 — 빈 자리를 찾아 남긴다 */
+  for(let i=2;i<=20&&(await get('ink',k))!==undefined;i++)k='ink_orphan:'+key+'#'+i;
+  await put('ink',k,raw);INKORPH++;return k}
+async function inkGet(key,p){                                                                                                               /* 잉크를 잡는 유일한 길 */
+  const raw=await get('ink',key),r=inkNorm(raw,p);
+  if(r.orphan){await inkOrphan(key,raw);await put('ink',key,r.val)}
+  else if(r.moved&&raw!==undefined&&raw!==null){await put('ink',key,r.val);INKMV++}
+  return r.val}
+zInkLoad=async function(Z,p){Z.ink[p.key]=await inkGet(p.key,p);zInkPaint(Z,p)}
 function zInkPaint(Z,p){const svg=Z.svgOf(p);if(!svg)return;const S=(Z.ink[p.key]||{s:[]}).s||[];
   svg.innerHTML=S.map((s,j)=>`<path data-j="${j}" d="${pathD(s.p,p.w,p.h)}" stroke="${s.c}" stroke-width="${s.w}" fill="none" stroke-linecap="round" stroke-linejoin="round"${s.hl?' opacity=".45"':''}/>`).join('')+'<path class="zlive" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'}
 function zInkDraw(Z,st,reset){
@@ -3921,15 +3958,19 @@ function zInkDraw(Z,st,reset){
   const p=Z.pages()[st.i];const live=p&&Z.svgOf(p)?Z.svgOf(p).querySelector('.zlive'):null;if(!live)return;
   live.setAttribute('stroke',st.c);live.setAttribute('stroke-width',st.w);if(st.hl)live.setAttribute('opacity','.45');
   let d='M'+st.p[0].toFixed(1)+' '+st.p[1].toFixed(1);for(let k=2;k<st.p.length;k+=2)d+=' L'+st.p[k].toFixed(1)+' '+st.p[k+1].toFixed(1);live.setAttribute('d',d)}
-zInkCommit=async function(Z,st){const p=Z.pages()[st.i];if(!p)return;if(Z.ink[p.key]===undefined)Z.ink[p.key]=(await get('ink',p.key))||{s:[]};
+zInkCommit=async function(Z,st){const p=Z.pages()[st.i];if(!p)return;{const cur=Z.ink[p.key];if(!cur||typeof cur!=='object'||!Array.isArray(cur.s))Z.ink[p.key]=await inkGet(p.key,p);}
   const q=[];for(let k=0;k<st.p.length;k+=2)q.push(+(st.p[k]/p.w).toFixed(4),+(st.p[k+1]/p.h).toFixed(4));
-  Z.ink[p.key].s.push({c:st.c,w:st.w,hl:st.hl,p:q});Z.last=p.key;await put('ink',p.key,Z.ink[p.key]);zInkPaint(Z,p)}
-zInkErase=async function(Z,pt){const p=pt.p||Z.pages()[pt.i];const K=Z.ink[p.key];if(!K)return;const S=K.s;let best=-1,bd=9;
-  S.forEach((s,j)=>{for(let k=0;k<s.p.length;k+=2){const d=Math.hypot(s.p[k]*p.w-pt.x,s.p[k+1]*p.h-pt.y);if(d<bd){bd=d;best=j}}});
-  if(best>=0){S.splice(best,1);await put('ink',p.key,K);zInkPaint(Z,p)}}
-zInkUndo=async function(Z){const P=Z.pages();let p=Z.last?P.find(x=>x.key===Z.last&&Z.ink[x.key]&&Z.ink[x.key].s.length):null;
-  if(!p){const vis=P.filter(x=>Z.ink[x.key]&&Z.ink[x.key].s.length);if(!vis.length)return;p=vis[vis.length-1]}
-  Z.ink[p.key].s.pop();await put('ink',p.key,Z.ink[p.key]);zInkPaint(Z,p)}
+  Z.ink[p.key].s.push({c:st.c,w:st.w,hl:st.hl,p:q});Z.last=p.key;
+  let ok=0;try{ok=await put('ink',p.key,Z.ink[p.key])}catch(e){ok=0}
+  zInkPaint(Z,p);   /* 저장이 실패해도 화면은 갱신한다 — 조용히 죽지 않게 */
+  if(!ok)toast('필기를 저장하지 못했습니다 — 기기 저장 공간을 확인해 주세요')}
+zInkErase=async function(Z,pt){const p=pt.p||Z.pages()[pt.i];if(!p)return;const K=Z.ink[p.key];if(!K||!Array.isArray(K.s))return;const S=K.s;let best=-1,bd=9;
+  S.forEach((s,j)=>{if(!s||!Array.isArray(s.p))return;for(let k=0;k<s.p.length;k+=2){const d=Math.hypot(s.p[k]*p.w-pt.x,s.p[k+1]*p.h-pt.y);if(d<bd){bd=d;best=j}}});
+  if(best>=0){S.splice(best,1);let ok=0;try{ok=await put('ink',p.key,K)}catch(e){ok=0}zInkPaint(Z,p);if(!ok)toast('필기를 저장하지 못했습니다 — 기기 저장 공간을 확인해 주세요')}}
+zInkUndo=async function(Z){const P=Z.pages();const hasS=x=>!!(Z.ink[x.key]&&Array.isArray(Z.ink[x.key].s)&&Z.ink[x.key].s.length);
+  let p=Z.last?P.find(x=>x.key===Z.last&&hasS(x)):null;
+  if(!p){const vis=P.filter(hasS);if(!vis.length)return;p=vis[vis.length-1]}
+  Z.ink[p.key].s.pop();let ok=0;try{ok=await put('ink',p.key,Z.ink[p.key])}catch(e){ok=0}zInkPaint(Z,p);if(!ok)toast('필기를 저장하지 못했습니다 — 기기 저장 공간을 확인해 주세요')}
 function zTools(Z,sel,vpSel){$$(sel+' span[data-tool]').forEach(b=>b.onclick=()=>{const t=b.dataset.tool;Z.pen=t!=='view';Z.tool=t==='view'?'pen':t;$$(sel+' span[data-tool]').forEach(x=>x.classList.toggle('on',x===b));$(vpSel).classList.toggle('pen',Z.pen);$(vpSel).classList.toggle('view',!Z.pen)})}
 
 /* ───────────── 서브노트 한 판 (엔진은 위 · 여기는 A3 여섯 쪽 배치 · 열 머리 · 팝업) ───────────── */
@@ -4230,7 +4271,10 @@ $('#bkqX').onclick=()=>$('#bkq').classList.add('hide');
 makeFloat($('#bkq'),$('#bkq .bkqh'),'bklist');
 /* ── 교재 필기(bink) 내보내기/가져오기 — 물리 exportData 무접촉 · 쪽 단위 병합(가져온 쪽이 덮음) ── */
 bkExportObj=async function(){const ks=(await keys('ink')).filter(k=>String(k).startsWith('bink:'));const o={v:1,subj:SUBJ_ID,at:Date.now(),bink:{}};for(const k of ks)o.bink[k]=await get('ink',k);return o}
-bkImportObj=async function(j){let n=0;for(const k in ((j&&j.bink)||{})){if(!String(k).startsWith('bink:'))continue;await put('ink',k,j.bink[k]);n++;delete BK.ink[k]}
+bkImportObj=async function(j){let n=0;for(const k in ((j&&j.bink)||{})){if(!String(k).startsWith('bink:'))continue;
+  const pg=BK.pgs.find(x=>x.key===k),r=inkNorm(j.bink[k],pg);
+  if(r.orphan){await inkOrphan(k,j.bink[k]);continue}   /* 못 알아본 꼴은 기기 기록을 덮지 않는다 */
+  await put('ink',k,r.val);if(r.moved)INKMV++;n++;delete BK.ink[k]}
   for(const p of BK.pgs)if(BK.ink[p.key]===undefined)await zInkLoad(BK,p);return n}
 
 /* ───────────── 생물 정리판(앱 판 2 · 2026-09-05 · saengmul/_task_bio_app_pan2.md + add1~add4) ─────────────
