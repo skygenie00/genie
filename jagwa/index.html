@@ -475,7 +475,7 @@ select.rsel{padding:4px 8px;border:1px solid var(--line);border-radius:999px;bac
 #svp{position:relative;flex:1;min-height:0;overflow:hidden;cursor:grab;touch-action:none}
 #svp.panning{cursor:grabbing} #svp.pen{cursor:crosshair}
 #sworld{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
-#stiles{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none}
+#stiles{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none;isolation:isolate}   /* isolate = 타일 인라인 z-index(2/1)를 이 안에 가둔다 · 없으면 .ztl 이 #sover 위로 올라와 잉크를 덮는다(add1 §1) */
 #sover{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none;will-change:transform}   /* 판 2: 잉크 덧층(타일 위) */
 .spgo{position:absolute}
 .spg{position:absolute;width:1191px;height:842px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18)}
@@ -518,7 +518,7 @@ select.rsel{padding:4px 8px;border:1px solid var(--line);border-radius:999px;bac
 #bkvp{flex:1;position:relative;overflow:hidden;touch-action:none;cursor:grab;min-height:0}
 #bkvp.panning{cursor:grabbing} #bkvp.pen{cursor:crosshair}
 #bkworld{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
-#bktiles{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none}
+#bktiles{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none;isolation:isolate}   /* isolate = 타일 인라인 z-index(2/1)를 이 안에 가둔다 · 없으면 .ztl 이 #bkover 위로 올라와 잉크를 덮는다(add1 §1) */
 #bkover{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none;will-change:transform}   /* 덧층 = 잉크·텍스트·칩(타일 위) */
 .bkpg{position:absolute;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18)}
 .bkpgo{background:transparent;box-shadow:none}
@@ -931,6 +931,38 @@ const saveST=()=>put('kv','status',ST);
 let HAVE={};          // fileId -> true  (등록된 PDF)
 let MERGED=false;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+/* ── 애플펜슬 전용 스위치는 기기 하나에 하나(2026-09-07 · add1 §2(1)) ──
+   SET 은 과목 DB(earth1·bio1·phys535)마다 따로라, 한 과목에서 꺼도 다른 과목은 켬 그대로였다.
+   지학 통이 true 라 손가락 필기가 애초에 관문에서 막혀 있었다. 자리를 localStorage 로 옮긴다(SYNC 밖).
+   ⚠ 없는 과목 통은 절대 열지 않는다 — indexedDB.open 은 없으면 만들어 버린다(databases() 로 거르고 upgradeneeded 면 물린다). */
+var PENCIL_KEY='jagwa.pencil';
+function pencilUnify(vals){const b=vals.filter(v=>typeof v==='boolean');
+  if(!b.length)return false;
+  return b.every(v=>v===b[0])?b[0]:false}   /* 엇갈리면 false — 푸는 쪽으로 */
+function pencilOf(dbName){return new Promise(ok=>{let done=false;const fin=v=>{if(!done){done=true;ok(v)}};
+  let r;try{r=indexedDB.open(dbName)}catch(e){return fin(undefined)}
+  r.onerror=()=>fin(undefined);r.onblocked=()=>fin(undefined);
+  r.onupgradeneeded=()=>{try{r.transaction.abort()}catch(e){}fin(undefined)};   /* 없던 통이면 만들지 않는다 */
+  r.onsuccess=e=>{const d=e.target.result;
+    try{if(!d.objectStoreNames.contains('kv')){d.close();return fin(undefined)}
+      const q=d.transaction('kv','readonly').objectStore('kv').get('set');
+      q.onsuccess=()=>{const v=q.result;d.close();fin(v&&typeof v==='object'?v.pencil:undefined)};
+      q.onerror=()=>{d.close();fin(undefined)}}
+    catch(err){try{d.close()}catch(_){}fin(undefined)}}})}
+async function pencilLoad(){
+  let ls=null;try{ls=localStorage.getItem(PENCIL_KEY)}catch(e){}
+  if(ls==='1'||ls==='0'){SET.pencil=(ls==='1');return SET.pencil}
+  const have=new Set();
+  try{if(indexedDB.databases){for(const d of await indexedDB.databases())if(d&&d.name)have.add(d.name)}}catch(e){}
+  const vals=[SET.pencil];
+  if(have.size)for(const id in SUBJ){const dn=SUBJ[id]&&SUBJ[id].DB;
+    if(!dn||dn===CUR.DB||!have.has(dn))continue;
+    vals.push(await pencilOf(dn))}
+  const v=pencilUnify(vals);
+  SET.pencil=v;try{localStorage.setItem(PENCIL_KEY,v?'1':'0')}catch(e){}
+  return v}
+async function pencilSet(v){SET.pencil=!!v;try{localStorage.setItem(PENCIL_KEY,v?'1':'0')}catch(e){}
+  await put('kv','set',SET);const ic=$('#inkc');if(ic)ic.classList.toggle('pen',!!SET.pencil);return SET.pencil}
 const toast=(m,ms=1600)=>{const d=document.createElement('div');d.className='toast';d.textContent=m;
   document.body.appendChild(d);setTimeout(()=>d.remove(),ms)};
 
@@ -1458,6 +1490,7 @@ function local(e){const b=inkc().getBoundingClientRect();
   return[(e.clientX-b.left)/b.width*RENDER.W,(e.clientY-b.top)/b.height*RENDER.H]}
 
 $('#inkc').addEventListener('pointerdown',e=>{
+  if(drawing&&e.pointerType==='touch')return;   /* 손바닥 거르기 — 획이 사는 동안 들어온 손가락은 안 받는다(add1 §2(2)⑤) */
   if(SET.pencil&&e.pointerType!=='pen')return;
   if(e.pointerType==='touch'&&!SET.pencil&&e.isPrimary===false)return;
   {const lc=locate(rec(VNO)); if(!CARD_LAYER&&lc.id!=='IMG'&&!HAVE[lc.id])return;}   /* 이미지 문항(IMG)도 필기 가능 · 카드 층(지학·생물)은 HAVE 로 막지 않는다(9/7) */
@@ -2688,7 +2721,7 @@ $('#btnSet').onclick=()=>{
       <p style="margin:8px 0 0;font-size:11.5px">파일 이름의 111~666을 보고 자동으로 자리를 잡습니다. 6개를 하나로 합친 통합본(549쪽)도 됩니다.<br>「저장소에서 시험지 받기」는 🔑 토큰이 있어야 하고, <b>바뀐 것만</b> 받습니다.</p>
     </div>
     <div class="fld"><label>필기</label>
-      <button class="btn" id="bPen">애플펜슬로만 필기 — ${SET.pencil?'켬':'끔'}</button>
+      <button class="btn" id="bPen">애플펜슬로만 필기 (이 기기 전체) — ${SET.pencil?'켬':'끔'}</button>
       <button class="btn" id="bMask">답 자동 가리기 — ${SET.mask?'켬':'끔'}</button>
       <button class="btn" id="bOmrMask">OMR 이 답 가리개를 겸함 — ${SET.omrMask?'켬':'끔'}</button>
       <button class="btn" id="bMaskH">가리개 기본 높이 — ${SET.maskH}줄</button>
@@ -2721,8 +2754,8 @@ $('#btnSet').onclick=()=>{
   b.querySelector('#bClose').onclick=()=>{b.remove();setSheet=null;draw()};
   b.querySelector('#fi').onchange=e=>addFiles(e.target.files);
   b.querySelector('#bPull').onclick=()=>{b.remove();setSheet=null;ensureFiles(true)};
-  b.querySelector('#bPen').onclick=async e=>{SET.pencil=!SET.pencil;await put('kv','set',SET);
-    e.target.textContent=`애플펜슬로만 필기 — ${SET.pencil?'켬':'끔'}`;$('#inkc').classList.toggle('pen',!!SET.pencil)};
+  b.querySelector('#bPen').onclick=async e=>{await pencilSet(!SET.pencil);
+    e.target.textContent=`애플펜슬로만 필기 (이 기기 전체) — ${SET.pencil?'켬':'끔'}`};
   b.querySelector('#bMask').onclick=async e=>{SET.mask=!SET.mask;await put('kv','set',SET);
     e.target.textContent=`답 자동 가리기 — ${SET.mask?'켬':'끔'}`;if(VNO)updateMask()};
   b.querySelector('#bOmrMask').onclick=async e=>{SET.omrMask=!SET.omrMask;await put('kv','set',SET);
@@ -2787,7 +2820,8 @@ async function importData(f){
   try{
     const j=JSON.parse(await f.text());
     if(j.status){ST=j.status;await put('kv','status',ST)}
-    if(j.set){SET=Object.assign(SET,j.set);await put('kv','set',SET)}
+    if(j.set){const js=Object.assign({},j.set);delete js.pencil;   /* pencil 은 기기 값 — 옛 기기 것을 얹지 않는다(add1 §2(1)) */
+      SET=Object.assign(SET,js);await put('kv','set',SET)}
     if(j.maskpos){MPOS=j.maskpos;await put('kv','maskpos',MPOS)}
     if(j.omrpos){OPOS=j.omrpos;await put('kv','omrpos',OPOS)}
     if(j.note){CMT=j.note;await saveNote()}
@@ -3119,6 +3153,8 @@ function recBoot(){
   ST=(await get('kv','status'))||{};
   if(migrate())await saveST();
   SET=Object.assign(SET,(await get('kv','set'))||{});
+  await pencilLoad();   /* 펜슬 스위치는 과목 통이 아니라 기기 하나에 하나(add1 §2(1)) */
+  try{await del('ink','diag:test')}catch(e){}   /* 진단 페이지(pendiag)가 쓴 시험 기록 치우기 — 기기에만 있어 앱이 지운다(add1 §4) */
   if(!SET.autoNextReset){SET.autoNext=false;SET.autoNextReset=1;await put('kv','set',SET);}
   if(!SET.p3reset){SET.rot={};SET.zoom=1;SET.p3reset=1;await put('kv','set',SET);}   /* 2026-09-05 필터 손질: ⟳＋ 단추를 떼며 회전·확대를 한 번 맞춤(회전 0 · 배율 1)으로 */
   if(SET.ndw)ndSetW(SET.ndw);   /* 서랍 너비(기기별) */
@@ -3215,7 +3251,8 @@ function mcardWin(no){
   b.onclick=e=>{if(e.target===b){b.remove();MCW=null}};
   let live=null;
   const pt=e=>{const rc=cv.getBoundingClientRect();return[Math.max(0,Math.min(1000,Math.round((e.clientX-rc.left)/rc.width*1000))),Math.max(0,Math.min(1000,Math.round((e.clientY-rc.top)/rc.height*1000)))]};
-  cv.addEventListener('pointerdown',e=>{ if(SET.pencil&&e.pointerType!=='pen')return; try{cv.setPointerCapture(e.pointerId)}catch(_){} const[u,v]=pt(e);
+  cv.addEventListener('pointerdown',e=>{ if(live&&e.pointerType==='touch')return;   /* 손바닥 거르기(add1 §2(2)⑤) */
+    if(SET.pencil&&e.pointerType!=='pen')return; try{cv.setPointerCapture(e.pointerId)}catch(_){} const[u,v]=pt(e);
     if(tool==='erase'){mcErase(no,u,v);mcPaint(cv,MC[no]);live={erase:1};return}
     live={c:tool==='hl'?'#F2C230':TOOL.color,w:TOOL.w,hl:tool==='hl'?1:0,p:[u,v]};e.preventDefault()},{passive:false});
   cv.addEventListener('pointermove',e=>{ if(!live)return; const evs=(e.getCoalescedEvents&&e.getCoalescedEvents().length)?e.getCoalescedEvents():[e];
@@ -3886,17 +3923,21 @@ function zWire(Z){
     for(const p of Z.pages()){if(wx>=p.x&&wx<=p.x+p.w&&wy>=p.y&&wy<=p.y+p.h)return {i:p.i,p,x:wx-p.x,y:wy-p.y}}return null};
   Z.toPage=toPage;
   vp.addEventListener('pointerdown',e=>{if(Z.ignore&&e.target.closest(Z.ignore))return;
+    /* 손바닥 거르기(add1 §2(2)) — 펜 획이 사는 동안 들어온 손가락은 세지도 않는다.
+       펜슬을 쓰면 손바닥이 닿아 접점이 둘이 되는 게 정상이라, 안 거르면 획이 통째로 버려졌다. */
+    if(stroke&&e.pointerType==='touch')return;
+    if(e.pointerType==='pen'&&!pinch)for(const [id,q] of [...ptrs])if(q&&q.t==='touch')ptrs.delete(id);   /* 손바닥이 먼저 닿았어도 펜이 이긴다 */
     const wasVel=!!Z.vel;stopInertia();if(wasVel){Z.moving=false;vp.classList.remove('moving')}
     if(!Z.pen&&Z.textSel&&e.pointerType==='mouse'&&e.target.closest(Z.textSel)){if(wasVel)settle();return}   /* 보기 툴 + 마우스 = 텍스트 선택에 맡긴다 */
-    try{vp.setPointerCapture(e.pointerId)}catch(_){}ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(ptrs.size===2){if(Z.pen&&Z.strictView){stroke=null;return}   /* 교재 모드(§4): 핀치·끌기는 「보기」 툴에서만 */
+    try{vp.setPointerCapture(e.pointerId)}catch(_){}ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,t:e.pointerType});
+    if(ptrs.size===2&&[...ptrs.values()].every(q=>q.t==='touch')){if(Z.pen&&Z.strictView){stroke=null;return}   /* 교재 모드(§4): 핀치·끌기는 「보기」 툴에서만 · 핀치는 손가락 둘일 때만(add1 §2(2)) */
       const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),s:Z.S,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,X:Z.X,Y:Z.Y};drag=null;stroke=null;moveOn();return}
     if(Z.pen&&(e.pointerType==='pen'||!SET.pencil)){const p=toPage(e.clientX,e.clientY);if(!p){if(wasVel)settle();return}
       if(Z.tool==='erase'){zInkErase(Z,p);return}
       stroke={i:p.i,c:Z.tool==='hl'?'#F2C230':Z.color,w:Z.tool==='hl'?Z.hlw:Z.w,hl:Z.tool==='hl',p:[p.x,p.y]};zInkDraw(Z,stroke,true);return}
     if(Z.pen&&Z.strictView){if(wasVel)settle();return}
     drag={ox:e.clientX,oy:e.clientY,X:Z.X,Y:Z.Y};Z.samples=[{t:performance.now(),x:Z.X,y:Z.Y}];vp.classList.add('panning');moveOn()});
-  vp.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  vp.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,t:(ptrs.get(e.pointerId)||{}).t||e.pointerType});
     if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);const r=vp.getBoundingClientRect();const cx=(a.x+b.x)/2-r.left,cy=(a.y+b.y)/2-r.top;const ns=Math.max(Z.MIN,Math.min(Z.MAX,pinch.s*d/pinch.d));
       Z.X=cx-(pinch.cx-r.left-pinch.X)*(ns/pinch.s);Z.Y=cy-(pinch.cy-r.top-pinch.Y)*(ns/pinch.s);Z.S=ns;schedule();return}
     if(stroke){const p=toPage(e.clientX,e.clientY);if(p&&p.i===stroke.i){stroke.p.push(p.x,p.y);zInkDraw(Z,stroke,false)}return}
