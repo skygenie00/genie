@@ -129,6 +129,7 @@ sup.fn{color:var(--rule);font-size:10px;cursor:pointer;text-decoration:underline
 /* ★ 판 3 (2026-09-02) — 전합 배지 · ★ 내 중요도 · 1단 거르기 트리 · 2단 검색 적중 · 3단 인용 자리 */
 .badge.jh{border:1px solid var(--rule);color:var(--rule);background:#fff4f4;font-weight:700}
 .badge.imp{color:#b8860b;background:#fff8e1}
+.badge.qa{background:#f2f2f2;color:#8a8a8a}.badge.qa.un{background:#fff8e1;color:#b8860b;font-weight:700}/* ★ QA 판 add1 — 검수 배지(초안·미검수) */
 .stars{display:inline-flex;gap:1px;font-size:16px;cursor:pointer;user-select:none;line-height:1}
 .stars span{color:#d9d6ce} .stars span.on{color:#e0a800}
 .tree .r.ftog{background:#f3f1ea;font-weight:700;color:#4a463f}
@@ -1916,7 +1917,7 @@ const REC_NAMES = { ox:'1차객 풀이 (O/X · 헷갈림 · 태그)', rounds:'1�
   logic:'📐 논리', link:'🔗 지문 연결', type:'🏷 유형 확정', omr:'📖 정리 핀',
   sticker:'🏷 스티커 사전 (두문자·줄임말)',
   blank:'✎ 빈칸 회독 (O/△/X)', blanktag:'✎ 빈칸 태그 (kind 확정)',
-  themefix:'⇄ 3법 대응 확정', precimp:'★ 판례 내 중요도', editq:'✎ 수정 큐 (볼트 고칠 자리)', preclink:'🔗 내가 이은 판례·2차' };   /* ★ 판 3 §9-2 · recsync §E · 판 4 add4 */
+  themefix:'⇄ 3법 대응 확정', precimp:'★ 판례 내 중요도', editq:'✎ 수정 큐 (볼트 고칠 자리)', preclink:'🔗 내가 이은 판례·2차', precqa:'✅ 판례 검수 (앱 층)' };   /* ★ 판 3 §9-2 · recsync §E · 판 4 add4 */
 function recLabel(k){
   const t = k.slice(REC_PRE.length);
   if (REC_NAMES[t]) return REC_NAMES[t];
@@ -1942,6 +1943,7 @@ function recDropCache(){
   if (typeof GIYREC !== 'undefined') GIYREC = null;
   if (typeof EQREC !== 'undefined') EQREC = null;   /* ★ recsync §E — 병합·강제 받기 뒤 큐 캐시 */
   if (typeof PLREC !== 'undefined') PLREC = null;   /* ★ 판 4 add4 — 내가 이은 판례·2차 */
+  if (typeof PQREC !== 'undefined') PQREC = null;   /* ★ QA 판 add1 — 앱 검수 */
 }
 function recDelete(k){
   try{ localStorage.removeItem(k); }catch(e){}
@@ -2017,7 +2019,7 @@ function recExport(){
 const SYNC_REPO = 'zzikkaplan/studyplandata', SYNC_BRANCH = 'main', SYNC_PATH = 'jopangi/기록.json';
 const SYNC_SKIP = ['ink' /* 캔버스 · 크다 */ ];
 const SYNC_KEYS = ['ox', 'rounds', 'ansfix', 'mcard', 'gi', 'gi.year', 'markup', 'logic', 'link', 'type', 'omr',
-  'sticker', 'blank', 'blanktag', 'themefix', 'postit', 'compare', 'precimp', 'editq', 'preclink']   /* ★ 판 4 add4 §2 — 내가 이은 판례·2차 (19→20) */
+  'sticker', 'blank', 'blanktag', 'themefix', 'postit', 'compare', 'precimp', 'editq', 'preclink', 'precqa']   /* ★ QA 판 add1 — 앱 검수(20→21) */   /* ★ 판 4 add4 §2 — 내가 이은 판례·2차 (19→20) */
   .filter(k => SYNC_SKIP.indexOf(k) < 0).map(k => REC_PRE + k);
 const SU_KEY = 'jopangi_sync_u', SG_KEY = 'jopangi_sync_gone', SS_KEY = 'jopangi_sync_shadow', SM_KEY = 'jopangi_sync_meta';
 const EQ_KEY = REC_PRE + 'editq';
@@ -4906,6 +4908,8 @@ async function popPrec4(id,ev,depth,law,q){   /* ★ 손질 9(9/5) — law = 다
   showPop(ev); popSizable(body,'prec');   /* ★ 판 4 add2 §3 */
   if(!p){ body.appendChild(el('div','cdim','리스트에 없는 판례 — '+id)); return; }
   const hd=el('div','memobtn'); const go=el('button','tool on','판례 갈래로 이동 ↗'); go.onclick=()=>{closeAllPops();precGo(id,lawX,p.요약본?'요약':'원문');render();}; hd.appendChild(go);   /* ★ 손질 9 — 문구 통일 · 깃발 */
+  if(p.요약본)hd.appendChild(qaBtnEl(p));   /* ★ QA 판 add1 §2 — [검수 완] · 요약본이 있는 행만 */
+  {const _qb=qaBadgeEl(p); if(_qb)hd.appendChild(_qb);}
   if(p.설명별칭)hd.appendChild(el('span','chip c-alias',p.설명별칭)); hd.appendChild(el('span','cdim',(p.설명줄||p.사건명||'').slice(0,80))); body.appendChild(hd);
   const SUM=await get(PFL(lawX,'요약')).catch(()=>({})); const F=await get(PFL(lawX,'전문')).catch(()=>({}));
   const s=SUM[id], sec=F[id]||{};
@@ -5002,7 +5006,27 @@ function impAll(){ if (!IMPREC) IMPREC = lsRead(IMP_KEY); return IMPREC; }
 function impOf(p){ const R = impAll(); if (Object.prototype.hasOwnProperty.call(R, p.id)) return +R[p.id] || 0;
   const b = parseInt(p.중요도, 10); return b > 0 ? b : 0; }
 function impSet(id, v){ const R = impAll(); R[id] = v > 0 ? v : 0; IMPREC = R; lsWrite(IMP_KEY, R, '★ 내 중요도'); }
-const PF_KEYS = ['gichul', 'madi', 'jo', 'type', 'court', 'imp', 'memo'];   /* ★ 메모 손질 — 메모 묶음 */
+/* ★ QA 판 add1 §2(2026-09-06 `_task_jo_prec_qa_chip_add1.md`) — **검수 두 층**.
+   파일 검수 = 요약본 YAML `검수`(⚙ 가 리스트 `검수` 열로 실어 온다 · 앱은 읽기만 · 볼트에 키가 없으면 열도 없다) ·
+   앱 검수 = 이 기기 기록 층 `jopangi.precqa`({id: 시각ms} · `기록.json` 동기화에 얹힘 · ⚙ 재실행에 안 지워진다 · `preclink` 와 같은 자리 규칙).
+   배지 ⓐ `검수` 없음·false → 「초안」 ⓑ true 인데 앱 검수 없음 → 「미검수」 ⓒ 앱 검수 있음 → 배지 없음(툴팁에 날짜).
+   **요약본이 없는 행(원본만)은 검수할 파일이 아직 없어 배지를 안 그린다.** */
+const PQ_KEY = REC_PRE + 'precqa';
+let PQREC = null;
+function pqAll(){ if (!PQREC) PQREC = lsRead(PQ_KEY); return PQREC; }
+function pqOf(id){ const v = pqAll()[id]; return v ? +v : 0; }
+function pqSet(id, on){ const R = pqAll(); if (on) R[id] = Date.now(); else delete R[id]; PQREC = R; lsWrite(PQ_KEY, R, '✅ 판례 검수'); }
+function qaState(p){ if (!p || !p.요약본) return null; if (pqOf(p.id)) return 'done'; return (p.검수 === true) ? 'unread' : 'draft'; }
+function qaBadgeEl(p){ const st = qaState(p); if (!st || st === 'done') return null;
+  const c = el('span', 'badge qa' + (st === 'unread' ? ' un' : ''), st === 'unread' ? '미검수' : '초안');
+  c.title = st === 'unread' ? '파일 검수는 끝(볼트 `검수: true`) · 앱 검수는 아직' : '볼트 `검수` 가 false 이거나 없다 — 파일 검수 전';
+  return c; }
+function qaBtnEl(p){ const on = !!pqOf(p.id);
+  const b = el('button', 'tool' + (on ? ' on' : ''), on ? '✅ 검수 완' : '검수 완');
+  b.title = on ? ('앱 검수 ' + new Date(pqOf(p.id)).toLocaleDateString() + ' — 누르면 지운다') : '이 판례를 내가 검수했다고 표시(이 기기 기록 층)';
+  b.onclick = ev => { ev.stopPropagation(); pqSet(p.id, !pqOf(p.id)); toast(pqOf(p.id) ? '검수 완' : '검수 표시를 지웠다'); render(); };
+  return b; }
+const PF_KEYS = ['gichul', 'madi', 'jo', 'type', 'court', 'imp', 'memo', 'qa'];   /* ★ QA 판 add1 — 검수 */   /* ★ 메모 손질 — 메모 묶음 */
 function pfGet(){ const f = S.precFilter || (S.precFilter = {}); PF_KEYS.forEach(k => { if (!Array.isArray(f[k])) f[k] = []; });
   if (!f.fold || typeof f.fold !== 'object') f.fold = {}; return f; }
 function pfEmpty(f){ return PF_KEYS.every(k => !f[k].length); }
@@ -5034,6 +5058,8 @@ function precPass(p, f, skip){
   if (skip !== 'type' && f.type.length){ if (f.type.indexOf(p.사건유형 || '미상') < 0) return false; }
   if (skip !== 'court' && f.court.length){ const c = p.법원 || '미상';
     if (!f.court.some(v => v === '전원합의체' ? !!p.전합 : v === c)) return false; }
+  if (skip !== 'qa' && f.qa && f.qa.length){ const st = qaState(p);   /* ★ QA 판 add1 §2 — 「미검수만」 = 초안·미검수를 함께 */
+    if (f.qa.indexOf('todo') >= 0 && !(st === 'draft' || st === 'unread')) return false; }
   if (skip !== 'imp' && f.imp.length){ const m = impOf(p), w = f.imp[0], R = impAll(), set = R[p.id] > 0;
     if (w === '5' ? m !== 5 : w === '4+' ? m < 4 : w === '3+' ? m < 3 : w === 'set' ? !set : w === 'unset' ? set : false) return false; }
   return true;
@@ -5306,6 +5332,8 @@ function precFilterUI(tree, P, f){
     { v: 'both', name: '1·2차 다', test: p => (p.기출차 || []).length === 2 },
     { v: '6개년', name: '6개년', test: p => has(p, '기출', '6개년') }, { v: '대법판례해설', name: '대법판례해설', test: p => has(p, '기출', '대법판례해설') },
     { v: '중요판례평석', name: '중요판례평석', test: p => has(p, '기출', '중요판례평석') }, { v: '전년도시험이후', name: '전년도시험이후', test: p => has(p, '기출', '전년도시험이후') }], true);   /* ★ 상표 손질 5 — 태그 알약(실측 4종) */
+  group('qa', '검수', [   /* ★ QA 판 add1 §2 — 초안·미검수를 함께 잡는다(기본 꺼짐 · 정렬 무변) */
+    { v: 'todo', name: '미검수만', test: p => { const s = qaState(p); return s === 'draft' || s === 'unread'; } }]);
   /* 2 단원별 — 대응표 V01~V70 순서 · 대분류(==…==) 헤더 접기 · 0 인 마디도 보인다 · 맨 아래 미분류 */
   group('madi', '단원별', null, false, () => {
     const tab = Array.isArray(P.마디표) ? P.마디표 : [];
@@ -5516,6 +5544,7 @@ async function viewPrec(){
   if(cur.요약본)hd.appendChild(el('span','badge','볼트 '+cur.연도폴더));
   if(cur.원본)hd.appendChild(el('span','badge','원본 '+cur.원본));
   if(cur.별칭&&typeof cur.별칭==='string')hd.appendChild(el('span','badge','별칭: '+cur.별칭.slice(0,40)));
+  {const _qb=qaBadgeEl(cur); if(_qb)hd.appendChild(_qb);}   /* ★ QA 판 add1 §2 — 검수 배지 */
   {const st=el('span','stars');st.title='내 중요도 — 누르면 그 값 · 같은 별 다시 누르면 0';   /* ★ 판 3 §9-2 — kv jopangi.precimp */
    const m=impOf(cur);
    for(let i=1;i<=5;i++){const s=el('span',i<=m?'on':'','★');s.dataset.v=i;
