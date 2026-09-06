@@ -931,7 +931,7 @@ function sameJSON(a,b){return JSON.stringify(a)===JSON.stringify(b)}
 async function syncFile(path,own,def){
  const f=loadF(path,def);
  const remote=await ghGet(path);
- if(!own){ if(remote){f.data=remote.data;f.sha=remote.sha;f.dirty=false;saveF(path,f);} return; }
+ if(!own){ if(remote){const chg=!sameJSON(f.data,remote.data);f.data=remote.data;f.sha=remote.sha;f.dirty=false;saveF(path,f);return chg;} return false; }   /* A-2(9/6) — 바뀐 게 있었는지 */
  let merged=f.data,sha=remote?remote.sha:null;
  if(remote){ merged=f.dirty?mergeFile(path,f.data,remote.data):remote.data; }
  const needPush=f.dirty||(!remote&&path==='settings.json');
@@ -939,31 +939,34 @@ async function syncFile(path,own,def){
   try{sha=await ghPut(path,merged,sha);logS(`↑ ${path}`);}
   catch(e){ if(/409|422/.test(e.message)){const r2=await ghGet(path);merged=mergeFile(path,merged,r2.data);sha=await ghPut(path,merged,r2.sha);logS(`↑ ${path} (재시도)`);} else throw e; }
  }
+ const chg=!sameJSON(f.data,merged);   /* A-2(9/6) — 로컬과 다른 것이 들어왔나(값이 같아도 dirty=false·saveF 는 그대로) */
  f.data=merged;f.sha=sha;f.dirty=false;saveF(path,f);
  if(path==='settings.json'){settings=Object.assign({},DEF_SETTINGS,merged);migrateSettings(merged);LS.set('tt.settings',settings);}
+ return chg;
 }
 async function syncAll(silent){
  if(syncing)return; if(!cfg.token){if(!silent)toast('설정에서 토큰을 넣어줘');return;}
  if(!navigator.onLine){if(!silent)toast('오프라인 — 큐에 보관');return;}
  syncing=true;renderSide();
+ let chg=false;const S=async(p,o,d)=>{if(await S(p,o,d))chg=true;};   /* A-2(9/6) — 하나라도 원격에서 바뀐 게 들어왔을 때만 끝에 render() */
  try{
   const me=cfg.person,peer=other();const months=new Set([ym(today()),ym(curDate()),ym(addDays(today(),-7))]);if(ui.galMonth)months.add(ui.galMonth);
   listDirty().forEach(p=>{const m=p.match(/^sessions\/[^/]+\/(\d{4}-\d{2})/);if(m)months.add(m[1]);});
-  await syncFile('settings.json',true,settings);
-  await syncFile(planPath(me),true,EMPTY_PLAN());if(peer)await syncFile(planPath(peer),false,EMPTY_PLAN());
-  for(const m of months){await syncFile(sessPath(me,m),true,{v:1,sessions:[]});if(peer)await syncFile(sessPath(peer,m),false,{v:1,sessions:[]});
-   await syncFile(snapPath(me,m),true,EMPTY_SNAP());if(peer)await syncFile(snapPath(peer,m),false,EMPTY_SNAP());}
-  await syncFile(todoPath(me),true,{v:2,cats:[],items:[]});if(peer)await syncFile(todoPath(peer),false,{v:2,cats:[],items:[]});
-  await syncFile('todos/공통.json',true,{v:1,items:[]});
-  await syncFile(recPath(me),true,{v:1,items:[]});if(peer)await syncFile(recPath(peer),false,{v:1,items:[]});
-  await syncFile(examPath(me),true,{v:1,items:[]});if(peer)await syncFile(examPath(peer),false,{v:1,items:[]});   /* 시험기록 판 1(9/5) — records 옆 · 같은 규칙(90초 · 4초 debounce · dirty 큐) */
-  await syncFile(histPath(me),false,{v:1,days:{}});if(peer)await syncFile(histPath(peer),false,{v:1,days:{}}); // 시간층은 앱이 안 씀 — pull 만
-  if(ui.view==='arch'||listDirty().includes('food/food.json'))await syncFile('food/food.json',true,{v:1,items:[]}); // fb13 §4 — 보는 중·대기분 있을 때만
-  if(ui.view==='arch')await syncFile(ANA_IDX,false,{v:1,items:[],criteria:[],strategy:false});   /* 판 2(9/5) — 시험분석 색인 · 읽기만 · md 는 열 때 anaNeed */
-  if(ui.view==='share'||listDirty().includes('share/share.json'))await syncFile('share/share.json',true,{v:1,items:[]}); // fb13 §5
+  await S('settings.json',true,settings);
+  await S(planPath(me),true,EMPTY_PLAN());if(peer)await S(planPath(peer),false,EMPTY_PLAN());
+  for(const m of months){await S(sessPath(me,m),true,{v:1,sessions:[]});if(peer)await S(sessPath(peer,m),false,{v:1,sessions:[]});
+   await S(snapPath(me,m),true,EMPTY_SNAP());if(peer)await S(snapPath(peer,m),false,EMPTY_SNAP());}
+  await S(todoPath(me),true,{v:2,cats:[],items:[]});if(peer)await S(todoPath(peer),false,{v:2,cats:[],items:[]});
+  await S('todos/공통.json',true,{v:1,items:[]});
+  await S(recPath(me),true,{v:1,items:[]});if(peer)await S(recPath(peer),false,{v:1,items:[]});
+  await S(examPath(me),true,{v:1,items:[]});if(peer)await S(examPath(peer),false,{v:1,items:[]});   /* 시험기록 판 1(9/5) — records 옆 · 같은 규칙(90초 · 4초 debounce · dirty 큐) */
+  await S(histPath(me),false,{v:1,days:{}});if(peer)await S(histPath(peer),false,{v:1,days:{}}); // 시간층은 앱이 안 씀 — pull 만
+  if(ui.view==='arch'||listDirty().includes('food/food.json'))await S('food/food.json',true,{v:1,items:[]}); // fb13 §4 — 보는 중·대기분 있을 때만
+  if(ui.view==='arch')await S(ANA_IDX,false,{v:1,items:[],criteria:[],strategy:false});   /* 판 2(9/5) — 시험분석 색인 · 읽기만 · md 는 열 때 anaNeed */
+  if(ui.view==='share'||listDirty().includes('share/share.json'))await S('share/share.json',true,{v:1,items:[]}); // fb13 §5
   cfg.lastSync=Date.now();LS.set('tt.cfg',cfg);logS('완료');if(!silent)toast('동기화됨');
  }catch(e){logS('✗ '+e.message);if(!silent)toast('동기화 실패: '+e.message);}
- syncing=false;render();
+ syncing=false;if(chg)render();else renderSide();   /* A-2(9/6) — 바뀐 게 없으면 동기화 칩만 */
 }
 let syncT=null;function scheduleSync(){clearTimeout(syncT);syncT=setTimeout(()=>syncAll(true),4000);renderSide();}
 window.addEventListener('online',()=>syncAll(true));
@@ -1125,7 +1128,13 @@ const $=id=>document.getElementById(id);
 /* §1-2(fb19) 본창과 PiP 를 함께 — render() 안의 pipPaint 는 「모달이 열려 있으면 보류」라
    PiP 모달에서 값을 바꾸면 PiP 가 안 따라오던 구멍이 있었다. 모달을 닫은 뒤 이 함수를 부른다. */
 function renderAll(){render();if(typeof pipPaint=='function')pipPaint();}
-function render(){applyMonthColor();renderSide();renderMain();renderPnav();fitMinis();fitStMore();planAfterRender();if(typeof pipPaint=='function')pipPaint();if(typeof zoomSt!=='undefined'&&zoomSt)zoomRender();if(typeof pmPopSync=='function')pmPopSync();}
+/* A-1(9/6 _task_ox_tt_input_fix_omrzoom §A) — #main 안 입력칸에 치던 글을 재렌더가 지우지 않게: 포커스된 input/textarea(id 있는 것)의 값·커서·스크롤을 잡아 두고 renderMain 뒤 같은 id 에 되살린다.
+   ⚠ 사용자 조작 이벤트(pointerdown·click·keydown·input·change) 처리 중에 동기로 불린 render 는 되살리지 않는다 — 그 조작이 의도한 재렌더(예 shareAddText 뒤 빈 칸)이고, iOS 는 버튼 탭이 포커스를 안 옮겨 activeElement 가 textarea 로 남기 때문.
+   동기화(syncAll · await 뒤)·visibilitychange·타이머로 오는 render 만 되살린다. id 없는 칸은 못 살린다(보고). */
+let _inUi=false;['pointerdown','click','keydown','input','change'].forEach(t=>document.addEventListener(t,()=>{_inUi=true;setTimeout(()=>{_inUi=false},0)},true));
+function keepInputGrab(){if(_inUi)return null;const a=document.activeElement,m=$('main');if(!a||!a.id||!m||!m.contains(a))return null;if(!(a.tagName==='TEXTAREA'||(a.tagName==='INPUT'&&!/^(checkbox|radio|button|submit|file|hidden|range|color)$/i.test(a.type))))return null;let s=null,e=null;try{s=a.selectionStart;e=a.selectionEnd}catch(_){}return{id:a.id,value:a.value,s,e,st:a.scrollTop}}
+function keepInputRestore(k){if(!k)return;const el=document.getElementById(k.id),m=$('main');if(!el||!m||!m.contains(el)||!/^(INPUT|TEXTAREA)$/.test(el.tagName))return;if(el.value!==k.value)el.value=k.value;try{el.focus({preventScroll:true});if(k.s!=null)el.setSelectionRange(k.s,k.e)}catch(_){}el.scrollTop=k.st}
+function render(){const _k=keepInputGrab();applyMonthColor();renderSide();renderMain();renderPnav();fitMinis();fitStMore();planAfterRender();if(typeof pipPaint=='function')pipPaint();if(typeof zoomSt!=='undefined'&&zoomSt)zoomRender();if(typeof pmPopSync=='function')pmPopSync();keepInputRestore(_k);}
 function dday(){const x=nextExam();if(!x)return'';const n=Math.ceil((parse(x.date)-parse(today()))/864e5);return n>=0?`D-${n}`:`D+${-n}`}
 function monthColor(mm){const def=DEF_SETTINGS.monthColors;const a=Array.isArray(settings.monthColors)&&settings.monthColors.length===12?settings.monthColors:def;const i=(+String(mm).slice(-2)||1)-1;return a[i]||def[i]}
 /* 보고 있는 달의 색을 --m8 로 (시트·격자·썸네일 전부 이 변수를 씀) */
