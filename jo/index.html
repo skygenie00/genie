@@ -2466,6 +2466,21 @@ async function giPopQList(p, yr, qs, ev){
     if (!q){ body.appendChild(el('div', 'cdim', '문항 ' + x.id + ' — 문항 JSON 에 없다')); return; }
     try{ body.appendChild(giCard(q, false)); }catch(e){ body.appendChild(el('div', 'cdim', x.id + ' 카드를 못 그렸다')); } }); }
 function giTags(p){ return (Array.isArray(p.기출) ? p.기출 : []).map(String).filter(g => !/^\d\d-\d+(-\d+)?$/.test(g)); }
+/* ★ QA 판(2026-09-06 `_task_jo_prec_qa_chip.md` §A) — 보라 칩(볼트 `기출`)이 ⚙ `기출표시` 와 **같은 값이면 그리지 않는다**.
+   같다의 잣대 = 앞뒤 공백·`★` 접두 제거 → 볼트 옛 꼴을 새 꼴로 옮겨 본 값까지 견줌 → **4필드는 5필드에 흡수**(양쪽 다).
+   과 글자는 그 행의 `기출표시` 에서 가져오고(다른 법 판례를 열었을 때도 맞다) 없으면 보고 있는 법. */
+const GI_GA = { '특허': '특', '상표': '상', '디보': '디', '디자인보호': '디' };
+const GI_RX = /^[12]차-[특상디민]-\d{2}-\d+(?:-[0-9A-Za-z가-힣]+)?$/;
+function giNorm(g){ return String(g == null ? '' : g).trim().replace(/^★\s*/, ''); }
+function giGa(gs){ for (const s of (gs || [])){ const m = /^[12]차-([특상디민])-/.exec(giNorm(s)); if (m) return m[1]; } return GI_GA[PLAW()] || '특'; }
+function giAlt(g, ga){ const s = giNorm(g), out = [s];
+  let m = /^(\d{2})-(\d+)-(\d+)$/.exec(s);   if (m) out.push('2차-' + ga + '-' + m[1] + '-' + m[2] + '-' + m[3]);
+  m = /^(\d{2})\.([12])차$/.exec(s);          if (m) out.push(m[2] + '차-' + ga + '-' + m[1] + '-' + (2000 + (+m[1]) - 1963));
+  return out; }
+function giEq(a, b){ a = giNorm(a); b = giNorm(b); if (a === b) return true;
+  return (a.split('-').length === 4 && b.indexOf(a + '-') === 0) || (b.split('-').length === 4 && a.indexOf(b + '-') === 0); }
+function giDup(g, gs, ga){ return giAlt(g, ga).some(a => (gs || []).some(s => giEq(a, s))); }
+function giIsGichul(g, ga){ const s = giNorm(g); return GI_RX.test(s) || giAlt(g, ga).length > 1 || /^[12]차\d/.test(s); }
 async function giGoTo(year, round, no){
   closeAllPops();
   let q = null;
@@ -5120,7 +5135,9 @@ function precDescEl(p, head){
   if (line) w.appendChild(el('div', head ? 'row' : '', line));
   const gs = Array.isArray(p.기출표시) ? p.기출표시 : [];
   if (gs.length){ const r = el('div', head ? 'row' : ''); gs.forEach(g => r.appendChild(giChipEl(g, p))); w.appendChild(r); }   /* ★ 판 4 add1 §2 — 기출 칩 → 기출뷰 · add4 2차 칩 → 카드 목록 */
-  const tags = giTags(p); if (tags.length){ const r = el('div', head ? 'row' : ''); tags.forEach(g => { const c = el('span', 'chip c-theme', g); c.title = '볼트 기출 태그'; r.appendChild(c); }); w.appendChild(r); }   /* ★ 상표 손질 5 — 태그 칩(회차 코드 아닌 값 · 클릭 없음) */
+  const _ga = giGa(gs);   /* ★ QA 판 §A — ⚙ 와 같은 값은 보라 칩을 안 그린다 · 볼트에만 있는 기출 표기는 툴팁을 달리 */
+  const tags = giTags(p).filter(g => !giDup(g, gs, _ga));
+  if (tags.length){ const r = el('div', head ? 'row' : ''); tags.forEach(g => { const c = el('span', 'chip c-theme', g); c.title = giIsGichul(g, _ga) ? '볼트에만 있음 — ⚙ 가 못 채운 자리' : '볼트 기출 태그'; r.appendChild(c); }); w.appendChild(r); }   /* ★ 상표 손질 5 — 태그 칩(회차 코드 아닌 값 · 클릭 없음) */
   return w;
 }
 function precCtxEl(z, q){
