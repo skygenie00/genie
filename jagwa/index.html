@@ -675,6 +675,29 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #sub,body[data-layer="pdf"]
 #subjTabs button.on{background:var(--teal);color:#fff;font-weight:700}
 #subjTabs button.off{color:var(--muted);opacity:.55;cursor:default}
 @media (max-width:480px){#subjTabs button{padding:6px 7px;font-size:12px}}
+/* ── 판 2 add2 §1-B 종이(굿노트 OMR) 꼴 모아보기 ──
+   열 하나 = [분홍 장 띠][보라 절 띠][칸…]. 세로로 채우고 다음 열로 넘어간다.
+   띠 높이가 열마다 같아서 첫 칸 줄이 안 어긋난다(높이는 JS 가 px 로 박는다). */
+.sheet .panel.mcpp{max-width:min(1480px,96vw);width:96vw;height:86vh;max-height:86vh;
+  display:flex;flex-direction:column;overflow:hidden;border-radius:16px 16px 0 0}
+.mcpp>h2,.mcpp>.mchint,.mcpp>.mcbar,.mcpp>.mcfoot{flex:none}
+.mcpp>.mchint{margin:2px 0 6px;font-size:11.5px;color:var(--muted)}
+.mcpp>.mcfoot{margin-top:8px}
+.mcpaper{flex:1;min-height:0;overflow:auto;display:flex;align-items:flex-start;gap:4px;
+  background:#fff;border:1px solid var(--line);border-radius:6px;padding:4px}
+.mccol{flex:none;display:flex;flex-direction:column;gap:4px}
+.mcch,.mcsec{flex:none;display:flex;align-items:center;padding:0 4px;font-size:10.5px;
+  white-space:nowrap;overflow:hidden;box-sizing:border-box;border-radius:2px}
+.mcch{font-weight:700;color:#8A3B62;background:transparent}
+.mcch.on{background:#FBDCE8}
+.mcsec{color:#3E3270;background:#E4DCF6}
+.mcsec.none{background:transparent}
+.mcpaper .mcard{flex:none;box-sizing:border-box;border-radius:3px}
+.mcpaper .mcard .t{padding:0 4px;font-size:10.5px;box-sizing:border-box;gap:3px}
+.mcpaper .mcard .t b{font-weight:700}
+.mcpaper .mcard .k{box-sizing:border-box;height:auto}
+.mcpaper .mcard.empty .k{font-size:11px}
+.mcpaper .mcard .m{font-size:9px;padding:0 4px}
 /*/EARTH:css*/
 </style>
 </head>
@@ -3238,13 +3261,21 @@ async function peekInk(no,cv,R){
 }
 /* §2 떠 있는 창 — 제목줄 = 손잡이(펜슬·손가락·마우스) · 오른쪽 아래 모서리 = 크기(280×200 ~ 화면−16) · 자리·크기는 세션 동안 WIN[key] 에(저장 안 함) */
 const WIN={};
-function makeFloat(sheet,handle,key){
+function makeFloat(sheet,handle,key,pkey){
   const p=sheet.querySelector('.panel'); if(!p||!handle)return;
   const g=document.createElement('div');g.className='twgrip';p.appendChild(g);
   handle.classList.add('twhandle');
   const clamp=st=>{st.w=Math.max(280,Math.min(window.innerWidth-16,st.w));st.h=Math.max(200,Math.min(window.innerHeight-16,st.h));
     st.l=Math.max(0,Math.min(window.innerWidth-st.w,st.l));st.t=Math.max(0,Math.min(window.innerHeight-st.h,st.t));return st};
   const apply=st=>{p.classList.add('float');p.style.left=st.l+'px';p.style.top=st.t+'px';p.style.width=st.w+'px';p.style.height=st.h+'px'};
+  /* 판 2 add2 §1-C — pkey 를 준 창만 크기를 기기 하나 값(localStorage)으로 기억한다.
+     안 준 창(물리 twin·sub·bklist·snote·mcard)은 종전 그대로 세션 동안(WIN)만 — 한 글자도 안 달라진다. */
+  const _pload=()=>{if(!pkey)return null;try{const v=JSON.parse(localStorage.getItem(pkey)||'null');
+    return (v&&+v.w>=280&&+v.h>=200)?{w:+v.w,h:+v.h}:null}catch(e){return null}};
+  const _psave=()=>{if(!pkey||!WIN[key])return;try{localStorage.setItem(pkey,JSON.stringify({w:Math.round(WIN[key].w),h:Math.round(WIN[key].h)}))}catch(e){}};
+  if(!WIN[key]){const s0=_pload();
+    if(s0){const w=Math.max(280,Math.min(window.innerWidth-16,s0.w)),h=Math.max(200,Math.min(window.innerHeight-16,s0.h));
+      WIN[key]=clamp({w,h,l:Math.round((window.innerWidth-w)/2),t:Math.round((window.innerHeight-h)/2)})}}
   if(WIN[key])apply(clamp(WIN[key]));
   const start=()=>{if(WIN[key])return WIN[key];const r=p.getBoundingClientRect();return WIN[key]=clamp({l:r.left,t:r.top,w:r.width,h:r.height})};
   let d=null;
@@ -3254,7 +3285,7 @@ function makeFloat(sheet,handle,key){
   let z=null;
   g.addEventListener('pointerdown',e=>{const st=start();z={x:e.clientX,y:e.clientY,w:st.w,h:st.h};try{g.setPointerCapture(e.pointerId)}catch(_){}apply(st);e.preventDefault();e.stopPropagation()},{passive:false});
   g.addEventListener('pointermove',e=>{if(!z)return;const st=WIN[key];st.w=z.w+(e.clientX-z.x);st.h=z.h+(e.clientY-z.y);apply(clamp(st))});
-  const zup=()=>{z=null};g.addEventListener('pointerup',zup);g.addEventListener('pointercancel',zup);
+  const zup=()=>{if(z)_psave();z=null};g.addEventListener('pointerup',zup);g.addEventListener('pointercancel',zup);
 }
 /* §4 손필기 암기카드 — 새 키 mcard(SYNC 열한째) · 칸 기준 정규화 1/1000 정수 · 카드 20KB 상한 · 문항 필기(ink)와 저장소 따로 */
 const MC_MAX=20000;
@@ -3288,12 +3319,13 @@ function mcardWin(no){
   b.querySelectorAll('.mct [data-t]').forEach(x=>x.onclick=()=>{tool=x.dataset.t;b.querySelectorAll('.mct [data-t]').forEach(y=>y.classList.toggle('on',y===x))});
   b.querySelector('#mcClear').onclick=async()=>{if(!MC[no])return;if(!confirm('이 카드를 전부 지울까요?'))return;delete MC[no];await saveMC();mcPaint(cv,null);st('지웠습니다')};
   b.querySelector('#mcX').onclick=()=>{b.remove();MCW=null};
-  makeFloat(b,b.querySelector('h2'),'mcard');
+  makeFloat(b,b.querySelector('h2'),'mcard',CARD_LAYER?'jagwa.win.mcard':null);   /* add2 §1-C — 카드 층에서만 크기를 기억한다(물리는 종전대로 세션 동안만) */
   b.onclick=e=>{if(e.target===b){b.remove();MCW=null}};
   const _jg=(typeof jogakOf==='function')?jogakOf(r):null;   /* 조각이 있는 과목·문항에서만 배경이 산다 · 물리는 카드 층 밖이라 함수 자체가 없다(typeof 로 막는다) */
   if(_jg){
     const box2=b.querySelector('.mccv');
-    box2.style.height=Math.round(Math.min(360,Math.max(140,box2.clientWidth/jogakAR(_jg))))+'px';
+    const fit=()=>{box2.style.height=Math.round(Math.min(360,Math.max(140,box2.clientWidth/jogakAR(_jg))))+'px'};
+    fit();   /* add2 §1-C — 창을 키워도 그리는 바닥 비율(식)은 그대로다. 모서리를 놓을 때 같은 식으로 다시 잰다. */
     const bg=document.createElement('canvas');bg.className='bg';box2.insertBefore(bg,box2.firstChild);
     const paintBg=async()=>{bg.style.display=jogakOn()?'':'none';
       if(!jogakOn())return;
@@ -3303,6 +3335,8 @@ function mcardWin(no){
     tg.onclick=()=>{jogakSet(!jogakOn());tg.classList.toggle('on',jogakOn());paintBg()};
     const mct=b.querySelector('.mct');mct.insertBefore(tg,mct.querySelector('#mcClear'));
     b.querySelector('#mcClear').textContent='내 필기 전부 지움';
+    /* add2 §1-C — 모서리를 놓으면 같은 식으로 바닥을 다시 잰다. 창만 커지고 잉크 좌표계(1/1000)는 그대로다. */
+    b.addEventListener('pointerup',e=>{if(e.target&&e.target.closest&&e.target.closest('.twgrip'))setTimeout(()=>{fit();size();paintBg()},0)},true);
     paintBg();
   }
   let live=null;
@@ -3337,23 +3371,91 @@ function mcardSheet(sub,label){
   const ordUnit=(a,z)=>{const ua=(typeof unitOf==='function'?unitOf(a[F.NO]):'')||'',uz=(typeof unitOf==='function'?unitOf(z[F.NO]):'')||'';
     const c=(typeof unitCmp==='function'?unitCmp(ua,uz):(ua<uz?-1:ua>uz?1:0));return c||(+a[F.ROUND]||0)-(+z[F.ROUND]||0)||(+a[F.LNO]||0)-(+z[F.LNO]||0)||a[F.NO]-z[F.NO]};
   const ordRound=(a,z)=>((+a[F.ROUND]||0)-(+z[F.ROUND]||0))||((+a[F.LNO]||0)-(+z[F.LNO]||0))||a[F.NO]-z[F.NO];
+  /* ══ 판 2 add2 §1-B — 종이(굿노트 OMR) 꼴 ══
+     JG(좌표표가 있는 과목 = 지학)일 때만 돈다. 물리·생물은 이 함수를 부르지도 않는다.
+     열 = [분홍 장 띠][보라 절 띠][칸…] · 세로로 채우고 다음 열로 · 절이 바뀌면 새 열에서 시작한다. */
+  const PAPER_AR=1.75;                      /* 칸 그림 비율 — 조각 309칸의 최빈값(1.747·1.743) · 한 값으로 굳혀야 열끼리 줄이 맞는다 */
+  const LBLH=18, BANDH=17, GAP=4;
+  const lblOf=r=>{const y=+r[F.YEAR]||0,rd=+r[F.ROUND]||0,ln=+r[F.LNO]||0;
+    return (y&&rd&&ln)?(String(y%100).padStart(2,'0')+'-'+rd+'-'+ln):String(r[F.CODE]||'')};   /* 25-62-9 · 확인문제는 회차·연도가 없어 코드로 */
+  const uOf=r=>(typeof unitOf==='function'?unitOf(r[F.NO]):'')||'';   /* ⚠ 사용자가 손으로 옮긴 값이 이긴다 */
+  const ordPaper=(a,z)=>{const c=(typeof unitCmp==='function'?unitCmp(uOf(a),uOf(z)):0);if(c)return c;
+    return ((+z[F.YEAR]||0)-(+a[F.YEAR]||0))||((+z[F.ROUND]||0)-(+a[F.ROUND]||0))||((+a[F.LNO]||0)-(+z[F.LNO]||0))||a[F.NO]-z[F.NO]};
+  const yearOfRound=rd=>{for(let i=0;i<DATA.length;i++){const r=DATA[i];if((+r[F.ROUND]||0)===rd&&+r[F.YEAR])return +r[F.YEAR]}return 0};
+  const paperGroups=qs=>{
+    if(mode==='round'){                      /* 회차별 — 띠는 회차 하나만. 분홍 장 띠는 안 쓴다 */
+      const m=new Map();
+      qs.forEach(r=>{const k=+r[F.ROUND]||0;if(!m.has(k))m.set(k,[]);m.get(k).push(r)});
+      return [...m.keys()].sort((a,z)=>z-a).map(k=>{const y=k?yearOfRound(k):0;
+        return {ch:'',chTxt:'',sec:String(k),secTxt:k?(k+'회'+(y?' ('+y+')':'')):'회차 없음',band:true,
+          rows:m.get(k).slice().sort((a,z)=>((+a[F.LNO]||0)-(+z[F.LNO]||0))||a[F.NO]-z[F.NO])}})}
+    const m=new Map();                       /* 단원별 — 절 묶음 → 소단원 코드순 → 최신순 */
+    qs.forEach(r=>{const u=uOf(r),k=(u&&u.split('.').length>=2)?secOf(u):'';
+      if(!m.has(k))m.set(k,[]);m.get(k).push(r)});
+    const ks=[...m.keys()].filter(k=>k).sort(typeof unitCmp==='function'?unitCmp:undefined);
+    if(m.has(''))ks.push('');                /* 단원 없는 것(미분류·미매칭)은 맨 뒤에 절 띠 없이 */
+    return ks.map(k=>{const ch=k?chOf(k):'';
+      return {ch,chTxt:ch?(ch+'. '+((TOC.ch[ch]||{}).name||'')):'미분류',
+        sec:k,secTxt:k?(k+' '+((TOC.sec[k]||{}).name||'')).trim():'',band:!!k,
+        rows:m.get(k).slice().sort(ordPaper)}})};
+  const paperFill=(qs,bar)=>{
+    const kh=Math.round(cw/PAPER_AR), cardH=LBLH+kh+2;
+    b.innerHTML=`<div class="panel mcpp"><h2>암기카드 — ${esc(label)}</h2>
+      <p class="mchint">세로로 채우고 다음 열로 · 짧게 누르면 조각 크게 · 길게 누르면 그 문항 팝업 · 모서리를 끌면 창 크기.</p>${bar}
+      <div class="mcpaper" id="mcPaper"></div>
+      <div class="mcfoot"><button class="chip" id="mcVault">볼트 카드 ${cardsFor(null,sub).length}장</button><span class="n" id="mcCnt"></span><span class="sp"></span><button class="btn sm pri" id="mcClose">닫기</button></div></div>`;
+    const paper=b.querySelector('#mcPaper');
+    const availH=Math.max(cardH+GAP,paper.clientHeight||Math.round(window.innerHeight*0.6));
+    const per=Math.max(2,Math.floor((availH-BANDH*2-GAP*3)/(cardH+GAP)));
+    const cols=[];
+    paperGroups(qs).forEach(g=>{
+      for(let i=0;i<g.rows.length;i+=per)
+        cols.push({band:g.band,secTxt:(i===0)?g.secTxt:'',rows:g.rows.slice(i,i+per)})});
+    /* 분홍 장 띠 — 열마다 첫 칸의 장을 보고 앞 열과 다를 때만 띄운다(회차별에서는 안 쓴다).
+       ⚠ 절 묶음 첫 열만 보면 미매칭(확인문제) 꼬리에서 장이 바뀌어도 안 뜬다 — 거기도 장은 있다. */
+    let lastCh='@';
+    cols.forEach(col=>{const r0=col.rows[0],u=r0?uOf(r0):'',ch=u?chOf(u):'';
+      col.chOn=(mode!=='round')&&(ch!==lastCh);
+      col.chTxt=ch?(ch+'. '+((TOC.ch[ch]||{}).name||'')):'미분류';
+      lastCh=ch});
+    paper.innerHTML=cols.map(col=>{
+      const cards=col.rows.map(r=>{const no=r[F.NO],mk=lastM(no),c=MC[no],jg=jogakOf(r);
+        return `<div class="mcard${(c||jg)?'':' empty'}" data-no="${no}" style="height:${cardH}px">`+
+          `<div class="t" style="height:${LBLH}px"><b>${esc(lblOf(r))}</b>${c?'<i class="pen">✎</i>':''}${mk?`<span class="m m${mk}">${mGlyph(mk)}</span>`:''}</div>`+
+          `<div class="k" style="height:${kh}px">${jg?`<canvas class="bg" data-bg="${no}"></canvas>`:''}${c?`<canvas data-cv="${no}"></canvas>`:(jg?'':'＋')}</div></div>`}).join('');
+      return `<div class="mccol" style="width:${cw}px">`+
+        `<div class="mcch${col.chOn?' on':''}" style="height:${BANDH}px">${col.chOn?esc(col.chTxt):''}</div>`+
+        `<div class="mcsec${col.band?'':' none'}" style="height:${BANDH}px">${col.secTxt?esc(col.secTxt):''}</div>`+
+        cards+`</div>`}).join('');
+    const cnt=b.querySelector('#mcCnt');
+    if(cnt)cnt.textContent=`칸 ${paper.querySelectorAll('.mcard').length} · 열 ${cols.length} · 열당 ${per}`};
   const draw=()=>{
-    let qs=DATA.filter(r=>r[F.SUB]===sub);
+    let qs=(sub===null||sub===undefined)?DATA.slice():DATA.filter(r=>r[F.SUB]===sub);   /* add2 §1-A — 목록 머리 「암기카드」는 sub 없이 부른다 = 전 문항 */
     if(JG)qs=qs.slice().sort(mode==='round'?ordRound:ordUnit);
     else if(sort==='mark'){const ord={X:0,Q:1,'':2,P:3,O:4};qs=qs.slice().sort((a,z)=>(ord[lastM(a[F.NO])]??2)-(ord[lastM(z[F.NO])]??2)||a[F.NO]-z[F.NO])}
     const n=qs.filter(r=>MC[r[F.NO]]).length;
     const bar=JG?`<div class="mcbar"><span class="seg"><b class="${mode==='unit'?'on':''}" data-m="unit">단원별</b><b class="${mode==='round'?'on':''}" data-m="round">회차별</b></span>
       <label>칸 <input type="range" id="mcW" min="110" max="320" step="10" value="${cw}"></label>
       <span class="sp" style="flex:1"></span><span class="n">내 카드 ${Object.keys(MC).length}장 · 합계 ${kb()}KB</span></div>`:'';
-    b.innerHTML=`<div class="panel frmpanel"><h2>암기카드 — ${esc(label)}</h2><p>${JG?'짧게 누르면 조각 크게 · 길게 누르면 그 문항 팝업.':'내가 쓴 카드 '+n+'장 · 문항마다 문제명 · 코멘트 · 필기. 카드를 누르면 크게 · 길게 누르면 그 문제로.'}</p>${bar}
+    if(JG)paperFill(qs,bar);
+    else b.innerHTML=`<div class="panel frmpanel"><h2>암기카드 — ${esc(label)}</h2><p>${JG?'짧게 누르면 조각 크게 · 길게 누르면 그 문항 팝업.':'내가 쓴 카드 '+n+'장 · 문항마다 문제명 · 코멘트 · 필기. 카드를 누르면 크게 · 길게 누르면 그 문제로.'}</p>${bar}
       <div class="mcgrid"${JG?` style="grid-template-columns:repeat(auto-fill,minmax(${cw}px,1fr))"`:''}>${qs.map(r=>{const no=r[F.NO],m=lastM(no),c=MC[no];const jg=JG?jogakOf(r):null;
         return `<div class="mcard${(c||jg)?'':' empty'}" data-no="${no}"><div class="t"><b>${JG?esc((r[F.ROUND]||'?')+'회 '+(r[F.LNO]||'?')+'번'):no+'. '+esc(titleOf(r))}</b><span class="mcc">${esc(r[F.CODE])}</span>${c?'<i class="pen">✎</i>':''}${m?`<span class="m m${m}">${mGlyph(m)}</span>`:''}</div>
           <div class="c">${noteOf(no)?'🗒 '+esc(noteOf(no)):'<span style="color:var(--muted)">🗒 (코멘트 없음)</span>'}</div>
           <div class="k"${JG&&jg?` style="height:${Math.round(cw/jogakAR(jg))}px"`:''}>${jg?`<canvas class="bg" data-bg="${no}"></canvas>`:''}${c?`<canvas data-cv="${no}"></canvas>`:(JG?(jg?'':'＋ 새 카드'):'카드 없음 · 문제에서 「암기카드」')}</div></div>`}).join('')}</div>
       <div class="mcfoot"><button class="chip" id="mcVault">볼트 카드 ${cardsFor(null,sub).length}장</button>${JG?'':`<button class="chip" id="mcSort">순서: ${sort==='no'?'문항번호':'마크순'} ▾</button>`}<span class="sp"></span><button class="btn sm pri" id="mcClose">닫기</button></div></div>`;
     b.querySelectorAll('canvas[data-cv]').forEach(cv=>{const no=+cv.dataset.cv,k=cv.parentElement;cv.width=Math.max(2,k.clientWidth*2);cv.height=Math.max(2,k.clientHeight*2);cv.style.width='100%';cv.style.height='100%';mcPaint(cv,MC[no])});
-    if(JG&&jogakOn())b.querySelectorAll('canvas[data-bg]').forEach(cv=>{const no=+cv.dataset.bg;
-      jogakPaint(cv,jogakOf(rec(no)),cv.parentElement.clientWidth).catch(()=>{cv.style.display='none'})});
+    /* 조각 배경 — 눈에 들어온 칸만 그린다(add2). 「암기카드」로 전 문항을 열면 칸이 704개라,
+       한꺼번에 그리면 pdf.js 가 수십 초를 먹는다(하네스 실측 · 한 판에 35초쯤).
+       ⚠ 칸·캔버스는 종전대로 다 만들어 둔다 — DOM 은 판 2 와 같고 그리는 때만 미룬다. */
+    if(JG&&jogakOn()){const cvs=[...b.querySelectorAll('canvas[data-bg]')];
+      const paintOne=cv=>{if(cv.__jgdone)return;cv.__jgdone=1;
+        jogakPaint(cv,jogakOf(rec(+cv.dataset.bg)),cv.parentElement.clientWidth).catch(()=>{cv.style.display='none'})};
+      if(typeof IntersectionObserver==='function'){
+        const io=new IntersectionObserver((es,ob)=>{es.forEach(e=>{if(e.isIntersecting){ob.unobserve(e.target);paintOne(e.target)}})},
+          {root:b.querySelector('.mcpaper')||null,rootMargin:'300px'});
+        cvs.forEach(cv=>io.observe(cv))}
+      else cvs.forEach(paintOne)}
     b.querySelectorAll('.mcard').forEach(el=>{const no=+el.dataset.no;let tm=null,long=false,sx=0,sy=0;
       el.onpointerdown=e=>{long=false;sx=e.clientX;sy=e.clientY;tm=setTimeout(()=>{long=true;
         if(JG)mcardPop(no);else{b.remove();openView(no)}},400)};
@@ -3367,8 +3469,12 @@ function mcardSheet(sub,label){
     b.querySelector('#mcVault').onclick=()=>cardSheet(null,sub,label);
     {const so=b.querySelector('#mcSort');if(so)so.onclick=()=>{sort=sort==='no'?'mark':'no';draw()}}
     b.querySelector('#mcClose').onclick=()=>b.remove();
+    if(JG)makeFloat(b,b.querySelector('h2'),'mcsheet','jagwa.win.mcsheet');   /* add2 §1-C — 다시 그릴 때마다 새 판에 손잡이·모서리를 다시 단다(WIN 이 자리를 이어받는다) */
   };
   b.onclick=e=>{if(e.target===b)b.remove()};
+  if(JG){let rt=null;const redo=()=>{clearTimeout(rt);rt=setTimeout(()=>{if(b.isConnected)draw()},180)};
+    b.addEventListener('pointerup',e=>{if(e.target&&e.target.closest&&e.target.closest('.twgrip'))redo()},true);   /* 모서리를 놓으면 새 높이에 맞춰 열당 칸 수를 다시 센다 */
+    const onWR=()=>{if(!b.isConnected){window.removeEventListener('resize',onWR);return}redo()};window.addEventListener('resize',onWR)}
   document.body.appendChild(b);draw();
 }
 /* 길게 누름 = **팝업**이지 이동이 아니다(판 2 §1-D(4)) — VNO 를 안 건드린다 */
@@ -4808,8 +4914,14 @@ var _rst0=recSaveToken;
 recSaveToken=function(t){_rst0(t);if(!DATA.length&&t)loadEarthData().then(ok=>{if(ok)draw()})};
 var _draw0=draw;
 draw=function(){_draw0();if(!DATA.length)$('#list').innerHTML='<div class="empty"><b>문항 데이터가 아직 없습니다</b>설정에서 🔑 토큰을 넣으면 비공개 저장소에서 받아 옵니다.</div>'};
-$('#btnRand').onclick=()=>{const L=filtered().map(r=>r[F.NO]);if(!L.length)return;const no=L[Math.floor(Math.random()*L.length)];openView(no,L.slice().sort(()=>Math.random()-.5))};
-$('#btnFirst').onclick=()=>{const L=filtered().map(r=>r[F.NO]);if(L.length)openView(L[0],L)};
+/* 판 2 add2 §1-A — 카드 층 머리는 「랜덤으로 풀기」·「처음부터 풀기」 대신 「암기카드」 하나.
+   누르면 모아보기가 **전 문항**으로 열린다(단원 줄의 「암기카드 N」은 그대로 두어 그 절만 열린다 — 문이 둘, 화면은 하나).
+   ⚠ 물리는 이 블록에 안 들어온다. 물리에서 두 단추를 떼는 줄(if(!CARD_LAYER))도 그대로다. */
+{const rd=$('#btnRand'), ft=$('#btnFirst');
+ if(rd){const mb=document.createElement('button');mb.className='chip';mb.id='btnMC';mb.textContent='암기카드';
+   mb.onclick=()=>mcardSheet(null,'전 문항');
+   rd.parentNode.insertBefore(mb,rd);rd.remove()}
+ if(ft)ft.remove()}
 window.addEventListener('resize',()=>{if(VNO&&BOOK.page&&bookVisible())bookOpen(BOOK.page)});
 
 $('#sub .shead b').textContent=CUR.NAME+' 서브노트';
