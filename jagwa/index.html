@@ -186,6 +186,8 @@ body[data-layer="pdf"] #trTog{display:none!important}   /* 물리 서랍엔 기�
 .vtop .title{flex:1;min-width:0}
 .vtop .t1{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vtop .t2{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 손가락 기기에서만 — 아이패드 브라우저의 쪽 조정 단추와 #vBack(「서재」)가 겹친다. 왼쪽 안여백 10px → +56px · 가로 모드 안전영역도 더한다(판 2 add1 · 2026-09-07). 데스크톱·헤드리스는 pointer:fine 이라 한 픽셀도 안 움직인다. */
+@media (pointer:coarse){.vtop{padding-left:calc(env(safe-area-inset-left) + 66px)}}
 #tm{font:600 14px/1 var(--mono);padding:7px 9px;border:1px solid var(--line);border-radius:8px;
   background:var(--card);min-width:56px;text-align:center}
 #tm.off{color:#B9BCC1;border-style:dashed}
@@ -4039,7 +4041,7 @@ function bpgChips(){
   box.classList.remove('hide');
   box.innerHTML='<b>고정</b>'+L.map(p=>`<span class="pin${p===BOOK.page?' on':''}" data-p="${p}">p${p}</span>`).join('');
   box.querySelectorAll('[data-p]').forEach(el=>el.onclick=()=>bookOpen(+el.dataset.p));}
-var bookRows=page=>DATA.filter(r=>CUR.BOOK_ROWS==='bpage'?bpgList(r).indexOf(page)>=0:(r[F.BPAGE]===page||(isC(r)&&r[F.PG]===page)||(!isC(r)&&r[F.SOLPG]===page)||bpgList(r).indexOf(page)>=0));   /* 생물 = 교재쪽(bpg 덮어쓰기)만 · 지학 = 교재쪽 ∪ 확인 문제쪽 ∪ 기출 부록쪽 · 판 1(9/7): 고정한 쪽을 합집합으로 더한다(수는 늘 수만 있다) */
+var bookRows=page=>DATA.filter(r=>CUR.BOOK_ROWS==='bpage'?bpgList(r).indexOf(page)>=0:bpgPinned(r)?bpgList(r).indexOf(page)>=0:(r[F.BPAGE]===page||(isC(r)&&r[F.PG]===page)||(!isC(r)&&r[F.SOLPG]===page)));   /* 생물 = 교재쪽(bpg 덮어쓰기)만 · 지학 = 교재쪽 ∪ 확인 문제쪽 ∪ 기출 부록쪽 · 판 2 add1(9/7): 고정한 문항은 고정한 쪽에만 뜬다 — 그때는 BPAGE·PG·SOLPG 를 보지 않는다 */
 function bookList(page){bookListInto(page,$('#bpList'),null)}
 /* 판 2: 같은 목록을 교재 패널(#bpList)과 교재 모드 팝업(#bkqList)에 그린다 · onPick = 문항 열기 전에 할 일(팝업은 교재 모드 닫기) */
 function bookListInto(page,box,onPick){
