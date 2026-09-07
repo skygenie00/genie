@@ -717,6 +717,26 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #sub,body[data-layer="pdf"]
 .mcpaper .mcard>.t b{font-weight:700;letter-spacing:-.02em}
 .mcpaper .mcard.empty>.k{background:#FAFAFA}
 .mcph{position:absolute;inset:0;z-index:0;background:repeating-linear-gradient(135deg,#F2F3F5 0 6px,#E9EBEE 6px 12px)}
+/* ── 판 3 ① 교재 조각 붙이기 ──
+   교재 창에서 **펜으로** 끈 네모(.crbox)를 그 문항의 문제 칸·해설 칸에 붙인다.
+   네모는 쪽 덧층(.bkpgo) 안에 쪽 좌표(pt)로 놓여 세계 변환을 그대로 탄다 — 다시 계산하지 않는다. */
+.crbox{position:absolute;border:1.5px dashed var(--sea);background:rgba(31,95,139,.10);z-index:4;pointer-events:none}
+.crbox.on{pointer-events:auto;cursor:move}
+.crbox i{position:absolute;width:11px;height:11px;background:#fff;border:1.5px solid var(--sea);border-radius:2px;pointer-events:auto}
+.crbox i[data-h="nw"]{left:-6px;top:-6px;cursor:nwse-resize} .crbox i[data-h="ne"]{right:-6px;top:-6px;cursor:nesw-resize}
+.crbox i[data-h="sw"]{left:-6px;bottom:-6px;cursor:nesw-resize} .crbox i[data-h="se"]{right:-6px;bottom:-6px;cursor:nwse-resize}
+#crmenu{position:fixed;z-index:95;background:var(--card);border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 6px 20px rgba(0,0,0,.22);padding:5px;display:flex;flex-direction:column;gap:3px;font-size:12.5px}
+#crmenu button{border:0;background:none;font:inherit;text-align:left;padding:6px 10px;border-radius:7px;cursor:pointer;white-space:nowrap}
+#crmenu button:hover{background:var(--sea-soft)}
+#crmenu button.x{color:var(--muted)}
+/* 문항 화면에 붙은 조각 */
+.cropw{margin:6px 0;display:flex;flex-direction:column;gap:6px}
+.cropi{position:relative;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff}
+.cropi canvas{display:block;width:100%}
+.cropi .cx{position:absolute;right:4px;top:4px;width:20px;height:20px;border-radius:50%;border:1px solid var(--line);
+  background:rgba(255,255,255,.9);font-size:12px;line-height:1;cursor:pointer;color:var(--muted)}
+.crophid{display:none!important}
 /*/EARTH:css*/
 </style>
 </head>
@@ -887,12 +907,12 @@ const SUBJ={
   /* 생물(앱 판 1 · 2026-09-05 · ready:true) — LAYER:true = 지학과 같은 층 · 지학 가정 여섯은 아래 과목 값(NCH_MAX·CH_LIST·KINDS·BOOK_ROWS·SOL_LABELS·SENT_PATH · BOOK_PDF_ADD 없음 = 인쇄쪽만)으로 푼다 */
   bio:{DB:'bio1', PDF_DIR:'bio/pdf/', IMG_DIR:'bio/img/', DATA_PATH:'bio/문항.json', TOC_PATH:'bio/목차.json',
         REC_PATH:'bio/기록.json', SYNC_PREFIX:'bio_sync_', NOTE_REPO:'zzikkaplan/notes', NOTE_PATH:'bio/', NOTE_DIR:'bio/note/', NOTE_JSON:'bio/정리판/',   /* 앱 판 2: NOTE_JSON = 정리판 JSON 자리(notes · 있으면 정리판 층이 켜진다) · 그림은 NOTE_PATH+'att/' */
-        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg','snote'],   /* 앱 판 1: bpg = 교재쪽 수동 매칭(15째) · 앱 판 2: snote = 정리판 줄에 붙이는 층(16째) */
+        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg','snote','crop'],   /* 앱 판 1: bpg = 교재쪽 수동 매칭(15째) · 앱 판 2: snote = 정리판 줄(16째) · 판 3 ①: crop = 교재 조각(17째) */
         NCH_MAX:8, CH_LIST:['1','2','3','4','5','6','7','8','9','10','11','12'], KINDS:['G','T','E'], BOOK_ROWS:'bpage', SOL_LABELS:true, SENT_PATH:'bio/교재문장.json',   /* 선택지 최대 8(T299·T309) · 장 12 · 유형 셋 · 「이 쪽의 문항」 = 교재쪽만 · 해설 탭(크리티컬/SYNAPSE) · 교재 문장 목록 */
         TITLE:'생물 기출 서재', LOG:'생물', NAME:'생물', LAYER:true, ready:true},
   earth:{DB:'earth1', PDF_DIR:'earth/pdf/', IMG_DIR:'earth/img/', DATA_PATH:'earth/문항.json', TOC_PATH:'earth/목차.json',
         REC_PATH:'earth/기록.json', SYNC_PREFIX:'earth_sync_', NOTE_REPO:'zzikkaplan/notes', NOTE_PATH:'earth/', NOTE_DIR:'earth/note/',
-        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg'],   /* 판 2: bpit = 교재 포스트잇(14째) · 판 1(9/7): bpg = 교재쪽 고정(15째 · 종전에는 빠져 있어 기기 사이로 안 갔다) */
+        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg','crop'],   /* 판 2: bpit = 교재 포스트잇(14째) · 판 1(9/7): bpg = 교재쪽 고정(15째) · 판 3 ①: crop = 교재 조각(16째) */
         BOOK_PDF_ADD:11,   /* 교재 모드 툴바 「(PDF NNN)」 = 인쇄쪽 + 11 (하이엔드 전체 PDF) */
         JOGAK_PATH:'earth/조각.json', OMR_PATH:'earth/omr2.pdf',   /* 판 2(9/7): 정리 OMR 조각 좌표표 · 그 원본 PDF(비공개 저장소 · pieceDoc 과 같은 통로) */
         TITLE:'지학 기출 서재', LOG:'지학', NAME:'지학', LAYER:true, ready:true}
@@ -2961,7 +2981,7 @@ const SYNC_KEYS=CARD_LAYER?CUR.SYNC_KEYS:SUBJ.phys.SYNC_KEYS;   /* 과목별 표
 /* 키 → 이 앱의 전역. 열 개 다 「문항번호 → 값」 dict 다(실측 확인).
    ⚠ `ansfix` 만 늦게 읽힌다(loadAfix) — null 이면 건너뛴다. */
 let MC={};            // no -> {w,h,s:[{c,w,hl,p:[u,v,… 1/1000 정수]}]}  손필기 암기카드 · kv/mcard · 카드 20KB 상한
-let BG={},UN={},BP={},BPG={},SN={};   // 지학·생물: bogi = uid→{ㄱ:'O'|'Q'|'X'} · unit = uid→'n.n.n' · bpit = 교재 포스트잇 · bpg = 교재쪽 수동 매칭(생물) · snote = 정리판 줄에 붙이는 층(생물) (물리 SYNC_KEYS 엔 없다)
+let BG={},UN={},BP={},BPG={},SN={},CROP={};   // 지학·생물: bogi = uid→{ㄱ:'O'|'Q'|'X'} · unit = uid→'n.n.n' · bpit = 교재 포스트잇 · bpg = 교재쪽 수동 매칭(생물) · snote = 정리판 줄에 붙이는 층(생물) · crop = 교재 조각(판 3 ①) (물리 SYNC_KEYS 엔 없다)
 const SYNC_REF={
   status :{g:()=>ST,   s:v=>{ST=v}},
   note   :{g:()=>CMT,  s:v=>{CMT=v}},
@@ -2979,7 +2999,8 @@ const SYNC_REF={
   unit   :{g:()=>UN,   s:v=>{UN=v}},
   bpit   :{g:()=>BP,   s:v=>{BP=v}},
   bpg    :{g:()=>BPG,  s:v=>{BPG=v}},
-  snote  :{g:()=>SN,   s:v=>{SN=v}}
+  snote  :{g:()=>SN,   s:v=>{SN=v}},
+  crop   :{g:()=>CROP, s:v=>{CROP=v}}
 };
 const U_KEY=CUR.SYNC_PREFIX+'u', GONE_KEY=CUR.SYNC_PREFIX+'gone',
       SHADOW_KEY=CUR.SYNC_PREFIX+'shadow', SMETA_KEY=CUR.SYNC_PREFIX+'meta';
@@ -3253,7 +3274,7 @@ function recBoot(){
   FR=(await get('kv','frm'))||{};
   MC=(await get('kv','mcard'))||{};
   LK=(await get('kv','link'))||{};
-  if(CARD_LAYER){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};BP=(await get('kv','bpit'))||{};BPG=(await get('kv','bpg'))||{};SN=(await get('kv','snote'))||{};}
+  if(CARD_LAYER){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};BP=(await get('kv','bpit'))||{};BPG=(await get('kv','bpg'))||{};SN=(await get('kv','snote'))||{};CROP=(await get('kv','crop'))||{};}
   const moved=await renumber();
   if(moved)setTimeout(()=>toast('문항 번호 재배열 — 기록 '+moved+'건을 옮겼습니다'),900);
   await loadHave();
@@ -3978,7 +3999,7 @@ function renderCard(r){
       ${snChip(r)}
       <span class="sp"></span><span class="cmark">${(()=>{const m=lastM(no);return m?`<b class="vm${m}">${MG[m]}</b> ${MLABEL[m]}`:'마크 없음'})()}</span>
     </div>
-    <div class="q">${esc(stemOf(r))}</div>
+    <div class="q${cropHas(uid,'q')?' crophid':''}">${esc(stemOf(r))}</div>${cropBoxHtml(uid,'q')}
     ${r[F.FILE]==='IMG'?`<div class="fig" id="cFig"><span class="ld">그림 받는 중…</span></div>`:''}
     ${(r[F.BOGI]||[]).length?`<div class="bogi">${r[F.BOGI].map(b=>`<div class="row" data-k="${b.키}" data-ans="${b.정오}">
         <span class="k">${b.키}.</span><span class="t">${esc(b.내용||bogiLineText(r,b.키))}${CUR.SOL_LABELS&&b.설명?`<span class="bexp" hidden>${esc(b.설명)}</span>`:''}</span>
@@ -3986,7 +4007,7 @@ function renderCard(r){
       </div>`).join('')}</div>`:''}
     ${ch.some(x=>x)?`<div class="choices">${ch.map((t,i)=>`<button data-c="${i+1}" class="${pick===String(i+1)?'pick':''}">${CIRC[i]} ${esc(t)}</button>`).join('')}</div>`:''}
     <details id="cDet"><summary>정답 · 해설${r[F.SOLPG]&&!CUR.KINDS?` (부록 ${r[F.SOLPG]}쪽)`:''}</summary>
-      <div class="sol"><b>정답 ${r[F.ANS]?CIRC[+r[F.ANS]-1]||r[F.ANS]:'—'}</b>${solHtml(r,sol,sol2)}
+      <div class="sol"><b>정답 ${r[F.ANS]?CIRC[+r[F.ANS]-1]||r[F.ANS]:'—'}</b>${cropBoxHtml(uid,'s')}<span class="solwrap${cropHas(uid,'s')?' crophid':''}">${solHtml(r,sol,sol2)}</span>
         <div class="jump">${(bp=>bp?`<span class="tag page" data-page="${bp}">교재 ${bp}쪽 ${esc(unitName(u))}</span>`:'')(bpgOf(r))}
         ${r[F.SOLPG]&&!CUR.KINDS?`<span class="tag page" data-page="${r[F.SOLPG]}">부록 ${r[F.SOLPG]}쪽</span>`:''}</div>
         ${r[F.NOTE]?`<div class="cnote">${esc(r[F.NOTE])}</div>`:''}</div></details>
@@ -4013,6 +4034,7 @@ function renderCard(r){
   $('#cSub').onclick=()=>subOpen(u?secOf(u):'',true);
   const csn=$('#cSn');if(csn)csn.onclick=()=>snOpen(csn.dataset.sec);   /* 판 2: 절 정리판 창 */
   $('#cPrev').onclick=()=>go(-1);$('#cNext').onclick=()=>go(1);
+  cropWire(c,uid,()=>showProblem());   /* 판 3 ① — 붙인 조각 그리기 · ✕ 로 떼면 원래 글자가 돌아온다 */
   markWrong();markAns();
 }
 /* 해설 칸 — 생물(CUR.SOL_LABELS): 기출 = 크리티컬(SOL) + SYNAPSE(SOL2) 탭 둘 · 타기출·예상 = SYNAPSE(SOL) 하나 · 없으면 「해설 없음」 칩 · 지학은 그대로 */
@@ -4445,6 +4467,18 @@ zRenderBody=async function(Z,my){
 }
 /* 포인터 — 핀치(두 손가락) · 끌기(보기) · 펜/형광/지우개 · 휠 · pointermove 는 한 프레임에 한 번(rAF) · 뗄 때 마지막 80ms 속도로 관성 */
 function zWire(Z){
+  /* 판 3 ① — 오리기 네모. Z.crop 을 켠 창(교재)에서만 산다. */
+  let crop=null;
+  const cropEl=()=>{const p=Z.pages()[crop.i];if(!p)return null;
+    let el=p.el.querySelector('.crbox');
+    if(!el){el=document.createElement('div');el.className='crbox';p.el.appendChild(el)}
+    return el};
+  const cropClear=()=>{$$(Z.world+' .crbox,'+Z.over+' .crbox').forEach(x=>x.remove());
+    const m=document.getElementById('crmenu');if(m)m.remove();crop=null};
+  Z.cropClear=cropClear;
+  const cropDraw=()=>{const el=cropEl();if(!el)return;
+    const x=Math.min(crop.x0,crop.x1),y=Math.min(crop.y0,crop.y1);
+    el.style.cssText='left:'+x+'px;top:'+y+'px;width:'+Math.abs(crop.x1-crop.x0)+'px;height:'+Math.abs(crop.y1-crop.y0)+'px'};
   zInit(Z);const vp=$(Z.vp);let ptrs=new Map(),drag=null,pinch=null,stroke=null;
   const flush=()=>{Z.pending=0;if(Z.clamp)Z.clamp();zApply(Z)};
   const schedule=()=>{if(!Z.pending)Z.pending=requestAnimationFrame(flush)};
@@ -4476,6 +4510,11 @@ function zWire(Z){
     try{vp.setPointerCapture(e.pointerId)}catch(_){}ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,t:e.pointerType});
     if(ptrs.size===2&&[...ptrs.values()].every(q=>q.t==='touch')){if(Z.pen&&Z.strictView){stroke=null;return}   /* 교재 모드(§4): 핀치·끌기는 「보기」 툴에서만 · 핀치는 손가락 둘일 때만(add1 §2(2)) */
       const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),s:Z.S,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,X:Z.X,Y:Z.Y};drag=null;stroke=null;moveOn();return}
+    /* 판 3 ① 오리기 — **펜에서만** 네모가 선다. 손가락은 아래로 흘려보내 종전대로 스크롤·핀치가 된다. */
+    if(Z.crop&&Z.tool==='crop'){
+      if(e.pointerType!=='pen'&&SET.pencil){if(wasVel)settle();drag={ox:e.clientX,oy:e.clientY,X:Z.X,Y:Z.Y};Z.samples=[{t:performance.now(),x:Z.X,y:Z.Y}];vp.classList.add('panning');moveOn();return}
+      const p=toPage(e.clientX,e.clientY);if(!p){if(wasVel)settle();return}
+      crop={i:p.i,x0:p.x,y0:p.y,x1:p.x,y1:p.y};cropDraw();return}
     if(Z.pen&&(e.pointerType==='pen'||!SET.pencil)){const p=toPage(e.clientX,e.clientY);if(!p){if(wasVel)settle();return}
       if(Z.tool==='erase'){zInkErase(Z,p);return}
       stroke={i:p.i,c:Z.tool==='hl'?'#F2C230':Z.color,w:Z.tool==='hl'?Z.hlw:Z.w,hl:Z.tool==='hl',p:[p.x,p.y]};zInkDraw(Z,stroke,true);return}
@@ -4484,11 +4523,20 @@ function zWire(Z){
   vp.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,t:(ptrs.get(e.pointerId)||{}).t||e.pointerType});
     if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);const r=vp.getBoundingClientRect();const cx=(a.x+b.x)/2-r.left,cy=(a.y+b.y)/2-r.top;const ns=Math.max(Z.MIN,Math.min(Z.MAX,pinch.s*d/pinch.d));
       Z.X=cx-(pinch.cx-r.left-pinch.X)*(ns/pinch.s);Z.Y=cy-(pinch.cy-r.top-pinch.Y)*(ns/pinch.s);Z.S=ns;schedule();return}
+    if(crop){const p=toPage(e.clientX,e.clientY);if(p&&p.i===crop.i){crop.x1=p.x;crop.y1=p.y;cropDraw()}return}
     if(stroke){const p=toPage(e.clientX,e.clientY);if(p&&p.i===stroke.i){stroke.p.push(p.x,p.y);zInkDraw(Z,stroke,false)}return}
     if(!drag)return;Z.X=drag.X+(e.clientX-drag.ox);Z.Y=drag.Y+(e.clientY-drag.oy);
     const now=performance.now();Z.samples.push({t:now,x:Z.X,y:Z.Y});while(Z.samples.length>12)Z.samples.shift();schedule()});
   const up=async e=>{ptrs.delete(e.pointerId);
     if(pinch&&ptrs.size<2)pinch=null;
+    if(crop&&ptrs.size===0){
+      const w=Math.abs(crop.x1-crop.x0),h=Math.abs(crop.y1-crop.y0);
+      if(w<8||h<8){cropClear()}                                   /* 톡 친 것은 네모가 아니다 */
+      else{const el=cropEl();if(el){el.classList.add('on');
+        el.innerHTML=['nw','ne','sw','se'].map(k=>'<i data-h="'+k+'"></i>').join('');
+        cropHandles(Z,el,crop,cropDraw)}
+        if(Z.onCrop)Z.onCrop(crop,cropClear)}
+      return}
     if(stroke&&ptrs.size===0){if(stroke.p.length>=4)await zInkCommit(Z,stroke);else zInkDraw(Z,null,true);stroke=null}
     if(drag&&ptrs.size===0){drag=null;Z.moving=false;vp.classList.remove('panning');if(Z.pending){cancelAnimationFrame(Z.pending);Z.pending=0;if(Z.clamp)Z.clamp();zTransform(Z)}
       if(!startInertia())settle();return}
@@ -4496,6 +4544,82 @@ function zWire(Z){
   vp.addEventListener('pointerup',up);vp.addEventListener('pointercancel',up);
   if(window.ResizeObserver)new ResizeObserver(()=>{if(vp.clientWidth&&vp.clientHeight&&Z.ready&&!vp.closest('.hide')){if(Z.clamp)Z.clamp();zApply(Z)}}).observe(vp);
 }
+/* ══ 판 3 ① 교재 조각 — 읽기·쓰기·그리기 ══
+   CROP[uid] = { q:[{p:인쇄쪽, r:[x0,y0,x1,y1]}], s:[…] } · q = 문제 칸 · s = 해설 칸.
+   ⚠ 그림 파일을 굽지 않는다. 좌표만 두고 열 때 교재 PDF 를 그 자리만 잘라 그린다.
+   ⚠ 모르는 꼴은 추측해서 덮지 않는다 — 그 조각만 빼고 CROPBAD 로 센다(판 1 BPGBAD 와 같은 방식). */
+var CROPBAD=0;
+var cropList=(uid,slot)=>{const o=CROP[uid];
+  if(!o||typeof o!=='object'||Array.isArray(o))return [];
+  const a=o[slot]; if(a===undefined||a===null)return [];
+  if(!Array.isArray(a)){CROPBAD++;return []}
+  const out=[];
+  for(const c of a){
+    if(!c||typeof c!=='object'||!(+c.p>0)||!Array.isArray(c.r)||c.r.length!==4||c.r.some(v=>!isFinite(+v))){CROPBAD++;continue}
+    out.push({p:+c.p,r:c.r.map(Number)})}
+  return out};
+var cropHas=(uid,slot)=>cropList(uid,slot).length>0;
+var saveCROP=()=>put('kv','crop',CROP);
+/* ⚠ `async function` 선언을 블록 안에 두면 블록 밖에서 안 보인다(Annex B 승격은 보통 function 에만 붙는다).
+   이 저장소가 이미 쓰는 꼴(var x=async function)로 둔다 — jogakPaint·zInkCommit 과 같다. */
+var cropAdd=async function(uid,slot,cell){
+  const o=CROP[uid]&&typeof CROP[uid]==='object'&&!Array.isArray(CROP[uid])?CROP[uid]:{};
+  const a=Array.isArray(o[slot])?o[slot].slice():[];
+  a.push({p:cell.p,r:cell.r.map(v=>+v.toFixed(1))});
+  CROP[uid]=Object.assign({},o,{[slot]:a});
+  let ok=0;try{ok=await saveCROP()}catch(e){ok=0}
+  if(!ok)toast('조각을 저장하지 못했습니다 — 기기 저장 공간을 확인해 주세요');
+  return ok}
+var cropDel=async function(uid,slot,i){
+  const a=cropList(uid,slot);if(i<0||i>=a.length)return;
+  a.splice(i,1);
+  const o=Object.assign({},CROP[uid]||{});
+  if(a.length)o[slot]=a;else delete o[slot];
+  if(Object.keys(o).length)CROP[uid]=o;else delete CROP[uid];
+  try{await saveCROP()}catch(e){}}
+/* 조각 한 자락을 캔버스에 그린다 — 교재 PDF 를 그 좌표만 오려 낸다(pdf.js 는 잘라내기 옵션이 없어 이동 행렬로) */
+var cropPaint=async function(cv,cell,cssW){
+  if(!cv||!cell)return 0;
+  const prev=cv.__crp; if(prev){try{await prev}catch(e){}}
+  const run=(async()=>{
+    const pc=pieceFor(cell.p); if(!pc)throw new Error('이 쪽은 조각에 없다');
+    const doc=await pieceDoc(pc.file);
+    const pg=await doc.getPage(Math.min(Math.max(1,cell.p-pc.pdf_offset),doc.numPages));
+    const [x0,y0,x1,y1]=cell.r, w=Math.max(1,x1-x0), h=Math.max(1,y1-y0);
+    const dpr=Math.max(1.5,Math.min(3,window.devicePixelRatio||1));
+    const sc=Math.max(0.5,(cssW||cv.clientWidth||320)/w)*dpr;
+    cv.width=Math.round(w*sc);cv.height=Math.round(h*sc);
+    const g=cv.getContext('2d');g.clearRect(0,0,cv.width,cv.height);
+    await pg.render({canvasContext:g,viewport:pg.getViewport({scale:sc}),transform:[1,0,0,1,-x0*sc,-y0*sc]}).promise;
+    return 1})();
+  cv.__crp=run; try{return await run}finally{if(cv.__crp===run)cv.__crp=null}};
+var cropBoxHtml=(uid,slot)=>{const L=cropList(uid,slot);if(!L.length)return '';
+  return `<div class="cropw" data-cropw="${slot}">`+L.map((c,i)=>
+    `<div class="cropi"><canvas data-cr="${slot}:${i}" data-p="${c.p}"></canvas><button class="cx" data-crx="${slot}:${i}" title="조각 떼기">✕</button></div>`).join('')+`</div>`};
+/* 문항 화면에 붙은 조각을 그리고 ✕ 를 맨다 — 화면을 다시 그리는 자리에서 한 번 부른다 */
+function cropWire(box,uid,redraw){
+  if(!box)return;
+  box.querySelectorAll('canvas[data-cr]').forEach(cv=>{
+    const [slot,i]=cv.dataset.cr.split(':');const cell=cropList(uid,slot)[+i];if(!cell)return;
+    const w=cv.parentElement.clientWidth||320;
+    cropPaint(cv,cell,w).catch(e=>{const p=cv.parentElement;if(p)p.innerHTML='<div class="ld" style="padding:8px;font-size:12px">조각을 못 그렸다 — '+esc(String(e&&e.message||e))+'</div>'})});
+  box.querySelectorAll('[data-crx]').forEach(b=>b.onclick=async e=>{
+    e.stopPropagation();const [slot,i]=b.dataset.crx.split(':');
+    await cropDel(uid,slot,+i);if(redraw)redraw()})}
+/* 판 3 ① — 오린 네모의 모서리를 잡아 다시 맞춘다(펜·손가락·마우스 다 잡는다 · 여기는 필기가 아니다) */
+function cropHandles(Z,el,crop,redraw){
+  el.querySelectorAll('i[data-h]').forEach(h=>{
+    h.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();
+      const k=h.dataset.h, sx=e.clientX, sy=e.clientY;
+      const a={x0:Math.min(crop.x0,crop.x1),y0:Math.min(crop.y0,crop.y1),x1:Math.max(crop.x0,crop.x1),y1:Math.max(crop.y0,crop.y1)};
+      try{h.setPointerCapture(e.pointerId)}catch(_){}
+      const mv=ev=>{const dx=(ev.clientX-sx)/Z.S, dy=(ev.clientY-sy)/Z.S;
+        crop.x0=a.x0+(k[1]==='w'?dx:0); crop.x1=a.x1+(k[1]==='e'?dx:0);
+        crop.y0=a.y0+(k[0]==='n'?dy:0); crop.y1=a.y1+(k[0]==='s'?dy:0);
+        redraw();
+        const m=document.getElementById('crmenu');if(m&&Z.cropMenuAt)Z.cropMenuAt(m)};
+      const upH=()=>{h.removeEventListener('pointermove',mv);h.removeEventListener('pointerup',upH);h.removeEventListener('pointercancel',upH)};
+      h.addEventListener('pointermove',mv);h.addEventListener('pointerup',upH);h.addEventListener('pointercancel',upH)},{passive:false})})}
 /* 잉크 — 쪽 좌표(pt) 정규화 · SVG 벡터라 배율마다 선명 · 기기별(IndexedDB ink · SYNC 밖) */
 var pathD=(p,w,h)=>{let d='M'+(p[0]*w).toFixed(1)+' '+(p[1]*h).toFixed(1);for(let k=2;k<p.length;k+=2)d+=' L'+(p[k]*w).toFixed(1)+' '+(p[k+1]*h).toFixed(1);return d};
 /* ── 잉크 형식 가드(2026-09-07 · gigu/_task_jagwa_ink_guard.md §2) ──
@@ -4784,7 +4908,36 @@ $('#bkX').onclick=bkClose;$('#bkPrevU').onclick=()=>bkStep(-1);$('#bkNextU').onc
 $('#bpBig').onclick=()=>bkOpen(BOOK.page||undefined);
 $('#bkSub').onclick=()=>{const p=bkCurPage();const pc=p?p.pc:null;subOpen(pc&&/^\d+\.\d+$/.test(String(pc.절))?pc.절:'',true)};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&BK.open&&!$$('.sheet').some(x=>!['book','sub','bkq'].includes(x.id)&&!x.classList.contains('hide')))bkClose()});
+/* 판 3 ① — 도구줄에 「▢ 오리기」를 카드 층에서만 붙인다(마크업은 안 건드린다 · 물리는 이 블록에 안 들어온다) */
+{const tb=$('#bktools');
+ if(tb&&!tb.querySelector('[data-tool="crop"]')){const sp=document.createElement('span');sp.dataset.tool='crop';sp.textContent='▢ 오리기';
+   const er=tb.querySelector('[data-tool="erase"]');tb.insertBefore(sp,er?er.nextSibling:null)}}
+BK.crop=true;   /* 이 창에서만 오리기가 산다 */
 zWire(BK);zTools(BK,'#bktools','#bkvp');$('#bkvp').classList.add('view');$('#bkUndo').onclick=()=>zInkUndo(BK);
+/* 판 3 ① — 네모를 놓으면 뜨는 작은 메뉴. 붙는 대상은 **지금 보고 있는 문항**(VNO).
+   ⚠ 「✎ 글자로 고치기」는 ④가 선 뒤에 살아난다 — 없는 단추를 그리지 않는다. */
+BK.cropMenuAt=function(m){
+  const el=$('#bkvp .crbox')||$('#bkover .crbox');if(!el||!m)return;
+  const r=el.getBoundingClientRect(), vp=$('#bkvp').getBoundingClientRect();
+  const x=Math.min(Math.max(8,r.left),Math.max(8,vp.right-m.offsetWidth-8));
+  const y=(r.bottom+6+m.offsetHeight<vp.bottom)?r.bottom+6:Math.max(8,r.top-m.offsetHeight-6);
+  m.style.left=Math.round(x)+'px';m.style.top=Math.round(y)+'px'};
+BK.onCrop=function(crop,clear){
+  const p=BK.pages()[crop.i];if(!p)return;
+  if(!VNO){toast('문항을 먼저 열어 주세요 — 조각은 지금 보는 문항에 붙습니다');clear();return}
+  const uid=rec(VNO)[F.CODE];
+  const cell={p:p.pr,r:[Math.min(crop.x0,crop.x1),Math.min(crop.y0,crop.y1),Math.max(crop.x0,crop.x1),Math.max(crop.y0,crop.y1)]};
+  const old=document.getElementById('crmenu');if(old)old.remove();
+  const m=document.createElement('div');m.id='crmenu';
+  m.innerHTML='<button data-s="q">🖼 문제 칸으로</button><button data-s="s">🖼 해설 칸으로</button><button class="x" data-s="">취소</button>';
+  document.body.appendChild(m);BK.cropMenuAt(m);
+  m.querySelectorAll('button').forEach(b=>b.onclick=async()=>{
+    const slot=b.dataset.s;
+    if(slot){await cropAdd(uid,slot,cell);
+      toast((slot==='q'?'문제':'해설')+' 칸에 조각을 붙였습니다 — '+p.pr+'쪽');
+      if(VNO&&!$('#view').classList.contains('hide'))showProblem()}
+    clear()});
+};
 /* ── 텍스트층(쪽마다 한 번 · pdf.js getTextContent → 투명 span · 「보기」 툴일 때만 잡힌다) ── */
 /* add1 §2-5: 보이는 쪽 ± 1 쪽만 텍스트층을 두고 나머지는 뗀다(포스트잇 칩은 다시 만들 때 같이) · build=false 면 떼기만 */
 function bkTextRange(){const vp=$('#bkvp'),H=vp.clientHeight;const vis=BK.pgs.filter(p=>{const sy=BK.Y+p.y*BK.S;return sy<H&&sy+p.h*BK.S>0});
@@ -5036,6 +5189,7 @@ exportData=async function(withPdf){
 };
 importData=async function(f){if(!f)return;let txt;try{txt=await f.text();const j=JSON.parse(txt);const c=j.card||{};
     if(c.bogi){BG=c.bogi;await put('kv','bogi',BG)}if(c.unit){UN=c.unit;await put('kv','unit',UN)}if(c.bpit){BP=c.bpit;await put('kv','bpit',BP)}if(c.bpg){BPG=c.bpg;await put('kv','bpg',BPG)}
+    if(c.crop){CROP=c.crop;await put('kv','crop',CROP)}
     if(c.snote){SN=c.snote;await put('kv','snote',SN)}if(c.mcard){MC=c.mcard;await put('kv','mcard',MC)}
   }catch(e){toast('백업 파일을 읽지 못했습니다');return}
   await _imp0(new Blob([txt],{type:'application/json'}));if(DATA.length)refreshUnits();
