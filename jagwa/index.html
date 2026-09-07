@@ -440,7 +440,16 @@ select.rsel{padding:4px 8px;border:1px solid var(--line);border-radius:999px;bac
 .pgbar input{width:52px;text-align:center;border:1px solid var(--line);border-radius:4px;padding:3px;font:inherit}
 .pgbar small{color:var(--muted)} .pgbar button{border:1px solid var(--line);background:#fff;border-radius:4px;padding:3px 8px;font-size:12px}
 #bpview{flex:1;overflow:auto;padding:6px;background:#EDECE6;position:relative}
-#bpc{display:block;margin:0 auto;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.2);max-width:100%}
+#bpc{display:block;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.2);max-width:100%}
+#bpwrap{position:relative;margin:0 auto;width:-moz-max-content;width:max-content;max-width:100%;isolation:isolate}   /* 잉크 덧층을 캔버스에 딱 맞추는 감싸개 · isolate = 9/7 쌓임 사고 되풀이 금지(판 1 §1-A) */
+#bpink{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2}   /* 읽기 전용 덧층 — 여기서는 안 긋는다 */
+.bpgchips{display:flex;gap:5px;flex-wrap:wrap;align-items:center;padding:5px 10px;border-bottom:1px solid var(--line);font-size:12px}
+.bpgchips b{color:var(--muted);font-weight:600}
+.bpgchips .pin{border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 9px;cursor:pointer}
+.bpgchips .pin.on{background:var(--sea);border-color:var(--sea);color:#fff;font-weight:700}
+.bpgl2{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0}
+.bpgl2 .pin{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;font-size:12.5px}
+.bpgl2 .pin i{font-style:normal;color:var(--red);cursor:pointer;margin-left:6px;font-weight:700}
 #bpMsg{font-size:12px;color:var(--muted);padding:6px;text-align:center}
 #bpList{max-height:34%;overflow:auto;padding:8px 10px;font-size:12.5px;border-top:1px solid var(--line)}
 #bpList h5{margin:0 0 6px;font-size:12px;color:var(--muted);font-weight:600}
@@ -755,7 +764,8 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #sub,body[data-layer="pdf"]
     <div id="bookpane">
       <div class="btabs"><b class="on" data-t="book">교재</b><b data-t="sub">🗒 서브노트</b><button id="bpX">✕</button></div>
       <div class="pgbar"><button id="bpPrev">‹</button><input id="bpPg" inputmode="numeric"><small id="bpInfo"></small><button id="bpNext">›</button><span class="sp"></span><button id="bpSub">🗒 이 쪽의 서브노트</button><button id="bpBig" title="현재 쪽으로 교재 모드">📖 크게</button></div>
-      <div id="bpview"><canvas id="bpc"></canvas><div id="bpMsg"></div></div>
+      <div class="bpgchips hide" id="bpgChips"></div>
+      <div id="bpview"><div id="bpwrap"><canvas id="bpc"></canvas><svg id="bpink" xmlns="http://www.w3.org/2000/svg"></svg></div><div id="bpMsg"></div></div>
       <div id="bpList"></div>
     </div>
   </div>
@@ -824,7 +834,7 @@ const SUBJ={
         TITLE:'생물 기출 서재', LOG:'생물', NAME:'생물', LAYER:true, ready:true},
   earth:{DB:'earth1', PDF_DIR:'earth/pdf/', IMG_DIR:'earth/img/', DATA_PATH:'earth/문항.json', TOC_PATH:'earth/목차.json',
         REC_PATH:'earth/기록.json', SYNC_PREFIX:'earth_sync_', NOTE_REPO:'zzikkaplan/notes', NOTE_PATH:'earth/', NOTE_DIR:'earth/note/',
-        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit'],   /* 판 2: bpit = 교재 포스트잇(14째) */
+        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg'],   /* 판 2: bpit = 교재 포스트잇(14째) · 판 1(9/7): bpg = 교재쪽 고정(15째 · 종전에는 빠져 있어 기기 사이로 안 갔다) */
         BOOK_PDF_ADD:11,   /* 교재 모드 툴바 「(PDF NNN)」 = 인쇄쪽 + 11 (하이엔드 전체 PDF) */
         TITLE:'지학 기출 서재', LOG:'지학', NAME:'지학', LAYER:true, ready:true}
 };
@@ -3373,13 +3383,44 @@ var CIRC='①②③④⑤⑥⑦⑧';
 function expandChoices(a){const out=[];
   (a||[]).forEach(t=>{String(t||'').replace(/\s*SYNAPSE 7\.0\s*$/,'').split(/\s*[⑥⑦⑧]\s*/).forEach((x,j)=>{x=x.trim();if(x.length>60&&j>0)x='';if(j===0||x)out.push(x)})});
   while(out.length&&!out[out.length-1])out.pop();return out.slice(0,CIRC.length)}
-var bpgOf=r=>{const o=BPG[r[F.CODE]];return o&&+o.p?+o.p:(r[F.BPAGE]||0)};
+/* ── 교재쪽 고정(판 1 §1-B · 2026-09-07) — 여러 쪽을 담는다 ──
+   새 꼴 BPG[uid] = {ps:[12,13,88], last:12, s?:문장번호}
+   옛 꼴 BPG[uid] = {p:12, s:3}  ← 생물 기기에 이미 있다. 계속 읽는다.
+   ⚠ 옛 꼴을 일괄 변환하지 않는다(다른 기기에 옛 앱이 남아 있을 수 있다). 사용자가 고치는 순간 새 꼴이 된다.
+   ⚠ 모르는 꼴을 만나면 자동값(BPAGE)으로 흘리고 BPGBAD 로 센다 — 추측해서 덮지 않는다. */
+var BPGBAD=0;
+function bpgList(r){const o=BPG[r[F.CODE]],auto=+r[F.BPAGE]>0?[+r[F.BPAGE]]:[];
+  if(o&&Array.isArray(o.ps)){const L=o.ps.map(Number).filter(p=>p>0);return L.length?L:auto}
+  if(o&&+o.p>0)return [+o.p];
+  if(o&&typeof o==='object'&&!Array.isArray(o.ps)&&o.p===undefined)BPGBAD++;   /* 새 꼴도 옛 꼴도 아닌 것 */
+  return auto}
+var bpgOf=r=>{const o=BPG[r[F.CODE]],L=bpgList(r);
+  if(!L.length)return 0;
+  if(o&&Array.isArray(o.ps)&&+o.last>0&&L.indexOf(+o.last)>=0)return +o.last;
+  return L[0]};
+var bpgPinned=r=>{const o=BPG[r[F.CODE]];return !!(o&&(Array.isArray(o.ps)?o.ps.length:+o.p>0))};
+function bpgWrite(uid,ps,last,s){                       /* 쓰기는 새 꼴로만 */
+  ps=(ps||[]).map(Number).filter(p=>p>0);
+  ps=ps.filter((p,i)=>ps.indexOf(p)===i).sort((a,b)=>a-b);
+  if(!ps.length){delete BPG[uid];return null}
+  const v={ps,last:ps.indexOf(+last)>=0?+last:ps[0]};
+  if(s!==undefined&&s!==null)v.s=s;
+  BPG[uid]=v;return v}
+/* 그 문항을 보는 동안 옆 칸에서 쪽을 바꿨고 그 쪽이 ps 안일 때만 last 를 남긴다.
+   ps 밖으로 넘겨 본 것은 기억하지 않고, 옛 꼴은 건드리지 않는다(변환은 사용자가 고칠 때만). */
+async function bpgTouchLast(page){
+  if(!VNO)return;const r=rec(VNO);if(!r)return;
+  const o=BPG[r[F.CODE]];
+  if(!o||!Array.isArray(o.ps))return;
+  if(o.ps.indexOf(+page)<0||+o.last===+page)return;
+  o.last=+page;await saveBPG();}
+
 var bpgWait=r=>r[F.BSRC]==='절시작·대기'&&!BPG[r[F.CODE]];
-var bookChip=r=>{const bp=bpgOf(r);if(!CUR.KINDS)return r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">교재 ${r[F.BPAGE]}쪽</span>`:'';
-  const o=BPG[r[F.CODE]];return (bp?`<span class="tag page" data-page="${bp}" title="${esc(String(r[F.BSENT]||'').slice(0,40))}">📖 p${bp}</span>`:'')+
+var bookChip=r=>{const bp=bpgOf(r);if(!CARD_LAYER)return r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">교재 ${r[F.BPAGE]}쪽</span>`:'';   /* 물리는 CARD_LAYER=false 라 타는 가지가 종전과 같다 · 지학도 생물과 같은 칩을 쓴다(판 1 §1-B) */
+  const o=BPG[r[F.CODE]],_n=bpgList(r).length;return (bp?`<span class="tag page" data-page="${bp}" title="${esc(String(r[F.BSENT]||'').slice(0,40))}">📖 p${bp}${_n>1?' +'+(_n-1):''}</span>`:'')+
     (bpgWait(r)?`<span class="tag wait" id="cBpg" title="교재쪽 수동 매칭">대기</span>`:`<span class="tag ${o?'ok':'match'} sm" id="cBpg" title="교재쪽 고치기">${o?'✓':'✎'}</span>`)};
-var bookChipSm=r=>{const bp=bpgOf(r);if(!CUR.KINDS)return r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">${r[F.BPAGE]}쪽</span>`:'';
-  return (bp?`<span class="tag page" data-page="${bp}">📖 p${bp}</span>`:'')+(bpgWait(r)?'<i class="wait">대기</i>':'')};
+var bookChipSm=r=>{const bp=bpgOf(r);if(!CARD_LAYER)return r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">${r[F.BPAGE]}쪽</span>`:'';
+  const _n=bpgList(r).length;return (bp?`<span class="tag page" data-page="${bp}">📖 p${bp}${_n>1?' +'+(_n-1):''}</span>`:'')+(bpgWait(r)?'<i class="wait">대기</i>':'')};
 
 /* ───────────── 데이터 적재 ───────────── */
 loadEarthData=async function(){
@@ -3555,6 +3596,7 @@ showProblem=async function(){
   CARD.open=false;
   renderCard(r);
   syncMarkBtns();syncNoteBtn();tmReset();
+  bpgChips();   /* 문항이 바뀌면 고정 칩 줄도 따라간다 — bookOpen 이 안 불릴 수도 있다(판 1 §1-B(3)) */
   if(bookVisible()&&bpgOf(r)&&BOOK.follow)bookOpen(bpgOf(r));
 }
 function renderCard(r){
@@ -3833,7 +3875,7 @@ bookOpen=async function(page,show){
   const pc=pieceFor(page);
   BOOK.page=page;$('#bpPg').value=page;
   const info=$('#bpInfo');
-  if(!pc){info.textContent='이 쪽은 조각에 없다';$('#bpMsg').textContent='';bookList(page);return}
+  if(!pc){info.textContent='이 쪽은 조각에 없다';$('#bpMsg').textContent='';bookList(page);bpInk(0);bpgChips();await bpgTouchLast(page);return}   /* 조각 없는 쪽 = 덧층도 비운다(판 1 §1-A) */
   BOOK.file=pc.file;const k=page-pc.pdf_offset;
   info.textContent=`${pc.file} ${k}/${pc.인쇄끝-pc.인쇄시작+1}쪽`+(CUR.BOOK_PDF_ADD?` · PDF ${page+CUR.BOOK_PDF_ADD}`:'');
   bookList(page);
@@ -3848,9 +3890,32 @@ bookOpen=async function(page,show){
     cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);cv.style.width=avail+'px';
     await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
     msg.textContent='';
-  }catch(e){msg.textContent='쪽을 그리지 못했습니다 — '+(e.message||e)}
+    await bpInk(page,base.width,base.height);   /* 교재 모드에서 그은 획을 여기서도 보이게(읽기 전용 · 판 1 §1-A) */
+  }catch(e){msg.textContent='쪽을 그리지 못했습니다 — '+(e.message||e);bpInk(0)}
+  bpgChips();await bpgTouchLast(page);
 }
-var bookRows=page=>DATA.filter(r=>CUR.BOOK_ROWS==='bpage'?bpgOf(r)===page:(r[F.BPAGE]===page||(isC(r)&&r[F.PG]===page)||(!isC(r)&&r[F.SOLPG]===page)));   /* 생물 = 교재쪽(bpg 덮어쓰기)만 · 지학 = 교재쪽 ∪ 확인 문제쪽 ∪ 기출 부록쪽 */
+/* 옆 교재 칸 잉크 덧층(판 1 §1-A) — **읽기 전용**. 교재 모드와 같은 키(bink:인쇄쪽)를 inkGet 으로만 잡는다.
+   좌표는 0~1 정규화라 viewBox 를 쪽 크기로 두고 pathD 로 그대로 그린다 — 다시 계산하지 않는다. */
+var bpInkGen=0;
+async function bpInk(page,w,h){
+  const sv=$('#bpink');if(!sv)return 0;
+  const my=++bpInkGen;
+  if(!page||!w||!h){sv.innerHTML='';sv.removeAttribute('viewBox');return 0}
+  sv.setAttribute('viewBox','0 0 '+w+' '+h);
+  const K=await inkGet('bink:'+page,{w,h});
+  if(my!==bpInkGen||BOOK.page!==page)return 0;
+  const S=(K&&K.s)||[];
+  sv.innerHTML=S.map((s,j)=>`<path data-j="${j}" d="${pathD(s.p,w,h)}" stroke="${s.c}" stroke-width="${s.w}" fill="none" stroke-linecap="round" stroke-linejoin="round"${s.hl?' opacity=".45"':''}/>`).join('');
+  return S.length}
+/* 옆 칸 머리줄의 고정 쪽 칩 — 누르면 그 쪽으로 · 지금 쪽에 on */
+function bpgChips(){
+  const box=$('#bpgChips');if(!box)return;
+  const r=VNO?rec(VNO):null, L=r?bpgList(r):[];
+  if(!r||L.length<2){box.classList.add('hide');box.innerHTML='';return}
+  box.classList.remove('hide');
+  box.innerHTML='<b>고정</b>'+L.map(p=>`<span class="pin${p===BOOK.page?' on':''}" data-p="${p}">p${p}</span>`).join('');
+  box.querySelectorAll('[data-p]').forEach(el=>el.onclick=()=>bookOpen(+el.dataset.p));}
+var bookRows=page=>DATA.filter(r=>CUR.BOOK_ROWS==='bpage'?bpgList(r).indexOf(page)>=0:(r[F.BPAGE]===page||(isC(r)&&r[F.PG]===page)||(!isC(r)&&r[F.SOLPG]===page)||bpgList(r).indexOf(page)>=0));   /* 생물 = 교재쪽(bpg 덮어쓰기)만 · 지학 = 교재쪽 ∪ 확인 문제쪽 ∪ 기출 부록쪽 · 판 1(9/7): 고정한 쪽을 합집합으로 더한다(수는 늘 수만 있다) */
 function bookList(page){bookListInto(page,$('#bpList'),null)}
 /* 판 2: 같은 목록을 교재 패널(#bpList)과 교재 모드 팝업(#bkqList)에 그린다 · onPick = 문항 열기 전에 할 일(팝업은 교재 모드 닫기) */
 function bookListInto(page,box,onPick){
@@ -3909,14 +3974,23 @@ bpgSheet=async function(no){const r=rec(no),uid=r[F.CODE],u=unitOf(no),sec=u?sec
   const S=(await loadSents()).map((x,i)=>Object.assign({i},x)).filter(x=>x.절===sec).sort((a,b)=>(a.연도-b.연도)||(a.인쇄쪽-b.인쇄쪽));
   const old=$('#bpgSheet');if(old)old.remove();
   const b=document.createElement('div');b.className='sheet';b.id='bpgSheet';
+  /* 시트의 「고정한 쪽」은 **사용자가 고정한 것만** — 자동값(BPAGE)은 고정이 아니라 되돌아갈 자리다.
+     bpgList 를 그대로 쓰면 자동값이 고정으로 딸려 들어간다(생물 하네스 A-6 이 잡음). */
+  const PS=(cur&&Array.isArray(cur.ps))?cur.ps.map(Number).filter(p=>p>0):((cur&&+cur.p>0)?[+cur.p]:[]);
   b.innerHTML=`<div class="panel"><h2>${esc(uid)} 교재쪽 매칭</h2>
     <p>지금: <b>p${bpgOf(r)||'?'}</b> ${cur?'(사용자 값'+(cur.s!==undefined?' · 문장 #'+cur.s:'')+')':'(자동 · '+esc(r[F.BSRC]||'없음')+')'}${r[F.BSENT]?'<br><small>'+esc(String(r[F.BSENT]).slice(0,60))+'</small>':''}</p>
-    <div class="fld"><label>${esc(sec||'절 없음')} 절의 교재 문장 ${S.length}</label><div class="bpgl">${S.map(x=>`<div data-i="${x.i}" data-p="${x.인쇄쪽}"><b>【${x.연도}】 p${x.인쇄쪽}</b>${esc(String(x.문장).slice(0,60))}</div>`).join('')||'<i>없음</i>'}</div></div>
-    <div class="fld"><label>쪽만 직접</label><input id="bpgP" class="tokin" inputmode="numeric" value="${bpgOf(r)||''}"> <button class="btn" id="bpgSet">이 쪽으로</button></div>
-    ${cur?'<button class="btn" id="bpgAuto">자동값으로</button> ':''}<button class="btn" id="bpgX">닫기</button></div>`;
-  const done=async v=>{if(v)BPG[uid]=v;else delete BPG[uid];await saveBPG();b.remove();if(VNO===no)showProblem();else draw();toast(v?'교재쪽 = p'+v.p:'자동값으로')};
+    <div class="fld"><label>고정한 쪽 ${PS.length}</label><div class="bpgl2" id="bpgPins">${PS.map(p=>`<span class="pin" data-pin="${p}">p${p}<i data-del="${p}" title="빼기">✕</i></span>`).join('')||'<i>없음(자동값)</i>'}</div></div>
+    ${S.length?`<div class="fld"><label>${esc(sec||'절 없음')} 절의 교재 문장 ${S.length}</label><div class="bpgl">${S.map(x=>`<div data-i="${x.i}" data-p="${x.인쇄쪽}"><b>【${x.연도}】 p${x.인쇄쪽}</b>${esc(String(x.문장).slice(0,60))}</div>`).join('')}</div></div>`:''}
+    <div class="fld"><label>쪽 번호로 고정</label><input id="bpgP" class="tokin" inputmode="numeric" value="${bpgOf(r)||''}"> <button class="btn" id="bpgAdd">＋ 고정</button>${BOOK.page?` <button class="btn" id="bpgHere">지금 보는 쪽(p${BOOK.page}) 담기</button>`:''}</div>
+    ${cur?'<button class="btn" id="bpgAuto">자동값으로 되돌림</button> ':''}<button class="btn" id="bpgX">닫기</button></div>`;
+  /* 쓰기는 늘 새 꼴 · 옛 꼴은 여기서 처음 고칠 때 풀려 담긴다 */
+  const save=async(ps,last,s)=>{const v=bpgWrite(uid,ps,last,s);await saveBPG();b.remove();if(VNO===no)showProblem();else draw();if(bookVisible()&&v)bookOpen(bpgOf(r));toast(v?'교재쪽 = '+v.ps.map(p=>'p'+p).join(' · '):'자동값으로')};
+  const done=async v=>{if(!v){delete BPG[uid];await saveBPG();b.remove();if(VNO===no)showProblem();else draw();toast('자동값으로');return}await save(PS.concat([v.p]),v.p,v.s)};
   b.querySelectorAll('.bpgl [data-i]').forEach(el=>el.onclick=()=>done({p:+el.dataset.p,s:+el.dataset.i}));
-  b.querySelector('#bpgSet').onclick=()=>{const p=+b.querySelector('#bpgP').value;if(p>0)done({p});else toast('쪽 번호를 넣으세요')};
+  b.querySelectorAll('[data-del]').forEach(el=>el.onclick=e=>{e.stopPropagation();save(PS.filter(p=>p!==+el.dataset.del),bpgOf(r))});
+  b.querySelectorAll('[data-pin]').forEach(el=>el.onclick=()=>{b.remove();bookOpen(+el.dataset.pin,true)});
+  b.querySelector('#bpgAdd').onclick=()=>{const p=+b.querySelector('#bpgP').value;if(p>0)save(PS.concat([p]),p);else toast('쪽 번호를 넣으세요')};
+  {const hb=b.querySelector('#bpgHere');if(hb)hb.onclick=()=>save(PS.concat([BOOK.page]),BOOK.page)}
   const au=b.querySelector('#bpgAuto');if(au)au.onclick=()=>done(null);
   b.querySelector('#bpgX').onclick=()=>b.remove();b.onclick=e=>{if(e.target===b)b.remove()};
   document.body.appendChild(b);
