@@ -698,6 +698,25 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #sub,body[data-layer="pdf"]
 .mcpaper .mcard .k{box-sizing:border-box;height:auto}
 .mcpaper .mcard.empty .k{font-size:11px}
 .mcpaper .mcard .m{font-size:9px;padding:0 4px}
+/* ── 판 2 add3 §1-A/B — 배치를 종이와 같게 · 쪽으로 끊어 아래로 쌓는다 ──
+   기준이 뒤집혔다: **열당 칸 수가 먼저**고 칸 크기가 창에서 나온다. 그래서 창이 어떻든
+   같은 문항이 같은 (쪽·열·칸)에 온다. 라벨은 종이처럼 칸 **안** 왼쪽 위에 얹는다. */
+.mcpaper{background:#DFE3E7;padding:0}
+.mcsizer{position:relative}
+.mcz{position:absolute;left:0;top:0;transform-origin:0 0;width:max-content;padding:8px}
+.mcpage{background:#fff;border:1px solid var(--line);border-radius:3px;width:max-content;
+  padding:5px 6px 7px;margin:0 0 16px}
+.mcpage+.mcpage{border-top:3px solid #9A988F;margin-top:16px}
+.mcpgn{font-size:10px;color:var(--muted);padding:0 0 3px 1px;letter-spacing:.02em}
+.mcprow{display:flex;align-items:flex-start;gap:3px}
+.mcpaper .mccol{gap:3px}
+.mcpaper .mcard{position:relative;overflow:hidden}
+.mcpaper .mcard>.k{position:absolute;inset:0;height:auto!important;border:0}
+.mcpaper .mcard>.t{position:absolute;left:0;top:0;right:0;z-index:3;border-bottom:0;
+  background:rgba(255,255,255,.80);padding:0 3px;gap:2px;line-height:1}
+.mcpaper .mcard>.t b{font-weight:700;letter-spacing:-.02em}
+.mcpaper .mcard.empty>.k{background:#FAFAFA}
+.mcph{position:absolute;inset:0;z-index:0;background:repeating-linear-gradient(135deg,#F2F3F5 0 6px,#E9EBEE 6px 12px)}
 /*/EARTH:css*/
 </style>
 </head>
@@ -3364,9 +3383,28 @@ showProblem=async function(){if(MCW){MCW.remove();MCW=null}return _showProblem_m
 function mcardSheet(sub,label){
   const b=document.createElement('div');b.className='sheet';let sort='no';
   const JG=(typeof jogakAny==='function')&&jogakAny();   /* 좌표표가 있는 과목에서만 모아보기(판 2 §1-D) · 물리는 함수 자체가 없다 · 생물은 좌표표가 없다 → 둘 다 종전 그대로 */
+  /* ── 판 2 add3 — 종이 값 ──
+     칸 가로세로비 1.732 = 종이 칸 72.48÷41.85pt. 한 쪽 = 11열 × 열당 칸 수(기본 13). 종이는 4쪽.
+     ⚠ 조각(omr2 오림)의 비율은 1.747 이라 0.9% 차이뿐 — 눈에 안 보이고, 조각을 늘이지 않는다. */
+  const PAPER_AR=1.732, CPP=11, NPC_DEF=12, NPC_MIN=8, NPC_MAX=20;
+  /* ⚠ 기본 열당 칸 수는 **12** 다. 지시서는 13 이라고 적었지만 종이(지학_굿노트_단원순_OMR.pdf)에서
+     라벨 자리를 뽑아 세니 **11열 × 12칸 · 4쪽 · 319칸**이었다(2026-09-08 실측). 13 으로 두면
+     첫 열이 한 칸 더 먹어 `01-38-2` 가 종이의 2열이 아니라 앱의 1열 끝에 붙는다 — 자리가 어긋난다. */
+  const BANDH=17, GAP=3, CARDH_MIN=34, FONT_MIN=7;
+  const ZMIN=0.35, ZMAX=3, ZBG=0.6;         /* 배율 한계·배경을 안 그리는 문턱 — §5 에 실측 근거를 적는다 */
+  const BGCAP=260, ROOTM=250;               /* 실측값 — §5 에 근거를 적는다.
+     ROOTM 250 = 보이는 한 쪽(칸 143 · 조각 119) + 다음 쪽 3분의 1 만큼 미리. 600 은 197장을 미리 시작해
+       두 쪽어치를 헛그리고, 120 은 화면 끝에서 자리표시자가 보인다.
+     BGCAP 260 = 한 쪽(140) + 미리 그린 몫보다 넉넉해 「지나갔다 돌아오면 그대로」가 지켜지고,
+       비트맵이 가장 큰 열당 8 에서도 260 × 58KB ≈ 15MB 로 묶인다. 넘으면 화면에서 먼 것부터 버린다
+       (쪽 캔버스가 남아 있어 다시 그리는 값은 drawImage 한 번뿐이다). */
   let mode=JG?'unit':'no', cw=JG?170:0;
+  /* add3 — 손잡이가 「칸 크기(px)」에서 **「열당 칸 수」**로 바뀌었다. 같은 값이면 창 크기와 무관하게 배치가 같다. */
+  let npc=NPC_DEF, zoom=1;
   try{if(JG){const m=localStorage.getItem('jagwa.mcmode');if(m==='round'||m==='unit')mode=m;
-    const w=+localStorage.getItem('jagwa.mcw');if(w>=110&&w<=320)cw=w}}catch(e){}
+    const w=+localStorage.getItem('jagwa.mcw');if(w>=110&&w<=320)cw=w;
+    const n=+localStorage.getItem('jagwa.mcn');if(n>=NPC_MIN&&n<=NPC_MAX)npc=Math.round(n);
+    const z=+localStorage.getItem('jagwa.mcz');if(z>=ZMIN&&z<=ZMAX)zoom=z}}catch(e){}
   const kb=()=>Math.round(JSON.stringify(MC).length/1024*10)/10;
   const ordUnit=(a,z)=>{const ua=(typeof unitOf==='function'?unitOf(a[F.NO]):'')||'',uz=(typeof unitOf==='function'?unitOf(z[F.NO]):'')||'';
     const c=(typeof unitCmp==='function'?unitCmp(ua,uz):(ua<uz?-1:ua>uz?1:0));return c||(+a[F.ROUND]||0)-(+z[F.ROUND]||0)||(+a[F.LNO]||0)-(+z[F.LNO]||0)||a[F.NO]-z[F.NO]};
@@ -3374,13 +3412,15 @@ function mcardSheet(sub,label){
   /* ══ 판 2 add2 §1-B — 종이(굿노트 OMR) 꼴 ══
      JG(좌표표가 있는 과목 = 지학)일 때만 돈다. 물리·생물은 이 함수를 부르지도 않는다.
      열 = [분홍 장 띠][보라 절 띠][칸…] · 세로로 채우고 다음 열로 · 절이 바뀌면 새 열에서 시작한다. */
-  const PAPER_AR=1.75;                      /* 칸 그림 비율 — 조각 309칸의 최빈값(1.747·1.743) · 한 값으로 굳혀야 열끼리 줄이 맞는다 */
-  const LBLH=18, BANDH=17, GAP=4;
   const lblOf=r=>{const y=+r[F.YEAR]||0,rd=+r[F.ROUND]||0,ln=+r[F.LNO]||0;
     return (y&&rd&&ln)?(String(y%100).padStart(2,'0')+'-'+rd+'-'+ln):String(r[F.CODE]||'')};   /* 25-62-9 · 확인문제는 회차·연도가 없어 코드로 */
   const uOf=r=>(typeof unitOf==='function'?unitOf(r[F.NO]):'')||'';   /* ⚠ 사용자가 손으로 옮긴 값이 이긴다 */
+  /* 최신순 = 연도↓ → 회차↓ → **문번↓**.
+     ⚠ add2 는 문번만 오름차순으로 뒀는데 종이를 실측하니 내림차순이었다(319칸 중 3쌍이 뒤집혀 있었다 —
+     12-49-7/12-49-6 · 22-59-3/22-59-1 · 21-58-2/21-58-1). 「절 → 소단원 코드순 → 최신순」이라는
+     차례 규약 자체는 그대로고, 최신순 안의 방향만 종이에 맞춘다. */
   const ordPaper=(a,z)=>{const c=(typeof unitCmp==='function'?unitCmp(uOf(a),uOf(z)):0);if(c)return c;
-    return ((+z[F.YEAR]||0)-(+a[F.YEAR]||0))||((+z[F.ROUND]||0)-(+a[F.ROUND]||0))||((+a[F.LNO]||0)-(+z[F.LNO]||0))||a[F.NO]-z[F.NO]};
+    return ((+z[F.YEAR]||0)-(+a[F.YEAR]||0))||((+z[F.ROUND]||0)-(+a[F.ROUND]||0))||((+z[F.LNO]||0)-(+a[F.LNO]||0))||a[F.NO]-z[F.NO]};
   const yearOfRound=rd=>{for(let i=0;i<DATA.length;i++){const r=DATA[i];if((+r[F.ROUND]||0)===rd&&+r[F.YEAR])return +r[F.YEAR]}return 0};
   const paperGroups=qs=>{
     if(mode==='round'){                      /* 회차별 — 띠는 회차 하나만. 분홍 장 띠는 안 쓴다 */
@@ -3399,18 +3439,24 @@ function mcardSheet(sub,label){
         sec:k,secTxt:k?(k+' '+((TOC.sec[k]||{}).name||'')).trim():'',band:!!k,
         rows:m.get(k).slice().sort(ordPaper)}})};
   const paperFill=(qs,bar)=>{
-    const kh=Math.round(cw/PAPER_AR), cardH=LBLH+kh+2;
     b.innerHTML=`<div class="panel mcpp"><h2>암기카드 — ${esc(label)}</h2>
-      <p class="mchint">세로로 채우고 다음 열로 · 짧게 누르면 조각 크게 · 길게 누르면 그 문항 팝업 · 모서리를 끌면 창 크기.</p>${bar}
-      <div class="mcpaper" id="mcPaper"></div>
+      <p class="mchint">두 손가락으로 확대축소(빈자리 두 번 톡 = 원래대로) · 짧게 누르면 조각 크게 · 길게 누르면 그 문항 팝업 · 모서리를 끌면 창 크기.</p>${bar}
+      <div class="mcpaper" id="mcPaper"><div class="mcsizer" id="mcSizer"><div class="mcz" id="mcZ"></div></div></div>
       <div class="mcfoot"><button class="chip" id="mcVault">볼트 카드 ${cardsFor(null,sub).length}장</button><span class="n" id="mcCnt"></span><span class="sp"></span><button class="btn sm pri" id="mcClose">닫기</button></div></div>`;
-    const paper=b.querySelector('#mcPaper');
-    const availH=Math.max(cardH+GAP,paper.clientHeight||Math.round(window.innerHeight*0.6));
-    const per=Math.max(2,Math.floor((availH-BANDH*2-GAP*3)/(cardH+GAP)));
+    const paper=b.querySelector('#mcPaper'), sizer=b.querySelector('#mcSizer'), zbox=b.querySelector('#mcZ');
+    /* ── §1-A 기준을 뒤집는다 — 열당 칸 수가 먼저, 칸 크기는 창에서 나온다 ──
+       그래서 창 높이가 어떻든 **어느 문항이 몇째 쪽·열·칸인지가 안 바뀐다**(배치 불변). */
+    const availH=Math.max(140,paper.clientHeight||Math.round(window.innerHeight*0.6));
+    let cardH=Math.floor((availH-BANDH*2-GAP*(npc+3)-24)/npc);
+    if(cardH<CARDH_MIN)cardH=CARDH_MIN;       /* 더 줄이지 않는다 — 작아서 안 보이는 것보다 세로 스크롤이 낫다 */
+    const cardW=Math.round(cardH*PAPER_AR);
+    const lblH=Math.max(FONT_MIN+4,Math.round(cardH*0.26));
+    const fs=Math.max(FONT_MIN,Math.min(11,Math.round(cardW/6.4*10)/10));
+    /* 열 나누기 — 절이 바뀌면 새 열에서 시작한다(종이와 같은 칸에 오게. 빈자리는 그대로 둔다) */
     const cols=[];
     paperGroups(qs).forEach(g=>{
-      for(let i=0;i<g.rows.length;i+=per)
-        cols.push({band:g.band,secTxt:(i===0)?g.secTxt:'',rows:g.rows.slice(i,i+per)})});
+      for(let i=0;i<g.rows.length;i+=npc)
+        cols.push({band:g.band,secTxt:(i===0)?g.secTxt:'',rows:g.rows.slice(i,i+npc)})});
     /* 분홍 장 띠 — 열마다 첫 칸의 장을 보고 앞 열과 다를 때만 띄운다(회차별에서는 안 쓴다).
        ⚠ 절 묶음 첫 열만 보면 미매칭(확인문제) 꼬리에서 장이 바뀌어도 안 뜬다 — 거기도 장은 있다. */
     let lastCh='@';
@@ -3418,24 +3464,61 @@ function mcardSheet(sub,label){
       col.chOn=(mode!=='round')&&(ch!==lastCh);
       col.chTxt=ch?(ch+'. '+((TOC.ch[ch]||{}).name||'')):'미분류';
       lastCh=ch});
-    paper.innerHTML=cols.map(col=>{
+    const colHTML=col=>{
       const cards=col.rows.map(r=>{const no=r[F.NO],mk=lastM(no),c=MC[no],jg=jogakOf(r);
-        return `<div class="mcard${(c||jg)?'':' empty'}" data-no="${no}" style="height:${cardH}px">`+
-          `<div class="t" style="height:${LBLH}px"><b>${esc(lblOf(r))}</b>${c?'<i class="pen">✎</i>':''}${mk?`<span class="m m${mk}">${mGlyph(mk)}</span>`:''}</div>`+
-          `<div class="k" style="height:${kh}px">${jg?`<canvas class="bg" data-bg="${no}"></canvas>`:''}${c?`<canvas data-cv="${no}"></canvas>`:(jg?'':'＋')}</div></div>`}).join('');
-      return `<div class="mccol" style="width:${cw}px">`+
+        return `<div class="mcard${(c||jg)?'':' empty'}" data-no="${no}" style="width:${cardW}px;height:${cardH}px">`+
+          `<div class="k">${jg?`<div class="mcph"></div><canvas class="bg" data-bg="${no}"></canvas>`:''}${c?`<canvas data-cv="${no}"></canvas>`:(jg?'':'＋')}</div>`+
+          `<div class="t" style="height:${lblH}px;font-size:${fs}px"><b>${esc(lblOf(r))}</b>${c?'<i class="pen">✎</i>':''}${mk?`<span class="m m${mk}">${mGlyph(mk)}</span>`:''}</div></div>`}).join('');
+      return `<div class="mccol" style="width:${cardW}px">`+
         `<div class="mcch${col.chOn?' on':''}" style="height:${BANDH}px">${col.chOn?esc(col.chTxt):''}</div>`+
         `<div class="mcsec${col.band?'':' none'}" style="height:${BANDH}px">${col.secTxt?esc(col.secTxt):''}</div>`+
-        cards+`</div>`}).join('');
+        cards+`</div>`};
+    /* ── §1-B 쪽으로 끊고 아래로 쌓는다 — 한 쪽 = 11열. 가로로 끝없이 가지 않게 ── */
+    const pages=[];for(let i=0;i<cols.length;i+=CPP)pages.push(cols.slice(i,i+CPP));
+    zbox.innerHTML=pages.map((pg,pi)=>
+      `<div class="mcpage"><div class="mcpgn">${pi+1}쪽</div><div class="mcprow">${pg.map(colHTML).join('')}</div></div>`).join('');
+    /* ── §1-C 확대축소는 transform 만 쓴다 — 칸 크기·좌표를 다시 계산하지 않는다 ── */
+    const applyZoom=()=>{zbox.style.transform='scale('+zoom+')';
+      sizer.style.width=Math.ceil(zbox.offsetWidth*zoom)+'px';
+      sizer.style.height=Math.ceil(zbox.offsetHeight*zoom)+'px'};
+    applyZoom();
+    b.__applyZoom=applyZoom;
     const cnt=b.querySelector('#mcCnt');
-    if(cnt)cnt.textContent=`칸 ${paper.querySelectorAll('.mcard').length} · 열 ${cols.length} · 열당 ${per}`};
+    if(cnt)cnt.textContent=`칸 ${zbox.querySelectorAll('.mcard').length} · 열 ${cols.length} · ${pages.length}쪽 · 열당 ${npc} · 배율 ${Math.round(zoom*100)}%`;
+    const nv=b.querySelector('#mcNv');if(nv)nv.textContent=String(npc);
+    b.__zsetup=()=>{
+      /* 두 손가락 핀치 · ctrl+휠 · 빈자리 두 번 톡 = 원래 배율. 단추는 만들지 않는다.
+         ⚠ 한 손가락은 종전대로 스크롤·누름이다(짧게/길게·8px 취소는 add2 그대로). */
+      const pts=new Map(); let pinch=null, tapT=0, multi=false;   /* multi = 이번 몸짓에 손가락이 둘 이상이었나(핀치를 놓는 것을 두 번 톡으로 오해하지 않게) */
+      const setZoom=z=>{z=Math.max(ZMIN,Math.min(ZMAX,z));
+        if(Math.abs(z-zoom)<0.002)return; zoom=z;
+        try{localStorage.setItem('jagwa.mcz',String(Math.round(z*1000)/1000))}catch(e){}
+        applyZoom();
+        if(cnt)cnt.textContent=cnt.textContent.replace(/배율 \d+%/,'배율 '+Math.round(zoom*100)+'%');
+        if(b.__bgwire)b.__bgwire()};
+      b.__setZoom=setZoom;
+      paper.addEventListener('pointerdown',e=>{if(pts.size===0)multi=false;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+        if(pts.size>=2){multi=true;const v=[...pts.values()];pinch={d:Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y),z:zoom}}},{passive:true});
+      paper.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;
+        pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+        if(pinch&&pts.size===2){const v=[...pts.values()],d=Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y);
+          if(pinch.d>10)setZoom(pinch.z*d/pinch.d)}},{passive:true});
+      const up=e=>{pts.delete(e.pointerId);if(pts.size<2)pinch=null};
+      ['pointerup','pointercancel','pointerleave'].forEach(t=>paper.addEventListener(t,up));
+      paper.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();setZoom(zoom*Math.exp(-e.deltaY/400))},{passive:false});
+      paper.addEventListener('pointerup',e=>{                 /* 빈자리 두 번 톡 — 칸 위에서는 안 잡는다(짧게 누름과 안 부딪히게) */
+        if(e.target&&e.target.closest&&e.target.closest('.mcard'))return;
+        if(multi||pts.size>1){tapT=0;return}                  /* 핀치를 놓는 중이면 톡이 아니다 */
+        const t=Date.now(); if(t-tapT<330){setZoom(1);tapT=0}else tapT=t},true);
+    };
+  };
   const draw=()=>{
     let qs=(sub===null||sub===undefined)?DATA.slice():DATA.filter(r=>r[F.SUB]===sub);   /* add2 §1-A — 목록 머리 「암기카드」는 sub 없이 부른다 = 전 문항 */
     if(JG)qs=qs.slice().sort(mode==='round'?ordRound:ordUnit);
     else if(sort==='mark'){const ord={X:0,Q:1,'':2,P:3,O:4};qs=qs.slice().sort((a,z)=>(ord[lastM(a[F.NO])]??2)-(ord[lastM(z[F.NO])]??2)||a[F.NO]-z[F.NO])}
     const n=qs.filter(r=>MC[r[F.NO]]).length;
     const bar=JG?`<div class="mcbar"><span class="seg"><b class="${mode==='unit'?'on':''}" data-m="unit">단원별</b><b class="${mode==='round'?'on':''}" data-m="round">회차별</b></span>
-      <label>칸 <input type="range" id="mcW" min="110" max="320" step="10" value="${cw}"></label>
+      <label>열당 <input type="range" id="mcW" min="${NPC_MIN}" max="${NPC_MAX}" step="1" value="${npc}"><b id="mcNv">${npc}</b></label>
       <span class="sp" style="flex:1"></span><span class="n">내 카드 ${Object.keys(MC).length}장 · 합계 ${kb()}KB</span></div>`:'';
     if(JG)paperFill(qs,bar);
     else b.innerHTML=`<div class="panel frmpanel"><h2>암기카드 — ${esc(label)}</h2><p>${JG?'짧게 누르면 조각 크게 · 길게 누르면 그 문항 팝업.':'내가 쓴 카드 '+n+'장 · 문항마다 문제명 · 코멘트 · 필기. 카드를 누르면 크게 · 길게 누르면 그 문제로.'}</p>${bar}
@@ -3445,17 +3528,41 @@ function mcardSheet(sub,label){
           <div class="k"${JG&&jg?` style="height:${Math.round(cw/jogakAR(jg))}px"`:''}>${jg?`<canvas class="bg" data-bg="${no}"></canvas>`:''}${c?`<canvas data-cv="${no}"></canvas>`:(JG?(jg?'':'＋ 새 카드'):'카드 없음 · 문제에서 「암기카드」')}</div></div>`}).join('')}</div>
       <div class="mcfoot"><button class="chip" id="mcVault">볼트 카드 ${cardsFor(null,sub).length}장</button>${JG?'':`<button class="chip" id="mcSort">순서: ${sort==='no'?'문항번호':'마크순'} ▾</button>`}<span class="sp"></span><button class="btn sm pri" id="mcClose">닫기</button></div></div>`;
     b.querySelectorAll('canvas[data-cv]').forEach(cv=>{const no=+cv.dataset.cv,k=cv.parentElement;cv.width=Math.max(2,k.clientWidth*2);cv.height=Math.max(2,k.clientHeight*2);cv.style.width='100%';cv.style.height='100%';mcPaint(cv,MC[no])});
-    /* 조각 배경 — 눈에 들어온 칸만 그린다(add2). 「암기카드」로 전 문항을 열면 칸이 704개라,
-       한꺼번에 그리면 pdf.js 가 수십 초를 먹는다(하네스 실측 · 한 판에 35초쯤).
-       ⚠ 칸·캔버스는 종전대로 다 만들어 둔다 — DOM 은 판 2 와 같고 그리는 때만 미룬다. */
-    if(JG&&jogakOn()){const cvs=[...b.querySelectorAll('canvas[data-bg]')];
-      const paintOne=cv=>{if(cv.__jgdone)return;cv.__jgdone=1;
-        jogakPaint(cv,jogakOf(rec(+cv.dataset.bg)),cv.parentElement.clientWidth).catch(()=>{cv.style.display='none'})};
-      if(typeof IntersectionObserver==='function'){
-        const io=new IntersectionObserver((es,ob)=>{es.forEach(e=>{if(e.isIntersecting){ob.unobserve(e.target);paintOne(e.target)}})},
-          {root:b.querySelector('.mcpaper')||null,rootMargin:'300px'});
-        cvs.forEach(cv=>io.observe(cv))}
-      else cvs.forEach(paintOne)}
+    /* 조각 배경 — 눈에 들어온 칸만 그린다(add2). 전 문항이면 칸이 704개라 한꺼번에 그리면
+       pdf.js 가 수십 초를 먹는다(실측 한 판 35초). 칸·캔버스는 다 만들어 두고 그리기만 미룬다.
+       add3 뒷정리 — ① 아직 안 그린 칸에 자리표시자(.mcph) → 「조각 없는 칸」과 눈으로 갈린다
+                    ② 그린 것은 안 버린다. 상한(BGCAP)을 넘으면 **화면에서 먼 것부터** 버리고 다시 지켜본다
+                    ③ 배율이 문턱(ZBG) 아래면 아예 안 그린다 — 축소하면 보이는 칸이 확 늘어 35초가 되돌아온다 */
+    if(JG&&jogakOn()){
+      const paper0=b.querySelector('.mcpaper');
+      const cvs=[...b.querySelectorAll('canvas[data-bg]')];
+      let io=null; b.__painted=[];
+      const phOf=cv=>{const k=cv.parentElement;return k?k.querySelector('.mcph'):null};
+      const far=cv=>{if(!paper0||!cv.isConnected)return true;
+        const r=cv.getBoundingClientRect(),p=paper0.getBoundingClientRect();
+        return r.bottom<p.top-ROOTM||r.top>p.bottom+ROOTM||r.right<p.left-ROOTM||r.left>p.right+ROOTM};
+      const evict=()=>{let guard=b.__painted.length;
+        while(b.__painted.length>BGCAP&&guard-->0){
+          const old=b.__painted.shift();
+          if(!old||!old.isConnected)continue;
+          if(!far(old)){b.__painted.push(old);continue}   /* 지금 보이는 것은 안 버린다 */
+          old.width=0;old.height=0;old.__jgdone=0;
+          const k=old.parentElement;
+          if(k&&!k.querySelector('.mcph'))k.insertAdjacentHTML('afterbegin','<div class="mcph"></div>');
+          if(io)io.observe(old)}};
+      const paintOne=cv=>{if(cv.__jgdone)return;cv.__jgdone=1;b.__painted.push(cv);
+        jogakPaint(cv,jogakOf(rec(+cv.dataset.bg)),cv.parentElement.clientWidth)
+          .then(()=>{const p=phOf(cv);if(p)p.remove()})
+          .catch(()=>{cv.style.display='none';const p=phOf(cv);if(p)p.remove()});
+        evict()};
+      const wire=()=>{
+        if(io){io.disconnect();io=null}
+        if(zoom<ZBG)return;                              /* 축소 상태 — 자리표시자만 두고 안 그린다 */
+        if(typeof IntersectionObserver!=='function'){cvs.forEach(paintOne);return}
+        io=new IntersectionObserver((es,ob)=>{es.forEach(e=>{if(e.isIntersecting){ob.unobserve(e.target);paintOne(e.target)}})},
+          {root:paper0||null,rootMargin:ROOTM+'px'});
+        cvs.forEach(cv=>{if(!cv.__jgdone)io.observe(cv)})};
+      b.__bgwire=wire; wire()}
     b.querySelectorAll('.mcard').forEach(el=>{const no=+el.dataset.no;let tm=null,long=false,sx=0,sy=0;
       el.onpointerdown=e=>{long=false;sx=e.clientX;sy=e.clientY;tm=setTimeout(()=>{long=true;
         if(JG)mcardPop(no);else{b.remove();openView(no)}},400)};
@@ -3465,11 +3572,13 @@ function mcardSheet(sub,label){
         if(JG&&!MC[no]&&!jogakOf(rec(no))){document.querySelectorAll('.sheet').forEach(x=>x.remove());openView(no).then(()=>mcardWin(no));return}
         mcardBig(no)}});
     if(JG){b.querySelectorAll('.mcbar [data-m]').forEach(x=>x.onclick=()=>{mode=x.dataset.m;try{localStorage.setItem('jagwa.mcmode',mode)}catch(e){}draw()});
-      const w=b.querySelector('#mcW');if(w)w.onchange=()=>{cw=+w.value;try{localStorage.setItem('jagwa.mcw',String(cw))}catch(e){}draw()}}
+      const w=b.querySelector('#mcW');if(w)w.oninput=w.onchange=()=>{npc=Math.round(+w.value);
+        try{localStorage.setItem('jagwa.mcn',String(npc))}catch(e){}draw()}}
     b.querySelector('#mcVault').onclick=()=>cardSheet(null,sub,label);
     {const so=b.querySelector('#mcSort');if(so)so.onclick=()=>{sort=sort==='no'?'mark':'no';draw()}}
     b.querySelector('#mcClose').onclick=()=>b.remove();
     if(JG)makeFloat(b,b.querySelector('h2'),'mcsheet','jagwa.win.mcsheet');   /* add2 §1-C — 다시 그릴 때마다 새 판에 손잡이·모서리를 다시 단다(WIN 이 자리를 이어받는다) */
+    if(JG&&b.__zsetup)b.__zsetup();   /* add3 §1-C — 새 판에 핀치·휠·두 번 톡을 다시 단다 */
   };
   b.onclick=e=>{if(e.target===b)b.remove()};
   if(JG){let rt=null;const redo=()=>{clearTimeout(rt);rt=setTimeout(()=>{if(b.isConnected)draw()},180)};
@@ -3596,21 +3705,45 @@ var omrDoc=async function(){                       /* pieceDoc 과 같은 통로
     }
     OMRDOC=await pdfjsLib.getDocument({data:buf.slice(0)}).promise;return OMRDOC})();
   try{return await OMRBUSY}finally{OMRBUSY=null}}
-/* 조각 하나를 캔버스에 그린다 — pdf.js 는 잘라내기 옵션이 없어 배율 viewport + 이동 행렬로 오려낸다 */
+/* 조각 하나를 캔버스에 그린다 — pdf.js 는 잘라내기 옵션이 없어 **쪽을 한 번 렌더해 두고 오려 붙인다**.
+   ⚠ add3(2026-09-08): 종전에는 조각마다 그 쪽을 통째로 렌더했다. 조각 309개가 실은 OMR **3쪽**에서
+   나온 것이라 309번 렌더가 됐고, 모아보기 한 쪽(칸 143 · 조각 119~197)을 채우는 데 **54~104초**가
+   걸렸다(실측). 쪽 캐시를 두니 렌더가 **3번**으로 줄어든다. 그린 그림은 종전과 같다 — 같은 배율의
+   같은 viewport 를 같은 자리에서 오려낸다. */
+var OMRPG=new Map(), OMRPGCAP=6, OMRPX=6e6;        /* '쪽@배율' → Promise<canvas> · 배율은 0.05 눈금 · 쪽 캔버스 상한 600만 화소(≈24MB) */
+var omrPageCanvas=function(pg,pno,s){
+  const key=pno+'@'+s;
+  let p=OMRPG.get(key);
+  if(p){OMRPG.delete(key);OMRPG.set(key,p);return p}   /* 최근 쓴 것을 뒤로 — 앞에서부터 버린다 */
+  p=(async()=>{
+    const vp=pg.getViewport({scale:s});
+    const c=document.createElement('canvas');
+    c.width=Math.ceil(vp.width);c.height=Math.ceil(vp.height);
+    await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+    return c})();
+  p.catch(()=>{OMRPG.delete(key)});
+  OMRPG.set(key,p);
+  while(OMRPG.size>OMRPGCAP)OMRPG.delete(OMRPG.keys().next().value);
+  return p};
 var jogakPaint=async function(cv,cell,cssW){
   if(!cv||!cell)return 0;
-  /* 같은 캔버스에 렌더가 겹치면 pdf.js 가 죽는다(토글을 빨리 두 번 누르면 그렇다) — 캔버스마다 줄 세운다 */
+  /* 같은 캔버스에 두 번 겹쳐 그리지 않게 캔버스마다 줄 세운다(토글을 빨리 두 번 누르면 그렇다) */
   const prev=cv.__jgp; if(prev){try{await prev}catch(e){}}
   const run=(async()=>{
-  const doc=await omrDoc();
-  const pg=await doc.getPage(cell.p);
   const [x0,y0,x1,y1]=cell.r, w=x1-x0, h=y1-y0;
   const dpr=Math.max(1.5,Math.min(3,window.devicePixelRatio||1));
-  const s=Math.max(0.5,(cssW||cv.clientWidth||300)/w)*dpr;
+  let s=Math.max(0.5,(cssW||cv.clientWidth||300)/w)*dpr;
+  s=Math.max(0.15,Math.round(s*20)/20);            /* 0.05 눈금 — 같은 쪽·비슷한 배율을 나눠 쓴다 */
   cv.width=Math.round(w*s);cv.height=Math.round(h*s);
-  const vp=pg.getViewport({scale:s});
   const g=cv.getContext('2d');g.clearRect(0,0,cv.width,cv.height);
-  await pg.render({canvasContext:g,viewport:vp,transform:[1,0,0,1,-x0*s,-y0*s]}).promise;
+  const doc=await omrDoc();
+  const pg=await doc.getPage(cell.p);
+  const v1=pg.getViewport({scale:1});
+  if(v1.width*s*v1.height*s<=OMRPX){               /* 모아보기 크기 — 쪽을 한 번 그려 두고 오려 붙인다 */
+    g.drawImage(await omrPageCanvas(pg,cell.p,s),Math.round(-x0*s),Math.round(-y0*s));
+  }else{                                            /* 카드 창처럼 크게 볼 때는 종전대로 그 조각만 오려 그린다(쪽을 캐시하면 수백 MB가 된다) */
+    await pg.render({canvasContext:g,viewport:pg.getViewport({scale:s}),transform:[1,0,0,1,-x0*s,-y0*s]}).promise;
+  }
   return 1})();
   cv.__jgp=run; try{return await run}finally{if(cv.__jgp===run)cv.__jgp=null}}
 var jogakAR=cell=>{const [x0,y0,x1,y1]=cell.r;return (x1-x0)/(y1-y0)};
