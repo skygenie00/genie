@@ -781,6 +781,14 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #sub,body[data-layer="pdf"]
 #qink{position:absolute;left:0;top:0;pointer-events:none;z-index:6;overflow:visible}
 #card.penon #qink{pointer-events:auto;touch-action:none;cursor:crosshair}
 #card.penon .q,#card.penon .choices,#card.penon .bogi,#card.penon details{user-select:none}
+/* ── 판 3 ④ 글자 고치기 tfix — 고친 칸에 작은 ✎ 배지 ── */
+.tfx{margin-left:5px;font-size:10.5px;color:var(--sand);font-weight:800;cursor:pointer;vertical-align:middle}
+#card .q,#card .choices button,#card .soltx{position:relative}
+#card .choices button.fixed,#card .q.fixed,#card .soltx.fixed{box-shadow:inset 2px 0 0 var(--sand)}
+#tfxSheet .panel textarea{width:100%;box-sizing:border-box;min-height:120px;font:inherit;font-size:13.5px;
+  line-height:1.6;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);resize:vertical}
+#tfxSheet .orig{font-size:12px;color:var(--muted);background:#F7F9FB;border-radius:8px;padding:8px 10px;margin:6px 0;
+  max-height:22vh;overflow:auto;white-space:pre-wrap}
 /*/EARTH:css*/
 </style>
 </head>
@@ -951,12 +959,12 @@ const SUBJ={
   /* 생물(앱 판 1 · 2026-09-05 · ready:true) — LAYER:true = 지학과 같은 층 · 지학 가정 여섯은 아래 과목 값(NCH_MAX·CH_LIST·KINDS·BOOK_ROWS·SOL_LABELS·SENT_PATH · BOOK_PDF_ADD 없음 = 인쇄쪽만)으로 푼다 */
   bio:{DB:'bio1', PDF_DIR:'bio/pdf/', IMG_DIR:'bio/img/', DATA_PATH:'bio/문항.json', TOC_PATH:'bio/목차.json',
         REC_PATH:'bio/기록.json', SYNC_PREFIX:'bio_sync_', NOTE_REPO:'zzikkaplan/notes', NOTE_PATH:'bio/', NOTE_DIR:'bio/note/', NOTE_JSON:'bio/정리판/',   /* 앱 판 2: NOTE_JSON = 정리판 JSON 자리(notes · 있으면 정리판 층이 켜진다) · 그림은 NOTE_PATH+'att/' */
-        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg','snote','crop','txt'],   /* 앱 판 1: bpg(15째) · 앱 판 2: snote(16째) · 판 3 ①: crop(17째) · 판 3 ②: txt = 글상자(18째) */
+        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg','snote','crop','txt','tfix'],   /* 앱 판 1: bpg(15째) · 앱 판 2: snote(16째) · 판 3 ①: crop(17째) · 판 3 ②: txt = 글상자(18째) */
         NCH_MAX:8, CH_LIST:['1','2','3','4','5','6','7','8','9','10','11','12'], KINDS:['G','T','E'], BOOK_ROWS:'bpage', SOL_LABELS:true, SENT_PATH:'bio/교재문장.json',   /* 선택지 최대 8(T299·T309) · 장 12 · 유형 셋 · 「이 쪽의 문항」 = 교재쪽만 · 해설 탭(크리티컬/SYNAPSE) · 교재 문장 목록 */
         TITLE:'생물 기출 서재', LOG:'생물', NAME:'생물', LAYER:true, ready:true},
   earth:{DB:'earth1', PDF_DIR:'earth/pdf/', IMG_DIR:'earth/img/', DATA_PATH:'earth/문항.json', TOC_PATH:'earth/목차.json',
         REC_PATH:'earth/기록.json', SYNC_PREFIX:'earth_sync_', NOTE_REPO:'zzikkaplan/notes', NOTE_PATH:'earth/', NOTE_DIR:'earth/note/',
-        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg','crop','txt'],   /* 판 2: bpit(14째) · 판 1: bpg(15째) · 판 3 ①: crop(16째) · 판 3 ②: txt = 글상자(17째) */
+        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg','crop','txt','tfix'],   /* 판 2: bpit(14째) · 판 1: bpg(15째) · 판 3 ①: crop(16째) · 판 3 ②: txt = 글상자(17째) */
         BOOK_PDF_ADD:11,   /* 교재 모드 툴바 「(PDF NNN)」 = 인쇄쪽 + 11 (하이엔드 전체 PDF) */
         JOGAK_PATH:'earth/조각.json', OMR_PATH:'earth/omr2.pdf',   /* 판 2(9/7): 정리 OMR 조각 좌표표 · 그 원본 PDF(비공개 저장소 · pieceDoc 과 같은 통로) */
         TITLE:'지학 기출 서재', LOG:'지학', NAME:'지학', LAYER:true, ready:true}
@@ -3025,7 +3033,7 @@ const SYNC_KEYS=CARD_LAYER?CUR.SYNC_KEYS:SUBJ.phys.SYNC_KEYS;   /* 과목별 표
 /* 키 → 이 앱의 전역. 열 개 다 「문항번호 → 값」 dict 다(실측 확인).
    ⚠ `ansfix` 만 늦게 읽힌다(loadAfix) — null 이면 건너뛴다. */
 let MC={};            // no -> {w,h,s:[{c,w,hl,p:[u,v,… 1/1000 정수]}]}  손필기 암기카드 · kv/mcard · 카드 20KB 상한
-let BG={},UN={},BP={},BPG={},SN={},CROP={},TXT={};   // 지학·생물: bogi = uid→{ㄱ:'O'|'Q'|'X'} · unit = uid→'n.n.n' · bpit = 교재 포스트잇 · bpg = 교재쪽 수동 매칭(생물) · snote = 정리판 줄에 붙이는 층(생물) · crop = 교재 조각(판 3 ①) · txt = 글상자(판 3 ② · 획과 다른 통) (물리 SYNC_KEYS 엔 없다)
+let BG={},UN={},BP={},BPG={},SN={},CROP={},TXT={},TFIX={};   // 지학·생물: bogi = uid→{ㄱ:'O'|'Q'|'X'} · unit = uid→'n.n.n' · bpit = 교재 포스트잇 · bpg = 교재쪽 수동 매칭(생물) · snote = 정리판 줄에 붙이는 층(생물) · crop = 교재 조각(판 3 ①) · txt = 글상자(판 3 ② · 획과 다른 통) (물리 SYNC_KEYS 엔 없다)
 const SYNC_REF={
   status :{g:()=>ST,   s:v=>{ST=v}},
   note   :{g:()=>CMT,  s:v=>{CMT=v}},
@@ -3045,7 +3053,8 @@ const SYNC_REF={
   bpg    :{g:()=>BPG,  s:v=>{BPG=v}},
   snote  :{g:()=>SN,   s:v=>{SN=v}},
   crop   :{g:()=>CROP, s:v=>{CROP=v}},
-  txt    :{g:()=>TXT,  s:v=>{TXT=v}}
+  txt    :{g:()=>TXT,  s:v=>{TXT=v}},
+  tfix   :{g:()=>TFIX, s:v=>{TFIX=v}}
 };
 const U_KEY=CUR.SYNC_PREFIX+'u', GONE_KEY=CUR.SYNC_PREFIX+'gone',
       SHADOW_KEY=CUR.SYNC_PREFIX+'shadow', SMETA_KEY=CUR.SYNC_PREFIX+'meta';
@@ -3319,7 +3328,7 @@ function recBoot(){
   FR=(await get('kv','frm'))||{};
   MC=(await get('kv','mcard'))||{};
   LK=(await get('kv','link'))||{};
-  if(CARD_LAYER){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};BP=(await get('kv','bpit'))||{};BPG=(await get('kv','bpg'))||{};SN=(await get('kv','snote'))||{};CROP=(await get('kv','crop'))||{};TXT=(await get('kv','txt'))||{};}
+  if(CARD_LAYER){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};BP=(await get('kv','bpit'))||{};BPG=(await get('kv','bpg'))||{};SN=(await get('kv','snote'))||{};CROP=(await get('kv','crop'))||{};TXT=(await get('kv','txt'))||{};TFIX=(await get('kv','tfix'))||{};}
   const moved=await renumber();
   if(moved)setTimeout(()=>toast('문항 번호 재배열 — 기록 '+moved+'건을 옮겼습니다'),900);
   await loadHave();
@@ -3937,7 +3946,8 @@ function pass(r){
   if(FL.mark==='note'&&!noteOf(no))return 0;
   if(FL.mark&&!['new','again','weak','less','note'].includes(FL.mark)&&m!==FL.mark)return 0;
   if(FL.q){const s=FL.q.toLowerCase();
-    const hay=[r[F.CODE],r[F.BODY],(r[F.CH]||[]).join(' '),(r[F.BOGI]||[]).map(b=>b.내용).join(' '),noteOf(no),unitOf(no)].join(' ').toLowerCase();
+    /* 판 3 ④ — **원본과 고친 글자를 둘 다** 훑는다. 고친 뒤 옛 낱말로 못 찾게 되면 안 된다. */
+    const hay=[r[F.CODE],r[F.BODY],(r[F.CH]||[]).join(' '),(r[F.BOGI]||[]).map(b=>b.내용).join(' '),noteOf(no),unitOf(no),tfixHay(r[F.CODE])].join(' ').toLowerCase();
     if(!hay.includes(s))return 0}
   return 1;
 }
@@ -4043,7 +4053,7 @@ showProblem=async function(){
 function renderCard(r){
   const no=r[F.NO],uid=r[F.CODE],u=unitOf(no),bg=bogiOf(uid),pick=lastPick(no),ox=hasOX(r);
   const ch=(r[F.CH]||[]).slice();if(CUR.KINDS){const n=Math.max(ch.length,+r[F.ANS]||0);while(ch.length<n)ch.push('')}   /* 정답이 ⑥·⑦인데 선택지 글이 모자라면 빈 단추 */
-  const sol=String(r[F.SOL]||'').split('⏎').map(esc).join('<br>'),sol2=String(r[F.SOL2]||'').split('⏎').map(esc).join('<br>');
+  const sol=String(txtOf(uid,'s')||'').split('⏎').map(esc).join('<br>')+(tfixOn(uid,'s')?'<i class="tfx">✎</i>':''),sol2=String(r[F.SOL2]||'').split('⏎').map(esc).join('<br>');   /* 판 3 ④ — 해설도 txtOf 를 지난다 */
   const c=$('#card');
   c.innerHTML=`<div class="cmeta">
       ${kindTag(r)}<span class="tag">${esc(titleOf(r))}</span>
@@ -4054,13 +4064,13 @@ function renderCard(r){
       ${snChip(r)}
       <span class="sp"></span><span class="cmark">${(()=>{const m=lastM(no);return m?`<b class="vm${m}">${MG[m]}</b> ${MLABEL[m]}`:'마크 없음'})()}</span>
     </div>
-    <div class="q${cropHas(uid,'q')?' crophid':''}">${esc(stemOf(r))}</div>${cropBoxHtml(uid,'q')}
+    <div class="q${cropHas(uid,'q')?' crophid':''}${tfixOn(uid,'q')?' fixed':''}" data-tfx="q">${esc(txtOf(uid,'q'))}${tfixOn(uid,'q')?'<i class="tfx" title="고친 글자 — 길게 누르면 다시 고치기">✎</i>':''}</div>${cropBoxHtml(uid,'q')}
     ${r[F.FILE]==='IMG'?`<div class="fig" id="cFig"><span class="ld">그림 받는 중…</span></div>`:''}
     ${(r[F.BOGI]||[]).length?`<div class="bogi">${r[F.BOGI].map(b=>`<div class="row" data-k="${b.키}" data-ans="${b.정오}">
         <span class="k">${b.키}.</span><span class="t">${esc(b.내용||bogiLineText(r,b.키))}${CUR.SOL_LABELS&&b.설명?`<span class="bexp" hidden>${esc(b.설명)}</span>`:''}</span>
         ${ox&&b.정오?`<div class="ox">${['O','Q','X'].map(v=>`<button class="${v}${bg[b.키]===v?' on':''}" data-v="${v}">${MG[v]}</button>`).join('')}</div>`:''}
       </div>`).join('')}</div>`:''}
-    ${ch.some(x=>x)?`<div class="choices">${ch.map((t,i)=>`<button data-c="${i+1}" class="${pick===String(i+1)?'pick':''}">${CIRC[i]} ${esc(t)}</button>`).join('')}</div>`:''}
+    ${ch.some(x=>x)?`<div class="choices">${ch.map((t,i)=>`<button data-c="${i+1}" data-tfx="c${i+1}" class="${pick===String(i+1)?'pick':''}${tfixOn(uid,'c'+(i+1))?' fixed':''}">${CIRC[i]} ${esc(txtOf(uid,'c'+(i+1)))}${tfixOn(uid,'c'+(i+1))?'<i class="tfx">✎</i>':''}</button>`).join('')}</div>`:''}
     <details id="cDet"><summary>정답 · 해설${r[F.SOLPG]&&!CUR.KINDS?` (부록 ${r[F.SOLPG]}쪽)`:''}</summary>
       <div class="sol"><b>정답 ${r[F.ANS]?CIRC[+r[F.ANS]-1]||r[F.ANS]:'—'}</b>${cropBoxHtml(uid,'s')}<span class="solwrap${cropHas(uid,'s')?' crophid':''}">${solHtml(r,sol,sol2)}</span>
         <div class="jump">${(bp=>bp?`<span class="tag page" data-page="${bp}">교재 ${bp}쪽 ${esc(unitName(u))}</span>`:'')(bpgOf(r))}
@@ -4091,10 +4101,12 @@ function renderCard(r){
   $('#cPrev').onclick=()=>go(-1);$('#cNext').onclick=()=>go(1);
   cropWire(c,uid,()=>showProblem());   /* 판 3 ① — 붙인 조각 그리기 · ✕ 로 떼면 원래 글자가 돌아온다 */
   qFit();qLoad(uid).then(()=>{qFit();qWire()});   /* 판 3 ③ — 문항 필기(qink:<uid>) · 폭을 박고 잉크 층을 얹는다 */
+  /* 판 3 ④ — 그 줄을 **길게 누르면** 글자 고치기. 짧게 누름(선택지 고르기)과 안 부딪힌다. */
+  c.querySelectorAll('[data-tfx]').forEach(el=>tfixLong(el,uid,el.dataset.tfx,()=>showProblem()));
   markWrong();markAns();
 }
 /* 해설 칸 — 생물(CUR.SOL_LABELS): 기출 = 크리티컬(SOL) + SYNAPSE(SOL2) 탭 둘 · 타기출·예상 = SYNAPSE(SOL) 하나 · 없으면 「해설 없음」 칩 · 지학은 그대로 */
-function solHtml(r,sol,sol2){if(!CUR.SOL_LABELS)return sol?'<div class="soltx">'+sol+'</div>':'';
+function solHtml(r,sol,sol2){if(!CUR.SOL_LABELS)return sol?'<div class="soltx" data-tfx="s">'+sol+'</div>':'';
   const k=kindOf(r);const L=[];if(sol)L.push([k==='G'?'크리티컬':'SYNAPSE',sol]);if(sol2)L.push(['SYNAPSE',sol2]);
   if(!L.length)return ' <span class="tag nosol">해설 없음</span>';
   if(L.length===1)return `<div class="soltx"><span class="tag sl">${L[0][0]}</span>${L[0][1]}</div>`;
@@ -4869,6 +4881,71 @@ var qEraseSheet=function(){
   b.querySelector('#qeL').onclick=async()=>{QINK.s=(QINK.s||[]).filter(x=>qRoundOf(x)!==QR);qPaint();await qSave();close();toast('지금 회독 필기를 지웠습니다')};
   b.querySelector('#qeA').onclick=async()=>{QINK.s=[];QR=1;qFillSel();qPaint();await qSave();close();toast('이 문항 필기를 모두 지웠습니다')};
   b.querySelector('#qeX').onclick=close;b.onclick=e=>{if(e.target===b)close()}};
+/* ══ 판 3 ④ 글자 고치기 tfix ══
+   OCR 이 틀린 글자를 타이핑으로 고친다. 담는 칸 **일곱** — 문제(q) · 보기 ①~⑤(c1~c5) · 해설(s).
+   정답은 기존 ansfix 가 맡는다. ⚠ **DATA 원본은 한 글자도 안 바꾼다**(D10) — 덮어 보일 뿐이다.
+   ⚠ 본문을 읽는 길은 **txtOf(uid, 칸) 하나**다. 화면·검색·모아보기가 전부 여기를 지난다 —
+   한 곳만 고치면 되게. (②의 글상자 txt 와 헷갈리지 말 것 — 그쪽은 덧층 글자, 이쪽은 문항 본문이다.) */
+var TFIXBAD=0;
+var TFIX_SLOTS=['q','c1','c2','c3','c4','c5','s'];
+var TFIX_LABEL={q:'문제',c1:'보기 ①',c2:'보기 ②',c3:'보기 ③',c4:'보기 ④',c5:'보기 ⑤',s:'해설'};
+var _UIDMAP=null;
+var rowByUid=uid=>{if(!_UIDMAP||_UIDMAP.__n!==DATA.length){_UIDMAP={__n:DATA.length};DATA.forEach(r=>{_UIDMAP[r[F.CODE]]=r})}
+  return _UIDMAP[uid]};
+var tfixRaw=(uid,slot)=>{const o=TFIX[uid];
+  if(!o||typeof o!=='object'||Array.isArray(o))return '';
+  const v=o[slot]; if(v===undefined||v===null||v==='')return '';
+  if(typeof v!=='string'){TFIXBAD++;return ''}
+  return v};
+var txtOrig=(uid,slot)=>{const r=rowByUid(uid); if(!r)return '';
+  if(slot==='q')return stemOf(r);
+  if(slot==='s')return String(r[F.SOL]||'');
+  const i=+String(slot).slice(1); return String((r[F.CH]||[])[i-1]||'')};
+/* 본문을 읽는 유일한 길 */
+var txtOf=(uid,slot)=>{const f=tfixRaw(uid,slot); return f||txtOrig(uid,slot)};
+var tfixOn=(uid,slot)=>!!tfixRaw(uid,slot);
+var tfixAny=uid=>TFIX_SLOTS.some(k=>tfixRaw(uid,k));
+/* 검색이 훑을 것 — 원본과 고친 글자를 **둘 다**. 고친 뒤 옛 낱말로 못 찾게 되면 안 된다. */
+var tfixHay=uid=>TFIX_SLOTS.map(k=>tfixRaw(uid,k)).filter(Boolean).join(' ');
+var saveTFIX=()=>put('kv','tfix',TFIX);
+var tfixSet=async function(uid,slot,v){
+  const o=Object.assign({},TFIX[uid]||{});
+  v=String(v==null?'':v);
+  if(v.trim())o[slot]=v; else delete o[slot];            /* 되돌리기 = 그 칸 비우기 */
+  if(Object.keys(o).length)TFIX[uid]=o; else delete TFIX[uid];
+  let ok=0;try{ok=await saveTFIX()}catch(e){ok=0}
+  if(!ok)toast('고친 글자를 저장하지 못했습니다 — 기기 저장 공간을 확인해 주세요');
+  return ok};
+/* 고치기 시트 — 원본을 옆에 두고 고친다. 비우면 원본으로 돌아간다. */
+var tfixSheet=function(uid,slot,after,seed){
+  const b=document.createElement('div');b.className='sheet';b.id='tfxSheet';
+  const orig=txtOrig(uid,slot), cur=tfixRaw(uid,slot);
+  b.innerHTML='<div class="panel"><h2>✎ 글자 고치기 — '+esc(TFIX_LABEL[slot]||slot)+'</h2>'+
+    '<p style="font-size:12px;color:var(--muted)">OCR 원본은 그대로 두고 **보이는 글자만** 갈아 끼운다. 비우면 원본으로 돌아간다.</p>'+
+    '<div class="orig">'+esc(orig||'(원본 없음)')+'</div>'+
+    '<textarea id="tfxIn"></textarea>'+
+    '<div style="display:flex;gap:6px;margin-top:10px"><button class="btn" id="tfxDel">되돌리기(비우기)</button>'+
+    '<span class="sp" style="flex:1"></span><button class="btn" id="tfxNo">닫기</button>'+
+    '<button class="btn pri" id="tfxOk">저장</button></div></div>';
+  document.body.appendChild(b);
+  const ta=b.querySelector('#tfxIn'); ta.value=cur||seed||orig||''; ta.focus();
+  const close=()=>b.remove();
+  b.querySelector('#tfxNo').onclick=close;
+  b.querySelector('#tfxDel').onclick=async()=>{await tfixSet(uid,slot,'');close();if(after)after()};
+  b.querySelector('#tfxOk').onclick=async()=>{
+    const v=ta.value;
+    await tfixSet(uid,slot,(v.trim()===String(orig).trim())?'':v);   /* 원본과 같으면 안 남긴다 */
+    close();if(after)after()};
+  b.onclick=e=>{if(e.target===b)close()}};
+/* 길게 누르면 그 줄을 고친다 — 짧게 누름(선택지 고르기)과 안 부딪히게 */
+function tfixLong(el,uid,slot,after){
+  if(!el)return;let tm=null,long=false,sx=0,sy=0;
+  el.addEventListener('pointerdown',e=>{long=false;sx=e.clientX;sy=e.clientY;
+    tm=setTimeout(()=>{long=true;tfixSheet(uid,slot,after)},550)});
+  el.addEventListener('pointermove',e=>{if(tm&&Math.hypot(e.clientX-sx,e.clientY-sy)>8){clearTimeout(tm);tm=null}});
+  const up=()=>{clearTimeout(tm);tm=null};
+  el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);el.addEventListener('pointerleave',up);
+  el.addEventListener('click',e=>{if(long){e.stopPropagation();e.preventDefault();long=false}},true)}
 /* 판 3 ① — 오린 네모의 모서리를 잡아 다시 맞춘다(펜·손가락·마우스 다 잡는다 · 여기는 필기가 아니다) */
 function cropHandles(Z,el,crop,redraw){
   el.querySelectorAll('i[data-h]').forEach(h=>{
@@ -5260,10 +5337,13 @@ BK.onCrop=function(crop,clear){
   const cell={p:p.pr,r:[Math.min(crop.x0,crop.x1),Math.min(crop.y0,crop.y1),Math.max(crop.x0,crop.x1),Math.max(crop.y0,crop.y1)]};
   const old=document.getElementById('crmenu');if(old)old.remove();
   const m=document.createElement('div');m.id='crmenu';
-  m.innerHTML='<button data-s="q">🖼 문제 칸으로</button><button data-s="s">🖼 해설 칸으로</button><button class="x" data-s="">취소</button>';
+  /* 판 3 ④가 섰으므로 「✎ 글자로 고치기」 줄이 살아난다(①에서는 없는 단추를 안 그렸다) */
+  m.innerHTML='<button data-s="q">🖼 문제 칸으로</button><button data-s="s">🖼 해설 칸으로</button>'+
+    '<button data-s="fix">✎ 글자로 고치기</button><button class="x" data-s="">취소</button>';
   document.body.appendChild(m);BK.cropMenuAt(m);
   m.querySelectorAll('button').forEach(b=>b.onclick=async()=>{
     const slot=b.dataset.s;
+    if(slot==='fix'){clear();tfixSheet(uid,'q',()=>{if(VNO&&!$('#view').classList.contains('hide'))showProblem()});return}
     if(slot){await cropAdd(uid,slot,cell);
       toast((slot==='q'?'문제':'해설')+' 칸에 조각을 붙였습니다 — '+p.pr+'쪽');
       if(VNO&&!$('#view').classList.contains('hide'))showProblem()}
@@ -5522,6 +5602,7 @@ importData=async function(f){if(!f)return;let txt;try{txt=await f.text();const j
     if(c.bogi){BG=c.bogi;await put('kv','bogi',BG)}if(c.unit){UN=c.unit;await put('kv','unit',UN)}if(c.bpit){BP=c.bpit;await put('kv','bpit',BP)}if(c.bpg){BPG=c.bpg;await put('kv','bpg',BPG)}
     if(c.crop){CROP=c.crop;await put('kv','crop',CROP)}
     if(c.txt){TXT=c.txt;await put('kv','txt',TXT)}
+    if(c.tfix){TFIX=c.tfix;await put('kv','tfix',TFIX)}
     if(c.snote){SN=c.snote;await put('kv','snote',SN)}if(c.mcard){MC=c.mcard;await put('kv','mcard',MC)}
   }catch(e){toast('백업 파일을 읽지 못했습니다');return}
   await _imp0(new Blob([txt],{type:'application/json'}));if(DATA.length)refreshUnits();
