@@ -32,7 +32,6 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .top{position:sticky;top:0;z-index:20;background:var(--paper);padding-top:env(safe-area-inset-top)}
 .brand{display:flex;align-items:baseline;gap:10px;padding:16px 0 8px}
 .brand h1{font-size:19px;margin:0;letter-spacing:-.02em}
-.brand .sub{font-size:12px;color:var(--muted)}
 .brand .spacer{flex:1}
 .chip{font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap}
 .chip.err{color:var(--red)}
@@ -120,6 +119,19 @@ body[data-layer="card"] #tLink,body[data-layer="card"] #vLink,body[data-layer="c
   font-size:13px;line-height:20px;text-align:center}
 .mk .tm{font:500 9.5px/1 var(--mono);color:#A9ACB1}
 .grouphd{font-size:12px;font-weight:700;color:var(--muted);padding:16px 2px 7px;letter-spacing:.02em}
+.grouphd.u{font-size:12.5px;font-weight:600;color:var(--ink);padding:9px 2px 5px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;scroll-margin-top:8px}   /* 소단원 머리(차례 단원순 · 2026-09-07) */
+.grouphd.u .p{font-weight:500;color:var(--muted);font-size:11px;border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+.grouphd{scroll-margin-top:8px}
+.grouphd.flash{animation:ghfl 1.4s ease-out}
+@keyframes ghfl{0%{background:#FDF3D0}100%{background:transparent}}
+.gh-empty{color:var(--muted);font-size:12.5px;padding:1px 2px 10px}
+#trlist .tlab{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}   /* 글자 = 스크롤 · 숫자 = 필터(§1(3)) */
+#trlist .tlab:active{text-decoration:underline}
+#trlist .n{cursor:pointer;border-radius:999px;padding:2px 7px;min-width:44px;text-align:right}
+#trlist .n:hover{background:var(--sea-soft);color:var(--sea)}
+#trlist .n:active{background:var(--sea);color:#fff}
+#trlist .at{box-shadow:inset 3px 0 0 var(--sea)}
+@media (pointer:coarse){#trlist>div{padding-top:11px;padding-bottom:11px} #trlist .n{min-height:44px;display:inline-flex;align-items:center;justify-content:flex-end}}
 .ghbtn{margin-left:8px;padding:1px 9px;font-size:10.5px;border:1px solid rgba(128,128,128,.45);border-radius:9px;background:transparent;color:var(--muted);cursor:pointer;vertical-align:1px}
 .ghbtn:hover{color:var(--teal);border-color:var(--teal)}
 #navTg{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:58;width:24px;height:66px;border:1px solid var(--line);border-left:none;border-radius:0 10px 10px 0;background:var(--card);color:var(--muted);font-size:13px;cursor:pointer;box-shadow:1px 0 6px rgba(0,0,0,.08)}
@@ -360,7 +372,7 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
   #fFold button{padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);font:inherit;font-size:12.5px;color:var(--ink);white-space:nowrap;cursor:pointer}
   #fFold .fsum{flex:1;min-width:0;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   body.fold #spec,body.fold #specHd,body.fold .legend,body.fold #fBig,body.fold #fEtc{display:none}
-  .brand{padding:10px 0 6px;flex-wrap:wrap;row-gap:6px} .brand h1{font-size:16px;white-space:nowrap;flex:0 0 100%} .brand .sub{display:none} .brand .spacer{display:none}   /* 제목 한 줄 · 칩(#examChip·#recChip·#subjTabs·#btnTree·#btnBook·#btnSet) 한 줄 */
+  .brand{padding:10px 0 6px;flex-wrap:wrap;row-gap:6px} .brand h1{font-size:16px;white-space:nowrap;flex:0 0 100%} .brand .spacer{display:none}   /* 제목 한 줄 · 칩(#examChip·#recChip·#subjTabs·#btnTree·#btnBook·#btnSet) 한 줄 */
   .brand{gap:6px} .brand .chip,.brand .iconbtn{padding:5px 7px;font-size:12px} #btnBook{font-size:0;padding:5px 6px} #btnBook::before{content:'📖';font-size:14px}   /* 지학은 칩이 셋 더 있어 390px 한 줄에 맞게 줄인다(📖 교재 → 📖) */
 }
 /*/PHONE:css*/
@@ -648,7 +660,6 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #sub,body[data-layer="pdf"]
   <div class="top">
     <div class="brand">
       <h1>자과 서재 · 물리</h1>
-      <span class="sub">알기 쉬운 변리사 물리 · 기본교재</span>
       <span class="spacer"></span>
       <span class="chip exam" id="examChip" style="display:none"
             title="다음 시험까지 — zzikkaTT 의 settings.json 을 읽는다(앱에 날짜를 박지 않는다)"></span>
@@ -3657,6 +3668,95 @@ function unitStats(code,T){
 }
 function dotClass(m){return m==='O'?'g':m==='Q'?'y':m==='X'?'r':m==='P'?'k':''}
 function navBuild(){buildTree()}
+/* ── 차례 = 단원순(2026-09-07 · gigu/_task_jagwa_list_order.md §1(2)) ──
+   종전에는 DATA 차례(=회차순) 그대로라 절 머리가 문제마다 다시 튀었다(G32-01·G32-02…).
+   단원 번호 자연 정렬 → 같은 단원 안에서 회차 → 문항 번호. 거르개가 없을 때는 기출 0 단원도 머리를 남긴다.
+   ⚠ 물리 draw 는 그대로 둔다 — 여기(if(CARD_LAYER) 안)서만 갈아 끼운다. */
+function unitCmp(a,b){                       /* 자연 정렬 — 마디마다 수로 비교(문자열이면 1.1.10 이 1.1.2 앞에 온다) */
+  const A=String(a||'').split('.'),B=String(b||'').split('.');
+  for(let i=0;i<Math.max(A.length,B.length);i++){
+    const s=A[i],t=B[i];
+    if(s===undefined)return -1; if(t===undefined)return 1;
+    const x=/^[0-9]+$/.test(s)?+s:NaN, y=/^[0-9]+$/.test(t)?+t:NaN;
+    if(!Number.isNaN(x)&&!Number.isNaN(y)){if(x!==y)return x-y;continue}
+    if(s!==t)return s<t?-1:1}
+  return 0}
+function unitOrder(){                        /* 목차의 모든 단원을 차례대로 — 기출 0 단원도 들어간다 */
+  const out=[];
+  (TOC.list||[]).forEach(c=>(c.절||[]).forEach(s=>{
+    const items=(s.항목||[]).filter(u=>u.코드!==s.절);   /* 생물 목차는 2단(항목 = 절 자신) */
+    if(!items.length)out.push({sec:s.절,unit:s.절,page:((s.항목||[])[0]||{}).쪽||''});
+    else items.forEach(u=>out.push({sec:s.절,unit:u.코드,page:u.쪽}))}));
+  out.sort((a,b)=>unitCmp(a.unit,b.unit));
+  return out}
+var _uordKey=null,_uord=null;
+function unitRank(){                         /* 단원 코드 → 차례 번호(목차가 바뀌면 다시 만든다) */
+  const key=(TOC.list||[]).length+'|'+Object.keys(TOC.unit||{}).length;
+  if(_uordKey===key&&_uord)return _uord;
+  const m={};unitOrder().forEach((u,i)=>{if(m[u.unit]===undefined)m[u.unit]=i});
+  _uordKey=key;return _uord=m}
+var fltOn=()=>!!(FL.bigs.length||FL.subs.length||FL.unit||FL.round||FL.mark||FL.q);   /* 기출/확인 토글은 거르개가 아니라 갈래다 */
+function listSort(L){
+  const R=unitRank(),BIG=1e9;
+  return L.slice().sort((a,b)=>{
+    const ua=unitOf(a[F.NO])||'',ub=unitOf(b[F.NO])||'';
+    const ra=R[ua]===undefined?BIG:R[ua], rb=R[ub]===undefined?BIG:R[ub];
+    if(ra!==rb)return ra-rb;
+    if(ra===BIG){const c=unitCmp(ua,ub);if(c)return c}      /* 목차에 없는 것(미분류·미매칭)끼리는 코드순 */
+    const qa=+a[F.ROUND]||0,qb=+b[F.ROUND]||0; if(qa!==qb)return qa-qb;
+    const la=+a[F.LNO]||0,lb=+b[F.LNO]||0; if(la!==lb)return la-lb;
+    return a[F.NO]-b[F.NO]})}
+draw=function(){
+  drawFilters();drawSpectrum();
+  const L=listSort(filtered()),box=$('#list');box.innerHTML='';
+  $('#cnt').textContent=`${L.length}문제 · 단원순`;
+  if(!L.length){box.innerHTML='<div class="empty"><b>조건에 맞는 문제가 없습니다</b>필터를 줄여 보세요.</div>';foldSummary();return}
+  const byUnit=new Map();
+  L.forEach(r=>{const u=unitOf(r[F.NO])||'';if(!byUnit.has(u))byUnit.set(u,[]);byUnit.get(u).push(r)});
+  const frag=document.createDocumentFragment();
+  const secHd=(secCode)=>{                    /* 큰 머리 = 종전 모양 그대로(장 · 절 + 공식·암기카드 단추) */
+    const ch=chOf(secCode), sub=secCode+' '+((TOC.sec[secCode]||{}).name||'');
+    const big=ch?ch+'. '+((TOC.ch[ch]||{}).name||''):'미분류';
+    const h=document.createElement('div');h.className='grouphd';h.dataset.uhd=secCode;
+    h.textContent=bigLabel(big)+' · '+sub;
+    if(typeof frmFor==='function'&&frmFor(sub).length){const x=document.createElement('button');x.className='ghbtn';x.textContent='공식';x.onclick=e=>{e.stopPropagation();frmSheet(sub)};h.appendChild(x)}
+    {const x=document.createElement('button');x.className='ghbtn';const n=DATA.filter(r=>r[F.SUB]===sub&&MC[r[F.NO]]).length;
+     x.textContent='암기카드'+(n?' '+n:'');x.onclick=e=>{e.stopPropagation();mcardSheet(sub,sub)};h.appendChild(x)}
+    frag.appendChild(h)};
+  const unitHd=(code,page,n)=>{
+    const h=document.createElement('div');h.className='grouphd u';h.dataset.uhd=code;
+    h.innerHTML=esc(unitLabel(code))+(page?`<span class="p">${esc(String(page))}쪽</span>`:'')+`<span class="p">${n}문항</span>`;
+    frag.appendChild(h)};
+  const showEmpty=!fltOn();                   /* 거르개로 빈 단원이 생기면 그때는 머리를 접는다 */
+  const seen=new Set();let curSec='';
+  unitOrder().forEach(u=>{
+    const rows=byUnit.get(u.unit)||[];
+    if(!rows.length&&!showEmpty)return;
+    if(u.sec!==curSec){curSec=u.sec;secHd(u.sec)}
+    unitHd(u.unit,u.page,rows.length);
+    seen.add(u.unit);
+    if(!rows.length){const e=document.createElement('div');e.className='gh-empty';e.textContent='이 단원에 든 기출이 없다';frag.appendChild(e);return}
+    rows.forEach(r=>frag.appendChild(row(r)))});
+  let rest=[];byUnit.forEach((rows,u)=>{if(!seen.has(u))rest=rest.concat(rows)});   /* 목차에 없는 것(미분류·미매칭)은 뒤에 종전 모양으로 */
+  if(rest.length){let cur='';
+    rest.forEach(r=>{const k=bigLabel(r[F.BIG])+' · '+r[F.SUB];
+      if(k!==cur){cur=k;const h=document.createElement('div');h.className='grouphd';h.textContent=k;frag.appendChild(h)}
+      frag.appendChild(row(r))})}
+  box.appendChild(frag);
+  foldSummary();
+};
+/* 목차 글자 → 그 단원 머리로 스크롤. **필터는 안 건드린다**(§1(3)) · .top 이 sticky 라 그 높이만큼 뺀다 · 가상 스크롤 없음(draw 가 통째로 그린다) */
+function treeGo(code){
+  if($('#view')&&!$('#view').classList.contains('hide'))closeView();
+  if(window.innerWidth<900)treeClose();
+  $$('#trlist .at').forEach(x=>x.classList.remove('at'));
+  const tr=$('#trlist [data-u="'+code+'"]');if(tr)tr.classList.add('at');
+  requestAnimationFrame(()=>{
+    const el=$('#list [data-uhd="'+code+'"]')||$('#list [data-uhd^="'+code+'."]');
+    if(!el){toast('목록에서 그 단원을 찾지 못했다');return}
+    const top=$('.top'),off=(top?top.getBoundingClientRect().height:0)+8;
+    window.scrollTo({top:Math.max(0,el.getBoundingClientRect().top+window.scrollY-off),behavior:'smooth'});
+    el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')})}
 function buildTree(){
   const box=$('#trlist');if(!box)return;
   const T=DATA.filter(showKind);
@@ -3664,16 +3764,18 @@ function buildTree(){
   let h='';
   TOC.list.forEach(c=>{
     const cs=unitStats(c.장,T);
-    h+=`<div class="trch" data-u="${c.장}"><i class="dot ${dotClass(cs.m)}"></i>${c.장}. ${esc(c.이름)}<span class="n">${cs.n}</span></div>`;
+    h+=`<div class="trch" data-u="${c.장}"><i class="dot ${dotClass(cs.m)}"></i><span class="tlab">${c.장}. ${esc(c.이름)}</span><span class="n">${cs.n}</span></div>`;
     if(FL.past==='p'){const un=T.filter(r=>unitOf(r[F.NO])===c.장).length;
-      h+=`<div class="trit unm${cur===c.장?' hit':''}" data-u="${c.장}"><i class="dot"></i>미매칭<span class="n">${un}</span></div>`}
+      h+=`<div class="trit unm${cur===c.장?' hit':''}" data-u="${c.장}"><i class="dot"></i><span class="tlab">미매칭</span><span class="n">${un}</span></div>`}
     c.절.forEach(s=>{const ss=unitStats(s.절,T);
-      h+=`<div class="trsec${cur===s.절?' hit':''}" data-u="${s.절}"><i class="dot ${dotClass(ss.m)}"></i>${s.절} ${esc(s.이름)}${SN_ON?`<i class="snt${snHas(s.절)===false?' none':''}" data-sn="${s.절}" title="정리판 ${s.절}">📄</i>`:''}<span class="n">${ss.n}</span></div>`;
+      h+=`<div class="trsec${cur===s.절?' hit':''}" data-u="${s.절}"><i class="dot ${dotClass(ss.m)}"></i><span class="tlab">${s.절} ${esc(s.이름)}</span>${SN_ON?`<i class="snt${snHas(s.절)===false?' none':''}" data-sn="${s.절}" title="정리판 ${s.절}">📄</i>`:''}<span class="n">${ss.n}</span></div>`;
       s.항목.forEach(u=>{if(u.코드===s.절)return;const us=unitStats(u.코드,T);   /* 생물 목차는 2단(항목 = 절 자신) — 같은 키면 한 줄 */
-        h+=`<div class="trit${cur===u.코드?' hit':''}" data-u="${u.코드}"><i class="dot ${dotClass(us.m)}"></i>${u.코드} ${esc(u.이름)}<span class="n">${u.쪽} · ${us.n}</span></div>`})});
+        h+=`<div class="trit${cur===u.코드?' hit':''}" data-u="${u.코드}"><i class="dot ${dotClass(us.m)}"></i><span class="tlab">${u.코드} ${esc(u.이름)}</span><span class="n">${u.쪽} · ${us.n}</span></div>`})});
   });
   box.innerHTML=h;
-  box.querySelectorAll('[data-u]').forEach(el=>el.onclick=()=>treePick(el.dataset.u));
+  box.querySelectorAll('[data-u]').forEach(el=>el.onclick=e=>{
+    if(e.target.closest('.n'))treePick(el.dataset.u);   /* 숫자 = 종전 필터 */
+    else treeGo(el.dataset.u)});                        /* 글자 = 스크롤만(§1(3)) */
   box.querySelectorAll('.snt').forEach(el=>el.onclick=e=>{e.stopPropagation();snOpen(el.dataset.sn)});   /* 판 2: 절 줄의 📄 → 정리판 */
   $('#trTog').textContent=CUR.KINDS?[...CUR.KINDS].filter(k=>FL.types.has(k)).map(k=>KIND_LAB[k]).join('·')+' 보는 중 · 다음':(FL.past==='p'?'확인문제 보는 중 · 기출로':'기출 보는 중 · 확인문제로');
   treeList();
