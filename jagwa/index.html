@@ -737,6 +737,40 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #sub,body[data-layer="pdf"]
 .cropi .cx{position:absolute;right:4px;top:4px;width:20px;height:20px;border-radius:50%;border:1px solid var(--line);
   background:rgba(255,255,255,.9);font-size:12px;line-height:1;cursor:pointer;color:var(--muted)}
 .crophid{display:none!important}
+/* ── 판 3 ② 글상자 txt ──
+   **획과 같은 자리에 놓이지만 다른 통에 저장된다.** 지우개는 획만 지우고 글상자는 눌러서 고친다.
+   좌표 기준은 그 자리 잉크와 똑같이 맞춘다(교재·서브노트 = 0~1 정규화 · 카드 = 1/1000). */
+.tbox{position:absolute;z-index:5;box-sizing:border-box;border:1px dashed transparent;border-radius:3px;
+  padding:1px 3px;white-space:pre-wrap;word-break:break-word;line-height:1.35;color:#C2185B;
+  background:rgba(255,255,255,.55);pointer-events:auto;cursor:text;outline:none;min-height:1em}
+.tbox:hover,.tbox:focus{border-color:#C2185B;background:rgba(255,255,255,.85)}
+.tbox .tgrip{position:absolute;right:-5px;bottom:-5px;width:10px;height:10px;background:#fff;
+  border:1.5px solid #C2185B;border-radius:2px;cursor:ew-resize;user-select:none}
+.tbox .tmove{position:absolute;left:-5px;top:-5px;width:10px;height:10px;background:#fff;
+  border:1.5px solid #C2185B;border-radius:50%;cursor:move;user-select:none}
+.tbox.empty{border-color:#E0A8C0}
+#bkvp.txtmode{cursor:crosshair}
+/* 목차 줄의 「내가 쓴 글자」 칩 — 물리 ndTail 의 🗒 칩과 같은 꼴(물리 코드는 안 건드린다) */
+.bkit .bkc{margin-left:6px;flex:none;font-size:10px;padding:0 5px;border-radius:8px;background:#FFF4D6;color:#8A6A00;font-weight:700;cursor:pointer}
+.bkit .bkc.on{background:var(--amber);color:#fff}
+.bkit{display:flex;align-items:center}
+#bkPop{position:fixed;z-index:96;max-width:340px;background:var(--card);border:1px solid var(--line);
+  border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.22);padding:8px 10px;font-size:12.5px}
+#bkPop b{display:block;margin-bottom:5px;font-size:12px}
+#bkPop .r{display:flex;gap:6px;padding:4px 0;border-top:1px dashed var(--line);cursor:pointer;align-items:baseline}
+#bkPop .r:hover{background:var(--sea-soft)}
+#bkPop .r .p{color:var(--muted);flex:none;font-size:11px;min-width:34px}
+#bkPop .r .k{flex:none}
+#bkPop .r .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 교재 창 「내가 쓴 글자」 검색 — 목차 서랍 머리. 인쇄 글자는 이 판에서 안 훑는다(판 4). */
+#bkTq{width:100%;box-sizing:border-box;margin:5px 0 3px;padding:5px 7px;font:inherit;font-size:12px;
+  border:1px solid var(--line);border-radius:7px;background:var(--card)}
+#bkTres{max-height:34vh;overflow:auto;font-size:12px}
+#bkTres .r{display:flex;gap:6px;padding:4px 2px;border-bottom:1px dashed var(--line);cursor:pointer;align-items:baseline}
+#bkTres .r:hover{background:var(--sea-soft)}
+#bkTres .r .p{color:var(--muted);flex:none;font-size:11px;min-width:34px}
+#bkTres .r .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#bkTres .none{color:var(--muted);padding:6px 2px}
 /*/EARTH:css*/
 </style>
 </head>
@@ -907,12 +941,12 @@ const SUBJ={
   /* 생물(앱 판 1 · 2026-09-05 · ready:true) — LAYER:true = 지학과 같은 층 · 지학 가정 여섯은 아래 과목 값(NCH_MAX·CH_LIST·KINDS·BOOK_ROWS·SOL_LABELS·SENT_PATH · BOOK_PDF_ADD 없음 = 인쇄쪽만)으로 푼다 */
   bio:{DB:'bio1', PDF_DIR:'bio/pdf/', IMG_DIR:'bio/img/', DATA_PATH:'bio/문항.json', TOC_PATH:'bio/목차.json',
         REC_PATH:'bio/기록.json', SYNC_PREFIX:'bio_sync_', NOTE_REPO:'zzikkaplan/notes', NOTE_PATH:'bio/', NOTE_DIR:'bio/note/', NOTE_JSON:'bio/정리판/',   /* 앱 판 2: NOTE_JSON = 정리판 JSON 자리(notes · 있으면 정리판 층이 켜진다) · 그림은 NOTE_PATH+'att/' */
-        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg','snote','crop'],   /* 앱 판 1: bpg = 교재쪽 수동 매칭(15째) · 앱 판 2: snote = 정리판 줄(16째) · 판 3 ①: crop = 교재 조각(17째) */
+        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg','snote','crop','txt'],   /* 앱 판 1: bpg(15째) · 앱 판 2: snote(16째) · 판 3 ①: crop(17째) · 판 3 ②: txt = 글상자(18째) */
         NCH_MAX:8, CH_LIST:['1','2','3','4','5','6','7','8','9','10','11','12'], KINDS:['G','T','E'], BOOK_ROWS:'bpage', SOL_LABELS:true, SENT_PATH:'bio/교재문장.json',   /* 선택지 최대 8(T299·T309) · 장 12 · 유형 셋 · 「이 쪽의 문항」 = 교재쪽만 · 해설 탭(크리티컬/SYNAPSE) · 교재 문장 목록 */
         TITLE:'생물 기출 서재', LOG:'생물', NAME:'생물', LAYER:true, ready:true},
   earth:{DB:'earth1', PDF_DIR:'earth/pdf/', IMG_DIR:'earth/img/', DATA_PATH:'earth/문항.json', TOC_PATH:'earth/목차.json',
         REC_PATH:'earth/기록.json', SYNC_PREFIX:'earth_sync_', NOTE_REPO:'zzikkaplan/notes', NOTE_PATH:'earth/', NOTE_DIR:'earth/note/',
-        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg','crop'],   /* 판 2: bpit = 교재 포스트잇(14째) · 판 1(9/7): bpg = 교재쪽 고정(15째) · 판 3 ①: crop = 교재 조각(16째) */
+        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg','crop','txt'],   /* 판 2: bpit(14째) · 판 1: bpg(15째) · 판 3 ①: crop(16째) · 판 3 ②: txt = 글상자(17째) */
         BOOK_PDF_ADD:11,   /* 교재 모드 툴바 「(PDF NNN)」 = 인쇄쪽 + 11 (하이엔드 전체 PDF) */
         JOGAK_PATH:'earth/조각.json', OMR_PATH:'earth/omr2.pdf',   /* 판 2(9/7): 정리 OMR 조각 좌표표 · 그 원본 PDF(비공개 저장소 · pieceDoc 과 같은 통로) */
         TITLE:'지학 기출 서재', LOG:'지학', NAME:'지학', LAYER:true, ready:true}
@@ -2981,7 +3015,7 @@ const SYNC_KEYS=CARD_LAYER?CUR.SYNC_KEYS:SUBJ.phys.SYNC_KEYS;   /* 과목별 표
 /* 키 → 이 앱의 전역. 열 개 다 「문항번호 → 값」 dict 다(실측 확인).
    ⚠ `ansfix` 만 늦게 읽힌다(loadAfix) — null 이면 건너뛴다. */
 let MC={};            // no -> {w,h,s:[{c,w,hl,p:[u,v,… 1/1000 정수]}]}  손필기 암기카드 · kv/mcard · 카드 20KB 상한
-let BG={},UN={},BP={},BPG={},SN={},CROP={};   // 지학·생물: bogi = uid→{ㄱ:'O'|'Q'|'X'} · unit = uid→'n.n.n' · bpit = 교재 포스트잇 · bpg = 교재쪽 수동 매칭(생물) · snote = 정리판 줄에 붙이는 층(생물) · crop = 교재 조각(판 3 ①) (물리 SYNC_KEYS 엔 없다)
+let BG={},UN={},BP={},BPG={},SN={},CROP={},TXT={};   // 지학·생물: bogi = uid→{ㄱ:'O'|'Q'|'X'} · unit = uid→'n.n.n' · bpit = 교재 포스트잇 · bpg = 교재쪽 수동 매칭(생물) · snote = 정리판 줄에 붙이는 층(생물) · crop = 교재 조각(판 3 ①) · txt = 글상자(판 3 ② · 획과 다른 통) (물리 SYNC_KEYS 엔 없다)
 const SYNC_REF={
   status :{g:()=>ST,   s:v=>{ST=v}},
   note   :{g:()=>CMT,  s:v=>{CMT=v}},
@@ -3000,7 +3034,8 @@ const SYNC_REF={
   bpit   :{g:()=>BP,   s:v=>{BP=v}},
   bpg    :{g:()=>BPG,  s:v=>{BPG=v}},
   snote  :{g:()=>SN,   s:v=>{SN=v}},
-  crop   :{g:()=>CROP, s:v=>{CROP=v}}
+  crop   :{g:()=>CROP, s:v=>{CROP=v}},
+  txt    :{g:()=>TXT,  s:v=>{TXT=v}}
 };
 const U_KEY=CUR.SYNC_PREFIX+'u', GONE_KEY=CUR.SYNC_PREFIX+'gone',
       SHADOW_KEY=CUR.SYNC_PREFIX+'shadow', SMETA_KEY=CUR.SYNC_PREFIX+'meta';
@@ -3274,7 +3309,7 @@ function recBoot(){
   FR=(await get('kv','frm'))||{};
   MC=(await get('kv','mcard'))||{};
   LK=(await get('kv','link'))||{};
-  if(CARD_LAYER){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};BP=(await get('kv','bpit'))||{};BPG=(await get('kv','bpg'))||{};SN=(await get('kv','snote'))||{};CROP=(await get('kv','crop'))||{};}
+  if(CARD_LAYER){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};BP=(await get('kv','bpit'))||{};BPG=(await get('kv','bpg'))||{};SN=(await get('kv','snote'))||{};CROP=(await get('kv','crop'))||{};TXT=(await get('kv','txt'))||{};}
   const moved=await renumber();
   if(moved)setTimeout(()=>toast('문항 번호 재배열 — 기록 '+moved+'건을 옮겼습니다'),900);
   await loadHave();
@@ -3348,13 +3383,13 @@ function mcardWin(no){
   b.innerHTML=`<div class="panel"><h2 class="mch">🃏 ${no}. ${esc(titleOf(r))} <span class="mcc">${esc(r[F.CODE])}</span><button class="iconbtn" id="mcX">✕</button></h2>
     <div class="mcnote">${noteOf(no)?'🗒 '+esc(noteOf(no)):'<span style="color:var(--muted)">🗒 코멘트 없음</span>'}</div>
     <div class="mccv"><canvas id="mcc"></canvas></div>
-    <div class="mct"><span class="on" data-t="pen">펜</span><span data-t="hl">형광</span><span data-t="erase">지우개</span><span id="mcClear">전체 지움</span><span class="r" id="mcSt"></span></div></div>`;
+    <div class="mct"><span class="on" data-t="pen">펜</span><span data-t="hl">형광</span><span data-t="erase">지우개</span>${CARD_LAYER?'<span data-t="txt">T 글상자</span>':''}<span id="mcClear">전체 지움</span><span class="r" id="mcSt"></span></div></div>`;
   document.body.appendChild(b);
   const cv=b.querySelector('#mcc'),box=b.querySelector('.mccv');let tool='pen';
   const st=t=>{const el=b.querySelector('#mcSt');if(el)el.textContent=t};
   const size=()=>{const dpr=Math.max(1,Math.min(3,window.devicePixelRatio||1));const w=box.clientWidth,h=box.clientHeight;if(!w||!h)return;
     cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.width=w+'px';cv.style.height=h+'px';mcPaint(cv,MC[no])};
-  size();try{new ResizeObserver(size).observe(box)}catch(e){}
+  size();try{new ResizeObserver(()=>{size();if(typeof cardTxtPaint==='function')cardTxtPaint()}).observe(box)}catch(e){}
   st(MC[no]?`${Math.round(JSON.stringify(MC[no]).length/1024*10)/10}KB · 기기 간 동기화`:'');
   b.querySelectorAll('.mct [data-t]').forEach(x=>x.onclick=()=>{tool=x.dataset.t;b.querySelectorAll('.mct [data-t]').forEach(y=>y.classList.toggle('on',y===x))});
   b.querySelector('#mcClear').onclick=async()=>{if(!MC[no])return;if(!confirm('이 카드를 전부 지울까요?'))return;delete MC[no];await saveMC();mcPaint(cv,null);st('지웠습니다')};
@@ -3381,7 +3416,17 @@ function mcardWin(no){
   }
   let live=null;
   const pt=e=>{const rc=cv.getBoundingClientRect();return[Math.max(0,Math.min(1000,Math.round((e.clientX-rc.left)/rc.width*1000))),Math.max(0,Math.min(1000,Math.round((e.clientY-rc.top)/rc.height*1000)))]};
+  /* 판 3 ② — 카드 글상자. 좌표는 **카드 잉크와 같은 1/1000** 이라 창 크기가 바뀌어도 같은 자리다.
+     ⚠ 획과 다른 통(TXT)이라 지우개가 안 지운다. */
+  const cardKey='card:'+no;
+  /* ⚠ 이 함수는 층 밖(물리도 지나간다)이다 — 카드 층에서만 글상자를 만든다.
+     블록 안 `function` 선언은 이름만 뜨고 값은 블록이 돌아야 들어간다(물리에서는 undefined). */
+  const cardTxt=CARD_LAYER&&typeof txtPaint==='function';
+  const cardTxtPaint=()=>{if(!cardTxt)return;box.__zs=()=>1;txtPaint(box,cardKey,box.clientWidth||1,box.clientHeight||1,1000,true)};
+  cardTxtPaint();
   cv.addEventListener('pointerdown',e=>{ if(live&&e.pointerType==='touch')return;   /* 손바닥 거르기(add1 §2(2)⑤) */
+    if(tool==='txt'&&cardTxt){const[u,v]=pt(e);e.preventDefault();
+      txtAdd(box,cardKey,box.clientWidth||1,box.clientHeight||1,1000,u/1000*(box.clientWidth||1),v/1000*(box.clientHeight||1),cardTxtPaint);return}
     if(SET.pencil&&e.pointerType!=='pen')return; try{cv.setPointerCapture(e.pointerId)}catch(_){} const[u,v]=pt(e);
     if(tool==='erase'){mcErase(no,u,v);mcPaint(cv,MC[no]);live={erase:1};return}
     live={c:tool==='hl'?'#F2C230':TOOL.color,w:TOOL.w,hl:tool==='hl'?1:0,p:[u,v]};e.preventDefault()},{passive:false});
@@ -4510,6 +4555,11 @@ function zWire(Z){
     try{vp.setPointerCapture(e.pointerId)}catch(_){}ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,t:e.pointerType});
     if(ptrs.size===2&&[...ptrs.values()].every(q=>q.t==='touch')){if(Z.pen&&Z.strictView){stroke=null;return}   /* 교재 모드(§4): 핀치·끌기는 「보기」 툴에서만 · 핀치는 손가락 둘일 때만(add1 §2(2)) */
       const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),s:Z.S,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,X:Z.X,Y:Z.Y};drag=null;stroke=null;moveOn();return}
+    /* 판 3 ② 글상자 — 찍으면 그 자리에 글자 통이 선다(획 통과 다른 통이라 지우개가 안 지운다) */
+    if(Z.txt&&Z.tool==='txt'){
+      if(e.target&&e.target.closest&&e.target.closest('.tbox'))return;   /* 이미 선 글상자를 누른 것은 고치기다 */
+      const p=toPage(e.clientX,e.clientY);if(!p){if(wasVel)settle();return}
+      if(Z.onTxt)Z.onTxt(p);return}
     /* 판 3 ① 오리기 — **펜에서만** 네모가 선다. 손가락은 아래로 흘려보내 종전대로 스크롤·핀치가 된다. */
     if(Z.crop&&Z.tool==='crop'){
       if(e.pointerType!=='pen'&&SET.pencil){if(wasVel)settle();drag={ox:e.clientX,oy:e.clientY,X:Z.X,Y:Z.Y};Z.samples=[{t:performance.now(),x:Z.X,y:Z.Y}];vp.classList.add('panning');moveOn();return}
@@ -4606,6 +4656,111 @@ function cropWire(box,uid,redraw){
   box.querySelectorAll('[data-crx]').forEach(b=>b.onclick=async e=>{
     e.stopPropagation();const [slot,i]=b.dataset.crx.split(':');
     await cropDel(uid,slot,+i);if(redraw)redraw()})}
+/* ══ 판 3 ② 글상자 txt ══
+   TXT[key] = [{x,y,w,s,c,fs}] · key 로 세 자리를 가른다 — 'bink:<쪽>'(교재) · 'note:<i>'(서브노트) · 'card:<no>'(암기카드).
+   ⚠ 좌표 기준은 **그 자리 잉크와 똑같이** — 교재·서브노트는 0~1 정규화, 카드는 1/1000. 새 기준을 만들지 않는다.
+   ⚠ 잉크는 한 글자도 안 건드린다(ink 스토어·inkGet·pathD 무접촉). 지우개는 획만 지운다.
+   ⚠ 이 글자가 판 4 검색이 훑을 대상이다 — 읽는 길을 txtList 한 자리로 모은다. */
+var TXTBAD=0, TXTSEQ=0;
+var TXT_C='#C2185B', TXT_FS=13;                       /* 색·글자 크기는 기본값 하나. 고르개는 이 판에 안 넣는다. */
+var txtList=key=>{const a=TXT[key];
+  if(a===undefined||a===null)return [];
+  if(!Array.isArray(a)){TXTBAD++;return []}
+  const out=[];
+  for(const t of a){
+    if(!t||typeof t!=='object'||typeof t.s!=='string'||!isFinite(+t.x)||!isFinite(+t.y)){TXTBAD++;continue}
+    out.push({id:t.id||('t'+(++TXTSEQ)),x:+t.x,y:+t.y,w:+t.w||0,s:t.s,c:t.c||TXT_C,fs:+t.fs||TXT_FS})}
+  return out};
+var saveTXT=()=>put('kv','txt',TXT);
+var txtSet=async(key,arr)=>{const a=(arr||[]).filter(t=>t&&String(t.s).trim()!=='')
+    .map(t=>({id:t.id||('t'+(++TXTSEQ)),x:t.x,y:t.y,w:t.w||0,s:t.s,c:t.c||TXT_C,fs:t.fs||TXT_FS}));   /* 빈 채로 두면 저절로 사라진다 */
+  if(a.length)TXT[key]=a;else delete TXT[key];
+  let ok=0;try{ok=await saveTXT()}catch(e){ok=0}
+  if(!ok)toast('글상자를 저장하지 못했습니다 — 기기 저장 공간을 확인해 주세요');
+  if(typeof bkTocChips==='function')bkTocChips();
+  return ok};
+/* 한 자리(key)의 글상자를 그 층(host)에 그린다 — host 는 쪽 크기(W×H)를 가진 덧층.
+   norm = 좌표 나누는 값(교재·서브노트 1 = 0~1 · 카드 1000) */
+function txtEl(t,j,host,key,W,H,N,editable){
+  const el=document.createElement('div');el.className='tbox';el.dataset.tj=String(j);el.dataset.tid=t.id;
+  el.style.left=(t.x/N*W)+'px';el.style.top=(t.y/N*H)+'px';
+  if(t.w>0)el.style.width=(t.w/N*W)+'px';
+  el.style.fontSize=(N===1?t.fs:Math.max(7,t.fs/1000*W*2.2))+'px';
+  el.style.color=t.c;el.textContent=t.s;
+  if(editable){el.contentEditable='true';txtWireOne(el,host,key,W,H,N)}
+  else el.style.pointerEvents='none';
+  return el}
+function txtPaint(host,key,W,H,norm,editable){
+  if(!host)return;
+  host.querySelectorAll('.tbox').forEach(x=>x.remove());
+  const N=norm||1;
+  txtList(key).forEach((t,j)=>host.appendChild(txtEl(t,j,host,key,W,H,N,editable)))}
+/* 글상자 하나 — 타이핑 · 끌어 옮김 · 크기 조절 · 빈 채로 두면 사라짐 */
+function txtWireOne(el,host,key,W,H,N){
+  /* 차례(index)로 집지 않는다 — 다시 그리는 사이에 어긋나 **남의 글상자를 덮어쓴다**(하네스 실측).
+     id 로 집으면 몇 번을 다시 그려도 제 것만 고친다. */
+  const tid=el.dataset.tid;
+  const commit=async()=>{const a=txtList(key);const t=a.find(x=>x.id===tid);if(!t)return;
+    t.s=String(el.textContent||'').replace(/ /g,' ');
+    const L=parseFloat(el.style.left)||0, T=parseFloat(el.style.top)||0, Wd=parseFloat(el.style.width)||0;
+    t.x=+(L/W*N).toFixed(N===1?4:0);t.y=+(T/H*N).toFixed(N===1?4:0);
+    if(Wd)t.w=+(Wd/W*N).toFixed(N===1?4:0);
+    await txtSet(key,a)};
+  el.addEventListener('blur',commit);
+  el.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape')el.blur()});
+  el.addEventListener('pointerdown',e=>e.stopPropagation());
+  const mv=document.createElement('span');mv.className='tmove';mv.contentEditable='false';
+  const gr=document.createElement('span');gr.className='tgrip';gr.contentEditable='false';
+  el.appendChild(mv);el.appendChild(gr);
+  const drag=(h,fn)=>h.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();
+    const sx=e.clientX,sy=e.clientY,L=parseFloat(el.style.left)||0,T=parseFloat(el.style.top)||0,Wd=el.getBoundingClientRect().width;
+    const S=(host.__zs&&host.__zs())||1;
+    try{h.setPointerCapture(e.pointerId)}catch(_){}
+    const m=ev=>fn(L,T,Wd,(ev.clientX-sx)/S,(ev.clientY-sy)/S);
+    const u=async()=>{h.removeEventListener('pointermove',m);h.removeEventListener('pointerup',u);await commit()};
+    h.addEventListener('pointermove',m);h.addEventListener('pointerup',u)},{passive:false});
+  drag(mv,(L,T,Wd,dx,dy)=>{el.style.left=(L+dx)+'px';el.style.top=(T+dy)+'px'});
+  drag(gr,(L,T,Wd,dx)=>{el.style.width=Math.max(24,Wd+dx)+'px'});
+}
+/* 그 자리에 글상자를 새로 세운다 — 세우고 바로 타이핑할 수 있게 커서를 준다.
+   ⚠ `async function` 선언을 블록 안에 두면 블록 밖(mcardWin 은 층 밖이다)에서 안 보인다 — var 꼴로 둔다. */
+var txtAdd=async function(host,key,W,H,N,px,py,repaint){
+  const a=txtList(key);
+  const id='t'+Date.now().toString(36)+(++TXTSEQ);
+  const t={id,x:+(px/W*N).toFixed(N===1?4:0),y:+(py/H*N).toFixed(N===1?4:0),w:0,s:'',c:TXT_C,fs:TXT_FS};
+  a.push(t);TXT[key]=a;                            /* 빈 채로는 저장하지 않는다 — 글자가 들어와야 txtSet 이 남긴다 */
+  /* ⚠ 여기서 통째로 다시 그리면 안 된다 — 커서가 든 글상자가 지워지면서 blur 가 터지고,
+     그 commit 이 아직 글자 없는 새 글상자를 걸러 내며 저장을 되돌린다(하네스 실측). 새 것 하나만 붙인다. */
+  const el=txtEl(t,a.length-1,host,key,W,H,N,true);
+  host.appendChild(el);
+  el.classList.add('empty');el.focus();
+  const r=document.createRange();r.selectNodeContents(el);r.collapse(false);
+  const sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);
+  return el};
+/* ══ 판 3 ② — **내가 쓴 글자를 훑는 한 자리** ══
+   포스트잇(bpit)과 글상자(txt 의 bink: 키) 둘만 돈다. **인쇄 글자는 이 판에서 안 훑는다** — 판 4 감이고,
+   판 4 는 여기에 한 줄을 더하면 된다(검색칸을 새로 만들게 하지 않는다).
+   ⚠ 손글씨(ink)는 영영 안 잡힌다 — 결과가 0일 때 「없다」가 아니라 그렇게 적는다. */
+function bkMyText(){
+  const out=[];
+  for(const k in BP){const v=BP[k];if(!v||!v.t)continue;
+    const a=String(k).split('|');const pr=+a[0];if(!(pr>0))continue;
+    out.push({pr,kind:'pit',word:a[3]||'',text:String(v.t),key:k})}
+  for(const k in TXT){if(String(k).indexOf('bink:')!==0)continue;
+    const pr=+String(k).slice(5);if(!(pr>0))continue;
+    txtList(k).forEach((t,j)=>{if(t.s.trim())out.push({pr,kind:'txt',word:'',text:t.s,key:k+'#'+j})})}
+  out.sort((a,z)=>a.pr-z.pr||(a.kind<z.kind?-1:1));
+  return out}
+/* 낱말 여러 개는 AND · 소문자 맞춤 — 코멘트 검색과 같은 규칙(새 규칙을 만들지 않는다) */
+function bkMyTextHits(q){const ws=String(q||'').toLowerCase().split(/\s+/).filter(Boolean);
+  if(!ws.length)return [];
+  return bkMyText().filter(x=>{const h=(x.text+' '+x.word).toLowerCase();return ws.every(w=>h.includes(w))})}
+var bkKindGlyph=k=>k==='pit'?'🗒':'T';
+/* 항목의 쪽 범위 — bkItemAt 과 **같은 규칙**(그 항목 p 부터 다음 항목 p 앞까지) */
+function bkItemRange(code){const L=bkItems();const i=L.findIndex(x=>String(x.code||'')===String(code));
+  if(i<0)return null;const lo=L[i].p, hi=(i+1<L.length)?L[i+1].p-1:1e9;return [lo,hi]}
+function bkItemMine(code){const rg=bkItemRange(code);if(!rg)return [];
+  return bkMyText().filter(x=>x.pr>=rg[0]&&x.pr<=rg[1])}
 /* 판 3 ① — 오린 네모의 모서리를 잡아 다시 맞춘다(펜·손가락·마우스 다 잡는다 · 여기는 필기가 아니다) */
 function cropHandles(Z,el,crop,redraw){
   el.querySelectorAll('i[data-h]').forEach(h=>{
@@ -4778,6 +4933,16 @@ var inkDraw=(st,reset)=>zInkDraw(SUB,st,reset);
 var inkCommit=st=>zInkCommit(SUB,st);
 var inkErase=pt=>zInkErase(SUB,pt);
 var inkUndo=()=>zInkUndo(SUB);
+/* 판 3 ② — 서브노트에도 같은 글자 통. 자리(키)만 다르고 규칙은 같다(note:<i>) */
+SUB.txt=true;
+{const tb=$('#stools');
+ if(tb&&!tb.querySelector('[data-tool="txt"]')){const sp=document.createElement('span');sp.dataset.tool='txt';sp.textContent='T 글상자';
+   const er=tb.querySelector('[data-tool="erase"]');tb.insertBefore(sp,er?er.nextSibling:null)}}
+function subTxtHost(p){return $('#sover .spgo[data-i="'+p.i+'"]')}
+function subTxtPaint(p){const h=subTxtHost(p);if(!h)return;h.__zs=()=>SUB.S;txtPaint(h,p.key,p.w,p.h,1,true)}
+function subTxtAll(){SUB.pages().forEach(subTxtPaint)}
+SUB.onTxt=function(p0){const p=SUB.pages()[p0.i];if(!p)return;
+  txtAdd(subTxtHost(p),p.key,p.w,p.h,1,p0.x,p0.y,()=>subTxtPaint(p))};
 zTools(SUB,'#stools','#svp');
 $('#sUndo').onclick=inkUndo;
 /* 올리기 — 쪽별로 갈라 저장소 PUT · 100MB 넘는 쪽은 거부 */
@@ -4834,6 +4999,54 @@ function bkItems(){if(BKITEMS)return BKITEMS;const L=[];
   piecesOrdered().forEach(v=>{if(!TOC.sec[v.절])L.push({code:'',name:String(v.file).replace(/\.pdf$/,''),p:v.인쇄시작,end:v.인쇄끝,ch:'부록'})});
   L.sort((a,b)=>a.p-b.p);return BKITEMS=L}
 function bkItemAt(pr){let cur=null;for(const it of bkItems()){if(it.p<=pr)cur=it;else break}return cur}
+/* 판 3 ② — 목차 줄의 「내가 쓴 글자」 칩. 물리 ndTail 의 🗒 칩과 같은 꼴을 카드 층에 따로 만든다(물리 코드 무접촉).
+   N = 그 항목 쪽 범위의 포스트잇 + 글상자 수. **0이면 칩을 안 그린다.** */
+function bkTocChips(){const box=$('#bklist');if(!box)return;
+  box.querySelectorAll('.bkit').forEach(el=>{
+    const old=el.querySelector('.bkc');if(old)old.remove();
+    const code=el.dataset.code||'';if(!code)return;
+    const n=bkItemMine(code).length;if(!n)return;
+    const c=document.createElement('i');c.className='bkc';c.dataset.nc=code;c.textContent='🗒 '+n;c.title='내가 쓴 글자 '+n+'개';
+    el.appendChild(c)})}
+/* 목차 서랍 머리에 「내가 쓴 글자에서 찾기」 칸을 둔다 — **교재 창 안**이다(목록 머리 #q 에 안 섞는다).
+   결과줄을 누르면 목차 칩 팝오버와 **같은 이동 함수(bkGoto)** 로 간다. */
+function bkTocWire(){
+  const th=$('#bktoc .bkth');
+  if(th&&!$('#bkTq')){
+    const wrap=document.createElement('div');
+    wrap.innerHTML='<input id="bkTq" placeholder="내가 쓴 글자에서 찾기(포스트잇·글상자)"><div id="bkTres"></div>';
+    th.insertAdjacentElement('afterend',wrap.firstChild);
+    th.parentElement.insertBefore(wrap.firstChild,$('#bklist'));
+  }
+  const q=$('#bkTq'), res=$('#bkTres');
+  if(q&&res)q.oninput=()=>{const v=q.value.trim();
+    if(!v){res.innerHTML='';return}
+    const H=bkMyTextHits(v);
+    res.innerHTML=H.length?H.map(x=>'<div class="r" data-p="'+x.pr+'"><span class="p">'+x.pr+'쪽</span><span>'+bkKindGlyph(x.kind)+'</span>'+
+        '<span class="t">'+(x.word?esc(x.word)+' · ':'')+esc(String(x.text).split('\n')[0])+'</span></div>').join('')
+      :'<div class="none">타이핑한 글자에서는 안 나왔다 — 손글씨는 검색에 안 잡힌다.</div>';
+    res.querySelectorAll('.r').forEach(el=>el.onclick=()=>bkGoto(+el.dataset.p))};
+  const box=$('#bklist');
+  if(box&&!box.__bkc){box.__bkc=1;
+    box.addEventListener('click',e=>{const c=e.target.closest('.bkc');
+      if(c){e.stopPropagation();bkPopToggle(c.dataset.nc,c)}},true)}
+  if(!document.__bkpop){document.__bkpop=1;document.addEventListener('click',e=>{if(!e.target.closest('#bkPop')&&!e.target.closest('.bkc'))bkPopClose()})}
+}
+let BKP=null;
+function bkPopClose(){const p=$('#bkPop');if(p)p.remove();$$('#bklist .bkc.on').forEach(x=>x.classList.remove('on'));BKP=null}
+function bkPopToggle(code,chip){
+  if(BKP===code){bkPopClose();return}
+  bkPopClose();BKP=code;chip.classList.add('on');
+  const L=bkItemMine(code);
+  const p=document.createElement('div');p.id='bkPop';
+  p.innerHTML='<b>🗒 내가 쓴 글자 · '+esc(unitLabel(code))+'</b>'+L.map(x=>
+    '<div class="r" data-p="'+x.pr+'"><span class="p">'+x.pr+'쪽</span><span class="k">'+bkKindGlyph(x.kind)+'</span>'+
+    '<span class="t">'+(x.word?esc(x.word)+' · ':'')+esc(String(x.text).split('\n')[0])+'</span></div>').join('');
+  p.onclick=e=>{const r=e.target.closest('.r');if(!r)return;e.stopPropagation();bkGoto(+r.dataset.p)};   /* 목차 서랍은 그대로 열려 있다 */
+  document.body.appendChild(p);
+  const rc=chip.getBoundingClientRect(), dr=$('#bktoc').getBoundingClientRect();
+  p.style.left=Math.round(Math.min(dr.right+6,window.innerWidth-p.offsetWidth-8))+'px';
+  p.style.top=Math.max(8,Math.min(rc.top-6,window.innerHeight-p.offsetHeight-8))+'px'}
 function bkInfo(){const p=bkCurPage();if(!p){$('#bkInfo').textContent='';return}const it=bkItemAt(p.pr);
   $('#bkInfo').textContent=(it?(it.code||it.name)+' · ':'')+p.pr+'쪽'+(CUR.BOOK_PDF_ADD?' (PDF '+(p.pr+CUR.BOOK_PDF_ADD)+')':'');
   $('#bkQn').textContent=bookRows(p.pr).length;bkTocCur(it)}
@@ -4872,7 +5085,7 @@ bkLoadPiece=async function(pc){
     el.innerHTML=`<svg class="bkink" viewBox="0 0 ${base.width} ${base.height}" width="${base.width}" height="${base.height}"></svg><div class="bktx"></div><div class="bkorph"></div>`;
     $('#bkover').appendChild(el);BK.pgs.push({i:BK.pgs.length,key:'bink:'+pr,pr,pc,doc,k,pg,w:base.width,h:base.height,x:0,y,el,bg});y+=base.height+BK.GAP;
   }
-  BK.pcs.push(pc);bkNextBand();
+  BK.pcs.push(pc);bkNextBand();bkTxtAll();   /* 판 3 ② — 새로 붙은 쪽에도 글상자를 그린다 */
 }
 function bkNextPiece(){const last=BK.pcs[BK.pcs.length-1];if(!last)return null;return piecesOrdered().find(v=>v.인쇄시작>last.인쇄끝)||null}
 function bkNextBand(){let b=$('#bkworld .bknext');if(!b){b=document.createElement('div');b.className='bknext';$('#bkworld').appendChild(b);b.onclick=()=>bkAppend()}
@@ -4891,12 +5104,13 @@ bkGoto=async function(pr){pr=+pr;if(!pr)return;await bkIdle();let p=BK.pgs.find(
     try{const last=BK.pcs[BK.pcs.length-1];if(last&&pc.인쇄시작===last.인쇄끝+1)await bkLoadPiece(pc);else await bkReset(pc);$('#bkmsg').textContent=''}
     catch(e){$('#bkmsg').textContent='조각을 받지 못했다 — '+(e.message||e);BK.loading=false;return}
     BK.loading=false;p=BK.pgs.find(x=>x.pr===pr);if(!p)return}
-  BK.Y=-(p.y*BK.S)+8;BK.clamp();zApply(BK)}
+  BK.Y=-(p.y*BK.S)+8;BK.clamp();zApply(BK);bkTxtAll()}
 function bkStep(d){const p=bkCurPage();if(!p)return;const L=bkItems();let i=L.indexOf(bkItemAt(p.pr));i=Math.max(0,Math.min(L.length-1,i+d));bkGoto(L[i].p)}
 /* ── 열고 닫기 ── */
 bkOpen=async function(pr){const st=bkState();const b=$('#book');b.classList.remove('hide');BK.open=true;$('#btnBook').classList.add('on');
   bkTocFold(st.toc===undefined?window.innerWidth<=480:!st.toc);if(SET.bkw)bkSetW(SET.bkw);
-  if(!BK.tocBuilt)bkTocBuild();
+  if(!BK.tocBuilt){bkTocBuild();bkTocWire()}
+  bkTocChips();
   pr=+pr||+st.page||(bkItems()[0]||{}).p||1;
   if(!BK.pgs.length){$('#bkmsg').textContent='조각 받는 중…';
     try{await bkReset(pieceFor(pr)||piecesOrdered()[0])}catch(e){$('#bkmsg').textContent='조각을 받지 못했다 — '+(e.message||e);return}
@@ -4913,6 +5127,15 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&BK.open&&!$$('.shee
  if(tb&&!tb.querySelector('[data-tool="crop"]')){const sp=document.createElement('span');sp.dataset.tool='crop';sp.textContent='▢ 오리기';
    const er=tb.querySelector('[data-tool="erase"]');tb.insertBefore(sp,er?er.nextSibling:null)}}
 BK.crop=true;   /* 이 창에서만 오리기가 산다 */
+BK.txt=true;
+{const tb=$('#bktools');
+ if(tb&&!tb.querySelector('[data-tool="txt"]')){const sp=document.createElement('span');sp.dataset.tool='txt';sp.textContent='T 글상자';
+   const cr=tb.querySelector('[data-tool="crop"]');tb.insertBefore(sp,cr?cr.nextSibling:null)}}
+/* 판 3 ② — 교재 쪽마다 글상자를 그린다. 좌표는 잉크와 같은 0~1 정규화다. */
+function bkTxtPaint(p){if(!p||!p.el)return;p.el.__zs=()=>BK.S;txtPaint(p.el,p.key,p.w,p.h,1,true)}
+function bkTxtAll(){BK.pgs.forEach(bkTxtPaint)}
+BK.onTxt=function(p0){const p=BK.pages()[p0.i];if(!p)return;
+  txtAdd(p.el,p.key,p.w,p.h,1,p0.x,p0.y,()=>bkTxtPaint(p))};
 zWire(BK);zTools(BK,'#bktools','#bkvp');$('#bkvp').classList.add('view');$('#bkUndo').onclick=()=>zInkUndo(BK);
 /* 판 3 ① — 네모를 놓으면 뜨는 작은 메뉴. 붙는 대상은 **지금 보고 있는 문항**(VNO).
    ⚠ 「✎ 글자로 고치기」는 ④가 선 뒤에 살아난다 — 없는 단추를 그리지 않는다. */
@@ -5190,6 +5413,7 @@ exportData=async function(withPdf){
 importData=async function(f){if(!f)return;let txt;try{txt=await f.text();const j=JSON.parse(txt);const c=j.card||{};
     if(c.bogi){BG=c.bogi;await put('kv','bogi',BG)}if(c.unit){UN=c.unit;await put('kv','unit',UN)}if(c.bpit){BP=c.bpit;await put('kv','bpit',BP)}if(c.bpg){BPG=c.bpg;await put('kv','bpg',BPG)}
     if(c.crop){CROP=c.crop;await put('kv','crop',CROP)}
+    if(c.txt){TXT=c.txt;await put('kv','txt',TXT)}
     if(c.snote){SN=c.snote;await put('kv','snote',SN)}if(c.mcard){MC=c.mcard;await put('kv','mcard',MC)}
   }catch(e){toast('백업 파일을 읽지 못했습니다');return}
   await _imp0(new Blob([txt],{type:'application/json'}));if(DATA.length)refreshUnits();
