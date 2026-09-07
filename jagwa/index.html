@@ -395,8 +395,10 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
 /*EARTH:css*/
 /* ═══════ 지학 층 (2026-09-04) ═══════ */
 :root{--sea:#1F5F8B;--sea-soft:#E3EEF6;--sand:#B9853A;--sand-soft:#FBF3E6;--lav:#D9D2EE}
-/* 물리 전용 도구는 숨긴다 — 문항 카드에는 PDF·필기·가리개·OMR 이 없다 */
-body[data-layer="card"] .stage,body[data-layer="card"] #navdr,body[data-layer="card"] #tLayer,body[data-layer="card"] #tLayerAdd,body[data-layer="card"] #tLayerEye,body[data-layer="card"] #tTheory,body[data-layer="card"] #tConcept,body[data-layer="card"] #tSol,body[data-layer="card"] #tAns,body[data-layer="card"] #tLock,body[data-layer="card"] #tRot,body[data-layer="card"] #tZoom,body[data-layer="card"] #tTwin,body[data-layer="card"] #tGpt,body[data-layer="card"] #tType,body[data-layer="card"] #tErase,body[data-layer="card"] #tUndo,body[data-layer="card"] #tW,body[data-layer="card"] .tools [data-pen],body[data-layer="card"] .tools [data-hl],body[data-layer="card"] #btnFormula,body[data-layer="card"] #btnConcept,body[data-layer="card"] #mask,body[data-layer="card"] #omrPad{display:none!important}
+/* 물리 전용 도구는 숨긴다 — 문항 카드에는 PDF·가리개·OMR 이 없다.
+   ⚠ 판 3 ③(2026-09-08): **필기는 이제 있다.** 펜·형광·지우개·↺·굵기·회독 고르개·👁 를 숨김 목록에서 뺐다.
+   물리 쪽 마크업과 핸들러는 한 글자도 안 건드리고, 카드 층에서 같은 단추에 제 핸들러를 다시 맨다. */
+body[data-layer="card"] .stage,body[data-layer="card"] #navdr,body[data-layer="card"] #tTheory,body[data-layer="card"] #tConcept,body[data-layer="card"] #tSol,body[data-layer="card"] #tAns,body[data-layer="card"] #tLock,body[data-layer="card"] #tRot,body[data-layer="card"] #tZoom,body[data-layer="card"] #tTwin,body[data-layer="card"] #tGpt,body[data-layer="card"] #tType,body[data-layer="card"] #btnFormula,body[data-layer="card"] #btnConcept,body[data-layer="card"] #mask,body[data-layer="card"] #omrPad{display:none!important}
 body[data-layer="card"] .tools .sep:first-of-type,body[data-layer="card"] .tools .sep:nth-of-type(2){display:none}
 /* 목록 배지 · 색 */
 .item.eg .num{color:var(--teal)} .item.ec .num{color:var(--muted)}
@@ -771,6 +773,14 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #sub,body[data-layer="pdf"]
 #bkTres .r .p{color:var(--muted);flex:none;font-size:11px;min-width:34px}
 #bkTres .r .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #bkTres .none{color:var(--muted);padding:6px 2px}
+/* ── 판 3 ③ 문항 화면 필기 ──
+   **바닥을 먼저 굳힌다.** 카드 안쪽 폭을 760 으로 박고, 좁은 화면에서는 카드를 통째로 줄인다.
+   폭이 고정되면 높이도 결정되므로 0~1 정규화가 흔들리지 않는다 — 획이 조용히 어긋나지 않게. */
+#cardwrap{overflow-x:hidden}
+#card{position:relative;width:760px;max-width:760px;transform-origin:top left}
+#qink{position:absolute;left:0;top:0;pointer-events:none;z-index:6;overflow:visible}
+#card.penon #qink{pointer-events:auto;touch-action:none;cursor:crosshair}
+#card.penon .q,#card.penon .choices,#card.penon .bogi,#card.penon details{user-select:none}
 /*/EARTH:css*/
 </style>
 </head>
@@ -4080,6 +4090,7 @@ function renderCard(r){
   const csn=$('#cSn');if(csn)csn.onclick=()=>snOpen(csn.dataset.sec);   /* 판 2: 절 정리판 창 */
   $('#cPrev').onclick=()=>go(-1);$('#cNext').onclick=()=>go(1);
   cropWire(c,uid,()=>showProblem());   /* 판 3 ① — 붙인 조각 그리기 · ✕ 로 떼면 원래 글자가 돌아온다 */
+  qFit();qLoad(uid).then(()=>{qFit();qWire()});   /* 판 3 ③ — 문항 필기(qink:<uid>) · 폭을 박고 잉크 층을 얹는다 */
   markWrong();markAns();
 }
 /* 해설 칸 — 생물(CUR.SOL_LABELS): 기출 = 크리티컬(SOL) + SYNAPSE(SOL2) 탭 둘 · 타기출·예상 = SYNAPSE(SOL) 하나 · 없으면 「해설 없음」 칩 · 지학은 그대로 */
@@ -4761,6 +4772,103 @@ function bkItemRange(code){const L=bkItems();const i=L.findIndex(x=>String(x.cod
   if(i<0)return null;const lo=L[i].p, hi=(i+1<L.length)?L[i+1].p-1:1e9;return [lo,hi]}
 function bkItemMine(code){const rg=bkItemRange(code);if(!rg)return [];
   return bkMyText().filter(x=>x.pr>=rg[0]&&x.pr<=rg[1])}
+/* ══ 판 3 ③ 문항 화면 필기 + 회독 층 ══
+   카드 층에는 문항 필기가 아예 없었다(3937줄이 paintInk 를 빈 함수로 갈아 끼운다 · 처음부터 그런 설계).
+   저장 = IndexedDB `ink` 스토어 키 **`qink:<uid>`**. ⚠ **SYNC_KEYS 에 안 넣는다** — 잉크는 지금도
+   동기화 밖이다(P5). 그래서 **문항 필기는 기기별로 산다**(물리와 같은 성질).
+   좌표·그리기는 판 1 규약 그대로 — inkGet 으로만 잡고 pathD 로 그린다. 다시 계산하지 않는다.
+   ⚠ 카드 폭을 760 으로 박았으므로 x·y 를 **둘 다 760 으로** 나눈다(세로는 1을 넘어도 된다).
+   회독 = 층을 쌓지 않고 **획마다 r**. r 이 없는 옛 획은 **1회독으로 친다**(추측이 아니라 규약). */
+var QCW=760;                                   /* 카드 안쪽 폭(논리 px) — 박아 둔 값 */
+var QINK={s:[]}, QUID='', QR=1, QHIDE=false, QDRAW=null;
+var qRoundOf=st=>{const v=+((st||{}).r);return v>=1?v:1};
+var qRounds=()=>{const m=new Set([1]);((QINK.s)||[]).forEach(x=>m.add(qRoundOf(x)));return [...m].sort((a,b)=>a-b)};
+var qKey=uid=>'qink:'+uid;
+function qFit(){                               /* 좁은 화면에서는 카드를 통째로 줄인다 — 획도 같은 비율로 따라간다 */
+  const wrap=$('#cardwrap'), card=$('#card'); if(!wrap||!card)return 1;
+  const avail=Math.max(120,wrap.clientWidth-2);
+  const k=Math.min(1,avail/QCW);
+  if(k<1){card.style.transform='scale('+k+')';card.style.marginLeft='0';card.style.marginRight='0';
+    card.style.marginBottom=(-card.offsetHeight*(1-k))+'px'}
+  else{card.style.transform='';card.style.marginLeft='auto';card.style.marginRight='auto';card.style.marginBottom=''}
+  return k}
+function qSvg(){                               /* 카드 안에 잉크 층을 얹는다 — 카드와 같은 변환을 그대로 탄다 */
+  const card=$('#card'); if(!card)return null;
+  let sv=card.querySelector('#qink');
+  if(!sv){sv=document.createElementNS('http://www.w3.org/2000/svg','svg');sv.id='qink';card.appendChild(sv)}
+  const H=Math.max(40,card.scrollHeight);
+  sv.setAttribute('viewBox','0 0 '+QCW+' '+H);
+  sv.setAttribute('width',QCW);sv.setAttribute('height',H);
+  return sv}
+function qPaint(){
+  const sv=qSvg(); if(!sv)return 0;
+  const S=(QINK&&QINK.s)||[];
+  sv.innerHTML=S.map((st,j)=>{const r=qRoundOf(st);
+    if(QHIDE&&r!==QR)return '';
+    const op=st.hl?0.32:(r===QR?1:0.30);
+    return '<path data-j="'+j+'" data-r="'+r+'" d="'+pathD(st.p,QCW,QCW)+'" stroke="'+st.c+'" stroke-width="'+st.w+'" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="'+op+'"/>'}).join('')
+    +'<path class="qlive" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+  return S.length}
+var qLoad=async function(uid){
+  QUID=uid; QINK=await inkGet(qKey(uid),{w:QCW,h:QCW});
+  if(!QINK||!Array.isArray(QINK.s))QINK={s:[]};
+  QR=Math.max(1,...qRounds());
+  qFillSel(); qPaint()};
+var qSave=async function(){let ok=0;try{ok=await put('ink',qKey(QUID),QINK)}catch(e){ok=0}
+  if(!ok)toast('필기를 저장하지 못했습니다 — 기기 저장 공간을 확인해 주세요');return ok};
+function qFillSel(){const sel=$('#tLayer'); if(!sel)return;
+  const R=qRounds(); if(R.indexOf(QR)<0)R.push(QR);
+  sel.innerHTML=R.sort((a,b)=>a-b).map(r=>'<option value="'+r+'"'+(r===QR?' selected':'')+'>'+r+'회독</option>').join('');
+  const eye=$('#tLayerEye'); if(eye)eye.classList.toggle('on',QHIDE)}
+/* 카드 좌표(논리 px) → 0~1 정규화(둘 다 폭으로 나눈다) */
+function qPt(e){const card=$('#card'), sv=card&&card.querySelector('#qink'); if(!sv)return null;
+  const r=sv.getBoundingClientRect(); const k=r.width/QCW||1;
+  return [(e.clientX-r.left)/k, (e.clientY-r.top)/k]}
+function qWire(){
+  const card=$('#card'); const sv=card&&card.querySelector('#qink'); if(!sv)return;
+  const penOn=()=>TOOL.mode==='pen'||TOOL.mode==='hl'||TOOL.mode==='erase';
+  card.classList.toggle('penon',penOn());
+  const live=()=>sv.querySelector('.qlive');
+  sv.onpointerdown=e=>{
+    if(!penOn())return;
+    if(SET.pencil&&e.pointerType!=='pen')return;      /* 손바닥 거르기 — 교재·카드와 같은 잣대 */
+    const p=qPt(e); if(!p)return;
+    try{sv.setPointerCapture(e.pointerId)}catch(_){}
+    if(TOOL.mode==='erase'){qEraseAt(p[0],p[1]);QDRAW={erase:1};e.preventDefault();return}
+    QDRAW={c:TOOL.mode==='hl'?TOOL.color:TOOL.color,w:TOOL.w,hl:TOOL.mode==='hl'?1:0,r:QR,p:[p[0]/QCW,p[1]/QCW]};
+    e.preventDefault()};
+  sv.onpointermove=e=>{
+    if(!QDRAW)return;
+    const p=qPt(e); if(!p)return;
+    if(QDRAW.erase){qEraseAt(p[0],p[1]);return}
+    QDRAW.p.push(p[0]/QCW,p[1]/QCW);
+    const l=live(); if(l){l.setAttribute('d',pathD(QDRAW.p,QCW,QCW));l.setAttribute('stroke',QDRAW.c);
+      l.setAttribute('stroke-width',QDRAW.w);l.setAttribute('opacity',QDRAW.hl?'0.32':'1')}
+    e.preventDefault()};
+  const up=async()=>{if(!QDRAW)return;const st=QDRAW;QDRAW=null;
+    if(st.erase){await qSave();return}
+    if(st.p.length<4){qPaint();return}
+    QINK.s.push({c:st.c,w:st.w,hl:st.hl,r:st.r,p:st.p.map(v=>+v.toFixed(4))});
+    qPaint();await qSave()};
+  sv.onpointerup=up;sv.onpointercancel=up}
+function qEraseAt(x,y){                        /* 지우개는 **지금 회독만** 지운다(물리와 같은 뜻) */
+  const S=QINK.s||[];let best=-1,bd=14;
+  S.forEach((st,j)=>{if(qRoundOf(st)!==QR)return;
+    for(let k=0;k<st.p.length;k+=2){const d=Math.hypot(st.p[k]*QCW-x,st.p[k+1]*QCW-y);if(d<bd){bd=d;best=j}}});
+  if(best>=0){S.splice(best,1);qPaint()}}
+var qUndo=async function(){const S=QINK.s||[];
+  for(let j=S.length-1;j>=0;j--)if(qRoundOf(S[j])===QR){S.splice(j,1);qPaint();await qSave();return}};
+var qEraseSheet=function(){
+  const b=document.createElement('div');b.className='sheet';
+  b.innerHTML='<div class="panel"><h2>필기 지우기</h2>'+
+    '<p style="font-size:12.5px;color:var(--muted)">지금 회독('+QR+'회독)만 지울지, 이 문항 필기를 모두 지울지 고르세요.</p>'+
+    '<div style="display:flex;gap:6px;margin-top:10px"><button class="btn" id="qeL">지금 회독만</button>'+
+    '<button class="btn" id="qeA">모두 지움</button><button class="btn pri" id="qeX" style="margin-left:auto">닫기</button></div></div>';
+  document.body.appendChild(b);
+  const close=()=>b.remove();
+  b.querySelector('#qeL').onclick=async()=>{QINK.s=(QINK.s||[]).filter(x=>qRoundOf(x)!==QR);qPaint();await qSave();close();toast('지금 회독 필기를 지웠습니다')};
+  b.querySelector('#qeA').onclick=async()=>{QINK.s=[];QR=1;qFillSel();qPaint();await qSave();close();toast('이 문항 필기를 모두 지웠습니다')};
+  b.querySelector('#qeX').onclick=close;b.onclick=e=>{if(e.target===b)close()}};
 /* 판 3 ① — 오린 네모의 모서리를 잡아 다시 맞춘다(펜·손가락·마우스 다 잡는다 · 여기는 필기가 아니다) */
 function cropHandles(Z,el,crop,redraw){
   el.querySelectorAll('i[data-h]').forEach(h=>{
@@ -5435,6 +5543,20 @@ draw=function(){_draw0();if(!DATA.length)$('#list').innerHTML='<div class="empty
  if(ft)ft.remove()}
 window.addEventListener('resize',()=>{if(VNO&&BOOK.page&&bookVisible())bookOpen(BOOK.page)});
 
+/* ══ 판 3 ③ — 회독 고르개와 눈 단추를 카드 층에서 되살린다 ══
+   물리의 #tLayer·#tLayerAdd·#tLayerEye·#tUndo·#tErase 를 **그대로 쓰되 핸들러만 다시 맨다**.
+   물리 쪽 코드는 한 글자도 안 건드렸다 — 뒤에 맨 것이 이긴다. */
+$('#tUndo').onclick=()=>qUndo();
+$('#tErase').onclick=()=>{ if(TOOL.mode==='erase')qEraseSheet(); else {setTool('erase');qWire()} };
+$('#tLayer').onchange=e=>{QR=Math.max(1,+e.target.value||1);qFillSel();qPaint()};
+$('#tLayerAdd').onclick=async()=>{QR=Math.max(1,...qRounds())+1;qFillSel();qPaint();
+  toast(QR+'회독으로 넘어갑니다 — 이제 긋는 획은 '+QR+'회독입니다')};
+$('#tLayerEye').onclick=()=>{QHIDE=!QHIDE;$('#tLayerEye').classList.toggle('on',QHIDE);qPaint();
+  toast(QHIDE?'지금 회독만 봅니다':'옛 회독도 함께 봅니다')};
+/* 펜·형광·지우개를 고르면 잉크 층이 잡히게(보기 상태면 글자 선택이 살아 있다) */
+{const _setTool=setTool;
+ setTool=function(){const r=_setTool.apply(this,arguments);try{qWire()}catch(e){}return r}}
+window.addEventListener('resize',()=>{try{if(VNO&&!$('#view').classList.contains('hide')){qFit();qPaint()}}catch(e){}});
 $('#sub .shead b').textContent=CUR.NAME+' 서브노트';
 
 }
