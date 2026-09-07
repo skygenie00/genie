@@ -283,6 +283,20 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
 .mcard .k{height:150px;position:relative;background:repeating-linear-gradient(0deg,transparent 0 21px,#EEF1F4 21px 22px),repeating-linear-gradient(90deg,transparent 0 21px,#EEF1F4 21px 22px),#fff}
 .mcard.empty .k{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;background:#FAFAFA;text-align:center;padding:8px}
 .mcfoot{display:flex;gap:6px;margin-top:12px;align-items:center} .mcfoot .sp{flex:1}
+.mccv canvas.bg{position:absolute;left:0;top:0;width:100%;height:100%;z-index:1}   /* 조각 배경 — 내 필기 아래(판 2 §1-C) */
+.mccv canvas#mcc,.mccv canvas#mcb{position:relative;z-index:2}
+.mcard .k canvas.bg{position:absolute;left:0;top:0;width:100%;height:100%;z-index:1}
+.mcard .k canvas[data-cv]{position:absolute;left:0;top:0;z-index:2}
+.mcbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 10px;font-size:12px}
+.mcbar .seg{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.mcbar .seg b{padding:3px 11px;cursor:pointer;font-weight:600;background:var(--card)}
+.mcbar .seg b.on{background:var(--blue);color:#fff}
+.mcbar input[type=range]{width:110px}
+.mcbar .n{color:var(--muted)}
+.mcard .pen{margin-left:4px;flex:none;color:var(--teal);font-weight:800}
+.mcpop .panel{width:520px;max-width:94vw}
+.mcpop .q{margin:8px 0;color:var(--blue);font-size:13px;line-height:1.6}
+.mcpop .sol{background:#FAFAF7;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;max-height:34vh;overflow:auto}
 .panel h2{font-size:16px;margin:0 0 4px}
 .panel p{font-size:13px;color:var(--muted);margin:0 0 14px}
 .panel .fld{margin-bottom:14px}
@@ -836,6 +850,7 @@ const SUBJ={
         REC_PATH:'earth/기록.json', SYNC_PREFIX:'earth_sync_', NOTE_REPO:'zzikkaplan/notes', NOTE_PATH:'earth/', NOTE_DIR:'earth/note/',
         SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg'],   /* 판 2: bpit = 교재 포스트잇(14째) · 판 1(9/7): bpg = 교재쪽 고정(15째 · 종전에는 빠져 있어 기기 사이로 안 갔다) */
         BOOK_PDF_ADD:11,   /* 교재 모드 툴바 「(PDF NNN)」 = 인쇄쪽 + 11 (하이엔드 전체 PDF) */
+        JOGAK_PATH:'earth/조각.json', OMR_PATH:'earth/omr2.pdf',   /* 판 2(9/7): 정리 OMR 조각 좌표표 · 그 원본 PDF(비공개 저장소 · pieceDoc 과 같은 통로) */
         TITLE:'지학 기출 서재', LOG:'지학', NAME:'지학', LAYER:true, ready:true}
 };
 const SUBJ_ORDER=['phys','bio','earth'];   /* 탭 셀 순서 */
@@ -3273,6 +3288,21 @@ function mcardWin(no){
   b.querySelector('#mcX').onclick=()=>{b.remove();MCW=null};
   makeFloat(b,b.querySelector('h2'),'mcard');
   b.onclick=e=>{if(e.target===b){b.remove();MCW=null}};
+  const _jg=(typeof jogakOf==='function')?jogakOf(r):null;   /* 조각이 있는 과목·문항에서만 배경이 산다 · 물리는 카드 층 밖이라 함수 자체가 없다(typeof 로 막는다) */
+  if(_jg){
+    const box2=b.querySelector('.mccv');
+    box2.style.height=Math.round(Math.min(360,Math.max(140,box2.clientWidth/jogakAR(_jg))))+'px';
+    const bg=document.createElement('canvas');bg.className='bg';box2.insertBefore(bg,box2.firstChild);
+    const paintBg=async()=>{bg.style.display=jogakOn()?'':'none';
+      if(!jogakOn())return;
+      try{await jogakPaint(bg,_jg,box2.clientWidth)}catch(e){bg.style.display='none';st('조각을 못 받았다 — '+(e.message||e))}};
+    const tg=document.createElement('span');tg.id='mcJg';tg.textContent='▣ 조각 보기';
+    tg.classList.toggle('on',jogakOn());
+    tg.onclick=()=>{jogakSet(!jogakOn());tg.classList.toggle('on',jogakOn());paintBg()};
+    const mct=b.querySelector('.mct');mct.insertBefore(tg,mct.querySelector('#mcClear'));
+    b.querySelector('#mcClear').textContent='내 필기 전부 지움';
+    paintBg();
+  }
   let live=null;
   const pt=e=>{const rc=cv.getBoundingClientRect();return[Math.max(0,Math.min(1000,Math.round((e.clientX-rc.left)/rc.width*1000))),Math.max(0,Math.min(1000,Math.round((e.clientY-rc.top)/rc.height*1000)))]};
   cv.addEventListener('pointerdown',e=>{ if(live&&e.pointerType==='touch')return;   /* 손바닥 거르기(add1 §2(2)⑤) */
@@ -3297,27 +3327,64 @@ showProblem=async function(){if(MCW){MCW.remove();MCW=null}return _showProblem_m
 /* §4-3 단원줄 「암기카드 N」 시트 — 그 소단원 문항마다 문제명(마크) · 코멘트 · 내 필기 · 누르면 크게 · 길게 누르면 그 문제로 · 볼트 카드는 아래 줄 */
 function mcardSheet(sub,label){
   const b=document.createElement('div');b.className='sheet';let sort='no';
+  const JG=(typeof jogakAny==='function')&&jogakAny();   /* 좌표표가 있는 과목에서만 모아보기(판 2 §1-D) · 물리는 함수 자체가 없다 · 생물은 좌표표가 없다 → 둘 다 종전 그대로 */
+  let mode=JG?'unit':'no', cw=JG?170:0;
+  try{if(JG){const m=localStorage.getItem('jagwa.mcmode');if(m==='round'||m==='unit')mode=m;
+    const w=+localStorage.getItem('jagwa.mcw');if(w>=110&&w<=320)cw=w}}catch(e){}
+  const kb=()=>Math.round(JSON.stringify(MC).length/1024*10)/10;
+  const ordUnit=(a,z)=>{const ua=(typeof unitOf==='function'?unitOf(a[F.NO]):'')||'',uz=(typeof unitOf==='function'?unitOf(z[F.NO]):'')||'';
+    const c=(typeof unitCmp==='function'?unitCmp(ua,uz):(ua<uz?-1:ua>uz?1:0));return c||(+a[F.ROUND]||0)-(+z[F.ROUND]||0)||(+a[F.LNO]||0)-(+z[F.LNO]||0)||a[F.NO]-z[F.NO]};
+  const ordRound=(a,z)=>((+a[F.ROUND]||0)-(+z[F.ROUND]||0))||((+a[F.LNO]||0)-(+z[F.LNO]||0))||a[F.NO]-z[F.NO];
   const draw=()=>{
     let qs=DATA.filter(r=>r[F.SUB]===sub);
-    if(sort==='mark'){const ord={X:0,Q:1,'':2,P:3,O:4};qs=qs.slice().sort((a,z)=>(ord[lastM(a[F.NO])]??2)-(ord[lastM(z[F.NO])]??2)||a[F.NO]-z[F.NO])}
+    if(JG)qs=qs.slice().sort(mode==='round'?ordRound:ordUnit);
+    else if(sort==='mark'){const ord={X:0,Q:1,'':2,P:3,O:4};qs=qs.slice().sort((a,z)=>(ord[lastM(a[F.NO])]??2)-(ord[lastM(z[F.NO])]??2)||a[F.NO]-z[F.NO])}
     const n=qs.filter(r=>MC[r[F.NO]]).length;
-    b.innerHTML=`<div class="panel frmpanel"><h2>암기카드 — ${esc(label)}</h2><p>내가 쓴 카드 ${n}장 · 문항마다 문제명 · 코멘트 · 필기. 카드를 누르면 크게 · 길게 누르면 그 문제로.</p>
-      <div class="mcgrid">${qs.map(r=>{const no=r[F.NO],m=lastM(no),c=MC[no];
-        return `<div class="mcard${c?'':' empty'}" data-no="${no}"><div class="t"><b>${no}. ${esc(titleOf(r))}</b><span class="mcc">${esc(r[F.CODE])}</span>${m?`<span class="m m${m}">${mGlyph(m)}</span>`:''}</div>
+    const bar=JG?`<div class="mcbar"><span class="seg"><b class="${mode==='unit'?'on':''}" data-m="unit">단원별</b><b class="${mode==='round'?'on':''}" data-m="round">회차별</b></span>
+      <label>칸 <input type="range" id="mcW" min="110" max="320" step="10" value="${cw}"></label>
+      <span class="sp" style="flex:1"></span><span class="n">내 카드 ${Object.keys(MC).length}장 · 합계 ${kb()}KB</span></div>`:'';
+    b.innerHTML=`<div class="panel frmpanel"><h2>암기카드 — ${esc(label)}</h2><p>${JG?'짧게 누르면 조각 크게 · 길게 누르면 그 문항 팝업.':'내가 쓴 카드 '+n+'장 · 문항마다 문제명 · 코멘트 · 필기. 카드를 누르면 크게 · 길게 누르면 그 문제로.'}</p>${bar}
+      <div class="mcgrid"${JG?` style="grid-template-columns:repeat(auto-fill,minmax(${cw}px,1fr))"`:''}>${qs.map(r=>{const no=r[F.NO],m=lastM(no),c=MC[no];const jg=JG?jogakOf(r):null;
+        return `<div class="mcard${(c||jg)?'':' empty'}" data-no="${no}"><div class="t"><b>${JG?esc((r[F.ROUND]||'?')+'회 '+(r[F.LNO]||'?')+'번'):no+'. '+esc(titleOf(r))}</b><span class="mcc">${esc(r[F.CODE])}</span>${c?'<i class="pen">✎</i>':''}${m?`<span class="m m${m}">${mGlyph(m)}</span>`:''}</div>
           <div class="c">${noteOf(no)?'🗒 '+esc(noteOf(no)):'<span style="color:var(--muted)">🗒 (코멘트 없음)</span>'}</div>
-          <div class="k">${c?`<canvas data-cv="${no}"></canvas>`:'카드 없음 · 문제에서 「암기카드」'}</div></div>`}).join('')}</div>
-      <div class="mcfoot"><button class="chip" id="mcVault">볼트 카드 ${cardsFor(null,sub).length}장</button><button class="chip" id="mcSort">순서: ${sort==='no'?'문항번호':'마크순'} ▾</button><span class="sp"></span><button class="btn sm pri" id="mcClose">닫기</button></div></div>`;
+          <div class="k"${JG&&jg?` style="height:${Math.round(cw/jogakAR(jg))}px"`:''}>${jg?`<canvas class="bg" data-bg="${no}"></canvas>`:''}${c?`<canvas data-cv="${no}"></canvas>`:(JG?(jg?'':'＋ 새 카드'):'카드 없음 · 문제에서 「암기카드」')}</div></div>`}).join('')}</div>
+      <div class="mcfoot"><button class="chip" id="mcVault">볼트 카드 ${cardsFor(null,sub).length}장</button>${JG?'':`<button class="chip" id="mcSort">순서: ${sort==='no'?'문항번호':'마크순'} ▾</button>`}<span class="sp"></span><button class="btn sm pri" id="mcClose">닫기</button></div></div>`;
     b.querySelectorAll('canvas[data-cv]').forEach(cv=>{const no=+cv.dataset.cv,k=cv.parentElement;cv.width=Math.max(2,k.clientWidth*2);cv.height=Math.max(2,k.clientHeight*2);cv.style.width='100%';cv.style.height='100%';mcPaint(cv,MC[no])});
-    b.querySelectorAll('.mcard').forEach(el=>{const no=+el.dataset.no;let tm=null,long=false;
-      el.onpointerdown=()=>{long=false;tm=setTimeout(()=>{long=true;b.remove();openView(no)},420)};
-      el.onpointerup=el.onpointerleave=el.onpointercancel=()=>clearTimeout(tm);
-      el.onclick=()=>{if(long){long=false;return}mcardBig(no)}});
+    if(JG&&jogakOn())b.querySelectorAll('canvas[data-bg]').forEach(cv=>{const no=+cv.dataset.bg;
+      jogakPaint(cv,jogakOf(rec(no)),cv.parentElement.clientWidth).catch(()=>{cv.style.display='none'})});
+    b.querySelectorAll('.mcard').forEach(el=>{const no=+el.dataset.no;let tm=null,long=false,sx=0,sy=0;
+      el.onpointerdown=e=>{long=false;sx=e.clientX;sy=e.clientY;tm=setTimeout(()=>{long=true;
+        if(JG)mcardPop(no);else{b.remove();openView(no)}},400)};
+      el.onpointermove=e=>{if(tm&&Math.hypot(e.clientX-sx,e.clientY-sy)>8){clearTimeout(tm);tm=null;long=true}};   /* 8px 넘게 움직이면 스크롤로 본다 */
+      el.onpointerup=el.onpointerleave=el.onpointercancel=()=>{clearTimeout(tm);tm=null};
+      el.onclick=()=>{if(long){long=false;return}
+        if(JG&&!MC[no]&&!jogakOf(rec(no))){document.querySelectorAll('.sheet').forEach(x=>x.remove());openView(no).then(()=>mcardWin(no));return}
+        mcardBig(no)}});
+    if(JG){b.querySelectorAll('.mcbar [data-m]').forEach(x=>x.onclick=()=>{mode=x.dataset.m;try{localStorage.setItem('jagwa.mcmode',mode)}catch(e){}draw()});
+      const w=b.querySelector('#mcW');if(w)w.onchange=()=>{cw=+w.value;try{localStorage.setItem('jagwa.mcw',String(cw))}catch(e){}draw()}}
     b.querySelector('#mcVault').onclick=()=>cardSheet(null,sub,label);
-    b.querySelector('#mcSort').onclick=()=>{sort=sort==='no'?'mark':'no';draw()};
+    {const so=b.querySelector('#mcSort');if(so)so.onclick=()=>{sort=sort==='no'?'mark':'no';draw()}}
     b.querySelector('#mcClose').onclick=()=>b.remove();
   };
   b.onclick=e=>{if(e.target===b)b.remove()};
   document.body.appendChild(b);draw();
+}
+/* 길게 누름 = **팝업**이지 이동이 아니다(판 2 §1-D(4)) — VNO 를 안 건드린다 */
+function mcardPop(no){
+  const r=rec(no);if(!r)return;
+  const old=document.getElementById('mcPop');if(old)old.remove();
+  const b=document.createElement('div');b.className='sheet mcpop';b.id='mcPop';
+  const ch=(r[F.CH]||[]).filter(x=>x);
+  b.innerHTML=`<div class="panel"><h2 class="mch">${esc((r[F.ROUND]||'?')+'회 '+(r[F.LNO]||'?')+'번')} <span class="mcc">${esc(r[F.CODE])}</span><button class="iconbtn" id="mpX">✕</button></h2>
+    <div class="q">${esc(stemOf(r))}</div>
+    ${ch.length?`<div class="sol">${ch.map((t,i)=>esc(CIRC[i]+' '+t)).join('<br>')}</div>`:''}
+    <div class="sol" style="margin-top:8px"><b>정답 ${r[F.ANS]?esc(CIRC[+r[F.ANS]-1]||r[F.ANS]):'—'}</b><br>${esc(String(r[F.SOL]||'해설 없음').split('⏎').join(' ')).slice(0,400)}</div>
+    <div style="display:flex;gap:6px;margin-top:10px"><button class="btn" id="mpGo">이 문항으로 가기</button><button class="btn" id="mpCard">카드 열어 쓰기</button><button class="btn pri" id="mpX2" style="margin-left:auto">닫기</button></div></div>`;
+  document.body.appendChild(b);
+  b.querySelector('#mpGo').onclick=()=>{document.querySelectorAll('.sheet').forEach(x=>x.remove());openView(no)};
+  b.querySelector('#mpCard').onclick=()=>{document.querySelectorAll('.sheet').forEach(x=>x.remove());openView(no).then(()=>mcardWin(no))};
+  b.querySelector('#mpX').onclick=b.querySelector('#mpX2').onclick=()=>b.remove();
+  b.onclick=e=>{if(e.target===b)b.remove()};
 }
 function mcardBig(no){
   const r=rec(no);const b=document.createElement('div');b.className='sheet';
@@ -3327,6 +3394,9 @@ function mcardBig(no){
     <button class="btn" id="mcEdit" style="margin-top:10px">이 문제로 가서 쓰기</button><button class="btn pri" id="mcBX" style="margin-top:8px">닫기</button></div>`;
   document.body.appendChild(b);
   const cv=b.querySelector('#mcb'),k=cv.parentElement;cv.width=Math.max(2,k.clientWidth*2);cv.height=Math.max(2,k.clientHeight*2);cv.style.width='100%';cv.style.height='100%';mcPaint(cv,MC[no]);
+  {const jg=(typeof jogakOf==='function')?jogakOf(r):null;   /* 짧게 누름 = 조각 크게 보기(판 2 §1-D(3)) */
+   if(jg&&jogakOn()){const bg=document.createElement('canvas');bg.className='bg';k.insertBefore(bg,k.firstChild);
+     jogakPaint(bg,jg,k.clientWidth).catch(()=>{bg.remove()})}}
   b.querySelector('#mcEdit').onclick=()=>{document.querySelectorAll('.sheet').forEach(x=>x.remove());openView(no).then(()=>mcardWin(no))};
   b.querySelector('#mcBX').onclick=()=>b.remove();b.onclick=e=>{if(e.target===b)b.remove()};
 }
@@ -3383,6 +3453,59 @@ var CIRC='①②③④⑤⑥⑦⑧';
 function expandChoices(a){const out=[];
   (a||[]).forEach(t=>{String(t||'').replace(/\s*SYNAPSE 7\.0\s*$/,'').split(/\s*[⑥⑦⑧]\s*/).forEach((x,j)=>{x=x.trim();if(x.length>60&&j>0)x='';if(j===0||x)out.push(x)})});
   while(out.length&&!out[out.length-1])out.pop();return out.slice(0,CIRC.length)}
+/* ── 정리 OMR 조각(판 2 · 2026-09-07 · gigu/_task_jagwa_pan2.md) ──
+   `earth/조각.json` = 회차-문번 → {p, r:[x0,y0,x1,y1]} pt. **읽기 전용 · 그림으로 굽지 않는다.**
+   배경은 `mcard` 에 **안 들어간다** — 내 필기 좌표계(1/1000)를 한 글자도 안 건드린다.
+   ⚠ 좌표표가 없는 과목(물리·생물)에서는 아래가 전부 꺼진 채로 종전과 같이 돈다. */
+var JOGAK={},JOGAK_SRC='',OMRDOC=null,OMRBUSY=null;
+var jogakKey=r=>(r&&r[F.ROUND]&&r[F.LNO])?(r[F.ROUND]+'-'+r[F.LNO]):'';
+var jogakOf=r=>{const k=jogakKey(r);return k&&JOGAK[k]?JOGAK[k]:null};
+var jogakAny=()=>{for(const k in JOGAK)return true;return false};
+var jogakOn=()=>{try{return localStorage.getItem('jagwa.jogak')!=='0'}catch(e){return true}};   /* 기기 하나 값 — SET 은 과목 DB 마다 따로라 안 쓴다(9/7 jagwa.pencil 과 같은 이유) */
+var jogakSet=v=>{try{localStorage.setItem('jagwa.jogak',v?'1':'0')}catch(e){}};
+/* ⚠ 아래 셋은 `var … = async function` 으로 둔다 — 블록 안 `async function` 선언은 Annex B 로 전역에 안 올라와서
+   물리 층에 있는 mcardWin·mcardSheet 가 못 본다(9/7 add1 때와 같은 함정 · 하네스 O-D 가 잡았다). */
+var loadJogak=async function(){
+  if(!CUR.JOGAK_PATH)return false;
+  let j=await get('kv',SUBJ_ID+'jogak');
+  if(recToken()){try{const sha=await ghSha(CUR.JOGAK_PATH);
+    if(sha&&(!j||j.sha!==sha)){j={sha,d:JSON.parse(await ghRaw(CUR.JOGAK_PATH))};await put('kv',SUBJ_ID+'jogak',j)}
+  }catch(e){console.warn('jogak',e)}}
+  if(!j||!j.d)return false;
+  JOGAK=j.d.cells||{};JOGAK_SRC=j.d.src||'';return true}
+var omrDoc=async function(){                       /* pieceDoc 과 같은 통로 — 비공개 저장소 · Accept raw · pdf 스토어 캐시 */
+  if(OMRDOC)return OMRDOC;
+  if(OMRBUSY)return OMRBUSY;
+  OMRBUSY=(async()=>{
+    let buf=await get('pdf','omr2');
+    if(!buf){
+      if(!recToken())throw new Error('토큰 없음');
+      const r=await fetch(ghUrl(CUR.OMR_PATH),{headers:{Authorization:'Bearer '+recToken(),Accept:'application/vnd.github.raw'},cache:'no-store'});
+      if(!r.ok)throw new Error('GET omr2 '+r.status);
+      buf=await r.arrayBuffer();
+      if(String.fromCharCode.apply(null,new Uint8Array(buf.slice(0,5))).indexOf('%PDF')<0)throw new Error('PDF 아님');
+      await put('pdf','omr2',buf);
+    }
+    OMRDOC=await pdfjsLib.getDocument({data:buf.slice(0)}).promise;return OMRDOC})();
+  try{return await OMRBUSY}finally{OMRBUSY=null}}
+/* 조각 하나를 캔버스에 그린다 — pdf.js 는 잘라내기 옵션이 없어 배율 viewport + 이동 행렬로 오려낸다 */
+var jogakPaint=async function(cv,cell,cssW){
+  if(!cv||!cell)return 0;
+  /* 같은 캔버스에 렌더가 겹치면 pdf.js 가 죽는다(토글을 빨리 두 번 누르면 그렇다) — 캔버스마다 줄 세운다 */
+  const prev=cv.__jgp; if(prev){try{await prev}catch(e){}}
+  const run=(async()=>{
+  const doc=await omrDoc();
+  const pg=await doc.getPage(cell.p);
+  const [x0,y0,x1,y1]=cell.r, w=x1-x0, h=y1-y0;
+  const dpr=Math.max(1.5,Math.min(3,window.devicePixelRatio||1));
+  const s=Math.max(0.5,(cssW||cv.clientWidth||300)/w)*dpr;
+  cv.width=Math.round(w*s);cv.height=Math.round(h*s);
+  const vp=pg.getViewport({scale:s});
+  const g=cv.getContext('2d');g.clearRect(0,0,cv.width,cv.height);
+  await pg.render({canvasContext:g,viewport:vp,transform:[1,0,0,1,-x0*s,-y0*s]}).promise;
+  return 1})();
+  cv.__jgp=run; try{return await run}finally{if(cv.__jgp===run)cv.__jgp=null}}
+var jogakAR=cell=>{const [x0,y0,x1,y1]=cell.r;return (x1-x0)/(y1-y0)};
 /* ── 교재쪽 고정(판 1 §1-B · 2026-09-07) — 여러 쪽을 담는다 ──
    새 꼴 BPG[uid] = {ps:[12,13,88], last:12, s?:문장번호}
    옛 꼴 BPG[uid] = {p:12, s:3}  ← 생물 기기에 이미 있다. 계속 읽는다.
@@ -3444,6 +3567,7 @@ loadEarthData=async function(){
     return false;
   }
   buildData(j.items,j.toc,j.pieces||{});
+  if(CUR.JOGAK_PATH){try{await loadJogak()}catch(e){console.warn('jogak',e)}}   /* 조각 좌표표 — 없는 과목(생물)에서는 부르지도 않는다(부팅 차례를 한 틱도 안 민다 · 판 2 §2) */
   return true;
 }
 function buildToc(toc){
