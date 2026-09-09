@@ -795,7 +795,7 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #sub,body[data-layer="pdf"]
 .pgbar .tgl.on{background:var(--sea);color:#fff;border-color:var(--sea)}
 .brefm{position:absolute;z-index:8;font-size:10.5px;line-height:1;padding:2px 5px;border-radius:8px;
   background:rgba(255,244,214,.92);border:1px solid var(--amber);color:#8A6A00;font-weight:700;
-  cursor:pointer;white-space:nowrap;user-select:none;-webkit-user-select:none;touch-action:none}
+  cursor:pointer;white-space:nowrap;user-select:none;-webkit-user-select:none;touch-action:none;pointer-events:auto}   /* add2 ① — #bkover 가 pointer-events:none 이라 여기서 되살린다(.pitchip 573 · .bkorph 576 과 같은 잣대) */
 .brefm:hover{background:var(--amber);color:#fff}
 .brefbox{position:absolute;z-index:7;border:1.5px dashed var(--amber);background:rgba(242,194,48,.12);pointer-events:none}
 #brefPop{position:fixed;z-index:97;background:var(--card);border:1px solid var(--line);border-radius:12px;
@@ -1515,7 +1515,7 @@ function locate(r){
 
 /* ---------------- 뷰어 ---------------- */
 let VNO=null, VDOC=null, VDOCID=null, VPAGE=null, VLIST=[];
-let TOOL={mode:'pen',color:'#16181B',w:2};
+let TOOL={mode:'view',color:'#16181B',w:2};   /* add2 ③ — 문제를 푸는 화면이지 필기하는 화면이 아니다 */
 let LAYER=0, LAYERS=1, HIDEOLD=false;
 let INK={};   // layerIndex -> [ {c,w,hl,p:[u,v,...]} ]
 let RENDER={W:0,H:0,rot:0,scale:1};
@@ -2608,7 +2608,8 @@ $$('[data-hl]').forEach(b=>b.onclick=()=>setTool('hl',b.dataset.hl,b));
 function setTool(mode,color,el){
   TOOL.mode=mode;if(color)TOOL.color=color;TOOL.w=+$('#tW').value;
   $$('.tl').forEach(b=>b.classList.remove('on'));
-  (el||$('#tErase')).classList.add('on');
+  const _on=el||(mode==='view'?$('#tView'):$('#tErase'));   /* add2 ③ — 「보기」는 지우개를 켜지 않는다 */
+  if(_on)_on.classList.add('on');
   if(HIDEOLD)$('#tLayerEye').classList.add('on');
 }
 $('#tW').onchange=()=>{TOOL.w=+$('#tW').value};
@@ -3351,7 +3352,7 @@ function recBoot(){
   if(moved)setTimeout(()=>toast('문항 번호 재배열 — 기록 '+moved+'건을 옮겼습니다'),900);
   await loadHave();
   await loadAfix();          /* ⚠ 동기화보다 먼저 — AFIX 가 null 이면 빈 ansfix 로 원격을 깎는다 */
-  setTool('pen','#16181B',$$('[data-pen]')[0]);
+  if(CARD_LAYER)setTool('view');else setTool('pen','#16181B',$$('[data-pen]')[0]);   /* add2 ③ — 카드 층만 보기로 연다. 물리는 종전 그대로다 */
   if(CARD_LAYER)await loadEarthData();
   draw();
   try{recBoot()}catch(e){console.warn('기록 동기화 시동 실패',e)}
@@ -5384,24 +5385,30 @@ $('#bkX').onclick=bkClose;$('#bkPrevU').onclick=()=>bkStep(-1);$('#bkNextU').onc
 $('#bpBig').onclick=()=>bkOpen(BOOK.page||undefined);
 $('#bkSub').onclick=()=>{const p=bkCurPage();const pc=p?p.pc:null;subOpen(pc&&/^\d+\.\d+$/.test(String(pc.절))?pc.절:'',true)};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&BK.open&&!$$('.sheet').some(x=>!['book','sub','bkq'].includes(x.id)&&!x.classList.contains('hide')))bkClose()});
-/* 판 3 ① — 도구줄에 「▢ 오리기」를 카드 층에서만 붙인다(마크업은 안 건드린다 · 물리는 이 블록에 안 들어온다) */
-{const tb=$('#bktools');
- if(tb&&!tb.querySelector('[data-tool="crop"]')){const sp=document.createElement('span');sp.dataset.tool='crop';sp.textContent='▢ 오리기';
-   const er=tb.querySelector('[data-tool="erase"]');tb.insertBefore(sp,er?er.nextSibling:null)}}
-BK.crop=true;   /* 이 창에서만 오리기가 산다 */
+/* add2 ④-1 — 교재 전체 화면에서는 「▢ 오리기」 단추를 그리지 않는다(사용자 확정).
+   ⚠ 아래 BK.crop 플래그는 절대 지우지 마라 — 4663줄이 링크(bref)와 **같이** 쓴다. 끄면 링크가 같이 죽는다.
+   기능은 안 잃는다 — 오리기는 문항 화면 교재 칸(bpCrop)에 그대로 있다. */
+BK.crop=true;   /* 오리기 네모 엔진 — **링크(bref)가 같이 쓴다**(4663줄). 단추는 안 그려도 이 플래그는 남긴다 */
 BK.txt=true;BK.bref=true;
+/* add2 ④-2 — 글상자를 먼저 붙이고(기준 = 지우개) 링크를 그 뒤에 붙인다.
+   종전에는 링크가 아직 없는 글상자를 기준으로 삼아 insertBefore(sp,null) 이 되어 ↺ 뒤로 밀렸다. */
+{const tb=$('#bktools');
+ if(tb&&!tb.querySelector('[data-tool="txt"]')){const sp=document.createElement('span');sp.dataset.tool='txt';sp.textContent='T 글상자';
+   const er=tb.querySelector('[data-tool="erase"]');tb.insertBefore(sp,er?er.nextSibling:null)}}
 {const tb=$('#bktools');
  if(tb&&!tb.querySelector('[data-tool="bref"]')){const sp=document.createElement('span');sp.dataset.tool='bref';sp.textContent='🔗 링크';
    const tx=tb.querySelector('[data-tool="txt"]');tb.insertBefore(sp,tx?tx.nextSibling:null)}}
+/* add2 ② — 링크를 저장·취소·떼기 한 뒤에는 도구를 「보기」로 되돌린다.
+   안 되돌리면 #bkvp.pen 이 남아 커서가 + 로 굳고, 4663줄 때문에 교재를 누를 때마다 새 네모가 그려진다.
+   ★ 오리기는 종전대로 연달아 되게 둔다 — 조각은 여러 장이지만 링크는 한 자리에 하나다.
+   zTools 를 고치지 않고 「보기 단추를 누른 것과 같은 상태」로만 되돌린다(교재·서브노트가 같은 zTools 를 쓴다). */
+function bkToolView(){const v=$('#bktools span[data-tool="view"]');if(v)v.click()}
 /* 판 3 add1 — 교재 전체 화면의 쪽마다 링크 표를 그린다(좌표는 글상자와 같은 0~1) */
-function bkBrefPaint(p){if(!p||!p.el)return;brefPaint(p.el,p.pr,p.w,p.h,()=>bkBrefAll())}
+function bkBrefPaint(p){if(!p||!p.el)return;brefPaint(p.el,p.pr,p.w,p.h,()=>{bkBrefAll();bkToolView()})}
 function bkBrefAll(){BK.pgs.forEach(bkBrefPaint)}
 BK.onBref=function(crop,clear){const p=BK.pages()[crop.i];if(!p)return;
   const x0=Math.min(crop.x0,crop.x1),y0=Math.min(crop.y0,crop.y1);
-  brefAsk(p.pr,[x0/p.w,y0/p.h,Math.abs(crop.x1-crop.x0)/p.w,Math.abs(crop.y1-crop.y0)/p.h],null,()=>{clear();bkBrefAll()})};
-{const tb=$('#bktools');
- if(tb&&!tb.querySelector('[data-tool="txt"]')){const sp=document.createElement('span');sp.dataset.tool='txt';sp.textContent='T 글상자';
-   const cr=tb.querySelector('[data-tool="crop"]');tb.insertBefore(sp,cr?cr.nextSibling:null)}}
+  brefAsk(p.pr,[x0/p.w,y0/p.h,Math.abs(crop.x1-crop.x0)/p.w,Math.abs(crop.y1-crop.y0)/p.h],null,()=>{clear();bkBrefAll();bkToolView()})};
 /* 판 3 ② — 교재 쪽마다 글상자를 그린다. 좌표는 잉크와 같은 0~1 정규화다. */
 function bkTxtPaint(p){if(!p||!p.el)return;p.el.__zs=()=>BK.S;txtPaint(p.el,p.key,p.w,p.h,1,true)}
 function bkTxtAll(){BK.pgs.forEach(bkTxtPaint)}
@@ -5830,6 +5837,15 @@ $('#tLayerAdd').onclick=async()=>{QR=Math.max(1,...qRounds())+1;qFillSel();qPain
   toast(QR+'회독으로 넘어갑니다 — 이제 긋는 획은 '+QR+'회독입니다')};
 $('#tLayerEye').onclick=()=>{QHIDE=!QHIDE;$('#tLayerEye').classList.toggle('on',QHIDE);qPaint();
   toast(QHIDE?'지금 회독만 봅니다':'옛 회독도 함께 봅니다')};
+/* add2 ③ — 문항 카드 도구줄에 「보기」 단추. 교재 도구줄(881줄 data-tool="view")과 같은 잣대다.
+   ⚠ 마크업(930줄)에 박지 않고 여기서 붙인다 — 박으면 물리 도구줄까지 바뀐다(물리 무변).
+   ⚠ setTool 이 penOn() 을 거짓으로 만들면 #card.penon 이 벗겨져 #qink 가 카드를 안 덮는다(782줄). */
+{const tb=$('.vbot .tools');
+ if(tb&&!tb.querySelector('#tView')){const b=document.createElement('button');
+   b.className='tl';b.id='tView';b.textContent='보기';
+   b.onclick=()=>setTool('view',null,b);
+   tb.insertBefore(b,tb.firstElementChild);
+   if(TOOL.mode==='view')b.classList.add('on')}}
 /* 펜·형광·지우개를 고르면 잉크 층이 잡히게(보기 상태면 글자 선택이 살아 있다) */
 {const _setTool=setTool;
  setTool=function(){const r=_setTool.apply(this,arguments);try{qWire()}catch(e){}return r}}
