@@ -847,14 +847,29 @@ body[data-layer="card"] #bookpane,body[data-layer="card"] #tBook{display:none!im
   cursor:pointer;white-space:nowrap;user-select:none;-webkit-user-select:none;touch-action:none;pointer-events:auto}   /* add2 ① — #bkover 가 pointer-events:none 이라 여기서 되살린다(.pitchip 573 · .bkorph 576 과 같은 잣대) */
 .brefm:hover{background:var(--amber);color:#fff}
 .brefbox{position:absolute;z-index:7;border:1.5px dashed var(--amber);background:rgba(242,194,48,.12);pointer-events:none}
-#brefPop{position:fixed;z-index:97;background:var(--card);border:1px solid var(--line);border-radius:12px;
+/* 판 3 add3 §1-A — 껍데기를 `.sheet > .panel` 꼴로 바꾼다(선례 = #bkq 598~601).
+   makeFloat 은 첫 줄이 sheet.querySelector('.panel') 이라 .panel 이 없으면 불러도 조용히 아무 일도 안 한다.
+   자리·크기·모양 선언은 전부 .panel 로 옮겼고 #brefPop 자체는 덧층만 남는다. .h·.bd·canvas·.msg 는 후손 선택자라 그대로 산다. */
+#brefPop{position:fixed;inset:0;z-index:97;background:transparent;pointer-events:none;display:block}
+#brefPop .panel{pointer-events:auto;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+  background:var(--card);border:1px solid var(--line);border-radius:12px;
   box-shadow:0 10px 32px rgba(0,0,0,.28);padding:8px;display:flex;flex-direction:column;gap:6px;
   width:min(560px,92vw);max-height:82vh}
+#brefPop .panel.float{transform:none;max-height:none;overflow:hidden}   /* makeFloat 이 left/top/width/height 를 인라인으로 잡는다 — 가운데 맞춤 transform 을 끈다(두 곳이 자리를 다투면 창이 튄다) */
+#brefPop .panel .twgrip{position:absolute;right:0;bottom:0;z-index:3}
 #brefPop .h{display:flex;gap:6px;align-items:center;font-size:12.5px;font-weight:700}
 #brefPop .h .sp{flex:1}
 #brefPop .bd{flex:1;min-height:0;overflow:auto;position:relative;background:#fff;border:1px solid var(--line);border-radius:8px}
 #brefPop canvas{display:block;width:100%}
 #brefPop .msg{font-size:12px;color:var(--muted);padding:10px}
+/* 판 3 add3 §2-B — 되돌아가는 링크 칩. 그 쪽 **가운데 위**에 두고 .brefm(노랑)과 색을 갈라 방향이 눈에 띄게 한다.
+   ⚠ #bkover 가 pointer-events:none 이라 .brefback 에 auto 를 **반드시** 준다(add2 ① 에서 .brefm 이 이것 하나 빠져 안 눌렸다). */
+.brefbackbar{position:absolute;z-index:9;left:50%;transform:translateX(-50%);top:2px;
+  display:flex;gap:4px;flex-wrap:wrap;justify-content:center;max-width:92%;pointer-events:none}
+.brefback{font-size:10.5px;line-height:1;padding:2px 6px;border-radius:8px;
+  background:rgba(214,238,255,.94);border:1px solid var(--sea);color:#0B4A6F;font-weight:700;
+  cursor:pointer;white-space:nowrap;user-select:none;-webkit-user-select:none;touch-action:none;pointer-events:auto}
+.brefback:hover{background:var(--sea);color:#fff}
 /*/EARTH:css*/
 </style>
 </head>
@@ -3757,10 +3772,13 @@ function mcardPop(no){
   const r=rec(no);if(!r)return;
   const old=document.getElementById('mcPop');if(old)old.remove();
   const b=document.createElement('div');b.className='sheet mcpop';b.id='mcPop';
-  const ch=(r[F.CH]||[]).filter(x=>x);
+  const uid=r[F.CODE];
+  /* add3 §3 ⓒ — 고친 글자(tfix)를 지난다. 빈 것을 거르는 길이 로직은 그대로 두되 **번호는 원래 자리**를 지킨다
+     (종전 filter 는 가운데가 비면 ②가 ③의 글을 달았다). */
+  const ch=(r[F.CH]||[]).map((t,i)=>({i:i,t:String(txtOf(uid,'c'+(i+1))||'')})).filter(x=>x.t);
   b.innerHTML=`<div class="panel"><h2 class="mch">${esc((r[F.ROUND]||'?')+'회 '+(r[F.LNO]||'?')+'번')} <span class="mcc">${esc(r[F.CODE])}</span><button class="iconbtn" id="mpX">✕</button></h2>
-    <div class="q">${esc(stemOf(r))}</div>
-    ${ch.length?`<div class="sol">${ch.map((t,i)=>esc(CIRC[i]+' '+t)).join('<br>')}</div>`:''}
+    <div class="q">${esc(txtOf(uid,'q'))}</div>
+    ${ch.length?`<div class="sol">${ch.map(x=>esc(CIRC[x.i]+' '+x.t)).join('<br>')}</div>`:''}
     <div class="sol" style="margin-top:8px"><b>정답 ${r[F.ANS]?esc(CIRC[+r[F.ANS]-1]||r[F.ANS]):'—'}</b><br>${esc(String(r[F.SOL]||'해설 없음').split('⏎').join(' ')).slice(0,400)}</div>
     <div style="display:flex;gap:6px;margin-top:10px"><button class="btn" id="mpGo">이 문항으로 가기</button><button class="btn" id="mpCard">카드 열어 쓰기</button><button class="btn pri" id="mpX2" style="margin-left:auto">닫기</button></div></div>`;
   document.body.appendChild(b);
@@ -4090,7 +4108,7 @@ function row(r){
      ${r[F.FILE]==='IMG'?'<span class="tag">그림</span>':''}
      ${rep?`<span class="tag">${rep}회독</span>`:''}
      ${(c=>c?`<span class="cmt" data-cmt="${no}">${esc(c)}</span>`:`<span class="cmt empty" data-cmt="${no}">＋한줄</span>`)(noteOf(no))}
-   </div><div class="prev">${esc(stemOf(r))}</div></div>${markBadge(no)}`;
+   </div><div class="prev">${esc(txtOf(r[F.CODE],'q'))}</div></div>${markBadge(no)}`;   /* add3 §3 ⓐ — 본문을 읽는 유일한 길 txtOf 를 지난다(고친 글자가 목록에도 보인다) */
   d.onclick=e=>{const c=e.target.closest('.cmt'),p=e.target.closest('[data-page]'),un=e.target.closest('[data-unit]');
     if(c)noteSheet(+c.dataset.cmt);
     else if(e.target.closest('.mk'))histSheet(no);
@@ -4375,7 +4393,7 @@ function treeList(){
   const box=$('#trq');if(!box)return;
   if(!VNO){box.innerHTML='';return}
   box.innerHTML=`<div class="trqh">지금 목록 ${VLIST.indexOf(VNO)+1} / ${VLIST.length}</div>`+VLIST.map(no=>{const r=rec(no);const m=lastM(no);
-    return `<div class="trqr${no===VNO?' cur':''}" data-no="${no}"><span class="ndno">${esc(r[F.CODE])}</span><span class="ndt">${esc(stemOf(r)).slice(0,28)}</span>${m?`<b class="ndm ndm${m}">${MG[m]}</b>`:''}${noteOf(no)?'<b class="ndc">🗒</b>':''}</div>`}).join('');
+    return `<div class="trqr${no===VNO?' cur':''}" data-no="${no}"><span class="ndno">${esc(r[F.CODE])}</span><span class="ndt">${esc(String(txtOf(r[F.CODE],'q')).slice(0,28))}</span>${m?`<b class="ndm ndm${m}">${MG[m]}</b>`:''}${noteOf(no)?'<b class="ndc">🗒</b>':''}</div>`}).join('');
   box.querySelectorAll('.trqr').forEach(el=>el.onclick=()=>{VNO=+el.dataset.no;showProblem()});
   const c=box.querySelector('.cur');if(c)c.scrollIntoView({block:'nearest'});
 }
@@ -5700,10 +5718,35 @@ var brefAsk=function(pr,rect,idx,after){
     if(cur)a[idx]={r:cur.r,to};else a.push({r:rect.map(v=>+(+v).toFixed(4)),to});
     await brefSet(pr,a);close();toast(pr+'쪽 → '+to+'쪽 링크를 걸었습니다');if(after)after()};
   b.onclick=e=>{if(e.target===b){close();if(after)after()}}};
+/* 판 3 add3 §2-A — pr 쪽을 **가리키는** 쪽들(역인덱스). 자료 꼴(BREF)은 한 글자도 안 바꾸고 그때그때 만든다.
+   BREF 는 작다(쪽 수 × 링크 수) — **캐시를 만들지 마라**(저장 뒤 무효화를 잊는다).
+   brefList 를 지나게 해서 꼴 검사·BREFBAD 세기를 한 곳으로 모은다(새 검사기를 만들지 않는다). */
+var brefBack=pr=>{const out=[];
+  for(const k in BREF){const from=+k; if(!(from>0)||from===+pr)continue;   /* 자기 쪽은 뺀다 */
+    let n=0; for(const x of brefList(from)) if(+x.to===+pr) n++;
+    if(n)out.push({from:from,n:n})}
+  return out.sort((a,b)=>a.from-b.from)};
+/* 되돌아가는 칩을 그 층(host) **가운데 위**에 그린다. 다 띄운다 — 자르지 않는다(줄이 넘치면 flex-wrap 으로 접힌다).
+   ⚠ **읽기 전용**이다 — 길게 누르기(고치기·떼기)는 .brefm 만. 한 쪽에서만 고칠 수 있어야 「어느 쪽이 정본인가」가 안 갈린다.
+   누르면 brefPop(from) — 팝업은 여전히 **한 겹**이고 안을 갈아 끼운다. */
+function brefBackPaint(host,pr){
+  if(!host)return 0;
+  host.querySelectorAll('.brefbackbar').forEach(x=>x.remove());
+  const B=brefBack(pr); if(!B.length)return 0;
+  const bar=document.createElement('div');bar.className='brefbackbar';
+  B.forEach(b=>{const el=document.createElement('i');el.className='brefback';
+    el.dataset.from=String(b.from);el.dataset.n=String(b.n);
+    el.textContent='↩ '+b.from+'쪽'+(b.n>1?' ×'+b.n:'');   /* 같은 쪽에서 두 자리가 여기를 가리키면 ×2 */
+    el.title=b.from+'쪽에서 이 쪽으로 옵니다 — 누르면 그 쪽이 팝업으로 뜹니다';
+    el.addEventListener('click',e=>{e.stopPropagation();brefPop(b.from)});
+    bar.appendChild(el)});
+  host.appendChild(bar);
+  return B.length}
 /* 링크 표를 그 층(host)에 그린다 — W×H 는 그 쪽 크기, k 는 화면 배율(길게 누르기로 고치기·떼기) */
 function brefPaint(host,pr,W,H,onChange){
   if(!host)return 0;
   host.querySelectorAll('.brefm').forEach(x=>x.remove());
+  host.querySelectorAll('.brefbackbar').forEach(x=>x.remove());   /* add3 §2-C ① */
   const L=brefList(pr);
   L.forEach((x,j)=>{
     const el=document.createElement('i');el.className='brefm';el.dataset.br=String(j);el.dataset.to=String(x.to);
@@ -5716,6 +5759,7 @@ function brefPaint(host,pr,W,H,onChange){
     el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);el.addEventListener('pointerleave',up);
     el.addEventListener('click',e=>{e.stopPropagation();if(long){long=false;return}brefPop(x.to)});
     host.appendChild(el)});
+  brefBackPaint(host,pr);   /* add3 §2-C ① — 되돌아가는 칩도 같이. ⚠ **반환값은 그대로 L.length 다**(하네스가 이 수를 잰다). 뒤로 칩 수는 host.querySelectorAll('.brefback').length 로 따로 잰다 */
   return L.length}
 /* ⚠ 팝업은 하나뿐이다 — 있으면 그 안을 갈아 끼운다. 창을 쌓지 않는다. */
 var BREFPOP=null;
@@ -5723,21 +5767,30 @@ function brefPopClose(){const p=$('#brefPop');if(p)p.remove();BREFPOP=null}
 var brefPop=async function(pr){
   let b=$('#brefPop');
   if(!b){b=document.createElement('div');b.id='brefPop';
-    b.innerHTML='<div class="h"><b id="brpT"></b><span class="sp"></span>'+
+    b.innerHTML='<div class="panel"><div class="h"><b id="brpT"></b><span class="sp"></span>'+
       '<button class="iconbtn" id="brpBig" title="이 쪽으로 교재 모드">⤢</button>'+
       '<button class="iconbtn" id="brpX">✕</button></div>'+
-      '<div class="bd"><canvas id="brpC"></canvas><div class="msg" id="brpM"></div></div>';
+      '<div class="bd"><canvas id="brpC"></canvas><div class="msg" id="brpM"></div></div></div>';
     document.body.appendChild(b);
     b.querySelector('#brpX').onclick=brefPopClose;
     b.querySelector('#brpBig').onclick=()=>{const p=BREFPOP;brefPopClose();if(p)bkOpen(p)};
-    const r=b.getBoundingClientRect();
-    b.style.left=Math.round(Math.max(8,(window.innerWidth-r.width)/2))+'px';
-    b.style.top=Math.round(Math.max(8,(window.innerHeight-r.height)/2))+'px';
+    /* 판 3 add3 §1-B — **새로 만드는 것이 없다.** 서브노트 창·교재 창·암기카드 창이 쓰는 makeFloat 을 그대로 부른다.
+       손잡이 = 머리줄 .h(makeFloat 이 button·[data-tool]·input·select 를 이미 걸러 내므로 ⤢·✕ 를 눌러도 안 끌린다).
+       오른쪽 아래 모서리 .twgrip 은 makeFloat 이 만든다 — 새 손잡이 단추를 만들지 않는다(9/8 사용자 확정).
+       pkey='jagwa.win.bref' 로 크기를 기기에 기억(교재 창 jagwa.win.book · 모아보기 jagwa.win.mcsheet 와 같은 잣대).
+       §1-C — 첫 자리 계산 줄 셋은 **뺐다**. makeFloat 이 WIN.bref 로 자리를 잡고 clamp 로 화면 밖을 막는다. */
+    makeFloat(b,b.querySelector('.h'),'bref','jagwa.win.bref');
+    /* §1-D — .bd 폭으로 캔버스 배율을 잡으므로 모서리로 창을 키우면 그림이 흐려지거나 잘린다.
+       모서리를 놓은 뒤 200ms 디바운스로 다시 그린다. ⚠ brefPop 에 이미 if(BREFPOP!==pr)return 경합 가드가 있다 — **새 가드를 만들지 않는다**. */
+    let _brz=null;
+    b.addEventListener('pointerup',e=>{if(e.target&&e.target.closest&&e.target.closest('.twgrip')){
+      clearTimeout(_brz);_brz=setTimeout(()=>{if(BREFPOP!=null)brefPop(BREFPOP)},200)}},true);
   }
   BREFPOP=pr;
   b.querySelector('#brpT').textContent='🔗 '+pr+'쪽';
   const cv=b.querySelector('#brpC'), msg=b.querySelector('#brpM'), bd=b.querySelector('.bd');
   bd.querySelectorAll('.brefm').forEach(x=>x.remove());
+  bd.querySelectorAll('.brefbackbar').forEach(x=>x.remove());   /* add3 §2-C ② */
   msg.textContent='그리는 중…';
   try{
     const pc=pieceFor(pr); if(!pc)throw new Error('이 쪽은 조각에 없다');
@@ -5759,6 +5812,7 @@ var brefPop=async function(pr){
       el.style.left=(x.r[0]*base.width*k)+'px';el.style.top=(x.r[1]*base.height*k)+'px';
       el.onclick=e=>{e.stopPropagation();brefPop(x.to)};
       bd.appendChild(el)});
+    brefBackPaint(bd,pr);   /* add3 §2-C ② — 팝업 안에도 되돌아가는 막대를 .bd 에 붙인다 */
   }catch(e){msg.textContent='쪽을 그리지 못했습니다 — '+(e.message||e)}
 };
 /* ══ 판 3 add1 — 오리기 메뉴는 **한 벌**이다 ══
