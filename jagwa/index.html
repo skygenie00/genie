@@ -759,16 +759,43 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #sub,body[data-layer="pdf"]
 /* ── 판 3 ② 글상자 txt ──
    **획과 같은 자리에 놓이지만 다른 통에 저장된다.** 지우개는 획만 지우고 글상자는 눌러서 고친다.
    좌표 기준은 그 자리 잉크와 똑같이 맞춘다(교재·서브노트 = 0~1 정규화 · 카드 = 1/1000). */
+/* ⓐ `min-width` — 빈 글상자는 폭이 글자 너비(=0)라 **찍을 자리도 커서 설 자리도 없었다.**
+   그래서 「옆으로 늘려야 써진다」가 났다. 빈 것은 더 넓게 잡아 바로 쓸 수 있게 한다. */
 .tbox{position:absolute;z-index:5;box-sizing:border-box;border:1px dashed transparent;border-radius:3px;
   padding:1px 3px;white-space:pre-wrap;word-break:break-word;line-height:1.35;color:#C2185B;
-  background:rgba(255,255,255,.55);pointer-events:auto;cursor:text;outline:none;min-height:1em}
+  background:rgba(255,255,255,.55);pointer-events:auto;cursor:text;outline:none;min-height:1.2em;min-width:2.6em;
+  -webkit-user-select:text;user-select:text}
 .tbox:hover,.tbox:focus{border-color:#C2185B;background:rgba(255,255,255,.85)}
 .tbox .tgrip{position:absolute;right:-5px;bottom:-5px;width:10px;height:10px;background:#fff;
   border:1.5px solid #C2185B;border-radius:2px;cursor:ew-resize;user-select:none}
 .tbox .tmove{position:absolute;left:-5px;top:-5px;width:10px;height:10px;background:#fff;
   border:1.5px solid #C2185B;border-radius:50%;cursor:move;user-select:none}
-.tbox.empty{border-color:#E0A8C0}
+.tbox.empty{border-color:#C2185B;background:rgba(255,255,255,.92);min-width:7em}
+/* ⓒ 지우기 · ⓓ 색·크기 — 옮기기(◦)·폭(▫) 옆에 둘을 더 단다 */
+.tbox .tdel{position:absolute;right:-7px;top:-7px;width:15px;height:15px;line-height:13px;text-align:center;
+  background:#fff;border:1.5px solid #C2185B;border-radius:50%;font-size:9px;color:#C2185B;cursor:pointer;
+  user-select:none;-webkit-user-select:none;touch-action:none}
+.tbox .tsty{position:absolute;left:-7px;bottom:-7px;width:15px;height:15px;line-height:13px;text-align:center;
+  background:#fff;border:1.5px solid #C2185B;border-radius:50%;font-size:9px;cursor:pointer;
+  user-select:none;-webkit-user-select:none;touch-action:none}
+.tpal{position:absolute;z-index:9;left:0;top:100%;margin-top:5px;display:flex;gap:4px;align-items:center;
+  background:var(--card);border:1px solid var(--line);border-radius:9px;padding:4px 6px;
+  box-shadow:0 4px 14px rgba(0,0,0,.2);white-space:nowrap;user-select:none;-webkit-user-select:none}
+.tpal i{width:16px;height:16px;border-radius:50%;box-shadow:0 0 0 1px var(--line);cursor:pointer;display:block}
+.tpal i.on{box-shadow:0 0 0 2px var(--ink)}
+.tpal s{width:1px;height:16px;background:var(--line);display:block}
+.tpal b{font-weight:700;cursor:pointer;padding:1px 6px;border-radius:6px;border:1px solid var(--line);
+  background:#fff;color:var(--ink);font-size:11px;line-height:1.5}
+.tpal b.on{background:var(--sea-soft);border-color:var(--sea);color:var(--sea)}
 #bkvp.txtmode{cursor:crosshair}
+/* ── 지학 3건 add — 교재는 **팝업 창 하나**로 본다(2026-09-10 사용자 확정) ──
+   문제 카드 머리줄의 `📖 p98` 칩 하나만 남기고, 옆 칸(#bookpane)과 아래 도구줄 「교재」(#tBook)를 걷는다.
+   옆 칸에만 있던 ◻오리기는 **교재 창 도구줄로 옮겼다**(🔗링크는 이미 거기 있었다) — 잃는 기능이 없다.
+   ⚠ 물리는 `body[data-layer="pdf"]` 규칙으로 원래 둘 다 숨어 있다 — 한 글자도 안 달라진다. */
+body[data-layer="card"] #bookpane,body[data-layer="card"] #tBook{display:none!important}
+/* 교재쪽 고정 칩 줄이 교재 창 머리줄로 옮겨 왔다 — 머리줄 안에서 한 줄로 흐른다 */
+.bkbar .bpgchips{display:flex;gap:4px;align-items:center;font-size:11.5px;color:var(--muted);margin:0}
+.bkbar .bpgchips.hide{display:none}
 /* 목차 줄의 「내가 쓴 글자」 칩 — 물리 ndTail 의 🗒 칩과 같은 꼴(물리 코드는 안 건드린다) */
 .bkit .bkc{margin-left:6px;flex:none;font-size:10px;padding:0 5px;border-radius:8px;background:#FFF4D6;color:#8A6A00;font-weight:700;cursor:pointer}
 .bkit .bkc.on{background:var(--amber);color:#fff}
@@ -796,6 +823,11 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #sub,body[data-layer="pdf"]
 #cardwrap{overflow-x:hidden}
 #card{position:relative;width:760px;max-width:760px;transform-origin:top left}
 #qink{position:absolute;left:0;top:0;pointer-events:none;z-index:6;overflow:visible}
+/* 지학 3건 add — 문항 화면 글상자 층. 필기(#qink)와 같은 자리에 얹되 **통이 다르다**(TXT · 키 q:<uid>).
+   평소에는 포인터를 안 받는다 — 「T 글상자」를 켠 동안에만 받는다(필기와 안 싸우게). */
+#qtxt{position:absolute;left:0;top:0;pointer-events:none;z-index:7;overflow:visible}
+#card.txton #qtxt{pointer-events:auto;cursor:text}
+#tTxt.on{background:var(--sea);color:#fff;border-color:var(--sea)}
 #card.penon #qink{pointer-events:auto;touch-action:none;cursor:crosshair}
 #card.penon .q,#card.penon .choices,#card.penon .bogi,#card.penon details{user-select:none}
 /* ── 판 3 ④ 글자 고치기 tfix — 고친 칸에 작은 ✎ 배지 ── */
@@ -3491,8 +3523,10 @@ function mcardWin(no){
   const cardTxtPaint=()=>{if(!cardTxt)return;box.__zs=()=>1;txtPaint(box,cardKey,box.clientWidth||1,box.clientHeight||1,1000,true)};
   cardTxtPaint();
   cv.addEventListener('pointerdown',e=>{ if(live&&e.pointerType==='touch')return;   /* 손바닥 거르기(add1 §2(2)⑤) */
-    if(tool==='txt'&&cardTxt){const[u,v]=pt(e);e.preventDefault();
-      txtAdd(box,cardKey,box.clientWidth||1,box.clientHeight||1,1000,u/1000*(box.clientWidth||1),v/1000*(box.clientHeight||1),cardTxtPaint);return}
+    /* ⓑ-2 — `preventDefault()` 를 focus **앞**에 걸면 iOS 가 자판을 안 올린다. 만든 뒤로 옮겼다. */
+    if(tool==='txt'&&cardTxt){const[u,v]=pt(e);
+      txtAdd(box,cardKey,box.clientWidth||1,box.clientHeight||1,1000,u/1000*(box.clientWidth||1),v/1000*(box.clientHeight||1),cardTxtPaint);
+      return}
     if(SET.pencil&&e.pointerType!=='pen')return; try{cv.setPointerCapture(e.pointerId)}catch(_){} const[u,v]=pt(e);
     if(tool==='erase'){mcErase(no,u,v);mcPaint(cv,MC[no]);live={erase:1};return}
     live={c:tool==='hl'?'#F2C230':TOOL.color,w:TOOL.w,hl:tool==='hl'?1:0,p:[u,v]};e.preventDefault()},{passive:false});
@@ -4147,7 +4181,8 @@ function renderCard(r){
   const csn=$('#cSn');if(csn)csn.onclick=()=>snOpen(csn.dataset.sec);   /* 판 2: 절 정리판 창 */
   $('#cPrev').onclick=()=>go(-1);$('#cNext').onclick=()=>go(1);
   cropWire(c,uid,()=>showProblem());   /* 판 3 ① — 붙인 조각 그리기 · ✕ 로 떼면 원래 글자가 돌아온다 */
-  qFit();qLoad(uid).then(()=>{qFit();qWire()});   /* 판 3 ③ — 문항 필기(qink:<uid>) · 폭을 박고 잉크 층을 얹는다 */
+  qFit();qLoad(uid).then(()=>{qFit();qWire();
+    if(typeof qTxtPaint==='function'){qTxtPaint();qTxtWire()}});   /* 판 3 ③ — 문항 필기(qink:<uid>) · 지학 3건 add — 글상자 층도 같이 */
   /* 판 3 ④ — 그 줄을 **길게 누르면** 글자 고치기. 짧게 누름(선택지 고르기)과 안 부딪힌다. */
   c.querySelectorAll('[data-tfx]').forEach(el=>tfixLong(el,uid,el.dataset.tfx,()=>showProblem()));
   markWrong();markAns();
@@ -4418,7 +4453,9 @@ function bpgChips(){
   const r=VNO?rec(VNO):null, L=r?bpgList(r):[];
   if(!r||L.length<2){box.classList.add('hide');box.innerHTML='';return}
   box.classList.remove('hide');
-  box.innerHTML='<b>고정</b>'+L.map(p=>`<span class="pin${p===BOOK.page?' on':''}" data-p="${p}">p${p}</span>`).join('');
+  /* 지학 3건 add — 「지금 보는 쪽」은 이제 교재 **창**이 들고 있다(옆 칸을 걷었다) */
+  const cur=(typeof bkCurPage==='function'&&bkCurPage())?bkCurPage().pr:BOOK.page;
+  box.innerHTML='<b>고정</b>'+L.map(p=>`<span class="pin${p===cur?' on':''}" data-p="${p}">p${p}</span>`).join('');
   box.querySelectorAll('[data-p]').forEach(el=>el.onclick=()=>bookOpen(+el.dataset.p));}
 var bookRows=page=>DATA.filter(r=>CUR.BOOK_ROWS==='bpage'?bpgList(r).indexOf(page)>=0:bpgPinned(r)?bpgList(r).indexOf(page)>=0:(r[F.BPAGE]===page||(isC(r)&&r[F.PG]===page)||(!isC(r)&&r[F.SOLPG]===page)));   /* 생물 = 교재쪽(bpg 덮어쓰기)만 · 지학 = 교재쪽 ∪ 확인 문제쪽 ∪ 기출 부록쪽 · 판 2 add1(9/7): 고정한 문항은 고정한 쪽에만 뜬다 — 그때는 BPAGE·PG·SOLPG 를 보지 않는다 */
 function bookList(page){bookListInto(page,$('#bpList'),null)}
@@ -4442,8 +4479,8 @@ BOOK.crop=false; BOOK.bref=false; BOOK.txt=false;   /* §1 — 옆 칸 글상자
    const big=$('#bpBig');
    bar.insertBefore(mk('bpCrop','◻ 오리기','펜으로 끌면 그 자리를 오려 이 문항에 붙인다'),big||null);
    bar.insertBefore(mk('bpRef','🔗 링크','끌어서 범위를 잡고 갈 쪽을 적는다'),big||null);
-   bar.insertBefore(mk('bpTxt','T 글상자','찍으면 그 자리에 글자 통이 선다 — 교재 전체 화면과 같은 통(bink:쪽)'),big||null);   /* §1 */
-   bar.insertBefore(mk('bpWin','⧉ 창으로','교재를 떠 있는 창으로 연다 — 자리·크기를 기억한다'),big||null);   /* §3 */
+   /* 지학 3건 add — 「T 글상자」·「⧉ 창으로」는 **옆 칸을 걷으면서 같이 걷었다**(사용자: 창으로는 필요없다).
+      글상자는 교재 창 도구줄에 있다. 아래 두 줄은 옆 칸을 되살릴 때만 쓴다. */
  }}
 function bpBrefPaint(){const w=$('#bpwrap');if(!w||!BOOK.page||!BOOK.pw)return 0;
   const r=w.getBoundingClientRect(), k=r.width/BOOK.pw||1;
@@ -4461,7 +4498,7 @@ function bpToolOff(){BOOK.crop=false;BOOK.bref=false;BOOK.txt=false;
   const a=$('#bpCrop'),b=$('#bpRef'),c=$('#bpTxt');if(a)a.classList.remove('on');if(b)b.classList.remove('on');if(c)c.classList.remove('on')}
 if($('#bpCrop'))$('#bpCrop').onclick=()=>{const on=!BOOK.crop;bpToolOff();BOOK.crop=on;$('#bpCrop').classList.toggle('on',on)};
 if($('#bpRef'))$('#bpRef').onclick=()=>{const on=!BOOK.bref;bpToolOff();BOOK.bref=on;$('#bpRef').classList.toggle('on',on)};
-if($('#bpTxt'))$('#bpTxt').onclick=()=>{const on=!BOOK.txt;bpToolOff();BOOK.txt=on;$('#bpTxt').classList.toggle('on',on)};   /* §1 */
+if($('#bpTxt'))$('#bpTxt').onclick=()=>{const on=!BOOK.txt;bpToolOff();BOOK.txt=on;$('#bpTxt').classList.toggle('on',on)};   /* §1 · 단추는 이제 안 그린다 */
 /* 옆 칸 좌표 — #bpwrap 은 쪽 하나를 avail 폭으로 그린 것이라 pt 로 되돌리는 값이 하나뿐이다 */
 function bpPt(e){const w=$('#bpwrap');if(!w||!BOOK.pw)return null;
   const r=w.getBoundingClientRect(); const k=r.width/BOOK.pw;
@@ -4485,7 +4522,7 @@ function bpPt(e){const w=$('#bpwrap');if(!w||!BOOK.pw)return null;
       const rr=wrap.getBoundingClientRect();
       wrap.__zs=()=>1;
       txtAdd(wrap,'bink:'+BOOK.page,rr.width,rr.height,1,q[0]*q[2],q[1]*q[2],()=>bpTxtPaint());
-      e.preventDefault();return}
+      return}   /* ⓑ-2 와 같은 잣대 — preventDefault 를 안 건다 */
     if(!BOOK.crop&&!BOOK.bref)return;
     if(e.target&&e.target.closest&&e.target.closest('.brefm'))return;
     if(e.pointerType!=='pen'&&SET.pencil)return;      /* ⚠ 손가락은 지금처럼 스크롤이다(커밋 ① 규칙 그대로) */
@@ -4708,6 +4745,10 @@ function zWire(Z){
     if(Z.txt&&Z.tool==='txt'){
       if(e.target&&e.target.closest&&e.target.closest('.tbox'))return;   /* 이미 선 글상자를 누른 것은 고치기다 */
       const p=toPage(e.clientX,e.clientY);if(!p){if(wasVel)settle();return}
+      /* ⓑ-1 — 위에서 이미 vp 가 포인터를 잡았다. 그대로 두면 **끝난 탭이 새 글상자에 안 닿아**
+         아이패드에서 자판이 안 올라온다. 글상자를 만들기 전에 놓는다. */
+      try{vp.releasePointerCapture(e.pointerId)}catch(_){}
+      ptrs.delete(e.pointerId);
       if(Z.onTxt)Z.onTxt(p);return}
     /* 판 3 ① 오리기 — **펜에서만** 네모가 선다. 손가락은 아래로 흘려보내 종전대로 스크롤·핀치가 된다. */
     if(Z.crop&&(Z.tool==='crop'||(Z.bref&&Z.tool==='bref'))){
@@ -4812,7 +4853,42 @@ function cropWire(box,uid,redraw){
    ⚠ 잉크는 한 글자도 안 건드린다(ink 스토어·inkGet·pathD 무접촉). 지우개는 획만 지운다.
    ⚠ 이 글자가 판 4 검색이 훑을 대상이다 — 읽는 길을 txtList 한 자리로 모은다. */
 var TXTBAD=0, TXTSEQ=0;
-var TXT_C='#C2185B', TXT_FS=13;                       /* 색·글자 크기는 기본값 하나. 고르개는 이 판에 안 넣는다. */
+/* ⓓ 색·크기 — 고르개를 넣었다(2026-09-10). 고른 값은 **다음 글상자의 기본값**이 되고 기기에 남는다.
+   ⚠ 저장 꼴은 그대로다 — 글상자마다 `c`·`fs` 를 이미 갖고 있었고 그 칸을 이제 쓰는 것뿐이다. */
+var TXT_COLORS=['#C2185B','#16181B','#B03A2E','#2F6FD0','#2E7D6F','#8A6A00'];
+var TXT_SIZES=[[11,'작게'],[13,'보통'],[17,'크게'],[22,'아주']];
+var TXT_C='#C2185B', TXT_FS=13;
+(function(){try{const v=JSON.parse(localStorage.getItem('jagwa.txt.style')||'null');
+  if(v&&TXT_COLORS.indexOf(v.c)>=0)TXT_C=v.c;
+  if(v&&TXT_SIZES.some(x=>x[0]===+v.fs))TXT_FS=+v.fs}catch(e){}})();
+var txtStyleSave=(c,fs)=>{TXT_C=c;TXT_FS=fs;
+  try{localStorage.setItem('jagwa.txt.style',JSON.stringify({c:c,fs:fs}))}catch(e){}};
+/* ⓑ-3 iOS 는 **끝난 탭**(pointerup/touchend)에서만 자판을 올린다.
+   `pointerdown` 안에서 부른 focus 는 데스크톱에서만 먹는다. 그래서 두 번 건다 —
+   지금 한 번(데스크톱), 그리고 바로 뒤에 오는 탭 끝에서 한 번 더(아이패드). */
+/* ★ 글상자의 **내용**만 읽는다 — 손잡이(✕·🎨·색고르개)는 글이 아니다.
+   ⚠ 이 함수를 거치지 않고 `el.textContent` 를 쓰면 손잡이 글자가 저장에 섞인다. */
+var TXT_CHROME=/(^|\s)(tmove|tgrip|tdel|tsty|tpal)(\s|$)/;
+var txtBody=function(el){
+  let out='';
+  el.childNodes.forEach(n=>{
+    if(n.nodeType===1&&typeof n.className==='string'&&TXT_CHROME.test(n.className))return;
+    out+=n.textContent||''});
+  return out};
+var txtFocus=function(el){
+  if(!el)return;
+  const put=()=>{try{el.focus({preventScroll:true});
+    const r=document.createRange();r.selectNodeContents(el);r.collapse(false);
+    const sl=window.getSelection();sl.removeAllRanges();sl.addRange(r)}catch(e){}};
+  put();
+  let done=false;
+  const off=()=>{document.removeEventListener('pointerup',again,true);
+    document.removeEventListener('touchend',again,true);clearTimeout(tm)};
+  function again(){if(done)return;done=true;off();if(el.isConnected)put()}
+  const tm=setTimeout(()=>{done=true;off()},800);
+  document.addEventListener('pointerup',again,true);
+  document.addEventListener('touchend',again,true);
+};
 var txtList=key=>{const a=TXT[key];
   if(a===undefined||a===null)return [];
   if(!Array.isArray(a)){TXTBAD++;return []}
@@ -4851,7 +4927,7 @@ function txtWireOne(el,host,key,W,H,N){
      id 로 집으면 몇 번을 다시 그려도 제 것만 고친다. */
   const tid=el.dataset.tid;
   const commit=async()=>{const a=txtList(key);const t=a.find(x=>x.id===tid);if(!t)return;
-    t.s=String(el.textContent||'').replace(/ /g,' ');
+    t.s=String(txtBody(el)||'').replace(/ /g,' ');
     const L=parseFloat(el.style.left)||0, T=parseFloat(el.style.top)||0, Wd=parseFloat(el.style.width)||0;
     t.x=+(L/W*N).toFixed(N===1?4:0);t.y=+(T/H*N).toFixed(N===1?4:0);
     if(Wd)t.w=+(Wd/W*N).toFixed(N===1?4:0);
@@ -4859,9 +4935,37 @@ function txtWireOne(el,host,key,W,H,N){
   el.addEventListener('blur',commit);
   el.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape')el.blur()});
   el.addEventListener('pointerdown',e=>e.stopPropagation());
+  el.addEventListener('input',()=>el.classList.toggle('empty',!String(txtBody(el)||'').trim()));
   const mv=document.createElement('span');mv.className='tmove';mv.contentEditable='false';
   const gr=document.createElement('span');gr.className='tgrip';gr.contentEditable='false';
-  el.appendChild(mv);el.appendChild(gr);
+  /* ⓒ 지우기 — 글상자 하나만 뺀다. 획(ink)은 손대지 않는다(통이 다르다). */
+  const dl=document.createElement('span');dl.className='tdel';dl.contentEditable='false';dl.textContent='✕';
+  dl.title='이 글상자 지우기';
+  dl.addEventListener('pointerdown',async e=>{e.stopPropagation();e.preventDefault();
+    const a=txtList(key).filter(x=>x.id!==tid);
+    el.remove();await txtSet(key,a)},{passive:false});
+  /* ⓓ 색·크기 — 이 글상자에 걸고, 고른 값을 다음 글상자 기본값으로 남긴다. */
+  const sy=document.createElement('span');sy.className='tsty';sy.contentEditable='false';sy.textContent='🎨';
+  sy.title='색·크기';
+  const apply=async(c,fs)=>{const a=txtList(key);const t=a.find(x=>x.id===tid);if(!t)return;
+    if(c)t.c=c; if(fs)t.fs=fs;
+    el.style.color=t.c; el.style.fontSize=(N===1?t.fs:Math.max(7,t.fs/1000*W*2.2))+'px';
+    txtStyleSave(t.c,t.fs); await txtSet(key,a)};
+  sy.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();
+    const old=el.querySelector('.tpal'); if(old){old.remove();return}
+    const cur=txtList(key).find(x=>x.id===tid)||{c:TXT_C,fs:TXT_FS};
+    const pal=document.createElement('div');pal.className='tpal';pal.contentEditable='false';
+    TXT_COLORS.forEach(c=>{const i=document.createElement('i');i.style.background=c;
+      if(c===cur.c)i.className='on';
+      i.addEventListener('pointerdown',ev=>{ev.stopPropagation();ev.preventDefault();apply(c,0);pal.remove()},{passive:false});
+      pal.appendChild(i)});
+    pal.appendChild(document.createElement('s'));
+    TXT_SIZES.forEach(([fs,lab])=>{const b=document.createElement('b');b.textContent=lab;
+      if(+fs===+cur.fs)b.className='on';
+      b.addEventListener('pointerdown',ev=>{ev.stopPropagation();ev.preventDefault();apply('',fs);pal.remove()},{passive:false});
+      pal.appendChild(b)});
+    el.appendChild(pal)},{passive:false});
+  el.appendChild(mv);el.appendChild(gr);el.appendChild(dl);el.appendChild(sy);
   const drag=(h,fn)=>h.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();
     const sx=e.clientX,sy=e.clientY,L=parseFloat(el.style.left)||0,T=parseFloat(el.style.top)||0,Wd=el.getBoundingClientRect().width;
     const S=(host.__zs&&host.__zs())||1;
@@ -4883,9 +4987,8 @@ var txtAdd=async function(host,key,W,H,N,px,py,repaint){
      그 commit 이 아직 글자 없는 새 글상자를 걸러 내며 저장을 되돌린다(하네스 실측). 새 것 하나만 붙인다. */
   const el=txtEl(t,a.length-1,host,key,W,H,N,true);
   host.appendChild(el);
-  el.classList.add('empty');el.focus();
-  const r=document.createRange();r.selectNodeContents(el);r.collapse(false);
-  const sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);
+  el.classList.add('empty');
+  txtFocus(el);   /* ⓑ-3 — 지금 한 번(데스크톱) · 탭이 끝날 때 한 번 더(아이패드) */
   return el};
 /* ══ 판 3 ② — **내가 쓴 글자를 훑는 한 자리** ══
    포스트잇(bpit)과 글상자(txt 의 bink: 키) 둘만 돈다. **인쇄 글자는 이 판에서 안 훑는다** — 판 4 감이고,
@@ -4963,6 +5066,38 @@ function qFillSel(){const sel=$('#tLayer'); if(!sel)return;
 function qPt(e){const card=$('#card'), sv=card&&card.querySelector('#qink'); if(!sv)return null;
   const r=sv.getBoundingClientRect(); const k=r.width/QCW||1;
   return [(e.clientX-r.left)/k, (e.clientY-r.top)/k]}
+/* ══ 지학 3건 add — 문항 화면(문제 카드) 글상자 ══
+   키 = `q:<uid>` · 좌표는 문항 필기와 **똑같이** 카드 폭(QCW)으로 나눈 0~1 이다.
+   ⚠ 잉크(qink)는 무접촉 — 지우개도 글상자를 안 지운다(통이 다르다). */
+var QTXT=false;
+var qtKey=uid=>'q:'+uid;
+function qTxtHost(){
+  const card=$('#card'); if(!card)return null;
+  let h=card.querySelector('#qtxt');
+  if(!h){h=document.createElement('div');h.id='qtxt';card.appendChild(h)}
+  h.style.width=QCW+'px';h.style.height=Math.max(40,card.scrollHeight)+'px';
+  h.__zs=()=>1;   /* 카드는 확대가 없다(스케일은 CSS transform 이 먹는다) */
+  return h}
+function qTxtPaint(){const h=qTxtHost(); if(!h||!QUID)return 0;
+  txtPaint(h,qtKey(QUID),QCW,QCW,1,true);
+  return h.querySelectorAll('.tbox').length}
+function qTxtWire(){
+  const card=$('#card'), h=qTxtHost(); if(!card||!h)return;
+  card.classList.toggle('txton',QTXT);
+  h.onpointerdown=e=>{
+    if(!QTXT)return;
+    if(e.target&&e.target.closest&&e.target.closest('.tbox'))return;   /* 이미 선 글상자를 누른 것은 고치기다 */
+    const r=h.getBoundingClientRect(), k=(r.width/QCW)||1;
+    txtAdd(h,qtKey(QUID),QCW,QCW,1,(e.clientX-r.left)/k,(e.clientY-r.top)/k,qTxtPaint)};
+  const b=$('#tTxt'); if(b)b.classList.toggle('on',QTXT)}
+/* 아래 도구줄에 손잡이 하나 — 카드 층에서만 만든다(물리 도구줄은 무접촉) */
+{const tb=document.querySelector('.vbot .tools');
+ if(tb&&!document.getElementById('tTxt')){
+   const b=document.createElement('button');b.className='tl wide';b.id='tTxt';b.textContent='T 글상자';
+   b.title='문제 위에 글자 통을 놓는다 — 필기와 다른 통이라 지우개가 안 지운다';
+   const er=document.getElementById('tErase');
+   tb.insertBefore(b,er?er.nextSibling:null);
+   b.onclick=()=>{QTXT=!QTXT;qTxtWire()};}}
 function qWire(){
   const card=$('#card'); const sv=card&&card.querySelector('#qink'); if(!sv)return;
   const penOn=()=>TOOL.mode==='pen'||TOOL.mode==='hl'||TOOL.mode==='erase';
@@ -5456,8 +5591,26 @@ function bkWin(on){
   setTimeout(()=>{try{if(BK.clamp)BK.clamp();if(typeof zApply==='function')zApply(BK)}catch(e){}},0);
 }
 $('#bkX').onclick=bkClose;$('#bkPrevU').onclick=()=>bkStep(-1);$('#bkNextU').onclick=()=>bkStep(1);
-$('#bpBig').onclick=()=>{bkWin(false);bkOpen(BOOK.page||undefined)};   /* 「크게」는 종전대로 전체 화면 */
-if($('#bpWin'))$('#bpWin').onclick=()=>{bkWin(true);bkOpen(BOOK.page||undefined)};   /* §3 — 같은 교재를 창으로 */
+$('#bpBig').onclick=()=>{bkWin(false);bkOpen(BOOK.page||undefined)};   /* 「크게」는 종전대로 전체 화면(옆 칸을 되살릴 때만 보인다) */
+/* ══ 지학 3건 add — 교재를 부르는 **모든 길**을 창 하나로 모은다 ══
+   `bookOpen` 은 문제 카드 머리줄 칩·조각 목록·핀·목록 화면 태그가 다 부르는 한 자리다.
+   여기만 갈아끼우면 **부르는 쪽을 한 군데도 안 고치고** 전부 창으로 간다.
+   `bookVisible()` 도 false 로 굳힌다 — 안 그러면 따라오기·resize 가 숨은 옆 칸을 계속 다시 그린다. */
+/* 지학 3건 add — 교재 창이 쪽을 바꿀 때 **옆 칸이 하던 두 가지**를 그대로 한다.
+   ⓐ `bpgTouchLast` — 보던 문항의 고정 목록 안 쪽이면 last 로 남긴다(규칙은 무접촉)
+   ⓑ `bpgChips` — 지금 보는 쪽에 표시를 옮긴다
+   ⚠ 안 이으면 last 가 영영 안 따라간다(하네스 S-B3 로 실측했다). */
+var _bkGoto_plain=bkGoto;
+bkGoto=async function(pr){const r=await _bkGoto_plain(pr);
+  try{await bpgTouchLast(+pr);bpgChips()}catch(e){}
+  return r};
+/* 교재쪽 고정 칩 줄을 교재 창 머리줄로 옮긴다 — 그리는 함수는 그대로다 */
+{const box=$('#bpgChips'), bar=$('#book .bkbar');
+ if(box&&bar&&box.parentElement!==bar)bar.appendChild(box);}
+var _bookOpen_pane=bookOpen;   /* 옛 길 — 옆 칸을 되살릴 때 쓴다. 지우지 마라 */
+bookOpen=async function(pr,show){bkWin(true);const r=await bkOpen(+pr||undefined);
+  try{bpgChips()}catch(e){} return r};
+bookVisible=()=>false;
 $('#bkSub').onclick=()=>{const p=bkCurPage();const pc=p?p.pc:null;subOpen(pc&&/^\d+\.\d+$/.test(String(pc.절))?pc.절:'',true)};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&BK.open&&!$$('.sheet').some(x=>!['book','sub','bkq'].includes(x.id)&&!x.classList.contains('hide')))bkClose()});
 /* add2 ④-1 — 교재 전체 화면에서는 「▢ 오리기」 단추를 그리지 않는다(사용자 확정).
@@ -5472,6 +5625,13 @@ BK.txt=true;BK.bref=true;
    const er=tb.querySelector('[data-tool="erase"]');tb.insertBefore(sp,er?er.nextSibling:null)}}
 {const tb=$('#bktools');
  if(tb&&!tb.querySelector('[data-tool="bref"]')){const sp=document.createElement('span');sp.dataset.tool='bref';sp.textContent='🔗 링크';
+   const tx=tb.querySelector('[data-tool="txt"]');tb.insertBefore(sp,tx?tx.nextSibling:null)}}
+/* 지학 3건 add — ◻ 오리기를 **교재 창으로 옮긴다**(옆 칸을 걷었으므로).
+   ⚠ add2 §4-1 이 「교재 전체 화면에는 안 그린다」고 뺐던 그 단추다 — 2026-09-10 사용자 확정으로 되돌린다.
+   엔진(`BK.crop`·`BK.onCrop`·`cropOffer`)은 그때도 안 지웠으므로 **단추만 도로 그린다.**
+   차례 = 보기·펜·형광·지우개·글상자·오리기·링크·↺ */
+{const tb=$('#bktools');
+ if(tb&&!tb.querySelector('[data-tool="crop"]')){const sp=document.createElement('span');sp.dataset.tool='crop';sp.textContent='◻ 오리기';
    const tx=tb.querySelector('[data-tool="txt"]');tb.insertBefore(sp,tx?tx.nextSibling:null)}}
 /* add2 ② — 링크를 저장·취소·떼기 한 뒤에는 도구를 「보기」로 되돌린다.
    안 되돌리면 #bkvp.pen 이 남아 커서가 + 로 굳고, 4663줄 때문에 교재를 누를 때마다 새 네모가 그려진다.
@@ -5927,7 +6087,8 @@ $('#tLayerEye').onclick=()=>{QHIDE=!QHIDE;$('#tLayerEye').classList.toggle('on',
 /* 펜·형광·지우개를 고르면 잉크 층이 잡히게(보기 상태면 글자 선택이 살아 있다) */
 {const _setTool=setTool;
  setTool=function(){const r=_setTool.apply(this,arguments);try{qWire()}catch(e){}return r}}
-window.addEventListener('resize',()=>{try{if(VNO&&!$('#view').classList.contains('hide')){qFit();qPaint()}}catch(e){}});
+window.addEventListener('resize',()=>{try{if(VNO&&!$('#view').classList.contains('hide')){qFit();qPaint();
+  if(typeof qTxtPaint==='function')qTxtPaint()}}catch(e){}});
 $('#sub .shead b').textContent=CUR.NAME+' 서브노트';
 
 }
