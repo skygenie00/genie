@@ -207,7 +207,11 @@ body[data-layer="pdf"] #trTog{display:none!important}   /* 물리 서랍엔 기�
 .stage.lock{overflow:hidden}
 .wrap{position:relative;margin:10px auto;box-shadow:0 2px 14px rgba(0,0,0,.25);background:#fff;height:max-content}
 .wrap canvas{display:block;position:absolute;top:0;left:0}
-#inkc{touch-action:none}
+/* 지학 3건 §2 — 끝에서 페이지가 끌려가는 것과 선택 풍선을 막는다(그리는 층에만) */
+#inkc{touch-action:none;overscroll-behavior:contain;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+/* `.pen` = **펜슬 전용 모드**(SET.pencil) — 손가락은 스크롤하라고 브라우저에 넘긴 것이다.
+   ⚠ 여기를 none 으로 뒤집지 마라 — 손가락 스크롤이 통째로 죽는다.
+   펜슬이 그을 때 화면이 같이 밀리던 것은 `stylusGuard` 가 손바닥에 속던 것이었다(§2 · 아래 참조). */
 #inkc.pen{touch-action:auto}
 #pdfc{position:relative!important}
 #mask{position:absolute;background:#EDECE6;border:1px solid #C4C2B9;border-radius:3px;
@@ -535,6 +539,19 @@ select.rsel{padding:4px 8px;border:1px solid var(--line);border-radius:999px;bac
 #book{position:fixed;inset:0;z-index:70;background:#DFE3E7;display:flex;align-items:stretch;justify-content:flex-start}
 #book.sheet{display:flex;background:#DFE3E7;align-items:stretch;justify-content:flex-start}
 #book.hide{display:none!important}
+/* ── 지학 3건 §3 — 교재를 **떠 있는 창**으로도 연다(2026-09-10) ──
+   평소(전체 화면)에는 감싸개 `.panel` 이 없는 것처럼 군다 — 층이 한 겹 늘 뿐 보이는 것은 그대로다.
+   `#book.win` 일 때만 **서브노트 창과 같은 규칙**이 된다 — 껍데기는 안 잡히고(.panel 만 pointer-events:auto)
+   뒤 문항 화면이 그대로 살아 있다. 창 안도 같은 #bkvp 라 필기·글상자·링크가 그대로 산다. */
+#book>.panel{background:transparent;width:100%;max-width:none;max-height:none;border-radius:0;padding:0;margin:0;
+  overflow:hidden;display:flex;align-items:stretch;flex:1;min-width:0;min-height:0}
+#book.win{background:transparent;pointer-events:none}
+#book.win>.panel{pointer-events:auto;position:fixed;left:auto;top:auto;right:8px;bottom:8px;width:62vw;height:74vh;
+  border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.3);background:#DFE3E7}
+#book.win>.panel.float{overflow:hidden;padding:0}
+#book>.panel .twgrip{position:absolute;right:0;bottom:0;z-index:5}
+@media (max-width:480px){#book.win>.panel:not(.float){left:0;top:0;right:0;bottom:0;width:auto;height:auto;border-radius:0}
+  #book.win>.panel.float{left:0!important;top:0!important;width:auto!important;height:auto!important;right:0;bottom:0;border-radius:0}}
 /* 목차 서랍 — 조판기식 세로 손잡이(누르면 접기 · 끌면 너비 160~420 · SET.bkw 기기별) · 폰도 같은 서랍(시트 아님) */
 #bktoc{position:relative;width:var(--bkw,260px);flex:none;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
 #bktoc.fold{width:13px} #bktoc.fold .bkth,#bktoc.fold #bklist{display:none}
@@ -874,7 +891,7 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #sub,body[data-layer="pdf"]
   </div>
   </div>
 </div>
-<div id="book" class="sheet hide">
+<div id="book" class="sheet hide"><div class="panel">
   <div id="bktoc"><div class="bkth">목차<span class="sp"></span><button id="bkPrevU" title="이전 항목">◀</button><button id="bkNextU" title="다음 항목">▶</button></div><div id="bklist"></div><div id="bkGrip" title="누르면 접기 · 끌면 너비">‹</div></div>
   <div id="bkmain">
     <div class="bkbar"><button id="bkX" title="문항 모드로">✕</button><span id="bkInfo"></span><span class="sp"></span>
@@ -882,7 +899,7 @@ body[data-layer="pdf"] #ebody,body[data-layer="pdf"] #sub,body[data-layer="pdf"]
       <button id="bkSub">🗒 서브노트</button><button id="bkSn" title="이 쪽 절의 정리판">📄 정리판</button><button id="bkQ">문항 <b id="bkQn">0</b></button></div>
     <div id="bkvp"><div id="bkworld"></div><div id="bktiles"></div><div id="bkover"></div><div id="bkmsg"></div></div>
   </div>
-</div>
+</div></div>
 <div id="bkq" class="sheet hide"><div class="panel"><div class="bkqh">이 쪽의 문항 · <b></b><button id="bkqX">✕</button></div><div id="bkqList"></div></div></div>
 <div id="snw" class="hide">
   <div class="panel">
@@ -1684,12 +1701,20 @@ $('#inkc').addEventListener('pointermove',e=>{
 
 function endDraw(){if(!drawing)return;drawing=null;paintInk();saveInk()}
 
-/* 아이패드: 펜슬이 닿은 동안에는 스크롤을 막고, 손가락일 때만 스크롤을 넘긴다 */
+/* 아이패드: 펜슬이 닿은 동안에는 스크롤을 막고, 손가락일 때만 스크롤을 넘긴다
+   ── 지학 3건 §2 로 구멍 둘을 막았다(2026-09-10) ──
+   ⓐ **획이 사는 동안에는 무조건 막는다.** 안 그러면 긋는 도중에 손가락이 닿는 순간 화면이 같이 밀린다.
+   ⓑ **접점을 전부 훑는다.** 종전에는 `touches[0]` 하나만 봤는데, 펜슬을 쥔 **손바닥이 먼저 닿으면**
+      그 자리가 `direct` 라 `stylus` 검사가 거짓이 되고 스크롤이 그대로 나갔다.
+      펜슬 필기에서 손바닥이 같이 닿는 것은 **정상**이라 이 구멍이 늘 열려 있었다.
+   ⚠ 손가락 스크롤은 그대로다 — 접점에 stylus 가 하나도 없으면 종전처럼 흘려보낸다. */
 function stylusGuard(e){
-  const t=e.touches&&e.touches[0];
-  if(!t)return;
+  if(drawing){e.preventDefault();return}          // ⓐ 긋는 중
+  const ts=(e.touches&&e.touches.length)?e.touches:e.changedTouches;
+  if(!ts||!ts.length)return;
   if(!SET.pencil){e.preventDefault();return}      // 손가락으로 필기하는 모드
-  if(t.touchType==='stylus')e.preventDefault();   // 펜슬 모드: 펜슬만 막고 손가락은 스크롤
+  for(let i=0;i<ts.length;i++){                   // ⓑ 접점을 전부 훑는다
+    if(ts[i]&&ts[i].touchType==='stylus'){e.preventDefault();return}}
 }
 ['touchstart','touchmove'].forEach(k=>
   $('#inkc').addEventListener(k,stylusGuard,{passive:false}));
@@ -3392,7 +3417,10 @@ function makeFloat(sheet,handle,key,pkey){
   if(WIN[key])apply(clamp(WIN[key]));
   const start=()=>{if(WIN[key])return WIN[key];const r=p.getBoundingClientRect();return WIN[key]=clamp({l:r.left,t:r.top,w:r.width,h:r.height})};
   let d=null;
-  handle.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;const st=start();d={x:e.clientX,y:e.clientY,l:st.l,t:st.t};try{handle.setPointerCapture(e.pointerId)}catch(_){}apply(st);e.preventDefault()},{passive:false});
+  /* 지학 3건 §3 — 교재 머리줄(.bkbar)이 손잡이인데 그 안에 도구 span 이 들어 있다.
+     단추만 빼면 도구를 누를 때 창이 따라 움직인다. **더하기만 한다** — 지금 쓰는 창 넷은
+     손잡이에 data-tool 이 없어 한 글자도 안 달라진다. */
+  handle.addEventListener('pointerdown',e=>{if(e.target.closest('button,[data-tool],#bktools,input,select'))return;const st=start();d={x:e.clientX,y:e.clientY,l:st.l,t:st.t};try{handle.setPointerCapture(e.pointerId)}catch(_){}apply(st);e.preventDefault()},{passive:false});
   handle.addEventListener('pointermove',e=>{if(!d)return;const st=WIN[key];st.l=d.l+(e.clientX-d.x);st.t=d.t+(e.clientY-d.y);apply(clamp(st))});
   const up=()=>{d=null};handle.addEventListener('pointerup',up);handle.addEventListener('pointercancel',up);
   let z=null;
@@ -4367,6 +4395,7 @@ bookOpen=async function(page,show){
     BOOK.pw=base.width;BOOK.ph=base.height;   /* 판 3 add1 — 옆 칸에서 오리기·링크가 쓰는 쪽 크기(pt) */
     await bpInk(page,base.width,base.height);   /* 교재 모드에서 그은 획을 여기서도 보이게(읽기 전용 · 판 1 §1-A) */
     bpBrefPaint();
+    bpTxtPaint();   /* 지학 3건 §1 — 교재 전체 화면에서 쓴 글상자를 이 칸에서도 보이게 */
   }catch(e){msg.textContent='쪽을 그리지 못했습니다 — '+(e.message||e);bpInk(0)}
   bpgChips();await bpgTouchLast(page);
 }
@@ -4406,21 +4435,33 @@ function bookTab(t){$$('#bookpane .btabs b').forEach(x=>x.classList.toggle('on',
 /* ══ 판 3 add1 §1-A — 문항 화면 교재 칸에서 바로 오린다 ══
    교재 전체 화면으로 들어갔다 나오지 않게. **새 저장이 없다** — 커밋 ①의 kv crop 을 그대로 쓰고
    여는 문만 하나 더 단다. 오리는 메뉴는 cropOffer 한 벌을 같이 부른다. */
-BOOK.crop=false; BOOK.bref=false;
+BOOK.crop=false; BOOK.bref=false; BOOK.txt=false;   /* §1 — 옆 칸 글상자 */
 {const bar=$('#bookpane .pgbar');
  if(bar&&!$('#bpCrop')){
    const mk=(id,txt,ttl)=>{const b=document.createElement('button');b.id=id;b.className='tgl';b.textContent=txt;b.title=ttl;return b};
    const big=$('#bpBig');
    bar.insertBefore(mk('bpCrop','◻ 오리기','펜으로 끌면 그 자리를 오려 이 문항에 붙인다'),big||null);
    bar.insertBefore(mk('bpRef','🔗 링크','끌어서 범위를 잡고 갈 쪽을 적는다'),big||null);
+   bar.insertBefore(mk('bpTxt','T 글상자','찍으면 그 자리에 글자 통이 선다 — 교재 전체 화면과 같은 통(bink:쪽)'),big||null);   /* §1 */
+   bar.insertBefore(mk('bpWin','⧉ 창으로','교재를 떠 있는 창으로 연다 — 자리·크기를 기억한다'),big||null);   /* §3 */
  }}
 function bpBrefPaint(){const w=$('#bpwrap');if(!w||!BOOK.page||!BOOK.pw)return 0;
   const r=w.getBoundingClientRect(), k=r.width/BOOK.pw||1;
   return brefPaint(w,BOOK.page,BOOK.pw*k,BOOK.ph*k,()=>bpBrefPaint())}
-function bpToolOff(){BOOK.crop=false;BOOK.bref=false;
-  const a=$('#bpCrop'),b=$('#bpRef');if(a)a.classList.remove('on');if(b)b.classList.remove('on')}
+/* ══ 지학 3건 §1 — 옆 칸(문항 화면 교재 칸) 글상자 ══
+   ★ 링크(bpBrefPaint)가 쓰는 길을 그대로 한 벌 더 놓는 것뿐이다. **새 통도 새 좌표 기준도 없다** —
+     키는 교재 전체 화면과 **같은 `bink:<인쇄쪽>`** 이고 좌표는 그 쪽 0~1 정규화다.
+     ⇒ 여기서 쓴 글자가 교재 전체 화면·검색칸(bkMyText)에 그대로 나타난다(반대도 같다). */
+function bpTxtPaint(){const w=$('#bpwrap');if(!w||!BOOK.page||!BOOK.pw)return 0;
+  const r=w.getBoundingClientRect(), k=r.width/BOOK.pw||1;
+  w.__zs=()=>1;   /* 이 칸은 확대가 없다 — 끌 때 델타를 그대로 쓴다 */
+  txtPaint(w,'bink:'+BOOK.page,BOOK.pw*k,BOOK.ph*k,1,true);
+  return w.querySelectorAll('.tbox').length}
+function bpToolOff(){BOOK.crop=false;BOOK.bref=false;BOOK.txt=false;
+  const a=$('#bpCrop'),b=$('#bpRef'),c=$('#bpTxt');if(a)a.classList.remove('on');if(b)b.classList.remove('on');if(c)c.classList.remove('on')}
 if($('#bpCrop'))$('#bpCrop').onclick=()=>{const on=!BOOK.crop;bpToolOff();BOOK.crop=on;$('#bpCrop').classList.toggle('on',on)};
 if($('#bpRef'))$('#bpRef').onclick=()=>{const on=!BOOK.bref;bpToolOff();BOOK.bref=on;$('#bpRef').classList.toggle('on',on)};
+if($('#bpTxt'))$('#bpTxt').onclick=()=>{const on=!BOOK.txt;bpToolOff();BOOK.txt=on;$('#bpTxt').classList.toggle('on',on)};   /* §1 */
 /* 옆 칸 좌표 — #bpwrap 은 쪽 하나를 avail 폭으로 그린 것이라 pt 로 되돌리는 값이 하나뿐이다 */
 function bpPt(e){const w=$('#bpwrap');if(!w||!BOOK.pw)return null;
   const r=w.getBoundingClientRect(); const k=r.width/BOOK.pw;
@@ -4437,6 +4478,14 @@ function bpPt(e){const w=$('#bpwrap');if(!w||!BOOK.pw)return null;
      'width:'+(Math.abs(cr.x1-cr.x0)*k)+'px;height:'+(Math.abs(cr.y1-cr.y0)*k)+'px'};
  if(wrap){
   wrap.addEventListener('pointerdown',e=>{
+    /* §1 — 글상자가 먼저다. 교재 전체 화면과 **같은 규칙**(펜·손가락을 안 가린다 · 이미 선 통을 누르면 고치기) */
+    if(BOOK.txt){
+      if(e.target&&e.target.closest&&e.target.closest('.tbox'))return;
+      const q=bpPt(e);if(!q)return;
+      const rr=wrap.getBoundingClientRect();
+      wrap.__zs=()=>1;
+      txtAdd(wrap,'bink:'+BOOK.page,rr.width,rr.height,1,q[0]*q[2],q[1]*q[2],()=>bpTxtPaint());
+      e.preventDefault();return}
     if(!BOOK.crop&&!BOOK.bref)return;
     if(e.target&&e.target.closest&&e.target.closest('.brefm'))return;
     if(e.pointerType!=='pen'&&SET.pencil)return;      /* ⚠ 손가락은 지금처럼 스크롤이다(커밋 ① 규칙 그대로) */
@@ -5380,9 +5429,35 @@ bkOpen=async function(pr){const st=bkState();const b=$('#book');b.classList.remo
     $('#bkmsg').textContent='';const vp=$('#bkvp');BK.S=st.S||Math.max(BK.MIN,Math.min(BK.MAX,(vp.clientWidth-24)/BK.pgs[0].w));}
   await bkGoto(pr);bkSave()}
 function bkClose(){if(BK.vel&&BK.stop)BK.stop();$('#book').classList.add('hide');BK.open=false;BK.gen++;$('#btnBook').classList.remove('on');$('#bkq').classList.add('hide');bkSave()}
-$('#btnBook').onclick=()=>{BK.open?bkClose():bkOpen()};
+$('#btnBook').onclick=()=>{if(BK.open){bkClose();return}bkWin(false);bkOpen()};   /* 머리 단추는 종전대로 전체 화면 */
+/* ══ 지학 3건 §3 — 교재 창(makeFloat) ══
+   ★ 새로 만드는 것이 없다 — 서브노트 창이 쓰는 `makeFloat` 을 그대로 부른다(`WIN.book` · `jagwa.win.book`).
+   창 안이라도 같은 `#bkvp`·`#bkover` 라 **필기·글상자·링크가 그대로 산다**(읽기 전용으로 만들지 않는다).
+   ⚠ 「📖 크게」(전체 화면)는 그대로 둔다 — 창은 **더하는 것**이다. */
+var BKWIN=false;
+function bkWin(on){
+  const b=$('#book'); const p=b&&b.querySelector('.panel'); if(!b||!p)return;
+  BKWIN=!!on; b.classList.toggle('win',BKWIN);
+  const wb=$('#bpWin'); if(wb)wb.classList.toggle('on',BKWIN);
+  if(!BKWIN){p.classList.remove('float');p.style.cssText='';}
+  else{
+    if(!b.__float){b.__float=1;
+      /* 기기에 적어 둔 크기가 있으면 makeFloat 이 그걸 쓴다 — 없을 때만 여기서 첫 자리를 잡는다 */
+      let saved=null;try{const v=JSON.parse(localStorage.getItem('jagwa.win.book')||'null');
+        if(v&&+v.w>=280&&+v.h>=200)saved=v}catch(e){}
+      if(!WIN.book&&!saved){const w=Math.min(1000,Math.round(window.innerWidth*0.72)),h=Math.min(820,Math.round(window.innerHeight*0.8));
+        WIN.book={w:w,h:h,l:Math.round((window.innerWidth-w)/2),t:Math.round((window.innerHeight-h)/2)}}
+      makeFloat(b,$('#book .bkbar'),'book','jagwa.win.book');
+    }
+    const st=WIN.book;
+    if(st){p.classList.add('float');p.style.left=st.l+'px';p.style.top=st.t+'px';p.style.width=st.w+'px';p.style.height=st.h+'px'}
+  }
+  /* 창 크기가 바뀌었으니 교재 쪽을 다시 재운다 — zWire 의 ResizeObserver 가 하는 것과 같은 일 */
+  setTimeout(()=>{try{if(BK.clamp)BK.clamp();if(typeof zApply==='function')zApply(BK)}catch(e){}},0);
+}
 $('#bkX').onclick=bkClose;$('#bkPrevU').onclick=()=>bkStep(-1);$('#bkNextU').onclick=()=>bkStep(1);
-$('#bpBig').onclick=()=>bkOpen(BOOK.page||undefined);
+$('#bpBig').onclick=()=>{bkWin(false);bkOpen(BOOK.page||undefined)};   /* 「크게」는 종전대로 전체 화면 */
+if($('#bpWin'))$('#bpWin').onclick=()=>{bkWin(true);bkOpen(BOOK.page||undefined)};   /* §3 — 같은 교재를 창으로 */
 $('#bkSub').onclick=()=>{const p=bkCurPage();const pc=p?p.pc:null;subOpen(pc&&/^\d+\.\d+$/.test(String(pc.절))?pc.절:'',true)};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&BK.open&&!$$('.sheet').some(x=>!['book','sub','bkq'].includes(x.id)&&!x.classList.contains('hide')))bkClose()});
 /* add2 ④-1 — 교재 전체 화면에서는 「▢ 오리기」 단추를 그리지 않는다(사용자 확정).
@@ -5794,7 +5869,10 @@ exportData=async function(withPdf){
   toast('만드는 중…');
   const inkKeys=await keys('ink'),inkVals=await all('ink');
   const out={v:2,at:Date.now(),subj:SUBJ_ID,status:ST,set:SET,maskpos:MPOS,omrpos:OPOS,note:CMT,qtype:QT,conc:CX,gpt:GP,twin:TW,ansfix:(AFIX||{}),frm:FR,ink:{},
-    card:{bogi:BG,unit:UN,bpit:BP,bpg:BPG,snote:SN,mcard:MC}};
+    /* 지학 3건 §1-5 — 판 3 로 만든 넷(조각·글상자·글자고침·링크)이 백업에서 빠져 있었다.
+       불러오기(importData)는 처음부터 넷을 다 읽는데 내보내기만 안 실었다 —
+       그대로 두면 백업으로 기기를 옮길 때 그 넷이 통째로 사라진다. */
+    card:{bogi:BG,unit:UN,bpit:BP,bpg:BPG,snote:SN,mcard:MC,crop:CROP,txt:TXT,tfix:TFIX,bref:BREF}};
   inkKeys.forEach((k,i)=>out.ink[k]=inkVals[i]);
   if(withPdf){out.pdf={};for(const k of await keys('pdf')){if(String(k).startsWith('img:')||String(k).startsWith('snatt:'))continue;const buf=await get('pdf',k);let s='',u=new Uint8Array(buf);for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));out.pdf[k]=btoa(s)}}
   const blob=new Blob([JSON.stringify(out)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);
