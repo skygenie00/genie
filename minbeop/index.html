@@ -4794,9 +4794,6 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 
   async function openDoc(id) {
     if (DOCCACHE[id]) return DOCCACHE[id];
-    /* 교재는 자산이 없다 — pdf.js + 배달된 글자층으로 만든 껍데기를 쓴다(4턴 §3).
-       이 갈래가 있어야 `openViewer(uid,'pick')` 이 교재 쪽에서 자리를 찍을 수 있다. */
-    if (MBB_VOL[id]) { DOCCACHE[id] = await mbbBookDoc(id); return DOCCACHE[id]; }
     var a = await getAsset(id);
     if (!a) {
       var meta = docs()[id] || {};
@@ -5937,7 +5934,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       rs = rs.slice().sort(function (a, b) { return b.score - a.score; });
       var top = rs[0];
       var ratio = (top.gap != null && top.score > 0) ? (top.gap / top.score) : null;
-      out.push({ vol: v, name: MBB_VOLNAME[v], top: top, rest: rs.slice(1, 3),
+      out.push({ vol: v, name: MBB_VOLNAME[v], top: top, rest: rs.slice(1, 3), all: rs,
                  ratio: ratio, wide: (ratio != null && ratio >= MBB_GAPCUT) });
     });
     return out;
@@ -5970,10 +5967,36 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   /* ⚠ 후보를 격차로 가르지 않는다(4턴 §5-B · 옛 규칙 폐기).
      2·3등은 **언제나 접힌 채로** 있고 「후보 2」 칩으로 편다 —
      1등이 틀렸을 때 봐야 하는 것이 후보다. */
+  /* ⚠ 후보를 격차로 가르지 않는다(4턴 §5-B · 옛 규칙 폐기).
+     2·3등은 언제나 접힌 채로 있고 「후보 N」 칩으로 편다.
+     ⚠ §C(add2) — 그 책에 **사람이 찍은 핀이 있으면** 그 줄은 **그 자리 하나만** 보인다.
+       「후보 N」 칩을 그리지 않고 대신 「자동으로 되돌리기」를 둔다. */
   function mbbListHTML(uid, groups) {
     if (!groups.length) return '<div style="padding:12px;font-size:12px;color:#6b7280">교재 자리를 찾지 못했습니다.</div>';
     var h = '<div style="padding:8px 10px 10px">';
     groups.forEach(function (g) {
+      var docid = MBB_DOCOF[g.top.doc];
+      var pin = mbbPickedOf(uid, docid);
+      /* 권이 둘인 7판은 다른 권에 찍혀 있을 수도 있다 */
+      if (!pin) {
+        for (var d in MBB_VOL) {
+          if (MBB_VOL[d] === g.vol && mbbPickedOf(uid, d)) { docid = d; pin = mbbPickedOf(uid, d); break; }
+        }
+      }
+      if (pin) {
+        var row = null;
+        for (var i = 0; i < g.all.length; i++) {
+          if (MBB_DOCOF[g.all[i].doc] === docid && g.all[i].p === pin.page) { row = g.all[i]; break; }
+        }
+        if (!row) {
+          for (var dn in MBB_DOCOF) { if (MBB_DOCOF[dn] === docid) { row = { doc: dn, p: pin.page, snip: '' }; break; } }
+        }
+        h += mbbRowHTML(row, '찍어 둔 자리');
+        h += '<button onclick="mbBookUnpin(\'' + uid + '\',\'' + docid + '\')"'
+          + ' style="font-size:10px;padding:2px 7px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;color:#4b5563;cursor:pointer">'
+          + '자동으로 되돌리기</button>';
+        return;
+      }
       h += mbbRowHTML(g.top, '');
       if (g.rest.length) {
         var bid = 'mbb-' + uid + '-' + g.vol;
@@ -6033,8 +6056,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       }
     } catch (e) { q = null; }
     if (!q) return null;
-    /* 열 이름은 `buildQuizData`(앱) 가 정한 것이다 — q·exp·stem·caseText·panrye */
-    return { munje: [q.stem, q.caseText, q.q].filter(Boolean).join(' '),
+    /* 열 이름은 `buildQuizData`(앱) 가 정한 것이다 — q·exp·stem·caseText·panrye
+       ⚠ `사례`(caseText)·`발문`(stem) 은 **토큰에 넣지 않는다**(2026-09-11 add2 §A-1) —
+         여러 문항이 나눠 쓰는 글이라 사례문 전체가 테두리에 딸려 들어온다
+         (`Q0271` 실측 — 사례문 0.515 가 끌려 올라가 0.754~0.842 대신 쪽 절반을 먹었다). */
+    return { munje: String(q.q || ''),
              haeseol: String(q.exp || ''),
              panrye: String(q.panrye || '') };
   }
@@ -6113,32 +6139,72 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   }
 
   /* §2-C — 문제 무리와 해설 무리를 아우른다. 너무 벌어지면 조밀한 쪽만. */
+  /* §A-2 닻 = `문제` 의 **가장 긴 이어지는 조각**(2026-09-11 add2).
+     ⚠ 본판 §2-C 의 「문제 무리와 해설 무리를 아우른다 · 쪽 절반까지 허용」을 **갈아쳤다.**
+       절반은 너무 헐거워 사례문까지 먹었다(`Q0271` 실측 — 사례문 0.515 가 끌려 들어왔다).
+     ⚠ `사례`·`발문` 은 여러 문항이 나눠 쓰는 글이라 토큰에서 **뺐다**(§A-1). */
+  var MBB_ANCHOR_MIN = 12;     /* 이어지는 조각이 이보다 짧으면 닻이 아니다 */
+  var MBB_TALL_MAX = 0.15;     /* 늘린 테두리가 쪽 높이의 이만큼을 넘으면 닻 줄만 */
+
+  /* 두 글자열의 가장 긴 공통 이어짐 — 쪽 글자열 쪽의 시작 자리와 길이를 돌려준다 */
+  function mbbLCS(P, Q) {
+    var best = { len: 0, pi: -1 };
+    if (!P || !Q) return best;
+    for (var pi = 0; pi < P.length; pi++) {
+      var c = P.charAt(pi);
+      var qi = Q.indexOf(c);
+      while (qi >= 0) {
+        var L = 0;
+        while (pi + L < P.length && qi + L < Q.length && P.charAt(pi + L) === Q.charAt(qi + L)) L++;
+        if (L > best.len) { best = { len: L, pi: pi }; if (L > 200) return best; }
+        qi = Q.indexOf(c, qi + 1);
+      }
+    }
+    return best;
+  }
+
+  function mbbSpanBox(items, flat, a, b) {
+    var hit = [];
+    for (var i = a; i <= b && i < flat.idx.length; i++) {
+      var it = items[flat.idx[i]];
+      if (it) hit.push(it);
+    }
+    return mbbBox(hit);
+  }
+
   function mbbBorder(uid, items) {
     var t = mbbQText(uid);
     if (!t) return { ok: false, why: 'notext' };
     var flat = mbbFlat(items);
-    var a = mbbTokens(t.munje), b = mbbTokens(t.haeseol);
-    /* 판례 열의 번호도 문제 쪽 재료로 넣는다 — 그 쪽에 박혀 있을 값이다 */
-    a.cases = a.cases.concat(mbbTokens(t.panrye).cases);
-    /* 판례번호를 먼저 맞춘다 */
-    var hq = mbbCluster(mbbHitsOf(flat, items, a.cases).concat(mbbHitsOf(flat, items, a.toks)));
-    var hh = mbbCluster(mbbHitsOf(flat, items, b.cases).concat(mbbHitsOf(flat, items, b.toks)));
-    var bq = mbbBox(hq), bh = mbbBox(hh);
-    if (!bq && !bh) return { ok: false, why: 'nohit' };
-    if (bq && bh) {
-      var lo = Math.min(bq.y0, bh.y0), hi = Math.max(bq.y1, bh.y1);
-      if (hi - lo > MBB_SPLIT_MAX) {
-        var pick = (bq.n >= bh.n) ? bq : bh;
-        return { ok: true, box: pick, both: false, split: true,
-                 nq: bq.n, nh: bh.n };
+    var qflat = (t.munje || '').replace(/\s+/g, '');
+    var hb = mbbCluster(mbbHitsOf(flat, items, mbbTokens(t.haeseol).cases)
+                 .concat(mbbHitsOf(flat, items, mbbTokens(t.haeseol).toks)));
+    var bh = mbbBox(hb);
+
+    var L = mbbLCS(flat.s, qflat);
+    if (L.len >= MBB_ANCHOR_MIN) {
+      var ba = mbbSpanBox(items, flat, L.pi, L.pi + L.len - 1);
+      if (ba) {
+        /* 닻 **아래쪽으로만** 해설을 따라 늘린다. 닻 위로는 절대 안 늘린다. */
+        var below = [];
+        for (var i = 0; i < hb.length; i++) if (hb[i].y >= ba.y0) below.push(hb[i]);
+        var bb = mbbBox(below);
+        var y1 = bb ? Math.max(ba.y1, bb.y1) : ba.y1;
+        var x0 = bb ? Math.min(ba.x0, bb.x0) : ba.x0;
+        var x1 = bb ? Math.max(ba.x1, bb.x1) : ba.x1;
+        if (y1 - ba.y0 > MBB_TALL_MAX) {
+          return { ok: true, anchor: L.len, tall: true, both: false,
+                   box: { x0: ba.x0, y0: ba.y0, x1: ba.x1, y1: ba.y1, n: ba.n },
+                   nq: ba.n, nh: bb ? bb.n : 0 };
+        }
+        return { ok: true, anchor: L.len, tall: false, both: !!bb,
+                 box: { x0: x0, y0: ba.y0, x1: x1, y1: y1, n: ba.n + (bb ? bb.n : 0) },
+                 nq: ba.n, nh: bb ? bb.n : 0 };
       }
-      return { ok: true, both: true, split: false, nq: bq.n, nh: bh.n,
-               box: { x0: Math.min(bq.x0, bh.x0), y0: lo,
-                      x1: Math.max(bq.x1, bh.x1), y1: hi, n: bq.n + bh.n } };
     }
-    var one = bq || bh;
-    return { ok: true, box: one, both: false, split: false,
-             nq: bq ? bq.n : 0, nh: bh ? bh.n : 0 };
+    /* 닻을 못 찾으면 해설 뭉치만으로 두른다 */
+    if (bh) return { ok: true, anchor: 0, tall: false, both: false, box: bh, nq: 0, nh: bh.n };
+    return { ok: false, why: 'nohit' };
   }
 
   /* 사람이 찍은 핀이 있으면 그것이 이긴다 */
@@ -6147,7 +6213,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       var arr = window.oxCoord && window.oxCoord.coordsOf ? window.oxCoord.coordsOf(uid) : [];
       for (var i = 0; i < arr.length; i++) {
         if (arr[i] && arr[i].doc === docid && arr[i].r && arr[i].r.length === 4) {
-          return { x0: arr[i].r[0], y0: arr[i].r[1], x1: arr[i].r[2], y1: arr[i].r[3] };
+          return { page: arr[i].page, x0: arr[i].r[0], y0: arr[i].r[1],
+                   x1: arr[i].r[2], y1: arr[i].r[3] };
         }
       }
     } catch (e) { }
@@ -6176,67 +6243,181 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     return n;
   }
 
-  /* ---------- §3 손으로 찍기 — 지금 있는 자리 찍기 길을 그대로 쓴다 ----------
-     ⚠ 새 저장 자리를 만들지 않는다. `openViewer(uid,'pick')` -> `newCoordKey` -> `saveCoords` 그대로다.
-     그 길이 서려면 ① `docs()` 에 그 책이 있어야 하고 ② `openDoc` 이 그 책을 열 수 있어야 한다.
-     ⚠ `meta.hash` 는 **언제나 `책메타.json` 의 `hash`** 다 — `hashBuf` 로 덮으면 핀이 stale 이 된다(§1-D). */
-  async function mbbRegisterDoc(docid) {
-    var m = await mbbMeta(docid);
-    if (!m) return false;
-    var meta = docs(), cur = meta[docid] || {};
-    meta[docid] = { name: m.file, file: m.file, pages: m.pages, hash: m.hash,
-                    at: cur.at || new Date().toISOString().slice(0, 10), book: 1 };
-    saveDocs(meta);
-    return true;
-  }
-
-  /* `assetDoc` 과 같은 꼴의 껍데기 — 그림은 pdf.js 가, 글자층은 배달된 것이 낸다.
-     ⚠ `assetDoc` 을 고치지 않는다. 정리OMR 은 지금 길 그대로 간다. */
-  async function mbbBookDoc(docid) {
-    var m = await mbbMeta(docid);
-    var doc = await mbbDoc(docid);
-    return {
-      numPages: m ? m.pages : doc.numPages,
-      getPage: async function (n) {
-        var p = Math.min(Math.max(1, n), doc.numPages);
-        var pg = await doc.getPage(p);
-        var w = null;
-        try { w = await mbbWords(docid, p); } catch (e) { w = null; }
-        var base = pg.getViewport({ scale: 1 });
-        return {
-          _p: { w: (w ? w.w : Math.round(base.width)), h: (w ? w.h : Math.round(base.height)),
-                words: (w ? w.words : '') },
-          getViewport: function (o) { return pg.getViewport(o); },
-          render: function (o) { return pg.render(o); }
-        };
-      }
-    };
-  }
-
-  async function mbBookPick(uid, docid, p) {
-    try {
-      await mbbRegisterDoc(docid);
-      localStorage.setItem(LAST_KEY, docid);
-      DOCCACHE[docid] = await mbbBookDoc(docid);
-      if (typeof openViewer === 'function') await openViewer(uid, 'pick');
-      else alert('자리 찍기 화면을 열 수 없습니다.');
-    } catch (e) {
-      alert('자리 찍기를 열지 못했습니다 — ' + (e && e.message || e));
+  /* §B 찍기는 **쪽 팝업 안에서 끝낸다**(2026-09-11 add2).
+     ⚠ 본판 §3 의 「`openViewer(id,'pick')` 을 그대로 쓰라」는 틀린 지시였다 —
+       그 뷰어는 정리OMR 자산 위에서만 도는 물건이다. 그 길(그리고 `openDoc` 에 달았던
+       교재 갈래)을 걷어냈다. `openViewer`·`runCheck`·정리OMR 갈래는 한 글자도 안 고쳤다.
+     ⚠ 교재 핀에는 `fp`·`num`·`pad`·`hash` 를 **넣지 않는다** — 글자층이 서버에서 오는
+       고정 파일이라 `runCheck` 가 이사시킬 일이 없다. */
+  function mbbSavePin(uid, docid, p, r4) {
+    var arr = coordsOf(uid).slice(), at = -1;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] && arr[i].doc === docid) { at = i; break; }
     }
+    var keep = at >= 0 ? arr[at] : null;
+    var rec = { k: (keep && keep.k) || newCoordKey(uid), doc: docid, page: p,
+                r: r4.map(function (n) { return Math.round(n * 1e4) / 1e4; }),
+                ts: Date.now(), label: (keep && keep.label) || '' };
+    if (at >= 0) arr[at] = rec; else arr.push(rec);
+    var o = coords();
+    o[uid] = arr;
+    saveCoords(o);
+    return rec;
   }
 
-  /* ---------- §5-C 쪽 팝업 ---------- */
+  /* §C 되돌리기 — **사람이 그 단추를 누를 때만** 지운다. 앱이 알아서 지우지 않는다. */
+  function mbbDropPin(uid, docid) {
+    var arr = coordsOf(uid).filter(function (x) { return !(x && x.doc === docid); });
+    var o = coords();
+    if (arr.length) o[uid] = arr; else delete o[uid];
+    saveCoords(o);
+  }
+
+  function mbBookPickCancel(key) {
+    var wrap = document.getElementById('mbbwrap-' + key);
+    if (wrap && wrap._pick) { wrap._pick.remove(); wrap._pick = null; }
+    var b = document.getElementById('mbbpickbtn-' + key);
+    if (b) b.textContent = '자리 직접 찍기';
+  }
+
+  function mbBookPick(key, docid, p, uid) {
+    var wrap = document.getElementById('mbbwrap-' + key);
+    if (!wrap) return;
+    if (wrap._pick) { mbBookPickCancel(key); return; }
+    var ov = document.createElement('div');
+    ov.className = 'mbb-pick';
+    ov.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;cursor:crosshair;'
+      + 'background:rgba(37,99,235,.04);touch-action:none';
+    var box = document.createElement('div');
+    box.style.cssText = 'position:absolute;border:2px dashed #2563eb;display:none;pointer-events:none';
+    ov.appendChild(box);
+    wrap.appendChild(ov);
+    wrap._pick = ov;
+    var b = document.getElementById('mbbpickbtn-' + key);
+    if (b) b.textContent = '찍기 취소';
+    var st = null;
+    function pos(e) {
+      var r = wrap.getBoundingClientRect();
+      var t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
+      return { x: Math.min(1, Math.max(0, (t.clientX - r.left) / r.width)),
+               y: Math.min(1, Math.max(0, (t.clientY - r.top) / r.height)) };
+    }
+    function draw(a, c) {
+      box.style.display = 'block';
+      box.style.left = (Math.min(a.x, c.x) * 100) + '%';
+      box.style.top = (Math.min(a.y, c.y) * 100) + '%';
+      box.style.width = (Math.abs(c.x - a.x) * 100) + '%';
+      box.style.height = (Math.abs(c.y - a.y) * 100) + '%';
+    }
+    function down(e) { e.preventDefault(); st = pos(e); draw(st, st); }
+    function move(e) { if (!st) return; e.preventDefault(); draw(st, pos(e)); }
+    function up(e) {
+      if (!st) return;
+      var c = pos(e), a = st;
+      st = null;
+      var r4 = [Math.min(a.x, c.x), Math.min(a.y, c.y), Math.max(a.x, c.x), Math.max(a.y, c.y)];
+      if (r4[2] - r4[0] < 0.01 || r4[3] - r4[1] < 0.004) { box.style.display = 'none'; return; }
+      mbbSavePin(uid, docid, p, r4);
+      mbBookPickCancel(key);
+      mbBookPage(docid, p);
+      if (MBB_OPEN_UID) mbBookOpen(MBB_OPEN_UID);
+    }
+    ov.addEventListener('mousedown', down);
+    ov.addEventListener('mousemove', move);
+    ov.addEventListener('mouseup', up);
+    ov.addEventListener('touchstart', down, { passive: false });
+    ov.addEventListener('touchmove', move, { passive: false });
+    ov.addEventListener('touchend', up);
+  }
+
+  function mbBookUnpin(uid, docid) {
+    mbbDropPin(uid, docid);
+    mbBookOpen(uid);
+  }
+
+  /* 테두리 — 선 하나뿐이다. 둘레 덮개·형광·글자 가리기 금지(본판 §2-E).
+     ⚠ 이 조각은 `.mc-zoom-inner` 안(캔버스 옆)에 들어가므로 확대·이동에 같이 따라간다. */
   function mbbBorderHTML(bd, picked) {
     var b = picked || (bd && bd.ok ? bd.box : null);
     if (!b) return '';
     var L = (b.x0 * 100).toFixed(2), T = (b.y0 * 100).toFixed(2);
     var W = Math.max(0.5, (b.x1 - b.x0) * 100).toFixed(2);
     var H = Math.max(0.5, (b.y1 - b.y0) * 100).toFixed(2);
-    /* ⚠ 테두리 선 하나뿐이다 — 덮개·형광·글자 가리기 금지 */
     return '<div class="mbb-border" style="position:absolute;left:calc(' + L + '% - 6px);top:calc(' + T
       + '% - 6px);width:calc(' + W + '% + 12px);height:calc(' + H + '% + 12px);'
       + 'border:2px solid ' + (picked ? '#2563eb' : '#dc2626') + ';border-radius:4px;'
       + 'pointer-events:none;box-sizing:border-box"></div>';
+  }
+
+  /* ---------- §5-C 쪽 팝업 (2026-09-11 add3 — 화질·확대) ----------
+     ★ 화질 — 전에는 `getViewport({scale: cw/base.width})` 라 창 안쪽 폭이 600px 이면
+       600픽셀 캔버스를 600px 자리에 깔았다(약 72dpi). 글자가 뭉갰다.
+       이제 `dpr` 을 곱하고 **캔버스 가로가 최소 1,500px** 은 되게 잡는다.
+     ⚠ 정리OMR 뷰어는 `var dpr = 1;` 로 **일부러 1 로 박아** 두었다(5173줄 주석 —
+       「원본이 이미 래스터라 더 키워봐야 선명해지지 않는다」). 교재는 사정이 다르다 —
+       스캔 해상도가 72dpi 보다 훨씬 높아 키우면 실제로 선명해진다. 그래서 교재만 곱한다.
+     ★ 상한 — 캔버스 픽셀 수 16,000,000 · 긴 변 4,000px. 아이패드에서 죽는다.
+     ★ 확대는 앱에 이미 있는 `.mc-zoom`(`mcZoomHTML`·`mcZoomBind`)을 **감싸 쓴다.**
+       그 안을 고치지 않는다. 테두리는 `.mc-zoom-inner` 안에 있으므로 캔버스에 붙어
+       같이 커지고 같이 움직인다. */
+  var MBB_PX_MAX = 16000000;
+  var MBB_SIDE_MAX = 4000;
+  var MBB_MIN_W = 1500;
+  var MBB_PAINT = {};          /* key -> {docid,p,zoom,busy,timer,poll,lastZoom} */
+
+  function mbbScaleFor(base, cssW, zoom) {
+    var dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    var k = Math.max(dpr, MBB_MIN_W / Math.max(240, cssW)) * Math.max(1, zoom || 1);
+    var s = (Math.max(240, cssW) / base.width) * k;
+    var w = base.width * s, h = base.height * s;
+    var lng = Math.max(w, h);
+    if (lng > MBB_SIDE_MAX) { s *= MBB_SIDE_MAX / lng; w = base.width * s; h = base.height * s; }
+    if (w * h > MBB_PX_MAX) s *= Math.sqrt(MBB_PX_MAX / (w * h));
+    return s;
+  }
+
+  async function mbbPaint(key, zoom) {
+    var st = MBB_PAINT[key];
+    if (!st || st.busy) return;
+    var wrap = document.getElementById('mbbwrap-' + key);
+    var body = oxWinBody(key);
+    if (!wrap || !body) { mbbStopPoll(key); return; }
+    st.busy = true;
+    try {
+      var doc = await mbbDoc(st.docid);
+      var pg = await doc.getPage(st.p);
+      var base = pg.getViewport({ scale: 1 });
+      var cssW = Math.max(240, body.clientWidth - 16);
+      var vp = pg.getViewport({ scale: mbbScaleFor(base, cssW, zoom) });
+      var cv = document.createElement('canvas');
+      cv.width = Math.round(vp.width);
+      cv.height = Math.round(vp.height);
+      cv.style.cssText = 'display:block;width:100%;height:auto;background:#fff';
+      await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+      var old = wrap.querySelector('canvas');
+      if (old) old.remove();
+      wrap.insertBefore(cv, wrap.firstChild);
+      st.lastZoom = Math.max(1, zoom || 1);
+      st.paints = (st.paints || 0) + 1;
+      st.px = [cv.width, cv.height];
+    } catch (e) {
+      st.err = String(e && e.message || e);
+    }
+    st.busy = false;
+  }
+
+  function mbbStopPoll(key) {
+    var st = MBB_PAINT[key];
+    if (st && st.poll) { clearInterval(st.poll); st.poll = null; }
+    if (st && st.timer) { clearTimeout(st.timer); st.timer = null; }
+  }
+
+  /* 창을 늘리거나 확대하면 150ms 뒤에 한 번만 다시 그린다(겹쳐 돌지 않는다) */
+  function mbbSchedule(key, zoom) {
+    var st = MBB_PAINT[key];
+    if (!st) return;
+    if (st.timer) clearTimeout(st.timer);
+    st.timer = setTimeout(function () { st.timer = null; mbbPaint(key, zoom); }, 150);
   }
 
   async function mbBookPage(docid, p) {
@@ -6251,15 +6432,6 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     if (!body) return;
     try {
       var wrec = await mbbWords(docid, p);
-      var doc = await mbbDoc(docid);
-      var pg = await doc.getPage(p);
-      var base = pg.getViewport({ scale: 1 });
-      var cw = Math.max(240, body.clientWidth - 16);
-      var vp = pg.getViewport({ scale: Math.min(cw / base.width, 3) });
-      var cv = document.createElement('canvas');
-      cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
-      cv.style.cssText = 'display:block;width:100%;height:auto;background:#fff';
-
       var bd = null, picked = null, note = '';
       if (uid) {
         picked = mbbPickedOf(uid, docid);
@@ -6274,22 +6446,51 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       var btn = 'font-size:11px;padding:3px 9px;border:1px solid #d1d5db;border-radius:6px;'
               + 'background:#f9fafb;color:#374151;cursor:pointer';
       body.innerHTML =
-        '<div id="mbbwrap-' + key + '" style="position:relative;line-height:0"></div>'
+        mcZoomHTML('<div id="mbbwrap-' + key + '" style="position:relative;line-height:0"></div>')
         + (note ? '<div style="padding:6px 10px;font-size:11px;color:#b45309">' + note + '</div>' : '')
         + '<div style="display:flex;gap:6px;padding:7px 10px;border-top:1px solid #e5e7eb;background:#f8fafc">'
         + '<button style="' + btn + '" onclick="mbBookBorderToggle(\'' + key + '\')">테두리 끄기</button>'
-        + (uid ? '<button style="' + btn + '" onclick="mbBookPick(\'' + uid + '\',\'' + docid + '\',' + p + ')">자리 직접 찍기</button>' : '')
+        + (uid ? '<button id="mbbpickbtn-' + key + '" style="' + btn + '" onclick="mbBookPick(\'' + key + '\',\'' + docid + '\',' + p + ',\'' + uid + '\')">자리 직접 찍기</button>' : '')
         + '</div>';
+      mcZoomBind(body);
+      MBB_PAINT[key] = { docid: docid, p: p, busy: false, timer: null, poll: null, lastZoom: 1 };
+      await mbbPaint(key, 1);
+
       var wrap = document.getElementById('mbbwrap-' + key);
-      wrap.appendChild(cv);
-      await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
       var bh = mbbBorderHTML(bd, picked);
-      if (bh) {
+      if (bh && wrap) {
         wrap.insertAdjacentHTML('beforeend', bh);
-        /* 테두리가 화면 가운데로 오게 스크롤한다 */
         var b = picked || bd.box;
-        var mid = (b.y0 + b.y1) / 2 * cv.clientHeight;
+        var cv0 = wrap.querySelector('canvas');
+        var mid = (b.y0 + b.y1) / 2 * (cv0 ? cv0.clientHeight : 0);
         body.scrollTop = Math.max(0, mid - body.clientHeight / 2);
+      }
+
+      /* 창 크기 바뀜 — 150ms debounce */
+      var st = MBB_PAINT[key];
+      if (window.ResizeObserver) {
+        st.ro = new ResizeObserver(function () {
+          var zb = document.getElementById('oxwin-' + key);
+          if (!zb) { mbbStopPoll(key); try { st.ro.disconnect(); } catch (e) { } return; }
+          mbbSchedule(key, st.lastZoom);
+        });
+        st.ro.observe(body);
+      }
+      /* 확대 — `.mc-zoom` 의 배율을 지켜보다 1.5배를 넘으면 그 배율로 다시 그린다.
+         ⚠ `mcZoomBind` 안을 고치지 않으려고 상태(`box._z.s`)를 읽는 쪽으로 했다. */
+      var zbox = body.querySelector('.mc-zoom');
+      if (zbox) {
+        st.poll = setInterval(function () {
+          if (!document.getElementById('oxwin-' + key)) { mbbStopPoll(key); return; }
+          st.ticks = (st.ticks || 0) + 1;
+          var s = (zbox._z && zbox._z.s) || 1;
+          st.sawS = s;
+          /* ⚠ 기준을 **예약할 때** 올린다. 완료 때 올리면 150ms 마다 타이머를 다시 깔아
+             debounce 가 영원히 미뤄진다(2026-09-11 실측 — 40번 예약하고 한 번도 안 그렸다). */
+          if (s > 1.5 && s > (st.want || 1) * 1.2) {
+            st.want = s; st.fired = (st.fired || 0) + 1; mbbSchedule(key, s);
+          }
+        }, 150);
       }
     } catch (e) {
       body.innerHTML = '<div style="padding:12px;font-size:12px;color:#b91c1c">받지 못했습니다.'
@@ -6307,6 +6508,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   window.mbBookOpen = mbBookOpen;
   window.mbBookPage = mbBookPage;
   window.mbBookPick = mbBookPick;
+  window.mbBookPickCancel = mbBookPickCancel;
+  window.mbBookUnpin = mbBookUnpin;
   window.mbBookBorderToggle = mbBookBorderToggle;
   /* 검산용 — 화면을 거치지 않고 재는 자리 */
   window.mbBook = {
@@ -6316,7 +6519,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     tune: function (ns, ck) { MBB_NOSTREAM = ns; MBB_CHUNK = ck; MBB_DOC = {}; },
     last: function () { return MBB_LAST; },
     border: mbbBorder, qtext: mbbQText, picked: mbbPickedOf, cluster: mbbCluster,
-    bookDoc: mbbBookDoc, register: mbbRegisterDoc, forget: mbbForgetBooks,
+    forget: mbbForgetBooks, savePin: mbbSavePin, dropPin: mbbDropPin, lcs: mbbLCS,
+    scaleFor: mbbScaleFor, paint: MBB_PAINT,
     setUid: function (u) { MBB_OPEN_UID = u; }
   };
 
