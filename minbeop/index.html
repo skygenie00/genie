@@ -7605,11 +7605,15 @@ function trScan() {
 }
 
 /* ── 다섯 칸 — hmStateOf 그대로 ── */
-function trStates(ids) {
-    const qHistory = trObj('ox_q_history'), qTags = trObj('ox_q_tags');
-    const stages = (typeof weakStages === 'function') ? weakStages() : {};
+/* ctx = 기록을 한 번만 읽어 돌려쓰는 꾸러미. 줄마다 JSON.parse 하면 88줄 × 3 번이다. */
+function trCtx() {
+    return { qHistory: trObj('ox_q_history'), qTags: trObj('ox_q_tags'),
+             stages: (typeof weakStages === 'function') ? weakStages() : {} };
+}
+function trStates(ids, ctx) {
+    const x = ctx || trCtx();
     const c = [0, 0, 0, 0, 0];
-    ids.forEach(id => c[hmStateOf(id, qHistory, qTags, stages)]++);
+    ids.forEach(id => c[hmStateOf(id, x.qHistory, x.qTags, x.stages)]++);
     return c;
 }
 /* 지난 회독 = 그 회독의 marks(맞음·틀림·안 푼 것) · 색은 같은 HM_COLORS 를 쓴다 */
@@ -7644,6 +7648,7 @@ function trBuild(focus) {
         + (onQuiz ? `<button class="trnow" onclick="trFocus()" title="지금 푸는 줄로 되돌아간다">지금 자리로</button>` : '');
 
     const chFold = trObj(TR_CH);
+    const CTX = trCtx();                 /* 기록은 한 번만 읽는다 */
     const hist = trObj('ox_chap_history');
     const prog = (typeof loadInProgress === 'function') ? loadInProgress() : {};
     const curRow = onQuiz ? `${currentSubject}|||${currentChapterLabel}` : '';
@@ -7665,19 +7670,22 @@ function trBuild(focus) {
             const off = r.idsF.length === 0;
             const isCur = (key === curRow);
             const isView = (!onQuiz && key === trViewRow);
+            /* ★ 막대·회독 칩은 **두 화면 모두** 그린다(사용자 9/11 — 「첫화면 서랍에서도 바랑 회독 보이게」).
+               다른 것은 둘뿐이다 — 첫 화면은 줄 옆 수가 그 줄의 문항 수(첫 화면 목록과 같은 값)이고,
+               「지금」 딱지는 문제풀이 화면에만 붙는다. */
             let body = '';
-            if (onQuiz) {
+            {
                 const chapKey = `${subj}||${label}||${S.sf}||${S.rf}`;
                 const hs = hist[chapKey] || [], ip = prog[chapKey];
                 const pick = (trAtt[key] === undefined) ? -1 : trAtt[key];
                 let c;
                 if (pick >= 0 && pick < hs.length) c = trMarkStates(r.idsF, hs[pick].marks);
                 else if (pick === hs.length && ip) c = trMarkStates(r.idsF, ip.marks);
-                else c = trStates(r.idsF);              /* 기본 = 지금 도는 회독 = 지금 상태(히트맵과 같은 수) */
+                else c = trStates(r.idsF, CTX);         /* 기본 = 지금 도는 회독 = 지금 상태(히트맵과 같은 수) */
                 const done = r.idsF.length - c[0];
                 body = `<div class="l1">${isCur ? '<span class="now">지금</span>' : ''}`
                      + `<span class="tx">${trEsc(r.sub)}</span>`
-                     + `<span class="n">${done}/${r.idsF.length}</span></div>`
+                     + `<span class="n">${onQuiz ? (done + '/' + r.idsF.length) : r.idsF.length}</span></div>`
                      + `<div title="${trEsc(trTip(c))}">${trBarHtml(c)}</div>`;
                 const chips = [];
                 hs.forEach((h, i) => {
@@ -7702,8 +7710,6 @@ function trBuild(focus) {
                         onclick="event.stopPropagation();trAttPick('${trEsc(key).replace(/'/g, "\\'")}',${i})"><b style="width:${(nm / tot * 100).toFixed(2)}%"></b><span>${i + 1}</span></span>`);
                 }
                 if (chips.length) body += `<div class="trchips">${chips.join('')}</div>`;
-            } else {
-                body = `<div class="l1"><span class="tx">${trEsc(r.sub)}</span><span class="n">${r.idsF.length}</span></div>`;
             }
             html += `<div class="trit${off ? ' off' : ''}${isCur ? ' cur' : ''}${isView ? ' view' : ''}" data-trk="${trEsc(key)}"`
                  +  (off ? '' : ` onclick="trGo('${trEsc(key).replace(/'/g, "\\'")}')"`) + `>${body}</div>`;
@@ -7718,12 +7724,15 @@ function trBuild(focus) {
             const hs = hist[chapKey] || [];
             const _m = trChapOf(chapters, currentChapterLabel);
             const ids = ((chapters[_m] || {})[currentChapterLabel] || { idsF: [] }).idsF;
-            const c = trStates(ids.length ? ids : (typeof currentFilteredData !== 'undefined' ? currentFilteredData.map(x => x.id) : []));
+            const c = trStates(ids.length ? ids : (typeof currentFilteredData !== 'undefined' ? currentFilteredData.map(x => x.id) : []), CTX);
             const tot = c.reduce((a, b) => a + b, 0);
             foot.innerHTML = `푼 것 ${tot - c[0]} / ${tot} · 남은 것 ${c[0]}`
                 + hs.map((h, i) => `<br>${i + 1}회독 ${h.score}/${h.total}`).join('');
         } else {
-            foot.textContent = `${subj} ${nQ}문항 · 장 ${Object.keys(chapters).length} · 줄 ${nLine}`;
+            const cAll = trStates(Object.values(chapters).flatMap(rows => Object.values(rows).flatMap(x => x.idsF)), CTX);
+            const tAll = cAll.reduce((a, b) => a + b, 0);
+            foot.innerHTML = `${trEsc(subj)} ${nQ}문항 · 장 ${Object.keys(chapters).length} · 줄 ${nLine}`
+                + `<br>푼 것 ${tAll - cAll[0]} / ${tAll} · 남은 것 ${cAll[0]}`;
         }
     }
     if (focus) trFocus();
