@@ -6125,6 +6125,26 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     return best;
   }
 
+  /* 그 쪽의 **글줄 간격**을 잰다 — 테두리를 글자 위로 올릴 만큼만 넓히려는 것.
+     좌표가 글자의 **베이스라인 원점**이라 그냥 감싸면 윗변이 첫 줄 글자 한가운데를 지난다
+     (2026-09-11 사용자 화면에서 드러났다 — 붉은 선이 글자를 가로질렀다). */
+  function mbbPitch(items) {
+    var seen = {}, ys = [], i;
+    for (i = 0; i < items.length; i++) {
+      var y = Math.round(items[i].y * 2000);
+      if (!seen[y]) { seen[y] = 1; ys.push(y / 2000); }
+    }
+    ys.sort(function (a, b) { return a - b; });
+    var d = [];
+    for (i = 1; i < ys.length; i++) {
+      var g = ys[i] - ys[i - 1];
+      if (g > 0.004 && g < 0.05) d.push(g);
+    }
+    if (!d.length) return 0.015;
+    d.sort(function (a, b) { return a - b; });
+    return d[Math.floor(d.length / 2)];
+  }
+
   function mbbBox(hits) {
     if (!hits.length) return null;
     var x0 = 1, y0 = 1, x1 = 0, y1 = 0;
@@ -6192,18 +6212,20 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         var y1 = bb ? Math.max(ba.y1, bb.y1) : ba.y1;
         var x0 = bb ? Math.min(ba.x0, bb.x0) : ba.x0;
         var x1 = bb ? Math.max(ba.x1, bb.x1) : ba.x1;
+        var pit = mbbPitch(items);
         if (y1 - ba.y0 > MBB_TALL_MAX) {
-          return { ok: true, anchor: L.len, tall: true, both: false,
+          return { ok: true, anchor: L.len, tall: true, both: false, pitch: pit,
                    box: { x0: ba.x0, y0: ba.y0, x1: ba.x1, y1: ba.y1, n: ba.n },
                    nq: ba.n, nh: bb ? bb.n : 0 };
         }
-        return { ok: true, anchor: L.len, tall: false, both: !!bb,
+        return { ok: true, anchor: L.len, tall: false, both: !!bb, pitch: pit,
                  box: { x0: x0, y0: ba.y0, x1: x1, y1: y1, n: ba.n + (bb ? bb.n : 0) },
                  nq: ba.n, nh: bb ? bb.n : 0 };
       }
     }
     /* 닻을 못 찾으면 해설 뭉치만으로 두른다 */
-    if (bh) return { ok: true, anchor: 0, tall: false, both: false, box: bh, nq: 0, nh: bh.n };
+    if (bh) return { ok: true, anchor: 0, tall: false, both: false, box: bh,
+                     pitch: mbbPitch(items), nq: 0, nh: bh.n };
     return { ok: false, why: 'nohit' };
   }
 
@@ -6338,13 +6360,29 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   /* 테두리 — 선 하나뿐이다. 둘레 덮개·형광·글자 가리기 금지(본판 §2-E).
      ⚠ 이 조각은 `.mc-zoom-inner` 안(캔버스 옆)에 들어가므로 확대·이동에 같이 따라간다. */
   function mbbBorderHTML(bd, picked) {
-    var b = picked || (bd && bd.ok ? bd.box : null);
-    if (!b) return '';
-    var L = (b.x0 * 100).toFixed(2), T = (b.y0 * 100).toFixed(2);
-    var W = Math.max(0.5, (b.x1 - b.x0) * 100).toFixed(2);
-    var H = Math.max(0.5, (b.y1 - b.y0) * 100).toFixed(2);
-    return '<div class="mbb-border" style="position:absolute;left:calc(' + L + '% - 6px);top:calc(' + T
-      + '% - 6px);width:calc(' + W + '% + 12px);height:calc(' + H + '% + 12px);'
+    var b, pad;
+    if (picked) {
+      /* ⚠ 사람이 찍은 사각형은 **그대로** 그린다. 여백을 바르면 찍은 것보다 커져 보인다
+         (2026-09-11 사용자 지적). */
+      b = picked;
+      pad = { t: 0, b: 0, l: 0, r: 0 };
+    } else {
+      if (!bd || !bd.ok) return '';
+      b = bd.box;
+      /* 자동 테두리는 글줄 하나만큼 위로, 조금 아래로, 옆으로 넉넉히 넓힌다 —
+         좌표가 베이스라인 원점이라 안 넓히면 선이 글자를 가로지른다. */
+      var pit = bd.pitch || 0.015;
+      /* ⚠ x 도 글자의 **왼쪽 원점**이라 오른쪽을 더 줘야 한다 —
+         안 그러면 마지막 글자가 선에 잘린다(2026-09-11 사용자 화면). */
+      /* 글줄 사이 빈틈에 선이 앉게 잡는다 — 베이스라인에서 위로 0.8줄, 아래로 0.22줄.
+         더 주면 이웃 줄 글자를 자르고, 덜 주면 이 줄 글자를 자른다. */
+      pad = { t: pit * 0.80 + 0.003, b: pit * 0.22 + 0.003, l: 0.018, r: 0.038 };
+    }
+    var x0 = Math.max(0, b.x0 - pad.l), y0 = Math.max(0, b.y0 - pad.t);
+    var x1 = Math.min(1, b.x1 + pad.r), y1 = Math.min(1, b.y1 + pad.b);
+    return '<div class="mbb-border" style="position:absolute;left:' + (x0 * 100).toFixed(2)
+      + '%;top:' + (y0 * 100).toFixed(2) + '%;width:' + Math.max(0.5, (x1 - x0) * 100).toFixed(2)
+      + '%;height:' + Math.max(0.5, (y1 - y0) * 100).toFixed(2) + '%;'
       + 'border:2px solid ' + (picked ? '#2563eb' : '#dc2626') + ';border-radius:4px;'
       + 'pointer-events:none;box-sizing:border-box"></div>';
   }
@@ -6520,7 +6558,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     last: function () { return MBB_LAST; },
     border: mbbBorder, qtext: mbbQText, picked: mbbPickedOf, cluster: mbbCluster,
     forget: mbbForgetBooks, savePin: mbbSavePin, dropPin: mbbDropPin, lcs: mbbLCS,
-    scaleFor: mbbScaleFor, paint: MBB_PAINT,
+    scaleFor: mbbScaleFor, paint: MBB_PAINT, pitch: mbbPitch, borderHTML: mbbBorderHTML,
     setUid: function (u) { MBB_OPEN_UID = u; }
   };
 
