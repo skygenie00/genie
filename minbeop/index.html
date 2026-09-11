@@ -4544,6 +4544,17 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     if (v && typeof v === 'object') return [v];
     return [];
   }
+  /* ⚠ 교재 자리는 **정리OMR 갈래에서 뗀다**(2026-09-11 사용자 지적 —
+       교재에서 자리를 찍었더니 문항의 📍 칩에 불이 들어왔다).
+     같은 `ox_q_coords` 에 담기지만 `doc` 가 교재면 정리OMR 쪽에서는 세지도, 보이지도 않는다.
+     교재 자리는 교재 자리 목록의 「찍어 둔 자리」로만 보인다. */
+  function isBookDoc(d) {
+    return !!(d && typeof MBB_VOL !== 'undefined' && MBB_VOL && MBB_VOL[d]);
+  }
+  function omrSlots(all, qid) {
+    return slotsRef(all, qid).filter(function (c) { return !(c && isBookDoc(c.doc)); });
+  }
+
   /* 저장된 자리 전부를 {qid, k, i, c} 로 편다 — c 는 all 안의 실체다 */
   function coordsFlat(all) {
     var out = [];
@@ -4999,8 +5010,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     V_HAVE = have;
     have.forEach(function (id) { if (!meta[id]) { meta[id] = { name: id + '.pdf', file: id + '.pdf' }; } });
     saveDocs(meta);                                    // 실물만 있던 것도 목록에 올린다
-    var ids = Object.keys(meta);
-    var arr0 = coordsOf(qid), ci0 = 0;
+    var ids = Object.keys(meta).filter(function (d) { return !isBookDoc(d); });
+    /* 교재 자리는 이 뷰어가 다루지 않는다 — 고를 때부터 뺀다 */
+    var arr0 = coordsOf(qid).filter(function (x) { return !isBookDoc(x && x.doc); }), ci0 = 0;
     if (k) {
       var f0 = arr0.findIndex(function (x) { return x.k === k; });
       if (f0 >= 0) ci0 = f0;
@@ -5711,7 +5723,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   }
   /* 하나라도 stale 이면 stale, 하나라도 있으면 has */
   function pinState(id, co, tags) {
-    var arr = slotsRef(co, id);
+    var arr = omrSlots(co, id);
     if (arr.length) {
       for (var i = 0; i < arr.length; i++) if (isStale(arr[i])) return 'stale';
       return 'has';
@@ -5720,11 +5732,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   }
   /* 여럿이면 개수를 붙인다 — 암기카드 「🃏 2」 칩과 같은 꼴이다 */
   function pinInner(id, co) {
-    var n = slotsRef(co, id).length;
+    var n = omrSlots(co, id).length;
     return '📍' + (n > 1 ? ' ' + n : '');
   }
   function pinTitle(id, co, st) {
-    var arr = slotsRef(co, id);
+    var arr = omrSlots(co, id);
     if (st === 'stale') return '문서가 바뀌었습니다 — 위치 확인 필요';
     if (st !== 'has') return '정리OMR에서 이 문항의 자리를 지정';
     if (arr.length > 1) return '정리OMR 저장된 자리 ' + arr.length + '곳';
@@ -5752,7 +5764,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       b.title = pinTitle(id, co, pinState(id, co, tags));
       b.onclick = function (e) {
         e.preventDefault(); e.stopPropagation();
-        openViewer(id, coordsOf(id).length ? 'view' : 'pick');
+        openViewer(id, omrSlots(coords(), id).length ? 'view' : 'pick');
       };
       btn.parentNode.insertBefore(b, btn);
       btn.addEventListener('click', function () { setTimeout(refreshPins, 30); });
@@ -5798,6 +5810,20 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
        책을 한 번 열면 그 뒤 쪽은 같은 문서를 쓰므로 **세션당 한 번**이 지금의 값이다. */
   var MBB_NOSTREAM = false;
   var MBB_CHUNK = 262144;
+
+  /* 4턴 초기 판의 `mbbRegisterDoc` 이 교재를 `ox_omr_docs` 에 올렸다(add2 에서 걷어냈다).
+     이미 저장된 것이 남아 좌표기억 목록에 「(이 기기에 없음)」으로 떠서 헷갈린다.
+     ⚠ 지우는 것은 **교재 세 항목뿐**이고 정리OMR 항목·좌표 핀은 건드리지 않는다. */
+  (function () {
+    try {
+      var m = docs(), hit = [];
+      for (var i = 0; i < MBB_DOCS.length; i++) {
+        if (m[MBB_DOCS[i]]) { delete m[MBB_DOCS[i]]; hit.push(MBB_DOCS[i]); }
+      }
+      if (hit.length) { saveDocs(m); }
+      window.__mbbPurged = hit;
+    } catch (e) { }
+  })();
 
   var MBB_META = {}, MBB_DOC = {}, MBB_JARI = {};
   var MBB_STAT = { pdf: {}, words: {} };   /* 검산 9 — 오간 바이트·걸린 시간 */
@@ -6577,7 +6603,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     setUid: function (u) { MBB_OPEN_UID = u; }
   };
 
-  window.oxCoord = { open: openViewer, coords: coords, coordsOf: coordsOf, docs: docs, crop: crop };
+  window.oxCoord = { open: openViewer, coords: coords, coordsOf: coordsOf, docs: docs, crop: crop,
+                     omrSlots: omrSlots, isBookDoc: isBookDoc, pinState: pinState };
 })();
 </script>
 
