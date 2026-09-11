@@ -550,6 +550,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         const MBPDF_WORDS = 'words';
         const MBPDF_PDF = 'pdf';
         const MBPDF_JARI = 'jari';
+        const MBPDF_ANN = 'ann';        /* ★ 주석 판(2026-09-12) — 형광펜만. 쪽마다 ann/<docid>/p<N>.json */
 
         function mbToken() {
             try { return String((JSON.parse(localStorage.getItem(MB_CFG_KEY) || '{}')).token || '').trim(); }
@@ -5905,6 +5906,49 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     } catch (e) { return null; }
   }
 
+  /* ---------- 형광펜 주석(2026-09-12 · _task_ox_ann_fix.md §A) ----------
+     ann/<docid>/p<N>.json = {"page":N,"w":..,"h":..,"hl":[{"r":[x0,y0,x1,y1],"c":"#rrggbb","t":"…"}]}
+     좌표는 **글자층과 같은 꼴**이다 — 0~2000 · 원점 왼쪽 위 · y 아래로.
+     ⚠ 없으면 조용히 넘어간다(7판 둘은 아직 주석이 없다). 없다는 것도 기억해 두 번 묻지 않는다. */
+  var MBB_ANN = {};                 /* docid:p -> rec | null */
+  var MBB_ANN_N = 2000;
+
+  async function mbbAnn(docid, p) {
+    var k = docid + ':' + p;
+    if (MBB_ANN[k] !== undefined) return MBB_ANN[k];
+    var rec = null;
+    try { rec = await mbGhGet(MBPDF_ANN + '/' + docid + '/p' + p + '.json', 'json', MBPDF_REPO); }
+    catch (e) { rec = null; }
+    MBB_ANN[k] = rec || null;
+    return MBB_ANN[k];
+  }
+
+  /* 테두리와 같은 길 — `%` 사각형 하나씩. 글자가 비치게 반투명으로 깔고, 선은 안 긋는다.
+     ⚠ 색은 파일 값 그대로다. 진하기만 CSS 투명도로 준다. */
+  function mbbAnnHTML(rec) {
+    if (!rec || !rec.hl || !rec.hl.length) return '';
+    var N = MBB_ANN_N, out = [];
+    for (var i = 0; i < rec.hl.length; i++) {
+      var o = rec.hl[i], r = o.r;
+      if (!r || r.length < 4) continue;
+      var x0 = r[0] / N, y0 = r[1] / N, x1 = r[2] / N, y1 = r[3] / N;
+      var w = Math.max(0.2, (x1 - x0) * 100), h = Math.max(0.2, (y1 - y0) * 100);
+      var c = /^#[0-9a-fA-F]{6}$/.test(o.c || '') ? o.c : '#ffff00';
+      out.push('<div class="mbb-hl" style="position:absolute;left:' + (x0 * 100).toFixed(2)
+        + '%;top:' + (y0 * 100).toFixed(2) + '%;width:' + w.toFixed(2) + '%;height:' + h.toFixed(2)
+        + '%;background:' + c + ';opacity:.45;mix-blend-mode:multiply;pointer-events:none;'
+        + 'border-radius:2px"></div>');
+      if (o.t) {   /* 사용자가 적은 글 — 작은 표시 하나, 누르면 보인다 */
+        out.push('<div class="mbb-hl mbb-hlnote" title="' + mbbSafe(o.t)
+          + '" onclick="alert(' + JSON.stringify(String(o.t)).replace(/"/g, '&quot;') + ')"'
+          + ' style="position:absolute;left:' + (x1 * 100).toFixed(2) + '%;top:' + (y0 * 100).toFixed(2)
+          + '%;width:11px;height:11px;margin-left:2px;border-radius:50%;background:#f59e0b;'
+          + 'border:1px solid #fff;cursor:pointer;z-index:3"></div>');
+      }
+    }
+    return out.join('');
+  }
+
   async function mbbWords(docid, p) {
     var meta = await mbbMeta(docid);
     var want = (meta && meta.pageHash) ? meta.pageHash[p - 1] : null;
@@ -6577,6 +6621,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         + (note ? '<div style="padding:6px 10px;font-size:11px;color:#b45309">' + note + '</div>' : '')
         + '<div style="display:flex;gap:6px;padding:7px 10px;border-top:1px solid #e5e7eb;background:#f8fafc">'
         + '<button style="' + btn + '" onclick="mbBookBorderToggle(\'' + key + '\')">테두리 끄기</button>'
+        + '<button style="' + btn + '" onclick="mbBookHlToggle(\'' + key + '\')">형광펜</button>'   /* ★ 주석 판 §A-6 */
         + (uid ? '<button id="mbbpickbtn-' + key + '" style="' + btn + '" onclick="mbBookPick(\'' + key + '\',\'' + docid + '\',' + p + ',\'' + uid + '\')">자리 직접 찍기</button>' : '')
         + '</div>';
       mcZoomBind(body);
@@ -6584,6 +6629,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       await mbbPaint(key, 1);
 
       var wrap = document.getElementById('mbbwrap-' + key);
+      /* ★ 형광펜을 테두리보다 **먼저** 넣는다 — 뒤에 넣는 테두리가 위에 온다(§A-6) */
+      try {
+        var arec = await mbbAnn(docid, p);
+        var ah = mbbAnnHTML(arec);
+        if (ah && wrap) wrap.insertAdjacentHTML('beforeend', ah);
+      } catch (e) { }
       var bh = mbbBorderHTML(bd, picked);
       if (bh && wrap) {
         wrap.insertAdjacentHTML('beforeend', bh);
@@ -6630,6 +6681,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     if (!el) return;
     el.querySelectorAll('.mbb-border').forEach(function (d) { d.hidden = !d.hidden; });
   }
+  /* ★ 주석 판 §A-6 — 형광펜 켜고 끄기(테두리 토글과 같은 결) */
+  function mbBookHlToggle(key) {
+    var el = document.getElementById('oxwin-' + key);
+    if (!el) return;
+    el.querySelectorAll('.mbb-hl').forEach(function (d) { d.hidden = !d.hidden; });
+  }
   var MBB_LAST = null, MBB_OPEN_UID = null;
 
   window.mbBookOpen = mbBookOpen;
@@ -6638,6 +6695,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   window.mbBookPickCancel = mbBookPickCancel;
   window.mbBookUnpin = mbBookUnpin;
   window.mbBookBorderToggle = mbBookBorderToggle;
+  window.mbBookHlToggle = mbBookHlToggle;
   /* 검산용 — 화면을 거치지 않고 재는 자리 */
   window.mbBook = {
     meta: mbbMeta, words: mbbWords, doc: mbbDoc, jari: mbbJari, shell: mbbShell,
@@ -6648,6 +6706,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     border: mbbBorder, qtext: mbbQText, picked: mbbPickedOf, cluster: mbbCluster,
     forget: mbbForgetBooks, savePin: mbbSavePin, dropPin: mbbDropPin, lcs: mbbLCS,
     scaleFor: mbbScaleFor, paint: MBB_PAINT, pitch: mbbPitch, borderHTML: mbbBorderHTML,
+    ann: mbbAnn, annHTML: mbbAnnHTML, annCache: MBB_ANN,
     setUid: function (u) { MBB_OPEN_UID = u; }
   };
 
