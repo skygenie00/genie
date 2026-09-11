@@ -13,9 +13,63 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .tag-btn { transition: all 0.2s ease-in-out; }
+        /* ═══ 목차 서랍(2026-09-11 _task_ox_toc_drawer.md) — 자과앱 #tree 규약 그대로 옮겼다.
+           접힘 = 손잡이 13px 만 · 손잡이는 서랍 오른쪽 가장자리의 세로 막대 하나(#trGrip).
+           너비·접힘은 기기별이고 동기화 밖이다(SYNC_KEYS 에 안 넣는다). */
+        #tree{position:fixed;left:0;top:0;bottom:0;width:var(--trw,272px);z-index:62;background:#fff;
+              border-right:1px solid #e5e7eb;display:flex;flex-direction:column;box-shadow:2px 0 12px rgba(0,0,0,.10)}
+        #tree.fold{width:13px} #tree.fold .trhead,#tree.fold #trlist,#tree.fold .trfoot{display:none}
+        #tree .trhead,#tree #trlist,#tree .trfoot{margin-right:13px}
+        #tree .trhead{display:flex;align-items:center;gap:4px;flex-wrap:wrap;
+              padding:calc(env(safe-area-inset-top) + 8px) 8px 7px 10px;border-bottom:1px solid #e5e7eb}
+        #tree .trhead button{padding:2px 7px;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;
+              font-weight:700;color:#6b7280;background:#fff;white-space:nowrap}
+        #tree .trhead button.on{background:#1f2937;border-color:#1f2937;color:#fff}
+        #tree .trhead button.trnow{margin-left:auto;color:#1d4ed8;border-color:#bfdbfe;background:#eff6ff}
+        #trlist{flex:1;overflow-y:auto;padding:4px 0;font-size:12px;overscroll-behavior:contain}
+        #trGrip{position:absolute;right:0;top:0;bottom:0;width:13px;border-left:1px solid #e5e7eb;background:#f9fafb;
+              display:grid;place-items:center;color:#9ca3af;font-size:13px;cursor:ew-resize;
+              touch-action:none;user-select:none;-webkit-user-select:none}
+        #trGrip:hover{color:#1d4ed8;background:#eff6ff}
+        .trch{display:flex;gap:5px;align-items:center;padding:4px 10px;cursor:pointer;
+              font-weight:800;color:#374151;background:#f9fafb;margin-top:5px;white-space:nowrap;overflow:hidden}
+        .trch .n{margin-left:auto;font-size:10px;color:#9ca3af;font-weight:700;flex:none}
+        .trch.cur{color:#1d4ed8}
+        .trit{padding:3px 10px 3px 20px;cursor:pointer;border-left:3px solid transparent}
+        .trit:hover{background:rgba(0,0,0,.04)}
+        .trit.cur{border-left-color:#2563eb;background:#eff6ff}
+        .trit.view{border-left-color:#93c5fd}
+        .trit.off{opacity:.38;cursor:default}
+        .trit.off:hover{background:none}
+        .trit .l1{display:flex;gap:5px;align-items:baseline}
+        .trit .tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#374151}
+        .trit .n{font-size:10px;color:#6b7280;font-weight:700;flex:none}
+        .trit .now{font-size:9px;font-weight:800;color:#fff;background:#2563eb;border-radius:3px;padding:0 3px;flex:none}
+        .trbar{display:flex;height:4px;border-radius:2px;overflow:hidden;background:#eee;margin:2px 0 0 0}
+        .trbar i{display:block;height:100%}
+        .trchips{display:flex;gap:3px;margin-top:2px;flex-wrap:wrap}
+        .trchip{position:relative;font-size:9px;font-weight:800;line-height:1;padding:2px 4px;border-radius:3px;
+              border:1px solid #d1d5db;color:#6b7280;background:#fff;cursor:pointer;overflow:hidden}
+        .trchip b{position:absolute;left:0;top:0;bottom:0;background:#dbeafe;z-index:0}
+        .trchip span{position:relative;z-index:1}
+        .trchip.done{border-color:#2563eb;color:#1d4ed8}
+        .trchip.on{background:#2563eb;border-color:#2563eb;color:#fff}
+        .trchip.on b{background:rgba(255,255,255,.28)}
+        .trchip.bad::after{content:'';position:absolute;right:0;top:0;width:4px;height:4px;border-radius:50%;background:#e24b4a;z-index:2}
+        .trfoot{border-top:1px solid #e5e7eb;padding:5px 10px;font-size:10.5px;color:#6b7280;line-height:1.55}
+        @media (min-width:900px){ body.tropen{padding-left:var(--trw,272px)} body.tropen.trfold{padding-left:13px} }
+        @media (max-width:899px){ #tree{box-shadow:2px 0 18px rgba(0,0,0,.22)} }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen py-3 px-2">
+<!-- ═══ 목차 서랍(_task_ox_toc_drawer.md) — 첫 화면·문제풀이 화면 둘 다에 뜬다.
+     손잡이는 #trGrip 하나뿐이다. 햄버거 단추를 따로 만들지 않는다. ═══ -->
+<div id="tree">
+  <div class="trhead" id="trhead"></div>
+  <div id="trlist"></div>
+  <div class="trfoot" id="trfoot"></div>
+  <div id="trGrip" title="누르면 접기 · 끌면 너비">‹</div>
+</div>
     <div class="max-w-4xl mx-auto relative">
         
         <!-- [1] 홈 화면: 전과목 대시보드 -->
@@ -1931,6 +1985,25 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             try { recBoot(); } catch (e) { console.warn('기록 동기화 시동 실패', e); }
         };
 
+        /* ★ 서랍 판(2026-09-11) — 대시보드·문제풀이·서랍이 **같은 잣대**를 쓰게 한 곳으로 모았다.
+           ⚠ 판정 줄은 옛 것과 한 글자도 다르지 않다. 베껴 둘로 만들면 언젠가 갈라진다. */
+        function trFilterPass(q, sourceFilter, reviewFilter, qHistory, qTags) {
+            if (sourceFilter !== 'all' && !(q.source && q.source.includes(sourceFilter))) return false;
+
+            if (reviewFilter === 'wrong' && qHistory[q.id] !== false) return false;
+            if (reviewFilter === 'fake' && !(qTags[q.id] && qTags[q.id].fake)) return false;
+            if (reviewFilter === 'concept' && !(qTags[q.id] && qTags[q.id].concept)) return false;
+            if (reviewFilter === 'memo' && !(qTags[q.id] && qTags[q.id].memo)) return false;
+            if (reviewFilter === 'important' && !(qTags[q.id] && qTags[q.id].important)) return false;
+            if (reviewFilter === 'wrong1' && wrongCount(q.id) !== 1) return false;
+            if (reviewFilter === 'wrong2' && wrongCount(q.id) !== 2) return false;
+            if (reviewFilter === 'wrong3' && wrongCount(q.id) < 3) return false;
+            if (reviewFilter === 'filled' && q.pending) return false;
+            if (reviewFilter === 'verified' && (q.pending || String(q.status||'').indexOf('OCR 단독')>=0)) return false;
+            if (reviewFilter === 'unverified' && String(q.status||'').indexOf('OCR 단독')<0) return false;
+            if (reviewFilter === 'untyped' && !qTypeOf(q).draft) return false;
+            return true;
+        }
         function renderDashboard() {
             const container = document.getElementById('dashboard-container');
             container.innerHTML = '';
@@ -1955,20 +2028,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             try { _mcAll = JSON.parse(localStorage.getItem('ox_mem_cards') || '{}'); } catch (e) { _mcAll = {}; }
             
             quizData.forEach(q => {
-                if (sourceFilter !== 'all' && !(q.source && q.source.includes(sourceFilter))) return;
-                
-                if (reviewFilter === 'wrong' && qHistory[q.id] !== false) return;
-                if (reviewFilter === 'fake' && !(qTags[q.id] && qTags[q.id].fake)) return;
-                if (reviewFilter === 'concept' && !(qTags[q.id] && qTags[q.id].concept)) return;
-                if (reviewFilter === 'memo' && !(qTags[q.id] && qTags[q.id].memo)) return;
-                if (reviewFilter === 'important' && !(qTags[q.id] && qTags[q.id].important)) return;
-                if (reviewFilter === 'wrong1' && wrongCount(q.id) !== 1) return;
-                if (reviewFilter === 'wrong2' && wrongCount(q.id) !== 2) return;
-                if (reviewFilter === 'wrong3' && wrongCount(q.id) < 3) return;
-                if (reviewFilter === 'filled' && q.pending) return;
-                if (reviewFilter === 'verified' && (q.pending || String(q.status||'').indexOf('OCR 단독')>=0)) return;
-                if (reviewFilter === 'unverified' && String(q.status||'').indexOf('OCR 단독')<0) return;
-                if (reviewFilter === 'untyped' && !qTypeOf(q).draft) return;
+                if (!trFilterPass(q, sourceFilter, reviewFilter, qHistory, qTags)) return;   /* ★ 서랍 판 — 판정은 옛 줄 그대로, 자리만 옮겼다 */
 
                 // 기출 문항은 «변리사 기출» 가상 과목에도 함께 노출 (같은 문항 id 재사용)
                 if (q.examYear) {
@@ -2054,7 +2114,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     subjectHtml += `
                         <div class="px-4 py-3">
                             ${flat ? '' : `
-                            <div class="flex items-baseline gap-2 mb-1.5">
+                            <div class="flex items-baseline gap-2 mb-1.5" data-trchap="${escAttr(subject)}|||${escAttr(chapMain)}">
                                 <span class="font-extrabold text-gray-800 text-sm">${chapMain}</span>
                                 <span class="text-[11px] text-gray-400 font-semibold">총 ${chapTotal}문제</span>
                             </div>`}
@@ -2093,7 +2153,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                             : 'text-blue-500 font-semibold';
 
                         subjectHtml += `
-                            <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-3 gap-y-1 py-1.5 hover:bg-gray-50 transition rounded px-1">
+                            <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-3 gap-y-1 py-1.5 hover:bg-gray-50 transition rounded px-1" data-trrow="${escAttr(subject)}|||${escAttr(chapLabel)}">
                                 <div class="flex items-baseline gap-2 min-w-0 basis-full sm:basis-auto">
                                     ${flat ? '' : '<span class="text-gray-300 text-xs shrink-0">›</span>'}
                                     <span class="${flat ? 'font-extrabold text-gray-800 text-sm' : 'font-semibold text-gray-700 text-[13px]'} truncate">${String(info.sub).replace(/^20\d\d\s+/, '')}</span>
@@ -2119,6 +2179,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 container.innerHTML += subjectHtml;
             }
             if (typeof updateQuickCounts === 'function') updateQuickCounts();
+            if (typeof trBuild === 'function') trBuild();          /* ★ 서랍 판 — 필터·정렬이 바뀌면 서랍도 따라간다 */
+            if (typeof trSpy === 'function') trSpy();              /* ★ 서랍 판 §3 — 스크롤 따라오는 파란 줄 */
         }
 
         function startQuiz(subject, chapLabel) {
@@ -2147,22 +2209,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     if (cLabel !== chapLabel) return false;
                 }
                 
-                if (sourceFilter !== 'all' && !(item.source && item.source.includes(sourceFilter))) return false;
-                
-                if (reviewFilter === 'wrong' && qHistory[item.id] !== false) return false;
-                if (reviewFilter === 'fake' && !(qTags[item.id] && qTags[item.id].fake)) return false;
-                if (reviewFilter === 'concept' && !(qTags[item.id] && qTags[item.id].concept)) return false;
-                if (reviewFilter === 'memo' && !(qTags[item.id] && qTags[item.id].memo)) return false;
-                if (reviewFilter === 'important' && !(qTags[item.id] && qTags[item.id].important)) return false;
-                if (reviewFilter === 'wrong1' && wrongCount(item.id) !== 1) return false;
-                if (reviewFilter === 'wrong2' && wrongCount(item.id) !== 2) return false;
-                if (reviewFilter === 'wrong3' && wrongCount(item.id) < 3) return false;
-                if (reviewFilter === 'filled' && item.pending) return false;
-                if (reviewFilter === 'verified' && (item.pending || String(item.status||'').indexOf('OCR 단독')>=0)) return false;
-                if (reviewFilter === 'unverified' && String(item.status||'').indexOf('OCR 단독')<0) return false;
-                if (reviewFilter === 'untyped' && !qTypeOf(item).draft) return false;
-
-                return true;
+                return trFilterPass(item, sourceFilter, reviewFilter, qHistory, qTags);   /* ★ 서랍 판 — 판정은 옛 줄 그대로 */
             });
 
             if (examMode) {
@@ -2207,6 +2254,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             
             renderQuizPage();
             window.scrollTo(0, 0);
+            if (typeof trBuild === 'function') trBuild(true);      /* ★ 서랍 판 §4-D — 그 줄을 가운데로(이미 보이면 안 움직인다) */
         }
 
         function goHome() {
@@ -7507,6 +7555,302 @@ function updateQuickCounts() {
     if (s) s.textContent = semiQueueItems().length;
     renderHeatmap();
 }
+
+/* ═══════════════ 목차 서랍 (2026-09-11 · _task_ox_toc_drawer.md) ═══════════════
+   줄의 단위 = 첫 화면 그대로다 — renderDashboard 의 grouped[과목][장][줄] 셋.
+   손잡이·접힘·너비 = 자과앱 #tree 규약을 그대로 옮겼다(gripWire · 160~420 · 접히면 13px).
+   ⚠ 접힘·너비·과목·장 접힘은 **기기별**이고 SYNC_KEYS 밖이다.
+   ⚠ 진행 막대는 히트맵과 같은 함수(hmStateOf)·같은 색(HM_COLORS)을 쓴다. 새로 짓지 않는다. */
+const TR_W = 'ox_tr_w', TR_FOLD = 'ox_tr_fold', TR_SUBJ = 'ox_tr_subj', TR_CH = 'ox_tr_chfold';
+let trAtt = {};      /* 줄키 → 고른 회독(-1 = 지금 상태) · 화면에만 산다 */
+let trIO = null;     /* 스크롤 따라오는 파란 줄 */
+let trViewRow = '';
+
+const trLS = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
+const trLSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+const trObj = k => { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch (e) { return {}; } };
+const trEsc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ── 줄 긁기 — 거르기를 **적용하지 않은** 줄 목록(자리는 늘 그대로)과, 그 줄의 거른 문항 ── */
+function trScan() {
+    const sf = (document.getElementById('source-filter') || {}).value || 'all';
+    const rf = (document.getElementById('review-filter') || {}).value || 'all';
+    const qHistory = trObj('ox_q_history'), qTags = trObj('ox_q_tags');
+    const G = {};
+    const put = (subj, main, label, sub, q, pass) => {
+        if (!G[subj]) G[subj] = {};
+        if (!G[subj][main]) G[subj][main] = {};
+        if (!G[subj][main][label]) G[subj][main][label] = { sub: sub, ids: [], idsF: [] };
+        const r = G[subj][main][label];
+        r.ids.push(q.id);
+        if (pass) r.idsF.push(q.id);
+    };
+    (typeof quizData === 'undefined' ? [] : quizData).forEach(q => {
+        const pass = trFilterPass(q, sf, rf, qHistory, qTags);
+        if (q.examYear) {                                   /* 첫 화면과 같은 가상 과목 */
+            const metas = (q.examMeta && q.examMeta.length) ? q.examMeta : [{ year: q.examYear, round: q.examRound }];
+            for (const meta of metas) {
+                const ec = `${meta.year}년 제${meta.round}회`;
+                put('변리사 기출', ec, ec, ec, q, pass);
+            }
+        }
+        const chapLabel = q.subChapter ? `${q.chapter} > ${q.subChapter}` : q.chapter;
+        put(q.subject, q.chapter, chapLabel, q.subChapter || q.chapter, q, pass);
+    });
+    const order = Object.keys(G).sort((a, b) => {
+        const rank = s => (s === '미분별 문제') ? -1 : (s === '변리사 기출') ? 1 : 0;
+        return rank(a) - rank(b);
+    });
+    return { G: G, order: order, sf: sf, rf: rf };
+}
+
+/* ── 다섯 칸 — hmStateOf 그대로 ── */
+function trStates(ids) {
+    const qHistory = trObj('ox_q_history'), qTags = trObj('ox_q_tags');
+    const stages = (typeof weakStages === 'function') ? weakStages() : {};
+    const c = [0, 0, 0, 0, 0];
+    ids.forEach(id => c[hmStateOf(id, qHistory, qTags, stages)]++);
+    return c;
+}
+/* 지난 회독 = 그 회독의 marks(맞음·틀림·안 푼 것) · 색은 같은 HM_COLORS 를 쓴다 */
+function trMarkStates(ids, marks) {
+    const c = [0, 0, 0, 0, 0];
+    ids.forEach(id => { const v = marks ? marks[id] : undefined;
+        c[v === true ? 1 : v === false ? 3 : 0]++; });
+    return c;
+}
+function trBarHtml(c) {
+    const tot = c.reduce((a, b) => a + b, 0) || 1;
+    return '<div class="trbar">' + [3, 4, 2, 1, 0].map(i =>
+        c[i] ? `<i style="width:${(c[i] / tot * 100).toFixed(3)}%;background:${HM_COLORS[i]}"></i>` : '').join('') + '</div>';
+}
+const trTip = c => HM_NAMES.map((n, i) => `${n} ${c[i]}`).join(' · ');
+
+/* ── 그리기 ── */
+function trBuild(focus) {
+    const box = document.getElementById('trlist'), head = document.getElementById('trhead');
+    if (!box || !head) return;
+    const qs = document.getElementById('quiz-screen');
+    const onQuiz = !!(qs && !qs.classList.contains('hide'));
+    const S = trScan();
+    if (!S.order.length) { box.innerHTML = ''; head.innerHTML = ''; return; }
+
+    let subj = trLS(TR_SUBJ, '');
+    if (onQuiz && typeof currentSubject === 'string' && currentSubject) subj = currentSubject;
+    if (S.order.indexOf(subj) < 0) subj = S.order[0];
+
+    head.innerHTML = S.order.map(s =>
+        `<button class="${s === subj ? 'on' : ''}" onclick="trPickSubj('${trEsc(s).replace(/'/g, "\\'")}')">${trEsc(s)}</button>`).join('')
+        + (onQuiz ? `<button class="trnow" onclick="trFocus()" title="지금 푸는 줄로 되돌아간다">지금 자리로</button>` : '');
+
+    const chFold = trObj(TR_CH);
+    const hist = trObj('ox_chap_history');
+    const prog = (typeof loadInProgress === 'function') ? loadInProgress() : {};
+    const curRow = onQuiz ? `${currentSubject}|||${currentChapterLabel}` : '';
+    const chapters = S.G[subj] || {};
+    let html = '', nLine = 0, nQ = 0;
+
+    for (const [chapMain, rows] of Object.entries(chapters)) {
+        const ents = Object.entries(rows);
+        const ck = subj + '|||' + chapMain;
+        const folded = !!chFold[ck];
+        const cTot = ents.reduce((n, e) => n + e[1].idsF.length, 0);
+        const hasCur = onQuiz && ents.some(e => `${subj}|||${e[0]}` === curRow);
+        html += `<div class="trch${hasCur ? ' cur' : ''}" onclick="trChFold('${trEsc(ck).replace(/'/g, "\\'")}')">`
+             +  `<span>${folded ? '▸' : '▾'}</span><span>${trEsc(chapMain)}</span><span class="n">${cTot}</span></div>`;
+        if (folded) { nLine += ents.length; nQ += cTot; continue; }
+        for (const [label, r] of ents) {
+            nLine++; nQ += r.idsF.length;
+            const key = subj + '|||' + label;
+            const off = r.idsF.length === 0;
+            const isCur = (key === curRow);
+            const isView = (!onQuiz && key === trViewRow);
+            let body = '';
+            if (onQuiz) {
+                const chapKey = `${subj}||${label}||${S.sf}||${S.rf}`;
+                const hs = hist[chapKey] || [], ip = prog[chapKey];
+                const pick = (trAtt[key] === undefined) ? -1 : trAtt[key];
+                let c;
+                if (pick >= 0 && pick < hs.length) c = trMarkStates(r.idsF, hs[pick].marks);
+                else if (pick === hs.length && ip) c = trMarkStates(r.idsF, ip.marks);
+                else c = trStates(r.idsF);              /* 기본 = 지금 도는 회독 = 지금 상태(히트맵과 같은 수) */
+                const done = r.idsF.length - c[0];
+                body = `<div class="l1">${isCur ? '<span class="now">지금</span>' : ''}`
+                     + `<span class="tx">${trEsc(r.sub)}</span>`
+                     + `<span class="n">${done}/${r.idsF.length}</span></div>`
+                     + `<div title="${trEsc(trTip(c))}">${trBarHtml(c)}</div>`;
+                const chips = [];
+                hs.forEach((h, i) => {
+                    const tot = h.total || r.idsF.length || 1;
+                    const nm = h.marks ? Object.keys(h.marks).length : tot;
+                    /* 틀림 = marks 의 false 수(첫 화면 2073줄과 같은 규칙) · `총 − 맞음` 으로 세면 안 푼 것이 틀림에 섞인다 */
+                    const wrongN = h.marks ? Object.values(h.marks).filter(v => v === false).length : Math.max(0, tot - h.score);
+                    const rightN = h.marks ? Object.values(h.marks).filter(v => v === true).length : (h.score || 0);
+                    const bad = wrongN > 0;
+                    chips.push(`<span class="trchip done${bad ? ' bad' : ''}${pick === i ? ' on' : ''}"
+                        title="${i + 1}회독 ${nm}/${tot} · 맞음 ${rightN} · 틀림 ${wrongN} · 안 푼 것 ${Math.max(0, tot - nm)}"
+                        onclick="event.stopPropagation();trAttPick('${trEsc(key).replace(/'/g, "\\'")}',${i})"><b style="width:${(nm / tot * 100).toFixed(2)}%"></b><span>${i + 1}</span></span>`);
+                });
+                if (ip) {
+                    const tot = ip.total || r.idsF.length || 1;
+                    const nm = ip.marks ? Object.keys(ip.marks).length : 0;
+                    const wrongN = ip.marks ? Object.values(ip.marks).filter(v => v === false).length : 0;
+                    const bad = wrongN > 0;
+                    const i = hs.length;
+                    chips.push(`<span class="trchip${bad ? ' bad' : ''}${pick === i ? ' on' : ''}"
+                        title="${i + 1}회독(진행중) ${nm}/${tot} · 맞음 ${Math.max(0, nm - wrongN)} · 틀림 ${wrongN} · 안 푼 것 ${Math.max(0, tot - nm)}"
+                        onclick="event.stopPropagation();trAttPick('${trEsc(key).replace(/'/g, "\\'")}',${i})"><b style="width:${(nm / tot * 100).toFixed(2)}%"></b><span>${i + 1}</span></span>`);
+                }
+                if (chips.length) body += `<div class="trchips">${chips.join('')}</div>`;
+            } else {
+                body = `<div class="l1"><span class="tx">${trEsc(r.sub)}</span><span class="n">${r.idsF.length}</span></div>`;
+            }
+            html += `<div class="trit${off ? ' off' : ''}${isCur ? ' cur' : ''}${isView ? ' view' : ''}" data-trk="${trEsc(key)}"`
+                 +  (off ? '' : ` onclick="trGo('${trEsc(key).replace(/'/g, "\\'")}')"`) + `>${body}</div>`;
+        }
+    }
+    box.innerHTML = html;
+
+    const foot = document.getElementById('trfoot');
+    if (foot) {
+        if (onQuiz) {
+            const chapKey = (typeof chapKeyOf === 'function') ? chapKeyOf(currentSubject, currentChapterLabel) : '';
+            const hs = hist[chapKey] || [];
+            const _m = trChapOf(chapters, currentChapterLabel);
+            const ids = ((chapters[_m] || {})[currentChapterLabel] || { idsF: [] }).idsF;
+            const c = trStates(ids.length ? ids : (typeof currentFilteredData !== 'undefined' ? currentFilteredData.map(x => x.id) : []));
+            const tot = c.reduce((a, b) => a + b, 0);
+            foot.innerHTML = `푼 것 ${tot - c[0]} / ${tot} · 남은 것 ${c[0]}`
+                + hs.map((h, i) => `<br>${i + 1}회독 ${h.score}/${h.total}`).join('');
+        } else {
+            foot.textContent = `${subj} ${nQ}문항 · 장 ${Object.keys(chapters).length} · 줄 ${nLine}`;
+        }
+    }
+    if (focus) trFocus();
+}
+
+/* 줄 이름으로 그 줄이 든 장을 찾는다 — 라벨을 ' > ' 로 자르면 「변리사 기출」에서 어긋난다 */
+function trChapOf(chapters, label) {
+    for (const [main, rows] of Object.entries(chapters || {})) if (rows[label]) return main;
+    return '';
+}
+function trPickSubj(s) { trLSet(TR_SUBJ, s); trBuild(); }
+function trChFold(ck) { const f = trObj(TR_CH); if (f[ck]) delete f[ck]; else f[ck] = 1; trLSet(TR_CH, JSON.stringify(f)); trBuild(); }
+function trAttPick(key, i) { trAtt[key] = (trAtt[key] === i) ? -1 : i; trBuild(); }
+
+/* ── 누르면 ── */
+function trGo(key) {
+    const p = key.split('|||'), subject = p[0], chapLabel = p.slice(1).join('|||');
+    const qs = document.getElementById('quiz-screen');
+    const onQuiz = !!(qs && !qs.classList.contains('hide'));
+    if (onQuiz) {
+        if (subject === currentSubject && chapLabel === currentChapterLabel) { trFocus(); return; }
+        const ungraded = document.querySelectorAll('#quiz-container input[type="radio"]:checked').length
+            - Object.keys(typeof currentSessionMarks === 'undefined' ? {} : currentSessionMarks).length;
+        if (ungraded > 0 && !confirm('채점하지 않은 것이 있다. 옮기면 그대로 저장해 둔다. 옮길까?')) return;
+        if (typeof stashExamPicks === 'function') stashExamPicks();
+        saveInProgress(chapKeyOf(currentSubject, currentChapterLabel));   /* goHome 이 하는 그대로 */
+        startQuiz(subject, chapLabel);
+        return;
+    }
+    /* 첫 화면 — 자리만 옮긴다. 필터는 건드리지 않는다. */
+    const row = [...document.querySelectorAll('[data-trrow]')].find(x => x.dataset.trrow === key);
+    if (!row) return;
+    const y = row.getBoundingClientRect().top + window.scrollY - 90;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    row.style.transition = 'background-color .4s';
+    row.style.backgroundColor = '#eff6ff';
+    setTimeout(() => { row.style.backgroundColor = ''; }, 900);
+    if (window.innerWidth < 900) trFold(true);
+}
+
+/* ── 지금 자리 ── */
+function trFocus() {
+    const qs = document.getElementById('quiz-screen');
+    if (!qs || qs.classList.contains('hide')) return;
+    const key = `${currentSubject}|||${currentChapterLabel}`;
+    const S = trScan();
+    const main = trChapOf(S.G[currentSubject], currentChapterLabel);
+    const f = trObj(TR_CH), ck = currentSubject + '|||' + main;
+    if (f[ck]) { delete f[ck]; trLSet(TR_CH, JSON.stringify(f)); trBuild(); }
+    const el = [...document.querySelectorAll('#trlist [data-trk]')].find(x => x.dataset.trk === key);
+    if (!el) return;
+    const box = document.getElementById('trlist');
+    const br = box.getBoundingClientRect(), er = el.getBoundingClientRect();
+    if (er.top >= br.top && er.bottom <= br.bottom) return;    /* 이미 보이면 움직이지 않는다 */
+    el.scrollIntoView({ block: 'center' });
+}
+
+/* ── 스크롤 따라오는 파란 줄(첫 화면) ── */
+function trSpy() {
+    if (trIO) { trIO.disconnect(); trIO = null; }
+    const rows = [...document.querySelectorAll('[data-trrow]')];
+    if (!rows.length) return;
+    trIO = new IntersectionObserver(es => {
+        const vis = es.filter(e => e.isIntersecting).map(e => e.target.dataset.trrow);
+        if (!vis.length) return;
+        const k = vis[0];
+        if (k === trViewRow) return;
+        trViewRow = k;
+        document.querySelectorAll('#trlist .trit.view').forEach(x => x.classList.remove('view'));
+        const el = [...document.querySelectorAll('#trlist [data-trk]')].find(x => x.dataset.trk === k);
+        if (el) el.classList.add('view');
+    }, { rootMargin: '-80px 0px -60% 0px' });
+    rows.forEach(r => trIO.observe(r));
+}
+
+/* ── 손잡이 — 자과앱 gripWire 그대로(탭 = 접기 · 끌기 = 너비 160~420) ── */
+function trSetW(w) {
+    w = Math.max(160, Math.min(Math.min(420, window.innerWidth - 60), Math.round(w)));
+    document.documentElement.style.setProperty('--trw', w + 'px');
+    return w;
+}
+function trFold(on) {
+    on = !!on;
+    document.getElementById('tree').classList.toggle('fold', on);
+    document.body.classList.toggle('trfold', on);
+    const g = document.getElementById('trGrip');
+    if (g) g.textContent = on ? '›' : '‹';
+    trLSet(TR_FOLD, on ? '1' : '');
+    return on;
+}
+function trGripWire(dr, g, o) {
+    let d = null;
+    g.addEventListener('pointerdown', e => {
+        d = { x: e.clientX, w: dr.getBoundingClientRect().width, moved: false };
+        try { g.setPointerCapture(e.pointerId); } catch (_) {}
+        e.preventDefault();
+    }, { passive: false });
+    g.addEventListener('pointermove', e => {
+        if (!d) return;
+        const dx = e.clientX - d.x;
+        if (Math.abs(dx) >= 4) d.moved = true;
+        if (d.moved && !(o.folded && o.folded())) o.setW(d.w + dx);
+    });
+    const up = () => { if (!d) return; const was = d; d = null;
+        if (!was.moved) { o.onTap(); return; }
+        if (o.folded && o.folded()) return;
+        o.onDrop(Math.round(dr.getBoundingClientRect().width)); };
+    g.addEventListener('pointerup', up);
+    g.addEventListener('pointercancel', up);
+}
+(function trBoot() {
+    const dr = document.getElementById('tree'), g = document.getElementById('trGrip');
+    if (!dr || !g) return;
+    document.body.classList.add('tropen');
+    const w = parseInt(trLS(TR_W, ''), 10);
+    if (w > 0) trSetW(w);
+    const fv = trLS(TR_FOLD, null);
+    trFold(fv === null ? (window.innerWidth < 900) : !!fv);   /* 폰은 처음에 접힌 채 — 덮개가 본문을 가린다 */
+    trGripWire(dr, g, {
+        folded: () => dr.classList.contains('fold'),
+        setW: trSetW,
+        onTap: () => trFold(!dr.classList.contains('fold')),
+        onDrop: w2 => trLSet(TR_W, String(w2))
+    });
+    addEventListener('resize', () => { const v = parseInt(trLS(TR_W, ''), 10); if (v > 0) trSetW(v); });
+    setTimeout(() => { try { trBuild(); trSpy(); } catch (e) { console.warn('[tr]', e); } }, 300);
+})();
 </script>
 </body>
 </html>
