@@ -1402,6 +1402,15 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     if (txt) { try { recMerge(JSON.parse(txt)); } catch (e) { console.warn('원격 기록 파싱 실패', e); } }
                 }
                 stampAll();
+                /* §4 올릴 것이 없으면 올리지 않는다 (2026-09-11 4턴).
+                   `recPayload()` 가 `savedAt` 을 늘 새로 넣어 아무것도 안 바뀌어도
+                   3분마다 563KB 짜리 커밋이 하나씩 생겼다. 받아서 합치는 것은 그대로 둔다.
+                   ⚠ 합친 뒤에 세야 한다 — 원격에서 받은 것이 있으면 올릴 것이 생긴다.
+                   ⚠ 손으로 누른 것(force)은 언제나 올린다. */
+                if (!force && recPending() === 0) {
+                    recBusy = false; recPaint();
+                    return;
+                }
                 let res = await ghPutJson(REC_PATH, JSON.stringify(recPayload()), sha);
                 if (res === 'conflict') {           /* 한 번만 재시도 */
                     sha = await ghSha(REC_PATH);
@@ -3236,15 +3245,15 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 return keys.some(k => theirs.includes(k));
             }).map(q => q.id);
         }
-        /* 📚 교재 자리 칩 — 2026-09-11 3턴 신설.
+        /* ID 칩 — 누르면 그 문항이 실린 교재 자리 목록이 뜬다.
            전에는 손잡이 없는 `<span>` 이고 `hidden sm:inline-block` 이라
-           **좁은 화면에서 칩 자체가 안 보였다.** 그것부터 풀었다.
-           꼴은 옆 칩들(`samePanryeChipHTML`·`yujeChipHTML`)을 그대로 따른다 —
-           새 손잡이 모양을 만들지 않는다.
+           **좁은 화면에서 칩 자체가 안 보였다.** 그것을 풀었다.
+           ⚠ 글자는 `ID Qnnnn` 뿐이다 — 이모티콘도 「교재」도 넣지 않는다(4턴 §5-A).
+             빛깔도 옆 칩들과 같은 회색이다. 새 빛깔을 만들지 않는다.
            ⚠ 채점 전(`item.pending`)에도 숨지 않는다 — 전 판 그대로다. */
         function bookChipHTML(item) {
             return `<button onclick="mbBookOpen('${item.id}')" title="이 문항이 실린 교재 자리"
-                class="text-[10px] px-1.5 py-0.5 rounded border bg-amber-50 text-amber-800 border-amber-300 font-extrabold hover:bg-amber-100 transition whitespace-nowrap">📚 ID ${item.id}<span class="hidden sm:inline"> 교재</span></button>`;
+                class="text-[10px] px-1.5 py-0.5 rounded border bg-gray-50 text-gray-500 border-gray-200 font-bold hover:bg-gray-100 transition whitespace-nowrap">ID ${item.id}</button>`;
         }
         /* 🔗 같은 판례 칩 — 상단 배지 줄에 붙는다 (2026-08-26 이동).
            채점 전에도 보이지만 개수만 보여주므로 정답이 새지 않는다. */
@@ -4785,6 +4794,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 
   async function openDoc(id) {
     if (DOCCACHE[id]) return DOCCACHE[id];
+    /* 교재는 자산이 없다 — pdf.js + 배달된 글자층으로 만든 껍데기를 쓴다(4턴 §3).
+       이 갈래가 있어야 `openViewer(uid,'pick')` 이 교재 쪽에서 자리를 찍을 수 있다. */
+    if (MBB_VOL[id]) { DOCCACHE[id] = await mbbBookDoc(id); return DOCCACHE[id]; }
     var a = await getAsset(id);
     if (!a) {
       var meta = docs()[id] || {};
@@ -5854,6 +5866,16 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     var url = 'https://api.github.com/repos/' + MBPDF_REPO + '/contents/'
             + encodeURI(MBPDF_PDF + '/' + meta.file) + '?ref=' + MB_BRANCH;
     var t0 = Date.now();
+    /* §1-A 기기에 재워 둔 것이 있으면 저장소를 안 거친다 — 같은 책인지는 `pdfMd5` 로 가른다.
+       3턴 실측에서 새로고침마다 66MB 를 다시 받았다. 가끔 여는 물건이라 이게 제일 아프다. */
+    var cached = await mbbPdfFromCache(docid, meta.pdfMd5);
+    if (cached) {
+      var dc = await lib.getDocument({ data: cached.slice(0), CMapReaderFactory: EmbeddedCMapReader,
+                                       cMapPacked: true }).promise;
+      MBB_STAT.pdf[docid] = { ms: Date.now() - t0, pages: dc.numPages, from: 'cache' };
+      MBB_DOC[docid] = dc;
+      return dc;
+    }
     var task = lib.getDocument({
       url: url,
       httpHeaders: { Authorization: 'Bearer ' + tk, Accept: 'application/vnd.github.raw' },
@@ -5865,9 +5887,17 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       cMapPacked: true
     });
     var doc = await task.promise;
-    MBB_STAT.pdf[docid] = { ms: Date.now() - t0, pages: doc.numPages,
+    MBB_STAT.pdf[docid] = { ms: Date.now() - t0, pages: doc.numPages, from: 'net',
                             range: !!(doc._transport && doc._transport._lastProgress) };
     MBB_DOC[docid] = doc;
+    /* 받은 바이트를 재운다. 할당량을 넘으면 조용히 넘어간다 — 억지로 쪼개지 않는다. */
+    try {
+      var got = await doc.getData();
+      if (got && got.byteLength > 2000) {
+        var okc = await mbbPdfToCache(docid, meta.pdfMd5, got.buffer || got);
+        MBB_STAT.pdf[docid].cached = !!okc;
+      }
+    } catch (e) { MBB_STAT.pdf[docid].cached = false; MBB_STAT.cacheErr = String(e && e.message || e); }
     return doc;
   }
 
@@ -5918,28 +5948,34 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     return (m && typeof m.printOffset === 'number') ? (p + m.printOffset) : null;
   }
 
+  /* 목록 한 줄 — 책 이름 · 인쇄쪽(크게) · PDF쪽(작게) · 미리보기 두 줄.
+     ⚠ 격차%·점수·순위를 화면에 적지 않는다(4턴 §5-B). 그것은 고르는 쪽의 속셈이다. */
   function mbbRowHTML(r, tag) {
     var docid = MBB_DOCOF[r.doc], pr = mbbPrint(docid, r.p);
-    var head = (pr == null ? ('PDF ' + r.p + '쪽') : ('인쇄 ' + pr + '쪽'))
-             + ' <span style="font-size:10px;color:#9ca3af">PDF ' + r.p + '</span>';
+    var vol = MBB_VOLNAME[MBB_VOL[docid]] || r.doc;
     return '<div onclick="mbBookPage(\'' + docid + '\',' + r.p + ')" '
       + 'style="padding:7px 9px;border:1px solid #e5e7eb;border-radius:8px;margin:4px 0;cursor:pointer;background:#fff"'
       + ' onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'#fff\'">'
-      + '<div style="font-size:12px;font-weight:800;color:#111827">' + head
-      + (tag ? ' <span style="font-size:10px;color:#6b7280">' + tag + '</span>' : '') + '</div>'
-      + '<div style="font-size:11px;color:#4b5563;line-height:1.45;max-height:2.9em;overflow:hidden">'
+      + '<div style="display:flex;align-items:baseline;gap:6px">'
+      + '<span style="font-size:11px;color:#6b7280">' + vol + '</span>'
+      + '<span style="font-size:14px;font-weight:800;color:#111827">'
+      + (pr == null ? (r.p + '쪽') : (pr + '쪽')) + '</span>'
+      + '<span style="font-size:10px;color:#9ca3af">PDF ' + r.p + '</span>'
+      + (tag ? '<span style="font-size:10px;color:#9ca3af">' + tag + '</span>' : '')
+      + '</div>'
+      + '<div style="font-size:11px;color:#4b5563;line-height:1.45;max-height:2.9em;overflow:hidden;margin-top:2px">'
       + mbbSafe(r.snip) + '…</div></div>';
   }
 
+  /* ⚠ 후보를 격차로 가르지 않는다(4턴 §5-B · 옛 규칙 폐기).
+     2·3등은 **언제나 접힌 채로** 있고 「후보 2」 칩으로 편다 —
+     1등이 틀렸을 때 봐야 하는 것이 후보다. */
   function mbbListHTML(uid, groups) {
     if (!groups.length) return '<div style="padding:12px;font-size:12px;color:#6b7280">교재 자리를 찾지 못했습니다.</div>';
     var h = '<div style="padding:8px 10px 10px">';
     groups.forEach(function (g) {
-      h += '<div style="font-size:11px;font-weight:800;color:#374151;margin:8px 0 2px">' + g.name
-        + (g.ratio == null ? '' : ' <span style="font-weight:600;color:#9ca3af">격차 '
-            + Math.round(g.ratio * 100) + '%</span>') + '</div>';
       h += mbbRowHTML(g.top, '');
-      if (!g.wide && g.rest.length) {
+      if (g.rest.length) {
         var bid = 'mbb-' + uid + '-' + g.vol;
         h += '<button onclick="var e=document.getElementById(\'' + bid + '\');e.hidden=!e.hidden"'
           + ' style="font-size:10px;padding:2px 7px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;color:#4b5563;cursor:pointer">'
@@ -5949,15 +5985,15 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         h += '</div>';
       }
     });
-    h += '<div style="font-size:11px;font-weight:800;color:#9ca3af;margin:12px 0 2px">정리OMR</div>'
-      + '<div style="padding:7px 9px;border:1px dashed #e5e7eb;border-radius:8px;font-size:11px;color:#9ca3af">'
-      + '추록 반영이 끝난 뒤에 붙습니다.</div>';
+    h += '<div style="font-size:11px;color:#9ca3af;margin:10px 0 2px">정리OMR — 추록 반영이 끝난 뒤에 붙습니다.</div>';
     return h + '</div>';
   }
 
   async function mbBookOpen(uid) {
     var key = 'book-' + uid;
-    oxWinOpen(key, '📚 교재 자리', 'ID ' + uid,
+    MBB_OPEN_UID = uid;
+    /* ⚠ 머리줄은 한 줄이다 — 「교재 자리」와 `ID Qnnnn` 을 겹쳐 적지 않는다(4턴 §5-B) */
+    oxWinOpen(key, uid, '',
       '<div style="padding:12px;font-size:12px;color:#6b7280">받는 중…</div>', 420);
     var j = null;
     try { j = await mbbJari(uid); } catch (e) { j = null; }
@@ -5973,14 +6009,244 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   }
 
   /* ---------- 쪽 팝업 ---------- */
+
+  /* ================= 4턴 — 테두리 · 재우기 · 손으로 찍기 (2026-09-11) =================
+     ★ 목적은 「문제나 해설이 이상할 때 원본이 맞는지 그때만 확인하는 것」이다.
+       테두리 좌표는 **화면에 쓰고 버린다.** 저장하지 않는다 —
+       열 때마다 같은 입력(마스터 글 + 쪽 글자층)에서 같은 값이 나온다.
+     ⚠ 자동 테두리를 `ox_q_coords` 에 쓰지 않는다. 그 키는 `SYNC_KEYS` 안이라 전 기기로 퍼지고
+       앱이 세 군데에서 「핀은 절대 지우지 않는다」를 지켜 되돌릴 길이 없다.
+     ⚠ 사람이 찍은 핀이 있으면 **그것이 이긴다**(§3). */
+
+  var MBB_CASE = /\d{2,4}[가-힣]{1,3}\d{1,6}/g;
+  var MBB_TOK = /[가-힣]{4,}/g;
+  var MBB_SPLIT_MAX = 0.5;     /* 두 무리 사이가 쪽 절반을 넘으면 한 무리만 두른다 */
+
+  /* 마스터에서 그 문항의 글을 가져온다. `snip` 을 쓰지 않는다(§0-B 2). */
+  function mbbQText(uid) {
+    var q = null;
+    try {
+      if (typeof quizData !== 'undefined' && quizData && quizData.length) {
+        for (var i = 0; i < quizData.length; i++) {
+          if (quizData[i] && quizData[i].id === uid) { q = quizData[i]; break; }
+        }
+      }
+    } catch (e) { q = null; }
+    if (!q) return null;
+    /* 열 이름은 `buildQuizData`(앱) 가 정한 것이다 — q·exp·stem·caseText·panrye */
+    return { munje: [q.stem, q.caseText, q.q].filter(Boolean).join(' '),
+             haeseol: String(q.exp || ''),
+             panrye: String(q.panrye || '') };
+  }
+
+  function mbbTokens(s) {
+    var out = { cases: [], toks: [] }, m;
+    if (!s) return out;
+    var flat = s.replace(/\s+/g, '');
+    MBB_CASE.lastIndex = 0;
+    while ((m = MBB_CASE.exec(flat))) out.cases.push(m[0]);
+    MBB_TOK.lastIndex = 0;
+    while ((m = MBB_TOK.exec(s))) out.toks.push(m[0]);
+    return out;
+  }
+
+  /* 글자층 항목을 이어 붙인 문자열과, 글자마다의 항목 번호를 만든다.
+     낱글자 단위라 이어 붙이면 쪽 본문이 된다. */
+  function mbbFlat(items) {
+    var s = '', idx = [];
+    for (var i = 0; i < items.length; i++) {
+      var t = items[i].s || '';
+      for (var k = 0; k < t.length; k++) { s += t[k]; idx.push(i); }
+    }
+    return { s: s, idx: idx };
+  }
+
+  /* ⚠ 흔한 어절은 버린다. 「사회생활규범」처럼 교재에 여러 번 나오는 말을 그대로 쓰면
+       걸린 자리가 쪽 곳곳에 흩어져 테두리가 쪽의 70~80% 를 덮는다(2026-09-11 실측).
+     ⚠ 그리고 걸린 자리를 **덩이로 모은다.** 문항 한 덩이는 몇 줄에 붙어 있으므로
+       y 가 MBB_GAP 보다 벌어지면 다른 덩이로 본다. 가장 두꺼운 덩이를 쓴다. */
+  var MBB_MAXHIT = 3;        /* 한 쪽에 이보다 자주 나오는 어절은 버린다 */
+  var MBB_GAP = 0.028;       /* 쪽 높이의 2.8% — 글줄 두 줄쯤 */
+
+  function mbbHitsOf(flat, items, needles) {
+    var hit = [];
+    for (var n = 0; n < needles.length; n++) {
+      var w = needles[n];
+      if (!w || w.length < 2) continue;
+      var at = [], i0 = flat.s.indexOf(w);
+      while (i0 >= 0) { at.push(i0); i0 = flat.s.indexOf(w, i0 + w.length); }
+      if (!at.length || at.length > MBB_MAXHIT) continue;
+      for (var a = 0; a < at.length; a++) {
+        for (var k = 0; k < w.length; k++) {
+          var it = items[flat.idx[at[a] + k]];
+          if (it) hit.push(it);
+        }
+      }
+    }
+    return hit;
+  }
+
+  /* y 로 덩이를 갈라 가장 두꺼운 덩이만 돌려준다 */
+  function mbbCluster(hits) {
+    if (hits.length < 2) return hits;
+    var ys = hits.slice().sort(function (a, b) { return a.y - b.y; });
+    var best = null, cur = [ys[0]];
+    for (var i = 1; i < ys.length; i++) {
+      if (ys[i].y - ys[i - 1].y <= MBB_GAP) { cur.push(ys[i]); }
+      else { if (!best || cur.length > best.length) best = cur; cur = [ys[i]]; }
+    }
+    if (!best || cur.length > best.length) best = cur;
+    return best;
+  }
+
+  function mbbBox(hits) {
+    if (!hits.length) return null;
+    var x0 = 1, y0 = 1, x1 = 0, y1 = 0;
+    for (var i = 0; i < hits.length; i++) {
+      var o = hits[i];
+      if (o.x < x0) x0 = o.x;
+      if (o.x > x1) x1 = o.x;
+      if (o.y < y0) y0 = o.y;
+      if (o.y > y1) y1 = o.y;
+    }
+    return { x0: x0, y0: y0, x1: x1, y1: y1, n: hits.length };
+  }
+
+  /* §2-C — 문제 무리와 해설 무리를 아우른다. 너무 벌어지면 조밀한 쪽만. */
+  function mbbBorder(uid, items) {
+    var t = mbbQText(uid);
+    if (!t) return { ok: false, why: 'notext' };
+    var flat = mbbFlat(items);
+    var a = mbbTokens(t.munje), b = mbbTokens(t.haeseol);
+    /* 판례 열의 번호도 문제 쪽 재료로 넣는다 — 그 쪽에 박혀 있을 값이다 */
+    a.cases = a.cases.concat(mbbTokens(t.panrye).cases);
+    /* 판례번호를 먼저 맞춘다 */
+    var hq = mbbCluster(mbbHitsOf(flat, items, a.cases).concat(mbbHitsOf(flat, items, a.toks)));
+    var hh = mbbCluster(mbbHitsOf(flat, items, b.cases).concat(mbbHitsOf(flat, items, b.toks)));
+    var bq = mbbBox(hq), bh = mbbBox(hh);
+    if (!bq && !bh) return { ok: false, why: 'nohit' };
+    if (bq && bh) {
+      var lo = Math.min(bq.y0, bh.y0), hi = Math.max(bq.y1, bh.y1);
+      if (hi - lo > MBB_SPLIT_MAX) {
+        var pick = (bq.n >= bh.n) ? bq : bh;
+        return { ok: true, box: pick, both: false, split: true,
+                 nq: bq.n, nh: bh.n };
+      }
+      return { ok: true, both: true, split: false, nq: bq.n, nh: bh.n,
+               box: { x0: Math.min(bq.x0, bh.x0), y0: lo,
+                      x1: Math.max(bq.x1, bh.x1), y1: hi, n: bq.n + bh.n } };
+    }
+    var one = bq || bh;
+    return { ok: true, box: one, both: false, split: false,
+             nq: bq ? bq.n : 0, nh: bh ? bh.n : 0 };
+  }
+
+  /* 사람이 찍은 핀이 있으면 그것이 이긴다 */
+  function mbbPickedOf(uid, docid) {
+    try {
+      var arr = window.oxCoord && window.oxCoord.coordsOf ? window.oxCoord.coordsOf(uid) : [];
+      for (var i = 0; i < arr.length; i++) {
+        if (arr[i] && arr[i].doc === docid && arr[i].r && arr[i].r.length === 4) {
+          return { x0: arr[i].r[0], y0: arr[i].r[1], x1: arr[i].r[2], y1: arr[i].r[3] };
+        }
+      }
+    } catch (e) { }
+    return null;
+  }
+
+  /* ---------- §1-A 받은 책을 기기에 재워 둔다 ---------- */
+  async function mbbPdfFromCache(docid, pdfMd5) {
+    try {
+      var r = await window.dbGet('bookpdf:' + docid);
+      if (r && r.pdfMd5 === pdfMd5 && r.buf && r.buf.byteLength > 2000) return r.buf;
+    } catch (e) { }
+    return null;
+  }
+  async function mbbPdfToCache(docid, pdfMd5, buf) {
+    try { await window.dbPut('bookpdf:' + docid, { pdfMd5: pdfMd5, buf: buf, at: Date.now() }); }
+    catch (e) { MBB_STAT.cacheErr = String(e && e.message || e); return false; }
+    return true;
+  }
+  async function mbbForgetBooks() {
+    var n = 0;
+    for (var i = 0; i < MBB_DOCS.length; i++) {
+      try { await window.dbPut('bookpdf:' + MBB_DOCS[i], null); n++; } catch (e) { }
+    }
+    MBB_DOC = {};
+    return n;
+  }
+
+  /* ---------- §3 손으로 찍기 — 지금 있는 자리 찍기 길을 그대로 쓴다 ----------
+     ⚠ 새 저장 자리를 만들지 않는다. `openViewer(uid,'pick')` -> `newCoordKey` -> `saveCoords` 그대로다.
+     그 길이 서려면 ① `docs()` 에 그 책이 있어야 하고 ② `openDoc` 이 그 책을 열 수 있어야 한다.
+     ⚠ `meta.hash` 는 **언제나 `책메타.json` 의 `hash`** 다 — `hashBuf` 로 덮으면 핀이 stale 이 된다(§1-D). */
+  async function mbbRegisterDoc(docid) {
+    var m = await mbbMeta(docid);
+    if (!m) return false;
+    var meta = docs(), cur = meta[docid] || {};
+    meta[docid] = { name: m.file, file: m.file, pages: m.pages, hash: m.hash,
+                    at: cur.at || new Date().toISOString().slice(0, 10), book: 1 };
+    saveDocs(meta);
+    return true;
+  }
+
+  /* `assetDoc` 과 같은 꼴의 껍데기 — 그림은 pdf.js 가, 글자층은 배달된 것이 낸다.
+     ⚠ `assetDoc` 을 고치지 않는다. 정리OMR 은 지금 길 그대로 간다. */
+  async function mbbBookDoc(docid) {
+    var m = await mbbMeta(docid);
+    var doc = await mbbDoc(docid);
+    return {
+      numPages: m ? m.pages : doc.numPages,
+      getPage: async function (n) {
+        var p = Math.min(Math.max(1, n), doc.numPages);
+        var pg = await doc.getPage(p);
+        var w = null;
+        try { w = await mbbWords(docid, p); } catch (e) { w = null; }
+        var base = pg.getViewport({ scale: 1 });
+        return {
+          _p: { w: (w ? w.w : Math.round(base.width)), h: (w ? w.h : Math.round(base.height)),
+                words: (w ? w.words : '') },
+          getViewport: function (o) { return pg.getViewport(o); },
+          render: function (o) { return pg.render(o); }
+        };
+      }
+    };
+  }
+
+  async function mbBookPick(uid, docid, p) {
+    try {
+      await mbbRegisterDoc(docid);
+      localStorage.setItem(LAST_KEY, docid);
+      DOCCACHE[docid] = await mbbBookDoc(docid);
+      if (typeof openViewer === 'function') await openViewer(uid, 'pick');
+      else alert('자리 찍기 화면을 열 수 없습니다.');
+    } catch (e) {
+      alert('자리 찍기를 열지 못했습니다 — ' + (e && e.message || e));
+    }
+  }
+
+  /* ---------- §5-C 쪽 팝업 ---------- */
+  function mbbBorderHTML(bd, picked) {
+    var b = picked || (bd && bd.ok ? bd.box : null);
+    if (!b) return '';
+    var L = (b.x0 * 100).toFixed(2), T = (b.y0 * 100).toFixed(2);
+    var W = Math.max(0.5, (b.x1 - b.x0) * 100).toFixed(2);
+    var H = Math.max(0.5, (b.y1 - b.y0) * 100).toFixed(2);
+    /* ⚠ 테두리 선 하나뿐이다 — 덮개·형광·글자 가리기 금지 */
+    return '<div class="mbb-border" style="position:absolute;left:calc(' + L + '% - 6px);top:calc(' + T
+      + '% - 6px);width:calc(' + W + '% + 12px);height:calc(' + H + '% + 12px);'
+      + 'border:2px solid ' + (picked ? '#2563eb' : '#dc2626') + ';border-radius:4px;'
+      + 'pointer-events:none;box-sizing:border-box"></div>';
+  }
+
   async function mbBookPage(docid, p) {
     var key = 'bookpg-' + docid + '-' + p;
-    var m = MBB_META[docid];
     var vol = MBB_VOLNAME[MBB_VOL[docid]] || docid;
     var pr = mbbPrint(docid, p);
-    oxWinOpen(key, vol + ' · ' + (pr == null ? ('PDF ' + p + '쪽') : ('인쇄 ' + pr + '쪽')),
-      'PDF ' + p, '<div style="padding:12px;font-size:12px;color:#6b7280">쪽을 받는 중…</div>',
-      520, { resize: true, sizeKey: 'bookpg' });
+    var uid = MBB_OPEN_UID || '';
+    oxWinOpen(key, vol + ' ' + (pr == null ? (p + '쪽') : (pr + '쪽')), 'PDF ' + p,
+      '<div style="padding:12px;font-size:12px;color:#6b7280">쪽을 받는 중…</div>',
+      560, { resize: true, sizeKey: 'bookpg' });
     var body = oxWinBody(key);
     if (!body) return;
     try {
@@ -5993,26 +6259,65 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       var cv = document.createElement('canvas');
       cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
       cv.style.cssText = 'display:block;width:100%;height:auto;background:#fff';
-      body.innerHTML = '';
-      body.appendChild(cv);
+
+      var bd = null, picked = null, note = '';
+      if (uid) {
+        picked = mbbPickedOf(uid, docid);
+        if (!picked && wrec) {
+          var items = await pageItems({ _p: { words: wrec.words } });
+          bd = mbbBorder(uid, items);
+          if (!bd.ok) note = '이 쪽에서 어디인지 못 짚었습니다.';
+        }
+      }
+      MBB_LAST = { docid: docid, p: p, uid: uid, bd: bd, picked: picked };
+
+      var btn = 'font-size:11px;padding:3px 9px;border:1px solid #d1d5db;border-radius:6px;'
+              + 'background:#f9fafb;color:#374151;cursor:pointer';
+      body.innerHTML =
+        '<div id="mbbwrap-' + key + '" style="position:relative;line-height:0"></div>'
+        + (note ? '<div style="padding:6px 10px;font-size:11px;color:#b45309">' + note + '</div>' : '')
+        + '<div style="display:flex;gap:6px;padding:7px 10px;border-top:1px solid #e5e7eb;background:#f8fafc">'
+        + '<button style="' + btn + '" onclick="mbBookBorderToggle(\'' + key + '\')">테두리 끄기</button>'
+        + (uid ? '<button style="' + btn + '" onclick="mbBookPick(\'' + uid + '\',\'' + docid + '\',' + p + ')">자리 직접 찍기</button>' : '')
+        + '</div>';
+      var wrap = document.getElementById('mbbwrap-' + key);
+      wrap.appendChild(cv);
       await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
-      if (wrec) MBB_LAST = { docid: docid, p: p, shell: mbbShell(pg, wrec) };
+      var bh = mbbBorderHTML(bd, picked);
+      if (bh) {
+        wrap.insertAdjacentHTML('beforeend', bh);
+        /* 테두리가 화면 가운데로 오게 스크롤한다 */
+        var b = picked || bd.box;
+        var mid = (b.y0 + b.y1) / 2 * cv.clientHeight;
+        body.scrollTop = Math.max(0, mid - body.clientHeight / 2);
+      }
     } catch (e) {
       body.innerHTML = '<div style="padding:12px;font-size:12px;color:#b91c1c">받지 못했습니다.'
         + '<div style="color:#6b7280;font-weight:400;margin-top:4px">' + mbbSafe(e && e.message) + '</div></div>';
     }
   }
-  var MBB_LAST = null;
+
+  function mbBookBorderToggle(key) {
+    var el = document.getElementById('oxwin-' + key);
+    if (!el) return;
+    el.querySelectorAll('.mbb-border').forEach(function (d) { d.hidden = !d.hidden; });
+  }
+  var MBB_LAST = null, MBB_OPEN_UID = null;
 
   window.mbBookOpen = mbBookOpen;
   window.mbBookPage = mbBookPage;
+  window.mbBookPick = mbBookPick;
+  window.mbBookBorderToggle = mbBookBorderToggle;
   /* 검산용 — 화면을 거치지 않고 재는 자리 */
   window.mbBook = {
     meta: mbbMeta, words: mbbWords, doc: mbbDoc, jari: mbbJari, shell: mbbShell,
     items: pageItems, fingerprint: fingerprint, fpAt: fpAt, group: mbbGroup,
     stat: MBB_STAT, docs: MBB_DOCS, file: MBB_FILE, files: MBB_BOOKFILE, gapcut: MBB_GAPCUT,
     tune: function (ns, ck) { MBB_NOSTREAM = ns; MBB_CHUNK = ck; MBB_DOC = {}; },
-    last: function () { return MBB_LAST; }
+    last: function () { return MBB_LAST; },
+    border: mbbBorder, qtext: mbbQText, picked: mbbPickedOf, cluster: mbbCluster,
+    bookDoc: mbbBookDoc, register: mbbRegisterDoc, forget: mbbForgetBooks,
+    setUid: function (u) { MBB_OPEN_UID = u; }
   };
 
   window.oxCoord = { open: openViewer, coords: coords, coordsOf: coordsOf, docs: docs, crop: crop };
