@@ -1253,7 +1253,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         /* ★ 2026-08-31 — `ox_q_fix`(정정)를 여기 넣었다. 8/29 의 「동기화 안 함」은
            **「마스터 엑셀에 자동 반영하지 않는다」** 쪽이 확정된 것이고(2026-08-31 사용자 확인),
            기기 사이에 보이는 것은 별개다. 옛 백업 파일도 이 목록으로 읽히므로 호환이 유지된다. */
-        const SYNC_KEYS = ['ox_q_history', 'ox_q_tags', 'ox_q_memos', 'ox_q_logic', 'ox_q_links', 'ox_q_marks', 'ox_chap_history', 'ox_in_progress', 'ox_q_coords', 'ox_omr_docs', 'ox_q_last', 'ox_q_type', 'ox_weak_stage', 'ox_mem_cards', 'ox_q_fix', 'ox_q_reflinks'];
+        const SYNC_KEYS = ['ox_q_history', 'ox_q_tags', 'ox_q_memos', 'ox_q_logic', 'ox_q_links', 'ox_q_marks', 'ox_chap_history', 'ox_in_progress', 'ox_q_coords', 'ox_omr_docs', 'ox_q_last', 'ox_q_type', 'ox_weak_stage', 'ox_mem_cards', 'ox_q_fix', 'ox_q_reflinks', 'ox_q_geunge'];
 
         function syncStatus(msg, tone) {
             const el = document.getElementById('sync-status');
@@ -2444,6 +2444,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                             </label>
                         </div>
 
+                        <!-- 근거 — 늘 열린 한 줄 (2026-09-12) · O/X 아래 · 해설 미리보기 위 -->
+                        ${ggLineHTML(item.id)}
+
                         <!-- 해설 미리보기 토글 (채점 전) -->
                         ${item.pending ? '' : `<div class="mt-2 flex justify-end items-center gap-3">
                             <button id="logic-btn-${item.id}" onclick="toggleLogic('${item.id}')" class="${(logicText || refHasText(item.id,'logic')) ? '' : 'hide '}text-[12px] text-blue-700 hover:text-blue-900 hover:underline flex items-center gap-1">📐 논리 보기</button>
@@ -2918,7 +2921,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            찾는 대상 — uid · 문제 번호 · 본문 · 출처 · 단원 */
         /* ★ `kind` 가 없으면 지금과 **한 글자도 다르지 않게** 군다(옛 부르는 자리를 안 고친다).
            kind='memo'  : 메모가 비지 않은 문항만 · 메모 글까지 검색
-           kind='logic' : 논리가 비지 않은 문항만 · 논리 글까지 검색 */
+           kind='logic' : 논리가 비지 않은 문항만 · 논리 글까지 검색
+           kind='geunge': 근거가 비지 않은 문항만 · 근거 글까지 검색.
+             ★ 이 갈래만 **고르는 것이 아니라 가는 것**이다 — 누르면 `jumpFromSearch` 로 그 문항에 간다.
+               그래서 「이미 넣음」도 없고, 제 문항도 결과에서 빼지 않는다. */
         function linkSearch(ownerId, kind) {
             const sfx = kind ? `${kind}-${ownerId}` : `${ownerId}`;
             const box = document.getElementById(`link-results-${sfx}`);
@@ -2929,15 +2935,17 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const low = term.toLowerCase();
             const memos = kind ? JSON.parse(localStorage.getItem('ox_q_memos') || '{}') : null;
             const extraOf = q => kind === 'memo' ? String(memos[q.id] || '')
-                               : kind === 'logic' ? String(logicOf(q) || '') : '';
-            const already = kind
+                               : kind === 'logic' ? String(logicOf(q) || '')
+                               : kind === 'geunge' ? ggTextOf(q.id) : '';
+            const already = kind === 'geunge' ? []
+                : kind
                 ? refPicked(ownerId, kind).map(x => x.toUpperCase())
                 : String((document.getElementById(`link-input-${ownerId}`) || {}).value || '')
                     .split(',').map(x => x.trim().toUpperCase()).filter(Boolean);
             const hits = [];
             for (let i = 0; i < quizData.length && hits.length < 30; i++) {
                 const q = quizData[i];
-                if (String(q.id) === String(ownerId).replace(/^cmp_/, '')) continue;   /* 창 안 편집기는 cmp_ 접두사를 쓴다 */
+                if (kind !== 'geunge' && String(q.id) === String(ownerId).replace(/^cmp_/, '')) continue;   /* 창 안 편집기는 cmp_ 접두사를 쓴다 · 근거 검색은 제 문항도 보여 준다 */
                 const extra = extraOf(q);
                 if (kind && !String(extra).trim()) continue;       /* 비어 있으면 후보가 아니다 */
                 const no = `${q.displayNo ?? q.probNum}${q.subNum || ''}`;
@@ -2953,12 +2961,15 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 const on = already.indexOf(String(q.id).toUpperCase()) !== -1;
                 const where = `${q.subject || ''} · ${q.subChapter || ''}`;
                 /* 그 글 한 줄 — `showFieldList` 가 쓰는 바로 그 클래스다(새로 짓지 않는다) */
-                const fcls = kind === 'logic' ? 'text-indigo-900 bg-indigo-50 border-indigo-400'
+                const fcls = kind === 'geunge' ? 'text-blue-800 bg-blue-50 border-blue-400'
+                           : kind === 'logic' ? 'text-indigo-900 bg-indigo-50 border-indigo-400'
                                               : 'text-yellow-800 bg-yellow-50 border-yellow-400';
+                const ftxt = kind === 'geunge' ? ggPickLine(q.id, low) : extraOf(q);
                 const fline = kind
-                    ? `<div class="border-l-2 pl-2 ${fcls} text-[11.5px] mt-0.5 whitespace-pre-wrap">${escHtml(String(extraOf(q)).slice(0, 90))}</div>`
+                    ? `<div class="border-l-2 pl-2 ${fcls} text-[11.5px] mt-0.5 whitespace-pre-wrap">${escHtml(String(ftxt).slice(0, 90))}</div>`
                     : '';
-                const call = kind ? `addRefId('${ownerId}','${kind}','${q.id}')` : `addLinkId('${ownerId}','${q.id}')`;
+                const call = kind === 'geunge' ? `jumpFromSearch('${q.id}')`
+                           : kind ? `addRefId('${ownerId}','${kind}','${q.id}')` : `addLinkId('${ownerId}','${q.id}')`;
                 return `<button onclick="${call}" class="block w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-indigo-50 transition ${on ? 'opacity-50' : ''}">
                     <div class="flex items-center gap-1.5 mb-0.5">
                         <span class="text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">ID ${q.id}</span>
@@ -3485,6 +3496,212 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         function escAttr(t) { return String(t == null ? '' : t).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
         function escHtml(t) {
             return String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+        }
+
+        /* ══════════════ 근거 (2026-09-12) ══════════════
+           문항 카드 O/X 줄 바로 밑에 **늘 열린** 한 줄. 한 줄 적고 Enter 하면 번호 칩으로 닫힌다.
+
+           ★ 칩 색은 **적는 순간** 그 문항의 상태로 굳는다 — 맞음 파랑 · 틀림 빨강 · 안 품 회색.
+             뒤에 다시 풀어 결과가 바뀌어도 **이미 박힌 색은 안 바뀐다.** 그래서 `ok` 를 그때 값으로
+             항목에 박아 두고 다시는 계산하지 않는다. `gradeCurrentPage` 는 손대지 않았다 —
+             그 함수는 카드를 다시 그리지 않고 제자리만 고치므로 칩에 닿지 않는다.
+
+           ⚠ `k`(항목 고유 키)를 꼭 남긴다. 지금 동기화 병합은 **칸 단위**(한 칸 = 문항 하나)라
+             두 기기에서 같은 문항에 각각 적으면 나중 것이 통째로 이긴다. 항목 단위로 합치는 것은
+             **다음 판**이고, 그때 `k` 가 없으면 합칠 수가 없다. 이 판에서 합치기는 만들지 않는다.
+
+           모양 : { "Q0279": [ { k, i, t, ok, ts, cs:[{k,t,ts}] } ] }
+             i  = 칩 번호. 그 문항에서 지금까지 만든 것 중 가장 큰 i + 1 (지운 뒤에도 다시 안 쓴다)
+             ok = 저장하는 순간 `ox_q_history[uid]` 그대로 (true / false / 키 없으면 null)
+
+           ⚠ 엑셀에는 열을 만들지 않는다(사용자 확정). 내보내기 모양도 안 바꾼다.            */
+        const GG_KEY = 'ox_q_geunge';
+        const GG_TMAX = 200, GG_CMAX = 300, GG_CN = 20;
+        function ggStore() { try { return JSON.parse(localStorage.getItem(GG_KEY) || '{}'); } catch (e) { return {}; } }
+        function ggOf(uid) { const a = ggStore()[uid]; return Array.isArray(a) ? a : []; }
+        function ggSaveList(uid, list) {
+            const o = ggStore();
+            if (list && list.length) o[uid] = list; else delete o[uid];
+            localStorage.setItem(GG_KEY, JSON.stringify(o));
+        }
+        function ggNewKey(p) { return p + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6); }
+        function ggItem(uid, k) { return ggOf(uid).find(g => g && g.k === k) || null; }
+        function ggMD(ts) { const d = new Date(ts || 0); return (d.getMonth() + 1) + '/' + d.getDate(); }
+        function ggOkWord(ok) { return ok === true ? '맞음' : ok === false ? '틀림' : '안 품'; }
+        function ggOkCls(ok) {
+            return ok === true ? 'text-blue-700 bg-blue-50 border-blue-300'
+                 : ok === false ? 'text-red-700 bg-red-50 border-red-300'
+                                : 'text-slate-500 bg-slate-50 border-slate-300';
+        }
+
+        function ggChipHTML(uid, g) {
+            return `<span id="gg-chip-${uid}-${g.k}" onclick="ggToggle('${uid}','${g.k}')" title="${escHtml(g.t || '')}"
+                class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2.5 py-0.5 border ${ggOkCls(g.ok)}">${g.i}</span>`;
+        }
+        function ggCsHTML(cs) {
+            if (!Array.isArray(cs) || !cs.length) return '<div class="text-[11.5px] text-gray-400 py-1">댓글 없음</div>';
+            return cs.map(c => `<div class="flex gap-1.5 py-1 border-b border-dashed border-gray-100 text-[12px] text-slate-700">
+                <span class="text-[10px] font-bold text-gray-400 whitespace-nowrap pt-0.5">${ggMD(c.ts)}</span>
+                <span class="whitespace-pre-wrap">${escHtml(c.t || '')}</span>
+            </div>`).join('');
+        }
+        function ggPanelHTML(uid, g) {
+            return `<div id="gg-pan-${uid}-${g.k}" class="hide mt-1.5 border border-slate-300 rounded-lg bg-slate-50/40 overflow-hidden">
+                <div class="flex items-center gap-2 px-2.5 py-1.5 border-b border-gray-100 bg-gray-50">
+                    <span id="gg-t-${uid}-${g.k}" class="flex-1 text-[12.5px] text-gray-800 whitespace-pre-wrap">${escHtml(g.t || '')}</span>
+                    <span class="text-[10.5px] font-bold text-slate-500 whitespace-nowrap">${ggOkWord(g.ok)} · ${ggMD(g.ts)}</span>
+                    <button type="button" onclick="ggEdit('${uid}','${g.k}')" class="text-[11px] font-bold text-blue-600 hover:underline">고치기</button>
+                    <button type="button" onclick="ggDel('${uid}','${g.k}')" class="text-[11px] font-bold text-red-700 hover:underline">지우기</button>
+                </div>
+                <div id="gg-edit-${uid}-${g.k}" class="hide flex gap-1.5 px-2.5 py-1.5 border-b border-gray-100">
+                    <input id="gg-ein-${uid}-${g.k}" type="text" value="${escHtml(g.t || '')}" autocomplete="off"
+                        onkeydown="ggEditKey(event,'${uid}','${g.k}')"
+                        class="flex-1 border border-blue-300 rounded-lg px-2 py-1 text-[12.5px] outline-none focus:border-blue-500">
+                    <button type="button" onclick="ggEditSave('${uid}','${g.k}')" class="text-[11px] font-bold text-white bg-blue-600 border border-blue-600 rounded-md px-2.5 py-1">저장</button>
+                    <button type="button" onclick="ggEdit('${uid}','${g.k}')" class="text-[11px] font-bold text-slate-600 bg-white border border-slate-300 rounded-md px-2.5 py-1">취소</button>
+                </div>
+                <div class="px-2.5 pb-2 pt-1">
+                    <div id="gg-cs-${uid}-${g.k}">${ggCsHTML(g.cs)}</div>
+                    <div class="flex gap-1.5 mt-1.5">
+                        <input id="gg-cin-${uid}-${g.k}" type="text" autocomplete="off" onkeydown="ggReplyKey(event,'${uid}','${g.k}')"
+                            class="flex-1 border border-gray-200 rounded-lg px-2 py-1 text-[12.5px] outline-none focus:border-blue-300 bg-white">
+                        <button type="button" onclick="ggReply('${uid}','${g.k}')" class="text-[11px] font-bold text-white bg-blue-600 border border-blue-600 rounded-md px-2.5 py-1">달기</button>
+                    </div>
+                </div>
+            </div>`;
+        }
+        /* 근거가 하나도 없어도 라벨과 빈 칸은 **늘 보인다**. 입력칸 안내 문구는 빈 문자열이다(사용자 확정). */
+        function ggLineHTML(uid) {
+            const list = ggOf(uid);
+            return `<div id="gg-box-${uid}" class="mt-2">
+                <div id="gg-line-${uid}" class="flex items-center gap-1.5 flex-wrap">
+                    <span class="text-[12px] font-extrabold text-slate-600 whitespace-nowrap">근거 :</span>
+                    <span id="gg-chips-${uid}" class="flex items-center gap-1.5 flex-wrap">${list.map(g => ggChipHTML(uid, g)).join('')}</span>
+                    <input id="gg-in-${uid}" type="text" placeholder="" autocomplete="off"
+                        onkeydown="ggKeyDown(event,'${uid}')" onblur="ggBlurSave('${uid}')"
+                        class="flex-1 min-w-[80px] border border-slate-300 rounded-lg px-2.5 py-1.5 text-[13px] outline-none focus:border-blue-500 bg-white">
+                    <button type="button" onclick="ggSearchToggle('${uid}')" title="근거에서 찾기"
+                        class="flex-none w-7 h-7 border border-gray-200 rounded-lg bg-white text-gray-400 text-[13px] leading-none hover:text-blue-600 hover:border-blue-300">🔍</button>
+                </div>
+                <div id="gg-pans-${uid}">${list.map(g => ggPanelHTML(uid, g)).join('')}</div>
+                <div id="gg-search-${uid}" class="hide mt-1.5 border border-slate-300 rounded-lg bg-white overflow-hidden">
+                    <div class="px-2.5 py-1.5 border-b border-gray-100 bg-gray-50 text-[11.5px] font-bold text-slate-600">🔍 근거에서 찾기</div>
+                    <input id="link-search-geunge-${uid}" type="text" placeholder="" autocomplete="off"
+                        oninput="linkSearch('${uid}','geunge')" onfocus="linkSearch('${uid}','geunge')"
+                        class="w-full px-2.5 py-1.5 text-[12.5px] outline-none border-b border-gray-100">
+                    <div id="link-results-geunge-${uid}" class="hide max-h-56 overflow-y-auto"></div>
+                </div>
+            </div>`;
+        }
+
+        /* ---------- 적기 ----------
+           Enter 로 저장한다. 칸을 벗어날 때(blur) 글자가 남아 있으면 그것도 저장한다 — 적어 놓고 잃지 않게.
+           빈 줄·공백만 있는 줄은 안 받는다. 200자를 넘으면 자르지 않고 **조용히 아무 일도 안 한다**.
+           ⚠ 카드를 다시 그리지 않는다 — 그 자리에 칩과 판만 붙이고 칸을 비운다. */
+        function ggKeyDown(e, uid) { if (e.key === 'Enter') { e.preventDefault(); ggAdd(uid, true); } }
+        function ggBlurSave(uid) { ggAdd(uid, false); }
+        function ggAdd(uid, keepFocus) {
+            const inp = document.getElementById(`gg-in-${uid}`);
+            if (!inp) return;
+            const t = String(inp.value || '').trim();
+            if (!t || t.length > GG_TMAX) return;
+            const hist = JSON.parse(localStorage.getItem('ox_q_history') || '{}');
+            const ok = hist[uid] === true ? true : hist[uid] === false ? false : null;
+            const list = ggOf(uid);
+            const g = {
+                k: ggNewKey('g_' + uid + '_'),
+                i: list.reduce((m, x) => Math.max(m, Number(x && x.i) || 0), 0) + 1,
+                t: t, ok: ok, ts: Date.now(), cs: []
+            };
+            list.push(g);
+            ggSaveList(uid, list);
+            const chips = document.getElementById(`gg-chips-${uid}`);
+            if (chips) chips.insertAdjacentHTML('beforeend', ggChipHTML(uid, g));
+            const pans = document.getElementById(`gg-pans-${uid}`);
+            if (pans) pans.insertAdjacentHTML('beforeend', ggPanelHTML(uid, g));
+            inp.value = '';
+            if (keepFocus) inp.focus();
+        }
+
+        /* ---------- 펼치기 · 고치기 · 지우기 ---------- */
+        function ggToggle(uid, k) {
+            const p = document.getElementById(`gg-pan-${uid}-${k}`);
+            if (!p) return;
+            p.classList.toggle('hide');
+            const c = document.getElementById(`gg-chip-${uid}-${k}`);
+            if (c) { c.classList.toggle('ring-2'); c.classList.toggle('ring-blue-200'); }
+        }
+        function ggEdit(uid, k) {
+            const b = document.getElementById(`gg-edit-${uid}-${k}`);
+            if (!b) return;
+            const open = b.classList.contains('hide');
+            const inp = document.getElementById(`gg-ein-${uid}-${k}`);
+            const g = ggItem(uid, k);
+            if (inp && g) inp.value = g.t || '';        /* 취소하면 저장된 글로 되돌린다 */
+            b.classList.toggle('hide');
+            if (open && inp) inp.focus();
+        }
+        function ggEditKey(e, uid, k) { if (e.key === 'Enter') { e.preventDefault(); ggEditSave(uid, k); } }
+        function ggEditSave(uid, k) {
+            const inp = document.getElementById(`gg-ein-${uid}-${k}`);
+            if (!inp) return;
+            const t = String(inp.value || '').trim();
+            if (!t || t.length > GG_TMAX) return;
+            const list = ggOf(uid);
+            const g = list.find(x => x && x.k === k);
+            if (!g) return;
+            g.t = t;                                    /* ⚠ 글만 바꾼다 — ok·ts·i 는 안 건드린다 */
+            ggSaveList(uid, list);
+            const tv = document.getElementById(`gg-t-${uid}-${k}`);
+            if (tv) tv.textContent = t;
+            const c = document.getElementById(`gg-chip-${uid}-${k}`);
+            if (c) c.title = t;
+            const b = document.getElementById(`gg-edit-${uid}-${k}`);
+            if (b) b.classList.add('hide');
+        }
+        function ggDel(uid, k) {
+            const g = ggItem(uid, k);
+            if (!g) return;
+            if (!confirm('근거 ' + g.i + ' 을(를) 지웁니다.\n\n' + (g.t || ''))) return;
+            ggSaveList(uid, ggOf(uid).filter(x => x && x.k !== k));   /* 뒤 번호는 다시 매기지 않는다 */
+            const p = document.getElementById(`gg-pan-${uid}-${k}`); if (p) p.remove();
+            const c = document.getElementById(`gg-chip-${uid}-${k}`); if (c) c.remove();
+        }
+
+        /* ---------- 댓글 — 쌓기만 한다(고치기·지우기는 다음 판) ---------- */
+        function ggReplyKey(e, uid, k) { if (e.key === 'Enter') { e.preventDefault(); ggReply(uid, k); } }
+        function ggReply(uid, k) {
+            const inp = document.getElementById(`gg-cin-${uid}-${k}`);
+            if (!inp) return;
+            const t = String(inp.value || '').trim();
+            if (!t || t.length > GG_CMAX) return;       /* 300자 넘으면 조용히 안 받는다 */
+            const list = ggOf(uid);
+            const g = list.find(x => x && x.k === k);
+            if (!g) return;
+            if (!Array.isArray(g.cs)) g.cs = [];
+            if (g.cs.length >= GG_CN) return;           /* 한 근거에 20개까지 */
+            g.cs.push({ k: ggNewKey('c_' + uid + '_'), t: t, ts: Date.now() });
+            ggSaveList(uid, list);
+            const box = document.getElementById(`gg-cs-${uid}-${k}`);
+            if (box) box.innerHTML = ggCsHTML(g.cs);
+            inp.value = '';
+            inp.focus();
+        }
+
+        /* ---------- 🔍 근거 검색 — 새로 짓지 않고 `linkSearch` 에 갈래를 붙였다 ---------- */
+        function ggTextOf(uid) { return ggOf(uid).map(g => String((g && g.t) || '')).join(' \n'); }
+        function ggPickLine(uid, low) {
+            const list = ggOf(uid);
+            const hit = list.find(g => String((g && g.t) || '').toLowerCase().includes(low)) || list[0];
+            return hit ? (hit.i + '. ' + (hit.t || '')) : '';
+        }
+        function ggSearchToggle(uid) {
+            const b = document.getElementById(`gg-search-${uid}`);
+            if (!b) return;
+            b.classList.toggle('hide');
+            if (b.classList.contains('hide')) return;
+            const inp = document.getElementById(`link-search-geunge-${uid}`);
+            if (inp) { inp.focus(); linkSearch(uid, 'geunge'); }
         }
 
         /* ---------- 유형(조문형/혼합/판례형) ----------
