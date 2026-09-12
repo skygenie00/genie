@@ -3346,23 +3346,13 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const uids = refOf(id, kind);
             if (!uids.length) return '';
             const isL = kind === 'logic';
-            const isG = kind === 'geunge';          /* add3 — 근거 갈래는 검색 결과가 쓰는 그 파랑 그대로 */
-            const cls = isG ? 'text-blue-800 bg-blue-50 border-blue-400'
-                     : isL ? 'text-indigo-900 bg-indigo-50 border-indigo-400'
-                           : 'text-yellow-800 bg-yellow-50 border-yellow-400';
+            const cls = isL ? 'text-indigo-900 bg-indigo-50 border-indigo-400' : 'text-yellow-800 bg-yellow-50 border-yellow-400';
             const icon = isL ? '📐' : '📝';
             return uids.map(u => {
                 const t = refTextOf(u, kind);
                 if (t === null || !String(t).trim()) return '';
-                /* ⚠ 메모·논리 머리줄은 한 글자도 안 바꾼다. `×` 는 근거 갈래에만 붙는다(지시서 §2-C). */
-                const head = isG
-                    ? `<span class="font-bold flex items-center gap-1 mb-0.5 text-[11px] opacity-80">`
-                      + `<span class="flex-1">🔗 연결한 근거 · ${escHtml(u)}</span>`
-                      + `<button onclick="ggRefDel('${escAttr(id)}','${escAttr(u)}')" title="이 연결만 끊기"`
-                      + ` class="text-[13px] leading-none text-gray-400 hover:text-red-600 font-black px-1">×</button></span>`
-                    : `<span class="font-bold block mb-0.5 text-[11px] opacity-80">🔗 연결한 ${isL ? '논리' : '메모'} · ${escHtml(u)}</span>`;
                 return `<div class="mt-1.5 text-[12.5px] ${cls} p-2.5 rounded-lg border-l-4 border-dashed leading-relaxed whitespace-pre-wrap">`
-                    + head
+                    + `<span class="font-bold block mb-0.5 text-[11px] opacity-80">🔗 연결한 ${isL ? '논리' : '메모'} · ${escHtml(u)}</span>`
                     + `<span>${escHtml(String(t).replace(/!\[\[img_[^\]]+\]\]/g, ''))}</span></div>`;
             }).join('');
         }
@@ -3371,8 +3361,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const uids = refOf(id, kind);
             if (!uids.length) return '';
             const isL = kind === 'logic';
-            const cls = kind === 'geunge' ? 'text-blue-700 bg-blue-50 border-blue-300 hover:bg-blue-100'
-                      : isL ? 'text-indigo-700 bg-indigo-50 border-indigo-300 hover:bg-indigo-100'
+            const cls = isL ? 'text-indigo-700 bg-indigo-50 border-indigo-300 hover:bg-indigo-100'
                             : 'text-yellow-700 bg-yellow-50 border-yellow-300 hover:bg-yellow-100';
             return uids.map(u => {
                 const gone = refTextOf(u, kind) === null;
@@ -3752,15 +3741,15 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 <div id="gg-line-${uid}" class="flex items-center gap-1 flex-wrap">
                     <span class="text-[11px] font-extrabold text-slate-600 whitespace-nowrap">근거 :</span>
                     <span id="gg-chips-${uid}" class="flex items-center gap-1 flex-wrap">${list.map(g => ggChipHTML(uid, g)).join('')}</span>
+                    <span id="gg-refchips-${uid}" class="flex items-center gap-1 flex-wrap">${ggRefChipsHTML(uid)}</span>
                     <input id="gg-in-${uid}" type="text" placeholder="" autocomplete="off"
                         onkeydown="ggKeyDown(event,'${uid}')" onblur="ggBlurSave('${uid}')"
                         class="flex-1 min-w-[80px] border border-slate-300 rounded-md px-2 py-px text-[12px] leading-4 outline-none focus:border-blue-500 bg-white">
                     <button type="button" onclick="ggSearchToggle('${uid}')" title="근거에서 찾기"
                         class="flex-none w-5 h-5 border border-gray-200 rounded-md bg-white text-gray-400 text-[11px] leading-none hover:text-blue-600 hover:border-blue-300">🔍</button>
-                    <span id="reflink-geunge-btns-${uid}" class="flex items-center gap-1">${refBtnsHTML(uid, 'geunge')}</span>
                 </div>
-                <div id="reflink-geunge-${uid}">${refBoxHTML(uid, 'geunge')}</div>
                 <div id="gg-pans-${uid}">${list.map(g => ggPanelHTML(uid, g)).join('')}</div>
+                <div id="reflink-geunge-${uid}">${ggRefBoxHTML(uid)}</div>
                 <div id="gg-search-${uid}" class="hide mt-1.5 border border-slate-300 rounded-lg bg-white overflow-hidden">
                     <div class="px-2.5 py-1.5 border-b border-gray-100 bg-gray-50 text-[11.5px] font-bold text-slate-600">🔍 근거에서 찾기</div>
                     <input id="link-search-geunge-${uid}" type="text" placeholder="" autocomplete="off"
@@ -3874,11 +3863,56 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         /* ★ add3 §2-B — 근거 연결은 **저장 버튼 없이 바로** 들어간다.
            누르는 즉시 `ox_q_reflinks` 에 넣고 · 검색칸을 닫고 · 그 자리만 갈아 끼운다.
            ⚠ 카드를 다시 그리지 않는다. ⚠ 근거 **글**(`ox_q_geunge`)은 손대지 않는다. */
+        /* ★ 2026-09-12 (add4) — 연결한 근거도 **칩으로 닫는다.**
+           add3 은 연결분을 늘 펼쳐 둔 상자로 그렸는데, 내 근거는 칩으로 닫히니 규칙이 어긋났다
+           (사용자 실물 `Q4308`). 이제 `근거 :` 줄에 `🔗 <uid>` 칩 하나로 들어가고 **눌러야** 펼쳐진다.
+           🔍 오른쪽에 따로 서 있던 UID 버튼은 없앴다 — 칩이 그 일을 하니 둘일 이유가 없다.
+           ⚠ 저장 꼴은 그대로다 — `ox_q_reflinks[uid].geunge` · 새 키 없음 · `SYNC_KEYS` 무변.
+           ⚠ 메모·논리 연결분은 늘 보이는 상자 그대로다(지시서 §4 — 이 판은 근거만). */
+        function ggRefChipsHTML(uid) {
+            return refOf(uid, 'geunge').map(u => {
+                const gone = refTextOf(u, 'geunge') === null;
+                return `<span id="gg-refchip-${uid}-${u}" onclick="ggRefToggle('${escAttr(uid)}','${escAttr(u)}')"`
+                    + ` title="연결한 근거 · ${escHtml(u)}"`
+                    + ` class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4`
+                    + ` border border-dashed text-blue-800 bg-blue-50 border-blue-400 ${gone ? 'opacity-40' : ''}">🔗 ${escHtml(u)}</span>`;
+            }).join('');
+        }
+        /* 칩마다 **제 판**이다. 한 상자에 몰아 넣지 않는다(지시서 §2). 처음엔 접혀 있다. */
+        function ggRefBoxHTML(uid) {
+            return refOf(uid, 'geunge').map(u => {
+                const t = refTextOf(u, 'geunge');
+                const body = (t === null) ? '지금 데이터에 없음' : String(t);
+                return `<div id="refgg-box-${uid}-${u}" class="hide mt-1.5 text-[12.5px] text-blue-900 bg-blue-50`
+                    + ` border-l-4 border-dashed border-blue-400 rounded-lg px-2.5 py-2 leading-relaxed whitespace-pre-wrap">`
+                    + `<div class="flex items-center gap-2 text-[11px] font-extrabold text-blue-800 opacity-80 mb-0.5">`
+                    + `<span class="flex-1">🔗 연결한 근거 · ${escHtml(u)}</span>`
+                    + `<button type="button" onclick="showLinkedQuestion('${escAttr(u)}','${escAttr(uid)}')"`
+                    + ` class="font-bold text-blue-600 hover:underline">↪ 그 문제 보기</button>`
+                    + `<button type="button" onclick="ggRefDel('${escAttr(uid)}','${escAttr(u)}')"`
+                    + ` class="font-bold text-red-700 hover:underline">× 연결 끊기</button></div>`
+                    + `<div>${escHtml(body)}</div></div>`;
+            }).join('');
+        }
+        /* 눌림 표시는 내 근거 칩이 쓰는 그것을 그대로 쓴다(`ggToggle` 과 같은 두 이름) */
+        function ggRefToggle(uid, u) {
+            const p = document.getElementById(`refgg-box-${uid}-${u}`);
+            if (!p) return;
+            p.classList.toggle('hide');
+            const c = document.getElementById(`gg-refchip-${uid}-${u}`);
+            if (c) { c.classList.toggle('ring-2'); c.classList.toggle('ring-blue-200'); }
+        }
         function ggRefPaint(uid) {
+            /* 펼쳐 둔 판은 다시 그린 뒤에도 펼쳐 둔다(하나를 끊었다고 나머지가 접히면 안 된다) */
+            const open = refOf(uid, 'geunge').filter(u => {
+                const p = document.getElementById(`refgg-box-${uid}-${u}`);
+                return p && !p.classList.contains('hide');
+            });
+            const cs = document.getElementById(`gg-refchips-${uid}`);
+            if (cs) cs.innerHTML = ggRefChipsHTML(uid);
             const box = document.getElementById(`reflink-geunge-${uid}`);
-            if (box) box.innerHTML = refBoxHTML(uid, 'geunge');
-            const btns = document.getElementById(`reflink-geunge-btns-${uid}`);
-            if (btns) btns.innerHTML = refBtnsHTML(uid, 'geunge');
+            if (box) box.innerHTML = ggRefBoxHTML(uid);
+            open.forEach(u => ggRefToggle(uid, u));
         }
         function ggRefAdd(ownerId, uid) {
             if (String(uid).toUpperCase() === String(ownerId).toUpperCase()) return;
