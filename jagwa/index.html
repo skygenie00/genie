@@ -1349,6 +1349,48 @@ function inkGuard(box){
 }
 window.addEventListener('load',()=>{try{inkGuard($('#cardwrap'));inkGuard($('#stage'))}catch(e){}});
 
+/* ══════════════ 덮개 뚫기 — 펜 모드에서도 카드가 눌린다 (2026-09-13) ══════════════
+   `#card.penon #qink{pointer-events:auto}` 라 펜 툴에서는 필기 덮개가 카드를 덮는다(852줄).
+   밑에 있는 선택지(`.choices button`) · `정답 · 해설`(`#cDet summary`) · 보기지문(`.bogi .row`) ·
+   머리줄 칩(`.tag`)이 **하나도 안 눌린다.** 그래서 「보기」로 바꿔야만 눌렀다.
+   ⇒ 덮개 위의 톡이 **밑의 눌리는 것**을 겨냥했으면 획을 시작하지 않고 그것을 누른다.
+     밑에 눌릴 것이 없으면 그냥 획이다(점 찍기를 안 잃는다). */
+const UNDER_HIT='button,summary,a,label,[role="button"],.tag,.chip,.tl,.iconbtn,.btn,'
+  +'.row[data-k],[data-c],[data-tfx],[data-go],[data-page],[data-no],.snt,.trit';
+function underInk(x,y,ink){
+  const keep=ink.style.pointerEvents;
+  ink.style.pointerEvents='none';
+  let el=null;try{el=document.elementFromPoint(x,y)}catch(_){}
+  ink.style.pointerEvents=keep;
+  if(!el||!el.closest)return null;
+  if(el.closest('select,input,textarea'))return null;   /* 글자칸은 제 손으로 받는다 */
+  return el.closest(UNDER_HIT)||null;
+}
+const __inkHit=new Map();
+function inkPierce(card){
+  if(!card||card.__pierce)return;card.__pierce=1;
+  card.addEventListener('pointerdown',e=>{
+    const ink=card.querySelector('#qink');
+    if(!ink||e.target!==ink)return;                     /* 덮개를 직접 눌렀을 때만 */
+    const hit=underInk(e.clientX,e.clientY,ink);
+    if(!hit)return;                                     /* 밑에 눌릴 것이 없다 — 그냥 획이다 */
+    e.stopPropagation();                                /* qWire 가 획을 시작하지 않게 */
+    __inkHit.set(e.pointerId,{el:hit,x:e.clientX,y:e.clientY});
+  },true);
+  const done=e=>{
+    const h=__inkHit.get(e.pointerId);__inkHit.delete(e.pointerId);
+    if(!h||e.type!=='pointerup')return;
+    if(Math.hypot(e.clientX-h.x,e.clientY-h.y)>8)return; /* 톡이 아니라 끈 것 */
+    e.stopPropagation();
+    try{h.el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window,
+      clientX:e.clientX,clientY:e.clientY}));}
+    catch(err){console.error(err);toast('처리 중 오류'+errTag(err))}
+  };
+  card.addEventListener('pointerup',done,true);
+  card.addEventListener('pointercancel',done,true);
+}
+window.addEventListener('load',()=>{try{inkPierce($('#card'))}catch(e){}});
+
 /* ---------------- 필터 ---------------- */
 const BIGS=[...new Set(DATA.map(r=>r[F.BIG]))];
 const BIGNO={'역학':'1','유체역학':'2','열역학':'3','파동·광학':'4','전자기학':'5','현대물리학':'6'};
@@ -4938,7 +4980,14 @@ function zWire(Z){
     if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);const r=vp.getBoundingClientRect();const cx=(a.x+b.x)/2-r.left,cy=(a.y+b.y)/2-r.top;const ns=Math.max(Z.MIN,Math.min(Z.MAX,pinch.s*d/pinch.d));
       Z.X=cx-(pinch.cx-r.left-pinch.X)*(ns/pinch.s);Z.Y=cy-(pinch.cy-r.top-pinch.Y)*(ns/pinch.s);Z.S=ns;schedule();return}
     if(crop){const p=toPage(e.clientX,e.clientY);if(p&&p.i===crop.i){crop.x1=p.x;crop.y1=p.y;cropDraw()}return}
-    if(stroke){const p=toPage(e.clientX,e.clientY);if(p&&p.i===stroke.i){stroke.p.push(p.x,p.y);zInkDraw(Z,stroke,false)}return}
+    /* ★ 2026-09-13 — 교재·서브노트 필기도 **사이 점을 다 받는다**(문항 카드와 같은 구멍이었다).
+       `zInkDraw` 는 점마다가 아니라 한 번만 부른다 — 더 자주 부르지 않는다. */
+    if(stroke){const evs=(e.getCoalescedEvents&&e.getCoalescedEvents().length)?e.getCoalescedEvents():[e];
+      let got=false;
+      evs.forEach(ev=>{const p=toPage(ev.clientX,ev.clientY);if(!p||p.i!==stroke.i)return;
+        const n=stroke.p.length;if(n>=2&&stroke.p[n-2]===p.x&&stroke.p[n-1]===p.y)return;
+        stroke.p.push(p.x,p.y);got=true});
+      if(got)zInkDraw(Z,stroke,false);return}
     if(!drag)return;Z.X=drag.X+(e.clientX-drag.ox);Z.Y=drag.Y+(e.clientY-drag.oy);
     const now=performance.now();Z.samples.push({t:now,x:Z.X,y:Z.Y});while(Z.samples.length>12)Z.samples.shift();schedule()});
   const up=async e=>{ptrs.delete(e.pointerId);
@@ -5287,10 +5336,26 @@ function qWire(){
     e.preventDefault()};
   sv.onpointermove=e=>{
     if(!QDRAW)return;
-    const p=qPt(e); if(!p)return;
-    if(QDRAW.erase){qEraseAt(p[0],p[1]);return}
-    QDRAW.p.push(p[0]/QCW,p[1]/QCW);
-    const l=live(); if(l){l.setAttribute('d',pathD(QDRAW.p,QCW,QCW));l.setAttribute('stroke',QDRAW.c);
+    /* ★ 2026-09-13 — 펜슬이 찍은 **사이 점을 다 받는다.**
+       `pointermove` 는 초당 60번쯤 오지만 펜슬은 그보다 훨씬 자주 찍힌다. 그 사이 점이
+       `getCoalescedEvents()` 에 담겨 오는데 여기만 안 쓰고 있어 선이 각지고 툭툭 끊겼다
+       (#inkc 1935줄 · 암기카드 3740줄은 원래 쓰고 있었다).
+       ⚠ `d` 는 통째로 다시 만들지 않고 **이어 붙인다** — `pathD` 가 단순 폴리라인이라 결과가 같고,
+         점이 촘촘해질수록 통째 다시 만들기는 획 하나에 O(n²)가 된다. */
+    const evs=(e.getCoalescedEvents&&e.getCoalescedEvents().length)?e.getCoalescedEvents():[e];
+    if(QDRAW.erase){evs.forEach(ev=>{const q=qPt(ev);if(q)qEraseAt(q[0],q[1])});return}
+    const l=live();
+    let add='';
+    evs.forEach(ev=>{
+      const q=qPt(ev); if(!q)return;
+      const u=q[0]/QCW, v=q[1]/QCW, n=QDRAW.p.length;
+      if(n>=2&&QDRAW.p[n-2]===u&&QDRAW.p[n-1]===v)return;   /* 같은 자리는 건너뛴다 */
+      QDRAW.p.push(u,v);
+      add+=' L'+(u*QCW).toFixed(1)+' '+(v*QCW).toFixed(1);
+    });
+    if(l&&add){
+      QDRAW.d=(QDRAW.d||pathD(QDRAW.p.slice(0,2),QCW,QCW))+add;
+      l.setAttribute('d',QDRAW.d);l.setAttribute('stroke',QDRAW.c);
       l.setAttribute('stroke-width',QDRAW.w);l.setAttribute('opacity',QDRAW.hl?'0.32':'1')}
     e.preventDefault()};
   const up=async()=>{if(!QDRAW)return;const st=QDRAW;QDRAW=null;
