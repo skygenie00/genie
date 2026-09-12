@@ -6082,6 +6082,45 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       + mbbSafe(r.snip) + '…</div></div>';
   }
 
+  /* ---------- 정리OMR 자리 줄 (2026-09-12) ----------
+     ⚠ `mbbRowHTML` 을 **본떴을 뿐** 그것을 고치지 않는다 — 교재 줄이 거기 걸려 있다.
+     ⚠ 점수·증거·순위 숫자는 화면에 적지 않는다(4턴 §5-B). `rank` 는 차례만 정한다. */
+  function mbbOmrRowHTML(r, tag) {
+    var p = +r.p || 1;
+    var a = [r.x, r.y, r.w, r.h].map(function (v) { return (v == null ? 'null' : +v); });
+    return '<div onclick="mbOmrGo(' + p + ',' + a.join(',') + ')" '
+      + 'style="padding:7px 9px;border:1px solid #e5e7eb;border-radius:8px;margin:4px 0;cursor:pointer;background:#fff"'
+      + ' onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'#fff\'">'
+      + '<div style="display:flex;align-items:baseline;gap:6px">'
+      + '<span style="font-size:11px;color:#6b7280">정리OMR</span>'
+      + '<span style="font-size:14px;font-weight:800;color:#111827">' + p + '쪽</span>'
+      + '<span style="font-size:10px;color:#9ca3af">PDF ' + p + '</span>'
+      + (tag ? '<span style="font-size:10px;color:#9ca3af">' + tag + '</span>' : '')
+      + '</div>'
+      + '<div style="font-size:11px;color:#4b5563;line-height:1.45;max-height:2.9em;overflow:hidden;margin-top:2px">'
+      + mbbSafe(r.snip) + '…</div></div>';
+  }
+
+  /* 그 자리를 뷰어에서 연다. ⚠ **핀을 만들지 않는다** — 찾기와 같은 노란 테두리(V.found)만 쓴다. */
+  async function mbOmrGo(p, x, y, w, hh) {
+    try { await openViewer(MBB_OPEN_UID || '', 'view'); } catch (e) { return; }
+    if (!V) return;
+    var ids = Object.keys(docs());
+    if (ids.indexOf('minbeopOMR') >= 0) {
+      V.docId = 'minbeopOMR';
+      var sel = V.wrap.querySelector('#cd-doc');
+      if (sel) sel.value = 'minbeopOMR';
+    }
+    V.page = +p || 1;
+    V.found = (x == null || y == null) ? null : [+x, +y, +x + (+w || 0.01), +y + (+hh || 0.01)];
+    V.zoomLevel = 1; V.pan = true;
+    await draw();
+    if (!V || !V.found) return;
+    var cx = (V.found[0] + V.found[2]) / 2 * RENDER.W, cy = (V.found[1] + V.found[3]) / 2 * RENDER.H;
+    V.stage.scrollLeft = cx - V.stage.clientWidth / 2;
+    V.stage.scrollTop = cy - V.stage.clientHeight / 2;
+  }
+
   /* ⚠ 후보를 격차로 가르지 않는다(4턴 §5-B · 옛 규칙 폐기).
      2·3등은 **언제나 접힌 채로** 있고 「후보 2」 칩으로 편다 —
      1등이 틀렸을 때 봐야 하는 것이 후보다. */
@@ -6089,7 +6128,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
      2·3등은 언제나 접힌 채로 있고 「후보 N」 칩으로 편다.
      ⚠ §C(add2) — 그 책에 **사람이 찍은 핀이 있으면** 그 줄은 **그 자리 하나만** 보인다.
        「후보 N」 칩을 그리지 않고 대신 「자동으로 되돌리기」를 둔다. */
-  function mbbListHTML(uid, groups) {
+  function mbbListHTML(uid, groups, omr) {
     if (!groups.length) return '<div style="padding:12px;font-size:12px;color:#6b7280">교재 자리를 찾지 못했습니다.</div>';
     var h = '<div style="padding:8px 10px 10px">';
     groups.forEach(function (g) {
@@ -6126,7 +6165,24 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         h += '</div>';
       }
     });
-    h += '<div style="font-size:11px;color:#9ca3af;margin:10px 0 2px">정리OMR — 추록 반영이 끝난 뒤에 붙습니다.</div>';
+    /* ---------- 정리OMR 자리 (2026-09-12) ---------- */
+    h += '<div style="font-size:11px;color:#9ca3af;margin:10px 0 2px">정리OMR</div>';
+    var oa = (omr && omr.length) ? omr.slice() : [];
+    oa.sort(function (a, b) { return (+a.rank || 9) - (+b.rank || 9); });
+    if (!oa.length) {
+      h += '<div style="padding:8px 9px;font-size:12px;color:#6b7280">정리OMR 자리를 찾지 못했습니다.</div>';
+    } else {
+      h += mbbOmrRowHTML(oa[0], '');
+      if (oa.length > 1) {
+        var oid = 'mbo-' + uid;
+        h += '<button onclick="var e=document.getElementById(\'' + oid + '\');e.hidden=!e.hidden"'
+          + ' style="font-size:10px;padding:2px 7px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;color:#4b5563;cursor:pointer">'
+          + '후보 ' + (oa.length - 1) + '</button>';
+        h += '<div id="' + oid + '" hidden>';
+        oa.slice(1).forEach(function (r) { h += mbbOmrRowHTML(r, '후보'); });
+        h += '</div>';
+      }
+    }
     return h + '</div>';
   }
 
@@ -6146,7 +6202,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       return;
     }
     for (var i = 0; i < MBB_DOCS.length; i++) { try { await mbbMeta(MBB_DOCS[i]); } catch (e) { } }
-    body.innerHTML = mbbListHTML(uid, mbbGroup(j.rows));
+    body.innerHTML = mbbListHTML(uid, mbbGroup(j.rows), j.omr);
   }
 
   /* ---------- 쪽 팝업 ---------- */
@@ -6689,6 +6745,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   }
   var MBB_LAST = null, MBB_OPEN_UID = null;
 
+  window.mbOmrGo = mbOmrGo;
   window.mbBookOpen = mbBookOpen;
   window.mbBookPage = mbBookPage;
   window.mbBookPick = mbBookPick;
