@@ -221,6 +221,11 @@ body[data-layer="pdf"] #trTog{display:none!important}   /* 물리 서랍엔 기�
    ⚠ 크롬에는 `-webkit-touch-callout` 이 없어 **헤드리스로 못 잰다** — 사용자 확인 항목이다. */
 .vtop,.vbot,.top,.bkbar,.snbar,.tools{touch-action:manipulation;user-select:none;-webkit-user-select:none}
 .stage,.wrap,#pdfc,#mask,#omrPad,#bkvp,#snvp,#svp{-webkit-touch-callout:none}
+/* ★ 2026-09-13 — 거품이 뜨는 곳은 캔버스가 아니라 **글자**다. 문제 카드에 껐다.
+   전에는 `#card.penon` 일 때만 껐는데(848줄) 「보기」에서 그대로라 여전히 떴다.
+   ⚠ 입력칸·글상자·교재 글자층(.bktx)은 고를 수 있어야 하므로 아래에서 되돌린다. */
+#cardwrap,#card,#card .q,#card .choices,#card .bogi,#card details,#card .sol,#card .soltx,#qtxt{
+  -webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 input,textarea,select,.tbox,.tbox *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 #pdfc{position:relative!important}
 #mask{position:absolute;background:#EDECE6;border:1px solid #C4C2B9;border-radius:3px;
@@ -1255,32 +1260,94 @@ async function pdfRender(page,params){
      ⓒ `pointerType==='mouse'` 는 합성하지 않는다 — 마우스는 `click` 이 멀쩡하다
      ⓓ 진짜 `click` 을 기다렸다가(60ms) 안 오면 그때만 합성한다
    ⚠ `stopPropagation` 도 `preventDefault` 도 하지 않는다. 지켜보다 모자란 것만 채운다. */
-const TAP_SEL='button,[role="button"],.tl,.iconbtn,.btn';
+/* ★ 2026-09-13 고침 — 앞 판은 `button` 만 봤다. 이 앱에서 눌리는 것은 거의 다 단추가 아니다 —
+   `<span class="tag">` 42 · `<span class="chip">` 11 · `<summary>` 2(정답·해설) · `[data-tool]` 18 …
+   그래서 펜으로 눌러도 아무 일이 안 났다. ⇒ **대상을 가리지 않는다.**
+   톡 친 것이면(움직임 8px 안) 그 자리에 `click` 을 그대로 쏘아 올린다. 무엇이 받는지는 앱이 안다. */
 const TAP_SKIP='select,input,textarea,.ogrip,#mask';
+const INK_SKIP='#inkc,#qink,#qtxt,.mccv,#bkvp,#snvp,#svp';   /* 필기 자리의 톡 = 점 획이지 누르기가 아니다 */
 const __tapLast=new WeakMap();
-function tapTarget(e){
-  const t=e&&e.target;
-  if(!t||!t.closest)return null;
-  if(t.closest(TAP_SKIP))return null;             /* ⓐ */
-  const el=t.closest(TAP_SEL);
-  if(!el||el.disabled)return null;
-  if(el.closest(TAP_SKIP))return null;
-  return el;
+const __tapDown=new Map();
+function tapSkip(t){
+  if(!t||!t.closest)return true;
+  return !!(t.closest(TAP_SKIP)||t.closest(INK_SKIP));
 }
-document.addEventListener('click',e=>{           /* 진짜 click 이 났음을 적어 둔다 */
-  const el=tapTarget(e);if(el)__tapLast.set(el,Date.now());
+document.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse')return;
+  __tapDown.set(e.pointerId,{x:e.clientX,y:e.clientY,t:e.target});
+},true);
+document.addEventListener('click',e=>{            /* 진짜 click 이 났음을 적어 둔다 */
+  const t=e.target;if(t)__tapLast.set(t,Date.now());
 },true);
 document.addEventListener('pointerup',e=>{
-  if(e.pointerType==='mouse')return;              /* ⓒ */
-  const el=tapTarget(e);
-  if(!el)return;
-  setTimeout(()=>{                                /* ⓓ 진짜 click 을 먼저 기다린다 */
-    const now=Date.now(),last=__tapLast.get(el)||0;
-    if(now-last<350)return;                       /* ⓑ 이미 났다 — 겹치지 않는다 */
-    __tapLast.set(el,now);
-    try{el.click()}catch(err){console.error(err);toast('처리 중 오류'+errTag(err))}
+  const dn=__tapDown.get(e.pointerId);__tapDown.delete(e.pointerId);
+  if(e.pointerType==='mouse')return;              /* 마우스는 click 이 멀쩡하다 */
+  if(!dn||dn.t!==e.target)return;                 /* 누른 자리와 뗀 자리가 달라졌다 — 끈 것이다 */
+  if(Math.hypot(e.clientX-dn.x,e.clientY-dn.y)>8)return;   /* 톡이 아니라 끈 것 */
+  const t=e.target;
+  if(tapSkip(t))return;
+  setTimeout(()=>{                                /* 진짜 click 을 먼저 기다린다 */
+    const now=Date.now(),last=__tapLast.get(t)||0;
+    if(now-last<350)return;                       /* 이미 났다 — 겹치지 않는다 */
+    __tapLast.set(t,now);
+    try{t.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window,
+      clientX:e.clientX,clientY:e.clientY}));}
+    catch(err){console.error(err);toast('처리 중 오류'+errTag(err))}
   },60);
 },true);
+document.addEventListener('pointercancel',e=>{__tapDown.delete(e.pointerId)},true);
+
+/* ══════════════ ⓐ 캡처 층 — 손가락을 필기에서 떼어낸다 (2026-09-13 · 본판 §1 ①) ══════════════
+   ★ 앞 판에서 **안 얹은 것이 틀렸다.** 손바닥이 `#cardwrap`(카드 층)·`.stage`(물리)를 굴리면
+     브라우저가 스크롤을 가져가고 펜 포인터에 `pointercancel` 이 날아온다 ⇒ **획이 짧게짧게 끊긴다.**
+     `#qink{touch-action:none}` 은 제 자리만 막을 뿐, 손바닥이 닿는 카드 바탕은 못 막는다.
+   ⇒ 기출서재처럼 굴리는 통에 **캡처 단계** 리스너를 얹어 손가락을 통째로 먹고 **직접 굴린다.**
+   ⚠ 필기 코드는 한 줄도 안 고친다 — 캡처는 대상 리스너보다 먼저 돈다.
+   ⚠ add1 §1-A — 눌리는 것 위에서 시작한 손가락은 **그대로 흘려보낸다**(안 그러면 손가락으로 단추를 못 누른다).
+   ⚠ 손바닥은 시계로 가르지 않는다 — 펜이 닿는 순간 이미 바닥에 있던 손가락이 손바닥이고,
+     그것이 떨어질 때까지만 무시한다(본판 §1). */
+/* 여기에 걸리면 **흘려보낸다** — 눌리는 것(단추·칩·요약·툴)과 끄는 것(.ogrip·#mask)과 글자칸.
+   그 밖은 전부 가로채서 손가락으로 굴린다. */
+const PASS_THRU='button,summary,a,label,[role="button"],.tl,.iconbtn,.btn,.tag,.chip,'
+  +'[data-tool],#omrPad,#navTg,select,input,textarea,.ogrip,#mask,.tbox,#qtxt';
+function inkGuard(box){
+  if(!box||box.__inkg)return;box.__inkg=1;
+  let penDown=false;const held=new Set(),palm=new Set();
+  let pan=null;
+  const isPalm=id=>penDown||palm.has(id);
+  box.addEventListener('pointerdown',e=>{
+    if(e.pointerType!=='pen')return;
+    penDown=true;for(const id of held)palm.add(id);pan=null;
+  },true);
+  const penEnd=e=>{if(e.pointerType==='pen')penDown=false};
+  box.addEventListener('pointerup',penEnd,true);
+  box.addEventListener('pointercancel',penEnd,true);
+  box.addEventListener('pointerdown',e=>{
+    if(e.pointerType!=='touch')return;
+    if(e.target&&e.target.closest&&e.target.closest(PASS_THRU))return;   /* add1 §1-A — 눌리는 것·끄는 것 위에서 시작한 손가락은 그대로 흘려보낸다 */
+    e.stopPropagation();if(e.cancelable)e.preventDefault();
+    held.add(e.pointerId);
+    if(penDown)palm.add(e.pointerId);
+    if(isPalm(e.pointerId))return;
+    pan={id:e.pointerId,x:e.clientX,y:e.clientY,sl:box.scrollLeft,st:box.scrollTop,armed:false};
+  },true);
+  box.addEventListener('pointermove',e=>{
+    if(e.pointerType!=='touch')return;
+    if(!pan||pan.id!==e.pointerId)return;
+    e.stopPropagation();if(e.cancelable)e.preventDefault();
+    const dx=e.clientX-pan.x,dy=e.clientY-pan.y;
+    if(!pan.armed){if(Math.hypot(dx,dy)<10)return;pan.armed=true}   /* 얹어 둔 손바닥이 미끄러져도 안 움직인다 */
+    box.scrollLeft=pan.sl-dx;box.scrollTop=pan.st-dy;
+  },true);
+  const up=e=>{
+    if(e.pointerType!=='touch')return;
+    held.delete(e.pointerId);palm.delete(e.pointerId);
+    if(pan&&pan.id===e.pointerId)pan=null;
+  };
+  box.addEventListener('pointerup',up,true);
+  box.addEventListener('pointercancel',up,true);
+}
+window.addEventListener('load',()=>{try{inkGuard($('#cardwrap'));inkGuard($('#stage'))}catch(e){}});
 
 /* ---------------- 필터 ---------------- */
 const BIGS=[...new Set(DATA.map(r=>r[F.BIG]))];
@@ -1690,7 +1757,8 @@ async function showProblem(){
   const saved=await get('ink',String(VNO));
   INK=saved||{0:[]};LAYERS=Math.max(1,Object.keys(INK).length);LAYER=LAYERS-1;
   fillLayerSel();
-  $('#inkc').classList.add('pen');   /* ★ 늘 켠다 — 손가락은 브라우저 스크롤로 나간다(본판 §1) */
+  $('#inkc').classList.remove('pen');   /* ★ 2026-09-13 — 도로 끈다. touch-action:none 을 지켜야
+     펜이 그을 때 브라우저가 스크롤을 가져가 획을 끊지 않는다. 손가락은 `inkGuard` 가 직접 굴린다. */
   await renderPage(loc);
   paintInk();
   await setupMask(VPAGE);
