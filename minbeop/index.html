@@ -8096,8 +8096,17 @@ function mcZoomBind(root) {
         const inner = box.querySelector('.mc-zoom-inner');
         const st = { s: 1, x: 0, y: 0 };
         box._z = st;
-        const apply = () => { inner.style.transform = 'translate(' + st.x + 'px,' + st.y + 'px) scale(' + st.s + ')'; };
+        /* ★ 2026-09-12 (add1) — 배율에 따라 손가락 몫을 갈라 준다.
+           `.mc-zoom` 인라인에 `touch-action:none` 이 박혀 있어 브라우저가 그 자리의 손가락을 스크롤로 안 쓴다.
+           그런데 아래 `touchstart` 는 손가락 하나일 때 **배율 > 1 에서만** 끌기를 받는다.
+           ⇒ 배율 1에서는 앱도 안 받고 브라우저도 안 굴려, 아이패드에서 창이 꼼짝 안 했다(7판 49쪽 · 사용자 실물).
+             PC 가 멀쩡했던 까닭은 휠이 창 본문을 굴리기 때문이다 — `wheel` 은 `ctrlKey` 일 때만 가로챈다.
+           ⚠ `mcZoomHTML` 의 `touch-action:none` 은 **안 지운다**(지우면 확대 상태 끌기가 깨진다). 여기서 덮는다.
+           ⚠ 손가락·마우스 로직 본체는 한 글자도 안 건드렸다 — 스타일 한 줄뿐이다. */
+        const tact = () => { box.style.touchAction = st.s > 1 ? 'none' : 'pan-y'; };
+        const apply = () => { inner.style.transform = 'translate(' + st.x + 'px,' + st.y + 'px) scale(' + st.s + ')'; tact(); };
         box._zapply = apply;
+        tact();                                    /* 첫 상태는 배율 1이므로 `pan-y` */
         const clamp = () => {
             if (st.s <= 1) { st.s = 1; st.x = 0; st.y = 0; return; }
             const bw = box.clientWidth, bh = box.clientHeight;
