@@ -298,14 +298,6 @@
         </div>
     </div>
 
-    <!-- [3] 관련 문제 보기 모달 (팝업창) -->
-    <div id="link-modal" class="hide fixed inset-0 bg-gray-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto no-scrollbar border-t-8 border-indigo-600">
-            <button onclick="closeLinkModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center font-bold text-xl transition">&times;</button>
-            <h3 class="text-xl font-extrabold mb-4 text-indigo-800 flex items-center gap-2">🔗 관련 문제 비교하기</h3>
-            <div id="link-modal-content" class="space-y-4"></div>
-        </div>
-    </div>
 
     <script>
         /* ===== SheetJS (xlsx mini) — 엑셀 읽기/쓰기 ===== */
@@ -1261,7 +1253,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         /* ★ 2026-08-31 — `ox_q_fix`(정정)를 여기 넣었다. 8/29 의 「동기화 안 함」은
            **「마스터 엑셀에 자동 반영하지 않는다」** 쪽이 확정된 것이고(2026-08-31 사용자 확인),
            기기 사이에 보이는 것은 별개다. 옛 백업 파일도 이 목록으로 읽히므로 호환이 유지된다. */
-        const SYNC_KEYS = ['ox_q_history', 'ox_q_tags', 'ox_q_memos', 'ox_q_logic', 'ox_q_links', 'ox_q_marks', 'ox_chap_history', 'ox_in_progress', 'ox_q_coords', 'ox_omr_docs', 'ox_q_last', 'ox_q_type', 'ox_weak_stage', 'ox_mem_cards', 'ox_q_fix'];
+        const SYNC_KEYS = ['ox_q_history', 'ox_q_tags', 'ox_q_memos', 'ox_q_logic', 'ox_q_links', 'ox_q_marks', 'ox_chap_history', 'ox_in_progress', 'ox_q_coords', 'ox_omr_docs', 'ox_q_last', 'ox_q_type', 'ox_weak_stage', 'ox_mem_cards', 'ox_q_fix', 'ox_q_reflinks'];
 
         function syncStatus(msg, tone) {
             const el = document.getElementById('sync-status');
@@ -2437,6 +2429,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         <div id="memo-display-${item.id}" class="hide mb-2 text-[12.5px] text-gray-800 bg-yellow-50 p-2.5 rounded-lg border-l-4 border-yellow-400">
                             <span class="font-bold">📝 내 메모: </span><span class="memo-content whitespace-pre-wrap" data-raw="${escHtml(memoText)}">${escHtml(memoText).replace(/!\[\[img_[^\]]+\]\]/g, '')}</span>
                         </div>
+                        <div id="reflink-memo-${item.id}" class="hide mb-2">${refBoxHTML(item.id,'memo')}</div>
                         <div id="linked-badges-${item.id}" class="mb-2.5 flex flex-wrap items-center gap-1 ${linkBadges ? '' : 'hide'}">${linkBadges}</div>
 
                         <!-- O/X 선택 -->
@@ -2453,7 +2446,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 
                         <!-- 해설 미리보기 토글 (채점 전) -->
                         ${item.pending ? '' : `<div class="mt-2 flex justify-end items-center gap-3">
-                            <button id="logic-btn-${item.id}" onclick="toggleLogic('${item.id}')" class="${logicText ? '' : 'hide '}text-[12px] text-blue-700 hover:text-blue-900 hover:underline flex items-center gap-1">📐 논리 보기</button>
+                            <button id="logic-btn-${item.id}" onclick="toggleLogic('${item.id}')" class="${(logicText || refHasText(item.id,'logic')) ? '' : 'hide '}text-[12px] text-blue-700 hover:text-blue-900 hover:underline flex items-center gap-1">📐 논리 보기</button>
+                            <span id="reflink-logic-btns-${item.id}" class="flex items-center gap-1">${refBtnsHTML(item.id,'logic')}</span>
                             <button id="peek-btn-${item.id}" onclick="togglePeekExp('${item.id}')" class="text-[12px] text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1">해설 미리보기</button>
                         </div>`}
 
@@ -2467,10 +2461,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 
                         <!-- 논리 주석 (독립 토글 · 채점 시 자동 노출) -->
                         <div id="logic-${item.id}" class="hide mt-1.5 text-[12.5px] text-indigo-900 bg-indigo-50 p-2.5 rounded-lg border-l-4 border-indigo-400 leading-relaxed whitespace-pre-wrap"><span class="font-bold">📐 논리: </span><span class="logic-content">${escHtml(logicText)}</span></div>
+                        <div id="reflink-logic-${item.id}" class="hide">${refBoxHTML(item.id,'logic')}</div>
 
                         <!-- 메모/연결 패널 토글 버튼 -->
                         <div class="mt-2 border-t border-dashed border-gray-200 pt-1.5 flex justify-end items-center gap-2">
                             <button id="memo-view-btn-${item.id}" onclick="toggleMemoView('${item.id}')" class="hide text-[11px] text-yellow-700 bg-yellow-50 border border-yellow-300 px-2 py-0.5 rounded font-bold hover:bg-yellow-100 transition">📝 메모 보기</button>
+                            <span id="reflink-memo-btns-${item.id}" class="flex items-center gap-1">${refBtnsHTML(item.id,'memo')}</span>
                             <button onclick="toggleMemoPanel('${item.id}')" class="text-[11px] text-gray-500 hover:text-blue-600 flex items-center gap-1 font-semibold transition">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>
                                 메모 및 유사문제 연결
@@ -2479,14 +2475,28 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 
                         <!-- 메모/연결 편집 패널 -->
                         <div id="memo-panel-${item.id}" class="hide mt-3 p-4 bg-gray-50 border border-gray-200 rounded-xl shadow-inner">
-                            <label class="block text-sm font-extrabold text-gray-700 mb-1">📝 나만의 암기 메모</label>
+                            <label class="block text-sm font-extrabold text-gray-700 mb-1">📝 암기 메모</label>
                             <textarea id="memo-input-${item.id}" class="w-full p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm resize-none" rows="2" placeholder="이 문제에 대한 팁, 주의사항, 두음자 등을 자유롭게 적어보세요.">${memoText}</textarea>
+                            <input type="hidden" id="refmemo-input-${item.id}" value="${refOf(item.id,'memo').join(',')}">
+                            <div id="refmemo-chips-${item.id}" class="flex flex-wrap gap-1 mt-1">${refChipsHTML(item.id,'memo')}</div>
+                            <div class="relative mt-1">
+                                <input type="text" id="link-search-memo-${item.id}" oninput="linkSearch('${item.id}','memo')" onfocus="linkSearch('${item.id}','memo')" autocomplete="off"
+                                    class="w-full p-2.5 border border-yellow-300 bg-yellow-50/40 rounded-lg outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-sm"
+                                    placeholder="🔍 찾아서 넣기 — 다른 문항의 메모를 이 문항에 겁니다">
+                                <div id="link-results-memo-${item.id}" class="hide absolute z-30 left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-xl max-h-60 overflow-auto"></div>
+                            </div>
                             
                                     <label class="block text-sm font-extrabold text-gray-700 mb-1 mt-4">📐 논리 (논점 구조 · 함정 · 비교 지문)</label>
                                 <textarea id="logic-input-${item.id}" class="w-full p-3 border border-indigo-200 bg-indigo-50/40 rounded-lg outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm resize-none" rows="3" placeholder="예: 같은 논점이 다른 해에 문장을 뒤집어 출제됨 / 조합형 지문을 교재가 변환한 것 / 거울조문 주의 등">${escHtml(logicText)}</textarea>
-                                <span class="block text-[11px] text-gray-500 mt-1 mb-2">* 엑셀 「논리」 칸과 연결됩니다. 내보내기하면 그대로 저장됩니다.</span>
+                                <input type="hidden" id="reflogic-input-${item.id}" value="${refOf(item.id,'logic').join(',')}">
+                                <div id="reflogic-chips-${item.id}" class="flex flex-wrap gap-1 mt-1">${refChipsHTML(item.id,'logic')}</div>
+                                <div class="relative mt-1 mb-2">
+                                    <input type="text" id="link-search-logic-${item.id}" oninput="linkSearch('${item.id}','logic')" onfocus="linkSearch('${item.id}','logic')" autocomplete="off"
+                                        class="w-full p-2.5 border border-indigo-300 bg-indigo-50/40 rounded-lg outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                                        placeholder="🔍 찾아서 넣기 — 다른 문항의 논리를 이 문항에 겁니다">
+                                    <div id="link-results-logic-${item.id}" class="hide absolute z-30 left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-xl max-h-60 overflow-auto"></div>
+                                </div>
                             <label class="block text-sm font-extrabold text-gray-700 mb-1 mt-4">🔗 관련/비교 문제 연결 (고유 ID 입력)
-                                <span class="block text-[11px] font-normal text-gray-500 mt-0.5">* 엑셀 「연결」 칸(27열)과 연결됩니다. 내보내기하면 그대로 저장됩니다.</span>
                             </label>
                             <div class="flex flex-col gap-1">
                                 <input type="text" id="link-input-${item.id}" class="w-full p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm" value="${links.join(', ')}" placeholder="연결할 문제의 고유 ID를 쉼표로 구분해 적어주세요. (예: Q1234, Q2555)">
@@ -2678,10 +2688,13 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         // --- 논리 주석 토글 ---
         function toggleLogic(id) {
             const el = document.getElementById(`logic-${id}`);
-            if (!el) return;
-            el.classList.toggle('hide');
+            const rf = document.getElementById(`reflink-logic-${id}`);
+            if (!el && !rf) return;
+            const wasHidden = el ? el.classList.contains('hide') : rf.classList.contains('hide');
+            if (el) el.classList.toggle('hide', !wasHidden);
+            if (rf) rf.classList.toggle('hide', !wasHidden);
             const btn = document.getElementById(`logic-btn-${id}`);
-            if (btn) btn.innerText = el.classList.contains('hide') ? '📐 논리 보기' : '📐 논리 숨기기';
+            if (btn) btn.innerText = wasHidden ? '📐 논리 숨기기' : '📐 논리 보기';
         }
         function revealLogic(id) {
             const el = document.getElementById(`logic-${id}`);
@@ -2729,8 +2742,16 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 
         function toggleMemoView(id) {
             const el = document.getElementById(`memo-display-${id}`);
-            if (!el) return;
-            el.classList.toggle('hide');
+            const rf = document.getElementById(`reflink-memo-${id}`);
+            if (!el && !rf) return;
+            const wasHidden = el ? el.classList.contains('hide') : rf.classList.contains('hide');
+            if (el) el.classList.toggle('hide', !wasHidden);
+            if (rf) rf.classList.toggle('hide', !wasHidden);
+            if (!el) {                                  /* 내 메모가 없고 연결분만 있는 문항 */
+                const b0 = document.getElementById(`memo-view-btn-${id}`);
+                if (b0) b0.innerText = wasHidden ? '📝 메모 숨기기' : '📝 메모 보기';
+                return;
+            }
             if (!el.classList.contains('hide')) paintMemoImages(id);
             const btn = document.getElementById(`memo-view-btn-${id}`);
             if (btn) btn.innerText = el.classList.contains('hide') ? '📝 메모 보기' : '📝 메모 숨기기';
@@ -2741,11 +2762,17 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const memos = JSON.parse(localStorage.getItem('ox_q_memos') || '{}');
             const btn = document.getElementById(`memo-view-btn-${id}`);
             if (!btn) return;
-            const has = memos[id] && String(memos[id]).trim();
+            /* ★ 연결한 메모만 있어도 「메모 보기」가 떠야 한다(판 1 §2) */
+            const mine = memos[id] && String(memos[id]).trim();
+            const has = mine || refHasText(id, 'memo');
             btn.classList.toggle('hide', !has);
-            if (!has) {
+            if (!mine) {
                 const el = document.getElementById(`memo-display-${id}`);
                 if (el) el.classList.add('hide');
+            }
+            if (!has) {
+                const rf = document.getElementById(`reflink-memo-${id}`);
+                if (rf) rf.classList.add('hide');
             }
         }
 
@@ -2857,6 +2884,19 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             else delete links[id];
             localStorage.setItem('ox_q_links', JSON.stringify(links));
             
+            /* 🔗 메모·논리 연결 — 27열 「연결」과 섞지 않는다(다른 키다) */
+            refPut(id, refPicked(id, 'memo'), refPicked(id, 'logic'));
+            const rmBox = document.getElementById(`reflink-memo-${id}`);
+            if (rmBox) rmBox.innerHTML = refBoxHTML(id, 'memo');
+            const rlBox = document.getElementById(`reflink-logic-${id}`);
+            if (rlBox) rlBox.innerHTML = refBoxHTML(id, 'logic');
+            const rmBtn = document.getElementById(`reflink-memo-btns-${id}`);
+            if (rmBtn) rmBtn.innerHTML = refBtnsHTML(id, 'memo');
+            const rlBtn = document.getElementById(`reflink-logic-btns-${id}`);
+            if (rlBtn) rlBtn.innerHTML = refBtnsHTML(id, 'logic');
+            const lb2 = document.getElementById(`logic-btn-${id}`);
+            if (lb2) lb2.classList.toggle('hide', !(String(logicEl && logicEl.value || '').trim() || refHasText(id, 'logic')));
+            
             const memoDisplay = document.getElementById(`memo-display-${id}`);
             const mc = memoDisplay.querySelector('.memo-content');
             mc.setAttribute('data-raw', memoVal.trim());
@@ -2876,21 +2916,32 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         /* ===== 연결할 문제 찾기 =====
            고유 ID 를 외우거나 그 문제로 찾아가지 않아도 되게, 입력칸 옆에서 바로 검색해 넣는다.
            찾는 대상 — uid · 문제 번호 · 본문 · 출처 · 단원 */
-        function linkSearch(ownerId) {
-            const box = document.getElementById(`link-results-${ownerId}`);
-            const inp = document.getElementById(`link-search-${ownerId}`);
+        /* ★ `kind` 가 없으면 지금과 **한 글자도 다르지 않게** 군다(옛 부르는 자리를 안 고친다).
+           kind='memo'  : 메모가 비지 않은 문항만 · 메모 글까지 검색
+           kind='logic' : 논리가 비지 않은 문항만 · 논리 글까지 검색 */
+        function linkSearch(ownerId, kind) {
+            const sfx = kind ? `${kind}-${ownerId}` : `${ownerId}`;
+            const box = document.getElementById(`link-results-${sfx}`);
+            const inp = document.getElementById(`link-search-${sfx}`);
             if (!box || !inp) return;
             const term = inp.value.trim();
             if (term.length < 1) { box.classList.add('hide'); box.innerHTML = ''; return; }
             const low = term.toLowerCase();
-            const already = String((document.getElementById(`link-input-${ownerId}`) || {}).value || '')
-                .split(',').map(x => x.trim().toUpperCase()).filter(Boolean);
+            const memos = kind ? JSON.parse(localStorage.getItem('ox_q_memos') || '{}') : null;
+            const extraOf = q => kind === 'memo' ? String(memos[q.id] || '')
+                               : kind === 'logic' ? String(logicOf(q) || '') : '';
+            const already = kind
+                ? refPicked(ownerId, kind).map(x => x.toUpperCase())
+                : String((document.getElementById(`link-input-${ownerId}`) || {}).value || '')
+                    .split(',').map(x => x.trim().toUpperCase()).filter(Boolean);
             const hits = [];
             for (let i = 0; i < quizData.length && hits.length < 30; i++) {
                 const q = quizData[i];
-                if (String(q.id) === String(ownerId)) continue;
+                if (String(q.id) === String(ownerId).replace(/^cmp_/, '')) continue;   /* 창 안 편집기는 cmp_ 접두사를 쓴다 */
+                const extra = extraOf(q);
+                if (kind && !String(extra).trim()) continue;       /* 비어 있으면 후보가 아니다 */
                 const no = `${q.displayNo ?? q.probNum}${q.subNum || ''}`;
-                const hay = [q.id, no, q.q, q.source, q.subject, q.subChapter].map(v => String(v || '').toLowerCase());
+                const hay = [q.id, no, q.q, q.source, q.subject, q.subChapter, extra].map(v => String(v || '').toLowerCase());
                 if (hay.some(h => h.includes(low))) hits.push(q);
             }
             if (!hits.length) {
@@ -2901,7 +2952,14 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             box.innerHTML = hits.map(q => {
                 const on = already.indexOf(String(q.id).toUpperCase()) !== -1;
                 const where = `${q.subject || ''} · ${q.subChapter || ''}`;
-                return `<button onclick="addLinkId('${ownerId}','${q.id}')" class="block w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-indigo-50 transition ${on ? 'opacity-50' : ''}">
+                /* 그 글 한 줄 — `showFieldList` 가 쓰는 바로 그 클래스다(새로 짓지 않는다) */
+                const fcls = kind === 'logic' ? 'text-indigo-900 bg-indigo-50 border-indigo-400'
+                                              : 'text-yellow-800 bg-yellow-50 border-yellow-400';
+                const fline = kind
+                    ? `<div class="border-l-2 pl-2 ${fcls} text-[11.5px] mt-0.5 whitespace-pre-wrap">${escHtml(String(extraOf(q)).slice(0, 90))}</div>`
+                    : '';
+                const call = kind ? `addRefId('${ownerId}','${kind}','${q.id}')` : `addLinkId('${ownerId}','${q.id}')`;
+                return `<button onclick="${call}" class="block w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-indigo-50 transition ${on ? 'opacity-50' : ''}">
                     <div class="flex items-center gap-1.5 mb-0.5">
                         <span class="text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">ID ${q.id}</span>
                         <span class="text-[10px] font-extrabold text-blue-700">${q.displayNo ?? q.probNum}${escHtml(q.subNum || '')}번</span>
@@ -2909,6 +2967,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         ${on ? '<span class="text-[10px] font-bold text-green-700">이미 넣음</span>' : ''}
                     </div>
                     <div class="text-[12px] text-gray-800">${escHtml(String(q.q || '')).slice(0, 70)}…</div>
+                    ${fline}
                 </button>`;
             }).join('');
             box.classList.remove('hide');
@@ -2925,7 +2984,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (box) { box.innerHTML = ''; box.classList.add('hide'); }
         }
 
-        function showLinkedQuestion(targetId) {
+        function showLinkedQuestion(targetId, fromId) {
             /* uid 표기 흔들림(공백·대소문자) 흡수. 엑셀 「연결」 칸을 손으로 적는 경우가 있어 관대하게 찾는다 */
             const key = String(targetId || '').trim();
             let q = quizData.find(item => item.id === key);
@@ -2970,15 +3029,125 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         <p class="text-sm text-gray-600 leading-relaxed">${q.exp}</p>
                     </div>
                 </div>
-                <button onclick="closeLinkModal()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition">닫기</button>
             `;
             
-            document.getElementById('link-modal-content').innerHTML = html;
-            document.getElementById('link-modal').classList.remove('hide');
+            /* ★ 덮개(#link-modal)를 걷고 **떠 있는 창**으로 연다(판 1 §3).
+               끌기·크기조절·크기 기억은 `oxWinOpen` 에 이미 있다 — 새로 짓지 않는다. */
+            const fromLabel = fromId ? `${escHtml(String(fromId))} 에서 열었습니다` : '';
+            oxWinOpen('cmp-' + q.id, `🔗 관련 문제 비교 — ${escHtml(q.id)}`, fromLabel,
+                      html + cmpExtraHTML(q.id), 560, { resize: true, sizeKey: 'cmp' });
         }
 
-        function closeLinkModal() {
-            document.getElementById('link-modal').classList.add('hide');
+        /* 창 안 버튼 줄 + 창 안에서만 접었다 펴는 칸들 (창 밖 카드를 건드리지 않는다) */
+        function cmpExtraHTML(uid) {
+            const bs = 'text-[11.5px] font-bold border px-2 py-1 rounded transition';
+            return `<div class="px-4 pb-4">
+                <div class="flex flex-wrap gap-1.5 mb-2">
+                    <button onclick="cmpToggle('${uid}','memo')" id="cmp-mb-${uid}" class="${bs} text-yellow-700 bg-yellow-50 border-yellow-300 hover:bg-yellow-100">📝 메모 보기</button>
+                    <button onclick="cmpToggle('${uid}','logic')" id="cmp-lb-${uid}" class="${bs} text-indigo-700 bg-indigo-50 border-indigo-300 hover:bg-indigo-100">📐 논리 보기</button>
+                    <button onclick="cmpToggle('${uid}','edit')" id="cmp-eb-${uid}" class="${bs} text-gray-600 bg-white border-gray-300 hover:bg-gray-50">✏️ 메모 및 유사문제 연결</button>
+                    <button onclick="jumpFromSearch('${uid}')" class="${bs} text-blue-700 bg-blue-50 border-blue-300 hover:bg-blue-100">↪ 이 문제로 이동</button>
+                </div>
+                <div id="cmp-memo-${uid}" class="hide"></div>
+                <div id="cmp-logic-${uid}" class="hide"></div>
+                <div id="cmp-edit-${uid}" class="hide"></div>
+            </div>`;
+        }
+        function cmpToggle(uid, kind) {
+            const box = document.getElementById(`cmp-${kind}-${uid}`);
+            if (!box) return;
+            const open = box.classList.contains('hide');
+            if (open) box.innerHTML = kind === 'edit' ? cmpEditHTML(uid) : cmpFieldHTML(uid, kind);
+            box.classList.toggle('hide', !open);
+            const bid = kind === 'memo' ? 'cmp-mb-' : kind === 'logic' ? 'cmp-lb-' : 'cmp-eb-';
+            const btn = document.getElementById(bid + uid);
+            const name = kind === 'memo' ? '📝 메모' : kind === 'logic' ? '📐 논리' : '✏️ 메모 및 유사문제 연결';
+            if (btn) btn.innerText = kind === 'edit' ? name : (open ? `${name} 숨기기` : `${name} 보기`);
+        }
+        function cmpFieldHTML(uid, kind) {
+            const isL = kind === 'logic';
+            const mine = refTextOf(uid, kind);
+            const cls = isL ? 'text-indigo-900 bg-indigo-50 border-indigo-400' : 'text-yellow-800 bg-yellow-50 border-yellow-400';
+            let h = '';
+            if (mine && String(mine).trim()) {
+                h += `<div class="text-[12.5px] ${cls} p-2.5 rounded-lg border-l-4 leading-relaxed whitespace-pre-wrap mb-1.5">`
+                   + `<span class="font-bold">${isL ? '📐 논리' : '📝 내 메모'}: </span>`
+                   + `<span>${escHtml(String(mine).replace(/!\[\[img_[^\]]+\]\]/g, ''))}</span></div>`;
+            }
+            h += refBoxHTML(uid, kind);
+            return h || `<div class="text-[12px] text-gray-500 p-2">${isL ? '논리' : '메모'}가 없습니다.</div>`;
+        }
+        /* 창 안 편집기 — 카드와 **같은 저장소**에 쓴다. id 는 cmp_ 접두사라 카드와 안 부딪친다. */
+        function cmpEditHTML(uid) {
+            const o = 'cmp_' + uid;
+            const memos = JSON.parse(localStorage.getItem('ox_q_memos') || '{}');
+            const q = quizData.find(x => String(x.id) === String(uid)) || {};
+            const links = JSON.parse(localStorage.getItem('ox_q_links') || '{}');
+            return `<div class="p-3 bg-gray-50 border border-gray-200 rounded-xl">
+                <label class="block text-[12px] font-extrabold text-gray-700 mb-1">📝 암기 메모</label>
+                <textarea id="cmp-memo-input-${uid}" rows="2" class="w-full p-2 border border-gray-300 rounded-lg text-[13px] outline-none focus:border-blue-500">${escHtml(String(memos[uid] || ''))}</textarea>
+                <input type="hidden" id="refmemo-input-${o}" value="${refOf(uid,'memo').join(',')}">
+                <div id="refmemo-chips-${o}" class="flex flex-wrap gap-1 mt-1">${refChipsHTML(o,'memo')}</div>
+                <div class="relative mt-1">
+                    <input type="text" id="link-search-memo-${o}" oninput="linkSearch('${o}','memo')" onfocus="linkSearch('${o}','memo')" autocomplete="off"
+                        class="w-full p-2 border border-yellow-300 bg-yellow-50/40 rounded-lg text-[13px] outline-none" placeholder="🔍 찾아서 넣기 — 다른 문항의 메모">
+                    <div id="link-results-memo-${o}" class="hide absolute z-30 left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-xl max-h-52 overflow-auto"></div>
+                </div>
+                <label class="block text-[12px] font-extrabold text-gray-700 mb-1 mt-3">📐 논리</label>
+                <textarea id="cmp-logic-input-${uid}" rows="2" class="w-full p-2 border border-indigo-200 bg-indigo-50/40 rounded-lg text-[13px] outline-none">${escHtml(String(logicOf(q) || ''))}</textarea>
+                <input type="hidden" id="reflogic-input-${o}" value="${refOf(uid,'logic').join(',')}">
+                <div id="reflogic-chips-${o}" class="flex flex-wrap gap-1 mt-1">${refChipsHTML(o,'logic')}</div>
+                <div class="relative mt-1">
+                    <input type="text" id="link-search-logic-${o}" oninput="linkSearch('${o}','logic')" onfocus="linkSearch('${o}','logic')" autocomplete="off"
+                        class="w-full p-2 border border-indigo-300 bg-indigo-50/40 rounded-lg text-[13px] outline-none" placeholder="🔍 찾아서 넣기 — 다른 문항의 논리">
+                    <div id="link-results-logic-${o}" class="hide absolute z-30 left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-xl max-h-52 overflow-auto"></div>
+                </div>
+                <label class="block text-[12px] font-extrabold text-gray-700 mb-1 mt-3">🔗 관련/비교 문제 연결 (고유 ID 입력)</label>
+                <input type="text" id="cmp-link-input-${uid}" class="w-full p-2 border border-gray-300 rounded-lg text-[13px] outline-none" value="${(links[uid] || []).join(', ')}">
+                <div class="mt-3 flex justify-end">
+                    <button onclick="cmpSave('${uid}')" class="bg-blue-600 text-white hover:bg-blue-700 px-4 py-1.5 rounded-lg text-[13px] font-bold">저장하기</button>
+                </div>
+            </div>`;
+        }
+        function cmpSave(uid) {
+            const o = 'cmp_' + uid;
+            const memoVal = String((document.getElementById(`cmp-memo-input-${uid}`) || {}).value || '').trim();
+            const logicVal = String((document.getElementById(`cmp-logic-input-${uid}`) || {}).value || '').trim();
+            const linkVal = String((document.getElementById(`cmp-link-input-${uid}`) || {}).value || '');
+            const memos = JSON.parse(localStorage.getItem('ox_q_memos') || '{}');
+            if (memoVal) memos[uid] = memoVal; else delete memos[uid];
+            localStorage.setItem('ox_q_memos', JSON.stringify(memos));
+            const st = logicStore();
+            const q = quizData.find(x => String(x.id) === String(uid));
+            if (logicVal === String((q && q.excelLogic) || '').trim()) delete st[uid]; else st[uid] = logicVal;
+            localStorage.setItem('ox_q_logic', JSON.stringify(st));
+            const links = JSON.parse(localStorage.getItem('ox_q_links') || '{}');
+            const parsed = linkVal.split(',').map(x => x.trim()).filter(Boolean);
+            if (parsed.length) links[uid] = parsed; else delete links[uid];
+            localStorage.setItem('ox_q_links', JSON.stringify(links));
+            refPut(uid, refPicked(o, 'memo'), refPicked(o, 'logic'));
+            if (typeof refreshModeCounts === 'function') refreshModeCounts();
+            /* 그 문항 카드가 화면에 있으면 같이 갱신한다 */
+            const card = document.getElementById(`memo-display-${uid}`);
+            if (card) {
+                const mc = card.querySelector('.memo-content');
+                if (mc) { mc.setAttribute('data-raw', memoVal); mc.innerText = memoVal.replace(/!\[\[img_[^\]]+\]\]/g, ''); }
+                const lg = document.getElementById(`logic-${uid}`);
+                if (lg) { const c2 = lg.querySelector('.logic-content'); if (c2) c2.innerText = logicVal; }
+                ['memo', 'logic'].forEach(k => {
+                    const bx = document.getElementById(`reflink-${k}-${uid}`);
+                    if (bx) bx.innerHTML = refBoxHTML(uid, k);
+                    const bt = document.getElementById(`reflink-${k}-btns-${uid}`);
+                    if (bt) bt.innerHTML = refBtnsHTML(uid, k);
+                });
+                if (typeof updateMemoButton === 'function') updateMemoButton(uid);
+            }
+            const box = document.getElementById(`cmp-edit-${uid}`);
+            if (box) box.innerHTML = cmpEditHTML(uid);
+            ['memo', 'logic'].forEach(k => {
+                const bx = document.getElementById(`cmp-${k}-${uid}`);
+                if (bx && !bx.classList.contains('hide')) bx.innerHTML = cmpFieldHTML(uid, k);
+            });
         }
 
         // --- 채점 및 페이지 이동 ---
@@ -3112,6 +3281,100 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            엑셀 26열(논리)은 불러오기 때 ox_q_logic 에 병합되고, 앱에서 편집하면 이 저장소가 기준이 된다.
            표시·검색·내보내기 모두 logicOf() 를 거친다. */
         function logicStore() { return JSON.parse(localStorage.getItem('ox_q_logic') || '{}'); }
+
+        /* ===== 🔗 메모·논리 연결 (2026-09-12) =====
+           ⚠ 27열 「연결」(ox_q_links)과 **다른 것**이다 — 저쪽은 「문제 연결」,
+             이쪽은 「그 문항의 메모/논리를 이 문항에 건다」다. 엑셀에 새 열을 만들지 않는다.
+           꼴 : { "Q5666": { "memo": ["Q0217"], "logic": ["Q0205"] } } */
+        function refStore() { try { return JSON.parse(localStorage.getItem('ox_q_reflinks') || '{}') || {}; } catch (e) { return {}; } }
+        function refOf(id, kind) {
+            const r = refStore()[id];
+            const a = r && r[kind];
+            return Array.isArray(a) ? a.filter(Boolean) : [];
+        }
+        function refPut(id, memoArr, logicArr) {
+            const st = refStore();
+            const m = Array.from(new Set((memoArr || []).map(x => String(x).trim()).filter(x => x && x !== id)));
+            const l = Array.from(new Set((logicArr || []).map(x => String(x).trim()).filter(x => x && x !== id)));
+            if (!m.length && !l.length) delete st[id];
+            else { st[id] = {}; if (m.length) st[id].memo = m; if (l.length) st[id].logic = l; }
+            localStorage.setItem('ox_q_reflinks', JSON.stringify(st));
+        }
+        /* 연결분 상자 — 내 것과 **같은 색**이고 테두리만 점선이다(§2). 새 색을 고르지 않는다. */
+        function refBoxHTML(id, kind) {
+            const uids = refOf(id, kind);
+            if (!uids.length) return '';
+            const isL = kind === 'logic';
+            const cls = isL ? 'text-indigo-900 bg-indigo-50 border-indigo-400' : 'text-yellow-800 bg-yellow-50 border-yellow-400';
+            const icon = isL ? '📐' : '📝';
+            return uids.map(u => {
+                const t = refTextOf(u, kind);
+                if (t === null || !String(t).trim()) return '';
+                return `<div class="mt-1.5 text-[12.5px] ${cls} p-2.5 rounded-lg border-l-4 border-dashed leading-relaxed whitespace-pre-wrap">`
+                    + `<span class="font-bold block mb-0.5 text-[11px] opacity-80">🔗 연결한 ${isL ? '논리' : '메모'} · ${escHtml(u)}</span>`
+                    + `<span>${escHtml(String(t).replace(/!\[\[img_[^\]]+\]\]/g, ''))}</span></div>`;
+            }).join('');
+        }
+        /* 숨기기 버튼 옆 UID 버튼 하나씩. 다른 장식은 붙이지 않는다(§2). */
+        function refBtnsHTML(id, kind) {
+            const uids = refOf(id, kind);
+            if (!uids.length) return '';
+            const isL = kind === 'logic';
+            const cls = isL ? 'text-indigo-700 bg-indigo-50 border-indigo-300 hover:bg-indigo-100'
+                            : 'text-yellow-700 bg-yellow-50 border-yellow-300 hover:bg-yellow-100';
+            return uids.map(u => {
+                const gone = refTextOf(u, kind) === null;
+                return `<button onclick="showLinkedQuestion('${u}','${id}')" class="text-[11px] ${cls} border px-2 py-0.5 rounded font-bold transition ${gone ? 'opacity-40' : ''}">🔗 ${escHtml(u)}</button>`;
+            }).join('');
+        }
+        /* 편집 패널에서 고른 것 — 저장 전까지는 숨은 칸에 담아 둔다(연결 칸과 같은 규약). */
+        function refPicked(id, kind) {
+            const el = document.getElementById(`ref${kind}-input-${id}`);
+            if (el) return String(el.value || '').split(',').map(x => x.trim()).filter(Boolean);
+            return refOf(id, kind);
+        }
+        function refChipsHTML(id, kind) {
+            const uids = refPicked(id, kind);
+            if (!uids.length) return '';
+            const isL = kind === 'logic';
+            const cls = isL ? 'text-indigo-700 bg-indigo-50 border-indigo-300' : 'text-yellow-700 bg-yellow-50 border-yellow-300';
+            return uids.map(u => `<span class="inline-flex items-center gap-1 text-[11px] ${cls} border px-1.5 py-0.5 rounded font-bold">🔗 ${escHtml(u)}`
+                + `<button onclick="delRefId('${id}','${kind}','${u}')" class="text-gray-400 hover:text-red-600 font-black leading-none">×</button></span>`).join('');
+        }
+        function refSync(id, kind) {
+            const box = document.getElementById(`ref${kind}-chips-${id}`);
+            if (box) box.innerHTML = refChipsHTML(id, kind);
+        }
+        function addRefId(ownerId, kind, uid) {
+            const el = document.getElementById(`ref${kind}-input-${ownerId}`);
+            if (!el) return;
+            const cur = refPicked(ownerId, kind);
+            if (String(uid) !== String(ownerId) && cur.map(x => x.toUpperCase()).indexOf(String(uid).toUpperCase()) === -1) cur.push(uid);
+            el.value = cur.join(',');
+            refSync(ownerId, kind);
+            const sb = document.getElementById(`link-search-${kind}-${ownerId}`);
+            if (sb) sb.value = '';
+            const box = document.getElementById(`link-results-${kind}-${ownerId}`);
+            if (box) { box.innerHTML = ''; box.classList.add('hide'); }
+        }
+        function delRefId(ownerId, kind, uid) {
+            const el = document.getElementById(`ref${kind}-input-${ownerId}`);
+            if (!el) return;
+            el.value = refPicked(ownerId, kind).filter(x => x.toUpperCase() !== String(uid).toUpperCase()).join(',');
+            refSync(ownerId, kind);
+        }
+        /* 이 문항에 연결분이 하나라도 (글까지) 있는가 */
+        function refHasText(id, kind) {
+            return refOf(id, kind).some(u => { const t = refTextOf(u, kind); return t !== null && String(t).trim(); });
+        }
+        /* 건 uid 의 메모/논리 글. 지금 데이터에 없으면 null (부르는 쪽이 문구를 고른다) */
+        function refTextOf(uid, kind) {
+            const q = quizData.find(x => String(x.id) === String(uid));
+            if (!q) return null;
+            if (kind === 'logic') return String(logicOf(q) || '');
+            const memos = JSON.parse(localStorage.getItem('ox_q_memos') || '{}');
+            return String(memos[uid] || '');
+        }
         function logicOf(item) {
             const id = typeof item === 'string' ? item : item.id;
             const st = logicStore();
