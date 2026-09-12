@@ -91,6 +91,13 @@
   .v-top .title{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;
     text-overflow:ellipsis;font-family:var(--serif);letter-spacing:.02em}
   .tbtn{padding:9px 12px;border-radius:6px;font-weight:700;color:#E8E8E6;font-size:14px}
+  /* ⚠ 아이패드 애플펜슬 대응 —
+     touch-action:manipulation : 더블탭 확대를 기다리느라 생기는 지연과 몸짓 해석을 없앤다
+     user-select:none          : 펜이 조금 끌리면 글자 선택이 시작돼 탭이 삼켜진다
+     둘 다 막대(단추 줄)에만 건다. 입력칸은 글자를 고를 수 있어야 하므로 되돌린다. */
+  .v-top,.toolbar,.recbar{touch-action:manipulation;user-select:none;-webkit-user-select:none}
+  .v-top input,.recbar input{user-select:text;-webkit-user-select:text}
+  .v-top button,.toolbar button,.recbar button{touch-action:manipulation}
   .tbtn.on{background:rgba(255,255,255,.16)}
   .pageline{display:flex;align-items:center;gap:2px;font-variant-numeric:tabular-nums}
   .pageline input{width:52px;text-align:center;background:transparent;border:1px solid #555A63;
@@ -390,7 +397,54 @@ const $ = s => document.querySelector(s);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const toast = m => { const t=$('#toast'); t.textContent=m; t.classList.add('show');
   clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2200); };
-const busy = on => { $('#busy').hidden = !on; };
+let busyTimer=null;
+const busy = on => {
+  $('#busy').hidden = !on;
+  clearTimeout(busyTimer);
+  /* ⚠ 대기 화면(#busy)은 inset:0 · z-index:100 이라 떠 있는 동안 **아무것도 눌리지 않는다**.
+     중간에 무언가 잘못돼 이것이 남으면 앱이 굳은 것처럼 보인다 — 그래서 스스로 걷는다. */
+  if(on) busyTimer=setTimeout(()=>{
+    if(!$('#busy').hidden){
+      $('#busy').hidden=true;
+      toast('오래 걸려 대기 화면을 닫았습니다. 다시 해 보세요.');
+    }
+  }, 45000);
+};
+
+/* ⚠ 아이패드 애플펜슬은 누를 때 1~2px 흔들린다. 그러면 사파리가 click 을 취소해서
+   단추에 눌린 표시(빨간 테두리)만 남고 아무 일도 일어나지 않는다.
+   ⇒ 막대 단추는 click 뿐 아니라 pointerup 으로도 눌리게 한다.
+   ⚠ 둘이 겹쳐 두 번 도는 것(쪽이 2장씩 넘어가는 것)을 500ms 창으로 막는다. */
+function tapable(el, fn){
+  if(!el) return;
+  let last=0;
+  const run=ev=>{
+    const t=Date.now();
+    if(t-last<500) return;
+    last=t;
+    try{ fn(ev); }catch(err){ console.error(err); toast('처리 중 오류'+errTag(err)); }
+  };
+  el.addEventListener('pointerup',e=>{
+    if(e.pointerType==='mouse') return;   /* 마우스는 click 이 확실하다 */
+    run(e);
+  });
+  el.addEventListener('click',run);
+}
+
+/* ⚠ 아이패드에서는 콘솔을 볼 수 없다. 조용히 죽으면 「오류났다」밖에 말할 수 없으므로
+   삼키지 말고 화면에 이름을 띄운다(A-1 과 같은 뜻). 3초에 한 번만. */
+let lastErrToast=0;
+function showErr(what){
+  const now=Date.now();
+  if(now-lastErrToast<3000) return;
+  lastErrToast=now;
+  toast('오류: '+String(what||'알 수 없음').slice(0,90));
+}
+window.addEventListener('error',e=>showErr(e.message));
+window.addEventListener('unhandledrejection',e=>{
+  const r=e.reason;
+  showErr(r && (r.name||r.message) ? ((r.name||'')+' '+(r.message||'')).trim() : r);
+});
 /* A-1: 실패를 한 문장으로 뭉개지 말고 원인 이름을 괄호로 덧붙인다
    (메모리 부족 · blob 증발 · PDF 손상이 다 달라 보이게) */
 const errTag = e => {
@@ -826,12 +880,13 @@ function releaseDoc(){
   V.pdf=null;
   if(V.url){ URL.revokeObjectURL(V.url); V.url=null; }
 }
-$('#backBtn').onclick=async()=>{
+async function goLibrary(){
   await flushSave();
   releaseDoc(); V.doc=null;
   $('#viewer').hidden=true; $('#library').hidden=false;
   closeLayers(); refreshLibrary();
-};
+}
+tapable($('#backBtn'), goLibrary);
 
 /* ── 렌더링 ── */
 async function renderPage(){
@@ -893,8 +948,8 @@ function applyStyle(ctx,s){
 const clampPage=p=>Math.max(1,Math.min(V.doc.pages,p));
 async function goPage(p){ p=clampPage(p); if(p===V.page) return;
   await flushSave(); V.page=p; V.undoStack=[]; await renderPage(); }
-$('#prevPg').onclick=()=>goPage(V.page-1);
-$('#nextPg').onclick=()=>goPage(V.page+1);
+tapable($('#prevPg'), ()=>goPage(V.page-1));
+tapable($('#nextPg'), ()=>goPage(V.page+1));
 $('#pgInput').onchange=e=>goPage(parseInt(e.target.value)||1);
 /* ⚠ 「－ ＋」단추는 뺐다(사용자 지시) — 확대는 손가락 두 개(핀치)와 Ctrl+휠로 한다. */
 /* ⚠ 「⟳ 회전」단추도 뺐다(사용자 지시). 문서에 저장된 rot 값은 renderPage 가 그대로 읽으므로,
@@ -1187,8 +1242,8 @@ $('#addLayer').onclick=async()=>{
   renderLayerPanel(); redrawInk();
   toast(`"${l.name}" — 깨끗한 시험지에서 다시 시작합니다. 이전 필기는 그대로 저장되어 있어요.`);
 };
-$('#layerBtn').onclick=()=>{ renderLayerPanel();
-  $('#layerPanel').classList.add('open'); $('#scrim').hidden=false; };
+tapable($('#layerBtn'), ()=>{ renderLayerPanel();
+  $('#layerPanel').classList.add('open'); $('#scrim').hidden=false; });
 const closeLayers=()=>{ $('#layerPanel').classList.remove('open'); $('#scrim').hidden=true; };
 $('#lpClose').onclick=closeLayers; $('#scrim').onclick=closeLayers;
 
@@ -1496,6 +1551,7 @@ async function repoGet(idxs){
   for(let k=0;k<idxs.length;k++){
     const it=repoItems[idxs[k]];
     $('#repoProg').textContent=`받는 중 ${k+1}/${idxs.length} — ${it.file}`;
+    busy(true);                            /* 한 건마다 지킴이 시계를 다시 감는다 */
     $('#busy').textContent=`시험지 받는 중 ${k+1}/${idxs.length}`;
     try{ const res=await repoFetchOne(it); got++; if(res&&res.replaced) redone++; }
     catch(err){ console.error(it.file,err); fails.push(it.file+errTag(err)); }
