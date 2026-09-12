@@ -107,6 +107,13 @@
   #pdfCanvas,#inkCanvas{position:absolute;inset:0;display:block}
   #pdfCanvas{position:relative}
   #inkCanvas{touch-action:none}
+  /* ⚠ 손바닥이 닿으면 iOS 가 길게누르기로 보아 글자를 선택하고
+     「복사 · 찾아보기 · 번역」 풍선을 띄운다. 뷰어 안에서는 둘 다 끈다.
+     -webkit-touch-callout 이 그 풍선을 막는 유일한 스위치다.
+     입력칸(회독 날짜·문제번호)은 글자를 고를 수 있어야 하므로 되돌린다. */
+  #viewer{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  #viewer input{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+  #stage,#sheet,#pdfCanvas,#inkCanvas{-webkit-touch-callout:none}
   #sheet.panmode #inkCanvas{pointer-events:none}
 
   /* 도구 막대 */
@@ -420,9 +427,18 @@ function tapable(el, fn){
   let last=0;
   const run=ev=>{
     const t=Date.now();
-    if(t-last<500) return;
+    /* pointerup 과 click 은 서로 50ms 안쪽으로 잇달아 온다(touch-action:manipulation 이라
+       사파리의 300ms 더블탭 대기도 없다). 350ms 면 겹침은 확실히 막으면서
+       쪽 넘기기를 초당 세 번까지 허용한다 — 500ms 는 연타가 먹지 않아 답답했다. */
+    if(t-last<350) return;
     last=t;
-    try{ fn(ev); }catch(err){ console.error(err); toast('처리 중 오류'+errTag(err)); }
+    /* ⚠ fn 이 async 면 던진 것이 반환값(약속)으로 온다 — 동기 try/catch 로는 못 잡는다.
+       못 잡으면 unhandledrejection 으로 새어나가 「오류: 알 수 없음」이 뜬다. */
+    try{
+      const r=fn(ev);
+      if(r && typeof r.catch==='function')
+        r.catch(err=>{ console.error(err); toast('처리 중 오류'+errTag(err)); });
+    }catch(err){ console.error(err); toast('처리 중 오류'+errTag(err)); }
   };
   el.addEventListener('pointerup',e=>{
     if(e.pointerType==='mouse') return;   /* 마우스는 click 이 확실하다 */
@@ -434,16 +450,29 @@ function tapable(el, fn){
 /* ⚠ 아이패드에서는 콘솔을 볼 수 없다. 조용히 죽으면 「오류났다」밖에 말할 수 없으므로
    삼키지 말고 화면에 이름을 띄운다(A-1 과 같은 뜻). 3초에 한 번만. */
 let lastErrToast=0;
-function showErr(what){
+/* ⚠ 「알 수 없음」만 뜨면 아무 도움이 안 된다. 있는 단서를 다 붙인다 —
+   이름·문장·파일:줄. 셋 다 비면 최소한 어디서 왔는지(kind)는 남긴다. */
+function showErr(kind, info){
   const now=Date.now();
   if(now-lastErrToast<3000) return;
   lastErrToast=now;
-  toast('오류: '+String(what||'알 수 없음').slice(0,90));
+  const txt=String(info||'').trim();
+  toast('오류['+kind+'] '+(txt||'내용 없음').slice(0,110));
 }
-window.addEventListener('error',e=>showErr(e.message));
+window.addEventListener('error',e=>{
+  const t=e.error;
+  const where=e.filename ? ' @'+String(e.filename).split('/').pop()+':'+e.lineno : '';
+  showErr('js', ((t&&t.name)||'')+' '+((t&&t.message)||e.message||'')+where);
+});
 window.addEventListener('unhandledrejection',e=>{
   const r=e.reason;
-  showErr(r && (r.name||r.message) ? ((r.name||'')+' '+(r.message||'')).trim() : r);
+  let d='';
+  if(r instanceof Error) d=(r.name||'')+' '+(r.message||'');
+  else if(r && typeof r==='object') d=(r.name||'')+' '+(r.message||'')+' '+(()=>{
+    try{ return JSON.stringify(r).slice(0,60); }catch(x){ return Object.prototype.toString.call(r); }
+  })();
+  else d=String(r);
+  showErr('약속', d);
 });
 /* A-1: 실패를 한 문장으로 뭉개지 말고 원인 이름을 괄호로 덧붙인다
    (메모리 부족 · blob 증발 · PDF 손상이 다 달라 보이게) */
@@ -849,7 +878,26 @@ function budgetDpr(cssW,cssH){
   return Math.max(0.4,dpr);
 }
 
-async function openViewer(id){
+/* 기기에 든 파일이 못 읽게 됐을 때(iOS 가 저장분을 걷어가는 일이 있다) 저장소에서 다시 받는다.
+   필기는 그대로 두고 파일만 갈아끼운다(repoFetchOne 이 그렇게 한다). */
+async function repairDoc(id){
+  try{
+    const d=await DB.get('docs',id);
+    if(!d) return false;
+    const r=await fetch(REPO_DIR+'list.json',{cache:'no-store'});
+    if(!r.ok) return false;
+    const items=(await r.json()).items||[];
+    const key=repoKeyOf(d);
+    const it=(d.src ? items.find(x=>x.file===d.src) : null)
+          || (d.hash ? items.find(x=>x.hash===d.hash) : null)
+          || (key ? items.find(x=>repoKeyOf(x)===key) : null)
+          || (d.title ? items.find(x=>x.title===d.title) : null);
+    if(!it) return false;
+    await repoFetchOne(it);
+    return true;
+  }catch(err){ console.error('고치기 실패',err); return false; }
+}
+async function openViewer(id,isRetry){
   busy(true);
   try{
     releaseDoc();                       /* A-2: 앞 문서를 확실히 놓고 시작한다 */
@@ -870,8 +918,21 @@ async function openViewer(id){
     setTool('pen','#17181B');
     await renderPage();
     renderLayerPanel();
-  }catch(err){ console.error(err); releaseDoc();
-    toast('시험지를 여는 데 실패했습니다.'+errTag(err)); }
+  }catch(err){
+    console.error(err); releaseDoc();
+    busy(false);
+    if(!isRetry){
+      toast('시험지를 여는 데 실패했습니다'+errTag(err)+' — 저장소에서 다시 받아 봅니다…');
+      busy(true);
+      const fixed=await repairDoc(id);
+      busy(false);
+      if(fixed){ await refreshLibrary(); return openViewer(id,true); }
+      toast('저장소에도 없어 고치지 못했습니다'+errTag(err)+'.');
+    }else{
+      toast('다시 받았는데도 열리지 않습니다'+errTag(err)+'.');
+    }
+    return;
+  }
   busy(false);
 }
 /* A-2: 문서를 놓는 자리는 한 곳으로 모은다 — revoke 를 빠뜨리면 새는 쪽이 더 나쁘다 */
@@ -889,8 +950,16 @@ async function goLibrary(){
 tapable($('#backBtn'), goLibrary);
 
 /* ── 렌더링 ── */
+let renderTask=null;
 async function renderPage(){
+  /* ⚠ 빠르게 두 번 누르면 같은 캔버스에 렌더가 겹쳐 pdf.js 가 던진다
+     (「Cannot use the same canvas during multiple render() operations」).
+     그 거절이 비동기라 단추 쪽 try/catch 에 안 잡혀 「오류: 알 수 없음」으로 떴다.
+     ⇒ 새 렌더를 시작하기 전에 앞 렌더를 끊는다. 끊긴 것은 오류가 아니다. */
+  if(!V.pdf || !V.doc) return;
+  if(renderTask){ try{ renderTask.cancel(); }catch(e){} renderTask=null; }
   const pg=await V.pdf.getPage(V.page);
+  if(!V.pdf || !V.doc) return;              /* 기다리는 사이에 서재로 나갔을 수 있다 */
   const rot=(pg.rotate + (V.doc.rot||0)) % 360;
   const stageW=$('#stage').clientWidth-28;
   const raw=pg.getViewport({scale:1, rotation:rot});
@@ -909,10 +978,18 @@ async function renderPage(){
   const ctx=$('#pdfCanvas').getContext('2d');
   ctx.setTransform(1,0,0,1,0,0);
   ctx.clearRect(0,0,$('#pdfCanvas').width,$('#pdfCanvas').height);
-  await pg.render({
+  renderTask=pg.render({
     canvasContext:ctx, viewport:vp,
     transform:[V.dpr,0,0,V.dpr,0,0]
-  }).promise;
+  });
+  try{
+    await renderTask.promise;
+  }catch(err){
+    if(err && err.name==='RenderingCancelledException') return;   /* 끊긴 것 — 조용히 */
+    throw err;
+  }finally{
+    renderTask=null;
+  }
   $('#pgInput').value=V.page;
   redrawInk();
 }
@@ -1011,18 +1088,51 @@ window.__zSet=zSet;               /* 검산에서 부른다 */
   let pinch=null, pan=null;
   const dist=()=>{ const [a,b]=[...pts.values()];
     return Math.hypot(a.x-b.x,a.y-b.y); };
-  const mid=()=>{ const [a,b]=[...pts.values()];
-    return {x:(a.x+b.x)/2, y:(a.y+b.y)/2}; };
+
+  /* ── 손바닥 거부 ─────────────────────────────────────────────────────
+     펜으로 쓰는 동안 손바닥이 닿으면 그것도 pointerType==='touch' 로 온다.
+     그대로 두면 손바닥이 한 손가락 이동으로 잡혀 **쓰는 중에 종이가 밀린다.**
+
+     ⚠ 처음엔 「펜을 뗀 뒤 600ms 동안 손가락 무시」라는 시계로 했는데,
+     그러면 **쓰고 나서 바로 하는 핀치까지 삼킨다**(하네스에서 확대가 안 되어 잡혔다).
+     그래서 시계를 버리고 **누가 닿아 있었는가**로 가른다 —
+     펜이 닿는 순간 이미 바닥에 있던 손가락은 손바닥으로 보고 **그것이 떨어질 때까지만**
+     무시한다. 펜을 뗀 뒤 **새로** 닿는 손가락은 곧바로 이동·확대로 쓴다. */
+  let penDown=false;
+  const held=new Set();     /* 지금 바닥에 닿아 있는 손가락 */
+  const palm=new Set();     /* 그중 손바닥으로 판정된 것 */
+  const dropTouches=()=>{ pts.clear(); pan=null;
+    if(pinch){ pinch=null; zPreview(1); } };
+
+  /* 펜은 가로채지 않는다 — 지켜보기만 한다(필기는 그대로 #inkCanvas 로 간다) */
+  stage.addEventListener('pointerdown',e=>{
+    if(e.pointerType!=='pen') return;
+    penDown=true;
+    for(const id of held) palm.add(id);   /* 펜보다 먼저 닿아 있던 것 = 손바닥 */
+    dropTouches();                        /* 손바닥이 시작해 둔 이동·확대를 버린다 */
+  },true);
+  const penEnd=e=>{ if(e.pointerType!=='pen') return; penDown=false; };
+  stage.addEventListener('pointerup',penEnd,true);
+  stage.addEventListener('pointercancel',penEnd,true);
+
+  const isPalm=id => penDown || palm.has(id);
 
   stage.addEventListener('pointerdown',e=>{
     if(e.pointerType!=='touch') return;      /* 펜·마우스는 언제나 필기로 보낸다 */
+    /* ⇒ #inkCanvas 는 손가락을 보지 못한다. preventDefault 는 길게누르기 선택까지 막는다 */
+    e.stopPropagation();
+    if(e.cancelable) e.preventDefault();
+    /* ⚠ 차례가 중요하다. 손바닥인지 먼저 가린 뒤에 획을 건드린다.
+       전에는 순서가 반대라, 펜으로 긋는 도중 손바닥이 닿으면 그 획을 버려서
+       **필기가 통째로 사라졌다**(2026-09-12 하네스 A 시나리오에서 획 0개로 잡음). */
+    held.add(e.pointerId);
+    if(penDown) palm.add(e.pointerId);       /* 쓰는 도중에 닿은 것 = 손바닥 */
+    if(isPalm(e.pointerId)) return;          /* 손바닥 — 획도 이동도 확대도 건드리지 않는다 */
+    if(drawing){ drawing=null; redrawInk(); } /* 진짜 손가락이면 긋던 획을 버린다 */
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    /* 손가락이 닿는 순간 이미 시작된 획이 있으면 버린다(손가락은 긋지 않는다) */
-    if(drawing){ drawing=null; redrawInk(); }
-    e.stopPropagation();                     /* ⇒ #inkCanvas 는 손가락을 보지 못한다 */
     if(pts.size===1 && V.pdf){
       pan={x:e.clientX, y:e.clientY,
-           sl:stage.scrollLeft, st:stage.scrollTop};
+           sl:stage.scrollLeft, st:stage.scrollTop, armed:false};
     }else if(pts.size===2 && V.pdf){
       pan=null;
       pinch={d0:dist()||1, z0:V.zoom, k:1};
@@ -1031,23 +1141,34 @@ window.__zSet=zSet;               /* 검산에서 부른다 */
 
   stage.addEventListener('pointermove',e=>{
     if(e.pointerType!=='touch') return;
-    if(!pts.has(e.pointerId)) return;
+    e.stopPropagation();                     /* 손가락 움직임은 언제나 필기로 안 간다 */
+    if(e.cancelable) e.preventDefault();
+    if(!pts.has(e.pointerId)) return;        /* 손바닥으로 걸러진 것 */
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    e.stopPropagation();
     if(pinch && pts.size>=2){
       const k=dist()/pinch.d0;
       pinch.k=Math.max(ZMIN/pinch.z0, Math.min(ZMAX/pinch.z0, k));
       zPreview(pinch.k);                     /* 그리지 않고 보여만 준다 */
     }else if(pan && pts.size===1){
-      stage.scrollLeft = pan.sl - (e.clientX - pan.x);
-      stage.scrollTop  = pan.st - (e.clientY - pan.y);
+      const dx=e.clientX-pan.x, dy=e.clientY-pan.y;
+      /* ⚠ 문턱 10px — 얹어 둔 손바닥이 자리를 잡느라 조금 미끄러져도 종이가 움직이지 않는다.
+         일부러 쓸어넘기면 금세 넘고, 한 번 넘으면 그 뒤로는 그대로 따라간다. */
+      if(!pan.armed){
+        if(Math.hypot(dx,dy)<10) return;
+        pan.armed=true;
+      }
+      stage.scrollLeft = pan.sl - dx;
+      stage.scrollTop  = pan.st - dy;
     }
   },true);
 
   const up=e=>{
     if(e.pointerType!=='touch') return;
-    pts.delete(e.pointerId);
     e.stopPropagation();
+    held.delete(e.pointerId);
+    palm.delete(e.pointerId);                /* 떨어졌으면 손바닥 딱지도 지운다 */
+    if(!pts.has(e.pointerId)){ if(!pts.size) pan=null; return; }
+    pts.delete(e.pointerId);
     if(pinch && pts.size<2){
       const {k,z0}=pinch; pinch=null; pan=null;
       zPreview(1);
