@@ -209,10 +209,19 @@ body[data-layer="pdf"] #trTog{display:none!important}   /* 물리 서랍엔 기�
 .wrap canvas{display:block;position:absolute;top:0;left:0}
 /* 지학 3건 §2 — 끝에서 페이지가 끌려가는 것과 선택 풍선을 막는다(그리는 층에만) */
 #inkc{touch-action:none;overscroll-behavior:contain;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-/* `.pen` = **펜슬 전용 모드**(SET.pencil) — 손가락은 스크롤하라고 브라우저에 넘긴 것이다.
+/* `.pen` — 손가락은 스크롤하라고 브라우저에 넘긴 것이다.
+   ★ 2026-09-12 — 전에는 `SET.pencil` 스위치가 켜고 껐는데, 필기가 **언제나 펜만**이 되어 늘 켠다.
    ⚠ 여기를 none 으로 뒤집지 마라 — 손가락 스크롤이 통째로 죽는다.
    펜슬이 그을 때 화면이 같이 밀리던 것은 `stylusGuard` 가 손바닥에 속던 것이었다(§2 · 아래 참조). */
 #inkc.pen{touch-action:auto}
+/* ★ 2026-09-12 (본판 §3 ③) — 손바닥이 닿으면 iOS 가 길게누르기로 보아 글자를 고르고
+   「복사 · 찾아보기 · 번역」 풍선을 띄운다. `-webkit-touch-callout` 이 그 풍선을 막는 **유일한** 스위치인데
+   자과앱에는 `#inkc` 한 곳에만 있었다(재 본 값 — 1회). 빠진 자리에만 넣는다.
+   ⚠ 입력칸·고르개·글상자(`.tbox`)는 글자를 고를 수 있어야 하므로 되돌린다.
+   ⚠ 크롬에는 `-webkit-touch-callout` 이 없어 **헤드리스로 못 잰다** — 사용자 확인 항목이다. */
+.vtop,.vbot,.top,.bkbar,.snbar,.tools{touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.stage,.wrap,#pdfc,#mask,#omrPad,#bkvp,#snvp,#svp{-webkit-touch-callout:none}
+input,textarea,select,.tbox,.tbox *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 #pdfc{position:relative!important}
 #mask{position:absolute;background:#EDECE6;border:1px solid #C4C2B9;border-radius:3px;
   display:grid;place-items:center;font-size:11px;color:#8A8880;cursor:move;z-index:5;
@@ -1164,40 +1173,107 @@ const saveST=()=>put('kv','status',ST);
 let HAVE={};          // fileId -> true  (등록된 PDF)
 let MERGED=false;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-/* ── 애플펜슬 전용 스위치는 기기 하나에 하나(2026-09-07 · add1 §2(1)) ──
-   SET 은 과목 DB(earth1·bio1·phys535)마다 따로라, 한 과목에서 꺼도 다른 과목은 켬 그대로였다.
-   지학 통이 true 라 손가락 필기가 애초에 관문에서 막혀 있었다. 자리를 localStorage 로 옮긴다(SYNC 밖).
-   ⚠ 없는 과목 통은 절대 열지 않는다 — indexedDB.open 은 없으면 만들어 버린다(databases() 로 거르고 upgradeneeded 면 물린다). */
-var PENCIL_KEY='jagwa.pencil';
-function pencilUnify(vals){const b=vals.filter(v=>typeof v==='boolean');
-  if(!b.length)return false;
-  return b.every(v=>v===b[0])?b[0]:false}   /* 엇갈리면 false — 푸는 쪽으로 */
-function pencilOf(dbName){return new Promise(ok=>{let done=false;const fin=v=>{if(!done){done=true;ok(v)}};
-  let r;try{r=indexedDB.open(dbName)}catch(e){return fin(undefined)}
-  r.onerror=()=>fin(undefined);r.onblocked=()=>fin(undefined);
-  r.onupgradeneeded=()=>{try{r.transaction.abort()}catch(e){}fin(undefined)};   /* 없던 통이면 만들지 않는다 */
-  r.onsuccess=e=>{const d=e.target.result;
-    try{if(!d.objectStoreNames.contains('kv')){d.close();return fin(undefined)}
-      const q=d.transaction('kv','readonly').objectStore('kv').get('set');
-      q.onsuccess=()=>{const v=q.result;d.close();fin(v&&typeof v==='object'?v.pencil:undefined)};
-      q.onerror=()=>{d.close();fin(undefined)}}
-    catch(err){try{d.close()}catch(_){}fin(undefined)}}})}
-async function pencilLoad(){
-  let ls=null;try{ls=localStorage.getItem(PENCIL_KEY)}catch(e){}
-  if(ls==='1'||ls==='0'){SET.pencil=(ls==='1');return SET.pencil}
-  const have=new Set();
-  try{if(indexedDB.databases){for(const d of await indexedDB.databases())if(d&&d.name)have.add(d.name)}}catch(e){}
-  const vals=[SET.pencil];
-  if(have.size)for(const id in SUBJ){const dn=SUBJ[id]&&SUBJ[id].DB;
-    if(!dn||dn===CUR.DB||!have.has(dn))continue;
-    vals.push(await pencilOf(dn))}
-  const v=pencilUnify(vals);
-  SET.pencil=v;try{localStorage.setItem(PENCIL_KEY,v?'1':'0')}catch(e){}
-  return v}
-async function pencilSet(v){SET.pencil=!!v;try{localStorage.setItem(PENCIL_KEY,v?'1':'0')}catch(e){}
-  await put('kv','set',SET);const ic=$('#inkc');if(ic)ic.classList.toggle('pen',!!SET.pencil);return SET.pencil}
+/* ── 애플펜슬 전용 스위치는 2026-09-12 에 없앴다 ──
+   필기가 언제나 펜만이 되어 `SET.pencil`·`pencilLoad`·`pencilSet`·`pencilOf`·`pencilUnify`·`PENCIL_KEY`
+   를 부르는 자리가 **0** 이 되었다(본판 §1). 그래서 기계째 걷었다.
+   ⚠ localStorage 의 `jagwa.pencil` **값은 안 지웠다**(본판 §5) — 읽는 코드만 없앴다.
+   ⚠ 과목 통(kv/set)의 `pencil` 필드도 그대로 둔다 — 지우면 옛 판으로 되돌릴 길이 막힌다. */
 const toast=(m,ms=1600)=>{const d=document.createElement('div');d.className='toast';d.textContent=m;
   document.body.appendChild(d);setTimeout(()=>d.remove(),ms)};
+
+/* ══════════════ ⑤ 오류를 화면에 이름까지 (2026-09-12 · 본판 §4) ══════════════
+   아이패드에서는 콘솔을 볼 수 없다. 조용히 죽으면 「오류났다」밖에 말할 수 없다.
+   ⚠ 자과앱에는 오류 표시가 **한 곳도 없었다**(재 본 값 — `errTag` 0 · `window.onerror` 0).
+     기출서재 것을 그대로 옮긴다. 3초에 한 번만 띄운다. */
+let __lastErrToast=0;
+function showErr(kind,info){
+  const now=Date.now();
+  if(now-__lastErrToast<3000)return;
+  __lastErrToast=now;
+  const txt=String(info||'').trim();
+  toast('오류['+kind+'] '+(txt||'내용 없음').slice(0,110),3200);
+}
+window.addEventListener('error',e=>{
+  const t=e.error;
+  const where=e.filename?' @'+String(e.filename).split('/').pop()+':'+e.lineno:'';
+  showErr('js',((t&&t.name)||'')+' '+((t&&t.message)||e.message||'')+where);
+});
+window.addEventListener('unhandledrejection',e=>{
+  const r=e.reason;
+  if(r&&r.name==='RenderingCancelledException')return;   /* 끊긴 렌더는 오류가 아니다(④) */
+  let s='';
+  if(r instanceof Error)s=(r.name||'')+' '+(r.message||'');
+  else if(r&&typeof r==='object')s=(r.name||'')+' '+(r.message||'')+' '+(()=>{
+    try{return JSON.stringify(r).slice(0,60)}catch(x){return Object.prototype.toString.call(r)}})();
+  else s=String(r);
+  showErr('약속',s);
+});
+/* 실패를 한 문장으로 뭉개지 말고 원인 이름을 괄호로 덧붙인다 */
+const errTag=e=>{
+  const n=e&&(e.name||(e.constructor&&e.constructor.name));
+  const m=e&&e.message;
+  return n?(' ('+n+(m?': '+String(m).slice(0,60):'')+')'):'';
+};
+
+/* ══════════════ ④ 렌더 겹침 끊기 (2026-09-12 · 본판 §4) ══════════════
+   같은 캔버스에 렌더가 겹치면 pdf.js 가 던지는데, 그 거절이 **비동기**라
+   동기 try/catch 에 안 잡히고 새어나가 「오류: 알 수 없음」이 된다.
+   ⚠ 자과앱에는 앞 렌더를 끊는 자리가 **하나도 없었다**(재 본 값 — `renderTask`·`cancel()` 0 · `.render(` 8자리).
+   캔버스마다 앞 렌더를 끊고 시작한다. `RenderingCancelledException` 은 오류로 치지 않는다.
+   ⚠ 끊긴 것은 던지지 않고 `false` 를 낸다 — 부르는 자리가 `.promise` 의 값을 쓰지 않으므로 그대로 이어진다. */
+const __rtask=new WeakMap();
+async function pdfRender(page,params){
+  const cv=params&&params.canvasContext&&params.canvasContext.canvas;
+  if(cv){const prev=__rtask.get(cv);if(prev){try{prev.cancel()}catch(e){}}}
+  const t=page.render(params);
+  if(cv)__rtask.set(cv,t);
+  try{await t.promise}
+  catch(err){
+    if(err&&err.name==='RenderingCancelledException')return false;   /* 끊긴 것 — 조용히 */
+    throw err;
+  }finally{if(cv&&__rtask.get(cv)===t)__rtask.delete(cv)}
+  return true;
+}
+
+/* ══════════════ ② 펜 탭 단추 — 위임 리스너 하나 (2026-09-12 · add1 §2) ══════════════
+   애플펜슬은 누를 때 1~2px 흔들려 사파리가 `click` 을 취소한다. 그러면 눌린 테두리만 남고
+   아무 일도 안 난다. 기출서재는 단추마다 `tapable(el,fn)` 을 씌웠지만, 자과앱은 단추가
+   **209개**라 자리마다 고치면 필기·기존 동작에 손이 간다.
+   ⇒ **문서에 위임 리스너 하나**로 덮는다(사용자 확정 2026-09-13) —
+     ㉮ 자리를 안 건드리니 필기·기존 동작 무접촉 ㉯ 되돌리기가 한 곳 ㉰ 앞으로 생기는 단추도 자동으로 덮인다.
+
+   조건 넷(사용자가 못박은 것) —
+     ⓐ `select`·입력칸·`.ogrip`·`#mask` 는 뺀다 — 앞 둘은 브라우저 기본 동작을, 뒤 둘은 **끌기**를 뺏는다
+     ⓑ 이미 `click` 이 정상으로 났으면 **350ms 창**으로 겹침을 막는다
+     ⓒ `pointerType==='mouse'` 는 합성하지 않는다 — 마우스는 `click` 이 멀쩡하다
+     ⓓ 진짜 `click` 을 기다렸다가(60ms) 안 오면 그때만 합성한다
+   ⚠ `stopPropagation` 도 `preventDefault` 도 하지 않는다. 지켜보다 모자란 것만 채운다. */
+const TAP_SEL='button,[role="button"],.tl,.iconbtn,.btn';
+const TAP_SKIP='select,input,textarea,.ogrip,#mask';
+const __tapLast=new WeakMap();
+function tapTarget(e){
+  const t=e&&e.target;
+  if(!t||!t.closest)return null;
+  if(t.closest(TAP_SKIP))return null;             /* ⓐ */
+  const el=t.closest(TAP_SEL);
+  if(!el||el.disabled)return null;
+  if(el.closest(TAP_SKIP))return null;
+  return el;
+}
+document.addEventListener('click',e=>{           /* 진짜 click 이 났음을 적어 둔다 */
+  const el=tapTarget(e);if(el)__tapLast.set(el,Date.now());
+},true);
+document.addEventListener('pointerup',e=>{
+  if(e.pointerType==='mouse')return;              /* ⓒ */
+  const el=tapTarget(e);
+  if(!el)return;
+  setTimeout(()=>{                                /* ⓓ 진짜 click 을 먼저 기다린다 */
+    const now=Date.now(),last=__tapLast.get(el)||0;
+    if(now-last<350)return;                       /* ⓑ 이미 났다 — 겹치지 않는다 */
+    __tapLast.set(el,now);
+    try{el.click()}catch(err){console.error(err);toast('처리 중 오류'+errTag(err))}
+  },60);
+},true);
 
 /* ---------------- 필터 ---------------- */
 const BIGS=[...new Set(DATA.map(r=>r[F.BIG]))];
@@ -1368,7 +1444,7 @@ async function twinPeek(no,onGo){
     const dpr=Math.max(2,Math.min(3,window.devicePixelRatio||1));
     const vp=page.getViewport({scale:avail/base.width*dpr,rotation:rot});
     cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
-    await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    await pdfRender(page,{canvasContext:cv.getContext('2d'),viewport:vp});
     await peekInk(no,cv,{W:cv.width,H:cv.height,rot,scale:avail/base.width*dpr});
   }catch(e){fail('미리보기를 만들지 못했습니다')}
 }
@@ -1607,7 +1683,7 @@ async function showProblem(){
   const saved=await get('ink',String(VNO));
   INK=saved||{0:[]};LAYERS=Math.max(1,Object.keys(INK).length);LAYER=LAYERS-1;
   fillLayerSel();
-  $('#inkc').classList.toggle('pen',!!SET.pencil);
+  $('#inkc').classList.add('pen');   /* ★ 늘 켠다 — 손가락은 브라우저 스크롤로 나간다(본판 §1) */
   await renderPage(loc);
   paintInk();
   await setupMask(VPAGE);
@@ -1668,7 +1744,7 @@ async function renderPage(loc){
   c.width=W;c.height=H;c.style.width=cssW+'px';c.style.height=cssH+'px';
   const ink=$('#inkc');ink.width=W;ink.height=H;ink.style.width=cssW+'px';ink.style.height=cssH+'px';
   $('#wrap').style.width=cssW+'px';$('#wrap').style.height=cssH+'px';
-  await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+  await pdfRender(page,{canvasContext:c.getContext('2d'),viewport:vp});
   RENDER={W,H,rot,scale:scale*dpr};
 }
 
@@ -1724,8 +1800,9 @@ function local(e){const b=inkc().getBoundingClientRect();
 
 $('#inkc').addEventListener('pointerdown',e=>{
   if(drawing&&e.pointerType==='touch')return;   /* 손바닥 거르기 — 획이 사는 동안 들어온 손가락은 안 받는다(add1 §2(2)⑤) */
-  if(SET.pencil&&e.pointerType!=='pen')return;
-  if(e.pointerType==='touch'&&!SET.pencil&&e.isPrimary===false)return;
+  /* ★ 2026-09-12 — 필기는 **언제나 펜만**이다. `SET.pencil` 스위치를 없앴다(본판 §1).
+     손가락 필기(`!SET.pencil`) 갈래는 죽은 길이라 같이 걷었다. */
+  if(e.pointerType!=='pen')return;
   {const lc=locate(rec(VNO)); if(!CARD_LAYER&&lc.id!=='IMG'&&!HAVE[lc.id])return;}   /* 이미지 문항(IMG)도 필기 가능 · 카드 층(지학·생물)은 HAVE 로 막지 않는다(9/7) */
   inkc().setPointerCapture(e.pointerId);
   const[x,y]=local(e);
@@ -1746,7 +1823,10 @@ $('#inkc').addEventListener('pointermove',e=>{
   e.preventDefault();
 },{passive:false});
 
-function endDraw(){if(!drawing)return;drawing=null;paintInk();saveInk()}
+function endDraw(e){
+  /* add1 §1-B — 걸어 둔 포인터 캡처를 여기서 푼다(브라우저가 알아서도 풀지만 자리를 남긴다) */
+  try{if(e&&e.pointerId!=null)inkc().releasePointerCapture(e.pointerId)}catch(_){}
+  if(!drawing)return;drawing=null;paintInk();saveInk()}
 
 /* 아이패드: 펜슬이 닿은 동안에는 스크롤을 막고, 손가락일 때만 스크롤을 넘긴다
    ── 지학 3건 §2 로 구멍 둘을 막았다(2026-09-10) ──
@@ -1759,7 +1839,6 @@ function stylusGuard(e){
   if(drawing){e.preventDefault();return}          // ⓐ 긋는 중
   const ts=(e.touches&&e.touches.length)?e.touches:e.changedTouches;
   if(!ts||!ts.length)return;
-  if(!SET.pencil){e.preventDefault();return}      // 손가락으로 필기하는 모드
   for(let i=0;i<ts.length;i++){                   // ⓑ 접점을 전부 훑는다
     if(ts[i]&&ts[i].touchType==='stylus'){e.preventDefault();return}}
 }
@@ -2963,7 +3042,6 @@ $('#btnSet').onclick=()=>{
       <p style="margin:8px 0 0;font-size:11.5px">파일 이름의 111~666을 보고 자동으로 자리를 잡습니다. 6개를 하나로 합친 통합본(549쪽)도 됩니다.<br>「저장소에서 시험지 받기」는 🔑 토큰이 있어야 하고, <b>바뀐 것만</b> 받습니다.</p>
     </div>
     <div class="fld"><label>필기</label>
-      <button class="btn" id="bPen">애플펜슬로만 필기 (이 기기 전체) — ${SET.pencil?'켬':'끔'}</button>
       <button class="btn" id="bMask">답 자동 가리기 — ${SET.mask?'켬':'끔'}</button>
       <button class="btn" id="bOmrMask">OMR 이 답 가리개를 겸함 — ${SET.omrMask?'켬':'끔'}</button>
       <button class="btn" id="bMaskH">가리개 기본 높이 — ${SET.maskH}줄</button>
@@ -2996,8 +3074,6 @@ $('#btnSet').onclick=()=>{
   b.querySelector('#bClose').onclick=()=>{b.remove();setSheet=null;draw()};
   b.querySelector('#fi').onchange=e=>addFiles(e.target.files);
   b.querySelector('#bPull').onclick=()=>{b.remove();setSheet=null;ensureFiles(true)};
-  b.querySelector('#bPen').onclick=async e=>{await pencilSet(!SET.pencil);
-    e.target.textContent=`애플펜슬로만 필기 (이 기기 전체) — ${SET.pencil?'켬':'끔'}`};
   b.querySelector('#bMask').onclick=async e=>{SET.mask=!SET.mask;await put('kv','set',SET);
     e.target.textContent=`답 자동 가리기 — ${SET.mask?'켬':'끔'}`;if(VNO)updateMask()};
   b.querySelector('#bOmrMask').onclick=async e=>{SET.omrMask=!SET.omrMask;await put('kv','set',SET);
@@ -3399,8 +3475,7 @@ function recBoot(){
   ST=(await get('kv','status'))||{};
   if(migrate())await saveST();
   SET=Object.assign(SET,(await get('kv','set'))||{});
-  await pencilLoad();   /* 펜슬 스위치는 과목 통이 아니라 기기 하나에 하나(add1 §2(1)) */
-  /* 진단 페이지가 남긴 찌꺼기 치우기 — diag: 로 시작하는 잉크 키를 시동 때 쓸어낸다(2026-09-07 뒤처리 ②-가).
+    /* 진단 페이지가 남긴 찌꺼기 치우기 — diag: 로 시작하는 잉크 키를 시동 때 쓸어낸다(2026-09-07 뒤처리 ②-가).
      ⚠ inkNorm/inkGet 안에 넣을 수는 없다 — 그 길은 bink:·note: 쪽 키만 지나가서 diag: 키를 아예 안 만난다.
      여기 두면 기기마다 앱을 한 번 열 때 저절로 사라지고, 사용자가 손댈 게 없다. */
   try{for(const k of await keys('ink'))if(String(k).indexOf('diag:')===0)await del('ink',k)}catch(e){}
@@ -3542,7 +3617,7 @@ function mcardWin(no){
     if(tool==='txt'&&cardTxt){const[u,v]=pt(e);
       txtAdd(box,cardKey,box.clientWidth||1,box.clientHeight||1,1000,u/1000*(box.clientWidth||1),v/1000*(box.clientHeight||1),cardTxtPaint);
       return}
-    if(SET.pencil&&e.pointerType!=='pen')return; try{cv.setPointerCapture(e.pointerId)}catch(_){} const[u,v]=pt(e);
+    if(e.pointerType!=='pen')return; try{cv.setPointerCapture(e.pointerId)}catch(_){} const[u,v]=pt(e);
     if(tool==='erase'){mcErase(no,u,v);mcPaint(cv,MC[no]);live={erase:1};return}
     live={c:tool==='hl'?'#F2C230':TOOL.color,w:TOOL.w,hl:tool==='hl'?1:0,p:[u,v]};e.preventDefault()},{passive:false});
   cv.addEventListener('pointermove',e=>{ if(!live)return; const evs=(e.getCoalescedEvents&&e.getCoalescedEvents().length)?e.getCoalescedEvents():[e];
@@ -3555,7 +3630,7 @@ function mcardWin(no){
     if(JSON.stringify(card).length>MC_MAX){card.s.pop();toast('너무 많이 그렸다 — 카드 하나 20KB 상한');mcPaint(cv,MC[no]);return}
     MC[no]=card;mcPaint(cv,card);await mcSave(no,st)};
   cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
-  ['touchstart','touchmove'].forEach(k=>cv.addEventListener(k,e=>{const t=e.touches&&e.touches[0];if(!t)return;if(!SET.pencil||t.touchType==='stylus')e.preventDefault()},{passive:false}));
+  ['touchstart','touchmove'].forEach(k=>cv.addEventListener(k,e=>{const t=e.touches&&e.touches[0];if(!t)return;if(t.touchType==='stylus')e.preventDefault()},{passive:false}));
 }
 /* 문항을 넘기면 카드 창은 닫는다(그 문항의 카드니까) */
 const _showProblem_mc=showProblem;
@@ -3903,7 +3978,7 @@ var omrPageCanvas=function(pg,pno,s){
     const vp=pg.getViewport({scale:s});
     const c=document.createElement('canvas');
     c.width=Math.ceil(vp.width);c.height=Math.ceil(vp.height);
-    await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+    await pdfRender(pg,{canvasContext:c.getContext('2d'),viewport:vp});
     return c})();
   p.catch(()=>{OMRPG.delete(key)});
   OMRPG.set(key,p);
@@ -3926,7 +4001,7 @@ var jogakPaint=async function(cv,cell,cssW){
   if(v1.width*s*v1.height*s<=OMRPX){               /* 모아보기 크기 — 쪽을 한 번 그려 두고 오려 붙인다 */
     g.drawImage(await omrPageCanvas(pg,cell.p,s),Math.round(-x0*s),Math.round(-y0*s));
   }else{                                            /* 카드 창처럼 크게 볼 때는 종전대로 그 조각만 오려 그린다(쪽을 캐시하면 수백 MB가 된다) */
-    await pg.render({canvasContext:g,viewport:pg.getViewport({scale:s}),transform:[1,0,0,1,-x0*s,-y0*s]}).promise;
+    await pdfRender(pg,{canvasContext:g,viewport:pg.getViewport({scale:s}),transform:[1,0,0,1,-x0*s,-y0*s]});
   }
   return 1})();
   cv.__jgp=run; try{return await run}finally{if(cv.__jgp===run)cv.__jgp=null}}
@@ -4443,7 +4518,7 @@ bookOpen=async function(page,show){
     const base=pg.getViewport({scale:1});const dpr=Math.max(1.5,Math.min(3,window.devicePixelRatio||1));
     const vp=pg.getViewport({scale:avail/base.width*dpr});
     cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);cv.style.width=avail+'px';
-    await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    await pdfRender(pg,{canvasContext:cv.getContext('2d'),viewport:vp});
     msg.textContent='';
     BOOK.pw=base.width;BOOK.ph=base.height;   /* 판 3 add1 — 옆 칸에서 오리기·링크가 쓰는 쪽 크기(pt) */
     await bpInk(page,base.width,base.height);   /* 교재 모드에서 그은 획을 여기서도 보이게(읽기 전용 · 판 1 §1-A) */
@@ -4543,7 +4618,7 @@ function bpPt(e){const w=$('#bpwrap');if(!w||!BOOK.pw)return null;
       return}   /* ⓑ-2 와 같은 잣대 — preventDefault 를 안 건다 */
     if(!BOOK.crop&&!BOOK.bref)return;
     if(e.target&&e.target.closest&&e.target.closest('.brefm'))return;
-    if(e.pointerType!=='pen'&&SET.pencil)return;      /* ⚠ 손가락은 지금처럼 스크롤이다(커밋 ① 규칙 그대로) */
+    if(e.pointerType!=='pen')return;      /* ⚠ 손가락은 지금처럼 스크롤이다(커밋 ① 규칙 그대로) */
     const p=bpPt(e);if(!p)return;
     clear();
     cr={x0:p[0],y0:p[1],x1:p[0],y1:p[1],k:p[2]};
@@ -4689,7 +4764,7 @@ zTileRender=async function(Z,n,b,ts,dpr){const p=n.p;const pg=await Z.pdfPage(p)
   const x0=n.c*ts,y0=n.r*ts,w=Math.min(ts,p.w-x0),h=Math.min(ts,p.h-y0);const cw=Math.min(4096,Math.ceil(w*b*dpr)),ch=Math.min(4096,Math.ceil(h*b*dpr));if(cw<2||ch<2)return null;
   const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;cv.className='ztile';cv.dataset.key=n.key;cv.style.cssText=`position:absolute;left:${(p.x+x0)*b}px;top:${(p.y+y0)*b}px;width:${w*b}px;height:${h*b}px`;
   const k=b*dpr*(p.w/base.width);const vpv=pg.getViewport({scale:k,offsetX:-x0*b*dpr,offsetY:-y0*b*dpr});
-  await pg.render({canvasContext:cv.getContext('2d'),viewport:vpv}).promise;return cv}
+  await pdfRender(pg,{canvasContext:cv.getContext('2d'),viewport:vpv});return cv}
 /* 보이는 타일만 — 캐시에 있으면 붙이고 없는 것만 그린다 · 화면 밖 타일은 DOM 에서 떼되 캐시에 둔다 · 통째 교체 없음 */
 zRender=async function(Z){
   zInit(Z);if(!Z.ready)return;const my=++Z.gen;Z.stats.renders++;Z.busy=my;   /* busy = 진행 중인 렌더 번호(검산·디버그용) */
@@ -4757,7 +4832,10 @@ function zWire(Z){
     const wasVel=!!Z.vel;stopInertia();if(wasVel){Z.moving=false;vp.classList.remove('moving')}
     if(!Z.pen&&Z.textSel&&e.pointerType==='mouse'&&e.target.closest(Z.textSel)){if(wasVel)settle();return}   /* 보기 툴 + 마우스 = 텍스트 선택에 맡긴다 */
     try{vp.setPointerCapture(e.pointerId)}catch(_){}ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,t:e.pointerType});
-    if(ptrs.size===2&&[...ptrs.values()].every(q=>q.t==='touch')){if(Z.pen&&Z.strictView){stroke=null;return}   /* 교재 모드(§4): 핀치·끌기는 「보기」 툴에서만 · 핀치는 손가락 둘일 때만(add1 §2(2)) */
+    if(ptrs.size===2&&[...ptrs.values()].every(q=>q.t==='touch')){   /* ★ 2026-09-12 — 손가락 둘은 **언제나** 핀치다.
+      전에는 `if(Z.pen&&Z.strictView) return` 이라 펜 툴이 켜져 있으면 손가락 핀치를 통째로 버렸다 —
+      사용자가 말한 「지학 서재가 제일 불편하다」의 본체다(본판 §1). `strictView` 는 상수로 뒤집지 않고
+      **입력 종류**로 가른다 : 손가락이면 여기서 이미 통과다. */
       const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),s:Z.S,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,X:Z.X,Y:Z.Y};drag=null;stroke=null;moveOn();return}
     /* 판 3 ② 글상자 — 찍으면 그 자리에 글자 통이 선다(획 통과 다른 통이라 지우개가 안 지운다) */
     if(Z.txt&&Z.tool==='txt'){
@@ -4770,13 +4848,16 @@ function zWire(Z){
       if(Z.onTxt)Z.onTxt(p);return}
     /* 판 3 ① 오리기 — **펜에서만** 네모가 선다. 손가락은 아래로 흘려보내 종전대로 스크롤·핀치가 된다. */
     if(Z.crop&&(Z.tool==='crop'||(Z.bref&&Z.tool==='bref'))){
-      if(e.pointerType!=='pen'&&SET.pencil){if(wasVel)settle();drag={ox:e.clientX,oy:e.clientY,X:Z.X,Y:Z.Y};Z.samples=[{t:performance.now(),x:Z.X,y:Z.Y}];vp.classList.add('panning');moveOn();return}
+      if(e.pointerType!=='pen'){if(wasVel)settle();drag={ox:e.clientX,oy:e.clientY,X:Z.X,Y:Z.Y};Z.samples=[{t:performance.now(),x:Z.X,y:Z.Y}];vp.classList.add('panning');moveOn();return}
       const p=toPage(e.clientX,e.clientY);if(!p){if(wasVel)settle();return}
       crop={i:p.i,x0:p.x,y0:p.y,x1:p.x,y1:p.y};cropDraw();return}
-    if(Z.pen&&(e.pointerType==='pen'||!SET.pencil)){const p=toPage(e.clientX,e.clientY);if(!p){if(wasVel)settle();return}
+    if(Z.pen&&e.pointerType==='pen'){const p=toPage(e.clientX,e.clientY);if(!p){if(wasVel)settle();return}
       if(Z.tool==='erase'){zInkErase(Z,p);return}
       stroke={i:p.i,c:Z.tool==='hl'?'#F2C230':Z.color,w:Z.tool==='hl'?Z.hlw:Z.w,hl:Z.tool==='hl',p:[p.x,p.y]};zInkDraw(Z,stroke,true);return}
-    if(Z.pen&&Z.strictView){if(wasVel)settle();return}
+    /* ★ 2026-09-12 — 손가락·마우스는 **언제나 조작**이다(자과앱 확정 · 기출서재와 다른 한 곳).
+       여기까지 온 펜은 위에서 이미 필기로 갔으므로, 남은 것은 끌기로 보낸다.
+       ⚠ `strictView` 를 상수 `false` 로 뒤집지 않았다 — 입력 종류로 갈랐다(본판 §1). */
+    if(Z.pen&&Z.strictView&&e.pointerType!=='touch'&&e.pointerType!=='mouse'){if(wasVel)settle();return}
     drag={ox:e.clientX,oy:e.clientY,X:Z.X,Y:Z.Y};Z.samples=[{t:performance.now(),x:Z.X,y:Z.Y}];vp.classList.add('panning');moveOn()});
   vp.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,t:(ptrs.get(e.pointerId)||{}).t||e.pointerType});
     if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);const r=vp.getBoundingClientRect();const cx=(a.x+b.x)/2-r.left,cy=(a.y+b.y)/2-r.top;const ns=Math.max(Z.MIN,Math.min(Z.MAX,pinch.s*d/pinch.d));
@@ -4849,7 +4930,7 @@ var cropPaint=async function(cv,cell,cssW){
     const sc=Math.max(0.5,(cssW||cv.clientWidth||320)/w)*dpr;
     cv.width=Math.round(w*sc);cv.height=Math.round(h*sc);
     const g=cv.getContext('2d');g.clearRect(0,0,cv.width,cv.height);
-    await pg.render({canvasContext:g,viewport:pg.getViewport({scale:sc}),transform:[1,0,0,1,-x0*sc,-y0*sc]}).promise;
+    await pdfRender(pg,{canvasContext:g,viewport:pg.getViewport({scale:sc}),transform:[1,0,0,1,-x0*sc,-y0*sc]});
     return 1})();
   cv.__crp=run; try{return await run}finally{if(cv.__crp===run)cv.__crp=null}};
 var cropBoxHtml=(uid,slot)=>{const L=cropList(uid,slot);if(!L.length)return '';
@@ -5123,7 +5204,7 @@ function qWire(){
   const live=()=>sv.querySelector('.qlive');
   sv.onpointerdown=e=>{
     if(!penOn())return;
-    if(SET.pencil&&e.pointerType!=='pen')return;      /* 손바닥 거르기 — 교재·카드와 같은 잣대 */
+    if(e.pointerType!=='pen')return;      /* 손바닥 거르기 — 교재·카드와 같은 잣대 */
     const p=qPt(e); if(!p)return;
     try{sv.setPointerCapture(e.pointerId)}catch(_){}
     if(TOOL.mode==='erase'){qEraseAt(p[0],p[1]);QDRAW={erase:1};e.preventDefault();return}
@@ -5802,7 +5883,7 @@ var brefPop=async function(pr){
     const dpr=Math.max(1.5,Math.min(3,window.devicePixelRatio||1));
     const vp=pg.getViewport({scale:avail/base.width*dpr});
     cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);cv.style.width=avail+'px';
-    await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    await pdfRender(pg,{canvasContext:cv.getContext('2d'),viewport:vp});
     if(BREFPOP!==pr)return;
     msg.textContent='';
     /* 팝업 안에서도 링크는 산다 — 누르면 **이 팝업이** 그 쪽으로 바뀐다(새 창을 안 만든다) */
