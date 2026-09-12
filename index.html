@@ -234,10 +234,6 @@
       <input id="pgInput" inputmode="numeric" aria-label="페이지 번호"><span id="pgTotal" style="opacity:.7">/ 1</span>
       <button class="tbtn" id="nextPg" aria-label="다음 페이지">▶</button>
     </div>
-    <button class="tbtn" id="zoomOut" aria-label="축소">－</button>
-    <button class="tbtn" id="zoomIn" aria-label="확대">＋</button>
-    <button class="tbtn" id="rotateBtn" title="페이지 90°씩 회전 (문서별로 저장됩니다)">⟳ 회전</button>
-    <button class="tbtn" id="pencilOnly" title="Apple Pencil로만 필기 (손가락은 스크롤)">✍︎ 펜슬만</button>
     <button class="tbtn" id="layerBtn">레이어</button>
   </div>
 
@@ -256,8 +252,6 @@
   <div id="stage"><div id="sheet"><canvas id="pdfCanvas"></canvas><canvas id="inkCanvas"></canvas></div></div>
 
   <div class="toolbar" id="toolbar">
-    <button class="tool" data-tool="pan" title="이동/스크롤">☰ 이동</button>
-    <span class="sep"></span>
     <button class="tool" data-tool="pen" data-color="#17181B" title="검정 펜"><span class="dot" style="background:#17181B"></span></button>
     <button class="tool" data-tool="pen" data-color="#B5372F" title="빨강 펜"><span class="dot" style="background:#B5372F"></span></button>
     <button class="tool" data-tool="pen" data-color="#1D4ED8" title="파랑 펜"><span class="dot" style="background:#1D4ED8"></span></button>
@@ -902,16 +896,9 @@ async function goPage(p){ p=clampPage(p); if(p===V.page) return;
 $('#prevPg').onclick=()=>goPage(V.page-1);
 $('#nextPg').onclick=()=>goPage(V.page+1);
 $('#pgInput').onchange=e=>goPage(parseInt(e.target.value)||1);
-$('#zoomIn').onclick=()=>{ V.zoom=Math.min(3,V.zoom+.25); renderPage(); };
-$('#zoomOut').onclick=()=>{ V.zoom=Math.max(.5,V.zoom-.25); renderPage(); };
-$('#rotateBtn').onclick=async()=>{
-  const had=V.doc.layers.some(l=>l.hasInk);
-  V.doc.rot=((V.doc.rot||0)+90)%360;
-  await DB.put('docs',V.doc);
-  await renderPage();
-  if(had) toast('방향을 돌렸습니다. 기존 필기는 화면 기준이라 위치가 어긋날 수 있어요.');
-  else toast('이 방향으로 기억해 둘게요.');
-};
+/* ⚠ 「－ ＋」단추는 뺐다(사용자 지시) — 확대는 손가락 두 개(핀치)와 Ctrl+휠로 한다. */
+/* ⚠ 「⟳ 회전」단추도 뺐다(사용자 지시). 문서에 저장된 rot 값은 renderPage 가 그대로 읽으므로,
+   전에 돌려 둔 시험지는 그 방향을 유지한다. 단추만 없앴지 기능을 지운 것이 아니다. */
 window.addEventListener('resize',()=>{ if(V.pdf) renderPage(); });
 
 /* ── A-5 (add1) 확대 입력 — 휠 · Ctrl+휠 · 두 손가락 핀치 ────────────────────
@@ -955,41 +942,63 @@ window.__zSet=zSet;               /* 검산에서 부른다 */
     zSet(V.zoom*Math.exp(-e.deltaY*0.0015),140);
   },{passive:false});
 
-  /* 두 손가락 핀치 — 캡처 단계 */
+  /* ── 손가락 = 이동/확대 · 펜슬 = 필기 (캡처 단계) ────────────────────────
+     「펜슬만」 단추를 눌러야 손가락이 스크롤되던 것을 없앴다. 이제 저절로 갈린다.
+
+     ⚠ 필기 코드를 고치지 않고 가를 수 있는 까닭 — 캡처는 대상(#inkCanvas) 리스너보다
+     먼저 돈다. 손가락이면 여기서 stopPropagation() 해서 획이 아예 시작되지 않게 하고,
+     펜·마우스면 손대지 않고 그대로 흘려보낸다.
+
+     ⚠ #inkCanvas 는 touch-action:none 이라 브라우저가 스스로 스크롤해 주지 않는다.
+     그래서 한 손가락 이동은 여기서 직접 #stage 를 굴린다. touch-action 을 풀어
+     브라우저에 맡기면 애플펜슬 쪽 preventDefault 가 막혀 필기가 깨진다. */
   const pts=new Map();
-  let pinch=null;
+  let pinch=null, pan=null;
   const dist=()=>{ const [a,b]=[...pts.values()];
     return Math.hypot(a.x-b.x,a.y-b.y); };
+  const mid=()=>{ const [a,b]=[...pts.values()];
+    return {x:(a.x+b.x)/2, y:(a.y+b.y)/2}; };
 
   stage.addEventListener('pointerdown',e=>{
     if(e.pointerType!=='touch') return;      /* 펜·마우스는 언제나 필기로 보낸다 */
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(pts.size===2 && V.pdf){
-      /* 첫 손가락이 이미 긋고 있던 획을 버린다 — 핀치를 획으로 남기지 않는다 */
-      if(drawing){ drawing=null; redrawInk(); }
+    /* 손가락이 닿는 순간 이미 시작된 획이 있으면 버린다(손가락은 긋지 않는다) */
+    if(drawing){ drawing=null; redrawInk(); }
+    e.stopPropagation();                     /* ⇒ #inkCanvas 는 손가락을 보지 못한다 */
+    if(pts.size===1 && V.pdf){
+      pan={x:e.clientX, y:e.clientY,
+           sl:stage.scrollLeft, st:stage.scrollTop};
+    }else if(pts.size===2 && V.pdf){
+      pan=null;
       pinch={d0:dist()||1, z0:V.zoom, k:1};
-      e.stopPropagation();
     }
   },true);
 
   stage.addEventListener('pointermove',e=>{
     if(e.pointerType!=='touch') return;
-    if(pts.has(e.pointerId)) pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(!pinch || pts.size<2) return;
+    if(!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     e.stopPropagation();
-    const k=dist()/pinch.d0;
-    pinch.k=Math.max(ZMIN/pinch.z0, Math.min(ZMAX/pinch.z0, k));
-    zPreview(pinch.k);                       /* 그리지 않고 보여만 준다 */
+    if(pinch && pts.size>=2){
+      const k=dist()/pinch.d0;
+      pinch.k=Math.max(ZMIN/pinch.z0, Math.min(ZMAX/pinch.z0, k));
+      zPreview(pinch.k);                     /* 그리지 않고 보여만 준다 */
+    }else if(pan && pts.size===1){
+      stage.scrollLeft = pan.sl - (e.clientX - pan.x);
+      stage.scrollTop  = pan.st - (e.clientY - pan.y);
+    }
   },true);
 
   const up=e=>{
     if(e.pointerType!=='touch') return;
     pts.delete(e.pointerId);
+    e.stopPropagation();
     if(pinch && pts.size<2){
-      const {k,z0}=pinch; pinch=null;
+      const {k,z0}=pinch; pinch=null; pan=null;
       zPreview(1);
       zSet(z0*k,0);                          /* 손을 뗀 뒤 한 번만 그린다 */
     }
+    if(!pts.size) pan=null;
   };
   stage.addEventListener('pointerup',up,true);
   stage.addEventListener('pointercancel',up,true);
@@ -1019,11 +1028,9 @@ $('#wsel').addEventListener('click',e=>{
   V.widthStep=+b.dataset.w;
   document.querySelectorAll('#wsel button').forEach(x=>x.classList.toggle('on',x===b));
 });
-$('#pencilOnly').onclick=()=>{
-  V.pencilOnly=!V.pencilOnly;
-  $('#pencilOnly').classList.toggle('on',V.pencilOnly);
-  toast(V.pencilOnly?'Apple Pencil로만 필기하고, 손가락으로는 스크롤합니다.':'손가락으로도 필기할 수 있습니다.');
-};
+/* ⚠ 「✍︎ 펜슬만」 단추를 없앴다(사용자 지시) — 이제 저절로 갈린다.
+   손가락 = 이동/확대 · 펜슬 = 필기 · 마우스 = 필기.
+   가르는 자리는 아래 wireZoom() 의 캡처 단계다. V.pencilOnly 는 늘 false 로 남는다. */
 
 /* ── 필기 (Pointer Events) ── */
 const ink=$('#inkCanvas');
