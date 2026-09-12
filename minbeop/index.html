@@ -1967,6 +1967,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         let isExamMode = false;         // 연도별 기출: 끝까지 풀고 한 번에 채점
 
         window.onload = async function() {
+            try { ggResetOnce(); } catch (e) {}      /* add2 §3 — 잘못 박힌 칩 색 한 번만 되돌리기 */
             const ok = await bootData();
             if (ok) { applyAutoImportant(); renderDashboard(); }
             refreshModeCounts();
@@ -3204,6 +3205,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 
                 // 정답 여부를 기록
                 qHistory[item.id] = isCorrect; 
+                ggPaintGraded(item.id, isCorrect);   /* add2 §2 — 아직 색 없는 근거 칩을 그 자리에서 칠한다 */
 
                 const radios = document.querySelectorAll(`input[name="answer_${item.id}"]`);
                 radios.forEach(r => r.disabled = true);
@@ -3533,6 +3535,132 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                  : ok === false ? 'text-red-700 bg-red-50 border-red-300'
                                 : 'text-slate-500 bg-slate-50 border-slate-300';
         }
+        /* 칩 색만 갈아 끼울 때 쓰는 이름들 — class 를 통째로 다시 쓰면 펼침 표시(ring)가 날아간다 */
+        const GG_OKCLS_ALL = ('text-blue-700 bg-blue-50 border-blue-300 '
+                            + 'text-red-700 bg-red-50 border-red-300 '
+                            + 'text-slate-500 bg-slate-50 border-slate-300').split(' ');
+        function ggRepaintChip(uid, g) {
+            const c = document.getElementById('gg-chip-' + uid + '-' + g.k);
+            if (c) {
+                GG_OKCLS_ALL.forEach(k => c.classList.remove(k));
+                ggOkCls(g.ok).split(' ').forEach(k => c.classList.add(k));
+            }
+            const p = document.getElementById('gg-pan-' + uid + '-' + g.k);
+            const meta = p && p.children[0] && p.children[0].children[1];
+            if (meta) meta.textContent = ggOkWord(g.ok) + ' · ' + ggMD(g.ts);
+        }
+
+        /* ★ 2026-09-12 (add2 §1) — 근거 칩 색의 근거는 **이번 회독**이다.
+           `ox_q_history` 는 지난 회독까지 눌러 담은 값이라, 8/26 에 채점된 문항(Q0275~Q0279)이
+           오늘 적자마자 빨강으로 박혔다(사용자 실물). 그 줄을 버리고 이 차례로 본다 —
+             ① 방금 채점했으면 `currentSessionMarks[uid]`
+             ② 없으면 저장해 둔 진행중 기록 `loadInProgress()[chapKeyOf(...)].marks[uid]`
+             ③ 둘 다 없으면 `null`(회색) — 채점을 누르는 순간 `ggPaintGraded` 가 칠한다.
+           ⚠ `chapKeyOf` 를 그대로 부른다. 그 키에는 거르기(`source-filter`·`review-filter`)가 들어가므로
+             문자열을 손으로 이어 붙이면 **다른 줄의 기록**을 본다.
+           ⚠ 문제풀이 화면이 아니면 1·2 를 찾지 않고 바로 `null` 이다.
+           ⚠ 이 자리에서 `ox_q_history` 를 다시 읽지 않는다. */
+        function ggMarkNow(uid) {
+            try {
+                const qs = document.getElementById('quiz-screen');
+                if (!qs || qs.classList.contains('hide')) return null;
+                const m = (typeof currentSessionMarks !== 'undefined' && currentSessionMarks) || {};
+                if (m[uid] === true) return true;
+                if (m[uid] === false) return false;
+                if (!currentSubject || !currentChapterLabel) return null;
+                const saved = loadInProgress()[chapKeyOf(currentSubject, currentChapterLabel)];
+                const sm = (saved && saved.marks) || {};
+                if (sm[uid] === true) return true;
+                if (sm[uid] === false) return false;
+            } catch (e) { return null; }
+            return null;
+        }
+
+        /* ★ add2 §2 — 채점하는 그 순간, 아직 색이 없는(`ok === null`) 근거만 그 결과로 칠한다.
+           ⚠ 이미 `true`/`false` 가 박힌 칩은 건드리지 않는다 — 다음 회독에 뒤집혀도 그대로다.
+           ⚠ `t`·`ts`·`i`·`k`·`cs` 도 그대로. `ts` 는 **적은 때**지 채점한 때가 아니다.
+           ⚠ 카드를 다시 그리지 않는다 — 칩 하나의 색과 펼침 판 머리줄만 제자리에서 간다
+             (다시 그리면 채점 배지·해설이 흔들린다). */
+        function ggPaintGraded(uid, isCorrect) {
+            const list = ggOf(uid);
+            if (!list.length) return 0;
+            let n = 0;
+            list.forEach(g => {
+                if (!g || (g.ok !== null && g.ok !== undefined)) return;
+                g.ok = !!isCorrect; n++;
+                ggRepaintChip(uid, g);
+            });
+            if (n) ggSaveList(uid, list);
+            return n;
+        }
+
+        /* ★ add2 §3 — 한 번만 도는 이관.
+           8/26 기록을 보고 잘못 박힌 색이라 남길 것이 없다(사용자 확정) — 모든 항목의 `ok` 를 `null` 로 되돌린다.
+           ⚠ `t`·`ts`·`i`·`k`·`cs` 는 한 글자도 안 건드린다.
+           ⚠ 표시 키는 **기기별**이다 — `SYNC_KEYS` 에 넣지 않는다. */
+        const GG_RESET_KEY = 'ox_gg_okreset';
+        function ggResetOnce() {
+            try {
+                if (localStorage.getItem(GG_RESET_KEY) === '1') return -1;
+                const o = ggStore();
+                let n = 0;
+                Object.keys(o).forEach(uid => {
+                    const list = o[uid];
+                    if (!Array.isArray(list)) return;
+                    list.forEach(g => { if (g && g.ok !== null) { g.ok = null; n++; } });
+                });
+                if (n) localStorage.setItem(GG_KEY, JSON.stringify(o));
+                localStorage.setItem(GG_RESET_KEY, '1');
+                return n;
+            } catch (e) { return -2; }
+        }
+
+        /* ★ add2 §4 — 회독 기록을 지우면 **그 회독에서 나온 문항 기록도** 같이 지운다.
+           지금까지는 `ox_chap_history` 만 지워, 히트맵과 근거 칩에 지운 회독의 결과가 그대로 남았다.
+           ⚠ 지우고 끝내면 안 된다 — 남은 회독에 그 문항이 있으면 **가장 나중 것의 값**으로 되세운다.
+             안 그러면 히트맵이 통째로 회색이 된다.
+           ⚠ 되세우는 것은 `ox_q_history`(맞았나)뿐이다. `ox_q_last`(푼 시각)·`ox_weak_stage`(약점 단계)는
+             남은 회독에 값이 있으면 **그대로 둔다** — 회독 기록의 `date` 는 지역 글자라 시각으로 되돌릴 수 없고,
+             아직 푼 문항을 「안 푼 것」으로 만들면 오늘 복습 줄이 틀어진다.
+           ⚠ 손대지 않는 것 — 메모·논리·태그·연결·좌표 핀·암기카드·근거 **글**.
+           ⚠ `ox_in_progress` 도 손대지 않는다(회독 기록이 아니라 풀다 만 자리다). */
+        function ggRecalcAfterDelete(goneAttempts, restAttempts) {
+            const ids = [];
+            const seen = {};
+            (goneAttempts || []).forEach(a => Object.keys((a && a.marks) || {}).forEach(id => {
+                if (!seen[id]) { seen[id] = 1; ids.push(id); }
+            }));
+            const out = { n: ids.length, back: 0, gone: 0, chips: 0 };
+            if (!ids.length) return out;
+            /* 남은 회독을 앞에서 뒤로 훑어 덮으면 **그 문항을 담은 가장 나중 회독**의 값이 남는다 */
+            const latest = {};
+            (restAttempts || []).forEach(a => {
+                const m = (a && a.marks) || {};
+                Object.keys(m).forEach(id => { if (seen[id]) latest[id] = m[id]; });
+            });
+            const hist = JSON.parse(localStorage.getItem('ox_q_history') || '{}');
+            const qlast = JSON.parse(localStorage.getItem('ox_q_last') || '{}');
+            const weak = JSON.parse(localStorage.getItem('ox_weak_stage') || '{}');
+            const gg = ggStore();
+            let ggTouched = false;
+            ids.forEach(id => {
+                const has = Object.prototype.hasOwnProperty.call(latest, id);
+                if (has) { hist[id] = latest[id]; out.back++; }
+                else { delete hist[id]; delete qlast[id]; delete weak[id]; out.gone++; }
+                const list = gg[id];
+                if (!Array.isArray(list)) return;
+                list.forEach(g => {
+                    if (!g || g.ok === null || g.ok === undefined) return;   /* 아직 색이 없는 것은 그대로 */
+                    const v = has ? latest[id] : null;
+                    if (g.ok !== v) { g.ok = v; out.chips++; ggTouched = true; ggRepaintChip(id, g); }
+                });
+            });
+            localStorage.setItem('ox_q_history', JSON.stringify(hist));
+            localStorage.setItem('ox_q_last', JSON.stringify(qlast));
+            localStorage.setItem('ox_weak_stage', JSON.stringify(weak));
+            if (ggTouched) localStorage.setItem(GG_KEY, JSON.stringify(gg));
+            return out;
+        }
 
         function ggChipHTML(uid, g) {
             return `<span id="gg-chip-${uid}-${g.k}" onclick="ggToggle('${uid}','${g.k}')" title="${escHtml(g.t || '')}"
@@ -3605,8 +3733,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (!inp) return;
             const t = String(inp.value || '').trim();
             if (!t || t.length > GG_TMAX) return;
-            const hist = JSON.parse(localStorage.getItem('ox_q_history') || '{}');
-            const ok = hist[uid] === true ? true : hist[uid] === false ? false : null;
+            const ok = ggMarkNow(uid);          /* add2 §1 — 이번 회독 기준. `ox_q_history` 는 안 본다 */
             const list = ggOf(uid);
             const g = {
                 k: ggNewKey('g_' + uid + '_'),
@@ -4497,12 +4624,13 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const all = JSON.parse(localStorage.getItem('ox_chap_history') || '{}');
             const hist = all[compareCtx.chapKey] || [];
             if (!hist[idx]) return;
-            if (!confirm(`${idx + 1}회독 기록(${hist[idx].score}/${hist[idx].total})을 삭제할까요?\n이후 회독 번호가 하나씩 당겨집니다.`)) return;
+            if (!confirm(`${idx + 1}회독 기록(${hist[idx].score}/${hist[idx].total})을 삭제할까요?\n이후 회독 번호가 하나씩 당겨집니다.\n\n이 회독에서 나온 문제별 정답기록도 함께 지워집니다.\n남은 회독에 그 문제가 있으면 그 값으로 되돌아갑니다(히트맵·근거 칩 색 같이).\n\n메모·논리·태그·연결·핀·암기카드·근거 글은 그대로 남습니다.`)) return;
 
-            hist.splice(idx, 1);
+            const _gone = hist.splice(idx, 1);       /* add2 §4 — 지운 회독의 marks 가 필요하다 */
             if (hist.length) all[compareCtx.chapKey] = hist;
             else delete all[compareCtx.chapKey];
             localStorage.setItem('ox_chap_history', JSON.stringify(all));
+            ggRecalcAfterDelete(_gone, hist);        /* 문항 기록·근거 칩을 남은 회독에 맞춘다 */
             clearWrongCache();
 
             renderCompareBody();
@@ -4514,10 +4642,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const all = JSON.parse(localStorage.getItem('ox_chap_history') || '{}');
             const hist = all[compareCtx.chapKey] || [];
             if (!hist.length) { syncStatus('삭제할 기록이 없습니다', 'err'); return; }
-            if (!confirm(`«${compareCtx.chapLabel}»의 회독 기록 ${hist.length}개를 모두 삭제할까요?\n\n(문제별 정답기록·메모·태그는 그대로 유지됩니다)`)) return;
+            if (!confirm(`«${compareCtx.chapLabel}»의 회독 기록 ${hist.length}개를 모두 삭제할까요?\n\n이 회독들에서 나온 문제별 정답기록·풀이시각·약점단계가 함께 지워집니다.\n히트맵이 「안 품」으로, 근거 칩 색이 회색으로 돌아갑니다.\n\n메모·논리·태그·연결·핀·암기카드·근거 글은 그대로 남습니다.`)) return;
 
             delete all[compareCtx.chapKey];
             localStorage.setItem('ox_chap_history', JSON.stringify(all));
+            ggRecalcAfterDelete(hist, []);           /* add2 §4 — 남은 회독이 없다 */
             clearWrongCache();
             renderCompareBody();
             renderDashboard();
@@ -4741,6 +4870,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 if (isCorrect) currentSessionScore++;
                 currentSessionMarks[item.id] = isCorrect;
                 qHistory[item.id] = isCorrect;
+                ggPaintGraded(item.id, isCorrect);   /* add2 §2 — 기출 한 번에 채점도 같은 자리 */
                 results.push({ item, picked, isCorrect });
             });
             localStorage.setItem('ox_q_history', JSON.stringify(qHistory));
