@@ -1273,13 +1273,14 @@ function tapSkip(t){
   return !!(t.closest(TAP_SKIP)||t.closest(INK_SKIP));
 }
 document.addEventListener('pointerdown',e=>{
-  if(e.pointerType==='mouse')return;
+  if(e.pointerType==='mouse'||e.__syn)return;     /* __syn = 덮개 밑으로 내가 넘긴 것 */
   __tapDown.set(e.pointerId,{x:e.clientX,y:e.clientY,t:e.target});
 },true);
 document.addEventListener('click',e=>{            /* 진짜 click 이 났음을 적어 둔다 */
   const t=e.target;if(t)__tapLast.set(t,Date.now());
 },true);
 document.addEventListener('pointerup',e=>{
+  if(e.__syn)return;                              /* 덮개 밑으로 내가 넘긴 것 — 겹쳐 만들지 않는다 */
   const dn=__tapDown.get(e.pointerId);__tapDown.delete(e.pointerId);
   if(e.pointerType==='mouse')return;              /* 마우스는 click 이 멀쩡하다 */
   if(!dn||dn.t!==e.target)return;                 /* 누른 자리와 뗀 자리가 달라졌다 — 끈 것이다 */
@@ -1367,21 +1368,45 @@ function underInk(x,y,ink){
   return el.closest(UNDER_HIT)||null;
 }
 const __inkHit=new Map();
+/* 덮개 밑으로 포인터 이벤트를 그대로 넘긴다 — 밑에 달린 손잡이(길게 누르기 등)가 스스로 돌게. */
+function inkSynth(el,type,e){
+  let ev;
+  try{ev=new PointerEvent(type,{pointerType:e.pointerType,pointerId:e.pointerId,isPrimary:true,
+    bubbles:true,cancelable:true,composed:true,clientX:e.clientX,clientY:e.clientY});}
+  catch(_){ev=new MouseEvent(type,{bubbles:true,cancelable:true,clientX:e.clientX,clientY:e.clientY});}
+  ev.__syn=1;                                           /* 톡 위임 리스너가 겹쳐 만들지 않게 */
+  el.dispatchEvent(ev);
+}
 function inkPierce(card){
   if(!card||card.__pierce)return;card.__pierce=1;
   card.addEventListener('pointerdown',e=>{
+    if(e.__syn)return;
     const ink=card.querySelector('#qink');
     if(!ink||e.target!==ink)return;                     /* 덮개를 직접 눌렀을 때만 */
     const hit=underInk(e.clientX,e.clientY,ink);
     if(!hit)return;                                     /* 밑에 눌릴 것이 없다 — 그냥 획이다 */
     e.stopPropagation();                                /* qWire 가 획을 시작하지 않게 */
     __inkHit.set(e.pointerId,{el:hit,x:e.clientX,y:e.clientY});
+    /* ★ 2026-09-13 — 밑으로 그대로 넘긴다. `tfixLong`(5442줄)이 여기서 550ms 시계를 건다 —
+       그래야 **길게 눌러 「글자 고치기 — 문제/보기/해설」**이 펜 모드에서도 열린다.
+       ⚠ 시계를 여기서 새로 만들지 않는다. 8px 취소도, 길게 누른 뒤 click 삼키기도 밑이 알아서 한다. */
+    inkSynth(hit,'pointerdown',e);
+  },true);
+  card.addEventListener('pointermove',e=>{
+    if(e.__syn)return;
+    const h=__inkHit.get(e.pointerId);if(!h)return;
+    e.stopPropagation();
+    inkSynth(h.el,'pointermove',e);                     /* 8px 넘게 움직이면 밑이 스스로 시계를 끈다 */
   },true);
   const done=e=>{
+    if(e.__syn)return;
     const h=__inkHit.get(e.pointerId);__inkHit.delete(e.pointerId);
-    if(!h||e.type!=='pointerup')return;
-    if(Math.hypot(e.clientX-h.x,e.clientY-h.y)>8)return; /* 톡이 아니라 끈 것 */
+    if(!h)return;
     e.stopPropagation();
+    inkSynth(h.el,e.type==='pointerup'?'pointerup':'pointercancel',e);   /* 시계를 끈다 */
+    if(e.type!=='pointerup')return;
+    if(Math.hypot(e.clientX-h.x,e.clientY-h.y)>8)return; /* 톡이 아니라 끈 것 */
+    /* 길게 눌러 이미 「글자 고치기」가 열렸으면 `tfixLong` 이 이 click 을 삼킨다(5449줄) */
     try{h.el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window,
       clientX:e.clientX,clientY:e.clientY}));}
     catch(err){console.error(err);toast('처리 중 오류'+errTag(err))}
@@ -5249,6 +5274,9 @@ var QINK={s:[]}, QUID='', QR=1, QHIDE=false, QDRAW=null;
 var qRoundOf=st=>{const v=+((st||{}).r);return v>=1?v:1};
 var qRounds=()=>{const m=new Set([1]);((QINK.s)||[]).forEach(x=>m.add(qRoundOf(x)));return [...m].sort((a,b)=>a-b)};
 var qKey=uid=>'qink:'+uid;
+/* 획 하나 동안 물고 가는 자 — `qPtF` 가 이것만 보고 셈한다(강제 리플로 0) */
+var QRECT=null,QK=1,QRAF=0;
+function qPtF(e){if(!QRECT)return null;return[(e.clientX-QRECT.left)/QK,(e.clientY-QRECT.top)/QK]}
 function qFit(){                               /* 좁은 화면에서는 카드를 통째로 줄인다 — 획도 같은 비율로 따라간다 */
   const wrap=$('#cardwrap'), card=$('#card'); if(!wrap||!card)return 1;
   const avail=Math.max(120,wrap.clientWidth-2);
@@ -5330,6 +5358,10 @@ function qWire(){
     if(!penOn())return;
     if(e.pointerType!=='pen')return;      /* 손바닥 거르기 — 교재·카드와 같은 잣대 */
     const p=qPt(e); if(!p)return;
+    /* ★ 2026-09-13 — 획 하나 동안 쓸 자를 **여기서 한 번만** 잰다.
+       `qPt` 는 점마다 DOM 을 두 번 뒤지고 `getBoundingClientRect()` 로 레이아웃을 강제한다.
+       사이 점을 받기 시작한 뒤로 점이 네 배라 그 비용도 네 배가 됐다. */
+    QRECT=sv.getBoundingClientRect(); QK=(QRECT.width/QCW)||1;
     try{sv.setPointerCapture(e.pointerId)}catch(_){}
     if(TOOL.mode==='erase'){qEraseAt(p[0],p[1]);QDRAW={erase:1};e.preventDefault();return}
     QDRAW={c:TOOL.mode==='hl'?TOOL.color:TOOL.color,w:TOOL.w,hl:TOOL.mode==='hl'?1:0,r:QR,p:[p[0]/QCW,p[1]/QCW]};
@@ -5343,22 +5375,29 @@ function qWire(){
        ⚠ `d` 는 통째로 다시 만들지 않고 **이어 붙인다** — `pathD` 가 단순 폴리라인이라 결과가 같고,
          점이 촘촘해질수록 통째 다시 만들기는 획 하나에 O(n²)가 된다. */
     const evs=(e.getCoalescedEvents&&e.getCoalescedEvents().length)?e.getCoalescedEvents():[e];
-    if(QDRAW.erase){evs.forEach(ev=>{const q=qPt(ev);if(q)qEraseAt(q[0],q[1])});return}
-    const l=live();
+    if(QDRAW.erase){evs.forEach(ev=>{const q=qPtF(ev)||qPt(ev);if(q)qEraseAt(q[0],q[1])});return}
     let add='';
     evs.forEach(ev=>{
-      const q=qPt(ev); if(!q)return;
+      const q=qPtF(ev)||qPt(ev); if(!q)return;
       const u=q[0]/QCW, v=q[1]/QCW, n=QDRAW.p.length;
       if(n>=2&&QDRAW.p[n-2]===u&&QDRAW.p[n-1]===v)return;   /* 같은 자리는 건너뛴다 */
       QDRAW.p.push(u,v);
       add+=' L'+(u*QCW).toFixed(1)+' '+(v*QCW).toFixed(1);
     });
-    if(l&&add){
+    if(add){
       QDRAW.d=(QDRAW.d||pathD(QDRAW.p.slice(0,2),QCW,QCW))+add;
-      l.setAttribute('d',QDRAW.d);l.setAttribute('stroke',QDRAW.c);
-      l.setAttribute('stroke-width',QDRAW.w);l.setAttribute('opacity',QDRAW.hl?'0.32':'1')}
+      /* ★ 2026-09-13 — SVG 는 `d` 를 넣을 때마다 **경로 전체를 다시 읽고 다시 칠한다.**
+         점이 늘수록 획 하나에 O(n²)다(캔버스인 물리·암기카드는 새 토막만 덧그린다).
+         점은 다 모으되 **한 프레임에 한 번만** 갈아 준다 — 그려지는 모양은 같고 일만 줄어든다. */
+      if(!QRAF)QRAF=requestAnimationFrame(()=>{QRAF=0;
+        const l=live(); if(!l||!QDRAW)return;
+        l.setAttribute('d',QDRAW.d);l.setAttribute('stroke',QDRAW.c);
+        l.setAttribute('stroke-width',QDRAW.w);l.setAttribute('opacity',QDRAW.hl?'0.32':'1')});
+    }
     e.preventDefault()};
-  const up=async()=>{if(!QDRAW)return;const st=QDRAW;QDRAW=null;
+  const up=async()=>{if(QRAF){cancelAnimationFrame(QRAF);QRAF=0}
+    QRECT=null;                                   /* 물고 있던 자를 놓는다 */
+    if(!QDRAW)return;const st=QDRAW;QDRAW=null;
     if(st.erase){await qSave();return}
     if(st.p.length<4){qPaint();return}
     QINK.s.push({c:st.c,w:st.w,hl:st.hl,r:st.r,p:st.p.map(v=>+v.toFixed(4))});
