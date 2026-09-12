@@ -4604,6 +4604,14 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     return slotsRef(all, qid).filter(function (c) { return !(c && isBookDoc(c.doc)); });
   }
 
+  /* 보는 문서 갈래의 자리만 (판 2). 「자리 추가 — N번째」·「자리 i / n」·◀▶ 가 이것을 쓴다.
+     9/11 에 📍 칩만 omrSlots 로 갈랐고 뷰어는 안 갈라서 교재 핀까지 세고 있었다. */
+  function slotsForDoc(qid, docId) {
+    return coordsOf(qid).filter(function (x) {
+      return x && (isBookDoc(docId) ? x.doc === docId : !isBookDoc(x.doc));
+    });
+  }
+
   /* 저장된 자리 전부를 {qid, k, i, c} 로 편다 — c 는 all 안의 실체다 */
   function coordsFlat(all) {
     var out = [];
@@ -4885,9 +4893,62 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       im.src = p.img;
     });
   }
+  /* ---------- 교재 자리를 그림으로 (판 2 · 2026-09-12) ----------
+     `crop()` 은 `getAsset(docId)`(= `omrasset:`) 만 봤다. 그 통에는 **정리OMR 만** 있다.
+     교재(minbeop7_1·7_2·9)는 pdf.js 로 그린다(`mbbDoc`) — 그래서 암기카드에서 교재 자리가
+     영영 안 떴고 「좌표기억을 한 번 열면 받아 옵니다」는 거짓말이었다.
+     ⚠ 쪽을 통째로 넣지 않는다. `r`(+`CROP_PAD`) 만큼만 잘라 낸다. */
+  var BOOKPAGE = {};
+  async function bookPageCanvas(docid, page, scale) {
+    var key = docid + '|' + page + '|' + Math.round(scale * 100);
+    if (BOOKPAGE[key]) return BOOKPAGE[key];
+    var doc = await mbbDoc(docid);
+    var pg = await doc.getPage(Math.max(1, Math.min(page || 1, doc.numPages)));
+    var vp = pg.getViewport({ scale: scale });
+    var cv = document.createElement('canvas');
+    cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+    var g = cv.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+    await pg.render({ canvasContext: g, viewport: vp }).promise;
+    BOOKPAGE[key] = cv;
+    var ks = Object.keys(BOOKPAGE);
+    while (ks.length > 6) { delete BOOKPAGE[ks.shift()]; }      /* 같은 쪽을 두 번 굽지 않되 무한히 쌓지도 않는다 */
+    return cv;
+  }
+  async function cropBook(docId, page, r, opt) {
+    try {
+      var px = opt.padX != null ? opt.padX : CROP_PAD.x;
+      var py = opt.padY != null ? opt.padY : CROP_PAD.y;
+      var x0 = Math.max(0, Math.min(r[0], r[2]) - px), y0 = Math.max(0, Math.min(r[1], r[3]) - py);
+      var x1 = Math.min(1, Math.max(r[0], r[2]) + px), y1 = Math.min(1, Math.max(r[1], r[3]) + py);
+      if (x1 - x0 <= 0 || y1 - y0 <= 0) return null;
+      var doc = await mbbDoc(docId);
+      var pg0 = await doc.getPage(Math.max(1, Math.min(page || 1, doc.numPages)));
+      var base = pg0.getViewport({ scale: 1 });
+      var maxW = opt.maxW || 900;                               /* 잘린 그림 가로가 900px 안팎 */
+      var sc = maxW / Math.max(1, base.width * (x1 - x0));
+      sc = Math.max(0.2, Math.min(sc, 8));
+      if (base.width * sc * base.height * sc > 26e6) sc = Math.sqrt(26e6 / (base.width * base.height));
+      var src = await bookPageCanvas(docId, page, sc);
+      var pw = src.width, ph = src.height;
+      var sx = Math.round(x0 * pw), sy = Math.round(y0 * ph);
+      var sw = Math.round((x1 - x0) * pw), sh = Math.round((y1 - y0) * ph);
+      if (sx + sw > pw) sw = pw - sx;
+      if (sy + sh > ph) sh = ph - sy;
+      if (sw < 2 || sh < 2) return null;
+      var cv = document.createElement('canvas');
+      cv.width = sw; cv.height = sh;
+      var g = cv.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, sw, sh);
+      g.drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh);
+      return cv.toDataURL('image/webp', 0.85);
+    } catch (e) { return null; }
+  }
+
   async function crop(docId, page, r, opt) {
     if (!r || r.length < 4) return null;
     opt = opt || {};
+    if (isBookDoc(docId)) return await cropBook(docId, page, r, opt);
     try {
       var a = await getAsset(docId);
       if (!a || !a.pages) return null;
@@ -5253,7 +5314,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     L.onpointerdown = L.onpointermove = L.onpointerup = L.onpointercancel = null;
     L.style.width = RENDER.W + 'px'; L.style.height = RENDER.H + 'px';
     L.style.pointerEvents = (V.mode === 'view') ? 'none' : 'auto';
-    var mineArr = coordsOf(V.qid);
+    /* ★ 보는 문서 갈래의 자리만 센다(판 2). 9/11 에 📍 칩만 omrSlots 로 갈랐고 뷰어는 안 갈라서
+       교재 핀 1 + 정리OMR 핀 1 인 문항에서 「자리 추가 — 3번째」가 떴다. */
+    var mineArr = slotsForDoc(V.qid, V.docId);
     if (!mineArr.length) V.ci = 0;
     else if (V.ci == null || V.ci < 0 || V.ci >= mineArr.length) V.ci = Math.max(0, Math.min(V.ci || 0, mineArr.length - 1));
     var c = mineArr[V.ci] || null;
@@ -5321,6 +5384,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       var pickWhat = !mineArr.length ? ''
         : (V.editK ? ' <b style="color:#a5b4fc">[자리 ' + (V.ci + 1) + ' 위치 다시 지정]</b>'
                    : ' <b style="color:#6ee7b7">[자리 추가 — ' + (mineArr.length + 1) + '번째]</b>');
+      /* ★ 자리를 더할 때 몇 개째인지 보이게(판 2) — view 모드에만 있던 것을 여기에도 둔다 */
+      if (mineArr.length) {
+        pickWhat += ' <span style="color:#9ca3af">· 자리 ' + (V.ci + 1) + ' / ' + mineArr.length + '</span>';
+      }
       V.bar.innerHTML = '<b>' + esc(qPreview(V.qid)) + '</b>' + pickWhat + ' <span style="color:#9ca3af">· ' +
         (V.pan ? '확대해서 둘러보세요. 기억해둘 자리를 찾으면 <b style="color:#a5b4fc">⬚ 영역 지정</b>을 누르세요'
                 : '그 자리를 드래그해서 감싸주세요') + '</span>';
@@ -5332,9 +5399,24 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         '<button id="cd-z6" style="' + bs + (zl === 0.6 ? on : off) + '">60%</button>' +
         '<button id="cd-z10" style="' + bs + (zl === 1 ? on : off) + '">100%</button>' +
         '<span id="cd-zl" title="휠(ctrl/⌘)·두 손가락으로 연속 확대" style="font-size:12px;color:#d1d5db;min-width:38px;text-align:center">' + (typeof zl === 'number' ? Math.round(zl * 100) + '%' : Math.round((V.fitScale || 0) * 100) + '%') + '</span>' +   /* D-1(9/6) */
+        (mineArr.length > 1 && V.editK ? '<button id="cd-pv2" style="' + bs + 'background:#374151;color:#d1d5db">◀</button>' +
+                                          '<button id="cd-nx2" style="' + bs + 'background:#374151;color:#d1d5db">▶</button>' : '') +
         (mineArr.length ? '<button id="cd-name" style="' + bs + 'background:#374151;color:#d1d5db">이름</button>' : '') +
         '<button id="cd-save" style="flex:1;' + bs + 'background:#059669;color:#fff;' + (V.rect ? '' : 'opacity:.4') + '"' + (V.rect ? '' : ' disabled') + '>이 위치 저장</button>' +
         '<button id="cd-cancel" style="' + bs + 'background:#374151;color:#fff">취소</button>';
+      var pv2 = V.foot.querySelector('#cd-pv2'), nx2 = V.foot.querySelector('#cd-nx2');
+      if (pv2) pv2.onclick = function () {
+        var n = mineArr.length; V.ci = (V.ci - 1 + n) % n;
+        var cc = mineArr[V.ci]; V.editK = cc ? (cc.k || legacyKey(V.qid)) : null;
+        if (cc && cc.page) V.page = cc.page;
+        V.rect = null; draw();
+      };
+      if (nx2) nx2.onclick = function () {
+        var n = mineArr.length; V.ci = (V.ci + 1) % n;
+        var cc = mineArr[V.ci]; V.editK = cc ? (cc.k || legacyKey(V.qid)) : null;
+        if (cc && cc.page) V.page = cc.page;
+        V.rect = null; draw();
+      };
       var keep = function () {
         var cx = V.stage.scrollLeft + V.stage.clientWidth / 2, cy = V.stage.scrollTop + V.stage.clientHeight / 2;
         return [RENDER.W ? cx / RENDER.W : 0.5, RENDER.H ? cy / RENDER.H : 0.5];
@@ -6169,6 +6251,19 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     h += '<div style="font-size:11px;color:#9ca3af;margin:10px 0 2px">정리OMR</div>';
     var oa = (omr && omr.length) ? omr.slice() : [];
     oa.sort(function (a, b) { return (+a.rank || 9) - (+b.rank || 9); });
+    /* ★ 핀이 있으면 그 자리 하나만 — 교재 갈래와 같은 규칙(판 2).
+       ⚠ 교재 갈래와 `mbbRowHTML` 은 고치지 않았다. */
+    var opin = mbbPickedOf(uid, 'minbeopOMR');
+    if (opin) {
+      h += mbbOmrRowHTML({ p: opin.page, snip: (opin.label || slotName(opin)),
+                           x: opin.r && opin.r[0], y: opin.r && opin.r[1],
+                           w: opin.r ? (opin.r[2] - opin.r[0]) : null,
+                           h: opin.r ? (opin.r[3] - opin.r[1]) : null }, '찍어 둔 자리');
+      h += '<button onclick="mbBookUnpin(\'' + uid + '\',\'minbeopOMR\')"'
+        + ' style="font-size:10px;padding:2px 7px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;color:#4b5563;cursor:pointer">'
+        + '자동으로 되돌리기</button>';
+      return h + '</div>';
+    }
     if (!oa.length) {
       h += '<div style="padding:8px 9px;font-size:12px;color:#6b7280">정리OMR 자리를 찾지 못했습니다.</div>';
     } else {
@@ -6745,6 +6840,14 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   }
   var MBB_LAST = null, MBB_OPEN_UID = null;
 
+  /* 자리 이름 — 「<라벨> <쪽>쪽」. 교재면 MBB_VOLNAME, 정리OMR 이면 docs()[id].name. (판 2) */
+  function slotName(c) {
+    if (!c) return '';
+    var d = c.doc || '';
+    var lab = isBookDoc(d) ? (MBB_VOLNAME[MBB_VOL[d]] || d)
+                           : (((docs() || {})[d] || {}).name || d || '정리OMR');
+    return String(lab).replace(/\.pdf$/i, '') + ' ' + (c.page || 1) + '쪽';
+  }
   window.mbOmrGo = mbOmrGo;
   window.mbBookOpen = mbBookOpen;
   window.mbBookPage = mbBookPage;
@@ -6768,6 +6871,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   };
 
   window.oxCoord = { open: openViewer, coords: coords, coordsOf: coordsOf, docs: docs, crop: crop,
+                     slotName: slotName, isBookDoc: isBookDoc, slotsForDoc: slotsForDoc,
                      omrSlots: omrSlots, isBookDoc: isBookDoc, pinState: pinState };
 })();
 </script>
@@ -7249,6 +7353,14 @@ function mcCoordApi() {
     const a = window.oxCoord;
     return (a && typeof a.coordsOf === 'function' && typeof a.crop === 'function') ? a : null;
 }
+/* 자리 이름 — 「<라벨> <쪽>쪽」(판 2). 저장값은 고치지 않고 **그리는 자리에서** ck 로 찾아 짓는다. */
+function mcSlotLabel(qid, ck, fallback) {
+    const api = mcCoordApi();
+    if (!api || typeof api.slotName !== 'function') return fallback;
+    const hit = (api.coordsOf(qid) || []).find(x => x.k === ck);
+    if (!hit) return fallback;
+    return hit.label || api.slotName(hit) || fallback;
+}
 async function mcCoordInner(c, fallbackQid) {
     const miss = t => '<div style="font-size:11px;color:#dc2626;padding:8px;line-height:1.5">[' + escHtml(t) + ']</div>';
     const api = mcCoordApi();
@@ -7259,8 +7371,9 @@ async function mcCoordInner(c, fallbackQid) {
     if (!hit) return miss('가리키던 자리가 지워졌습니다');
     const url = await api.crop(hit.doc, hit.page, hit.r, {});
     if (url) return '<img src="' + url + '" style="width:100%;height:auto;display:block">';
-    const nm = ((api.docs() || {})[hit.doc] || {}).name || hit.doc || '정리OMR';
-    return miss('이 기기에 ' + nm + ' 이(가) 없습니다 — 좌표기억을 한 번 열면 받아 옵니다');
+    /* ★ 교재는 좌표기억을 열어도 안 받아 온다(pdf.js 길이라 통이 다르다) — 거짓 안내를 고쳤다(판 2).
+       교재 자리 목록이 쓰는 문구와 같게 맞춘다. */
+    return miss('받지 못했습니다 — 🔑 토큰이 이 기기에 있는지 확인해 주세요');
 }
 function mcCoordPickSync(id) {
     const n = document.querySelectorAll('[data-ckfor="' + id + '"]:checked').length;
@@ -7284,7 +7397,7 @@ function mcAddCoords(id) {
         const at = slots.findIndex(x => x.k === ck);
         if (at < 0) return;
         const sl = slots[at];
-        all[id].push({ k: mcNewKey(id), kind: 'coord', name: sl.label || ('자리 ' + (at + 1)),
+        all[id].push({ k: mcNewKey(id), kind: 'coord', name: sl.label || mcSlotLabel(id, ck, '자리 ' + (at + 1)),
                        qid: id, ck: ck, ts: Date.now() });
         used[ck] = 1; n++;
     });
@@ -7442,7 +7555,7 @@ async function mcFill(id) {
         }
         list += '<div style="border:1px solid #e5e7eb;border-radius:9px;padding:9px;margin-bottom:9px;background:#fafafa">'
             + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'
-            + '<span style="font-size:11.5px;font-weight:800;color:#374151;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(c.name || '카드') + '</span>'
+            + '<span style="font-size:11.5px;font-weight:800;color:#374151;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(c.kind === 'coord' && c.ck ? mcSlotLabel(c.qid || id, c.ck, c.name || '카드') : (c.name || '카드')) + '</span>'
             + (edit ? '<span style="font-size:10px;color:#9ca3af">' + (c.kind === 'svg' ? 'SVG' : c.kind === 'coord' ? '좌표' : 'IMG') + '</span>'
                     + '<button onclick="mcDel(\'' + id + '\',\'' + c.k + '\')" style="font-size:10.5px;font-weight:700;color:#b91c1c;border:1px solid #fecaca;background:#fff;border-radius:5px;padding:1px 6px;cursor:pointer">삭제</button>' : '')
             + '</div>' + mcZoomHTML(inner) + '</div>';
