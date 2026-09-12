@@ -2689,11 +2689,26 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (typeof updateQuickCounts === 'function' && _home && !_home.classList.contains('hide')) updateQuickCounts();
         }
 
+        /* ★ 2026-09-12 (add3 §1) — 「글이 들어 있는가」.
+           메모·논리 상자는 카드를 그릴 때 **늘** 만들어지므로, 있는가로 가르면 **빈 상자가 열린다**
+           (사용자 실물 `Q4307` — 내 메모는 비고 연결한 메모만 있는데 「📝 내 메모:」 만 적힌 빈 노란 상자가 떴다).
+           메모는 `data-raw`(그림 표시 `![[img_…]]` 를 걷어낸 뒤), 논리는 글자 그대로 본다.
+           ⚠ `updateMemoButton` 은 이미 첫 그림에서 빈 상자를 숨기고 있다 — 거기는 안 건드린다(지시서 §1). */
+        function ggBoxHasText(el, sel) {
+            if (!el) return false;
+            const c = el.querySelector(sel);
+            if (!c) return false;
+            const raw = c.hasAttribute('data-raw') ? (c.getAttribute('data-raw') || '') : (c.textContent || '');
+            return !!String(raw).replace(/!\[\[img_[^\]]+\]\]/g, '').trim();
+        }
+
         // --- 논리 주석 토글 ---
         function toggleLogic(id) {
-            const el = document.getElementById(`logic-${id}`);
+            const elRaw = document.getElementById(`logic-${id}`);
+            const el = ggBoxHasText(elRaw, '.logic-content') ? elRaw : null;   /* add3 §1 — 글이 없으면 없는 셈 친다 */
             const rf = document.getElementById(`reflink-logic-${id}`);
             if (!el && !rf) return;
+            if (elRaw && !el) elRaw.classList.add('hide');
             const wasHidden = el ? el.classList.contains('hide') : rf.classList.contains('hide');
             if (el) el.classList.toggle('hide', !wasHidden);
             if (rf) rf.classList.toggle('hide', !wasHidden);
@@ -2703,6 +2718,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         function revealLogic(id) {
             const el = document.getElementById(`logic-${id}`);
             if (!el) return;
+            /* add3 §1 — 채점 때도 빈 상자는 열지 않는다 */
+            if (!ggBoxHasText(el, '.logic-content')) { el.classList.add('hide'); return; }
             el.classList.remove('hide');
             const btn = document.getElementById(`logic-btn-${id}`);
             if (btn) btn.innerText = '📐 논리 숨기기';
@@ -2745,9 +2762,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         }
 
         function toggleMemoView(id) {
-            const el = document.getElementById(`memo-display-${id}`);
+            const elRaw = document.getElementById(`memo-display-${id}`);
+            const el = ggBoxHasText(elRaw, '.memo-content') ? elRaw : null;   /* add3 §1 — 글이 없으면 없는 셈 친다 */
             const rf = document.getElementById(`reflink-memo-${id}`);
             if (!el && !rf) return;
+            if (elRaw && !el) elRaw.classList.add('hide');
             const wasHidden = el ? el.classList.contains('hide') : rf.classList.contains('hide');
             if (el) el.classList.toggle('hide', !wasHidden);
             if (rf) rf.classList.toggle('hide', !wasHidden);
@@ -2924,8 +2943,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            kind='memo'  : 메모가 비지 않은 문항만 · 메모 글까지 검색
            kind='logic' : 논리가 비지 않은 문항만 · 논리 글까지 검색
            kind='geunge': 근거가 비지 않은 문항만 · 근거 글까지 검색.
-             ★ 이 갈래만 **고르는 것이 아니라 가는 것**이다 — 누르면 `jumpFromSearch` 로 그 문항에 간다.
-               그래서 「이미 넣음」도 없고, 제 문항도 결과에서 빼지 않는다. */
+             ★ 2026-09-12 add3 — 누르면 **그 문항의 근거가 이 문항에 걸린다**(`addRefId`).
+               한동안 `jumpFromSearch` 로 그 문항에 가게 했었는데 연결로 바뀌었다.
+               그래서 제 문항을 빼는 것도 · 「이미 넣음」도 다른 갈래와 **같은 규칙**으로 돌아왔다. */
         function linkSearch(ownerId, kind) {
             const sfx = kind ? `${kind}-${ownerId}` : `${ownerId}`;
             const box = document.getElementById(`link-results-${sfx}`);
@@ -2938,15 +2958,14 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const extraOf = q => kind === 'memo' ? String(memos[q.id] || '')
                                : kind === 'logic' ? String(logicOf(q) || '')
                                : kind === 'geunge' ? ggTextOf(q.id) : '';
-            const already = kind === 'geunge' ? []
-                : kind
+            const already = kind
                 ? refPicked(ownerId, kind).map(x => x.toUpperCase())
                 : String((document.getElementById(`link-input-${ownerId}`) || {}).value || '')
                     .split(',').map(x => x.trim().toUpperCase()).filter(Boolean);
             const hits = [];
             for (let i = 0; i < quizData.length && hits.length < 30; i++) {
                 const q = quizData[i];
-                if (kind !== 'geunge' && String(q.id) === String(ownerId).replace(/^cmp_/, '')) continue;   /* 창 안 편집기는 cmp_ 접두사를 쓴다 · 근거 검색은 제 문항도 보여 준다 */
+                if (String(q.id) === String(ownerId).replace(/^cmp_/, '')) continue;   /* 창 안 편집기는 cmp_ 접두사를 쓴다 */
                 const extra = extraOf(q);
                 if (kind && !String(extra).trim()) continue;       /* 비어 있으면 후보가 아니다 */
                 const no = `${q.displayNo ?? q.probNum}${q.subNum || ''}`;
@@ -2969,8 +2988,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 const fline = kind
                     ? `<div class="border-l-2 pl-2 ${fcls} text-[11.5px] mt-0.5 whitespace-pre-wrap">${escHtml(String(ftxt).slice(0, 90))}</div>`
                     : '';
-                const call = kind === 'geunge' ? `jumpFromSearch('${q.id}')`
-                           : kind ? `addRefId('${ownerId}','${kind}','${q.id}')` : `addLinkId('${ownerId}','${q.id}')`;
+                const call = kind ? `addRefId('${ownerId}','${kind}','${q.id}')` : `addLinkId('${ownerId}','${q.id}')`;
                 return `<button onclick="${call}" class="block w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-indigo-50 transition ${on ? 'opacity-50' : ''}">
                     <div class="flex items-center gap-1.5 mb-0.5">
                         <span class="text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">ID ${q.id}</span>
@@ -3305,12 +3323,22 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const a = r && r[kind];
             return Array.isArray(a) ? a.filter(Boolean) : [];
         }
-        function refPut(id, memoArr, logicArr) {
+        /* ★ add3 — 셋째 갈래 `geunge` 를 더했다. **넷째 인자를 주지 않으면 지금 값을 그대로 둔다** —
+           옛 부르는 두 자리(`saveMemoAndLink`·`cmpSave`)를 한 글자도 안 고치려고 그렇게 했다.
+           ⚠ 새 저장소 키를 만들지 않는다. `ox_q_reflinks` 한 칸 안에 갈래만 늘었다. */
+        function refPut(id, memoArr, logicArr, geungeArr) {
             const st = refStore();
             const m = Array.from(new Set((memoArr || []).map(x => String(x).trim()).filter(x => x && x !== id)));
             const l = Array.from(new Set((logicArr || []).map(x => String(x).trim()).filter(x => x && x !== id)));
-            if (!m.length && !l.length) delete st[id];
-            else { st[id] = {}; if (m.length) st[id].memo = m; if (l.length) st[id].logic = l; }
+            const gSrc = (geungeArr === undefined || geungeArr === null) ? refOf(id, 'geunge') : geungeArr;
+            const g = Array.from(new Set((gSrc || []).map(x => String(x).trim()).filter(x => x && x !== id)));
+            if (!m.length && !l.length && !g.length) delete st[id];
+            else {
+                st[id] = {};
+                if (m.length) st[id].memo = m;
+                if (l.length) st[id].logic = l;
+                if (g.length) st[id].geunge = g;
+            }
             localStorage.setItem('ox_q_reflinks', JSON.stringify(st));
         }
         /* 연결분 상자 — 내 것과 **같은 색**이고 테두리만 점선이다(§2). 새 색을 고르지 않는다. */
@@ -3318,13 +3346,23 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const uids = refOf(id, kind);
             if (!uids.length) return '';
             const isL = kind === 'logic';
-            const cls = isL ? 'text-indigo-900 bg-indigo-50 border-indigo-400' : 'text-yellow-800 bg-yellow-50 border-yellow-400';
+            const isG = kind === 'geunge';          /* add3 — 근거 갈래는 검색 결과가 쓰는 그 파랑 그대로 */
+            const cls = isG ? 'text-blue-800 bg-blue-50 border-blue-400'
+                     : isL ? 'text-indigo-900 bg-indigo-50 border-indigo-400'
+                           : 'text-yellow-800 bg-yellow-50 border-yellow-400';
             const icon = isL ? '📐' : '📝';
             return uids.map(u => {
                 const t = refTextOf(u, kind);
                 if (t === null || !String(t).trim()) return '';
+                /* ⚠ 메모·논리 머리줄은 한 글자도 안 바꾼다. `×` 는 근거 갈래에만 붙는다(지시서 §2-C). */
+                const head = isG
+                    ? `<span class="font-bold flex items-center gap-1 mb-0.5 text-[11px] opacity-80">`
+                      + `<span class="flex-1">🔗 연결한 근거 · ${escHtml(u)}</span>`
+                      + `<button onclick="ggRefDel('${escAttr(id)}','${escAttr(u)}')" title="이 연결만 끊기"`
+                      + ` class="text-[13px] leading-none text-gray-400 hover:text-red-600 font-black px-1">×</button></span>`
+                    : `<span class="font-bold block mb-0.5 text-[11px] opacity-80">🔗 연결한 ${isL ? '논리' : '메모'} · ${escHtml(u)}</span>`;
                 return `<div class="mt-1.5 text-[12.5px] ${cls} p-2.5 rounded-lg border-l-4 border-dashed leading-relaxed whitespace-pre-wrap">`
-                    + `<span class="font-bold block mb-0.5 text-[11px] opacity-80">🔗 연결한 ${isL ? '논리' : '메모'} · ${escHtml(u)}</span>`
+                    + head
                     + `<span>${escHtml(String(t).replace(/!\[\[img_[^\]]+\]\]/g, ''))}</span></div>`;
             }).join('');
         }
@@ -3333,7 +3371,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const uids = refOf(id, kind);
             if (!uids.length) return '';
             const isL = kind === 'logic';
-            const cls = isL ? 'text-indigo-700 bg-indigo-50 border-indigo-300 hover:bg-indigo-100'
+            const cls = kind === 'geunge' ? 'text-blue-700 bg-blue-50 border-blue-300 hover:bg-blue-100'
+                      : isL ? 'text-indigo-700 bg-indigo-50 border-indigo-300 hover:bg-indigo-100'
                             : 'text-yellow-700 bg-yellow-50 border-yellow-300 hover:bg-yellow-100';
             return uids.map(u => {
                 const gone = refTextOf(u, kind) === null;
@@ -3359,6 +3398,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (box) box.innerHTML = refChipsHTML(id, kind);
         }
         function addRefId(ownerId, kind, uid) {
+            /* ★ add3 §2-B — 근거는 문항 카드에 바로 붙은 🔍 라 **저장 버튼이 없다.** 누르는 즉시 넣는다.
+               숨은 칸(`refgeunge-input-…`)도 없으므로 여기서 갈라 준다. */
+            if (kind === 'geunge') return ggRefAdd(ownerId, uid);
             const el = document.getElementById(`ref${kind}-input-${ownerId}`);
             if (!el) return;
             const cur = refPicked(ownerId, kind);
@@ -3385,6 +3427,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const q = quizData.find(x => String(x.id) === String(uid));
             if (!q) return null;
             if (kind === 'logic') return String(logicOf(q) || '');
+            /* add3 — 근거는 그 문항의 근거 글을 `1. …` 꼴로 줄바꿈해 잇는다. 하나도 없으면 빈 글. */
+            if (kind === 'geunge') {
+                return (typeof ggOf === 'function' ? ggOf(uid) : [])
+                    .map(g => ((g && g.i) ? g.i + '. ' : '') + String((g && g.t) || '')).join('\n');
+            }
             const memos = JSON.parse(localStorage.getItem('ox_q_memos') || '{}');
             return String(memos[uid] || '');
         }
@@ -3710,7 +3757,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         class="flex-1 min-w-[80px] border border-slate-300 rounded-md px-2 py-px text-[12px] leading-4 outline-none focus:border-blue-500 bg-white">
                     <button type="button" onclick="ggSearchToggle('${uid}')" title="근거에서 찾기"
                         class="flex-none w-5 h-5 border border-gray-200 rounded-md bg-white text-gray-400 text-[11px] leading-none hover:text-blue-600 hover:border-blue-300">🔍</button>
+                    <span id="reflink-geunge-btns-${uid}" class="flex items-center gap-1">${refBtnsHTML(uid, 'geunge')}</span>
                 </div>
+                <div id="reflink-geunge-${uid}">${refBoxHTML(uid, 'geunge')}</div>
                 <div id="gg-pans-${uid}">${list.map(g => ggPanelHTML(uid, g)).join('')}</div>
                 <div id="gg-search-${uid}" class="hide mt-1.5 border border-slate-300 rounded-lg bg-white overflow-hidden">
                     <div class="px-2.5 py-1.5 border-b border-gray-100 bg-gray-50 text-[11.5px] font-bold text-slate-600">🔍 근거에서 찾기</div>
@@ -3821,6 +3870,33 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const list = ggOf(uid);
             const hit = list.find(g => String((g && g.t) || '').toLowerCase().includes(low)) || list[0];
             return hit ? (hit.i + '. ' + (hit.t || '')) : '';
+        }
+        /* ★ add3 §2-B — 근거 연결은 **저장 버튼 없이 바로** 들어간다.
+           누르는 즉시 `ox_q_reflinks` 에 넣고 · 검색칸을 닫고 · 그 자리만 갈아 끼운다.
+           ⚠ 카드를 다시 그리지 않는다. ⚠ 근거 **글**(`ox_q_geunge`)은 손대지 않는다. */
+        function ggRefPaint(uid) {
+            const box = document.getElementById(`reflink-geunge-${uid}`);
+            if (box) box.innerHTML = refBoxHTML(uid, 'geunge');
+            const btns = document.getElementById(`reflink-geunge-btns-${uid}`);
+            if (btns) btns.innerHTML = refBtnsHTML(uid, 'geunge');
+        }
+        function ggRefAdd(ownerId, uid) {
+            if (String(uid).toUpperCase() === String(ownerId).toUpperCase()) return;
+            const cur = refOf(ownerId, 'geunge');
+            if (cur.map(x => String(x).toUpperCase()).indexOf(String(uid).toUpperCase()) === -1) cur.push(String(uid));
+            refPut(ownerId, refOf(ownerId, 'memo'), refOf(ownerId, 'logic'), cur);
+            ggRefPaint(ownerId);
+            const sb = document.getElementById(`link-search-geunge-${ownerId}`);
+            if (sb) sb.value = '';
+            const box = document.getElementById(`link-results-geunge-${ownerId}`);
+            if (box) { box.innerHTML = ''; box.classList.add('hide'); }
+            const panel = document.getElementById(`gg-search-${ownerId}`);
+            if (panel) panel.classList.add('hide');
+        }
+        function ggRefDel(ownerId, uid) {
+            refPut(ownerId, refOf(ownerId, 'memo'), refOf(ownerId, 'logic'),
+                   refOf(ownerId, 'geunge').filter(x => String(x).toUpperCase() !== String(uid).toUpperCase()));
+            ggRefPaint(ownerId);
         }
         function ggSearchToggle(uid) {
             const b = document.getElementById(`gg-search-${uid}`);
