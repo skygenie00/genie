@@ -3641,7 +3641,9 @@ function recBoot(){
   if(moved)setTimeout(()=>toast('문항 번호 재배열 — 기록 '+moved+'건을 옮겼습니다'),900);
   await loadHave();
   await loadAfix();          /* ⚠ 동기화보다 먼저 — AFIX 가 null 이면 빈 ansfix 로 원격을 깎는다 */
-  if(CARD_LAYER)setTool('view');else setTool('pen','#16181B',$$('[data-pen]')[0]);   /* add2 ③ — 카드 층만 보기로 연다. 물리는 종전 그대로다 */
+  /* ★ 2026-09-13 — 카드 층도 물리와 같이 **펜**으로 연다(「보기」 단추를 걷었다).
+     펜 덮개가 카드를 덮어도 덮개 뚫기가 짧게 톡·길게 누르기를 다 밑으로 넘긴다. */
+  setTool('pen','#16181B',$$('[data-pen]')[0]);
   if(CARD_LAYER)await loadEarthData();
   draw();
   try{recBoot()}catch(e){console.warn('기록 동기화 시동 실패',e)}
@@ -6389,15 +6391,12 @@ $('#tLayerAdd').onclick=async()=>{QR=Math.max(1,...qRounds())+1;qFillSel();qPain
   toast(QR+'회독으로 넘어갑니다 — 이제 긋는 획은 '+QR+'회독입니다')};
 $('#tLayerEye').onclick=()=>{QHIDE=!QHIDE;$('#tLayerEye').classList.toggle('on',QHIDE);qPaint();
   toast(QHIDE?'지금 회독만 봅니다':'옛 회독도 함께 봅니다')};
-/* add2 ③ — 문항 카드 도구줄에 「보기」 단추. 교재 도구줄(881줄 data-tool="view")과 같은 잣대다.
-   ⚠ 마크업(930줄)에 박지 않고 여기서 붙인다 — 박으면 물리 도구줄까지 바뀐다(물리 무변).
-   ⚠ setTool 이 penOn() 을 거짓으로 만들면 #card.penon 이 벗겨져 #qink 가 카드를 안 덮는다(782줄). */
-{const tb=$('.vbot .tools');
- if(tb&&!tb.querySelector('#tView')){const b=document.createElement('button');
-   b.className='tl';b.id='tView';b.textContent='보기';
-   b.onclick=()=>setTool('view',null,b);
-   tb.insertBefore(b,tb.firstElementChild);
-   if(TOOL.mode==='view')b.classList.add('on')}}
+/* ── 문항 카드 도구줄의 「보기」 단추는 2026-09-13 에 걷었다 ──
+   하던 두 일이 다 없어졌다 —
+     ① 손가락 핀치·끌기를 쓰려면 보기여야 했다 → 이제 어느 툴에서나 된다(`strictView` 를 입력 종류로 갈랐다)
+     ② 필기 덮개를 걷어 카드가 눌리게 했다     → 이제 `inkPierce` 가 한다
+        (짧게 톡 = 선택지·정답해설 · 길게 = 글자 고치기 — 둘 다 덮개 밑으로 넘긴다)
+   ⚠ `setTool('view')` 갈래 자체는 남겨 둔다 — 교재·서브노트 툴줄이 아직 그 뜻을 쓴다. */
 /* 펜·형광·지우개를 고르면 잉크 층이 잡히게(보기 상태면 글자 선택이 살아 있다) */
 {const _setTool=setTool;
  setTool=function(){const r=_setTool.apply(this,arguments);try{qWire()}catch(e){}return r}}
