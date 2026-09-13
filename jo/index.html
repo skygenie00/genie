@@ -197,6 +197,14 @@ sup.pitwho{font-size:8px;padding:0 3px;margin-left:1px;height:auto;vertical-alig
 .ln.mdh1{font-size:17px;font-weight:800;margin:12px 0 4px} .ln.mdh2{font-size:15px;font-weight:700;margin:9px 0 3px} .ln.mdh3{font-size:13.5px;font-weight:700;margin:7px 0 2px}
 .htog{color:#b5b1a8;font-size:11px;cursor:pointer;margin-right:5px;user-select:none;display:inline-block;width:12px} .htog:hover{color:var(--exc)}
 .mdhid{display:none !important}
+/* ★ 노트 판 (2026-09-13 · _task_jo_note_md.md §B-2) — 감춘 표시 자리에 뜻을 입힌다.
+   ⚠ 글자는 하나도 안 지운다 · 네모(☐/☑)는 ::before 라 textContent 에 안 들어간다. */
+.mdbg{border-radius:2px;padding:0 1px}
+.mdcode{background:#f0eee8;border:1px solid #e2ded4;border-radius:3px;padding:0 3px;font-family:ui-monospace,Consolas,monospace;font-size:.92em}
+.mdquote{color:#77736b;border-left:2px solid #d9d6ce;padding-left:6px;margin-left:1px;display:inline-block}
+.mdck{display:inline-block;width:1.15em;font-size:0;overflow:visible;vertical-align:baseline}
+.mdck::before{content:'\2610';font-size:12.5px;color:#8a867d}
+.mdck.mdckon::before{content:'\2611';color:var(--exc)}
 .embx{display:block;border-left:3px solid #cfcbc2;background:#faf8f3;border-radius:0 8px 8px 0;padding:6px 30px 6px 10px;margin:4px 0;position:relative;font-size:12.5px;white-space:normal}
 .embx .emtools{position:absolute;right:6px;top:3px;display:flex;gap:5px} .embx .emtools span{cursor:pointer;color:#9a958b;font-size:11px} .embx .emtools span:hover{color:var(--exc)}
 .embx .emhead{display:none;color:#9a958b;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .embx.fold .emhead{display:block} .embx.fold .embody{display:none}
@@ -1059,6 +1067,52 @@ function renderLine(row,opt){
        else if(fopen){if(fm.index>fopen.at){push(opens,fopen.at,{md:'mdcolor',color:fopen.color});push(closes,fm.index,{md:'mdcolor'});}fopen=null;}}
      (row.e||[]).forEach(e=>{if(e.k==='E'&&e.b>e.a){push(opens,e.a,{md:'mdmark'});push(closes,e.b,{md:'mdmark'});}
        if(e.k==='U'&&e.b>e.a){push(opens,e.a,{md:'mdmark'});push(closes,e.la,{md:'mdmark'});push(opens,e.la,{md:'mdlink',href:e.to});push(closes,e.lb,{md:'mdlink'});push(opens,e.lb,{md:'mdmark'});push(closes,e.b,{md:'mdmark'});}});}   /* ★ 상표 판 5 add1 §1b — 요약본 외부 그림·링크 */
+    /* ★ 노트 판 (2026-09-13 · _task_jo_note_md.md §B-2) — 남은 md·HTML 표시를 같은 좌표계 위에서 감춘다.
+       <font color> 갈래를 그대로 베꼈다: 태그·기호 구간은 mdmark(폭 0) · 안 글자에 뜻을 입힌다.
+       ★ 글자를 지우지 않는다 — 문자는 아래 createTextNode 가 한 자씩 그대로 붙이므로 textContent === t 는 그대로다. */
+    {const rt=/<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b([^<>]*)>/g;let tm;const tstk={};
+     while((tm=rt.exec(t))){const nm=tm[2].toLowerCase();
+       if(nm==='font')continue;                                   /* font 는 위 갈래가 이미 맡았다 */
+       push(opens,tm.index,{md:'mdmark'});push(closes,tm.index+tm[0].length,{md:'mdmark'});
+       if(!tm[1]){const st=/style\s*=\s*["']([^"']*)["']/i.exec(tm[3]||'');
+         const bg=st?/background(?:-color)?\s*:\s*([^;]+)/i.exec(st[1]):null;
+         const fg=st?/(?:^|;)\s*color\s*:\s*([^;]+)/i.exec(st[1]):null;
+         (tstk[nm]=tstk[nm]||[]).push({at:tm.index+tm[0].length,bg:bg&&bg[1].trim(),fg:fg&&fg[1].trim()});}
+       else{const st=(tstk[nm]||[]).pop();
+         if(st&&tm.index>st.at){
+           if(st.bg){push(opens,st.at,{md:'mdbg',color:st.bg});push(closes,tm.index,{md:'mdbg'});}
+           else if(st.fg){push(opens,st.at,{md:'mdcolor',color:st.fg});push(closes,tm.index,{md:'mdcolor'});}
+           else if(nm==='u'){push(opens,st.at,{md:'mdund'});push(closes,tm.index,{md:'mdund'});}
+           else if(nm==='s'||nm==='del'){push(opens,st.at,{md:'mdstrike'});push(closes,tm.index,{md:'mdstrike'});}
+           else if(nm==='b'||nm==='strong'){push(opens,st.at,{md:'mdbold'});push(closes,tm.index,{md:'mdbold'});}
+           else if(nm==='i'||nm==='em'){push(opens,st.at,{md:'mdital'});push(closes,tm.index,{md:'mdital'});}
+           else if(nm==='mark'){push(opens,st.at,{md:'mdhl'});push(closes,tm.index,{md:'mdhl'});}}}}}
+    /* 양끝 기호 갈래 — 기호는 mdmark, 안 글자에 뜻 (==형광== · `코드` · ~~취소선~~ · *기울임* 홑) */
+    const mdWrap=(rx,k,w)=>{let m2;rx.lastIndex=0;
+      while((m2=rx.exec(t))){const a=m2.index+(m2[1]||'').length,b=a+m2[0].length-(m2[1]||'').length;
+        if(b-a<=w*2)continue;
+        push(opens,a,{md:'mdmark'});push(closes,a+w,{md:'mdmark'});
+        push(opens,a+w,{md:k});push(closes,b-w,{md:k});
+        push(opens,b-w,{md:'mdmark'});push(closes,b,{md:'mdmark'});}};
+    mdWrap(/()==[^=\n]+==/g,'mdhl',2);
+    mdWrap(/()~~[^~\n]+~~/g,'mdstrike',2);
+    mdWrap(/()`[^`\n]+`/g,'mdcode',1);
+    mdWrap(/(^|[^*\w])\*(?!\*)[^*\n]+?\*(?!\*)/g,'mdital',1);
+    /* 줄머리 갈래 — `> 인용` · `- [ ]`/`- [x]` 할 일(네모는 CSS ::before 라 글자 수에 안 들어간다) */
+    {const q=/^(\s*>\s?)/.exec(t);
+     if(q){push(opens,0,{md:'mdmark'});push(closes,q[1].length,{md:'mdmark'});
+       push(opens,q[1].length,{md:'mdquote'});push(closes,n,{md:'mdquote'});}}
+    {const ck=/^(\s*[-*+]\s+)(\[[ xX]\])(?=\s|$)/.exec(t);
+     if(ck){const a=ck[1].length;
+       push(opens,a,{md:ck[2][1]===' '?'mdck':'mdck mdckon'});push(closes,a+3,{md:ck[2][1]===' '?'mdck':'mdck mdckon'});}}
+    /* `[글](주소)` — 이벤트(U 등)가 이미 덮은 자리는 건너뛴다 */
+    {const rl=/(^|[^!])\[([^\[\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g;let lm;
+     while((lm=rl.exec(t))){const a=lm.index+lm[1].length,b=a+lm[0].length-lm[1].length;
+       if((row.e||[]).some(e=>e.a!=null&&e.b!=null&&e.a<=a&&b<=e.b))continue;
+       const la=a+1,lb=la+lm[2].length;
+       push(opens,a,{md:'mdmark'});push(closes,la,{md:'mdmark'});
+       push(opens,la,{md:'mdlink',href:lm[3]});push(closes,lb,{md:'mdlink'});
+       push(opens,lb,{md:'mdmark'});push(closes,b,{md:'mdmark'});}}
     const mb=/\s*\^[0-9a-f]{6}\s*$/.exec(t);
     if(mb){push(opens,mb.index,{md:'blockid'});push(closes,n,{md:'blockid'});}
     let pos=t.indexOf('**');
@@ -1125,7 +1179,12 @@ function renderLine(row,opt){
       if(o.anc){const anc=el('span','stkanc');const ch=stkChipEl(o.anc,opt,row);anc.appendChild(ch);const nn=(ancN[i]=(ancN[i]||0)+1)-1;if(nn)ch.style.bottom=(0.9+nn*1.5)+'em';top().appendChild(anc);return;}   /* 같은 앵커의 칩은 위로 쌓는다(겹침 0) */   /* ★ 칩 자유이동 — 폭 0 앵커 + 절대 위치 칩 */
       let node;
       if(o.md==='mdlink'){node=el('a','mdlink');node.href=o.href;node.target='_blank';node.rel='noopener';node.title=o.href;node.onclick=ev=>ev.stopPropagation();}   /* ★ 상표 판 5 add1 §1b — 요약본 외부 그림·링크 */
-      else if(o.md){node=o.md==='mdbold'?el('strong'):el('span',o.md);if(o.md==='mdcolor'&&o.color)node.style.color=o.color;}   /* ★ 판 4 §2-1 · add4 색 */
+      else if(o.md){   /* ★ 판 4 §2-1 · add4 색 · 노트 판 §B-2 갈래 보탬 */
+        node=o.md==='mdbold'?el('strong'):o.md==='mdital'?el('em'):o.md==='mdund'?el('u')
+            :o.md==='mdstrike'?el('s'):o.md==='mdcode'?el('code','mdcode')
+            :o.md==='mdhl'?el('mark','y'):el('span',o.md);
+        if(o.md==='mdcolor'&&o.color)node.style.color=o.color;
+        if(o.md==='mdbg'&&o.color)node.style.background=o.color;}
       else if(o.pl){node=el('span','plink'+(o.pl.j?'':' dead'));   /* ★ 판 4 §2-2 — <사건번호> → ③ 판례 팝업 · 깊이 3 이면 3단으로 */
         if(o.pl.j){const pid=o.pl.j;node.onclick=ev=>{ev.stopPropagation();const d=opt.depth||0;
           if(d>=3){closeAllPops();S.tab='prec';S.prec=pid;S.precTab='요약';render();}else popPrec4(pid,ev,d+1);};}
@@ -4781,7 +4840,7 @@ async function embedInline(chip, file, id, to, opt){
   const T = await embedTarget(file, id);
   const rec = T && T.rec;
   const blk = rec ? noteBlockRows(rec, id) : null;
-  if (!blk){ chip.classList.add('dead'); chip.classList.remove('live'); chip.textContent = '⤷ 못 찾음 · ' + to; chip.onclick = null; chip.title = '대상 없음 — ' + to + (rec ? ' (블록 ^' + id + ' 없음)' : ' (특허목차 밖이거나 색인)'); EMBMISS[to] = 1; return; }   /* ★ add4 §1 */
+  if (!blk){ chip.classList.add('dead'); chip.classList.remove('live'); chip.textContent = '⤷ 못 찾음 · ' + to; chip.onclick = null; chip.title = '대상 없음 — ' + to + (rec ? ' (블록 ^' + id + ' 없음)' : ' (그 법 목차노트에 없다 — 색인이거나 아직 안 실린 파일)'); EMBMISS[to] = 1; return; }   /* ★ add4 §1 */
   const folded = !!(S.embFold || {})[to];
   const box = el('div', 'embx' + (folded ? ' fold' : ''));
   const tools = el('div', 'emtools');
