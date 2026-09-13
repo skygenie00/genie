@@ -71,6 +71,7 @@ button{cursor:pointer}
 .stc .hd .sttgl:hover{color:var(--blue)}
 .foot{border-top:1px solid #ddd;margin-top:auto;padding-top:6px;display:flex;justify-content:space-between;font-size:10px;color:#555;align-items:flex-end}
 .foot .big{font-size:22px;font-weight:800;color:#222}
+.foot .ydtot{color:#9a9a9a}   /* 격자 아래 왼쪽 — 어제 합계 */
 /* MiMi bar */
 .mbar{margin-top:8px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:11.5px;background:#fff}
 .mbar .row1{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
@@ -758,7 +759,7 @@ let ui=LS.get('tt.ui',{view:'day',date:null,galMonth:null});
 if(ui.view==='week'||ui.view==='month')ui.view='day'; // feedback8 §1: 일간/주간/월간 = 한 페이지
 let run=LS.get('tt.run',null);            // 진행 중 타이머 {s,p,i,cat,plan,nt,d,a,at}
 let stSel=LS.get('tt.sel',null);          // Study Time 선택 줄 {type:'item'|'cat',id}
-let syncLog=[];let syncing=false;
+let syncLog=[];let syncing=false,syncAgain=false;   /* ★ (9/13) 도는 중에 온 요청을 버리지 않는다 */
 const subjColor=n=>(settings.subjects.find(x=>x.n===n)||{}).c||'#999';
 const other=()=>settings.people.find(p=>p!==cfg.person)||'';
 const dayStart=()=>settings.dayStart??5;
@@ -976,11 +977,23 @@ function mergeFile(path,local,remote){
  return local; // settings: 로컬(더러운 쪽)이 이김
 }
 function sameJSON(a,b){return JSON.stringify(a)===JSON.stringify(b)}
+/* ★ (9/13) await 사이에 사용자가 쓴 것을 지우지 않는다.
+   syncFile 이 맨 처음 뜬 스냅샷을 그대로 saveF 하면, 그 사이의 upsert* 가 통째로 날아갔다
+   (STOP 으로 만든 블록이 사라지던 자리). 쓰기 직전에 다시 읽어 달라졌으면 되병합한다. */
+function commitFile(path,def,merged,sha,base){
+ const now=loadF(path,def);
+ const raced=JSON.stringify(now.data)!==base;              // 스냅샷 이후 로컬이 달라졌나
+ const data=raced?mergeFile(path,now.data,merged):merged;  // 로컬을 첫 인자로 — id·u 최신 승
+ saveF(path,{data,sha,dirty:raced});                       // 새로 생긴 것은 아직 안 올라갔다 → dirty 유지
+ if(raced)scheduleSync();                                  // 다음 판에서 밀어 올린다
+ return data;
+}
 /* 한 파일 동기화. own=true 면 push 까지, 아니면 pull 만 */
 async function syncFile(path,own,def){
  const f=loadF(path,def);
+ const base=JSON.stringify(f.data);                        // ★ 스냅샷 지문 — commitFile 이 이것과 견준다
  const remote=await ghGet(path);
- if(!own){ if(remote){const chg=!sameJSON(f.data,remote.data);f.data=remote.data;f.sha=remote.sha;f.dirty=false;saveF(path,f);return chg;} return false; }   /* A-2(9/6) — 바뀐 게 있었는지 */
+ if(!own){ if(remote){const data=commitFile(path,def,remote.data,remote.sha,base);return !sameJSON(f.data,data);} return false; }   /* A-2(9/6) — 바뀐 게 있었는지 */
  let merged=f.data,sha=remote?remote.sha:null;
  if(remote){ merged=f.dirty?mergeFile(path,f.data,remote.data):remote.data; }
  const needPush=f.dirty||(!remote&&path==='settings.json');
@@ -988,13 +1001,13 @@ async function syncFile(path,own,def){
   try{sha=await ghPut(path,merged,sha);logS(`↑ ${path}`);}
   catch(e){ if(/409|422/.test(e.message)){const r2=await ghGet(path);merged=mergeFile(path,merged,r2.data);sha=await ghPut(path,merged,r2.sha);logS(`↑ ${path} (재시도)`);} else throw e; }
  }
- const chg=!sameJSON(f.data,merged);   /* A-2(9/6) — 로컬과 다른 것이 들어왔나(값이 같아도 dirty=false·saveF 는 그대로) */
- f.data=merged;f.sha=sha;f.dirty=false;saveF(path,f);
- if(path==='settings.json'){settings=Object.assign({},DEF_SETTINGS,merged);migrateSettings(merged);LS.set('tt.settings',settings);}
+ const data=commitFile(path,def,merged,sha,base);   /* ★ 여기서 되읽고 되병합 — 스냅샷으로 덮지 않는다 */
+ const chg=!sameJSON(f.data,data);   /* A-2(9/6) — 로컬과 다른 것이 들어왔나(값이 같아도 saveF 는 그대로) */
+ if(path==='settings.json'){settings=Object.assign({},DEF_SETTINGS,data);migrateSettings(data);LS.set('tt.settings',settings);}
  return chg;
 }
 async function syncAll(silent){
- if(syncing)return; if(!cfg.token){if(!silent)toast('설정에서 토큰을 넣어줘');return;}
+ if(syncing){syncAgain=true;return} if(!cfg.token){if(!silent)toast('설정에서 토큰을 넣어줘');return;}
  if(!navigator.onLine){if(!silent)toast('오프라인 — 큐에 보관');return;}
  syncing=true;renderSide();
  let chg=false;const S=async(p,o,d)=>{if(await syncFile(p,o,d))chg=true;};   /* A-2(9/6) — 하나라도 원격에서 바뀐 게 들어왔을 때만 끝에 render() */
@@ -1015,7 +1028,9 @@ async function syncAll(silent){
   if(ui.view==='share'||listDirty().includes('share/share.json'))await S('share/share.json',true,{v:1,items:[]}); // fb13 §5
   cfg.lastSync=Date.now();LS.set('tt.cfg',cfg);logS('완료');if(!silent)toast('동기화됨');
  }catch(e){logS('✗ '+e.message);if(!silent)toast('동기화 실패: '+e.message);}
- syncing=false;if(chg)render();else renderSide();   /* A-2(9/6) — 바뀐 게 없으면 동기화 칩만 */
+ syncing=false;
+ if(syncAgain){syncAgain=false;setTimeout(()=>syncAll(true),400);}   /* ★ 버려진 예약분을 한 번 더 */
+ if(chg)render();else renderSide();   /* A-2(9/6) — 바뀐 게 없으면 동기화 칩만 */
 }
 let syncT=null;function scheduleSync(){clearTimeout(syncT);syncT=setTimeout(()=>syncAll(true),4000);renderSide();}
 window.addEventListener('online',()=>syncAll(true));
@@ -1313,7 +1328,7 @@ function sheetHTML(who,d,sess,{withRun=true,axis='day'}={}){
  return`<div class="sheet" style="position:relative"><button class="btn pmbtn" onclick="pmPopup(this.ownerDocument)" title="계획관리 팝업 — 화면 이동 없이 편집 (§9)">📋 계획관리</button><div class="ribbon rbtn" onclick="ribbonModal('${axis}',this.ownerDocument)" title="클릭 = 날짜 이동 · 하루 시작 (§1 fb18)">${rlab}</div><div class="paper">
  <div><div class="hd">Time Table</div><div class="tt"><span></span><div class="tth">${[1,2,3,4,5].map(n=>`<i style="left:${(n*100/6).toFixed(2)}%">${n*10}</i>`).join('')}</div>${ttRows(sess,{lp:lifePlanned(who,d)})}</div></div>
  <div class="stc"><div class="hd">Study Time${mine&&catRows.length?`<span class="sttgl" onclick="stCatTgl()" title="세부계획 없이 활동 단위로 재는 줄 — 켜면 목록에 나온다">활동 줄 ${catRows.length} ${showCat?'▾':'▸'}</span>`:''}</div><div class="st">${rows.map(rowHTML).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}${(()=>{const lm=sess.filter(x=>x.life).reduce((a,x)=>a+(x.b-x.a),0);return`<div class="it liferow" ${mine?`onclick="pickRow('life','')" title="클릭 = 선택 · START 로 시작 — 종류는 블록 클릭으로 나중에 지정 (합산 없음)"`:''}><i class="sw hsw"></i><span class="nm">생활</span><span class="pl" style="color:#aaa">${mine?'밥·산책·… 나중 지정':''}</span><span>${lm?dur(lm):''}</span></div>`})()}</div>
- <div class="foot"><div>Start <b>${sess.length?hmDisp(sess[0].a):(mine&&run&&run.d===d?hmDisp(run.a):'--:--')}</b> &nbsp; Stop <b>${sess.length?hmDisp(Math.max(...sess.map(x=>x.b))):'--:--'}</b></div><div>Total${exTxt?`<i style="font-style:normal;font-size:9px;color:#999"> (${exTxt}${exN?' 뺀 값':' 제외'})</i>`:''} <span class="big"${mine&&run&&run.d===d?` id="stTot" data-base="${tot}"`:''}>${dur(tot+(mine&&run&&run.d===d&&!run.nt?runMin:0))}</span></div></div></div></div></div>`;
+ <div class="foot">${axis==='day'?`<div class="ydtot" title="어제 잰 시간 — Total 과 같은 셈(생활·합산 제외 뺀 값)">어제 <b>${dur(mSum(sessionsOf(who,addDays(d,-1))))}</b></div>`:''}<div>Start <b>${sess.length?hmDisp(sess[0].a):(mine&&run&&run.d===d?hmDisp(run.a):'--:--')}</b> &nbsp; Stop <b>${sess.length?hmDisp(Math.max(...sess.map(x=>x.b))):'--:--'}</b></div><div>Total${exTxt?`<i style="font-style:normal;font-size:9px;color:#999"> (${exTxt}${exN?' 뺀 값':' 제외'})</i>`:''} <span class="big"${mine&&run&&run.d===d?` id="stTot" data-base="${tot}"`:''}>${dur(tot+(mine&&run&&run.d===d&&!run.nt?runMin:0))}</span></div></div></div></div></div>`;
 }
 function mbarHTML(){
  const si=selInfo();
