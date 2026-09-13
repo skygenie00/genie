@@ -187,6 +187,11 @@ button{cursor:pointer}
 .mini .miniin{position:absolute;left:0;top:0;transform-origin:0 0}
 .mini .minic{position:absolute;inset:0;z-index:2}
 .snapbadge.mod{background:#c60;border-color:#c60;color:#fff}
+.card .lb .pvc{margin-left:auto;align-self:center;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:11px;line-height:1;flex:none;border:1px solid transparent}
+.card .lb .pvc.pen{background:#F4511E;border-color:#d84315}
+.card .lb .pvc.pen.pd{background:#e4e4e6;border-color:#d6d6d8;opacity:.5}
+.card .lb .pvc.rew{background:#FFC93C;border-color:#e0a800}
+.card .lb .pvc.on{cursor:pointer}
 .card .lb b{font-weight:800;font-size:11px}
 .mthumb{width:100%;height:84px;display:grid;grid-template-rows:14px 1fr;gap:2px}
 .mthumb .rb2{background:var(--m8);color:#fff;text-align:center;font-weight:700;font-size:8px;letter-spacing:.15em;line-height:14px}
@@ -1627,13 +1632,48 @@ function monthCardHTML(m){ // MiMi 월간 점 카드(Study Time 그리드 + To d
  </div></div>`;
 }
 function shiftMonth(d,n){const dt=parse(d);dt.setDate(1);dt.setMonth(dt.getMonth()+n);return iso(dt)}
+/* ----- 벌칙 ⚡ · 포상 🏅 (2026-09-13 _task_tt_share_penalty §B) -----
+   잣대 = sn.total(Study Time · 분 — mSum 이 nt 세션을 빼므로 생활 블록은 이미 빠져 있다)
+   문턱 = settings.redHours*60 (footBg 가 바닥을 분홍으로 칠하는 그 값 · 숫자를 새로 안 박는다)
+   차례 ① 시행일 전 = 없음 ② total ≥ 문턱 = 🏅 ③ 어제가 문턱 이상 = 면제(칩 없음)
+        ④ total < 어제 = ⚡ ⑤ 그 밖(같거나 많다 · 0↔0 포함) = 없음
+   어제 = 달력의 어제(addDays(d,-1)) · 어제가 미반영이면 판정하지 않는다(칩 없음)
+   확정 시점 = takeSnap. 다시 반영하면 다시 잰다. pd(수행함)는 물려받는다. */
+const PV_FROM='2026-09-12';   /* 시행일 — 소급 금지 */
+function pvCalc(who,d,total){
+ if(d<PV_FROM)return'';
+ const th=settings.redHours*60;
+ if(total>=th)return'rew';
+ const y=snapOf(who,addDays(d,-1));
+ if(!y)return'';
+ const yt=y.total||0;
+ if(yt>=th)return'';
+ return total<yt?'pen':'';
+}
+/* ⚡ 수행 표시 뒤집기 — 제 것만(스냅샷 파일이 사람별이라 남의 것엔 못 쓴다) */
+function pvToggle(d){
+ const who=cfg.person,m=ym(d);const f=snapFileF(who,m);const e=f.data.days[d];
+ if(!e||e.pv!=='pen')return;
+ e.pd=e.pd?0:1;e.u=Date.now();
+ f.dirty=true;saveF(snapPath(who,m),f);scheduleSync();render();
+}
+const PV_TIT={pen:'벌칙 — 누르면 수행 표시',pdone:'벌칙 수행함 — 다시 누르면 되돌아간다',rew:'10시간 채움'};
+/* .lb 안 dur() 왼쪽 칩 하나. 이모티콘 한 자만 — 뜻은 title 로. 남의 칩은 보이기만 하고 안 눌린다 */
+function pvChip(who,d,sn){
+ const v=sn&&sn.pv;
+ if(v==='rew')return`<span class="pvc rew" title="${esc(PV_TIT.rew)}">🏅</span>`;
+ if(v!=='pen')return'';
+ const done=!!sn.pd,mine=who===cfg.person;
+ return`<span class="pvc pen${done?' pd':''}${mine?' on':''}" title="${esc(done?PV_TIT.pdone:PV_TIT.pen)}"${mine?` onclick="event.stopPropagation();pvToggle('${d}')"`:''}>⚡</span>`;
+}
 /* ----- 데일리 모음 = 반영(스냅샷) ----- */
 function takeSnap(d){ // 내 것만. 그 시점 복사본 — 원본을 나중에 고쳐도 칸은 그대로
  const who=cfg.person;const m=ym(d);const f=snapFileF(who,m);
  const sess=sessionsOf(who,d);
  const rows=dayRows(who,d); // Study Time 줄 그대로 저장 (it = [과목,라벨,완료,분,분류명,이월배지] — 6번째 = §7-4 fb17)
  const old=f.data.days[d]||{};
- f.data.days[d]={at:Date.now(),u:Date.now(),total:mSum(sess),memo:old.memo||'',
+ const tot=mSum(sess);
+ f.data.days[d]={at:Date.now(),u:Date.now(),total:tot,memo:old.memo||'',pv:pvCalc(cfg.person,d,tot),pd:old.pd||0,
   ss:sess.map(x=>[x.s,x.a,x.b,x.nt?1:0,x.life?1:0]),
   it:rows.map(r=>[r.s,(r.type==='unit'?[r.catName,r.label].filter(Boolean).join(' '):(r.type==='legacy'?r.label:[r.cat?r.cat.name:'',r.label].filter(Boolean).join(' '))),r.done?1:0,r.min,r.cat?r.cat.name:(r.catName||''),carryText(r)||'',r.ntMin||0])};
  f.dirty=true;saveF(snapPath(who,m),f);scheduleSync();
@@ -1685,7 +1725,8 @@ function dayCard(who,x){
   return`<div class="card empty"><div class="th" style="flex-direction:column;gap:6px;position:relative"><span class="snapbadge">미반영</span><span>${isT?(snapMode()==='auto'&&mine?'오늘 · 하루가 지나면 자동 반영':'오늘'):'지난 날'}</span>${mine?`<button class="btn" style="border-color:var(--blue);color:var(--blue)" onclick="takeSnap('${x}');toast('반영했어');render()">${isT&&snapMode()==='auto'?'지금 반영':'데일리 모음에 반영'}</button>`:''}</div><div class="lb"><span>${dlab}</span><span>${ddayAt(x)}</span><b style="margin-left:auto;color:#ccc">--:--</b></div></div>`;
  }
  const dirty=mine&&snapDirtyChk(who,x,sn);
- return`<div class="card" onclick="snapView('${who}','${x}')" style="cursor:pointer"><div class="th full" style="position:relative">${miniSheet(snapSheetHTML(x,sn))}${dirty?'<span class="snapbadge mod">반영 후 수정됨</span>':''}</div><div class="lb" style="background:${footBg(sn.total||0)};color:#111"><span>${dlab}${sn.memo?' ✎':''}</span><span style="color:#666">${ddayAt(x)}</span><b style="margin-left:auto">${dur(sn.total||0)}</b></div></div>`;
+ const pc=pvChip(who,x,sn);   /* 미반영(.card.empty)·시간층(.card.hist) 칸은 위에서 이미 돌아갔다 */
+ return`<div class="card" onclick="snapView('${who}','${x}')" style="cursor:pointer"><div class="th full" style="position:relative">${miniSheet(snapSheetHTML(x,sn))}${dirty?'<span class="snapbadge mod">반영 후 수정됨</span>':''}</div><div class="lb" style="background:${footBg(sn.total||0)};color:#111"><span>${dlab}${sn.memo?' ✎':''}</span><span style="color:#666">${ddayAt(x)}</span>${pc}<b style="margin-left:${pc?'6px':'auto'}">${dur(sn.total||0)}</b></div></div>`;
 }
 function weekKey(plan,ws){const L=wLabelOf(plan,ws);return L!=null?'W'+pad(L):ws} // 프로젝트 셀법 라벨 키 · 범위 밖은 날짜 키
 function weekCard(who,ws){
