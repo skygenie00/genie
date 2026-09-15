@@ -17,11 +17,12 @@
            켜짐(형광펜 보기) = 덮개 숨김 · 꺼짐(필기모드) = #qcards.penon 에서 덮개가 펜을 받는다 · 자과앱 #card·#qink(841~853줄) 규약을 민법 자리에 맞췄다.
            ⚠ transform 은 레이아웃 폭을 안 줄이므로 묶음 바깥에서 가로로 넘친 몫을 자른다(clip — 스크롤 통을 만들지 않는다) */
         #quiz-container{overflow-x:clip}
-        #qcards{position:relative;width:900px;max-width:900px;transform-origin:top left}
+        /* ★ 09-16 (_task_ox_ink_add1 §A·§F) — 축소 없앰: 묶음은 옛 반응형 폭(100% · 최대 900 · 가운데) · transform 없음 · 필기 좌표는 그린 카드 폭으로 나눈다(qiWire) · 필기모드 손가락은 브라우저 스크롤(pan-y) */
+        #qcards{position:relative;width:100%;max-width:900px;margin:0 auto}
         #qcards .question-box{position:relative}
         #qcards .qink{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:6;overflow:visible;display:none}
-        #qcards.penon .qink{display:block;pointer-events:auto;touch-action:none;cursor:crosshair}
-        #qcards.penon{touch-action:none}
+        #qcards.penon .qink{display:block;pointer-events:auto;touch-action:pan-y pinch-zoom;cursor:crosshair}
+        #qcards.penon{touch-action:pan-y}
         #qcards.penon .question-box p,#qcards.penon .question-box span{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
         #ink-tools button{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #d1d5db;border-radius:6px;background:#fff;font-size:12px;line-height:1;padding:0}
         #ink-tools button.on{outline:2px solid #1d4ed8;outline-offset:1px}
@@ -2213,7 +2214,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             return true;
         }
         /* ★ 09-15 (_task_ox_jeongni_popup §C) — 📋 정리칩 묶음 열쇠 = 소단원 글자(info.sub) 앞 「N.N」(1.1 · 2.10) · 안 나오면 그 행(chapLabel) 하나가 한 묶음 */
-        function jnKeyOf(sub, chapLabel) { const m = /^\d+\.\d+/.exec(String(sub || '')); return m ? m[0] : String(chapLabel); }
+        /* ★ 09-16 (_task_ox_card_simple_add11 §3) — 「N.」뿐인 소단원(4. 권리의 객체 · 5. 법률행위 …)도 「N」 열쇠로 한 묶음 · 뒤 꼬리표 「(미수록)」 은 안 본다 · 「N」 과 「N.M」 은 다른 열쇠(합치지 않는다) */
+        function jnKeyOf(sub, chapLabel) { const m = /^\d+(?:\.\d+)?/.exec(String(sub || '')); return m ? m[0] : String(chapLabel); }
+        const JN_SUFFIX_RE = /\((?:7판신설|미수록|변형)\)$/;   /* ★ 09-16 (add11 §3 · 사용자 9/16) — 꼬리표 줄(chapLabel 끝) · 📋 은 이런 줄이 아닌 묶음 첫 줄에 */
         /* 목차 줄 한 장(章)의 소단원 차례 — renderDashboard 안에 있던 정렬 줄을 글자 그대로 옮겼다(📋 묶음을 먼저 모을 때도 같은 차례를 쓴다) */
         function dashEntriesOf(subMap) {
             const entries = Object.entries(subMap);
@@ -2320,10 +2323,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 for (const subMap of Object.values(chapterMap)) {
                     for (const [chapLabel, info] of dashEntriesOf(subMap)) {
                         const gk = jnKeyOf(info.sub, chapLabel);
-                        if (!jnGroups.has(gk)) { jnGroups.set(gk, []); jnFirst.add(chapLabel); }
+                        if (!jnGroups.has(gk)) jnGroups.set(gk, []);
                         jnGroups.get(gk).push(chapLabel);
                     }
                 }
+                /* ★ 09-16 (_task_ox_card_simple_add11 §3 · 사용자 9/16) — 📋 붙는 줄 = 묶음 안에서 꼬리표 없는 첫 줄((7판신설)·(미수록)·(변형) 으로 안 끝나는 chapLabel) · 그런 줄이 없을 때만 정렬 첫 줄 · data-jn 묶음 목록(정렬 차례)은 그대로 */
+                for (const labs of jnGroups.values()) jnFirst.add(labs.find(l => !JN_SUFFIX_RE.test(l)) || labs[0]);
                 const roman = (() => { const i = _romanAll.indexOf(subject); return i < 0 ? '' : (ROMAN_NUM[i] || String(i + 1)); })();   /* ★ add3 · add6 — 숫자 색은 제목 글자와 같은 검정(text-gray-800) */
                 let subjectHtml = `
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -2372,10 +2377,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                                 // 「그 회독 당시 상태」가 아니게 되므로 생략한다 (🔴 는 marks 에서 복원 가능)
                                 const confPart = (typeof h.confuse === 'number') ? `🌀${h.confuse} ` : '';
                                 const fakePart = (typeof h.fake === 'number') ? `⚠${h.fake} ` : '';
+                                /* ★ 09-16 (_task_ox_card_simple_add11 §1) — 틀린 수도 X 와 같은 빨강 span 안(add9 는 X 만) · 🌀·⚠ 와 「/전체」는 그대로 */
                                 return `
                                 <button onclick="openCompareModal('${subject}', '${esc}')" title="${hi + 1}회독 (${h.date || ''}) · 클릭하면 회독별 비교 / 기록 삭제"
                                     class="text-[10px] bg-blue-50 hover:bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded border border-blue-200 font-bold whitespace-nowrap transition">
-                                    ${hi + 1}회독 ${confPart}${fakePart}<span class="text-red-600 font-black">X</span>${wrongN} /${h.total}
+                                    ${hi + 1}회독 ${confPart}${fakePart}<span class="text-red-600 font-black">X${wrongN}</span> /${h.total}
                                 </button>`;
                             }).join('');
                         }
@@ -2507,7 +2513,35 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             renderDashboard(); 
         }
 
+        /* ★ 09-16 (_task_ox_ink_add1 §E) — 렌더 한 번 = 저장소 한 번. renderQuizPage 가 처음에 qpCacheOpen 으로 풀어 두고 끝(qiAfterRender 뒤)에서 qpCacheClose 로 비운다.
+           그 사이 ggStore·linkStore·refStore·loadQTypes 는 캐시를, yujeBackOf 는 한 번 지은 색인을 돌려준다 · 캐시가 없으면(렌더 밖 · 저장 코드) 옛대로 새로 푼다.
+           실측(헤드리스 PC · 문항 5,548 · 근거 1,203문항) — 옛 판 렌더 한 번 약 7초 중 yujeBackChipHTML 6.7초(카드마다 전 문항 × quizData.find) · ggLineHTML 0.17초(카드마다 근거·참조 저장소) */
+        var GG_PAGE = null, LINK_PAGE = null, REF_PAGE = null, QTYPE_PAGE = null, YUJE_PAGE = null;
+        function qpCacheClose() { GG_PAGE = null; LINK_PAGE = null; REF_PAGE = null; QTYPE_PAGE = null; YUJE_PAGE = null; }
+        function qpCacheOpen() {
+            qpCacheClose();
+            GG_PAGE = ggStore(); LINK_PAGE = linkStore(); REF_PAGE = refStore(); QTYPE_PAGE = loadQTypes(); YUJE_PAGE = yujeBackIndex();
+            queueMicrotask(qpCacheClose);                /* 렌더가 도중에 죽어도 이 일이 끝나면 비운다 — 저장 코드가 낡은 캐시를 안 쓰게 */
+        }
+        function yujeBackIndex() {                       /* yujeBackOf(id) 를 모든 id 에 한 번에 — 차례·겹침·자기 빼기 규칙 글자 그대로(같은 id 가 둘이면 첫 행의 유제를 본다 · yujeOf 의 find 와 같다) */
+            const first = new Map();
+            quizData.forEach(x => { const k = String(x.id); if (!first.has(k)) first.set(k, x); });
+            const idx = new Map();
+            quizData.forEach(q => {
+                const qid = String(q.id), qkey = qid.trim().toUpperCase(), src = first.get(qid);
+                if (!src) return;
+                Array.from(new Set(String(src.yuje || '').split(/[,\s]+/).map(s => s.trim()).filter(s => s && s !== qid))).forEach(to => {
+                    const tkey = String(to).trim().toUpperCase();
+                    if (tkey === qkey) return;
+                    let arr = idx.get(tkey);
+                    if (!arr) idx.set(tkey, arr = []);
+                    if (arr.indexOf(qid) === -1) arr.push(qid);
+                });
+            });
+            return idx;
+        }
         function renderQuizPage() {
+            qpCacheOpen();   /* ★ 09-16 (_task_ox_ink_add1 §E) — 렌더 한 번 = 저장소 한 번(근거·연결·참조·유형 저장소와 유제 되짚기 색인을 여기서 한 번 · 끝에서 비운다) */
             // 페이지 인덱스가 범위를 벗어나면 보정 (빈 화면 방지)
             const _unit = isExamMode
                 ? Math.ceil([...new Set(currentFilteredData.map(x => x.examNo))].length / EXAM_Q_PER_PAGE)
@@ -2538,7 +2572,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             }
 
             const qHistory = JSON.parse(localStorage.getItem('ox_q_history') || '{}');
-            const userLinks = JSON.parse(localStorage.getItem('ox_q_links') || '{}');
+            const userLinks = linkStore();   /* ★ 09-16 (_task_ox_ink_add1 §E) — 페이지 캐시(LINK_PAGE) · 옛 판은 여기서 한 번 더 풀었다 */
             const qTags = JSON.parse(localStorage.getItem('ox_q_tags') || '{}');
 
             let currentCaseText = null;
@@ -2648,7 +2682,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                                 ${typeBadge}
                                 ${examBadges}
                                 ${bookChipHTML(item)}
-                                ${item.pending ? '' : samePanryeChipHTML(item)}
+                                ${item.pending ? '' : samePanryeChipHTML(item, true)}
                                 ${item.pending ? '' : `<span data-lkchips="${item.id}" class="contents" style="display:contents">${myLinkChipHTML(item)}</span>`}
                                 ${item.pending ? '' : yujeChipHTML(item)}
                                 ${item.pending ? '' : yujeBackChipHTML(item)}
@@ -2817,6 +2851,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 document.getElementById('exam-prev-bar').classList.toggle('hide', currentPageIndex === 0);
             }
             qiAfterRender(pageData);   /* ★ 09-15 (_task_ox_ink) — 카드마다 필기 덮개 · 폭 맞춤 · 이 쪽 필기 불러오기 */
+            qpCacheClose();   /* ★ 09-16 (_task_ox_ink_add1 §E) — 렌더 끝 · 캐시를 비운다(저장 코드는 늘 새로 푼다) */
         }
 
         /* ══════════ ★ 09-15 (_task_ox_ink) 문제풀이 필기 — 자과앱 문항 화면 필기를 옮겨 왔다 ══════════
@@ -2824,7 +2859,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            · 꺼짐 = 필기모드 — 지문·해설을 평문으로 다시 그림(#mark-bar 안 뜸) · #qcards.penon · 덮개가 펜을 받는다 · 도구 다섯(검정·빨강·형광·지우개·🗑)
            · 필기는 문항마다 이 기기 IndexedDB(ox_master_db · rows 통 · 키 ink:q:<uid>) · 동기화 밖 · localStorage 에 안 쓴다
              (rows 통을 통째로 비우는 코드는 없다 — img:·omrasset:·omrhash: 도 같은 통에 키로 산다 · 9/15 census)
-           · 좌표 = 카드(q-box) 안 논리 px 를 QI_W(900)로 나눈 u,v(세로도 900 · 자과앱과 같다) · 카드 묶음 폭을 900 으로 박아 창 폭이 바뀌어도 줄바꿈이 같다
+           · 좌표 = ★ 09-16 add1 — 그릴 때의 카드(덮개 svg) 폭 W 로 나눈 u,v(세로도 W) · 묶음에 w:W 기록(옛 값 w 없음 = 900 · QI_W) · 그리기는 지금 폭으로 균등(svg viewBox 0 0 1 1000 · slice · 굵기 non-scaling-stroke) · 회전·창 폭이 바뀌면 줄바꿈이 달라져 세로가 어긋날 수 있다(감수)
            · 펜(pointerType pen)만 긋는다 · 손가락은 절대 안 긋는다 · 자과앱 조각 넷(펜 톡 위임 · 손바닥 거르기 · 덮개 뚫기 · 긋기)을 옮기되 회독 층·되돌리기는 뺐다(사용자 9/15) */
         const QI_W = 900;
         var cardMarksOn = true;
@@ -2832,6 +2867,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         var QI = {};                 /* uid → {s:[{c,w,hl,p:[u,v,…]}]} */
         var _qiSaveT = {};
         var QI_DRAW = null, QI_RAF = 0;
+        var QI_PEN = false;          /* ★ add1 §F — 펜이 닿아 있는가(손바닥 거르기 · iOS 터치 막기가 같이 본다) */
         function qiKey(uid) { return 'ink:q:' + uid; }
         async function dbDel(key) {
             const db = await dbOpen();
@@ -2840,18 +2876,20 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 t.onsuccess = () => res(); t.onerror = () => rej(t.error);
             });
         }
-        function qiPathD(p) {
+        function qiPathD(p) {                        /* ★ add1 — 단위 좌표 그대로(u,v) · svg viewBox 가 지금 폭을 곱한다 */
             if (!p || p.length < 2) return '';
-            let d = 'M' + (p[0] * QI_W).toFixed(1) + ' ' + (p[1] * QI_W).toFixed(1);
-            for (let k = 2; k < p.length; k += 2) d += ' L' + (p[k] * QI_W).toFixed(1) + ' ' + (p[k + 1] * QI_W).toFixed(1);
+            const f = v => (+v).toFixed(5);
+            let d = 'M' + f(p[0]) + ' ' + f(p[1]);
+            for (let k = 2; k < p.length; k += 2) d += ' L' + f(p[k]) + ' ' + f(p[k + 1]);
             return d;
         }
         function qiPaint(uid) {
             const sv = document.getElementById('ink-' + uid);
             if (!sv) return 0;
             const S = (QI[uid] && QI[uid].s) || [];
-            sv.innerHTML = S.map((st, j) => '<path data-j="' + j + '" d="' + qiPathD(st.p) + '" stroke="' + st.c + '" stroke-width="' + st.w + '" fill="none" stroke-linecap="round" stroke-linejoin="round"' + (st.hl ? ' opacity="0.32"' : '') + '/>').join('')
-                + '<path class="qlive" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+            const ve = ' vector-effect="non-scaling-stroke"';   /* ★ add1 — 굵기는 화면 px 그대로(카드 폭이 바뀌어도) */
+            sv.innerHTML = S.map((st, j) => '<path data-j="' + j + '" d="' + qiPathD(st.p) + '" stroke="' + st.c + '" stroke-width="' + st.w + '" fill="none" stroke-linecap="round" stroke-linejoin="round"' + ve + (st.hl ? ' opacity="0.32"' : '') + '/>').join('')
+                + '<path class="qlive" fill="none" stroke-linecap="round" stroke-linejoin="round"' + ve + '/>';
             return S.length;
         }
         function qiSave(uid) {
@@ -2860,7 +2898,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 delete _qiSaveT[uid];
                 const v = QI[uid];
                 try {
-                    if (v && v.s && v.s.length) await dbPut(qiKey(uid), { s: v.s });
+                    if (v && v.s && v.s.length) await dbPut(qiKey(uid), { w: v.w || QI_W, s: v.s });
                     else await dbDel(qiKey(uid));
                 } catch (e) { syncStatus('필기를 저장하지 못했습니다 — 기기 저장 공간을 확인해 주세요', 'err'); }
             }, 300);
@@ -2871,23 +2909,13 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 let v = null;
                 try { v = await dbGet(qiKey(uid)); } catch (e) { v = null; }
                 if (_qiSaveT[uid] && QI[uid]) { qiPaint(uid); return; }   /* 읽는 사이에 그은 획이 있다 — 메모리가 더 새것이다 */
-                QI[uid] = (v && Array.isArray(v.s)) ? { s: v.s } : { s: [] };
+                QI[uid] = (v && Array.isArray(v.s)) ? { w: +v.w || QI_W, s: v.s } : { w: QI_W, s: [] };
                 qiPaint(uid);
             }));
         }
+        /* 09-16 add1 — 축소 없음 · 묶음은 CSS 반응형 폭(100% · 최대 900)이라 여기서 할 일이 없다 · 부르는 자리(qiAfterRender·ResizeObserver)는 그대로 둔다 */
         function qcardsFit() {
-            const host = document.getElementById('quiz-container'), c = document.getElementById('qcards');
-            if (!host || !c) return 1;
-            const hs = getComputedStyle(host);
-            const avail = host.clientWidth - (parseFloat(hs.paddingLeft) || 0) - (parseFloat(hs.paddingRight) || 0);   /* innerWidth 가 아니라 묶음이 들어갈 안쪽 폭 — 바깥 틀(max-w-4xl 896px)보다 넓게 재면 카드 오른쪽이 잘린다 */
-            const k = avail > 0 ? Math.min(1, avail / QI_W) : 1;
-            const tf = k < 1 ? 'scale(' + k + ')' : '';
-            const mb = k < 1 ? Math.round(-c.offsetHeight * (1 - k)) + 'px' : '';
-            const ml = k < 1 ? '0px' : 'auto';
-            if (c.style.transform !== tf) c.style.transform = tf;
-            if (c.style.marginBottom !== mb) c.style.marginBottom = mb;
-            if (c.style.marginLeft !== ml) { c.style.marginLeft = ml; c.style.marginRight = ml; }
-            return k;
+            return 1;
         }
         function qiAfterRender(pageData) {
             const wrap = document.getElementById('qcards');
@@ -2897,11 +2925,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 if (!uid || document.getElementById('ink-' + uid)) return;
                 const sv = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                 sv.setAttribute('class', 'qink'); sv.setAttribute('id', 'ink-' + uid); sv.setAttribute('data-uid', uid);
+                sv.setAttribute('viewBox', '0 0 1 1000'); sv.setAttribute('preserveAspectRatio', 'xMinYMin slice');   /* ★ add1 — 단위 좌표를 지금 폭으로 균등 확대(회전·창 크기가 바뀌어도 따라간다) */
                 box.appendChild(sv);
                 qiWire(sv, uid);
             });
             wrap.classList.toggle('penon', !cardMarksOn);
-            qiGuard(); qiPierce();
+            qiGuard(); qiPierce(); qiTouchWire();   /* ★ add1 §F — iOS 펜슬·손바닥 터치 막기는 필기모드일 때만 단다 */
             qiToolsPaint();
             qcardsFit();
             if (window.ResizeObserver) {          /* 정답·해설이 펴져 묶음 높이가 바뀌거나 창 폭이 바뀌면 다시 맞춘다(한 프레임에 한 번) */
@@ -2950,33 +2979,32 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (!confirm('이 쪽 ' + uids.length + '문항 필기를 모두 지웁니다')) return;
             for (const uid of uids) {
                 clearTimeout(_qiSaveT[uid]); delete _qiSaveT[uid];
-                QI[uid] = { s: [] }; qiPaint(uid);
+                QI[uid] = { w: QI_W, s: [] }; qiPaint(uid);
                 try { await dbDel(qiKey(uid)); } catch (e) { }
             }
         }
-        function qiScale() { const c = document.getElementById('qcards'); return c ? ((c.getBoundingClientRect().width / QI_W) || 1) : 1; }
         /* 긋기 — 자과앱 qWire·qEraseAt(5398~5456) · 펜이 찍은 사이 점을 다 받고(getCoalescedEvents) · 획 하나 동안 자(rect·배율)는 한 번만 잰다 · 한 프레임에 한 번 d 갱신 */
         function qiWire(sv, uid) {
             sv.addEventListener('pointerdown', e => {
                 if (cardMarksOn || e.pointerType !== 'pen') return;        /* 펜만 긋는다 — 손가락·마우스는 절대 안 긋는다 */
-                const r = sv.getBoundingClientRect(), k = qiScale();
-                const x = (e.clientX - r.left) / k, y = (e.clientY - r.top) / k;
+                const r = sv.getBoundingClientRect(), W = r.width || 1;    /* ★ add1 — 그리는 카드(덮개) 폭 W · 획 하나 동안 이 자를 쓴다 */
+                const x = e.clientX - r.left, y = e.clientY - r.top;
                 try { sv.setPointerCapture(e.pointerId); } catch (_) { }
-                if (QI_TOOL.mode === 'erase') { qiEraseAt(uid, x, y); QI_DRAW = { id: e.pointerId, erase: 1, uid: uid, r: r, k: k }; e.preventDefault(); return; }
-                QI_DRAW = { id: e.pointerId, uid: uid, r: r, k: k, c: QI_TOOL.color, w: QI_TOOL.w, hl: QI_TOOL.hl, p: [x / QI_W, y / QI_W] };
+                if (QI_TOOL.mode === 'erase') { qiEraseAt(uid, x, y, W); QI_DRAW = { id: e.pointerId, erase: 1, uid: uid, r: r, W: W }; e.preventDefault(); return; }
+                QI_DRAW = { id: e.pointerId, uid: uid, r: r, W: W, c: QI_TOOL.color, w: QI_TOOL.w, hl: QI_TOOL.hl, p: [x / W, y / W] };
                 e.preventDefault();
             });
             sv.addEventListener('pointermove', e => {
                 const D = QI_DRAW;
                 if (!D || D.uid !== uid || D.id !== e.pointerId) return;    /* 그 펜의 점만 받는다 — 얹힌 손바닥이 덮개 위에서 움직여도 획에 안 섞인다 */
                 const evs = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
-                if (D.erase) { evs.forEach(ev => qiEraseAt(uid, (ev.clientX - D.r.left) / D.k, (ev.clientY - D.r.top) / D.k)); e.preventDefault(); return; }
+                if (D.erase) { evs.forEach(ev => qiEraseAt(uid, ev.clientX - D.r.left, ev.clientY - D.r.top, D.W)); e.preventDefault(); return; }
                 let add = '';
                 evs.forEach(ev => {
-                    const u = (ev.clientX - D.r.left) / D.k / QI_W, v = (ev.clientY - D.r.top) / D.k / QI_W, n = D.p.length;
+                    const u = (ev.clientX - D.r.left) / D.W, v = (ev.clientY - D.r.top) / D.W, n = D.p.length;
                     if (n >= 2 && D.p[n - 2] === u && D.p[n - 1] === v) return;    /* 같은 자리는 건너뛴다 */
                     D.p.push(u, v);
-                    add += ' L' + (u * QI_W).toFixed(1) + ' ' + (v * QI_W).toFixed(1);
+                    add += ' L' + u.toFixed(5) + ' ' + v.toFixed(5);
                 });
                 if (add) {
                     D.d = (D.d || qiPathD(D.p.slice(0, 2))) + add;
@@ -2995,16 +3023,18 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 QI_DRAW = null;
                 if (D.erase) { qiSave(uid); return; }
                 const p = D.p.length === 2 ? D.p.concat(D.p) : D.p;      /* 톡 = 점 획 하나(자과앱은 버렸다 · 민법 §E G5 는 점 획 1) */
-                (QI[uid] = QI[uid] || { s: [] }).s.push({ c: D.c, w: D.w, hl: D.hl, p: p.map(v => +v.toFixed(4)) });
+                const g = (QI[uid] = QI[uid] || { w: QI_W, s: [] });
+                g.w = Math.round(D.W);                                  /* ★ add1 — 그린 폭(마지막 획의 폭)을 묶음에 적는다 · 그리기에는 안 쓴다 */
+                g.s.push({ c: D.c, w: D.w, hl: D.hl, p: p.map(v => +v.toFixed(4)) });
                 qiPaint(uid); qiSave(uid);
             };
             sv.addEventListener('pointerup', up);
             sv.addEventListener('pointercancel', up);
         }
-        function qiEraseAt(uid, x, y) {              /* 지우개 = 획 하나 통째(14px 반경) */
+        function qiEraseAt(uid, x, y, W) {           /* 지우개 = 획 하나 통째(14px 반경) · ★ add1 — 지금 폭 W 로 px 를 센다 */
             const S = (QI[uid] && QI[uid].s) || [];
             let best = -1, bd = 14;
-            S.forEach((st, j) => { for (let k = 0; k < st.p.length; k += 2) { const d = Math.hypot(st.p[k] * QI_W - x, st.p[k + 1] * QI_W - y); if (d < bd) { bd = d; best = j; } } });
+            S.forEach((st, j) => { for (let k = 0; k < st.p.length; k += 2) { const d = Math.hypot(st.p[k] * W - x, st.p[k + 1] * W - y); if (d < bd) { bd = d; best = j; } } });
             if (best >= 0) { S.splice(best, 1); qiPaint(uid); }
         }
         /* ② 펜 톡 위임 — 자과앱 1250~1299. 애플펜슬은 누를 때 흔들려 사파리가 click 을 취소한다 → 60ms 기다려 진짜 click 이 없으면 합성 · 진짜 click 뒤 350ms 창으로 겹침 막기 · 마우스는 합성 안 함.
@@ -3051,17 +3081,16 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const h = el.closest(QI_HIT);
             return h ? { el: h } : null;
         }
+        /* ★ 09-16 (_task_ox_ink_add1 §F) — 손가락 수동 굴림(pan)을 걷었다 · 손가락은 브라우저 기본 스크롤(관성) · 펜이 닿아 있는 동안 닿은 손가락(손바닥)만 막는다 */
         function qiGuard() {
             const box = document.getElementById('quiz-container');
             if (!box || box.__qig) return;
             box.__qig = 1;
-            const SE = () => document.scrollingElement || document.documentElement;
-            let penDown = false, pan = null;
             const held = new Set(), palm = new Set();
-            box.addEventListener('pointerdown', e => { if (cardMarksOn || e.pointerType !== 'pen') return; penDown = true; for (const id of held) palm.add(id); pan = null; }, true);
-            const penEnd = e => { if (e.pointerType === 'pen') penDown = false; };
-            box.addEventListener('pointerup', penEnd, true);
-            box.addEventListener('pointercancel', penEnd, true);
+            box.addEventListener('pointerdown', e => { if (cardMarksOn || e.pointerType !== 'pen') return; QI_PEN = true; for (const id of held) palm.add(id); }, true);
+            const penEnd = e => { if (e.pointerType === 'pen') QI_PEN = false; };
+            document.addEventListener('pointerup', penEnd, true);          /* 펜을 묶음 밖에서 떼도 풀린다 */
+            document.addEventListener('pointercancel', penEnd, true);
             box.addEventListener('pointerdown', e => {
                 if (cardMarksOn || e.pointerType !== 'touch') return;
                 const t = e.target;
@@ -3070,22 +3099,35 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     const sv = t.closest('svg.qink');
                     if (sv && qiUnder(e.clientX, e.clientY, sv)) return;
                 }
-                e.stopPropagation(); if (e.cancelable) e.preventDefault();
                 held.add(e.pointerId);
-                if (penDown) palm.add(e.pointerId);
-                if (penDown || palm.has(e.pointerId)) return;
-                pan = { id: e.pointerId, x: e.clientX, y: e.clientY, sl: SE().scrollLeft, st: SE().scrollTop, armed: false };
+                if (QI_PEN) palm.add(e.pointerId);
+                if (!palm.has(e.pointerId)) return;                        /* 펜이 안 닿았으면 손가락은 브라우저 몫 — 스크롤·관성 그대로 */
+                e.stopPropagation(); if (e.cancelable) e.preventDefault();
             }, true);
             box.addEventListener('pointermove', e => {
-                if (cardMarksOn || e.pointerType !== 'touch' || !pan || pan.id !== e.pointerId) return;
+                if (cardMarksOn || e.pointerType !== 'touch' || !palm.has(e.pointerId)) return;
                 e.stopPropagation(); if (e.cancelable) e.preventDefault();
-                const dx = e.clientX - pan.x, dy = e.clientY - pan.y;
-                if (!pan.armed) { if (Math.hypot(dx, dy) < 10) return; pan.armed = true; }   /* 얹어 둔 손바닥이 미끄러져도 안 움직인다 */
-                SE().scrollLeft = pan.sl - dx; SE().scrollTop = pan.st - dy;
             }, true);
-            const up = e => { if (e.pointerType !== 'touch') return; held.delete(e.pointerId); palm.delete(e.pointerId); if (pan && pan.id === e.pointerId) pan = null; };
+            const up = e => { if (e.pointerType !== 'touch') return; held.delete(e.pointerId); palm.delete(e.pointerId); };
             box.addEventListener('pointerup', up, true);
             box.addEventListener('pointercancel', up, true);
+        }
+        /* ★ add1 §F — iOS 사파리: 덮개가 touch-action:pan-y 라 펜슬도 세로로 끌면 페이지가 굴러가 획이 끊길 수 있다(pointerdown 의 preventDefault 로는 못 막는다).
+           필기모드일 때만 #quiz-container 에 막는 손잡이를 단다 — 펜슬(touchType 'stylus') 터치는 늘 · 손가락 터치는 펜이 닿아 있는 동안만 touchstart·touchmove 기본 동작을 막는다.
+           표시 모드로 돌아가면 손잡이를 뗀다(그때는 막는 손잡이가 아예 없다 — 스크롤이 JS 를 기다리지 않게) */
+        function qiTouchBlock(e) {
+            if (cardMarksOn || !e.cancelable) return;
+            const ts = e.changedTouches || [];
+            for (let i = 0; i < ts.length; i++) if (ts[i].touchType === 'stylus') { e.preventDefault(); return; }
+            if (QI_PEN) e.preventDefault();
+        }
+        function qiTouchWire() {
+            const box = document.getElementById('quiz-container');
+            if (!box) return;
+            ['touchstart', 'touchmove'].forEach(t => {
+                box.removeEventListener(t, qiTouchBlock, { capture: true });
+                if (!cardMarksOn) box.addEventListener(t, qiTouchBlock, { capture: true, passive: false });
+            });
         }
         /* 덮개 뚫기 — 자과앱 underInk·inkSynth·inkPierce(1353~1416). 필기모드에서 덮개 위 톡이 밑의 눌리는 것을 겨냥했으면 획을 시작하지 않고 그것을 누른다(펜·손가락 둘 다)
            · 글자칸(근거 입력 등)은 포커스만 준다(민법 §E G5) · 밑에 눌릴 것이 없으면 그냥 획이다(점 찍기를 안 잃는다) */
@@ -3240,6 +3282,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            보여줄 때만 역방향을 계산해 머리 칩 「↩백링크N」으로 띄운다(★ 09-15 add7 — 카드 둘째 줄 배지는 걷었다).
            그래서 엑셀 구조도 uid 도 건드리지 않는다. */
         function linkStore() {
+            if (LINK_PAGE) return LINK_PAGE;   /* ★ 09-16 (_task_ox_ink_add1 §E) — 렌더 중이면 페이지 캐시 */
             try { return JSON.parse(localStorage.getItem('ox_q_links') || '{}'); }
             catch (e) { return {}; }
         }
@@ -3265,6 +3308,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 .map(s => s.trim()).filter(s => s && s !== String(id))));
         }
         function yujeBackOf(id) {
+            if (YUJE_PAGE) return (YUJE_PAGE.get(String(id).trim().toUpperCase()) || []).slice();   /* ★ 09-16 (_task_ox_ink_add1 §E) — 렌더 중이면 한 번 지은 색인(옛 판은 카드마다 전 문항 × quizData.find) */
             const key = String(id).trim().toUpperCase();
             const out = [];
             quizData.forEach(q => {
@@ -3548,7 +3592,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            ⚠ 27열 「연결」(ox_q_links)과 **다른 것**이다 — 저쪽은 「문제 연결」,
              이쪽은 「그 문항의 메모/논리를 이 문항에 건다」다. 엑셀에 새 열을 만들지 않는다.
            꼴 : { "Q5666": { "memo": ["Q0217"], "logic": ["Q0205"] } } */
-        function refStore() { try { return JSON.parse(localStorage.getItem('ox_q_reflinks') || '{}') || {}; } catch (e) { return {}; } }
+        function refStore() { if (REF_PAGE) return REF_PAGE; try { return JSON.parse(localStorage.getItem('ox_q_reflinks') || '{}') || {}; } catch (e) { return {}; } }
         function refOf(id, kind) {
             const r = refStore()[id];
             const a = r && r[kind];
@@ -3799,7 +3843,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 if (box) box.outerHTML = ggLineHTML(uid, s);
             });
         }
-        function ggStore() { try { return JSON.parse(localStorage.getItem(GG_KEY) || '{}'); } catch (e) { return {}; } }
+        function ggStore() { if (GG_PAGE) return GG_PAGE; try { return JSON.parse(localStorage.getItem(GG_KEY) || '{}'); } catch (e) { return {}; } }
         function ggOf(uid) { const a = ggStore()[uid]; return Array.isArray(a) ? a : []; }
         function ggSaveList(uid, list) {
             const o = ggStore();
@@ -4385,7 +4429,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             '혼합':   { on: 'bg-violet-100 text-violet-900 border-violet-400 font-extrabold', off: 'bg-white text-violet-500 border-violet-300 border-dashed font-semibold' },
             '판례형': { on: 'bg-teal-100 text-teal-900 border-teal-400 font-extrabold',      off: 'bg-white text-teal-600 border-teal-300 border-dashed font-semibold' }
         };
-        function loadQTypes() { try { return JSON.parse(localStorage.getItem('ox_q_type') || '{}'); } catch (e) { return {}; } }
+        function loadQTypes() { if (QTYPE_PAGE) return QTYPE_PAGE; try { return JSON.parse(localStorage.getItem('ox_q_type') || '{}'); } catch (e) { return {}; } }
         /* ---------- 정정(ox_q_fix) — 2026-08-29 · loadQTypes 와 같은 방식(uid 기준 · 엑셀 재이식에 안 날아감).
            ★ 2026-08-31 동기화에 편입했다(SYNC_KEYS 안). **마스터 엑셀 자동 반영은 여전히 안 한다**
              — 8/29 확정 중 살아 있는 부분은 그쪽이다. 「엑셀 반영함」 도장은 사람이 손으로 찍는다. */
@@ -4537,10 +4581,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const same = samePanrye(item);
             if (!same.length) return '';
             /* ★ 09-15 (_task_ox_jeongni_popup §C·§E) — short=true(정리 창·비교 창) = 「🔗 판 N」 · 짧은 글자라 늘 보인다 · 누름이 밑으로 번지지 않게 · 인자 없이(문제풀이 카드) 부르면 아래 옛 글자 그대로 */
-            if (short) return `<button onclick="event.stopPropagation();showRelated('${item.id}','same')" title="해설의 판례번호가 같은 지문 ${same.length}개"
+            /* ★ 09-16 (_task_ox_ink_add1 §B) — 문제풀이 카드도 「🔗 판 N」(정리 창과 같은 글자) · 옛 「🔗 같은 판례 N」 갈래는 걷었다 · short 인자는 남기되 안 본다 */
+            return `<button onclick="event.stopPropagation();showRelated('${item.id}','same')" title="해설의 판례번호가 같은 지문 ${same.length}개"
                 class="text-[10px] px-1.5 py-0.5 rounded border bg-teal-50 text-teal-800 border-teal-300 font-extrabold hover:bg-teal-100 transition whitespace-nowrap">🔗 판 ${same.length}</button>`;
-            return `<button onclick="showRelated('${item.id}','same')" title="해설의 판례번호가 같은 지문 ${same.length}개"
-                class="text-[10px] px-1.5 py-0.5 rounded border bg-teal-50 text-teal-800 border-teal-300 font-extrabold hover:bg-teal-100 transition whitespace-nowrap">🔗<span class="hidden sm:inline"> 같은 판례</span> ${same.length}</button>`;
         }
         /* 🔗 내가 연결한 칩 — 2026-08-26 상단 칩 줄로 올렸다
            ★ 09-15 (_task_ox_card_simple_add7) — 알약 없이 글자 둘: 「↩링크N」(남색 · 내가 연결한 수) · 「↩백링크N」(연두 · 나를 연결한 수 — 내가 연결한 것과 겹치는 uid 는 뺀다) · 0 이면 그 글자 없음.
@@ -5112,8 +5155,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         : mark(q.q, term))
                     : `<span class="text-gray-500">${escHtml(q.q).slice(0, 60)}…</span>
                        <div class="mt-1 text-blue-900 bg-blue-50 border-l-2 border-blue-400 pl-2 py-1">🔗 ${mark(gpk[0], term)}${gpk.length > 1 ? `<div class="mt-0.5">↳ ${mark(gpk[1], term)}</div>` : ''}</div>`;
+                /* ★ 09-16 (_task_ox_card_simple_add11 §2) — 결과를 누르면 단원으로 옮기지 않고 문항 팝업(검색 칸은 그대로) · 근거 탭은 팝업을 그 문항 근거 줄까지 굴린다 · 「↪ 이 문제로 이동」은 팝업 안에 그대로 */
                 return `
-                    <button onclick="jumpFromSearch('${q.id}')" class="w-full text-left px-4 py-2 border-b border-gray-100 hover:bg-blue-50 transition">
+                    <button onclick="openQPopup('${q.id}');qpScrollTo('${q.id}','${searchMode === 'm' ? 'gg' : 'top'}')" class="w-full text-left px-4 py-2 border-b border-gray-100 hover:bg-blue-50 transition">
                         <div class="flex items-center gap-1.5 mb-0.5">
                             <span class="text-[10px] font-bold text-gray-400 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">ID ${q.id}</span>
                             <span class="text-[10px] font-bold text-indigo-700">${escHtml(where)}</span>
@@ -8664,6 +8708,16 @@ function openQPopup(id) {
         + '<div id="qp-link-box-' + id + '" style="display:none;margin-top:9px;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px"></div>'   /* ★ add8 — 「✏️ 연결」 칸(펼 때 qpLinkEditHTML 로 채운다) */
         + '</div>';
     oxWinOpen(key, escHtml(qLabelOf(q)) + ' · ' + escHtml(qWhere(q)), q.panrye ? '🏛 ' + escHtml(q.panrye) : '', body, 520);
+}
+/* ★ 09-16 (_task_ox_card_simple_add11 §2) — 🔍 검색 결과에서 연 문항 팝업의 자리. where 'gg' = 그 문항 근거 줄(qp-gg-box-<uid>)이 보이게 · 그 밖 = 맨 위.
+   팝업 몸통(.oxwin-body)만 굴린다 — scrollIntoView 는 뒤 페이지(검색 결과)까지 굴릴 수 있다 · 창은 oxWinOpen 이 맨 앞으로 올리지만 한 번 더 앞으로 */
+function qpScrollTo(id, where) {
+    const w = document.getElementById('oxwin-q-' + id);
+    const bd = w ? w.querySelector('.oxwin-body') : null;
+    if (!bd) return;
+    oxWinFront(w);
+    const gg = where === 'gg' ? document.getElementById('qp-gg-box-' + id) : null;
+    bd.scrollTop = gg ? Math.max(0, Math.round(gg.getBoundingClientRect().top - bd.getBoundingClientRect().top + bd.scrollTop - 8)) : 0;
 }
 /* ★ 09-15 (_task_ox_card_simple_add8) — 문항 팝업 안 「✏️ 연결」 칸. 옛 비교 창 편집기(cmpEditHTML·cmpSave)를 옮겼다 — 저장소는 카드 편집 패널과 같은 ox_q_links.
    id 는 qp- 접두사(카드의 link-input-·memo-panel- 과 안 부딪친다) · 「🔍 찾아서 넣기」는 카드와 같은 linkSearch(범위 qp-) · 논리 칸은 없다(logic_merge). */
