@@ -3368,7 +3368,8 @@ const SYNC_REF={
 const U_KEY=CUR.SYNC_PREFIX+'u', GONE_KEY=CUR.SYNC_PREFIX+'gone',
       SHADOW_KEY=CUR.SYNC_PREFIX+'shadow', SMETA_KEY=CUR.SYNC_PREFIX+'meta';
 const lsObj=k=>{try{return JSON.parse(localStorage.getItem(k)||'{}')||{}}catch(e){return{}}};
-const lsPut=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+/* ★ 2026-09-15 (_task_ox_sync_and_limit §J) — 저장 실패를 삼키지 않는다: 콘솔·칩에 남기고 다시 던진다(동기화 중이면 칩이 실패를 보인다 · 저장 얼개 무변) */
+const lsPut=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){console.error('localStorage 저장 실패',k,e);try{recErr='저장 실패 — '+k;recPaint()}catch(_){}throw e}};
 const ckey=(k,c)=>k+'|'+c;
 const csplit=s=>{const i=s.indexOf('|');return[s.slice(0,i),s.slice(i+1)]};
 
@@ -3412,48 +3413,83 @@ function stampAll(){
   return n;
 }
 
-/* ---------- 병합 — 칸 단위 최신 승 · 무승부는 원격 ---------- */
+/* ---------- 병합 — 칸 단위 최신 승 · 묘비 · 그림자 갱신 (민법OX 와 같은 규칙) ----------
+   ★ 2026-09-15 (_task_ox_sync_and_limit §C·§D) — 민법OX 에 넣은 고침을 그대로 옮겼다. 도장은 「누가 더 최신인가」에만 쓰고,
+     「그 칸이 있는가」·「어느 값이 더 담고 있는가」는 데이터로 가른다.
+     ① 그림자와 다른 칸(도장 전의 이 기기 수정 = 내려받는 사이에 적은 칸)은 받지도 지우지도 않는다 — 바로 뒤 stampAll 이 찍는다
+     ② 내가 더 새것이면 둔다 · 원격 묘비는 도장과 같은 시각이어도 이긴다 · 원격이 더 새것이면 받는다
+     ③ 원격에도 내게도 도장이 없는 칸 — 내게 없으면 받고 도장 1 · 있으면 둔다
+     ④ 도장이 같으면 값으로 — 같으면 그대로 · 다르면 JSON 이 긴 쪽 · 길이도 같으면 사전순 큰 쪽(진 값은 콘솔 · 수는 칩에)
+        status 는 도장을 값(h[].t)에서 끌어와 기기 사이 동률이 흔하다 — 도장으로 가르면 이력이 통째로 덮인다
+     ⑤ 그림자는 병합이 손댄 **칸만** 갈아 끼운다. `dirty` 는 키 단위라 그것으로 그림자를 갈면 같은 키(status 등) 안에서
+        내려받는 사이 적은 칸이 도장을 못 받는다 — 칸 목록(touched)을 따로 모은다. `dirty` 는 IndexedDB 쓰기·화면 갱신에 그대로 쓴다.
+     took·del 은 값이 실제로 바뀐 칸만 · ahead = 내가 이겼는데 원격 값이 다른 칸 */
 async function recMerge(remote){
-  const u=lsObj(U_KEY),gone=lsObj(GONE_KEY);
+  const u=lsObj(U_KEY),gone=lsObj(GONE_KEY),shadow=lsObj(SHADOW_KEY);
   const rU=remote.u||{},rG=remote.gone||{},rD=remote.data||{};
   const byKey={};
   const add=s=>{const p=csplit(s);if(!byKey[p[0]])byKey[p[0]]=new Set();byKey[p[0]].add(p[1])};
   Object.keys(rU).forEach(add);Object.keys(rG).forEach(add);
-  let took=0,kept=0,del=0;const dirty={};
+  let took=0,kept=0,del=0,tie=0,ahead=0;const dirty={},touched={};
+  const has=(o,c)=>!!o&&Object.prototype.hasOwnProperty.call(o,c);
+  const J=v=>JSON.stringify(v);
   for(const k of SYNC_KEYS){
     const cur=SYNC_REF[k].g();
     if(!cur)continue;
+    const old=shadow[k]||{},rd=rD[k]||{};
     const cells=byKey[k]||new Set();
-    Object.keys(rD[k]||{}).forEach(c=>cells.add(c));
+    Object.keys(rd).forEach(c=>cells.add(c));
+    const mark=c=>{dirty[k]=1;(touched[k]=touched[k]||[]).push(c)};
     for(const c of cells){
       const ck=ckey(k,c);
+      if(J(cur[c])!==J(old[c])){kept++;continue}                        /* ① */
       const mine=Math.max(u[ck]||0,gone[ck]||0);
       const theirs=Math.max(rU[ck]||0,rG[ck]||0);
-      if(theirs===0||theirs<mine){kept++;continue}          /* 내 쪽이 이긴다 */
+      const rv=has(rd,c)?rd[c]:undefined;
+      if(theirs<mine){kept++;if(J(cur[c])!==J(rv))ahead++;continue}      /* ② 내 쪽이 이긴다 */
       if((rG[ck]||0)>=(rU[ck]||0)&&(rG[ck]||0)>0){
-        /* 원격이 지웠다 — ★ 지운 것이 되살아나면 안 된다 */
-        if(c in cur){delete cur[c];del++;dirty[k]=1}
-        gone[ck]=rG[ck];delete u[ck];
-      }else if(rD[k]&&Object.prototype.hasOwnProperty.call(rD[k],c)){
-        cur[c]=rD[k][c];u[ck]=rU[ck];delete gone[ck];took++;dirty[k]=1;
+        /* ② 원격이 지웠다 — ★ 지운 것이 되살아나면 안 된다 */
+        if(c in cur){delete cur[c];del++;mark(c)}
+        gone[ck]=rG[ck];delete u[ck];continue;
       }
+      if(theirs===0){if(!(c in cur)&&has(rd,c)){cur[c]=rv;u[ck]=1;took++;mark(c)}else kept++;continue}   /* ③ */
+      if(theirs>mine){if(has(rd,c)){if(!has(cur,c)||J(cur[c])!==J(rv)){cur[c]=rv;took++;mark(c)}u[ck]=rU[ck];delete gone[ck]}continue}   /* ② 원격이 이긴다 */
+      /* ④ 동률 — 내 묘비는 원격 묘비와 같게 이긴다(어느 기기에서 먼저 눌러도 결과가 같게) */
+      if((gone[ck]||0)>=(u[ck]||0)){kept++;continue}
+      const sL=has(cur,c)?J(cur[c]):'',sR=has(rd,c)?J(rv):'';
+      if(sL===sR){kept++;continue}
+      tie++;
+      const rWin=sR.length>sL.length||(sR.length===sL.length&&sR>sL);   /* ⚠ 「내 것을 두고 도장 +1」 금지 — 두 기기가 서로 +1 하며 튕긴다 */
+      console.warn('기록 동기화 동률 — 도장이 같은데 값이 달라 더 많이 담은 쪽을 남긴다',ck,
+        '내 것 '+sL.length+'자 · 원격 '+sR.length+'자 → '+(rWin?'원격':'내 것'),'· 버린 값',rWin?sL:sR);
+      if(rWin){cur[c]=rv;took++;mark(c)}else{kept++;ahead++}
     }
   }
   lsPut(U_KEY,u);lsPut(GONE_KEY,gone);
   for(const k in dirty)await put('kv',k,SYNC_REF[k].g());
   /* ★ 그림자도 같이 갱신한다 — 안 하면 다음 stampAll 이
-     「원격에서 받은 것」을 「내가 바꾼 것」으로 오인해 도장을 새로 찍는다. */
-  const shadow=lsObj(SHADOW_KEY);
-  SYNC_KEYS.forEach(k=>{const v=SYNC_REF[k].g();if(v)shadow[k]=v});
-  lsPut(SHADOW_KEY,shadow);
-  return{took,kept,del,dirty:Object.keys(dirty)};
+     「원격에서 받은 것」을 「내가 바꾼 것」으로 오인해 도장을 새로 찍는다.
+     ★ 2026-09-15 §C — 단 손댄 칸만(⑤). IndexedDB 를 기다린 뒤라 그림자를 다시 읽어 칸마다 갈음한다(충돌 재시도로 두 번 불려도 같다). */
+  const sh=lsObj(SHADOW_KEY);
+  for(const k in touched){const now=SYNC_REF[k].g()||{},sk=sh[k]||(sh[k]={});touched[k].forEach(c=>{if(has(now,c))sk[c]=now[c];else delete sk[c]})}
+  lsPut(SHADOW_KEY,sh);
+  return{took,kept,del,tie,ahead,dirty:Object.keys(dirty)};
 }
 
-function recPayload(){
+function recPayload(remote){
   /* ★ data 는 SYNC_KEYS 만 돌며 만든다 — `ink` 가 들어갈 길이 없다(P5). */
   const data={};SYNC_KEYS.forEach(k=>{data[k]=SYNC_REF[k].g()||{}});
+  /* ★ 2026-09-15 (_task_ox_sync_and_limit §E) — `remote` 를 주면 도장·묘비를 원격과 합집합으로(같은 칸은 큰 시각 ·
+     한 칸이 둘 다면 큰 쪽만 · 동률은 묘비). 인자가 없으면 옛 판과 같다. */
+  const u=lsObj(U_KEY),gone=lsObj(GONE_KEY);
+  if(remote){
+    const rU=remote.u||{},rG=remote.gone||{};
+    for(const x in rU)if(!((u[x]||0)>=rU[x]))u[x]=rU[x];
+    for(const x in rG)if(!((gone[x]||0)>=rG[x]))gone[x]=rG[x];
+    for(const x in u){if(!Object.prototype.hasOwnProperty.call(gone,x))continue;if(gone[x]>=u[x])delete u[x];else delete gone[x]}
+  }
   return{v:1,savedAt:new Date().toISOString(),by:recWho(),
-         data:data,u:lsObj(U_KEY),gone:lsObj(GONE_KEY)};
+         data:data,u:u,gone:gone};
 }
 function recPending(){
   const last=(lsObj(SMETA_KEY)).lastSync||0;
@@ -3492,13 +3528,16 @@ async function ghPutJson(path,text,sha){
 }
 
 /* ---------- 동기화 ---------- */
-let recBusy=false, recErr='';
+let recBusy=false, recErr='', recTie=0;   /* recTie — 2026-09-15 §D-5 · 이 세션에서 값으로 가른 동률 수(메모리에만 · 새 키 0) */
 function recAfterMerge(res){
   if(!res||!res.dirty.length)return;
   if(CARD_LAYER&&typeof refreshUnits==='function'&&DATA.length)refreshUnits();
   if(res.dirty.indexOf('conc')>=0)buildCQ();
   try{draw();renderSettings()}catch(e){}
 }
+/* ★ 2026-09-15 (_task_ox_sync_and_limit §E) — 받은 원격을 들고 가 올릴 때 도장·묘비를 합친다(recPayload(remote)).
+   파싱 실패만 건너뛰고 병합이 죽으면 칩에 남긴다 — 옛 판은 둘을 한 try 로 묶어 병합이 반쯤 돈 채로 올릴 수 있었다.
+   ⚠ 이 앱은 원래 맞출 때마다 올린다(§F 「올릴 것이 없으면 안 올린다」는 민법OX·조판기 몫) — 그대로 둔다. */
 async function syncRecords(force){
   if(recBusy)return;
   if(!recToken()){recPaint();return}
@@ -3508,18 +3547,22 @@ async function syncRecords(force){
     await loadAfix();                 /* ⚠ AFIX 가 null 이면 빈 ansfix 를 올려 원격을 깎는다 */
     stampAll();
     let sha=await ghSha(REC_PATH);
+    let remote=null;
     if(sha){
       const txt=await ghRaw(REC_PATH);
-      if(txt){try{recAfterMerge(await recMerge(JSON.parse(txt)))}catch(e){console.warn('원격 기록 파싱 실패',e)}}
+      if(txt){try{remote=JSON.parse(txt)}catch(e){console.warn('원격 기록 파싱 실패',e)}}
+      if(remote){const m=await recMerge(remote);recTie+=m.tie||0;try{recAfterMerge(m)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}
     }
     stampAll();
-    let res=await ghPutJson(REC_PATH,JSON.stringify(recPayload()),sha);
+    let res=await ghPutJson(REC_PATH,JSON.stringify(recPayload(remote)),sha);
     if(res==='conflict'){                                  /* 한 번만 재시도 */
       sha=await ghSha(REC_PATH);
       const txt2=await ghRaw(REC_PATH);
-      if(txt2){try{recAfterMerge(await recMerge(JSON.parse(txt2)))}catch(e){}}
+      let remote2=null;
+      if(txt2){try{remote2=JSON.parse(txt2)}catch(e){}}
+      if(remote2){const m2=await recMerge(remote2);recTie+=m2.tie||0;try{recAfterMerge(m2)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}
       stampAll();
-      res=await ghPutJson(REC_PATH,JSON.stringify(recPayload()),sha);
+      res=await ghPutJson(REC_PATH,JSON.stringify(recPayload(remote2)),sha);
       if(res==='conflict')throw new Error('두 번 다 충돌');
     }
     lsPut(SMETA_KEY,{lastSync:Date.now(),remoteSha:res});
@@ -3584,6 +3627,7 @@ function recPaint(){
         t='● 동기화됨'+(ago!=null?' '+(ago<1?'방금':ago<60?ago+'분 전':Math.round(ago/60)+'시간 전'):'');
       }
     }
+    if(recTie)t+=' · 동률 '+recTie+'건';   /* ★ 09-15 §D-5 — 0 이면 안 보인다 · 진 값은 콘솔 */
     el.textContent=t;
     el.classList.toggle('err',bad);
     el.title=recErr?('기록 동기화 — '+recErr+' · 누르면 다시 맞춘다')
