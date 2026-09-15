@@ -113,43 +113,9 @@
                 </div>
             </div>
 
-            <!-- 🎯 필터 (2026-08-17 슬림화) -->
-            <div class="bg-blue-50/60 px-4 py-2.5 border-b border-blue-100 grid grid-cols-1 md:grid-cols-3 gap-2">
-                <div>
-                    <label class="text-[10px] font-extrabold text-gray-500 block mb-0.5">🎯 기출 출처</label>
-                    <select id="source-filter" onchange="renderDashboard()" class="w-full p-1.5 text-[12.5px] border border-gray-300 rounded-lg text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white cursor-pointer">
-                        <option value="all">전체 기출 모두 보기</option>
-                        <option value="변리사">🎯 변리사 기출만 보기</option>
-                        <option value="변호사">⚖️ 변호사 기출만 보기</option>
-                        <option value="노무사">📝 노무사 기출만 보기</option>
-                        <option value="감평">🏠 감정평가사 기출만 보기</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-[10px] font-extrabold text-gray-500 block mb-0.5">🔥 약점 복습 필터</label>
-                    <select id="review-filter" onchange="renderDashboard()" class="w-full p-1.5 text-[12.5px] border border-gray-300 rounded-lg text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white cursor-pointer">
-                        <option value="all">전체 문제 모두 풀기</option>
-                        <option value="wrong">❌ 최근 회독에서 틀린 문제</option>
-                        <option value="fake">⚠️ '페이크' 태그 문제만</option>
-                        <option value="concept">💡 '개념' 태그 문제만</option>
-                        <option value="memo">🧠 '암기' 태그 문제만</option>
-                        <option value="important">⭐ '중요' 태그 문제만</option>
-                        <option value="wrong1">1️⃣ 한 번 틀린 문제</option>
-                        <option value="wrong2">2️⃣ 두 번 틀린 문제</option>
-                        <option value="wrong3">3️⃣ 세 번 이상 틀린 문제</option>
-                        <option value="unverified">⚠️ 미검증 문제만 (정답 확인 필요)</option>
-                        <option value="untyped">🏷 유형 미확정만 (조문형/판례형 찍기)</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-[10px] font-extrabold text-gray-500 block mb-0.5">↕ 단원 정렬</label>
-                    <select id="dash-sort" onchange="renderDashboard()" class="w-full p-1.5 text-[12.5px] border border-gray-300 rounded-lg text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white cursor-pointer">
-                        <option value="toc">📖 목차순 (기본)</option>
-                        <option value="wrong">🔴 오답 많은 순</option>
-                        <option value="unsolved">⬜ 안 푼 문제 많은 순</option>
-                    </select>
-                </div>
-            </div>
+            <!-- 🎯 필터 — ★ 09-15 (_task_ox_card_simple_add4) 필터 줄은 화면에서 걷었다. 기출 출처·단원 정렬은 값을 읽는 코드와 회독 열쇠(과목||단원||sf||rf)가 그대로 돌게 hide select 로 고정(all · toc) · 약점 필터는 ⚡ 줄 오른쪽 끝 -->
+            <select id="source-filter" class="hide" onchange="renderDashboard()"><option value="all">전체 기출</option></select>
+            <select id="dash-sort" class="hide" onchange="renderDashboard()"><option value="toc">목차순</option></select>
 
             <!-- 🔍 검색 -->
             <div class="bg-white px-4 py-2.5 border-b border-gray-200 flex flex-wrap items-center gap-2">
@@ -195,6 +161,18 @@
                 <button onclick="startSemiQueue()" class="text-[11px] bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border border-yellow-300 px-2.5 py-1 rounded font-bold transition" title="약점에서 한 번 맞힌 지문. 여기서 또 맞히면 🌀헷갈림 태그가 풀리고 초록이 됩니다">
                     🌤 덜약점 <span id="semi-count" class="bg-white/70 px-1 rounded"></span>
                 </button>
+                <!-- ★ 09-15 (_task_ox_card_simple_add4) 작은 필터 — 값 문자열은 옛 그대로(회독 열쇠) · 태그 필터와 「3번+ 틀림」은 한 값만 -->
+                <span class="ml-auto flex items-center gap-1">
+                    <span class="text-[10.5px] text-gray-500" style="font-size:10.5px">필터</span>
+                    <select id="review-filter" onchange="renderDashboard()" class="text-[11px] font-bold border border-gray-300 rounded px-2 py-1 bg-white">
+                        <option value="all">필터 없음</option>
+                        <option value="fake">⚠️ 페이크</option>
+                        <option value="concept">💡 개념</option>
+                        <option value="memo">🧠 암기</option>
+                        <option value="important">⭐ 중요</option>
+                        <option value="wrong3">3번+ 틀림</option>
+                    </select>
+                </span>
             </div>
 
             <div id="dashboard-container" class="p-3 md:p-5 space-y-4 bg-gray-50/50">
@@ -231,22 +209,22 @@
             <!-- 채점 결과 다시 열기 (채점 후에만 표시) · ★ 09-15 (_task_ox_card_simple §C) 오른쪽 아래 알약 -->
             <div id="reopen-grade-bar" class="hide sticky bottom-2 z-10 flex justify-end">
                 <div class="inline-flex items-center gap-1 bg-white border border-gray-200 rounded-full shadow-lg px-1.5 py-1">
-                    <button onclick="reopenGradeModal()" class="text-[12px] font-bold text-indigo-700 hover:bg-indigo-50 rounded-full px-3 py-1 transition whitespace-nowrap">📊 채점표</button>
-                    <button id="reopen-next-btn" onclick="advanceFromGrade()" class="text-[12px] font-extrabold text-white bg-blue-600 hover:bg-blue-700 rounded-full px-3 py-1 transition whitespace-nowrap">다음</button>
+                    <button onclick="reopenGradeModal()" class="text-[12px] font-extrabold text-blue-500 hover:text-blue-700 bg-transparent border-0 rounded-full px-2 py-1 transition whitespace-nowrap">📊 채점</button>
+                    <button id="reopen-next-btn" onclick="advanceFromGrade()" class="text-[12px] font-bold text-gray-600 hover:text-blue-700 bg-transparent border-0 rounded-full px-2 py-1 transition whitespace-nowrap">다음</button>
                 </div>
             </div>
 
             <!-- 기출 모드 이전 페이지 · ★ 09-15 §C 흰 알약 -->
             <div id="exam-prev-bar" class="hide sticky bottom-2 z-10 flex justify-start">
-                <button onclick="goPrevPageExam()" class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 text-[12px] font-bold rounded-full shadow-lg px-3 py-1 transition whitespace-nowrap">◀ 이전</button>
+                <button onclick="goPrevPageExam()" class="bg-white hover:bg-gray-50 text-gray-600 hover:text-blue-700 border border-gray-200 text-[12px] font-bold rounded-full shadow-lg px-3 py-1 transition whitespace-nowrap">◀ 이전</button>
             </div>
 
             <!-- 하단 컨트롤 · ★ 09-15 §C 오른쪽 아래 알약 하나 — 「마킹 N/총 · 채점 ✓ · 다음 ▶」(#action-btn 글자·onclick 은 모드마다 JS 가 바꾼다) -->
             <div id="controls-container" class="sticky bottom-2 z-10 flex justify-end">
                 <div class="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-full shadow-lg pl-3 pr-1.5 py-1">
                     <span class="text-[11px] text-gray-500 font-bold whitespace-nowrap">마킹 <b id="mark-count">0</b>/<span id="mark-total">0</span></span>
-                    <button id="action-btn" onclick="gradeCurrentPage()" class="text-[12px] font-extrabold text-white bg-blue-600 hover:bg-blue-700 rounded-full px-3 py-1 transition whitespace-nowrap">채점 ✓</button>
-                    <button id="skip-next-btn" onclick="goNextPageNoGrade()" class="hide text-[12px] font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1 transition whitespace-nowrap">다음 ▶</button>
+                    <button id="action-btn" onclick="gradeCurrentPage()" class="text-[12px] font-extrabold text-blue-500 hover:text-blue-700 bg-transparent border-0 rounded-full px-2 py-1 transition whitespace-nowrap">채점 ✓</button>
+                    <button id="skip-next-btn" onclick="goNextPageNoGrade()" class="hide text-[12px] font-bold text-gray-600 hover:text-blue-700 bg-transparent border-0 rounded-full px-2 py-1 transition whitespace-nowrap">다음 ▶</button>
                 </div>
             </div>
 
@@ -282,20 +260,7 @@
         </div>
     </div>
 
-    <!-- [3-0] 채점 결과 요약 모달 -->
-    <div id="grade-modal" class="hide fixed inset-0 bg-gray-900/60 z-50 flex items-center justify-center p-3 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full relative max-h-[85vh] flex flex-col border-t-4 border-blue-600">
-            <div class="p-4 border-b border-gray-100 flex justify-between items-center shrink-0">
-                <h3 class="text-base font-extrabold text-gray-800">📊 채점 결과</h3>
-                <button onclick="closeGradeModal()" class="text-gray-400 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-full w-6 h-6 flex items-center justify-center font-bold transition">&times;</button>
-            </div>
-            <div id="grade-modal-score" class="px-4 py-3 text-center shrink-0"></div>
-            <div id="grade-modal-list" class="px-4 pb-2 overflow-y-auto no-scrollbar flex-1"></div>
-            <div class="p-3 border-t border-gray-100 shrink-0">
-                <button id="grade-modal-next" onclick="closeGradeModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-sm transition shadow">확인</button>
-            </div>
-        </div>
-    </div>
+    <!-- [3-0] 채점 결과 — ★ 09-15 (_task_ox_card_simple_add1 §1) 가운데 덮개(#grade-modal)는 걷었다 · showGradeModal 이 떠 있는 작은 창 oxWinOpen('grade', …) 을 연다 -->
 
 
     <script>
@@ -2109,7 +2074,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 
         const PAGE_SIZE = 20;
         const EXAM_Q_PER_PAGE = 5;   // 기출: 한 화면에 보여줄 «문제» 수 
-        const BAR_BTN_CLS = 'text-[12px] font-extrabold text-white bg-blue-600 hover:bg-blue-700 rounded-full px-3 py-1 transition whitespace-nowrap';   /* ★ 09-15 (_task_ox_card_simple §C) — 아래 알약 #action-btn 은 모드와 상관없이 이 모양 하나(글자·onclick 만 갈래마다) */
+        /* ★ 09-15 (_task_ox_card_simple §C · add1 §3) — 아래 알약 안 단추는 채움 없는 글자만. 채점류(채점 ✓·전체 채점 ✓·회독 저장 ✓·📊 채점) = 파스텔 파랑 · 이동류(다음 ▶·◀ 이전) = 회색 */
+        const BAR_GRADE_CLS = 'text-[12px] font-extrabold text-blue-500 hover:text-blue-700 bg-transparent border-0 rounded-full px-2 py-1 transition whitespace-nowrap';
+        const BAR_MOVE_CLS = 'text-[12px] font-bold text-gray-600 hover:text-blue-700 bg-transparent border-0 rounded-full px-2 py-1 transition whitespace-nowrap';
+        let chapterSaved = null;   /* ★ 09-15 (_task_ox_card_simple_add1 §2) — 채점과 함께 저장한 회독의 chapKey · 같으면 다시 저장·진행중 쓰기 안 함 · startQuiz·startVirtualQuiz·goNextPage·떠날 때 null */
         let currentSubject = "";
         let currentChapterLabel = "";
         let currentFilteredData = []; 
@@ -2241,6 +2209,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 return rank(a) - rank(b);
             });
 
+            /* ★ 09-15 (_task_ox_card_simple_add3) — 과목 제목 앞 대문자 로마 숫자(Ⅰ…). 필터로 과목이 빠져도 번호가 안 바뀌게 quizData 전체 과목을 subjectOrder 와 같은 규칙으로 센다 · 「미분별 문제」는 숫자 없음 */
+            const ROMAN_NUM = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ', 'Ⅶ', 'Ⅷ', 'Ⅸ', 'Ⅹ', 'Ⅺ', 'Ⅻ'];
+            const _romanRank = s => (s === '미분별 문제') ? -1 : (s === '변리사 기출') ? 1 : 0;
+            const _romanAll = [...new Set(quizData.map(q => q.subject).concat(quizData.some(q => q.examYear) ? ['변리사 기출'] : []))]
+                .sort((a, b) => _romanRank(a) - _romanRank(b)).filter(s => s !== '미분별 문제');
             for (const subject of subjectOrder) {
                 let chapterMap = grouped[subject];
                 // 기출은 최신 연도부터
@@ -2259,11 +2232,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         jnGroups.get(gk).push(chapLabel);
                     }
                 }
+                const roman = (() => { const i = _romanAll.indexOf(subject); return i < 0 ? '' : (ROMAN_NUM[i] || String(i + 1)); })();   /* ★ add3 */
                 let subjectHtml = `
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                         <div class="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
                             <h2 class="text-base font-extrabold text-gray-800 flex items-center gap-1.5">
-                                <span class="text-blue-600">📚</span> ${subject}
+                                ${roman ? `<span class="text-blue-600 font-black">${roman}</span> ` : ''}${subject}
                             </h2>
                         </div>
                         <div class="divide-y divide-gray-100">
@@ -2337,8 +2311,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                                 <div class="flex flex-wrap items-center justify-end gap-1.5 shrink-0 ml-auto">
                                     ${progBadge}
                                     ${historyBadges}
-                                    <button onclick="startQuiz('${subject}', '${chapLabel}')" class="${prog ? 'bg-amber-500 hover:bg-amber-600' : 'bg-blue-600 hover:bg-blue-700'} text-white px-2.5 py-1 rounded-md font-bold text-[11px] transition shadow-sm whitespace-nowrap">
-                                        ${prog ? '이어서 풀기' : nextAttempt + '회독 시작'}
+                                    <button onclick="startQuiz('${subject}', '${chapLabel}')" title="${prog ? '이어서 풀기' : nextAttempt + '회독 시작'}" class="text-[11.5px] font-extrabold bg-transparent border-0 px-1.5 py-1 rounded whitespace-nowrap hover:bg-gray-100 ${prog ? 'text-amber-600 hover:text-amber-700' : 'text-blue-500 hover:text-blue-700'}" style="font-size:11.5px">
+                                        ${prog ? '이어서' : nextAttempt + '회독'}
                                     </button>
                                 </div>
                             </div>
@@ -2399,6 +2373,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             currentSessionMarks = {};
             resumePicks = {};
             lastGradeResults = null;
+            chapterSaved = null;   /* ★ 09-15 (_task_ox_card_simple_add1 §2) */
             document.getElementById('reopen-grade-bar').classList.add('hide');
 
             // 진행중이던 회독이 있으면 이어서
@@ -2430,6 +2405,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         }
 
         function goHome() {
+            if (chapterSaved && currentSubject && currentChapterLabel && chapterSaved === chapKeyOf(currentSubject, currentChapterLabel)) { finishChapterLeave(); return; }   /* ★ 09-15 (_task_ox_card_simple_add1 §2) — 채점과 함께 저장한 회독이면 떠남부처럼 세션을 비우고 간다 */
             if (currentSubject && currentChapterLabel) {
                 saveInProgress(chapKeyOf(currentSubject, currentChapterLabel));
             }
@@ -2726,11 +2702,15 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     const remain = Math.min(PAGE_SIZE, currentFilteredData.length - endIdx);
                     actionBtn.innerText = `다음 ${remain}문제 ▶`;
                     actionBtn.setAttribute('onclick', 'goNextPage()');
-                    actionBtn.className = BAR_BTN_CLS;
+                    actionBtn.className = BAR_MOVE_CLS;
                 } else {
-                    actionBtn.innerText = '결과 저장 🏆';
-                    actionBtn.setAttribute('onclick', 'finishChapter()');
-                    actionBtn.className = BAR_BTN_CLS;
+                    if (chapterSaved && chapterSaved === chapKeyOf(currentSubject, currentChapterLabel)) {
+                        document.getElementById('controls-container').classList.add('hide');   /* ★ 09-15 (_task_ox_card_simple_add1 §2) — 이미 저장된 마지막 쪽 · 채점 창 ✕ 가 목록으로 */
+                    } else {
+                        actionBtn.innerText = '회독 저장 ✓';   /* ★ add1 §2 — 채점만 되고 저장 안 된 옛 진행중(마지막 쪽)으로 돌아왔을 때 · 🏆 없음 */
+                        actionBtn.setAttribute('onclick', 'finishChapter()');
+                        actionBtn.className = BAR_GRADE_CLS;
+                    }
                 }
             } else if (isExamMode) {
                 // 연도별 기출: 페이지 이동만, 마지막 페이지에서 전체 채점
@@ -2741,16 +2721,16 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     const remain = Math.min(PAGE_SIZE, currentFilteredData.length - endIdx);
                     actionBtn.innerText = `다음 ${remain}문제 ▶`;
                     actionBtn.setAttribute('onclick', 'goNextPageExam()');
-                    actionBtn.className = BAR_BTN_CLS;
+                    actionBtn.className = BAR_MOVE_CLS;
                 } else {
                     actionBtn.innerText = '전체 채점 ✓';
                     actionBtn.setAttribute('onclick', 'gradeAllExam()');
-                    actionBtn.className = BAR_BTN_CLS;
+                    actionBtn.className = BAR_GRADE_CLS;
                 }
             } else {
                 actionBtn.innerText = '채점 ✓';
                 actionBtn.setAttribute('onclick', 'gradeCurrentPage()');
-                actionBtn.className = BAR_BTN_CLS;
+                actionBtn.className = BAR_GRADE_CLS;
                 // 채점 없이 다음 페이지로 넘어가는 버튼 (마지막 페이지가 아닐 때만)
                 const skipBtn = document.getElementById('skip-next-btn');
                 const totalPages = Math.ceil(currentFilteredData.length / PAGE_SIZE);
@@ -3332,6 +3312,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             try { if (typeof applyWeakStage === 'function') applyWeakStage(typeof pageResults !== 'undefined' ? pageResults : results); } catch (e) {}
             /* 채점 직후 도장·동기화 (2026-08-31) */
             try { stampAll(); syncRecords(); } catch (e) {}
+            clearWrongCache();   /* ★ 09-15 (_task_ox_card_simple_add5) — 방금 틀린 것이 첫 화면 「3번+ 틀림」에 바로 잡히게 */
             currentSessionScore += pageScore;
 
             const actionBtn = document.getElementById('action-btn');
@@ -3340,11 +3321,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 const remain = Math.min(PAGE_SIZE, currentFilteredData.length - endIdx);
                 actionBtn.innerText = `다음 ${remain}문제 ▶`;
                 actionBtn.setAttribute('onclick', 'goNextPage()');
-                actionBtn.className = BAR_BTN_CLS;
+                actionBtn.className = BAR_MOVE_CLS;
             } else {
-                actionBtn.innerText = '결과 저장 🏆';
-                actionBtn.setAttribute('onclick', 'finishChapter()');
-                actionBtn.className = BAR_BTN_CLS;
+                finishChapterSave();   /* ★ 09-15 (_task_ox_card_simple_add1 §2) — 마지막 쪽은 채점과 함께 저장(#action-btn 글자는 안 바꾼다 · 도장·동기화는 위에서 한 번 · 저장부 끝에서 도장 한 번 더) */
             }
             
             lastGradeResults = { results: pageResults, score: pageScore, total: pageData.length };
@@ -3367,6 +3346,15 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     Object.entries(marks).forEach(([id, ok]) => {
                         if (ok === false) map[id] = (map[id] || 0) + 1;
                     });
+                });
+            });
+            /* ★ 09-15 (_task_ox_card_simple_add5) — 끝내지 않은 회독(진행중 · ⚡약점·덜약점 큐 포함)에서 이미 채점된 틀림도 센다.
+               같은 열쇠가 끝나면 진행중 칸은 지워지고 회독 기록으로 옮겨가므로 두 번 세지 않는다 */
+            let prog = {};
+            try { prog = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}') || {}; } catch (e) { prog = {}; }
+            Object.values(prog).forEach(p => {
+                Object.entries((p && p.marks) || {}).forEach(([id, ok]) => {
+                    if (ok === false) map[id] = (map[id] || 0) + 1;
                 });
             });
             _wrongCache = map;
@@ -5076,6 +5064,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 
         function saveInProgress(chapKey) {
             if (!chapKey || !currentFilteredData.length) return;
+            if (chapterSaved && chapterSaved === chapKey) return;   /* ★ 09-15 (_task_ox_card_simple_add1 §2) — 채점과 함께 저장한 회독은 진행중으로 다시 안 쓴다(탭 숨김·goHome 때 되살아남 방지) */
             const all = loadInProgress();
 
             // 아직 채점하지 않았지만 선택해 둔 O/X도 함께 보관
@@ -5103,6 +5092,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 };
             }
             localStorage.setItem(PROGRESS_KEY, JSON.stringify(all));
+            clearWrongCache();   /* ★ add5 — 진행중 틀림도 세므로 진행중을 쓸 때마다 캐시를 비운다(채점 뒤 goHome 이 진행중을 쓰는 순간 반영) */
         }
 
         function clearInProgress(chapKey) {
@@ -5124,6 +5114,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const n = Object.keys(p.marks || {}).length + Object.keys(p.picks || {}).length;
             if (!confirm(`「${chapLabel}」 진행중 ${hist.length + 1}회독(${n}/${p.total})을 버립니다.\n회독 기록(${hist.length}건)과 문항 채점은 그대로입니다.`)) return;
             clearInProgress(chapKey);
+            clearWrongCache();   /* ★ add5 — 버린 진행중의 틀림은 셈에서 빠진다 */
             if (currentSubject === subject && currentChapterLabel === chapLabel) {
                 currentSessionMarks = {};
                 currentSessionScore = 0;
@@ -5308,38 +5299,24 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         }
 
         function showGradeModal(results, score, total) {
+            /* ★ 09-15 (_task_ox_card_simple_add1 §1) — 덮개 대신 떠 있는 작은 창. 점수 한 줄 · 회독별 비교(번호 칸 → 문항 팝업) · 중간 쪽만 아랫줄 「다음 ▶」.
+               마지막 쪽(채점과 함께 저장된 회독)은 「✓ 회독 저장됨」 · 아랫줄 없음 · ✕ 가 목록으로(oxWinClose 의 grade 갈래 → gradeWinClosed) */
             const pct = total ? Math.round(score / total * 100) : 0;
             const tone = pct >= 80 ? 'text-green-600' : (pct >= 60 ? 'text-blue-600' : 'text-red-600');
-
-            document.getElementById('grade-modal-score').innerHTML = `
-                <div class="text-3xl font-extrabold ${tone}">${score} / ${total}</div>
-                <div class="text-[11px] text-gray-500 font-semibold mt-0.5">정답률 ${pct}%</div>
-            `;
-
-            const wrong = results.filter(r => !r.isCorrect);
-            let listHtml = '';
-
-            if (!wrong.length) {
-                listHtml += `<div class="text-center text-[12px] text-green-700 font-bold py-2">🎉 모두 정답입니다!</div>`;
-            }
-
-            // 회독별 비교표 (번호를 누르면 해당 문제로 이동)
-            listHtml += renderAttemptCompare(results);
-
-            document.getElementById('grade-modal-list').innerHTML = listHtml;
-
-            const nextBtn = document.getElementById('grade-modal-next');
-            const actionBtn = document.getElementById('action-btn');
-            nextBtn.innerText = actionBtn.innerText.replace(/^[▶🏆]\s*/, '') || '확인';
-            // '확인'은 다음 단계로 진행 (다음 페이지 / 최종 저장)
-            nextBtn.onclick = () => { closeGradeModal(); actionBtn.click(); };
-
+            const saved = !!(chapterSaved && currentSubject && currentChapterLabel && chapterSaved === chapKeyOf(currentSubject, currentChapterLabel));
+            const body = `<div class="px-3 py-2.5">`
+                + `<div class="flex items-baseline gap-2"><b class="text-[20px] font-black ${tone}" style="font-size:20px">${score} / ${total}</b>`
+                + `<span class="text-[11px] text-gray-500 font-bold">${pct}%</span>`
+                + (saved ? `<span class="ml-auto text-[11px] font-extrabold text-green-700">✓ 회독 저장됨</span>` : '')
+                + `</div>`
+                + renderAttemptCompare(results)
+                + `</div>`
+                + (saved ? '' : `<div class="flex justify-end px-3 py-2 border-t border-gray-200"><button onclick="oxWinClose('grade');goNextPage()" class="${BAR_MOVE_CLS}">다음 ▶</button></div>`);
+            oxWinOpen('grade', '📊 채점', '', body, 340, { resize: true, sizeKey: 'grade' });
             const reopenNext = document.getElementById('reopen-next-btn');
-            if (reopenNext) reopenNext.innerText = nextBtn.innerText;
-
+            if (reopenNext) reopenNext.classList.toggle('hide', saved);                 /* 마지막 쪽이면 아래 막대는 「📊 채점」만 */
             document.getElementById('reopen-grade-bar').classList.add('hide');
             document.getElementById('controls-container').classList.add('hide');
-            document.getElementById('grade-modal').classList.remove('hide');
         }
 
         /* 현재 채점 결과를 «지금까지의 회독»과 번호로 비교 */
@@ -5363,15 +5340,14 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 const style = 'min-width:1.6rem;text-align:center;display:inline-block';
                 if (id && ids.indexOf(String(id)) !== -1) {
                     const hover = (v === false) ? 'hover:bg-red-200' : (v === true ? 'hover:bg-green-100' : 'hover:bg-gray-100');
-                    return `<button onclick="jumpToQuestion('${id}')" title="이 문제로 이동"
+                    return `<button onclick="openQPopup('${id}')" title="문항 팝업"
                         class="px-1 py-0.5 rounded border text-[10px] leading-none cursor-pointer transition ${cls} ${hover}"
                         style="${style}">${lbl}</button>`;
                 }
                 return `<span class="px-1 py-0.5 rounded border text-[10px] leading-none ${cls}" style="${style}">${lbl}</span>`;
             };
 
-            let html = `<div class="border-t border-gray-200 pt-2 mt-2">
-                <div class="text-[11px] font-extrabold text-indigo-700 mb-1.5">📑 회독별 비교</div>`;
+            let html = `<div class="border-t border-gray-200 pt-2 mt-2">`;   /* ★ 09-15 (_task_ox_card_simple_add1 §1) — 「📑 회독별 비교」 제목 줄 뺌 · 번호 칸은 문항 팝업 */
 
             past.forEach((h, i) => {
                 html += `<div class="mb-1.5">
@@ -5404,9 +5380,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         <div class="flex flex-wrap gap-1">${fixed.length ? fixed.map(id => chip(labelOf[id], true, id)).join('') : '<span class="text-[10px] text-gray-400">없음</span>'}</div>
                     </div>
                 </div>`;
-            } else {
-                html += `<div class="text-[10px] text-gray-400 mt-1">이전 회독 기록이 없어 이번 결과만 표시됩니다.</div>`;
-            }
+            }   /* ★ add1 §1 — 「이전 회독 기록이 없어 …」 글줄 뺌 */
 
             return html + `</div>`;
         }
@@ -5421,9 +5395,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             }
         }
 
-        function closeGradeModal() {
-            document.getElementById('grade-modal').classList.add('hide');
-            // 채점 후에는 하단 바 대신 '채점표 다시보기'만 노출
+        function closeGradeModal() { oxWinClose('grade'); }   /* ★ 09-15 (_task_ox_card_simple_add1 §1) — 닫은 뒤 일은 oxWinClose 의 grade 갈래(gradeWinClosed)가 맡는다 */
+        /* 채점 창이 닫힌 뒤 — 채점과 함께 저장된 마지막 쪽이면 목록으로(finishChapterLeave) · 아니면 지금처럼 아래 「📊 채점 · 다음」 막대 */
+        function gradeWinClosed() {
+            const k = (currentSubject && currentChapterLabel) ? chapKeyOf(currentSubject, currentChapterLabel) : null;
+            if (chapterSaved && chapterSaved === k) { finishChapterLeave(); return; }
             if (lastGradeResults) document.getElementById('reopen-grade-bar').classList.remove('hide');
             else document.getElementById('controls-container').classList.remove('hide');
         }
@@ -5541,32 +5517,34 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             /* 채점 직후 도장·동기화 (2026-08-31) */
             try { stampAll(); syncRecords(); } catch (e) {}
 
+            finishChapterSave();   /* ★ 09-15 (_task_ox_card_simple_add1 §2) — 기출 전체 채점도 채점과 함께 저장 */
+
             // 현재 페이지에 보이는 문항은 결과 상태로 갱신
             renderQuizPage();
 
             lastGradeResults = { results, score: currentSessionScore, total: currentFilteredData.length };
             showGradeModal(results, currentSessionScore, currentFilteredData.length);
 
-            const actionBtn = document.getElementById('action-btn');
-            actionBtn.innerText = '결과 저장 🏆';
-            actionBtn.setAttribute('onclick', 'finishChapter()');
-            actionBtn.className = BAR_BTN_CLS;
-            document.getElementById('controls-container').classList.remove('hide');
         }
 
         function goNextPage() {
             currentPageIndex++;
             lastGradeResults = null;
+            chapterSaved = null;   /* ★ 09-15 (_task_ox_card_simple_add1 §2) */
             document.getElementById('reopen-grade-bar').classList.add('hide');
             renderQuizPage();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function finishChapter() {
+        /* ★ 09-15 (_task_ox_card_simple_add1 §2) — 옛 finishChapter 를 저장부·떠남부로 갈랐다. 마지막 쪽 채점(gradeCurrentPage·gradeAllExam)이 바로 저장부를 부르고,
+           채점 창 ✕·「🏠 목록」(goHome)이 떠남부를 부른다. 옛 이름 finishChapter() = 저장 + 떠남(부르는 곳 그대로) */
+        function finishChapter() { finishChapterSave(); finishChapterLeave(); }
+        function finishChapterSave() {
             const sourceFilter = document.getElementById('source-filter').value;
             const reviewFilter = document.getElementById('review-filter').value;
             
             const chapKey = `${currentSubject}||${currentChapterLabel}||${sourceFilter}||${reviewFilter}`;
+            if (chapterSaved === chapKey) return;             /* 한 번만 저장 — 같은 회독을 두 번 넣지 않는다 */
             const chapHistory = JSON.parse(localStorage.getItem('ox_chap_history') || '{}');
             
             if (!chapHistory[chapKey]) chapHistory[chapKey] = [];
@@ -5593,17 +5571,22 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             
             localStorage.setItem('ox_chap_history', JSON.stringify(chapHistory));
             clearWrongCache();
-
+            clearInProgress(chapKey);                          /* 옛 떠남부에 있던 줄 — 저장과 함께 진행중을 지운다 */
+            chapterSaved = chapKey;
+            try { stampAll(); } catch (e) {}                   /* 저장 뒤 도장 — 창을 닫기 전에 회독 칸이 도장 없이 남지 않게(채점 직후 stampAll 은 저장 앞이었다) */
+        }
+        function finishChapterLeave() {
             // 진행중 상태 종료 (goHome이 다시 저장하지 않도록 세션·화면도 비움)
             currentSessionMarks = {};
             currentSessionScore = 0;
             currentPageIndex = 0;
             resumePicks = {};
             document.getElementById('quiz-container').innerHTML = '';
-            clearInProgress(chapKey);
 
             // 저장 후 별도 결과창 없이 바로 목록으로 (요청: 세번째 창 표시 안 함)
             lastGradeResults = null;
+            chapterSaved = null;
+            const _gw = document.getElementById('oxwin-grade'); if (_gw) _gw.remove();   /* oxWinClose 를 부르면 gradeWinClosed 를 거쳐 여기로 되돌아온다 */
             goHome();
         }
     </script>
@@ -8159,6 +8142,7 @@ function startVirtualQuiz(queueName, items) {
     currentSessionMarks = {};
     resumePicks = {};
     lastGradeResults = null;
+    chapterSaved = null;   /* ★ 09-15 (_task_ox_card_simple_add1 §2) */
     document.getElementById('reopen-grade-bar').classList.add('hide');
     const saved = loadInProgress()[chapKeyOf(currentSubject, currentChapterLabel)];
     if (saved && saved.total === currentFilteredData.length) {
@@ -8336,7 +8320,7 @@ function openOmrPad() {
         '<div id="omr-rows" class="px-3 py-2 space-y-0.5"></div>'
         + '<div class="flex justify-end items-center gap-2 px-3 py-1.5 border-t border-gray-200 bg-white" style="position:sticky;bottom:0">'
         + '<span id="omr-count" class="text-[11px] text-gray-500"></span>'
-        + '<button onclick="omrGrade()" class="text-[11.5px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full px-3 py-1" style="font-size:11.5px">채점 ✓</button>'
+        + '<button onclick="omrGrade()" class="text-[11.5px] font-extrabold text-blue-500 hover:text-blue-700 bg-transparent border-0 rounded-full px-2 py-1" style="font-size:11.5px">채점 ✓</button>'
         + '</div>', 360, { resize: true, sizeKey: 'omr' });
     if (w && !w.style.height) { w.style.height = Math.max(160, Math.min(420, innerHeight - 120)) + 'px'; w.style.maxHeight = 'none'; }
     renderOmrPad();
@@ -8362,7 +8346,7 @@ function renderOmrPad() {
                 : '<span class="text-red-600 font-extrabold text-[12px] w-5 text-center shrink-0">❌</span>')
             : '<span class="w-5 shrink-0"></span>';
         const btn = (v, on) => `<button onclick="omrMark('${it.id}','${v}')" ${graded ? 'disabled' : ''}
-            class="w-10 py-1 rounded-full border text-[12px] font-bold transition shrink-0 ${on ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-300 hover:border-blue-400 hover:bg-blue-50'} ${graded ? 'opacity-60 cursor-default' : ''}">${v}</button>`;
+            class="w-10 py-1 rounded-full border text-[12px] font-bold transition shrink-0 ${on ? (v === 'O' ? 'bg-blue-700 text-white border-blue-700' : 'bg-red-600 text-white border-red-600') : 'bg-white text-gray-500 border-gray-300 hover:border-blue-400 hover:bg-blue-50'} ${graded ? 'opacity-60 cursor-default' : ''}">${v}</button>`;
         return `<div class="flex items-center gap-2 px-2 py-1 rounded ${isCur ? 'omr-cur bg-indigo-50 border border-indigo-300' : ''}" id="omr-row-${it.id}">
             <span class="text-[12px] font-bold text-gray-600 w-20 text-right shrink-0 truncate" title="${it.label}">${it.label}</span>
             ${btn('O', oSel)} ${btn('X', xSel)} ${gBadge}
@@ -8397,7 +8381,7 @@ document.addEventListener('keydown', (e) => {
 var currentQueueKind = null;
 let _oxWinZ = 12000, _oxWinN = 0;
 function oxWinFront(el) { el.style.zIndex = ++_oxWinZ; }
-function oxWinClose(key) { const el = document.getElementById('oxwin-' + key); if (el) el.remove(); }
+function oxWinClose(key) { const el = document.getElementById('oxwin-' + key); if (el) el.remove(); if (key === 'grade' && typeof gradeWinClosed === 'function') gradeWinClosed(); }   /* ★ 09-15 (_task_ox_card_simple_add1 §1) — 채점 창만의 갈래 */
 function oxWinCloseAll() { document.querySelectorAll('.oxwin').forEach(e => e.remove()); _oxWinN = 0; }
 function oxWinBody(key) { const el = document.getElementById('oxwin-' + key); return el ? el.querySelector('.oxwin-body') : null; }
 /* 여섯째 인수 `opt` 는 2026-09-11 3턴에 더했다.
@@ -8524,7 +8508,7 @@ document.addEventListener('keydown', e => {
     const wins = [...document.querySelectorAll('.oxwin')];
     if (!wins.length) return;
     wins.sort((a, b) => (+a.style.zIndex || 0) - (+b.style.zIndex || 0));
-    wins[wins.length - 1].remove();
+    const _top = wins[wins.length - 1]; if (_top.id === 'oxwin-grade') oxWinClose('grade'); else _top.remove();   /* ★ add1 §1 — 채점 창은 ✕ 와 같은 갈래로 */
 });
 function qWhere(q) { return q.subject ? q.subject + ' · ' + (q.subChapter || q.chapter || '') : (q.chapter || ''); }
 function qLabelOf(q) {
