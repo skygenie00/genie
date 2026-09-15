@@ -13,6 +13,18 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .tag-btn { transition: all 0.2s ease-in-out; }
+        /* ★ 09-15 (_task_ox_ink §A) — 문제풀이 카드 묶음 폭 고정(W=900) · 좁으면 통째로 줄인다(qcardsFit) · 카드마다 필기 덮개 svg.qink.
+           켜짐(형광펜 보기) = 덮개 숨김 · 꺼짐(필기모드) = #qcards.penon 에서 덮개가 펜을 받는다 · 자과앱 #card·#qink(841~853줄) 규약을 민법 자리에 맞췄다.
+           ⚠ transform 은 레이아웃 폭을 안 줄이므로 묶음 바깥에서 가로로 넘친 몫을 자른다(clip — 스크롤 통을 만들지 않는다) */
+        #quiz-container{overflow-x:clip}
+        #qcards{position:relative;width:900px;max-width:900px;transform-origin:top left}
+        #qcards .question-box{position:relative}
+        #qcards .qink{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:6;overflow:visible;display:none}
+        #qcards.penon .qink{display:block;pointer-events:auto;touch-action:none;cursor:crosshair}
+        #qcards.penon{touch-action:none}
+        #qcards.penon .question-box p,#qcards.penon .question-box span{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+        #ink-tools button{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #d1d5db;border-radius:6px;background:#fff;font-size:12px;line-height:1;padding:0}
+        #ink-tools button.on{outline:2px solid #1d4ed8;outline-offset:1px}
         /* ═══ 목차 서랍(2026-09-11 _task_ox_toc_drawer.md) — 자과앱 #tree 규약 그대로 옮겼다.
            접힘 = 손잡이 13px 만 · 손잡이는 서랍 오른쪽 가장자리의 세로 막대 하나(#trGrip).
            너비·접힘은 기기별이고 동기화 밖이다(SYNC_KEYS 에 안 넣는다). */
@@ -186,9 +198,19 @@
                     <span id="current-subject-title" class="font-bold text-sm text-gray-800 leading-tight">과목명</span>
                     <span id="current-chapter-title" class="text-[11px] text-blue-600 font-semibold leading-tight">세부단원명</span>
                 </div>
-                <div class="flex items-center gap-2 shrink-0">
+                <div class="flex flex-wrap justify-end items-center gap-2 min-w-0">
                     <span id="progress-text" class="text-[11px] font-bold bg-gray-100 px-2 py-0.5 rounded text-gray-700 border border-gray-200 whitespace-nowrap">
                         문제 1-20 / 총 50
+                    </span>
+                    <!-- ★ 09-15 (_task_ox_ink §B) 「✏️ 표시」 토글 — 켜짐 ✏️(노랑 바탕) = 형광펜·밑줄 · 꺼짐 ✍(남색 바탕) = 필기모드 · 꺼지면 오른쪽에 도구 다섯(글자 없음 · title 만) -->
+                    <button id="ink-toggle" type="button" onclick="qiToggle()" title="형광펜·밑줄 보기 — 누르면 필기모드(펜슬로 긋기)" class="shrink-0" style="width:28px;height:24px;border-radius:6px;border:1px solid #facc15;background:#fef9c3;color:#111827;font-size:13px;line-height:1;padding:0">✏️</button>
+                    <span id="ink-tools" class="hide inline-flex items-center gap-1 bg-gray-100 border border-gray-200 rounded-md px-1 py-0.5 shrink-0">
+                        <button type="button" data-qi="pen" title="검정 펜" onclick="qiTool('pen')"><i style="width:10px;height:10px;border-radius:50%;background:#16181B;display:inline-block"></i></button>
+                        <button type="button" data-qi="red" title="빨강 펜" onclick="qiTool('red')"><i style="width:10px;height:10px;border-radius:50%;background:#dc2626;display:inline-block"></i></button>
+                        <button type="button" data-qi="hl" title="형광펜" onclick="qiTool('hl')"><i style="width:13px;height:6px;border-radius:2px;background:#facc15;display:inline-block"></i></button>
+                        <i style="width:1px;height:16px;background:#d1d5db;display:inline-block"></i>
+                        <button type="button" data-qi="erase" title="지우개 — 획 하나씩" onclick="qiTool('erase')">◻</button>
+                        <button type="button" data-qi-clear="1" title="이 쪽 필기 모두 지우기" onclick="qiClearPage()">🗑</button>
                     </span>
                     <button onclick="openOmrPad()" class="text-[11px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded font-bold transition shrink-0" title="문제는 책으로 보고 여기엔 마킹만 — 현재 페이지와 연동됩니다">
                         📝 OMR
@@ -2646,7 +2668,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         <!-- 실제 지문 (설문) -->
                         <div class="flex items-start gap-1.5 mb-2">
                             <span class="text-blue-700 font-extrabold text-[13px] whitespace-nowrap pt-px">${questionLabel}</span>
-                            <p class="text-gray-800 font-medium text-[13px] leading-relaxed" ${item.pending ? '' : `data-mark="q-${item.id}" data-text="${escHtml(item.q)}"`}>${item.pending ? '<span class="text-gray-400 italic font-normal">내용 미입력 (PDF 미수록 항목)</span>' : markHTML(`q-${item.id}`, item.q)}</p>
+                            <p class="text-gray-800 font-medium text-[13px] leading-relaxed" ${(item.pending || !cardMarksOn) ? '' : `data-mark="q-${item.id}" data-text="${escHtml(item.q)}"`}>${item.pending ? '<span class="text-gray-400 italic font-normal">내용 미입력 (PDF 미수록 항목)</span>' : (cardMarksOn ? markHTML(`q-${item.id}`, item.q) : escHtml(item.q))}</p>
                         </div>
                         
                         <!-- 근거 — 늘 열린 한 줄 (2026-09-12) · 지문 아래 · ★ 09-15 아랫줄(정답·해설 ▸ · O · X) 위 -->
@@ -2667,7 +2689,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         <div id="exp-${item.id}" class="hide mt-2.5">
                             <div id="peek-ans-${item.id}" class="hide mb-1.5"></div>
                             <div class="flex items-center gap-1.5 mb-1.5 result-badge text-[13px]"></div>
-                            <p class="text-[12.5px] text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-200 leading-relaxed whitespace-pre-wrap" ${item.pending ? '' : `data-mark="e-${item.id}" data-text="${escHtml(item.exp)}"`}>${item.pending ? '해설 미입력' : markHTML(`e-${item.id}`, item.exp)}</p>
+                            <p class="text-[12.5px] text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-200 leading-relaxed whitespace-pre-wrap" ${(item.pending || !cardMarksOn) ? '' : `data-mark="e-${item.id}" data-text="${escHtml(item.exp)}"`}>${item.pending ? '해설 미입력' : (cardMarksOn ? markHTML(`e-${item.id}`, item.exp) : escHtml(item.exp))}</p>
                             ${item.pending ? '' : actionBarHTML(item)}
                         </div>
 
@@ -2703,7 +2725,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 
             if (currentStem !== null) htmlContent += `</div></div>`;
 
-            container.innerHTML = htmlContent;
+            container.innerHTML = `<div id="qcards"${cardMarksOn ? '' : ' class="penon"'}>` + htmlContent + '</div>';   /* ★ 09-15 (_task_ox_ink §A) — 카드 묶음(폭 900 고정 · 좁으면 통째로 줄인다) */
 
             // 채점 전에 선택만 해둔 답 복원
             Object.entries(resumePicks || {}).forEach(([id, val]) => {
@@ -2794,6 +2816,320 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 // 일반 모드에서도 이전 페이지 바 재활용 (첫 페이지가 아닐 때만)
                 document.getElementById('exam-prev-bar').classList.toggle('hide', currentPageIndex === 0);
             }
+            qiAfterRender(pageData);   /* ★ 09-15 (_task_ox_ink) — 카드마다 필기 덮개 · 폭 맞춤 · 이 쪽 필기 불러오기 */
+        }
+
+        /* ══════════ ★ 09-15 (_task_ox_ink) 문제풀이 필기 — 자과앱 문항 화면 필기를 옮겨 왔다 ══════════
+           · 「✏️ 표시」 켜짐(cardMarksOn · 메모리 · 새로고침하면 켜짐 · 정리 창 토글과 같다) = 지금 그대로 형광펜·밑줄(data-mark) · 필기 덮개 숨김
+           · 꺼짐 = 필기모드 — 지문·해설을 평문으로 다시 그림(#mark-bar 안 뜸) · #qcards.penon · 덮개가 펜을 받는다 · 도구 다섯(검정·빨강·형광·지우개·🗑)
+           · 필기는 문항마다 이 기기 IndexedDB(ox_master_db · rows 통 · 키 ink:q:<uid>) · 동기화 밖 · localStorage 에 안 쓴다
+             (rows 통을 통째로 비우는 코드는 없다 — img:·omrasset:·omrhash: 도 같은 통에 키로 산다 · 9/15 census)
+           · 좌표 = 카드(q-box) 안 논리 px 를 QI_W(900)로 나눈 u,v(세로도 900 · 자과앱과 같다) · 카드 묶음 폭을 900 으로 박아 창 폭이 바뀌어도 줄바꿈이 같다
+           · 펜(pointerType pen)만 긋는다 · 손가락은 절대 안 긋는다 · 자과앱 조각 넷(펜 톡 위임 · 손바닥 거르기 · 덮개 뚫기 · 긋기)을 옮기되 회독 층·되돌리기는 뺐다(사용자 9/15) */
+        const QI_W = 900;
+        var cardMarksOn = true;
+        var QI_TOOL = { kind: 'pen', mode: 'pen', color: '#16181B', w: 2, hl: 0 };
+        var QI = {};                 /* uid → {s:[{c,w,hl,p:[u,v,…]}]} */
+        var _qiSaveT = {};
+        var QI_DRAW = null, QI_RAF = 0;
+        function qiKey(uid) { return 'ink:q:' + uid; }
+        async function dbDel(key) {
+            const db = await dbOpen();
+            return new Promise((res, rej) => {
+                const t = db.transaction(DB_STORE, 'readwrite').objectStore(DB_STORE).delete(key);
+                t.onsuccess = () => res(); t.onerror = () => rej(t.error);
+            });
+        }
+        function qiPathD(p) {
+            if (!p || p.length < 2) return '';
+            let d = 'M' + (p[0] * QI_W).toFixed(1) + ' ' + (p[1] * QI_W).toFixed(1);
+            for (let k = 2; k < p.length; k += 2) d += ' L' + (p[k] * QI_W).toFixed(1) + ' ' + (p[k + 1] * QI_W).toFixed(1);
+            return d;
+        }
+        function qiPaint(uid) {
+            const sv = document.getElementById('ink-' + uid);
+            if (!sv) return 0;
+            const S = (QI[uid] && QI[uid].s) || [];
+            sv.innerHTML = S.map((st, j) => '<path data-j="' + j + '" d="' + qiPathD(st.p) + '" stroke="' + st.c + '" stroke-width="' + st.w + '" fill="none" stroke-linecap="round" stroke-linejoin="round"' + (st.hl ? ' opacity="0.32"' : '') + '/>').join('')
+                + '<path class="qlive" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+            return S.length;
+        }
+        function qiSave(uid) {
+            clearTimeout(_qiSaveT[uid]);
+            _qiSaveT[uid] = setTimeout(async () => {
+                delete _qiSaveT[uid];
+                const v = QI[uid];
+                try {
+                    if (v && v.s && v.s.length) await dbPut(qiKey(uid), { s: v.s });
+                    else await dbDel(qiKey(uid));
+                } catch (e) { syncStatus('필기를 저장하지 못했습니다 — 기기 저장 공간을 확인해 주세요', 'err'); }
+            }, 300);
+        }
+        async function qiLoad(uids) {
+            await Promise.all(uids.map(async uid => {
+                if (_qiSaveT[uid] && QI[uid]) { qiPaint(uid); return; }   /* 아직 안 쓴 획이 메모리에 있다 — 옛 저장값으로 덮지 않는다 */
+                let v = null;
+                try { v = await dbGet(qiKey(uid)); } catch (e) { v = null; }
+                if (_qiSaveT[uid] && QI[uid]) { qiPaint(uid); return; }   /* 읽는 사이에 그은 획이 있다 — 메모리가 더 새것이다 */
+                QI[uid] = (v && Array.isArray(v.s)) ? { s: v.s } : { s: [] };
+                qiPaint(uid);
+            }));
+        }
+        function qcardsFit() {
+            const host = document.getElementById('quiz-container'), c = document.getElementById('qcards');
+            if (!host || !c) return 1;
+            const hs = getComputedStyle(host);
+            const avail = host.clientWidth - (parseFloat(hs.paddingLeft) || 0) - (parseFloat(hs.paddingRight) || 0);   /* innerWidth 가 아니라 묶음이 들어갈 안쪽 폭 — 바깥 틀(max-w-4xl 896px)보다 넓게 재면 카드 오른쪽이 잘린다 */
+            const k = avail > 0 ? Math.min(1, avail / QI_W) : 1;
+            const tf = k < 1 ? 'scale(' + k + ')' : '';
+            const mb = k < 1 ? Math.round(-c.offsetHeight * (1 - k)) + 'px' : '';
+            const ml = k < 1 ? '0px' : 'auto';
+            if (c.style.transform !== tf) c.style.transform = tf;
+            if (c.style.marginBottom !== mb) c.style.marginBottom = mb;
+            if (c.style.marginLeft !== ml) { c.style.marginLeft = ml; c.style.marginRight = ml; }
+            return k;
+        }
+        function qiAfterRender(pageData) {
+            const wrap = document.getElementById('qcards');
+            if (!wrap) return;
+            wrap.querySelectorAll('.question-box').forEach(box => {
+                const uid = String(box.id || '').replace('q-box-', '');
+                if (!uid || document.getElementById('ink-' + uid)) return;
+                const sv = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                sv.setAttribute('class', 'qink'); sv.setAttribute('id', 'ink-' + uid); sv.setAttribute('data-uid', uid);
+                box.appendChild(sv);
+                qiWire(sv, uid);
+            });
+            wrap.classList.toggle('penon', !cardMarksOn);
+            qiGuard(); qiPierce();
+            qiToolsPaint();
+            qcardsFit();
+            if (window.ResizeObserver) {          /* 정답·해설이 펴져 묶음 높이가 바뀌거나 창 폭이 바뀌면 다시 맞춘다(한 프레임에 한 번) */
+                if (!qcardsFit._ro) qcardsFit._ro = new ResizeObserver(() => { if (!qcardsFit._raf) qcardsFit._raf = requestAnimationFrame(() => { qcardsFit._raf = 0; qcardsFit(); }); });
+                qcardsFit._ro.disconnect();
+                qcardsFit._ro.observe(wrap);
+                const host = document.getElementById('quiz-container'); if (host) qcardsFit._ro.observe(host);
+            }
+            qiLoad((pageData || []).map(it => String(it.id)));
+        }
+        function qiToggle() {
+            const ae = document.activeElement;
+            if (ae && ae !== document.body && ae.closest && ae.closest('#quiz-container') && ae.blur) ae.blur();   /* 근거 칸에 쓰던 글자는 onblur 로 먼저 저장된다 */
+            const marks = currentSessionMarks || {};
+            const peek = [...document.querySelectorAll('#quiz-container .question-box > [id^="exp-"]:not(.hide)')].map(x => x.id.slice(4)).filter(u => !(String(u) in marks));
+            cardMarksOn = !cardMarksOn;
+            const bar = document.getElementById('mark-bar'); if (bar) bar.classList.add('hide');
+            try { const sel = window.getSelection(); if (sel) sel.removeAllRanges(); } catch (e) { }
+            renderQuizPage();                    /* 채점된 카드는 renderQuizPage 가 라디오 disabled·✓/✗·O/X 칠을 되살린다 · 고른 답은 resumePicks(9/15 census) */
+            peek.forEach(u => { const ex = document.getElementById('exp-' + u); if (ex && ex.classList.contains('hide')) togglePeekExp(u); });   /* 채점 전에 펴 둔 「정답·해설」은 다시 편다 */
+        }
+        function qiToolsPaint() {
+            const b = document.getElementById('ink-toggle'), t = document.getElementById('ink-tools');
+            if (b) {
+                b.textContent = cardMarksOn ? '✏️' : '✍';
+                b.title = cardMarksOn ? '형광펜·밑줄 보기 — 누르면 필기모드(펜슬로 긋기)' : '필기모드 — 누르면 형광펜·밑줄 보기';
+                b.style.background = cardMarksOn ? '#fef9c3' : '#1e3a8a';
+                b.style.borderColor = cardMarksOn ? '#facc15' : '#1e3a8a';
+                b.style.color = cardMarksOn ? '#111827' : '#ffffff';
+            }
+            if (t) {
+                t.classList.toggle('hide', cardMarksOn);
+                t.querySelectorAll('[data-qi]').forEach(x => x.classList.toggle('on', x.getAttribute('data-qi') === QI_TOOL.kind));
+            }
+        }
+        function qiTool(kind) {
+            const set = { pen: { mode: 'pen', color: '#16181B', w: 2, hl: 0 }, red: { mode: 'pen', color: '#dc2626', w: 2, hl: 0 },
+                          hl: { mode: 'pen', color: '#facc15', w: 12, hl: 1 }, erase: { mode: 'erase', color: QI_TOOL.color, w: QI_TOOL.w, hl: 0 } }[kind];
+            if (!set) return;
+            QI_TOOL = Object.assign({ kind: kind }, set);
+            qiToolsPaint();
+        }
+        async function qiClearPage() {
+            const uids = [...document.querySelectorAll('#qcards .question-box')].map(b => String(b.id || '').replace('q-box-', '')).filter(Boolean);
+            if (!uids.length) return;
+            if (!confirm('이 쪽 ' + uids.length + '문항 필기를 모두 지웁니다')) return;
+            for (const uid of uids) {
+                clearTimeout(_qiSaveT[uid]); delete _qiSaveT[uid];
+                QI[uid] = { s: [] }; qiPaint(uid);
+                try { await dbDel(qiKey(uid)); } catch (e) { }
+            }
+        }
+        function qiScale() { const c = document.getElementById('qcards'); return c ? ((c.getBoundingClientRect().width / QI_W) || 1) : 1; }
+        /* 긋기 — 자과앱 qWire·qEraseAt(5398~5456) · 펜이 찍은 사이 점을 다 받고(getCoalescedEvents) · 획 하나 동안 자(rect·배율)는 한 번만 잰다 · 한 프레임에 한 번 d 갱신 */
+        function qiWire(sv, uid) {
+            sv.addEventListener('pointerdown', e => {
+                if (cardMarksOn || e.pointerType !== 'pen') return;        /* 펜만 긋는다 — 손가락·마우스는 절대 안 긋는다 */
+                const r = sv.getBoundingClientRect(), k = qiScale();
+                const x = (e.clientX - r.left) / k, y = (e.clientY - r.top) / k;
+                try { sv.setPointerCapture(e.pointerId); } catch (_) { }
+                if (QI_TOOL.mode === 'erase') { qiEraseAt(uid, x, y); QI_DRAW = { id: e.pointerId, erase: 1, uid: uid, r: r, k: k }; e.preventDefault(); return; }
+                QI_DRAW = { id: e.pointerId, uid: uid, r: r, k: k, c: QI_TOOL.color, w: QI_TOOL.w, hl: QI_TOOL.hl, p: [x / QI_W, y / QI_W] };
+                e.preventDefault();
+            });
+            sv.addEventListener('pointermove', e => {
+                const D = QI_DRAW;
+                if (!D || D.uid !== uid || D.id !== e.pointerId) return;    /* 그 펜의 점만 받는다 — 얹힌 손바닥이 덮개 위에서 움직여도 획에 안 섞인다 */
+                const evs = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
+                if (D.erase) { evs.forEach(ev => qiEraseAt(uid, (ev.clientX - D.r.left) / D.k, (ev.clientY - D.r.top) / D.k)); e.preventDefault(); return; }
+                let add = '';
+                evs.forEach(ev => {
+                    const u = (ev.clientX - D.r.left) / D.k / QI_W, v = (ev.clientY - D.r.top) / D.k / QI_W, n = D.p.length;
+                    if (n >= 2 && D.p[n - 2] === u && D.p[n - 1] === v) return;    /* 같은 자리는 건너뛴다 */
+                    D.p.push(u, v);
+                    add += ' L' + (u * QI_W).toFixed(1) + ' ' + (v * QI_W).toFixed(1);
+                });
+                if (add) {
+                    D.d = (D.d || qiPathD(D.p.slice(0, 2))) + add;
+                    if (!QI_RAF) QI_RAF = requestAnimationFrame(() => {
+                        QI_RAF = 0;
+                        const l = sv.querySelector('.qlive'); if (!l || !QI_DRAW) return;
+                        l.setAttribute('d', QI_DRAW.d); l.setAttribute('stroke', QI_DRAW.c); l.setAttribute('stroke-width', QI_DRAW.w); l.setAttribute('opacity', QI_DRAW.hl ? '0.32' : '1');
+                    });
+                }
+                e.preventDefault();
+            });
+            const up = e => {
+                const D = QI_DRAW;
+                if (!D || D.uid !== uid || D.id !== e.pointerId) return;
+                if (QI_RAF) { cancelAnimationFrame(QI_RAF); QI_RAF = 0; }
+                QI_DRAW = null;
+                if (D.erase) { qiSave(uid); return; }
+                const p = D.p.length === 2 ? D.p.concat(D.p) : D.p;      /* 톡 = 점 획 하나(자과앱은 버렸다 · 민법 §E G5 는 점 획 1) */
+                (QI[uid] = QI[uid] || { s: [] }).s.push({ c: D.c, w: D.w, hl: D.hl, p: p.map(v => +v.toFixed(4)) });
+                qiPaint(uid); qiSave(uid);
+            };
+            sv.addEventListener('pointerup', up);
+            sv.addEventListener('pointercancel', up);
+        }
+        function qiEraseAt(uid, x, y) {              /* 지우개 = 획 하나 통째(14px 반경) */
+            const S = (QI[uid] && QI[uid].s) || [];
+            let best = -1, bd = 14;
+            S.forEach((st, j) => { for (let k = 0; k < st.p.length; k += 2) { const d = Math.hypot(st.p[k] * QI_W - x, st.p[k + 1] * QI_W - y); if (d < bd) { bd = d; best = j; } } });
+            if (best >= 0) { S.splice(best, 1); qiPaint(uid); }
+        }
+        /* ② 펜 톡 위임 — 자과앱 1250~1299. 애플펜슬은 누를 때 흔들려 사파리가 click 을 취소한다 → 60ms 기다려 진짜 click 이 없으면 합성 · 진짜 click 뒤 350ms 창으로 겹침 막기 · 마우스는 합성 안 함.
+           ★ 민법은 pointerType === 'pen' 만 합성한다(손가락 톡은 지금도 click 이 멀쩡하다) · 문제풀이 화면(#quiz-screen)과 떠 있는 창(.oxwin) 안에서만 — 정리OMR 좌표 뷰어는 제 포인터 손잡이(확대·자리 찍기)가 있다 */
+        const QI_TAP_SKIP = 'select,input,textarea,.oxwin-head,.oxwin-grip,#mark-bar';
+        const QI_INK_SKIP = '.qink,.mc-zoom';
+        const __qiTapLast = new WeakMap(), __qiTapDown = new Map();
+        function qiTapSkip(t) {
+            if (!t || !t.closest) return true;
+            if (!t.closest('#quiz-screen,.oxwin')) return true;
+            return !!(t.closest(QI_TAP_SKIP) || t.closest(QI_INK_SKIP));
+        }
+        document.addEventListener('pointerdown', e => { if (e.pointerType !== 'pen' || e.__syn) return; __qiTapDown.set(e.pointerId, { x: e.clientX, y: e.clientY, t: e.target }); }, true);
+        document.addEventListener('click', e => { if (e.target) __qiTapLast.set(e.target, performance.now()); }, true);   /* 시계는 performance.now — 350ms 창만 잰다(단조 · 기기 시각을 안 건드린다) */
+        document.addEventListener('pointerup', e => {
+            if (e.__syn || e.pointerType !== 'pen') return;
+            const dn = __qiTapDown.get(e.pointerId); __qiTapDown.delete(e.pointerId);
+            if (!dn || dn.t !== e.target) return;                          /* 누른 자리와 뗀 자리가 다르다 — 끈 것이다 */
+            if (Math.hypot(e.clientX - dn.x, e.clientY - dn.y) > 8) return;
+            const t = e.target;
+            if (qiTapSkip(t)) return;
+            setTimeout(() => {                                             /* 진짜 click 을 먼저 기다린다 */
+                const now = performance.now(), last = __qiTapLast.get(t);
+                if (last !== undefined && now - last < 350) return;          /* 이미 났다 — 겹치지 않는다 */
+                __qiTapLast.set(t, now);
+                try { t.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, clientX: e.clientX, clientY: e.clientY })); } catch (err) { console.warn(err); }
+            }, 60);
+        }, true);
+        document.addEventListener('pointercancel', e => { __qiTapDown.delete(e.pointerId); }, true);
+        /* ⓐ 손바닥 거르기 — 자과앱 inkGuard(1301~1351). 민법은 페이지가 window 로 굴러가서 굴리는 통 = document.scrollingElement.
+           필기모드일 때만 · #quiz-container 캡처 단계에서 손가락을 먹고 직접 굴린다 · 펜이 닿는 순간 이미 바닥에 있던 손가락 = 손바닥(뗄 때까지 무시)
+           · 눌리는 것 위에서 시작한 손가락(덮개 밑이 눌리는 것이면 그것도)은 흘려보낸다 */
+        const QI_PASS = 'button,summary,a,label,[role="button"],[onclick],select,input,textarea';
+        const QI_HIT = 'button,summary,a,label,[role="button"],[onclick],input';
+        function qiUnder(x, y, sv) {
+            const keep = sv.style.pointerEvents;
+            sv.style.pointerEvents = 'none';
+            let el = null;
+            try { el = document.elementFromPoint(x, y); } catch (_) { }
+            sv.style.pointerEvents = keep;
+            if (!el || !el.closest) return null;
+            const f = el.closest('textarea,select,input:not([type="radio"]):not([type="checkbox"]):not([type="button"]):not([type="submit"]):not([type="file"])');
+            if (f) return { field: f };                        /* 글자칸 — 포커스만 · 라디오·체크·파일은 아래에서 누른다 */
+            const h = el.closest(QI_HIT);
+            return h ? { el: h } : null;
+        }
+        function qiGuard() {
+            const box = document.getElementById('quiz-container');
+            if (!box || box.__qig) return;
+            box.__qig = 1;
+            const SE = () => document.scrollingElement || document.documentElement;
+            let penDown = false, pan = null;
+            const held = new Set(), palm = new Set();
+            box.addEventListener('pointerdown', e => { if (cardMarksOn || e.pointerType !== 'pen') return; penDown = true; for (const id of held) palm.add(id); pan = null; }, true);
+            const penEnd = e => { if (e.pointerType === 'pen') penDown = false; };
+            box.addEventListener('pointerup', penEnd, true);
+            box.addEventListener('pointercancel', penEnd, true);
+            box.addEventListener('pointerdown', e => {
+                if (cardMarksOn || e.pointerType !== 'touch') return;
+                const t = e.target;
+                if (t && t.closest) {
+                    if (t.closest(QI_PASS)) return;
+                    const sv = t.closest('svg.qink');
+                    if (sv && qiUnder(e.clientX, e.clientY, sv)) return;
+                }
+                e.stopPropagation(); if (e.cancelable) e.preventDefault();
+                held.add(e.pointerId);
+                if (penDown) palm.add(e.pointerId);
+                if (penDown || palm.has(e.pointerId)) return;
+                pan = { id: e.pointerId, x: e.clientX, y: e.clientY, sl: SE().scrollLeft, st: SE().scrollTop, armed: false };
+            }, true);
+            box.addEventListener('pointermove', e => {
+                if (cardMarksOn || e.pointerType !== 'touch' || !pan || pan.id !== e.pointerId) return;
+                e.stopPropagation(); if (e.cancelable) e.preventDefault();
+                const dx = e.clientX - pan.x, dy = e.clientY - pan.y;
+                if (!pan.armed) { if (Math.hypot(dx, dy) < 10) return; pan.armed = true; }   /* 얹어 둔 손바닥이 미끄러져도 안 움직인다 */
+                SE().scrollLeft = pan.sl - dx; SE().scrollTop = pan.st - dy;
+            }, true);
+            const up = e => { if (e.pointerType !== 'touch') return; held.delete(e.pointerId); palm.delete(e.pointerId); if (pan && pan.id === e.pointerId) pan = null; };
+            box.addEventListener('pointerup', up, true);
+            box.addEventListener('pointercancel', up, true);
+        }
+        /* 덮개 뚫기 — 자과앱 underInk·inkSynth·inkPierce(1353~1416). 필기모드에서 덮개 위 톡이 밑의 눌리는 것을 겨냥했으면 획을 시작하지 않고 그것을 누른다(펜·손가락 둘 다)
+           · 글자칸(근거 입력 등)은 포커스만 준다(민법 §E G5) · 밑에 눌릴 것이 없으면 그냥 획이다(점 찍기를 안 잃는다) */
+        const __qiHit = new Map();
+        function qiSynth(el, type, e) {
+            let ev;
+            try { ev = new PointerEvent(type, { pointerType: e.pointerType, pointerId: e.pointerId, isPrimary: true, bubbles: true, cancelable: true, composed: true, clientX: e.clientX, clientY: e.clientY }); }
+            catch (_) { ev = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY }); }
+            ev.__syn = 1;
+            el.dispatchEvent(ev);
+        }
+        function qiPierce() {
+            const box = document.getElementById('quiz-container');
+            if (!box || box.__qip) return;
+            box.__qip = 1;
+            box.addEventListener('pointerdown', e => {
+                if (e.__syn || cardMarksOn) return;
+                const sv = e.target && e.target.closest ? e.target.closest('svg.qink') : null;
+                if (!sv) return;
+                const hit = qiUnder(e.clientX, e.clientY, sv);
+                if (!hit) return;
+                e.stopPropagation(); if (e.cancelable) e.preventDefault();
+                if (hit.field) { try { hit.field.focus(); } catch (_) { } return; }
+                __qiHit.set(e.pointerId, { el: hit.el, x: e.clientX, y: e.clientY });
+                qiSynth(hit.el, 'pointerdown', e);
+            }, true);
+            box.addEventListener('pointermove', e => {
+                if (e.__syn) return;
+                const h = __qiHit.get(e.pointerId); if (!h) return;
+                e.stopPropagation();
+                qiSynth(h.el, 'pointermove', e);
+            }, true);
+            const done = e => {
+                if (e.__syn) return;
+                const h = __qiHit.get(e.pointerId); __qiHit.delete(e.pointerId);
+                if (!h) return;
+                e.stopPropagation();
+                qiSynth(h.el, e.type === 'pointerup' ? 'pointerup' : 'pointercancel', e);
+                if (e.type !== 'pointerup' || Math.hypot(e.clientX - h.x, e.clientY - h.y) > 8) return;
+                __qiTapLast.set(h.el, performance.now());      /* 펜 톡 위임이 겹쳐 만들지 않게 */
+                try { h.el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, clientX: e.clientX, clientY: e.clientY })); } catch (err) { console.warn(err); }
+            };
+            box.addEventListener('pointerup', done, true);
+            box.addEventListener('pointercancel', done, true);
         }
 
         // --- 태그 (체크) 토글 기능 ---
