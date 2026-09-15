@@ -967,8 +967,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 out.moved.push(uid);
                 if (text.length > GG_TMAX) out.over.push([uid, text.length]);
                 if (dry) return;
+                list.forEach((x, n) => { if (x) x.i = n + 1; });   /* ★ 09-15 (_task_ox_jeongni_popup_add3) — 같은 규칙: 이관받는 문항만 1부터 매긴 뒤 개수+1 */
                 list.push({ k: ggNewKey('g_' + uid + '_'),
-                            i: list.reduce((m, x) => Math.max(m, Number(x && x.i) || 0), 0) + 1,
+                            i: list.length + 1,
                             t: text, ok: null, ts: Date.now(), cs: [], src: 'memo' });
                 ggSaveList(uid, list);
             });
@@ -1201,8 +1202,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const norm = normalizeMarks(list);
             if (norm.length) all[key] = norm; else delete all[key];
             saveMarks(all);
-            const host = document.querySelector(`[data-mark="${key}"]`);
-            if (host) host.innerHTML = renderMarked(host.getAttribute('data-text') || '', all[key]);
+            /* ★ 09-15 (_task_ox_jeongni_popup_add1 §2) — 같은 data-mark 상자 전부(문제풀이 카드 + 정리 창)를 다시 그린다 · 저장은 위에서 한 번 */
+            document.querySelectorAll(`[data-mark="${key}"]`).forEach(host => { host.innerHTML = renderMarked(host.getAttribute('data-text') || '', all[key]); });
             window.getSelection().removeAllRanges();
             document.getElementById('mark-bar').classList.add('hide');
             _pendingMark = null;
@@ -1215,8 +1216,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (!hit) return;
             saveMarks(all);
             for (const k of [`q-${id}`, `e-${id}`]) {
-                const host = document.querySelector(`[data-mark="${k}"]`);
-                if (host) host.innerHTML = renderMarked(host.getAttribute('data-text') || '', null);
+                document.querySelectorAll(`[data-mark="${k}"]`).forEach(host => { host.innerHTML = renderMarked(host.getAttribute('data-text') || '', null); });   /* ★ 09-15 (add1 §2) — 같은 상자 전부 */
             }
         }
 
@@ -2152,6 +2152,20 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (reviewFilter === 'untyped' && !qTypeOf(q).draft) return false;
             return true;
         }
+        /* ★ 09-15 (_task_ox_jeongni_popup §C) — 📋 정리칩 묶음 열쇠 = 소단원 글자(info.sub) 앞 「N.N」(1.1 · 2.10) · 안 나오면 그 행(chapLabel) 하나가 한 묶음 */
+        function jnKeyOf(sub, chapLabel) { const m = /^\d+\.\d+/.exec(String(sub || '')); return m ? m[0] : String(chapLabel); }
+        /* 목차 줄 한 장(章)의 소단원 차례 — renderDashboard 안에 있던 정렬 줄을 글자 그대로 옮겼다(📋 묶음을 먼저 모을 때도 같은 차례를 쓴다) */
+        function dashEntriesOf(subMap) {
+            const entries = Object.entries(subMap);
+            // 단원 정렬 — 목차순(기본)은 그대로, 그 외에는 장(章) 안에서만 재정렬
+            const dashSort = (document.getElementById('dash-sort') || {}).value || 'toc';
+            if (dashSort === 'wrong') {
+                entries.sort((a, b) => (b[1].wrong || 0) - (a[1].wrong || 0));
+            } else if (dashSort === 'unsolved') {
+                entries.sort((a, b) => ((b[1].count - (b[1].done || 0)) - (a[1].count - (a[1].done || 0))));
+            }
+            return entries;
+        }
         function renderDashboard() {
             const container = document.getElementById('dashboard-container');
             container.innerHTML = '';
@@ -2235,6 +2249,16 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         Object.entries(chapterMap).sort((a, b) => b[0].localeCompare(a[0]))
                     );
                 }
+                /* ★ 09-15 (_task_ox_jeongni_popup §C) — 📋 정리칩. 이 과목 목차 줄을 그릴 차례 그대로 한 번 먼저 돌아 「N.N」 묶음을 모은다(jnKeyOf · 과목 안이면 장을 건너도 한 묶음).
+                   단추는 묶음의 첫 행에만 · 묶음에 든 chapLabel 전부를 그 단추 data-jn 에 ||| 로 잇는다 */
+                const jnGroups = new Map(), jnFirst = new Set();
+                for (const subMap of Object.values(chapterMap)) {
+                    for (const [chapLabel, info] of dashEntriesOf(subMap)) {
+                        const gk = jnKeyOf(info.sub, chapLabel);
+                        if (!jnGroups.has(gk)) { jnGroups.set(gk, []); jnFirst.add(chapLabel); }
+                        jnGroups.get(gk).push(chapLabel);
+                    }
+                }
                 let subjectHtml = `
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                         <div class="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
@@ -2248,14 +2272,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 for (const [chapMain, subMap] of Object.entries(chapterMap)) {
                     const chapTotal = Object.values(subMap).reduce((n, v) => n + v.count, 0);
 
-                    const entries = Object.entries(subMap);
-                    // 단원 정렬 — 목차순(기본)은 그대로, 그 외에는 장(章) 안에서만 재정렬
-                    const dashSort = (document.getElementById('dash-sort') || {}).value || 'toc';
-                    if (dashSort === 'wrong') {
-                        entries.sort((a, b) => (b[1].wrong || 0) - (a[1].wrong || 0));
-                    } else if (dashSort === 'unsolved') {
-                        entries.sort((a, b) => ((b[1].count - (b[1].done || 0)) - (a[1].count - (a[1].done || 0))));
-                    }
+                    const entries = dashEntriesOf(subMap);   // 단원 정렬 — ★ 09-15 (_task_ox_jeongni_popup §C) 정렬 줄은 dashEntriesOf 로 옮겼다(글자 그대로 · 📋 묶음도 같은 차례로 모은다)
                     // 세부단원이 하나뿐이고 장 이름과 같으면 헤더를 생략하고 한 줄로 표시
                     const flat = entries.length === 1 && entries[0][1].sub === chapMain;
 
@@ -2272,6 +2289,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     for (const [chapLabel, info] of entries) {
                         const chapKey = `${subject}||${chapLabel}||${sourceFilter}||${reviewFilter}`;
                         const chapHistory = historyData[chapKey] || [];
+                        const jnKey = jnKeyOf(info.sub, chapLabel);   /* ★ 09-15 (_task_ox_jeongni_popup §C) — 묶음의 첫 행이면 🃏 바로 오른쪽에 📋 (숫자 없음) */
+                        const jnBtn = jnFirst.has(chapLabel)
+                            ? `<button data-jn="${escHtml(jnGroups.get(jnKey).join('|||'))}" onclick="event.stopPropagation();openJeongni('${escAttr(subject)}','${escAttr(jnKey)}',this)"
+                                    title="이 묶음 정리"
+                                    class="text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 rounded px-1.5 py-0.5 whitespace-nowrap shrink-0 hover:bg-teal-100 transition">📋</button>`
+                            : '';
 
                         let historyBadges = '';
                         if (chapHistory.length) {
@@ -2293,8 +2316,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 
                         const nextAttempt = chapHistory.length + 1;
                         const prog = inProgressAll[chapKey];
+                        /* ★ 09-15 (_task_ox_jeongni_popup_add2 §1) — 진행중 배지 바로 뒤(안이 아니라 뒤)에 × = 진행중 회독 버리기(discardInProgress) · 진행중이 없으면 단추도 없다 */
                         const progBadge = prog
-                            ? `<span class="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded border border-amber-300 font-extrabold whitespace-nowrap">▶ ${nextAttempt}회독 진행중 ${Object.keys(prog.marks || {}).length + Object.keys(prog.picks || {}).length}/${prog.total}</span>`
+                            ? `<span class="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded border border-amber-300 font-extrabold whitespace-nowrap">▶ ${nextAttempt}회독 진행중 ${Object.keys(prog.marks || {}).length + Object.keys(prog.picks || {}).length}/${prog.total}</span><button onclick="event.stopPropagation();discardInProgress('${escAttr(subject)}','${escAttr(chapLabel)}')" title="이 진행중 회독을 버립니다(채점 기록은 안 지워집니다)" class="text-[10px] text-amber-700 hover:text-red-600 font-extrabold px-1">×</button>`
                             : '';
                         const countStyle = reviewFilter !== 'all'
                             ? 'text-orange-600 font-bold bg-orange-100 px-1.5 py-0.5 rounded'
@@ -2308,7 +2332,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                                     <span class="text-[11px] ${countStyle} whitespace-nowrap shrink-0">총 ${info.count}문제</span>
                                     <button data-mcchap="${subject}|||${chapLabel}" onclick="event.stopPropagation();openChapCards('${escAttr(subject)}','${escAttr(chapLabel)}')"
                                         title="이 단원의 암기카드"
-                                        class="text-[10px] font-bold text-fuchsia-700 bg-fuchsia-50 border border-fuchsia-200 rounded px-1.5 py-0.5 whitespace-nowrap shrink-0 hover:bg-fuchsia-100 transition" style="opacity:${info.cards ? 1 : .55}">🃏<span class="hidden sm:inline"> 암기노트</span>${info.cards ? ' ' + info.cards : ''}</button>
+                                        class="text-[10px] font-bold text-fuchsia-700 bg-fuchsia-50 border border-fuchsia-200 rounded px-1.5 py-0.5 whitespace-nowrap shrink-0 hover:bg-fuchsia-100 transition" style="opacity:${info.cards ? 1 : .55}">🃏${info.cards ? ' ' + info.cards : ''}</button>${jnBtn}
                                 </div>
                                 <div class="flex flex-wrap items-center justify-end gap-1.5 shrink-0 ml-auto">
                                     ${progBadge}
@@ -3118,17 +3142,20 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 </div>
             ` : '';
 
+            /* ★ 09-15 (_task_ox_jeongni_popup §E) — 첫 줄 끝에 🔗판·↩연결 칩(짧은 글자) · 지문 <p> 바로 아래 근거 줄 통째(범위 cp- · 카드 ''·문항 팝업 qp- 와 id 가 안 부딪친다 · 세 범위가 서로 제자리만 갈아 끼운다) */
             const html = `
                 <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4">
                     <div class="flex items-center gap-2 mb-2">
                         <span class="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded">ID: ${q.id}</span>
                         <span class="text-sm text-gray-600 font-semibold">${q.subject} > ${chapLabel}</span>
+                        ${samePanryeChipHTML(q, true)}${myLinkChipHTML(q, true)}
                     </div>
                     <div class="font-bold text-lg text-blue-800 mb-3">${q.displayNo ?? q.probNum}번${subLabel} ${q.source ? `<span class="text-sm font-normal text-purple-700 ml-2">(${q.source})</span>` : ''}</div>
                     
                     ${caseHTML}
 
                     <p class="text-gray-800 font-medium text-lg mb-4 leading-relaxed">${q.q}</p>
+                    <div class="mb-4">${ggLineHTML(q.id, 'cp-')}</div>
                     
                     <div class="flex items-center gap-2 mb-4">
                         <span class="font-extrabold text-gray-700">정답:</span> 
@@ -3542,6 +3569,13 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         <span class="text-[11px] font-extrabold text-gray-500 bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5">${map.get(k)}건</span>
                     </button>`).join('');
         }
+        /* ★ 09-15 (_task_ox_jeongni_popup §A·§C) — 근거 목록 행·정리 창 행의 🔗 연결 근거 칩 · onclick 없음 · 끝에 쓰임 수(useNumHTML — 문항 팝업 칩 ggRefChipsHTML 과 같은 값·모양) */
+        function fieldRefChipsHTML(uid) {
+            return refOf(uid, 'geunge').map(u =>
+                `<span class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4`
+                + ` border border-dashed text-blue-800 bg-blue-50 border-blue-400 ${refTextOf(u, 'geunge') === null ? 'opacity-40' : ''}">🔗 ${escHtml(u)}`
+                + useNumHTML('geunge', u, uid) + `</span>`).join('');
+        }
         function showFieldList(kind, gi) {
             const key = _fieldGroups[gi];
             const box = document.getElementById('search-results');
@@ -3557,9 +3591,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     /* ★ 2026-09-15 (_task_ox_gg_popup_rec §A) — 근거(m) 행은 그 문항 **팝업**을 연다 · 논리(l) 행은 옛 그대로 이동.
                        연결한 근거가 있으면 첫 줄에 `🔗 <uid>` 칩을 미리 붙인다 — ggRefChipsHTML 의 칩과 같은 class · onclick 없음(행 전체가 단추다) */
                     const go = kind === 'm' ? 'openQPopup' : 'jumpFromSearch';
-                    const refChips = kind === 'm' ? refOf(q.id, 'geunge').map(u =>
-                        `<span class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4`
-                        + ` border border-dashed text-blue-800 bg-blue-50 border-blue-400 ${refTextOf(u, 'geunge') === null ? 'opacity-40' : ''}">🔗 ${escHtml(u)}</span>`).join('') : '';
+                    /* ★ 09-15 (_task_ox_jeongni_popup §A) — 칩 끝에 쓰임 수(fieldRefChipsHTML) · 근거(m) 상자는 줄바꿈 그대로(whitespace-pre-wrap)·글 전부(220자 자르기 없음) · 논리(l) 상자는 옛 글자 그대로 */
+                    const refChips = kind === 'm' ? fieldRefChipsHTML(q.id) : '';
+                    const txtBox = kind === 'l'
+                        ? `<div class="mt-1 border-l-2 pl-2 py-1 ${cls}">${icon} ${escHtml(String(txt)).slice(0, 220)}</div>`
+                        : `<div class="mt-1 border-l-2 pl-2 py-1 ${cls} whitespace-pre-wrap" style="white-space:pre-wrap">${icon} ${escHtml(String(txt))}</div>`;   /* 인라인 = Tailwind CDN 이 나중에 생긴 클래스를 늦게 만드는 것 대비 */
                     return `
                     <button onclick="${go}('${q.id}')" class="w-full text-left px-4 py-2 border-b border-gray-100 hover:bg-blue-50 transition">
                         <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
@@ -3570,7 +3606,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         </div>
                         <div class="text-[12px] text-gray-800 leading-relaxed">
                             <span class="text-gray-500">${escHtml(q.q).slice(0, 60)}…</span>
-                            <div class="mt-1 border-l-2 pl-2 py-1 ${cls}">${icon} ${escHtml(String(txt)).slice(0, 220)}</div>
+                            ${txtBox}
                         </div>
                     </button>`;
                 }).join('');
@@ -3634,7 +3670,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            gg 함수들은 sc 를 끝 인자로 받아 id 조립과 onclick 글자에 실어 나른다 — 안 주면 ''(카드 쪽 글자 무변).
            한쪽에서 저장·지움·연결·끊기가 일어나면 **다른 범위의 같은 문항 상자만** ggLineHTML 로 통째 갈아 끼운다
            (카드 전체는 다시 그리지 않는다 · 펼침은 닫혀도 된다). 저장 꼴·저장소 키 무변. */
-        const GG_SCOPES = ['', 'qp-'];
+        const GG_SCOPES = ['', 'qp-', 'cp-'];   /* ★ 09-15 (_task_ox_jeongni_popup §E) — 관련 문제 비교 창 = 'cp-' */
         function ggScA(sc) { return sc ? `,'${sc}'` : ''; }
         function ggBoxRefresh(uid, sc) {
             GG_SCOPES.forEach(s => {
@@ -3862,7 +3898,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         /* 여러 줄 칸 높이 — 아래로만 자란다. 테두리 두께를 더해야 스크롤바가 안 생긴다. 숨은 칸은 재지 않는다(0 이 된다). */
         /* ★ 2026-09-15 (_task_ox_sync_and_limit §B) — 한도 안내. 칸과 단추가 한 줄(flex)이라 **그 줄 바로 아래**에 붙인다.
            댓글 칸(gg-cin-·refgg-cein-)은 GG_CMAX · 본문 칸은 GG_TMAX. 저장 꼴 무변 · 새 저장소 키 0. */
-        function ggMaxOf(el) { return /^(?:qp-)?(gg-cin-|refgg-cein-)/.test((el && el.id) || '') ? GG_CMAX : GG_TMAX; }   /* 09-15 — 팝업 범위(qp-)의 댓글 칸도 GG_CMAX */
+        function ggMaxOf(el) { return /^(?:qp-|cp-)?(gg-cin-|refgg-cein-)/.test((el && el.id) || '') ? GG_CMAX : GG_TMAX; }   /* 09-15 — 문항 팝업(qp-)·비교 창(cp-) 범위의 댓글 칸도 GG_CMAX */
         function ggLimitNote(el, msg) {
             if (!el || !el.id) return;
             let n = document.getElementById(el.id + '-over');
@@ -3898,20 +3934,32 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (!t || !ggLimitOk(inp, t, GG_TMAX)) return;   /* §B — 넘기면 칸 아래에 몇 자인지 보인다 */
             const ok = ggMarkNow(uid);          /* add2 §1 — 이번 회독 기준. `ox_q_history` 는 안 본다 */
             const list = ggOf(uid);
+            /* ★ 09-15 (_task_ox_jeongni_popup_add3) — 새 번호는 개수+1. 옛 판에서 지워 번호가 비어 있던 문항(「2」만 남은 것)은
+               더하는 이때 1부터 다시 매긴다(개수+1 만 쓰면 「2·2」가 된다) · 한꺼번에 훑지는 않는다 — 손댄 문항만 */
+            let renum = false;
+            list.forEach((x, n) => { if (x && x.i !== n + 1) { x.i = n + 1; renum = true; } });
             const g = {
                 k: ggNewKey('g_' + uid + '_'),
-                i: list.reduce((m, x) => Math.max(m, Number(x && x.i) || 0), 0) + 1,
+                i: list.length + 1,
                 t: t, ok: ok, ts: Date.now(), cs: []
             };
             list.push(g);
             ggSaveList(uid, list);
-            const chips = document.getElementById(`${sc}gg-chips-${uid}`);
-            if (chips) chips.insertAdjacentHTML('beforeend', ggChipHTML(uid, g, sc));
-            const pans = document.getElementById(`${sc}gg-pans-${uid}`);
-            if (pans) pans.insertAdjacentHTML('beforeend', ggPanelHTML(uid, g, sc));
-            inp.value = '';
-            if (keepFocus) inp.focus();
+            if (renum) {                         /* 번호가 바뀐 칩·판까지 새로 — 제 범위 상자 통째(적던 칸도 새 칸) */
+                const box = document.getElementById(`${sc}gg-box-${uid}`);
+                if (box) box.outerHTML = ggLineHTML(uid, sc);
+                const ni = document.getElementById(`${sc}gg-in-${uid}`);
+                if (ni && keepFocus) ni.focus();
+            } else {
+                const chips = document.getElementById(`${sc}gg-chips-${uid}`);
+                if (chips) chips.insertAdjacentHTML('beforeend', ggChipHTML(uid, g, sc));
+                const pans = document.getElementById(`${sc}gg-pans-${uid}`);
+                if (pans) pans.insertAdjacentHTML('beforeend', ggPanelHTML(uid, g, sc));
+                inp.value = '';
+                if (keepFocus) inp.focus();
+            }
             ggBoxRefresh(uid, sc);              /* ★ 09-15 §B — 같은 문항이 다른 범위(카드↔팝업)에 떠 있으면 그 상자만 */
+            if (renum) ggRefOwnersRepaint(uid);
         }
 
         /* ---------- 펼치기 · 고치기 · 지우기 ---------- */
@@ -3951,14 +3999,26 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (b) b.classList.add('hide');
             ggBoxRefresh(uid, sc);              /* ★ 09-15 §B */
         }
+        /* ★ 09-15 (_task_ox_jeongni_popup_add3) — 이 문항 근거를 연결해 둔 문항(owner)의 「연결한 근거」 상자가 화면에 떠 있으면 그것도 새로 그린다
+           (번호가 바뀌거나 지운 항목이 남아 보이지 않게 · 범위마다 · 펼침은 ggRefPaint 가 지킨다) */
+        function ggRefOwnersRepaint(uid) {
+            (typeof useOwners === 'function' ? useOwners('geunge', uid) : []).forEach(owner => {
+                GG_SCOPES.forEach(s => { if (document.getElementById(`${s}reflink-geunge-${owner}`)) ggRefPaint(owner, s); });
+            });
+        }
         function ggDel(uid, k, sc = '') {
             const g = ggItem(uid, k);
             if (!g) return;
             if (!confirm('근거 ' + g.i + ' 을(를) 지웁니다.\n\n' + (g.t || ''))) return;
-            ggSaveList(uid, ggOf(uid).filter(x => x && x.k !== k));   /* 뒤 번호는 다시 매기지 않는다 */
-            const p = document.getElementById(`${sc}gg-pan-${uid}-${k}`); if (p) p.remove();
-            const c = document.getElementById(`${sc}gg-chip-${uid}-${k}`); if (c) c.remove();
+            /* ★ 09-15 (_task_ox_jeongni_popup_add3) — 남은 근거를 차례대로 1부터 다시 매긴다(i 는 보이는 글자일 뿐 · 정체·연결·댓글은 k 로 잇는다).
+               번호가 바뀐 칩·판이 같이 새로 그려지게 제 범위 상자도 통째 갈아 끼운다(펼침은 닫힌다) · 다른 범위는 전처럼 ggBoxRefresh */
+            const list = ggOf(uid).filter(x => x && x.k !== k);
+            list.forEach((x, n) => { x.i = n + 1; });
+            ggSaveList(uid, list);
+            const box = document.getElementById(`${sc}gg-box-${uid}`);
+            if (box) box.outerHTML = ggLineHTML(uid, sc);
             ggBoxRefresh(uid, sc);              /* ★ 09-15 §B */
+            ggRefOwnersRepaint(uid);
         }
 
         /* ---------- 댓글 — 쌓기만 한다(고치기·지우기는 다음 판) ---------- */
@@ -4290,7 +4350,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const t = new Date(y, mo - 1, d);
             return isNaN(t.getTime()) ? null : t;
         }
-        function recStripHTML(uid) {
+        /* ★ 09-15 (_task_ox_jeongni_popup §C) — 풀이 기록 칸의 **자료 모으기**만 떼어 냈다(recStripHTML 과 정리 창 jnRecHTML 이 같이 쓴다 · 줄 글자는 옛 recStripHTML 그대로).
+           allProg=false(카드) — 지금 단원 chapKey 의 진행중은 뺀다(이번 세션 칸이 맡는다) · true(정리 창) — 이번 세션 칸이 없으니 진행중 전부를 칸으로 */
+        function recCellsOf(uid, allProg = false) {
             const J = k => { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch (e) { return {}; } };
             const hist = J('ox_chap_history'), tags = J('ox_q_tags'), prog = J(PROGRESS_KEY);
             const label = key => { const p = String(key).split('||'); return p[0] === '⚡빠른실행' ? '⚡ ' + (p[1] || '') : (p[1] || p[0] || ''); };
@@ -4303,7 +4365,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 });
             });
             let curKey = null;
-            try { if (currentSubject && currentChapterLabel) curKey = chapKeyOf(currentSubject, currentChapterLabel); } catch (e) { curKey = null; }
+            if (!allProg) { try { if (currentSubject && currentChapterLabel) curKey = chapKeyOf(currentSubject, currentChapterLabel); } catch (e) { curKey = null; } }
             Object.keys(prog).forEach(key => {
                 if (key === curKey) return;                              /* 이번 세션은 아래 한 칸이 맡는다 */
                 const p = prog[key], v = p && p.marks ? p.marks[uid] : undefined;
@@ -4311,6 +4373,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 cells.push({ t: recStripDay(p.date), key: key, n: (Array.isArray(hist[key]) ? hist[key].length : 0) + 1, ok: v, cf: null, prog: true });
             });
             cells.sort((x, y) => (x.t ? x.t.getTime() : 0) - (y.t ? y.t.getTime() : 0));   /* 같은 날은 chapKey·배열 차례 그대로(안정 정렬) */
+            return { cells, hist, tags, curKey, label };
+        }
+        function recStripHTML(uid) {
+            const { cells, hist, tags, curKey, label } = recCellsOf(uid);   /* ★ 09-15 — 자료 모으기는 recCellsOf 로 옮겼다(글자 그대로) */
             const sm = (typeof currentSessionMarks !== 'undefined' && currentSessionMarks) || {};
             const sv = (sm[uid] === true || sm[uid] === false) ? sm[uid] : null;
             const wrap = 'mt-1 mb-1 px-2 py-1 rounded-lg border border-dashed border-purple-200 bg-purple-50/40 text-[12px]';
@@ -4345,16 +4411,22 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const box = document.getElementById('rec-strip-' + uid);
             if (box && !box.classList.contains('hide')) box.innerHTML = recStripHTML(uid);
         }
-        function samePanryeChipHTML(item) {
+        function samePanryeChipHTML(item, short = false) {
             const same = samePanrye(item);
             if (!same.length) return '';
+            /* ★ 09-15 (_task_ox_jeongni_popup §C·§E) — short=true(정리 창·비교 창) = 「🔗 판 N」 · 짧은 글자라 늘 보인다 · 누름이 밑으로 번지지 않게 · 인자 없이(문제풀이 카드) 부르면 아래 옛 글자 그대로 */
+            if (short) return `<button onclick="event.stopPropagation();showRelated('${item.id}','same')" title="해설의 판례번호가 같은 지문 ${same.length}개"
+                class="text-[10px] px-1.5 py-0.5 rounded border bg-teal-50 text-teal-800 border-teal-300 font-extrabold hover:bg-teal-100 transition whitespace-nowrap">🔗 판 ${same.length}</button>`;
             return `<button onclick="showRelated('${item.id}','same')" title="해설의 판례번호가 같은 지문 ${same.length}개"
                 class="text-[10px] px-1.5 py-0.5 rounded border bg-teal-50 text-teal-800 border-teal-300 font-extrabold hover:bg-teal-100 transition whitespace-nowrap">🔗<span class="hidden sm:inline"> 같은 판례</span> ${same.length}</button>`;
         }
         /* 🔗 내가 연결한 칩 — 2026-08-26 상단 칩 줄로 올렸다 */
-        function myLinkChipHTML(item) {
+        function myLinkChipHTML(item, short = false) {
             const my = (JSON.parse(localStorage.getItem('ox_q_links') || '{}')[item.id] || []).filter(Boolean);
             if (!my.length) return '';
+            /* ★ 09-15 (_task_ox_jeongni_popup §C·§E) — short=true = 「↩ 연결 N」 · 인자 없음(카드)은 아래 옛 글자 그대로 */
+            if (short) return `<button onclick="event.stopPropagation();showRelated('${item.id}','mine')" title="직접 연결해둔 문제 ${my.length}개"
+                class="text-[10px] px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold hover:bg-indigo-100 transition whitespace-nowrap">↩ 연결 ${my.length}</button>`;
             return `<button onclick="showRelated('${item.id}','mine')" title="직접 연결해둔 문제 ${my.length}개"
                 class="text-[10px] px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold hover:bg-indigo-100 transition whitespace-nowrap">↩<span class="hidden sm:inline"> 내가 연결한</span> ${my.length}</button>`;
         }
@@ -4999,6 +5071,30 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             delete all[chapKey];
             localStorage.setItem(PROGRESS_KEY, JSON.stringify(all));
         }
+        /* ★ 09-15 (_task_ox_jeongni_popup_add2) — 진행중 회독 버리기. 진행중을 지우는 길이 finishChapter 하나뿐이라, 끝난 회독의 진행중 칸이
+           동기화로 되살아나면(옛 판 도장 누락으로 묘비가 없던 것) 앱에서 치울 방법이 없었다. 확인 → clearInProgress 로 그 칸 하나만.
+           · 회독 기록(ox_chap_history)·문항 채점은 안 건드린다 · 저장 꼴·키 무변 · 확인창 수는 배지와 같은 수(채점 marks + 고른 picks)
+           · 다른 기기 — 다음 동기화의 stampAll 이 그림자에만 남은 칸에 묘비를 지금 시각으로 찍고 병합의 묘비 우선이 이긴다(새 코드 없음 · syncRecords 를 따로 안 부른다)
+           · 지금 그 단원이 풀이 세션으로 잡혀 있으면 finishChapter 처럼 세션·화면도 비운다(뒤에 goHome·progFlush 가 다시 저장하지 않게) */
+        function discardInProgress(subject, chapLabel) {
+            const chapKey = chapKeyOf(subject, chapLabel);
+            const p = loadInProgress()[chapKey];
+            if (!p) { renderDashboard(); return; }
+            let hist = [];
+            try { hist = (JSON.parse(localStorage.getItem('ox_chap_history') || '{}') || {})[chapKey] || []; } catch (e) { hist = []; }
+            const n = Object.keys(p.marks || {}).length + Object.keys(p.picks || {}).length;
+            if (!confirm(`「${chapLabel}」 진행중 ${hist.length + 1}회독(${n}/${p.total})을 버립니다.\n회독 기록(${hist.length}건)과 문항 채점은 그대로입니다.`)) return;
+            clearInProgress(chapKey);
+            if (currentSubject === subject && currentChapterLabel === chapLabel) {
+                currentSessionMarks = {};
+                currentSessionScore = 0;
+                currentPageIndex = 0;
+                resumePicks = {};
+                const qc = document.getElementById('quiz-container');
+                if (qc) qc.innerHTML = '';
+            }
+            renderDashboard();
+        }
 
         function chapKeyOf(subject, chapLabel) {
             const sf = document.getElementById('source-filter').value;
@@ -5515,8 +5611,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         </div>
     </div>
 
-    <!-- ✏️ 형광펜 툴바 -->
-    <div id="mark-bar" class="hide fixed z-[60] bg-white rounded-lg shadow-xl border border-gray-300 px-1.5 py-1 flex flex-wrap items-center justify-center gap-1 max-w-[176px]">
+    <!-- ✏️ 형광펜 툴바 · ★ 09-15 (_task_ox_jeongni_popup_add1) 떠 있는 창(.oxwin · z-index 12000부터 오른다) 안에서 긁어도 창 위에 보이게 z-index 를 인라인으로 올렸다(z-[60] 은 창 밑에 깔린다) -->
+    <div id="mark-bar" style="z-index:2147483000" class="hide fixed z-[60] bg-white rounded-lg shadow-xl border border-gray-300 px-1.5 py-1 flex flex-wrap items-center justify-center gap-1 max-w-[176px]">
         <button onclick="applyMark('y')" title="노랑" class="w-7 h-7 rounded hover:ring-2 ring-gray-300" style="background:#fde68a"></button>
         <button onclick="applyMark('g')" title="초록" class="w-7 h-7 rounded hover:ring-2 ring-gray-300" style="background:#bbf7d0"></button>
         <button onclick="applyMark('b')" title="파랑" class="w-7 h-7 rounded hover:ring-2 ring-gray-300" style="background:#bfdbfe"></button>
@@ -8420,6 +8516,8 @@ function openQPopup(id) {
     if (!q) { alert('지금 불러온 데이터에 없는 문항입니다 (' + id + ')'); return; }
     const key = 'q-' + id;
     const same = (typeof samePanrye === 'function') ? samePanrye(q) : [];
+    let mine = [];   /* ★ 09-15 (_task_ox_jeongni_popup §D) — 내가 연결한 문제(ox_q_links) · myLinkChipHTML 과 같은 셈 · 0이면 단추 없음 */
+    try { mine = (JSON.parse(localStorage.getItem('ox_q_links') || '{}')[id] || []).filter(Boolean); } catch (e) { mine = []; }
     const cards = mcCount(id);
     const ansColor = q.a === 'O' ? '#2563eb' : '#dc2626';
     const body =
@@ -8438,7 +8536,8 @@ function openQPopup(id) {
         + '</div>'
         + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;padding-top:9px;border-top:1px dashed #e5e7eb">'
         + '<button onclick="qPopToggleAns(\'' + id + '\',this)" style="font-size:11.5px;font-weight:700;color:#4f46e5;background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;padding:3px 9px;cursor:pointer">정답·해설 보기</button>'
-        + (same.length ? '<button onclick="showRelated(\'' + id + '\',\'same\')" style="font-size:11.5px;font-weight:700;color:#0f766e;background:#f0fdfa;border:1px solid #99f6e4;border-radius:6px;padding:3px 9px;cursor:pointer">🔗 같은 판례 ' + same.length + '</button>' : '')
+        + (same.length ? '<button onclick="showRelated(\'' + id + '\',\'same\')" style="font-size:11.5px;font-weight:700;color:#0f766e;background:#f0fdfa;border:1px solid #99f6e4;border-radius:6px;padding:3px 9px;cursor:pointer">🔗 판 ' + same.length + '</button>' : '')
+        + (mine.length ? '<button onclick="showRelated(\'' + id + '\',\'mine\')" style="font-size:11.5px;font-weight:700;color:#3730a3;background:#eef2ff;border:1px solid #a5b4fc;border-radius:6px;padding:3px 9px;cursor:pointer">↩ 연결 ' + mine.length + '</button>' : '')
         + '<button onclick="openMemCard(\'' + id + '\')" style="font-size:11.5px;font-weight:700;color:#a21caf;background:#fdf4ff;border:1px solid #f5d0fe;border-radius:6px;padding:3px 9px;cursor:pointer">🃏 암기카드 ' + (cards || '') + '</button>'
         + '<span style="flex:1"></span>'
         + '<button onclick="oxWinClose(\'' + key + '\');jumpFromSearch(\'' + id + '\')" style="font-size:11.5px;font-weight:700;color:#fff;background:#2563eb;border:1px solid #2563eb;border-radius:6px;padding:3px 9px;cursor:pointer">↪ 이 문제로 이동</button>'
@@ -8862,11 +8961,138 @@ async function openChapCards(subject, chapLabel) {
     body.innerHTML = '<div style="padding:6px 14px 14px">' + html + '</div>';
     mcZoomBind(body);
 }
+/* ---------- 📋 정리 창 (2026-09-15 · _task_ox_jeongni_popup §C · add1) ----------
+   목차 줄 📋(「N.N」 묶음의 첫 행) → 그 묶음(본문·7판신설·변형·미수록…)의 문항 **전부**를 한 창에 · 소단원마다 소제목 줄 + chapUidsOf 차례 그대로.
+   · 묶음의 chapLabel 들은 누른 단추의 data-jn 에서 읽는다(다시 계산 안 함) · 단추 없이 부르면 quizData 에서 같은 규칙(jnKeyOf)으로 모은다
+   · 행 = ID(교재 자리 · bookChipHTML)·번호(누르면 문항 팝업)·출처·🔗연결 근거 칩(+쓰임 수)·🔗판·↩연결·붙은 태그 아이콘·오른쪽 끝 기록 두 줄
+          / 지문 전문 / 내 근거(줄바꿈 그대로) / 정답·해설 ▸(행마다 따로 접힘)
+   · 기록 두 줄은 recCellsOf 칸으로만 그린다 — 이번 세션 칸·「마지막」 없음 · 칸 18×16px · 칸 색·title 은 카드 풀이 기록 그대로
+   · add1 — 지문·해설에 형광펜·밑줄(markHTML · data-mark 가 카드와 같아 툴바로 긋고 지운다 · 지문에 onclick 없음)
+            제목 줄 「✏️ 표시」로 이 창들 안에서만 껐다 켠다(jnMarksOn · 메모리 값 · 저장 안 함 · 새로고침하면 켜짐)
+   ⚠ 저장소는 읽기만 한다(긋기는 원래대로 applyMark 가 ox_q_marks 에) · 창 크기 기억은 oxWinOpen 이 원래 하던 그대로(sizeKey 'jn') */
+let jnMarksOn = true;
+function jnNameOf(l) { const s = String(l), i = s.indexOf(' > '); return i >= 0 ? s.slice(i + 3) : s; }
+function jnLabelsOf(subject, gkey) {
+    if (subject === '변리사 기출') return [String(gkey)];
+    const out = [];
+    (typeof quizData !== 'undefined' ? quizData : []).forEach(q => {
+        if (q.subject !== subject) return;
+        const l = q.subChapter ? q.chapter + ' > ' + q.subChapter : q.chapter;
+        if (jnKeyOf(q.subChapter || q.chapter, l) === String(gkey) && out.indexOf(l) < 0) out.push(l);
+    });
+    return out;
+}
+function jnRecHTML(uid) {
+    const { cells, label } = recCellsOf(uid, true);
+    if (!cells.length) return '<span class="text-[11px] text-gray-400">기록 없음</span>';
+    const md = t => t ? (t.getMonth() + 1) + '/' + t.getDate() : '?';
+    const sz = 'display:inline-flex;align-items:center;justify-content:center;width:18px;height:16px;flex:none';
+    const top = cells.map(c => {
+        const cls = c.ok === true ? 'text-blue-700 bg-blue-50 border-blue-300'
+                  : c.ok === false ? 'text-red-700 bg-red-50 border-red-300'
+                  : 'text-gray-400 bg-white border-gray-300 border-dashed';
+        const tip = md(c.t) + ' · ' + label(c.key) + ' · ' + c.n + '회독째' + (c.prog ? ' · 진행중' : '');
+        return `<span class="rounded font-extrabold border ${cls}${c.prog ? ' border-dashed' : ''}" style="${sz}" title="${escHtml(tip)}">${c.ok === true ? 'O' : c.ok === false ? 'X' : '·'}</span>`;
+    }).join('');
+    const bottom = cells.map(c => `<span class="${c.cf === true ? 'text-amber-700 font-extrabold' : c.cf === null ? 'text-gray-300' : ''}" style="${sz}">${c.cf === true ? '△' : c.cf === null ? '–' : ''}</span>`).join('');
+    return `<div data-jnrec="1" class="max-w-full overflow-x-auto text-[11px] leading-none">`
+        + `<div class="flex items-center gap-0.5">${top}</div>`
+        + `<div class="flex items-center gap-0.5">${bottom}</div>`
+        + `</div>`;
+}
+function jnRowHTML(q) {
+    const id = q.id;
+    let tg = {};
+    try { tg = (JSON.parse(localStorage.getItem('ox_q_tags') || '{}') || {})[id] || {}; } catch (e) { tg = {}; }
+    const icons = [['fake', '⚠️'], ['concept', '💡'], ['memo', '🧠'], ['important', '⭐']].filter(x => tg[x[0]]).map(x => x[1]).join('');   /* 🌀 은 안 그린다 — 기록 아랫줄 △ 가 맡는다 */
+    const txt = refTextOf(id, 'geunge');
+    const qText = String(q.q || ''), eText = String(q.exp || '');
+    /* add1 — 켜짐: 카드와 같은 data-mark·data-text + markHTML(안에서 이스케이프한다 · escHtml 로 또 감싸지 않는다) · 꺼짐: escHtml 평문 · data-mark 없음 */
+    const qAttr = jnMarksOn ? ` data-mark="q-${id}" data-text="${escHtml(qText)}"` : '';
+    const eAttr = jnMarksOn ? ` data-mark="e-${id}" data-text="${escHtml(eText)}"` : '';
+    const qHTML = jnMarksOn ? markHTML('q-' + id, qText) : escHtml(qText);
+    const eHTML = jnMarksOn ? markHTML('e-' + id, eText) : escHtml(eText);
+    return `<div data-jnrow="${escHtml(id)}" class="px-3.5 py-2 border-b border-gray-100">`
+        + `<div class="flex flex-wrap items-center gap-1.5">`
+        + bookChipHTML(q)
+        + `<button type="button" onclick="openQPopup('${escAttr(id)}')" title="문항 팝업" class="text-[10px] font-bold text-indigo-700 cursor-pointer hover:bg-indigo-50 rounded px-1">${q.displayNo}${escHtml(q.subNum || '')}번</button>`
+        + (q.source ? `<span class="text-[10px] font-bold text-purple-700">${escHtml(q.source)}</span>` : '')
+        + fieldRefChipsHTML(id)
+        + samePanryeChipHTML(q, true) + myLinkChipHTML(q, true)
+        + (icons ? `<span class="text-[11px] tracking-wide">${icons}</span>` : '')
+        + `<span class="ml-auto">${jnRecHTML(id)}</span>`
+        + `</div>`
+        + `<div class="mt-1 text-[12.5px] leading-relaxed text-gray-800" style="font-size:12.5px"${qAttr}>${qHTML}</div>`
+        + (txt ? `<div class="mt-1 border-l-2 pl-2 py-1 text-[12px] leading-relaxed text-blue-900 bg-blue-50 border-blue-400 whitespace-pre-wrap" style="white-space:pre-wrap">🔗 ${escHtml(String(txt))}</div>` : '')
+        + `<button type="button" onclick="event.stopPropagation();jnAnsToggle(this)" class="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded px-2 py-0.5 mt-1">정답·해설 ▸</button>`
+        + `<div data-jnans="${escHtml(id)}" class="hide mt-1">`
+        + `<div class="text-[12px] font-extrabold text-gray-700 mb-1">정답 <b class="font-black ${q.a === 'O' ? 'text-blue-600' : 'text-red-600'}">${escHtml(String(q.a || ''))}</b></div>`
+        + `<div class="text-[12.5px] text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-200 leading-relaxed whitespace-pre-wrap" style="font-size:12.5px;white-space:pre-wrap"${eAttr}>${eHTML}</div>`
+        + `</div>`
+        + `</div>`;
+}
+function jnAnsToggle(btn) {
+    const box = btn && btn.nextElementSibling;
+    if (!box || !box.hasAttribute('data-jnans')) return;
+    const hidden = box.classList.toggle('hide');
+    btn.textContent = hidden ? '정답·해설 ▸' : '정답·해설 ▾';
+}
+function jnBodyHTML(subject, labels) {
+    let total = 0, html = '';
+    for (const l of labels) {
+        const ids = chapUidsOf(subject, l);
+        total += ids.length;
+        html += `<div data-jnh="1" class="px-3.5 py-1.5 bg-slate-50 border-b border-gray-100 text-[11px] font-extrabold text-indigo-800">${escHtml(jnNameOf(l))} · ${ids.length}문항</div>`;
+        for (const id of ids) {
+            const q = quizData.find(x => x.id === id);
+            if (q) html += jnRowHTML(q);
+        }
+    }
+    return { html, total };
+}
+function jnMarksPaint(btn) {
+    btn.className = 'text-[10.5px] font-bold border rounded px-1.5 py-0.5 whitespace-nowrap '
+        + (jnMarksOn ? 'text-amber-800 bg-amber-50 border-amber-300' : 'text-gray-500 bg-white border-gray-300');
+    btn.title = jnMarksOn ? '형광펜·밑줄 표시 켜짐 — 누르면 끈다(이 창에서만)' : '형광펜·밑줄 표시 꺼짐 — 누르면 켠다';
+}
+/* add1 §3 — 값이 하나(jnMarksOn)라 떠 있는 정리 창 전부를 같이 다시 그린다(창마다 따로 두면 단추와 행이 어긋난다) · 펼쳐 둔 정답·해설은 접힌다 */
+function jnMarksToggle() {
+    jnMarksOn = !jnMarksOn;
+    document.querySelectorAll('.oxwin[data-jnlabels]').forEach(w => {
+        const body = w.querySelector('.oxwin-body');
+        if (body) body.innerHTML = jnBodyHTML(w.getAttribute('data-jnsubject') || '', String(w.getAttribute('data-jnlabels') || '').split('|||').filter(Boolean)).html;
+        const b = w.querySelector('[data-jnmarks]');
+        if (b) jnMarksPaint(b);
+    });
+}
+function openJeongni(subject, gkey, btn) {
+    const raw = (btn && btn.getAttribute) ? btn.getAttribute('data-jn') : null;
+    const labels = raw ? raw.split('|||').filter(Boolean) : jnLabelsOf(subject, gkey);
+    if (!labels.length) return;
+    const { html, total } = jnBodyHTML(subject, labels);
+    const key = 'jn-' + String(subject + '|' + gkey).replace(/[^A-Za-z0-9가-힣]/g, '_');
+    const w = oxWinOpen(key, '📋 정리 · ' + escHtml(jnNameOf(labels[0])), escHtml(subject) + ' · ' + total + '문항', html, 600, { resize: true, sizeKey: 'jn' });
+    if (!w) return;
+    w.setAttribute('data-jnsubject', subject);
+    w.setAttribute('data-jnlabels', labels.join('|||'));
+    const head = w.querySelector('.oxwin-head');
+    let tb = w.querySelector('[data-jnmarks]');
+    if (head && !tb) {                                  /* add1 §3 — 제목 줄 오른쪽 · 닫기 왼쪽 (BUTTON 이라 끌기가 안 잡는다) */
+        tb = document.createElement('button');
+        tb.type = 'button';
+        tb.setAttribute('data-jnmarks', '1');
+        tb.style.fontSize = '10.5px';
+        tb.textContent = '✏️ 표시';
+        tb.onclick = jnMarksToggle;
+        head.insertBefore(tb, head.lastElementChild);
+    }
+    if (tb) jnMarksPaint(tb);
+}
 function renderDashboardCardCounts() {
     document.querySelectorAll('[data-mcchap]').forEach(btn => {
         const parts = btn.getAttribute('data-mcchap').split('|||');
         const n = mcTotalOf(chapUidsOf(parts[0], parts[1]));
-        btn.innerHTML = '🃏<span class="hidden sm:inline"> 암기노트</span>' + (n ? ' ' + n : '');
+        btn.innerHTML = '🃏' + (n ? ' ' + n : '');   /* ★ 09-15 (_task_ox_jeongni_popup §B) — 「암기노트」 글자 뺌 · 아이콘+수만 */
         btn.style.opacity = n ? '1' : '.55';
     });
 }
