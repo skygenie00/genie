@@ -2482,7 +2482,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     const opt = CIRCLED[m.opt] || (m.opt || '');
                     return `<span class="bg-gray-100 text-gray-600 text-[11px] font-bold px-2 py-0.5 rounded-md border border-gray-200 whitespace-nowrap">${m.year}:${m.no || ''}:${opt}</span>`;
                 }).join('');
-                const sourceBadge = item.source ? `<span class="bg-purple-100 text-purple-800 text-[11px] font-extrabold px-2 py-0.5 rounded-md border border-purple-200 whitespace-nowrap">${escHtml(item.source)}</span>` : '';
+                /* ★ 09-15 (_task_ox_gg_popup_rec §C) — 누르면 헤더 줄 바로 아래에 풀이 기록 두 줄(recStripToggle) · class 는 옛 글자 그대로 */
+                const sourceBadge = item.source ? `<button type="button" onclick="recStripToggle('${item.id}')" title="풀이 기록" class="bg-purple-100 text-purple-800 text-[11px] font-extrabold px-2 py-0.5 rounded-md border border-purple-200 whitespace-nowrap">${escHtml(item.source)}</button>` : '';
 
                 const t = qTags[item.id] || { fake: false, concept: false, memo: false, confuse: false };
                 const confuseStyle = t.confuse ? 'bg-amber-100 text-amber-900 border-amber-500 font-extrabold shadow-sm' : 'bg-gray-50 text-gray-400 border-gray-200 font-semibold';
@@ -2572,6 +2573,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                             </div>
                         </div>
                         
+                        ${item.source ? `<div id="rec-strip-${item.id}" class="hide"></div>` : ''}
                         <!-- 실제 지문 (설문) -->
                         <div class="flex items-start gap-1.5 mb-2">
                             <span class="text-blue-700 font-extrabold text-[13px] whitespace-nowrap pt-px">${questionLabel}</span>
@@ -3022,10 +3024,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
              ★ 2026-09-12 add3 — 누르면 **그 문항의 근거가 이 문항에 걸린다**(`addRefId`).
                한동안 `jumpFromSearch` 로 그 문항에 가게 했었는데 연결로 바뀌었다.
                그래서 제 문항을 빼는 것도 · 「이미 넣음」도 다른 갈래와 **같은 규칙**으로 돌아왔다. */
-        function linkSearch(ownerId, kind) {
+        function linkSearch(ownerId, kind, sc = '') {
             const sfx = kind ? `${kind}-${ownerId}` : `${ownerId}`;
-            const box = document.getElementById(`link-results-${sfx}`);
-            const inp = document.getElementById(`link-search-${sfx}`);
+            const pre = kind === 'geunge' ? sc : '';            /* ★ 09-15 (_task_ox_gg_popup_rec §B) — 근거 갈래만 범위를 쓴다(메모·논리 연결 상자는 그대로) */
+            const box = document.getElementById(`${pre}link-results-${sfx}`);
+            const inp = document.getElementById(`${pre}link-search-${sfx}`);
             if (!box || !inp) return;
             const term = inp.value.trim();
             if (term.length < 1) { box.classList.add('hide'); box.innerHTML = ''; return; }
@@ -3066,7 +3069,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 const fline = kind
                     ? `<div class="border-l-2 pl-2 ${fcls} text-[11.5px] mt-0.5 whitespace-pre-wrap">${escHtml(fshow)}</div>`
                     : '';
-                const call = kind ? `addRefId('${ownerId}','${kind}','${q.id}')` : `addLinkId('${ownerId}','${q.id}')`;
+                const call = kind ? `addRefId('${ownerId}','${kind}','${q.id}'${ggScA(pre)})` : `addLinkId('${ownerId}','${q.id}')`;
                 return `<button onclick="${call}" class="block w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-indigo-50 transition ${on ? 'opacity-50' : ''}">
                     <div class="flex items-center gap-1.5 mb-0.5">
                         <span class="text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">ID ${q.id}</span>
@@ -3300,6 +3303,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 }
             });
 
+            pageData.forEach(it => recStripRefresh(it.id));   /* ★ 09-15 (_task_ox_gg_popup_rec §C) — 열려 있던 풀이 기록 상자만 이번 칸을 O/X 로 */
             localStorage.setItem('ox_q_history', JSON.stringify(qHistory));
             // 풀이 시각 기록 (오늘 복습 = 간격 반복용). 이 채점에서 다룬 문항만 갱신
             try {
@@ -3447,10 +3451,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const box = document.getElementById(`ref${kind}-chips-${id}`);
             if (box) box.innerHTML = refChipsHTML(id, kind);
         }
-        function addRefId(ownerId, kind, uid) {
+        function addRefId(ownerId, kind, uid, sc = '') {
             /* ★ add3 §2-B — 근거는 문항 카드에 바로 붙은 🔍 라 **저장 버튼이 없다.** 누르는 즉시 넣는다.
-               숨은 칸(`refgeunge-input-…`)도 없으므로 여기서 갈라 준다. */
-            if (kind === 'geunge') return ggRefAdd(ownerId, uid);
+               숨은 칸(`refgeunge-input-…`)도 없으므로 여기서 갈라 준다. ★ 09-15 — 근거 갈래는 범위(sc)도 넘긴다 */
+            if (kind === 'geunge') return ggRefAdd(ownerId, uid, sc);
             const el = document.getElementById(`ref${kind}-input-${ownerId}`);
             if (!el) return;
             const cur = refPicked(ownerId, kind);
@@ -3550,12 +3554,19 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     const txt = kind === 'l' ? logicOf(q) : refTextOf(q.id, 'geunge');   /* 2026-09-14 — 근거 `i. 본문` 줄들 */
                     const cls = kind === 'l' ? 'text-indigo-900 bg-indigo-50 border-indigo-400' : 'text-blue-900 bg-blue-50 border-blue-400';
                     const icon = kind === 'l' ? '📐' : '🔗';
+                    /* ★ 2026-09-15 (_task_ox_gg_popup_rec §A) — 근거(m) 행은 그 문항 **팝업**을 연다 · 논리(l) 행은 옛 그대로 이동.
+                       연결한 근거가 있으면 첫 줄에 `🔗 <uid>` 칩을 미리 붙인다 — ggRefChipsHTML 의 칩과 같은 class · onclick 없음(행 전체가 단추다) */
+                    const go = kind === 'm' ? 'openQPopup' : 'jumpFromSearch';
+                    const refChips = kind === 'm' ? refOf(q.id, 'geunge').map(u =>
+                        `<span class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4`
+                        + ` border border-dashed text-blue-800 bg-blue-50 border-blue-400 ${refTextOf(u, 'geunge') === null ? 'opacity-40' : ''}">🔗 ${escHtml(u)}</span>`).join('') : '';
                     return `
-                    <button onclick="jumpFromSearch('${q.id}')" class="w-full text-left px-4 py-2 border-b border-gray-100 hover:bg-blue-50 transition">
-                        <div class="flex items-center gap-1.5 mb-0.5">
+                    <button onclick="${go}('${q.id}')" class="w-full text-left px-4 py-2 border-b border-gray-100 hover:bg-blue-50 transition">
+                        <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
                             <span class="text-[10px] font-bold text-gray-400 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">ID ${q.id}</span>
                             <span class="text-[10px] font-bold text-indigo-700">${q.displayNo}${escHtml(q.subNum || '')}번</span>
                             ${q.source ? `<span class="text-[10px] font-bold text-purple-700">${escHtml(q.source)}</span>` : ''}
+                            ${refChips}
                         </div>
                         <div class="text-[12px] text-gray-800 leading-relaxed">
                             <span class="text-gray-500">${escHtml(q.q).slice(0, 60)}…</span>
@@ -3618,6 +3629,20 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            ⚠ 한도를 없애지 않는다 — 무제한이면 기록 파일이 커져 내려받는 창이 길어지고, 그 창이 길수록 도장이 더 자주 빠진다.
            ★ 넘기면 조용히 삼키지 않고 그 칸 아래에 「4000자까지 · 지금 4213자」를 보인다(ggLimitOk) — 한도 숫자보다 이게 중요하다. */
         const GG_TMAX = 4000, GG_CMAX = 2000, GG_CN = 20;
+        /* ★ 2026-09-15 (_task_ox_gg_popup_rec §B) — 근거 줄의 **범위 접두사**. 카드 = ''(옛 id 그대로) · 문항 팝업 = 'qp-'.
+           같은 문항이 카드와 팝업에 같이 떠 있을 수 있어(문제풀이 중 같은 판례·연결 목록에서 openQPopup) id 를 가른다.
+           gg 함수들은 sc 를 끝 인자로 받아 id 조립과 onclick 글자에 실어 나른다 — 안 주면 ''(카드 쪽 글자 무변).
+           한쪽에서 저장·지움·연결·끊기가 일어나면 **다른 범위의 같은 문항 상자만** ggLineHTML 로 통째 갈아 끼운다
+           (카드 전체는 다시 그리지 않는다 · 펼침은 닫혀도 된다). 저장 꼴·저장소 키 무변. */
+        const GG_SCOPES = ['', 'qp-'];
+        function ggScA(sc) { return sc ? `,'${sc}'` : ''; }
+        function ggBoxRefresh(uid, sc) {
+            GG_SCOPES.forEach(s => {
+                if (s === sc) return;
+                const box = document.getElementById(`${s}gg-box-${uid}`);
+                if (box) box.outerHTML = ggLineHTML(uid, s);
+            });
+        }
         function ggStore() { try { return JSON.parse(localStorage.getItem(GG_KEY) || '{}'); } catch (e) { return {}; } }
         function ggOf(uid) { const a = ggStore()[uid]; return Array.isArray(a) ? a : []; }
         function ggSaveList(uid, list) {
@@ -3639,14 +3664,16 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                             + 'text-red-700 bg-red-50 border-red-300 '
                             + 'text-slate-500 bg-slate-50 border-slate-300').split(' ');
         function ggRepaintChip(uid, g) {
-            const c = document.getElementById('gg-chip-' + uid + '-' + g.k);
-            if (c) {
-                GG_OKCLS_ALL.forEach(k => c.classList.remove(k));
-                ggOkCls(g.ok).split(' ').forEach(k => c.classList.add(k));
-            }
-            const p = document.getElementById('gg-pan-' + uid + '-' + g.k);
-            const meta = p && p.children[0] && p.children[0].children[1];
-            if (meta) meta.textContent = ggOkWord(g.ok) + ' · ' + ggMD(g.ts);
+            GG_SCOPES.forEach(sc => {                    /* ★ 09-15 (_task_ox_gg_popup_rec §B) — 카드와 문항 팝업 둘 다 */
+                const c = document.getElementById(sc + 'gg-chip-' + uid + '-' + g.k);
+                if (c) {
+                    GG_OKCLS_ALL.forEach(k => c.classList.remove(k));
+                    ggOkCls(g.ok).split(' ').forEach(k => c.classList.add(k));
+                }
+                const p = document.getElementById(sc + 'gg-pan-' + uid + '-' + g.k);
+                const meta = p && p.children[0] && p.children[0].children[1];
+                if (meta) meta.textContent = ggOkWord(g.ok) + ' · ' + ggMD(g.ts);
+            });
         }
 
         /* ★ 2026-09-12 (add2 §1) — 근거 칩 색의 근거는 **이번 회독**이다.
@@ -3761,8 +3788,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             return out;
         }
 
-        function ggChipHTML(uid, g) {
-            return `<span id="gg-chip-${uid}-${g.k}" onclick="ggToggle('${uid}','${g.k}')" title="${escHtml(g.t || '')}"
+        function ggChipHTML(uid, g, sc = '') {
+            return `<span id="${sc}gg-chip-${uid}-${g.k}" onclick="ggToggle('${uid}','${g.k}'${ggScA(sc)})" title="${escHtml(g.t || '')}"
                 class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4 border ${ggOkCls(g.ok)}">${g.i}</span>`;
         }
         function ggCsHTML(cs) {
@@ -3773,53 +3800,53 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 <button type="button" onclick="ggCsLink(this)" title="이 댓글에서 연결 걸기 — 근거에서 찾기" class="ml-auto flex-none self-start text-[11px] leading-4 text-gray-400 hover:text-blue-600">🔗</button>
             </div>`).join('');
         }
-        function ggPanelHTML(uid, g) {
-            return `<div id="gg-pan-${uid}-${g.k}" class="hide mt-1.5 border border-slate-300 rounded-lg bg-slate-50/40 overflow-hidden">
+        function ggPanelHTML(uid, g, sc = '') {
+            return `<div id="${sc}gg-pan-${uid}-${g.k}" class="hide mt-1.5 border border-slate-300 rounded-lg bg-slate-50/40 overflow-hidden">
                 <div class="flex items-center gap-2 px-2.5 py-1.5 border-b border-gray-100 bg-gray-50">
-                    <span id="gg-t-${uid}-${g.k}" class="flex-1 text-[12.5px] text-gray-800 whitespace-pre-wrap">${escHtml(g.t || '')}</span>
+                    <span id="${sc}gg-t-${uid}-${g.k}" class="flex-1 text-[12.5px] text-gray-800 whitespace-pre-wrap">${escHtml(g.t || '')}</span>
                     <span class="text-[10.5px] font-bold text-slate-500 whitespace-nowrap">${ggOkWord(g.ok)} · ${ggMD(g.ts)}</span>
-                    <button type="button" onclick="ggEdit('${uid}','${g.k}')" class="text-[11px] font-bold text-blue-600 hover:underline">고치기</button>
-                    <button type="button" onclick="ggDel('${uid}','${g.k}')" class="text-[11px] font-bold text-red-700 hover:underline">지우기</button>
+                    <button type="button" onclick="ggEdit('${uid}','${g.k}'${ggScA(sc)})" class="text-[11px] font-bold text-blue-600 hover:underline">고치기</button>
+                    <button type="button" onclick="ggDel('${uid}','${g.k}'${ggScA(sc)})" class="text-[11px] font-bold text-red-700 hover:underline">지우기</button>
                 </div>
-                <div id="gg-edit-${uid}-${g.k}" class="hide flex gap-1.5 px-2.5 py-1.5 border-b border-gray-100">
-                    <textarea id="gg-ein-${uid}-${g.k}" rows="1" autocomplete="off"
-                        onkeydown="ggEditKey(event,'${uid}','${g.k}')" oninput="ggFit(this)" style="resize:none;overflow:hidden"
+                <div id="${sc}gg-edit-${uid}-${g.k}" class="hide flex gap-1.5 px-2.5 py-1.5 border-b border-gray-100">
+                    <textarea id="${sc}gg-ein-${uid}-${g.k}" rows="1" autocomplete="off"
+                        onkeydown="ggEditKey(event,'${uid}','${g.k}'${ggScA(sc)})" oninput="ggFit(this)" style="resize:none;overflow:hidden"
                         class="flex-1 border border-blue-300 rounded-lg px-2 py-1 text-[12.5px] outline-none focus:border-blue-500">${escHtml(g.t || '')}</textarea>
-                    <button type="button" onclick="ggEditSave('${uid}','${g.k}')" class="text-[11px] font-bold text-white bg-blue-600 border border-blue-600 rounded-md px-2.5 py-1">저장</button>
-                    <button type="button" onclick="ggEdit('${uid}','${g.k}')" class="text-[11px] font-bold text-slate-600 bg-white border border-slate-300 rounded-md px-2.5 py-1">취소</button>
+                    <button type="button" onclick="ggEditSave('${uid}','${g.k}'${ggScA(sc)})" class="text-[11px] font-bold text-white bg-blue-600 border border-blue-600 rounded-md px-2.5 py-1">저장</button>
+                    <button type="button" onclick="ggEdit('${uid}','${g.k}'${ggScA(sc)})" class="text-[11px] font-bold text-slate-600 bg-white border border-slate-300 rounded-md px-2.5 py-1">취소</button>
                 </div>
                 <div class="px-2.5 pb-2 pt-1">
-                    <div id="gg-cs-${uid}-${g.k}">${ggCsHTML(g.cs)}</div>
+                    <div id="${sc}gg-cs-${uid}-${g.k}">${ggCsHTML(g.cs)}</div>
                     <div class="flex gap-1.5 mt-1.5">
-                        <textarea id="gg-cin-${uid}-${g.k}" rows="1" autocomplete="off" onkeydown="ggReplyKey(event,'${uid}','${g.k}')" oninput="ggFit(this)" style="resize:none;overflow:hidden"
+                        <textarea id="${sc}gg-cin-${uid}-${g.k}" rows="1" autocomplete="off" onkeydown="ggReplyKey(event,'${uid}','${g.k}'${ggScA(sc)})" oninput="ggFit(this)" style="resize:none;overflow:hidden"
                             class="flex-1 border border-gray-200 rounded-lg px-2 py-1 text-[12.5px] outline-none focus:border-blue-300 bg-white"></textarea>
-                        <button type="button" onclick="ggReply('${uid}','${g.k}');ggFit(document.getElementById('gg-cin-${uid}-${g.k}'))" class="text-[11px] font-bold text-white bg-blue-600 border border-blue-600 rounded-md px-2.5 py-1">달기</button>
+                        <button type="button" onclick="ggReply('${uid}','${g.k}'${ggScA(sc)});ggFit(document.getElementById('${sc}gg-cin-${uid}-${g.k}'))" class="text-[11px] font-bold text-white bg-blue-600 border border-blue-600 rounded-md px-2.5 py-1">달기</button>
                     </div>
                 </div>
             </div>`;
         }
         /* 근거가 하나도 없어도 라벨과 빈 칸은 **늘 보인다**. 입력칸 안내 문구는 빈 문자열이다(사용자 확정). */
-        function ggLineHTML(uid) {
+        function ggLineHTML(uid, sc = '') {
             const list = ggOf(uid);
-            return `<div id="gg-box-${uid}" class="mt-2">
-                <div id="gg-line-${uid}" class="flex items-center gap-1 flex-wrap">
+            return `<div id="${sc}gg-box-${uid}" class="mt-2">
+                <div id="${sc}gg-line-${uid}" class="flex items-center gap-1 flex-wrap">
                     <span class="text-[11px] font-extrabold text-slate-600 whitespace-nowrap">근거${useLabelHTML('geunge', uid)} :</span>
-                    <span id="gg-chips-${uid}" class="flex items-center gap-1 flex-wrap">${list.map(g => ggChipHTML(uid, g)).join('')}</span>
-                    <span id="gg-refchips-${uid}" class="flex items-center gap-1 flex-wrap">${ggRefChipsHTML(uid)}</span>
-                    <textarea id="gg-in-${uid}" rows="1" placeholder="" autocomplete="off"
-                        onkeydown="ggKeyDown(event,'${uid}')" onblur="ggBlurSave('${uid}')" oninput="ggFit(this)" style="resize:none;overflow:hidden"
+                    <span id="${sc}gg-chips-${uid}" class="flex items-center gap-1 flex-wrap">${list.map(g => ggChipHTML(uid, g, sc)).join('')}</span>
+                    <span id="${sc}gg-refchips-${uid}" class="flex items-center gap-1 flex-wrap">${ggRefChipsHTML(uid, sc)}</span>
+                    <textarea id="${sc}gg-in-${uid}" rows="1" placeholder="" autocomplete="off"
+                        onkeydown="ggKeyDown(event,'${uid}'${ggScA(sc)})" onblur="ggBlurSave('${uid}'${ggScA(sc)})" oninput="ggFit(this)" style="resize:none;overflow:hidden"
                         class="flex-1 min-w-[80px] border border-slate-300 rounded-md px-2 py-px text-[12px] leading-4 outline-none focus:border-blue-500 bg-white"></textarea>
-                    <button type="button" onclick="ggSearchToggle('${uid}')" title="근거에서 찾기"
+                    <button type="button" onclick="ggSearchToggle('${uid}'${ggScA(sc)})" title="근거에서 찾기"
                         class="flex-none w-5 h-5 border border-gray-200 rounded-md bg-white text-gray-400 text-[11px] leading-none hover:text-blue-600 hover:border-blue-300">🔍</button>
                 </div>
-                <div id="gg-pans-${uid}">${list.map(g => ggPanelHTML(uid, g)).join('')}</div>
-                <div id="reflink-geunge-${uid}">${ggRefBoxHTML(uid)}</div>
-                <div id="gg-search-${uid}" class="hide mt-1.5 border border-slate-300 rounded-lg bg-white overflow-hidden">
+                <div id="${sc}gg-pans-${uid}">${list.map(g => ggPanelHTML(uid, g, sc)).join('')}</div>
+                <div id="${sc}reflink-geunge-${uid}">${ggRefBoxHTML(uid, sc)}</div>
+                <div id="${sc}gg-search-${uid}" class="hide mt-1.5 border border-slate-300 rounded-lg bg-white overflow-hidden">
                     <div class="px-2.5 py-1.5 border-b border-gray-100 bg-gray-50 text-[11.5px] font-bold text-slate-600">🔍 근거에서 찾기</div>
-                    <input id="link-search-geunge-${uid}" type="text" placeholder="" autocomplete="off"
-                        oninput="linkSearch('${uid}','geunge')" onfocus="linkSearch('${uid}','geunge')"
+                    <input id="${sc}link-search-geunge-${uid}" type="text" placeholder="" autocomplete="off"
+                        oninput="linkSearch('${uid}','geunge'${ggScA(sc)})" onfocus="linkSearch('${uid}','geunge'${ggScA(sc)})"
                         class="w-full px-2.5 py-1.5 text-[12.5px] outline-none border-b border-gray-100">
-                    <div id="link-results-geunge-${uid}" class="hide max-h-56 overflow-y-auto"></div>
+                    <div id="${sc}link-results-geunge-${uid}" class="hide max-h-56 overflow-y-auto"></div>
                 </div>
             </div>`;
         }
@@ -3830,12 +3857,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            ⚠ 카드를 다시 그리지 않는다 — 그 자리에 칩과 판만 붙이고 칸을 비운다. */
         /* ★ 2026-09-14 — 칸이 여러 줄이 됐다. shift+enter = 줄바꿈(브라우저 기본 동작 그대로) · enter = 저장.
            저장한 뒤에는 칸 높이를 한 줄로 되돌린다(`ggAdd` 가 칸을 비운다). */
-        function ggKeyDown(e, uid) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ggAdd(uid, true); ggFit(e.target); } }
-        function ggBlurSave(uid) { ggAdd(uid, false); ggFit(document.getElementById(`gg-in-${uid}`)); }
+        function ggKeyDown(e, uid, sc = '') { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ggAdd(uid, true, sc); ggFit(e.target); } }
+        function ggBlurSave(uid, sc = '') { ggAdd(uid, false, sc); ggFit(document.getElementById(`${sc}gg-in-${uid}`)); }
         /* 여러 줄 칸 높이 — 아래로만 자란다. 테두리 두께를 더해야 스크롤바가 안 생긴다. 숨은 칸은 재지 않는다(0 이 된다). */
         /* ★ 2026-09-15 (_task_ox_sync_and_limit §B) — 한도 안내. 칸과 단추가 한 줄(flex)이라 **그 줄 바로 아래**에 붙인다.
            댓글 칸(gg-cin-·refgg-cein-)은 GG_CMAX · 본문 칸은 GG_TMAX. 저장 꼴 무변 · 새 저장소 키 0. */
-        function ggMaxOf(el) { return /^(gg-cin-|refgg-cein-)/.test((el && el.id) || '') ? GG_CMAX : GG_TMAX; }
+        function ggMaxOf(el) { return /^(?:qp-)?(gg-cin-|refgg-cein-)/.test((el && el.id) || '') ? GG_CMAX : GG_TMAX; }   /* 09-15 — 팝업 범위(qp-)의 댓글 칸도 GG_CMAX */
         function ggLimitNote(el, msg) {
             if (!el || !el.id) return;
             let n = document.getElementById(el.id + '-over');
@@ -3864,8 +3891,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             el.style.height = 'auto';
             el.style.height = (el.scrollHeight + el.offsetHeight - el.clientHeight) + 'px';
         }
-        function ggAdd(uid, keepFocus) {
-            const inp = document.getElementById(`gg-in-${uid}`);
+        function ggAdd(uid, keepFocus, sc = '') {
+            const inp = document.getElementById(`${sc}gg-in-${uid}`);
             if (!inp) return;
             const t = String(inp.value || '').trim();
             if (!t || !ggLimitOk(inp, t, GG_TMAX)) return;   /* §B — 넘기면 칸 아래에 몇 자인지 보인다 */
@@ -3878,35 +3905,36 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             };
             list.push(g);
             ggSaveList(uid, list);
-            const chips = document.getElementById(`gg-chips-${uid}`);
-            if (chips) chips.insertAdjacentHTML('beforeend', ggChipHTML(uid, g));
-            const pans = document.getElementById(`gg-pans-${uid}`);
-            if (pans) pans.insertAdjacentHTML('beforeend', ggPanelHTML(uid, g));
+            const chips = document.getElementById(`${sc}gg-chips-${uid}`);
+            if (chips) chips.insertAdjacentHTML('beforeend', ggChipHTML(uid, g, sc));
+            const pans = document.getElementById(`${sc}gg-pans-${uid}`);
+            if (pans) pans.insertAdjacentHTML('beforeend', ggPanelHTML(uid, g, sc));
             inp.value = '';
             if (keepFocus) inp.focus();
+            ggBoxRefresh(uid, sc);              /* ★ 09-15 §B — 같은 문항이 다른 범위(카드↔팝업)에 떠 있으면 그 상자만 */
         }
 
         /* ---------- 펼치기 · 고치기 · 지우기 ---------- */
-        function ggToggle(uid, k) {
-            const p = document.getElementById(`gg-pan-${uid}-${k}`);
+        function ggToggle(uid, k, sc = '') {
+            const p = document.getElementById(`${sc}gg-pan-${uid}-${k}`);
             if (!p) return;
             p.classList.toggle('hide');
-            const c = document.getElementById(`gg-chip-${uid}-${k}`);
+            const c = document.getElementById(`${sc}gg-chip-${uid}-${k}`);
             if (c) { c.classList.toggle('ring-2'); c.classList.toggle('ring-blue-200'); }
         }
-        function ggEdit(uid, k) {
-            const b = document.getElementById(`gg-edit-${uid}-${k}`);
+        function ggEdit(uid, k, sc = '') {
+            const b = document.getElementById(`${sc}gg-edit-${uid}-${k}`);
             if (!b) return;
             const open = b.classList.contains('hide');
-            const inp = document.getElementById(`gg-ein-${uid}-${k}`);
+            const inp = document.getElementById(`${sc}gg-ein-${uid}-${k}`);
             const g = ggItem(uid, k);
             if (inp && g) { inp.value = g.t || ''; ggLimitNote(inp, ''); }   /* 취소하면 저장된 글로 되돌린다 · §B 안내도 걷는다 */
             b.classList.toggle('hide');
             if (open && inp) { ggFit(inp); inp.focus(); }
         }
-        function ggEditKey(e, uid, k) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ggEditSave(uid, k); } }
-        function ggEditSave(uid, k) {
-            const inp = document.getElementById(`gg-ein-${uid}-${k}`);
+        function ggEditKey(e, uid, k, sc = '') { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ggEditSave(uid, k, sc); } }
+        function ggEditSave(uid, k, sc = '') {
+            const inp = document.getElementById(`${sc}gg-ein-${uid}-${k}`);
             if (!inp) return;
             const t = String(inp.value || '').trim();
             if (!t || !ggLimitOk(inp, t, GG_TMAX)) return;   /* §B — 옛 판은 200자에서 저장 단추를 눌러도 아무 말 없이 안 저장됐다 */
@@ -3915,26 +3943,28 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (!g) return;
             g.t = t;                                    /* ⚠ 글만 바꾼다 — ok·ts·i 는 안 건드린다 */
             ggSaveList(uid, list);
-            const tv = document.getElementById(`gg-t-${uid}-${k}`);
+            const tv = document.getElementById(`${sc}gg-t-${uid}-${k}`);
             if (tv) tv.textContent = t;
-            const c = document.getElementById(`gg-chip-${uid}-${k}`);
+            const c = document.getElementById(`${sc}gg-chip-${uid}-${k}`);
             if (c) c.title = t;
-            const b = document.getElementById(`gg-edit-${uid}-${k}`);
+            const b = document.getElementById(`${sc}gg-edit-${uid}-${k}`);
             if (b) b.classList.add('hide');
+            ggBoxRefresh(uid, sc);              /* ★ 09-15 §B */
         }
-        function ggDel(uid, k) {
+        function ggDel(uid, k, sc = '') {
             const g = ggItem(uid, k);
             if (!g) return;
             if (!confirm('근거 ' + g.i + ' 을(를) 지웁니다.\n\n' + (g.t || ''))) return;
             ggSaveList(uid, ggOf(uid).filter(x => x && x.k !== k));   /* 뒤 번호는 다시 매기지 않는다 */
-            const p = document.getElementById(`gg-pan-${uid}-${k}`); if (p) p.remove();
-            const c = document.getElementById(`gg-chip-${uid}-${k}`); if (c) c.remove();
+            const p = document.getElementById(`${sc}gg-pan-${uid}-${k}`); if (p) p.remove();
+            const c = document.getElementById(`${sc}gg-chip-${uid}-${k}`); if (c) c.remove();
+            ggBoxRefresh(uid, sc);              /* ★ 09-15 §B */
         }
 
         /* ---------- 댓글 — 쌓기만 한다(고치기·지우기는 다음 판) ---------- */
-        function ggReplyKey(e, uid, k) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ggReply(uid, k); ggFit(e.target); } }
-        function ggReply(uid, k) {
-            const inp = document.getElementById(`gg-cin-${uid}-${k}`);
+        function ggReplyKey(e, uid, k, sc = '') { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ggReply(uid, k, sc); ggFit(e.target); } }
+        function ggReply(uid, k, sc = '') {
+            const inp = document.getElementById(`${sc}gg-cin-${uid}-${k}`);
             if (!inp) return;
             const t = String(inp.value || '').trim();
             if (!t || !ggLimitOk(inp, t, GG_CMAX)) return;   /* §B — 넘기면 칸 아래에 몇 자인지 보인다(옛 판은 300자에서 조용히 안 받았다) */
@@ -3945,10 +3975,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (g.cs.length >= GG_CN) { ggLimitNote(inp, '댓글은 한 근거에 ' + GG_CN + '개까지'); return; }   /* 한 근거에 20개까지 · §B 조용히 삼키지 않는다(수는 그대로) */
             g.cs.push({ k: ggNewKey('c_' + uid + '_'), t: t, ts: Date.now() });
             ggSaveList(uid, list);
-            const box = document.getElementById(`gg-cs-${uid}-${k}`);
+            const box = document.getElementById(`${sc}gg-cs-${uid}-${k}`);
             if (box) box.innerHTML = ggCsHTML(g.cs);
             inp.value = '';
             inp.focus();
+            ggBoxRefresh(uid, sc);              /* ★ 09-15 §B */
         }
 
         /* ---------- 🔍 근거 검색 — 새로 짓지 않고 `linkSearch` 에 갈래를 붙였다 ---------- */
@@ -3983,10 +4014,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            🔍 오른쪽에 따로 서 있던 UID 버튼은 없앴다 — 칩이 그 일을 하니 둘일 이유가 없다.
            ⚠ 저장 꼴은 그대로다 — `ox_q_reflinks[uid].geunge` · 새 키 없음 · `SYNC_KEYS` 무변.
            ⚠ 메모·논리 연결분은 늘 보이는 상자 그대로다(지시서 §4 — 이 판은 근거만). */
-        function ggRefChipsHTML(uid) {
+        function ggRefChipsHTML(uid, sc = '') {
             return refOf(uid, 'geunge').map(u => {
                 const gone = refTextOf(u, 'geunge') === null;
-                return `<span id="gg-refchip-${uid}-${u}" onclick="ggRefToggle('${escAttr(uid)}','${escAttr(u)}')"`
+                return `<span id="${sc}gg-refchip-${uid}-${u}" onclick="ggRefToggle('${escAttr(uid)}','${escAttr(u)}'${ggScA(sc)})"`
                     + ` title="연결한 근거 · ${escHtml(u)}"`
                     + ` class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4`
                     + ` border border-dashed text-blue-800 bg-blue-50 border-blue-400 ${gone ? 'opacity-40' : ''}">🔗 ${escHtml(u)}`
@@ -3999,37 +4030,38 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            ⚠ 사본을 만들지 않는다 — 고친 값은 **대상 문항의 목록**(`ggSaveList(u, …)`)에 쓰고, 그 문항 카드가 떠 있으면 제자리만 간다.
            ⚠ 댓글도 본문과 같은 자격이다(§E-4③) — 댓글 줄에도 「✎ 여기서 고치기」가 붙고, 🔗 는 `ggCsHTML` 이 붙인다.
            비는 경우를 둘로 가른다 — `quizData` 에 uid 가 없으면 「지금 데이터에 없음」, 있는데 근거가 0 이면 「그 문항에 근거가 없습니다」. */
-        function ggRefBoxHTML(uid) {
+        function ggRefBoxHTML(uid, sc = '') {
             return refOf(uid, 'geunge').map(u => {
                 const gone = refTextOf(u, 'geunge') === null;
                 const list = gone ? [] : ggOf(u);
                 const body = gone ? '<div class="text-slate-500">지금 데이터에 없음</div>'
                            : !list.length ? '<div class="text-slate-500">그 문항에 근거가 없습니다</div>'
-                           : list.map(g => g ? ggRefRowHTML(uid, u, g) : '').join('');
-                return `<div id="refgg-box-${uid}-${u}" class="hide mt-1.5 text-[12.5px] text-blue-900 bg-blue-50`
+                           : list.map(g => g ? ggRefRowHTML(uid, u, g, sc) : '').join('');
+                return `<div id="${sc}refgg-box-${uid}-${u}" class="hide mt-1.5 text-[12.5px] text-blue-900 bg-blue-50`
                     + ` border-l-4 border-dashed border-blue-400 rounded-lg px-2.5 py-2 leading-relaxed">`
                     + `<div class="flex items-center gap-2 text-[11px] font-extrabold text-blue-800 opacity-80 mb-0.5">`
                     + `<span class="flex-1">🔗 연결한 근거 · ${escHtml(u)}</span>`
                     + `<button type="button" onclick="showLinkedQuestion('${escAttr(u)}','${escAttr(uid)}')"`
                     + ` class="font-bold text-blue-600 hover:underline">↪ 그 문제 보기</button>`
-                    + `<button type="button" onclick="ggRefDel('${escAttr(uid)}','${escAttr(u)}')"`
+                    + `<button type="button" onclick="ggRefDel('${escAttr(uid)}','${escAttr(u)}'${ggScA(sc)})"`
                     + ` class="font-bold text-red-700 hover:underline">× 연결 끊기</button></div>`
                     + body + `</div>`;
             }).join('');
         }
         /* 연결 상자의 한 항목 — 색 점(ok) · 번호 · 본문(여러 줄 그대로) · ✎ + 그 항목의 댓글(`ggCsHTML` 그대로) · 댓글마다 ✎.
            id 에 **건 문항(uid)** 을 넣는다 — 대상 문항 카드가 같은 화면에 있어도 그 카드의 `gg-…` id 와 안 부딪친다. */
-        function ggRefRowHTML(uid, u, g) {
+        function ggRefRowHTML(uid, u, g, sc = '') {
             const a = v => escAttr(String(v == null ? '' : v));
-            const arg = ck => `'${a(uid)}','${a(u)}','${a(g.k)}'` + (ck === undefined ? '' : `,'${a(ck)}'`);
+            /* ★ 09-15 (_task_ox_gg_popup_rec §B) — 범위(sc)는 끝 인자다. 본문 줄(ck 없음)은 그 자리를 undefined 로 채워 넘긴다 · sc='' 면 옛 글자 그대로 */
+            const arg = ck => `'${a(uid)}','${a(u)}','${a(g.k)}'` + (ck === undefined ? (sc ? `,undefined${ggScA(sc)}` : '') : `,'${a(ck)}'${ggScA(sc)}`);
             const id = `${uid}-${u}-${g.k}`;
             const dot = g.ok === true ? '#2563eb' : g.ok === false ? '#dc2626' : '#94a3b8';
             const edBtn = ck => `<button type="button" onclick="ggRefEdit(${arg(ck)})"`
                 + ` class="flex-none text-[11px] font-bold text-blue-600 hover:underline whitespace-nowrap">✎ 여기서 고치기</button>`;
             const editor = (ck, text) => {
                 const eid = ck === undefined ? id : `${id}-${ck}`;
-                return `<div id="refgg-${ck === undefined ? 'edit' : 'cedit'}-${eid}" class="hide flex gap-1.5 mt-1">`
-                    + `<textarea id="refgg-${ck === undefined ? 'ein' : 'cein'}-${eid}" rows="1" autocomplete="off" oninput="ggFit(this)" style="resize:none;overflow:hidden"`
+                return `<div id="${sc}refgg-${ck === undefined ? 'edit' : 'cedit'}-${eid}" class="hide flex gap-1.5 mt-1">`
+                    + `<textarea id="${sc}refgg-${ck === undefined ? 'ein' : 'cein'}-${eid}" rows="1" autocomplete="off" oninput="ggFit(this)" style="resize:none;overflow:hidden"`
                     + ` onkeydown="ggRefEditKey(event,${arg(ck)})"`
                     + ` class="flex-1 border border-blue-300 rounded-lg px-2 py-1 text-[12.5px] text-gray-800 outline-none focus:border-blue-500 bg-white">${escHtml(text || '')}</textarea>`
                     + `<button type="button" onclick="ggRefEditSave(${arg(ck)})" class="text-[11px] font-bold text-white bg-blue-600 border border-blue-600 rounded-md px-2.5 py-1">저장</button>`
@@ -4040,7 +4072,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 + `<div class="flex items-start gap-1.5">`
                 + `<span title="${ggOkWord(g.ok)}" style="flex:none;display:inline-block;width:7px;height:7px;border-radius:9999px;margin-top:8px;background:${dot}"></span>`
                 + `<span class="flex-none font-extrabold">${escHtml(String(g.i))}.</span>`
-                + `<span id="refgg-t-${id}" class="flex-1 min-w-0 whitespace-pre-wrap">${escHtml(g.t || '')}</span>`
+                + `<span id="${sc}refgg-t-${id}" class="flex-1 min-w-0 whitespace-pre-wrap">${escHtml(g.t || '')}</span>`
                 + edBtn() + `</div>`
                 + editor(undefined, g.t)
                 + cs.map((c, n) => {
@@ -4055,12 +4087,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const cs = (g && Array.isArray(g.cs)) ? g.cs : [];
             return cs.find(x => x && x.k === ck) || (/^\d+$/.test(String(ck)) ? (cs[+ck] || null) : null);
         }
-        function ggRefEdit(uid, u, k, ck) {
+        function ggRefEdit(uid, u, k, ck, sc = '') {
             const isC = ck !== undefined;
             const eid = `${uid}-${u}-${k}` + (isC ? `-${ck}` : '');
-            const b = document.getElementById((isC ? 'refgg-cedit-' : 'refgg-edit-') + eid);
+            const b = document.getElementById(sc + (isC ? 'refgg-cedit-' : 'refgg-edit-') + eid);
             if (!b) return;
-            const inp = document.getElementById((isC ? 'refgg-cein-' : 'refgg-ein-') + eid);
+            const inp = document.getElementById(sc + (isC ? 'refgg-cein-' : 'refgg-ein-') + eid);
             const g = ggItem(u, k);
             const c = (g && isC) ? ggCsOf(g, ck) : null;
             if (inp && g) { inp.value = isC ? ((c && c.t) || '') : (g.t || ''); ggLimitNote(inp, ''); }   /* 취소하면 저장된 글로 되돌린다 · §B 안내도 걷는다 */
@@ -4068,10 +4100,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             b.classList.toggle('hide');
             if (open && inp) { ggFit(inp); inp.focus(); }
         }
-        function ggRefEditKey(e, uid, u, k, ck) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ggRefEditSave(uid, u, k, ck); } }
-        function ggRefEditSave(uid, u, k, ck) {
+        function ggRefEditKey(e, uid, u, k, ck, sc = '') { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ggRefEditSave(uid, u, k, ck, sc); } }
+        function ggRefEditSave(uid, u, k, ck, sc = '') {
             const isC = ck !== undefined;
-            const inp = document.getElementById((isC ? 'refgg-cein-' : 'refgg-ein-') + `${uid}-${u}-${k}` + (isC ? `-${ck}` : ''));
+            const inp = document.getElementById(sc + (isC ? 'refgg-cein-' : 'refgg-ein-') + `${uid}-${u}-${k}` + (isC ? `-${ck}` : ''));
             if (!inp) return;
             const t = String(inp.value || '').trim();
             if (!t || !ggLimitOk(inp, t, isC ? GG_CMAX : GG_TMAX)) return;   /* 적는 칸과 같은 문턱 — §B 넘기면 칸 아래에 몇 자인지 보인다 */
@@ -4082,76 +4114,84 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (isC && !c) return;
             if (isC) c.t = t; else g.t = t;              /* ⚠ 글만 바꾼다 — k·i·ok·ts·cs(댓글의 k·ts) 는 안 건드린다 */
             ggSaveList(u, list);
-            ggRefPaint(uid);
-            /* 대상 문항 카드가 떠 있으면 **제자리만** 간다 — 카드를 다시 그리지 않는다(채점 배지·해설이 흔들린다) */
-            if (isC) {
-                const box = document.getElementById(`gg-cs-${u}-${k}`);
-                if (box) box.innerHTML = ggCsHTML(g.cs);
-            } else {
-                const tv = document.getElementById(`gg-t-${u}-${k}`); if (tv) tv.textContent = t;
-                const ei = document.getElementById(`gg-ein-${u}-${k}`); if (ei) ei.value = t;
-                const ch = document.getElementById(`gg-chip-${u}-${k}`); if (ch) ch.title = t;
-            }
+            ggRefPaint(uid, sc);
+            /* 대상 문항 카드가 떠 있으면 **제자리만** 간다 — 카드를 다시 그리지 않는다(채점 배지·해설이 흔들린다)
+               ★ 09-15 §B — 대상 문항이 문항 팝업에 떠 있어도 같은 자리를 간다(범위마다) */
+            GG_SCOPES.forEach(s => {
+                if (isC) {
+                    const box = document.getElementById(`${s}gg-cs-${u}-${k}`);
+                    if (box) box.innerHTML = ggCsHTML(g.cs);
+                } else {
+                    const tv = document.getElementById(`${s}gg-t-${u}-${k}`); if (tv) tv.textContent = t;
+                    const ei = document.getElementById(`${s}gg-ein-${u}-${k}`); if (ei) ei.value = t;
+                    const ch = document.getElementById(`${s}gg-chip-${u}-${k}`); if (ch) ch.title = t;
+                }
+            });
+            ggBoxRefresh(uid, sc);              /* ★ 09-15 §B — 건 문항이 다른 범위에도 떠 있으면 그 상자만 */
         }
         /* 댓글 줄의 🔗 — 본문 줄 🔍 가 여는 **그 찾기 칸**을 연다(연결은 문항 단위 · 같은 칸 `ox_q_reflinks[uid].geunge`).
            `ggCsHTML` 은 uid 를 받지 않는다(댓글 달기가 그 함수를 한 인자로 다시 부른다) — 둘러싼 `gg-box-<uid>` 에서 읽는다. */
         function ggCsLink(el) {
-            const box = el && el.closest ? el.closest('[id^="gg-box-"]') : null;
+            /* ★ 09-15 (_task_ox_gg_popup_rec §B) — 둘러싼 근거 줄(카드 gg-box- · 문항 팝업 qp-gg-box-)에서 범위와 uid 를 읽는다 */
+            const box = el && el.closest ? el.closest(GG_SCOPES.map(s => `[id^="${s}gg-box-"]`).join(',')) : null;
             if (!box) return;
-            const uid = box.id.slice('gg-box-'.length);
-            const p = document.getElementById(`gg-search-${uid}`);
+            const at = box.id.indexOf('gg-box-');
+            const sc = box.id.slice(0, at), uid = box.id.slice(at + 'gg-box-'.length);
+            const p = document.getElementById(`${sc}gg-search-${uid}`);
             if (p && !p.classList.contains('hide')) {           /* 이미 열려 있으면 닫지 말고 칸에 커서만 */
-                const inp = document.getElementById(`link-search-geunge-${uid}`);
-                if (inp) { inp.focus(); linkSearch(uid, 'geunge'); }
+                const inp = document.getElementById(`${sc}link-search-geunge-${uid}`);
+                if (inp) { inp.focus(); linkSearch(uid, 'geunge', sc); }
                 return;
             }
-            ggSearchToggle(uid);
+            ggSearchToggle(uid, sc);
         }
         /* 눌림 표시는 내 근거 칩이 쓰는 그것을 그대로 쓴다(`ggToggle` 과 같은 두 이름) */
-        function ggRefToggle(uid, u) {
-            const p = document.getElementById(`refgg-box-${uid}-${u}`);
+        function ggRefToggle(uid, u, sc = '') {
+            const p = document.getElementById(`${sc}refgg-box-${uid}-${u}`);
             if (!p) return;
             p.classList.toggle('hide');
-            const c = document.getElementById(`gg-refchip-${uid}-${u}`);
+            const c = document.getElementById(`${sc}gg-refchip-${uid}-${u}`);
             if (c) { c.classList.toggle('ring-2'); c.classList.toggle('ring-blue-200'); }
         }
-        function ggRefPaint(uid) {
+        function ggRefPaint(uid, sc = '') {
             /* 펼쳐 둔 판은 다시 그린 뒤에도 펼쳐 둔다(하나를 끊었다고 나머지가 접히면 안 된다) */
             const open = refOf(uid, 'geunge').filter(u => {
-                const p = document.getElementById(`refgg-box-${uid}-${u}`);
+                const p = document.getElementById(`${sc}refgg-box-${uid}-${u}`);
                 return p && !p.classList.contains('hide');
             });
-            const cs = document.getElementById(`gg-refchips-${uid}`);
-            if (cs) cs.innerHTML = ggRefChipsHTML(uid);
-            const box = document.getElementById(`reflink-geunge-${uid}`);
-            if (box) box.innerHTML = ggRefBoxHTML(uid);
-            open.forEach(u => ggRefToggle(uid, u));
+            const cs = document.getElementById(`${sc}gg-refchips-${uid}`);
+            if (cs) cs.innerHTML = ggRefChipsHTML(uid, sc);
+            const box = document.getElementById(`${sc}reflink-geunge-${uid}`);
+            if (box) box.innerHTML = ggRefBoxHTML(uid, sc);
+            open.forEach(u => ggRefToggle(uid, u, sc));
         }
-        function ggRefAdd(ownerId, uid) {
+        function ggRefAdd(ownerId, uid, sc = '') {
             if (String(uid).toUpperCase() === String(ownerId).toUpperCase()) return;
             const cur = refOf(ownerId, 'geunge');
             if (cur.map(x => String(x).toUpperCase()).indexOf(String(uid).toUpperCase()) === -1) cur.push(String(uid));
             refPut(ownerId, refOf(ownerId, 'memo'), refOf(ownerId, 'logic'), cur);
-            ggRefPaint(ownerId);
-            const sb = document.getElementById(`link-search-geunge-${ownerId}`);
+            ggRefPaint(ownerId, sc);
+            const sb = document.getElementById(`${sc}link-search-geunge-${ownerId}`);
             if (sb) sb.value = '';
-            const box = document.getElementById(`link-results-geunge-${ownerId}`);
+            const box = document.getElementById(`${sc}link-results-geunge-${ownerId}`);
             if (box) { box.innerHTML = ''; box.classList.add('hide'); }
-            const panel = document.getElementById(`gg-search-${ownerId}`);
+            const panel = document.getElementById(`${sc}gg-search-${ownerId}`);
             if (panel) panel.classList.add('hide');
+            ggBoxRefresh(ownerId, sc);          /* ★ 09-15 §B */
         }
-        function ggRefDel(ownerId, uid) {
+        function ggRefDel(ownerId, uid, sc = '') {
             refPut(ownerId, refOf(ownerId, 'memo'), refOf(ownerId, 'logic'),
                    refOf(ownerId, 'geunge').filter(x => String(x).toUpperCase() !== String(uid).toUpperCase()));
-            ggRefPaint(ownerId);
+            ggRefPaint(ownerId, sc);
+            ggBoxRefresh(ownerId, sc);          /* ★ 09-15 §B */
         }
-        function ggSearchToggle(uid) {
-            const b = document.getElementById(`gg-search-${uid}`);
+        function ggSearchToggle(uid, sc = '') {
+            const b = document.getElementById(`${sc}gg-search-${uid}`);
             if (!b) return;
             b.classList.toggle('hide');
             if (b.classList.contains('hide')) return;
-            const inp = document.getElementById(`link-search-geunge-${uid}`);
-            if (inp) { inp.focus(); linkSearch(uid, 'geunge'); }
+            const inp = document.getElementById(`${sc}link-search-geunge-${uid}`);
+            if (inp) { inp.focus(); linkSearch(uid, 'geunge', sc); }
         }
 
         /* ---------- 유형(조문형/혼합/판례형) ----------
@@ -4236,6 +4276,75 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         }
         /* 🔗 같은 판례 칩 — 상단 배지 줄에 붙는다 (2026-08-26 이동).
            채점 전에도 보이지만 개수만 보여주므로 정답이 새지 않는다. */
+        /* ---------- 풀이 기록 두 줄 (2026-09-15 · _task_ox_gg_popup_rec §C) ----------
+           문제풀이 카드의 보라 출처 칩을 누르면 헤더 줄 바로 아래(#rec-strip-<uid>)에 편다 — 윗줄 회독마다 O/X · 아랫줄 그때 헷갈림 △.
+           · 카드 렌더 때는 비어 있다(5,548행을 다 계산하지 않는다) · 열 때마다 다시 계산한다(채점 뒤 눌러도 맞게)
+           · 자료 — ox_chap_history 전 chapKey·전 항목의 marks[uid] + 진행중(ox_in_progress)의 다른 chapKey + 이번 세션 한 칸(맨 끝)
+           · 「그때 헷갈림」은 09-15 부터 finishChapter 가 남기는 cf 칸에만 있다 — 칸이 없는 옛 회독은 모름(–)이고 지어내지 않는다
+           ⚠ 개수 요약은 넣지 않는다 · 고른 답은 안 보인다(맞음/틀림만 · 눌러야 열린다 — 카드 머리의 「이전 회독 배지 안 보임」 줄과 어긋나지 않는다) */
+        function recStripDay(s) {
+            const m = String(s || '').match(/\d+/g) || [];
+            if (m.length < 3) return null;
+            let y = +m[0], mo = +m[1], d = +m[2];
+            if (y <= 31 && +m[2] > 31) { y = +m[2]; mo = +m[0]; d = +m[1]; }   /* 9/15/2026 꼴(월/일/연)도 받는다 */
+            const t = new Date(y, mo - 1, d);
+            return isNaN(t.getTime()) ? null : t;
+        }
+        function recStripHTML(uid) {
+            const J = k => { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch (e) { return {}; } };
+            const hist = J('ox_chap_history'), tags = J('ox_q_tags'), prog = J(PROGRESS_KEY);
+            const label = key => { const p = String(key).split('||'); return p[0] === '⚡빠른실행' ? '⚡ ' + (p[1] || '') : (p[1] || p[0] || ''); };
+            const cells = [];
+            Object.keys(hist).forEach(key => {
+                (Array.isArray(hist[key]) ? hist[key] : []).forEach((a, n) => {
+                    const v = a && a.marks ? a.marks[uid] : undefined;
+                    if (v !== true && v !== false) return;
+                    cells.push({ t: recStripDay(a.date), key: key, n: n + 1, ok: v, cf: (a.cf && typeof a.cf === 'object') ? !!a.cf[uid] : null });
+                });
+            });
+            let curKey = null;
+            try { if (currentSubject && currentChapterLabel) curKey = chapKeyOf(currentSubject, currentChapterLabel); } catch (e) { curKey = null; }
+            Object.keys(prog).forEach(key => {
+                if (key === curKey) return;                              /* 이번 세션은 아래 한 칸이 맡는다 */
+                const p = prog[key], v = p && p.marks ? p.marks[uid] : undefined;
+                if (v !== true && v !== false) return;
+                cells.push({ t: recStripDay(p.date), key: key, n: (Array.isArray(hist[key]) ? hist[key].length : 0) + 1, ok: v, cf: null, prog: true });
+            });
+            cells.sort((x, y) => (x.t ? x.t.getTime() : 0) - (y.t ? y.t.getTime() : 0));   /* 같은 날은 chapKey·배열 차례 그대로(안정 정렬) */
+            const sm = (typeof currentSessionMarks !== 'undefined' && currentSessionMarks) || {};
+            const sv = (sm[uid] === true || sm[uid] === false) ? sm[uid] : null;
+            const wrap = 'mt-1 mb-1 px-2 py-1 rounded-lg border border-dashed border-purple-200 bg-purple-50/40 text-[12px]';
+            if (!cells.length && sv === null) return `<div class="${wrap}"><span class="text-[11px] text-gray-400">풀이 기록 없음</span></div>`;
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            cells.push({ t: today, key: curKey || '', n: ((curKey && Array.isArray(hist[curKey])) ? hist[curKey].length : 0) + 1, ok: sv, cf: !!(tags[uid] && tags[uid].confuse), cur: true });
+            const md = t => t ? (t.getMonth() + 1) + '/' + t.getDate() : '?';
+            const sz = 'display:inline-flex;align-items:center;justify-content:center;width:22px;height:20px;flex:none';
+            const top = cells.map(c => {
+                const cls = c.ok === true ? 'text-blue-700 bg-blue-50 border-blue-300'
+                          : c.ok === false ? 'text-red-700 bg-red-50 border-red-300'
+                          : 'text-gray-400 bg-white border-gray-300 border-dashed';
+                const tip = md(c.t) + ' · ' + label(c.key) + ' · ' + c.n + '회독째' + (c.prog ? ' · 진행중' : c.cur ? ' · 이번' : '');
+                return `<span class="rounded font-extrabold border ${cls}${c.prog ? ' border-dashed' : ''}" style="${sz}" title="${escHtml(tip)}">${c.ok === true ? 'O' : c.ok === false ? 'X' : '·'}</span>`;
+            }).join('');
+            const last = cells.filter(c => c.ok === true || c.ok === false).reduce((m, c) => (c.t && (!m || c.t > m)) ? c.t : m, null);
+            const bottom = cells.map(c => `<span class="${c.cf === true ? 'text-amber-700 font-extrabold' : c.cf === null ? 'text-gray-300' : ''}" style="${sz}">${c.cf === true ? '△' : c.cf === null ? '–' : ''}</span>`).join('');
+            return `<div class="${wrap} overflow-x-auto">`
+                + `<div class="flex items-center gap-1">${top}${last ? `<span class="text-[11px] text-gray-500 ml-2 whitespace-nowrap">마지막 ${md(last)}</span>` : ''}</div>`
+                + `<div class="flex items-center gap-1">${bottom}</div>`
+                + `</div>`;
+        }
+        function recStripToggle(uid) {
+            const box = document.getElementById('rec-strip-' + uid);
+            if (!box) return;
+            if (!box.classList.contains('hide')) { box.classList.add('hide'); return; }
+            box.innerHTML = recStripHTML(uid);
+            box.classList.remove('hide');
+        }
+        /* 채점 직후 — 열려 있던 상자만 다시 채운다(닫혀 있으면 아무것도 안 한다) */
+        function recStripRefresh(uid) {
+            const box = document.getElementById('rec-strip-' + uid);
+            if (box && !box.classList.contains('hide')) box.innerHTML = recStripHTML(uid);
+        }
         function samePanryeChipHTML(item) {
             const same = samePanrye(item);
             if (!same.length) return '';
@@ -5337,6 +5446,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 date: new Date().toLocaleDateString(),
                 // 이 회독에서 각 문제를 맞았는지 (번호 비교용)
                 marks: Object.assign({}, currentSessionMarks),
+                // ★ 2026-09-15 (_task_ox_gg_popup_rec §C) — 이 회독을 마친 시점에 🌀헷갈림이 붙어 있던 문항(풀이 기록 아랫줄 △).
+                //   하나도 없으면 {} 로 넣는다 — {} 는 「봤는데 없었다」, 칸이 없는 옛 기록은 「모름」이다.
+                cf: currentFilteredData.reduce((acc, it) => { if (_tagsNow[it.id] && _tagsNow[it.id].confuse) acc[it.id] = true; return acc; }, {}),
                 // 문제 번호 표시용 (id -> "36(1)")
                 labels: currentFilteredData.reduce((acc, it) => {
                     acc[it.id] = `${it.displayNo ?? it.probNum}${it.subNum}`;
@@ -8319,6 +8431,7 @@ function openQPopup(id) {
         + '</div>'
         + '<div style="font-size:13px;line-height:1.65;color:#1f2937;white-space:pre-wrap">'
         + '<b style="color:#1d4ed8">' + escHtml(qLabelOf(q)) + '</b> ' + escHtml(String(q.q || '')) + '</div>'
+        + ggLineHTML(id, 'qp-')   /* ★ 09-15 (_task_ox_gg_popup_rec §B) — 근거 줄 통째(범위 qp-) · 지문 아래 · 정답·해설 위 */
         + '<div id="qpop-ans-' + id + '" style="display:none;margin-top:10px">'
         + '<div style="font-size:12.5px;font-weight:800;margin-bottom:4px">정답 <b style="color:' + ansColor + '">' + escHtml(String(q.a || '')) + '</b></div>'
         + '<div style="font-size:12px;line-height:1.6;color:#374151;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:9px;white-space:pre-wrap">' + escHtml(String(q.exp || '해설 없음')) + '</div>'
