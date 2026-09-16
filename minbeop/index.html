@@ -72,6 +72,23 @@
         .trfoot{border-top:1px solid #e5e7eb;padding:5px 10px;font-size:10.5px;color:#6b7280;line-height:1.55}
         @media (min-width:900px){ body.tropen{padding-left:var(--trw,272px)} body.tropen.trfold{padding-left:13px} }
         @media (max-width:899px){ #tree{box-shadow:2px 0 18px rgba(0,0,0,.22)} }
+
+        /* ★ 2026-09-16 (_task_ox_gg_bang §B) — 근거 「!」 한 벌. 색은 **여기 한 자리**에만 둔다.
+           옅은 빨강 #e57373 · 바탕 #fff5f5 · 선 #f0a0a0 · 본문 #c94f4f · 칩 테두리 #f3c2c2 */
+        .ggbang{display:inline-block;flex:none;width:10px;text-align:center;color:#c4c8cf;font-weight:900;font-size:13px;line-height:1;cursor:pointer;user-select:none}
+        .ggbang.on{color:#e57373}
+        .gg-on{background:#fff5f5 !important;border-left:3px solid #f0a0a0 !important}
+        .gg-on > div{background:transparent !important}
+        .gg-on .ggb-t{color:#c94f4f !important}
+        .gg-on-dash{background:#fff5f5;border-left:3px dashed #f0a0a0;color:#c94f4f;border-radius:6px;padding:2px 6px}
+        /* 원문자 — 테두리만 굵은 빨강. **채우지 않는다.** ggOkCls 의 틀림/맞음 색은 그대로 두고 그 위에 겹친다. */
+        .ggnum-on{border-width:2.5px !important;border-style:solid !important;border-color:#e57373 !important}
+        .ggnum-on-n{color:#e57373 !important;background:#fff !important}
+        .ggchip-on{border-color:#e57373 !important;color:#e57373 !important;background:#fff5f5 !important}
+        .ggrefbox-on{border-color:#f0a0a0 !important}
+        .ggcnt{color:#e57373;border-color:#f3c2c2;background:#fff}
+        .ggbanghd{color:#e57373;font-weight:800;border-bottom:1px dashed #e57373;cursor:pointer}
+        .ggbanghd.off{color:#9ca3af;border-bottom-color:#d1d5db;cursor:default}
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen py-3 px-2">
@@ -121,6 +138,8 @@
                     </label>
                     <button onclick="recForcePush()" title="이 기기 기록으로 원격을 덮는다 — 첫 판·사고 복구용" class="text-[11px] bg-white hover:bg-gray-50 text-amber-700 px-2.5 py-1 rounded font-bold transition border border-amber-300">⬆ 강제 올리기</button>
                     <button onclick="recForcePull()" title="원격 기록으로 이 기기를 덮는다 — 첫 판·사고 복구용" class="text-[11px] bg-white hover:bg-gray-50 text-amber-700 px-2.5 py-1 rounded font-bold transition border border-amber-300">⬇ 강제 받기</button>
+                    <!-- ★ 2026-09-16 (_task_ox_gg_bang §C-2) — 받아 둔 PDF 만 지운다. 기록·필기·핀·색인은 그대로 -->
+                    <button onclick="mbForgetPrompt()" title="이 기기에 재워 둔 교재·시험지 PDF 를 지운다 — 기록·필기·핀은 그대로고 다음에 열 때 다시 받는다" class="text-[11px] bg-white hover:bg-gray-50 text-amber-700 px-2.5 py-1 rounded font-bold transition border border-amber-300">🗑 받아 둔 교재·시험지 지우기</button>
                     <button id="pick-folder-btn" onclick="chooseSaveFolder()" class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded font-bold transition border border-gray-300">📂 저장폴더 지정</button>
                     <span id="folder-label" onclick="clearSaveFolder()" title="클릭하면 폴더 지정 해제" class="text-[10px] font-bold text-gray-400 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded cursor-pointer">📁 폴더 미지정</span>
                 </div>
@@ -2876,6 +2895,42 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         var QI_DRAW = null, QI_RAF = 0;
         var QI_PEN = false;          /* ★ add1 §F — 펜이 닿아 있는가(손바닥 거르기 · iOS 터치 막기가 같이 본다) */
         function qiKey(uid) { return 'ink:q:' + uid; }
+        /* ★ 2026-09-16 (_task_ox_gg_bang §C-2) — 열쇠만 훑는다(값을 다 올리지 않는다) */
+        async function dbKeys() {
+            const db = await dbOpen();
+            return new Promise((res, rej) => {
+                const t = db.transaction(DB_STORE, 'readonly').objectStore(DB_STORE).getAllKeys();
+                t.onsuccess = () => res(t.result || []); t.onerror = () => rej(t.error);
+            });
+        }
+        /* 받아 둔 PDF 만 지운다. **재서 묻는다** — 숫자를 지어내지 않는다(§C-2).
+           ⚠ 기록(`ox_*`)·필기·핀(`ox_q_coords`)·색인(`gichulidx:*`)은 건드리지 않는다 —
+             색인은 PDF hash 에 묶여 있어 다시 받으면 그대로 맞는다.
+           ⚠ 새 함수를 만들지 않는다 — 지우는 일은 있는 `mbbForgetBooks()`(window.mbBook.forget)가 한다. */
+        async function mbForgetPrompt() {
+            let keys = [];
+            try { keys = await dbKeys(); } catch (e) { keys = []; }
+            const isS = k => typeof k === 'string';
+            const bk = keys.filter(k => isS(k) && k.indexOf('bookpdf:') === 0);
+            const gk = keys.filter(k => isS(k) && k.indexOf('gichulpdf:') === 0);
+            let bytes = 0, nb = 0, ng = 0;
+            for (const k of bk.concat(gk)) {
+                let v = null;
+                try { v = await dbGet(k); } catch (e) { }
+                const buf = v && v.buf;
+                if (!buf || !buf.byteLength) continue;
+                bytes += buf.byteLength;
+                if (k.indexOf('bookpdf:') === 0) nb++; else ng++;
+            }
+            if (!nb && !ng) { syncStatus('받아 둔 게 없습니다'); return; }
+            const mb = bytes / 1048576;
+            if (!confirm('받아 둔 교재 ' + nb + '권 · 시험지 ' + ng + '장(약 '
+                + (mb >= 10 ? Math.round(mb) : mb.toFixed(1)) + ' MB)을 이 기기에서 지웁니다.\n'
+                + '기록·필기·핀은 그대로고, 다음에 열 때 다시 받습니다.')) return;
+            try { await window.mbBook.forget(); } catch (e) { syncStatus('지우지 못했습니다 — ' + (e && e.message), 'err'); return; }
+            document.querySelectorAll('.oxwin').forEach(w => { if (/^oxwin-(bookpg|exampg)-/.test(w.id)) w.remove(); });
+            syncStatus((nb + ng) + '개 지움', 'ok');
+        }
         async function dbDel(key) {
             const db = await dbOpen();
             return new Promise((res, rej) => {
@@ -3678,34 +3733,52 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 box.innerHTML = `<div class="p-4 text-center text-[12px] text-gray-500">${modeLabel(kind)} 기록이 없습니다.</div>`;
                 return;
             }
-            const map = new Map();
-            items.forEach(q => { const k = fieldGroupKey(q); map.set(k, (map.get(k) || 0) + 1); });
+            /* ★ 2026-09-16 (_task_ox_gg_bang §C) — 머리줄 끝 「! N」 이 단추다(밑점선 · N=0 이면 회색·못 누름).
+               단원 줄에는 켜진 개수 칩 「! n」(0 이면 칩 없음). 「! N」 을 누르면 상태 B — 켜진 근거가 있는 단원만.
+               ⚠ 셈은 `fieldItems` 가 이미 모은 것에서 `bang` 만 걸러 센다 — 5,548 전수 훑기 아님. */
+            const gst = ggStore();
+            const bang = q => ggBangNum(q.id, gst);
+            const total = items.reduce((s, q) => s + bang(q), 0);
+            if (!total) GG_BANG_ONLY = false;
+            const use = GG_BANG_ONLY ? items.filter(q => bang(q) > 0) : items;
+            const map = new Map(), bmap = new Map();
+            use.forEach(q => {
+                const k = fieldGroupKey(q);
+                map.set(k, (map.get(k) || 0) + 1);
+                bmap.set(k, (bmap.get(k) || 0) + bang(q));
+            });
             _fieldGroups = [...map.keys()];
-            box.innerHTML =
-                `<div class="px-4 py-2 bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-700">${modeLabel(kind)} ${items.length}건 · ${_fieldGroups.length}개 단원 <span class="font-normal text-gray-500">— 단원을 누르면 목록이 나옵니다</span></div>` +
+            const head = GG_BANG_ONLY
+                ? `<div data-ggfield="dist" class="px-4 py-2 border-b border-gray-200 text-[11px] font-extrabold" style="background:#fff5f5;color:#c94f4f">${modeLabel(kind)} <b>! ${total}건 · ${_fieldGroups.length}개 단원</b> <span class="font-normal">— 켜진 근거만 보는 중 · </span><span onclick="ggBangOnlyToggle()" class="font-normal text-gray-500" style="border-bottom:1px dashed #9ca3af;cursor:pointer">전체 ${items.length}건으로</span></div>`
+                : `<div data-ggfield="dist" class="px-4 py-2 bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-700">${modeLabel(kind)} ${items.length}건 · ${_fieldGroups.length}개 단원 <span class="font-normal text-gray-500">— 단원을 누르면 목록이 나옵니다</span> · <span ${total ? `onclick="ggBangOnlyToggle()" class="ggbanghd"` : `class="ggbanghd off"`}>! ${total}</span></div>`;
+            box.innerHTML = head +
                 _fieldGroups.map((k, i) => `
                     <button onclick="showFieldList('${kind}', ${i})" class="w-full text-left px-4 py-2 border-b border-gray-100 hover:bg-blue-50 transition flex items-center justify-between gap-2">
                         <span class="text-[12px] font-bold text-indigo-800">${escHtml(k)}</span>
-                        <span class="text-[11px] font-extrabold text-gray-500 bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5">${map.get(k)}건</span>
+                        <span class="flex items-center gap-1 flex-none">${GG_BANG_ONLY ? '' : `<span class="text-[11px] font-extrabold text-gray-500 bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5">${map.get(k)}건</span>`}${bmap.get(k) ? `<span class="ggcnt text-[11px] font-extrabold border rounded px-1.5 py-0.5">! ${bmap.get(k)}</span>` : ''}</span>
                     </button>`).join('');
         }
         /* ★ 09-15 (_task_ox_jeongni_popup §A·§C) — 근거 목록 행·정리 창 행의 🔗 연결 근거 칩 · onclick 없음 · 끝에 쓰임 수(useNumHTML — 문항 팝업 칩 ggRefChipsHTML 과 같은 값·모양) */
         function fieldRefChipsHTML(uid) {
             return refOf(uid, 'geunge').map(u =>
-                `<span class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4`
-                + ` border border-dashed text-blue-800 bg-blue-50 border-blue-400 ${refTextOf(u, 'geunge') === null ? 'opacity-40' : ''}">🔗 ${escHtml(u)}`
+                `<span data-gbref="${escAttr(u)}" class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4`
+                + ` border border-dashed text-blue-800 bg-blue-50 border-blue-400 ${refTextOf(u, 'geunge') === null ? 'opacity-40' : ''}${ggBangAny(u) ? ' ggchip-on' : ''}">🔗 ${escHtml(u)}`
                 + useNumHTML('geunge', u, uid) + `</span>`).join('');
         }
         function showFieldList(kind, gi) {
             const key = _fieldGroups[gi];
             const box = document.getElementById('search-results');
-            const items = fieldItems(kind).filter(q => fieldGroupKey(q) === key);
+            /* ★ 2026-09-16 (§C) — 상태 B 면 켜진 근거가 있는 문항만 남기고, 글도 **켜진 근거만** 보인다 */
+            let items = fieldItems(kind).filter(q => fieldGroupKey(q) === key);
+            if (GG_BANG_ONLY) items = items.filter(q => ggBangNum(q.id) > 0);
             box.classList.remove('hide');
             box.innerHTML =
-                `<button onclick="showFieldDistribution('${kind}')" class="w-full text-left px-4 py-2 bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-700 hover:bg-gray-100">← ${modeLabel(kind)} 단원 목록으로</button>` +
-                `<div class="px-4 py-1.5 border-b border-gray-100 text-[11px] font-bold text-indigo-800">${escHtml(key)} · ${items.length}건</div>` +
+                `<button data-ggfield="list:${gi}" onclick="showFieldDistribution('${kind}')" class="w-full text-left px-4 py-2 bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-700 hover:bg-gray-100">← ${modeLabel(kind)} 단원 목록으로</button>` +
+                `<div class="px-4 py-1.5 border-b border-gray-100 text-[11px] font-bold text-indigo-800">${escHtml(key)} · ${items.length}건${GG_BANG_ONLY ? ' <span style="color:#c94f4f">· 켜진 근거만</span>' : ''}</div>` +
                 items.map(q => {
-                    const txt = refTextOf(q.id, 'geunge');   /* 2026-09-14 — 근거 `i. 본문` 줄들 */
+                    const txt = GG_BANG_ONLY
+                        ? ggOf(q.id).filter(g => g && g.bang).map(g => ((g && g.i) ? g.i + '. ' : '') + String((g && g.t) || '')).join('\n')
+                        : refTextOf(q.id, 'geunge');   /* 2026-09-14 — 근거 `i. 본문` 줄들 */
                     const cls = 'text-blue-900 bg-blue-50 border-blue-400';
                     const icon = '🔗';
                     /* ★ 2026-09-15 (_task_ox_gg_popup_rec §A) — 근거(m) 행은 그 문항 **팝업**을 연다(★ 09-15 _task_ox_logic_merge §B-3 — 논리(l) 갈래는 걷었다).
@@ -3714,7 +3787,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     /* ★ 09-15 (_task_ox_jeongni_popup §A) — 칩 끝에 쓰임 수(fieldRefChipsHTML) · 근거(m) 상자는 줄바꿈 그대로(whitespace-pre-wrap)·글 전부(220자 자르기 없음) */
                     const refChips = fieldRefChipsHTML(q.id);
                     const txtBox =
-                        `<div class="mt-1 border-l-2 pl-2 py-1 ${cls} whitespace-pre-wrap" style="white-space:pre-wrap">${icon} ${escHtml(String(txt))}</div>`;   /* 인라인 = Tailwind CDN 이 나중에 생긴 클래스를 늦게 만드는 것 대비 */
+                        `<div class="mt-1 border-l-2 pl-2 py-1 ${GG_BANG_ONLY ? '' : cls} whitespace-pre-wrap" style="white-space:pre-wrap${GG_BANG_ONLY ? ';background:#fff5f5;color:#c94f4f;border-color:#f0a0a0' : ''}">${icon} ${escHtml(String(txt))}</div>`;   /* 인라인 = Tailwind CDN 이 나중에 생긴 클래스를 늦게 만드는 것 대비 */
                     return `
                     <button onclick="${go}('${q.id}')" class="w-full text-left px-4 py-2 border-b border-gray-100 hover:bg-blue-50 transition">
                         <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
@@ -3733,6 +3806,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 
         function setSearchMode(mode) {
             if (mode !== 'q' && mode !== 'm') mode = 'm';   /* ★ 09-15 (_task_ox_logic_merge §B-3) — 논리('l') 갈래는 걷었다. 옛 값이 들어와도 근거로 */
+            if (mode === 'q') ggBangOnlyOff();              /* ★ 2026-09-16 (§C) — 「문제」 로 가면 「! N」 필터는 풀린다 */
             searchMode = mode;
             const on  = 'text-[11px] px-2.5 py-1 rounded font-bold border transition bg-blue-600 text-white border-blue-600';
             const off = 'text-[11px] px-2.5 py-1 rounded font-bold border transition bg-gray-50 text-gray-600 border-gray-300';
@@ -3861,6 +3935,88 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         function ggItem(uid, k) { return ggOf(uid).find(g => g && g.k === k) || null; }
         function ggMD(ts) { const d = new Date(ts || 0); return (d.getMonth() + 1) + '/' + d.getDate(); }
         function ggOkWord(ok) { return ok === true ? '맞음' : ok === false ? '틀림' : '안 품'; }
+        /* ══════════════ 근거 「!」 표시 (2026-09-16 · _task_ox_gg_bang) ══════════════
+           근거 **항목(k)** 에 붙는 한 칸(`bang:true`)이다. 끄면 칸을 지운다 — 옛 판 데이터와 같은 꼴을 지킨다.
+           ⚠ 새 localStorage 키 없음 · `SYNC_KEYS` 무변 · 엑셀 열 무변. `ox_q_geunge` 가 이미 칸 단위로 병합되므로 그대로 탄다.
+           ⚠ 댓글(`cs`)에는 안 붙는다. 근거를 지우면 같이 사라진다.
+           ⚠ 켜고 끌 때 **카드를 다시 그리지 않는다.** `data-gb*` 를 단 자리만 class 를 뒤집는다 —
+             그래야 펼침·적다 만 초고가 살아남는다(§A). */
+        function ggBangOf(g) { return !!(g && g.bang); }
+        function ggBangAny(uid, gst) {
+            const a = gst ? (Array.isArray(gst[uid]) ? gst[uid] : []) : ggOf(uid);
+            return a.some(g => g && g.bang);
+        }
+        function ggBangNum(uid, gst) {
+            const a = gst ? (Array.isArray(gst[uid]) ? gst[uid] : []) : ggOf(uid);
+            return a.filter(g => g && g.bang).length;
+        }
+        /* 「!」 글자 하나 — 상자 없음 · 10px. `jn-` 범위는 줄 전체가 단추라 눌림을 막는다(칩과 같은 규약). */
+        function ggBangHTML(uid, g, sc = '') {
+            return `<span data-gb="${escAttr(uid)}|${escAttr(g.k)}" class="ggbang${g.bang ? ' on' : ''}"`
+                + ` onclick="${sc === 'jn-' ? 'event.stopPropagation();' : ''}ggBangToggle('${escAttr(uid)}','${escAttr(g.k)}'${ggScA(sc)})"`
+                + ` title="${g.bang ? '중요 표시 끄기' : '중요 표시'}">!</span>`;
+        }
+        function ggBangToggle(uid, k, sc = '') {
+            const list = ggOf(uid);
+            const g = list.find(x => x && x.k === k);
+            if (!g) return;
+            if (g.bang) delete g.bang; else g.bang = true;     /* 끄면 **칸을 지운다** */
+            ggSaveList(uid, list);
+            ggBangPaint(uid);
+        }
+        /* 그 근거가 떠 있는 **모든 자리**를 제자리에서 갈아 끼운다 — 카드·문항 팝업·정리 창·연결 상자.
+           innerHTML 을 건드리지 않으므로 펼침과 입력 초고가 그대로다. */
+        function ggBangPaint(uid) {
+            const on = {};
+            ggOf(uid).forEach(g => { if (g && g.bang) on[g.k] = 1; });
+            const any = Object.keys(on).length > 0;
+            const mine = (el, at) => {
+                const v = String(el.getAttribute(at) || '').split('|');
+                return v[0] === String(uid) ? (v[1] || '') : null;
+            };
+            document.querySelectorAll('[data-gb]').forEach(el => {
+                const k = mine(el, 'data-gb'); if (k === null) return;
+                el.classList.toggle('on', !!on[k]);
+                el.title = on[k] ? '중요 표시 끄기' : '중요 표시';
+            });
+            document.querySelectorAll('[data-gbbox]').forEach(el => {
+                const k = mine(el, 'data-gbbox'); if (k === null) return;
+                el.classList.toggle(el.hasAttribute('data-gbdash') ? 'gg-on-dash' : 'gg-on', !!on[k]);
+            });
+            document.querySelectorAll('[data-gbnum]').forEach(el => {
+                const k = mine(el, 'data-gbnum'); if (k === null) return;
+                el.classList.toggle('ggnum-on', !!on[k]);
+                el.classList.toggle('ggnum-on-n', !!on[k] && !el.hasAttribute('data-gbok'));
+            });
+            document.querySelectorAll('[data-gbref]').forEach(el => {
+                if (el.getAttribute('data-gbref') !== String(uid)) return;
+                el.classList.toggle('ggchip-on', any);
+            });
+            document.querySelectorAll('[data-gbrefbox]').forEach(el => {
+                if (el.getAttribute('data-gbrefbox') !== String(uid)) return;
+                el.classList.toggle('ggrefbox-on', any);
+            });
+            ggFieldRepaint();                    /* 정리 창 근거 목록이 떠 있으면 셈이 바뀐다(§A) */
+        }
+        /* 근거 목록(분포·단원)이 떠 있으면 그 화면만 다시 그린다. 안 떠 있으면 아무 일도 안 한다. */
+        function ggFieldRepaint() {
+            const box = document.getElementById('search-results');
+            if (!box || box.classList.contains('hide')) return;
+            const m = box.querySelector('[data-ggfield]');
+            if (!m) return;
+            const v = String(m.getAttribute('data-ggfield') || '');
+            if (v === 'dist') showFieldDistribution('m');
+            else if (v.indexOf('list:') === 0) showFieldList('m', +v.slice(5));
+        }
+        /* ---------- §C 정리 창 근거 목록 — 머리줄 「! N」 필터 ----------
+           ⚠ 모듈 변수뿐이다. localStorage 에 남기지 않는다(§C). 「문제」 모드로 가면 풀린다. */
+        let GG_BANG_ONLY = false;
+        function ggBangOnlyToggle() {
+            GG_BANG_ONLY = !GG_BANG_ONLY;
+            showFieldDistribution('m');
+        }
+        function ggBangOnlyOff() { GG_BANG_ONLY = false; }
+
         function ggOkCls(ok) {
             return ok === true ? 'text-blue-700 bg-blue-50 border-blue-300'
                  : ok === false ? 'text-red-700 bg-red-50 border-red-300'
@@ -3996,8 +4152,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         }
 
         function ggChipHTML(uid, g, sc = '') {
-            return `<span id="${sc}gg-chip-${uid}-${g.k}" onclick="ggToggle('${uid}','${g.k}'${ggScA(sc)})" title="${escHtml(g.t || '')}"
-                class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4 border ${ggOkCls(g.ok)}">${g.i}</span>`;
+            /* ★ 2026-09-16 (§B) — 「!」 가 켜지면 테두리만 굵은 빨강. `ggOkCls` 는 그대로 둔다(틀림+켜짐 = 둘 다) */
+            const bn = g.bang ? ' ggnum-on' + ((g.ok === true || g.ok === false) ? '' : ' ggnum-on-n') : '';
+            const bok = (g.ok === true || g.ok === false) ? ' data-gbok="1"' : '';
+            return `<span id="${sc}gg-chip-${uid}-${g.k}" data-gbnum="${escAttr(uid)}|${escAttr(g.k)}"${bok} onclick="ggToggle('${uid}','${g.k}'${ggScA(sc)})" title="${escHtml(g.t || '')}"
+                class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4 border ${ggOkCls(g.ok)}${bn}">${g.i}</span>`;
         }
         function ggCsHTML(cs) {
             if (!Array.isArray(cs) || !cs.length) return '<div class="text-[11.5px] text-gray-400 py-1">댓글 없음</div>';
@@ -4008,9 +4167,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             </div>`).join('');
         }
         function ggPanelHTML(uid, g, sc = '') {
-            return `<div id="${sc}gg-pan-${uid}-${g.k}" class="hide mt-1.5 border border-slate-300 rounded-lg bg-slate-50/40 overflow-hidden">
+            /* ★ 2026-09-16 (§B) — 머리줄 맨 앞에 「!」 · 켜지면 판이 연한 빨강 + 왼쪽 빨간 실선 */
+            return `<div id="${sc}gg-pan-${uid}-${g.k}" data-gbbox="${escAttr(uid)}|${escAttr(g.k)}" class="hide mt-1.5 border border-slate-300 rounded-lg bg-slate-50/40 overflow-hidden${g.bang ? ' gg-on' : ''}">
                 <div class="flex items-center gap-2 px-2.5 py-1.5 border-b border-gray-100 bg-gray-50">
-                    <span id="${sc}gg-t-${uid}-${g.k}" class="flex-1 text-[12.5px] text-gray-800 whitespace-pre-wrap">${escHtml(g.t || '')}</span>
+                    ${ggBangHTML(uid, g, sc)}
+                    <span id="${sc}gg-t-${uid}-${g.k}" class="ggb-t flex-1 text-[12.5px] text-gray-800 whitespace-pre-wrap">${escHtml(g.t || '')}</span>
                     <span class="text-[10.5px] font-bold text-slate-500 whitespace-nowrap">${ggOkWord(g.ok)} · ${ggMD(g.ts)}</span>
                     <button type="button" onclick="ggEdit('${uid}','${g.k}'${ggScA(sc)})" class="text-[11px] font-bold text-blue-600 hover:underline">고치기</button>
                     <button type="button" onclick="ggDel('${uid}','${g.k}'${ggScA(sc)})" class="text-[11px] font-bold text-red-700 hover:underline">지우기</button>
@@ -4274,6 +4435,17 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             hit = hit || list[0];
             return hit ? (hit.i + '. ' + one(hit.t) + (c ? '\n↳ ' + one(c.t) : '')) : '';
         }
+        /* ★ 2026-09-16 (_task_ox_gg_bang §B) — `ggPickLine` 이 고른 **바로 그 항목**이 켜져 있는가.
+           ⚠ 검색 결과 줄은 문항마다 하나라 「!」 단추를 달 자리가 없다(어느 k 인지 고를 수 없다).
+             그래서 여기서는 **켜짐 색만** 보이고 토글은 없다 — 켜고 끄는 곳은 판과 연결 상자다. */
+        function ggPickBang(uid, low, given) {
+            const list = Array.isArray(given) ? given : ggOf(uid);
+            const has = v => String(v || '').toLowerCase().includes(low);
+            let hit = list.find(g => g && has(g.t)) || null;
+            if (!hit) hit = list.find(g => g && Array.isArray(g.cs) && g.cs.some(y => y && has(y.t))) || null;
+            hit = hit || list[0];
+            return !!(hit && hit.bang);
+        }
         /* ★ add3 §2-B — 근거 연결은 **저장 버튼 없이 바로** 들어간다.
            누르는 즉시 `ox_q_reflinks` 에 넣고 · 검색칸을 닫고 · 그 자리만 갈아 끼운다.
            ⚠ 카드를 다시 그리지 않는다. ⚠ 근거 **글**(`ox_q_geunge`)은 손대지 않는다. */
@@ -4286,10 +4458,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         function ggRefChipsHTML(uid, sc = '') {
             return refOf(uid, 'geunge').map(u => {
                 const gone = refTextOf(u, 'geunge') === null;
-                return `<span id="${sc}gg-refchip-${uid}-${u}" onclick="${sc === 'jn-' ? 'event.stopPropagation();' : ''}ggRefToggle('${escAttr(uid)}','${escAttr(u)}'${ggScA(sc)})"`
+                /* ★ 2026-09-16 (§B) — 그 문항 근거 중 켜진 게 하나라도 있으면 칩도 빨강 */
+                return `<span id="${sc}gg-refchip-${uid}-${u}" data-gbref="${escAttr(u)}" onclick="${sc === 'jn-' ? 'event.stopPropagation();' : ''}ggRefToggle('${escAttr(uid)}','${escAttr(u)}'${ggScA(sc)})"`
                     + ` title="연결한 근거 · ${escHtml(u)}"`
                     + ` class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4`
-                    + ` border border-dashed text-blue-800 bg-blue-50 border-blue-400 ${gone ? 'opacity-40' : ''}">🔗 ${escHtml(u)}`
+                    + ` border border-dashed text-blue-800 bg-blue-50 border-blue-400 ${gone ? 'opacity-40' : ''}${ggBangAny(u) ? ' ggchip-on' : ''}">🔗 ${escHtml(u)}`
                     + useNumHTML('geunge', u, uid) + `</span>`;
             }).join('');
         }
@@ -4306,8 +4479,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 const body = gone ? '<div class="text-slate-500">지금 데이터에 없음</div>'
                            : !list.length ? '<div class="text-slate-500">그 문항에 근거가 없습니다</div>'
                            : list.map(g => g ? ggRefRowHTML(uid, u, g, sc) : '').join('');
-                return `<div id="${sc}refgg-box-${uid}-${u}" class="hide mt-1.5 text-[12.5px] text-blue-900 bg-blue-50`
-                    + ` border-l-4 border-dashed border-blue-400 rounded-lg px-2.5 py-2 leading-relaxed">`
+                /* ★ 2026-09-16 (§B) — 그 문항 근거 중 켜진 게 하나라도 있으면 상자 테두리도 붉은 점선 */
+                return `<div id="${sc}refgg-box-${uid}-${u}" data-gbrefbox="${escAttr(u)}" class="hide mt-1.5 text-[12.5px] text-blue-900 bg-blue-50`
+                    + ` border-l-4 border-dashed border-blue-400 rounded-lg px-2.5 py-2 leading-relaxed${ggBangAny(u) ? ' ggrefbox-on' : ''}">`
                     + `<div class="flex items-center gap-2 text-[11px] font-extrabold text-blue-800 opacity-80 mb-0.5">`
                     + `<span class="flex-1">🔗 연결한 근거 · ${escHtml(u)}</span>`
                     + `<button type="button" onclick="showLinkedQuestion('${escAttr(u)}','${escAttr(uid)}')"`
@@ -4337,8 +4511,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     + `<button type="button" onclick="ggRefEdit(${arg(ck)})" class="text-[11px] font-bold text-slate-600 bg-white border border-slate-300 rounded-md px-2.5 py-1">취소</button></div>`;
             };
             const cs = Array.isArray(g.cs) ? g.cs : [];
-            return `<div class="mt-1">`
+            /* ★ 2026-09-16 (§B) — 항목 맨 앞에 「!」 · 켜지면 왼쪽 선이 **점선**(상자 틀과 맞춤) */
+            return `<div data-gbbox="${escAttr(u)}|${escAttr(g.k)}" data-gbdash="1" class="mt-1${g.bang ? ' gg-on-dash' : ''}">`
                 + `<div class="flex items-start gap-1.5">`
+                + ggBangHTML(u, g, sc)
                 + `<span title="${ggOkWord(g.ok)}" style="flex:none;display:inline-block;width:7px;height:7px;border-radius:9999px;margin-top:8px;background:${dot}"></span>`
                 + `<span class="flex-none font-extrabold">${escHtml(String(g.i))}.</span>`
                 + `<span id="${sc}refgg-t-${id}" class="flex-1 min-w-0 whitespace-pre-wrap">${escHtml(g.t || '')}</span>`
@@ -5197,7 +5373,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                            <div class="mt-1 text-emerald-900 bg-emerald-50 border-l-2 border-emerald-400 pl-2 py-1">💬 ${mark(expSnip, term)}</div>`
                         : mark(q.q, term))
                     : `<span class="text-gray-500">${escHtml(q.q).slice(0, 60)}…</span>
-                       <div class="mt-1 text-blue-900 bg-blue-50 border-l-2 border-blue-400 pl-2 py-1">🔗 ${mark(gpk[0], term)}${gpk.length > 1 ? `<div class="mt-0.5">↳ ${mark(gpk[1], term)}</div>` : ''}</div>`;
+                       <div class="mt-1 pl-2 py-1 border-l-2 ${ggPickBang(q.id, low) ? '' : 'text-blue-900 bg-blue-50 border-blue-400'}"${ggPickBang(q.id, low) ? ' style="background:#fff5f5;color:#c94f4f;border-color:#f0a0a0"' : ''}>🔗 ${mark(gpk[0], term)}${gpk.length > 1 ? `<div class="mt-0.5">↳ ${mark(gpk[1], term)}</div>` : ''}</div>`;
                 /* ★ 09-16 (_task_ox_card_simple_add11 §2) — 결과를 누르면 단원으로 옮기지 않고 문항 팝업(검색 칸은 그대로) · 근거 탭은 팝업을 그 문항 근거 줄까지 굴린다 · 「↪ 이 문제로 이동」은 팝업 안에 그대로 */
                 return `
                     <button onclick="openQPopup('${q.id}');qpScrollTo('${q.id}','${searchMode === 'm' ? 'gg' : 'top'}')" class="w-full text-left px-4 py-2 border-b border-gray-100 hover:bg-blue-50 transition">
@@ -7983,18 +8159,21 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     catch (e) { MBB_STAT.cacheErr = String(e && e.message || e); return false; }
     return true;
   }
-  /* ★ 2026-09-16 (§B-2) — 받아 둔 시험지도 같이 지운다. 열쇠는 `gichulpdf:`·`gichulidx:` 둘이다. */
+  /* ★ 2026-09-16 (§B-2 → _task_ox_gg_bang §C-2) — 받아 둔 시험지를 지운다.
+     ⚠ **색인(`gichulidx:`)은 안 지운다.** 색인은 PDF hash 에 묶여 있어 다시 받으면 그대로 맞는다 —
+       지우면 20쪽을 다시 훑을 뿐이다(§C-2).
+     ⚠ **목록(`list.json`)을 받지 않는다.** 옛 판은 `mbxList()` 로 파일 이름을 얻었는데,
+       그러면 망이 없거나 목록이 안 받아질 때 **조용히 한 장도 못 지웠다**(2026-09-16 하네스 실측 —
+       fetch 를 막았더니 교재 3권만 지워지고 시험지 2장이 남았다). 기기 안 열쇠를 직접 훑는다. */
   async function mbxForget() {
-    var n = 0;
-    try {
-      var list = await mbxList();
-      for (var f in list) {
-        var h = String(list[f].hash || '').slice(0, 12);
-        try { await window.dbPut('gichulpdf:' + f + ':' + h, null); n++; } catch (e) { }
-        try { await window.dbPut('gichulidx:' + f + ':' + h, null); n++; } catch (e) { }
-      }
-    } catch (e) { }
-    MBX_DOC = {}; MBX_IDX = {};
+    var n = 0, keys = [];
+    try { keys = await window.dbKeys(); } catch (e) { keys = []; }
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      if (typeof k !== 'string' || k.indexOf('gichulpdf:') !== 0) continue;
+      try { await window.dbPut(k, null); n++; } catch (e) { }
+    }
+    MBX_DOC = {};
     return n;
   }
   async function mbbForgetBooks() {
