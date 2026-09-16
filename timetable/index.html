@@ -71,8 +71,8 @@ button{cursor:pointer}
 .stc .hd .sttgl:hover{color:var(--blue)}
 .foot{border-top:1px solid #ddd;margin-top:auto;padding-top:6px;display:flex;justify-content:space-between;font-size:10px;color:#555;align-items:flex-end}
 .foot .big{font-size:22px;font-weight:800;color:#222}
-.foot .ydtot{color:#8b8b8b;font-size:12.5px;line-height:1.7}   /* 격자 아래 왼쪽 — add1 §D: 나 어제 / 상대 어제·오늘 두 줄 */
-.foot .ydtot .nm{font-weight:800;color:#555}.foot .ydtot b{font-weight:800;font-size:13px;color:#333}
+.ydtwo{border-top:1px solid #ddd;margin-top:6px;padding:6px 8px;font-size:12.5px;line-height:1.7;color:#8b8b8b;white-space:nowrap}   /* 왼쪽 Time Table 기둥 아래(시안 ③ 자리) — 나 어제 / 상대 어제·오늘 두 줄 · add1 보정 */
+.ydtwo .nm{font-weight:800;color:#555}.ydtwo b{font-weight:800;font-size:13px;color:#333}
 /* add1 §E — 일간 절 머리줄 오른쪽 두 사람 ⚡🍀 잔액(벌칙포상 탭 위 칸과 같은 함수로 그린다) */
 .ttsh .subtxt{display:flex;flex:1;min-width:0;align-items:center;gap:8px;flex-wrap:wrap}
 .ttsh .daybal{margin-left:auto;display:flex;gap:10px;align-items:center;font-size:11.5px;cursor:pointer;white-space:nowrap}
@@ -1398,7 +1398,7 @@ function dayRows(who,d){
    상대 세션 파일이 이 기기에 아직 안 왔으면(동기화 전) --:-- 로 둔다 — 0 으로 보이면 거짓말이 된다. */
 function ydVal(who,d){return localStorage.getItem(fkey(sessPath(who,ym(d))))==null?'--:--':dur(mSum(sessionsOf(who,d)))}
 function ydFootHTML(who,d){const ot=settings.people.find(p=>p!==who)||'',y=addDays(d,-1);
- return`<div class="ydtot" title="어제 잰 시간 — Total 과 같은 셈(생활·합산 제외 뺀 값)"><div><span class="nm">${esc(who)}</span> 어제 <b>${dur(mSum(sessionsOf(who,y)))}</b></div>${ot?`<div><span class="nm">${esc(ot)}</span> 어제 <b>${ydVal(ot,y)}</b> · 오늘 <b>${ydVal(ot,d)}</b></div>`:''}</div>`}
+ return`<div class="ydtwo" title="어제 잰 시간 — Total 과 같은 셈(생활·합산 제외 뺀 값)"><div><span class="nm">${esc(who)}</span> 어제 <b>${dur(mSum(sessionsOf(who,y)))}</b></div>${ot?`<div><span class="nm">${esc(ot)}</span> 어제 <b>${ydVal(ot,y)}</b> · 오늘 <b>${ydVal(ot,d)}</b></div>`:''}</div>`}
 function sheetHTML(who,d,sess,{withRun=true,axis='day'}={}){
  const dt=parse(d);const tot=mSum(sess);
  // fb20 §1-4 — 생활과 「합산 제외」를 갈라 적는다. 생활은 이미 nt:1 이라 !x.life 로 겹침을 막는다
@@ -1424,9 +1424,9 @@ function sheetHTML(who,d,sess,{withRun=true,axis='day'}={}){
   return`<div class="it ${on?'selr':''} ${r.done?'done2':''} ${r.dim?'dim2':''}" onclick="${click}"><i class="sw" style="background:${subjColor(r.s)}"></i><span class="nm">${esc(r.s)}</span><span class="pl${(ui.stMore||{})[r.type+'|'+r.id]?' ex':''}" data-more="${esc(r.type+'|'+r.id)}">${esc(lbl)||'—'}</span>${badge}<span${isRun?` id="stRunMin" data-base="${r.min}"`:''}${r.ntMin?` style="color:#999" title="합산 제외 — 잰 시간은 이 값이고 Total 에는 안 들어간다"`:''}>${dur(r.min+(isRun?runMin:0))}</span>${on&&r.type==='item'?`<button class="btn" onclick="event.stopPropagation();toggleTodo('${r.id}')">${r.done?'완료 취소':'완료'}</button>`:''}${on&&r.type==='unit'?`<button class="btn" onclick="event.stopPropagation();togglePlanDone('${(r.band||{}).id}','${(r.unit||{}).id}','${d}')">${r.done?'완료 취소':'완료'}</button>`:''}</div>`;
  };
  return`<div class="sheet" style="position:relative"><button class="btn pmbtn" onclick="pmPopup(this.ownerDocument)" title="계획관리 팝업 — 화면 이동 없이 편집 (§9)">📋 계획관리</button><div class="ribbon rbtn" onclick="ribbonModal('${axis}',this.ownerDocument)" title="클릭 = 날짜 이동 · 하루 시작 (§1 fb18)">${rlab}</div><div class="paper">
- <div><div class="hd">Time Table</div><div class="tt"><span></span><div class="tth">${[1,2,3,4,5].map(n=>`<i style="left:${(n*100/6).toFixed(2)}%">${n*10}</i>`).join('')}</div>${ttRows(sess,{lp:lifePlanned(who,d)})}</div></div>
+ <div><div class="hd">Time Table</div><div class="tt"><span></span><div class="tth">${[1,2,3,4,5].map(n=>`<i style="left:${(n*100/6).toFixed(2)}%">${n*10}</i>`).join('')}</div>${ttRows(sess,{lp:lifePlanned(who,d)})}</div>${axis==='day'?ydFootHTML(who,d):''}</div>
  <div class="stc"><div class="hd">Study Time${mine&&catRows.length?`<span class="sttgl" onclick="stCatTgl()" title="세부계획 없이 활동 단위로 재는 줄 — 켜면 목록에 나온다">활동 줄 ${catRows.length} ${showCat?'▾':'▸'}</span>`:''}</div><div class="st">${rows.map(rowHTML).join('')||'<div style="color:#bbb;font-size:11px">기록 없음</div>'}${(()=>{const lm=sess.filter(x=>x.life).reduce((a,x)=>a+(x.b-x.a),0);return`<div class="it liferow" ${mine?`onclick="pickRow('life','')" title="클릭 = 선택 · START 로 시작 — 종류는 블록 클릭으로 나중에 지정 (합산 없음)"`:''}><i class="sw hsw"></i><span class="nm">생활</span><span class="pl" style="color:#aaa">${mine?'밥·산책·… 나중 지정':''}</span><span>${lm?dur(lm):''}</span></div>`})()}</div>
- <div class="foot">${axis==='day'?ydFootHTML(who,d):''}<div>Start <b>${sess.length?hmDisp(sess[0].a):(mine&&run&&run.d===d?hmDisp(run.a):'--:--')}</b> &nbsp; Stop <b>${sess.length?hmDisp(Math.max(...sess.map(x=>x.b))):'--:--'}</b></div><div>Total${exTxt?`<i style="font-style:normal;font-size:9px;color:#999"> (${exTxt}${exN?' 뺀 값':' 제외'})</i>`:''} <span class="big"${mine&&run&&run.d===d?` id="stTot" data-base="${tot}"`:''}>${dur(tot+(mine&&run&&run.d===d&&!run.nt?runMin:0))}</span></div></div></div></div></div>`;
+ <div class="foot"><div>Start <b>${sess.length?hmDisp(sess[0].a):(mine&&run&&run.d===d?hmDisp(run.a):'--:--')}</b> &nbsp; Stop <b>${sess.length?hmDisp(Math.max(...sess.map(x=>x.b))):'--:--'}</b></div><div>Total${exTxt?`<i style="font-style:normal;font-size:9px;color:#999"> (${exTxt}${exN?' 뺀 값':' 제외'})</i>`:''} <span class="big"${mine&&run&&run.d===d?` id="stTot" data-base="${tot}"`:''}>${dur(tot+(mine&&run&&run.d===d&&!run.nt?runMin:0))}</span></div></div></div></div></div>`;
 }
 function mbarHTML(){
  const si=selInfo();
