@@ -1780,10 +1780,61 @@ let PV_NM={raw:null,m:new Map()}; // share.json 원문 → pv 항목 이름표 �
 function pvItemName(id){const raw=localStorage.getItem(fkey('share/share.json'))||''; // 지운 항목(del)도 이름은 찾는다
  if(PV_NM.raw!==raw){const m=new Map();try{((JSON.parse(raw||'{}').data||{}).items||[]).forEach(x=>{if(x&&x.ty==='pv')m.set(x.id,x.t||'')})}catch(e){}PV_NM={raw,m}}
  return PV_NM.m.get(id)||''}
+/* ══ 벌칙포상 수행 상태·메모를 share.json 으로 (2026-09-16 · _task_tt_pv_other §A) ══
+   ⚠ 남의 스냅샷 파일(`snaps/<사람>/<달>.json`)에는 **절대 안 쓴다** — 그 파일은 그 사람 두 기기가
+     세션 id 로 병합하는 자리라 제3자가 쓰면 동기화 설계가 깨진다. 그래서 수행 상태(`pd·pvi·pvd·pvb·pvx`)와
+     메모를 둘이 같이 쓰는 `share/share.json` 으로 옮겼다(기존 `mergeList` 가 `u` 최신 승으로 이미 병합한다).
+   ⚠ 칩이 **있는지**(`pv==='pen'|'rew'`)는 지금처럼 스냅샷이 정한다 — 그 사람 타이머·반영 규칙 몫이다.
+     이 판은 **수행 상태와 메모만** 옮긴다.
+   ⚠ 스냅샷의 옛 값은 **안 지운다**(되돌릴 수 있게). 읽기 우선순위로만 갈린다 — share 가 있으면 그것이 정본. */
+let PVD_C={raw:null,m:new Map()};
+function pvdMap(){ // share.json 의 pvd·memo 항목 색인(PV_NM 과 같은 틀 — raw 가 그대로면 다시 안 푼다)
+ const raw=localStorage.getItem(fkey('share/share.json'))||'';
+ if(PVD_C.raw!==raw){const m=new Map();
+  try{((JSON.parse(raw||'{}').data||{}).items||[]).forEach(x=>{if(x&&!x.del&&(x.ty==='pvd'||x.ty==='memo'))m.set(x.id,x)})}catch(e){}
+  PVD_C={raw,m}}
+ return PVD_C.m}
+const pvdId=(who,d)=>'pvd|'+who+'|'+d;
+const memoId=(who,kind,key)=>'memo|'+who+'|'+kind+'|'+key;
+/* 스냅샷 칸 위에 share 항목을 덮어 얹는다. 이 하나를 pvChips·pvChip 이 부르므로 아래 모든 셈이 같은 값을 본다 */
+function pvState(who,d,e){
+ if(!e)return e;
+ const s=pvdMap().get(pvdId(who,d));
+ if(!s)return e;
+ const o=Object.assign({},e);
+ delete o.pvi;delete o.pvd;delete o.pvb;delete o.pvx;
+ o.pd=s.pd?1:0;
+ if(s.pd){if(s.pvi){o.pvi=s.pvi;o.pvd=s.pvd}if(s.pvb)o.pvb=s.pvb;if(s.pvx)o.pvx=s.pvx}
+ return o}
+function memoOf(who,kind,key,fb){const s=pvdMap().get(memoId(who,kind,key));return s?String(s.memo||''):String(fb||'')}
+/* 옛 데이터 이관 — 이 기기에 있는 **내 스냅샷**의 pd·memo 를 share.json 으로 한 번만 옮긴다.
+   ⚠ 상대 스냅샷은 건드리지 않는다 — 그 사람 기기가 제 몫을 옮긴다(내가 옮기면 두 기기가 같은 항목을 다른 u 로 두 번 만든다).
+   ⚠ 이미 있는 id 는 안 덮는다. 이관 뒤에도 스냅샷 옛 값은 그대로 둔다. */
+function pvdMigrate(){
+ if(LS.get('tt.pvd_migrated'))return 0;
+ const who=cfg.person;
+ if(!who){return 0}
+ const f=shareFile();let n=0;
+ const put=t=>{if(f.data.items.findIndex(x=>x.id===t.id)>=0)return;f.data.items.push(t);n++};
+ const pre=fkey('snaps/'+who+'/');
+ Object.keys(localStorage).filter(k=>k.indexOf(pre)===0&&k.slice(-5)==='.json').forEach(k=>{
+  const m=k.slice(pre.length,-5);const sf=snapFileF(who,m);
+  const D=sf.data.days||{};
+  Object.keys(D).forEach(d=>{const e=D[d];if(!e)return;const u=e.u||Date.now();
+   if(e.pd)put({id:pvdId(who,d),ty:'pvd',who,d,pd:1,pvi:e.pvi,pvd:e.pvd,pvb:e.pvb,pvx:e.pvx,by:who,at:u,u,del:false});
+   if(e.memo)put({id:memoId(who,'days',d),ty:'memo',who,kind:'days',key:d,memo:e.memo,by:who,at:u,u,del:false})});
+  ['weeks','months'].forEach(kind=>{const G=sf.data[kind]||{};
+   Object.keys(G).forEach(key=>{const g=G[key];if(!g||!g.memo)return;const u=g.u||Date.now();
+    put({id:memoId(who,kind,key),ty:'memo',who,kind,key,memo:g.memo,by:who,at:u,u,del:false})})})});
+ if(n){f.dirty=true;saveF('share/share.json',f);scheduleSync()}
+ LS.set('tt.pvd_migrated',1);
+ return n}
 function pvChips(who){ // pv 있는 날 전부 · 오래된 순 · 시행일 달부터 이번 달까지(이 기기에 있는 스냅샷 파일)
  const out=[];const last=ym(today());
  for(let m=PV_FROM.slice(0,7);m<=last;m=ym(addDays(m+'-01',32))){const days=snapFileF(who,m).data.days||{};
-  Object.keys(days).sort().forEach(d=>{const e=days[d];if(e&&(e.pv==='pen'||e.pv==='rew'))out.push({d,e})})}
+  /* ★ 2026-09-16 (§A-2) — 스냅샷 칸 위에 share.json 의 수행 상태를 덮어 얹는다.
+     여기 하나만 거치면 pvBal·pvBundle·pvBundleOf·pvOldest·pvRowHTML·pvDoneTitle 이 전부 같은 값을 본다. */
+  Object.keys(days).sort().forEach(d=>{const e=days[d];if(e&&(e.pv==='pen'||e.pv==='rew'))out.push({d,e:pvState(who,d,e)})})}
  return out}
 function pvBal(who,c){c=c||pvChips(who);const pen=c.filter(x=>x.e.pv==='pen'&&!x.e.pd).length,rew=c.filter(x=>x.e.pv==='rew'&&!x.e.pd).length;return{pen,rew,net:pen-rew}}
 /* add1 §E — 잔액 칸 글자를 두 곳(⚡탭 위 칸 · 일간 머리줄)이 같이 쓴다. 두 벌 만들지 않는다 */
@@ -1799,8 +1850,9 @@ function pvDoneTitle(e){
 /* .lb 안 dur() 왼쪽 칩 하나(A꼴) — ⚡ 주황 · 🍀 초록 · 회색 취소선 = pd(수행·받음·상쇄) · 제 칩만 눌린다(카드 본체 클릭 = 확대는 stopPropagation 으로 갈림) */
 function pvChip(who,d,sn){
  const v=sn&&sn.pv;if(v!=='pen'&&v!=='rew')return'';
- const done=!!sn.pd,mine=who===cfg.person;
- return`<span class="pvc ${v}${done?' pd':''}${mine?' on':''}" title="${esc(done?pvDoneTitle(sn):(mine||v==='rew')?PV_TIT[v]:'벌칙')}"${mine?` onclick="event.stopPropagation();pvPick('${d}')"`:''}>${pvK(v)}</span>`}
+ /* ★ 2026-09-16 (§A-2·§B) — share 를 덮어 얹고, **상대 칩도** 눌러 정해 줄 수 있다(class `on` 도 둘 다) */
+ const e=pvState(who,d,sn),done=!!e.pd;
+ return`<span class="pvc ${v}${done?' pd':''} on" title="${esc(done?pvDoneTitle(e):PV_TIT[v])}" onclick="event.stopPropagation();pvPick('${d}','${esc(who)}')">${pvK(v)}</span>`}
 function pvBundle(who,d,w,c){ // 누른 칩 + 같은 종류 미수행 칩(누른 날보다 오래된 것부터 · 모자라면 그다음 것) 무게만큼 — 모자라면 null
  c=c||pvChips(who);const me=c.find(x=>x.d===d);if(!me||me.e.pd)return null;
  const rest=c.filter(x=>x.d!==d&&x.e.pv===me.e.pv&&!x.e.pd).map(x=>x.d);
@@ -1813,65 +1865,85 @@ function pvBundleOf(who,d,c){ // 되돌릴 묶음 — 상쇄 짝 · 같은 묶�
  if(e.pvi)return c.filter(x=>x.e.pd&&!x.e.pvb&&x.e.pvi===e.pvi&&x.e.pvd===e.pvd).map(x=>x.d);
  return[d]}
 function pvOldest(who,kind,skip,c){c=c||pvChips(who);const x=c.find(z=>z.e.pv===kind&&!z.e.pd&&z.d!==skip);return x?x.d:''}
-function pvWrite(who,ops){ // ops=[[d,fn]] · 제 스냅샷만 · 달 파일마다 한 번 저장 — 옛 pvToggle 과 같은 길(u·dirty·saveF·scheduleSync·render)
- if(who!==cfg.person||!ops.length)return false;
- const files=new Map(),now=Date.now();
- ops.forEach(([d,fn])=>{const m=ym(d);if(!files.has(m))files.set(m,snapFileF(who,m));const e=files.get(m).data.days[d];if(e){fn(e);e.u=now}});
- files.forEach((f,m)=>{f.dirty=true;saveF(snapPath(who,m),f)});
+/* ★ 2026-09-16 (§A-3) — ops=[[d,fn]] · **share.json 에** upsert 한다(남의 스냅샷에 안 쓴다).
+   fn 은 옛 몸통 그대로(`z.pd=1;z.pvi=…`)를 항목 위에서 돌린다 — 되돌리기는 `pd:0` upsert(항목을 지우지 않는다 · del 안 씀).
+   ⚠ 여러 건이어도 **saveF·scheduleSync 는 한 번**(항목마다 예약하면 render 가 여러 번 돈다). */
+function pvWrite(who,ops){
+ if(!who||!ops.length)return false;
+ const f=shareFile(),now=Date.now();
+ ops.forEach(([d,fn])=>{const id=pvdId(who,d);
+  const i=f.data.items.findIndex(x=>x.id===id);
+  const z=i>=0?Object.assign({},f.data.items[i]):{id,ty:'pvd',who,d,pd:0,at:now};
+  fn(z);
+  z.id=id;z.ty='pvd';z.who=who;z.d=d;z.by=cfg.person;z.u=now;z.del=false;
+  if(i>=0)f.data.items[i]=z;else f.data.items.push(z)});
+ f.dirty=true;saveF('share/share.json',f);
  scheduleSync();render();return true}
-function pvApply(d,itemId){
- const who=cfg.person,c=pvChips(who),me=c.find(x=>x.d===d);if(!me||me.e.pd)return false;const k=me.e.pv;
+/* ★ 2026-09-16 (§A-3) — `who` 를 **끝 인자**로 받는다. 안 주면 옛대로 `cfg.person`
+   (자리를 앞에 넣으면 옛 호출·옛 하네스 `pvApply(d,id)` 가 깨진다 — 차례만 뒤로 두면 둘 다 선다). */
+function pvApply(d,itemId,who){
+ who=who||cfg.person;
+ const c=pvChips(who),me=c.find(x=>x.d===d);if(!me||me.e.pd)return false;const k=me.e.pv;
  const it=shareItems('pv').find(x=>x.id===itemId);if(!it||it.kind!==k||it.who!==who)return false;
  const days=pvBundle(who,d,pvW(it),c);
  if(!days){toast(`${pvK(k)} ${pvW(it)} 필요 · 지금 ${pvBal(who,c)[k]}`);return false}
  const pvd=today(),pvb=uid();
  return pvWrite(who,days.map(x=>[x,z=>{z.pd=1;z.pvi=it.id;z.pvd=pvd;z.pvb=pvb;delete z.pvx}]))}
-function pvUndo(d){const who=cfg.person;const days=pvBundleOf(who,d);if(!days.length)return false;
+function pvUndo(d,who){who=who||cfg.person;const days=pvBundleOf(who,d);if(!days.length)return false;
  return pvWrite(who,days.map(x=>[x,z=>{z.pd=0;delete z.pvi;delete z.pvd;delete z.pvx;delete z.pvb}]))}
 const pvXops=(a,b)=>[[a,z=>{z.pd=1;z.pvx=b;delete z.pvi;delete z.pvd;delete z.pvb}],[b,z=>{z.pd=1;z.pvx=a;delete z.pvi;delete z.pvd;delete z.pvb}]];
-function pvOffset(d1,d2){const who=cfg.person,c=pvChips(who),a=c.find(x=>x.d===d1),b=c.find(x=>x.d===d2);
+function pvOffset(d1,d2,who){who=who||cfg.person;const c=pvChips(who),a=c.find(x=>x.d===d1),b=c.find(x=>x.d===d2);
  if(!a||!b||a.e.pd||b.e.pd||a.e.pv===b.e.pv)return false;
  return pvWrite(who,pvXops(d1,d2))}
-function pvOffsetN(){const who=cfg.person,c=pvChips(who);
+function pvOffsetN(who){who=who||cfg.person;const c=pvChips(who);
  const P=c.filter(x=>x.e.pv==='pen'&&!x.e.pd).map(x=>x.d),Q=c.filter(x=>x.e.pv==='rew'&&!x.e.pd).map(x=>x.d),n=Math.min(P.length,Q.length);
  if(!n||!confirm(`⚡·🍀 ${n}쌍을 상쇄할까? (오래된 것끼리)`))return false;
  return pvWrite(who,P.slice(0,n).flatMap((a,i)=>pvXops(a,Q[i])))}
 /* §4 카드 칩 팝업 — 앱의 modal() 틀 그대로(단추 = 수행함/받음 · 닫기 · 몸통 안 「상쇄」) · 회색 칩이면 되돌리기/풀기 */
-function pvPick(d){
- const who=cfg.person,c=pvChips(who),me=c.find(x=>x.d===d);if(!me)return;const e=me.e;
+/* ★ 2026-09-16 (§B) — `who` 를 끝 인자로 받고, 머리에 **누구 것인지** 칩 하나를 붙인다
+   (상대 것을 정해 주는 자리라 이름이 안 보이면 헷갈린다 · 새 문구는 없다). */
+function pvPick(d,who){
+ who=who||cfg.person;
+ const c=pvChips(who),me=c.find(x=>x.d===d);if(!me)return;const e=me.e;
+ const pi=settings.people.indexOf(who),NM=`<span class="chip ${pi?'k':'h'}">${esc(who)}</span> `;
  const k=e.pv,K=pvK(k),nm=k==='rew'?'포상':'벌칙',lab=`${pvMD(d)} (${DAYS[parse(d).getDay()]})`;
  if(e.pd){const bd=pvBundleOf(who,d,c);
-  modal(`<h4>${K} ${lab} ${nm} <small style="color:#888;font-weight:400">— ${esc(pvDoneTitle(e))}</small></h4><p style="font-size:11px;color:#666;margin:6px 0">${bd.length>1?`묶인 칩 ${bd.map(pvMD).join(' · ')} 이 한꺼번에 되살아난다`:'이 칩이 다시 살아난다'}</p>`,()=>{pvUndo(d)},null,null,e.pvx?'풀기':'되돌리기');
+  modal(`<h4>${NM}${K} ${lab} ${nm} <small style="color:#888;font-weight:400">— ${esc(pvDoneTitle(e))}</small></h4><p style="font-size:11px;color:#666;margin:6px 0">${bd.length>1?`묶인 칩 ${bd.map(pvMD).join(' · ')} 이 한꺼번에 되살아난다`:'이 칩이 다시 살아난다'}</p>`,()=>{pvUndo(d,who)},null,null,e.pvx?'풀기':'되돌리기');
   pvModalNo();return}
  const cnt=pvBal(who,c)[k],part=pvOldest(who,k==='rew'?'pen':'rew',d,c);let first=true;
  const rows=pvItems(who,k).map(it=>{const w=pvW(it),ok=w<=cnt,ex=ok&&w>1?(pvBundle(who,d,w,c)||[]).slice(1):[],on=ok&&first;if(on)first=false;
   return`<div class="pvopt ${k}${ok?'':' no'}${on?' on':''}" data-id="${esc(it.id)}"${ok?' onclick="pvOptSel(this)"':''}><span>${esc(it.t)}</span><span class="r">${ok?(ex.length?ex.map(pvMD).join(' · ')+' 도 같이':''):`${K} ${w} 필요 · 지금 ${cnt}`}<span class="pvw ${k}">${w}</span></span></div>`}).join('');
- modal(`<h4>${K} ${lab} ${nm} <small style="color:#888;font-weight:400">— 잔액 ${K}${cnt}점</small></h4><div id="pvPk">${rows||'<p style="font-size:11px;color:#888;margin:6px 0">Share ▸ 벌칙포상에서 먼저 적어라</p>'}</div>${part?`<div style="margin-top:6px"><button class="btn" onclick="this.closest('.modal').remove();pvOffset('${d}','${part}')">${pvK(k==='rew'?'pen':'rew')} ${pvMD(part)} 와 상쇄</button></div>`:''}`,
-  q=>{const o=q('pvPk').querySelector('.pvopt.on');if(o)pvApply(d,o.dataset.id);else toast('고를 항목이 없어')},null,null,k==='rew'?'받음':'수행함');
+ modal(`<h4>${NM}${K} ${lab} ${nm} <small style="color:#888;font-weight:400">— 잔액 ${K}${cnt}점</small></h4><div id="pvPk">${rows||'<p style="font-size:11px;color:#888;margin:6px 0">Share ▸ 벌칙포상에서 먼저 적어라</p>'}</div>${part?`<div style="margin-top:6px"><button class="btn" onclick="this.closest('.modal').remove();pvOffset('${d}','${part}','${esc(who)}')">${pvK(k==='rew'?'pen':'rew')} ${pvMD(part)} 와 상쇄</button></div>`:''}`,
+  q=>{const o=q('pvPk').querySelector('.pvopt.on');if(o)pvApply(d,o.dataset.id,who);else toast('고를 항목이 없어')},null,null,k==='rew'?'받음':'수행함');
  pvModalNo()}
 function pvOptSel(el){[...el.parentNode.children].forEach(x=>x.classList.remove('on'));el.classList.add('on')}
 function pvModalNo(){const m=[...document.querySelectorAll('.modal')].pop();const b=m&&m.querySelector('#mNo');if(b)b.textContent='닫기'} // modal() 의 「취소」를 이 팝업에서만 「닫기」로
-function pvApplySel(d){const s=document.getElementById('pvS_'+d);const id=s&&s.value;if(!id){toast('항목을 골라줘');return}pvApply(d,id)}
+function pvApplySel(d,who,pi){
+ const s=document.getElementById(`pvS_${pi==null?settings.people.indexOf(who||cfg.person):pi}_${d}`)||document.getElementById('pvS_'+d);
+ const id=s&&s.value;if(!id){toast('항목을 골라줘');return}pvApply(d,id,who)}
 /* §5 Share ▸ ⚡ 벌칙포상 — 잔액 두 칸 · 목록 두 기둥 · 데일리 모음에서 온 칩 줄 */
 function pvTabHTML(){
  const P=settings.people,me=cfg.person,IT=shareItems('pv'),C=new Map(P.map(w=>[w,pvChips(w)]));
  const bal=P.map(who=>{const b=pvBal(who,C.get(who)),n=Math.min(b.pen,b.rew);
-  return`<div><span class="who">${esc(who)}</span>${pvBalNums(b)}${pvBalNet(b)}${who===me?`<button class="btn s" onclick="pvOffsetN()"${n?'':' disabled'}>상쇄 ${n}</button>`:''}</div>`}).join('');
+  /* ★ 2026-09-16 (§B) — 「상쇄 N」 을 두 사람 다 */
+  return`<div><span class="who">${esc(who)}</span>${pvBalNums(b)}${pvBalNet(b)}<button class="btn s" onclick="pvOffsetN('${esc(who)}')"${n?'':' disabled'}>상쇄 ${n}</button></div>`}).join('');
  const list=(who,pi,k)=>{const its=pvItems(who,k,IT),nm=k==='rew'?'포상':'벌칙';
   return`<div class="pvlist"><div class="hd"><span>${nm} ${pvK(k)} · 무게 = ${k==='rew'?'쓰는':'갚는'} 점수</span><span>${its.length}</span></div>${its.map(it=>`<div class="pvit ${k}"><span>${esc(it.t)}</span><span class="pvw ${k}">${pvW(it)}</span><span class="x" title="고치기" onclick="pvItemEdit('${it.id}')">✎</span><span class="x" title="지우기" onclick="pvItemDel('${it.id}')">×</span></div>`).join('')}<div class="pvadd"><input id="pvN_${pi}_${k}" placeholder="${nm} 추가"><input id="pvW_${pi}_${k}" class="n" type="number" min="1" value="1"><button class="btn s p" onclick="pvItemAdd(${pi},'${k}')">＋</button></div></div>`};
  const cols=P.map((who,pi)=>`<div class="pvcol"><h4><span class="chip ${pi?'k':'h'}">${esc(who)}</span> 목록</h4>${list(who,pi,'pen')}${list(who,pi,'rew')}</div>`).join('');
  const rows=P.map(who=>C.get(who).map(x=>pvRowHTML(who,x.d,x.e,C.get(who),IT)).join('')).join('');
  return`<div class="pvtab"><div class="pvbal">${bal}</div><div class="pvnote">칩 1개 = 1점 · 잔액 = ⚡ 와 🍀 중 많은 쪽에서 적은 쪽을 뺀 것(아직 안 쓴 칩만) · 「상쇄 N」 = ⚡1 ↔ 🍀1 짝을 오래된 것끼리 N 개</div><div class="pvcols">${cols}</div><div class="pvdue"><h4>데일리 모음에서 온 칩 <small>— 한 칩 = 한 줄 · 오래된 것부터 · 카드 칩 클릭과 같은 일</small></h4>${rows||'<p style="color:#888;font-size:11px">아직 칩이 없어</p>'}</div></div>`}
+/* ★ 2026-09-16 (§B) — 상대 줄의 `—` 를 걷었다. 두 사람 다 select·수행함·상쇄·되돌리기. */
 function pvRowHTML(who,d,e,c,IT){
- const mine=who===cfg.person,k=e.pv,K=pvK(k),pi=settings.people.indexOf(who);
+ const k=e.pv,K=pvK(k),pi=settings.people.indexOf(who);
  const head=`<span class="d">${pvMD(d)} (${DAYS[parse(d).getDay()]}) <span class="chip ${pi?'k':'h'}">${esc(who)}</span></span><span class="pvc ${k}${e.pd?' pd':''}" title="${esc(e.pd?pvDoneTitle(e):PV_TIT[k])}">${K}</span>`;
  if(e.pd){
   const mid=e.pvx?`<span class="off">상쇄됨 ↔ ${pvMD(e.pvx)} ${pvK(k==='rew'?'pen':'rew')}</span>`:e.pvi?`<span class="off">${esc(pvItemName(e.pvi)||'(항목 없음)')} <span class="done">✓ ${pvMD(e.pvd)} ${k==='rew'?'받음':'수행'}</span></span>`:'<span class="off">수행함</span>';
-  return`<div class="pvrow">${head}${mid}<span class="ops">${mine?`<button class="btn s" onclick="pvUndo('${d}')">${e.pvx?'풀기':'되돌리기'}</button>`:''}</span></div>`}
- if(!mine)return`<div class="pvrow">${head}<span class="off">—</span><span class="ops"></span></div>`;
+  return`<div class="pvrow">${head}${mid}<span class="ops"><button class="btn s" onclick="pvUndo('${d}','${esc(who)}')">${e.pvx?'풀기':'되돌리기'}</button></span></div>`}
  const cnt=pvBal(who,c)[k],part=pvOldest(who,k==='rew'?'pen':'rew',d,c);
  const opts=pvItems(who,k,IT).map(it=>{const w=pvW(it),ok=w<=cnt,ex=ok&&w>1?(pvBundle(who,d,w,c)||[]).slice(1):[];return`<option value="${esc(it.id)}"${ok?'':' disabled'}>${esc(it.t)} (${w}${ex.length?' · '+ex.map(pvMD).join('·')+' 와 함께':''}${ok?'':` · ${K} ${w} 필요 · 지금 ${cnt}`})</option>`}).join('');
- return`<div class="pvrow">${head}<select id="pvS_${d}"><option value="">— ${k==='rew'?'포상':'벌칙'} 고르기 —</option>${opts}</select><span class="ops"><button class="btn s" onclick="pvApplySel('${d}')">${k==='rew'?'받음':'수행함'}</button><button class="btn s" onclick="pvOffset('${d}','${part}')"${part?'':' disabled'}>상쇄</button></span></div>`}
+ /* ⚠ select id 는 사람마다 갈라야 한다 — 두 사람 줄이 같은 화면에 있으면 같은 날짜가 겹친다 */
+ const sid=`pvS_${pi}_${d}`;
+ return`<div class="pvrow">${head}<select id="${sid}"><option value="">— ${k==='rew'?'포상':'벌칙'} 고르기 —</option>${opts}</select><span class="ops"><button class="btn s" onclick="pvApplySel('${d}','${esc(who)}',${pi})">${k==='rew'?'받음':'수행함'}</button><button class="btn s" onclick="pvOffset('${d}','${part}','${esc(who)}')"${part?'':' disabled'}>상쇄</button></span></div>`}
 function pvItemAdd(pi,k){const who=settings.people[pi];if(!who)return;const n=document.getElementById(`pvN_${pi}_${k}`),w=document.getElementById(`pvW_${pi}_${k}`);
  const t=(n&&n.value||'').trim(),wv=parseInt(w&&w.value,10);
  if(!t){toast('이름을 적어줘');return}if(!(wv>=1)){toast('무게는 1 이상');return}
@@ -1913,11 +1985,16 @@ function autoSnapCatchup(){ // 자동 모드: 하루가 지나면 전날을 찍�
  for(let i=30;i>=1;i--){const d=addDays(t0,-i);if(!snapOf(cfg.person,d)){takeSnap(d);n++;}}
  if(n)toast('밀린 '+n+'일을 데일리 모음에 반영했어');
 }
-function snapMemoSave(kind,key,val,m){
- const f=snapFileF(cfg.person,m);
- if(kind==='days'){const e=f.data.days[key];if(!e)return;e.memo=val;e.u=Date.now();}
- else{const g=f.data[kind];g[key]=g[key]||{};g[key].memo=val;g[key].u=Date.now();}
- f.dirty=true;saveF(snapPath(cfg.person,m),f);scheduleSync();
+/* ★ 2026-09-16 (§A-3) — 메모도 **share.json** 에. `who` 를 받아 상대 것도 고친다(남의 스냅샷에 안 쓴다).
+   ⚠ `m`(달)은 더 안 쓴다 — 열쇠가 `memo|who|kind|key` 라 달을 안 탄다. 부르는 자리는 그대로 넘겨도 된다. */
+function snapMemoSave(kind,key,val,m,who){
+ who=who||cfg.person;
+ const f=shareFile(),id=memoId(who,kind,key),now=Date.now();
+ const i=f.data.items.findIndex(x=>x.id===id);
+ const z=i>=0?Object.assign({},f.data.items[i]):{id,ty:'memo',who,kind,key,at:now};
+ z.memo=String(val==null?'':val);z.by=cfg.person;z.u=now;z.del=false;
+ if(i>=0)f.data.items[i]=z;else f.data.items.push(z);
+ f.dirty=true;saveF('share/share.json',f);scheduleSync();
 }
 function ddayAt(d){const xs=(settings.exams||[]).filter(x=>!x.del&&x.date).sort((a,b)=>a.date<b.date?-1:1);const x=xs.find(z=>z.date>=d)||xs[xs.length-1];if(!x)return'';const n=Math.ceil((parse(x.date)-parse(d))/864e5);return n>=0?`D-${n}`:`D+${-n}`}
 function snapMonthStats(who,m){const fd=parse(m+'-01');const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();const t0=today();let tot=0,miss=0;
@@ -1941,7 +2018,7 @@ function dayCard(who,x){
  }
  const dirty=mine&&snapDirtyChk(who,x,sn);
  const pc=pvChip(who,x,sn);   /* 미반영(.card.empty)·시간층(.card.hist) 칸은 위에서 이미 돌아갔다 */
- return`<div class="card" onclick="snapView('${who}','${x}')" style="cursor:pointer"><div class="th full" style="position:relative">${miniSheet(snapSheetHTML(x,sn))}${dirty?'<span class="snapbadge mod">반영 후 수정됨</span>':''}</div><div class="lb" style="background:${footBg(sn.total||0)};color:#111"><span>${dlab}${sn.memo?' ✎':''}</span><span style="color:#666">${ddayAt(x)}</span>${pc}<b style="margin-left:${pc?'6px':'auto'}">${dur(sn.total||0)}</b></div></div>`;
+ return`<div class="card" onclick="snapView('${who}','${x}')" style="cursor:pointer"><div class="th full" style="position:relative">${miniSheet(snapSheetHTML(x,sn))}${dirty?'<span class="snapbadge mod">반영 후 수정됨</span>':''}</div><div class="lb" style="background:${footBg(sn.total||0)};color:#111"><span>${dlab}${memoOf(who,'days',x,sn.memo)?' ✎':''}</span><span style="color:#666">${ddayAt(x)}</span>${pc}<b style="margin-left:${pc?'6px':'auto'}">${dur(sn.total||0)}</b></div></div>`;
 }
 function weekKey(plan,ws){const L=wLabelOf(plan,ws);return L!=null?'W'+pad(L):ws} // 프로젝트 셀법 라벨 키 · 범위 밖은 날짜 키
 function weekCard(who,ws){
@@ -1970,9 +2047,9 @@ function snapView(who,d){
  ${snapSheetHTML(d,sn)}
  ${recSecHTML(who,d)}
  <p style="font-size:10px;color:#888;margin:6px 0">반영 ${new Date(sn.at).toLocaleString('ko')}</p>
- <div class="row"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit" ${mine?'':'readonly'}>${esc(sn.memo||'')}</textarea></div>
+ <div class="row"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit">${esc(memoOf(who,'days',d,sn.memo))}</textarea></div>
  <div class="row" style="justify-content:flex-end;gap:6px"><button class="btn" onclick="this.closest('.modal').remove();setDate('${d}');setView('day')">이 날 일간으로</button>${mine?`<button class="btn" onclick="this.closest('.modal').remove();takeSnap('${d}');toast('다시 반영했어');render()">다시 반영</button>`:''}</div>`,
- q=>{if(mine)snapMemoSave('days',d,q('snMemo').value,ym(d));render()});
+ q=>{snapMemoSave('days',d,q('snMemo').value,ym(d),who);render()});
  wideModal();
 }
 function snapWeekSheetHTML(who,ws){
@@ -1992,12 +2069,11 @@ function snapWeekSheetHTML(who,ws){
 }
 function snapViewW(who,ws){
  const wplan=planView(who);const wl=wLabelOf(wplan,ws);const key=weekKey(wplan,ws);
- const mine=who===cfg.person;
- const memo=(snapFileF(who,ym(ws)).data.weeks[key]||{}).memo||'';
+ const memo=memoOf(who,'weeks',key,(snapFileF(who,ym(ws)).data.weeks[key]||{}).memo);
  modal(`<h4 style="margin-bottom:6px">${esc(who)} · 주간 ${wl!=null?'W'+pad(wl):ws.replace(/-/g,'.')+'~'}</h4>
  ${snapWeekSheetHTML(who,ws)}
- <div class="row" style="margin-top:6px"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit" ${mine?'':'readonly'}>${esc(memo)}</textarea></div>`,
- q=>{if(mine)snapMemoSave('weeks',key,q('snMemo').value,ym(ws));render()});
+ <div class="row" style="margin-top:6px"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit">${esc(memo)}</textarea></div>`,
+ q=>{snapMemoSave('weeks',key,q('snMemo').value,ym(ws),who);render()});
  wideModal();
 }
 function snapMonthSheetHTML(who,m){
@@ -2019,12 +2095,11 @@ function snapMonthSheetHTML(who,m){
  <div style="text-align:right;font-weight:800;font-size:16px;margin-top:6px">Total ${dur(tot)}</div></div></div>`;
 }
 function snapViewM(who,m){
- const mine=who===cfg.person;
- const memo=(snapFileF(who,m).data.months[m]||{}).memo||'';
+ const memo=memoOf(who,'months',m,(snapFileF(who,m).data.months[m]||{}).memo);
  modal(`<h4 style="margin-bottom:6px">${esc(who)} · ${m.replace('-','.')} 월간</h4>
  ${snapMonthSheetHTML(who,m)}
- <div class="row" style="margin-top:6px"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit" ${mine?'':'readonly'}>${esc(memo)}</textarea></div>`,
- q=>{if(mine)snapMemoSave('months',m,q('snMemo').value,m);render()});
+ <div class="row" style="margin-top:6px"><label>메모</label><textarea id="snMemo" style="flex:1;border:1px solid #ddd;border-radius:3px;padding:5px;min-height:56px;font:inherit">${esc(memo)}</textarea></div>`,
+ q=>{snapMemoSave('months',m,q('snMemo').value,m,who);render()});
  wideModal();
 }
 /* 칸 = 시트 통째 축소 (feedback4 §9): 700px 로 그려 칸 폭에 맞춰 scale, 위에 클릭 막는 투명 층 */
@@ -4727,6 +4802,7 @@ async function pip(){
 setInterval(()=>{if(run&&pipWin&&!pipWin.closed)pipPaint()},60000);
 /* ---------- 시작 ---------- */
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+pvdMigrate();        // ★ 2026-09-16 (§A-3) — 내 스냅샷의 옛 pd·memo 를 share.json 으로 한 번만
 maybeAutoBaseline(); // 매달 1일 첫 실행 때 기준선 자동 고정
 autoSnapCatchup();   // 반영 자동 모드면 밀린 날을 찍음
 render();
