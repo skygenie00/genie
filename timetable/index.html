@@ -857,6 +857,43 @@ table.mdt td,table.mdt th{white-space:normal;vertical-align:top;min-width:40px}t
 .c2r div.c2r-none{color:var(--c2r-dim);font-size:12px;padding:6px 10px}
 @media (max-width:640px){.c2r .c2r-cols{grid-template-columns:1fr}}
 @container (max-width:640px){.c2r .c2r-cols{grid-template-columns:1fr}}
+/* 9/18 채점결과분석 시안 옮김 (_task_cha2_screen §B-12) — 새 클래스만 더한다 */
+.c2r{--c2r-add:#7a6c9a;--c2r-addb:#eee9f6;--c2r-xs:#d9534f}
+@media (prefers-color-scheme:dark){.c2r{--c2r-add:#b0a3cf;--c2r-addb:#2c2740;--c2r-xs:#e2756f}}
+.c2r .c2r-tag{display:inline-block;font-size:11px;font-weight:700;color:var(--c2r-must);background:var(--c2r-mustb);border-radius:4px;padding:0 3px;margin-right:2px;line-height:1.5;vertical-align:1px}
+.c2r .c2r-tag-y{color:var(--c2r-d);background:var(--c2r-db)}
+.c2r .c2r-tag-h{color:var(--c2r-add);background:none;padding:0}
+.c2r .c2r-tag-m{color:var(--c2r-xs);background:none;padding:0}
+.c2r .c2r-tag-w{color:var(--c2r-dim);background:none;padding:0 1px}
+.c2r .c2r-ek{font-size:11px;color:var(--c2r-dim);font-weight:400;margin-right:2px}
+.c2r .c2r-pj{font-size:11px;font-weight:700;color:var(--c2r-dim);margin-left:2px;white-space:nowrap}
+.c2r .c2r-pj i{font-style:normal}
+.c2r .c2r-pj i.c2r-jo{color:var(--c2r-o)}
+.c2r .c2r-pj i.c2r-jd{color:var(--c2r-d)}
+.c2r .c2r-pj i.c2r-jx{color:var(--c2r-x)}
+.c2r .c2r-src{display:inline-block;font-size:10px;font-weight:600;color:var(--c2r-add);background:var(--c2r-addb);border-radius:8px;padding:0 6px;line-height:1.6;margin-left:4px}
+.c2r .c2r-src:empty{display:none}
+.c2r .c2r-hd .c2r-sc{margin-left:auto;font-weight:700;color:var(--c2r-fg)}
+.c2r .c2r-sl u{text-decoration:none;color:var(--c2r-xs)}
+.c2r li.c2r-sent{color:var(--c2r-dim)}
+.c2r li.c2r-lk{padding:0 0 2px 16px;list-style:none}
+.c2r li.c2r-lk summary{cursor:pointer;font-size:11px;color:var(--c2r-dim);list-style:none;display:inline}
+.c2r li.c2r-lk summary::-webkit-details-marker{display:none}
+.c2r li.c2r-lk div{font-size:11px;padding:2px 0 2px 6px}
+.c2r .c2r-lkbtn{font-size:11px;font-weight:600;color:var(--c2r-dim);border:1px solid var(--c2r-line);border-radius:9px;padding:0 8px;cursor:pointer;margin-left:8px}
+.c2r .c2r-stack{display:flex;flex-direction:column;gap:10px;min-width:0}
+.c2r .c2r-cols.c2r-pair{grid-template-columns:1fr 1fr}
+@media (max-width:640px){.c2r .c2r-cols.c2r-pair{grid-template-columns:1fr}}
+@container (max-width:640px){.c2r .c2r-cols.c2r-pair{grid-template-columns:1fr}}
+.c2r .c2r-bl{color:var(--c2r-must);text-decoration:none;background:var(--c2r-mustb);border-radius:6px;padding:0 6px;margin-right:2px;white-space:nowrap;display:inline-block;line-height:1.7}
+.c2r .c2r-bl small{color:var(--c2r-dim);margin-left:3px}
+/* E-7 — 아이패드(768) 폭에서도 1열. 기존 640 규칙(윗 블록)은 그대로 두고 새 규칙만 더한다 · render_a.py 는 900 */
+@media (max-width:900px){.c2r .c2r-cols,.c2r .c2r-cols.c2r-pair{grid-template-columns:1fr}}
+@container (max-width:900px){.c2r .c2r-cols,.c2r .c2r-cols.c2r-pair{grid-template-columns:1fr}}
+/* ① 점수 표 이름 칸 — render_a.py `.st .who b{display:block}` · 새 규칙만 더한다 */
+.c2r table.c2r-st td:first-child{white-space:nowrap}
+.c2r table.c2r-st td:first-child>b{display:block}
+.c2r table.c2r-st .c2r-src{margin:2px 0 0 0}
 </style>
 </head>
 <body>
@@ -4612,7 +4649,7 @@ function anaSum(md,me){const P=mdParse(md);const sec=P.secs.find(x=>/^요소/.te
   out.push({n:cur.n,text:parts.join(' · ')||(mi>0?'ok':'—'),star:/★/.test(memo)});cur=null};
  sec.lines.forEach(ln=>{const m=ln.match(/^### 설\((\d)\)/);if(m){flush();cur={n:+m[1],t:[]};return}if(cur&&/^\s*\|/.test(ln))cur.t.push(ln)});flush();return out}
 function anaProbFiles(it){const o={};(it.files||[]).forEach(f=>{const m=f.name.match(/^([특상디민])문(\d)\.md$/);if(m)o[ANA_SUBJ[m[1]]+m[2]]=f});return o}
-/* add23 */ /* add2(9/6) — 과목 단위 md(예측 꼴 「<과목>_<사람>.md」 · 「문항별: a / b / c / d」 = 원점수) · 그 밖의 글 md(61회 「글.md」)는 격자 아래 토글 */
+/* add23 */ /* add2(9/6) — 과목 단위 md(예측 꼴 「<과목>_<사람>.md」 · 「문항별: a / b / c / d」 = 채점표 값) · 그 밖의 글 md(61회 「글.md」)는 격자 아래 토글 */
 function anaSubjFiles(it){const o={};(it.files||[]).forEach(f=>{const m=f.name.match(/^(특허|상표|디보|민소)_[^\/]*\.md$/);if(m)o[m[1]]=f});return o}
 function anaExtraFiles(it){const pf=anaProbFiles(it),sf=anaSubjFiles(it);const used=new Set([...Object.values(pf),...Object.values(sf)]);return (it.files||[]).filter(f=>f.kind!=='head'&&f.kind!=='grade'&&!used.has(f))}   /* ★ 9/16 — 채점 JSON(kind grade)은 글 md 가 아니다 */
 function anaQvals(P){const v=String(P.meta['문항별']||'').split('/').map(x=>parseFloat(x.trim()));return v.length===4&&v.every(x=>!isNaN(x))?v:null}
@@ -4621,7 +4658,7 @@ function ana2HTML(it){const me=ANA_ME[it.who]||it.who;const x=examGet(exId(it.no
  /* 격자 */
  const cell=(subj,i)=>{const key=subj+(i+1);const isS=!pf[key]&&!!sf[subj];const f=pf[key]||sf[subj];const mine=x&&x.subj&&x.subj[subj]&&x.subj[subj].q?x.subj[subj].q[i]:null;let md=f?anaNeed(f.path,f.md5):null;let cls='',tag='',sum='',my=null;
   if(f&&md){const P=mdParse(md);
-   if(isS){const qv=anaQvals(P);my=qv?qv[i]:null;cls='pred';tag=`<small class="anapred">예측 · 원점수</small>`;if(mine!=null&&my!=null)tag=`<small class="anapred">예측 ${my} → 실제 ${mine}(${mine-my>=0?'+':''}${r1(mine-my)})</small>`}
+   if(isS){const qv=anaQvals(P);my=qv?qv[i]:null;cls='pred';tag=`<small class="anapred">예측 · 채점표 값</small>`;if(mine!=null&&my!=null)tag=`<small class="anapred">예측 ${my} → 실제 ${mine}(${mine-my>=0?'+':''}${r1(mine-my)})</small>`}
    else{const sc=anaScores(P.title);my=sc[me];const vals=Object.values(sc);
     if(f.pred){cls='pred';tag=`<small class="anapred">예측</small>`;if(mine!=null&&my!=null)tag=`<small class="anapred">예측 ${my} → 실제 ${mine}(${mine-my>=0?'+':''}${r1(mine-my)})</small>`}
     else if(f.kind==='table'&&my!=null&&vals.length>1){if(my>=Math.max(...vals))cls='max';else if(my<=Math.min(...vals))cls='min'}   /* 글 꼴은 점수만(색·요약 없음 · B-4) */
@@ -4631,7 +4668,7 @@ function ana2HTML(it){const me=ANA_ME[it.who]||it.who;const x=examGet(exId(it.no
   const on=ui.ana.prob===key;
   return`<td class="anac ${cls}${f||g2?' has':''}${on?' on':''}" ${f||g2?`onclick="anaUI('prob',ui.ana.prob==='${key}'?'':'${key}')"`:''}><b>${shown!=null?r1(shown):'—'}</b>${tag}${sum?`<div class="anasum">${sum}</div>`:''}</td>`};
  h+=`<div class="extbl"><table class="ext anagrid"><tr><th></th>${[1,2,3,4].map(i=>`<th>문${i}</th>`).join('')}<th>합</th></tr>${EX_S2.map(subj=>{const v=x&&x.subj?x.subj[subj]:null;return`<tr><td>${subj}${subj==='디보'&&!sf[subj]?' <small>(점수만)</small>':''}</td>${[0,1,2,3].map(i=>cell(subj,i)).join('')}<td><b>${v&&exNum(v.score)!=null?r1(exNum(v.score)):'—'}</b></td></tr>`}).join('')}</table></div>
- <p class="exdim">칸 = 내 점수(exam JSON 문제별 · 없으면 md 머리의 내 점수) · <span class="sw max"></span> 5인 중 최대 · <span class="sw min"></span> 최소 · <span class="sw pred"></span> 예측(「원점수」 = 채점표 원점수 · 실점 환산은 md 본문) · 아래 줄 = 요소 표 내 열(${esc(me)})에서 답틀·누락 · ★ 있으면 굵게 · 칸 클릭 → md</p>`;
+ <p class="exdim">칸 = 내 점수(exam JSON 문제별 · 없으면 md 머리의 내 점수) · <span class="sw max"></span> 5인 중 최대 · <span class="sw min"></span> 최소 · <span class="sw pred"></span> 예측(채점표 값 · 실점 환산은 md 본문) · 아래 줄 = 요소 표 내 열(${esc(me)})에서 답틀·누락 · ★ 있으면 굵게 · 칸 클릭 → md</p>`;
  xf.forEach(f=>{const md=anaNeed(f.path,f.md5);h+=md==null?anaLoading():`<div class="anatext">${mdHTML(md,'a2t|'+f.path)}</div>`});   /* 61회 글 꼴 — 격자 아래 md 토글 그대로 */
  const pk=ui.ana.prob;const pfile=pk?(pf[pk]||sf[pk.replace(/\d$/,'')]):null;
  const g2p=pk?anaGrade2(it,pk.replace(/\d$/,''),+pk.slice(-1)):null;   /* ★ 9/16 채점결과분석 §D-2 — 그 문항 v2 레코드가 있으면 cha2ReportEl(마운트는 renderMain) */
@@ -4666,7 +4703,7 @@ function cha2ReportEl(recs,cur,opt){
  const F=v=>(v==null||isNaN(v))?'—':String(Math.round(v*100)/100);
  const root=E('div','c2r');
  if(!recs.length){root.appendChild(E('div','c2r-sub','채점표(v2) 레코드 없음'));return root;}
- const r0=recs[0],ppl=(r0.사람||[]).slice(),multi=ppl.length>1;
+ const r0=recs[0],ppl=(r0.사람||[]).slice(),multi=ppl.length>1,STACK=ppl.length>2;
  const isCur=r=>cur!=null&&String(r.번호)===String(cur);
  const PL=r=>(/^\d+$/.test(String(r.번호))?'문':'')+r.번호;
  const QS=q=>String((q&&(q.라벨||q.제목))||'').replace(/^설문/,'');
@@ -4674,81 +4711,148 @@ function cha2ReportEl(recs,cur,opt){
  const QL=(r,n)=>PL(r)+'-'+(n==='_'?'미배정':QS(qOf(r,n)));
  const RV=t=>({'역적용':'역','역적용형':'역','누락형':'누락','누락':'누락','결론어만':'결론어만','결론어만형':'결론어만','결론어만 기재형':'결론어만'})[String(t||'').trim()]||'답틀';
  const MC=es=>{const c={};(es||[]).forEach(e=>{const k=e.k||'?';c[k]=(c[k]||0)+1;});return ['조','판','사','?'].filter(k=>c[k]).map(k=>k+c[k]).join('');};
- const IN=t=>{const w=E('span');const s=String(t==null?'':t);const rx=/\[\[([^\[\]|#]+)(?:#\^([0-9A-Za-z-]+))?(?:\|([^\]]*))?\]\]|\*\*([^*]+)\*\*/g;let last=0,m;
-  while((m=rx.exec(s))){if(m.index>last)w.appendChild(document.createTextNode(s.slice(last,m.index)));
-   if(m[4]!=null)w.appendChild(E('b','',m[4]));else{const nd=opt.note?opt.note(m[1].trim(),m[2]||'',m[3]||''):null;w.appendChild(nd||E('code','',m[0]));}
+ /* ── 규약 옮김 (render_a.py — `_채점기준.md` 2-4·2-6 정본 구현) ── */
+ const ROMAN=['Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ','Ⅵ','Ⅶ','Ⅷ','Ⅸ','Ⅹ'];
+ const CIRC='⓪①②③④⑤⑥⑦⑧⑨';
+ const JO=t=>String(t==null?'':t).replace(/민사소송법/g,'민소법').replace(/제(\d+)조/g,'$1조').replace(/제(\d)항/g,(m,d)=>CIRC[+d]).replace(/조 ?(?=[①-⑨])/g,'').replace(/제(\d+)호/g,'$1호');
+ const NM=t=>String(t==null?'':t).replace(/\*\*/g,'').replace(/\s+/g,' ').trim();
+ const TX=nd=>((nd.no?nd.no+' ':'')+(nd.t||'')).trim();
+ const TAGC={'판':'c2r-tag','학판검':'c2r-tag c2r-tag-y','#':'c2r-tag c2r-tag-h'};
+ const TAGEL=g=>{const c=TAGC[g];return c?E('span',c,'['+g+']'):null;};   /* 조 는 목차에 안 그린다(2-4) */
+ const HPG=/^\s*(\(\d\)|[ⅰⅱⅲ]\)|\d\))\s*(학설|판례|검토)\s*$/;
+ const LT=(t,top)=>{const s=String(t||'');
+  if(/학판검|학설.*판례.*검토/.test(s))return '학판검';
+  if(/\[대법원|\d{2,4}[다후마카]\d|\(判\)|判例|판례\]|\(판\)|\(판례\)|판례$|판결\]|전원합의체/.test(s))return '판';
+  if(/\d+조|\d+[①-⑩]|민법|민소법|특허법|상표법/.test(s))return '';
+  if(top&&!/문제의 소재|쟁점|사안|결론|해결|소결|논점/.test(s))return '#';
+  return '';};
+ const HAE=(nd,lv)=>{const t=TX(nd),kids=nd.sub||[];
+  if(!lv&&kids.length)return kids.some(k=>HPG.test(TX(k)))?'학판검':'';   /* render_a: 하위가 있으면 [학판검] 아니면 딱지 없음 */
+  if(lv&&HPG.test(t))return '';
+  return LT(t,true);};
+ const IN=(t,j)=>{const w=E('span');const s=String(t==null?'':t);const rx=/\[\[([^\[\]|#]+)(?:#\^([0-9A-Za-z-]+))?(?:\|([^\]]*))?\]\]|\*\*([^*]+)\*\*/g;let last=0,m;
+  const put=x=>{if(x)w.appendChild(document.createTextNode(j?JO(x):x));};
+  while((m=rx.exec(s))){if(m.index>last)put(s.slice(last,m.index));
+   if(m[4]!=null)w.appendChild(E('b','',j?JO(m[4]):m[4]));else{const nd=opt.note?opt.note(m[1].trim(),m[2]||'',m[3]||''):null;w.appendChild(nd||E('code','',m[0]));}
    last=m.index+m[0].length;}
-  if(last<s.length)w.appendChild(document.createTextNode(s.slice(last)));return w;};
- const LN=(ol,nodes,lv,kind,ctx)=>{(nodes||[]).forEach(nd=>{
-   const li=E('li',[lv?'c2r-sub2':'',kind==='목차'&&nd.m==='-'?'c2r-out':''].filter(Boolean).join(' '));if(lv)li.style.paddingLeft=(16*lv)+'px';
-   li.appendChild(IN(((nd.no?nd.no+' ':'')+(nd.t||'')).trim()));
-   if(kind==='해설'&&nd.pts!=null)A(li,' ',E('small','c2r-pt',F(nd.pts)));
-   if(kind==='목차'){if(nd.m==='-')A(li,' ',E('small','','해설 밖'));else A(li,' ',E('span','c2r-chip '+({'O':'c2r-o','△':'c2r-d','X':'c2r-x'}[nd.m]||''),nd.m));if(ctx)ctx.push([nd,li]);}
-   ol.appendChild(li);LN(ol,nd.sub,lv+1,kind,ctx);});};
- const MISS=(sub,es)=>(es||[]).forEach(e=>{const m=A(E('li','c2r-miss'),IN((e.k||'?')+' '+e.t),' — 안 씀 ',E('span','c2r-chip c2r-x','X'));if(opt.chips)(opt.chips(e)||[]).forEach(c=>{if(c)A(m,' ',c);});sub.appendChild(m);});
+  if(last<s.length)put(s.slice(last));return w;};
+ /* 🔗 블록링크 — 한 줄 접힌 토글(B-4) · 동작은 opt.note 가 앱마다 준다(B-5) */
+ const LKLI=lks=>{const li=E('li','c2r-lk'),dt=E('details'),sm=E('summary','','🔗 '+lks.length),dv=E('div');
+  lks.forEach(k=>{const a=opt.note?opt.note(String(k.노트||''),String(k.블록||''),''):null;dv.appendChild(a||E('code','','[['+(k.노트||'')+(k.블록?'#^'+k.블록:'')+']]'));dv.appendChild(document.createTextNode(' '));});
+  dt.appendChild(sm);dt.appendChild(dv);li.appendChild(dt);return li;};
+ /* 사람 열 목차 줄 — 요소 번호(회색) + 갈래 딱지 + 글 + 판정 칩 (B-3·B-8) */
+ const LNT=(ol,nodes,lv,ctx)=>{(nodes||[]).forEach(nd=>{
+   const sent=nd.문장===true,dash=nd.m==='-';
+   const li=E('li',[lv?'c2r-sub2':'',dash?'c2r-out':'',sent?'c2r-sent':''].filter(Boolean).join(' '));if(lv)li.style.paddingLeft=(16*lv)+'px';
+   const ks=nd.요소||[];if(ks.length)A(li,E('span','c2r-ek',ks.map(k=>CIRC[k]||('('+k+')')).join('')),' ');
+   const tg=TAGEL(nd.갈래);if(tg)A(li,tg,' ');
+   li.appendChild(IN(TX(nd),1));
+   if(!sent){if(dash)A(li,' ',E('small','','해설 밖'));else if(nd.m)A(li,' ',E('span','c2r-chip '+({'O':'c2r-o','△':'c2r-d','X':'c2r-x'}[nd.m]||''),nd.m));}
+   if(ctx)ctx.push([nd,li]);
+   ol.appendChild(li);if(nd.링크&&nd.링크.length)ol.appendChild(LKLI(nd.링크));LNT(ol,nd.sub,lv+1,ctx);});};
+ /* 해설 줄 — 글자 판정 딱지 + 줄 끝 사람별 판정/누락 딱지 (B-3·B-7) */
+ const LNH=(ol,nodes,lv,tail)=>{(nodes||[]).forEach(nd=>{
+   const li=E('li',lv?'c2r-sub2':'');if(lv)li.style.paddingLeft=(16*lv)+'px';
+   const tg=TAGEL(HAE(nd,lv));if(tg)A(li,tg,' ');
+   li.appendChild(IN(TX(nd),1));
+   if(nd.pts!=null)A(li,' ',E('small','c2r-pt',F(nd.pts)));
+   if(tail)tail(nd,li);
+   ol.appendChild(li);if(nd.링크&&nd.링크.length)ol.appendChild(LKLI(nd.링크));LNH(ol,nd.sub,lv+1,tail);});};
+ const MISS=(sub,es)=>(es||[]).forEach(e=>{const m=A(E('li','c2r-miss'),E('span','c2r-tag','['+(e.k||'?')+']'),' ',IN(e.t,1),' — 안 씀 ',E('span','c2r-chip c2r-x','X'));if(opt.chips)(opt.chips(e)||[]).forEach(c=>{if(c)A(m,' ',c);});sub.appendChild(m);});
  const ORD=(n,r)=>(r.설문번호||[]).indexOf(n);
+ const SRC=t=>{const s=String(t||'');return /과거문/.test(s)?'과거문 목차':(/복기/.test(s)?'복기':((/자필/.test(s)||/\.pdf/i.test(s))?'자필 답안':''));};
  A(root,A(E('div','c2r-sub'),'채점일 ',E('b','',r0.채점일||'—'),' · 대상 ',E('b','',ppl.join(' · ')||'—'),' · 해설 ',E('b','',(r0.해설||[]).map(h=>h.by).join(' · ')||'—'),' · 자 ',E('b','','채점기준 v2'),' · 원본 ',E('code','',r0.원본||'')));
  /* ① 점수 */
- const S1=A(E('section','c2r-sec c2r-score'),A(E('h2'),E('span','','① 점수'),'원점수 · 문항 아래 설문 줄 = 설(n)(배점)-누락(조n판n사n)-답틀'));
+ const S1=A(E('section','c2r-sec c2r-score'),A(E('h2'),E('span','','① 점수'),'문항 아래 설문 줄 = 설(n)(배점)-누락(조n판n사n)-답틀'));
  const tb=E('table','c2r-st');const hr=E('tr');hr.appendChild(E('th'));let bpT=0;
  recs.forEach(r=>{hr.appendChild(E('th','c2r-n'+(isCur(r)?' c2r-cur':''),PL(r)+' ('+F(r.배점)+')'));bpT+=r.배점||0;});
- hr.appendChild(E('th','c2r-n','합 ('+F(bpT)+')'));tb.appendChild(hr);
- ppl.forEach(p=>{const tr=A(E('tr'),A(E('td'),E('b','',p)));let sum=0,lo=0,hi=0,any=false;
+ hr.appendChild(E('th','c2r-n','예측점수 ('+F(bpT)+')'));tb.appendChild(hr);
+ ppl.forEach(p=>{const tr=A(E('tr'),A(E('td'),E('b','',p),E('span','c2r-src',SRC(Object.values((r0.목차원천||{})[p]||{})[0]))));let pred=0,pany=false,nomok=0;
   recs.forEach(r=>{const td=E('td','c2r-n'+(isCur(r)?' c2r-cur':''));const h=(r.합계||{})[p];td.appendChild(E('b','',h?F(h.점수):'—'));
-   if(h){sum+=h.점수;lo+=h.범위[0];hi+=h.범위[1];any=true;}
+   const pv=(r.예측합||{})[p];if(pv!=null){pred+=pv;pany=true;}
+   nomok+=(r.설문||[]).filter(q=>!q.몫).length;
    const miss=(r.누락||{})[p]||{},dap=(r.답틀||{})[p]||{};
-   (r.설문||[]).forEach(q=>{const d=E('div','c2r-sl','설'+QS(q)+'('+F(q.배점)+')');const mc=MC(miss[q.n]);if(mc)A(d,'-누락('+mc+')');if(dap[q.n])A(d,'-',E('i','','답틀'));td.appendChild(d);});
-   if((miss._||[]).length||dap._){const d=E('div','c2r-sl','설문 미배정');const mc=MC(miss._);if(mc)A(d,'-누락('+mc+')');if(dap._)A(d,'-',E('i','','답틀'));td.appendChild(d);}
+   (r.설문||[]).forEach((q,i)=>{const d=E('div','c2r-sl',(ROMAN[i]||(i+1))+'.설'+QS(q)+'('+F(q.배점)+')');const mc=MC(miss[q.n]);if(mc)A(d,' ',E('u','','누락('+mc+')'));
+    if(dap[q.n]){A(d,' ',E('i','','답틀'));if(dap[q.n].논점이탈)A(d,' ',E('i','','🚨논점 이탈'));}
+    td.appendChild(d);});
+   if((miss._||[]).length||dap._){const d=E('div','c2r-sl','설문 미배정');const mc=MC(miss._);if(mc)A(d,' ',E('u','','누락('+mc+')'));if(dap._)A(d,' ',E('i','','답틀'));td.appendChild(d);}
    tr.appendChild(td);});
-  const tt=E('td','c2r-n c2r-tot',any?F(sum):'—');if(any&&lo!==hi)A(tt,' ',E('span','c2r-rg',F(lo)+'~'+F(hi)));tr.appendChild(tt);tb.appendChild(tr);});
- A(S1,A(E('div','c2r-wrap'),tb),E('div','c2r-tags','누락 = 해설 요소 중 안 쓴 것의 수(조 = 조문·이론 · 판 = 판례 · 사 = 사안 포섭이 틀림 — 반대 방향이거나, 결론은 맞는데 근거가 틀린 것 · ? = 갈래 미정) · 답틀 = 결론이 해설과 반대 · 합 = 설문 값에서 계산'+((r0.문제수&&recs.length<r0.문제수)?' · ⚠ 카드 없는 문제 '+(r0.문제수-recs.length)+'개는 이 표에 없다':'')));
+  const tt=E('td','c2r-n c2r-tot',pany?F(pred):'—');if(nomok)tt.appendChild(E('div','c2r-rg','몫 없음 '+nomok));tr.appendChild(tt);tb.appendChild(tr);});
+ A(S1,A(E('div','c2r-wrap'),tb),E('div','c2r-tags','누락 = 해설 요소 중 안 쓴 것의 수(조 = 조문·이론 · 판 = 판례 · 사 = 사안 포섭이 틀림 — 반대 방향이거나, 결론은 맞는데 근거가 틀린 것 · ? = 갈래 미정) · 답틀 = 결론이 해설과 반대 · 예측점수 = 채점기준 3-3(요소 몫 × 판정 · 천장)'+((r0.문제수&&recs.length<r0.문제수)?' · ⚠ 카드 없는 문제 '+(r0.문제수-recs.length)+'개는 이 표에 없다':'')));
  /* ② 목차 */
  const S2=A(E('section','c2r-sec c2r-toc'),A(E('h2'),E('span','','② 목차'),'해설 목차 — 채점자 · 각자 쓴 목차 그대로 · 나란히'));
+ const lkb=E('b','c2r-lkbtn','🔗 링크 모두 펴기');
+ lkb.addEventListener('click',ev=>{ev.stopPropagation();const on=lkb.dataset.on!=='1';S2.querySelectorAll('li.c2r-lk details').forEach(d=>{d.open=on;});lkb.dataset.on=on?'1':'0';lkb.textContent=on?'🔗 링크 모두 접기':'🔗 링크 모두 펴기';});
+ S2.querySelector('h2').appendChild(lkb);
  recs.filter(r=>cur==null||isCur(r)).forEach(r=>{const Q=r.설문||[];
-  const qh=A(E('div','c2r-q'),PL(r)+(r.제목&&!/^문제 /.test(r.제목)?' '+r.제목:'')+' ',E('small','',F(r.배점)+'점 · '+Q.map(q=>q.라벨+' '+F(q.배점)).join(' · ')));
-  const revs=ppl.map(p=>[p,Object.keys((r.답틀||{})[p]||{})]).filter(x=>x[1].length);
-  if(revs.length)qh.appendChild(E('span','c2r-chip c2r-rev','답틀 '+revs.map(([p,ns])=>p+' '+ns.map(n=>n==='_'?'미배정':'설'+QS(qOf(r,n))).join('·')).join(' / ')));
+  const qh=A(E('div','c2r-q'),PL(r)+(r.제목&&!/^문제 /.test(r.제목)?' '+r.제목:'')+' ',E('small','',F(r.배점)+'점 · '+Q.map((q,i)=>(ROMAN[i]||(i+1))+'.'+q.라벨+' '+F(q.배점)).join(' · ')));
   S2.appendChild(qh);
-  const cols=E('div','c2r-cols');cols.style.setProperty('--c2rn',String(Math.max(1,ppl.length)));
+  const cols=E('div','c2r-cols'+(STACK?' c2r-pair':''));cols.style.setProperty('--c2rn',String(Math.max(1,ppl.length)));
   const hc=E('div','c2r-col c2r-hae');const hd=A(E('div','c2r-hd'),'해설 목차 ',E('small','',F(r.배점)+'점'));hc.appendChild(hd);
+  /* 몫 요소 ↔ 해설 줄 (표시용 · 값엔 안 쓴다 · 못 이으면 안 그린다) */
+  const PMAP={};Q.forEach(q=>{const M={};ppl.forEach(p=>{const e=(q.예측||{})[p];if(!e)return;(e.요소||[]).forEach(x=>{if(x.k==null)return;(M[x.k]=M[x.k]||{t:x.t,j:{}}).j[p]=x.판정||'';});});PMAP[q.n]=M;});
+  const elemOf=(txt,M)=>{const s=NM(txt);if(!s)return null;let hit=null,n=0;
+   Object.keys(M).forEach(k=>{const et=NM(M[k].t);if(!et)return;if(s.indexOf(et)>=0||(et.length>=4&&s.length>=4&&et.indexOf(s)>=0)){hit=k;n++;}});
+   return n===1?hit:null;};
+  const missed={};ppl.forEach(p=>{const mm=(r.누락||{})[p]||{};Object.keys(mm).forEach(n=>(mm[n]||[]).forEach(e=>{const k=NM(e.line||e.t);if(k)(missed[k]=missed[k]||[]).push(p);}));});
+  const misstag=(txt,li)=>{const s=NM(txt);if(!s)return false;const hits=[];
+   Object.keys(missed).forEach(k=>{if(k===s||k.indexOf(s)>=0||s.indexOf(k)>=0)missed[k].forEach(p=>{if(hits.indexOf(p)<0)hits.push(p);});});
+   if(!hits.length)return false;A(li,' ',E('span','c2r-tag c2r-tag-m','[누]'));hits.forEach(p=>A(li,E('span','c2r-tag c2r-tag-w','['+p.slice(0,1)+']')));return true;};
   const H=(r.해설||[]).filter(h=>h&&h.설문);const tg=E('span','c2r-tg');
   H.forEach((h,i)=>{const ol=E('ol','c2r-ol');ol.dataset.by=h.by;if(i)ol.style.display='none';
-   Q.forEach(q=>{const li=A(E('li'),IN(q.제목||q.라벨),E('em','','('+F(q.배점)+'점)'));const sub=E('ol');const ns=(h.설문||{})[q.n];const none=((r.해설없음||{})[h.by]||{})[q.n];
-    if(ns&&ns.length)LN(sub,ns,0,'해설');else sub.appendChild(E('li','c2r-none',none||'(이 설문 해설 목차 없음)'));li.appendChild(sub);ol.appendChild(li);});
+   Q.forEach((q,qi)=>{const li=A(E('li'),IN(q.제목||q.라벨,1),E('em','','('+F(q.배점)+'점)'));const sub=E('ol');const ns=(h.설문||{})[q.n];const none=((r.해설없음||{})[h.by]||{})[q.n];
+    const M=PMAP[q.n]||{};
+    const tail=(nd,el)=>{const k=elemOf(TX(nd),M);
+     if(k!=null&&Object.keys(M[k].j).length){const g=E('span','c2r-pj');g.appendChild(document.createTextNode('['));
+      ppl.forEach((p,pi)=>{const v=M[k].j[p]||'';const c=v==='O'?'c2r-jo':(v==='△'?'c2r-jd':'c2r-jx');
+       if(pi)g.appendChild(document.createTextNode(' '));g.appendChild(E('i',c,p.slice(0,1)+(v==='O'||v==='△'?v:'X')));});
+      g.appendChild(document.createTextNode(']'));A(el,' ',g);return;}
+     misstag(nd.t||'',el);};
+    if(ns&&ns.length)LNH(sub,ns,0,tail);else sub.appendChild(E('li','c2r-none',none||'(이 설문 해설 목차 없음)'));li.appendChild(sub);ol.appendChild(li);});
    hc.appendChild(ol);
    if(H.length>1){const b=E('b',i?'':'on',h.by);b.addEventListener('click',ev=>{ev.stopPropagation();[...tg.children].forEach((x,j)=>x.classList.toggle('on',j===i));[...hc.children].filter(x=>x.tagName==='OL').forEach((o,j)=>{o.style.display=j===i?'':'none';});});tg.appendChild(b);}});
   if(H.length>1)hd.appendChild(tg);
   if(!H.length)hc.appendChild(E('div','c2r-none','해설 콜아웃 없음'));
   cols.appendChild(hc);
-  ppl.forEach(p=>{const pc=E('div','c2r-col');const h=(r.합계||{})[p];pc.appendChild(A(E('div','c2r-hd'),p+' ',E('small','',(h?F(h.점수):'—')+' / '+F(r.배점))));
-   const ol=E('ol','c2r-ol');const M=(r.목차||{})[p]||{},MN=(r.목차없음||{})[p]||{},miss=(r.누락||{})[p]||{},dap=(r.답틀||{})[p]||{},sc=(r.점수||{})[p]||{};
-   Q.forEach(q=>{const s=sc[q.n];const em=E('em','','('+F(q.배점)+'점)'+(s?' · '+F(s.v):''));const li=A(E('li'),q.라벨,em);const sub=E('ol');const ctx=[];
-    if((M[q.n]||[]).length)LN(sub,M[q.n],0,'목차',ctx);else sub.appendChild(E('li','c2r-none',MN[q.n]||'(목차 없음)'));
-    if(dap[q.n]){const chip=E('span','c2r-chip c2r-rev',RV(dap[q.n].유형));chip.title=[dap[q.n].유형,dap[q.n].메모].filter(Boolean).join(' — ');const concl=ctx.filter(([nd])=>/결론|해결/.test(nd.t||'')).pop();if(concl)A(concl[1],' ',chip);else A(em,' ',chip);}
+  const holder=STACK?E('div','c2r-stack'):cols;
+  ppl.forEach(p=>{const pc=E('div','c2r-col');const h=(r.합계||{})[p];const dapp=(r.답틀||{})[p]||{};
+   const hdp=A(E('div','c2r-hd'),p,E('span','c2r-src',SRC(Object.values((r.목차원천||{})[p]||{})[0])));
+   Object.keys(dapp).sort((a,b)=>ORD(a,r)-ORD(b,r)).forEach(n=>{const dv=dapp[n]||{};
+    const c=E('span','c2r-chip c2r-rev','답틀 '+(n==='_'?'미배정':'설'+QS(qOf(r,n))));
+    c.title=[dv.유형,dv.메모].filter(Boolean).join(' — ');hdp.appendChild(c);
+    if(dv.논점이탈)hdp.appendChild(E('span','c2r-chip c2r-rev','🚨 논점 이탈'));});
+   hdp.appendChild(E('small','c2r-sc',(h?F(h.점수):'—')+' / '+F(r.배점)));pc.appendChild(hdp);
+   const ol=E('ol','c2r-ol');const M=(r.목차||{})[p]||{},MN=(r.목차없음||{})[p]||{},miss=(r.누락||{})[p]||{},sc=(r.점수||{})[p]||{};
+   Q.forEach((q,qi)=>{const s=sc[q.n];const pv=((q.예측||{})[p]||{}).값;
+    const em=E('em','','('+F(q.배점)+'점)'+(s?' · '+F(s.v):'')+(pv!=null?' · 예측 '+F(pv):''));
+    const li=A(E('li'),(ROMAN[qi]||(qi+1))+'.'+q.라벨,em);const sub=E('ol');const ctx=[];
+    if((M[q.n]||[]).length)LNT(sub,M[q.n],0,ctx);else sub.appendChild(E('li','c2r-none',MN[q.n]||'(목차 없음)'));
+    if(dapp[q.n]){const chip=E('span','c2r-chip c2r-rev',RV(dapp[q.n].유형));chip.title=[dapp[q.n].유형,dapp[q.n].메모].filter(Boolean).join(' — ');const concl=ctx.filter(([nd])=>/결론|해결/.test(nd.t||'')).pop();if(concl)A(concl[1],' ',chip);else A(em,' ',chip);}
     MISS(sub,miss[q.n]);li.appendChild(sub);ol.appendChild(li);});
-   if((miss._||[]).length||dap._){const sm=E('small','c2r-unq',' (설문을 못 가린 것)');const li=A(E('li','c2r-unq'),'설문 미배정',sm);const sub=E('ol');
-    if(dap._){const chip=E('span','c2r-chip c2r-rev',RV(dap._.유형));chip.title=[dap._.유형,dap._.메모].filter(Boolean).join(' — ');A(sm,' ',chip);}
+   if((miss._||[]).length||dapp._){const sm=E('small','c2r-unq',' (설문을 못 가린 것)');const li=A(E('li','c2r-unq'),'설문 미배정',sm);const sub=E('ol');
+    if(dapp._){const chip=E('span','c2r-chip c2r-rev',RV(dapp._.유형));chip.title=[dapp._.유형,dapp._.메모].filter(Boolean).join(' — ');A(sm,' ',chip);}
     MISS(sub,miss._);li.appendChild(sub);ol.appendChild(li);}
-   pc.appendChild(ol);cols.appendChild(pc);});
+   pc.appendChild(ol);holder.appendChild(pc);});
+  if(STACK)cols.appendChild(holder);
   S2.appendChild(cols);});
- S2.appendChild(E('div','c2r-tags','해설이 둘이면 단추로 번갈아 · 사람 열 = 그 사람이 쓴 목차 그대로(번호·표기 안 바꿈) · 줄 끝 칩 = 해설 요소 대조 판정 · 「안 씀」 = 채점자가 본문까지 읽고 누락으로 판정한 것 · 「해설 밖」 = 배점 0'));
+ S2.appendChild(E('div','c2r-tags','해설이 둘이면 단추로 번갈아 · 사람 열 = 그 사람이 쓴 목차 그대로(번호·표기 안 바꿈) · 줄 앞 ①②… = 몫 줄 요소 번호 · 딱지 [판] [학판검] [#] · 해설 줄 끝 [햄O 꼬△] = 그 요소의 사람별 판정 · 「안 씀」 = 채점자가 본문까지 읽고 누락으로 판정한 것 · 「해설 밖」 = 배점 0'));
  /* ③ 코멘트 */
  const cm=r0.코멘트||{};
  const S3=A(E('section','c2r-sec c2r-cm'),A(E('h2'),E('span','','③ 코멘트'),multi?'사람 비교 · 칸 + 산문':'산문'));
  if(multi){const T=E('table','c2r-cmp');const th=E('tr');th.appendChild(E('th'));ppl.forEach(p=>th.appendChild(E('th','',p)));T.appendChild(th);
   const row=(name,fn)=>{const cells=ppl.map(p=>fn(p));if(!cells.some(c=>c&&c.childNodes.length))return;const tr=A(E('tr'),E('td','',name));cells.forEach(c=>tr.appendChild(c||E('td')));T.appendChild(tr);};
-  row('답틀',p=>{const td=E('td');recs.forEach(r=>Object.keys((r.답틀||{})[p]||{}).sort((a,b)=>ORD(a,r)-ORD(b,r)).forEach(n=>{const d=r.답틀[p][n];if(td.childNodes.length)td.appendChild(E('br'));A(td,E('span','c2r-chip c2r-rev',QL(r,n)),' ',IN([d.유형&&d.유형!=='?'?d.유형:'',d.메모].filter(Boolean).join(' — ')));}));return td;});
+  row('답틀',p=>{const td=E('td');recs.forEach(r=>Object.keys((r.답틀||{})[p]||{}).sort((a,b)=>ORD(a,r)-ORD(b,r)).forEach(n=>{const d=r.답틀[p][n];if(td.childNodes.length)td.appendChild(E('br'));A(td,E('span','c2r-chip c2r-rev',QL(r,n)),' ',IN([d.유형&&d.유형!=='?'?d.유형:'',d.메모].filter(Boolean).join(' — '),1));}));return td;});
   row('누락 (배점 큰 순)',p=>{const td=E('td');const L=[];recs.forEach(r=>Object.keys((r.누락||{})[p]||{}).forEach(n=>(r.누락[p][n]||[]).forEach(e=>L.push([r,n,e]))));
    L.sort((a,b)=>((b[2].pts!=null?b[2].pts:-1)-(a[2].pts!=null?a[2].pts:-1))||((qOf(b[0],b[1]).배점||0)-(qOf(a[0],a[1]).배점||0)));
-   L.forEach(([r,n,e],i)=>{if(i)td.appendChild(document.createTextNode(' · '));const q=qOf(r,n);A(td,QL(r,n)+(q.배점!=null?'('+F(q.배점)+')':'')+' ',IN((e.k||'?')+' '+e.t));if(e.pts!=null)A(td,' ',E('b','',F(e.pts)));});return td;});
-  row('결론어만 (△)',p=>{const td=E('td');recs.forEach(r=>(r.설문||[]).forEach(q=>{const walk=ns=>(ns||[]).forEach(nd=>{if(nd.m==='△'){if(td.childNodes.length)td.appendChild(document.createTextNode(' · '));A(td,QL(r,q.n)+' ',IN(((nd.no?nd.no+' ':'')+(nd.t||'')).trim()));}walk(nd.sub);});walk(((r.목차||{})[p]||{})[q.n]);}));return td;});
+   L.forEach(([r,n,e],i)=>{if(i)td.appendChild(document.createTextNode(' · '));const q=qOf(r,n);A(td,QL(r,n)+(q.배점!=null?'('+F(q.배점)+')':'')+' ',IN((e.k||'?')+' '+e.t,1));if(e.pts!=null)A(td,' ',E('b','',F(e.pts)));});return td;});
+  row('결론어만 (△)',p=>{const td=E('td');recs.forEach(r=>(r.설문||[]).forEach(q=>{const walk=ns=>(ns||[]).forEach(nd=>{if(nd.m==='△'){if(td.childNodes.length)td.appendChild(document.createTextNode(' · '));A(td,QL(r,q.n)+' ',IN(TX(nd),1));}walk(nd.sub);});walk(((r.목차||{})[p]||{})[q.n]);}));return td;});
   const TR=cm.표||{},FIX=['잘된 점','고칠 점','보완 블록 링크'];
-  FIX.concat(Object.keys(TR).filter(k=>FIX.indexOf(k)<0)).forEach(name=>{if(!TR[name])return;row(name,p=>{const td=E('td');String(TR[name][p]||'').split(/<br\s*\/?>/i).forEach((s,i)=>{if(!s)return;if(td.childNodes.length)td.appendChild(E('br'));td.appendChild(IN(s));});return td;});});
+  FIX.concat(Object.keys(TR).filter(k=>FIX.indexOf(k)<0)).forEach(name=>{if(!TR[name])return;row(name,p=>{const td=E('td');String(TR[name][p]||'').split(/<br\s*\/?>/i).forEach((s,i)=>{if(!s)return;if(td.childNodes.length)td.appendChild(E('br'));td.appendChild(IN(s,1));});return td;});});
   S3.appendChild(A(E('div','c2r-wrap'),T));
   const common=[];recs.forEach(r=>{const K={};ppl.forEach(p=>Object.keys((r.누락||{})[p]||{}).forEach(n=>(r.누락[p][n]||[]).forEach(e=>{const k=n+'|'+(e.line||e.t);(K[k]=K[k]||{n:n,e:e,who:{}}).who[p]=1;})));
    Object.keys(K).forEach(k=>{if(Object.keys(K[k].who).length===ppl.length)common.push([r,K[k].n,K[k].e]);});});
   if(common.length){const d=A(E('div','c2r-common'),E('b','','공통 통누락 — 복습 우선'),' ');
-   common.forEach(([r,n,e],i)=>{if(i)d.appendChild(document.createTextNode(' · '));const q=qOf(r,n);A(d,QL(r,n)+(q.배점!=null?'('+F(q.배점)+')':'')+' ',IN(e.line||e.t));if(e.pts!=null)A(d,' ',E('b','',F(e.pts)));});
+   common.forEach(([r,n,e],i)=>{if(i)d.appendChild(document.createTextNode(' · '));const q=qOf(r,n);A(d,QL(r,n)+(q.배점!=null?'('+F(q.배점)+')':'')+' ',IN(e.line||e.t,1));if(e.pts!=null)A(d,' ',E('b','',F(e.pts)));});
    A(d,' ',E('small','','(모든 사람 누락 줄에 같이 있는 요소 — 조판기 판례 레일 「채점 누락」 · 자동중요도 +2 재료)'));S3.appendChild(d);}
  }
  if(cm.산문){const dt=E('details','c2r-prose');dt.appendChild(E('summary','','산문 '+String(cm.산문).split('\n').length+'줄 — 펼치기'));dt.appendChild(opt.md?opt.md(cm.산문):E('pre','',cm.산문));S3.appendChild(dt);}
@@ -4768,7 +4872,7 @@ function anaSum2(r,who){return (r.설문||[]).map(q=>{const es=((r.누락||{})[w
 function anaReportHTML(it,pk,g2){const k='a2r|'+it.id+'|'+pk;C2R_Q[k]={recs:g2.recs,cur:g2.cur.번호};
  return`<div class="anaprob"><div class="ttl anapt"><b>${esc(pk)} · 채점결과분석 <span>${esc(g2.cur.원본||'')}</span></b><div class="r"><button class="btn" onclick="anaUI('prob','')">닫기</button></div></div><div class="c2rmount" data-k="${esc(k)}"></div></div>`}
 function c2rMount(root){(root||document).querySelectorAll('.c2rmount').forEach(n=>{const q=C2R_Q[n.dataset.k];if(!q)return;
- n.replaceWith(cha2ReportEl(q.recs,q.cur,{md:t=>{const d=document.createElement('div');d.className='mdv c2r-md';d.innerHTML=mdBlock(String(t||'').split('\n').map(l=>l.replace(/^#{3,6} /,'### ')),{});return d}}))})}
+ n.replaceWith(cha2ReportEl(q.recs,q.cur,{md:t=>{const d=document.createElement('div');d.className='mdv c2r-md';d.innerHTML=mdBlock(String(t||'').split('\n').map(l=>l.replace(/^#{3,6} /,'### ')),{});return d},note:(f,id)=>{const a=document.createElement('a');a.className='c2r-bl';a.href='obsidian://open?vault=PA%27s%20archive&file='+encodeURIComponent(f)+(id?'%23%5E'+encodeURIComponent(id):'');a.target='_blank';a.rel='noopener';a.title=f+(id?'#^'+id:'');a.textContent=f;return a}}))})}
 /* ---- 시험전략 (add3 · 9/6) — 층(1차/2차) 칩 + 과목 칩 · 고정 절 접힘 · 상단 카드 접힘(ui.stratCard) · 절 기억(ui.stratOpen) ---- */
 const ST_SUBJ=/^(산재|물리|생물|지학|화학|민법|민소|특허|상표|디보)/;
 function stratLayers(md){const L=String(md||'').replace(/\r\n/g,'\n').split('\n');const out=[];let cur=null;L.forEach(ln=>{if(/^# /.test(ln)){cur={lines:[ln]};out.push(cur);return}if(!cur){cur={lines:[]};out.push(cur)}cur.lines.push(ln)});
@@ -4791,7 +4895,7 @@ function stratCard2(P){const sec=P&&P.secs.find(s=>/합격선|진단/.test(s.tit
  const pr=[...txt.matchAll(/(민소|특허|상표|디보)\s+햄찌\s+(≈?\d+(?:\.\d+)?)\s*·\s*꼬까\s+(≈?\d+(?:\.\d+)?)/g)].map(m=>[m[1],m[2],m[3]]);
  const lastCut=cuts.length?cuts[cuts.length-1]:null;const pno=ann[1]||'';
  const sum=[lastCut?`컷 ${lastCut[1]}`:'',my?`${myno[1]?myno[1]+'회 ':''}${my[2]}`:'',pr.length?`${pno?pno+'회 ':''}예측 ${pr.map(p=>`${p[0].slice(0,1)} ${p[1]}/${p[2]}`).join(' · ')}`:''].filter(Boolean).join(' · ')||'2차';
- const body=`<div class="stcard st2"><div><h5>컷 추이</h5><div class="stcuts">${cuts.map(c=>`<span><small>${c[0]}회</small><b>${c[1]}</b></span>`).join('')}${ann[1]?`<span><small>${ann[1]}회</small><b>${esc(ann[2])} 발표</b></span>`:''}</div></div>${my?`<div><h5>${myno[1]?myno[1]+'회 ':''}${esc(myno[2]||'')}</h5><p>컷 ${my[1]} 에 <b class="stneg">${my[2]}</b></p></div>`:''}${pr.length?`<div><h5>${pno?pno+'회 ':''}예측 <small>원점수(채점표)</small></h5><table class="ext stpred"><tr><th></th><th>햄찌</th><th>꼬까</th></tr>${pr.map(p=>`<tr><td>${p[0]}</td><td>${p[1]}</td><td>${p[2]}</td></tr>`).join('')}</table></div>`:''}</div>`;
+ const body=`<div class="stcard st2"><div><h5>컷 추이</h5><div class="stcuts">${cuts.map(c=>`<span><small>${c[0]}회</small><b>${c[1]}</b></span>`).join('')}${ann[1]?`<span><small>${ann[1]}회</small><b>${esc(ann[2])} 발표</b></span>`:''}</div></div>${my?`<div><h5>${myno[1]?myno[1]+'회 ':''}${esc(myno[2]||'')}</h5><p>컷 ${my[1]} 에 <b class="stneg">${my[2]}</b></p></div>`:''}${pr.length?`<div><h5>${pno?pno+'회 ':''}예측 <small>채점표 값</small></h5><table class="ext stpred"><tr><th></th><th>햄찌</th><th>꼬까</th></tr>${pr.map(p=>`<tr><td>${p[0]}</td><td>${p[1]}</td><td>${p[2]}</td></tr>`).join('')}</table></div>`:''}</div>`;
  return{sum,body}}
 function stratHTML(){const idx=anaIdx();const path='exam/strategy.md';const md=idx.strategy?anaNeed(path):anaText(path);
  const nx=nextExam();const defCha=nx&&/2차/.test(nx.name||'')?2:1;const cha=ui.stratCha||defCha;ui.stratOpen=ui.stratOpen||{};
