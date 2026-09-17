@@ -4757,7 +4757,8 @@ function cha2ReportEl(recs,cur,opt){
 /* ★ 9/16 채점결과분석 — tt 연결부(jopangi/_task_cha2_report.md §D-2): exam/analysis/<회>-2/채점_<과목>.json(kind grade · analysis_sync 가 ⚙ 산출을 복사)에
    그 문항의 v2 레코드가 있으면 조판기 채점 탭과 같은 cha2ReportEl 로 그리고, 격자 칸 요약 줄은 v2 누락·답틀로 · v2 가 없으면 종전 화면 그대로 */
 const C2R_Q={};
-function anaGrade2(it,subj,q){const f=(it.files||[]).find(x=>x.kind==='grade'&&x.name==='채점_'+subj+'.json');if(!f)return null;const G=anaJSON(f.path);if(!G||typeof G!=='object')return null;
+function anaGrade2(it,subj,q){const f=(anaIdx().grades||[]).find(x=>x.no===it.no&&x.cha===2&&x.subj===subj);if(!f)return null;   /* ★ 9/17 — 채점 JSON 항목 = index 최상위 grades[](items[].files[] 에 두면 새로고침 안 된 옛 앱이 JSON 을 글 md 로 그린다) */
+ const c=loadF(f.path,null);if(c.data==null||c.sha!==f.md5){anaFetch(f.path,f.md5);return null}let G=c.data;if(typeof G==='string'){try{G=JSON.parse(G)}catch(e){return null}}if(!G||typeof G!=='object')return null;   /* md5 로 받는다 — 캐시 sha ≠ index md5(9/16 판이 sha 없이 담은 캐시 포함)면 다시 받고 그동안 종전 화면 */
  const R=[];Object.keys(G).forEach(k=>{if(k==='_meta')return;((G[k]||{}).회차||[]).forEach(r=>{const m=/^2차\d{2}-(\d+)-(\d+)$/.exec((r&&r.기출)||'');if(r&&r.v===2&&m&&+m[1]===+it.no&&(r.사람||[]).indexOf(it.who)>=0)R.push(r)})});
  if(!R.length)return null;const last=R.reduce((a,r)=>(r.채점일||'')>(a.채점일||'')?r:a,R[0]);
  const recs=R.filter(r=>r.원본===last.원본&&r.채점일===last.채점일).sort((a,b)=>(a.차례||0)-(b.차례||0));
