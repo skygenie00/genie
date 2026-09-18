@@ -3458,6 +3458,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         <span class="text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">ID ${q.id}</span>
                         <span class="text-[10px] font-extrabold text-blue-700">${q.displayNo ?? q.probNum}${escHtml(q.subNum || '')}번</span>
                         <span class="text-[10px] font-bold text-indigo-700">${escHtml(where)}</span>
+                        ${(kind === 'geunge' && !on) ? useNumHTML('geunge', q.id, '', '↩') : ''}
                         ${on ? '<span class="text-[10px] font-bold text-green-700">이미 넣음</span>' : ''}
                     </div>
                     <div class="text-[12px] text-gray-800">${escHtml(String(q.q || '')).slice(0, 70)}…</div>
@@ -4167,7 +4168,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             return cs.map((c, n) => `<div class="flex gap-1.5 py-1 border-b border-dashed border-gray-100 text-[12px] text-slate-700"${del ? ` data-ck="${escAttr(String(c.k || n))}" data-gk="${escAttr(String(gk))}" data-guid="${escAttr(String(guid))}"` : ''}>
                 <span class="text-[10px] font-bold text-gray-400 whitespace-nowrap pt-0.5">${ggMD(c.ts)}</span>
                 <span class="whitespace-pre-wrap">${escHtml(c.t || '')}</span>
-                ${del ? `<button type="button" onclick="ggCsDel(this)" class="ml-auto flex-none self-start text-[11px] font-bold text-red-700 hover:underline">지우기</button>` : ''}
+                ${del ? `<button type="button" onclick="ggCsEdit(this)" class="ml-auto flex-none self-start text-[11px] font-bold text-blue-600 hover:underline">고치기</button><button type="button" onclick="ggCsDel(this)" class="flex-none self-start text-[11px] font-bold text-red-700 hover:underline">지우기</button>` : ''}
             </div>`).join('');
         }
         /* [댓글 지우기] — 근거 지우기(`ggDel`)가 되묻으므로 **같게** 되묻는다(§C-2).
@@ -4207,6 +4208,68 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 if (b) b.innerHTML = ggCsHTML(g.cs, gk, uid);
             });
             ggBoxRefresh(uid, sc);
+        }
+        /* ★ 2026-09-18 (_task_ox_cs_edit_usecount §A) — 댓글 「고치기」. 그 줄의 글 칸을 편집 칸(근거 고치기 칸 gg-edit 과 같은 꼴)으로 바꾸고
+           저장하면 **그 댓글 t 만** 바꾼다(ts·k·본문·ok·bang·다른 댓글·연결 무변 — ggRefEditSave 가 댓글 t 를 고치는 자리와 같다).
+           Enter 저장 · Shift+Enter 줄바꿈 · Esc 취소(창 닫기 Esc 로 안 번진다) · 빈 글은 저장 안 됨(칸 빨강 · 그대로) ·
+           한도 = 댓글 GG_CMAX(id 가 gg-cin- 로 시작해 ggMaxOf 가 댓글 한도로 잰다) · 「연결한 근거」 상자 댓글 줄은 del 이 없어 단추도 없다(A-4). */
+        function ggCsCtx(el) {
+            const row = el && el.closest ? el.closest('[data-ck]') : null;
+            const box = el && el.closest ? el.closest(GG_SCOPES.map(s => `[id^="${s}gg-box-"]`).join(',')) : null;
+            if (!row || !box) return null;
+            const at = box.id.indexOf('gg-box-');
+            return { row: row, sc: box.id.slice(0, at), uid: box.id.slice(at + 'gg-box-'.length), gk: row.getAttribute('data-gk'), ck: row.getAttribute('data-ck') };
+        }
+        function ggCsEdit(el) {
+            const x = ggCsCtx(el);
+            if (!x) return;
+            const g = ggItem(x.uid, x.gk), c = g ? ggCsOf(g, x.ck) : null;
+            if (!g || !c || x.row.querySelector('textarea')) return;
+            [...x.row.children].slice(1).forEach(n => n.remove());   /* 날짜만 남기고 글·단추를 걷는다 */
+            const w = document.createElement('div');
+            w.className = 'flex-1 flex gap-1.5 items-start';
+            w.innerHTML = `<textarea id="${x.sc}gg-cin-${x.uid}-${x.gk}-ed-${escAttr(String(x.ck))}" rows="2" autocomplete="off" onkeydown="ggCsEditKey(event,this)" oninput="ggFit(this)" style="resize:none;overflow:hidden"`
+                + ` class="flex-1 border border-blue-300 rounded-lg px-2 py-1 text-[12.5px] outline-none focus:border-blue-500"></textarea>`
+                + `<button type="button" onclick="ggCsEditSave(this)" class="flex-none text-[11px] font-bold text-white bg-blue-600 border border-blue-600 rounded-md px-2.5 py-1">저장</button>`
+                + `<button type="button" onclick="ggCsEditCancel(this)" class="flex-none text-[11px] font-bold text-slate-600 bg-white border border-slate-300 rounded-md px-2.5 py-1">취소</button>`;
+            x.row.appendChild(w);
+            const ta = w.querySelector('textarea');
+            ta.value = c.t || '';
+            ggFit(ta);
+            ta.focus();
+        }
+        function ggCsEditKey(e, ta) {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ggCsEditSave(ta); }
+            else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); ggCsEditCancel(ta); }
+        }
+        function ggCsRepaint(uid, gk) {
+            const g = ggItem(uid, gk);
+            GG_SCOPES.forEach(s => {
+                const b = document.getElementById(`${s}gg-cs-${uid}-${gk}`);
+                if (b) b.innerHTML = ggCsHTML(g ? g.cs : [], gk, uid);
+            });
+        }
+        function ggCsEditCancel(el) {
+            const x = ggCsCtx(el);
+            if (x) ggCsRepaint(x.uid, x.gk);
+        }
+        function ggCsEditSave(el) {
+            const x = ggCsCtx(el);
+            if (!x) return;
+            const ta = x.row.querySelector('textarea');
+            if (!ta) return;
+            const t = String(ta.value || '').trim();
+            if (!t) { ta.style.borderColor = '#dc2626'; ta.focus(); return; }   /* 인라인 — focus:border-blue-500 클래스보다 앞선다 */
+            if (!ggLimitOk(ta, t, GG_CMAX)) return;
+            const list = ggOf(x.uid);
+            const g = list.find(y => y && y.k === x.gk);
+            const c = g ? ggCsOf(g, x.ck) : null;
+            if (!c) return;
+            c.t = t;
+            ggSaveList(x.uid, list);
+            ggCsRepaint(x.uid, x.gk);
+            ggBoxRefresh(x.uid, x.sc);
+            ggRefOwnersRepaint(x.uid);
         }
         function ggPanelHTML(uid, g, sc = '') {
             /* ★ 2026-09-16 (§B) — 머리줄 맨 앞에 「!」 · 켜지면 판이 연한 빨강 + 왼쪽 빨간 실선 */
@@ -5078,11 +5141,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 + ';cursor:pointer;display:inline-block;padding:6px 4px;margin:-6px 0 -6px -1px';
         }
         /* 칩 옆 숫자. 칩 본체의 onclick 을 가로채지 않는다(stopPropagation). */
-        function useNumHTML(kind, uid, me) {
+        function useNumHTML(kind, uid, me, pre) {   /* ★ 2026-09-18 (_task_ox_cs_edit_usecount §B) — pre = 숫자 앞 글자(근거 찾기 결과 줄 「↩」) · 안 주면 옛 출력 그대로 */
             const n = useCount(kind, uid);
             if (n <= 1) return '';
             return '<i onclick="event.stopPropagation();useWin(\'' + escAttr(kind) + '\',\'' + escAttr(String(uid)) + '\',\'' + escAttr(String(me || '')) + '\')"'
-                + ' title="이 ' + (USE_LABEL[kind] || '') + '를 쓰는 문항 ' + n + '" style="' + useNumStyle(n) + '">' + n + '</i>';
+                + ' title="이 ' + (USE_LABEL[kind] || '') + '를 쓰는 문항 ' + n + '" style="' + useNumStyle(n) + '">' + (pre || '') + n + '</i>';
         }
         /* 라벨 옆 수 — `근거 ↩4 :` 꼴. 자기 UID 로 조회한다(§0). */
         function useLabelHTML(kind, uid) {
@@ -7327,6 +7390,68 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     if (p) p.remove();
     V.refPop = null;
   }
+  /* ★ 2026-09-18 (_task_ox_cs_edit_usecount §C·§F) — 한 자리(rc = resolveSlot 뒤 doc·page·r)를 찍어 둔 **다른** 문항들.
+     셈은 paint() 의 byBox 와 글자 그대로 같다 — resolveSlot · 같은 doc·page(엄격 비교) · r×1e4 반올림 키 · 나(uid)는 뺀다 · qid 는 하나만.
+     kind = 그 레코드에 ref 가 없으면 'orig'(처음 찍은 문항) · 있으면 'ref'(🔗 로 같이 쓰는 문항). 저장소 무접촉(읽기만). */
+  function slotKey(r) { return (r || []).map(function (n) { return Math.round(n * 1e4); }).join(','); }
+  function slotUsers(uid, rc) {
+    if (!rc || !rc.r || rc.r.length !== 4) return [];
+    var key = slotKey(rc.r), seen = {}, out = [];
+    coordsFlat(coords()).forEach(function (o) {
+      if (o.qid === uid || seen[o.qid]) return;
+      var oc = resolveSlot(o.c);
+      if (!oc || !oc.r || oc.r.length !== 4 || oc.doc !== rc.doc || oc.page !== rc.page || slotKey(oc.r) !== key) return;
+      seen[o.qid] = 1;
+      out.push({ qid: o.qid, c: o.c, rc: oc, kind: (o.c && o.c.ref && o.c.ref.qid) ? 'ref' : 'orig' });
+    });
+    return out;
+  }
+  /* 문항 이름 — qPreview(화면에 그려진 지문)가 없으면 quizData 지문 · 그것도 없으면 id */
+  function slotQName(qid, n) {
+    var t = qPreview(qid);
+    if (!t) {
+      var qs = (typeof quizData !== 'undefined' && quizData) ? quizData : [];
+      for (var i = 0; i < qs.length; i++) { if (String(qs[i].id) === String(qid)) { t = String(qs[i].q || ''); break; } }
+    }
+    return String(t || qid).replace(/\s+/g, ' ').trim().slice(0, n || 14);
+  }
+  /* 「↩ n」 — 카드 ↩ 칩과 같은 색·크기(useNumStyle · 5↑ 빨강) · 0 이면 '' · 누르면 목록 창(§F) · 둘레 클릭으로 안 번진다 */
+  function slotNumHTML(uid, rc) {
+    var us = slotUsers(uid, rc), n = us.length;
+    if (!n) return '';
+    var names = us.map(function (x) { return slotQName(x.qid, 14); });
+    var call = "slotWin('" + esc(uid) + "','" + esc(rc.doc) + "'," + (rc.page == null ? 'null' : (+rc.page)) + ",'" + rc.r.join(',') + "')";
+    return '<i style="' + useNumStyle(n) + '" title="' + esc('이 자리를 찍어 둔 문항 ' + n + ' — ' + names.join(' · ')) + '"'
+      + ' onclick="event.stopPropagation();' + call + '">↩' + n + '</i>';
+  }
+  /* 목록 창 — oxWinOpen 그대로(새 창틀 없음) · 맨 위 = 지금 문항(노랑 · 클릭 없음) · 줄 = ID · N번 · 지문 앞 40자 · 원본/🔗 같이 씀 · 줄 클릭 = 그 문항 팝업 */
+  function slotWin(uid, doc, page, rs) {
+    var rc = { doc: doc, page: page, r: String(rs || '').split(',').map(Number) };
+    if (rc.r.length !== 4 || rc.r.some(function (x) { return isNaN(x); })) return;
+    var us = slotUsers(uid, rc), n = us.length;
+    var dm = docs()[doc] || {};
+    var qs = (typeof quizData !== 'undefined' && quizData) ? quizData : [];
+    var row = function (qid, tail, me) {
+      var q = null;
+      for (var i = 0; i < qs.length; i++) { if (String(qs[i].id) === String(qid)) { q = qs[i]; break; } }
+      var no = q ? String(q.displayNo != null ? q.displayNo : (q.probNum != null ? q.probNum : '')) + String(q.subNum || '') : '';
+      return '<div' + (me ? '' : ' onclick="openQPopup(\'' + esc(qid) + '\')"')
+        + ' style="display:flex;gap:6px;align-items:center;padding:6px 10px;border-bottom:1px solid #f3f4f6;font-size:12px;' + (me ? 'background:#fefce8' : 'cursor:pointer') + '">'
+        + '<span style="flex:none;font-size:10px;font-weight:700;color:#6b7280;background:' + (me ? '#fff' : '#f9fafb') + ';border:1px solid #e5e7eb;padding:1px 6px;border-radius:4px">ID ' + esc(qid) + '</span>'
+        + (no ? '<span style="flex:none;font-size:10px;font-weight:800;color:#1d4ed8">' + esc(no) + '번</span>' : '')
+        + '<span style="flex:1;min-width:0;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(slotQName(qid, 40)) + '</span>'
+        + tail + '</div>';
+    };
+    var body = row(uid, '<span style="flex:none;font-size:10px;color:#a16207;font-weight:700">지금 문항</span>', true)
+      + us.map(function (x) {
+          return row(x.qid, x.kind === 'ref'
+            ? '<span style="flex:none;font-size:10px;color:#7c3aed;font-weight:700">🔗 같이 씀</span>'
+            : '<span style="flex:none;font-size:10px;color:#6b7280">원본</span>', false);
+        }).join('');
+    oxWinOpen('slotuse-' + String(uid).replace(/[^A-Za-z0-9]/g, '_') + '-' + slotKey(rc.r).replace(/[^0-9]/g, '_'),
+      '📍 이 자리를 찍어 둔 문항 ' + n, esc((dm.name || doc || '') + ' ' + (page || 1) + '쪽'), body, 360);
+  }
+
   function refPopOpen(g) {
     if (!V || !V.layer || !g || !g.list.length) return;
     refPopClose();
@@ -7340,11 +7465,13 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       'box-shadow:0 6px 18px rgba(0,0,0,.18);width:250px;pointer-events:auto;z-index:8',
       '<b style="display:block;color:#6d28d9;margin-bottom:3px">' + head + '</b>' +
       '<div style="color:#4b5563;line-height:1.45;max-height:2.9em;overflow:hidden">' + line + '</div>' +
-      '<div style="display:flex;gap:6px;margin-top:7px">' +
+      '<div style="display:flex;gap:6px;margin-top:7px;align-items:center">' +
       '<button type="button" id="cd-refgo" style="white-space:nowrap;background:#7c3aed;color:#fff;border:0;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">이 문항에도 쓰기 🔗</button>' +
+      slotNumHTML(V.qid, it.rc) +                     /* ★ 2026-09-18 (_task_ox_cs_edit_usecount §D) — 이 자리를 찍어 둔 문항 수 */
       '<button type="button" id="cd-refno" style="white-space:nowrap;background:#f9fafb;color:#4b5563;border:1px solid #d1d5db;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">여기서 새로 찍기</button>' +
       '</div>');
     pop.id = 'cd-refpop';
+    pop._g = g;                                       /* ★ 9/18 cs_edit_usecount — 검산용(이 팝업의 상자 그룹 · D-4 가 slotUsers 와 맞댄다) */
     pop.onpointerdown = function (e) { e.stopPropagation(); };
     V.layer.appendChild(pop);
     V.refPop = true;                                  /* 떠 있는 동안 드래그 시작 안 함(§B-3) */
@@ -8351,6 +8478,18 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     var img = box.querySelector('.mbbpic-img');
     var chip = box.querySelector('.mbbpic-chip');
     if (chip) chip.textContent = '자리 ' + (i + 1) + ' / ' + arr.length + ' ▶';
+    /* ★ 2026-09-18 (_task_ox_cs_edit_usecount §E) — 지금 보는 자리를 찍어 둔 다른 문항 수 「↩ n」 · 칩 다음 형제(칩 없는 한 자리 그림은 아랫줄을 새로) · 0 이면 없음 */
+    var useH = slotNumHTML(uid, rc), use = box.querySelector('.mbbpic-use');
+    if (useH && !use) {
+      use = document.createElement('span'); use.className = 'mbbpic-use'; use.style.marginLeft = '6px';
+      if (chip) chip.parentNode.insertBefore(use, chip.nextSibling);
+      else {
+        var nav1 = document.createElement('div'); nav1.className = 'mbbpic-nav';
+        nav1.style.cssText = 'padding:3px 6px;border-top:1px solid #f1f5f9;background:#f9fafb';
+        nav1.appendChild(use); box.appendChild(nav1);
+      }
+    }
+    if (use) use.innerHTML = useH;
     box.onclick = function (e) {
       if (e.target && e.target.classList && e.target.classList.contains('mbbpic-chip')) {
         box.setAttribute('data-mbbi', String((i + 1) % arr.length));
@@ -9261,7 +9400,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   window.oxCoord = { open: openViewer, coords: coords, coordsOf: coordsOf, docs: docs, crop: crop,
                      resolveSlot: resolveSlot,
                      slotName: slotName, isBookDoc: isBookDoc, slotsForDoc: slotsForDoc,
-                     omrSlots: omrSlots, isBookDoc: isBookDoc, pinState: pinState };
+                     omrSlots: omrSlots, isBookDoc: isBookDoc, pinState: pinState,
+                     slotUsers: slotUsers, slotNumHTML: slotNumHTML };   /* ★ 9/18 cs_edit_usecount — 검산용 */
+  window.slotWin = slotWin;                           /* 「↩ n」 onclick 이 부른다 */
 })();
 </script>
 
