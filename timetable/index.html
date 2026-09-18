@@ -874,10 +874,10 @@ table.mdt td,table.mdt th{white-space:normal;vertical-align:top;min-width:40px}t
 .c2r .c2r-hd .c2r-sc{margin-left:auto;font-weight:700;color:var(--c2r-fg)}
 .c2r .c2r-sl u{text-decoration:none;color:var(--c2r-xs)}
 .c2r li.c2r-sent{color:var(--c2r-dim)}
-.c2r li.c2r-lk{padding:0 0 2px 16px;list-style:none}
-.c2r li.c2r-lk summary{cursor:pointer;font-size:11px;color:var(--c2r-dim);list-style:none;display:inline}
-.c2r li.c2r-lk summary::-webkit-details-marker{display:none}
-.c2r li.c2r-lk div{font-size:11px;padding:2px 0 2px 6px}
+/* 9/18 add2 — 🔗 = 목차 줄 끝 인라인 칩 · 펼친 목록은 그 줄 안(li.c2r-lk 줄은 없앰) */
+.c2r .c2r-lkb{display:inline-block;margin-left:6px;font-size:11px;color:var(--c2r-dim);cursor:pointer;font-weight:400}
+.c2r .c2r-lkb:hover{text-decoration:underline}
+.c2r ul.c2r-lkl{margin:2px 0 4px 16px;padding:0;list-style:none;font-size:12px}
 .c2r .c2r-lkbtn{font-size:11px;font-weight:600;color:var(--c2r-dim);border:1px solid var(--c2r-line);border-radius:9px;padding:0 8px;cursor:pointer;margin-left:8px}
 .c2r .c2r-stack{display:flex;flex-direction:column;gap:10px;min-width:0}
 .c2r .c2r-cols.c2r-pair{grid-template-columns:1fr 1fr}
@@ -4753,10 +4753,11 @@ function cha2ReportEl(recs,cur,opt){
    if(m[4]!=null)w.appendChild(E('b','',j?JO(m[4]):m[4]));else{const nd=opt.note?opt.note(m[1].trim(),m[2]||'',m[3]||''):null;w.appendChild(nd||E('code','',m[0]));}
    last=m.index+m[0].length;}
   if(last<s.length)put(s.slice(last));return w;};
- /* 🔗 블록링크 — 한 줄 접힌 토글(B-4) · 동작은 opt.note 가 앱마다 준다(B-5) */
- const LKLI=lks=>{const li=E('li','c2r-lk'),dt=E('details'),sm=E('summary','','🔗 '+lks.length),dv=E('div');
-  lks.forEach(k=>{const a=opt.note?opt.note(String(k.노트||''),String(k.블록||''),''):null;dv.appendChild(a||E('code','','[['+(k.노트||'')+(k.블록?'#^'+k.블록:'')+']]'));dv.appendChild(document.createTextNode(' '));});
-  dt.appendChild(sm);dt.appendChild(dv);li.appendChild(dt);return li;};
+ /* 🔗 블록링크 — 목차 줄 끝 인라인 칩 + 그 줄 안 펼친 목록(add2 B-1 · 9/18 사용자 「목차 큰 그림이 한눈에」) · 동작은 opt.note 가 앱마다 준다(B-5) */
+ const LKIN=(li,lks)=>{const b=E('span','c2r-lkb','🔗 '+lks.length),ul=E('ul','c2r-lkl');ul.style.display='none';
+  lks.forEach(k=>{const a=opt.note?opt.note(String(k.노트||''),String(k.블록||''),''):null;ul.appendChild(A(E('li'),a||E('code','','[['+(k.노트||'')+(k.블록?'#^'+k.블록:'')+']]')));});
+  b.addEventListener('click',ev=>{ev.stopPropagation();ul.style.display=ul.style.display==='none'?'block':'none';});
+  A(li,' ',b,ul);};
  /* 사람 열 목차 줄 — 쓴 번호 + 갈래 딱지 + 글 + 판정 칩 (B-3·B-8 · add1 B-8: 요소 번호 ①② 는 안 그린다 · B-9: 번호 → 딱지 → 글) */
  const LNT=(ol,nodes,lv,ctx)=>{(nodes||[]).forEach(nd=>{
    const sent=nd.문장===true,dash=nd.m==='-';
@@ -4765,7 +4766,8 @@ function cha2ReportEl(recs,cur,opt){
    li.appendChild(IN(TT(nd),1));
    if(!sent){if(dash)A(li,' ',E('small','','해설 밖'));else if(nd.m)A(li,' ',E('span','c2r-chip '+({'O':'c2r-o','△':'c2r-d','X':'c2r-x'}[nd.m]||''),nd.m));}
    if(ctx)ctx.push([nd,li]);
-   ol.appendChild(li);if(nd.링크&&nd.링크.length)ol.appendChild(LKLI(nd.링크));LNT(ol,nd.sub,lv+1,ctx);});};
+   if(nd.링크&&nd.링크.length)LKIN(li,nd.링크);
+   ol.appendChild(li);LNT(ol,nd.sub,lv+1,ctx);});};
  /* 해설 줄 — 글자 판정 딱지 + 줄 끝 사람별 판정/누락 딱지 (B-3·B-7 · add1 B-9: 번호 → 딱지 → 글) */
  const LNH=(ol,nodes,lv,tail)=>{(nodes||[]).forEach(nd=>{
    const li=E('li',lv?'c2r-sub2':'');if(lv)li.style.paddingLeft=(16*lv)+'px';
@@ -4773,7 +4775,8 @@ function cha2ReportEl(recs,cur,opt){
    li.appendChild(IN(TT(nd),1));
    if(nd.pts!=null)A(li,' ',E('small','c2r-pt',F(nd.pts)));
    if(tail)tail(nd,li);
-   ol.appendChild(li);if(nd.링크&&nd.링크.length)ol.appendChild(LKLI(nd.링크));LNH(ol,nd.sub,lv+1,tail);});};
+   if(nd.링크&&nd.링크.length)LKIN(li,nd.링크);
+   ol.appendChild(li);LNH(ol,nd.sub,lv+1,tail);});};
  const MISS=(sub,es)=>(es||[]).forEach(e=>{const m=A(E('li','c2r-miss'),E('b','','누락'),' ',E('span','c2r-tag','['+(e.k||'?')+']'),' ',IN(e.t,1));if(opt.chips)(opt.chips(e)||[]).forEach(c=>{if(c)A(m,' ',c);});sub.appendChild(m);});
  const ORD=(n,r)=>(r.설문번호||[]).indexOf(n);
  const SRC=t=>{const s=String(t||'');return /과거문/.test(s)?'과거문 목차':(/복기/.test(s)?'복기':((/자필/.test(s)||/\.pdf/i.test(s))?'자필 답안':''));};
@@ -4798,7 +4801,7 @@ function cha2ReportEl(recs,cur,opt){
  /* ② 목차 */
  const S2=A(E('section','c2r-sec c2r-toc'),A(E('h2'),E('span','','② 목차'),'해설 목차 — 채점자 · 각자 쓴 목차 그대로 · 나란히'));
  const lkb=E('b','c2r-lkbtn','🔗 링크 모두 펴기');
- lkb.addEventListener('click',ev=>{ev.stopPropagation();const on=lkb.dataset.on!=='1';S2.querySelectorAll('li.c2r-lk details').forEach(d=>{d.open=on;});lkb.dataset.on=on?'1':'0';lkb.textContent=on?'🔗 링크 모두 접기':'🔗 링크 모두 펴기';});
+ lkb.addEventListener('click',ev=>{ev.stopPropagation();const on=lkb.dataset.on!=='1';S2.querySelectorAll('ul.c2r-lkl').forEach(u=>{u.style.display=on?'block':'none';});lkb.dataset.on=on?'1':'0';lkb.textContent=on?'🔗 링크 모두 접기':'🔗 링크 모두 펴기';});
  S2.querySelector('h2').appendChild(lkb);
  recs.filter(r=>cur==null||isCur(r)).forEach(r=>{const Q=r.설문||[];
   const qh=A(E('div','c2r-q'),PL(r)+(r.제목&&!/^문제 /.test(r.제목)?' '+r.제목:'')+' ',E('small','',F(r.배점)+'점 · '+Q.map((q,i)=>(ROMAN[i]||(i+1))+'.'+q.라벨+' '+F(q.배점)).join(' · ')));
@@ -4843,7 +4846,7 @@ function cha2ReportEl(recs,cur,opt){
     const em=E('em','','('+F(q.배점)+'점)'+(pv!=null?' · 예측 '+F(pv):''));   /* add1 B-2 — 채점표 눈금 값은 안 그린다 */
     const li=A(E('li'),(ROMAN[qi]||(qi+1))+'.'+q.라벨,em);const sub=E('ol');const ctx=[];
     if((M[q.n]||[]).length)LNT(sub,M[q.n],0,ctx);else sub.appendChild(E('li','c2r-none',MN[q.n]||'(목차 없음)'));
-    if(dapp[q.n]){const chip=E('span','c2r-chip c2r-rev',RV(dapp[q.n].유형));chip.title=[dapp[q.n].유형,dapp[q.n].메모].filter(Boolean).join(' — ');const concl=ctx.filter(([nd])=>/결론|해결/.test(nd.t||'')).pop();if(concl)A(concl[1],' ',chip);else A(em,' ',chip);}
+    if(dapp[q.n]){const chip=E('span','c2r-chip c2r-rev',RV(dapp[q.n].유형));chip.title=[dapp[q.n].유형,dapp[q.n].메모].filter(Boolean).join(' — ');const concl=ctx.filter(([nd])=>/결론|해결/.test(nd.t||'')).pop();if(concl){const lb=[...concl[1].children].find(x=>x.classList.contains('c2r-lkb'));if(lb){const sp=lb.previousSibling;concl[1].insertBefore(document.createTextNode(' '),sp);concl[1].insertBefore(chip,sp);}else A(concl[1],' ',chip);}else A(em,' ',chip);}
     MISS(sub,miss[q.n]);li.appendChild(sub);ol.appendChild(li);});
    if((miss._||[]).length||dapp._){const sm=E('small','c2r-unq',' (설문을 못 가린 것)');const li=A(E('li','c2r-unq'),'설문 미배정',sm);const sub=E('ol');
     if(dapp._){const chip=E('span','c2r-chip c2r-rev',RV(dapp._.유형));chip.title=[dapp._.유형,dapp._.메모].filter(Boolean).join(' — ');A(sm,' ',chip);}
