@@ -5195,7 +5195,7 @@ async function popCard4(kind,ck,ev,depth,blockId,tab){   /* ★ 2차 탭 판 1 �
   const pop=body.parentNode;
   S.cha2Sel='card|'+kind+'|'+ck; try{ c2Mark(S.cha2Sel,false); }catch(e){}   /* 열린 카드 = 보드·목록 상시 강조(메모 add1 §3 준용) */
   if(!rec&&!gv){ body.appendChild(el('div','cdim','본문 JSON 에 없다 — '+name+' / '+ck)); return; }
-  if(rec&&rec.fm&&Object.keys(rec.fm).length){ const ch=el('div','chips'); Object.entries(rec.fm).forEach(([k,v])=>{ if(k==='해설')return; const s=Array.isArray(v)?v.join(' · '):String(v||''); if(s)ch.appendChild(el('span','chip c-src',k+': '+s.slice(0,40))); }); if(ch.childNodes.length)body.appendChild(ch); }   /* ★ 2차 탭 판 1 add1 — §11 fm 칩(배열은 · 로 이어) · 해설은 위 링크 칩으로 */
+  if(rec&&rec.fm&&Object.keys(rec.fm).length){ const ch=el('div','chips'); const _lp=c2FmPrec(rec.fm), _pm=_lp.length?await c2PrecIds():null; Object.entries(rec.fm).forEach(([k,v])=>{ if(k==='해설')return; if(k==='연결판례'&&_lp.length){ _lp.forEach(x=>ch.appendChild(x.v?c2LinkEl({k:'prec',v:x.v},depth,_pm):el('span','chip c-src',k+': '+('[['+x.raw+']]').slice(0,40)))); return; } const s=Array.isArray(v)?v.join(' · '):String(v||''); if(s)ch.appendChild(el('span','chip c-src',k+': '+s.slice(0,40))); }); if(ch.childNodes.length)body.appendChild(ch); }   /* ★ 2차 탭 판 1 add1 — §11 fm 칩(배열은 · 로 이어) · 해설은 위 링크 칩으로 · ★ mainprec D(9/18) — 연결판례 = [[…]] 마다 ⚖ 판례 칩(c2LinkEl · popPrec4) */
   const top=el('div'); top.style.cssText='display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px';
   const go=el('button','tool on','2차 레일로 ↗'); go.onclick=()=>{closeAllPops();S.tab='cha2';S.boardKind=kind;S.cha2Sel='card|'+kind+'|'+ck;render();}; top.appendChild(go);
   const r0=gv?gv.회차[gv.회차.length-1]:null;
@@ -6637,6 +6637,8 @@ async function view2cha(){
 /* ── 카드 팝업 채점·해설 탭 재료 */
 async function c2PrecIds(){const P=await get(PF('리스트')).catch(()=>null);if(!P)return null;const m=new Map();
   (P.판례||[]).forEach(p=>{m.set(p.id,p.id);const b=String(p.id).replace(/전합$/,'');if(!m.has(b))m.set(b,p.id);if(p.사건번호&&!m.has(p.사건번호))m.set(p.사건번호,p.id);});return m;}
+/* ★ mainprec D(9/18) — 기출 노트 fm 「연결판례」(메인 판례) → [[파일]] 마다 {raw,v} · v = 파일 이름 {요}특|상 뒤 사건번호(지시서 [다후마카허] 를 한글 1~2자·연도 2~4자리로 넓힘 — 도·두·나 사건도) · 못 뽑으면 v='' → 그 값은 종전 글자 칩 */
+function c2FmPrec(fm){const v=fm&&fm['연결판례'];const a=Array.isArray(v)?v:(v?[v]:[]);const out=[];a.forEach(x=>{const t=String(x||'');const rx=/\[\[([^\[\]|#]+)(?:#[^\[\]|]*)?(?:\|[^\[\]]*)?\]\]/g;let m;while((m=rx.exec(t))){const f=m[1].trim();const n=/\{[요원]\}[특상](\d{2,4}[가-힣]{1,2}\d+(?:전합)?)/.exec(f);out.push({raw:f,v:n?n[1]:''});}});return out;}
 function c2LinkEl(l,depth,pm){const d=(depth||1)+1;
   if(l.k==='note'){const f=String(l.file||'').split('/').pop();const s=el('span','chip c-src','📄 '+f.slice(0,22)+(l.id?' ^'+l.id:''));s.title='목차 노트 팝업 — '+f+(l.id?' #^'+l.id:'');s.onclick=ev=>{ev.stopPropagation();popNote(f,l.id||null,ev,d);};return s;}
   if(l.k==='prec'){const id=pm&&pm.get(l.v);const s=el('span','chip c-prec'+(id?'':' wait'),'⚖ '+l.v);if(id){s.title='판례 팝업 — '+id;s.onclick=ev=>{ev.stopPropagation();popPrec4(id,ev,d);};}else s.title='리스트에 없는 판례 — '+l.v;return s;}
@@ -6906,7 +6908,8 @@ function popCell(x,ev,bodies){
   const rec=(bodies||{})[x.파일];
   if(rec&&rec.fm&&Object.keys(rec.fm).length){
     const ch=el('div','chips');
-    Object.entries(rec.fm).forEach(([k,v])=>{const s=Array.isArray(v)?v.join(' · '):String(v||'');if(s)ch.appendChild(el('span','chip c-src',k+': '+s.slice(0,24)));});   /* ★ 2차 탭 판 1 add1 — §11 배열 값 */
+    const _lp=c2FmPrec(rec.fm);   /* ★ mainprec D(9/18) — 연결판례 = ⚖ 판례 칩 · 이 함수는 동기라 자리표를 두고 c2PrecIds 뒤에 채운다(차례 그대로) */
+    Object.entries(rec.fm).forEach(([k,v])=>{if(k==='연결판례'&&_lp.length){const hold=el('span');ch.appendChild(hold);c2PrecIds().catch(()=>null).then(pm=>{_lp.forEach(x=>hold.before(x.v?c2LinkEl({k:'prec',v:x.v},1,pm):el('span','chip c-src',k+': '+('[['+x.raw+']]').slice(0,24))));hold.remove();});return;}const s=Array.isArray(v)?v.join(' · '):String(v||'');if(s)ch.appendChild(el('span','chip c-src',k+': '+s.slice(0,24)));});   /* ★ 2차 탭 판 1 add1 — §11 배열 값 */
     body.appendChild(ch);
   }
   const blk=el('div');
