@@ -955,6 +955,7 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .cv-pop mark{background:#ffe066;color:inherit;padding:0 1px}
 .cv-book .m{color:#6b675f;font-size:11.5px;margin-bottom:4px}.cv-bookpg{position:relative;border:1px solid #e3e0d8}.cv-bookhl{position:absolute;background:rgba(255,196,0,.28);outline:2px solid rgba(230,120,0,.85);border-radius:2px;pointer-events:none}
 /* ══ 정리캔버스(민소) 끝 ══ */
+.badge.bk{background:#f1efe9;color:#6b665d;border:1px solid #e3e0d8}   /* ★ 민소 판례 — 교재 쪽 칩(회색) */
 </style>
 </head>
 <body>
@@ -3466,7 +3467,7 @@ const JP_OTHER=/(실용신안법|상표법|디자인보호법|민사소송법|�
 async function joPrecIdx(){
   if(JOPREC&&JOPRECLAW===S.law)return JOPREC;
   JOPRECLAW=S.law;JOPREC={map:{},src:''};
-  if(S.law!=='특허법'&&S.law!=='상표법')return JOPREC;   // 판례 갤리 = 특허·상표(판 3 상표 9/3)
+  if(S.law!=='특허법'&&S.law!=='상표법'&&S.law!=='민사소송법')return JOPREC;   // 판례 갤리 = 특허·상표(판 3 상표 9/3) · 민소(2026-09-20 _task_jo_prec_minso)
   const map={};
   const add=(k2,id,tag)=>{if(!id)return;
     const e2=(map[k2]=map[k2]||{});(e2[id]=e2[id]||{})[tag]=1;};
@@ -5428,7 +5429,7 @@ function qaBtnEl(p){ const on = !!pqOf(p.id);
   b.title = on ? ('앱 검수 ' + new Date(pqOf(p.id)).toLocaleDateString() + ' — 누르면 지운다') : '이 판례를 내가 검수했다고 표시(이 기기 기록 층)';
   b.onclick = ev => { ev.stopPropagation(); pqSet(p.id, !pqOf(p.id)); toast(pqOf(p.id) ? '검수 완' : '검수 표시를 지웠다'); render(); };
   return b; }
-const PF_KEYS = ['gichul', 'madi', 'jo', 'type', 'court', 'imp', 'memo', 'qa', 'gichul2y'];   /* ★ prec3 §A-5 — 2차기출 회차 = prec_filter 안 칸 하나(초기화·전부 지우기·빈 판정을 같이 탄다) */   /* ★ QA 판 add1 — 검수 */   /* ★ 메모 손질 — 메모 묶음 */
+const PF_KEYS = ['gichul', 'madi', 'jo', 'type', 'court', 'imp', 'memo', 'qa', 'gichul2y', 'chaek'];   /* ★ 민소 2026-09-20 — chaek = 교재(핵심만/윤곽만/둘 다) */   /* ★ prec3 §A-5 — 2차기출 회차 = prec_filter 안 칸 하나(초기화·전부 지우기·빈 판정을 같이 탄다) */   /* ★ QA 판 add1 — 검수 */   /* ★ 메모 손질 — 메모 묶음 */
 function pfGet(){ const f = S.precFilter || (S.precFilter = {}); PF_KEYS.forEach(k => { if (!Array.isArray(f[k])) f[k] = []; });
   if (!f.fold || typeof f.fold !== 'object') f.fold = {}; return f; }
 function pfEmpty(f){ return PF_KEYS.every(k => !f[k].length); }
@@ -5466,6 +5467,18 @@ function precHoeTable(all, cha){ const c = {};
   (all || []).forEach(p => precHoeSet(p, cha).forEach(v => { c[v] = (c[v] || 0) + 1; }));
   return Object.keys(c).sort().reverse().map(v => ({ v: v, 연도: 2000 + (+v.slice(0, 2)), 회: +v.slice(3), n: c[v] })); }
 function pfClearY(){ const f = S.precFilter; if (f && Array.isArray(f.gichul2y) && f.gichul2y.length){ f.gichul2y = []; uiSave(); } }
+/* ★ 민소(2026-09-20 _task_jo_prec_minso §2) — 볼트 `- 책:` 줄에서 온 교재 쪽. 다른 법 행에는 이 열이 없다.
+   꼴 {핵심:[쪽…], 윤곽:[쪽…], 겹침:bool, 색인:['핵심'…]} · 칩은 회색 한 개 「핵심 p.98,99 · 윤곽 p.120」 */
+function precBookTxt(bk){ if (!bk) return '';
+  const part = n => (bk[n] && bk[n].length) ? n + ' p.' + bk[n].join(',') : ((bk.색인 || []).indexOf(n) >= 0 ? n + ' 색인' : '');
+  return [part('핵심'), part('윤곽')].filter(Boolean).join(' · '); }
+function precBookEl(bk){ const t = precBookTxt(bk); if (!t) return null;
+  const c = el('span', 'badge bk', t);
+  c.title = '교재 자리 — 볼트 판례 파일의 `- 책:` 줄' + (bk.겹침 ? ' · 두 책에 다 있다' : '');
+  return c; }
+function precBookState(p){ const bk = p.책; if (!bk) return '';
+  const h = !!(bk.핵심 && bk.핵심.length), y = !!(bk.윤곽 && bk.윤곽.length);
+  return h && y ? 'both' : h ? 'haek' : y ? 'yun' : 'idx'; }
 function precPass(p, f, skip){
   if (skip !== 'gichul' && f.gichul.length){ const g = Array.isArray(p.기출차) ? p.기출차 : []; const w = f.gichul[0];
     if (w !== '1차' && w !== '2차' && w !== 'both'){ if ((Array.isArray(p.기출) ? p.기출 : []).indexOf(w) < 0) return false; }   /* ★ 상표 손질 5 — 태그 알약 = 기출 배열에 그 값 */
@@ -5474,6 +5487,7 @@ function precPass(p, f, skip){
     const hs = precHoeSet(p, '2차'); if (!f.gichul2y.some(v => hs.has(v))) return false; }
   if (skip !== 'memo' && f.memo && f.memo.length){ const pm = pitByPrec()[p.id] || []; if (!f.memo.some(v => v === 'has' ? pm.length > 0 : pm.some(m => m.who === v))) return false; }   /* ★ 메모 손질 — 메모 있음 · 사람 */
   if (skip !== 'madi' && f.madi.length){ const vs = precMadi(p); if (!f.madi.some(v => vs.indexOf(v) >= 0)) return false; }
+  if (skip !== 'chaek' && f.chaek && f.chaek.length){ if (f.chaek.indexOf(precBookState(p)) < 0) return false; }   /* ★ 민소 — 책(핵심만/윤곽만/둘 다) */
   if (skip !== 'jo' && f.jo.length){ const js = precJoSet(p); if (!f.jo.some(v => js.has(v))) return false; }   /* ★ add2 — 조 단위 · 구법(확정) 합침 · 묶음 둘 */
   if (skip !== 'type' && f.type.length){ if (f.type.indexOf(p.사건유형 || '미상') < 0) return false; }
   if (skip !== 'court' && f.court.length){ const c = p.법원 || '미상';
@@ -5848,7 +5862,14 @@ function precFilterUI(tree, P, f){
   });
   group('qa', '검수', [   /* ★ QA 판 add1 §2 — 초안·미검수를 함께 잡는다(기본 꺼짐 · 정렬 무변) */
     { v: 'todo', name: '미검수만', test: p => { const s = qaState(p); return s === 'draft' || s === 'unread'; } }]);
+  /* ★ 민소(2026-09-20) — 마디표가 비면 「단원별」 자리에 교재 거르기(핵심만/윤곽만/둘 다). 책 열이 없는 법에는 둘 다 안 뜬다. */
+  if (!(Array.isArray(P.마디표) && P.마디표.length) && all.some(p => p.책))
+    group('chaek', '교재', [
+      { v: 'haek', name: '핵심만', test: p => precBookState(p) === 'haek' },
+      { v: 'yun', name: '윤곽만', test: p => precBookState(p) === 'yun' },
+      { v: 'both', name: '둘 다', test: p => precBookState(p) === 'both' }]);
   /* 2 단원별 — 대응표 V01~V70 순서 · 대분류(==…==) 헤더 접기 · 0 인 마디도 보인다 · 맨 아래 미분류 */
+  if (Array.isArray(P.마디표) && P.마디표.length)
   group('madi', '단원별', null, false, () => {
     const tab = Array.isArray(P.마디표) ? P.마디표 : [];
     let head = null, folded = false;
@@ -5940,7 +5961,7 @@ async function viewPrec(){
     tree.appendChild(r);
   });
   const lg=el('div','legend');
-  lg.innerHTML='⚖N = 볼트 편입 건수(원본 ∪ 요약본)<br>특허·상표 = 볼트 갤리 · 디보·민소는 아직';   /* ★ 상표 판 3 */
+  lg.innerHTML='⚖N = 볼트 편입 건수(원본 ∪ 요약본)<br>특허·상표·민소 = 볼트 갤리 · 디보는 아직';   /* ★ 상표 판 3 · 민소 2026-09-20 */
   tree.appendChild(lg);
   slot.appendChild(tree);
   slot.appendChild(handle('tree'));
@@ -6010,6 +6031,7 @@ async function viewPrec(){
       p.선고?p.선고.replace(/(\d{4})(\d{2})(\d{2})/,'$1.$2.$3'):(p.연도폴더||'요약본')));
     {const m=impOf(p);if(m)pn.appendChild(el('span','badge imp','★'+m));}
     if(p.사건유형)pn.appendChild(el('span','badge ty',p.사건유형));   /* ★ add1 — 사건유형 칩 */
+    {const bc=precBookEl(p.책); if(bc)pn.appendChild(bc);}   /* ★ 민소 — 교재 쪽 칩 */
     {const pm=pitByPrec()[p.id]||[]; if(pm.length){ const c=el('span','chip c-memo','🗒 '+pm.length); c.title='이 판례 메모 '+pm.length+' — 클릭 = 목록'; [...new Set(pm.map(m=>m.who).filter(w=>w))].forEach(w=>c.appendChild(pitWhoBadge(w))); c.onclick=ev=>{ev.stopPropagation();popPitList(p,ev);}; pn.appendChild(c);} }   /* ★ 메모 손질 — 종류 칩 옆 메모 칩 */
     r.appendChild(pn);
     r.appendChild(precDescEl(p,false));   /* ★ add1 — 노란 별칭 칩 · 설명줄(안 자름) · 기출 칩 */
@@ -6062,6 +6084,7 @@ async function viewPrec(){
   hd.appendChild(el('b','',cur.사건번호||''));
   if(cur.전합)hd.appendChild(el('span','badge jh','전합'));   /* ★ 판 3 §3-3 */
   if(cur.선고)hd.appendChild(el('span','badge','선고 '+cur.선고.replace(/(\d{4})(\d{2})(\d{2})/,'$1-$2-$3')));
+  {const bc=precBookEl(cur.책); if(bc)hd.appendChild(bc);}   /* ★ 민소 — 교재 쪽 칩(머리) */
   /* ★ linkwin §3-b — 머리 배지 셋(볼트 연도폴더 · 원본 · 별칭:)은 걷었다 — 별칭은 아래 설명별칭 한 줄과 겹친다 */
   {const _qb=qaBadgeEl(cur); if(_qb)hd.appendChild(_qb);}   /* ★ QA 판 add1 §2 — 검수 배지 */
   {const st=el('span','stars');st.title='내 중요도 — 누르면 그 값 · 같은 별 다시 누르면 0';   /* ★ 판 3 §9-2 — kv jopangi.precimp */
@@ -6175,7 +6198,7 @@ function popPitList(p, ev){ const key = 'pitlist|' + PLAW() + '|' + p.id; if (po
 async function precMemoGo(id, word){
   let P = null; try{ P = await get(PF('리스트')); }catch(e){}
   let law = S.law;
-  if (!P || !(P.판례 || []).find(x => x.id === id)){ for (const lw of ['특허법', '상표법']){ if (lw === S.law) continue; try{ const P2 = await get('prec_' + (SHORT[lw] || '') + '_리스트.json'); if ((P2.판례 || []).find(x => x.id === id)){ law = lw; P = P2; break; } }catch(e){} } }
+  if (!P || !(P.판례 || []).find(x => x.id === id)){ for (const lw of ['특허법', '상표법', '민사소송법']){ if (lw === S.law) continue; try{ const P2 = await get('prec_' + (SHORT[lw] || '') + '_리스트.json'); if ((P2.판례 || []).find(x => x.id === id)){ law = lw; P = P2; break; } }catch(e){} } }
   const p = (P && P.판례 || []).find(x => x.id === id); if (!p){ toast('리스트에 없는 판례 — ' + id, 1); return; }
   S.law = law; S.tab = 'prec'; S.prec = id; S.precTab = '요약'; await render();   /* ★ prec3 §B-5 */   /* ★ 메모 add1 — §3 거르기 밖이어도 2단에 카드가 끼워지므로 toast 없음 */
   if (word){ setTimeout(() => { const w = String(word).trim(); const el2 = [...document.querySelectorAll('#slot .ln, #slot pre.raw')].find(x => x.textContent.indexOf(w) >= 0);
@@ -10327,7 +10350,7 @@ const skRun=async e=>{   /* ★ 손질 8 — §2 300ms 디바운스 — 아래 $
   }
   if(SKON.prec){   /* ★ 손질 8 — §2 판례 갈래 = 2단 검색(precSearch)과 같은 범위 · 켜진 법마다 · 전건(40 씩 더 보기) · 문맥 한 줄 */
     try{
-      const lawsP=lawsOn.filter(l=>['특허법','상표법'].indexOf(l)>=0);
+      const lawsP=lawsOn.filter(l=>['특허법','상표법','민사소송법'].indexOf(l)>=0);   /* ★ 민소(2026-09-20) */
       const all=[];
       for(const law of lawsP){
         const P=await get(PFL(law,'리스트'));
