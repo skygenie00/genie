@@ -2132,6 +2132,11 @@ function popShell(kind, title, key){
   POPS.push(p);
   dragify(p, hd);
   p.addEventListener('mousedown', () => { p.style.zIndex = ++POPZ; });
+  /* ★ gaek_mb §24 — 팝업 **전부**에 크기 손잡이(사용자 「반드시」·「조문 팝업 말고도 다」).
+     종류 = kind||'pop' · 새 손잡이 코드는 짜지 않고 popSizable 을 기본으로 붙인다.
+     다음 틱에 붙이는 까닭 — 부른 쪽이 popShell 바로 뒤에 제 종류로(`'note'`·`'gi'` …)
+     popSizable 을 부르면 그쪽이 먼저 `p._sz` 를 차지해 **그 종류가 이긴다**. */
+  setTimeout(() => { if (p.isConnected && !p._sz) popSizable(body, kind || 'pop'); }, 0);
   return body;
 }
 function closeOne(p){
@@ -3101,10 +3106,8 @@ function popRec(ev){
   const im = el('button', 'tool', '⤒ 기록 들여오기');
   im.onclick = () => inp.click();
   row.appendChild(ex); row.appendChild(im); row.appendChild(inp);
-  const slb = el('button', 'tool', '📝 학습로그');
-  slb.title = '오늘/어제/그저께 학습을 노션 붙여넣기용 텍스트로';
-  slb.onclick = ev2 => studyLogPop(ev2);
-  row.appendChild(slb);
+  /* ★ gaek_mb §23 — 「📝 학습로그」 단추는 걷었다(민법OX 9/15 §D 와 같은 까닭 —
+     tt 데일리 모음이 대신한다). `studyLogPop`·요약 코드는 그대로 둔다(부르는 곳 0). */
   body.appendChild(row);
   /* ★ recsync §C·§D — 동기화는 헤더 칩이 한다 · 여기엔 토큰 칸과 사고 복구용 강제 버튼 */
   body.appendChild(el('div', 'grp', '🔄 기록 동기화 — ' + SYNC_REPO + ' · ' + SYNC_PATH + ' (필기 ink 제외 · 3분 · 칸 단위 최신 승)'));
@@ -9542,10 +9545,27 @@ function beopjeon(host, lines){
   host.appendChild(wrap);
 }
 
+/* ★ gaek_mb §25 — 법제처 주소 꼴. 2026-09-21 Code 가 직접 열어 확인했다.
+     조문 `법령/특허법시행규칙/제11조` → lsSideInfoP.do?joNo=0011&joBrNo=00 (조의N 은 joBrNo=02)
+            상표법시행규칙·디자인보호법시행규칙도 같은 꼴로 열린다.
+     판례 `판례/(2011후927)` → precInfoP.do?precSeq=192588 (그 사건 본문 · 2006허3496·2024허12388 도 맞음)
+            법제처 판례 DB 에 없는 번호는 빈 껍데기가 뜬다(2017허4501·98후2610 실측). */
+function lawGoJoUrl(lawNm, jo){
+  return 'https://www.law.go.kr/법령/' + encodeURIComponent(lawNm) + '/' + encodeURIComponent(jo); }
+function lawGoPrecUrl(no){
+  return 'https://www.law.go.kr/판례/(' + encodeURIComponent(String(no || '').trim()) + ')'; }
+function joRuleJo(k){          /* `施規 11` · `施規 11의2` → `제11조` · `제11조의2` */
+  const m = /^\s*施規\s*(\d+)(?:의\s*(\d+))?/.exec(String(k || ''));
+  return m ? ('제' + m[1] + '조' + (m[2] ? '의' + m[2] : '')) : String(k || ''); }
 function joWonBtn(x){
   if(!x.law){
-    const d=el('button','jowon dead','⚖ '+x.k);
-    d.title='시행규칙은 앱에 데이터가 없다 — 표시만 한다';
+    /* ★ gaek_mb §25 — 시행규칙은 조판기에 데이터가 없다. 죽은 표시 대신 법제처로 내보낸다. */
+    const lawNm = S.law + '시행규칙', jo = joRuleJo(x.k);
+    const d=el('a','jowon','⚖ '+x.k+' 원문');
+    d.href=lawGoJoUrl(lawNm, jo);
+    d.target='_blank';d.rel='noopener';
+    d.title='조판기에 없는 '+lawNm+' '+jo+' — 법제처에서 연다';
+    d.onclick=ev=>ev.stopPropagation();
     return d;
   }
   /* ★ 8/26 사용자 확정 — 이 단추는 **법제처 그 조 원문**으로 나간다.
