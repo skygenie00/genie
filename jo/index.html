@@ -955,7 +955,13 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .cv-pop mark{background:#ffe066;color:inherit;padding:0 1px}
 .cv-book .m{color:#6b675f;font-size:11.5px;margin-bottom:4px}.cv-bookpg{position:relative;border:1px solid #e3e0d8}.cv-bookhl{position:absolute;background:rgba(255,196,0,.28);outline:2px solid rgba(230,120,0,.85);border-radius:2px;pointer-events:none}
 /* ══ 정리캔버스(민소) 끝 ══ */
-.badge.bk{background:#f1efe9;color:#6b665d;border:1px solid #e3e0d8}   /* ★ 민소 판례 — 교재 쪽 칩(회색) */
+.badge.bk{background:#f1efe9;color:#6b665d;border:1px solid #e3e0d8;white-space:nowrap}   /* ★ 민소 판례 — 교재 쪽 칩(회색) */
+.badge.bk .bkgo{cursor:pointer;text-decoration:underline dotted}.badge.bk .bkgo:hover{color:var(--exc)}
+.cv-booknav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;margin-bottom:6px}
+.cv-booknav button{font:inherit;font-size:12px;padding:2px 9px;border:1px solid #d9d6ce;border-radius:6px;background:#fff;cursor:pointer}
+.cv-booknav button[disabled]{opacity:.4;cursor:default}
+.cv-booknav input#cvBookP{width:44px;text-align:center;font:inherit;font-size:11.5px;padding:1px 4px;border:1px solid #d9d6ce;border-radius:5px}
+.cv-bookview{min-height:60px}
 </style>
 </head>
 <body>
@@ -5473,8 +5479,18 @@ function precBookTxt(bk){ if (!bk) return '';
   const part = n => (bk[n] && bk[n].length) ? n + ' p.' + bk[n].join(',') : ((bk.색인 || []).indexOf(n) >= 0 ? n + ' 색인' : '');
   return [part('핵심'), part('윤곽')].filter(Boolean).join(' · '); }
 function precBookEl(bk){ const t = precBookTxt(bk); if (!t) return null;
-  const c = el('span', 'badge bk', t);
-  c.title = '교재 자리 — 볼트 판례 파일의 `- 책:` 줄' + (bk.겹침 ? ' · 두 책에 다 있다' : '');
+  const c = el('span', 'badge bk');
+  c.title = '교재 자리 — 볼트 판례 파일의 `- 책:` 줄(PDF 쪽) · 누르면 그 쪽이 열린다' + (bk.겹침 ? ' · 두 책에 다 있다' : '');
+  /* ★ add1(2026-09-20) — 책마다 누를 수 있게 쪼갠다. 누르면 정리캔버스와 같은 교재 팝업(민법앱 길). */
+  ['핵심', '윤곽'].forEach(nm => { const ps = (bk[nm] || []);
+    if (!ps.length && (bk.색인 || []).indexOf(nm) < 0) return;
+    if (c.childNodes.length) c.appendChild(document.createTextNode(' · '));
+    if (!ps.length){ c.appendChild(document.createTextNode(nm + ' 색인')); return; }
+    const s2 = el('span', 'bkgo', nm + ' p.' + ps.join(','));
+    s2.onclick = ev => { ev.stopPropagation();
+      if (typeof viewCanvas === 'function' && viewCanvas.book) viewCanvas.book({ book: nm, page: ps[0] }, ev);
+      else toast('교재 보기를 못 불렀다', 1); };
+    c.appendChild(s2); });
   return c; }
 function precBookState(p){ const bk = p.책; if (!bk) return '';
   const h = !!(bk.핵심 && bk.핵심.length), y = !!(bk.윤곽 && bk.윤곽.length);
@@ -10905,30 +10921,108 @@ const viewCanvas = (() => {
     const MM = memoAll(); for (const pn of mounted){ const p = D.pages[pn - 1]; const pg = built.get(pn); const lns = pg.querySelectorAll('.cv-ln'); const bls = pg.querySelectorAll('.cv-blk'); lns.forEach(e => e.classList.remove('keep')); bls.forEach(e => e.classList.remove('keep'));
       bls.forEach(e => { const b = p.blocks[+e.dataset.b]; let ok = false; if (F.has('학판검') && b.k === '학판검') ok = true; if (F.has('판례') && b.k === '판례') ok = true; if (F.has('이론') && b.th) ok = true; if (F.has('vault') && b.v) ok = true; if (F.has('memo') && MM[key(b)]) ok = true; if (ok){ e.classList.add('keep'); b.ls.forEach(i => lns[i] && lns[i].classList.add('keep')); } }); } }
 
-  /* ══ 교재 보기 — 민법앱 근거 방식(교재 PDF 는 사용자가 한 번 넣고 IndexedDB 에 재운다 · 쪽 그림 + 자리 강조) ══ */
-  const BOOK = { db: null, doc: {} };
+  /* ══ 교재 보기 — 민법앱과 같은 길(2026-09-20 · _task_canvas_app_add1) ══
+     비공개 저장소 `zzikkaplan/minbeoppdf` 에서 **자동으로 받는다**. 사용자가 PDF 를 넣는 화면은 없다.
+     ⚠ 민법앱(genie/minbeop/index.html)의 `mbbMeta`·`mbbWords`·`mbbDoc`·`mbbPdfFromCache` 를 그대로 옮긴 것이다(이름만 `cvb*`).
+       토큰 칸(`tt.cfg`)·IndexedDB(`ox_master_db`/`rows`)·열쇠(`bookmeta:` `bookpage:` `bookpdf:`)가 **같다** —
+       두 앱은 origin 이 같아(github.io) 민법앱이 받아 둔 책을 그대로 쓰고, 여기서 받은 것도 민법앱이 쓴다.
+     ⚠ 책 쪽수(`canvas_match.json` · 볼트 `- 책:`)는 **PDF 쪽**이다(실측). 인쇄 쪽은 `cvbPrint` 로 따로 보인다. */
+  const CVB_REPO = 'zzikkaplan/minbeoppdf', CVB_BRANCH = 'main', CVB_WORDS = 'words', CVB_PDFDIR = 'pdf';
+  const CVB_DOCID = { '핵심': 'minso_hs', '윤곽': 'minso_yg' };
+  const CVB_NAME = { minso_hs: '핵심 민소', minso_yg: '윤곽 민소' };
+  const CVB = { meta: {}, doc: {}, stat: {}, db: null };
   const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
-  function bookDb(){ if (BOOK.db) return Promise.resolve(BOOK.db); return new Promise((res, rej) => { const rq = indexedDB.open('jopangi_books', 1); rq.onupgradeneeded = () => rq.result.createObjectStore('pdf'); rq.onsuccess = () => { BOOK.db = rq.result; res(BOOK.db); }; rq.onerror = () => rej(rq.error); }); }
-  async function bookGet(name){ const db = await bookDb(); return new Promise(res => { const rq = db.transaction('pdf', 'readonly').objectStore('pdf').get(name); rq.onsuccess = () => res(rq.result || null); rq.onerror = () => res(null); }); }
-  async function bookPut(name, rec){ const db = await bookDb(); return new Promise((res, rej) => { const tx = db.transaction('pdf', 'readwrite'); tx.objectStore('pdf').put(rec, name); tx.oncomplete = () => res(true); tx.onerror = () => rej(tx.error); }); }
-  function pdfLib(){ if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib); return new Promise((res, rej) => { const s = document.createElement('script'); s.src = PDFJS + 'pdf.min.js'; s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js'; res(window.pdfjsLib); }; s.onerror = () => rej(new Error('pdf.js 를 못 불렀다')); document.head.appendChild(s); }); }
-  async function bookDoc(name){ if (BOOK.doc[name]) return BOOK.doc[name]; const rec = await bookGet(name); if (!rec) return null; const lib = await pdfLib(); const doc = await lib.getDocument({ data: new Uint8Array(rec.buf.slice(0)), cMapUrl: PDFJS + 'cmaps/', cMapPacked: true }).promise; BOOK.doc[name] = doc; return doc; }
-  /* canvas_match 한 줄({book,page,y0,y1[,x0,x1]} · pt · 위 기준) → 민법앱 근거 꼴 {doc,p,r:[x0,y0,x1,y1]} (0~2000 · 왼쪽 위 원점 · 앱 뷰어가 이 꼴만 읽는다) */
+  function cvbTok(){ try { return (typeof syncToken === 'function' ? syncToken() : String((JSON.parse(localStorage.getItem('tt.cfg') || '{}')).token || '').trim()); } catch (e) { return ''; } }
+  function cvbDb(){ if (CVB.db) return Promise.resolve(CVB.db); return new Promise((res, rej) => { const rq = indexedDB.open('ox_master_db', 1);
+    rq.onupgradeneeded = () => { const db = rq.result; if (!db.objectStoreNames.contains('rows')) db.createObjectStore('rows'); };
+    rq.onsuccess = () => { CVB.db = rq.result; res(CVB.db); }; rq.onerror = () => rej(rq.error); }); }
+  async function cvbGet(k){ const db = await cvbDb(); return new Promise(res => { let rq; try { rq = db.transaction('rows', 'readonly').objectStore('rows').get(k); } catch (e) { return res(null); } rq.onsuccess = () => res(rq.result); rq.onerror = () => res(null); }); }
+  async function cvbPut(k, v){ const db = await cvbDb(); return new Promise(res => { let tx; try { tx = db.transaction('rows', 'readwrite'); } catch (e) { return res(false); } tx.objectStore('rows').put(v, k); tx.oncomplete = () => res(true); tx.onerror = () => res(false); }); }
+  /* 저장소 한 파일 — 1MB 를 넘는 것이 있어 `vnd.github.raw`(민법앱과 같은 까닭) */
+  async function cvbGh(path, kind){ const tk = cvbTok(); if (!tk){ CVB.stat.last = 'no-token'; return null; }
+    const url = 'https://api.github.com/repos/' + CVB_REPO + '/contents/' + encodeURI(path) + '?ref=' + CVB_BRANCH + '&t=' + Date.now();
+    let r = null; try { r = await fetch(url, { headers: { Authorization: 'Bearer ' + tk, Accept: 'application/vnd.github.raw' }, cache: 'no-store' }); } catch (e) { CVB.stat.last = 'net'; return null; }
+    if (!r.ok){ CVB.stat.last = r.status; return null; }
+    CVB.stat.last = 200; return kind === 'buf' ? await r.arrayBuffer() : await r.json(); }
+  async function cvbMeta(docid){ if (CVB.meta[docid]) return CVB.meta[docid];
+    const key = 'bookmeta:' + docid; let old = null; try { old = await cvbGet(key); } catch (e) {}
+    let fresh = null; try { fresh = await cvbGh(CVB_WORDS + '/' + docid + '/책메타.json', 'json'); } catch (e) { fresh = null; }
+    const m = (fresh && fresh.docid) ? fresh : old;
+    if (fresh && fresh.docid){ try { await cvbPut(key, fresh); } catch (e) {} }
+    if (m) CVB.meta[docid] = m;
+    return m || null; }
+  const cvbPrint = (docid, p) => { const m = CVB.meta[docid]; return (m && typeof m.printOffset === 'number') ? (p + m.printOffset) : null; };
+  async function cvbGunzip(buf){ try { const st = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip')); return JSON.parse(await new Response(st).text()); } catch (e) { return null; } }
+  /* 쪽 글자층 — 지금 화면에는 안 쓰지만(자리 강조는 매칭 좌표) 민법앱과 같은 꼴로 받아 재운다(나중 자리 찍기) */
+  async function cvbWords(docid, p){ const meta = await cvbMeta(docid); const want = (meta && meta.pageHash) ? meta.pageHash[p - 1] : null;
+    const key = 'bookpage:' + docid + ':' + p; let cur = null; try { cur = await cvbGet(key); } catch (e) {}
+    if (cur && cur.words != null && (!want || cur.ph === want)) return cur;
+    const buf = await cvbGh(CVB_WORDS + '/' + docid + '/ox_book_' + docid + '_p' + p + '.json.gz', 'buf'); if (!buf) return cur || null;
+    const js = await cvbGunzip(buf); if (!js) return cur || null;
+    const rec = { page: p, w: js.w, h: js.h, words: js.words || '', ph: want || '' };
+    try { await cvbPut(key, rec); } catch (e) {} return rec; }
+  async function cvbFromCache(docid, pdfMd5){ try { const r = await cvbGet('bookpdf:' + docid); if (r && r.pdfMd5 === pdfMd5 && r.buf && r.buf.byteLength > 2000) return r.buf; } catch (e) {} return null; }
+  async function cvbToCache(docid, pdfMd5, buf){ try { return await cvbPut('bookpdf:' + docid, { pdfMd5, buf, at: Date.now() }); } catch (e) { return false; } }
+  function pdfLib(){ if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib); return new Promise((res, rej) => { const s = document.createElement('script'); s.src = PDFJS + 'pdf.min.js'; s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js'; res(window.pdfjsLib); }; s.onerror = () => rej(new Error('pdf.js 를 못 불렀다 — 인터넷을 확인해라')); document.head.appendChild(s); }); }
+  /* 통짜 PDF — 기기에 재워 둔 것이 있으면 그것, 없으면 pdf.js 가 Range 로 받는다(50MB 를 통째로 안 받는다) */
+  async function cvbDoc(docid){ if (CVB.doc[docid]) return CVB.doc[docid];
+    const meta = await cvbMeta(docid);
+    if (!meta) throw new Error(cvbTok() ? '책메타를 받지 못했다 — 저장소에 ' + CVB_WORDS + '/' + docid + '/책메타.json 이 있는지 보라' : '토큰이 없다');
+    const lib = await pdfLib(); const tk = cvbTok(); if (!tk) throw new Error('토큰이 없다');
+    const t0 = Date.now();
+    const cached = await cvbFromCache(docid, meta.pdfMd5);
+    if (cached){ const dc = await lib.getDocument({ data: cached.slice(0), cMapUrl: PDFJS + 'cmaps/', cMapPacked: true }).promise;
+      CVB.stat[docid] = { ms: Date.now() - t0, pages: dc.numPages, from: 'cache' }; CVB.doc[docid] = dc; return dc; }
+    const url = 'https://api.github.com/repos/' + CVB_REPO + '/contents/' + encodeURI(CVB_PDFDIR + '/' + meta.file) + '?ref=' + CVB_BRANCH;
+    const doc = await lib.getDocument({ url, httpHeaders: { Authorization: 'Bearer ' + tk, Accept: 'application/vnd.github.raw' },
+      withCredentials: false, disableAutoFetch: true, rangeChunkSize: 262144, cMapUrl: PDFJS + 'cmaps/', cMapPacked: true }).promise;
+    CVB.stat[docid] = { ms: Date.now() - t0, pages: doc.numPages, from: 'net' }; CVB.doc[docid] = doc;
+    /* 받은 바이트를 기기에 재운다 — 민법앱과 같은 열쇠. ⚠ 기다리지 않는다: `getData()` 는 통짜(50MB)를 다 받는 일이라
+       기다리면 첫 쪽이 그만큼 늦게 뜬다(관문 G-1 첫 열기 ≤10초). 뒤에서 끝나면 다음부터 캐시로 연다. */
+    doc.getData().then(got => { if (got && got.byteLength > 2000) return cvbToCache(docid, meta.pdfMd5, got.buffer || got); })
+      .then(ok => { CVB.stat[docid].cached = !!ok; }).catch(() => { CVB.stat[docid].cached = false; });
+    return doc; }
+  /* canvas_match 한 줄({book,page,y0,y1[,x0,x1]} · pt · 위 기준) → 민법앱 근거 꼴 {doc,p,r:[x0,y0,x1,y1]} (0~2000) */
   function toGeunge(m, pw, ph){ const x0 = m.x0 != null ? m.x0 : 0, x1 = m.x1 != null ? m.x1 : pw; return { doc: m.book, p: m.page, r: [x0 / pw, m.y0 / ph, x1 / pw, m.y1 / ph].map(v => Math.round(Math.max(0, Math.min(1, v)) * 2000)) }; }
-  function bookPick(name, done){ const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/pdf'; inp.onchange = async () => { const f = inp.files && inp.files[0]; if (!f) return; const buf = await f.arrayBuffer(); const want = MATCH && MATCH.books && MATCH.books[name];
-      try { const lib = await pdfLib(); const d = await lib.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise; if (want && want.pages && d.numPages !== want.pages){ toast('쪽 수가 다르다 — ' + d.numPages + '쪽 (기대 ' + want.pages + '쪽) · ' + name + ' ABBYY 판을 넣어라', 1); return; } } catch (e) { toast('PDF 를 못 열었다 — ' + (e && e.message || e), 1); return; }
-      try { await bookPut(name, { file: f.name, size: f.size, at: Date.now(), buf }); } catch (e) { toast('이 기기에 재우지 못했다(저장공간) — 이번만 연다', 1); }
-      delete BOOK.doc[name]; toast('📘 ' + name + ' 교재를 이 기기에 넣었다'); done && done(); }; inp.click(); }
-  async function bookShow(m, ev){ const pid = 'cv|book|' + m.book + '|' + m.page + '|' + Math.round(m.y0); if (popToggle(pid)) return; const body = popShell('canvas', '📘 ' + m.book + ' p.' + m.page, pid); showPop(ev); popSizable(body, 'canvas');
-    const host = el('div', 'cv-book'); body.appendChild(host); host.innerHTML = '<div class="m">교재를 여는 중…</div>';
-    let doc = null; try { doc = await bookDoc(m.book); } catch (e) { host.innerHTML = `<div class="cv-card">교재를 못 열었다 — ${esc(e && e.message || e)}</div>`; return; }
-    if (!doc){ host.innerHTML = `<div class="cv-card"><b>${esc(m.book)} 교재 PDF 가 이 기기에 없다</b><div class="m">한 번 넣으면 이 기기(IndexedDB)에 재워 두고 다음부터 바로 연다 · ABBYY 판(${MATCH && MATCH.books && MATCH.books[m.book] ? MATCH.books[m.book].pages + '쪽' : ''})</div><button data-pick>PDF 넣기</button></div>`; host.querySelector('[data-pick]').onclick = e2 => { e2.stopPropagation(); bookPick(m.book, () => { closeOne(body.parentNode); bookShow(m, ev); }); }; return; }
-    const pg = await doc.getPage(m.page); const pw = pg.view[2] - pg.view[0], ph = pg.view[3] - pg.view[1]; const g = toGeunge(m, pw, ph);
-    const W = Math.max(320, host.clientWidth || 420); const vp = pg.getViewport({ scale: W / pw * (window.devicePixelRatio || 1) });
-    const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height); cv.style.cssText = 'width:100%;display:block';
-    const wrap = el('div', 'cv-bookpg'); wrap.appendChild(cv); const hl = el('div', 'cv-bookhl'); hl.style.cssText = `left:${g.r[0] / 20}%;top:${g.r[1] / 20}%;width:${(g.r[2] - g.r[0]) / 20}%;height:${(g.r[3] - g.r[1]) / 20}%`; wrap.appendChild(hl);
-    host.innerHTML = `<div class="m">${esc(m.book)} p.${m.page} · y ${Math.round(m.y0)}–${Math.round(m.y1)}pt · ${esc(m.how || '')} ${(m.score || 0).toFixed(2)}</div>`; host.appendChild(wrap);
-    await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise; setTimeout(() => { try { hl.scrollIntoView({ block: 'center' }); } catch (e) {} }, 60); }
+  /* 교재 쪽 팝업 — 쪽 그림 + 자리 강조 + ◀▶·쪽 입력(민법앱 mbBookPage 와 같은 얼개) */
+  async function bookShow(m, ev){ const docid = CVB_DOCID[m.book] || m.book; const pid = 'cv|book|' + docid; if (popToggle(pid)) return;
+    const body = popShell('canvas', '📘 ' + (CVB_NAME[docid] || m.book), pid); showPop(ev); popSizable(body, 'canvas');
+    const host = el('div', 'cv-book'); body.appendChild(host);
+    const st = { p: m.page, hl: m.y0 != null ? m : null, busy: 0 };
+    host.innerHTML = '<div class="m">교재를 받는 중… (처음 한 번은 오래 걸린다)</div>';
+    let doc = null;
+    try { doc = await cvbDoc(docid); }
+    catch (e){ const why = String(e && e.message || e);
+      host.innerHTML = '<div class="cv-card"><b>교재를 받지 못했다</b><div class="m">' + esc(why) + (/토큰/.test(why)
+        ? ' — 타임테이블·민법앱과 같은 칸(tt.cfg)에 GitHub 토큰을 한 번 넣으면 이 기기에서 계속 쓴다'
+        : ' — 저장소에 없음(' + esc(CVB_PDFDIR + '/' + ((CVB.meta[docid] || {}).file || docid)) + ')') + '</div></div>'; return; }
+    const head = el('div', 'cv-booknav'); const view = el('div', 'cv-bookview'); host.innerHTML = ''; host.appendChild(head); host.appendChild(view);
+    const draw = async () => { const tk = ++st.busy;
+      const pg = await doc.getPage(st.p); if (tk !== st.busy) return;
+      const pw = pg.view[2] - pg.view[0], ph = pg.view[3] - pg.view[1];
+      const W = Math.max(320, view.clientWidth || host.clientWidth || 420);
+      const vp = pg.getViewport({ scale: W / pw * (window.devicePixelRatio || 1) });
+      const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height); cv.style.cssText = 'width:100%;display:block';
+      const wrap = el('div', 'cv-bookpg'); wrap.appendChild(cv);
+      if (st.hl && st.hl.page === st.p){ const g = toGeunge(st.hl, pw, ph); const hl = el('div', 'cv-bookhl');
+        hl.style.cssText = `left:${g.r[0] / 20}%;top:${g.r[1] / 20}%;width:${(g.r[2] - g.r[0]) / 20}%;height:${(g.r[3] - g.r[1]) / 20}%`; wrap.appendChild(hl); }
+      view.innerHTML = ''; view.appendChild(wrap);
+      await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+      const box = wrap.querySelector('.cv-bookhl'); if (box) setTimeout(() => { try { box.scrollIntoView({ block: 'center' }); } catch (e) {} }, 60); };
+    const paint = () => { const pr = cvbPrint(docid, st.p); const n = doc.numPages;
+      head.innerHTML = `<button data-pv ${st.p <= 1 ? 'disabled' : ''}>◀</button>`
+        + `<span><b>${pr == null ? st.p : pr}</b>쪽 <span class="m">· PDF <input id="cvBookP" type="text" inputmode="numeric" value="${st.p}"> / ${n}</span></span>`
+        + `<button data-nx ${st.p >= n ? 'disabled' : ''}>▶</button>`
+        + `<span class="m">${esc(CVB_NAME[docid] || docid)} · ${(CVB.stat[docid] || {}).from === 'cache' ? '이 기기에 재워 둔 것' : '저장소에서 받음'}`
+        + (st.hl ? ` · 자리 y ${Math.round(st.hl.y0)}–${Math.round(st.hl.y1)}pt${st.hl.how ? ' · ' + esc(st.hl.how) : ''}${st.hl.score ? ' ' + (+st.hl.score).toFixed(2) : ''}` : '') + '</span>';
+      const go = d => { st.p = Math.max(1, Math.min(n, st.p + d)); paint(); draw(); };
+      head.querySelector('[data-pv]').onclick = e2 => { e2.stopPropagation(); go(-1); };
+      head.querySelector('[data-nx]').onclick = e2 => { e2.stopPropagation(); go(1); };
+      const inp = head.querySelector('#cvBookP');
+      inp.addEventListener('pointerdown', e2 => e2.stopPropagation());
+      inp.addEventListener('keydown', e2 => { e2.stopPropagation(); if (e2.key === 'Enter'){ st.p = Math.max(1, Math.min(n, +inp.value | 0)); paint(); draw(); } });
+      inp.addEventListener('change', () => { st.p = Math.max(1, Math.min(n, +inp.value | 0)); paint(); draw(); }); };
+    paint(); await draw(); }
 
   /* ── 머리 표시(수정 수 · 판 바뀜 · 핀 수) ── */
   function paintBadges(){ const e = document.getElementById('cvEditN'); if (e) e.textContent = '✎ 수정 ' + LOG.ops.length; const w = document.getElementById('cvStale'); if (w){ const msg = []; if (REPLAY.stale) msg.push('판이 바뀜 · 편집 ' + REPLAY.ok + '건 재생'); if (REPLAY.bad) msg.push('재생 못 한 편집 ' + REPLAY.bad); w.textContent = msg.join(' · '); w.style.display = msg.length ? '' : 'none'; } const np = document.getElementById('cvNpin'); if (np) np.textContent = Object.keys(pinAll()).length; }
@@ -10986,7 +11080,9 @@ const viewCanvas = (() => {
   }
   /* 하네스·검산용 창구 — 앱 동작에는 안 쓰인다 */
   viewCanvas._cv = () => ({ D, META, MATCH, LOG, REPLAY, links, UNDO, INK, get vz(){ return vz; }, get vx(){ return vx; }, get vy(){ return vy; }, mounted, built, sel,
-    set(v){ if (v.vz != null) vz = v.vz; if (v.vx != null) vx = v.vx; if (v.vy != null) vy = v.vy; clampPan(); apply(); }, apply, fit, minZ, gotoPage, jump, select, startEdit, commitEdit, undo, runQ, goHit, occOf, blockOp, openPop, toGeunge, drawConn, key, BK, applyOp });
+    set(v){ if (v.vz != null) vz = v.vz; if (v.vy != null) vy = v.vy; if (v.vx != null) vx = v.vx; clampPan(); apply(); }, apply, fit, minZ, gotoPage, jump, select, startEdit, commitEdit, undo, runQ, goHit, occOf, blockOp, openPop, toGeunge, drawConn, key, BK, applyOp, CVB, cvbMeta, cvbWords, cvbDoc, cvbPrint });
+  /* 판례탭 책 칩도 같은 팝업으로 연다 — {book:'핵심'|'윤곽', page:PDF쪽} */
+  viewCanvas.book = (m, ev) => bookShow(m, ev);
   return viewCanvas;
 })();
 /* ══ 정리캔버스(민소) 끝 ══ */
