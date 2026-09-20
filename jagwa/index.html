@@ -1200,6 +1200,47 @@ body[data-subj="earth"] .vbot .tools{justify-content:flex-end}
   border-radius:5px;padding:2px 6px;resize:none;overflow:hidden}
 .ggrc2 .ggrcl{display:flex;gap:5px;align-items:flex-start}
 .ggrc2 .ggrcl>span{flex:1;min-width:0;white-space:pre-wrap}
+/* ══════ add3 (2026-09-20 · _task_jagwa_earth_listpop_add3) ══════ */
+/* ② 근거 덩어리를 필기 덮개 **위**로 — `#qink`(z 6)·`#qtxt`(z 7)보다 위라
+   펜 도구가 켜져 있어도 칩·결과 줄·글자칸이 제 손으로 이벤트를 받는다(누름·포커스·펜슬 손글씨).
+   그 자리에는 획이 안 그어진다 — 뜻한 것이다. 옛 획은 밑(z 6)에 깔리고 데이터는 안 지운다. */
+#card .ggtop{position:relative;z-index:8;background:var(--card)}
+/* ③ 쓰임 수 — 민법 9/14 확정 규칙. 알약·배지가 아니라 **숫자 글자**다.
+   1 이하 = 안 그림 · 2〜4 = 회색 · 5 이상 = 빨강(문턱 5 고정 · 분포로 조정하지 않는다).
+   히트 영역만 상하 6·좌우 4 넓히고 음수 마진으로 되돌린다 — 그림은 무변(애플펜슬용). */
+/* ⚠ 열 자리의 옛 규칙(`.ggline .lb i`·`.ggref i`·`.ggres i`)이 색을 이긴다 — 특이도를 같이 올린다(2026-09-20 실측). */
+.gguse,.ggline .lb .gguse,.ggref .gguse,.ggres .gguse{font-style:normal;font-size:10.5px;font-weight:900;
+  color:var(--muted);cursor:pointer;display:inline-block;padding:6px 4px;margin:-6px 0 -6px -1px;user-select:none}
+.gguse.hot,.ggline .lb .gguse.hot,.ggref .gguse.hot,.ggres .gguse.hot{color:var(--red)}
+/* ③ 쓰임 목록 창 */
+#gguwBody{flex:1;overflow:auto}
+#gguw .gguh{padding:9px 11px;background:var(--sea-soft);border-bottom:1px solid #CFE0EC}
+#gguw .ln{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px}
+#gguw .ln .sp{flex:1}
+#gguw .cd{font-size:10px;font-weight:700;color:#20456A;background:var(--card);border:1px solid #BFD6E6;
+  padding:1px 6px;border-radius:4px;white-space:nowrap}
+#gguw .un{font-size:10px;font-weight:700;color:#4A3E7A}
+#gguw .qq{font-size:12px;color:#38414A;line-height:1.5}
+#gguw .gguh .gg{margin-top:5px;font-size:12px;color:#20456A;white-space:pre-wrap;line-height:1.6}
+#gguw .gsep{padding:5px 11px;background:var(--paper);border-bottom:1px solid var(--line);
+  font-size:11px;font-weight:800;color:#4A5661}
+#gguw .gguR{padding:8px 11px;border-bottom:1px solid var(--line)}
+#gguw .gguR.me{background:#FFFBEA}
+#gguw .gguR.none{font-size:12px;color:var(--muted)}
+#gguw .now{font-size:9.5px;font-weight:800;color:#8A6300;background:#FFF6DF;border:1px solid #E9CE8B;
+  padding:1px 5px;border-radius:4px}
+/* ③ 찾기 결과 줄 = 민법 꼴 세 줄(머리줄 · 문제 글 · 찾은 근거 줄) */
+.ggres.g3{display:block;padding:7px 9px}
+.ggres.g3.on{opacity:.5}
+.ggres.g3 .hd{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px}
+.ggres.g3 .cd{font-size:10px;font-weight:700;color:var(--muted);background:var(--paper);
+  border:1px solid var(--line);padding:1px 6px;border-radius:4px;white-space:nowrap}
+.ggres.g3 .hd b{font-size:10.5px;font-weight:800;color:var(--sea);white-space:nowrap}
+.ggres.g3 .un{font-size:10px;font-weight:700;color:#4A3E7A}
+.ggres.g3 .already{font-size:10px;font-weight:800;color:#1E7A55}
+.ggres.g3 .qq{font-size:12px;color:#38414A;line-height:1.5}
+.ggres.g3 .gl{border-left:2px solid #7FA8C6;background:var(--sea-soft);padding:2px 6px;margin-top:3px;
+  font-size:11.5px;color:#20456A;white-space:pre-wrap}
 /*/EARTH:css*/
 </style>
 </head>
@@ -1619,7 +1660,10 @@ document.addEventListener('pointercancel',e=>{__tapDown.delete(e.pointerId)},tru
 /* 여기에 걸리면 **흘려보낸다** — 눌리는 것(단추·칩·요약·툴)과 끄는 것(.ogrip·#mask)과 글자칸.
    그 밖은 전부 가로채서 손가락으로 굴린다. */
 const PASS_THRU='button,summary,a,label,[role="button"],.tl,.iconbtn,.btn,.tag,.chip,'
-  +'[data-tool],#omrPad,#navTg,select,input,textarea,.ogrip,#mask,.tbox,#qtxt';
+  +'[data-tool],#omrPad,#navTg,select,input,textarea,.ogrip,#mask,.tbox,#qtxt,'
+  /* add3 ②-ⓒ — 근거 덩어리의 누르는 것들. 손가락 톡이 스크롤로 빼앗기지 않게 흘려보낸다.
+     지학에만 있는 클래스라 물리·생물 화면은 한 곳도 안 달라진다(글자만 는 선택자다). */
+  +'.ggnum,.ggbang,.ggref,.ggres,.gguse,[data-ggown],[data-ggpick],[data-ggrt],[data-ggtog]';
 function inkGuard(box){
   if(!box||box.__inkg)return;box.__inkg=1;
   let penDown=false;const held=new Set(),palm=new Set();
@@ -5773,7 +5817,13 @@ function qTxtWire(){
    b.title='문제 위에 글자 통을 놓는다 — 필기와 다른 통이라 지우개가 안 지운다';
    const er=document.getElementById('tErase');
    tb.insertBefore(b,er?er.nextSibling:null);
-   b.onclick=()=>{QTXT=!QTXT;qTxtWire()};}}
+   b.onclick=()=>{QTXT=!QTXT;
+     /* add3 ①-ⓑ — 글상자를 켜면 필기 도구를 놓는다(도구는 늘 하나만 켜져 있다).
+        `setTool` 을 부르지 않는 까닭 = 그것이 ①-ⓐ 로 QTXT 를 다시 꺼 버린다. */
+     if(QTXT){TOOL.mode='view';
+       document.querySelectorAll('[data-pen],[data-hl],#tErase').forEach(x=>x.classList.remove('on'));
+       try{qWire()}catch(e){}}
+     qTxtWire()};}}
 function qWire(){
   const card=$('#card'); const sv=card&&card.querySelector('#qink'); if(!sv)return;
   const penOn=()=>TOOL.mode==='pen'||TOOL.mode==='hl'||TOOL.mode==='erase';
@@ -6848,7 +6898,15 @@ $('#tLayerEye').onclick=()=>{QHIDE=!QHIDE;$('#tLayerEye').classList.toggle('on',
    ⚠ `setTool('view')` 갈래 자체는 남겨 둔다 — 교재·서브노트 툴줄이 아직 그 뜻을 쓴다. */
 /* 펜·형광·지우개를 고르면 잉크 층이 잡히게(보기 상태면 글자 선택이 살아 있다) */
 {const _setTool=setTool;
- setTool=function(){const r=_setTool.apply(this,arguments);try{qWire()}catch(e){}return r}}
+ setTool=function(mode){const r=_setTool.apply(this,arguments);
+   /* add3 ①-ⓐ — 펜·형광·지우개를 고르면 **글상자 모드를 끈다.**
+      본디 `setTool` 은 `.tl` 의 `on` 만 지워서 단추는 꺼져 보이는데 `QTXT` 는 살아 있었다 —
+      글상자 층 `#qtxt`(z 7)가 필기 덮개(z 6) 위라 모든 톡을 그것이 먼저 받아 글상자가 섰다.
+      ①-ⓒ 표시와 상태가 갈리지 않게 `qTxtWire()` 로 `#tTxt.on` 을 늘 `QTXT` 에 맞춘다. */
+   if(mode==='pen'||mode==='hl'||mode==='erase')QTXT=false;
+   try{qWire()}catch(e){}
+   try{qTxtWire()}catch(e){}
+   return r}}
 window.addEventListener('resize',()=>{try{if(VNO&&!$('#view').classList.contains('hide')){qFit();qPaint();
   if(typeof qTxtPaint==='function')qTxtPaint()}}catch(e){}});
 $('#sub .shead b').textContent=CUR.NAME+' 서브노트';
@@ -7382,6 +7440,62 @@ var ggRefAdd=async function(uid,u){if(uid===u)return;const a=ggRefOf(uid).slice(
 var ggRefDel=async function(uid,u){const a=ggRefOf(uid).filter(x=>x!==u);
   if(a.length)GGREF[uid]=a;else delete GGREF[uid];await saveGGREF()}
 
+/* ── add3 ③ 쓰임 수 — 세 자리(근거 줄 라벨 · 연결 칩 옆 · 찾기 결과 줄)가 **이 하나**를 쓴다.
+   n = ggOwners(uid).length(= 그 근거를 걸어 둔 문항 수 · 자기 자신은 안 센다).
+   민법 9/14 확정 규칙: 1 이하 = 안 그림 · 2〜4 = 회색 · 5 이상 = 빨강.
+   `me` = 지금 보는 쪽(창에서 「× 연결 끊기」를 내줄 문항). 없으면 빈 글자. */
+var ggUseN=uid=>ggOwners(uid).length;
+function ggUseHTML(uid,pre,me){
+  const n=ggUseN(uid); if(n<=1)return '';
+  return '<i class="gguse'+(n>=5?' hot':'')+'" data-gguse="'+ea(String(uid)+'|'+String(me||''))+'"'
+    +' title="이 문항의 근거를 쓰는 문항 '+n+'">'+(pre||'')+n+'</i>'}
+/* 목록 차례(단원순) — 쓰임 수로 정렬하지 않는다 */
+function ggUseSort(list){
+  const cmpU=(a,b)=>(typeof unitCmp==='function'?unitCmp(a,b):(a<b?-1:a>b?1:0));
+  const key=u=>{const r=rowByUid(u);
+    return r?[String(unitOf(r[F.NO])||''),+r[F.ROUND]||0,+r[F.LNO]||0,+r[F.NO]||0]:null};
+  return list.slice().sort((a,b)=>{const ka=key(a),kb=key(b);
+    if(!ka&&!kb)return 0; if(!ka)return 1; if(!kb)return -1;
+    return cmpU(ka[0],kb[0])||(ka[1]-kb[1])||(ka[2]-kb[2])||(ka[3]-kb[3])})}
+var ggWhere=r=>((+r[F.ROUND]||0)+'회 '+(+r[F.LNO]||0)+'번 · '+unitLabel(unitOf(r[F.NO])));
+/* 쓰임 목록 창 — 새 창틀을 안 만든다. 📋 정리 창이 쓰는 `makeFloat` 을 그대로 부른다. */
+function ggUseWin(target,me){
+  if(!ISEA)return;
+  const old=document.getElementById('gguw');if(old)old.remove();
+  const owners=ggUseSort(ggOwners(target)), r0=rowByUid(target);
+  const gtext=ggOf(target).map(g=>g.i+'. '+ggFlat(g)
+    +((g.cs||[]).length?'\n'+g.cs.map(c=>'  ↳ '+String((c&&c.t)||'')).join('\n'):'')).join('\n');
+  const head='<div class="gguh"><div class="ln">'
+    +'<span class="cd">'+esc(r0?codeShow(r0):String(target))+'</span>'
+    +'<span class="un">'+esc(r0?ggWhere(r0):'지금 데이터에 없음')+'</span></div>'
+    +(r0?'<div class="qq">'+esc(String(txtOf(target,'q')).slice(0,120))+'</div>':'')
+    +(gtext?'<div class="gg">'+esc(gtext)+'</div>':'')+'</div>';
+  const sep='<div class="gsep">이 근거를 걸어 둔 문항 '+owners.length+'</div>';
+  const rows=owners.map(u=>{const r=rowByUid(u);
+    if(!r)return '<div class="gguR none">'+esc(String(u))+' — 지금 데이터에 없음</div>';
+    const isMe=me&&String(u)===String(me);
+    return '<div class="gguR'+(isMe?' me':'')+'"><div class="ln">'
+      +'<span class="cd">'+esc(codeShow(r))+'</span>'
+      +'<span class="un">'+esc(ggWhere(r))+'</span>'
+      +(isMe?'<span class="now">지금 보는 문항</span>':'')
+      +'<span class="sp"></span>'
+      +(isMe?'<button class="lk red" data-gguux="'+ea(String(u)+'|'+String(target))+'">× 연결 끊기</button>'
+            :'<button class="lk" data-gguugo="'+ea(String(u))+'">↪ 그 문제 보기</button>')
+      +'</div><div class="qq">'+esc(String(txtOf(u,'q')).slice(0,80))+'…</div></div>'}).join('')
+    ||'<div class="bplnone">걸어 둔 문항이 없습니다</div>';
+  const b=document.createElement('div');b.className='sheet';b.id='gguw';
+  b.innerHTML='<div class="panel"><div class="bplh">'
+    +'<span>🔗 '+esc(r0?codeShow(r0):String(target))+' 의 근거를 쓰는 문항 '+owners.length+'</span>'
+    +'<span class="mut" style="font-weight:500;margin-left:6px">누르면 그 문제가 창으로 열립니다</span>'
+    +'<button id="gguwX">닫기</button></div><div id="gguwBody">'+head+sep+rows+'</div></div>';
+  document.body.appendChild(b);
+  b.querySelector('#gguwX').onclick=()=>b.remove();
+  if(!WIN.gguse){let sv=null;try{sv=JSON.parse(localStorage.getItem('jagwa.win.gguse')||'null')}catch(e){}
+    if(!sv){const w=Math.min(560,Math.round(window.innerWidth*0.92)),
+                  h=Math.min(640,Math.round(window.innerHeight*0.8));
+      WIN.gguse={w:w,h:h,l:Math.round((window.innerWidth-w)/2),t:Math.round((window.innerHeight-h)/2)}}}
+  makeFloat(b,b.querySelector('.bplh'),'gguse','jagwa.win.gguse');
+}
 function ggChipHTML(uid,g,sc){
   return '<span class="ggnum '+ggOkCls(g.ok)+(g.bang?' bang':'')+'" data-ggtog="'+ea(uid+'|'+g.k+'|'+sc)+'"'
     +' data-gbnum="'+ea(uid+'|'+g.k)+'" title="'+ea(ggFlat(g))+'">'+g.i+'</span>'}
@@ -7407,10 +7521,9 @@ function ggPanelHTML(uid,g,sc){
     +'<button class="lk" data-ggreply="'+ea(uid+'|'+g.k+'|'+sc)+'">달기</button></div></div></div>'}
 function ggRefChipsHTML(uid,sc){
   return ggRefOf(uid).map(u=>{
-    const n=ggOwners(u).length;
     return '<span class="ggref'+(ggBangAny(u)?' bang':'')+'" data-ggrt="'+ea(uid+'|'+u+'|'+sc)+'"'
       +' data-gbref="'+ea(u)+'" title="연결한 근거 · '+ea(u)+'">🔗 '+esc(codeShow(rowByUid(u))||u)
-      +(n>1?'<i>↩'+n+'</i>':'')+'</span>'}).join('')}
+      +ggUseHTML(u,'',uid)+'</span>'}).join('')}
 function ggRefBoxHTML(uid,sc){
   return ggRefOf(uid).map(u=>{
     const r=rowByUid(u), list=r?ggOf(u):[];
@@ -7437,7 +7550,8 @@ function ggRefBoxHTML(uid,sc){
 function ggLineHTML(uid,sc){
   const list=ggOf(uid), own=ggOwners(uid).length;
   return '<div class="ggbox" id="'+sc+'gg-box-'+ea(uid)+'" data-ggbox="'+ea(uid+'|'+sc)+'">'
-    +'<div class="ggline"><span class="lb">근거'+(own?'<i data-ggown="'+ea(uid)+'">↩'+own+'</i>':'')+' :</span>'
+    /* add3 ③ — 라벨 옆 쓰임 수. 지금까지는 n=1 에도 떴다(민법 규칙은 1 = 안 그림) */
+    +'<div class="ggline"><span class="lb">근거'+ggUseHTML(uid,'↩',uid)+' :</span>'
     +'<span class="chips">'+list.map(g=>ggChipHTML(uid,g,sc)).join('')+'</span>'
     +'<span class="refchips">'+ggRefChipsHTML(uid,sc)+'</span>'
     +'<span class="ggrows" data-ggrows="'+ea(uid+'|'+sc)+'">'+ggRowHTML('')+'</span>'
@@ -7560,14 +7674,29 @@ function ggHits(q){
       if(!hay.includes(low)&&!uid.toLowerCase().includes(low)&&!String(codeShow(r)).toLowerCase().includes(low))return}
     out.push({uid:uid,no:r[F.NO],line:ggPickLine(uid,low),bang:ggBangAny(uid),own:ggOwners(uid).length})});
   return out}
-function ggResLine(h,q){
-  const mark=s=>{const low=String(q||'').toLowerCase();if(!low)return esc(s);
-    const i=String(s).toLowerCase().indexOf(low);if(i<0)return esc(s);
-    return esc(s.slice(0,i))+'<mark>'+esc(s.slice(i,i+low.length))+'</mark>'+esc(s.slice(i+low.length))};
-  return '<div class="ggres" data-ggres="'+h.no+'"><b>'+esc(codeShow(rec(h.no)))+'</b>'
+/* add3 ③ — 카드 안 찾기와 위 검색 줄이 **같은 세 줄 꼴**을 쓴다(민법 3443~3467).
+   mode 'pick' = 카드 안(누르면 연결 걸기) · 'go' = 위 검색 줄(누르면 문항 창).
+   노란 찾은 글자 표시는 위 검색 줄에서만 — 카드 안은 지금까지도 없었다. */
+function ggResRowHTML(h,q,mode,me,sc){
+  const r=rec(h.no);
+  const on=(mode==='pick'&&me&&ggRefOf(me).indexOf(h.uid)>=0);
+  const mark=t=>{const low=String(q||'').toLowerCase();
+    if(mode!=='go'||!low)return esc(t);
+    const i=String(t).toLowerCase().indexOf(low);if(i<0)return esc(t);
+    return esc(t.slice(0,i))+'<mark>'+esc(t.slice(i,i+low.length))+'</mark>'+esc(t.slice(i+low.length))};
+  const line=String(h.line||'').split('\n').map(x=>x.slice(0,90)).join('\n');
+  return '<div class="ggres g3'+(on?' on':'')+'" '
+    +(mode==='pick'?'data-ggpick="'+ea(String(me)+'|'+h.uid+'|'+String(sc||''))+'"'
+                   :'data-ggres="'+h.no+'"')+'>'
+    +'<div class="hd"><span class="cd">'+esc(codeShow(r))+'</span>'
+    +'<b>'+esc((+r[F.ROUND]||0)+'회 '+(+r[F.LNO]||0)+'번')+'</b>'
+    +'<span class="un">'+esc(unitLabel(unitOf(h.no)))+'</span>'
     +(h.bang?'<span class="ggbang on">!</span>':'')
-    +'<span class="t">'+mark(h.line)+'</span>'
-    +(h.own>1?'<i>↩'+h.own+'</i>':'')+'</div>'}
+    +(on?'':ggUseHTML(h.uid,'↩',me||''))
+    +(on?'<span class="already">이미 넣음</span>':'')+'</div>'
+    +'<div class="qq">'+esc(String(txtOf(h.uid,'q')).slice(0,70))+'…</div>'
+    +'<div class="gl">'+mark(line)+'</div></div>'}
+function ggResLine(h,q){return ggResRowHTML(h,q,'go','','')}
 /* §D-7 위 검색 줄 「🔗 근거」 모드 */
 function ggResBox(q){
   const box=document.getElementById('esres');if(!box)return;
@@ -7596,10 +7725,14 @@ function ggFindRun(uid,sc){
   const q=String((b.querySelector('input')||{}).value||'');
   const hits=ggHits(q).filter(h=>h.uid!==uid);
   b.querySelector('.res').innerHTML=hits.length
-    ? hits.slice(0,40).map(h=>'<div class="ggres" data-ggpick="'+ea(uid+'|'+h.uid+'|'+sc)+'"><b>'+esc(codeShow(rec(h.no)))+'</b>'
-        +(h.bang?'<span class="ggbang on">!</span>':'')+'<span class="t">'+esc(h.line)+'</span>'
-        +(h.own>1?'<i>&#8629;'+h.own+'</i>':'')+'</div>').join('')
+    ? hits.slice(0,40).map(h=>ggResRowHTML(h,q,'pick',uid,sc)).join('')
     : '<div class="bplnone">찾은 근거가 없다</div>'}
+/* add3 ③ — 찾기 칸은 타자마다 돌리지 않고 120ms 모았다 한 번(민법 3470 · 아이패드 입력 밀림).
+   상자를 열 때(포커스)는 지금처럼 즉시 돌린다. */
+var _ggFindT={};
+function ggFindSoon(uid,sc){const k=uid+'|'+sc;
+  clearTimeout(_ggFindT[k]);
+  _ggFindT[k]=setTimeout(()=>{delete _ggFindT[k];ggFindRun(uid,sc)},120)}
 function ggEditOpen(uid,k,sc){
   const box=document.querySelector('[data-gged-box="'+CSS.escape(uid+'|'+k+'|'+sc)+'"]');
   const g=ggItem(uid,k); if(!box||!g)return;
@@ -7733,6 +7866,13 @@ if(ISEA){
     const t=e.target; if(!t||!t.closest)return;
     const hit=s=>t.closest(s);
     let el;
+    /* add3 ③ — 쓰임 수는 **맨 먼저** 본다. 칩·결과 줄 안에 있어서 그 누름을 가로채면 안 된다. */
+    if(el=hit('[data-gguse]')){e.stopPropagation();e.preventDefault();
+      const v=par(el,'data-gguse');ggUseWin(v[0],v[1]||'');return}
+    if(el=hit('[data-gguugo]')){e.stopPropagation();
+      const r=rowByUid(el.getAttribute('data-gguugo'));if(r)openView(r[F.NO]);return}
+    if(el=hit('[data-gguux]')){e.stopPropagation();const v=par(el,'data-gguux');
+      await ggRefDel(v[0],v[1]);ggRepaint(v[0]);ggUseWin(v[1],v[0]);return}
     if(el=hit('[data-mc]')){e.stopPropagation();mcwOpen(el.getAttribute('data-mc')||'all');return}
     if(el=hit('[data-jn]')){e.stopPropagation();jnOpen(el.getAttribute('data-jn'));return}
     if(el=hit('[data-go]')){e.stopPropagation();openView(+el.getAttribute('data-go'));return}
@@ -7791,7 +7931,7 @@ if(ISEA){
     const t=e.target; if(!t||!t.matches)return;
     if(t.matches('.ggrow .txt')||t.matches('[data-ggcin]')||t.matches('.ggedin'))ggFit(t);
     const fb=t.closest?t.closest('[data-ggfindbox]'):null;
-    if(fb){const v=String(fb.getAttribute('data-ggfindbox')).split('|');ggFindRun(v[0],v[1])}
+    if(fb){const v=String(fb.getAttribute('data-ggfindbox')).split('|');ggFindSoon(v[0],v[1])}
   },true);
   /* 칸을 벗어날 때 — **줄이 하나일 때만** 저장(§D-2) */
   document.addEventListener('focusout',async e=>{
@@ -7829,7 +7969,11 @@ function ggCardHTML(r){
   if(!ISEA)return '';
   const uid=r[F.CODE], no=r[F.NO];
   const lks=(typeof linksOf==='function')?linksOf(no):[];
-  return '<div class="ggwrap">'+ggLineHTML(uid,'qp-')+'</div>'
+  /* add3 ② — 근거 줄·판·찾기 상자·연결 상자·아랫줄을 **한 겹으로 싸서** 덮개 위에 올린다(`.ggtop`).
+     `UNDER_HIT` 에 하나씩 더하는 길은 안 쓴다 — 글자칸(포커스·펜슬 손글씨)은 그 길로 못 살리고,
+     근거 줄에 요소가 늘 때마다 또 빠진다. */
+  return '<div class="ggtop">'
+    +'<div class="ggwrap">'+ggLineHTML(uid,'qp-')+'</div>'
     +'<div class="vrow">'
     +'<button class="vdet" id="cDetBtn" title="'+ea(r[F.SOLPG]&&!CUR.KINDS?('부록 '+r[F.SOLPG]+'쪽'):'정답·해설')+'">정답·해설 ▸</button>'
     /* add2 §C — P 가 넷째. title 은 아랫줄 `#mP` 것을 그대로 가져온다(따로 적지 않는다) */
@@ -7838,7 +7982,8 @@ function ggCardHTML(r){
         +'>'+MG[m]+'</button>').join('')
     +'<span class="lkchips">'+lks.map(x=>{const q=rec(x);
         return q?'<button class="lkchip" data-go="'+x+'">🔗 '+esc(codeShow(q))+'</button>':''}).join('')+'</span>'
-    +'<span class="sp"></span><button class="vlink" id="cLink">✏️ 연결</button></div>'}
+    +'<span class="sp"></span><button class="vlink" id="cLink">✏️ 연결</button></div>'
+    +'</div>'}
 function ggCardWire(c,r){
   if(!ISEA||!c)return;
   const no=r[F.NO];
