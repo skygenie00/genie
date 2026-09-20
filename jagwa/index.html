@@ -1175,7 +1175,12 @@ body[data-subj="earth"] .vbot #mX,body[data-subj="earth"] .vbot #tNote{display:n
 #inkPill #tErase::before{content:'\25FB';font-size:12px}
 #inkPill #tTxt::before{content:'T';font-size:11px;font-weight:800}
 #inkPill #tUndo::before{content:'\21BA';font-size:13px}
-body[data-subj="earth"] #view .vtop{flex-wrap:wrap;row-gap:6px}
+/* 좁으면 알약만 둘째 줄로(§A-1). 문항 창은 **떠 있는 창**이라 화면 폭이 아니라
+   그 창 폭을 재야 한다 — @media 가 아니라 **@container** 를 쓴다(2026-09-20 실측: @media 는 안 먹는다).
+   제목에 최소 폭을 줘야 줄이 정말 넘친다 — `.title{flex:1;min-width:0}` 은 0 까지 줄어 줄이 안 바뀐다. */
+body[data-subj="earth"] #view .vtop{flex-wrap:wrap;row-gap:6px;container-type:inline-size}
+body[data-subj="earth"] #view .vtop .title{min-width:96px}
+@container (max-width:560px){#view .vtop #inkPill{order:9;margin-left:auto}}
 /* §B 지학 아랫줄은 다섯뿐(오른쪽 맞춤) — 나머지는 머리줄 알약·근거 아랫줄·머리 칩으로 갔다.
    `.tl` 의 본디 display 가 grid 라 되살릴 때도 grid 로 둔다(select#tLayer 도 같다). */
 body[data-subj="earth"] .vbot .tools>*{display:none!important}
