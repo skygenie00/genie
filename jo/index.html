@@ -906,7 +906,7 @@ body.inkon .main,body.inkon .pop{user-select:none}
 #cvWorld{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
 .cv-pg{position:absolute;background:#fff;box-shadow:0 1px 4px var(--cv-shadow)}
 .cv-pg .cv-pn{position:absolute;left:8px;top:6px;font-size:13px;font-weight:700;color:#B8B2A4}
-.cv-pg svg{position:absolute;left:0;top:0;pointer-events:none}
+.cv-pg svg{position:absolute;left:0;top:0;pointer-events:none;mix-blend-mode:multiply}   /* ★ add2 — 형광이 글자 밑에 깔린 것처럼 */
 .cv-pg img{position:absolute;pointer-events:none}
 .cv-hl{position:absolute;background:rgba(245,196,0,.28);border-radius:3px;pointer-events:none;z-index:1}.cv-hl.tt{background:rgba(245,196,0,.30)}
 .cv-bar{position:absolute;width:5px;border-radius:3px;pointer-events:none;z-index:2}.cv-bar.y{background:#F5C400}.cv-bar.p{background:#7A4FFF}
@@ -920,9 +920,9 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .cv-blk{position:absolute;border:1px solid transparent;border-radius:3px;cursor:pointer}
 .cv-blk:hover{border-color:color-mix(in srgb,var(--cv-sel) 50%,transparent);background:color-mix(in srgb,var(--cv-sel) 6%,transparent)}
 .cv-blk.on{border:2px solid var(--cv-sel);background:color-mix(in srgb,var(--cv-sel) 8%,transparent)}
-.cv-blk.hp{border-color:color-mix(in srgb,#C48A00 55%,transparent)}
+.cv-blk.hp:hover{border-color:color-mix(in srgb,#C48A00 70%,transparent)}   /* ★ add3 — 늘 보이던 테두리는 hover 때만 */
 .cv-blk.tk:after{content:'▸';position:absolute;right:-13px;top:-1px;font-size:10px;color:var(--cv-exc);opacity:.85}
-.cv-blk.cs{border-color:color-mix(in srgb,var(--cv-case) 45%,transparent)}
+.cv-blk.cs:hover{border-color:color-mix(in srgb,var(--cv-case) 60%,transparent)}   /* ★ add3 — hover 때만 */
 .cv-blk.flash{animation:cvfl 1.2s}@keyframes cvfl{0%{background:color-mix(in srgb,var(--cv-sel) 35%,transparent)}100%{background:transparent}}
 #cvWorld.flt .cv-blk:not(.keep){opacity:0}#cvWorld.flt .cv-ln{opacity:.2}#cvWorld.flt .cv-ln.keep{opacity:1}
 .cv-ln.del{display:none}.cv-blk.del{display:none}
@@ -10546,7 +10546,7 @@ const viewCanvas = (() => {
               memo: REC_PRE + 'canvasmemo', pin: REC_PRE + 'canvaspin', ui: 'jopangi_ui.canvas' };
   const rgb = c => c ? `rgb(${c.map(v => Math.round(v * 255)).join(',')})` : '#000';
   const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  let META = null, BASE = null, D = null, MATCH, GICHUL = {}, PW = 0, NP = 0, WH = 0;
+  let META = null, BASE = null, D = null, MATCH, GICHUL = {}, IMGS = {}, PW = 0, NP = 0, WH = 0;
   let stage = null, world = null, chips = null, labels = null, H = null, conn = null;
   let vx = 20, vy = 20, vz = 1, sel = null; const F = new Set();
   let built = new Map(), mounted = new Set();
@@ -10583,6 +10583,7 @@ const viewCanvas = (() => {
     BASE = await Promise.all(META.pages.map(p => get(DIR + 'canvas_p' + p.n + '.json')));
     try { MATCH = await get(DIR + 'canvas_match.json'); } catch (e) { MATCH = null; }
     try { GICHUL = await get(DIR + 'canvas_gichul.json'); } catch (e) { GICHUL = {}; }
+    try { IMGS = await get(DIR + 'canvas_imgs.json'); } catch (e) { IMGS = {}; }   /* ★ add2 — 원본 해상도 그림 자리표 */
   }
   function build(){
     D = { PW: META.PW, PH: META.PH, GAP: META.GAP, pyeon: META.pyeon, pages: BASE.map(p => JSON.parse(JSON.stringify(p))) };
@@ -10621,16 +10622,21 @@ const viewCanvas = (() => {
     pg.innerHTML = `<div class="cv-pn">${p.n}쪽</div>`;
     const ns = 'http://www.w3.org/2000/svg'; const svg = document.createElementNS(ns, 'svg'); svg.setAttribute('width', PW * SC); svg.setAttribute('height', p.ph * SC); svg.setAttribute('viewBox', `0 ${p.oy} ${PW} ${p.ph}`);
     let d = '';
+    /* ★ add2·add3(2026-09-20 · 시안 v50) — lw ≥ 4 = 굿노트 형광펜(색 불문) → 굵기 그대로 · opacity .33 · 둥근 끝.
+       펜 획(lw 0.5·2.3~2.6)은 (lw||1)*0.8 로 그리고 불투명. 쪽 svg 는 multiply 라 글자 밑에 깔린 것처럼 보인다. */
     p.shapes.forEach(s => { if (s.k === 'r'){ d += `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" fill="${s.f ? rgb(s.f) : 'none'}" ${s.s && s.lw ? `stroke="${rgb(s.s)}" stroke-width="${s.lw}"` : ''}/>`; }
-      else if (s.k === 'l'){ const yel = s.s && s.s[0] > .95 && s.s[1] > .7 && s.s[2] < .2; d += `<line x1="${s.x}" y1="${s.y}" x2="${s.x2}" y2="${s.y2}" stroke="${rgb(s.s)}" stroke-width="${s.lw || 1}" stroke-linecap="round" ${yel ? 'opacity=".6"' : ''}/>`; }
-      else { d += `<path d="M${s.p.map(q => q.join(' ')).join('L')}" fill="${s.f ? rgb(s.f) : 'none'}" ${s.s ? `stroke="${rgb(s.s)}" stroke-width="${s.lw || 1}"` : ''} stroke-linejoin="round"/>`; } });
+      else if (s.k === 'l'){ const hi = (s.lw || 0) >= 4; d += `<line x1="${s.x}" y1="${s.y}" x2="${s.x2}" y2="${s.y2}" stroke="${rgb(s.s)}" stroke-width="${hi ? s.lw : (s.lw || 1) * 0.8}" stroke-linecap="round" ${hi ? 'opacity=".33"' : ''}/>`; }
+      else { const hi = (s.lw || 0) >= 4; d += `<path d="M${s.p.map(q => q.join(' ')).join('L')}" fill="${s.f ? rgb(s.f) : 'none'}" ${s.s ? `stroke="${rgb(s.s)}" stroke-width="${hi ? s.lw : (s.lw || 1) * 0.8}"` : ''} stroke-linejoin="round" stroke-linecap="round" ${hi ? 'opacity=".33"' : ''}/>`; } });
     svg.innerHTML = d; pg.appendChild(svg);
     p.hls.forEach(o => { const e = document.createElement('div'); e.className = 'cv-hl' + (o.t ? ' tt' : ''); e.style.cssText = `left:${o.x * SC}px;top:${(o.y - p.oy) * SC}px;width:${o.w * SC}px;height:${o.h * SC}px` + (o.c ? `;background:rgba(${Math.round(o.c[0] * 255)},${Math.round(o.c[1] * 255)},${Math.round(o.c[2] * 255)},.28)` : ''); pg.appendChild(e); });
     p.bars.forEach(o => { const e = document.createElement('div'); e.className = 'cv-bar ' + o.c; e.style.cssText = `left:${o.x * SC - 2}px;top:${(o.y - p.oy) * SC}px;height:${o.h * SC}px`; pg.appendChild(e); });
-    p.imgs.forEach(o => { const im = document.createElement('img'); im.src = o.d; im.style.cssText = `left:${o.x * SC}px;top:${(o.y - p.oy) * SC}px;width:${o.w * SC}px;height:${o.h * SC}px`; pg.appendChild(im); });
+    /* ★ add2 — 오려붙인 그림은 원본 해상도 파일(img/pN_i.jpg)로. 없으면 쪽 파일 안 base64(저해상)로 떨어진다. */
+    p.imgs.forEach((o, i) => { const im = document.createElement('img'); const j = (IMGS[p.n] || []).find(x => x.i === i);
+      im.src = j ? (DATA + DIR + j.src) : o.d; im.style.cssText = `left:${o.x * SC}px;top:${(o.y - p.oy) * SC}px;width:${o.w * SC}px;height:${o.h * SC}px`; pg.appendChild(im); });
     const frag = document.createDocumentFragment();
     p.lines.forEach((l, li) => { const e = document.createElement('div'); e.className = 'cv-ln' + (l.cat ? ' cat' : '') + (l.del ? ' del' : ''); e.dataset.i = li; e.style.cssText = `left:${l.x * SC}px;top:${(l.y - p.oy) * SC}px;height:${l.h * SC}px`;
-      l.r.forEach(r => { const s = document.createElement('span'); s.textContent = r.t; s.dataset.w = r.w * SC; s.style.cssText = `left:${(r.x - l.x) * SC}px;font-size:${Math.min(r.s, 3) * SC * 0.8}px;color:${rgb(r.c)}`; e.appendChild(s); }); frag.appendChild(e); });
+      /* ★ add3(시안 v50 · 세션 1 규칙 9) — 글자 크기는 본문 3pt 로 통일한다(원본 s 는 안 본다) */
+      l.r.forEach(r => { const s = document.createElement('span'); s.textContent = r.t; s.dataset.w = r.w * SC; s.style.cssText = `left:${(r.x - l.x) * SC}px;font-size:${3 * SC * 0.8}px;color:${rgb(r.c)}`; e.appendChild(s); }); frag.appendChild(e); });
     p.blocks.forEach((b, i) => { if (b.k === '헤딩' || b.del) return; const e = document.createElement('div'); e.className = 'cv-blk' + (b.k === '학판검' ? ' hp' : b.k === '판례' ? ' cs' : '') + (b.full ? ' tk' : ''); e.style.cssText = `left:${b.x * SC - 3}px;top:${(b.y - p.oy) * SC - 2}px;width:${b.w * SC + 6}px;height:${b.h * SC + 3}px;z-index:${10 + b.d}`; e.dataset.p = p.n; e.dataset.b = i; frag.appendChild(e); });
     pg.appendChild(frag);
     const isvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); isvg.setAttribute('class', 'cv-inksvg'); isvg.setAttribute('width', PW * SC); isvg.setAttribute('height', p.ph * SC); isvg.setAttribute('viewBox', `0 0 ${PW} ${p.ph}`); pg.appendChild(isvg); inkDraw(p, isvg); inkBind(p, isvg);
@@ -11025,7 +11031,12 @@ const viewCanvas = (() => {
     paint(); await draw(); }
 
   /* ── 머리 표시(수정 수 · 판 바뀜 · 핀 수) ── */
-  function paintBadges(){ const e = document.getElementById('cvEditN'); if (e) e.textContent = '✎ 수정 ' + LOG.ops.length; const w = document.getElementById('cvStale'); if (w){ const msg = []; if (REPLAY.stale) msg.push('판이 바뀜 · 편집 ' + REPLAY.ok + '건 재생'); if (REPLAY.bad) msg.push('재생 못 한 편집 ' + REPLAY.bad); w.textContent = msg.join(' · '); w.style.display = msg.length ? '' : 'none'; } const np = document.getElementById('cvNpin'); if (np) np.textContent = Object.keys(pinAll()).length; }
+  /* ★ add3(2026-09-20) — 데이터 판이 바뀌면 옛 편집 기록은 **줄 번호가 밀려 엉뚱한 줄**에 붙을 수 있다.
+     지우는 것은 사람 몫이라 배지를 누르면 묻고 비운다(내가 말없이 지우지 않는다). */
+  function logWipe(){ if (!confirm('데이터 판이 바뀌었다(' + (LOG.hash || '?') + ' → ' + META.hash + ').\n옛 편집 기록 ' + LOG.ops.length + '건은 줄 번호가 밀려 엉뚱한 줄에 붙을 수 있다.\n비울까?')) return;
+    const A2 = lsRead(K.log); delete A2[DOC]; lsWrite(K.log, A2, '📝 정리캔버스 편집');
+    LOG = { hash: META.hash, ops: [] }; REPLAY = { ok: 0, bad: 0, stale: false }; D = null; toast('편집 기록을 비웠다'); render(); }
+  function paintBadges(){ const e = document.getElementById('cvEditN'); if (e) e.textContent = '✎ 수정 ' + LOG.ops.length; const w = document.getElementById('cvStale'); if (w){ const msg = []; if (REPLAY.stale) msg.push('판이 바뀜 · 편집 ' + REPLAY.ok + '건 재생'); if (REPLAY.bad) msg.push('재생 못 한 편집 ' + REPLAY.bad); w.textContent = msg.join(' · ') + (msg.length ? ' · 비우기' : ''); w.style.display = msg.length ? '' : 'none'; w.style.cursor = msg.length ? 'pointer' : ''; w.title = msg.length ? '누르면 옛 편집 기록을 비운다(묻는다)' : ''; w.onclick = msg.length ? (ev => { ev.stopPropagation(); logWipe(); }) : null; } const np = document.getElementById('cvNpin'); if (np) np.textContent = Object.keys(pinAll()).length; }
 
   /* ── 문서 전역(한 번만) — Ctrl+Z · Esc · 창 크기 · 글꼴 ── */
   let BOUND = false;
