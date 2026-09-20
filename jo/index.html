@@ -1166,6 +1166,33 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .mbfixb.on{border-color:#e8c877;background:#fdf3d8;color:var(--warn)}
 /* 아랫줄이 ✏️ 연결을 맡는다 — 옛 카드 발(「✏ 메모 및 유사문제 연결」 줄)은 숨긴다 */
 .mbq .qft{display:none}
+/* ══ _task_jo_gaek_mb §C-10 유형 칩 — 민법 typeChipHTML 실측(11px · p2/8 · rad6 · 초안 점선) ══
+   한 칩이지만 **누름은 두 조각**이다(유형 글자 · 조문 글자). 조각 사이 점은 안 눌린다. */
+.mbtype{display:inline-flex;align-items:center;gap:3px;font-size:11px;line-height:16.5px;
+  padding:2px 8px;border-radius:6px;border:1px solid;white-space:nowrap;
+  background:var(--paper);color:var(--sub);border-color:#cfcabf}
+.mbtype.draft{border-style:dashed;font-weight:600}
+.mbtype.fix{font-weight:800}
+.mbtype.jo{background:#eaf2fb;color:#14507d;border-color:#8fbce4}
+.mbtype.pan{background:#e9f5f1;color:#12564a;border-color:#8ecbbb}
+.mbtype.mix{background:#f0ebfa;color:#3f2f73;border-color:#b3a2dd}
+.mbtype.none{color:#9a958b}
+.mbtype .seg{font:inherit;color:inherit;background:transparent;border:0;padding:0;cursor:pointer}
+.mbtype .seg:hover{text-decoration:underline}
+.mbtype .seg.more{cursor:default;opacity:.75}
+.mbtype .seg.more:hover{text-decoration:none}
+.mbtype .dot{font-style:normal;opacity:.5}
+/* §C-16 교재 자리 목록 — 민법 mbbRowHTML 값 그대로(인라인 style 이라 잴 것 없이 같은 수) */
+.mbblist{padding:8px 10px 10px}
+.mbbrow{padding:7px 9px;border:1px solid var(--line);border-radius:8px;margin:4px 0;
+  cursor:pointer;background:var(--paper)}
+.mbbrow:hover{background:var(--panel)}
+.mbbrow .hd{display:flex;align-items:baseline;gap:6px}
+.mbbrow .hd .k{font-size:11px;color:var(--sub)}
+.mbbrow .hd .p{font-size:14px;font-weight:800;color:var(--ink)}
+.mbbrow .hd .m{font-size:10px;color:#9a958b}
+.mbbrow .sn{font-size:11px;color:#4a463f;line-height:1.45;max-height:2.9em;overflow:hidden;margin-top:2px}
+.mbbnone{padding:12px;font-size:12px;color:var(--sub)}
 </style>
 </head>
 <body>
@@ -8254,6 +8281,101 @@ function mbRecStrip(key){
    oxOf · oxAns · oxFixed · oxPut · oxState · oxFix · oxClear · solEl · logicView · lnkLines 그대로.
    바뀐 것은 꼴이다: 큰 O/X 상자를 걷고 「정답·해설 ▸ · O · X · 결과 … ✏️ 연결」 한 줄로,
    해설은 그 단추 하나가 [결과 줄 · 해설 · 제7판 해설 · 액션 바]를 연다(채점 뒤엔 저절로 펴짐). */
+/* ══════════ _task_jo_gaek_mb §C-10 머리 유형 칩 · 짧은 조문 꼴 ══════════
+   「유형 · 조문 앞 둘 · 외 N」 한 칩. **누름은 두 조각** — 유형 글자 = typePop · 조문 글자 = popJo.
+   보이는 글자만 「혼합」이고 저장값(`조문+판례`)은 그대로다(지시서 §C-10).
+   ⚠ 짧게 줄이는 함수는 **하나**다(joShort) · 1차객에서만 쓴다. */
+const JOSH_LAW = { '특': '특허', '상': '상표', '디': '디보', '민': '민소' };
+function joShort(c){
+  const s = String(c || '').trim();
+  /* ⓐ 코드 꼴 `특-128-2-1` (법-조-항-호-목) */
+  if (s.indexOf('-') > 0 && !/^제/.test(s)){
+    const g = s.split('-');
+    if (g.length < 2) return s;
+    const cur = (LAW_SHORT || {})[SHORT[S.law]] || '';
+    const pre = (g[0] && g[0] !== cur) ? ((JOSH_LAW[g[0]] || g[0]) + ' ') : '';
+    let out = g[1];                                   /* 128 · 5의2 */
+    if (g[2]) out += (JOHANG[+g[2]] || ('(' + g[2] + ')'));
+    else if (g[3]) return pre + out + '-' + g[3];     /* 항 없이 호만 → 128-1 */
+    if (g[3]) out += g[3];
+    if (g[4]) out += g[4];
+    return pre + out;
+  }
+  /* ⓑ 사람이 읽는 꼴 `제128조② 1호 가목` */
+  const m = /^제\s*(\d+)조(?:의\s*(\d+))?\s*([①-⑮])?\s*(?:(\d+)\s*호)?\s*(?:([가-힣])\s*목)?/.exec(s);
+  if (!m) return s;
+  let out = m[1] + (m[2] ? '의' + m[2] : '');
+  if (m[3]) out += m[3];
+  else if (m[4]) return out + '-' + m[4];
+  if (m[4]) out += m[4];
+  if (m[5]) out += m[5];
+  return out;
+}
+/* 유형 칩 — 민법 typeChipHTML 꼴(11px · p2/8 · rad6 · 초안이면 점선) */
+function mbTypeChip(key, draft, jos, host){
+  const fix = tyOf(key), eff = tyEff(key, draft);
+  const raw = eff ? TY_NAME[eff] : '';                       /* 저장값 이름 */
+  const lbl = raw === '조문+판례' ? '혼합' : raw;            /* 보이는 글자만 갈음 */
+  const list = (jos || []).filter(Boolean);
+  const shown = list.slice(0, 2);
+  const tail = list.length > shown.length ? (' 외 ' + (list.length - shown.length)) : '';
+  const chip = el('span', 'mbtype ' + (eff || 'none') + (fix ? ' fix' : ' draft'));
+  const tb = el('button', 'seg ty', lbl || '유형?');
+  tb.title = (fix ? '직접 확정한 값' : '초안 — 눌러 확정') + ' · 저장값 ' + (raw || '없음');
+  tb.onclick = ev => { ev.stopPropagation(); typePop(key, ev); };
+  chip.appendChild(tb);
+  shown.forEach(c => {
+    chip.appendChild(el('i', 'dot', '·'));
+    const jb = el('button', 'seg jo', joShort(c));
+    jb.title = (typeof joLabel === 'function' && String(c).indexOf('-') > 0) ? joLabel(c) : String(c);
+    jb.onclick = ev => { ev.stopPropagation();
+      const k = (String(c).indexOf('-') > 0 && typeof joCode === 'function') ? joCode(c)
+              : String(c).replace(/\s.*$/, '');
+      if (k) popJo(S.law, k, ev, 1); else toast('조문 번호를 못 읽었다'); };
+    chip.appendChild(jb);
+  });
+  if (tail){
+    const mb = el('span', 'seg more', tail);
+    mb.title = list.slice(2).map(x => (String(x).indexOf('-') > 0 ? joLabel(x) : x)).join(' · ');
+    chip.appendChild(mb);
+  }
+  host.appendChild(chip);
+  return chip;
+}
+
+/* ══════════ §C-16 「ID …」 → 교재 자리 목록(민법 mbbListHTML 꼴) ══════════
+   이번 판은 **정리OMR 자리만** 채운다. 교재 PDF 줄·「후보 N」은 나중 판이라
+   **죽은 줄을 그리지 않는다**(지시서 §C-16). 누름은 앞 판 핀이 하던 길 그대로(pinPop·omrJump). */
+function mbbPop(key, ev){
+  const _pk = 'cell|📚 교재 자리 — ' + linkDisp(key);
+  if (popToggle(_pk)) return;
+  const body = popShell('cell', '📚 교재 자리 — ' + linkDisp(key), _pk);
+  showPop(ev);
+  const wrap = el('div', 'mbblist');
+  if (S.law !== '특허법'){
+    wrap.appendChild(el('div', 'mbbnone', '정리OMR 은 특허만 있다'));
+    body.appendChild(wrap); return;
+  }
+  const info = (typeof pinInfo === 'function') ? pinInfo(key) : null;
+  const pin = info && info.pin;
+  const row = el('div', 'mbbrow');
+  const hd = el('div', 'hd');
+  hd.appendChild(el('span', 'k', '정리OMR'));
+  hd.appendChild(el('span', 'p', pin ? (pin.page + '쪽') : '아직 안 찍음'));
+  if (pin) hd.appendChild(el('span', 'm', 'PDF ' + pin.page));
+  hd.appendChild(el('span', 'm', pin ? (pin.user ? '찍어 둔 자리' : '자동 자리') : '누르면 찍기'));
+  row.appendChild(hd);
+  row.appendChild(el('div', 'sn', pin
+    ? '그 자리를 미리 본다 — 누르면 정리 레일의 그 줄로 간다.'
+    : '이 지문이 정리OMR 어디에 있는지 아직 안 찍었다. 누르면 찍기 화면으로 간다.'));
+  row.onclick = ev2 => { closeAllPops();
+    if (pin && typeof pinPop === 'function') pinPop(key, ev2);
+    else if (typeof omrJump === 'function') omrJump(key); };
+  wrap.appendChild(row);
+  wrap.appendChild(el('div', 'mbbnone',
+    '교재 PDF 자리·후보는 다음 판에서 들어온다 — 지금은 줄을 그리지 않는다.'));
+  body.appendChild(wrap);
+}
 function oxPickRow(row, key, raw, sol, extra, chips){
   const rec = oxOf(key) || {}, ans = oxAns(key, raw), fixed = oxFixed(key);
   lnkLines(row, key);                     /* 관련/나를 연결한 문제 — 자리 그대로 */
@@ -9571,7 +9693,11 @@ function qCard(q,mokTitle,seq){
   const keysL0=(q.지문||[]).map(z=>oxKeyLid(q,z));
   h.appendChild(el('span','qb v',String(q.연도).slice(2)+' 변리'));
   const sid0=((q.지문||[])[0]||{}).uid||'';
-  h.appendChild(el('span','qb id',sid0?sid0.slice(0,7):('ID '+q.id)));
+  /* ★ gaek_mb §C-16 — 「ID …」 는 교재 자리 목록(정리OMR 자리만)을 연다 */
+  {const idb=el('button','qb id',sid0?sid0.slice(0,7):('ID '+q.id));
+   idb.title='교재 자리 — 정리OMR';
+   idb.onclick=ev=>{ev.stopPropagation(); if(keysL0.length)mbbPop(keysL0[0],ev);};
+   h.appendChild(idb);}
   /* ★ v정정 ④ (8/27) — 문번 71~99 = 이 문항의 uid 가 임시라는 뜻(원장 규칙).
      뒤에 문번이 확정되면 uid 가 바뀐다 — 그때는 기록 이사 장치가 같이 간다. */
   if(sid0&&+sid0.slice(5,7)>=71)h.appendChild(el('span','qb t','임시'));
@@ -9584,11 +9710,10 @@ function qCard(q,mokTitle,seq){
     const eff=tk?tyEff(tk,tyDraftL(q)):'';
     const lbl=eff?TY_NAME[eff]:(q.갈래||'');
     if(tk){
-      const tb=el('button','qb '+(lbl==='판례형'?'v':'t'),lbl||'🏷 유형');
-      tb.style.border=fix?'1px solid currentColor':'1px dashed currentColor';
-      tb.title=fix?'손으로 확정한 유형 — 누르면 바꾼다':'컴파일러 초안 — 누르면 확정한다';
-      tb.onclick=ev=>{ev.stopPropagation();typePop(tk,ev);};
-      h.appendChild(tb);
+      /* ★ gaek_mb §C-10 — 민법 유형 칩 꼴. 조문은 이 문항 지문들의 근거조문을 모아 앞 둘만.
+         누름은 두 조각 — 유형 글자 = typePop · 조문 글자 = popJo. 저장값은 안 건드린다. */
+      const jos=[]; (q.지문||[]).forEach(z2=>(z2.jo||[]).forEach(c=>{if(jos.indexOf(c)<0)jos.push(c)}));
+      mbTypeChip(tk, tyDraftL(q), jos, h);
     }else if(q.갈래)h.appendChild(el('span','qb '+(q.갈래==='판례형'?'v':'t'),q.갈래));
   }
   // 「기출」/「기출변형」 접기 단추(§2) — 문번·유형은 접힌 한 줄로(정보는 버리지 않는다)
@@ -9609,6 +9734,12 @@ function qCard(q,mokTitle,seq){
     h.appendChild(pb);
   }
   if(keysL0.length)h.appendChild(mcChip(keysL0[0]));   // 🃏 — 태그줄과 같은 규약(첫 지문 키)
+  /* ★ gaek_mb §C-10 — 민법처럼 「↩링크N」 옆에 「↩백링크N」도 둔다 */
+  {const nB=keysL0.reduce((a,k)=>a+lkBack(k).length,0);
+   if(nB){const bb=el('button','qb t','↩백링크 '+nB);
+     bb.title='이 지문을 연결해 둔 다른 지문';
+     bb.onclick=ev=>{ev.stopPropagation();editPop(keysL0[0],ev);};
+     h.appendChild(bb);}}
   {const nF=keysL0.reduce((a,k)=>a+lkOf(k).length,0);  // ★ v3-F §6-1 ⓐ — 내가 연결한 수만
    if(nF){const cb=el('button','qb t','↩ 내가 연결한 '+nF);
      cb.onclick=ev=>{ev.stopPropagation();editPop(keysL0[0],ev);};
@@ -9853,7 +9984,11 @@ function p7Card(z,seq){
   /* ★ v3-F §1 — 배지줄 = 좌표(태그) · ID · 유형 · 「제7판」(접기 단추) · 🃏 만.
      초록 리담 칩·「리담과 흡수됨」·「p.쪽」은 「제7판」 단추의 접힌 한 줄로(정보는 버리지 않는다). */
   h.appendChild(el('span','qb v',z.태그));
-  h.appendChild(el('span','qb id',z.uid||('ID '+z.id)));
+  /* ★ gaek_mb §C-16 */
+  {const idb7=el('button','qb id',z.uid||('ID '+z.id));
+   idb7.title='교재 자리 — 정리OMR';
+   idb7.onclick=ev=>{ev.stopPropagation(); mbbPop(oxKeyP7(z),ev);};
+   h.appendChild(idb7);}
   const lk=(P7LID||{})[z.id];
   const JOS=p7Jo(z.sol, lk?(lk.z.jo||[]):[]);
   const cases=[];
@@ -9868,12 +10003,14 @@ function p7Card(z,seq){
     /* ★ v3-J §0-0 — 초안 계산은 공용 tyDraftP · 배지 = tyEff(거르기와 같은 값) */
     const eff=tyEff(tk7,tyDraftP(z));
     const lbl=eff?TY_NAME[eff]:'';
-    const tb=el('button','qb '+(lbl==='판례형'?'v':'t'),lbl||'🏷 유형');
-    tb.style.border=fix?'1px solid currentColor':'1px dashed currentColor';
-    tb.title='누르면 근거 조문·판례가 펼쳐진다'+(fix?' · 손으로 확정한 유형':' · 컴파일러 초안');
-    tb.onclick=ev=>{ev.stopPropagation();
+    /* ★ gaek_mb §C-10 — 민법 유형 칩. 조문 조각은 popJo 로 바로 간다(펼침은 유형 글자 밖에서) */
+    const tb=mbTypeChip(tk7, tyDraftP(z), JOS.map(x=>x.k), h);
+
+    /* 근거 조문·판례 펼침은 칩 옆 작은 단추가 맡는다(유형 글자는 typePop 이 가져갔다) */
+    const exb=el('button','qb t','근거 ▾');
+    exb.onclick=ev=>{ev.stopPropagation();
       expand.style.display=expand.style.display==='none'?'':'none';};
-    h.appendChild(tb);
+    h.appendChild(exb);
     JOS.forEach(x=>{
       const a=el('button','chip c-jo','⚖ '+x.k);
       if(x.law)a.onclick=ev=>{ev.stopPropagation();popJo('특허법',x.k,ev,1);};
