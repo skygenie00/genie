@@ -891,6 +891,46 @@ body[data-layer="card"] #tSub,body[data-layer="card"] #tMatch{display:none!impor
   background:rgba(214,238,255,.94);border:1px solid var(--sea);color:#0B4A6F;font-weight:700;
   cursor:pointer;white-space:nowrap;user-select:none;-webkit-user-select:none;touch-action:none;pointer-events:auto}
 .brefback:hover{background:var(--sea);color:#fff}
+/* ══════════ 지학 목록판 (2026-09-20 · gigu/_task_jagwa_earth_listpop.md) ══════════
+   ⚠ 여기 있는 것은 전부 `body[data-subj="earth"]`·`#view.win`·`#bpl` 안이다 —
+     생물·물리는 이 판으로 한 픽셀도 안 달라진다(#view.win·#bpl 은 지학에서만 생긴다). */
+/* §B 차례 모드 단추 — 머리 과목 탭(#subjTabs)과 같은 꼴 */
+body[data-subj="earth"] .ordseg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;vertical-align:middle;background:var(--card)}
+body[data-subj="earth"] .ordseg button{padding:3px 9px;border:0;border-right:1px solid var(--line);background:none;font:inherit;font-size:12px;color:inherit;cursor:pointer;white-space:nowrap;line-height:1.2}
+body[data-subj="earth"] .ordseg button:last-child{border-right:0}
+body[data-subj="earth"] .ordseg button.on{background:var(--teal);color:#fff;font-weight:700}
+/* §B 히트맵 묶음 경계 빈 칸 — 누름 없음·색 없음(개수 셈에서도 뺀다) */
+body[data-subj="earth"] .spectrum i.gap{background:transparent;border-radius:0;pointer-events:none}
+/* §E 문항 창 — `.panel` 이 없는 껍데기라 `selfpanel` 로 제 몸이 판이 된다(makeFloat 첫 줄) */
+#view.win{inset:auto;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.3);overflow:hidden}
+#view.win .twgrip{position:absolute;right:0;bottom:0;z-index:5}
+#view:not(.win) .twgrip{display:none}
+#view.win #navdr,#view.win #navTg{position:absolute}
+@media (max-width:480px){#view.win{left:0!important;top:0!important;width:auto!important;height:auto!important;right:0;bottom:0;border-radius:0}}
+/* §F 교재 자리 목록 창 — `#bkq` 와 같은 규칙(배경 투명·안 막음) */
+#bpl{position:fixed;inset:0;z-index:76;background:transparent;pointer-events:none;display:block}
+#bpl.sheet{display:block;background:transparent}
+#bpl .panel{pointer-events:auto;position:fixed;right:12px;top:64px;left:auto;width:360px;max-width:92vw;height:56vh;
+  max-width:none;max-height:none;padding:0;margin:0;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.3);overflow:hidden;display:flex;flex-direction:column}
+#bpl .panel.float{padding:0;overflow:hidden}
+#bpl .panel .twgrip{position:absolute;right:0;bottom:0;z-index:3}
+.bplh{display:flex;align-items:center;gap:6px;padding:8px 10px;font-size:12.5px;font-weight:700;border-bottom:1px solid var(--line);background:var(--card)}
+.bplh button{margin-left:auto;padding:3px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);font:inherit;font-size:12px;cursor:pointer}
+#bplBody{flex:1;overflow:auto;padding:8px 10px}
+#bplFoot{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--line);background:var(--card);flex:none}
+#bplFoot button{padding:4px 9px;border:1px solid var(--line);border-radius:6px;background:var(--card);font:inherit;font-size:12px;cursor:pointer}
+.bplrow{padding:7px 9px;border:1px solid var(--line);border-radius:8px;margin:4px 0;cursor:pointer;background:var(--card)}
+.bplrow:hover{background:var(--paper)}
+.bplrow .h{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.bplrow .bk{font-size:11px;color:var(--muted)}
+.bplrow .pr{font-size:14px;font-weight:800;color:var(--ink)}
+.bplrow .pf{font-size:10px;color:var(--muted)}
+.bplrow .tg{font-size:10px;color:var(--muted)}
+.bplrow .sn{font-size:11px;color:#4A5661;line-height:1.45;margin-top:2px}
+.bplhd{font-size:11px;color:var(--muted);margin:10px 0 2px}
+.bplnone{padding:8px 9px;font-size:12px;color:var(--muted)}
+/* §F 교재 창 머리줄 「붙는 문항」 — 엉뚱한 문항에 조각이 붙는 것을 눈으로 막는다 */
+.bkbar #bkFor{font-size:11px;color:#5A4500;background:#FFF3B0;border:1px solid #E2C044;border-radius:6px;padding:2px 7px;white-space:nowrap}
 /*/EARTH:css*/
 </style>
 </head>
@@ -1067,7 +1107,7 @@ const SUBJ={
   earth:{DB:'earth1', PDF_DIR:'earth/pdf/', IMG_DIR:'earth/img/', DATA_PATH:'earth/문항.json', TOC_PATH:'earth/목차.json',
         REC_PATH:'earth/기록.json', SYNC_PREFIX:'earth_sync_', NOTE_REPO:'zzikkaplan/notes', NOTE_PATH:'earth/', NOTE_DIR:'earth/note/',
         SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg','crop','txt','tfix','bref'],   /* 판 2: bpit(14째) · 판 1: bpg(15째) · 판 3 ①: crop(16째) · 판 3 ②: txt = 글상자(17째) */
-        BOOK_PDF_ADD:11,   /* 교재 모드 툴바 「(PDF NNN)」 = 인쇄쪽 + 11 (하이엔드 전체 PDF) */
+        BOOK_PDF_ADD:11, BOOK_NAME:'하이엔드 11판',   /* 교재 모드 툴바 「(PDF NNN)」 = 인쇄쪽 + 11 (하이엔드 전체 PDF) · BOOK_NAME = 교재 자리 목록 줄머리(2026-09-20) */
         JOGAK_PATH:'earth/조각.json', OMR_PATH:'earth/omr2.pdf',   /* 판 2(9/7): 정리 OMR 조각 좌표표 · 그 원본 PDF(비공개 저장소 · pieceDoc 과 같은 통로) */
         TITLE:'지학 기출 서재', LOG:'지학', NAME:'지학', LAYER:true, ready:true}
 };
@@ -3710,7 +3750,7 @@ async function peekInk(no,cv,R){
 /* §2 떠 있는 창 — 제목줄 = 손잡이(펜슬·손가락·마우스) · 오른쪽 아래 모서리 = 크기(280×200 ~ 화면−16) · 자리·크기는 세션 동안 WIN[key] 에(저장 안 함) */
 const WIN={};
 function makeFloat(sheet,handle,key,pkey){
-  const p=sheet.querySelector('.panel'); if(!p||!handle)return;
+  const p=sheet.querySelector('.panel')||(sheet.classList.contains('selfpanel')?sheet:null); if(!p||!handle)return;   /* 지학 목록판 §E — **더하기만** 한다. 지금 부르는 창은 전부 `.panel` 이 있어 한 글자도 안 달라진다 */
   const g=document.createElement('div');g.className='twgrip';p.appendChild(g);
   handle.classList.add('twhandle');
   const clamp=st=>{st.w=Math.max(280,Math.min(window.innerWidth-16,st.w));st.h=Math.max(200,Math.min(window.innerHeight-16,st.h));
@@ -4094,6 +4134,37 @@ Object.assign(F,{UNIT:16,BPAGE:17,CH:18,BOGI:19,SOL:20,SOLPG:21,ROUND:22,CAND:23
 var TOC={ch:{},sec:{},unit:{},list:[]};      // 목차 — ch['3']={name,secs[]} · sec['3.4']={name,ch,units[]} · unit['3.4.5']={name,p,sec,ch}
 var PIECES={};                                   // earth/pdf/index.json
 var isC=r=>r[F.SRC]==='확인';
+/* ══════════ 지학 목록판 (2026-09-20 · gigu/_task_jagwa_earth_listpop.md) ══════════
+   과목 문 = `ISEA`. **`CARD_LAYER` 로 걸면 생물까지 걸린다** — 여기서는 쓰지 않는다.
+   생물·물리는 이 판으로 화면도 DOM 글자도 한 곳도 안 달라진다. */
+var ISEA=SUBJ_ID==='earth';
+/* §A 목록·히트맵·문항 창 머리에 **보이는** 코드. uid(F.CODE)는 한 글자도 안 바꾼다 —
+   그것이 unit·bpg·crop·tfix·bogi·txtOf 의 열쇠다. 여기는 표시뿐이다. */
+var codeShow=r=>{
+  if(!ISEA||!r||isC(r)||!(+r[F.ROUND])||!(+r[F.LNO]))return r?r[F.CODE]:'';
+  return 'G'+String((+r[F.ROUND])+1963).slice(2)+'-'+r[F.ROUND]+'-'+(+r[F.LNO])};
+/* §B 차례 모드 — 기기 하나 값(SYNC 밖 · SYNC_KEYS 무변) · 기본 단원별 · 확인문제에서는 단원순 고정 */
+var ORD_K='jagwa.earth.order';
+var ordMode=()=>{if(!ISEA||FL.past==='p')return 'unit';
+  try{return localStorage.getItem(ORD_K)==='round'?'round':'unit'}catch(e){return 'unit'}};
+var ordSet=v=>{try{localStorage.setItem(ORD_K,v==='round'?'round':'unit')}catch(e){}};
+var roundSort=L=>L.slice().sort((a,b)=>{
+  const qa=+a[F.ROUND]||0,qb=+b[F.ROUND]||0; if(qa!==qb)return qb-qa;      /* 회차 내림 */
+  const la=+a[F.LNO]||0,lb=+b[F.LNO]||0; if(la!==lb)return la-lb;          /* 문번 오름 */
+  return a[F.NO]-b[F.NO]});
+var LISTNOS=[];   /* §B — 지금 화면 목록의 차례. 문항 창 ◀▶(VLIST)가 이것을 받는다 */
+function ordBar(){
+  if(!ISEA)return;
+  let b=document.getElementById('ordSeg');
+  if(!b){const cn=$('#cnt'); if(!cn||!cn.parentNode)return;
+    b=document.createElement('span');b.className='ordseg';b.id='ordSeg';
+    b.innerHTML='<button type="button" data-o="round">회차별</button><button type="button" data-o="unit">단원별</button>';
+    cn.parentNode.insertBefore(b,cn.nextSibling);
+    b.onclick=e=>{const t=e.target.closest('[data-o]');if(!t)return;ordSet(t.dataset.o);draw()}}
+  b.classList.toggle('hide',FL.past==='p');            /* 확인문제에서는 숨긴다(저장값은 안 건드린다) */
+  const m=ordMode();
+  b.querySelectorAll('[data-o]').forEach(x=>x.classList.toggle('on',x.dataset.o===m));
+}
 var uidOf=no=>rec(no)[F.CODE];
 var unitOf=no=>{const r=rec(no);const u=UN[r[F.CODE]];return (u===undefined||u===null)?(r[F.UNIT]||''):u};
 var unitName=c=>TOC.unit[c]?TOC.unit[c].name:(TOC.sec[c]?TOC.sec[c].name:(TOC.ch[c]?TOC.ch[c].name:''));
@@ -4228,7 +4299,7 @@ async function bpgTouchLast(page){
 
 var bpgWait=r=>r[F.BSRC]==='절시작·대기'&&!BPG[r[F.CODE]];
 var bookChip=r=>{const bp=bpgOf(r);if(!CARD_LAYER)return r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">교재 ${r[F.BPAGE]}쪽</span>`:'';   /* 물리는 CARD_LAYER=false 라 타는 가지가 종전과 같다 · 지학도 생물과 같은 칩을 쓴다(판 1 §1-B) */
-  const o=BPG[r[F.CODE]],_n=bpgList(r).length;return (bp?`<span class="tag page" data-page="${bp}" title="${esc(String(r[F.BSENT]||'').slice(0,40))}">📖 p${bp}${_n>1?' +'+(_n-1):''}</span>`:'')+
+  const o=BPG[r[F.CODE]],_n=bpgList(r).length;return (bp?`<span class="tag page"${ISEA?' data-bpl="1"':''} data-page="${bp}" title="${esc(String(r[F.BSENT]||'').slice(0,40))}">📖 p${bp}${_n>1?' +'+(_n-1):''}</span>`:'')+
     (bpgWait(r)?`<span class="tag wait" id="cBpg" title="교재쪽 수동 매칭">대기</span>`:`<span class="tag ${o?'ok':'match'} sm" id="cBpg" title="교재쪽 고치기">${o?'✓':'✎'}</span>`)};
 var bookChipSm=r=>{const bp=bpgOf(r);if(!CARD_LAYER)return r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">${r[F.BPAGE]}쪽</span>`:'';
   const _n=bpgList(r).length;return (bp?`<span class="tag page" data-page="${bp}">📖 p${bp}${_n>1?' +'+(_n-1):''}</span>`:'')+(bpgWait(r)?'<i class="wait">대기</i>':'')};
@@ -4309,7 +4380,7 @@ function pass(r){
   if(FL.mark&&!['new','again','weak','less','note'].includes(FL.mark)&&m!==FL.mark)return 0;
   if(FL.q){const s=FL.q.toLowerCase();
     /* 판 3 ④ — **원본과 고친 글자를 둘 다** 훑는다. 고친 뒤 옛 낱말로 못 찾게 되면 안 된다. */
-    const hay=[r[F.CODE],r[F.BODY],(r[F.CH]||[]).join(' '),(r[F.BOGI]||[]).map(b=>b.내용).join(' '),noteOf(no),unitOf(no),tfixHay(r[F.CODE])].join(' ').toLowerCase();
+    const hay=[r[F.CODE],codeShow(r),r[F.BODY],(r[F.CH]||[]).join(' '),(r[F.BOGI]||[]).map(b=>b.내용).join(' '),noteOf(no),unitOf(no),tfixHay(r[F.CODE])].join(' ').toLowerCase();
     if(!hay.includes(s))return 0}
   return 1;
 }
@@ -4350,11 +4421,18 @@ function drawFilters(){
 }
 /* 히트맵 — 기출/확인 토글을 따른다(섞지 않는다) · 장 필터만 따라간다 */
 function drawSpectrum(){
-  const s=$('#spec'), L=DATA.filter(r=>showKind(r)&&(!FL.bigs.length||FL.bigs.includes(r[F.BIG])));
-  s.innerHTML='';let c={O:0,X:0,Q:0,P:0,z:0,weak:0,less:0};
+  const s=$('#spec');
+  let L=DATA.filter(r=>showKind(r)&&(!FL.bigs.length||FL.bigs.includes(r[F.BIG])));
+  /* §B — 거르는 규칙은 그대로다. **칸 차례만** 목록 모드와 같게 하고 묶음 경계에 빈 칸 하나를 넣는다.
+     색·개수·누름은 무변 · 빈 칸은 개수 셈에서 뺀다. 지학 밖은 `grp` 가 null 이라 한 줄도 안 달라진다. */
+  let grp=null;
+  if(ISEA){ if(ordMode()==='round'){L=roundSort(L);grp=r=>String(r[F.ROUND]||'')}
+            else {L=listSort(L);grp=r=>chOf(unitOf(r[F.NO])||'')||'·'} }
+  s.innerHTML='';let c={O:0,X:0,Q:0,P:0,z:0,weak:0,less:0};let gprev=null;
   L.forEach(r=>{const no=r[F.NO],m=lastM(no),n=Math.min(3,reps(no)),w=weakState(no);
+    if(grp){const k=grp(r);if(gprev!==null&&k!==gprev){const g=document.createElement('i');g.className='gap';s.appendChild(g)}gprev=k}
     const i=document.createElement('i');i.className=w==='less'?'W':(m?`${m} r${n}`:'');
-    i.title=`${r[F.CODE]} ${unitLabel(unitOf(no))}`+(m?` · ${n}회독`:'');i.onclick=()=>openView(no);s.appendChild(i);
+    i.title=`${codeShow(r)} ${unitLabel(unitOf(no))}`+(m?` · ${n}회독`:'');i.onclick=()=>openView(no);s.appendChild(i);
     if(!m)c.z++;else if(c[m]!=null)c[m]++;if(w)c[w]++});
   $('#c0').textContent=c.z;$('#cO').textContent=c.O;$('#cQ').textContent=c.Q;$('#cX').textContent=c.X;
   $('#cP').textContent=c.P;$('#cWk').textContent=c.weak;$('#cW').textContent=c.less;
@@ -4362,13 +4440,13 @@ function drawSpectrum(){
 function row(r){
   const d=document.createElement('div');d.className='item'+(isC(r)?' ec':' eg');
   const no=r[F.NO],rep=reps(no),u=unitOf(no);
-  d.innerHTML=`<div class="num">${esc(r[F.CODE])}</div>
+  d.innerHTML=`<div class="num">${esc(codeShow(r))}</div>
    <div class="body"><div class="meta">
      ${kindTag(r)}
      <span class="sub">${esc(titleOf(r))}</span>
      <span class="tag unit" data-unit="${esc(u)}">${esc(u?unitLabel(u):(isC(r)?'미매칭':'미분류'))}</span>
      ${bookChipSm(r)}
-     ${r[F.FILE]==='IMG'?'<span class="tag">그림</span>':''}
+     ${(!ISEA&&r[F.FILE]==='IMG')?'<span class="tag">그림</span>':''}
      ${rep?`<span class="tag">${rep}회독</span>`:''}
      ${(c=>c?`<span class="cmt" data-cmt="${no}">${esc(c)}</span>`:`<span class="cmt empty" data-cmt="${no}">＋한줄</span>`)(noteOf(no))}
    </div><div class="prev">${esc(txtOf(r[F.CODE],'q'))}</div></div>${markBadge(no)}`;   /* add3 §3 ⓐ — 본문을 읽는 유일한 길 txtOf 를 지난다(고친 글자가 목록에도 보인다) */
@@ -4376,8 +4454,9 @@ function row(r){
     if(c)noteSheet(+c.dataset.cmt);
     else if(e.target.closest('.mk'))histSheet(no);
     else if(un&&un.dataset.unit){FL.unit=un.dataset.unit;FL.bigs=[];FL.subs=[];draw();treeHit(un.dataset.unit)}
-    else if(p){openView(no).then(()=>bookOpen(+p.dataset.page,true))}
-    else openView(no)};
+    else if(p){ if(ISEA){bplOpen(no);return}                      /* §F 지학 목록 칩 = **목록 창만** — 문항을 열지 않는다 */
+                openView(no).then(()=>bookOpen(+p.dataset.page,true))}
+    else openView(no,(ISEA&&LISTNOS.length)?LISTNOS.slice():undefined)};   /* §B ◀▶ 는 화면 목록 차례를 받는다 */
   return d;
 }
 
@@ -4404,7 +4483,7 @@ showProblem=async function(){
   const r=rec(VNO); if(!r)return;
   navSync();
   const u=unitOf(VNO);
-  $('#vT1').textContent=`${r[F.CODE]} · ${titleOf(r)}`+(r[F.YEAR]?` (${r[F.YEAR]})`:'');
+  $('#vT1').textContent=`${codeShow(r)} · ${titleOf(r)}`+(r[F.YEAR]?` (${r[F.YEAR]})`:'');
   $('#vT2').textContent=`${r[F.BIG]} › ${unitLabel(u)} · 교재 ${bpgOf(r)||'?'}쪽`+(r[F.ORIG]?` · 변시 ${r[F.ORIG]}회 원형`:'');
   CARD.open=false;
   renderCard(r);
@@ -4452,7 +4531,9 @@ function renderCard(r){
     markWrong();
   });
   c.querySelectorAll('.choices button').forEach(b=>b.onclick=()=>pickChoice(+b.dataset.c));
-  c.querySelectorAll('[data-page]').forEach(x=>x.onclick=e=>{e.preventDefault();bookOpen(+x.dataset.page,true)});
+  c.querySelectorAll('[data-page]').forEach(x=>x.onclick=e=>{e.preventDefault();
+    if(ISEA&&x.dataset.bpl){bplOpen(r[F.NO]);return}                  /* §F 머리줄 📖 p 칩 = 교재 자리 목록 창 */
+    bookOpen(+x.dataset.page,true)});
   $('#cDet').ontoggle=()=>{CARD.open=$('#cDet').open;markWrong();markAns()};
   $('#cUnit').onclick=()=>{treeOpen();treeHit(u)};
   $('#cMatch').onclick=()=>matchSheet(no);
@@ -4563,14 +4644,28 @@ function listSort(L){
     const ra=R[ua]===undefined?BIG:R[ua], rb=R[ub]===undefined?BIG:R[ub];
     if(ra!==rb)return ra-rb;
     if(ra===BIG){const c=unitCmp(ua,ub);if(c)return c}      /* 목차에 없는 것(미분류·미매칭)끼리는 코드순 */
-    const qa=+a[F.ROUND]||0,qb=+b[F.ROUND]||0; if(qa!==qb)return qa-qb;
+    const qa=+a[F.ROUND]||0,qb=+b[F.ROUND]||0; if(qa!==qb)return ISEA?qb-qa:qa-qb;   /* §B 지학은 최신 회차가 위 */
     const la=+a[F.LNO]||0,lb=+b[F.LNO]||0; if(la!==lb)return la-lb;
     return a[F.NO]-b[F.NO]})}
 draw=function(){
   drawFilters();drawSpectrum();
-  const L=listSort(filtered()),box=$('#list');box.innerHTML='';
-  $('#cnt').textContent=`${L.length}문제 · 단원순`;
+  /* §B — 지학만 두 모드다. 생물은 `ISEA` 가 false 라 아래 두 줄이 종전과 같은 값을 낸다. */
+  const _rnd=ISEA&&ordMode()==='round';
+  const L=_rnd?roundSort(filtered()):listSort(filtered()),box=$('#list');box.innerHTML='';
+  $('#cnt').textContent=`${L.length}문제 · ${_rnd?'회차순':'단원순'}`;
+  ordBar();
+  if(ISEA)LISTNOS=L.map(r=>r[F.NO]);
   if(!L.length){box.innerHTML='<div class="empty"><b>조건에 맞는 문제가 없습니다</b>필터를 줄여 보세요.</div>';foldSummary();return}
+  if(_rnd){                                   /* 회차별 = 회차 머리 한 줄만 · 절 머리·빈 단원 줄 없음 */
+    const frag=document.createDocumentFragment(), byR=new Map();
+    L.forEach(r=>{const k=+r[F.ROUND]||0;if(!byR.has(k))byR.set(k,[]);byR.get(k).push(r)});
+    [...byR.keys()].sort((a,b)=>b-a).forEach(k=>{
+      const rows=byR.get(k);
+      const h=document.createElement('div');h.className='grouphd u';h.dataset.rhd=String(k);
+      h.innerHTML=esc(k+'회 · '+(k+1963)+'년')+`<span class="p">${rows.length}문항</span>`;
+      frag.appendChild(h);
+      rows.forEach(r=>frag.appendChild(row(r)))});
+    box.appendChild(frag);foldSummary();return}
   const byUnit=new Map();
   L.forEach(r=>{const u=unitOf(r[F.NO])||'';if(!byUnit.has(u))byUnit.set(u,[]);byUnit.get(u).push(r)});
   const frag=document.createDocumentFragment();
@@ -4608,6 +4703,7 @@ draw=function(){
 /* 목차 글자 → 그 단원 머리로 스크롤. **필터는 안 건드린다**(§1(3)) · .top 이 sticky 라 그 높이만큼 뺀다 · 가상 스크롤 없음(draw 가 통째로 그린다) */
 function treeGo(code){
   if($('#view')&&!$('#view').classList.contains('hide'))closeView();
+  if(ISEA&&ordMode()==='round'){ordSet('unit');draw()}   /* §B 회차별에는 도착할 단원 머리가 없다 — 단원별로 바꾸고 간다 */
   if(window.innerWidth<900)treeClose();
   $$('#trlist .at').forEach(x=>x.classList.remove('at'));
   const tr=$('#trlist [data-u="'+code+'"]');if(tr)tr.classList.add('at');
@@ -4870,6 +4966,9 @@ loadSents=async function(){if(SENTS)return SENTS;let j=await get('kv',SUBJ_ID+'s
   if(!j&&recToken()&&CUR.SENT_PATH){try{j={items:JSON.parse(await ghRaw(CUR.SENT_PATH)),at:Date.now()};await put('kv',SUBJ_ID+'sent',j)}catch(e){console.warn('sents',e)}}
   return SENTS=(j&&j.items)||[]}
 bpgSheet=async function(no){const r=rec(no),uid=r[F.CODE],u=unitOf(no),sec=u?secOf(u):'',cur=BPG[uid]||null;
+  /* §F ⓑ — 옆 칸을 걷은 뒤 `BOOK.page` 는 영영 null 이라 「지금 보는 쪽 담기」가 안 떴다.
+     지학은 교재 **창**이 들고 있는 쪽을 읽는다(생물은 종전 그대로 `BOOK.page`). */
+  const _bp=ISEA?((((typeof bkCurPage==='function'&&BK&&BK.open)?bkCurPage():null)||{}).pr||BOOK.page):BOOK.page;
   const S=(await loadSents()).map((x,i)=>Object.assign({i},x)).filter(x=>x.절===sec).sort((a,b)=>(a.연도-b.연도)||(a.인쇄쪽-b.인쇄쪽));
   const old=$('#bpgSheet');if(old)old.remove();
   const b=document.createElement('div');b.className='sheet';b.id='bpgSheet';
@@ -4880,16 +4979,16 @@ bpgSheet=async function(no){const r=rec(no),uid=r[F.CODE],u=unitOf(no),sec=u?sec
     <p>지금: <b>p${bpgOf(r)||'?'}</b> ${cur?'(사용자 값'+(cur.s!==undefined?' · 문장 #'+cur.s:'')+')':'(자동 · '+esc(r[F.BSRC]||'없음')+')'}${r[F.BSENT]?'<br><small>'+esc(String(r[F.BSENT]).slice(0,60))+'</small>':''}</p>
     <div class="fld"><label>고정한 쪽 ${PS.length}</label><div class="bpgl2" id="bpgPins">${PS.map(p=>`<span class="pin" data-pin="${p}">p${p}<i data-del="${p}" title="빼기">✕</i></span>`).join('')||'<i>없음(자동값)</i>'}</div></div>
     ${S.length?`<div class="fld"><label>${esc(sec||'절 없음')} 절의 교재 문장 ${S.length}</label><div class="bpgl">${S.map(x=>`<div data-i="${x.i}" data-p="${x.인쇄쪽}"><b>【${x.연도}】 p${x.인쇄쪽}</b>${esc(String(x.문장).slice(0,60))}</div>`).join('')}</div></div>`:''}
-    <div class="fld"><label>쪽 번호로 고정</label><input id="bpgP" class="tokin" inputmode="numeric" value="${bpgOf(r)||''}"> <button class="btn" id="bpgAdd">＋ 고정</button>${BOOK.page?` <button class="btn" id="bpgHere">지금 보는 쪽(p${BOOK.page}) 담기</button>`:''}</div>
+    <div class="fld"><label>쪽 번호로 고정</label><input id="bpgP" class="tokin" inputmode="numeric" value="${bpgOf(r)||''}"> <button class="btn" id="bpgAdd">＋ 고정</button>${_bp?` <button class="btn" id="bpgHere">지금 보는 쪽(p${_bp}) 담기</button>`:''}</div>
     ${cur?'<button class="btn" id="bpgAuto">자동값으로 되돌림</button> ':''}<button class="btn" id="bpgX">닫기</button></div>`;
   /* 쓰기는 늘 새 꼴 · 옛 꼴은 여기서 처음 고칠 때 풀려 담긴다 */
-  const save=async(ps,last,s)=>{const v=bpgWrite(uid,ps,last,s);await saveBPG();b.remove();if(VNO===no)showProblem();else draw();if(bookVisible()&&v)bookOpen(bpgOf(r));toast(v?'교재쪽 = '+v.ps.map(p=>'p'+p).join(' · '):'자동값으로')};
-  const done=async v=>{if(!v){delete BPG[uid];await saveBPG();b.remove();if(VNO===no)showProblem();else draw();toast('자동값으로');return}await save(PS.concat([v.p]),v.p,v.s)};
+  const save=async(ps,last,s)=>{const v=bpgWrite(uid,ps,last,s);await saveBPG();b.remove();if(VNO===no)showProblem();else draw();if(bookVisible()&&v)bookOpen(bpgOf(r));bplRefresh(no);toast(v?'교재쪽 = '+v.ps.map(p=>'p'+p).join(' · '):'자동값으로')};
+  const done=async v=>{if(!v){delete BPG[uid];await saveBPG();b.remove();if(VNO===no)showProblem();else draw();bplRefresh(no);toast('자동값으로');return}await save(PS.concat([v.p]),v.p,v.s)};
   b.querySelectorAll('.bpgl [data-i]').forEach(el=>el.onclick=()=>done({p:+el.dataset.p,s:+el.dataset.i}));
   b.querySelectorAll('[data-del]').forEach(el=>el.onclick=e=>{e.stopPropagation();save(PS.filter(p=>p!==+el.dataset.del),bpgOf(r))});
   b.querySelectorAll('[data-pin]').forEach(el=>el.onclick=()=>{b.remove();bookOpen(+el.dataset.pin,true)});
   b.querySelector('#bpgAdd').onclick=()=>{const p=+b.querySelector('#bpgP').value;if(p>0)save(PS.concat([p]),p);else toast('쪽 번호를 넣으세요')};
-  {const hb=b.querySelector('#bpgHere');if(hb)hb.onclick=()=>save(PS.concat([BOOK.page]),BOOK.page)}
+  {const hb=b.querySelector('#bpgHere');if(hb)hb.onclick=()=>save(PS.concat([_bp]),_bp)}
   const au=b.querySelector('#bpgAuto');if(au)au.onclick=()=>done(null);
   b.querySelector('#bpgX').onclick=()=>b.remove();b.onclick=e=>{if(e.target===b)b.remove()};
   document.body.appendChild(b);
@@ -5887,8 +5986,8 @@ bkOpen=async function(pr){const st=bkState();const b=$('#book');b.classList.remo
     try{await bkReset(pieceFor(pr)||piecesOrdered()[0])}catch(e){$('#bkmsg').textContent='조각을 받지 못했다 — '+(e.message||e);return}
     $('#bkmsg').textContent='';const vp=$('#bkvp');BK.S=st.S||Math.max(BK.MIN,Math.min(BK.MAX,(vp.clientWidth-24)/BK.pgs[0].w));}
   await bkGoto(pr);bkSave()}
-function bkClose(){if(BK.vel&&BK.stop)BK.stop();$('#book').classList.add('hide');BK.open=false;BK.gen++;$('#btnBook').classList.remove('on');$('#bkq').classList.add('hide');bkSave()}
-$('#btnBook').onclick=()=>{if(BK.open){bkClose();return}bkWin(false);bkOpen()};   /* 머리 단추는 종전대로 전체 화면 */
+function bkClose(){if(BK.vel&&BK.stop)BK.stop();$('#book').classList.add('hide');BK.open=false;BK.gen++;$('#btnBook').classList.remove('on');$('#bkq').classList.add('hide');if(ISEA)cropFor(null);bkSave()}
+$('#btnBook').onclick=()=>{if(BK.open){bkClose();return}bkWin(ISEA);bkOpen()};   /* §D 지학은 떠 있는 창 · 생물은 종전대로 전체 화면 */
 /* ══ 지학 3건 §3 — 교재 창(makeFloat) ══
    ★ 새로 만드는 것이 없다 — 서브노트 창이 쓰는 `makeFloat` 을 그대로 부른다(`WIN.book` · `jagwa.win.book`).
    창 안이라도 같은 `#bkvp`·`#bkover` 라 **필기·글상자·링크가 그대로 산다**(읽기 전용으로 만들지 않는다).
@@ -5911,6 +6010,7 @@ function bkWin(on){
     const st=WIN.book;
     if(st){p.classList.add('float');p.style.left=st.l+'px';p.style.top=st.t+'px';p.style.width=st.w+'px';p.style.height=st.h+'px'}
   }
+  if(ISEA)cropFor(CROPFOR);   /* §F 머리줄 「붙는 문항」 칸을 다시 잰다 */
   /* 창 크기가 바뀌었으니 교재 쪽을 다시 재운다 — zWire 의 ResizeObserver 가 하는 것과 같은 일 */
   setTimeout(()=>{try{if(BK.clamp)BK.clamp();if(typeof zApply==='function')zApply(BK)}catch(e){}},0);
 }
@@ -6125,8 +6225,11 @@ var brefPop=async function(pr){
    교재 전체 화면(BK)과 문항 화면 교재 칸(#bookpane)이 **같이 이 함수를 부른다.**
    두 벌이 되면 한쪽만 고치는 날이 온다(지시서 §1-A). at(m) = 그 자리에 메뉴를 놓는 법. */
 function cropOffer(cell,clear,at){
-  if(!VNO){toast('문항을 먼저 열어 주세요 — 조각은 지금 보는 문항에 붙습니다');clear();return}
-  const uid=rec(VNO)[F.CODE];
+  /* §F ⓑ — 문항을 안 연 채 교재 자리 목록 창에서 오릴 수 있다. 그때 붙는 대상이 `CROPFOR` 다.
+     `CROPFOR` 가 비어 있으면(생물·평소) 종전 그대로 `VNO` 다. */
+  const tno=(typeof CROPFOR!=='undefined'&&CROPFOR)||VNO;
+  if(!tno){toast('문항을 먼저 열어 주세요 — 조각은 지금 보는 문항에 붙습니다');clear();return}
+  const uid=rec(tno)[F.CODE];
   const old=document.getElementById('crmenu');if(old)old.remove();
   const m=document.createElement('div');m.id='crmenu';
   /* 판 3 ④가 섰으므로 「✎ 글자로 고치기」 줄이 살아난다(①에서는 없는 단추를 안 그렸다) */
@@ -6138,7 +6241,8 @@ function cropOffer(cell,clear,at){
     if(slot==='fix'){clear();tfixSheet(uid,'q',()=>{if(VNO&&!$('#view').classList.contains('hide'))showProblem()});return}
     if(slot){await cropAdd(uid,slot,cell);
       toast((slot==='q'?'문제':'해설')+' 칸에 조각을 붙였습니다 — '+cell.p+'쪽');
-      if(VNO&&!$('#view').classList.contains('hide'))showProblem()}
+      if(VNO&&!$('#view').classList.contains('hide'))showProblem();
+      if(ISEA){draw();bplRefresh(tno)}}   /* 문항을 안 연 채 붙였어도 목록 칩·목록 창이 그 자리에서 바뀐다 */
     clear()});
 }
 BK.onCrop=function(crop,clear){
@@ -6448,6 +6552,117 @@ window.addEventListener('resize',()=>{try{if(VNO&&!$('#view').classList.contains
   if(typeof qTxtPaint==='function')qTxtPaint()}}catch(e){}});
 $('#sub .shead b').textContent=CUR.NAME+' 서브노트';
 
+/* ══════════════════ 지학 목록판 §D·§E·§F (2026-09-20 · gigu/_task_jagwa_earth_listpop.md) ══════════════════
+   ⚠ 아래는 전부 `if(ISEA)` 안이거나 `ISEA` 가 false 면 아무 일도 안 하는 함수다.
+     생물은 여기 한 줄도 타지 않는다(하네스 B 묶음이 DOM 글자로 잰다). */
+
+/* ── §F 붙는 대상 ──
+   교재 자리 목록 창을 열면 그 문항으로 서고, 문항을 열거나 교재 창을 닫으면 비워진다.
+   `cropOffer` 가 `CROPFOR||VNO` 에 붙인다 — 그 밖 `VNO` 쓰임은 한 곳도 안 건드렸다. */
+var CROPFOR=null;
+function cropFor(no){
+  CROPFOR=(no&&rec(no))?no:null;
+  const bar=$('#book .bkbar');if(!bar)return;
+  let c=document.getElementById('bkFor');
+  if(!CROPFOR){if(c)c.remove();return}
+  if(!c){c=document.createElement('span');c.id='bkFor';
+    const inf=document.getElementById('bkInfo');bar.insertBefore(c,inf?inf.nextSibling:bar.firstChild)}
+  c.textContent='붙는 문항 '+codeShow(rec(CROPFOR));
+}
+
+/* ── §E 문항 = 떠 있는 창 ──
+   새로 짓는 것이 없다 — 교재 창이 쓰는 `makeFloat` 을 그대로 부른다(`WIN.view` · `jagwa.win.view`).
+   `#view` 는 `.panel` 이 없는 껍데기라 `selfpanel` 을 달아 **제 몸이 판**이 된다.
+   ⚠ 필기·오리기·글상자·암기카드·타이머·O△XP·단축키는 한 글자도 안 달라진다 —
+     좌표가 칸 기준 1/1000 이라 창 크기와 무관하다(하네스 V-필기가 잰다). */
+var VWIN_K='jagwa.view.win';
+var vwOn=()=>{if(!ISEA)return false;try{return localStorage.getItem(VWIN_K)!=='0'}catch(e){return true}};
+function vwApply(on){
+  const v=$('#view');if(!v||!ISEA)return;
+  on=!!on;v.classList.toggle('win',on);
+  const tg=document.getElementById('vWinTg');if(tg)tg.classList.toggle('on',on);
+  if(!on){v.classList.remove('float');v.style.cssText='';return}
+  if(!v.__float){v.__float=1;v.classList.add('selfpanel');
+    let saved=null;try{const x=JSON.parse(localStorage.getItem('jagwa.win.view')||'null');
+      if(x&&+x.w>=280&&+x.h>=200)saved=x}catch(e){}
+    if(!WIN.view&&!saved){const w=Math.min(1000,Math.round(window.innerWidth*0.72)),
+                                h=Math.min(860,Math.round(window.innerHeight*0.86));
+      WIN.view={w:w,h:h,l:Math.round((window.innerWidth-w)/2),t:Math.round((window.innerHeight-h)/2)}}
+    makeFloat(v,$('#view .vtop'),'view','jagwa.win.view')}
+  const st=WIN.view;
+  if(st){v.classList.add('float');v.style.left=st.l+'px';v.style.top=st.t+'px';v.style.width=st.w+'px';v.style.height=st.h+'px'}
+}
+if(ISEA){
+  /* `.vtop` 에 ⤢ 하나 — 창 ↔ 전체 화면. 단추는 makeFloat 의 끌기에서 빠진다(3732줄 규칙). */
+  const t=$('#view .vtop');
+  if(t&&!document.getElementById('vWinTg')){
+    const b=document.createElement('button');b.className='iconbtn';b.id='vWinTg';b.title='창 ↔ 전체 화면';b.textContent='⤢';
+    b.onclick=()=>{const on=!$('#view').classList.contains('win');
+      try{localStorage.setItem(VWIN_K,on?'1':'0')}catch(e){}
+      vwApply(on)};
+    t.insertBefore(b,$('#vPrev')||null)}
+  /* 문항을 열 때마다 창/전체 화면을 세우고 **붙는 대상을 비운다**(§F — 연 문항이 이긴다) */
+  {const _ov=openView;
+   openView=async function(no,list){cropFor(null);const r=await _ov(no,list);vwApply(vwOn());return r}}
+  /* 창 크기가 바뀌면 지금 `window` `resize` 가 하는 일을 그대로 다시 부른다(교재 창 선례) */
+  if(window.ResizeObserver){let rv=null;
+    try{new ResizeObserver(()=>{clearTimeout(rv);rv=setTimeout(()=>{
+      try{if(VNO&&!$('#view').classList.contains('hide')){qFit();qPaint();
+        if(typeof qTxtPaint==='function')qTxtPaint()}}catch(e){}},80)}).observe($('#view'))}catch(e){}}
+  /* §D 교재 창에서 전체 화면으로 가는 길 — `#bpWin`·`#bpBig` 은 창 머리줄에 없다(실측) */
+  {const bar=$('#book .bkbar');
+   if(bar&&!document.getElementById('bkWinTg')){
+     const b=document.createElement('button');b.id='bkWinTg';b.title='전체 화면';b.textContent='⤢';
+     b.onclick=()=>bkWin(!BKWIN);bar.appendChild(b)}}
+}
+
+/* ── §F 교재 자리 목록 창 (민법앱 `mbBookOpen` 꼴) ──
+   격차·점수·순위는 적지 않는다(민법 4턴 §5-B 와 같다) · 후보도 없다(사용자 9/20).
+   ★ 사용자 요구 셋은 **이미 있는 기능**으로 선다 — 여기서 닿게만 한다.
+     ⓐ 쪽 이동 = 교재 창 그대로   ⓑ 찍기 = 「✎ 쪽 고정」(bpgSheet) · 「◻ 오리기」(교재 창 도구)
+     ⓒ 카드에 나타남 = 지금 `cropWire`·`bookChip` 이 하던 그대로 */
+var BPLNO=null;
+function bplOpen(no,force){
+  if(!ISEA)return;
+  const had=document.getElementById('bpl');
+  if(had&&BPLNO===no&&!force){had.remove();BPLNO=null;cropFor(null);return}   /* 같은 칩을 다시 누르면 닫힌다 */
+  if(had)had.remove();
+  const r=rec(no); if(!r)return;
+  BPLNO=no; cropFor(no);
+  /* 그 쪽이 속한 소단원 — 목차 `쪽` 으로 역산(그 쪽 이하에서 가장 늦게 시작하는 소단원) */
+  const uAt=p=>{let best='',bp=-1;
+    unitOrder().forEach(u=>{const q=+u.page;if(q>0&&q<=p&&q>=bp){bp=q;best=u.unit}});
+    return best};
+  const bkName=esc(CUR.BOOK_NAME||'교재'), add=+CUR.BOOK_PDF_ADD||0;
+  const bkRow=(p,tag)=>`<div class="bplrow" data-go="${p}"><div class="h">`
+    +`<span class="bk">${bkName}</span><span class="pr">${p}쪽</span>`
+    +`<span class="pf">PDF ${p+add}</span>`+(tag?`<span class="tg">${esc(tag)}</span>`:'')
+    +`</div><div class="sn">${esc((u=>u?unitLabel(u):'소단원 미상')(uAt(p)))}</div></div>`;
+  let h='';
+  if(bpgPinned(r)){const L=bpgList(r),last=bpgOf(r);
+    h+=[last].concat(L.filter(p=>p!==last)).map(p=>bkRow(p,'찍어 둔 자리')).join('')}
+  else{const a=+r[F.BPAGE]||0;
+    h+=a?bkRow(a,''):'<div class="bplnone">교재 자리가 없다</div>'}
+  h+='<div class="bplhd">정리OMR</div>';
+  const jg=(typeof jogakOf==='function')?jogakOf(r):null;
+  h+=jg?`<div class="bplrow" data-omr="1"><div class="h"><span class="bk">정리OMR</span><span class="pr">${(+jg.p||1)}쪽</span></div></div>`
+       :'<div class="bplnone">정리OMR 자리가 없다</div>';
+  const b=document.createElement('div');b.className='sheet';b.id='bpl';
+  b.innerHTML=`<div class="panel"><div class="bplh"><span>${esc(codeShow(r))}</span><button id="bplX">닫기</button></div>`
+    +`<div id="bplBody">${h}</div>`
+    +`<div id="bplFoot"><button id="bplPin">✎ 쪽 고정</button><button id="bplCrop">◻ 오리기</button></div></div>`;
+  document.body.appendChild(b);
+  b.querySelectorAll('[data-go]').forEach(el=>el.onclick=()=>bookOpen(+el.dataset.go,true));   /* 목록 창은 그대로 남는다 */
+  b.querySelectorAll('[data-omr]').forEach(el=>el.onclick=()=>mcardBig(no));
+  b.querySelector('#bplX').onclick=()=>{b.remove();BPLNO=null;cropFor(null)};
+  b.querySelector('#bplPin').onclick=()=>bpgSheet(no);
+  b.querySelector('#bplCrop').onclick=async()=>{cropFor(no);
+    await bookOpen(bpgOf(r)||undefined);
+    const t=$('#bktools [data-tool="crop"]'); if(t)t.click();
+    cropFor(no)};
+  makeFloat(b,b.querySelector('.bplh'),'bplist','jagwa.win.bplist');
+}
+function bplRefresh(no){if(ISEA&&document.getElementById('bpl')&&BPLNO===no)bplOpen(no,1)}
 }
 /*/EARTH:js*/
 </script>
