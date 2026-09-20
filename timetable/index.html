@@ -33,6 +33,8 @@ button{cursor:pointer}
 .ttl .r{font-size:11px;color:#666;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .btn{border:1px solid #bbb;background:#fff;border-radius:4px;padding:4px 9px;font-size:11px}
 .btn.p{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn.d.arm{background:#c0392b;color:#fff;border-color:#c0392b;font-weight:700}
+.modal .delnote{font-size:11px;color:#c0392b;margin-top:6px;text-align:right;line-height:1.4}
 .btn.d{color:#c33;border-color:#e99}
 .views{display:flex;gap:4px;font-size:11.5px;margin-bottom:10px;border-bottom:1px solid var(--line);padding-bottom:6px;overflow-x:auto}
 .views span{padding:3px 8px;border-radius:4px;color:#555;cursor:pointer;white-space:nowrap}
@@ -1333,7 +1335,7 @@ function lifeModal(s,doc){
   <span class="pjpk dash" onclick="lifeAddType('${s.id}',this.ownerDocument)">＋ 직접 추가</span></div></div>
  <p style="font-size:10px;color:#888">공부 시간 합산·부하·주월계획에 안 들어가는 블록이야.</p>`,
  q=>{sessSaveTimes(s,q('lA').value,q('lB').value);upsertSession(s);render()}, // §4(fb18) 시간 편집 = 세션 편집과 같은 경로
- ()=>{if(confirm('이 생활 블록을 지울까?')){deleteSession(s);render()}},doc);
+ ()=>{deleteSession(s);render()},doc,undefined,'이 생활 블록을 지웁니다.');   /* §A-2 confirm 을 뗐다 — modal 이 두 번 묻는다 */
 }
 function lifeSetType(id,encN,doc){const s=findSess(id);if(!s)return;s.p=decodeURIComponent(encN);upsertSession(s);
  const m=[...(doc||document).querySelectorAll('.modal')].pop();if(m)m.remove();renderAll();} // §1-2(fb19) 그 창 기준
@@ -1341,7 +1343,9 @@ function lifeAddType(id,doc){const n=(prompt('생활 종류 이름 (예: 앱작�
  settings.lifeTypes=Array.isArray(settings.lifeTypes)?settings.lifeTypes:[];
  if(!settings.lifeTypes.includes(n))settings.lifeTypes.push(n);saveSettings();
  lifeSetType(id,encodeURIComponent(n),doc);}
-function lifeDelType(encN,doc){const n=decodeURIComponent(encN);if(!confirm(`프리셋 「${n}」 을 지울까? (과거 블록 라벨은 그대로)`))return;
+function lifeDelType(encN,doc){const n=decodeURIComponent(encN);
+ /* §A-3 — `modal` 을 안 거치는 자리다. 이미 있는 길과 같게 **그 창의** confirm 을 부른다(delTodo 1725 와 같은 꼴) */
+ if(!((doc&&doc.defaultView)||window).confirm(`프리셋 「${n}」 을 지울까? (과거 블록 라벨은 그대로)`))return;
  settings.lifeTypes=(settings.lifeTypes||[]).filter(x=>x!==n);saveSettings();
  const m=[...(doc||document).querySelectorAll('.modal')].pop();if(m)m.remove();renderAll();}
 /* §5(fb18) 생활 블록에 종류 표시 — 기본 4종은 이모지 · 직접 추가한 종류는 이름 전체(폭 모자라면 잘림 · 툴팁엔 전체).
@@ -1614,7 +1618,7 @@ function cmEdit(id){
  const P=settings.people;
  modal(`<h4>공통 할일</h4><div class="row"><label>내용</label><input id="cT" value="${esc(x.t)}"></div><div class="row"><label>기한</label><input id="cD" type="date" value="${x.due||''}"></div><div class="row"><label>누가</label>${P.map((n,i)=>`<label style="width:auto;white-space:nowrap"><input type="checkbox" id="cW${i}" ${(x.who||[]).includes(n)?'checked':''}> ${esc(n)}</label>`).join('')}</div><p style="font-size:10px;color:#888">적음: ${esc(x.by||'')} ${x.at||''}</p>`,
  q=>{x.t=q('cT').value;x.due=q('cD').value||'';const w=P.filter((n,i)=>q('cW'+i)&&q('cW'+i).checked);if(w.length)x.who=w;upsertShared(x);render()},
- ()=>{if(confirm('지울까? '+x.t)){x.del=true;upsertShared(x);render()}});
+ ()=>{x.del=true;upsertShared(x);render()},undefined,undefined,'지웁니다 — '+x.t);   /* §A-2 */
 }
 function dayBodyHTML(){ // 일간 절 본문 — 지금 일간 화면 통째 무변 (feedback8 §1-2 · 배치만 절 안으로)
  const d=curDate();const sess=sessionsOf(cfg.person,d);
@@ -1765,13 +1769,29 @@ function editSession(id,doc){
    else{const c=tf.data.cats.find(z=>z.id===rid);s.plan='';s.cat=rid;if(c){s.s=c.s;s.p=c.name;s.i='';s.nt=!!c.noTimer;}}
   }else{s.plan='';s.cat='';}
   upsertSession(s);render()},
- ()=>{if(confirm('이 세션을 지울까?')){deleteSession(s);render()}},doc);
+ ()=>{deleteSession(s);render()},doc,undefined,'이 세션을 지웁니다.');   /* §A-2 — 작은 창에서 안 먹던 자리(9/20) */
 }
-function modal(body,onOk,onDel,doc,okLabel){doc=doc||document; // §1-1(fb19) okLabel 만 선택 인자 — 안 주면 종전대로 「저장」
+/* ★ 2026-09-20 (_task_tt_pip_delete §A-1) — 「삭제」는 **두 번 누름**이다.
+   까닭: 이 모달은 `doc`(작은 창 = 문서 PiP 문서)에 그려지는데 `confirm` 은 **본창 탭**에 뜬다.
+   작은 창을 쓰는 동안 본창은 가려져 있어 사용자는 아무 일도 안 일어난 것으로 본다(9/20 사용자 실측).
+   ⇒ 브라우저 확인 창에 기대지 않는다. 첫 누름 = 글자 「정말 삭제?」 + 빨강 채움(+ 무엇을 지우는지 한 줄),
+      3초 안에 다시 누르면 지운다. 3초가 지나면 첫 누름으로 되돌아간다.
+   ⚠ `delNote` 는 **여섯째 선택 인자**다 — 안 주면 종전 부르는 자리가 한 글자도 안 달라진다. */
+function modal(body,onOk,onDel,doc,okLabel,delNote){doc=doc||document; // §1-1(fb19) okLabel 만 선택 인자 — 안 주면 종전대로 「저장」
  const m=doc.createElement('div');m.className='modal';m.innerHTML=`<div class="box">${body}<div class="acts">${onDel?'<button class="btn d" id="mDel">삭제</button>':''}<button class="btn" id="mNo">취소</button><button class="btn p" id="mOk">${esc(okLabel||'저장')}</button></div></div>`;
  doc.body.appendChild(m);const close=()=>m.remove();const q=id=>m.querySelector('#'+id);
  const after=()=>{if(typeof pipPaint=='function')pipPaint()}; // §1-2(fb19) 닫은 뒤 PiP 반영(보류 규칙 때문에 render 만으로는 안 따라옴)
- q('mNo').onclick=()=>{close();after()};q('mOk').onclick=()=>{onOk(q);close();after()};if(onDel)q('mDel').onclick=()=>{onDel();close();after()};
+ q('mNo').onclick=()=>{close();after()};q('mOk').onclick=()=>{onOk(q);close();after()};
+ if(onDel){const db=q('mDel');let armed=0,tm=null;
+  const disarm=()=>{armed=0;if(tm){clearTimeout(tm);tm=null}db.textContent='삭제';db.classList.remove('arm');
+    const nt=m.querySelector('.delnote');if(nt)nt.remove()};
+  db.onclick=()=>{
+    if(armed){disarm();onDel();close();after();return}
+    armed=1;db.textContent='정말 삭제?';db.classList.add('arm');
+    if(delNote){const nt=doc.createElement('div');nt.className='delnote';nt.textContent=delNote;
+      db.parentNode.parentNode.appendChild(nt)}
+    tm=setTimeout(disarm,3000)};
+ }
  m.addEventListener('click',e=>{if(e.target===m)close()});
 }
 /* ----- 주간 ----- */
@@ -3151,7 +3171,8 @@ function bandModal(b){
     x.w1=L1;x.w2=L2;}
    x.per=Math.max(0,+q('bP').value||0);x.note=q('bM').value;x.u=Date.now();
    syncBaselineFor(p2,x)});render()},
- b.id?()=>{if(confirm('이 활동을 지울까? '+b.name)){planMut(p2=>{const x=p2.bands.find(z=>z.id===b.id);if(x){x.del=true;x.u=Date.now()}});render()}}:null);
+ b.id?()=>{planMut(p2=>{const x=p2.bands.find(z=>z.id===b.id);if(x){x.del=true;x.u=Date.now()}});render()}:null,
+  undefined,undefined,b.id?('이 활동을 지웁니다 — '+b.name):undefined);   /* §A-2 */
 }
 /* 팝업 A (§2-1): 활동 몸통 클릭 = 세부계획 리스트(체크 모드) · ✎ 고르기 = 같은 창에서 과목 세부계획 전체 중 이 활동 것 고르기 */
 let bpSt=null;
@@ -3589,7 +3610,8 @@ function unitModal(sEnc,idEnc){
   planMut(p=>{p.units[s]=p.units[s]||[];let x=u?p.units[s].find(z=>z.id===u.id):null;
    if(!x){x={id:nid,done:{},del:false};p.units[s].push(x);}
    x.n=q('uN').value.trim();x.est=+q('uE').value||60;x.reads=+q('uR').value||0;x.weak=q('uW').checked;x.u=Date.now();});render()},
- u?()=>{if(confirm('이 세부계획을 지울까? '+u.id)){planMut(p=>{const x=(p.units[s]||[]).find(z=>z.id===u.id);if(x){x.del=true;x.u=Date.now()}});render()}}:null);
+ u?()=>{planMut(p=>{const x=(p.units[s]||[]).find(z=>z.id===u.id);if(x){x.del=true;x.u=Date.now()}});render()}:null,
+  undefined,undefined,u?('이 세부계획을 지웁니다 — '+u.id):undefined);   /* §A-2 */
 }
 /* §6(fb19) 「붙여넣기」 → 「✎ 전체 편집」 — 열면 현재 전체가 채워지고, 고치면 반영·지우면 빠짐.
    파싱 규칙은 종전 그대로(맨 앞 공백까지 = 번호 · 나머지 = 이름 · 이름 형식엔 손대지 않는다).
