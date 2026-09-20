@@ -446,6 +446,17 @@ select.rsel{padding:4px 8px;border:1px solid var(--line);border-radius:999px;bac
 #card .fig{border:1px solid var(--line);border-radius:8px;padding:6px;margin:6px 0 12px;background:#fff;text-align:center;min-height:40px}
 #card .fig img{max-width:100%;height:auto;display:block;margin:0 auto}
 #card .fig .ld{font-size:12px;color:var(--muted)}
+/* 2026-09-20 — 원본 그림 가리기(§A). ✕ 는 붙인 조각의 것(.cropi .cx)과 같은 꼴이다. */
+#card .fig{position:relative}
+#card .fig .cx{position:absolute;right:4px;top:4px;width:20px;height:20px;border-radius:50%;border:1px solid var(--line);
+  background:rgba(255,255,255,.9);font-size:12px;line-height:1;cursor:pointer;color:var(--muted);font-family:inherit;padding:0}
+#card .fig .figw{display:block}
+#card .figshow{display:inline-block;margin:6px 0 12px;padding:3px 10px;font:inherit;font-size:11.5px;
+  color:var(--muted);background:var(--card);border:1px dashed var(--line);border-radius:999px;cursor:pointer}
+#card .figshow:hover{color:var(--ink);border-color:var(--muted)}
+/* 〈보기〉 줄도 고친 글자 표시를 문제·선택지와 같게(§B) */
+.bogi .t.fixed{background:#FFFDF3}
+.bogi .t .tfx{font-style:normal;color:var(--sand);margin-left:4px;font-size:11px}
 .bogi{border-top:1px solid var(--line);margin-top:4px}
 .bogi .row{display:flex;align-items:flex-start;gap:10px;padding:8px 4px;border-bottom:1px solid var(--line)}
 .bogi .k{font-weight:700;width:20px;flex:none;margin-top:2px}
@@ -952,6 +963,11 @@ body[data-subj="earth"] #list{padding:0 14px}
 body[data-subj="earth"] #esh .ehead #btnTree,
 body[data-subj="earth"] #esh .ehead #btnBook,
 body[data-subj="earth"] #esh .ehead #btnSet{font-size:11px;font-weight:700;padding:4px 10px;border-radius:4px}
+/* add1 이 빠뜨린 값(§C) — 두 칩이 `.chip` 둘째 규칙(필터 칩 · 12.5px · 둥근 테두리)을 먹고 있었다 */
+body[data-subj="earth"] #esh .ehead #examChip{font-size:11px;font-weight:800;padding:2px 8px;border-radius:4px}
+body[data-subj="earth"] #esh .ehead #recChip{font-size:11px;font-weight:700;padding:0;border:0;
+  background:none;border-radius:0;color:var(--muted)}
+body[data-subj="earth"] #esh .ehead #recChip.err{color:var(--red)}
 body[data-subj="earth"] #esh .ehead #subjTabs{border-radius:4px}
 body[data-subj="earth"] #esh .ehead #subjTabs button{font-size:10px;padding:2px 6px;font-weight:700;color:var(--muted)}
 body[data-subj="earth"] #esh .ehead #subjTabs button.on{background:var(--ink);color:#fff}
@@ -4727,9 +4743,11 @@ function renderCard(r){
       <span class="sp"></span><span class="cmark">${(()=>{const m=lastM(no);return m?`<b class="vm${m}">${MG[m]}</b> ${MLABEL[m]}`:'마크 없음'})()}</span>
     </div>
     <div class="q${cropHas(uid,'q')?' crophid':''}${tfixOn(uid,'q')?' fixed':''}" data-tfx="q">${esc(txtOf(uid,'q'))}${tfixOn(uid,'q')?'<i class="tfx" title="고친 글자 — 길게 누르면 다시 고치기">✎</i>':''}</div>${cropBoxHtml(uid,'q')}
-    ${r[F.FILE]==='IMG'?`<div class="fig" id="cFig"><span class="ld">그림 받는 중…</span></div>`:''}
+    ${r[F.FILE]!=='IMG'?'':(figHid(uid)
+        ? `<button type="button" class="figshow" id="cFigShow" title="가려 둔 원본 그림을 다시 본다">🖼 원본 그림 보이기</button>`
+        : `<div class="fig" id="cFig"><span class="figw"><span class="ld">그림 받는 중…</span></span><button type="button" class="cx" id="cFigX" title="원본 그림 가리기">✕</button></div>`)}
     ${(r[F.BOGI]||[]).length?`<div class="bogi">${r[F.BOGI].map(b=>`<div class="row" data-k="${b.키}" data-ans="${b.정오}">
-        <span class="k">${b.키}.</span><span class="t">${esc(b.내용||bogiLineText(r,b.키))}${CUR.SOL_LABELS&&b.설명?`<span class="bexp" hidden>${esc(b.설명)}</span>`:''}</span>
+        <span class="k">${b.키}.</span><span class="t${tfixOn(uid,'b'+b.키)?' fixed':''}" data-tfx="b${b.키}">${esc(txtOf(uid,'b'+b.키))}${tfixOn(uid,'b'+b.키)?'<i class="tfx" title="고친 글자 — 길게 누르면 다시 고치기">✎</i>':''}${CUR.SOL_LABELS&&b.설명?`<span class="bexp" hidden>${esc(b.설명)}</span>`:''}</span>
         ${ox&&b.정오?`<div class="ox">${['O','Q','X'].map(v=>`<button class="${v}${bg[b.키]===v?' on':''}" data-v="${v}">${MG[v]}</button>`).join('')}</div>`:''}
       </div>`).join('')}</div>`:''}
     ${ch.some(x=>x)?`<div class="choices">${ch.map((t,i)=>`<button data-c="${i+1}" data-tfx="c${i+1}" class="${pick===String(i+1)?'pick':''}${tfixOn(uid,'c'+(i+1))?' fixed':''}">${CIRC[i]} ${esc(txtOf(uid,'c'+(i+1)))}${tfixOn(uid,'c'+(i+1))?'<i class="tfx">✎</i>':''}</button>`).join('')}</div>`:''}
@@ -4741,7 +4759,15 @@ function renderCard(r){
         ${r[F.NOTE]?`<div class="cnote">${esc(r[F.NOTE])}</div>`:''}</div></details>
     <div class="cnav"><button id="cPrev">← 이전</button><span>${VLIST.indexOf(VNO)+1} / ${VLIST.length}</span><button id="cNext">다음 →</button></div>`;
   c.scrollTop=0;
-  if(r[F.FILE]==='IMG')imgUrl(uid).then(url=>{const f=$('#cFig');if(!f)return;f.innerHTML=url?`<img src="${url}" alt="문항 그림">`:'<span class="ld">그림을 받지 못했습니다(토큰 확인)</span>'});
+  /* 가려 두었으면 **받지도 않는다**(§A) · ✕ 는 그대로 두고 그림 칸(.figw)만 채운다 */
+  if(r[F.FILE]==='IMG'&&!figHid(uid))imgUrl(uid).then(url=>{const f=$('#cFig .figw');if(!f)return;f.innerHTML=url?`<img src="${url}" alt="문항 그림">`:'<span class="ld">그림을 받지 못했습니다(토큰 확인)</span>'});
+  {const fx=c.querySelector('#cFigX');
+   if(fx)fx.onclick=async e=>{e.stopPropagation();
+     try{const ink=await get('ink','qink:'+uid);
+       if(ink&&Array.isArray(ink.s)&&ink.s.length)toast('필기 자리가 어긋날 수 있습니다 — 그림이 빠지면 아래가 당겨집니다')}catch(_){}
+     await tfixSet(uid,'fig','0');showProblem()};
+   const fs=c.querySelector('#cFigShow');
+   if(fs)fs.onclick=async e=>{e.stopPropagation();await tfixSet(uid,'fig','');showProblem()};}
   c.querySelectorAll('.ox button').forEach(b=>b.onclick=async()=>{
     const rowEl=b.closest('.row'),k=rowEl.dataset.k,v=b.dataset.v;
     const cur=(BG[uid]||{})[k];
@@ -5790,6 +5816,16 @@ var qEraseSheet=function(){
 var TFIXBAD=0;
 var TFIX_SLOTS=['q','c1','c2','c3','c4','c5','s'];
 var TFIX_LABEL={q:'문제',c1:'보기 ①',c2:'보기 ②',c3:'보기 ③',c4:'보기 ④',c5:'보기 ⑤',s:'해설'};
+/* ── 2026-09-20 (_task_jagwa_earth_fig_bogi) ──
+   칸이 둘 늘었다. 새 kv·새 SYNC 키는 만들지 않는다 — `tfix` 의 뜻(원본은 그대로 두고 보이는 것만 갈아 끼운다)과 같다.
+     `b`+키  = 〈보기〉 ㄱ·ㄴ·ㄷ… 줄의 글자   → `tfixSlotsOf` 로 검색·「고친 글자 있음」에 들어간다
+     `fig`   = 원본 그림 가림('0')            → **`TFIX_SLOTS` 에도 `tfixSlotsOf` 에도 안 넣는다.**
+               글이 아니라 보임/안 보임이라 검색 글·「고친 글자 있음」에 끼면 안 된다. */
+var tfixBKey=slot=>(/^b./.test(String(slot))?String(slot).slice(1):'');
+var tfixSlotsOf=uid=>{const r=rowByUid(uid);
+  return TFIX_SLOTS.concat(((r&&r[F.BOGI])||[]).map(b=>'b'+b.키))};
+var tfixLabel=slot=>{const k=tfixBKey(slot);return k?('〈보기〉 '+k):(TFIX_LABEL[slot]||slot)};
+var figHid=uid=>tfixRaw(uid,'fig')==='0';
 var _UIDMAP=null;
 var rowByUid=uid=>{if(!_UIDMAP||_UIDMAP.__n!==DATA.length){_UIDMAP={__n:DATA.length};DATA.forEach(r=>{_UIDMAP[r[F.CODE]]=r})}
   return _UIDMAP[uid]};
@@ -5801,13 +5837,16 @@ var tfixRaw=(uid,slot)=>{const o=TFIX[uid];
 var txtOrig=(uid,slot)=>{const r=rowByUid(uid); if(!r)return '';
   if(slot==='q')return stemOf(r);
   if(slot==='s')return String(r[F.SOL]||'');
+  {const k=tfixBKey(slot); if(k){                       /* 〈보기〉 줄 — 지금 그리던 값 그대로 */
+     const b=((r[F.BOGI]||[]).find(x=>String(x.키)===k))||null;
+     return String((b&&b.내용)||bogiLineText(r,k)||'')}}
   const i=+String(slot).slice(1); return String((r[F.CH]||[])[i-1]||'')};
 /* 본문을 읽는 유일한 길 */
 var txtOf=(uid,slot)=>{const f=tfixRaw(uid,slot); return f||txtOrig(uid,slot)};
 var tfixOn=(uid,slot)=>!!tfixRaw(uid,slot);
-var tfixAny=uid=>TFIX_SLOTS.some(k=>tfixRaw(uid,k));
+var tfixAny=uid=>tfixSlotsOf(uid).some(k=>tfixRaw(uid,k));
 /* 검색이 훑을 것 — 원본과 고친 글자를 **둘 다**. 고친 뒤 옛 낱말로 못 찾게 되면 안 된다. */
-var tfixHay=uid=>TFIX_SLOTS.map(k=>tfixRaw(uid,k)).filter(Boolean).join(' ');
+var tfixHay=uid=>tfixSlotsOf(uid).map(k=>tfixRaw(uid,k)).filter(Boolean).join(' ');
 var saveTFIX=()=>put('kv','tfix',TFIX);
 var tfixSet=async function(uid,slot,v){
   const o=Object.assign({},TFIX[uid]||{});
@@ -5821,7 +5860,7 @@ var tfixSet=async function(uid,slot,v){
 var tfixSheet=function(uid,slot,after,seed){
   const b=document.createElement('div');b.className='sheet';b.id='tfxSheet';
   const orig=txtOrig(uid,slot), cur=tfixRaw(uid,slot);
-  b.innerHTML='<div class="panel"><h2>✎ 글자 고치기 — '+esc(TFIX_LABEL[slot]||slot)+'</h2>'+
+  b.innerHTML='<div class="panel"><h2>✎ 글자 고치기 — '+esc(tfixLabel(slot))+'</h2>'+
     '<p style="font-size:12px;color:var(--muted)">OCR 원본은 그대로 두고 **보이는 글자만** 갈아 끼운다. 비우면 원본으로 돌아간다.</p>'+
     '<div class="orig">'+esc(orig||'(원본 없음)')+'</div>'+
     '<textarea id="tfxIn"></textarea>'+
