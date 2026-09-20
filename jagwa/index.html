@@ -1162,6 +1162,39 @@ body[data-subj="earth"] .vbot #mX,body[data-subj="earth"] .vbot #tNote{display:n
 .bkbar .doctab b{font-size:11.5px;font-weight:700;padding:3px 9px;background:var(--card);color:var(--muted);cursor:pointer}
 .bkbar .doctab b.on{background:var(--ink);color:#fff}
 .bkpick{position:absolute;border:2px solid #7A5FBF;background:rgba(122,95,191,.10);pointer-events:none}
+/* ══════ add2 (2026-09-20 · _task_jagwa_earth_listpop_add2) ══════ */
+/* §A 필기 도구 알약 — 문항 창 머리줄. 민법앱 #ink-tools(227~234) 치수를 그대로 쓴다.
+   단추는 **옮긴 것**이라 .tl 규칙(34×34)을 여기서 덮는다. 글자는 CSS 로만 가린다(#btnBook 선례 · 410줄). */
+#inkPill{display:inline-flex;align-items:center;gap:4px;flex:none;margin-left:auto;
+  padding:2px 4px;background:#F0EFEA;border:1px solid var(--line);border-radius:6px}
+#inkPill .sep{width:1px;height:16px;background:#D9D8D2;flex:none;margin:0}
+#inkPill .tl{width:22px;height:20px;padding:0;border-radius:5px;background:#fff;font-size:0;line-height:1}
+#inkPill .tl.on{border:1.5px solid var(--sea);background:#fff;box-shadow:none}
+#inkPill .sw{width:10px;height:10px;border-radius:50%}
+#inkPill .hl .sw{width:13px;height:6px;border-radius:2px}
+#inkPill #tErase::before{content:'\25FB';font-size:12px}
+#inkPill #tTxt::before{content:'T';font-size:11px;font-weight:800}
+#inkPill #tUndo::before{content:'\21BA';font-size:13px}
+body[data-subj="earth"] #view .vtop{flex-wrap:wrap;row-gap:6px}
+/* §B 지학 아랫줄은 다섯뿐(오른쪽 맞춤) — 나머지는 머리줄 알약·근거 아랫줄·머리 칩으로 갔다.
+   `.tl` 의 본디 display 가 grid 라 되살릴 때도 grid 로 둔다(select#tLayer 도 같다). */
+body[data-subj="earth"] .vbot .tools>*{display:none!important}
+body[data-subj="earth"] .vbot .tools>#tLayer,
+body[data-subj="earth"] .vbot .tools>#tLayerAdd,
+body[data-subj="earth"] .vbot .tools>#tLayerEye,
+body[data-subj="earth"] .vbot .tools>#tHist,
+body[data-subj="earth"] .vbot .tools>#tCard{display:grid!important}
+body[data-subj="earth"] .vbot .tools{justify-content:flex-end}
+/* §C 근거 아랫줄 넷째 단추 P — 켜지면 먹색(아랫줄 #mP 와 같은 색) */
+.vox.vP.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+/* §D 연결한 근거 상자 「✎ 여기서 고치기」 */
+.ggrefbox .ggrr .lk,.ggrc2 .lk{flex:none;white-space:nowrap}
+.ggrefbox .ed{display:flex;gap:5px;flex-wrap:wrap;align-items:flex-start;margin:3px 0 5px;padding-left:20px}
+.ggrefbox .ed .ggrow .txt,.ggrefbox .ed .ggrow .lab,.ggrefbox .ed .cein{background:#fff}
+.ggrefbox .ed .cein{flex:1;min-width:120px;font:inherit;font-size:12px;border:1px solid var(--sea);
+  border-radius:5px;padding:2px 6px;resize:none;overflow:hidden}
+.ggrc2 .ggrcl{display:flex;gap:5px;align-items:flex-start}
+.ggrc2 .ggrcl>span{flex:1;min-width:0;white-space:pre-wrap}
 /*/EARTH:css*/
 </style>
 </head>
@@ -6865,6 +6898,23 @@ if(ISEA){
       try{localStorage.setItem(VWIN_K,on?'1':'0')}catch(e){}
       vwApply(on)};
     t.insertBefore(b,$('#vPrev')||null)}
+  /* ── add2 §A — 필기 도구를 머리줄 알약으로 **옮긴다**(지학만).
+     새로 만들지 않고 옮기므로 id·onclick·`setTool` 의 `.tl.on` 표시가 그대로 산다.
+     `#tTxt` 는 JS 가 늦게 끼우지만(5732줄) 그 줄이 이 줄보다 위라 여기선 이미 있다.
+     카드 `.cmeta` 가 아니라 머리줄인 까닭 = 아래로 스크롤해도 늘 보여야 필기 중에 색을 바꾼다. */
+  if(t&&!document.getElementById('inkPill')){
+    const p=document.createElement('span');p.id='inkPill';
+    t.insertBefore(p,document.getElementById('tm')||null);
+    const tb=document.querySelector('.vbot .tools');
+    ['[data-pen="#16181B"]','[data-pen="#B03A2E"]','[data-pen="#2F6FD0"]',
+     '[data-hl="#F2C230"]','[data-hl="#7FD1AE"]','[data-hl="#FF7A7A"]',
+     '#tErase','#tTxt','#tUndo'].forEach((q,n)=>{
+      const b2=tb?tb.querySelector(q):null; if(!b2)return;
+      if(n===3||n===6){const i=document.createElement('i');i.className='sep';p.appendChild(i)}
+      p.appendChild(b2)});
+    /* §A-4 굵기는 지학에서 숨기고 「보통」으로 — 값을 읽는 setTool·onchange 는 그대로 둔다 */
+    const w=document.getElementById('tW');
+    if(w&&w.value!=='2'){w.value='2';if(typeof TOOL==='object')TOOL.w=2}}
   /* 문항을 열 때마다 창/전체 화면을 세우고 **붙는 대상을 비운다**(§F — 연 문항이 이긴다) */
   {const _ov=openView;
    openView=async function(no,list){cropFor(null);const r=await _ov(no,list);vwApply(vwOn());return r}}
@@ -7361,10 +7411,19 @@ function ggRefBoxHTML(uid,sc){
     const r=rowByUid(u), list=r?ggOf(u):[];
     const body=!r?'<div class="mut">지금 데이터에 없음</div>'
       :!list.length?'<div class="mut">그 문항에 근거가 없습니다</div>'
-      :list.map(g=>'<div class="ggrr'+(g.bang?' bang':'')+'">'
+      /* add2 §D — 항목마다·댓글마다 「✎ 여기서 고치기」. 키는 `건 문항|그 문항|근거 k|(댓글 ck|)범위` */
+      :list.map(g=>{const kk=ea(uid+'|'+u+'|'+g.k+'|'+sc);
+        return '<div class="ggrr'+(g.bang?' bang':'')+'">'
         +'<span class="ggbang'+(g.bang?' on':'')+'" data-ggbang="'+ea(u+'|'+g.k)+'">!</span>'
-        +'<b>'+g.i+'.</b><span class="t">'+esc(ggFlat(g))+'</span></div>'
-        +(Array.isArray(g.cs)&&g.cs.length?'<div class="ggrc2">'+g.cs.map(c=>'<div>↳ '+esc(c.t||'')+'</div>').join('')+'</div>':'')).join('');
+        +'<b>'+g.i+'.</b><span class="t">'+esc(ggFlat(g))+'</span>'
+        +'<button class="lk" data-ggre="'+kk+'">✎ 여기서 고치기</button></div>'
+        +'<div class="ed hide" data-ggre-box="'+kk+'"></div>'
+        +(Array.isArray(g.cs)&&g.cs.length?'<div class="ggrc2">'+g.cs.map(c=>{
+            const ck=String((c&&c.k)||'');
+            const ck2=ea(uid+'|'+u+'|'+g.k+'|'+ck+'|'+sc);
+            return '<div class="ggrcl"><span>↳ '+esc((c&&c.t)||'')+'</span>'
+              +(ck?'<button class="lk" data-ggrce="'+ck2+'">✎ 여기서 고치기</button>':'')+'</div>'
+              +(ck?'<div class="ed hide" data-ggrce-box="'+ck2+'"></div>':'')}).join('')+'</div>':'')}).join('');
     return '<div class="ggrefbox hide'+(ggBangAny(u)?' bang':'')+'" id="'+sc+'gg-refbox-'+ea(uid)+'-'+ea(u)+'" data-gbrefbox="'+ea(u)+'">'
       +'<div class="hd"><span class="sp">🔗 연결한 근거 · '+esc(codeShow(r)||u)+'</span>'
       +'<button class="lk" data-ggrgo="'+ea(u)+'">↪ 그 문제 보기</button>'
@@ -7433,6 +7492,8 @@ var ggAdd0=async function(uid,sc,keepFocus,box){
   return 1}
 /* 그 문항의 근거 상자를 **떠 있는 모든 자리**에서 갈아 끼운다 */
 function ggRepaint(uid){
+  const __ggOpen=[...document.querySelectorAll('.ggrefbox')]
+    .filter(b=>b.id&&!b.classList.contains('hide')).map(b=>b.id);
   document.querySelectorAll('[data-ggbox]').forEach(el=>{
     const [u,sc]=String(el.dataset.ggbox).split('|');
     if(u!==uid)return;
@@ -7444,6 +7505,9 @@ function ggRepaint(uid){
   document.querySelectorAll('[data-ggrc]').forEach(el=>{
     const [u,sc]=String(el.dataset.ggrc).split('|');
     el.innerHTML=ggRefChipsHTML(u,sc)});
+  /* add2 §D — 펴 두었던 연결 상자는 펴 둔 채로. `ggRefBoxHTML` 은 늘 `hide` 로 짓기 때문에
+     이걸 안 하면 「✎ 여기서 고치기」로 저장할 때마다 상자가 접혀 어디를 고쳤는지 잃는다. */
+  __ggOpen.forEach(id=>{const b=document.getElementById(id);if(b)b.classList.remove('hide')});
   try{shellPaint()}catch(e){}
   try{if(typeof ggChipPaint==='function')ggChipPaint()}catch(e){}}
 /* 목록 카드의 읽기 전용 「근거 n」 칩만 다시 */
@@ -7611,6 +7675,52 @@ function ggCsEditOpen(uid,k,ck){
     const list=ggOf(uid).slice();const gg=list.find(x=>x&&x.k===k);const cc=gg?ggCsOf(gg,ck):null;
     if(!cc)return;cc.t=t;await ggSaveList(uid,list);ggCsRepaint(uid,k)};
   bs[1].onclick=ev=>{ev.stopPropagation();ggCsRepaint(uid,k)}}
+/* ── add2 §D 「✎ 여기서 고치기」 — 연결한 근거를 **사본 없이 그 문항(GG[u]) 자리에서** 고친다.
+   `uid` = 걸어 둔 쪽(상자를 펴 놓은 문항) · `u` = 근거 임자. 저장은 글(`t`·`parts`)만 바꾼다 —
+   `k`·`i`·`ok`·`ts`·`cs`·`bang` 은 안 건드린다(민법 `ggRefEditSave` 4665 와 같은 규칙). */
+function ggRefEdBox(at,key){return document.querySelector('['+at+'="'+CSS.escape(key)+'"]')}
+function ggRefEditOpen(uid,u,k,sc){
+  const box=ggRefEdBox('data-ggre-box',uid+'|'+u+'|'+k+'|'+sc), g=ggItem(u,k);
+  if(!box||!g)return;
+  if(!box.classList.contains('hide')){box.classList.add('hide');box.innerHTML='';return}
+  const parts=Array.isArray(g.parts)&&g.parts.length?g.parts:[{l:'',t:g.t||''}];
+  box.innerHTML='<span class="ggrows">'
+    +parts.map(p=>ggRowHTML(p.l).replace('></textarea>','>'+esc(p.t)+'</textarea>')).join('')+'</span>'
+    +'<button class="pl" data-ggedplus="1">＋ 병렬</button>'
+    +'<button class="lk" data-ggedsave="1">저장</button>';
+  box.classList.remove('hide');
+  ggRowsSync(box.querySelector('.ggrows'));
+  box.querySelectorAll('.ggrow .txt').forEach(ggFit);
+  box.querySelector('[data-ggedplus]').onclick=ev=>{ev.stopPropagation();
+    const rb=box.querySelector('.ggrows');const rs=ggRowsOf(rb);
+    rb.insertAdjacentHTML('beforeend',ggRowHTML(ggNextLabel(rs.length?rs[rs.length-1].l:'')));ggRowsSync(rb)};
+  box.querySelector('[data-ggedsave]').onclick=async ev=>{ev.stopPropagation();
+    const rs=ggRowsOf(box.querySelector('.ggrows')).filter(x=>x.t);
+    if(!rs.length)return;
+    const flat=rs.map(x=>(x.l?x.l+' ':'')+x.t).join('\n');
+    if(!ggLimitOk(box.querySelector('.txt'),flat,GG_TMAX))return;
+    const list=ggOf(u).slice();const gg=list.find(x=>x&&x.k===k);if(!gg)return;
+    gg.t=flat;
+    if(rs.length>1||rs[0].l)gg.parts=rs.map(x=>({l:x.l,t:x.t}));else delete gg.parts;
+    await ggSaveList(u,list);ggRepaint(u)}}
+function ggRefCsEditOpen(uid,u,k,ck,sc){
+  const box=ggRefEdBox('data-ggrce-box',uid+'|'+u+'|'+k+'|'+ck+'|'+sc);
+  const g=ggItem(u,k), c=g?ggCsOf(g,ck):null;
+  if(!box||!c)return;
+  if(!box.classList.contains('hide')){box.classList.add('hide');box.innerHTML='';return}
+  box.innerHTML='<textarea rows="1" class="cein"></textarea>'
+    +'<button class="lk" data-ggcesave="1">저장</button><button class="lk" data-ggcex="1">취소</button>';
+  box.classList.remove('hide');
+  const ta=box.querySelector('textarea');ta.value=c.t||'';ggFit(ta);ta.focus();
+  box.querySelector('[data-ggcex]').onclick=ev=>{ev.stopPropagation();
+    box.classList.add('hide');box.innerHTML=''};
+  box.querySelector('[data-ggcesave]').onclick=async ev=>{ev.stopPropagation();
+    const t=String(ta.value||'').trim();
+    if(!t||!ggLimitOk(ta,t,GG_CMAX))return;
+    const list=ggOf(u).slice();const gg=list.find(x=>x&&x.k===k);
+    const cc=gg?ggCsOf(gg,ck):null; if(!cc)return;
+    cc.t=t;                                       /* 댓글도 글만 — k·ts 무변 */
+    await ggSaveList(u,list);ggRepaint(u)}}
 
 if(ISEA){
   const par=(el,at)=>String(el.getAttribute(at)||'').split('|');
@@ -7649,6 +7759,8 @@ if(ISEA){
     if(el=hit('[data-ggreply]')){e.stopPropagation();const v=par(el,'data-ggreply');await ggReply(v[0],v[1],v[2]);return}
     if(el=hit('[data-ggcd]')){e.stopPropagation();const v=par(el,'data-ggcd');await ggCsDel(v[0],v[1],v[2]);return}
     if(el=hit('[data-ggce]')){e.stopPropagation();const v=par(el,'data-ggce');ggCsEditOpen(v[0],v[1],v[2]);return}
+    if(el=hit('[data-ggre]')){e.stopPropagation();const v=par(el,'data-ggre');ggRefEditOpen(v[0],v[1],v[2],v[3]||'');return}
+    if(el=hit('[data-ggrce]')){e.stopPropagation();const v=par(el,'data-ggrce');ggRefCsEditOpen(v[0],v[1],v[2],v[3],v[4]||'');return}
     if(el=hit('[data-ggfind]')){e.stopPropagation();const v=par(el,'data-ggfind');
       const b=document.querySelector('[data-ggfindbox="'+CSS.escape(v[0]+'|'+v[1])+'"]');
       if(b){b.classList.toggle('hide');const i=b.querySelector('input');
@@ -7715,7 +7827,10 @@ function ggCardHTML(r){
   return '<div class="ggwrap">'+ggLineHTML(uid,'qp-')+'</div>'
     +'<div class="vrow">'
     +'<button class="vdet" id="cDetBtn" title="'+ea(r[F.SOLPG]&&!CUR.KINDS?('부록 '+r[F.SOLPG]+'쪽'):'정답·해설')+'">정답·해설 ▸</button>'
-    +['O','Q','X'].map(m=>'<button class="vox v'+m+(lastM(no)===m?' on':'')+'" data-vmark="'+m+'">'+MG[m]+'</button>').join('')
+    /* add2 §C — P 가 넷째. title 은 아랫줄 `#mP` 것을 그대로 가져온다(따로 적지 않는다) */
+    +['O','Q','X','P'].map(m=>'<button class="vox v'+m+(lastM(no)===m?' on':'')+'" data-vmark="'+m+'"'
+        +(m==='P'?' title="'+ea(String((document.getElementById('mP')||{}).title||''))+'"':'')
+        +'>'+MG[m]+'</button>').join('')
     +'<span class="lkchips">'+lks.map(x=>{const q=rec(x);
         return q?'<button class="lkchip" data-go="'+x+'">🔗 '+esc(codeShow(q))+'</button>':''}).join('')+'</span>'
     +'<span class="sp"></span><button class="vlink" id="cLink">✏️ 연결</button></div>'}
