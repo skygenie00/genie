@@ -1051,6 +1051,59 @@ body.inkon .main,body.inkon .pop{user-select:none}
      border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;white-space:nowrap}
 .mbback:hover{background:#eceae4}
 .mbempty{padding:18px 16px;text-align:center;font-size:12px;color:var(--sub)}
+/* ══════════ _task_jo_gaek_mb §A-2 — 목차 서랍(민법OX `#tree` 꼴) ══════════
+   px 는 민법 실물 계산 스타일 실측(2026-09-21 · jo/_px_mb2.py) · 색만 조판기 색.
+   ⚠ 자리는 **세로 탭(.rail) 의 오른쪽 형제**다 — 민법은 `position:fixed;left:0` 이지만
+     조판기 껍데기는 `.body2` 가 flex 라, fixed 로 두면 세로 탭을 덮거나 그 너비를 박아야 한다.
+     형제로 두면 덮지 않고 px 는 그대로다(다르게 한 것 · 보고에 적는다).
+   ⚠ `--trw` 는 조판기가 이미 쓴다(옛 트리) — 서랍은 `--jtrw` 를 쓴다. */
+#jtree{width:var(--jtrw,272px);flex-shrink:0;position:relative;background:var(--paper);
+  border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;
+  box-shadow:2px 0 12px rgba(0,0,0,.10)}
+#jtree.fold{width:13px}
+#jtree.fold .jthead,#jtree.fold #jtlist,#jtree.fold .jtfoot{display:none}
+#jtree .jthead,#jtree #jtlist,#jtree .jtfoot{margin-right:13px}
+#jtree .jthead{display:flex;align-items:center;gap:4px;flex-wrap:wrap;
+  padding:8px 8px 7px 10px;border-bottom:1px solid var(--line)}
+#jtree .jthead button{padding:2px 7px;border:1px solid var(--line);border-radius:6px;font-size:11px;
+  font-weight:700;color:var(--sub);background:var(--paper);white-space:nowrap;cursor:pointer}
+#jtree .jthead button.on{background:#2b2a27;border-color:#2b2a27;color:#fff}
+#jtree .jthead button.jtnow{margin-left:auto;color:var(--exc);border-color:#c3d6f0;background:#eef4fc}
+#jtlist{flex:1;overflow-y:auto;padding:4px 0;font-size:12px;overscroll-behavior:contain}
+#jtgrip{position:absolute;right:0;top:0;bottom:0;width:13px;border-left:1px solid var(--line);
+  background:var(--panel);display:grid;place-items:center;color:#a5a19a;font-size:13px;
+  cursor:ew-resize;touch-action:none;user-select:none;-webkit-user-select:none}
+#jtgrip:hover{color:var(--exc);background:#eef4fc}
+.jtch{display:flex;gap:5px;align-items:center;padding:4px 10px;cursor:pointer;
+  font-weight:800;color:var(--ink);background:var(--panel);margin-top:5px;
+  white-space:nowrap;overflow:hidden}
+.jtch .n{margin-left:auto;font-size:10px;color:#9a958b;font-weight:700;flex:none}
+.jtch.cur{color:var(--exc)}
+.jtch.d2{background:transparent;font-size:11.5px;padding-left:16px;margin-top:2px}
+.jtit{padding:3px 10px 3px 20px;cursor:pointer;border-left:3px solid transparent}
+.jtit:hover{background:rgba(0,0,0,.04)}
+.jtit.cur{border-left-color:var(--exc);background:#eef4fc}
+.jtit.off{opacity:.38;cursor:default}
+.jtit.off:hover{background:none}
+.jtit .l1{display:flex;gap:5px;align-items:baseline}
+.jtit .tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.jtit .n{font-size:10px;color:var(--sub);font-weight:700;flex:none}
+.jtit .now{font-size:9px;font-weight:800;color:#fff;background:var(--exc);border-radius:3px;
+  padding:0 3px;flex:none}
+/* ⚠ `.jtbar` 는 조판기가 이미 쓴다(조문 목차 장 줄 · 396줄) — 그 이름을 쓰면 그 줄이 4px 로 눌린다.
+   그래서 서랍 막대만 `.jdbar` 로 간다(2026-09-21 실측 · memory: 한 파일 앱엔 이름 충돌부터). */
+.jdbar{display:flex;height:4px;border-radius:2px;overflow:hidden;background:#eee;margin:2px 0 0 0}
+.jdbar i{display:block;height:100%}
+.jtchips{display:flex;gap:3px;margin-top:2px;flex-wrap:wrap}
+.jtchip{position:relative;font-size:9px;font-weight:800;line-height:1;padding:2px 4px;
+  border-radius:3px;border:1px solid #d6d2c8;color:var(--sub);background:var(--paper);
+  cursor:pointer;overflow:hidden}
+.jtchip b{position:absolute;left:0;top:0;bottom:0;background:#dce8f8;z-index:0}
+.jtchip span{position:relative;z-index:1}
+.jtchip.done{border-color:var(--exc);color:var(--exc)}
+.jtchip.bad::after{content:'';position:absolute;right:0;top:0;width:4px;height:4px;
+  border-radius:50%;background:var(--rule);z-index:2}
+.jtfoot{border-top:1px solid var(--line);padding:5px 10px;font-size:10.5px;color:var(--sub);line-height:1.55}
 </style>
 </head>
 <body>
@@ -1146,12 +1199,17 @@ try{const u=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     ['note','list','prec','toc','link','canvas'].forEach(k=>{if(u['pop_'+k]&&typeof u['pop_'+k]==='object')S.popCfg[k]=u['pop_'+k];});   /* ★ 판 4 add2 */   /* ★ linkwin §2 — link(창 넷) */
     if(u.omr&&typeof u.omr==='object')S.omrPos=u.omr;   /* ★ 기출뷰 손질 3 — OMR 자리 */
     if(u.cha2_filter&&typeof u.cha2_filter==='object')S.cha2Filter=u.cha2_filter;if(u.cha2_sort)S.cha2Sort=u.cha2_sort;   /* ★ 2차 탭 판 1 — §4-2 필터·정렬 = 표시층(jopangi_ui) */}catch(e){}   /* ★ v3-L §1 */
+/* ★ gaek_mb §A-2 — 목차 서랍 기억. `jopangi_ui` 안(기기별 · 동기화 밖 · 민법도 기기별이다) */
+try{const u2=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
+    if(u2.jt_w>0)S.jtW=u2.jt_w; if(u2.jt_fold)S.jtFold=true;
+    if(u2.jt_ch&&typeof u2.jt_ch==='object')S.jtCh=u2.jt_ch;}catch(e){}
+S.jtCh=S.jtCh||{};
 function uiSave(){try{localStorage.setItem(UI_KEY,JSON.stringify(
   {nmw:S.qlNmW,rdw:S.qlRdW,jpw:S.joPanelW,hfold:S.heatFold?1:0,trw:S.treeW,
    jbk:S.joBlank,jbs:S.joBlankStar?1:0,
    prec_filter:S.precFilter||{},prec_sort:S.precSort,
    lsw:S.listW,prec_ygroups:S.precYG||{},
-   md_fold:S.mdFold||{},embed_fold:S.embFold||{},pop_note:S.popCfg.note||null,pop_list:S.popCfg.list||null,pop_prec:S.popCfg.prec||null,pop_toc:S.popCfg.toc||null,pop_link:S.popCfg.link||null,pop_canvas:S.popCfg.canvas||null,omr:S.omrPos||null,cha2_filter:S.cha2Filter||{},cha2_sort:S.cha2Sort||''}));}catch(e){}}   /* ★ 판 3 §3-4 · 판 4 · add2 */
+   md_fold:S.mdFold||{},embed_fold:S.embFold||{},pop_note:S.popCfg.note||null,pop_list:S.popCfg.list||null,pop_prec:S.popCfg.prec||null,pop_toc:S.popCfg.toc||null,pop_link:S.popCfg.link||null,pop_canvas:S.popCfg.canvas||null,omr:S.omrPos||null,cha2_filter:S.cha2Filter||{},cha2_sort:S.cha2Sort||'',jt_w:S.jtW||0,jt_fold:S.jtFold?1:0,jt_ch:S.jtCh||{}}));}catch(e){}}   /* ★ 판 3 §3-4 · 판 4 · add2 */
 const C={};
 const $=(s,r)=>(r||document).querySelector(s);
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;
@@ -10280,7 +10338,179 @@ function mbBackBar(main, label){
   if (label) bar.appendChild(el('span', 'pl', label));
   main.insertBefore(bar, main.firstChild);
 }
+/* ══════════ _task_jo_gaek_mb §A-2 — 목차 서랍 ══════════
+   민법OX `#tree` 의 꼴·치수·동작을 그대로 옮긴다(머리 단추 · 줄 꼴 · 「지금」 · 막대 · 회독 칩 ·
+   너비 끌기 · 접힘 · 장 접힘 기억). 첫 화면·문제풀이 화면 **둘 다**에 뜬다.
+   기억 = `jopangi_ui`(기기별 · 동기화 밖) — `jt_w`·`jt_fold`·`jt_ch`.
+   ⚠ 값은 `qlRow`·`mbUnitRow` 와 **같은 길**로 센다(mgKeys·rndList·oxOf) — 새 셈을 안 만든다. */
+var JTDATA = null;      /* {M, byId, P7map, subj} — viewJimun 이 채운다 */
+
+function jtSet(d){ JTDATA = d; }
+
+function jtEl(){
+  let t = document.getElementById('jtree');
+  if (t) return t;
+  const host = document.querySelector('.body2'), slot = document.getElementById('slot');
+  if (!host || !slot) return null;
+  t = el('div', ''); t.id = 'jtree';
+  t.appendChild(el('div', 'jthead'));
+  const ls = el('div', ''); ls.id = 'jtlist'; t.appendChild(ls);
+  t.appendChild(el('div', 'jtfoot'));
+  const g = el('div', '', '‹'); g.id = 'jtgrip';
+  jtGripWire(g);
+  t.appendChild(g);
+  host.insertBefore(t, slot);
+  return t;
+}
+
+/* 손잡이 — 조판기 handle(1284) 과 같은 장치. 탭 = 접기 · 끌기 = 너비 160~420 */
+function jtGripWire(g){
+  g.title = '누르면 접기 · 끌면 너비';
+  let x0 = 0, w0 = 0, cur = 0;
+  g.addEventListener('pointerdown', ev => {
+    if (ev.button !== 0 && ev.pointerType === 'mouse') return;
+    x0 = ev.clientX; w0 = cur = (S.jtW || 272); g._drag = false;
+    try{ g.setPointerCapture(ev.pointerId); }catch(e){}
+  });
+  g.addEventListener('pointermove', ev => {
+    if (!g.hasPointerCapture || !g.hasPointerCapture(ev.pointerId)) return;
+    if (S.jtFold) return;
+    const dx = ev.clientX - x0;
+    if (!g._drag && Math.abs(dx) < 4) return;
+    g._drag = true;
+    cur = Math.max(160, Math.min(Math.min(420, innerWidth - 120), Math.round(w0 + dx)));
+    document.documentElement.style.setProperty('--jtrw', cur + 'px');
+  });
+  const end = ev => {
+    try{ g.releasePointerCapture(ev.pointerId); }catch(e){}
+    if (!g._drag) return;
+    S.jtW = cur; uiSave();
+    setTimeout(() => { g._drag = false; }, 300);
+  };
+  g.addEventListener('pointerup', end);
+  g.addEventListener('pointercancel', end);
+  g.addEventListener('click', () => {
+    if (g._drag){ g._drag = false; return; }
+    S.jtFold = !S.jtFold; uiSave(); jtPaint();
+  });
+}
+
+function jtStat(keys){
+  const total = keys.length;
+  const done = keys.filter(k => (oxOf(k) || {}).p).length;
+  let bad = 0;
+  keys.forEach(k => { const st = oxState(k); if (st === 3) bad++; });
+  return { total: total, done: done, bad: bad };
+}
+
+/* 화면마다 다시 그린다 — render() 끝에서 부른다 */
+function jtPaint(){
+  const on = (S.tab === 'jimun') && (S.jimunTab === 'ox') && !!JTDATA;
+  const t = document.getElementById('jtree') || (on ? jtEl() : null);
+  if (!t) return;
+  t.style.display = on ? '' : 'none';
+  if (!on) return;
+  document.documentElement.style.setProperty('--jtrw', (S.jtW || 272) + 'px');
+  t.classList.toggle('fold', !!S.jtFold);
+  const g = document.getElementById('jtgrip'); if (g) g.textContent = S.jtFold ? '›' : '‹';
+  if (S.jtFold) return;
+
+  const { M, byId, P7map, subj } = JTDATA;
+  const hd = t.querySelector('.jthead'); hd.innerHTML = '';
+  const fold = el('button', '', Object.keys(S.jtCh || {}).length ? '모두 펴기' : '모두 접기');
+  fold.onclick = () => {
+    if (Object.keys(S.jtCh || {}).length) S.jtCh = {};
+    else { S.jtCh = {}; M.forEach((n, i) => { if (n.깊이 === 1) S.jtCh[i] = 1; }); }
+    uiSave(); jtPaint();
+  };
+  hd.appendChild(fold);
+  const now = el('button', 'jtnow', '지금');
+  now.title = '지금 보고 있는 단원으로';
+  now.onclick = () => { const c = t.querySelector('.jtit.cur, .jtch.cur');
+    if (c) c.scrollIntoView({ block: 'center' }); else toast('고른 단원이 없다'); };
+  hd.appendChild(now);
+
+  const box = document.getElementById('jtlist'); box.innerHTML = '';
+  const kidOf = i => (i + 1 < M.length) && (M[i + 1].깊이 > M[i].깊이);
+  const labOf = i => ((M[i].no ? M[i].no + (M[i].깊이 === 1 ? '. ' : ' ') : '') + M[i].제목);
+  const anc = [];
+  M.forEach((n, i) => {
+    while (anc.length && M[anc[anc.length - 1]].깊이 >= n.깊이) anc.pop();
+    const hid = anc.some(a => S.jtCh && S.jtCh[a]);
+    const kid = kidOf(i);
+    anc.push(i);
+    if (hid) return;
+    const sel = '__mg' + i;
+    const keys = mgKeys(M, i, byId, P7map);
+    let sub = 0;
+    for (let j = i + 1; j < M.length && M[j].깊이 > n.깊이; j++) sub += mgKeys(M, j, byId, P7map).length;
+    if (kid){
+      const r = el('div', 'jtch' + (n.깊이 >= 2 ? ' d2' : '') + (S.mok === sel ? ' cur' : ''));
+      r.appendChild(el('span', '', (S.jtCh && S.jtCh[i] ? '▸ ' : '▾ ') + labOf(i)));
+      r.appendChild(el('span', 'n', String(keys.length + sub)));
+      r.onclick = () => { S.jtCh = S.jtCh || {};
+        if (S.jtCh[i]) delete S.jtCh[i]; else S.jtCh[i] = 1; uiSave(); jtPaint(); };
+      box.appendChild(r);
+      if (!keys.length) return;
+    }
+    if (!keys.length && kid) return;
+    const st = jtStat(keys);
+    const it = el('div', 'jtit' + (S.mok === sel ? ' cur' : '') + (st.total ? '' : ' off'));
+    it.style.paddingLeft = (20 + Math.max(0, n.깊이 - 2) * 8) + 'px';
+    const l1 = el('div', 'l1');
+    l1.appendChild(el('span', 'tx', labOf(i)));
+    l1.appendChild(el('span', 'n', String(st.total)));
+    if (S.mok === sel) l1.appendChild(el('span', 'now', '지금'));
+    it.appendChild(l1);
+    if (st.total){
+      const bar = el('div', 'jdbar');
+      const iOk = el('i', ''); iOk.style.width = Math.round((st.done - st.bad) / st.total * 100) + '%';
+      iOk.style.background = '#2E7D6F';
+      const iBad = el('i', ''); iBad.style.width = Math.round(st.bad / st.total * 100) + '%';
+      iBad.style.background = 'var(--rule)';
+      bar.appendChild(iOk); bar.appendChild(iBad);
+      it.appendChild(bar);
+      const rl = rndList('mok|' + subj + '|' + sel);
+      if (rl.length){
+        const cs = el('div', 'jtchips');
+        rl.forEach(r0 => {
+          const tot = (r0.total != null ? r0.total : r0.done) || 1;
+          const c = el('span', 'jtchip done' + (r0.wrong ? ' bad' : ''));
+          const b = el('b', ''); b.style.width = Math.round((tot - r0.wrong) / tot * 100) + '%';
+          c.appendChild(b);
+          c.appendChild(el('span', '', String(r0.n)));
+          c.title = r0.n + '회독 🌀' + r0.confuse + ' ⚠' + (r0.fake != null ? r0.fake : '–') +
+                    ' X' + r0.wrong + ' /' + tot + ' — 누르면 회독별 비교';
+          c.onclick = ev => { ev.stopPropagation(); rndPop('mok|' + subj + '|' + sel, keys, labOf(i), ev); };
+          cs.appendChild(c);
+        });
+        it.appendChild(cs);
+      }
+      it.onclick = () => { S.mok = sel; S.oxPage = null; render(); };
+    }
+    box.appendChild(it);
+  });
+  /* 미분류 */
+  const placed = new Set();
+  M.forEach(n => n.리담.forEach(x => placed.add(x)));
+  const unk = [];
+  (JTDATA.qs || []).filter(q => !placed.has(q.id))
+    .forEach(q => (q.지문 || []).forEach(z => unk.push(oxKeyLid(q, z))));
+  if (unk.length){
+    const it = el('div', 'jtit' + (S.mok === '__미분류' ? ' cur' : ''));
+    const l1 = el('div', 'l1');
+    l1.appendChild(el('span', 'tx', '미분류 (리담)'));
+    l1.appendChild(el('span', 'n', String(unk.length)));
+    if (S.mok === '__미분류') l1.appendChild(el('span', 'now', '지금'));
+    it.appendChild(l1);
+    it.onclick = () => { S.mok = '__미분류'; S.oxPage = null; render(); };
+    box.appendChild(it);
+  }
+  const ft = t.querySelector('.jtfoot');
+  ft.textContent = '누르면 그 단원 · 숫자 = 지문 수 · 막대 = 푼 비율(빨강 = 틀림) · 칩 = 마감 회독';
+}
 async function viewJimun(){
+  jtSet(null);   /* ★ gaek_mb §A-2 — 못 그리는 화면(민소·데이터 없음)에서는 서랍을 비운다 */
   const slot=$('#slot');slot.innerHTML='';
   if(S.law==='민사소송법'){
     const m=el('div','main');
@@ -10313,7 +10543,9 @@ async function viewJimun(){
   autoImportant(JM, subj);   // ★ v3-C §7 — ⭐ 정답표 지목 지문 1회 자동 태그
   /* ★ v3-D §0 — 순번·마디 경로 계산용 스냅샷. 순번은 그릴 때만 계산하고 저장하지 않는다 */
   {const _pm={};if(P7)P7.지문.forEach(z=>_pm[z.id]=z);
-   VJ={M:(MG&&MG.마디)||[],byId:byId,P7map:_pm,qs:JM.문제||[]};}
+   VJ={M:(MG&&MG.마디)||[],byId:byId,P7map:_pm,qs:JM.문제||[]};
+   /* ★ gaek_mb §A-2 — 서랍도 같은 재료를 쓴다(따로 읽지 않는다) */
+   jtSet({M:VJ.M,byId:byId,P7map:_pm,subj:subj,qs:JM.문제||[]});}
 
   // ── 좌측 : OX문제면 「목차+회독」 한 표, 기출문제면 연도 목록
   /* ★ gaek_mb §A-1 — 1차객 탭 본문은 **첫 화면 ↔ 문제풀이 화면** 둘이다.
@@ -11658,6 +11890,7 @@ async function render(){
   /* ★ v3-F §0 — 떠 있는 지문 팝업을 본 화면과 같은 상태로 다시 그린다(같은 sid 기록 공유) */
   CARDPOPS=CARDPOPS.filter(p=>p.body&&p.body.isConnected);
   CARDPOPS.forEach(p=>{try{p.paint();}catch(e){}});
+  jtPaint();   /* ★ gaek_mb §A-2 — 서랍은 첫 화면·문제풀이 화면 둘 다에 뜬다 */
   busy=false;
 }
 // 폭이 바뀌면 법전 조판의 단 수를 다시 잡는다. ⚠ 한 행 글자 수는 그대로다 — 단만 준다.
