@@ -217,7 +217,8 @@ a.mdlink{color:#1a5fb4;text-decoration:underline dotted;cursor:pointer}a.mdlink:
 .lkrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap} .lkrow .why{color:#6b675f;font-size:11.5px} .lkrow .tool{padding:1px 6px;font-size:11px}
 .lkform input{width:100%;box-sizing:border-box;margin:3px 0} .lkform .res{cursor:pointer}   /* ★ 판 4 add4 §2·§4 */
 .plg{display:inline-flex;flex-wrap:wrap;gap:1px 3px;align-items:center;vertical-align:middle;margin:0 4px 4px 0} .plgb{font-size:11px;font-weight:800;background:transparent;border:0;padding:0 2px;cursor:pointer;white-space:nowrap;font-family:inherit;line-height:1.6} .plgb:hover{text-decoration:underline}   /* ★ linkwin §1 — 민법앱 글자 단추 꼴(알약 없음) */
-.chip.c-gi.gimain{border:1.5px solid #b45309;font-weight:700}/* ★ 볼트 링크 판 §E-3 — 그 문제의 메인 판례 */
+.chip.c-gi.gimain{border:1.5px solid #b45309;font-weight:700}
+.gilgd{font-size:10.5px;margin-top:2px}/* ★ add2 §A-3 — 흐린 칩 범례 *//* ★ 볼트 링크 판 §E-3 — 그 문제의 메인 판례 */
 .badge.vt{background:#f1f0ec;color:#8a857b;border:1px solid #e2e0d9}/* ★ 볼트 링크 판 §B-2 — 볼트에서 온 줄 */
 .plwv{flex:1 0 100%;font-size:11px;padding:2px 7px;border-radius:0 5px 5px 0;white-space:pre-wrap;word-break:break-word;border-left:2px solid #d6d3ca;background:#f7f6f3;color:#77736a}/* ★ 볼트 링크 판 §B-2 — raw 꼬리 */
 .plwsub{font-size:11px;color:#8a857b;margin:0 0 7px} .res.plout{opacity:.5;cursor:default} .res.plout:hover{background:transparent;border-color:#eeece6} .plwhy,.plwhyb{flex:1 0 100%;font-size:11.5px;padding:2px 7px;border-radius:0 5px 5px 0;white-space:pre-wrap;word-break:break-word} .plwhy{border-left:2px solid #facc15;background:#fefce8;color:#854d0e} .plwhyb{border-left:2px solid #a3e635;background:#f7fee7;color:#3f6212}   /* ★ linkwin §2 */
@@ -2785,8 +2786,29 @@ function giChipEl(g, p){
   if (m && cha === '1'){ c.style.cursor = 'pointer';   /* ★ 손질 7 — 기출문항 열(⚙) 로 그 연도 인용 문항 → 1 카드 팝업 · 여럿 목록 팝업 · 0 기출뷰 이동 */
     const qs = (p && Array.isArray(p.기출문항) ? p.기출문항 : []).filter(x => String(x.yr) === yr && (!rd || String(x.rd || '') === rd) && (!no || String(x.no || '') === no));
     c.title = (isMain ? '이 문제의 메인 판례 · ' : '') + '1차 ' + yr + '년' + (rd ? ' ' + rd + '회' : '') + (no ? ' ' + no + '번' : '') + (ledNo ? ' 원장 문번 ' + ledNo : '') + ' · 이 판례를 인용한 문항 ' + qs.length + (qs.length ? '' : ' — 기출뷰로 이동');
-    if (!qs.length) c.style.opacity = '.6';
-    c.onclick = ev => { ev.stopPropagation(); if (qs.length === 1) giPopQid(qs[0].id, ev); else if (qs.length > 1) giPopQList(p, yr, qs, ev); else giGoTo(yr, rd, no); }; }   /* ★ 상표 손질 5 — 확정 문항이면 카드 팝업(이동 없음) · 아니면 기존 이동 */
+    if (!qs.length){ c.style.opacity = '.6';
+      const why = (p && p.기출문항없음 && p.기출문항없음[g]) || '';
+      c.title += ' · 문항 카드 없음' + (why === '연도밖' ? (' — ' + yr + '년 문항 JSON 밖') : (why === '원장짝없음' ? ' — 원장 짝 없음' + (ledNo ? '(원장 문번 ' + ledNo + ')' : '') : '')); }
+    /* ★ add2 §A-1·A-2 — 1차 칩도 **언제나 팝업**이다(화면이 안 넘어간다) · 다른 법 칩이면 그 법으로 옮겨 본다 ·
+       문항 카드가 없으면 까닭 안내 팝업 + 「그 해 기출뷰로 ↗」 단추. 이동은 그 단추로만. */
+    c.onclick = async ev => { ev.stopPropagation();
+      const _gm = /^([12])차-([특상디민])-/.exec(g), _law = _gm && GI_LAWOF[_gm[2]];
+      const pick = pz => (Array.isArray(pz && pz.기출문항) ? pz.기출문항 : []).filter(
+        x => String(x.yr) === yr && (!rd || String(x.rd || '') === rd) && (!no || String(x.no || '') === no));
+      let pp = p, qq = qs;
+      if (_law && _law !== S.law && !qs.length){
+        /* ★ A-2 — 다른 법 코드면 그 법 리스트를 **먼저 읽어 보고**, 거기 문항이 있을 때만 법을 옮긴다.
+           없는데 옮기면 화면만 흔들리고 안내 팝업은 똑같이 뜬다(2002후567 의 `1차-특-20-57-17` 이 그 경우). */
+        try{ const P2 = await get(PFL(_law, '리스트'));
+          const p2 = (P2.판례 || []).find(x => x.id === p.id) ||
+                     (P2.판례 || []).find(x => String(x.사건번호 || '') === String(p.사건번호 || ''));
+          const q2 = pick(p2);
+          if (q2.length){ S.law = _law; await render(); pp = p2; qq = q2; }
+        }catch(e){}
+      }
+      if (qq.length === 1) giPopQid(qq[0].id, ev);
+      else if (qq.length > 1) giPopQList(pp, yr, qq, ev);
+      else giPopNone(pp, yr, rd, no, ledNo, g, ev); }; }   /* ★ 상표 손질 5 — 확정 문항이면 카드 팝업(이동 없음) · 아니면 기존 이동 */
   else if (m){ c.style.cursor = 'pointer'; c.title = (isMain ? '이 문제의 메인 판례 · ' : '') + '2차 기출 ' + yr + '년' + (rd ? ' ' + rd + '회' : '') + (no ? ' 문제 ' + no : '') + ' — 이 판례에 이어진 2차 카드 목록';   /* add4 §4 · add5: 그 문제(회차-N)로 거름 */
     c.onclick = async ev => { ev.stopPropagation(); const pp = p || (S.tab === 'prec' && S.prec && C[PF('리스트')] ? (C[PF('리스트')].판례 || []).find(x => x.id === S.prec) : null);
       if (!pp){ toast('판례 행이 없다'); return; }
@@ -2795,6 +2817,21 @@ function giChipEl(g, p){
       if (_law && _law !== S.law){ S.law = _law; await render(); }
       popCardList(pp, '기출', { yr: yr, rd: rd, no: no }, ev, 0); }; }
   return c;
+}
+/* ★ add2 §A-1 — 문항 카드가 없는 1차 칩의 안내 팝업. 화면은 안 넘어간다 — 이동은 단추로만. */
+function giPopNone(p, yr, rd, no, ledNo, code, ev){
+  const key = 'gi|' + PLAW() + '|' + yr + '|' + (rd || '') + '|' + ((p && p.id) || '');   /* A-4 — 같은 칩 두 번 = 닫힘 */
+  if (popToggle(key)) return;
+  const body = popShell('', '📝 1차 ' + yr + '년' + (rd ? ' ' + rd + '회' : '') + ' · ' + ((p && (p.사건번호 || p.id)) || ''), key);
+  showPop(ev);
+  const why = (p && p.기출문항없음 && p.기출문항없음[code]) || '';
+  body.appendChild(el('div', 'plwsub', '이 연도·회차의 문항 카드가 없다 — ' + (
+    why === '연도밖' ? (yr + '년 문항이 문항 JSON 에 없다')
+    : why === '원장짝없음' ? ('이 판례에 걸린 원장 짝이 없다' + (ledNo ? ' (볼트 문번은 원장 문번 ' + ledNo + ')' : ''))
+    : '까닭 미상(⚙ 기출문항없음 에 값이 없다)')));
+  const go = el('button', 'tool', '그 해 기출뷰로 ↗');
+  go.onclick = e2 => { e2.stopPropagation(); closeAllPops(); giGoTo(yr, rd, no); };
+  body.appendChild(go);
 }
 /* ★ 상표 손질 5 — 1차 칩 → 문항 카드 팝업(기출뷰 카드 부품 giCard 그대로 · popShell 안 · 탭 이동 없음 · 다른 팝업 안 닫음 · 같은 문항 다시 클릭 = 닫힘) */
 async function giPopQ(year, round, no, ev){ let q = null;
@@ -5615,7 +5652,9 @@ function precDescEl(p, head){
   const line = p.설명줄 || p.사건명 || va || '';
   if (line) w.appendChild(el('div', head ? 'row' : '', line));
   const gs = Array.isArray(p.기출표시) ? p.기출표시 : [];
-  if (gs.length){ const r = el('div', head ? 'row' : ''); gs.forEach(g => r.appendChild(giChipEl(g, p))); w.appendChild(r); }   /* ★ 판 4 add1 §2 — 기출 칩 → 기출뷰 · add4 2차 칩 → 카드 목록 */
+  if (gs.length){ const r = el('div', head ? 'row' : ''); gs.forEach(g => r.appendChild(giChipEl(g, p))); w.appendChild(r);
+    /* ★ add2 §A-3 — 흐린 칩의 뜻을 한 번 적어 둔다(3단 머리에만 · 흐린 것이 있을 때만) */
+    if (head && Object.keys((p && p.기출문항없음) || {}).length) w.appendChild(el('div', 'cdim gilgd', '흐림 = 문항 카드 없음 (눌러도 화면은 안 넘어간다)')); }   /* ★ 판 4 add1 §2 — 기출 칩 → 기출뷰 · add4 2차 칩 → 카드 목록 */
   const tags = giTags(p);   /* ★ §E-3 — 낱말 태그만 · 숨김 규칙 없음(칩 한 줄) */
   if (tags.length){ const r = el('div', head ? 'row' : ''); tags.forEach(g => { const c = el('span', 'chip c-theme', g); c.title = '볼트 기출 태그'; r.appendChild(c); }); w.appendChild(r); }
   return w;
@@ -5639,15 +5678,18 @@ function plOwn(id){ return (plAll()[id] || []).map((x, i) => Object.assign({ k: 
    앱 기록(kv preclink)과 따로 살고 **✎·✕ 가 없다** — 고치려면 옵시디언에서 머리말을 고친다. */
 function vlPrec(p){ const seen = new Set(), out = [];
   (Array.isArray(p && p.연결판례) ? p.연결판례 : []).forEach(x => { const id = x.id || '', k = id || ('raw|' + x.raw);
-    if (seen.has(k)) return; seen.add(k); out.push({ vault: true, to: id, raw: x.raw }); });
+    if (seen.has(k)) return; seen.add(k); out.push({ vault: true, to: id, raw: x.raw, law: x.law || '' }); });
   return out; }
+const LAW_SHORT = { '특허': '특', '상표': '상', '민소': '민', '디보': '디' };
+const LAW_FULL = { '특허': '특허법', '상표': '상표법', '민소': '민사소송법', '디보': '디자인보호법' };
 function vlCards(p){ return (Array.isArray(p && p.연결사례) ? p.연결사례 : []); }
 let VBI = null, VBIP = null;
 function vbIdx(P){   /* 볼트 역색인 — `연결판례[].id` → 부모 행. 리스트를 한 번만 돈다(행마다 안 돈다 · plInIdx 와 같은 결) */
   if (P && VBIP === P && VBI) return VBI;
   const m = new Map();
   ((P && P.판례) || []).forEach(a => { const seen = new Set();
-    (Array.isArray(a.연결판례) ? a.연결판례 : []).forEach(x => { if (!x.id || x.id === a.id || seen.has(x.id)) return;
+    (Array.isArray(a.연결판례) ? a.연결판례 : []).forEach(x => { if (!x.id || x.id === a.id || x.law || seen.has(x.id)) return;
+      /* 다른 법을 거는 링크는 이 법 역색인에 넣지 않는다 — id 가 저쪽 리스트 것이라 여기서 맞으면 남이다 */
       seen.add(x.id); const L = m.get(x.id) || []; L.push({ vault: true, _from: a.id, raw: x.raw }); m.set(x.id, L); }); });
   VBIP = P; VBI = m; return m; }
 function plIn(id){ const R = plAll(), out = []; Object.keys(R).forEach(a => { if (a === id) return; (R[a] || []).forEach((x, i) => { if ((x.k || 'prec') === 'prec' && x.to === id) out.push(Object.assign({ k: 'prec', _i: i, _from: a, _in: true }, x)); }); }); return out; }
@@ -5820,11 +5862,19 @@ function precLinkWin(kind, cur, Cc, P, ev, depth, focus){
        id 없으면 누를 수 없는 회색 「리스트 밖」 행 */
     const vs = kind === 'link' ? vlPrec(cur) : (vbIdx(P).get(cur.id) || []);
     vs.forEach(x => { const oid = kind === 'link' ? x.to : x._from;
-      const d = oid ? rowOf(oid) : el('div', 'res plout'); d.classList.add('lkrow');
-      if (!oid){ d.appendChild(el('b', '', String(x.raw || '').slice(0, 50))); d.appendChild(el('span', 'badge', '리스트 밖')); }
+      /* ★ add1 §C-2 — 다른 법 판례는 이 법 리스트에 없다. 이름 줄만 그리고, 누르면 그 법으로 옮겨 연다. */
+      const other = x.law && LAW_FULL[x.law] && LAW_FULL[x.law] !== S.law;
+      const d = (oid && !other) ? rowOf(oid) : el('div', 'res'); d.classList.add('lkrow');
+      if (other){ d.appendChild(el('b', '', String(x.raw || '').replace(/^\{[요원]\}[특상민디]/, '').slice(0, 44)));
+        d.appendChild(el('span', 'lawtag', '[' + (LAW_SHORT[x.law] || x.law) + ']')); }
+      else if (!oid){ d.classList.add('plout'); d.appendChild(el('b', '', String(x.raw || '').slice(0, 50)));
+        d.appendChild(el('span', 'badge', '리스트 밖')); }
       d.appendChild(el('span', 'badge vt', '볼트'));
       d.appendChild(el('div', 'plwv', String(x.raw || '')));
-      d.onclick = oid ? (e2 => openPrec(oid, e2)) : (e2 => e2.stopPropagation());
+      d.onclick = oid ? (async e2 => { e2.stopPropagation();
+          if (other){ S.law = LAW_FULL[x.law]; await render(); }
+          openPrec(oid, e2); })
+        : (e2 => e2.stopPropagation());
       list.appendChild(d); });
     if (!xs.length && !vs.length) list.appendChild(el('div', 'cdim', kind === 'link' ? '연결된 판례가 없습니다' : '이 판례를 연결해 둔 판례가 없습니다')); };
   draw();
