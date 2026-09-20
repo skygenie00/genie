@@ -218,6 +218,7 @@ a.mdlink{color:#1a5fb4;text-decoration:underline dotted;cursor:pointer}a.mdlink:
 .lkform input{width:100%;box-sizing:border-box;margin:3px 0} .lkform .res{cursor:pointer}   /* ★ 판 4 add4 §2·§4 */
 .plg{display:inline-flex;flex-wrap:wrap;gap:1px 3px;align-items:center;vertical-align:middle;margin:0 4px 4px 0} .plgb{font-size:11px;font-weight:800;background:transparent;border:0;padding:0 2px;cursor:pointer;white-space:nowrap;font-family:inherit;line-height:1.6} .plgb:hover{text-decoration:underline}   /* ★ linkwin §1 — 민법앱 글자 단추 꼴(알약 없음) */
 .chip.c-gi.gimain{border:1.5px solid #b45309;font-weight:700}
+.chip.c-gi.gihand{border:1px dashed #64748b}/* ★ 0921 §E-1 — ✏️ 손으로 이은 기출 카드 */
 .gilgd{font-size:10.5px;margin-top:2px}/* ★ add2 §A-3 — 흐린 칩 범례 *//* ★ 볼트 링크 판 §E-3 — 그 문제의 메인 판례 */
 .badge.vt{background:#f1f0ec;color:#8a857b;border:1px solid #e2e0d9}/* ★ 볼트 링크 판 §B-2 — 볼트에서 온 줄 */
 .plwv{flex:1 0 100%;font-size:11px;padding:2px 7px;border-radius:0 5px 5px 0;white-space:pre-wrap;word-break:break-word;border-left:2px solid #d6d3ca;background:#f7f6f3;color:#77736a}/* ★ 볼트 링크 판 §B-2 — raw 꼬리 */
@@ -5652,7 +5653,19 @@ function precDescEl(p, head){
   const line = p.설명줄 || p.사건명 || va || '';
   if (line) w.appendChild(el('div', head ? 'row' : '', line));
   const gs = Array.isArray(p.기출표시) ? p.기출표시 : [];
-  if (gs.length){ const r = el('div', head ? 'row' : ''); gs.forEach(g => r.appendChild(giChipEl(g, p))); w.appendChild(r);
+  /* ★ 0921 §E-1 — ✏️ 로 손수 이은 **기출 카드**는 볼트 `기출:` 에 없으니 하늘색 칩으로 따로 그린다(꼬리 ✎).
+     코드 = 카드 키 `<과>기출 YY-회-N` → `2차-<과>-YY-회-N` · 이미 하늘색에 있는 코드면 그리지 않는다. */
+  const hand = [];
+  { const seen = new Set(gs);
+    plOwn(p.id).forEach(x => { if (x.k !== 'card' || x.kind !== '기출' || !x.ck) return;
+      const m = /^([특상디민])기출 (\d\d)-(\d+)-(\d+)/.exec(String(x.ck));
+      const code = m ? ('2차-' + m[1] + '-' + m[2] + '-' + m[3] + '-' + m[4]) : '';
+      if (!code || seen.has(code)) return; seen.add(code); hand.push({ code: code, ck: x.ck, why: x.why || '' }); }); }
+  if (gs.length || hand.length){ const r = el('div', head ? 'row' : ''); gs.forEach(g => r.appendChild(giChipEl(g, p)));
+    hand.forEach(h => { const c = el('span', 'chip c-gi gihand', h.code + ' ✎');
+      c.style.cursor = 'pointer'; c.title = '내가 이은 2차 기출 카드 — ' + h.ck + (h.why ? ' · ' + h.why : '') + ' (풀기는 🧾 목록 창에서)';
+      c.onclick = ev => { ev.stopPropagation(); popCard4('기출', h.ck, ev, 1); }; r.appendChild(c); });
+    w.appendChild(r);
     /* ★ add2 §A-3 — 흐린 칩의 뜻을 한 번 적어 둔다(3단 머리에만 · 흐린 것이 있을 때만) */
     if (head && Object.keys((p && p.기출문항없음) || {}).length) w.appendChild(el('div', 'cdim gilgd', '흐림 = 문항 카드 없음 (눌러도 화면은 안 넘어간다)')); }   /* ★ 판 4 add1 §2 — 기출 칩 → 기출뷰 · add4 2차 칩 → 카드 목록 */
   const tags = giTags(p);   /* ★ §E-3 — 낱말 태그만 · 숨김 규칙 없음(칩 한 줄) */
@@ -6221,7 +6234,11 @@ async function viewPrec(){
   eqHeadBtn('prec|'+subj+'|'+cur.id,chips);   /* ★ recsync §E · 판 4 add3 — ✎ 대기 수 칩(통째 버튼은 없앴다) */
   chips.appendChild(precLinkGlyphs(cur,CITE[cur.id]||{},P,0));   /* ★ linkwin §1 — 「🔗 인용 N · 피인용 N · 내 N」 칩 → 글자 넷(0 이면 없음) + ✏️ 연결 · 누름 = 창 넷 */
   {const cs=cardLinksOf(cur);   /* ★ 판 4 add4 §4 — 🧾 기출·사례·GS N (⚙ 이차카드 + 내가 이은 것) · 클릭 = 목록 팝업 */
-   ['기출','사례','GS'].forEach(kind=>{const n=cs.filter(x=>x.kind===kind).length;if(!n)return;
+   /* ★ 0921 §E-1 — 초록 「🧾 기출 N」 은 뺐다. 하늘색 `2차-…` 칩(볼트 `기출:`)과 **완전히 겹친다**
+      (9/21 실측 — 초록이 세는 카드 특허 105 · 상표 55 가 전부 하늘색에 있고, 하늘색에만 있는 행이 특허 125 · 상표 6).
+      게다가 초록은 보고 있는 법 카드만 세서 2002후567 은 초록 1 · 하늘 3 으로 어긋나 보였다.
+      ✏️ 손으로 이은 기출 카드는 `precDescEl` 이 하늘색 칩(꼬리 ✎)으로 그린다 — 사라지지 않는다. */
+   ['사례','GS'].forEach(kind=>{const n=cs.filter(x=>x.kind===kind).length;if(!n)return;
      const c=el('span','chip c-quiz','🧾 '+kind+' '+n);c.style.cursor='pointer';c.title='이 판례에 이어진 2차 '+kind+' 카드';
      c.onclick=ev=>{ev.stopPropagation();popCardList(cur,kind,null,ev,0);};chips.appendChild(c);});
    if(!cs.length){const c=el('span','chip c-quiz','🧾 + 2차 잇기');c.style.opacity='.6';c.style.cursor='pointer';c.title='⚙ 짝 0 — 손으로 2차 카드를 잇는다';
@@ -11048,6 +11065,17 @@ const viewCanvas = (() => {
     let r = null; try { r = await fetch(url, { headers: { Authorization: 'Bearer ' + tk, Accept: 'application/vnd.github.raw' }, cache: 'no-store' }); } catch (e) { CVB.stat.last = 'net'; return null; }
     if (!r.ok){ CVB.stat.last = r.status; return null; }
     CVB.stat.last = 200; return kind === 'buf' ? await r.arrayBuffer() : await r.json(); }
+  /* ★ 0921 §F — 「저장소에 없음」으로 뭉뚱그리지 않는다. `CVB.stat.last`(cvbGh 가 남긴 것) 또는
+     pdf.js 예외의 status 를 그대로 문구에 박는다. 9/20 햄찌 아이패드의 「저장소에 없음」은 사실 404 —
+     파일이 없는 게 아니라 **토큰이 minbeoppdf 를 못 본 것**이었고, 옛 문구로는 그걸 가를 수 없었다. */
+  function cvbWhy(last, path){
+    if (last === 'no-token') return '🔑 토큰이 없다 — 타임테이블·민법앱과 같은 칸(tt.cfg)에 GitHub 토큰을 한 번 넣으면 이 기기에서 계속 쓴다';
+    if (last === 'net' || last == null) return '네트워크 오류 — 다시 해 보라';
+    const n = Number(last);
+    if (n === 404 || n === 401 || n === 403)
+      return 'HTTP ' + n + ' — 토큰이 이 저장소(' + CVB_REPO + ')를 못 본다(권한·만료) 또는 파일이 없다: ' + (path || '');
+    return 'HTTP ' + n + (path ? ' — ' + path : '');
+  }
   async function cvbMeta(docid){ if (CVB.meta[docid]) return CVB.meta[docid];
     const key = 'bookmeta:' + docid; let old = null; try { old = await cvbGet(key); } catch (e) {}
     let fresh = null; try { fresh = await cvbGh(CVB_WORDS + '/' + docid + '/책메타.json', 'json'); } catch (e) { fresh = null; }
@@ -11071,21 +11099,32 @@ const viewCanvas = (() => {
   /* 통짜 PDF — 기기에 재워 둔 것이 있으면 그것, 없으면 pdf.js 가 Range 로 받는다(50MB 를 통째로 안 받는다) */
   async function cvbDoc(docid){ if (CVB.doc[docid]) return CVB.doc[docid];
     const meta = await cvbMeta(docid);
-    if (!meta) throw new Error(cvbTok() ? '책메타를 받지 못했다 — 저장소에 ' + CVB_WORDS + '/' + docid + '/책메타.json 이 있는지 보라' : '토큰이 없다');
-    const lib = await pdfLib(); const tk = cvbTok(); if (!tk) throw new Error('토큰이 없다');
+    if (!meta) throw new Error('책메타를 받지 못했다 · ' + cvbWhy(CVB.stat.last, CVB_WORDS + '/' + docid + '/책메타.json'));   /* ★ 0921 §F */
+    const lib = await pdfLib(); const tk = cvbTok(); if (!tk) throw new Error(cvbWhy('no-token'));
     const t0 = Date.now();
     const cached = await cvbFromCache(docid, meta.pdfMd5);
     if (cached){ const dc = await lib.getDocument({ data: cached.slice(0), cMapUrl: PDFJS + 'cmaps/', cMapPacked: true }).promise;
       CVB.stat[docid] = { ms: Date.now() - t0, pages: dc.numPages, from: 'cache' }; CVB.doc[docid] = dc; return dc; }
     const url = 'https://api.github.com/repos/' + CVB_REPO + '/contents/' + encodeURI(CVB_PDFDIR + '/' + meta.file) + '?ref=' + CVB_BRANCH;
-    const doc = await lib.getDocument({ url, httpHeaders: { Authorization: 'Bearer ' + tk, Accept: 'application/vnd.github.raw' },
-      withCredentials: false, disableAutoFetch: true, rangeChunkSize: 262144, cMapUrl: PDFJS + 'cmaps/', cMapPacked: true }).promise;
+    /* ★ 0921 §F — PDF 단계도 코드를 박는다. pdf.js 는 UnexpectedResponseException 에 `status` 를 담아 준다. */
+    let doc;
+    try {
+      doc = await lib.getDocument({ url, httpHeaders: { Authorization: 'Bearer ' + tk, Accept: 'application/vnd.github.raw' },
+        withCredentials: false, disableAutoFetch: true, rangeChunkSize: 262144, cMapUrl: PDFJS + 'cmaps/', cMapPacked: true }).promise;
+    } catch (e){
+      const st = (e && e.status) || null;
+      CVB.stat.last = st || 'net';
+      throw new Error('교재 PDF 를 받지 못했다 · ' + cvbWhy(st || 'net', CVB_PDFDIR + '/' + meta.file));
+    }
     CVB.stat[docid] = { ms: Date.now() - t0, pages: doc.numPages, from: 'net' }; CVB.doc[docid] = doc;
     /* 받은 바이트를 기기에 재운다 — 민법앱과 같은 열쇠. ⚠ 기다리지 않는다: `getData()` 는 통짜(50MB)를 다 받는 일이라
        기다리면 첫 쪽이 그만큼 늦게 뜬다(관문 G-1 첫 열기 ≤10초). 뒤에서 끝나면 다음부터 캐시로 연다. */
     doc.getData().then(got => { if (got && got.byteLength > 2000) return cvbToCache(docid, meta.pdfMd5, got.buffer || got); })
       .then(ok => { CVB.stat[docid].cached = !!ok; }).catch(() => { CVB.stat[docid].cached = false; });
     return doc; }
+  /* ★ 0921 §F — 하네스가 문구를 잴 수 있게 내놓는 창구 하나(이 블록은 IIFE 안이라 밖에서 안 보인다).
+     읽기 전용 · 앱 동작에 쓰이지 않는다. */
+  try { window.__jocvb = { why: cvbWhy, doc: cvbDoc, C: CVB }; } catch (e) {}
   /* canvas_match 한 줄({book,page,y0,y1[,x0,x1]} · pt · 위 기준) → 민법앱 근거 꼴 {doc,p,r:[x0,y0,x1,y1]} (0~2000) */
   function toGeunge(m, pw, ph){ const x0 = m.x0 != null ? m.x0 : 0, x1 = m.x1 != null ? m.x1 : pw; return { doc: m.book, p: m.page, r: [x0 / pw, m.y0 / ph, x1 / pw, m.y1 / ph].map(v => Math.round(Math.max(0, Math.min(1, v)) * 2000)) }; }
   /* 교재 쪽 팝업 — 쪽 그림 + 자리 강조 + ◀▶·쪽 입력(민법앱 mbBookPage 와 같은 얼개) */
@@ -11096,10 +11135,9 @@ const viewCanvas = (() => {
     host.innerHTML = '<div class="m">교재를 받는 중… (처음 한 번은 오래 걸린다)</div>';
     let doc = null;
     try { doc = await cvbDoc(docid); }
+    /* ★ 0921 §F — 까닭은 cvbDoc 이 이미 코드까지 박아 던진다. 여기서 다시 「저장소에 없음」으로 뭉개지 않는다. */
     catch (e){ const why = String(e && e.message || e);
-      host.innerHTML = '<div class="cv-card"><b>교재를 받지 못했다</b><div class="m">' + esc(why) + (/토큰/.test(why)
-        ? ' — 타임테이블·민법앱과 같은 칸(tt.cfg)에 GitHub 토큰을 한 번 넣으면 이 기기에서 계속 쓴다'
-        : ' — 저장소에 없음(' + esc(CVB_PDFDIR + '/' + ((CVB.meta[docid] || {}).file || docid)) + ')') + '</div></div>'; return; }
+      host.innerHTML = '<div class="cv-card"><b>교재를 받지 못했다</b><div class="m">' + esc(why) + '</div></div>'; return; }
     const head = el('div', 'cv-booknav'); const view = el('div', 'cv-bookview'); host.innerHTML = ''; host.appendChild(head); host.appendChild(view);
     const draw = async () => { const tk = ++st.busy;
       const pg = await doc.getPage(st.p); if (tk !== st.busy) return;
