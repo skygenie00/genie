@@ -9697,6 +9697,11 @@ function joChip(c, host){
 function lnkChips(q, z, host){
   const p = (z.pan || '').trim();
   if (p){
+    /* ★ gaek_mb §C-15(10구간) — 🏛 판례번호. 「같은 판례」 칩보다 앞이다. */
+    { const b0 = el('button', 'chip c-quiz panb', '🏛 ' + p.slice(0, 22));
+      b0.title = '조판기 판례로 연다 — 조판기에 없으면 법제처에서 연다 · ' + p;
+      b0.onclick = ev => { ev.stopPropagation(); panGo(p, ev); };
+      host.appendChild(b0); }
     const n = (((LNKIDX || {}).pan || {})[p] || []).length;
     if (n > 1){
       const b = el('button', 'chip c-quiz', '🔗 같은 판례 ' + (n - 1));
@@ -10584,6 +10589,19 @@ function lawGoJoUrl(lawNm, jo){
   return 'https://www.law.go.kr/법령/' + encodeURIComponent(lawNm) + '/' + encodeURIComponent(jo); }
 function lawGoPrecUrl(no){
   return 'https://www.law.go.kr/판례/(' + encodeURIComponent(String(no || '').trim()) + ')'; }
+/* ★ gaek_mb §C-15·머리말 ⑧(10구간 2026-09-21) — 🏛 판례번호.
+   조판기 리스트에 있으면 그 판례 팝업(`popPrec4`) · 없으면 법제처 판례로 내보낸다.
+   ⚠ 사건번호를 **새로 짓지 않는다** — 리스트의 `사건번호`·`id` 와 글자로 맞춘다. */
+function panKey(s){ return String(s || '').replace(/\s+/g, ''); }
+async function panGo(no, ev){
+  const want = panKey(no);
+  let P = null; try{ P = await get(PFL(S.law, '리스트')) }catch(e){}
+  const hit = ((P && P.판례) || []).find(p => {
+    const c = panKey(p.사건번호 || ''), i = panKey(p.id || '');
+    return c === want || i === want || c.split(',').includes(want); });
+  if (hit){ popPrec4(hit.id, ev, 1, S.law); return; }
+  window.open(lawGoPrecUrl(want), '_blank', 'noopener');
+}
 function joRuleJo(k){          /* `施規 11` · `施規 11의2` → `제11조` · `제11조의2` */
   const m = /^\s*施規\s*(\d+)(?:의\s*(\d+))?/.exec(String(k || ''));
   return m ? ('제' + m[1] + '조' + (m[2] ? '의' + m[2] : '')) : String(k || ''); }
@@ -10591,7 +10609,7 @@ function joWonBtn(x){
   if(!x.law){
     /* ★ gaek_mb §25 — 시행규칙은 조판기에 데이터가 없다. 죽은 표시 대신 법제처로 내보낸다. */
     const lawNm = S.law + '시행규칙', jo = joRuleJo(x.k);
-    const d=el('a','jowon','⚖ '+x.k+' 원문');
+    const d=el('a','jowon','⚖ '+joShort(x.k)+' 원문');   /* ★ 10구간 — 보이는 글자만 짧은 꼴 */
     d.href=lawGoJoUrl(lawNm, jo);
     d.target='_blank';d.rel='noopener';
     d.title='조판기에 없는 '+lawNm+' '+jo+' — 법제처에서 연다';
@@ -10601,7 +10619,7 @@ function joWonBtn(x){
   /* ★ 8/26 사용자 확정 — 이 단추는 **법제처 그 조 원문**으로 나간다.
      민법OX 의 「제924조 원문」과 같은 자리·같은 행동이다.
      앱 안에서 보고 싶으면 머리 배지줄의 「조문형 · 제X조」 칩을 누른다. */
-  const b=el('a','jowon','⚖ '+x.k+' 원문');
+  const b=el('a','jowon','⚖ '+joShort(x.k)+' 원문');   /* ★ 10구간 — 보이는 글자만 짧은 꼴 */
   b.href='https://www.law.go.kr/법령/'+encodeURIComponent(S.law)
          +'/'+encodeURIComponent(x.k);
   b.target='_blank';b.rel='noopener';
