@@ -3821,19 +3821,22 @@ async function recMerge(remote){
     }
   }
   lsPut(U_KEY,u);lsPut(GONE_KEY,gone);
-  for(const k in dirty)await put('kv',k,SYNC_REF[k].g());
+  for(const k in dirty){const v=SYNC_REF[k].g(); if(v)await put('kv',k,v)}   /* add3 §C-2 — 안 읽힌 통은 IndexedDB 에도 안 쓴다 */
   /* ★ 그림자도 같이 갱신한다 — 안 하면 다음 stampAll 이
      「원격에서 받은 것」을 「내가 바꾼 것」으로 오인해 도장을 새로 찍는다.
      ★ 2026-09-15 §C — 단 손댄 칸만(⑤). IndexedDB 를 기다린 뒤라 그림자를 다시 읽어 칸마다 갈음한다(충돌 재시도로 두 번 불려도 같다). */
   const sh=lsObj(SHADOW_KEY);
-  for(const k in touched){const now=SYNC_REF[k].g()||{},sk=sh[k]||(sh[k]={});touched[k].forEach(c=>{if(has(now,c))sk[c]=now[c];else delete sk[c]})}
+  for(const k in touched){const now=SYNC_REF[k].g(); if(!now)continue; const sk=sh[k]||(sh[k]={});touched[k].forEach(c=>{if(has(now,c))sk[c]=now[c];else delete sk[c]})}
   lsPut(SHADOW_KEY,sh);
   return{took,kept,del,tie,ahead,dirty:Object.keys(dirty)};
 }
 
 function recPayload(remote){
-  /* ★ data 는 SYNC_KEYS 만 돌며 만든다 — `ink` 가 들어갈 길이 없다(P5). */
-  const data={};SYNC_KEYS.forEach(k=>{data[k]=SYNC_REF[k].g()||{}});
+  /* ★ data 는 SYNC_KEYS 만 돌며 만든다 — `ink` 가 들어갈 길이 없다(P5).
+     ★ 2026-09-21 (add3 §C-2) — 아직 안 읽힌 통(`g()` 가 null)은 **원격 것 그대로** 실어 보낸다.
+       `||{}` 로 빈 객체를 보내면 그 키의 원격 칸이 통째로 지워진다(근거 소실의 두 번째 길). */
+  const data={};SYNC_KEYS.forEach(k=>{const v=SYNC_REF[k].g();
+    data[k]=v||((remote&&remote.data&&remote.data[k])||{})});
   /* ★ 2026-09-15 (_task_ox_sync_and_limit §E) — `remote` 를 주면 도장·묘비를 원격과 합집합으로(같은 칸은 큰 시각 ·
      한 칸이 둘 다면 큰 쪽만 · 동률은 묘비). 인자가 없으면 옛 판과 같다. */
   const u=lsObj(U_KEY),gone=lsObj(GONE_KEY);
@@ -7047,18 +7050,54 @@ function bplRefresh(no){if(ISEA&&document.getElementById('bpl')&&BPLNO===no)bplO
 /* ── §G 새 통 셋 — gg(근거) · ggref(근거 연결) · pick(직접 찍은 자리) ──
    `link` 는 물리에 이미 있다(LK · SYNC_REF 에도 있다). 지학 SYNC_KEYS 에 넷을 더한다. */
 var GG={}, GGREF={}, PICK={};
+/* ── 2026-09-21 (_task_jagwa_shell_bio_phys_add3 §C) — **늦게 읽는 통 가드** ──
+   `gg`·`ggref`·`pick` 은 부팅 kv 읽기(3723)를 이미 지나쳐서 아래에서 **늦게** 읽는다.
+   그 사이 `recBoot` 이 시동 즉시 `stampAll` 을 돌리는데(3996), 빈 객체는 3754 가드
+   `if(!cur)continue` 를 **그냥 지나** 그림자에만 있는 칸을 묘비로 만든다(3762).
+   ⚠ 짐작이 아니다 — 2026-09-20 22:05:56 에 `gone['gg|G59-06']` 이 그렇게 찍혔고
+     근거 한 칸이 원격에서 사라졌다(studyplandata 이력 실측 · bf50ce9f → ed4a72f7).
+   ⇒ 읽기가 끝나기 전에는 `g()` 가 **null** 을 낸다. `ansfix` 가 쓰던 바로 그 길이다. */
+var GG_READY=false;
 var saveGG=()=>put('kv','gg',GG), saveGGREF=()=>put('kv','ggref',GGREF), savePICK=()=>put('kv','pick',PICK);
 if(ISEA){
-  SYNC_REF.gg   ={g:()=>GG,   s:v=>{GG=v}};
-  SYNC_REF.ggref={g:()=>GGREF,s:v=>{GGREF=v}};
-  SYNC_REF.pick ={g:()=>PICK, s:v=>{PICK=v}};
+  SYNC_REF.gg   ={g:()=>GG_READY?GG:null,   s:v=>{GG=v;GG_READY=true}};
+  SYNC_REF.ggref={g:()=>GG_READY?GGREF:null,s:v=>{GGREF=v}};
+  SYNC_REF.pick ={g:()=>GG_READY?PICK:null, s:v=>{PICK=v}};
   ['gg','ggref','pick','link'].forEach(k=>{if(SYNC_KEYS.indexOf(k)<0)SYNC_KEYS.push(k)});
 }
 /* 부팅 때 이미 지나간 kv 읽기(3723)를 여기서 한 번 더 — 지학에서만 · 그 줄은 안 고친다 */
 if(ISEA)(async()=>{try{
   GG=(await get('kv','gg'))||{}; GGREF=(await get('kv','ggref'))||{}; PICK=(await get('kv','pick'))||{};
+  GG_READY=true;                    /* ← 여기서부터 도장·병합·밀기에 든다(add3 §C-1) */
+  try{await ggFixEat()}catch(e){console.warn('ggFixEat',e)}
   if(typeof draw==='function'&&DATA.length)draw();
-}catch(e){console.warn('gg load',e)}})();
+}catch(e){console.warn('gg load',e);
+  /* §C-3 조용히 삼키지 않는다 — 통은 null 로 남고 칩에 보인다 */
+  try{recErr='근거 통을 못 읽었다 — 동기화에서 뺐다';recPaint()}catch(_){}
+}})();
+/* ── 2026-09-21 (add3 §A-2) 되살림 한 벌 — 멱등 ──
+   `<과목>/근거_되살림_20260921.json`({uid:[항목…]})이 있으면 **지금 목록에 없는 `k` 만** 보탠다.
+   기록 파일을 손으로 고쳐 밀지 않는다(도장·병합이 꼬인다) — 앱이 보태면 `stampAll` 이 도장을 찍는다.
+   한 번 먹으면 기기에 표시하고 다시 안 먹는다(민법 `ox_gg_*_merged` 선례). */
+var GGFIX_K='jagwa.ggfix.20260921.'+SUBJ_ID;
+var ggFixEat=async function(){
+  if(!ISEA)return 0;
+  try{if(localStorage.getItem(GGFIX_K))return 0}catch(e){}
+  let j=null;
+  try{const t=await ghRaw(SUBJ_ID+'/근거_되살림_20260921.json'); if(!t)return 0; j=JSON.parse(t)}
+  catch(e){return 0}                                   /* 토큰이 없거나 파일이 없으면 조용히 0 */
+  if(!j||typeof j!=='object')return 0;
+  let n=0;
+  for(const uid in j){
+    const add=(j[uid]||[]).filter(g=>g&&g.k);
+    if(!add.length)continue;
+    const list=ggOf(uid).slice(), have=new Set(list.map(g=>g&&g.k));
+    let m=0; add.forEach(g=>{if(!have.has(g.k)){list.push(g);m++}});
+    if(m){list.forEach((x,i)=>{if(x)x.i=i+1}); await ggSaveList(uid,list); n+=m}
+  }
+  try{localStorage.setItem(GGFIX_K,String(Date.now()))}catch(e){}
+  if(n){try{draw()}catch(e){} try{toast('사라졌던 근거 '+n+'칸을 되살렸습니다')}catch(e){}}
+  return n};
 
 var ggOf=uid=>{const a=GG[uid];return Array.isArray(a)?a:[]};
 var ggBangAny=uid=>ggOf(uid).some(g=>g&&g.bang);
