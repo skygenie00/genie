@@ -11665,21 +11665,13 @@ async function viewJimun(){
   /* ★ gaek_mb §A-1 — 1차객 탭 본문은 **첫 화면 ↔ 문제풀이 화면** 둘이다.
      첫 화면 = OX 갈래 · 고른 마디 없음 · 큐 아님. 그때는 가운데 목차 열을 그리지 않는다
      (목차는 과목 카드 › 장 › 단원 줄로 간다 · 서랍은 다음 판). */
-  const MBHOME=(S.jimunTab==='ox')&&!S.mok&&!S.oxQueue;
-  if(MBHOME){ /* 첫 화면 — 왼쪽 열 없음 */ }
-  else if(S.jimunTab==='ox'){
-    /* ★ 손잡이를 열 바깥에서 떼어 경계선 위에 세운다(8/26). 동작은 그대로다. */
-    const box=el('div','qlbox'+(S.treeHid?' nonm':''));
-    box.style.setProperty('--nmw',S.qlNmW+'px');   // ★ 끌어 정한 너비(8/26)
-    box.style.setProperty('--rdw',S.qlRdW+'px');
-    box.appendChild(qlColumn(MG,JM,byId,P7,subj));
-    /* ★ 판례탭처럼 열마다 자기 오른쪽에 하나씩(8/26).
-       목차 손잡이는 이름칸 경계(228px)에 띄우고,
-       회독 손잡이는 띄우지 않고 flex 형제로 붙여 회독칸 오른쪽 끝에 세운다. */
-    const h1=qlHandle('tree','목차');h1.className='handle qlh a';box.appendChild(h1);
-    const h2=qlHandle('list','회독');box.appendChild(h2);
-    slot.appendChild(box);
-  }else{
+  /* ★ gaek_mb §A-1·§B-7(9구간 2026-09-21) — OX 갈래에서는 옛 「목차+회독」 열을 **아예 안 그린다.**
+     2구간은 첫 화면에서만 걷어 문제풀이·큐 화면에 409px 열이 카드 옆에 남아 있었다(census 실측).
+     §A-1 「지금처럼 목차 표와 카드가 나란히가 아니다」 · 목차는 왼쪽 서랍(§A-2)에 있다.
+     `qlColumn`·`qlHandle` 정의와 `S.treeHid`·`S.listHid` 는 다른 탭이 쓰므로 그대로 둔다. */
+  const MBHOME=(S.jimunTab==='ox')&&!S.mok&&!S.oxQueue;   /* 아래 11706·11735 가 쓴다 */
+  if(S.jimunTab==='ox'){ /* 왼쪽 열 없음 — 첫 화면도 문제풀이 화면도 */ }
+  else{
     const tree=el('div','tree'+(S.treeHid?' hid':''));
     tree.appendChild(el('div','h',subj+' · 연도'));
     const byY=collect(JM.문제,q=>q.연도);
