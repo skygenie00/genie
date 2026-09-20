@@ -1193,6 +1193,30 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .mbbrow .hd .m{font-size:10px;color:#9a958b}
 .mbbrow .sn{font-size:11px;color:#4a463f;line-height:1.45;max-height:2.9em;overflow:hidden;margin-top:2px}
 .mbbnone{padding:12px;font-size:12px;color:var(--sub)}
+/* ══════════ _task_jo_gaek_mb §D-17 알약 (+ _add1 누름 가로채기 고침) ══════════
+   민법 실물 값 실측(2026-09-21) · 색만 조판기 색. 화면 고정(fixed)이 아니라
+   **문제풀이 화면 안 sticky** 다 — 민법과 같다.
+   ⚠ _add1 — 민법 실물의 아래 막대 셋은 가로 한 줄을 다 차지해 서로 덮고, 뒤 상자의 빈 부분이
+     누름을 가로챈다(사용자 9/21 「맨 밑으로 내려야만 이전이 눌린다」). **그 결함은 안 옮긴다** —
+     상자는 pointer-events:none · 그 안의 알약·단추만 auto. */
+.mbbar{position:sticky;bottom:8px;z-index:10;display:flex;pointer-events:none;margin-top:10px}
+.mbbar.r{justify-content:flex-end}
+.mbbar.l{justify-content:flex-start}
+.mbbar>*{pointer-events:auto}
+.mbpill{display:inline-flex;align-items:center;gap:6px;background:var(--paper);
+  border:1px solid var(--line);border-radius:9999px;padding:4px 6px 4px 12px;
+  box-shadow:0 10px 15px -3px rgba(0,0,0,.12),0 4px 6px -4px rgba(0,0,0,.12)}
+.mbpill .mk{font-size:11px;font-weight:700;color:var(--sub);white-space:nowrap;line-height:16.5px}
+.mbpill .mk b{font-weight:800;color:var(--ink)}
+.mbpb{font-size:12px;line-height:18px;font-weight:800;color:var(--exc);background:transparent;
+  border:0;border-radius:9999px;padding:4px 8px;white-space:nowrap;cursor:pointer}
+.mbpb.sub{font-weight:700;color:var(--sub)}
+.mbpb:hover{color:#1b4f9c}
+.mbpb[disabled]{opacity:.45;cursor:default}
+.mbprev{font-size:12px;line-height:18px;font-weight:700;color:var(--sub);background:var(--paper);
+  border:1px solid var(--line);border-radius:9999px;padding:4px 12px;white-space:nowrap;cursor:pointer;
+  box-shadow:0 10px 15px -3px rgba(0,0,0,.12),0 4px 6px -4px rgba(0,0,0,.12)}
+.mbprev:hover{color:var(--exc)}
 </style>
 </head>
 <body>
@@ -8376,6 +8400,64 @@ function mbbPop(key, ev){
     '교재 PDF 자리·후보는 다음 판에서 들어온다 — 지금은 줄을 그리지 않는다.'));
   body.appendChild(wrap);
 }
+/* ══════════ _task_jo_gaek_mb §D-17 알약 — 민법 꼴 · 문제풀이 화면 안 sticky ══════════
+   옛 「쪽 1/1 · 마킹 0/13」 뜬 알약(#oxpill)과 떠 있는 두 단추(#oxfab)를 이것으로 갈음한다.
+   ⚠ **회독·마감 규칙은 안 건드린다**(지시서 §F). 민법의 「마지막 쪽 채점 = 자동 저장+잠금」은
+     조판기의 마감 규칙을 바꾸는 일이라 옮기지 않았다 — 마지막 쪽에서는 채점 뒤 알약에
+     「◈ 저장·보기」(옛 `rndClose` 그대로)가 뜬다. 보고에 적는다.
+   ⚠ _add1 — 막대는 `pointer-events:none`, 알약·단추만 `auto`(민법 실물의 누름 가로채기를 안 옮긴다). */
+function mbPillBars(main, ctx, pgCells, allCells, nPg, marked, unDone, scope2, keysAll, mokLabel){
+  const graded = keysAll.some(k => ((oxOf(k) || {}).p));
+  /* ── ◀ 이전 (왼쪽 흰 알약) ── */
+  if (nPg > 1 && S.oxPage > 0){
+    const bl = el('div', 'mbbar l');
+    const pb = el('button', 'mbprev', '◀ 이전');
+    pb.onclick = () => { S.oxPage--; S.oxPageJump = true; render(); };
+    bl.appendChild(pb);
+    main.appendChild(bl);
+  }
+  /* ── 채점 뒤 알약 — 「📊 채점 · 다음」 ── */
+  if (graded){
+    const bg = el('div', 'mbbar r');
+    const box = el('div', 'mbpill');
+    const b1 = el('button', 'mbpb', '📊 채점');
+    b1.title = '채점 결과 · 회독별 비교';
+    b1.onclick = ev => rsltPop(scope2, keysAll, mokLabel, ev);
+    box.appendChild(b1);
+    if (nPg > 1 && S.oxPage < nPg - 1){
+      const b2 = el('button', 'mbpb sub', '다음');
+      b2.onclick = () => { S.oxPage++; S.oxPageJump = true; render(); };
+      box.appendChild(b2);
+    } else {
+      /* 마지막 쪽 — 옛 「◈ 단원 최종 결과 저장 및 보기」 자리(마감 규칙 무변) */
+      const b3 = el('button', 'mbpb sub', '◈ 저장·보기');
+      b3.title = '이 판을 마감하고 결과를 본다 — 옛 「단원 최종 결과 저장 및 보기」와 같다';
+      b3.onclick = () => rndClose(scope2, keysAll, mokLabel);
+      box.appendChild(b3);
+    }
+    bg.appendChild(box);
+    main.appendChild(bg);
+  }
+  /* ── 아래 알약 — 「마킹 N/총 · 채점 ✓ · 다음 ▶」 ── */
+  const br = el('div', 'mbbar r');
+  const box2 = el('div', 'mbpill');
+  const mk = el('span', 'mk');
+  mk.appendChild(document.createTextNode('마킹 '));
+  mk.appendChild(el('b', '', String(marked.length)));
+  mk.appendChild(document.createTextNode('/' + unDone.length));
+  box2.appendChild(mk);
+  const gb = el('button', 'mbpb', '채점 ✓');
+  if (!unDone.length) { gb.disabled = true; gb.title = '이 쪽은 다 채점됐다'; }
+  else gb.onclick = () => oxGrade(pgCells, ctx);
+  box2.appendChild(gb);
+  if (nPg > 1 && S.oxPage < nPg - 1){
+    const nb = el('button', 'mbpb sub', '다음 ▶');
+    nb.onclick = () => { S.oxPage++; S.oxPageJump = true; render(); };
+    box2.appendChild(nb);
+  }
+  br.appendChild(box2);
+  main.appendChild(br);
+}
 function oxPickRow(row, key, raw, sol, extra, chips){
   const rec = oxOf(key) || {}, ans = oxAns(key, raw), fixed = oxFixed(key);
   lnkLines(row, key);                     /* 관련/나를 연결한 문제 — 자리 그대로 */
@@ -11101,34 +11183,10 @@ async function viewJimun(){
         }
         main.appendChild(bar);
       }
-      /* ★ v3-F §6-1 — 「쪽·마킹」 알약: 오른쪽에 떠서 스크롤을 따라온다(두 단추 위).
-         마킹은 render 를 부르므로 알약도 그때마다 새 수로 그려진다. */
-      if (CARDS.length){
-        const pill = el('div', 'oxpill'); pill.id = 'oxpill';
-        pill.appendChild(el('span', '', '쪽 ' + (S.oxPage + 1) + '/' + nPg +
-          ' · 마킹 ' + marked.length + '/' + unDone.length));
-        if (unDone.length && marked.length === unDone.length){
-          const gb = el('button', 'pgbig', '✅ 이 페이지 채점');
-          gb.style.padding = '2px 10px';
-          gb.onclick = () => oxGrade(pgCells, ctx);
-          pill.appendChild(gb);
-        }
-        document.body.appendChild(pill);
-      }
-      /* ★ v3-D §5 — 한 번이라도 채점한 판에서만 떠 있는 두 단추(큐에는 없다) */
-      if (CARDS.length && keysAll.some(k => ((oxOf(k) || {}).p))){
-        const fw = el('div'); fw.id = 'oxfab';
-        fw.style.cssText = 'position:fixed;right:18px;bottom:18px;z-index:55;'
-          + 'display:flex;flex-direction:column;gap:8px;align-items:flex-end';
-        const fb1 = el('button', 'tool', '📊 채점표');
-        fb1.style.cssText = 'background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.18)';
-        fb1.onclick = ev => rsltPop(scope2, keysAll, mokLabel, ev);
-        const fb2 = el('button', 'tool on', '◈ 단원 최종 결과 저장 및 보기');
-        fb2.style.cssText = 'box-shadow:0 4px 14px rgba(0,0,0,.18)';
-        fb2.onclick = () => rndClose(scope2, keysAll, mokLabel);
-        fw.appendChild(fb1); fw.appendChild(fb2);
-        document.body.appendChild(fw);
-      }
+      /* ★ gaek_mb §D-17 — 옛 뜬 알약(#oxpill)·떠 있는 두 단추(#oxfab)를 민법 꼴
+         **화면 안 sticky 알약 셋**으로 갈음한다(◀ 이전 · 채점 뒤 알약 · 아래 알약). */
+      if (CARDS.length)
+        mbPillBars(main, ctx, pgCells, allCells, nPg, marked, unDone, scope2, keysAll, mokLabel);
     }else if(!S.mok){
       main.appendChild(emptyBox('📝','가운데 목록에서 마디를 고르면 그 마디 문항이 묶여 나온다',
         '문제가 있는 마디에만 「총 N문제」가 붙는다'));
