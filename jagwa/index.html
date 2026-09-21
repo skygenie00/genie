@@ -275,6 +275,17 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
   padding:18px 18px calc(env(safe-area-inset-bottom) + 18px);max-height:86vh;overflow:auto}
 /* 떠 있는 창(2026-09-04 · 쌍둥이 미리보기 · 손필기 암기카드) — 제목줄 끌기 · 오른쪽 아래 모서리 크기 · 세션 동안 자리 기억 */
 .sheet .panel.float{position:fixed;margin:0;max-width:none;max-height:none;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.3);overflow:auto;padding-bottom:18px}
+/* ══ add16 — 「보는 시트」는 **모달이 아니다.** 덮개를 지우고 누름을 안 막는다(`#bpl` 과 같은 길).
+   뒤의 문제 창에서 필기·넘기기·단추가 그대로 먹고, 문제와 풀이를 나란히 놓을 수 있다. */
+.sheet.shfloat{background:transparent;pointer-events:none;display:block}
+.sheet.shfloat>.panel{pointer-events:auto}
+.sheet.shfloat>.panel>h2{position:sticky;top:0;z-index:2;background:var(--card);
+  margin:0 -18px 8px;padding:2px 18px 8px;display:flex;align-items:center;gap:8px}
+.sheet.shfloat .shx{margin-left:auto;border:0;background:none;color:var(--muted);
+  font-size:14px;line-height:1;cursor:pointer;padding:2px 4px}
+.sheet.shfloat .shx:hover{color:var(--red)}
+/* §A-3 — 안의 그림은 창 폭을 따른다 */
+.sheet.shfloat .panel img{max-width:100%;height:auto}
 .twhandle{cursor:move;touch-action:none;user-select:none}
 .twgrip{position:sticky;bottom:0;display:block;margin-left:auto;width:22px;height:22px;cursor:nwse-resize;touch-action:none;border-radius:0 0 10px 0;
   background:linear-gradient(135deg,transparent 48%,#9A988F 48%,#9A988F 60%,transparent 60%,transparent 70%,#9A988F 70%,#9A988F 82%,transparent 82%)}
@@ -2914,7 +2925,8 @@ function syncNoteBtn(){
 }
 $('#tNote').onclick=()=>{if(VNO)noteSheet(VNO)};
 
-$('#tAns').onclick=()=>{
+/* ★ add16 — 이름 없는 핸들러였다. 감싸려면 이름이 있어야 해서 함수로 뽑는다(안은 그대로). */
+function ansSheet(){
   const r=rec(VNO);
   const b=document.createElement('div');b.className='sheet';
   b.innerHTML=`<div class="panel"><h2>${VNO}번 정답</h2>
@@ -2924,7 +2936,8 @@ $('#tAns').onclick=()=>{
     <button class="btn" style="margin-top:14px">닫기</button></div>`;
   b.onclick=e=>{if(e.target===b||e.target.tagName==='BUTTON')b.remove()};
   document.body.appendChild(b);
-};
+}
+$('#tAns').onclick=()=>ansSheet();
 
 /* ---------------- 공식·이론 (옵시디언 물리 목차) ---------------- */
 const VAULT="PA's archive", NOTE='변리사 시험/자과/물리/물리 목차.md';
@@ -7157,6 +7170,66 @@ function cropFor(no){
     const inf=document.getElementById('bkInfo');bar.insertBefore(c,inf?inf.nextSibling:bar.firstChild)}
   c.textContent='붙는 문항 '+codeShow(rec(CROPFOR));
 }
+
+/* ══════════ add16 — 「보는 시트」를 떠 있는 창으로 ══════════
+   새 창틀을 짓지 않는다 — 📋·🃏 창이 쓰는 `makeFloat` 에 그대로 태운다.
+   ⚠ 확인 창·설정(지우기 확인·동기화 도움말·설정·지학 편집 넷)은 **모달 그대로** 둔다(§A-5).
+   ⚠ 옛 시트의 안(글자·단추·id)은 한 글자도 안 바꾼다 — 겉틀만 띄운다. */
+function shFloat(b,key,title){
+  if(!SHELL||!b)return b;
+  const p=b.querySelector('.panel'); if(!p)return b;
+  const id='sh-'+key;
+  /* 같은 창을 다시 열면 **하나를 갈아 그린다**(쌓이지 않는다 · §A-2) */
+  document.querySelectorAll('#'+id).forEach(x=>{if(x!==b)x.remove()});
+  b.id=id; b.dataset.shkey=key;
+  b.classList.add('shfloat');
+  let h=p.querySelector('h2');
+  if(!h){h=document.createElement('h2');h.textContent=title||key;p.insertBefore(h,p.firstChild)}
+  if(!h.querySelector('.shx')){
+    const x=document.createElement('button');x.className='shx';x.type='button';
+    x.title='닫기';x.textContent='✕';x.onclick=()=>b.remove();h.appendChild(x)}
+  /* 처음 뜨는 자리 = 문제 창 오른쪽 옆(자리가 없으면 가운데) */
+  if(typeof WIN==='object'&&!WIN[key]){
+    const v=document.getElementById('view');
+    const vr=(v&&!v.classList.contains('hide'))?v.getBoundingClientRect():null;
+    const w=Math.min(560,Math.max(320,window.innerWidth-40));
+    const hh=Math.min(Math.round(window.innerHeight*0.72),window.innerHeight-40);
+    let l=Math.round((window.innerWidth-w)/2), t=Math.round((window.innerHeight-hh)/2);
+    if(vr&&vr.right+8+w<=window.innerWidth-8){l=Math.round(vr.right+8);t=Math.round(vr.top)}
+    WIN[key]={l:l,t:t,w:w,h:hh};
+  }
+  try{makeFloat(b,h,key,'jagwa.win.'+key)}catch(e){console.warn('shFloat',e)}
+  return b;
+}
+/* 어느 함수를 어느 이름으로 띄우나 — 표는 수행 결과에 그대로 적는다 */
+var SHWIN=[['solSheet','sol'],['ansSheet','ans'],['frmSheet','frm'],['theorySheet','theory'],
+           ['conceptSheet','concept'],['conceptView','conceptView'],['conceptPick','conceptPick'],
+           ['conceptStat','conceptStat'],['twinSheet','twin'],['gptSheet','gpt'],
+           ['typeSheet','type'],['linkSheet','link'],['histSheet','hist'],
+           ['ansFixSheet','ansfix'],['omrResult','omr'],['yearSheet','year'],
+           ['mcardSheet','mcard'],['cardSheet','card']];
+/* 문항이 바뀌면 **문항에 매인 창**은 닫는다(§A-2 의 허락한 갈래 — 따라 그리려면 창마다
+   여는 인자를 알아야 해서 이 판에서는 닫는 쪽을 골랐다. 수행 결과에 적는다). */
+var SHPERQ=['sol','ans','twin','gpt','type','link','hist','ansfix','mcard','card'];
+if(SHELL)setTimeout(()=>{
+  SHWIN.forEach(([fn,key])=>{
+    const f=window[fn]; if(typeof f!=='function')return;
+    if(f.__sh)return;
+    const g=function(){
+      const r=f.apply(this,arguments);
+      try{const b=[...document.querySelectorAll('body>.sheet:not(.shfloat)')].pop();
+        if(b)shFloat(b,key)}catch(e){console.warn('shFloat wrap',e)}
+      return r};
+    g.__sh=1; window[fn]=g;
+  });
+  const _sp2=window.showProblem;
+  if(typeof _sp2==='function'&&!_sp2.__shq){
+    const g2=async function(){const x=await _sp2.apply(this,arguments);
+      try{SHPERQ.forEach(k=>{const b=document.getElementById('sh-'+k);if(b)b.remove()})}catch(e){}
+      return x};
+    g2.__shq=1; window.showProblem=g2;
+  }
+},400);
 
 /* ── §E 문항 = 떠 있는 창 ──
    새로 짓는 것이 없다 — 교재 창이 쓰는 `makeFloat` 을 그대로 부른다(`WIN.view` · `jagwa.win.view`).
