@@ -427,6 +427,8 @@ body[data-layer="card"] .stage,body[data-layer="card"] #navdr,body[data-layer="c
 body[data-layer="card"] .tools .sep:first-of-type,body[data-layer="card"] .tools .sep:nth-of-type(2){display:none}
 /* 목록 배지 · 색 */
 .item.eg .num{color:var(--teal)} .item.ec .num{color:var(--muted)}
+/* ★ add12 §A-4 — 변리사 기출(`PA…`)만 초록 · 그 밖(타기출·기본)은 회색(사용자 9/21) */
+body[data-shell] #list .item .num.nog{color:#8b8e94}
 .tag.tg{background:#E6F2EE;color:#1B7F4B;border-color:#BFE0D2} .tag.tc{background:#F0F0EE;color:#6E7278}
 .tag.unit{background:var(--subj-soft);color:var(--subj);border-color:#BFD3E6;cursor:pointer}
 .tag.page{background:var(--sand-soft);color:#7A5520;border-color:#E9D5B5;cursor:pointer}
@@ -1222,15 +1224,30 @@ body[data-layer="pdf"] #pRow1 .lk2{width:auto;height:auto;padding:4px 8px;border
   font-size:11.5px;font-weight:600;color:var(--muted);border-radius:6px}
 body[data-layer="pdf"] #pRow1 .lk2.dim{color:var(--muted);font-weight:600}
 body[data-layer="pdf"] #pRow1 .lk2.on{color:var(--subj)}
-@container (max-width:560px){#pRow1 .sp{flex-basis:100%;height:0;margin:0}}
-/* add1 §B 물리 아랫줄 = 있는 것만 다섯(오른쪽 맞춤) */
+/* ★ add15 §A-4 — **줄을 안 꺾는다.** 좁으면 그 줄 안에서 가로로 민다(막대는 숨긴다).
+   옛 `@container (max-width:560px)` 의 「.sp 가 줄을 꺾는다」 규칙은 걷었다. */
+body[data-layer="pdf"] #pRow1{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:none;-ms-overflow-style:none}
+body[data-layer="pdf"] #pRow1::-webkit-scrollbar{display:none}
+/* 왼쪽 묶음(정답 ▸ … P)은 밀어도 늘 보인다 */
+body[data-layer="pdf"] #pRow1>#tAns,body[data-layer="pdf"] #pRow1>#tSol,
+body[data-layer="pdf"] #pRow1>#mO,body[data-layer="pdf"] #pRow1>#mQ,
+body[data-layer="pdf"] #pRow1>#mX,body[data-layer="pdf"] #pRow1>#mP{
+  position:sticky;left:0;z-index:2;background:var(--card)}
+body[data-layer="pdf"] #pRow1>#tSol{left:52px} body[data-layer="pdf"] #pRow1>#mO{left:104px}
+body[data-layer="pdf"] #pRow1>#mQ{left:136px} body[data-layer="pdf"] #pRow1>#mX{left:168px}
+body[data-layer="pdf"] #pRow1>#mP{left:200px}
+body[data-layer="pdf"] #pRow1>*{flex:none}
+body[data-layer="pdf"] #pRow1 .lk2{white-space:nowrap}
+/* `#tLayer` 는 `<select>` 다 — 상자·화살표를 지워 글자만 보이게 하되 **누르면 고르개가 뜬다** */
+body[data-layer="pdf"] #pRow1 select.lk2{appearance:none;-webkit-appearance:none;
+  border:0;background:none;padding:4px 8px;font-size:11.5px;font-weight:600;color:var(--muted);
+  border-radius:6px;cursor:pointer;text-align:left;text-align-last:left}
+/* ★ add15 §A-3 — 비게 된 아랫줄은 높이 0 으로 접는다(DOM 은 남긴다 — 찾는 코드가 있다) */
+body[data-layer="pdf"] .vbot .tools:not(#pRow1){height:0;min-height:0;padding:0;margin:0;
+  border:0;overflow:hidden}
+/* ★ add15 §A-1·§A-3 — 다섯이 윗줄로 갔다. 아랫줄에는 아무것도 안 보인다(빈 줄은 접힌다). */
 body[data-layer="pdf"] .vbot .tools:not(#pRow1)>*{display:none!important}
-body[data-layer="pdf"] .vbot .tools:not(#pRow1)>#tLayer,
-body[data-layer="pdf"] .vbot .tools:not(#pRow1)>#tLayerAdd,
-body[data-layer="pdf"] .vbot .tools:not(#pRow1)>#tLayerEye,
-body[data-layer="pdf"] .vbot .tools:not(#pRow1)>#tHist,
-body[data-layer="pdf"] .vbot .tools:not(#pRow1)>#tCard{display:grid!important}
-body[data-layer="pdf"] .vbot .tools:not(#pRow1){justify-content:flex-end}
 
 /* ══════ 2026-09-21 (_task_jagwa_shell_bio_phys_add4) — 옛 필터 거르개 셋 ══════ */
 #esh .ebar select.fsel{font:inherit;font-size:11px;font-weight:700;color:var(--ink);background:var(--card);
@@ -4588,10 +4605,23 @@ var MG={O:'O',Q:'△',X:'X',P:'P'};
    선택지: CIRC 8자 · nch = 선택지 배열 길이(⑥⑦⑧ 로 붙은 OCR 줄은 expandChoices 가 가른다) · 정답 6·7 표시
    교재쪽: bpgOf(r) = kv bpg[uid].p(사용자 수동 매칭 · SYNC 15째) 없으면 BPAGE · 「절시작·대기」 = bpgWait */
 var KIND_LAB={G:'기출',C:'확인',T:'타기출',E:'예상'},KIND_CLS={G:'tg',C:'tc',T:'tt',E:'te'};
-var kindOf=r=>({'변리사':'G','확인':'C','타기출':'T','예상':'E'})[r[F.SRC]]||'G';
-var kindTag=r=>{const k=kindOf(r);return `<span class="tag ${KIND_CLS[k]}">${KIND_LAB[k]}</span>`};
+/* ★ add12 §A-1 — 물리 `SRC` 는 `MD기출`·`PT기출`… 열두 갈래라 표에 없다.
+   옛 `||'G'` 떨어짐이 **577 전부에 「기출」 딱지**를 붙이고 있었다(사용자 9/21).
+   물리는 데이터로 가른다 — `변리사` = 기출 · 그 밖에 `SRC` 가 있으면 타기출 · 없으면 **딱지 없음**.
+   카드 층(지학·생물)은 `SRC` 가 그 네 낱말이라 옛 길 그대로다. */
+var kindOf=r=>{
+  const m=({'변리사':'G','확인':'C','타기출':'T','예상':'E'})[r[F.SRC]];
+  if(m)return m;
+  if(HASBOOK||CUR.KINDS)return 'G';
+  return r[F.SRC]?'T':'';
+};
+var kindTag=r=>{const k=kindOf(r);
+  return k?`<span class="tag ${KIND_CLS[k]}">${KIND_LAB[k]}</span>`:''};
 if(!FL.types)FL.types=new Set(['G']);   /* 데이터 적재 전에 draw() 가 먼저 돌아도 칩이 산다 */
-var showKind=r=>CUR.KINDS?FL.types.has(kindOf(r)):(FL.past==='p'?isC(r):!isC(r));
+/* ★ add12 §A-2 — 물리의 분류(전체·기출·타기출·기본)는 `phPast` 가 맡는다.
+   옛 `FL.past==='p'?isC(r)` 갈래는 물리에서 **늘 빈 목록**이 된다(`isC` 0건). */
+var showKind=r=>CUR.KINDS?FL.types.has(kindOf(r))
+  :(HASBOOK?(FL.past==='p'?isC(r):!isC(r)):true);
 var CIRC='①②③④⑤⑥⑦⑧';
 function expandChoices(a){const out=[];
   (a||[]).forEach(t=>{String(t||'').replace(/\s*SYNAPSE 7\.0\s*$/,'').split(/\s*[⑥⑦⑧]\s*/).forEach((x,j)=>{x=x.trim();if(x.length>60&&j>0)x='';if(j===0||x)out.push(x)})});
@@ -4816,6 +4846,9 @@ function pass(r){
   /* ⚠ 「기출」의 뜻이 과목마다 다르다 — 지학·생물은 `showKind`(확인문제/갈래)가 가리지만,
      기본 문항이 있는 과목(물리)에서 `past==='y'` 는 **변리사 기출만**이다(옛 1784줄). */
   if(FL.past==='y'&&fHasBase()&&r[F.SRC]!=='변리사')return 0;
+  /* ★ add12 §A-2 — 물리의 「타기출」 = `SRC` 가 있고 변리사가 아님(옛 1857줄).
+     옛날엔 `showKind` 의 `isC` 갈래가 맡았지만 물리에는 확인문제가 0건이라 늘 빈 목록이 됐다. */
+  if(FL.past==='p'&&fHasBase()&&!(r[F.SRC]&&r[F.SRC]!=='변리사'))return 0;
   if(FL.type&&r[F.TYPE]!==FL.type)return 0;
   if(FL.cp&&FL.cp.length&&typeof CL!=='undefined'&&!(CL[r[F.CODE]]||[]).some(k=>FL.cp.includes(k)))return 0;                                        /* 기본 = 기출만 · 확인문제(지학)/타기출·예상(생물)은 토글 */
   if(FL.bigs.length&&!FL.bigs.includes(r[F.BIG]))return 0;
@@ -4912,15 +4945,27 @@ function drawSpectrum(){
 function row(r){
   const d=document.createElement('div');d.className='item'+(isC(r)?' ec':' eg');
   const no=r[F.NO],rep=reps(no),u=unitOf(no);
-  d.innerHTML=`<div class="num">${esc(codeShow(r))}</div>
+  /* ★ add11 — 물리 목록 줄에서 사라진 표시를 **옛 `row`(2082)의 조각 그대로** 되살린다.
+     ⚠ 「YYYY 변리사」 연도 칩은 안 되살린다(사용자 9/21 — 코드 앞 두 자리가 연도다 · §A-0).
+     ★ add12 §A-4 — 변리사 기출이 아닌 물리 줄의 코드 글자는 회색(`.nog`). */
+  const PH=!HASBOOK;
+  d.innerHTML=`<div class="num${(PH&&r[F.SRC]!=='변리사')?' nog':''}">${esc(codeShow(r))}</div>
    <div class="body"><div class="meta">
      ${kindTag(r)}
-     <span class="sub">${esc(titleOf(r))}</span>
+     ${(PH&&r[F.STAR])?`<span class="star">${'★'.repeat(r[F.STAR])}</span>`:''}
+     <span class="sub">${esc(titleOf(r))}${PH?` · ${r[F.LNO]}`:''}</span>
+     ${PH?`<span class="tag lv${r[F.LV]}">${r[F.LV]}</span>`:''}
      <span class="tag unit" data-unit="${esc(u)}">${esc(u?unitLabel(u):(isC(r)?'미매칭':'미분류'))}</span>
      ${bookChipSm(r)}
+     ${(PH&&r[F.VLT])?`<span class="tag vlt">볼트 ${r[F.VLT]}</span>`:''}
+     ${(PH&&r[F.VLT]&&typeof SOL!=='undefined'&&SOL[r[F.VLT]])?`<span class="tag sol">풀이</span>`:''}
+     ${PH?(v=>v?`<span class="tag vm" title="볼트 기록">${[...v].map(c=>`<b class="vm${c==='\u0394'?'Q':c}">${c}</b>`).join('')}</span>`:'')(typeof vaultMark==='function'?vaultMark(no,r[F.VLT]):''):''}
      ${(!SHELL&&r[F.FILE]==='IMG')?'<span class="tag">그림</span>':''}
-     ${rep?`<span class="tag">${rep}회독</span>`:''}
       ${(v=>(v&&v.length)?`<span class="tag tw" data-tw="${no}" title="쌍둥이 문항">쌍 ${v.map(x=>esc(rec(x)[F.CODE])).join(' ')}</span>`:'')(HASBOOK||typeof twinsOf!=='function'?[]:twinsOf(no))}
+     ${PH?(v=>v.length?`<span class="tag lk" data-lk="${no}">🔗 ${v.length}</span>`:'')(typeof linksOf==='function'?linksOf(no):[]):''}
+     ${rep?`<span class="tag">${rep}회독</span>`:''}
+     ${(PH&&typeof gptOf==='function'&&gptOf(no))?'<span class="tag gp">GPT</span>':''}
+     ${PH?(typeof typeOf==='function'?typeOf(no):[]).map(t=>`<span class="tag qt${typeFixed(no)?'':' dr'}">${esc(t)}</span>`).join(''):''}
      ${SHELL?'':(c=>c?`<span class="cmt" data-cmt="${no}">${esc(c)}</span>`:`<span class="cmt empty" data-cmt="${no}">＋한줄</span>`)(noteOf(no))}
      ${SHELL&&mcCountOf(no)?`<span class="tag" style="cursor:default">🃏 ${mcCountOf(no)}</span>`:''}
      ${SHELL?`<span class="tag gg${ggBangAny(GGU(r))?' bang':''}${ggOf(GGU(r)).length?'':' hide'}" data-ggcnt="${esc(GGU(r))}">근거 ${ggOf(GGU(r)).length}${ggBangAny(GGU(r))?' !':''}</span>`:''}
@@ -4928,6 +4973,8 @@ function row(r){
   d.onclick=e=>{const c=e.target.closest('.cmt'),p=e.target.closest('[data-page]'),un=e.target.closest('[data-unit]');
     {const tw=e.target.closest('[data-tw]');   /* add4 §5 — 옛 목록과 같은 시트 */
      if(tw){if(typeof twinSheet==='function')twinSheet(+tw.dataset.tw);return}}
+    {const lk=e.target.closest('[data-lk]');   /* ★ add11 §A-2 — 옛 2111 과 같은 시트 */
+     if(lk){if(typeof linkSheet==='function')linkSheet(+lk.dataset.lk);return}}
     if(c)noteSheet(+c.dataset.cmt);
     else if(e.target.closest('.mk'))histSheet(no);
     else if(un&&un.dataset.unit){FL.unit=un.dataset.unit;FL.bigs=[];FL.subs=[];draw();treeHit(un.dataset.unit)}
@@ -7462,8 +7509,11 @@ function shellPaint(){
   if(PHCLS()){
     /* ★ add6 §B-1 — 물리에는 「확인문제」가 없다(`isC` 0건). 그 자리에 **분류**를 올린다.
        수는 아래 줄 「분류 ▾」 고르개가 세던 것 그대로다(기출 = 변리사 기출 · 기본 = 출처 없음). */
-    const nY=DATA.filter(r=>r[F.SRC]==='변리사').length, nN=DATA.filter(r=>!r[F.SRC]).length;
-    kd.innerHTML=[['','전체',T.length],['y','기출',nY],['n','기본',nN]].map(x=>
+    /* ★ add12 §A-2 — 「타기출」을 넣어 넷이다(합이 577 로 맞는다) */
+    const nY=DATA.filter(r=>r[F.SRC]==='변리사').length,
+          nT=DATA.filter(r=>r[F.SRC]&&r[F.SRC]!=='변리사').length,
+          nN=DATA.filter(r=>!r[F.SRC]).length;
+    kd.innerHTML=[['','전체',T.length],['y','기출',nY],['p','타기출',nT],['n','기본',nN]].map(x=>
       '<button type="button" class="chchip'+((FL.past||'')===x[0]?' on':'')+'" data-past="'+x[0]+'">'
       +x[1]+' '+x[2]+'</button>').join('');
   } else {
@@ -7555,18 +7605,11 @@ function ebarFilters(esh){
   /* ★ add6 §B-3 — 물리는 갈래가 히트맵 머리로 올라갔다. 여기엔 **★중요 토글 칩** 하나와
      「모두 풀기」만 둔다(옛 「모두 풀기」가 하던 연도·난이도·분류·중요 풀기를 그대로 맡는다). */
   if(PHCLS()){
-    kill('fClsWrap');
-    if(fHasStar()){
-      const st=mk('fStarBtn','button','ebtn'); st.type='button';
-      st.textContent='★중요'+(FL.star?' 1':'');
-      st.classList.toggle('dim',!FL.star);
-      st.classList.toggle('on',!!FL.star);
-      st.onclick=()=>{FL.star=!FL.star;draw()};
-    } else kill('fStarBtn');
-    const cl=mk('fAllClr','button','ebtn'); cl.type='button';
-    cl.textContent='모두 풀기';
-    cl.classList.toggle('dim',!(FL.past||FL.star||FL.year||FL.lv));
-    cl.onclick=()=>{FL.past='';FL.star=false;FL.year='';FL.lv='';draw()};
+    /* ★ add10 §A-1 — 「★중요」·「모두 풀기」 두 칩은 걷는다(사용자 9/21 — 둘 다 필요 없다).
+       고르개 줄은 「필터 ▾ · 연도 ▾ · 난이도 ▾」까지다. 각 고르개의 「…▾」(빈 값)이 풀기 구실을 한다.
+       `FL.star` 는 죽은 조건으로 남기되 **늘 거짓**임을 관문이 잰다. */
+    kill('fClsWrap'); kill('fStarBtn'); kill('fAllClr');
+    if(FL.star)FL.star=false;
   } else { kill('fStarBtn'); kill('fAllClr');
   /* ③ 분류 — 갈래(하나만) + ★중요(따로) */
   if(fHasBase()||fHasStar()){
@@ -7774,7 +7817,10 @@ function jnOpen(sec){
      `lvDeep()` 에 기대지 않고 **데이터로 가른다** — 자신 말고 다른 단원이 있을 때만 뺀다. */
   const _uAll=((TOC.sec[sec]||{}).units||[]);
   const units=_uAll.some(u=>u!==sec)?_uAll.filter(u=>u!==sec):_uAll.slice();
-  const T=DATA.filter(showKind);
+  /* ★ add14 §A-1 — 물리 📋 창도 **분류 칩**(전체·기출·타기출·기본)을 따른다.
+     `showKind` 는 지학 갈래 칩·생물 `CUR.KINDS` 만 보고 물리 `FL.past` 는 안 본다.
+     ⚠ 따르는 것은 **갈래 층뿐**이다 — 연도·난이도·약점·검색은 안 먹인다(§A-2). */
+  const T=DATA.filter(r=>showKind(r)&&(typeof phPast==='function'?phPast(r):true));
   const rows=u=>listSort(T.filter(r=>unitOf(r[F.NO])===u));
   let total=0;units.forEach(u=>{total+=rows(u).length});
   const b=document.createElement('div');b.className='sheet';b.id='jnw';
@@ -7787,21 +7833,28 @@ function jnOpen(sec){
   b.querySelector('#jnwBody').innerHTML=units.map(u=>{
     const L=rows(u); if(!L.length)return '';
     return '<div class="jnh">'+esc(unitLabel(u))+' · '+L.length+'문항</div>'
-      +L.map(r=>jnRowHTML(r)).join('')}).join('')||'<div class="bplnone">이 절에 든 문항이 없다</div>';
+      +L.map(r=>jnRowHTML(r)).join('')}).join('')
+    ||('<div class="bplnone">'
+       +((typeof FL!=='undefined'&&FL.past)?'이 분류에 든 문항이 없다':'이 절에 든 문항이 없다')
+       +'</div>');
   makeFloat(b,b.querySelector('.bplh'),'jn','jagwa.win.jn');
 }
 function jnRowHTML(r){
-  const no=r[F.NO], uid=r[F.CODE], bp=bpgOf(r);
+  /* ★ add10 §A-2 — 근거 열쇠는 **`GGU(r)`** 다(물리 = `P009` · 카드 층 = `F.CODE`).
+     `F.CODE` 로 찾으면 물리에서 늘 빈 목록이라 되살린 코멘트가 안 보였다(사용자 9/21).
+     ⚠ 문제 글·풀이(`txtOf`)는 `F.CODE` 가 맞다 — 그것은 안 건드린다. */
+  const no=r[F.NO], uid=r[F.CODE], gu=GGU(r), bp=bpgOf(r);
   return '<div class="jnrow" data-no="'+no+'">'
     +'<div class="h">'+(bp?'<button class="tag page" data-bpl="'+no+'">📖 p'+bp+'</button>':'')
     +'<button class="jgo" data-go="'+no+'">'+esc(codeShow(r))+'</button>'
     +'<span class="mut">'+esc(titleOf(r))+'</span>'
     +(mcCountOf(no)?'<span class="jcard" style="cursor:default">🃏 '+mcCountOf(no)+'</span>':'')
-    +'<span class="ggrc">'+ggRefChipsHTML(uid,'jn-')+'</span>'
-    +'<span class="sp"></span><span class="mk">'+(lastM(no)?MG[lastM(no)]:'·')+'</span></div>'
+    +'<span class="ggrc">'+ggRefChipsHTML(gu,'jn-')+'</span>'
+    /* ★ add10 §A-4 — 마크는 첫 화면 줄과 **같은 묶음**(`markBadge`) */
+    +'<span class="sp"></span>'+(hist(no).length?markBadge(no):'<span class="mk">·</span>')+'</div>'
     +'<div class="q">'+esc(txtOf(uid,'q'))+'</div>'
-    +(ggOf(uid).length?'<div class="ggmine">'+ggOf(uid).map(g=>'<div>'+esc(ggFlat(g))+'</div>').join('')+'</div>':'')
-    +'<div class="ggrb" data-ggrb="'+ea(uid)+'|jn-">'+ggRefBoxHTML(uid,'jn-')+'</div>'
+    +(ggOf(gu).length?'<div class="ggmine">'+ggOf(gu).map(g=>'<div>'+esc(ggFlat(g))+'</div>').join('')+'</div>':'')
+    +'<div class="ggrb" data-ggrb="'+ea(gu)+'|jn-">'+ggRefBoxHTML(gu,'jn-')+'</div>'
     +'<button class="jnans" data-jnans="'+no+'">정답·해설 ▸</button>'
     +'<div class="jnansb hide"><b>정답 '+esc(r[F.ANS]?(CIRC[+r[F.ANS]-1]||r[F.ANS]):'—')+'</b>'
     +'<div class="sol">'+esc(String(txtOf(uid,'s')||'').split('⏎').join('\n'))+'</div></div>'
@@ -8497,7 +8550,10 @@ function ggPhysPaint(){
   let box=document.getElementById('ggphys');
   const r=(typeof VNO!=='undefined'&&VNO)?rec(VNO):null;
   if(!r){if(box)box.remove();return}
-  if(!box){box=document.createElement('div');box.id='ggphys';st.appendChild(box)}
+  /* ★ add13 §A-1 — 근거 줄은 문제 **위**다(`#stage` 의 맨 앞 · `#wrap` 앞).
+     사용자 9/21 — 문제를 끝까지 내리지 않아도 근거를 보고 쓸 수 있어야 한다. */
+  if(!box){box=document.createElement('div');box.id='ggphys'}
+  if(box.parentNode!==st||st.firstChild!==box)st.insertBefore(box,st.firstChild);
   box.innerHTML='<div class="ggtop"><div class="ggwrap">'+ggLineHTML(GGU(r),'qp-')+'</div></div>';
   try{ggRowsSync(box.querySelector('.ggrows'))}catch(e){}
 }
@@ -8509,6 +8565,10 @@ function physRowBuild(){
   vb.insertBefore(r1,tb);
   ['#tAns','#tSol','#mO','#mQ','#mX','#mP'].forEach(q=>{const b=tb.querySelector(q);if(b)r1.appendChild(b)});
   const sp=document.createElement('span');sp.className='sp';r1.appendChild(sp);
+  /* ★ add15 §A-1 — 아랫줄 다섯(회독 고르개·+회독·👁·회독 이력·암기카드)을 **여기로 옮긴다.**
+     자리 = `.sp` 뒤 · 「공식」 앞. 꼴은 `lk2`(글자 꼴) — 상자를 지운다. 아랫줄은 비어 접힌다. */
+  ['#tLayer','#tLayerAdd','#tLayerEye','#tHist','#tCard'].forEach(q=>{
+    const b=tb.querySelector(q); if(!b)return; b.classList.add('lk2'); r1.appendChild(b)});
   ['#tTheory','#tConcept','#tTwin','#tGpt','#tType','#tLink'].forEach(q=>{
     const b=tb.querySelector(q); if(!b)return; b.classList.add('lk2'); r1.appendChild(b)});
   /* 「정답 ▸」·「풀이 ▸」 — 지학 「정답·해설 ▸」 꼴(시트가 둘이라 단추도 둘) */
