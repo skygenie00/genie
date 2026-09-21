@@ -149,6 +149,28 @@ body[data-layer="card"] #tLink,body[data-layer="card"] #vLink,body[data-layer="c
 @media (min-width:900px){body.tropen{padding-left:var(--trw,272px)} body.tropen.trfold{padding-left:13px}}
 body[data-layer="pdf"] #trTog{display:none!important}   /* 물리 서랍엔 기출/확인 토글 없음 */
 @media (min-width:900px){#view.ndopen .stage{padding-left:var(--ndw,236px)}}
+/* ══ add9 §A — 첫 화면 왼쪽 **상주 서랍**(물리 옛 「문제 목록」 그 꼴 · 자리만 옮겼다) ══
+   `#navdr` 은 이미 `position:fixed;left:0` 이다 — `#view` 밖으로 옮기기만 하면 첫 화면에서도 선다.
+   본문(`#lib`)은 서랍 너비만큼 밀어 **겹치지 않게** 한다(옛 `body.tropen` 과 같은 규칙). */
+#navdr.ndres{z-index:59}
+#navdr.ndres.fold{width:13px}
+#navdr.ndres.fold .ndhead,#navdr.ndres.fold .ndlist{display:none}
+#navTg.ndres{display:none}                      /* 상주일 때는 손잡이 단추가 필요 없다 */
+body.vopen:not(.vwin) #navdr.ndres{z-index:61}  /* 전체 화면 뷰어 위로 */
+body.vopen:not(.vwin) #navTg.ndres{display:block;z-index:62}
+@media (min-width:900px){
+  body.ndon{padding-left:var(--ndw,236px)}
+  body.ndon.ndfold{padding-left:13px}
+}
+@media (max-width:899px){                        /* §A-5 좁은 화면은 접힌 채 시작 · 본문 무변 */
+  body.ndon{padding-left:0}
+}
+.ndsec{display:flex;gap:6px;align-items:baseline;padding:6px 10px 4px;font-size:11px;font-weight:800;
+  color:var(--muted);background:var(--paper);border-top:1px solid var(--line);cursor:pointer;position:sticky;top:0}
+.ndsec:first-child{border-top:none}
+.ndsec .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.ndsec .n{font-weight:700}
+.ndsec:hover .nm{color:var(--teal)}
 .ndrow{display:flex;gap:6px;align-items:baseline;padding:5px 10px 5px 10px;font-size:11.5px;cursor:pointer;line-height:1.4;border-left:3px solid transparent}
 .ndrow:hover{background:rgba(128,128,128,.1)}
 .ndrow.cur{background:rgba(46,125,111,.12);border-left-color:var(--teal)}
@@ -434,7 +456,9 @@ body[data-subj="bio"],body[data-subj="phys"]{--subj:var(--teal);--subj-soft:#E9F
 /* 물리 전용 도구는 숨긴다 — 문항 카드에는 PDF·가리개·OMR 이 없다.
    ⚠ 판 3 ③(2026-09-08): **필기는 이제 있다.** 펜·형광·지우개·↺·굵기·회독 고르개·👁 를 숨김 목록에서 뺐다.
    물리 쪽 마크업과 핸들러는 한 글자도 안 건드리고, 카드 층에서 같은 단추에 제 핸들러를 다시 맨다. */
-body[data-layer="card"] .stage,body[data-layer="card"] #navdr,body[data-layer="card"] #tTheory,body[data-layer="card"] #tConcept,body[data-layer="card"] #tSol,body[data-layer="card"] #tAns,body[data-layer="card"] #tLock,body[data-layer="card"] #tRot,body[data-layer="card"] #tZoom,body[data-layer="card"] #tTwin,body[data-layer="card"] #tGpt,body[data-layer="card"] #tType,body[data-layer="card"] #btnFormula,body[data-layer="card"] #btnConcept,body[data-layer="card"] #mask,body[data-layer="card"] #omrPad{display:none!important}
+/* ★ add9 §A — `#navdr` 은 이 목록에서 뺐다. 세 과목이 **같은 상주 서랍**을 쓴다
+   (카드 층은 옛 `#tree` 를 쓰느라 숨겨 두었던 것이다). */
+body[data-layer="card"] .stage,body[data-layer="card"] #tTheory,body[data-layer="card"] #tConcept,body[data-layer="card"] #tSol,body[data-layer="card"] #tAns,body[data-layer="card"] #tLock,body[data-layer="card"] #tRot,body[data-layer="card"] #tZoom,body[data-layer="card"] #tTwin,body[data-layer="card"] #tGpt,body[data-layer="card"] #tType,body[data-layer="card"] #btnFormula,body[data-layer="card"] #btnConcept,body[data-layer="card"] #mask,body[data-layer="card"] #omrPad{display:none!important}
 body[data-layer="card"] .tools .sep:first-of-type,body[data-layer="card"] .tools .sep:nth-of-type(2){display:none}
 /* 목록 배지 · 색 */
 .item.eg .num{color:var(--teal)} .item.ec .num{color:var(--muted)}
@@ -935,6 +959,11 @@ body[data-shell] .spectrum i.gap{background:transparent;border-radius:0;pointer-
 /* §E 문항 창 — `.panel` 이 없는 껍데기라 `selfpanel` 로 제 몸이 판이 된다(makeFloat 첫 줄) */
 #view.win{inset:auto;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.3);overflow:hidden}
 #view.win .twgrip{position:absolute;right:0;bottom:0;z-index:5}
+/* ★ add9 §C-2 — 창 배율 알약을 `.vtop` 줄 안에 둔다(지학 `.szoom` 의 글자·단추 꼴은 그대로) */
+.szoom.vzt{position:static;display:inline-flex;align-items:center;margin:0 4px}
+.szoom.vzt.hide{display:none}
+.szoom.vzt .btns{display:inline-flex;align-items:center;gap:2px}
+.szoom.vzt .pct{min-width:40px;text-align:center}
 #view:not(.win) .twgrip{display:none}
 #view.win #navdr,#view.win #navTg{position:absolute}
 @media (max-width:480px){#view.win{left:0!important;top:0!important;width:auto!important;height:auto!important;right:0;bottom:0;border-radius:0}}
@@ -1345,7 +1374,7 @@ body[data-layer="pdf"] .vbot .tools:not(#pRow1)>*{display:none!important}
             title="기록 동기화 — 누르면 지금 맞춘다"></span>
       
       
-      <!--EARTH:html_chip--><span class="segs" id="subjTabs" title="과목 — 저장하고 새로고침"></span><button class="iconbtn" id="btnTree">목차</button><button class="iconbtn" id="btnBook" title="교재 모드">📖 교재</button><!--/EARTH:html_chip-->
+      <!--EARTH:html_chip--><span class="segs" id="subjTabs" title="과목 — 저장하고 새로고침"></span><!-- ★ add9 §A-1 「목차」 단추(#btnTree)는 걷었다 — 왼쪽 상주 서랍이 그 구실을 한다 --><button class="iconbtn" id="btnBook" title="교재 모드">📖 교재</button><!--/EARTH:html_chip-->
       <button class="iconbtn" id="btnSet">설정</button>
     </div>
     <div id="dl" class="hide"></div>
@@ -2257,16 +2286,20 @@ let LAYER=0, LAYERS=1, HIDEOLD=false;
 let INK={};   // layerIndex -> [ {c,w,hl,p:[u,v,...]} ]
 let RENDER={W:0,H:0,rot:0,scale:1};
 
+/* ★ add9 §B — 창이 떠 있는 동안만 `body.vopen` (전체 화면이면 서랍이 그 위로 온다) */
 async function openView(no,list){
+  document.body.classList.add('vopen');
   VNO=no;
   VLIST=list||filtered().map(r=>r[F.NO]);
   if(!VLIST.includes(no))VLIST=DATA.map(r=>r[F.NO]);
   $('#view').classList.remove('hide');
   navBuild();
-  $('#navdr').classList.toggle('hide',!SET.nav);$('#view').classList.toggle('ndopen',!!SET.nav);
+  /* ★ add9 §A-2 — 상주 서랍이라 숨기지 않는다(접힘은 `.fold` 가 맡는다) */
+  $('#view').classList.toggle('ndopen',!!SET.nav);
   await showProblem();
 }
-function closeView(){$('#view').classList.add('hide');ndPopClose();VNO=null;draw()}
+function closeView(){$('#view').classList.add('hide');document.body.classList.remove('vopen');
+  ndPopClose();VNO=null;draw();try{navBuild();navSync()}catch(e){}}
 
 function rec(no){return DATA[no-1]}
 
@@ -2292,6 +2325,19 @@ async function showProblem(){
   tmReset();
 }
 
+/* ══ add9 §C — 물리 팝업창 확대·축소 ══
+   전체 화면은 옛 그대로(`Math.min(폭−24, 900) * SET.zoom`) ·
+   **창 모드에서는 900px 상한을 걷고** 창 폭에 맞춘 뒤 창 배율(`VWZ`)을 곱한다.
+   창 배율은 기기별(`jagwa.win.view.zoom`)이고 `SET.zoom`(전체 화면용)은 안 건드린다. */
+var VWZ_K='jagwa.win.view.zoom', VWZ=1;
+try{const _z=parseFloat(localStorage.getItem(VWZ_K)); if(_z>=0.5&&_z<=3)VWZ=_z}catch(e){}
+function vWin(){const v=document.getElementById('view');return !!(v&&v.classList.contains('win'))}
+function vAvail(stage){
+  const base=stage.clientWidth-24;
+  /* ★ add9 §C-4 — 카드 층(지학·생물)은 **무접촉**이다. 옛 셈 그대로 돌려준다. */
+  if(HASBOOK)return Math.min(base,900)*SET.zoom;
+  return vWin()?Math.max(120,base*VWZ):Math.min(base,900)*SET.zoom;
+}
 async function renderPage(loc){
   const c=$('#pdfc');
   if(loc.id==='IMG'){
@@ -2299,7 +2345,7 @@ async function renderPage(loc){
     const im=await new Promise(ok=>{const x=new Image();x.onload=()=>ok(x);
       x.onerror=()=>ok(null);x.src='img/'+loc.img+'.jpg';});
     const stage=$('#stage');
-    const avail=Math.min(stage.clientWidth-24,900)*SET.zoom;
+    const avail=vAvail(stage);   /* ★ add9 §C-1 */
     const dpr=Math.max(2,Math.min(3,window.devicePixelRatio||1));
     const iw=im?im.naturalWidth:760, ih=im?im.naturalHeight:1000;
     const sc=avail/iw, W=Math.round(iw*sc*dpr), H=Math.round(ih*sc*dpr);
@@ -2315,8 +2361,10 @@ async function renderPage(loc){
   }
   if(!HAVE[loc.id]){
     const ctx=c.getContext('2d');const W=760,H=1080;
-    c.width=W;c.height=H;c.style.width=W/2+'px';c.style.height=H/2+'px';
-    $('#wrap').style.width=W/2+'px';$('#wrap').style.height=H/2+'px';
+    /* ★ add9 §C-1 — 자리표도 창 폭을 따른다(옛 고정 380px 이라 창을 키워도 안 커졌다) */
+    const _sw=Math.round(vAvail($('#stage'))), _sh=Math.round(_sw*H/W);
+    c.width=W;c.height=H;c.style.width=_sw+'px';c.style.height=_sh+'px';
+    $('#wrap').style.width=_sw+'px';$('#wrap').style.height=_sh+'px';
     ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
     ctx.fillStyle='#6E7278';ctx.font='600 26px -apple-system,sans-serif';ctx.textAlign='center';
     ctx.fillText('PDF가 아직 등록되지 않았습니다',W/2,H/2-30);
@@ -2332,7 +2380,7 @@ async function renderPage(loc){
   const page=await VDOC.getPage(Math.min(loc.page,VDOC.numPages));VPAGE=page;
   const rot=(SET.rot[loc.id]||0);
   const stage=$('#stage');
-  const avail=Math.min(stage.clientWidth-24, 900)*SET.zoom;
+  const avail=vAvail(stage);   /* ★ add9 §C-1 */
   const base=page.getViewport({scale:1,rotation:rot});
   const scale=avail/base.width;
   const dpr=Math.max(2,Math.min(3,window.devicePixelRatio||1));
@@ -3238,15 +3286,40 @@ function ndTail(no){const m=lastM(no), w=weakState(no), c=noteOf(no);
   return (w==='less'?'<i class="ndw" title="덜약점"></i>':'')+
     (m?'<b class="ndm ndm'+m+'">'+mGlyph(m)+'</b>':'')+
     (c?'<b class="ndc" data-nc="'+no+'" title="코멘트">\uD83D\uDDD2</b>':'')}
+/* ★ add9 §A — 상주 서랍. 목록은 **첫 화면 목록 그대로**(`filtered()`)라 편 칩·분류·검색을
+   바꾸면 같이 좁아진다. 단원이 바뀌는 자리에 얇은 머리 줄을 끼워 옛 「목차」 단추가 하던
+   **단원으로 가기**와 **마지막 마크**가 남게 한다(§A-3·§A-6 · 갈 곳 없음 0). */
+function navList(){
+  try{ const L=filtered(); if(L&&L.length)return L.map(r=>r[F.NO]); }catch(e){}
+  return (VLIST&&VLIST.length)?VLIST.slice():[];
+}
 function navBuild(){
   const L=$('#ndList'); if(!L)return;
+  const nos=navList();
   const frag=document.createDocumentFragment();
-  VLIST.forEach(no=>{
+  let cur=null, rows=[];
+  const flushSec=()=>{
+    if(cur===null)return;
+    const st=(typeof trStats==='function')?trStats(rows.map(n=>rec(n)).filter(Boolean)):{n:rows.length,m:''};
+    const h=document.createElement('div');h.className='ndsec';h.dataset.sec=cur;
+    h.innerHTML='<i class="dot '+((typeof trDot==='function')?trDot(st.m):'')+'"></i>'
+      +'<span class="nm">'+esc(unitLabel(cur)||'미분류')+'</span><span class="n">'+st.n+'</span>';
+    frag.insertBefore(h,frag.childNodes[secAt]||null);
+    rows=[];
+  };
+  let secAt=0;
+  nos.forEach(no=>{
     const r=rec(no); if(!r)return;
+    const u=unitOf(no)||'';
+    if(u!==cur){ flushSec(); cur=u; secAt=frag.childNodes.length; }
+    rows.push(no);
     const d=document.createElement('div');d.className='ndrow';d.dataset.no=no;
     d.innerHTML='<span class="ndno">'+no+'</span><span class="ndt">'+esc(r[F.CODE])+esc(r[F.LV])+'-'+esc(titleOf(r))+'</span><span class="ndtail">'+ndTail(no)+'</span>';
     frag.appendChild(d)});
+  flushSec();
   L.innerHTML='';L.appendChild(frag);
+  const H=$('#ndHead');
+  if(H&&!VNO)H.textContent='목록 '+nos.length+'문항';
 }
 function navSync(){
   const H=$('#ndHead'); if(!H||!VNO)return;
@@ -3264,7 +3337,20 @@ function navSync(){
 $('#ndList').onclick=e=>{
   const c=e.target.closest('.ndc');
   if(c){e.stopPropagation();ndPopToggle(+c.dataset.nc,c);return}   /* 🗒 칩 = 팝오버 · 행 이동과 가른다 */
-  const x=e.target.closest('.ndrow');if(!x)return;ndPopClose();VNO=+x.dataset.no;showProblem()};
+  /* ★ add9 §A-3 — 단원 머리 줄 = 첫 화면 목록을 그 절로 스크롤(옛 「목차」 단추 구실) */
+  const sc=e.target.closest('.ndsec');
+  if(sc){ ndPopClose();
+    const u=sc.dataset.sec;
+    const el=[...document.querySelectorAll('#list .item')].find(x2=>{
+      const n2=+((x2.dataset.no)||(x2.querySelector('.num')||{}).textContent||0);
+      return n2&&String(unitOf(n2)||'')===String(u)});
+    if(el)el.scrollIntoView({block:'center',behavior:'smooth'});
+    return}
+  /* ★ add9 §A-4 — 줄을 누르면 **팝업창으로** 연다(지금 목록을 그대로 들고) */
+  const x=e.target.closest('.ndrow');if(!x)return;ndPopClose();
+  const no=+x.dataset.no;
+  if($('#view').classList.contains('hide'))openView(no,navList());
+  else{VNO=no;showProblem()}};
 /* 코멘트 팝오버(2026-09-04) — 칩 옆에 떠서 전문 + 「고치기」(= noteSheet). 같은 칩을 다시 누르거나 바깥을 누르면 닫힌다. */
 let NDP=null;
 function ndPopClose(){const p=$('#ndPop');if(p)p.remove();document.querySelectorAll('#ndList .ndc.on').forEach(x=>x.classList.remove('on'));NDP=null}
@@ -3284,8 +3370,36 @@ document.addEventListener('click',e=>{if(NDP!==null&&!e.target.closest('#ndPop')
 $('#navTg').onclick=async()=>{const dr=$('#navdr');dr.classList.toggle('hide');ndPopClose();
   SET.nav=!dr.classList.contains('hide');$('#view').classList.toggle('ndopen',SET.nav);await put('kv','set',SET);
   if(SET.nav)navSync()};
+/* ★ add9 §A-2 — 서랍을 `#view` **밖으로 옮긴다**(새로 짓지 않는다 · id·class·글자 무변).
+   `#navdr` 은 이미 `position:fixed;left:0;top:0;bottom:0` 이라 옮기기만 하면 첫 화면에서도 선다.
+   옮겼으므로 `#view.win`(팝업창) 안에는 **한 개도 없다**(§B). */
+var ND_FOLD_K='jagwa.nd.fold.'+SUBJ_ID, ND_W_K='jagwa.nd.w.'+SUBJ_ID;
+function ndResFold(on){
+  on=!!on; const dr=$('#navdr'); if(!dr)return on;
+  dr.classList.toggle('fold',on); document.body.classList.toggle('ndfold',on);
+  const g=$('#ndGrip'); if(g)g.textContent=on?'›':'‹';
+  try{localStorage.setItem(ND_FOLD_K,on?'1':'0')}catch(e){}
+  return on}
+function ndResident(){
+  if(!SHELL)return;
+  const dr=$('#navdr'), tg=$('#navTg'); if(!dr)return;
+  if(dr.parentNode!==document.body)document.body.appendChild(dr);
+  if(tg&&tg.parentNode!==document.body)document.body.appendChild(tg);
+  dr.classList.add('ndres'); if(tg)tg.classList.add('ndres');
+  dr.classList.remove('hide');
+  document.body.classList.add('ndon');
+  let w=0; try{w=+localStorage.getItem(ND_W_K)||0}catch(e){}
+  ndSetW(w||SET.ndw||236);
+  let f=null; try{const v=localStorage.getItem(ND_FOLD_K); if(v!==null)f=(v==='1')}catch(e){}
+  if(f===null)f=(window.innerWidth<900);          /* §A-5 좁은 화면은 접힌 채 시작 */
+  ndResFold(f);
+}
 /* §3 손잡이 — 탭(이동 4px 미만) = 접기 · 끌기 = 너비 160~420(폰은 화면−60) · SET.ndw 기기별 · SYNC 밖 */
-function ndSetW(w){w=Math.max(160,Math.min(Math.min(420,window.innerWidth-60),Math.round(w)));$('#view').style.setProperty('--ndw',w+'px');return w}
+function ndSetW(w){w=Math.max(160,Math.min(Math.min(420,window.innerWidth-60),Math.round(w)));
+  document.documentElement.style.setProperty('--ndw',w+'px');
+  const v=$('#view'); if(v)v.style.setProperty('--ndw',w+'px');
+  try{localStorage.setItem(ND_W_K,String(w))}catch(e){}
+  return w}
 /* 공통 손잡이(2026-09-05 · 필터 add1 B-2) — #ndGrip·#bkGrip(층)·#trGrip 셋이 이 함수 하나: 탭(이동 4px 미만) = onTap · 끌기 = setW(폭) · 뗄 때 onDrop(폭) · folded() 면 끌기·onDrop 무시 · before = 누를 때(팝업 닫기 등) */
 function gripWire(dr,g,o){let d=null;
   g.addEventListener('pointerdown',e=>{d={x:e.clientX,w:dr.getBoundingClientRect().width,moved:false};try{g.setPointerCapture(e.pointerId)}catch(_){}if(o.before)o.before();e.preventDefault()},{passive:false});
@@ -3293,8 +3407,40 @@ function gripWire(dr,g,o){let d=null;
   const up=async()=>{if(!d)return;const was=d;d=null;if(!was.moved){await o.onTap();return}if(o.folded&&o.folded())return;await o.onDrop(Math.round(dr.getBoundingClientRect().width))};
   g.addEventListener('pointerup',up);g.addEventListener('pointercancel',up)}
 gripWire($('#navdr'),$('#ndGrip'),{before:()=>ndPopClose(),setW:ndSetW,
-  onTap:async()=>{$('#navdr').classList.add('hide');$('#view').classList.remove('ndopen');SET.nav=false;await put('kv','set',SET)},
-  onDrop:async w=>{SET.ndw=w;await put('kv','set',SET)}});   /* 동작 = 옛 IIFE 그대로 */
+  /* ★ add9 §A-2 — 상주 서랍이므로 탭은 **숨기기가 아니라 접기**다(손잡이는 남는다) */
+  folded:()=>$('#navdr').classList.contains('fold'),
+  onTap:async()=>{ndResFold(!$('#navdr').classList.contains('fold'))},
+  onDrop:async w=>{SET.ndw=w;await put('kv','set',SET)}});
+
+/* ★ add9 §A — 서랍을 세우고, 목록이 바뀔 때마다 같이 다시 짓는다(편 칩·분류·검색·고르개) */
+if(SHELL){
+  /* ⚠ 덮개를 여기서 바로 걸면 **뒤에 오는 덮개·갈아끼움**에 진다(카드 층이 `draw` 를 다시 짓는다).
+     부팅이 끝난 뒤에 건다 — 그때의 `draw` 를 감싸므로 누가 갈아끼웠든 그 위에 얹힌다. */
+  setTimeout(()=>{
+    const _drawND=draw;
+    draw=function(){_drawND();
+      try{ndResident()}catch(e){console.warn('ndResident',e)}
+      try{navBuild();navSync()}catch(e){console.warn('navBuild',e)}};
+    try{ndResident()}catch(e){console.warn('ndResident',e)}
+    try{navBuild();navSync()}catch(e){console.warn('navBuild',e)}
+    /* ⚠ `draw` 덮개만으로는 모자란다 — 데이터가 늦게 오는 과목(지학·생물)은 그 뒤에
+       `draw` 를 **다시 갈아끼우는** 자리가 있어 덮개가 떨어져 나간다(2026-09-21 실측 0줄).
+       목록(`#list`)이 다시 그려지는 것을 직접 보고 따라 짓는다 — 누가 그렸든 걸린다. */
+    try{const lst=document.getElementById('list');
+      if(lst&&typeof MutationObserver!=='undefined'&&!lst.__ndmo){lst.__ndmo=1;
+        let mt=0;
+        new MutationObserver(()=>{clearTimeout(mt);
+          mt=setTimeout(()=>{try{ndResident();navBuild();navSync()}catch(e){}},80)})
+          .observe(lst,{childList:true});}
+    }catch(e){console.warn('ndObserve',e)}
+  },300);
+  /* ★ add9 §A-6 — 옛 목차 서랍의 「기출/확인 토글」(#trTog)은 카드 층에만 있던 구실이라
+     상주 서랍 머리로 **옮긴다**(갈 곳 없음 0). 물리는 CSS 150 이 이미 숨겨 두었다. */
+  setTimeout(()=>{try{
+    const tg=document.getElementById('trTog'), hd=document.querySelector('#navdr .ndhead');
+    if(tg&&hd&&tg.parentNode!==hd)hd.appendChild(tg);
+  }catch(e){}},320);
+}
 
 /* ═══ 첫 화면 목차 서랍(물리 · 2026-09-05 _task_phys_filter_fix_add1.md B-1) — 지학·생물과 같은 #tree(층 마커 HTML · 물리는 게이트만 풀었다) · 줄 = 대단원(F.BIG) → 소단원(F.SUB) · 수 = 「변리사 기출/기본」 칩(specPast) 기준 · 마지막 마크 · 카드 층에서는 층의 buildTree/treePick/treeHit/treeOpen/treeClose 가 갈아 끼운다 ═══ */
 const trDot=m=>m==='O'?'g':m==='Q'?'y':m==='X'?'r':m==='P'?'k':'';
@@ -3312,9 +3458,10 @@ function treePick(big,sub){FL.bigs=[big];FL.subs=sub?[sub]:[];draw();
   if(hd){const top=$('#lib .top');const y=hd.getBoundingClientRect().top+window.scrollY-((top?top.getBoundingClientRect().height:0)+8);window.scrollTo({top:Math.max(0,y),behavior:'smooth'})}
   if(window.innerWidth<900)treeClose()}
 function treeHit(sub){buildTree();const el=[...document.querySelectorAll('#trlist [data-s]')].find(x=>x.dataset.s===sub);if(el)el.scrollIntoView({block:'center'})}
-function treeOpen(){$('#tree').classList.remove('hide');document.body.classList.add('tropen');buildTree()}
+/* ★ add9 §A-6 — 옛 목차 서랍(#tree)은 걷었다 — 부르는 자리가 남아 있어도 안 뜬다(죽은 길) */
+function treeOpen(){}
 function treeClose(){$('#tree').classList.add('hide');document.body.classList.remove('tropen')}
-$('#btnTree').onclick=()=>{$('#tree').classList.contains('hide')?treeOpen():treeClose()};
+/* ★ add9 §A-1·§A-6 — 「목차」 단추와 옛 목차 서랍(#tree)은 걷었다(상주 서랍이 갈음) */
 $('#trX').onclick=()=>treeClose();
 {const _drawT=draw;draw=function(){_drawT();if(!CARD_LAYER&&!$('#tree').classList.contains('hide'))buildTree()}}   /* 필터·칩이 바뀌면 열린 서랍의 수도 따라간다 */
 /* 세 층 공통 손잡이 #trGrip(층 마커 HTML) — 탭 = 접기(손잡이만 남김 · SET.tro) · 끌기 = 너비 160~420(폰 화면−60 · SET.trw) · 기기별 · SYNC 밖 · 데스크톱(≥900) 열려 있을 때 본문 왼쪽 여백 = body.tropen padding · 폰은 fixed 덮개 */
@@ -5161,7 +5308,10 @@ function unitStats(code,T){
 }
 function dotClass(m){return m==='O'?'g':m==='Q'?'y':m==='X'?'r':m==='P'?'k':''}
 /* ★ add5 §A-3 — 물리 목록 패널(#ndList)은 제 것으로. 카드판은 서랍으로 갈음한다 */
-if(HASBOOK)navBuild=function(){buildTree()};
+/* ★ add9 §A — 카드 층은 옛 `#tree` 를 쓰느라 `navBuild` 를 `buildTree` 로 갈아끼웠다.
+   그래서 지학·생물 상주 서랍이 **0줄**이었다(2026-09-21 실측 — `navBuild` 는 에러 없이
+   돌았지만 `#trlist` 를 채우고 있었다). 이제 세 과목이 같은 서랍을 쓴다 — 안 갈아끼운다. */
+/* if(HASBOOK)navBuild=function(){buildTree()}; */
 /* ── 차례 = 단원순(2026-09-07 · gigu/_task_jagwa_list_order.md §1(2)) ──
    종전에는 DATA 차례(=회차순) 그대로라 절 머리가 문제마다 다시 튀었다(G32-01·G32-02…).
    단원 번호 자연 정렬 → 같은 단원 안에서 회차 → 문항 번호. 거르개가 없을 때는 기출 0 단원도 머리를 남긴다.
@@ -5308,10 +5458,12 @@ function treeList(){
   const c=box.querySelector('.cur');if(c)c.scrollIntoView({block:'nearest'});
 }
 if(HASBOOK)navSync=function(){if(!$('#tree').classList.contains('hide'))buildTree();else treeList()};
-function treeOpen(){$('#tree').classList.remove('hide');document.body.classList.add('tropen');buildTree()}   /* 필터 add1: 데스크톱 여백 동행(body.tropen · 핵심 CSS) */
+/* ★ add9 §A-6 — 옛 목차 서랍(#tree)은 걷었다 — 부르는 자리가 남아 있어도 안 뜬다(죽은 길) */
+function treeOpen(){}   /* 필터 add1: 데스크톱 여백 동행(body.tropen · 핵심 CSS) */
 function treeClose(){$('#tree').classList.add('hide');document.body.classList.remove('tropen')}
-$('#navTg').onclick=()=>{$('#tree').classList.contains('hide')?treeOpen():treeClose()};
-$('#btnTree').onclick=()=>{$('#tree').classList.contains('hide')?treeOpen():treeClose()};
+/* ★ add9 §A-6 — 옛 목차 서랍 대신 **상주 서랍 접기**를 여닫는다(전체 화면에서만 보이는 단추) */
+$('#navTg').onclick=()=>{ndResFold(!$('#navdr').classList.contains('fold'))};
+/* ★ add9 §A-1 — 카드 층 여닫이도 걷는다 */
 $('#trX').onclick=treeClose;
 $('#trTog').onclick=()=>{if(CUR.KINDS){const seq=[['G'],['G','T'],['G','T','E']],cur=[...FL.types].sort().join();const i=seq.findIndex(s=>s.slice().sort().join()===cur);FL.types=new Set(seq[(i+1)%seq.length])}else FL.past=FL.past==='p'?'y':'p';FL.round='';if(VNO){const L=filtered().map(r=>r[F.NO]);if(L.length){VLIST=L;if(!VLIST.includes(VNO))VNO=VLIST[0];showProblem()}}else draw();buildTree()};
 
@@ -7238,9 +7390,41 @@ if(SHELL)setTimeout(()=>{
      좌표가 칸 기준 1/1000 이라 창 크기와 무관하다(하네스 V-필기가 잰다). */
 var VWIN_K='jagwa.view.win';
 var vwOn=()=>{if(!SHELL)return false;try{return localStorage.getItem(VWIN_K)!=='0'}catch(e){return true}};
+/* ★ add9 §C-1 — 창 크기가 바뀌면 **같은 쪽·같은 스크롤 비율로 다시 그린다**(150ms 모아서).
+   필기·정답 가림·OMR 은 쪽 기준 좌표라(`toNorm`) 다시 그리면 제자리에 붙는다. */
+var VRZT=0, VRZBUSY=false;
+/* ⚠ `async function` 은 Annex B 승격을 못 받는다 — 이 자리는 `if(SHELL){` 안이라
+   `var` 로 올려야 하네스·다른 블록에서 보인다(2026-09-21 실측). */
+var vReflow = async function(){
+  if(VRZBUSY)return; if(!VNO)return;
+  const v=document.getElementById('view'); if(!v||v.classList.contains('hide'))return;
+  const st=$('#stage'); if(!st)return;
+  VRZBUSY=true;
+  const rel=st.scrollHeight>0?(st.scrollTop/st.scrollHeight):0;
+  try{
+    await renderPage(locate(rec(VNO)));
+    paintInk();
+    await setupMask(VPAGE);
+    if(typeof layoutOmr==='function')layoutOmr();
+    if(typeof txBoxLayout==='function')txBoxLayout();
+    st.scrollTop=Math.round(rel*st.scrollHeight);
+  }catch(e){console.warn('vReflow',e)}
+  VRZBUSY=false;
+};
+function vzPaint(){
+  const p=document.getElementById('vzPct'); if(p)p.textContent=Math.round(VWZ*100)+'%';
+  const w=document.getElementById('vzWrap'); if(w)w.classList.toggle('hide',!vWin());
+}
+function vzSet(z){
+  VWZ=Math.max(0.5,Math.min(3,Math.round(z*100)/100));
+  try{localStorage.setItem(VWZ_K,String(VWZ))}catch(e){}
+  vzPaint(); vReflow();
+}
 function vwApply(on){
   const v=$('#view');if(!v||!SHELL)return;
   on=!!on;v.classList.toggle('win',on);
+  setTimeout(()=>{try{vzPaint();vReflow()}catch(e){}},60);   /* ★ add9 §C */
+  document.body.classList.toggle('vwin',on);   /* ★ add9 §B — 서랍 쌓임 순서를 가른다 */
   const tg=document.getElementById('vWinTg');if(tg)tg.classList.toggle('on',on);
   if(!on){v.classList.remove('float');v.style.cssText='';return}
   if(!v.__float){v.__float=1;v.classList.add('selfpanel');
@@ -7262,6 +7446,40 @@ if(SHELL){
       try{localStorage.setItem(VWIN_K,on?'1':'0')}catch(e){}
       vwApply(on)};
     t.insertBefore(b,$('#vPrev')||null)}
+  /* ★ add9 §C-2 — 창 배율 「− NNN% ＋ 맞춤」(지학 서브노트 `.szoom` 꼴·글자 그대로).
+     ⚠ **물리만**이다 — 지학·생물 카드 창은 이미 창 크기를 따라가고 §C-4 가 무접촉을 못 박았다. */
+  if(t&&!HASBOOK&&!document.getElementById('vzWrap')){
+    const w=document.createElement('span');w.id='vzWrap';w.className='szoom vzt hide';
+    w.innerHTML='<div class="btns"><button id="vzOut">−</button>'
+      +'<span class="pct" id="vzPct">100%</span><button id="vzIn">＋</button>'
+      +'<button class="w" id="vzFit">맞춤</button></div>';
+    w.querySelector('#vzOut').onclick=()=>vzSet(VWZ-0.1);
+    w.querySelector('#vzIn').onclick=()=>vzSet(VWZ+0.1);
+    w.querySelector('#vzFit').onclick=()=>vzSet(1);
+    t.insertBefore(w,$('#vPrev')||null);
+    vzPaint();
+  }
+  /* ★ add9 §C-1 — `#stage` 크기를 지켜본다(150ms 모아서) · 물리만 */
+  {const st=$('#stage');
+   if(st&&!HASBOOK&&typeof ResizeObserver!=='undefined'&&!st.__rz){st.__rz=1;
+     new ResizeObserver(()=>{clearTimeout(VRZT);VRZT=setTimeout(vReflow,150)}).observe(st)}}
+  /* ★ add9 §C-2 — 두 손가락 벌리기 · Ctrl+휠. 필기는 **펜만** 받으므로 안 겹친다(add2 무접촉) */
+  {const st=$('#stage');
+   if(st&&!HASBOOK&&!st.__pz){st.__pz=1;
+     st.addEventListener('wheel',e=>{if(!e.ctrlKey||!vWin())return;
+       e.preventDefault();vzSet(VWZ*(e.deltaY<0?1.1:1/1.1))},{passive:false});
+     const P=new Map(); let d0=0,z0=1;
+     st.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;P.set(e.pointerId,e);
+       if(P.size===2){const a=[...P.values()];
+         d0=Math.hypot(a[0].clientX-a[1].clientX,a[0].clientY-a[1].clientY);z0=VWZ}});
+     st.addEventListener('pointermove',e=>{if(e.pointerType!=='touch'||!P.has(e.pointerId))return;
+       P.set(e.pointerId,e);
+       if(P.size===2&&d0>0&&vWin()){const a=[...P.values()];
+         const d=Math.hypot(a[0].clientX-a[1].clientX,a[0].clientY-a[1].clientY);
+         vzSet(z0*d/d0);e.preventDefault()}},{passive:false});
+     const end=e=>{P.delete(e.pointerId);if(P.size<2)d0=0};
+     st.addEventListener('pointerup',end);st.addEventListener('pointercancel',end);
+   }}
   /* ── add2 §A — 필기 도구를 머리줄 알약으로 **옮긴다**(지학만).
      새로 만들지 않고 옮기므로 id·onclick·`setTool` 의 `.tl.on` 표시가 그대로 산다.
      `#tTxt` 는 JS 가 늦게 끼우지만(5732줄) 그 줄이 이 줄보다 위라 여기선 이미 있다.
@@ -7523,7 +7741,7 @@ function shellBuild(){
   lib.insertBefore(esh,list);
   /* 지금 것을 **옮긴다** — id·핸들러가 그대로 산다 */
   const head=esh.querySelector('.ehead'), srch=esh.querySelector('.esearch'), hm=esh.querySelector('.ehm'), bar=esh.querySelector('#eCntWrap');
-  ['#subjTabs','#btnTree','#btnBook','#btnSet'].forEach(s=>{const el=$(s);if(el)head.appendChild(el)});
+  ['#subjTabs','#btnBook','#btnSet'].forEach(s=>{const el=$(s);if(el)head.appendChild(el)});   /* ★ add9 §A-1 — #btnTree 걷음 */
   ['#examChip','#recChip'].forEach(s=>{const el=$(s);if(el)head.appendChild(el)});
   {const dl=$('#dl');if(dl)esh.insertBefore(dl,esh.querySelector('.esearch'))}
   {const q=$('#q');if(q){q.placeholder='검색어를 입력하세요';srch.appendChild(q)}}
