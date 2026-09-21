@@ -7071,7 +7071,11 @@ $('#tLayerEye').onclick=()=>{QHIDE=!QHIDE;$('#tLayerEye').classList.toggle('on',
 window.addEventListener('resize',()=>{try{if(VNO&&!$('#view').classList.contains('hide')){qFit();qPaint();
   if(typeof qTxtPaint==='function')qTxtPaint()}}catch(e){}});
 $('#sub .shead b').textContent=CUR.NAME+' 서브노트';
-if(SHELL)setTimeout(()=>{try{ggEatNotes()}catch(e){console.warn('ggEatNotes',e)}},1200);   /* add1 §D-6 — 멱등 */
+/* ★ add7 §B-1 — 옛 1.2초 타이머를 걷었다. 그 자리는 **근거 가드(`GG_READY`)가 풀리기 전**이라
+   `GG` 가 아직 빈 통이었고, 늦게 오는 읽기가 옮긴 근거를 통째로 되덮었다
+   (2026-09-20 19:57:00 실측 — 물리 코멘트 31개가 지워지고 근거는 0줄 · studyplandata `6d29469`
+    의 `data.gg` 는 **키는 있는데 비어 있었다** = `GG_READY` 는 참, `GG` 가 빈 통 ⇒ 원인 ⓐ).
+   이제 `gg` 읽기가 끝난 자리(7249 아래)에서 한 번 돈다. */
 
 /* ══════════════════ 지학 목록판 §D·§E·§F (2026-09-20 · gigu/_task_jagwa_earth_listpop.md) ══════════════════
    ⚠ 아래는 전부 `if(ISEA)` 안이거나 `ISEA` 가 false 면 아무 일도 안 하는 함수다.
@@ -7245,9 +7249,18 @@ if(SHELL){
 }
 /* 부팅 때 이미 지나간 kv 읽기(3723)를 여기서 한 번 더 — 지학에서만 · 그 줄은 안 고친다 */
 if(SHELL)(async()=>{try{
+  /* ★ add7 — **`db` 가 열릴 때까지 기다린다.** 이 자리는 파싱 중에 도는데 `open()`(4089)은
+     비동기라 **찬 시동**에서는 아직 `db` 가 없다. 그때 `tx` 가 던지면 아래 catch 로 빠져
+     `GG_READY` 가 **영영 거짓**으로 남고, 그 세션 내내 `gg`·`ggref` 가 올리기에서 통째로
+     빠진다(= 물리 31개를 잃은 원인 ⓑ 의 뿌리). 2026-09-21 헤드리스 찬 시동에서 재현했다. */
+  for(let i=0;i<600&&!db;i++){await new Promise(r=>setTimeout(r,20));}
   GG=(await get('kv','gg'))||{}; GGREF=(await get('kv','ggref'))||{}; PICK=(await get('kv','pick'))||{};
   GG_READY=true;                    /* ← 여기서부터 도장·병합·밀기에 든다(add3 §C-1) */
   try{await ggFixEat()}catch(e){console.warn('ggFixEat',e)}
+  /* ★ add7 §A — 잃은 물리 코멘트 31개를 근거로 되살린다(멱등 · 같은 글자면 안 넣는다) */
+  try{await ggRestoreNotes_f6cee06()}catch(e){console.warn('ggRestoreNotes',e)}
+  /* ★ add7 §B-1 — 코멘트 흡수는 **여기서 한 번**. 가드가 풀린 뒤라야 옮긴 근거가 산다. */
+  try{await ggEatNotes()}catch(e){console.warn('ggEatNotes',e)}
   if(typeof draw==='function'&&DATA.length)draw();
 }catch(e){console.warn('gg load',e);
   /* §C-3 조용히 삼키지 않는다 — 통은 null 로 남고 칩에 보인다 */
@@ -8036,20 +8049,60 @@ function ggResBox(q){
   const hits=ggHits(q);
   box.classList.remove('hide');
   box.innerHTML=hits.length?hits.map(h=>ggResLine(h,q)).join(''):'<div class="bplnone">찾은 근거가 없다</div>'}
-/* §D-6 코멘트 흡수 — 옛 note 를 근거로 한 번만 옮긴다(멱등) */
+/* ══ add7 §A — 잃어버린 물리 코멘트 되살림 (2026-09-21) ══
+   2026-09-20 19:57:00 에 `ggEatNotes` 가 근거 가드보다 먼저 돌아 코멘트 31개를 지우고
+   묘비까지 찍었는데 옮긴 근거는 한 줄도 안 남았다(studyplandata `f6cee06` → `6d29469`).
+   그 커밋에서 꺼낸 글자와 도장을 아래 상수에 싣고, 근거 통에 **같은 글자가 없을 때만** 보탠다.
+   ⇒ 깃발을 따로 두지 않는다 — 「같은 글자 검사」가 곧 깃발이다(기기 둘이 같이 돌려도 62줄이 안 된다).
+   ⚠ 묘비(`gone['note|N']`)는 **그대로 둔다** — 코멘트는 근거로 간 것이 맞다(§A-3). */
+var GGNOTE_F6={"9":["근의공식때문 / 진행방향으로 속도줄면 반대방향 가속도(-a) v=0 최대거리. 이후 거리줄어듬",1788617056265],"10":["평균속력개념",1788214011257],"15":["a,v,s-t 그래프",1788214011257],"18":["①아는거 ➔ ②공식활용",1788214011257],"21":["한물체 : 속도변화➔시간으로푸는게가장빠름.:가속도=속도변화량/시간활용",1788214011257],"22":["두물체:상대속도개념과 중력가속도관계",1788214011257],"28":["알짜힘=“한물체”작용하는 최종힘. F1+F2=(m1+m2)a : 질량비율로 나눠갖는다",1788214011257],"29":["물체마찰없는 고정도르래",1788214011257],"30":["고정도르래. g빼먹지말기",1788214011257],"32":["작반줄글문제",1788214011257],"34":["F랑 반대되는 힘“mg”를 나누기! 나누는 TIP. 반대힘.그리고 90도각도",1788214011257],"35":["매달린진자",1788214011257],"37":["수직인 두힘 합력으로 물체가속도구하면되서 분해필요없음. F합력=루트F1제곱+F2제곱",1788214011257],"38":["정지해있어 F 반대힘 구하면되서 그냥 분해하면됨.",1788214011257],"39":["움직도르래 3T",1788214011257],"40":["고정도르래",1788214011257],"41":["T로 연결된 두물체",1788214011257],"42":["T로 연결된 고정도르래 : 각물체. T는 하나. g빼먹지말기.",1788214011257],"43":["움직도르래(T합력)+고정도르래(T하나)",1788214011257],"48":["탄성력",1788282299410],"50":["고정관념.아는각도로 둘다움직이기.마찰력없어도 수직항력있다",1788446149719],"51":["마찰력,빗면나오면 무조건 수직항력 더해서생각",1788458147834],"53":["움직도르래(T합력)+고정도르래(T하나)",1788453331616],"60":["엇각도",1788458005622],"61":["엇각도",1788457677664],"63":["강물:시간은 동일. 거리,속력변함.",1788503448332],"64":["1:2:루트5",1788526035514],"65":["질량없으면 에너지문제x. 포물선 지면 속도방향조심",1788518137536],"66":["속력 제곱합은 v나 vxy 둘 중 하나는 알때 쓰는거..",1788518747771],"67":["포물선*변위=",1788525245192],"70":["속도방향조심",1788541736994]};
+var GGNOTE_F6_SAVED="2026-09-20T13:13:23.323Z";
+var ggRestoreNotes_f6cee06=async function(){
+  /* 물리 기록만 되살린다 — 재료가 `phys/기록.json` 것이고 열쇠가 물리 문항 번호다.
+     (갈래가 아니라 **그 과목의 잃은 기록**을 되돌리는 일이라 과목 이름으로 건다) */
+  if(!SHELL||SUBJ_ID!=='phys')return 0;
+  if(!GG_READY||!(SYNC_REF.gg&&SYNC_REF.gg.g()))return 0;   /* 가드 전에는 안 돈다 */
+  let n=0;
+  for(const no of Object.keys(GGNOTE_F6)){
+    const t=String(GGNOTE_F6[no][0]||'').trim(); if(!t)continue;
+    const r=rec(+no); if(!r)continue;
+    const uid=GGU(r); if(!uid)continue;
+    const list=ggOf(uid).slice();
+    if(list.some(g=>String(g.t||'').trim()===t))continue;   /* 이미 있다 — 멱등 */
+    const ts=GGNOTE_F6[no][1]||Date.parse(GGNOTE_F6_SAVED)||Date.now();
+    list.push({k:ggNewKey('g_'),i:list.length+1,t:t,ok:null,ts:ts,cs:[],src:'note'});
+    GG[uid]=list; n++;
+  }
+  if(n){await saveGG();try{draw()}catch(e){}}
+  return n}
+
+/* §D-6 코멘트 흡수 — 옛 note 를 근거로 한 번만 옮긴다(멱등)
+   ★ add7 §B-2 — **차례를 못 박는다.** 근거를 먼저 저장하고, 통이 아직 열려 있는 것을
+   확인한 뒤에야 코멘트를 지운다. 둘이 같은 올리기에 같이 실리거나 둘 다 안 실린다. */
 var ggEatNotes=async function(){
   if(!SHELL)return 0;
-  let n=0;
+  /* ★ add7 §B-1 — 근거 가드가 풀리기 전에는 한 글자도 안 건드린다.
+     가드 전에 돌면 늦게 오는 읽기가 `GG` 를 빈 통으로 되덮어 옮긴 근거가 사라진다. */
+  if(!GG_READY||!(SYNC_REF.gg&&SYNC_REF.gg.g()))return 0;
+  const moved=[];
   for(const no of Object.keys(CMT||{})){
     const t=String(CMT[no]||'').trim(); if(!t)continue;
     const r=rec(+no); if(!r)continue;
-    const uid=GGU(r), list=ggOf(uid).slice();
+    const uid=GGU(r); if(!uid)continue;
+    const list=ggOf(uid).slice();
+    if(list.some(g=>String(g.t||'').trim()===t)){moved.push(no);continue}   /* 이미 옮겼다 */
     let ts=Date.now();try{const u=lsObj(U_KEY);if(u['note|'+no])ts=u['note|'+no]}catch(e){}
-    list.push({k:ggNewKey('g_'),i:list.length+1,t:t,ok:null,ts:ts,cs:[]});
-    GG[uid]=list; delete CMT[no]; n++;
+    list.push({k:ggNewKey('g_'),i:list.length+1,t:t,ok:null,ts:ts,cs:[],src:'note'});
+    GG[uid]=list; moved.push(no);
   }
-  if(n){await saveGG();await saveNote();try{draw()}catch(e){}}
-  return n}
+  if(!moved.length)return 0;
+  await saveGG();
+  /* 저장 뒤에도 통이 열려 있어야 지운다 — 닫혔으면 코멘트를 그대로 둔다(다음 판에 다시 옮긴다) */
+  if(!(SYNC_REF.gg&&SYNC_REF.gg.g()))return 0;
+  moved.forEach(no=>{delete CMT[no]});
+  await saveNote();
+  try{draw()}catch(e){}
+  return moved.length}
 
 /* ── 위임 리스너 한 벌(지학에서만 단다) ── */
 function ggFindRun(uid,sc){
