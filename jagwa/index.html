@@ -308,6 +308,21 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
 .sheet.shfloat .shx:hover{color:var(--red)}
 /* §A-3 — 안의 그림은 창 폭을 따른다 */
 .sheet.shfloat .panel img{max-width:100%;height:auto}
+/* ══ Claude 풀이 읽기 판 (2026-09-22 · _task_jagwa_claude_slot §A-2) ══
+   알아듣는 꼴은 여섯뿐 — ①~⑤ 절 머리 · `- ` 글머리 · `1. ` 번호 · **굵게** · | 표 · 빈 줄 = 문단 */
+.gpread{font-size:13.5px;line-height:1.72;word-break:break-word}
+.gpread .gph{font-size:13.5px;font-weight:700;color:var(--blue);margin:17px 0 6px;
+  padding-bottom:5px;border-bottom:1px solid var(--line)}
+.gpread>.gph:first-child{margin-top:2px}
+.gpread .gpp{margin:6px 0}
+.gpread .gpul,.gpread .gpol{margin:6px 0;padding-left:21px}
+.gpread .gpul{list-style:disc} .gpread .gpol{list-style:decimal}
+.gpread .gpul li,.gpread .gpol li{margin:3px 0}
+.gpread .gptb{border-collapse:collapse;width:100%;margin:8px 0;font-size:12.5px}
+.gpread .gptb th,.gpread .gptb td{border:1px solid var(--line);padding:5px 8px;
+  text-align:left;vertical-align:top}
+.gpread .gptb th{background:var(--paper);font-weight:600}
+.gpmot{margin:0 0 10px}
 .twhandle{cursor:move;touch-action:none;user-select:none}
 .twgrip{position:sticky;bottom:0;display:block;margin-left:auto;width:22px;height:22px;cursor:nwse-resize;touch-action:none;border-radius:0 0 10px 0;
   background:linear-gradient(135deg,transparent 48%,#9A988F 48%,#9A988F 60%,transparent 60%,transparent 70%,#9A988F 70%,#9A988F 82%,transparent 82%)}
@@ -1510,7 +1525,7 @@ body[data-layer="pdf"] .vbot .tools:not(#pRow1)>*{display:none!important}
       <button class="tl" id="mP" title="패스 — 풀 수 있지만 계산이 긴 문제 (키 4)">P</button>
       <button class="tl wide" id="tTwin">쌍둥이</button>
       <button class="tl wide" id="tLink" title="관련 문항 잇기(한 방향 저장 · 양방향 표시)">연결</button>
-      <button class="tl wide" id="tGpt">GPT</button>
+      <button class="tl wide" id="tGpt">Claude</button>
       <button class="tl wide" id="tNote">코멘트</button>
       <button class="tl wide" id="tHist">기록</button>
       <!--EARTH:html_tools--><button class="tl wide" id="tBook">교재</button><button class="tl wide" id="tSub">서브노트</button><button class="tl wide" id="tMatch">매칭</button><!--/EARTH:html_tools-->
@@ -2161,7 +2176,7 @@ function row(r){
        ${(v=>v.length?`<span class="tag tw" data-tw="${r[F.NO]}">쌍 ${v.map(x=>esc(rec(x)[F.CODE])).join(' ')}</span>`:'')(twinsOf(r[F.NO]))}
        ${(v=>v.length?`<span class="tag lk" data-lk="${r[F.NO]}">🔗 ${v.length}</span>`:'')(linksOf(r[F.NO]))}
        ${rep?`<span class="tag">${rep}회독</span>`:''}
-       ${gptOf(r[F.NO])?'<span class="tag gp">GPT</span>':''}
+       ${gptOf(r[F.NO])?'<span class="tag gp">Claude</span>':''}
        ${typeOf(r[F.NO]).map(t=>`<span class="tag qt${typeFixed(r[F.NO])?'':' dr'}">${t}</span>`).join('')}
        ${(c=>c?`<span class="cmt" data-cmt="${r[F.NO]}">${esc(c)}</span>`
                 :`<span class="cmt empty" data-cmt="${r[F.NO]}">＋한줄</span>`)(noteOf(r[F.NO]))}
@@ -3012,7 +3027,7 @@ function buildCQ(){
   DATA.forEach(r=>{conceptKeys(r).forEach(k=>{(m[k]=m[k]||[]).push(r[F.NO])})});
   CQ=m;
 }
-let GP={};            /* no -> 'GPT 풀이 원문'  (붙여넣어 두는 곳) */
+let GP={};            /* no -> 'Claude 풀이 원문'  (붙여넣어 두는 곳) */
 const gptOf=no=>GP[no]||'';
 const saveGP=()=>put('kv','gpt',GP);
 $('#tTwin').onclick=()=>{if(VNO)twinSheet(VNO)};
@@ -3572,50 +3587,146 @@ $('#tW').onchange=()=>{TOOL.w=+$('#tW').value};
 $('#tType').onclick=()=>{if(VNO)typeSheet(VNO)};
 $('#tGpt').onclick=()=>{if(VNO)gptSheet(VNO)};
 
-/* ---------------- GPT 풀이 붙여넣기 ----------------
-   밖에서 받은 풀이를 그대로 붙여 두는 곳. 문항마다 하나씩 남는다 */
+/* ---------------- Claude 풀이 — 읽기 판 · 고치기 · 모션 ----------------
+   밖에서 받은 풀이를 그대로 붙여 두는 곳. 문항마다 하나씩 남는다.
+   ★ 2026-09-22 (_task_jagwa_claude_slot §A-2·§A-3) — 글이 있으면 **읽기 판**이 먼저 뜬다.
+     보이는 글자만 「Claude」다 — 데이터 이름(kv 'gpt' · GP · gptOf · SYNC_KEYS)은 한 글자도 안 바꿨다.
+     세 과목이 같은 창을 쓴다(SHWIN 이 gptSheet 를 'gpt' 이름으로 띄운다). */
+
+/* ── 읽기 판 ──
+   알아듣는 꼴은 여섯뿐이다: 줄머리 ①~⑤(절 머리) · `- ` 글머리 · `1. ` 번호 · **굵게** · `|` 표 · 빈 줄 = 문단.
+   ⚠ 그 밖의 글자는 그대로 둔다 — esc 를 **먼저** 지나므로 글 안의 <script> 는 글자로만 보인다. */
+const GP_SEC=/^\s*([①-⑩])\s*(.*)$/, GP_UL=/^\s*-\s+/, GP_OL=/^\s*\d+\.\s+/;
+const gpInline=s=>esc(s).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+const gpCells=r=>r.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(x=>x.trim());
+const gpIsSep=r=>r.indexOf('-')>=0&&/^[\s|:\-]+$/.test(r);
+function gpRender(src){
+  const L=String(src||'').replace(/\r\n?/g,'\n').split('\n'), out=[];
+  let i=0;
+  while(i<L.length){
+    const x=L[i];
+    if(!x.trim()){i++;continue}                                   /* 빈 줄 = 문단 경계 */
+    if(x.indexOf('|')>=0){                                        /* 표 */
+      const rows=[];while(i<L.length&&L[i].indexOf('|')>=0){rows.push(L[i]);i++}
+      const body=rows.filter(r=>!gpIsSep(r));
+      const head=(rows.length>1&&gpIsSep(rows[1])&&body.length)?body.shift():null;
+      out.push('<table class="gptb">'
+        +(head?'<thead><tr>'+gpCells(head).map(c=>'<th>'+gpInline(c)+'</th>').join('')+'</tr></thead>':'')
+        +'<tbody>'+body.map(r=>'<tr>'+gpCells(r).map(c=>'<td>'+gpInline(c)+'</td>').join('')+'</tr>').join('')
+        +'</tbody></table>');
+      continue}
+    const m=x.match(GP_SEC);
+    if(m){out.push('<h3 class="gph">'+esc(m[1])+(m[2]?' '+gpInline(m[2]):'')+'</h3>');i++;continue}
+    if(GP_UL.test(x)){
+      const it=[];while(i<L.length&&GP_UL.test(L[i])){it.push(gpInline(L[i].replace(GP_UL,'')));i++}
+      out.push('<ul class="gpul">'+it.map(v=>'<li>'+v+'</li>').join('')+'</ul>');continue}
+    if(GP_OL.test(x)){
+      const it=[];while(i<L.length&&GP_OL.test(L[i])){it.push(gpInline(L[i].replace(GP_OL,'')));i++}
+      out.push('<ol class="gpol">'+it.map(v=>'<li>'+v+'</li>').join('')+'</ol>');continue}
+    const par=[];
+    while(i<L.length&&L[i].trim()&&L[i].indexOf('|')<0
+          &&!GP_SEC.test(L[i])&&!GP_UL.test(L[i])&&!GP_OL.test(L[i])){par.push(gpInline(L[i]));i++}
+    out.push('<p class="gpp">'+par.join('<br>')+'</p>');
+  }
+  return out.join('');
+}
+
+/* ── 모션 (§A-3) ──
+   motion/index.json = {"phys":[72]} — 그 과목 목록에 번호가 있을 때만 단추가 선다.
+   ⚠ 못 읽으면 단추 없이 조용히 넘어간다(콘솔에 한 줄). 같은 오리진이라 iframe 으로 끼운다. */
+var MOT=null, MOTQ=null;
+function motLoad(){
+  if(MOTQ)return MOTQ;
+  MOTQ=Promise.resolve().then(()=>fetch('motion/index.json',{cache:'no-store'}))
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
+    .then(j=>{MOT=(j&&typeof j==='object')?j:{};return MOT})
+    .catch(e=>{MOT={};console.warn('모션 목록 motion/index.json 을 못 읽었다 — 모션 단추 없이 간다:',(e&&e.message)||e);return MOT});
+  return MOTQ;
+}
+const motHas=no=>!!(MOT&&Array.isArray(MOT[SUBJ_ID])&&MOT[SUBJ_ID].indexOf(+no)>=0);
+
 function gptSheet(no){
   const r=rec(no);
   const b=document.createElement('div');b.className='sheet';
-  b.innerHTML=`<div class="panel"><h2>${no}번 GPT 풀이</h2>
+  b.innerHTML=`<div class="panel"><h2>${no}번 Claude 풀이</h2>
     <p>${esc(r[F.SUB])} · ${r[F.CODE]}</p>
-    <div class="fld"><textarea id="gpIn" rows="12" placeholder="여기에 붙여넣으세요"
+    <div class="gpmot" id="gpMotBar" style="display:none"><button class="btn sm" type="button" id="gpMot">▶ 모션</button></div>
+    <div id="gpMotBox" style="display:none"></div>
+    <div id="gpBody"></div></div>`;
+  document.body.appendChild(b);
+  const host=b.querySelector('#gpBody');
+  const close=()=>b.remove();
+  const done=v=>{
+    if($('#view').classList.contains('hide'))draw(); else syncGptBtn();
+    toast(v?'Claude 풀이를 저장했습니다':'Claude 풀이를 지웠습니다');
+  };
+  /* 읽기 판 — 글이 있을 때 먼저 보이는 쪽 */
+  function showRead(){
+    host.innerHTML=`<div class="gpread">${gpRender(gptOf(no))}</div>
+    <div style="display:flex;gap:6px;justify-content:flex-end">
+      <button class="btn sm" type="button" id="gpEdit">고치기</button>
+      <button class="btn sm" type="button" id="gpNo">닫기</button>
+    </div>`;
+    host.querySelector('#gpEdit').onclick=()=>showEdit();
+    host.querySelector('#gpNo').onclick=close;
+  }
+  /* 고치기 판 — 옛 꼴 그대로(붙여넣기·지우기·닫기·저장) */
+  function showEdit(){
+    host.innerHTML=`<div class="fld"><textarea id="gpIn" rows="12" placeholder="여기에 붙여넣으세요"
       style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;
              font-size:13.5px;line-height:1.65;box-sizing:border-box;resize:vertical;
              font-family:inherit"></textarea></div>
     <div style="display:flex;gap:6px;justify-content:flex-end">
-      <button class="btn sm" id="gpPaste">붙여넣기</button>
-      <button class="btn sm" id="gpDel">지우기</button>
-      <button class="btn sm" id="gpNo">닫기</button>
-      <button class="btn sm pri" id="gpSave">저장</button>
-    </div></div>`;
-  document.body.appendChild(b);
-  const ta=b.querySelector('#gpIn');
-  ta.value=gptOf(no);
-  setTimeout(()=>ta.focus(),60);
-  const close=()=>b.remove();
-  const commit=async()=>{
-    const v=ta.value.trim();
-    if(v)GP[no]=v; else delete GP[no];
-    await saveGP(); close();
-    if($('#view').classList.contains('hide'))draw(); else syncGptBtn();
-    toast(v?'GPT 풀이를 저장했습니다':'GPT 풀이를 지웠습니다');
-  };
-  b.querySelector('#gpSave').onclick=commit;
-  b.querySelector('#gpDel').onclick=()=>{ta.value='';commit()};
-  b.querySelector('#gpNo').onclick=close;
-  b.querySelector('#gpPaste').onclick=async()=>{
-    try{const t=await navigator.clipboard.readText();
-      if(t){ta.value=ta.value?ta.value+'\n\n'+t:t;toast('붙여넣었습니다')}
-      else toast('클립보드가 비어 있습니다')}
-    catch(e){toast('브라우저가 막았습니다 — 칸을 누르고 붙여넣기 해주세요',2600)}
-  };
+      <button class="btn sm" type="button" id="gpPaste">붙여넣기</button>
+      <button class="btn sm" type="button" id="gpDel">지우기</button>
+      <button class="btn sm" type="button" id="gpNo">닫기</button>
+      <button class="btn sm pri" type="button" id="gpSave">저장</button>
+    </div>`;
+    const ta=host.querySelector('#gpIn');
+    ta.value=gptOf(no);
+    setTimeout(()=>ta.focus(),60);
+    /* back=true 면 저장 뒤 읽기 판으로 돌아온다. 글이 비면 옛 판처럼 닫는다. */
+    const commit=async(back)=>{
+      const v=ta.value.trim();
+      if(v)GP[no]=v; else delete GP[no];
+      await saveGP();
+      if(back&&v)showRead(); else close();
+      done(v);
+    };
+    host.querySelector('#gpSave').onclick=()=>commit(true);
+    host.querySelector('#gpDel').onclick=()=>{ta.value='';commit(false)};
+    host.querySelector('#gpNo').onclick=close;
+    host.querySelector('#gpPaste').onclick=async()=>{
+      try{const t=await navigator.clipboard.readText();
+        if(t){ta.value=ta.value?ta.value+'\n\n'+t:t;toast('붙여넣었습니다')}
+        else toast('클립보드가 비어 있습니다')}
+      catch(e){toast('브라우저가 막았습니다 — 칸을 누르고 붙여넣기 해주세요',2600)}
+    };
+  }
+  gptOf(no)?showRead():showEdit();
+  motLoad().then(()=>{
+    if(!b.isConnected||!motHas(no))return;
+    const bar=b.querySelector('#gpMotBar'),box=b.querySelector('#gpMotBox'),mb=bar&&bar.querySelector('#gpMot');
+    if(!bar||!box||!mb)return;
+    bar.style.display='';
+    mb.onclick=()=>{
+      const on=box.style.display==='none';
+      if(on&&!box.firstChild){
+        const f=document.createElement('iframe');
+        f.id='gpMotFrame';f.title='모션';f.src='motion/'+SUBJ_ID+'_'+no+'.html';
+        f.style.cssText='width:100%;height:480px;border:1px solid var(--line);border-radius:9px;display:block;background:var(--card)';
+        box.appendChild(f);
+      }
+      box.style.display=on?'':'none';
+      mb.textContent=on?'▼ 모션 닫기':'▶ 모션';
+    };
+  });
   b.onclick=e=>{if(e.target===b)close()};
 }
 function syncGptBtn(){
   const btn=$('#tGpt'); if(!btn||!VNO)return;
   const has=!!gptOf(VNO);
-  btn.textContent=has?'GPT ✓':'GPT';
+  btn.textContent=has?'Claude ✓':'Claude';
   btn.style.color=has?'var(--teal)':'';
 }
 
@@ -5194,7 +5305,7 @@ function row(r){
       ${(v=>(v&&v.length)?`<span class="tag tw" data-tw="${no}" title="쌍둥이 문항">쌍 ${v.map(x=>esc(rec(x)[F.CODE])).join(' ')}</span>`:'')(HASBOOK||typeof twinsOf!=='function'?[]:twinsOf(no))}
      ${PH?(v=>v.length?`<span class="tag lk" data-lk="${no}">🔗 ${v.length}</span>`:'')(typeof linksOf==='function'?linksOf(no):[]):''}
      ${rep?`<span class="tag">${rep}회독</span>`:''}
-     ${(PH&&typeof gptOf==='function'&&gptOf(no))?'<span class="tag gp">GPT</span>':''}
+     ${(PH&&typeof gptOf==='function'&&gptOf(no))?'<span class="tag gp">Claude</span>':''}
      ${PH?(typeof typeOf==='function'?typeOf(no):[]).map(t=>`<span class="tag qt${typeFixed(no)?'':' dr'}">${esc(t)}</span>`).join(''):''}
      ${SHELL?'':(c=>c?`<span class="cmt" data-cmt="${no}">${esc(c)}</span>`:`<span class="cmt empty" data-cmt="${no}">＋한줄</span>`)(noteOf(no))}
      ${SHELL&&mcCountOf(no)?`<span class="tag" style="cursor:default">🃏 ${mcCountOf(no)}</span>`:''}
