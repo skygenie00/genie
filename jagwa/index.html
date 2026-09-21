@@ -959,12 +959,16 @@ body[data-shell] .spectrum i.gap{background:transparent;border-radius:0;pointer-
 /* §E 문항 창 — `.panel` 이 없는 껍데기라 `selfpanel` 로 제 몸이 판이 된다(makeFloat 첫 줄) */
 #view.win{inset:auto;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.3);overflow:hidden}
 #view.win .twgrip{position:absolute;right:0;bottom:0;z-index:5}
-/* ★ add9 §C-2 — 창 배율 알약을 `.vtop` 줄 안에 둔다(지학 `.szoom` 의 글자·단추 꼴은 그대로) */
-.szoom.vzt{position:static;display:inline-flex;align-items:center;margin:0 4px}
-.szoom.vzt.hide{display:none}
-.szoom.vzt .btns{display:inline-flex;align-items:center;gap:2px}
-.szoom.vzt .pct{min-width:40px;text-align:center}
+/* ★ add17 §A-1 — 확대해서 문제가 칸보다 넓어지면 **왼쪽으로도 굴러가야** 축(핀치 가운데·커서)이
+   제자리에 선다. `justify-content:center` 는 넘친 왼쪽을 못 굴리는 것이 크롬·사파리의 오랜 성질이라
+   창 모드에서만 `margin:auto` 로 바꾼다(좁을 때 가운데 맞춤은 그대로다 · 전체 화면은 무접촉). */
+#view.win .stage{justify-content:flex-start}
+#view.win .stage>.wrap{margin:10px auto}
+/* ★ add17 §A-1 — add9 §C-2 의 창 배율 알약(`.szoom.vzt`)을 **걷었다.**
+   확대·축소는 두 손가락 핀치 · Ctrl+휠 · 두 번 톡(맞춤)으로 한다 — 배율 숫자는 화면에 없다.
+   ⚠ 사용자 규칙(9/21 · 「10번 넘게 말했다」) — 「− NNN% ＋ 맞춤」 꼴 단추 묶음은 어느 앱에도 안 넣는다. */
 #view:not(.win) .twgrip{display:none}
+#navdr .ndsec.nd0{opacity:.5}   /* ★ add19 §A-2 — 문항이 0인 단원 머리(첫 화면과 같이 선다 · 흐리게) */
 #view.win #navdr,#view.win #navTg{position:absolute}
 @media (max-width:480px){#view.win{left:0!important;top:0!important;width:auto!important;height:auto!important;right:0;bottom:0;border-radius:0}}
 /* §F 교재 자리 목록 창 — `#bkq` 와 같은 규칙(배경 투명·안 막음) */
@@ -1274,6 +1278,9 @@ body[data-layer="pdf"] #pRow1>#tAns,body[data-layer="pdf"] #pRow1>#tSol,
 body[data-layer="pdf"] #pRow1>#mO,body[data-layer="pdf"] #pRow1>#mQ,
 body[data-layer="pdf"] #pRow1>#mX,body[data-layer="pdf"] #pRow1>#mP{
   position:sticky;left:0;z-index:2;background:var(--card)}
+/* ★ add17 §A-3 — 위 고정 규칙의 `background:var(--card)` 가 1262 의 먹색 바탕을 **같은 무게로 뒤에서**
+   덮어 「P」가 흰 바탕·흰 글자(빈 상자)였다. `#mO`·`#mQ`·`#mX` 는 본디 흰 바탕이라 안 드러났다. */
+body[data-layer="pdf"] #pRow1>#mP{background:var(--ink);color:#fff;border-color:var(--ink)}
 body[data-layer="pdf"] #pRow1>#tSol{left:52px} body[data-layer="pdf"] #pRow1>#mO{left:104px}
 body[data-layer="pdf"] #pRow1>#mQ{left:136px} body[data-layer="pdf"] #pRow1>#mX{left:168px}
 body[data-layer="pdf"] #pRow1>#mP{left:200px}
@@ -2290,7 +2297,9 @@ let RENDER={W:0,H:0,rot:0,scale:1};
 async function openView(no,list){
   document.body.classList.add('vopen');
   VNO=no;
-  VLIST=list||filtered().map(r=>r[F.NO]);
+  /* ★ add19 §A-1 — 목록을 안 주고 열 때의 기본값도 **첫 화면 차례**(`navList`)다.
+     옛 판은 `filtered()` 의 데이터 차례라 목록 줄·히트맵으로 연 문항에서 ▶ 가 딴 데로 갔다. */
+  VLIST=list||((typeof navList==='function')?navList():filtered().map(r=>r[F.NO]));
   if(!VLIST.includes(no))VLIST=DATA.map(r=>r[F.NO]);
   $('#view').classList.remove('hide');
   navBuild();
@@ -3289,37 +3298,50 @@ function ndTail(no){const m=lastM(no), w=weakState(no), c=noteOf(no);
 /* ★ add9 §A — 상주 서랍. 목록은 **첫 화면 목록 그대로**(`filtered()`)라 편 칩·분류·검색을
    바꾸면 같이 좁아진다. 단원이 바뀌는 자리에 얇은 머리 줄을 끼워 옛 「목차」 단추가 하던
    **단원으로 가기**와 **마지막 마크**가 남게 한다(§A-3·§A-6 · 갈 곳 없음 0). */
+/* ★ add19 §A-1 — ▶ 넘기기 목록(`VLIST`)도 **첫 화면 차례** 그대로다.
+   옛 판은 `filtered()` 의 데이터 차례(회차·문번)라 ▶ 가 첫 화면의 다음 줄이 아니라
+   다음 회차 문번으로 갔다(지학). 접힘은 안 따른다(§A-3). */
 function navList(){
+  try{ const s=shellL();
+       const nos=shellSeq(s.L,s.rnd,{coll:false,chips:false}).filter(x=>x.t==='q').map(x=>x.r[F.NO]);
+       if(nos.length)return nos; }catch(e){}
   try{ const L=filtered(); if(L&&L.length)return L.map(r=>r[F.NO]); }catch(e){}
   return (VLIST&&VLIST.length)?VLIST.slice():[];
 }
+/* ★ add19 §A — 서랍은 `shellSeq` 가 지은 **첫 화면 차례 그대로** 선다.
+   · 머리 줄 = 소단원 머리(편·절 머리는 서랍에 안 세운다 — 지금 꼴 유지 §A-2)
+   · **문항이 0인 단원 머리도 세운다**(첫 화면의 `showEmpty=!fltOn()` 규칙 그대로 · 흐린 글자 §A-2)
+   · 첫 화면에서 접어 둔 묶음의 문항도 서랍에는 선다(`coll:false` · §A-3) */
 function navBuild(){
   const L=$('#ndList'); if(!L)return;
-  const nos=navList();
+  const s=shellL();
+  const seq=shellSeq(s.L,s.rnd,{coll:false,chips:false});
   const frag=document.createDocumentFragment();
-  let cur=null, rows=[];
+  let nQ=0, hd=null, rows=[];
   const flushSec=()=>{
-    if(cur===null)return;
+    if(!hd)return;
     const st=(typeof trStats==='function')?trStats(rows.map(n=>rec(n)).filter(Boolean)):{n:rows.length,m:''};
-    const h=document.createElement('div');h.className='ndsec';h.dataset.sec=cur;
-    h.innerHTML='<i class="dot '+((typeof trDot==='function')?trDot(st.m):'')+'"></i>'
-      +'<span class="nm">'+esc(unitLabel(cur)||'미분류')+'</span><span class="n">'+st.n+'</span>';
-    frag.insertBefore(h,frag.childNodes[secAt]||null);
-    rows=[];
+    const dot=hd.querySelector('.dot'); if(dot)dot.className='dot '+((typeof trDot==='function')?trDot(st.m):'');
+    const nn=hd.querySelector('.n'); if(nn)nn.textContent=st.n;
+    hd.classList.toggle('nd0',!rows.length);
+    hd=null; rows=[];
   };
-  let secAt=0;
-  nos.forEach(no=>{
-    const r=rec(no); if(!r)return;
-    const u=unitOf(no)||'';
-    if(u!==cur){ flushSec(); cur=u; secAt=frag.childNodes.length; }
-    rows.push(no);
-    const d=document.createElement('div');d.className='ndrow';d.dataset.no=no;
-    d.innerHTML='<span class="ndno">'+no+'</span><span class="ndt">'+esc(r[F.CODE])+esc(r[F.LV])+'-'+esc(titleOf(r))+'</span><span class="ndtail">'+ndTail(no)+'</span>';
-    frag.appendChild(d)});
+  seq.forEach(it=>{
+    if(it.t==='q'){
+      const r=it.r, no=r[F.NO];
+      nQ++; rows.push(no);
+      const d=document.createElement('div');d.className='ndrow';d.dataset.no=no;
+      d.innerHTML='<span class="ndno">'+no+'</span><span class="ndt">'+esc(r[F.CODE])+esc(r[F.LV])+'-'+esc(titleOf(r))+'</span><span class="ndtail">'+ndTail(no)+'</span>';
+      frag.appendChild(d); return}
+    if(!it.uhd)return;                       /* 편·절 머리는 서랍에 안 세운다 */
+    flushSec();
+    hd=document.createElement('div');hd.className='ndsec';hd.dataset.sec=it.uhd;
+    hd.innerHTML='<i class="dot"></i><span class="nm">'+esc(unitLabel(it.uhd)||'미분류')+'</span><span class="n">0</span>';
+    frag.appendChild(hd)});
   flushSec();
   L.innerHTML='';L.appendChild(frag);
   const H=$('#ndHead');
-  if(H&&!VNO)H.textContent='목록 '+nos.length+'문항';
+  if(H&&!VNO)H.textContent='목록 '+nQ+'문항';
 }
 function navSync(){
   const H=$('#ndHead'); if(!H||!VNO)return;
@@ -3341,7 +3363,9 @@ $('#ndList').onclick=e=>{
   const sc=e.target.closest('.ndsec');
   if(sc){ ndPopClose();
     const u=sc.dataset.sec;
-    const el=[...document.querySelectorAll('#list .item')].find(x2=>{
+    /* ★ add19 §A-2 — 문항이 0인 단원도 세우므로 **머리 자체**를 먼저 찾는다(줄이 없다) */
+    let el=document.querySelector('#list [data-uhd="'+String(u).replace(/"/g,'\\"')+'"]');
+    if(!el)el=[...document.querySelectorAll('#list .item')].find(x2=>{
       const n2=+((x2.dataset.no)||(x2.querySelector('.num')||{}).textContent||0);
       return n2&&String(unitOf(n2)||'')===String(u)});
     if(el)el.scrollIntoView({block:'center',behavior:'smooth'});
@@ -3376,6 +3400,7 @@ $('#navTg').onclick=async()=>{const dr=$('#navdr');dr.classList.toggle('hide');n
 var ND_FOLD_K='jagwa.nd.fold.'+SUBJ_ID, ND_W_K='jagwa.nd.w.'+SUBJ_ID;
 function ndResFold(on){
   on=!!on; const dr=$('#navdr'); if(!dr)return on;
+  try{tapEat(400)}catch(e){}                   /* ★ add18 §B-2 — 접거나 펴는 순간에도 막이 */
   dr.classList.toggle('fold',on); document.body.classList.toggle('ndfold',on);
   const g=$('#ndGrip'); if(g)g.textContent=on?'›':'‹';
   try{localStorage.setItem(ND_FOLD_K,on?'1':'0')}catch(e){}
@@ -3396,15 +3421,48 @@ function ndResident(){
 }
 /* §3 손잡이 — 탭(이동 4px 미만) = 접기 · 끌기 = 너비 160~420(폰은 화면−60) · SET.ndw 기기별 · SYNC 밖 */
 function ndSetW(w){w=Math.max(160,Math.min(Math.min(420,window.innerWidth-60),Math.round(w)));
+  try{tapEat(400)}catch(e){}                   /* ★ add18 §B-2 — 너비가 바뀌는 순간에도 막이 */
   document.documentElement.style.setProperty('--ndw',w+'px');
   const v=$('#view'); if(v)v.style.setProperty('--ndw',w+'px');
   try{localStorage.setItem(ND_W_K,String(w))}catch(e){}
   return w}
+/* ★ add18 §B-2 — **유령 누름 막이.** iOS 사파리는 터치가 끝난 **그 좌표에 그때 있는 요소**로
+   `click` 을 보낸다 — 접힌 서랍(13px)을 톡 하면 서랍이 펴지며 손가락 아래에 `.ndrow` 가 와
+   그리로 `click` 이 가 문제가 저절로 열렸다(사용자 아이패드 9/21 ⓐⓑ). PC 마우스는 누른 요소와
+   뗀 요소의 공통 조상으로 가서 안 터진다.
+   ⇒ 손잡이에서 손을 뗀 뒤·접기·너비가 바뀐 뒤 **400ms 안에 오는 click 한 번**을 캡처 단계에서 먹는다.
+   ⚠ 한 번 쓰면 바로 풀린다 — 평소에는 막이가 아예 서 있지 않다(§D 멈춤 조건). */
+var TAP_EAT=0;
+/* ⚠ 막이는 **진짜 손짓 중에만** 선다. `ndResident()` 가 목록이 바뀔 때마다 `ndSetW` 를 부르므로
+   조건 없이 세우면 **다시 그릴 때마다** 400ms 막이가 서서 그 사이의 누름이 통째로 먹힌다
+   (§D 멈춤 조건 그대로 · 2026-09-21 하네스 실측 — 칩·접기·서랍 줄 41건이 안 먹었다).
+   ⇒ 바로 앞(1.2초 안)에 **손가락이 닿은 적**이 있을 때만 세운다. */
+function tapEat(ms){if(!TAP_DOWN||Date.now()-TAP_DOWN.t>1200)return;TAP_EAT=Date.now()+(ms||400)}
+/* ★ add18 §B-3 — **여는 줄은 「같은 요소에서 눌렀고 · 10px 미만 · 600ms 안」일 때만** 연다.
+   `click` 만 보고 열면 다른 데서 시작한 터치·스크롤하다 뗀 터치가 문제를 연다.
+   ⚠ `el.click()`(코드가 부르는 것)·키보드는 `detail===0` 이라 그대로 통과시킨다. */
+var TAP_SEL='#ndList .ndrow,#list .item,#spec i';
+var TAP_DOWN=null;
+if(typeof document!=='undefined'&&!document.__tapg){document.__tapg=1;
+  document.addEventListener('pointerdown',e=>{
+    TAP_DOWN={el:e.target,x:e.clientX,y:e.clientY,t:Date.now()}},true);
+  document.addEventListener('click',e=>{
+    if(!e.detail)return;                       /* 코드가 부른 click(el.click())·키보드 — **막이보다 먼저** 통과 */
+    if(TAP_EAT&&Date.now()<TAP_EAT){TAP_EAT=0;e.stopPropagation();e.preventDefault();return}
+    const o=e.target&&e.target.closest?e.target.closest(TAP_SEL):null;
+    if(!o)return;
+    const d=TAP_DOWN;
+    if(!d||!d.el)return;                       /* 누름을 못 본 click — 막지 않는다(막이는 위 한 줄이 맡는다) */
+    const ok=o.contains(d.el.nodeType===1?d.el:d.el.parentElement)
+      &&Math.hypot(e.clientX-d.x,e.clientY-d.y)<10&&(Date.now()-d.t)<600;
+    if(!ok){e.stopPropagation();e.preventDefault()}},true);
+}
 /* 공통 손잡이(2026-09-05 · 필터 add1 B-2) — #ndGrip·#bkGrip(층)·#trGrip 셋이 이 함수 하나: 탭(이동 4px 미만) = onTap · 끌기 = setW(폭) · 뗄 때 onDrop(폭) · folded() 면 끌기·onDrop 무시 · before = 누를 때(팝업 닫기 등) */
 function gripWire(dr,g,o){let d=null;
   g.addEventListener('pointerdown',e=>{d={x:e.clientX,w:dr.getBoundingClientRect().width,moved:false};try{g.setPointerCapture(e.pointerId)}catch(_){}if(o.before)o.before();e.preventDefault()},{passive:false});
   g.addEventListener('pointermove',e=>{if(!d)return;const dx=e.clientX-d.x;if(Math.abs(dx)>=4)d.moved=true;if(d.moved&&!(o.folded&&o.folded()))o.setW(d.w+dx)});
-  const up=async()=>{if(!d)return;const was=d;d=null;if(!was.moved){await o.onTap();return}if(o.folded&&o.folded())return;await o.onDrop(Math.round(dr.getBoundingClientRect().width))};
+  const up=async()=>{if(!d)return;const was=d;d=null;tapEat(400);   /* ★ add18 §B-2 — 뒤따라오는 유령 click 한 번을 먹는다 */
+    if(!was.moved){await o.onTap();return}if(o.folded&&o.folded())return;await o.onDrop(Math.round(dr.getBoundingClientRect().width))};
   g.addEventListener('pointerup',up);g.addEventListener('pointercancel',up)}
 gripWire($('#navdr'),$('#ndGrip'),{before:()=>ndPopClose(),setW:ndSetW,
   /* ★ add9 §A-2 — 상주 서랍이므로 탭은 **숨기기가 아니라 접기**다(손잡이는 남는다) */
@@ -4339,7 +4397,10 @@ function makeFloat(sheet,handle,key,pkey){
   /* 지학 3건 §3 — 교재 머리줄(.bkbar)이 손잡이인데 그 안에 도구 span 이 들어 있다.
      단추만 빼면 도구를 누를 때 창이 따라 움직인다. **더하기만 한다** — 지금 쓰는 창 넷은
      손잡이에 data-tool 이 없어 한 글자도 안 달라진다. */
-  handle.addEventListener('pointerdown',e=>{if(e.target.closest('button,[data-tool],#bktools,input,select'))return;const st=start();d={x:e.clientX,y:e.clientY,l:st.l,t:st.t};try{handle.setPointerCapture(e.pointerId)}catch(_){}apply(st);e.preventDefault()},{passive:false});
+  /* ★ add18 §B-5 — 손잡이 안의 **단추·링크·입력·고르개** 위에서는 끌기를 시작하지 않고
+     `preventDefault` 도 하지 않는다. iOS 에서 손잡이가 기본 동작을 막으면 그 안의
+     「서재」·✕ 의 `click` 이 죽어 창이 안 닫힌다(사용자 9/21 ⓒ의 뒤 절반). */
+  handle.addEventListener('pointerdown',e=>{if(e.target.closest('button,a,[data-tool],[data-nodrag],#bktools,input,select,textarea'))return;const st=start();d={x:e.clientX,y:e.clientY,l:st.l,t:st.t};try{handle.setPointerCapture(e.pointerId)}catch(_){}apply(st);e.preventDefault()},{passive:false});
   handle.addEventListener('pointermove',e=>{if(!d)return;const st=WIN[key];st.l=d.l+(e.clientX-d.x);st.t=d.t+(e.clientY-d.y);apply(clamp(st))});
   const up=()=>{d=null};handle.addEventListener('pointerup',up);handle.addEventListener('pointercancel',up);
   let z=null;
@@ -4712,10 +4773,14 @@ var ISEA=SUBJ_ID==='earth';
 var PHCLS=()=>(!HASBOOK&&!CUR.KINDS);
 /* 목록 `pass`(1851)의 `FL.past` 갈래를 **그대로** 옮긴 것 — 새 셈을 만들지 않는다.
    히트맵이 목록과 같은 수를 내야 한다(§B-2 · 관문 P-1). */
+/* ★ add18 §A-1 — 「타기출」을 「기본」에 합쳤다(사용자 9/21 — 「왜 분리시켜 놓았나」).
+   `'n'` = **변리사가 아닌 것 전부**(`SRC!=='변리사'`) · 어딘가에 `'p'` 가 남아 있으면 `'n'` 으로 읽는다.
+   ⚠ 거르는 자리가 넷(목록 `pass`·히트맵 `phPast`·📋 창·칩)이라 **이 한 함수로 모은다**(add12 교훈). */
+var pastNow=()=>{const p=FL.past||''; return (PHCLS()&&p==='p')?'n':p};
 var phPast=r=>{
-  if(!PHCLS()||!FL.past)return true;
-  if(FL.past==='y')return r[F.SRC]==='변리사';
-  if(FL.past==='n')return !r[F.SRC];
+  if(!PHCLS()||!pastNow())return true;
+  if(pastNow()==='y')return r[F.SRC]==='변리사';
+  if(pastNow()==='n')return r[F.SRC]!=='변리사';
   if(FL.past==='p')return !!(r[F.SRC]&&r[F.SRC]!=='변리사');
   return true};
 /* §A 목록·히트맵·문항 창 머리에 **보이는** 코드. uid(F.CODE)는 한 글자도 안 바꾼다 —
@@ -4773,7 +4838,9 @@ var kindOf=r=>{
   const m=({'변리사':'G','확인':'C','타기출':'T','예상':'E'})[r[F.SRC]];
   if(m)return m;
   if(HASBOOK||CUR.KINDS)return 'G';
-  return r[F.SRC]?'T':'';
+  /* ★ add18 §A-2 — 물리는 **변리사만 「기출」** · 그 밖은 딱지 없음(옛 「타기출」 딱지 삭제).
+     `.num` 회색(add12 §A-4)이 이미 변리사가 아님을 알린다. */
+  return '';
 };
 var kindTag=r=>{const k=kindOf(r);
   return k?`<span class="tag ${KIND_CLS[k]}">${KIND_LAB[k]}</span>`:''};
@@ -5002,13 +5069,16 @@ function pass(r){
   if(FL.lv&&String(r[F.LV]||'')!==FL.lv)return 0;
   if(FL.star&&!r[F.STAR])return 0;
   if(FL.year&&!(r[F.SRC]==='변리사'&&String(r[F.YEAR])===FL.year))return 0;
+  /* ★ add18 §A-1 — 물리(분류 칩이 있는 과목)는 **`phPast` 한 함수**에 맡긴다.
+     거르개가 목록·히트맵·📋 창에 따로 있으면 한쪽만 고쳐도 안 걸린다(add12 교훈). */
+  if(PHCLS()){ if(!phPast(r))return 0; }
+  else{
   if(FL.past==='n'&&r[F.SRC])return 0;
   /* ⚠ 「기출」의 뜻이 과목마다 다르다 — 지학·생물은 `showKind`(확인문제/갈래)가 가리지만,
      기본 문항이 있는 과목(물리)에서 `past==='y'` 는 **변리사 기출만**이다(옛 1784줄). */
   if(FL.past==='y'&&fHasBase()&&r[F.SRC]!=='변리사')return 0;
-  /* ★ add12 §A-2 — 물리의 「타기출」 = `SRC` 가 있고 변리사가 아님(옛 1857줄).
-     옛날엔 `showKind` 의 `isC` 갈래가 맡았지만 물리에는 확인문제가 0건이라 늘 빈 목록이 됐다. */
   if(FL.past==='p'&&fHasBase()&&!(r[F.SRC]&&r[F.SRC]!=='변리사'))return 0;
+  }
   if(FL.type&&r[F.TYPE]!==FL.type)return 0;
   if(FL.cp&&FL.cp.length&&typeof CL!=='undefined'&&!(CL[r[F.CODE]]||[]).some(k=>FL.cp.includes(k)))return 0;                                        /* 기본 = 기출만 · 확인문제(지학)/타기출·예상(생물)은 토글 */
   if(FL.bigs.length&&!FL.bigs.includes(r[F.BIG]))return 0;
@@ -5086,7 +5156,7 @@ function drawSpectrum(){
      그래서 수는 실제로 그린 L.length 다(옛 판은 specPast 로 거른 수였다 — 「전체」일 때는 같다). */
   if(!HASBOOK){
     const hd=$('#specHd');
-    if(hd)hd.textContent=(FL.past==='y'?'변리사 기출 ':FL.past==='n'?'기본 ':FL.past==='p'?'타기출 ':'전체 ')+L.length+(FL.bigs.length?' · '+FL.bigs.map(bigLabel).join('·'):'');
+    if(hd)hd.textContent=(pastNow()==='y'?'변리사 기출 ':pastNow()==='n'?'기본 ':'전체 ')+L.length+(FL.bigs.length?' · '+FL.bigs.map(bigLabel).join('·'):'');   /* ★ add18 §A-1 */
   }
   /* §B — 거르는 규칙은 그대로다. **칸 차례만** 목록 모드와 같게 하고 묶음 경계에 빈 칸 하나를 넣는다.
      색·개수·누름은 무변 · 빈 칸은 개수 셈에서 뺀다. 지학 밖은 `grp` 가 null 이라 한 줄도 안 달라진다. */
@@ -5353,12 +5423,13 @@ function listSort(L){
 draw=function(){
   drawFilters();drawSpectrum();
   /* §B — 지학만 두 모드다. 생물은 `ISEA` 가 false 라 아래 두 줄이 종전과 같은 값을 낸다. */
-  const _rnd=HASROUND()&&ordMode()==='round';
-  const L=_rnd?roundSort(filtered()):listSort(filtered()),box=$('#list');box.innerHTML='';
+  const _s=shellL(), _rnd=_s.rnd;                       /* ★ add19 §A-1 — 서랍과 **같은 재료** */
+  const L=_s.L,box=$('#list');box.innerHTML='';
   /* add1 §A — 지학 개수 줄에는 모드 글자를 안 적는다(모드는 옆 단추가 보인다) */
   $('#cnt').textContent=SHELL?`${L.length}문제`:`${L.length}문제 · ${_rnd?'회차순':'단원순'}`;
   ordBar();
-  if(SHELL){LISTNOS=L.map(r=>r[F.NO]);shellBuild();shellPaint()}
+  /* ★ add19 §A-1·§A-3 — 화면 목록 줄이 넘겨주는 차례도 `shellSeq`(접힘과 무관하다) */
+  if(SHELL){LISTNOS=(typeof navList==='function')?navList():L.map(r=>r[F.NO]);shellBuild();shellPaint()}
   if(!L.length){box.innerHTML='<div class="empty"><b>조건에 맞는 문제가 없습니다</b>필터를 줄여 보세요.</div>';foldSummary();return}
   /* ★ add5 §A-3 — 옛 3286 겹(필터가 바뀌면 열린 물리 서랍도 따라 그린다)은 이 draw 가 덮어 없앴다 */
   if(!HASBOOK&&!$('#tree').classList.contains('hide'))buildTree();
@@ -5457,7 +5528,12 @@ function treeList(){
   box.querySelectorAll('.trqr').forEach(el=>el.onclick=()=>{VNO=+el.dataset.no;showProblem()});
   const c=box.querySelector('.cur');if(c)c.scrollIntoView({block:'nearest'});
 }
-if(HASBOOK)navSync=function(){if(!$('#tree').classList.contains('hide'))buildTree();else treeList()};
+/* ★ add19 §B-3 — **갈아끼우지 않는다.** 옛 판은 이 줄이 상주 서랍의 `navSync`(3346)를 통째로
+   덮어 지학·생물에서 서랍 강조·머리가 안 따라왔다(add9 가 `navBuild` 의 같은 갈아끼움은 걷었다).
+   ⚠ 같은 이름이 뒤에서 다시 대입되는지 **짝까지 함께** 세라(navBuild ↔ navSync). */
+if(HASBOOK){const _navSync0=navSync;
+  navSync=function(){try{_navSync0()}catch(e){console.warn('navSync',e)}
+    if(!$('#tree').classList.contains('hide'))buildTree();else treeList()};}
 /* ★ add9 §A-6 — 옛 목차 서랍(#tree)은 걷었다 — 부르는 자리가 남아 있어도 안 뜬다(죽은 길) */
 function treeOpen(){}   /* 필터 add1: 데스크톱 여백 동행(body.tropen · 핵심 CSS) */
 function treeClose(){$('#tree').classList.add('hide');document.body.classList.remove('tropen')}
@@ -7407,13 +7483,43 @@ var vReflow = async function(){
     await setupMask(VPAGE);
     if(typeof layoutOmr==='function')layoutOmr();
     if(typeof txBoxLayout==='function')txBoxLayout();
-    st.scrollTop=Math.round(rel*st.scrollHeight);
+    /* ★ add17 §A-1 — 손짓으로 바꾼 배율이면 **축이 제자리에 오게** 굴린다(비율 복원보다 먼저다) */
+    if(VZFOC){const f=VZFOC;VZFOC=null;vzScroll(f)}
+    else st.scrollTop=Math.round(rel*st.scrollHeight);
   }catch(e){console.warn('vReflow',e)}
   VRZBUSY=false;
 };
 function vzPaint(){
-  const p=document.getElementById('vzPct'); if(p)p.textContent=Math.round(VWZ*100)+'%';
-  const w=document.getElementById('vzWrap'); if(w)w.classList.toggle('hide',!vWin());
+  /* ★ add17 §A-1 — 알약을 걷었다. 부르는 자리(vzSet·vwApply)는 그대로 두고 몸만 비운다
+     (배율 숫자는 화면에 안 보인다 · 토스트도 안 띄운다). */
+}
+/* ★ add17 §A-1 — 확대·축소는 **손짓**으로. 손짓 중에는 CSS 변형으로 따라가고(안 그린다)
+   손을 떼면 그 배율로 한 번만 **선명하게** 다시 그린다. 축(핀치 가운데·커서)이 안 움직인다. */
+var VZFOC=null, VZPRE=null, VZWT=0, VZLAST=1;
+function vzMark(cx,cy){                       /* 축을 「내용 안의 비율」로 적어 둔다 */
+  const st=document.getElementById('stage'), w=document.getElementById('wrap');
+  if(!st||!w)return null;
+  const r=w.getBoundingClientRect(), sr=st.getBoundingClientRect();
+  return {fx:r.width?(cx-r.left)/r.width:0.5, fy:r.height?(cy-r.top)/r.height:0.5,
+          sx:cx-sr.left, sy:cy-sr.top};
+}
+function vzScroll(foc){                       /* 적어 둔 축이 화면에서 제자리에 오게 굴린다 */
+  const st=document.getElementById('stage'), w=document.getElementById('wrap');
+  if(!st||!w||!foc)return;
+  const r=w.getBoundingClientRect(), sr=st.getBoundingClientRect();
+  st.scrollLeft+=(r.left-sr.left)+foc.fx*r.width-foc.sx;
+  st.scrollTop +=(r.top -sr.top )+foc.fy*r.height-foc.sy;
+}
+function vzPreview(k,foc){                    /* 손짓 중 — 늘여만 본다(렌더 0) */
+  const w=document.getElementById('wrap'); if(!w)return;
+  w.style.transformOrigin='0 0';
+  w.style.transform=(Math.abs(k-1)<0.0005)?'':'scale('+k+')';
+  vzScroll(foc);
+}
+function vzCommit(z,foc){                     /* 손을 떼면 — 변형을 풀고 그 배율로 다시 그린다 */
+  const w=document.getElementById('wrap'); if(w)w.style.transform='';
+  VZFOC=foc||null;
+  vzSet(z);
 }
 function vzSet(z){
   VWZ=Math.max(0.5,Math.min(3,Math.round(z*100)/100));
@@ -7446,39 +7552,63 @@ if(SHELL){
       try{localStorage.setItem(VWIN_K,on?'1':'0')}catch(e){}
       vwApply(on)};
     t.insertBefore(b,$('#vPrev')||null)}
-  /* ★ add9 §C-2 — 창 배율 「− NNN% ＋ 맞춤」(지학 서브노트 `.szoom` 꼴·글자 그대로).
-     ⚠ **물리만**이다 — 지학·생물 카드 창은 이미 창 크기를 따라가고 §C-4 가 무접촉을 못 박았다. */
-  if(t&&!HASBOOK&&!document.getElementById('vzWrap')){
-    const w=document.createElement('span');w.id='vzWrap';w.className='szoom vzt hide';
-    w.innerHTML='<div class="btns"><button id="vzOut">−</button>'
-      +'<span class="pct" id="vzPct">100%</span><button id="vzIn">＋</button>'
-      +'<button class="w" id="vzFit">맞춤</button></div>';
-    w.querySelector('#vzOut').onclick=()=>vzSet(VWZ-0.1);
-    w.querySelector('#vzIn').onclick=()=>vzSet(VWZ+0.1);
-    w.querySelector('#vzFit').onclick=()=>vzSet(1);
-    t.insertBefore(w,$('#vPrev')||null);
-    vzPaint();
-  }
+  /* ★ add17 §A-1 — add9 §C-2 의 「− NNN% ＋ 맞춤」 단추 묶음(`#vzWrap`)을 **걷었다.**
+     배율 값·기억(`jagwa.win.view.zoom`)·창 크기 따라 다시 그리기(§C-1)는 그대로 산다. */
   /* ★ add9 §C-1 — `#stage` 크기를 지켜본다(150ms 모아서) · 물리만 */
   {const st=$('#stage');
    if(st&&!HASBOOK&&typeof ResizeObserver!=='undefined'&&!st.__rz){st.__rz=1;
      new ResizeObserver(()=>{clearTimeout(VRZT);VRZT=setTimeout(vReflow,150)}).observe(st)}}
-  /* ★ add9 §C-2 — 두 손가락 벌리기 · Ctrl+휠. 필기는 **펜만** 받으므로 안 겹친다(add2 무접촉) */
+  /* ★ add17 §A-1 — 두 손가락 벌리기 · Ctrl+휠(트랙패드 핀치) · 두 번 톡 = 맞춤.
+     그냥 휠은 지금처럼 스크롤이다(확대가 아니다) · 필기는 **펜만** 받으므로 안 겹친다(add2 무접촉).
+     ⚠ 두 손가락 스크롤과 안 다투게 **거리 변화가 12px 을 넘을 때만** 핀치로 본다(§C). */
   {const st=$('#stage');
    if(st&&!HASBOOK&&!st.__pz){st.__pz=1;
+     const CLZ=z=>Math.max(0.5,Math.min(3,Math.round(z*100)/100));
      st.addEventListener('wheel',e=>{if(!e.ctrlKey||!vWin())return;
-       e.preventDefault();vzSet(VWZ*(e.deltaY<0?1.1:1/1.1))},{passive:false});
-     const P=new Map(); let d0=0,z0=1;
+       e.preventDefault();
+       const foc=vzMark(e.clientX,e.clientY);
+       if(!VZPRE)VZPRE={z0:VWZ};
+       const z=CLZ((VZPRE.z!=null?VZPRE.z:VZPRE.z0)*(e.deltaY<0?1.1:1/1.1));
+       VZPRE.z=z;VZPRE.foc=foc;
+       vzPreview(z/VZPRE.z0,foc);
+       clearTimeout(VZWT);
+       VZWT=setTimeout(()=>{const p=VZPRE;VZPRE=null;if(p&&p.z!=null)vzCommit(p.z,p.foc)},140);
+     },{passive:false});
+     const P=new Map(); let d0=0,z0=1,foc=null,pin=false;
+     /* ⚠ **잡아채는 층**이어야 한다 — `inkGuard`(1838)가 잡아채는 층에서 손가락 이벤트마다
+        `stopPropagation()` 을 걸어, 거품 층 손잡이는 실기기에서 아예 안 불린다(2026-09-21 실측). */
      st.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;P.set(e.pointerId,e);
        if(P.size===2){const a=[...P.values()];
-         d0=Math.hypot(a[0].clientX-a[1].clientX,a[0].clientY-a[1].clientY);z0=VWZ}});
+         d0=Math.hypot(a[0].clientX-a[1].clientX,a[0].clientY-a[1].clientY);z0=VWZ;pin=false;
+         foc=vzMark((a[0].clientX+a[1].clientX)/2,(a[0].clientY+a[1].clientY)/2)}},true);
      st.addEventListener('pointermove',e=>{if(e.pointerType!=='touch'||!P.has(e.pointerId))return;
        P.set(e.pointerId,e);
        if(P.size===2&&d0>0&&vWin()){const a=[...P.values()];
          const d=Math.hypot(a[0].clientX-a[1].clientX,a[0].clientY-a[1].clientY);
-         vzSet(z0*d/d0);e.preventDefault()}},{passive:false});
-     const end=e=>{P.delete(e.pointerId);if(P.size<2)d0=0};
-     st.addEventListener('pointerup',end);st.addEventListener('pointercancel',end);
+         if(!pin&&Math.abs(d-d0)<12)return;     /* 거리가 안 변하면 두 손가락 **스크롤**이다 */
+         pin=true;
+         const z=CLZ(z0*d/d0);
+         VZPRE={z0:z0,z:z,foc:foc};
+         vzPreview(z/z0,foc);
+         /* 핀치 중에는 한 손가락 굴리기(inkGuard)와 안 다툰다 */
+         e.stopImmediatePropagation(); if(e.cancelable)e.preventDefault()}},{capture:true,passive:false});
+     const end=e=>{P.delete(e.pointerId);
+       if(P.size<2){if(pin&&VZPRE&&VZPRE.z!=null){const p=VZPRE;VZPRE=null;vzCommit(p.z,p.foc)}
+         d0=0;pin=false}};
+     st.addEventListener('pointerup',end,true);st.addEventListener('pointercancel',end,true);
+     /* 두 번 톡 = 맞춤(1)과 직전 배율 사이. **필기 도구가 「손(보기)」일 때만** — 펜·형광·지우개는 필기가 이긴다 */
+     const dbl=(cx,cy)=>{
+       if(!vWin()||TOOL.mode!=='view')return;
+       const f=vzMark(cx,cy);
+       if(Math.abs(VWZ-1)>0.005){VZLAST=VWZ;vzCommit(1,f)}
+       else if(Math.abs(VZLAST-1)>0.005)vzCommit(VZLAST,f)};
+     st.addEventListener('dblclick',e=>{if(!vWin()||TOOL.mode!=='view')return;
+       e.preventDefault();dbl(e.clientX,e.clientY)},{passive:false});
+     let tapT=0,tapX=0,tapY=0;                 /* iOS 는 dblclick 이 안 올 수 있어 톡 두 번을 직접 센다(손가락만) */
+     st.addEventListener('pointerup',e=>{if(e.pointerType!=='touch'||P.size)return;
+       const now=Date.now();
+       if(now-tapT<300&&Math.hypot(e.clientX-tapX,e.clientY-tapY)<20){tapT=0;dbl(e.clientX,e.clientY);return}
+       tapT=now;tapX=e.clientX;tapY=e.clientY},true);
    }}
   /* ── add2 §A — 필기 도구를 머리줄 알약으로 **옮긴다**(지학만).
      새로 만들지 않고 옮기므로 id·onclick·`setTool` 의 `.tl.on` 표시가 그대로 산다.
@@ -7499,7 +7629,13 @@ if(SHELL){
     if(w&&w.value!=='2'){w.value='2';if(typeof TOOL==='object')TOOL.w=2}}
   /* 문항을 열 때마다 창/전체 화면을 세우고 **붙는 대상을 비운다**(§F — 연 문항이 이긴다) */
   {const _ov=openView;
-   openView=async function(no,list){if(HASBOOK)cropFor(null);const r=await _ov(no,list);vwApply(vwOn());
+   openView=async function(no,list){if(HASBOOK)cropFor(null);
+     /* ★ add17 §A-2 — `#view` 를 **보이기 전에** 창 꼴을 입힌다. 옛 판은 옛 `openView` 가
+        전체 화면으로 깔고 문제를 다 그린 **뒤에야** `vwApply` 라 그 사이(쪽 그리는 시간)
+        전체 화면이 보였다(사용자 9/21 「튐」). 옛 `openView` 는 `.hide` 만 걷고 class 를
+        안 지우므로 미리 입혀 두면 그대로 산다(§C 의 멈춤 조건 — 관문 P-16-2 가 잰다). */
+     try{vwApply(vwOn())}catch(e){}
+     const r=await _ov(no,list);vwApply(vwOn());
      /* 2026-09-21 — 물리는 카드가 없어 근거 목록을 여기서 PDF 아래에 붙인다(§B-2) */
      /* ★ add5 §A-2 — ggPhysPaint 는 showProblem 겹(아래)으로 옮겼다.
         물리는 go(±1) 이 openView 를 안 거쳐 여기서만 부르면 다음 문항에서 근거 줄이 안 따라왔다.
@@ -7801,11 +7937,11 @@ function shellPaint(){
     /* ★ add6 §B-1 — 물리에는 「확인문제」가 없다(`isC` 0건). 그 자리에 **분류**를 올린다.
        수는 아래 줄 「분류 ▾」 고르개가 세던 것 그대로다(기출 = 변리사 기출 · 기본 = 출처 없음). */
     /* ★ add12 §A-2 — 「타기출」을 넣어 넷이다(합이 577 로 맞는다) */
+    /* ★ add18 §A-1 — 「타기출」을 「기본」에 합쳐 **셋**이다(전체 = 기출 + 기본) */
     const nY=DATA.filter(r=>r[F.SRC]==='변리사').length,
-          nT=DATA.filter(r=>r[F.SRC]&&r[F.SRC]!=='변리사').length,
-          nN=DATA.filter(r=>!r[F.SRC]).length;
-    kd.innerHTML=[['','전체',T.length],['y','기출',nY],['p','타기출',nT],['n','기본',nN]].map(x=>
-      '<button type="button" class="chchip'+((FL.past||'')===x[0]?' on':'')+'" data-past="'+x[0]+'">'
+          nN=DATA.filter(r=>r[F.SRC]!=='변리사').length;
+    kd.innerHTML=[['','전체',T.length],['y','기출',nY],['n','기본',nN]].map(x=>
+      '<button type="button" class="chchip'+((pastNow()||'')===x[0]?' on':'')+'" data-past="'+x[0]+'">'
       +x[1]+' '+x[2]+'</button>').join('');
   } else {
   kd.innerHTML='<button type="button" class="chchip'+(FL.past!=='p'?' on':'')+'" data-past="y">기출 '+nG+'</button>'
@@ -7960,17 +8096,92 @@ function ehd(cls,key,label,chips,pills){
     +(pills||[]).map(p=>'<span class="p">'+esc(p)+'</span>').join('')+(chips||'');
   h.onclick=e=>{if(e.target.closest('button'))return;collToggle(key)};
   return h}
-function drawEarthList(L,rnd,box){
-  const frag=document.createDocumentFragment();
+/* ★ add19 §A-1 — **차례를 짓는 함수 하나.** 첫 화면 그리기(`drawEarthList`)·상주 서랍(`navBuild`)·
+   문제 창 넘기기 목록(`navList` → `VLIST`)이 **모두 이것을 쓴다.**
+   옛 판은 첫 화면만 `unitOrder()` 묶음이고 서랍·`VLIST` 는 `filtered()` 의 **데이터 차례(회차·문번)**라
+   지학에서 서랍이 딴 차례로 서고 ▶ 가 다음 회차로 갔다(사용자 캡처 9/21).
+     opt.coll  = 첫 화면의 접기를 따르나(첫 화면 true · 서랍 false — 서랍은 접힘과 무관하다 §A-3)
+     opt.chips = 머리줄 단추 HTML 을 지을까(서랍은 안 쓴다 · false 면 건너뛴다)
+   돌려주는 것 = 화면에 서는 차례 그대로의 열
+     {t:'ch'|'sec'|'u', key, label, chips, pills, uhd, rhd, n} · {t:'q', r, inU} · {t:'empty'} · {t:'rest', label} */
+function shellSeq(L,rnd,opt){
+  opt=opt||{};
+  const coll=(opt.coll!==false), wantChips=(opt.chips!==false);
+  const has=k=>coll&&collHas(k);
+  const CH=f=>wantChips?f():'';
+  const out=[];
   if(rnd){
     const byR=new Map();
     L.forEach(r=>{const k=+r[F.ROUND]||0;if(!byR.has(k))byR.set(k,[]);byR.get(k).push(r)});
     [...byR.keys()].sort((a,b)=>b-a).forEach(k=>{
       const rows=byR.get(k), key='r'+k;
-      const h=ehd('ch',key,k+'회 · '+(k+1963)+'년',mcChipHTML(rows.map(r=>r[F.NO]),'',k+'회'),[rows.length+'문항']);
-      h.dataset.rhd=String(k);frag.appendChild(h);
-      if(!collHas(key))rows.forEach(r=>frag.appendChild(row(r)))});
-    box.appendChild(frag);return}
+      out.push({t:'ch',key:key,label:k+'회 · '+(k+1963)+'년',
+        chips:CH(()=>mcChipHTML(rows.map(r=>r[F.NO]),'',k+'회')),pills:[rows.length+'문항'],
+        rhd:String(k),n:rows.length});
+      if(!has(key))rows.forEach(r=>out.push({t:'q',r:r}))});
+    return out}
+  const byUnit=new Map();
+  L.forEach(r=>{const u=unitOf(r[F.NO])||'';if(!byUnit.has(u))byUnit.set(u,[]);byUnit.get(u).push(r)});
+  const showEmpty=!fltOn();
+  const seen=new Set();
+  const order=unitOrder();
+  const nOf=u=>(byUnit.get(u)||[]).length;
+  const secN={},chN={},secU={},chU={};
+  order.forEach(u=>{const c=chOf(u.unit)||'';
+    secN[u.sec]=(secN[u.sec]||0)+nOf(u.unit); chN[c]=(chN[c]||0)+nOf(u.unit);
+    (secU[u.sec]=secU[u.sec]||[]).push(u.unit); (chU[c]=chU[c]||[]).push(u.unit)});
+  const nosOf=us=>us.reduce((a,u)=>a.concat((byUnit.get(u)||[]).map(r=>r[F.NO])),[]);
+  let curCh='',curSec='';
+  order.forEach(u=>{
+    const rows=byUnit.get(u.unit)||[], c=chOf(u.unit)||'';
+    if(!rows.length&&!showEmpty)return;
+    if(c!==curCh){curCh=c;curSec='';
+      out.push({t:'ch',key:'c'+c,label:c+'. '+((TOC.ch[c]||{}).name||''),chips:'',pills:[chN[c]+'문항'],n:chN[c]})}
+    if(has('c'+c)){seen.add(u.unit);return}
+    if(u.sec!==curSec){curSec=u.sec;
+      const nos=nosOf(secU[u.sec]||[]);
+      out.push({t:'sec',key:'s'+u.sec,label:u.sec+' '+((TOC.sec[u.sec]||{}).name||''),
+        chips:CH(()=>mcChipHTML(nos,u.sec,u.sec)+jnChipHTML(u.sec)+frmChipHTML(u.sec===u.unit?u.unit:'')),
+        pills:[secN[u.sec]+'문항'],
+        /* 2026-09-20 §B-1 — 두 층 과목(생물·물리)은 절 코드 = 단원 코드다. 절 머리가 곧 단원 머리 */
+        uhd:(u.sec===u.unit?u.unit:''),n:secN[u.sec]})}
+    if(has('s'+u.sec)){seen.add(u.unit);return}
+    if(u.sec!==u.unit){
+      out.push({t:'u',key:'u'+u.unit,label:unitLabel(u.unit),
+        chips:CH(()=>mcChipHTML(rows.map(r=>r[F.NO]),u.unit,u.unit)+frmChipHTML(u.unit)),
+        pills:(u.page?[String(u.page)+'쪽',rows.length+'문항']:[rows.length+'문항']),
+        uhd:u.unit,n:rows.length});
+      seen.add(u.unit);
+      if(has('u'+u.unit))return;
+    }else seen.add(u.unit);
+    if(!rows.length){out.push({t:'empty'});return}
+    rows.forEach(r=>out.push({t:'q',r:r,inU:1}))});
+  let rest=[];byUnit.forEach((rows,u)=>{if(!seen.has(u))rest=rest.concat(rows)});
+  if(rest.length){let cur='';
+    rest.forEach(r=>{const k=bigLabel(r[F.BIG])+' · '+r[F.SUB];
+      if(k!==cur){cur=k;out.push({t:'rest',label:k})}
+      out.push({t:'q',r:r})})}
+  return out;
+}
+/* ★ add19 §A-1 — 첫 화면·서랍이 **같은 재료**를 보게 한다(거르개·차례를 한 곳에서) */
+function shellL(){
+  const rnd=HASROUND()&&ordMode()==='round';
+  return {rnd:rnd, L:(rnd?roundSort(filtered()):listSort(filtered()))};
+}
+function drawEarthList(L,rnd,box){
+  const frag=document.createDocumentFragment();
+  shellSeq(L,rnd,{coll:true}).forEach(it=>{
+    if(it.t==='q'){const el=row(it.r);if(it.inU)el.classList.add('in-u');frag.appendChild(el);return}
+    if(it.t==='empty'){const e=document.createElement('div');e.className='gh-empty';e.textContent='이 단원에 든 기출이 없다';frag.appendChild(e);return}
+    if(it.t==='rest'){const h=document.createElement('div');h.className='grouphd ch';h.textContent=it.label;frag.appendChild(h);return}
+    const h=ehd(it.t,it.key,it.label,it.chips,it.pills);
+    if(it.rhd)h.dataset.rhd=it.rhd;
+    if(it.uhd)h.dataset.uhd=it.uhd;
+    frag.appendChild(h)});
+  box.appendChild(frag);
+}
+function _drawEarthListOld(L,rnd,box){
+  const frag=document.createDocumentFragment();
   const byUnit=new Map();
   L.forEach(r=>{const u=unitOf(r[F.NO])||'';if(!byUnit.has(u))byUnit.set(u,[]);byUnit.get(u).push(r)});
   const showEmpty=!fltOn();
@@ -8017,6 +8228,8 @@ function drawEarthList(L,rnd,box){
       frag.appendChild(row(r))})}
   box.appendChild(frag);
 }
+/* ⚠ 위 `_drawEarthListOld` 는 **아무 데서도 안 부른다** — add19 로 `shellSeq` 가 차례를 짓는다.
+   옛 글자를 지우지 않고 남겨 둔 것은 하네스가 두 판을 줄로 맞대기 위해서다. */
 
 /* ══════════════ 지학 add1 §C·§D·§E·§F ══════════════
    ⚠ 민법앱(`minbeop/index.html`)의 실물을 읽고 옮겼다. 짝은 보고 표에 적었다.
