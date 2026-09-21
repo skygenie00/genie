@@ -1164,6 +1164,9 @@ body[data-shell] #list .gh-empty{margin-left:20px}
 body[data-book] #card #cDet>summary{display:none}
 body[data-book] .vbot #mO,body[data-book] .vbot #mQ,
 body[data-book] .vbot #mX,body[data-book] .vbot #tNote{display:none!important}
+/* ★ add6 §C-3 — 물리(pdf 층)에서도 「코멘트」를 걷는다. 옛 코멘트는 그 문항의 근거 줄로 갔고,
+   새 글은 근거 줄에 적는다(코멘트 통 `note` 는 죽은 키로 `SYNC_KEYS` 에 남는다 · §C-2). */
+body[data-layer="pdf"] .vbot #tNote{display:none!important}
 /* ── add1 §F 교재 창 탭 ── */
 .bkbar .doctab{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .bkbar .doctab b{font-size:11.5px;font-weight:700;padding:3px 9px;background:var(--card);color:var(--muted);cursor:pointer}
@@ -4527,6 +4530,17 @@ var isC=r=>r[F.SRC]==='확인';
    과목 문 = `ISEA`. **`CARD_LAYER` 로 걸면 생물까지 걸린다** — 여기서는 쓰지 않는다.
    생물·물리는 이 판으로 화면도 DOM 글자도 한 곳도 안 달라진다. */
 var ISEA=SUBJ_ID==='earth';
+/* ★ add6 §B — 「분류(전체·기출·기본)」는 **물리 갈래**다. 지학은 「기출│확인문제」,
+   생물은 `CUR.KINDS` 를 쓴다 — 그래서 과목 이름이 아니라 **그 갈래가 있나**로 건다. */
+var PHCLS=()=>(!HASBOOK&&!CUR.KINDS);
+/* 목록 `pass`(1851)의 `FL.past` 갈래를 **그대로** 옮긴 것 — 새 셈을 만들지 않는다.
+   히트맵이 목록과 같은 수를 내야 한다(§B-2 · 관문 P-1). */
+var phPast=r=>{
+  if(!PHCLS()||!FL.past)return true;
+  if(FL.past==='y')return r[F.SRC]==='변리사';
+  if(FL.past==='n')return !r[F.SRC];
+  if(FL.past==='p')return !!(r[F.SRC]&&r[F.SRC]!=='변리사');
+  return true};
 /* §A 목록·히트맵·문항 창 머리에 **보이는** 코드. uid(F.CODE)는 한 글자도 안 바꾼다 —
    그것이 unit·bpg·crop·tfix·bogi·txtOf 의 열쇠다. 여기는 표시뿐이다. */
 var codeShow=r=>{
@@ -4870,7 +4884,9 @@ function drawFilters(){
 /* 히트맵 — 기출/확인 토글을 따른다(섞지 않는다) · 장 필터만 따라간다 */
 function drawSpectrum(){
   const s=$('#spec');
-  let L=DATA.filter(r=>showKind(r)&&(!FL.bigs.length||FL.bigs.includes(r[F.BIG])));
+  /* ★ add6 §B-2 — 분류 칩이 **히트맵도 같이** 좁힌다(지학은 갈래 칩이 이미 그렇다).
+     규칙은 목록 `pass` 의 것을 그대로 쓴 `phPast` 다 — 칸 수 = 목록 수여야 한다. */
+  let L=DATA.filter(r=>showKind(r)&&phPast(r)&&(!FL.bigs.length||FL.bigs.includes(r[F.BIG])));
   /* ★ add5 §A-3 — 물리 옛 1929 의 머리 글자(#specHd)를 되살린다.
      ⚠ 거르개(specPast)까지 되돌리지는 않는다 — 껍데기 관문 P-1(「히트맵 칸 수 = 577」)이 이미
      못 박은 자리라 되돌리면 그것이 깨진다. 칸 수·차례는 껍데기가 맡고 머리 글자만 물리 것으로.
@@ -7430,15 +7446,34 @@ function shellPaint(){
   const chs=esh.querySelector('#eChs');
   chs.innerHTML='<button type="button" class="chchip'+(cur?'':' on')+'" data-big="">전체</button>'
     +BIGS.map(b=>{const c=String(b).split('.')[0];
+      /* ★ add6 §A — 물리 `BIGS` 는 「역학」처럼 **번호가 없다**. `TOC.ch` 열쇠는 차례 번호라
+         `split('.')[0]` 로는 못 찾아 칩 글자가 「 195」로 비었다(2026-09-21 실측).
+         번호로 못 찾으면 **이름으로** 찾아 「N. 이름」을 짓는다.
+         ⚠ 지학·생물은 `BIG` 이 「N. 이름」이라 `chShort` 가 서므로 글자가 안 바뀐다. */
+      let lab=chShort(c);
+      if(!lab){const k=Object.keys(TOC.ch||{}).find(x=>(TOC.ch[x]||{}).name===b);
+        lab=k?(k+'. '+TOC.ch[k].name):String(b)}
       return '<button type="button" class="chchip'+(cur===b?' on':'')+'" data-big="'+esc(b)+'">'
-        +esc(chShort(c))+' '+T.filter(r=>r[F.BIG]===b).length+'</button>'}).join('');
+        +esc(lab)+' '+T.filter(r=>r[F.BIG]===b).length+'</button>'}).join('');
   chs.querySelectorAll('[data-big]').forEach(el=>el.onclick=()=>{
     const v=el.dataset.big;FL.bigs=v?[v]:[];FL.subs=[];FL.unit='';draw()});
   /* 기출 │ 확인문제 */
   const kd=esh.querySelector('#eKind');
+  if(PHCLS()){
+    /* ★ add6 §B-1 — 물리에는 「확인문제」가 없다(`isC` 0건). 그 자리에 **분류**를 올린다.
+       수는 아래 줄 「분류 ▾」 고르개가 세던 것 그대로다(기출 = 변리사 기출 · 기본 = 출처 없음). */
+    const nY=DATA.filter(r=>r[F.SRC]==='변리사').length, nN=DATA.filter(r=>!r[F.SRC]).length;
+    kd.innerHTML=[['','전체',T.length],['y','기출',nY],['n','기본',nN]].map(x=>
+      '<button type="button" class="chchip'+((FL.past||'')===x[0]?' on':'')+'" data-past="'+x[0]+'">'
+      +x[1]+' '+x[2]+'</button>').join('');
+  } else {
   kd.innerHTML='<button type="button" class="chchip'+(FL.past!=='p'?' on':'')+'" data-past="y">기출 '+nG+'</button>'
     +'<button type="button" class="chchip'+(FL.past==='p'?' on':'')+'" data-past="p">확인문제 '+nC+'</button>';
-  kd.querySelectorAll('[data-past]').forEach(el=>el.onclick=()=>{FL.past=el.dataset.past;FL.round='';draw()});
+  }
+  kd.querySelectorAll('[data-past]').forEach(el=>el.onclick=()=>{FL.past=el.dataset.past;
+    /* 옛 물리 규칙 1836 — 연도는 「변리사 기출」일 때만 산다 */
+    if(PHCLS()&&FL.past!=='y')FL.year='';
+    FL.round='';draw()});
   /* 범례 — 지금 값 그대로 */
   const LG=[['c0','안 품','#DEDDD6'],['cO','맞음','var(--teal)'],['cQ','헷갈림','var(--amber)'],
             ['cX','틀림','var(--red)'],['cP','P','var(--ink)'],['cW','덜약점','#F3E39A']];
@@ -7517,6 +7552,22 @@ function ebarFilters(esh){
     s.classList.toggle('dim',!FL.lv);
     s.onchange=()=>{FL.lv=s.value;draw()};
   } else kill('fLv');
+  /* ★ add6 §B-3 — 물리는 갈래가 히트맵 머리로 올라갔다. 여기엔 **★중요 토글 칩** 하나와
+     「모두 풀기」만 둔다(옛 「모두 풀기」가 하던 연도·난이도·분류·중요 풀기를 그대로 맡는다). */
+  if(PHCLS()){
+    kill('fClsWrap');
+    if(fHasStar()){
+      const st=mk('fStarBtn','button','ebtn'); st.type='button';
+      st.textContent='★중요'+(FL.star?' 1':'');
+      st.classList.toggle('dim',!FL.star);
+      st.classList.toggle('on',!!FL.star);
+      st.onclick=()=>{FL.star=!FL.star;draw()};
+    } else kill('fStarBtn');
+    const cl=mk('fAllClr','button','ebtn'); cl.type='button';
+    cl.textContent='모두 풀기';
+    cl.classList.toggle('dim',!(FL.past||FL.star||FL.year||FL.lv));
+    cl.onclick=()=>{FL.past='';FL.star=false;FL.year='';FL.lv='';draw()};
+  } else { kill('fStarBtn'); kill('fAllClr');
   /* ③ 분류 — 갈래(하나만) + ★중요(따로) */
   if(fHasBase()||fHasStar()){
     let w=esh.querySelector('#fClsWrap');
@@ -7545,8 +7596,11 @@ function ebarFilters(esh){
     if(!w.__out){w.__out=1;
       document.addEventListener('click',e=>{if(!w.contains(e.target))pop.classList.add('hide')})}
   } else kill('fClsWrap');
-  /* ④ 「메모 있음」 — 옛 줄에서 **필터가 아니라 시트**를 열던 단추다(1846줄). 같은 구실로 옮긴다. */
-  if(fHasBase()&&typeof memoSheet==='function'&&typeof memoHas==='function'){
+  }
+  /* ④ 「메모 있음」 — 옛 줄에서 **필터가 아니라 시트**를 열던 단추다(1846줄). 같은 구실로 옮긴다.
+     ★ add6 §C-3 — 물리에서는 **걷는다.** 옛 코멘트가 근거로 갔으니 `memoHas` 는 이제
+     「🃏 전체 N」과 같은 집합이다(코멘트 ∪ 손필기 ∪ 볼트 카드 = 카드뿐). 갈 곳 = 🃏 전체. */
+  if(!PHCLS()&&fHasBase()&&typeof memoSheet==='function'&&typeof memoHas==='function'){
     const b=mk('fMemo','button','ebtn'); b.type='button';
     b.textContent='메모 있음 '+DATA.filter(memoHas).length;
     b.onclick=()=>memoSheet();
@@ -7669,7 +7723,8 @@ var mcwOpen=async function(sc){
   const nos=mcNosOf(sc).filter(no=>mcCountOf(no)>0);
   const b=document.createElement('div');b.className='sheet';b.id='mcw';
   b.innerHTML='<div class="panel"><div class="bplh"><span>🃏 암기카드 · '+esc(mcScLabel(sc))+'</span>'
-    +'<span class="mut" style="font-weight:500;margin-left:6px">지학 · 카드 '+mcCountIn(mcNosOf(sc))+'</span>'
+    /* ★ add8 §A-2 · §A-4 — 🃏 창 머리에도 같은 글자가 박혀 있었다(전수로 찾아 같이 고친다) */
+    +'<span class="mut" style="font-weight:500;margin-left:6px">'+esc(CUR.NAME)+' · 카드 '+mcCountIn(mcNosOf(sc))+'</span>'
     +'<button id="mcwX">닫기</button></div><div id="mcwBody"></div>'
     +'<div id="mcwFoot"><span class="mut">＋ 카드 넣기</span><select id="mcwSel"></select>'
     +'<button id="mcwInk">✍ 손필기</button><button id="mcwBk">📖 교재에서 찍기</button>'
@@ -7713,13 +7768,19 @@ var mcwOpen=async function(sc){
 function jnOpen(sec){
   if(!SHELL)return;
   const old=document.getElementById('jnw');if(old)old.remove();
-  const units=((TOC.sec[sec]||{}).units||[]).filter(u=>u!==sec);
+  /* ★ add8 §A-1 — 지학은 세 층(절 아래 소단원)이라 절 자신을 빼는 것이 맞지만,
+     물리·생물은 `buildTocFromData` 가 `TOC.sec[sec].units=[sec]` 로 **절 = 단원 하나**를 짓는다.
+     그때 빼면 단원이 0 이 되어 창이 「이 절에 든 문항이 없다」로 떴다(2026-09-21 사용자 캡처).
+     `lvDeep()` 에 기대지 않고 **데이터로 가른다** — 자신 말고 다른 단원이 있을 때만 뺀다. */
+  const _uAll=((TOC.sec[sec]||{}).units||[]);
+  const units=_uAll.some(u=>u!==sec)?_uAll.filter(u=>u!==sec):_uAll.slice();
   const T=DATA.filter(showKind);
   const rows=u=>listSort(T.filter(r=>unitOf(r[F.NO])===u));
   let total=0;units.forEach(u=>{total+=rows(u).length});
   const b=document.createElement('div');b.className='sheet';b.id='jnw';
   b.innerHTML='<div class="panel"><div class="bplh"><span>📋 정리 · '+esc(sec+' '+((TOC.sec[sec]||{}).name||''))+'</span>'
-    +'<span class="mut" style="font-weight:500;margin-left:6px">지학 · '+total+'문항</span>'
+    /* ★ add8 §A-2 — 과목 이름이 「지학」으로 박혀 있었다. `CUR.NAME` 을 쓴다. */
+    +'<span class="mut" style="font-weight:500;margin-left:6px">'+esc(CUR.NAME)+' · '+total+'문항</span>'
     +'<button id="jnwX">닫기</button></div><div id="jnwBody"></div></div>';
   document.body.appendChild(b);
   b.querySelector('#jnwX').onclick=()=>b.remove();
