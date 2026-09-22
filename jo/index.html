@@ -1055,6 +1055,21 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .cv-pop .cv-lfind{padding:6px;border-top:1px solid #e3e0d8;background:#f6f4ef}.cv-pop .cv-lfind input{width:100%;box-sizing:border-box;font-size:12px;padding:4px 6px;border:1px solid #e3e0d8;border-radius:6px;background:transparent;color:#1a1a1a}
 .cv-pop .cv-lres{max-height:200px;overflow:auto}.cv-pop .cv-lres .cv-lrow{cursor:default}.cv-pop .cv-lres input.w{flex:1;min-width:60px;font-size:11px;padding:2px 5px;border:1px solid #e3e0d8;border-radius:5px;background:transparent;color:#1a1a1a}
 .cv-pop mark{background:#ffe066;color:inherit;padding:0 1px}
+/* ★ _task_canvas_jari_cand — 교재 칩 상태 · 자리 창 후보 카드 · 찍기 */
+.cv-chip.jr-hand,.cv-chip.jr-none{border-color:var(--cv-ok);color:var(--cv-ok);font-weight:600}.cv-chip.jr-lo{border-color:#f59e0b;color:#b45309}
+.cv-chip.jr-cand{border:1px dashed #d93b3b;background:#fff5f5;color:#b91c1c}.cv-chip.jr-nil{color:var(--cv-mute)}
+.cv-pop .cv-jst{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 8px;border-radius:6px;background:#f6f4ef;font-size:12px}.cv-pop .cv-jst .t{flex:1;min-width:120px}
+.cv-pop .cv-jst.s-hand,.cv-pop .cv-jst.s-none{background:#ecf7ef;color:#1d7a3e}.cv-pop .cv-jst.s-lo{background:#fff7e6;color:#8a5a00}.cv-pop .cv-jst.s-cand,.cv-pop .cv-jst.s-nil{background:#fff1f1;color:#b91c1c}
+.cv-pop .cv-jc{border:1px solid #e3e0d8;border-radius:6px;padding:6px 8px;background:#fff;cursor:pointer;display:flex;flex-direction:column;gap:3px}.cv-pop .cv-jc:hover{border-color:#2F6FD0}
+.cv-pop .cv-jc.on{border:2px solid #1d7a3e;background:#f3faf5}.cv-pop .cv-jc .r1{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.cv-pop .cv-jc .r1 b{font-weight:700}
+.cv-pop .cv-jc .bar{display:inline-block;width:70px;height:6px;border-radius:3px;background:#eeebe4;overflow:hidden;margin-left:auto}.cv-pop .cv-jc .bar i{display:block;height:100%;background:#2F6FD0}
+.cv-pop .cv-jc .in{font-size:10.5px;padding:0 6px;border-radius:8px;border:1px solid #d9d6ce;color:#6b675f}.cv-pop .cv-jc .in.y{border-color:#16a34a;color:#166534;background:#f0fdf4}.cv-pop .cv-jc .in.n{border-color:#f59e0b;color:#8a5a00;background:#fffbeb}
+.cv-pop .cv-jc .r3{display:flex;align-items:center;gap:8px}.cv-pop .cv-jc .r3 .bl{cursor:pointer;opacity:.6}.cv-pop .cv-jc.on [data-ok]{border-color:#1d7a3e;color:#1d7a3e;font-weight:700}
+.cv-pop .cv-jfoot{display:flex;gap:8px;flex-wrap:wrap}.cv-pop .cv-jfoot [data-pick]{border-color:#16a34a;color:#166534}
+.cv-booknav button.pk.on{background:#16a34a;border-color:#16a34a;color:#fff}.cv-booknav button.sv{border-color:#16a34a;color:#166534;font-weight:700}
+.cv-book .cv-booknav{position:sticky;top:0;z-index:6;background:#fff;padding:3px 0}   /* 쪽을 내려 찍어도 ◀▶·📍·「이 자리 저장」이 창 위에 남는다 */
+.cv-pickov{position:absolute;inset:0;z-index:3;cursor:crosshair;touch-action:none;background:rgba(22,163,74,.04)}
+.cv-pickbox{position:absolute;border:2px solid #10b981;background:rgba(16,185,129,.16);border-radius:4px;pointer-events:none;z-index:4}
 .cv-book .m{color:#6b675f;font-size:11.5px;margin-bottom:4px}.cv-bookpg{position:relative;border:1px solid #e3e0d8}.cv-bookhl{position:absolute;background:rgba(255,196,0,.28);outline:2px solid rgba(230,120,0,.85);border-radius:2px;pointer-events:none}
 /* ══ 정리캔버스(민소) 끝 ══ */
 .badge.bk{background:#f1efe9;color:#6b665d;border:1px solid #e3e0d8;white-space:nowrap}   /* ★ 민소 판례 — 교재 쪽 칩(회색) */
@@ -2861,7 +2876,7 @@ const REC_NAMES = { ox:'1차객 풀이 (O/X · 헷갈림 · 태그)', rounds:'1�
   sticker:'🏷 스티커 사전 (두문자·줄임말)',
   blank:'✎ 빈칸 회독 (O/△/X)', blanktag:'✎ 빈칸 태그 (kind 확정)',
   themefix:'⇄ 3법 대응 확정', precimp:'★ 판례 내 중요도', editq:'✎ 수정 큐 (볼트 고칠 자리)', preclink:'🔗 내가 이은 판례·2차', precqa:'✅ 판례 검수 (앱 층)', precqafile:'✅ 볼트 검수 대기 (⚙ 가 읽는다)',
-  canvas:'📝 정리캔버스 편집 (민소)', canvasink:'✍ 정리캔버스 필기', canvaslink:'🔗 정리캔버스 링크', canvasmemo:'🗒 정리캔버스 메모', canvaspin:'★ 정리캔버스 핀', clfix:'Claude 답 정정 (반영 전)', c2unit:'🧩 2차 단원 (손값 · 문제 단위)' };   /* ★ prec3 §C-3 */   /* ★ 판 3 §9-2 · recsync §E · 판 4 add4 */
+  canvas:'📝 정리캔버스 편집 (민소)', canvasink:'✍ 정리캔버스 필기', canvaslink:'🔗 정리캔버스 링크', canvasmemo:'🗒 정리캔버스 메모', canvaspin:'★ 정리캔버스 핀', clfix:'Claude 답 정정 (반영 전)', c2unit:'🧩 2차 단원 (손값 · 문제 단위)', canvasjari:'📘 정리캔버스 교재 자리' };   /* ★ prec3 §C-3 */   /* ★ 판 3 §9-2 · recsync §E · 판 4 add4 */
 function recLabel(k){
   const t = k.slice(REC_PRE.length);
   if (REC_NAMES[t]) return REC_NAMES[t];
@@ -2967,7 +2982,7 @@ const SYNC_SKIP = ['ink' /* 캔버스 · 크다 */ ];
 const SYNC_KEYS = ['ox', 'rounds', 'ansfix', 'mcard', 'gi', 'gi.year', 'markup', 'logic', 'link', 'type', 'omr',
   'gg', 'ggref',
   'sticker', 'blank', 'blanktag', 'themefix', 'postit', 'compare', 'precimp', 'editq', 'preclink', 'precqa', 'precqafile',
-  'canvas', 'canvasink', 'canvaslink', 'canvasmemo', 'canvaspin', 'clfix', 'c2unit']   /* ★ _task_jo_2cha_unit §C-5 — 2차 단원 손값(30→31 · 칸 = '<법>|<YY-회-N>' · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_claude_answers §F — Claude 답 정정(29→30 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 다음 맞추기에서 되살린다) */   /* ★ 정리캔버스(민소) — 편집 로그·필기·링크·메모·핀(22→27) */   /* ★ prec3 §C-3 — 볼트 검수 대기(21→22) */   /* ★ QA 판 add1 — 앱 검수(20→21) */   /* ★ 판 4 add4 §2 — 내가 이은 판례·2차 (19→20) */
+  'canvas', 'canvasink', 'canvaslink', 'canvasmemo', 'canvaspin', 'clfix', 'c2unit', 'canvasjari']   /* ★ _task_canvas_jari_cand §D-1 — 정리캔버스 교재 자리 손값(31→32 · 칸 = bid · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_2cha_unit §C-5 — 2차 단원 손값(30→31 · 칸 = '<법>|<YY-회-N>' · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_claude_answers §F — Claude 답 정정(29→30 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 다음 맞추기에서 되살린다) */   /* ★ 정리캔버스(민소) — 편집 로그·필기·링크·메모·핀(22→27) */   /* ★ prec3 §C-3 — 볼트 검수 대기(21→22) */   /* ★ QA 판 add1 — 앱 검수(20→21) */   /* ★ 판 4 add4 §2 — 내가 이은 판례·2차 (19→20) */
   .filter(k => SYNC_SKIP.indexOf(k) < 0).map(k => REC_PRE + k);
 const SU_KEY = 'jopangi_sync_u', SG_KEY = 'jopangi_sync_gone', SS_KEY = 'jopangi_sync_shadow', SM_KEY = 'jopangi_sync_meta';
 const EQ_KEY = REC_PRE + 'editq';
@@ -13609,7 +13624,7 @@ const viewCanvas = (() => {
   const SC = 4;   /* 시안 S(배율) — 앱의 S(상태)와 부딪혀 이름만 바꿨다 */
   const DIR = 'omr/민소/', DOC = '민소';
   const K = { log: REC_PRE + 'canvas', ink: REC_PRE + 'canvasink', link: REC_PRE + 'canvaslink',
-              memo: REC_PRE + 'canvasmemo', pin: REC_PRE + 'canvaspin', ui: 'jopangi_ui.canvas' };
+              memo: REC_PRE + 'canvasmemo', pin: REC_PRE + 'canvaspin', jari: REC_PRE + 'canvasjari', ui: 'jopangi_ui.canvas' };
   const rgb = c => c ? `rgb(${c.map(v => Math.round(v * 255)).join(',')})` : '#000';
   const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   let META = null, BASE = null, D = null, MATCH, GICHUL = {}, IMGS = {}, PW = 0, NP = 0, WH = 0;
@@ -13757,13 +13772,48 @@ const viewCanvas = (() => {
   function pathOf(p, b){ const out = []; let q = b; while (q && q.p != null){ q = p.blocks[q.p]; if (q.k === '헤딩') out.unshift(outer(btxt(p, q).split('\n')[0]).slice(0, 26)); } const tag = [...p.lines].filter(l => (l.cat === 1 || l.cat === 2) && l.y <= b.y + 0.5 && Math.abs(l.x - b.x) < 140).sort((a, c) => c.y - a.y)[0]; if (tag) out.unshift(outer(tag.r.map(r => r.t).join(''))); return out.filter((t, i) => t && out.indexOf(t) === i).join(' › '); }
   const casesOf = (p, b) => { const text = btxt(p, b); return b.k === '판례' ? [text.replace(/\n/g, '')] : [...text.replace(/\n/g, '').matchAll(/<([^<>]{6,})>/g)].map(m => m[1]); };
   const matchOf = b => (MATCH && MATCH.m && MATCH.m[key(b)]) || [];
+  /* ★ _task_canvas_jari_cand — 교재 자리: ⚙ 후보(c) · 확신(cf) · 목차 축(toc) + 손값 kv jopangi.canvasjari
+     손값 = {by:'cand',b,p,y0,y1,x0,x1,s,h,ci,t,who} · {by:'hand',b,p,r:[x0,y0,x1,y1],t,who} · {none:true,t,who} · 되돌리기 = {auto:true,t}(칸을 안 지운다)
+     손값이 ⚙ 재실행·데이터 판 바뀜을 이긴다(규약 ⑤) · bid 가 데이터에서 사라지면 칸은 남기고 머리 배지 「교재 확정 N 고아」(지우는 건 사람) */
+  let CAND = null;   /* ⚙ 가 c 를 canvas_cand.json 으로 뗀 판이면 자리 창을 열 때 읽는다(A-5) */
+  const candOf = b => { const C0 = (MATCH && MATCH.c) || CAND; return (C0 && C0[key(b)]) || []; };
+  const candN = b => (MATCH && MATCH.c) ? candOf(b).length : (CAND ? candOf(b).length : ((MATCH && MATCH.cn && MATCH.cn[key(b)]) || 0));
+  async function candLoad(){ if (!MATCH || MATCH.c || CAND || !MATCH.cand) return; try { const j = await get(DIR + MATCH.cand); CAND = (j && j.c) || {}; } catch (e) { CAND = {}; } }
+  const cfOf = b => (MATCH && MATCH.cf && MATCH.cf[key(b)]) || '';
+  const rngOf = (b, book) => { const t = MATCH && MATCH.toc && b.note ? MATCH.toc[b.note] : null; return (t && t[book]) || null; };
+  function jariAll(){ return lsRead(K.jari); }
+  function jariOk(v){ return !!(v && !v.auto && (v.none || ((v.by === 'cand' || v.by === 'hand') && v.b && v.p))); }
+  function jariOf(b){ const v = jariAll()[key(b)]; return jariOk(v) ? v : null; }
+  function jariPut(b, v){ const A = jariAll(); A[key(b)] = v; if (lsWrite(K.jari, A, '📘 정리캔버스 교재 자리')){ try { stampAll(); syncRecords(); } catch (e) {} } }
+  const jariWho = () => { try { return syncWho() || ''; } catch (e) { return ''; } };
+  const bookPr = (book, p) => { const pr = cvbPrint(CVB_DOCID[book] || book, p); return pr == null ? p : pr; };
+  function jariState(b){ const h = jariOf(b);
+    if (h) return h.none ? { st: 'none', t: '교재 없음 ✓' } : { st: 'hand', t: '교재 p.' + bookPr(h.b, h.p) + ' ✓' };
+    if (MATCH === null) return { st: 'pre', t: '교재 · 매칭 전' };
+    const mt = matchOf(b);
+    if (mt.length) return cfOf(b) === 'hi' ? { st: 'hi', t: '교재 p.' + bookPr(mt[0].book, mt[0].page) + ' · 자동' } : { st: 'lo', t: '교재 p.' + bookPr(mt[0].book, mt[0].page) + ' · 확신 낮음' };
+    const n = candN(b); if (n) return { st: 'cand', t: '교재 후보 ' + n + ' — 골라야 함' };
+    return { st: 'nil', t: '교재 –' }; }
+  /* 교재 미확정 = 손값 없는 블록 중 m 없음 ∪ cf='lo'(B-3) */
+  const jariOpen = b => { const x = jariState(b).st; return x === 'lo' || x === 'cand' || x === 'nil'; };
+  const jariBlocks = () => { const out = []; if (D) D.pages.forEach(p => p.blocks.forEach(b => { if (b.k !== '헤딩' && !b.del) out.push({ p, b }); })); return out; };
+  const jariOpenN = () => jariBlocks().filter(o => jariOpen(o.b)).length;
+  function jariBadges(){ const n = document.getElementById('cvJariN'); if (n) n.textContent = jariOpenN();
+    const w = document.getElementById('cvJariOrph'); if (!w) return; const A = jariAll(); const orph = Object.keys(A).filter(k => jariOk(A[k]) && !BK.get(k));
+    w.textContent = orph.length ? '교재 확정 ' + orph.length + ' 고아' : ''; w.style.display = orph.length ? '' : 'none';
+    w.title = orph.length ? '손값의 블록이 지금 데이터에 없다(데이터 판이 바뀜) — 칸은 남겨 두었다 · 지우는 건 사람: ' + orph.slice(0, 8).join(', ') : ''; }
+  /* 손값이 바뀐 뒤 — 칩 · 열린 자리 창 · 머리 수 · 필터 */
+  function jariAfter(b){ if (sel && sel.b === b) select(sel.el, true); const w = POPS.find(x => x._pk === 'cv|jari|' + key(b)); const o = BK.get(key(b));
+    if (w && o){ const box = w.querySelector('.cv-jari'); if (box) jariDraw(box, o.p, o.b); } jariBadges(); if (F.has('jari')) applyFilter(); }
+  /* 다음 미확정 — 같은 쪽 뒤 블록 → 다음 쪽 차례(끝이면 처음부터) */
+  function jariNext(b){ const L = jariBlocks(); const i = L.findIndex(o => o.b === b); for (let k = 1; k <= L.length; k++){ const o = L[(i + k) % L.length]; if (o.b !== b && jariOpen(o.b)) return o; } return null; }
   function select(el, noToggle){ if (sel) sel.el.classList.remove('on'); sel = null; chips.hidden = true; if (!el) return; const p = D.pages[+el.dataset.p - 1], b = p.blocks[+el.dataset.b]; if (b.full && !noToggle){ const R = stage.getBoundingClientRect(); openPop(p, b, 'full', { clientX: R.left + vx + (b.x + b.w) * SC * vz + 140, clientY: R.top + vy + b.y * SC * vz }, []); } sel = { el, p, b }; el.classList.add('on');
     const cases = casesOf(p, b);
     const it = []; if (b.th) it.push({ c: 'th', t: '# 이론', k: 'vault' }); if (b.full) it.push({ c: 'case', t: '▸ 본문 (' + b.full.src + ')', k: 'full' });
     const nl = cases.length + 1 + lkOwn(b).length, nb = lkIn(b).length + giCount(b);
     it.push({ c: '', t: '🔗 ' + nl, k: 'link' }); it.push({ c: '', t: '↩ ' + (nb || '–'), k: 'back' });
     if (cases.length) it.push({ c: 'case', t: '판례 ' + cases.length, k: 'case' });
-    const mt = matchOf(b); it.push({ c: '', t: MATCH === null ? '교재 · 매칭 전' : ('교재' + (mt.length ? ' ' + mt.length : ' –')), k: 'jari' }); it.push({ c: '', t: memoOf(b) ? '메모 ✓' : '메모 +', k: 'memo' });
+    const js = jariState(b); it.push({ c: 'jr jr-' + js.st, t: js.t, k: 'jari' });   /* ★ jari_cand B-1 — 상태 하나로 글자 */ it.push({ c: '', t: memoOf(b) ? '메모 ✓' : '메모 +', k: 'memo' });
     chips.innerHTML = ''; const idl = document.createElement('span'); idl.className = 'cv-bid'; idl.textContent = b.v && b.v.id ? '^' + b.v.id : '^ —'; idl.title = b.v && b.v.id ? '볼트 블록 id — 누르면 그 문단(볼트 창)' : '볼트 블록 id'; if (b.v && b.v.id){ idl.style.cursor = 'pointer'; idl.onclick = ev => { ev.stopPropagation(); popNote(b.v.note, b.v.id, ev, 1); }; } chips.appendChild(idl);
     it.forEach(x => { const s = document.createElement('span'); s.className = 'cv-chip ' + x.c; s.textContent = x.t; s.onclick = ev => { ev.stopPropagation(); openPop(p, b, x.k, ev, cases); }; chips.appendChild(s); });
     const ops = document.createElement('div'); ops.className = 'cv-ops'; ops.innerHTML = `<span class="cv-chip" data-op="merge" title="다음 형제 블록과 합치기">⤵ 합치기</span><span class="cv-chip" data-op="kind" title="종류 바꾸기">${b.k} ▾</span><span class="cv-chip" data-op="del" title="블록 지우기(줄 포함)">지우기</span>`; ops.querySelectorAll('.cv-chip').forEach(c => c.onclick = ev => { ev.stopPropagation(); blockOp(p, b, c.dataset.op); }); chips.appendChild(ops);
@@ -13787,7 +13837,7 @@ const viewCanvas = (() => {
   function linkBody(p, b, kind, cases){ const rows = [];
     if (kind === 'link'){
       cases.forEach(c => { const ns = caseNos(c); rows.push(`<div class="cv-lrow"><span class="cv-tg case">판례</span><div class="t">${esc(c.slice(0, 110))}<div class="m">${ns.length ? '사건번호 ' + ns.map(esc).join(' · ') : '사건번호 ▢'} · 자동(본문 &lt;…&gt;)</div></div></div>`); });
-      const mt = matchOf(b); rows.push(`<div class="cv-lrow"><span class="cv-tg">교재</span><div class="t">${MATCH === null ? '<span class="m">교재 매칭 전 — canvas_match.json 없음</span>' : mt.length ? mt.map(x => `${esc(x.book)} p.${x.page}`).join(' · ') + ' <span class="m">자동 · 교재 칩에서 열기</span>' : '<span class="m">교재 자리 없음(자동)</span>'}</div></div>`);
+      const js = jariState(b); rows.push(`<div class="cv-lrow"><span class="cv-tg">교재</span><div class="t">${MATCH === null ? '<span class="m">교재 매칭 전 — canvas_match.json 없음</span>' : esc(js.t) + ' <span class="m">· 교재 칩에서 열기</span>'}</div></div>`);
       lkOwn(b).forEach((l, i) => { let t = ''; if (l.to.k === 'block'){ const o = BK.get(l.to.key); t = o ? esc(bfirst(o.p, o.b)) + ' <span class="m">· ' + o.p.n + '쪽 · ' + o.b.k + '</span>' : esc(l.to.key); } else if (l.to.k === 'prec') t = '⚖ ' + esc(l.to.id) + ' <span class="m">· ' + esc(SHORT[l.to.law] || l.to.law || '') + '</span>'; else if (l.to.k === 'book') t = '📘 ' + esc(l.to.book) + ' p.' + l.to.page;
         rows.push(`<div class="cv-lrow" data-i="${i}"><span class="cv-tg me">내가</span><div class="t">${t}${l.why ? `<div class="why">${esc(l.why)}</div>` : ''}</div><div class="tools"><span data-s title="캔버스에 화살표로 보이기" style="${l.show ? 'opacity:1;color:#b45309' : ''}">↗</span><span data-e>✎</span><span data-x>✕</span></div></div>`); });
     } else {
@@ -13927,9 +13977,53 @@ const viewCanvas = (() => {
       d += `<path d="M${ax} ${ay}C${mx} ${ay},${mx} ${by},${bx - 1} ${by}" fill="none" stroke="#b45309" stroke-width="0.8" stroke-dasharray="2 1.5" marker-end="url(#cvah2)"/>`; if (l.why) d += `<text x="${mx}" y="${(ay + by) / 2 - 1.5}" text-anchor="middle">${esc(l.why)}</text>`; });
     conn.innerHTML = d; }
 
-  function placeChips(){ if (!chips || chips.hidden || !sel) return; chips.style.left = (vx + (sel.b.x + sel.b.w) * SC * vz + 10) + 'px'; chips.style.top = (vy + (sel.b.y * SC - 2) * vz) + 'px'; }
+  function placeChips(){ if (!chips || chips.hidden || !sel) return; let L = vx + (sel.b.x + sel.b.w) * SC * vz + 10, T = vy + (sel.b.y * SC - 2) * vz;
+    /* ★ jari_cand — 넓은 블록이면 칩 줄이 무대 밖으로 나갔다(아이패드 세로) · 무대 안으로 당긴다(블록 오른쪽을 조금 덮어도 칩에 손이 닿는 게 먼저) */
+    const sw = stage ? stage.clientWidth : 0, sh = stage ? stage.clientHeight : 0, cw = chips.offsetWidth || 0, ch = chips.offsetHeight || 0;
+    if (sw && cw && L + cw > sw - 8) L = Math.max(8, sw - cw - 8); if (sh && ch && T + ch > sh - 8) T = Math.max(8, sh - ch - 8); if (T < 8 && sh) T = 8;
+    chips.style.left = L + 'px'; chips.style.top = T + 'px'; }
 
   /* ══ 팝업 — 조판기 popShell · popSizable('canvas') (여러 개 · 끌기 · 크기 기억 = jopangi_ui.pop_canvas) ══ */
+  /* ★ _task_canvas_jari_cand B-2 — 자리 창 몸: 지금 상태 한 줄 · 후보 카드(누름 = 교재 쪽 + 자리 강조 · 「✓ 이 자리」) ·
+     「넷 다 아님 → 📍 직접 찍기」 · 「교재에 없음」 · 「다음 미확정 ▶」 · 🔗 이 블록에 잇기(링크 = 여럿 · 확정 = 하나 — 다른 일이라 그대로 둔다) */
+  const JHOW = { vote: '본문 겹침', text: '본문 겹침', title: '제목', case: '판례 번호', toc: '단원 범위', stamp: '스탬프' };
+  const jWhen = t => { try { const d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate(); } catch (e) { return ''; } };
+  const asHl = x => ({ book: x.b, page: x.p, y0: x.y0, y1: x.y1, x0: x.x0, x1: x.x1, how: x.h, score: x.s });
+  async function jariDraw(box, p, b){ if (!box) return;
+    if (MATCH === null){ box.innerHTML = `<div class="cv-card ex"><b>교재 자리 — 매칭 전</b><div class="m">canvas_match.json 이 아직 없다(_task_canvas_match)</div></div>`; return; }
+    await candLoad();
+    const h = jariOf(b), mt = matchOf(b), js = jariState(b), cs = candOf(b);
+    /* 옛 데이터(c 없음)면 m 을 카드로 */
+    const list = cs.length ? cs : mt.map(x => ({ b: x.book, p: x.page, y0: x.y0, y1: x.y1, x0: x.x0, x1: x.x1, s: x.score || 0, h: x.how, ax: 'text', g: 0, in: 0 }));
+    const head = h ? (h.none ? `✓ 교재에 없음 — ${jWhen(h.t)} ${esc(h.who || '')}` : `✓ ${esc(h.b)} p.${bookPr(h.b, h.p)}${h.by === 'hand' ? ' · 직접 찍음' : ''} — ${jWhen(h.t)} ${esc(h.who || '')}`)
+      : ({ hi: '자동 · 확신 높음', lo: '자동 · 확신 낮음 — 맞는 자리를 골라 확정', cand: '골라야 함 — 자동 자리 없음', nil: '후보 없음 — 직접 찍거나 「교재에 없음」' }[js.st] || '');
+    let html = `<div class="cv-jst s-${js.st}"><span class="t">${head}</span>${h ? '<button data-rv>자동으로 되돌리기</button>' : ''}<button data-nx title="손값 없는 블록 중 자동 자리가 없거나 확신 낮은 것을 차례로">다음 미확정 ▶</button></div>`;
+    list.forEach((x, i) => { const on = !!(h && h.by === 'cand' && h.b === x.b && h.p === x.p), pr = bookPr(x.b, x.p), rg = rngOf(b, x.b);
+      html += `<div class="cv-jc${on ? ' on' : ''}" data-ci="${i}"><div class="r1"><span class="cv-tg">${esc(x.b)}</span> <b>p.${pr}</b>${pr !== x.p ? ` <span class="m">(PDF ${x.p})</span>` : ''}`
+        + `<span class="bar"><i style="width:${Math.round(Math.max(0, Math.min(1, +x.s || 0)) * 100)}%"></i></span><span class="m">${(+x.s || 0).toFixed(2)}</span></div>`
+        + `<div class="r2"><span class="m">${JHOW[x.h] || esc(x.h || '')}${x.ax === 'toc' && x.h !== 'toc' ? ' · 단원 범위에서 찾음' : ''}</span> <span class="in ${rg ? (x.in ? 'y' : 'n') : 'u'}">${rg ? (x.in ? '구간 안' : '구간 밖') : '구간 없음'}</span>${i ? ` <span class="m">1등과 −${(+x.g || 0).toFixed(2)}</span>` : ''}</div>`
+        + `<div class="r3"><button data-ok>${on ? '✓ 확정됨' : '✓ 이 자리'}</button><span class="bl" data-bl title="이 블록에 잇기">🔗</span></div></div>`; });
+    if (!list.length) html += `<div class="cv-card"><span class="m">자동 후보가 없다 — 직접 찍거나 「교재에 없음」</span></div>`;
+    html += `<div class="cv-jfoot"><button data-pick>${list.length ? '넷 다 아님 → ' : ''}📍 직접 찍기</button><button data-none>교재에 없음</button></div>`;
+    box.innerHTML = html;
+    const put = (v, msg) => { jariPut(b, v); toast(msg); jariAfter(b); };
+    box.querySelectorAll('.cv-jc').forEach(c => { const i = +c.dataset.ci, x = list[i];
+      c.onclick = e2 => { e2.stopPropagation(); bookShow(asHl(x), e2, { p, b, cand: x, ci: i }); };   /* 교재 창 머리에도 「✓ 이 자리」(작은 화면에선 교재 창이 이 창을 덮는다) */
+      c.querySelector('[data-ok]').onclick = e2 => { e2.stopPropagation(); put({ by: 'cand', b: x.b, p: x.p, y0: x.y0, y1: x.y1, x0: x.x0, x1: x.x1, s: x.s, h: x.h, ci: i, t: Date.now(), who: jariWho() }, '교재 자리를 확정했다 — ' + x.b + ' p.' + bookPr(x.b, x.p)); };
+      c.querySelector('[data-bl]').onclick = e2 => { e2.stopPropagation(); if (links.some(l => l.from === key(b) && l.to.k === 'book' && l.to.book === x.b && l.to.page === x.p)){ toast('이미 이었다'); return; } links.push({ from: key(b), to: { k: 'book', book: x.b, page: x.p }, why: '', show: false, t: Date.now() }); linksSave(); toast('🔗 교재 자리를 이었다'); if (sel && sel.b === b) select(sel.el, true); }; });
+    const rv = box.querySelector('[data-rv]'); if (rv) rv.onclick = e2 => { e2.stopPropagation(); put({ auto: true, t: Date.now() }, '자동으로 되돌렸다'); };
+    box.querySelector('[data-none]').onclick = e2 => { e2.stopPropagation(); put({ none: true, t: Date.now(), who: jariWho() }, '교재에 없음으로 닫았다'); };
+    box.querySelector('[data-pick]').onclick = e2 => { e2.stopPropagation();
+      /* 시작 쪽 = 1등 후보 쪽 · 없으면 목차 구간 첫 쪽 · 둘 다 없으면 교재 본문 첫 쪽 */
+      let bk = '', pg = 0; if (list.length){ bk = list[0].b; pg = list[0].p; }
+      else { for (const nm of Object.keys(CVB_DOCID)){ const rg = rngOf(b, nm); if (rg){ bk = nm; pg = rg[0]; break; } } }
+      if (!bk){ bk = Object.keys(CVB_DOCID)[0]; pg = (MATCH.books && MATCH.books[bk] && MATCH.books[bk].body) || 1; }
+      bookShow({ book: bk, page: pg }, e2, { p, b, pick: true }); };
+    box.querySelector('[data-nx]').onclick = e2 => { e2.stopPropagation(); const o = jariNext(b); if (!o){ toast('교재 미확정 블록이 없다'); return; }
+      const w = POPS.find(x => x._pk === 'cv|jari|' + key(b)); if (w) closeOne(w);
+      jump(o.p, o.b); const R0 = stage.getBoundingClientRect(); openPop(o.p, o.b, 'jari', { clientX: R0.left + R0.width / 2 + 60, clientY: R0.top + 80 }, []); };
+    const pw = box.closest('.pop'); if (pw) setTimeout(() => mbWinFit(pw), 0);   /* 카드가 들어가 창이 길다 — 화면 안으로(아래 단추가 밖에 남지 않게) */
+  }
   function openPop(p, b, kind, ev, cases){ const pid = 'cv|' + kind + '|' + key(b); if (popToggle(pid)) return; const text = btxt(p, b);
     const title = { vault: '볼트 블록', case: '판례', jari: '교재 자리', memo: '메모', full: '본문', link: '🔗 링크 · 이 블록이 가리키는 것', back: '↩ 백링크 · 이 블록을 가리키는 것' }[kind] + (kind === 'link' || kind === 'back' ? '' : ' · ' + b.k);
     const body = popShell('canvas', title, pid); showPop(ev); popSizable(body, 'canvas');
@@ -13939,17 +14033,14 @@ const viewCanvas = (() => {
       : `<div class="cv-card"><span class="m">${b.note ? '노트 「' + esc(b.note) + '」 안에서 짝 없음' : '위쪽 목차노트 태그를 못 찾음'}</span></div><div class="cv-card"><div class="txt">${esc(text)}</div></div>`;
     if (kind === 'full') h += `<div class="cv-card"><div class="m">${b.full.src === '볼트' ? '볼트 · ' + esc(b.full.note) + (b.full.id ? ' #^' + esc(b.full.id) : '') : esc(b.full.note)} · 일치 ${Math.round(b.full.s * 100)}%</div><div class="txt">${esc(b.full.t).replace(/\t/g, '    ')}</div></div>`;
     if (kind === 'case') h += cases.map((c, ci) => `<div class="cv-card" data-ci="${ci}"><b>${esc(c.slice(0, 120))}</b><div class="m">사건번호 ${caseNos(c).map(esc).join(' · ') || '▢'} · 찾는 중…</div><div class="cv-cres"></div></div>`).join('');
-    if (kind === 'jari'){ const mt = matchOf(b); h += `<div class="cv-card"><b>정리OMR ${p.n}쪽</b> <span class="m">원본 자리 (${b.x.toFixed(0)}, ${(b.y - p.oy).toFixed(0)})</span></div>`;
-      h += MATCH === null ? `<div class="cv-card ex"><b>교재 자리 — 매칭 전</b><div class="m">canvas_match.json 이 아직 없다(_task_canvas_match)</div></div>`
-        : mt.length ? mt.map((x, mi) => `<div class="cv-lrow" data-mi="${mi}" style="cursor:pointer"><span class="cv-tg">${esc(x.book)}</span><div class="t"><b>p.${x.page}</b> <span class="m">y ${Math.round(x.y0)}–${Math.round(x.y1)} · ${esc(x.how || '')} · ${(x.score || 0).toFixed(2)}</span></div><div class="tools"><span data-bl title="이 블록에 잇기">🔗</span></div></div>`).join('') + `<div class="m" style="padding:4px 2px">누르면 교재 쪽 그림 + 자리 강조(교재 PDF 는 한 번 넣으면 이 기기에 재워 둔다)</div>`
-        : `<div class="cv-card"><span class="m">이 블록은 교재 자리를 못 찾았다(자동)</span></div>`; }
+    if (kind === 'jari') h += `<div class="cv-card"><b>정리OMR ${p.n}쪽</b> <span class="m">원본 자리 (${b.x.toFixed(0)}, ${(b.y - p.oy).toFixed(0)})</span></div><div class="cv-jari"></div>`;   /* ★ jari_cand B-2 — 몸은 jariDraw */
     if (kind === 'link' || kind === 'back') h += `<div class="cv-lbox">${linkBody(p, b, kind, cases)}</div>`;
     if (kind === 'memo') h += `<textarea placeholder="이 블록에 메모 (검색됨)">${esc(memoOf(b))}</textarea>`;
     host.innerHTML = h;
     const vw = host.querySelector('[data-vw]'); if (vw) vw.onclick = e2 => { e2.stopPropagation(); popNote(b.v.note, b.v.id, e2, 1); };
     if (kind === 'link' || kind === 'back') wireLink(host.querySelector('.cv-lbox'), p, b, cases, kind);
     if (kind === 'memo'){ const ta = host.querySelector('textarea'); ta.addEventListener('keydown', e2 => e2.stopPropagation()); let mt = null; ta.addEventListener('input', () => { clearTimeout(mt); mt = setTimeout(() => { memoPut(b, ta.value); if (sel && sel.b === b) select(sel.el, true); if (hq) runQ(hq); }, 300); }); ta.focus(); }
-    if (kind === 'jari'){ host.querySelectorAll('.cv-lrow[data-mi]').forEach(r => { const x = matchOf(b)[+r.dataset.mi]; r.onclick = e2 => { e2.stopPropagation(); bookShow(x, e2); }; const bl = r.querySelector('[data-bl]'); if (bl) bl.onclick = e2 => { e2.stopPropagation(); if (links.some(l => l.from === key(b) && l.to.k === 'book' && l.to.book === x.book && l.to.page === x.page)){ toast('이미 이었다'); return; } links.push({ from: key(b), to: { k: 'book', book: x.book, page: x.page }, why: '', show: false, t: Date.now() }); linksSave(); toast('🔗 교재 자리를 이었다'); if (sel && sel.b === b) select(sel.el, true); }; }); }
+    if (kind === 'jari') jariDraw(host.querySelector('.cv-jari'), p, b);
     if (kind === 'case') cases.forEach(async (c, ci) => { const box = host.querySelector(`.cv-card[data-ci="${ci}"]`); const res = box.querySelector('.cv-cres'), m = box.querySelector('.m'); const ns = caseNos(c); let found = [];
       for (const no of ns){ (await precFind(no)).forEach(x => { if (!found.some(y => y.id === x.id && y.law === x.law)) found.push(x); }); }
       if (found.length){ m.textContent = '사건번호 ' + ns.join(' · ') + ' · 판례 리스트에서 찾음'; res.innerHTML = found.map(x => caseRow(x, b)).join(''); wireCaseRows(res, p, b); return; }
@@ -13991,7 +14082,7 @@ const viewCanvas = (() => {
       if (left == null) return; const m = document.createElement('div'); m.className = 'cv-mark' + (k === hi ? ' cur' : ''); m.style.cssText = `left:${left * SC - 1}px;top:${(x.l.y - p.oy) * SC - 1}px;width:${wid * SC + 2}px;height:${x.l.h * SC + 2}px`; pg.appendChild(m); }); } }
   function applyFilter(){ world.classList.toggle('flt', F.size > 0); if (!F.size){ world.querySelectorAll('.keep').forEach(e => e.classList.remove('keep')); return; }
     const MM = memoAll(); for (const pn of mounted){ const p = D.pages[pn - 1]; const pg = built.get(pn); const lns = pg.querySelectorAll('.cv-ln'); const bls = pg.querySelectorAll('.cv-blk'); lns.forEach(e => e.classList.remove('keep')); bls.forEach(e => e.classList.remove('keep'));
-      bls.forEach(e => { const b = p.blocks[+e.dataset.b]; let ok = false; if (F.has('학판검') && b.k === '학판검') ok = true; if (F.has('판례') && b.k === '판례') ok = true; if (F.has('이론') && b.th) ok = true; if (F.has('vault') && b.v) ok = true; if (F.has('memo') && MM[key(b)]) ok = true; if (ok){ e.classList.add('keep'); b.ls.forEach(i => lns[i] && lns[i].classList.add('keep')); } }); } }
+      bls.forEach(e => { const b = p.blocks[+e.dataset.b]; let ok = false; if (F.has('학판검') && b.k === '학판검') ok = true; if (F.has('판례') && b.k === '판례') ok = true; if (F.has('이론') && b.th) ok = true; if (F.has('vault') && b.v) ok = true; if (F.has('memo') && MM[key(b)]) ok = true; if (F.has('jari') && jariOpen(b)) ok = true; if (ok){ e.classList.add('keep'); b.ls.forEach(i => lns[i] && lns[i].classList.add('keep')); } }); } }
 
   /* ══ 교재 보기 — 민법앱과 같은 길(2026-09-20 · _task_canvas_app_add1) ══
      비공개 저장소 `zzikkaplan/minbeoppdf` 에서 **자동으로 받는다**. 사용자가 PDF 를 넣는 화면은 없다.
@@ -14076,13 +14167,28 @@ const viewCanvas = (() => {
   /* ★ 0921 §F — 하네스가 문구를 잴 수 있게 내놓는 창구 하나(이 블록은 IIFE 안이라 밖에서 안 보인다).
      읽기 전용 · 앱 동작에 쓰이지 않는다. */
   try { window.__jocvb = { why: cvbWhy, doc: cvbDoc, C: CVB }; } catch (e) {}
+  try { window.__jocvj = { state: k => { const o = BK.get(k); return o ? jariState(o.b) : null; }, cand: k => { const o = BK.get(k); return o ? candOf(o.b) : null; }, openN: () => jariOpenN(), next: k => { const o = BK.get(k); const n = o ? jariNext(o.b) : null; return n ? key(n.b) : null; }, go: k => { const o = BK.get(k); if (!o || !stage) return false; const r = stage.getBoundingClientRect(); vz = Math.max(vz, 1); vx = r.width / 2 - (o.b.x + o.b.w / 2) * SC * vz; vy = r.height / 2 - (o.b.y + o.b.h / 2) * SC * vz; clampPan(); apply(); return true; } }; } catch (e) {}   /* ★ jari_cand — 읽기(상태·후보·수·다음) + 하네스용 이동 go(jump 의 화면 옮기기만 · 고르기는 하네스가 진짜로 누른다) · 앱 동작에 안 쓰인다 */
   /* canvas_match 한 줄({book,page,y0,y1[,x0,x1]} · pt · 위 기준) → 민법앱 근거 꼴 {doc,p,r:[x0,y0,x1,y1]} (0~2000) */
   function toGeunge(m, pw, ph){ const x0 = m.x0 != null ? m.x0 : 0, x1 = m.x1 != null ? m.x1 : pw; return { doc: m.book, p: m.page, r: [x0 / pw, m.y0 / ph, x1 / pw, m.y1 / ph].map(v => Math.round(Math.max(0, Math.min(1, v)) * 2000)) }; }
   /* 교재 쪽 팝업 — 쪽 그림 + 자리 강조 + ◀▶·쪽 입력(민법앱 mbBookPage 와 같은 얼개) */
-  async function bookShow(m, ev){ const docid = CVB_DOCID[m.book] || m.book; const pid = 'cv|book|' + docid; if (popToggle(pid)) return;
+  /* ★ _task_canvas_jari_cand §C — 교재 창은 **교재마다 하나**: 이미 떠 있으면 그 창을 새 자리로 돌린다(같은 자리를 또 누르면 닫힘 = popToggle 뜻 그대로 ·
+     9/22 민법 좌표뷰어 겹침 사고). 블록의 자리 창에서 열면(ctx = {p, b}) 머리에 「📍 찍기」 — 쪽 위에 끌어 초록 상자 →
+     「이 자리 저장」 = 손값 {by:'hand', b, p, r:[x0,y0,x1,y1](쪽 크기로 0~1 · 네 자리)}. 두 손가락은 끌기가 아니다(쪽 스크롤) ·
+     뗄 때 releasePointerCapture 를 명시 · 쪽을 넘겨도 모드 유지 · 상자는 하나. 판례·기출 칩에서 연 창(ctx 없음)에는 「📍 찍기」가 없다. */
+  async function bookShow(m, ev, ctx){ const docid = CVB_DOCID[m.book] || m.book; const pid = 'cv|book|' + docid;
+    const old = POPS.find(x => x._pk === pid);
+    if (old){ if (old._cvb && old._cvb.retarget(m, ctx)) return; closeOne(old); return; }
     const body = popShell('canvas', '📘 ' + (CVB_NAME[docid] || m.book), pid); showPop(ev); popSizable(body, 'canvas');
+    const pw0 = body.parentNode;
     const host = el('div', 'cv-book'); body.appendChild(host);
-    const st = { p: m.page, hl: m.y0 != null ? m : null, busy: 0 };
+    const st = { p: m.page, hl: m.y0 != null ? m : null, busy: 0, ctx: ctx || null, pick: !!(ctx && ctx.pick), box: null, book: m.book };
+    let paint = () => {}, draw = async () => {}, ready = false;
+    pw0._cvb = { st, retarget(m2, ctx2){
+      const sameHl = m2.y0 != null ? !!(st.hl && st.hl.page === m2.page && st.hl.y0 === m2.y0) : !st.hl;
+      const sameCtx = ((ctx2 && ctx2.b) || null) === ((st.ctx && st.ctx.b) || null);
+      if (m2.page === st.p && sameHl && sameCtx && !(ctx2 && ctx2.pick && !st.pick)) return false;   /* 같은 자리를 또 누름 = 닫기 */
+      st.p = m2.page; st.hl = m2.y0 != null ? m2 : null; if (ctx2){ if (!sameCtx) st.box = null; st.ctx = ctx2; if (ctx2.pick) st.pick = true; }
+      try { pw0.style.zIndex = ++POPZ; } catch (e) {} if (ready){ paint(); draw(); } return true; } };
     host.innerHTML = '<div class="m">교재를 받는 중… (처음 한 번은 오래 걸린다)</div>';
     let doc = null;
     try { doc = await cvbDoc(docid); }
@@ -14090,7 +14196,27 @@ const viewCanvas = (() => {
     catch (e){ const why = String(e && e.message || e);
       host.innerHTML = '<div class="cv-card"><b>교재를 받지 못했다</b><div class="m">' + esc(why) + '</div></div>'; return; }
     const head = el('div', 'cv-booknav'); const view = el('div', 'cv-bookview'); host.innerHTML = ''; host.appendChild(head); host.appendChild(view);
-    const draw = async () => { const tk = ++st.busy;
+    const scroller = () => { let q = view; while (q && q !== document.body){ const cs = getComputedStyle(q); if (/(auto|scroll)/.test(cs.overflowY) && q.scrollHeight > q.clientHeight) return q; q = q.parentElement; } return body; };
+    const drawBox = (wrap, r) => { const o = wrap.querySelector('.cv-pickbox'); if (o) o.remove(); r = r || (st.box && st.box.p === st.p ? st.box.r : null); if (!r) return;
+      const d = el('div', 'cv-pickbox'); d.style.cssText = `left:${r[0] * 100}%;top:${r[1] * 100}%;width:${(r[2] - r[0]) * 100}%;height:${(r[3] - r[1]) * 100}%`; wrap.appendChild(d); };
+    const bindPick = (ov, wrap) => { const ptrs = new Map(); let start = null, tmp = null;
+      const frac = e => { const r = wrap.getBoundingClientRect(); return [Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))]; };
+      ov.addEventListener('pointerdown', e => { e.stopPropagation(); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (ptrs.size >= 2){ start = null; tmp = null; drawBox(wrap); return; }   /* 두 손가락 = 끌기 아님(시작 버림) */
+        start = frac(e); try { ov.setPointerCapture(e.pointerId); } catch (_) {} e.preventDefault(); });
+      ov.addEventListener('pointermove', e => { const prev = ptrs.get(e.pointerId); if (!prev) return; ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (ptrs.size >= 2){ const sc = scroller(); sc.scrollTop -= (e.clientY - prev.y) / ptrs.size; sc.scrollLeft -= (e.clientX - prev.x) / ptrs.size; start = null; tmp = null; return; }   /* 두 손가락 = 쪽 스크롤 */
+        if (!start) return; const f = frac(e); tmp = [Math.min(start[0], f[0]), Math.min(start[1], f[1]), Math.max(start[0], f[0]), Math.max(start[1], f[1])]; drawBox(wrap, tmp); });
+      const end = e => { try { ov.releasePointerCapture(e.pointerId); } catch (_) {}   /* ★ 9/22 민법 — 뗄 때 저절로 풀리는 것에만 기대지 않는다 */
+        ptrs.delete(e.pointerId);
+        if (e.type === 'pointerup' && start && tmp && tmp[2] - tmp[0] >= 0.008 && tmp[3] - tmp[1] >= 0.008) st.box = { p: st.p, r: tmp.map(v => Math.round(v * 1e4) / 1e4) };   /* 너무 작은 상자(0.8% 미만)는 버린다 */
+        start = null; tmp = null; drawBox(wrap); paint(); };
+      ov.addEventListener('pointerup', end); ov.addEventListener('pointercancel', end); };
+    const setPick = on => { st.pick = on; const wrap = view.querySelector('.cv-bookpg'); if (wrap){ const o = wrap.querySelector('.cv-pickov'); if (o) o.remove(); if (on){ const ov = el('div', 'cv-pickov'); wrap.appendChild(ov); bindPick(ov, wrap); } } paint(); };
+    const save = () => { if (!st.box || !st.ctx) return; const b = st.ctx.b;
+      jariPut(b, { by: 'hand', b: st.book, p: st.box.p, r: st.box.r, t: Date.now(), who: jariWho() });
+      closeOne(pw0); toast('교재 자리를 확정했다 — ' + st.book + ' p.' + bookPr(st.book, st.box.p)); jariAfter(b); };
+    draw = async () => { const tk = ++st.busy;
       const pg = await doc.getPage(st.p); if (tk !== st.busy) return;
       const pw = pg.view[2] - pg.view[0], ph = pg.view[3] - pg.view[1];
       const W = Math.max(320, view.clientWidth || host.clientWidth || 420);
@@ -14099,23 +14225,32 @@ const viewCanvas = (() => {
       const wrap = el('div', 'cv-bookpg'); wrap.appendChild(cv);
       if (st.hl && st.hl.page === st.p){ const g = toGeunge(st.hl, pw, ph); const hl = el('div', 'cv-bookhl');
         hl.style.cssText = `left:${g.r[0] / 20}%;top:${g.r[1] / 20}%;width:${(g.r[2] - g.r[0]) / 20}%;height:${(g.r[3] - g.r[1]) / 20}%`; wrap.appendChild(hl); }
-      view.innerHTML = ''; view.appendChild(wrap);
+      if (st.pick && st.ctx){ const ov = el('div', 'cv-pickov'); wrap.appendChild(ov); bindPick(ov, wrap); }
+      drawBox(wrap);
+      view.innerHTML = ''; view.appendChild(wrap); mbWinFit(pw0);   /* 쪽 그림 자리가 잡히면 곧바로 화면 안으로(렌더를 기다리지 않는다 — 큰 쪽은 오래 걸린다) */
       await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
       const box = wrap.querySelector('.cv-bookhl'); if (box) setTimeout(() => { try { box.scrollIntoView({ block: 'center' }); } catch (e) {} }, 60); };
-    const paint = () => { const pr = cvbPrint(docid, st.p); const n = doc.numPages;
+    paint = () => { const pr = cvbPrint(docid, st.p); const n = doc.numPages;
       head.innerHTML = `<button data-pv ${st.p <= 1 ? 'disabled' : ''}>◀</button>`
         + `<span><b>${pr == null ? st.p : pr}</b>쪽 <span class="m">· PDF <input id="cvBookP" type="text" inputmode="numeric" value="${st.p}"> / ${n}</span></span>`
         + `<button data-nx ${st.p >= n ? 'disabled' : ''}>▶</button>`
+        + (st.ctx && st.ctx.cand && !st.pick && st.ctx.cand.p === st.p ? `<button data-ok class="sv" title="이 후보 자리로 확정(자리 창의 「✓ 이 자리」와 같다)">✓ 이 자리</button>` : '')
+        + (st.ctx ? `<button data-pk class="pk${st.pick ? ' on' : ''}" title="쪽 위에 끌어 이 블록의 교재 자리를 직접 찍는다(두 손가락 = 스크롤)">📍 찍기</button>` + (st.box ? `<button data-sv class="sv">이 자리 저장 · p.${bookPr(st.book, st.box.p)}</button>` : '') : '')
         + `<span class="m">${esc(CVB_NAME[docid] || docid)} · ${(CVB.stat[docid] || {}).from === 'cache' ? '이 기기에 재워 둔 것' : '저장소에서 받음'}`
         + (st.hl ? ` · 자리 y ${Math.round(st.hl.y0)}–${Math.round(st.hl.y1)}pt${st.hl.how ? ' · ' + esc(st.hl.how) : ''}${st.hl.score ? ' ' + (+st.hl.score).toFixed(2) : ''}` : '') + '</span>';
       const go = d => { st.p = Math.max(1, Math.min(n, st.p + d)); paint(); draw(); };
       head.querySelector('[data-pv]').onclick = e2 => { e2.stopPropagation(); go(-1); };
       head.querySelector('[data-nx]').onclick = e2 => { e2.stopPropagation(); go(1); };
+      const pk = head.querySelector('[data-pk]'); if (pk) pk.onclick = e2 => { e2.stopPropagation(); setPick(!st.pick); };
+      const sv = head.querySelector('[data-sv]'); if (sv) sv.onclick = e2 => { e2.stopPropagation(); save(); };
+      const okb = head.querySelector('[data-ok]'); if (okb) okb.onclick = e2 => { e2.stopPropagation(); const x = st.ctx.cand, b = st.ctx.b;
+        jariPut(b, { by: 'cand', b: x.b, p: x.p, y0: x.y0, y1: x.y1, x0: x.x0, x1: x.x1, s: x.s, h: x.h, ci: st.ctx.ci, t: Date.now(), who: jariWho() });
+        closeOne(pw0); toast('교재 자리를 확정했다 — ' + x.b + ' p.' + bookPr(x.b, x.p)); jariAfter(b); };
       const inp = head.querySelector('#cvBookP');
       inp.addEventListener('pointerdown', e2 => e2.stopPropagation());
       inp.addEventListener('keydown', e2 => { e2.stopPropagation(); if (e2.key === 'Enter'){ st.p = Math.max(1, Math.min(n, +inp.value | 0)); paint(); draw(); } });
       inp.addEventListener('change', () => { st.p = Math.max(1, Math.min(n, +inp.value | 0)); paint(); draw(); }); };
-    paint(); await draw(); }
+    ready = true; paint(); await draw(); mbWinFit(pw0); }
 
   /* ── 머리 표시(수정 수 · 판 바뀜 · 핀 수) ── */
   /* ★ add3(2026-09-20) — 데이터 판이 바뀌면 옛 편집 기록은 **줄 번호가 밀려 엉뚱한 줄**에 붙을 수 있다.
@@ -14123,7 +14258,7 @@ const viewCanvas = (() => {
   function logWipe(){ if (!confirm('데이터 판이 바뀌었다(' + (LOG.hash || '?') + ' → ' + META.hash + ').\n옛 편집 기록 ' + LOG.ops.length + '건은 줄 번호가 밀려 엉뚱한 줄에 붙을 수 있다.\n비울까?')) return;
     const A2 = lsRead(K.log); delete A2[DOC]; lsWrite(K.log, A2, '📝 정리캔버스 편집');
     LOG = { hash: META.hash, ops: [] }; REPLAY = { ok: 0, bad: 0, stale: false }; D = null; toast('편집 기록을 비웠다'); render(); }
-  function paintBadges(){ const e = document.getElementById('cvEditN'); if (e) e.textContent = '✎ 수정 ' + LOG.ops.length; const w = document.getElementById('cvStale'); if (w){ const msg = []; if (REPLAY.stale) msg.push('판이 바뀜 · 편집 ' + REPLAY.ok + '건 재생'); if (REPLAY.bad) msg.push('재생 못 한 편집 ' + REPLAY.bad); w.textContent = msg.join(' · ') + (msg.length ? ' · 비우기' : ''); w.style.display = msg.length ? '' : 'none'; w.style.cursor = msg.length ? 'pointer' : ''; w.title = msg.length ? '누르면 옛 편집 기록을 비운다(묻는다)' : ''; w.onclick = msg.length ? (ev => { ev.stopPropagation(); logWipe(); }) : null; } const np = document.getElementById('cvNpin'); if (np) np.textContent = Object.keys(pinAll()).length; }
+  function paintBadges(){ jariBadges(); const e = document.getElementById('cvEditN'); if (e) e.textContent = '✎ 수정 ' + LOG.ops.length; const w = document.getElementById('cvStale'); if (w){ const msg = []; if (REPLAY.stale) msg.push('판이 바뀜 · 편집 ' + REPLAY.ok + '건 재생'); if (REPLAY.bad) msg.push('재생 못 한 편집 ' + REPLAY.bad); w.textContent = msg.join(' · ') + (msg.length ? ' · 비우기' : ''); w.style.display = msg.length ? '' : 'none'; w.style.cursor = msg.length ? 'pointer' : ''; w.title = msg.length ? '누르면 옛 편집 기록을 비운다(묻는다)' : ''; w.onclick = msg.length ? (ev => { ev.stopPropagation(); logWipe(); }) : null; } const np = document.getElementById('cvNpin'); if (np) np.textContent = Object.keys(pinAll()).length; }
 
   /* ── 문서 전역(한 번만) — Ctrl+Z · Esc · 창 크기 · 글꼴 ── */
   let BOUND = false;
@@ -14148,8 +14283,8 @@ const viewCanvas = (() => {
     const bar = el('div', 'cv-subbar');
     bar.innerHTML = `<span>쪽 <input id="cvPg" type="text" inputmode="numeric" value="1"> / ${NP}</span>`
       + `<span style="display:flex;align-items:center;gap:3px"><input id="cvQ" placeholder="🔍 정리 본문·메모" autocomplete="off"><b id="cvQn"></b></span>`
-      + `<span id="cvFilters" style="display:flex;gap:6px"><span class="cv-scope f" data-f="학판검">학판검 <b>${c.학판검 || 0}</b></span><span class="cv-scope f" data-f="판례">판례 <b>${c.판례 || 0}</b></span><span class="cv-scope f" data-f="이론">이론 <b>${c.이론 || 0}</b></span><span class="cv-scope f" data-f="vault">볼트 짝 <b>${c.볼트짝 || 0}</b></span><span class="cv-scope f" data-f="memo">메모</span></span>`
-      + `<span class="cv-scope" id="cvPinBtn" title="고른 블록 고정">★ 핀 <b id="cvNpin">0</b></span><span class="cv-badge" id="cvEditN" title="편집 로그(jopangi.canvas) 건수">✎ 수정 0</span><span class="cv-badge warn" id="cvStale" style="display:none"></span>`
+      + `<span id="cvFilters" style="display:flex;gap:6px"><span class="cv-scope f" data-f="학판검">학판검 <b>${c.학판검 || 0}</b></span><span class="cv-scope f" data-f="판례">판례 <b>${c.판례 || 0}</b></span><span class="cv-scope f" data-f="이론">이론 <b>${c.이론 || 0}</b></span><span class="cv-scope f" data-f="vault">볼트 짝 <b>${c.볼트짝 || 0}</b></span><span class="cv-scope f" data-f="memo">메모</span><span class="cv-scope f" data-f="jari" title="손값 없는 블록 중 자동 자리가 없거나 확신 낮은 것 — 켜면 그 블록만 진하게">교재 미확정 <b id="cvJariN">${jariOpenN()}</b></span></span>`
+      + `<span class="cv-scope" id="cvPinBtn" title="고른 블록 고정">★ 핀 <b id="cvNpin">0</b></span><span class="cv-badge" id="cvEditN" title="편집 로그(jopangi.canvas) 건수">✎ 수정 0</span><span class="cv-badge warn" id="cvStale" style="display:none"></span><span class="cv-badge warn" id="cvJariOrph" style="display:none"></span>`
       + `<span id="cvInkbar" class="${S.ink ? 'on' : ''}"><span class="cv-scope t" data-t="pen" title="펜 · 끝에서 잠깐 멈추면 직선">✎ 펜</span><span class="cv-scope t" data-t="line" title="직선">╱ 직선</span><span class="cv-scope t" data-t="arrow" title="화살표">↗ 화살표</span><span class="cv-scope t" data-t="erase" title="획 지우개 (원본 획도)">◌ 지우개</span><span class="sw" data-c="#111" style="background:#111"></span><span class="sw" data-c="#D93B3B" style="background:#D93B3B"></span><span class="sw" data-c="#2F6FD0" style="background:#2F6FD0"></span><span class="sw" data-c="#F5C400" style="background:#F5C400;opacity:.7" title="형광"></span><span class="cv-scope w" data-w="0.7" title="가는 선">가늘</span><span class="cv-scope w" data-w="1.2">보통</span><span class="cv-scope" id="cvInkUndo" title="마지막 획 되돌리기">↶</span></span>`
       + `<span class="cv-hint">끌기=이동 · 휠/핀치=확대 · 블록 클릭=칩 · 줄 두 번 탭(또는 꾹)=편집${S.ink ? ' · 필기 켜짐(✍) — 펜슬·마우스=그리기, 손가락=이동' : ''}</span>`;
     main.appendChild(bar);
@@ -14172,6 +14307,7 @@ const viewCanvas = (() => {
     const u = uiRead(); if (!VIEWED){ F.clear(); (u.F || []).forEach(f => F.add(f)); }   /* 두 번째부터는 지금 화면을 지킨다 — 필기 단추·탭 왕복이 render() 를 부르는 앱이라, 시안처럼 자리·배율이 그대로여야 한다 */
     bar.querySelectorAll('.cv-scope.f').forEach(cc => { cc.classList.toggle('on', F.has(cc.dataset.f)); cc.onclick = () => { const f = cc.dataset.f; if (F.has(f)) F.delete(f); else F.add(f); cc.classList.toggle('on', F.has(f)); applyFilter(); uiSaveCv(); }; });
     bindStage(); bindDocOnce(); paintBadges();
+    viewCanvas.metaWarm().then(() => { if (sel && sel.el && sel.el.isConnected) select(sel.el, true); }).catch(() => {});
     if (VIEWED && vz > 0){ clampPan(); apply(); } else if (u.vz > 0){ vz = u.vz; vx = u.vx; vy = u.vy; clampPan(); apply(); } else fit();
     VIEWED = true;
     if (hq){ qI.value = hq; runQ(hq); }
@@ -14181,6 +14317,7 @@ const viewCanvas = (() => {
     set(v){ if (v.vz != null) vz = v.vz; if (v.vy != null) vy = v.vy; if (v.vx != null) vx = v.vx; clampPan(); apply(); }, apply, fit, minZ, gotoPage, jump, select, startEdit, commitEdit, undo, runQ, goHit, occOf, blockOp, openPop, toGeunge, drawConn, key, BK, applyOp, CVB, cvbMeta, cvbWords, cvbDoc, cvbPrint });
   /* 판례탭 책 칩도 같은 팝업으로 연다 — {book:'핵심'|'윤곽', page:PDF쪽} */
   viewCanvas.book = (m, ev) => bookShow(m, ev);
+  viewCanvas.metaWarm = async () => { for (const d of Object.values(CVB_DOCID)){ if (CVB.meta[d]) continue; try { const x = await cvbGet('bookmeta:' + d); if (x && x.docid) CVB.meta[d] = x; } catch (e) {} } };   /* ★ jari_cand B-1 — 네트워크 없이 IDB 만 */
   return viewCanvas;
 })();
 /* ══ 정리캔버스(민소) 끝 ══ */
