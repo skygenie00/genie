@@ -42,12 +42,19 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 
 /* ── 본문 3단 ── */
 .body2{display:flex;flex:1;min-height:0}
-.rail{width:40px;flex-shrink:0;background:#eceae3;border-right:1px solid var(--line);
-  display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:4px;font-size:11px}
-.rail .rb{writing-mode:vertical-rl;padding:9px 4px;border-radius:7px;color:#777;white-space:nowrap}
-.rail .rb b{font-size:10px}
-.rail .rb.on{background:var(--exc);color:#fff}
-.rail .rb[disabled]{opacity:.45;cursor:not-allowed}
+/* ★ hrail(9/22 · _task_jo_hrail_list §A) — 갈래 다섯 칸은 머리 첫 줄 「민소」 칩 오른쪽 **가로 탭**이다(세로 레일 .rail 은 걷었다).
+   칸·수·켜짐은 drawRail·railCounts 그대로 · 구분선 = #hrail 왼쪽 테두리(1px #cfcabd · 높이 26 · 좌우 10). */
+#hrail{display:flex;align-items:center;gap:4px;flex:none;margin-left:10px;padding-left:10px;border-left:1px solid #cfcabd}
+#hrail .rb{display:inline-block;height:26px;line-height:26px;padding:0 10px;border-radius:7px;
+  font-size:12.5px;color:#4b5563;white-space:nowrap}
+#hrail .rb b{font-size:11px;opacity:.75;margin-left:5px}
+#hrail .rb.on{background:var(--exc);color:#fff}
+#hrail .rb[disabled]{opacity:.45;cursor:not-allowed}
+#hbadges{display:flex;align-items:center;gap:8px;flex:none;margin-left:auto}
+/* 둘째 줄 = 🔍 검색줄 전폭(머리와 같은 바탕) · 첫 줄이 넘치면 배지 묶음이 이 줄 오른쪽으로 내려온다(hdrFit) */
+.hsearch{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:7px 12px;background:var(--panel);
+  border-bottom:1px solid #d9d5cb;flex-shrink:0}
+.hsearch .search{flex:1;max-width:none}
 .handle{width:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
   border-right:1px solid var(--line);background:#f3f1ec;color:#a5a19a;cursor:pointer;font-size:12px}
 .tree{width:var(--trw,212px);flex-shrink:0;border-right:1px solid var(--line);overflow:auto;
@@ -279,6 +286,31 @@ select.sel[disabled]{color:#b5b1a8;background:#f4f2ec}
 .chip.c-score{background:#dcfce7;color:#166534;font-size:10.5px;padding:0 7px;cursor:pointer;margin:0;white-space:nowrap}.chip.c-score.low{background:#fee2e2;color:#991b1b}.chip.c-score.none{background:#f1f3f5;color:#9ca3af}
 .chip.c-pdf{background:#efece5;color:#555;font-size:10.5px;padding:0 7px;margin:0;text-decoration:none;white-space:nowrap}.chip.c-pdf:hover{color:var(--exc)}
 .prow.dim{opacity:.4}.prow .sc{font-size:11px;color:#555}.prow .sc b{font-weight:700}.prow .sc .w{color:#a33333}.prow .sc .n{color:#9ca3af}
+/* ★ hrail(9/22) §C-1·C-2 — 보드 차례 단추 「회차별 │ 단원별」(자과 .ordseg 꼴 그대로 · 켜짐 = --exc) · 「단원별」은 이 판에서 비활성
+   ⚠ 조판기에는 --card 가 없다 — 없으면 흰색(#fff)이 서게 둘째 값을 준다 */
+.ordseg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;vertical-align:middle;background:var(--card,#fff);margin-left:2px}
+.ordseg button{padding:3px 9px;border:0;border-right:1px solid var(--line);font-size:12px;white-space:nowrap;line-height:1.2}
+.ordseg button:last-child{border-right:0}
+.ordseg button.on{background:var(--exc);color:#fff;font-weight:700}
+.ordseg button[disabled]{opacity:.45;cursor:not-allowed}
+/* ★ hrail(9/22) §C-3·C-4 — 2차 기출·GS 보드 = 회차 목록 한 열(자과 지학 문제 카드 꼴 · 조판기 값) */
+.c2list{padding:10px 0 0}
+.c2lh{display:flex;align-items:center;gap:8px;margin:0 0 4px}
+.c2lh .ysort{padding:2px 8px;border:1px solid var(--line);background:var(--panel)}
+.c2lh .ysel{width:auto}
+.c2list .cell.c2row{display:grid;grid-template-columns:78px 1fr auto;gap:10px;align-items:start;padding:9px 12px;margin:6px 0;
+  border:1px solid var(--line);border-radius:10px;background:var(--card,#fff);max-height:none;overflow:visible;cursor:pointer}
+.c2list .cell.c2row.hot{border-color:#f0b27a}
+.c2list .cell.c2row:hover{border-color:var(--exc)}
+.c2list .cell.c2row.sel{border-color:#d4a72c;box-shadow:0 0 0 2px #fff7d6}
+.c2row .c2code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;color:#0f766e;white-space:nowrap}
+.c2row .c2mid{min-width:0}
+.c2row .c2t1{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;color:var(--sub)}
+.c2row .c2t1>*{max-width:100%}
+.c2row .c2t1 .chip{margin:0;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}   /* 좁은 폭(아이패드 세로)에서 점수 칩이 줄 밖으로 안 나가게 — 칸 안에서 띄어쓰기로 줄바꿈 */
+.c2row .chip.c2k{background:#e6f4ec;color:#166534}
+.c2row .chip.c2n{background:#eef2ff;color:#3730a3}
+.c2row .c2t2{margin-top:3px;font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tree .legend,.plist .legend{font-size:10.5px;color:#9a958b;padding:6px 13px 10px}
 .gtabs{display:flex;gap:4px;margin:4px 0 8px}.gtabs .tool.on{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
 .gsum{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin:4px 0 6px;align-items:center}.gsum b{font-size:15px}
@@ -975,6 +1007,11 @@ body.inkon .main,body.inkon .pop{user-select:none}
      #f9fafb → var(--panel) · #fff → var(--paper) · #dc2626 → var(--rule) */
 .mbh{background:var(--paper);border:1px solid var(--line);border-radius:16px;overflow:hidden;
      box-shadow:0 10px 15px -3px rgba(0,0,0,.08),0 4px 6px -4px rgba(0,0,0,.08);margin:0 0 14px}
+/* ★ hrail(9/22) §B — 1차객 세 화면(첫 화면·문제풀이·기출)은 서랍 손잡이 바로 옆부터 꽉 찬다.
+   .main 위·좌우 여백 0(아래 90 그대로) · 첫 화면 카드 .mbh 는 모서리·옆·위 테두리·그림자 0.
+   1차객 한정 클래스(.mbflush)라 조문·판례·2차·정리 탭의 .main 값은 무변이다(⚠ .jimun 은 옛 카드 클래스라 안 쓴다). */
+.main.mbflush{padding:0 0 90px}
+.main.mbflush .mbh{border-radius:0;border-left:0;border-right:0;border-top:0;box-shadow:none;margin:0 0 10px}
 .mbh .mbhd{background:var(--paper);padding:12px 16px;border-bottom:2px solid var(--exc);
      display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .mbh .mbhd h1{font-size:18px;font-weight:800;color:var(--ink);line-height:28px;margin:0}
@@ -1054,6 +1091,7 @@ body.inkon .main,body.inkon .pop{user-select:none}
 /* ══════════ _task_jo_gaek_mb §A-2 — 목차 서랍(민법OX `#tree` 꼴) ══════════
    px 는 민법 실물 계산 스타일 실측(2026-09-21 · jo/_px_mb2.py) · 색만 조판기 색.
    ⚠ 자리는 **세로 탭(.rail) 의 오른쪽 형제**다 — 민법은 `position:fixed;left:0` 이지만
+     ★ hrail(9/22) — 세로 탭을 걷어 서랍은 이제 .body2 맨 왼쪽(x 0)이다(형제 자리 그대로).
      조판기 껍데기는 `.body2` 가 flex 라, fixed 로 두면 세로 탭을 덮거나 그 너비를 박아야 한다.
      형제로 두면 덮지 않고 px 는 그대로다(다르게 한 것 · 보고에 적는다).
    ⚠ `--trw` 는 조판기가 이미 쓴다(옛 트리) — 서랍은 `--jtrw` 를 쓴다. */
@@ -1515,16 +1553,20 @@ mark.mkc.u{background:transparent;border-bottom:2px solid var(--exc)}
   <header class="topbar">
     <span class="logo">⚖ 조판기</span>
     <span id="laws" style="display:flex;gap:4px"></span>
-    <div class="search" id="ksearch">🔍 <span>조문 · 판례 · 지문 · 메모 (Ctrl K)</span></div>
-    <span class="badge" id="lblToggle" style="cursor:pointer">🏷 라벨: 펴짐 ▾</span>
-    <span class="badge" id="inkToggle" style="cursor:pointer">✍ 필기</span>
-    <span class="badge" id="recBtn" style="cursor:pointer">⤓ 기록</span>
-    <span class="badge" id="eqBtn" style="cursor:pointer" title="✎ 수정 큐 — 볼트에서 고칠 자리를 적어 둔 것">✎ 수정 0</span>
-    <span class="badge" id="syncChip" style="cursor:pointer" title="기록 동기화 — 누르면 지금 · 길게(우클릭) = 강제 올리기/받기">– 토큰 없음</span>
-    <span class="badge" id="whoChip" style="cursor:pointer" title="메모에 붙는 사람(tt.cfg person) — 클릭 = 바꾸기">👤 ?</span>
+    <nav id="hrail"></nav>
+    <span id="hbadges">
+      <span class="badge" id="lblToggle" style="cursor:pointer">🏷 라벨: 펴짐 ▾</span>
+      <span class="badge" id="inkToggle" style="cursor:pointer">✍ 필기</span>
+      <span class="badge" id="recBtn" style="cursor:pointer">⤓ 기록</span>
+      <span class="badge" id="eqBtn" style="cursor:pointer" title="✎ 수정 큐 — 볼트에서 고칠 자리를 적어 둔 것">✎ 수정 0</span>
+      <span class="badge" id="syncChip" style="cursor:pointer" title="기록 동기화 — 누르면 지금 · 길게(우클릭) = 강제 올리기/받기">– 토큰 없음</span>
+      <span class="badge" id="whoChip" style="cursor:pointer" title="메모에 붙는 사람(tt.cfg person) — 클릭 = 바꾸기">👤 ?</span>
+    </span>
   </header>
+  <div class="hsearch" id="hsrow">
+    <div class="search" id="ksearch">🔍 <span>조문 · 판례 · 지문 · 메모 (Ctrl K)</span></div>
+  </div>
   <div class="body2">
-    <nav class="rail" id="rail"></nav>
     <div id="slot" style="display:flex;flex:1;min-width:0"></div>
   </div>
 </div>
@@ -1557,6 +1599,8 @@ const PF=n=>'prec_'+PLAW()+'_'+n+'.json', NF=()=>'note_'+PLAW()+'.json', JMF=()=
 const PREC_RAWDIR={특허:'특허판례원본',상표:'상표판례원본',디보:'디자인판례원본',민소:'민소판례원본'};
 // 갈래 이동은 **세로 레일 하나만** 한다. 상단 갈래 탭은 없앴다 —
 // 리담 실물이 그렇고(lidamuistructure.md §25) 레일과 3개가 겹쳤다. 8/23 사용자 결정.
+// ★ 8/23 → 9/22 가로 탭으로 — 사용자 9/22 19:18 확정(_task_jo_hrail_list §0). 세로 레일은 걷고 같은 칸·수를
+//   머리 첫 줄 「민소」 칩 오른쪽 #hrail 에 그린다(drawRail·railCounts 그대로 · 그리는 자리만 바뀜).
 const RAILS=[['jo','조문'],['prec','판례'],['jimun','1차객'],['cha2','2차'],
              ['omr','정리']];   // ★ v3-E §1-3 — 📖 정리(특허만)
 // 정본 시행일 — 사양서 §2-1 정본 MST 표
@@ -1581,7 +1625,7 @@ const S={law:'특허법',tab:'jo',jo:null,prec:null,precTab:'요약',
          joPanel:false,joPanelF:'all',joPanelN:3,joPanelP:0,joPanelW:340,
          // ★ v3-F3 ④ — 히트맵 범위(마디 바꿔도 유지) · 접기(jopangi_ui 에도 기억)
          heatScope:'self',heatFold:false,
-         series:'',yearFilter:'',yearSort:'asc',zoom:0.55,
+         series:'',yearFilter:'',yearSort:'desc',zoom:0.55,   /* ★ hrail(9/22) §C-3 — 2차 기출·GS 목록 기본 = 회차 내림(옛 격자 기본 'asc') */
          // §3 마크업 스티커 편집 모드 · §4 필기 모드 — 둘 다 기본은 꺼짐(T5)
          stick:false,ink:false,inkColor:'#D93B3B',inkW:2,inkErase:false,
          // ★ 1차객 열 너비(8/26) — 손잡이를 끌어 바꾼다. 기기마다 다르므로 기록층 밖에 둔다.
@@ -1611,12 +1655,14 @@ S.jtCh=S.jtCh||{};
 try{const u3=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if(u3.mk_off)S.mkOff=true;
     if(u3.hm_top)S.hmTop=String(u3.hm_top);}catch(e){}   /* ★ gaek_mb §C-12 · add1 §C */
+try{const u4=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
+    if(u4.c2ord==='round'||u4.c2ord==='unit')S.c2ord=u4.c2ord;}catch(e){}   /* ★ hrail(9/22) §C-1 — 2차 보드 차례(회차별│단원별) */
 function uiSave(){try{localStorage.setItem(UI_KEY,JSON.stringify(
   {nmw:S.qlNmW,rdw:S.qlRdW,jpw:S.joPanelW,hfold:S.heatFold?1:0,trw:S.treeW,
    jbk:S.joBlank,jbs:S.joBlankStar?1:0,
    prec_filter:S.precFilter||{},prec_sort:S.precSort,
    lsw:S.listW,prec_ygroups:S.precYG||{},
-   md_fold:S.mdFold||{},embed_fold:S.embFold||{},pop_note:S.popCfg.note||null,pop_list:S.popCfg.list||null,pop_prec:S.popCfg.prec||null,pop_toc:S.popCfg.toc||null,pop_link:S.popCfg.link||null,pop_canvas:S.popCfg.canvas||null,pop_claude:S.popCfg.claude||null,pop_jn:S.popCfg.jn||null,omr:S.omrPos||null,cha2_filter:S.cha2Filter||{},cha2_sort:S.cha2Sort||'',jt_w:S.jtW||0,jt_fold:S.jtFold?1:0,jt_ch:S.jtCh||{},mk_off:S.mkOff?1:0,hm_top:S.hmTop||''}));}catch(e){}}   /* ★ 판 3 §3-4 · 판 4 · add2 */
+   md_fold:S.mdFold||{},embed_fold:S.embFold||{},pop_note:S.popCfg.note||null,pop_list:S.popCfg.list||null,pop_prec:S.popCfg.prec||null,pop_toc:S.popCfg.toc||null,pop_link:S.popCfg.link||null,pop_canvas:S.popCfg.canvas||null,pop_claude:S.popCfg.claude||null,pop_jn:S.popCfg.jn||null,omr:S.omrPos||null,cha2_filter:S.cha2Filter||{},cha2_sort:S.cha2Sort||'',jt_w:S.jtW||0,jt_fold:S.jtFold?1:0,jt_ch:S.jtCh||{},mk_off:S.mkOff?1:0,hm_top:S.hmTop||'',c2ord:S.c2ord||'round'}));}catch(e){}}   /* ★ 판 3 §3-4 · 판 4 · add2 */
 const C={};
 const $=(s,r)=>(r||document).querySelector(s);
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;
@@ -1662,7 +1708,7 @@ function drawTop(){
   skLawPaint();
 }
 function drawRail(){
-  const r=$('#rail');r.innerHTML='';
+  const r=$('#hrail');r.innerHTML='';   /* ★ hrail(9/22) §A-1 — 그리는 자리만 #rail → #hrail(칸·수·켜짐 규칙 그대로) */
   RAILS.forEach(([k,label])=>{
     // 민소는 1차 지문 갈래가 없다 — 레일에서 숨긴다(사양서 §4-0)
     if(k==='jimun'&&S.law==='민사소송법')return;
@@ -1673,7 +1719,18 @@ function drawRail(){
     b.onclick=()=>{S.tab=k;render();};
     r.appendChild(b);
   });
-  railCounts();
+  railCounts().then(hdrFit);   /* ★ hrail(9/22) §A-5 — 수가 다 찬 뒤에 첫 줄을 잰다(수 없는 좁은 탭으로 재면 배지가 첫 줄에 남아 줄이 갈린다 · 하네스 실측) */
+}
+/* ★ hrail(9/22) §A-5 — 머리 첫 줄(로고·법 칩·갈래 탭·배지 여섯)이 한 줄에 안 들면 배지 묶음을
+   둘째 줄 검색줄 오른쪽으로 내린다(검색줄 flex:1 · 배지 flex:none). 먼저 첫 줄에 넣어 보고 줄이 갈렸으면 내린다.
+   언제 — drawRail 이 railCounts 로 수를 다 채운 뒤(⚠ 그 전에 재면 좁은 탭 기준이라 배지가 첫 줄에 남는다 ·
+   수가 차면 #hrail 크기가 직전 보고값과 같아 ResizeObserver 도 안 울린다) · 창 resize · 배지 글자가 바뀔 때(ResizeObserver). */
+function hdrFit(){
+  const top=document.querySelector('header.topbar'),hb=$('#hbadges'),row=$('#hsrow'),lg=$('header.topbar .logo');
+  if(!top||!hb||!row||!lg)return;
+  if(hb.parentNode!==top)top.appendChild(hb);
+  const a=lg.getBoundingClientRect(),b=hb.getBoundingClientRect();
+  if(Math.abs((b.top+b.bottom)/2-(a.top+a.bottom)/2)>6)row.appendChild(hb);
 }
 async function railCounts(){
   const set=(k,v)=>{const n=$(`[data-n="${k}"]`);if(n)n.textContent=v;};
@@ -7619,6 +7676,50 @@ function c2CellEl(c,bodies){const hot=/⚠|누락/.test(c.x.논점||'');const cd
   const ph=el('div','cdim','…');ph.style.minHeight='180px';cd.appendChild(ph);
   cd._lazy=()=>{if(cd._done)return;cd._done=1;try{ph.replaceWith(renderBody(bodies[c.file],c.file,{card:1,kind:S.boardKind,skel:fm==='skel'}));}catch(e){ph.textContent='본문 렌더 실패';}};   /* 보이는 카드만 본문(사례 171·514 한꺼번에 안 그림) · add1: 뼈대 = h2 아래 접은 채 */
   if(C2IO)C2IO.observe(cd);return cd;}
+/* ★ hrail(9/22) §C-3·C-4 — 2차 기출·GS 보드 = 회차 목록 한 열(격자 대신).
+   차례 = 회차 내림 · 문번 오름(자과 roundSort 와 같은 차례 · 같은 칸에 여럿이면 파일 이름 순) · 연도·회차 단추 = 내림 ↔ 오름.
+   회차 = 파일명 YY-회-N 의 회(기출 = 행 「51」 · GS = 행 「26-1」 을 마디마다 수로 잰다 — 「26-10」 도 26-1 과 안 섞인다).
+   줄 = 코드 YY-회-N │ 갈래 칩 · 「51회 3번 · 2014년」 · 사례번호 칩 · 점수 칩(c2ScoreChip 그대로) · 해설 칩 / 논점 한 줄 │ (빈 칸)
+   줄은 `.cell[data-ck]` 이다 — c2Mark(2단 ↔ 보드)와 보드 스크롤 따라감이 고치지 않고 이 줄로 온다.
+   줄 클릭 = popCard4(S.boardKind,c.file,e,1) — 옛 칸의 .ctitle 클릭과 같은 길. 본문은 안 그린다(C2IO 안 씀). */
+function c2RoundCmp(a,b){const x=String(a).split('-').map(Number),y=String(b).split('-').map(Number);
+  for(let i=0;i<Math.max(x.length,y.length);i++){const p=x[i],q=y[i];if(p===q)continue;
+    if(p==null||isNaN(p)||q==null||isNaN(q))return String(a).localeCompare(String(b));return p-q;}
+  return 0;}
+function c2RowEl(c){const hot=/⚠|누락/.test(c.x.논점||'');
+  const r=el('div','cell c2row'+(hot?' hot':'')+(c.pass?'':' dim')+(S.cha2Sel===c.ck?' sel':''));r.dataset.ck=c.ck;
+  r.appendChild(el('div','c2code',(c.yr?String(c.yr).slice(2)+'-':'')+c.row+'-'+c.col));
+  const m=el('div','c2mid'),t1=el('div','c2t1');
+  t1.appendChild(el('span','chip c-src c2k',S.boardKind));
+  t1.appendChild(el('span','c2rn',(S.boardKind==='GS'&&c.series?c.series+' · ':'')+c.row+'회 '+c.col+'번'+(c.yr?' · '+c.yr+'년':'')));
+  if(c.num)t1.appendChild(el('span','chip c-src c2n','사례 '+c.num));
+  t1.appendChild(c2ScoreChip(c));c2PdfChips(c.info.pdfs).forEach(a=>t1.appendChild(a));
+  m.appendChild(t1);m.appendChild(el('div','c2t2',c.title));r.appendChild(m);
+  r.appendChild(el('div','c2r3'));
+  r.title='눌러서 크게 보기';r.onclick=e=>{e.stopPropagation();popCard4(S.boardKind,c.file,e,1);};
+  return r;}
+function c2ListEl(shown,years){const L=shown.filter(c=>c.row);if(!L.length)return null;
+  const desc=S.yearSort!=='asc';
+  L.sort((a,b)=>{const v=c2RoundCmp(a.row,b.row);if(v)return desc?-v:v;return ((a.col||0)-(b.col||0))||c2Cmp(a.file,b.file);});
+  const w=el('div','c2list'),hd=el('div','c2lh');
+  /* 옛 격자 머리칸의 두 가지 — 연도·회차 단추(이제 목록의 내림 ↔ 오름) · 회차 거르기 */
+  const sb=el('button','ysort',(S.boardKind==='GS'?'연도-회':'연도·회차')+(desc?' ↓':' ↑'));
+  sb.title='눌러서 빠른순 ↔ 늦은순';sb.onclick=()=>{S.yearSort=desc?'asc':'desc';render();};hd.appendChild(sb);
+  if(years.length){const s2=el('select','sel ysel');const o0=el('option','','전체 '+years.length);o0.value='';s2.appendChild(o0);
+    years.forEach(v=>{const o=el('option','',String(v).slice(2)+'-'+(v-1963));o.value=v;if(String(S.yearFilter)===String(v))o.selected=true;s2.appendChild(o);});
+    s2.onchange=()=>{S.yearFilter=s2.value;render();};hd.appendChild(s2);}
+  w.appendChild(hd);L.forEach(c=>w.appendChild(c2RowEl(c)));return w;}
+/* ★ hrail(9/22) §C-1·C-2 — 보드 차례 단추 「회차별 │ 단원별」(자과 ordMode/ordSet 과 같은 꼴).
+   값 = jopangi_ui.c2ord('round'|'unit' · 기본 'round' · 기기 하나 값 · SYNC 밖).
+   「단원별」은 이 판에서 비활성 — 볼트 목차 × 문제 단위 매칭 데이터가 오는 다음 판에서 켠다(C2_UNIT_READY). */
+const C2_UNIT_READY=false;
+function c2Ord(){return (C2_UNIT_READY&&S.c2ord==='unit')?'unit':'round';}
+function c2OrdSet(v){S.c2ord=(v==='unit')?'unit':'round';uiSave();}
+function c2OrdSeg(){const s=el('span','ordseg');s.id='ordSeg';const m=c2Ord();
+  [['round','회차별'],['unit','단원별']].forEach(([v,t])=>{const b=el('button',m===v?'on':'',t);b.type='button';b.dataset.o=v;
+    if(v==='unit'&&!C2_UNIT_READY){b.disabled=true;b.title='단원 매칭 데이터 대기 — 볼트 목차(특·상·디·민소) · 문제 단위';}
+    b.onclick=()=>{if(b.disabled)return;c2OrdSet(v);render();};s.appendChild(b);});
+  return s;}
 async function view2cha(){
   const slot=$('#slot');slot.innerHTML='';
   const B=await get('2cha_보드.json');
@@ -7652,6 +7753,7 @@ async function view2cha(){
       '볼트에 해당 폴더가 없다  ·  다른 갈래: '+other));
     slot.appendChild(main);return;
   }
+  if(S.boardKind!=='사례')bar.insertBefore(c2OrdSeg(),sp);   /* ★ hrail(9/22) §C-1 — 「사례」 알약 오른쪽 · 기출·GS 에서만(사례 = 격자 그대로 · 단추 없음) */
   const cells=d.격자||{},keys=Object.keys(cells);
   const un=d.미배치||[];
   const bodies=await bodyOf(S.boardKind,subj);   /* ★ 2차 기출 폴더 판(9/4) — 특례 제거 */
@@ -7710,7 +7812,15 @@ async function view2cha(){
   list.appendChild(el('div','legend','행 클릭 → 보드 그 카드로(가운데) · 보드 스크롤 → 목록 선택이 따라온다'));
 
   /* ── 보드(격자) — 기출·GS = 연도·회차 × 문제 · 사례 = 번호 첫 마디 열 */
+  /* ★ hrail(9/22) §C-3 — 기출·GS 는 격자 대신 **회차 목록 한 열**(c2ListEl) · 사례 갈래는 아래 격자 그대로.
+     목록은 본문을 안 그리므로 C2IO(보이는 셀만 본문)를 안 쓴다. 미배치 상자·하단 배지는 목록 아래 그대로. */
   const shown=cards.filter(pass0);
+  if(S.boardKind!=='사례'){
+    C2IO=null;
+    const lw=c2ListEl(shown,years);
+    if(!lw){main.appendChild(emptyBox('🖋','필터에 걸리는 문항이 없다','강사·연도 필터를 풀어라'));slot.appendChild(main);return;}
+    main.appendChild(lw);
+  }else{
   C2IO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){if(e.target._lazy)e.target._lazy();C2IO.unobserve(e.target);}}),{root:main,rootMargin:'500px'});
   const wrap=el('div','gwrap');
   const g=el('div','grid');
@@ -7724,42 +7834,9 @@ async function view2cha(){
     g.appendChild(el('div','gh','사례 · 왼→오른쪽 · 한 줄 5장'));
     units.forEach(u=>{const nm=c2ChapName(u);const h=el('div','gr',u+(nm?' '+nm:'')+'\n('+shown.filter(c=>c.unit===u).length+')');h.title=nm||u;g.appendChild(h);
       const holder=el('div','crow');shown.filter(c=>c.unit===u).sort((a,b)=>c2Cmp(a.file,b.file)).forEach(c=>holder.appendChild(c2CellEl(c,bodies)));g.appendChild(holder);});
-  }else{
-    let rows=[...new Set(shown.filter(c=>c.row).map(c=>c.row))];
-    rows.sort((a,c)=>{const v=c2RowCmp(a,c);return S.yearSort==='desc'?-v:v;});
-    const cols=[...new Set(shown.filter(c=>c.row).map(c=>c.col))].sort((a,c)=>a-c);
-    if(!rows.length||!cols.length){
-      main.appendChild(emptyBox('🖋','필터에 걸리는 문항이 없다','강사·연도 필터를 풀어라'));
-      slot.appendChild(main);return;}
-    g.style.gridTemplateColumns=`64px repeat(${cols.length},minmax(210px,1fr))`;
-    g.style.minWidth=(64+cols.length*218)+'px';
-    // 정렬·연도 필터는 별도 줄이 아니라 **연도·회차 머리칸 안**에 둔다(8/23 사용자)
-    const yh=el('div','gh yh');
-    const sb=el('button','ysort',(S.boardKind==='GS'?'연도-회':'연도·회차')+(S.yearSort==='asc'?' ↑':' ↓'));
-    sb.title='눌러서 빠른순 ↔ 늦은순';
-    sb.onclick=()=>{S.yearSort=S.yearSort==='asc'?'desc':'asc';render();};
-    yh.appendChild(sb);
-    if(years.length){
-      const s2=el('select','sel ysel');
-      const o0=el('option','','전체 '+years.length);o0.value='';s2.appendChild(o0);
-      years.forEach(v=>{const o=el('option','',String(v).slice(2)+'-'+(v-1963));o.value=v;
-        if(String(S.yearFilter)===String(v))o.selected=true;s2.appendChild(o);});
-      s2.onchange=()=>{S.yearFilter=s2.value;render();};
-      yh.appendChild(s2);
-    }
-    g.appendChild(yh);
-    cols.forEach(c=>g.appendChild(el('div','gh','문제 '+c)));
-    rows.forEach(r=>{
-      const yr=(shown.find(c=>c.row===r)||{}).yr;
-      g.appendChild(el('div','gr',yr?(String(yr).slice(2)+'-'+r):String(r)));
-      cols.forEach(c=>{
-        const lst=shown.filter(x=>x.row===r&&x.col===c);
-        if(!lst.length){g.appendChild(el('div','cellnone'));return;}
-        const holder=el('div');lst.forEach(x=>holder.appendChild(c2CellEl(x,bodies)));g.appendChild(holder);
-      });
-    });
   }
   wrap.appendChild(g);main.appendChild(wrap);
+  }   /* ★ hrail(9/22) — 사례 격자 끝. 옛 기출·GS 격자(연도·회차 × 문제 칸 · 열 머리 · cellnone)는 c2ListEl 이 갈음한다 */
 
   if(S.boardKind!=='사례'&&un.length){
     const u=el('div','unpl');
@@ -12564,7 +12641,7 @@ async function viewJimun(){
   }
 
   MBHEAD = null;   /* ★ add1 §A-1 — 앞 화면 값이 남지 않게 그릴 때마다 비운다 */
-  const main=el('div','main');
+  const main=el('div','main mbflush');   /* ★ hrail(9/22) §B — 서랍 손잡이 바로 옆부터(위·좌우 여백 0 · 첫 화면·문제풀이·기출 셋 다) */
   const tabs=el('div','modebar');
   /* ★ 버튼 옆 수 — OX 는 「문제(지문)」, 기출은 「문항」이다(사용자 확정 8/26).
      짝이 붙은 리담 지문은 제7판 쪽에서 세므로 특허에서만 뺀다 — 두 번 세지 않기 위해서다. */
@@ -13863,6 +13940,10 @@ async function render(){
   jtPaint();   /* ★ gaek_mb §A-2 — 서랍은 첫 화면·문제풀이 화면 둘 다에 뜬다 */
   busy=false;
 }
+/* ★ hrail(9/22) §A-5 — 폭·배지 글자·탭 수가 바뀌면 머리 첫 줄을 다시 잰다(알림 안에서 안 옮기고 다음 틀에) */
+addEventListener('resize',hdrFit);
+try{const hro=new ResizeObserver(()=>requestAnimationFrame(hdrFit));
+    ['hrail','hbadges'].forEach(i=>{const n=document.getElementById(i);if(n)hro.observe(n);});}catch(e){}
 // 폭이 바뀌면 법전 조판의 단 수를 다시 잡는다. ⚠ 한 행 글자 수는 그대로다 — 단만 준다.
 let rsz=null;
 addEventListener('resize',()=>{
