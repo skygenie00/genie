@@ -6930,6 +6930,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   /* ---------- 뷰어 ---------- */
   var V = null;
   var V_HAVE = [];   // 이 기기에 실제로 있는 정리OMR id 목록
+  /* ★ 2026-09-22 (_task_ox_omr_close_ipad §B-2) — 여는 중 잠금. 첫 호출이 자산 목록(IndexedDB)을 기다리는 사이에
+     온 두 번째 호출은 그냥 돌아간다. 그 await 뒤로 틀을 붙일 때까지는 await 가 없어 끼어들 틈이 없다. */
+  var V_OPENING = false;
 
   function el(tag, css, html) {
     var e = document.createElement(tag);
@@ -6945,7 +6948,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     return t.replace(/\s+/g, ' ').slice(0, 46);
   }
 
-  function closeViewer() { if (V) { V.wrap.remove(); V = null; } }
+  /* ★ 2026-09-22 (_task_ox_omr_close_ipad §B-1) — 뷰어는 한 번에 하나. V 를 잃은 틀(고아)까지 뗀다.
+     두 번 열리면 위 틀만 닫히고 아래 틀이 남는다 — 그 틀의 닫기·아래 단추는 V(null)를 봐서 먹통이었다(아이패드 9/22). */
+  function closeViewer() {
+    if (V) { V.wrap.remove(); V = null; }
+    document.querySelectorAll('#cd-wrap').forEach(function (w) { w.remove(); });
+  }
 
   /* IndexedDB에 실제로 들어 있는 정리OMR 목록.
      문서목록(ox_omr_docs)은 기기 간에 동기화되지만 실물은 기기마다 따로라,
@@ -6974,8 +6982,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 
   async function openViewer(qid, mode, k) {
     if (typeof window.dbPut !== 'function') { alert('앱 초기화 전입니다. 잠시 후 다시 눌러주세요.'); return; }
+    if (V_OPENING) return;                             /* ★ §B-2 — 여는 중에 온 두 번째 호출 */
     var meta = docs();
-    var have = await assetIds();
+    var have;
+    V_OPENING = true;
+    try { have = await assetIds(); } finally { V_OPENING = false; }
     V_HAVE = have;
     have.forEach(function (id) { if (!meta[id]) { meta[id] = { name: id + '.pdf', file: id + '.pdf' }; } });
     saveDocs(meta);                                    // 실물만 있던 것도 목록에 올린다
@@ -6999,7 +7010,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       if (!docId) docId = (lastId && meta[lastId]) ? lastId : (ids[0] || null);
     }
 
+    closeViewer();                                     /* ★ §B-1 — 떠 있는 뷰어(와 고아 틀)를 먼저 닫는다 · 뷰어는 한 번에 하나 */
     var wrap = el('div', 'position:fixed;inset:0;z-index:10000;background:rgba(17,24,39,.86);display:flex;flex-direction:column');
+    wrap.id = 'cd-wrap';
     var head = el('div', 'flex:0 0 auto;padding:8px 10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:#111827;color:#fff');
     head.innerHTML =
       '<span style="font-weight:800;font-size:13px">📍 좌표기억</span>' +
@@ -7483,7 +7496,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 Math.min(1, Math.max(start[0], x)), Math.min(1, Math.max(start[1], y))];
       drawPickBox();
     };
-    L.onpointerup = L.onpointercancel = function () {
+    L.onpointerup = L.onpointercancel = function (e) {
+      try { L.releasePointerCapture(e.pointerId); } catch (_) { }   /* ★ §B-3 — 뗄 때 저절로 풀리는 것에만 기대지 않는다 */
       start = null;
       if (V.rect && (V.rect[2] - V.rect[0] < 0.008 || V.rect[3] - V.rect[1] < 0.008)) { V.rect = null; drawPickBox(); }
     };
