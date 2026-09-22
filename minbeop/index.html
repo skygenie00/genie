@@ -1453,6 +1453,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         /* §B-3 Claude 창 — oxWinOpen 그대로(끌기 oxWinDrag · 크기 oxWinResize 손잡이 · 크기 기억 sizeKey 'claude' · 정리 창 'jn' 과 따로) · uid 마다 한 창(다시 누르면 앞으로) */
         function clOpen(uid) {
             const q = quizData.find(x => x.id === uid);
+            clFigRetry(uid);   /* ★ 2026-09-22 (_task_ox_claude_fig §B-1) — 못 받았던 그림은 창을 열 때 한 번 더 받는다 */
             oxWinOpen('cl-' + uid, escHtml('Claude · ' + (q ? qLabelOf(q) + ' · ' : '') + uid), '', clBodyHTML(uid), 480, { resize: true, sizeKey: 'claude' });
         }
         function clBodyHTML(uid) {
@@ -1474,6 +1475,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 + '<span style="font-size:11px;color:#6b7280">' + escHtml([a.d, a.unit].filter(Boolean).join(' · ')) + '</span>'
                 + (a.uid ? '<span style="margin-left:auto"><button type="button" class="uid" onclick="openQPopup(\'' + escAttr(a.uid) + '\')">' + escHtml(a.uid) + '</button></span>' : '')
                 + '</div>'
+                + clFigHTML(m)   /* ★ 2026-09-22 (_task_ox_claude_fig §B-2) — 그림 한 장(fig 칸이 있는 답만 · 없으면 빈 글) */
                 + (f ? '<div class="clfixtag">정정 · 반영 전 · <span>' + clTs(f.ts) + '</span></div>' : '')
                 + '<div data-clmdbox>' + clMdHTML(f ? f.md : a.md) + '</div>'
                 + (a.core ? '<div class="clcore">핵심 — ' + escHtml(a.core) + '</div>' : '')
@@ -1559,6 +1561,92 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (!d.length) return '';
             const t = only ? d.map(m => 'Claude · ' + String((clAns(m) || {}).core || '')).join('\n') : 'C' + d.length + ' · ' + String((clAns(d[0]) || {}).core || '');
             return '<div class="mt-1 border-l-2 pl-2 py-1 whitespace-pre-wrap" style="white-space:pre-wrap;background:#fff7ed;color:#b45309;border-color:#fdba74;font-weight:600">' + escHtml(t) + '</div>';
+        }
+
+        /* ══════════════ Claude 답 그림 (2026-09-22 · _task_ox_claude_fig) ══════════════
+           답의 선택 칸 `fig`(minbeop/ 기준 상대 경로 · 예 "claude_fig/M002.html") = 채팅이 만든 **완결된 HTML 한 장**(스크립트 없음) · 없으면 그림 없음.
+           받기 = **창을 열 때** 그 답의 fig 만 ghRaw 로(앱 시작 때 0) · 메모리 CL_FIG 에만(localStorage·IndexedDB 안 씀) · 다시 그릴 때는 CL_FIG 에서 바로.
+           그리기 = 머리 줄 바로 아래 `<div data-clfig>` 안 iframe(sandbox 는 allow-same-origin 하나 · srcdoc) — 스크립트 허락은 **주지 않는다**(그림 안 스크립트는 안 돈다) ·
+             iframe 이라 그림의 <style>(body{margin:0} 따위)이 앱으로 새지 않는다 · 높이 = 그림 문서 높이(불러온 뒤 · 글꼴이 온 뒤 · 그릇 폭이 바뀔 때마다).
+           404·실패 = 그 자리에 한 줄 「그림을 못 불러왔다 (M002)」 · 글 본문은 그대로 · 창을 다시 열면 한 번 더 받는다.
+           「크게 보기」 = oxWinOpen 860 · 크기 기억 'clfig'(Claude 창 'claude' 와 따로). 정정(✎)은 글 본문만 고친다 — 그림은 안 건드린다. */
+        const CL_FIG = {};                           /* m → { f(경로), st: 'wait'|'ok'|'fail', html } */
+        let CL_FIG_RO = null;
+        function clFigOf(m) {
+            const a = clAns(m), f = (a && typeof a.fig === 'string') ? a.fig.trim() : '';
+            return (f && /^[\w\-./]+\.html$/.test(f) && f.indexOf('..') < 0 && f[0] !== '/') ? f : '';
+        }
+        function clFigState(m) { const f = clFigOf(m), c = CL_FIG[m]; return (f && c && c.f === f) ? c : null; }   /* 경로가 바뀌면 새로 받는다 */
+        async function clFigLoad(m) {
+            const f = clFigOf(m);
+            if (!f) return;
+            const c = clFigState(m);
+            if (c && c.st !== 'fail') return;        /* 받는 중이거나 받았다 — 한 번만 */
+            CL_FIG[m] = { f: f, st: 'wait', html: '' };
+            try {
+                const t = await ghRaw('minbeop/' + f);   /* 404 → null */
+                if (t == null) throw new Error('404');
+                CL_FIG[m] = { f: f, st: 'ok', html: t };
+            } catch (e) {
+                console.warn('Claude 그림 받기 실패:', m, f, (e && e.message) || e);
+                CL_FIG[m] = { f: f, st: 'fail', html: '' };
+            }
+            clFigPaint(m);
+        }
+        /* 창을 열 때 — 못 받았던 그림만 한 번 더 받게 비운다(다시 그릴 때마다 받지는 않는다) */
+        function clFigRetry(uid) {
+            (CL_BY_UID[uid] || []).concat(CL_MENT[uid] || []).forEach(m => { const c = clFigState(m); if (c && c.st === 'fail') delete CL_FIG[m]; });
+        }
+        /* §B-2 그릇 — fig 없는 답은 빈 글(옛 판 clAnsHTML 과 한 글자도 같다) */
+        function clFigHTML(m) {
+            if (!clFigOf(m)) return '';
+            if (!clFigState(m)) setTimeout(() => clFigLoad(m), 0);
+            return '<div data-clfig="' + escHtml(m) + '" style="position:relative;margin-bottom:8px">' + clFigInner(m) + '</div>';
+        }
+        function clFigInner(m) {
+            const c = clFigState(m) || { st: 'wait' };
+            const note = t => '<div style="font-size:11px;color:#6b7280;padding:2px 0">' + t + '</div>';
+            if (c.st === 'fail') return note('그림을 못 불러왔다 (' + escHtml(m) + ')');
+            if (c.st !== 'ok') return note('그림 불러오는 중');
+            return '<button type="button" onclick="clFigBig(\'' + escAttr(m) + '\')" style="position:absolute;top:4px;right:6px;z-index:1;font:inherit;font-size:11px;font-weight:700;color:#6b7280;background:none;border:0;padding:0;cursor:pointer">크게 보기</button>'
+                + clFigFrame(m, c.html);
+        }
+        function clFigFrame(m, html) {
+            return '<iframe sandbox="allow-same-origin" title="Claude 그림 ' + escHtml(m) + '" srcdoc="' + escHtml(html) + '" onload="clFigFit(this)"'
+                + ' style="display:block;width:100%;height:0;border:0;border-radius:8px;background:transparent;pointer-events:none"></iframe>';   /* 누를 것이 없는 정지 그림 — 손가락·마우스는 늘 앱 쪽이 받는다(WebKit 은 끌던 마우스가 iframe 위로 가면 그 문서로 넘긴다 · 그림 위에서 시작한 스크롤도 창으로) */
+        }
+        /* 받은 뒤 — 창을 다시 그리지 않고 그 그릇만 갈아 끼운다 */
+        function clFigPaint(m) {
+            document.querySelectorAll('[data-clfig="' + CSS.escape(m) + '"]').forEach(b => { b.innerHTML = clFigInner(m); });
+        }
+        /* 높이 = 그림 문서 높이. 0 으로 줄였다가 잰다 — 스크롤 높이는 보이는 높이보다 작아지지 않아서, 안 그러면 폭이 좁아질 때 안 줄어든다 */
+        function clFigFit(fr) {
+            let doc = null;
+            try { doc = fr.contentDocument; } catch (e) { doc = null; }
+            if (!doc || !doc.documentElement) return;
+            fr.style.height = '0px';
+            fr.style.height = Math.ceil(doc.documentElement.scrollHeight) + 'px';
+            fr._clw = fr.clientWidth;
+            if (fr._clfit) return;
+            fr._clfit = 1;
+            if (typeof ResizeObserver === 'function') {
+                if (!CL_FIG_RO) CL_FIG_RO = new ResizeObserver(es => es.forEach(e => {
+                    if (!e.target.isConnected) { CL_FIG_RO.unobserve(e.target); return; }
+                    const f2 = e.target.querySelector('iframe');
+                    if (f2 && f2._clfit && f2.clientWidth !== f2._clw && !f2._clraf)   /* 폭이 바뀔 때만 — 높이만 바뀐 알림은 제 몫이라 건너뛴다 */
+                        f2._clraf = requestAnimationFrame(() => { f2._clraf = 0; if (f2.isConnected) clFigFit(f2); });   /* 다음 틀로 — 알림 안에서 높이를 바꾸면 「ResizeObserver loop」 알림이 쌓인다 */
+                }));
+                CL_FIG_RO.observe(fr.parentElement);
+            }
+            try { if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(() => { if (fr.isConnected) clFigFit(fr); }); } catch (e) { }   /* 글꼴이 늦게 오면 글줄 높이가 바뀐다 */
+        }
+        /* §B-3 「크게 보기」 — 그림만 큰 창(끌기·크기 조절 · 크기 기억 'clfig') · 높이 규칙은 같다(폭이 넓으면 그림이 그만큼 커진다) */
+        function clFigBig(m) {
+            const c = clFigState(m);
+            if (!c || c.st !== 'ok') return;
+            const a = clAns(m) || {};
+            oxWinOpen('clfig-' + m, escHtml('Claude 그림 · ' + m), escHtml(a.title || ''),
+                '<div data-clfigbig="' + escHtml(m) + '" style="padding:10px 12px;background:#fffefb">' + clFigFrame(m, c.html) + '</div>', 860, { resize: true, sizeKey: 'clfig' });
         }
 
         /* ══════════════ 기록 자동 동기화 (2026-08-31) ══════════════
