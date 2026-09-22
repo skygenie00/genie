@@ -90,6 +90,28 @@
         .ggcnt{color:#e57373;border-color:#f3c2c2;background:#fff}
         .ggbanghd{color:#e57373;font-weight:800;border-bottom:1px dashed #e57373;cursor:pointer}
         .ggbanghd.off{color:#9ca3af;border-bottom-color:#d1d5db;cursor:default}
+        /* ★ 2026-09-22 (_task_ox_claude_answers) — Claude 답(주황 #b45309). 값은 시안 mockup_ox_claude_card·search 그대로 · Tailwind 새 클래스 대신 여기 둔다 */
+        .ggclhd{color:#b45309;font-weight:800;border-bottom:1px dashed #b45309;cursor:pointer}
+        .ggclhd.off{color:#9ca3af;border-bottom-color:#d1d5db;cursor:default}
+        .ggclcnt{color:#b45309;border-color:#fed7aa;background:#fff}
+        .clsrc{flex:none;font-size:10px;font-weight:800;border-radius:4px;padding:0 5px;border:1px solid #e5e7eb;color:#6b7280;background:#fff}
+        .clsrc.gg{color:#1d4ed8;border-color:#bfdbfe}
+        .clsrc.cl{color:#b45309;border-color:#fed7aa;background:#fff7ed}
+        .clmd{font-size:12.5px;line-height:1.7;color:#1f2937}
+        .clmd p{margin:0 0 6px}
+        .clmd h4{margin:10px 0 4px;font-size:12px;font-weight:800;color:#7c2d12}
+        .clmd ul{margin:0 0 6px;padding-left:18px;list-style:disc}
+        .clmd .cltbl{overflow-x:auto}
+        .clmd table{border-collapse:collapse;font-size:11.5px;margin:4px 0}
+        .clmd td,.clmd th{border:1px solid #e5e7eb;padding:3px 7px;text-align:left;vertical-align:top}
+        .clmd th{background:#fafaf9;font-weight:700}
+        .clmd .uid{font:inherit;font-size:11.5px;font-weight:800;color:#1d4ed8;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+        .clmd .clcore{background:#fff7ed;border-radius:6px;padding:6px 9px;margin:8px 0;font-weight:700;color:#7c2d12}
+        .clmd .clfixbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px;padding-top:8px;border-top:1px dashed #fed7aa}
+        .clmd .clfixbar button{font:inherit;font-size:11px;font-weight:700;color:#6b7280;background:none;border:0;padding:0;cursor:pointer}
+        .clmd .clfixbar button.on{color:#fff;background:#b45309;border-radius:5px;padding:2px 8px}
+        .clmd .clfixtag{display:inline-block;font-size:10.5px;font-weight:800;color:#9a3412;background:#ffedd5;border-radius:4px;padding:0 6px;margin-bottom:6px}
+        .clmd .clfixtag span{font-weight:500;color:#c2410c}
         /* ★ 2026-09-21 (_task_ox_prev_bar_click §A1) — 아래 sticky 막대 셋은 **누름을 안 받는다.**
            셋 다 가로 한 줄을 다 차지하는 빈 상자이고 bottom:8px·z-10 이라, 화면 아래에 붙어 있는 동안
            DOM 에서 뒤에 오는 #controls-container 의 **빈 왼쪽**이 「◀ 이전」 위를 덮어 누름을 가로챈다
@@ -1336,7 +1358,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         /* ★ 2026-08-31 — `ox_q_fix`(정정)를 여기 넣었다. 8/29 의 「동기화 안 함」은
            **「마스터 엑셀에 자동 반영하지 않는다」** 쪽이 확정된 것이고(2026-08-31 사용자 확인),
            기기 사이에 보이는 것은 별개다. 옛 백업 파일도 이 목록으로 읽히므로 호환이 유지된다. */
-        const SYNC_KEYS = ['ox_q_history', 'ox_q_tags', 'ox_q_memos', 'ox_q_logic', 'ox_q_links', 'ox_q_marks', 'ox_chap_history', 'ox_in_progress', 'ox_q_coords', 'ox_omr_docs', 'ox_q_last', 'ox_q_type', 'ox_weak_stage', 'ox_mem_cards', 'ox_q_fix', 'ox_q_reflinks', 'ox_q_geunge'];
+        /* ★ 2026-09-22 (_task_ox_claude_answers §E-1) — `ox_cl_fix`(Claude 답 정정 · 내 글이라 기기 사이로 건너간다)를 끝에 더했다. 병합은 칸 단위 규칙 그대로(한 칸 = M 번호 하나). */
+        const SYNC_KEYS = ['ox_q_history', 'ox_q_tags', 'ox_q_memos', 'ox_q_logic', 'ox_q_links', 'ox_q_marks', 'ox_chap_history', 'ox_in_progress', 'ox_q_coords', 'ox_omr_docs', 'ox_q_last', 'ox_q_type', 'ox_weak_stage', 'ox_mem_cards', 'ox_q_fix', 'ox_q_reflinks', 'ox_q_geunge', 'ox_cl_fix'];
 
         function syncStatus(msg, tone) {
             const el = document.getElementById('sync-status');
@@ -1345,6 +1368,197 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             el.className = `text-[11px] font-bold ${tone === 'err' ? 'text-red-600' : 'text-green-700'}`;
             clearTimeout(syncStatus._t);
             syncStatus._t = setTimeout(() => { el.textContent = ''; }, 6000);
+        }
+
+        /* ══════════════ Claude 답 (2026-09-22 · _task_ox_claude_answers) ══════════════
+           studyplandata `minbeop/claude.json` = 노션 「⚖️ 민법QA」 의 배달본 — **앱은 읽기만 한다**(쓰는 길 0).
+           받는 길은 기록 동기화와 같다(ghRaw — MB_REPO·MB_BRANCH·raw·tt.cfg 토큰). 앱 시작(recBoot) 한 번 + syncRecords 가 돌 때마다 한 번.
+           ⚠ 메모리에만 둔다(CL_DATA) — localStorage·IndexedDB 에 넣지 않는다(localStorage 는 이미 2.6MB).
+           404 = 아직 답이 없다(정상 · 빈 것) · 그 밖의 실패(토큰 없음·네트워크) = 단추를 안 그리고 syncStatus 한 번.
+           내가 고친 것은 `ox_cl_fix`(SYNC_KEYS 끝)에 따로 쌓는다 — { M001: { md, ts, done:false } } · claude.json 은 안 건드린다. */
+        const MB_CL_PATH = 'minbeop/claude.json';
+        const CL_FIX_KEY = 'ox_cl_fix', CL_FIX_MAX = 20000;
+        let CL_DATA = null, CL_STATE = 'wait', CL_BUSY = false, CL_WARNED = false, CL_SIG = '';   /* CL_STATE: wait(받는 중) · ok(받음 · 404 면 빈 것) · fail(못 받음) */
+        let CL_BY_UID = {}, CL_MENT = {};            /* §A-4 파생 색인 — 받을 때 한 번 계산(직접 답 · 다른 답 md 에서 언급) · 저장 키 없음 */
+        async function clLoad() {
+            if (CL_BUSY) return;                     /* 앱 시작 때 recBoot 와 첫 syncRecords 가 같이 부른다 — 한 번만 받는다 */
+            if (!mbToken()) { clFail('토큰 없음'); return; }
+            CL_BUSY = true;
+            try {
+                const txt = await ghRaw(MB_CL_PATH);  /* 404 → null */
+                const j = txt == null ? { v: 1, answers: {} } : JSON.parse(txt);
+                if (!j || typeof j.answers !== 'object' || !j.answers) throw new Error('answers 가 없다');
+                clSet(j);
+            } catch (e) { clFail(String((e && e.message) || e)); }
+            finally { CL_BUSY = false; }
+        }
+        function clFail(why) {
+            console.warn('Claude 답 받기 실패:', why);
+            if (CL_STATE !== 'ok') { CL_STATE = 'fail'; clPaintAll(); }   /* 받은 적이 있으면 그 답을 그대로 둔다 */
+            if (!CL_WARNED) { CL_WARNED = true; syncStatus('Claude 답을 못 받았습니다', 'err'); }   /* 조용한 실패 금지 · 한 번만 */
+        }
+        function clSet(j) {
+            const A = j.answers, by = {}, ment = {};
+            Object.keys(A).sort().forEach(m => {     /* M 번호 순 */
+                const a = A[m] || {}, u = String(a.uid || '');
+                if (u) (by[u] = by[u] || []).push(m);
+                const seen = {};
+                (String(a.md || '').match(/\bQ\d{4}\b/g) || []).forEach(x => {
+                    if (x === u || seen[x]) return;
+                    seen[x] = 1; (ment[x] = ment[x] || []).push(m);
+                });
+            });
+            const sig = JSON.stringify(A), changed = CL_STATE !== 'ok' || sig !== CL_SIG;
+            CL_DATA = j; CL_BY_UID = by; CL_MENT = ment; CL_STATE = 'ok'; CL_SIG = sig;
+            if (changed) { clPaintAll(); try { ggFieldRepaint(); } catch (e) { } }   /* 🔗 근거 단원·문항 목록이 떠 있으면 C 숫자를 맞춘다 */
+        }
+        function clAns(m) { return (CL_DATA && CL_DATA.answers && CL_DATA.answers[m]) || null; }
+        function clFixAll() { try { return JSON.parse(localStorage.getItem(CL_FIX_KEY) || '{}') || {}; } catch (e) { return {}; } }
+        function clFixOf(m) { const f = clFixAll()[m]; return (f && !f.done && typeof f.md === 'string') ? f : null; }   /* §E-2 — done:true 면 원문을 보인다 */
+        function clMdOf(m) { const f = clFixOf(m); return f ? f.md : String((clAns(m) || {}).md || ''); }
+        function clTs(ts) { const t = new Date(+ts || 0), p = n => String(n).padStart(2, '0'); return p(t.getMonth() + 1) + '-' + p(t.getDate()) + ' ' + p(t.getHours()) + ':' + p(t.getMinutes()); }
+
+        /* §B-2 카드·팝업 단추 — 글자만(테두리·바탕 없음). 직접 답 N = 주황 「Claude N」 · 언급만 = 회색 「Claude」 + 주황 「↩」(N≥2 면 ↩N) · 둘 다 없음 = 회색.
+           ⚠ 카드에서는 「C1」 로 줄이지 않는다(사용자 09-22). M 번호는 title 에만. 못 받았으면(fail) 숨은 자리표만 — 나중에 받으면 clPaintAll 이 갈아 끼운다. */
+        function clBtnHTML(uid, pop) {
+            const tag = ' data-clbtn="' + escHtml(uid) + '"' + (pop ? ' data-clpop="1"' : '');
+            if (CL_STATE === 'fail') return '<span' + tag + ' hidden></span>';
+            const d = CL_BY_UID[uid] || [], m = CL_MENT[uid] || [];
+            const tip = d.map(x => x + ' 답').concat(m.map(x => x + ' 답에서 언급')).join(' · ') || 'Claude 답 없음';
+            return '<button type="button"' + tag + ' onclick="clOpen(\'' + escAttr(uid) + '\')" title="' + escHtml(tip) + '"'
+                + ' style="display:inline-flex;align-items:center;gap:3px;padding:0;border:0;background:none;cursor:pointer;font-size:' + (pop ? '11.5px' : '11px')
+                + ';font-weight:' + (d.length ? '700' : '500') + ';color:' + (d.length ? '#b45309' : '#6b7280') + '">Claude'
+                + (d.length ? '<span style="font-weight:800">' + d.length + '</span>' : '')
+                + (m.length ? '<span style="font-size:10px;font-weight:800;color:#b45309">↩' + (m.length > 1 ? m.length : '') + '</span>' : '')
+                + (d.some(x => clFixOf(x)) ? '<span style="font-size:9.5px;font-weight:800;color:#9a3412;background:#ffedd5;border-radius:3px;padding:0 4px">정정</span>' : '')
+                + '</button>';
+        }
+        /* §D 정리 창 칩 — 글자만 · 주황 · 11px 굵게 · 직접 답 N = 「CN」 · 언급만 = 「↩」/「↩N」 · **둘 다 없으면 안 그린다**(사용자 09-22 · 숨은 자리표만) */
+        function clChipHTML(uid) {
+            const tag = ' data-clchip="' + escHtml(uid) + '"';
+            const d = CL_STATE === 'ok' ? (CL_BY_UID[uid] || []) : [], m = CL_STATE === 'ok' ? (CL_MENT[uid] || []) : [];
+            if (!d.length && !m.length) return '<span' + tag + ' hidden></span>';
+            const tip = d.map(x => x + ' 답').concat(m.map(x => x + ' 답에서 언급')).join(' · ');
+            return '<button type="button"' + tag + ' onclick="event.stopPropagation();clOpen(\'' + escAttr(uid) + '\')" title="' + escHtml(tip) + '"'
+                + ' style="font-size:11px;font-weight:700;color:#b45309;background:none;border:0;padding:0;margin-left:8px;cursor:pointer">'
+                + (d.length ? 'C' + d.length : '↩' + (m.length > 1 ? m.length : '')) + '</button>';
+        }
+        /* 받거나 정정한 뒤 — 떠 있는 단추·칩·Claude 창을 제자리에서 갈아 끼운다(카드를 다시 그리지 않는다 · 고치는 중인 창은 둔다) */
+        function clPaintAll() {
+            document.querySelectorAll('[data-clbtn]').forEach(b => { b.outerHTML = clBtnHTML(b.getAttribute('data-clbtn'), b.getAttribute('data-clpop') === '1'); });
+            document.querySelectorAll('[data-clchip]').forEach(b => { b.outerHTML = clChipHTML(b.getAttribute('data-clchip')); });
+            document.querySelectorAll('[data-clwin]').forEach(c => { const bd = c.parentElement; if (bd && !c.querySelector('[data-clfixta]')) bd.innerHTML = clBodyHTML(c.getAttribute('data-clwin')); });
+        }
+
+        /* §B-3 Claude 창 — oxWinOpen 그대로(끌기 oxWinDrag · 크기 oxWinResize 손잡이 · 크기 기억 sizeKey 'claude' · 정리 창 'jn' 과 따로) · uid 마다 한 창(다시 누르면 앞으로) */
+        function clOpen(uid) {
+            const q = quizData.find(x => x.id === uid);
+            oxWinOpen('cl-' + uid, escHtml('Claude · ' + (q ? qLabelOf(q) + ' · ' : '') + uid), '', clBodyHTML(uid), 480, { resize: true, sizeKey: 'claude' });
+        }
+        function clBodyHTML(uid) {
+            const d = CL_BY_UID[uid] || [], m = CL_MENT[uid] || [];
+            const note = t => '<div style="font-size:11px;color:#6b7280;margin-bottom:6px">' + t + '</div>';
+            let h;
+            if (CL_STATE === 'wait') h = note('Claude 답을 받는 중이다.');
+            else if (d.length) h = d.map(clAnsHTML).join('');                      /* 직접 답이 여럿이면 M 번호 순으로 잇는다 */
+            else if (m.length) h = note('이 문항에 걸린 답은 없고, 다른 답 ' + m.length + '건에서 언급됐다.') + m.map(clAnsHTML).join('');
+            else h = note('이 문항에 걸린 Claude 답이 아직 없다. 채팅에서 물어보면 적립되고 여기 붙는다.');
+            return '<div data-clwin="' + escHtml(uid) + '" class="clmd" style="padding:12px 14px;background:#fffdf9">' + h + '</div>';
+        }
+        /* 답 하나 — ① 머리(M · 날짜 · 단원 · 오른쪽 끝 그 답이 붙은 uid) ② 본문(정정본 우선) ③ 핵심 줄 ④ ✎ 정정 */
+        function clAnsHTML(m, i) {
+            const a = clAns(m) || {}, f = clFixOf(m);
+            return '<div data-clans="' + escHtml(m) + '"' + (i ? ' style="margin-top:12px;padding-top:12px;border-top:1px solid #fed7aa"' : '') + '>'
+                + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px">'
+                + '<span style="font-weight:800;color:#7c2d12">' + escHtml(m) + '</span>'
+                + '<span style="font-size:11px;color:#6b7280">' + escHtml([a.d, a.unit].filter(Boolean).join(' · ')) + '</span>'
+                + (a.uid ? '<span style="margin-left:auto"><button type="button" class="uid" onclick="openQPopup(\'' + escAttr(a.uid) + '\')">' + escHtml(a.uid) + '</button></span>' : '')
+                + '</div>'
+                + (f ? '<div class="clfixtag">정정 · 반영 전 · <span>' + clTs(f.ts) + '</span></div>' : '')
+                + '<div data-clmdbox>' + clMdHTML(f ? f.md : a.md) + '</div>'
+                + (a.core ? '<div class="clcore">핵심 — ' + escHtml(a.core) + '</div>' : '')
+                + '<div class="clfixbar"><button type="button" onclick="clFixEdit(this)">✎ 정정</button></div>'
+                + '</div>';
+        }
+        /* §A-3 본문 문법 — escHtml 로 다 이스케이프한 뒤 이것만 태그로: ### 소제목 · - 목록 · | 표 |(둘째 줄 |---| = 머리 구분) · **굵게** · 빈 줄 = 문단 · Q0000 = 문항 팝업 단추 */
+        function clMdHTML(md) {
+            const inl = t => escHtml(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+                .replace(/\bQ\d{4}\b/g, u => '<button type="button" class="uid" onclick="openQPopup(\'' + u + '\')">' + u + '</button>');
+            const L = String(md || '').replace(/\r\n?/g, '\n').split('\n'), row = t => /^\|.*\|$/.test(t);
+            let out = '', para = [], i = 0;
+            const flush = () => { if (para.length) { out += '<p>' + para.join('<br>') + '</p>'; para = []; } };
+            while (i < L.length) {
+                const t = L[i].trim();
+                if (!t) { flush(); i++; continue; }
+                if (/^###\s+/.test(t)) { flush(); out += '<h4>' + inl(t.replace(/^###\s+/, '')) + '</h4>'; i++; continue; }
+                if (/^- /.test(t)) {
+                    flush(); let li = '';
+                    while (i < L.length && /^- /.test(L[i].trim())) { li += '<li>' + inl(L[i].trim().slice(2)) + '</li>'; i++; }
+                    out += '<ul>' + li + '</ul>'; continue;
+                }
+                if (row(t)) {
+                    flush(); const rows = [];
+                    while (i < L.length && row(L[i].trim())) { rows.push(L[i].trim()); i++; }
+                    const head = rows.length > 1 && /^\|[\s:|-]+\|$/.test(rows[1]) && rows[1].indexOf('-') >= 0;
+                    out += '<div class="cltbl"><table>' + rows.map((r, k) => (head && k === 1) ? '' : '<tr>' + r.slice(1, -1).split('|')
+                        .map(c => { const g = (head && k === 0) ? 'th' : 'td'; return '<' + g + '>' + inl(c.trim()) + '</' + g + '>'; }).join('') + '</tr>').join('') + '</table></div>';
+                    continue;
+                }
+                para.push(inl(t)); i++;
+            }
+            flush();
+            return out;
+        }
+        /* §E-2 ✎ 정정 — md 원문(정정본이 있으면 정정본)을 textarea 로 고친다(글자 칸을 바로 고치면 표·목록이 깨진다) */
+        function clFixEdit(btn) {
+            const wrap = btn.closest('[data-clans]'), box = wrap && wrap.querySelector('[data-clmdbox]');
+            if (!box) return;
+            box.innerHTML = '<textarea data-clfixta style="width:100%;min-height:240px;box-sizing:border-box;font:inherit;font-size:12px;line-height:1.6;border:1px solid #fed7aa;border-radius:6px;padding:6px 8px;background:#fff">'
+                + escHtml(clMdOf(wrap.getAttribute('data-clans'))) + '</textarea>'
+                + '<div data-clfixmsg style="font-size:11px;font-weight:700;color:#b91c1c;margin-top:4px"></div>';
+            btn.parentElement.innerHTML = '<button type="button" class="on" onclick="clFixSave(this)">저장 (정정으로)</button><button type="button" onclick="clWinRefresh(this)">취소</button>';
+        }
+        function clFixSave(btn) {
+            const wrap = btn.closest('[data-clans]'), ta = wrap && wrap.querySelector('[data-clfixta]');
+            if (!ta) return;
+            const m = wrap.getAttribute('data-clans'), md = String(ta.value || '');
+            if (md.length > CL_FIX_MAX) {           /* 조용히 삼키지 않는다 */
+                wrap.querySelector('[data-clfixmsg]').textContent = '20,000자까지 · 지금 ' + md.length.toLocaleString() + '자';
+                return;
+            }
+            if (md !== clMdOf(m)) {                  /* 안 고치고 누르면 정정을 만들지 않는다 */
+                const all = clFixAll();
+                all[m] = { md: md, ts: Date.now(), done: false };
+                lsPut(CL_FIX_KEY, all);
+                try { stampAll(); syncRecords(); } catch (e) { }
+            }
+            clWinRefresh(btn);
+            clPaintAll();
+        }
+        function clWinRefresh(el) {
+            const w = el && el.closest('.oxwin'), bd = w && w.querySelector('.oxwin-body'), c = bd && bd.querySelector('[data-clwin]');
+            if (c) bd.innerHTML = clBodyHTML(c.getAttribute('data-clwin'));
+        }
+        /* §C-1 근거 검색 — 이 문항이 어디서 걸렸나(근거 본문 · 댓글 · Claude 답 = 정정본 우선 + core · 걸리는 단위는 answers[M].uid 문항) */
+        function clHitsOf(uid, low) {
+            return (CL_BY_UID[uid] || []).filter(m => (clMdOf(m) + '\n' + String((clAns(m) || {}).core || '')).toLowerCase().includes(low));
+        }
+        function clSrcOf(uid, low) {
+            const has = v => String(v || '').toLowerCase().includes(low), gl = ggOf(uid);
+            return { gg: gl.some(g => g && has(g.t)), cm: gl.some(g => g && Array.isArray(g.cs) && g.cs.some(c => c && has(c.t))), cl: clHitsOf(uid, low) };
+        }
+        function clSnip(m, low) {                    /* 걸린 자리 앞뒤 한 줄 — 표·목록 기호는 뺀다 */
+            const t = (clMdOf(m) + ' ' + String((clAns(m) || {}).core || '')).replace(/\*\*/g, '').replace(/^#+\s*/gm, '').replace(/^\s*-\s+/gm, '')
+                .replace(/-{3,}/g, ' ').replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
+            const i = t.toLowerCase().indexOf(low), s = Math.max(0, i - 30);
+            return (s ? '…' : '') + t.slice(s, s + 90) + (s + 90 < t.length ? '…' : '');
+        }
+        /* §C-3 문항 목록 Claude 상자 — 평소 「C n · core」 · Claude 만 보기면 답마다 「Claude · core」(시안 mockup_ox_claude_search) */
+        function clFieldBoxHTML(uid, only) {
+            const d = CL_BY_UID[uid] || [];
+            if (!d.length) return '';
+            const t = only ? d.map(m => 'Claude · ' + String((clAns(m) || {}).core || '')).join('\n') : 'C' + d.length + ' · ' + String((clAns(d[0]) || {}).core || '');
+            return '<div class="mt-1 border-l-2 pl-2 py-1 whitespace-pre-wrap" style="white-space:pre-wrap;background:#fff7ed;color:#b45309;border-color:#fdba74;font-weight:600">' + escHtml(t) + '</div>';
         }
 
         /* ══════════════ 기록 자동 동기화 (2026-08-31) ══════════════
@@ -1644,6 +1858,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (recBusy) return;
             if (!mbToken()) { recPaint(); return; }
             if (navigator.onLine === false) { recPaint(); return; }
+            clLoad();                                 /* ★ 2026-09-22 (_task_ox_claude_answers §A-2) — 기록 동기화가 돌 때 Claude 답도 한 번 더(작다 · ETag 안 씀 · 받는 중이면 건너뛴다) */
             recBusy = true; recPaint();
             let got = false;                          /* 병합이 무언가를 받았거나 지웠나 — §E·§H */
             try {
@@ -1813,6 +2028,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         function recBoot() {
             recPaint();
             stampAll();
+            clLoad();                                        /* ★ 2026-09-22 (_task_ox_claude_answers §A-2) — Claude 답 받기 · 앱 시작 한 번(토큰이 없어도 불러 실패를 한 번 알린다) */
             /* ★ 2026-09-14 (_task_ox_memo_merge §B · 사용자 승인) — 메모 → 근거 이관은 **첫 동기화가 끝난 뒤** 한 번.
                동기화 전에 옮기면 그 칸 도장이 「지금」으로 찍혀, 다른 기기가 그사이 같은 문항에 단 근거를 칸째로 덮는다.
                토큰이 없거나 오프라인이어도 `syncRecords` 는 끝을 맺는다 — 실패해도 돌도록 두 갈래에 다 건다. */
@@ -2750,6 +2966,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                             <label id="ox-X-${item.id}" class="${OX_BTN_BASE} bg-white text-red-600 border-gray-300" style="${OX_BTN_STY}"><input type="radio" name="answer_${item.id}" value="X" class="sr-only" style="${SR_ONLY_STY}">X</label>
                             <span id="ox-res-${item.id}" class="text-[11px] font-extrabold"></span>
                             <span class="ml-auto flex flex-wrap items-center gap-1.5">
+                                ${clBtnHTML(item.id)}
                                 <button onclick="toggleMemoPanel('${item.id}')" class="text-[11px] text-gray-500 hover:text-blue-700">✏️ 연결</button>
                             </span>
                         </div>`}
@@ -3776,7 +3993,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         /* 해당 필드가 채워진 문항 목록 */
         function fieldItems(kind) {
             const gst = ggStore();                   /* 2026-09-14 — 근거가 하나라도 있는 문항(memoCount 와 같은 잣대) */
-            return quizData.filter(q => Array.isArray(gst[q.id]) && gst[q.id].length);
+            /* ★ 2026-09-22 (_task_ox_claude_answers §C-2) — ∪ 직접 Claude 답이 있는 문항 */
+            return quizData.filter(q => (Array.isArray(gst[q.id]) && gst[q.id].length) || !!CL_BY_UID[q.id]);
         }
         function fieldGroupKey(q) { return `${q.subject} · ${q.subChapter || q.chapter}`; }
 
@@ -3807,23 +4025,30 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const gst = ggStore();
             const bang = q => ggBangNum(q.id, gst);
             const total = items.reduce((s, q) => s + bang(q), 0);
+            /* ★ 2026-09-22 (_task_ox_claude_answers §C-2) — 「C n」 = 직접 Claude 답이 있는 문항 수 · 「! n」 오른쪽 · 0 이면 회색·못 누름 */
+            const cln = q => (CL_BY_UID[q.id] ? 1 : 0);
+            const clTotal = items.reduce((s, q) => s + cln(q), 0);
             if (!total) GG_BANG_ONLY = false;
-            const use = GG_BANG_ONLY ? items.filter(q => bang(q) > 0) : items;
-            const map = new Map(), bmap = new Map();
+            if (!clTotal) GG_CL_ONLY = false;
+            const use = GG_BANG_ONLY ? items.filter(q => bang(q) > 0) : GG_CL_ONLY ? items.filter(q => cln(q) > 0) : items;
+            const map = new Map(), bmap = new Map(), cmap = new Map();
             use.forEach(q => {
                 const k = fieldGroupKey(q);
                 map.set(k, (map.get(k) || 0) + 1);
                 bmap.set(k, (bmap.get(k) || 0) + bang(q));
+                cmap.set(k, (cmap.get(k) || 0) + cln(q));
             });
             _fieldGroups = [...map.keys()];
             const head = GG_BANG_ONLY
                 ? `<div data-ggfield="dist" class="px-4 py-2 border-b border-gray-200 text-[11px] font-extrabold" style="background:#fff5f5;color:#c94f4f">${modeLabel(kind)} <b>! ${total}건 · ${_fieldGroups.length}개 단원</b> <span class="font-normal">— 켜진 근거만 보는 중 · </span><span onclick="ggBangOnlyToggle()" class="font-normal text-gray-500" style="border-bottom:1px dashed #9ca3af;cursor:pointer">전체 ${items.length}건으로</span></div>`
-                : `<div data-ggfield="dist" class="px-4 py-2 bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-700">${modeLabel(kind)} ${items.length}건 · ${_fieldGroups.length}개 단원 <span class="font-normal text-gray-500">— 단원을 누르면 목록이 나옵니다</span> · <span ${total ? `onclick="ggBangOnlyToggle()" class="ggbanghd"` : `class="ggbanghd off"`}>! ${total}</span></div>`;
+                : GG_CL_ONLY   /* ★ 2026-09-22 §C-2 — 「!」 상태 머리와 같은 꼴 · 바탕 #fff7ed · 글자 주황 */
+                ? `<div data-ggfield="dist" class="px-4 py-2 border-b border-gray-200 text-[11px] font-extrabold" style="background:#fff7ed;color:#b45309">${modeLabel(kind)} <b>C${clTotal}건 · ${_fieldGroups.length}개 단원</b> <span class="font-normal">— Claude 답이 있는 것만 보는 중 · </span><span onclick="ggClOnlyToggle()" class="font-normal text-gray-500" style="border-bottom:1px dashed #9ca3af;cursor:pointer">전체 ${items.length}건으로</span></div>`
+                : `<div data-ggfield="dist" class="px-4 py-2 bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-700">${modeLabel(kind)} ${items.length}건 · ${_fieldGroups.length}개 단원 <span class="font-normal text-gray-500">— 단원을 누르면 목록이 나옵니다</span> · <span ${total ? `onclick="ggBangOnlyToggle()" class="ggbanghd"` : `class="ggbanghd off"`}>! ${total}</span> · <span ${clTotal ? `onclick="ggClOnlyToggle()" class="ggclhd"` : `class="ggclhd off"`}>C${clTotal}</span></div>`;
             box.innerHTML = head +
                 _fieldGroups.map((k, i) => `
                     <button onclick="showFieldList('${kind}', ${i})" class="w-full text-left px-4 py-2 border-b border-gray-100 hover:bg-blue-50 transition flex items-center justify-between gap-2">
                         <span class="text-[12px] font-bold text-indigo-800">${escHtml(k)}</span>
-                        <span class="flex items-center gap-1 flex-none">${GG_BANG_ONLY ? '' : `<span class="text-[11px] font-extrabold text-gray-500 bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5">${map.get(k)}건</span>`}${bmap.get(k) ? `<span class="ggcnt text-[11px] font-extrabold border rounded px-1.5 py-0.5">! ${bmap.get(k)}</span>` : ''}</span>
+                        <span class="flex items-center gap-1 flex-none">${(GG_BANG_ONLY || GG_CL_ONLY) ? '' : `<span class="text-[11px] font-extrabold text-gray-500 bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5">${map.get(k)}건</span>`}${(bmap.get(k) && !GG_CL_ONLY) ? `<span class="ggcnt text-[11px] font-extrabold border rounded px-1.5 py-0.5">! ${bmap.get(k)}</span>` : ''}${(cmap.get(k) && !GG_BANG_ONLY) ? `<span class="ggclcnt text-[11px] font-extrabold border rounded px-1.5 py-0.5">C${cmap.get(k)}</span>` : ''}</span>
                     </button>`).join('');
         }
         /* ★ 09-15 (_task_ox_jeongni_popup §A·§C) — 근거 목록 행·정리 창 행의 🔗 연결 근거 칩 · onclick 없음 · 끝에 쓰임 수(useNumHTML — 문항 팝업 칩 ggRefChipsHTML 과 같은 값·모양) */
@@ -3839,10 +4064,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             /* ★ 2026-09-16 (§C) — 상태 B 면 켜진 근거가 있는 문항만 남기고, 글도 **켜진 근거만** 보인다 */
             let items = fieldItems(kind).filter(q => fieldGroupKey(q) === key);
             if (GG_BANG_ONLY) items = items.filter(q => ggBangNum(q.id) > 0);
+            if (GG_CL_ONLY) items = items.filter(q => !!CL_BY_UID[q.id]);   /* ★ 2026-09-22 (_task_ox_claude_answers §C-3) */
             box.classList.remove('hide');
             box.innerHTML =
                 `<button data-ggfield="list:${gi}" onclick="showFieldDistribution('${kind}')" class="w-full text-left px-4 py-2 bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-700 hover:bg-gray-100">← ${modeLabel(kind)} 단원 목록으로</button>` +
-                `<div class="px-4 py-1.5 border-b border-gray-100 text-[11px] font-bold text-indigo-800">${escHtml(key)} · ${items.length}건${GG_BANG_ONLY ? ' <span style="color:#c94f4f">· 켜진 근거만</span>' : ''}</div>` +
+                `<div class="px-4 py-1.5 border-b border-gray-100 text-[11px] font-bold text-indigo-800">${escHtml(key)} · ${items.length}건${GG_BANG_ONLY ? ' <span style="color:#c94f4f">· 켜진 근거만</span>' : ''}${GG_CL_ONLY ? ' <span style="color:#b45309">· Claude 답만</span>' : ''}</div>` +
                 items.map(q => {
                     const txt = GG_BANG_ONLY
                         ? ggOf(q.id).filter(g => g && g.bang).map(g => ((g && g.i) ? g.i + '. ' : '') + String((g && g.t) || '')).join('\n')
@@ -3856,6 +4082,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     const refChips = fieldRefChipsHTML(q.id);
                     const txtBox =
                         `<div class="mt-1 border-l-2 pl-2 py-1 ${GG_BANG_ONLY ? '' : cls} whitespace-pre-wrap" style="white-space:pre-wrap${GG_BANG_ONLY ? ';background:#fff5f5;color:#c94f4f;border-color:#f0a0a0' : ''}">${icon} ${escHtml(String(txt))}</div>`;   /* 인라인 = Tailwind CDN 이 나중에 생긴 클래스를 늦게 만드는 것 대비 */
+                    /* ★ 2026-09-22 (_task_ox_claude_answers §C-3) — 평소 = 근거 상자 아래 Claude 상자(직접 답이 있을 때) · 근거 없이 Claude 답만 있는 문항은 근거 상자를 안 그린다
+                       · Claude 만 보기 = 근거 상자 대신 Claude 상자만 · 「!」 상태는 옛 그대로(근거 상자만) */
+                    const boxes = GG_CL_ONLY ? clFieldBoxHTML(q.id, true) : GG_BANG_ONLY ? txtBox : ((txt ? txtBox : '') + clFieldBoxHTML(q.id, false));
                     return `
                     <button onclick="${go}('${q.id}')" class="w-full text-left px-4 py-2 border-b border-gray-100 hover:bg-blue-50 transition">
                         <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
@@ -3866,7 +4095,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         </div>
                         <div class="text-[12px] text-gray-800 leading-relaxed">
                             <span class="text-gray-500">${escHtml(q.q).slice(0, 60)}…</span>
-                            ${txtBox}
+                            ${boxes}
                         </div>
                     </button>`;
                 }).join('');
@@ -3874,7 +4103,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 
         function setSearchMode(mode) {
             if (mode !== 'q' && mode !== 'm') mode = 'm';   /* ★ 09-15 (_task_ox_logic_merge §B-3) — 논리('l') 갈래는 걷었다. 옛 값이 들어와도 근거로 */
-            if (mode === 'q') ggBangOnlyOff();              /* ★ 2026-09-16 (§C) — 「문제」 로 가면 「! N」 필터는 풀린다 */
+            if (mode === 'q') { ggBangOnlyOff(); ggClOnlyOff(); }   /* ★ 2026-09-16 (§C) — 「문제」 로 가면 「! N」 필터는 풀린다 · ★ 09-22 「C n」 도 */
             searchMode = mode;
             const on  = 'text-[11px] px-2.5 py-1 rounded font-bold border transition bg-blue-600 text-white border-blue-600';
             const off = 'text-[11px] px-2.5 py-1 rounded font-bold border transition bg-gray-50 text-gray-600 border-gray-300';
@@ -4079,11 +4308,20 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         /* ---------- §C 정리 창 근거 목록 — 머리줄 「! N」 필터 ----------
            ⚠ 모듈 변수뿐이다. localStorage 에 남기지 않는다(§C). 「문제」 모드로 가면 풀린다. */
         let GG_BANG_ONLY = false;
+        /* ★ 2026-09-22 (_task_ox_claude_answers §C-2) — 「C n」 = Claude 답이 있는 것만. 「!」 와 동시에 켜지지 않는다(하나를 켜면 다른 하나는 끈다) · 모듈 변수뿐 */
+        let GG_CL_ONLY = false;
         function ggBangOnlyToggle() {
             GG_BANG_ONLY = !GG_BANG_ONLY;
+            if (GG_BANG_ONLY) GG_CL_ONLY = false;
             showFieldDistribution('m');
         }
         function ggBangOnlyOff() { GG_BANG_ONLY = false; }
+        function ggClOnlyToggle() {
+            GG_CL_ONLY = !GG_CL_ONLY;
+            if (GG_CL_ONLY) GG_BANG_ONLY = false;
+            showFieldDistribution('m');
+        }
+        function ggClOnlyOff() { GG_CL_ONLY = false; }
 
         function ggOkCls(ok) {
             return ok === true ? 'text-blue-700 bg-blue-50 border-blue-300'
@@ -5563,7 +5801,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 const gst = ggStore();
                 const hasLow = v => String(v || '').toLowerCase().includes(low);
                 hits = quizData.filter(q => (Array.isArray(gst[q.id]) ? gst[q.id] : []).some(g => g &&
-                    (hasLow(g.t) || (Array.isArray(g.cs) && g.cs.some(c => c && hasLow(c.t))))));
+                    (hasLow(g.t) || (Array.isArray(g.cs) && g.cs.some(c => c && hasLow(c.t)))))
+                    || clHitsOf(q.id, low).length > 0);   /* ★ 2026-09-22 (_task_ox_claude_answers §C-1) — Claude 답(정정본 우선 + core)까지 · 걸리는 단위는 answers[M].uid 문항 */
             }
 
             cnt.textContent = `${hits.length}건`;
@@ -5588,13 +5827,15 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     expSnip = (st > 0 ? '…' : '') + e.slice(st, st + 170) + (e.length > st + 170 ? '…' : '');
                 }
                 const gpk = (searchMode === 'm') ? ggPickLine(q.id, low).split('\n↳ ') : null;   /* 걸린 조각 — 본문 한 줄 + (댓글에서 걸렸으면) ↳ 한 줄 */
+                /* ★ 2026-09-22 (_task_ox_claude_answers §C-1) — 어디서 걸렸는지 딱지(근거 · 댓글 · Claude · 여럿이면 여럿) · Claude 에서만 걸린 문항은 근거 상자를 안 그린다 */
+                const srcM = (searchMode === 'm') ? clSrcOf(q.id, low) : null;
                 const body = (searchMode === 'q')
                     ? (inExp
                         ? `<span class="text-gray-500">${escHtml(q.q).slice(0, 60)}…</span>
                            <div class="mt-1 text-emerald-900 bg-emerald-50 border-l-2 border-emerald-400 pl-2 py-1">💬 ${mark(expSnip, term)}</div>`
                         : mark(q.q, term))
                     : `<span class="text-gray-500">${escHtml(q.q).slice(0, 60)}…</span>
-                       <div class="mt-1 pl-2 py-1 border-l-2 ${ggPickBang(q.id, low) ? '' : 'text-blue-900 bg-blue-50 border-blue-400'}"${ggPickBang(q.id, low) ? ' style="background:#fff5f5;color:#c94f4f;border-color:#f0a0a0"' : ''}>🔗 ${mark(gpk[0], term)}${gpk.length > 1 ? `<div class="mt-0.5">↳ ${mark(gpk[1], term)}</div>` : ''}</div>`;
+                       ${(srcM.gg || srcM.cm) ? `<div class="mt-1 pl-2 py-1 border-l-2 ${ggPickBang(q.id, low) ? '' : 'text-blue-900 bg-blue-50 border-blue-400'}"${ggPickBang(q.id, low) ? ' style="background:#fff5f5;color:#c94f4f;border-color:#f0a0a0"' : ''}>🔗 ${mark(gpk[0], term)}${gpk.length > 1 ? `<div class="mt-0.5">↳ ${mark(gpk[1], term)}</div>` : ''}</div>` : ''}${srcM.cl.length ? `<div class="mt-1 pl-2 py-1 border-l-2" style="background:#fff7ed;color:#b45309;border-color:#fdba74">${mark(clSnip(srcM.cl[0], low), term)}</div>` : ''}`;
                 /* ★ 09-16 (_task_ox_card_simple_add11 §2) — 결과를 누르면 단원으로 옮기지 않고 문항 팝업(검색 칸은 그대로) · 근거 탭은 팝업을 그 문항 근거 줄까지 굴린다 · 「↪ 이 문제로 이동」은 팝업 안에 그대로 */
                 return `
                     <button onclick="openQPopup('${q.id}');qpScrollTo('${q.id}','${searchMode === 'm' ? 'gg' : 'top'}')" class="w-full text-left px-4 py-2 border-b border-gray-100 hover:bg-blue-50 transition">
@@ -5602,6 +5843,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                             <span class="text-[10px] font-bold text-gray-400 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">ID ${q.id}</span>
                             <span class="text-[10px] font-bold text-indigo-700">${escHtml(where)}</span>
                             ${q.source ? `<span class="text-[10px] font-bold text-purple-700">${escHtml(q.source)}</span>` : ''}
+                            ${srcM ? (srcM.gg ? '<span class="clsrc gg">근거</span>' : '') + (srcM.cm ? '<span class="clsrc">댓글</span>' : '') + (srcM.cl.length ? '<span class="clsrc cl">Claude</span>' : '') : ''}
                         </div>
                         <div class="text-[12px] text-gray-800 leading-relaxed">${body}</div>
                     </button>`;
@@ -9980,6 +10222,7 @@ function openQPopup(id) {
         + '<button onclick="qPopToggleAns(\'' + id + '\',this)" style="font-size:11.5px;font-weight:700;color:#4f46e5;background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;padding:3px 9px;cursor:pointer">정답·해설 보기</button>'
         + (same.length ? '<button onclick="showRelated(\'' + id + '\',\'same\')" style="font-size:11.5px;font-weight:700;color:#0f766e;background:#f0fdfa;border:1px solid #99f6e4;border-radius:6px;padding:3px 9px;cursor:pointer">🔗 판 ' + same.length + '</button>' : '')
         + '<span data-lkchips="' + id + '" style="display:contents">' + myLinkChipHTML(q, true) + '</span>'   /* ★ 09-15 (_task_ox_card_simple_add7) — 「↩링크N」「↩백링크N」(카드와 같은 글자) */
+        + clBtnHTML(id, true)   /* ★ 2026-09-22 (_task_ox_claude_answers §B-1) — 「✏️ 연결」 바로 앞 · 글자만 */
         + '<button onclick="qpLinkToggle(\'' + id + '\')" style="font-size:11.5px;font-weight:700;color:#374151;background:#fff;border:1px solid #d1d5db;border-radius:6px;padding:3px 9px;cursor:pointer">✏️ 연결</button>'   /* ★ add8 — 유사문제 연결 칸(옛 비교 창 「✏️ 연결」 · id 는 qp- 접두사) */
         + '<button onclick="openMemCard(\'' + id + '\')" style="font-size:11.5px;font-weight:700;color:#a21caf;background:#fdf4ff;border:1px solid #f5d0fe;border-radius:6px;padding:3px 9px;cursor:pointer">🃏 암기카드 ' + (cards || '') + '</button>'
         + '<span style="flex:1"></span>'
@@ -10519,6 +10762,7 @@ function jnRowHTML(q) {
         + (txt ? `<div class="mt-1 border-l-2 pl-2 py-1 text-[12px] leading-relaxed text-blue-900 bg-blue-50 border-blue-400 whitespace-pre-wrap" style="white-space:pre-wrap">🔗 ${escHtml(String(txt))}</div>` : '')
         + `<div id="jn-reflink-geunge-${escHtml(id)}">${ggRefBoxHTML(id, 'jn-')}</div>`   /* ★ 09-15 §E — 내 근거 상자 바로 아래(없으면 지문 아래) · 처음 접힘 */
         + `<button type="button" onclick="event.stopPropagation();jnAnsToggle(this)" class="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded px-2 py-0.5 mt-1">정답·해설 ▸</button>`
+        + clChipHTML(id)   /* ★ 2026-09-22 (_task_ox_claude_answers §D) — 「정답·해설 ▸」 바로 뒤 · 답 없는 행은 안 그린다 */
         + `<div data-jnans="${escHtml(id)}" class="hide mt-1">`
         + `<div class="text-[12px] font-extrabold text-gray-700 mb-1">정답 <b class="font-black ${q.a === 'O' ? 'text-blue-600' : 'text-red-600'}">${escHtml(String(q.a || ''))}</b></div>`
         + `<div class="text-[12.5px] text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-200 leading-relaxed whitespace-pre-wrap" style="font-size:12.5px;white-space:pre-wrap"${eAttr}>${eHTML}</div>`
@@ -10526,8 +10770,9 @@ function jnRowHTML(q) {
         + `</div>`;
 }
 function jnAnsToggle(btn) {
-    const box = btn && btn.nextElementSibling;
-    if (!box || !box.hasAttribute('data-jnans')) return;
+    /* ★ 2026-09-22 (_task_ox_claude_answers §D) — 단추 바로 뒤에 C 칩이 설 수 있어 nextElementSibling 이 아니라 **같은 부모의 data-jnans** 를 찾는다 */
+    const box = btn && btn.parentElement ? btn.parentElement.querySelector(':scope > [data-jnans]') : null;
+    if (!box) return;
     const hidden = box.classList.toggle('hide');
     btn.textContent = hidden ? '정답·해설 ▸' : '정답·해설 ▾';
 }
