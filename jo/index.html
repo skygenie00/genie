@@ -736,7 +736,7 @@ table.gtbl{border-collapse:collapse;width:100%;font-size:12px;margin-bottom:8px}
   box-shadow:0 8px 26px rgba(20,40,90,.20);font-size:12.5px}
 .pop .ph{display:flex;align-items:center;gap:7px;background:#eaf1fb;color:var(--exc);
   font-size:11px;font-weight:700;padding:5px 10px;position:sticky;top:0;cursor:move;
-  user-select:none}
+  user-select:none;z-index:6}   /* ★ ms_claude_editq A — 본문 글줄 .rbody .ln{position:relative} 가 z 없는 sticky 머리 위로 그려져 굴리면 머리를 덮던 것(쌓임 맥락은 .pop 안에서만) */
 .pop .ph .pt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pop .ph button{margin-left:auto;color:inherit;font-size:12px;cursor:pointer}
 .pop .pb{padding:9px 12px}
@@ -1526,7 +1526,7 @@ mark.mkc.u{background:transparent;border-bottom:2px solid var(--exc)}
 /* §D 민법 창 꼴 머리 — Claude 창 · 지문 팝업 · 📋 정리 창 셋만(민법 oxWinOpen 실측) · 글꼴은 창 전체 Malgun 먼저 */
 .pop.mbwin{border:1px solid #cbd5e1;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.28);background:#fff;
   font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
-.pop.mbwin .ph{gap:8px;padding:7px 10px;background:#f8fafc;border-bottom:1px solid #e5e7eb;color:#111827;font-size:13px;z-index:3}
+.pop.mbwin .ph{gap:8px;padding:7px 10px;background:#f8fafc;border-bottom:1px solid #e5e7eb;color:#111827;font-size:13px;z-index:6}   /* ★ ms_claude_editq A — .pop .ph 와 같은 6(이 선택자가 더 구체적이라 따로 맞춘다) */
 .pop.mbwin .ph .mbtt{min-width:0;flex:1}
 .pop.mbwin .ph .pt{display:block;font-size:13px;font-weight:800;color:#111827;line-height:1.4}
 .pop.mbwin .ph .mbps{display:block;font-size:10.5px;font-weight:400;color:#6b7280;line-height:1.4;
@@ -1637,6 +1637,11 @@ mark.mkc.u{background:transparent;border-bottom:2px solid var(--exc)}
 .jn2 .jna b{font-weight:900}
 .jn2 .jne{font-size:12.5px;color:#374151;background:#f9fafb;padding:10px;border-radius:8px;border:1px solid #e5e7eb;line-height:1.625;white-space:pre-wrap}
 .jn2 .jn0{padding:10px 14px;font-size:11px;color:#6b7280}
+/* ★ ms_claude_editq(9/24) — C-4 카드 팝업 탭 옆 「Claude」(답 없음 = 회색 · 있음 = 주황 글자·테두리 #fed7aa) · D 검색 범위·결과 아이콘 「C」(주황 800) */
+.gtabs .tool.cltab{color:#9a958b}
+.gtabs .tool.cltab.has{color:#b45309;border-color:#fed7aa;font-weight:700}
+#skscope .scope[data-s="claude"]::before{content:'C';color:#b45309;font-weight:800;margin-right:4px}
+.res .skic[data-sk="claude"]{color:#b45309;font-weight:800}
 /* ★ mok_popup_phone(9/23 · _task_jo_mok_popup_phone) — E 「모두 닫기」 · G 폰(폭 ≤ 640) */
 /* E — 팝업이 둘 이상이면 맨 위 팝업(z-index 최대) 머리 ✕ 왼쪽에 「모두 닫기」(시안 v7 — 작은 테두리 단추 · 머리 색 계열 · popAllSync).
    DOM 은 ✕ 뒤에 붙이고 보이는 차례만 order 로 바꾼다 — ✕ 를 「머리 첫 단추」로 찾는 곳(mbWinHead 의 ':scope > button' · 하네스)이 그대로 ✕ 를 잡게.
@@ -1693,7 +1698,7 @@ mark.mkc.u{background:transparent;border-bottom:2px solid var(--exc)}
     <span class="scope" data-s="prec">⚖ 판례</span>
     <span class="scope" data-s="jimun">📝 지문</span>
     <span class="scope" data-s="memo">🗒 메모</span>
-    <span class="scope" data-s="logic">📐 논리</span>
+    <span class="scope" data-s="claude">Claude</span>
     <span class="scope" data-s="omr">📖 정리</span>
     <span class="scope" data-s="stk">🏷 두문자·줄임말</span>
     <span id="skLaws" style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap"></span>
@@ -3345,7 +3350,9 @@ function recTouch(){ clearTimeout(recTouchT); recTouchT = setTimeout(() => { sta
    ⚠ 셈(근거 N개 · C n)은 1차객 · 보고 있는 법 안(OXPOOL)만 — 상표 JSON 에 T… 열쇠가 섞여 있어 접두 글자로 법을 가르지 않는다. */
 const CL_PATH = 'jopangi/claude.json';
 const CLFIX_KEY = REC_PRE + 'clfix', CL_FIX_MAX = 20000;
-const CL_RX = /\b[TSD]\d{7}(?:P7)?\b/g;   /* 지문 열쇠 — T|S|D + 7자리 · 제7판 일부는 T + 7자리 + P7(jimun_*.json 6,369개 실측) · 답 번호 T001 은 3자리라 안 걸린다 */
+const CL_RX = /\b[TSD]\d{7}(?:P7)?\b|민기출 \d\d-\d\d-\d(?!\d)/g;   /* 지문 열쇠 — T|S|D + 7자리 · 제7판 일부는 T + 7자리 + P7(jimun_*.json 6,369개 실측) · 답 번호 T001 은 3자리라 안 걸린다
+   ★ ms_claude_editq C-2 — 민소 2차 기출 문제 코드(민기출 YY-RR-N)도 글자 단추·언급(↩) · 답 번호 MS001 은 어느 꼴에도 안 걸린다 */
+const CL_MS_RX = /^민기출 \d\d-\d\d-\d$/;   /* 민소 2차 기출 답의 uid = 문제 코드(설문으로 안 나눔) */
 let CL_DATA = null, CL_STATE = 'wait', CL_BUSY = false, CL_WARNED = false, CL_SIG = '';   /* CL_STATE: wait(받는 중) · ok(받음 · 404 면 빈 것) · fail(못 받음) */
 let CL_BY_UID = {}, CL_MENT = {};            /* §A-4 파생 색인 — 받을 때 한 번 계산(직접 답 · 다른 답 md 에서 언급) · 저장 키 없음 */
 async function clLoad(){
@@ -3386,6 +3393,22 @@ function clFixOf(m){ const f = clFixAll()[m]; return (f && !f.done && typeof f.m
 function clMdOf(m){ const f = clFixOf(m); return f ? f.md : String((clAns(m) || {}).md || ''); }
 function clTs(ts){ const t = new Date(+ts || 0), p = n => String(n).padStart(2, '0'); return p(t.getMonth() + 1) + '-' + p(t.getDate()) + ' ' + p(t.getHours()) + ':' + p(t.getMinutes()); }
 function clTip(d, m){ return d.map(x => x + ' 답').concat(m.map(x => x + ' 답에서 언급')).join(' · '); }
+/* ★ ms_claude_editq C — 민소 2차 기출: 카드 열쇠(2cha_본문_기출_민소.json) ↔ 문제 코드 uid. 짝 = key === uid || key.startsWith(uid + '-') · 처음 쓸 때 한 번 받는다 */
+let CL_MSK = null;
+function clMsUid(ck){ const m = /^민기출 \d\d-\d\d-\d(?!\d)/.exec(String(ck || '')); return m ? m[0] : null; }
+async function clMsKeys(){ if (CL_MSK) return CL_MSK;
+  const C = await get('2cha_본문_기출_민소.json').catch(() => null); const o = {};
+  Object.keys(C || {}).forEach(k => { const u = clMsUid(k); if (u && (k === u || k.indexOf(u + '-') === 0) && !o[u]) o[u] = k; });
+  CL_MSK = o; return o; }
+/* 붙은 자리 — 1차객 = 지문 이름 · 열쇠(창 제목 무변) · 민소 = 코드 · 카드 이름(열쇠의 코드 뒤 글 · 없으면 코드만) */
+function clWho(uid){ uid = String(uid || '');
+  if (!CL_MS_RX.test(uid)) return ggWho(uid) + ' · ' + uid;
+  const k = CL_MSK && CL_MSK[uid]; const nm = k && k.length > uid.length + 1 ? k.slice(uid.length + 1) : '';
+  return uid + (nm ? ' · ' + nm : ''); }
+/* 민소 코드 단추 → 그 기출 카드 팝업(깊이 +1 · 보고 있는 법이 달라도 민소 카드로) */
+async function clMsGo(uid, ev, depth){ const K = await clMsKeys(); const k = K[uid];
+  if (!k){ toast('민소 2차 기출에 그 문제 카드가 없다 — ' + uid); return; }
+  popCard4('기출', k, ev, depth, null, null, '민사소송법'); }
 
 /* §B 카드 아랫줄 단추 — 글자만(테두리·바탕 없음) · 직접 답 N = 주황 「Claude N」 · 언급만 = 회색 「Claude」 + 주황 「↩」(N≥2 면 ↩N) · 둘 다 없음 = 회색.
    번호(T001…)는 title 에만. 못 받았으면(fail) 숨은 자리표만 — 나중에 받으면 clPaintAll 이 갈아 끼운다(카드를 다시 그리지 않는다).
@@ -3403,6 +3426,19 @@ function clBtn(uid, pop){
   b.onclick = ev => { ev.stopPropagation(); clOpen(uid, ev); };
   return b;
 }
+/* ★ ms_claude_editq C-3 — 민소 2차 기출 보드 줄: 답이나 언급이 있을 때만 clBtn(76줄 전부에 회색을 세우지 않는다) · 없거나 못 받았으면 숨은 자리표 · clPaintAll 이 같은 규칙으로 갈아 끼운다 */
+function clBtnIf(uid){
+  const d = CL_STATE === 'ok' ? (CL_BY_UID[uid] || []) : [], m = CL_STATE === 'ok' ? (CL_MENT[uid] || []) : [];
+  let b; if (d.length || m.length) b = clBtn(uid); else { b = el('span'); b.hidden = true; b.dataset.clbtn = uid; }
+  b.dataset.clif = '1'; return b; }
+/* ★ ms_claude_editq C-4 — 민소 2차 기출 카드 팝업 탭 줄 오른쪽 「Claude」(+N) · 늘 보인다(답 없으면 회색 → 「아직 답 없음」 창) · 탭을 안 바꾸고 새 팝업으로(깊이 +1) */
+function clTabBtn(uid, depth){
+  const d = CL_STATE === 'ok' ? (CL_BY_UID[uid] || []) : [], m = CL_STATE === 'ok' ? (CL_MENT[uid] || []) : [];
+  const b = el('button', 'tool cltab' + (d.length ? ' has' : ''), 'Claude' + (d.length ? ' ' + d.length : ''));
+  b.type = 'button'; b.dataset.cltab = uid; b.dataset.cldepth = String(depth || 2);
+  b.title = clTip(d, m) || 'Claude 답 없음';
+  b.onclick = ev => { ev.stopPropagation(); clOpen(uid, ev, depth || 2); };
+  return b; }
 /* §H 정리 창 칩 — 글자만 · 주황 11px 굵게 · 직접 답 N = 「CN」 · 언급만 = 「↩」/「↩N」 · 둘 다 없으면 숨은 자리표만 */
 function clChip(uid){
   const d = CL_STATE === 'ok' ? (CL_BY_UID[uid] || []) : [], m = CL_STATE === 'ok' ? (CL_MENT[uid] || []) : [];
@@ -3414,19 +3450,21 @@ function clChip(uid){
 }
 /* 받거나 정정한 뒤 — 떠 있는 단추·칩·Claude 창을 제자리에서 갈아 끼운다(카드를 다시 그리지 않는다 · 고치는 중인 창은 둔다) */
 function clPaintAll(){
-  document.querySelectorAll('[data-clbtn]').forEach(b => b.replaceWith(clBtn(b.dataset.clbtn, b.dataset.clpop === '1')));
+  document.querySelectorAll('[data-clbtn]').forEach(b => b.replaceWith(b.dataset.clif === '1' ? clBtnIf(b.dataset.clbtn) : clBtn(b.dataset.clbtn, b.dataset.clpop === '1')));   /* ★ ms_claude_editq C-3 — clif = 있을 때만 */
+  document.querySelectorAll('[data-cltab]').forEach(b => b.replaceWith(clTabBtn(b.dataset.cltab, +b.dataset.cldepth || 2)));   /* ★ ms_claude_editq C-4 */
   document.querySelectorAll('[data-clchip]').forEach(b => b.replaceWith(clChip(b.dataset.clchip)));
   document.querySelectorAll('[data-clwin]').forEach(w => { if (!w.querySelector('[data-clfixta]')) clWinFill(w); });
 }
 
 /* §C Claude 창 — popShell('claude') + popSizable 'claude'(정리 창 'jn' 과 크기 기억을 따로) · 머리 §D · 폭 480 ·
    같은 지문을 다시 누르면 닫힌다(popToggle · 조판기 규칙). 창 전체 글꼴은 Malgun 먼저(.mbwin). */
-function clOpen(uid, ev){
+function clOpen(uid, ev, depth){
   const _pk = 'claude|' + uid;
   if (popToggle(_pk)) return;
-  const body = popShell('claude', 'Claude · ' + ggWho(uid) + ' · ' + uid, _pk);
+  const body = popShell('claude', 'Claude · ' + clWho(uid), _pk);   /* ★ ms_claude_editq C-5 — 제목 = clWho(1차객 무변 · 민소 = 코드 · 카드 이름) */
   mbWinFrame(body.parentNode);
-  const w = el('div', 'clmd'); w.dataset.clwin = uid;
+  if (CL_MS_RX.test(String(uid)) && !CL_MSK) clMsKeys().then(() => { const pt = body.parentNode.querySelector('.ph .pt'); if (pt) pt.textContent = 'Claude · ' + clWho(uid); });   /* 카드 이름은 처음 한 번 받은 뒤 */
+  const w = el('div', 'clmd'); w.dataset.clwin = uid; w.dataset.cldepth = String(depth || 1);
   body.appendChild(w);
   clWinFill(w);
   showPop(ev);
@@ -3464,7 +3502,9 @@ function clAnsEl(m, i){
 }
 /* 본문·머리의 지문 열쇠 단추 → 새 지문 팝업(§E) */
 function clWire(root){
-  root.querySelectorAll('button.uid[data-sid]').forEach(b => { b.onclick = ev => { ev.stopPropagation(); popCard(b.dataset.sid, ev); }; });
+  root.querySelectorAll('button.uid[data-sid]').forEach(b => { b.onclick = ev => { ev.stopPropagation(); const sid = b.dataset.sid;
+    if (CL_MS_RX.test(sid)){ const w = b.closest('[data-clwin]'); clMsGo(sid, ev, (+(w && w.dataset.cldepth) || 1) + 1); }   /* ★ ms_claude_editq C-5 — 민소 코드 = 그 기출 카드(popCard4) */
+    else popCard(sid, ev); }; });
 }
 /* §A-3 본문 문법 — 먼저 다 이스케이프한 뒤 이것만 태그로: ### 소제목 · - 목록 · | 표 |(둘째 줄 |---| = 머리 구분) · **굵게** · 빈 줄 = 문단 · 지문 열쇠 = 글자 단추 */
 function clEsc(t){ return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
@@ -6543,10 +6583,10 @@ async function popPrec4(id,ev,depth,law,q){   /* ★ 손질 9(9/5) — law = 다
   if(q&&tab==='요약'){ const qn=String(q).trim(); const hit=[...cont.querySelectorAll('.ln')].find(d=>(d.textContent||'').indexOf(qn)>=0); if(hit){ hit.classList.add('blkhl'); setTimeout(()=>{try{hit.scrollIntoView({block:'center'});}catch(e){}},60); } }   /* ★ 손질 9 — 검색어 첫 일치 줄 */
 }
 /* ③ 2차 카드 팝업 — renderBody 카드 재사용 */
-async function popCard4(kind,ck,ev,depth,blockId,tab){   /* ★ 2차 탭 판 1 §4-5 — 탭 셋(문제/해설/채점) · tab 을 주면 열린 팝업은 탭만 바꾼다 */
-  kind=kind||'사례'; const subj=PLAW(); const name=kind+'_'+subj;
+async function popCard4(kind,ck,ev,depth,blockId,tab,law){   /* ★ 2차 탭 판 1 §4-5 — 탭 셋(문제/해설/채점) · tab 을 주면 열린 팝업은 탭만 바꾼다 · ★ ms_claude_editq C-5 — law 를 주면 그 법 카드(Claude 창의 민소 코드 · 없으면 지금 법 그대로) */
+  kind=kind||'사례'; const subj=(law&&SHORT[law])||PLAW(); const name=kind+'_'+subj;
   const bk=kind;   /* ★ 2차 기출 폴더 판(9/4) — 특례 제거 · 기출은 CHF('기출') */
-  const C=await get(CHF(bk)).catch(()=>({})); const rec=C[ck];
+  const C=await get('2cha_본문_'+bk+'_'+subj+'.json').catch(()=>({})); const rec=C[ck];   /* = CHF(bk) (law 가 없으면 같은 파일) */
   const G=await gradeOf(subj); const gv=G['card|'+kind+'|'+ck]||G['card|'+(kind==='사례'?'기출':'사례')+'|'+ck]||null;
   const _pk24=('cell')+'|'+('🧾 '+kind+' · '+String(ck).slice(0,40)+(blockId?' · ^'+blockId:''));
   { const open=POPS.find(x=>x._pk===_pk24); if(open){ if(tab&&open._setTab){ open._setTab(tab); return; } closeOne(open); return; } }
@@ -6572,6 +6612,7 @@ async function popCard4(kind,ck,ev,depth,blockId,tab){   /* ★ 2차 탭 판 1 �
     cont.appendChild(el('div','cdim','…')); c2GradeEl(gv,depth||1).then(n=>{ cont.innerHTML=''; cont.appendChild(n); }); };
   pop._setTab=draw;
   ['문제','해설','채점'].forEach(t=>{const b=el('button','tool',t);b.dataset.t=t;b.onclick=ev2=>{ev2.stopPropagation();draw(t);};tabs.appendChild(b);});
+  if(subj==='민소'&&kind==='기출'){ const u=clMsUid(ck); if(u)tabs.appendChild(clTabBtn(u,(depth||1)+1)); }   /* ★ ms_claude_editq C-4 — 민소 기출 카드만 · 탭 옆 「Claude」 */
   if(top.childNodes.length)body.appendChild(top); body.appendChild(tabs); body.appendChild(cont); draw(tab||'문제');
 }
 /* §2-4 요약본 목차 팝업 — 헤딩만 접힌 목록 · › 절 펴기 · 헤딩 글자 클릭 = 3단 요약 탭 그 줄 */
@@ -7882,7 +7923,6 @@ function popCallout(co,file,ev,kind,depth){
   const _pkc=(co.co==='question'?'':'fn')+'|'+file+'::'+co.t; if(popToggle(_pkc))return;   /* ★ 상표 손질 6 — 여러 줄 호출 — 콜아웃 키 = 종류|파일::제목 */
   const body=popShell(co.co==='question'?'':'fn',
     (co.co==='question'?'⑦ ':'📄 ')+co.t, _pkc);
-  body.appendChild(el('div','cdim','제목의 ˅ 를 눌러 접고 편다 · 글줄을 길게 누르면 🗒 메모 · ✎ 수정'));
   body.appendChild(renderBody({행:co.rows},file+'::'+co.t,{kind:kind,depth:(depth||0)+1}));   /* ★ add5 — 안 본문도 같은 renderBody */
   showPop(ev);
 }
@@ -8087,7 +8127,9 @@ function c2RowEl(c, o){ o = o || {}; const hot = /⚠|누락/.test(c.x.논점 ||
   if (o.over && o.main) t1.appendChild(el('span', 'c2ovt', '걸침 — 주단원 ' + (c2uNum(o.main) || o.main)));
   if (S.boardKind === 'GS' && c.series) t1.appendChild(el('span', 'c2ser', c.series));
   if (c.num) t1.appendChild(el('span', 'chip c-src c2n', '사례 ' + c.num));
-  t1.appendChild(c2ScoreChip(c)); c2PdfChips(c.info.pdfs).forEach(a => t1.appendChild(a));
+  t1.appendChild(c2ScoreChip(c));
+  if (S.law === '민사소송법' && S.boardKind === '기출'){ const u = clMsUid(c.file); if (u) t1.appendChild(clBtnIf(u)); }   /* ★ ms_claude_editq C-3 — 점수 칩 바로 오른쪽 · 답이나 언급이 있을 때만 · 누르면 창만(줄 누름으로 안 번짐) */
+  c2PdfChips(c.info.pdfs).forEach(a => t1.appendChild(a));
   m.appendChild(t1); r.appendChild(m);
   const r3 = el('div', 'c2r3'); if (o.subj) c2uChips(r3, c, o); r.appendChild(r3);
   r.title = '눌러서 크게 보기'; r.onclick = e => { e.stopPropagation(); popCard4(S.boardKind, c.file, e, 1); };
@@ -13557,7 +13599,7 @@ $('#ksearch').onclick=openSk;
    찾다가 보던 자리를 잃지 않는 것이 검색의 값이다. */
 /* ★ v3-H §2 — 범위에 🗒 메모(§4 층)·📐 논리 · 법 다중선택(특·상·디·민소).
    메모는 b 패치가 층을 채우기 전엔 0건이 정상이다. */
-const SKON={jo:false,prec:false,jimun:false,memo:false,logic:false,omr:false,stk:false};   /* ★ 손질 9 — 처음은 전부 꺼짐(사용자 확정) */
+const SKON={jo:false,prec:false,jimun:false,memo:false,claude:false,omr:false,stk:false};   /* ★ ms_claude_editq D — logic(근거로 흡수된 죽은 키) 자리를 claude 로 · 옛 jopangi_skon 의 logic 은 skonLoad 가 모르는 키라 저절로 버려진다 */   /* ★ 손질 9 — 처음은 전부 꺼짐(사용자 확정) */
 const SKON_KEY='jopangi_skon';   /* 기기별 · `jopangi.` 접두를 안 써 기록 내보내기·동기화 밖(UI_KEY 와 같은 이유) */
 function skonLoad(){ try{ const j=JSON.parse(localStorage.getItem(SKON_KEY)||'null'); if(j&&typeof j==='object') Object.keys(SKON).forEach(k=>{ SKON[k]=!!j[k]; }); }catch(e){} }
 function skonSave(){ try{ localStorage.setItem(SKON_KEY, JSON.stringify(SKON)); }catch(e){} }
@@ -13585,7 +13627,7 @@ function skLawPaint(){
     holder.appendChild(b);
   });
 }
-const SK_ICON={jo:'📖',prec:'⚖',jimun:'📝',omr:'📖',memo:'🗒',logic:'📐',stk:'🏷'};
+const SK_ICON={jo:'📖',prec:'⚖',jimun:'📝',omr:'📖',memo:'🗒',claude:'C',stk:'🏷'};   /* ★ ms_claude_editq D — Claude = 주황 800 「C」(CSS .skic[data-sk=claude]) */
 function skTarget(tk){
   if(tk.indexOf('jo|')===0){const p=tk.slice(3).split(':');return (SHORT[p[0]]||p[0])+' '+(p[1]||'');}
   if(tk.indexOf('q|')===0)return '지문 '+tk.slice(2);
@@ -13606,7 +13648,7 @@ function skMemoGo(tk,ev,r){
 }
 function skRow(box,cls,head,tail,tag,open){
   const d=el('div','res');
-  if(SK_ICON[cls])d.appendChild(el('span','skic',SK_ICON[cls]));   /* ★ v3-H §2 — 걸린 범위 아이콘 */
+  if(SK_ICON[cls]){const ic=el('span','skic',SK_ICON[cls]);ic.dataset.sk=cls;d.appendChild(ic);}   /* ★ v3-H §2 — 걸린 범위 아이콘 · ★ ms_claude_editq D — data-sk(Claude 「C」 색) */
   d.appendChild(el('b','',head));
   if(tail)d.appendChild(el('span','x',tail));
   d.appendChild(el('span','lawtag',tag));
@@ -13667,7 +13709,7 @@ function popJimun(title,body,ev,go){
 const skRun=async e=>{   /* ★ 손질 8 — §2 300ms 디바운스 — 아래 $('#skin').oninput 이 부른다 */
   const q=(e.target.value||'').trim();const box=$('#skres');box.innerHTML='';skRows=[];skSel=0;
   if(!q)return;
-  if(!Object.keys(SKON).some(k=>SKON[k])){box.appendChild(el('div','grp','범위를 골라라 — 위의 범위(조문·판례·지문·메모·논리·기출·스티커) 중 하나 이상을 켜야 찾는다'));return;}   /* ★ 손질 9 — 0건 침묵 금지 */
+  if(!Object.keys(SKON).some(k=>SKON[k])){box.appendChild(el('div','grp','범위를 골라라 — 위의 범위(조문·판례·지문·메모·Claude·기출·스티커) 중 하나 이상을 켜야 찾는다'));return;}   /* ★ 손질 9 — 0건 침묵 금지 */
   const lawsOn=LAWS.filter(l=>SKLAW[l]);   /* ★ v3-H §2 — 켜진 법마다 읽어 합친다 */
   if(SKON.jo){
     try{
@@ -13778,19 +13820,28 @@ const skRun=async e=>{   /* ★ 손질 8 — §2 300ms 디바운스 — 아래 $
     out.forEach(r=>skRow(box,'memo',(r.word?'「'+r.word+'」 ':'')+skTarget(r.tk),skCut(r.t,q),'메모'+(r.who?' · '+r.who:''),   /* ★ 메모 손질 — 줄 끝 사람 */
       ev=>{closeSk();skMemoGo(r.tk,ev,r);}));
   }
-  if(SKON.logic){
-    /* ★ v3-H §2 — 📐 논리(jopangi.logic) 본문 검색 · 결과 = 그 지문 팝업 */
-    const A=lgAll();
-    const out=[];
-    for(const k2 of Object.keys(A)){
-      if(out.length>=30)break;
-      const t2=(A[k2]||{}).t||'';
-      if(t2.indexOf(q)<0)continue;
-      out.push({k:k2,x:skCut(t2,q)});
+  if(SKON.claude){
+    /* ★ ms_claude_editq D — Claude 답 글에서 찾는다(옛 📐 논리 자리 · 논리 기록 키·lgAll·흡수 코드는 둔다).
+       대상 = CL_DATA.answers 중 켜진 법 칩에 드는 것(답 law · 없으면 번호 머리 T·S·D·MS) · 찾는 글 = 본문(정정본 우선)+핵심 줄+번호+붙은 자리 이름 · indexOf · 최대 30 · 누르면 Claude 창 */
+    if(CL_STATE==='wait')box.appendChild(el('div','grp','Claude 답을 받는 중이다'));
+    else if(CL_STATE==='fail')box.appendChild(el('div','grp','Claude 답을 못 받았다 — 토큰·네트워크'));
+    else{
+      const A=(CL_DATA&&CL_DATA.answers)||{}, ks=Object.keys(A).sort(), out=[];
+      const lawOf=m=>{ const a=A[m]||{}; return String(a.law||(m.indexOf('MS')===0?'민소':({T:'특허',S:'상표',D:'디보'})[m[0]]||'')); };
+      if(ks.some(m=>CL_MS_RX.test(String((A[m]||{}).uid||''))))await clMsKeys();   /* 민소 카드 이름(붙은 자리) */
+      for(const m of ks){
+        if(out.length>=30)break;
+        const a=A[m]||{}, lw=lawOf(m), full=LAW_FULL[lw]; if(!full||!SKLAW[full])continue;
+        const u=String(a.uid||''), ms=CL_MS_RX.test(u), nm1=(((OXPOOL||{})[u])||{}).name||'';   /* 1차객 = 지문 이름(1차객 풀이 안 떠 있으면 열쇠 그대로 — 짧은 표기 「603」 은 그 화면 안에서만 뜻이 있다) */
+        const where=ms?u:(nm1||u);
+        const hay=clMdOf(m)+'\n'+String(a.core||'')+'\n'+m+'\n'+(ms?clWho(u):(ggWho(u)+'\n'+u));
+        if(hay.indexOf(q)<0)continue;
+        out.push({m:m,u:u,lw:lw,where:where});
+      }
+      box.appendChild(el('div','grp','Claude — '+out.length+'건'));
+      out.forEach(r=>skRow(box,'claude',r.m+' · '+r.where,clSnip(r.m,q.toLowerCase()),r.lw,
+        ev=>{closeSk();clOpen(r.u,ev);}));
     }
-    box.appendChild(el('div','grp','📐 논리 — '+out.length+'건'));
-    out.forEach(r=>skRow(box,'logic',linkDisp(r.k),r.x,'논리',
-      ev=>{closeSk();popCard(r.k,ev);}));
   }
   if(SKON.omr&&SKLAW['특허법']){   /* 정리는 특허만 — 지금 규칙 유지 */
     try{
