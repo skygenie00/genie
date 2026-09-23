@@ -1637,6 +1637,30 @@ mark.mkc.u{background:transparent;border-bottom:2px solid var(--exc)}
 .jn2 .jna b{font-weight:900}
 .jn2 .jne{font-size:12.5px;color:#374151;background:#f9fafb;padding:10px;border-radius:8px;border:1px solid #e5e7eb;line-height:1.625;white-space:pre-wrap}
 .jn2 .jn0{padding:10px 14px;font-size:11px;color:#6b7280}
+/* ★ mok_popup_phone(9/23 · _task_jo_mok_popup_phone) — E 「모두 닫기」 · G 폰(폭 ≤ 640) */
+/* E — 팝업이 둘 이상이면 맨 위 팝업(z-index 최대) 머리 ✕ 왼쪽에 「모두 닫기」(시안 v7 — 작은 테두리 단추 · 머리 색 계열 · popAllSync).
+   DOM 은 ✕ 뒤에 붙이고 보이는 차례만 order 로 바꾼다 — ✕ 를 「머리 첫 단추」로 찾는 곳(mbWinHead 의 ':scope > button' · 하네스)이 그대로 ✕ 를 잡게.
+   키는 ✕(12px × 1.62) 안이다 — 단추가 붙고 떨어져도 머리 높이가 안 변한다. */
+.pop .ph>button.pall{order:1;margin-left:auto;flex:none;font-size:11.5px;line-height:1.3;padding:1px 8px;border:1px solid #a9c1ea;border-radius:6px;background:#fff;color:var(--exc);white-space:nowrap}
+.pop .ph.hasall>button:not(.pall){order:2;margin-left:6px}
+.pop.k-cell .ph>button.pall{border-color:#9cc9ab;color:#1f7a3f}
+.pop.k-fn .ph>button.pall{border-color:#dccb7c;color:#7a6a17}
+.pop.mbwin .ph>button.pall{border-color:#d1d5db;color:#6b7280;font-weight:700}
+@media (max-width:640px){
+  /* G-5 — 맨 윗줄 탭(#hrail)은 제 줄 안에서 가로 스크롤(스크롤바 얇게) · 페이지는 안 넓어진다.
+     폰에선 탭 줄이 로고·법 칩 아래 제 줄로 내려가므로 왼쪽 구분선·여백은 뺀다 */
+  #hrail{flex:1 1 100%;min-width:0;margin-left:0;padding-left:0;border-left:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+  #hrail::-webkit-scrollbar{height:3px} #hrail::-webkit-scrollbar-thumb{background:#cfcabd;border-radius:2px}
+  #hrail .rb{flex:none}
+  /* 배지 묶음(hdrFit 이 검색줄로 내린 뒤)도 제 줄 안에서 접힌다 — 배지 여섯이 폭을 넘어 페이지를 넓히지 않게 */
+  #hbadges{flex-wrap:wrap;flex-shrink:1;min-width:0;max-width:100%;row-gap:4px}
+  /* G-4 — 옆 두 칸(.tree · .plist) = 본문 위에 겹쳐 뜨는 서랍(본문을 밀지 않는다) · 폭 = min(지금 폭, 85%) · 그림자 ·
+     자리 = 손잡이 줄 바로 오른쪽(drawerPlace) · 손잡이 ‹ › 로 열고 바깥을 누르면 닫힘(render 뒤 pointerdown 캡처) */
+  #slot{position:relative}
+  #slot>.tree:not(.hid),#slot>.plist:not(.hid){position:absolute;top:0;bottom:0;left:0;z-index:40;box-shadow:6px 0 18px rgba(20,30,60,.22)}
+  #slot>.tree:not(.hid){width:min(var(--trw,212px),85%)}
+  #slot>.plist:not(.hid){width:min(var(--lsw,262px),85%);background:#fff}
+}
 </style>
 </head>
 <body>
@@ -1738,6 +1762,10 @@ try{const u=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     ['note','list','prec','toc','link','canvas','claude','jn','c2unit','moknote'].forEach(k=>{if(u['pop_'+k]&&typeof u['pop_'+k]==='object')S.popCfg[k]=u['pop_'+k];});   /* ★ pop_moknote D-2 — moknote */   /* ★ 판 4 add2 */   /* ★ linkwin §2 — link(창 넷) */
     if(u.omr&&typeof u.omr==='object')S.omrPos=u.omr;   /* ★ 기출뷰 손질 3 — OMR 자리 */
     if(u.cha2_filter&&typeof u.cha2_filter==='object')S.cha2Filter=u.cha2_filter;if(u.cha2_sort)S.cha2Sort=u.cha2_sort;   /* ★ 2차 탭 판 1 — §4-2 필터·정렬 = 표시층(jopangi_ui) */}catch(e){}   /* ★ v3-L §1 */
+/* ★ mok_popup_phone G-4 — 폰(폭 ≤ 640)은 옆 두 칸(.tree · .plist)을 접은 채로 시작한다 · jopangi_ui 에 treeHid·listHid 기억이 있으면 그것
+   (⚠ 바탕 census — 그 두 값을 jopangi_ui 에 쓰는 곳은 없다 · 새로 쓰게 하면 PC 동작이 바뀌므로 안 한다) */
+try{const u5=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
+    if(vvPhone()){S.treeHid=('treeHid' in u5)?!!u5.treeHid:true;S.listHid=('listHid' in u5)?!!u5.listHid:true;}}catch(e){}
 /* ★ gaek_mb §A-2 — 목차 서랍 기억. `jopangi_ui` 안(기기별 · 동기화 밖 · 민법도 기기별이다) */
 try{const u2=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if(u2.jt_w>0)S.jtW=u2.jt_w; if(u2.jt_fold)S.jtFold=true;
@@ -1800,7 +1828,7 @@ function drawTop(){
   skLawPaint();
 }
 function drawRail(){
-  const r=$('#hrail');r.innerHTML='';   /* ★ hrail(9/22) §A-1 — 그리는 자리만 #rail → #hrail(칸·수·켜짐 규칙 그대로) */
+  const r=$('#hrail');const sl=r.scrollLeft;r.innerHTML='';   /* ★ mok_popup_phone G-5 — 폰에서 옆으로 민 자리(sl)는 다시 그려도 지킨다(비웠다 채우면 0 으로 돌아가 방금 켠 오른쪽 탭이 화면 밖으로 사라졌다) */   /* ★ hrail(9/22) §A-1 — 그리는 자리만 #rail → #hrail(칸·수·켜짐 규칙 그대로) */
   RAILS.forEach(([k,label])=>{
     // 민소는 1차 지문 갈래가 없다 — 레일에서 숨긴다(사양서 §4-0)
     if(k==='jimun'&&S.law==='민사소송법')return;
@@ -1810,8 +1838,12 @@ function drawRail(){
     const n=el('b','','');n.dataset.n=k;b.appendChild(n);
     b.onclick=()=>{S.tab=k;render();};
     r.appendChild(b);
+    if(k==='cha2')r.appendChild(mokBtnEl());   /* ★ mok_popup_phone A — 「목차노트 N」 = 2차 바로 오른쪽 탭(네 법 · 어느 탭이든) · 누르면 목록 팝업만(S.tab 무변 · .on 없음) */
   });
-  railCounts().then(hdrFit);   /* ★ hrail(9/22) §A-5 — 수가 다 찬 뒤에 첫 줄을 잰다(수 없는 좁은 탭으로 재면 배지가 첫 줄에 남아 줄이 갈린다 · 하네스 실측) */
+  r.scrollLeft=sl;
+  railCounts().then(()=>{ r.scrollLeft=sl; const on=r.querySelector('.rb.on');   /* ★ mok_popup_phone G-5 — 수가 다 차 줄이 넓어진 뒤 민 자리를 되돌리고(수 없는 좁은 줄에선 0 으로 깎인다) · 켠 탭이 줄 밖이면 보이게 · PC(안 넘침)는 무동작 */
+    if(on&&r.scrollWidth>r.clientWidth){ const a=r.getBoundingClientRect(),b=on.getBoundingClientRect(); if(b.left<a.left)r.scrollLeft-=a.left-b.left+8; else if(b.right>a.right)r.scrollLeft+=b.right-a.right+8; }
+    hdrFit(); });   /* ★ hrail(9/22) §A-5 — 수가 다 찬 뒤에 첫 줄을 잰다(수 없는 좁은 탭으로 재면 배지가 첫 줄에 남아 줄이 갈린다 · 하네스 실측) */
 }
 /* ★ hrail(9/22) §A-5 — 머리 첫 줄(로고·법 칩·갈래 탭·배지 여섯)이 한 줄에 안 들면 배지 묶음을
    둘째 줄 검색줄 오른쪽으로 내린다(검색줄 flex:1 · 배지 flex:none). 먼저 첫 줄에 넣어 보고 줄이 갈렸으면 내린다.
@@ -1842,6 +1874,8 @@ async function railCounts(){
   try{const b=await get('2cha_보드.json');let n=0;
       Object.keys(b).forEach(k=>{if(k.endsWith('|'+SHORT[S.law]))n+=b[k].총||0;});
       set('cha2',n.toLocaleString());}catch(e){set('cha2','–');}
+  { const n=await mokCount(), mb=$('#mokBtn');   /* ★ mok_popup_phone A-3 — 목차노트 탭 수도 여기서 채운다(hdrFit 은 수가 다 찬 뒤에 잰다) · 0 = 흐린 「—」 + disabled */
+    set('mok',n?String(n):'—'); if(mb){ mb.disabled=!n; mb.title=PLAW()+' 목차노트 '+(n?n+' — 볼트 차례대로 목록 · 누르면 노트':'없음'); } }
   if(S.law==='특허법'){
     try{set('omr',(await get('omr/특허/omr_meta.json')).pages.length+'쪽');}
     catch(e){set('omr','—');}
@@ -1903,7 +1937,9 @@ function handle(which){
      4px 미만이면 클릭=접기 · jopangi_ui.trw(법 무관 하나) · 접힌 상태에선 끌기 없음
      ★ 판 4 §2-5 — 2단(plist)도 같은 장치 · 200~600px · jopangi_ui.lsw */
   h.onclick=()=>{if(h._drag){h._drag=false;return;}
-    if(which==='tree')S.treeHid=!S.treeHid;else S.listHid=!S.listHid;render();};
+    if(which==='tree')S.treeHid=!S.treeHid;else S.listHid=!S.listHid;
+    if(vvPhone()&&!(which==='tree'?S.treeHid:S.listHid)){if(which==='tree')S.listHid=true;else S.treeHid=true;}   /* ★ mok_popup_phone G-4 — 폰: 서랍은 하나씩(다른 쪽은 접는다) */
+    render();};
   if(off)return h;
   const isTree=which==='tree';
   const MIN=isTree?160:200,MAX=isTree?520:600,VAR=isTree?'--trw':'--lsw';
@@ -2059,7 +2095,7 @@ function renderLine(row,opt){
         const s=el('span','embed dead','⤷ 못 찾음 · '+e.to); s.title=(e.miss==='c'?'대상 파일이 특허목차 70 밖':'파일은 있으나 블록 ^id 가 없다')+' — _임베드_미해결.csv';
         top().appendChild(s); EMBMISS[e.to]=1; }
       else if(e.k==='E'&&e.a===i){
-        /* ★ 판 4 §2-2 — `⤷ 파일#^id` = 목차노트 팝업 진입(깊이 ①) · 깊이 3 안에서는 팝업을 갈아 끼운다(깊이 4 없음) */
+        /* ★ 판 4 §2-2 — `⤷ 파일#^id` = 목차노트 팝업 진입(깊이 ①) · ★ mok_popup_phone D — 갈아 끼우지 않는다(어느 깊이든 새 팝업 한 겹 더) */
         const s=el('span','embed live','⤷ '+e.to);
         const tf=String(e.to||'').split('#')[0],tid=(String(e.to||'').split('#^')[1]||'').trim();
         s.title='임베드 팝업 — '+tf+(tid?' · 블록 ^'+tid:'');
@@ -2079,19 +2115,19 @@ function renderLine(row,opt){
             :o.md==='mdhl'?el('mark','y'):el('span',o.md);
         if(o.md==='mdcolor'&&o.color)node.style.color=o.color;
         if(o.md==='mdbg'&&o.color)node.style.background=o.color;}
-      else if(o.pl){node=el('span','plink'+(o.pl.j?'':' dead'));   /* ★ 판 4 §2-2 — <사건번호> → ③ 판례 팝업 · 깊이 3 이면 3단으로 */
+      else if(o.pl){node=el('span','plink'+(o.pl.j?'':' dead'));   /* ★ 판 4 §2-2 — <사건번호> → ③ 판례 팝업 · ★ mok_popup_phone D — 깊이 제한 없음(늘 한 겹 더) */
         if(o.pl.j){const pid=o.pl.j;node.onclick=ev=>{ev.stopPropagation();const d=opt.depth||0;
-          if(d>=3){closeAllPops();S.tab='prec';S.prec=pid;S.precTab='요약';render();}else popPrec4(pid,ev,d+1);};}
+          popPrec4(pid,ev,d+1);};}
         else node.title='리스트에 없는 판례';}
       else if(o.ln){
         node=el('span','joLink'+(o.ln.j?'':' dead'));
-        // ★ 팝업 깊이는 2단에서 멈춘다 — 2단 안의 링크는 그 조문 뷰로 이동한다(§5-4)
+        // ★ 팝업 깊이는 2단에서 멈췄다(§5-4) → ★ mok_popup_phone D — 멈추지 않는다(팝업 안 조문 링크도 늘 새 조문 팝업 한 겹 더)
         /* ★ v3-H §3 — 표시 글자(「제132조제3항제2호」)에서 항·호를 뽑아 팝업이 그 항을 받는다.
            `to` 에 `#` 이 있으면 그것도 본다. 항이 없으면 지금 그대로. */
         if(o.ln.j)node.onclick=ev=>{ev.stopPropagation();
           const d=opt.depth||0, law=opt.law||S.law;
           const hl=joHangOf(node.textContent||'',o.ln.to||'');
-          if(d>=2)goJo(law,o.ln.j,hl); else popJo(law,o.ln.j,ev,d+1,hl);};
+          popJo(law,o.ln.j,ev,d+1,hl);};
         // 조문노트가 아닌 볼트 노트는 지금처럼 dead 로 둔다(§5-2) — 팝업을 붙이지 않는다
         else node.title='조문노트가 아닌 볼트 노트 — v0 범위 밖';
       }else{
@@ -2770,7 +2806,7 @@ async function viewJo(){
         showPop(ev);
         const pg=bx.querySelector('.bjpage');if(pg)bjFit(pg);   // 지금 펼침과 같은 자리
         setTimeout(()=>{const w2=bx.firstElementChild?bx.firstElementChild.offsetWidth:0;
-          if(w2)pb.parentNode.style.width=Math.min(innerWidth-40,w2+46)+'px';},0);
+          if(w2){pb.parentNode.style.width=Math.min(vvBox().w-40,w2+46)+'px';vvFit(pb.parentNode);}},0);   /* ★ mok_popup_phone G-1·G-2 */
       };
     }
     fold.appendChild(body);
@@ -2798,19 +2834,55 @@ async function viewJo(){
    ⚠ 지시서 §3-E 는 「팝업 다중/드래그/고정」을 v0 제외로 뒀다.
       8/23 사용자 요구로 켰다. 고정(📌)은 아직 없다 — 다중·드래그만. */
 let POPZ = 60, POPS = [];
+/* ★ mok_popup_phone G-1 — 팝업 자리·크기·끌기·크기 조절이 재는 화면 = **보이는 화면**(visualViewport · 없으면 documentElement 크기). 한 곳에서만 잰다(규칙 ㊜).
+   x·y 는 position:fixed 기준(레이아웃 뷰포트) 좌표 — 보이는 화면의 왼쪽 위 = (offsetLeft, offsetTop).
+   PC·아이패드 가로는 이 값이 innerWidth·innerHeight 와 같다(스크롤바 없음 · 확대 없음) — 그래서 폭 > 640 은 무변(G-6). */
+function vvBox(){
+  const v = window.visualViewport, d = document.documentElement;
+  if (v && v.width > 0) return { x: v.offsetLeft || 0, y: v.offsetTop || 0, w: v.width, h: v.height };
+  return { x: 0, y: 0, w: (d && d.clientWidth) || innerWidth, h: (d && d.clientHeight) || innerHeight };
+}
+/* 폰 = 폭 ≤ 640 — CSS @media (max-width:640px) 와 같은 판정(JS 와 CSS 가 어긋나지 않게) */
+function vvPhone(){ return window.matchMedia ? matchMedia('(max-width:640px)').matches : innerWidth <= 640; }
+/* G-3 끌기 한계 — 머리가 화면에 걸려 있어야 다시 잡는다. PC = 지금 그대로(왼쪽 0 ~ 폭−60 · 위 0 ~ 높이−34).
+   폰 = 머리가 60px 이상 걸려 있으면 왼쪽으로도 더 민다(오른쪽 폭−60 · 아래 높이−34 는 같은 규칙) */
+function popClamp(p, x, y){
+  const B = vvBox(), x0 = B.x + (vvPhone() ? Math.min(0, 60 - ((p && p.offsetWidth) || 0)) : 0);
+  return [Math.max(x0, Math.min(B.x + B.w - 60, x)), Math.max(B.y, Math.min(B.y + B.h - 34, y))];
+}
+/* G-2 폰 폭 팝업 — 폭 = 보이는 폭 − 16(가운데) · 높이 ≤ 보이는 높이 − 16 · 아래 끝이 화면 밖이면 위로 · 그 뒤 늘어나도 화면 안(max-height).
+   크기 기억(popCfg)이 화면보다 크면 줄여서 쓴다 — 기억값은 안 덮는다(p._vvFit → 끌기 저장이 그 크기를 안 쓴다 · 크기 손잡이로 바꾼 것만 쓴다).
+   PC(폭 > 640)는 아무것도 안 한다 · 목차노트 목록+노트 위 30%·아래 70%(p._vvSplit)는 mokOpenNote 가 정한 대로 둔다 */
+function vvFit(p){
+  if (!p || !p.isConnected || p._vvSplit || !vvPhone()) return;
+  const B = vvBox(), W = Math.max(120, Math.round(B.w - 16)), H = Math.max(120, Math.round(B.h - 16));
+  const sized = p.classList.contains('sized'), w0 = p.offsetWidth, w = sized ? Math.min(w0, W) : W;
+  if (w !== w0 || !sized) p.style.width = w + 'px';
+  if (sized && w0 > W) p._vvFit = 1;
+  const r = p.getBoundingClientRect();
+  let x = parseFloat(p.style.left), y = parseFloat(p.style.top); if (isNaN(x)) x = r.left; if (isNaN(y)) y = r.top;
+  x = w >= W ? B.x + (B.w - w) / 2 : Math.max(B.x + 8, Math.min(B.x + B.w - w - 8, x));
+  y = Math.max(B.y + 8, Math.min(y, B.y + B.h - 8 - Math.min(Math.max(r.height, 120), H)));
+  p.style.left = Math.round(x) + 'px'; p.style.top = Math.round(y) + 'px';
+  const room = Math.max(120, Math.round(B.y + B.h - 8 - Math.round(y)));
+  if (sized && p.offsetHeight > room){ p.style.height = room + 'px'; p._vvFit = 1; }
+  const cmh = parseFloat(getComputedStyle(p).maxHeight);
+  p.style.maxHeight = Math.round(isNaN(cmh) ? room : Math.min(cmh, room)) + 'px';
+}
 function dragify(p, hd){
   let sx = 0, sy = 0, ox = 0, oy = 0, on = false;
   hd.addEventListener('mousedown', ev => {
     if (ev.target.closest('button')) return;
     on = true; sx = ev.clientX; sy = ev.clientY;
     ox = parseFloat(p.style.left) || 0; oy = parseFloat(p.style.top) || 0;
-    p.style.zIndex = ++POPZ;
+    p.style.zIndex = ++POPZ; popAllSync();   /* ★ mok_popup_phone E — 맨 위가 바뀌면 「모두 닫기」가 옮겨 간다 */
     ev.preventDefault();
   });
   addEventListener('mousemove', ev => {
     if (!on) return;
-    p.style.left = Math.max(0, Math.min(innerWidth - 60, ox + ev.clientX - sx)) + 'px';
-    p.style.top = Math.max(0, Math.min(innerHeight - 34, oy + ev.clientY - sy)) + 'px';
+    const [x, y] = popClamp(p, ox + ev.clientX - sx, oy + ev.clientY - sy);   /* ★ mok_popup_phone G-3 — 보이는 화면 기준 한계 */
+    p.style.left = x + 'px';
+    p.style.top = y + 'px';
   });
   addEventListener('mouseup', () => { on = false; });
 }
@@ -2831,17 +2903,19 @@ function popShell(kind, title, key){
   document.body.appendChild(p);
   POPS.push(p);
   dragify(p, hd);
-  p.addEventListener('mousedown', () => { p.style.zIndex = ++POPZ; });
+  p.addEventListener('mousedown', () => { p.style.zIndex = ++POPZ; popAllSync(); });   /* ★ mok_popup_phone E */
   /* ★ gaek_mb §24 — 팝업 **전부**에 크기 손잡이(사용자 「반드시」·「조문 팝업 말고도 다」).
      종류 = kind||'pop' · 새 손잡이 코드는 짜지 않고 popSizable 을 기본으로 붙인다.
      다음 틱에 붙이는 까닭 — 부른 쪽이 popShell 바로 뒤에 제 종류로(`'note'`·`'gi'` …)
      popSizable 을 부르면 그쪽이 먼저 `p._sz` 를 차지해 **그 종류가 이긴다**. */
-  setTimeout(() => { if (p.isConnected && !p._sz) popSizable(body, kind || 'pop'); }, 0);
+  setTimeout(() => { if (p.isConnected && !p._sz) popSizable(body, kind || 'pop'); vvFit(p); }, 0);   /* ★ mok_popup_phone G-2 — 부른 쪽이 자리를 다 잡은 뒤 폰 폭 맞춤(PC 무동작) */
+  popAllSync();   /* ★ mok_popup_phone E */
   return body;
 }
 function closeOne(p){
   p.remove();
   POPS = POPS.filter(q => q !== p);
+  popAllSync();   /* ★ mok_popup_phone E — 맨 위가 바뀌었다 */
 }
 function closePop(){                    // 맨 위 하나만 닫는다
   if (POPS.length) closeOne(POPS[POPS.length - 1]);
@@ -2849,18 +2923,33 @@ function closePop(){                    // 맨 위 하나만 닫는다
 function closeAllPops(){
   POPS.slice().forEach(closeOne);
 }
+/* ★ mok_popup_phone E — 팝업이 둘 이상이면 맨 위(z-index 최대) 팝업 머리 ✕ 왼쪽에 「모두 닫기」 하나 → closeAllPops · 하나뿐이면 없음.
+   맨 위가 바뀌는 곳(popShell · closeOne · mousedown 올리기 · 터치로 머리 잡기 · dragify · 교재 창 되돌리기)마다 부른다. Esc(closePop)는 그대로 */
+function popAllSync(){
+  let top = null, tz = -Infinity;
+  POPS.forEach(q => { const z = +q.style.zIndex || 0; if (q.isConnected && z >= tz){ tz = z; top = q; } });
+  const on = POPS.length >= 2 ? top : null;
+  document.querySelectorAll('.pop .ph > button.pall').forEach(b => { if (b.closest('.pop') !== on){ const h = b.parentNode; b.remove(); if (h) h.classList.remove('hasall'); } });
+  if (!on) return;
+  const hd = on.querySelector(':scope > .ph'); if (!hd || hd.querySelector(':scope > button.pall')) return;
+  const b = el('button', 'pall', '모두 닫기'); b.type = 'button'; b.title = '떠 있는 팝업 전부 닫기';
+  b.onclick = ev => { ev.stopPropagation(); closeAllPops(); };
+  hd.appendChild(b); hd.classList.add('hasall');
+}
 function showPop(ev){
   const p = POPS[POPS.length - 1];
   if (!p) return;
+  const B = vvBox();   /* ★ mok_popup_phone G-1 — 보이는 화면 기준(PC 는 innerWidth·innerHeight 와 같은 값) */
   const w = p.offsetWidth || 440, h = p.offsetHeight || 260;
   // 여러 개를 띄우면 조금씩 어긋나게 쌓는다
   const k = (POPS.length - 1) % 6;
-  let x = ev ? ev.clientX + 14 : innerWidth - w - 40;
-  let y = ev ? ev.clientY + 14 : 110;
-  x = Math.max(8, Math.min(x + k * 22, innerWidth - w - 8));
-  y = Math.max(8, Math.min(y + k * 20, innerHeight - Math.min(h, 260) - 8));
+  let x = ev ? ev.clientX + 14 : B.x + B.w - w - 40;
+  let y = ev ? ev.clientY + 14 : B.y + 110;
+  x = Math.max(B.x + 8, Math.min(x + k * 22, B.x + B.w - w - 8));
+  y = Math.max(B.y + 8, Math.min(y + k * 20, B.y + B.h - Math.min(h, 260) - 8));
   p.style.left = x + 'px';
   p.style.top = y + 'px';
+  vvFit(p);   /* ★ mok_popup_phone G-2 — 폰이면 폭 = 화면 − 16(가운데) · 아래 끝 화면 안 */
 }
 
 /* ══════════ 알림 ══════════
@@ -3466,9 +3555,10 @@ function mbWinFrame(p, sub){
    뜬 뒤 아래가 잘리면 그만큼 위로 · 오른쪽이 잘리면 왼쪽으로 올린다. 끌기·크기 기억(popSizable)은 그대로 — 이 창들의 첫 자리만 */
 function mbWinFit(p){
   if (!p || !p.isConnected) return;
-  const r = p.getBoundingClientRect();
-  if (r.bottom > innerHeight - 8) p.style.top = Math.max(8, innerHeight - r.height - 8) + 'px';
-  if (r.right > innerWidth - 8) p.style.left = Math.max(8, innerWidth - r.width - 8) + 'px';
+  const B = vvBox(), r = p.getBoundingClientRect();   /* ★ mok_popup_phone G-1 — 보이는 화면 기준 */
+  if (r.bottom > B.y + B.h - 8) p.style.top = Math.max(B.y + 8, B.y + B.h - r.height - 8) + 'px';
+  if (r.right > B.x + B.w - 8) p.style.left = Math.max(B.x + 8, B.x + B.w - r.width - 8) + 'px';
+  vvFit(p);
 }
 
 /* §G 첫 화면 「🔗 근거」 근거 단원 목록 창 — 민법 onCountClick·showFieldDistribution·showFieldList 를 옮겼다(그리는 곳 = 검색 결과 칸 MBSR.box).
@@ -6094,7 +6184,8 @@ function renderBeonjeon(host, orig){
 /* ══════════ 조문·각주 팝업 (§5) ══════════
    ⚠ `popJo`·`popFoot` 은 부르기만 하고 **정의가 아예 없었다**(`:482`·`:468`).
       누르면 ReferenceError 가 나고 아무 일도 안 일어났다. 껍데기는 popShell 을 다시 쓴다.
-   ★ 깊이는 2단에서 멈춘다 — 2단 안의 링크는 새 팝업을 안 띄우고 **그 조문 뷰로 이동**한다. */
+   ★ 깊이는 2단에서 멈춘다 — 2단 안의 링크는 새 팝업을 안 띄우고 **그 조문 뷰로 이동**한다.
+   → ★ mok_popup_phone D(9/23) — 멈추지 않는다: 팝업 안 링크는 어느 깊이든 새 팝업 한 겹 더(뷰 이동은 머리 「뷰로 이동 ↗」 단추로만). */
 const JOCIRC='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
 function joHangOf(txt, to){
   /* ★ v3-H §3 — 링크 표시 글자·to 에서 항·호를 뽑는다. 항이 없으면 null. */
@@ -6142,8 +6233,7 @@ async function popJo(law, k, ev, depth, hl){
     const go = el('button', 'tool on', '뷰로 이동 ↗');   // 머리에 「뷰로 이동」(사양서 §4-2)
     go.onclick = () => goJo(law, k, hl);
     body.appendChild(go);
-    if (depth >= 2)
-      body.appendChild(el('span', 'badge', '2단 — 여기 링크는 팝업 대신 뷰로 이동한다'));
+    /* ★ mok_popup_phone D — 「2단 — 여기 링크는 팝업 대신 뷰로 이동한다」 딱지는 걷었다(깊이 딱지 0 · 링크는 늘 새 팝업) */
     const j = B.조[k];
     if (!j){ body.appendChild(el('div', 'cdim', '본문을 찾지 못했다 — ' + k)); return; }
     const ap = mkApply(law + ':' + k, j.행);
@@ -6195,7 +6285,7 @@ function popFoot(id, ev, rec, depth){
 
 
 /* ══════════ 판 4 (2026-09-02 · _task_jo_pan4.md §2-2 · §2-4) — 목차노트 팝업 · 목록 팝업 · 판례/카드 팝업 · 요약본 목차 팝업 ══════════
-   깊이 = ① 노트 ② 목록 ③ 판례/카드 · ③ 안의 링크·⤷ 는 「3단으로 보내기」(popJo §5-4 와 같은 결). 노트 레일·메모 칩·「판례 열기」 칩·블록 줄 정방향 칩은 만들지 않는다. */
+   깊이 = ① 노트 ② 목록 ③ 판례/카드 · ③ 안의 링크·⤷ 는 「3단으로 보내기」(popJo §5-4 와 같은 결) → ★ mok_popup_phone D(9/23) — 보내지 않고 새 팝업 한 겹 더(깊이 제한 없음). 노트 레일·메모 칩·「판례 열기」 칩·블록 줄 정방향 칩은 만들지 않는다. */
 const YFOLD=['1.2026','2.2025','3.2024','4.2023','5.2022','6.2021','7.2020','8.2019이전'];
 function mdLine(d,row,lv){ if(row.h)d.classList.add('mdh'+Math.min(row.h,3)); if(lv!=null){ const px=row.h?(row.h-1)*18:lv*18+(row.i||0)*15; if(px)d.style.paddingLeft=px+'px'; } else if(row.i)d.style.paddingLeft=(row.i*15)+'px'; if(row.id)d.dataset.block=row.id; return d; }   /* ★ linkwin §3-b — lv(렌더 루프가 넘기는 직전 헤딩 급)가 오면 급 들여쓰기(헤딩 (h-1)*18 · 본문 lv*18+i*15 · 4급 이상은 3급 글꼴에 급대로) · 안 오면 옛 꼴(노트 팝업·임베드 안·2차 카드·목차 미리보기) */
 
@@ -6227,7 +6317,7 @@ async function embedTarget(file, id){
   return null;
 }
 function embedOpen(tf, tid, ev, depth){ const d = depth || 0;
-  embedTarget(tf, tid).then(T => { if (!T){ toast('임베드 대상을 못 찾았다 — ' + tf); return; } if (d >= 3){ closeAllPops(); T.open(ev, 1); } else T.open(ev, d + 1); }); }
+  embedTarget(tf, tid).then(T => { if (!T){ toast('임베드 대상을 못 찾았다 — ' + tf); return; } T.open(ev, d + 1); }); }   /* ★ mok_popup_phone D — 깊이 제한 없음 */
 async function embedInline(chip, file, id, to, opt){
   const T = await embedTarget(file, id);
   const rec = T && T.rec;
@@ -6237,7 +6327,7 @@ async function embedInline(chip, file, id, to, opt){
   const box = el('div', 'embx' + (folded ? ' fold' : ''));
   const tools = el('div', 'emtools');
   const op = el('span', '', '⤢'); op.title = (T.layer === '노트' ? '노트' : (T.layer === '2차' ? '2차 카드' : '판례')) + ' 팝업 — 그 블록 강조';
-  op.onclick = ev => { ev.stopPropagation(); const d = (opt && opt.depth) || 0; if (d >= 3){ closeAllPops(); T.open(ev, 1); } else T.open(ev, d + 1); };
+  op.onclick = ev => { ev.stopPropagation(); const d = (opt && opt.depth) || 0; T.open(ev, d + 1); };   /* ★ mok_popup_phone D */
   const fo = el('span', '', folded ? '⌄' : '⌃'); fo.title = '접기/펴기(기억)';
   fo.onclick = ev => { ev.stopPropagation(); const f = !box.classList.contains('fold'); box.classList.toggle('fold', f); fo.textContent = f ? '⌄' : '⌃'; S.embFold = S.embFold || {}; if (f) S.embFold[to] = 1; else delete S.embFold[to]; uiSave(); };
   tools.appendChild(op); tools.appendChild(fo); box.appendChild(tools);
@@ -6274,27 +6364,28 @@ function popSizable(body, kind){
   const p = body.parentNode; if (!p || p._sz) return; p._sz = kind;
   const hd = p.querySelector('.ph');
   const cfg = (S.popCfg || {})[kind];
-  const applyCfg = c => { if (!c){ p.classList.remove('sized'); p.style.width = ''; p.style.height = ''; return; }
+  const applyCfg = c => { if (!c){ p.classList.remove('sized'); p.style.width = ''; p.style.height = ''; vvFit(p); return; }
     p.classList.add('sized'); if (c.w) p.style.width = c.w + 'px'; if (c.h) p.style.height = c.h + 'px';
-    if (c.x != null){ p.style.left = Math.max(0, Math.min(innerWidth - 60, c.x)) + 'px'; p.style.top = Math.max(0, Math.min(innerHeight - 34, c.y || 0)) + 'px'; } };
+    if (c.x != null){ const [x, y] = popClamp(p, c.x, c.y || 0); p.style.left = x + 'px'; p.style.top = y + 'px'; }
+    vvFit(p); };   /* ★ mok_popup_phone G-1·G-2 — 보이는 화면 기준 · 폰이면 화면보다 큰 기억 크기를 줄여서 쓴다(기억값 무변) */
   applyCfg(cfg);
-  const save = () => { const r = p.getBoundingClientRect(); S.popCfg = S.popCfg || {};
-    S.popCfg[kind] = { w: Math.round(r.width), h: p._szKeepH ? ((S.popCfg[kind] || {}).h) : Math.round(r.height), x: Math.round(parseFloat(p.style.left) || r.left), y: Math.round(parseFloat(p.style.top) || r.top) }; uiSave(); };   /* ★ pop_moknote B-4 — p._szKeepH(포스트잇 창) = 높이는 스스로 재므로 기억 높이를 안 바꾼다 */
+  const save = rsz => { const r = p.getBoundingClientRect(); S.popCfg = S.popCfg || {}; const o = S.popCfg[kind] || {}, keep = !!p._vvFit && !rsz;   /* ★ mok_popup_phone G-2 — 폰에서 줄여 쓴 크기는 끌기 저장이 안 덮는다(크기 손잡이로 바꾼 것만) */
+    S.popCfg[kind] = { w: keep ? o.w : Math.round(r.width), h: (p._szKeepH || keep) ? o.h : Math.round(r.height), x: Math.round(parseFloat(p.style.left) || r.left), y: Math.round(parseFloat(p.style.top) || r.top) }; if (rsz) p._vvFit = 0; uiSave(); };   /* ★ pop_moknote B-4 — p._szKeepH(포스트잇 창) = 높이는 스스로 재므로 기억 높이를 안 바꾼다 */
   const rs = el('span', 'prsz'); rs.title = '끌어서 크기 조절';
   let x0 = 0, y0 = 0, w0 = 0, h0 = 0, on = false;
   rs.addEventListener('pointerdown', ev => { ev.stopPropagation(); ev.preventDefault(); on = true; x0 = ev.clientX; y0 = ev.clientY; const r = p.getBoundingClientRect(); w0 = r.width; h0 = r.height; try{ rs.setPointerCapture(ev.pointerId); }catch(e){} });
-  rs.addEventListener('pointermove', ev => { if (!on) return; const L = parseFloat(p.style.left) || 0, T = parseFloat(p.style.top) || 0;
-    const w = Math.max(360, Math.min(innerWidth - L - 4, w0 + ev.clientX - x0)), h = Math.max(240, Math.min(innerHeight - T - 4, h0 + ev.clientY - y0));
+  rs.addEventListener('pointermove', ev => { if (!on) return; const L = parseFloat(p.style.left) || 0, T = parseFloat(p.style.top) || 0, B = vvBox();   /* ★ mok_popup_phone G-1·G-3 — 보이는 화면 기준 · 최소 폭 = min(360, 화면 폭 − 16) */
+    const w = Math.max(Math.min(360, B.w - 16), Math.min(B.x + B.w - L - 4, w0 + ev.clientX - x0)), h = Math.max(240, Math.min(B.y + B.h - T - 4, h0 + ev.clientY - y0));
     p.classList.add('sized'); p.style.width = w + 'px'; p.style.height = h + 'px'; });
-  const end = ev => { if (!on) return; on = false; try{ rs.releasePointerCapture(ev.pointerId); }catch(e){} save(); };
+  const end = ev => { if (!on) return; on = false; try{ rs.releasePointerCapture(ev.pointerId); }catch(e){} save(true); };
   rs.addEventListener('pointerup', end); rs.addEventListener('pointercancel', end);
   p.appendChild(rs);
   if (hd){
     hd.addEventListener('mouseup', () => save());
     hd.addEventListener('dblclick', ev => { if (ev.target.closest('button')) return; delete (S.popCfg || {})[kind]; applyCfg(null); uiSave(); });
     let tx = 0, ty = 0, ox = 0, oy = 0, ton = false;   /* 터치·펜 끌기(마우스는 dragify) */
-    hd.addEventListener('pointerdown', ev => { if (ev.pointerType === 'mouse' || ev.target.closest('button')) return; ton = true; tx = ev.clientX; ty = ev.clientY; ox = parseFloat(p.style.left) || 0; oy = parseFloat(p.style.top) || 0; try{ hd.setPointerCapture(ev.pointerId); }catch(e){} });
-    hd.addEventListener('pointermove', ev => { if (!ton) return; p.style.left = Math.max(0, Math.min(innerWidth - 60, ox + ev.clientX - tx)) + 'px'; p.style.top = Math.max(0, Math.min(innerHeight - 34, oy + ev.clientY - ty)) + 'px'; });
+    hd.addEventListener('pointerdown', ev => { if (ev.pointerType === 'mouse' || ev.target.closest('button')) return; ton = true; tx = ev.clientX; ty = ev.clientY; ox = parseFloat(p.style.left) || 0; oy = parseFloat(p.style.top) || 0; p.style.zIndex = ++POPZ; popAllSync(); try{ hd.setPointerCapture(ev.pointerId); }catch(e){} });   /* ★ mok_popup_phone E — 터치로 머리를 잡으면 맨 위로 */
+    hd.addEventListener('pointermove', ev => { if (!ton) return; const [x, y] = popClamp(p, ox + ev.clientX - tx, oy + ev.clientY - ty); p.style.left = x + 'px'; p.style.top = y + 'px'; });   /* ★ mok_popup_phone G-3 */
     const tend = ev => { if (!ton) return; ton = false; try{ hd.releasePointerCapture(ev.pointerId); }catch(e){} save(); };
     hd.addEventListener('pointerup', tend); hd.addEventListener('pointercancel', tend);
   }
@@ -6303,7 +6394,7 @@ async function noteData(){ const N=await get(NF()).catch(()=>({})); const B=awai
 function noteBlChips(key,B,host,depth,ev0){
   const b=B[key]||{}; const kinds=[['판례','판례'],['사례','사례'],['기출','기출'],['GS','GS'],['노트','노트']];
   kinds.forEach(([k,label])=>{ const arr=b[k]||[]; if(!arr.length)return;
-    const c=el('span','chip c-prec',label+' '+arr.length); c.onclick=ev=>{ev.stopPropagation(); if(depth>=3){toast('깊이 3 — 목록은 노트 팝업(①)에서');return;} popNoteList(label,key,arr,ev,depth+1);}; host.appendChild(c); });
+    const c=el('span','chip c-prec',label+' '+arr.length); c.onclick=ev=>{ev.stopPropagation(); popNoteList(label,key,arr,ev,depth+1);};   /* ★ mok_popup_phone D — 「깊이 3 —」 알림 없음 */ host.appendChild(c); });
   /* 📍 정리핀 — kv jopangi.omr 의 ref 가 `note|파일#^id` 면 「정리 p.N」 · 없으면 「찍기」(지문 핀 UI 재사용 · omrJump) */
   { const pk='note|'+key; let pin=null; try{ const U=omAll(); Object.keys(U).forEach(id=>{ if(U[id].ref===pk)pin=U[id]; }); }catch(e){}
     const c=el('span','chip c-src',pin?('📍 정리 p.'+pin.page):'📍 찍기'); c.title=pin?'정리 레일 그 자리로':'정리OMR 에서 그 행을 한 번 눌러 위치를 찍는다';
@@ -6321,12 +6412,8 @@ async function popNote(file,blockId,ev,depth){
   const body=popShell('cell','📄 '+file+(blockId?' · ^'+blockId:''),'note|'+PLAW()+'|'+file+'|'+(blockId||''));
   showPop(ev); popSizable(body,'note');   /* ★ 판 4 add2 §3 */
   if(!rec){ body.appendChild(el('div','cdim','목차 노트에 없다 — '+file+' (특허목차 70 밖이거나 색인 파일)')); return; }
-  const fw=rec.정방향||{판례:[],노트:[]};
-  const hd=el('div','memobtn');
-  const fc=el('span','chip c-prec','이 노트가 인용 · 판례 '+(fw.판례||[]).length+' · 노트 '+(fw.노트||[]).length);
-  fc.onclick=e2=>{e2.stopPropagation(); if(depth>=3)return; const items=(fw.판례||[]).map(x=>({kind:'판례',v:x})).concat((fw.노트||[]).map(x=>({kind:'노트',v:x}))); popNoteList('정방향',file,items,e2,depth+1);};
-  hd.appendChild(fc); if(depth>=2)hd.appendChild(el('span','badge',depth+'단'));
-  body.appendChild(hd);
+  /* ★ mok_popup_phone C — 머리 아래 줄(「이 노트가 인용 · 판례 N · 노트 N」 칩 · 「N단」 딱지)은 그리지 않는다(사용자 9/23 13:08 「이 줄 다 안 보이게」).
+     그 칩은 모은 목록 popNoteList('정방향') 의 유일한 입구였다 — 본문 안 인용 링크(⤷ 임베드 · <사건번호>)는 그대로 열린다 · 데이터 정방향·popNoteList 는 둔다 */
   const box=el('div','box ntbox'); let hl=null; const ents=[]; let hlv=0;   /* ★ 판 4 add2 §2 헤딩 접기 · ★ pop_moknote E-2·E-3 — ntbox = 줄 간격 · hlv = 직전 제목 단계 */
   let hlA=-1,hlB=-1; if(blockId){ const bi=(rec.행||[]).findIndex(r=>r.id===blockId); if(bi>=0){ const bk=rec.행[bi].blk; hlA=(bk&&bk.a!=null)?bk.a:bi; hlB=(bk&&bk.b!=null)?bk.b:bi; } }   /* ★ 판 4 add3 — 강조 = 문단 전체(blk) */
   (rec.행||[]).forEach((row,ri)=>{
@@ -6355,14 +6442,14 @@ async function popNoteList(label,key,items,ev,depth){
     body.appendChild(el('div','grp',kind+' — '+groups[kind].length+'건'));
     groups[kind].forEach(v=>{ const d=el('div','res');
       if(kind==='판례'){ const p=by[v]||{id:v}; d.appendChild(el('b','',p.사건번호||v)); if(p.전합)d.appendChild(el('span','badge jh','전합')); d.appendChild(el('span','x',(p.설명별칭||p.사건명||p.별칭||'').slice(0,44)));
-        d.onclick=e2=>{ if(depth>=3){closeAllPops();S.tab='prec';S.prec=v;S.precTab='요약';render();} else popPrec4(v,e2,depth+1); }; }   /* ★ prec3 §B-5 — 요약본이 없으면 3단이 원문 팝업을 열어 준다 */
+        d.onclick=e2=>{ popPrec4(v,e2,depth+1); }; }   /* ★ mok_popup_phone D */   /* ★ prec3 §B-5 — 요약본이 없으면 3단이 원문 팝업을 열어 준다 */
       else if(kind==='노트'){ const f=v.split('#')[0],id=(v.split('#^')[1]||''); d.appendChild(el('b','',f.slice(0,30))); if(id)d.appendChild(el('span','x','^'+id));
         { const rec=NN[f.split('/').pop()]; const bk=(rec&&id)?noteBlockRows(rec,id):null;   /* ★ 판 4 add3 — 미리보기 = 문단 전체(blk) */
           if(bk){ const pv=bk.map(x=>String(x[1].t||'').replace(/\s*\^[0-9a-f]{6}\s*$/,'').replace(/^\s*#{1,6}\s*/,'').trim()).filter(Boolean).join(' ⏎ ');   /* ★ add4 §1 */
             const q=el('div','cdim blkpv',pv.slice(0,120)+(pv.length>120?'…':'')); q.style.fontSize='11px'; d.appendChild(q); } }
-        d.onclick=e2=>{ if(depth>=3){closeAllPops();popNote(f,id,e2,1);} else popNote(f,id,e2,depth+1); }; }
+        d.onclick=e2=>{ popNote(f,id,e2,depth+1); }; }   /* ★ mok_popup_phone D */
       else { d.appendChild(el('b','',String(v).slice(0,50))); d.appendChild(el('span','lawtag',kind));
-        d.onclick=e2=>{ if(depth>=3){closeAllPops();S.tab='cha2';S.boardKind=kind==='사례'?'사례':kind;render();} else popCard4(kind,v,e2,depth+1); }; }
+        d.onclick=e2=>{ popCard4(kind,v,e2,depth+1); }; }   /* ★ mok_popup_phone D */
       body.appendChild(d); });
   });
   if(!arr.length)body.appendChild(el('div','cdim','없다'));
@@ -6371,14 +6458,16 @@ async function popNoteList(label,key,items,ev,depth){
    N = NF() 키 수(특허 70 · 상표 99 · 민소 84 · 디보 49 — 사용자 9/23 14:00 「디보도 켠다」) · 못 읽으면 흐린 「목차노트 —」.
    차례 = 이름 앞 번호 마디(`^\d+(?:\.\d+)*\.`)를 숫자 배열로(2. < 2.1. < 2.2. < 3. · 같으면 이름) · 번호 없는 노트는 맨 아래.
    칩 = 그 노트를 인용한 카드 수(note_backlink `<노트>#^…` 를 모아 갈래마다 서로 다른 값 · 0 은 안 그림 · 노트끼리 인용은 안 셈). */
-async function mokBtnEl(subj){
-  const N = await get(NF()).catch(() => null); const n = N ? Object.keys(N).length : 0;
-  const b = el('button', 'pill' + (n ? '' : ' wait'), '목차노트 ' + (n || '—')); b.id = 'mokBtn';
-  if (!n){ b.disabled = true; b.title = subj + ' 목차노트 없음'; return b; }
-  b.title = subj + ' 목차노트 ' + n + ' — 볼트 차례대로 목록 · 누르면 노트';
-  b.onclick = ev => { ev.stopPropagation(); popMokNote(b, ev); };
+/* ★ mok_popup_phone A — 단추는 #hrail 가로 탭(button.rb · <b data-n="mok">)이 됐다 · 2차 보드 머리 단추는 걷었다.
+   수는 railCounts 가 mokCount 로 채운다(세는 곳은 mokCount 하나 — 규칙 ㊜) · 누르면 탭 전환이 아니라 목록 팝업(같은 키 다시 = 닫힘) */
+function mokBtnEl(){
+  const b = el('button', 'rb'); b.id = 'mokBtn';
+  b.appendChild(document.createTextNode('목차노트 ')); const n = el('b', '', ''); n.dataset.n = 'mok'; b.appendChild(n);
+  b.title = PLAW() + ' 목차노트 — 볼트 차례대로 목록 · 누르면 노트';
+  b.onclick = ev => { ev.stopPropagation(); if (!b.disabled) popMokNote(b, ev); };
   return b;
 }
+async function mokCount(){ const N = await get(NF()).catch(() => null); return N ? Object.keys(N).length : 0; }
 function mokNum(f){ const m = /^(\d+(?:\.\d+)*)\./.exec(String(f)); return m ? m[1].split('.').map(Number) : null; }
 function mokCmp(a, b){ const x = mokNum(a), y = mokNum(b);
   if (x && y){ for (let i = 0; i < Math.max(x.length, y.length); i++){ const p = x[i] == null ? -1 : x[i], q = y[i] == null ? -1 : y[i]; if (p !== q) return p - q; } }
@@ -6397,10 +6486,10 @@ async function popMokNote(btn, ev){
   const body = popShell('cell', '📑 목차노트 — ' + PLAW() + ' ' + names.length, key); const p = body.parentNode;
   p.classList.add('mkpop');
   popSizable(body, 'moknote');   /* 기억 자리·크기가 있으면 그것(jopangi_ui.pop_moknote) · 없으면 아래 — ⚠ popSizable 이 기억 없을 때 폭을 비우므로 그 뒤에 준다 */
-  if (!(S.popCfg || {}).moknote){ const br = btn.getBoundingClientRect(), W = Math.min(470, innerWidth - 16);
-    const x = Math.max(8, Math.min(br.left, innerWidth - W - 8)), y = Math.max(8, Math.min(br.bottom + 8, innerHeight - 200));
-    p.style.width = W + 'px'; p.style.left = x + 'px'; p.style.top = y + 'px'; p.style.maxHeight = Math.max(240, innerHeight - y - 16) + 'px'; }
-  body.appendChild(el('div', 'cdim', '볼트 목차 차례 · 누르면 노트 팝업'));
+  if (!(S.popCfg || {}).moknote){ const B = vvBox(), br = btn.getBoundingClientRect(), W = Math.min(470, B.w - 16);   /* ★ mok_popup_phone G-1 — 보이는 화면 기준 · 첫 자리 = 탭 바로 아래 */
+    const x = Math.max(B.x + 8, Math.min(br.left, B.x + B.w - W - 8)), y = Math.max(B.y + 8, Math.min(br.bottom + 8, B.y + B.h - 200));
+    p.style.width = W + 'px'; p.style.left = x + 'px'; p.style.top = y + 'px'; p.style.maxHeight = Math.max(240, B.y + B.h - y - 16) + 'px'; }
+  vvFit(p);
   const L = el('div', 'mklist');
   names.forEach(f => { const num = mokNum(f); const r = el('div', 'mkr' + (/==/.test(f) ? ' ch' : '')); r.dataset.note = f;
     r.style.paddingLeft = (10 + ((num ? num.length : 1) - 1) * 16) + 'px';
@@ -6413,20 +6502,26 @@ async function popMokNote(btn, ev){
     L.appendChild(r); });
   body.appendChild(L);
 }
-/* 노트 팝업(2단 · 머리 「2단」 딱지 그대로)은 목록 오른쪽에 — 화면이 좁아 목록을 거의 덮게 되면 showPop 규칙 그대로.
-   어느 쪽이든 아래가 화면 밖이면 그만큼 위로(아이패드 — 목록 아래쪽 줄을 누르면 showPop 이 머리 몇 줄만 남겼다 · mbWinFit 과 같은 뜻) */
+/* 노트 팝업(2단 · ★ mok_popup_phone C — 깊이 딱지는 없다)은 목록 오른쪽에 — 화면이 좁아 목록을 거의 덮게 되면 showPop 규칙 그대로.
+   어느 쪽이든 아래가 화면 밖이면 그만큼 위로(아이패드 — 목록 아래쪽 줄을 누르면 showPop 이 머리 몇 줄만 남겼다 · mbWinFit 과 같은 뜻)
+   ★ mok_popup_phone G-2 — 폰(폭 ≤ 640)은 목록 = 위 30% · 노트 = 아래 70%(폭 = 보이는 폭 − 16 · 둘 다 화면 안 · 시안 「고친 뒤」 · 기억값은 안 덮는다) */
 async function mokOpenNote(f, ev, lp){
   await popNote(f, null, ev, 2);
   const np = POPS.find(x => x._pk === 'note|' + PLAW() + '|' + f + '|'); if (!np) return;
+  const B = vvBox();   /* ★ mok_popup_phone G-1 */
+  if (vvPhone() && lp && lp.isConnected){
+    const W = Math.round(B.w - 16), H = Math.round(B.h - 16), g = 8, lh = Math.round((H - g) * 0.3), nh = H - g - lh, X = Math.round(B.x + 8), Y = Math.round(B.y + 8);
+    [[lp, Y, lh], [np, Y + lh + g, nh]].forEach(([q, t, h]) => { q._vvSplit = 1; q._vvFit = 1; q.style.width = W + 'px'; q.style.left = X + 'px'; q.style.top = t + 'px'; q.style.height = h + 'px'; q.style.maxHeight = h + 'px'; });
+    return; }
   if (lp && lp.isConnected){ const lr = lp.getBoundingClientRect(), w = np.offsetWidth || 440;
-    const x = Math.min(lr.right + 12, innerWidth - w - 8);
-    if (x - lr.left >= Math.min(200, lr.width * 0.45)){ np.style.left = Math.max(8, x) + 'px'; np.style.top = Math.max(8, lr.top) + 'px'; } }
+    const x = Math.min(lr.right + 12, B.x + B.w - w - 8);
+    if (x - lr.left >= Math.min(200, lr.width * 0.45)){ np.style.left = Math.max(B.x + 8, x) + 'px'; np.style.top = Math.max(B.y + 8, lr.top) + 'px'; } }
   const r = np.getBoundingClientRect();
-  if (r.bottom > innerHeight - 8) np.style.top = Math.max(8, innerHeight - r.height - 8) + 'px';
+  if (r.bottom > B.y + B.h - 8) np.style.top = Math.max(B.y + 8, B.y + B.h - r.height - 8) + 'px';
 }
-/* ③ 판례 팝업 — 3단과 같은 요약/원문 렌더(크기만 팝업) · 안의 링크·⤷ 는 3단으로 */
+/* ③ 판례 팝업 — 3단과 같은 요약/원문 렌더(크기만 팝업) · 안의 링크·⤷ 는 3단으로 → ★ mok_popup_phone D — 새 팝업 한 겹 더 */
 async function popPrec4(id,ev,depth,law,q){   /* ★ 손질 9(9/5) — law = 다른 법 판례(검색 결과)도 그 법 파일로 · q = 검색어(요약본 첫 일치 줄 강조) */
-  depth=depth||3; const lawX=(law&&LAWS.indexOf(law)>=0)?law:S.law; const LK=SHORT[lawX]||PLAW();
+  depth=depth||1; /* ★ mok_popup_phone D — 기본 3 은 「3단에서 막기」 몫이었다(막는 곳이 없어져 층 수 그대로 1) */ const lawX=(law&&LAWS.indexOf(law)>=0)?law:S.law; const LK=SHORT[lawX]||PLAW();
   if(popToggle('prec|'+LK+'|'+id))return;   /* ★ 상표 손질 5 */
   const P=await get(PFL(lawX,'리스트')).catch(()=>({판례:[]})); const p=(P.판례||[]).find(x=>x.id===id);
   const body=popShell('cell','⚖ '+(p?(p.사건번호||id):id)+(p&&p.전합?' [전합]':'')+(lawX!==S.law?' · '+LK:''),'prec|'+LK+'|'+id);
@@ -6932,7 +7027,7 @@ async function popCardList(p, kind, year, ev, depth){
       if (x.vault) d.appendChild(el('span', 'badge vt', '볼트'));   /* ★ 볼트 링크 판 §B-3 */
       if (x.fmhit) d.appendChild(el('span', 'why', 'fm 기출 일치'));   /* ★ 손질 9 ⓑ */
       if (x.manual){ d.appendChild(el('span', 'why', '내가 이음' + (x.why ? ' · ' + x.why : ''))); plRowTools(d, x, draw); }
-      d.onclick = e2 => { e2.stopPropagation(); if (depth >= 3){ closeAllPops(); popCard4(kind, x.ck, e2, 1); } else popCard4(kind, x.ck, e2, depth + 1); };
+      d.onclick = e2 => { e2.stopPropagation(); popCard4(kind, x.ck, e2, depth + 1); };   /* ★ mok_popup_phone D */
       box.appendChild(d); });
     if (kind === '사례'){   /* ★ 볼트 링크 판 §B-3 — 카드로 못 이은 볼트 `연결사례`: kind '' = 회색 raw · '글' = 회색 한 줄. 수에 안 센다. */
       const rest = vlCards(p).filter(x => x && (x.kind === '' || x.kind === '글'));
@@ -6995,10 +7090,10 @@ function precLinkWin(kind, cur, Cc, P, ev, depth, focus){
   const body = popShell('', title, key); showPop(ev); popSizable(body, 'link');
   { const me = body.parentNode, at = q => [parseFloat(q.style.left) || 0, parseFloat(q.style.top) || 0];   /* 같은 기억 자리에 다른 창이 있으면 비켜 놓는다(나란히) */
     for (let k = 0; k < 8 && POPS.some(q => q !== me && q._sz === 'link' && Math.abs(at(q)[0] - at(me)[0]) < 8 && Math.abs(at(q)[1] - at(me)[1]) < 8); k++){
-      me.style.left = Math.max(0, Math.min(innerWidth - 60, at(me)[0] + 28)) + 'px'; me.style.top = Math.max(0, Math.min(innerHeight - 34, at(me)[1] + 28)) + 'px'; } }
+      const [x2, y2] = popClamp(me, at(me)[0] + 28, at(me)[1] + 28); me.style.left = x2 + 'px'; me.style.top = y2 + 'px'; } }   /* ★ mok_popup_phone G-1 */
   body.appendChild(el('div', 'plwsub', PLWIN[kind][1]));
   const by = {}; (P.판례 || []).forEach(p => { by[p.id] = p; });
-  const openPrec = (id, e2) => { if (depth >= 3){ closeAllPops(); popPrec4(id, e2, 1); } else popPrec4(id, e2, depth + 1); };
+  const openPrec = (id, e2) => { popPrec4(id, e2, depth + 1); };   /* ★ mok_popup_phone D */
   const rowOf = id => { const p = by[id] || { id: id }; const d = el('div', 'res'); d.appendChild(el('b', '', p.사건번호 || id));
     if (p.전합) d.appendChild(el('span', 'badge jh', '전합')); d.appendChild(el('span', 'x', (p.설명별칭 || p.별칭 || p.사건명 || '').slice(0, 40))); return d; };
   const list = el('div', 'plwl'); body.appendChild(list);
@@ -7564,11 +7659,11 @@ function pitGrow(body, ta){
   const p = body.parentNode; if (!p || !ta) return;
   popSizable(body, 'fn'); p._szKeepH = 1;
   let autoH = 0, handH = 0;
-  const win = () => { if (!p.isConnected) return;
-    p.style.height = ''; p.style.maxHeight = Math.max(120, innerHeight - 16) + 'px';
+  const win = () => { if (!p.isConnected) return; const B = vvBox();   /* ★ mok_popup_phone G-1 — 보이는 화면 기준 */
+    p.style.height = ''; p.style.maxHeight = Math.max(120, B.h - 16) + 'px';
     const r = p.getBoundingClientRect(), T = parseFloat(p.style.top) || r.top;
-    if (r.bottom > innerHeight - 8) p.style.top = Math.max(8, T - (r.bottom - (innerHeight - 8))) + 'px';
-    if (r.right > innerWidth - 8) p.style.left = Math.max(8, innerWidth - r.width - 8) + 'px'; };   /* 오른쪽이 화면 밖이면(좁은 화면에 넓은 화면 기억 자리) 왼쪽으로 — 삭제 단추가 밖에 남지 않게 */
+    if (r.bottom > B.y + B.h - 8) p.style.top = Math.max(B.y + 8, T - (r.bottom - (B.y + B.h - 8))) + 'px';
+    if (r.right > B.x + B.w - 8) p.style.left = Math.max(B.x + 8, B.x + B.w - r.width - 8) + 'px'; };   /* 오른쪽이 화면 밖이면(좁은 화면에 넓은 화면 기억 자리) 왼쪽으로 — 삭제 단추가 밖에 남지 않게 */
   const fit = () => { if (!p.isConnected){ removeEventListener('resize', fit); return; }
     ta.style.height = 'auto';
     const want = Math.max(ta.scrollHeight + 2, handH);
@@ -7583,7 +7678,7 @@ function pitGrow(body, ta){
    text = 이 줄의 평문(splitWords 색인 기준). 줄 앞에 각주표시 등 다른 글이 있어도
    pref(여분 글자 수)로 자리를 맞춘다. */
 let PITCXL = null;   /* ★ v3-N §6 — 진행 중 길게누르기 타이머의 취소 손잡이 */
-document.addEventListener('selectionchange', () => { if (PITCXL) PITCXL(); });
+document.addEventListener('selectionchange', () => { const s = getSelection(); if (PITCXL && s && !s.isCollapsed) PITCXL(); });   /* ★ mok_popup_phone F — 마우스를 누르는 순간 커서만 옮긴(빈) 선택은 취소가 아니다 · 긁어서 선택이 생기면 취소(누를 때 이미 선택이 있으면 안 붙음 · 8px 움직임 취소는 그대로) */
 function pitWire(lineEl, target, struct, text){
   if (!lineEl || lineEl._pit) return; lineEl._pit = 1;
   text = String(text || '');
@@ -8078,9 +8173,9 @@ function c2uWin(c, subj, ev){
   /* 창을 누른 단추 옆에(왼쪽 · 자리가 없으면 오른쪽) — 단추를 덮지 않아야 「같은 단추 두 번 = 닫힘」이 손으로도 된다.
      끌어 둔 자리(jopangi_ui.pop_c2unit)가 있으면 그 자리를 따른다. */
   try{ const bt = ev && ev.currentTarget && ev.currentTarget.getBoundingClientRect ? ev.currentTarget.getBoundingClientRect() : null;
-    if (bt && !((S.popCfg || {}).c2unit || {}).hasOwnProperty('x')){ const w = p.offsetWidth || 460;
-      let x = bt.left - w - 8; if (x < 8) x = Math.max(8, Math.min(bt.right + 8, innerWidth - w - 8));
-      p.style.left = x + 'px'; p.style.top = Math.max(8, Math.min(bt.top, innerHeight - 160)) + 'px'; } }catch(e){}
+    if (bt && !((S.popCfg || {}).c2unit || {}).hasOwnProperty('x')){ const w = p.offsetWidth || 460, B = vvBox();   /* ★ mok_popup_phone G-1 */
+      let x = bt.left - w - 8; if (x < B.x + 8) x = Math.max(B.x + 8, Math.min(bt.right + 8, B.x + B.w - w - 8));
+      p.style.left = x + 'px'; p.style.top = Math.max(B.y + 8, Math.min(bt.top, B.y + B.h - 160)) + 'px'; vvFit(p); } }catch(e){}
   const A = c2uAuto(subj, code), eff = c2uEff(subj, code);
   const autoRows = A ? (A.설문 || []).map(x => ({ no: x.no, u: (x.단원 || []).map(u => u.n) })) : [];
   let st = { main: eff ? eff.main : '', s: eff ? eff.s.map(r => ({ no: r.no, u: r.u.map(x => x.n) })) : [{ no: '(전체)', u: [] }] };
@@ -8183,7 +8278,7 @@ async function view2cha(){
     const n=d0?(k==='기출'?(d0.배치수||0):(d0.총||0)):0;
     const b=el('button','pill'+(S.boardKind===k?' on':(n?'':' wait')),k+' '+(n||'—'));
     b.onclick=()=>{S.boardKind=k;S.series='';S.yearFilter='';render();};bar.appendChild(b);});
-  bar.appendChild(await mokBtnEl(subj));   /* ★ pop_moknote D-1 — 「사례 N」 바로 오른쪽(#ordSeg 앞) · 누르면 팝업만(보드 갈래 무변) */
+  /* ★ mok_popup_phone A-2 — 「목차노트 N」 단추는 맨 윗줄 탭(#hrail · 2차 오른쪽)으로 옮겼다(옛 pop_moknote D-1 자리) */
   const sp=el('span');sp.style.flex='1';bar.appendChild(sp);
   if(S.boardKind==='사례'){const fm0=c2FoldMode();const fb=el('button','pill',C2FOLD_LABEL[fm0]);fb.dataset.fold=fm0;fb.title='카드 본문 접힘 — 뼈대(콜아웃 + 설문 헤딩 + 번호 줄 · 기본) / 제목만(폰 기본) / 전부 · 기기별';fb.onclick=()=>{try{localStorage.setItem(C2FOLD_KEY,C2FOLD_MODES[(C2FOLD_MODES.indexOf(fm0)+1)%3]);}catch(e){}render();};bar.appendChild(fb);}   /* 9/5 B-6 · add1 값 셋 · ★ hrail(9/22 사용자) — 기출·GS 목록엔 본문이 없어 누를 것이 없다 → 사례 격자에만 */
   /* 보드/목록 토글은 없앴다(§4-1) — 목록은 2단 서랍이다 */
@@ -14340,7 +14435,7 @@ const viewCanvas = (() => {
       const sameCtx = ((ctx2 && ctx2.b) || null) === ((st.ctx && st.ctx.b) || null);
       if (m2.page === st.p && sameHl && sameCtx && !(ctx2 && ctx2.pick && !st.pick)) return false;   /* 같은 자리를 또 누름 = 닫기 */
       st.p = m2.page; st.hl = m2.y0 != null ? m2 : null; if (ctx2){ if (!sameCtx) st.box = null; st.ctx = ctx2; if (ctx2.pick) st.pick = true; }
-      try { pw0.style.zIndex = ++POPZ; } catch (e) {} if (ready){ paint(); draw(); } return true; } };
+      try { pw0.style.zIndex = ++POPZ; popAllSync(); } catch (e) {} if (ready){ paint(); draw(); } return true; } };
     host.innerHTML = '<div class="m">교재를 받는 중… (처음 한 번은 오래 걸린다)</div>';
     let doc = null;
     try { doc = await cvbDoc(docid); }
@@ -14513,8 +14608,23 @@ async function render(){
   CARDPOPS=CARDPOPS.filter(p=>p.body&&p.body.isConnected);
   CARDPOPS.forEach(p=>{try{p.paint();}catch(e){}});
   jtPaint();   /* ★ gaek_mb §A-2 — 서랍은 첫 화면·문제풀이 화면 둘 다에 뜬다 */
+  drawerPlace();   /* ★ mok_popup_phone G-4 */
   busy=false;
 }
+/* ★ mok_popup_phone G-4 — 폰(폭 ≤ 640): 옆 두 칸(.tree · .plist)은 본문 위 서랍(CSS) · 자리 = 손잡이 줄 바로 오른쪽(손잡이 ‹ › 는 늘 보인다) · PC 는 자리를 비운다 */
+function drawerPlace(){ const slot=$('#slot'); if(!slot)return; const ph=vvPhone(), mn=slot.querySelector(':scope > .main');
+  const L=ph?[...slot.querySelectorAll(':scope > .handle')].filter(h=>!mn||(h.compareDocumentPosition(mn)&Node.DOCUMENT_POSITION_FOLLOWING))   /* 본문 앞 손잡이만(조문 오른쪽 정오문제 패널 손잡이는 뺀다) */
+    .reduce((m,h)=>Math.max(m,h.offsetLeft+h.offsetWidth),0):0;
+  slot.querySelectorAll(':scope > .tree, :scope > .plist').forEach(d=>{d.style.left=ph?L+'px':'';}); }
+addEventListener('resize',drawerPlace);
+/* 서랍 바깥을 누르면 닫힌다(손잡이·팝업·메뉴·검색창·알림은 바깥이 아니다) · 그 누름은 닫는 데만 쓴다 —
+   다시 그리기가 비동기라 뒤따르는 click 이 아래 본문에 닿을 수 있어 그 click 하나를 먹는다(다음 pointerdown 이나 1초 뒤 풀림) */
+let DRAWER_EAT=false;
+document.addEventListener('pointerdown',ev=>{ DRAWER_EAT=false; if(!vvPhone())return; const slot=$('#slot'); if(!slot)return;
+  const open=[...slot.querySelectorAll(':scope > .tree:not(.hid), :scope > .plist:not(.hid)')]; if(!open.length)return;
+  const t=ev.target; if(!t||!t.closest||open.some(d=>d.contains(t))||t.closest('.handle, .pop, .pitmenu, #sk, .omrwrap, #toasts, .stkbub'))return;
+  S.treeHid=true; S.listHid=true; DRAWER_EAT=true; setTimeout(()=>{DRAWER_EAT=false;},1000); render(); },true);
+document.addEventListener('click',ev=>{ if(!DRAWER_EAT)return; DRAWER_EAT=false; ev.stopPropagation(); ev.preventDefault(); },true);
 /* ★ hrail(9/22) §A-5 — 폭·배지 글자·탭 수가 바뀌면 머리 첫 줄을 다시 잰다(알림 안에서 안 옮기고 다음 틀에) */
 addEventListener('resize',hdrFit);
 try{const hro=new ResizeObserver(()=>requestAnimationFrame(hdrFit));
