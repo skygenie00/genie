@@ -1079,7 +1079,7 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .cv-pop .cv-jc .r3{display:flex;align-items:center;gap:8px}.cv-pop .cv-jc .r3 .bl{cursor:pointer;opacity:.6}.cv-pop .cv-jc.on [data-ok]{border-color:#1d7a3e;color:#1d7a3e;font-weight:700}
 .cv-pop .cv-jfoot{display:flex;gap:8px;flex-wrap:wrap}.cv-pop .cv-jfoot [data-pick]{border-color:#16a34a;color:#166534}
 .cv-booknav button.pk.on{background:#16a34a;border-color:#16a34a;color:#fff}.cv-booknav button.sv{border-color:#16a34a;color:#166534;font-weight:700}
-.cv-book .cv-booknav{position:sticky;top:0;z-index:6;background:#fff;padding:3px 0}   /* 쪽을 내려 찍어도 ◀▶·📍·「이 자리 저장」이 창 위에 남는다 */
+.cv-book .cv-booknav{position:sticky;top:var(--cvph,0px);z-index:6;background:#fff;padding:3px 0}   /* 쪽을 내려 찍어도 ◀▶·📍·「이 자리 저장」이 창 위에 남는다 · ★ 머리 **아래**에 붙는다(--cvph = 팝업 머리 높이 · cvNavTop) — top:0 이면 머리(sticky · 같은 z 6)와 같은 자리에 붙어 DOM 이 뒤인 막대가 제목·✕·끌기 손잡이를 덮었다 */
 .cv-pickov{position:absolute;inset:0;z-index:3;cursor:crosshair;touch-action:none;background:rgba(22,163,74,.04)}
 .cv-pickbox{position:absolute;border:2px solid #10b981;background:rgba(16,185,129,.16);border-radius:4px;pointer-events:none;z-index:4}
 .cv-book .m{color:#6b675f;font-size:11.5px;margin-bottom:4px}.cv-bookpg{position:relative;border:1px solid #e3e0d8}.cv-bookhl{position:absolute;background:rgba(255,196,0,.28);outline:2px solid rgba(230,120,0,.85);border-radius:2px;pointer-events:none}
@@ -14473,11 +14473,15 @@ const viewCanvas = (() => {
      9/22 민법 좌표뷰어 겹침 사고). 블록의 자리 창에서 열면(ctx = {p, b}) 머리에 「📍 찍기」 — 쪽 위에 끌어 초록 상자 →
      「이 자리 저장」 = 손값 {by:'hand', b, p, r:[x0,y0,x1,y1](쪽 크기로 0~1 · 네 자리)}. 두 손가락은 끌기가 아니다(쪽 스크롤) ·
      뗄 때 releasePointerCapture 를 명시 · 쪽을 넘겨도 모드 유지 · 상자는 하나. 판례·기출 칩에서 연 창(ctx 없음)에는 「📍 찍기」가 없다. */
+  /* ★ 교재 창 머리 높이 → --cvph(막대 sticky top) · 글꼴·폭에 따라 달라서 재서 넣는다(ResizeObserver · 없으면 한 번). 창마다 한 번만 단다 */
+  function cvNavTop(pw){ const ph = pw && pw.querySelector(':scope > .ph'); if (!ph) return;
+    const set = () => { const h = ph.getBoundingClientRect().height; if (h > 0) pw.style.setProperty('--cvph', h + 'px'); };
+    set(); if (window.ResizeObserver && !pw._cvphRO){ try { pw._cvphRO = new ResizeObserver(set); pw._cvphRO.observe(ph); } catch (e) {} } }
   async function bookShow(m, ev, ctx){ const docid = CVB_DOCID[m.book] || m.book; const pid = 'cv|book|' + docid;
     const old = POPS.find(x => x._pk === pid);
     if (old){ if (old._cvb && old._cvb.retarget(m, ctx)) return; closeOne(old); return; }
     const body = popShell('canvas', '📘 ' + (CVB_NAME[docid] || m.book), pid); showPop(ev); popSizable(body, 'canvas');
-    const pw0 = body.parentNode;
+    const pw0 = body.parentNode; cvNavTop(pw0);
     const host = el('div', 'cv-book'); body.appendChild(host);
     const st = { p: m.page, hl: m.y0 != null ? m : null, busy: 0, ctx: ctx || null, pick: !!(ctx && ctx.pick), box: null, book: m.book };
     let paint = () => {}, draw = async () => {}, ready = false;
