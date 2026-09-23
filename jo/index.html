@@ -199,10 +199,23 @@ sup.pitwho{font-size:8px;padding:0 3px;margin-left:1px;height:auto;vertical-alig
 .plist{width:var(--lsw,262px);flex-shrink:0;border-right:1px solid var(--line);overflow:auto}
 /* ★ 판 4 (2026-09-02) — md 렌더(글자 수 불변) · 목차노트 팝업 · 연도 묶음 · 요약본 목차 팝업 */
 /* ★ 판 4 add2 — 옵시디언 읽기 화면처럼: `#`·`**` 표식은 숨기되 글자 수·textContent 는 그대로(폭 0 · 글자 0) · ^id 는 흐린 작은 글씨 */
-.mdhash,.mdmark{display:inline-block;width:0;font-size:0;overflow:hidden;opacity:0}
+.mdhash,.mdmark,.mdtab{display:inline-block;width:0;font-size:0;overflow:hidden;opacity:0}   /* ★ pop_moknote E-1 — .mdtab = 노트 팝업 줄 앞 탭(글자는 그대로 · 폭 0) */
 .blockid{opacity:.4;font-size:10px;margin-left:4px}
 .ln.mdh1{font-size:17px;font-weight:800;margin:12px 0 4px} .ln.mdh2{font-size:15px;font-weight:700;margin:9px 0 3px} .ln.mdh3{font-size:13.5px;font-weight:700;margin:7px 0 2px}
-.htog{color:#b5b1a8;font-size:11px;cursor:pointer;margin-right:5px;user-select:none;display:inline-block;width:12px} .htog:hover{color:var(--exc)}
+.htog{color:#b5b1a8;font-size:11px;cursor:pointer;margin-right:2px;user-select:none;display:inline-block;width:9px;text-align:center} .htog:hover{color:var(--exc)}   /* ★ pop_moknote E-4 — 칸 9 · 여백 2(모든 곳 · 옛 12/5) */
+.rh>.htog{margin-right:-3px}   /* ★ pop_moknote E-4 — 2차 카드 제목 줄(.rh)은 flex 라 gap 5px 이 더 붙는다 → −3+5 = 2(다른 곳과 같은 간격) */
+/* ★ pop_moknote E-3 — 노트 팝업(popNote)의 제 줄만 줄 간격(시안 값 · 글자 크기는 그대로) · 줄 안 임베드 상자(.embx .ln)는 무변 — 그래서 직계(>)로 좁힌다 */
+.ntbox>.ntrow>.ln{margin-top:2px;margin-bottom:2px} .ntbox>.ntrow>.ln.mdh1{margin-top:7px;margin-bottom:2px} .ntbox>.ntrow>.ln.mdh2{margin-top:5px;margin-bottom:2px} .ntbox>.ntrow>.ln.mdh3{margin-top:4px;margin-bottom:1px}
+/* ★ pop_moknote D — 목차노트 목록(번호 마디 들여쓰기 · 장 머리 굵게 · 인용 카드 수 칩 넷 · 누른 줄 옅은 파랑) */
+.mklist .mkr{display:flex;gap:8px;align-items:baseline;padding:5px 10px;border-radius:7px;cursor:pointer;font-size:12.5px;line-height:1.45}
+.mklist .mkr:hover{background:#f3f0e8} .mklist .mkr.ch{font-weight:800;margin-top:6px} .mklist .mkr.on{background:#e8f0fb}
+.mklist .mkr .nm{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.mklist .mkr .n{margin-left:auto;flex:none;display:flex;gap:3px;font-weight:400}
+.mklist .ck{font-size:10.5px;padding:0 6px;border-radius:8px;line-height:17px;white-space:nowrap}
+.mklist .ck-g{background:#e8f0fb;color:#2f5fb3} .mklist .ck-s{background:#efeae0;color:#6b5f45} .mklist .ck-gs{background:#f3e8fb;color:#7a3fb0} .mklist .ck-p{background:#f1f1ef;color:#77736b}
+/* ★ pop_moknote F — ✎ 블록번호 칩 · 막힘 까닭 줄 */
+.chip.eqlock{background:#f2f0ea;color:#6b675f;font-size:10.5px;padding:0 7px;margin:0;white-space:nowrap}
+.eqwhy{display:flex;gap:6px;align-items:center;flex-wrap:wrap;color:#b91c1c;font-size:11.5px;margin:3px 0 0} .eqwhy .tool{font-size:11px;padding:1px 8px}
 .mdhid{display:none !important}
 /* ★ 노트 판 (2026-09-13 · _task_jo_note_md.md §B-2) — 감춘 표시 자리에 뜻을 입힌다.
    ⚠ 글자는 하나도 안 지운다 · 네모(☐/☑)는 ::before 라 textContent 에 안 들어간다. */
@@ -724,7 +737,6 @@ table.gtbl{border-collapse:collapse;width:100%;font-size:12px;margin-bottom:8px}
 .pop .ph{display:flex;align-items:center;gap:7px;background:#eaf1fb;color:var(--exc);
   font-size:11px;font-weight:700;padding:5px 10px;position:sticky;top:0;cursor:move;
   user-select:none}
-.pop .ph .pdrag{opacity:.65}
 .pop .ph .pt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pop .ph button{margin-left:auto;color:inherit;font-size:12px;cursor:pointer}
 .pop .pb{padding:9px 12px}
@@ -1515,7 +1527,6 @@ mark.mkc.u{background:transparent;border-bottom:2px solid var(--exc)}
 .pop.mbwin{border:1px solid #cbd5e1;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.28);background:#fff;
   font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
 .pop.mbwin .ph{gap:8px;padding:7px 10px;background:#f8fafc;border-bottom:1px solid #e5e7eb;color:#111827;font-size:13px;z-index:3}
-.pop.mbwin .ph .pdrag{display:none}
 .pop.mbwin .ph .mbtt{min-width:0;flex:1}
 .pop.mbwin .ph .pt{display:block;font-size:13px;font-weight:800;color:#111827;line-height:1.4}
 .pop.mbwin .ph .mbps{display:block;font-size:10.5px;font-weight:400;color:#6b7280;line-height:1.4;
@@ -1724,7 +1735,7 @@ try{const u=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if(u.prec_sort)S.precSort=u.prec_sort;
     if(u.lsw>0)S.listW=u.lsw;if(u.prec_ygroups&&typeof u.prec_ygroups==='object')S.precYG=u.prec_ygroups;   /* ★ 판 4 */
     if(u.md_fold&&typeof u.md_fold==='object')S.mdFold=u.md_fold;if(u.embed_fold&&typeof u.embed_fold==='object')S.embFold=u.embed_fold;
-    ['note','list','prec','toc','link','canvas','claude','jn','c2unit'].forEach(k=>{if(u['pop_'+k]&&typeof u['pop_'+k]==='object')S.popCfg[k]=u['pop_'+k];});   /* ★ 판 4 add2 */   /* ★ linkwin §2 — link(창 넷) */
+    ['note','list','prec','toc','link','canvas','claude','jn','c2unit','moknote'].forEach(k=>{if(u['pop_'+k]&&typeof u['pop_'+k]==='object')S.popCfg[k]=u['pop_'+k];});   /* ★ pop_moknote D-2 — moknote */   /* ★ 판 4 add2 */   /* ★ linkwin §2 — link(창 넷) */
     if(u.omr&&typeof u.omr==='object')S.omrPos=u.omr;   /* ★ 기출뷰 손질 3 — OMR 자리 */
     if(u.cha2_filter&&typeof u.cha2_filter==='object')S.cha2Filter=u.cha2_filter;if(u.cha2_sort)S.cha2Sort=u.cha2_sort;   /* ★ 2차 탭 판 1 — §4-2 필터·정렬 = 표시층(jopangi_ui) */}catch(e){}   /* ★ v3-L §1 */
 /* ★ gaek_mb §A-2 — 목차 서랍 기억. `jopangi_ui` 안(기기별 · 동기화 밖 · 민법도 기기별이다) */
@@ -1743,7 +1754,7 @@ function uiSave(){try{localStorage.setItem(UI_KEY,JSON.stringify(
    jbk:S.joBlank,jbs:S.joBlankStar?1:0,
    prec_filter:S.precFilter||{},prec_sort:S.precSort,
    lsw:S.listW,prec_ygroups:S.precYG||{},
-   md_fold:S.mdFold||{},embed_fold:S.embFold||{},pop_note:S.popCfg.note||null,pop_list:S.popCfg.list||null,pop_prec:S.popCfg.prec||null,pop_toc:S.popCfg.toc||null,pop_link:S.popCfg.link||null,pop_canvas:S.popCfg.canvas||null,pop_claude:S.popCfg.claude||null,pop_jn:S.popCfg.jn||null,pop_c2unit:S.popCfg.c2unit||null,omr:S.omrPos||null,cha2_filter:S.cha2Filter||{},cha2_sort:S.cha2Sort||'',jt_w:S.jtW||0,jt_fold:S.jtFold?1:0,jt_ch:S.jtCh||{},mk_off:S.mkOff?1:0,hm_top:S.hmTop||'',c2ord:S.c2ord||'round',c2uopen:S.c2uOpen||{}}));}catch(e){}}   /* ★ 판 3 §3-4 · 판 4 · add2 */
+   md_fold:S.mdFold||{},embed_fold:S.embFold||{},pop_note:S.popCfg.note||null,pop_list:S.popCfg.list||null,pop_prec:S.popCfg.prec||null,pop_toc:S.popCfg.toc||null,pop_link:S.popCfg.link||null,pop_canvas:S.popCfg.canvas||null,pop_claude:S.popCfg.claude||null,pop_jn:S.popCfg.jn||null,pop_c2unit:S.popCfg.c2unit||null,pop_moknote:S.popCfg.moknote||null,omr:S.omrPos||null,cha2_filter:S.cha2Filter||{},cha2_sort:S.cha2Sort||'',jt_w:S.jtW||0,jt_fold:S.jtFold?1:0,jt_ch:S.jtCh||{},mk_off:S.mkOff?1:0,hm_top:S.hmTop||'',c2ord:S.c2ord||'round',c2uopen:S.c2uOpen||{}}));}catch(e){}}   /* ★ 판 3 §3-4 · 판 4 · add2 */
 const C={};
 const $=(s,r)=>(r||document).querySelector(s);
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;
@@ -1938,7 +1949,7 @@ function renderLine(row,opt){
   /* ★ 판 4 §2-1 — md 꾸밈을 같은 좌표계 위에 얹는다(글자를 지우지 않는다 · 흐린 span 으로 감싼다) */
   if(opt.md!==false){
     const mh=/^(\s*#{1,6})(\s)/.exec(t);   /* ★ 판 4 add4 §1 — 4~6단은 본문 굵게만 */
-    if(mh){push(opens,0,{md:'mdhash'});push(closes,mh[1].length,{md:'mdhash'});
+    if(mh){push(opens,0,{md:'mdhash'});push(closes,mh[0].length,{md:'mdhash'});   /* ★ pop_moknote E-4 — `#` 뒤 한 칸까지 폭 0 안으로(글자 수 무변 · 모든 곳) */
       if(mh[1].trim().length>=4){push(opens,mh[0].length,{md:'mdbold'});push(closes,n,{md:'mdbold'});}}
     /* ★ 판 4 add4 §1 — <font color="…">…</font> 은 ** 와 같은 식(태그 구간 mdmark · 안 글자 그 색) · ![[…]] 원문 구간도 mdmark(칩·상자는 그대로) */
     {const rf=/<font\b[^>]*?color\s*=\s*["']?([^"'\s>]+)["']?[^>]*>|<\/font\s*>/gi;let fm,fopen=null;
@@ -2000,6 +2011,9 @@ function renderLine(row,opt){
       push(opens,pos,{md:'mdmark'});push(closes,pos+2,{md:'mdmark'});
       push(opens,pos+2,{md:'mdbold'});push(closes,q,{md:'mdbold'});
       push(opens,q,{md:'mdmark'});push(closes,q+2,{md:'mdmark'});pos=t.indexOf('**',q+2);}
+    /* ★ pop_moknote E-1 — opt.tabHide(노트 팝업만) = 줄 앞 탭을 폭 0 꾸밈(mdtab)으로 감싼다 · 글자는 안 지운다(포스트잇·마크업 좌표 무변)
+       ⚠ 맨 끝에 넣는다 — 0 에서 여는 다른 꾸밈(인용·블록번호 등)보다 안쪽이어야 쌓임이 안 꼬인다 */
+    if(opt.tabHide){const tb=/^\t+/.exec(t);if(tb){push(opens,0,{md:'mdtab'});push(closes,tb[0].length,{md:'mdtab'});}}
   }
   const frag=document.createDocumentFragment();const ancN={};   /* ★ 칩 자유이동 — 같은 앵커 칩 수 */
   const stack=[frag];
@@ -2517,8 +2531,7 @@ async function viewJo(){
   /* ★ v3-H §5 — 테마 = 3법 비교 자리 + 내가 만드는 비교(단일법도 열 비교 · 사양서 §4-1 개정)
      ★ v3-J §0-1 — 칩 줄·펼침 패널은 본문 아래로(그림 8/27). 머리엔 「🧩 테마 N ↓」 하나 —
      누르면 본문 아래로 스크롤(펼쳐진 게 없으면 첫 칩을 펼치고 내려간다). */
-  {const n=pitCount('jo|'+S.law+':'+S.jo+SEP);   /* ⚠ base 는 아래(모드바)에서 선언된다 — 여기서 못 쓴다 */
-   if(n)link.appendChild(el('span','chip c-quiz','🗒 메모 '+n));}
+  {const tk='jo|'+S.law+':'+S.jo; const c=pitChipEl(pitListOf(tk),'이 조문',ev=>popPitJo(tk,ev)); if(c)link.appendChild(c);}   /* ⚠ base 는 아래(모드바)에서 선언된다 — 여기서 못 쓴다 · ★ pop_moknote B-5 — 판례 칩과 같은 꼴(대상키 접두만 다름) */
   const thRow=el('div','conn');thRow.id='thbot';
   const thBox=el('div');
   await thChips(thRow,thBox);
@@ -2807,7 +2820,7 @@ function popShell(kind, title, key){
   const p = el('div', 'pop' + (kind ? ' k-' + kind : '')); p._pk = key || null;
   p.style.zIndex = ++POPZ;
   const hd = el('div', 'ph');
-  hd.appendChild(el('span', 'pdrag', '≡'));
+  /* ★ pop_moknote A — 머리 「≡」 는 걷었다(모든 팝업 · 끌기는 머리 .ph 전체 — dragify·popSizable 그대로) */
   hd.appendChild(el('span', 'pt', title));
   const x = el('button', '', '✕');
   x.onclick = ev => { ev.stopPropagation(); closeOne(p); };
@@ -3675,10 +3688,48 @@ function eqFileOf(target){
   return '';
 }
 function eqRail(target){ const g = target.split('|')[0]; return { prec: '판례', jo: '조문', cha2: '2차', jimun: '원장', note: '노트', card: '2차' }[g] || g; }
+/* ★ pop_moknote F (2026-09-23 · 사용자 13:1x·13:2x 정정 · 14:0x) — ✎ 블록번호 지킴.
+   ① 줄 전체가 `^id`(앞뒤 공백만)인 줄은 ✎ 를 안 연다(고칠 본문이 없고 지우면 블록이 죽는다 · 꼬리 규칙보다 먼저).
+   ② before 끝이 `공백+^id` 면 꼬리 = 그 공백+^id(공백 종류·수 글자 그대로) · 칸에는 원래 글 그대로(떼지도 옮기지도 붙이지도 않는다).
+   ③ 저장 때 after 가 그 꼬리로 끝나지 않으면 막고 까닭을 칸 아래 빨간 줄로 · 「원래 꼬리로 되돌리기」 = 꼬리만 원래대로(본문 고친 것은 둔다 · 칸에 넣고 다시 저장).
+   ④ 꼬리 줄을 비워 지우면 확인 창 — 노트 줄이면 그 블록을 부르는 수(note_backlink `<파일>#^id`) · 노트 밖 줄은 수 없이 확인만. */
+const EQ_BLK_ONLY = /^\s*\^[A-Za-z0-9-]+\s*$/;
+function eqTailOf(before){ const s = String(before || ''); if (!s || EQ_BLK_ONLY.test(s)) return null;
+  const m = /(\s+)\^([A-Za-z0-9-]+)\s*$/.exec(s); return m ? { sp: m[1], id: m[2], tail: s.slice(m.index) } : null; }
+function eqWsName(s){ const t = (s.match(/\t/g) || []).length, b = (s.match(/ /g) || []).length, o = s.length - t - b;
+  return [t ? '탭 ' + t : '', b ? '띄어쓰기 ' + b : '', o ? '그 밖 공백 ' + o : ''].filter(Boolean).join(' + ') || '없음'; }
+function eqTailWhy(T, after){
+  if (after.endsWith(T.tail)) return '';
+  const tag = '^' + T.id, k = after.lastIndexOf(tag);
+  if (k < 0) return '블록번호 ' + tag + ' 가 없어졌다';
+  const rest = after.slice(k + tag.length), rest0 = T.tail.slice(T.tail.lastIndexOf(tag) + tag.length);
+  if (/^[A-Za-z0-9-]/.test(rest)) return '블록번호가 바뀌었다 — 원래 ' + tag;
+  if (rest !== rest0) return tag + ' 뒤에 글이 더 있다 — 블록번호는 문단 끝이어야 블록이 선다';
+  return tag + ' 앞 공백이 바뀌었다 — 원래 ' + eqWsName(T.sp) + ' · 지금 ' + eqWsName((/\s*$/.exec(after.slice(0, k)) || [''])[0]); }
+function eqTailFix(T, after){ const tag = '^' + T.id; let s = String(after || ''); const k = s.lastIndexOf(tag);
+  if (k >= 0){ const pre = s.slice(0, k).replace(/\s+$/, ''), post = s.slice(k + tag.length); s = pre + (post.trim() ? (/^\s/.test(post) ? post : ' ' + post) : ''); }
+  return s.replace(/\s+$/, '') + T.tail; }
+function eqLockUi(T, ta){   /* 칸 옆 칩 「🔒 ^id」 + 칸 아래 까닭 줄(처음엔 숨김) — show(why) 로 띄운다 */
+  const chip = el('span', 'chip eqlock', '🔒 ^' + T.id); chip.title = '블록번호 — 지우거나 옮기면 저장이 막힌다';
+  const why = el('div', 'eqwhy'); why.style.display = 'none'; const wt = el('span', ''); const fx = el('button', 'tool', '원래 꼬리로 되돌리기');
+  fx.title = '꼬리(' + eqWsName(T.sp) + ' + ^' + T.id + ')만 원래대로 · 본문 고친 것은 둔다';
+  fx.onclick = e2 => { e2.stopPropagation(); ta.value = eqTailFix(T, ta.value.replace(/\r/g, '')); why.style.display = 'none'; try{ ta.focus(); }catch(e){} };
+  why.appendChild(wt); why.appendChild(fx); ta.insertAdjacentElement('afterend', why);
+  ta.addEventListener('input', () => { why.style.display = 'none'; });
+  return { chip: chip, show: s => { wt.textContent = '⚠ ' + s; why.style.display = ''; } }; }
+function eqBlkConfirm(target, T, go){
+  const p = String(target || '').split('|');
+  const ask = B => { let msg = '이 줄은 블록 ^' + T.id;
+    if (B){ const b = B[p.slice(2).join('|') + '#^' + T.id] || {}; msg += ' — 부르는 곳: ' + ['기출', '사례', 'GS', '판례', '노트'].map(k => k + ' ' + (b[k] || []).length).join(' · '); }
+    msg += '\n줄을 지우면 이 블록을 부르는 곳이 끊긴다 — 지울까?';
+    if (confirm(msg)) go(); };
+  if (p[0] === 'note') get('note_backlink.json').then(ask, () => ask({})); else ask(null); }
 function eqAdd(target, part, quote, ev, existing){
   /* ★ 판 4 add1 §1 — 문서 단위 항목(before '' · after 자유 글)의 「다시 고치기」 전용. ★ add3 (9/2 밤) — 머리 「✎ 통째」 새로 만들기는 없앴다(existing 없으면 돌아감) · 이미 큐에 든 통째 항목만 그대로. 줄은 eqEditLine 이 맡는다. */
   target = eqNorm(target);
   if (!existing){ toast('머리 ✎ 통째는 없앴다 — 글줄을 길게 눌러 ✎ 수정'); return; }
+  if (typeof existing.before === 'string' && EQ_BLK_ONLY.test(existing.before)){ toast('블록번호 줄 — 고치지 않는다'); return; }   /* ★ pop_moknote F-3 */
+  const T = (typeof existing.before === 'string' && existing.before) ? eqTailOf(existing.before) : null;   /* ★ pop_moknote F-1 */
   const _pk6=('')+'|'+((existing ? '✎ 수정 — 다시 고치기' : '✎ 수정 — 이 문서 통째') + ' · ' + eqRail(target)); if(popToggle(_pk6))return; const body=popShell('', (existing ? '✎ 수정 — 다시 고치기' : '✎ 수정 — 이 문서 통째') + ' · ' + eqRail(target), _pk6);   /* ★ 상표 손질 6 — 키 종류|제목 */
   body.classList.add('eqform');
   body.appendChild(el('div', 'cdim', target + (part ? ' · ' + part : ' · (문서 통째)') + (existing ? '' : ' · ' + (eqFileOf(target) || '(파일은 채팅이 대상키로 되찾는다)'))));
@@ -3686,15 +3737,20 @@ function eqAdd(target, part, quote, ev, existing){
   else if (quote) body.appendChild(el('div', 'q', '원문: ' + quote));
   body.appendChild(el('div', 'grp', existing && typeof existing.before === 'string' && existing.before ? '고친 줄(after)' : '지시 (필수 · 채팅이 이 글로 볼트를 고친다)'));
   const ta = el('textarea'); ta.value = existing ? (typeof existing.after === 'string' ? existing.after : (existing.note || '')) : ''; body.appendChild(ta);
+  const LK = T ? eqLockUi(T, ta) : null;   /* ★ pop_moknote F-2 */
   const row = el('div', 'memobtn');
   const ok = el('button', 'tool on', existing ? '고침' : '적어 두기');
   ok.onclick = () => { const after = ta.value.replace(/\r/g, ''); if (!after.trim() && !(existing && typeof existing.before === 'string' && existing.before)){ toast('⚠ 지시를 적어라', 1); return; }
-    const A = eqAll().slice();
-    if (existing){ const i = A.findIndex(x => x.k === existing.k); if (i >= 0){ const y = Object.assign({}, A[i], { after: after, at: nowIso().slice(0, 16), st: '대기' }); delete y.note; delete y.kind; A[i] = y; } }
-    else A.unshift({ k: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), at: nowIso().slice(0, 16), who: '나',
-      target: target, part: part || '', file: eqFileOf(target), before: '', after: after, st: '대기' });
-    eqSave(A); closeOne(body.parentNode); toast('✎ 수정 큐에 ' + (existing ? '고쳤다' : '적었다') + ' — 동기화되면 채팅이 읽는다'); render(); };
+    if (T && after !== ''){ const why = eqTailWhy(T, after); if (why){ LK.show(why); return; } }   /* ★ pop_moknote F-2 — 꼬리가 안 맞으면 막고 까닭 */
+    const go = () => {
+      const A = eqAll().slice();
+      if (existing){ const i = A.findIndex(x => x.k === existing.k); if (i >= 0){ const y = Object.assign({}, A[i], { after: after, at: nowIso().slice(0, 16), st: '대기' }); delete y.note; delete y.kind; A[i] = y; } }
+      else A.unshift({ k: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), at: nowIso().slice(0, 16), who: '나',
+        target: target, part: part || '', file: eqFileOf(target), before: '', after: after, st: '대기' });
+      eqSave(A); closeOne(body.parentNode); toast('✎ 수정 큐에 ' + (existing ? '고쳤다' : '적었다') + ' — 동기화되면 채팅이 읽는다'); render(); };
+    if (T && after === '') eqBlkConfirm(target, T, go); else go(); };   /* ★ pop_moknote F-4 — 꼬리 줄 비우기 = 확인 창 */
   row.appendChild(ok);
+  if (LK) row.appendChild(LK.chip);   /* ★ pop_moknote F-2 — 칸 옆 「🔒 ^id」 */
   if (existing){ const del = el('button', 'tool', '↩ 되돌리기(삭제)'); del.onclick = () => { if (!confirm('이 수정 항목을 지운다? (화면은 원문으로 돌아간다)')) return; eqSave(eqAll().filter(x => x.k !== existing.k)); closeOne(body.parentNode); render(); }; row.appendChild(del);
     const stb = el('select', 'sel'); ['대기', '보류', '반영됨'].forEach(s => { const o = el('option', '', s); o.value = s; if (existing.st === s) o.selected = true; stb.appendChild(o); });
     stb.onchange = () => { const A = eqAll().slice(); const i = A.findIndex(x => x.k === existing.k); if (i >= 0){ A[i] = Object.assign({}, A[i], { st: stb.value }); eqSave(A); } }; row.appendChild(stb); }
@@ -3704,24 +3760,31 @@ function eqAdd(target, part, quote, ev, existing){
 function eqEditLine(lineEl, target, part, text, ev, existing){
   target = eqNorm(target);
   if (lineEl._eqedit) return;
+  const before0 = existing && typeof existing.before === 'string' && existing.before ? existing.before : String(text || '');
+  if (EQ_BLK_ONLY.test(before0)){ toast('블록번호 줄 — 고치지 않는다'); return; }   /* ★ pop_moknote F-3 — 꼬리 규칙보다 먼저 */
+  const T = eqTailOf(before0);   /* ★ pop_moknote F-1 */
   const cur = existing ? (typeof existing.after === 'string' ? existing.after : String(text || '')) : String(text || '');
   const ta = el('textarea', 'eqta'); ta.value = cur; ta.rows = Math.max(2, Math.min(8, cur.split('\n').length + 1));
   const bar = el('div', 'memobtn');
   const ok = el('button', 'tool on', '고침 저장'), cx = el('button', 'tool', '취소');
   bar.appendChild(ok); bar.appendChild(cx); bar.appendChild(el('span', 'cdim', '줄 추가 = 개행으로 이어 쓰기 · 삭제 = 비우기 · 저장 즉시 화면에(볼트 반영 전)'));
   const box = el('div', 'eqedit'); box.appendChild(ta); box.appendChild(bar);
+  const LK = T ? eqLockUi(T, ta) : null; if (LK) bar.insertBefore(LK.chip, bar.lastChild);   /* ★ pop_moknote F-2 — 칸 옆 「🔒 ^id」 */
   const saved = Array.from(lineEl.childNodes); lineEl._eqedit = 1; lineEl.innerHTML = ''; lineEl.appendChild(box);
   const restore = () => { lineEl._eqedit = 0; lineEl.innerHTML = ''; saved.forEach(n => lineEl.appendChild(n)); };
   const inPop = !!lineEl.closest('.pop');
   cx.onclick = e2 => { e2.stopPropagation(); restore(); };
   ok.onclick = e2 => { e2.stopPropagation(); const after = ta.value.replace(/\r/g, '');
     if (after === String(text || '') && !existing){ toast('바뀐 것이 없다'); restore(); return; }
-    const A = eqAll().slice(); let item;
-    if (existing){ const i = A.findIndex(x => x.k === existing.k); item = Object.assign({}, A[i >= 0 ? i : 0], { after: after, at: nowIso().slice(0, 16), st: '대기' }); delete item.note; delete item.kind; if (i >= 0) A[i] = item; else A.unshift(item); }
-    else { item = { k: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), at: nowIso().slice(0, 16), who: '나', target: target, part: part || '', file: eqFileOf(target), before: String(text || ''), after: after, st: '대기' }; A.unshift(item); }
-    eqSave(A); toast('✎ 고쳤다 — 화면엔 바로 · 볼트엔 채팅이 반영한다');
-    if (inPop){ restore(); lineEl._eqlock = 0; lineEl.querySelectorAll('.eqflag,.eqpend').forEach(x => x.remove()); eqApplyOverlay(lineEl, item); eqFlagsOn(lineEl, target, part, String(text || '')); }
-    else render(); };
+    if (T && after !== ''){ const why = eqTailWhy(T, after); if (why){ LK.show(why); return; } }   /* ★ pop_moknote F-2 — 꼬리가 안 맞으면 막고 까닭 */
+    const go = () => {
+      const A = eqAll().slice(); let item;
+      if (existing){ const i = A.findIndex(x => x.k === existing.k); item = Object.assign({}, A[i >= 0 ? i : 0], { after: after, at: nowIso().slice(0, 16), st: '대기' }); delete item.note; delete item.kind; if (i >= 0) A[i] = item; else A.unshift(item); }
+      else { item = { k: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), at: nowIso().slice(0, 16), who: '나', target: target, part: part || '', file: eqFileOf(target), before: String(text || ''), after: after, st: '대기' }; A.unshift(item); }
+      eqSave(A); toast('✎ 고쳤다 — 화면엔 바로 · 볼트엔 채팅이 반영한다');
+      if (inPop){ restore(); lineEl._eqlock = 0; lineEl.querySelectorAll('.eqflag,.eqpend').forEach(x => x.remove()); eqApplyOverlay(lineEl, item); eqFlagsOn(lineEl, target, part, String(text || '')); }
+      else render(); };
+    if (T && after === '') eqBlkConfirm(target, T, go); else go(); };   /* ★ pop_moknote F-4 — 꼬리 줄 비우기 = 확인 창 */
   ['click', 'pointerdown', 'pointerup', 'keydown'].forEach(n => box.addEventListener(n, e2 => e2.stopPropagation()));
   setTimeout(() => ta.focus(), 30);
 }
@@ -6216,7 +6279,7 @@ function popSizable(body, kind){
     if (c.x != null){ p.style.left = Math.max(0, Math.min(innerWidth - 60, c.x)) + 'px'; p.style.top = Math.max(0, Math.min(innerHeight - 34, c.y || 0)) + 'px'; } };
   applyCfg(cfg);
   const save = () => { const r = p.getBoundingClientRect(); S.popCfg = S.popCfg || {};
-    S.popCfg[kind] = { w: Math.round(r.width), h: Math.round(r.height), x: Math.round(parseFloat(p.style.left) || r.left), y: Math.round(parseFloat(p.style.top) || r.top) }; uiSave(); };
+    S.popCfg[kind] = { w: Math.round(r.width), h: p._szKeepH ? ((S.popCfg[kind] || {}).h) : Math.round(r.height), x: Math.round(parseFloat(p.style.left) || r.left), y: Math.round(parseFloat(p.style.top) || r.top) }; uiSave(); };   /* ★ pop_moknote B-4 — p._szKeepH(포스트잇 창) = 높이는 스스로 재므로 기억 높이를 안 바꾼다 */
   const rs = el('span', 'prsz'); rs.title = '끌어서 크기 조절';
   let x0 = 0, y0 = 0, w0 = 0, h0 = 0, on = false;
   rs.addEventListener('pointerdown', ev => { ev.stopPropagation(); ev.preventDefault(); on = true; x0 = ev.clientX; y0 = ev.clientY; const r = p.getBoundingClientRect(); w0 = r.width; h0 = r.height; try{ rs.setPointerCapture(ev.pointerId); }catch(e){} });
@@ -6264,12 +6327,13 @@ async function popNote(file,blockId,ev,depth){
   fc.onclick=e2=>{e2.stopPropagation(); if(depth>=3)return; const items=(fw.판례||[]).map(x=>({kind:'판례',v:x})).concat((fw.노트||[]).map(x=>({kind:'노트',v:x}))); popNoteList('정방향',file,items,e2,depth+1);};
   hd.appendChild(fc); if(depth>=2)hd.appendChild(el('span','badge',depth+'단'));
   body.appendChild(hd);
-  const box=el('div','box'); let hl=null; const ents=[];   /* ★ 판 4 add2 §2 헤딩 접기 */
+  const box=el('div','box ntbox'); let hl=null; const ents=[]; let hlv=0;   /* ★ 판 4 add2 §2 헤딩 접기 · ★ pop_moknote E-2·E-3 — ntbox = 줄 간격 · hlv = 직전 제목 단계 */
   let hlA=-1,hlB=-1; if(blockId){ const bi=(rec.행||[]).findIndex(r=>r.id===blockId); if(bi>=0){ const bk=rec.행[bi].blk; hlA=(bk&&bk.a!=null)?bk.a:bi; hlB=(bk&&bk.b!=null)?bk.b:bi; } }   /* ★ 판 4 add3 — 강조 = 문단 전체(blk) */
   (rec.행||[]).forEach((row,ri)=>{
     const wrap=el('div','ntrow'); ents.push({ri:ri,row:row,el:wrap});
     const d=mdLine(el('div','ln'),row);
-    d.appendChild(renderLine(row,{label:false,depth:depth}));
+    { const h=row.h||0; if(h)hlv=h; const px=h?(h-1)*15:(hlv?hlv*15+12:0)+(row.i||0)*15; d.style.paddingLeft=px?px+'px':''; }   /* ★ pop_moknote E-2 — 기출창과 같은 15px 계단: 제목 (h-1)×15 · 본문 = 직전 제목×15+12 + 탭 수×15 · 첫 제목 전 = 탭 수×15 */
+    d.appendChild(renderLine(row,{label:false,depth:depth,tabHide:true}));   /* ★ pop_moknote E-1 — 줄 앞 탭 = 폭 0(글자 수 무변) */
     pitWire(d,'note|'+PLAW()+'|'+file,String(ri),row.t||'');   /* 포스트잇·✎ 수정 큐 대상키 note|<법>|<파일> · 구조키 = 줄번호 · ★ 상표 판 3 */
     wrap.appendChild(d);
     if(ri>=hlA&&ri<=hlB){ d.classList.add('blkhl'); if(!hl)hl=wrap; }   /* ★ 판 4 add3 — 문단 전체 강조 · 스크롤은 첫 줄로 */
@@ -6302,6 +6366,63 @@ async function popNoteList(label,key,items,ev,depth){
       body.appendChild(d); });
   });
   if(!arr.length)body.appendChild(el('div','cdim','없다'));
+}
+/* ★ pop_moknote D (2026-09-23) — 2차 보드 「목차노트 N」 단추 → 목록 팝업(1단 · 볼트 차례) → 노트 팝업(2단)
+   N = NF() 키 수(특허 70 · 상표 99 · 민소 84 · 디보 49 — 사용자 9/23 14:00 「디보도 켠다」) · 못 읽으면 흐린 「목차노트 —」.
+   차례 = 이름 앞 번호 마디(`^\d+(?:\.\d+)*\.`)를 숫자 배열로(2. < 2.1. < 2.2. < 3. · 같으면 이름) · 번호 없는 노트는 맨 아래.
+   칩 = 그 노트를 인용한 카드 수(note_backlink `<노트>#^…` 를 모아 갈래마다 서로 다른 값 · 0 은 안 그림 · 노트끼리 인용은 안 셈). */
+async function mokBtnEl(subj){
+  const N = await get(NF()).catch(() => null); const n = N ? Object.keys(N).length : 0;
+  const b = el('button', 'pill' + (n ? '' : ' wait'), '목차노트 ' + (n || '—')); b.id = 'mokBtn';
+  if (!n){ b.disabled = true; b.title = subj + ' 목차노트 없음'; return b; }
+  b.title = subj + ' 목차노트 ' + n + ' — 볼트 차례대로 목록 · 누르면 노트';
+  b.onclick = ev => { ev.stopPropagation(); popMokNote(b, ev); };
+  return b;
+}
+function mokNum(f){ const m = /^(\d+(?:\.\d+)*)\./.exec(String(f)); return m ? m[1].split('.').map(Number) : null; }
+function mokCmp(a, b){ const x = mokNum(a), y = mokNum(b);
+  if (x && y){ for (let i = 0; i < Math.max(x.length, y.length); i++){ const p = x[i] == null ? -1 : x[i], q = y[i] == null ? -1 : y[i]; if (p !== q) return p - q; } }
+  else if (x || y) return x ? -1 : 1;   /* 번호 없는 노트는 맨 아래 */
+  return a < b ? -1 : a > b ? 1 : 0; }
+let MOKCITE = null;
+function mokCite(B){ if (MOKCITE && MOKCITE.B === B) return MOKCITE.m;
+  const m = {}; Object.keys(B || {}).forEach(k => { const i = k.indexOf('#^'); if (i < 0) return; const f = k.slice(0, i), v = B[k] || {};
+    const o = m[f] || (m[f] = { 기출: new Set(), 사례: new Set(), GS: new Set(), 판례: new Set() });
+    ['기출', '사례', 'GS', '판례'].forEach(c => (v[c] || []).forEach(x => o[c].add(x))); });
+  MOKCITE = { B: B, m: m }; return m; }
+async function popMokNote(btn, ev){
+  const key = 'moknote|' + PLAW(); if (popToggle(key)) return;
+  const { N, B } = await noteData(); const names = Object.keys(N || {}).sort(mokCmp); const cite = mokCite(B);
+  if (POPS.find(x => x._pk === key)) return;   /* 받는 사이 두 번 눌렀으면 하나만 */
+  const body = popShell('cell', '📑 목차노트 — ' + PLAW() + ' ' + names.length, key); const p = body.parentNode;
+  p.classList.add('mkpop');
+  popSizable(body, 'moknote');   /* 기억 자리·크기가 있으면 그것(jopangi_ui.pop_moknote) · 없으면 아래 — ⚠ popSizable 이 기억 없을 때 폭을 비우므로 그 뒤에 준다 */
+  if (!(S.popCfg || {}).moknote){ const br = btn.getBoundingClientRect(), W = Math.min(470, innerWidth - 16);
+    const x = Math.max(8, Math.min(br.left, innerWidth - W - 8)), y = Math.max(8, Math.min(br.bottom + 8, innerHeight - 200));
+    p.style.width = W + 'px'; p.style.left = x + 'px'; p.style.top = y + 'px'; p.style.maxHeight = Math.max(240, innerHeight - y - 16) + 'px'; }
+  body.appendChild(el('div', 'cdim', '볼트 목차 차례 · 누르면 노트 팝업'));
+  const L = el('div', 'mklist');
+  names.forEach(f => { const num = mokNum(f); const r = el('div', 'mkr' + (/==/.test(f) ? ' ch' : '')); r.dataset.note = f;
+    r.style.paddingLeft = (10 + ((num ? num.length : 1) - 1) * 16) + 'px';
+    r.appendChild(el('span', 'nm', f));
+    const cs = el('span', 'n'), C0 = cite[f];
+    [['기출', 'ck-g'], ['사례', 'ck-s'], ['GS', 'ck-gs'], ['판례', 'ck-p']].forEach(([k, cl]) => { const v = C0 ? C0[k].size : 0; if (!v) return;
+      const c = el('span', 'ck ' + cl, k + ' ' + v); c.title = '이 노트를 인용한 ' + k + ' 수(같은 카드는 한 번)'; cs.appendChild(c); });
+    r.appendChild(cs);
+    r.onclick = e2 => { e2.stopPropagation(); L.querySelectorAll('.mkr.on').forEach(q => q.classList.remove('on')); r.classList.add('on'); mokOpenNote(f, e2, p); };
+    L.appendChild(r); });
+  body.appendChild(L);
+}
+/* 노트 팝업(2단 · 머리 「2단」 딱지 그대로)은 목록 오른쪽에 — 화면이 좁아 목록을 거의 덮게 되면 showPop 규칙 그대로.
+   어느 쪽이든 아래가 화면 밖이면 그만큼 위로(아이패드 — 목록 아래쪽 줄을 누르면 showPop 이 머리 몇 줄만 남겼다 · mbWinFit 과 같은 뜻) */
+async function mokOpenNote(f, ev, lp){
+  await popNote(f, null, ev, 2);
+  const np = POPS.find(x => x._pk === 'note|' + PLAW() + '|' + f + '|'); if (!np) return;
+  if (lp && lp.isConnected){ const lr = lp.getBoundingClientRect(), w = np.offsetWidth || 440;
+    const x = Math.min(lr.right + 12, innerWidth - w - 8);
+    if (x - lr.left >= Math.min(200, lr.width * 0.45)){ np.style.left = Math.max(8, x) + 'px'; np.style.top = Math.max(8, lr.top) + 'px'; } }
+  const r = np.getBoundingClientRect();
+  if (r.bottom > innerHeight - 8) np.style.top = Math.max(8, innerHeight - r.height - 8) + 'px';
 }
 /* ③ 판례 팝업 — 3단과 같은 요약/원문 렌더(크기만 팝업) · 안의 링크·⤷ 는 3단으로 */
 async function popPrec4(id,ev,depth,law,q){   /* ★ 손질 9(9/5) — law = 다른 법 판례(검색 결과)도 그 법 파일로 · q = 검색어(요약본 첫 일치 줄 강조) */
@@ -6338,9 +6459,9 @@ async function popCard4(kind,ck,ev,depth,blockId,tab){   /* ★ 2차 탭 판 1 �
   const pop=body.parentNode;
   S.cha2Sel='card|'+kind+'|'+ck; try{ c2Mark(S.cha2Sel,false); }catch(e){}   /* 열린 카드 = 보드·목록 상시 강조(메모 add1 §3 준용) */
   if(!rec&&!gv){ body.appendChild(el('div','cdim','본문 JSON 에 없다 — '+name+' / '+ck)); return; }
-  if(rec&&rec.fm&&Object.keys(rec.fm).length){ const ch=el('div','chips'); const _lp=c2FmPrec(rec.fm), _pm=_lp.length?await c2PrecIds():null; Object.entries(rec.fm).forEach(([k,v])=>{ if(k==='해설')return; if(k==='연결판례'&&_lp.length){ _lp.forEach(x=>ch.appendChild(x.v?c2LinkEl({k:'prec',v:x.v},depth,_pm):el('span','chip c-src',k+': '+('[['+x.raw+']]').slice(0,40)))); return; } const s=Array.isArray(v)?v.join(' · '):String(v||''); if(s)ch.appendChild(el('span','chip c-src',k+': '+s.slice(0,40))); }); if(ch.childNodes.length)body.appendChild(ch); }   /* ★ 2차 탭 판 1 add1 — §11 fm 칩(배열은 · 로 이어) · 해설은 위 링크 칩으로 · ★ mainprec D(9/18) — 연결판례 = [[…]] 마다 ⚖ 판례 칩(c2LinkEl · popPrec4) */
+  if(rec&&rec.fm&&Object.keys(rec.fm).length){ const ch=el('div','chips'); const _lp=c2FmPrec(rec.fm), _pm=_lp.length?await c2PrecIds():null; Object.entries(rec.fm).forEach(([k,v])=>{ if(k==='해설'||k==='기출')return; if(k==='연결판례'&&_lp.length){ _lp.forEach(x=>ch.appendChild(x.v?c2LinkEl({k:'prec',v:x.v},depth,_pm):el('span','chip c-src',k+': '+('[['+x.raw+']]').slice(0,40)))); return; } const s=Array.isArray(v)?v.join(' · '):String(v||''); if(s)ch.appendChild(el('span','chip c-src',k+': '+s.slice(0,40))); }); if(ch.childNodes.length)body.appendChild(ch); }   /* ★ 2차 탭 판 1 add1 — §11 fm 칩(배열은 · 로 이어) · 해설은 위 링크 칩으로 · ★ mainprec D(9/18) — 연결판례 = [[…]] 마다 ⚖ 판례 칩(c2LinkEl · popPrec4) · ★ pop_moknote C-2 — 기출 칸은 제목에 이미 뜬다(칩 안 그림) */
   const top=el('div'); top.style.cssText='display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px';
-  const go=el('button','tool on','2차 레일로 ↗'); go.onclick=()=>{closeAllPops();S.tab='cha2';S.boardKind=kind;S.cha2Sel='card|'+kind+'|'+ck;render();}; top.appendChild(go);
+  /* ★ pop_moknote C-1 — 「2차 레일로 ↗」 단추는 걷었다 · top 줄은 자식(점수·PDF 칩)이 있을 때만 붙인다 */
   const r0=gv?gv.회차[gv.회차.length-1]:null;
   if(r0){ top.appendChild(el('span','chip c-alias',(c2Bp(r0)||'?')+'점')); if(r0.기출)top.appendChild(el('span','chip c-quiz',r0.기출)); else if(r0.번호)top.appendChild(el('span','chip c-quiz','['+r0.번호+']'));
   }
@@ -6356,7 +6477,7 @@ async function popCard4(kind,ck,ev,depth,blockId,tab){   /* ★ 2차 탭 판 1 �
     cont.appendChild(el('div','cdim','…')); c2GradeEl(gv,depth||1).then(n=>{ cont.innerHTML=''; cont.appendChild(n); }); };
   pop._setTab=draw;
   ['문제','해설','채점'].forEach(t=>{const b=el('button','tool',t);b.dataset.t=t;b.onclick=ev2=>{ev2.stopPropagation();draw(t);};tabs.appendChild(b);});
-  body.appendChild(top); body.appendChild(tabs); body.appendChild(cont); draw(tab||'문제');
+  if(top.childNodes.length)body.appendChild(top); body.appendChild(tabs); body.appendChild(cont); draw(tab||'문제');
 }
 /* §2-4 요약본 목차 팝업 — 헤딩만 접힌 목록 · › 절 펴기 · 헤딩 글자 클릭 = 3단 요약 탭 그 줄 */
 async function popSumToc(p,ev){
@@ -7180,7 +7301,7 @@ async function viewPrec(){
     {const m=impOf(p);if(m)pn.appendChild(el('span','badge imp','★'+m));}
     if(p.사건유형)pn.appendChild(el('span','badge ty',p.사건유형));   /* ★ add1 — 사건유형 칩 */
     {const bc=precBookEl(p.책); if(bc)pn.appendChild(bc);}   /* ★ 민소 — 교재 쪽 칩 */
-    {const pm=pitByPrec()[p.id]||[]; if(pm.length){ const c=el('span','chip c-memo','🗒 '+pm.length); c.title='이 판례 메모 '+pm.length+' — 클릭 = 목록'; [...new Set(pm.map(m=>m.who).filter(w=>w))].forEach(w=>c.appendChild(pitWhoBadge(w))); c.onclick=ev=>{ev.stopPropagation();popPitList(p,ev);}; pn.appendChild(c);} }   /* ★ 메모 손질 — 종류 칩 옆 메모 칩 */
+    {const c=pitChipEl(pitByPrec()[p.id]||[],'이 판례',ev=>popPitList(p,ev)); if(c)pn.appendChild(c);}   /* ★ 메모 손질 — 종류 칩 옆 메모 칩 · ★ pop_moknote B-5 — 한 벌(pitChipEl) */
     r.appendChild(pn);
     r.appendChild(precDescEl(p,false));   /* ★ add1 — 노란 별칭 칩 · 설명줄(안 자름) · 기출 칩 */
     if(p.원본){const c=el('span','chip c-src','원본 ▸');c.title='원본 5절 머리';c.onclick=ev=>{ev.stopPropagation();popRawToc(p,ev);};r.appendChild(c);}   /* ★ 판 4 §2-4 */
@@ -7222,7 +7343,7 @@ async function viewPrec(){
     if(!ok)b.disabled=true;
     b.onclick=()=>{S.precTab=t;render();};bar.appendChild(b);});
   {const rb=el('button','tool last','원문 ↗');   /* ★ prec3 §B-3 — 원문은 팝업으로 · 다시 누르면 닫힌다 */
-   rb.title='원문을 팝업으로 — 「≡」를 잡아 끌어 옮기고 오른쪽 아래 모서리로 크기를 바꾼다 · 여러 판례를 같이 띄울 수 있다';
+   rb.title='원문을 팝업으로 — 머리를 잡아 끌어 옮기고 오른쪽 아래 모서리로 크기를 바꾼다 · 여러 판례를 같이 띄울 수 있다';
    if(!hasRaw)rb.disabled=true;
    rb.onclick=ev=>{ev.stopPropagation();precRawPop(cur.id,ev,null,S.law,false);};bar.appendChild(rb);}
   main.appendChild(bar);
@@ -7250,8 +7371,7 @@ async function viewPrec(){
   (Array.isArray(cur.조문키)&&cur.조문키.length?cur.조문키:(Array.isArray(cur.조문)?cur.조문:[]).map(x=>({law:'',jo:'',detail:'',raw:x,cur:null}))).forEach(k=>chips.appendChild(precJoChipEl(k,true)));   /* ★ 판 4 add1 §2 */
   /* ★ 판 4 add4 §3 — 「📝 기출」 칩은 뺐다: 볼트 `기출` 문자열은 ⚙ 기출표시(1차 20NN-회-문번)에 전부 옮겨 간다(K1 어긋남 0) */
   /* ★ linkwin §3-b — 카테고리 칩(보라) · 🃏 자리표(클릭·뜻 없음)는 걷었다 */
-  {const n=pitCount('prec|'+cur.id+SEP);   /* ★ v3-H §4 — 카드 머리 「🗒 메모 N」 */
-   if(n)chips.appendChild(el('span','chip c-quiz','🗒 메모 '+n));}
+  {const c=pitChipEl(pitByPrec()[cur.id]||[],'이 판례',ev=>popPitList(cur,ev)); if(c)chips.appendChild(c);}   /* ★ v3-H §4 · ★ pop_moknote B-5 — 2단 카드와 같은 칩(「🗒 N」+사람 딱지 · 클릭 = 메모 목록) */
   eqHeadBtn('prec|'+subj+'|'+cur.id,chips);   /* ★ recsync §E · 판 4 add3 — ✎ 대기 수 칩(통째 버튼은 없앴다) */
   chips.appendChild(precLinkGlyphs(cur,CITE[cur.id]||{},P,0));   /* ★ linkwin §1 — 「🔗 인용 N · 피인용 N · 내 N」 칩 → 글자 넷(0 이면 없음) + ✏️ 연결 · 누름 = 창 넷 */
   {const cs=cardLinksOf(cur);   /* ★ 판 4 add4 §4 — 🧾 기출·사례·GS N (⚙ 이차카드 + 내가 이은 것) · 클릭 = 목록 팝업 */
@@ -7311,7 +7431,7 @@ async function bodyOf(kind,subj){
 /* ══ v3-H §4 — 🗒 포스트잇 = 단어 단위 메모 (조문·판례·지문·2차 공용 · 사양서 §4-3) ══
    키 = 대상키 + 구조키 + 단어번호 + 단어텍스트 (마크업 키와 같은 사상 — 좌표가 밀려도
    같은 줄 안 같은 단어면 같은 것 · 같은 줄에서 못 찾으면 「고아」 조각으로 보인다).
-   공유·상대 표시는 GAS 전이라 자리만 — who 기본 「나」 · 건별 🔒 비공개. */
+   공유·상대 표시는 GAS 전이라 자리만 — who 기본 「나」 · ★ pop_moknote B-3(9/23) — 건별 🔒 비공개는 걷었다(저장에 priv 칸 없음 · 옛 priv 는 이 창에서 저장하면 빠진다). */
 const PIT_KEY = REC_PRE + 'postit';
 const CMP_KEY = REC_PRE + 'compare';
 let PITREC = null, CMPREC = null;
@@ -7341,8 +7461,20 @@ function pitByPrec(){ const A = pitAll(); const n = Object.keys(A).length; if (P
   const map = {}; Object.keys(A).forEach(k => { const p = k.split(SEP); if (String(p[0] || '').indexOf('prec|') !== 0) return; const id = p[0].slice(5); const v = A[k] || {};
     (map[id] = map[id] || []).push({ key: k, tk: p[0], struct: p[1] || '', wi: p[2], word: p[3] || '', t: String(v.t || ''), who: pitWhoOf(v), ts: v.ts || '' }); });
   PITIDX = { rec: A, n: n, map: map }; return map; }
-function popPitList(p, ev){ const key = 'pitlist|' + PLAW() + '|' + p.id; if (popToggle(key)) return;
-  const body = popShell('fn', '🗒 메모 — ' + (p.사건번호 || p.id), key); const pm = pitByPrec()[p.id] || [];
+/* ★ pop_moknote B-5 — 메모 칩 한 벌(판례 2단 카드 · 판례 3단 머리 · 조문 3단 머리) = 「🗒 N」 + 사람 딱지 + 클릭 = 메모 목록.
+   목록은 대상키 하나(prec|<id> · jo|<법>:<조>)의 메모 — 판례는 pitByPrec 색인 그대로 · 조문은 pitListOf(같은 꼴). */
+function pitListOf(tk){ const A = pitAll(), out = [];
+  Object.keys(A).forEach(k => { const p = k.split(SEP); if (p[0] !== tk) return; const v = A[k] || {};
+    out.push({ key: k, tk: p[0], struct: p[1] || '', wi: p[2], word: p[3] || '', t: String(v.t || ''), who: pitWhoOf(v), ts: v.ts || '' }); });
+  return out; }
+function pitChipEl(pm, what, open){ if (!pm || !pm.length) return null;
+  const c = el('span', 'chip c-memo', '🗒 ' + pm.length); c.title = what + ' 메모 ' + pm.length + ' — 클릭 = 목록';
+  [...new Set(pm.map(m => m.who).filter(w => w))].forEach(w => c.appendChild(pitWhoBadge(w)));
+  c.onclick = ev => { ev.stopPropagation(); open(ev); }; return c; }
+function popPitList(p, ev){ popPitListOf('pitlist|' + PLAW() + '|' + p.id, '🗒 메모 — ' + (p.사건번호 || p.id), pitByPrec()[p.id] || [], ev); }
+function popPitJo(tk, ev){ popPitListOf('pitlist|' + tk, '🗒 메모 — ' + skTarget(tk), pitListOf(tk), ev); }
+function popPitListOf(key, title, pm, ev){ if (popToggle(key)) return;
+  const body = popShell('fn', title, key);
   pm.forEach(m => { const d = el('div', 'res'); d.appendChild(el('b', '', (m.word ? '「' + m.word + '」 ' : '') + m.t.slice(0, 60))); d.appendChild(pitWhoBadge(m.who, m.key)); d.appendChild(el('span', 'cdim', ' ' + pitFmt(m.ts)));   /* ★ 메모 add1 — §1 미상도 보인다(클릭 = 그 메모만) */
     d.onclick = ev2 => { ev2.stopPropagation(); skMemoGo(m.tk, ev2, { key: m.key, word: m.word, t: m.t, who: m.who }); }; body.appendChild(d); });
   if (!pm.length) body.appendChild(el('div', 'cdim', '메모 없음'));
@@ -7397,7 +7529,7 @@ function pitLabel(target, struct, word){
       else if (p[i] === '호') head += ' ' + p[i + 1] + '호';
     }
   }
-  return '🗒 포스트잇 · ' + head + (word ? ' 「' + String(word).slice(0, 14) + '」' : '');
+  return '🗒 ' + head + (word ? ' 「' + String(word).slice(0, 14) + '」' : '');   /* ★ pop_moknote B-1 — 「포스트잇 · 」 뺌(팝업 키에도 들어간다 — 같은 창 두 번 = 닫힘은 같은 식이라 그대로) */
 }
 function pitEdit(target, struct, wi, word, ev){
   const key = pitKey(target, struct, wi, word);
@@ -7407,26 +7539,45 @@ function pitEdit(target, struct, wi, word, ev){
   ta.value = (cur && cur.t) || ''; ta.placeholder = '이 단어에 붙일 포스트잇';
   body.appendChild(ta);
   body.appendChild(el('div', 'cdim',
-    (cur ? pitWhoOf(cur) : (pitWho() || '(저장 때 이름을 묻는다)')) + ' · ' + ((cur && cur.ts) ? pitFmt(cur.ts) : '새 메모') +   /* ★ 메모 add1 — §1·§2 */
-    ' · 기본 공유 — GAS 전이라 지금은 이 기기 안'));
+    (cur ? pitWhoOf(cur) : (pitWho() || '(저장 때 이름을 묻는다)')) + ' · ' + ((cur && cur.ts) ? pitFmt(cur.ts) : '새 메모')));   /* ★ 메모 add1 — §1·§2 · ★ pop_moknote B-2 — 「기본 공유 — GAS …」 뺌 */
   if (cur && pitWhoOf(cur) === '미상') body.appendChild(pitWhoBadge('미상', key));   /* ★ 메모 add1 — §1 옛 메모 = 미상 배지(클릭 = 이 메모만) */
   const row = el('div', 'memobtn');
-  let priv = !!(cur && cur.priv);
-  const pv = el('button', 'tool' + (priv ? ' on' : ''), '🔒 비공개');
-  pv.title = '건별 비공개 — 켜면 상대에게 안 보인다(GAS 뒤 적용)';
-  pv.onclick = () => { priv = !priv; pv.classList.toggle('on', priv); };
   const ok = el('button', 'tool on', cur ? '✎ 수정 저장' : '저장');
   ok.onclick = () => { const v = ta.value.trim();   /* ★ 메모 add1 — §1 who 비면 묻고 저장 — 빈 who 저장 0 */
     if (!v){ pitPut(key, null); closePop(); render(); return; }
-    const save = w => { pitPut(key, { t: v, who: w, at: (cur && cur.at) || nowIso(), priv: priv }); closePop(); render(); };
+    const save = w => { pitPut(key, { t: v, who: w, at: (cur && cur.at) || nowIso() }); closePop(); render(); };   /* ★ pop_moknote B-3 — priv 칸 없음 */
     const w0 = (cur && cur.who && cur.who !== '나') ? cur.who : pitWho();
     if (w0) save(w0); else pitAskWho(save, null); };
   const del = el('button', 'tool', '🗑 삭제');
   del.onclick = () => { pitPut(key, null); closePop(); render(); };
-  row.appendChild(pv); row.appendChild(ok); row.appendChild(del);
+  row.appendChild(ok); row.appendChild(del);
   body.appendChild(row);
   showPop(ev);
+  pitGrow(body, ta);   /* ★ pop_moknote B-4 */
   setTimeout(() => ta.focus(), 30);
+}
+/* ★ pop_moknote B-4 — 메모 칸이 글 길이만큼 저절로 늘어난다(열 때 한 번 · 입력 때마다) · 칸 높이 = max(글 높이, 손으로 끌어 둔 높이)
+   손끌기(resize:vertical)는 남긴다 — 끌어 바뀐 높이를 기억해 그보다 작게는 안 줄이고, 글이 넘으면 다시 늘어난다.
+   창도 칸을 따라 늘어난다 — 이 창만 .pop 의 60vh·기억 높이(S.popCfg.fn.h)를 안 쓴다(높이 = 내용 · 아래가 화면 밖이면 위로 · 화면보다 크면 화면 높이 → 창 안 스크롤).
+   크기 기억은 'fn' 그대로(폭·자리) — 이 창의 늘어난 높이는 기억에 안 쓴다(p._szKeepH · 누구?·메모 목록 등 다른 'fn' 창 무변). 시안 P6tg… 동작 그대로. */
+function pitGrow(body, ta){
+  const p = body.parentNode; if (!p || !ta) return;
+  popSizable(body, 'fn'); p._szKeepH = 1;
+  let autoH = 0, handH = 0;
+  const win = () => { if (!p.isConnected) return;
+    p.style.height = ''; p.style.maxHeight = Math.max(120, innerHeight - 16) + 'px';
+    const r = p.getBoundingClientRect(), T = parseFloat(p.style.top) || r.top;
+    if (r.bottom > innerHeight - 8) p.style.top = Math.max(8, T - (r.bottom - (innerHeight - 8))) + 'px';
+    if (r.right > innerWidth - 8) p.style.left = Math.max(8, innerWidth - r.width - 8) + 'px'; };   /* 오른쪽이 화면 밖이면(좁은 화면에 넓은 화면 기억 자리) 왼쪽으로 — 삭제 단추가 밖에 남지 않게 */
+  const fit = () => { if (!p.isConnected){ removeEventListener('resize', fit); return; }
+    ta.style.height = 'auto';
+    const want = Math.max(ta.scrollHeight + 2, handH);
+    ta.style.height = want + 'px'; autoH = ta.offsetHeight; win(); };
+  const hand = () => { const h = ta.offsetHeight; if (autoH && Math.abs(h - autoH) > 1){ handH = h; autoH = h; win(); } };
+  ta.addEventListener('input', fit);
+  ['mouseup', 'pointerup', 'touchend'].forEach(n => ta.addEventListener(n, hand));
+  addEventListener('resize', fit);
+  fit();
 }
 /* 줄 하나에 표시(밑줄+오른쪽 조각) + 길게 누르면 붙이기.
    text = 이 줄의 평문(splitWords 색인 기준). 줄 앞에 각주표시 등 다른 글이 있어도
@@ -8032,6 +8183,7 @@ async function view2cha(){
     const n=d0?(k==='기출'?(d0.배치수||0):(d0.총||0)):0;
     const b=el('button','pill'+(S.boardKind===k?' on':(n?'':' wait')),k+' '+(n||'—'));
     b.onclick=()=>{S.boardKind=k;S.series='';S.yearFilter='';render();};bar.appendChild(b);});
+  bar.appendChild(await mokBtnEl(subj));   /* ★ pop_moknote D-1 — 「사례 N」 바로 오른쪽(#ordSeg 앞) · 누르면 팝업만(보드 갈래 무변) */
   const sp=el('span');sp.style.flex='1';bar.appendChild(sp);
   if(S.boardKind==='사례'){const fm0=c2FoldMode();const fb=el('button','pill',C2FOLD_LABEL[fm0]);fb.dataset.fold=fm0;fb.title='카드 본문 접힘 — 뼈대(콜아웃 + 설문 헤딩 + 번호 줄 · 기본) / 제목만(폰 기본) / 전부 · 기기별';fb.onclick=()=>{try{localStorage.setItem(C2FOLD_KEY,C2FOLD_MODES[(C2FOLD_MODES.indexOf(fm0)+1)%3]);}catch(e){}render();};bar.appendChild(fb);}   /* 9/5 B-6 · add1 값 셋 · ★ hrail(9/22 사용자) — 기출·GS 목록엔 본문이 없어 누를 것이 없다 → 사례 격자에만 */
   /* 보드/목록 토글은 없앴다(§4-1) — 목록은 2단 서랍이다 */
