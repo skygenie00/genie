@@ -1082,6 +1082,10 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .cv-book .cv-booknav{position:sticky;top:var(--cvph,0px);z-index:6;background:#fff;padding:3px 0}   /* 쪽을 내려 찍어도 ◀▶·📍·「이 자리 저장」이 창 위에 남는다 · ★ 머리 **아래**에 붙는다(--cvph = 팝업 머리 높이 · cvNavTop) — top:0 이면 머리(sticky · 같은 z 6)와 같은 자리에 붙어 DOM 이 뒤인 막대가 제목·✕·끌기 손잡이를 덮었다 */
 .cv-pickov{position:absolute;inset:0;z-index:3;cursor:crosshair;touch-action:none;background:rgba(22,163,74,.04)}
 .cv-pickbox{position:absolute;border:2px solid #10b981;background:rgba(16,185,129,.16);border-radius:4px;pointer-events:none;z-index:4}
+.cv-stamp{position:absolute;box-sizing:border-box;border:2px solid #2563eb;background:rgba(37,99,235,.08);border-radius:2px;cursor:pointer;z-index:2}   /* ★ book_stamp B-3 — 교재 도장(출처 찾음) · 찍기 덮개(z 3) 아래 */
+.cv-stamp .tg{position:absolute;right:-2px;top:0;transform:translateY(-100%);font-size:10.5px;font-weight:700;line-height:1.45;color:#fff;background:#2563eb;padding:0 5px;border-radius:3px 3px 0 0;white-space:nowrap}
+.cv-srcband{position:absolute;background:rgba(255,196,0,.28);outline:2px solid rgba(230,120,0,.85);border-radius:2px;pointer-events:none}   /* ★ book_stamp B-3 — 출처 줄 띠(쪽 폭 84% · 16pt) */
+.cv-candrow{padding:7px 9px;border:1px solid #e5e7eb;border-radius:8px;margin:4px 0;cursor:pointer;background:#fff;font-size:13px;font-weight:700;color:#1e3a8a}.cv-candrow:hover{background:#f8fafc}
 .cv-book .m{color:#6b675f;font-size:11.5px;margin-bottom:4px}.cv-bookpg{position:relative;border:1px solid #e3e0d8}.cv-bookhl{position:absolute;background:rgba(255,196,0,.28);outline:2px solid rgba(230,120,0,.85);border-radius:2px;pointer-events:none}
 /* ══ 정리캔버스(민소) 끝 ══ */
 .badge.bk{background:#f1efe9;color:#6b665d;border:1px solid #e3e0d8;white-space:nowrap}   /* ★ 민소 판례 — 교재 쪽 칩(회색) */
@@ -1323,6 +1327,14 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .mbbrow .hd .m{font-size:10px;color:#9a958b}
 .mbbrow .sn{font-size:11px;color:#4a463f;line-height:1.45;max-height:2.9em;overflow:hidden;margin-top:2px}
 .mbbnone{padding:12px;font-size:12px;color:var(--sub)}
+/* ★ book_stamp C-3 — 민소 목차노트 「교재 자리」 창(민법 mbBookOpen 폭 420 · 제목 = 문단 첫 줄 한 줄 · 줄 = 위 .mbbrow 그대로) */
+.pop.k-ncbook{width:420px}
+.pop.k-ncbook .ph .pt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ncb-sec{font-size:11px;color:#9ca3af;margin:10px 0 2px}
+.ncb-more{font-size:10px;padding:2px 7px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;color:#4b5563;cursor:pointer;margin:2px 0}
+.ncb-pic{margin:6px 0 4px;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;background:#fff;cursor:pointer}
+.ncb-pic canvas{width:100%;height:auto;display:block}
+.ncb-pic .m{font-size:10.5px;color:#9ca3af;padding:5px 6px;line-height:1.4}
 /* ══════════ _task_jo_gaek_mb §D-17 알약 (+ _add1 누름 가로채기 고침) ══════════
    민법 실물 값 실측(2026-09-21) · 색만 조판기 색. 화면 고정(fixed)이 아니라
    **문제풀이 화면 안 sticky** 다 — 민법과 같다.
@@ -1652,10 +1664,10 @@ mark.mkc.u{background:transparent;border-bottom:2px solid var(--exc)}
 .pop.k-fn .ph>button.pall{border-color:#dccb7c;color:#7a6a17}
 .pop.mbwin .ph>button.pall{border-color:#d1d5db;color:#6b7280;font-weight:700}
 @media (max-width:640px){
-  /* G-5 — 맨 윗줄 탭(#hrail)은 제 줄 안에서 가로 스크롤(스크롤바 얇게) · 페이지는 안 넓어진다.
+  /* G-5 — 맨 윗줄 탭(#hrail)은 제 줄 안에서 가로 스크롤 · 페이지는 안 넓어진다. ★ book_stamp D-1 — 스크롤 줄은 안 보이게(밀어서 넘기기는 그대로 · 사용자 9/24 01:34)
      폰에선 탭 줄이 로고·법 칩 아래 제 줄로 내려가므로 왼쪽 구분선·여백은 뺀다 */
-  #hrail{flex:1 1 100%;min-width:0;margin-left:0;padding-left:0;border-left:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
-  #hrail::-webkit-scrollbar{height:3px} #hrail::-webkit-scrollbar-thumb{background:#cfcabd;border-radius:2px}
+  #hrail{flex:1 1 100%;min-width:0;margin-left:0;padding-left:0;border-left:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #hrail::-webkit-scrollbar{display:none}
   #hrail .rb{flex:none}
   /* 배지 묶음(hdrFit 이 검색줄로 내린 뒤)도 제 줄 안에서 접힌다 — 배지 여섯이 폭을 넘어 페이지를 넓히지 않게 */
   #hbadges{flex-wrap:wrap;flex-shrink:1;min-width:0;max-width:100%;row-gap:4px}
@@ -1764,7 +1776,7 @@ try{const u=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if(u.prec_sort)S.precSort=u.prec_sort;
     if(u.lsw>0)S.listW=u.lsw;if(u.prec_ygroups&&typeof u.prec_ygroups==='object')S.precYG=u.prec_ygroups;   /* ★ 판 4 */
     if(u.md_fold&&typeof u.md_fold==='object')S.mdFold=u.md_fold;if(u.embed_fold&&typeof u.embed_fold==='object')S.embFold=u.embed_fold;
-    ['note','list','prec','toc','link','canvas','claude','jn','c2unit','moknote'].forEach(k=>{if(u['pop_'+k]&&typeof u['pop_'+k]==='object')S.popCfg[k]=u['pop_'+k];});   /* ★ pop_moknote D-2 — moknote */   /* ★ 판 4 add2 */   /* ★ linkwin §2 — link(창 넷) */
+    ['note','list','prec','toc','link','canvas','claude','jn','c2unit','moknote','ncbook'].forEach(k=>{if(u['pop_'+k]&&typeof u['pop_'+k]==='object')S.popCfg[k]=u['pop_'+k];});   /* ★ pop_moknote D-2 — moknote */   /* ★ 판 4 add2 */   /* ★ linkwin §2 — link(창 넷) */
     if(u.omr&&typeof u.omr==='object')S.omrPos=u.omr;   /* ★ 기출뷰 손질 3 — OMR 자리 */
     if(u.cha2_filter&&typeof u.cha2_filter==='object')S.cha2Filter=u.cha2_filter;if(u.cha2_sort)S.cha2Sort=u.cha2_sort;   /* ★ 2차 탭 판 1 — §4-2 필터·정렬 = 표시층(jopangi_ui) */}catch(e){}   /* ★ v3-L §1 */
 /* ★ mok_popup_phone G-4 — 폰(폭 ≤ 640)은 옆 두 칸(.tree · .plist)을 접은 채로 시작한다 · jopangi_ui 에 treeHid·listHid 기억이 있으면 그것
@@ -1787,7 +1799,7 @@ function uiSave(){try{localStorage.setItem(UI_KEY,JSON.stringify(
    jbk:S.joBlank,jbs:S.joBlankStar?1:0,
    prec_filter:S.precFilter||{},prec_sort:S.precSort,
    lsw:S.listW,prec_ygroups:S.precYG||{},
-   md_fold:S.mdFold||{},embed_fold:S.embFold||{},pop_note:S.popCfg.note||null,pop_list:S.popCfg.list||null,pop_prec:S.popCfg.prec||null,pop_toc:S.popCfg.toc||null,pop_link:S.popCfg.link||null,pop_canvas:S.popCfg.canvas||null,pop_claude:S.popCfg.claude||null,pop_jn:S.popCfg.jn||null,pop_c2unit:S.popCfg.c2unit||null,pop_moknote:S.popCfg.moknote||null,omr:S.omrPos||null,cha2_filter:S.cha2Filter||{},cha2_sort:S.cha2Sort||'',jt_w:S.jtW||0,jt_fold:S.jtFold?1:0,jt_ch:S.jtCh||{},mk_off:S.mkOff?1:0,hm_top:S.hmTop||'',c2ord:S.c2ord||'round',c2uopen:S.c2uOpen||{}}));}catch(e){}}   /* ★ 판 3 §3-4 · 판 4 · add2 */
+   md_fold:S.mdFold||{},embed_fold:S.embFold||{},pop_note:S.popCfg.note||null,pop_list:S.popCfg.list||null,pop_prec:S.popCfg.prec||null,pop_toc:S.popCfg.toc||null,pop_link:S.popCfg.link||null,pop_canvas:S.popCfg.canvas||null,pop_claude:S.popCfg.claude||null,pop_jn:S.popCfg.jn||null,pop_c2unit:S.popCfg.c2unit||null,pop_moknote:S.popCfg.moknote||null,pop_ncbook:S.popCfg.ncbook||null,omr:S.omrPos||null,cha2_filter:S.cha2Filter||{},cha2_sort:S.cha2Sort||'',jt_w:S.jtW||0,jt_fold:S.jtFold?1:0,jt_ch:S.jtCh||{},mk_off:S.mkOff?1:0,hm_top:S.hmTop||'',c2ord:S.c2ord||'round',c2uopen:S.c2uOpen||{}}));}catch(e){}}   /* ★ 판 3 §3-4 · 판 4 · add2 */
 const C={};
 const $=(s,r)=>(r||document).querySelector(s);
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;
@@ -2862,6 +2874,7 @@ function vvFit(p){
   if (!p || !p.isConnected || p._vvSplit || !vvPhone()) return;
   const B = vvBox(), W = Math.max(120, Math.round(B.w - 16)), H = Math.max(120, Math.round(B.h - 16));
   const sized = p.classList.contains('sized'), w0 = p.offsetWidth, w = sized ? Math.min(w0, W) : W;
+  if (sized) p.style.maxHeight = '';   /* ★ book_stamp D-2 — 저장 크기로 다시 열 때 showPop 의 첫 vvFit 가 박은 인라인 max-height(60vh)가 .sized 를 이겨 기억 높이가 60vh 에 막혔다 */
   if (w !== w0 || !sized) p.style.width = w + 'px';
   if (sized && w0 > W) p._vvFit = 1;
   const r = p.getBoundingClientRect();
@@ -6416,7 +6429,8 @@ function popSizable(body, kind){
   rs.addEventListener('pointerdown', ev => { ev.stopPropagation(); ev.preventDefault(); on = true; x0 = ev.clientX; y0 = ev.clientY; const r = p.getBoundingClientRect(); w0 = r.width; h0 = r.height; try{ rs.setPointerCapture(ev.pointerId); }catch(e){} });
   rs.addEventListener('pointermove', ev => { if (!on) return; const L = parseFloat(p.style.left) || 0, T = parseFloat(p.style.top) || 0, B = vvBox();   /* ★ mok_popup_phone G-1·G-3 — 보이는 화면 기준 · 최소 폭 = min(360, 화면 폭 − 16) */
     const w = Math.max(Math.min(360, B.w - 16), Math.min(B.x + B.w - L - 4, w0 + ev.clientX - x0)), h = Math.max(240, Math.min(B.y + B.h - T - 4, h0 + ev.clientY - y0));
-    p.classList.add('sized'); p.style.width = w + 'px'; p.style.height = h + 'px'; });
+    p.classList.add('sized'); p.style.width = w + 'px'; p.style.height = h + 'px';
+    if (vvPhone()) p.style.maxHeight = (B.y + B.h - T - 4) + 'px'; });   /* ★ book_stamp D-2 — 폰: 기억 없는 팝업은 vvFit 의 인라인 max-height(60vh)가 .sized 를 이겨 손잡이로 안 늘었다 */
   const end = ev => { if (!on) return; on = false; try{ rs.releasePointerCapture(ev.pointerId); }catch(e){} save(true); };
   rs.addEventListener('pointerup', end); rs.addEventListener('pointercancel', end);
   p.appendChild(rs);
@@ -6431,12 +6445,13 @@ function popSizable(body, kind){
   }
 }
 async function noteData(){ const N=await get(NF()).catch(()=>({})); const B=await get('note_backlink.json').catch(()=>({})); return {N,B}; }
-function noteBlChips(key,B,host,depth,ev0){
+function noteBlChips(key,B,host,depth,ev0,nc){   /* ★ book_stamp C-2 — nc = {file,end}(민소) 면 📍 정리핀 자리에 📘 교재 자리 */
   const b=B[key]||{}; const kinds=[['판례','판례'],['사례','사례'],['기출','기출'],['GS','GS'],['노트','노트']];
   kinds.forEach(([k,label])=>{ const arr=b[k]||[]; if(!arr.length)return;
     const c=el('span','chip c-prec',label+' '+arr.length); c.onclick=ev=>{ev.stopPropagation(); popNoteList(label,key,arr,ev,depth+1);};   /* ★ mok_popup_phone D — 「깊이 3 —」 알림 없음 */ host.appendChild(c); });
   /* 📍 정리핀 — kv jopangi.omr 의 ref 가 `note|파일#^id` 면 「정리 p.N」 · 없으면 「찍기」(지문 핀 UI 재사용 · omrJump) */
-  { const pk='note|'+key; let pin=null; try{ const U=omAll(); Object.keys(U).forEach(id=>{ if(U[id].ref===pk)pin=U[id]; }); }catch(e){}
+  if(nc) host.appendChild(ncChip(nc.file,nc.end,depth));   /* ★ book_stamp C-2 — 민소: 「📍 찍기 / 📍 정리 p.N」 → 📘 하나(글자 없음 · 같은 회색 c-src · 흐리게·숨기기 없음 — 민법 bookChipHTML 규칙) */
+  else { const pk='note|'+key; let pin=null; try{ const U=omAll(); Object.keys(U).forEach(id=>{ if(U[id].ref===pk)pin=U[id]; }); }catch(e){}
     const c=el('span','chip c-src',pin?('📍 정리 p.'+pin.page):'📍 찍기'); c.title=pin?'정리 레일 그 자리로':'정리OMR 에서 그 행을 한 번 눌러 위치를 찍는다';
     c.onclick=ev=>{ev.stopPropagation();closeAllPops();omrJump(pk);}; host.appendChild(c); }
   /* 🃏 암기카드 — 대상키 = 노트 줄 */
@@ -6447,7 +6462,7 @@ function noteBlChips(key,B,host,depth,ev0){
 async function popNote(file,blockId,ev,depth){
   depth=depth||1; file=String(file||'').split('/').pop();   /* 전체 경로 임베드(`…/특허목차/7. ==청범해석==`)도 파일명으로 */
   if(popToggle('note|'+PLAW()+'|'+file+'|'+(blockId||'')))return;   /* ★ 상표 손질 5 */
-  const {N,B}=await noteData();
+  const [{N,B},NCA]=await Promise.all([noteData(),PLAW()==='민소'?ncData():Promise.resolve(null)]); const NCP=NCA?((NCA.p||{})[file]||{}):null;   /* ★ book_stamp C-2 — 민소 = 노트↔캔버스 짝(문단 끝 행 → {a,b,L,c}) */
   const rec=N[file];
   const body=popShell('cell','📄 '+file+(blockId?' · ^'+blockId:''),'note|'+PLAW()+'|'+file+'|'+(blockId||''));
   showPop(ev); popSizable(body,'note');   /* ★ 판 4 add2 §3 */
@@ -6464,13 +6479,97 @@ async function popNote(file,blockId,ev,depth){
     pitWire(d,'note|'+PLAW()+'|'+file,String(ri),row.t||'');   /* 포스트잇·✎ 수정 큐 대상키 note|<법>|<파일> · 구조키 = 줄번호 · ★ 상표 판 3 */
     wrap.appendChild(d);
     if(ri>=hlA&&ri<=hlB){ d.classList.add('blkhl'); if(!hl)hl=wrap; }   /* ★ 판 4 add3 — 문단 전체 강조 · 스크롤은 첫 줄로 */
-    if(row.id){ const bl=el('div','ntbl'); noteBlChips(file+'#^'+row.id,B,bl,depth,ev); wrap.appendChild(bl); }
+    if(row.id){ const bl=el('div','ntbl'); noteBlChips(file+'#^'+row.id,B,bl,depth,ev,NCP?{file:file,end:ri}:null); wrap.appendChild(bl); }
+    else if(NCP&&NCP[ri]&&(NCP[ri].b||[]).length){ const bl=el('div','ntbl'); bl.appendChild(ncChip(file,ri,depth)); wrap.appendChild(bl); }   /* ★ book_stamp C-2 — ^id 없는 문단도 짝 블록이 있으면 끝 줄에 칩 줄(📘 하나 — 판례·사례·기출 칩은 ^id 가 열쇠라 없다) */
     box.appendChild(wrap);
   });
   hfoldWire(ents,'note|'+file);
   body.appendChild(box);
   if(hl)setTimeout(()=>{try{hl.scrollIntoView({block:'center'});}catch(e){}},60);
 }
+/* ══ ★ book_stamp C-2·C-3(2026-09-24) — 민소 목차노트 📘 「교재 자리」 ══
+   데이터 = data/omr/민소/note_canvas.json(⚙ note_canvas.py) — {p: {파일: {문단 끝 행: {a 시작 행, b [짝 블록 bid…], L 층, c {핵심|윤곽: [{p PDF 쪽, y0?,y1?(pt · 위 기준), s, h}]}}}}} · 교재 글자 없음(D11).
+   칩 = noteBlChips(^id 문단 · 옛 📍 자리) + ^id 없는 문단 중 짝이 있는 것(끝 줄에 ntbl 새로) — 특허·상표·디보의 📍 는 그대로.
+   창 = 민법 mbBookOpen 꼴(mbWinFrame · 폭 420 · 제목 = 문단 첫 줄 한 줄): 책마다 1등 줄(mbbRowHTML 꼴 — 책 · 인쇄 쪽 크게 · PDF 쪽 · 그 자리 글 두 줄) + 접힌 「후보 N」 ·
+     짝 블록에 손값(jopangi.canvasjari)이 있으면 그 책은 그 자리 하나 + 그림 + 「자동으로 되돌리기」 · 자리가 없으면 「교재 자리를 찾지 못했습니다.」 · 맨 아래 「정리캔버스」 짝 블록 줄.
+   자리·손값·되돌리기·교재 쪽 창·글자층·인쇄 쪽은 viewCanvas.jari(정리캔버스와 한 함수 · 규칙 ㊜)로만 부른다 — 여기서 새로 고르지 않는다.
+   ⚠ 줄에 층 이름·점수·순위를 적지 않는다(사용자 9/24 01:5x · 민법 4턴 §5-B) — 손값만 「찍어 둔 자리」 · 접힌 줄은 민법처럼 「후보」. */
+async function ncData(){ try { return await get('omr/민소/note_canvas.json'); } catch (e) { return { p: {} }; } }   /* 못 받으면 빈 것(get 은 받은 것만 재운다 — 다음에 다시 받는다) */
+function ncChip(file, end, depth){ const c = el('span', 'chip c-src', '📘'); c.title = '교재 자리';
+  c.onclick = ev => { ev.stopPropagation(); ncBookOpen(file, end, ev, (depth || 1) + 1); }; return c; }
+/* 문단 첫 행 — note_canvas.py paragraphs() 와 같은 규칙(제목·^id 뒤 · 들여쓰기 없는 줄에서 시작) · ⚙ 파일에 없는 문단(짝·글 없는 ^id 문단)의 제목용 */
+function ncParaStart(rows, end){ let a = end; while (a > 0 && rows[a] && rows[a].i && !rows[a - 1].h && !rows[a - 1].id) a--; return a; }
+function ncTitle(rows, a, end){ for (let i = a; i <= end; i++){ const t = String((rows[i] || {}).t || '').replace(/!\[\[[^\]]*\]\]/g, ' ').replace(/\^[0-9a-f]{6}\b/g, ' ').replace(/\s+/g, ' ').trim(); if (t) return t; } return '교재 자리'; }
+/* 그 자리 글 두 줄 — 쪽 글자층(낱글자 `글자\tx\ty` · 0~2000 · y = 글자 밑줄)에서 y0~y1(pt) 안 글자를 줄로 묶어 앞 두 줄.
+   글자층에는 빈칸이 없다 — 띄어쓰기는 글자 사이가 그 줄 보통 간격(가운데 값)의 1.28배를 넘는 곳 */
+function ncSnip(rec, s){ if (!rec || !rec.words || !rec.h || !s) return '';
+  const Wp = rec.w || 1, Hp = rec.h; let y0 = s.y0, y1 = s.y1, x0 = s.x0, x1 = s.x1;
+  if (s.r){ x0 = s.r[0] * Wp; y0 = s.r[1] * Hp; x1 = s.r[2] * Wp; y1 = s.r[3] * Hp; }
+  if (y0 == null || y1 == null) return '';
+  const Y0 = (y0 - 1) / Hp * 2000, Y1 = (y1 + 3) / Hp * 2000, X0 = x0 != null ? (x0 - 2) / Wp * 2000 : -1, X1 = x1 != null ? (x1 + 2) / Wp * 2000 : 2001;
+  const cs = []; String(rec.words).split('\n').forEach(ln => { const a = ln.split('\t'); if (a.length < 3) return; const x = +a[1], y = +a[2]; if (y >= Y0 && y <= Y1 && x >= X0 && x <= X1) cs.push([a[0], x, y]); });
+  cs.sort((u, v) => u[2] - v[2] || u[1] - v[1]); const L = [];
+  cs.forEach(c => { const l = L[L.length - 1]; if (l && c[2] - l.y <= 6) l.c.push(c); else L.push({ y: c[2], c: [c] }); });
+  return L.slice(0, 2).map(l => { const c = l.c.sort((u, v) => u[1] - v[1]); const d = c.slice(1).map((q, i) => q[1] - c[i][1]).filter(v => v > 0).sort((u, v) => u - v); const md = d.length ? d[d.length >> 1] : 0;
+    return c.map((q, i) => (i && md && q[1] - c[i - 1][1] > md * 1.28 ? ' ' : '') + q[0]).join(''); }).join(' '); }
+/* 줄 하나 — 민법 mbbRowHTML 꼴(.mbbrow · §C-16 값) · 누르면 go(ev, 글자층) */
+function ncRow(J, bk, s, tag, go){ const r = el('div', 'mbbrow'); r.dataset.book = bk; r.dataset.p = s.p;
+  const hd = el('div', 'hd'); hd.appendChild(el('span', 'k', J.name(bk))); hd.appendChild(el('span', 'p', J.pr(bk, s.p) + '쪽')); hd.appendChild(el('span', 'm', 'PDF ' + s.p));
+  if (tag) hd.appendChild(el('span', 'm', tag)); r.appendChild(hd);
+  const sn = el('div', 'sn'); r.appendChild(sn); let rec = null;
+  J.words(bk, s.p).then(w => { rec = w; const t = ncSnip(w, s); sn.textContent = t ? t + '…' : ''; }).catch(() => {});
+  r.onclick = ev => { ev.stopPropagation(); go(ev, rec); }; return r; }
+/* 찍어 둔 자리 그림 — 민법 mbbPicHTML 꼴(줄 바로 아래 · 쪽 크롭 · 뒤따라 채운다 · 누르면 그 쪽) */
+function ncPic(J, bk, s, go){ const box = el('div', 'ncb-pic'); box.appendChild(el('div', 'm', '그림을 여는 중…'));
+  J.pic(bk, s, 400).then(cv => { box.innerHTML = ''; box.appendChild(cv || el('div', 'm', '이 기기에 그림이 아직 없습니다')); })
+    .catch(() => { box.innerHTML = ''; box.appendChild(el('div', 'm', '이 기기에 그림이 아직 없습니다')); });
+  box.onclick = ev => { ev.stopPropagation(); go(ev); }; return box; }
+async function ncBookOpen(file, end, ev, depth){
+  const pk = 'ncbook|' + PLAW() + '|' + file + '|' + end; if (popToggle(pk)) return;   /* 같은 📘 를 또 누르면 닫힌다(조판기 규칙) */
+  const [{ N }, NCA] = await Promise.all([noteData(), ncData()]);
+  if (POPS.find(x => x._pk === pk)) return;   /* 받는 사이 두 번 눌렀으면 하나만 */
+  const rows = ((N || {})[file] || {}).행 || [], e = (((NCA || {}).p || {})[file] || {})[end] || null;
+  const body = popShell('ncbook', ncTitle(rows, e ? e.a : ncParaStart(rows, end), end), pk); const pop = body.parentNode;
+  mbWinFrame(pop);
+  const host = el('div', 'mbblist'); host.dataset.ncb = String(end); host._nc = { file, end, e };
+  host.appendChild(el('div', 'mbbnone', '받는 중…')); body.appendChild(host);
+  showPop(ev); popSizable(body, 'ncbook'); mbWinFit(pop);
+  await ncBookFill(host); mbWinFit(pop); }
+async function ncBookFill(host){ const e = (host._nc || {}).e; const J = viewCanvas.jari;
+  let ok = false; try { ok = await J.ensure(); } catch (x) { ok = false; }   /* 캔버스 데이터를 아직 안 받았으면 여기서 받는다 */
+  try { await J.meta(); } catch (x) {}   /* 인쇄 쪽(printOffset) */
+  if (!host.isConnected) return;
+  const pairs = []; if (ok && e) (e.b || []).forEach(bid => { const o = J.find(bid); if (o && !pairs.some(q => q.k === o.k)) pairs.push(o); });   /* 편집으로 bid 가 없어졌으면 그 줄을 품은 지금 블록 · 못 찾으면 그 짝만 뺀다 */
+  const hand = {}; let none = null;   /* 손값 — 짝 블록 차례로 처음 걸리는 것(책마다 · 규약 ⑤ 손값이 이긴다) · 「교재에 없음」은 책 손값이 하나도 없을 때만 */
+  pairs.forEach(o => { const v = J.hand(o.k); if (!v) return; if (v.none){ if (!none) none = o; } else if (!hand[v.b]) hand[v.b] = { o, v }; });
+  /* 교재 쪽 창에 넘길 블록 ctx — 그 쪽을 후보로 가진 짝 블록(캔버스 자리 창 카드 그대로 · 차례 ci) · 없으면 첫 짝 블록(점수표 자리 · h 'note') */
+  const ctxOf = (bk, s) => { for (const o of pairs){ const L = J.list(o.k); const i = L.findIndex(x => x.b === bk && x.p === s.p); if (i >= 0) return { k: o.k, x: L[i], ci: i }; }
+    return pairs.length ? { k: pairs[0].k, x: { b: bk, p: s.p, y0: s.y0, y1: s.y1, s: 0, h: 'note' }, ci: -1 } : null; };
+  const hlOf = (s, rec) => s.r ? (rec && rec.h ? { y0: s.r[1] * rec.h, y1: s.r[3] * rec.h, x0: s.r[0] * rec.w, x1: s.r[2] * rec.w } : {}) : { y0: s.y0, y1: s.y1, x0: s.x0, x1: s.x1 };
+  host.innerHTML = ''; let any = false;
+  if (none && !Object.keys(hand).length){ any = true;
+    host.appendChild(el('div', 'mbbnone', '교재에 없음 ✓ — 정리캔버스에서 닫아 둔 자리'));
+    const rv = el('button', 'ncb-more', '자동으로 되돌리기'); rv.onclick = ev2 => { ev2.stopPropagation(); J.revert(none.k); }; host.appendChild(rv); }
+  else ['핵심', '윤곽'].forEach(bk => { const hv = hand[bk];
+    if (hv){ any = true; const v = hv.v, s = v.by === 'hand' ? { p: v.p, r: v.r } : { p: v.p, y0: v.y0, y1: v.y1, x0: v.x0, x1: v.x1 };
+      let rec0 = null; const go = (ev2, rec) => J.book(Object.assign({ book: bk, page: v.p }, hlOf(s, rec || rec0)), ev2, hv.o.k);
+      host.appendChild(ncRow(J, bk, s, '찍어 둔 자리', (ev2, rec) => { rec0 = rec; go(ev2, rec); }));
+      host.appendChild(ncPic(J, bk, s, ev2 => go(ev2, rec0)));
+      const rv = el('button', 'ncb-more', '자동으로 되돌리기'); rv.onclick = ev2 => { ev2.stopPropagation(); J.revert(hv.o.k); }; host.appendChild(rv); return; }
+    const L = ((e && e.c) || {})[bk] || []; if (!L.length) return; any = true;
+    const row = s => ncRow(J, bk, s, s === L[0] ? '' : '후보', (ev2, rec) => { const c = ctxOf(bk, s); J.book(Object.assign({ book: bk, page: s.p }, hlOf(s, rec)), ev2, c && c.k, c && c.x, c && c.ci); });
+    host.appendChild(row(L[0]));
+    if (L.length > 1){ const b = el('button', 'ncb-more', '후보 ' + (L.length - 1)), box = el('div'); box.hidden = true; box.dataset.more = bk;
+      b.onclick = ev2 => { ev2.stopPropagation(); if (!box.childNodes.length) L.slice(1).forEach(s => box.appendChild(row(s))); box.hidden = !box.hidden; mbWinFit(host.closest('.pop')); };
+      host.appendChild(b); host.appendChild(box); } });
+  if (!any) host.appendChild(el('div', 'mbbnone', '교재 자리를 찾지 못했습니다.'));
+  if (pairs.length){ host.appendChild(el('div', 'ncb-sec', '정리캔버스'));
+    pairs.forEach(o => { const r = el('div', 'mbbrow'); r.dataset.bid = o.k; const hd = el('div', 'hd');
+      hd.appendChild(el('span', 'k', '정리')); hd.appendChild(el('span', 'p', o.n + '쪽')); hd.appendChild(el('span', 'm', '· 블록 ' + o.k)); r.appendChild(hd);
+      r.appendChild(el('div', 'sn', o.t.split('\n').map(x => x.trim()).filter(Boolean).slice(0, 2).join(' ')));
+      r.onclick = ev2 => { ev2.stopPropagation(); J.go(o.k); }; host.appendChild(r); }); } }
+/* 손값이 바뀐 뒤(캔버스 jariAfter 가 부른다) — 떠 있는 「교재 자리」 창을 다시 채운다 */
+function ncBookRefresh(){ document.querySelectorAll('.mbblist[data-ncb]').forEach(h => { if (h._nc && h.isConnected) ncBookFill(h); }); }
 async function popNoteList(label,key,items,ev,depth){
   const _pk23=('cell')+'|'+('🔗 '+label+' — '+key.slice(0,40)); if(popToggle(_pk23))return; const body=popShell('cell', '🔗 '+label+' — '+key.slice(0,40), _pk23);   /* ★ 상표 손질 6 — 키 종류|제목 */
   showPop(ev); popSizable(body,'list');   /* ★ 판 4 add2 §3 */
@@ -13931,6 +14030,7 @@ const viewCanvas = (() => {
   let built = new Map(), mounted = new Set();
   let LOG = null, REPLAY = { ok: 0, bad: 0, stale: false };
   let VIEWED = false;   /* 이 세션에서 캔버스를 한 번이라도 그렸는가(화면 유지용) */
+  let GOTO = null;   /* ★ book_stamp C-3 — 목차노트 「교재 자리」 창의 정리캔버스 줄 → 다음 그리기 끝에 그 블록으로(골라 두고 가운데로) */
 
   /* ── 기록층 ── */
   function logRead(){ const A = lsRead(K.log); const o = A[DOC]; return (o && Array.isArray(o.ops)) ? o : { hash: META.hash, ops: [] }; }
@@ -14078,7 +14178,8 @@ const viewCanvas = (() => {
   const candN = b => (MATCH && MATCH.c) ? candOf(b).length : (CAND ? candOf(b).length : ((MATCH && MATCH.cn && MATCH.cn[key(b)]) || 0));
   async function candLoad(){ if (!MATCH || MATCH.c || CAND || !MATCH.cand) return; try { const j = await get(DIR + MATCH.cand); CAND = (j && j.c) || {}; } catch (e) { CAND = {}; } }
   const cfOf = b => (MATCH && MATCH.cf && MATCH.cf[key(b)]) || '';
-  const rngOf = (b, book) => { const t = MATCH && MATCH.toc && b.note ? MATCH.toc[b.note] : null; return (t && t[book]) || null; };
+  const noteOf = b => (MATCH && MATCH.bn && Object.prototype.hasOwnProperty.call(MATCH.bn, key(b))) ? MATCH.bn[key(b)] : b.note;   /* ★ book_stamp C-0 — 태그 번호로 찾은 목차노트 이름(canvas_match.json bn · 블록 파일과 다른 것만) */
+  const rngOf = (b, book) => { const nm = noteOf(b); const t = MATCH && MATCH.toc && nm ? MATCH.toc[nm] : null; return (t && t[book]) || null; };
   function jariAll(){ return lsRead(K.jari); }
   function jariOk(v){ return !!(v && !v.auto && (v.none || ((v.by === 'cand' || v.by === 'hand') && v.b && v.p))); }
   function jariOf(b){ const v = jariAll()[key(b)]; return jariOk(v) ? v : null; }
@@ -14102,7 +14203,10 @@ const viewCanvas = (() => {
     w.title = orph.length ? '손값의 블록이 지금 데이터에 없다(데이터 판이 바뀜) — 칸은 남겨 두었다 · 지우는 건 사람: ' + orph.slice(0, 8).join(', ') : ''; }
   /* 손값이 바뀐 뒤 — 칩 · 열린 자리 창 · 머리 수 · 필터 */
   function jariAfter(b){ if (sel && sel.b === b) select(sel.el, true); const w = POPS.find(x => x._pk === 'cv|jari|' + key(b)); const o = BK.get(key(b));
-    if (w && o){ const box = w.querySelector('.cv-jari'); if (box) jariDraw(box, o.p, o.b); } jariBadges(); if (F.has('jari')) applyFilter(); }
+    if (w && o){ const box = w.querySelector('.cv-jari'); if (box) jariDraw(box, o.p, o.b); } jariBadges(); if (F.has('jari') && world) applyFilter();   /* ★ book_stamp C-3 — 캔버스를 한 번도 안 그린 채(목차노트 창에서) 손값을 바꾸면 world 가 없다 */
+    try { if (typeof ncBookRefresh === 'function') ncBookRefresh(); } catch (e) {} }   /* ★ book_stamp C-3 — 떠 있는 목차노트 「교재 자리」 창도 다시 */
+  /* 자동으로 되돌리기 — 자리 창 · 목차노트 「교재 자리」 창 둘 다 이것(같은 함수 · 같은 데이터 {auto:true} — 칸을 안 지운다) */
+  function jariRevert(b){ jariPut(b, { auto: true, t: Date.now() }); toast('자동으로 되돌렸다'); jariAfter(b); }
   /* 다음 미확정 — 같은 쪽 뒤 블록 → 다음 쪽 차례(끝이면 처음부터) */
   function jariNext(b){ const L = jariBlocks(); const i = L.findIndex(o => o.b === b); for (let k = 1; k <= L.length; k++){ const o = L[(i + k) % L.length]; if (o.b !== b && jariOpen(o.b)) return o; } return null; }
   function select(el, noToggle){ if (sel) sel.el.classList.remove('on'); sel = null; chips.hidden = true; if (!el) return; const p = D.pages[+el.dataset.p - 1], b = p.blocks[+el.dataset.b]; if (b.full && !noToggle){ const R = stage.getBoundingClientRect(); openPop(p, b, 'full', { clientX: R.left + vx + (b.x + b.w) * SC * vz + 140, clientY: R.top + vy + b.y * SC * vz }, []); } sel = { el, p, b }; el.classList.add('on');
@@ -14287,12 +14391,13 @@ const viewCanvas = (() => {
   const JHOW = { vote: '본문 겹침', text: '본문 겹침', title: '제목', case: '판례 번호', toc: '단원 범위', stamp: '스탬프' };
   const jWhen = t => { try { const d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate(); } catch (e) { return ''; } };
   const asHl = x => ({ book: x.b, page: x.p, y0: x.y0, y1: x.y1, x0: x.x0, x1: x.x1, how: x.h, score: x.s });
+  /* 자리 창 카드 — ⚙ 후보(c) · 옛 데이터(c 없음)면 m 을 카드로 (★ book_stamp C-3 — 목차노트 「교재 자리」 창도 이 함수로 블록 ctx 를 고른다 · 규칙 ㊜) */
+  function jariList(b){ const cs = candOf(b); return cs.length ? cs : matchOf(b).map(x => ({ b: x.book, p: x.page, y0: x.y0, y1: x.y1, x0: x.x0, x1: x.x1, s: x.score || 0, h: x.how, ax: 'text', g: 0, in: 0 })); }
   async function jariDraw(box, p, b){ if (!box) return;
     if (MATCH === null){ box.innerHTML = `<div class="cv-card ex"><b>교재 자리 — 매칭 전</b><div class="m">canvas_match.json 이 아직 없다(_task_canvas_match)</div></div>`; return; }
     await candLoad();
     const h = jariOf(b), mt = matchOf(b), js = jariState(b), cs = candOf(b);
-    /* 옛 데이터(c 없음)면 m 을 카드로 */
-    const list = cs.length ? cs : mt.map(x => ({ b: x.book, p: x.page, y0: x.y0, y1: x.y1, x0: x.x0, x1: x.x1, s: x.score || 0, h: x.how, ax: 'text', g: 0, in: 0 }));
+    const list = jariList(b);   /* 옛 데이터(c 없음)면 m 을 카드로 — jariList(★ book_stamp C-3 로 뗐다 · 값 무변) */
     const head = h ? (h.none ? `✓ 교재에 없음 — ${jWhen(h.t)} ${esc(h.who || '')}` : `✓ ${esc(h.b)} p.${bookPr(h.b, h.p)}${h.by === 'hand' ? ' · 직접 찍음' : ''} — ${jWhen(h.t)} ${esc(h.who || '')}`)
       : ({ hi: '자동 · 확신 높음', lo: '자동 · 확신 낮음 — 맞는 자리를 골라 확정', cand: '골라야 함 — 자동 자리 없음', nil: '후보 없음 — 직접 찍거나 「교재에 없음」' }[js.st] || '');
     let html = `<div class="cv-jst s-${js.st}"><span class="t">${head}</span>${h ? '<button data-rv>자동으로 되돌리기</button>' : ''}<button data-nx title="손값 없는 블록 중 자동 자리가 없거나 확신 낮은 것을 차례로">다음 미확정 ▶</button></div>`;
@@ -14309,7 +14414,7 @@ const viewCanvas = (() => {
       c.onclick = e2 => { e2.stopPropagation(); bookShow(asHl(x), e2, { p, b, cand: x, ci: i }); };   /* 교재 창 머리에도 「✓ 이 자리」(작은 화면에선 교재 창이 이 창을 덮는다) */
       c.querySelector('[data-ok]').onclick = e2 => { e2.stopPropagation(); put({ by: 'cand', b: x.b, p: x.p, y0: x.y0, y1: x.y1, x0: x.x0, x1: x.x1, s: x.s, h: x.h, ci: i, t: Date.now(), who: jariWho() }, '교재 자리를 확정했다 — ' + x.b + ' p.' + bookPr(x.b, x.p)); };
       c.querySelector('[data-bl]').onclick = e2 => { e2.stopPropagation(); if (links.some(l => l.from === key(b) && l.to.k === 'book' && l.to.book === x.b && l.to.page === x.p)){ toast('이미 이었다'); return; } links.push({ from: key(b), to: { k: 'book', book: x.b, page: x.p }, why: '', show: false, t: Date.now() }); linksSave(); toast('🔗 교재 자리를 이었다'); if (sel && sel.b === b) select(sel.el, true); }; });
-    const rv = box.querySelector('[data-rv]'); if (rv) rv.onclick = e2 => { e2.stopPropagation(); put({ auto: true, t: Date.now() }, '자동으로 되돌렸다'); };
+    const rv = box.querySelector('[data-rv]'); if (rv) rv.onclick = e2 => { e2.stopPropagation(); jariRevert(b); };   /* ★ book_stamp C-3 — 목차노트 창과 한 함수(값 무변) */
     box.querySelector('[data-none]').onclick = e2 => { e2.stopPropagation(); put({ none: true, t: Date.now(), who: jariWho() }, '교재에 없음으로 닫았다'); };
     box.querySelector('[data-pick]').onclick = e2 => { e2.stopPropagation();
       /* 시작 쪽 = 1등 후보 쪽 · 없으면 목차 구간 첫 쪽 · 둘 다 없으면 교재 본문 첫 쪽 */
@@ -14391,7 +14496,7 @@ const viewCanvas = (() => {
   const CVB_REPO = 'zzikkaplan/minbeoppdf', CVB_BRANCH = 'main', CVB_WORDS = 'words', CVB_PDFDIR = 'pdf';
   const CVB_DOCID = { '핵심': 'minso_hs', '윤곽': 'minso_yg' };
   const CVB_NAME = { minso_hs: '핵심 민소', minso_yg: '윤곽 민소' };
-  const CVB = { meta: {}, doc: {}, stat: {}, db: null };
+  const CVB = { meta: {}, doc: {}, stat: {}, db: null, stamp: {} };   /* ★ book_stamp B-3 — stamp = 교재 도장 → 출처(docid → {쪽: [줄]} · 못 받으면 null) */
   const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
   function cvbTok(){ try { return (typeof syncToken === 'function' ? syncToken() : String((JSON.parse(localStorage.getItem('tt.cfg') || '{}')).token || '').trim()); } catch (e) { return ''; } }
   function cvbDb(){ if (CVB.db) return Promise.resolve(CVB.db); return new Promise((res, rej) => { const rq = indexedDB.open('ox_master_db', 1);
@@ -14434,6 +14539,18 @@ const viewCanvas = (() => {
     const rec = { page: p, w: js.w, h: js.h, words: js.words || '', ph: want || '' };
     try { await cvbPut(key, rec); } catch (e) {} return rec; }
   async function cvbFromCache(docid, pdfMd5){ try { const r = await cvbGet('bookpdf:' + docid); if (r && r.pdfMd5 === pdfMd5 && r.buf && r.buf.byteLength > 2000) return r.buf; } catch (e) {} return null; }
+  /* ★ book_stamp B-3 — 교재 도장 → 출처 데이터. 비공개 저장소 stamp/<docid>.json(책메타와 같은 길 · cvbGh) · 메모리 + IndexedDB `bookstamp:<docid>`.
+     그 파일의 pdfMd5 가 지금 책메타의 pdfMd5 와 같을 때만 쓴다(다른 판 PDF 위에 자리를 그리지 않는다) · 교재 문구(CVB.stat.last)는 흔들지 않는다.
+     줄 = {p, rect:[x0,y0,x1,y1](pt · 왼쪽 아래 원점 · 주석본), st:'ok'|'ambig', to:{book,p,y}|null, cands:[{book,p,y}], o:도장 OCR 앞 20자} */
+  async function cvbStamp(docid){ if (Object.prototype.hasOwnProperty.call(CVB.stamp, docid)) return CVB.stamp[docid];
+    const meta = await cvbMeta(docid); const want = meta && meta.pdfMd5;
+    const key = 'bookstamp:' + docid; let old = null; try { old = await cvbGet(key); } catch (e) {}
+    const last = CVB.stat.last; let fresh = null; try { fresh = await cvbGh('stamp/' + docid + '.json', 'json'); } catch (e) { fresh = null; } CVB.stat.last = last;
+    if (fresh && Array.isArray(fresh.rows)){ try { await cvbPut(key, fresh); } catch (e) {} }
+    const d = (fresh && Array.isArray(fresh.rows)) ? fresh : old;
+    const ok = !!(d && Array.isArray(d.rows) && (!want || d.pdfMd5 === want));
+    const byP = {}; if (ok) d.rows.forEach(r => { (byP[r.p] = byP[r.p] || []).push(r); });
+    CVB.stamp[docid] = ok ? byP : null; return CVB.stamp[docid]; }
   async function cvbToCache(docid, pdfMd5, buf){ try { return await cvbPut('bookpdf:' + docid, { pdfMd5, buf, at: Date.now() }); } catch (e) { return false; } }
   function pdfLib(){ if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib); return new Promise((res, rej) => { const s = document.createElement('script'); s.src = PDFJS + 'pdf.min.js'; s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js'; res(window.pdfjsLib); }; s.onerror = () => rej(new Error('pdf.js 를 못 불렀다 — 인터넷을 확인해라')); document.head.appendChild(s); }); }
   /* 통짜 PDF — 기기에 재워 둔 것이 있으면 그것, 없으면 pdf.js 가 Range 로 받는다(50MB 를 통째로 안 받는다) */
@@ -14462,6 +14579,14 @@ const viewCanvas = (() => {
     doc.getData().then(got => { if (got && got.byteLength > 2000) return cvbToCache(docid, meta.pdfMd5, got.buffer || got); })
       .then(ok => { CVB.stat[docid].cached = !!ok; }).catch(() => { CVB.stat[docid].cached = false; });
     return doc; }
+  /* ★ book_stamp C-3 — 쪽 한 자리 그림(민법 mbbPicHTML 꼴) — s = {p, r:[x0,y0,x1,y1](0~1 · 위 기준)} 또는 {p, y0,y1[,x0,x1]}(pt · 위 기준) · 위아래 6pt 여유 · 높이는 쪽의 40% 까지 */
+  async function cvbCrop(docid, s, W){ const doc = await cvbDoc(docid); const pg = await doc.getPage(s.p);
+    const pw = pg.view[2] - pg.view[0], ph = pg.view[3] - pg.view[1];
+    let r = s.r ? s.r.slice() : [s.x0 != null ? s.x0 / pw : 0.04, (s.y0 || 0) / ph, s.x1 != null ? s.x1 / pw : 0.96, (s.y1 != null ? s.y1 : (s.y0 || 0) + 40) / ph];
+    r = [Math.max(0, r[0] - 0.01), Math.max(0, r[1] - 6 / ph), Math.min(1, r[2] + 0.01), Math.min(1, r[3] + 6 / ph)]; if (r[3] - r[1] > 0.4) r[3] = r[1] + 0.4;
+    const k = window.devicePixelRatio || 1, vp = pg.getViewport({ scale: W * k / Math.max(1, (r[2] - r[0]) * pw) });
+    const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round((r[2] - r[0]) * vp.width)); cv.height = Math.max(1, Math.round((r[3] - r[1]) * vp.height));
+    await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp, transform: [1, 0, 0, 1, -r[0] * vp.width, -r[1] * vp.height] }).promise; return cv; }
   /* ★ 0921 §F — 하네스가 문구를 잴 수 있게 내놓는 창구 하나(이 블록은 IIFE 안이라 밖에서 안 보인다).
      읽기 전용 · 앱 동작에 쓰이지 않는다. */
   try { window.__jocvb = { why: cvbWhy, doc: cvbDoc, C: CVB }; } catch (e) {}
@@ -14477,6 +14602,61 @@ const viewCanvas = (() => {
   function cvNavTop(pw){ const ph = pw && pw.querySelector(':scope > .ph'); if (!ph) return;
     const set = () => { const h = ph.getBoundingClientRect().height; if (h > 0) pw.style.setProperty('--cvph', h + 'px'); };
     set(); if (window.ResizeObserver && !pw._cvphRO){ try { pw._cvphRO = new ResizeObserver(set); pw._cvphRO.observe(ph); } catch (e) {} } }
+  /* ★ book_stamp B-3 — 쪽 그림 위 도장 상자. ok = 파란 테두리 + 오른쪽 위 「↗ 책 p.N」(PDF 쪽) · ambig = 같은 테두리 + 「↗ 후보 N」.
+     좌표 = left (x0−v0)/W · top (v3−y1)/H(v = pdf.js 쪽 view · pt · 왼쪽 아래 원점) · 찍기 덮개(z 3)보다 아래(z 2)라 📍 찍기 끌기를 가로채지 않는다.
+     ok 누름 = 출처 새 팝업(srcShow) · ambig 누름 = 후보 목록(candShow) — 원래 창은 그대로 둔다(같은 책이어도 넘기지 않는다 · 사용자 9/24 01:34) */
+  const CVB_DOC2BOOK = { minso_hs: '핵심', minso_yg: '윤곽' };
+  async function stampPaint(wrap, docid, p, v){ let S0 = null; try { S0 = await cvbStamp(docid); } catch (e) {}
+    if (!S0 || !wrap.isConnected) return 0; wrap.querySelectorAll('.cv-stamp').forEach(e => e.remove());
+    const W = v[2] - v[0], H = v[3] - v[1], rows = S0[p] || [];
+    rows.forEach((r, i) => { const [x0, y0, x1, y1] = r.rect;
+      const d = el('div', 'cv-stamp' + (r.st === 'ok' ? '' : ' amb')); d.dataset.st = r.st; d.dataset.i = i;
+      d.style.cssText = `left:${(x0 - v[0]) / W * 100}%;top:${(v[3] - y1) / H * 100}%;width:${(x1 - x0) / W * 100}%;height:${(y1 - y0) / H * 100}%`;
+      d.appendChild(el('span', 'tg', r.st === 'ok' ? '↗ ' + r.to.book + ' p.' + r.to.p : '↗ 후보 ' + (r.cands || []).length));
+      d.title = '도장 「' + (r.o || '') + '」 — ' + (r.st === 'ok' ? '출처 쪽을 새 창으로' : '출처 후보 목록');
+      d.onclick = ev => { ev.stopPropagation(); const fr = { book: CVB_DOC2BOOK[docid] || docid, p, o: r.o || '' };
+        if (r.st === 'ok') srcShow({ book: r.to.book, page: r.to.p, y: r.to.y }, fr, ev); else candShow(r, fr, ev, docid, i); };
+      wrap.appendChild(d); });
+    return rows.length; }
+  /* 출처 팝업 — 키 cv|src|<docid>|<쪽>(「교재 창은 교재마다 하나」 규칙은 자리 창의 교재 창 몫 · 여기는 다른 키) · 같은 출처를 또 누르면 닫힌다(popToggle).
+     머리 = 「출처 · 핵심 p.61 도장 「OCR 앞 20자」」 · 출처 줄 = to.y(위 기준 pt) 둘레 띠(쪽 폭 84% · 높이 16pt · y 없으면 쪽만) · ◀▶ 로 넘기고 그 쪽 도장도 같은 규칙 */
+  async function srcShow(to, from, ev){ const docid = CVB_DOCID[to.book] || to.book; const pid = 'cv|src|' + docid + '|' + to.page;
+    if (popToggle(pid)) return;
+    const body = popShell('canvas', '출처 · ' + from.book + ' p.' + from.p + ' 도장 「' + String(from.o || '').slice(0, 20) + '」', pid); showPop(ev); popSizable(body, 'canvas');
+    const pw0 = body.parentNode; cvNavTop(pw0);
+    const host = el('div', 'cv-book cv-src'); body.appendChild(host);
+    host.innerHTML = '<div class="m">교재를 받는 중… (처음 한 번은 오래 걸린다)</div>';
+    let doc = null;
+    try { doc = await cvbDoc(docid); }
+    catch (e){ host.innerHTML = '<div class="cv-card"><b>교재를 받지 못했다</b><div class="m">' + esc(String(e && e.message || e)) + '</div></div>'; return; }
+    const head = el('div', 'cv-booknav'), view = el('div', 'cv-bookview'); host.innerHTML = ''; host.appendChild(head); host.appendChild(view);
+    const st = { p: to.page, busy: 0 };
+    const draw = async () => { const tk = ++st.busy; const pg = await doc.getPage(st.p); if (tk !== st.busy) return;
+      const pw = pg.view[2] - pg.view[0], ph = pg.view[3] - pg.view[1];
+      const W = Math.max(320, view.clientWidth || host.clientWidth || 420);
+      const vp = pg.getViewport({ scale: W / pw * (window.devicePixelRatio || 1) });
+      const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height); cv.style.cssText = 'width:100%;display:block';
+      const wrap = el('div', 'cv-bookpg'); wrap.appendChild(cv);
+      if (st.p === to.page && to.y != null){ const b = el('div', 'cv-srcband'); b.style.cssText = `left:8%;width:84%;top:${to.y / ph * 100}%;height:${16 / ph * 100}%`; wrap.appendChild(b); }
+      view.innerHTML = ''; view.appendChild(wrap); mbWinFit(pw0);
+      stampPaint(wrap, docid, st.p, pg.view);
+      await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+      const b = wrap.querySelector('.cv-srcband'); if (b) setTimeout(() => { try { b.scrollIntoView({ block: 'center' }); } catch (e) {} }, 60); };
+    const paint = () => { const pr = cvbPrint(docid, st.p), n = doc.numPages;
+      head.innerHTML = `<button data-pv ${st.p <= 1 ? 'disabled' : ''}>◀</button><span><b>${pr == null ? st.p : pr}</b>쪽 <span class="m">· PDF ${st.p} / ${n}</span></span>`
+        + `<button data-nx ${st.p >= n ? 'disabled' : ''}>▶</button><span class="m">${esc(CVB_NAME[docid] || docid)}</span>`;
+      const go = d => { st.p = Math.max(1, Math.min(n, st.p + d)); paint(); draw(); };
+      head.querySelector('[data-pv]').onclick = e2 => { e2.stopPropagation(); go(-1); };
+      head.querySelector('[data-nx]').onclick = e2 => { e2.stopPropagation(); go(1); }; };
+    paint(); await draw(); mbWinFit(pw0); }
+  /* ambig 누름 — 작은 후보 목록(「핵심 p.248」…) · 줄 누름 = 위 출처 팝업 · 같은 도장을 또 누르면 닫힌다 */
+  function candShow(r, from, ev, docid, i){ const pid = 'cv|cand|' + docid + '|' + from.p + '|' + i; if (popToggle(pid)) return;
+    const body = popShell('canvas', '도장 「' + String(r.o || '').slice(0, 20) + '」 · 출처 후보 ' + (r.cands || []).length, pid); showPop(ev); popSizable(body, 'canvas');
+    const box = el('div', 'cv-candlist');
+    (r.cands || []).forEach(c => { const row = el('div', 'cv-candrow', c.book + ' p.' + c.p); row.dataset.book = c.book; row.dataset.p = c.p;
+      row.onclick = e2 => { e2.stopPropagation(); srcShow({ book: c.book, page: c.p, y: c.y }, from, e2); }; box.appendChild(row); });
+    if (!(r.cands || []).length) box.appendChild(el('div', 'cdim', '후보가 없다'));
+    body.appendChild(box); }
   async function bookShow(m, ev, ctx){ const docid = CVB_DOCID[m.book] || m.book; const pid = 'cv|book|' + docid;
     const old = POPS.find(x => x._pk === pid);
     if (old){ if (old._cvb && old._cvb.retarget(m, ctx)) return; closeOne(old); return; }
@@ -14530,6 +14710,7 @@ const viewCanvas = (() => {
       if (st.pick && st.ctx){ const ov = el('div', 'cv-pickov'); wrap.appendChild(ov); bindPick(ov, wrap); }
       drawBox(wrap);
       view.innerHTML = ''; view.appendChild(wrap); mbWinFit(pw0);   /* 쪽 그림 자리가 잡히면 곧바로 화면 안으로(렌더를 기다리지 않는다 — 큰 쪽은 오래 걸린다) */
+      stampPaint(wrap, docid, st.p, pg.view);   /* ★ book_stamp B-3 — 이 쪽 도장(기다리지 않는다 · 판례탭 책 칩 창도 같은 길) */
       await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
       const box = wrap.querySelector('.cv-bookhl'); if (box) setTimeout(() => { try { box.scrollIntoView({ block: 'center' }); } catch (e) {} }, 60); };
     paint = () => { const pr = cvbPrint(docid, st.p); const n = doc.numPages;
@@ -14613,12 +14794,33 @@ const viewCanvas = (() => {
     if (VIEWED && vz > 0){ clampPan(); apply(); } else if (u.vz > 0){ vz = u.vz; vx = u.vx; vy = u.vy; clampPan(); apply(); } else fit();
     VIEWED = true;
     if (hq){ qI.value = hq; runQ(hq); }
+    if (GOTO){ const g = GOTO; GOTO = null; const o = BK.get(g); if (o) jump(o.p, o.b); }   /* ★ book_stamp C-3 — 목차노트 「교재 자리」 창의 정리캔버스 줄 → 그 블록(골라 두고 가운데로) */
   }
   /* 하네스·검산용 창구 — 앱 동작에는 안 쓰인다 */
   viewCanvas._cv = () => ({ D, META, MATCH, LOG, REPLAY, links, UNDO, INK, get vz(){ return vz; }, get vx(){ return vx; }, get vy(){ return vy; }, mounted, built, sel,
     set(v){ if (v.vz != null) vz = v.vz; if (v.vy != null) vy = v.vy; if (v.vx != null) vx = v.vx; clampPan(); apply(); }, apply, fit, minZ, gotoPage, jump, select, startEdit, commitEdit, undo, runQ, goHit, occOf, blockOp, openPop, toGeunge, drawConn, key, BK, applyOp, CVB, cvbMeta, cvbWords, cvbDoc, cvbPrint });
   /* 판례탭 책 칩도 같은 팝업으로 연다 — {book:'핵심'|'윤곽', page:PDF쪽} */
   viewCanvas.book = (m, ev) => bookShow(m, ev);
+  /* ★ book_stamp C-3 — 목차노트 「교재 자리」 창(IIFE 밖 ncBookOpen)이 정리캔버스와 **한 함수**를 쓰는 창구(규칙 ㊜ · 지시서 C-3 「window.__jocvj 처럼」).
+     블록은 bid 로 주고받는다 · 캔버스를 아직 안 받았으면 ensure() 가 받아 짓는다(지어 둔 것이 있으면 다시 짓지 않는다 — 떠 있는 캔버스를 흔들지 않는다). */
+  viewCanvas.jari = {
+    async ensure(){ if (!META || !BASE) await load(); if (!D) build(); await candLoad(); return MATCH !== null; },
+    /* bid → 지금 블록 {k, n 쪽, t 글}. 편집(합치기·자르기 재생)으로 bid 가 없어졌으면 그 bid 줄(bid = 첫 줄 id)을 품은 블록 중 가장 작은 것 · 줄도 없으면 null */
+    find(bid){ let o = BK.get(bid);
+      if (!o){ const p = pageOfId(bid), i = p ? lineIdx(p, bid) : -1;
+        if (i >= 0 && !p.lines[i].del){ const bs = p.blocks.filter(x => !x.del && x.k !== '헤딩' && x.ls.includes(i)).sort((a, c) => a.ls.length - c.ls.length); if (bs.length) o = { p, b: bs[0] }; } }
+      return o ? { k: key(o.b), n: o.p.n, t: btxt(o.p, o.b) } : null; },
+    hand: k => { const o = BK.get(k); return o ? jariOf(o.b) : null; },
+    state: k => { const o = BK.get(k); return o ? jariState(o.b) : null; },
+    list: k => { const o = BK.get(k); return o ? jariList(o.b) : []; },
+    revert: k => { const o = BK.get(k); if (o) jariRevert(o.b); },
+    book(m, ev, k, x, ci){ const o = k ? BK.get(k) : null; return bookShow(m, ev, o ? { p: o.p, b: o.b, cand: x || undefined, ci } : undefined); },
+    pr: (book, p) => bookPr(book, p),
+    name: book => CVB_NAME[CVB_DOCID[book] || book] || book,
+    meta: () => Promise.all(Object.values(CVB_DOCID).map(d => cvbMeta(d).catch(() => null))),
+    words: (book, p) => cvbWords(CVB_DOCID[book] || book, p),
+    pic: (book, s, W) => cvbCrop(CVB_DOCID[book] || book, s, W),
+    go(k){ if (!BK.get(k)) return false; GOTO = k; try { closeAllPops(); } catch (e) {} S.tab = 'omr'; render(); return true; } };
   viewCanvas.metaWarm = async () => { for (const d of Object.values(CVB_DOCID)){ if (CVB.meta[d]) continue; try { const x = await cvbGet('bookmeta:' + d); if (x && x.docid) CVB.meta[d] = x; } catch (e) {} } };   /* ★ jari_cand B-1 — 네트워크 없이 IDB 만 */
   return viewCanvas;
 })();
