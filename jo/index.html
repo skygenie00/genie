@@ -1343,6 +1343,21 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .mkomr:hover{color:#0f766e}
 .mkomr.mkoff{color:#c4bfb5}
 .mkomr.mkgap{visibility:hidden;pointer-events:none}
+/* ★ _task_jo_ms_cvfind A(2026-09-25) — 목차노트 목록(민소) 끝 목차 줄 토글 › → 영역 지정(손값)한 자리 그림(값 = 시안 「목차노트 영역 토글」 v2 그대로) */
+.mklist .mkr.mkhas{position:relative}
+.mktg{position:absolute;top:5px;width:14px;height:18px;display:flex;align-items:center;justify-content:center;border:0;background:none;padding:0;cursor:pointer;color:#8a8479;border-radius:4px}
+.mktg[hidden]{display:none}   /* ⚠ 위 display:flex 가 hidden 속성을 덮는다(생물 .bexp 와 같은 함정) — 이 줄이 없으면 손값 없는 줄에도 보인다 */
+.mktg:hover{color:#111;background:#ece8df}
+.mktg svg{transition:transform .15s}
+.mktg.mkopen svg{transform:rotate(90deg)}
+.mkclip{margin:1px 10px 7px 0;border:1px solid #e5e1d8;border-radius:7px;background:#eceae4;overflow:hidden}
+.mkcv{position:relative;overflow:hidden;touch-action:none;cursor:zoom-in}
+.mkcv.mkz{cursor:grab}
+.mkcv.mkz:active{cursor:grabbing}
+.mkin{position:absolute;left:0;top:0}
+.mkin .mkbx{position:absolute;pointer-events:none;outline:2px solid #f97316;border-radius:2px}
+.mkcf{display:flex;gap:6px;align-items:center;padding:3px 8px;font-size:10.5px;color:#8a8479;background:#faf9f6;border-top:1px solid #eeebe4}
+.mkcf .mkold{color:#b45309}
 .pop.omrpop{display:flex;flex-direction:column;overflow:hidden;min-width:320px;min-height:260px}
 .pop.omrpop>.pb{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:0}
 .pop.omrpop>.ph,.pop.omrpop>.prsz{flex:none}   /* 크기 손잡이(음수 여백)가 줄어들면 그만큼 본문이 팝업 아래로 밀려 발 줄이 잘린다(9/24 실측 11px) */
@@ -1370,6 +1385,14 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .opft .opsp{flex:1}
 .opft button{border:1px solid #d6d0c4;background:#fff;border-radius:5px;padding:1px 8px;cursor:pointer;font:inherit}
 .opft [data-ok]{background:#0f766e;color:#fff;border-color:#0f766e}
+/* ★ _task_jo_ms_cvfind D(2026-09-25) — 전체 검색 「📖 정리」 결과 팝업(틀·쪽 칸·네모는 정리OMR 팝업 .omrpop 그대로) */
+.sfpop .opbar{flex-wrap:nowrap}
+.sfpop .sfnav{display:inline-flex;align-items:center;gap:3px;flex:none}
+.sfpop .sfnav button[disabled]{opacity:.35;cursor:default}
+.sfpop .sfn{font-weight:700;min-width:44px;text-align:center;font-variant-numeric:tabular-nums}
+.sfpop .sfwhere{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b675f;margin-left:6px}
+.sfpop .sfpg img{position:absolute;display:block;max-width:none}   /* 특허 300dpi 타일 — 제 크기(끝 줄·끝 칸 타일은 1024 보다 작다) */
+.sfpop .opft [data-go]{background:#1f2937;color:#fff;border-color:#1f2937}
 .opft [hidden]{display:none!important}
 .mbbrow.ncpin .m{color:#b45309;font-weight:700}
 /* ★ _task_jo_ms_notecolor B·C(2026-09-24) — 민소 목차노트 「정리 색」 · 값은 시안 v2(nc_css) 그대로 */
@@ -6922,6 +6945,21 @@ function mokCite(B){ if (MOKCITE && MOKCITE.B === B) return MOKCITE.m;
    목표 블록 = 그 노트 블록 전부 = 앱의 noteOf 규칙(canvas_match.bn 이 먼저 · 없으면 블록 파일 note — rngOf 와 같은 길).
      bn 은 「블록 파일 note 와 달라진 블록만」 싣는다(canvas_match.py) — bn 만 세면 대부분 빠진다(9/24 · 2.3. = 3 / 87 · 끝 목차 50/58 이 모자람) */
 function mokPinNum(f){ const m = /^(\d+(?:\.\d+)*)/.exec(String(f)); return m ? m[1].split('.').filter(Boolean).map(Number) : null; }
+/* ★ _task_jo_ms_cvfind A(2026-09-25) — 영역 지정 손값(jopangi.ncomr note|<노트> · 새 저장 칸 없음)을 찍은 끝 목차 줄 → 압정 왼쪽 들여쓰기 칸에 토글 ›
+   누르면 줄 바로 밑(.mkcw · 같은 paddingLeft)에 찍은 네모 자리 그림(viewCanvas.jari.omrClip) · 다시 누르면 접힘 · 펼친 것은 이 세션 동안만(MKCLIP_OPEN · 저장 안 함)
+   토글은 끝 목차(LEAF) 줄에만 만들고 손값이 없으면 숨김(hidden) — 보임·펼친 그림은 mokPinPaint 가 칠할 때마다 다시(omrAfter → 손값이 바뀌면) */
+const MK_TG_SVG = '<svg viewBox="0 0 10 10" width="9" height="9" aria-hidden="true"><path d="M3 1.5 7 5 3 8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const MKCLIP_OPEN = new Set();
+function mokTg(f, r){ const t = el('button', 'mktg'); t.type = 'button'; t.innerHTML = MK_TG_SVG; t.dataset.note = f; t.hidden = true;
+  t.title = '영역 지정한 자리 펼치기 · 접기'; t.setAttribute('aria-expanded', 'false');
+  t.onclick = ev => { ev.stopPropagation(); if (MKCLIP_OPEN.has(f)) MKCLIP_OPEN.delete(f); else MKCLIP_OPEN.add(f); mokClipSync(r); };   /* 줄 누름(노트 팝업)과 안 섞이게 */
+  return t; }
+function mokClipSync(r){ const f = r.dataset.note, t = r.querySelector(':scope > .mktg'); if (!t) return;
+  let c = r.nextElementSibling; if (c && !c.classList.contains('mkcw')) c = null;
+  const on = !t.hidden && MKCLIP_OPEN.has(f); t.classList.toggle('mkopen', on); t.setAttribute('aria-expanded', on ? 'true' : 'false');
+  if (c) c.remove(); if (!on) return;
+  const w = el('div', 'mkcw'); w.style.paddingLeft = r.style.paddingLeft; r.after(w);
+  const J = viewCanvas.jari; J.ensure().then(() => { if (w.isConnected) J.omrClip('note|' + f, w, f); }).catch(() => {}); }   /* 캔버스 데이터가 아직 없으면 받은 뒤 */
 function mokLeafSet(names){ const nums = names.map(mokPinNum), out = new Set();
   names.forEach((f, i) => { const a = nums[i]; if (!a || !nums.some((b, j) => j !== i && b && b.length > a.length && a.every((x, k) => b[k] === x))) out.add(f); });
   return out; }
@@ -6935,6 +6973,7 @@ function mokPin(f, leaf){ const b = el('span', 'mkomr' + (leaf ? '' : ' mkgap'))
 function mokPinPaint(load){ const bs = document.querySelectorAll('.mkpop .mkomr:not(.mkgap)'); if (!bs.length) return;
   const J = viewCanvas.jari, M = J.noteBids();
   bs.forEach(b => { const f = b.dataset.note; b.classList.toggle('mkpin', !!J.omrHand('note|' + f));
+    { const r = b.closest('.mkr'), t = r && r.querySelector(':scope > .mktg'); if (t){ t.hidden = !J.omrHand('note|' + f); if (M || !load) mokClipSync(r); } }   /* ★ cvfind A — 손값 있을 때만 토글 · 펼친 그림 다시(데이터를 받는 중이면 받은 뒤 한 번) */
     if (!M) return; const n = (M[f] || []).length; b.classList.toggle('mkoff', !n);
     b.title = n ? '정리OMR 팝업 — 이 노트 블록 ' + n + '개 자리 · 영역 지정으로 손값' : '정리캔버스에 이 노트 블록이 없다 — 눌러 영역 지정으로 찍을 수 있다'; });
   if (!M && load) J.ensure().then(() => mokPinPaint(false)).catch(() => {}); }
@@ -6954,6 +6993,7 @@ async function popMokNote(btn, ev){
   names.forEach(f => { const num = mokNum(f); const r = el('div', 'mkr' + (/==/.test(f) ? ' ch' : '')); r.dataset.note = f;
     r.style.paddingLeft = (10 + ((num ? num.length : 1) - 1) * 16) + 'px';
     if (LEAF) r.appendChild(mokPin(f, LEAF.has(f)));   /* ★ omrpop A — 끝 목차 = 압정 · 나머지 = 같은 폭 빈자리 */
+    if (LEAF && LEAF.has(f)){ const t = mokTg(f, r); t.style.left = (parseInt(r.style.paddingLeft, 10) - 15) + 'px'; r.classList.add('mkhas'); r.appendChild(t); }   /* ★ cvfind A — 토글(손값 있을 때만 보임) · 절대 자리라 이름 줄 맞춤 무변 */
     r.appendChild(el('span', 'nm', f));
     const cs = el('span', 'n'), C0 = cite[f];
     [['기출', 'ck-g'], ['사례', 'ck-s'], ['GS', 'ck-gs'], ['판례', 'ck-p']].forEach(([k, cl]) => { const v = C0 ? C0[k].size : 0; if (!v) return;
@@ -14329,6 +14369,7 @@ async function sampleCards(main){
 /* ══════════ 검색 ══════════ */
 let skRows=[],skSel=0;
 function openSk(){$('#sk').style.display='block';$('#skin').value='';$('#skin').focus();
+  $('#sk').style.zIndex=String(Math.max(70,POPZ+1));   /* ★ cvfind D — 떠 있는 팝업(정리 결과 창 등 · POPZ 가 70 을 넘으면)보다 위 */
   $('#skres').innerHTML='';skRows=[];skSel=0;skonLoad();skPaint();}   /* ★ 손질 9 — 열 때 마지막 범위 되읽음 */
 function closeSk(){$('#sk').style.display='none';}
 $('#ksearch').onclick=openSk;
@@ -14384,6 +14425,74 @@ function skMemoGo(tk,ev,r){
   showPop(ev);
   if(tk.indexOf('prec|')===0) precMemoGo(tk.slice(5), r&&r.word);   /* ★ 메모 손질 — 그 판례 3단 열고 앵커 낱말로 */
 }
+/* ══ ★ _task_jo_ms_cvfind D(2026-09-25) — 전체 검색 「📖 정리」 결과 팝업 ══
+   탭은 그대로 · 창 하나(키 sfind — 다른 결과를 누르면 같은 창이 그 자리로 · 맨 앞으로) · 틀 = 정리OMR 팝업(.omrpop 머리·쪽 칸·발 줄 · popSizable 'sfind')
+   쪽 = 민소 정리캔버스(viewCanvas.findPage — buildPage) · 특허 정리OMR 300dpi 타일(omr_meta.json tiles[쪽]['300'] · K = 300/72 · 민소 SC = 4 와 거의 같은 px/pt)
+   찾은 글자 = 주황(.oppin · 둘레 2pt) · 같은 쪽 다른 결과 = 노랑(.opauto · 1pt) · 첫 배율 SF_Z · 찾은 글자를 가운데
+   휠(Ctrl 없이 · 팝업 밖으로 안 샘) = 마우스 자리 기준 확대(× 1.0018^−deltaY · 0.06~4) · 두 손가락 = 핀치 · 끌기 = 옮기기 · 배율 숫자·−/+·맞춤 단추 없음(사용자 규칙)
+   ◀ ▶ = 그 법 결과 차례(전체 수 기준 — 목록 상한 밖도) · 「정리 탭 이 자리로 →」 = 이 창을 닫고 민소 = viewCanvas.goFind · 특허 = 특허법으로 바꾼 뒤 omrGoto
+     (옛 판은 민소 탭에서 특허 정리 결과를 누르면 omrGoto 가 법을 안 바꿔 민소 정리로 갔다) */
+const SF_Z = 1.6;
+let OMR_META_SF = null;   /* 특허 정리OMR 타일 표(omr_meta.json) — 정리 줄을 그리기 전에 받는다 */
+async function popFindOmr(o){
+  const key = 'sfind'; let w = POPS.find(x => x._pk === key);
+  if (!w){ const body = popShell('cell', '🔍 정리', key); w = body.parentNode; w.classList.add('omrpop', 'sfpop'); popSizable(body, 'sfind');
+    if (!(S.popCfg || {}).sfind){ const B = vvBox(), W = Math.min(820, B.w - 24), H = Math.min(Math.round(B.h * 0.74), 680);   /* ⚠ popSizable 이 기억 없을 때 폭을 비우므로 그 뒤에 준다 */
+      w.style.width = W + 'px'; w.style.height = H + 'px'; w.style.maxHeight = H + 'px';
+      w.style.left = Math.round(B.x + (B.w - W) / 2) + 'px'; w.style.top = Math.round(B.y + Math.max(12, (B.h - H) / 2)) + 'px'; }
+    vvFit(w);
+    body.innerHTML = '<div class="opbar"><span class="sfnav"><button type="button" data-hn="-1" title="앞 결과">◀</button><b class="sfn"></b><button type="button" data-hn="1" title="뒤 결과">▶</button></span><span class="sfwhere"></span></div>'
+      + '<div class="opv"><div class="opin"><div class="oppg sfpg"></div><div class="opov"></div></div></div>'
+      + '<div class="opft"><span class="opmsg"></span><span class="opsp"></span><button type="button" data-go>정리 탭 이 자리로 →</button></div>';
+    sfWire(w); }
+  else { w.style.zIndex = ++POPZ; popAllSync(); }
+  w._sf = Object.assign({}, o, { s: SF_Z, pn: null, pg: null });
+  if (o.law === '민소'){ try { await viewCanvas.jari.ensure(); } catch (e) {} }
+  sfDraw(w); }
+function sfHit(w){ const o = w._sf; return o.hits[o.k]; }
+function sfBox(o, h){ return o.law === '민소' ? viewCanvas.findBox(h) : h.box; }
+function sfDraw(w){ const o = w._sf, h = sfHit(w), host = w.querySelector('.sfpg'); if (!h) return;
+  if (o.pn !== o.law + '|' + h.n){ host.innerHTML = ''; host.className = 'oppg sfpg' + (o.law === '민소' ? ' cvw' : ' sft'); host.style.transform = 'none';
+    if (o.law === '민소') o.pg = viewCanvas.findPage(h.n, host);
+    else { const tm = (((OMR_META_SF || {}).tiles || {})[String(h.n)] || {})['300']; o.pg = tm ? { w: tm.w, h: tm.h, K: 300 / 72 } : null;
+      if (tm) for (let ty = 0; ty < tm.rows; ty++) for (let tx = 0; tx < tm.cols; tx++){ const im = el('img'); im.src = DATA + 'omr/특허/t/' + h.n + '/300/' + tx + '_' + ty + '.webp'; im.alt = ''; im.draggable = false; im.style.left = tx * 1024 + 'px'; im.style.top = ty * 1024 + 'px'; host.appendChild(im); } }
+    if (!o.pg) host.innerHTML = '<div class="opnone">이 쪽을 그리지 못했다</div>';
+    o.pn = o.law + '|' + h.n; }
+  w.querySelector('.ph .pt').textContent = '🔍 정리 · ' + o.law + ' ' + h.n + '쪽';
+  w.querySelector('.sfn').textContent = (o.k + 1) + ' / ' + o.hits.length;
+  w.querySelector('.sfwhere').textContent = o.law === '민소' ? (h.head || '') : '「' + o.q + '」';
+  w.querySelector('.opmsg').textContent = '「' + o.q + '」 · 휠·두 손가락 = 확대 · 끌기 = 옮기기';
+  w.querySelector('[data-hn="-1"]').disabled = o.k <= 0; w.querySelector('[data-hn="1"]').disabled = o.k >= o.hits.length - 1;
+  sfScale(w, o.s); sfCenter(w); }
+function sfScale(w, s, ax, ay){ const o = w._sf, v = w.querySelector('.opv'); if (!o.pg) return; s = Math.max(0.06, Math.min(4, s));
+  const old = o.s, cx = ax == null ? null : (v.scrollLeft + ax) / old, cy = ay == null ? null : (v.scrollTop + ay) / old;
+  o.s = s; const inn = w.querySelector('.opin'); inn.style.width = o.pg.w * s + 'px'; inn.style.height = o.pg.h * s + 'px'; w.querySelector('.sfpg').style.transform = 'scale(' + s + ')';
+  if (cx != null){ v.scrollLeft = cx * s - ax; v.scrollTop = cy * s - ay; } sfOv(w); }
+function sfOv(w){ const o = w._sf, h = sfHit(w), k = o.s * (o.pg ? o.pg.K : 1); let t = '', cur = '';
+  const bx = (b, m, c) => `<div class="opbx ${c}" style="left:${(b[0] - m) * k}px;top:${(b[1] - m) * k}px;width:${(b[2] - b[0] + 2 * m) * k}px;height:${(b[3] - b[1] + 2 * m) * k}px"></div>`;
+  o.hits.forEach((x, i) => { if (x.n !== h.n) return; const b = sfBox(o, x); if (!b) return; if (i === o.k) cur = bx(b, 2, 'oppin'); else t += bx(b, 1, 'opauto'); });
+  w.querySelector('.opov').innerHTML = t + cur; }   /* 지금 결과(주황)를 맨 위에 */
+function sfCenter(w){ const o = w._sf, v = w.querySelector('.opv'), b = sfBox(o, sfHit(w)); if (!b || !o.pg) return; const k = o.s * o.pg.K;
+  v.scrollLeft = (b[0] + b[2]) / 2 * k - v.clientWidth / 2; v.scrollTop = (b[1] + b[3]) / 2 * k - v.clientHeight / 2; }
+function sfWire(w){ const v = w.querySelector('.opv');
+  w.addEventListener('pointerdown', () => { if ((+w.style.zIndex || 0) < POPZ){ w.style.zIndex = ++POPZ; popAllSync(); } }, true);   /* 손가락으로 안을 눌러도 맨 앞(마우스는 popShell 이 올린다) */
+  w.querySelector('.pb').addEventListener('click', e => { const o = w._sf, t = e.target;
+    const hn = t.closest('[data-hn]'); if (hn){ e.stopPropagation(); const k = o.k + (+hn.dataset.hn); if (k >= 0 && k < o.hits.length){ o.k = k; sfDraw(w); } return; }
+    if (t.closest('[data-go]')){ e.stopPropagation(); const h = sfHit(w); closeOne(w);
+      if (o.law === '민소') viewCanvas.goFind(h);
+      else { if (S.law !== '특허법'){ S.law = '특허법'; S.jo = null; S.prec = null; pfClearY(); } omrGoto(h.n, h.x, h.y); } } });   /* 특허 정리 = 특허 탭에서만(법 바꾸기 = 머리 법 칩과 같은 규칙) */
+  v.addEventListener('wheel', e => { e.preventDefault(); e.stopPropagation(); const r = v.getBoundingClientRect(), dy = Math.max(-240, Math.min(240, e.deltaY * (e.deltaMode === 1 ? 33 : 1)));
+    sfScale(w, w._sf.s * Math.pow(1.0018, -dy), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  const P = new Map(); let pan = null, pinch = null;
+  const two = () => { const [a, b] = [...P.values()]; return [(a.x + b.x) / 2, (a.y + b.y) / 2, Math.hypot(a.x - b.x, a.y - b.y)]; };
+  v.addEventListener('pointerdown', e => { if (e.button > 0) return; e.stopPropagation(); P.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { v.setPointerCapture(e.pointerId); } catch (_) {}
+    if (P.size === 2){ const [mx, my, d] = two(), r = v.getBoundingClientRect(), s = w._sf.s; pinch = { d: d || 1, s, cx: (v.scrollLeft + mx - r.left) / s, cy: (v.scrollTop + my - r.top) / s }; pan = null; return; }
+    if (P.size > 2) return; pan = { x: e.clientX, y: e.clientY, l: v.scrollLeft, t: v.scrollTop }; });
+  v.addEventListener('pointermove', e => { if (!P.has(e.pointerId)) return; P.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && P.size >= 2){ const [mx, my, d] = two(), r = v.getBoundingClientRect(); sfScale(w, pinch.s * d / pinch.d); const s = w._sf.s; v.scrollLeft = pinch.cx * s - (mx - r.left); v.scrollTop = pinch.cy * s - (my - r.top); return; }
+    if (pan){ v.scrollLeft = pan.l - (e.clientX - pan.x); v.scrollTop = pan.t - (e.clientY - pan.y); } });
+  const end = e => { try { v.releasePointerCapture(e.pointerId); } catch (_) {} P.delete(e.pointerId); if (P.size < 2) pinch = null; if (!P.size) pan = null; };
+  v.addEventListener('pointerup', end); v.addEventListener('pointercancel', end); }
 function skRow(box,cls,head,tail,tag,open){
   const d=el('div','res');
   if(SK_ICON[cls]){const ic=el('span','skic',SK_ICON[cls]);ic.dataset.sk=cls;d.appendChild(ic);}   /* ★ v3-H §2 — 걸린 범위 아이콘 · ★ ms_claude_editq D — data-sk(Claude 「C」 색) */
@@ -14581,21 +14690,24 @@ const skRun=async e=>{   /* ★ 손질 8 — §2 300ms 디바운스 — 아래 $
         ev=>{closeSk();clOpen(r.u,ev);}));
     }
   }
-  if(SKON.omr&&SKLAW['특허법']){   /* 정리는 특허만 — 지금 규칙 유지 */
-    try{
-      const W=await get('omr/특허/omr_words.json');
-      const out=[];
-      W.pages.forEach((ws,pi)=>{
-        if(out.length>=30)return;
-        for(const w of ws){
-          if(out.length>=30)break;
-          if(String(w[4]).indexOf(q)>=0)out.push({p:pi+1,x:w[0],y:w[1],t:w[4]});
-        }
-      });
-      box.appendChild(el('div','grp','📖 정리 — '+out.length+'건'));
-      out.forEach(r=>skRow(box,'omr','p.'+r.p,String(r.t).slice(0,44),'정리',
-        ev=>{closeSk();omrGoto(r.p,r.x,r.y);}));
-    }catch(err){box.appendChild(el('div','grp','📖 정리 — 산출물이 없다'));}
+  if(SKON.omr&&(SKLAW['특허법']||SKLAW['민사소송법'])){   /* ★ _task_jo_ms_cvfind B(2026-09-25) — 정리 = 특허(정리OMR 낱말 · 찾기 규칙 그대로) + 민소(정리캔버스 · 정리 탭 검색칸과 같은 규칙)
+      한 묶음 「📖 정리 — N건」 · 줄 꼴 = 판례 결과 줄과 같게(머리 · 꼬리표 · 문맥 줄) · 상한 특허 30 · 민소 40 · 누르면 팝업(D — 탭은 그대로) */
+    const rows=[],miss=[];let tot=0;
+    if(SKLAW['특허법']){try{
+      if(!OMR_META_SF)OMR_META_SF=await get('omr/특허/omr_meta.json').catch(()=>null);   /* D — 팝업 쪽 그림(타일 표)은 줄을 그리기 전에 받아 둔다 */
+      const W=await get('omr/특허/omr_words.json'),HT=[];
+      W.pages.forEach((ws,pi)=>{for(const w of ws){if(String(w[4]).indexOf(q)>=0)HT.push({n:pi+1,box:[w[0],w[1],w[0]+w[2],w[1]+w[3]],x:w[0],y:w[1],t:String(w[4])});}});
+      tot+=HT.length;HT.slice(0,30).forEach((h,k)=>rows.push({law:'특허',head:h.n+'쪽',ctx:h.t,q:q,go:()=>popFindOmr({law:'특허',q:q,hits:HT,k:k})}));
+    }catch(err){miss.push('특허');}}
+    if(SKLAW['민사소송법']){try{
+      const H=await viewCanvas.find(q);if(!H)throw new Error('정리캔버스 없음');
+      if(($('#skin').value||'').trim()!==q)return;   /* 정리캔버스를 받는 사이 검색어가 바뀌었다 — 새 검색이 다시 그린다(옛 줄이 섞이지 않게) */
+      tot+=H.length;H.slice(0,40).forEach((h,k)=>rows.push({law:'민소',head:h.n+'쪽'+(h.head?' · '+h.head:''),ctx:h.ctx,memo:h.memo,q:h.q,go:()=>popFindOmr({law:'민소',q:h.q,hits:H,k:k})}));
+    }catch(err){miss.push('민소');}}
+    box.appendChild(el('div','grp','📖 정리 — '+tot+'건'+(tot>rows.length?' (앞 '+rows.length+'건 · 전부는 정리 탭 검색칸)':'')+(miss.length?' · '+miss.join('·')+' 정리를 읽지 못했다':'')));
+    rows.forEach(r=>{skRow(box,'omr',r.head,'',r.law+' · 정리'+(r.memo?' · 메모':''),ev=>{closeSk();r.go();});
+      const d=box.lastChild,c=precCtxEl({절:r.memo?'메모':'본문',ctx:r.ctx},r.q);c.classList.add('skctx');d.classList.add('hasctx');d.appendChild(c);});
+    skRows=[...box.querySelectorAll('.res')].map(x=>({open:x._sko||(()=>{})}));   /* 줄을 다 그린 뒤 다시 세운다(Enter·↑↓) */
   }
   if(SKON.stk){
     /* ★ v3-J §2-E — 🏷 두문자·줄임말: 이름·뜻이 맞는 사전 항목 + 그 스티커가 붙은 자리 전부 */
@@ -14670,6 +14782,7 @@ const viewCanvas = (() => {
   let LOG = null, REPLAY = { ok: 0, bad: 0, stale: false };
   let VIEWED = false;   /* 이 세션에서 캔버스를 한 번이라도 그렸는가(화면 유지용) */
   let GOTO = null;   /* ★ book_stamp C-3 — 목차노트 「교재 자리」 창의 정리캔버스 줄 → 다음 그리기 끝에 그 블록으로(골라 두고 가운데로) */
+  let FINDGO = null;   /* ★ cvfind D — 전체 검색 정리 팝업 「정리 탭 이 자리로 →」 → 다음 그리기 끝에 정리 탭 검색칸에 같은 말 → 그 결과로(goHit) */
   let REMAP = null, MIG = null;   /* ★ relayout C-3 — 옛 판 줄 자리(canvas_remap.json · 옮길 것이 있을 때만 받는다) · 이번 로드에 옮긴 수 */
   let SH = null, SHD = null;   /* ★ relayout C-2 — 고른 도형 {n, sid} · 끄는 중 {id, p, svg, sid, x0, y0, dx, dy, moved, ev} */
 
@@ -14857,8 +14970,8 @@ const viewCanvas = (() => {
   function zoomAt(mx, my, nz){ nz = Math.max(minZ(), Math.min(6, nz)); vx = mx - (mx - vx) * (nz / vz); vy = my - (my - vy) * (nz / vz); vz = nz; clampPan(); apply(); }
   const pts = new Map(); let drag = null, pinch = null;
   function bindStage(){
-    stage.addEventListener('wheel', e => { e.preventDefault(); const r = stage.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, vz * Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
-    stage.addEventListener('pointerdown', e => { if (e.target.closest('#cvChips')) return; if (S.ink && INK.tool !== 'shape' && e.pointerType !== 'touch' && e.target.closest('.cv-inksvg')) return; pts.set(e.pointerId, e); try { stage.setPointerCapture(e.pointerId); } catch (x) {} if (pts.size === 2){ const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), z: vz, cx: (a.clientX + b.clientX) / 2, cy: (a.clientY + b.clientY) / 2, vx, vy }; drag = null; return; } drag = { x: e.clientX, y: e.clientY, vx, vy, moved: false, blk: e.target.closest('.cv-blk') }; stage.classList.add('dragging'); });
+    stage.addEventListener('wheel', e => { if (e.target.closest('#cvHits')) return; HITA++; e.preventDefault(); const r = stage.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, vz * Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+    stage.addEventListener('pointerdown', e => { if (e.target.closest('#cvChips,#cvHits')) return; HITA++; if (S.ink && INK.tool !== 'shape' && e.pointerType !== 'touch' && e.target.closest('.cv-inksvg')) return; pts.set(e.pointerId, e); try { stage.setPointerCapture(e.pointerId); } catch (x) {} if (pts.size === 2){ const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), z: vz, cx: (a.clientX + b.clientX) / 2, cy: (a.clientY + b.clientY) / 2, vx, vy }; drag = null; return; } drag = { x: e.clientX, y: e.clientY, vx, vy, moved: false, blk: e.target.closest('.cv-blk') }; stage.classList.add('dragging'); });
     stage.addEventListener('pointermove', e => { if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, e);
       if (pinch && pts.size === 2){ const [a, b] = [...pts.values()]; const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); const r = stage.getBoundingClientRect(); const nz = Math.max(minZ(), Math.min(6, pinch.z * d / pinch.d)); const mx = pinch.cx - r.left, my = pinch.cy - r.top; vx = mx - (mx - pinch.vx) * (nz / pinch.z); vy = my - (my - pinch.vy) * (nz / pinch.z); vz = nz; clampPan(); apply(); return; }
       if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true; vx = drag.vx + dx; vy = drag.vy + dy; clampPan(); apply(); });
@@ -15259,8 +15372,22 @@ const viewCanvas = (() => {
     let cur = null, grp = null; hits.forEach((x, k) => { if (cur !== x.p.n){ cur = x.p.n; const inPage = hits.filter(y => y.p === x.p); grp = document.createElement('div'); grp.className = 'cv-hitgrp'; const th = thumbWithHits(x.p, inPage); th.className = 'cv-th'; th.title = x.p.n + '쪽'; th.onclick = () => goHit(hits.indexOf(inPage[0])); const col = document.createElement('div'); col.className = 'cv-hcol'; col.innerHTML = `<div class="m" style="font-weight:700">${x.p.n}쪽 · ${inPage.length}</div>`; grp.appendChild(th); grp.appendChild(col); H.appendChild(grp); }
       const d = document.createElement('div'); d.className = 'cv-hit'; d.dataset.k = k; const a = Math.max(0, x.at - 14); d.innerHTML = `${x.memo ? '<span class="cv-mtag">메모</span>' : ''}${esc(x.n.slice(a, x.at))}<mark>${esc(x.n.slice(x.at, x.at + q.length))}</mark>${esc(x.n.slice(x.at + q.length, x.at + q.length + 24))}`; d.onclick = () => goHit(k); grp.querySelector('.cv-hcol').appendChild(d); });
     markAll(); }
+  /* ★ _task_jo_ms_cvfind C(2026-09-25) — 검색 결과로 갈 때: 배율 max(지금, HITZ)(상한 6) · 찾은 글자 가운데(덩이 안 글자 비례 = markAll 과 같은 셈 · 메모 = 블록 가운데)를
+     목록(#cvHits) 오른쪽 끝 + 16px ~ 무대 오른쪽의 가운데(목록이 없으면 무대 가운데) · 세로 = 무대 가운데로 · 0.28초 ease-out(cubic) · 매 프레임 clampPan·apply
+     · 새로 누르거나 무대를 만지면(HITA) 앞 움직임을 끊는다 · 끝나면 markAll · Enter·Shift+Enter · 쪽 그림 누름도 이 goHit */
+  const HITZ = 2;   /* 읽는 배율(사용자 9/25 캡처 둘째 그림) */
+  let HITA = 0;
+  function hitPt(x){ if (x.memo) return [x.b.x + x.b.w / 2, x.b.y + x.b.h / 2];
+    let pos = 0; for (const r of x.l.r){ const rn = r.t.replace(/\s+/g, ''); if (x.at < pos + rn.length){ const f = (x.at - pos) / Math.max(1, rn.length), wd = Math.min(1, hq.length / Math.max(1, rn.length)) * r.w; return [r.x + f * r.w + wd / 2, x.l.y + x.l.h / 2]; } pos += rn.length; }
+    return [x.l.x + (x.l.x1 - x.l.x) / 2, x.l.y + x.l.h / 2]; }
   function goHit(k){ if (!hits.length) return; hi = (k + hits.length) % hits.length; const x = hits[hi];
-    const r = stage.getBoundingClientRect(); vz = Math.max(vz, 1); vx = r.width / 2 - (x.l.x + (x.l.x1 - x.l.x) / 2) * SC * vz; vy = r.height / 2 - (x.l.y + x.l.h / 2) * SC * vz; clampPan(); apply(); markAll();
+    const r = stage.getBoundingClientRect(), hr = H.getBoundingClientRect(), L = (H.childElementCount && hr.width) ? Math.max(0, Math.min(r.width - 80, hr.right - r.left + 16)) : 0;
+    const [X, Y] = hitPt(x), z1 = Math.min(6, Math.max(vz, HITZ)), cx = L + (r.width - L) / 2, cy = r.height / 2;
+    const a = { z: vz, x: vx, y: vy }, b = { z: z1, x: cx - X * SC * z1, y: cy - Y * SC * z1 }, t0 = performance.now(), T = 280, my = ++HITA;
+    const step = now => { if (my !== HITA) return; const t = Math.min(1, Math.max(0, (now - t0) / T)), e = 1 - Math.pow(1 - t, 3);
+      vz = a.z + (b.z - a.z) * e; vx = a.x + (b.x - a.x) * e; vy = a.y + (b.y - a.y) * e; clampPan(); apply();
+      if (t < 1) requestAnimationFrame(step); else markAll(); };
+    requestAnimationFrame(step); markAll();
     H.querySelectorAll('.cv-hit.cur').forEach(e => e.classList.remove('cur')); const d = H.querySelector(`.cv-hit[data-k="${hi}"]`); if (d){ d.classList.add('cur'); d.scrollIntoView({ block: 'nearest' }); } }
   function clearMarks(){ if (world) world.querySelectorAll('.cv-mark').forEach(e => e.remove()); }
   function markAll(){ clearMarks(); if (!hq) return; for (const pn of mounted){ const pg = built.get(pn); const p = D.pages[pn - 1]; hits.forEach((x, k) => { if (x.p !== p) return;
@@ -15582,8 +15709,27 @@ const viewCanvas = (() => {
     if (VIEWED && vz > 0){ clampPan(); apply(); } else if (u.vz > 0){ vz = u.vz; vx = u.vx; vy = u.vy; clampPan(); apply(); } else fit();
     VIEWED = true; shpPaint();   /* ★ relayout C-2 — 고른 도형 테두리(필기 켜짐 · ◇ 도형일 때만 · 아니면 풀린다) */
     if (hq){ qI.value = hq; runQ(hq); }
+    if (FINDGO){ const f = FINDGO; FINDGO = null; qI.value = f.q; runQ(f.q);   /* ★ cvfind D — 검색칸에 같은 말 → 같은 결과를 골라 C 의 확대로 */
+      const k = hits.findIndex(x => x.p.n === f.n && x.at === f.at && (f.b ? !!x.memo && key(x.b) === f.b : !x.memo && x.i === f.i)); goHit(k >= 0 ? k : 0); }
     if (GOTO){ const g = GOTO; GOTO = null; const o = BK.get(g); if (o) jump(o.p, o.b); }   /* ★ book_stamp C-3 — 목차노트 「교재 자리」 창의 정리캔버스 줄 → 그 블록(골라 두고 가운데로) */
   }
+  /* ★ _task_jo_ms_cvfind B·D(2026-09-25) — 전체 검색(Ctrl K) 「📖 정리」 창구
+     find(q) = 정리 탭 검색칸과 같은 규칙(occOf · 띄어쓰기 무시 · 본문 줄 + 메모) → [{n 쪽, i 줄, at, b 메모 블록 키, memo, head, ctx, q}]
+       head = 그 줄을 품은 가장 작은 블록(헤딩 아닌 것 먼저)의 목차노트(noteOf) · 없으면 pathOf · ctx = 띄어쓰기 뺀 줄 글에서 찾은 자리 앞 22자 ~ 뒤 40자
+     findPage(n, host) = 그 쪽을 buildPage 로 따로 짓기(정리OMR 팝업과 같은 길) · findBox(h) = 찾은 글자 네모(쪽 기준 pt · 덩이 안 글자 비례 · 메모 = 블록)
+     goFind(h) = 민소 · 정리 탭으로 가서 그 결과(FINDGO) */
+  viewCanvas.find = async q => { await viewCanvas.jari.ensure(); if (!D) return null; const qn = String(q || '').replace(/\s+/g, ''); if (!qn) return [];
+    return occOf(qn).map(x => { const p = x.p; let b = x.memo ? x.b : null;
+      if (!b){ const bs = p.blocks.filter(y => !y.del && y.ls.includes(x.i)).sort((a, c) => a.ls.length - c.ls.length); b = bs.find(y => y.k !== '헤딩') || bs[0] || null; }
+      const nt = b ? (noteOf(b) || '') : '', a = Math.max(0, x.at - 22);
+      return { n: p.n, i: x.i, at: x.at, b: x.memo ? key(x.b) : null, memo: !!x.memo, head: nt || (b ? pathOf(p, b) : ''), ctx: x.n.slice(a, x.at + qn.length + 40), q: qn }; }); };
+  viewCanvas.findPage = (n, host) => { const p = D && D.pages[n - 1]; if (!p) return null; const pg = buildPage(p); pg.style.top = '0px'; host.appendChild(pg); fitRuns(pg, 1); return { w: PW * SC, h: p.ph * SC, K: SC }; };
+  viewCanvas.findBox = h => { const p = D && D.pages[h.n - 1]; if (!p) return null;
+    if (h.b){ const o = BK.get(h.b); return o ? [o.b.x, o.b.y - o.p.oy, o.b.x + o.b.w, o.b.y - o.p.oy + o.b.h] : null; }
+    const l = p.lines[h.i]; if (!l) return null; let pos = 0;
+    for (const r of l.r){ const rn = r.t.replace(/\s+/g, ''); if (h.at < pos + rn.length){ const f = (h.at - pos) / Math.max(1, rn.length), x0 = r.x + f * r.w, wd = Math.min(1, h.q.length / Math.max(1, rn.length)) * r.w; return [x0, l.y - p.oy, x0 + wd, l.y - p.oy + l.h]; } pos += rn.length; }
+    return [l.x, l.y - p.oy, l.x1, l.y - p.oy + l.h]; };
+  viewCanvas.goFind = h => { FINDGO = h; if (S.law !== '민사소송법'){ S.law = '민사소송법'; S.jo = null; S.prec = null; pfClearY(); } S.tab = 'omr'; render(); };   /* 법 바꾸기 = 머리 법 칩과 같은 규칙 */
   /* 하네스·검산용 창구 — 앱 동작에는 안 쓰인다 */
   viewCanvas._cv = () => ({ D, META, MATCH, LOG, REPLAY, links, UNDO, INK, get vz(){ return vz; }, get vx(){ return vx; }, get vy(){ return vy; }, mounted, built, sel,
     set(v){ if (v.vz != null) vz = v.vz; if (v.vy != null) vy = v.vy; if (v.vx != null) vx = v.vx; clampPan(); apply(); }, apply, fit, minZ, gotoPage, jump, select, startEdit, commitEdit, undo, runQ, goHit, occOf, blockOp, openPop, toGeunge, drawConn, key, BK, applyOp, CVB, cvbMeta, cvbWords, cvbDoc, cvbPrint,
@@ -15680,6 +15826,50 @@ const viewCanvas = (() => {
   function omrAfter(){ try { if (typeof mokPinPaint === 'function') mokPinPaint(); } catch (e) {} try { if (typeof ncBookRefresh === 'function') ncBookRefresh(); } catch (e) {} }
   function omrRevert(k){ omrPut(k, { auto: true, t: Date.now() }); const w = POPS.find(x => x._pk === 'cv|omr|' + k);
     if (w && w._omr){ w._omr.box = null; w._omr.pick = false; omrBar(w); omrOv(w); omrFit(w); omrFoot(w); } toast('자동으로 되돌렸다'); omrAfter(); }
+  /* ══ ★ _task_jo_ms_cvfind A(2026-09-25) — 목차노트 목록 토글 밑 「찍은 자리」 그림(viewCanvas.jari.omrClip(k, mount, title)) ══
+     쪽 = 정리OMR 팝업과 같은 길(buildPage · top 0 · 붙인 **뒤** fitRuns(pg, 1) — 붙이기 전에 재면 폭 0) · 바탕 칸 = oppg cvw
+     첫 배율 f0 = 칸 폭 / (네모 폭 pt × SC) · 보기 칸 높이 = 네모 높이 pt × SC × f0(상한 없음 — 네모 전부 · 자르지 않음) · 확대 f0 × 0.5 ~ × 6 · 주황 테(.mkbx) = 늘 네모 자리
+     손놀림 — Ctrl+휠(트랙패드 핀치도 ctrlKey 휠) = 마우스 자리 기준 확대 · Ctrl 없는 휠 = 가로채지 않음(목록이 굴러간다) · 두 손가락 = 핀치
+       · 마우스 끌기 = 옮기기 · 손가락 하나 = 확대 전엔 목록 위아래 굴림(보기 칸이 touch-action:none 이라 손으로 굴린다) · 확대 뒤엔 옮기기
+       · 두 번 누름(320ms) = 처음 크기 · 한 번 누름(움직임 4px 미만) = 그 노트의 정리OMR 팝업(omrOpen) */
+  function omrClip(k, mount, title){
+    const pin = omrOf(k); if (!pin || !D) return null; const p = D.pages[pin.p - 1]; if (!p) return null;
+    const R = pin.r, rw = (R[2] - R[0]) * SC, rh = (R[3] - R[1]) * SC, old = !!(pin.h && META && pin.h !== META.hash);
+    const box = document.createElement('div'); box.className = 'mkclip';
+    box.innerHTML = '<div class="mkcv"><div class="mkin"><div class="oppg cvw"></div><div class="mkbx"></div></div></div>'
+      + '<div class="mkcf"><span>' + pin.p + '쪽 · 영역 지정</span>' + (old ? '<span class="mkold">판이 바뀜 — 다시 찍어 주세요</span>' : '') + '</div>';
+    mount.appendChild(box);
+    const v = box.querySelector('.mkcv'), inn = box.querySelector('.mkin'), host = box.querySelector('.oppg'), bx = box.querySelector('.mkbx');
+    const pg = buildPage(p); pg.style.top = '0px'; host.appendChild(pg); fitRuns(pg, 1);
+    const W = Math.max(120, box.clientWidth), f0 = W / rw, H = Math.max(36, Math.round(rh * f0));
+    v.style.height = H + 'px';
+    const st = { s: f0, x: 0, y: 0 };
+    const put = () => { host.style.transform = 'scale(' + st.s + ')'; inn.style.transform = 'translate(' + st.x + 'px,' + st.y + 'px)';
+      bx.style.cssText = `left:${R[0] * SC * st.s}px;top:${R[1] * SC * st.s}px;width:${rw * st.s}px;height:${rh * st.s}px`;
+      v.classList.toggle('mkz', st.s > f0 * 1.02); };
+    const home = () => { st.s = f0; st.x = -R[0] * SC * f0 + (W - rw * f0) / 2; st.y = -R[1] * SC * f0; put(); };
+    const zoom = (s, ax, ay) => { s = Math.max(f0 * 0.5, Math.min(f0 * 6, s)); const px = (ax - st.x) / st.s, py = (ay - st.y) / st.s; st.s = s; st.x = ax - px * s; st.y = ay - py * s; put(); };
+    home();
+    v.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); e.stopPropagation(); const r = v.getBoundingClientRect();
+      zoom(st.s * Math.pow(1.0025, -Math.max(-240, Math.min(240, e.deltaY))), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+    const scr = () => { for (let q = box.parentElement; q; q = q.parentElement){ const o = getComputedStyle(q).overflowY; if ((o === 'auto' || o === 'scroll') && q.scrollHeight > q.clientHeight) return q; } return null; };   /* 목록을 굴리는 칸(목차노트 창 = .pop) */
+    const P = new Map(); let g = null, moved = false, lastTap = 0;
+    v.addEventListener('pointerdown', e => { if (e.button > 0) return; e.stopPropagation(); P.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { v.setPointerCapture(e.pointerId); } catch (_) {}
+      if (P.size === 1){ moved = false; const sc = scr(); g = { x: e.clientX, y: e.clientY, ox: st.x, oy: st.y, sc, st: sc ? sc.scrollTop : 0 }; }
+      if (P.size === 2){ const [a, b] = [...P.values()], r = v.getBoundingClientRect(); g = { pinch: 1, d: Math.hypot(a.x - b.x, a.y - b.y) || 1, s: st.s, mx: (a.x + b.x) / 2 - r.left, my: (a.y + b.y) / 2 - r.top, ox: st.x, oy: st.y }; moved = true; } });
+    v.addEventListener('pointermove', e => { if (!P.has(e.pointerId) || !g) return; P.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (g.pinch && P.size >= 2){ const [a, b] = [...P.values()], r = v.getBoundingClientRect(), d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+        const px = (g.mx - g.ox) / g.s, py = (g.my - g.oy) / g.s, s = Math.max(f0 * 0.5, Math.min(f0 * 6, g.s * d / g.d)); st.s = s; st.x = mx - px * s; st.y = my - py * s; put(); return; }
+      if (g.pinch) return;
+      const dx = e.clientX - g.x, dy = e.clientY - g.y; if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
+      if (st.s > f0 * 1.02 || e.pointerType === 'mouse'){ st.x = g.ox + dx; st.y = g.oy + dy; put(); }
+      else if (g.sc) g.sc.scrollTop = g.st - dy; });
+    const end = e => { try { v.releasePointerCapture(e.pointerId); } catch (_) {} if (!P.delete(e.pointerId)) return;
+      if (P.size) return; const pinched = g && g.pinch; g = null; if (moved || pinched || e.type !== 'pointerup') return;
+      const now = Date.now(); if (now - lastTap < 320){ lastTap = 0; clearTimeout(v._t); home(); return; } lastTap = now;
+      v._t = setTimeout(() => { if (lastTap === now) omrOpen({ key: k, title: title || k.replace(/^note\|/, ''), note: k.replace(/^note\|/, '') }, e); }, 330); };
+    v.addEventListener('pointerup', end); v.addEventListener('pointercancel', end);
+    return box; }
   function omrWire(w){ const st = w._omr, v = w.querySelector('.opv');
     w.addEventListener('pointerdown', () => { if ((+w.style.zIndex || 0) < POPZ){ w.style.zIndex = ++POPZ; popAllSync(); } }, true);   /* 손가락으로 팝업 안을 눌러도 맨 앞(마우스는 popShell 이 올린다) */
     w.querySelector('.pb').addEventListener('click', e => { const t = e.target;
@@ -15729,6 +15919,7 @@ const viewCanvas = (() => {
     pic: (book, s, W) => cvbCrop(CVB_DOCID[book] || book, s, W),
     go(k){ if (!BK.get(k)) return false; GOTO = k; try { closeAllPops(); } catch (e) {} S.tab = 'omr'; render(); return true; },   /* ★ omrpop C-1 — 📘 창 줄은 이제 omr(부르는 곳 0 · 지우지 않고 둔다) */
     omr: (ctx, ev) => omrOpen(ctx, ev), omrHand: k => omrOf(k), omrRevert: k => omrRevert(k), noteBids: () => omrNoteMap() };   /* ★ _task_jo_ms_omrpop — 정리OMR 팝업 · 손값(jopangi.ncomr) · 노트 → 블록(noteOf) */
+  viewCanvas.jari.omrClip = (k, m, t) => omrClip(k, m, t);   /* ★ cvfind A — 목차노트 목록 토글 밑 찍은 자리 그림 */
   viewCanvas.metaWarm = async () => { for (const d of Object.values(CVB_DOCID)){ if (CVB.meta[d]) continue; try { const x = await cvbGet('bookmeta:' + d); if (x && x.docid) CVB.meta[d] = x; } catch (e) {} } };   /* ★ jari_cand B-1 — 네트워크 없이 IDB 만 */
   viewCanvas.hsBook = { doc: cvbDoc, meta: cvbMeta, gh: cvbGh, why: cvbWhy, get: cvbGet, put: cvbPut, stat: CVB.stat, name: d => CVB_NAME[d] || d };   /* ★ c2card G-6 — 해설 쪽 창이 교재 창과 같은 길 */
   return viewCanvas;
