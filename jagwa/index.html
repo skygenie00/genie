@@ -491,6 +491,14 @@ body[data-shell] #list .item .num.nog{color:#8b8e94}
 .soltabs{display:flex;gap:4px;margin-bottom:6px} .soltabs button{padding:3px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:12px;cursor:pointer} .soltabs button.on{background:var(--subj);border-color:var(--subj);color:#fff}
 .tag.sl{margin-right:6px} .tag.nosol{color:var(--muted)}
 .bexp{display:block;margin-top:4px;font-size:12.5px;color:var(--muted);line-height:1.5;font-weight:400}
+.bexp[hidden]{display:none}   /* ★ bio ocrfix §K(2026-09-25) — 위 display:block 이 hidden 속성을 덮어 해설을 열기 전에도 설명이 보였다 */
+/* ★ bio ocrfix §J(2026-09-25) — 정답·해설 아래 「📎 참고」 칸(원본 노란 상자 꼴) · 그림은 누르면 크게 */
+.ocrref{margin-top:10px;background:#FFFBEA;border:1px solid #F3E3A3;border-left:4px solid #E7B416;border-radius:6px;padding:8px 10px;font-size:12.5px;line-height:1.6;color:var(--ink);white-space:normal}
+.ocrref .rfh{font-weight:800;margin-bottom:4px}
+.ocrref .rfimg{margin:4px 0 6px;text-align:center} .ocrref .rfimg img{max-width:100%;height:auto;cursor:zoom-in;display:block;margin:0 auto}
+.ocrref .rfimg .ld{font-size:11px;color:var(--muted)}
+#ocrrfz{position:fixed;inset:0;z-index:98;background:rgba(20,20,24,.82);display:flex;align-items:center;justify-content:center;cursor:zoom-out}
+#ocrrfz img{max-width:96vw;max-height:92vh;background:#fff;border-radius:6px}
 .bpgl{max-height:40vh;overflow:auto;border:1px solid var(--line);border-radius:6px;margin-top:4px} .bpgl div{padding:6px 8px;border-bottom:1px dashed var(--line);cursor:pointer;font-size:12.5px} .bpgl div:hover{background:var(--subj-soft)} .bpgl b{color:var(--subj);margin-right:6px}
 select.rsel{padding:4px 8px;border:1px solid var(--line);border-radius:999px;background:var(--card);font:inherit;font-size:11px;font-weight:700;color:var(--muted)}
 .num{min-width:58px;font-size:11px}
@@ -4945,7 +4953,7 @@ if(SHELL){
    물리 함수는 여기서 같은 이름으로 다시 정의해 갈아 끼운다(뒤 스크립트가 이긴다). 물리 데이터 배열은 빌드가 비웠다.
    문항 본문은 HTML 에 없다 — 비공개 저장소 <과목>/문항.json(CUR.DATA_PATH) 을 토큰으로 받아 IndexedDB kv 에 캐시한다(D11). add1: 과목 값은 전부 CUR — 생물(SUBJ.bio) 도 이 층을 그대로 쓴다. */
 
-Object.assign(F,{UNIT:16,BPAGE:17,CH:18,BOGI:19,SOL:20,SOLPG:21,ROUND:22,CAND:23,NOTE:24,ORIG:25,SOL2:26,BSENT:27,BSRC:28,SYNPG:29});   /* 26~29 = 생물 열(해설2·교재문장·문장근거·SYNAPSE쪽 · 지학 행은 빈값) */
+Object.assign(F,{UNIT:16,BPAGE:17,CH:18,BOGI:19,SOL:20,SOLPG:21,ROUND:22,CAND:23,NOTE:24,ORIG:25,SOL2:26,BSENT:27,BSRC:28,SYNPG:29,REF:30});   /* 26~29 = 생물 열(해설2·교재문장·문장근거·SYNAPSE쪽 · 지학 행은 빈값) */
 var TOC={ch:{},sec:{},unit:{},list:[]};      // 목차 — ch['3']={name,secs[]} · sec['3.4']={name,ch,units[]} · unit['3.4.5']={name,p,sec,ch}
 var PIECES={};                                   // earth/pdf/index.json
 var isC=r=>r[F.SRC]==='확인';
@@ -5192,7 +5200,7 @@ function buildData(items,toc,pieces){
     const G=it.유형==='기출';
     const row=[i+1,+it.문제쪽||0,it.그림?'IMG':'TXT',0,'','',+it.문번||it.문번,0,'',it.uid,G?(+it.연도||''):'',G?'변리사':(it.유형==='확인'?'확인':it.유형),'',String(it.정답||''),
       it.문항||'','',(it.단원==='미분류'?'':it.단원)||(it.유형==='확인'?it.uid[1]:''),+it.교재쪽||0,CUR.KINDS?expandChoices(it.선택지):(it.선택지||[]),it.보기||[],it.해설||'',+it.해설쪽||0,+it.회차||'',it.단원후보||'',it.비고||'',it.원형회차||'',
-      it.해설2||'',it.교재문장||'',it.문장근거||'',it.SYNAPSE쪽||''];
+      it.해설2||'',it.교재문장||'',it.문장근거||'',it.SYNAPSE쪽||'',Array.isArray(it.참고)?it.참고:[]];   /* ★ bio ocrfix §J — F.REF(30) = 참고 상자(생물 · 없으면 빈 칸) */
     DATA.push(row);
   });
   refreshUnits();
@@ -5414,6 +5422,32 @@ imgUrl=async function(uid){
   }
   return IMGURL[uid]=URL.createObjectURL(new Blob([buf],{type:'image/jpeg'}));
 }
+/* ★ bio ocrfix §J(2026-09-25 · saengmul/_task_jagwa_bio_ocrfix.md) — 정답·해설 아래 「📎 참고」 칸
+   데이터 `참고` = [{제목, 글(줄마다 ' ⏎ '), 그림?(bio/img/ref….jpg), 쪽?}] · 그림은 imgUrl 과 같은 길(IndexedDB pdf 통 img:ref:<파일>)
+   과목 문 HASBOOK(카드 층) · 참고가 없는 문항은 빈 글자를 돌려준다(DOM 무변) · 글자 고치기(TFIX)는 이번엔 안 붙인다 */
+var REFURL={};
+var ocrRefUrl=async function(file){
+  if(REFURL[file])return REFURL[file];
+  let buf=await get('pdf','img:ref:'+file);
+  if(!buf){
+    if(!recToken())return '';
+    try{const r=await fetch(ghUrl(CUR.IMG_DIR+file),{headers:{Authorization:'Bearer '+recToken(),Accept:'application/vnd.github.raw'},cache:'no-store'});
+      if(!r.ok)return '';buf=await r.arrayBuffer();await put('pdf','img:ref:'+file,buf)}catch(e){return ''}
+  }
+  return REFURL[file]=URL.createObjectURL(new Blob([buf],{type:'image/jpeg'}));
+};
+var ocrRefHtml=r=>{const L=(HASBOOK&&r&&Array.isArray(r[F.REF]))?r[F.REF]:[];if(!L.length)return '';
+  return L.map(x=>'<div class="ocrref"><div class="rfh">📎 참고'+(x.제목?' · '+esc(String(x.제목)):'')+'</div>'
+    +(x.그림?'<div class="rfimg" data-refimg="'+esc(String(x.그림))+'"><span class="ld">그림 받는 중…</span></div>':'')
+    +'<div class="rft">'+String(x.글||'').split(' ⏎ ').map(esc).join('<br>')+'</div></div>').join('')};
+var ocrRefPaint=root=>{if(!root)return;
+  root.querySelectorAll('.ocrref .rfimg[data-refimg]:not([data-done])').forEach(el=>{el.setAttribute('data-done','1');
+    ocrRefUrl(el.getAttribute('data-refimg')).then(u=>{
+      if(!u){el.innerHTML='<span class="ld">그림 — 토큰이 있어야 보인다</span>';return}
+      el.innerHTML='<img alt="참고 그림" role="button" src="'+u+'">';   /* role=button — 필기 덮개(UNDER_HIT)·손가락 굴림(PASS_THRU)이 제 선택자로 흘려보낸다(두 상수 무변) */
+      el.querySelector('img').onclick=e=>{e.stopPropagation();const z=document.createElement('div');z.id='ocrrfz';
+        z.innerHTML='<img alt="참고 그림" src="'+u+'">';const x=()=>{z.remove();removeEventListener('keydown',k,true)};
+        const k=ev=>{if(ev.key==='Escape'){ev.stopPropagation();x()}};z.onclick=x;addEventListener('keydown',k,true);document.body.appendChild(z)}})})};
 var bogiOf=uid=>BG[uid]||{};
 var saveBG=()=>put('kv','bogi',BG);
 var hasOX=r=>(r[F.BOGI]||[]).some(b=>b.정오);            /* 순서·묶음 문항(정오 빈칸)은 토글을 안 그린다 */
@@ -5458,12 +5492,13 @@ function renderCard(r){
     ${ch.some(x=>x)?`<div class="choices">${ch.map((t,i)=>`<button data-c="${i+1}" data-tfx="c${i+1}" class="${pick===String(i+1)?'pick':''}${tfixOn(uid,'c'+(i+1))?' fixed':''}">${CIRC[i]} ${esc(txtOf(uid,'c'+(i+1)))}${tfixOn(uid,'c'+(i+1))?'<i class="tfx">✎</i>':''}</button>`).join('')}</div>`:''}
     ${ggCardHTML(r)}
     <details id="cDet"><summary>정답 · 해설${r[F.SOLPG]&&!CUR.KINDS?` (부록 ${r[F.SOLPG]}쪽)`:''}</summary>
-      <div class="sol"><b>정답 ${r[F.ANS]?CIRC[+r[F.ANS]-1]||r[F.ANS]:'—'}</b>${cropBoxHtml(uid,'s')}<span class="solwrap${cropHas(uid,'s')?' crophid':''}">${solHtml(r,sol,sol2)}</span>
+      <div class="sol"><b>정답 ${r[F.ANS]?CIRC[+r[F.ANS]-1]||r[F.ANS]:'—'}</b>${cropBoxHtml(uid,'s')}<span class="solwrap${cropHas(uid,'s')?' crophid':''}">${solHtml(r,sol,sol2)}</span>${ocrRefHtml(r)}
         <div class="jump">${(bp=>bp?`<span class="tag page" data-page="${bp}">교재 ${bp}쪽 ${esc(unitName(u))}</span>`:'')(bpgOf(r))}
         ${r[F.SOLPG]&&!CUR.KINDS?`<span class="tag page" data-page="${r[F.SOLPG]}">부록 ${r[F.SOLPG]}쪽</span>`:''}</div>
         ${r[F.NOTE]?`<div class="cnote">${esc(r[F.NOTE])}</div>`:''}</div></details>
     <div class="cnav"><button id="cPrev">← 이전</button><span>${VLIST.indexOf(VNO)+1} / ${VLIST.length}</span><button id="cNext">다음 →</button></div>`;
   c.scrollTop=0;
+  ocrRefPaint(c);   /* ★ bio ocrfix §J — 참고 그림 */
   /* 가려 두었으면 **받지도 않는다**(§A) · ✕ 는 그대로 두고 그림 칸(.figw)만 채운다 */
   if(r[F.FILE]==='IMG'&&!figHid(uid))imgUrl(uid).then(url=>{const f=$('#cFig .figw');if(!f)return;f.innerHTML=url?`<img src="${url}" alt="문항 그림">`:'<span class="ld">그림을 받지 못했습니다(토큰 확인)</span>'});
   {const fx=c.querySelector('#cFigX');
@@ -8571,7 +8606,7 @@ function jnRowHTML(r){
     +'<div class="ggrb" data-ggrb="'+ea(gu)+'|jn-">'+ggRefBoxHTML(gu,'jn-')+'</div>'
     +'<button class="jnans" data-jnans="'+no+'">정답·해설 ▸</button>'
     +'<div class="jnansb hide"><b>정답 '+esc(r[F.ANS]?(CIRC[+r[F.ANS]-1]||r[F.ANS]):'—')+'</b>'
-    +'<div class="sol">'+esc(String(txtOf(uid,'s')||'').split('⏎').join('\n'))+'</div></div>'
+    +'<div class="sol">'+esc(String(txtOf(uid,'s')||'').split('⏎').join('\n'))+'</div>'+ocrRefHtml(r)+'</div>'
     +'</div>'}
 
 /* ── §D 근거 ──
@@ -9095,7 +9130,7 @@ if(SHELL){
     if(el=hit('[data-bpl2]')){e.stopPropagation();bplOpen(+el.getAttribute('data-bpl2'));return}
     if(el=hit('[data-jnans]')){e.stopPropagation();
       const b=el.nextElementSibling;if(!b)return;
-      const hid=b.classList.toggle('hide');el.textContent=hid?'정답·해설 ▸':'정답·해설 ▾';return}
+      const hid=b.classList.toggle('hide');el.textContent=hid?'정답·해설 ▸':'정답·해설 ▾';if(!hid)ocrRefPaint(b);return}   /* ★ bio ocrfix §J — 펼칠 때 참고 그림 */
     if(el=hit('[data-px]')){e.stopPropagation();
       const v=el.getAttribute('data-px').split(':');const r=rec(+v[0]);
       const a=pkOf(r[F.CODE]).slice();a.splice(+v[1],1);
