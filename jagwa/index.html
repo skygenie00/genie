@@ -1877,23 +1877,32 @@ function inkGuard(box,opt){
   /* ★ bookwin H·I(2026-09-24 · _task_jagwa_earth_bookwin §H·§I) — **`opt` 를 줄 때만** 켠다(카드 층 #cardwrap — 지학 · ★ add1 생물도).
      물리 #stage 는 opt 없이 불려 아래 새 갈래를 한 줄도 안 탄다.
      ⓑ 펜이 닿기 직전(호버)·쓰는 동안·뗀 뒤 opt.palmMs 안에 닿은 손가락 = 손바닥(획과 획 사이에 새로 닿은 손바닥도)
-     ⓒ 접촉면이 큰 손가락(폭·높이 opt.big px 이상) = 손바닥
+     ⓒ (걷음 · ★ penfinger A 2026-09-25) 접촉면 크기로는 손바닥을 가르지 않는다 — 아이패드 사파리 손가락은 폭·높이가 40~50px 라
+       「opt.big 40 이상 = 손바닥」이 보통 손가락을 손바닥으로 봐 문제 창이 손가락으로 안 굴렀다 · 손바닥은 ⓑ(펜 시각)·ⓓ 로만 거른다
      ⓓ 펜이 닿는 순간 이미 굴리던 손가락(= 펜보다 먼저 닿은 손바닥)이 굴린 만큼 되돌린다
      ⓔ 눌리는 것(PASS_THRU) 위에서 시작한 손가락도 10px 넘게 끌면 굴린다 — #cardwrap 이 touch-action:none 이라
        브라우저가 대신 굴려 주지 않는다 · 굴린 뒤 뗀 톡은 밑의 단추를 누르지 않는다
      I 손바닥이 아닌 손가락 둘 = opt.pinch 로 확대·축소(두 손가락 가운데가 제자리) */
   const O=opt||null,pos=new Map();let lastPen=-1e9,pin=null,dragT=-1e9;
+  /* ★ penfinger A'(2026-09-25) — 손가락 길게 누르기 = 글자 고치기(opt.longPress · 카드 층). 이 가드가 capture 에서 stopPropagation 해
+     글자에 달린 tfixLong(거품)이 손가락 pointerdown 을 못 받았다 — 바탕부터 손가락으로는 한 번도 안 열렸다(마우스·펜만 열렸다).
+     그래서 막은 손가락(!pass)의 시계를 여기서 건다 — 손바닥(ⓑ)·펜이 닿음·두 손가락·8px 넘게 움직임·뗌이면 끈다 · 연 뒤 뗀 톡은 ⓔ 처럼 먹는다.
+     눌리는 것(PASS_THRU — 선택지 단추 등)은 막지 않으니 제 tfixLong 이 연다(둘이 겹쳐 열리지 않는다) */
+  let lp=null,lpFired=null;const lpOff=()=>{if(lp){clearTimeout(lp.tm);lp=null}};
   const now=()=>performance.now();
   const isPalm=id=>penDown||palm.has(id);
   box.addEventListener('pointerdown',e=>{
     if(e.pointerType!=='pen')return;
-    penDown=true;for(const id of held)palm.add(id);
+    penDown=true;for(const id of held)palm.add(id);lpOff();   /* ★ penfinger A' — 펜이 닿으면 손가락 시계를 끈다 */
     if(O){lastPen=now();pin=null;if(pan){box.scrollLeft=pan.sl;box.scrollTop=pan.st}}   /* ⓓ */
     pan=null;
   },true);
   const penEnd=e=>{if(e.pointerType==='pen'){penDown=false;if(O)lastPen=now()}};
   box.addEventListener('pointerup',penEnd,true);
   box.addEventListener('pointercancel',penEnd,true);
+  if(O){document.addEventListener('pointerup',penEnd,true);document.addEventListener('pointercancel',penEnd,true)}
+  /* ★ penfinger A'(2026-09-25) — 펜을 상자 밖에서 떼도 penDown 을 푼다(카드 층 · opt). 펜으로 글자를 길게 눌러 「글자 고치기」 창이 뜨면
+     펜은 그 창 위에서 떨어져 이 상자가 뗌을 못 봤다 → penDown 이 참으로 남아 **그 뒤 손가락이 전부 손바닥**(굴림 0 · 바탕부터 · 실측) */
   if(O)box.addEventListener('pointermove',e=>{if(e.pointerType==='pen')lastPen=now()},true);   /* ⓑ 펜 호버도 센다 */
   box.addEventListener('pointerdown',e=>{
     if(e.pointerType!=='touch')return;
@@ -1903,16 +1912,19 @@ function inkGuard(box,opt){
     held.add(e.pointerId);
     if(penDown)palm.add(e.pointerId);
     if(O){pos.set(e.pointerId,{x:e.clientX,y:e.clientY});
-      if(e.width>=O.big||e.height>=O.big||now()-lastPen<O.palmMs)palm.add(e.pointerId)}   /* ⓑ ⓒ */
+      if(now()-lastPen<O.palmMs)palm.add(e.pointerId)}   /* ⓑ(ⓒ 크기 잣대는 걷음 — penfinger A) */
     if(isPalm(e.pointerId))return;
     if(O&&O.pinch){const live=[...held].filter(id=>!palm.has(id));
-      if(live.length>=2){pan=null;const a=pos.get(live[0]),b=pos.get(live[1]);
+      if(live.length>=2){pan=null;lpOff();const a=pos.get(live[0]),b=pos.get(live[1]);
         if(a&&b){pin={ids:live.slice(0,2),d:Math.hypot(a.x-b.x,a.y-b.y)||1,z:O.pinch.get()};return}}}
-    pan={id:e.pointerId,x:e.clientX,y:e.clientY,sl:box.scrollLeft,st:box.scrollTop,armed:false,pass:pass};
+    pan={id:e.pointerId,x:e.clientX,y:e.clientY,sl:box.scrollLeft,st:box.scrollTop,armed:false,pass:pass,el:e.target};   /* el — ★ penfinger(굴림이 되면 그 단추의 길게 누르기를 끈다) */
+    if(O&&O.longPress&&!pass){lpOff();const el=O.longPress.at(e);   /* ★ penfinger A' */
+      if(el){const id=e.pointerId;lp={id,x:e.clientX,y:e.clientY,tm:setTimeout(()=>{if(!lp||lp.id!==id)return;lp=null;pan=null;lpFired=id;O.longPress.go(el)},550)}}}
   },true);
   box.addEventListener('pointermove',e=>{
     if(e.pointerType!=='touch')return;
     if(O&&pos.has(e.pointerId))pos.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(lp&&lp.id===e.pointerId&&Math.hypot(e.clientX-lp.x,e.clientY-lp.y)>8)lpOff();   /* ★ penfinger A' — 움직이면 굴림 */
     if(O&&pin&&pin.ids.indexOf(e.pointerId)>=0){e.stopPropagation();if(e.cancelable)e.preventDefault();
       const a=pos.get(pin.ids[0]),b=pos.get(pin.ids[1]);
       if(a&&b)O.pinch.set(pin.z*Math.hypot(a.x-b.x,a.y-b.y)/pin.d,(a.x+b.x)/2,(a.y+b.y)/2);return}
@@ -1920,12 +1932,16 @@ function inkGuard(box,opt){
     const dx=e.clientX-pan.x,dy=e.clientY-pan.y;
     if(pan.pass&&!pan.armed&&Math.hypot(dx,dy)<10)return;   /* ⓔ 단추 위 톡은 막지 않고 흘려보낸다 */
     e.stopPropagation();if(e.cancelable)e.preventDefault();
-    if(!pan.armed){if(Math.hypot(dx,dy)<10)return;pan.armed=true}   /* 얹어 둔 손바닥이 미끄러져도 안 움직인다 */
+    if(!pan.armed){if(Math.hypot(dx,dy)<10)return;pan.armed=true;   /* 얹어 둔 손바닥이 미끄러져도 안 움직인다 */
+      if(O&&pan.pass&&pan.el)try{const c=new PointerEvent('pointercancel',{pointerId:e.pointerId,pointerType:'touch',isPrimary:true,bubbles:true});c.__syn=1;pan.el.dispatchEvent(c)}catch(_){}}
+      /* ★ penfinger A'(2026-09-25) — 눌리는 것(선택지 단추 등) 위에서 시작한 손가락이 굴림이 되면 그 단추에 pointercancel 을 넘겨 길게 누르기 시계를 끈다.
+         가드가 굴림 move 를 막아 tfixLong 이 8px 움직임을 못 봤다 — 선택지 위에서 시작한 굴림이 550ms 를 넘으면 굴리는 중에 「글자 고치기」가 떴다(바탕부터) */
     box.scrollLeft=pan.sl-dx;box.scrollTop=pan.st-dy;
   },true);
   const up=e=>{
-    if(e.pointerType!=='touch')return;
+    if(e.pointerType!=='touch'||e.__syn)return;   /* ★ penfinger — 위에서 넘긴 가짜 pointercancel 은 가드가 안 받는다 */
     held.delete(e.pointerId);palm.delete(e.pointerId);
+    if(lp&&lp.id===e.pointerId)lpOff();if(O&&lpFired===e.pointerId){lpFired=null;dragT=now()}   /* ★ penfinger A' — 길게 눌러 연 뒤 뗀 톡은 밑을 안 누른다(ⓔ click 먹기) */
     if(O){pos.delete(e.pointerId);if(pin&&pin.ids.indexOf(e.pointerId)>=0)pin=null;
       if(pan&&pan.id===e.pointerId&&pan.pass&&pan.armed)dragT=now()}
     if(pan&&pan.id===e.pointerId)pan=null;
@@ -1944,14 +1960,34 @@ window.addEventListener('load',()=>{try{inkGuard($('#cardwrap'),(typeof HASBOOK!
      밑에 눌릴 것이 없으면 그냥 획이다(점 찍기를 안 잃는다). */
 const UNDER_HIT='button,summary,a,label,[role="button"],.tag,.chip,.tl,.iconbtn,.btn,'
   +'.row[data-k],[data-c],[data-tfx],[data-go],[data-page],[data-no],.snt,.trit';
-function underInk(x,y,ink){
+/* ★ penfinger B(2026-09-25) — 펜이 누르기로 넘길 것은 **진짜 단추뿐**(선택지 · O/△/X · 「정답 · 해설」 · 머리줄 칩 …).
+   문제 글·〈보기〉 줄·〈보기〉 설명·해설 글(`[data-tfx]`·`.row[data-k]`) 위의 펜은 곧바로 필기다(옛 판은 펜도 손가락과 같이 UNDER_HIT 로 넘겨
+   획을 안 긋고 preventDefault 도 없어 아이패드에서 펜이 굴림이 됐다 — 사용자 「〈보기〉 줄에 펜을 대면 갑자기 스크롤」). 손가락·마우스는 UNDER_HIT 그대로. */
+const PEN_HIT='button,summary,a,label,[role="button"],.tag,.chip,.tl,.iconbtn,.btn';
+function underInk(x,y,ink,sel){   /* sel = 찾을 선택자(없으면 UNDER_HIT · ★ penfinger B 가 PEN_HIT 로 부른다) */
   const keep=ink.style.pointerEvents;
   ink.style.pointerEvents='none';
   let el=null;try{el=document.elementFromPoint(x,y)}catch(_){}
   ink.style.pointerEvents=keep;
   if(!el||!el.closest)return null;
   if(el.closest('select,input,textarea'))return null;   /* 글자칸은 제 손으로 받는다 */
-  return el.closest(UNDER_HIT)||null;
+  return el.closest(sel||UNDER_HIT)||null;
+}
+/* ★ penfinger B — 펜 길게 누르기 = 글자 고치기(살린다). 펜이 `[data-tfx]` 글자 위에서 시작했으면 획은 곧바로 긋되 시계 550ms —
+   그동안 8px 안에 머물면 그 획을 버리고(QDRAW 비움 · 살아 있는 선 지움 · 포인터 캡처 풀기 · 저장 안 됨) 그 칸의 글자 고치기.
+   8px 넘게 움직이거나 떼면 시계를 끈다(획은 보통대로). 지우개일 때는 안 건다(지우는 중에 멈춘 것은 고치기 뜻이 아니다). */
+let PENLP=null;
+function penLongOff(){if(PENLP){clearTimeout(PENLP.tm);PENLP=null}}
+function penLongArm(e,tf,ink){
+  penLongOff();
+  if(typeof TOOL!=='undefined'&&TOOL.mode==='erase')return;
+  const id=e.pointerId,uid=QUID,slot=tf.dataset.tfx;
+  PENLP={id,x:e.clientX,y:e.clientY,tm:setTimeout(()=>{
+    if(!PENLP||PENLP.id!==id)return;PENLP=null;
+    QDRAW=null;if(QRAF){cancelAnimationFrame(QRAF);QRAF=0}QRECT=null;
+    const l=ink.querySelector('.qlive');if(l)l.removeAttribute('d');
+    try{ink.releasePointerCapture(id)}catch(_){}
+    tfixSheet(uid,slot,()=>showProblem())},550)};
 }
 const __inkHit=new Map();
 /* 덮개 밑으로 포인터 이벤트를 그대로 넘긴다 — 밑에 달린 손잡이(길게 누르기 등)가 스스로 돌게. */
@@ -1968,8 +2004,12 @@ function inkPierce(card){
   card.addEventListener('pointerdown',e=>{
     if(e.__syn)return;
     const ink=card.querySelector('#qink');
-    if(!ink||e.target!==ink)return;                     /* 덮개를 직접 눌렀을 때만 */
+    if(!ink||!ink.contains(e.target))return;            /* 덮개를 직접 눌렀을 때만 — ★ penfinger B: 이미 그은 획(path) 위도 덮개다(옛 판은 e.target!==ink 라 획 위에서 뚫기가 안 탔다) */
     const hit=underInk(e.clientX,e.clientY,ink);
+    if(e.pointerType==='pen'&&!underInk(e.clientX,e.clientY,ink,PEN_HIT)){   /* ★ penfinger B — 진짜 단추가 아니면 펜은 곧바로 필기(qWire 가 캡처·preventDefault) */
+      const tf=hit&&hit.closest&&hit.closest('[data-tfx]');
+      if(tf)penLongArm(e,tf,ink);
+      return}
     if(!hit)return;                                     /* 밑에 눌릴 것이 없다 — 그냥 획이다 */
     e.stopPropagation();                                /* qWire 가 획을 시작하지 않게 */
     __inkHit.set(e.pointerId,{el:hit,x:e.clientX,y:e.clientY});
@@ -1980,12 +2020,14 @@ function inkPierce(card){
   },true);
   card.addEventListener('pointermove',e=>{
     if(e.__syn)return;
+    if(PENLP&&PENLP.id===e.pointerId&&Math.hypot(e.clientX-PENLP.x,e.clientY-PENLP.y)>8)penLongOff();   /* ★ penfinger B — 움직이면 보통 획 */
     const h=__inkHit.get(e.pointerId);if(!h)return;
     e.stopPropagation();
     inkSynth(h.el,'pointermove',e);                     /* 8px 넘게 움직이면 밑이 스스로 시계를 끈다 */
   },true);
   const done=e=>{
     if(e.__syn)return;
+    if(PENLP&&PENLP.id===e.pointerId)penLongOff();     /* ★ penfinger B — 550ms 전에 떼면 보통 획 */
     const h=__inkHit.get(e.pointerId);__inkHit.delete(e.pointerId);
     if(!h)return;
     e.stopPropagation();
@@ -9541,7 +9583,12 @@ if(HASBOOK){
     QZ=z;qFit();
     const b=c.getBoundingClientRect(),k1=b.width/QCW||1;
     w.scrollLeft+=(b.left+u*k1)-cx;w.scrollTop+=(b.top+v*k1)-cy};
-  window.INKG_EA={palmMs:1200,big:40,pinch:{get:()=>QZ,set:(z,x,y)=>qZoomAt(z,x,y)}};
+  window.INKG_EA={palmMs:1200,pinch:{get:()=>QZ,set:(z,x,y)=>qZoomAt(z,x,y)},   /* ★ penfinger A — big(접촉면 크기 손바닥) 걷음 */
+    /* ★ penfinger A' — 손가락 길게 누르기 = 글자 고치기(inkGuard 가 시계를 건다) · at = 손가락 밑 글자 칸(필기 덮개 위면 덮개를 걷고 밑) · go = 그 칸 tfixSheet */
+    longPress:{at:e=>{const c=$('#card');let t=e.target;if(!c||!t||!t.closest||!c.contains(t))return null;
+        if(t.closest('#qink')){const ink=c.querySelector('#qink');return ink?underInk(e.clientX,e.clientY,ink,'[data-tfx]'):null}
+        return t.closest('[data-tfx]')},
+      go:el=>{try{tfixSheet(QUID,el.dataset.tfx,()=>showProblem())}catch(err){console.error(err)}}}};
   {const w=$('#cardwrap');
    if(w){w.style.touchAction='none';w.style.overscrollBehavior='contain';
      w.addEventListener('wheel',e=>{if(!(e.ctrlKey||e.metaKey))return;e.preventDefault();qZoomAt(QZ*Math.exp(-e.deltaY*0.01),e.clientX,e.clientY)},{passive:false})}}
@@ -9561,6 +9608,18 @@ if(HASBOOK){
         const w=Math.min(560,((b.querySelector('.panel')||b).clientWidth||600)-40);
         cells.forEach(c=>{const cv=document.createElement('canvas');box.appendChild(cv);Promise.resolve(cropPaint(cv,c,w)).catch(()=>cv.remove())})}}catch(e){}
     return ret}}
+  /* ★ penfinger A''(2026-09-25) — 카드 글자를 길게 눌러 연 「글자 고치기」 창(손가락·펜) — 그 손을 뗄 때 **창 바탕에 떨어지는 click 한 번**만 먹는다.
+     터치 click 은 뗀 자리 맨 위(= 막 뜬 창 바탕)에 나서 창이 곧바로 닫혔다(선택지 단추 tfixLong 도 같았다 · 바탕부터).
+     창 안 단추·다른 자리 click 은 안 먹는다 · 누른 곳이 카드(#cardwrap) 밖이면 안 건다(목록 줄 J 는 제 것이 있다) · 뗀 뒤 0.7초 */
+  {let down=0,downT=null,eatArm=false,eatUntil=0;
+   document.addEventListener('pointerdown',e=>{down++;downT=e.target},true);
+   const lift=()=>{down=Math.max(0,down-1);if(eatArm&&!down){eatArm=false;eatUntil=performance.now()+700}};
+   document.addEventListener('pointerup',lift,true);document.addEventListener('pointercancel',e=>{if(!e.__syn)lift()},true);
+   addEventListener('blur',()=>{down=0});
+   document.addEventListener('click',e=>{const b=document.getElementById('tfxSheet');
+     if(b&&e.target===b&&(eatArm||performance.now()<eatUntil)){eatArm=false;eatUntil=0;e.stopImmediatePropagation();e.preventDefault()}},true);
+   const _sh2=tfixSheet;tfixSheet=function(){const ret=_sh2.apply(this,arguments);
+     if(down>0&&downT&&downT.closest&&downT.closest('#cardwrap'))eatArm=true;return ret}}
   {const SEL='.item .prev,#jnw .jnrow .q';let lp=null,lpT=-1e9;
    const uidOf=el=>{const it=el.closest('.item');if(it&&it.dataset.uid)return it.dataset.uid;const jr=el.closest('.jnrow'),r=jr&&rec(+jr.dataset.no);return r?r[F.CODE]:null};
    document.addEventListener('pointerdown',e=>{const el=e.target&&e.target.closest&&e.target.closest(SEL);if(!el)return;const uid=uidOf(el);if(!uid)return;
