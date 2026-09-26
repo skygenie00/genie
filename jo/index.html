@@ -2108,9 +2108,10 @@ async function railCounts(){
     //    특허는 제7판 OX 지문 + 리담 전용 지문 — 짝이 붙은 리담 지문은 제7판 쪽에서 세므로 뺀다.
     const sh=SHORT[S.law], j=await get('jimun_'+sh+'.json');
     let n=0;const _ks=new Set();   /* ★ toc_fuse(9/26) — 같은 지문(uid)은 한 번만(객관식 선지 줄 P7-nnnn-k 는 리담 선지와 uid 를 나눠 쓴다) */
-    (j.문제||[]).forEach(q=>(q.지문||[]).forEach(z=>{if(!(sh==='특허'&&z.병합)){n++;if(z.uid)_ks.add(z.uid);}}));
+    /* ★ uid 판(9/27) — 같은 uid 는 한 번 */
+    (j.문제||[]).forEach(q=>(q.지문||[]).forEach(z=>{if(!(sh==='특허'&&z.병합)){if(!(z.uid&&_ks.has(z.uid)))n++;if(z.uid)_ks.add(z.uid);}}));
     if(sh==='특허'){try{const P=await get('jimun_7pan.json');
-      (P.지문||[]).filter(z=>z.ox==='O'||z.ox==='X').forEach(z=>{if(!(z.uid&&_ks.has(z.uid)))n++;});}catch(e){}}
+      (P.지문||[]).filter(z=>z.ox==='O'||z.ox==='X').forEach(z=>{if(!(z.uid&&_ks.has(z.uid))){n++;if(z.uid)_ks.add(z.uid);}});}catch(e){}}
     set('jimun',n.toLocaleString());
   }catch(e){set('jimun','—');}}
   try{const b=await get('2cha_보드.json');let n=0;
@@ -3546,6 +3547,7 @@ async function syncRecords(force){
     let remote = null, m = null;
     if (sha){ const txt = await ghRaw(SYNC_PATH); if (txt){ try { remote = JSON.parse(txt); } catch (e) { console.warn('원격 기록 파싱 실패', e); } } }
     if (remote){ m = recMerge(remote); recTie += m.tie || 0; }
+    uidMigrateSafe('sync');   /* ★ uid 판(9/27) — 받은 옛 uid 칸을 새 uid 로(다음 stampAll 이 옮김·묘비를 찍어 올린다) */
     const syncAt = Date.now();          /* 이 시각까지의 도장은 맞춘 것으로 친다(올리는 동안 찍힌 도장은 다음 판에 센다) */
     stampAll();
     const lacks = !!remote && SYNC_KEYS.some(k => {
@@ -3564,6 +3566,7 @@ async function syncRecords(force){
         let remote2 = null;
         if (txt2){ try { remote2 = JSON.parse(txt2); } catch (e) {} }
         if (remote2){ const m2 = recMerge(remote2); recTie += m2.tie || 0; }
+        uidMigrateSafe('sync');   /* ★ uid 판(9/27) */
         stampAll();
         res = await ghPutJson(SYNC_PATH, JSON.stringify(recPayload(remote2)), sha);
         if (res === 'conflict') throw new Error('두 번 다 충돌');
@@ -3589,7 +3592,7 @@ function recTouch(){ clearTimeout(recTouchT); recTouchT = setTimeout(() => { sta
    ⚠ 셈(근거 N개 · C n)은 1차객 · 보고 있는 법 안(OXPOOL)만 — 상표 JSON 에 T… 열쇠가 섞여 있어 접두 글자로 법을 가르지 않는다. */
 const CL_PATH = 'jopangi/claude.json';
 const CLFIX_KEY = REC_PRE + 'clfix', CL_FIX_MAX = 20000;
-const CL_RX = /\b[TSD]\d{7}(?:P7)?\b|민기출 \d\d-\d\d-\d(?!\d)/g;   /* 지문 열쇠 — T|S|D + 7자리 · 제7판 일부는 T + 7자리 + P7(jimun_*.json 6,369개 실측) · 답 번호 T001 은 3자리라 안 걸린다
+const CL_RX = /\b(?:[TSD]\d{6}[1-7ㄱㄴㄷㄹㅁㅂㅅ가나다라마바사](?:[hr]\d?)?|[TSD]R\d{4}[1-7ㄱㄴㄷㄹㅁㅂㅅ가나다라마바사]|T[HJ]\d{6}[1-7ㄱㄴㄷㄹㅁㅂㅅ가나다라마바사]?|TX\d{4}[1-7ㄱㄴㄷㄹㅁㅂㅅ가나다라마바사]?|[TSD]\d{7}(?:P7)?)(?![0-9A-Za-z])|민기출 \d\d-\d\d-\d(?!\d)/g;   /* ★ uid 판(9/27) — 새 uid 꼴(보기 글자·h/r·TR·TH·TJ·TX)도 · 옛 꼴 그대로 · 뒤 경계는 lookahead(보기 글자 뒤 조사 「의」 허용) */   /* 지문 열쇠 — T|S|D + 7자리 · 제7판 일부는 T + 7자리 + P7(jimun_*.json 6,369개 실측) · 답 번호 T001 은 3자리라 안 걸린다
    ★ ms_claude_editq C-2 — 민소 2차 기출 문제 코드(민기출 YY-RR-N)도 글자 단추·언급(↩) · 답 번호 MS001 은 어느 꼴에도 안 걸린다 */
 const CL_MS_RX = /^민기출 \d\d-\d\d-\d$/;   /* 민소 2차 기출 답의 uid = 문제 코드(설문으로 안 나눔) */
 let CL_DATA = null, CL_STATE = 'wait', CL_BUSY = false, CL_WARNED = false, CL_SIG = '';   /* CL_STATE: wait(받는 중) · ok(받음 · 404 면 빈 것) · fail(못 받음) */
@@ -3614,10 +3617,10 @@ function clFail(why){
 function clSet(j){
   const A = j.answers, by = {}, ment = {};
   Object.keys(A).sort().forEach(m => {       /* 번호 순 */
-    const a = A[m] || {}, u = String(a.uid || '');
+    const a = A[m] || {}, u = uidClKey(String(a.uid || ''));   /* ★ uid 판(9/27) — 죽은 옛 uid 에 붙은 답·언급도 새 uid 카드에 */
     if (u) (by[u] = by[u] || []).push(m);
     const seen = {};
-    (String(a.md || '').match(CL_RX) || []).forEach(x => {
+    (String(a.md || '').match(CL_RX) || []).map(uidClKey).forEach(x => {
       if (x === u || seen[x]) return;
       seen[x] = 1; (ment[x] = ment[x] || []).push(m);
     });
@@ -4430,6 +4433,7 @@ function slText(off){
   const O = oxAll();
   Object.keys(O).forEach(k => {
     const r = O[k];
+    if (typeof uidIsOrphan === 'function' && uidIsOrphan(k)) return;   /* ★ uid 판(9/27) — 고아(죽은 옛 uid) 안 셈 */
     if (!slIn(r.ts, w)) return;
     const m = slMokName(k);
     if (r.p){ bump(m, 'g'); bump(m, r.ok ? 'r' : 'x'); }
@@ -9574,7 +9578,7 @@ function oxState(k){
 }
 function oxPut(k, patch){
   const A = oxAll(), cur = A[k] || {};
-  A[k] = Object.assign({}, cur, patch, { ts: nowIso() });
+  A[k] = Object.assign({}, cur, patch, { ts: nowIso(), uv: 1 });   /* ★ uid 판(9/27) — uv = 새 uid 판 앱이 쓴 값(별칭 옮기기가 옛 앱 값과 가른다) */
   OXREC = A; lsWrite(OX_KEY, A, '1차객 풀이');
 }
 /* ★ v3-C §6-3 (8/26 밤) — 즉시 채점(oxPick) 폐기. 마킹(m)을 모아 한꺼번에 채점한다.
@@ -9600,7 +9604,7 @@ function oxGrade(cells, ctx){
   todo.forEach(c => {
     const cur = A[c.k] || {};
     const ok = (cur.m === oxAns(c.k, c.ans));
-    const rec = Object.assign({}, cur, { p: cur.m, ok: ok, ts: nowIso() });
+    const rec = Object.assign({}, cur, { p: cur.m, ok: ok, ts: nowIso(), uv: 1 });   /* ★ uid 판(9/27) — uv */
     delete rec.m;
     if (S.oxQueue === 'weak'){ rec.sg = (ok && cur.c) ? 'semi' : ''; }
     else if (S.oxQueue === 'semi'){ if (ok){ rec.c = false; rec.sg = ''; } else rec.sg = ''; }
@@ -9834,6 +9838,9 @@ function sidFind(sid){
   for (const id in VJ.P7map){
     if (oxKeyP7(VJ.P7map[id]) === sid) return { kind: 'P', z: VJ.P7map[id] };
   }
+  /* ★ uid 판(9/27) — 옛 uid(죽은 별칭)로 부르면 새 uid 지문(링크·언급·근거 등 부르는 곳 전부) */
+  const _nk = (typeof uidAliasResolve === 'function') ? uidAliasResolve(sid) : null;
+  if (_nk && _nk !== sid) return sidFind(_nk);
   return null;
 }
 /* ★ _task_jo_claude_answers §E (2026-09-22) — 지문 팝업을 민법 「문항 팝업」(openQPopup) 꼴로(폭 520 · 머리 §D).
@@ -11205,7 +11212,8 @@ function rndClose(scope, keys, label){
 function oxKeyDisp(k){
   if (k.indexOf('L:') === 0){ const i = k.indexOf('#'); return i >= 0 ? k.slice(i) : k; }
   if (k.indexOf('P7:') === 0) return k.slice(3);
-  return k.length === 8 ? k.slice(5) : k;   // sid 8자 → 뒤 3자(문번2+지문1 · 규약 v3)
+  /* ★ uid 판(9/27) — 문번 앎 꼴(법+연도2+회차2+문번2+선지·보기 글자[+h·r]) = 뒤(문번2+선지+꼬리) · TR·TH·TJ·TX 는 통째 */
+  return /^[TSD]\d{6}[1-7ㄱㄴㄷㄹㅁㅂㅅ가나다라마바사](?:[hr]\d?)?$/.test(k) ? k.slice(5) : k;
 }
 function rndGo(scope, k){
   const info = (OXPOOL || {})[k];
@@ -12458,12 +12466,12 @@ function qCard(q,mokTitle,seq){
     /* ★ add1 §B-2 — 지문 머리줄(민법 2707~2731 차례) · §B-4 이력 줄은 접힌 채 시작 */
     {const _k=oxKeyLid(q,z);
      mbQHead(row,_k,String(q.연도).slice(2)+' 변리',L=>{
-       if(z.uid&&+String(z.uid).slice(5,7)>=71)L.appendChild(el('span','qb t','임시'));
+       /* ★ uid 판(9/27) — 「임시」 딱지 걷음: 새 uid 규칙에는 임시 번호(711~)가 없다 */
        /* 유형 값 열쇠는 **문항 첫 지문 열쇠 그대로**다(저장 단위 무변 — add1 보고 §다르게).
           조문 조각만 그 지문 것으로 짓는다. */
        const _tk=keysL0[0]||_k;
        mbTypeChip(_tk,tyDraftL(q),(z.jo||[]),L);
-       const _id=el('button','qb id',z.uid?String(z.uid).slice(0,7):('ID '+q.id));
+       const _id=el('button','qb id',z.uid?String(z.uid):('ID '+q.id));   /* ★ uid 판(9/27) — ID 칩 = uid 통째 */
        _id.title='교재 자리 — 정리OMR';
        _id.onclick=ev=>{ev.stopPropagation();mbbPop(_k,ev);};
        L.appendChild(_id);
@@ -12737,7 +12745,7 @@ function p7Card(z,seq){
     const bits=[];
     if(z.쪽)bits.push('p.'+z.쪽);
     if(z.리담)bits.push('리담 '+z.리담.연도+'년 '+z.리담.문항+'번 ('+z.리담.선지+')');
-    bits.push(z.병합?'리담과 흡수됨 — 기록 공유':(z.리담?'리담과 같은 지문':'제7판 단독'));
+    bits.push(z.병합?'리담과 흡수됨 — 기록 공유':(z.리담?'리담과 글이 다름 — 기록 따로':'제7판 단독'));   /* ★ uid 판(9/27) — 리담 참조가 있는데 병합이 아니면 uid 가 갈린 행 */
     if(z.유제)bits.push('유제');
     sub.textContent=bits.join(' · ');
     const pb=el('button','qb v qexp','제7판');
@@ -13064,7 +13072,10 @@ function mbSearchRow(main, nJi, nMun){
   inp.type = 'text'; inp.placeholder = '검색어를 입력하세요';
   inp.value = S.oxQ || '';
   inp.oninput = () => { S.oxQ = inp.value; mbSearchSoon(); };
-  inp.onkeydown = ev => { if (ev.key === 'Enter'){ S.oxQ = inp.value; mbSearchRun(); } };
+  inp.onkeydown = ev => { if (ev.key === 'Enter'){ S.oxQ = inp.value; mbSearchRun();
+    /* ★ uid 판(9/27) — ID(지금·옛 uid) 하나로 맞으면 Enter = 그 지문 팝업(자리 = 기본 · 글쇠 사건엔 좌표가 없다) */
+    const ik = (S.oxQMode === 'g') ? [] : uidSearchKeys(String(S.oxQ || '').trim(), OXPOOL || {});
+    if (ik.length === 1) mbSrOpen(ik[0], false, null); } };
   sr.appendChild(inp);
   const mq = el('button', 'mbsb' + ((S.oxQMode || 'q') === 'q' ? ' on' : ''), '📄 문제');
   mq.onclick = () => { S.oxQMode = 'q'; GG_BANG_ONLY = false; GG_CL_ONLY = false; uiSave(); render(); };   /* ★ _task_jo_claude_answers §G-2 — 「문제」 로 가면 「!」·「C」 필터가 풀린다 */
@@ -13073,7 +13084,7 @@ function mbSearchRow(main, nJi, nMun){
   /* ★ gaek_mb §C-13 — 근거 통이 들어왔다. 2구간에서 꺼 두었던 「🔗 근거」를 켠다. */
   const hasGG = (typeof ggAll === 'function');
   const mg = el('button', 'mbsb' + (S.oxQMode === 'g' ? ' on' : ''),
-                '🔗 근거 (' + (hasGG ? Object.keys(ggAll()).length : 0) + ')');
+                '🔗 근거 (' + (hasGG ? Object.keys(ggAll()).filter(k => !uidIsOrphan(k)).length : 0) + ')');
   mg.title = '근거·댓글 글에서 찾는다 — 1차객 · 보고 있는 법 안에서만';
   mg.onclick = () => { S.oxQMode = 'g'; uiSave(); render(); };
   sr.appendChild(mg);
@@ -13113,13 +13124,15 @@ function mbSearchRun(){
   const ggHit = k => (ggAll()[k] || []).some(g =>
     (ggFlat(g) + ' ' + ((g.cs || []).map(c => c.t || '').join(' '))).includes(q));
   let hit;
+  const idk = gmode ? [] : uidSearchKeys(q, P);   /* ★ uid 판(9/27) — ID(지금·옛 uid) 맞춤을 맨 위에 */
   if (gmode){
     const hg = Object.keys(ggAll()).filter(k => P[k] && ggHit(k));
     hit = hg.concat(Object.keys(CL_BY_UID).filter(k => P[k] && hg.indexOf(k) < 0 && clHitsOf(k, low).length));
-  } else hit = Object.keys(P).filter(k => {
+  } else hit = idk.concat(Object.keys(P).filter(k => {
+      if (idk.indexOf(k) >= 0) return false;
       const c = P[k] || {};
       return String(c.t || '').includes(q) || String(c.name || '').includes(q);
-    });
+    }));
   cnt.textContent = hit.length + '개';
   box.classList.remove('hide');
   if (!hit.length){ box.appendChild(el('div', 'rr', '찾은 것이 없다')); return; }
@@ -13128,6 +13141,7 @@ function mbSearchRun(){
     const r = el('div', 'rr');
     const mm = el('div', 'm', (c.name || '') + (MBK2M[k] ? ' · ' + MBK2M[k].label : ''));
     r.appendChild(mm);
+    if (idk.indexOf(k) >= 0) mm.appendChild(el('span', 'srcb', k === q ? 'ID' : '옛 ID ' + q + ' → ' + k));   /* ★ uid 판 */
     r.appendChild(document.createTextNode(String(c.t || '').slice(0, 120)));
     if (gmode){   /* 걸린 곳 딱지(근거 · Claude) · Claude 로 걸렸으면 걸린 자리 앞뒤 한 줄 */
       const cm = clHitsOf(k, low);
@@ -14164,8 +14178,9 @@ async function viewJimun(){
   /* ★ 버튼 옆 수 — OX 는 「문제(지문)」, 기출은 「문항」이다(사용자 확정 8/26).
      짝이 붙은 리담 지문은 제7판 쪽에서 세므로 특허에서만 뺀다 — 두 번 세지 않기 위해서다. */
   let nJi=0;const _ks=new Set();   /* ★ toc_fuse(9/26) — 같은 지문(uid)은 한 번만 */
-  (JM.문제||[]).forEach(q=>(q.지문||[]).forEach(z=>{if(!(P7&&z.병합)){nJi++;if(z.uid)_ks.add(z.uid);}}));
-  if(P7)(P7.지문||[]).filter(z=>z.ox==='O'||z.ox==='X').forEach(z=>{if(!(z.uid&&_ks.has(z.uid)))nJi++;});
+  /* ★ uid 판(9/27) — 같은 uid 는 리담끼리·제7판끼리도 한 번(같은 글 = uid 하나) */
+  (JM.문제||[]).forEach(q=>(q.지문||[]).forEach(z=>{if(!(P7&&z.병합)){if(!(z.uid&&_ks.has(z.uid)))nJi++;if(z.uid)_ks.add(z.uid);}}));
+  if(P7)(P7.지문||[]).filter(z=>z.ox==='O'||z.ox==='X').forEach(z=>{if(!(z.uid&&_ks.has(z.uid))){nJi++;if(z.uid)_ks.add(z.uid);}});
   const nMun=JM.문항||(JM.문제||[]).length;
   [['ox','OX문제 '+nJi.toLocaleString()],
    ['gichul','기출문제 '+nMun.toLocaleString()]].forEach(([k,t])=>{
@@ -14187,6 +14202,10 @@ async function viewJimun(){
     if (P7) P7.지문.forEach(z => {
       if (z.병합) return;   // 병합 지문은 리담 쪽에서 세어진다 (uid 동일 보장)
       pool.push({ k: oxKeyP7(z), dom: 'qb-' + oxKeyP7(z), kind: 'P', z: z }); });
+    /* ★ uid 판(9/27) — 같은 글 = uid 하나(지시서 A-5)라 한 열쇠가 여러 줄(다른 해 같은 리담 선지 · 리담과 같은 글의 제7판 줄)에 선다.
+       풀은 열쇠 하나에 한 번(먼저 선 것 = 리담 · 이른 해) — 히트맵 칸·큐·셈이 두 번 세지 않게(toc_fuse F10c 히트맵 합 = 풀) */
+    { const _sk = new Set(), _dd = pool.filter(c => { if (_sk.has(c.k)) return false; _sk.add(c.k); return true; });
+      pool.length = 0; _dd.forEach(c => pool.push(c)); }
     /* ★ v3-C — 채점표 칩·채점기가 키로 카드(dom)·정오를 찾는 표(§3)
        ★ v3-E — kind·id·이름·본문을 실어 🔗 연결 찾기·점프·학습로그가 같이 쓴다 */
     OXPOOL = {}; OXDOMPG = {};
@@ -16181,6 +16200,149 @@ async function c2Migrate(){
   return done.gichul2;
 }
 setTimeout(() => { c2Migrate().catch(e => console.warn('[migr]', e)); }, 1200);
+/* ══ uid 판(2026-09-27 · _task_jo_gaek_uid + add1 §D) — 옛 uid 별칭: 옮기기 · 고아 · 찾기 ══
+   ⚙ uid_rule 로 지문 열쇠(uid)가 새 규칙을 탔다(원장 옛uid 열 · jo/data/uid_alias.json · 지문마다 ou).
+   ① 옮기기 — 옛 열쇠에 붙은 기록(⭐ 태그·풀이 · 정답 정정 · 유형 · 근거 · 근거 연결 · 암기카드 · 🔗 연결 · 형광펜 · 회독 목록)을 새 열쇠로.
+      켤 때 한 번 · 동기화 받은 뒤(recMerge 다음 · stampAll 앞)마다 · 멱등(두 번째부터 옮길 것 0).
+      map = 죽은 옛 열쇠(늘 옮긴다) · split = 지금 다른 지문이 새 uid 로 쓰는 옛 열쇠 — **옛 앱이 쓴 값만** 옮긴다.
+        「옛 앱이 쓴」 = ox 기록에 새 앱 표시 uv 가 없다(새 앱 oxPut·oxGrade 가 uv:1 을 붙인다 — 전환 뒤 옛 판 기기가 옛 뜻으로
+        다시 쓴 칸도 옮긴다) · 값이 객체가 아닌 통(근거·암기카드 목록 · 정답 정정)은 동기화 칸 도장이 switchAt 전인 칸.
+        옮겨 넣은 값에는 uv:1 을 붙인다 — map 목표 98 이 split 옛 열쇠라(9/27) 안 붙이면 다음 판에 한 번 더 옮겨진다.
+        그래서 한 판 안에서도 split 을 먼저 · map 을 나중에 옮긴다.
+      새 열쇠에 값이 있으면 태그(tg)·헷갈림(c)은 합집합 · 풀이 기록은 ts 가 늦은 쪽(없으면 도장) · 값의 ts 는 그대로.
+      옛 열쇠는 지운다 — stampAll 이 묘비를 찍어 다른 기기에서도 지워진다. 옛 판 기기가 옛 열쇠를 다시 올리면 다음 동기화 뒤 또 옮긴다.
+      autoImportant·jopangi_auto 는 건드리지 않는다(다시 돌리지 않는다).
+   ② 고아 — 죽은 옛 열쇠(map)는 학습로그·근거 수에 안 센다(⭐·약점 셈은 원래 화면 지문 열쇠만 센다).
+   ③ 찾기 — 🔍 칸에 지금 uid·옛 uid 를 치면 그 지문(별칭표 · 데이터 ou) · sidFind 도 옛 uid 로 부르면 새 지문.
+   ④ Claude 답 — 답의 uid·본문 언급이 죽은 옛 uid(map)면 새 uid 카드에 붙인다(clSet 색인 때 · 별칭표가 답보다 늦게 오면 받은 뒤 다시 색인).
+      split 옛 열쇠는 지금 다른 지문의 uid 라 그대로 둔다(답에는 전환 시각을 가를 도장이 없다). */
+let UIDALIAS = null, UIDMIG_LAST = null;
+async function uidAliasLoad(){
+  if (UIDALIAS) return UIDALIAS;
+  try{ const A = await get('uid_alias.json'); if (A && (A.map || A.split)) UIDALIAS = A; }catch(e){}
+  return UIDALIAS;
+}
+const uidHas = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
+function uidIsOrphan(k){ return !!UIDALIAS && uidHas(UIDALIAS.map, k); }
+function uidAliasResolve(k){ return (UIDALIAS && uidHas(UIDALIAS.map, k)) ? UIDALIAS.map[k] : null; }
+function uidMigrate(why){
+  const A = UIDALIAS; if (!A) return 0;
+  const U = sObj(SU_KEY), sw = Date.parse(A.switchAt || '') || 0;
+  const st = (store, k) => U[ckey(store, k)] || 0;
+  const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  /* 옛 뜻의 값인가(split 을 옮길 것인가) — 새 앱 표시 uv 가 있으면 새 지문 몫 · ox 는 uv 없음 = 옛 앱 · 그 밖 통은 도장이 전환 전 */
+  const oldVal = (store, k, v) => isObj(v) && v.uv ? false : (store === OX_KEY ? true : (!sw || st(store, k) < sw));
+  const mark = v => isObj(v) ? Object.assign({}, v, { uv: 1 }) : v;
+  const tsv = v => Date.parse((v && typeof v === 'object' && !Array.isArray(v) && v.ts) || '') || 0;
+  const later = (a, b, ta, tb) => { const x = tsv(a) || ta, y = tsv(b) || tb; return y > x ? b : a; };
+  const uniq = arr => { const seen = new Set(), out = []; arr.forEach(x => { const s = JSON.stringify(x); if (!seen.has(s)){ seen.add(s); out.push(x); } }); return out; };
+  const cat = (cur, old) => uniq([].concat(Array.isArray(cur) ? cur : [], Array.isArray(old) ? old : []));
+  const MERGE = {};
+  MERGE[OX_KEY] = (cur, old, tc, to) => { const b = Object.assign({}, later(cur, old, tc, to));
+    const tg = Object.assign({}, (old || {}).tg || {}, (cur || {}).tg || {});
+    if (Object.keys(tg).length) b.tg = tg; if ((cur || {}).c || (old || {}).c) b.c = true; return b; };
+  MERGE[FIX_KEY] = (cur, old, tc, to) => (to > tc ? old : cur);
+  MERGE[TY_KEY] = later;
+  MERGE[GG_KEY] = cat; MERGE[GR_KEY] = cat; MERGE[MC_KEY] = cat;
+  MERGE[LK_KEY] = (cur, old, tc, to) => Object.assign({}, later(cur, old, tc, to), { v: uniq([].concat((cur || {}).v || [], (old || {}).v || [])) });
+  const moved = {}; let total = 0;
+  const bump = (name, n) => { if (n){ moved[name] = (moved[name] || 0) + n; total += n; } };
+  [OX_KEY, FIX_KEY, TY_KEY, GG_KEY, GR_KEY, MC_KEY, LK_KEY].forEach(store => {
+    let S0; try{ S0 = JSON.parse(localStorage.getItem(store) || 'null'); }catch(e){ return; }
+    if (!S0 || typeof S0 !== 'object' || Array.isArray(S0)) return;
+    let n = 0;
+    const mv = (k, nk) => {
+      if (!nk || nk === k || S0[k] === undefined) return;
+      S0[nk] = mark((S0[nk] === undefined) ? S0[k] : MERGE[store](S0[nk], S0[k], st(store, nk), st(store, k)));
+      delete S0[k]; n++;
+    };
+    const keys = Object.keys(S0);
+    keys.forEach(k => { if (uidHas(A.split, k) && oldVal(store, k, S0[k])) mv(k, A.split[k]); });   /* split 먼저 */
+    keys.forEach(k => { if (uidHas(A.map, k)) mv(k, A.map[k]); });                       /* map 나중 */
+    if (store === LK_KEY || store === GR_KEY){      /* 값 속 열쇠(🔗 연결 v · 근거 연결 목록) — 죽은 옛 열쇠만(값마다 도장이 없다) */
+      Object.keys(S0).forEach(k => {
+        const r = S0[k], arr = store === LK_KEY ? ((r || {}).v || []) : (Array.isArray(r) ? r : []);
+        if (!arr.some(x => uidIsOrphan(x))) return;
+        const nv = uniq(arr.map(x => uidAliasResolve(x) || x).filter(x => x !== k));
+        S0[k] = store === LK_KEY ? Object.assign({}, r, { v: nv }) : nv; n++;
+      });
+    }
+    if (n){ lsWrite(store, S0, '별칭 옮기기'); bump(store.slice(REC_PRE.length), n); }
+  });
+  (function(){                                       /* 형광펜 — 'card|1차객|<열쇠>' + SEP + … 합성 열쇠 */
+    let M; try{ M = JSON.parse(localStorage.getItem(MK_KEY) || 'null'); }catch(e){ return; }
+    if (!M || typeof M !== 'object' || Array.isArray(M)) return;
+    const PRE = 'card|1차객|'; let n = 0;
+    const plan = [];
+    Object.keys(M).forEach(k => {
+      if (k.indexOf(PRE) !== 0) return;
+      const rest = k.slice(PRE.length), i = rest.indexOf(SEP); if (i < 0) return;
+      const u = rest.slice(0, i);
+      if (uidHas(A.split, u) && oldVal(MK_KEY, k, M[k])) plan.push([0, k, PRE + A.split[u] + rest.slice(i)]);
+      else if (uidHas(A.map, u)) plan.push([1, k, PRE + A.map[u] + rest.slice(i)]);
+    });
+    plan.sort((a, b) => a[0] - b[0]).forEach(([_, k, nk]) => {
+      if (M[k] === undefined) return;
+      M[nk] = mark((M[nk] === undefined) ? M[k] : later(M[nk], M[k], st(MK_KEY, nk), st(MK_KEY, k)));
+      delete M[k]; n++;
+    });
+    if (n){ lsWrite(MK_KEY, M, '별칭 옮기기'); bump('markup', n); }
+  })();
+  (function(){                                       /* 회독 — 마감 기록의 열쇠 목록(그 회독 시각으로 split 을 가른다) */
+    let R; try{ R = JSON.parse(localStorage.getItem(RND_KEY) || 'null'); }catch(e){ return; }
+    if (!R || typeof R !== 'object' || Array.isArray(R)) return;
+    let n = 0;
+    Object.keys(R).forEach(sc => (Array.isArray(R[sc]) ? R[sc] : []).forEach(r => {
+      if (!r || typeof r !== 'object') return;
+      const t = Date.parse(r.ts || '') || 0, old = !!sw && t < sw;
+      ['wrongK', 'confuseK', 'semiK', 'rightK', 'allK'].forEach(f => {
+        if (!Array.isArray(r[f])) return;
+        let ch = false;
+        const nv = r[f].map(x => { const nx = uidHas(A.map, x) ? A.map[x] : ((old && uidHas(A.split, x)) ? A.split[x] : null);
+          if (nx && nx !== x){ ch = true; return nx; } return x; });
+        if (ch){ r[f] = uniq(nv); n++; }
+      });
+    }));
+    if (n){ lsWrite(RND_KEY, R, '별칭 옮기기'); bump('rounds', n); }
+  })();
+  if (total){ try{ recDropCache(); }catch(e){} console.log('[uid 별칭 옮기기]', why, moved); }
+  UIDMIG_LAST = { why: why, at: nowIso(), total: total, moved: moved };
+  return total;
+}
+function uidMigrateSafe(why){ try{ return UIDALIAS ? uidMigrate(why) : 0; }catch(e){ console.warn('[uidmig]', e); return 0; } }
+/* ④ Claude 답 색인 열쇠 — 죽은 옛 uid 는 새 uid(별칭표 전·이 줄 앞에 불리면 그대로) */
+function uidClKey(k){ try{ return uidAliasResolve(k) || k; }catch(e){ return k; } }
+function uidClReindex(){                             /* 답이 별칭표보다 먼저 왔으면 다시 색인(옛 uid 가 든 답이 있을 때만) */
+  if (!UIDALIAS || !CL_DATA || CL_STATE !== 'ok') return false;
+  const A = CL_DATA.answers || {};
+  const hit = Object.keys(A).some(m => { const a = A[m] || {};
+    return uidIsOrphan(String(a.uid || '')) || (String(a.md || '').match(CL_RX) || []).some(x => uidIsOrphan(x)); });
+  if (!hit) return false;
+  CL_SIG = ''; clSet(CL_DATA);                       /* 서명을 비워 clSet 이 카드를 다시 칠하게 */
+  return true;
+}
+async function uidMigrateBoot(){
+  await uidAliasLoad();
+  try{ uidClReindex(); }catch(e){ console.warn('[uid cl]', e); }
+  try{ stampAll(); }catch(e){}      /* 도장 안 받은 이 기기 수정(전환 뒤 새 지문에 쓴 것)이 「전환 전」으로 보이지 않게 먼저 찍는다 */
+  const n = uidMigrateSafe('boot');
+  if (n){ toast('새 uid 로 기록 ' + n + '칸을 옮겼다(⭐·풀이 등 · 옛 열쇠는 지움)'); try{ render(); }catch(e){} }
+  return n;
+}
+/* 🔍 ID 찾기 — 지금 uid 그대로 · 별칭표(map·split) · 데이터 ou(지문마다 옛 uid). 보고 있는 법 안(P = OXPOOL)만 */
+function uidSearchKeys(q, P){
+  const s = String(q || '').trim();
+  if (!s || /\s/.test(s) || s.length < 5 || s.length > 16) return [];
+  const out = [], add = k => { if (k && P[k] && out.indexOf(k) < 0) out.push(k); };
+  add(s);
+  if (UIDALIAS){ add((UIDALIAS.map || {})[s]); add((UIDALIAS.split || {})[s]); }
+  if (VJ){
+    (VJ.qs || []).forEach(qq => (qq.지문 || []).forEach(z => { if ((z.ou || []).indexOf(s) >= 0) add(oxKeyLid(qq, z)); }));
+    for (const id in (VJ.P7map || {})){ const z = VJ.P7map[id]; if ((z.ou || []).indexOf(s) >= 0) add(oxKeyP7(z)); }
+  }
+  return out;
+}
+setTimeout(() => { uidMigrateBoot().catch(e => console.warn('[uidmig]', e)); }, 900);
 </script>
 </body>
 </html>
