@@ -131,12 +131,15 @@
 .exv-paper .question-box{border:0!important;box-shadow:none!important;padding:4px 2px!important;margin:0!important;background:transparent!important}
 .exv-hide{display:none!important}
 .exv-bogi{border:1.5px solid #9ca3af;border-radius:4px;padding:8px 10px;margin:4px 0 8px;background:#fff}
-.exv-sel{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px 12px;font-size:13.5px;color:#1f2937;margin:2px 0 8px;padding-left:4px}
+.exv-sel{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13.5px;color:#1f2937;margin:2px 0 8px;padding-left:4px}   /* ★ add1 §E(9/27) — 5칸 격자였다: 한 줄에 다 안 들어가면 선지를 덩이째 다음 줄로 */
+.exv-sel>.exv-opt{flex:1 1 0;min-width:max-content}   /* 넓으면 다섯 칸 같은 폭(= 옛 1fr) · 좁으면 글 폭 밑으로 안 줄고 줄을 바꾼다 */
+.exv-sel>.exv-wait{flex-basis:100%}
 .exv-wait{grid-column:1/-1;color:#9ca3af;font-size:12px;font-style:italic}
 .exv-miss{color:#9ca3af;font-size:12.5px;font-style:italic;padding:4px 2px}
 .exv-ans{display:flex;justify-content:flex-end;margin-top:4px}
 .exv-peek{font-size:11px;font-weight:700;color:#4338ca;background:#eef2ff;border:1px solid #c7d2fe;border-radius:4px;padding:2px 8px;cursor:pointer}
-.exv-opt{display:flex;align-items:center;gap:3px;background:transparent;border:0;padding:2px 0;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.exv-opt{display:flex;align-items:center;gap:3px;background:transparent;border:0;padding:2px 0;font:inherit;color:inherit;cursor:pointer;text-align:left;white-space:nowrap}   /* ★ add1 §E — 「ㄱ, ㄴ」 한 덩이 */
+.exv-pre{font-size:11px;color:#9ca3af;margin-top:6px}   /* ★ add1 §A — 「채점 전 — 지문 O·X 는 채점 뒤」 */
 .exv-num{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:999px;border:1.5px solid transparent;background:transparent;color:#1d4ed8;font-weight:800;cursor:pointer;padding:0 2px;font-size:13px;line-height:1}
 .exv-num:hover,.exv-opt:hover .exv-num{border-color:#93c5fd}
 .exv-num.sel{background:#1d4ed8;color:#fff!important;border-color:#1d4ed8}
@@ -1793,7 +1796,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 for (const c in cur) {
                     if (JSON.stringify(cur[c]) !== JSON.stringify(old[c])) {
                         /* A-3 회독만 예외 — 진짜 시각(ox_q_last)이 이미 있다 */
-                        u[ckey(k, c)] = (k === 'ox_q_history' && qlast[c]) ? qlast[c] : now;
+                        /* ★ add1 §C(9/27) — 도장은 뒤로 가지 않는다: 회독의 진짜 시각(ox_q_last)이 지금 도장보다 새것일 때만 그 시각 · 아니면 now
+                           (× 로 지운 뒤 남은 회독 값으로 되세운 칸이 옛 시각 도장을 받아 원격과 동률 → recMerge 동률 = 원격 → 옛 값이 되돌아왔다) */
+                        const _ck = ckey(k, c);
+                        u[_ck] = (k === 'ox_q_history' && qlast[c] && qlast[c] > (u[_ck] || 0)) ? qlast[c] : now;
                         delete gone[ckey(k, c)]; n++;
                     }
                 }
@@ -3123,7 +3129,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         ${EXVP ? `<div class="${exvPostCls(item).trim()}">${ggLineHTML(item.id)}</div>` : ggLineHTML(item.id)}
 
                         <!-- ★ 09-15 (_task_ox_card_simple §A) 아랫줄 하나 — 정답·해설 ▸ · O · X · (채점 뒤) 맞음/틀림 · 오른쪽 끝 연결(논리 단추는 _task_ox_logic_merge 에서 걷음). 라디오 name·value 는 옛 그대로(sr-only) -->
-                        ${item.pending ? '' : `<div class="flex flex-wrap items-center gap-1.5 mt-1.5${EXVP ? exvPostCls(item) : ''}">
+                        ${item.pending ? '' : `${EXVP ? exvPreHTML(item) : ''}<div class="flex flex-wrap items-center gap-1.5 mt-1.5${EXVP ? exvOxCls(item) : ''}">
                             <button id="peek-btn-${item.id}" onclick="togglePeekExp('${item.id}')" class="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded px-2 py-0.5">정답·해설 ▸</button>
                             <label id="ox-O-${item.id}" class="${OX_BTN_BASE} bg-white text-blue-700 border-gray-300" style="${OX_BTN_STY}"><input type="radio" name="answer_${item.id}" value="O" class="sr-only" style="${SR_ONLY_STY}">O</label>
                             <label id="ox-X-${item.id}" class="${OX_BTN_BASE} bg-white text-red-600 border-gray-300" style="${OX_BTN_STY}"><input type="radio" name="answer_${item.id}" value="X" class="sr-only" style="${SR_ONLY_STY}">X</label>
@@ -11503,6 +11509,7 @@ async function gkeyBoot() {
     if (!GKEY) gkeyRefresh(null, true);
 }
 function exvAfterGkey() {
+    setTimeout(() => { try { exvRoundsFix(); } catch (e) { } }, 1500);   /* ★ add1 §B-4 — 옛 회독 바로잡기(한 번) */
     try {
         const home = document.getElementById('home-screen');
         if (home && !home.classList.contains('hide')) { renderDashboard(); return; }
@@ -11602,6 +11609,9 @@ function exvPostCls(item) {
     const y = exvYear(), key = exvKey(item.examNo, y);
     return ' exv-post' + (exvRevealed(key, [item]) || exvRevealed(key, exvItemsOf(y, item.examNo)) ? '' : ' exv-hide');
 }
+/* ★ add1 §A(9/27) — 지문 O·X 줄은 문항 채점 뒤에만(누를 칸이 안 보이니 기록 길이 없다) · 채점 전 ▸ 를 편 문항엔 「채점 전」 한 줄 */
+function exvOxCls(item) { const key = exvKey(item.examNo, exvYear()); return ' exv-post-ox' + (EXV_RES[key] !== undefined ? '' : ' exv-hide'); }
+function exvPreHTML(item) { const key = exvKey(item.examNo, exvYear()); return `<div class="exv-pre${EXV_OPEN[key] && EXV_RES[key] === undefined ? '' : ' exv-hide'}">채점 전 — 지문 O·X 는 채점 뒤</div>`; }
 /* 카드 머리 번호 — 일반 = 고르는 단추(원문자) · 조합형 = 지문 글자(ㄱ.) */
 function exvLabelHTML(item) {
     const y = exvYear(), key = exvKey(item.examNo, y), raw = exvRaw(item, y);
@@ -11680,6 +11690,9 @@ function exvPaint() {
         const items = [...q.querySelectorAll('.question-box')].map(b => ({ id: b.id.replace('q-box-', '') }));
         const open = exvRevealed(key, items);
         q.querySelectorAll('.exv-post').forEach(e => e.classList.toggle('exv-hide', !open));
+        const graded = EXV_RES[key] !== undefined;   /* ★ add1 §A — 지문 O·X 줄은 채점 뒤에만 · ▸ 만 편 문항은 「채점 전」 한 줄 */
+        q.querySelectorAll('.exv-post-ox').forEach(e => e.classList.toggle('exv-hide', !graded));
+        q.querySelectorAll('.exv-pre').forEach(e => e.classList.toggle('exv-hide', graded || !EXV_OPEN[key]));
         if (picks[key]) q.classList.remove('exv-need');
     });
     const c = document.getElementById('mark-count'), t = document.getElementById('mark-total');
@@ -11711,11 +11724,14 @@ function exvPeek(key) {
 }
 function exvPageKeys() { return [...document.querySelectorAll('#quiz-container .exv-q')].map(q => q.dataset.exq); }
 /* 쪽 채점(OMR 「채점 ✓」·gradeCurrentPage) — 이 쪽 문항을 기출키로 · 안 고른 문항이 있으면 채점 안 함 */
-function exvGradePage() {
+async function exvGradePage() {
     const y = exvYear(), picks = exvPicks(), keys = exvPageKeys();
     const miss = keys.filter(k => !picks[k] && EXV_RES[k] === undefined);
     document.querySelectorAll('#quiz-container .exv-q').forEach(q => q.classList.toggle('exv-need', miss.includes(q.dataset.exq)));
     if (miss.length) { exvToast('답을 안 고른 문제가 있습니다 — ' + miss.map(k => k.split(':')[1] + '번').join(', ')); return; }
+    /* ★ add1 §B-2 — 그 쪽 조합 선지를 먼저 읽는다 · 「읽는 중」이 남으면 채점하지 않는다(한 번 더 누르면 된다) */
+    if ((await exvComboWait(y, keys.map(k => +k.split(':')[1]))).length) { exvToast('조합 선지 읽는 중 — 잠시 뒤 다시'); return; }
+    if (y !== exvYear()) return;
     keys.forEach(k => {
         if (EXV_RES[k] !== undefined) return;
         const cor = exvCorrect(y, +k.split(':')[1]);
@@ -11725,11 +11741,15 @@ function exvGradePage() {
     exvPaint();
 }
 /* 전체 채점 — 이 해 문항 전부를 고른 때만 · 회독 하나(ox_exam_rounds) · 시계와 그 해 고른 답은 비운다 */
-function exvGradeAll() {
+async function exvGradeAll() {
     const y = exvYear(), picks = exvPicks();
     const nos = [...new Set(currentFilteredData.map(x => x.examNo))].sort((a, b) => a - b);
     const miss = nos.filter(n => !picks[exvKey(n, y)]);
     if (miss.length) { exvToast('답을 안 고른 문제 ' + miss.length + '개 — ' + miss.slice(0, 10).join(', ') + (miss.length > 10 ? ' …' : '') + '번'); return; }
+    /* ★ add1 §B-1 — 그 해 문번 전부의 조합 선지를 먼저 읽는다(안 연 쪽도 · 새로고침 뒤 「이어서」로 마지막 쪽만 연 때도) ·
+       「읽는 중」이 남으면 저장하지 않고 토스트(틀린 점수를 남기는 것보다 한 번 더 누르게) · 「못 읽음」은 본판대로 null */
+    if ((await exvComboWait(y, nos)).length) { exvToast('조합 선지 읽는 중 — 잠시 뒤 다시'); return; }
+    if (y !== exvYear() || EXV_DONE[y]) return;
     let ok = 0;
     const pk = {};
     nos.forEach(n => {
@@ -11780,8 +11800,8 @@ function exvRecordOne(id, v) {
     const item = quizData.find(x => String(x.id) === String(id));
     if (!item || !item.examNo) return false;
     const y = exvYear(), key = exvKey(item.examNo, y);
-    if (!exvRevealed(key, [item]) && EXV_RES[key] === undefined && !EXV_OPEN[key]) return false;
-    if (Object.prototype.hasOwnProperty.call(currentSessionMarks, String(id))) return true;
+    if (Object.prototype.hasOwnProperty.call(currentSessionMarks, String(id))) return true;   /* 이미 기록 — 두 번 안 씀 */
+    if (EXV_RES[key] === undefined) return false;   /* ★ add1 §A(9/27) — 문항 채점 뒤에만 연다 · 「정답·해설 ▸」 펼침·이 세션 기록으로는 안 연다(사용자 9/26 22:45) */
     const isCorrect = (v === item.a);
     const qHistory = JSON.parse(localStorage.getItem('ox_q_history') || '{}');
     qHistory[id] = isCorrect;
@@ -11821,6 +11841,9 @@ function exvOmrOpen() {
         + '<button onclick="omrGrade()" class="text-[11.5px] font-extrabold text-blue-500 hover:text-blue-700 bg-transparent border-0 rounded-full px-2 py-1" style="font-size:11.5px">채점 ✓</button></div>',
         250, { resize: true, sizeKey: 'omr' });
     if (w) w.dataset.exvYear = y;
+    /* ★ add1 §D(9/27) — 시계를 제목 글 밖으로: [제목 글(말줄임)] [시계(flex:none)] [닫기] · 멈춤 상태에서도 ▶·시간·↺ 가 안 잘린다 */
+    if (w) { const tm = w.querySelector('#exv-timer'), hd = w.querySelector('.oxwin-head'), cb = hd && hd.querySelector(':scope > button');
+        if (tm && hd && tm.parentNode !== hd) { tm.style.flex = 'none'; tm.style.marginLeft = '0'; hd.insertBefore(tm, cb || null); } }
     const rows = document.getElementById('exv-omr-rows');
     if (!rows) return;
     rows.innerHTML = nos.map(no => '<div class="exv-omr" data-no="' + no + '"><span class="no">' + no + '</span>'
@@ -11893,6 +11916,59 @@ function exvTimerPaint() {
     if (ov) { const o = over > 0 ? ' · 초과 +' + exvFmt(over) : ''; if (ov.dataset.s !== o) { ov.dataset.s = o; ov.innerHTML = o; } }
 }
 setInterval(() => { if (document.getElementById('exv-timer') && (exvTimerGet().since || EXV_RESET_ARM)) exvTimerPaint(); }, 1000);   /* 흐를 때와 「한 번 더」가 풀릴 때만 */
+
+/* ★ add1(9/27) §B — 조합 선지 읽기를 시간 한도 안에서 기다린다 · 남은 「읽는 중」 문번을 돌려준다(없으면 []) */
+function exvNosOf(y) {
+    const g = GKEY && GKEY.keys && GKEY.keys[String(y)];
+    if (g) return Object.keys(g).map(Number).sort((a, b) => a - b);
+    const s = new Set();
+    (typeof quizData !== 'undefined' ? quizData : []).forEach(q => (q.examMeta || []).forEach(m => { if (String(m.year) === String(y) && m.no) s.add(+m.no); }));
+    return [...s].sort((a, b) => a - b);
+}
+async function exvComboWait(y, nos, ms) {
+    let to = null;
+    try { await Promise.race([exvComboLoad(y, nos), new Promise(r => { to = setTimeout(r, ms || 2000); })]); } catch (e) { }
+    if (to) clearTimeout(to);
+    return nos.filter(n => exvIsCombo(y, n) && exvCorrect(y, n).why === '읽는 중');
+}
+/* §B-3 — 기출 해 정리 창 「문제 N」 칸: 그 해 조합 선지를 다 읽은 뒤 칸만 다시 그린다(창 · 스크롤 무변) */
+const _jxLoad = {};
+function jnExamCellsLoad(y) {
+    if (_jxLoad[y]) return;
+    _jxLoad[y] = 1;
+    setTimeout(async () => {
+        try { await exvComboLoad(y, exvNosOf(y)); } catch (e) { }
+        _jxLoad[y] = 0;
+        document.querySelectorAll('.jx-no[data-jxy="' + y + '"]').forEach(r => { const c = r.querySelector('.jx-cells'); if (c) c.innerHTML = jnExamCells(y, +r.dataset.jxno); });
+    }, 0);
+}
+/* §B-4 — 이미 저장된 회독 바로잡기(멱등) — 그 해 조합 선지를 다 읽은 뒤 picks 로 ok 를 다시 센다(정답을 정할 수 있는 문번만) ·
+   바뀐 회독만 ok 와 fixedAt · 한 번 고친 회독은 다시 안 센다 · 앱을 켤 때(기출키가 선 뒤) 한 번 */
+let _exvFixRun = false;
+async function exvRoundsFix() {
+    if (_exvFixRun || !GKEY || !GKEY.keys) return window.__exvFix || null;
+    _exvFixRun = true;
+    const out = { years: 0, fixed: 0, rows: [] };
+    try {
+        const R0 = exvRounds();
+        for (const y of Object.keys(R0)) {
+            if (!(R0[y] || []).some(r => r && r.picks && !r.fixedAt)) continue;
+            try { await exvComboLoad(y, exvNosOf(y)); } catch (e) { continue; }
+            out.years++;
+            const R = exvRounds();   /* 읽는 사이에 바뀌었을 수 있다 — 다시 읽는다 */
+            let n = 0;
+            (R[y] || []).forEach((r, i) => {
+                if (!r || !r.picks || r.fixedAt) return;
+                let ok = 0;
+                Object.keys(r.picks).forEach(no => { const p = +r.picks[no], cor = exvCorrect(y, +no); if (p && cor.ans.length && cor.ans.includes(p)) ok++; });
+                if (ok !== r.ok) { out.rows.push([y, i + 1, r.ok, ok]); r.ok = ok; r.fixedAt = new Date().toISOString(); n++; }
+            });
+            if (n) { out.fixed += n; try { localStorage.setItem('ox_exam_rounds', JSON.stringify(R)); } catch (e) { } }
+        }
+        if (out.fixed) { try { stampAll(); syncRecords(); } catch (e) { } }
+    } finally { window.__exvFix = out; }
+    return out;
+}
 
 /* ---------- 토스트 — 앱에 알림 거품이 없어 기출뷰 몫만 ---------- */
 let _exvToastT = null;
@@ -12057,13 +12133,13 @@ function jnExamYear(subject, label) { return subject === '변리사 기출' ? ((
 /* 문항 채점 칸 — 시험지 회독(ox_exam_rounds)마다 한 칸 · 누르면 옆에 출처(지우기 없음) */
 function jnExamCells(y, no) {
     const R = exvRounds()[y] || [];
-    const cor = exvCorrect(y, no);
+    const cor = exvCorrect(y, no), wait = cor.why === '읽는 중';   /* ★ add1 §B-3 — 조합 선지를 읽는 동안 「…」 · 다 읽으면 칸만 다시(jnExamCellsLoad) */
     const md = d => { const t = recStripDay(d); return t ? (t.getMonth() + 1) + '/' + t.getDate() : String(d || ''); };
     return R.map((r, i) => {
         const p = r.picks ? +r.picks[no] : 0;
         const ok = p && cor.ans.length ? cor.ans.includes(p) : null;
         const tip = md(r.date) + ' · ' + (i + 1) + '회독째 · ' + (p ? '고른 ' + EXV_CIR[p] : '안 고름') + (cor.ans.length ? ' · 정답 ' + cor.ans.map(n => EXV_CIR[n]).join('·') : '');
-        return `<button type="button" class="jx-cell ${!p ? 'na' : ok ? 'o' : 'x'}" data-tip="${escHtml(tip)}" onclick="event.stopPropagation();jxCellTap(this)">${!p ? '·' : ok ? 'O' : 'X'}</button>`;
+        return `<button type="button" class="jx-cell ${!p || wait ? 'na' : ok ? 'o' : 'x'}" data-tip="${escHtml(tip + (wait ? ' · 정답 …(조합 선지 읽는 중)' : ''))}" onclick="event.stopPropagation();jxCellTap(this)">${!p ? '·' : wait ? '…' : ok ? 'O' : 'X'}</button>`;
     }).join('');
 }
 /* 기출 해의 정리 창 몸통 — 문번마다 「문제 N」 구분 줄(+ 문항 채점 칸) · 그 안 행은 선지 차례(ㄱ·ㄴ·ㄷ / ①~⑤) · 시험지 꼴은 안 넣는다(§F-2) */
@@ -12080,9 +12156,10 @@ function jnExamBodyHTML(y, l, ids) {
     const nos = [...by.keys()].sort((a, b) => a - b);
     let html = `<div data-jnh="1" class="px-3.5 py-1.5 bg-slate-50 border-b border-gray-100 text-[11px] font-extrabold text-indigo-800">${escHtml(jnNameOf(l))} · ${exvYearQCount(y)}문항 · ${ids.length}지문</div>`;
     nos.forEach(no => {
-        html += `<div class="jx-no" data-jxno="${no}"><span>문제 ${no}</span><span class="jx-cells">${jnExamCells(y, no)}</span><span class="jx-info hide"></span></div>`;
+        html += `<div class="jx-no" data-jxno="${no}" data-jxy="${y}"><span>문제 ${no}</span><span class="jx-cells">${jnExamCells(y, no)}</span><span class="jx-info hide"></span></div>`;
         by.get(no).sort((a, b) => a.opt - b.opt).forEach(r => { html += jnRowHTML(r.q); });
     });
+    jnExamCellsLoad(y);   /* ★ add1 §B-3 */
     return html;
 }
 function jxCellTap(b) {
