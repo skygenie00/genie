@@ -1580,6 +1580,36 @@ mark.mkc.u{background:transparent;border-bottom:2px solid var(--exc)}
 .mbsbar .mbback{flex-shrink:0}
 /* 제7판 차례에만 있는 마디 — 옛 `qlRow` 의 `#d4b04a` 그대로(§D-3) */
 .p7only{color:#d4b04a}
+/* ★ toc_fuse(9/26) D-1 — 목차 조문 칩(앱 joChip · 누르면 popJo) · 서랍 9.5px/500 · 첫 화면 11px */
+.jochips{display:inline-flex;gap:3px;align-items:baseline;flex:none;white-space:nowrap;color:#8b8b95}
+.jochips .c2jb{font-size:11px;font-weight:600}
+#jtlist .jochips{gap:2px}
+#jtlist .jochips .c2jb{font-size:9.5px;font-weight:500}
+#jtlist .jtit .l1:has(.jochips) .tx{flex:0 1 auto}
+#jtlist .jtit .l1:has(.jochips) .n{margin-left:auto}
+/* ★ toc_fuse(9/26) D-5 — 서랍 머리 한 줄: ▾(접기만) + 이름(누르면 바로 밑 문항) */
+.jtar{display:inline-block;width:14px;flex:none;cursor:pointer;color:#8a8479}
+.jtch .jtnm{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.jtch .now{font-size:9px;font-weight:800;color:#fff;background:var(--exc);border-radius:3px;padding:0 3px;flex:none}
+/* ★ toc_fuse(9/26) D-5 — 첫 화면 장 머리에 제 문항이 있으면 머리 전체가 누름 자리 */
+.mbch>.hh.mbhgo{cursor:pointer}
+.mbch>.hh.mbhgo:hover .nm{text-decoration:underline;text-underline-offset:2px}
+/* ★ toc_fuse(9/26) D-2 — 책 소제목 ▸(첫 화면 줄 번호 앞 · 칩·단추 꼴 아님) · 목록은 줄 바로 아래 */
+.mbsbt{display:inline-block;width:14px;flex:none;text-align:center;font-size:11px;font-weight:400;
+  color:#8a8479;cursor:pointer;line-height:16px;user-select:none;-webkit-user-select:none}
+.mbsubs{margin:0 0 6px 34px;padding:6px 10px;border-left:2px solid #e2dfd7;display:flex;flex-direction:column;gap:2px}
+.mbsubs[hidden]{display:none}
+.mbsi{display:flex;gap:10px;font-size:12px;color:#4a4740;line-height:18px}
+.mbsi b{font-weight:600;color:#1e6fd9;font-size:11.5px;white-space:nowrap}
+.mbsi.z,.mbsi.z b{color:#a39e94}
+.mbsi u{text-decoration:none;color:#6e6a62}
+/* ★ toc_fuse(9/26) D-4 — 자식 없는 편 = 편 머리 자리에 한 줄(17px 굵게 · 편 머리 바탕 · 12px 16px) */
+.mbur.mbsolo{padding:12px 16px;background:var(--panel);border-radius:0}
+.mbur.mbsolo>.l .nm{font-size:17px;font-weight:700;line-height:24px}
+/* ★ toc_fuse(9/26) — 객관식 선지 줄(P7-nnnn-k) 종합사례 상자(민법 case-box 꼴) */
+.p7case{background:#eef2ff;border:1px solid #c7d2fe;border-radius:14px;padding:12px 14px 4px;margin:0 0 12px}
+.p7cash{font-weight:900;color:#4338ca;font-size:14px;margin-bottom:8px}
+.p7cast{white-space:pre-wrap;color:#1f2937;line-height:1.7;font-size:14px;margin-bottom:10px}
 
 /* ══ §B-2 지문 머리줄 — 민법 2707~2731 ══
    ⚠ `justify-between` 을 쓰지 않는다(민법 2707 주석 — 폭이 모자라면 왼쪽이 짜부라진다).
@@ -2077,10 +2107,10 @@ async function railCounts(){
     // ★ 「문제」 = 정답을 넣을 수 있는 지문 하나(사용자 확정 8/26). 문항 묶음이 아니다.
     //    특허는 제7판 OX 지문 + 리담 전용 지문 — 짝이 붙은 리담 지문은 제7판 쪽에서 세므로 뺀다.
     const sh=SHORT[S.law], j=await get('jimun_'+sh+'.json');
-    let n=0;
-    (j.문제||[]).forEach(q=>(q.지문||[]).forEach(z=>{if(!(sh==='특허'&&z.병합))n++;}));
+    let n=0;const _ks=new Set();   /* ★ toc_fuse(9/26) — 같은 지문(uid)은 한 번만(객관식 선지 줄 P7-nnnn-k 는 리담 선지와 uid 를 나눠 쓴다) */
+    (j.문제||[]).forEach(q=>(q.지문||[]).forEach(z=>{if(!(sh==='특허'&&z.병합)){n++;if(z.uid)_ks.add(z.uid);}}));
     if(sh==='특허'){try{const P=await get('jimun_7pan.json');
-      n+=(P.지문||[]).filter(z=>z.ox==='O'||z.ox==='X').length;}catch(e){}}
+      (P.지문||[]).filter(z=>z.ox==='O'||z.ox==='X').forEach(z=>{if(!(z.uid&&_ks.has(z.uid)))n++;});}catch(e){}}
     set('jimun',n.toLocaleString());
   }catch(e){set('jimun','—');}}
   try{const b=await get('2cha_보드.json');let n=0;
@@ -11221,9 +11251,32 @@ function mokCards(i){
   const out = [];
   lids.map(id => VJ.byId[id]).filter(Boolean)
     .forEach(q => out.push({ kind: 'L', q: q, dom: 'qb-' + q.id }));
-  jos.map(id => VJ.P7map[id]).filter(z => z && !(z.병합 && _seen.has(z.uid)))
-    .forEach(z => out.push({ kind: 'P', z: z, dom: 'qb-' + oxKeyP7(z) }));
+  const _p7 = jos.map(id => VJ.P7map[id]).filter(z => z && !(z.병합 && _seen.has(z.uid)));
+  /* ★ toc_fuse(9/26) C — 마디 안 제7판 줄 = 책 차례(`순` · 없으면 id) · 모아보기(출처 「책」)는 책 모아보기 차례 그대로 */
+  if (n.출처 !== '책') _p7.sort((a, b) => p7Cmp(a, b));
+  _p7.forEach(z => out.push({ kind: 'P', z: z, dom: 'qb-' + oxKeyP7(z) }));
   return out;
+}
+/* ★ toc_fuse(9/26) — 제7판 줄 차례: `순`(책 차례 · 원장이 매김) · 없으면 id 순 */
+function p7Cmp(za, zb, a, b){
+  const x = za && za.순, y = zb && zb.순;
+  if (x != null && y != null && x !== y) return x - y;
+  a = String(a != null ? a : (za || {}).id); b = String(b != null ? b : (zb || {}).id);
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+/* ★ toc_fuse(9/26) — 카드 번호(보이는 수). 객관식 선지 줄(P7-nnnn-k)은 같은 문항이면 한 번호(「N번 - (k)」) */
+function mokNos(cards){
+  const out = []; let no = 0, prev = null;
+  cards.forEach(c => { const q = (c.kind === 'P' && c.z && c.z.문항) ? c.z.문항 : null;
+    if (!(q && q === prev)) no++; prev = q; out.push(no); });
+  return out;
+}
+/* ★ toc_fuse(9/26) — 종합사례 상자(민법 case-box 꼴 · 「[종합사례 원문] - N번」 + 사례·보기 글) */
+function p7CaseBox(z, no){
+  const b = el('div', 'p7case');
+  b.appendChild(el('div', 'p7cash', '[종합사례 원문] - ' + no + '번'));
+  b.appendChild(el('div', 'p7cast', String(z.사례 || '')));
+  return b;
 }
 function unCards(){
   if (!VJ) return [];
@@ -11243,13 +11296,13 @@ function scopeCards(scope){
 }
 // 카드 목록 → 지문(=문제) 목록. s = 카드 순번(1~) · zn = 지문 번호(제7판 단독은 없음)
 function mokCells(cards){
-  const cells = [];
+  const cells = [], nos = mokNos(cards);   /* ★ toc_fuse(9/26) — 이름표 = 보이는 카드 번호(선지 줄은 「N(k)」) · s 는 카드 차례 그대로 */
   cards.forEach((c, ci) => {
-    const s = ci + 1;
+    const s = ci + 1, no = nos[ci];
     if (c.kind === 'L')(c.q.지문 || []).forEach(z => cells.push({
-      k: oxKeyLid(c.q, z), ans: z.ox || '', dom: c.dom, s: s, zn: z.n, label: s + '(' + z.n + ')' }));
+      k: oxKeyLid(c.q, z), ans: z.ox || '', dom: c.dom, s: s, zn: z.n, label: no + '(' + z.n + ')' }));
     else cells.push({ k: oxKeyP7(c.z), ans: (c.z.ox || ((c.z.리담 || {}).ox || '')) || '',
-      dom: c.dom, s: s, zn: null, label: String(s) });
+      dom: c.dom, s: s, zn: null, label: c.z.문항 ? no + '(' + c.z.선지 + ')' : String(no) });
   });
   return cells;
 }
@@ -11951,16 +12004,19 @@ function mcChapOpen(label, keys, ev){
 /* ══════════ 가운데 마디 열 (민법OX 이식 · 2026-08-26) ══════════
    한 행 = 마디 하나. 총문제 · 🃏 암기노트 · 회독 진행중 · 회독수를 그 자리에서 보인다.
    ★ 회독 scope 는 기존과 같은 `mok|<과목>|__mg<i>` 다 — 이미 쌓인 회독 기록이 그대로 붙는다. */
-function mgRoll(M,i){
+function mgRoll(M,i,P7map){
   /* ★ 8/26 사용자 확정 — **자기 마디에 직접 붙은 것만** 센다.
      전엔 하위 마디를 전부 합쳐서 「대목차 39 = 소목차 39」 처럼 같은 수가 두 번 나왔고
      같은 지문이 부모 화면과 자식 화면에 겹쳐 보였다.
      차례는 ID 순으로 고정한다 — 제7판 ID 는 교재 차례대로 매겨져 있다. */
   const n=M[i];
-  return [Array.from(new Set(n.지문)).sort(),Array.from(new Set(n.리담))];
+  /* ★ toc_fuse(9/26) C — 차례 = 책 차례(제7판 `순` 오름차순 · 없으면 id 순). 모아보기(출처 「책」)는 책 모아보기 차례 그대로 */
+  const js=Array.from(new Set(n.지문));
+  if(n.출처!=='책')js.sort((a,b)=>p7Cmp((P7map||{})[a],(P7map||{})[b],a,b));
+  return [js,Array.from(new Set(n.리담))];
 }
 function mgKeys(M,i,byId,P7map){
-  const r=mgRoll(M,i),keys=[];
+  const r=mgRoll(M,i,P7map),keys=[];
   r[1].forEach(id=>{const q=byId[id];if(q)(q.지문||[]).forEach(z=>keys.push(oxKeyLid(q,z)));});
   r[0].forEach(id=>{const z=P7map[id];if(z)keys.push(oxKeyP7(z));});
   return keys;
@@ -12626,7 +12682,7 @@ function p7Card(z,seq){
   card.id = 'qb-' + oxKeyP7(z);
   /* ★ add1 §B-2 — 제7판 단독 카드는 카드 하나가 곧 지문 하나라 이 머리줄이 지문 머리줄이다 */
   const h=el('div','qhd mbqhd');
-  if(seq)h.appendChild(el('b','oxseq',seq+'번'));   // ★ v3-D §1 — 순번(지문 번호 없음)
+  if(seq)h.appendChild(el('b','oxseq',seq+'번'+(z.문항?' - ('+z.선지+')':'')));   // ★ v3-D §1 — 순번(지문 번호 없음) · ★ toc_fuse(9/26) 객관식 선지 줄 「N번 - (k)」
   /* ★ v3-F §1 — 배지줄 = 좌표(태그) · ID · 유형 · 「제7판」(접기 단추) · 🃏 만.
      초록 리담 칩·「리담과 흡수됨」·「p.쪽」은 「제7판」 단추의 접힌 한 줄로(정보는 버리지 않는다). */
   /* ★ add1 §B-4 — 출처 칩을 누르면 머리줄 바로 아래에 이력 줄이 편다(민법 recStripToggle) */
@@ -13078,12 +13134,42 @@ function mbSearchRun(){
       if (ggHit(k)) mm.appendChild(el('span', 'srcb gg', '근거'));
       if (cm.length){ mm.appendChild(el('span', 'srcb cl', 'Claude')); r.appendChild(el('div', 'clsnip', clSnip(cm[0], low))); }
     }
-    r.onclick = () => linkGo(k);
+    r.onclick = ev => mbSrOpen(k, gmode, ev);   /* ★ toc_fuse add1(9/26) — 단원으로 안 옮기고 지문 팝업(민법 문항 팝업) */
     box.appendChild(r);
   });
   if (hit.length > 200) box.appendChild(el('div', 'rr', '… 200개까지만 보인다 (총 ' + hit.length + ')'));
 }
 
+/* ★ toc_fuse add1(9/26) — 1차객 🔍 검색 결과 누름 = 지문 팝업(민법 검색 결과 누름 = openQPopup + qpScrollTo 그대로).
+   단원으로 안 옮긴다 — 검색 칸 글자 · 결과 목록 · 셈 칸 · S.tab · S.jimunTab · S.mok · 화면 굴림 그대로 · render() 안 부름.
+   ① 같은 지문 팝업이 떠 있으면 닫지 않고 맨 앞으로(민법 oxWinOpen) ② 없으면 popCard(다른 곳의 popCard 토글은 무변)
+   ③ 다음 틱에 **팝업 몸통만** 굴린다 — 근거 모드면 .ggbox 윗변을 몸통 위 8px 에 · 아니면 맨 위(scrollIntoView 는 뒤 페이지까지 굴려서 안 쓴다)
+   단원으로 가고 싶으면 팝업 안 「↪ 이 지문으로 이동」(지금 그대로). */
+function mbSrOpen(k, gmode, ev){
+  const pk = 'q|📝 지문 ' + k;
+  let pop = POPS.find(p => p._pk === pk);
+  if (pop){ pop.style.zIndex = ++POPZ; try{ popAllSync(); }catch(e){} }
+  else { popCard(k, ev); pop = POPS.find(p => p._pk === pk); }
+  if (!pop) return;
+  setTimeout(() => {
+    const bd = pop.querySelector('.pb') || pop;
+    let sc = bd;   /* 몸통(.pb)이 제 굴림 칸이 아니면(넘침 없음) 팝업 안에서 가장 가까운 굴림 칸 — 조판기 팝업은 .pop 이 굴린다 */
+    if (!(sc.scrollHeight > sc.clientHeight + 1)){
+      for (let q = bd; q && q !== document.body; q = q.parentElement){
+        const o = getComputedStyle(q).overflowY;
+        if ((o === 'auto' || o === 'scroll') && q.scrollHeight > q.clientHeight + 1){ sc = q; break; }
+        if (q === pop) break;
+      }
+    }
+    /* 몸통 위 = 굴림 칸 윗변 · 붙박이(sticky) 머리 .ph 가 그 안에 있으면 머리 아랫변 */
+    const ph = pop.querySelector(':scope > .ph');
+    let top0 = sc.getBoundingClientRect().top;
+    if (ph && sc.contains(ph) && getComputedStyle(ph).position === 'sticky') top0 = Math.max(top0, ph.getBoundingClientRect().bottom);
+    const gg = gmode ? pop.querySelector('.ggbox') : null;
+    if (gg) sc.scrollTop = Math.max(0, sc.scrollTop + gg.getBoundingClientRect().top - top0 - 8);
+    else sc.scrollTop = 0;
+  }, 0);
+}
 /* §B-6 ⚡ 줄 — 민법 값 + 조판기 「거르기」를 select 하나로. 칩 줄은 걷었다(값·큐 로직 무변) */
 function mbQuickRow(main, counts){
   const qr = el('div', 'mbqr');
@@ -13104,6 +13190,30 @@ function mbQuickRow(main, counts){
   main.appendChild(qr);
 }
 
+/* ★ toc_fuse(9/26) D-1 — 마디 `조`(조문 코드 · '~' 는 글자) → 이름 바로 뒤 앱 조문 칩(joChip · 누르면 popJo · 줄 누름으로 안 샌다) */
+function mbJoChips(nd, host){
+  const js = (nd && nd.조) || [];
+  if (!js.length) return null;
+  const w = el('span', 'jochips');
+  js.forEach(c => { if (c === '~') w.appendChild(document.createTextNode('~')); else joChip(c, w); });
+  host.appendChild(w);
+  return w;
+}
+/* ★ toc_fuse(9/26) D-2 — 책 소제목 목록 한 벌(「Ⅱ 파리조약  10문제」 · 0 은 옅게 · 별칭 「= …」) */
+var MBSUBOPEN = {};   /* 펼친 줄(마디 차례) — 이 세션 안에서만 · 저장 안 함 */
+function mbSubList(subs){
+  const box = el('div', 'mbsubs');
+  subs.forEach(s => {
+    const nm = s[0], q = +s[1] || 0, al = s[2] || '';
+    const r = el('div', 'mbsi' + (q ? '' : ' z'));
+    const t = el('span', '', nm);
+    if (al){ t.appendChild(document.createTextNode(' = ')); t.appendChild(el('u', '', al)); }
+    r.appendChild(t);
+    r.appendChild(el('b', '', q + '문제'));
+    box.appendChild(r);
+  });
+  return box;
+}
 /* §B-7 단원 줄 — qlRow(8927) 와 **같은 값**을 민법 꼴로 그린다 */
 function mbUnitRow(M, i, sel, label, keys, subj, flat, jn){
   const scope = 'mok|' + subj + '|' + sel;
@@ -13113,9 +13223,22 @@ function mbUnitRow(M, i, sel, label, keys, subj, flat, jn){
   keys.forEach(k => { MBK2M[k] = { sel: sel, label: label }; });
   const row = el('div', 'mbur' + (flat ? ' flat' : ''));
   const L = el('div', 'l');
-  if (!flat) L.appendChild(el('span', 'ar', '›'));
+  /* ★ toc_fuse(9/26) D-2 — 책 소제목이 있는 줄은 번호 앞 「▸」 하나(원래 「›」는 안 그린다 · 화살표 하나).
+     누르면 줄 바로 아래 목록(부르는 쪽이 row._subList 를 줄 뒤에 붙인다) · 처음엔 접힘 · 펼친 것은 이 세션 안에서만 */
+  const nd = (M && M[i]) || null, subs = (nd && nd.소제목) || [];
+  if (subs.length){
+    const t = el('span', 'mbsbt');
+    const list = mbSubList(subs);
+    const paint = () => { const o = !!MBSUBOPEN[i]; t.textContent = o ? '▾' : '▸'; list.hidden = !o;
+      t.title = '책 소제목 ' + subs.length + '개 — 누르면 ' + (o ? '접기' : '펼치기'); };
+    t.onclick = ev => { ev.stopPropagation(); if (MBSUBOPEN[i]) delete MBSUBOPEN[i]; else MBSUBOPEN[i] = 1; paint(); };
+    paint();
+    L.appendChild(t);
+    row._subList = list;
+  } else if (!flat) L.appendChild(el('span', 'ar', '›'));
   /* ★ add1 §D-3 — 제7판 차례에만 있는 마디는 옅은 노랑(옛 `qlRow` 판정·색 그대로) */
-  L.appendChild(el('span', 'nm' + ((M && M[i] && M[i].출처 === '제7판') ? ' p7only' : ''), label));
+  L.appendChild(el('span', 'nm' + ((nd && nd.출처 === '제7판') ? ' p7only' : ''), label));
+  if (nd) mbJoChips(nd, L);   /* ★ toc_fuse(9/26) D-1 — 이름 바로 뒤 조문 칩 */
   L.appendChild(el('span', 'tot', '총 ' + total + '문제'));
   /* ★ add2 §A-1 — 민법 차례는 「이름 · 총 N문제 · 🃏 N · 📋」다(민법 2391 주석 —
      묶음의 첫 행이면 🃏 **바로 오른쪽에** 📋). 2구간이 📋 을 앞에 두었던 것을 바로잡는다. */
@@ -13203,12 +13326,23 @@ function mbDash(main, MG, JM, byId, P7, subj){
     const jn = (GRP[i] && GRP[i].subs.length) ? GRP[i] : null;
     const r = mbUnitRow(M, i, '__mg' + i, labOf(i), keys, subj, flat, jn);
     (chap || card).appendChild(r);
+    if (r._subList) (chap || card).appendChild(r._subList);   /* ★ toc_fuse(9/26) D-2 — 소제목 목록은 줄 바로 아래 */
   };
   M.forEach((n, i) => {
     const d = n.깊이;
     if (d === 1){
       flush();
       card = el('div', 'mbsj');
+      /* ★ toc_fuse(9/26) D-4 — 자식이 없고 제 문항이 있는 편(12 실용신안)은 편 머리 자리에 한 줄.
+         총 N문제 · 🃏 · 회독이 그 줄에 바로 붙고 누르면 그 문항(서랍처럼 편에 흡수) · 옛 판은 「총 0문제」 머리만 그렸다 */
+      { const own = keyOf(i);
+        if (own.length && !kidOf(i)){
+          const r = mbUnitRow(M, i, '__mg' + i, (n.no ? String(n.no) + ' ' : '') + n.제목, own, subj, true, null);
+          r.classList.add('mbsolo');
+          card.appendChild(r);
+          if (r._subList) card.appendChild(r._subList);
+          dash.appendChild(card); card = null;
+          return; } }
       const hd = el('div', 'hd');
       const h2 = el('h2', '');
       h2.appendChild(el('b', '', n.no ? String(n.no) : ''));
@@ -13224,6 +13358,7 @@ function mbDash(main, MG, JM, byId, P7, subj){
       chap = el('div', 'mbch');
       const hh = el('div', 'hh');
       hh.appendChild(el('span', 'nm' + (n.출처 === '제7판' ? ' p7only' : ''), labOf(i)));
+      mbJoChips(n, hh);   /* ★ toc_fuse(9/26) D-1 */
       const tt = el('span', 'tot', '');
       hh.appendChild(tt);
       /* ★ add2 §B-1 — 「2.2」 처럼 머리 줄이 서 있으면 📋 은 **그 머리 줄**에 붙는다 */
@@ -13235,8 +13370,14 @@ function mbDash(main, MG, JM, byId, P7, subj){
       let sub = 0;
       for (let j = i + 1; j < M.length && M[j].깊이 > d; j++) sub += keyOf(j).length;
       tt.textContent = '총 ' + (own.length + sub) + '문제';
+      /* ★ toc_fuse(9/26) D-5 — 장 머리에 제 문항이 있으면 같은 이름 줄을 또 세우지 않는다.
+         머리 전체가 누름 자리(바로 밑 문항 · 칩·📋 은 제 일) · 검색 결과의 「· 단원」 은 머리 이름으로(MBK2M) */
       if (own.length){ cardTot += own.length;
-        chap.appendChild(mbUnitRow(M, i, '__mg' + i, labOf(i), own, subj, false, null)); }
+        own.forEach(k => { MBK2M[k] = { sel: '__mg' + i, label: labOf(i) }; });
+        hh.classList.add('mbhgo');
+        hh.title = labOf(i) + ' 바로 밑 문항 ' + own.length + '개 — 누르면 풀기';
+        hh.onclick = e => { if (e.target.closest('button,.mbjn,[data-jn]')) return;
+          S.mok = '__mg' + i; S.oxPage = null; render(); }; }
       return;
     }
     if (d === 2){ chap = el('div', 'mbch'); card.appendChild(chap); rowInto(i, true); chap = null; return; }
@@ -13510,13 +13651,21 @@ function jtPaint(){
       /* ★ add1 §D-3 — 볼트 목차에 없고 **제7판(홍기석) 차례에만** 있는 마디는 옅은 노랑.
          옛 `qlRow` 의 판정(`n.출처==='제7판'`)·색(`#d4b04a`) 그대로다 — 9구간이 그 열을
          걷으면서 같이 사라졌던 것을 서랍·첫 화면에 되살린다. */
-      r.appendChild(el('span', n.출처 === '제7판' ? 'p7only' : '',
-        (S.jtCh && S.jtCh[i] ? '▸ ' : '▾ ') + labOf(i)));
-      r.appendChild(el('span', 'n', String(keys.length + sub)));
-      r.onclick = () => { S.jtCh = S.jtCh || {};
+      /* ★ toc_fuse(9/26) D-5 — 머리 한 줄: 「▾」(.jtar · 누르면 접기만) + 이름(누르면 그 마디 바로 밑 문항 ·
+         제 문항이 없으면 이름도 접기) · 같은 이름 줄(.jtit)은 따로 안 세운다 · 「지금」 표식은 머리에 */
+      const fold = () => { S.jtCh = S.jtCh || {};
         if (S.jtCh[i]) delete S.jtCh[i]; else S.jtCh[i] = 1; uiSave(); jtPaint(); };
+      const ar = el('span', 'jtar', S.jtCh && S.jtCh[i] ? '▸' : '▾');
+      ar.onclick = e => { e.stopPropagation(); fold(); };
+      r.appendChild(ar);
+      r.appendChild(el('span', 'jtnm' + (n.출처 === '제7판' ? ' p7only' : ''), labOf(i)));
+      mbJoChips(n, r);   /* ★ toc_fuse(9/26) D-1 */
+      r.appendChild(el('span', 'n', String(keys.length + sub)));
+      if (S.mok === sel) r.appendChild(el('span', 'now', '지금'));
+      r.onclick = keys.length ? () => { S.mok = sel; S.oxPage = null; render(); } : fold;
+      if (keys.length) r.title = labOf(i) + ' 바로 밑 문항 ' + keys.length + '개 — 누르면 풀기 · ▾ 로 접기';
       box.appendChild(r);
-      if (!keys.length) return;
+      return;
     }
     if (!keys.length && kid) return;
     const st = jtStat(keys);
@@ -13524,6 +13673,7 @@ function jtPaint(){
     it.style.paddingLeft = (20 + Math.max(0, n.깊이 - 2) * 8) + 'px';
     const l1 = el('div', 'l1');
     l1.appendChild(el('span', 'tx' + (n.출처 === '제7판' ? ' p7only' : ''), labOf(i)));
+    mbJoChips(n, l1);   /* ★ toc_fuse(9/26) D-1 — 이름 바로 뒤 조문 칩(이름은 넘치면 말줄임 그대로) */
     l1.appendChild(el('span', 'n', String(st.total)));
     if (S.mok === sel) l1.appendChild(el('span', 'now', '지금'));
     it.appendChild(l1);
@@ -14013,9 +14163,9 @@ async function viewJimun(){
   const tabs=el('div','modebar');
   /* ★ 버튼 옆 수 — OX 는 「문제(지문)」, 기출은 「문항」이다(사용자 확정 8/26).
      짝이 붙은 리담 지문은 제7판 쪽에서 세므로 특허에서만 뺀다 — 두 번 세지 않기 위해서다. */
-  let nJi=0;
-  (JM.문제||[]).forEach(q=>(q.지문||[]).forEach(z=>{if(!(P7&&z.병합))nJi++;}));
-  if(P7)nJi+=(P7.지문||[]).filter(z=>z.ox==='O'||z.ox==='X').length;
+  let nJi=0;const _ks=new Set();   /* ★ toc_fuse(9/26) — 같은 지문(uid)은 한 번만 */
+  (JM.문제||[]).forEach(q=>(q.지문||[]).forEach(z=>{if(!(P7&&z.병합)){nJi++;if(z.uid)_ks.add(z.uid);}}));
+  if(P7)(P7.지문||[]).filter(z=>z.ox==='O'||z.ox==='X').forEach(z=>{if(!(z.uid&&_ks.has(z.uid)))nJi++;});
   const nMun=JM.문항||(JM.문제||[]).length;
   [['ox','OX문제 '+nJi.toLocaleString()],
    ['gichul','기출문제 '+nMun.toLocaleString()]].forEach(([k,t])=>{
@@ -14139,7 +14289,8 @@ async function viewJimun(){
       const CARDS = mokCards(i);
       const PGN = 20, nPg = CARDS.length > PGN ? Math.ceil(CARDS.length / PGN) : 1;
       OXDOMPG = {};
-      CARDS.forEach((c, ci) => { c.s = ci + 1; c.pg = nPg > 1 ? ((ci / PGN) | 0) : 0; OXDOMPG[c.dom] = c.pg; });
+      const _nos = mokNos(CARDS);   /* ★ toc_fuse(9/26) — 보이는 번호(선지 줄은 한 문항 한 번호) · s 는 카드 차례 그대로 */
+      CARDS.forEach((c, ci) => { c.s = ci + 1; c.no = _nos[ci]; c.pg = nPg > 1 ? ((ci / PGN) | 0) : 0; OXDOMPG[c.dom] = c.pg; });
       const allCells = mokCells(CARDS);
       allCells.forEach(x => { x.pg = CARDS[x.s - 1].pg; });
       // 마디에 막 들어왔다(S.oxPage=null) → 채점 안 된 문제가 처음 나오는 쪽(§6-4)
@@ -14244,7 +14395,15 @@ async function viewJimun(){
       const shownCards = pageCards.filter(cardPass);
       if (!shownCards.length && pageCards.length)
         main.appendChild(emptyBox('📝','이 쪽에는 거르기에 걸리는 카드가 없다','거르기를 「전체」로 두면 다 보인다'));
-      shownCards.forEach(c => main.appendChild(c.kind === 'L' ? qCard(c.q, null, c.s) : p7Card(c.z, c.s)));
+      /* ★ toc_fuse(9/26) — 객관식 선지 줄: 번호 「N번 - (k)」 · 사례·보기가 딸린 문항(z.사례)은 종합사례 상자 한 벌에 담는다 */
+      { let cbox = null, cq = null;
+        shownCards.forEach(c => {
+          const card = c.kind === 'L' ? qCard(c.q, null, c.no) : p7Card(c.z, c.no);
+          const q = (c.kind === 'P' && c.z.문항 && c.z.사례) ? c.z.문항 : null;
+          if (q && q !== cq){ cbox = p7CaseBox(c.z, c.no); main.appendChild(cbox); }
+          cq = q;
+          (q ? cbox : main).appendChild(card);
+        }); }
       /* ★ add1 §A-2 — 맨 아래 큰 단추 둘(「✅ 이 페이지 채점」·「▶ 다음 N문제」)과
          「◀ 이전」은 민법에 없다. 셋 다 아래 알약(`mbPillBars`)이 이미 맡고 있다. */
       if (false){
