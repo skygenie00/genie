@@ -134,6 +134,8 @@
 .exv-sel{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13.5px;color:#1f2937;margin:2px 0 8px;padding-left:4px}   /* ★ add1 §E(9/27) — 5칸 격자였다: 한 줄에 다 안 들어가면 선지를 덩이째 다음 줄로 */
 .exv-sel>.exv-opt{flex:1 1 0;min-width:max-content}   /* 넓으면 다섯 칸 같은 폭(= 옛 1fr) · 좁으면 글 폭 밑으로 안 줄고 줄을 바꾼다 */
 .exv-sel>.exv-wait{flex-basis:100%}
+.exv-sel.exv-selm>.exv-opt{flex:0 0 auto;min-width:0}   /* ★ add2 §D — 재는 동안(글 폭 그대로) */
+.exv-sel.exv-selw>.exv-opt{flex:0 0 var(--exvow);min-width:0}   /* ★ add2 §D — 줄이 바뀌는 폭: 모든 선지 = 가장 긴 선지 글 폭 · 줄 끝 선지가 안 늘어난다 */
 .exv-wait{grid-column:1/-1;color:#9ca3af;font-size:12px;font-style:italic}
 .exv-miss{color:#9ca3af;font-size:12.5px;font-style:italic;padding:4px 2px}
 .exv-ans{display:flex;justify-content:flex-end;margin-top:4px}
@@ -1841,11 +1843,15 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 Object.keys(rD[k] || {}).forEach(c => cells.add(c));
                 for (const c of cells) {
                     const ck = ckey(k, c);
-                    if (J(cur[c]) !== J(old[c])) { kept++; continue; }   /* 그림자와 다름 = 도장 전의 이 기기 수정 — 내 것이 가장 새것 */
+                    if (J(cur[c]) !== J(old[c])) {   /* 그림자와 다름 = 도장 전의 이 기기 수정 — 내 것이 가장 새것 */
+                        if (k === 'ox_exam_rounds' && has(rD[k], c) && typeof exvRoundsUnion === 'function') { const u2 = exvRoundsUnion(cur[c], rD[k][c]); if (J(u2) !== J(cur[c])) cur[c] = u2; }   /* ★ add2 §A-2 — 시험지 회독은 회독 단위로 합친다(다른 기기 회독을 안 버린다) */
+                        kept++; continue;
+                    }
                     const mine = Math.max(u[ck] || 0, gone[ck] || 0);
                     const theirs = Math.max(rU[ck] || 0, rG[ck] || 0);
                     const rv = has(rD[k], c) ? rD[k][c] : undefined;
                     if (theirs < mine) {                                   /* §D-2 내 쪽이 이긴다 */
+                        if (k === 'ox_exam_rounds' && rv !== undefined && J(cur[c]) !== J(rv) && typeof exvRoundsUnion === 'function') { const u2 = exvRoundsUnion(cur[c], rv); if (J(u2) !== J(cur[c])) cur[c] = u2; }   /* ★ add2 §A-2 — 그림자 무변 → 바로 뒤 stampAll 이 도장 · 올림 */
                         kept++;
                         if (J(cur[c]) !== J(rv)) ahead++;                  /* 원격 값이 내 것과 다르다 — 올릴 것이 있다(§F) */
                         continue;
@@ -1865,6 +1871,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                         continue;
                     }
                     if (theirs > mine) {                                   /* §D-3 원격이 이긴다 */
+                        if (k === 'ox_exam_rounds' && has(rD[k], c) && has(cur, c) && J(cur[c]) !== J(rv) && typeof exvRoundsUnion === 'function') {
+                            const u2 = exvRoundsUnion(cur[c], rv);   /* ★ add2 §A-2 — 원격에 없는 이 기기 회독이 있으면 합친 값(받은 칸으로 안 침 · 그림자 무변 → 도장 → 올림) */
+                            if (J(u2) !== J(rv)) { cur[c] = u2; took++; delete gone[ck]; continue; }
+                        }
                         if (has(rD[k], c)) {
                             if (!has(cur, c) || J(cur[c]) !== J(rv)) { cur[c] = rv; took++; touch(k, c); }
                             u[ck] = rU[ck]; delete gone[ck];
@@ -1877,6 +1887,13 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     if ((gone[ck] || 0) >= (u[ck] || 0)) { kept++; continue; }
                     const sL = has(cur, c) ? J(cur[c]) : '', sR = has(rD[k], c) ? J(rv) : '';
                     if (sL === sR) { kept++; continue; }                   /* 값이 같으면 아무것도 안 한다 — 대부분 여기 */
+                    if (k === 'ox_exam_rounds' && has(cur, c) && has(rD[k], c) && typeof exvRoundsUnion === 'function') {   /* ★ add2 §A-2 — 동률도 회독 단위로 */
+                        const u2 = exvRoundsUnion(cur[c], rv);
+                        if (J(u2) === sR) { cur[c] = rv; took++; touch(k, c); }
+                        else if (J(u2) === sL) { kept++; ahead++; }
+                        else { cur[c] = u2; took++; }
+                        continue;
+                    }
                     tie++;
                     /* 「더 많이 담은 쪽」 — JSON 이 긴 쪽 · 길이도 같으면 사전순 큰 쪽. 두 기기가 같은 두 값을 같은 규칙으로 보므로 튕기지 않는다.
                        ⚠ 「내 것을 두고 도장 +1」 로 하지 않는다 — 두 기기가 서로 +1 하며 영영 튕긴다. 진 값은 버리기 전에 콘솔에 남긴다. */
@@ -2072,7 +2089,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 if (pushed) { meta.lastPush = Date.now(); meta.remoteSha = pushed; }
                 lsPut(SMETA_KEY, meta);
                 recFail = '';
+                try { if (typeof exvSyncDone === 'function') exvSyncDone(true); } catch (e2) { }   /* ★ add2 §A-1 — 첫 동기화(받기·병합)가 끝났다 → 옛 회독 바로잡기 */
             } catch (e) {
+                try { if (typeof exvSyncDone === 'function') exvSyncDone(false); } catch (e2) { }   /* ★ add2 §A-1 — 첫 받기가 실패하면 그 세션은 바로잡기 안 함 */
                 recFail = String((e && e.message) || e || '알 수 없음');
                 console.warn('기록 동기화 건너뜀:', recFail);   /* ⚠ 오류창 금지 — 3분마다 튀어나온다 */
                 syncStatus('기록 동기화 실패 — ' + recFail, 'err');
@@ -11509,7 +11528,7 @@ async function gkeyBoot() {
     if (!GKEY) gkeyRefresh(null, true);
 }
 function exvAfterGkey() {
-    setTimeout(() => { try { exvRoundsFix(); } catch (e) { } }, 1500);   /* ★ add1 §B-4 — 옛 회독 바로잡기(한 번) */
+    setTimeout(() => { try { exvFixKick('gkey'); } catch (e) { } }, 1500);   /* ★ add1 §B-4 · add2 §A-1(9/27) — 옛 회독 바로잡기(한 번) · 동기화 기기는 첫 동기화가 끝난 뒤(exvFixKick) */
     try {
         const home = document.getElementById('home-screen');
         if (home && !home.classList.contains('hide')) { renderDashboard(); return; }
@@ -11699,6 +11718,7 @@ function exvPaint() {
     if (c) c.textContent = marked;
     if (t) t.textContent = total;
     if (document.getElementById('exv-omr-rows')) exvOmrPaint();
+    try { exvSelFit(); } catch (e) { }   /* ★ add2 §D(9/27) — 줄이 바뀌는 폭이면 선지를 같은 폭으로 */
 }
 function exvPick(b) {
     const key = b.dataset.exk, n = +b.dataset.exn;
@@ -11732,17 +11752,20 @@ async function exvGradePage() {
     /* ★ add1 §B-2 — 그 쪽 조합 선지를 먼저 읽는다 · 「읽는 중」이 남으면 채점하지 않는다(한 번 더 누르면 된다) */
     if ((await exvComboWait(y, keys.map(k => +k.split(':')[1]))).length) { exvToast('조합 선지 읽는 중 — 잠시 뒤 다시'); return; }
     if (y !== exvYear()) return;
+    const picks2 = exvPicks();   /* ★ add2 §B(9/27) — 기다리는 동안 바꾼 답까지 */
+    { const m2 = keys.filter(k => !picks2[k] && EXV_RES[k] === undefined); if (m2.length) { exvToast('답을 안 고른 문제가 있습니다 — ' + m2.map(k => k.split(':')[1] + '번').join(', ')); return; } }
     keys.forEach(k => {
         if (EXV_RES[k] !== undefined) return;
         const cor = exvCorrect(y, +k.split(':')[1]);
-        EXV_LASTPICK[k] = picks[k];
-        EXV_RES[k] = cor.ans.length ? cor.ans.includes(picks[k]) : null;
+        EXV_LASTPICK[k] = picks2[k];
+        EXV_RES[k] = cor.ans.length ? cor.ans.includes(picks2[k]) : null;
     });
     exvPaint();
 }
 /* 전체 채점 — 이 해 문항 전부를 고른 때만 · 회독 하나(ox_exam_rounds) · 시계와 그 해 고른 답은 비운다 */
 async function exvGradeAll() {
-    const y = exvYear(), picks = exvPicks();
+    const y = exvYear();
+    let picks = exvPicks();
     const nos = [...new Set(currentFilteredData.map(x => x.examNo))].sort((a, b) => a - b);
     const miss = nos.filter(n => !picks[exvKey(n, y)]);
     if (miss.length) { exvToast('답을 안 고른 문제 ' + miss.length + '개 — ' + miss.slice(0, 10).join(', ') + (miss.length > 10 ? ' …' : '') + '번'); return; }
@@ -11750,17 +11773,22 @@ async function exvGradeAll() {
        「읽는 중」이 남으면 저장하지 않고 토스트(틀린 점수를 남기는 것보다 한 번 더 누르게) · 「못 읽음」은 본판대로 null */
     if ((await exvComboWait(y, nos)).length) { exvToast('조합 선지 읽는 중 — 잠시 뒤 다시'); return; }
     if (y !== exvYear() || EXV_DONE[y]) return;
-    let ok = 0;
+    picks = exvPicks();   /* ★ add2 §B(9/27) — 기다리는 동안 바꾼 답까지(고르기는 안 막는다) */
+    { const m2 = nos.filter(n => !picks[exvKey(n, y)]); if (m2.length) { exvToast('답을 안 고른 문제 ' + m2.length + '개 — ' + m2.slice(0, 10).join(', ') + '번'); return; } }
+    let ok = 0, unk = 0;
     const pk = {};
     nos.forEach(n => {
         const k = exvKey(n, y), cor = exvCorrect(y, n);
         EXV_LASTPICK[k] = picks[k]; pk[n] = picks[k];
         EXV_RES[k] = cor.ans.length ? cor.ans.includes(picks[k]) : null;
         if (EXV_RES[k]) ok++;
+        if (EXV_RES[k] === null) unk++;
     });
     const t = exvTimerGet(), ms = exvElapsed(t);
     const R = exvRounds();
-    (R[y] = R[y] || []).push({ date: new Date().toLocaleDateString(), ok: ok, n: nos.length, ms: ms, picks: pk });
+    { const rd = { date: new Date().toLocaleDateString(), ok: ok, n: nos.length, ms: ms, picks: pk, id: exvRoundId() };   /* ★ add2 §A-4 — 회독 열쇠(합치기) · 정답을 다 정했으면 다시 셈 대상 아님 */
+      if (!unk) { rd.fixedAt = new Date().toISOString(); rd.fv = 2; }
+      (R[y] = R[y] || []).push(rd); }
     try { localStorage.setItem('ox_exam_rounds', JSON.stringify(R)); } catch (e) { }
     exvTimerPut({ acc: 0, since: 0 });
     const P = exvPicks();
@@ -11942,33 +11970,104 @@ function jnExamCellsLoad(y) {
         document.querySelectorAll('.jx-no[data-jxy="' + y + '"]').forEach(r => { const c = r.querySelector('.jx-cells'); if (c) c.innerHTML = jnExamCells(y, +r.dataset.jxno); });
     }, 0);
 }
-/* §B-4 — 이미 저장된 회독 바로잡기(멱등) — 그 해 조합 선지를 다 읽은 뒤 picks 로 ok 를 다시 센다(정답을 정할 수 있는 문번만) ·
-   바뀐 회독만 ok 와 fixedAt · 한 번 고친 회독은 다시 안 센다 · 앱을 켤 때(기출키가 선 뒤) 한 번 */
+/* §B-4 — 이미 저장된 회독 바로잡기(멱등) — 그 해 조합 선지를 다 읽은 뒤 picks 로 ok 를 다시 센다
+   ★ add2 §A(9/27) — ① 동기화 기기는 첫 동기화(받기·병합)가 끝난 뒤에만(exvSyncDone → exvFixKick · 받기 실패면 그 세션은 안 돈다 · 토큰 없는 기기는 기출키 뒤)
+   ② 정답을 못 정하는 문번이 하나라도 있는 회독은 안 건드린다(fixedAt·fv 없음 · 다음에 다시) ③ ok 가 늘 때만 고친다 · 줄면 목록만(window.__exvFix.down)
+   ④ 고친 표 = fv:2 — add1 이 찍은 fixedAt(줄인 것 포함)은 다시 셈 대상(늘 때만 고치므로 깎인 점수가 되돌아온다) ⑤ 고치면 첫 화면이 떠 있을 때 다시 그림 */
 let _exvFixRun = false;
+var EXV_SYNC = { done: false, ok: false };
+function exvSyncDone(ok) {
+    if (EXV_SYNC.done) return;
+    EXV_SYNC.done = true; EXV_SYNC.ok = !!ok;
+    if (ok) { try { exvFixKick('sync'); } catch (e) { } }
+}
+function exvFixKick(src) {
+    if (!GKEY || !GKEY.keys) return;
+    let tok = false;
+    try { tok = !!mbToken(); } catch (e) { tok = false; }
+    if (tok && !EXV_SYNC.ok) return;   /* 동기화 기기 — 첫 동기화가 끝나기 전(또는 받기 실패)엔 안 돈다 */
+    exvRoundsFix();
+}
 async function exvRoundsFix() {
     if (_exvFixRun || !GKEY || !GKEY.keys) return window.__exvFix || null;
     _exvFixRun = true;
-    const out = { years: 0, fixed: 0, rows: [] };
+    const out = { years: 0, fixed: 0, rows: [], down: [], skip: [] };
     try {
         const R0 = exvRounds();
         for (const y of Object.keys(R0)) {
-            if (!(R0[y] || []).some(r => r && r.picks && !r.fixedAt)) continue;
+            if (!(R0[y] || []).some(r => r && r.picks && r.fv !== 2)) continue;
             try { await exvComboLoad(y, exvNosOf(y)); } catch (e) { continue; }
             out.years++;
             const R = exvRounds();   /* 읽는 사이에 바뀌었을 수 있다 — 다시 읽는다 */
             let n = 0;
             (R[y] || []).forEach((r, i) => {
-                if (!r || !r.picks || r.fixedAt) return;
+                if (!r || !r.picks || r.fv === 2) return;
+                const nos = Object.keys(r.picks);
+                if (nos.some(no => !(+r.picks[no]) || !exvCorrect(y, +no).ans.length)) { out.skip.push([y, i + 1]); return; }   /* 못 정하는 문번 — 안 건드림 */
                 let ok = 0;
-                Object.keys(r.picks).forEach(no => { const p = +r.picks[no], cor = exvCorrect(y, +no); if (p && cor.ans.length && cor.ans.includes(p)) ok++; });
-                if (ok !== r.ok) { out.rows.push([y, i + 1, r.ok, ok]); r.ok = ok; r.fixedAt = new Date().toISOString(); n++; }
+                nos.forEach(no => { const p = +r.picks[no], cor = exvCorrect(y, +no); if (cor.ans.includes(p)) ok++; });
+                if (ok > (+r.ok || 0)) { out.rows.push([y, i + 1, r.ok, ok]); r.ok = ok; r.fixedAt = new Date().toISOString(); r.fv = 2; n++; }
+                else if (ok < (+r.ok || 0)) out.down.push([y, i + 1, r.ok, ok]);   /* 줄어드는 것은 고치지 않는다(옛 회독은 당시 채점이 기준) */
             });
             if (n) { out.fixed += n; try { localStorage.setItem('ox_exam_rounds', JSON.stringify(R)); } catch (e) { } }
         }
-        if (out.fixed) { try { stampAll(); syncRecords(); } catch (e) { } }
+        if (out.fixed) {
+            try { stampAll(); syncRecords(); } catch (e) { }
+            try { const home = document.getElementById('home-screen'); if (home && !home.classList.contains('hide')) renderDashboard(); } catch (e) { }   /* ★ add2 §A-5 */
+        }
     } finally { window.__exvFix = out; }
     return out;
 }
+/* ★ add2 §A-2 — 시험지 회독 합치기(recMerge 가 ox_exam_rounds 칸에서만 부른다)
+   열쇠 = id(새 회독) · 옛 회독은 날짜·문항 수·시간·고른 답(두 기기에 같은 JSON 으로 있으니 같은 열쇠) ·
+   같은 회독이 둘이면 ok 큰 쪽(바로잡기는 늘기만) → 같으면 고친 표 있는 쪽 → 늦게 고친 쪽 → 내 것 ·
+   차례 = 한쪽이 다른 쪽을 다 품으면 그 쪽 차례 그대로 · 둘 다 제 회독이 있으면 날짜 → id 시각 → 열쇠(두 기기가 같은 차례 → 서로 되받아치지 않는다) */
+function exvRoundId() { return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function exvRoundKey(r) { return (r && r.id) ? String(r.id) : 'o|' + (r && r.date) + '|' + (r && r.n) + '|' + (r && r.ms) + '|' + JSON.stringify((r && r.picks) || {}); }
+function exvRoundPick(a, b) {
+    const oa = +a.ok || 0, ob = +b.ok || 0;
+    if (oa !== ob) return oa > ob ? a : b;
+    const fa = String(a.fixedAt || ''), fb = String(b.fixedAt || '');
+    if (!!fa !== !!fb) return fa ? a : b;
+    if ((a.fv === 2) !== (b.fv === 2)) return a.fv === 2 ? a : b;
+    return fb > fa ? b : a;
+}
+function exvRoundsUnion(L, Rm) {
+    L = Array.isArray(L) ? L : []; Rm = Array.isArray(Rm) ? Rm : [];
+    const kL = L.map(exvRoundKey), kR = Rm.map(exvRoundKey), best = {};
+    L.forEach((r, i) => { best[kL[i]] = best[kL[i]] ? exvRoundPick(best[kL[i]], r) : r; });
+    Rm.forEach((r, i) => { best[kR[i]] = best[kR[i]] ? exvRoundPick(best[kR[i]], r) : r; });
+    const sL = new Set(kL), sR = new Set(kR);
+    let order;
+    if (kR.every(k => sL.has(k))) order = kL;
+    else if (kL.every(k => sR.has(k))) order = kR;
+    else {
+        const day = r => { try { const t = recStripDay(r.date); return t ? t.getTime() : 0; } catch (e) { return 0; } };
+        const its = r => { const m = /^r([0-9a-z]+?)[0-9a-z]{4}$/.exec(String(r.id || '')); return m ? parseInt(m[1], 36) || 0 : 0; };
+        order = [...new Set(kL.concat(kR))].sort((x, y) => (day(best[x]) - day(best[y])) || (its(best[x]) - its(best[y])) || (x < y ? -1 : x > y ? 1 : 0));
+    }
+    const seen = new Set();
+    return order.filter(k => !seen.has(k) && seen.add(k)).map(k => best[k]);
+}
+/* ★ add2 §D — 선지 줄: 한 줄에 다 들어가면 손대지 않는다(지금 꼴 · 픽셀 무변) · 줄이 바뀌면 모든 선지 = 가장 긴 선지 글 폭 */
+function exvSelFit() {
+    document.querySelectorAll('#quiz-container .exv-sel').forEach(s => {
+        const opts = [...s.children].filter(e => e.classList.contains('exv-opt'));
+        s.classList.remove('exv-selw');
+        if (opts.length < 2) return;
+        s.classList.add('exv-selm');
+        const ws = opts.map(o => o.getBoundingClientRect().width);
+        s.classList.remove('exv-selm');
+        const cs = getComputedStyle(s), gap = parseFloat(cs.columnGap) || 0;
+        const avail = s.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+        const need = ws.reduce((a, w) => a + w, 0) + gap * (opts.length - 1);
+        if (need <= avail + 0.5) return;
+        s.style.setProperty('--exvow', Math.ceil(Math.max.apply(null, ws)) + 'px');
+        s.classList.add('exv-selw');
+    });
+}
+let _exvSelT = null;
+addEventListener('resize', () => { clearTimeout(_exvSelT); _exvSelT = setTimeout(() => { try { if (document.querySelector('#quiz-container .exv-sel')) exvSelFit(); } catch (e) { } }, 150); });
 
 /* ---------- 토스트 — 앱에 알림 거품이 없어 기출뷰 몫만 ---------- */
 let _exvToastT = null;
@@ -12138,8 +12237,9 @@ function jnExamCells(y, no) {
     return R.map((r, i) => {
         const p = r.picks ? +r.picks[no] : 0;
         const ok = p && cor.ans.length ? cor.ans.includes(p) : null;
-        const tip = md(r.date) + ' · ' + (i + 1) + '회독째 · ' + (p ? '고른 ' + EXV_CIR[p] : '안 고름') + (cor.ans.length ? ' · 정답 ' + cor.ans.map(n => EXV_CIR[n]).join('·') : '');
-        return `<button type="button" class="jx-cell ${!p || wait ? 'na' : ok ? 'o' : 'x'}" data-tip="${escHtml(tip + (wait ? ' · 정답 …(조합 선지 읽는 중)' : ''))}" onclick="event.stopPropagation();jxCellTap(this)">${!p ? '·' : wait ? '…' : ok ? 'O' : 'X'}</button>`;
+        const unk = !!p && !wait && ok === null;   /* ★ add2 §C(9/27) — 정답을 못 정한 칸은 X 가 아니라 「?」 */
+        const tip = md(r.date) + ' · ' + (i + 1) + '회독째 · ' + (p ? '고른 ' + EXV_CIR[p] : '안 고름') + (cor.ans.length ? ' · 정답 ' + cor.ans.map(n => EXV_CIR[n]).join('·') : (unk ? ' · 정답 조합 선지 못 읽음' : ''));
+        return `<button type="button" class="jx-cell ${!p || wait || unk ? 'na' : ok ? 'o' : 'x'}" data-tip="${escHtml(tip + (wait ? ' · 정답 …(조합 선지 읽는 중)' : ''))}" onclick="event.stopPropagation();jxCellTap(this)">${!p ? '·' : wait ? '…' : unk ? '?' : ok ? 'O' : 'X'}</button>`;
     }).join('');
 }
 /* 기출 해의 정리 창 몸통 — 문번마다 「문제 N」 구분 줄(+ 문항 채점 칸) · 그 안 행은 선지 차례(ㄱ·ㄴ·ㄷ / ①~⑤) · 시험지 꼴은 안 넣는다(§F-2) */
