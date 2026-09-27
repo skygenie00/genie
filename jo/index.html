@@ -1617,7 +1617,7 @@ mark.mkc.u{background:transparent;border-bottom:2px solid var(--exc)}
 .mbqhd{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:8px;
   border-bottom:1px solid #f3f4f6;padding-bottom:6px}
 .mbqhd>.l{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
-.mbqhd>.t{display:flex;flex-wrap:wrap;gap:4px;margin-left:auto}
+.mbqhd>.mbtags{display:flex;flex-wrap:wrap;gap:4px;margin-left:auto}   /* ★ jo_cardfix §A-1 — 태그 묶음 고유 선택자(옛 .mbqhd>.t 는 qb t 칩 — 🔗 판 · 📎 유제 · ↩ 칩 — 에도 걸려 칩이 가운데 떴다) */
 /* 태그 다섯 — 민법 TAGCLS/TAGSTY 실측(22×22 · 13px · 바탕·테두리 없음) */
 .mbqhd .qtag{width:22px;height:22px;font-size:13px;line-height:1;padding:0;
   background:transparent;border:0;border-radius:0;color:inherit;font-weight:400;
@@ -3225,6 +3225,7 @@ function recDropCache(){
   if (typeof PLREC !== 'undefined') PLREC = null;   /* ★ 판 4 add4 — 내가 이은 판례·2차 */
   if (typeof PQREC !== 'undefined') PQREC = null;   /* ★ QA 판 add1 — 앱 검수 */
   if (typeof BKTREC !== 'undefined') BKTREC = null;   /* ★ mbsame_add3 §A-7 — 빈칸 종류 */
+  if (typeof QFIXREC !== 'undefined') QFIXREC = null;   /* ★ jo_cardfix §A-7 — 정정 글 칸 */
 }
 function recDelete(k){
   try{ localStorage.removeItem(k); }catch(e){}
@@ -3304,7 +3305,7 @@ const SYNC_SKIP = ['ink' /* 캔버스 · 크다 */ ];
 const SYNC_KEYS = ['ox', 'rounds', 'ansfix', 'mcard', 'gi', 'gi.year', 'markup', 'logic', 'link', 'type', 'omr',
   'gg', 'ggref',
   'sticker', 'blank', 'blanktag', 'themefix', 'postit', 'compare', 'precimp', 'editq', 'preclink', 'precqa', 'precqafile',
-  'canvas', 'canvasink', 'canvaslink', 'canvasmemo', 'canvaspin', 'clfix', 'c2unit', 'canvasjari', 'c2htag', 'c2mark', 'c2hsjari', 'ncomr', 'notecolor', 'jonot', 'giround', 'recgone', 'bktype']   /* ★ _task_jo_gaek_mbsame_add3 §A-7 — 빈칸 종류 손값(41번째 · 칸 = 지문 열쇠(uid) · 값 {v:[내용·주체·기간 | 없음], ts} · 「지우기」 = {v:[]}(OMR 표시를 덮는 빈 값 · 칸을 안 지운다) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_joscreen §F-1 — 「이 조 아님 ×」 손값(39→40 · 칸 = 지문 열쇠(uid) · 값 = 뗀 조 키 배열 · 되살리기로 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_notecolor C — 목차노트 정리 색 고침(36→37 · 칸 = <노트 파일>|<행> · 값 [[s,e,색,낱말]] · 되돌리기 = 그 구간 항목을 빼고 칸이 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_omrpop B-4 — 정리OMR 자리 손값(35→36 · 칸 = note|<노트> · para|<노트>|<문단 끝 행> · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_canvas_jari_cand §D-1 — 정리캔버스 교재 자리 손값(31→32 · 칸 = bid · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_2cha_unit §C-5 — 2차 단원 손값(30→31 · 칸 = '<법>|<YY-회-N>' · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_claude_answers §F — Claude 답 정정(29→30 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 다음 맞추기에서 되살린다) */   /* ★ 정리캔버스(민소) — 편집 로그·필기·링크·메모·핀(22→27) */   /* ★ prec3 §C-3 — 볼트 검수 대기(21→22) */   /* ★ QA 판 add1 — 앱 검수(20→21) */   /* ★ 판 4 add4 §2 — 내가 이은 판례·2차 (19→20) */
+  'canvas', 'canvasink', 'canvaslink', 'canvasmemo', 'canvaspin', 'clfix', 'c2unit', 'canvasjari', 'c2htag', 'c2mark', 'c2hsjari', 'ncomr', 'notecolor', 'jonot', 'giround', 'recgone', 'bktype', 'qfix']   /* ★ _task_jo_cardfix §A-7 — 정정 글 칸(42번째 · 칸 = 지문 열쇠 · 값 {q?, exp?, case?, q0, exp0, case0, ts} · ↩ 정정 해제 = 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_gaek_mbsame_add3 §A-7 — 빈칸 종류 손값(41번째 · 칸 = 지문 열쇠(uid) · 값 {v:[내용·주체·기간 | 없음], ts} · 「지우기」 = {v:[]}(OMR 표시를 덮는 빈 값 · 칸을 안 지운다) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_joscreen §F-1 — 「이 조 아님 ×」 손값(39→40 · 칸 = 지문 열쇠(uid) · 값 = 뗀 조 키 배열 · 되살리기로 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_notecolor C — 목차노트 정리 색 고침(36→37 · 칸 = <노트 파일>|<행> · 값 [[s,e,색,낱말]] · 되돌리기 = 그 구간 항목을 빼고 칸이 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_omrpop B-4 — 정리OMR 자리 손값(35→36 · 칸 = note|<노트> · para|<노트>|<문단 끝 행> · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_canvas_jari_cand §D-1 — 정리캔버스 교재 자리 손값(31→32 · 칸 = bid · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_2cha_unit §C-5 — 2차 단원 손값(30→31 · 칸 = '<법>|<YY-회-N>' · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_claude_answers §F — Claude 답 정정(29→30 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 다음 맞추기에서 되살린다) */   /* ★ 정리캔버스(민소) — 편집 로그·필기·링크·메모·핀(22→27) */   /* ★ prec3 §C-3 — 볼트 검수 대기(21→22) */   /* ★ QA 판 add1 — 앱 검수(20→21) */   /* ★ 판 4 add4 §2 — 내가 이은 판례·2차 (19→20) */
   .filter(k => SYNC_SKIP.indexOf(k) < 0).map(k => REC_PRE + k);
 const SU_KEY = 'jopangi_sync_u', SG_KEY = 'jopangi_sync_gone', SS_KEY = 'jopangi_sync_shadow', SM_KEY = 'jopangi_sync_meta';
 const EQ_KEY = REC_PRE + 'editq';
@@ -8063,6 +8064,7 @@ function cmpPut(id, rec){
   return lsWrite(CMP_KEY, CMPREC, '🧩 내 비교');
 }
 REC_NAMES.postit = '🗒 포스트잇';
+REC_NAMES.qfix = '✎ 정정 글';   /* ★ jo_cardfix §A-7 */
 REC_NAMES.compare = '🧩 내 비교';
 { const _rdc0 = recDropCache;
   recDropCache = function(){ _rdc0(); PITREC = null; CMPREC = null; }; }
@@ -9744,6 +9746,7 @@ function linkListPop(keys, ev){
 let CARDPOPS = [];                       // 팝업 카드 — render 뒤 다시 그려 본 화면과 맞춘다
 let OMRMETA2 = null, OMRMAP2 = null;     // 정리OMR meta·map (📍 상태 판정용 · viewJimun 이 싣는다)
 function sidFind(sid){
+  if (typeof cfIsOther === 'function' && cfIsOther(sid)) return cfHit(sid);   /* ★ jo_cardfix §A-3 — 다른 법 열쇠 = 그 법 데이터(불러 둔 것 · 없으면 null) */
   if (!VJ) return null;
   const m1 = /^L:(.+)#(\d+)$/.exec(sid);
   if (m1 && VJ.byId[m1[1]]){
@@ -9771,10 +9774,12 @@ function sidFind(sid){
    O/X 단추 없음(풀이는 카드에서만) · 근거 줄은 ggLine 그대로(쓰고 고치는 길 무변) · CARDPOPS 다시 그리기 길 유지(펴 둔 정답 상자도 그대로). */
 function popCard(sid, ev){
   const hit = sidFind(sid);
+  if (!hit && typeof cfIsOther === 'function' && cfIsOther(sid) && !(CF_DATA[cfLawOf(sid)] || {}).m){ cfLoad(cfLawOf(sid)).then(() => popCard(sid, ev)); return; }   /* ★ jo_cardfix §A-3 — 다른 법은 한 번 불러서 */
   if (!hit){ toast('지금 불러온 데이터에 없는 지문이다 — ' + sid); return; }
   const lab = (MBK2M[sid] && MBK2M[sid].label) || '';
   const _pk34 = 'q|📝 지문 ' + sid; if (popToggle(_pk34)) return;   /* ★ 상표 손질 6 — 키 종류|제목(열쇠는 옛 판 그대로 — 제목이 바뀌어도 같은 지문 = 같은 창) */
-  const body = popShell('q', ggWho(sid) + ' · ' + S.law + (lab ? ' · ' + lab : ''), _pk34);
+  const _lw = hit.law || S.law;   /* ★ jo_cardfix §A-3 */
+  const body = popShell('q', (_lw === S.law ? ggWho(sid) : cfRowOf(sid).no) + ' · ' + _lw + (lab && _lw === S.law ? ' · ' + lab : ''), _pk34);
   const pop = body.parentNode;
   pop.classList.add('mbqp');
   mbWinFrame(pop);
@@ -9804,12 +9809,13 @@ function qpBody(hit, k, pop, isOpen, setOpen){
   const lab = (MBK2M[k] && MBK2M[k].label) || '';
   const ch = el('div', 'qpchips');
   ch.appendChild(el('span', 'qpc1', hit.kind === 'P' ? '제7판' : '변리사 ' + String(hit.q.연도).slice(2)));
-  ch.appendChild(el('span', 'qpc2', S.law + (lab ? ' · ' + lab : '')));
+  ch.appendChild(el('span', 'qpc2', (hit.law || S.law) + (lab && (!hit.law || hit.law === S.law) ? ' · ' + lab : '')));   /* ★ jo_cardfix §A-3 */
   ch.appendChild(el('span', 'qpc3', k));
+  cfLinkChips(ch, k);   /* ★ jo_cardfix §A-4 — 문제 창에도 ↩링크N · ↩백링크N */
   w.appendChild(ch);
   const tx = el('div', 'qptx');
   tx.appendChild(el('b', '', ggWho(k)));
-  tx.appendChild(document.createTextNode(hit.kind === 'P' ? p7Text(z.t) : String(z.t || '')));
+  tx.appendChild(document.createTextNode(cfFixQ(k, hit.kind === 'P' ? p7Text(z.t) : String(z.t || ''))));   /* ★ jo_cardfix §A-7 — 고친 글 먼저 */
   w.appendChild(tx);
   ggLine(w, k, []);
   const as = qpAnsSol(hit), a = oxAns(k, as.raw);
@@ -9819,7 +9825,7 @@ function qpBody(hit, k, pop, isOpen, setOpen){
   ad.appendChild(ab);
   if (oxFixed(k)) ad.appendChild(document.createTextNode(' (정정)'));
   ans.appendChild(ad);
-  ans.appendChild(el('div', 'qpe', as.sol || '해설 없음'));
+  ans.appendChild(el('div', 'qpe', cfFixExp(k, as.sol) || '해설 없음'));   /* ★ jo_cardfix §A-7 */
   w.appendChild(ans);
   const bar = el('div', 'qpbar');
   const pk = el('button', 'qpb qpk', isOpen() ? '정답·해설 접기' : '정답·해설 보기'); pk.type = 'button';
@@ -9834,9 +9840,9 @@ function qpBody(hit, k, pop, isOpen, setOpen){
   mc.onclick = ev => { ev.stopPropagation(); mcOpen(k, ev); };
   bar.appendChild(mc);
   bar.appendChild(el('span', 'qpsp'));
-  const go = el('button', 'qpb qgo', '↪ 이 지문으로 이동'); go.type = 'button';
+  const go = el('button', 'qpb qgo', '↪ 이동'); go.type = 'button';   /* ★ jo_cardfix §A-5 — 글자만(바탕·테 없음 · 자리·동작 그대로) */
   go.onclick = () => { closeOne(pop); linkGo(k); };
-  bar.appendChild(go);
+  if (!hit.law || hit.law === S.law) bar.appendChild(go);   /* 다른 법 지문 = 그 법 화면이 아니라 이동 없음 */
   w.appendChild(bar);
   return w;
 }
@@ -9891,7 +9897,8 @@ async function popPan(caseNo, selfKey, ev){
   });
 }
 /* §6-1 — ✏ 메모 및 유사문제 연결: 논리 글 칸 + 연결 찾기 + 걸린 연결(해제) 한 팝업 */
-function editPop(key, ev){
+function editPop(key, ev){ return cfLinkWin(key, ev); }   /* ★ jo_cardfix §A-2 — 떠 있는 연결 창(누르면 바로 저장 · 번호 누름 = 문제 창 · 세 법) · 옛 몸 = editPop0 */
+function editPop0(key, ev){
   const _pk36=('fn')+'|'+('✏ 메모 및 유사문제 연결 — ' + linkDisp(key)); if(popToggle(_pk36))return; const body=popShell('fn', '✏ 메모 및 유사문제 연결 — ' + linkDisp(key), _pk36);   /* ★ 상표 손질 6 — 키 종류|제목 */
   /* ★ gaek_mb §C-13 — 📐 논리 칸은 걷었다(근거로 흡수 · 입구는 카드의 근거 줄). */
   body.appendChild(el('div', 'rndhd', '🔗 연결할 지문 찾기'));
@@ -9939,7 +9946,7 @@ function editPop(key, ev){
   inp.oninput = paintFind;
   paintCur();
   showPop(ev);
-  setTimeout(() => ta.focus(), 30);
+  setTimeout(() => inp.focus(), 30);   /* ★ jo_cardfix §A-2 — 옛 ta(걷은 📐 논리 칸) 오류 */
 }
 /* §6-1 — 지문 글 밑 두 줄(있을 때만): 관련 문제(정방향) · 나를 연결한 문제(역방향) */
 function lnkLines(row, key){
@@ -10714,6 +10721,7 @@ function ggFill(box, uid, autos){
   list.forEach(g => {
     const n = el('span', 'ggnum ' + ggOkCls(g.ok) + (g.bang ? ' bang' : '') + (g.src ? ' src' : ''),
                  String(g.i));
+    n.dataset.gbnum = uid + '|' + g.k;   /* ★ jo_cardfix §A-6 */
     n.title = (g.src ? '[' + g.src + '] ' : '') + ggFlat(g);
     const pan = ggPanel(uid, g);
     n.onclick = ev => { ev.stopPropagation();
@@ -10726,7 +10734,7 @@ function ggFill(box, uid, autos){
   /* 연결해 온 근거 칩 */
   const rc = el('span', 'refchips');
   ggRefOf(uid).forEach(t => {
-    const c = el('span', 'ggrefchip', '🔗' + (ggOf(t).length || ''));
+    const c = el('span', 'ggrefchip' + (ggOf(t).some(g => g && g.bang) ? ' bang' : ''), '🔗' + (ggOf(t).length || '')); c.dataset.gbref = t;   /* ★ jo_cardfix §A-6 */
     c.title = ggWho(t) + ' 의 근거 ' + ggOf(t).length + '개 — 누르면 아래 상자에서 펴고 접는다';
     c.onclick = ev => { ev.stopPropagation();
       const rb = box.querySelector('.ggrefbox');
@@ -10760,13 +10768,11 @@ function ggFill(box, uid, autos){
   fi.oninput = () => { clearTimeout(tm); tm = setTimeout(() => ggFindRun(uid, fi.value, rs), 120); };
 }
 function ggPanel(uid, g){
-  const pan = el('div', 'ggpan' + (g.bang ? ' bang' : ''));
+  const pan = el('div', 'ggpan' + (g.bang ? ' bang' : '')); pan.dataset.gbbox = uid + '|' + g.k;   /* ★ jo_cardfix §A-6 */
   const hd = el('div', 'hd');
-  const bg = el('button', 'bg' + (g.bang ? ' on' : ''), '!');
-  bg.title = '「!」 — 꼭 보고 갈 것';
-  bg.onclick = ev => { ev.stopPropagation();
-    const L = ggOf(uid).slice(); const it = L.find(x => x.k === g.k); if (!it) return;
-    it.bang = !it.bang; ggPutList(uid, L); ggRepaint(uid); };
+  const bg = el('button', 'bg' + (g.bang ? ' on' : ''), '!'); bg.dataset.gb = uid + '|' + g.k;
+  bg.title = g.bang ? '「!」 끄기' : '「!」 — 꼭 보고 갈 것';
+  bg.onclick = ev => { ev.stopPropagation(); cfBangToggle(uid, g.k); };   /* ★ jo_cardfix §A-6 — 다시 그리지 않고 제자리 칠(펼침·쓰던 글 그대로 · 민법 ggBangPaint) */
   hd.appendChild(bg);
   const t = el('span', 't');
   if (Array.isArray(g.parts) && g.parts.length){
@@ -10872,7 +10878,7 @@ function ggRefBox(uid){
   if (!refs.length){ box.style.display = 'none'; return box; }
   box.appendChild(el('div', 'rh', '🔗 다른 지문에서 끌어온 근거 ' + refs.length));
   refs.forEach(t => {
-    const r = el('div', 'ggrefrow');
+    const r = el('div', 'ggrefrow' + (ggOf(t).some(g => g && g.bang) ? ' bang' : '')); r.dataset.gbrefbox = t;   /* ★ jo_cardfix §A-6 */
     const l1 = el('div', 'l1');
     l1.appendChild(el('span', '', ggWho(t)));
     const u2 = ggUseEl(t, uid); if (u2) l1.appendChild(u2);
@@ -10885,7 +10891,7 @@ function ggRefBox(uid){
     l1.appendChild(x);
     r.appendChild(l1);
     ggOf(t).forEach(g => {
-      const gr = el('div', 'gt');
+      const gr = el('div', 'gt' + (g.bang ? ' bang' : '')); gr.dataset.gbline = t + '|' + g.k;   /* ★ jo_cardfix §A-6 */
       gr.appendChild(el('b', 'pl', g.i + '.'));
       gr.appendChild(document.createTextNode(' ' + ggFlat(g)));
       const e2 = el('button', 'lk', '✎ 여기서 고치기');
@@ -10979,13 +10985,20 @@ function ggEatLogicOnce(){
 }
 function oxPickRow(row, key, raw, sol, extra, chips, autos){
   const rec = oxOf(key) || {}, ans = oxAns(key, raw), fixed = oxFixed(key);
-  lnkLines(row, key);                     /* 관련/나를 연결한 문제 — 자리 그대로 */
+  const sol0 = sol; sol = cfFixExp(key, sol);   /* ★ jo_cardfix §A-7 — 고친 해설 먼저(정정 칸에는 원래 값) */
+  /* ★ jo_cardfix §A-4 — 글 밑 「🔗 관련 문제 …」·「↩ 나를 연결한 문제 …」 줄 걷음(머리 「↩링크N」·「↩백링크N」 이 맡는다 · lnkLines 함수는 둔다) */
   /* ★ add1 §B-4 — 이력 줄은 늘 보이지 않는다. 머리줄 바로 아래 접힌 상자(`.mbrecw`)에
      들어가고 **그 지문의 출처 칩**을 눌러야 편다(민법 `recStripToggle` 4884). */
   ggLine(row, key, autos || []);          /* ★ gaek_mb §C-13 — 늘 열린 근거 한 줄 */
 
   const bot = el('div', 'mbbot');
   const exp = el('div', 'mbexp');
+  if (cfFixed(key)) Promise.resolve().then(() => {   /* ★ jo_cardfix §A-7 — 머리 줄 「✎ 정정됨」(카드에 붙은 뒤) */
+    const hd = row.querySelector(':scope > .mbqhd') || ((row.closest('.qwrap, .uzexb') || row).querySelector('.mbqhd'));
+    if (!hd || hd.querySelector(':scope > .cfhd')) return;
+    const fc = el('button', 'mbfixb cfdone cfhd', '✎ 정정됨'); fc.type = 'button'; fc.title = '정정된 지문 — 누르면 원래 값';
+    fc.onclick = ev => { ev.stopPropagation(); exp.style.display = ''; cfFixOrig(key, raw, exp); };
+    const tg = hd.querySelector(':scope > .mbtags'); if (tg) hd.insertBefore(fc, tg); else hd.appendChild(fc); });
   const pk = el('button', 'mbpeek', '정답·해설 ▸');
   pk.onclick = () => { const on = exp.style.display !== 'none';
     exp.style.display = on ? 'none' : ''; pk.textContent = on ? '정답·해설 ▸' : '정답·해설 ▾'; };
@@ -11025,9 +11038,11 @@ function oxPickRow(row, key, raw, sol, extra, chips, autos){
   const act = el('div', 'mbact');
   if (extra) act.appendChild(extra);
   if (chips) act.appendChild(chips);
-  const fx = el('button', 'mbfixb' + (fixed ? ' on' : ''), fixed ? ('✎ 정정 ' + fixed) : '✎ 정정');
-  fx.title = '채점값을 직접 넣는다 — 원장은 안 건드리고 이 기기에만 쌓인다';
-  fx.onclick = ev => { ev.stopPropagation(); oxFix(key, raw); };
+  if (cfFixed(key)){ const fd = el('button', 'mbfixb cfdone', '✎ 정정됨'); fd.type = 'button'; fd.title = '정정된 지문 — 누르면 원래 값';
+    fd.onclick = ev => { ev.stopPropagation(); cfFixOrig(key, raw, exp); }; act.appendChild(fd); }   /* ★ jo_cardfix §A-7 — 민법 「✎ 정정됨」 */
+  const fx = el('button', 'mbfixb', '✎ 정정'); fx.type = 'button';
+  fx.title = '정답·해설 정정 — 문제 글 · 정답 · 해설 · 종합사례 원문(원장·데이터 파일은 안 건드린다)';
+  fx.onclick = ev => { ev.stopPropagation(); cfFixOpen(key, raw, sol0, exp); };   /* ★ jo_cardfix §A-7 — prompt() 걷음 · 해설 밑 노란 칸(민법 openFixPanel) */
   act.appendChild(fx);
   if (rec.p || rec.c || rec.m){
     const cl = el('button', 'mbfixb', '지우개');
@@ -11195,7 +11210,7 @@ function mokNos(cards){
 function p7CaseBox(z, no){
   const b = el('div', 'p7case');
   b.appendChild(el('div', 'p7cash', '[종합사례 원문] - ' + (z.책번호 || no) + '번'));   /* ★ mbsame §B-1 — 책 번호 */
-  b.appendChild(el('div', 'p7cast', String(z.사례 || '')));
+  b.appendChild(el('div', 'p7cast', cfFixCase(oxKeyP7(z), String(z.사례 || ''))));   /* ★ jo_cardfix §A-7 — 고친 원문 먼저 */
   return b;
 }
 function unCards(){
@@ -11203,7 +11218,8 @@ function unCards(){
   const placed = new Set();
   VJ.M.forEach(n => n.리담.forEach(x => placed.add(x)));
   const out = [];
-  (VJ.qs || []).filter(q => !placed.has(q.id))
+  const _uk = new Set(uzUnkKeys(VJ.qs || [], VJ.M));   /* ★ jo_cardfix §A-10 — 셈·목록과 같은 열쇠 */
+  (VJ.qs || []).filter(q => !placed.has(q.id) && (q.지문 || []).some(z => _uk.has(oxKeyLid(q, z))))
     .forEach(q => out.push({ kind: 'L', q: q, dom: 'qb-' + q.id }));
   return out;
 }
@@ -11696,12 +11712,12 @@ function lnkChips(q, z, host){
   const p = (z.pan || '').trim();
   if (p){
     /* ★ gaek_mb §C-15(10구간) — 🏛 판례번호. 「같은 판례」 칩보다 앞이다. */
-    { const b0 = el('button', 'chip c-quiz panb', '🏛 ' + p.slice(0, 22));
+    { const b0 = el('button', 'cfpan', '🏛 ' + p.slice(0, 22));   /* ★ jo_cardfix §A-8 — 글자만 */
       b0.title = '조판기 판례로 연다 — 조판기에 없으면 법제처에서 연다 · ' + p;
       b0.onclick = ev => { ev.stopPropagation(); panGo(p, ev); };
       host.appendChild(b0); }
     const n = (((LNKIDX || {}).pan || {})[p] || []).length;
-    if (n > 1){
+    if (n > 1 && !(MLN && MLN.ok)){   /* ★ jo_cardfix §A-8 — 1차객 카드는 머리 「🔗 판 N」 이 맡는다(옛 「🔗 같은 판례 N」 알약 걷음) */
       const b = el('button', 'chip c-quiz', '🔗 같은 판례 ' + (n - 1));
       b.title = p;
       b.onclick = ev => { ev.stopPropagation(); lnkPop('pan', p, ev); };
@@ -12395,19 +12411,13 @@ function qCard(q,mokTitle,seq){
        _id.title='교재 자리 — 정리OMR';
        _id.onclick=ev=>{ev.stopPropagation();mbbPop(_k,ev);};
        L.appendChild(_id);
-       const _nb=lkBack(_k).length;
-       if(_nb){const b2=el('button','qb t','↩백링크 '+_nb);
-         b2.title='이 지문을 연결해 둔 다른 지문';
-         b2.onclick=ev=>{ev.stopPropagation();editPop(_k,ev);};L.appendChild(b2);}
-       const _nf=lkOf(_k).length;
-       if(_nf){const b3=el('button','qb t','↩ 내가 연결한 '+_nf);
-         b3.onclick=ev=>{ev.stopPropagation();editPop(_k,ev);};L.appendChild(b3);}
+       cfLinkChips(L,_k);   /* ★ jo_cardfix §A-4 — ↩링크N(남색) · ↩백링크N(연두) 글자 */
        L.appendChild(mcChip(_k));
      });}
     const q1=el('div','oxq');
     q1.appendChild(el('b','mbqlab','('+(z.기호||z.n)+')'));   // ★ gaek_mb §C-9 — 민법 지문 이름표(13px/800 · 파랑)
     /* ★ gaek_mb §C-12 — 지문 글은 형광펜을 받는다(저장 = 조판기 markup 키) */
-    {const bsp=el('span','mbqtx');mkcPaint(bsp,oxKeyLid(q,z),'q',String(bon||''));
+    {const bsp=el('span','mbqtx');mkcPaint(bsp,oxKeyLid(q,z),'q',cfFixQ(oxKeyLid(q,z),String(bon||'')));   /* ★ jo_cardfix §A-7 */
      q1.appendChild(bsp);   /* ★ v3-H §4 — 지문 줄 포스트잇 */
      pitWire(bsp,'q|'+oxKeyLid(q,z),'',bon||'');}
     if(pan&&!z.p7)q1.appendChild(el('span','badge','제7판 대응 없음 — 리담판 표시'));
@@ -12638,7 +12648,7 @@ function p7Card(z,seq){
       const bag=(((LNKIDX||{}).panN||{})[c]||[]);
       const nSame=bag.filter(x=>oxKeyLid(x.q,x.z)!==tk7).length;   // ★ §4 — 자기 자신 제외
       /* 본판 §C-15·10구간 — 🏛 = 조판기 판례 먼저 · 없으면 법제처 */
-      const b=el('button','chip c-quiz panb','🏛 '+c+(nSame?' · 같은 지문 '+nSame:''));
+      const b=el('button','cfpan','🏛 '+c);   /* ★ jo_cardfix §A-8 — 글자만(민법 actionBarHTML) · 「· 같은 지문 N」 걷음(머리 「🔗 판 N」 이 맡음 · nSame 은 안 씀) */
       b.title='조판기 판례로 연다 — 조판기에 없으면 법제처에서 연다 · '+c;
       b.onclick=ev=>{ev.stopPropagation();popPan(c,tk7,ev);};      // 수집 여부로 안 가른다
       chipBox7.appendChild(b);
@@ -12649,11 +12659,10 @@ function p7Card(z,seq){
    idb7.title='교재 자리 — 정리OMR';
    idb7.onclick=ev=>{ev.stopPropagation(); mbbPop(tk7,ev);};
    h.appendChild(idb7);}
-  {const nF=lkOf(tk7).length;   // ★ v3-F §6-1 ⓐ — 내가 연결한 수만
-   if(nF){const cb=el('button','qb t','↩ 내가 연결한 '+nF);
-     cb.onclick=ev=>{ev.stopPropagation();editPop(tk7,ev);};
-     h.appendChild(cb);}}
-  if(MLN&&MLN.ok){ mlnYujeChip(h,z); mlnHBackChip(h,z,MLN.p7node[z.id]); mlnPanChip(h,tk7,cases); }   /* ★ mbsame §B-2 — 📎 유제 · 📖 원 기출(h 줄) · 🔗 같은 판례 */
+  /* ★ jo_cardfix §A-1·§A-4·§A-9 — 민법 차례(ID · 🔗 판 · ↩링크 · ↩백링크) · 📎 유제 칩 걷음(사용자 「가」 — 유제 카드는 본문 밑 그대로) · 📖 원 기출은 그 뒤 */
+  if(MLN&&MLN.ok)mlnPanChip(h,tk7,cases);
+  cfLinkChips(h,tk7);
+  if(MLN&&MLN.ok)mlnHBackChip(h,z,MLN.p7node[z.id]);
   // 「제7판」 접기 단추(§1)
   const sub=el('div','qsub');sub.style.display='none';
   {
@@ -12681,7 +12690,7 @@ function p7Card(z,seq){
   {const q7=el('div','oxq');
    const bl=(typeof mlnBookLab==='function'?mlnBookLab(z):'')||(seq?seq+'번'+(z.문항?' - ('+z.선지+')':''):'');   /* ★ mbsame §B-1 — 책 번호 「25번」「25-유제」「12번 - (3)」 */
    if(bl)q7.appendChild(el('b','mbqlab mlnbk',bl));
-   q7.appendChild(el('span','mbqtx',p7Text(z.t))); row.appendChild(q7);}
+   q7.appendChild(el('span','mbqtx',cfFixQ(tk7,p7Text(z.t)))); row.appendChild(q7);}   /* ★ jo_cardfix §A-7 */
   // 정오 = 원장의 유효정오. 없으면 리담 것으로 보강하되 출처를 밝힌다
   let ox=z.ox, from='유효정오';
   if(!ox&&z.리담&&z.리담.ox){ox=z.리담.ox;from='리담 보강';}
@@ -12956,6 +12965,7 @@ async function viewOmr(){
 var MBK2M = {};        /* 지문 열쇠 → 마디 sel — 검색 결과에서 그 마디로 갈 때 쓴다 */
 
 function mbFixN(JM){   /* 머리줄 「✎ 정정 N」 — 이 법에서 정오가 고쳐진 지문 수 */
+  if (typeof cfFixKeys === 'function') return cfFixKeys().length;   /* ★ jo_cardfix §A-7 — 정오(FIX_KEY) + 글 칸(jopangi.qfix) · 옛 셈(oxOf().fix)은 늘 0 이었다 */
   let n = 0;
   try{ (JM.문제 || []).forEach(q => (q.지문 || []).forEach(z => {
     const r = oxOf(oxKeyLid(q, z)) || {}; if (r.fix || r.ansfix) n++; })); }catch(e){}
@@ -12971,7 +12981,7 @@ function mbSubHead(main, JM, P7, nJi, nMun){
                                       : ('지문 ' + nJi.toLocaleString() + ' · 문항 ' + nMun.toLocaleString()))); }
   hd.appendChild(el('span', 'sp'));
   const fx = mbFixN(JM);
-  if (fx) hd.appendChild(el('span', 'dl', '✎ 정정 ' + fx));
+  if (fx){ const fb = el('span', 'dl cffx', '✎ 정정 ' + fx); fb.title = '정정 목록'; fb.onclick = ev => { ev.stopPropagation(); cfFixList(ev); }; hd.appendChild(fb); }   /* ★ jo_cardfix §A-7 — 누르면 정정 목록 창 */
   main.appendChild(hd);
 }
 
@@ -13933,7 +13943,7 @@ function jnRow(k, idx){
   if (ic) top.appendChild(el('span', 'jnic', ic));
   top.appendChild(uzJnRec(k));   /* ★ mbsame §D-7·§E — 풀이 기록 칸 · ★ add3 §A-4 — 오른쪽 끝 · 없으면 「기록 없음」 글자 */
   r.appendChild(top);
-  const qq = el('div', 'jnqq'); mkcPaint(qq, k, 'q', ggText(k)); r.appendChild(qq);   /* 형광펜 그대로 */
+  const qq = el('div', 'jnqq'); mkcPaint(qq, k, 'q', cfFixQ(k, ggText(k))); r.appendChild(qq);   /* ★ jo_cardfix §A-7 */   /* 형광펜 그대로 */
   const gl = ggOf(k);
   if (gl.length){
     const gb = el('div', 'jngg');
@@ -13941,7 +13951,7 @@ function jnRow(k, idx){
     gl.forEach((g, i) => {
       if (i) gb.appendChild(document.createTextNode('\n'));
       gb.appendChild(document.createTextNode(g.i + '. '));
-      const gt = el('span'); mkcPaint(gt, k, 'g' + g.k, ggFlat(g)); gb.appendChild(gt);
+      const gt = el('span', g.bang ? 'bang' : ''); gt.dataset.gbline = k + '|' + g.k; mkcPaint(gt, k, 'g' + g.k, ggFlat(g)); gb.appendChild(gt);   /* ★ jo_cardfix §A-6 — 정리 창 목록도 같이 칠 */
     });
     r.appendChild(gb);
   }
@@ -13956,7 +13966,7 @@ function jnRow(k, idx){
   const ab = el('b', '', a || '미확정'); ab.style.color = a === 'O' ? '#2563eb' : a === 'X' ? '#dc2626' : '#6b7280';
   ad.appendChild(ab);
   ans.appendChild(ad);
-  ans.appendChild(el('div', 'jne', as.sol || '해설 없음'));
+  ans.appendChild(el('div', 'jne', cfFixExp(k, as.sol) || '해설 없음'));   /* ★ jo_cardfix §A-7 */
   r.appendChild(ans);
   return r;
 }
@@ -14003,7 +14013,7 @@ function mbQHead(row, key, srcLabel, fillLeft){
   }
   if (fillLeft) fillLeft(L);
   hd.appendChild(L);
-  const T = el('div', 't');
+  const T = el('div', 't mbtags');   /* ★ jo_cardfix §A-1 */
   oxTagBar(key, T);
   hd.appendChild(T);
   row.appendChild(hd);
@@ -14446,7 +14456,8 @@ async function viewJimun(){
       if(S.mok==='__미분류'){
         const placed=new Set();
         (MG?MG.마디:[]).forEach(n=>n.리담.forEach(x=>placed.add(x)));
-        list=JM.문제.filter(q=>!placed.has(q.id)).filter(q=>(q.지문||[]).some(z=>uzPass(oxKeyLid(q,z))));   /* ★ add3 — 한 거름 */
+        const _uk=new Set(uzUnkKeys(JM.문제,MG?MG.마디:[]));   /* ★ jo_cardfix §A-10 — 미분류 셈과 한 열쇠(한 거름 · 마디 카드에 선 지문 뺌) */
+        list=JM.문제.filter(q=>!placed.has(q.id)).filter(q=>(q.지문||[]).some(z=>_uk.has(oxKeyLid(q,z))));
         main.appendChild(el('div','badge','미분류 '+list.length+'문항 — 근거조문이 없거나 마디 제목에 조문이 안 적혀 못 붙은 것'));
       }else{
         const node=MK.마디.find(n=>n.파일===S.mok);
@@ -16220,7 +16231,7 @@ function uidMigrate(why){
     const tg = Object.assign({}, (old || {}).tg || {}, (cur || {}).tg || {});
     if (Object.keys(tg).length) b.tg = tg; if ((cur || {}).c || (old || {}).c) b.c = true; return b; };
   MERGE[FIX_KEY] = (cur, old, tc, to) => (to > tc ? old : cur);
-  MERGE[TY_KEY] = later; MERGE[BKT_KEY] = later;
+  MERGE[TY_KEY] = later; MERGE[BKT_KEY] = later; MERGE[QFIX_KEY] = later;   /* ★ jo_cardfix §A-7 */
   MERGE[GG_KEY] = cat; MERGE[GR_KEY] = cat; MERGE[MC_KEY] = cat;
   MERGE[LK_KEY] = (cur, old, tc, to) => Object.assign({}, later(cur, old, tc, to), { v: uniq([].concat((cur || {}).v || [], (old || {}).v || [])) });
   const moved = {}; let total = 0;
@@ -16229,7 +16240,7 @@ function uidMigrate(why){
      풀이 기록(m · p · 회독)은 아래 map/split 규칙대로 한쪽만 — 옮기기 전에 옛 태그를 떠 둔다 */
   const uzMultiTg = {};
   try{ const O0 = JSON.parse(localStorage.getItem(OX_KEY) || 'null') || {}; Object.keys(A.multi || {}).forEach(o => { const v = O0[o]; if (v && v.tg && Object.keys(v.tg).length) uzMultiTg[o] = v.tg; }); }catch(e){}
-  [OX_KEY, FIX_KEY, TY_KEY, GG_KEY, GR_KEY, MC_KEY, LK_KEY, BKT_KEY].forEach(store => {   /* ★ mbsame_add3 §A-7 — 빈칸 종류도 옮긴다 */
+  [OX_KEY, FIX_KEY, TY_KEY, GG_KEY, GR_KEY, MC_KEY, LK_KEY, BKT_KEY, QFIX_KEY].forEach(store => {   /* ★ jo_cardfix §A-7 — 정정 글 칸도 옮긴다 */   /* ★ mbsame_add3 §A-7 — 빈칸 종류도 옮긴다 */
     let S0; try{ S0 = JSON.parse(localStorage.getItem(store) || 'null'); }catch(e){ return; }
     if (!S0 || typeof S0 !== 'object' || Array.isArray(S0)) return;
     let n = 0;
@@ -16483,7 +16494,7 @@ function mlnBoxL(q){   /* 리담 문항 — 발문 + 그 문항 선지 */
 function mlnCaseBoxL(q, no){
   const b = el('div', 'p7case');
   b.appendChild(el('div', 'p7cash', '[종합사례 원문] - ' + no + '번'));
-  b.appendChild(el('div', 'p7cast', String(q.발문 || '')));
+  b.appendChild(el('div', 'p7cast', cfFixCase(oxKeyLid(q, (q.지문 || [])[0] || {}), String(q.발문 || ''))));   /* ★ jo_cardfix §A-7 */
   return b;
 }
 /* 책 번호 — 본편 「25번」 · 유제 「25-유제」 · 쪼갠 객관식 「12번 - (3)」 */
@@ -16579,22 +16590,19 @@ function mlnLidCard(q, z, no, ln, ni){
   const idb = el('button', 'qb id', z.uid ? String(z.uid) : ('ID ' + q.id));
   idb.title = '교재 자리 — 정리OMR'; idb.onclick = ev => { ev.stopPropagation(); mbbPop(k, ev); };
   L.appendChild(idb);
-  const nb = lkBack(k).length;
-  if (nb){ const b2 = el('button', 'qb t', '↩백링크 ' + nb); b2.title = '이 지문을 연결해 둔 다른 지문';
-    b2.onclick = ev => { ev.stopPropagation(); editPop(k, ev); }; L.appendChild(b2); }
-  const nf = lkOf(k).length;
-  if (nf){ const b3 = el('button', 'qb t', '↩ 내가 연결한 ' + nf); b3.onclick = ev => { ev.stopPropagation(); editPop(k, ev); }; L.appendChild(b3); }
-  mlnBonChip(L, q, z, ln, ni);
+  /* ★ jo_cardfix §A-1·§A-4 — 민법 차례(ID · 🔗 판 · ↩링크 · ↩백링크) · 📖 본문은 그 뒤 */
   const cases = []; panNo(z.pan || '').concat(panNo(z.sol || '')).forEach(c => { if (cases.indexOf(c) < 0) cases.push(c); });
   mlnPanChip(L, k, cases);
+  cfLinkChips(L, k);
+  mlnBonChip(L, q, z, ln, ni);
   L.appendChild(mcChip(k));
   hd.appendChild(L);
-  const T = el('div', 't'); if (S.law === '특허법' && typeof pinTag === 'function') pinTag(k, T); oxTagBar(k, T); hd.appendChild(T);
+  const T = el('div', 't mbtags'); if (S.law === '특허법' && typeof pinTag === 'function') pinTag(k, T); oxTagBar(k, T); hd.appendChild(T);
   row.appendChild(hd);
   const rw = el('div', 'mbrecw hide'); rw.dataset.rk = k; row.appendChild(rw);
   const q1 = el('div', 'oxq');
   q1.appendChild(el('b', 'mbqlab mlnbk', no + '번 - (' + (z.기호 || z.n) + ')'));
-  { const bsp = el('span', 'mbqtx'); mkcPaint(bsp, k, 'q', String(z.t || '')); q1.appendChild(bsp); pitWire(bsp, 'q|' + k, '', z.t || ''); }
+  { const _zt = cfFixQ(k, String(z.t || '')); const bsp = el('span', 'mbqtx'); mkcPaint(bsp, k, 'q', _zt); q1.appendChild(bsp); pitWire(bsp, 'q|' + k, '', _zt); }   /* ★ jo_cardfix §A-7 — 고친 글 먼저 */
   row.appendChild(q1);
   const autos = [];
   if (z.역산) autos.push({ t: '역산', tip: '해설 누락에서 되짚은 정오다 — 직독값이 아니다' + (z.정오근거 ? (' · ' + z.정오근거) : '') });
@@ -16619,6 +16627,7 @@ function mlnObjCard(o, no){
   mlnYearChips(h, k, { kind: 'O', o: o });
   const idb = el('button', 'qb id', o.uid || ('ID ' + o.id)); idb.title = '교재 자리 — 정리OMR'; idb.onclick = ev => { ev.stopPropagation(); mbbPop(k, ev); };
   h.appendChild(idb);
+  cfLinkChips(h, k);   /* ★ jo_cardfix §A-4 */
   const pb = el('button', 'qb v qexp', '제7판'); const sub = el('div', 'qsub'); sub.style.display = 'none';
   sub.textContent = ['p.' + (o.쪽 || '—'), '객관식 · 문항째 한 카드(계산·날짜·순서·빈칸 등)', '답 ' + (o.답 || '—')].join(' · ');
   pb.onclick = ev => { ev.stopPropagation(); sub.style.display = sub.style.display === 'none' ? '' : 'none'; };
@@ -17554,8 +17563,10 @@ function uzUnkKeys(qs, M){
   const placed = new Set();
   (M || []).forEach(n => (n.리담 || []).forEach(x => placed.add(x)));
   const seen = new Set(), out = [];
+  const _cks = (typeof cfCardKeySet === 'function') ? cfCardKeySet() : null;   /* ★ jo_cardfix §A-10 — 마디 카드에 선 열쇠(제7판 흡수 · (미수록)·(변형) 줄)는 미분류에서 뺀다(두 번 세지 않음) */
   (qs || []).filter(q => !placed.has(q.id)).forEach(q => (q.지문 || []).forEach(z => {
-    const k = oxKeyLid(q, z); if (seen.has(k)) return; seen.add(k); out.push(k); }));
+    if (MLN && MLN.ok && z.uid && MLN.p7uid && MLN.p7uid.has(z.uid)) return;
+    const k = oxKeyLid(q, z); if (_cks && _cks.has(k)) return; if (seen.has(k)) return; seen.add(k); out.push(k); }));
   return uzF(out);   /* ★ add3 — 한 거름 */
 }
 /* 히트맵 대목차 칩 — 첫 화면·서랍과 같은 줄 규칙(mlnKeys 넷 줄 · 본편 · 판신설 · 미수록 · 변형) · 옛 판은 mgKeys(옛 마디 규칙)라 수가 달랐다(mbsame_add2 ⑪) */
@@ -18155,13 +18166,10 @@ function uzExvBox(q, z, i, combo, graded, open){
   const idb = el('button', 'qb id', z.uid ? String(z.uid) : ('ID ' + q.id)); idb.type = 'button';
   idb.title = '교재 자리 — 정리OMR'; idb.onclick = ev => { ev.stopPropagation(); mbbPop(k, ev); };
   L.appendChild(idb);
-  const nbk = lkBack(k).length;
-  if (nbk){ const b2 = el('button', 'qb t', '↩백링크 ' + nbk); b2.onclick = ev => { ev.stopPropagation(); editPop(k, ev); }; L.appendChild(b2); }
-  const nf = lkOf(k).length;
-  if (nf){ const b3 = el('button', 'qb t', '↩ 내가 연결한 ' + nf); b3.onclick = ev => { ev.stopPropagation(); editPop(k, ev); }; L.appendChild(b3); }
+  cfLinkChips(L, k);   /* ★ jo_cardfix §A-4 */
   L.appendChild(mcChip(k));
   hd.appendChild(L);
-  const T = el('div', 't'); if (S.law === '특허법' && typeof pinTag === 'function') pinTag(k, T); oxTagBar(k, T);
+  const T = el('div', 't mbtags'); if (S.law === '특허법' && typeof pinTag === 'function') pinTag(k, T); oxTagBar(k, T);
   T.querySelectorAll('.qtag').forEach(t => { if (t.textContent === OXTAG_IC.important) t.remove(); });   /* ⭐ 는 기출뷰에서만 뺀다(민법 inExamView) */
   hd.appendChild(T);
   box.appendChild(hd);
@@ -18170,10 +18178,10 @@ function uzExvBox(q, z, i, combo, graded, open){
   if (combo){ const lb0 = el('span', 'uzexlab', uzBogiLab(z, q) + '.'); if (String(z.기호 || '') !== uzBogiLab(z, q)) lb0.title = '데이터 표지 ' + z.기호; q1.appendChild(lb0); }
   else { const lb = el('span', 'uzexlab'); const nb = el('button', 'exv-num exv-lab', UZ_CIR[i + 1] || String(i + 1)); nb.type = 'button';
     nb.dataset.exk = key; nb.dataset.exn = String(i + 1); nb.title = '이 선지를 답으로 고르기'; nb.onclick = () => uzExvPick(q, i + 1, nb); lb.appendChild(nb); q1.appendChild(lb); }
-  { const bsp = el('span', 'mbqtx'); mkcPaint(bsp, k, 'q', String(z.t || '')); q1.appendChild(bsp); pitWire(bsp, 'q|' + k, '', z.t || ''); }
+  { const _zt = cfFixQ(k, String(z.t || '')); const bsp = el('span', 'mbqtx'); mkcPaint(bsp, k, 'q', _zt); q1.appendChild(bsp); pitWire(bsp, 'q|' + k, '', _zt); }   /* ★ jo_cardfix §A-7 — 고친 글 먼저 */
   box.appendChild(q1);
   const reveal = graded || open;
-  const post = el('div', 'exv-post' + (reveal ? '' : ' exv-hide')); lnkLines(post, k); ggLine(post, k, []); box.appendChild(post);
+  const post = el('div', 'exv-post' + (reveal ? '' : ' exv-hide')); ggLine(post, k, []); box.appendChild(post);   /* ★ jo_cardfix §A-4 — 기출뷰 지문 칸도 「관련 문제」 줄 걷음 */
   box.appendChild(el('div', 'exv-pre' + (open && !graded ? '' : ' exv-hide'), '채점 전 — 지문 O·X 는 채점 뒤'));
   const bot = el('div', 'mbbot exv-post-ox' + (graded ? '' : ' exv-hide'));
   const exp = el('div', 'mbexp'); exp.style.display = open ? '' : 'none';
@@ -18195,7 +18203,7 @@ function uzExvBox(q, z, i, combo, graded, open){
   brr.appendChild(lk); bot.appendChild(brr);
   box.appendChild(bot);
   { const rb = el('div', 'resb'); rb.appendChild(el('span', 'ansb', '정답 ' + (a || '미확정'))); exp.appendChild(rb);
-    exp.appendChild(z.sol ? solEl(z.sol) : el('div', 'cdim', '해설 없음')); }
+    { const _s = cfFixExp(k, z.sol || ''); exp.appendChild(_s ? solEl(_s) : el('div', 'cdim', '해설 없음')); } }   /* ★ jo_cardfix §A-7 — 고친 해설 먼저 */
   box.appendChild(exp);
   inkHost(box, 'z|' + k);
   return box;
@@ -18368,6 +18376,450 @@ function uzJnStemRow(inf){
   '.pop.mbwin .ph>button.jnxtg,.jnxtg{margin-left:6px;font-size:10.5px;font-weight:700;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;border-radius:4px;padding:2px 6px;cursor:pointer;line-height:1.5}',   /* 창 머리 단추 규칙(.pop.mbwin .ph>button)보다 구체적으로 */
   '.pop.mbwin .ph>button.jnxtg.off,.jnxtg.off{color:#6b7280;background:#fff;border-color:#d1d5db}'
 ].join('\n'); document.head.appendChild(s); }catch(e){} })();
+
+/* ══ jo_cardfix(2026-09-27 · _task_jo_cardfix) — 끝 블록 셋째 ══
+   이 블록은 patch 스크립트(task\_patch_jo_cardfix.py)가 마지막 스크립트 닫는 태그 바로 앞에 붙인다(주석에도 그 태그 글자를 쓰지 않는다 — HTML 이 거기서 스크립트를 끊는다).
+   함수 이름은 cf 로 시작(붙이기 전 census). 옛 함수는 patch 가 부르는 자리만 이리로 돌린다(editPop → cfLinkWin 등). */
+
+/* ── §A-3 법 셋 열쇠 — uid 머리 글자 T 특허 · S 상표 · D 디보(TR·TH·TJ·TX·TU 도 T) · 다른 법 1차객 데이터는 필요할 때 한 번 get()(특허는 제7판도) ── */
+var CF_LAWC = { T: '특허법', S: '상표법', D: '디자인보호법' };
+var CF_DATA = {};                 /* 법 → { m: Map(열쇠 → {kind, q, z}) } · 불러오는 중 = { wait: Promise } */
+var CF_HI = null, CF_RC = null;   /* 지금 법 색인 · 지금 법 찾기 줄(캐시) */
+function cfLawOf(k){ return CF_LAWC[String(k || '').charAt(0)] || S.law; }
+function cfIsOther(k){ const L = cfLawOf(k); return L !== S.law && LAWS3APP.indexOf(L) >= 0; }
+function cfLoad(law){
+  const D = CF_DATA[law];
+  if (D) return D.wait || Promise.resolve(D);
+  const p = Promise.all([get('jimun_' + SHORT[law] + '.json').catch(() => null), law === '특허법' ? get('jimun_7pan.json').catch(() => null) : Promise.resolve(null)])
+    .then(([J, P7x]) => {
+      const m = new Map();
+      ((J && J.문제) || []).forEach(q => (q.지문 || []).forEach(z => { const k = oxKeyLid(q, z); if (!m.has(k)) m.set(k, { kind: 'L', q: q, z: z }); }));
+      if (P7x) (P7x.지문 || []).forEach(z => { const k = oxKeyP7(z); if (!m.has(k)) m.set(k, { kind: 'P', z: z }); });
+      return (CF_DATA[law] = { m: m, fail: !J });
+    });
+  CF_DATA[law] = { wait: p };
+  return p;
+}
+function cfLoadOthers(){ return Promise.all(LAWS3APP.filter(L => L !== S.law).map(cfLoad)); }
+/* 지금 법 색인 — 풀(OXPOOL)이 고른 쪽 먼저(같은 uid 가 리담·제7판 둘에 서면 풀의 kind·id = 카드·이름과 같은 쪽) ·
+   풀 밖 열쇠는 리담(마디에 붙은 문항 먼저 = uzQsOrd) → 제7판 */
+function cfHitCur(){
+  if (CF_HI && CF_HI.vj === VJ && CF_HI.pool === OXPOOL) return CF_HI.m;
+  const m = new Map(), P = OXPOOL || {};
+  if (VJ){
+    Object.keys(P).forEach(k => { const c = P[k] || {};
+      if (c.kind === 'L'){ const q = VJ.byId[c.id]; const z = q && (q.지문 || []).find(x => oxKeyLid(q, x) === k); if (z) m.set(k, { kind: 'L', q: q, z: z }); }
+      else { const z = (VJ.P7map || {})[c.id]; if (z) m.set(k, { kind: 'P', z: z }); } });
+    ((typeof uzQsOrd === 'function') ? uzQsOrd() : (VJ.qs || [])).forEach(q => (q.지문 || []).forEach(z => { const k = oxKeyLid(q, z); if (!m.has(k)) m.set(k, { kind: 'L', q: q, z: z }); }));
+    Object.keys(VJ.P7map || {}).forEach(id => { const z = VJ.P7map[id]; const k = oxKeyP7(z); if (!m.has(k)) m.set(k, { kind: 'P', z: z }); });
+  }
+  CF_HI = { vj: VJ, pool: OXPOOL, m: m };
+  return m;
+}
+/* §A-10 마디 카드에 선 열쇠 전부(단원 줄 넷 · 제7판·흡수·(미수록)·(변형)) — 미분류는 이 밖의 리담 열쇠만 · MLN 마다 한 번 */
+function cfCardKeySet(){
+  if (!(MLN && MLN.ok && VJ)) return null;
+  if (MLN._cfck && MLN._cfck.vj === VJ) return MLN._cfck.s;
+  const s = new Set(), M = VJ.M || [];
+  M.forEach((n, i) => MLN_LNS.forEach(ln => { try{ mlnKeys(M, i, ln, VJ.P7map, VJ.byId).forEach(k => s.add(k)); }catch(e){} }));
+  MLN._cfck = { vj: VJ, s: s };
+  return s;
+}
+/* 열쇠 → {kind, q, z, law} · 다른 법은 불러 둔 것만(없으면 null — 부른 쪽이 cfLoad 뒤 다시) */
+function cfHit(k){
+  const law = cfLawOf(k);
+  if (law === S.law || LAWS3APP.indexOf(law) < 0){ const h = cfHitCur().get(k); return h ? Object.assign({ law: S.law }, h) : null; }
+  const D = CF_DATA[law];
+  const h = (D && D.m) ? D.m.get(k) : null;
+  return h ? Object.assign({ law: law }, h) : null;
+}
+/* 줄 하나 — uid · 번호(제7판 = 책 번호 「25번」「15-유제1」 · 리담 = 「시험 문번(선지)」 · 모르면 「?번(선지)」) · 어디(「특허법 · 단원」 · 단원 모름 = 「상표법 · 2018 제55회」) · 출처 태그 · 본문 */
+function cfRow(k, h){
+  const law = h.law || S.law, L = h.kind === 'L', z = h.z;
+  const lab = (law === S.law && MBK2M[k] && MBK2M[k].label) || '';
+  const no = L ? ((h.q.시험문번 ? h.q.시험문번 : '?') + '번(' + (z.기호 || z.n) + ')') : (mlnBookLab(z) || '?번');
+  const where = law + ' · ' + (lab || (L ? (h.q.연도 + ' 제' + h.q.회차 + '회') : ('제7판 p.' + (z.쪽 || '—'))));
+  const t = L ? String(z.t || '') : p7Text(z.t);
+  const r = { k: k, law: law, uid: String(z.uid || k), no: no, where: where, src: L ? (String(h.q.연도 || '').slice(2) + ' 변리') : String(z.태그 || '제7판'), t: cfFixQ(k, t) };
+  r.hay = [r.uid, r.no, r.src, r.where, r.t].join('\n').toLowerCase();
+  return r;
+}
+function cfRowOf(k){ const h = cfHit(k); return h ? cfRow(k, h) : null; }
+/* 지금 법 찾기 줄 — 풀(OXPOOL) 차례 그대로(옛 editPop 과 같은 차례) · 단원 이름(MBK2M)이 늘면 다시 짓는다 */
+function cfRowsCur(){
+  const P = OXPOOL || {}, nm = Object.keys(MBK2M || {}).length;
+  if (CF_RC && CF_RC.vj === VJ && CF_RC.pool === P && CF_RC.nm === nm && CF_RC.law === S.law) return CF_RC.rows;
+  const I = cfHitCur(), rows = [];
+  Object.keys(P).forEach(k => {
+    const h = I.get(k);
+    if (h){ rows.push(cfRow(k, Object.assign({ law: S.law }, h))); return; }
+    const c = P[k]; const r = { k: k, law: S.law, uid: k, no: c.name || oxKeyDisp(k), where: S.law + ' · ' + ((MBK2M[k] && MBK2M[k].label) || ''), src: '', t: String(c.t || '') };
+    r.hay = [r.uid, r.no, r.where, r.t].join('\n').toLowerCase(); rows.push(r);
+  });
+  CF_RC = { vj: VJ, pool: P, nm: nm, law: S.law, rows: rows };
+  return rows;
+}
+var CF_RO = {};   /* 다른 법 찾기 줄(법마다 한 번) */
+function cfRowsOther(law){
+  if (CF_RO[law]) return CF_RO[law];
+  const D = CF_DATA[law]; if (!D || !D.m) return [];
+  const rows = []; D.m.forEach((h, k) => rows.push(cfRow(k, Object.assign({ law: law }, h))));
+  return (CF_RO[law] = rows);
+}
+function cfFind(q, key){
+  const low = String(q || '').toLowerCase(), out = [];
+  if (!low) return out;
+  const scan = rows => { for (const r of rows){ if (r.k === key) continue; if (r.hay.indexOf(low) >= 0){ out.push(r); if (out.length >= 30) return true; } } return false; };
+  if (scan(cfRowsCur())) return out;
+  for (const law of LAWS3APP){ if (law === S.law) continue; if (scan(cfRowsOther(law))) return out; }
+  return out;
+}
+function cfLinked(a, b){ return lkOf(a).indexOf(b) >= 0 || lkOf(b).indexOf(a) >= 0; }
+
+/* ── §A-2 연결 창 — 떠 있는 창(popShell · 끌기·크기 손잡이 그대로) · 결과 누름 = 바로 저장(lkAdd) · 번호 누름 = 그 문제 창 ── */
+function cfHeadChips(key, ev){
+  /* 그 카드 머리 칩 셋(출처 · 출제연도 · uid)을 그대로 복제 — 흐림 없이 · 누름 없음 */
+  const t = ev && ev.target && ev.target.closest ? ev.target : null;
+  const card = t ? t.closest('.qwrap, .uzexb, .mbq, .qp2') : null;
+  const hd = card ? card.querySelector('.mbqhd, .qhd, .qpchips') : null;
+  const out = [];
+  const mk = (src, cls, txt) => {
+    const s = src ? src.cloneNode(true) : el('span', cls, txt);
+    const e = el('span', (src ? src.className : cls) + ' cfhc'); e.innerHTML = s.innerHTML || ''; if (!src) e.textContent = txt;
+    if (src && src.title) e.title = src.title;
+    return e;
+  };
+  const h = cfHit(key), r = h ? cfRow(key, h) : null;
+  const sv = hd && hd.querySelector('.qb.v:not(.qexp)'), yc = hd && hd.querySelector('.jxec'), idc = hd && hd.querySelector('.qb.id');
+  out.push(mk(sv, 'qb v', r ? r.src : ''));
+  if (yc) out.push(mk(yc, 'jxec', ''));
+  out.push(mk(idc, 'qb id', r ? r.uid : key));
+  out.forEach(e => e.classList.remove('fd'));
+  return out;
+}
+function cfRowEl(r, key, cur, back, onPick){
+  const on = !cur && cfLinked(key, r.k);
+  const b = el(cur ? 'div' : 'button', 'cfr' + (on ? ' on' : '') + (cur ? ' cur' : ''));
+  if (!cur) b.type = 'button';
+  const l1 = el('div', 'cfl1');
+  l1.appendChild(el('span', 'cfid', r.uid));
+  if (back) l1.appendChild(el('span', 'cfbk', '↩'));
+  const no = el('span', 'cfno', r.no); no.dataset.pc = r.k; no.title = '문제 창 열기';
+  no.onclick = ev => { ev.stopPropagation(); popCard(r.k, ev); };
+  l1.appendChild(no);
+  l1.appendChild(el('span', 'cfwh', r.where));
+  if (on) l1.appendChild(el('span', 'cfon', '이미 넣음'));
+  b.appendChild(l1);
+  b.appendChild(el('div', 'cftx', String(r.t || '').replace(/\s+/g, ' ').slice(0, 70) + '…'));
+  if (onPick) b.onclick = onPick;
+  return b;
+}
+function cfLinkWin(key, ev){
+  const pk = 'cflw|' + key;
+  const olds = POPS.filter(p => p._cflw), same = olds.some(p => p._pk === pk);
+  olds.forEach(closeOne);
+  if (same) return;                                   /* 같은 단추 다시 누름 = 닫힘 · 창은 하나만 */
+  const btn = ev && ev.target && ev.target.closest ? ev.target.closest('button') : null;
+  const body = popShell('cflw', '', pk);
+  const p = body.parentNode; p._cflw = 1; p.classList.add('cflw');
+  popSizable(body, 'cflw');                            /* 지금 붙여야 기억 크기 뒤 자리를 본다(기억 없으면 CSS 폭 440) */
+  const ph = p.querySelector(':scope > .ph'), pt = ph && ph.querySelector('.pt');
+  if (pt){ pt.classList.add('cftt'); pt.textContent = '🔗 연결'; cfHeadChips(key, ev).forEach(c => pt.appendChild(c)); }
+  const x = ph && ph.querySelector(':scope > button:not(.pall)'); if (x){ x.classList.add('cfx'); x.title = '닫기'; }
+  body.classList.add('cfbd');
+  body.appendChild(el('div', 'cflb', '🔗 연결할 지문 찾기 — 특허·상표·디보 · uid · 번호 · 출처 · 단원 · 본문'));
+  const inp = el('input', 'cfq'); inp.type = 'text'; inp.setAttribute('autocomplete', 'off');
+  inp.placeholder = '🔍 찾아서 넣기 — 번호·본문·출처로 검색 (예: 취소, 31, 2015)';
+  body.appendChild(inp);
+  const rs = el('div', 'cfrs'); rs.hidden = true; body.appendChild(rs);
+  const cur = el('div', 'cfcurw'); body.appendChild(cur);
+  body.appendChild(el('div', 'cfft', '결과를 누르면 바로 연결된다(저장 단추 없음) · ✕ = 연결 풀기'));
+  const paintCur = () => {
+    cur.innerHTML = '';
+    const f = lkOf(key), bk = lkBack(key).filter(t => f.indexOf(t) < 0);
+    const all = f.map(t => [t, false]).concat(bk.map(t => [t, true]));
+    if (!all.length) return;
+    cur.appendChild(el('div', 'cfcl', '걸린 연결 ' + all.length));
+    const box = el('div', 'cfcur'); cur.appendChild(box);
+    let wait = false;
+    all.forEach(([t, back]) => {
+      const line = el('div', 'cfcr');
+      const r = cfRowOf(t);
+      if (r) line.appendChild(cfRowEl(r, key, true, back));
+      else {
+        const miss = !cfIsOther(t) || !!(CF_DATA[cfLawOf(t)] || {}).m;
+        if (!miss) wait = true;
+        line.appendChild(cfRowEl({ k: t, uid: t, no: oxKeyDisp(t), where: cfLawOf(t), t: miss ? '없는 지문' : '불러오는 중' }, key, true, back));
+      }
+      const xx = el('button', 'cfxx', '✕'); xx.type = 'button'; xx.title = '연결 풀기';
+      xx.onclick = e2 => { e2.stopPropagation(); lkDel(key, t); paintCur(); paintFind(); render(); };
+      line.appendChild(xx);
+      box.appendChild(line);
+    });
+    if (wait) cfLoadOthers().then(() => { if (p.isConnected) paintCur(); });
+  };
+  const paintFind = () => {
+    rs.innerHTML = '';
+    const q = (inp.value || '').trim();
+    if (!q){ rs.hidden = true; return; }
+    const hits = cfFind(q, key);
+    rs.hidden = false;
+    if (!hits.length){ rs.appendChild(el('div', 'cfnone', '맞는 지문이 없다')); return; }
+    hits.forEach(r => rs.appendChild(cfRowEl(r, key, false, false, () => {
+      if (!lkAdd(key, r.k)) return;
+      toast('🔗 연결했다 — ' + r.no + ' ' + r.uid);
+      inp.value = ''; rs.innerHTML = ''; rs.hidden = true;
+      paintCur(); render();
+    })));
+  };
+  let tm = null;
+  inp.oninput = () => { clearTimeout(tm); tm = setTimeout(paintFind, 120); };   /* 민법 linkSearchSoon 과 같은 모음 */
+  paintCur();
+  cfLoadOthers().then(() => { if (!p.isConnected) return; if ((inp.value || '').trim()) paintFind(); paintCur(); });
+  /* 자리 = 누른 단추 아래(없으면 showPop) · 화면 밖이면 안으로 */
+  const cfg = (S.popCfg || {}).cflw;
+  if (btn && !(cfg && cfg.x != null)){
+    const R = btn.getBoundingClientRect(), B = vvBox(), w = p.offsetWidth || 440;
+    p.style.left = Math.max(B.x + 8, Math.min(R.left, B.x + B.w - w - 8)) + 'px';
+    p.style.top = Math.max(B.y + 8, R.bottom + 4) + 'px';
+    vvFit(p);
+  } else if (!(cfg && cfg.x != null)) showPop(ev);
+  mbWinFit(p);
+  setTimeout(() => { try{ inp.focus(); }catch(e){} }, 30);
+  return p;
+}
+
+/* ── §A-4 카드 연결 표시 — 머리 칩 「↩링크N」(남색 글자) · 「↩백링크N」(연두 · 내가 연결한 것 뺌) · 누르면 연결 창 ── */
+function cfLinkChips(host, k){
+  const my = lkOf(k), back = lkBack(k).filter(x => my.indexOf(x) < 0);
+  if (my.length){ const b = el('button', 'cflk m', '↩링크' + my.length); b.type = 'button'; b.title = '내가 연결한 지문';
+    b.onclick = ev => { ev.stopPropagation(); editPop(k, ev); }; host.appendChild(b); }
+  if (back.length){ const b = el('button', 'cflk b', '↩백링크' + back.length); b.type = 'button'; b.title = '나를 연결한 지문(내가 연결한 것은 뺌)';
+    b.onclick = ev => { ev.stopPropagation(); editPop(k, ev); }; host.appendChild(b); }
+}
+
+/* ── §A-6 근거 「!」 — 다시 그리지 않고 제자리 칠(민법 ggBangPaint) · 펼침·쓰던 글·초점 그대로 · 같은 근거가 떠 있는 모든 자리 ── */
+function cfBangToggle(uid, gk){
+  const L = ggOf(uid).slice(); const it = L.find(x => x.k === gk); if (!it) return;
+  it.bang = !it.bang; if (!it.bang) delete it.bang;
+  ggPutList(uid, L);
+  cfBangPaint(uid);
+}
+function cfBangPaint(uid){
+  const on = {}; ggOf(uid).forEach(g => { if (g && g.bang) on[g.k] = 1; });
+  const any = Object.keys(on).length > 0, U = String(uid);
+  const mine = (e, at) => { const v = String(e.getAttribute(at) || '').split('|'); return v[0] === U ? (v[1] || '') : null; };
+  document.querySelectorAll('[data-gb]').forEach(e => { const k = mine(e, 'data-gb'); if (k === null) return;
+    e.classList.toggle('on', !!on[k]); e.title = on[k] ? '「!」 끄기' : '「!」 — 꼭 보고 갈 것'; });
+  document.querySelectorAll('[data-gbbox]').forEach(e => { const k = mine(e, 'data-gbbox'); if (k === null) return; e.classList.toggle('bang', !!on[k]); });
+  document.querySelectorAll('[data-gbnum]').forEach(e => { const k = mine(e, 'data-gbnum'); if (k === null) return; e.classList.toggle('bang', !!on[k]); });
+  document.querySelectorAll('[data-gbref]').forEach(e => { if (e.getAttribute('data-gbref') === U) e.classList.toggle('bang', any); });
+  document.querySelectorAll('[data-gbrefbox]').forEach(e => { if (e.getAttribute('data-gbrefbox') === U) e.classList.toggle('bang', any); });
+  document.querySelectorAll('[data-gbline]').forEach(e => { const k = mine(e, 'data-gbline'); if (k === null) return; e.classList.toggle('bang', !!on[k]); });
+  try{ if (typeof ggFieldRepaint === 'function') ggFieldRepaint(); }catch(e){}
+}
+
+/* ── §A-7 정정 — 민법 openFixPanel 그대로(해설 밑 노란 칸 · 문제 글 · 정답 O/X · 해설 · 종합사례 원문 · 저장/취소/↩ 정정 해제) ──
+   정오 = 옛 FIX_KEY(jopangi.ansfix) 그대로 · 글 칸 = 새 키 jopangi.qfix {sid: {q?, exp?, case?, q0, exp0, case0, ts}}(SYNC_KEYS · 원장·데이터 파일 무변 · 볼트 ✎ 수정 큐와 섞지 않음) */
+const QFIX_KEY = REC_PRE + 'qfix';
+let QFIXREC = null;
+function qfixAll(){ if (!QFIXREC) QFIXREC = lsRead(QFIX_KEY); return QFIXREC; }
+function qfixOf(k){ return qfixAll()[k] || null; }
+function cfFixQ(k, t){ const f = qfixOf(k); return (f && typeof f.q === 'string') ? f.q : t; }
+function cfFixExp(k, t){ const f = qfixOf(k); return (f && typeof f.exp === 'string') ? f.exp : t; }
+function cfFixCase(k, t){ const f = qfixOf(k); return (f && typeof f.case === 'string') ? f.case : t; }
+function cfFixed(k){ return !!oxFixed(k) || !!qfixOf(k); }
+/* 종합사례 원문 한 묶음 — 제7판 = 같은 문항(z.문항)의 줄 · 리담 = 같은 문항의 선지 · 원문 글자가 같은 다른 묶음도(민법 fixCasePeers) */
+function cfCaseOf(h){
+  if (!h) return { t: '', peers: [] };
+  if (h.kind === 'L'){ const t = String(h.q.발문 || ''); return { t: t, peers: (h.q.지문 || []).map(z => oxKeyLid(h.q, z)) }; }
+  const z = h.z; if (!z.문항) return { t: String(z.사례 || ''), peers: [oxKeyP7(z)] };
+  const peers = Object.keys((VJ && VJ.P7map) || {}).map(id => VJ.P7map[id]).filter(x => x.문항 === z.문항).map(oxKeyP7);
+  return { t: String(z.사례 || ''), peers: peers.length ? peers : [oxKeyP7(z)] };
+}
+function cfFixOpen(key, raw, sol, host){
+  const old = host.querySelector(':scope > .cffix');
+  if (old){ old.remove(); return; }
+  const h = cfHit(key) || sidFind(key);
+  const f = qfixOf(key) || {};
+  const q0 = h ? (h.kind === 'L' ? String(h.z.t || '') : p7Text(h.z.t)) : String(((OXPOOL || {})[key] || {}).t || '');
+  const cs = cfCaseOf(h);
+  const box = el('div', 'cffix');
+  const hd = el('div', 'cffh'); hd.appendChild(el('b', '', '✎ 정정')); hd.appendChild(el('span', '', '고친 값은 기록(동기화)에만 쌓이고, 원장은 사람이 직접 고친다')); box.appendChild(hd);
+  box.appendChild(el('div', 'cffl', '문제'));
+  const tq = el('textarea', 'cfft1'); tq.rows = 4; tq.value = cfFixQ(key, q0); box.appendChild(tq);
+  const ar = el('div', 'cffa'); ar.appendChild(el('span', 'cffl2', '정답'));
+  let pick = oxAns(key, raw) || '';
+  const paintA = () => ar.querySelectorAll('button').forEach(b => { b.className = 'cfab ' + (b.dataset.v === pick ? (pick === 'O' ? 'o' : 'x') : ''); });
+  ['O', 'X'].forEach(v => { const b = el('button', 'cfab', v); b.type = 'button'; b.dataset.v = v; b.onclick = ev => { ev.stopPropagation(); pick = v; paintA(); }; ar.appendChild(b); });
+  ar.appendChild(el('span', 'cffo', '원래 ' + (raw || '—')));
+  box.appendChild(ar); paintA();
+  box.appendChild(el('div', 'cffl', '해설'));
+  const te = el('textarea', 'cfft1'); te.rows = 5; te.value = cfFixExp(key, sol || ''); box.appendChild(te);
+  const cl = el('div', 'cffl cffc'); cl.appendChild(el('span', '', '종합사례 원문'));
+  cl.appendChild(el('span', 'cffn', '글자가 같은 지문끼리 한 상자다 · 원문을 고치면 같은 상자 전부에 같이 먹는다')); box.appendChild(cl);
+  const tc = el('textarea', 'cfft1'); tc.rows = 4; tc.value = cfFixCase(key, cs.t); box.appendChild(tc);
+  const br = el('div', 'cffb');
+  const sv = el('button', 'cfsv', '저장'); sv.type = 'button';
+  const cc = el('button', 'cfcc', '취소'); cc.type = 'button'; cc.onclick = ev => { ev.stopPropagation(); box.remove(); };
+  br.appendChild(sv); br.appendChild(cc);
+  if (cfFixed(key)){ const un = el('button', 'cfun', '↩ 정정 해제'); un.type = 'button'; un.onclick = ev => { ev.stopPropagation(); cfFixClear(key); }; br.appendChild(un); }
+  box.appendChild(br);
+  sv.onclick = ev => {
+    ev.stopPropagation();
+    const A = qfixAll(), prev = A[key] || {};
+    const rec = { q0: prev.q0 != null ? prev.q0 : q0, exp0: prev.exp0 != null ? prev.exp0 : (sol || ''), case0: prev.case0 != null ? prev.case0 : cs.t, ts: nowIso() };
+    if (tq.value !== rec.q0) rec.q = tq.value;
+    if (te.value !== rec.exp0) rec.exp = te.value;
+    const caseNew = tc.value, caseChanged = caseNew !== cfFixCase(key, cs.t);
+    if (caseNew !== rec.case0) rec.case = caseNew;
+    if (rec.q == null && rec.exp == null && rec.case == null) delete A[key]; else A[key] = rec;
+    /* 원문 글자를 고쳤으면 같은 상자 지문 전부에 같은 case */
+    if (caseChanged) cs.peers.forEach(pk => { if (pk === key) return; const o = A[pk] || { q0: undefined, exp0: undefined, case0: cs.t, ts: nowIso() };
+      if (o.case0 == null) o.case0 = cs.t; if (caseNew !== o.case0) o.case = caseNew; else delete o.case; o.ts = nowIso();
+      if (o.q == null && o.exp == null && o.case == null) delete A[pk]; else A[pk] = o; });
+    QFIXREC = A; lsWrite(QFIX_KEY, A, '✎ 정정');
+    const F = fixAll();
+    if ((pick === 'O' || pick === 'X') && pick !== String(raw || '').toUpperCase()) F[key] = pick; else delete F[key];
+    FIXREC = F; lsWrite(FIX_KEY, F, '정답 정정');
+    toast('✎ 정정했다 — ' + (ggWho ? ggWho(key) : key));
+    render();
+  };
+  host.appendChild(box);
+  try{ box.scrollIntoView({ block: 'nearest' }); }catch(e){}
+  return box;
+}
+function cfFixClear(key){
+  const A = qfixAll(); delete A[key]; QFIXREC = A; lsWrite(QFIX_KEY, A, '✎ 정정');
+  const F = fixAll(); delete F[key]; FIXREC = F; lsWrite(FIX_KEY, F, '정답 정정');
+  toast('↩ 정정을 풀었다'); render();
+}
+/* 「✎ 정정됨」 — 누르면 원래 값 상자를 폈다 접는다(민법 toggleFixOrig) */
+function cfFixOrig(key, raw, host){
+  const old = host.querySelector(':scope > .cffo2'); if (old){ old.remove(); return; }
+  const f = qfixOf(key) || {}, d = el('div', 'cffo2');
+  const hd = el('div', ''); hd.appendChild(el('b', 'cfob', '원래 값')); hd.appendChild(document.createTextNode(' · 정답 ')); hd.appendChild(el('b', '', raw || '—'));
+  if (oxFixed(key)) hd.appendChild(document.createTextNode(' → ' + oxFixed(key)));
+  d.appendChild(hd);
+  if (typeof f.q === 'string') d.appendChild(el('div', 'cfos', '문 원래 — ' + String(f.q0 || '')));
+  if (typeof f.case === 'string') d.appendChild(el('div', 'cfos', '사례 원래 — ' + (String(f.case0 || '') || '빈 칸')));
+  d.appendChild(el('div', 'cfos', typeof f.exp === 'string' ? String(f.exp0 || '') : '해설은 안 고쳤다'));
+  if (f.ts) d.appendChild(el('div', 'cfod', '고친 날 ' + String(f.ts).slice(0, 10)));
+  host.appendChild(d);
+}
+/* 첫 화면 머리 「✎ 정정 N」 → 정정 목록 창(민법 showFixList 꼴 · 그 지문으로 가기 · ↩ 정정 취소) */
+function cfFixKeys(){
+  const P = OXPOOL || {}, s = new Set();
+  Object.keys(fixAll()).forEach(k => { if (P[k] && oxFixed(k)) s.add(k); });
+  Object.keys(qfixAll()).forEach(k => { if (P[k]) s.add(k); });
+  return [...s];
+}
+function cfFixList(ev){
+  const pk = 'q|✎ 정정 목록'; if (popToggle(pk)) return;
+  const body = popShell('q', '✎ 정정 목록 · ' + S.law, pk);
+  const paint = () => {
+    body.innerHTML = '';
+    const ks = cfFixKeys();
+    if (!ks.length){ body.appendChild(el('div', 'cdim', '정정한 지문이 없다')); return; }
+    ks.forEach(k => {
+      const f = qfixOf(k) || {}, r = cfRowOf(k), raw = ((OXPOOL || {})[k] || {}).ans || '';
+      const w = el('div', 'cffr');
+      const l1 = el('div', 'cffr1'); l1.appendChild(el('span', 'cfid', r ? r.uid : k));
+      if (typeof f.q === 'string') l1.appendChild(el('span', 'cftg q', '문'));
+      if (typeof f.case === 'string') l1.appendChild(el('span', 'cftg c', '사례'));
+      l1.appendChild(el('span', 'cfwh', r ? r.where + ' · ' + r.no : ''));
+      l1.appendChild(el('span', 'cfdt', String(f.ts || '').slice(0, 10)));
+      w.appendChild(l1);
+      const go = el('button', 'cffgo', String(r ? r.t : '').replace(/\s+/g, ' ').slice(0, 40) + ((r && r.t.length > 40) ? '…' : '')); go.type = 'button';
+      go.onclick = () => { closeAllPops(); linkGo(k); };
+      w.appendChild(go);
+      w.appendChild(el('div', 'cffa2', oxFixed(k) ? ('정답 ' + (raw || '—') + ' → ' + oxFixed(k)) : '정답 그대로'));
+      if (typeof f.q === 'string') w.appendChild(el('div', 'cffe', '문 고침 — 원래 ' + String(f.q0 || '').slice(0, 60) + '… → ' + String(f.q).slice(0, 60) + '…'));
+      if (typeof f.case === 'string') w.appendChild(el('div', 'cffe', '사례 고침 — 원래 ' + String(f.case0 || '').slice(0, 60) + '… → ' + String(f.case).slice(0, 60) + '…'));
+      if (typeof f.exp === 'string') w.appendChild(el('div', 'cffe', '해설 고침 — 원래 ' + String(f.exp0 || '').slice(0, 60) + '… → ' + String(f.exp).slice(0, 60) + '…'));
+      const un = el('button', 'cfun', '↩ 정정 취소'); un.type = 'button'; un.onclick = e2 => { e2.stopPropagation(); cfFixClear(k); paint(); };
+      w.appendChild(un);
+      body.appendChild(w);
+    });
+  };
+  paint();
+  showPop(ev);
+}
+
+/* ── CSS — 연결 창(시안 v9 값) · 머리 칩 · 근거 「!」(민법 값) · 정정 칸(민법 amber) · 판례 줄 글자 · 이동 글자 ── */
+(function(){ try{ const s = document.createElement('style'); s.textContent = [
+  /* §A-1 태그 묶음만 오른쪽 끝(.t 이름으로 걸지 않는다) */
+  '.mbqhd>.mbtags{display:flex;flex-wrap:wrap;gap:4px;margin-left:auto}',
+  /* §A-2 연결 창 */
+  '.pop.cflw{background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 10px 25px -5px rgba(0,0,0,.12);font:12.5px system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#1f2937;overflow:hidden;display:flex;flex-direction:column}',
+  '.pop.cflw>.ph{display:flex;align-items:center;gap:6px;padding:8px 10px 8px 12px;border-bottom:1px solid #e5e7eb;background:#fff;color:#374151}',
+  '.pop.cflw>.ph .cftt{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-weight:800;color:#374151;font-size:12.5px}',
+  '.pop.cflw>.ph .cfhc{display:inline-block;vertical-align:middle;cursor:default;opacity:1;filter:none}',
+  '.pop.cflw>.ph>button.cfx{margin-left:auto;border:0;background:none;color:#6b7280;font:700 13px system-ui;cursor:pointer}',
+  '.pop.cflw>.pb.cfbd{padding:10px 12px 12px;background:#f9fafb;overflow:auto;flex:1;min-height:0}',
+  '.cflw .cflb{font-size:12px;font-weight:800;color:#374151;margin-bottom:5px}',
+  '.cflw .cfq{display:block;width:100%;box-sizing:border-box;padding:10px;border:1px solid #a5b4fc;border-radius:8px;background:rgba(238,242,255,.4);font:14px "Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#000;outline:none}',
+  '.cflw .cfq:focus{border-color:#6366f1;box-shadow:0 0 0 1px #6366f1}',
+  '.cflw .cfrs{margin-top:4px;max-height:240px;overflow:auto;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,.08)}',
+  '.cflw .cfr{display:block;width:100%;box-sizing:border-box;text-align:left;padding:8px 12px;border:0;border-bottom:1px solid #f3f4f6;background:#fff;cursor:pointer;font:16px/24px "Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#000;border-radius:0}',
+  '.cflw .cfr:hover{background:#eef2ff}',
+  '.cflw .cfr.on{opacity:.5}',
+  '.cflw .cfr.cur{border-bottom:0;flex:1 1 auto;min-width:0;background:transparent}',
+  '.cflw .cfl1{display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap}',
+  '.cflw .cfid{padding:2px 6px;border:1px solid #e5e7eb;border-radius:4px;background:#f9fafb;color:#6b7280;font-size:10px;font-weight:700;line-height:15px}',
+  '.cflw .cfbk{color:#4d7c0f;font-size:10px;font-weight:800;line-height:15px}',
+  '.cflw .cfno{color:#1d4ed8;font-size:10px;font-weight:800;line-height:15px;text-decoration:underline dotted;text-underline-offset:2px;cursor:pointer}',
+  '.cflw .cfwh{color:#4338ca;font-size:10px;font-weight:700;line-height:15px}',
+  '.cflw .cfon{color:#15803d;font-size:10px;font-weight:700;line-height:15px}',
+  '.cflw .cftx{color:#1f2937;font-size:12px;font-weight:400;line-height:18px}',
+  '.cflw .cfnone{padding:10px;text-align:center;font-size:12px;color:#6b7280}',
+  '.cflw .cfcl{font-size:12px;font-weight:800;color:#374151;margin:10px 0 4px}',
+  '.cflw .cfcur{background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}',
+  '.cflw .cfcr{display:flex;align-items:center;gap:6px;border-bottom:1px solid #f3f4f6}',
+  '.cflw .cfxx{flex:none;margin-right:6px;padding:2px 9px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font:700 12px system-ui,"Malgun Gothic",sans-serif;cursor:pointer}',
+  '.cflw .cfft{margin-top:7px;font-size:10.5px;color:#9ca3af}',
+  /* §A-4 머리 칩 ↩링크N · ↩백링크N(민법 값 · 바탕·테 없음) */
+  'button.cflk{background:transparent;border:0;padding:0 2px;font:800 11px/16.5px "Malgun Gothic","Apple SD Gothic Neo",sans-serif;cursor:pointer;white-space:nowrap}',
+  'button.cflk.m{color:#1e3a8a}', 'button.cflk.b{color:#4d7c0f}',
+  /* §A-5 문제 창 「↪ 이동」 = 글자만 */
+  '.qp2 .qpbar .qpb.qgo{background:none;border:0;padding:0;color:#1d4ed8;font-size:12px;font-weight:700}',
+  /* §A-6 근거 「!」(민법 값) */
+  '.ggpan .hd .bg{border:0;background:transparent;padding:0;width:10px;text-align:center;color:#c4c8cf;font-size:13px;font-weight:900;line-height:1;cursor:pointer}',
+  '.ggpan .hd .bg.on{border:0;background:transparent;color:#e57373}',
+  '.ggpan.bang{background:#fff5f5;border-left:3px solid #f0a0a0}',
+  '.ggpan.bang .hd{background:transparent}',
+  '.ggpan.bang .hd .t{color:#c94f4f}',
+  '.ggnum.bang{border-width:2.5px;border-style:solid;border-color:#e57373;color:#e57373;background:#fff}',
+  '.ggrefchip.bang{border-color:#e57373;color:#e57373;background:#fff5f5}',
+  '.ggrefbox.bang{border-color:#f0a0a0}',
+  /* §A-7 정정 칸(민법 openFixPanel · amber) */
+  '.cffix{margin-top:8px;padding:10px;border:1px solid #fcd34d;border-radius:8px;background:rgba(255,251,235,.6);font-size:12px}',
+  '.cffix .cffh{display:flex;align-items:center;gap:8px;margin-bottom:6px}', '.cffix .cffh b{color:#78350f}', '.cffix .cffh span{font-size:11px;color:#6b7280}',
+  '.cffix .cffl{margin-bottom:4px;font-weight:700;color:#4b5563}', '.cffix .cffc{margin-top:8px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}', '.cffix .cffn{font-size:11px;font-weight:400;color:#6b7280}',
+  '.cffix .cfft1{display:block;width:100%;box-sizing:border-box;font-size:12px;padding:8px;border:1px solid #d1d5db;border-radius:4px;line-height:1.625;margin-bottom:8px;font-family:inherit}',
+  '.cffix .cffa{display:flex;align-items:center;gap:8px;margin-bottom:8px}', '.cffix .cffl2{font-weight:700;color:#4b5563}',
+  '.cffix .cfab{padding:4px 12px;border-radius:4px;border:1px solid #d1d5db;background:#fff;color:#6b7280;font-size:13px;font-weight:800}',
+  '.cffix .cfab.o{background:#2563eb;color:#fff;border-color:#2563eb}', '.cffix .cfab.x{background:#dc2626;color:#fff;border-color:#dc2626}',
+  '.cffix .cffo{font-size:11px;color:#6b7280}',
+  '.cffix .cffb{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}',
+  '.cffix .cfsv{padding:4px 10px;border-radius:4px;background:#d97706;color:#fff;font-weight:700;border:0}',
+  '.cffix .cfcc{padding:4px 10px;border-radius:4px;background:#fff;border:1px solid #d1d5db;font-weight:700;color:#4b5563}',
+  '.cfun{padding:4px 10px;border-radius:4px;background:#fff;border:1px solid #fca5a5;color:#dc2626;font-weight:700;margin-left:auto}',
+  '.cffo2{margin-top:6px;padding:8px;border-radius:4px;border:1px solid #fde68a;background:#fff;font-size:11.5px;color:#374151;white-space:pre-wrap}',
+  '.cffo2 .cfob{color:#92400e}', '.cffo2 .cfos{margin-top:4px;padding-top:4px;border-top:1px dashed #fde68a}', '.cffo2 .cfod{margin-top:4px;font-size:10.5px;color:#9ca3af}',
+  'button.mbfixb.cfdone{color:#92400e;background:#fffbeb;border-color:#fcd34d}',
+  '.cffr{padding:8px 12px;border-bottom:1px solid #f3f4f6}', '.cffr1{display:flex;align-items:center;gap:6px;font-size:11px;margin-bottom:2px}',
+  '.cffr .cfid{padding:2px 6px;border:1px solid #e5e7eb;border-radius:4px;background:#f9fafb;color:#9ca3af;font-weight:700}',
+  '.cffr .cftg{padding:1px 4px;border-radius:4px;font-weight:700}', '.cffr .cftg.q{color:#b45309;background:#fffbeb;border:1px solid #fde68a}', '.cffr .cftg.c{color:#4338ca;background:#eef2ff;border:1px solid #c7d2fe}',
+  '.cffr .cfwh{color:#6b7280}', '.cffr .cfdt{margin-left:auto;color:#9ca3af}',
+  '.cffr .cffgo{display:block;width:100%;text-align:left;font-size:12.5px;color:#1f2937;background:none;border:0;padding:0;cursor:pointer}',
+  '.cffr .cffa2{margin-top:4px;font-size:11.5px;font-weight:700}', '.cffr .cffe{margin-top:4px;font-size:11px;color:#4b5563}',
+  '.cffr .cfun{margin-left:0;margin-top:6px;font-size:11px;padding:2px 8px}',
+  /* §A-8 판례 줄 = 글자만(민법 actionBarHTML 🏛) */
+  'button.cfpan{background:transparent;border:0;border-radius:0;padding:0;font:700 12px "Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#075985;cursor:pointer;white-space:nowrap}',
+  '.mbhd .dl.cffx{cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}'
+].join('\n'); document.head.appendChild(s); }catch(e){} })();
+
 </script>
 </body>
 </html>
