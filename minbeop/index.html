@@ -3157,7 +3157,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                             <span id="ox-res-${item.id}" class="text-[11px] font-extrabold"></span>
                             <span class="ml-auto flex flex-wrap items-center gap-1.5">
                                 ${clBtnHTML(item.id)}
-                                <button onclick="toggleMemoPanel('${item.id}')" class="text-[11px] text-gray-500 hover:text-blue-700">✏️ 연결</button>
+                                <button onclick="event.stopPropagation();lwOpen('${item.id}',event)" class="text-[11px] text-gray-500 hover:text-blue-700">✏️ 연결</button>
                             </span>
                         </div>`}
 
@@ -3169,26 +3169,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                             ${item.pending ? '' : actionBarHTML(item)}
                         </div>
 
-                        <!-- 메모/연결 편집 패널 -->
-                        <div id="memo-panel-${item.id}" class="hide mt-3 p-4 bg-gray-50 border border-gray-200 rounded-xl shadow-inner">
-                            <label class="block text-sm font-extrabold text-gray-700 mb-1">🔗 관련/비교 문제 연결 (고유 ID 입력)
-                            </label>
-                            <div class="flex flex-col gap-1">
-                                <input type="text" id="link-input-${item.id}" class="w-full p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm" value="${links.join(', ')}" placeholder="연결할 문제의 고유 ID를 쉼표로 구분해 적어주세요. (예: Q1234, Q2555)">
-                                <span class="text-xs text-gray-500 ml-1">* 다른 문제 상단에 표시된 '고유 ID' 숫자를 적으시면 됩니다.</span>
-                                <div class="relative mt-1">
-                                    <input type="text" id="link-search-${item.id}" oninput="linkSearch('${item.id}')" onfocus="linkSearch('${item.id}')" autocomplete="off"
-                                        class="w-full p-2.5 border border-indigo-300 bg-indigo-50/40 rounded-lg outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
-                                        placeholder="🔍 찾아서 넣기 — 번호·본문·출처로 검색 (예: 취소, 31, 2015)">
-                                    <div id="link-results-${item.id}" class="hide absolute z-30 left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-xl max-h-60 overflow-auto"></div>
-                                </div>
-                            </div>
-                            
-                            <div class="mt-4 flex justify-end gap-2">
-                                <button onclick="toggleMemoPanel('${item.id}')" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-lg text-sm font-bold transition">닫기</button>
-                                <button onclick="saveMemoAndLink('${item.id}')" class="bg-blue-600 text-white hover:bg-blue-700 px-5 py-2 rounded-lg text-sm font-bold shadow-sm transition">저장하기</button>
-                            </div>
-                        </div>
+                        <!-- ★ 2026-09-27 (_task_ox_linkwin) — 카드 안 메모/연결 편집 패널 걷음 · 「✏️ 연결」 = 떠 있는 창(lwOpen) -->
                     </div>
                 `;
                 if (EXVP) exvHTML[item.id] = questionHTML; else htmlContent += questionHTML;   /* ★ 2026-09-26 기출뷰 — 문번마다 exvPaperHTML 이 짠다 */
@@ -3812,11 +3793,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             }
         }
 
-        function toggleMemoPanel(id) {
-            const panel = document.getElementById(`memo-panel-${id}`);
-            panel.classList.toggle('hide');
-            if (!panel.classList.contains('hide')) bindMemoImageInput(id);
-        }
+        /* ★ 2026-09-27 (_task_ox_linkwin) — toggleMemoPanel 걷음(부르는 곳 없음 · 연결 = 떠 있는 창 lwOpen) */
 
         /* ===== 🔗 연결 배지 — 정방향 + 역방향(백링크) =====
            저장은 지금처럼 한 방향으로만 한다(엑셀 「연결」 칸 그대로).
@@ -3861,20 +3838,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             return out;
         }
 
-        function saveMemoAndLink(id) {
-            const linkVal = document.getElementById(`link-input-${id}`).value;
-            /* ★ 09-15 (_task_ox_logic_merge §B-1) — 논리 칸·논리 연결을 걷었다. 이 저장은 유사문제(ox_q_links)만 쓴다 */
-            
-            const links = JSON.parse(localStorage.getItem('ox_q_links') || '{}');
-            const parsedLinks = linkVal.split(',').map(s => s.trim()).filter(Boolean);
-            if (parsedLinks.length > 0) links[id] = parsedLinks;
-            else delete links[id];
-            localStorage.setItem('ox_q_links', JSON.stringify(links)); useIdxDrop();
-            
-            linkChipsRepaint();   /* ★ 09-15 (_task_ox_card_simple_add7) — 카드 둘째 줄(관련 문제 배지)을 걷었다 · 떠 있는 「↩링크N」「↩백링크N」 글자만 다시 그린다 */
-
-            toggleMemoPanel(id);
-        }
+        /* ★ 2026-09-27 (_task_ox_linkwin) — saveMemoAndLink 걷음(부르는 곳 없음 · 연결 = 떠 있는 창 lwOpen) */
 
         /* ===== 연결할 문제 찾기 =====
            고유 ID 를 외우거나 그 문제로 찾아가지 않아도 되게, 입력칸 옆에서 바로 검색해 넣는다.
@@ -10490,12 +10454,11 @@ function openQPopup(id) {
         + (same.length ? '<button onclick="showRelated(\'' + id + '\',\'same\')" style="font-size:11.5px;font-weight:700;color:#0f766e;background:#f0fdfa;border:1px solid #99f6e4;border-radius:6px;padding:3px 9px;cursor:pointer">🔗 판 ' + same.length + '</button>' : '')
         + '<span data-lkchips="' + id + '" style="display:contents">' + myLinkChipHTML(q, true) + '</span>'   /* ★ 09-15 (_task_ox_card_simple_add7) — 「↩링크N」「↩백링크N」(카드와 같은 글자) */
         + clBtnHTML(id, true)   /* ★ 2026-09-22 (_task_ox_claude_answers §B-1) — 「✏️ 연결」 바로 앞 · 글자만 */
-        + '<button onclick="qpLinkToggle(\'' + id + '\')" style="font-size:11.5px;font-weight:700;color:#374151;background:#fff;border:1px solid #d1d5db;border-radius:6px;padding:3px 9px;cursor:pointer">✏️ 연결</button>'   /* ★ add8 — 유사문제 연결 칸(옛 비교 창 「✏️ 연결」 · id 는 qp- 접두사) */
+        + '<button onclick="event.stopPropagation();lwOpen(\'' + id + '\',event)" style="font-size:11.5px;font-weight:700;color:#374151;background:#fff;border:1px solid #d1d5db;border-radius:6px;padding:3px 9px;cursor:pointer">✏️ 연결</button>'   /* ★ add8 — 유사문제 연결 칸(옛 비교 창 「✏️ 연결」 · id 는 qp- 접두사) */
         + '<button onclick="openMemCard(\'' + id + '\')" style="font-size:11.5px;font-weight:700;color:#a21caf;background:#fdf4ff;border:1px solid #f5d0fe;border-radius:6px;padding:3px 9px;cursor:pointer">🃏 암기카드 ' + (cards || '') + '</button>'
         + '<span style="flex:1"></span>'
-        + '<button onclick="oxWinClose(\'' + key + '\');jumpFromSearch(\'' + id + '\')" style="font-size:11.5px;font-weight:700;color:#fff;background:#2563eb;border:1px solid #2563eb;border-radius:6px;padding:3px 9px;cursor:pointer">↪ 이 문제로 이동</button>'
+        + '<button class="qpgo" onclick="oxWinClose(\'' + key + '\');jumpFromSearch(\'' + id + '\')" style="font-size:12px;font-weight:700;color:#1d4ed8;background:none;border:0;padding:0;cursor:pointer">↪ 이동</button>'   /* ★ 2026-09-27 (_task_ox_linkwin §A-2) — 글자만 · 자리·동작 그대로 */
         + '</div>'
-        + '<div id="qp-link-box-' + id + '" style="display:none;margin-top:9px;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px"></div>'   /* ★ add8 — 「✏️ 연결」 칸(펼 때 qpLinkEditHTML 로 채운다) */
         + '</div>';
     oxWinOpen(key, escHtml(qLabelOf(q)) + ' · ' + escHtml(qWhere(q)), q.panrye ? '🏛 ' + escHtml(q.panrye) : '', body, 520);
 }
@@ -10511,39 +10474,9 @@ function qpScrollTo(id, where) {
 }
 /* ★ 09-15 (_task_ox_card_simple_add8) — 문항 팝업 안 「✏️ 연결」 칸. 옛 비교 창 편집기(cmpEditHTML·cmpSave)를 옮겼다 — 저장소는 카드 편집 패널과 같은 ox_q_links.
    id 는 qp- 접두사(카드의 link-input-·memo-panel- 과 안 부딪친다) · 「🔍 찾아서 넣기」는 카드와 같은 linkSearch(범위 qp-) · 논리 칸은 없다(logic_merge). */
-function qpLinkToggle(id) {
-    const box = document.getElementById('qp-link-box-' + id);
-    if (!box) return;
-    const open = box.style.display === 'none';
-    if (open) box.innerHTML = qpLinkEditHTML(id);
-    box.style.display = open ? 'block' : 'none';
-}
-function qpLinkEditHTML(id) {
-    const cur = (linkStore()[id] || []).join(', ');
-    const a = escAttr(id);
-    return '<label style="display:block;font-size:12px;font-weight:800;color:#374151;margin-bottom:4px">🔗 관련/비교 문제 연결 (고유 ID 입력)</label>'
-        + '<input type="text" id="qp-link-input-' + id + '" value="' + escHtml(cur) + '" placeholder="연결할 문제의 고유 ID를 쉼표로 구분해 적어주세요. (예: Q1234, Q2555)" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none">'
-        + '<div class="relative" style="position:relative;margin-top:6px">'
-        + '<input type="text" id="qp-link-search-' + id + '" oninput="linkSearch(\'' + a + '\',\'\',\'qp-\')" onfocus="linkSearch(\'' + a + '\',\'\',\'qp-\')" autocomplete="off" placeholder="🔍 찾아서 넣기 — 번호·본문·출처로 검색 (예: 취소, 31, 2015)" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid #a5b4fc;background:#f5f7ff;border-radius:8px;font-size:13px;outline:none">'
-        + '<div id="qp-link-results-' + id + '" class="hide absolute z-30 left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-xl max-h-60 overflow-auto" style="position:absolute;z-index:30;left:0;right:0;margin-top:4px;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,.15);max-height:15rem;overflow:auto"></div>'
-        + '</div>'
-        + '<div style="display:flex;justify-content:flex-end;gap:6px;margin-top:8px">'
-        + '<button onclick="qpLinkToggle(\'' + a + '\')" style="font-size:12px;font-weight:700;color:#374151;background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:4px 12px;cursor:pointer">닫기</button>'
-        + '<button onclick="qpLinkSave(\'' + a + '\')" style="font-size:12px;font-weight:700;color:#fff;background:#2563eb;border:1px solid #2563eb;border-radius:8px;padding:4px 12px;cursor:pointer">저장하기</button>'
-        + '</div>';
-}
-function qpLinkSave(id) {
-    const inp = document.getElementById('qp-link-input-' + id);
-    if (!inp) return;
-    const links = JSON.parse(localStorage.getItem('ox_q_links') || '{}');
-    const parsed = String(inp.value || '').split(',').map(s => s.trim()).filter(Boolean);
-    if (parsed.length) links[id] = parsed; else delete links[id];
-    localStorage.setItem('ox_q_links', JSON.stringify(links)); useIdxDrop();
-    const ci = document.getElementById('link-input-' + id);   /* 카드 편집 패널이 떠 있으면 그 칸도 맞춘다 */
-    if (ci) ci.value = parsed.join(', ');
-    linkChipsRepaint();
-    qpLinkToggle(id);
-}
+/* ★ 2026-09-27 (_task_ox_linkwin) — qpLinkToggle 걷음(부르는 곳 없음 · 연결 = 떠 있는 창 lwOpen) */
+/* ★ 2026-09-27 (_task_ox_linkwin) — qpLinkEditHTML 걷음(부르는 곳 없음 · 연결 = 떠 있는 창 lwOpen) */
+/* ★ 2026-09-27 (_task_ox_linkwin) — qpLinkSave 걷음(부르는 곳 없음 · 연결 = 떠 있는 창 lwOpen) */
 /* 🃏 암기카드 (P6 설계) — SVG는 localStorage(기록파일에 실림), 이미지는 IndexedDB(그 기기만) */
 let _mcCache = null;
 function mcInvalidate() { _mcCache = null; }
@@ -12359,6 +12292,180 @@ function jxCellTap(b) {
     if (info.dataset.on === b.dataset.tip && !info.classList.contains('hide')) { info.classList.add('hide'); info.dataset.on = ''; return; }
     b.classList.add('rec-on'); info.dataset.on = b.dataset.tip; info.textContent = b.dataset.tip; info.classList.remove('hide');
 }
+
+/* ══ ★ 2026-09-27 (_task_ox_linkwin) — 연결 창 = 조판기 꼴(떠 있는 창 · 누르면 바로 저장 · 번호 누르면 문제 창) ══
+   두 앱 같은 꼴(조판기 _task_jo_cardfix §A-2 · 시안 아티팩트 v9 값) · 민법만 = 제목 ID 칩 「ID Q…」 · 찾기 = 민법 문항만 · 역방향 줄 없음(머리 「↩백링크N」 이 맡음).
+   저장 = ox_q_links(한 방향 · 칸 = 문항 하나) → useIdxDrop → linkChipsRepaint — 옛 saveMemoAndLink 와 같은 길(도장·병합 규칙 무변).
+   이 블록은 patch 스크립트(minbeop\task\_patch_mb_linkwin.py)가 마지막 스크립트 닫는 태그 바로 앞에 붙인다(주석에도 그 태그 글자를 쓰지 않는다). */
+function lwEl(tag, cls, txt) { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+function lwLinks() { try { return JSON.parse(localStorage.getItem('ox_q_links') || '{}') || {}; } catch (e) { return {}; } }
+function lwMine(owner) { return (lwLinks()[owner] || []).filter(Boolean); }
+function lwHas(owner, id) { const u = String(id).trim().toUpperCase(); return lwMine(owner).some(x => String(x).trim().toUpperCase() === u); }
+function lwSave(owner, arr) {
+    const links = lwLinks();
+    if (arr.length) links[owner] = arr; else delete links[owner];
+    localStorage.setItem('ox_q_links', JSON.stringify(links)); useIdxDrop();
+    try { linkChipsRepaint(); } catch (e) { }
+}
+function lwAdd(owner, id) {
+    if (String(owner) === String(id)) { exvToast('자기 자신에는 연결할 수 없다'); return false; }
+    if (lwHas(owner, id)) { exvToast('이미 연결돼 있다'); return false; }
+    lwSave(owner, lwMine(owner).concat([id]));
+    return true;
+}
+function lwDel(owner, id) { const u = String(id).trim().toUpperCase(); lwSave(owner, lwMine(owner).filter(x => String(x).trim().toUpperCase() !== u)); }
+/* 줄 하나 — 민법 linkSearch 줄 꼴(ID 칩 · N번 · 과목·단원 · 본문 앞 70자) · 번호 = 점선 밑줄(누르면 문제 창) */
+function lwNo(q) { return `${q.displayNo ?? q.probNum}${q.subNum || ''}번`; }
+function lwRowEl(q, owner, cur, onPick) {
+    const on = !cur && lwHas(owner, q.id);
+    const b = lwEl(cur ? 'div' : 'button', 'cfr' + (on ? ' on' : '') + (cur ? ' cur' : ''));
+    if (!cur) b.type = 'button';
+    const l1 = lwEl('div', 'cfl1');
+    l1.appendChild(lwEl('span', 'cfid', 'ID ' + q.id));
+    const no = lwEl('span', 'cfno', lwNo(q)); no.dataset.pc = q.id; no.title = '문제 창 열기';
+    no.onclick = ev => { ev.stopPropagation(); showLinkedQuestion(q.id); };
+    l1.appendChild(no);
+    l1.appendChild(lwEl('span', 'cfwh', `${q.subject || ''} · ${q.subChapter || ''}`));
+    if (on) l1.appendChild(lwEl('span', 'cfon', '이미 넣음'));
+    b.appendChild(l1);
+    b.appendChild(lwEl('div', 'cftx', String(q.q || '').slice(0, 70) + '…'));
+    if (onPick) b.onclick = onPick;
+    return b;
+}
+/* 찾기 — 지금 linkSearch 대상·차례·30 건 그대로(uid · 번호 · 본문 · 출처 · 과목 · 단원 · 1자부터) */
+function lwFind(owner, term) {
+    const low = String(term || '').trim().toLowerCase(), hits = [];
+    if (!low) return hits;
+    for (let i = 0; i < quizData.length && hits.length < 30; i++) {
+        const q = quizData[i];
+        if (String(q.id) === String(owner)) continue;
+        const no = `${q.displayNo ?? q.probNum}${q.subNum || ''}`;
+        const hay = [q.id, no, q.q, q.source, q.subject, q.subChapter].map(v => String(v || '').toLowerCase());
+        if (hay.some(h => h.includes(low))) hits.push(q);
+    }
+    return hits;
+}
+/* 제목 칩 셋 — 그 카드 머리(출처 · 출제연도 · ID) 그대로 복제 · 흐림 없이 · 누름 없음 */
+function lwHeadChips(owner) {
+    /* 카드(#q-box-<id>)가 화면에 있으면 그 칩(출처 recStripToggle · 출제연도 data-exam 첫째 · ID mbBookOpen)의 꼴·글을 그대로 · 없으면(문항 팝업만 뜬 때) 같은 꼴로 데이터에서 */
+    const box = document.getElementById('q-box-' + owner);
+    const q = quizData.find(x => x.id === owner) || {};
+    const CIR = (typeof CIRCLED !== 'undefined') ? CIRCLED : ['', '①', '②', '③', '④', '⑤'];
+    const mk = (sel, cls, txt) => { const e = box && box.querySelector(sel); const c = lwEl('span', (e ? e.className : cls) + ' cfhc', e ? e.textContent.trim() : txt); c.style.opacity = '1'; return c; };
+    const out = [];
+    if (q.source || (box && box.querySelector('button[onclick^="recStripToggle"]')))
+        out.push(mk('button[onclick^="recStripToggle"]', 'bg-purple-100 text-purple-800 text-[11px] font-extrabold px-2 py-0.5 rounded-md border border-purple-200 whitespace-nowrap', q.source || ''));
+    const m = (q.examMeta || [])[0];
+    if (m || (box && box.querySelector('button[data-exam]')))
+        out.push(mk('button[data-exam]', 'bg-gray-100 text-gray-600 text-[11px] font-bold px-2 py-0.5 rounded-md border border-gray-200 whitespace-nowrap', m ? (m.year + ':' + (m.no || '') + ':' + (CIR[m.opt] || (m.opt || ''))) : ''));
+    out.push(mk('button[onclick^="mbBookOpen"]', 'text-[10px] px-1.5 py-0.5 rounded border bg-gray-50 text-gray-500 border-gray-200 font-bold whitespace-nowrap', 'ID ' + owner));
+    return out;
+}
+/* 화면 밖이면 안으로 — 아래 끝이 보이는 화면 밖이면 위로 · 오른쪽 끝이 밖이면 왼쪽으로(조판기 mbWinFit 과 같은 규칙 · 창 높이는 80vh 안) ·
+   열 때와 줄이 늘고 줄 때(걸린 연결 · 찾기 결과) 다시 맞춘다 */
+function lwFit(w) {
+    if (!w || !w.isConnected) return;
+    const r = w.getBoundingClientRect();
+    if (r.bottom > innerHeight - 8) w.style.top = Math.max(8, innerHeight - r.height - 8) + 'px';
+    if (r.right > innerWidth - 8) w.style.left = Math.max(8, innerWidth - r.width - 8) + 'px';
+}
+function lwOpen(owner, ev) {
+    const old = document.getElementById('oxwin-lk');
+    if (old) { const same = old.dataset.lkowner === String(owner); old.remove(); if (same) return; }   /* 같은 단추 다시 누름 = 닫힘 · 창 하나만 */
+    const btn = ev && ev.target && ev.target.closest ? ev.target.closest('button') : null;
+    const w = oxWinOpen('lk', '🔗 연결', '', '<div class="cfbd"></div>', 440, { resize: true, sizeKey: 'lk' });
+    if (!w) return;
+    w.dataset.lkowner = String(owner);
+    w.classList.add('cflw');
+    const head = w.querySelector('.oxwin-head'), tt = head && head.querySelector('div');
+    if (head) {
+        head.style.cssText = 'display:flex;align-items:center;gap:6px;padding:8px 10px 8px 12px;border-bottom:1px solid #e5e7eb;background:#fff;cursor:move;touch-action:none';
+        if (tt) { tt.className = 'cftt'; tt.style.cssText = ''; tt.textContent = '🔗 연결'; lwHeadChips(owner, ev).forEach(c => tt.appendChild(c)); }
+        const x = head.querySelector(':scope > button'); if (x) { x.textContent = '✕'; x.title = '닫기'; x.className = 'cfx'; x.style.cssText = ''; }
+    }
+    const body = w.querySelector('.cfbd');
+    body.appendChild(lwEl('div', 'cflb', '🔗 연결할 문제 찾기 — 번호 · 본문 · 출처 · 단원'));
+    const inp = lwEl('input', 'cfq'); inp.type = 'text'; inp.setAttribute('autocomplete', 'off');
+    inp.placeholder = '🔍 찾아서 넣기 — 번호·본문·출처로 검색 (예: 취소, 31, 2015)';
+    body.appendChild(inp);
+    const rs = lwEl('div', 'cfrs'); rs.hidden = true; body.appendChild(rs);
+    const cur = lwEl('div', 'cfcurw'); body.appendChild(cur);
+    body.appendChild(lwEl('div', 'cfft', '결과를 누르면 바로 연결된다(저장 단추 없음) · ✕ = 연결 풀기'));
+    const paintCur = () => {
+        cur.innerHTML = '';
+        const my = lwMine(owner);
+        if (!my.length) return;
+        cur.appendChild(lwEl('div', 'cfcl', '걸린 연결 ' + my.length));
+        const bx = lwEl('div', 'cfcur'); cur.appendChild(bx);
+        my.forEach(id => {
+            const line = lwEl('div', 'cfcr');
+            const q = quizData.find(x => String(x.id).trim().toUpperCase() === String(id).trim().toUpperCase());
+            line.appendChild(q ? lwRowEl(q, owner, true) : lwRowEl({ id: id, q: '지금 불러온 데이터에 없는 문항', subject: '', subChapter: '' }, owner, true));
+            const xx = lwEl('button', 'cfxx', '✕'); xx.type = 'button'; xx.title = '연결 풀기';
+            xx.onclick = e2 => { e2.stopPropagation(); lwDel(owner, id); paintCur(); paintFind(); };
+            line.appendChild(xx);
+            bx.appendChild(line);
+        });
+        lwFit(w);
+    };
+    const paintFind = () => {
+        rs.innerHTML = '';
+        const term = (inp.value || '').trim();
+        if (!term) { rs.hidden = true; return; }
+        const hits = lwFind(owner, term);
+        rs.hidden = false;
+        if (!hits.length) { rs.appendChild(lwEl('div', 'cfnone', '찾는 문제가 없습니다')); return; }
+        hits.forEach(q => rs.appendChild(lwRowEl(q, owner, false, () => {
+            if (!lwAdd(owner, q.id)) return;
+            exvToast('🔗 연결했다 — ' + q.id + ' ' + lwNo(q));
+            inp.value = ''; rs.innerHTML = ''; rs.hidden = true;
+            paintCur();
+        })));
+        lwFit(w);
+    };
+    let tm = null;
+    inp.oninput = () => { clearTimeout(tm); tm = setTimeout(paintFind, 120); };   /* linkSearchSoon 과 같은 모음 */
+    paintCur();
+    /* 자리 = 누른 단추 아래 · 화면 밖이면 안으로(크기 기억이 있으면 그 폭) */
+    if (btn) {
+        const R = btn.getBoundingClientRect(), ww = w.offsetWidth || 440;
+        w.style.left = Math.max(8, Math.min(R.left, innerWidth - ww - 8)) + 'px';
+        w.style.top = Math.max(8, Math.min(R.bottom + 4, innerHeight - 160)) + 'px';
+    }
+    lwFit(w);
+    setTimeout(() => { try { inp.focus(); } catch (e) { } }, 30);
+    return w;
+}
+(function () { try { const s = document.createElement('style'); s.textContent = [
+    '#oxwin-lk.cflw{background:#fff;border:1px solid #e5e7eb !important;border-radius:12px;box-shadow:0 10px 25px -5px rgba(0,0,0,.12) !important;font:12.5px system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#1f2937}',
+    '#oxwin-lk .cftt{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-weight:800;color:#374151;font-size:12.5px;min-width:0;flex:1}',
+    '#oxwin-lk .cfhc{display:inline-block;vertical-align:middle;cursor:default;opacity:1}',
+    '#oxwin-lk .cfx{margin-left:auto;border:0;background:none;color:#6b7280;font:700 13px system-ui;cursor:pointer}',
+    '#oxwin-lk .oxwin-body{background:#f9fafb}',
+    '#oxwin-lk .cfbd{padding:10px 12px 12px;background:#f9fafb}',
+    '#oxwin-lk .cflb{font-size:12px;font-weight:800;color:#374151;margin-bottom:5px}',
+    '#oxwin-lk .cfq{display:block;width:100%;box-sizing:border-box;padding:10px;border:1px solid #a5b4fc;border-radius:8px;background:rgba(238,242,255,.4);font:14px "Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#000;outline:none}',
+    '#oxwin-lk .cfq:focus{border-color:#6366f1;box-shadow:0 0 0 1px #6366f1}',
+    '#oxwin-lk .cfrs{margin-top:4px;max-height:240px;overflow:auto;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,.08)}',
+    '#oxwin-lk .cfr{display:block;width:100%;box-sizing:border-box;text-align:left;padding:8px 12px;border:0;border-bottom:1px solid #f3f4f6;background:#fff;cursor:pointer;font:16px/24px "Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#000;border-radius:0}',
+    '#oxwin-lk .cfr:hover{background:#eef2ff}', '#oxwin-lk .cfr.on{opacity:.5}',
+    '#oxwin-lk .cfr.cur{border-bottom:0;flex:1 1 auto;min-width:0;background:transparent}',
+    '#oxwin-lk .cfl1{display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap}',
+    '#oxwin-lk .cfid{padding:2px 6px;border:1px solid #e5e7eb;border-radius:4px;background:#f9fafb;color:#6b7280;font-size:10px;font-weight:700;line-height:15px}',
+    '#oxwin-lk .cfno{color:#1d4ed8;font-size:10px;font-weight:800;line-height:15px;text-decoration:underline dotted;text-underline-offset:2px;cursor:pointer}',
+    '#oxwin-lk .cfwh{color:#4338ca;font-size:10px;font-weight:700;line-height:15px}',
+    '#oxwin-lk .cfon{color:#15803d;font-size:10px;font-weight:700;line-height:15px}',
+    '#oxwin-lk .cftx{color:#1f2937;font-size:12px;font-weight:400;line-height:18px}',
+    '#oxwin-lk .cfnone{padding:10px;text-align:center;font-size:12px;color:#6b7280}',
+    '#oxwin-lk .cfcl{font-size:12px;font-weight:800;color:#374151;margin:10px 0 4px}',
+    '#oxwin-lk .cfcur{background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}',
+    '#oxwin-lk .cfcr{display:flex;align-items:center;gap:6px;border-bottom:1px solid #f3f4f6}',
+    '#oxwin-lk .cfxx{flex:none;margin-right:6px;padding:2px 9px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font:700 12px system-ui,"Malgun Gothic",sans-serif;cursor:pointer}',
+    '#oxwin-lk .cfft{margin-top:7px;font-size:10.5px;color:#9ca3af}',
+    /* 문항 팝업 「↪ 이동」 = 글자만 */
+    'button.qpgo{background:none !important;border:0 !important;padding:0 !important;color:#1d4ed8 !important;font-size:12px !important;font-weight:700 !important;cursor:pointer}'
+].join('\n'); document.head.appendChild(s); } catch (e) { } })();
+
 </script>
 </body>
 </html>
