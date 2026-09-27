@@ -1993,7 +1993,7 @@ const S={law:'특허법',tab:'jo',jo:null,prec:null,precTab:'요약',
 const UI_KEY='jopangi_ui';   // ⚠ `jopangi.` 접두가 아니다 — 기록 내보내기·건수에서 빠진다
 try{const u=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if(u.nmw>0)S.qlNmW=u.nmw;if(u.rdw>0)S.qlRdW=u.rdw;
-    if(u.jpw>0)S.joPanelW=u.jpw;if(u.jph>0)S.joPanelH=u.jph;if(u.hfold)S.heatFold=true;
+    if(u.jww>0)S.joPanelW=u.jww;if(u.jwh>0)S.joPanelH=u.jwh;   /* ★ revfix0928 A-2 — 창 크기 = 새 키(옛 패널 jpw 340 을 안 이어받는다) */if(u.hfold)S.heatFold=true;
     if(u.trw>0)S.treeW=u.trw;   /* ★ v3-J §0-2 */
     if(u.jbk)S.joBlank=Object.assign({내용:false,주체:false,기간:false},u.jbk);
     if(u.jbs)S.joBlankStar=true;
@@ -2024,7 +2024,7 @@ try{const u4=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if('note_color' in u4)S.noteColor=!!u4.note_color;   /* ★ notecolor B — 「정리 색」 켜고 끄기(기기별 · 기본 켬) */
     if(u4.c2uopen&&typeof u4.c2uopen==='object'&&!Array.isArray(u4.c2uopen))S.c2uOpen=u4.c2uopen;}catch(e){}   /* ★ 2cha_unit §B-4 — 걸침 펼침(기기 하나 값) */   /* ★ hrail(9/22) §C-1 — 2차 보드 차례(회차별│단원별) */
 function uiSave(){try{localStorage.setItem(UI_KEY,JSON.stringify(
-  {nmw:S.qlNmW,rdw:S.qlRdW,jpw:S.joPanelW,jph:S.joPanelH,hfold:S.heatFold?1:0,trw:S.treeW,
+  {nmw:S.qlNmW,rdw:S.qlRdW,jww:S.joPanelW,jwh:S.joPanelH,hfold:S.heatFold?1:0,trw:S.treeW,
    jbk:S.joBlank,jbs:S.joBlankStar?1:0,
    prec_filter:S.precFilter||{},prec_sort:S.precSort,
    lsw:S.listW,prec_ygroups:S.precYG||{},
@@ -2695,7 +2695,7 @@ async function viewJo(){
     const r=el('div','r'+(S.jo===x.k?' on':''));
     r.appendChild(el('span','nm',x.k+' '+(x.t||'')));
     /* ★ joscreen §E-1·§E-3·§E-4(⑨⑪⑫) — ★ 개정일 = 이름 바로 뒤 · 오른쪽 = 고정 폭 세 칸 [빈칸 표지][✏️N][🔗N](없는 칸은 빈자리 · 모든 줄이 세로로 맞는다) · 막대 걷음 · ✏️ */
-    if(stars[x.k])r.appendChild(el('span','jstarc jstarn','★ '+stars[x.k].replace(/^20/,'')));
+    if(stars[x.k])r.appendChild(el('span','jstarc jstarn'+((S.treeW||212)<260?' jsshr':''),'★ '+stars[x.k].replace(/^20/,'')));   /* ★ revfix0928 A-7 — 좁은 서랍(260 미만)은 ★ 개정일이 이름보다 먼저 줄어든다(모자라면 ★ 만) · 260·320 무변 */
     const em=el('em','jcol3'+((S.treeW||212)<300?'':' wide'));
     {const bm=bkMark3(x.k);em.appendChild(bm||el('span','jc0'));}
     em.appendChild(x.M?el('span','jcm','✏️'+x.M):el('span','jc0'));
@@ -10363,7 +10363,7 @@ function mbTypeChip(key, draft, jos, host, jsid){
   tb.title = (fix ? '직접 확정한 값' : '초안 — 눌러 확정') + ' · 저장값 ' + (raw || '없음');
   tb.onclick = ev => { ev.stopPropagation(); typePop(key, ev); };
   chip.appendChild(tb);
-  uzBkSeg(chip, key, eff);   /* ★ mbsame_add3 §A-7 — 「조문형」 바로 오른쪽 빈칸 종류 글자(따로 칩 없음) */
+  uzBkSeg(chip, jsid || key, eff);   /* ★ revfix0928 A-3 — 지문 열쇠(표시·창·저장·바깥 필터가 같은 열쇠) · ★ mbsame_add3 §A-7 — 「조문형」 바로 오른쪽 빈칸 종류 글자(따로 칩 없음) */
   shown.forEach(c => {
     chip.appendChild(el('i', 'dot', '·'));
     const jb = el('button', 'seg jo', joShort(c));
@@ -13640,14 +13640,21 @@ function jtPaint(){
       box.appendChild(gr);
       if (!gfold) gs.forEach(g => {
         const cur = (S.jimunTab === 'gichul' && String(S.year) === g.y);
-        const it2 = el('div', 'jtit' + (cur ? ' cur' : ''));
-        it2.style.paddingLeft = '20px';
-        const l2 = el('div', 'l1');
-        l2.appendChild(el('span', 'tx', g.y + '년' + (g.r ? ' 제' + g.r + '회' : '')));
+        const nm = g.y + '년' + (g.r ? ' 제' + g.r + '회' : '');
         const gks = []; ((JTDATA && JTDATA.qs) || []).forEach(q => { if (String(q.연도) === g.y) (q.지문 || []).forEach(z => gks.push(oxKeyLid(q, z))); });
         const gst = jtStat(gks);   /* ★ mbsame_add3 §A-2 ① — 지문 수 · 기출뷰에선 「푼 것/전체」 + 막대(민법 trBuild) */
-        l2.appendChild(el('span', 'n', S.jimunTab === 'gichul' ? (gst.done + '/' + gst.total) : String(gst.total)));
+        /* ★ revfix0928 A-4 — 해마다 해 머리 줄(민법 .trch · 「▾ 2026년 제63회 · 98」 · 누름 = 접기/펴기) + 회차 줄(민법 .trit · 「지금」 → 이름 → 「0/98」 · 누름 = 그 해 기출뷰) */
+        const yk = 'gy' + g.y, yfold = !!(S.jtCh && S.jtCh[yk]);
+        const yh = el('div', 'jtych' + (cur ? ' cur' : '')); yh.dataset.gy = g.y;
+        yh.appendChild(el('span', '', yfold ? '▸' : '▾')); yh.appendChild(el('span', 'tx', nm)); yh.appendChild(el('span', 'n', String(gst.total)));
+        yh.onclick = () => { S.jtCh = S.jtCh || {}; if (S.jtCh[yk]) delete S.jtCh[yk]; else S.jtCh[yk] = 1; uiSave(); jtPaint(); };
+        box.appendChild(yh);
+        if (yfold) return;
+        const it2 = el('div', 'jtit jtyit' + (cur ? ' cur' : '')); it2.dataset.gy = g.y;   /* jtit = 옛 줄 이름(찾는 곳 그대로) · 값은 jtyit(민법 .trit) */
+        const l2 = el('div', 'l1');
         if (cur) l2.appendChild(el('span', 'now', '지금'));
+        l2.appendChild(el('span', 'tx', nm));
+        l2.appendChild(el('span', 'n', S.jimunTab === 'gichul' ? (gst.done + '/' + gst.total) : String(gst.total)));
         it2.appendChild(l2);
         if (gst.total){ const bar = el('div', 'jdbar'); const iOk = el('i', ''); iOk.style.width = Math.round((gst.done - gst.bad) / gst.total * 100) + '%'; iOk.style.background = '#2E7D6F';
           const iBad = el('i', ''); iBad.style.width = Math.round(gst.bad / gst.total * 100) + '%'; iBad.style.background = 'var(--rule)'; bar.appendChild(iOk); bar.appendChild(iBad); it2.appendChild(bar); }
@@ -14013,6 +14020,35 @@ function jtLvStep(){
   if (S.tab === 'jimun' && S.jimunTab === 'ox' && !S.mok && !S.oxQueue) render(); else jtPaint();   /* ★ add3 — 첫 화면도 같은 편 접힘 */
 }
 
+/* ★ revfix0928 A-5 — viewJimun 준비부(색인 · 제7판 짝 · ⭐ 자동 태그 · 마디 M · VJ · MLN) — 1차객 화면과 조문 탭 정오문제 창이 같이 쓴다 · drawer = 서랍(jtSet)도 */
+function vjPrep(JM, P7, MG, subj, drawer){
+  const byId={};JM.문제.forEach(q=>byId[q.id]=q);
+  lnkBuild(JM);              // 같은 판례·조문 색인 (한 번만)
+  p7Link(JM, P7);            // 제7판 지문 → 리담 선지 짝 (근거 물려받기)
+  autoImportant(JM, subj);   // ★ v3-C §7 — ⭐ 정답표 지목 지문 1회 자동 태그
+  /* ★ v3-D §0 — 순번·마디 경로 계산용 스냅샷. 순번은 그릴 때만 계산하고 저장하지 않는다 */
+  {const _pm={};if(P7)P7.지문.forEach(z=>_pm[z.id]=z);
+   VJ={M:(MG&&MG.마디)||[],byId:byId,P7map:_pm,qs:JM.문제||[]};
+   /* ★ gaek_mb §A-2 — 서랍도 같은 재료를 쓴다(따로 읽지 않는다) */
+   if(drawer)jtSet({M:VJ.M,byId:byId,P7map:_pm,subj:subj,qs:JM.문제||[]});
+   try{mlnBuild(JM,P7,VJ.M,subj);if(MLN)MLN._subj=subj;}catch(e){console.warn('[mln]',e);MLN={ok:false};}}   /* ★ mbsame §A — 단원 줄 재료 */
+  return byId;
+}
+/* ★ revfix0928 A-5 — 조문 탭 ☑ 정오문제 창: MLN 이 이 법 것으로 준비 안 됐으면 1차객 준비부를 같은 함수로(1차객 탭을 안 거쳐도 같은 칩 · 서랍은 안 건드림) */
+async function jpMlnReady(){
+  const subj = SHORT[S.law];
+  if (subj !== '특허' || (MLN && MLN.ok && MLN._subj === subj)) return;
+  try{
+    const JM = await get('jimun_' + subj + '.json'); if (!JM) return;
+    let P7 = null, MG = null;
+    try{ P7 = await get('jimun_7pan.json'); }catch(e){}
+    try{ MG = await get('mokcha_병합.json'); }catch(e){}
+    try{ if (!JOKEY){ const JL = await get('jo_특허법_목록.json'); JOKEY = {}; JL.조.forEach(x => { JOKEY[x.k] = x.t || ''; }); } }catch(e){}
+    try{ await panIdx(); }catch(e){}
+    try{ if (!OMRMAP2){ OMRMETA2 = await get('omr/특허/omr_meta.json'); OMRMAP2 = (await get('omr/특허/omr_map.json')).map || {}; } }catch(e){}
+    vjPrep(JM, P7, MG, subj, false);
+  }catch(e){ console.warn('[jpMln]', e); }
+}
 async function viewJimun(){
   jtSet(null);   /* ★ gaek_mb §A-2 — 못 그리는 화면(민소·데이터 없음)에서는 서랍을 비운다 */
   const slot=$('#slot');slot.innerHTML='';
@@ -14041,16 +14077,7 @@ async function viewJimun(){
     m.appendChild(emptyBox('📝',subj+' 1차객 — 데이터 없음','리담 추출 대기'));
     slot.appendChild(m);return;}
 
-  const byId={};JM.문제.forEach(q=>byId[q.id]=q);
-  lnkBuild(JM);              // 같은 판례·조문 색인 (한 번만)
-  p7Link(JM, P7);            // 제7판 지문 → 리담 선지 짝 (근거 물려받기)
-  autoImportant(JM, subj);   // ★ v3-C §7 — ⭐ 정답표 지목 지문 1회 자동 태그
-  /* ★ v3-D §0 — 순번·마디 경로 계산용 스냅샷. 순번은 그릴 때만 계산하고 저장하지 않는다 */
-  {const _pm={};if(P7)P7.지문.forEach(z=>_pm[z.id]=z);
-   VJ={M:(MG&&MG.마디)||[],byId:byId,P7map:_pm,qs:JM.문제||[]};
-   /* ★ gaek_mb §A-2 — 서랍도 같은 재료를 쓴다(따로 읽지 않는다) */
-   jtSet({M:VJ.M,byId:byId,P7map:_pm,subj:subj,qs:JM.문제||[]});
-   try{mlnBuild(JM,P7,VJ.M,subj);}catch(e){console.warn('[mln]',e);MLN={ok:false};}}   /* ★ mbsame §A — 단원 줄 재료 */
+  const byId=vjPrep(JM,P7,MG,subj,true);   /* ★ revfix0928 A-5 — 준비부를 함수로(조문 탭 ☑ 정오문제 창도 같이 쓴다) */
   /* ★ gaek_mb §C-13 — 📐 논리 → 근거 흡수. 한 번만 돌고(깃발) 두 번 돌려도 +0 이다. */
   try{ggEatLogicOnce()}catch(e){console.warn('ggEatLogicOnce',e)}
 
@@ -17449,7 +17476,7 @@ function c3LpWire(col, hd, lp, curK, curH){
   jsLongPress(hd, () => c3PickToggle(col, hd, lp, curK, curH));
 }
 function c3PickToggle(col, hd, lp, curK, curH){
-  const old = col.querySelector(':scope > .c3pick');
+  const old = (col.nextElementSibling && col.nextElementSibling.classList.contains('c3pick')) ? col.nextElementSibling : col.querySelector(':scope > .c3pick');   /* ★ revfix0928 A-6 — 칸은 이제 카드 바로 뒤 */
   if (old){ old.remove(); return; }
   const box = el('div', 'c3pick'); box.dataset.dst = lp.dst;
   box.appendChild(el('span', 'qb t', SHORT[lp.dst] || lp.dst));
@@ -17488,7 +17515,7 @@ function c3PickToggle(col, hd, lp, curK, curH){
   const b3 = el('button', 'tool', '대응 없음'); b3.type = 'button';
   b3.onclick = ev => { ev.stopPropagation(); thfPut(lp.base, lp.dst, 'none'); render(); };
   [inp, sel, b1, b2, b3].forEach(x => box.appendChild(x));
-  hd.after(box);
+  col.after(box);   /* ★ revfix0928 A-6 — 카드 머리 뒤(카드 안)가 아니라 카드(.thcol) 바로 아래 제 줄(flex-basis 100%) */
   fill();
 }
 var UZ_PIT_KEPT = 0;
@@ -18022,15 +18049,15 @@ function uzExv(main, JM){
   show.forEach(q => paper.appendChild(uzExvQ(q, y, graded)));
   main.appendChild(paper);
   /* 알약 — 왼쪽 ◀ 이전 · 오른쪽 「마킹 m/5 · 다음 5문제 ▶」 · 마지막 쪽 「전체 채점 ✓」(민법 controls-container) */
-  if (pg > 0){ const bl = el('div', 'mbbar l'); const pb = el('button', 'mbprev', '◀ 이전'); pb.type = 'button';
+  if (pg > 0){ const bl = el('div', 'mbbar l uzexbar'); const pb = el('button', 'mbprev', '◀ 이전'); pb.type = 'button';
     pb.onclick = () => { S.exvPg[pgk] = pg - 1; S.oxPageJump = true; render(); }; bl.appendChild(pb); main.appendChild(bl); }
-  const br = el('div', 'mbbar r'), box = el('div', 'mbpill');
+  const br = el('div', 'mbbar r uzexbar'), box = el('div', 'mbpill');   /* ★ revfix0928 A-4 — uzexbar = 기출뷰 알약만(민법 값 · 단원 풀이 알약 무변) */
   const mk = el('span', 'mk'); mk.appendChild(document.createTextNode('마킹 ')); const mb = el('b', '', '0'); mk.appendChild(mb);
   mk.appendChild(document.createTextNode('/' + show.length)); box.appendChild(mk);
   const rem = list.length - (pg + 1) * PER;
   if (rem > 0){ const nb = el('button', 'mbpb', '다음 ' + Math.min(PER, rem) + '문제 ▶'); nb.type = 'button'; nb.dataset.uzexnext = '1';
     nb.onclick = () => { S.exvPg[pgk] = pg + 1; S.oxPageJump = true; render(); }; box.appendChild(nb); }
-  else if (!graded && gr.length){ const gb = el('button', 'mbpb', '전체 채점 ✓'); gb.type = 'button'; gb.dataset.uzexgrade = '1';
+  else if (!graded && gr.length){ const gb = el('button', 'mbpb uzgrade', '전체 채점 ✓'); gb.type = 'button'; gb.dataset.uzexgrade = '1';
     gb.onclick = () => uzExvGradeAll(y, list); box.appendChild(gb); }
   else if (graded) box.appendChild(el('span', 'mk uzexdone', '채점됨 ' + (yrec.right != null ? yrec.right : '?') + '/' + (yrec.n || gr.length)));
   br.appendChild(box); main.appendChild(br);
@@ -18452,6 +18479,64 @@ function cfRowEl(r, key, cur, back, onPick){
   if (onPick) b.onclick = onPick;
   return b;
 }
+(function(){ try{ const s = document.createElement('style'); s.id = 'revfix0928css'; s.textContent = [   /* ★ revfix0928 — 이 판 CSS 한 덩어리 */
+  /* A-1 연결 창 — 머리·찾기 칸·안내 줄 굳음 · 몸만 굴림(결과 목록 240px 굴림 걷음) */
+  '.pop.cflw.cfwin>.ph{flex:none}',
+  '.pop.cflw.cfwin>.cfsrch{flex:none;padding:10px 12px 4px;background:#f9fafb}',
+  '.pop.cflw.cfwin>.pb.cfbd{flex:1 1 auto;min-height:0;overflow:auto;padding:4px 12px 6px}',
+  '.pop.cflw.cfwin .cfrs{max-height:none;overflow:visible}',
+  '.pop.cflw.cfwin>.cfft{flex:none;margin:0;padding:6px 12px 9px;background:#f9fafb;border-top:1px solid #f3f4f6}',
+  /* A-4 기출뷰 = 민법 값(uzexbar · uzexh · uzexv 안만 · 단원 풀이 알약 무변) */
+  '.mbbar.uzexbar{max-width:896px;margin-left:auto;margin-right:auto}',
+  '.mbsbar.uzexh{max-width:896px;margin-left:auto;margin-right:auto}',
+  '.exv-paper.uzexv{max-width:896px;margin-left:auto;margin-right:auto}',
+  '.uzexn{max-width:896px;margin-left:auto;margin-right:auto;box-sizing:border-box}',
+  '.uzexbar .mbpill{background:#fff;border:1px solid #e5e7eb;border-radius:9999px;padding:4px 6px 4px 12px;box-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1)}',
+  '.uzexbar .mbpb{font-size:12px;font-weight:700;color:#4b5563;background:transparent;border:0;border-radius:9999px;padding:4px 8px}',
+  '.uzexbar .mbpb.uzgrade{font-weight:800;color:#3b82f6}',
+  '.uzexbar .mbpb:hover{color:#1d4ed8}',
+  '.uzexbar .mbprev{font-size:12px;font-weight:700;color:#4b5563;background:#fff;border:1px solid #e5e7eb;border-radius:9999px;padding:4px 12px;box-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1)}',
+  '.uzexbar .mbprev:hover{color:#1d4ed8;background:#f9fafb}',
+  '.uzexbar .mbpill .mk{font-size:11px;font-weight:700;color:#6b7280}',
+  '.uzexbar .mbpill .mk b{font-weight:900;color:#6b7280}',
+  '.mbsbar.uzexh .pg{font-size:11px;font-weight:700;color:#374151;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:4px;padding:2px 8px}',
+  '.mbsbar.uzexh .t2{font-size:11px;font-weight:600;color:#2563eb}',
+  '.exv-paper.uzexv .mbqtx{color:#1f2937}',
+  /* A-4 서랍 「변리사 기출」 해 머리(민법 .trch) · 회차 줄(민법 .trit) */
+  '.jtych{display:flex;gap:5px;align-items:center;padding:4px 10px;cursor:pointer;font-size:12px;line-height:1.5;font-weight:800;color:#374151;background:#f9fafb;margin-top:5px;white-space:nowrap;overflow:hidden;min-height:26px;box-sizing:border-box}',
+  '.jtych .tx{min-width:0;overflow:hidden;text-overflow:ellipsis}',
+  '.jtych .n{margin-left:auto;font-size:10px;color:#9ca3af;font-weight:700;flex:none}',
+  '.jtych.cur{color:#1d4ed8}',
+  '.jtyit{padding:3px 10px 3px 20px;cursor:pointer;border-left:3px solid transparent;min-height:30px;box-sizing:border-box;line-height:1.5}',
+  '.jtyit:hover{background:rgba(0,0,0,.04)}',
+  '.jtyit.cur{border-left-color:#2563eb;background:#eff6ff}',
+  '.jtyit .l1{display:flex;gap:5px;align-items:baseline}',
+  '.jtyit .tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#374151;font-size:12px;font-weight:400}',
+  '.jtyit .n{font-size:10px;color:#6b7280;font-weight:700;flex:none}',
+  '.jtyit .now{font-size:9px;font-weight:800;color:#fff;background:#2563eb;border-radius:3px;padding:0 3px;flex:none}',
+  /* A-7 좁은 서랍 ★ 개정일 = 이름보다 먼저 줄어든다(오른쪽 세 칸 폭 무변) */
+  '.tree .r .jstarn.jsshr{flex:0 1000 auto;min-width:1.1em;overflow:hidden;white-space:nowrap;text-overflow:clip}',
+  /* A-6 3법 길게 누른 칸 = 카드 바로 아래 제 줄 */
+  '.thcols>.c3pick{flex:0 0 100%;box-sizing:border-box}'
+].join('\n'); document.head.appendChild(s); }catch(e){} })();
+/* ★ revfix0928 A-1 — 연결 창 자리 맞춤(PC·폰 같은 함수) · max-height 먼저 지우고(옛 값과 min 하지 않음) 자연 높이를 잰다 ·
+   폭 = min(440, 화면−16)(기억·손잡이 크기면 그 폭을 화면 안으로) · 높이 = min(자연, 화면−16) · top = 단추 아래(끈 뒤엔 지금 자리)를 화면 안으로(모자라면 위로) · max-height = 화면 아래 끝까지 */
+function cfFit(p){
+  if (!p || !p.isConnected) return;
+  const B = vvBox(), sized = p.classList.contains('sized');
+  const w = Math.round(Math.max(120, Math.min(sized ? (parseFloat(p.style.width) || p.offsetWidth || 440) : 440, B.w - 16)));
+  p.style.width = w + 'px';
+  p.style.maxHeight = 'none';
+  const h = Math.round(Math.min(p.offsetHeight, B.h - 16));
+  let top = parseFloat(p.style.top), left = parseFloat(p.style.left);
+  if (isNaN(top) || isNaN(left)){ const r = p.getBoundingClientRect(); if (isNaN(top)) top = r.top; if (isNaN(left)) left = r.left; }
+  if (p._cfY != null) top = p._cfY;   /* 자리 = 단추 아래(모자라면 아래 clamp 가 위로 올린다) */
+  top = Math.max(B.y + 8, Math.min(top, B.y + B.h - 8 - h));
+  left = Math.max(B.x + 8, Math.min(left, B.x + B.w - w - 8));
+  p.style.top = Math.round(top) + 'px'; p.style.left = Math.round(left) + 'px';
+  if (sized && p.offsetHeight > B.y + B.h - 8 - top) p.style.height = Math.round(B.y + B.h - 8 - top) + 'px';
+  p.style.maxHeight = Math.round(B.y + B.h - 8 - top) + 'px';
+}
 function cfLinkWin(key, ev){
   const pk = 'cflw|' + key;
   const olds = POPS.filter(p => p._cflw), same = olds.some(p => p._pk === pk);
@@ -18464,14 +18549,15 @@ function cfLinkWin(key, ev){
   const ph = p.querySelector(':scope > .ph'), pt = ph && ph.querySelector('.pt');
   if (pt){ pt.classList.add('cftt'); pt.textContent = '🔗 연결'; cfHeadChips(key, ev).forEach(c => pt.appendChild(c)); }
   const x = ph && ph.querySelector(':scope > button:not(.pall)'); if (x){ x.classList.add('cfx'); x.title = '닫기'; }
-  body.classList.add('cfbd');
-  body.appendChild(el('div', 'cflb', '🔗 연결할 지문 찾기 — 특허·상표·디보 · uid · 번호 · 출처 · 단원 · 본문'));
+  body.classList.add('cfbd'); p.classList.add('cfwin');   /* ★ revfix0928 A-1 — 창 틀 셋: 머리·찾기 칸(굳음) / 몸 = 결과·걸린 연결(여기만 굴림) / 안내 줄(굳음) */
+  const srch = el('div', 'cfsrch'); p.insertBefore(srch, body);
+  srch.appendChild(el('div', 'cflb', '🔗 연결할 지문 찾기 — 특허·상표·디보 · uid · 번호 · 출처 · 단원 · 본문'));
   const inp = el('input', 'cfq'); inp.type = 'text'; inp.setAttribute('autocomplete', 'off');
   inp.placeholder = '🔍 찾아서 넣기 — 번호·본문·출처로 검색 (예: 취소, 31, 2015)';
-  body.appendChild(inp);
+  srch.appendChild(inp);
   const rs = el('div', 'cfrs'); rs.hidden = true; body.appendChild(rs);
   const cur = el('div', 'cfcurw'); body.appendChild(cur);
-  body.appendChild(el('div', 'cfft', '결과를 누르면 바로 연결된다(저장 단추 없음) · ✕ = 연결 풀기'));
+  body.after(el('div', 'cfft', '결과를 누르면 바로 연결된다(저장 단추 없음) · ✕ = 연결 풀기'));
   const paintCur = () => {
     cur.innerHTML = '';
     const f = lkOf(key), bk = lkBack(key).filter(t => f.indexOf(t) < 0);
@@ -18517,12 +18603,16 @@ function cfLinkWin(key, ev){
   /* 자리 = 누른 단추 아래(없으면 showPop) · 화면 밖이면 안으로 */
   const cfg = (S.popCfg || {}).cflw;
   if (btn && !(cfg && cfg.x != null)){
-    const R = btn.getBoundingClientRect(), B = vvBox(), w = p.offsetWidth || 440;
-    p.style.left = Math.max(B.x + 8, Math.min(R.left, B.x + B.w - w - 8)) + 'px';
-    p.style.top = Math.max(B.y + 8, R.bottom + 4) + 'px';
-    vvFit(p);
+    const R = btn.getBoundingClientRect();
+    p.style.left = R.left + 'px'; p.style.top = (R.bottom + 4) + 'px'; p._cfY = R.bottom + 4;   /* 단추 아래 자리를 기억(결과가 줄면 다시 단추 아래로 · 머리를 잡으면 잊음) */
   } else if (!(cfg && cfg.x != null)) showPop(ev);
-  mbWinFit(p);
+  cfFit(p);   /* ★ revfix0928 A-1 — 폭·자리·높이를 화면 안으로(PC·폰 같은 함수 · 첫 popSizable 의 vvFit 가 남긴 120px 도 지움) · 옛 vvFit·mbWinFit 대신 */
+  { let raf = 0; const again = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; if (p.isConnected) cfFit(p); }); };
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(again) : null;
+    if (ro){ ro.observe(rs); ro.observe(cur); }   /* 결과·걸린 연결이 바뀌면(paintFind·paintCur·다른 법 받기) 다시 맞춤 */
+    const vv = window.visualViewport; addEventListener('resize', again); if (vv) vv.addEventListener('resize', again);
+    if (ph) ph.addEventListener('pointerdown', () => { p._cfY = null; });   /* 끌기·크기 = 사람 자리(단추 자리를 잊는다) */
+    const pc = p._onClose; p._onClose = () => { if (ro) ro.disconnect(); removeEventListener('resize', again); if (vv) vv.removeEventListener('resize', again); if (pc) pc(); }; }
   setTimeout(() => { try{ inp.focus(); }catch(e){} }, 30);
   return p;
 }
@@ -19392,6 +19482,7 @@ async function wmCiWin(base, j){
 async function joPanelMount(slot){
   if (!S.joPanel){ wmWinDrop('jp'); return; }
   const JP = await joPanelIdx();
+  await jpMlnReady();   /* ★ revfix0928 A-5 — 1차객 탭을 안 거쳐도 카드 칩이 1차객과 같게 */
   const ent = (JP || {})[S.jo] || { L: [], P: [] };
   const items = jsPanelItems(ent, S.jo);   /* 칩과 같은 함수 · 최신 연도부터 · 같은 uid 한 장 · 「이 조 아님」 뺌 */
   const nL = items.filter(it => it.kind === 'L').length, nP = items.length - nL;
