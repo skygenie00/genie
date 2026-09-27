@@ -2000,7 +2000,8 @@ try{const u=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if(u.prec_sort)S.precSort=u.prec_sort;
     if(u.lsw>0)S.listW=u.lsw;if(u.prec_ygroups&&typeof u.prec_ygroups==='object')S.precYG=u.prec_ygroups;   /* ★ 판 4 */
     if(u.md_fold&&typeof u.md_fold==='object')S.mdFold=u.md_fold;if(u.embed_fold&&typeof u.embed_fold==='object')S.embFold=u.embed_fold;
-    ['note','list','prec','toc','link','canvas','claude','jn','c2unit','moknote','ncbook'].forEach(k=>{if(u['pop_'+k]&&typeof u['pop_'+k]==='object')S.popCfg[k]=u['pop_'+k];});   /* ★ pop_moknote D-2 — moknote */   /* ★ 판 4 add2 */   /* ★ linkwin §2 — link(창 넷) */
+    ['note','list','prec','toc','link','canvas','claude','jn','c2unit','moknote','ncbook','bookpg'].forEach(k=>{if(u['pop_'+k]&&typeof u['pop_'+k]==='object')S.popCfg[k]=u['pop_'+k];});   /* ★ pop_moknote D-2 — moknote */   /* ★ 판 4 add2 */   /* ★ linkwin §2 — link(창 넷) */
+    if(Array.isArray(u.ox_bk))S.oxBk=u.ox_bk.filter(x=>['내용','주체','기간'].indexOf(x)>=0);   /* ★ mbsame_add3 §A-6 — 빈칸 종류 거름(기기 값) */
     if(u.omr&&typeof u.omr==='object')S.omrPos=u.omr;   /* ★ 기출뷰 손질 3 — OMR 자리 */
     if(u.cha2_filter&&typeof u.cha2_filter==='object')S.cha2Filter=u.cha2_filter;if(u.cha2_sort)S.cha2Sort=u.cha2_sort;   /* ★ 2차 탭 판 1 — §4-2 필터·정렬 = 표시층(jopangi_ui) */}catch(e){}   /* ★ v3-L §1 */
 /* ★ mok_popup_phone G-4 — 폰(폭 ≤ 640)은 옆 두 칸(.tree · .plist)을 접은 채로 시작한다 · jopangi_ui 에 treeHid·listHid 기억이 있으면 그것
@@ -2026,7 +2027,7 @@ function uiSave(){try{localStorage.setItem(UI_KEY,JSON.stringify(
    jbk:S.joBlank,jbs:S.joBlankStar?1:0,
    prec_filter:S.precFilter||{},prec_sort:S.precSort,
    lsw:S.listW,prec_ygroups:S.precYG||{},
-   md_fold:S.mdFold||{},embed_fold:S.embFold||{},pop_note:S.popCfg.note||null,pop_list:S.popCfg.list||null,pop_prec:S.popCfg.prec||null,pop_toc:S.popCfg.toc||null,pop_link:S.popCfg.link||null,pop_canvas:S.popCfg.canvas||null,pop_claude:S.popCfg.claude||null,pop_jn:S.popCfg.jn||null,pop_c2unit:S.popCfg.c2unit||null,pop_moknote:S.popCfg.moknote||null,pop_ncbook:S.popCfg.ncbook||null,omr:S.omrPos||null,cha2_filter:S.cha2Filter||{},cha2_sort:S.cha2Sort||'',jt_w:S.jtW||0,jt_fold:S.jtFold?1:0,jt_ch:S.jtCh||{},mb_ch:S.mbCh||{},mk_off:S.mkOff?1:0,hm_top:S.hmTop||'',c2ord:S.c2ord||'round',c2uopen:S.c2uOpen||{},note_color:S.noteColor===false?0:1}));}catch(e){}}   /* ★ 판 3 §3-4 · 판 4 · add2 */
+   md_fold:S.mdFold||{},embed_fold:S.embFold||{},pop_note:S.popCfg.note||null,pop_list:S.popCfg.list||null,pop_prec:S.popCfg.prec||null,pop_toc:S.popCfg.toc||null,pop_link:S.popCfg.link||null,pop_canvas:S.popCfg.canvas||null,pop_claude:S.popCfg.claude||null,pop_jn:S.popCfg.jn||null,pop_c2unit:S.popCfg.c2unit||null,pop_moknote:S.popCfg.moknote||null,pop_ncbook:S.popCfg.ncbook||null,pop_bookpg:S.popCfg.bookpg||null,ox_bk:S.oxBk||[],omr:S.omrPos||null,cha2_filter:S.cha2Filter||{},cha2_sort:S.cha2Sort||'',jt_w:S.jtW||0,jt_fold:S.jtFold?1:0,jt_ch:S.jtCh||{},mb_ch:S.mbCh||{},mk_off:S.mkOff?1:0,hm_top:S.hmTop||'',c2ord:S.c2ord||'round',c2uopen:S.c2uOpen||{},note_color:S.noteColor===false?0:1}));}catch(e){}}   /* ★ 판 3 §3-4 · 판 4 · add2 */
 const C={};
 const $=(s,r)=>(r||document).querySelector(s);
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;
@@ -3223,6 +3224,7 @@ function recDropCache(){
   if (typeof EQREC !== 'undefined') EQREC = null;   /* ★ recsync §E — 병합·강제 받기 뒤 큐 캐시 */
   if (typeof PLREC !== 'undefined') PLREC = null;   /* ★ 판 4 add4 — 내가 이은 판례·2차 */
   if (typeof PQREC !== 'undefined') PQREC = null;   /* ★ QA 판 add1 — 앱 검수 */
+  if (typeof BKTREC !== 'undefined') BKTREC = null;   /* ★ mbsame_add3 §A-7 — 빈칸 종류 */
 }
 function recDelete(k){
   try{ localStorage.removeItem(k); }catch(e){}
@@ -3302,7 +3304,7 @@ const SYNC_SKIP = ['ink' /* 캔버스 · 크다 */ ];
 const SYNC_KEYS = ['ox', 'rounds', 'ansfix', 'mcard', 'gi', 'gi.year', 'markup', 'logic', 'link', 'type', 'omr',
   'gg', 'ggref',
   'sticker', 'blank', 'blanktag', 'themefix', 'postit', 'compare', 'precimp', 'editq', 'preclink', 'precqa', 'precqafile',
-  'canvas', 'canvasink', 'canvaslink', 'canvasmemo', 'canvaspin', 'clfix', 'c2unit', 'canvasjari', 'c2htag', 'c2mark', 'c2hsjari', 'ncomr', 'notecolor', 'jonot', 'giround', 'recgone']   /* ★ _task_jo_joscreen §F-1 — 「이 조 아님 ×」 손값(39→40 · 칸 = 지문 열쇠(uid) · 값 = 뗀 조 키 배열 · 되살리기로 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_notecolor C — 목차노트 정리 색 고침(36→37 · 칸 = <노트 파일>|<행> · 값 [[s,e,색,낱말]] · 되돌리기 = 그 구간 항목을 빼고 칸이 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_omrpop B-4 — 정리OMR 자리 손값(35→36 · 칸 = note|<노트> · para|<노트>|<문단 끝 행> · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_canvas_jari_cand §D-1 — 정리캔버스 교재 자리 손값(31→32 · 칸 = bid · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_2cha_unit §C-5 — 2차 단원 손값(30→31 · 칸 = '<법>|<YY-회-N>' · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_claude_answers §F — Claude 답 정정(29→30 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 다음 맞추기에서 되살린다) */   /* ★ 정리캔버스(민소) — 편집 로그·필기·링크·메모·핀(22→27) */   /* ★ prec3 §C-3 — 볼트 검수 대기(21→22) */   /* ★ QA 판 add1 — 앱 검수(20→21) */   /* ★ 판 4 add4 §2 — 내가 이은 판례·2차 (19→20) */
+  'canvas', 'canvasink', 'canvaslink', 'canvasmemo', 'canvaspin', 'clfix', 'c2unit', 'canvasjari', 'c2htag', 'c2mark', 'c2hsjari', 'ncomr', 'notecolor', 'jonot', 'giround', 'recgone', 'bktype']   /* ★ _task_jo_gaek_mbsame_add3 §A-7 — 빈칸 종류 손값(41번째 · 칸 = 지문 열쇠(uid) · 값 {v:[내용·주체·기간 | 없음], ts} · 「지우기」 = {v:[]}(OMR 표시를 덮는 빈 값 · 칸을 안 지운다) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_joscreen §F-1 — 「이 조 아님 ×」 손값(39→40 · 칸 = 지문 열쇠(uid) · 값 = 뗀 조 키 배열 · 되살리기로 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_notecolor C — 목차노트 정리 색 고침(36→37 · 칸 = <노트 파일>|<행> · 값 [[s,e,색,낱말]] · 되돌리기 = 그 구간 항목을 빼고 칸이 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_omrpop B-4 — 정리OMR 자리 손값(35→36 · 칸 = note|<노트> · para|<노트>|<문단 끝 행> · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_canvas_jari_cand §D-1 — 정리캔버스 교재 자리 손값(31→32 · 칸 = bid · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_2cha_unit §C-5 — 2차 단원 손값(30→31 · 칸 = '<법>|<YY-회-N>' · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_claude_answers §F — Claude 답 정정(29→30 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 다음 맞추기에서 되살린다) */   /* ★ 정리캔버스(민소) — 편집 로그·필기·링크·메모·핀(22→27) */   /* ★ prec3 §C-3 — 볼트 검수 대기(21→22) */   /* ★ QA 판 add1 — 앱 검수(20→21) */   /* ★ 판 4 add4 §2 — 내가 이은 판례·2차 (19→20) */
   .filter(k => SYNC_SKIP.indexOf(k) < 0).map(k => REC_PRE + k);
 const SU_KEY = 'jopangi_sync_u', SG_KEY = 'jopangi_sync_gone', SS_KEY = 'jopangi_sync_shadow', SM_KEY = 'jopangi_sync_meta';
 const EQ_KEY = REC_PRE + 'editq';
@@ -9751,7 +9753,7 @@ function sidFind(sid){
   }
   const m2 = /^P7:(.+)$/.exec(sid);
   if (m2 && VJ.P7map[m2[1]]) return { kind: 'P', z: VJ.P7map[m2[1]] };
-  for (const q of (VJ.qs || [])){
+  for (const q of uzQsOrd()){   /* ★ mbsame_add2 ④ — 같은 uid 가 여러 문항이면 마디에 붙은 문항 먼저(풀 규칙과 같은 차례 · 옛 판은 리담 차례 첫 문항 = 미분류 2004 가 떴다) */
     const z = (q.지문 || []).find(x => x.uid === sid);
     if (z) return { kind: 'L', q: q, z: z };
   }
@@ -10419,6 +10421,7 @@ function mbTypeChip(key, draft, jos, host, jsid){
   tb.title = (fix ? '직접 확정한 값' : '초안 — 눌러 확정') + ' · 저장값 ' + (raw || '없음');
   tb.onclick = ev => { ev.stopPropagation(); typePop(key, ev); };
   chip.appendChild(tb);
+  uzBkSeg(chip, key, eff);   /* ★ mbsame_add3 §A-7 — 「조문형」 바로 오른쪽 빈칸 종류 글자(따로 칩 없음) */
   shown.forEach(c => {
     chip.appendChild(el('i', 'dot', '·'));
     const jb = el('button', 'seg jo', joShort(c));
@@ -11795,15 +11798,14 @@ function mcChipSync(){
   document.querySelectorAll('[data-mck]').forEach(b => {
     const n = mcCount(b.getAttribute('data-mck'));
     b.textContent = '🃏' + (n ? ' ' + n : '');
-    b.style.opacity = n ? '1' : '.5';
+    if (b.classList.contains('mcchip')) b.classList.toggle('on', !!n); else b.style.opacity = n ? '1' : '.5';   /* ★ add3 §A-3 */
   });
 }
 function mcChip(k){
   const n = mcCount(k);
-  const b = el('button', 'qtag', '🃏' + (n ? ' ' + n : ''));
+  const b = el('button', 'mcchip' + (n ? ' on' : ''), '🃏' + (n ? ' ' + n : ''));   /* ★ mbsame_add3 §A-3 — 민법 🃏 칩(10px · 테 · 여백 2px 6px · 있으면 자홍) */
   b.setAttribute('data-mck', k);
   b.title = '암기카드 — SVG 를 끌어다 넣는다';
-  b.style.opacity = n ? '1' : '.5';
   b.onclick = ev => { ev.stopPropagation(); mcOpen(k, ev); };
   return b;
 }
@@ -11934,7 +11936,8 @@ function mgRoll(M,i,P7map){
   if(n.출처!=='책')js.sort((a,b)=>p7Cmp((P7map||{})[a],(P7map||{})[b],a,b));
   return [js,Array.from(new Set(n.리담))];
 }
-function mgKeys(M,i,byId,P7map){
+function mgKeys(M,i,byId,P7map){ return uzF(mgKeys0(M,i,byId,P7map)); }   /* ★ mbsame_add3 §A-6·§A-8 — 한 거름(uzF · 기출/기타 ∧ 유형 ∧ 빈칸 종류) */
+function mgKeys0(M,i,byId,P7map){
   if(MLN&&MLN.ok&&M===VJ.M){const d=mlnDirect(M,i,P7map,byId);return d.b.concat(d.n,d.u,d.v).map(mlnCardKey);}   /* ★ mbsame — 단원 줄 넷의 합(서랍·첫 화면·히트맵 한 함수) */
   const r=mgRoll(M,i,P7map),keys=[];
   r[1].forEach(id=>{const q=byId[id];if(q)(q.지문||[]).forEach(z=>keys.push(oxKeyLid(q,z)));});
@@ -12040,11 +12043,7 @@ function qlColumn(MG,JM,byId,P7,subj){
     if(tip.length)r.title=tip.join(String.fromCharCode(10));
     list.appendChild(r);
   });
-  const placed=new Set();
-  M.forEach(n=>n.리담.forEach(x=>placed.add(x)));
-  const unk=[];
-  JM.문제.filter(q=>!placed.has(q.id))
-        .forEach(q=>(q.지문||[]).forEach(z=>unk.push(oxKeyLid(q,z))));
+  const unk=uzUnkKeys(JM.문제,M);   /* ★ uid_add2 §C-2 — 셈 한 함수(같은 열쇠 한 번) */
   list.appendChild(qlRow(M,'un','__미분류','미분류 (리담)',unk,subj,false,false));
   return list;
 }
@@ -12123,7 +12122,8 @@ function giGrade(y, list){
   });
   giYearPut(y, { sub: nowIso(), n: gr.length, right: right });
   { const picks = {}; gr.forEach(q => { const p = (giOf(giKey(q)) || {}).p; if (p) picks[String(giNo(q))] = String(p); });   /* ★ mbsame §D-3 — 회독 하나 + 시간 */
-    grndPush(y, { date: nowIso().slice(0, 10), ts: nowIso(), ok: right, n: gr.length, ms: omkMs(y), picks: picks }); omkReset(y); }
+    const st0 = grndYearStat(y);   /* ★ mbsame_add3 §A-1 ⓑ — 제출 때 지문 기록 스냅숏(첫 화면 상자 아랫줄) */
+    grndPush(y, { date: nowIso().slice(0, 10), ts: nowIso(), ok: right, n: gr.length, ms: omkMs(y), picks: picks, st: { cf: st0.cf, fk: st0.fk, x: st0.x, n: st0.n } }); omkReset(y); }
   toast(y + '년 ' + right + '/' + gr.length + ' 맞음');
   return true;
 }
@@ -12966,7 +12966,9 @@ function mbSubHead(main, JM, P7, nJi, nMun){
   const hd = el('div', 'mbhd');
   const h1 = el('h1', '', '📖 ' + S.law + ' 1차객');
   hd.appendChild(h1);
-  hd.appendChild(el('span', 'dl', '지문 ' + nJi.toLocaleString() + ' · 문항 ' + nMun.toLocaleString()));
+  { const sp = uzSplit(false);   /* ★ mbsame_add3 §A-8 — 「기출 N · 기타 M · 문항 K」(자과 「기출 319 · 확인 385」 꼴 · 풀 셈) */
+    hd.appendChild(el('span', 'dl', sp ? ('기출 ' + sp.g.toLocaleString() + ' · 기타 ' + sp.x.toLocaleString() + ' · 문항 ' + nMun.toLocaleString())
+                                      : ('지문 ' + nJi.toLocaleString() + ' · 문항 ' + nMun.toLocaleString()))); }
   hd.appendChild(el('span', 'sp'));
   const fx = mbFixN(JM);
   if (fx) hd.appendChild(el('span', 'dl', '✎ 정정 ' + fx));
@@ -12984,7 +12986,7 @@ function mbSearchRow(main, nJi, nMun){
   inp.onkeydown = ev => { if (ev.key === 'Enter'){ S.oxQ = inp.value; mbSearchRun();
     /* ★ uid 판(9/27) — ID(지금·옛 uid) 하나로 맞으면 Enter = 그 지문 팝업(자리 = 기본 · 글쇠 사건엔 좌표가 없다) */
     const ik = (S.oxQMode === 'g') ? [] : uidSearchKeys(String(S.oxQ || '').trim(), OXPOOL || {});
-    if (ik.length === 1) mbSrOpen(ik[0], false, null); } };
+    if (ik.length === 1) mbSrOpen(ik[0], false, null); else if (ik.length > 1 && uzGal(String(S.oxQ || '').trim())) ik.forEach(k => mbSrOpen(k, false, null)); } };   /* ★ uid_add2 §A-3 — 갈라진 옛 uid = 줄마다 팝업 */
   sr.appendChild(inp);
   const mq = el('button', 'mbsb' + ((S.oxQMode || 'q') === 'q' ? ' on' : ''), '📄 문제');
   mq.onclick = () => { S.oxQMode = 'q'; GG_BANG_ONLY = false; GG_CL_ONLY = false; uiSave(); render(); };   /* ★ _task_jo_claude_answers §G-2 — 「문제」 로 가면 「!」·「C」 필터가 풀린다 */
@@ -13042,6 +13044,7 @@ function mbSearchRun(){
       const c = P[k] || {};
       return String(c.t || '').includes(q) || String(c.name || '').includes(q);
     }));
+  hit = hit.filter(k => uzPass(k));   /* ★ add3 §A-8 — 검색 결과도 한 거름 */
   cnt.textContent = hit.length + '개';
   box.classList.remove('hide');
   if (!hit.length){ box.appendChild(el('div', 'rr', '찾은 것이 없다')); return; }
@@ -13050,7 +13053,7 @@ function mbSearchRun(){
     const r = el('div', 'rr');
     const mm = el('div', 'm', (c.name || '') + (MBK2M[k] ? ' · ' + MBK2M[k].label : ''));
     r.appendChild(mm);
-    if (idk.indexOf(k) >= 0) mm.appendChild(el('span', 'srcb', k === q ? 'ID' : '옛 ID ' + q + ' → ' + k));   /* ★ uid 판 */
+    if (idk.indexOf(k) >= 0) mm.appendChild(el('span', 'srcb', (uzGal(q) && idk.length > 1) ? '옛 uid · 갈라짐' + (k === q ? '' : ' → ' + k) : (k === q ? 'ID' : '옛 ID ' + q + ' → ' + k)));   /* ★ uid 판 · uid_add2 §A-3 — 갈라진 옛 uid 는 두 줄 모두 「옛 uid · 갈라짐」(다른 지문에 「ID」 딱지 안 붙임) */
     r.appendChild(document.createTextNode(String(c.t || '').slice(0, 120)));
     if (gmode){   /* 걸린 곳 딱지(근거 · Claude) · Claude 로 걸렸으면 걸린 자리 앞뒤 한 줄 */
       const cm = clHitsOf(k, low);
@@ -13102,14 +13105,9 @@ function mbQuickRow(main, counts){
     b.onclick = () => { S.oxQueue = (S.oxQueue === k ? '' : k); render(); };
     qr.appendChild(b);
   });
+  uzStepText(qr);   /* ★ mbsame_add3 §A-8 — 덜약점 뒤 단계 접기 글자 하나(접기1 → … → 펴기) */
   qr.appendChild(el('span', 'sp'));
-  qr.appendChild(el('span', 'lb', '거르기'));
-  const sel = el('select');
-  [['all', '전체'], ['jo', '조문형'], ['pan', '판례형'], ['mix', '조문+판례'], ['untype', '미확정']]
-    .forEach(([k, t]) => { const o = el('option', '', t); o.value = k;
-      if ((S.oxFilter || 'all') === k) o.selected = true; sel.appendChild(o); });
-  sel.onchange = () => { S.oxFilter = sel.value; render(); };
-  qr.appendChild(sel);
+  uzFilterBtn(qr);   /* ★ mbsame_add3 §A-6 — 「필터」 · 펼침 목록(유형 다섯 + 조문형이면 빈칸 종류 여럿) · 값 S.oxFilter 무변 + S.oxBk */
   main.appendChild(qr);
 }
 
@@ -13143,7 +13141,7 @@ function mbUnitRow(M, i, sel, label, keys, subj, flat, jn){
   const rl = rndList(scope), rn = rl.length, total = keys.length;
   const done = keys.filter(k => (oxOf(k) || {}).p).length;
   const cards = keys.reduce((a, k) => a + mcCount(k), 0);
-  keys.forEach(k => { if (MLN && MLN.ok && /~[uv]$/.test(sel) && MLN.p7uid.has(k)) return; MBK2M[k] = { sel: sel, label: label }; });   /* ★ mbsame — 흡수된 기출변형 선지는 본편 줄이 맡는다 */
+  keys.forEach(k => { if (MLN && MLN.ok && /~[uv]$/.test(sel) && MLN.p7uid.has(k)) return; if (sel === '__미분류' && MBK2M[k]) return; MBK2M[k] = { sel: sel, label: label }; });   /* ★ mbsame_add2 ④ — 단원에 선 열쇠를 미분류 줄이 덮지 않는다 */   /* ★ mbsame — 흡수된 기출변형 선지는 본편 줄이 맡는다 */
   const row = el('div', 'mbur' + (flat ? ' flat' : ''));
   const L = el('div', 'l');
   /* ★ toc_fuse(9/26) D-2 — 책 소제목이 있는 줄은 번호 앞 「▸」 하나(원래 「›」는 안 그린다 · 화살표 하나).
@@ -13241,7 +13239,7 @@ function mbDash(main, MG, JM, byId, P7, subj){
     });
   }
   let card = null, chap = null, cardTot = 0, cardHd = null;
-  const flush = () => { if (card){ if (cardHd) cardHd.textContent = '총 ' + cardTot + '문제';
+  const flush = () => { if (card){ if (cardHd) cardHd.textContent = '총 ' + (cardHd._n != null ? cardHd._n : cardTot) + '문제';   /* ★ mbsame_add2 ⑪ — 편 머리 = uzSub(히트맵 칩과 같은 함수 · 접어도 무변) */
     dash.appendChild(card); } card = null; chap = null; cardTot = 0; cardHd = null; };
   const rowInto = (i, flat) => {
     /* ★ mbsame §A — 끝 마디마다 단원 줄 넷(본편 · (판신설) · (미수록) · (변형)) · 0 인 줄은 안 그린다 · 줄마다 📋(그 줄 지문) */
@@ -13260,26 +13258,39 @@ function mbDash(main, MG, JM, byId, P7, subj){
     (chap || card).appendChild(r);
     if (r._subList) (chap || card).appendChild(r._subList);   /* ★ toc_fuse(9/26) D-2 — 소제목 목록은 줄 바로 아래 */
   };
+  let uzFold = false;   /* ★ mbsame_add3 §A-8 — 편 카드 접힘(S.mbCh · 머리만 남음) */
   M.forEach((n, i) => {
     const d = n.깊이;
+    if (d > 1 && uzFold) return;
     if (d === 1){
       flush();
+      uzFold = !!(S.mbCh && S.mbCh[i]) && kidOf(i);
       card = el('div', 'mbsj');
       /* ★ toc_fuse(9/26) D-4 — 자식이 없고 제 문항이 있는 편(12 실용신안)은 편 머리 자리에 한 줄.
          총 N문제 · 🃏 · 회독이 그 줄에 바로 붙고 누르면 그 문항(서랍처럼 편에 흡수) · 옛 판은 「총 0문제」 머리만 그렸다 */
       { const own = keyOf(i);
         if (own.length && !kidOf(i)){
-          const r = mbUnitRow(M, i, '__mg' + i, (n.no ? String(n.no) + ' ' : '') + n.제목, own, subj, true, null);
+          /* ★ mbsame_add2 ③ — 편 머리 한 줄 = 첫 줄(본편 · 비면 첫 줄) · 머리 셈 = uzSub(줄 넷 합) · (판신설)·(미수록)·(변형) 줄은 바로 밑(서랍과 같은 mlnKeys) */
+          const nm0 = (n.no ? String(n.no) + ' ' : '') + n.제목;
+          const lines = (MLN && MLN.ok) ? MLN_LNS.map(ln => [ln, mlnKeys(M, i, ln, VJ.P7map, byId)]).filter(x => x[1].length) : [];
+          const L0 = lines.length ? lines[0] : ['b', own];
+          const r = mbUnitRow(M, i, lines.length ? mlnSel(i, L0[0]) : '__mg' + i, nm0 + (L0[0] !== 'b' ? MLN_NAME[L0[0]] : ''), L0[1], subj, true, null);
           r.classList.add('mbsolo');
+          if (lines.length > 1){ const tt0 = r.querySelector(':scope > .l > .tot'); if (tt0) tt0.textContent = '총 ' + uzSub(M, i).length + '문제'; }
           card.appendChild(r);
           if (r._subList) card.appendChild(r._subList);
+          if (lines.length > 1){ const ch1 = el('div', 'mbch'); card.appendChild(ch1);
+            lines.slice(1).forEach(([ln, ks]) => { const lab = nm0 + MLN_NAME[ln];
+              const r2 = mbUnitRow(M, 'x', mlnSel(i, ln), lab, ks, subj, false, { label: lab, subs: [{ i: i, label: lab, keys: ks }] });
+              r2.classList.add('mlnline'); ch1.appendChild(r2); }); }
           dash.appendChild(card); card = null;
           return; } }
       const hd = el('div', 'hd');
       const h2 = el('h2', '');
+      if (kidOf(i)) h2.appendChild(uzTopArrow(i));   /* ★ add3 §A-8 — 편 머리 이름 앞 ▾(서랍 .jtar 꼴) */
       h2.appendChild(el('b', '', n.no ? String(n.no) : ''));
       h2.appendChild(document.createTextNode(' ' + n.제목));
-      cardHd = el('span', 'tot', '');
+      cardHd = el('span', 'tot', ''); cardHd._n = uzSub(M, i).length;
       h2.appendChild(cardHd);
       hd.appendChild(h2);
       card.appendChild(hd);
@@ -13302,7 +13313,7 @@ function mbDash(main, MG, JM, byId, P7, subj){
       const own = keyOf(i);
       let sub = 0;
       for (let j = i + 1; j < M.length && M[j].깊이 > d; j++) sub += keyOf(j).length;
-      tt.textContent = '총 ' + (own.length + sub) + '문제';
+      tt.textContent = '총 ' + uzSub(M, i).length + '문제';   /* ★ mbsame_add2 ⑪ — uzSub */
       /* ★ toc_fuse(9/26) D-5 — 장 머리에 제 문항이 있으면 같은 이름 줄을 또 세우지 않는다.
          머리 전체가 누름 자리(바로 밑 문항 · 칩·📋 은 제 일) · 검색 결과의 「· 단원」 은 머리 이름으로(MBK2M) */
       if (own.length){ cardTot += own.length;
@@ -13324,11 +13335,7 @@ function mbDash(main, MG, JM, byId, P7, subj){
   });
   flush();
   /* 미분류 — 옛 qlColumn 의 마지막 줄 그대로 */
-  const placed = new Set();
-  M.forEach(n => n.리담.forEach(x => placed.add(x)));
-  const unk = [];
-  JM.문제.filter(q => !placed.has(q.id))
-        .forEach(q => (q.지문 || []).forEach(z => unk.push(oxKeyLid(q, z))));
+  const unk = uzUnkKeys(JM.문제, M);   /* ★ uid_add2 §C-2 — 셈 한 함수(같은 열쇠 한 번) */
   if (unk.length){
     const c2 = el('div', 'mbsj');
     const hd = el('div', 'hd');
@@ -13341,7 +13348,7 @@ function mbDash(main, MG, JM, byId, P7, subj){
     dash.appendChild(c2);
   }
   /* ★ add2 §C-1 — 「미분류 (리담)」 뒤, 맨 끝 */
-  {const gi = mbGiCard(JM); if (gi) dash.appendChild(gi);}
+  {const gi = (UZGK === 'x') ? null : mbGiCard(JM); if (gi) dash.appendChild(gi);}   /* ★ add3 §A-8 — 기타에서는 「변리사 기출」 카드 안 그림(해 = 리담 = 기출) */
   main.appendChild(dash);
 }
 
@@ -13355,7 +13362,7 @@ function mbGiGo(y){
 }
 function mbGiRounds(JM){
   const by = {};
-  (JM.문제 || []).forEach(q => {
+  (JM.문제 || []).filter(q => /^\d{4}$/.test(String(q.연도 || ''))).forEach(q => {   /* ★ add3 — 연도 모름(uid_add2 PM-0506 · TRU…)은 해 줄이 아니다 */
     const k = String(q.연도) + '|' + String(q.회차 || '');
     (by[k] = by[k] || { y: String(q.연도), r: String(q.회차 || ''), n: 0 }).n++;
   });
@@ -13383,7 +13390,7 @@ function mbGiCard(JM){
       jb.onclick = ev => { ev.stopPropagation(); jnxYearOpen(g.y, ev); }; L.appendChild(jb); }
     row.appendChild(L);
     const R = el('div', 'r');
-    rounds.forEach((r0, i) => R.appendChild(grndBox(r0, i, lim, st)));
+    rounds.forEach((r0, i) => { const bx = grndBox(r0, i, lim, st); bx.onclick = ev => { ev.stopPropagation(); uzGrCompare(g.y, ev); }; R.appendChild(bx); });   /* ★ add3 §A-1 ⓐ — 줄 누름(기출뷰)으로 안 샌다 */
     const G = giAll(), pre = PLAW() + ':' + g.y + ':';
     const picked = Object.keys(G).filter(k => k.indexOf(pre) === 0 && G[k] && G[k].p && !G[k].g).length;
     const yr = (typeof giYearOf === 'function') ? (giYearOf(g.y) || {}) : {};
@@ -13404,6 +13411,7 @@ function mbGiCard(JM){
 /* §A-1 첫 화면 한 벌 */
 function mbHome(main, MG, JM, byId, P7, subj, counts, allCells, nJi, nMun){
   MBK2M = {};
+  allCells = allCells.filter(c => uzPass(c.k));   /* ★ mbsame_add3 — 히트맵 칸·범례 = 한 거름 */
   const box = el('div', 'mbh');
   mbSubHead(box, JM, P7, nJi, nMun);
   mbSearchRow(box, nJi, nMun);
@@ -13412,13 +13420,9 @@ function mbHome(main, MG, JM, byId, P7, subj, counts, allCells, nJi, nMun){
   const hm = el('div', 'mbhm');
   {
     const _p7m = {}; if (P7) P7.지문.forEach(z => _p7m[z.id] = z);
-    const tops = mbHmTops(MG, byId, _p7m);
+    const tops = uzHmTops(MG, byId, _p7m);   /* ★ mbsame_add2 ⑪ — 대목차 칩 셈 = 첫 화면·서랍 줄 규칙 */
     {
-      const placed = new Set();
-      if (MG) MG.마디.forEach(n => n.리담.forEach(x => placed.add(x)));
-      const unk = [];
-      JM.문제.filter(q => !placed.has(q.id))
-            .forEach(q => (q.지문 || []).forEach(z => unk.push(oxKeyLid(q, z))));
+      const unk = uzUnkKeys(JM.문제, MG ? MG.마디 : []);   /* ★ uid_add2 §C-2 — 히트맵 「미분류 (리담)」 칩 = 서랍·풀과 같은 함수 */
       if (unk.length) tops.push({ i: 'un', label: '미분류 (리담)', keys: unk });
     }
     const sel = tops.some(t => t.i === S.hmTop) ? S.hmTop : '';
@@ -13439,6 +13443,7 @@ function mbHome(main, MG, JM, byId, P7, subj, counts, allCells, nJi, nMun){
       };
       mk('', '전체', null);
       tops.forEach(t => mk(t.i, t.label, t.keys.length));
+      uzGkChips(sc);   /* ★ mbsame_add3 §A-8 — 대목차 칩 뒤 「│ 기출 N · 기타 M」(자과 #eKind 꼴) */
       hh.appendChild(sc);
       hh.appendChild(el('span', 'hmsp'));
       legend.forEach(x => hh.appendChild(x));
@@ -13461,6 +13466,7 @@ function mbHome(main, MG, JM, byId, P7, subj, counts, allCells, nJi, nMun){
    「문제 a-b / 총 N」 · 「✏️ 표시」 · 「📝 OMR」. 그 위에 서 있던 네 덩어리는 걷었다. */
 function mbBackBar(main, label){
   const H = MBHEAD || {};
+  if (H.exv) return uzExvHead(main, H);   /* ★ mbsame_add3 §A-2 ② — 기출뷰 머리 = 민법 한 줄(변리사 기출 / 해 · 「a~b번 / 총 N문제」 · ✏️ · 📝 OMR · 🏠 목록) */
   const bar = el('div', 'mbsbar');
   const b = el('button', 'mbback', '← 목차');
   b.title = '첫 화면으로';
@@ -13586,6 +13592,7 @@ function jtPaint(){
   const anc = [];
   M.forEach((n, i) => {
     while (anc.length && M[anc[anc.length - 1]].깊이 >= n.깊이) anc.pop();
+    if (S.jimunTab === 'gichul') return;   /* ★ mbsame_add3 §A-2 ① — 기출뷰 서랍 = 해 줄만 · 기출을 닫으면 단원 서랍 */
     const hid = anc.some(a => S.jtCh && S.jtCh[a]);
     const kid = kidOf(i);
     anc.push(i);
@@ -13602,13 +13609,15 @@ function jtPaint(){
       /* ★ toc_fuse(9/26) D-5 — 머리 한 줄: 「▾」(.jtar · 누르면 접기만) + 이름(누르면 그 마디 바로 밑 문항 ·
          제 문항이 없으면 이름도 접기) · 같은 이름 줄(.jtit)은 따로 안 세운다 · 「지금」 표식은 머리에 */
       const fold = () => { S.jtCh = S.jtCh || {};
-        if (S.jtCh[i]) delete S.jtCh[i]; else S.jtCh[i] = 1; uiSave(); jtPaint(); };
+        if (S.jtCh[i]) delete S.jtCh[i]; else S.jtCh[i] = 1;
+        if (n.깊이 === 1){ uzTopFold(i, !!S.jtCh[i]); uiSave(); render(); return; }   /* ★ add3 §A-8 — 편 마디 = 첫 화면과 한 값 */
+        uiSave(); jtPaint(); };
       const ar = el('span', 'jtar', S.jtCh && S.jtCh[i] ? '▸' : '▾');
       ar.onclick = e => { e.stopPropagation(); fold(); };
       r.appendChild(ar);
       r.appendChild(el('span', 'jtnm' + (n.출처 === '제7판' ? ' p7only' : ''), labOf(i)));
       mbJoChips(n, r);   /* ★ toc_fuse(9/26) D-1 */
-      r.appendChild(el('span', 'n', String(keys.length + sub)));
+      r.appendChild(el('span', 'n', String(uzSub(M, i).length)));   /* ★ mbsame_add2 ⑪ — uzSub */
       if (S.mok === sel) r.appendChild(el('span', 'now', '지금'));
       r.onclick = keys.length ? () => { S.mok = mdpHeadSel(i); S.oxPage = null; render(); } : fold;   /* ★ mbsame — 본편이 비면 첫 줄 */
       if (keys.length) r.title = labOf(i) + ' 바로 밑 문항 ' + keys.length + '개 — 누르면 풀기 · ▾ 로 접기';
@@ -13659,12 +13668,8 @@ function jtPaint(){
     box.appendChild(it); });
   });
   /* 미분류 */
-  const placed = new Set();
-  M.forEach(n => n.리담.forEach(x => placed.add(x)));
-  const unk = [];
-  (JTDATA.qs || []).filter(q => !placed.has(q.id))
-    .forEach(q => (q.지문 || []).forEach(z => unk.push(oxKeyLid(q, z))));
-  if (unk.length){
+  const unk = uzUnkKeys(JTDATA.qs, M);   /* ★ uid_add2 §C-2 — 셈 한 함수 */
+  if (unk.length && S.jimunTab !== 'gichul'){
     const it = el('div', 'jtit' + (S.mok === '__미분류' ? ' cur' : ''));
     const l1 = el('div', 'l1');
     l1.appendChild(el('span', 'tx', '미분류 (리담)'));
@@ -13677,12 +13682,12 @@ function jtPaint(){
   /* ★ add2 §C-4 — 민법 서람처럼 맨 아래에 「변리사 기출」 마디(연도 줄).
      연도 줄 = 그 회차 전체가 한 단원(민법 2288~2298). 기록·셔미는 안 건드린다. */
   {
-    const gs = (typeof mbGiRounds === 'function') ? mbGiRounds({ 문제: JTDATA.qs || [] }) : [];
+    const gs = ((UZGK !== 'x' || S.jimunTab === 'gichul') && typeof mbGiRounds === 'function') ? mbGiRounds({ 문제: JTDATA.qs || [] }) : [];   /* ★ add3 §A-8 — 기타에서는 해 줄 안 그림 */
     if (gs.length){
-      const gfold = !!(S.jtCh && S.jtCh.gi);
+      const gfold = !!(S.jtCh && S.jtCh.gi) && S.jimunTab !== 'gichul';   /* ★ add3 — 기출뷰에선 늘 편다 */
       const gr = el('div', 'jtch' + (S.jimunTab === 'gichul' ? ' cur' : ''));
       gr.appendChild(el('span', '', (gfold ? '▸ ' : '▾ ') + '변리사 기출'));
-      gr.appendChild(el('span', 'n', String(gs.reduce((a, g) => a + g.n, 0))));
+      gr.appendChild(el('span', 'n', String(((JTDATA && JTDATA.qs) || []).filter(q => /^\d{4}$/.test(String(q.연도 || ''))).reduce((a, q) => a + (q.지문 || []).length, 0))));   /* ★ add3 §A-2 ① — 지문 수(민법 trBuild 꼴) */
       gr.onclick = () => { S.jtCh = S.jtCh || {};
         if (S.jtCh.gi) delete S.jtCh.gi; else S.jtCh.gi = 1; uiSave(); jtPaint(); };
       box.appendChild(gr);
@@ -13692,9 +13697,13 @@ function jtPaint(){
         it2.style.paddingLeft = '20px';
         const l2 = el('div', 'l1');
         l2.appendChild(el('span', 'tx', g.y + '년' + (g.r ? ' 제' + g.r + '회' : '')));
-        l2.appendChild(el('span', 'n', String(g.n)));
+        const gks = []; ((JTDATA && JTDATA.qs) || []).forEach(q => { if (String(q.연도) === g.y) (q.지문 || []).forEach(z => gks.push(oxKeyLid(q, z))); });
+        const gst = jtStat(gks);   /* ★ mbsame_add3 §A-2 ① — 지문 수 · 기출뷰에선 「푼 것/전체」 + 막대(민법 trBuild) */
+        l2.appendChild(el('span', 'n', S.jimunTab === 'gichul' ? (gst.done + '/' + gst.total) : String(gst.total)));
         if (cur) l2.appendChild(el('span', 'now', '지금'));
         it2.appendChild(l2);
+        if (gst.total){ const bar = el('div', 'jdbar'); const iOk = el('i', ''); iOk.style.width = Math.round((gst.done - gst.bad) / gst.total * 100) + '%'; iOk.style.background = '#2E7D6F';
+          const iBad = el('i', ''); iBad.style.width = Math.round(gst.bad / gst.total * 100) + '%'; iBad.style.background = 'var(--rule)'; bar.appendChild(iOk); bar.appendChild(iBad); it2.appendChild(bar); }
         it2.onclick = () => mbGiGo(g.y);
         box.appendChild(it2);
       });
@@ -13874,15 +13883,21 @@ function jnOpen(label, keys, ev, subs){
   const parts = (subs && subs.length) ? subs : [{ label: label, keys: keys || [] }];
   const total = parts.reduce((a, P) => a + P.keys.length, 0);
   const body = popShell('q', '📋 정리 · ' + label, _pk);
-  mbWinFrame(body.parentNode, S.law + ' · ' + total + '지문');
+  body.parentNode.classList.add('jnwin');   /* ★ add3 §A-4 — 600 × 80vh(민법) */
+  const total0 = parts.reduce((a, P) => a + (P.keys._n0 != null ? P.keys._n0 : P.keys.length), 0), uzfl = uzFilterOn();   /* ★ add3 §A-6 — 부제에 거름 */
+  mbWinFrame(body.parentNode, S.law + ' · ' + (uzfl ? total0 : total) + '지문' + (uzfl ? ' · 거름 ' + uzFilterLabel() + ' ' + total : ''));
   jnxMkBtn(body.parentNode);   /* ★ mbsame §D-7 — 「✏️ 표시」 */
   const w = el('div', 'jn2');
   const idx = jnHitIdx();
   parts.forEach(P => {
     w.appendChild(el('div', 'jnh2', (P.label || label) + ' · ' + P.keys.length + '지문'));
-    P.keys.forEach(k => w.appendChild(jnRow(k, idx)));
+    let uzPrevQ = null;   /* ★ mbsame_add3 §A-5 — 같은 문항 첫 지문 앞 발문 줄 하나(끊겼다 다시 나오면 또) */
+    P.keys.forEach(k => { const inf = uzJnInfo(k, idx.get(k) || sidFind(k));
+      if (inf.qid && inf.stem && inf.qid !== uzPrevQ) w.appendChild(uzJnStemRow(inf));
+      uzPrevQ = inf.qid || null;
+      w.appendChild(jnRow(k, idx)); });
   });
-  if (!total) w.appendChild(el('div', 'jn0', '이 단원에는 지문이 없다'));
+  if (!total) w.appendChild(el('div', 'jn0', (uzfl && total0) ? '이 거름에 맞는 지문이 없다' : '이 단원에는 지문이 없다'));
   body.appendChild(w);
   showPop(ev);
   popSizable(body, 'jn');
@@ -13891,7 +13906,7 @@ function jnOpen(label, keys, ev, subs){
 /* 열쇠 → {kind,q,z} — sidFind 와 같은 차례(리담 먼저 · 제7판은 리담에 없는 열쇠만)를 한 번에 짓는다(묶음 지문마다 전수 훑기를 안 한다) */
 function jnHitIdx(){
   const M = new Map(); if (!VJ) return M;
-  (VJ.qs || []).forEach(q => (q.지문 || []).forEach(z => { const k = oxKeyLid(q, z); if (!M.has(k)) M.set(k, { kind: 'L', q: q, z: z }); }));
+  uzQsOrd().forEach(q => (q.지문 || []).forEach(z => { const k = oxKeyLid(q, z); if (!M.has(k)) M.set(k, { kind: 'L', q: q, z: z }); }));   /* ★ mbsame_add2 ④ — 마디에 붙은 문항 먼저 */
   for (const id in (VJ.P7map || {})){ const z = VJ.P7map[id], k = oxKeyP7(z); if (!M.has(k)) M.set(k, { kind: 'P', z: z }); }
   return M;
 }
@@ -13901,15 +13916,22 @@ function jnRow(k, idx){
   const hit = idx.get(k) || sidFind(k), c = (OXPOOL || {})[k] || {};
   const r = el('div', 'jnr'); r.dataset.jnrow = k;
   const top = el('div', 'jntop');
-  const no = el('button', 'jnno', ggWho(k)); no.type = 'button'; no.title = '지문 팝업';
+  /* ★ mbsame_add3 §A-4 — 민법 jnRowHTML 차례: ID 칩 → 번호 → 출제연도 칩 → 출처 → 근거 칩 → 🔗 판 → ↩링크N·↩백링크N → 아이콘 → 오른쪽 끝 기록 칸 */
+  const idb = el('button', 'qb id', String(k)); idb.type = 'button'; idb.title = '교재 자리 — 정리OMR';
+  idb.onclick = ev => { ev.stopPropagation(); mbbPop(k, ev); };
+  top.appendChild(idb);
+  const inf = uzJnInfo(k, hit);
+  const no = el('button', 'jnno', inf.no || ggWho(k)); no.type = 'button'; no.title = '지문 팝업';
   no.onclick = ev => { ev.stopPropagation(); popCard(k, ev); };
   top.appendChild(no);
   if (hit) mlnYearChips(top, k, hit.kind === 'P' ? { kind: 'P', z: hit.z } : { kind: 'L', q: hit.q, z: hit.z });   /* ★ mbsame §D-7 — 번호 바로 뒤 출제연도 칩 */
-  if ((hit && hit.kind === 'P') || c.kind === 'P') top.appendChild(el('span', 'jnsrc', '제7판'));
+  if (inf.src) top.appendChild(el('span', 'jnsrc', inf.src));   /* ★ add3 — 카드 출처 칩과 같은 말(옛 「제7판」 글자 걷음) */
   const u = ggUseEl(k, ''); if (u) top.appendChild(u);
+  if (hit) mlnPanChip(top, k, uzJnCases(hit));
+  uzJnLinks(top, k);
   const ic = ['fake', 'concept', 'memo', 'important'].filter(t => oxTagOn(k, t)).map(t => OXTAG_IC[t]).join('');   /* 🌀 은 안 그린다(민법 그대로) */
   if (ic) top.appendChild(el('span', 'jnic', ic));
-  top.appendChild(rgnStrip(k, true));   /* ★ mbsame §D-7·§E — 글자 하나 대신 풀이 기록 칸(누르면 출처 · × 두 번 = 지움) */
+  top.appendChild(uzJnRec(k));   /* ★ mbsame §D-7·§E — 풀이 기록 칸 · ★ add3 §A-4 — 오른쪽 끝 · 없으면 「기록 없음」 글자 */
   r.appendChild(top);
   const qq = el('div', 'jnqq'); mkcPaint(qq, k, 'q', ggText(k)); r.appendChild(qq);   /* 형광펜 그대로 */
   const gl = ggOf(k);
@@ -14033,12 +14055,15 @@ function jtLvApply(lv){
   O.slice(0, O.length - 1).forEach((d, x) => {
     (K[d] || []).forEach(i => { if (x >= upto) s[i] = 1; });
   });
-  S.jtCh = s; uiSave();
+  S.jtCh = s;
+  { const M = (JTDATA || {}).M || []; S.mbCh = S.mbCh || {};   /* ★ add3 §A-8 — 편 마디 = 첫 화면과 한 값 */
+    M.forEach((n, i) => { if (n.깊이 === 1 && (i + 1 < M.length) && M[i + 1].깊이 > 1){ if (s[i]) S.mbCh[i] = 1; else delete S.mbCh[i]; } }); }
+  uiSave();
 }
 function jtLvStep(){
   const O = jtLvOrder();
   jtLvApply(O[(O.indexOf(jtLvNow()) + 1) % O.length]);
-  jtPaint();
+  if (S.tab === 'jimun' && S.jimunTab === 'ox' && !S.mok && !S.oxQueue) render(); else jtPaint();   /* ★ add3 — 첫 화면도 같은 편 접힘 */
 }
 
 async function viewJimun(){
@@ -14164,7 +14189,7 @@ async function viewJimun(){
       t: String(c.z.t || ''),
       ans: (c.kind === 'P' ? (c.z.ox || ((c.z.리담 || {}).ox || '')) : c.kind === 'O' ? '' : c.z.ox) || '' }; });
     const counts = { weak: 0, semi: 0 };   /* ★ v3-H §1 — 논리 수 세기 폐기(거르기가 없어졌다) */
-    pool.forEach(c => { if (oxQueueHas(c.k, 'weak')) counts.weak++;
+    pool.forEach(c => { if (!uzPass(c.k)) return; if (oxQueueHas(c.k, 'weak')) counts.weak++;   /* ★ add3 — ⚡ 셈도 한 거름 */
                         if (oxQueueHas(c.k, 'semi')) counts.semi++; });
     /* ★ gaek_mb §A-1·§B — 첫 화면(머리줄·검색 줄·히트맵·⚡ 줄·과목 카드)
        ⚠ 회독 열쇠·셈은 여기서 새로 짜지 않는다 — 위에서 지은 pool·counts 를 그대로 쓴다. */
@@ -14178,7 +14203,7 @@ async function viewJimun(){
        거르기·모드 값은 첫 화면에서 정한 대로 큐·쪽에 그대로 먹는다(§A-3 · 값 무변). */
 
     if (S.oxQueue){
-      const hit = pool.filter(c => oxQueueHas(c.k, S.oxQueue));
+      const hit = pool.filter(c => uzPass(c.k) && oxQueueHas(c.k, S.oxQueue));   /* ★ add3 — 큐도 한 거름 */
       // ★ 큐에는 회독을 두지 않는다(사용자 확정 8/26) — 큐로는 회독을 돌지 않는다
       /* ★ add1 §A-2 — 히트맵 줄은 첫 화면으로 갔다(민법 `#quiz-screen` 에 없다) */
       if (!hit.length){
@@ -14254,7 +14279,7 @@ async function viewJimun(){
       /* ★ v3-E §0 (8/27 사용자 확인) — 바닥 고정 바 폐기. 「📝 OMR」·「쪽·마킹」은 히트맵 줄로,
          「✅ 이 페이지 채점」은 마지막 카드 아래 한 번(다 채점되면 사라진다).
          「🏆 N+1회독 시작」은 화면에 안 둔다 — 가운데 열 하나로 충분하다. */
-      const CARDS = mokCards(i, _mp.ln);
+      const CARDS = uzCards(mokCards(i, _mp.ln));   /* ★ mbsame_add3 §A-6·§A-8 — 한 거름(첫 화면 셈 = 이 카드 수 · 쪽·번호는 남은 카드로) */
       const PGN = 20, nPg = CARDS.length > PGN ? Math.ceil(CARDS.length / PGN) : 1;
       OXDOMPG = {};
       const _nos = mokNos(CARDS);   /* ★ toc_fuse(9/26) — 보이는 번호(선지 줄은 한 문항 한 번호) · s 는 카드 차례 그대로 */
@@ -14421,7 +14446,7 @@ async function viewJimun(){
       if(S.mok==='__미분류'){
         const placed=new Set();
         (MG?MG.마디:[]).forEach(n=>n.리담.forEach(x=>placed.add(x)));
-        list=JM.문제.filter(q=>!placed.has(q.id));
+        list=JM.문제.filter(q=>!placed.has(q.id)).filter(q=>(q.지문||[]).some(z=>uzPass(oxKeyLid(q,z))));   /* ★ add3 — 한 거름 */
         main.appendChild(el('div','badge','미분류 '+list.length+'문항 — 근거조문이 없거나 마디 제목에 조문이 안 적혀 못 붙은 것'));
       }else{
         const node=MK.마디.find(n=>n.파일===S.mok);
@@ -14458,7 +14483,7 @@ async function viewJimun(){
       }
     }
   }else{
-    giView(main, JM);   // 과제 7 — 연도별 기출뷰 + OMR (§8)
+    uzExv(main, JM);   // ★ mbsame_add3 §A-2 — 기출뷰 = 민법 exv 틀(옛 giView·giCard 는 부르지 않는다 · 정의는 남김)
   }
   /* ★ gaek_mb §A-1 · add2 §C-3 — 기출 화면도 같은 머리 한 줄이다 */
   if((S.jimunTab==='ox'&&S.mok)||S.jimunTab==='gichul')mbBackBar(main,'');
@@ -16195,12 +16220,16 @@ function uidMigrate(why){
     const tg = Object.assign({}, (old || {}).tg || {}, (cur || {}).tg || {});
     if (Object.keys(tg).length) b.tg = tg; if ((cur || {}).c || (old || {}).c) b.c = true; return b; };
   MERGE[FIX_KEY] = (cur, old, tc, to) => (to > tc ? old : cur);
-  MERGE[TY_KEY] = later;
+  MERGE[TY_KEY] = later; MERGE[BKT_KEY] = later;
   MERGE[GG_KEY] = cat; MERGE[GR_KEY] = cat; MERGE[MC_KEY] = cat;
   MERGE[LK_KEY] = (cur, old, tc, to) => Object.assign({}, later(cur, old, tc, to), { v: uniq([].concat((cur || {}).v || [], (old || {}).v || [])) });
   const moved = {}; let total = 0;
   const bump = (name, n) => { if (n){ moved[name] = (moved[name] || 0) + n; total += n; } };
-  [OX_KEY, FIX_KEY, TY_KEY, GG_KEY, GR_KEY, MC_KEY, LK_KEY].forEach(store => {
+  /* ★ uid_add2 §A-2(9/27) — 옛 uid 하나 → 카드 둘 이상(별칭표 multi · ⚙ uid_apply 가 센 148): 태그(tg · ⭐ 등)는 새 열쇠 모두에 ·
+     풀이 기록(m · p · 회독)은 아래 map/split 규칙대로 한쪽만 — 옮기기 전에 옛 태그를 떠 둔다 */
+  const uzMultiTg = {};
+  try{ const O0 = JSON.parse(localStorage.getItem(OX_KEY) || 'null') || {}; Object.keys(A.multi || {}).forEach(o => { const v = O0[o]; if (v && v.tg && Object.keys(v.tg).length) uzMultiTg[o] = v.tg; }); }catch(e){}
+  [OX_KEY, FIX_KEY, TY_KEY, GG_KEY, GR_KEY, MC_KEY, LK_KEY, BKT_KEY].forEach(store => {   /* ★ mbsame_add3 §A-7 — 빈칸 종류도 옮긴다 */
     let S0; try{ S0 = JSON.parse(localStorage.getItem(store) || 'null'); }catch(e){ return; }
     if (!S0 || typeof S0 !== 'object' || Array.isArray(S0)) return;
     let n = 0;
@@ -16222,6 +16251,38 @@ function uidMigrate(why){
     }
     if (n){ lsWrite(store, S0, '별칭 옮기기'); bump(store.slice(REC_PRE.length), n); }
   });
+  (function(){   /* ★ uid_add2 §A-2 — 떠 둔 옛 태그를 multi 의 새 열쇠 모두에(있으면 합집합 · uv:1 · 멱등) */
+    const ks = Object.keys(uzMultiTg); if (!ks.length) return;
+    let O; try{ O = JSON.parse(localStorage.getItem(OX_KEY) || 'null'); }catch(e){ return; }
+    if (!O || typeof O !== 'object' || Array.isArray(O)) return;
+    let n = 0;
+    ks.forEach(o => ((A.multi || {})[o] || []).forEach(t => {
+      const cur = O[t] || {}, tg = Object.assign({}, uzMultiTg[o], cur.tg || {});
+      if (JSON.stringify(tg) === JSON.stringify(cur.tg || {})) return;
+      O[t] = Object.assign({}, cur, { tg: tg, uv: 1 }); n++; }));
+    if (n){ lsWrite(OX_KEY, O, '별칭 옮기기'); bump('ox-tag', n); }
+  })();
+  (function(){   /* ★ uid_add2 §A-1 — 🗒 포스트잇 열쇠 'q|<uid>' + SEP + 구조 + SEP + 단어번호 + SEP + 단어 의 uid 칸만 새 uid 로 ·
+                    새 열쇠에 다른 값이 이미 있으면 옛 열쇠를 그대로 둔다(둘 다 남김 · 글이 다르면 합치지 않음) · 멱등 */
+    let P; try{ P = JSON.parse(localStorage.getItem(PIT_KEY) || 'null'); }catch(e){ return; }
+    if (!P || typeof P !== 'object' || Array.isArray(P)) return;
+    let n = 0, kept = 0;
+    const same = (a, b) => { const f = v => JSON.stringify(Object.assign({}, v || {}, { ts: 0 })); return f(a) === f(b); };
+    Object.keys(P).forEach(k => {
+      if (k.indexOf('q|') !== 0) return;
+      const rest = k.slice(2), i = rest.indexOf(SEP); if (i <= 0) return;
+      const u = rest.slice(0, i);
+      let nu = null;
+      if (uidHas(A.split, u) && oldVal(PIT_KEY, k, P[k])) nu = A.split[u];
+      else if (uidHas(A.map, u)) nu = A.map[u];
+      if (!nu || nu === u) return;
+      const nk = 'q|' + nu + rest.slice(i);
+      if (P[nk] !== undefined){ if (same(P[nk], P[k])){ delete P[k]; n++; } else kept++; return; }
+      P[nk] = P[k]; delete P[k]; n++;
+    });
+    if (n){ lsWrite(PIT_KEY, P, '별칭 옮기기'); try{ PITREC = null; PITIDX.rec = null; }catch(e){} bump('postit', n); }
+    UZ_PIT_KEPT = kept;
+  })();
   (function(){                                       /* 형광펜 — 'card|1차객|<열쇠>' + SEP + … 합성 열쇠 */
     let M; try{ M = JSON.parse(localStorage.getItem(MK_KEY) || 'null'); }catch(e){ return; }
     if (!M || typeof M !== 'object' || Array.isArray(M)) return;
@@ -16288,7 +16349,7 @@ function uidSearchKeys(q, P){
   if (!s || /\s/.test(s) || s.length < 5 || s.length > 16) return [];
   const out = [], add = k => { if (k && P[k] && out.indexOf(k) < 0) out.push(k); };
   add(s);
-  if (UIDALIAS){ add((UIDALIAS.map || {})[s]); add((UIDALIAS.split || {})[s]); }
+  if (UIDALIAS){ add((UIDALIAS.map || {})[s]); add((UIDALIAS.split || {})[s]); ((UIDALIAS.multi || {})[s] || []).forEach(add); }   /* ★ uid_add2 §A-3 — 갈라진 옛 uid 는 새 열쇠 모두 */
   if (VJ){
     (VJ.qs || []).forEach(qq => (qq.지문 || []).forEach(z => { if ((z.ou || []).indexOf(s) >= 0) add(oxKeyLid(qq, z)); }));
     for (const id in (VJ.P7map || {})){ const z = VJ.P7map[id]; if ((z.ou || []).indexOf(s) >= 0) add(oxKeyP7(z)); }
@@ -16381,7 +16442,7 @@ function mlnDirect(M, i, P7map, byId){
   MLN.dc[ck] = out; return out;
 }
 function mlnCardKey(c){ return c.kind === 'Z' ? oxKeyLid(c.q, c.z) : oxKeyP7(c.kind === 'O' ? c.o : c.z); }
-function mlnKeys(M, i, ln, P7map, byId){ return mlnDirect(M, i, P7map, byId)[ln].map(mlnCardKey); }
+function mlnKeys(M, i, ln, P7map, byId){ return uzF(mlnDirect(M, i, P7map, byId)[ln].map(mlnCardKey)); }   /* ★ add3 — 한 거름 */
 /* 단원 화면 = 마디 + 아래 전부(옛 mokCards 규칙) · 줄 하나 */
 function mlnCardsDeep(i, ln){
   const M = VJ.M, n = M[i]; if (!n) return [];
@@ -16402,7 +16463,7 @@ function mlnCardsDeep(i, ln){
 /* 종합사례 상자를 그릴지 — 단순 「옳지 않은 것은?」(줄 글이 모두 문장)이면 상자 없이 줄만(민법 83번 - (1)) ·
    조건 발문(「특허를 받을 수 없는 것은?」)·사례·보기·명사구 선지면 상자(줄 O/X 가 「발문 조건에 드는가」라서 발문이 늘 보여야 한다) */
 function mlnBoxy(stem, texts){
-  const s = String(stem || '').replace(/\s+/g, ' ').trim();
+  const s = String(stem || '').replace(/\s+/g, ' ').trim().replace(/\s*[（(][^()（）]*(?:판례|다툼)[^()（）]*[)）]\s*$/, '').trim();   /* ★ mbsame_add2 ⑤ — 「(다툼이 있는 경우 판례에 의함)」 꼴 꼬리를 걷고 판정 */
   if (!s) return false;
   const simple = s.length <= 60 && !/[【】]|甲|乙|丙|丁|청구항|사례|보기|괄호|순서|배열|몇/.test(s)
     && /(옳은|옳지\s*않은|틀린|맞는|바른|바르지\s*않은|적절한|적절하지\s*않은|잘못된|타당한|타당하지\s*않은)\s*(것|설명|지문|내용|기술)[은을]?\s*(모두\s*)?(고른\s*것은)?\s*[?？]?$/.test(s);
@@ -16485,7 +16546,7 @@ function mlnBonChip(host, q, z, ln, ni){
 function mlnHBackChip(host, z, ni){   /* 제7판 h 줄 → 원 기출 리담 선지(미수록 카드) */
   if (!z.uid || !/h\d?$/.test(z.uid)) return;
   const base = z.uid.replace(/h\d?$/, ''); const L = (MLN.lid || {})[base]; if (!L || !L.length) return;
-  const { q, z: lz } = L[0];
+  const { q, z: lz } = uzLidPick(L);   /* ★ mbsame_add2 ④ — 마디에 붙은 문항 먼저(풀 규칙과 같은 차례) · 없을 때만 미분류 */
   const b = el('button', 'qb t mlnbon', '📖 원 기출');
   b.title = '같은 시험 자리의 원 기출(리담 · (미수록)) — ' + String(lz.t || '').replace(/\s+/g, ' ').slice(0, 60);
   b.onclick = ev => { ev.stopPropagation(); popCard(oxKeyLid(q, lz), ev); };
@@ -16610,7 +16671,8 @@ const JXE_CIRC = ['', '①', '②', '③', '④', '⑤', '⑥', '⑦'];
 const JXE_KO = ['', 'ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ'];
 const JXE = { list: {}, listP: {}, doc: {}, idx: {}, stat: { list: {}, pdf: {}, idx: {} }, sp: null, spP: null };
 (function(){ try{ const s = document.createElement('style'); s.textContent = [
-  '.jxec{background:#f3f4f6;color:#4b5563;font-size:11px;font-weight:700;padding:1px 7px;border-radius:6px;border:1px solid #e5e7eb;white-space:nowrap;cursor:pointer}',
+  '.jxec{background:#f3f4f6;color:#4b5563;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;border:1px solid #e5e7eb;white-space:nowrap;cursor:pointer}',   /* ★ mbsame_add2 ⑭ — 여백 2px 8px(민법) */
+  '.ph .jxe-nav{position:static;margin-left:auto;padding:0 4px;border:0;background:transparent;flex:none;gap:4px}',   /* ⑭ — 머리 안 ◀ ▶ */
   '.jxec.fd{opacity:.45}',
   '.jxec.sp{background:#fdf2f8;color:#9d174d;border-color:#fbcfe8}',
   '.jxe-pg{position:relative;margin:0 auto}',
@@ -16724,7 +16786,7 @@ function jxeBox(rec, n){
   if (!body.length) return null;
   let x0 = 1, x1 = 0, y0 = 1, y1 = 0;
   body.forEach(l => { x0 = Math.min(x0, l.x0); x1 = Math.max(x1, l.x1); y0 = Math.min(y0, l.y0); y1 = Math.max(y1, l.y1); });
-  const cut = (endI < 0) && (h.nx >= 0) && L[h.nx] && L[h.nx].p > h.p;
+  const cut = uzCut(rec, n);   /* ★ mbsame_add2 ⑩ — 그 문항 마지막 선지 표지(⑤)가 다음 쪽일 때만 · 못 찾으면 옛 규칙 */
   return { box: { x0, y0, x1, y1 }, body, page: h.p, cut: !!cut, pitch: jxePitch(L.filter(l => l.p === h.p)) };
 }
 function jxeBand(body, opt, optRaw){
@@ -16751,10 +16813,12 @@ async function jxeOpen(law, y, no, opt, optRaw, ev){
   const pk = 'cv|exam|' + file, old = (POPS || []).find(p => p._pk === pk);
   if (old && old._jxe){ if (old._jxe.retarget(no, opt, optRaw)) return; closeOne(old); return; }
   const meta = list[file];
-  const body = popShell('canvas', '📄 ' + (meta.title || file), pk); showPop(ev); popSizable(body, 'canvas');
+  const body = popShell('canvas', '📄 ' + (meta.title || file), pk); showPop(ev); popSizable(body, 'bookpg');   /* ★ mbsame_add2 ⑭ — 민법 시험지 창과 같은 크기 기억 열쇠(bookpg) */
   const pw = body.parentNode;
+  if (!((S.popCfg || {}).bookpg)) pw.style.width = Math.min(560, Math.max(320, (window.innerWidth || 560) - 16)) + 'px';   /* 기억 없으면 폭 560(민법) · popSizable 뒤에 */
   const nav = el('div', 'jxe-nav'), view = el('div', 'jxe-view'), ft = el('div', 'jxe-ft');
-  body.appendChild(nav); body.appendChild(view); body.appendChild(ft);
+  { const hd0 = pw.querySelector(':scope > .ph'), x0 = hd0 && hd0.querySelector(':scope > button'); if (hd0) hd0.insertBefore(nav, x0); else body.appendChild(nav); }   /* ★ ⑭ — ◀ ▶ 는 창 머리(민법 mbNavMount 자리) */
+  body.appendChild(view); body.appendChild(ft);
   view.appendChild(el('div', 'cdim', '시험지를 받는 중…'));
   const st = { no: +no || 0, opt: +opt || 0, optRaw: optRaw || '', p: 1, busy: 0, marks: true };
   let rec = null, doc = null;
@@ -16769,7 +16833,6 @@ async function jxeOpen(law, y, no, opt, optRaw, ev){
     inp.onkeydown = e2 => { if (e2.key !== 'Enter') return; e2.preventDefault(); const v = parseInt(inp.value, 10);
       if (rec && v >= 1 && v <= rec.pages){ st.p = v; paint(); draw(); } else { inp.style.borderColor = '#dc2626'; setTimeout(() => { inp.style.borderColor = ''; }, 1200); } };
     nav.appendChild(pv); nav.appendChild(inp); nav.appendChild(el('span', 'm', '/ ' + (rec ? rec.pages : '?') + '쪽')); nav.appendChild(nx);
-    nav.appendChild(el('span', 'm', (meta.subject || '') + ' · ' + (JXE.stat.pdf[file] && JXE.stat.pdf[file].from === 'cache' ? '이 기기에 재워 둔 것' : '저장소에서 받음')));
   };
   const draw = async () => {
     const tk = ++st.busy; if (!doc || !rec) return;
@@ -16785,7 +16848,7 @@ async function jxeOpen(law, y, no, opt, optRaw, ev){
       const bx = jxeBox(rec, st.no);
       if (bx){
         const pd = (bx.pitch || 0.015) * 0.45;
-        const bn = jxeBand(bx.body, st.opt, st.optRaw);
+        const bn = uzBand(bx.body, st.opt, st.optRaw);   /* ★ mbsame_add2 ⑩ — 표지를 다 잡았을 때만 띠 */
         if (bn){ const d = el('div', 'jxe-bn'); const pt2 = (bx.pitch || 0.015) * 0.18 + 0.002;
           d.style.cssText = 'left:' + (Math.max(0, bn.x0 - 0.008) * 100).toFixed(2) + '%;top:' + (Math.max(0, bn.y0 - pt2) * 100).toFixed(2) + '%;width:' + (Math.max(0.5, (Math.min(1, bn.x1 + 0.012) - Math.max(0, bn.x0 - 0.008)) * 100)).toFixed(2) + '%;height:' + (Math.max(0.5, (Math.min(1, bn.y1 + pt2) - Math.max(0, bn.y0 - pt2)) * 100)).toFixed(2) + '%';
           d.hidden = !st.marks; wrap.appendChild(d); }
@@ -16799,6 +16862,7 @@ async function jxeOpen(law, y, no, opt, optRaw, ev){
     ft.innerHTML = ''; const tg = el('button', 'tool', st.marks ? '테두리 끄기' : '테두리 켜기');
     tg.onclick = e2 => { e2.stopPropagation(); st.marks = !st.marks; wrap.querySelectorAll('.jxe-bd,.jxe-bn').forEach(x => { x.hidden = !st.marks; }); tg.textContent = st.marks ? '테두리 끄기' : '테두리 켜기'; };
     ft.appendChild(tg); if (note) ft.appendChild(el('span', '', note));
+    ft.appendChild(el('span', 'm', (meta.subject || '') + ' · ' + (JXE.stat.pdf[file] && JXE.stat.pdf[file].from === 'cache' ? '이 기기에 재워 둔 것' : '저장소에서 받음')));   /* ⑭ — 머리에서 옮김 */
     if (rec.miss && rec.miss.length) ft.appendChild(el('span', '', '못 짚은 문번 ' + rec.miss.join(',')));
     try{ mbWinFit(pw); }catch(e){}
     await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
@@ -16835,7 +16899,7 @@ function jxeChip(law, y, no, lab, q, pre){
   b.title = (pre ? pre : '') + y + '년 ' + (known ? no + '번' : '문번 모름') + (lab ? ' ' + jxeSym(lab) : '') +
     (known && has && +y >= 2008 ? ' — 누르면 그 해 시험지 쪽' : (!known ? ' — 누르면 그 해 기출뷰 문항' : ' — 그 해 시험지가 없다'));
   b.onclick = ev => { ev.stopPropagation();
-    if (!known){ if (q) jxeGiPop(law, q.id, ev); else toast('그 해 시험지가 없습니다'); return; }
+    if (!known){ if (q) jxeGiPop(law, q.id, ev); return; }   /* ★ mbsame_add2 ⑫ — 그 해 리담에 같은 지문이 없으면 누름 무반응 · 토스트 없음(칩 흐림 그대로) */
     if (!has || +y < 2008){ toast('그 해 시험지가 없습니다'); return; }
     const opt = /^\d$/.test(lab) ? +lab : (JXE_KO.indexOf(lab) > 0 ? JXE_KO.indexOf(lab) : 0);
     jxeOpen(law, y, no, opt, lab, ev); };
@@ -16881,7 +16945,8 @@ function jxeChips(host, key, ctx){
   const occ = ((MLN && MLN.lid) || {})[uid] || [];
   let weak = null;   /* 책 태그 해(TH)에서만 나온 칩 — 다른 칩이 서면 뺀다(책 태그가 틀린 꼴 · §C 링크 틀림) */
   if (pu && pu.law === law){ const q0 = occ.length ? occ[0].q : (ctx.q || null);
-    if (pu.no) add(law, pu.y, pu.no, pu.lab, q0); else if (!occ.length){ if (pu.th) weak = [law, pu.y, 0, pu.lab, q0]; else add(law, pu.y, 0, pu.lab, q0); } }
+    const q1 = q0 || uzSameYearLid(pu.y, ctx.kind === 'L' ? (z && z.t) : p7Text(z && z.t));   /* ★ mbsame_add2 ⑫ — 문번 모름 칩 = 그 해 리담의 같은 글 문항(없으면 null · 누름 무반응) */
+    if (pu.no) add(law, pu.y, pu.no, pu.lab, q0); else if (!occ.length){ if (pu.th) weak = [law, pu.y, 0, pu.lab, q1]; else add(law, pu.y, 0, pu.lab, q1); } }
   occ.forEach(({ q, z: z2 }) => add(law, +q.연도, +q.시험문번 || 0, z2.기호 || String(z2.n), q));
   /* 상표 칩 — 특허 카드와 같은 글의 상표 리담 선지 */
   if (law === '특허법'){
@@ -16935,12 +17000,23 @@ function grndAll(){ if (!GRNDREC) GRNDREC = lsRead(GRND_KEY); return GRNDREC; }
 function grndList(y){
   const A = grndAll(), k = giYKey(y);
   let L = Array.isArray(A[k]) ? A[k] : [];
+  if (!VJ || !(VJ.qs || []).length) return L;   /* 문항을 아직 못 받았으면 옮기기·걷기를 안 한다(문번 범위를 모른다) */
+  /* ★ mbsame_add3 §A-1 ⓒ — 옛 한 번 값(gi.year)을 옮겨 만든 회독(mig:1) 가운데 그 법 문번 안 고른 답이 0 인 것은 걷는다(가짜 회독 · 멱등 · 동기화로 원격도 ·
+     옛 gi·gi.year 값 자체는 그대로) — 9/27 특허:2026 「1회독 0/10 X10」 = 상표 쪽 문번 21~30 에 고른 답 없이 제출된 값 */
+  const nos = uzGiNos(y), inN = r => Object.keys((r && r.picks) || {}).filter(n => nos.has(String(n))).length;
+  if (L.some(r => r && r.mig && !inN(r))){ L = L.filter(r => !(r && r.mig && !inN(r)));
+    if (L.length) A[k] = L; else delete A[k]; GRNDREC = A; lsWrite(GRND_KEY, A, '기출 회독'); }
   if (!L.length){ const Y = giYearOf(y);
-    if (Y && Y.sub){   /* 옛 한 번 값(gi.year) → 1회독 */
+    if (Y && Y.sub){   /* 옛 한 번 값 → 1회독 — 고른 답(p)이 있고 그 법 문번 안인 것이 하나라도 있을 때만 · picks = 그 문번만 · n = 그 수 */
       const picks = {}; const G = giAll(), pre = PLAW() + ':' + y + ':';
-      Object.keys(G).forEach(gk => { if (gk.indexOf(pre) === 0 && G[gk] && G[gk].p && G[gk].g) picks[gk.slice(pre.length)] = String(G[gk].p); });   /* 그 제출 때 채점된 답만 */
-      L = [{ date: String(Y.sub).slice(0, 10), ts: Y.sub, ok: Y.right, n: Y.n, ms: null, picks: picks, mig: 1 }];
-      A[k] = L; GRNDREC = A; lsWrite(GRND_KEY, A, '기출 회독'); } }
+      Object.keys(G).forEach(gk => { if (gk.indexOf(pre) !== 0) return; const no = gk.slice(pre.length);
+        if (G[gk] && G[gk].p && G[gk].g && nos.has(no)) picks[no] = String(G[gk].p); });
+      const pn = Object.keys(picks);
+      if (pn.length){
+        const qs = VJ.qs.filter(q => String(q.연도) === String(y)); let ok = 0;
+        pn.forEach(no => { const q = qs.find(x => giKey(x) === pre + no); if (q && giAns(q).indexOf(picks[no]) >= 0) ok++; });
+        L = [{ date: String(Y.sub).slice(0, 10), ts: Y.sub, ok: ok, n: pn.length, ms: null, picks: picks, mig: 1 }];
+        A[k] = L; GRNDREC = A; lsWrite(GRND_KEY, A, '기출 회독'); } } }
   return L;
 }
 function grndPush(y, rec){ const A = grndAll(), k = giYKey(y); const L = (Array.isArray(A[k]) ? A[k] : []).slice(); L.push(rec); A[k] = L; GRNDREC = A; lsWrite(GRND_KEY, A, '기출 회독'); }   /* 옮기기는 부르는 쪽(giGrade 첫머리)이 먼저 한다 — 여기서 또 부르면 방금 쓴 gi.year 가 「옛 값」 으로 한 번 더 쌓인다 */
@@ -16999,16 +17075,16 @@ function grndYearStat(y){   /* 그 해 지문 지금 상태(조판기엔 기출 
   return { qs: qs, n: n, cf: cf, fk: fk, x: x };
 }
 function grndBox(r, i, lim, st){
-  const b = el('span', 'grbx'); b.appendChild(el('b', '', (i + 1) + '회독'));
+  const b = el('button', 'grbx'); b.type = 'button'; b.appendChild(el('b', '', (i + 1) + '회독'));   /* ★ mbsame_add3 §A-1 ⓐ — 단추(누르면 회독 비교 창 · onclick 은 부르는 쪽) */
   const l2 = el('span', 'l2');
   const top = el('span', '');
   top.appendChild(document.createTextNode((r.ok != null ? r.ok : '?') + '/' + (r.n || '?') + ' X' + Math.max(0, (r.n || 0) - (r.ok || 0))));
   if (r.ms != null){ const m = Math.round(r.ms / 60000); top.appendChild(document.createTextNode(' · '));
     const mm = el('span', lim && r.ms > lim ? 'ov' : '', m + 'm'); top.appendChild(mm); }
   l2.appendChild(top);
-  l2.appendChild(el('span', '', '🌀' + st.cf + ' ⚠' + st.fk + ' X' + st.x + ' /' + st.n));
+  if (r.st) l2.appendChild(el('span', '', '🌀' + r.st.cf + ' ⚠' + r.st.fk + ' X' + r.st.x + ' /' + r.st.n));   /* ★ add3 §A-1 ⓑ — 제출 때 지문 기록 스냅숏 · 없는 옛 회독은 아랫줄 비움 */
   b.appendChild(l2);
-  b.title = (r.date || '') + ' · ' + (i + 1) + '회독째 · 시험지 ' + (r.ok != null ? r.ok : '?') + '/' + (r.n || '?') + (r.ms != null ? ' · ' + Math.round(r.ms / 60000) + '분' : '') + ' · 지문 = 지금 기록 상태';
+  b.title = (r.date || '') + ' · ' + (i + 1) + '회독째 · 시험지 ' + (r.ok != null ? r.ok : '?') + '/' + (r.n || '?') + (r.ms != null ? ' · ' + Math.round(r.ms / 60000) + '분' : '') + '' + (r.st ? ' · 지문 = 제출 때 기록' : ' · 지문 기록 스냅숏 없음(옛 회독)');
   return b;
 }
 /* ── ⑥ 📋 정리 창 — 기출 해 줄(첫 화면 「변리사 기출」 해마다) ── */
@@ -17027,7 +17103,7 @@ function jnxGrCells(q, y, rounds, info){
   rounds.forEach((r, i) => { const pk = String((r.picks || {})[no] || '');
     const cls = !pk ? 'n' : (ans.indexOf(pk) >= 0 ? 'o' : 'x');
     const c = el('button', 'grc ' + cls, !pk ? '·' : (cls === 'o' ? 'O' : 'X')); c.type = 'button';
-    const tip = String(r.date || '').slice(5).replace('-', '/') + ' · ' + (i + 1) + '회독째 · 고른 ' + (pk ? (OMARK[+pk - 1] || pk) : '없음') + ' · 정답 ' + (ans.map(x => OMARK[+x - 1] || x).join('·') || '—');
+    const tip = uzMd(r.date) + ' · ' + (i + 1) + '회독째 · 고른 ' + (pk ? (OMARK[+pk - 1] || pk) : '없음') + ' · 정답 ' + (ans.map(x => OMARK[+x - 1] || x).join('·') || '—');
     c.title = tip;
     c.onclick = ev => { ev.stopPropagation(); info.textContent = info.textContent === tip ? '' : tip; };
     box.appendChild(c); });
@@ -17039,6 +17115,7 @@ function jnxYearOpen(y, ev){
   const _pk = 'q|📋 정리 · ' + label; if (popToggle(_pk)) return;
   let total = 0; qs.forEach(q => { total += (q.지문 || []).length; });
   const body = popShell('q', '📋 정리 · ' + label, _pk);
+  body.parentNode.classList.add('jnwin');   /* ★ add3 §A-4 */
   mbWinFrame(body.parentNode, S.law + ' · ' + qs.length + '문항 · ' + total + '지문');
   jnxMkBtn(body.parentNode);
   const w = el('div', 'jn2'), idx = jnHitIdx(), rounds = grndList(y);
@@ -17097,14 +17174,14 @@ function rgnStrip(key, compact){
     if (c.ok !== true && c.ok !== false){ top.appendChild(el('span', cls, '·')); }
     else {
       const b = el('button', cls + ' rgb', c.ok ? 'O' : 'X'); b.type = 'button';
-      const tip = md(c.date || nowIso().slice(0, 10)) + ' · ' + (c.cur ? (rgnScopeLabel(S.mok ? 'mok|' + SHORT[S.law] + '|' + S.mok : '') || '지금 판') : rgnScopeLabel(c.scope)) + ' · ' + c.n + '회독째' + (c.cur ? ' · 진행중' : '');
+      const tip = md(c.date || nowIso().slice(0, 10)) + ' · ' + (c.cur ? (uzScopeShort(S.mok ? 'mok|' + SHORT[S.law] + '|' + S.mok : '') || '지금 판') : uzScopeShort(c.scope)) + ' · ' + c.n + '회독째' + (c.cur ? ' · 진행중' : '');   /* ★ mbsame_add2 ⑥ — 마디 번호 + 마지막 이름 */
       b.title = tip;
       b.onclick = ev => { ev.stopPropagation();
         const on = b.classList.contains('rgon');
         box.querySelectorAll('.rgon').forEach(x => x.classList.remove('rgon'));
         if (on){ info.hidden = true; info.innerHTML = ''; return; }
         b.classList.add('rgon'); info.hidden = false; info.innerHTML = '';
-        info.appendChild(document.createTextNode(tip));
+        info.appendChild(el('span', 'rgt', tip));   /* ★ mbsame_add2 ⑥ — 글만 말줄임 · × 는 늘 보임 */
         const x = el('button', 'rgx', '×'); x.type = 'button'; x.title = '이 기록 지우기 — 한 번 더 누르면 지워진다';
         x.onclick = e2 => { e2.stopPropagation(); if (!x.dataset.sure){ x.dataset.sure = '1'; x.classList.add('sure'); return; } rgnDelete(key, c); };
         info.appendChild(x); };
@@ -17198,8 +17275,7 @@ function mdpIndent(row, i){
   row.dataset.mdpd = d;
 }
 function mdpHead(box, M, i, label, keyOf, GRP){
-  const d = M[i].깊이, own = keyOf(i), allK = own.slice();
-  for (let j = i + 1; j < M.length && M[j].깊이 > d; j++) keyOf(j).forEach(k => allK.push(k));
+  const d = M[i].깊이, own = keyOf(i), allK = uzSub(M, i);   /* ★ mbsame_add2 ⑪ — 머리 셈 = uzSub(한 열쇠 한 번) */
   const row = el('div', 'mbur mdph'); row.dataset.mdp = i;
   const L = el('div', 'l');
   L.appendChild(mdpArrow(i));
@@ -17225,7 +17301,7 @@ function mdpHead(box, M, i, label, keyOf, GRP){
 function mdpHeadSel(i){
   if (!(MLN && MLN.ok)) return '__mg' + i;
   const d = mlnDirect(VJ.M, i, VJ.P7map, VJ.byId);
-  const ln = MLN_LNS.find(x => d[x].length) || 'b';
+  const ln = MLN_LNS.find(x => uzF(d[x].map(mlnCardKey)).length) || MLN_LNS.find(x => d[x].length) || 'b';   /* ★ add3 — 거른 뒤 첫 줄 */
   return mlnSel(i, ln);
 }
 /* 머리의 제 (판신설)·(미수록)·(변형) 줄 — 머리 바로 밑에 한 칸 더 들여 세운다(본편은 머리 자신이 맡는다 · 본편이 비었으면 첫 줄은 머리가 맡는다) */
@@ -17233,7 +17309,7 @@ function mdpOwnRows(box, M, i, label){
   if (!(MLN && MLN.ok)) return;
   const d = mlnDirect(M, i, VJ.P7map, VJ.byId), subj = SHORT[S.law];
   const first = mdpHeadSel(i);
-  ['n', 'u', 'v'].forEach(ln => { const ks = d[ln].map(mlnCardKey); if (!ks.length) return;   /* 본편은 머리 자신 · 나머지 줄은 늘 따로 보인다 */
+  ['n', 'u', 'v'].forEach(ln => { const ks = uzF(d[ln].map(mlnCardKey)); if (!ks.length) return;   /* 본편은 머리 자신 · 나머지 줄은 늘 따로 보인다 · ★ add3 한 거름 */
     const lab = label + MLN_NAME[ln];
     const r = mbUnitRow(M, 'x', mlnSel(i, ln), lab, ks, subj, false, { label: lab, subs: [{ i: i, label: lab, keys: ks }] });
     r.classList.add('mlnline', 'mdpk'); r.style.marginLeft = ((Math.max(2, M[i].깊이) - 1) * 14) + 'px';
@@ -17243,7 +17319,7 @@ function mdpOwnRows(box, M, i, label){
 function jtOwnRows(box, M, i, label, subj){
   if (!(MLN && MLN.ok)) return;
   const d = mlnDirect(M, i, VJ.P7map, VJ.byId), first = mdpHeadSel(i);
-  ['n', 'u', 'v'].forEach(ln => { const ks = d[ln].map(mlnCardKey); const sel = mlnSel(i, ln); if (!ks.length) return;
+  ['n', 'u', 'v'].forEach(ln => { const ks = uzF(d[ln].map(mlnCardKey)); const sel = mlnSel(i, ln); if (!ks.length) return;   /* ★ add3 한 거름 */
     const st = jtStat(ks);
     const it = el('div', 'jtit' + (S.mok === sel ? ' cur' : '') + (st.total ? '' : ' off'));
     it.style.paddingLeft = (20 + Math.max(0, M[i].깊이 - 1) * 8) + 'px';
@@ -17468,6 +17544,830 @@ function c3PickToggle(col, hd, lp, curK, curH){
   hd.after(box);
   fill();
 }
+var UZ_PIT_KEPT = 0;
+/* ══ uidmbs2(2026-09-27 · _task_jo_gaek_uid_add2 + _task_jo_gaek_mbsame_add2 + _add3) — 끝 블록 ══
+   이 블록은 patch 스크립트(task\_patch_jo_uidmbs2.py)가 마지막 스크립트 닫는 태그 바로 앞에 붙인다(주석에도 그 태그 글자를 쓰지 않는다 — HTML 이 거기서 스크립트를 끊는다). 함수 이름은 uz 로 시작(겹침 없음 — 붙이기 전 census). */
+
+/* ── 셈 한 함수(㊜) — 미분류(리담) 열쇠: 마디에 안 붙은 리담 문항의 지문 열쇠 · 같은 열쇠는 한 번(uid 판 같은 글 = uid 하나 · uid_add2 §C-2)
+   첫 화면 · 서랍 · 히트맵 대목차 칩 · 1차 목록(qlColumn)이 모두 이것을 부른다(옛 판은 네 곳이 따로 셌고 겹친 열쇠를 안 걷었다) */
+function uzUnkKeys(qs, M){
+  const placed = new Set();
+  (M || []).forEach(n => (n.리담 || []).forEach(x => placed.add(x)));
+  const seen = new Set(), out = [];
+  (qs || []).filter(q => !placed.has(q.id)).forEach(q => (q.지문 || []).forEach(z => {
+    const k = oxKeyLid(q, z); if (seen.has(k)) return; seen.add(k); out.push(k); }));
+  return uzF(out);   /* ★ add3 — 한 거름 */
+}
+/* 히트맵 대목차 칩 — 첫 화면·서랍과 같은 줄 규칙(mlnKeys 넷 줄 · 본편 · 판신설 · 미수록 · 변형) · 옛 판은 mgKeys(옛 마디 규칙)라 수가 달랐다(mbsame_add2 ⑪) */
+function uzHmTops(MG, byId, P7map){
+  const out = [];
+  if (!MG) return out;
+  const M = MG.마디;
+  const keysAt = j => (MLN && MLN.ok) ? MLN_LNS.reduce((a, ln) => a.concat(mlnKeys(M, j, ln, (VJ && VJ.P7map) || P7map, byId)), []) : mgKeys(M, j, byId, P7map);
+  M.forEach((n, i) => {
+    if (n.깊이 !== 1) return;
+    let keys = keysAt(i);
+    for (let j = i + 1; j < M.length && M[j].깊이 > 1; j++) keys = keys.concat(keysAt(j));
+    out.push({ i: String(i), label: (n.no ? n.no + '. ' : '') + n.제목, keys: [...new Set(keys)] });
+  });
+  return out;
+}
+
+/* ── 기록 칸(mbsame_add2 ⑥⑧⑨) — 출처 글 = 「9/20 · 8.3.2.2 균등론 · 1회독째」(마디 번호 + 마지막 이름) · 넘치면 글만 말줄임 · × 는 늘 줄 안 ── */
+function uzScopeShort(scope){
+  const sel = (scope || '').split('|')[2] || '';
+  const m = /^__mg(\d+)(?:~([nuv]))?$/.exec(sel);
+  if (m){ const n = ((VJ && VJ.M) || [])[+m[1]]; if (n) return ((n.no ? n.no + ' ' : '') + n.제목 + (MLN_NAME[m[2] || 'b'] || '')).trim(); }
+  if (sel === '__미분류') return '미분류 (리담)';
+  try{ const p = rgnScopeLabel(scope); const parts = String(p || '').split(/\s*[›>]\s*/); return parts[parts.length - 1] || p; }catch(e){ return scope; }
+}
+function uzMd(d){ const m = String(d || '').match(/\d{4}-(\d{1,2})-(\d{1,2})/); return m ? (+m[1]) + '/' + (+m[2]) : '?'; }
+(function(){ try{ const s = document.createElement('style'); s.textContent = [
+  '.mbrec .r{min-width:0;flex-wrap:wrap}',   /* ⑥ 좁으면(390px · 서랍 열림) 출처 글이 다음 줄로 — × 가 줄 밖으로 안 밀린다 · 줄 사이 = gap 4px 그대로(민법 값 · gaek_mb px 표) */
+  '.mbrec .rgi{color:var(--sub);display:inline-flex;align-items:center;min-width:0;max-width:100%;flex:0 1 auto;overflow:hidden}',   /* ⑨ 「마지막」 글과 같은 색 · 줄 폭을 안 넘는다 */
+  '.mbrec .rgi .rgt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}',   /* ⑥ 글만 말줄임 */
+  '.mbrec .rgi .rgx{flex:none}'                                                                 /* ⑥ × 는 늘 보임 */
+].join('\n'); document.head.appendChild(s); }catch(e){} })();
+
+/* ── 📖 원 기출(mbsame_add2 ④) — 같은 uid 의 리담 선지 가운데 마디에 붙은 문항 먼저(풀 규칙과 같은 차례 · mbsame 판단 ②) · 없을 때만 미분류 ── */
+var UZQO = { vj: null, mln: null, a: [] };
+function uzQsOrd(){   /* 리담 문항 차례 — 마디에 붙은 문항 먼저(OXPOOL 을 짓는 차례와 같다) · 팝업(sidFind)·정리 창 색인이 같이 쓴다 */
+  if (UZQO.vj === VJ && UZQO.mln === MLN) return UZQO.a;
+  const qs = (VJ && VJ.qs) || [], on = q => !!(MLN && MLN.ok && MLN.lidnode && MLN.lidnode[q.id] != null);
+  UZQO = { vj: VJ, mln: MLN, a: qs.filter(on).concat(qs.filter(q => !on(q))) };
+  return UZQO.a;
+}
+function uzLidPick(L){
+  if (!L || !L.length) return null;
+  const on = L.filter(x => x && x.q && MLN && MLN.lidnode && MLN.lidnode[x.q.id] != null);
+  return (on.length ? on : L)[0];
+}
+
+/* ── 출제연도 칩 · 문번 모름(mbsame_add2 ⑫) — 그 해 리담에 같은 글 지문이 있으면 그 문항 · 없으면 null(칩 흐림 · 누름 무반응 · 토스트 없음) ── */
+function uzSameYearLid(y, text){
+  const nk = jxeNorm(text); if (nk.length < 8) return null;
+  const qs = ((VJ && VJ.qs) || []).filter(q => String(q.연도) === String(y));
+  for (const q of qs) for (const z of (q.지문 || [])) if (jxeNorm(z.t) === nk) return q;
+  return null;
+}
+
+/* ── 시험지 띠·이어짐(mbsame_add2 ⑩ · 민법 mbxBand·mbxBox 와 같은 고침) ──
+   띠: 그 문항에서 선지 표지를 차례대로 다 잡았을 때만(①~⑤ 다섯 · ㄱ 꼴은 고른 표지와 그다음 표지 또는 첫 ① 줄) — 못 잡으면 띠 없음(빨간 문번 테만)
+   이어짐: 그 문항의 마지막 선지 표지(⑤)가 다음 쪽에 있을 때만 · ⑤ 를 못 찾으면 옛 규칙(다음 문번 머리가 다음 쪽) 가운데 이 쪽 끝이 문항 끝이 아닌 것 */
+function uzBand(body, opt, optRaw){
+  if (!(opt >= 1 && opt <= 5) || !body || !body.length) return null;
+  const ko = /[ㄱ-ㅎ]/.test(String(optRaw || ''));
+  const fams = ko ? [JXE_KO] : [JXE_CIRC, JXE_KO];
+  for (let f = 0; f < fams.length; f++){
+    const marks = fams[f], starts = [];
+    body.forEach((l, i) => { const t = l.t.replace(/^\s+/, ''); for (let j = 1; j <= 5; j++) if (t.indexOf(marks[j]) === 0){ starts.push({ j, i }); break; } });
+    const hit = starts.find(s => s.j === opt); if (!hit) continue;
+    let endI = -1;
+    if (marks === JXE_CIRC){
+      const seq = starts.map(s => s.j).join('');
+      if (seq.indexOf('12345') < 0) return null;   /* 다섯 표지를 차례로 다 못 잡음 → 띠 없음 */
+      const nx = starts.find(s => s.i > hit.i && s.j === opt + 1);
+      endI = nx ? nx.i : (opt === 5 ? uzEndOfOpt(body, hit.i) : -1);
+    } else {
+      const nx = starts.find(s => s.i > hit.i && s.j === opt + 1);
+      if (nx) endI = nx.i;
+      else { const c1 = body.findIndex((l, i) => i > hit.i && /^\s*①/.test(l.t)); endI = c1 > 0 ? c1 : -1; }
+    }
+    if (endI < 0 || endI <= hit.i) return null;
+    let y0 = 1, y1 = 0, x0 = 1, x1 = 0;
+    for (let i = hit.i; i < endI; i++){ y0 = Math.min(y0, body[i].y0); y1 = Math.max(y1, body[i].y1); x0 = Math.min(x0, body[i].x0); x1 = Math.max(x1, body[i].x1); }
+    return { x0, y0, x1, y1 };
+  }
+  return null;
+}
+/* ⑤ 줄부터 — 다음 줄이 멀리 떨어지거나(쪽 꼬리) 짧은 쪽 번호 줄이면 거기까지 */
+function uzEndOfOpt(body, i0){
+  let e = i0 + 1;
+  const pitch = jxePitch(body) || 0.02;
+  while (e < body.length){
+    const gap = body[e].y0 - body[e - 1].y1;
+    if (gap > pitch * 2.2) break;
+    if (body[e].y0 > 0.93 && body[e].t.replace(/\s/g, '').length <= 8) break;
+    e++;
+  }
+  return e;
+}
+/* 이어짐 — 그 문항 머리 줄부터 다음 문항 머리까지(쪽을 넘어) ⑤ 표지 줄의 쪽 */
+function uzCut(rec, n){
+  const h = rec.no[n]; if (!h) return false;
+  const L = rec.lines, end = (h.nx >= 0) ? h.nx : L.length;
+  let last5 = -1;
+  for (let i = h.i; i < end; i++){ const t = (L[i].t || '').replace(/^\s+/, ''); if (t.indexOf('⑤') === 0) last5 = i; }
+  if (last5 >= 0) return L[last5].p > h.p;
+  /* ⑤ 를 못 찾으면(2020 처럼 글자층에 표지가 없는 해) — 그 문항 글줄(쪽 머리·꼬리 짧은 줄 빼고)이 실제로 다음 쪽까지 갈 때만 ·
+     옛 규칙(다음 문번 머리가 다음 쪽)은 쪽 끝에서 끝난 문항도 이어짐으로 그렸다(9/27 실측 2020 8 문항 거짓) */
+  for (let i = h.i; i < end; i++){ const l = L[i]; if (l.p > h.p && !((l.t || '').replace(/\s/g, '').length <= 8 && (l.y0 > 0.93 || l.y0 < 0.07))) return true; }
+  return false;
+}
+
+/* ── uid 별칭(uid_add2 §A) — 🔍 갈라진 옛 uid ── */
+function uzGal(q){
+  const A = UIDALIAS; if (!A || !q) return false;
+  return uidHas(A.split, q) || ((A.multi || {})[q] || []).length > 1;
+}
+
+/* ══ 셈 한 거름(㊜ · mbsame_add2 ⑪ · add3 §A-6·§A-8) ══
+   uzPass(k) = 기출/기타(UZGK) ∧ 유형 필터(oxKeep · 카드 초안) ∧ 빈칸 종류(S.oxBk · 유형이 조문형일 때만).
+   첫 화면 셈 · 서랍 · 히트맵 칩·칸·범례 · ⚡ 셈·큐 · 📋 정리 창 · 단원 풀이 카드 · 🔍 검색이 모두 이 하나를 지난다
+   (거르는 자리 = mgKeys · mlnKeys · 미분류(uzUnkKeys) · 단원 카드(uzCards) · 풀 칸 — 옛 판은 유형 필터를 단원 카드 목록에만 걸었다).
+   기출 = 리담 지문 전부 + 제7판 태그 「yy 변리」(「2차」 없음 · 여러 해 「24·03·02 변리」 포함) + 리담과 같은 uid 인 제7판 줄 · 기타 = 그 밖(사법 · 미기출 · 변리 2차 · 태그 없음).
+   머리 셈(편 카드 · 장 머리 · 깊은 머리 · 서랍 머리 · 히트맵 대목차 칩) = uzSub(마디 + 아래 전부 · 한 열쇠 한 번) 하나(⑪ — 옛 판은 칩만 겹친 열쇠를 걷었다). */
+var UZGK = 'g';   /* g 기출 · x 기타 — 기기 값 · 저장 안 함(자과 FL.past) · 새로고침 = 기출 */
+var UZI = { vj: null, mln: null, m: null }, UZD = { m: new Map() };
+function uzTagGi(t){ t = String(t || ''); return /\d{2}\s*변리/.test(t) && !/2차/.test(t); }
+function uzIdx(){
+  if (UZI.m && UZI.vj === VJ && UZI.mln === MLN) return UZI.m;
+  const m = new Map();
+  if (VJ){
+    (VJ.qs || []).forEach(q => (q.지문 || []).forEach(z => { const k = oxKeyLid(q, z); if (!m.has(k)) m.set(k, { gi: true, L: q }); }));
+    const P = VJ.P7map || {};
+    Object.keys(P).forEach(id => { const z = P[id], k = oxKeyP7(z), e = m.get(k); if (e){ if (!e.P) e.P = z; } else m.set(k, { gi: uzTagGi(z.태그), P: z }); });
+    const O = (MLN && MLN.ok && MLN.obj) || {};
+    Object.keys(O).forEach(id => { const o = O[id], k = oxKeyP7(o); if (!m.has(k)) m.set(k, { gi: uzTagGi(o.태그), P: o }); });
+  }
+  UZI = { vj: VJ, mln: MLN, m: m }; UZD = { m: new Map() };
+  return m;
+}
+function uzIsGi(k){ const e = uzIdx().get(k); return e ? e.gi : true; }
+function uzDraft(k){
+  uzIdx(); if (UZD.m.has(k)) return UZD.m.get(k);
+  const e = UZI.m.get(k); let d = '';
+  try{ d = e ? (e.P ? tyDraftP(e.P) : (e.L ? tyDraftL(e.L) : '')) : ''; }catch(x){ d = ''; }
+  UZD.m.set(k, d); return d;
+}
+const UZ_TY = [['all', '전체'], ['jo', '조문형'], ['pan', '판례형'], ['mix', '조문+판례'], ['untype', '미확정']];
+const UZ_BK = ['내용', '주체', '기간'];
+function uzBkSel(){ return (S.oxFilter === 'jo' && Array.isArray(S.oxBk)) ? UZ_BK.filter(x => S.oxBk.indexOf(x) >= 0) : []; }
+function uzGkPass(k){ return UZGK === 'x' ? !uzIsGi(k) : uzIsGi(k); }
+function uzTyPass(k){ return (S.oxFilter && S.oxFilter !== 'all') ? oxKeep(k, uzDraft(k)) : true; }
+function uzBkPass(k){ const s = uzBkSel(); if (!s.length) return true; const v = bkOf(k); return s.some(x => v.indexOf(x) >= 0); }
+function uzPass(k){ return uzGkPass(k) && uzTyPass(k) && uzBkPass(k); }
+function uzFilterOn(){ return !!(S.oxFilter && S.oxFilter !== 'all') || uzBkSel().length > 0; }
+/* 열쇠 목록 거르기 — 돌려준 배열의 _n0 = 기출/기타만 거른 수(정리 창 부제 「12지문 · 거름 조문형 5」 의 12) */
+function uzF(keys){
+  const g = (keys || []).filter(uzGkPass);
+  const out = uzFilterOn() ? g.filter(k => uzTyPass(k) && uzBkPass(k)) : g;
+  out._n0 = g.length;
+  return out;
+}
+/* 마디 i + 아래 전부(줄 넷) · 한 열쇠 한 번 · 거름 지남 — 머리 셈 한 함수 */
+function uzSub(M, i){
+  const n = M && M[i]; if (!n || !VJ) return [];
+  const seen = new Set(), out = [];
+  const push = a => a.forEach(k => { if (!seen.has(k)){ seen.add(k); out.push(k); } });
+  push(mgKeys(M, i, VJ.byId, VJ.P7map));
+  for (let j = i + 1; j < M.length && M[j].깊이 > n.깊이; j++) push(mgKeys(M, j, VJ.byId, VJ.P7map));
+  return out;
+}
+/* 단원 풀이 카드 — 카드 열쇠 가운데 하나라도 거름을 지나면 남긴다(쪽·번호는 남은 카드로 다시 매긴다) */
+function uzCardKeys(c){
+  if (c.kind === 'Z') return [oxKeyLid(c.q, c.z)];
+  if (c.kind === 'O') return [oxKeyP7(c.o)];
+  if (c.kind === 'L') return (c.q.지문 || []).map(z => oxKeyLid(c.q, z));
+  return [oxKeyP7(c.z)];
+}
+function uzCards(cards){ return (cards || []).filter(c => uzCardKeys(c).some(uzPass)); }
+/* 풀 나눔 — 머리 「기출 N · 기타 M」(풀 그대로) · 칩(유형·빈칸 거름을 지난 수 = 고르면 보일 칸 수) */
+function uzSplit(tyToo){
+  const P = OXPOOL; if (!P) return null;
+  let g = 0, x = 0;
+  Object.keys(P).forEach(k => { if (tyToo && !(uzTyPass(k) && uzBkPass(k))) return; if (uzIsGi(k)) g++; else x++; });
+  return { g: g, x: x };
+}
+function uzGkChips(sc){
+  const c = uzSplit(true); if (!c) return;
+  sc.appendChild(el('span', 'uzgksep', '│'));
+  [['g', '기출', c.g], ['x', '기타', c.x]].forEach(p => {
+    const b = el('button', 'hmsc uzgk' + (UZGK === p[0] ? ' on' : ''), p[1]);
+    b.type = 'button'; b.dataset.uzgk = p[0];
+    b.appendChild(document.createTextNode(' ')); b.appendChild(el('b', '', p[2].toLocaleString()));
+    b.title = p[0] === 'g' ? '리담 지문 전부 + 제7판 「yy 변리」 태그 · 리담과 같은 지문' : '제7판 사법 · 미기출 · 변리 2차 · 태그 없음';
+    b.onclick = ev => { ev.stopPropagation(); if (UZGK === p[0]) return; UZGK = p[0]; render(); };
+    sc.appendChild(b);
+  });
+}
+/* ── 바깥 필터(§A-6) — 네이티브 select 대신 펼침 목록 · 유형 하나 + (조문형일 때만) 빈칸 종류 여럿 ── */
+var UZFM_OPEN = 0;
+function uzFilterLabel(){
+  const t = (UZ_TY.find(x => x[0] === (S.oxFilter || 'all')) || UZ_TY[0])[1], b = uzBkSel();
+  return t + (b.length ? ' · ' + b.join('·') : '');
+}
+function uzFilterBtn(qr){
+  qr.appendChild(el('span', 'lb', '필터'));
+  const w = el('span', 'uzfw');
+  const b = el('button', 'uzfb', uzFilterLabel() + ' ▾'); b.type = 'button';
+  b.onclick = ev => { ev.stopPropagation(); uzFilterMenu(w); };
+  w.appendChild(b);
+  qr.appendChild(w);
+  if (UZFM_OPEN){ UZFM_OPEN = 0; uzFilterMenu(w); }   /* 체크는 열린 채(다시 그려도 목록을 다시 편다) */
+}
+function uzFilterMenu(w){
+  const old = w.querySelector('.uzfm'); if (old){ old.remove(); return; }
+  const m = el('div', 'uzfm');
+  UZ_TY.forEach(p => {
+    const r = el('button', 'uzfo' + ((S.oxFilter || 'all') === p[0] ? ' on' : ''), p[1]); r.type = 'button'; r.dataset.uzty = p[0];
+    r.onclick = ev => { ev.stopPropagation(); m.remove(); if ((S.oxFilter || 'all') === p[0]) return; S.oxFilter = p[0]; render(); };   /* 유형을 바꾸면 닫힘 */
+    m.appendChild(r);
+  });
+  m.appendChild(el('div', 'uzfsep'));
+  if ((S.oxFilter || 'all') === 'jo'){
+    m.appendChild(el('div', 'uzfh', '빈칸 종류 · 여럿 고름'));
+    UZ_BK.forEach(k => {
+      const lab = el('label', 'uzfc'); lab.dataset.uzbk = k;
+      const cb = el('input'); cb.type = 'checkbox'; cb.checked = (S.oxBk || []).indexOf(k) >= 0;
+      cb.onchange = () => { const s = new Set(S.oxBk || []); if (cb.checked) s.add(k); else s.delete(k);
+        S.oxBk = UZ_BK.filter(x => s.has(x)); uiSave(); UZFM_OPEN = 1; render(); };
+      lab.appendChild(cb);
+      const sp = el('span', '', k); sp.style.color = BK_COLOR[k] || ''; lab.appendChild(sp);
+      m.appendChild(lab);
+    });
+  } else m.appendChild(el('div', 'uzfn', '조문형을 고르면 빈칸 종류(내용·주체·기간)로 더 거를 수 있다'));
+  w.appendChild(m);
+  const off = e => { if (!m.isConnected){ document.removeEventListener('pointerdown', off, true); return; }
+    if (!w.contains(e.target)){ m.remove(); document.removeEventListener('pointerdown', off, true); } };
+  setTimeout(() => document.addEventListener('pointerdown', off, true), 0);   /* 목록 밖 누름 = 닫힘 */
+}
+/* ── 첫 화면 접기(§A-8) — 편 카드 머리 ▾ · ⚡ 줄 단계 글자(접기1 → 접기2 → … → 펴기) · 값 = S.mbCh(편 마디는 서랍 S.jtCh 와 한 값) ── */
+function uzKidOf(M, i){ return (i + 1 < M.length) && (M[i + 1].깊이 > M[i].깊이); }
+function uzTopFold(i, v){
+  S.mbCh = S.mbCh || {}; S.jtCh = S.jtCh || {};
+  if (v){ S.mbCh[i] = 1; S.jtCh[i] = 1; } else { delete S.mbCh[i]; delete S.jtCh[i]; }
+}
+function uzTopArrow(i){
+  const f = !!(S.mbCh && S.mbCh[i]);
+  const a = el('span', 'jtar uztar', f ? '▸' : '▾'); a.title = f ? '펴기' : '접기'; a.dataset.uztar = i;
+  a.onclick = ev => { ev.stopPropagation(); uzTopFold(i, !(S.mbCh && S.mbCh[i])); uiSave(); render(); };
+  return a;
+}
+function uzLvMax(){ const M = (VJ && VJ.M) || []; let d = 1; M.forEach(n => { d = Math.max(d, n.깊이 || 1); }); return d; }   /* 목차 최대 깊이(특허 4) — 단계 N 은 그 −1 까지 */
+/* 지금 단계 — 깊이 L 머리가 다 접히고 그 위는 다 펴졌으면 L · 아니면 'all' */
+function uzLvNow(){
+  const M = (VJ && VJ.M) || [], s = S.mbCh || {}, mx = uzLvMax();
+  for (let L = 1; L <= mx; L++){
+    const heads = M.map((n, i) => i).filter(i => uzKidOf(M, i));
+    const shut = heads.filter(i => M[i].깊이 === L).every(i => s[i]);
+    const above = heads.filter(i => M[i].깊이 < L).every(i => !s[i]);
+    if (shut && above && heads.some(i => M[i].깊이 === L)) return L;
+  }
+  return 'all';
+}
+function uzLvApply(L){
+  const M = (VJ && VJ.M) || [];
+  S.mbCh = {};
+  M.forEach((n, i) => { if (uzKidOf(M, i) && L !== 'all' && n.깊이 >= L) S.mbCh[i] = 1; });
+  S.jtCh = S.jtCh || {};
+  M.forEach((n, i) => { if (n.깊이 === 1 && uzKidOf(M, i)){ if (S.mbCh[i]) S.jtCh[i] = 1; else delete S.jtCh[i]; } });   /* 편 마디 = 서랍과 한 값 */
+  uiSave();
+}
+function uzStepText(qr){
+  const M = (VJ && VJ.M) || []; if (!M.length) return;
+  const mx = Math.max(1, uzLvMax() - 1), now = uzLvNow();
+  const next = now === 'all' ? 1 : (now >= mx ? 'all' : now + 1);
+  const t = el('button', 'uzstep', next === 'all' ? '펴기' : ('접기' + next)); t.type = 'button';
+  t.title = next === 'all' ? '다 편다' : (next === 1 ? '편 머리만 남긴다' : '깊이 ' + next + ' 머리까지 남긴다');
+  t.onclick = ev => { ev.stopPropagation(); uzLvApply(next); render(); };
+  qr.appendChild(t);
+}
+(function(){ try{ const s = document.createElement('style'); s.textContent = [
+  '.uzgksep{font-size:10px;font-weight:700;color:#6b7280;align-self:center;margin:0 1px;line-height:1.4}',   /* 범례 글 색 */
+  '.uzfw{position:relative;display:inline-flex}',
+  '.uzfb{font-size:11px;font-weight:700;padding:4px 8px;border:1px solid #cfcabf;border-radius:4px;background:var(--paper);color:var(--ink);cursor:pointer;white-space:nowrap}',   /* 옛 select 자리·꼴 */
+  '.uzfm{position:absolute;right:0;top:calc(100% + 4px);z-index:60;min-width:190px;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.12);padding:4px;display:flex;flex-direction:column}',
+  '.uzfo{text-align:left;font-size:12px;font-weight:600;padding:5px 8px;border:0;background:transparent;border-radius:4px;cursor:pointer;color:#1f2937}',
+  '.uzfo:hover{background:#f3f4f6}',
+  '.uzfo.on{background:#1f2937;color:#fff}',
+  '.uzfsep{border-top:1px dashed #cbd5e1;margin:4px 2px}',   /* 점선 줄 */
+  '.uzfh{font-size:10.5px;font-weight:700;color:#6b7280;padding:2px 8px}',
+  '.uzfc{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:4px 8px;cursor:pointer}',
+  '.uzfn{font-size:10.5px;color:#9ca3af;padding:4px 8px;line-height:1.5}',
+  '.uzstep{font-size:11px;font-weight:700;color:#6b7280;background:transparent;border:0;padding:0 2px;cursor:pointer;line-height:16.5px}',   /* 글자 하나 · 테·바탕 없음 */
+  '.mbsj>.hd h2 .uztar{font-size:12px;font-weight:400;text-align:center;user-select:none;-webkit-user-select:none}',
+  /* §A-8 줄 정렬 — 「▸」(소제목)·「›」·「▾」(머리)는 이름 앞 흐름에 서지 않고 줄 왼쪽 여백에 내건다(같은 깊이 이름 x 같음 · 깊이마다 14px = mdpIndent) ·
+     실측(9/27 · 카드 왼끝 기준): 깊이 2 = 21(▸ 줄 43 · 장 머리 41) · 3 = 35(› 46.9 · ▸ 57 · 머리 43) · 4 = 49(› 62.9) · 편 머리 한 줄(.mbsolo)은 무변 */
+  '.mbur:not(.mbsolo)>.l{position:relative}',
+  '.mbur:not(.mbsolo)>.l>.ar,.mbur:not(.mbsolo)>.l>.mbsbt,.mbur.mdph>.l>.mdpar{position:absolute;left:-16px;top:0;width:14px;margin:0;text-align:center;line-height:20px}',
+  '.mbur.mdpk{padding-left:4px}',
+  '.mbch>.hh{position:relative;padding-left:4px}',
+  '.mbch>.hh>.mdpar{position:absolute;left:-12px;top:0;width:14px;margin:0;line-height:20px}'
+].join('\n'); document.head.appendChild(s); }catch(e){} })();
+
+/* ══ 빈칸 종류(mbsame_add3 §A-7) — 유형 칩 안 「조문형」 바로 오른쪽 글자 · 여럿 고름 · 초안 없음 ══
+   값 = 기록 jopangi.bktype {열쇠: {v: ['내용'|'주체'|'기간', …] | ['없음'], ts}} 가 있으면 그것 · 없으면 OMR 표시(jo/data/bktype_omr.json · ⚙ _omr_bktype) ·
+   「지우기」 = 기록에 {v: []}(OMR 표시를 덮어 「빈칸?」) · 파이프라인은 기록을 만들지 않는다. ⚠ var — recDropCache 가 스크립트 앞쪽에서 불려도 TDZ 없음. */
+var BKT_KEY = REC_PRE + 'bktype', BKTREC = null, BKTOMR = null;
+try{ REC_NAMES.bktype = '🏷 빈칸 종류 (내용·주체·기간)'; }catch(e){}
+function bktAll(){ if (!BKTREC) BKTREC = lsRead(BKT_KEY); return BKTREC; }
+function bkOf(k){ const r = bktAll()[k]; if (r && Array.isArray(r.v)) return r.v; const o = (BKTOMR || {})[k]; return Array.isArray(o) ? o : []; }
+function bkSrc(k){ const r = bktAll()[k]; if (r && Array.isArray(r.v)) return 'rec'; return ((BKTOMR || {})[k] || []).length ? 'omr' : ''; }
+function bkPut(k, v){ const A = bktAll(); A[k] = { v: v, ts: nowIso() }; BKTREC = A; lsWrite(BKT_KEY, A, '🏷 빈칸 종류'); }
+async function bktOmrLoad(){
+  if (BKTOMR) return BKTOMR;
+  try{ const d = await get('bktype_omr.json'); BKTOMR = (d && typeof d === 'object' && !Array.isArray(d)) ? d : {}; }catch(e){ BKTOMR = {}; }
+  return BKTOMR;
+}
+setTimeout(() => { bktOmrLoad().then(d => { try{ if (Object.keys(d || {}).length && S.tab === 'jimun') render(); }catch(e){} }); }, 700);
+/* 유형 칩 안 글자 — 유형이 조문형·혼합(조문이 끼는 것)일 때만 · 찍기 전 = 회색 점선 밑줄 「빈칸?」 · 찍은 값 = 밑줄 없음(여럿이면 첫 종류 색) */
+function uzBkSeg(chip, key, eff){
+  if (!(eff === 'jo' || eff === 'mix') || !key) return;
+  const v = bkOf(key), src = bkSrc(key), none = v.length === 1 && v[0] === '없음';
+  chip.appendChild(el('i', 'dot', '·'));
+  const b = el('button', 'seg bk' + (v.length ? (none ? ' no' : '') : ' q'), v.length ? v.join('·') : '빈칸?');
+  b.type = 'button'; b.dataset.bk = key;
+  if (v.length && !none) b.style.color = BK_COLOR[v[0]] || '';
+  b.title = v.length ? ('빈칸 종류' + (src === 'omr' ? '(정리OMR 표시)' : '(직접 확정)') + ' — 눌러 바꾸기') : '빈칸 종류 — 눌러 확정(내용·주체·기간 여럿)';
+  b.onclick = ev => { ev.stopPropagation(); bkPop(key, ev); };
+  chip.appendChild(b);
+}
+function bkPop(k, ev){
+  const t = '🏷 빈칸 종류 확정 — ' + linkDisp(k), pk = 'q|' + t;
+  if (popToggle(pk)) return;
+  const body = popShell('q', t, pk);
+  const paint = () => {
+    body.innerHTML = '';
+    const cur = bkOf(k), none = cur.length === 1 && cur[0] === '없음';
+    UZ_BK.forEach(x => {
+      const on = cur.indexOf(x) >= 0;
+      const b = el('button', 'tool bkt' + (on ? ' on' : ''), x); b.type = 'button'; b.dataset.bkv = x;
+      if (!on) b.style.color = BK_COLOR[x] || '';
+      b.onclick = () => { const s = new Set(bkOf(k).filter(y => y !== '없음')); if (s.has(x)) s.delete(x); else s.add(x);
+        bkPut(k, UZ_BK.filter(y => s.has(y))); paint(); render(); };   /* 켜고 끔 · 창은 열린 채 */
+      body.appendChild(b);
+    });
+    const no = el('button', 'tool bkt' + (none ? ' on' : ''), '없음'); no.type = 'button'; no.dataset.bkv = '없음';
+    no.onclick = () => { bkPut(k, none ? [] : ['없음']); paint(); render(); };
+    body.appendChild(no);
+    const rv = el('button', 'tool bkt', '지우기'); rv.type = 'button'; rv.dataset.bkv = '지우기';
+    rv.onclick = () => { bkPut(k, []); paint(); render(); };
+    body.appendChild(rv);
+    body.appendChild(el('div', 'cdim', '여럿 고름(누를 때마다 켜고 끔) · 직접 찍은 값이 정리OMR 표시를 이긴다 · 지우기 = 「빈칸?」 · 키 = 지문 uid'));
+  };
+  paint();
+  showPop(ev);
+}
+(function(){ try{ const s = document.createElement('style'); s.textContent = [
+  '.mbtype .seg.bk{font-weight:700}',
+  '.mbtype .seg.bk.q{color:#9ca3af;font-weight:600;text-decoration:underline dotted;text-underline-offset:2px}',   /* 찍기 전 = 회색 점선 밑줄 */
+  '.mbtype .seg.bk.no{color:#6b7280}'
+].join('\n'); document.head.appendChild(s); }catch(e){} })();
+/* ══ uidmbs2 끝 블록 2 — mbsame_add3 §A-1·§A-2(2026-09-27) · 기출 해 줄 · 기출뷰 = 민법 exv 틀 ══
+   §A-1 ⓐ 회독 상자 = 단추 → 회독 비교 창(그 해 문항 × 회독 O/X · 고른 답 · 정답 · 분) · 줄 누름으로 안 샌다
+         ⓑ 아랫줄 = 제출 때 지문 기록 스냅숏(회독 기록 st:{cf,fk,x,n}) · 스냅숏 없는 옛 회독은 비움
+         ⓒ 옛 gi.year 옮기기 = 그 법 문번 안 고른 답이 있을 때만 · 이미 만든 mig 회독 가운데 그 수가 0 인 것은 걷는다
+   §A-2 기출뷰 — 민법 exvPaperHTML 틀(발문 머리 exv-head · 선지 = question-box 칸 · ①~⑤ 동그라미 · 조합 보기 상자 + 「① ㄱ, ㄴ」 줄 ·
+         문항 「정답·해설 ▸」 · 채점 전 O·X 줄 숨김) · 5문제 쪽 + 알약(「마킹 m/5 · 다음 5문제 ▶」 · 마지막 쪽 「전체 채점 ✓」) ·
+         머리 한 줄(변리사 기출 / 2026년 제63회 · 「1~5번 / 총 20문제」 · ✏️ · 📝 OMR · 🏠 목록) · 서랍 = 해 줄 ·
+         기록 열쇠 = 옛 그대로(고른 답 gi · 제출 gi.year · 회독 giround · 지문 = 1차객 oxKeyLid) · OMR 무변 · ⭐ 는 기출뷰에서만 뺀다. */
+var UZEXO = {};                 /* 문항 「정답·해설 ▸」 편 것(세션) · 열쇠 = giKey */
+var UZCMB = {}, UZCMBD = null;  /* 조합 선지 — 열쇠 법|년|문번 → {sets, src} | {miss} · 데이터 기댐 = exam_combo.json */
+const UZ_CIR = ['', '①', '②', '③', '④', '⑤'];
+const UZ_KO_ALL = 'ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ', UZ_KO_P1 = '㈀㈁㈂㈃㈄㈅㈆㈇㈈㈉㈊㈋㈌㈍', UZ_KO_P2 = '㈎㈏㈐㈑㈒㈓㈔㈕㈖㈗㈘㈙㈚㈛';   /* 보기 표지 — ㄱ · (ㄱ) · (가) */
+function uzIsKo(s){ s = String(s || ''); return s.length === 1 && (UZ_KO_ALL + UZ_KO_P1 + UZ_KO_P2).indexOf(s) >= 0; }
+/* 보기 표지 보이기 — (ㄱ)꼴 ㈀ 은 ㄱ 과 같은 글자 · (가)꼴 ㈎ 는 조합 선지가 ㄱ 꼴 글자를 쓰면 차례대로 ㄱ·ㄴ·ㄷ(리담 받아쓰기 꼴 · 시험지는 ㄱ.ㄴ.) · 원래 글자는 title */
+function uzBogiLab(z, q){
+  const s = String(z.기호 || ''), i1 = UZ_KO_P1.indexOf(s), i2 = UZ_KO_P2.indexOf(s);
+  if (i1 >= 0) return UZ_KO_ALL[i1];
+  if (i2 >= 0){ const c = UZCMB[uzCmbKey(q)]; if (c && c.opts && c.opts.some(o => /[ㄱ-ㅎ]/.test(o))) return UZ_KO_ALL[i2] || s; }
+  return s || String(z.n || '');
+}
+function uzIsCombo(q){ return (q.지문 || []).some(z => uzIsKo(z.기호)); }
+function uzGiYears(JM){ return Object.keys(collect((JM.문제 || []).filter(q => /^\d{4}$/.test(String(q.연도 || ''))), q => String(q.연도))).sort().reverse(); }
+function uzGiNos(y){ const pre = PLAW() + ':' + y + ':'; return new Set(((VJ && VJ.qs) || []).filter(q => String(q.연도) === String(y)).map(q => giKey(q).slice(pre.length))); }
+
+/* ── §A-1 ⓐ 회독 비교 창 ── */
+function uzGrCompare(y, ev){
+  const qs = ((VJ && VJ.qs) || []).filter(q => String(q.연도) === String(y)).sort((a, b) => ((+giNo(a)) - (+giNo(b))) || ((+a.문번) - (+b.문번)));
+  const q0 = qs[0] || {}, label = y + '년' + (q0.회차 ? ' 제' + q0.회차 + '회' : '');
+  const pk = 'q|📊 회독별 비교 · ' + label; if (popToggle(pk)) return;
+  const body = popShell('q', '📊 회독별 비교 · ' + label, pk);
+  const paint = () => {
+    body.innerHTML = '';
+    const L = grndList(y);
+    if (!L.length){ body.appendChild(el('div', 'uzgc0', '아직 이 해의 회독 기록이 없습니다.')); return; }
+    const chipOf = (r, q) => {
+      const no = String(giNo(q)), ans = giAns(q), p = String((r.picks || {})[no] || '');
+      const cls = !p ? 'n' : (ans.indexOf(p) >= 0 ? 'o' : 'x');
+      const b = el('button', 'uzgcc ' + cls, no); b.type = 'button';
+      b.title = no + '번 · 고른 ' + (p ? (UZ_CIR[+p] || p) : '없음') + ' · 정답 ' + (ans.map(x => UZ_CIR[+x] || x).join('·') || '—');
+      b.onclick = e2 => { e2.stopPropagation(); const pw = body.closest('.pop'); if (pw) closeOne(pw); uzExvGoto(y, no); };
+      return b;
+    };
+    L.forEach((r, i) => {
+      const box = el('div', 'uzgcr');
+      const hd = el('div', 'uzgch');
+      hd.appendChild(el('b', '', (i + 1) + '회독'));
+      hd.appendChild(el('span', 'sc', (r.ok != null ? r.ok : '?') + '/' + (r.n || '?')));
+      const wrong = Math.max(0, (r.n || 0) - (r.ok || 0));
+      if (wrong) hd.appendChild(el('span', 'x', '오답 ' + wrong));
+      if (r.ms != null) hd.appendChild(el('span', 'm', Math.round(r.ms / 60000) + '분'));
+      hd.appendChild(el('span', 'd', String(r.date || '')));
+      const del = el('button', 'uzgcdel', '삭제'); del.type = 'button'; del.title = '이 회독 기록 지우기 — 한 번 더 누르면 지워진다(고른 답·지문 기록은 그대로)';
+      del.onclick = e2 => { e2.stopPropagation(); if (!del.dataset.sure){ del.dataset.sure = '1'; del.classList.add('sure'); del.textContent = '한 번 더'; return; }
+        const A = grndAll(), k = giYKey(y), LL = (Array.isArray(A[k]) ? A[k] : []).slice(); LL.splice(i, 1);
+        if (LL.length) A[k] = LL; else delete A[k]; GRNDREC = A; lsWrite(GRND_KEY, A, '기출 회독'); paint(); try{ render(); }catch(x){} };
+      hd.appendChild(del);
+      box.appendChild(hd);
+      const cs = el('div', 'uzgccs');
+      if (!Object.keys(r.picks || {}).length) cs.appendChild(el('span', 'uzgc0', '문항별 기록이 없는 회독입니다(점수만 저장됨)'));
+      else qs.forEach(q => cs.appendChild(chipOf(r, q)));
+      box.appendChild(cs);
+      body.appendChild(box);
+    });
+    const withP = L.filter(r => Object.keys(r.picks || {}).length);
+    if (withP.length >= 2){
+      const res = (r, q) => { const p = String((r.picks || {})[String(giNo(q))] || ''); return !p ? undefined : giAns(q).indexOf(p) >= 0; };
+      const always = qs.filter(q => withP.every(r => res(r, q) === false));
+      const fixed = qs.filter(q => { const s = withP.map(r => res(r, q)).filter(v => v !== undefined); return s.length >= 2 && s[0] === false && s[s.length - 1] === true; });
+      const ft = el('div', 'uzgcft');
+      [['계속 틀림', always, 'x'], ['극복함', fixed, 'o']].forEach(([t, arr, c]) => {
+        const row = el('div', 'uzgcf'); row.appendChild(el('span', 'lb ' + c, t));
+        const w = el('div', 'uzgccs');
+        if (!arr.length) w.appendChild(el('span', 'uzgc0', '없음'));
+        arr.forEach(q => { const no = String(giNo(q)); const b = el('button', 'uzgcc ' + c, no); b.type = 'button';
+          b.onclick = e2 => { e2.stopPropagation(); const pw = body.closest('.pop'); if (pw) closeOne(pw); uzExvGoto(y, no); }; w.appendChild(b); });
+        row.appendChild(w); ft.appendChild(row); });
+      body.appendChild(ft);
+    }
+  };
+  paint();
+  showPop(ev);
+}
+/* 비교 창 칩 → 그 해 기출뷰 · 그 문항이 든 쪽 */
+function uzExvGoto(y, no){
+  const qs = ((VJ && VJ.qs) || []).filter(q => String(q.연도) === String(y)).sort((a, b) => ((+giNo(a)) - (+giNo(b))) || ((+a.문번) - (+b.문번)));
+  const ix = qs.findIndex(q => String(giNo(q)) === String(no));
+  S.exvPg = S.exvPg || {}; S.exvPg[PLAW() + ':' + y] = ix >= 0 ? Math.floor(ix / 5) : 0;
+  S.exvJump = String(no);
+  mbGiGo(y);
+}
+
+/* ── §A-2 ⑥ 조합 선지 — 시험지 글자층(민법 mbxComboOf 그대로) → 없으면 데이터(exam_combo.json · 글자층이 빠진 것은 그림으로 읽어 넣었다) ── */
+function uzComboOf(rec, n){
+  const h = rec && rec.no ? rec.no[n] : null; if (!h) return null;
+  const end = h.nx >= 0 ? h.nx : rec.lines.length, parts = [];
+  for (let i = h.i; i < end; i++){ const L = rec.lines[i], short = L.t.replace(/\s/g, '').length <= 30;
+    if (L.y0 > 0.93 && short) continue; if (L.y0 < 0.07 && short && i !== h.i) continue; parts.push(L.t); }
+  const s = parts.join('\n'), k = s.lastIndexOf('①'); if (k < 0) return null;
+  const seg = s.slice(k), C = ['①', '②', '③', '④', '⑤'], pos = C.map(c => seg.indexOf(c));
+  for (let i = 0; i < 5; i++) if (pos[i] < 0 || (i && pos[i] < pos[i - 1])) return null;
+  const sets = [];
+  for (let i = 0; i < 5; i++){ const part = seg.slice(pos[i] + 1, i < 4 ? pos[i + 1] : seg.length), cs = [];
+    for (const ch of part) if (UZ_KO_ALL.indexOf(ch) >= 0) cs.push(ch);
+    if (!cs.length || new Set(cs).size !== cs.length) return null; sets.push(cs); }
+  return sets;
+}
+function uzSetsOk(sets, q){   /* 글자층에서 읽은 글자 묶음 — 다섯 · 글자 ⊆ 그 문항 보기 표지(ㄱ 꼴일 때만 잰다) */
+  if (!Array.isArray(sets) || sets.length !== 5 || sets.some(s => !s || !s.length)) return false;
+  const have = new Set((q.지문 || []).map(z => String(z.기호 || '')).filter(c => UZ_KO_ALL.indexOf(c) >= 0));
+  return !have.size || sets.every(s => s.every(c => have.has(c)));
+}
+async function uzComboData(){
+  if (UZCMBD) return UZCMBD;
+  try{ const d = await get('exam_combo.json'); UZCMBD = (d && typeof d === 'object') ? d : {}; }catch(e){ UZCMBD = {}; }
+  return UZCMBD;
+}
+function uzCmbKey(q){ return PLAW() + '|' + q.연도 + '|' + giNo(q); }
+async function uzComboLoad(y, qs){
+  const need = qs.filter(q => uzIsCombo(q) && !(UZCMB[uzCmbKey(q)] && UZCMB[uzCmbKey(q)].opts));
+  if (!need.length) return;
+  const law = S.law, D = await uzComboData();
+  let rec = null;
+  try{ if (jxeHasYear(law, y)) rec = await jxeIndex(JXE_LAWF[law] || 'teukheo', jxeFile(law, y)); }catch(e){ rec = null; }
+  need.forEach(q => {
+    let opts = null, src = '';
+    if (rec){ const s = uzComboOf(rec, +giNo(q)); if (s && uzSetsOk(s, q)){ opts = s.map(x => x.join(', ')); src = 'pdf'; } }
+    if (!opts){ const t = (((D[PLAW()] || {})[String(y)] || {})[String(giNo(q))]) || null;   /* 데이터 = 글자층(⚙) 또는 그림에서 사람이 읽은 글 그대로(「1개」 꼴 포함) */
+      if (Array.isArray(t) && t.length === 5 && t.every(x => String(x || '').trim())){ opts = t.map(x => String(x).trim()); src = 'data'; } }
+    UZCMB[uzCmbKey(q)] = opts ? { opts: opts, src: src } : { miss: true };
+  });
+}
+
+/* ── §A-2 기출뷰 본문 ── */
+function uzExv(main, JM){
+  const ys = uzGiYears(JM);
+  if (!ys.length){ main.appendChild(emptyBox('📝', '기출 문항이 없다')); return; }
+  const y = (S.year && ys.indexOf(String(S.year)) >= 0) ? String(S.year) : ys[0];
+  S.year = y;
+  const list = (JM.문제 || []).filter(q => String(q.연도) === y).sort((a, b) => ((+giNo(a)) - (+giNo(b))) || ((+a.문번) - (+b.문번)));
+  GIOMR = list;
+  if (!(S.omrCur >= 0) || S.omrCur > list.length - 1) S.omrCur = 0;
+  const yrec = giYearOf(y) || {}, graded = !!yrec.sub, q0 = list[0] || {};
+  const gr = list.filter(giGradable);
+  const PER = 5, nPg = Math.max(1, Math.ceil(list.length / PER));
+  S.exvPg = S.exvPg || {};
+  const pgk = PLAW() + ':' + y;
+  let pg = +S.exvPg[pgk] || 0; if (pg < 0 || pg >= nPg) pg = 0; S.exvPg[pgk] = pg;
+  const show = list.slice(pg * PER, pg * PER + PER);
+  const a = show.length ? giNo(show[0]) : 0, b = show.length ? giNo(show[show.length - 1]) : 0;
+  MBHEAD = { exv: 1, top: '변리사 기출', unit: y + '년' + (q0.회차 ? ' 제' + q0.회차 + '회' : ''),
+             tip: list.length + '문항' + (q0.형 ? ' · ' + q0.형 + '형' : '') + (gr.length ? ' · 채점 가능 ' + gr.length : ''),
+             range: a + '~' + b + '번 / 총 ' + list.length + '문제', y: y, list: list };
+  if (!gr.length) main.appendChild(el('div', 'uzexn', '⚠ ' + y + '년은 최종정답이 아직 없다 — 채점하지 않는다(문제는 그대로 풀 수 있다)'));
+  else if (gr.length < list.length) main.appendChild(el('div', 'uzexn', '⚠ 시험문번·정답이 확정된 것은 ' + gr.length + '문항 — 나머지 ' + (list.length - gr.length) + '문항은 채점에서 뺀다'));
+  if (S.omr) main.appendChild(giOmrPad(y, list));
+  const paper = el('div', 'exv-paper uzexv'); paper.dataset.uzexv = y;
+  show.forEach(q => paper.appendChild(uzExvQ(q, y, graded)));
+  main.appendChild(paper);
+  /* 알약 — 왼쪽 ◀ 이전 · 오른쪽 「마킹 m/5 · 다음 5문제 ▶」 · 마지막 쪽 「전체 채점 ✓」(민법 controls-container) */
+  if (pg > 0){ const bl = el('div', 'mbbar l'); const pb = el('button', 'mbprev', '◀ 이전'); pb.type = 'button';
+    pb.onclick = () => { S.exvPg[pgk] = pg - 1; S.oxPageJump = true; render(); }; bl.appendChild(pb); main.appendChild(bl); }
+  const br = el('div', 'mbbar r'), box = el('div', 'mbpill');
+  const mk = el('span', 'mk'); mk.appendChild(document.createTextNode('마킹 ')); const mb = el('b', '', '0'); mk.appendChild(mb);
+  mk.appendChild(document.createTextNode('/' + show.length)); box.appendChild(mk);
+  const rem = list.length - (pg + 1) * PER;
+  if (rem > 0){ const nb = el('button', 'mbpb', '다음 ' + Math.min(PER, rem) + '문제 ▶'); nb.type = 'button'; nb.dataset.uzexnext = '1';
+    nb.onclick = () => { S.exvPg[pgk] = pg + 1; S.oxPageJump = true; render(); }; box.appendChild(nb); }
+  else if (!graded && gr.length){ const gb = el('button', 'mbpb', '전체 채점 ✓'); gb.type = 'button'; gb.dataset.uzexgrade = '1';
+    gb.onclick = () => uzExvGradeAll(y, list); box.appendChild(gb); }
+  else if (graded) box.appendChild(el('span', 'mk uzexdone', '채점됨 ' + (yrec.right != null ? yrec.right : '?') + '/' + (yrec.n || gr.length)));
+  br.appendChild(box); main.appendChild(br);
+  paper._mark = mb;
+  uzExvPaint(paper);
+  if (show.some(uzIsCombo)) uzComboLoad(y, show).then(() => { if (!paper.isConnected) return;
+    paper.querySelectorAll('[data-uzsel]').forEach(s => { const q = show.find(x => giKey(x) === s.dataset.uzsel); if (q) uzExvSelFill(s, q); }); uzExvPaint(paper); });
+  if (S.exvJump){ const no = S.exvJump; S.exvJump = null;
+    setTimeout(() => { const t = paper.querySelector('[data-exno="' + no + '"]'); if (t) try{ t.scrollIntoView({ block: 'start' }); }catch(e){} }, 0); }
+}
+/* 문항 하나 — 발문 머리 · 선지 칸(또는 보기 상자 + 조합 선지 줄) · 문항 「정답·해설 ▸」 */
+function uzExvQ(q, y, graded){
+  const key = giKey(q), rec = giOf(key) || {}, ans = giAns(q), combo = uzIsCombo(q), open = !!UZEXO[key];
+  const w = el('div', 'exv-q'); w.dataset.exq = key; w.dataset.exno = String(giNo(q));
+  const hd = el('div', 'exv-head');
+  hd.appendChild(el('span', 'exv-no', giNo(q) + '.'));
+  hd.appendChild(el('span', 'exv-stem', q.발문 || ''));
+  const rs = el('span', 'exv-res');
+  if (graded && ans.length) rs.appendChild(el('span', rec.ok ? 'exv-r-ok' : 'exv-r-bad', rec.ok ? 'O 맞음' : 'X 틀림 · 정답 ' + ans.map(x => UZ_CIR[+x] || x).join('·')));
+  else if (graded && !ans.length) rs.appendChild(el('span', 'exv-r-na', '정답 못 정함'));
+  hd.appendChild(rs);
+  w.appendChild(hd);
+  const zs = q.지문 || [];
+  if (combo){
+    const bg = el('div', 'exv-bogi');
+    zs.forEach((z, i) => bg.appendChild(uzExvBox(q, z, i, true, graded, open)));
+    w.appendChild(bg);
+    const sel = el('div', 'exv-sel'); sel.dataset.uzsel = key;
+    uzExvSelFill(sel, q);
+    w.appendChild(sel);
+  } else {
+    for (let k = 1; k <= 5; k++){
+      const z = zs[k - 1];
+      if (z) w.appendChild(uzExvBox(q, z, k - 1, false, graded, open));
+      else w.appendChild(el('div', 'exv-miss', UZ_CIR[k] + ' (이 선지는 데이터에 없음)'));
+    }
+    zs.slice(5).forEach((z, i) => w.appendChild(uzExvBox(q, z, i + 5, false, graded, open)));
+  }
+  const an = el('div', 'exv-ans');
+  const pk = el('button', 'exv-peek', open ? '정답·해설 ▾' : '정답·해설 ▸'); pk.type = 'button';
+  pk.onclick = () => { if (UZEXO[key]) delete UZEXO[key]; else UZEXO[key] = 1;
+    const nw = uzExvQ(q, y, graded); w.replaceWith(nw); uzExvPaint(nw.closest('.exv-paper')); };
+  an.appendChild(pk);
+  w.appendChild(an);
+  return w;
+}
+function uzExvSelFill(sel, q){
+  sel.innerHTML = '';
+  const c = UZCMB[uzCmbKey(q)];
+  if (!c){ sel.appendChild(el('span', 'exv-wait', '조합 선지 읽는 중…')); return; }
+  if (!c.opts){ sel.appendChild(el('span', 'exv-wait', '조합 선지를 읽지 못했습니다')); return; }
+  c.opts.forEach((s, i) => {
+    const b = el('button', 'exv-opt'); b.type = 'button'; b.dataset.exk = giKey(q); b.dataset.exn = String(i + 1);
+    b.appendChild(el('b', 'exv-num', UZ_CIR[i + 1])); b.appendChild(document.createTextNode(s));
+    b.title = '조합 선지 ' + UZ_CIR[i + 1] + ' 고르기' + (c.src === 'data' ? ' · 글 = 데이터(글자층 또는 시험지 그림에서 읽어 둔 것)' : ' · 글 = 시험지 글자층');
+    b.onclick = () => uzExvPick(q, i + 1, b);
+    sel.appendChild(b);
+  });
+}
+/* 선지(보기) 칸 하나 — 민법 기출뷰 question-box: 칩 줄 · 번호 · 글 · (채점 뒤) 근거 · 「정답·해설 ▸ · O · X」 · ✏️ 연결 */
+function uzExvBox(q, z, i, combo, graded, open){
+  const k = oxKeyLid(q, z), key = giKey(q);
+  const box = el('div', 'question-box uzexb'); box.id = 'exb-' + k; box.dataset.uzk = k;
+  const hd = el('div', 'mbqhd'), L = el('div', 'l');
+  const sb = el('button', 'qb v', String(q.연도).slice(2) + ' 변리'); sb.type = 'button';
+  sb.title = '풀이 기록'; sb.onclick = ev => { ev.stopPropagation(); mbRecToggle(box); };
+  L.appendChild(sb);
+  const k0 = oxKeyLid(q, (q.지문 || [])[0] || z);
+  mbTypeChip(k0, tyDraftL(q), (z.jo || []), L, k);
+  mlnYearChips(L, k, { kind: 'L', q: q, z: z });
+  const idb = el('button', 'qb id', z.uid ? String(z.uid) : ('ID ' + q.id)); idb.type = 'button';
+  idb.title = '교재 자리 — 정리OMR'; idb.onclick = ev => { ev.stopPropagation(); mbbPop(k, ev); };
+  L.appendChild(idb);
+  const nbk = lkBack(k).length;
+  if (nbk){ const b2 = el('button', 'qb t', '↩백링크 ' + nbk); b2.onclick = ev => { ev.stopPropagation(); editPop(k, ev); }; L.appendChild(b2); }
+  const nf = lkOf(k).length;
+  if (nf){ const b3 = el('button', 'qb t', '↩ 내가 연결한 ' + nf); b3.onclick = ev => { ev.stopPropagation(); editPop(k, ev); }; L.appendChild(b3); }
+  L.appendChild(mcChip(k));
+  hd.appendChild(L);
+  const T = el('div', 't'); if (S.law === '특허법' && typeof pinTag === 'function') pinTag(k, T); oxTagBar(k, T);
+  T.querySelectorAll('.qtag').forEach(t => { if (t.textContent === OXTAG_IC.important) t.remove(); });   /* ⭐ 는 기출뷰에서만 뺀다(민법 inExamView) */
+  hd.appendChild(T);
+  box.appendChild(hd);
+  const rw = el('div', 'mbrecw hide'); rw.dataset.rk = k; box.appendChild(rw);
+  const q1 = el('div', 'oxq');
+  if (combo){ const lb0 = el('span', 'uzexlab', uzBogiLab(z, q) + '.'); if (String(z.기호 || '') !== uzBogiLab(z, q)) lb0.title = '데이터 표지 ' + z.기호; q1.appendChild(lb0); }
+  else { const lb = el('span', 'uzexlab'); const nb = el('button', 'exv-num exv-lab', UZ_CIR[i + 1] || String(i + 1)); nb.type = 'button';
+    nb.dataset.exk = key; nb.dataset.exn = String(i + 1); nb.title = '이 선지를 답으로 고르기'; nb.onclick = () => uzExvPick(q, i + 1, nb); lb.appendChild(nb); q1.appendChild(lb); }
+  { const bsp = el('span', 'mbqtx'); mkcPaint(bsp, k, 'q', String(z.t || '')); q1.appendChild(bsp); pitWire(bsp, 'q|' + k, '', z.t || ''); }
+  box.appendChild(q1);
+  const reveal = graded || open;
+  const post = el('div', 'exv-post' + (reveal ? '' : ' exv-hide')); lnkLines(post, k); ggLine(post, k, []); box.appendChild(post);
+  box.appendChild(el('div', 'exv-pre' + (open && !graded ? '' : ' exv-hide'), '채점 전 — 지문 O·X 는 채점 뒤'));
+  const bot = el('div', 'mbbot exv-post-ox' + (graded ? '' : ' exv-hide'));
+  const exp = el('div', 'mbexp'); exp.style.display = open ? '' : 'none';
+  const pk = el('button', 'mbpeek', open ? '정답·해설 ▾' : '정답·해설 ▸'); pk.type = 'button';
+  pk.onclick = () => { const on = exp.style.display !== 'none'; exp.style.display = on ? 'none' : ''; pk.textContent = on ? '정답·해설 ▸' : '정답·해설 ▾'; };
+  bot.appendChild(pk);
+  const r = oxOf(k) || {}, a = oxAns(k, z.ox);
+  ['O', 'X'].forEach(v => { const on = r.p === v;
+    const b = el('button', 'mboxb ' + v + (on ? ' sel' : '') + (r.p ? (v === a ? ' right' : (on ? ' wrong' : '')) : ''), v); b.type = 'button';
+    b.title = '이 지문을 ' + v + ' 로 — 1차객 지문 기록에 곧바로(누를 때마다 다시 채점)';
+    b.onclick = ev => { ev.stopPropagation(); const A = oxAll(), cur = A[k] || {}; const ok = v === oxAns(k, z.ox);
+      const rec2 = Object.assign({}, cur, { p: v, ok: ok, ts: nowIso(), uv: 1 }); delete rec2.m;
+      A[k] = rec2; OXREC = A; lsWrite(OX_KEY, A, '1차객 풀이');
+      const nb2 = uzExvBox(q, z, i, combo, graded, true); nb2.querySelector('.mbexp').style.display = ''; box.replaceWith(nb2); };
+    bot.appendChild(b); });
+  const rs = el('span', 'mbres2', r.p ? (r.ok ? '✓ 맞음' : '✗ 틀림') : ''); if (r.p) rs.style.color = r.ok ? 'var(--exc)' : 'var(--rule)'; bot.appendChild(rs);
+  const brr = el('span', 'mbbotr'); brr.appendChild(clBtn(k));
+  const lk = el('button', 'mblink', '✏️ 연결'); lk.type = 'button'; lk.title = '메모 · 유사문제 연결'; lk.onclick = ev => { ev.stopPropagation(); editPop(k, ev); };
+  brr.appendChild(lk); bot.appendChild(brr);
+  box.appendChild(bot);
+  { const rb = el('div', 'resb'); rb.appendChild(el('span', 'ansb', '정답 ' + (a || '미확정'))); exp.appendChild(rb);
+    exp.appendChild(z.sol ? solEl(z.sol) : el('div', 'cdim', '해설 없음')); }
+  box.appendChild(exp);
+  inkHost(box, 'z|' + k);
+  return box;
+}
+/* 고르기 — 채점된 해는 안 바뀐다 · 칠하기는 제자리(다시 그리지 않는다) */
+function uzExvPick(q, n, btn){
+  if ((giYearOf(q.연도) || {}).sub) return;
+  giPut(giKey(q), { p: String(n) });
+  uzExvPaint(btn && btn.closest('.exv-paper'));
+}
+function uzExvPaint(paper){
+  if (!paper) return;
+  const y = paper.dataset.uzexv, graded = !!(giYearOf(y) || {}).sub;
+  let marked = 0;
+  paper.querySelectorAll('.exv-q').forEach(qw => {
+    const key = qw.dataset.exq, rec = giOf(key) || {}, p = rec.p ? +rec.p : 0;
+    const q = (GIOMR || []).find(x => giKey(x) === key), ans = q ? giAns(q).map(Number) : [];
+    if (p) marked++;
+    qw.querySelectorAll('[data-exk]').forEach(b => {
+      const n = +b.dataset.exn, tgt = b.classList.contains('exv-num') ? b : (b.querySelector('.exv-num') || b);
+      const sel = p === n && !(graded && rec.ok === false), bad = p === n && graded && rec.ok === false, ok = graded && ans.indexOf(n) >= 0;
+      [b, tgt].forEach(x => { x.classList.toggle('sel', sel); x.classList.toggle('bad', bad); x.classList.toggle('ok', ok); });
+    });
+  });
+  const m = paper._mark || (paper.parentNode && paper.parentNode.querySelector('.mbpill .mk b'));
+  if (m) m.textContent = String(marked);
+}
+/* 전체 채점 — 이 해 채점 가능한 문항을 다 고른 때만(민법 exvGradeAll) · 채점·회독은 옛 giGrade 그대로(OMR 「제출」과 같은 길) */
+function uzExvGradeAll(y, list){
+  const gr = list.filter(giGradable), miss = gr.filter(q => !(giOf(giKey(q)) || {}).p).map(q => giNo(q));
+  if (miss.length){ toast('답을 안 고른 문제 ' + miss.length + '개 — ' + miss.slice(0, 10).join(', ') + (miss.length > 10 ? ' …' : '') + '번'); return; }
+  if (giGrade(y, list)){ S.omr = false; render(); }
+}
+/* 머리 한 줄 — 민법 #quiz-screen 상태바(변리사 기출 / 2026년 제63회 · 「1~5번 / 총 20문제」 · ✏️ · 📝 OMR · 🏠 목록) */
+function uzExvHead(main, H){
+  const bar = el('div', 'mbsbar uzexh');
+  const tw = el('div', 'tw');
+  tw.appendChild(el('span', 't1', H.top || '변리사 기출'));
+  const t2 = el('span', 't2', H.unit || ''); if (H.tip) t2.title = H.tip; tw.appendChild(t2);
+  bar.appendChild(tw);
+  const R = el('div', 'r');
+  R.appendChild(el('span', 'pg', H.range || ''));
+  const mt = el('button', 'uzexink' + (S.mkOff ? ' off' : ''), '✏️'); mt.type = 'button';
+  mt.title = S.mkOff ? '형광펜·밑줄 꺼짐 — 누르면 보인다' : '형광펜·밑줄 보기 — 누르면 감춘다';
+  mt.onclick = () => { S.mkOff = !S.mkOff; uiSave(); render(); };
+  R.appendChild(mt);
+  const ob = el('button', 'mbomr', '📝 OMR'); ob.type = 'button'; ob.title = '문제는 시험지로 보고 여기엔 마킹만';
+  ob.onclick = () => { S.omr = !S.omr; render(); };
+  R.appendChild(ob);
+  const hb = el('button', 'mbback uzexhome', '🏠 목록'); hb.type = 'button'; hb.title = '첫 화면으로';
+  hb.onclick = () => { S.jimunTab = 'ox'; S.mok = ''; S.oxQueue = ''; S.oxPage = null; S.omr = false; render(); };
+  R.appendChild(hb);
+  bar.appendChild(R);
+  main.insertBefore(bar, main.firstChild);
+}
+(function(){ try{ const s = document.createElement('style'); s.textContent = [
+  /* 민법 exv-css 그대로(치수·색 실측 값) */
+  '.exv-paper .exv-q{background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:14px 14px 10px;margin:0 0 12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}',
+  '.exv-head{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px}',
+  '.exv-no{font-weight:800;color:#111827;font-size:15px;white-space:nowrap}',
+  '.exv-stem{font-weight:700;color:#111827;font-size:14px;line-height:1.6;flex:1;min-width:0}',
+  '.exv-res{margin-left:auto;white-space:nowrap;font-size:13px;font-weight:900;padding-left:8px}',
+  '.exv-r-ok{color:#1d4ed8}.exv-r-bad{color:#dc2626}.exv-r-na{color:#9ca3af}',
+  '.exv-paper .question-box{border:0;box-shadow:none;padding:4px 2px;margin:0;background:transparent}',
+  '.exv-hide{display:none!important}',
+  '.exv-bogi{border:1.5px solid #9ca3af;border-radius:4px;padding:8px 10px;margin:4px 0 8px;background:#fff}',
+  '.exv-sel{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13.5px;color:#1f2937;margin:2px 0 8px;padding-left:4px}',
+  '.exv-sel>.exv-opt{flex:1 1 0;min-width:max-content}',
+  '.exv-sel>.exv-wait{flex-basis:100%}',
+  '.exv-wait{color:#9ca3af;font-size:12px;font-style:italic}',
+  '.exv-miss{color:#9ca3af;font-size:12.5px;font-style:italic;padding:4px 2px}',
+  '.exv-ans{display:flex;justify-content:flex-end;margin-top:4px}',
+  '.exv-peek{font-size:11px;font-weight:700;color:#4338ca;background:#eef2ff;border:1px solid #c7d2fe;border-radius:4px;padding:2px 8px;cursor:pointer}',
+  '.exv-opt{display:flex;align-items:center;gap:3px;background:transparent;border:0;padding:2px 0;font:inherit;color:inherit;cursor:pointer;text-align:left;white-space:nowrap}',
+  '.exv-pre{font-size:11px;color:#9ca3af;margin-top:6px}',
+  '.exv-num{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:999px;border:1.5px solid transparent;background:transparent;color:#1d4ed8;font-weight:800;cursor:pointer;padding:0 2px;font-size:13px;line-height:1}',
+  '.exv-num:hover,.exv-opt:hover .exv-num{border-color:#93c5fd}',
+  '.exv-num.sel{background:#1d4ed8;color:#fff!important;border-color:#1d4ed8}',
+  '.exv-num.bad{background:#dc2626;color:#fff!important;border-color:#dc2626}',
+  '.exv-num.ok{box-shadow:0 0 0 3px #93c5fd}',
+  '.uzexlab{color:#1d4ed8;font-weight:800;font-size:13px;white-space:nowrap;padding-top:1px;flex:none}',
+  '.uzexn{font-size:11.5px;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:4px 10px;margin:0 0 10px}',
+  '.uzexb .mbqhd{border-bottom:1px solid #f3f4f6;padding-bottom:6px;margin-bottom:8px}',
+  '.uzexink{width:28px;height:24px;border-radius:6px;border:1px solid #facc15;background:#fef9c3;color:#111827;font-size:13px;line-height:1;padding:0;cursor:pointer;flex:none}',
+  '.uzexink.off{border-color:#c7d2fe;background:#e0e7ff}',
+  '.uzexhome{background:#e5e7eb;color:#374151;border:0}',
+  'button.grbx{cursor:pointer;font-family:inherit;line-height:inherit;text-align:left}',
+  'button.grbx:hover{background:#dbeafe}',
+  /* 회독 비교 창(민법 compare-modal 꼴) */
+  '.uzgcr{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:0 0 10px}',
+  '.uzgch{display:flex;align-items:baseline;gap:8px;padding:6px 10px;background:#f9fafb;border-bottom:1px solid #e5e7eb}',
+  '.uzgch b{font-size:12px;font-weight:800;color:#1f2937}.uzgch .sc{font-size:11px;font-weight:700;color:#1d4ed8}',
+  '.uzgch .x{font-size:10px;font-weight:700;color:#dc2626}.uzgch .m,.uzgch .d{font-size:10px;color:#9ca3af}',
+  '.uzgcdel{margin-left:auto;font-size:10px;font-weight:700;color:#dc2626;border:1px solid #fecaca;background:#fff;border-radius:4px;padding:1px 6px;cursor:pointer}',
+  '.uzgcdel.sure{color:#fff;background:#dc2626;border-color:#dc2626}',
+  '.uzgccs{display:flex;flex-wrap:wrap;gap:4px;padding:8px}',
+  '.uzgcc{min-width:1.6rem;text-align:center;font-size:10px;line-height:1;padding:3px 4px;border-radius:4px;border:1px solid;cursor:pointer;background:#f9fafb;color:#d1d5db;border-color:#e5e7eb}',
+  '.uzgcc.o{background:#f0fdf4;color:#15803d;border-color:#86efac}',
+  '.uzgcc.x{background:#fee2e2;color:#b91c1c;border-color:#f87171;font-weight:800}',
+  '.uzgcft{border-top:1px solid #e5e7eb;padding-top:6px}',
+  '.uzgcf{display:flex;align-items:flex-start;gap:8px}.uzgcf .lb{font-size:10px;font-weight:800;border-radius:4px;padding:2px 6px;white-space:nowrap;margin-top:8px}',
+  '.uzgcf .lb.x{color:#b91c1c;background:#fef2f2;border:1px solid #fecaca}.uzgcf .lb.o{color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0}',
+  '.uzgc0{font-size:11px;color:#9ca3af;padding:6px 2px}'
+].join('\n'); document.head.appendChild(s); }catch(e){} })();
+
+/* ══ mbsame_add3 §A-4·§A-5 — 📋 정리 창 줄 = 민법 jnRowHTML 차례 · 발문 줄 ══
+   첫 줄 = ID 칩(uid 통째 · 카드 ID 칩과 같은 꼴) → 번호(제7판 책 번호 「1번」·「17-유제」 · 리담 = 시험 문번 · 모르면 리담 순번) → 출제연도 칩 →
+   출처(카드 출처 칩과 같은 말 「01 사법」「26 변리」) → 근거 칩 → 🔗 판 N → ↩링크N·↩백링크N → 아이콘 → 오른쪽 끝 기록 칸(없으면 「기록 없음」).
+   발문 줄 = 같은 문항(제7판 문항 · 리담 문항 id)의 첫 지문 앞 하나(민법 기출 해 정리 「문제 N」 줄 꼴) · 발문 없는 문항(OX 한 줄 · 사례 빈칸 · 통문항 카드)은 없음 · 끊겼다 다시 나오면 또 한 줄. */
+function uzBookNo(b){ b = String(b == null ? '' : b); return /^\d+$/.test(b) ? b + '번' : b; }
+function uzJnInfo(k, hit){
+  const e = uzIdx().get(k) || {};
+  if (e.P) return { no: uzBookNo(e.P.책번호) || '', src: String(e.P.태그 || '제7판'), stem: String(e.P.사례 || '').trim(), qid: e.P.문항 ? 'P:' + e.P.문항 : '' };
+  if (hit && hit.kind === 'L'){ const q = hit.q; return { no: (q.시험문번 || q.문번) + '번', src: String(q.연도 || '').slice(2) + ' 변리', stem: String(q.발문 || '').trim(), qid: 'L:' + q.id }; }
+  return { no: '', src: '', stem: '', qid: '' };
+}
+function uzJnCases(hit){
+  const out = [], z = hit && hit.z; if (!z) return out;
+  (hit.kind === 'L' ? panNo(z.pan || '').concat(panNo(z.sol || '')) : panNo(z.sol || '')).forEach(c => { if (out.indexOf(c) < 0) out.push(c); });
+  return out;
+}
+function uzJnLinks(host, k){
+  const my = lkOf(k), back = lkBack(k).filter(x => my.indexOf(x) < 0);
+  if (my.length){ const b = el('button', 'jnlk m', '↩링크' + my.length); b.type = 'button'; b.title = '내가 연결한 지문'; b.onclick = ev => { ev.stopPropagation(); linkListPop([k], ev); }; host.appendChild(b); }
+  if (back.length){ const b = el('button', 'jnlk b', '↩백링크' + back.length); b.type = 'button'; b.title = '나를 연결한 지문'; b.onclick = ev => { ev.stopPropagation(); linkListPop([k], ev); }; host.appendChild(b); }
+}
+function uzJnRec(k){
+  const w = el('span', 'jnrecw'), s = rgnStrip(k, true);
+  if (s.querySelector(':scope > .dim')) w.appendChild(el('span', 'jnnone', '기록 없음'));
+  else w.appendChild(s);
+  return w;
+}
+function uzJnStemRow(inf){
+  const d = el('div', 'jnstem'); d.dataset.jnstem = inf.qid;
+  d.appendChild(el('span', 'no', inf.no || ''));
+  d.appendChild(el('span', 'st', inf.stem));
+  return d;
+}
+/* ══ mbsame_add3 §A-3 — 1차객 카드 칩 = 민법 값(유형 칩 색 · 🃏 칩 · 출제연도 칩 높이 · 글꼴) · 출처 칩 「26 변리」·ID 칩 uid 는 조판기 그대로 ══ */
+(function(){ try{ const s = document.createElement('style'); s.textContent = [
+  /* 유형 칩 — 민법 QTYPE_STYLE(초안 = 흰 바탕 점선 · 확정 = 옅은 바탕 실선 800) · 「유형?」 = 회색 점선 */
+  '.mbtype{background:#fff;color:#9ca3af;border-color:#d1d5db}',
+  '.mbtype.jo.draft{background:#fff;color:#0284c7;border-color:#7dd3fc}',
+  '.mbtype.jo.fix{background:#e0f2fe;color:#0c4a6e;border-color:#38bdf8}',
+  '.mbtype.pan.draft{background:#fff;color:#0d9488;border-color:#5eead4}',
+  '.mbtype.pan.fix{background:#ccfbf1;color:#134e4a;border-color:#2dd4bf}',
+  '.mbtype.mix.draft{background:#fff;color:#8b5cf6;border-color:#c4b5fd}',
+  '.mbtype.mix.fix{background:#ede9fe;color:#4c1d95;border-color:#a78bfa}',
+  /* 🃏 — 민법 mcChipHTML(10px · 600 · 회색 칩 · 있으면 자홍 800) */
+  '.mcchip{display:inline-flex;align-items:center;font-size:10px;font-weight:600;line-height:15px;color:#9ca3af;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:2px 6px;cursor:pointer;white-space:nowrap}',
+  '.mcchip.on{color:#86198f;background:#fae8ff;border-color:#e879f9;font-weight:800}',
+  /* 출제연도 칩 — 민법 높이 22.5(11px · 줄높이 16.5 · 여백 2px 8px) */
+  '.jxec{line-height:16.5px}',
+  /* 글꼴 — 카드·기출뷰·정리 창 안은 민법 차례(Malgun 먼저) */
+  '.mbq,.exv-paper,.jn2{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}',
+  '.mbq button,.exv-paper button,.jn2 button{font-family:inherit}',
+  /* 정리 창 — 민법 창 크기 600 × 80vh(1553×900 에서 720) · 크기 기억(jn)이 있으면 그것 */
+  '.pop.mbwin.jnwin{width:600px;max-height:80vh}',
+  '.pop.mbwin.jnwin.sized{max-height:none}',
+  '.jn2 .jntop{gap:6px}',
+  '.jn2 .jnrecw{margin-left:auto;display:inline-flex;align-items:center}',
+  '.jn2 .jnnone{font-size:11px;color:#9ca3af}',
+  '.jn2 .jnlk{font-size:11px;font-weight:800;background:transparent;border:0;padding:0 2px;cursor:pointer;white-space:nowrap;line-height:1.5}',
+  '.jn2 .jnlk.m{color:#1e3a8a}.jn2 .jnlk.b{color:#4d7c0f}',
+  '.jn2 .qb.id{font-size:10.5px}',
+  /* 발문 줄 — 민법 기출 해 정리 「문제 N」 줄 꼴 + 발문 글(12px · 700 · 줄바꿈 허용) */
+  '.jn2 .jnstem{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;padding:6px 14px 3px;border-top:2px solid #c7d2fe;background:#f8fafc;font-size:11.5px;font-weight:900;color:#3730a3}',
+  '.jn2 .jnstem .st{font-size:12px;font-weight:700;color:#1f2937;white-space:normal;line-height:1.5;flex:1 1 200px;min-width:0}',
+  /* ✏️ 표시 — 민법 jnMarksPaint(켜짐 주황 · 꺼짐 회색) */
+  '.pop.mbwin .ph>button.jnxtg,.jnxtg{margin-left:6px;font-size:10.5px;font-weight:700;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;border-radius:4px;padding:2px 6px;cursor:pointer;line-height:1.5}',   /* 창 머리 단추 규칙(.pop.mbwin .ph>button)보다 구체적으로 */
+  '.pop.mbwin .ph>button.jnxtg.off,.jnxtg.off{color:#6b7280;background:#fff;border-color:#d1d5db}'
+].join('\n'); document.head.appendChild(s); }catch(e){} })();
 </script>
 </body>
 </html>

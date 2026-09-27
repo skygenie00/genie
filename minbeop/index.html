@@ -9676,8 +9676,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       y0 = Math.min(y0, body[i].y0); y1 = Math.max(y1, body[i].y1);
     }
     var pageLines = lines.filter(function (L) { return L.p === h.p; });
-    /* 두 쪽에 걸친 문제 — 다음 문번이 다음 쪽에 있고 이 덩이가 쪽 끝까지 간다 */
-    var cut = (endI < 0) && (h.nx >= 0) && lines[h.nx] && lines[h.nx].p > h.p;
+    /* 두 쪽에 걸친 문제 — ★ 2026-09-27(조판기 mbsame_add2 ⑩ 과 한 규칙) 그 문항 마지막 선지 표지(⑤)가 다음 쪽일 때만 · ⑤ 를 못 찾으면 옛 규칙 */
+    var cut = mbxCut(rec, n);
     return { box: { x0: x0, y0: y0, x1: x1, y1: y1 }, pitch: 0, body: body,
              page: h.p, cut: !!cut, pageLines: pageLines, linePitch: mbxPitch(pageLines) };
   }
@@ -9685,6 +9685,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   /* 지문 띠 — 덩이 안에서 opt 번째 표시로 시작하는 줄부터 다음 표시 줄 앞까지.
      ⚠ 마스터 `지문` 은 ①~⑤ 말고 ㄱ~ㅅ 도 쓴다(3,311 토큰 중 350). `optIndex` 가 둘 다 1~5 로 바꾸므로
        **원래 글자(optRaw)** 로 갈래를 고른다. 못 찾으면 띠 없이 테두리만(§B-3). */
+  /* ★ 2026-09-27 (조판기 _task_jo_gaek_mbsame_add2 ⑩ · 한 함수) — 띠는 그 문항에서 선지 표지를 차례대로 다 잡았을 때만(①~⑤ 다섯 ·
+     ㄱ 꼴은 고른 표지와 그다음 표지 또는 첫 ① 줄) · 못 잡으면 띠 없음(틀린 띠보다 없는 것이 낫다 · 테두리만) · ⑤ 는 그 선지 끝까지 */
   function mbxBand(body, opt, optRaw) {
     if (!(opt >= 1 && opt <= 5) || !body || !body.length) return null;
     var ko = /[ㄱ-ㅎ]/.test(String(optRaw || ''));
@@ -9700,8 +9702,15 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       var hit = null;
       for (i = 0; i < starts.length; i++) if (starts[i].j === opt) { hit = starts[i]; break; }
       if (!hit) continue;
-      var endI = body.length;
-      for (i = 0; i < starts.length; i++) if (starts[i].i > hit.i) { endI = starts[i].i; break; }
+      var nx = null, endI = -1;
+      for (i = 0; i < starts.length; i++) if (starts[i].i > hit.i && starts[i].j === opt + 1) { nx = starts[i]; break; }
+      if (marks === MBX_CIRC) {
+        var seq = starts.map(function (s) { return s.j; }).join('');
+        if (seq.indexOf('12345') < 0) return null;      /* 다섯 표지를 차례로 다 못 잡음 → 띠 없음 */
+        endI = nx ? nx.i : (opt === 5 ? mbxEndOfOpt(body, hit.i) : -1);
+      } else if (nx) endI = nx.i;
+      else { for (i = hit.i + 1; i < body.length; i++) if (/^\s*①/.test(body[i].t)) { endI = i; break; } }
+      if (endI < 0 || endI <= hit.i) return null;
       var y0 = 1, y1 = 0, x0 = 1, x1 = 0;
       for (i = hit.i; i < endI; i++) {
         y0 = Math.min(y0, body[i].y0); y1 = Math.max(y1, body[i].y1);
@@ -9710,6 +9719,27 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       return { x0: x0, y0: y0, x1: x1, y1: y1, fam: ko ? 'ko' : (f ? 'ko' : 'circ') };
     }
     return null;
+  }
+  /* ⑤ 줄부터 — 다음 줄이 멀리 떨어지거나(쪽 꼬리) 짧은 쪽 번호 줄이면 거기까지 */
+  function mbxEndOfOpt(body, i0) {
+    var e = i0 + 1, pitch = mbxPitch(body) || 0.02;
+    while (e < body.length) {
+      var gap = body[e].y0 - body[e - 1].y1;
+      if (gap > pitch * 2.2) break;
+      if (body[e].y0 > 0.93 && body[e].t.replace(/\s/g, '').length <= 8) break;
+      e++;
+    }
+    return e;
+  }
+  /* 이어짐 — 그 문항 머리 줄부터 다음 문항 머리까지(쪽을 넘어) ⑤ 표지 줄의 쪽 */
+  function mbxCut(rec, n) {
+    var h = rec.no[n]; if (!h) return false;
+    var L = rec.lines, end = (h.nx >= 0) ? h.nx : L.length, last5 = -1, i;
+    for (i = h.i; i < end; i++) { var t = (L[i].t || '').replace(/^\s+/, ''); if (t.indexOf('⑤') === 0) last5 = i; }
+    if (last5 >= 0) return L[last5].p > h.p;
+    /* ⑤ 를 못 찾으면 — 그 문항 글줄(쪽 머리·꼬리 짧은 줄 빼고)이 실제로 다음 쪽까지 갈 때만(옛 규칙 = 쪽 끝에서 끝난 문항도 이어짐) */
+    for (i = h.i; i < end; i++) { var l = L[i]; if (l.p > h.p && !((l.t || '').replace(/\s/g, '').length <= 8 && (l.y0 > 0.93 || l.y0 < 0.07))) return true; }
+    return false;
   }
 
   /* ★ 2026-09-26 (_task_ox_exview_paper §A-2) — 조합 선지 「① ㄱ, ㄴ ② …」 다섯의 글자 집합(문번 덩이의 마지막 ① 부터 ①~⑤ 가 차례로 한 번씩일 때만 · 못 읽으면 null).
