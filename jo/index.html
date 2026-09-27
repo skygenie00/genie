@@ -1978,7 +1978,8 @@ const S={law:'특허법',tab:'jo',jo:null,prec:null,precTab:'요약',
          oxPage:null,oxPageJump:false,
          omrPage:1,omrPick:null,   // ★ v3-E §1-3 — 정리OMR 쪽 · 위치 찍기 모드
          // ★ v3-F §8 — 조문 탭 정오문제 패널(조를 바꿔도 열린 채 따라간다)
-         joPanel:false,joPanelF:'all',joPanelN:3,joPanelP:0,joPanelW:340,
+         joPanel:false,joPanelF:'all',joPanelN:3,joPanelP:0,joPanelW:470,joPanelH:640,mkWin:false,ciWin:'',   /* ★ jo_wonmun §A-4 — 정오문제 = 떠 있는 창(처음 470×640 · jopangi_ui jpw·jph) · 마크업·인용 창 깃발 */
+        
          // ★ v3-F3 ④ — 히트맵 범위(마디 바꿔도 유지) · 접기(jopangi_ui 에도 기억)
          heatScope:'self',heatFold:false,
          series:'',yearFilter:'',yearSort:'desc',zoom:0.55,   /* ★ hrail(9/22) §C-3 — 2차 기출·GS 목록 기본 = 회차 내림(옛 격자 기본 'asc') */
@@ -1992,7 +1993,7 @@ const S={law:'특허법',tab:'jo',jo:null,prec:null,precTab:'요약',
 const UI_KEY='jopangi_ui';   // ⚠ `jopangi.` 접두가 아니다 — 기록 내보내기·건수에서 빠진다
 try{const u=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if(u.nmw>0)S.qlNmW=u.nmw;if(u.rdw>0)S.qlRdW=u.rdw;
-    if(u.jpw>0)S.joPanelW=u.jpw;if(u.hfold)S.heatFold=true;
+    if(u.jpw>0)S.joPanelW=u.jpw;if(u.jph>0)S.joPanelH=u.jph;if(u.hfold)S.heatFold=true;
     if(u.trw>0)S.treeW=u.trw;   /* ★ v3-J §0-2 */
     if(u.jbk)S.joBlank=Object.assign({내용:false,주체:false,기간:false},u.jbk);
     if(u.jbs)S.joBlankStar=true;
@@ -2023,7 +2024,7 @@ try{const u4=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if('note_color' in u4)S.noteColor=!!u4.note_color;   /* ★ notecolor B — 「정리 색」 켜고 끄기(기기별 · 기본 켬) */
     if(u4.c2uopen&&typeof u4.c2uopen==='object'&&!Array.isArray(u4.c2uopen))S.c2uOpen=u4.c2uopen;}catch(e){}   /* ★ 2cha_unit §B-4 — 걸침 펼침(기기 하나 값) */   /* ★ hrail(9/22) §C-1 — 2차 보드 차례(회차별│단원별) */
 function uiSave(){try{localStorage.setItem(UI_KEY,JSON.stringify(
-  {nmw:S.qlNmW,rdw:S.qlRdW,jpw:S.joPanelW,hfold:S.heatFold?1:0,trw:S.treeW,
+  {nmw:S.qlNmW,rdw:S.qlRdW,jpw:S.joPanelW,jph:S.joPanelH,hfold:S.heatFold?1:0,trw:S.treeW,
    jbk:S.joBlank,jbs:S.joBlankStar?1:0,
    prec_filter:S.precFilter||{},prec_sort:S.precSort,
    lsw:S.listW,prec_ygroups:S.precYG||{},
@@ -2789,15 +2790,18 @@ async function viewJo(){
 
   const link=el('div','conn');
   link.style.gap='1px 3px';   /* ★ joscreen §A-3·§A-5(⑯⑱) — 「이 조문 연결」 이름표 걷음 · 칩 넷 = 판례 탭 .plgb 글자(칸 사이 3px · 색은 칩마다 그대로 · 누름·0 흐림 무변) */
-  {const s0=el('span','plgb','📜 인용하는 조 '+back.length);s0.style.color='var(--exc)';s0.style.cursor='default';s0.style.textDecoration='none';link.appendChild(s0);}
+  {const s0=el('span','plgb wmci','📜 인용하는 조 '+back.length);s0.style.color='var(--exc)';s0.style.cursor='default';s0.style.textDecoration='none';
+   if(back.length){s0.style.cursor='pointer';s0.title='이 조를 본문에 적은 조 — 누르면 떠 있는 창';
+     s0.onclick=ev=>{ev.stopPropagation();const bk=S.law+':'+S.jo;S.ciWin=(S.ciWin===bk)?'':bk;render();};}   /* ★ jo_wonmun §A-5 — N = 0 이면 지금처럼(누름 없음) */
+   link.appendChild(s0);}
   /* ★ v3-F §8 — 「☑ 정오문제 N」(N = 이 조 · 항·호 하위 포함 리담 지문 수).
      테마·카드 v0 자리표는 버린다(사용자 8/27). */
   {
     const JP=await joPanelIdx();
     const e2=(JP||{})[S.jo]||{L:[],P:[]};
     const _its=jsPanelItems(e2,S.jo), _nL=_its.filter(x=>x.kind==='L').length;   /* ★ joscreen §A-6(①) — N = 패널 「전체」 와 같은 함수(리담 + 제7판 · 같은 uid 한 번 · 「이 조 아님」 뺌) */
-    const b=el('button','plgb','☑ 정오문제 '+_its.length);b.style.color='var(--ok)';
-    b.title='이 조를 근거로 단 지문 — 누르면 오른쪽 패널 · 기출 '+_nL+' · 제7판 '+(_its.length-_nL);
+    const b=el('button','plgb wmjp','☑ 정오문제 '+_its.length);b.style.color='var(--ok)';
+    b.title='이 조를 근거로 단 지문 — 누르면 떠 있는 창 · 리담 '+_nL+' · 해례 '+(_its.length-_nL);   /* ★ jo_wonmun §A-4 */
     b.onclick=()=>{S.joPanel=!S.joPanel;S.joPanelP=0;render();};
     link.appendChild(b);
   }
@@ -2861,14 +2865,13 @@ async function viewJo(){
   const inkKey='jo|'+base;
   const pinned=S.ink||inkHas(inkKey);        // 필기가 있으면 본문 높이·폭을 잠근다(§4-2)
   const stkBtn=el('button','mode'+(S.stick?' on':''),'✎ 마크업');
-  stkBtn.title='켜면 마크업 하나하나가 스티커가 된다 — 지우기·유형 바꾸기·색 고르기';
+  const stkN=el('span','mkn');stkBtn.appendChild(stkN);   /* ★ jo_wonmun §A-2 — 「✎ 마크업 k/N」(k = 켠 수 · 11px #9ca3af) */
+  stkBtn.title='마크업 창 — 볼트에서 더하고 바꾸고 칠한 것 · 누른 것만 원문에 얹힌다 · 창 「✎ 편집」 = 스티커 편집';
   if(bkMode){
     stkBtn.disabled=true;stkBtn.classList.add('dis');
     stkBtn.title='빈칸 모드에서는 마크업 편집을 잠근다';   // ★ v3-L §2 — 필기·마크업 잠금
     if(S.stick)S.stick=false;
-  }else stkBtn.onclick=()=>{
-    if(!S.stick&&S.ink){S.ink=false;toast('필기를 끄고 마크업 편집을 켰다 — 둘은 같이 못 켠다');}
-    S.stick=!S.stick;render();};
+  }else stkBtn.onclick=ev=>{ev.stopPropagation();S.mkWin=!S.mkWin;render();};   /* ★ jo_wonmun §A-2 — 창 열고 닫기(스티커 편집 켜기는 창 「✎ 편집」 · 필기 끄기 toast 도 그쪽) */
   mb.appendChild(stkBtn);
   if(bkJo){
     const st=el('button','tool jstar'+(S.joBlankStar?' on':''),'★ 중요 빈칸만');
@@ -2889,6 +2892,7 @@ async function viewJo(){
     main.appendChild(thRow);
     main.appendChild(thBox);
     slot.appendChild(main);
+    wmWinDrop('mk');await wmCiWin(base,j);   /* ★ jo_wonmun — 빈칸 모드 = 마크업 창 내림(✎ 마크업 흐림 · 깃발은 둔다) */
     await joPanelMount(slot);
     if(THSCROLL){THSCROLL=false;
       const t2=document.getElementById('thbot');
@@ -2897,6 +2901,8 @@ async function viewJo(){
   }
   const ap=mkApply(base,j.행);
   const box=el('div','box');
+  const _wmx=wmCtx(j,base,ap,pinned),_wmD={};   /* ★ jo_wonmun §A-1 — 원문 재료 · mode wm = 원문 줄 · pin = 필기 조(볼트 행 · 꾸밈만) · stick = ✎ 편집(볼트 행 전부) */
+  stkN.textContent=_wmx.k+'/'+_wmx.n;
   /* ★ joscreen §B(⑰) — 「✏ 내 편집본 — 볼트 md 그대로 렌더 · 마크업 N · 링크 N」 머리줄 걷음(칸 첫 줄 = 조문 글 · 스티커 연결선 무변) */
   let _acr=false;   /* ★ v3-J §2-A — #…/두문자 태그 줄 뒤의 꼬리 줄 = 두문자 */
   let _acrHint=false;   /* ★ v3-M M8⑤ — 안내는 조당 한 번 */
@@ -2907,6 +2913,7 @@ async function viewJo(){
     if(k0==='두문자')_acr=/\/두문자/.test(String(row.t||''));
     else if(k0!=='꼬리'&&k0!=='각주')_acr=false;
     else if(k0==='꼬리'&&(!_rt||/^\[/.test(_rt)||/^-{3,}/.test(_rt)))_acr=false;   /* ★ M9 — 블록 끝 */
+    if(_wmx.mode==='wm'&&!_wmx.need[ri])return;   /* ★ jo_wonmun §A-1 — 원문 모드: 켠 메모·각주 줄만 볼트 행으로 그린다(나머지 = 원문 줄) */
     const d=el('div',joClass(row.k));
     d.dataset.ri=ri;
     if(row.fd)d.appendChild(el('span','fdmark','[^'+row.fd+'] '));
@@ -2929,12 +2936,13 @@ async function viewJo(){
       if(!_acrHint){_acrHint=true;   /* ★ v3-M M8⑤ */
         d.appendChild(el('span','cdim',' ← 줄 그대로 두고 화면만 칩 · 클릭 = 팔레트에 담기'));}
     }else
-    d.appendChild(renderLine(row,{m:ap.eff[ri],rec:j,law:S.law,base:base,
+    d.appendChild(renderLine(row,{m:_wmx.mode==='pin'?_wmx.pinM(ri):ap.eff[ri],rec:j,law:S.law,base:base,   /* ★ jo_wonmun §A-1-4 — 필기 조 = 켠 꾸밈만 */
                                   stick:S.stick,lockLabel:pinned}));
     if(row.b){const a=el('span','anchor','^'+row.b);a.id='b-'+row.b;d.appendChild(a);}
     pitWire(d,'jo|'+base,rowKey(row),row.t||'');   /* ★ v3-H §4 */
-    box.appendChild(d);
+    if(_wmx.mode==='wm')_wmD[ri]=d;else box.appendChild(d);
   });
+  if(_wmx.mode==='wm')wmBodyInto(box,_wmx,_wmD);   /* ★ jo_wonmun §A-1 — 본문 = 원문 줄(켠 항목만 얹는다) */
   blk.appendChild(box);
 
   if(S.stick){
@@ -3038,7 +3046,8 @@ async function viewJo(){
   main.appendChild(thBox);
 
   slot.appendChild(main);
-  await joPanelMount(slot);            // ★ v3-F §8 — 오른쪽 정오문제 패널(조를 바꿔도 따라간다)
+  wmMkWin(_wmx);await wmCiWin(base,j);   /* ★ jo_wonmun §A-2·§A-5 — 마크업 창(조를 바꿔도 따라간다) · 인용 창(그 조에서만) */
+  await joPanelMount(slot);            // ★ jo_wonmun §A-4 — 정오문제 = 떠 있는 창(옛 오른쪽 패널·손잡이 걷음 · 조를 바꿔도 따라간다)
   if(THSCROLL){THSCROLL=false;
     const t2=document.getElementById('thbot');
     if(t2)setTimeout(()=>t2.scrollIntoView({block:'start'}),60);}
@@ -3132,6 +3141,7 @@ function popShell(kind, title, key){
   return body;
 }
 function closeOne(p){
+  if (p && p._onClose){ const f = p._onClose; p._onClose = null; try{ f(); }catch(e){} }   /* ★ jo_wonmun — 떠 있는 창을 닫으면 제 깃발을 끈다(✕ · Esc · 모두 닫기) */
   p.remove();
   POPS = POPS.filter(q => q !== p);
   popAllSync();   /* ★ mok_popup_phone E — 맨 위가 바뀌었다 */
@@ -3139,8 +3149,8 @@ function closeOne(p){
 function closePop(){                    // 맨 위 하나만 닫는다
   if (POPS.length) closeOne(POPS[POPS.length - 1]);
 }
-function closeAllPops(){
-  POPS.slice().forEach(closeOne);
+function closeAllPops(all){   /* ★ jo_wonmun — 화면을 옮기며 닫는 길(인자 없음 · goJo·linkGo 등)은 원문 창 셋(마크업·정오문제·인용)을 남긴다 — 옛 오른쪽 패널처럼 조를 따라간다(§A-4-1) · 「모두 닫기」 단추(all)만 다 닫는다 */
+  POPS.slice().forEach(p => { if (!all && p && p._wmk) return; closeOne(p); });
 }
 /* ★ mok_popup_phone E — 팝업이 둘 이상이면 맨 위(z-index 최대) 팝업 머리 ✕ 왼쪽에 「모두 닫기」 하나 → closeAllPops · 하나뿐이면 없음.
    맨 위가 바뀌는 곳(popShell · closeOne · mousedown 올리기 · 터치로 머리 잡기 · dragify · 교재 창 되돌리기)마다 부른다. Esc(closePop)는 그대로 */
@@ -3152,7 +3162,7 @@ function popAllSync(){
   if (!on) return;
   const hd = on.querySelector(':scope > .ph'); if (!hd || hd.querySelector(':scope > button.pall')) return;
   const b = el('button', 'pall', '모두 닫기'); b.type = 'button'; b.title = '떠 있는 팝업 전부 닫기';
-  b.onclick = ev => { ev.stopPropagation(); closeAllPops(); };
+  b.onclick = ev => { ev.stopPropagation(); closeAllPops(true); };   /* ★ jo_wonmun — 「모두 닫기」 = 원문 창 셋까지 */
   hd.appendChild(b); hd.classList.add('hasall');
 }
 function showPop(ev){
@@ -3226,6 +3236,7 @@ function recDropCache(){
   if (typeof PQREC !== 'undefined') PQREC = null;   /* ★ QA 판 add1 — 앱 검수 */
   if (typeof BKTREC !== 'undefined') BKTREC = null;   /* ★ mbsame_add3 §A-7 — 빈칸 종류 */
   if (typeof QFIXREC !== 'undefined') QFIXREC = null;   /* ★ jo_cardfix §A-7 — 정정 글 칸 */
+  if (typeof MKONREC !== 'undefined') MKONREC = null;   /* ★ jo_wonmun §A-3 — 마크업 켠 것 */
 }
 function recDelete(k){
   try{ localStorage.removeItem(k); }catch(e){}
@@ -3305,7 +3316,7 @@ const SYNC_SKIP = ['ink' /* 캔버스 · 크다 */ ];
 const SYNC_KEYS = ['ox', 'rounds', 'ansfix', 'mcard', 'gi', 'gi.year', 'markup', 'logic', 'link', 'type', 'omr',
   'gg', 'ggref',
   'sticker', 'blank', 'blanktag', 'themefix', 'postit', 'compare', 'precimp', 'editq', 'preclink', 'precqa', 'precqafile',
-  'canvas', 'canvasink', 'canvaslink', 'canvasmemo', 'canvaspin', 'clfix', 'c2unit', 'canvasjari', 'c2htag', 'c2mark', 'c2hsjari', 'ncomr', 'notecolor', 'jonot', 'giround', 'recgone', 'bktype', 'qfix']   /* ★ _task_jo_cardfix §A-7 — 정정 글 칸(42번째 · 칸 = 지문 열쇠 · 값 {q?, exp?, case?, q0, exp0, case0, ts} · ↩ 정정 해제 = 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_gaek_mbsame_add3 §A-7 — 빈칸 종류 손값(41번째 · 칸 = 지문 열쇠(uid) · 값 {v:[내용·주체·기간 | 없음], ts} · 「지우기」 = {v:[]}(OMR 표시를 덮는 빈 값 · 칸을 안 지운다) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_joscreen §F-1 — 「이 조 아님 ×」 손값(39→40 · 칸 = 지문 열쇠(uid) · 값 = 뗀 조 키 배열 · 되살리기로 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_notecolor C — 목차노트 정리 색 고침(36→37 · 칸 = <노트 파일>|<행> · 값 [[s,e,색,낱말]] · 되돌리기 = 그 구간 항목을 빼고 칸이 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_omrpop B-4 — 정리OMR 자리 손값(35→36 · 칸 = note|<노트> · para|<노트>|<문단 끝 행> · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_canvas_jari_cand §D-1 — 정리캔버스 교재 자리 손값(31→32 · 칸 = bid · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_2cha_unit §C-5 — 2차 단원 손값(30→31 · 칸 = '<법>|<YY-회-N>' · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_claude_answers §F — Claude 답 정정(29→30 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 다음 맞추기에서 되살린다) */   /* ★ 정리캔버스(민소) — 편집 로그·필기·링크·메모·핀(22→27) */   /* ★ prec3 §C-3 — 볼트 검수 대기(21→22) */   /* ★ QA 판 add1 — 앱 검수(20→21) */   /* ★ 판 4 add4 §2 — 내가 이은 판례·2차 (19→20) */
+  'canvas', 'canvasink', 'canvaslink', 'canvasmemo', 'canvaspin', 'clfix', 'c2unit', 'canvasjari', 'c2htag', 'c2mark', 'c2hsjari', 'ncomr', 'notecolor', 'jonot', 'giround', 'recgone', 'bktype', 'qfix', 'mkon']   /* ★ _task_jo_wonmun §A-3 — 조문 마크업 켠 것(43번째 · 칸 = 「법:조」 · 값 {k:[항목 열쇠], s:[통째 켠 종류], x:[켠 종류 안에서 끈 열쇠]} · 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_cardfix §A-7 — 정정 글 칸(42번째 · 칸 = 지문 열쇠 · 값 {q?, exp?, case?, q0, exp0, case0, ts} · ↩ 정정 해제 = 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_gaek_mbsame_add3 §A-7 — 빈칸 종류 손값(41번째 · 칸 = 지문 열쇠(uid) · 값 {v:[내용·주체·기간 | 없음], ts} · 「지우기」 = {v:[]}(OMR 표시를 덮는 빈 값 · 칸을 안 지운다) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_joscreen §F-1 — 「이 조 아님 ×」 손값(39→40 · 칸 = 지문 열쇠(uid) · 값 = 뗀 조 키 배열 · 되살리기로 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_notecolor C — 목차노트 정리 색 고침(36→37 · 칸 = <노트 파일>|<행> · 값 [[s,e,색,낱말]] · 되돌리기 = 그 구간 항목을 빼고 칸이 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_omrpop B-4 — 정리OMR 자리 손값(35→36 · 칸 = note|<노트> · para|<노트>|<문단 끝 행> · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_canvas_jari_cand §D-1 — 정리캔버스 교재 자리 손값(31→32 · 칸 = bid · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_2cha_unit §C-5 — 2차 단원 손값(30→31 · 칸 = '<법>|<YY-회-N>' · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_claude_answers §F — Claude 답 정정(29→30 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 다음 맞추기에서 되살린다) */   /* ★ 정리캔버스(민소) — 편집 로그·필기·링크·메모·핀(22→27) */   /* ★ prec3 §C-3 — 볼트 검수 대기(21→22) */   /* ★ QA 판 add1 — 앱 검수(20→21) */   /* ★ 판 4 add4 §2 — 내가 이은 판례·2차 (19→20) */
   .filter(k => SYNC_SKIP.indexOf(k) < 0).map(k => REC_PRE + k);
 const SU_KEY = 'jopangi_sync_u', SG_KEY = 'jopangi_sync_gone', SS_KEY = 'jopangi_sync_shadow', SM_KEY = 'jopangi_sync_meta';
 const EQ_KEY = REC_PRE + 'editq';
@@ -4108,6 +4119,7 @@ function eqAdd(target, part, quote, ev, existing){
 }
 /* ★ 판 4 add1 §1 — 글줄 ✎ = 그 줄이 편집 칸으로 바뀐다(원문 t 채워짐). 저장 = {before: 원문 줄, after: 고친 줄} · 줄 추가 = after 에 개행으로 · 삭제 = after '' */
 function eqEditLine(lineEl, target, part, text, ev, existing){
+  if (lineEl && lineEl._wm && WMX && WMX.rows && WMX.rows[lineEl._wm.ri]) text = String(WMX.rows[lineEl._wm.ri].t || '');   /* ★ jo_wonmun — 원문 줄에서 ✎ 수정 = 짝 볼트 행 글(큐 before = 볼트 글) */
   target = eqNorm(target);
   if (lineEl._eqedit) return;
   const before0 = existing && typeof existing.before === 'string' && existing.before ? existing.before : String(text || '');
@@ -5633,6 +5645,7 @@ let MKS = null;
 function mkAll(){ if (!MKS) MKS = lsRead(MK_KEY); return MKS; }
 function mkPut(key, rec){
   mkAll();
+  if (rec && rec.op === 'new' && !MKS[key] && typeof wmNewMark === 'function') wmNewMark(key);   /* ★ jo_wonmun §A-2-5 — 새로 칠한 것은 켠 채(다음 그림에서 mkon 에 넣는다) */
   if (rec === null) delete MKS[key];
   else MKS[key] = Object.assign({}, rec, { ts: nowIso() });
   return lsWrite(MK_KEY, MKS, '마크업 스티커');
@@ -5796,13 +5809,18 @@ function stkBubbleWire(box, base, rows){
     const sn = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentNode;
     const line = sn && sn.closest ? sn.closest('.ln') : null;
     if (!line || !line.contains(r.endContainer) || !box.contains(line)) return;
-    const ri = +line.dataset.ri;
-    const row = rows[ri]; if (!row) return;
+    const _w = line._wm;   /* ★ jo_wonmun §A-2-5 — 원문 줄: 선택 → 짝 볼트 좌표(원문에만 있는 글자가 걸치면 거품을 누를 때 막는다) */
+    const ri = _w ? _w.ri : +line.dataset.ri;
+    const row = rows[ri]; if (!row && !_w) return;
+    let a = 0, b = 0;
+    if (_w){ const ab = wmSelAB(line, r); if (ab){ a = ab[0]; b = ab[1]; } }
+    else {
     const pre = document.createRange();
     pre.selectNodeContents(line); pre.setEnd(r.startContainer, r.startOffset);
-    const a = plainLen(pre.cloneContents());
-    const b = a + plainLen(r.cloneContents());
+    a = plainLen(pre.cloneContents());
+    b = a + plainLen(r.cloneContents());
     if (b <= a) return;
+    }
     const er = r.cloneRange(); er.collapse(false);
     let rc = er.getBoundingClientRect();
     if (!rc || (!rc.left && !rc.top)) rc = r.getBoundingClientRect();
@@ -5813,6 +5831,7 @@ function stkBubbleWire(box, base, rows){
     bub.onmousedown = ev2 => ev2.preventDefault();      // 거품을 눌러도 selection 이 안 풀리게
     bub.onclick = ev2 => {
       ev2.stopPropagation(); stkBubKill();
+      if (_w && (!row || b <= a)){ toast('⚠ 원문에만 있는 글자가 걸쳤다 — 볼트에 없는 글자는 칠할 수 없다', 1); return; }   /* ★ jo_wonmun §A-2-5 */
       const cross = (mkApply(base, rows).eff[ri] || []).some(m =>
         (a < m.b && b > m.a) && !(a >= m.a && b <= m.b) && !(m.a >= a && m.b <= b));
       if (cross){ toast('이미 있는 마크업과 걸쳐서 겹친다 — 구간을 다시 골라라', 1); return; }
@@ -5930,7 +5949,8 @@ function stkDropWire(box, base, rows){
     const row = rows[ri]; if (!row){ offDrop(); return; }
     const pre = document.createRange();
     pre.selectNodeContents(line); pre.setEnd(r.startContainer, r.startOffset);
-    let a = plainLen(pre.cloneContents());
+    let a = line._wm ? wmOffAt(line, r.startContainer, r.startOffset) : plainLen(pre.cloneContents());   /* ★ jo_wonmun — 원문 줄은 짝 볼트 좌표 */
+    if (a < 0){ offDrop(); return; }
     const t = String(row.t || '');
     /* ★ v3-O §2 — 앵커 이동(낱말 드랍)은 편집 모드만 · 읽기 모드 mv = 항상 표시 이동 */
     if (mv && !S.stick){   /* ★ 칩 자유이동 — 읽기 모드 = at 이동(낱말 경계 스냅 · 구간 밖은 끝) + 세로 잔여 off · 앵커 구간 무변 · mkPut 1회 */
@@ -10191,15 +10211,15 @@ function pinPop(key, ev){
 }
 
 /* ══ v3-F §8 — 지문 카드 한 장 공용 빌더(popCard·정오문제 패널이 같이 쓴다) ══ */
-function sidCardEl(hit, sid, seq){
+function sidCardEl(hit, sid, seq, opt){   /* ★ jo_wonmun §A-4-5 — opt.instant = 정오문제 창 곧바로 채점(인자로 넘긴다 · 전역 깃발 없음) */
   if (hit.kind === 'P'){
-    const c = p7Card(hit.z, seq);
+    const c = p7Card(hit.z, seq, opt);
     c.removeAttribute('id');   // 본 화면 카드와 dom id 가 겹치면 스크롤이 헷갈린다
     return c;
   }
   /* ★ joscreen §F-3(⑤⑦) — 리담 갈래 걷음: 1차객 단원 카드 빌더(mbsame mlnLidCard) 하나 · 출제연도 칩 = uid 판 규칙(「2008:8:㉤」·「2003:?:⑤」) */
   const ln = (MLN && MLN.ok) ? mlnClass(hit.q, hit.z) : '';
-  const c = mlnLidCard(hit.q, hit.z, seq, ln, (MLN && MLN.lidnode) ? MLN.lidnode[hit.q.id] : null);
+  const c = mlnLidCard(hit.q, hit.z, seq, ln, (MLN && MLN.lidnode) ? MLN.lidnode[hit.q.id] : null, opt);
   c.removeAttribute('id');   // 본 화면 카드와 dom id 가 겹치면 스크롤이 헷갈린다
   return c;
 }
@@ -10239,92 +10259,7 @@ async function joPanelIdx(){
   }catch(e){}
   return JOPANE;
 }
-async function joPanelMount(slot){
-  if (!S.joPanel) return;
-  const JP = await joPanelIdx();
-  const ent = (JP || {})[S.jo] || { L: [], P: [] };
-  // 손잡이 — 누르면 접기 · 끌면 너비(qlHandle 과 같은 결 · jopangi_ui 에 기억)
-  const h = el('div', 'handle drg', '›');
-  h.title = '정오문제 패널 — 누르면 접기 · 끌면 너비';
-  let x0 = 0, w0 = 0, curW = 0;
-  h.addEventListener('pointerdown', ev => {
-    if (ev.button !== 0 && ev.pointerType === 'mouse') return;
-    x0 = ev.clientX; w0 = curW = S.joPanelW; h._drag = false;
-    try{ h.setPointerCapture(ev.pointerId); }catch(e){}
-  });
-  h.addEventListener('pointermove', ev => {
-    if (!h.hasPointerCapture || !h.hasPointerCapture(ev.pointerId)) return;
-    const dx = ev.clientX - x0;
-    if (!h._drag && Math.abs(dx) < 4) return;
-    h._drag = true;
-    curW = Math.max(240, Math.min(700, Math.round(w0 - dx)));
-    if (h.nextSibling) h.nextSibling.style.width = curW + 'px';
-  });
-  const end = ev => {
-    try{ h.releasePointerCapture(ev.pointerId); }catch(e){}
-    if (!h._drag) return;
-    S.joPanelW = curW; uiSave();
-    setTimeout(() => { h._drag = false; }, 300);
-  };
-  h.addEventListener('pointerup', end);
-  h.addEventListener('pointercancel', end);
-  h.onclick = () => { if (h._drag){ h._drag = false; return; } S.joPanel = false; render(); };
-  slot.appendChild(h);
-  const pane = el('div', 'jopane');
-  pane.style.width = S.joPanelW + 'px';
-  const items = jsPanelItems(ent, S.jo);   /* ★ joscreen §F·add1 §B — 칩과 같은 함수 · 최신 연도부터(연도 ↓ · 문번 ↑ · 선지 ↑) · 같은 uid 한 장 · 「이 조 아님」 뺌 */
-  const nL = items.filter(it => it.kind === 'L').length, nP = items.length - nL;
-  const shown = items.filter(it =>
-    S.joPanelF === 'all' || (S.joPanelF === 'L' ? it.kind === 'L' : it.kind === 'P'));
-  /* ★ v3-F3 ③ — 한 쪽 = 지문 5개 고정(사용자 8/27 · 「한 번에 N개」 선택 폐기) */
-  const per = 5;
-  const nPg = Math.max(1, Math.ceil(shown.length / per));
-  if (S.joPanelP >= nPg) S.joPanelP = 0;
-  const cur = shown.slice(S.joPanelP * per, (S.joPanelP + 1) * per);
-  const cb = el('div', 'ctrlbar');
-  cb.appendChild(el('span', 'pl', '☑ 정오문제 ' + shown.length + '건'));
-  [['all', '전체 ' + items.length], ['L', '기출 ' + nL], ['P', '제7판 ' + nP]].forEach(p2 => {
-    const b = el('button', 'tool' + (S.joPanelF === p2[0] ? ' on' : ''), p2[1]);
-    b.onclick = () => { S.joPanelF = p2[0]; S.joPanelP = 0; render(); };
-    cb.appendChild(b);
-  });
-  pane.appendChild(cb);
-  /* ★ v3-F3 ③ — 쪽 단추 「1 2 3 4 5 …」(지금 쪽 강조) · p/P 표기는 뺀다 */
-  const cb2 = el('div', 'ctrlbar');
-  cb2.appendChild(el('span', 'pl', '쪽'));
-  for (let p2 = 0; p2 < nPg; p2++){
-    const b = el('button', 'tool' + (S.joPanelP === p2 ? ' on' : ''), String(p2 + 1));
-    b.onclick = ((pp) => () => { S.joPanelP = pp; render(); })(p2);
-    cb2.appendChild(b);
-  }
-  if (nPg > 1) pane.appendChild(cb2);   /* ★ joscreen add1 §C'-1(④) — 한 쪽뿐이면 「쪽」 줄을 안 그린다 */
-  if (!shown.length) pane.appendChild(emptyBox('☑', '이 조에 걸린 지문이 없다'));
-  const _nos = jsPanelNos(shown);   /* ★ joscreen §F-3 — 번호 = 1차객 단원 규칙(같은 문항 = 한 번호 「k번 - (선지)」) */
-  cur.forEach((it, ix) => {
-    const c = sidCardEl(it, it.sid, _nos[S.joPanelP * per + ix]);
-    c.id = 'jp-' + it.sid;                 // ✅ 채점의 붉은 칸·스크롤이 이 id 를 쓴다
-    pane.appendChild(c);
-  });
-  if (shown.length){
-    const ftr = el('div', 'memobtn');
-    const pv = el('button', 'tool', '← 이전');
-    pv.disabled = S.joPanelP <= 0;
-    pv.onclick = () => { S.joPanelP--; render(); };
-    ftr.appendChild(pv);
-    const nx = el('button', 'tool', '다음 →');
-    nx.disabled = S.joPanelP >= nPg - 1;
-    nx.onclick = () => { S.joPanelP++; render(); };
-    ftr.appendChild(nx);
-    const gb = el('button', 'tool on', '✅ 채점');
-    gb.title = '보이는 묶음을 채점한다 — 마킹→채점 규칙 그대로 · 결과 창 없이 toast';
-    gb.onclick = () => oxGrade(cur.map(it => ({ k: it.sid,
-      ans: (it.kind === 'P' ? (it.z.ox || ((it.z.리담 || {}).ox || '')) : it.z.ox) || '',
-      dom: 'jp-' + it.sid })));
-    ftr.appendChild(gb);
-    pane.appendChild(ftr);
-  }
-  slot.appendChild(pane);
-}
+/* ★ 2026-09-27 (_task_jo_wonmun §A-4) — 옛 joPanelMount(오른쪽 패널 · 손잡이 · 「☑ 정오문제 N건」·쪽·← 이전/다음 →/✅ 채점) 걷음 · 같은 이름 새 함수 = 끝 블록(떠 있는 창) */
 
 /* ── 지문 한 줄의 O/X 줄 — 리담·제7판 카드가 같이 쓴다 ── */
 const OXNAME = ['안 품', '맞음', '헷갈림', '틀림', '덜약점'];
@@ -10983,7 +10918,8 @@ function ggEatLogicOnce(){
   if (n) toast('📐 논리 ' + n + '칸을 근거로 옮겼다');
   return n;
 }
-function oxPickRow(row, key, raw, sol, extra, chips, autos){
+function oxPickRow(row, key, raw, sol, extra, chips, autos, opt){
+  const inst = !!(opt && opt.instant); if (inst) row.classList.add('oxinst');   /* ★ jo_wonmun §A-4-5 — 정오문제 창: O/X = 곧바로 그 지문만 채점 */
   const rec = oxOf(key) || {}, ans = oxAns(key, raw), fixed = oxFixed(key);
   const sol0 = sol; sol = cfFixExp(key, sol);   /* ★ jo_cardfix §A-7 — 고친 해설 먼저(정정 칸에는 원래 값) */
   /* ★ jo_cardfix §A-4 — 글 밑 「🔗 관련 문제 …」·「↩ 나를 연결한 문제 …」 줄 걷음(머리 「↩링크N」·「↩백링크N」 이 맡는다 · lnkLines 함수는 둔다) */
@@ -11008,10 +10944,11 @@ function oxPickRow(row, key, raw, sol, extra, chips, autos){
     const b = el('button', 'mboxb ' + v + (on ? ' sel' : '') +
       (rec.p ? (v === ans ? ' right' : (on ? ' wrong' : '')) : ''), v);
     b.title = rec.p ? '채점된 지문이다' : (on ? '고른 답 — 다시 누르면 푼다' : v + ' 로 마킹');
-    if (!rec.p) b.onclick = () => { oxPut(key, { m: rec.m === v ? '' : v }); render(); };
+    if (!rec.p) b.onclick = inst ? (ev => { ev.stopPropagation(); oxPut(key, { m: v }); const bx = row.closest('[id^="jp-"]'); oxGrade([{ k: key, ans: raw, dom: bx ? bx.id : '' }]); })
+                                 : (() => { oxPut(key, { m: rec.m === v ? '' : v }); render(); });   /* ★ jo_wonmun §A-4-5 — 창 안 = 마킹 넣고 그 한 칸만 oxGrade · 1차객 = 마킹만(무변) */
     bot.appendChild(b);
   });
-  const rs = el('span', 'mbres2', rec.p ? (rec.ok ? '✓ 맞음' : '✗ 틀림') : '');
+  const rs = el('span', 'mbres2', rec.p ? (rec.ok ? '✓ 맞음' : '✗ 틀림' + (inst ? ' · 정답 ' + (ans || '?') : '')) : '');   /* ★ jo_wonmun §A-4-5 — 창 안은 「✗ 틀림 · 정답 O」 */
   if (rec.p) rs.style.color = rec.ok ? 'var(--exc)' : 'var(--rule)';
   bot.appendChild(rs);
   if (!ans) bot.appendChild(el('span', 'qb warn', '정오 없음 — 채점 불가'));
@@ -12615,7 +12552,7 @@ function joWonBtn(x){
 }
 
 // ── 제7판 「nn 변리」 지문 = 지문 단위 OX (문항 묶음이 없다)
-function p7Card(z,seq){
+function p7Card(z,seq,opt){
   const card=el('div','qwrap mbq');   /* ★ gaek_mb §C-9 */
   card.id = 'qb-' + oxKeyP7(z);
   /* ★ add1 §B-2 — 제7판 단독 카드는 카드 하나가 곧 지문 하나라 이 머리줄이 지문 머리줄이다 */
@@ -12700,7 +12637,7 @@ function p7Card(z,seq){
   /* ★ v3-F §3 — 「⚖ 원문」(법제처)은 해설을 펼쳤을 때만(해설 안) */
   let wb=null;
   if(JOS.length){wb=el('div');JOS.forEach(x=>wb.appendChild(joWonBtn(x)));}
-  oxPickRow(row, tk7, ox, sol7, wb, chipBox7);
+  oxPickRow(row, tk7, ox, sol7, wb, chipBox7, undefined, opt);
   card.appendChild(row);
   inkHost(card,'q7|'+z.id);                // 캔버스 한 장 = 지문 카드 하나(§4-3)
   return card;
@@ -16114,6 +16051,7 @@ async function render(){
   document.documentElement.style.setProperty('--trw',(S.treeW||212)+'px');   /* ★ v3-J §0-2 */
   document.documentElement.style.setProperty('--lsw',(S.listW||262)+'px');   /* ★ 판 4 §2-5 */
   drawTop();drawRail();inkBar();
+  if(S.tab!=='jo')wmWinsClose();   /* ★ jo_wonmun — 조문 화면 밖이면 원문 창 셋을 내린다(깃발은 둔다 — 돌아오면 다시 뜬다) */
   try{
     if(S.tab==='prec')await viewPrec();
     else if(S.tab==='cha2')await view2cha();
@@ -16576,7 +16514,7 @@ function mlnPanChip(host, key, cases){
 /* 출제연도 칩 자리(§C · jxeChips 가 채운다 — 그 판이 없으면 비운다) */
 function mlnYearChips(host, key, ctx){ try{ if (typeof jxeChips === 'function') jxeChips(host, key, ctx); }catch(e){ console.warn('[jxe]', e); } }
 /* ── 리담 선지 한 줄 = 카드 하나((미수록)·(변형)·큐) ── */
-function mlnLidCard(q, z, no, ln, ni){
+function mlnLidCard(q, z, no, ln, ni, opt){
   const k = oxKeyLid(q, z);
   const card = el('div', 'qwrap mbq mlnz'); card.id = 'qb-' + k; card.dataset.mln = ln || '';
   const row = el('div', 'oxrow'); row.style.borderTop = '0';
@@ -16611,7 +16549,7 @@ function mlnLidCard(q, z, no, ln, ni){
   const chipBox = el('span', 'mbchips'); lnkChips(q, z, chipBox);
   let sol3 = z.sol || '';
   if (z.병합 && (z.p7sol || '').trim()) sol3 = (sol3 ? sol3 + '\n\n' : '') + '📘 제7판 해설\n' + p7Text(z.p7sol);
-  oxPickRow(row, k, z.ox, sol3, null, chipBox, autos);
+  oxPickRow(row, k, z.ox, sol3, null, chipBox, autos, opt);
   card.appendChild(row);
   inkHost(card, 'z|' + k);
   return card;
@@ -18819,6 +18757,741 @@ function cfFixList(ev){
   'button.cfpan{background:transparent;border:0;border-radius:0;padding:0;font:700 12px "Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#075985;cursor:pointer;white-space:nowrap}',
   '.mbhd .dl.cffx{cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}'
 ].join('\n'); document.head.appendChild(s); }catch(e){} })();
+
+
+/* ══ ★ 2026-09-27 (_task_jo_wonmun) — 조문 본문 = 원문 · ✎ 마크업 창(누른 것만 얹기) · ☑ 정오문제 창 · 📜 인용하는 조 창 ══
+   본문 = j.원본[1:] 줄 그대로 · 볼트 행 ↔ 원문 줄 짝 = 참고 구현 _ref_wonmun_align.py 포트(wmSM = difflib.SequenceMatcher autojunk=False ·
+   wmBuild = build() · 네 법 1,273 조 줄·항목 대조 어긋남 0) · 볼트에서 더하고 바꾸고 칠한 것 = 창 항목(기본 꺼짐) ·
+   켠 것 = jopangi.mkon {「법:조」: {k:[항목 열쇠], s:[통째 켠 종류], x:[켠 종류 안에서 끈 열쇠]}} · 빈 칸 = 원문(칸을 지운다 · 묘비) ·
+   필기 있는 조 = 볼트 행 그대로(꾸밈만 켜고 끔 · 기록 없으면 모두 켬 · 저장 안 함) · ✎ 편집(S.stick) = 볼트 행 전부 · 빈칸 모드 무변. */
+function wmSM(a, b){
+  const b2j = new Map();
+  for (let j = 0; j < b.length; j++){ const c = b[j]; let l = b2j.get(c); if (!l){ l = []; b2j.set(c, l); } l.push(j); }
+  const flm = (alo, ahi, blo, bhi) => {
+    let besti = alo, bestj = blo, bestsize = 0, j2len = new Map();
+    for (let i = alo; i < ahi; i++){
+      const nj = new Map(), l = b2j.get(a[i]);
+      if (l) for (let x = 0; x < l.length; x++){
+        const j = l[x];
+        if (j < blo) continue;
+        if (j >= bhi) break;
+        const k = (j2len.get(j - 1) || 0) + 1;
+        nj.set(j, k);
+        if (k > bestsize){ besti = i - k + 1; bestj = j - k + 1; bestsize = k; }
+      }
+      j2len = nj;
+    }
+    while (besti > alo && bestj > blo && a[besti - 1] === b[bestj - 1]){ besti--; bestj--; bestsize++; }
+    while (besti + bestsize < ahi && bestj + bestsize < bhi && a[besti + bestsize] === b[bestj + bestsize]) bestsize++;
+    return [besti, bestj, bestsize];
+  };
+  const la = a.length, lb = b.length, queue = [[0, la, 0, lb]], mb = [];
+  while (queue.length){
+    const [alo, ahi, blo, bhi] = queue.pop();
+    const x = flm(alo, ahi, blo, bhi), i = x[0], j = x[1], k = x[2];
+    if (k){
+      mb.push(x);
+      if (alo < i && blo < j) queue.push([alo, i, blo, j]);
+      if (i + k < ahi && j + k < bhi) queue.push([i + k, ahi, j + k, bhi]);
+    }
+  }
+  mb.sort((p, q) => p[0] - q[0] || p[1] - q[1] || p[2] - q[2]);
+  let i1 = 0, j1 = 0, k1 = 0, M = 0;
+  const na = [];
+  for (const [i2, j2, k2] of mb){
+    if (i1 + k1 === i2 && j1 + k1 === j2) k1 += k2;
+    else { if (k1) na.push([i1, j1, k1]); i1 = i2; j1 = j2; k1 = k2; }
+  }
+  if (k1) na.push([i1, j1, k1]);
+  na.push([la, lb, 0]);
+  na.forEach(x => { M += x[2]; });
+  return {
+    ratio: (la + lb) ? 2.0 * M / (la + lb) : 1.0,
+    ops(){
+      const out = []; let i = 0, j = 0;
+      for (const [ai, bj, size] of na){
+        const tag = (i < ai && j < bj) ? 'replace' : (i < ai) ? 'delete' : (j < bj) ? 'insert' : '';
+        if (tag) out.push([tag, i, ai, j, bj]);
+        i = ai + size; j = bj + size;
+        if (size) out.push(['equal', ai, i, bj, j]);
+      }
+      return out;
+    }
+  };
+}
+const WM_SKIP = { 각주: 1, 꼬리: 1, 두문자: 1, FM: 1, 기타: 1 };
+const WM_KIND = { '#ff0000': '빨강', '#245bdb': '파랑', '#7030a0': '보라' };
+const WM_QUO = '“”"\'‘’ ';
+const WM_MEMO = { 두문자: '두문자·태그 줄', 꼬리: '메모 줄', 기타: '메모 줄', 본문: '메모 줄', 항: '메모 줄', 호: '메모 줄', FM: '머리말(---)', R: '메모 줄' };
+const WM_REV = /<(개정|신설|전문개정|본조신설|타법개정)[^<>]*>/g;
+function wmNorm(s){ return String(s || '').replace(/<[^<>]+>/g, '').replace(/\s+/g, ''); }
+function wmOlab(o, cur){
+  let m = /^\s*([①-⑳])/.exec(o);
+  if (m) return [m[1], m[1]];
+  m = /^\s*(\d+)\./.exec(o);
+  if (m && cur) return [cur + '-' + m[1], cur];
+  return [cur || '', cur];
+}
+/* 원문 줄 — 원본[0] 이 제목 줄인데 특허 6 조(제119조 · 제126조의2 · 제132조의10·12·13·14)는 제목 뒤에 ① 본문이 붙어 있다 →
+   그 뒷글을 첫 본문 줄로 뗀다(원본[1:] 만 쓰면 ① 문장이 빠지고 ①·② 짝이 엇갈린다 · 참고 구현 build 는 무변 — 넘기는 원본만 가른다) */
+function wmOrig(j){
+  const o = (j && j['원본']) || [];
+  if (!o.length) return o;
+  const m = /^\s*(제\d+조(?:의\d+)?)\s*(\((?:[^()]|\([^()]*\))*\))?/.exec(o[0]);
+  if (!m) return o;
+  const rest = o[0].slice(m[0].length).replace(/^\s+/, '');
+  if (!rest.replace(/^(<[^<>]*>\s*)*/, '').trim()) return o;
+  return [o[0].slice(0, m[0].length).replace(/\s+$/, ''), rest].concat(o.slice(1));
+}
+function wmOcls(o){ return /^\s*[①-⑳]/.test(o) ? 'hang' : /^\s*\[/.test(o) ? 'ref' : 'ln'; }
+/* J = {조키: 조} (제목 표로도 쓴다) · 행의 m 은 부르는 쪽이 준 것(앱 = 스티커 층을 덮은 mkApply eff · _k·_new 를 그대로 싣는다) */
+function wmBuild(J, jo){
+  const j = J[jo], O = (j['원본'] || []).slice(1), rows = j['행'] || [];
+  const R = []; rows.forEach((r, i) => { if (r.k[0] !== 'H') R.push([i, r]); });
+  const items = [], iid = {};
+  const neu = (g, sub, kw) => { iid[g] = (iid[g] || 0) + 1; const it = Object.assign({ id: g + iid[g], g: g, sub: sub }, kw); items.push(it); return it; };
+  const match = new Map(); let p = 0;
+  for (const [ri, r] of R){
+    const n = wmNorm(r.t);
+    if (!n || WM_SKIP[r.k[0]] === 1) continue;
+    let best = null;
+    for (let q = p; q < Math.min(O.length, p + 4); q++){
+      const rt = wmSM(wmNorm(O[q]), n).ratio;
+      if (rt >= 0.6 && (best === null || rt > best[1])) best = [q, rt];
+    }
+    if (best){ match.set(ri, best[0]); p = best[0] + 1; }
+  }
+  const rowOf = new Map(); match.forEach((q, ri) => rowOf.set(q, ri));
+  const lines = [];
+  const fnrows = new Map(); let cur = null;
+  for (const [ri, r] of R){
+    const k0 = r.k[0];
+    if (k0 === '각주'){ cur = String(r.k[1]); if (!fnrows.has(cur)) fnrows.set(cur, []); fnrows.get(cur).push(ri); continue; }
+    if (k0 === '꼬리' && cur){ fnrows.get(cur).push(ri); continue; }
+    cur = null;
+  }
+  const fnrowset = new Set(); fnrows.forEach(v => v.forEach(x => fnrowset.add(x)));
+  const fnitem = new Map();
+  const fitem = (fid, hl) => {
+    if (!fnitem.has(fid)){
+      const txt = (fnrows.get(fid) || []).map(x => String(rows[x].t || '').trim()).join(' / ');
+      fnitem.set(fid, neu('fn', '각주', { h: hl, x: txt, fid: fid }));
+    }
+    return fnitem.get(fid);
+  };
+  const mitems = (ri, r, hl, segs) => {
+    const res = [];
+    (r.m || []).forEach(m => {
+      if (m.t === 'tag' && !m.v) return;
+      let inside = null;
+      for (const [b1, b2, it] of segs) if (b1 <= m.a && m.b <= b2) inside = it;
+      const mm = { a: m.a, b: m.b, t: m.t, v: m.v };
+      if (m._k) mm._k = m._k;
+      if (m._new) mm._new = 1;
+      if (inside !== null){ mm.w = inside.id; res.push(mm); return; }
+      let sub, sg;
+      if (m.t === 'font'){ sub = (WM_KIND[m.v] || '글자색') + ' 글자'; sg = '색 글자'; }
+      else if (m.t === 'span' || m.t === 'mark'){ sub = '형광'; sg = '형광'; }
+      else if (m.t === 'u'){ sub = '밑줄'; sg = '밑줄'; }
+      else if (m.t === 'bold'){ sub = '굵게'; sg = '굵게'; }
+      else if (m.t === 'strike'){ sub = '취소선'; sg = '취소선'; }
+      else if (m.t === 'tag'){ sub = '태그 칩'; sg = '태그 칩'; }
+      else { sub = m.t; sg = m.t; }
+      const it = neu('mk', sg, { h: hl, x: String(r.t || '').slice(m.a, m.b), kd: sub, m: mm, ri: ri });
+      mm.id = it.id; res.push(mm);
+    });
+    return res;
+  };
+  const links = (ri, r, hl) => {
+    const L = [];
+    (r.e || []).forEach(e => {
+      if (e.k !== 'L') return;
+      const it = neu('lb', '조 이름표', { h: hl, x: String(r.t || '').slice(e.a, e.b), lab: ((J[e.j] || {})['제목']) || '' });
+      L.push({ a: e.a, b: e.b, j: e.j == null ? null : e.j, id: it.id });
+    });
+    return L;
+  };
+  const memoLine = (ri, r, alab) => {
+    const k0 = r.k[0], t = String(r.t || '');
+    const es = (r.e || []).filter(e => e.k === 'E');
+    if (es.length && !t.trim()){
+      const it = neu('ln', '임베드', { h: alab, x: '⤷ ' + (es[0].to || '') });
+      return { cls: 'emb', lab: '', ch: [], item: it.id, emb: es[0].to || '', ri: ri };
+    }
+    let sub = WM_MEMO[k0] || '메모 줄';
+    if (/^\s*#/.test(t)) sub = '두문자·태그 줄';
+    const it = neu('ln', sub, { h: alab, x: t.trim().slice(0, 60) });
+    const ms = mitems(ri, r, alab, [[0, t.length, it]]);
+    return { cls: 'tail', lab: '', ch: t.split('').map((c, i) => [c, i, it.id, 'r', 0]), item: it.id, m: ms, L: [], F: [], ri: ri };
+  };
+  const unAfter = new Map(); let last = -1;
+  for (const [ri, r] of R){
+    if (match.has(ri)){ last = match.get(ri); continue; }
+    if (fnrowset.has(ri)) continue;
+    if (!String(r.t || '').trim() && !(r.e || []).some(e => e.k === 'E')) continue;
+    if (!unAfter.has(last)) unAfter.set(last, []);
+    unAfter.get(last).push([ri, r]);
+  }
+  const emitUn = (q, lab) => { (unAfter.get(q) || []).forEach(([ri, r]) => lines.push(memoLine(ri, r, q === O.length - 1 ? '조 끝' : lab))); };
+  emitUn(-1, '');
+  let curH = '';
+  O.forEach((o, q) => {
+    const lc = wmOlab(o, curH), lab = lc[0]; curH = lc[1];
+    if (!rowOf.has(q)){
+      const ch = o.split('').map(c => [c, -1, null, 'b', 0]);
+      lines.push({ cls: wmOcls(o), lab: lab, ch: ch, m: [], L: [], F: [] });
+    } else {
+      const ri = rowOf.get(q), r = rows[ri], t = String(r.t || '');
+      const zones = []; let O2 = o;
+      if (t.indexOf('지재처') >= 0 && o.indexOf('지식재산처') >= 0){
+        O2 = ''; let k = 0; const rx = /지식재산처/g; let mt;
+        while ((mt = rx.exec(o))){ O2 += o.slice(k, mt.index); zones.push(O2.length); O2 += '지재처'; k = mt.index + mt[0].length; }
+        O2 += o.slice(k);
+      }
+      const zs = new Set(zones);
+      const back = (x1, x2) => { let out = '', i = x1; while (i < x2){ if (zs.has(i) && i + 3 <= x2){ out += '지식재산처'; i += 3; } else { out += O2[i]; i++; } } return out; };
+      const ch = [], segs = [], qit = {};
+      for (const [tag, a1, a2, b1, b2] of wmSM(O2, t).ops()){
+        const A = back(a1, a2), B = t.slice(b1, b2);
+        if (tag === 'equal'){
+          let i = a1, bb = b1;
+          while (i < a2){
+            if (zs.has(i) && i + 3 <= a2){
+              const it = neu('dl', '지식재산처 → 지재처', { h: lab, x: '지식재산처', y: '지재처' });
+              '지식재산처'.split('').forEach(c => ch.push([c, -1, it.id, 'o', 0]));
+              for (let z = 0; z < 3; z++) ch.push([t[bb + z], bb + z, it.id, 'r', 0]);
+              i += 3; bb += 3;
+            } else { ch.push([t[bb], bb, null, 'b', 0]); i++; bb++; }
+          }
+          continue;
+        }
+        const As = A.trim(), Bs = B.trim();
+        if (A.replace(/\s+/g, '') === B.replace(/\s+/g, '') || ((As === '' || As === '.') && (Bs === '' || Bs === '.'))){
+          A.split('').forEach(c => ch.push([c, -1, null, 'b', 0])); continue;   // 빈칸·점 차이 = 원문대로(항목 아님)
+        }
+        let it;
+        if (!A){
+          let sub;
+          if (/^\s*\([^()]{1,40}\)\s*$/.test(B)) sub = '항 소제목';
+          else if (B.split('').every(c => WM_QUO.indexOf(c) >= 0)) sub = '따옴표';
+          else if (B.indexOf('#^') >= 0 || B.endsWith('|')) sub = '링크 찌꺼기';
+          else sub = '더한 글자';
+          if (sub === '따옴표' && qit[q]){ it = qit[q]; it.x = (it.x + ' … ' + Bs).trim(); }
+          else { it = neu('ad', sub, { h: lab, x: Bs }); if (sub === '따옴표') qit[q] = it; }
+        } else if (!B){
+          it = neu('dl', /<(개정|신설|전문개정|본조신설|타법개정)/.test(A) ? '개정 꼬리표' : '뺀 원문 글자', { h: lab, x: As });
+        } else it = neu('dl', '바꾼 글자', { h: lab, x: As, y: Bs });
+        A.split('').forEach(c => ch.push([c, -1, it.id, 'o', 0]));
+        B.split('').forEach((c, i) => ch.push([c, b1 + i, it.id, 'r', 0]));
+        if (B) segs.push([b1, b2, it]);
+      }
+      const s = ch.map(x => x[0]).join(''); let mt;
+      WM_REV.lastIndex = 0;
+      while ((mt = WM_REV.exec(s))) for (let k = mt.index; k < mt.index + mt[0].length; k++) ch[k][4] = 1;
+      const ms = mitems(ri, r, lab, segs), Ls = links(ri, r, lab), Fs = [];
+      (r.e || []).forEach(e => { if (e.k === 'F'){ const it = fitem(String(e.id), lab); Fs.push({ a: e.a, id: it.id, fid: String(e.id) }); } });
+      lines.push({ cls: wmOcls(o), lab: lab, ch: ch, m: ms, L: Ls, F: Fs, ri: ri });
+    }
+    emitUn(q, lab);
+  });
+  fnrows.forEach((frs, fid) => {
+    const it = fitem(fid, '');
+    frs.forEach(x => {
+      const r = rows[x], t = (r.k[0] === '각주' ? '[^' + fid + '] ' : '') + String(r.t || '');
+      lines.push({ cls: 'fd', lab: '', ch: t.split('').map(c => [c, -1, it.id, 'r', 0]), item: it.id, m: [], L: [], F: [], ri: x });
+    });
+  });
+  return { jo: jo, title: j['제목'], lines: lines, items: items };
+}
+
+/* ── 켠 것 기록 — jopangi.mkon ── */
+const MKON_KEY = REC_PRE + 'mkon';
+var MKONREC = null;   // var — recDropCache 가 이 줄보다 먼저 불려도 TDZ 없이
+REC_NAMES.mkon = '✎ 마크업 켠 것 (조문 원문)';
+function mkonAll(){ if (!MKONREC) MKONREC = lsRead(MKON_KEY); return MKONREC; }
+function mkonGet(base){ const v = mkonAll()[base]; return (v && typeof v === 'object' && !Array.isArray(v)) ? v : null; }
+function mkonSet(base, st){
+  mkonAll();
+  const o = { k: [...st.k].sort(), s: [...st.s].sort(), x: [...st.x].sort() };
+  if (!o.k.length && !o.s.length && !o.x.length) delete MKONREC[base];   // 빈 칸 = 원문 → 칸을 지운다(묘비)
+  else MKONREC[base] = o;
+  return lsWrite(MKON_KEY, MKONREC, '✎ 마크업 켠 것');
+}
+const WM_GROUPS = [['ad', '원문에 더한 글자', ['항 소제목', '따옴표', '링크 찌꺼기', '더한 글자']],
+  ['dl', '원문과 다르게 쓴 글자', ['지식재산처 → 지재처', '개정 꼬리표', '바꾼 글자', '뺀 원문 글자']],
+  ['ln', '원문에 없는 줄', ['메모 줄', '두문자·태그 줄', '각주', '임베드', '머리말(---)']],
+  ['mk', '꾸밈', ['색 글자', '형광', '밑줄', '굵게', '취소선', '태그 칩', '조 이름표']]];
+const WM_PINOK = { '색 글자': 1, '형광': 1, '밑줄': 1, '굵게': 1, '취소선': 1 };   // 필기 조에서 켜고 끌 수 있는 것(글 폭 무변)
+const WM_LOCKMSG = '필기가 있어 잠금 — 글 폭이 바뀌면 필기가 어긋난다';
+function wmGrp(it){ return it.g === 'fn' ? 'ln' : it.g === 'lb' ? 'mk' : it.g; }
+/* 항목 열쇠 = 묶음·종류·항 표시·발췌(·바꾼 글) + 같은 것 차례 — 좌표를 안 넣는다(볼트 글이 밀려도 발췌로 다시 찾는다 · mkKeyOf 처럼 발췌를 넣는다) */
+function wmKeys(items){
+  const seen = {};
+  items.forEach(it => {
+    const b = [it.g, it.sub, it.h || '', it.x || '', it.y == null ? '' : it.y].join('¦');
+    const n = seen[b] = (seen[b] || 0) + 1;
+    it.key = n > 1 ? b + '¦#' + n : b;
+  });
+}
+function wmOnOf(st, it){ return st.s.has(it.sub) ? !st.x.has(it.key) : st.k.has(it.key); }
+let WM_NEWK = [];   // 새로 칠한 마크업 열쇠(mkPut op new) — 다음 그림에서 그 항목을 켠다(§A-2-5 「켠 채로 둔다」)
+function wmNewMark(k){ if (k && WM_NEWK.indexOf(k) < 0) WM_NEWK.push(k); }
+let WMX = null;   // 지금 조문 화면의 원문 재료(창·관문이 읽는다)
+/* 조 하나의 재료 — mode: 'wm' = 원문 · 'pin' = 필기 조(볼트 행 · 꾸밈만) · 'stick' = ✎ 편집(볼트 행 전부 · 창 목록은 그대로) */
+function wmCtx(j, base, ap, pinned){
+  const jo = S.jo;
+  const rows = (j.행 || []).map((r, ri) => Object.assign({}, r, { m: (ap.eff[ri] || []) }));
+  const j2 = Object.assign({}, j, { 행: rows, 원본: wmOrig(j) });   // 제목 줄에 붙은 ① 본문은 첫 줄로(wmOrig)
+  const J2 = new Proxy({}, { get: (o, k) => k === jo ? j2 : (JOTITLE[k] ? { 제목: JOTITLE[k] } : undefined) });
+  const b = wmBuild(J2, jo);
+  wmKeys(b.items);
+  const rec = mkonGet(base);
+  const st = { k: new Set(rec ? rec.k || [] : []), s: new Set(rec ? rec.s || [] : []), x: new Set(rec ? rec.x || [] : []) };
+  /* 새로 칠한 것 = 켠 채 */
+  if (WM_NEWK.length){
+    let ch = false;
+    b.items.forEach(it => { if (it.m && it.m._k && WM_NEWK.indexOf(it.m._k) >= 0){
+      WM_NEWK = WM_NEWK.filter(k => k !== it.m._k);
+      if (st.s.has(it.sub)) st.x.delete(it.key); else st.k.add(it.key);
+      ch = true; } });
+    if (ch && (rec || !pinned)) mkonSet(base, st);
+  }
+  const lockOf = it => pinned && !(it.g === 'mk' && WM_PINOK[it.sub]);
+  const on = {};
+  b.items.forEach(it => { on[it.id] = lockOf(it) ? true : (pinned && !mkonGet(base)) ? true : wmOnOf(st, it); });
+  const X = { mode: S.stick ? 'stick' : pinned ? 'pin' : 'wm', base: base, law: S.law, jo: jo, j: j, rows: rows, b: b, st: st, on: on, pinned: pinned, lockOf: lockOf,
+    need: {}, mk: {} };
+  b.lines.forEach(L => { if ((L.cls === 'tail' || L.cls === 'emb' || L.cls === 'fd') && on[L.item]) X.need[L.ri] = 1; });
+  b.lines.forEach(L => (L.m || []).forEach(m => { if (L.ri != null) X.mk[L.ri + '|' + m.a + '|' + m.b + '|' + m.t + '|' + (m.v || '')] = m.id || m.w || ''; }));
+  X.pinM = ri => (ap.eff[ri] || []).filter(m => { const id = X.mk[ri + '|' + m.a + '|' + m.b + '|' + m.t + '|' + (m.v || '')]; return !id || on[id]; });
+  X.n = b.items.length; X.k = b.items.filter(it => on[it.id]).length;
+  WMX = X;
+  return X;
+}
+/* 켜고 끄기 — ids = 항목들 · v = 켬/끔 · 필기 조의 잠긴 것은 건너뛴다 */
+function wmToggle(X, its, v){
+  const st = X.st, rec = mkonGet(X.base);
+  if (X.pinned && !rec){   /* 필기 조 첫 손질 = 「모두 켬」 을 기록으로 굳힌다(꾸밈 종류 통째 켬) */
+    Object.keys(WM_PINOK).forEach(s => st.s.add(s));
+  }
+  its.forEach(it => {
+    if (X.lockOf(it)) return;
+    const onNow = X.pinned && !rec ? true : wmOnOf(st, it);
+    const want = v == null ? !onNow : !!v;
+    if (st.s.has(it.sub)){ if (want) st.x.delete(it.key); else st.x.add(it.key); }
+    else { if (want) st.k.add(it.key); else st.k.delete(it.key); }
+  });
+  if (X.pinned && !st.k.size && !st.s.size){   /* 필기 조에서 꾸밈을 다 끄면 빈 칸(= 기본 모두 켬)이 되지 않게 끈 열쇠를 남긴다 */
+    X.b.items.forEach(it => { if (!X.lockOf(it)) st.x.add(it.key); });
+  }
+  mkonSet(X.base, st);
+  render();
+}
+function wmTypeSet(X, sub, v, its){
+  const st = X.st;
+  if (X.pinned){ wmToggle(X, its, v); return; }
+  its.forEach(it => { st.k.delete(it.key); st.x.delete(it.key); });
+  if (v) st.s.add(sub); else st.s.delete(sub);
+  mkonSet(X.base, st);
+  render();
+}
+function wmAll(X, v){
+  const st = X.st;
+  if (X.pinned){ wmToggle(X, X.b.items, v); return; }
+  st.k.clear(); st.x.clear(); st.s.clear();
+  if (v){ WM_GROUPS.forEach(G => G[2].forEach(s => st.s.add(s))); X.b.items.forEach(it => st.s.add(it.sub)); }
+  mkonSet(X.base, st);
+  render();
+}
+
+/* ── 본문 그림 ── */
+function wmBodyInto(box, X, rowD){
+  X.b.lines.forEach(L => {
+    if (L.cls === 'tail' || L.cls === 'emb' || L.cls === 'fd'){
+      if (!X.on[L.item]) return;
+      const d = rowD[L.ri]; if (d && !d.isConnected) box.appendChild(d);   // 켠 메모·각주 줄 = 그 볼트 행을 지금 길로
+      return;
+    }
+    const d = wmLineEl(L, X);
+    if (d) box.appendChild(d);
+  });
+}
+function wmMkEl(m){
+  const col = /^(#|rgb|hsl)/i.test(String(m.v || '')) ? m.v : null;
+  let n;
+  if (m.t === 'font'){ n = el('span'); n.style.color = m.v; }
+  else if (m.t === 'span'){ const mm = /background\s*:\s*([^;"']+)/.exec(m.v || ''); n = el('mark', 'y'); if (mm) n.style.background = mm[1]; else if (col) n.style.background = col; }
+  else if (m.t === 'u'){ n = el('u'); if (col) n.style.textDecorationColor = col; }
+  else if (m.t === 'bold') n = el('strong');
+  else if (m.t === 'mark'){ n = el('mark', 'y'); if (col) n.style.background = col; }
+  else if (m.t === 'strike'){ n = el('s'); if (col) n.style.color = col; }
+  else n = el('span');
+  return n;
+}
+function wmLineEl(L, X){
+  const on = X.on, row = L.ri != null ? X.rows[L.ri] : null, ch = L.ch;
+  const src = ch.map(c => c[0]).join('');
+  const d = el('div', row ? joClass(row.k) : (L.cls === 'hang' ? 'ln hang' : L.cls === 'ref' ? 'ln ref'
+    : /^\s*\d+\./.test(src) ? 'ln ho' : /^\s*[가-하]\./.test(src) ? 'ln mok' : 'ln'));
+  d.classList.add('wml');
+  if (row) d.dataset.ri = L.ri;
+  const idx = [];
+  for (let k = 0; k < ch.length; k++){ const c = ch[k]; if (c[3] === 'b' || (c[3] === 'r' ? !!on[c[2]] : !on[c[2]])) idx.push(k); }
+  if (!idx.length) return null;
+  const W = { ri: L.ri, v: [], nodes: [] }; d._wm = W;
+  const mOn = m => m.id ? !!on[m.id] : m.w ? !!on[m.w] : true;
+  const firstAt = pos => { for (let q = 0; q < idx.length; q++) if (ch[idx[q]][1] >= pos) return q; return -1; };
+  const supAt = {}, ancAt = {};
+  (L.F || []).forEach(f => { if (!on[f.id]) return; const q = firstAt(f.a); (supAt[q] = supAt[q] || []).push(f); });
+  const MS = (L.m || []).filter(m => m.t !== 'tag' && mOn(m));
+  (L.m || []).forEach(m => { if (m.t !== 'tag' || !m.v || !mOn(m)) return;
+    const rec = m._k ? (mkAll()[m._k] || {}) : {}; const q = firstAt(Math.min(m.b, m.a + stkAt(rec, m)));
+    (ancAt[q] = ancAt[q] || []).push(m); });
+  const eOf = lk => row ? (row.e || []).find(e => e.k === 'L' && e.a === lk.a && e.b === lk.b) : null;
+  let lkEl = null, lkId = null, run = null, runKey = null;
+  const putSup = f => { const e0 = row ? (row.e || []).find(e => e.k === 'F' && String(e.id) === f.fid) : null;
+    const s = el('sup', 'fn', '[' + f.fid + ']');
+    s.onclick = ev => { ev.stopPropagation(); popFoot(e0 ? e0.id : f.fid, ev, X.j, 1); };
+    d.appendChild(s); lkEl = null; run = null; runKey = null; };
+  const putAnc = m => { const a = el('span', 'stkanc'); a.appendChild(stkChipEl(m, { base: X.base, stick: false }, row)); d.appendChild(a); run = null; runKey = null; };
+  const putLbl = lk => { const title = JOTITLE[lk.j]; if (!title) return;
+    const g = el('span', 'lbl' + (S.labels ? '' : ' off'), S.labels ? ('[' + title + ']') : '[…]');
+    g.title = '클릭해서 접기/펴기';
+    g.onclick = ev => { ev.stopPropagation(); const off = g.classList.toggle('off'); g.textContent = off ? '[…]' : '[' + title + ']'; };
+    d.appendChild(g); };
+  for (let q = 0; q < idx.length; q++){
+    const k = idx[q], c = ch[k], rp = c[1];
+    (supAt[q] || []).forEach(putSup);
+    (ancAt[q] || []).forEach(putAnc);
+    let lk = null; const ms = [];
+    if (rp >= 0){
+      MS.forEach((m, mi) => { if (rp >= m.a && rp < m.b) ms.push(mi); });
+      (L.L || []).forEach(l => { if (rp >= l.a && rp < l.b) lk = l; });
+    }
+    const key = ms.join(',') + '|' + (c[4] ? 1 : 0) + '|' + (lk ? lk.id : '');
+    if (!run || runKey !== key){
+      /* 한 덩이 = 같은 꾸밈·회색·링크 — 겉에서 안으로 꾸밈을 씌운다(renderLine 과 같은 요소) */
+      let host;
+      if (lk){
+        if (!lkEl || lkId !== lk.id){
+          lkEl = el('span', 'wmlk' + (lk.j ? '' : ' dead')); lkId = lk.id;
+          if (lk.j){ const e0 = eOf(lk), lkj = lk.j, node = lkEl;
+            node.onclick = ev => { ev.stopPropagation(); popJo(X.law, lkj, ev, 1, joHangOf(node.textContent || '', (e0 && e0.to) || '')); }; }
+          d.appendChild(lkEl);
+        }
+        host = lkEl;
+      } else { lkEl = null; lkId = null; host = d; }
+      let inner = null, outer = null;
+      ms.forEach(mi => { const n = wmMkEl(MS[mi]); if (inner) inner.appendChild(n); else outer = n; inner = n; });
+      if (c[4]){ const g = el('span', 'wmrev'); if (inner) inner.appendChild(g); else outer = g; inner = g; }
+      if (!outer){ outer = inner = document.createDocumentFragment(); }
+      host.appendChild(outer);
+      run = inner.nodeType === 11 ? host : inner; runKey = key;
+    }
+    const tn = document.createTextNode(c[0]);
+    run.appendChild(tn); W.v.push(rp); W.nodes.push(tn);
+    const nx = idx[q + 1];
+    if (lk && (nx == null || !(ch[nx][1] >= lk.a && ch[nx][1] < lk.b))){
+      if (on[lk.id]) putLbl(lk);
+      lkEl = null; lkId = null; run = null; runKey = null;
+    }
+  }
+  (supAt[-1] || []).forEach(putSup);
+  (ancAt[-1] || []).forEach(putAnc);
+  if (row && row.b){ const a = el('span', 'anchor wmanc'); a.id = 'b-' + row.b; d.appendChild(a); }   /* 블록 자리(#b=) — 글자 없이 id 만 */
+  if (row) pitWire(d, 'jo|' + X.base, rowKey(row), W.nodes.map(n => n.nodeValue).join(''));   /* ★ 포스트잇 = 짝 볼트 행 열쇠 · 단어는 원문 글에서 다시 찾는다(못 찾으면 고아 깃발) */
+  return d;
+}
+/* 원문 줄 선택 → 짝 볼트 좌표 [a, b) · 원문에만 있는 글자가 걸치면 null */
+function wmSelAB(line, r){
+  const W = line && line._wm; if (!W || W.ri == null) return null;
+  let s = -1, e = -1;
+  for (let i = 0; i < W.nodes.length; i++){
+    const n = W.nodes[i];
+    let inR = false;
+    try{ inR = r.intersectsNode(n) && !(r.startContainer === n && r.startOffset >= n.nodeValue.length) && !(r.endContainer === n && r.endOffset === 0); }catch(err){}
+    if (!inR) continue;
+    if (s < 0) s = i; e = i;
+  }
+  if (s < 0) return null;
+  for (let i = s; i <= e; i++) if (W.v[i] < 0) return null;
+  return [W.v[s], W.v[e] + 1];
+}
+function wmOffAt(line, node, off){   // 떨군 자리(글자 노드·오프셋) → 볼트 좌표(원문에만 있는 글자면 가장 가까운 앞 볼트 글자 뒤)
+  const W = line && line._wm; if (!W) return -1;
+  let i = W.nodes.indexOf(node); if (i < 0) return -1;
+  if (off > 0) i++;
+  for (let q = i; q < W.v.length; q++) if (W.v[q] >= 0) return W.v[q];
+  for (let q = Math.min(i, W.v.length) - 1; q >= 0; q--) if (W.v[q] >= 0) return W.v[q] + 1;
+  return -1;
+}
+
+/* ── 떠 있는 창 셋(연결 창 틀 · popShell) ── */
+function wmWinOf(kind){ return POPS.find(p => p._wmk === kind && p.isConnected) || null; }
+function wmWinDrop(kind){ const p = wmWinOf(kind); if (p){ p._onClose = null; closeOne(p); } }
+function wmWinsClose(){ ['mk', 'jp', 'ci'].forEach(wmWinDrop); }
+function wmWin(kind, title, w, h, at){
+  let p = wmWinOf(kind), body;
+  if (p){
+    body = p.querySelector(':scope > .pb');
+    const pt = p.querySelector(':scope > .ph .pt'); if (pt && pt.textContent !== title) pt.textContent = title;
+    p._wmScr = body.scrollTop;
+    body.innerHTML = '';
+    const f0 = p.querySelector(':scope > .wmft'); if (f0) f0.remove();
+    return body;
+  }
+  body = popShell('wm' + kind, title, 'wm|' + kind);
+  p = body.parentNode; p._wmk = kind; p._sz = 'wm' + kind;   // 크기 손잡이는 아래 것(popSizable 대신 · 정오 창 = jopangi_ui 폭·높이)
+  p.classList.add('cflw', 'wmwin', 'wm-' + kind, 'sized');
+  body.classList.add('cfbd');
+  const x = p.querySelector(':scope > .ph > button:not(.pall)'); if (x){ x.classList.add('cfx'); x.title = '닫기'; }
+  p._onClose = () => { if (kind === 'mk') S.mkWin = false; else if (kind === 'jp') S.joPanel = false; else if (kind === 'ci') S.ciWin = ''; };
+  const B = vvBox();
+  w = Math.min(w, B.w - 16); p.style.width = w + 'px';
+  if (h) p.style.height = Math.min(h, B.h - 16) + 'px'; else p.style.maxHeight = Math.min(560, B.h - 16) + 'px';
+  const [x0, y0] = popClamp(p, at ? at.x : B.x + B.w - w - 40, at ? at.y : B.y + 110);
+  p.style.left = Math.round(Math.min(x0, B.x + B.w - w - 8)) + 'px'; p.style.top = Math.round(y0) + 'px';
+  const rs = el('span', 'prsz'); rs.title = '끌어서 크기 조절';
+  let sx = 0, sy = 0, w0 = 0, h0 = 0, on = false;
+  rs.addEventListener('pointerdown', ev => { ev.stopPropagation(); ev.preventDefault(); on = true; sx = ev.clientX; sy = ev.clientY; const r = p.getBoundingClientRect(); w0 = r.width; h0 = r.height; try{ rs.setPointerCapture(ev.pointerId); }catch(e){} });
+  rs.addEventListener('pointermove', ev => { if (!on) return; const B2 = vvBox(), L = parseFloat(p.style.left) || 0, T = parseFloat(p.style.top) || 0;
+    p.style.width = Math.max(280, Math.min(B2.x + B2.w - L - 4, w0 + ev.clientX - sx)) + 'px';
+    p.style.height = Math.max(180, Math.min(B2.y + B2.h - T - 4, h0 + ev.clientY - sy)) + 'px'; p.style.maxHeight = 'none'; });
+  const end = ev => { if (!on) return; on = false; try{ rs.releasePointerCapture(ev.pointerId); }catch(e){}
+    if (kind === 'jp'){ const r = p.getBoundingClientRect(); S.joPanelW = Math.round(r.width); S.joPanelH = Math.round(r.height); uiSave(); } };
+  rs.addEventListener('pointerup', end); rs.addEventListener('pointercancel', end);
+  p.appendChild(rs);
+  vvFit(p);
+  return body;
+}
+function wmWinFoot(kind, txt){ const p = wmWinOf(kind); if (!p) return; const f = el('div', 'wmft', txt); p.insertBefore(f, p.querySelector(':scope > .prsz')); }
+function wmWinScr(kind){ const p = wmWinOf(kind); if (p && p._wmScr){ const b = p.querySelector(':scope > .pb'); if (b) b.scrollTop = p._wmScr; } }
+function wmAtChip(sel, dy){   // 칩 아래 자리
+  const c = document.querySelector(sel); if (!c) return null;
+  const r = c.getBoundingClientRect(); return { x: Math.round(r.left), y: Math.round(r.bottom + (dy || 6)) };
+}
+
+/* ── ✎ 마크업 창 ── */
+let WMFOLD = {};   // 종류 → 편 상태(창 안 · 이 세션)
+function wmMkPreview(it){
+  const tx = el('span', 'pv');
+  if (it.g === 'ad'){ tx.appendChild(el('span', 'plus', '+')); tx.appendChild(document.createTextNode(it.x)); }
+  else if (it.g === 'dl'){
+    if (it.y != null){ tx.appendChild(el('span', '', it.x)); tx.appendChild(el('span', 'arr', '→')); tx.appendChild(el('b', '', it.y || '(없앰)')); }
+    else tx.appendChild(el('span', 'del', it.x));
+  }
+  else if (it.g === 'ln'){ tx.appendChild(el('span', '', it.x)); tx.classList.add('mm'); }
+  else if (it.g === 'fn'){ tx.appendChild(el('sup', 'fn', '[' + it.fid + ']')); tx.appendChild(document.createTextNode(' ' + it.x)); }
+  else if (it.g === 'lb'){ tx.appendChild(document.createTextNode(it.x + ' ')); tx.appendChild(el('span', 'lbl', '[' + (it.lab || '') + ']')); }
+  else { const n = wmMkEl(it.m || {}); n.appendChild(document.createTextNode(it.x.length > 34 ? it.x.slice(0, 33) + '…' : it.x)); tx.appendChild(n); }
+  return tx;
+}
+function wmKdOf(it){
+  if (it.g === 'mk') return it.kd;
+  if (it.g === 'dl') return it.sub === '개정 꼬리표' ? '켜면 숨김' : '켜면 바꿈';
+  if (it.g === 'ad') return '켜면 넣음';
+  if (it.g === 'lb') return '이름표';
+  if (it.g === 'fn') return '각주';
+  return '켜면 줄';
+}
+function wmMkWin(X){
+  if (!S.mkWin || !X){ wmWinDrop('mk'); return; }
+  const mainR = (document.querySelector('#slot > .main') || document.body).getBoundingClientRect();
+  const B = vvBox(), w = 440, y = Math.max(B.y + 8, Math.round(mainR.top + 110));
+  const body = wmWin('mk', '✎ 마크업 · ' + X.jo + ' ' + (X.j.제목 || ''), w, Math.min(820, Math.max(520, B.y + B.h - y - 24)),
+    { x: Math.round(Math.min(mainR.right, B.x + B.w) - w - 24), y: y });
+  const on = X.on, items = X.b.items;
+  const bar = el('div', 'mkbar');
+  const cnt = el('span', 'mkc'); cnt.appendChild(document.createTextNode('켠 것 ')); cnt.appendChild(el('b', '', String(X.k))); cnt.appendChild(document.createTextNode(' / ' + X.n));
+  bar.appendChild(cnt);
+  const all = el('button', 'tx', '모두 켜기'), none = el('button', 'tx g', '모두 끄기'), ed = el('button', 'tx' + (S.stick ? '' : ' g'), S.stick ? '✎ 편집 켜짐' : '✎ 편집');
+  all.title = '= 지금까지의 화면(볼트 글 그대로)'; none.title = '= 원문';
+  ed.title = '스티커 편집 — 켜면 본문에 볼트 행이 전부 보이고 눌러서 지우기·유형·색(그대로)';
+  all.onclick = ev => { ev.stopPropagation(); wmAll(X, true); };
+  none.onclick = ev => { ev.stopPropagation(); wmAll(X, false); };
+  ed.onclick = ev => { ev.stopPropagation(); if (!S.stick && S.ink){ S.ink = false; toast('필기를 끄고 마크업 편집을 켰다 — 둘은 같이 못 켠다'); } S.stick = !S.stick; render(); };
+  bar.appendChild(all); bar.appendChild(none); const sp = el('span'); sp.style.flex = '1'; bar.appendChild(sp); bar.appendChild(ed);
+  body.appendChild(bar);
+  if (X.pinned) body.appendChild(el('div', 'wmlock', '🔒 ' + WM_LOCKMSG + ' · 색·형광·밑줄·굵게만 켜고 끈다'));
+  const lockToast = () => toast(WM_LOCKMSG, 1);
+  WM_GROUPS.forEach(G => {
+    const gits = items.filter(it => wmGrp(it) === G[0]); if (!gits.length) return;
+    const glock = gits.every(X.lockOf);
+    const gw = el('div', 'G' + (glock ? ' lock' : '')); gw.dataset.g = G[0];
+    const gh = el('div', 'wgh'); gh.appendChild(el('span', 'gn', G[1])); gh.appendChild(el('span', 'n', String(gits.length))); gh.appendChild(el('span', 'sp'));
+    const a = el('button', 'tx', '켜기'), z = el('button', 'tx g', '끄기');
+    a.onclick = ev => { ev.stopPropagation(); if (glock) return lockToast(); if (X.pinned) wmToggle(X, gits, true); else { const st = X.st; G[2].concat(gits.map(i => i.sub)).forEach(s => { st.s.add(s); }); gits.forEach(i => { st.k.delete(i.key); st.x.delete(i.key); }); mkonSet(X.base, st); render(); } };
+    z.onclick = ev => { ev.stopPropagation(); if (glock) return lockToast(); if (X.pinned) wmToggle(X, gits, false); else { const st = X.st; G[2].concat(gits.map(i => i.sub)).forEach(s => { st.s.delete(s); }); gits.forEach(i => { st.k.delete(i.key); st.x.delete(i.key); }); mkonSet(X.base, st); render(); } };
+    gh.appendChild(a); gh.appendChild(z); gw.appendChild(gh);
+    const subs = G[2].concat([...new Set(gits.map(i => i.sub))].filter(s => G[2].indexOf(s) < 0));
+    subs.forEach(sub => {
+      const its = gits.filter(i => i.sub === sub); if (!its.length) return;
+      const tlock = its.every(X.lockOf);
+      const k = its.filter(i => on[i.id]).length;
+      const sh = el('div', 'sh' + (tlock ? ' lock' : '')); sh.dataset.sub = sub;
+      const open = WMFOLD[sub] != null ? WMFOLD[sub] : its.length <= 6;
+      sh.appendChild(el('span', 'ar', open ? '▾' : '▸')); sh.appendChild(el('span', 'sn', sub));
+      const sn = el('span', 'n', its.length + ' '); if (k) sn.appendChild(el('span', 'on', '· 켬 ' + k)); sh.appendChild(sn);
+      sh.appendChild(el('span', 'sp'));
+      const a2 = el('button', 'tx', '켜기'), z2 = el('button', 'tx g', '끄기');
+      a2.onclick = ev => { ev.stopPropagation(); if (tlock) return lockToast(); wmTypeSet(X, sub, true, its); };
+      z2.onclick = ev => { ev.stopPropagation(); if (tlock) return lockToast(); wmTypeSet(X, sub, false, its); };
+      sh.appendChild(a2); sh.appendChild(z2); gw.appendChild(sh);
+      const list = el('div', 'its'); list.style.display = open ? '' : 'none';
+      sh.onclick = () => { const o2 = list.style.display === 'none'; list.style.display = o2 ? '' : 'none'; sh.firstChild.textContent = o2 ? '▾' : '▸'; WMFOLD[sub] = o2; };
+      its.forEach(it => {
+        const lk = X.lockOf(it);
+        const r = el('div', 'it' + (on[it.id] ? ' on' : '') + (lk ? ' lock' : '')); r.dataset.key = it.key; r.dataset.id = it.id;
+        r.appendChild(el('span', 'ck')); r.appendChild(el('span', 'h', it.h || '')); r.appendChild(wmMkPreview(it)); r.appendChild(el('span', 'k', wmKdOf(it)));
+        r.onclick = ev => { ev.stopPropagation(); if (lk) return lockToast(); wmToggle(X, [it]); };
+        list.appendChild(r);
+      });
+      gw.appendChild(list);
+    });
+    body.appendChild(gw);
+  });
+  if (!items.length) body.appendChild(el('div', 'cdim', '이 조는 볼트 글이 원문과 같다 — 켤 것이 없다'));
+  wmWinFoot('mk', '누른 것만 원문에 얹힌다 · 켠 것은 기기마다 같이(jopangi.mkon)');
+  wmWinScr('mk');
+}
+
+/* ── 📜 인용하는 조 창 ── */
+function wmJoNum(k){ const m = /제(\d+)조(?:의(\d+))?/.exec(k || ''); return m ? (+m[1]) * 1000 + (+(m[2] || 0)) : 1e9; }
+function wmCiteOf(jj, jo){
+  const txt = wmOrig(jj).slice(1).join(' ');   // 제목 줄에 붙은 ① 본문도 찾는다
+  const rx = new RegExp(jo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?!의\\d)((?:ㆍ?제\\d+(?:항|호|목))*)');
+  const m = rx.exec(txt);
+  if (!m){ const s = txt.slice(0, 60); return { pre: s + (txt.length > 60 ? '…' : ''), hit: '', post: '' }; }
+  const a = Math.max(0, m.index - 38), e = m.index + m[0].length;
+  return { pre: (a > 0 ? '…' : '') + txt.slice(a, m.index), hit: m[0], post: txt.slice(e, e + 28) + (e + 28 < txt.length ? '…' : '') };
+}
+async function wmCiWin(base, j){
+  if (S.ciWin !== base){ wmWinDrop('ci'); if (S.ciWin && S.ciWin !== base) S.ciWin = ''; return; }
+  const idx = await get('jo_링크역인덱스.json').catch(() => ({}));
+  const back = idx[base] || [];
+  if (!back.length){ S.ciWin = ''; wmWinDrop('ci'); return; }
+  const B = await get(`jo_${S.law}_본문.json`);
+  const body = wmWin('ci', '📜 인용하는 조 ' + back.length + ' · 본문에 「' + S.jo + '」를 적은 조', 540, 0, wmAtChip('#slot .conn .plgb.wmci'));
+  back.forEach(k => {
+    const jj = (B.조 || {})[k] || {};
+    const r = el('div', 'ci'); r.dataset.jo = k;
+    const h = el('div'); h.appendChild(el('span', 'cn', k)); h.appendChild(el('span', 'ct', jj.제목 || JOTITLE[k] || '')); r.appendChild(h);
+    const c = wmCiteOf(jj, S.jo);
+    const p = el('div', 'cp'); p.appendChild(document.createTextNode(c.pre)); if (c.hit) p.appendChild(el('b', '', c.hit)); p.appendChild(document.createTextNode(c.post)); r.appendChild(p);
+    r.onclick = ev => { ev.stopPropagation(); S.jo = k; S.ciWin = ''; render(); };
+    body.appendChild(r);
+  });
+  const mine = [];
+  (j.행 || []).forEach(r => (r.e || []).forEach(e => { if (e.k === 'L' && e.j && e.j !== S.jo && mine.indexOf(e.j) < 0) mine.push(e.j); }));
+  mine.sort((x, y) => wmJoNum(x) - wmJoNum(y));
+  wmWinFoot('ci', '이 조가 적은 조 = ' + (mine.length ? mine.join(' · ') : '없음') + ' → 본문 속 조 링크');
+  wmWinScr('ci');
+}
+
+/* ── ☑ 정오문제 창 — 오른쪽 패널·손잡이 걷음(옛 joPanelMount 자리 · 이름 그대로) ── */
+async function joPanelMount(slot){
+  if (!S.joPanel){ wmWinDrop('jp'); return; }
+  const JP = await joPanelIdx();
+  const ent = (JP || {})[S.jo] || { L: [], P: [] };
+  const items = jsPanelItems(ent, S.jo);   /* 칩과 같은 함수 · 최신 연도부터 · 같은 uid 한 장 · 「이 조 아님」 뺌 */
+  const nL = items.filter(it => it.kind === 'L').length, nP = items.length - nL;
+  const shown = items.filter(it => S.joPanelF === 'all' || (S.joPanelF === 'L' ? it.kind === 'L' : it.kind === 'P'));
+  const per = 5, nPg = Math.max(1, Math.ceil(shown.length / per));
+  if (S.joPanelP >= nPg) S.joPanelP = 0;
+  const cur = shown.slice(S.joPanelP * per, (S.joPanelP + 1) * per);
+  const body = wmWin('jp', '☑ 정오문제 · ' + S.jo + ' ' + (JOTITLE[S.jo] || ''), S.joPanelW || 470, S.joPanelH || 640, wmAtChip('#slot .conn .plgb.wmjp'));
+  const again = () => { joPanelMount(); };
+  const tb = (txt, onF, fn) => { const b = el('button', 'jpt' + (onF ? ' on' : ''), txt); b.type = 'button'; b.onclick = ev => { ev.stopPropagation(); fn(); }; return b; };
+  const bar = el('div', 'jpbar');
+  [['all', '전체 ' + items.length], ['P', '해례 ' + nP], ['L', '리담 ' + nL]].forEach(f => {   /* 거름 뜻 무변(L = 리담 · P = 해례) */
+    bar.appendChild(tb(f[1], S.joPanelF === f[0], () => { S.joPanelF = f[0]; S.joPanelP = 0; again(); }));
+  });
+  if (nPg > 1){ bar.appendChild(el('span', 'jpgap'));
+    for (let i = 0; i < nPg; i++) bar.appendChild(tb(String(i + 1), S.joPanelP === i, () => { S.joPanelP = i; again(); })); }
+  body.appendChild(bar);
+  if (!shown.length) body.appendChild(emptyBox('☑', '이 조에 걸린 지문이 없다'));
+  const _nos = jsPanelNos(shown);
+  const cards = el('div', 'jpcards');
+  cur.forEach((it, ix) => {
+    const c = sidCardEl(it, it.sid, _nos[S.joPanelP * per + ix], { instant: true });   /* ★ §A-4-5 — O/X 누르면 곧바로 그 지문만 채점(인자로 준다) */
+    c.id = 'jp-' + it.sid;
+    cards.appendChild(c);
+  });
+  body.appendChild(cards);
+  if (nPg > 1){
+    const nav = el('div', 'jpnav');
+    const pv = tb('←', false, () => { if (S.joPanelP > 0){ S.joPanelP--; again(); } }), nx = tb('→', false, () => { if (S.joPanelP < nPg - 1){ S.joPanelP++; again(); } });
+    if (S.joPanelP <= 0) pv.classList.add('dis'); if (S.joPanelP >= nPg - 1) nx.classList.add('dis');
+    const pg = el('span', 'jpn'); pg.appendChild(el('b', '', String(S.joPanelP + 1))); pg.appendChild(document.createTextNode(' / ' + nPg));
+    nav.appendChild(pv); nav.appendChild(pg); nav.appendChild(nx);
+    body.appendChild(nav);
+  }
+  if (slot !== undefined) wmWinScr('jp'); else body.scrollTop = 0;
+}
+
+(function(){
+  const css = [
+    '.wml .wmlk{cursor:pointer;text-decoration:underline dotted #9ca3af;text-decoration-thickness:1px;text-underline-offset:3px}',
+    '.wml .wmlk.dead{cursor:default}',
+    '.wml .wmrev{color:#9ca3af;font-size:.92em}',
+    '.modebar .mode .mkn{margin-left:4px;font-size:11px;color:#9ca3af;font-weight:700}',
+    '.modebar .mode.on .mkn{color:#dbe6f7}',
+    '.pop.wmwin>.ph .pt{font:800 13px system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#1f2937;flex:1;min-width:0}',
+    '.pop.wmwin>.ph{padding:9px 12px;cursor:move}',
+    '.pop.wmwin>.ph>button.cfx{color:#9ca3af;font:700 14px system-ui}',
+    '.pop.wmwin>.pb.cfbd{font:13px/1.55 system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#1f2937}',
+    '.pop.wmwin>.wmft{flex:none;padding:7px 12px;border-top:1px solid #e5e7eb;background:#fff;color:#9ca3af;font-size:11.5px}',
+    '.pop.wmwin>.prsz{flex:none}',
+    '.wmwin .mkbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:12px;color:#6b7280;margin-bottom:6px}',
+    '.wmwin .mkbar b{color:#1f2937}',
+    '.wmwin .tx{background:none;border:0;padding:0;font:700 12px system-ui,"Malgun Gothic",sans-serif;color:#1d4ed8;cursor:pointer}',
+    '.wmwin .tx.g{color:#6b7280}',
+    '.wmwin .wmlock{font-size:11.5px;color:#b06000;margin:0 0 6px}',
+    '.wmwin .G{margin:10px 0 2px;padding-top:8px;border-top:1px solid #e5e7eb}',
+    '.wmwin .G:first-of-type{border-top:0}',
+    '.wmwin .wgh{display:flex;align-items:center;gap:10px;font:800 12.5px system-ui,"Malgun Gothic",sans-serif;color:#111827;margin-bottom:4px}',
+    '.wmwin .wgh .n{color:#9ca3af;font-weight:700}',
+    '.wmwin .wgh .sp,.wmwin .sh .sp{flex:1}',
+    '.wmwin .sh{display:flex;align-items:center;gap:8px;font:700 12px system-ui,"Malgun Gothic",sans-serif;color:#374151;padding:4px 2px;cursor:pointer}',
+    '.wmwin .sh .ar{width:12px;color:#9ca3af}',
+    '.wmwin .sh .n{color:#9ca3af}',
+    '.wmwin .sh .on{color:#2563eb}',
+    '.wmwin .it{display:grid;grid-template-columns:18px 38px 1fr auto;gap:6px;align-items:baseline;padding:5px 6px;border-radius:7px;cursor:pointer;font-size:13px;line-height:1.45;background:#fff;border:1px solid #f3f4f6;margin:0 0 3px 14px}',
+    '.wmwin .it:hover{border-color:#c7d2fe}',
+    '.wmwin .it .ck{width:14px;height:14px;border:1.5px solid #9ca3af;border-radius:3px;align-self:center;box-sizing:border-box;position:relative}',
+    '.wmwin .it.on .ck{background:#2563eb;border-color:#2563eb}',
+    '.wmwin .it.on .ck::after{content:"";position:absolute;left:3.5px;top:.5px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}',
+    '.wmwin .it .h{color:#9ca3af;font-size:11px;font-weight:700}',
+    '.wmwin .it .k{color:#9ca3af;font-size:11px;white-space:nowrap}',
+    '.wmwin .it.on{background:#eff6ff;border-color:#bfdbfe}',
+    '.wmwin .it .pv{min-width:0;overflow-wrap:anywhere}',
+    '.wmwin .it .pv.mm{color:#8a867d}',
+    '.wmwin .G.lock .wgh,.wmwin .sh.lock,.wmwin .it.lock{opacity:.45}',
+    '.wmwin .plus{color:#059669;font-weight:800;margin-right:3px}',
+    '.wmwin .del{color:#9ca3af;text-decoration:line-through}',
+    '.wmwin .arr{color:#9ca3af;margin:0 4px}',
+    '.wm-ci .ci{padding:8px 8px;cursor:pointer;border-radius:6px;background:#fff;margin-bottom:4px;border:1px solid #f3f4f6}',
+    '.wm-ci .ci:hover{background:#eef2ff}',
+    '.wm-ci .ci .cn{font:800 13px system-ui,"Malgun Gothic",sans-serif;color:#2f6fd0}',
+    '.wm-ci .ci .ct{font-weight:700;color:#374151;margin-left:6px;font-size:13px}',
+    '.wm-ci .ci .cp{font-size:12.5px;color:#4b5563;margin-top:3px}',
+    '.wm-ci .ci .cp b{color:#111827;background:#fef3c7}',
+    '.pop.wm-jp>.pb.cfbd{font:13.5px/1.62 system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:var(--ink)}',   /* 카드 = 옛 패널과 같은 글(본문 13.5px) */
+    '.wm-jp .qwrap{margin-top:8px}',
+    '.wm-jp .jpbar{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px;padding:0 2px 8px;margin-bottom:2px;border-bottom:1px solid #e5e7eb}',
+    '.wm-jp .jpt{background:none;border:0;padding:0;font:700 12px system-ui,"Malgun Gothic",sans-serif;color:#9ca3af;cursor:pointer}',
+    '.wm-jp .jpt.on{color:#2563eb}',
+    '.wm-jp .jpgap{width:6px}',
+    '.wm-jp .jpnav{display:flex;justify-content:center;align-items:baseline;gap:14px;padding:8px 0 2px;font:700 13px system-ui,"Malgun Gothic",sans-serif;color:#6b7280}',
+    '.wm-jp .jpnav .jpt{font-size:15px;color:#2563eb}',
+    '.wm-jp .jpnav .jpt.dis{color:#d1d5db;cursor:default}',
+    '.wm-jp .jpn b{color:#2563eb}',
+    '.oxinst .mboxb.sel.right{border-color:var(--exc);color:var(--exc);background:#eaf1fb}',
+    '.oxinst .mboxb.sel.wrong{border-color:var(--rule);color:var(--rule)}',
+    '.oxinst .mbres2{font-size:12.5px;margin-left:6px;white-space:nowrap}'
+  ].join('\n');
+  const st = document.createElement('style'); st.id = 'wonmun-css'; st.textContent = css; document.head.appendChild(st);
+})();
 
 </script>
 </body>
