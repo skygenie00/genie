@@ -2036,7 +2036,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         async function syncRecords(force) {
             if (recBusy) return;
             if (!mbToken()) { recPaint(); return; }
-            if (navigator.onLine === false) { recPaint(); return; }
+            if (navigator.onLine === false) { try { if (typeof exvSyncDone === 'function') exvSyncDone(false); } catch (e2) { } recPaint(); return; }   /* ★ revfix0928 A-2 — 오프라인도 받기 실패(그날 바로잡기 안 돎) */
             clLoad();                                 /* ★ 2026-09-22 (_task_ox_claude_answers §A-2) — 기록 동기화가 돌 때 Claude 답도 한 번 더(작다 · ETag 안 씀 · 받는 중이면 건너뛴다) */
             recBusy = true; recPaint();
             let got = false;                          /* 병합이 무언가를 받았거나 지웠나 — §E·§H */
@@ -11999,15 +11999,20 @@ function jnExamCellsLoad(y) {
    ④ 고친 표 = fv:2 — add1 이 찍은 fixedAt(줄인 것 포함)은 다시 셈 대상(늘 때만 고치므로 깎인 점수가 되돌아온다) ⑤ 고치면 첫 화면이 떠 있을 때 다시 그림 */
 let _exvFixRun = false;
 var EXV_SYNC = { done: false, ok: false };
+/* ★ revfix0928 A-2 — 받기 실패한 날 = 기기별 키 ox_exv_fixskip(localStorage · SYNC_KEYS 밖 · 동기화 안 함) = 이 기기 날짜 · 날이 바뀌면 저절로 풀림 · 성공 때 지우지 않음 */
+var EXV_SKIP_KEY = 'ox_exv_fixskip';
+function exvToday() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function exvSyncDone(ok) {
     if (EXV_SYNC.done) return;
     EXV_SYNC.done = true; EXV_SYNC.ok = !!ok;
+    if (!ok) { try { localStorage.setItem(EXV_SKIP_KEY, exvToday()); } catch (e) { } }   /* ★ revfix0928 A-2 — 이 세션 첫 받기 실패 → 오늘은 안 돈다 */
     if (ok) { try { exvFixKick('sync'); } catch (e) { } }
 }
 function exvFixKick(src) {
     if (!GKEY || !GKEY.keys) return;
     let tok = false;
     try { tok = !!mbToken(); } catch (e) { tok = false; }
+    if (tok) { let sk = null; try { sk = localStorage.getItem(EXV_SKIP_KEY); } catch (e) { } if (sk === exvToday()) return; }   /* ★ revfix0928 A-2 — 오늘 첫 받기가 실패한 기기는 같은 날 새로고침해도 안 돈다 */
     if (tok && !EXV_SYNC.ok) return;   /* 동기화 기기 — 첫 동기화가 끝나기 전(또는 받기 실패)엔 안 돈다 */
     exvRoundsFix();
 }
@@ -12440,7 +12445,7 @@ function lwOpen(owner, ev) {
     '#oxwin-lk.cflw{background:#fff;border:1px solid #e5e7eb !important;border-radius:12px;box-shadow:0 10px 25px -5px rgba(0,0,0,.12) !important;font:12.5px system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#1f2937}',
     '#oxwin-lk .cftt{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-weight:800;color:#374151;font-size:12.5px;min-width:0;flex:1}',
     '#oxwin-lk .cfhc{display:inline-block;vertical-align:middle;cursor:default;opacity:1}',
-    '#oxwin-lk .cfx{margin-left:auto;border:0;background:none;color:#6b7280;font:700 13px system-ui;cursor:pointer}',
+    '#oxwin-lk .cfx{margin-left:auto;border:0;background:none;color:#6b7280;font:700 13px system-ui;cursor:pointer;padding:revert}',   /* ★ revfix0928 A-1 — 여백 = 브라우저 단추 기본값(Tailwind 0 을 되돌림) = 조판기 연결 창 ✕ 와 같은 크기(Chromium 1px 6px · WebKit 2px 6px 3px) */
     '#oxwin-lk .oxwin-body{background:#f9fafb}',
     '#oxwin-lk .cfbd{padding:10px 12px 12px;background:#f9fafb}',
     '#oxwin-lk .cflb{font-size:12px;font-weight:800;color:#374151;margin-bottom:5px}',
