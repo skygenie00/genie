@@ -2646,6 +2646,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (reviewFilter === 'untyped' && !qTypeOf(q).draft) return false;
             return true;
         }
+        /* ★ 2026-09-27 (_task_ox_exview_paper_add3 §A) — 「변리사 기출」 해 줄 차례 = 최신 해부터 · 첫 화면(renderDashboard)과 서랍(trBuild)이 이 한 함수를 쓴다.
+           줄 이름 「2026년 제63회」 을 글자 내림차순(네 자리 해가 앞) · [이름, 값] 배열을 제자리에서 정렬해 돌려준다 */
+        function exvYearSort(ents) { return ents.sort((a, b) => b[0].localeCompare(a[0])); }
         /* ★ 09-15 (_task_ox_jeongni_popup §C) — 📋 정리칩 묶음 열쇠 = 소단원 글자(info.sub) 앞 「N.N」(1.1 · 2.10) · 안 나오면 그 행(chapLabel) 하나가 한 묶음 */
         /* ★ 09-16 (_task_ox_card_simple_add11 §3) — 「N.」뿐인 소단원(4. 권리의 객체 · 5. 법률행위 …)도 「N」 열쇠로 한 묶음 · 뒤 꼬리표 「(미수록)」 은 안 본다 · 「N」 과 「N.M」 은 다른 열쇠(합치지 않는다) */
         function jnKeyOf(sub, chapLabel) { const m = /^\d+(?:\.\d+)?/.exec(String(sub || '')); return m ? m[0] : String(chapLabel); }
@@ -2682,6 +2685,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const qHistory = JSON.parse(localStorage.getItem('ox_q_history') || '{}');
             const qTags = JSON.parse(localStorage.getItem('ox_q_tags') || '{}');
             if (typeof mcInvalidate === 'function') mcInvalidate();
+            if (typeof jnFilterSync === 'function') jnFilterSync();   /* ★ add3 §B — 필터가 바뀌면 떠 있는 📋 정리 창도(renderDashboard = 필터 select 의 onchange) */
             let _mcAll = {};
             try { _mcAll = JSON.parse(localStorage.getItem('ox_mem_cards') || '{}'); } catch (e) { _mcAll = {}; }
             
@@ -2746,9 +2750,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 let chapterMap = grouped[subject];
                 // 기출은 최신 연도부터
                 if (subject === '변리사 기출') {
-                    chapterMap = Object.fromEntries(
-                        Object.entries(chapterMap).sort((a, b) => b[0].localeCompare(a[0]))
-                    );
+                    chapterMap = Object.fromEntries(exvYearSort(Object.entries(chapterMap)));   /* ★ add3 §A — 서랍과 한 함수 */
                 }
                 /* ★ 09-15 (_task_ox_jeongni_popup §C) — 📋 정리칩. 이 과목 목차 줄을 그릴 차례 그대로 한 번 먼저 돌아 「N.N」 묶음을 모은다(jnKeyOf · 과목 안이면 장을 건너도 한 묶음).
                    단추는 묶음의 첫 행에만 · 묶음에 든 chapLabel 전부를 그 단추 data-jn 에 ||| 로 잇는다 */
@@ -11044,20 +11046,73 @@ function jnAnsToggle(btn) {
     const hidden = box.classList.toggle('hide');
     btn.textContent = hidden ? '정답·해설 ▸' : '정답·해설 ▾';
 }
+/* ★ 2026-09-27 (_task_ox_exview_paper_add3 §B) — 정리 창 = 바깥 필터(첫 화면 셈과 한 함수 trFilterPass) · 사용자 9/27 「바깥에 필터하는데 왜 안 바뀌어?」
+   jnFilter() = 지금 필터(출처·복습) · on 이면 행을 거르고 부제에 「거름 <필터 이름> N」 · key 는 창이 어느 필터로 그려졌는지(data-jnf) */
+function jnFilter() {
+    const sf = (document.getElementById('source-filter') || {}).value || 'all';
+    const rf = (document.getElementById('review-filter') || {}).value || 'all';
+    const on = sf !== 'all' || rf !== 'all';
+    const name = id => { const s = document.getElementById(id); return (s && s.value !== 'all' && s.selectedIndex >= 0) ? String(s.options[s.selectedIndex].textContent || '').trim() : ''; };
+    const qHistory = on ? trObj('ox_q_history') : {}, qTags = on ? trObj('ox_q_tags') : {};
+    return { on: on, key: sf + '|' + rf, label: on ? [name('source-filter'), name('review-filter')].filter(Boolean).join(' · ') : '',
+             pass: q => trFilterPass(q, sf, rf, qHistory, qTags) };
+}
 function jnBodyHTML(subject, labels) {
-    let total = 0, html = '';
+    let total = 0, kept = 0, html = '';
+    const F = jnFilter();
+    const QM = F.on ? new Map(quizData.map(q => [q.id, q])) : null;
     for (const l of labels) {
-        const ids = chapUidsOf(subject, l);
-        total += ids.length;
+        const ids0 = chapUidsOf(subject, l);
+        total += ids0.length;
+        const ids = F.on ? ids0.filter(id => { const q = QM.get(id); return !!q && F.pass(q); }) : ids0;
+        kept += ids.length;
+        if (F.on && !ids.length) continue;                      /* 거른 뒤 빈 줄은 머리도 안 세운다 */
         const _ey = jnExamYear(subject, l);                     /* ★ 2026-09-26 (_task_ox_exview_paper §F-2) — 기출 해 = 「문제 N」 구분 줄 · 선지 차례 */
-        if (_ey) { html += jnExamBodyHTML(_ey, l, ids); continue; }
+        if (_ey) { html += jnExamBodyHTML(_ey, l, ids, F.on); continue; }
         html += `<div data-jnh="1" class="px-3.5 py-1.5 bg-slate-50 border-b border-gray-100 text-[11px] font-extrabold text-indigo-800">${escHtml(jnNameOf(l))} · ${ids.length}문항</div>`;
         for (const id of ids) {
             const q = quizData.find(x => x.id === id);
             if (q) html += jnRowHTML(q);
         }
     }
-    return { html, total };
+    if (F.on && !kept) html = '<div data-jnempty="1" class="px-3.5 py-6 text-center text-[12px] text-gray-500">이 거름에 맞는 문항이 없다</div>';
+    return { html, total, kept, flt: F.on ? F.label : '', key: F.key };
+}
+/* 부제 — 「민법총칙 · 16문항 · 거름 ⚠️ 페이크 3」(16 = 묶음 전부 · 3 = 거른 뒤) · 기출 해는 「변리사 기출 · 40문항 · 188지문 · 거름 …」 */
+function jnSubOf(subject, labels, r) {
+    const _ey = jnExamYear(subject, labels[0]);
+    return escHtml(subject) + ' · ' + (_ey ? exvYearQCount(_ey) + '문항 · ' + r.total + '지문' : r.total + '문항') + (r.flt ? ' · 거름 ' + escHtml(r.flt) + ' ' + r.kept : '');
+}
+/* 이미 떠 있는 창은 oxWinOpen 이 몸통만 바꾼다 — 부제 줄도 같이 */
+function jnSubSet(w, sub) {
+    const box = w && w.querySelector('.oxwin-head > div');
+    if (!box) return;
+    let el = box.children[1];
+    if (!el) { el = document.createElement('div'); el.style.cssText = 'font-size:10.5px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'; box.appendChild(el); }
+    el.innerHTML = sub;
+}
+/* 창 하나 다시 그림(몸통 · 부제 · 그린 필터 표) — ✏️ 표시 켜고 끄기와 필터 바뀜이 같이 쓴다 */
+function jnWinRedraw(w) {
+    const subject = w.getAttribute('data-jnsubject') || '';
+    const labels = String(w.getAttribute('data-jnlabels') || '').split('|||').filter(Boolean);
+    const r = jnBodyHTML(subject, labels);
+    const body = w.querySelector('.oxwin-body');
+    if (body) body.innerHTML = r.html;
+    jnSubSet(w, jnSubOf(subject, labels, r));
+    w.setAttribute('data-jnf', r.key);
+}
+/* 필터가 창을 그린 때와 다르면 다시 그림(같으면 손대지 않는다 — 펼쳐 둔 정답·해설이 renderDashboard 마다 접히지 않게) */
+function jnFilterSync() {
+    const k = jnFilter().key;
+    document.querySelectorAll('.oxwin[data-jnlabels]').forEach(w => { if ((w.getAttribute('data-jnf') || 'all|all') !== k) jnWinRedraw(w); });
+}
+/* 필터를 건 채 연 창 — 첫 화면 단추의 줄 목록(data-jn)은 거른 줄만 담는다 → 묶음의 빠진 줄을 목차 제자리(jnLabelsOf 차례)에 끼운다.
+   단추 줄끼리의 차례는 단추 그대로 · 단추에 묶음 밖 줄이 있으면(변리사 기출 등) 단추 그대로 · 빠진 줄이 없으면 단추 그대로(옛 판과 같다) */
+function jnLabelsFull(subject, gkey, raw) {
+    const full = jnLabelsOf(subject, gkey);
+    if (!raw.length || raw.some(l => full.indexOf(l) < 0) || full.every(l => raw.indexOf(l) >= 0)) return raw;
+    let k = 0;
+    return full.map(l => raw.indexOf(l) >= 0 ? raw[k++] : l);
 }
 function jnMarksPaint(btn) {
     btn.className = 'text-[10.5px] font-bold border rounded px-1.5 py-0.5 whitespace-nowrap '
@@ -11069,22 +11124,24 @@ function jnMarksToggle() {
     jnMarksOn = !jnMarksOn;
     document.querySelectorAll('.oxwin[data-jnlabels]').forEach(w => {
         const body = w.querySelector('.oxwin-body');
-        if (body) body.innerHTML = jnBodyHTML(w.getAttribute('data-jnsubject') || '', String(w.getAttribute('data-jnlabels') || '').split('|||').filter(Boolean)).html;
+        jnWinRedraw(w);   /* ★ add3 §B — 몸통 · 부제 · 그린 필터 표를 한 함수로 */
         const b = w.querySelector('[data-jnmarks]');
         if (b) jnMarksPaint(b);
     });
 }
 function openJeongni(subject, gkey, btn) {
     const raw = (btn && btn.getAttribute) ? btn.getAttribute('data-jn') : null;
-    const labels = raw ? raw.split('|||').filter(Boolean) : jnLabelsOf(subject, gkey);
+    const labels = raw ? jnLabelsFull(subject, gkey, raw.split('|||').filter(Boolean)) : jnLabelsOf(subject, gkey);   /* ★ add3 §B — 거른 채 연 창도 필터를 풀면 묶음 전부 */
     if (!labels.length) return;
-    const { html, total } = jnBodyHTML(subject, labels);
+    const _jr = jnBodyHTML(subject, labels), html = _jr.html;   /* ★ add3 §B — 거른 행 · 부제 「거름 …」 */
     const key = 'jn-' + String(subject + '|' + gkey).replace(/[^A-Za-z0-9가-힣]/g, '_');
     const _ey = jnExamYear(subject, labels[0]);   /* ★ 2026-09-26 §F-2 — 「변리사 기출 · 40문항 · 188지문」 */
-    const w = oxWinOpen(key, '📋 정리 · ' + escHtml(jnNameOf(labels[0])), escHtml(subject) + ' · ' + (_ey ? exvYearQCount(_ey) + '문항 · ' + total + '지문' : total + '문항'), html, 600, { resize: true, sizeKey: 'jn' });
+    const w = oxWinOpen(key, '📋 정리 · ' + escHtml(jnNameOf(labels[0])), jnSubOf(subject, labels, _jr), html, 600, { resize: true, sizeKey: 'jn' });
     if (!w) return;
     w.setAttribute('data-jnsubject', subject);
     w.setAttribute('data-jnlabels', labels.join('|||'));
+    w.setAttribute('data-jnf', _jr.key);
+    jnSubSet(w, jnSubOf(subject, labels, _jr));   /* 이미 떠 있던 창(oxWinOpen 이 몸통만 바꿈)도 부제를 */
     const head = w.querySelector('.oxwin-head');
     let tb = w.querySelector('[data-jnmarks]');
     if (head && !tb) {                                  /* add1 §3 — 제목 줄 오른쪽 · 닫기 왼쪽 (BUTTON 이라 끌기가 안 잡는다) */
@@ -11245,6 +11302,7 @@ function trBuild(focus) {
     const qs = document.getElementById('quiz-screen');
     const onQuiz = !!(qs && !qs.classList.contains('hide'));
     const S = trScan();
+    if (typeof jnFilterSync === 'function') jnFilterSync();   /* ★ add3 §B — 검색 이동(jumpFromSearch)처럼 renderDashboard 를 안 거치는 필터 바뀜도 */
     if (!S.order.length) { box.innerHTML = ''; head.innerHTML = ''; return; }
 
     let subj = trLS(TR_SUBJ, '');
@@ -11263,7 +11321,9 @@ function trBuild(focus) {
     const chapters = S.G[subj] || {};
     let html = '', nLine = 0, nQ = 0;
 
-    for (const [chapMain, rows] of Object.entries(chapters)) {
+    const chEnts = Object.entries(chapters);
+    if (subj === '변리사 기출') exvYearSort(chEnts);   /* ★ add3 §A — 첫 화면과 한 함수(최신 해부터) · 다른 과목은 목차 차례 그대로 */
+    for (const [chapMain, rows] of chEnts) {
         const ents = Object.entries(rows);
         const ck = subj + '|||' + chapMain;
         const folded = !!chFold[ck];
@@ -12273,7 +12333,7 @@ function jnExamCells(y, no) {
     }).join('');
 }
 /* 기출 해의 정리 창 몸통 — 문번마다 「문제 N」 구분 줄(+ 문항 채점 칸) · 그 안 행은 선지 차례(ㄱ·ㄴ·ㄷ / ①~⑤) · 시험지 꼴은 안 넣는다(§F-2) */
-function jnExamBodyHTML(y, l, ids) {
+function jnExamBodyHTML(y, l, ids, flt) {
     const by = new Map();
     ids.forEach(id => {
         const q = quizData.find(x => x.id === id);
@@ -12284,7 +12344,7 @@ function jnExamBodyHTML(y, l, ids) {
         by.get(no).push({ q: q, opt: +m.opt || 0 });
     });
     const nos = [...by.keys()].sort((a, b) => a - b);
-    let html = `<div data-jnh="1" class="px-3.5 py-1.5 bg-slate-50 border-b border-gray-100 text-[11px] font-extrabold text-indigo-800">${escHtml(jnNameOf(l))} · ${exvYearQCount(y)}문항 · ${ids.length}지문</div>`;
+    let html = `<div data-jnh="1" class="px-3.5 py-1.5 bg-slate-50 border-b border-gray-100 text-[11px] font-extrabold text-indigo-800">${escHtml(jnNameOf(l))} · ${flt ? nos.length : exvYearQCount(y)}문항 · ${ids.length}지문</div>`;   /* ★ add3 §B — 거르면 남은 문번 수 */
     nos.forEach(no => {
         html += `<div class="jx-no" data-jxno="${no}" data-jxy="${y}"><span>문제 ${no}</span><span class="jx-cells">${jnExamCells(y, no)}</span><span class="jx-info hide"></span></div>`;
         by.get(no).sort((a, b) => a.opt - b.opt).forEach(r => { html += jnRowHTML(r.q); });
