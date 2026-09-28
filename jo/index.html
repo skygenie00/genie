@@ -3093,6 +3093,13 @@ function vvBox(){
   return { x: 0, y: 0, w: (d && d.clientWidth) || innerWidth, h: (d && d.clientHeight) || innerHeight };
 }
 /* 폰 = 폭 ≤ 640 — CSS @media (max-width:640px) 와 같은 판정(JS 와 CSS 가 어긋나지 않게) */
+/* ★ revfix0928night A-4 — 폰(보이는 폭 ≤ 480) 교재 쪽 창 = 보이는 높이의 60% 이상 · 창 전체가 화면 안(누른 자리 아래 남은 높이로 줄지 않게) · PC·아이패드 무변
+   까닭: showPop → vvFit 가 창을 누른 자리 그대로 두고(열 때 창 = 「받는 중」 한 줄이라 낮다) max-height 를 그 아래 남은 높이로 박았다 → 누른 자리가 아래일수록 띠가 된다 */
+function cvbPhoneTall(p){ if (!p) return; const B = vvBox(); if (B.w > 480) return;
+  const H = Math.max(120, Math.round(B.h - 16)), h = Math.min(H, Math.max(p.offsetHeight, Math.ceil(B.h * 0.6)));
+  p.style.maxHeight = H + 'px'; p.style.height = h + 'px';
+  let y = parseFloat(p.style.top); if (isNaN(y)) y = p.getBoundingClientRect().top;
+  p.style.top = Math.round(Math.max(B.y + 8, Math.min(y, B.y + B.h - 8 - h))) + 'px'; }
 function vvPhone(){ return window.matchMedia ? matchMedia('(max-width:640px)').matches : innerWidth <= 640; }
 /* G-3 끌기 한계 — 머리가 화면에 걸려 있어야 다시 잡는다. PC = 지금 그대로(왼쪽 0 ~ 폭−60 · 위 0 ~ 높이−34).
    폰 = 머리가 60px 이상 걸려 있으면 왼쪽으로도 더 민다(오른쪽 폭−60 · 아래 높이−34 는 같은 규칙) */
@@ -6726,9 +6733,13 @@ function ncRow(J, bk, s, tag, go){ const r = el('div', 'mbbrow'); r.dataset.book
   J.words(bk, s.p).then(w => { rec = w; const t = ncSnip(w, s); sn.textContent = t ? t + '…' : ''; }).catch(() => {});
   r.onclick = ev => { ev.stopPropagation(); go(ev, rec); }; return r; }
 /* 찍어 둔 자리 그림 — 민법 mbbPicHTML 꼴(줄 바로 아래 · 쪽 크롭 · 뒤따라 채운다 · 누르면 그 쪽) */
+/* ★ revfix0928night A-1 — 그림이 비동기로 들어오면 창이 길어진다 → 그 창을 다시 맞춘다(창 높이 한도 = 보이는 화면 − 16 · 넘으면 창 몸이 구른다 · 머리 sticky)
+   폰은 showPop 의 vvFit 가 max-height 를 누른 자리 아래 남은 높이로 박아 두어 mbWinFit 만으로는 위로 못 올라간다 — 한도를 먼저 푼다 */
+function ncPicFit(box){ const p = box && box.closest ? box.closest('.pop') : null; if (!p || !p.isConnected) return;
+  const B = vvBox(); p.style.maxHeight = Math.max(120, Math.round(B.h - 16)) + 'px'; mbWinFit(p); }
 function ncPic(J, bk, s, go){ const box = el('div', 'ncb-pic'); box.appendChild(el('div', 'm', '그림을 여는 중…'));
-  J.pic(bk, s, 400).then(cv => { box.innerHTML = ''; box.appendChild(cv || el('div', 'm', '이 기기에 그림이 아직 없습니다')); })
-    .catch(() => { box.innerHTML = ''; box.appendChild(el('div', 'm', '이 기기에 그림이 아직 없습니다')); });
+  J.pic(bk, s, 400).then(cv => { box.innerHTML = ''; box.appendChild(cv || el('div', 'm', '이 기기에 그림이 아직 없습니다')); ncPicFit(box); })
+    .catch(() => { box.innerHTML = ''; box.appendChild(el('div', 'm', '이 기기에 그림이 아직 없습니다')); ncPicFit(box); });
   box.onclick = ev => { ev.stopPropagation(); go(ev); }; return box; }
 async function ncBookOpen(file, end, ev, depth){
   const pk = 'ncbook|' + PLAW() + '|' + file + '|' + end; if (popToggle(pk)) return;   /* 같은 📘 를 또 누르면 닫힌다(조판기 규칙) */
@@ -10467,7 +10478,7 @@ function p8Fr(s){ return (s && s.r) ? Object.assign({}, s, { r: s.r.map(v => v /
 function p8Guess(uid){ try { const z = Object.values((VJ && VJ.P7map) || {}).find(x => x.uid === uid); const p = +((z && ((z.판8 && z.판8.pdf8) || z.pdf쪽)) || 0); return p ? Math.min(805, p) : 1; } catch (e) { return 1; } }
 /* 8판 줄 — 목차노트 「교재 자리」 ncRow 꼴 그대로 · 둘째 줄 = 그 자리 글자층 글 40자(지시서 A-4 · 저장 안 함) */
 function p8Row(J, bk, s, tag, go){ const r = el('div', 'mbbrow'); r.dataset.book = bk; r.dataset.p = s.p;
-  const hd = el('div', 'hd'); hd.appendChild(el('span', 'k', J.name(bk))); hd.appendChild(el('span', 'p', J.pr(bk, s.p) + '쪽')); hd.appendChild(el('span', 'm', 'PDF ' + s.p));
+  const hd = el('div', 'hd'); hd.appendChild(el('span', 'k', J.name(bk))); hd.appendChild(el('span', 'p', 'p.' + J.pr(bk, s.p))); hd.appendChild(el('span', 'm', 'PDF ' + s.p));   /* ★ revfix0928night A-2 — 8판 줄 「p.N」(민법·정리캔버스 줄 「N쪽」 무변) */
   if (tag) hd.appendChild(el('span', 'm', tag)); r.appendChild(hd);
   const sn = el('div', 'sn'); r.appendChild(sn);
   J.words(bk, s.p).then(w => { const t = ncSnip(w, s); sn.textContent = t ? t.slice(0, 40) + '…' : ''; }).catch(() => {});
@@ -10488,8 +10499,8 @@ async function p8BookFill(host, uid){
     const rv = el('button', 'ncb-more', '자동으로 되돌리기'); rv.onclick = ev => { ev.stopPropagation(); J.k8.put(uid, { auto: true, t: Date.now() }); p8BookRefresh(uid); }; host.appendChild(rv); }
   else if (rows.length){
     host.appendChild(p8Row(J, P8B, rows[0], rows[0].c ? '확신 ' + rows[0].c : '', ev => open(rows[0], ev)));
-    if (rows.length > 1){ const b = el('button', 'ncb-more', '후보 ' + (rows.length - 1)), box = el('div'); box.hidden = true; box.dataset.more = P8B;
-      b.onclick = ev => { ev.stopPropagation(); if (!box.childNodes.length) rows.slice(1).forEach(s => box.appendChild(p8Row(J, P8B, s, '후보', ev2 => open(s, ev2)))); box.hidden = !box.hidden; try { mbWinFit(host.closest('.pop')); } catch (e) {} };
+    if (rows.length > 1){ const b = el('button', 'ncb-more', '후보 ' + Math.min(2, rows.length - 1)), box = el('div'); box.hidden = true; box.dataset.more = P8B;   /* ★ revfix0928night A-3 — 2·3등만(민법 slice(1,3)) */
+      b.onclick = ev => { ev.stopPropagation(); if (!box.childNodes.length) rows.slice(1, 3).forEach(s => box.appendChild(p8Row(J, P8B, s, '후보', ev2 => open(s, ev2)))); box.hidden = !box.hidden; try { mbWinFit(host.closest('.pop')); } catch (e) {} };
       host.appendChild(b); host.appendChild(box); } }
   else host.appendChild(el('div', 'mbbnone', '해례 8판 — 자리 없음 · 직접 찍기'));
   const pk = el('button', 'ncb-more p8pick', '📍 자리 직접 찍기'); pk.title = '해례 8판 쪽 창에서 이 지문 자리를 끌어 찍는다(두 손가락 = 스크롤)';
@@ -13410,10 +13421,15 @@ function mbGiRounds(JM){
   const by = {};
   (JM.문제 || []).filter(q => /^\d{4}$/.test(String(q.연도 || ''))).forEach(q => {   /* ★ add3 — 연도 모름(uid_add2 PM-0506 · TRU…)은 해 줄이 아니다 */
     const k = String(q.연도) + '|' + String(q.회차 || '');
-    (by[k] = by[k] || { y: String(q.연도), r: String(q.회차 || ''), n: 0 }).n++;
+    const g0 = (by[k] = by[k] || { y: String(q.연도), r: String(q.회차 || ''), n: 0 });
+    if (!uzOffPaper(q, JM.문제 || [])) g0.n++;   /* ★ revfix0928night A-8 — 시험지에 없는 문항은 해 줄 셈 밖 */
   });
   return Object.keys(by).sort().reverse().map(k => by[k]);
 }
+(function(){ try{ const s = document.createElement('style'); s.id = 'rn0928css'; s.textContent = [   /* ★ revfix0928night A-8 */
+  '.exv-off{margin-top:18px;padding-top:10px;border-top:2px dashed #cbd5e1}',
+  '.exv-offh{font:700 12.5px/1.5 "Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#6b7280;margin:0 0 8px}'
+].join('\n'); document.head.appendChild(s); }catch(e){} })();
 function mbGiCard(JM){
   const gs = mbGiRounds(JM);
   if (!gs.length) return null;
@@ -15810,7 +15826,7 @@ const viewCanvas = (() => {
     const old = POPS.find(x => x._pk === pid);
     if (old){ if (old._cvb && old._cvb.retarget(m, ctx)) return; closeOne(old); return; }
     const body = popShell('canvas', '📘 ' + (CVB_NAME[docid] || m.book), pid); showPop(ev); popSizable(body, 'canvas');
-    const pw0 = body.parentNode; cvNavTop(pw0);
+    const pw0 = body.parentNode; cvNavTop(pw0); cvbPhoneTall(pw0);   /* ★ revfix0928night A-4 */
     const host = el('div', 'cv-book'); body.appendChild(host);
     const st = { p: m.page, hl: (m.y0 != null || m.r) ? m : null, busy: 0, ctx: ctx || null, pick: !!(ctx && ctx.pick), box: null, book: m.book };   /* ★ book8 — 자리 = pt y0/y1 또는 쪽 비 r */
     let paint = () => {}, draw = async () => {}, ready = false;
@@ -17084,7 +17100,8 @@ function jxeSpMatch(t){
 function jxeChips(host, key, ctx){
   if (!ctx) return;
   const law = S.law, out = [], seen = new Set();
-  const add = (lw, y, no, lab, q, pre) => { const k = [pre || '', lw, y, no || 0, lab || ''].join('|'); if (seen.has(k)) return; seen.add(k); out.push([lw, y, no, lab, q, pre]); };
+  const add = (lw, y, no, lab, q, pre) => { { const i3 = UZ_KO_P3.indexOf(String(lab || '')); if (i3 >= 0) lab = UZ_KO_ALL[i3]; }   /* ★ revfix0928night A-5 — ㉡ 와 uid 끝 ㄴ 이 같은 자리(칩 두 벌 → 한 벌) */
+    const k = [pre || '', lw, y, no || 0, lab || ''].join('|'); if (seen.has(k)) return; seen.add(k); out.push([lw, y, no, lab, q, pre]); };
   const z = ctx.z || ctx.o, uid = String((z && z.uid) || '');
   if (/^(TJ|TX|SJ|DJ)/.test(uid)) return;   /* 사법·미기출 = 칩 없음 */
   if (ctx.kind === 'L'){ const q = ctx.q; add(law, +q.연도, +q.시험문번 || 0, ctx.z.기호 || String(ctx.z.n), q); }
@@ -18074,22 +18091,29 @@ function bkPop(k, ev){
 var UZEXO = {};                 /* 문항 「정답·해설 ▸」 편 것(세션) · 열쇠 = giKey */
 var UZCMB = {}, UZCMBD = null;  /* 조합 선지 — 열쇠 법|년|문번 → {sets, src} | {miss} · 데이터 기댐 = exam_combo.json */
 const UZ_CIR = ['', '①', '②', '③', '④', '⑤'];
-const UZ_KO_ALL = 'ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ', UZ_KO_P1 = '㈀㈁㈂㈃㈄㈅㈆㈇㈈㈉㈊㈋㈌㈍', UZ_KO_P2 = '㈎㈏㈐㈑㈒㈓㈔㈕㈖㈗㈘㈙㈚㈛';   /* 보기 표지 — ㄱ · (ㄱ) · (가) */
-function uzIsKo(s){ s = String(s || ''); return s.length === 1 && (UZ_KO_ALL + UZ_KO_P1 + UZ_KO_P2).indexOf(s) >= 0; }
+const UZ_KO_ALL = 'ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ', UZ_KO_P1 = '㈀㈁㈂㈃㈄㈅㈆㈇㈈㈉㈊㈋㈌㈍', UZ_KO_P2 = '㈎㈏㈐㈑㈒㈓㈔㈕㈖㈗㈘㈙㈚㈛', UZ_KO_P3 = '㉠㉡㉢㉣㉤㉥㉦㉧㉨㉩㉪㉫㉬㉭';   /* ★ revfix0928night A-5 — ㉠ 꼴(원장 기호=㉠)도 보기 */   /* 보기 표지 — ㄱ · (ㄱ) · (가) */
+function uzIsKo(s){ s = String(s || ''); return s.length === 1 && (UZ_KO_ALL + UZ_KO_P1 + UZ_KO_P2 + UZ_KO_P3).indexOf(s) >= 0; }
 /* 보기 표지 보이기 — (ㄱ)꼴 ㈀ 은 ㄱ 과 같은 글자 · (가)꼴 ㈎ 는 조합 선지가 ㄱ 꼴 글자를 쓰면 차례대로 ㄱ·ㄴ·ㄷ(리담 받아쓰기 꼴 · 시험지는 ㄱ.ㄴ.) · 원래 글자는 title */
 function uzBogiLab(z, q){
-  const s = String(z.기호 || ''), i1 = UZ_KO_P1.indexOf(s), i2 = UZ_KO_P2.indexOf(s);
+  const s = String(z.기호 || ''), i1 = UZ_KO_P1.indexOf(s), i2 = UZ_KO_P2.indexOf(s), i3 = UZ_KO_P3.indexOf(s);
   if (i1 >= 0) return UZ_KO_ALL[i1];
+  if (i3 >= 0) return UZ_KO_ALL[i3];   /* ★ revfix0928night A-5 — ㉠ = ㄱ(시험지는 ㄱ.) */
   if (i2 >= 0){ const c = UZCMB[uzCmbKey(q)]; if (c && c.opts && c.opts.some(o => /[ㄱ-ㅎ]/.test(o))) return UZ_KO_ALL[i2] || s; }
   return s || String(z.n || '');
 }
-function uzIsCombo(q){ return (q.지문 || []).some(z => uzIsKo(z.기호)); }
+/* ★ revfix0928night A-8 — 시험문번이 하나라도 있는 해에서 시험문번이 없는 문항 = 시험지에 없음(1~20 · 총 N문제 · 채점 · 해 줄 셈 밖 · 맨 끝 칸)
+   시험지가 없는 옛 해(시험문번이 하나도 없는 해)는 무변 · 문항 카드·기록 열쇠(giKey) 무변 */
+let UZOFFY = null;
+function uzHasNoY(qs, y){ const k = PLAW() + '|' + y; if (!UZOFFY || UZOFFY._n !== qs.length){ UZOFFY = { _n: qs.length }; }
+  if (!(k in UZOFFY)) UZOFFY[k] = qs.some(q => String(q.연도) === String(y) && q.시험문번); return UZOFFY[k]; }
+function uzOffPaper(q, qs){ return !q.시험문번 && uzHasNoY(qs, String(q.연도)); }
+function uzIsCombo(q){ return (q.지문 || []).some(z => uzIsKo(z.기호) && (UZ_KO_P3.indexOf(String(z.기호)) < 0 || !!q.시험문번)); }   /* ★ revfix0928night A-5 — ㉠ 꼴은 시험지 자리가 있는 문항만(시험지 없는 2005 셋은 조합 선지를 못 읽어 무변) */
 function uzGiYears(JM){ return Object.keys(collect((JM.문제 || []).filter(q => /^\d{4}$/.test(String(q.연도 || ''))), q => String(q.연도))).sort().reverse(); }
 function uzGiNos(y){ const pre = PLAW() + ':' + y + ':'; return new Set(((VJ && VJ.qs) || []).filter(q => String(q.연도) === String(y)).map(q => giKey(q).slice(pre.length))); }
 
 /* ── §A-1 ⓐ 회독 비교 창 ── */
 function uzGrCompare(y, ev){
-  const qs = ((VJ && VJ.qs) || []).filter(q => String(q.연도) === String(y)).sort((a, b) => ((+giNo(a)) - (+giNo(b))) || ((+a.문번) - (+b.문번)));
+  const qs = ((VJ && VJ.qs) || []).filter(q => String(q.연도) === String(y) && !uzOffPaper(q, VJ.qs)).sort((a, b) => ((+giNo(a)) - (+giNo(b))) || ((+a.문번) - (+b.문번)));
   const q0 = qs[0] || {}, label = y + '년' + (q0.회차 ? ' 제' + q0.회차 + '회' : '');
   const pk = 'q|📊 회독별 비교 · ' + label; if (popToggle(pk)) return;
   const body = popShell('q', '📊 회독별 비교 · ' + label, pk);
@@ -18147,7 +18171,7 @@ function uzGrCompare(y, ev){
 }
 /* 비교 창 칩 → 그 해 기출뷰 · 그 문항이 든 쪽 */
 function uzExvGoto(y, no){
-  const qs = ((VJ && VJ.qs) || []).filter(q => String(q.연도) === String(y)).sort((a, b) => ((+giNo(a)) - (+giNo(b))) || ((+a.문번) - (+b.문번)));
+  const qs = ((VJ && VJ.qs) || []).filter(q => String(q.연도) === String(y) && !uzOffPaper(q, VJ.qs)).sort((a, b) => ((+giNo(a)) - (+giNo(b))) || ((+a.문번) - (+b.문번)));
   const ix = qs.findIndex(q => String(giNo(q)) === String(no));
   S.exvPg = S.exvPg || {}; S.exvPg[PLAW() + ':' + y] = ix >= 0 ? Math.floor(ix / 5) : 0;
   S.exvJump = String(no);
@@ -18201,7 +18225,8 @@ function uzExv(main, JM){
   if (!ys.length){ main.appendChild(emptyBox('📝', '기출 문항이 없다')); return; }
   const y = (S.year && ys.indexOf(String(S.year)) >= 0) ? String(S.year) : ys[0];
   S.year = y;
-  const list = (JM.문제 || []).filter(q => String(q.연도) === y).sort((a, b) => ((+giNo(a)) - (+giNo(b))) || ((+a.문번) - (+b.문번)));
+  const all = (JM.문제 || []).filter(q => String(q.연도) === y).sort((a, b) => ((+giNo(a)) - (+giNo(b))) || ((+a.문번) - (+b.문번)));
+  const list = all.filter(q => !uzOffPaper(q, JM.문제 || [])), offp = all.filter(q => uzOffPaper(q, JM.문제 || []));   /* ★ revfix0928night A-8 */
   GIOMR = list;
   if (!(S.omrCur >= 0) || S.omrCur > list.length - 1) S.omrCur = 0;
   const yrec = giYearOf(y) || {}, graded = !!yrec.sub, q0 = list[0] || {};
@@ -18220,6 +18245,9 @@ function uzExv(main, JM){
   if (S.omr) main.appendChild(giOmrPad(y, list));
   const paper = el('div', 'exv-paper uzexv'); paper.dataset.uzexv = y;
   show.forEach(q => paper.appendChild(uzExvQ(q, y, graded)));
+  if (offp.length && pg === nPg - 1){ const oh = el('div', 'exv-off'); oh.dataset.exoff = y;   /* ★ revfix0928night A-8 — 그 해 맨 끝 「시험지에 없음」 */
+    oh.appendChild(el('div', 'exv-offh', '시험지에 없음 · ' + offp.length + '문항 — 시험 문번을 못 가른 문항(채점·총 문제 수에 안 든다)'));
+    offp.forEach(q => oh.appendChild(uzExvQ(q, y, false))); paper.appendChild(oh); }
   main.appendChild(paper);
   /* 알약 — 왼쪽 ◀ 이전 · 오른쪽 「마킹 m/5 · 다음 5문제 ▶」 · 마지막 쪽 「전체 채점 ✓」(민법 controls-container) */
   if (pg > 0){ const bl = el('div', 'mbbar l uzexbar'); const pb = el('button', 'mbprev', '◀ 이전'); pb.type = 'button';
