@@ -24,7 +24,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 #app{display:flex;flex-direction:column;height:100vh;background:#fff}
 
 /* ── 상단 ── */
-.topbar{display:flex;align-items:center;gap:8px;padding:9px 14px;
+.topbar{display:flex;align-items:center;gap:8px;padding:9px 14px;position:relative;   /* ★ revfix0928pm A-1 — 머리 세모(absolute)의 자리 기준 */
   border-bottom:1px solid var(--line);background:var(--panel);flex-shrink:0;flex-wrap:wrap}
 .logo{font-weight:800;font-size:14px;white-space:nowrap}
 .search{flex:1;min-width:150px;display:flex;gap:7px;align-items:center;cursor:text;
@@ -51,7 +51,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 #hrail .rb.on{background:var(--exc);color:#fff}
 #hrail .rb[disabled]{opacity:.45;cursor:not-allowed}
 #hbadges{display:flex;align-items:center;gap:8px;flex:none;margin-left:auto}
-#hdrFold{flex:none;align-self:center;font-size:13px;line-height:1;color:#6b7280;background:none;border:0;padding:0 8px;cursor:pointer}   /* ★ hdrfold — 머리 접기 세모(▴ 펼침 · ▾ 접음 · 글자만) */
+#hdrFold{flex:none;align-self:center;font-size:13px;line-height:1;color:#6b7280;background:none;border:0;padding:0 8px;cursor:pointer;position:absolute;z-index:2;left:0;top:0}   /* ★ revfix0928pm A-1 — 흐름 밖(줄 나뉨 = 세모 없는 바탕) · 자리 = hdrFoldPos */   /* ★ hdrfold — 머리 접기 세모(▴ 펼침 · ▾ 접음 · 글자만) */
 #app.hfold #hrail,#app.hfold #hbadges,#app.hfold #hsrow,#app.hfold .mbhd,#app.hfold .mbsr{display:none!important}   /* ★ hdrfold — 접음 = 갈래 탭 · 배지 · 검색줄 · 1차객 머리 두 줄 */
 /* 둘째 줄 = 🔍 검색줄 전폭(머리와 같은 바탕) · 첫 줄이 넘치면 배지 묶음이 이 줄 오른쪽으로 내려온다(hdrFit) */
 .hsearch{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:7px 12px;background:var(--panel);
@@ -2079,9 +2079,20 @@ function drawTop(){
   skLawPaint();
 }
 /* ★ hdrfold — 머리 접기 세모 · 접음 = #app.hfold(CSS 가 다섯 요소를 숨김) · 누름 뒤 hdrFit(배지 자리) · resize 알림(본문 높이가 바뀜 → 창·서랍 자리 맞춤 · vvFit·cfFit 등) */
+/* ★ revfix0928pm A-1 — 세모 자리 = #laws 오른쪽 끝 +1px · 세로 가운데(.topbar 기준) · #laws·.topbar 크기가 바뀔 때마다 */
+function hdrFoldPos(){
+  const b=$('#hdrFold'),lw=$('#laws'),top=document.querySelector('header.topbar');if(!b||!lw||!top)return;
+  const t=top.getBoundingClientRect(),l=lw.getBoundingClientRect();
+  b.style.left=Math.round((l.right-t.left+1)*100)/100+'px';
+  b.style.top=Math.round((l.top-t.top+(l.height-b.offsetHeight)/2)*100)/100+'px';
+}
+(function(){try{const go=()=>{try{hdrFoldPos();}catch(e){}};
+  if(typeof ResizeObserver==='function'){const ro=new ResizeObserver(go);const w=()=>{const lw=$('#laws'),top=document.querySelector('header.topbar');if(lw&&top){ro.observe(lw);ro.observe(top);}else setTimeout(w,50);};w();}
+  window.addEventListener('resize',go);}catch(e){}})();
 function hdrFoldPaint(){
   const app=$('#app'),b=$('#hdrFold');if(app)app.classList.toggle('hfold',!!S.hdrFold);
   if(!b)return;b.textContent=S.hdrFold?'▾':'▴';
+  try{requestAnimationFrame(()=>hdrFoldPos());}catch(e){}   /* ★ revfix0928pm A-1 — drawTop 이 법 칩을 다 세운 뒤 */
   b.onclick=ev=>{ev.stopPropagation();S.hdrFold=!S.hdrFold;uiSave();hdrFoldPaint();
     try{hdrFit();}catch(e){}try{window.dispatchEvent(new Event('resize'));}catch(e){}};
 }
@@ -2705,9 +2716,9 @@ async function viewJo(){
   };
   const joRow=x=>{
     const r=el('div','r'+(S.jo===x.k?' on':''));
-    r.appendChild(el('span','nm',x.k+' '+(x.t||'')));
+    {const nm=el('span','nm jnm2');nm.appendChild(el('span','jno',x.k+' '));nm.appendChild(el('span','jtt',x.t||''));r.appendChild(nm);}   /* ★ revfix0928pm A-5 — 조 번호(늘 보임) + 이름(말줄임 …) · 글자는 그대로 */
     /* ★ joscreen §E-1·§E-3·§E-4(⑨⑪⑫) — ★ 개정일 = 이름 바로 뒤 · 오른쪽 = 고정 폭 세 칸 [빈칸 표지][✏️N][🔗N](없는 칸은 빈자리 · 모든 줄이 세로로 맞는다) · 막대 걷음 · ✏️ */
-    if(stars[x.k])r.appendChild(el('span','jstarc jstarn'+((S.treeW||212)<260?' jsshr':''),'★ '+stars[x.k].replace(/^20/,'')));   /* ★ revfix0928 A-7 — 좁은 서랍(260 미만)은 ★ 개정일이 이름보다 먼저 줄어든다(모자라면 ★ 만) · 260·320 무변 */
+    if(stars[x.k]){const sj=el('span','jstarc jstarn'+((S.treeW||212)<260?' jsshr':''),'★');sj.appendChild(el('span','jsd',' '+stars[x.k].replace(/^20/,'')));r.appendChild(sj);}   /* ★ revfix0928pm A-5 — 날짜 조각을 떼어(글자 그대로) 모자라면 통째 숨김(반쯤 잘린 숫자 없음) */   /* ★ revfix0928 A-7 — 좁은 서랍(260 미만)은 ★ 개정일이 이름보다 먼저 줄어든다(모자라면 ★ 만) · 260·320 무변 */
     const em=el('em','jcol3'+((S.treeW||212)<300?'':' wide'));
     {const bm=bkMark3(x.k);em.appendChild(bm||el('span','jc0'));}
     em.appendChild(x.M?el('span','jcm','✏️'+x.M):el('span','jc0'));
@@ -9842,7 +9853,7 @@ function qpBody(hit, k, pop, isOpen, setOpen){
   const z = hit.z, w = el('div', 'qp2');
   const lab = (MBK2M[k] && MBK2M[k].label) || '';
   const ch = el('div', 'qpchips');
-  ch.appendChild(el('span', 'qpc1', hit.kind === 'P' ? '제7판' : '변리사 ' + String(hit.q.연도).slice(2)));
+  ch.appendChild(el('span', 'qpc1', hit.kind === 'P' ? (p8Is(hit.z) ? 'H8' : 'H7') : '변리사 ' + String(hit.q.연도).slice(2)));   /* ★ revfix0928pm A-2 — 판 이름 칩 H7 · H8 */
   ch.appendChild(el('span', 'qpc2', (hit.law || S.law) + (lab && (!hit.law || hit.law === S.law) ? ' · ' + lab : '')));   /* ★ jo_cardfix §A-3 */
   ch.appendChild(el('span', 'qpc3', k));
   cfLinkChips(ch, k);   /* ★ jo_cardfix §A-4 — 문제 창에도 ↩링크N · ↩백링크N */
@@ -12393,7 +12404,7 @@ function qCard(q,mokTitle,seq){
     sub.textContent=q.출처==='기출변형'
       ?(q.연도+'년'+(q.회차?' '+q.회차+'회':'')+' · 시험 문번 '+(q.시험문번||q.문번)+'번')
       :(q.연도+'년'+(q.회차?' '+q.회차+'회':'')+' '+문번표기+' · '+typ);
-    const pb=el('button','src '+q.출처+' qexp',q.출처);
+    const pb=el('button','src '+q.출처+' qexp',q.출처==='제7판'?'H7':q.출처);   /* ★ revfix0928pm A-2 — 출처 칩 글자만(클래스·판정 = 값 그대로) */
     pb.title='누르면 문번·유형 한 줄이 펼쳐진다';
     pb.onclick=ev=>{ev.stopPropagation();
       sub.style.display=sub.style.display==='none'?'':'none';};
@@ -12696,7 +12707,7 @@ function p7Card(z,seq,opt){
     bits.push(z.병합?'리담과 흡수됨 — 기록 공유':(z.리담?'리담과 글이 다름 — 기록 따로':(p8Is(z)?'해례 8판에만 있는 지문':'제7판 단독')));   /* ★ uid 판(9/27) — 리담 참조가 있는데 병합이 아니면 uid 가 갈린 행 */
     if(z.유제)bits.push('유제');
     sub.textContent=bits.join(' · ');
-    const pb=el('button','qb v qexp',p8Is(z)?'8판':'제7판');   /* ★ p8up — 8판 새 카드는 「8판」 */
+    const pb=el('button','qb v qexp',p8Is(z)?'H8':'H7');   /* ★ p8up — 8판 새 카드는 「8판」 · ★ revfix0928pm A-2 — H7 · H8 */
     pb.title='누르면 출처 정보 한 줄이 펼쳐진다';
     pb.onclick=ev=>{ev.stopPropagation();
       sub.style.display=sub.style.display==='none'?'':'none';};
@@ -14750,7 +14761,10 @@ async function gotoJimun(kind, id, dom, ln){
   let i = (kind === 'P' ? ix.p7 : ix.lid)[id];
   if (i === undefined && kind === 'P' && MLN && MLN.ok && /^P7-\d{4}$/.test(String(id))){ const k2 = Object.keys(ix.p7).find(x => x.indexOf(id + '-') === 0); if (k2) i = ix.p7[k2]; }   /* ★ mbsame — 문항째 카드 · 쪼갠 문항 */
   if (i === undefined){ toast('이 지문이 걸린 마디를 찾지 못했다 — 목차에 안 붙은 지문이다'); return; }
-  S.tab = 'jimun'; S.jimunTab = 'ox'; S.oxQueue = ''; S.mok = (MLN && MLN.ok && kind === 'L' && (ln === 'u' || ln === 'v')) ? mlnSel(i, ln) : '__mg' + i; S.oxPage = null;
+  /* ★ revfix0928pm A-3 — 8판 새 카드(본편이 아니라 (미수록) 줄에 선다) = 그 마디의 (미수록) 줄 · 거름(기출/기타)에 걸리면 그 쪽으로 */
+  const z8 = (kind === 'P' && MLN && MLN.ok && VJ && VJ.P7map) ? VJ.P7map[id] : null, p8n = p8Is(z8);
+  if (p8n && typeof uzGkPass === 'function'){ const k8 = String(dom || '').replace(/^qb-/, ''); if (!uzGkPass(k8)) UZGK = uzIsGi(k8) ? 'g' : 'x'; }
+  S.tab = 'jimun'; S.jimunTab = 'ox'; S.oxQueue = ''; S.mok = (MLN && MLN.ok && kind === 'L' && (ln === 'u' || ln === 'v')) ? mlnSel(i, ln) : (p8n ? mlnSel(i, 'u') : '__mg' + i); S.oxPage = null;
   closeAllPops(); await render();
   /* ★ v3-C §6-2 — 목표 카드가 다른 쪽이면 그 쪽으로 넘긴다 */
   const pg = (OXDOMPG || {})[dom];
@@ -14860,16 +14874,16 @@ const skRun=async e=>{   /* ★ 손질 8 — §2 300ms 디바운스 — 아래 $
       if(P7)for(const z of P7.지문){
         if(out.length>=60)break;
         if(String(z.t||'').includes(q))
-          out.push({h:(p8Is(z)?'8판 '+z.태그+' p.'+z.판8.p8:'제7판 '+z.태그+' p.'+(z.쪽||'—')),x:skCut(z.t,q),   /* ★ p8up — 8판 새 카드 */
-                    t:z.t,ox:z.ox,sol:z.sol,tag:'제7판',
+          out.push({h:(p8Is(z)?'H8 '+z.태그+' p.'+z.판8.p8:'H7 '+z.태그+' p.'+(z.쪽||'—')),x:skCut(z.t,q),   /* ★ p8up — 8판 새 카드 · ★ revfix0928pm A-2 — H7 · H8 */
+                    t:z.t,ox:z.ox,sol:z.sol,tag:(p8Is(z)?'H8':'H7'),p7:1,   /* ★ revfix0928pm A-2 — 판정은 갈래 값 p7(글자 아님) */
                     go:{kind:'P',id:z.id,dom:'qb-'+(z.uid||('P7:'+z.id))}});
       }
       box.appendChild(el('div','grp','📝 지문 — '+out.length+'건'));
       out.forEach(r=>skRow(box,'jimun',r.h,r.x,r.tag,
         ev=>{closeSk();
-          const rows=[['',(r.tag==='제7판'?p7Text(r.t):r.t)]];
+          const rows=[['',(r.p7?p7Text(r.t):r.t)]];
           if(r.ox)rows.push(['badge','정오 '+r.ox]);
-          if(r.sol)rows.push(['sol',(r.tag==='제7판'?p7Text(r.sol):r.sol)]);
+          if(r.sol)rows.push(['sol',(r.p7?p7Text(r.sol):r.sol)]);
           popJimun(r.h,rows,ev,r.go);}));
     }catch(err){box.appendChild(el('div','grp','📝 지문 — 읽지 못했다'));}
   }
@@ -16571,9 +16585,9 @@ var P8L = {}, P8N = new Set();   /* P8N = 8판 새 카드 uid — 단원 이름�
 const P8_AT = Date.parse('2026-09-28T14:30:00+09:00');   /* 8판 판올림 인도 시각 — 이보다 앞선 풀이 기록 = 7판 글로 푼 것 */
 function p8New(c){ return !!(c && c.kind === 'P' && c.z && c.z.판8 && c.z.판8.cat === '새'); }
 function p8Is(z){ return !!(z && z.판8 && z.판8.cat === '새'); }
-function p8No(p){ const n = String((p && p.no8) || '').replace(/\.$/, ''); return '8판 p.' + p.p8 + ' ' + (/유제/.test(n) ? n : n + '번'); }
+function p8No(p){ const n = String((p && p.no8) || '').replace(/\.$/, ''); return 'H8 p.' + p.p8 + ' ' + (/유제/.test(n) ? n : n + '번'); }   /* ★ revfix0928pm A-2 — 「H8 p.N N번」 */
 /* 제7판 줄 자리 글 — 8판 새 카드는 제7판 쪽이 없다(「8판 p.N」) */
-function p7PageLab(z){ return p8Is(z) ? '8판 p.' + z.판8.p8 : '제7판 p.' + ((z && z.쪽) || '—'); }
+function p7PageLab(z){ return p8Is(z) ? 'H8 p.' + z.판8.p8 : 'H7 p.' + ((z && z.쪽) || '—'); }   /* ★ revfix0928pm A-2 */
 function p8Chip(host, z, card){
   const p = z && z.판8; if (!p) return;
   let t = '', c = '';
@@ -16729,14 +16743,14 @@ function mlnObjCard(o, no){
   const k = oxKeyP7(o), rec = oxOf(k) || {};
   const card = el('div', 'qwrap mbq mlno'); card.id = 'qb-' + k;
   const h = el('div', 'qhd mbqhd');
-  const sb = el('button', 'qb v', o.태그 || '제7판'); sb.title = '풀이 기록'; sb.onclick = ev => { ev.stopPropagation(); mbRecToggle(card); };
+  const sb = el('button', 'qb v', o.태그 || (p8Is(o) ? 'H8' : 'H7')); sb.title = '풀이 기록';   /* ★ revfix0928pm A-2 */ sb.onclick = ev => { ev.stopPropagation(); mbRecToggle(card); };
   h.appendChild(sb);
   mbTypeChip(k, tyDraftP(o), [], h);
   mlnYearChips(h, k, { kind: 'O', o: o });
   const idb = el('button', 'qb id', o.uid || ('ID ' + o.id)); idb.title = '교재 자리 — 정리OMR'; idb.onclick = ev => { ev.stopPropagation(); mbbPop(k, ev); };
   h.appendChild(idb);
   cfLinkChips(h, k);   /* ★ jo_cardfix §A-4 */
-  const pb = el('button', 'qb v qexp', '제7판'); const sub = el('div', 'qsub'); sub.style.display = 'none';
+  const pb = el('button', 'qb v qexp', p8Is(o) ? 'H8' : 'H7'); const sub = el('div', 'qsub'); sub.style.display = 'none';   /* ★ revfix0928pm A-2 */
   sub.textContent = ['p.' + (o.쪽 || '—'), '객관식 · 문항째 한 카드(계산·날짜·순서·빈칸 등)', '답 ' + (o.답 || '—')].join(' · ');
   pb.onclick = ev => { ev.stopPropagation(); sub.style.display = sub.style.display === 'none' ? '' : 'none'; };
   h.appendChild(pb);
@@ -18426,7 +18440,7 @@ function uzExvHead(main, H){
 function uzBookNo(b){ b = String(b == null ? '' : b); return /^\d+$/.test(b) ? b + '번' : b; }
 function uzJnInfo(k, hit){
   const e = uzIdx().get(k) || {};
-  if (e.P) return { no: uzBookNo(e.P.책번호) || (p8Is(e.P) ? p8No(e.P.판8) : ''), src: String(e.P.태그 || '제7판'), stem: String(e.P.사례 || '').trim(), qid: e.P.문항 ? 'P:' + e.P.문항 : '' };
+  if (e.P) return { no: uzBookNo(e.P.책번호) || (p8Is(e.P) ? p8No(e.P.판8) : ''), src: String(e.P.태그 || (p8Is(e.P) ? 'H8' : 'H7')), stem: String(e.P.사례 || '').trim(), qid: e.P.문항 ? 'P:' + e.P.문항 : '' };
   if (hit && hit.kind === 'L'){ const q = hit.q; return { no: (q.시험문번 || q.문번) + '번', src: String(q.연도 || '').slice(2) + ' 변리', stem: String(q.발문 || '').trim(), qid: 'L:' + q.id }; }
   return { no: '', src: '', stem: '', qid: '' };
 }
@@ -18550,7 +18564,7 @@ function cfRow(k, h){
   const no = L ? ((h.q.시험문번 ? h.q.시험문번 : '?') + '번(' + (z.기호 || z.n) + ')') : (mlnBookLab(z) || '?번');
   const where = law + ' · ' + (lab || (L ? (h.q.연도 + ' 제' + h.q.회차 + '회') : p7PageLab(z)));
   const t = L ? String(z.t || '') : p7Text(z.t);
-  const r = { k: k, law: law, uid: String(z.uid || k), no: no, where: where, src: L ? (String(h.q.연도 || '').slice(2) + ' 변리') : String(z.태그 || '제7판'), t: cfFixQ(k, t) };
+  const r = { k: k, law: law, uid: String(z.uid || k), no: no, where: where, src: L ? (String(h.q.연도 || '').slice(2) + ' 변리') : String(z.태그 || (p8Is(z) ? 'H8' : 'H7')), t: cfFixQ(k, t) };   /* ★ revfix0928pm A-2 */
   r.hay = [r.uid, r.no, r.src, r.where, r.t].join('\n').toLowerCase();
   return r;
 }
@@ -18661,6 +18675,12 @@ function cfRowEl(r, key, cur, back, onPick){
   '.jtyit .now{font-size:9px;font-weight:800;color:#fff;background:#2563eb;border-radius:3px;padding:0 3px;flex:none}',
   /* A-7 좁은 서랍 ★ 개정일 = 이름보다 먼저 줄어든다(오른쪽 세 칸 폭 무변) */
   '.tree .r .jstarn.jsshr{flex:0 1000 auto;min-width:1.1em;overflow:hidden;white-space:nowrap;text-overflow:clip}',
+  /* ★ revfix0928pm A-5 — 서랍 조 줄 = 번호 칸(줄지 않음 · 뒤 빈칸 pre) + 이름 칸(줄며 끝 …) · 이름 칸 = grid(번호 max-content · 이름 minmax(0,max-content)) — 넓으면 글 전체 · 좁으면 이름만 줄고 번호 아래로는 안 준다 */
+  '.tree .r span.nm.jnm2{display:grid;grid-template-columns:max-content minmax(0,max-content);min-width:min-content;overflow:hidden}',
+  '.tree .r span.nm.jnm2>.jno{white-space:pre}',
+  '.tree .r .jstarn.jsshr{display:inline-flex;flex-wrap:wrap;align-items:flex-start;height:1.5em;line-height:1.5em;text-overflow:clip}',
+  '.tree .r .jstarn>.jsd{white-space:pre}',
+  '.tree .r span.nm.jnm2>.jtt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
   /* A-6 3법 길게 누른 칸 = 카드 바로 아래 제 줄 */
   '.thcols>.c3pick{flex:0 0 100%;box-sizing:border-box}'
 ].join('\n'); document.head.appendChild(s); }catch(e){} })();
