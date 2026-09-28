@@ -51,6 +51,8 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 #hrail .rb.on{background:var(--exc);color:#fff}
 #hrail .rb[disabled]{opacity:.45;cursor:not-allowed}
 #hbadges{display:flex;align-items:center;gap:8px;flex:none;margin-left:auto}
+#hdrFold{flex:none;align-self:center;font-size:13px;line-height:1;color:#6b7280;background:none;border:0;padding:0 8px;cursor:pointer}   /* ★ hdrfold — 머리 접기 세모(▴ 펼침 · ▾ 접음 · 글자만) */
+#app.hfold #hrail,#app.hfold #hbadges,#app.hfold #hsrow,#app.hfold .mbhd,#app.hfold .mbsr{display:none!important}   /* ★ hdrfold — 접음 = 갈래 탭 · 배지 · 검색줄 · 1차객 머리 두 줄 */
 /* 둘째 줄 = 🔍 검색줄 전폭(머리와 같은 바탕) · 첫 줄이 넘치면 배지 묶음이 이 줄 오른쪽으로 내려온다(hdrFit) */
 .hsearch{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:7px 12px;background:var(--panel);
   border-bottom:1px solid #d9d5cb;flex-shrink:0}
@@ -1909,6 +1911,7 @@ mark.mkc.u{background:transparent;border-bottom:2px solid var(--exc)}
   <header class="topbar">
     <span class="logo">⚖ 조판기</span>
     <span id="laws" style="display:flex;gap:4px"></span>
+    <button id="hdrFold" type="button" title="머리 접기 / 펴기">▴</button>
     <nav id="hrail"></nav>
     <span id="hbadges">
       <span class="badge" id="lblToggle" style="cursor:pointer">🏷 라벨: 펴짐 ▾</span>
@@ -1995,6 +1998,7 @@ try{const u=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if(u.nmw>0)S.qlNmW=u.nmw;if(u.rdw>0)S.qlRdW=u.rdw;
     if(u.jww>0)S.joPanelW=u.jww;if(u.jwh>0)S.joPanelH=u.jwh;   /* ★ revfix0928 A-2 — 창 크기 = 새 키(옛 패널 jpw 340 을 안 이어받는다) */if(u.hfold)S.heatFold=true;
     if(u.trw>0)S.treeW=u.trw;   /* ★ v3-J §0-2 */
+    if(u.hdr_fold===true)S.hdrFold=true;   /* ★ hdrfold — 머리 접힘(기기별 · 처음 = 펼침) */
     if(u.jbk)S.joBlank=Object.assign({내용:false,주체:false,기간:false},u.jbk);
     if(u.jbs)S.joBlankStar=true;
     if(u.prec_filter&&typeof u.prec_filter==='object')S.precFilter=u.prec_filter;   /* ★ 판 3 §3-4 */
@@ -2024,7 +2028,7 @@ try{const u4=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if('note_color' in u4)S.noteColor=!!u4.note_color;   /* ★ notecolor B — 「정리 색」 켜고 끄기(기기별 · 기본 켬) */
     if(u4.c2uopen&&typeof u4.c2uopen==='object'&&!Array.isArray(u4.c2uopen))S.c2uOpen=u4.c2uopen;}catch(e){}   /* ★ 2cha_unit §B-4 — 걸침 펼침(기기 하나 값) */   /* ★ hrail(9/22) §C-1 — 2차 보드 차례(회차별│단원별) */
 function uiSave(){try{localStorage.setItem(UI_KEY,JSON.stringify(
-  {nmw:S.qlNmW,rdw:S.qlRdW,jww:S.joPanelW,jwh:S.joPanelH,hfold:S.heatFold?1:0,trw:S.treeW,
+  {nmw:S.qlNmW,rdw:S.qlRdW,jww:S.joPanelW,jwh:S.joPanelH,hfold:S.heatFold?1:0,hdr_fold:!!S.hdrFold,trw:S.treeW,
    jbk:S.joBlank,jbs:S.joBlankStar?1:0,
    prec_filter:S.precFilter||{},prec_sort:S.precSort,
    lsw:S.listW,prec_ygroups:S.precYG||{},
@@ -2044,6 +2048,7 @@ async function get(name){
 /* ══════════ 골격 ══════════ */
 function drawTop(){
   const lw=$('#laws');lw.innerHTML='';
+  hdrFoldPaint();   /* ★ hdrfold */
   LAWS.forEach(L=>{const b=el('button','pill'+(S.law===L?' on':''),SHORT[L]);
     b.onclick=()=>{S.law=L;S.jo=null;S.prec=null;pfClearY();   /* ★ prec3 §A-5 — 법을 바꾸면 고른 회차를 비운다 */
       if(S.tab==='jimun'&&L==='민사소송법')S.tab='jo';render();};lw.appendChild(b);});
@@ -2072,6 +2077,13 @@ function drawTop(){
   /* ★ v3-H §2 — 갈래 법이 바뀌면 그 법을 검색에도 켠다(다른 켜진 것은 안 끈다) */
   SKLAW[S.law]=true;
   skLawPaint();
+}
+/* ★ hdrfold — 머리 접기 세모 · 접음 = #app.hfold(CSS 가 다섯 요소를 숨김) · 누름 뒤 hdrFit(배지 자리) · resize 알림(본문 높이가 바뀜 → 창·서랍 자리 맞춤 · vvFit·cfFit 등) */
+function hdrFoldPaint(){
+  const app=$('#app'),b=$('#hdrFold');if(app)app.classList.toggle('hfold',!!S.hdrFold);
+  if(!b)return;b.textContent=S.hdrFold?'▾':'▴';
+  b.onclick=ev=>{ev.stopPropagation();S.hdrFold=!S.hdrFold;uiSave();hdrFoldPaint();
+    try{hdrFit();}catch(e){}try{window.dispatchEvent(new Event('resize'));}catch(e){}};
 }
 function drawRail(){
   const r=$('#hrail');const sl=r.scrollLeft;r.innerHTML='';   /* ★ mok_popup_phone G-5 — 폰에서 옆으로 민 자리(sl)는 다시 그려도 지킨다(비웠다 채우면 0 으로 돌아가 방금 켠 오른쪽 탭이 화면 밖으로 사라졌다) */   /* ★ hrail(9/22) §A-1 — 그리는 자리만 #rail → #hrail(칸·수·켜짐 규칙 그대로) */
