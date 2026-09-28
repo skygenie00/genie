@@ -9870,7 +9870,7 @@ function qpBody(hit, k, pop, isOpen, setOpen){
   ad.appendChild(ab);
   if (oxFixed(k)) ad.appendChild(document.createTextNode(' (정정)'));
   ans.appendChild(ad);
-  ans.appendChild(el('div', 'qpe', cfFixExp(k, as.sol) || '해설 없음'));   /* ★ jo_cardfix §A-7 */
+  ans.appendChild(p8SolWrap(hit.kind === 'P' ? p8S7(z) : '', k, el('div', 'qpe', cfFixExp(k, as.sol) || '해설 없음')));   /* ★ jo_cardfix §A-7 · ★ p8sol §A-3 */
   w.appendChild(ans);
   const bar = el('div', 'qpbar');
   const pk = el('button', 'qpb qpk', isOpen() ? '정답·해설 접기' : '정답·해설 보기'); pk.type = 'button';
@@ -11039,7 +11039,7 @@ function oxPickRow(row, key, raw, sol, extra, chips, autos, opt){
     exp.appendChild(rb);
   }
   logicView(exp, key);
-  exp.appendChild(sol ? solEl(sol) : el('div', 'cdim', '해설 없음'));
+  exp.appendChild(p8SolWrap(opt && opt.p8s7, key, sol ? solEl(sol) : el('div', 'cdim', '해설 없음')));   /* ★ p8sol §A-3 */
   /* ── 하단 액션 바 — ⚖ 원문(joWonBtn 그대로) · 지문 끝에 있던 조문·판례 칩 · ✎ 정정 · 지우개 ── */
   const act = el('div', 'mbact');
   if (extra) act.appendChild(extra);
@@ -12736,7 +12736,7 @@ function p7Card(z,seq,opt){
   /* ★ v3-F §3 — 「⚖ 원문」(법제처)은 해설을 펼쳤을 때만(해설 안) */
   let wb=null;
   if(JOS.length){wb=el('div');JOS.forEach(x=>wb.appendChild(joWonBtn(x)));}
-  oxPickRow(row, tk7, ox, sol7, wb, chipBox7, undefined, opt);
+  oxPickRow(row, tk7, ox, sol7, wb, chipBox7, undefined, Object.assign({}, opt, { p8s7: p8S7(z) }));   /* ★ p8sol §A-3 — opt 는 instant 만 읽힌다 */
   card.appendChild(row);
   inkHost(card,'q7|'+z.id);                // 캔버스 한 장 = 지문 카드 하나(§4-3)
   return card;
@@ -14009,7 +14009,7 @@ function jnRow(k, idx){
   const ab = el('b', '', a || '미확정'); ab.style.color = a === 'O' ? '#2563eb' : a === 'X' ? '#dc2626' : '#6b7280';
   ad.appendChild(ab);
   ans.appendChild(ad);
-  ans.appendChild(el('div', 'jne', cfFixExp(k, as.sol) || '해설 없음'));   /* ★ jo_cardfix §A-7 */
+  ans.appendChild(p8SolWrap(hit && hit.kind === 'P' ? p8S7(hit.z) : '', k, el('div', 'jne', cfFixExp(k, as.sol) || '해설 없음')));   /* ★ jo_cardfix §A-7 · ★ p8sol §A-3 */
   r.appendChild(ans);
   return r;
 }
@@ -16588,6 +16588,21 @@ function p8Is(z){ return !!(z && z.판8 && z.판8.cat === '새'); }
 function p8No(p){ const n = String((p && p.no8) || '').replace(/\.$/, ''); return 'H8 p.' + p.p8 + ' ' + (/유제/.test(n) ? n : n + '번'); }   /* ★ revfix0928pm A-2 — 「H8 p.N N번」 */
 /* 제7판 줄 자리 글 — 8판 새 카드는 제7판 쪽이 없다(「8판 p.N」) */
 function p7PageLab(z){ return p8Is(z) ? 'H8 p.' + z.판8.p8 : 'H7 p.' + ((z && z.쪽) || '—'); }   /* ★ revfix0928pm A-2 */
+/* ★ p8sol §A-3 — 해설 칸 머리 「8판 해설 고침」(판8.s7 이 있는 줄만 · 회색 11px 700) → 해설 아래 흐린 상자 「7판 해설」 · 한 번 더 누르면 접힘
+   사용자가 고친 해설(qfixOf(k).exp)이 보이는 줄은 상자에 「(내가 고친 해설이 보이는 중)」 한 줄 · 명칭만·새 카드 = 표시 없음(s7 없음) */
+function p8SolWrap(s7, k, node){
+  if (!s7) return node;
+  const w = el('div', 'p8sw'), hd = el('div', 'p8sh');
+  const b = el('button', 'p8c g', '8판 해설 고침'); b.type = 'button'; b.title = '누르면 7판 해설(한 번 더 누르면 접힘)';
+  b.onclick = ev => { ev.stopPropagation();
+    const old = w.querySelector(':scope > .p8t7'); if (old){ old.remove(); return; }
+    const d = el('div', 'p8t7'); d.appendChild(el('b', '', '7판 해설')); d.appendChild(document.createTextNode(p7Text(s7)));
+    let f = null; try{ f = k ? qfixOf(k) : null; }catch(e){}
+    if (f && typeof f.exp === 'string') d.appendChild(el('div', 'p8fx', '(내가 고친 해설이 보이는 중)'));
+    w.appendChild(d); };
+  hd.appendChild(b); w.appendChild(hd); w.appendChild(node); return w;
+}
+function p8S7(z){ return (z && z.판8 && z.판8.s7) || ''; }
 function p8Chip(host, z, card){
   const p = z && z.판8; if (!p) return;
   let t = '', c = '';
@@ -16616,7 +16631,8 @@ function p8LidChip(host, z, q){
   '.p8c{display:inline-block;background:transparent;border:0;padding:0 2px;font:700 11px/16.5px "Malgun Gothic","Apple SD Gothic Neo",sans-serif;white-space:nowrap;vertical-align:middle}',
   'button.p8c{cursor:pointer}', '.p8c.g{color:#9ca3af}', '.p8c.r{color:#dc2626}', '.p8c.n{color:#15803d}',
   '.p8t7{margin:2px 0 6px;padding:4px 10px;font-size:12.5px;line-height:1.6;color:#9ca3af;background:#f9fafb;border-left:3px solid #e5e7eb;white-space:pre-wrap}',
-  '.p8t7 b{font-weight:700;margin-right:6px}'
+  '.p8t7 b{font-weight:700;margin-right:6px}',   /* ★ p8sol §A-3 */
+  '.p8sh{margin:0 0 1px;text-align:left;line-height:16.5px}', '.p8sh .p8c{padding:0}', '.p8fx{margin-top:2px;font-size:11.5px;color:#9ca3af}'
 ].join('\n'); document.head.appendChild(s); }catch(e){} })();
 function mlnBookLab(z){
   if (z.판8 && z.판8.cat === '새') return p8No(z.판8);   /* ★ p8up — 8판 새 카드 = 책번호 자리에 「8판 p.N N번」 */
@@ -16782,7 +16798,7 @@ function mlnObjCard(o, no){
   box.appendChild(pk);
   const sv = el('button', 'jnpk', '정답·해설 ▸'); const sd = el('div', 'jnans2'); sd.hidden = true;
   sd.appendChild(el('div', 'jna', '정답 ' + (ans || '미확정')));
-  sd.appendChild(solEl(o.sol || '해설 없음', 'jne'));
+  sd.appendChild(p8SolWrap(p8S7(o), k, solEl(o.sol || '해설 없음', 'jne')));   /* ★ p8sol §A-3 */
   sv.onclick = ev => { ev.stopPropagation(); sd.hidden = !sd.hidden; sv.textContent = sd.hidden ? '정답·해설 ▸' : '정답·해설 ▾'; };
   box.appendChild(sv); box.appendChild(sd);
   card.appendChild(box);
@@ -18327,7 +18343,7 @@ function uzExvBox(q, z, i, combo, graded, open){
   brr.appendChild(lk); bot.appendChild(brr);
   box.appendChild(bot);
   { const rb = el('div', 'resb'); rb.appendChild(el('span', 'ansb', '정답 ' + (a || '미확정'))); exp.appendChild(rb);
-    { const _s = cfFixExp(k, z.sol || ''); exp.appendChild(_s ? solEl(_s) : el('div', 'cdim', '해설 없음')); } }   /* ★ jo_cardfix §A-7 — 고친 해설 먼저 */
+    { const _s = cfFixExp(k, z.sol || ''); exp.appendChild(p8SolWrap(p8S7(z), k, _s ? solEl(_s) : el('div', 'cdim', '해설 없음'))); } }   /* ★ jo_cardfix §A-7 — 고친 해설 먼저 · ★ p8sol §A-3 */
   box.appendChild(exp);
   inkHost(box, 'z|' + k);
   return box;
