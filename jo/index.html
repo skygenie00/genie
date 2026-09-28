@@ -12362,6 +12362,7 @@ function qCard(q,mokTitle,seq){
        L.appendChild(_id);
        cfLinkChips(L,_k);   /* ★ jo_cardfix §A-4 — ↩링크N(남색) · ↩백링크N(연두) 글자 */
        L.appendChild(mcChip(_k));
+       p8LidChip(L,z,q);   /* ★ p8up A-3 — 이미 있는 34(마디에 안 붙은 문항 = 미분류 문항 카드) */
      });}
     const q1=el('div','oxq');
     q1.appendChild(el('b','mbqlab','('+(z.기호||z.n)+')'));   // ★ gaek_mb §C-9 — 민법 지문 이름표(13px/800 · 파랑)
@@ -12616,18 +12617,19 @@ function p7Card(z,seq,opt){
   const sub=el('div','qsub');sub.style.display='none';
   {
     const bits=[];
-    if(z.쪽)bits.push('p.'+z.쪽);
+    if(z.쪽)bits.push('p.'+z.쪽);else if(p8Is(z))bits.push(p8No(z.판8));   /* ★ p8up — 8판 새 카드 = 8판 자리 */
     if(z.리담)bits.push('리담 '+z.리담.연도+'년 '+z.리담.문항+'번 ('+z.리담.선지+')');
-    bits.push(z.병합?'리담과 흡수됨 — 기록 공유':(z.리담?'리담과 글이 다름 — 기록 따로':'제7판 단독'));   /* ★ uid 판(9/27) — 리담 참조가 있는데 병합이 아니면 uid 가 갈린 행 */
+    bits.push(z.병합?'리담과 흡수됨 — 기록 공유':(z.리담?'리담과 글이 다름 — 기록 따로':(p8Is(z)?'해례 8판에만 있는 지문':'제7판 단독')));   /* ★ uid 판(9/27) — 리담 참조가 있는데 병합이 아니면 uid 가 갈린 행 */
     if(z.유제)bits.push('유제');
     sub.textContent=bits.join(' · ');
-    const pb=el('button','qb v qexp','제7판');
+    const pb=el('button','qb v qexp',p8Is(z)?'8판':'제7판');   /* ★ p8up — 8판 새 카드는 「8판」 */
     pb.title='누르면 출처 정보 한 줄이 펼쳐진다';
     pb.onclick=ev=>{ev.stopPropagation();
       sub.style.display=sub.style.display==='none'?'':'none';};
     h.appendChild(pb);
   }
   h.appendChild(mcChip(tk7));   // 🃏
+  p8Chip(h, z, card);   /* ★ p8up A-3 — 칩 줄 끝 */
   const tagbox7=el('span','mbtags t');   /* ★ gaek_mb §C-10 */
   if(S.law==='특허법'&&typeof pinTag==='function')pinTag(tk7,tagbox7);   /* ★ mbsame §B-3 — 📍 좌표기억 = 오른쪽 아이콘 첫째(민법 injectPins) */
   oxTagBar(tk7,tagbox7);
@@ -13100,7 +13102,7 @@ function mbUnitRow(M, i, sel, label, keys, subj, flat, jn){
   const rl = rndList(scope), rn = rl.length, total = keys.length;
   const done = keys.filter(k => (oxOf(k) || {}).p).length;
   const cards = keys.reduce((a, k) => a + mcCount(k), 0);
-  keys.forEach(k => { if (MLN && MLN.ok && /~[uv]$/.test(sel) && MLN.p7uid.has(k)) return; if (sel === '__미분류' && MBK2M[k]) return; MBK2M[k] = { sel: sel, label: label }; });   /* ★ mbsame_add2 ④ — 단원에 선 열쇠를 미분류 줄이 덮지 않는다 */   /* ★ mbsame — 흡수된 기출변형 선지는 본편 줄이 맡는다 */
+  keys.forEach(k => { if (MLN && MLN.ok && /~[uv]$/.test(sel) && MLN.p7uid.has(k) && !P8N.has(k)) return;   /* ★ p8up — 8판 새 카드는 (미수록) 줄이 제 단원 */ if (sel === '__미분류' && MBK2M[k]) return; MBK2M[k] = { sel: sel, label: label }; });   /* ★ mbsame_add2 ④ — 단원에 선 열쇠를 미분류 줄이 덮지 않는다 */   /* ★ mbsame — 흡수된 기출변형 선지는 본편 줄이 맡는다 */
   const row = el('div', 'mbur' + (flat ? ' flat' : ''));
   const L = el('div', 'l');
   /* ★ toc_fuse(9/26) D-2 — 책 소제목이 있는 줄은 번호 앞 「▸」 하나(원래 「›」는 안 그린다 · 화살표 하나).
@@ -14041,6 +14043,8 @@ function vjPrep(JM, P7, MG, subj, drawer){
   /* ★ v3-D §0 — 순번·마디 경로 계산용 스냅샷. 순번은 그릴 때만 계산하고 저장하지 않는다 */
   {const _pm={};if(P7)P7.지문.forEach(z=>_pm[z.id]=z);
    VJ={M:(MG&&MG.마디)||[],byId:byId,P7map:_pm,qs:JM.문제||[]};
+   P8L=(P7&&P7.판8_리담)||{};   /* ★ p8up — 이미 앱 리담 카드인 8판 지문 34(uid · 문항 통째면 문항 id) → 8판 자리 */
+   P8N=new Set(((P7&&P7.지문)||[]).filter(z=>z.판8&&z.판8.cat==='새').map(z=>z.uid));
    /* ★ gaek_mb §A-2 — 서랍도 같은 재료를 쓴다(따로 읽지 않는다) */
    if(drawer)jtSet({M:VJ.M,byId:byId,P7map:_pm,subj:subj,qs:JM.문제||[]});
    try{mlnBuild(JM,P7,VJ.M,subj);if(MLN)MLN._subj=subj;}catch(e){console.warn('[mln]',e);MLN={ok:false};}}   /* ★ mbsame §A — 단원 줄 재료 */
@@ -14170,7 +14174,7 @@ async function viewJimun(){
     OXPOOL = {}; OXDOMPG = {};
     pool.forEach(c => { OXPOOL[c.k] = { dom: c.dom, kind: c.kind, ln: c.ln || '',   /* ★ mbsame — 문항째 카드(O)는 제7판 쪽 · 단원 줄 */
       id: (c.kind === 'L' ? c.q.id : c.z.id),
-      name: (c.kind !== 'L' ? '제7판 p.' + (c.z.쪽 || '—')
+      name: (c.kind !== 'L' ? p7PageLab(c.z)   /* ★ p8up */
                             : c.q.연도 + '년 ' + (c.q.시험문번 || c.q.문번) + '번(' + c.z.n + ')'),
       t: String(c.z.t || ''),
       ans: (c.kind === 'P' ? (c.z.ox || ((c.z.리담 || {}).ox || '')) : c.kind === 'O' ? '' : c.z.ox) || '' }; });
@@ -14782,7 +14786,7 @@ const skRun=async e=>{   /* ★ 손질 8 — §2 300ms 디바운스 — 아래 $
       if(P7)for(const z of P7.지문){
         if(out.length>=60)break;
         if(String(z.t||'').includes(q))
-          out.push({h:'제7판 '+z.태그+' p.'+(z.쪽||'—'),x:skCut(z.t,q),
+          out.push({h:(p8Is(z)?'8판 '+z.태그+' p.'+z.판8.p8:'제7판 '+z.태그+' p.'+(z.쪽||'—')),x:skCut(z.t,q),   /* ★ p8up — 8판 새 카드 */
                     t:z.t,ox:z.ox,sol:z.sol,tag:'제7판',
                     go:{kind:'P',id:z.id,dom:'qb-'+(z.uid||('P7:'+z.id))}});
       }
@@ -16423,7 +16427,8 @@ function mlnDirect(M, i, P7map, byId){
   const js = Array.from(new Set(n.지문 || []));
   const cs = js.map(id => mlnCardOf(id, P7map)).filter(Boolean);
   if (n.출처 !== '책') cs.sort((a, b) => ((a.kind === 'O' ? mlnObjSun(a.o) : a.z.순) - (b.kind === 'O' ? mlnObjSun(b.o) : b.z.순)));
-  out.b = cs;
+  out.b = cs.filter(c => !p8New(c));   /* ★ p8up — 8판 새 카드는 본편이 아니라 (미수록) */
+  cs.filter(p8New).forEach(c => out.u.push(Object.assign({}, c, { ln: 'u' })));
   Array.from(new Set(n.리담 || [])).forEach(id => { const q = (byId || {})[id]; if (!q) return;
     (q.지문 || []).forEach(z => { const c = mlnClass(q, z); if (c === 'a') return;
       out[c].push({ kind: 'Z', q: q, z: z, dom: 'qb-' + oxKeyLid(q, z), ln: c }); }); });
@@ -16440,10 +16445,12 @@ function mlnCardsDeep(i, ln){
     const seen = new Set(), cs = [];
     idx.forEach(j => (M[j].지문 || []).forEach(id => { if (seen.has(id)) return; seen.add(id); const c = mlnCardOf(id, VJ.P7map); if (c) cs.push(c); }));
     if (n.출처 !== '책') cs.sort((a, b) => ((a.kind === 'O' ? mlnObjSun(a.o) : a.z.순) - (b.kind === 'O' ? mlnObjSun(b.o) : b.z.순)));
-    return cs;
+    return cs.filter(c => !p8New(c));   /* ★ p8up — 8판 새 카드는 본편에서 뺀다 */
   }
   if (ln === 'n') return [];
   const seenQ = new Set(), cs = [];
+  if (ln === 'u'){ const seenP = new Set();   /* ★ p8up — (미수록) 줄 = 8판 새 카드(마디 지문 · 책 차례) + 제7판에 없는 리담 선지 */
+    idx.forEach(j => (M[j].지문 || []).forEach(id => { if (seenP.has(id)) return; seenP.add(id); const c = mlnCardOf(id, VJ.P7map); if (p8New(c)) cs.push(Object.assign({}, c, { ln: 'u' })); })); }
   idx.forEach(j => (M[j].리담 || []).forEach(id => { if (seenQ.has(id)) return; seenQ.add(id); const q = VJ.byId[id]; if (!q) return;
     (q.지문 || []).forEach(z => { if (mlnClass(q, z) === ln) cs.push({ kind: 'Z', q: q, z: z, dom: 'qb-' + oxKeyLid(q, z), ln: ln }); }); }));
   return cs;
@@ -16475,7 +16482,46 @@ function mlnCaseBoxL(q, no){
   return b;
 }
 /* 책 번호 — 본편 「25번」 · 유제 「25-유제」 · 쪼갠 객관식 「12번 - (3)」 */
+/* ★ p8up A-3 — 해례 8판 표시(원장 판8 칸 · 판8_리담 표) · 글자만(cardfix 머리 칩 꼴) · 색 셋 */
+var P8L = {}, P8N = new Set();   /* P8N = 8판 새 카드 uid — 단원 이름표(MBK2M)가 (미수록) 줄의 제7판 uid 를 건너뛸 때 이것은 안 건너뛴다 */
+const P8_AT = Date.parse('2026-09-28T14:30:00+09:00');   /* 8판 판올림 인도 시각 — 이보다 앞선 풀이 기록 = 7판 글로 푼 것 */
+function p8New(c){ return !!(c && c.kind === 'P' && c.z && c.z.판8 && c.z.판8.cat === '새'); }
+function p8Is(z){ return !!(z && z.판8 && z.판8.cat === '새'); }
+function p8No(p){ const n = String((p && p.no8) || '').replace(/\.$/, ''); return '8판 p.' + p.p8 + ' ' + (/유제/.test(n) ? n : n + '번'); }
+/* 제7판 줄 자리 글 — 8판 새 카드는 제7판 쪽이 없다(「8판 p.N」) */
+function p7PageLab(z){ return p8Is(z) ? '8판 p.' + z.판8.p8 : '제7판 p.' + ((z && z.쪽) || '—'); }
+function p8Chip(host, z, card){
+  const p = z && z.판8; if (!p) return;
+  let t = '', c = '';
+  if (p.cat === '문장'){ t = '8판 고침'; c = 'g'; }
+  else if (p.cat === '답'){ t = '8판 고침 · 답 ' + (p.a7 || '?') + '→' + z.ox; c = 'r'; }
+  else if (p.cat === '없음'){ t = '8판에 없음'; c = 'g'; }
+  else if (p.cat === '새'){ t = '8판 새'; c = 'n'; }
+  else return;   /* 명칭 · 기관 · 오류 · 자리 = 표시 없음(글만 8판) */
+  const tog = (p.cat === '문장' || p.cat === '답') && p.t7;
+  const b = el(tog ? 'button' : 'span', 'p8c ' + c, t); if (tog) b.type = 'button';
+  b.title = tog ? '누르면 7판 글(한 번 더 누르면 접힘)' : (p.cat === '새' ? '해례 8판에만 있는 지문' : '해례 8판에서 빠진 지문 — 카드·기록은 그대로');
+  if (tog) b.onclick = ev => { ev.stopPropagation();
+    const old = card.querySelector(':scope > .p8t7'); if (old){ old.remove(); return; }
+    const d = el('div', 'p8t7'); d.appendChild(el('b', '', '7판 글')); d.appendChild(document.createTextNode(p7Text(p.t7)));
+    const hd = card.querySelector(':scope > .mbqhd'); if (hd) hd.after(d); else card.prepend(d); };
+  host.appendChild(b);
+  if (p.cat === '답'){ let r = null; try{ r = oxOf(oxKeyP7(z)); }catch(e){}   /* 옛 풀이 기록(8판 전) = 7판 답으로 푼 것 */
+    if (r && r.p && Date.parse(r.ts || '') < P8_AT) host.appendChild(el('span', 'p8c g p8old', '7판 글')); }
+}
+/* 이미 앱 리담 카드인 8판 지문 — 「8판 p.N N번」(지문 uid · 없으면 문항 통째 표) */
+function p8LidChip(host, z, q){
+  const p = (z && z.uid && P8L[z.uid]) || (q && P8L[q.id] && P8L[q.id].문항 ? P8L[q.id] : null); if (!p) return;
+  const s = el('span', 'p8c g', p8No(p)); s.title = '해례 8판 자리'; host.appendChild(s);
+}
+(function(){ try{ const s = document.createElement('style'); s.id = 'p8upcss'; s.textContent = [
+  '.p8c{display:inline-block;background:transparent;border:0;padding:0 2px;font:700 11px/16.5px "Malgun Gothic","Apple SD Gothic Neo",sans-serif;white-space:nowrap;vertical-align:middle}',
+  'button.p8c{cursor:pointer}', '.p8c.g{color:#9ca3af}', '.p8c.r{color:#dc2626}', '.p8c.n{color:#15803d}',
+  '.p8t7{margin:2px 0 6px;padding:4px 10px;font-size:12.5px;line-height:1.6;color:#9ca3af;background:#f9fafb;border-left:3px solid #e5e7eb;white-space:pre-wrap}',
+  '.p8t7 b{font-weight:700;margin-right:6px}'
+].join('\n'); document.head.appendChild(s); }catch(e){} })();
 function mlnBookLab(z){
+  if (z.판8 && z.판8.cat === '새') return p8No(z.판8);   /* ★ p8up — 8판 새 카드 = 책번호 자리에 「8판 p.N N번」 */
   const bn = String(z.책번호 || '');
   if (!bn) return '';
   if (z.문항) return bn + '번 - (' + z.선지 + ')';
@@ -16573,6 +16619,7 @@ function mlnLidCard(q, z, no, ln, ni, opt){
   cfLinkChips(L, k);
   mlnBonChip(L, q, z, ln, ni);
   L.appendChild(mcChip(k));
+  p8LidChip(L, z, q);   /* ★ p8up A-3 — 이미 있는 34 */
   hd.appendChild(L);
   const T = el('div', 't mbtags'); if (S.law === '특허법' && typeof pinTag === 'function') pinTag(k, T); oxTagBar(k, T); hd.appendChild(T);
   row.appendChild(hd);
@@ -18087,6 +18134,7 @@ function uzExvQ(q, y, graded){
   const hd = el('div', 'exv-head');
   hd.appendChild(el('span', 'exv-no', giNo(q) + '.'));
   hd.appendChild(el('span', 'exv-stem', q.발문 || ''));
+  if (P8L[q.id] && P8L[q.id].문항){ const s8 = el('span', 'p8c g', p8No(P8L[q.id])); s8.title = '해례 8판 자리(문항 통째)'; hd.appendChild(s8); }   /* ★ p8up A-3 — 문항 통째 */
   const rs = el('span', 'exv-res');
   if (graded && ans.length) rs.appendChild(el('span', rec.ok ? 'exv-r-ok' : 'exv-r-bad', rec.ok ? 'O 맞음' : 'X 틀림 · 정답 ' + ans.map(x => UZ_CIR[+x] || x).join('·')));
   else if (graded && !ans.length) rs.appendChild(el('span', 'exv-r-na', '정답 못 정함'));
@@ -18145,6 +18193,7 @@ function uzExvBox(q, z, i, combo, graded, open){
   L.appendChild(idb);
   cfLinkChips(L, k);   /* ★ jo_cardfix §A-4 */
   L.appendChild(mcChip(k));
+  p8LidChip(L, z, null);   /* ★ p8up A-3 — 이미 있는 34(지문) */
   hd.appendChild(L);
   const T = el('div', 't mbtags'); if (S.law === '특허법' && typeof pinTag === 'function') pinTag(k, T); oxTagBar(k, T);
   T.querySelectorAll('.qtag').forEach(t => { if (t.textContent === OXTAG_IC.important) t.remove(); });   /* ⭐ 는 기출뷰에서만 뺀다(민법 inExamView) */
@@ -18293,7 +18342,7 @@ function uzExvHead(main, H){
 function uzBookNo(b){ b = String(b == null ? '' : b); return /^\d+$/.test(b) ? b + '번' : b; }
 function uzJnInfo(k, hit){
   const e = uzIdx().get(k) || {};
-  if (e.P) return { no: uzBookNo(e.P.책번호) || '', src: String(e.P.태그 || '제7판'), stem: String(e.P.사례 || '').trim(), qid: e.P.문항 ? 'P:' + e.P.문항 : '' };
+  if (e.P) return { no: uzBookNo(e.P.책번호) || (p8Is(e.P) ? p8No(e.P.판8) : ''), src: String(e.P.태그 || '제7판'), stem: String(e.P.사례 || '').trim(), qid: e.P.문항 ? 'P:' + e.P.문항 : '' };
   if (hit && hit.kind === 'L'){ const q = hit.q; return { no: (q.시험문번 || q.문번) + '번', src: String(q.연도 || '').slice(2) + ' 변리', stem: String(q.발문 || '').trim(), qid: 'L:' + q.id }; }
   return { no: '', src: '', stem: '', qid: '' };
 }
@@ -18415,7 +18464,7 @@ function cfRow(k, h){
   const law = h.law || S.law, L = h.kind === 'L', z = h.z;
   const lab = (law === S.law && MBK2M[k] && MBK2M[k].label) || '';
   const no = L ? ((h.q.시험문번 ? h.q.시험문번 : '?') + '번(' + (z.기호 || z.n) + ')') : (mlnBookLab(z) || '?번');
-  const where = law + ' · ' + (lab || (L ? (h.q.연도 + ' 제' + h.q.회차 + '회') : ('제7판 p.' + (z.쪽 || '—'))));
+  const where = law + ' · ' + (lab || (L ? (h.q.연도 + ' 제' + h.q.회차 + '회') : p7PageLab(z)));
   const t = L ? String(z.t || '') : p7Text(z.t);
   const r = { k: k, law: law, uid: String(z.uid || k), no: no, where: where, src: L ? (String(h.q.연도 || '').slice(2) + ' 변리') : String(z.태그 || '제7판'), t: cfFixQ(k, t) };
   r.hay = [r.uid, r.no, r.src, r.where, r.t].join('\n').toLowerCase();
