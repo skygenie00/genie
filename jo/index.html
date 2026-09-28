@@ -10436,10 +10436,54 @@ function mbbPop(key, ev){
    pg.onclick = ev2 => { ev2.stopPropagation(); closeAllPops();
      if (typeof omrJump === 'function') omrJump(key); };
    wrap.appendChild(pg);}
-  wrap.appendChild(el('div', 'mbbnone',
-    '교재 PDF 자리·후보는 다음 판에서 들어온다 — 지금은 줄을 그리지 않는다.'));
+  { const h8 = el('div', 'mbb8'); h8.dataset.p8u = key; wrap.appendChild(h8); p8BookFill(h8, key); }   /* ★ book8 A-4 — 「다음 판에서…」 자리 = 해례 8판 줄 */
   body.appendChild(wrap);
 }
+/* ══ ★ _task_jo_book8 A-4 — 1차객 「📚 교재 자리」 해례 8판 줄 ══
+   대응표 = 비공개 minbeoppdf words/patent_hr8/대응.json({uid: [{p, r:[x0,y0,x1,y1](0~2000 · 위 기준), s, how, c?}] · 책 글 없음) · 메모리 + IndexedDB bookmap:patent_hr8(책메타와 같은 길 · 못 받으면 재운 것)
+   줄 = 목차노트 「교재 자리」 창 ncRow 꼴(책 이름 · 인쇄 쪽 · PDF 쪽 · 확신 글자 · 둘째 줄 = 그 자리 글자층 글 · 저장 안 함) · 2~4등 = 접힌 「후보 N」 ·
+   찍어 둔 자리(jopangi.canvasjari 칸 p8|<uid>)가 있으면 그것 하나 + 그림 + 「자동으로 되돌리기」(대응표보다 먼저) · 대응표에 없으면 「해례 8판 — 자리 없음 · 직접 찍기」 한 줄 ·
+   누름 = 정리캔버스 교재 창(같은 cvbDoc · cv-bookhl 칠함 · ◀▶ · 쪽 입력) · 「📍 자리 직접 찍기」 = 그 창 📍 찍기(ctx.save → 칸 p8|<uid>) */
+const P8B = 'patent_hr8';
+let P8MAP = null;
+async function p8Map(){ if (P8MAP) return P8MAP; const H = viewCanvas.hsBook; let old = null; try { old = await H.get('bookmap:' + P8B); } catch (e) {}
+  let fresh = null; try { fresh = await H.gh('words/' + P8B + '/대응.json', 'json'); } catch (e) {}
+  if (fresh && fresh._meta){ try { await H.put('bookmap:' + P8B, fresh); } catch (e) {} }
+  const m = (fresh && fresh._meta) ? fresh : ((old && old._meta) ? old : null); if (m) P8MAP = m; return m; }
+function p8Fr(s){ return (s && s.r) ? Object.assign({}, s, { r: s.r.map(v => v / 2000) }) : s; }   /* 대응표 r(0~2000) → 쪽 비(0~1 · 손값·그림·글자층 글과 같은 꼴) */
+function p8Guess(uid){ try { const z = Object.values((VJ && VJ.P7map) || {}).find(x => x.uid === uid); const p = +((z && ((z.판8 && z.판8.pdf8) || z.pdf쪽)) || 0); return p ? Math.min(805, p) : 1; } catch (e) { return 1; } }
+/* 8판 줄 — 목차노트 「교재 자리」 ncRow 꼴 그대로 · 둘째 줄 = 그 자리 글자층 글 40자(지시서 A-4 · 저장 안 함) */
+function p8Row(J, bk, s, tag, go){ const r = el('div', 'mbbrow'); r.dataset.book = bk; r.dataset.p = s.p;
+  const hd = el('div', 'hd'); hd.appendChild(el('span', 'k', J.name(bk))); hd.appendChild(el('span', 'p', J.pr(bk, s.p) + '쪽')); hd.appendChild(el('span', 'm', 'PDF ' + s.p));
+  if (tag) hd.appendChild(el('span', 'm', tag)); r.appendChild(hd);
+  const sn = el('div', 'sn'); r.appendChild(sn);
+  J.words(bk, s.p).then(w => { const t = ncSnip(w, s); sn.textContent = t ? t.slice(0, 40) + '…' : ''; }).catch(() => {});
+  r.onclick = ev => { ev.stopPropagation(); go(ev); }; return r; }
+async function p8BookFill(host, uid){
+  const J = viewCanvas.jari; host.innerHTML = ''; host.appendChild(el('div', 'ncb-sec', '교재'));
+  const wait = el('div', 'mbbnone', '해례 8판 자리를 받는 중…'); host.appendChild(wait);
+  let M = null; try { M = await p8Map(); } catch (e) { M = null; }
+  try { await J.meta8(); } catch (e) {}
+  if (!host.isConnected) return; wait.remove();
+  const rows = ((M && M[uid]) || []).map(p8Fr), pin = J.k8.get(uid);
+  const ctx = pick => ({ b: 'p8|' + uid, pick: !!pick, save: v => { J.k8.put(uid, { by: 'hand', b: P8B, p: v.p, r: v.r, t: Date.now(), who: (typeof syncWho === 'function' ? (syncWho() || '') : '') });
+      toast('교재 자리를 찍었다 — 해례 8판 p.' + J.pr(P8B, v.p)); p8BookRefresh(uid); } });
+  const open = (s, ev, pick) => J.book8(Object.assign({ book: P8B, page: s.p }, s.r ? { r: s.r, cf: s.c || '' } : {}), ev, ctx(pick));
+  if (pin){ const s = { p: pin.p, r: pin.r };
+    host.appendChild(p8Row(J, P8B, s, '찍어 둔 자리', ev => open(s, ev)));
+    host.appendChild(ncPic(J, P8B, s, ev => open(s, ev)));
+    const rv = el('button', 'ncb-more', '자동으로 되돌리기'); rv.onclick = ev => { ev.stopPropagation(); J.k8.put(uid, { auto: true, t: Date.now() }); p8BookRefresh(uid); }; host.appendChild(rv); }
+  else if (rows.length){
+    host.appendChild(p8Row(J, P8B, rows[0], rows[0].c ? '확신 ' + rows[0].c : '', ev => open(rows[0], ev)));
+    if (rows.length > 1){ const b = el('button', 'ncb-more', '후보 ' + (rows.length - 1)), box = el('div'); box.hidden = true; box.dataset.more = P8B;
+      b.onclick = ev => { ev.stopPropagation(); if (!box.childNodes.length) rows.slice(1).forEach(s => box.appendChild(p8Row(J, P8B, s, '후보', ev2 => open(s, ev2)))); box.hidden = !box.hidden; try { mbWinFit(host.closest('.pop')); } catch (e) {} };
+      host.appendChild(b); host.appendChild(box); } }
+  else host.appendChild(el('div', 'mbbnone', '해례 8판 — 자리 없음 · 직접 찍기'));
+  const pk = el('button', 'ncb-more p8pick', '📍 자리 직접 찍기'); pk.title = '해례 8판 쪽 창에서 이 지문 자리를 끌어 찍는다(두 손가락 = 스크롤)';
+  pk.onclick = ev => { ev.stopPropagation(); open(pin ? { p: pin.p, r: pin.r } : (rows[0] || { p: p8Guess(uid) }), ev, true); };
+  host.appendChild(pk);
+  try { mbWinFit(host.closest('.pop')); } catch (e) {} }
+function p8BookRefresh(uid){ document.querySelectorAll('.mbb8[data-p8u]').forEach(h => { if (h.dataset.p8u === uid && h.isConnected) p8BookFill(h, uid); }); }
 /* ══════════ _task_jo_gaek_mb §D-17 알약 — 민법 꼴 · 문제풀이 화면 안 sticky ══════════
    옛 「쪽 1/1 · 마킹 0/13」 뜬 알약(#oxpill)과 떠 있는 두 단추(#oxfab)를 이것으로 갈음한다.
    ⚠ **회독·마감 규칙은 안 건드린다**(지시서 §F). 민법의 「마지막 쪽 채점 = 자동 저장+잠금」은
@@ -15162,7 +15206,7 @@ const viewCanvas = (() => {
   const jariBlocks = () => { const out = []; if (D) D.pages.forEach(p => p.blocks.forEach(b => { if (b.k !== '헤딩' && !b.del) out.push({ p, b }); })); return out; };
   const jariOpenN = () => jariBlocks().filter(o => jariOpen(o.b)).length;
   function jariBadges(){ const n = document.getElementById('cvJariN'); if (n) n.textContent = jariOpenN();
-    const w = document.getElementById('cvJariOrph'); if (!w) return; const A = jariAll(); const orph = Object.keys(A).filter(k => jariOk(A[k]) && !BK.get(k));
+    const w = document.getElementById('cvJariOrph'); if (!w) return; const A = jariAll(); const orph = Object.keys(A).filter(k => jariOk(A[k]) && !BK.get(k) && !/^p8\|/.test(k));   /* ★ book8 — 1차객 8판 칸(p8|uid)은 블록이 아니다 */
     w.textContent = orph.length ? '교재 확정 ' + orph.length + ' 고아' : ''; w.style.display = orph.length ? '' : 'none';
     w.title = orph.length ? '손값의 블록이 지금 데이터에 없다(데이터 판이 바뀜) — 칸은 남겨 두었다 · 지우는 건 사람: ' + orph.slice(0, 8).join(', ') : ''; }
   /* 손값이 바뀐 뒤 — 칩 · 열린 자리 창 · 머리 수 · 필터 */
@@ -15555,7 +15599,8 @@ const viewCanvas = (() => {
   const CVB_DOCID = { '핵심': 'minso_hs', '윤곽': 'minso_yg' };
   const CVB_NAME = { minso_hs: '핵심 민소', minso_yg: '윤곽 민소',
     minso_gc: '윤곽 민사소송법 기출집', minso_hb: '민소 핸드북', minso_63_jgd: '63회 해설 정경대', minso_63_kjy: '63회 해설 김중연', minso_63_kwak: '63회 총평 곽준형',
-    tk_63_hgs: '홍기석 해설', tk_63_hanbit: '한빛 해설', tk_63_phj: '박형준 풀답안', tk_63_phj_s3: '박형준 보충', tk_63_pjh: '박지환 총평' };   /* ★ c2card G-1 — 해설 자료 열 권(이름만 · CVB_DOCID 는 정리캔버스 교재 둘 그대로 — 그 목록을 도는 곳이 있어 무변으로 둔다) */
+    tk_63_hgs: '홍기석 해설', tk_63_hanbit: '한빛 해설', tk_63_phj: '박형준 풀답안', tk_63_phj_s3: '박형준 보충', tk_63_pjh: '박지환 총평',
+    patent_hr8: '특허법 해례 8판' };   /* ★ book8 A-4 — 1차객 「📚 교재 자리」 8판 쪽 창 */   /* ★ c2card G-1 — 해설 자료 열 권(이름만 · CVB_DOCID 는 정리캔버스 교재 둘 그대로 — 그 목록을 도는 곳이 있어 무변으로 둔다) */
   const CVB = { meta: {}, doc: {}, stat: {}, db: null, stamp: {} };   /* ★ book_stamp B-3 — stamp = 교재 도장 → 출처(docid → {쪽: [줄]} · 못 받으면 null) */
   const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
   function cvbTok(){ try { return (typeof syncToken === 'function' ? syncToken() : String((JSON.parse(localStorage.getItem('tt.cfg') || '{}')).token || '').trim()); } catch (e) { return ''; } }
@@ -15723,13 +15768,14 @@ const viewCanvas = (() => {
     const body = popShell('canvas', '📘 ' + (CVB_NAME[docid] || m.book), pid); showPop(ev); popSizable(body, 'canvas');
     const pw0 = body.parentNode; cvNavTop(pw0);
     const host = el('div', 'cv-book'); body.appendChild(host);
-    const st = { p: m.page, hl: m.y0 != null ? m : null, busy: 0, ctx: ctx || null, pick: !!(ctx && ctx.pick), box: null, book: m.book };
+    const st = { p: m.page, hl: (m.y0 != null || m.r) ? m : null, busy: 0, ctx: ctx || null, pick: !!(ctx && ctx.pick), box: null, book: m.book };   /* ★ book8 — 자리 = pt y0/y1 또는 쪽 비 r */
     let paint = () => {}, draw = async () => {}, ready = false;
     pw0._cvb = { st, retarget(m2, ctx2){
-      const sameHl = m2.y0 != null ? !!(st.hl && st.hl.page === m2.page && st.hl.y0 === m2.y0) : !st.hl;
+      const hk = h => h ? (h.r ? 'r' + h.r.join(',') : 'y' + h.y0) : '';   /* ★ book8 */
+      const sameHl = (m2.y0 != null || m2.r) ? !!(st.hl && st.hl.page === m2.page && hk(st.hl) === hk(m2)) : !st.hl;
       const sameCtx = ((ctx2 && ctx2.b) || null) === ((st.ctx && st.ctx.b) || null);
       if (m2.page === st.p && sameHl && sameCtx && !(ctx2 && ctx2.pick && !st.pick)) return false;   /* 같은 자리를 또 누름 = 닫기 */
-      st.p = m2.page; st.hl = m2.y0 != null ? m2 : null; if (ctx2){ if (!sameCtx) st.box = null; st.ctx = ctx2; if (ctx2.pick) st.pick = true; }
+      st.p = m2.page; st.hl = (m2.y0 != null || m2.r) ? m2 : null; if (ctx2){ if (!sameCtx) st.box = null; st.ctx = ctx2; if (ctx2.pick) st.pick = true; }
       try { pw0.style.zIndex = ++POPZ; popAllSync(); } catch (e) {} if (ready){ paint(); draw(); } return true; } };
     host.innerHTML = '<div class="m">교재를 받는 중… (처음 한 번은 오래 걸린다)</div>';
     let doc = null;
@@ -15755,7 +15801,8 @@ const viewCanvas = (() => {
         start = null; tmp = null; drawBox(wrap); paint(); };
       ov.addEventListener('pointerup', end); ov.addEventListener('pointercancel', end); };
     const setPick = on => { st.pick = on; const wrap = view.querySelector('.cv-bookpg'); if (wrap){ const o = wrap.querySelector('.cv-pickov'); if (o) o.remove(); if (on){ const ov = el('div', 'cv-pickov'); wrap.appendChild(ov); bindPick(ov, wrap); } } paint(); };
-    const save = () => { if (!st.box || !st.ctx) return; const b = st.ctx.b;
+    const save = () => { if (st.box && st.ctx && st.ctx.save){ st.ctx.save({ p: st.box.p, r: st.box.r }); closeOne(pw0); return; }   /* ★ book8 — 부른 쪽 저장(1차객 8판 자리) */
+      if (!st.box || !st.ctx) return; const b = st.ctx.b;
       jariPut(b, { by: 'hand', b: st.book, p: st.box.p, r: st.box.r, t: Date.now(), who: jariWho() });
       closeOne(pw0); toast('교재 자리를 확정했다 — ' + st.book + ' p.' + bookPr(st.book, st.box.p)); jariAfter(b); };
     draw = async () => { const tk = ++st.busy;
@@ -15765,7 +15812,7 @@ const viewCanvas = (() => {
       const vp = pg.getViewport({ scale: W / pw * (window.devicePixelRatio || 1) });
       const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height); cv.style.cssText = 'width:100%;display:block';
       const wrap = el('div', 'cv-bookpg'); wrap.appendChild(cv);
-      if (st.hl && st.hl.page === st.p){ const g = toGeunge(st.hl, pw, ph); const hl = el('div', 'cv-bookhl');
+      if (st.hl && st.hl.page === st.p){ const g = st.hl.r ? { r: st.hl.r.map(v => Math.round(Math.max(0, Math.min(1, v)) * 2000)) } : toGeunge(st.hl, pw, ph); const hl = el('div', 'cv-bookhl');   /* ★ book8 — r = 쪽 비 */
         hl.style.cssText = `left:${g.r[0] / 20}%;top:${g.r[1] / 20}%;width:${(g.r[2] - g.r[0]) / 20}%;height:${(g.r[3] - g.r[1]) / 20}%`; wrap.appendChild(hl); }
       if (st.pick && st.ctx){ const ov = el('div', 'cv-pickov'); wrap.appendChild(ov); bindPick(ov, wrap); }
       drawBox(wrap);
@@ -15780,7 +15827,7 @@ const viewCanvas = (() => {
         + (st.ctx && st.ctx.cand && !st.pick && st.ctx.cand.p === st.p ? `<button data-ok class="sv" title="이 후보 자리로 확정(자리 창의 「✓ 이 자리」와 같다)">✓ 이 자리</button>` : '')
         + (st.ctx ? `<button data-pk class="pk${st.pick ? ' on' : ''}" title="쪽 위에 끌어 이 블록의 교재 자리를 직접 찍는다(두 손가락 = 스크롤)">📍 찍기</button>` + (st.box ? `<button data-sv class="sv">이 자리 저장 · p.${bookPr(st.book, st.box.p)}</button>` : '') : '')
         + `<span class="m">${esc(CVB_NAME[docid] || docid)} · ${(CVB.stat[docid] || {}).from === 'cache' ? '이 기기에 재워 둔 것' : '저장소에서 받음'}`
-        + (st.hl ? ` · 자리 y ${Math.round(st.hl.y0)}–${Math.round(st.hl.y1)}pt${st.hl.how ? ' · ' + esc(st.hl.how) : ''}${st.hl.score ? ' ' + (+st.hl.score).toFixed(2) : ''}` : '') + '</span>';
+        + (st.hl && st.hl.r ? (st.hl.cf ? ' · 확신 ' + esc(st.hl.cf) : '') : st.hl ? ` · 자리 y ${Math.round(st.hl.y0)}–${Math.round(st.hl.y1)}pt${st.hl.how ? ' · ' + esc(st.hl.how) : ''}${st.hl.score ? ' ' + (+st.hl.score).toFixed(2) : ''}` : '') + '</span>';
       const go = d => { st.p = Math.max(1, Math.min(n, st.p + d)); paint(); draw(); };
       head.querySelector('[data-pv]').onclick = e2 => { e2.stopPropagation(); go(-1); };
       head.querySelector('[data-nx]').onclick = e2 => { e2.stopPropagation(); go(1); };
@@ -16066,7 +16113,13 @@ const viewCanvas = (() => {
     pic: (book, s, W) => cvbCrop(CVB_DOCID[book] || book, s, W),
     go(k){ if (!BK.get(k)) return false; GOTO = k; try { closeAllPops(); } catch (e) {} S.tab = 'omr'; render(); return true; },   /* ★ omrpop C-1 — 📘 창 줄은 이제 omr(부르는 곳 0 · 지우지 않고 둔다) */
     omr: (ctx, ev) => omrOpen(ctx, ev), omrHand: k => omrOf(k), omrRevert: k => omrRevert(k), noteBids: () => omrNoteMap() };   /* ★ _task_jo_ms_omrpop — 정리OMR 팝업 · 손값(jopangi.ncomr) · 노트 → 블록(noteOf) */
-  viewCanvas.jari.omrClip = (k, m, t) => omrClip(k, m, t);   /* ★ cvfind A — 목차노트 목록 토글 밑 찍은 자리 그림 */
+  viewCanvas.jari.omrClip = (k, m, t) => omrClip(k, m, t);
+  /* ★ book8 A-4 — 1차객 「📚 교재 자리」 해례 8판 줄 — 쪽 창 = 이 교재 창(같은 cvbDoc · 📍 찍기) · 손값 = 같은 기록 키(jopangi.canvasjari)의 칸 p8|<uid> */
+  viewCanvas.jari.book8 = (m, ev, ctx) => bookShow(m, ev, ctx);
+  viewCanvas.jari.meta8 = () => cvbMeta('patent_hr8');
+  viewCanvas.jari.k8 = { get: u => { const v = jariAll()['p8|' + u]; return jariOk(v) ? v : null; },
+    raw: u => jariAll()['p8|' + u] || null,
+    put: (u, v) => { const A = jariAll(); A['p8|' + u] = v; if (lsWrite(K.jari, A, '📚 교재 자리(해례 8판)')){ try { syncRecords(); } catch (e) {} } return true; } };   /* ★ cvfind A — 목차노트 목록 토글 밑 찍은 자리 그림 */
   viewCanvas.metaWarm = async () => { for (const d of Object.values(CVB_DOCID)){ if (CVB.meta[d]) continue; try { const x = await cvbGet('bookmeta:' + d); if (x && x.docid) CVB.meta[d] = x; } catch (e) {} } };   /* ★ jari_cand B-1 — 네트워크 없이 IDB 만 */
   viewCanvas.hsBook = { doc: cvbDoc, meta: cvbMeta, gh: cvbGh, why: cvbWhy, get: cvbGet, put: cvbPut, stat: CVB.stat, name: d => CVB_NAME[d] || d };   /* ★ c2card G-6 — 해설 쪽 창이 교재 창과 같은 길 */
   return viewCanvas;
