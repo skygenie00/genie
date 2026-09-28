@@ -2716,7 +2716,7 @@ async function viewJo(){
   };
   const joRow=x=>{
     const r=el('div','r'+(S.jo===x.k?' on':''));
-    {const nm=el('span','nm jnm2');nm.appendChild(el('span','jno',x.k+' '));nm.appendChild(el('span','jtt',x.t||''));r.appendChild(nm);}   /* ★ revfix0928pm A-5 — 조 번호(늘 보임) + 이름(말줄임 …) · 글자는 그대로 */
+    {const nm=el('span','nm jnm2');nm.appendChild(el('span','jno',x.k));nm.appendChild(el('span','jtt',' '+(x.t||'')));r.appendChild(nm);}   /* ★ revfix0928pm A-5 — 조 번호(늘 보임) + 이름(말줄임 …) · 글자는 그대로 */
     /* ★ joscreen §E-1·§E-3·§E-4(⑨⑪⑫) — ★ 개정일 = 이름 바로 뒤 · 오른쪽 = 고정 폭 세 칸 [빈칸 표지][✏️N][🔗N](없는 칸은 빈자리 · 모든 줄이 세로로 맞는다) · 막대 걷음 · ✏️ */
     if(stars[x.k]){const sj=el('span','jstarc jstarn'+((S.treeW||212)<260?' jsshr':''),'★');sj.appendChild(el('span','jsd',' '+stars[x.k].replace(/^20/,'')));r.appendChild(sj);}   /* ★ revfix0928pm A-5 — 날짜 조각을 떼어(글자 그대로) 모자라면 통째 숨김(반쯤 잘린 숫자 없음) */   /* ★ revfix0928 A-7 — 좁은 서랍(260 미만)은 ★ 개정일이 이름보다 먼저 줄어든다(모자라면 ★ 만) · 260·320 무변 */
     const em=el('em','jcol3'+((S.treeW||212)<300?'':' wide'));
@@ -18675,12 +18675,12 @@ function cfRowEl(r, key, cur, back, onPick){
   '.jtyit .now{font-size:9px;font-weight:800;color:#fff;background:#2563eb;border-radius:3px;padding:0 3px;flex:none}',
   /* A-7 좁은 서랍 ★ 개정일 = 이름보다 먼저 줄어든다(오른쪽 세 칸 폭 무변) */
   '.tree .r .jstarn.jsshr{flex:0 1000 auto;min-width:1.1em;overflow:hidden;white-space:nowrap;text-overflow:clip}',
-  /* ★ revfix0928pm A-5 — 서랍 조 줄 = 번호 칸(줄지 않음 · 뒤 빈칸 pre) + 이름 칸(줄며 끝 …) · 이름 칸 = grid(번호 max-content · 이름 minmax(0,max-content)) — 넓으면 글 전체 · 좁으면 이름만 줄고 번호 아래로는 안 준다 */
+  /* ★ revfix0928pm A-5 — 서랍 조 줄 = 번호 칸(줄지 않음 · 빈칸은 이름 조각 앞 pre — 번호 칸 최소폭에 안 든다) + 이름 칸(줄며 끝 …) · 이름 칸 = grid(번호 max-content · 이름 minmax(0,max-content)) — 넓으면 글 전체 · 좁으면 이름만 줄고 번호 아래로는 안 준다 */
   '.tree .r span.nm.jnm2{display:grid;grid-template-columns:max-content minmax(0,max-content);min-width:min-content;overflow:hidden}',
-  '.tree .r span.nm.jnm2>.jno{white-space:pre}',
+  '.tree .r span.nm.jnm2>.jno{white-space:nowrap}',
   '.tree .r .jstarn.jsshr{display:inline-flex;flex-wrap:wrap;align-items:flex-start;height:1.5em;line-height:1.5em;text-overflow:clip}',
   '.tree .r .jstarn>.jsd{white-space:pre}',
-  '.tree .r span.nm.jnm2>.jtt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+  '.tree .r span.nm.jnm2>.jtt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:pre}',
   /* A-6 3법 길게 누른 칸 = 카드 바로 아래 제 줄 */
   '.thcols>.c3pick{flex:0 0 100%;box-sizing:border-box}'
 ].join('\n'); document.head.appendChild(s); }catch(e){} })();
