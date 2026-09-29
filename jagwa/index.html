@@ -1389,6 +1389,18 @@ body[data-layer="pdf"] .vbot .tools:not(#pRow1)>*{display:none!important}
   border:1px solid var(--line);padding:1px 6px;border-radius:4px;white-space:nowrap}
 .ggres.g3 .hd b{font-size:10.5px;font-weight:800;color:var(--subj);white-space:nowrap}
 .ggres.g3 .un{font-size:10px;font-weight:700;color:#4A3E7A}
+/* ★ jagwa_search — 개수 칸 「근거 N개 ▸」(민법 근거 모드 개수 칸 꼴) · 단원 분포 줄 · 💬 칸 이름은 .ggres i(회색 작은 글자) 그대로 */
+#qCnt.eslink{color:#2563EB;font-weight:800;text-decoration:underline;cursor:pointer}
+.esdh{display:flex;align-items:center;gap:8px;padding:6px 9px;font-size:11px;font-weight:800;color:#38414A;background:var(--paper);border-bottom:1px solid var(--line)}
+.esdh.bang{background:#fff5f5;color:#c94f4f}
+.esdh[data-esback]{cursor:pointer}
+.esdh .esb{margin-left:auto;color:var(--red);border-bottom:1px dashed currentColor;cursor:pointer}
+.esdh .esb.off{color:var(--muted);border-bottom:0;cursor:default}
+.esdk{padding:4px 9px;font-size:11px;font-weight:700;color:#4A3E7A;border-bottom:1px dashed var(--line)}
+.esdr{display:flex;align-items:center;gap:6px;padding:6px 9px;border-bottom:1px dashed var(--line);cursor:pointer;font-size:12px;font-weight:700;color:#4A3E7A}
+.esdr:hover{background:var(--paper)}
+.esdr .rt{margin-left:auto;display:flex;gap:4px;align-items:center}
+.esdr .n{font-size:11px;font-weight:800;color:var(--muted);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:0 5px}
 .ggres.g3 .already{font-size:10px;font-weight:800;color:#1E7A55}
 .ggres.g3 .qq{font-size:12px;color:#38414A;line-height:1.5}
 .ggres.g3 .gl{border-left:2px solid #7FA8C6;background:var(--subj-soft);padding:2px 6px;margin-top:3px;
@@ -4304,8 +4316,9 @@ async function importData(f){
 /* 「랜덤으로 풀기」「처음부터 풀기」 는 물리 층에서 뺐다(2026-09-05 필터 손질 B-2) — HTML 단추는 지학·생물 층이 그대로 쓰므로 물리에서만 DOM 에서 뗀다 */
 if(!CARD_LAYER){['btnRand','btnFirst'].forEach(id=>{const b=document.getElementById(id);if(b)b.remove()})}
 $('#q').oninput=e=>{const v=e.target.value.trim();
-  if(typeof SHELL!=='undefined'&&SHELL&&typeof GGMODE!=='undefined'&&GGMODE==='g'){ggResBox(v);return}
+  if(typeof SHELL!=='undefined'&&SHELL){esSearch();return}   /* ★ jagwa_search — 목록은 안 거른다 · 결과 상자(#esres) · 두 모드 다 */
   FL.q=v;draw()};
+$('#q').addEventListener('keydown',e=>{if(e.key==='Enter'&&typeof SHELL!=='undefined'&&SHELL){e.preventDefault();esSearch()}});   /* ★ jagwa_search — Enter 도 */
 
 document.addEventListener('keydown',e=>{
   const t=e.target;                       /* 입력칸 안에서는 단축키를 꺼 둔다 */
@@ -5458,19 +5471,6 @@ function pass(r){
   if(FL.mark==='bang')return ggBangAny(GGU(r))?1:0;          /* add1 §A 필터 */
   if(FL.mark==='gg')return ggOf(GGU(r)).length?1:0;
   if(FL.mark&&!['new','again','weak','less','note','bang','gg'].includes(FL.mark)&&m!==FL.mark)return 0;
-  if(FL.q){const s=FL.q.toLowerCase();
-    /* 판 3 ④ — **원본과 고친 글자를 둘 다** 훑는다. 고친 뒤 옛 낱말로 못 찾게 되면 안 된다. */
-    /* ★ add5 §A-4 — 물리는 **옛 1868 을 글자 그대로** 쓴다. 소단원 이름·유형·GPT·번호·볼트 번호가
-       카드판 `hay` 에 없어 못 찾았고, 거꾸로 카드판이 더 훑는 것(선택지·보기·단원·고친 글자)을 그대로 두면
-       「15」 같은 짧은 말에 선택지가 걸려 **집합이 옛 판과 달라진다**(실측 15 → 31 vs 27). 지학·생물 무변. */
-    if(!HASBOOK){
-      if(!(String(r[F.CODE]).toLowerCase().includes(s)||String(r[F.OLDU]||'').toLowerCase().includes(s)||String(r[F.SUB]).includes(FL.q)||String(r[F.BODY]).includes(FL.q)
-          ||String(noteOf(no)).includes(FL.q)||typeOf(no).some(t=>t===FL.q)||String(gptOf(no)).includes(FL.q)
-          ||String(no)===FL.q||String(r[F.VLT])===FL.q))return 0;
-      return 1;
-    }
-    const hay=[r[F.CODE],codeShow(r),r[F.BODY],(r[F.CH]||[]).join(' '),(r[F.BOGI]||[]).map(b=>b.내용).join(' '),noteOf(no),unitOf(no),tfixHay(r[F.CODE])].join(' ').toLowerCase();
-    if(!hay.includes(s))return 0}
   return 1;
 }
 function drawFilters(){
@@ -5800,7 +5800,7 @@ function unitRank(){                         /* 단원 코드 → 차례 번호(
   if(_uordKey===key&&_uord)return _uord;
   const m={};unitOrder().forEach((u,i)=>{if(m[u.unit]===undefined)m[u.unit]=i});
   _uordKey=key;return _uord=m}
-var fltOn=()=>!!(FL.bigs.length||FL.subs.length||FL.unit||FL.round||FL.mark||FL.q);   /* 기출/확인 토글은 거르개가 아니라 갈래다 */
+var fltOn=()=>!!(FL.bigs.length||FL.subs.length||FL.unit||FL.round||FL.mark);   /* ★ jagwa_search — 검색어는 거르개가 아니다(목록을 안 거른다) */   /* 기출/확인 토글은 거르개가 아니라 갈래다 */
 function listSort(L){
   const R=unitRank(),BIG=1e9;
   return L.slice().sort((a,b)=>{
@@ -8317,6 +8317,7 @@ function shellBuild(){
   const clr=document.createElement('button');clr.type='button';clr.className='ebtn';clr.id='qClr';clr.textContent='지우기';
   srch.appendChild(clr);
   const qc=document.createElement('span');qc.className='mut';qc.id='qCnt';srch.appendChild(qc);
+  qc.onclick=()=>{if(ES_CNT.link){ES_BANG=false;esDist()}};   /* ★ jagwa_search A-4 — 「근거 N개 ▸」 */
   {const sp=$('#spec');if(sp)hm.appendChild(sp)}
   {const cn=$('#cnt');if(cn)bar.appendChild(cn)}
   {const os=document.getElementById('ordSeg');if(os)bar.appendChild(os)}
@@ -8330,7 +8331,7 @@ function shellBuild(){
   esh.querySelector('#hmTg').onclick=()=>{const on=localStorage.getItem(HM_FOLD_K)==='1';
     try{localStorage.setItem(HM_FOLD_K,on?'0':'1')}catch(e){}shellPaint()};
   sg.onclick=e=>{const b=e.target.closest('[data-sm]');if(!b)return;ggSearchMode(b.dataset.sm)};
-  clr.onclick=()=>{const q=$('#q');if(q)q.value='';FL.q='';if(typeof ggResBox==='function')ggResBox('');draw()};
+  clr.onclick=()=>{const q=$('#q');if(q)q.value='';FL.q='';ES_BANG=false;esSearch();draw()};   /* ★ jagwa_search — 칸·상자·개수 비움(근거 모드면 「근거 N개 ▸」) */
   esh.querySelector('#eWk').onclick=()=>{FL.mark=FL.mark==='weak'?'':'weak';draw()};
   esh.querySelector('#eLs').onclick=()=>{FL.mark=FL.mark==='less'?'':'less';draw()};
   esh.querySelector('#rvF').onchange=e=>{FL.mark=e.target.value||'';draw()};
@@ -8405,7 +8406,7 @@ function shellPaint(){
     lv.textContent=(ordMode()==='round'?(lvNow(true)==='ch'?'회차':'문제'):lvLab(lvNow(false)))}}
   {const g=esh.querySelector('.seg2 [data-sm="g"]');if(g)g.textContent='🔗 근거 ('+Object.keys(GG).reduce((a,k)=>a+ggOf(k).length,0)+')'}
   {const m=esh.querySelector('#mcAll');if(m)m.textContent='🃏 전체 '+mcCountIn(DATA.filter(r=>!isC(r)).map(r=>r[F.NO]))}
-  {const c=esh.querySelector('#qCnt');if(c)c.textContent=''}
+  esCntPaint();   /* ★ jagwa_search — 개수 칸은 검색 상태가 쥔다(목록을 다시 그려도 안 지운다) */
   try{ebarFilters(esh)}catch(e){console.warn('ebarFilters',e)}   /* add4 */
 }
 /* ── 2026-09-21 (_task_jagwa_shell_bio_phys_add4) — 옛 필터 줄의 거르개를 껍데기 `.ebar` 로 ──
@@ -8514,7 +8515,7 @@ function ggSearchMode(m){
   const esh=document.getElementById('esh');if(!esh)return;
   esh.querySelectorAll('.seg2 [data-sm]').forEach(b=>b.classList.toggle('on',b.dataset.sm===GGMODE));
   const q=$('#q');if(q)q.placeholder=GGMODE==='g'?'근거·댓글에서 검색':'검색어를 입력하세요';
-  if(typeof ggResBox==='function')ggResBox(GGMODE==='g'?String((q||{}).value||''):'');
+  ES_BANG=false;esSearch();   /* ★ jagwa_search A-4 — 모드를 바꾸면 그 모드 규칙으로 같은 글을 다시 찾는다 · 「!」 풀림 */
   draw();
 }
 
@@ -9065,7 +9066,8 @@ function ggHits(q){
   const out=[];
   DATA.filter(r=>!isC(r)).forEach(r=>{const uid=GGU(r),L=ggOf(uid);if(!L.length)return;
     if(low){const hay=L.map(g=>ggFlat(g)+' '+(g.cs||[]).map(c=>c.t).join(' ')).join(' ').toLowerCase();
-      if(!hay.includes(low)&&!uid.toLowerCase().includes(low)&&!String(codeShow(r)).toLowerCase().includes(low))return}
+      if(!hay.includes(low)&&!uid.toLowerCase().includes(low)&&!String(codeShow(r)).toLowerCase().includes(low)
+         &&!(esNS(low)&&esNS(codeShow(r)).includes(esNS(low))))return}   /* ★ jagwa_search — ID 는 하이픈·띄어쓰기 무시(G953201 → G95-32-01) */
     out.push({uid:uid,no:r[F.NO],line:ggPickLine(uid,low),bang:ggBangAny(uid),own:ggOwners(uid).length})});
   return out}
 /* add3 ③ — 카드 안 찾기와 위 검색 줄이 **같은 세 줄 꼴**을 쓴다(민법 3443~3467).
@@ -9091,13 +9093,94 @@ function ggResRowHTML(h,q,mode,me,sc){
     +'<div class="qq">'+esc(String(txtOf(h.uid,'q')).slice(0,70))+'…</div>'
     +'<div class="gl">'+mark(line)+'</div></div>'}
 function ggResLine(h,q){return ggResRowHTML(h,q,'go','','')}
+/* ══ jagwa_search (2026-09-29 · jagwa/_task_jagwa_search.md) — 검색 = 민법OX 꼴 ══
+   목록은 안 거른다 · 결과 = #esres(근거 모드와 같은 상자) · 「N건」 = #qCnt · 100건까지 · 누름 = openView(no, 걸린 번호 전부).
+   찾는 칸 — 생물·지학: 본문(+고친 글자) · 선택지 · 〈보기〉 · 해설 · 해설2 · 보기 설명 · 참고 · 코멘트 · 보이는 ID · 출처
+             물리: 옛 목록 거름 식 그대로(esPhysHit). 켜 둔 갈래·단원·마크 필터는 안 본다(그 과목 DATA 전부). */
+var ES_NOS=[],ES_BANG=false,ES_CNT={t:'',link:false},ES_DK=[];
+var esNS=v=>String(v==null?'':v).toLowerCase().replace(/[\s\-]+/g,'');
+var esMark=(t,q)=>{t=String(t==null?'':t);const low=String(q||'').toLowerCase(),i=low?t.toLowerCase().indexOf(low):-1;
+  return i<0?esc(t):esc(t.slice(0,i))+'<mark>'+esc(t.slice(i,i+low.length))+'</mark>'+esc(t.slice(i+low.length))};
+var esSrc=r=>(HASBOOK&&kindOf(r)==='G')?((+r[F.ROUND]||0)+'회 '+(+r[F.LNO]||0)+'번'):String(titleOf(r)||'');
+var esUnit=no=>(typeof unitOf==='function'&&typeof unitLabel==='function')?unitLabel(unitOf(no)):'';
+/* 💬 조각을 찾는 칸 차례(§A-2) — 선택지 → 〈보기〉 → 해설 → 해설2 → 보기 설명 → 참고 → 코멘트 */
+function esFields(r){const bg=Array.isArray(r[F.BOGI])?r[F.BOGI]:[],rf=Array.isArray(r[F.REF])?r[F.REF]:[],j=a=>a.filter(Boolean).join(' / ');
+  return [['선택지',j((r[F.CH]||[]).map(x=>String(x==null?'':x)))],['보기',j(bg.map(b=>String((b&&b.내용)||'')))],
+    ['해설',String(r[F.SOL]||'')],['해설2',String(r[F.SOL2]||'')],['보기 설명',j(bg.map(b=>String((b&&b.설명)||'')))],
+    ['참고',j(rf.map(x=>j([String((x&&x.제목)||''),String((x&&x.글)||'')])))],['코멘트',String(noteOf(r[F.NO])||'')]]}
+/* 한 행이 걸렸나 → null | {k:'body'|'id'|'src'|칸 이름, t:그 칸 글} */
+function esHit(r,q){
+  if(!HASBOOK)return esPhysHit(r,q)?{k:String(r[F.BODY]).includes(q)?'body':'etc'}:null;
+  const low=q.toLowerCase(),uid=r[F.CODE];
+  if((String(r[F.BODY]||'')+' '+tfixHay(uid)).toLowerCase().includes(low))return {k:'body'};
+  for(const f of esFields(r))if(f[1]&&f[1].toLowerCase().includes(low))return {k:f[0],t:f[1]};
+  const ns=esNS(q);
+  if(ns&&esNS(codeShow(r)).includes(ns))return {k:'id'};
+  if(ns&&(esNS(esSrc(r)).includes(ns)||esNS(titleOf(r)).includes(ns)))return {k:'src'};
+  return null}
+function esRowHTML(r,q,h){
+  const no=r[F.NO],body=String((HASBOOK?txtOf(r[F.CODE],'q'):r[F.BODY])||'').replace(/\s+/g,' ').trim(),src=esSrc(r);
+  let l2;
+  if(h.k==='body')l2='<div class="qq">'+esMark(body.slice(0,140),q)+(body.length>140?'…':'')+'</div>';
+  else if(h.t!=null){const e=String(h.t).replace(/\s+/g,' '),i=e.toLowerCase().indexOf(q.toLowerCase()),st=Math.max(0,i-30);
+    const sn=(st>0?'…':'')+e.slice(st,st+170)+(e.length>st+170?'…':'');
+    l2='<div class="qq">'+esc(body.slice(0,60))+'…</div><div class="gl">💬 <i>'+esc(h.k)+'</i> '+esMark(sn,q)+'</div>'}
+  else l2='<div class="qq">'+esc(body.slice(0,70))+'…</div>';
+  return '<div class="ggres g3" data-esq="'+no+'"><div class="hd">'
+    +'<span class="cd">'+(h.k==='id'?'<mark>'+esc(codeShow(r))+'</mark>':esc(codeShow(r)))+'</span>'
+    +'<b>'+(h.k==='src'?'<mark>'+esc(src)+'</mark>':esc(src))+'</b>'
+    +'<span class="un">'+esc(esUnit(no))+'</span></div>'+l2+'</div>'}
+var esGgRows=()=>DATA.filter(r=>!isC(r)&&ggOf(GGU(r)).length>0);   /* ggHits 와 같은 모집단(확인문제 뺌) */
+function esCntPaint(){const c=document.getElementById('qCnt');if(!c)return;
+  if(ES_CNT.link)ES_CNT.t='근거 '+esGgRows().length+'개 ▸';   /* 근거가 늘고 줄면 다시 센다 */
+  c.textContent=ES_CNT.t;c.classList.toggle('eslink',!!ES_CNT.link)}
+function esSearch(){
+  const box=document.getElementById('esres');if(!box)return;
+  const v=String(($('#q')||{}).value||'').trim(),n=v.replace(/\s+/g,'').length;
+  if(n<2){box.classList.add('hide');box.innerHTML='';ES_NOS=[];
+    ES_CNT=n===1?{t:'두 글자 이상 입력하세요',link:false}:(GGMODE==='g'?{t:'',link:true}:{t:'',link:false});
+    esCntPaint();return}
+  if(GGMODE==='g'){ES_NOS=[];ES_CNT={t:(ggResBox(v)||0)+'건',link:false};esCntPaint();return}   /* 근거 모드 = 지금 ggResBox 그대로 + 개수 */
+  const hits=[];DATA.forEach(r=>{const h=esHit(r,v);if(h)hits.push([r,h])});   /* 차례 = 데이터 차례 */
+  ES_NOS=hits.map(x=>x[0][F.NO]);ES_CNT={t:hits.length+'건',link:false};esCntPaint();
+  box.classList.remove('hide');box.scrollTop=0;
+  if(!hits.length){box.innerHTML='<div class="bplnone">검색 결과가 없습니다.</div>';return}
+  box.innerHTML=hits.slice(0,100).map(x=>esRowHTML(x[0],v,x[1])).join('')
+    +(hits.length>100?'<div class="bplnone">상위 100건만 표시했습니다. 검색어를 더 좁혀보세요.</div>':'')}
+/* A-4 「근거 N개 ▸」 → 단원 분포 → 단원 문항 줄 · 「! K」 = 켜진 근거가 있는 문항만(민법 상태 B) */
+var esUK=u=>String(u||'').split('.').map(x=>String(+x||0).padStart(4,'0')).join('.');
+function esDist(){
+  const box=document.getElementById('esres');if(!box)return;
+  const all=esGgRows(),bang=r=>ggBangAny(GGU(r)),K=all.filter(bang).length;if(!K)ES_BANG=false;
+  const use=ES_BANG?all.filter(bang):all,m=new Map(),bm=new Map();
+  use.forEach(r=>{const u=(typeof unitOf==='function'?unitOf(r[F.NO]):'')||'';m.set(u,(m.get(u)||0)+1);if(bang(r))bm.set(u,(bm.get(u)||0)+1)});
+  ES_DK=[...m.keys()].sort((a,b)=>((!a)-(!b))||esUK(a).localeCompare(esUK(b)));   /* 단원 코드 차례 · 미분류 끝 */
+  box.classList.remove('hide');box.scrollTop=0;
+  if(!all.length){box.innerHTML='<div class="bplnone">근거 기록이 없습니다.</div>';return}
+  box.innerHTML='<div class="esdh'+(ES_BANG?' bang':'')+'">'+(ES_BANG?'근거 <b>! '+use.length+'건 · '+ES_DK.length+'개 단원</b>':'근거 '+use.length+'건 · '+ES_DK.length+'개 단원')
+    +'<span class="esb'+(K?'':' off')+'"'+(K?' data-esbang="1"':'')+'>! '+K+'</span></div>'
+    +ES_DK.map((u,i)=>'<div class="esdr" data-esu="'+i+'"><span>'+esc(typeof unitLabel==='function'?unitLabel(u):u)+'</span><span class="rt">'
+      +(ES_BANG?'':'<span class="n">'+m.get(u)+'건</span>')+(bm.get(u)?'<span class="ggbang on">! '+bm.get(u)+'</span>':'')+'</span></div>').join('')}
+function esDistList(i){
+  const box=document.getElementById('esres');if(!box)return;const u=ES_DK[i];if(u===undefined)return esDist();
+  let L=esGgRows().filter(r=>((typeof unitOf==='function'?unitOf(r[F.NO]):'')||'')===u);if(ES_BANG)L=L.filter(r=>ggBangAny(GGU(r)));
+  box.classList.remove('hide');box.scrollTop=0;
+  box.innerHTML='<div class="esdh" data-esback="1">◀ 단원 분포로</div>'
+    +'<div class="esdk">'+esc(typeof unitLabel==='function'?unitLabel(u):u)+' · '+L.length+'건'+(ES_BANG?' · 켜진 근거만':'')+'</div>'
+    +L.map(r=>{const uid=GGU(r);return ggResLine({uid:uid,no:r[F.NO],line:ggPickLine(uid,''),bang:ggBangAny(uid),own:ggOwners(uid).length},'')}).join('')}
+/* ★ jagwa_search A-5 — 물리 찾는 식 = 옛 목록 거름(pass 의 `!HASBOOK` 갈래)을 글자 그대로 옮긴 것 · FL.q → q */
+function esPhysHit(r,q){const s=q.toLowerCase(),no=r[F.NO];
+  return !!(String(r[F.CODE]).toLowerCase().includes(s)||String(r[F.SUB]).includes(q)||String(r[F.BODY]).includes(q)
+          ||String(noteOf(no)).includes(q)||typeOf(no).some(t=>t===q)||String(gptOf(no)).includes(q)
+          ||String(no)===q||String(r[F.VLT])===q)}
 /* §D-7 위 검색 줄 「🔗 근거」 모드 */
 function ggResBox(q){
   const box=document.getElementById('esres');if(!box)return;
   if(GGMODE!=='g'){box.classList.add('hide');box.innerHTML='';return}
   const hits=ggHits(q);
   box.classList.remove('hide');
-  box.innerHTML=hits.length?hits.map(h=>ggResLine(h,q)).join(''):'<div class="bplnone">찾은 근거가 없다</div>'}
+  box.innerHTML=hits.length?hits.map(h=>ggResLine(h,q)).join(''):'<div class="bplnone">찾은 근거가 없다</div>';
+  return hits.length}   /* ★ jagwa_search — 개수 칸 「N건」 */
 /* ══ add7 §A — 잃어버린 물리 코멘트 되살림 (2026-09-21) ══
    2026-09-20 19:57:00 에 `ggEatNotes` 가 근거 가드보다 먼저 돌아 코멘트 31개를 지우고
    묘비까지 찍었는데 옮긴 근거는 한 줄도 안 남았다(studyplandata `f6cee06` → `6d29469`).
@@ -9323,6 +9406,10 @@ if(SHELL){
       if(a.length)PICK[GGU(r)]=a;else delete PICK[GGU(r)];
       await savePICK();draw();
       const w=document.getElementById('mcw');if(w)mcwOpen(w.getAttribute('data-sc')||'all');return}
+    if(el=hit('[data-esq]')){e.stopPropagation();openView(+el.getAttribute('data-esq'),ES_NOS.slice());return}   /* ★ jagwa_search — ▶ = 검색 결과 차례(필터 밖 갈래 포함) · 검색칸·상자 그대로 */
+    if(el=hit('[data-esu]')){e.stopPropagation();esDistList(+el.getAttribute('data-esu'));return}
+    if(el=hit('[data-esback]')){e.stopPropagation();esDist();return}
+    if(el=hit('[data-esbang]')){e.stopPropagation();ES_BANG=!ES_BANG;esDist();return}
     if(el=hit('[data-ggres]')){e.stopPropagation();openView(+el.getAttribute('data-ggres'));return}
     if(el=hit('[data-ggbang]')){e.stopPropagation();const v=par(el,'data-ggbang');ggBangToggle(v[0],v[1]);return}
     if(el=hit('[data-ggtog]')){e.stopPropagation();const v=par(el,'data-ggtog');
