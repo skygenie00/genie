@@ -8,7 +8,7 @@ r"""_task_jo_revfix0929b §B 관문 — 교재 자리 창 · 기출뷰 발문·�
   회귀(규칙 57) — main 쪽 book8 · revfix0928night · revfix0929 · uid_add3 · 동기화 jo 는 N:(JOP · r'jo\data' 한 덩이 조각)라 「N: 필요 — 합칠 때 본 세션」으로 적는다
   자리 = _roots(GENIE_ROOT · MBPDF_ROOT) — 클라우드: GENIE_ROOT=/home/user/genie MBPDF_ROOT=/home/user/minbeoppdf
   서버 = 스스로(127.0.0.1 빈 포트) · /jo/index.html = 앱(+ SEED + 도구 __RB) · /jo/data · /gichul/pdf · /__book/ = 비공개 minbeoppdf 로컬 클론(토큰 없이 · SEED 가 fetch 를 돌린다) · /__vendor/ = pdf.js(앱이 cdnjs 에서 받는 3.11.174)
-  누름 = 진짜 포인터(page.mouse · 손가락 = Chromium CDP 터치 · WebKit touchscreen.tap) · 보임 = elementFromPoint · 누름 영역 = elementFromPoint 로 위아래·좌우를 더듬어 잰다
+  누름 = 진짜 포인터(page.mouse · 손가락 = Chromium CDP 터치 · WebKit touchscreen.tap · WebKit 길게 누르기 = 같은 자리 합성 touch 포인터 + touchend) · 보임 = elementFromPoint · 누름 영역 = elementFromPoint 로 위아래·좌우를 더듬어 잰다
   WebKit 은 터치 칸(A-4 · A-6 · A-8)만 — 이 컴퓨터에 WebKit 이 없으면 「안 잼」
 """
 import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
@@ -353,15 +353,29 @@ SIX = [('체크', '.tree .r button.jck', '.tree .r button.jck', True), ('접기1
 MEAS = r"""([sel, same, n]) => [...document.querySelectorAll(sel)].filter(__RB.vis).slice(0, n || 4).map(e => { e.scrollIntoView({block:'center'}); return __RB.tgt(e, same); })"""
 
 
-def dev_page(br, tag, src, dev, eng='chromium', ls=None):
+def dev_page(br, tag, src, dev, eng=None, ls=None):
+    eng = eng or br.browser_type.name   # 합치기(9/30 Code) — B4 · B8 이 WebKit 브라우저를 넘기며 엔진을 안 줘 크로미움(CDP) 길로 가 멈췄다
     W, Hh = dev
     touch = dev in (PHONE, PAD)
     return Pg(br, eng, tag, src, W, Hh, touch=touch, ls=ls, dsf=2 if touch else 1)
 
 
+WK_LONG = r"""([x, y, ty]) => { const t = ty === 'pointerdown' ? document.elementFromPoint(x, y) : (window.__tlT || document.elementFromPoint(x, y));
+  if (ty === 'pointerdown') window.__tlT = t;
+  t.dispatchEvent(new PointerEvent(ty, {bubbles: true, cancelable: true, composed: true, pointerId: 7, pointerType: 'touch', isPrimary: true,
+    clientX: x, clientY: y, button: 0, buttons: ty === 'pointerdown' ? 1 : 0}));
+  if (ty === 'pointerup') t.dispatchEvent(new Event('touchend', {bubbles: true, cancelable: true, composed: true}));
+  return t.tagName; }"""
+
+
 def long_press(p, x, y, ms=700):
     if p.eng == 'webkit':
-        p.pg.touchscreen.tap(x, y)
+        # 합치기(9/30 Code) — Playwright WebKit 은 진짜 터치를 붙잡지 못한다(톡만 · CDP 없음). 옛 길(톡 한 번)은 길게 누르기가 아니라 막대가 안 떴다.
+        # 앱 길게 누르기 = 줄 pointerdown 뒤 500ms 타이머 — 같은 자리에 합성 touch 포인터를 같은 시간 보내고, 손 뗄 때처럼 touchend 도 보낸다.
+        p.pg.evaluate(WK_LONG, [x, y, 'pointerdown'])
+        p.wait(ms)
+        p.pg.evaluate(WK_LONG, [x, y, 'pointerup'])
+        p.wait(350)
         return
     cdp = p.ctx.new_cdp_session(p.pg)
     cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': x, 'y': y}]})
