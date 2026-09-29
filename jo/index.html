@@ -6769,13 +6769,16 @@ function ncRow(J, bk, s, tag, go){ const r = el('div', 'mbbrow'); r.dataset.book
   const hd = el('div', 'hd'); hd.appendChild(el('span', 'k', J.name(bk))); hd.appendChild(el('span', 'p', J.pr(bk, s.p) + '쪽')); hd.appendChild(el('span', 'm', 'PDF ' + s.p));
   if (tag) hd.appendChild(el('span', 'm', tag)); r.appendChild(hd);
   const sn = el('div', 'sn'); r.appendChild(sn); let rec = null;
-  J.words(bk, s.p).then(w => { rec = w; const t = ncSnip(w, s); sn.textContent = t ? t + '…' : ''; }).catch(() => {});
+  J.words(bk, s.p).then(w => { rec = w; const t = ncSnip(w, s); sn.textContent = t ? t + '…' : ''; ncSnFit(sn); }).catch(() => {});
   r.onclick = ev => { ev.stopPropagation(); go(ev, rec); }; return r; }
 /* 찍어 둔 자리 그림 — 민법 mbbPicHTML 꼴(줄 바로 아래 · 쪽 크롭 · 뒤따라 채운다 · 누르면 그 쪽) */
 /* ★ revfix0928night A-1 — 그림이 비동기로 들어오면 창이 길어진다 → 그 창을 다시 맞춘다(창 높이 한도 = 보이는 화면 − 16 · 넘으면 창 몸이 구른다 · 머리 sticky)
    폰은 showPop 의 vvFit 가 max-height 를 누른 자리 아래 남은 높이로 박아 두어 mbWinFit 만으로는 위로 못 올라간다 — 한도를 먼저 푼다 */
-function ncPicFit(box){ const p = box && box.closest ? box.closest('.pop') : null; if (!p || !p.isConnected) return;
+function ncPicFit(box){ const p = box && box.closest ? box.closest('.pop') : null;
+  if (!p || !p.isConnected){ if (box && (box._fitN = (box._fitN || 0) + 1) < 30) requestAnimationFrame(() => ncPicFit(box)); return; }   /* ★ revfix0929 A-2 — 창이 붙기 전이면 다음 프레임에 다시 */
   const B = vvBox(); p.style.maxHeight = Math.max(120, Math.round(B.h - 16)) + 'px'; mbWinFit(p); }
+/* ★ revfix0929 A-2 — 줄 둘째 글(J.words)이 그림보다 늦게 들어오면 창이 한 줄 길어진다 → 그림 있는 창이면 다시 맞춤(그림 없는 창은 무변) */
+function ncSnFit(sn){ const p = sn && sn.closest ? sn.closest('.pop') : null; if (p && p.isConnected && p.querySelector('.ncb-pic')) ncPicFit(sn); }
 function ncPic(J, bk, s, go){ const box = el('div', 'ncb-pic'); box.appendChild(el('div', 'm', '그림을 여는 중…'));
   J.pic(bk, s, 400).then(cv => { box.innerHTML = ''; box.appendChild(cv || el('div', 'm', '이 기기에 그림이 아직 없습니다')); ncPicFit(box); })
     .catch(() => { box.innerHTML = ''; box.appendChild(el('div', 'm', '이 기기에 그림이 아직 없습니다')); ncPicFit(box); });
@@ -10532,7 +10535,7 @@ function p8Row(J, bk, s, tag, go){ const r = el('div', 'mbbrow'); r.dataset.book
   const hd = el('div', 'hd'); hd.appendChild(el('span', 'k', J.name(bk))); hd.appendChild(el('span', 'p', 'p.' + J.pr(bk, s.p))); hd.appendChild(el('span', 'm', 'PDF ' + s.p));   /* ★ revfix0928night A-2 — 8판 줄 「p.N」(민법·정리캔버스 줄 「N쪽」 무변) */
   if (tag) hd.appendChild(el('span', 'm', tag)); r.appendChild(hd);
   const sn = el('div', 'sn'); r.appendChild(sn);
-  J.words(bk, s.p).then(w => { const t = ncSnip(w, s); sn.textContent = t ? t.slice(0, 40) + '…' : ''; }).catch(() => {});
+  J.words(bk, s.p).then(w => { const t = ncSnip(w, s); sn.textContent = t ? t.slice(0, 40) + '…' : ''; ncSnFit(sn); }).catch(() => {});
   r.onclick = ev => { ev.stopPropagation(); go(ev); }; return r; }
 async function p8BookFill(host, uid){
   const J = viewCanvas.jari; host.innerHTML = ''; host.appendChild(el('div', 'ncb-sec', '교재'));
