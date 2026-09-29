@@ -109,7 +109,6 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .bjpage .bj-ho{padding-left:1.7em;text-indent:-1.7em}
 .bjpage .bj-mok{padding-left:3.3em;text-indent:-1.7em}
 .bjpage .bj-note{color:#77736b}
-.bjnote{font-size:11px;color:#a5a19a;margin-top:8px}
 .ln{margin:3px 0;white-space:pre-wrap;word-break:break-word}
 .ln.ho{padding-left:1.5em}
 .ln.mok{padding-left:3em}
@@ -487,7 +486,7 @@ table.gtbl{border-collapse:collapse;width:100%;font-size:12px;margin-bottom:8px}
 .jhl{background:#fdf6d8;border-left:3px solid #c9a400;padding-left:6px}
 .jhl.jhl2{background:#f6e9a8}
 .jdim{opacity:.5}
-.hangchip{float:right;font-size:10px;color:#8a6d00;background:#f5e9c0;border-radius:4px;padding:1px 6px;margin-left:8px;white-space:nowrap}
+/* ★ revfix0929b A-9 — 안 쓰는 CSS 걷음(전수 확인): 설명 글 칸 · 항 칩 · 모드 줄 알약 안 k/N(.mkn 은 .jomt 규칙만 남음) — .modebar·.mode 는 1차객 탭·빠른 실행 줄이 써서 둔다 */
 .ptchip{font-size:10px;background:#f5e9c0;color:#8a6d00;border-radius:4px;padding:1px 6px;margin-left:6px;white-space:nowrap}
 /* ★ v3-H §4 포스트잇 · §5 테마 */
 .pitw{border-bottom:2px dotted #b8860b;cursor:pointer}
@@ -2029,6 +2028,7 @@ try{const u5=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
 /* ★ gaek_mb §A-2 — 목차 서랍 기억. `jopangi_ui` 안(기기별 · 동기화 밖 · 민법도 기기별이다) */
 try{const u2=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     if(u2.jt_w>0)S.jtW=u2.jt_w; if(u2.jt_fold)S.jtFold=true;
+    if(window.matchMedia&&matchMedia('(max-width:480px)').matches)S.jtFold=true;   /* ★ revfix0929b A-6 — 폰(≤480)은 1차객 문제 서랍을 접은 채 시작(옆 두 칸 G-4 와 같은 규칙 · 펴면 카드 위 덮개) */
     if(u2.jt_ch&&typeof u2.jt_ch==='object')S.jtCh=u2.jt_ch;}catch(e){}
 S.jtCh=S.jtCh||{};
 try{const u6=JSON.parse(localStorage.getItem(UI_KEY)||'{}');if(u6.mb_ch&&typeof u6.mb_ch==='object')S.mbCh=u6.mb_ch;}catch(e){}
@@ -2674,6 +2674,25 @@ async function viewJo(){
   /* 머리 i 의 아래(더 깊은 머리 포함) 끝 · 아래가 있는가 */
   const hEnd=i=>{let e=i+1;while(e<장들.length&&장들[e].lv>장들[i].lv)e++;return e;};
   const hKid=i=>(i+1<장들.length&&장들[i+1].lv>장들[i].lv)||L.조.some(x=>x.j===i);
+  /* ★ revfix0929b A-11 — 머리 범위 = 볼트 from~to · 편(이름 「제N편」)과 from/to 가 빈 머리 = 그 머리 아래(하위 머리까지) 첫 조 ~ 마지막 조 ·
+     하위 = 뒤 머리 중 이름 계급(편 > 장 > 절 > 관)이 더 깊은 것(민소는 편·장이 같은 lv 1 이라 lv 로는 못 가린다 · 이름으로 못 가리면 lv) · 조가 하나도 없으면 '' */
+  const hRank=h2=>{const m=/제\d+(?:의\d+)?\s*(편|장|절|관)/.exec(h2.no||'');return m?({편:1,장:2,절:3,관:4})[m[1]]:null;};
+  const jHeadRange=i=>{const h2=장들[i],r0=hRank(h2),dat=(h2.from&&h2.to)?h2.from+'~'+h2.to:'';
+    if(dat&&r0!==1)return dat;
+    let e=i+1;while(e<장들.length){const r1=hRank(장들[e]);if(!((r0!=null&&r1!=null)?r1>r0:장들[e].lv>h2.lv))break;e++;}
+    const ks=L.조.filter(x=>x.j!=null&&x.j>=i&&x.j<e);
+    return ks.length?ks[0].k+'~'+ks[ks.length-1].k:dat;};
+  /* ★ v3-J §0-2 — 「지금 조의 장은 매번 강제 펼침」 폐기(제1장이 안 접히던 원인).
+     조가 바뀐 첫 렌더에서 한 번만 그 장의 접힘 표시를 지운다 — 그 뒤엔 접으면 접힌다.
+     ★ joscreen0929 A-1-6 — 절(lv2)도 접히므로 그 조의 절 머리도 같은 때 한 번 편다
+     ★ revfix0929b A-9 — 이 펼침을 접기 글자 셈보다 **먼저** 한다(옛: 글자를 먼저 세어 접기2 → 제192조 첫 화면이 「펴기」로 남았다) */
+  if(장들.length&&JOSEEN!==S.law+':'+S.jo){
+    JOSEEN=S.law+':'+S.jo;
+    const lv1Of=i=>{let i2=i;while(i2>0&&장들[i2].lv!==1)i2--;return i2;};
+    const cx=L.조.find(x=>x.k===S.jo);
+    let ch=false;if(cx&&cx.j!=null)[lv1Of(cx.j),cx.j].forEach(i=>{if(i!=null&&_jf[i]){delete _jf[i];ch=true;}});
+    if(ch)_jfSave(_jf);
+  }
   {
     const bar2=el('div','jtbar');
     /* ★ joscreen0929 A-1-5 — 칩 둘 → 하나 「전체 N ▾」(목록 = 전체 · ★ 2년 내 개정 · 가는 줄 · 체크 색 여섯) */
@@ -2734,7 +2753,7 @@ async function viewJo(){
      const no=el('span','jno',x.k);no.tabIndex=0;no.setAttribute('role','button');no.title=x.k+' 원문 팝업';
      no.onclick=ev=>{ev.stopPropagation();popJo(S.law,x.k,ev,1);};
      no.onkeydown=ev=>{if(ev.key!=='Enter')return;ev.preventDefault();ev.stopPropagation();
-       const rc=no.getBoundingClientRect();popJo(S.law,x.k,{clientX:rc.left,clientY:rc.bottom},1);};
+       const rc=no.getBoundingClientRect();popJo(S.law,x.k,{clientX:rc.left,clientY:rc.bottom,target:no},1);};   /* ★ revfix0929b A-7 — 링크 자리(target) */
      nm.appendChild(no);nm.appendChild(el('span','jtt',' '+(x.t||'')));r.appendChild(nm);}   /* ★ revfix0928pm A-5 — 조 번호(늘 보임) + 이름(말줄임 …) · 글자는 그대로 */
     /* ★ joscreen §E-1·§E-3·§E-4(⑨⑪⑫) — ★ 개정일 = 이름 바로 뒤 · 오른쪽 = 고정 폭 칸(없는 칸은 빈자리 · 모든 줄이 세로로 맞는다) · 막대 걷음
        ★ joscreen0929 A-1-1 — 세 칸 [빈칸 표지][✏️N][🔗N] → 두 칸 [빈칸 표지][체크 단추] */
@@ -2751,17 +2770,7 @@ async function viewJo(){
   }else{
     const byHead={};const noHead=[];
     L.조.forEach(x=>{(x.j==null?noHead:(byHead[x.j]=byHead[x.j]||[])).push(x);});
-    const lv1Of=i=>{let i2=i;while(i2>0&&장들[i2].lv!==1)i2--;return i2;};
-    let curJoLv1=null,curJoH=null;
-    {const cx=L.조.find(x=>x.k===S.jo);if(cx&&cx.j!=null){curJoH=cx.j;curJoLv1=lv1Of(cx.j);}}
-    /* ★ v3-J §0-2 — 「지금 조의 장은 매번 강제 펼침」 폐기(제1장이 안 접히던 원인).
-       조가 바뀐 첫 렌더에서 한 번만 그 장의 접힘 표시를 지운다 — 그 뒤엔 접으면 접힌다.
-       ★ joscreen0929 A-1-6 — 절(lv2)도 접히므로 그 조의 절 머리도 같은 때 한 번 편다 */
-    if(JOSEEN!==S.law+':'+S.jo){
-      JOSEEN=S.law+':'+S.jo;
-      let ch=false;[curJoLv1,curJoH].forEach(i=>{if(i!=null&&_jf[i]){delete _jf[i];ch=true;}});
-      if(ch)_jfSave(_jf);
-    }
+    /* (조가 바뀐 첫 렌더의 장·절 펼침은 위 — 접기 글자보다 먼저 · revfix0929b A-9) */
     const gStar=i1=>{let n2=0;
       for(let i=i1;i<hEnd(i1);i++)
         (byHead[i]||[]).forEach(x=>{if(stars[x.k])n2++;});
@@ -2776,23 +2785,24 @@ async function viewJo(){
       if(h.lv===1){
         const k2=gStar(i);
         const hr=el('div','r jhead');hr.dataset.hi=i;
-        /* ★ v3-J §0-2 — 좁으면 이름 우선: 범위는 말줄임(전체는 툴팁) · ★수는 남긴다 */
+        /* ★ v3-J §0-2 — 좁으면 이름 우선: 범위는 말줄임(전체는 툴팁) · ★수는 남긴다
+           ★ revfix0929b A-11 — 이름 = 서랍 폭 안에서 말줄임(전체는 툴팁 · 옛: 이름 flex-shrink 0 이라 긴 장 이름이 서랍을 가로로 넓혔다) ·
+           범위 = 이름 아래 둘째 줄(10px · 지금 색 · 서랍 폭과 상관없이 한 꼴) · 범위가 없는 머리(아래 조 없음)는 둘째 줄 없음(빈 「~」 없음) */
+        const hw=el('div','jhw');
         const hnm=el('span','nm',(folded?'▸ ':'▾ ')+h.no+' '+(h.t||''));
-        hnm.style.flexShrink='0';
-        hr.appendChild(hnm);
-        const em2=el('em');
-        const rge=el('span','jrange',(h.from||'')+'~'+(h.to||''));
-        rge.title=(h.from||'')+'~'+(h.to||'');
-        em2.appendChild(rge);
-        if(k2)em2.appendChild(el('span','jstarc','★'+k2));
-        hr.appendChild(em2);
+        hnm.title=h.no+' '+(h.t||'');
+        hw.appendChild(hnm);
+        const rg=jHeadRange(i);
+        if(rg){const rge=el('span','jrange',rg);rge.title=rg;hw.appendChild(rge);}
+        hr.appendChild(hw);
+        if(k2){const em2=el('em','jhst');em2.appendChild(el('span','jstarc','★'+k2));hr.appendChild(em2);}
         hr.onclick=()=>{if(flt)return;const f2=Object.assign({},_jf);
           if(f2[i0])delete f2[i0];else f2[i0]=1;_jfSave(f2);render();};
         tree.appendChild(hr);
       }else{
         /* ★ joscreen0929 A-1-6 — 절(lv2) 접기를 새로 넣는다(▾/▸ · 줄 꼴은 jsub 그대로 · 누르면 그 절만 접고 편다) */
         const sr=el('div','r jsub');sr.dataset.hi=i;
-        sr.appendChild(el('span','nm',(folded?'▸ ':'▾ ')+h.no+' '+(h.t||'')));
+        {const snm=el('span','nm',(folded?'▸ ':'▾ ')+h.no+' '+(h.t||''));snm.title=h.no+' '+(h.t||'');sr.appendChild(snm);}   /* ★ revfix0929b A-11 — 말줄임(글 그대로) · 전체는 툴팁 */
         sr.onclick=()=>{if(flt)return;const f2=Object.assign({},_jf);
           if(f2[i0])delete f2[i0];else f2[i0]=1;_jfSave(f2);render();};
         tree.appendChild(sr);
@@ -3048,7 +3058,7 @@ async function viewJo(){
     const body=el('div','origbody');
     beopjeon(body,j.원본);              // ★ 법전 조판(사진 실측 8/26) — 글자는 안 고친다
     void renderBeonjeon;                // 옛 조판기는 남겨 둔다(되돌릴 자리)
-    /* ★ joscreen0929 A-7 — 창 아래 설명 글(.bjnote)은 화면에서 뺐다(필기로 잠긴 펼침 · 떠 있는 창 둘 다) · 그 문장은 여기 글자 그대로:
+    /* ★ joscreen0929 A-7 — 창 아래 설명 글(옛 설명 글 칸 · 그 CSS 는 revfix0929b A-9 에서 걷음)은 화면에서 뺐다(필기로 잠긴 펼침 · 떠 있는 창 둘 다) · 그 문장은 여기 글자 그대로:
        사진(특허법 33·34쪽) 실측 조판 — 한 행 길이 고정 · 어절 중간에서 끊는다 · 양끝맞춤. 글자 크기는 바꿀 수 없다(필기가 이 고정에 기댄다). */
     if(pinned){
       fold.style.cursor='default';
@@ -3067,7 +3077,7 @@ async function viewJo(){
         const _pk3=('')+'|'+('⚖ '+S.jo+' 원문'); if(popToggle(_pk3))return; const pb=popShell('', '⚖ '+S.jo+' 원문', _pk3);   /* ★ 상표 손질 6 — 키 종류|제목 */
         const bx=el('div','origbody');
         beopjeon(bx,j.원본);               // 사진 실측 조판 그대로 — 한 행 글자 수 고정(v3-B §1)
-        /* ★ joscreen0929 A-7 — 떠 있는 창 아래 설명 글(.bjnote)은 화면에서 뺐다 · 그 문장은 여기 글자 그대로:
+        /* ★ joscreen0929 A-7 — 떠 있는 창 아래 설명 글(옛 설명 글 칸)은 화면에서 뺐다 · 그 문장은 여기 글자 그대로:
            사진(특허법 33·34쪽) 실측 조판 — 한 행 길이 고정 · 어절 중간에서 끊는다 · 양끝맞춤. 글자 크기는 바꿀 수 없다(필기가 이 고정에 기댄다). */
         pb.appendChild(bx);
         showPop(ev);
@@ -6514,9 +6524,11 @@ function goJo(law, k, hl){
 async function popJo(law, k, ev, depth, hl){
   depth = depth || 1;
   if (popToggle('jo|' + law + '|' + k)) return;   /* ★ 상표 손질 5 */
+  const anc = popAnchorOf(ev);   /* ★ revfix0929b A-7 — 누른 링크 자리(글이 오기 전에 잰다) */
   const body = popShell('', k + ' — 불러오는 중', 'jo|' + law + '|' + k);   /* ★ c2card C-1 — 제목 📖 뗌 */
   showPop(ev);
   const pop = body.parentNode;
+  popPlace(pop, anc);   /* ★ revfix0929b A-7 — 「불러오는 중」 창도 링크를 안 덮는다 */
   try{
     const L = await get('jo_' + law + '_목록.json');
     const B = await get('jo_' + law + '_본문.json');
@@ -6559,7 +6571,7 @@ async function popJo(law, k, ev, depth, hl){
     if (!body.firstChild) body.appendChild(el('div', 'cdim', '원문 줄이 없다 — ' + k));
     jmPaintAll(body, base, j.행); dmnAll(body);   /* ★ markfix A-3 · A-5 */
     stkBubbleWire(body, base, j.행);   /* ★ markfix A-3 — 팝업 본문 긁기도 같은 막대 */
-    popInView(pop); setTimeout(() => popInView(pop), 0);   /* ★ joscreen0929 A-2-3 — 글이 다 들어온 뒤 창 전체를 보이는 화면 안으로(넘치면 몸만 굴린다) */
+    popPlace(pop, anc); setTimeout(() => popPlace(pop, anc), 0);   /* ★ joscreen0929 A-2-3 — 글이 다 들어온 뒤 창 전체를 보이는 화면 안으로(넘치면 몸만 굴린다) · ★ revfix0929b A-7 — 링크 아래 → 위 → 넓은 쪽 줄여서 → 가운데(옛 popInView 는 위로 밀어 누른 줄을 덮었다) */
     if (hlFirst) setTimeout(() => { pop.scrollTop = Math.max(0, hlFirst.offsetTop - 50); }, 30);
   }catch(e){
     body.innerHTML = '';
@@ -6777,8 +6789,10 @@ function ncRow(J, bk, s, tag, go){ const r = el('div', 'mbbrow'); r.dataset.book
 function ncPicFit(box){ const p = box && box.closest ? box.closest('.pop') : null;
   if (!p || !p.isConnected){ if (box && (box._fitN = (box._fitN || 0) + 1) < 30) requestAnimationFrame(() => ncPicFit(box)); return; }   /* ★ revfix0929 A-2 — 창이 붙기 전이면 다음 프레임에 다시 */
   const B = vvBox(); p.style.maxHeight = Math.max(120, Math.round(B.h - 16)) + 'px'; mbWinFit(p); }
-/* ★ revfix0929 A-2 — 줄 둘째 글(J.words)이 그림보다 늦게 들어오면 창이 한 줄 길어진다 → 그림 있는 창이면 다시 맞춤(그림 없는 창은 무변) */
-function ncSnFit(sn){ const p = sn && sn.closest ? sn.closest('.pop') : null; if (p && p.isConnected && p.querySelector('.ncb-pic')) ncPicFit(sn); }
+/* ★ revfix0929 A-2 — 줄 둘째 글(J.words)이 그림보다 늦게 들어오면 창이 한 줄 길어진다 → 그림 있는 창이면 다시 맞춤(그림 없는 창은 무변)
+   ★ revfix0929b A-2 — 그림 없는(찍어 둔 자리 없는) 창도 같은 맞춤(ncPicFit → mbWinFit) — 둘째 글이 창을 연 뒤에 와서 아래 24px 가 화면 밖에 남던 것(PC 1440×900 칩 y 700 · 588–924) ·
+     목차노트 「교재 자리」 창(ncRow)도 같은 함수라 같이 맞는다(뜻한 차이) */
+function ncSnFit(sn){ const p = sn && sn.closest ? sn.closest('.pop') : null; if (p && p.isConnected) ncPicFit(sn); }
 function ncPic(J, bk, s, go){ const box = el('div', 'ncb-pic'); box.appendChild(el('div', 'm', '그림을 여는 중…'));
   J.pic(bk, s, 400).then(cv => { box.innerHTML = ''; box.appendChild(cv || el('div', 'm', '이 기기에 그림이 아직 없습니다')); ncPicFit(box); })
     .catch(() => { box.innerHTML = ''; box.appendChild(el('div', 'm', '이 기기에 그림이 아직 없습니다')); ncPicFit(box); });
@@ -10564,7 +10578,7 @@ async function p8BookFill(host, uid){
   const pk = el('button', 'ncb-more p8pick', '📍 자리 직접 찍기'); pk.title = '해례 8판 쪽 창에서 이 지문 자리를 끌어 찍는다(두 손가락 = 스크롤)';
   pk.onclick = ev => { ev.stopPropagation(); open(pin ? { p: pin.p, r: pin.r } : (rows[0] || { p: p8Guess(uid) }), ev, true); };
   host.appendChild(pk);
-  try { mbWinFit(host.closest('.pop')); } catch (e) {} }
+  try { ncPicFit(host); } catch (e) {} }   /* ★ revfix0929b A-2 — 그림 없는 창도 그림 창과 같은 맞춤(폰은 누른 자리 아래 한도를 먼저 풀어 위로 올릴 수 있게 · 둘째 글이 안 와도) */
 function p8BookRefresh(uid){ document.querySelectorAll('.mbb8[data-p8u]').forEach(h => { if (h.dataset.p8u === uid && h.isConnected) p8BookFill(h, uid); }); }
 /* ══════════ _task_jo_gaek_mb §D-17 알약 — 민법 꼴 · 문제풀이 화면 안 sticky ══════════
    옛 「쪽 1/1 · 마킹 0/13」 뜬 알약(#oxpill)과 떠 있는 두 단추(#oxfab)를 이것으로 갈음한다.
@@ -13624,6 +13638,11 @@ function mbBackBar(main, label){
 var JTDATA = null;      /* {M, byId, P7map, subj} — viewJimun 이 채운다 */
 
 function jtSet(d){ JTDATA = d; }
+/* ★ revfix0929b A-6 — 폰(≤480) 1차객 문제 서랍 = 카드 위 덮개(CSS) · 접은 채 시작 · 서랍에서 마디·해를 고르면 접음 · 바깥 누름 = 접음(옆 두 칸 G-4 와 같은 규칙)
+   까닭: 서랍(272px)이 제 칸을 차지해 카드 칸이 118px 로 짓눌렸다(새로 열기 → 1차객 탭 사용자 길에서 재현) · 덮개면 카드 칸 = 화면 − 접힌 손잡이 13px */
+var JT_PH_AT = null;   /* 폰에서 서랍을 편 때의 자리 */
+function jtPhone(){ return !!(window.matchMedia && matchMedia('(max-width:480px)').matches); }
+function jtWhere(){ return [S.tab, S.jimunTab, S.mok, S.year, S.oxQueue].join('|'); }
 
 function jtEl(){
   let t = document.getElementById('jtree');
@@ -13669,7 +13688,9 @@ function jtGripWire(g){
   g.addEventListener('pointercancel', end);
   g.addEventListener('click', () => {
     if (g._drag){ g._drag = false; return; }
-    S.jtFold = !S.jtFold; uiSave(); jtPaint();
+    S.jtFold = !S.jtFold; uiSave();
+    JT_PH_AT = S.jtFold ? null : jtWhere();   /* ★ revfix0929b A-6 — 폰: 연 자리를 적어 두고 서랍에서 다른 마디로 가면 접는다(jtPaint) */
+    jtPaint();
   });
 }
 
@@ -13688,7 +13709,9 @@ function jtPaint(){
   const t = document.getElementById('jtree') || (on ? jtEl() : null);
   if (!t) return;
   t.style.display = on ? '' : 'none';
+  t.classList.toggle('jton', !!on);   /* ★ revfix0929b A-6 — 보이는 서랍(폰 덮개 자리 CSS 가 본다) */
   if (!on) return;
+  if (jtPhone() && !S.jtFold && JT_PH_AT !== null && JT_PH_AT !== jtWhere()){ S.jtFold = true; JT_PH_AT = null; uiSave(); }   /* ★ revfix0929b A-6 — 폰: 서랍에서 마디·해를 고르면 접어 카드가 보이게 */
   document.documentElement.style.setProperty('--jtrw', (S.jtW || 272) + 'px');
   t.classList.toggle('fold', !!S.jtFold);
   const g = document.getElementById('jtgrip'); if (g) g.textContent = S.jtFold ? '›' : '‹';
@@ -18379,7 +18402,7 @@ function uzExvQ(q, y, graded){
   const w = el('div', 'exv-q'); w.dataset.exq = key; w.dataset.exno = String(giNo(q));
   const hd = el('div', 'exv-head');
   hd.appendChild(el('span', 'exv-no', giNo(q) + '.'));
-  hd.appendChild(el('span', 'exv-stem', q.발문 || ''));
+  hd.appendChild(el('span', 'exv-stem' + (/\n/.test(q.발문 || '') ? ' exv-ml' : ''), q.발문 || ''));   /* ★ revfix0929b A-3 — 데이터 줄바꿈이 있는 발문만 줄을 지킨다(1차객 카드 .p7cast 와 같은 pre-wrap · 굵기·크기 그대로 · 줄바꿈 없는 발문은 DOM 무변) */
   if (P8L[q.id] && P8L[q.id].문항){ const s8 = el('span', 'p8c g', p8No(P8L[q.id])); s8.title = '해례 8판 자리(문항 통째)'; hd.appendChild(s8); }   /* ★ p8up A-3 — 문항 통째 */
   const rs = el('span', 'exv-res');
   if (graded && ans.length) rs.appendChild(el('span', rec.ok ? 'exv-r-ok' : 'exv-r-bad', rec.ok ? 'O 맞음' : 'X 틀림 · 정답 ' + ans.map(x => UZ_CIR[+x] || x).join('·')));
@@ -18537,6 +18560,7 @@ function uzExvHead(main, H){
   '.exv-head{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px}',
   '.exv-no{font-weight:800;color:#111827;font-size:15px;white-space:nowrap}',
   '.exv-stem{font-weight:700;color:#111827;font-size:14px;line-height:1.6;flex:1;min-width:0}',
+  '.exv-stem.exv-ml{white-space:pre-wrap}',   /* ★ revfix0929b A-3 */
   '.exv-res{margin-left:auto;white-space:nowrap;font-size:13px;font-weight:900;padding-left:8px}',
   '.exv-r-ok{color:#1d4ed8}.exv-r-bad{color:#dc2626}.exv-r-na{color:#9ca3af}',
   '.exv-paper .question-box{border:0;box-shadow:none;padding:4px 2px;margin:0;background:transparent}',
@@ -19532,6 +19556,32 @@ function wmMkEl(m){
   else n = el('span');
   return n;
 }
+/* ★ revfix0929b A-10 — 원문 줄의 같은 법 조 인용 = 「제N조」·「제N조의M」 + 꼬리(제K항 · 제K호(의L) · 제K목) — 볼트 행과 짝이 안 맞아 링크가 없던 줄도 건다(짝 맞아 링크가 있는 줄은 무변) ·
+   다른 법 인용 뺌 = 앞을 연쇄(띄어쓰기 · ㆍ · , · 및 · 또는 · 와/과 · 부터 · 까지 · 앞 인용 · 편·장·절 · 괄호 묶음)째 걷고 「법 이름」 · 같은 법/조약/협정 · 동법 · 시행령 · 시행규칙으로 끝나면 · 그 법 목록에 있는 조만 · 자기 조 뺌 */
+const WM_AUTO_RX = /제(\d+)조(?:의(\d+))?(?:제\d+항)?(?:제\d+호(?:의\d+)?)?(?:제\d+목)?/g;
+function wmAutoOther(pre){
+  let t = pre;
+  for (let i = 0; i < 80; i++){
+    const t2 = t.replace(/(?:\s|ㆍ|·|,|및|또는|와|과|이나|부터|까지|내지|~|\()+$/, '')
+      .replace(/\([^()]*\)$/, '')   // 앞 괄호 묶음 — 「…의정서」(이하 "…"라 한다) · (제87조부터 …)
+      .replace(/제\d+조(?:의\d+)?(?:제\d+항)?(?:제\d+호(?:의\d+)?)?(?:제\d+목)?(?:\(\d+\))?$/, '')
+      .replace(/(?:제\d+(?:편|장|절|관|항|목)|제\d+호(?:의\d+)?)$/, '');   // 「민사소송법」 제1편제2장제4절(…)
+    if (t2 === t) break;
+    t = t2;
+  }
+  return /」$/.test(t) || /(?:같은|동)\s*(?:법률|법|영|규칙|조약|협정|의정서|협약)$/.test(t) || /(?:시행령|시행규칙)$/.test(t);
+}
+function wmAutoLinks(str, self, TT){
+  const out = []; let m;
+  WM_AUTO_RX.lastIndex = 0;
+  while ((m = WM_AUTO_RX.exec(str))){
+    const k = '제' + m[1] + '조' + (m[2] ? '의' + m[2] : '');
+    if (k === self || !TT || TT[k] == null) continue;
+    if (wmAutoOther(str.slice(Math.max(0, m.index - 160), m.index))) continue;
+    out.push({ s: m.index, e: m.index + m[0].length, j: k });
+  }
+  return out;
+}
 function wmLineEl(L, X){
   const on = X.on, row = L.ri != null ? X.rows[L.ri] : null, ch = L.ch;
   const src = ch.map(c => c[0]).join('');
@@ -19542,6 +19592,15 @@ function wmLineEl(L, X){
   const idx = [];
   for (let k = 0; k < ch.length; k++){ const c = ch[k]; if (c[3] === 'b' || (c[3] === 'r' ? !!on[c[2]] : !on[c[2]])) idx.push(k); }
   if (!idx.length) return null;
+  let autoAt = null;   /* ★ revfix0929b A-10 — 볼트 링크가 없는 줄 = 원문 글자(볼트에만 있는 글자 뺌)의 같은 법 조 인용에 링크 */
+  if (!(L.L && L.L.length)){
+    const ds = idx.map(k => ch[k][0]).join('');
+    wmAutoLinks(ds, X.jo, X.titles || JOTITLE).forEach((a, n) => {
+      for (let q = a.s; q < a.e; q++) if (ch[idx[q]][3] === 'r') return;
+      const lk = { id: 'wa' + n, j: a.j, auto: 1 }; autoAt = autoAt || {};
+      for (let q = a.s; q < a.e; q++) autoAt[q] = lk;
+    });
+  }
   const W = { ri: L.ri, v: [], nodes: [], X: X }; d._wm = W;   /* ★ joscreen0929 A-2 — X = 이 줄의 재료(조문 팝업 줄의 ✎ 수정이 제 조 볼트 행을 찾는다) */
   const mOn = m => m.id ? !!on[m.id] : m.w ? !!on[m.w] : true;
   const firstAt = pos => { for (let q = 0; q < idx.length; q++) if (ch[idx[q]][1] >= pos) return q; return -1; };
@@ -19572,6 +19631,7 @@ function wmLineEl(L, X){
       MS.forEach((m, mi) => { if (rp >= m.a && rp < m.b) ms.push(mi); });
       (L.L || []).forEach(l => { if (rp >= l.a && rp < l.b) lk = l; });
     }
+    if (!lk && autoAt) lk = autoAt[q] || null;
     const key = ms.join(',') + '|' + (c[4] ? 1 : 0) + '|' + (lk ? lk.id : '');
     if (!run || runKey !== key){
       /* 한 덩이 = 같은 꾸밈·회색·링크 — 겉에서 안으로 꾸밈을 씌운다(renderLine 과 같은 요소) */
@@ -19595,7 +19655,7 @@ function wmLineEl(L, X){
     const tn = document.createTextNode(c[0]);
     run.appendChild(tn); W.v.push(rp); W.nodes.push(tn);
     const nx = idx[q + 1];
-    if (lk && (nx == null || !(ch[nx][1] >= lk.a && ch[nx][1] < lk.b))){
+    if (lk && (lk.auto ? !(autoAt && autoAt[q + 1] === lk) : (nx == null || !(ch[nx][1] >= lk.a && ch[nx][1] < lk.b)))){
       if (on[lk.id]) putLbl(lk);
       lkEl = null; lkId = null; run = null; runKey = null;
     }
@@ -19769,10 +19829,11 @@ function wmCiteOf(jj, jo){
   const a = Math.max(0, m.index - 38), e = m.index + m[0].length;
   return { pre: (a > 0 ? '…' : '') + txt.slice(a, m.index), hit: m[0], post: txt.slice(e, e + 28) + (e + 28 < txt.length ? '…' : '') };
 }
-/* ★ joscreen0929 A-3 — 이 조 원문 줄이 적은 다른 조 = 원문 줄(볼트 행과 짝지은 줄)의 조 링크 중 원문에 있는 글자에 걸린 것만 ·
+/* ★ joscreen0929 A-3 — 이 조 원문 줄이 적은 다른 조 = 원문 줄(볼트 행과 짝지은 줄)의 조 링크 중 원문에 있는 글자에 걸린 것만 · ★ revfix0929b A-10 — + 링크 없는 줄의 같은 법 조 인용(wmAutoLinks) ·
    볼트 머리글(related)·메모 줄·각주 줄의 링크는 뺀다(볼트 글에만 있어 원문 인용이 아니다) · 켠 것과 상관없는 셈(창·칩이 늘 같은 수) · 차례 = 조 번호 */
-function wmCiteOut(j, jo){
+function wmCiteOut(j, jo, TT){
   if (!j) return [];
+  TT = TT || JOTITLE;
   const j2 = Object.assign({}, j, { 원본: wmOrig(j) });
   const J2 = new Proxy({}, { get: (o, kk) => kk === jo ? j2 : undefined });
   let b; try{ b = wmBuild(J2, jo); }catch(e){ return []; }
@@ -19783,6 +19844,8 @@ function wmCiteOut(j, jo){
       if (!l.j || l.j === jo || out.indexOf(l.j) >= 0) return;
       if ((Ln.ch || []).some(c => c[3] === 'b' && c[1] >= l.a && c[1] < l.b)) out.push(l.j);
     });
+    /* ★ revfix0929b A-10 — 볼트 링크가 없는 줄 = 원문 글자(짝 여부 무관 · 켠 것과 상관없이 원문)의 같은 법 조 인용도 센다(조문 화면 링크와 같은 함수) */
+    if (!(Ln.L && Ln.L.length)) wmAutoLinks((Ln.ch || []).filter(c => c[3] !== 'r').map(c => c[0]).join(''), jo, TT).forEach(a => { if (out.indexOf(a.j) < 0) out.push(a.j); });
   });
   return out.sort((x, y) => wmJoNum(x) - wmJoNum(y));
 }
@@ -19860,8 +19923,6 @@ async function joPanelMount(slot){
     '.wml .wmlk{cursor:pointer;text-decoration:underline dotted #9ca3af;text-decoration-thickness:1px;text-underline-offset:3px}',
     '.wml .wmlk.dead{cursor:default}',
     '.wml .wmrev{color:#9ca3af;font-size:.92em}',
-    '.modebar .mode .mkn{margin-left:4px;font-size:11px;color:#9ca3af;font-weight:700}',
-    '.modebar .mode.on .mkn{color:#dbe6f7}',
     '.pop.wmwin>.ph .pt{font:800 13px system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#1f2937;flex:1;min-width:0}',
     '.pop.wmwin>.ph{padding:9px 12px;cursor:move}',
     '.pop.wmwin>.ph>button.cfx{color:#9ca3af;font:700 14px system-ui}',
@@ -20139,6 +20200,90 @@ function pitLong(lineEl, target, struct, text, pref, ev){
   '.mk9bar .mk9r2 button.m2,#c2mark .mk9r2 button.m2{width:auto;height:auto;padding:3px 6px;border:0;border-radius:5px;background:#f3f4f6;color:#374151;font:600 12px/1.25 system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;white-space:nowrap;cursor:pointer}',
   '.mk9bar .mk9r2 button.m2:hover,#c2mark .mk9r2 button.m2:hover{background:#e5e7eb}'
 ].join('\n'); document.head.appendChild(s); }catch(e){} })();
+
+/* ══ ★ 2026-09-29 (_task_jo_revfix0929b) — 검수 흠 고침: 교재 자리 창 · 기출뷰 발문·머리 · 누름 자리 · 폰 1차객 서랍 · 조문 팝업 자리 · 터치 누름 · 접기 글자 · 🔗인 · 서랍 머리 ══ */
+(function(){ try{ const s = document.createElement('style'); s.id = 'revfix0929b-css'; s.textContent = [
+  /* A-5 폰(≤480) 기출뷰 머리 — 말줄임 대신 제 폭(연도·회차 「2013년 제50회」는 늘 다 보인다 · 단추 줄이 대신 접힌다) · PC 무변 */
+  '@media (max-width:480px){',
+  '  .mbsbar.uzexh .tw{flex:none;max-width:62%}',
+  '  .mbsbar.uzexh .t1,.mbsbar.uzexh .t2{white-space:normal;overflow:visible;text-overflow:clip}',
+  /* A-6 폰(≤480) 1차객 문제 서랍 = 카드 위 덮개(펼 때) · 접힌 손잡이(13px)는 제 자리 — 열고 닫아도 카드 칸이 안 흔들린다 */
+  '  .body2{position:relative}',
+  '  #jtree.jton:not(.fold){position:absolute;top:0;bottom:0;left:0;z-index:45;width:min(var(--jtrw,272px),85%)}',
+  '  #jtree.jton:not(.fold)+#slot{margin-left:13px}',
+  '}',
+  /* A-11 서랍 머리 — 이름은 서랍 폭 안에서 말줄임 · 범위 = 이름 아래 둘째 줄(.jrange 10px · 지금 색) · ★수는 오른쪽에 늘 보인다 */
+  '.tree .r.jhead .jhw{display:flex;flex-direction:column;flex:1 1 auto;min-width:0}',
+  '.tree .r.jhead .jhw>.nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+  '.tree .r.jhead .jhw>.jrange{line-height:1.3}',
+  '.tree .r.jhead>em.jhst{flex:none;overflow:visible}',
+  /* A-4 · A-8 터치(pointer: coarse) 누름 영역 ≥ 36 — 보이는 글자·크기·줄은 그대로 · 투명 ::before = 둘레(36) · 이웃 칸과 겹치는 곳은 ::after = 제 몫(이웃과의 가운데까지 · 한 층 위)이 이겨 가까운 쪽이 먹는다 · PC 마우스 무변
+     교재 자리 창 단추(자동으로 되돌리기 · 📍 자리 직접 찍기 · 후보) · 1차객 「정답·해설 ▸」 · 서랍 체크 단추(줄 간격 30 → 위아래 이웃 체크와 가운데서 나눔) · 「접기1」 · 모드 줄 글자(위 연결 줄에 안 닿게 위 8 · 아래 12) ·
+     막대 둘째 줄 단추(첫 줄 단추에 안 닿고 막대 밖으로 안 나가게 위 11 · 아래 4) · 팔레트 칸 · 「지우기」 · 거름 목록 줄 */
+  '@media (pointer:coarse){',
+  '  .ncb-more,.mbpeek,.tree .r button.jck,.jtbar .uzstep.jstep,.jomt .plgb.jomd,.mk9bar .mk9r2 button.m2,#c2mark .mk9r2 button.m2,.jckpal .jcksw,.jckpal .jckclr,.jckmenu .jckmo{position:relative}',
+  '  .ncb-more::before,.mbpeek::before,.tree .r button.jck::before,.jtbar .uzstep.jstep::before,.jckpal .jcksw::before,.jckpal .jckclr::before,.jckmenu .jckmo::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,36px);height:max(100%,36px);transform:translate(-50%,-50%);z-index:1}',
+  '  .jomt .plgb.jomd::before{content:"";position:absolute;left:50%;top:-8px;bottom:-12px;width:max(100%,36px);transform:translateX(-50%);z-index:1}',
+  '  .mk9bar .mk9r2 button.m2::before,#c2mark .mk9r2 button.m2::before{content:"";position:absolute;left:0;right:0;top:-11px;bottom:-4px;z-index:1}',
+  '  .tree .r button.jck::after{content:"";position:absolute;left:50%;top:-7px;bottom:-7px;width:max(100%,36px);transform:translateX(-50%);z-index:2}',
+  '  .jckpal .jcksw::after{content:"";position:absolute;left:-1px;right:-1px;top:50%;height:max(100%,36px);transform:translateY(-50%);z-index:2}',
+  '  .jckmenu .jckmo::after,.ncb-more::after{content:"";position:absolute;left:-2px;right:-2px;top:0;bottom:0;z-index:2}',
+  '  .ncb-more::after{left:0;right:0;top:-2px;bottom:-2px}',
+  /* 교재 자리 창 단추 = 위(그림·대응표 줄, 6px 위)에 안 닿게 아래로 기운 둘레(위 3 · 아래 11) · 「정답·해설 ▸」 = 위 근거 칸(6px 위)에 안 닿게 위 5 · 아래 9 · 그림·대응표 줄은 한 층 위(둘레가 제 자리를 못 먹는다) */
+  '  .ncb-more::before{top:-3px;bottom:-11px;height:auto;transform:translateX(-50%)}',
+  '  .mbpeek::before{top:-5px;bottom:-9px;height:auto;transform:translateX(-50%)}',
+  '  .mbbrow,.ncb-pic{position:relative;z-index:2}',
+  '  .jomt .plgb.jomd::after{content:"";position:absolute;left:-6px;right:-6px;top:-3px;bottom:-3px;z-index:2}',
+  /* 수 0 줄의 흐림(opacity .45)은 쌓임 맥락을 만들어 제 몫(::after)이 이웃 둘레에 진다 → 같은 겉모습을 글자·바탕 알파로(터치만) */
+  '  .jckmenu .jckmo.z{opacity:1;color:rgba(31,41,55,.45)}', '  .jckmenu .jckmo.z:hover{background:rgba(243,244,246,.45)}',
+  '  .jckmenu .jckmo.z.on,.jckmenu .jckmo.z.on:hover{background:rgba(31,41,55,.45);color:#fff}', '  .jckmenu .jckmo.z .jcki{opacity:.45}',
+  '}'
+].join('\n'); document.head.appendChild(s); }catch(e){} })();
+/* A-7 조문 팝업 자리 — 누른 링크(줄 끝에서 나뉘면 조각 전부)의 아래(링크 아래 + 6)에 다 들어가면 아래 · 아니면 위(아래 끝 = 링크 위 − 6) ·
+   둘 다 안 되면 넓은 쪽에 높이를 줄여(≥ 200 · 몸이 굴러간다) · 그래도 안 되면 가운데(덮기는 이때만) — 폭·가로 자리·끌기·크기 조절·폰 폭(vvFit)은 그대로 ·
+   원문 줄 링크 · 서랍 조 번호 · 3법 카드 제목 · 인용 창 항목이 다 popJo 로 오므로 한 곳 · 링크 자리를 모르면(ev 없음) 옛 popInView */
+function popAnchorOf(ev){
+  if (!ev) return null;
+  const ct = ev.currentTarget, x = ev.clientX, y = ev.clientY;
+  let t = (ct && ct.nodeType === 1 && ct !== document.body && ct !== document.documentElement) ? ct : ev.target;
+  if (t && t.nodeType === 3) t = t.parentElement;
+  const pt = (typeof x === 'number' && typeof y === 'number') ? { top: y, bottom: y, left: x, right: x } : null;
+  if (!t || !t.getClientRects || !t.isConnected) return pt;
+  const rs = [...t.getClientRects()].filter(r => r.width > 0 && r.height > 0);
+  if (!rs.length) return pt;
+  return { top: Math.min(...rs.map(r => r.top)), bottom: Math.max(...rs.map(r => r.bottom)), left: Math.min(...rs.map(r => r.left)), right: Math.max(...rs.map(r => r.right)) };   // 줄 끝에서 둘로 나뉜 링크 = 두 조각을 다 안 덮는다
+}
+function popPlace(p, a){
+  if (!p || !p.isConnected) return;
+  if (!a){ popInView(p); return; }
+  const B = vvBox(), T0 = B.y + 8, B0 = B.y + B.h - 8, H = Math.max(120, Math.round(B.h - 16)), sized = p.classList.contains('sized');
+  if (!sized) p.style.maxHeight = '';   // 앞서 줄인 값 · vvFit 가 박은 「누른 자리 아래 남은 높이」를 풀고 제 높이를 다시 잰다
+  const cmh = parseFloat(getComputedStyle(p).maxHeight);
+  const cap = Math.round(Math.min(isNaN(cmh) ? H : cmh, H));
+  p.style.maxHeight = cap + 'px';
+  if (sized && p.offsetHeight > cap) p.style.height = cap + 'px';
+  const h = Math.min(p.offsetHeight, cap), dn = B0 - (a.bottom + 6), up = (a.top - 6) - T0;
+  let y;
+  if (h <= dn) y = a.bottom + 6;
+  else if (h <= up) y = a.top - 6 - h;
+  else if (Math.max(dn, up) >= 200){
+    const room = Math.floor(Math.max(dn, up));
+    p.style.maxHeight = room + 'px'; if (sized) p.style.height = room + 'px';
+    y = dn >= up ? a.bottom + 6 : a.top - 6 - Math.min(p.offsetHeight, room);
+  } else y = B.y + Math.max(8, (B.h - h) / 2);
+  const r = p.getBoundingClientRect();
+  let x = parseFloat(p.style.left); if (isNaN(x)) x = r.left;
+  x = Math.max(B.x + 8, Math.min(x, B.x + B.w - 8 - r.width));
+  p.style.left = Math.round(x) + 'px'; p.style.top = Math.round(y) + 'px';
+}
+/* A-6 폰 서랍 바깥 누름 = 접음(그 누름은 닫는 데만 · 옆 두 칸 DRAWER_EAT 와 같은 길) */
+document.addEventListener('pointerdown', ev => {
+  if (!jtPhone() || S.jtFold) return;
+  const t = document.getElementById('jtree'), x = ev.target;
+  if (!t || !t.classList.contains('jton') || !x || !x.closest || t.contains(x) || x.closest('.pop, .pitmenu, #toasts, .mk9bar, #c2mark')) return;
+  S.jtFold = true; JT_PH_AT = null; uiSave(); jtPaint();
+  DRAWER_EAT = true; setTimeout(() => { DRAWER_EAT = false; }, 1000);
+}, true);
 
 </script>
 </body>
