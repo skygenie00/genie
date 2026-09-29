@@ -534,7 +534,8 @@ def static_checks():
     except Exception as e:
         j = None
         N('CL-Z index.json 읽기 실패', str(e))
-    T('CL-Z motion/index.json = {"phys":[72]}', j == {'phys': [72]}, j)
+    # 2026-09-29 claude_e001 — 지학 149·84 를 더했다(earth 키). 이 묶음이 지킬 것은 물리 값 [72] 무변이다.
+    T('CL-Z motion/index.json 의 phys = [72] 무변(9/29 claude_e001 부터 earth 더함)', isinstance(j, dict) and j.get('phys') == [72], j)
     T('CL-Z motion 폴더에 .pdf 가 없다(공개 저장소)',
       not [x for x in os.listdir(MOTDIR) if x.lower().endswith('.pdf')],
       os.listdir(MOTDIR))
