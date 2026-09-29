@@ -145,7 +145,28 @@ def pop_wait(pg, key, t=15000):
     pg.wait_for_timeout(250)
 
 
+WK_LONG = r"""([x, y, ty]) => { const t = ty === 'pointerdown' ? document.elementFromPoint(x, y) : (window.__tlT || document.elementFromPoint(x, y));
+  if (ty === 'pointerdown') window.__tlT = t;
+  t.dispatchEvent(new PointerEvent(ty, {bubbles: true, cancelable: true, composed: true, pointerId: 7, pointerType: 'touch', isPrimary: true,
+    clientX: x, clientY: y, button: 0, buttons: ty === 'pointerdown' ? 1 : 0}));
+  if (ty === 'pointerup') t.dispatchEvent(new Event('touchend', {bubbles: true, cancelable: true, composed: true}));   // 실기기처럼 손을 뗄 때 touchend 도(선택으로 막대를 띄우는 길)
+  return t.tagName; }"""
+
+
 def touch_long(ctx, pg, x, y, ms=700, mid=None):
+    if ctx.browser and ctx.browser.browser_type.name != 'chromium':
+        # 합치기(9/29 Code) — WebKit: Playwright 는 진짜 터치를 붙잡고 있지 못한다(톡만 · CDP 없음).
+        # 앱 길게 누르기 = 줄 pointerdown 뒤 500ms 타이머(pitWire) — 같은 자리에 합성 touch 포인터를 같은 시간 보내 그 길을 잰다.
+        pg.evaluate(WK_LONG, [x, y, 'pointerdown'])
+        if mid:
+            pg.wait_for_timeout(200)
+            mid()
+            pg.wait_for_timeout(max(0, ms - 200))
+        else:
+            pg.wait_for_timeout(ms)
+        pg.evaluate(WK_LONG, [x, y, 'pointerup'])
+        pg.wait_for_timeout(350)
+        return
     cdp = ctx.new_cdp_session(pg)
     cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': x, 'y': y}]})
     if mid:
@@ -560,11 +581,17 @@ def b5(br, url, R, engine='chromium'):
     idle(pg, 500)
     pg.wait_for_function("() => [...document.querySelectorAll('#slot .main .box .ln')].some(l => l._pitInfo)", timeout=30000)
     pos = pg.evaluate("() => { const l = [...document.querySelectorAll('#slot .main .box .ln')].find(x => x._pitInfo && /[가-힣]{3,}/.test(x.textContent)); l.scrollIntoView({block: 'center'}); const m = /[가-힣]{3,}/.exec(l.textContent); const r = __findText(l, m[0]); return Object.assign(__rectOf(r), {w: m[0], t: l._pitInfo.target}); }")
-    cdp = ctx.new_cdp_session(pg)
-    cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': pos['x'], 'y': pos['y']}]})
-    pg.wait_for_timeout(700)
-    q = pg.evaluate(BARQ)
-    cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
+    if engine == 'chromium':
+        cdp = ctx.new_cdp_session(pg)
+        cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': pos['x'], 'y': pos['y']}]})
+        pg.wait_for_timeout(700)
+        q = pg.evaluate(BARQ)
+        cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
+    else:   # 합치기(9/29) — WebKit 은 합성 touch 포인터(touch_long 과 같은 길)
+        pg.evaluate(WK_LONG, [pos['x'], pos['y'], 'pointerdown'])
+        pg.wait_for_timeout(700)
+        q = pg.evaluate(BARQ)
+        pg.evaluate(WK_LONG, [pos['x'], pos['y'], 'pointerup'])
     R.ck(G, '5j' + sfx, q['pit'] == 1 and not q['bars'], '판례 줄(%s 「%s」) 길게 누르기 = .pitmenu %d %s · 막대 %d' % (pos['t'], pos['w'], q['pit'], q['pitText'], len(q['bars'])))
     R.ck(G, '5z' + sfx, not errs, 'JS 오류 %s' % errs[:3])
     ctx.close()

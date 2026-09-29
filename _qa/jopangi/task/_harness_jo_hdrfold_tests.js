@@ -28,7 +28,8 @@ window.__HF = {
   railAt(re){ const rx = new RegExp(re); const b = [...document.querySelectorAll('#hrail .rb')].find(x => rx.test(txt(x))); return b ? hitOn(b) : null; },
   sk(){ const s = document.getElementById('sk'); return { vis: vis(s), disp: s ? getComputedStyle(s).display : null, focus: document.activeElement ? document.activeElement.id : null }; },
   skClose(){ try{ if (typeof skClose === 'function') skClose(); else { const s = document.getElementById('sk'); if (s) s.style.display = 'none'; } }catch(e){} return 1; },
-  bars(){ const q = s => [...document.querySelectorAll(s)].filter(vis).length; return { modebar: q('#slot .modebar'), jtbar: q('#slot .jtbar'), ctrlbar: q('#slot .ctrlbar'), omrbar: q('#slot .omrbar'), hm: q('#slot .mbhm') }; },
+  /* 9/30 joscreen0929 합치기 — 조문 모드 줄 그릇이 .modebar → .jomt(A-4 글자화) · 둘 다 센다 */
+  bars(){ const q = s => [...document.querySelectorAll(s)].filter(vis).length; return { modebar: q('#slot .modebar, #slot .jomt'), jtbar: q('#slot .jtbar'), ctrlbar: q('#slot .ctrlbar'), omrbar: q('#slot .omrbar'), hm: q('#slot .mbhm') }; },
   head(){ const top = document.querySelector('header.topbar'); if (!top) return null;
     const kids = [...top.children].filter(vis).map(e => ({ id: e.id || e.className, r: R(e) }));
     return { h: R(top).h, kids: kids, hs: document.getElementById('hsrow') ? R(document.getElementById('hsrow')).h : null }; },

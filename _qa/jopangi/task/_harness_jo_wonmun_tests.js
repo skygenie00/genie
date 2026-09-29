@@ -92,7 +92,7 @@
       return JSON.stringify({ n: n, lines: nl, bad: bad.length, ex: bad.slice(0, 5) });
     },
     /* ── 단추·칩 ── */
-    mkBtn() { const b = QA('#slot .modebar .mode').find(x => /✎ 마크업/.test(T(x))); return JSON.stringify(Object.assign(ptOf(b), { t: b ? T(b) : null, n: b && Q('.mkn', b) ? T(Q('.mkn', b)) : null,
+    mkBtn() { const b = QA('#slot .modebar .mode, #slot .jomt .jomd').find(x => /✎ 마크업/.test(T(x)));   /* 9/30 joscreen0929 합치기 — 모드 줄 글자화로 단추 = .jomt 안 .plgb.jomd(옛 .modebar .mode 도 받음) */ return JSON.stringify(Object.assign(ptOf(b), { t: b ? T(b) : null, n: b && Q('.mkn', b) ? T(Q('.mkn', b)) : null,
       ncs: b && Q('.mkn', b) ? (s => ({ fs: s.fontSize, col: s.color }))(getComputedStyle(Q('.mkn', b))) : null })); },
     jpChip() { const b = QA('#slot .conn .plgb').find(x => /☑ 정오문제/.test(T(x))); return JSON.stringify(Object.assign(ptOf(b), { t: b ? T(b) : null })); },
     ciChip() { const b = QA('#slot .conn .plgb').find(x => /📜 인용하는 조/.test(T(x))); return JSON.stringify(Object.assign(ptOf(b), { t: b ? T(b) : null, cur: b ? getComputedStyle(b).cursor : null })); },
