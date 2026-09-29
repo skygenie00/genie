@@ -2369,7 +2369,7 @@ function twinSheet(no){
       let t=null;
       if(/^\d+$/.test(v)&&v.length===4&&DATA.find(z=>z[F.CODE]==='PA'+v))t=DATA.find(z=>z[F.CODE]==='PA'+v)[F.NO];
       else if(/^\d+$/.test(v)&&rec(+v))t=+v;
-      else{const r=DATA.find(z=>String(z[F.CODE]).toLowerCase()===v.toLowerCase());if(r)t=r[F.NO];}
+      else{const r=DATA.find(z=>String(z[F.CODE]).toLowerCase()===v.toLowerCase())||DATA.find(z=>z[F.OLDU]&&String(z[F.OLDU]).toLowerCase()===v.toLowerCase());if(r)t=r[F.NO];}   /* ★ jagwa_uid — 옛 번호도 찾는다 */
       if(!t||t===no){toast('문항을 찾지 못했습니다');return}
       await twinLink(no,t,true);draw();drawList();toast(t+'번과 이었습니다');};
     b.querySelector('#twNo').onclick=()=>b.remove();
@@ -3133,7 +3133,7 @@ function cardSheet(code,sub,label){
    N = 한줄 코멘트(kv note) ∪ 손필기 카드(kv mcard) ∪ 볼트 카드(MCARDS q:[코드]) · 대단원별 · 줄 = 코드 · 코멘트 첫 줄 · 💬(코멘트 → noteSheet) 🃏(카드 → memoCard) · 코드 → 그 문항 · 정렬 = 코드 순 */
 const memoHas=r=>!!(noteOf(r[F.NO])||MC[r[F.NO]]||cardsFor(r[F.CODE]).length);
 function memoSheet(){
-  const L=DATA.filter(memoHas).slice().sort((a,b)=>String(a[F.CODE]).localeCompare(String(b[F.CODE]))||a[F.NO]-b[F.NO]);
+  const L=DATA.filter(memoHas).slice().sort((a,b)=>jgSortKey(a).localeCompare(jgSortKey(b))||a[F.NO]-b[F.NO]);   /* ★ jagwa_uid — 차례 = 옛 번호 글자(지금과 같은 차례) */
   const nC=L.filter(r=>noteOf(r[F.NO])).length, nK=L.filter(r=>MC[r[F.NO]]||cardsFor(r[F.CODE]).length).length;
   const b=document.createElement('div');b.className='sheet';b.id='memoSheet';
   let h=`<div class="panel frmpanel"><h2>📝 메모 있음 ${L.length} · 코멘트 ${nC} · 암기카드 ${nK}</h2>`;
@@ -4053,7 +4053,7 @@ function ansFixSheet(no){
 /* 연도별 채점표 — 변리사 한 회차 10문항을 실전처럼 모아 본다 */
 function yearSheet(y){
   const rows=DATA.filter(r=>r[F.SRC]==='변리사'&&String(r[F.YEAR])===String(y))
-                 .sort((a,b)=>String(a[F.CODE]).localeCompare(String(b[F.CODE])));
+                 .sort((a,b)=>jgSortKey(a).localeCompare(jgSortKey(b)));   /* ★ jagwa_uid */
   let hit=0,done=0;
   const body=rows.map(r=>{
     const no=r[F.NO], pick=pickOf(no), ok=ansOf(no), m=lastM(no);
@@ -4531,7 +4531,33 @@ async function ghPutJson(path,text,sha){
 
 /* ---------- 동기화 ---------- */
 let recBusy=false, recErr='', recTie=0;   /* recTie — 2026-09-15 §D-5 · 이 세션에서 값으로 가른 동률 수(메모리에만 · 새 키 0) */
+/* ★ jagwa_uid A-5 — 생물·지학 기록 옮김(옛 uid → 새 uid) · 멱등 · 옛 데이터(옛uid 0) = 아무것도 안 함 */
+var jgSortKey=r=>String((r&&(r[F.OLDU]||r[F.CODE]))||'');
+var JG_O2N=null;
+function jgO2N(){if(JG_O2N&&JG_O2N.__n===DATA.length)return JG_O2N;const m={__n:DATA.length,__any:false};
+  DATA.forEach(r=>{const o=r[F.OLDU];if(o&&o!==r[F.CODE]){m[o]=String(r[F.CODE]);m.__any=true}});return JG_O2N=m}
+const JG_KEYS=['bogi','unit','bpg','crop','tfix','gg','ggref','pick'];
+async function jgMigrate(why){
+  if(!CARD_LAYER||!DATA.length)return 0;const M=jgO2N();if(!M.__any)return 0;
+  const u=lsObj(U_KEY),gone=lsObj(GONE_KEY),shadow=lsObj(SHADOW_KEY),now=Date.now(),has=(o,c)=>!!o&&Object.prototype.hasOwnProperty.call(o,c);
+  let n=0;const touched=[];
+  for(const k of JG_KEYS){if(!SYNC_REF[k])continue;const cur=SYNC_REF[k].g();if(!cur)continue;   /* 늦게 읽는 통이 아직이면 null — 건너뛴다(9/20 묘비 사고) */
+    let ch=false;const sh=shadow[k];
+    for(const o of Object.keys(cur)){const nw=M[o];if(!nw||typeof nw!=='string')continue;
+      const ko=ckey(k,o),kn=ckey(k,nw);
+      if(has(cur,nw)){const so=u[ko]||0,sn=u[kn]||0;
+        if(so>sn){console.warn('jagwa uid 옮김 — 옛·새 둘 다 · 옛 칸 도장이 늦어 이김',k,o,'→',nw,'버린 값',JSON.stringify(cur[nw]));cur[nw]=cur[o];u[kn]=so;if(sh&&has(sh,o))sh[nw]=sh[o]}
+        else console.warn('jagwa uid 옮김 — 옛·새 둘 다 · 새 칸이 이김',k,o,'→',nw,'버린 값',JSON.stringify(cur[o]));}
+      else{cur[nw]=cur[o];if(u[ko])u[kn]=u[ko];if(sh&&has(sh,o)&&!has(sh,nw))sh[nw]=sh[o]}   /* 도장·그림자 = 옛 칸 그대로(새로 안 찍는다) */
+      delete cur[o];delete u[ko];if(sh)delete sh[o];gone[ko]=Math.max(gone[ko]||0,now);ch=true;n++}
+    if(k==='ggref')for(const c of Object.keys(cur)){const a=cur[c];if(!Array.isArray(a)||!a.some(x=>typeof M[x]==='string'))continue;
+      const b=a.map(x=>typeof M[x]==='string'?M[x]:x);if(sh&&has(sh,c)&&JSON.stringify(sh[c])===JSON.stringify(a))sh[c]=b;cur[c]=b;ch=true;n++}   /* 값 속 uid — 도장 그대로 · 더 긴 값이라 동률 병합에서 이긴다 */
+    if(ch){touched.push(k);try{await put('kv',k,cur)}catch(e){console.warn('jgMigrate put',k,e)}}}
+  if(n){lsPut(U_KEY,u);lsPut(GONE_KEY,gone);lsPut(SHADOW_KEY,shadow);console.info('jagwa uid 옮김',why,n,touched);window.__JGMIG=(window.__JGMIG||0)+n;
+    try{if(typeof refreshUnits==='function')refreshUnits()}catch(e){}}
+  return n}
 function recAfterMerge(res){
+  if(CARD_LAYER)jgMigrate('merge').then(n=>{if(n)try{draw()}catch(e){}}).catch(e=>console.warn('jgMigrate',e));   /* ★ jagwa_uid — 옛 판 기기가 늦게 올린 옛 열쇠 */
   if(!res||!res.dirty.length)return;
   if(CARD_LAYER&&typeof refreshUnits==='function'&&DATA.length)refreshUnits();
   if(res.dirty.indexOf('conc')>=0)buildCQ();
@@ -4691,6 +4717,7 @@ function recBoot(){
      펜 덮개가 카드를 덮어도 덮개 뚫기가 짧게 톡·길게 누르기를 다 밑으로 넘긴다. */
   setTool('pen','#16181B',$$('[data-pen]')[0]);
   if(CARD_LAYER)await loadEarthData();
+  if(CARD_LAYER)try{await jgMigrate('boot')}catch(e){console.warn('jgMigrate',e)}   /* ★ jagwa_uid — 데이터 선 뒤 · 도장·올림 전 */
   draw();
   try{recBoot()}catch(e){console.warn('기록 동기화 시동 실패',e)}
   await ensureFiles();
@@ -5096,7 +5123,7 @@ if(SHELL){
    물리 함수는 여기서 같은 이름으로 다시 정의해 갈아 끼운다(뒤 스크립트가 이긴다). 물리 데이터 배열은 빌드가 비웠다.
    문항 본문은 HTML 에 없다 — 비공개 저장소 <과목>/문항.json(CUR.DATA_PATH) 을 토큰으로 받아 IndexedDB kv 에 캐시한다(D11). add1: 과목 값은 전부 CUR — 생물(SUBJ.bio) 도 이 층을 그대로 쓴다. */
 
-Object.assign(F,{UNIT:16,BPAGE:17,CH:18,BOGI:19,SOL:20,SOLPG:21,ROUND:22,CAND:23,NOTE:24,ORIG:25,SOL2:26,BSENT:27,BSRC:28,SYNPG:29,REF:30});   /* 26~29 = 생물 열(해설2·교재문장·문장근거·SYNAPSE쪽 · 지학 행은 빈값) */
+Object.assign(F,{UNIT:16,BPAGE:17,CH:18,BOGI:19,SOL:20,SOLPG:21,ROUND:22,CAND:23,NOTE:24,ORIG:25,SOL2:26,BSENT:27,BSRC:28,SYNPG:29,REF:30,OLDU:31});   /* ★ jagwa_uid — 31 = 데이터 「옛uid」(생물·지학 · 없으면 빈 칸) */   /* 26~29 = 생물 열(해설2·교재문장·문장근거·SYNAPSE쪽 · 지학 행은 빈값) */
 var TOC={ch:{},sec:{},unit:{},list:[]};      // 목차 — ch['3']={name,secs[]} · sec['3.4']={name,ch,units[]} · unit['3.4.5']={name,p,sec,ch}
 var PIECES={};                                   // earth/pdf/index.json
 var isC=r=>r[F.SRC]==='확인';
@@ -5122,6 +5149,7 @@ var phPast=r=>{
 /* §A 목록·히트맵·문항 창 머리에 **보이는** 코드. uid(F.CODE)는 한 글자도 안 바꾼다 —
    그것이 unit·bpg·crop·tfix·bogi·txtOf 의 열쇠다. 여기는 표시뿐이다. */
 var codeShow=r=>{
+  if(HASBOOK&&r&&r[F.OLDU])return String(r[F.CODE]);   /* ★ jagwa_uid — 새 번호 = 보이는 번호(생물 B… · 지학 G…) · 옛 데이터는 아래 그대로 */
   if(!HASROUND()||!r||isC(r)||!(+r[F.ROUND])||!(+r[F.LNO]))return r?r[F.CODE]:'';
   return 'G'+String((+r[F.ROUND])+1963).slice(2)+'-'+r[F.ROUND]+'-'+(+r[F.LNO])};
 /* §B 차례 모드 — 기기 하나 값(SYNC 밖 · SYNC_KEYS 무변) · 기본 단원별 · 확인문제에서는 단원순 고정 */
@@ -5342,8 +5370,8 @@ function buildData(items,toc,pieces){
   items.forEach((it,i)=>{
     const G=it.유형==='기출';
     const row=[i+1,+it.문제쪽||0,it.그림?'IMG':'TXT',0,'','',+it.문번||it.문번,0,'',it.uid,G?(+it.연도||''):'',G?'변리사':(it.유형==='확인'?'확인':it.유형),'',String(it.정답||''),
-      it.문항||'','',(it.단원==='미분류'?'':it.단원)||(it.유형==='확인'?it.uid[1]:''),+it.교재쪽||0,CUR.KINDS?expandChoices(it.선택지):(it.선택지||[]),it.보기||[],it.해설||'',+it.해설쪽||0,+it.회차||'',it.단원후보||'',it.비고||'',it.원형회차||'',
-      it.해설2||'',it.교재문장||'',it.문장근거||'',it.SYNAPSE쪽||'',Array.isArray(it.참고)?it.참고:[]];   /* ★ bio ocrfix §J — F.REF(30) = 참고 상자(생물 · 없으면 빈 칸) */
+      it.문항||'','',(it.단원==='미분류'?'':it.단원)||(it.유형==='확인'?(it.옛uid||it.uid)[1]:''),+it.교재쪽||0,CUR.KINDS?expandChoices(it.선택지):(it.선택지||[]),it.보기||[],it.해설||'',+it.해설쪽||0,+it.회차||'',it.단원후보||'',it.비고||'',it.원형회차||'',
+      it.해설2||'',it.교재문장||'',it.문장근거||'',it.SYNAPSE쪽||'',Array.isArray(it.참고)?it.참고:[],it.옛uid||''];   /* ★ jagwa_uid — F.OLDU */   /* ★ bio ocrfix §J — F.REF(30) = 참고 상자(생물 · 없으면 빈 칸) */
     DATA.push(row);
   });
   refreshUnits();
@@ -5354,7 +5382,7 @@ function buildData(items,toc,pieces){
 function refreshUnits(){
   DATA.forEach(r=>{
     const u=UN[r[F.CODE]]!==undefined?UN[r[F.CODE]]:r[F.UNIT];
-    const ch=u?chOf(u):(isC(r)?r[F.CODE][1]:'');
+    const ch=u?chOf(u):(isC(r)?(r[F.OLDU]||r[F.CODE])[1]:'');   /* ★ jagwa_uid — 장 글자 = 옛 번호 자리 */
     r[F.BIG]=ch?ch+'. '+((TOC.ch[ch]||{}).name||''):'미분류';
     const sec=u&&u.split('.').length>=2?secOf(u):'';
     r[F.SUB]=sec?sec+' '+((TOC.sec[sec]||{}).name||''):(isC(r)?'(미매칭)':'(미분류)');
@@ -5390,7 +5418,7 @@ function buildTocFromData(){
     r[F.UNIT]=ch?(secCode[ch+'|'+String(r[F.SUB]||'').trim()]||''):''});
 }
 if(!HASBOOK)buildTocFromData();
-if(HASBOOK)titleOf=r=>{const k=kindOf(r);if(k==='C')return r[F.CODE][1]+'장 확인문제 '+r[F.LNO]+'번';if(!CUR.KINDS)return r[F.ROUND]+'회 '+r[F.LNO]+'번';
+if(HASBOOK)titleOf=r=>{const k=kindOf(r);if(k==='C')return (r[F.OLDU]||r[F.CODE])[1]+'장 확인문제 '+r[F.LNO]+'번';if(!CUR.KINDS)return r[F.ROUND]+'회 '+r[F.LNO]+'번';
   if(k==='G')return r[F.YEAR]+'년 자과 '+r[F.LNO]+'번';
   if(k==='T'){const m=/출처 \[([^\]]*)\]/.exec(r[F.NOTE]||'');return '타기출 · '+(m?m[1].replace(/\s+/g,' ').trim():'SYNAPSE p'+r[F.PG])}
   return '예상 · SYNAPSE p'+r[F.PG]};
@@ -5436,7 +5464,7 @@ function pass(r){
        카드판 `hay` 에 없어 못 찾았고, 거꾸로 카드판이 더 훑는 것(선택지·보기·단원·고친 글자)을 그대로 두면
        「15」 같은 짧은 말에 선택지가 걸려 **집합이 옛 판과 달라진다**(실측 15 → 31 vs 27). 지학·생물 무변. */
     if(!HASBOOK){
-      if(!(String(r[F.CODE]).toLowerCase().includes(s)||String(r[F.SUB]).includes(FL.q)||String(r[F.BODY]).includes(FL.q)
+      if(!(String(r[F.CODE]).toLowerCase().includes(s)||String(r[F.OLDU]||'').toLowerCase().includes(s)||String(r[F.SUB]).includes(FL.q)||String(r[F.BODY]).includes(FL.q)
           ||String(noteOf(no)).includes(FL.q)||typeOf(no).some(t=>t===FL.q)||String(gptOf(no)).includes(FL.q)
           ||String(no)===FL.q||String(r[F.VLT])===FL.q))return 0;
       return 1;
@@ -6158,7 +6186,7 @@ function matchSheet(no){
     <p>지금: <b>${esc(cur?unitLabel(cur):'없음')}</b>${UN[uid]!==undefined?' (사용자 값)':' (데이터 값)'}</p>
     ${cand&&cand!==cur?`<button class="btn pri" id="mCand">후보 확정 — ${esc(unitLabel(cand))}</button>`:''}
     <div class="fld"><label>목차에서 고르기</label>
-      <select id="mCh" class="tokin">${chs.map(c=>`<option value="${c.장}"${(cur||uid[1]||'')[0]===c.장?' selected':''}>${c.장}. ${esc(c.이름)}</option>`).join('')}</select>
+      <select id="mCh" class="tokin">${chs.map(c=>`<option value="${c.장}"${(cur||(r[F.OLDU]||uid)[1]||'')[0]===c.장?' selected':''}>${c.장}. ${esc(c.이름)}</option>`).join('')}</select>
       <select id="mSec" class="tokin" style="margin-top:6px"></select>
       <select id="mUnit" class="tokin" style="margin-top:6px"></select>
       <button class="btn" id="mSet" style="margin-top:8px">이 항목으로</button></div>
@@ -6173,7 +6201,7 @@ function matchSheet(no){
     if(VNO===no)showProblem();else draw();buildTree()};
   const mc=b.querySelector('#mCand');if(mc)mc.onclick=()=>set(cand);
   b.querySelector('#mSet').onclick=()=>set(b.querySelector('#mUnit').value);
-  b.querySelector('#mNone').onclick=()=>set(isC(r)?uid[1]:'');
+  b.querySelector('#mNone').onclick=()=>set(isC(r)?(r[F.OLDU]||uid)[1]:'');
   b.querySelector('#mClose').onclick=()=>b.remove();
   b.onclick=e=>{if(e.target===b)b.remove()};
   document.body.appendChild(b);
@@ -6752,7 +6780,7 @@ var tfixSlotsOf=uid=>{const r=rowByUid(uid);
 var tfixLabel=slot=>{const k=tfixBKey(slot);return k?('〈보기〉 '+k):(TFIX_LABEL[slot]||slot)};
 var figHid=uid=>tfixRaw(uid,'fig')==='0';
 var _UIDMAP=null;
-var rowByUid=uid=>{if(!_UIDMAP||_UIDMAP.__n!==DATA.length){_UIDMAP={__n:DATA.length};DATA.forEach(r=>{_UIDMAP[r[F.CODE]]=r;const g=GGU(r);if(g)_UIDMAP[g]=r})}
+var rowByUid=uid=>{if(!_UIDMAP||_UIDMAP.__n!==DATA.length){_UIDMAP={__n:DATA.length};DATA.forEach(r=>{_UIDMAP[r[F.CODE]]=r;const g=GGU(r);if(g)_UIDMAP[g]=r;if(r[F.OLDU]&&!_UIDMAP[r[F.OLDU]])_UIDMAP[r[F.OLDU]]=r})}   /* ★ jagwa_uid — 옛 번호로 불러도 그 행 */
   return _UIDMAP[uid]};
 var tfixRaw=(uid,slot)=>{const o=TFIX[uid];
   if(!o||typeof o!=='object'||Array.isArray(o))return '';
@@ -7620,7 +7648,7 @@ function snRender(){
 }
 function snFixCount(){const doc=SNOTE.doc;if(!doc)return 0;return doc.줄.reduce((a,r)=>a+(SN[r.id]||[]).filter(x=>x.k==='fix'&&!x.done).length,0)}
 function snBandAct(lid,a){const act=a.dataset.act,v=a.dataset.v;
-  if(act==='q'){const r=DATA.find(x=>x[F.CODE]===v);if(!r){toast('문항 '+v+' 없음');return}openView(r[F.NO])}
+  if(act==='q'){const r=DATA.find(x=>x[F.CODE]===v)||DATA.find(x=>x[F.OLDU]===v);if(!r){toast('문항 '+v+' 없음');return}openView(r[F.NO])}   /* ★ jagwa_uid */
   else if(act==='p')bkOpen(+v);else if(act==='s')snOpen(v);
   else if(act==='del'){const j=+a.dataset.j;const it=SN[lid]||[];it.splice(j,1);if(!it.length)delete SN[lid];saveSN().then(snRender)}}
 /* ── 그림 첨부: 폭 1180 이하 JPEG → notes <과목>/att/<sha8>.jpg PUT(서브노트 올리기 통로 ghPutBin) · pdf 저장소 캐시 snatt:<path> ── */
@@ -8147,6 +8175,7 @@ if(SHELL)(async()=>{try{
   for(let i=0;i<600&&!db;i++){await new Promise(r=>setTimeout(r,20));}
   GG=(await get('kv','gg'))||{}; GGREF=(await get('kv','ggref'))||{}; PICK=(await get('kv','pick'))||{};
   GG_READY=true;                    /* ← 여기서부터 도장·병합·밀기에 든다(add3 §C-1) */
+  try{await jgMigrate('gg')}catch(e){console.warn('jgMigrate gg',e)}   /* ★ jagwa_uid — 늦게 읽는 통(gg·ggref·pick)은 읽기가 끝난 뒤 옮긴다 */
   try{await ggFixEat()}catch(e){console.warn('ggFixEat',e)}
   /* ★ add7 §A — 잃은 물리 코멘트 31개를 근거로 되살린다(멱등 · 같은 글자면 안 넣는다) */
   try{await ggRestoreNotes_f6cee06()}catch(e){console.warn('ggRestoreNotes',e)}
