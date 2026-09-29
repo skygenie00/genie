@@ -1844,6 +1844,18 @@ mark.mkc.u{background:transparent;border-bottom:2px solid var(--exc)}
 #c2mark button{width:28px;height:28px;border:0;border-radius:4px;cursor:pointer;font:800 13px/1 system-ui,"Malgun Gothic",sans-serif;background:none}
 #c2mark button.sw:hover{box-shadow:0 0 0 2px #d1d5db}
 #c2mark button.tx:hover{background:#f3f4f6}
+/* ★ markfix A-2 — 1차객·조문 막대 = 2차 #c2mark 와 같은 꼴 */
+.mk9bar{position:fixed;z-index:2147483000;display:flex;flex-wrap:wrap;gap:4px;justify-content:center;align-items:center;max-width:176px;padding:4px 6px;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,.18)}
+.mk9bar[hidden]{display:none!important}
+.mk9bar button{width:28px;height:28px;border:0;border-radius:4px;cursor:pointer;font:800 13px/1 system-ui,"Malgun Gothic",sans-serif;background:none;padding:0}
+.mk9bar button.sw:hover{box-shadow:0 0 0 2px #d1d5db}
+.mk9bar button.tx:hover{background:#f3f4f6}
+.mkcbar.mk9bar{border-radius:8px;padding:4px 6px;gap:4px}
+.mkcbar.mk9bar button,.mkcbar.mk9bar .sw{width:28px;height:28px;border:0;border-radius:4px;padding:0}
+mark.mkc.g,mark.mkc.b,mark.mkc.r,mark.mkc.o,mark.mkc.ub{background:transparent}
+/* ★ markfix A-5 — 조문 「다만,」 = 굵은 파랑 · 행 첫머리가 아니면 새 줄(글자 없는 표시 · 행 앞 빈칸만큼) */
+.dmn{font-weight:700;color:var(--exc)}
+.dmn.dmnbr::before{content:"\A" attr(data-ind);white-space:pre}
 /* ★ c2card G-6 — 해설 탭 자료 고르기 줄 · 목록(시안 v25 .c2hs) · 쪽 창(.c2pgw · popShell 틀) */
 .c2hs{padding:6px 2px 10px}
 .c2hs .top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:6px 8px;border:1px solid #e6e1d6;border-radius:6px;background:#faf8f3;margin-bottom:8px}
@@ -2910,6 +2922,7 @@ async function viewJo(){
      (해례 조판이 달라 좌표 이식 금지 — 사양서). 테마 줄·오른쪽 패널은 그대로 온다. */
   if(bkMode){
     await bkBody(blk,bkJo,bkOn,base);
+    dmnAll(blk);   /* ★ markfix A-5 — 빈칸 모드도 줄바꿈(빈칸 안 글자는 없는 글이라 안 걸린다 · 칠은 안 그린다) */
     main.appendChild(blk);
     thRow.insertBefore(el('span','k','🧩 테마·비교'),thRow.firstChild);
     main.appendChild(thRow);
@@ -2966,6 +2979,7 @@ async function viewJo(){
     if(_wmx.mode==='wm')_wmD[ri]=d;else box.appendChild(d);
   });
   if(_wmx.mode==='wm')wmBodyInto(box,_wmx,_wmD);   /* ★ jo_wonmun §A-1 — 본문 = 원문 줄(켠 항목만 얹는다) */
+  box.querySelectorAll('.ln').forEach(L=>{L._jmBase=base;}); jmPaintAll(box,base,j.행); dmnAll(box);   /* ★ markfix A-3 내 칠 · A-5 「다만,」 */
   blk.appendChild(box);
 
   if(S.stick){
@@ -3346,7 +3360,7 @@ const SYNC_SKIP = ['ink' /* 캔버스 · 크다 */ ];
 const SYNC_KEYS = ['ox', 'rounds', 'ansfix', 'mcard', 'gi', 'gi.year', 'markup', 'logic', 'link', 'type', 'omr',
   'gg', 'ggref',
   'sticker', 'blank', 'blanktag', 'themefix', 'postit', 'compare', 'precimp', 'editq', 'preclink', 'precqa', 'precqafile',
-  'canvas', 'canvasink', 'canvaslink', 'canvasmemo', 'canvaspin', 'clfix', 'c2unit', 'canvasjari', 'c2htag', 'c2mark', 'c2hsjari', 'ncomr', 'notecolor', 'jonot', 'giround', 'recgone', 'bktype', 'qfix', 'mkon']   /* ★ _task_jo_wonmun §A-3 — 조문 마크업 켠 것(43번째 · 칸 = 「법:조」 · 값 {k:[항목 열쇠], s:[통째 켠 종류], x:[켠 종류 안에서 끈 열쇠]} · 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_cardfix §A-7 — 정정 글 칸(42번째 · 칸 = 지문 열쇠 · 값 {q?, exp?, case?, q0, exp0, case0, ts} · ↩ 정정 해제 = 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_gaek_mbsame_add3 §A-7 — 빈칸 종류 손값(41번째 · 칸 = 지문 열쇠(uid) · 값 {v:[내용·주체·기간 | 없음], ts} · 「지우기」 = {v:[]}(OMR 표시를 덮는 빈 값 · 칸을 안 지운다) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_joscreen §F-1 — 「이 조 아님 ×」 손값(39→40 · 칸 = 지문 열쇠(uid) · 값 = 뗀 조 키 배열 · 되살리기로 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_notecolor C — 목차노트 정리 색 고침(36→37 · 칸 = <노트 파일>|<행> · 값 [[s,e,색,낱말]] · 되돌리기 = 그 구간 항목을 빼고 칸이 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_omrpop B-4 — 정리OMR 자리 손값(35→36 · 칸 = note|<노트> · para|<노트>|<문단 끝 행> · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_canvas_jari_cand §D-1 — 정리캔버스 교재 자리 손값(31→32 · 칸 = bid · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_2cha_unit §C-5 — 2차 단원 손값(30→31 · 칸 = '<법>|<YY-회-N>' · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_claude_answers §F — Claude 답 정정(29→30 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 다음 맞추기에서 되살린다) */   /* ★ 정리캔버스(민소) — 편집 로그·필기·링크·메모·핀(22→27) */   /* ★ prec3 §C-3 — 볼트 검수 대기(21→22) */   /* ★ QA 판 add1 — 앱 검수(20→21) */   /* ★ 판 4 add4 §2 — 내가 이은 판례·2차 (19→20) */
+  'canvas', 'canvasink', 'canvaslink', 'canvasmemo', 'canvaspin', 'clfix', 'c2unit', 'canvasjari', 'c2htag', 'c2mark', 'c2hsjari', 'ncomr', 'notecolor', 'jonot', 'giround', 'recgone', 'bktype', 'qfix', 'mkon', 'jomark']   /* ★ _task_jo_wonmun §A-3 — 조문 마크업 켠 것(43번째 · 칸 = 「법:조」 · 값 {k:[항목 열쇠], s:[통째 켠 종류], x:[켠 종류 안에서 끈 열쇠]} · 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_cardfix §A-7 — 정정 글 칸(42번째 · 칸 = 지문 열쇠 · 값 {q?, exp?, case?, q0, exp0, case0, ts} · ↩ 정정 해제 = 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_gaek_mbsame_add3 §A-7 — 빈칸 종류 손값(41번째 · 칸 = 지문 열쇠(uid) · 값 {v:[내용·주체·기간 | 없음], ts} · 「지우기」 = {v:[]}(OMR 표시를 덮는 빈 값 · 칸을 안 지운다) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_joscreen §F-1 — 「이 조 아님 ×」 손값(39→40 · 칸 = 지문 열쇠(uid) · 값 = 뗀 조 키 배열 · 되살리기로 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_notecolor C — 목차노트 정리 색 고침(36→37 · 칸 = <노트 파일>|<행> · 값 [[s,e,색,낱말]] · 되돌리기 = 그 구간 항목을 빼고 칸이 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_omrpop B-4 — 정리OMR 자리 손값(35→36 · 칸 = note|<노트> · para|<노트>|<문단 끝 행> · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_canvas_jari_cand §D-1 — 정리캔버스 교재 자리 손값(31→32 · 칸 = bid · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_2cha_unit §C-5 — 2차 단원 손값(30→31 · 칸 = '<법>|<YY-회-N>' · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_claude_answers §F — Claude 답 정정(29→30 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 다음 맞추기에서 되살린다) */   /* ★ 정리캔버스(민소) — 편집 로그·필기·링크·메모·핀(22→27) */   /* ★ prec3 §C-3 — 볼트 검수 대기(21→22) */   /* ★ QA 판 add1 — 앱 검수(20→21) */   /* ★ 판 4 add4 §2 — 내가 이은 판례·2차 (19→20) */
   .filter(k => SYNC_SKIP.indexOf(k) < 0).map(k => REC_PRE + k);
 const SU_KEY = 'jopangi_sync_u', SG_KEY = 'jopangi_sync_gone', SS_KEY = 'jopangi_sync_shadow', SM_KEY = 'jopangi_sync_meta';
 const EQ_KEY = REC_PRE + 'editq';
@@ -4817,6 +4831,7 @@ async function cmp3Card(law,k,score,baseLines,baseR,dashed,opt){
     bj.appendChild(d);
   });
   if(!lines.length)bj.textContent='(본문 없음)';
+  else dmnAll(bj,':scope > div');   /* ★ markfix A-5 — 3법 비교 카드 본문 */
   col.appendChild(bj);
   setTimeout(()=>{
     if(bj.scrollHeight>bj.clientHeight+2){
@@ -5830,7 +5845,26 @@ function plainLen(root){
 /* ★ v3-N §5 — 읽기 모드(마크업 편집 꺼짐) 긁기 → 「🏷」 거품 하나 · 탭 = stkAttachPop 진입.
    키 규약·필기 잠금 toast 는 stkAttachPop 이 그대로 맡는다(입구만 하나 더 · 편집 전환 없음).
    빈칸 모드는 이 함수가 안 불린다(viewJo 가 그 전에 return) · 편집 모드에선 안 뜬다. */
-function stkBubKill(){ const b = document.getElementById('stkbub'); if (b) b.remove(); }
+function stkBubKill(){ const b = document.getElementById('stkbub'); if (b) b.remove(); const m = document.getElementById('jomk9'); if (m){ m.hidden = true; m._t = null; } }   /* ★ markfix A-3 — 조문 막대도 같은 때 숨김 */
+let JM9 = null;
+function jm9Bar(){ if (JM9 && JM9.isConnected) return JM9;
+  const b = el('div', 'mk9bar'); b.id = 'jomk9'; b.hidden = true; mk9Fill(b);
+  const tg = el('button', 'tx', '🏷'); tg.type = 'button'; tg.dataset.tag = '1'; tg.title = '선택한 글에 태그 스티커 붙이기(옛 🏷 거품)'; b.appendChild(tg);
+  b.addEventListener('mousedown', ev => ev.preventDefault());
+  b.addEventListener('click', ev => { const x = ev.target.closest('button'); const T = b._t; if (!x || !T) return; ev.stopPropagation();
+    if (T.w && (!T.row || T.b <= T.a)){ toast('⚠ 원문에만 있는 글자가 걸쳤다 — 볼트에 없는 글자는 칠할 수 없다', 1); return; }
+    if (x.dataset.tag){ b.hidden = true;
+      const cross = (mkApply(T.base, T.rows).eff[T.ri] || []).some(m => (T.a < m.b && T.b > m.a) && !(T.a >= m.a && T.b <= m.b) && !(m.a >= T.a && m.b <= T.b));
+      if (cross){ toast('이미 있는 마크업과 걸쳐서 겹친다 — 구간을 다시 골라라', 1); return; }
+      try{ window.getSelection().removeAllRanges(); }catch(e){}
+      stkAttachPop(T.base, T.row, T.a, T.b, ev); return; }
+    const k = T.base + '|' + rowKey(T.row), A = lsRead(JOMARK_KEY) || {};
+    const nL = c2MarkNorm((A[k] || []).concat([[T.a, T.b, x.dataset.m || '']])); if (nL.length) A[k] = nL; else delete A[k];
+    lsWrite(JOMARK_KEY, A, '🖍 조문 칠');
+    document.querySelectorAll('.ln').forEach(L => { const W = L._wm, ri = W ? W.ri : (L.dataset.ri != null && L.dataset.ri !== '' ? +L.dataset.ri : null); if (ri === T.ri && L.closest('.box,.pb') && (L._jmBase || T.base) === T.base) jmPaintLine(L, T.base, T.rows); });
+    try{ getSelection().removeAllRanges(); }catch(_){} b.hidden = true; b._t = null; });
+  document.body.appendChild(b); return (JM9 = b); }
+function jm9Show(rc, t){ try{ mkcHide(); }catch(e){} const b = jm9Bar(); b._t = t; mk9Place(b, rc); }   /* 1차객 막대는 숨김 */
 function stkBubbleWire(box, base, rows){
   const grab = ev => {
     stkBubKill();
@@ -5853,6 +5887,8 @@ function stkBubbleWire(box, base, rows){
     b = a + plainLen(r.cloneContents());
     if (b <= a) return;
     }
+    jm9Show(r.getBoundingClientRect(), { base: base, row: row, ri: ri, a: a, b: b, w: !!_w, line: line, rows: rows });   /* ★ markfix A-3 — 거품 대신 막대(도구 아홉 + 끝 🏷) */
+    if (true) return;
     const er = r.cloneRange(); er.collapse(false);
     let rc = er.getBoundingClientRect();
     if (!rc || (!rc.left && !rc.top)) rc = r.getBoundingClientRect();
@@ -6495,7 +6531,7 @@ async function popJo(law, k, ev, depth, hl){
     /* ★ mok_popup_phone D — 「2단 — 여기 링크는 팝업 대신 뷰로 이동한다」 딱지는 걷었다(깊이 딱지 0 · 링크는 늘 새 팝업) */
     const j = B.조[k];
     if (!j){ body.appendChild(el('div', 'cdim', '본문을 찾지 못했다 — ' + k)); return; }
-    const ap = mkApply(law + ':' + k, j.행);
+    const ap = mkApply(law + ':' + k, j.행), _onE = mkOnEff(law, k, j, ap);   /* ★ markfix A-4 */
     /* ★ v3-H §3 — 링크한 항 블록(호·목 하위 포함 · k[1] 이 같은 동그라미)을 연노랑+세로 띠로,
        다른 항은 흐림. 호까지 오면 그 호 줄을 한 번 더 진하게. 다른 항 줄을 누르면 흐림이 걷힌다. */
     let hlFirst = null;
@@ -6503,8 +6539,9 @@ async function popJo(law, k, ev, depth, hl){
       if (row.k[0] === 'H') return;
       const d = el('div', joClass(row.k));
       if (row.fd) d.appendChild(el('span', 'fdmark', '[^' + row.fd + '] '));
+      d.dataset.ri = ri; d._jmBase = law + ':' + k;   /* ★ markfix A-3 — 팝업 줄도 칠 */
       d.appendChild(renderLine(row, { label: false, depth: depth, rec: j, law: law,
-                                      m: ap.eff[ri] }));
+                                      m: _onE(ri) }));   /* ★ markfix A-4 — 켠 것만 */
       pitWire(d, 'jo|' + law + ':' + k, rowKey(row), row.t || '');   /* ★ v3-H §4 */
       if (hl && hl.hang && row.k[0] === '항'){
         if ((hl.hangs || [hl.hang]).some(h2 => row.k[1] === JOCIRC[h2 - 1])){   /* ★ c2card C-3 — 76①② = 두 항 다 칠함(hl.hangs) */
@@ -6521,6 +6558,8 @@ async function popJo(law, k, ev, depth, hl){
       }
       body.appendChild(d);
     });
+    jmPaintAll(body, law + ':' + k, j.행); dmnAll(body);   /* ★ markfix A-3 · A-5 */
+    stkBubbleWire(body, law + ':' + k, j.행);   /* ★ markfix A-3 — 팝업 본문 긁기도 같은 막대 */
     if (hlFirst) setTimeout(() => { body.scrollTop = Math.max(0, hlFirst.offsetTop - 50); }, 30);
   }catch(e){
     body.innerHTML = '';
@@ -8554,10 +8593,22 @@ function c2MarkPaint(host){ host.querySelectorAll('span.c2mk').forEach(s => { wh
 function c2MarkOff(host, range){ let acc = 0, s = -1, e = -1; c2TextNodes(host).forEach(n => { const L = n.nodeValue.length; if (n === range.startContainer) s = acc + range.startOffset; if (n === range.endContainer) e = acc + range.endOffset; acc += L; });
   return (s >= 0 && e >= 0 && e > s) ? [s, e] : null; }
 let C2MB = null, C2PM = null, C2MST = null;
-function c2MarkBar(){ if (C2MB) return C2MB; const b = el('div'); b.id = 'c2mark'; b.hidden = true;
+/* ★ markfix A-2 — 형광 여섯 · 밑줄 빨강·파랑(「U」) · 🧽 — 2차 문제 창 · 1차객 · 조문 막대가 이 함수 하나로 단추를 만든다 */
+function mk9Fill(b){
   [['y', '#fde68a'], ['g', '#bbf7d0'], ['b', '#bfdbfe'], ['r', '#fecaca'], ['o', '#fed7aa'], ['p', '#e9d5ff']].forEach(([k, c]) => { const x = el('button', 'sw'); x.type = 'button'; x.dataset.m = k; x.title = '형광펜'; x.style.background = c; b.appendChild(x); });
   [['u', 'U', '#ef4444', '밑줄 빨강'], ['ub', 'U', '#2563eb', '밑줄 파랑']].forEach(([k, tx, c, tip]) => { const x = el('button', 'tx', tx); x.type = 'button'; x.dataset.m = k; x.title = tip; x.style.cssText = 'color:' + c + ';text-decoration:underline;text-decoration-color:' + c; b.appendChild(x); });
   { const x = el('button', 'tx', '🧽'); x.type = 'button'; x.dataset.m = ''; x.title = '지우개'; b.appendChild(x); }
+}
+/* ★ markfix A-2 — 막대 자리 = 선택 아래 10px(아래에 막대 높이만큼 자리가 없을 때만 위) · 가로 = 선택 가운데 · 보이는 화면(visualViewport) 안 8px */
+function mk9Place(bar, rc){
+  const v = window.visualViewport, X0 = v ? v.offsetLeft : 0, Y0 = v ? v.offsetTop : 0, W = v ? v.width : innerWidth, H = v ? v.height : innerHeight;
+  bar.hidden = false; const w = bar.offsetWidth || 176, h = bar.offsetHeight || 70;
+  let top = rc.bottom + 10; if (top + h > Y0 + H - 8) top = rc.top - 10 - h;
+  top = Math.max(Y0 + 8, Math.min(Y0 + H - 8 - h, top));
+  const left = Math.max(X0 + 8, Math.min(X0 + W - 8 - w, rc.left + rc.width / 2 - w / 2));
+  bar.style.left = Math.round(left) + 'px'; bar.style.top = Math.round(top) + 'px'; }
+function c2MarkBar(){ if (C2MB) return C2MB; const b = el('div'); b.id = 'c2mark'; b.hidden = true;
+  mk9Fill(b);   /* ★ markfix A-2 — 도구 아홉 = 한 함수(1차객·조문 막대와 같은 단추) */
   b.addEventListener('mousedown', e => e.preventDefault());
   b.addEventListener('click', e => { const x = e.target.closest('button'); if (!x || !C2PM) return; e.stopPropagation(); const k = C2PM.host.dataset.c2mark; const A = lsRead(C2MARK_KEY);
     const L = (A[k] || []).concat([[C2PM.s, C2PM.e, x.dataset.m]]); const nL = c2MarkNorm(L); if (nL.length) A[k] = nL; else delete A[k]; lsWrite(C2MARK_KEY, A, '🖍 2차 문제 창 형광펜');
@@ -9871,7 +9922,7 @@ function qpBody(hit, k, pop, isOpen, setOpen){
   w.appendChild(ch);
   const tx = el('div', 'qptx');
   tx.appendChild(el('b', '', ggWho(k)));
-  tx.appendChild(document.createTextNode(cfFixQ(k, hit.kind === 'P' ? p7Text(z.t) : String(z.t || ''))));   /* ★ jo_cardfix §A-7 — 고친 글 먼저 */
+  { const _tq = cfFixQ(k, hit.kind === 'P' ? p7Text(z.t) : String(z.t || '')); if (hit.kind === 'P'){ const sp = el('span'); mkcPaint(sp, k, 'q', _tq, true); tx.appendChild(sp); } else tx.appendChild(document.createTextNode(_tq)); }   /* ★ jo_cardfix §A-7 — 고친 글 먼저 · ★ markfix A-1 — 7판 글은 칠 보이기만 */
   w.appendChild(tx);
   ggLine(w, k, []);
   const as = qpAnsSol(hit), a = oxAns(k, as.raw);
@@ -12737,7 +12788,7 @@ function p7Card(z,seq,opt){
   {const q7=el('div','oxq');
    const bl=(typeof mlnBookLab==='function'?mlnBookLab(z):'')||(seq?seq+'번'+(z.문항?' - ('+z.선지+')':''):'');   /* ★ mbsame §B-1 — 책 번호 「25번」「25-유제」「12번 - (3)」 */
    if(bl)q7.appendChild(el('b','mbqlab mlnbk',bl));
-   q7.appendChild(el('span','mbqtx',cfFixQ(tk7,p7Text(z.t)))); row.appendChild(q7);}   /* ★ jo_cardfix §A-7 */
+   {const _t7=cfFixQ(tk7,p7Text(z.t)),bsp7=el('span','mbqtx');mkcPaint(bsp7,tk7,'q',_t7);q7.appendChild(bsp7);} row.appendChild(q7);}   /* ★ jo_cardfix §A-7 · ★ markfix A-1 — 7판 카드 지문 글도 형광펜(열쇠 = 기록 열쇠 · 흡수 줄은 uid = 리담 카드와 같은 열쇠) */
   // 정오 = 원장의 유효정오. 없으면 리담 것으로 보강하되 출처를 밝힌다
   let ox=z.ox, from='유효정오';
   if(!ox&&z.리담&&z.리담.ox){ox=z.리담.ox;from='리담 보강';}
@@ -13788,7 +13839,7 @@ function jtPaint(){
      `[base, rowKey, a, b, t, v, 발췌].join(SEP)` — base 만 `card|1차객|<지문열쇠>` 다.
      그래서 조문 쪽 prefix 훑기(`base+SEP`)에 안 걸리고, 값 꼴도 섞이지 않는다. */
 const MKC_BASE = uid => 'card|1차객|' + uid;
-const MKC_T = { y: '형광(노랑)', p: '형광(분홍)', u: '밑줄' };
+const MKC_T = { y: '형광(노랑)', g: '형광(초록)', b: '형광(파랑)', r: '형광(빨강)', o: '형광(주황)', p: '형광(보라)', u: '밑줄(빨강)', ub: '밑줄(파랑)' };   /* ★ markfix A-2 — 도구 아홉(저장 글자 = 2차 C2MARK 와 같음 · 옛 y·p·u 그대로) */
 function mkcKey(uid, rk, a, b, t, ex){
   return [MKC_BASE(uid), rk, a, b, t, '', String(ex || '').slice(0, 40)].join(SEP);
 }
@@ -13820,15 +13871,16 @@ function mkcNorm(list){
   return out.filter(m => m.b > m.a).sort((x, y) => x.a - y.a);
 }
 /* 글자칸 하나를 형광펜과 함께 그린다. `host` 는 글만 든 요소여야 한다. */
-function mkcPaint(host, uid, rk, text){
+function mkcPaint(host, uid, rk, text, view){   /* ★ markfix A-1 — view = 보이기만(긋는 칸이 아님) */
   host.textContent = '';
-  host.dataset.mk = uid + '|' + rk;
-  host.dataset.mkt = text;
+  if (!view){ host.dataset.mk = uid + '|' + rk;
+  host.dataset.mkt = text; }
   const ms = S.mkOff ? [] : mkcNorm(mkcOf(uid, rk));
   let pos = 0;
   ms.forEach(m => {
     if (m.a > pos) host.appendChild(document.createTextNode(text.slice(pos, m.a)));
     const mk = el('mark', 'mkc ' + (m.t || 'y'), text.slice(m.a, m.b));
+    mk.style.cssText = C2MARK_STYLE[m.t] || C2MARK_STYLE.y;   /* ★ markfix A-2 — 칠 꼴 = 민법·2차(아래 45% · 밑줄 2px) */
     mk.dataset.mkk = m.k;
     host.appendChild(mk);
     pos = m.b;
@@ -13848,24 +13900,16 @@ function mkcOffsets(root, range){
   return (s >= 0 && e >= 0 && e > s) ? [s, e] : null;
 }
 let MKCBAR = null;
-function mkcBar(){
+function mkcBar(){   /* ★ markfix A-2 — 2차 막대와 같은 도구 아홉(mk9Fill) */
   if (MKCBAR && MKCBAR.isConnected) return MKCBAR;
-  const b = el('div', 'mkcbar hide');
-  [['y', '노랑'], ['p', '분홍'], ['u', '밑줄']].forEach(([t, nm]) => {
-    const x = el('button', 'sw ' + t, '');
-    x.title = MKC_T[t] || nm;
-    x.onmousedown = ev => ev.preventDefault();
-    x.onclick = () => mkcApply(t);
-    b.appendChild(x);
-  });
-  const er = el('button', 'er', '지우개');
-  er.onmousedown = ev => ev.preventDefault();
-  er.onclick = () => mkcApply('');
-  b.appendChild(er);
+  const b = el('div', 'mkcbar mk9bar'); b.id = 'mkc9'; b.hidden = true;
+  mk9Fill(b);
+  b.addEventListener('mousedown', ev => ev.preventDefault());
+  b.addEventListener('click', ev => { const x = ev.target.closest('button'); if (!x) return; ev.stopPropagation(); mkcApply(x.dataset.m || ''); });
   document.body.appendChild(b);
   MKCBAR = b; return b;
 }
-function mkcHide(){ if (MKCBAR) MKCBAR.classList.add('hide'); MKCBAR && (MKCBAR._t = null); }
+function mkcHide(){ if (MKCBAR) MKCBAR.hidden = true; MKCBAR && (MKCBAR._t = null); }
 function mkcMaybe(){
   const sel = window.getSelection();
   if (!sel || sel.isCollapsed || !sel.rangeCount) return mkcHide();
@@ -13877,10 +13921,8 @@ function mkcMaybe(){
   if (!off) return mkcHide();
   const bar = mkcBar();
   bar._t = { host: host, a: off[0], b: off[1] };
-  const rc = r.getBoundingClientRect();
-  bar.classList.remove('hide');
-  bar.style.left = Math.max(8, Math.min(innerWidth - 190, rc.left)) + 'px';
-  bar.style.top = Math.max(8, rc.top - 34) + 'px';
+  mk9Place(bar, r.getBoundingClientRect());   /* ★ markfix A-2 — 선택 아래(폰 선택 메뉴가 위를 덮는다) */
+  const jb = document.getElementById('jomk9'); if (jb){ jb.hidden = true; jb._t = null; }   /* 다른 막대는 숨김 */
 }
 function mkcApply(t){
   const bar = MKCBAR, cur = bar && bar._t;
@@ -13900,6 +13942,51 @@ function mkcApply(t){
 }
 document.addEventListener('selectionchange', () => { try{ mkcMaybe(); }catch(e){} });
 document.addEventListener('mousedown', ev => { if (MKCBAR && !ev.target.closest('.mkcbar')) mkcHide(); });
+document.addEventListener('mousedown', ev => { if (MKCBAR && MKCBAR._t && !MKCBAR._t.host.isConnected) mkcHide(); }, true);   /* ★ markfix — 칠할 글이 화면에서 없어졌으면(다른 화면으로 감) 막대도 숨김 */
+/* ★ markfix A-4 — 조문 팝업 = 조문 화면(wmCtx)과 같은 켠 것 규칙 · 부작용 없음(WMX·새 칠 목록·mkonSet 안 건드림) · 칠은 볼트 행 좌표 그대로 */
+function mkOnEff(law, k, j, ap){
+  try{ const base = law + ':' + k, pinned = inkHas('jo|' + base);
+    const rows = (j.행 || []).map((r, ri) => Object.assign({}, r, { m: (ap.eff[ri] || []) }));
+    const j2 = Object.assign({}, j, { 행: rows, 원본: wmOrig(j) });
+    const J2 = new Proxy({}, { get: (o, kk) => kk === k ? j2 : (JOTITLE[kk] ? { 제목: JOTITLE[kk] } : undefined) });
+    const b = wmBuild(J2, k); wmKeys(b.items);
+    const rec = mkonGet(base), st = { k: new Set(rec ? rec.k || [] : []), s: new Set(rec ? rec.s || [] : []), x: new Set(rec ? rec.x || [] : []) };
+    const lockOf = it => pinned && !(it.g === 'mk' && WM_PINOK[it.sub]), on = {};
+    b.items.forEach(it => { on[it.id] = lockOf(it) ? true : (pinned && !rec) ? true : wmOnOf(st, it); });
+    const mk = {}; b.lines.forEach(L => (L.m || []).forEach(m => { if (L.ri != null) mk[L.ri + '|' + m.a + '|' + m.b + '|' + m.t + '|' + (m.v || '')] = m.id || m.w || ''; }));
+    return ri => (ap.eff[ri] || []).filter(m => { const id = mk[ri + '|' + m.a + '|' + m.b + '|' + m.t + '|' + (m.v || '')]; return !id || on[id]; });
+  }catch(e){ return ri => ap.eff[ri]; } }
+/* ★ markfix A-3 — 조문 본문 칠 = jopangi.jomark {「법:조|rowKey」: [[s,e,종류]]} · 볼트 행 평문 좌표(plainLen · 원문 줄은 짝 볼트 좌표 W.v) · 글자 바탕·밑줄만(줄 폭 무변) */
+const JOMARK_KEY = REC_PRE + 'jomark';
+function jmUnwrap(line){ line.querySelectorAll('span.jmk').forEach(s => { while (s.firstChild) s.parentNode.insertBefore(s.firstChild, s); s.remove(); }); }
+function jmWrap(n){ const w = el('span', 'jmk'); n.parentNode.insertBefore(w, n); w.appendChild(n); return w; }
+function jmPaintLine(line, base, rows){
+  jmUnwrap(line);
+  const W = line._wm, ri = W ? W.ri : (line.dataset.ri != null && line.dataset.ri !== '' ? +line.dataset.ri : null); const row = ri != null ? rows[ri] : null; if (!row) return;
+  const L = c2MarkNorm((lsRead(JOMARK_KEY) || {})[base + '|' + rowKey(row)]); if (!L.length) return;
+  const n = String(row.t || '').length;
+  L.forEach(([s0, e0, t]) => { if (s0 >= n || e0 > n) return;   /* 볼트 글이 바뀌어 넘치면 안 그린다(지우지 않는다) */
+    const css = C2MARK_STYLE[t] || C2MARK_STYLE.y;
+    if (W){ W.nodes.forEach((tn, i) => { const v = W.v[i]; if (v >= s0 && v < e0 && tn.parentNode) jmWrap(tn).style.cssText = css; }); return; }
+    const tw = document.createTreeWalker(line, NodeFilter.SHOW_TEXT); const nodes = []; let x; while ((x = tw.nextNode())) if (!plainSkip(x, line)) nodes.push(x);
+    let acc = 0; nodes.forEach(tn => { const len = tn.nodeValue.length, a = acc, b = acc + len; acc = b; if (b <= s0 || a >= e0) return;
+      let t2 = tn; const ls = Math.max(0, s0 - a), le = Math.min(len, e0 - a);
+      if (le < len) t2.splitText(le); if (ls > 0) t2 = t2.splitText(ls); jmWrap(t2).style.cssText = css; }); }); }
+function jmPaintAll(root, base, rows){ root.querySelectorAll('.ln').forEach(line => { try{ jmPaintLine(line, base, rows); }catch(e){} }); }
+/* ★ markfix A-5 — 「다만,」 — 글자를 넣거나 지우지 않는다(감싸기만) · 행 첫머리(앞이 빈칸뿐)가 아니면 ::before 줄바꿈 + 행 앞 빈칸만큼 */
+function dmnLine(line){
+  if (line.querySelector('.dmn')) return;
+  const tw = document.createTreeWalker(line, NodeFilter.SHOW_TEXT); const nodes = []; let x; while ((x = tw.nextNode())) if (!plainSkip(x, line)) nodes.push(x);
+  const str = nodes.map(nd => nd.nodeValue).join(''); let p = str.indexOf('다만,'); if (p < 0) return;
+  const ind = (/^[ \t\u3000]*/.exec(str) || [''])[0];
+  const hits = []; while (p >= 0){ hits.push(p); p = str.indexOf('다만,', p + 3); }
+  hits.reverse().forEach(p0 => { const brk = /\S/.test(str.slice(0, p0));
+    for (let c = p0 + 2; c >= p0; c--){ let acc = 0, tn = null, off = 0; for (const nd of nodes){ const len = nd.nodeValue.length; if (c < acc + len){ tn = nd; off = c - acc; break; } acc += len; }
+      if (!tn || !tn.parentNode) continue; let t2 = tn; if (off + 1 < t2.nodeValue.length) t2.splitText(off + 1); if (off > 0){ t2 = t2.splitText(off); }
+      const i0 = nodes.indexOf(tn); if (t2 !== tn) nodes.splice(i0 + 1, 0, t2);
+      const w = el('span', 'dmn' + (c === p0 && brk ? ' dmnbr' : '')); if (c === p0 && brk) w.dataset.ind = ind; t2.parentNode.insertBefore(w, t2); w.appendChild(t2); } }); }
+function dmnAll(root, sel){ root.querySelectorAll(sel || '.ln').forEach(line => { try{ dmnLine(line); }catch(e){} }); }
+
 
 /* ══ §E-21 🃏 암기카드 창 — 민법 꼴(지문마다 묶고 「보기」 단추 · 카드 이름) ══
    저장은 조판기 `mcard` 그대로다(꼴이 같다 — 열쇠마다 배열 · 항목 {id,name,svg,ts}). */
@@ -16190,6 +16277,7 @@ const viewCanvas = (() => {
 let busy=false;
 async function render(){
   if(busy)return;busy=true;
+  try{ mkcHide(); const _jb=document.getElementById('jomk9'); if(_jb){ _jb.hidden=true; _jb._t=null; } }catch(e){}   /* ★ markfix — 화면을 다시 그리면 칠 막대는 숨김(글이 바뀐 뒤 옛 막대가 첫 누름을 먹지 않게) */
   /* ★ 스크롤 보존 (8/26) — slot 을 통째로 다시 그리므로 안 잡아 두면 누를 때마다 맨 위로 튄다.
      태그·O/X 가 「눌러도 아무 일 없다」로 보이던 원인이 이것이다. */
   const SCR={};
@@ -19307,6 +19395,7 @@ function wmBuild(J, jo){
 const MKON_KEY = REC_PRE + 'mkon';
 var MKONREC = null;   // var — recDropCache 가 이 줄보다 먼저 불려도 TDZ 없이
 REC_NAMES.mkon = '✎ 마크업 켠 것 (조문 원문)';
+REC_NAMES.jomark = '🖍 조문 칠 (형광펜·밑줄)';   /* ★ markfix A-3 */
 function mkonAll(){ if (!MKONREC) MKONREC = lsRead(MKON_KEY); return MKONREC; }
 function mkonGet(base){ const v = mkonAll()[base]; return (v && typeof v === 'object' && !Array.isArray(v)) ? v : null; }
 function mkonSet(base, st){
