@@ -1,17 +1,24 @@
 # -*- coding: utf-8 -*-
 """_task_jo_joscreen0929 관문 — 조판기 조문 화면 손질(서랍 · 연결 줄 · 모드 줄 · 본문 길게 누르기 · 조문 팝업 원문 · 3법 카드 원문 · 원문 보기 설명 글).
 
-쓰는 법
-  python _qa/_harness_jo_joscreen0929.py                      # 이 저장소 jo/index.html · Chromium · B-1~B-7 + 회귀 R
-  python _qa/_harness_jo_joscreen0929.py --html <바탕 index.html> --yardstick
+쓰는 법(N: jopangi/task/ 또는 genie _qa/jopangi/task/ 에서 · 저장소 = _roots.genie() = GENIE_ROOT · 없으면 ~/Documents/genie)
+  python _harness_jo_joscreen0929.py                          # 그 저장소 jo/index.html · Chromium · B-1~B-7 + 회귀 R
+  python _harness_jo_joscreen0929.py --html <바탕 index.html> --yardstick
                                                               # 헛잣대 — 바탕(착수 HEAD)에서 B-1~B-7 이 저마다 FAIL 해야 한다
-  python _qa/_harness_jo_joscreen0929.py --webkit            # 터치 칸(B-2 폰 · B-5)을 WebKit 으로도(깔려 있으면)
-  python _qa/_harness_jo_joscreen0929.py --only B1,B5        # 일부만
+  python _harness_jo_joscreen0929.py --webkit                # 터치 칸(B-2 폰 · B-5)을 WebKit 으로도(깔려 있으면)
+  python _harness_jo_joscreen0929.py --only B1,B5            # 일부만
+  ★ 2026-09-29 합치기(Code) — 클라우드가 _qa/ 맨 위에 두었던 것을 N: 정본 jopangi/task/ 로 들여오고 genie 는 _qa/jopangi/task/ 로 옮겼다.
+    바꾼 것은 _roots 머리 5줄과 ROOT 한 줄뿐(옛: 이 파일의 위 폴더 = 저장소 뿌리 · 옮긴 자리에서는 뿌리가 아니다).
 
 준비: pip install playwright · playwright install chromium (WebKit 은 playwright install webkit).
 서버는 스스로 띄운다(127.0.0.1 · 빈 포트): /jo/index.html = --html 파일 · /jo/data/* = 이 저장소 jo/data. 바깥 주소 요청은 막는다(재현성).
 화면: PC 1511×1043(사용자 125%) · 폰 390×844 터치 흉내(is_mobile · has_touch · CDP 터치 이벤트로 길게 누르기).
 """
+import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
+_d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
+while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
+    _d_r = _os_r.path.dirname(_d_r)
+_sys_r.path.append(_d_r); import _roots   # noqa: E402
 import argparse
 import json
 import os
@@ -24,7 +31,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 from playwright.sync_api import sync_playwright
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = _roots.genie()   # 합치기(9/29) — 옛: 이 파일의 위 폴더(_qa/ 맨 위에 있을 때만 저장소 뿌리)
 DATA = os.path.join(ROOT, 'jo', 'data')
 PC = {'width': 1511, 'height': 1043}
 PHONE = {'width': 390, 'height': 844}
