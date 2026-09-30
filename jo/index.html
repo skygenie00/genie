@@ -2668,7 +2668,10 @@ async function viewJo(){
   const JCK=jckAll(),JPD=await joPanelIdx();
   const jqn=k=>jsPanelItems((JPD||{})[k]||{L:[],P:[]},k).length;
   const flt=S.joStar||'';
-  const vis=x=>!flt||(flt==='★'?!!stars[x.k]:JCK[S.law+':'+x.k]===flt);
+  /* ★ jo_theme A-1-2 — 거름 점 하나(빈 → 내용 → 주체 → 기간 · 기기별 jopangi_ui_tdot) · 색일 때 그 점 켜진 조만(★·체크 색 거름과 겹쳐 건다) */
+  const tdk=TM_DOTN[tmDotGet()]||null;
+  const bkN3=(k,kk)=>{if(!BKD0||!BKD0.조)return 0;const e=BKD0.조[k];let n=0;if(e)e.행.forEach((r2,ri)=>(r2.b||[]).forEach(b2=>{if(bkKindOf(S.law,k,ri,b2)===kk)n++;}));return n;};
+  const vis=x=>(!flt||(flt==='★'?!!stars[x.k]:JCK[S.law+':'+x.k]===flt))&&(!tdk||bkN3(x.k,tdk)>0);
   const ckN={};JCK_COLORS.forEach(c=>{ckN[c[0]]=0;});
   L.조.forEach(x=>{const v=JCK[S.law+':'+x.k];if(ckN[v]!=null)ckN[v]++;});
   /* 머리 i 의 아래(더 깊은 머리 포함) 끝 · 아래가 있는가 */
@@ -2699,7 +2702,8 @@ async function viewJo(){
   {
     const bar2=el('div','jtbar');
     /* ★ joscreen0929 A-1-5 — 칩 둘 → 하나 「전체 N ▾」(목록 = 전체 · ★ 2년 내 개정 · 가는 줄 · 체크 색 여섯) */
-    jckFltChip(bar2,L.조.length,nStar,ckN,명칭);
+    jckFltChip(bar2,L.조.length,nStar,ckN,명칭,tdk?tdk+' '+L.조.filter(vis).length:null);   /* ★ jo_theme A-1-2 — 점 켜짐 = 「주체 175 ▾」(거름 이름 + 수 · ▾ 메뉴 그대로) */
+    bar2.appendChild(tmDotEl());   /* ★ jo_theme A-1-2 — 「전체 N ▾」 바로 뒤 점 하나 */
     /* ★ joscreen0929 A-1-6 — 「모두 접기」 → 단계 접기 글자(1차객 uzStepText 규칙·꼴 · 글자 = 다음 누름 「접기1」 → 「접기2」 → 「펴기」) ·
        접기 L = 깊이 L 이상 머리를 접는다(uzLvApply 규칙) · 저장 = jopangi_ui_jofold 그대로(절도 같은 칸) · 거름 동안 흐림·누름 막음 */
     {const hk=장들.map((h,i)=>i).filter(hKid);
@@ -2709,12 +2713,17 @@ async function viewJo(){
      const next=now==='all'?1:(now>=mx?'all':now+1);
      if(hk.length){
        const c3=el('button','uzstep jstep',next==='all'?'펴기':('접기'+next));c3.type='button';
-       if(flt){c3.disabled=true;c3.title='거름 동안은 전부 펼쳐 보인다';}
+       if(flt||tdk||(S.treeTheme&&S.law===TM_LAW)){c3.disabled=true;c3.title=(S.treeTheme&&S.law===TM_LAW)?'테마 줄에는 접기가 없다':'거름 동안은 전부 펼쳐 보인다';}
        else{c3.title=next==='all'?'다 편다':(next===1?(jLv0===0?'편':'장')+' 머리만 남긴다':'깊이 '+next+' 머리까지 남긴다');
          c3.onclick=ev=>{ev.stopPropagation();const f2={};
            if(next!=='all')hk.forEach(i=>{if(jDep(i)>=next)f2[i]=1;});
            _jfSave(f2);render();};}
        bar2.appendChild(c3);}}
+    /* ★ jo_theme A-1-1 — 「접기1」 꼴 글자 「테마 N」(N = 테마 수 · 거름 점이면 거른 수) → 조 줄 자리에 테마 줄 · 그 글자는 「목차」 → 다시 누르면 목차 · 특허법만(재료 = 특허 정리omr) */
+    if(S.law===TM_LAW){const c4=el('button','uzstep jstep tmtg',S.treeTheme?'목차':('테마 '+tmThemeCount(tdk)));c4.type='button';
+      if(!tmHas()){c4.disabled=true;c4.title='테마 재료가 없다';}
+      else{c4.title=S.treeTheme?'목차(조 줄)로':'정리omr 테마 줄로';c4.onclick=ev=>{ev.stopPropagation();S.treeTheme=!S.treeTheme;render();};}
+      bar2.appendChild(c4);}
     tree.appendChild(bar2);
   }
   /* ★ v3-M M12 — 트리 빈칸 표지 「내 주 기」(kv 확정 태그 반영 · 채점 뒤 O/△/X 바탕 ·
@@ -2768,7 +2777,9 @@ async function viewJo(){
     r.onclick=()=>{S.jo=x.k;render();};
     return r;
   };
-  if(!장들.length){
+  if(S.treeTheme&&S.law===TM_LAW&&tmHas()){
+    tmTreeRows(tree,tdk);   /* ★ jo_theme A-1-1 — 테마 줄(조 줄 .r 꼴) + 「＋ 테마」 */
+  }else if(!장들.length){
     L.조.forEach(x=>{if(vis(x))tree.appendChild(joRow(x));});
   }else{
     const byHead={};const noHead=[];
@@ -2782,8 +2793,8 @@ async function viewJo(){
     for(let i=0;i<장들.length;i++){
       const h=장들[i];
       /* ★ joscreen0929 A-1-5 — 거름(★·색): 머리는 그 아래 남은 조가 있을 때만(절 머리도 같은 규칙) · 거름 중엔 전부 펼침 */
-      if(flt&&!gVis(i)){i=hEnd(i)-1;continue;}
-      const folded=!flt&&!!_jf[i];   // ★ v3-J §0-2 — 자동 펼침은 조 바뀔 때 한 번(위)
+      if((flt||tdk)&&!gVis(i)){i=hEnd(i)-1;continue;}   /* ★ jo_theme A-1-2 — 거름 점도 같은 규칙(남는 조가 있는 머리만 · 거름 중엔 펼침) */
+      const folded=!(flt||tdk)&&!!_jf[i];   // ★ v3-J §0-2 — 자동 펼침은 조 바뀔 때 한 번(위)
       const i0=i;
       /* ★ revfix0930 A-4 — 편(층 0)도 장 머리 꼴(이름 · 범위 · 접기) · 민소는 들여쓰기로 층(편 jd0 · 장 jd1 · 절 jd2) — 편 없는 세 법은 갈래 이름 무변 */
       if(jLv(h)<=1){
@@ -2800,14 +2811,14 @@ async function viewJo(){
         if(rg){const rge=el('span','jrange',rg);rge.title=rg;hw.appendChild(rge);}
         hr.appendChild(hw);
         if(k2){const em2=el('em','jhst');em2.appendChild(el('span','jstarc','★'+k2));hr.appendChild(em2);}
-        hr.onclick=()=>{if(flt)return;const f2=Object.assign({},_jf);
+        hr.onclick=()=>{if(flt||tdk)return;const f2=Object.assign({},_jf);
           if(f2[i0])delete f2[i0];else f2[i0]=1;_jfSave(f2);render();};
         tree.appendChild(hr);
       }else{
         /* ★ joscreen0929 A-1-6 — 절(lv2) 접기를 새로 넣는다(▾/▸ · 줄 꼴은 jsub 그대로 · 누르면 그 절만 접고 편다) */
         const sr=el('div','r jsub'+(jLv0===0?' jd'+(jLv(h)-jLv0):''));sr.dataset.hi=i;
         {const snm=el('span','nm',(folded?'▸ ':'▾ ')+h.no+' '+(h.t||''));snm.title=h.no+' '+(h.t||'');sr.appendChild(snm);}   /* ★ revfix0929b A-11 — 말줄임(글 그대로) · 전체는 툴팁 */
-        sr.onclick=()=>{if(flt)return;const f2=Object.assign({},_jf);
+        sr.onclick=()=>{if(flt||tdk)return;const f2=Object.assign({},_jf);
           if(f2[i0])delete f2[i0];else f2[i0]=1;_jfSave(f2);render();};
         tree.appendChild(sr);
       }
@@ -2934,6 +2945,10 @@ async function viewJo(){
     if(S.stick)S.stick=false;
   }else stkBtn.onclick=ev=>{ev.stopPropagation();S.mkWin=!S.mkWin;render();};   /* ★ jo_wonmun §A-2 — 창 열고 닫기(스티커 편집 켜기는 창 「✎ 편집」 · 필기 끄기 toast 도 그쪽) */
   mb.appendChild(stkBtn);
+  /* ★ jo_theme A-4-1 — 모드 줄 끝 「테마 N」(글자 #a16207 · 숫자 굵게 · 알약 없음 · N = 이 조를 적은 테마 수 = 재료 jo ∪ 기록 link − jo- · 0 = 회색) → 연결 창 */
+  {const tn=tmOf(S.law,S.jo).length;const tb=el('button','plgb jomd tmjo','테마 ');tb.type='button';tb.style.color=tn?'#a16207':'#9ca3af';tb.appendChild(el('span','n',String(tn)));
+   tb.title=tn?'이 조를 적은 테마 '+tn+' — 누르면 연결 창':'이 조를 적은 테마가 없다'+(tmHas()?' — 누르면 찾아 잇기':'');
+   tb.onclick=ev=>{ev.stopPropagation();tmOfWin(S.law,S.jo,ev);};mb.appendChild(tb);}
   main.appendChild(mb);
 
   // ── 필기가 얹힐 덩어리 = 조 하나(§4-3). 캔버스는 이 덩어리의 clientWidth 로 그린다.
@@ -2944,9 +2959,7 @@ async function viewJo(){
     await bkBody(blk,bkJo,bkOn,base);
     dmnAll(blk);   /* ★ markfix A-5 — 빈칸 모드도 줄바꿈(빈칸 안 글자는 없는 글이라 안 걸린다 · 칠은 안 그린다) */
     main.appendChild(blk);
-    thRow.insertBefore(el('span','k','🧩 테마·비교'),thRow.firstChild);
-    main.appendChild(thRow);
-    main.appendChild(thBox);
+    main.appendChild(thBox);   /* ★ jo_theme A-4-3 — 「🧩 테마·비교」 글자 · 「＋ 비교 만들기」 칩 줄 걷음(3법 비교 패널 · jopangi.compare · 테마.json 무변) */
     slot.appendChild(main);
     wmWinDrop('mk');await wmCiWin(base,j);   /* ★ jo_wonmun — 빈칸 모드 = 마크업 창 내림(✎ 마크업 흐림 · 깃발은 둔다) */
     await joPanelMount(slot);
@@ -3096,9 +3109,7 @@ async function viewJo(){
   main.appendChild(blk);
   inkHost(blk,inkKey);                 // 캔버스 한 장 = 조 하나(§4-3)
   /* ★ v3-J §0-1 — 테마·내 비교 칩 줄 + 펼침 패널 = 편집본/원문 카드가 끝난 자리(그림 8/27) */
-  thRow.insertBefore(el('span','k','🧩 테마·비교'),thRow.firstChild);
-  main.appendChild(thRow);
-  main.appendChild(thBox);
+  main.appendChild(thBox);   /* ★ jo_theme A-4-3 — 칩 줄(thRow) 걷음 · 패널(thBox)은 그대로 */
 
   slot.appendChild(main);
   wmMkWin(_wmx);await wmCiWin(base,j);   /* ★ jo_wonmun §A-2·§A-5 — 마크업 창(조를 바꿔도 따라간다) · 인용 창(그 조에서만) */
@@ -3269,7 +3280,7 @@ const REC_NAMES = { ox:'1차객 풀이 (O/X · 헷갈림 · 태그)', rounds:'1�
   sticker:'🏷 스티커 사전 (두문자·줄임말)',
   blank:'✎ 빈칸 회독 (O/△/X)', blanktag:'✎ 빈칸 태그 (kind 확정)',
   themefix:'3법 비교 확정', precimp:'★ 판례 내 중요도', editq:'✎ 수정 큐 (볼트 고칠 자리)', preclink:'🔗 내가 이은 판례·2차', precqa:'✅ 판례 검수 (앱 층)', precqafile:'✅ 볼트 검수 대기 (⚙ 가 읽는다)',
-  canvas:'📝 정리캔버스 편집 (민소)', canvasink:'✍ 정리캔버스 필기', canvaslink:'🔗 정리캔버스 링크', canvasmemo:'🗒 정리캔버스 메모', canvaspin:'★ 정리캔버스 핀', clfix:'Claude 답 정정 (반영 전)', c2unit:'🧩 2차 단원 (손값 · 문제 단위)', canvasjari:'📘 정리캔버스 교재 자리', c2htag:'🏷 2차 목차 칩 ([주]·[학판검] …)', c2mark:'🖍 2차 문제 창 형광펜·밑줄', c2hsjari:'📌 2차 해설 자리 손값', ncomr:'📌 정리OMR 자리 (민소 목차노트 · 문단)', notecolor:'🎨 목차노트 정리 색 고침 (민소)', jonot:'⚖ 이 조 아님 (지문 조 연결 뗌)' };   /* ★ c2card A-5 · E-3 · G-6 — 새 키 셋(32 → 35) */   /* ★ prec3 §C-3 */   /* ★ 판 3 §9-2 · recsync §E · 판 4 add4 */
+  canvas:'📝 정리캔버스 편집 (민소)', canvasink:'✍ 정리캔버스 필기', canvaslink:'🔗 정리캔버스 링크', canvasmemo:'🗒 정리캔버스 메모', canvaspin:'★ 정리캔버스 핀', clfix:'Claude 답 정정 (반영 전)', c2unit:'🧩 2차 단원 (손값 · 문제 단위)', theme:'🧩 테마 (이름·줄·두문자·주체·조 연결)', canvasjari:'📘 정리캔버스 교재 자리', c2htag:'🏷 2차 목차 칩 ([주]·[학판검] …)', c2mark:'🖍 2차 문제 창 형광펜·밑줄', c2hsjari:'📌 2차 해설 자리 손값', ncomr:'📌 정리OMR 자리 (민소 목차노트 · 문단)', notecolor:'🎨 목차노트 정리 색 고침 (민소)', jonot:'⚖ 이 조 아님 (지문 조 연결 뗌)' };   /* ★ c2card A-5 · E-3 · G-6 — 새 키 셋(32 → 35) */   /* ★ prec3 §C-3 */   /* ★ 판 3 §9-2 · recsync §E · 판 4 add4 */
 function recLabel(k){
   const t = k.slice(REC_PRE.length);
   if (REC_NAMES[t]) return REC_NAMES[t];
@@ -3378,7 +3389,7 @@ const SYNC_SKIP = ['ink' /* 캔버스 · 크다 */ ];
 const SYNC_KEYS = ['ox', 'rounds', 'ansfix', 'mcard', 'gi', 'gi.year', 'markup', 'logic', 'link', 'type', 'omr',
   'gg', 'ggref',
   'sticker', 'blank', 'blanktag', 'themefix', 'postit', 'compare', 'precimp', 'editq', 'preclink', 'precqa', 'precqafile',
-  'canvas', 'canvasink', 'canvaslink', 'canvasmemo', 'canvaspin', 'clfix', 'c2unit', 'canvasjari', 'c2htag', 'c2mark', 'c2hsjari', 'ncomr', 'notecolor', 'jonot', 'giround', 'recgone', 'bktype', 'qfix', 'mkon', 'jomark', 'jocheck']   /* ★ _task_jo_joscreen0929 A-1-4 — 서랍 조 체크 색(칸 = 「법:조」 · 값 = 색 한 글자 빨·주·노·초·파·보 · 지우기 = 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_wonmun §A-3 — 조문 마크업 켠 것(43번째 · 칸 = 「법:조」 · 값 {k:[항목 열쇠], s:[통째 켠 종류], x:[켠 종류 안에서 끈 열쇠]} · 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_cardfix §A-7 — 정정 글 칸(42번째 · 칸 = 지문 열쇠 · 값 {q?, exp?, case?, q0, exp0, case0, ts} · ↩ 정정 해제 = 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_gaek_mbsame_add3 §A-7 — 빈칸 종류 손값(41번째 · 칸 = 지문 열쇠(uid) · 값 {v:[내용·주체·기간 | 없음], ts} · 「지우기」 = {v:[]}(OMR 표시를 덮는 빈 값 · 칸을 안 지운다) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_joscreen §F-1 — 「이 조 아님 ×」 손값(39→40 · 칸 = 지문 열쇠(uid) · 값 = 뗀 조 키 배열 · 되살리기로 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_notecolor C — 목차노트 정리 색 고침(36→37 · 칸 = <노트 파일>|<행> · 값 [[s,e,색,낱말]] · 되돌리기 = 그 구간 항목을 빼고 칸이 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_omrpop B-4 — 정리OMR 자리 손값(35→36 · 칸 = note|<노트> · para|<노트>|<문단 끝 행> · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_canvas_jari_cand §D-1 — 정리캔버스 교재 자리 손값(31→32 · 칸 = bid · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_2cha_unit §C-5 — 2차 단원 손값(30→31 · 칸 = '<법>|<YY-회-N>' · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_claude_answers §F — Claude 답 정정(29→30 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 다음 맞추기에서 되살린다) */   /* ★ 정리캔버스(민소) — 편집 로그·필기·링크·메모·핀(22→27) */   /* ★ prec3 §C-3 — 볼트 검수 대기(21→22) */   /* ★ QA 판 add1 — 앱 검수(20→21) */   /* ★ 판 4 add4 §2 — 내가 이은 판례·2차 (19→20) */
+  'canvas', 'canvasink', 'canvaslink', 'canvasmemo', 'canvaspin', 'clfix', 'c2unit', 'canvasjari', 'c2htag', 'c2mark', 'c2hsjari', 'ncomr', 'notecolor', 'jonot', 'giround', 'recgone', 'bktype', 'qfix', 'mkon', 'jomark', 'jocheck', 'theme']   /* ★ jo_theme A-0 — 테마 고친 것·손 연결(jopangi.theme · 칸 = 테마 id · acr · subj+ · subj- · link) */   /* ★ _task_jo_joscreen0929 A-1-4 — 서랍 조 체크 색(칸 = 「법:조」 · 값 = 색 한 글자 빨·주·노·초·파·보 · 지우기 = 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_wonmun §A-3 — 조문 마크업 켠 것(43번째 · 칸 = 「법:조」 · 값 {k:[항목 열쇠], s:[통째 켠 종류], x:[켠 종류 안에서 끈 열쇠]} · 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_cardfix §A-7 — 정정 글 칸(42번째 · 칸 = 지문 열쇠 · 값 {q?, exp?, case?, q0, exp0, case0, ts} · ↩ 정정 해제 = 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_gaek_mbsame_add3 §A-7 — 빈칸 종류 손값(41번째 · 칸 = 지문 열쇠(uid) · 값 {v:[내용·주체·기간 | 없음], ts} · 「지우기」 = {v:[]}(OMR 표시를 덮는 빈 값 · 칸을 안 지운다) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_joscreen §F-1 — 「이 조 아님 ×」 손값(39→40 · 칸 = 지문 열쇠(uid) · 값 = 뗀 조 키 배열 · 되살리기로 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_notecolor C — 목차노트 정리 색 고침(36→37 · 칸 = <노트 파일>|<행> · 값 [[s,e,색,낱말]] · 되돌리기 = 그 구간 항목을 빼고 칸이 비면 칸을 지운다(묘비) · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_ms_omrpop B-4 — 정리OMR 자리 손값(35→36 · 칸 = note|<노트> · para|<노트>|<문단 끝 행> · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_canvas_jari_cand §D-1 — 정리캔버스 교재 자리 손값(31→32 · 칸 = bid · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_2cha_unit §C-5 — 2차 단원 손값(30→31 · 칸 = '<법>|<YY-회-N>' · 되돌리기 = {auto:true} 로 덮어 칸을 안 지운다 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 되살린다) */   /* ★ _task_jo_claude_answers §F — Claude 답 정정(29→30 · 옛 판 기기는 이 키를 몰라 올릴 때 data 에서 빠진다 — 새 판 기기가 다음 맞추기에서 되살린다) */   /* ★ 정리캔버스(민소) — 편집 로그·필기·링크·메모·핀(22→27) */   /* ★ prec3 §C-3 — 볼트 검수 대기(21→22) */   /* ★ QA 판 add1 — 앱 검수(20→21) */   /* ★ 판 4 add4 §2 — 내가 이은 판례·2차 (19→20) */
   .filter(k => SYNC_SKIP.indexOf(k) < 0).map(k => REC_PRE + k);
 const SU_KEY = 'jopangi_sync_u', SG_KEY = 'jopangi_sync_gone', SS_KEY = 'jopangi_sync_shadow', SM_KEY = 'jopangi_sync_meta';
 const EQ_KEY = REC_PRE + 'editq';
@@ -5114,9 +5125,9 @@ async function jo2chaPop(files,ev){
       const rec=B2&&B2[f];
       if(!rec){toast('본문을 못 읽었다 — '+f);return;}
       const _pk14=('q')+'|'+('🧾 '+f); if(popToggle(_pk14))return; const bd=popShell('q', '🧾 '+f, _pk14);   /* ★ 상표 손질 6 — 키 종류|제목 */
-      const go=el('button','tool on','보드로 이동 ↗');
-      go.onclick=()=>{S.tab='cha2';S.boardKind=fe.kind;closeAllPops();render();};
-      bd.appendChild(go);
+      /* ★ jo_theme A-7 — 「보드로 이동 ↗」(몸 첫 줄 파란 단추) → 머리 제목 뒤 「이동 ↗」 글자(조문 팝업과 한 꼴 · 동작 무변) */
+      {const pt3=bd.parentNode.querySelector(':scope > .ph .pt'),gw=el('span','ptgo'),go=el('button','plgb tmgo','이동 ↗');go.type='button';go.title='이 문제를 2차 보드로 연다';
+       go.onclick=()=>{S.tab='cha2';S.boardKind=fe.kind;closeAllPops();render();};gw.appendChild(go);if(pt3)pt3.after(gw);else bd.appendChild(gw);}
       bd.appendChild(renderBody(rec,f));
       showPop(ev2);
       setTimeout(()=>{
@@ -6570,7 +6581,7 @@ async function popJo(law, k, ev, depth, hl){
     const pt = pop.querySelector('.pt');
     if (pt){
       pt.textContent = (SHORT[law] || law) + ' ' + k + (ti ? ' ' + ti : '');   /* ★ c2card C-1 — 📖 뗌 */
-      { const gw = el('span', 'ptgo'), gb = el('button', 'plgb', '뷰로 이동 ↗'); gb.type = 'button'; gb.title = '이 조를 조문 뷰로 연다';
+      { const gw = el('span', 'ptgo'), gb = el('button', 'plgb tmgo', '이동 ↗'); gb.type = 'button';   /* ★ jo_theme A-7 — 「뷰로 이동 ↗」 → 「이동 ↗」 글자(동작 무변) */ gb.title = '이 조를 조문 뷰로 연다';
         gb.onclick = ev2 => { ev2.stopPropagation(); goJo(law, k, hl); }; gw.appendChild(gb); pt.after(gw); }   /* ★ joscreen §D(㉓) — 알약 단추 → 머리 제목 바로 뒤 글자(.plgb · 11px · 파랑 · 바탕 없음) */
       if (hl && hl.hang)   /* ★ v3-H §3 — 머리 「→ 제N항」 칩 · ★ c2card C-3 — 항이 둘 이상이면 머리에 다 적는다(칠하기는 첫 항) · ★ joscreen0929 A-2-3 — 칩은 제목 밖(제목만 말줄임) */
         pt.after(el('span', 'ptchip', '→ 제' + (hl.hangs && hl.hangs.length > 1 ? hl.hangs.join('·') : hl.hang) + '항' + (hl.ho ? ' 제' + hl.ho + '호' : '')));
@@ -14991,6 +15002,9 @@ const skRun=async e=>{   /* ★ 손질 8 — §2 300ms 디바운스 — 아래 $
       box.appendChild(el('div','grp','📖 조문 — '+out.length+'건'));
       out.forEach(r=>skRow(box,'jo',r.k+(r.t?' '+r.t:''),r.x,SHORT[r.law],
         ev=>{closeSk();popJo(r.law,r.k,ev,1);}));
+      /* ★ jo_theme A-6 — 테마(특허법) — 결과 줄 = 「{테마} 조각」 → 테마 창 */
+      if(lawsOn.indexOf(TM_LAW)>=0){const th=tmSearch(q);if(th.length){box.appendChild(el('div','grp','🧩 테마 — '+th.length+'건'));
+        th.forEach(h=>skRow(box,'thm','{'+h.t.n+'}',h.x,'테마',ev=>{closeSk();tmWin(h.t.id,ev);}));}}
     }catch(err){box.appendChild(el('div','grp','📖 조문 — 읽지 못했다'));}
   }
   if(SKON.prec){   /* ★ 손질 8 — §2 판례 갈래 = 2단 검색(precSearch)과 같은 범위 · 켜진 법마다 · 전건(40 씩 더 보기) · 문맥 한 줄 */
@@ -15822,7 +15836,7 @@ const viewCanvas = (() => {
     minso_gc: '윤곽 민사소송법 기출집', minso_hb: '민소 핸드북', minso_63_jgd: '63회 해설 정경대', minso_63_kjy: '63회 해설 김중연', minso_63_kwak: '63회 총평 곽준형',
     tk_63_hgs: '홍기석 해설', tk_63_hanbit: '한빛 해설', tk_63_phj: '박형준 풀답안', tk_63_phj_s3: '박형준 보충', tk_63_pjh: '박지환 총평',
     patent_hr8: '특허법 해례 8판' };   /* ★ book8 A-4 — 1차객 「📚 교재 자리」 8판 쪽 창 */   /* ★ c2card G-1 — 해설 자료 열 권(이름만 · CVB_DOCID 는 정리캔버스 교재 둘 그대로 — 그 목록을 도는 곳이 있어 무변으로 둔다) */
-  const CVB = { meta: {}, doc: {}, stat: {}, db: null, stamp: {} };   /* ★ book_stamp B-3 — stamp = 교재 도장 → 출처(docid → {쪽: [줄]} · 못 받으면 null) */
+  const CVB = { meta: {}, doc: {}, stat: {}, db: null, stamp: {}, text: {} };   /* ★ jo_theme A-8 — text = 쪽 글(검색) */   /* ★ book_stamp B-3 — stamp = 교재 도장 → 출처(docid → {쪽: [줄]} · 못 받으면 null) */
   const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
   function cvbTok(){ try { return (typeof syncToken === 'function' ? syncToken() : String((JSON.parse(localStorage.getItem('tt.cfg') || '{}')).token || '').trim()); } catch (e) { return ''; } }
   function cvbDb(){ if (CVB.db) return Promise.resolve(CVB.db); return new Promise((res, rej) => { const rq = indexedDB.open('ox_master_db', 1);
@@ -15864,6 +15878,24 @@ const viewCanvas = (() => {
     const js = await cvbGunzip(buf); if (!js) return cur || null;
     const rec = { page: p, w: js.w, h: js.h, words: js.words || '', ph: want || '' };
     try { await cvbPut(key, rec); } catch (e) {} return rec; }
+  /* ★ jo_theme A-8 — 쪽 글(words/<docid>/글.json.gz = { docid, pdfMd5, pages, t:[쪽 글] } · 쪽 글 = 줄 차례 · 공백 없음 · 줄 사이 \n) · 메모리 + IndexedDB booktext:<docid>
+     책메타 pdfMd5 와 같을 때만 쓴다(다른 판 PDF 위에 상자를 그리지 않는다) · 404 = null(재워 둔 것도 버림 · 검색칸 0) · 토큰 없음·네트워크 = 재워 둔 것 · 교재 문구(CVB.stat.last)는 흔들지 않는다 */
+  async function cvbText(docid){ if (Object.prototype.hasOwnProperty.call(CVB.text, docid)) return CVB.text[docid];
+    const meta = await cvbMeta(docid), key = 'booktext:' + docid; let cur = null; try { cur = await cvbGet(key); } catch (e) {}
+    const good = x => !!x && Array.isArray(x.t) && x.t.length > 0 && (!meta || !meta.pdfMd5 || !x.pdfMd5 || x.pdfMd5 === meta.pdfMd5);
+    const last = CVB.stat.last; let js = null;
+    try { const buf = await cvbGh(CVB_WORDS + '/' + docid + '/글.json.gz', 'buf'); if (buf) js = await cvbGunzip(buf); } catch (e) {}
+    const code = CVB.stat.last; CVB.stat.last = last;
+    if (good(js)){ try { await cvbPut(key, js); } catch (e) {} return (CVB.text[docid] = js); }
+    if (code === 404){ try { await cvbPut(key, null); } catch (e) {} return (CVB.text[docid] = null); }
+    return (CVB.text[docid] = good(cur) ? cur : null); }
+  /* 찾기 = 공백(줄바꿈 포함) 뺀 부분 문자열 · 두 글자부터 · 목록은 앞 100쪽 · 총 쪽·곳 수는 전부 */
+  function cvbFind(tx, raw){ const q = String(raw || '').replace(/\s+/g, ''); if (q.length < 2 || !tx) return null;
+    const pages = []; let np = 0, total = 0;
+    (tx.t || []).forEach((t0, i) => { const s = String(t0 || '').replace(/\s+/g, ''); if (s.indexOf(q) < 0) return; np++;
+      const at = []; let j = -1; while ((j = s.indexOf(q, j + 1)) >= 0) at.push(j); total += at.length;
+      if (pages.length < 100) pages.push({ p: i + 1, s: s, at: at }); });
+    return { q: q, raw: String(raw || '').trim(), pages: pages, np: np, total: total }; }
   async function cvbFromCache(docid, pdfMd5){ try { const r = await cvbGet('bookpdf:' + docid); if (r && r.pdfMd5 === pdfMd5 && r.buf && r.buf.byteLength > 2000) return r.buf; } catch (e) {} return null; }
   /* ★ book_stamp B-3 — 교재 도장 → 출처 데이터. 비공개 저장소 stamp/<docid>.json(책메타와 같은 길 · cvbGh) · 메모리 + IndexedDB `bookstamp:<docid>`.
      그 파일의 pdfMd5 가 지금 책메타의 pdfMd5 와 같을 때만 쓴다(다른 판 PDF 위에 자리를 그리지 않는다) · 교재 문구(CVB.stat.last)는 흔들지 않는다.
@@ -16005,6 +16037,55 @@ const viewCanvas = (() => {
     catch (e){ const why = String(e && e.message || e);
       host.innerHTML = '<div class="cv-card"><b>교재를 받지 못했다</b><div class="m">' + esc(why) + '</div></div>'; return; }
     const head = el('div', 'cv-booknav'); const view = el('div', 'cv-bookview'); host.innerHTML = ''; host.appendChild(head); host.appendChild(view);
+    /* ★ jo_theme A-8 — 8판 교재 창 검색 · 머리(◀ 쪽 ▶ · 📍 찍기 줄 = .cv-booknav · sticky · --cvph 아래) 안 둘째 줄 = 검색칸 · 그 아래 목록 → 누르면 쪽 이동 + 노란 상자(누른 곳 주황 테) ·
+       쪽 글이 없으면(404 · 판 다름) 검색칸 0 · 찍기·저장·자리 잠금·맞춤·칩 안 덮기 무변 · 다른 교재 창 DOM 무변(8판만) · retarget = 결과·상자 지움(검색어 남김) */
+    const BS = docid === 'patent_hr8' ? { tx: null, res: null, sel: null, open: true, box: el('div', 'cv-bs'), list: el('div', 'cv-bsres') } : null;
+    if (BS){
+      const inp = el('input'); inp.type = 'text'; inp.placeholder = '교재에서 찾기 — 두 글자부터'; inp.setAttribute('enterkeyhint', 'search');
+      const go = el('button', 'cv-bsgo', '🔍'); go.type = 'button'; go.title = '찾기(Enter)';
+      BS.box.appendChild(inp); BS.box.appendChild(go); BS.inp = inp; BS.list.hidden = true;
+      ['pointerdown', 'mousedown', 'touchstart'].forEach(n => { BS.box.addEventListener(n, e2 => e2.stopPropagation()); BS.list.addEventListener(n, e2 => e2.stopPropagation()); });
+      const run = () => { if (!BS.tx) return; BS.res = cvbFind(BS.tx, inp.value); BS.sel = null; BS.open = true; BS.paintList(); BS.paintBoxes(); mbWinFit(pw0); };
+      go.onclick = e2 => { e2.stopPropagation(); run(); };
+      inp.addEventListener('keydown', e2 => { e2.stopPropagation(); if (e2.key === 'Enter'){ e2.preventDefault(); run(); } });
+      BS.clear = () => { BS.res = null; BS.sel = null; BS.open = true; BS.paintList(); BS.paintBoxes(); };
+      BS.paintList = () => { const L = BS.list, r = BS.res; L.innerHTML = ''; L.hidden = !r; if (!r) return;
+        const hd = el('div', 'cv-bshd'); hd.appendChild(el('b', '', '「' + r.raw + '」')); hd.appendChild(document.createTextNode(' 총 ' + r.np + '쪽 · ' + r.total + '곳'));
+        const x = el('button', 'cv-bsx', '✕'); x.type = 'button'; x.title = '검색 결과 닫기(검색어는 남는다)'; x.onclick = e2 => { e2.stopPropagation(); BS.clear(); }; hd.appendChild(x); L.appendChild(hd);
+        if (BS.sel && !BS.open){ const pr = cvbPrint(docid, BS.sel.p);
+          const one = el('div', 'cv-bsone', (BS.sel.g + 1) + '/' + r.total + '곳 · p.' + (pr == null ? BS.sel.p : pr) + ' 목록 ▾'); one.title = '목록 다시 펴기';
+          one.onclick = e2 => { e2.stopPropagation(); BS.open = true; BS.paintList(); mbWinFit(pw0); }; L.appendChild(one); return; }
+        const sc = el('div', 'cv-bslist'); let g = 0;
+        r.pages.forEach(pg => { const pr = cvbPrint(docid, pg.p);
+          sc.appendChild(el('div', 'cv-bspg', 'p.' + (pr == null ? pg.p : pr) + ' PDF ' + pg.p + ' · ' + pg.at.length + '곳'));
+          pg.at.forEach((j, jj) => { const gi = g++, d = el('div', 'cv-bssn' + (BS.sel && BS.sel.g === gi ? ' on' : ''));
+            d.appendChild(document.createTextNode(pg.s.slice(Math.max(0, j - 14), j))); d.appendChild(el('mark', '', pg.s.slice(j, j + r.q.length))); d.appendChild(document.createTextNode(pg.s.slice(j + r.q.length, j + r.q.length + 14)));
+            d.onclick = e2 => { e2.stopPropagation(); BS.sel = { p: pg.p, j: jj, g: gi }; BS.open = false; st.p = pg.p; BS.paintList(); paint(); draw(); };
+            sc.appendChild(d); }); });
+        L.appendChild(sc); };
+      /* 그 쪽 words(글자 한 자 · x·y 0~2000) 로 상자 — 쪽 글 차례와 같은 차례로 k 번째 = 목록의 k 번째 곳 · 줄을 넘는 곳은 줄마다 조각(data-k 같음) */
+      BS.paintBoxes = async () => { const wrap = view.querySelector('.cv-bookpg'); if (!wrap) return; wrap.querySelectorAll('.cv-bshit').forEach(x => x.remove());
+        const r = BS.res; if (!r || !r.pages.some(pg => pg.p === st.p)) return;
+        const p0 = st.p, rec = await cvbWords(docid, p0); if (st.p !== p0 || !wrap.isConnected || !rec || !rec.words || BS.res !== r) return;
+        wrap.querySelectorAll('.cv-bshit').forEach(x => x.remove());
+        const ch = []; String(rec.words).split('\n').forEach(ln => { const a = ln.split('\t'); if (a.length < 3 || !a[0] || /\s/.test(a[0])) return; ch.push({ c: a[0], x: +a[1], y: +a[2] }); });
+        const S2 = ch.map(c => c.c).join(''), hits = []; let j = -1; while ((j = S2.indexOf(r.q, j + 1)) >= 0) hits.push(j);
+        const dx = []; for (let i = 1; i < ch.length; i++){ const a = ch[i - 1], b = ch[i]; if (Math.abs(a.y - b.y) <= 3){ const d = b.x - a.x; if (d > 4 && d < 160) dx.push(d); } }
+        dx.sort((a, b) => a - b); const adv = dx.length ? dx[dx.length >> 1] : 36, asp = (rec.w && rec.h) ? rec.w / rec.h : 595 / 841, hy = adv * asp;
+        let cur = null;
+        hits.forEach((h, k) => { const seg = ch.slice(h, h + r.q.length), rows = [];
+          seg.forEach(c => { const L0 = rows.find(q => Math.abs(q.y - c.y) <= 3); if (L0){ L0.x0 = Math.min(L0.x0, c.x); L0.x1 = Math.max(L0.x1, c.x); } else rows.push({ y: c.y, x0: c.x, x1: c.x }); });
+          rows.forEach(q => { const on = !!(BS.sel && BS.sel.p === p0 && BS.sel.j === k), d = el('div', 'cv-bshit' + (on ? ' cur' : '')); d.dataset.k = k;
+            d.style.cssText = `left:${(q.x0 - adv * 0.12) / 20}%;top:${(q.y - hy * 1.08) / 20}%;width:${(q.x1 - q.x0 + adv * 1.24) / 20}%;height:${(hy * 1.28) / 20}%`;   /* words x·y = 글자 왼쪽 아래(밑줄) — 9/30 쪽 55 실측 */
+            wrap.appendChild(d); if (on && !cur) cur = d; }); });
+        if (cur) setTimeout(() => { try { cur.scrollIntoView({ block: 'center' }); } catch (e) {} }, 60); };
+      BS.hook = () => {
+        const paint0 = paint; paint = () => { paint0(); if (BS.tx){ head.appendChild(BS.box); head.appendChild(BS.list); } };
+        const draw0 = draw; draw = async () => { await draw0(); BS.paintBoxes(); };
+        const rt0 = pw0._cvb.retarget; pw0._cvb.retarget = function(m2, ctx2){ const ok = rt0.call(this, m2, ctx2); if (ok) BS.clear(); return ok; }; };
+      cvbText(docid).then(tx => { if (!tx || !host.isConnected) return; BS.tx = tx; if (ready) paint(); }).catch(() => {});
+    }
+
     const scroller = () => { let q = view; while (q && q !== document.body){ const cs = getComputedStyle(q); if (/(auto|scroll)/.test(cs.overflowY) && q.scrollHeight > q.clientHeight) return q; q = q.parentElement; } return body; };
     const drawBox = (wrap, r) => { const o = wrap.querySelector('.cv-pickbox'); if (o) o.remove(); r = r || (st.box && st.box.p === st.p ? st.box.r : null); if (!r) return;
       const d = el('div', 'cv-pickbox'); d.style.cssText = `left:${r[0] * 100}%;top:${r[1] * 100}%;width:${(r[2] - r[0]) * 100}%;height:${(r[3] - r[1]) * 100}%`; wrap.appendChild(d); };
@@ -16061,6 +16142,7 @@ const viewCanvas = (() => {
       inp.addEventListener('pointerdown', e2 => e2.stopPropagation());
       inp.addEventListener('keydown', e2 => { e2.stopPropagation(); if (e2.key === 'Enter'){ st.p = Math.max(1, Math.min(n, +inp.value | 0)); paint(); draw(); } });
       inp.addEventListener('change', () => { st.p = Math.max(1, Math.min(n, +inp.value | 0)); paint(); draw(); }); };
+    if (BS) BS.hook();   /* ★ jo_theme A-8 */
     ready = true; paint(); await draw(); mbWinFit(pw0); }
 
   /* ── 머리 표시(수정 수 · 판 바뀜 · 핀 수) ── */
@@ -20081,10 +20163,11 @@ function jckPal(btn, law, k){
   jckFloat(p, btn);
 }
 /* 거름 칩 하나 「전체 N ▾」 — 고른 것이 칩 글자(「★ 2년 내 개정 N ▾」 · 「[아이콘] 빨강 n ▾」) */
-function jckFltChip(host, total, nStar, ckN, mc){
+function jckFltChip(host, total, nStar, ckN, mc, lab){
   const cur = S.joStar || '', c = JCK_COLORS.find(x => x[0] === cur);
   const b = el('button', 'tool on jckf'); b.type = 'button';
-  if (c){ b.appendChild(jckSvg(c[2])); b.appendChild(document.createTextNode(' ' + c[1] + ' ' + (ckN[cur] || 0) + ' ▾')); }
+  if (lab) b.textContent = lab + ' ▾';   /* ★ jo_theme A-1-2 — 거름 점 켜짐 = 「주체 175 ▾」 */
+  else if (c){ b.appendChild(jckSvg(c[2])); b.appendChild(document.createTextNode(' ' + c[1] + ' ' + (ckN[cur] || 0) + ' ▾')); }
   else b.textContent = (cur === '★' ? '★ 2년 내 개정 ' + nStar : '전체 ' + total) + ' ▾';
   b.onclick = ev => { ev.stopPropagation(); jckMenu(b, total, nStar, ckN, mc); };
   host.appendChild(b);
@@ -20359,6 +20442,475 @@ document.addEventListener('pointerdown', ev => {
   '  .tree .r.jhead::after,.tree .r.jsub::after{content:"";position:absolute;inset:0;z-index:3}',
   '  .wml .wmlk,.joLink{padding:1.5px 0;-webkit-box-decoration-break:clone;box-decoration-break:clone}',
   '}'
+].join('\n'); document.head.appendChild(s); }catch(e){} })();
+/* ══════ ★ 2026-10-01 (_task_jo_theme) — 조문 「테마」(정리omr 정리 글 잇기) · 서랍 테마 줄·거름 점 · 테마 창 · 두문자·조 목록 창 · 조문 「테마 N」 · 고치기 한 방식 · 검색 · 팝업 틀 ══════
+   재료(비공개 minbeoppdf · 로컬 판 ⚙ 가 만든다 · 여기는 받는 쪽만) = theme/patent_hr8/테마.json.gz
+     { pdfMd5, boxes:{k:{p, r, lines:[{ind, runs:[{t,c}]}], svg}}, themes:[{id, n, boxes, region, jo, bk}], acr:{말:{m, jo}}, subj:[…] }
+     받기 = 책메타와 같은 길(viewCanvas.hsBook.gh · 메모리 + IndexedDB theme:patent_hr8) · 404 = 테마 0(재워 둔 것도 버림) · 토큰 없음·네트워크 = 재워 둔 것 · 오류 문구 없음
+   기록 = jopangi.theme(SYNC_KEYS 끝 · 칸 = tid · acr · subj+ · subj- · link — recMerge 그대로)
+     { <tid>: { n, l:{"<box>|<줄>": 고친 글('' = 지운 줄)}, "jo+":[…], "jo-":[…], gone:1 }, acr:{ 말:{m, gone, t} }, "subj+":[…], "subj-":[…], link:{ "<법>:<조>":[tid…] } }
+     원본 재료 무수정 · 지움 = 묘비(gone) · 두문자를 목록 창 「＋ 두문자」로 더하면 그 테마 id 를 t 에 적는다(글에 없는 두문자도 그 테마 두문자가 되게 — 모양에 없던 칸 하나)
+   ⚠ 옛 판 기기는 SYNC_KEYS 에 theme 이 없어 올릴 때 data 에서 빠진다(도장 u 는 합집합이라 남는다) → 새 판 기기가 다음 맞춤 때 동률(제 값이 더 김)로 다시 싣는다(physphone tfix 와 같은 길)
+   ⚠ 시안 규칙 — 실물 이웃 요소의 꼴 그대로 · 새 칩·알약·탭 줄·범례 없음 · 글자로만 · 같은 것은 어디서나 한 꼴(테마 줄 = 서랍 · 연결 창 · 찾기 결과 한 함수 tmRowEl) */
+const TM_PATH = 'theme/patent_hr8/테마.json.gz', TM_IDB = 'theme:patent_hr8', TM_KEY = REC_PRE + 'theme', TM_LAW = '특허법';
+const TM_CELL = ['acr', 'link', 'subj+', 'subj-'];   /* 테마 id 가 아닌 칸 */
+const TM = { d: null, st: 'wait', p: null };
+async function tmGunzip(buf){ try { const st = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip')); return JSON.parse(await new Response(st).text()); } catch (e) { return null; } }
+function tmHs(){ try { return (typeof viewCanvas === 'function' && viewCanvas.hsBook) || null; } catch (e) { return null; } }
+async function tmLoad(){
+  const H = tmHs(); if (!H){ TM.st = 'none'; return null; }
+  const ok = x => !!x && typeof x === 'object' && Array.isArray(x.themes) && !!x.boxes && typeof x.boxes === 'object';
+  let old = null; try { old = await H.get(TM_IDB); } catch (e) {}
+  const last = H.stat.last; let fresh = null, code = null;
+  try { const buf = await H.gh(TM_PATH, 'buf'); code = H.stat.last; if (buf) fresh = await tmGunzip(buf); } catch (e) {}
+  H.stat.last = last;   /* 교재 창 문구(CVB.stat.last)를 흔들지 않는다 */
+  if (ok(fresh)){ try { await H.put(TM_IDB, fresh); } catch (e) {} TM.d = fresh; TM.st = 'ok'; return fresh; }
+  if (code === 404){ try { await H.put(TM_IDB, null); } catch (e) {} TM.d = null; TM.st = 'none'; return null; }
+  if (ok(old)){ TM.d = old; TM.st = 'ok'; return old; }
+  TM.d = null; TM.st = 'none'; return null;
+}
+function tmRerender(){ if (!TM.d) return; const go = () => { if (typeof busy !== 'undefined' && busy) return setTimeout(go, 150); if (S.tab === 'jo') render(); }; setTimeout(go, 0); }
+/* ── 기록 ── */
+function tmRec(){ const r = lsRead(TM_KEY); return (r && typeof r === 'object' && !Array.isArray(r)) ? r : {}; }
+function tmSave(r){ lsWrite(TM_KEY, r, '테마 기록'); }
+function tmEditRec(fn){ const r = tmRec(); fn(r); tmSave(r); }
+/* ── 조 열쇠 — 재료 「3」 「7-2」 「133③」 「224-2」 · 입력 「133」 「제52조의2」 → 「제N조(의M)」 ── */
+function tmJoKey(s){ const m = /^\s*(?:제\s*)?(\d{1,3})\s*(?:조)?\s*(?:(?:-|의)\s*(\d{1,2}))?/.exec(String(s == null ? '' : s)); return m ? '제' + m[1] + '조' + (m[2] ? '의' + m[2] : '') : null; }
+function tmJoShort(k){ const m = /^제(\d+)조(?:의(\d+))?/.exec(String(k || '')); return m ? m[1] + (m[2] ? '-' + m[2] : '') : String(k || ''); }
+function tmLawKey(lk){ const i = String(lk).indexOf(':'); return i < 0 ? [TM_LAW, lk] : [lk.slice(0, i), lk.slice(i + 1)]; }
+/* ── 모형 = 재료 + 기록 ── */
+function tmMake(t, r, mine, R){
+  const jo = [], add = k => { const kk = tmJoKey(k); if (kk && jo.indexOf(kk) < 0) jo.push(kk); };
+  (t.jo || []).forEach(add); (r['jo+'] || []).forEach(add);
+  const minus = new Set((r['jo-'] || []).map(tmJoKey));
+  const pat = jo.filter(k => !minus.has(k));
+  const lk = [];   /* 손으로 이은 조(법:조) — 특허법 재료 조와 겹치면 뺀다 */
+  Object.keys((R && R.link) || {}).forEach(k2 => { if (((R.link[k2]) || []).indexOf(t.id) < 0) return; const [law, k] = tmLawKey(k2); if (law === TM_LAW && pat.indexOf(k) >= 0) return; lk.push(law + ':' + k); });
+  return { id: t.id, n: (r.n != null && r.n !== '') ? r.n : (t.n || ''), boxes: t.boxes || [], region: t.region || null, bk: (t.bk || [0, 0, 0]).slice(0, 3), jo: pat, lk: lk, l: r.l || {}, mine: !!mine };
+}
+function tmModel(){
+  const D = TM.d || { themes: [] }, R = tmRec(), out = [], seen = new Set();
+  (D.themes || []).forEach(t => { if (!t || !t.id) return; seen.add(t.id); const r = R[t.id] || {}; if (r.gone) return; out.push(tmMake(t, r, false, R)); });
+  Object.keys(R).forEach(id => { if (seen.has(id) || TM_CELL.indexOf(id) >= 0) return; const r = R[id]; if (!r || typeof r !== 'object' || Array.isArray(r) || r.gone || !r.n) return;
+    out.push(tmMake({ id: id, n: r.n, boxes: [], region: null, jo: [], bk: [0, 0, 0] }, r, true, R)); });
+  return out;
+}
+function tmHas(){ return !!TM.d || tmModel().length > 0; }
+function tmGet(id){ return tmModel().find(t => t.id === id) || null; }
+function tmAcr(){
+  const D = TM.d || {}, R = tmRec(), A = {};
+  Object.keys(D.acr || {}).forEach(w => { const a = D.acr[w] || {}; A[w] = { m: a.m || '', jo: (a.jo || []).map(tmJoKey).filter(Boolean), t: null }; });
+  Object.keys(R.acr || {}).forEach(w => { const a = R.acr[w] || {}; if (a.gone){ delete A[w]; return; }
+    const b = A[w] || { m: '', jo: [], t: null }; A[w] = { m: a.m != null ? a.m : b.m, jo: Array.isArray(a.jo) ? a.jo.map(tmJoKey).filter(Boolean) : b.jo, t: a.t || b.t || null }; });
+  return A;
+}
+function tmSubj(){ const D = TM.d || {}, R = tmRec(); const s = new Set((D.subj || []).concat(R['subj+'] || [])); (R['subj-'] || []).forEach(x => s.delete(x)); return [...s].filter(x => x && String(x).trim()).map(String).sort((a, b) => b.length - a.length); }
+/* 글 줄 — 고친 줄(l) 얹음 · '' = 지운 줄 · 재료에 없는 번호 = 「＋ 줄」로 더한 줄(그 박스 끝 · 새 테마는 박스 「_」) */
+function tmLines(t){
+  const D = TM.d || { boxes: {} }, out = [], done = new Set();
+  const bks = (t.boxes || []).filter(bk => D.boxes && D.boxes[bk] && !D.boxes[bk].svg);
+  bks.forEach(bk => { const b = D.boxes[bk];
+    (b.lines || []).forEach((ln, i) => { const key = bk + '|' + i; done.add(key); const e = t.l[key]; if (e === '') return;
+      const runs = e != null ? [{ t: String(e), c: (((ln.runs || [])[0]) || {}).c || '' }] : (ln.runs || []);
+      out.push({ bk: bk, i: i, key: key, ind: ln.ind || 0, runs: runs }); }); });
+  const extra = Object.keys(t.l).filter(k => !done.has(k) && !/\|s\d+$/.test(k) && t.l[k] !== '')
+    .map(k => { const p = k.lastIndexOf('|'); return { bk: k.slice(0, p), i: +k.slice(p + 1), key: k }; }).filter(x => x.i >= 0)
+    .sort((a, b) => (bks.indexOf(a.bk) - bks.indexOf(b.bk)) || (a.i - b.i));
+  extra.forEach(x => { let at = out.length; for (let j = out.length - 1; j >= 0; j--){ if (out[j].bk === x.bk){ at = j + 1; break; } }
+    out.splice(at, 0, { bk: x.bk, i: x.i, key: x.key, ind: 0, runs: [{ t: String(t.l[x.key]), c: '' }] }); });
+  return out;
+}
+function tmSvgs(t){ const D = TM.d || { boxes: {} }; return (t.boxes || []).map(bk => ({ bk: bk, b: D.boxes && D.boxes[bk] })).filter(x => x.b && x.b.svg); }
+function tmSvgTexts(x, t){ const out = []; try { const doc = new DOMParser().parseFromString(String(x.b.svg), 'image/svg+xml'); doc.querySelectorAll('text').forEach((n, i) => { const e = t.l[x.bk + '|s' + i]; out.push(e != null ? String(e) : (n.textContent || '')); }); } catch (e) {} return out; }
+function tmText(t){ return tmLines(t).map(L => L.runs.map(r => r.t || '').join('')).concat(...tmSvgs(t).map(x => tmSvgTexts(x, t))).join('\n'); }
+/* 이 테마의 두문자 = 글에 나오는 사전 열쇠(긴 말 먼저) + 이 테마 목록 창에서 더한 것(t) · 색 = 처음 나온 run 색 */
+function tmThAcr(t){
+  const A = tmAcr(), words = Object.keys(A).sort((a, b) => b.length - a.length), out = [], seen = new Set();
+  const runs = []; tmLines(t).forEach(L => L.runs.forEach(r => runs.push(r))); tmSvgs(t).forEach(x => tmSvgTexts(x, t).forEach(s => runs.push({ t: s, c: '' })));
+  words.forEach(w => { if (seen.has(w)) return; const r = runs.find(q => String(q.t || '').indexOf(w) >= 0); if (r || A[w].t === t.id){ seen.add(w); out.push({ w: w, m: A[w].m, jo: A[w].jo, c: (r && r.c) || '' }); } });
+  return out;
+}
+function tmJoAll(t){ return t.jo.map(k => TM_LAW + ':' + k).concat(t.lk); }
+function tmOf(law, k){   /* 이 조를 적은 테마 = 재료 jo(+jo+ −jo-) ∪ 기록 link */
+  const R = tmRec(), L = ((R.link || {})[law + ':' + k]) || [];
+  return tmModel().map(t => { const mat = law === TM_LAW && t.jo.indexOf(k) >= 0; const ln = L.indexOf(t.id) >= 0; return (mat || ln) ? { t: t, link: ln && !mat } : null; }).filter(Boolean);
+}
+function tmTitle(t){ return '{' + t.n + '} · 두' + tmThAcr(t).length + ' §' + tmJoAll(t).length; }
+/* ── 거름 점(기기별 · 동기화 밖 · 처음 = 빈) — 0 빈 · 1 내용 · 2 주체 · 3 기간 ── */
+const TM_DOT_K = 'jopangi_ui_tdot', TM_DOTN = [null, '내용', '주체', '기간'];
+function tmDotGet(){ try { const v = +JSON.parse(localStorage.getItem(TM_DOT_K) || '0'); return (v >= 0 && v <= 3) ? v : 0; } catch (e) { return 0; } }
+function tmDotSet(v){ try { localStorage.setItem(TM_DOT_K, JSON.stringify(v)); } catch (e) {} }
+function tmDotEl(){
+  const v = tmDotGet(), kk = TM_DOTN[v], c = el('i', 'bkmk dot tmdot' + (kk ? ' on' : ''));
+  c.setAttribute('role', 'button'); c.tabIndex = 0;
+  if (kk){ const col = BK_COLOR[kk]; c.style.background = col; c.style.borderColor = col; }
+  c.title = kk ? kk + ' 점 켜진 조·테마만 — 누르면 다음(빈 → 내용 → 주체 → 기간 → 빈)' : '거름 점 — 누를 때마다 내용 → 주체 → 기간 → 빈';
+  const go = ev => { ev.stopPropagation(); tmDotSet((v + 1) % 4); render(); };
+  c.onclick = go; c.onkeydown = ev => { if (ev.key === 'Enter'){ ev.preventDefault(); go(ev); } };
+  return c;
+}
+/* 점 셋 = 조 줄 bkMark3 과 같은 꼴(좁은 서랍 = 점 · 300 이상 = 글자) · 테마 bk 로 켬 */
+function tmDots(bk){
+  const dots = (S.treeW || 212) < 300, box = el('span', 'bkm3' + (dots ? ' dots' : ''));
+  [['내용', '내'], ['주체', '주'], ['기간', '기']].forEach(([kk, ch], i) => { const c2 = el('i', 'bkmk' + (dots ? ' dot' : ''));
+    if (bk && bk[i]){ const col = BK_COLOR[kk]; if (!dots) c2.textContent = ch; c2.style.color = col; c2.style.borderColor = col + 'B3'; c2.style.background = dots ? col : (col + '22'); }
+    box.appendChild(c2); });
+  box.title = '내용 ' + (bk && bk[0] ? 'O' : '—') + ' · 주체 ' + (bk && bk[1] ? 'O' : '—') + ' · 기간 ' + (bk && bk[2] ? 'O' : '—');
+  return box;
+}
+/* ── 테마 줄 — 서랍 · 연결 창 · 찾기 결과가 한 함수(outerHTML 꼴 같음 · 연결 창만 끝 ✕ / 결과 ＋) ── */
+function tmRowEl(t, o){
+  o = o || {};
+  const r = el('div', 'r tmr'); r.dataset.tm = t.id;
+  const nm = el('span', 'nm jnm2'), no = el('span', 'jno', '{' + t.n + '}');
+  no.dataset.tmed = 'name'; no.title = '{' + t.n + '} 테마 창 · 길게 누르면 이름 고치기';
+  nm.appendChild(no); r.appendChild(nm);
+  const em = el('em', 'jcol3' + ((S.treeW || 212) < 300 ? '' : ' wide'));
+  em.appendChild(tmDots(t.bk));
+  const A = tmThAcr(t), J = tmJoAll(t);
+  const d2 = el('span', 'tmd2', '두' + A.length), sn = el('span', 'tms', '§' + J.length);
+  d2.title = sn.title = '두문자 ' + A.length + ' · 조 ' + J.length + ' — 누르면 목록 창';
+  const lst = ev => { ev.stopPropagation(); tmListWin(t.id, ev); };
+  const ds = el('span', 'tmds'); ds.appendChild(d2); ds.appendChild(sn); ds.onclick = lst; ds.setAttribute('role', 'button'); em.appendChild(ds); r.appendChild(em);   /* 둘째 칸(조 줄 체크 단추 자리 44px) = 「두N §N」 한 누름(둘 다 목록 창) */
+  r.onclick = ev => { if (TMLP.eat()) return; tmWin(t.id, ev); };
+  if (o.x){ const x = el('button', 'tmx', '✕'); x.type = 'button'; x.title = '이 조와의 손 연결을 푼다'; x.onclick = ev => { ev.stopPropagation(); o.x(ev); }; r.appendChild(x); }
+  if (o.plus){ const p = el('button', 'tmplus', '＋'); p.type = 'button'; p.title = '이 조에 잇는다'; p.onclick = ev => { ev.stopPropagation(); o.plus(ev); }; r.appendChild(p); }
+  return r;
+}
+/* 서랍 — 테마 줄(거름 점 켜짐 = bk 그 칸 1 인 것만) + 「＋ 테마」 */
+function tmTreeRows(tree, kk){
+  const ix = kk ? ['내용', '주체', '기간'].indexOf(kk) : -1;
+  tmModel().filter(t => ix < 0 || (t.bk && t.bk[ix])).forEach(t => tree.appendChild(tmRowEl(t)));
+  const add = el('div', 'r tmaddr'), s0 = el('span', 'jtt', '＋ 테마'); add.appendChild(s0);
+  add.onclick = ev => { ev.stopPropagation(); if (TMLP.eat()) return;
+    tmEdit(add, '', v => { if (!v) return; const id = 'u' + Date.now().toString(36); tmEditRec(r => { r[id] = { n: v, l: {}, 'jo+': [] }; }); render(); }, { ph: '새 테마 이름' }); };
+  tree.appendChild(add);
+}
+function tmThemeCount(kk){ const ix = kk ? ['내용', '주체', '기간'].indexOf(kk) : -1; return tmModel().filter(t => ix < 0 || (t.bk && t.bk[ix])).length; }
+/* ── 글 표시 — 조 인용(링크) · 주체 낱말(점선) · 두문자(굵게 · 누르면 뜻) ── */
+const TM_OTHER = { '시규': null, '민소': '민사소송법', '상': '상표법', '디': '디자인보호법' };
+const TM_JO_RX = /(시규|민소|상|디)?\s?(\d{1,3})(?:조(?:의(\d{1,2}))?(?:\s?[①-⑳])?|-(\d{1,2})(?:조)?(?:\s?[①-⑳])?|의(\d{1,2})(?:조)?(?:\s?[①-⑳])?|([①-⑳]))/g;
+function tmMarks(s, ctx){
+  const out = [], take = (a, b, kind, x) => { if (out.some(q => a < q.b && b > q.a)) return; out.push({ a: a, b: b, kind: kind, x: x }); };
+  ctx.acr.forEach(w => { let i = -1; while ((i = s.indexOf(w, i + 1)) >= 0) take(i, i + w.length, 'acr', w); });
+  TM_JO_RX.lastIndex = 0; let m;
+  while ((m = TM_JO_RX.exec(s))){
+    let a = m.index, pre = m[1] || '';
+    if (pre){ const before = s[a - 1]; if (before && /[가-힣]/.test(before)){ a += pre.length; pre = ''; while (s[a] === ' ') a++; } }   /* 「이상5조」의 상 = 법 머리 아님 */
+    if (/\d/.test(s[a - 1] || '')) continue;
+    const n = m[2], sub = m[3] || m[4] || m[5] || '';
+    if ((m[4] || m[5]) && m[0].indexOf('조') < 0){ const nx = s[m.index + m[0].length] || ''; if (/[가-힣]/.test(nx) && !/[조항호]/.test(nx)) continue; }   /* 「1-2년」 「3의2배」 = 조 아님 */
+    const law = pre ? TM_OTHER[pre] : TM_LAW;
+    if (pre && !law){ continue; }   /* 시규 = 이 앱에 없는 법 → 링크 없음 */
+    take(a, m.index + m[0].length, 'jo', { law: law, k: '제' + n + '조' + (sub ? '의' + sub : '') });
+  }
+  ctx.subj.forEach(w => { let i = -1; while ((i = s.indexOf(w, i + 1)) >= 0) take(i, i + w.length, 'subj', w); });
+  return out.sort((p, q) => p.a - q.a);
+}
+function tmCtx(t){ return { acr: tmThAcr(t).map(x => x.w).concat(Object.keys(tmAcr())).filter((w, i, a) => a.indexOf(w) === i).sort((a, b) => b.length - a.length), subj: tmSubj() }; }
+function tmFill(host, s, color, ctx, svg){
+  const mk = (tag, cls, txt) => { const n = svg ? document.createElementNS('http://www.w3.org/2000/svg', 'tspan') : document.createElement(tag); n.setAttribute('class', cls); n.textContent = txt; return n; };
+  let i = 0;
+  tmMarks(s, ctx).forEach(q => {
+    if (q.a > i) host.appendChild(document.createTextNode(s.slice(i, q.a)));
+    const t2 = s.slice(q.a, q.b);
+    if (q.kind === 'jo'){ const a = mk('a', 'wmlk', t2); a.dataset.law = q.x.law; a.dataset.k = q.x.k; a.setAttribute('title', (SHORT[q.x.law] || q.x.law) + ' ' + q.x.k + ' 원문 팝업'); host.appendChild(a); }
+    else if (q.kind === 'subj'){ const b = mk('span', 'thsb', t2); b.dataset.tmed = 'subj'; b.dataset.w = q.x; host.appendChild(b); }
+    else { const b = mk('b', 'thac', t2); b.dataset.tmed = 'acr'; b.dataset.w = q.x; host.appendChild(b); }
+    i = q.b; });
+  if (i < s.length) host.appendChild(document.createTextNode(s.slice(i)));
+}
+function tmSvgEl(x, t, ctx){
+  let doc = null; try { doc = new DOMParser().parseFromString(String(x.b.svg), 'image/svg+xml'); } catch (e) { return null; }
+  const svg = doc && doc.documentElement; if (!svg || svg.nodeName.toLowerCase() !== 'svg') return null;
+  svg.querySelectorAll('script,foreignObject,iframe,image,use').forEach(n => n.remove());
+  svg.querySelectorAll('*').forEach(n => [...n.attributes].forEach(a => { if (/^on/i.test(a.name) || /javascript:/i.test(a.value)) n.removeAttribute(a.name); }));
+  [...svg.attributes].forEach(a => { if (/^on/i.test(a.name)) svg.removeAttribute(a.name); });
+  svg.querySelectorAll('text').forEach((n, i) => { const e = t.l[x.bk + '|s' + i]; const s = e != null ? String(e) : (n.textContent || '');
+    while (n.firstChild) n.removeChild(n.firstChild); tmFill(n, s, '', ctx, true); n.setAttribute('data-tmed', 'svgline'); n.setAttribute('data-key', x.bk + '|s' + i); });
+  const node = document.importNode(svg, true); node.removeAttribute('width'); node.removeAttribute('height');
+  const w = el('div', 'thfig'); w.appendChild(node);
+  w.addEventListener('click', ev => { if (ev.target.closest && ev.target.closest('.wmlk,.thac,.thsb')) return; if (TMLP.eat()) return; w.classList.toggle('big'); });
+  return w;
+}
+function tmBody(body, t){
+  body.innerHTML = '';
+  const ctx = tmCtx(t), A = tmAcr(), wrap = el('div', 'tmbody');
+  tmLines(t).forEach(L => {
+    const d = el('div', 'thl'); d.dataset.tmed = 'line'; d.dataset.key = L.key; d.style.paddingLeft = (L.ind * 0.55) + 'em';
+    L.runs.forEach(r => { const sp = el('span'); if (r.c) sp.style.color = r.c; tmFill(sp, String(r.t || ''), r.c, ctx, false); d.appendChild(sp); });
+    wrap.appendChild(d); });
+  tmSvgs(t).forEach(x => { const f = tmSvgEl(x, t, ctx); if (f) wrap.appendChild(f); });
+  const add = el('div', 'tmadd'); const s0 = el('span', 'jtt', '＋ 줄'); add.appendChild(s0);
+  add.onclick = ev => { ev.stopPropagation(); if (TMLP.eat()) return; tmEdit(s0, '', v => { if (!v) return;
+    const bk = (tmLines(t).slice(-1)[0] || {}).bk || (t.boxes || [])[0] || '_', used = Object.keys(t.l).concat(tmLines(t).map(L => L.key)).filter(k => k.indexOf(bk + '|') === 0).map(k => +k.slice(bk.length + 1)).filter(n => n >= 0);
+    const D = TM.d || { boxes: {} }, n0 = ((D.boxes[bk] || {}).lines || []).length, n = Math.max(n0, ...used.map(x => x + 1), 0);
+    tmEditRec(r => { const o = r[t.id] = r[t.id] || {}; o.l = o.l || {}; o.l[bk + '|' + n] = v; }); tmRefresh(); }, { ph: '더할 줄 글' }); };
+  wrap.appendChild(add);
+  const pgs = (t.boxes || []).map(bk => ((TM.d || { boxes: {} }).boxes[bk] || {}).p).filter(p => p != null);
+  const uniq = pgs.filter((p, i) => pgs.indexOf(p) === i);
+  if (uniq.length) wrap.appendChild(el('div', 'thsrc', '정리omr ' + uniq.join('·') + '쪽'));
+  body.appendChild(wrap);
+  tmWire(wrap, A);
+}
+/* 누름 — 조 링크 → 조문 팝업 · 두문자 → 그 자리 아래 뜻 한 줄 토글 */
+function tmWire(root, A){
+  root.addEventListener('click', ev => {
+    const a = ev.target.closest && ev.target.closest('.wmlk');
+    if (a && root.contains(a)){ ev.preventDefault(); ev.stopPropagation(); if (TMLP.eat()) return; popJo(a.dataset.law || TM_LAW, a.dataset.k, ev, 1); return; }
+    const b = ev.target.closest && ev.target.closest('.thac');
+    if (b && root.contains(b)){ ev.stopPropagation(); if (TMLP.eat()) return; tmAcrToggle(b); }
+  });
+}
+function tmAcrToggle(b){
+  const w = b.dataset.w, line = b.closest('.thl, .throw2, .thfig') || b.parentNode;
+  const nx = line.nextElementSibling;
+  if (nx && nx.classList.contains('thacm') && nx.dataset.w === w){ nx.remove(); return; }
+  const a = tmAcr()[w] || { m: '' }, d = el('div', 'thacm', a.m ? w + ' — ' + a.m : w + ' — (뜻 없음 · 길게 눌러 적기)');
+  d.dataset.w = w; d.dataset.tmed = 'acrm'; if (!a.m) d.classList.add('none');
+  line.after(d);
+}
+function tmRefresh(){   /* 고친 뒤 열린 테마 창·목록 창·연결 창을 다시 그림 + 서랍·조문 머리(render) */
+  (typeof POPS !== 'undefined' ? POPS : []).slice().forEach(p => { const k = p._pk || '';
+    if (k.indexOf('theme|') === 0){ const t = tmGet(k.slice(6)); if (!t){ closeOne(p); return; } const pt = p.querySelector('.pt'); if (pt) pt.textContent = tmTitle(t); tmBody(p.querySelector('.pb'), t); }
+    else if (k.indexOf('themelist|') === 0){ const t = tmGet(k.slice(10)); if (!t){ closeOne(p); return; } const pt = p.querySelector('.pt'); if (pt) pt.textContent = tmTitle(t); tmListBody(p.querySelector('.pb'), t); }
+    else if (k.indexOf('themeof|') === 0){ const [, law, jk] = k.split('|'); tmOfBody(p, law, jk); } });
+  const go = () => { if (typeof busy !== 'undefined' && busy) return setTimeout(go, 120); if (S.tab === 'jo') render(); }; go();
+}
+/* ── A-2 테마 창 ── */
+function tmWin(id, ev){
+  const t = tmGet(id); if (!t) return;
+  const key = 'theme|' + id; if (popToggle(key)) return;
+  const body = popShell('theme', tmTitle(t), key); showPop(ev); popSizable(body, 'theme');
+  tmBody(body, t);
+  try { popInView(body.parentNode); } catch (e) {}
+}
+/* ── A-3 두문자·조 목록 창(하나) — 여러 조 두문자 = 맨 위 · 조 줄(제N조 · 제목 · 그 조 두문자) · 끝 「＋ 조」 「＋ 두문자」 「＋ 주체」 ── */
+function tmListWin(id, ev){
+  const t = tmGet(id); if (!t) return;
+  const key = 'themelist|' + id; if (popToggle(key)) return;
+  const body = popShell('theme', tmTitle(t), key); showPop(ev); popSizable(body, 'theme');
+  tmListBody(body, t);
+}
+async function tmListBody(body, t){
+  let TT = {}; try { const L = await get('jo_' + TM_LAW + '_목록.json'); (L.조 || []).forEach(j => { TT[j.k] = j.t; }); } catch (e) {}
+  body.innerHTML = '';
+  const wrap = el('div', 'tmlist'), acr = tmThAcr(t);
+  const acrEl = x => { const b = el('b', 'thac', x.w); b.dataset.w = x.w; b.dataset.tmed = 'acrw'; if (x.c) b.style.color = x.c; return b; };
+  acr.filter(x => (x.jo || []).length > 1).forEach(x => {
+    const r = el('div', 'throw2 tmmulti'); r.appendChild(el('span', 'tmjs', x.jo.map(k => tmJoShort(k) + '조').join(' · ')));
+    const rt = el('span', 'tmar'); rt.appendChild(acrEl(x)); r.appendChild(rt); wrap.appendChild(r); });
+  tmJoAll(t).forEach(lk => { const [law, k] = tmLawKey(lk);
+    const r = el('div', 'throw2 tmjr'); r.dataset.lk = lk;
+    const jn = el('b', 'tmjn', (law === TM_LAW ? '' : (SHORT[law] || law) + ' ') + k); jn.dataset.tmed = 'jo'; jn.dataset.lk = lk; r.appendChild(jn);
+    r.appendChild(el('span', 'tmjt', law === TM_LAW ? (TT[k] || '') : ''));
+    const rt = el('span', 'tmar'); acr.filter(x => law === TM_LAW && (x.jo || []).length === 1 && x.jo[0] === k).forEach(x => rt.appendChild(acrEl(x))); r.appendChild(rt);
+    r.onclick = ev => { if (ev.target.closest('.thac')) return; if (TMLP.eat()) return; popJo(law, k, ev, 1); };
+    wrap.appendChild(r); });
+  const ad = el('div', 'tmadd');
+  const addJo = el('span', 'jtt', '＋ 조'), addAc = el('span', 'jtt', '＋ 두문자'), addSb = el('span', 'jtt', '＋ 주체');
+  addJo.onclick = ev => { ev.stopPropagation(); tmEdit(addJo, '', v => { const k = tmJoKey(v); if (!k) return; tmEditRec(r => { const o = r[t.id] = r[t.id] || {};
+    o['jo-'] = (o['jo-'] || []).filter(x => tmJoKey(x) !== k); if (!(o['jo+'] || []).some(x => tmJoKey(x) === k)) o['jo+'] = (o['jo+'] || []).concat([tmJoShort(k)]); }); tmRefresh(); }, { ph: '조 번호(예: 133 · 52의2)' }); };
+  addAc.onclick = ev => { ev.stopPropagation(); tmEdit(addAc, '', w => { if (!w) return; setTimeout(() => {
+    const host = [...body.querySelectorAll('.tmadd .jtt')].find(x => x.textContent === '＋ 두문자') || addAc;
+    tmEdit(host, '', m => { tmEditRec(r => { r.acr = r.acr || {}; r.acr[w] = { m: m || '', t: t.id }; }); tmRefresh(); }, { ph: '「' + w + '」 뜻' }); }, 0); }, { ph: '두문자(말)' }); };
+  addSb.onclick = ev => { ev.stopPropagation(); tmEdit(addSb, '', v => { if (!v) return; tmEditRec(r => { r['subj-'] = (r['subj-'] || []).filter(x => x !== v); if ((r['subj+'] || []).indexOf(v) < 0) r['subj+'] = (r['subj+'] || []).concat([v]); }); tmRefresh(); }, { ph: '주체 낱말' }); };
+  ad.appendChild(addJo); ad.appendChild(document.createTextNode(' · ')); ad.appendChild(addAc); ad.appendChild(document.createTextNode(' · ')); ad.appendChild(addSb);
+  wrap.appendChild(ad);
+  body.appendChild(wrap);
+  tmWire(wrap, tmAcr());
+}
+/* ── A-4 조문 「테마 N」 → 연결 창(연결 테마 줄 · 손 연결만 끝 ✕ · 찾기 칸 → 결과 줄 끝 ＋) ── */
+function tmOfWin(law, k, ev){
+  if (!tmHas()) return;
+  const key = 'themeof|' + law + '|' + k; if (popToggle(key)) return;
+  const body = popShell('theme', k + ' · 테마 ' + tmOf(law, k).length, key); body.parentNode.classList.add('tmofw'); showPop(ev); popSizable(body, 'theme');
+  tmOfBody(body.parentNode, law, k);
+}
+function tmOfBody(p, law, k){
+  const body = p.querySelector('.pb'); if (!body) return;
+  const keepQ = (body.querySelector('.thsrch input') || {}).value || '';
+  const L = tmOf(law, k), pt = p.querySelector('.pt'); if (pt) pt.textContent = k + ' · 테마 ' + L.length;
+  body.innerHTML = '';
+  const list = el('div', 'tmof');
+  L.forEach(x => list.appendChild(tmRowEl(x.t, x.link ? { x: () => { tmEditRec(r => { r.link = r.link || {}; const a = (r.link[law + ':' + k] || []).filter(id => id !== x.t.id); if (a.length) r.link[law + ':' + k] = a; else delete r.link[law + ':' + k]; }); tmRefresh(); } } : {})));
+  if (!L.length) list.appendChild(el('div', 'cdim', '이 조를 적은 테마가 없다'));
+  body.appendChild(list);
+  const sr = el('div', 'thsrch'), inp = el('input'), go = el('button', 'tmsgo', '🔍');
+  inp.type = 'text'; inp.placeholder = '테마 찾기 — 이름·글(두 글자부터)'; inp.value = keepQ; go.type = 'button';
+  sr.appendChild(inp); sr.appendChild(go); body.appendChild(sr);
+  const res = el('div', 'tmres'); body.appendChild(res);
+  const run = () => { res.innerHTML = ''; const q = String(inp.value || '').trim(); if (q.length < 2) return;
+    const have = new Set(L.map(x => x.t.id));
+    const hits = tmSearch(q).filter(h => !have.has(h.t.id));
+    if (!hits.length){ res.appendChild(el('div', 'cdim', '「' + q + '」 — 이을 테마 없음')); return; }
+    hits.forEach(h => res.appendChild(tmRowEl(h.t, { plus: () => { tmEditRec(r => { r.link = r.link || {}; const a = r.link[law + ':' + k] || []; if (a.indexOf(h.t.id) < 0) r.link[law + ':' + k] = a.concat([h.t.id]);
+      if (law === TM_LAW){ const o = r[h.t.id]; if (o && o['jo-']) o['jo-'] = o['jo-'].filter(x => tmJoKey(x) !== k); } }); tmRefresh(); } }))); };
+  go.onclick = ev => { ev.stopPropagation(); run(); };
+  inp.onkeydown = ev => { ev.stopPropagation(); if (ev.key === 'Enter'){ ev.preventDefault(); run(); } };
+  if (keepQ) run();
+}
+/* ── A-6 검색 — 테마 이름 · 글 · 두문자 뜻 ── */
+function tmSearch(q){
+  q = String(q || '').trim(); if (q.length < 2) return [];
+  const A = tmAcr(), out = [];
+  tmModel().forEach(t => {
+    const nm = String(t.n || ''), tx = tmText(t);
+    const ms = tmThAcr(t).map(x => x.w + ' ' + (A[x.w] || {}).m).join('\n');
+    let x = null;
+    if (nm.indexOf(q) >= 0) x = '{' + nm + '}';
+    else { const src = tx.indexOf(q) >= 0 ? tx : (ms.indexOf(q) >= 0 ? ms : null); if (src){ const i = src.indexOf(q); x = src.slice(Math.max(0, i - 16), i + q.length + 22).replace(/\s+/g, ' '); } }
+    if (x != null) out.push({ t: t, x: x }); });
+  return out;
+}
+/* ── A-5 고치기 한 방식 — 길게 누르기(450ms · 본문 글줄과 같은 판정 · 합성 touch 도 됨) → 그 자리 입력 칸 + ✓ 하나 · ✓ = 저장 · 비우고 ✓ = 지움 · 바깥 = 취소 · 칸은 하나만
+   칸은 **손을 뗄 때** 연다 — 누르는 동안 열면 손 뗌이 새 칸 위 톡(합성 mousedown)이 되어 입력 칸 포커스가 날아간다(physphone 9/30 실측) · 아이패드 자판도 손 뗌 안에서 뜬다 */
+let TMED = null;
+function tmEdit(host, cur, save, o){
+  o = o || {};
+  if (TMED) TMED.done(false);
+  const svgMode = !!(host.namespaceURI && host.namespaceURI.indexOf('svg') >= 0);
+  const box = el('span', 'tmed'), inp = el('input', 'thed'), ok = el('button', 'tmok', '✓');
+  inp.type = 'text'; inp.value = cur || ''; inp.placeholder = o.ph || ''; inp.setAttribute('enterkeyhint', 'done'); ok.type = 'button'; ok.title = '저장(비우고 누르면 지움)';
+  box.appendChild(inp); box.appendChild(ok);
+  let keep = null, anchor = null;
+  if (svgMode){ anchor = host.closest('.thfig') || host; box.classList.add('blk'); anchor.after(box); }
+  else { keep = [...host.childNodes]; host.classList.add('tmon'); host.textContent = ''; host.appendChild(box); }
+  let open = true;
+  const out = e => { if (!box.contains(e.target)) done(false); };
+  const done = commit => { if (!open) return; open = false; if (TMED && TMED.box === box) TMED = null; document.removeEventListener('pointerdown', out, true);
+    const v = String(inp.value || '').trim(); box.remove();
+    if (!svgMode){ host.classList.remove('tmon'); keep.forEach(n => host.appendChild(n)); }
+    if (commit) save(v); };
+  TMED = { box: box, done: done };
+  const stop = e => e.stopPropagation();
+  ['click', 'pointerdown', 'mousedown', 'touchstart', 'dblclick'].forEach(n => box.addEventListener(n, stop));
+  inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter'){ e.preventDefault(); done(true); } else if (e.key === 'Escape'){ e.preventDefault(); done(false); } });
+  ok.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); done(true); });
+  setTimeout(() => { if (open) document.addEventListener('pointerdown', out, true); }, 0);
+  inp.focus(); try { inp.select(); } catch (_) {}
+}
+/* 길게 누르기 판정(문서 한 곳) — [data-tmed] 대상 · 450ms · 8px 넘게 움직이면 취소 · 뗄 때 연다 · 그 뒤 click 한 번은 먹는다 */
+const TMLP = (() => {
+  let lp = null, lpT = -1e9;
+  const eat = () => performance.now() - lpT < 700;
+  const drop = L => { clearTimeout(L.tm); L.el.classList.remove('tmlp'); };
+  document.addEventListener('pointerdown', e => { const t = e.target && e.target.closest && e.target.closest('[data-tmed]'); if (!t || t.closest('.tmed')) return;
+    if (lp) drop(lp); lp = { el: t, x: e.clientX, y: e.clientY, long: false };
+    lp.tm = setTimeout(() => { if (!lp) return; lp.long = true; lp.el.classList.add('tmlp'); }, 450); }, true);
+  document.addEventListener('pointermove', e => { if (lp && Math.hypot(e.clientX - lp.x, e.clientY - lp.y) > 8){ drop(lp); lp = null; } }, true);
+  const up = e => { if (!lp) return; const L = lp; lp = null; drop(L); if (!L.long) return; lpT = performance.now(); if (e.type === 'pointerup') tmLong(L.el); };
+  document.addEventListener('pointerup', up, true); document.addEventListener('pointercancel', up, true);
+  document.addEventListener('touchend', e => { if (performance.now() - lpT < 120 && e.cancelable) e.preventDefault(); }, { capture: true, passive: false });
+  document.addEventListener('click', e => { if (performance.now() - lpT < 700 && e.target && e.target.closest && !e.target.closest('.tmed') && e.target.closest('[data-tmed],.tmr,.throw2,.thfig')){ lpT = -1e9; e.stopPropagation(); e.preventDefault(); } }, true);   /* 고치기 칸(✓ · 입력) 안 누름은 안 먹는다 */
+  document.addEventListener('contextmenu', e => { if (e.target && e.target.closest && e.target.closest('[data-tmed],.tmed')) e.preventDefault(); }, true);
+  return { eat: () => { const r = eat(); if (r) lpT = -1e9; return r; } };
+})();
+/* 대상마다 무엇을 고치나 */
+function tmLong(t){
+  if (!t.isConnected) return;
+  const kind = t.dataset.tmed || t.getAttribute('data-tmed');
+  const row = t.closest('.tmr'), pop = t.closest('.pop'), pk = (pop && pop._pk) || '';
+  const tid = row ? row.dataset.tm : (pk.indexOf('theme|') === 0 ? pk.slice(6) : (pk.indexOf('themelist|') === 0 ? pk.slice(10) : ''));
+  const th = tid ? tmGet(tid) : null;
+  if (kind === 'name' && th){ tmEdit(row || t, th.n, v => { tmEditRec(r => { const o = r[th.id] = r[th.id] || {}; if (!v){ o.gone = 1; } else { o.n = v; delete o.gone; } }); tmRefresh(); }, { ph: '테마 이름' }); return; }
+  if ((kind === 'line' || kind === 'svgline') && th){
+    const key = t.dataset.key || t.getAttribute('data-key'), cur = t.textContent || '';
+    tmEdit(t, cur, v => { tmEditRec(r => { const o = r[th.id] = r[th.id] || {}; o.l = o.l || {}; o.l[key] = v; }); tmRefresh(); }, { ph: '줄 글(비우면 지움)' }); return; }
+  if (kind === 'acr' || kind === 'acrm'){
+    const w = t.dataset.w, a = tmAcr()[w] || { m: '' };
+    tmEdit(t, a.m || '', v => { tmEditRec(r => { r.acr = r.acr || {}; const o = r.acr[w] = Object.assign({}, r.acr[w] || {}); o.m = v; delete o.gone; }); tmRefresh(); }, { ph: '「' + w + '」 뜻' }); return; }
+  if (kind === 'acrw'){
+    const w = t.dataset.w, a = tmAcr()[w] || { m: '', jo: [] };
+    tmEdit(t, w, v => { tmEditRec(r => { r.acr = r.acr || {}; if (v === w) return; r.acr[w] = { gone: 1 }; if (v) r.acr[v] = { m: a.m || '', jo: (a.jo || []).map(tmJoShort), t: a.t || tid || undefined }; }); tmRefresh(); }, { ph: '두문자(비우면 지움)' }); return; }
+  if (kind === 'subj'){
+    const w = t.dataset.w;
+    tmEdit(t, w, v => { tmEditRec(r => { if (v === w) return; r['subj+'] = (r['subj+'] || []).filter(x => x !== w); if ((r['subj-'] || []).indexOf(w) < 0) r['subj-'] = (r['subj-'] || []).concat([w]);
+      if (v){ r['subj-'] = r['subj-'].filter(x => x !== v); if ((r['subj+'] || []).indexOf(v) < 0) r['subj+'] = (r['subj+'] || []).concat([v]); } }); tmRefresh(); }, { ph: '주체 낱말(비우면 목록에서 뺌)' }); return; }
+  if (kind === 'jo' && th){
+    const lk = t.dataset.lk, [law, k] = tmLawKey(lk);
+    tmEdit(t.closest('.throw2') || t, law === TM_LAW ? k : lk, v => { tmEditRec(r => { const o = r[th.id] = r[th.id] || {};
+      const unlink = () => { if (r.link && r.link[lk]){ r.link[lk] = r.link[lk].filter(id => id !== th.id); if (!r.link[lk].length) delete r.link[lk]; }
+        if (law === TM_LAW){ o['jo+'] = (o['jo+'] || []).filter(x => tmJoKey(x) !== k); if (!(o['jo-'] || []).some(x => tmJoKey(x) === k)) o['jo-'] = (o['jo-'] || []).concat([tmJoShort(k)]); } };
+      if (!v){ unlink(); return; }
+      const nk = tmJoKey(v); if (!nk || (law === TM_LAW && nk === k)) return;
+      unlink(); o['jo-'] = (o['jo-'] || []).filter(x => tmJoKey(x) !== nk); if (!(o['jo+'] || []).some(x => tmJoKey(x) === nk)) o['jo+'] = (o['jo+'] || []).concat([tmJoShort(nk)]); }); tmRefresh(); }, { ph: '조 번호(비우면 연결 풂)' }); return; }
+}
+TM.p = tmLoad().then(() => tmRerender()).catch(() => { TM.st = 'none'; });
+try { if (typeof SK_ICON === 'object' && SK_ICON) SK_ICON.thm = '🧩'; } catch (e) {}   /* A-6 검색 결과 줄 아이콘 칸(다른 갈래와 같은 자리) */
+/* ── CSS — 테마 줄·창 · A-7 팝업 틀(조판기 전부 = 민법 oxwin 값 · 종류별 색 걷음 · 폭·크기 무변) ── */
+(function(){ try{ const s = document.createElement('style'); s.id = 'jo-theme-css'; s.textContent = [
+  /* A-1 서랍 — 테마 줄 = 조 줄(.r) 꼴 · 「두N」 갈색 · 「§N」 회색 · 글자만(테두리 0) · 거름 점 = 조 줄 점과 같은 크기 · 빈 = 회색 테두리 흰 바탕 */
+  '.tree .r.tmr .jno{white-space:nowrap}',
+  '.tmr em.jcol3 .tmd2{font-size:11px;color:#b45309}', '.tmr em.jcol3 .tms{font-size:11px;color:#6b7280}', '.tmr em.jcol3 .tmds{cursor:pointer}',
+  '.tree .r.tmaddr{cursor:pointer}', '.tree .r.tmaddr .jtt,.tmadd .jtt{color:#9ca3af;font-size:11.5px;cursor:pointer}',
+  '.jtbar .bkmk.tmdot{align-self:center;width:12px;height:12px;border-radius:50%;border:1.5px solid #9ca3af;background:#fff;box-sizing:border-box;cursor:pointer;flex:none}',
+  '.jtbar .bkmk.tmdot.on{border-width:1.5px}',
+  '.tmr .tmx{margin-left:6px;flex:none;border:0;background:none;color:#9ca3af;font-size:12px;cursor:pointer;padding:0 2px}', '.tmr .tmx:hover{color:#dc2626}',
+  '.tmr .tmplus{margin-left:6px;flex:none;border:0;background:none;color:#2563eb;font-size:14px;font-weight:800;cursor:pointer;padding:0 2px}',
+  '.pop .tmof .r.tmr,.pop .tmres .r.tmr{padding:5px 4px;border-radius:6px;display:flex;justify-content:space-between;gap:6px;align-items:center;cursor:pointer}',
+  '.pop .tmof .r.tmr:hover,.pop .tmres .r.tmr:hover{background:#efece4}',
+  '.pop .tmof .r.tmr span.nm,.pop .tmres .r.tmr span.nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+  '.pop .tmof .r.tmr em,.pop .tmres .r.tmr em{font-style:normal;color:#a5a19a;font-size:11px;align-items:center;flex-shrink:0}',
+  '.pop .tmof .r.tmr em.jcol3,.pop .tmres .r.tmr em.jcol3{display:inline-grid;grid-template-columns:30px 44px;column-gap:4px;justify-items:start;margin-left:auto;flex:none}',
+  '.pop .tmof .r.tmr em.jcol3.wide,.pop .tmres .r.tmr em.jcol3.wide{grid-template-columns:44px 44px}',
+  '.tmr em.jcol3 .tmds{display:inline-flex;gap:3px;white-space:nowrap;justify-self:stretch}',   /* 칸(44px) 가득 — 줄마다 누름 둘레 가로 자리가 같다(글자 폭 따라 흔들리면 이웃 줄 쪽이 더 가까운 점이 생긴다) */
+  '.thsrch{display:flex;gap:6px;align-items:center;margin:10px 0 4px}', '.thsrch input{flex:1;min-width:0;height:30px;box-sizing:border-box;font:inherit;font-size:12.5px;padding:3px 8px;border:1px solid #cbd5e1;border-radius:6px}',
+  '.thsrch .tmsgo{height:30px;min-width:36px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer}',
+  /* A-2 테마 창 글 — 글자색·줄·들여쓰기 그대로 · 주체 = 점선 밑줄(바탕 없음) · 두문자 = 굵게 · 조 인용 = 조문 팝업 링크 */
+  '.pop .tmbody .thl{white-space:pre-wrap;font-size:12.5px;line-height:1.55;color:#111827}',
+  '.thl .thsb,.throw2 .thsb{text-decoration:underline dotted currentColor;text-underline-offset:2px;background:none}',
+  '.thl .thac,.throw2 .thac{font-weight:800;cursor:pointer}',
+  '.thacm{font-size:11.5px;color:#374151;margin:1px 0 3px 1.2em;line-height:1.5}', '.thacm.none{color:#9ca3af}',
+  '.thfig{margin:6px 0;cursor:zoom-in}', '.thfig svg{display:block;max-width:100%;height:auto}', '.thfig.big{cursor:zoom-out}', '.thfig.big svg{width:100%}',
+  '.thfig svg .wmlk{fill:var(--exc);cursor:pointer;text-decoration:underline}', '.thfig svg .thsb{text-decoration:underline dotted}', '.thfig svg .thac{font-weight:800}',
+  '.thsrc{margin-top:8px;font-size:11px;color:#9ca3af}', '.tmadd{margin-top:6px}',
+  /* A-3 목록 창 줄 */
+  '.throw2{display:flex;align-items:center;gap:8px;min-height:36px;padding:2px 2px;border-bottom:1px solid #f1f5f9;cursor:pointer}',
+  '.throw2 .tmjs{color:#6b7280;font-size:11.5px;flex:1;min-width:0}', '.throw2 .tmjn{color:#1d4ed8;font-weight:800;flex:none}',
+  '.throw2 .tmjt{color:#374151;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}', '.throw2 .tmar{display:inline-flex;gap:6px;flex:none;margin-left:auto}',
+  /* A-4 조문 「테마 N」 — 글자 #a16207 · 숫자 굵게 · 알약 없음(모드 줄 글자 꼴) · 0 = 회색 */
+  '.jomt .plgb.jomd.tmjo .n{font-weight:800}',
+  /* A-5 고치기 칸 */
+  '.tmed{display:inline-flex;align-items:center;gap:4px;width:100%;max-width:100%;vertical-align:middle}', '.tmed.blk{display:flex;margin:4px 0}',
+  '.tmed .thed{flex:1;min-width:0;width:100%;height:30px;box-sizing:border-box;font:inherit;font-size:13px;font-weight:500;padding:3px 7px;border:1.5px solid #2563eb;border-radius:6px;background:#fff;color:#111827}',
+  '.tmed .tmok{flex:none;width:36px;height:36px;border:0;border-radius:8px;background:#2563eb;color:#fff;font-size:16px;font-weight:800;cursor:pointer;padding:0}',
+  '.tmon{display:block}', '.tmlp{background:#fef3c7;border-radius:4px}',
+  '[data-tmed]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}',
+  '@media (pointer:coarse){.tree .r.tmr,.tree .r.tmaddr{min-height:36px;box-sizing:border-box}.pop .tmof .r.tmr,.pop .tmres .r.tmr{min-height:36px}.tmadd .jtt{display:inline-block;padding:9px 0}',
+  '  .jtbar .bkmk.tmdot{position:relative}.jtbar .bkmk.tmdot::before{content:"";position:absolute;left:50%;top:50%;width:36px;height:36px;transform:translate(-50%,-50%)}',
+  '  .jtbar .bkmk.tmdot{margin:0 12px}',   /* 둘레 36 이 이웃(전체 N ▾ · 접기1) 둘레와 안 겹치게 */
+  '  .tmr em.jcol3 .tmds{position:relative}.tmr em.jcol3 .tmds::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:36px;transform:translate(-50%,-50%)}',
+  '  .tmadd .jtt{display:inline-block;padding:10px 0;min-width:36px;text-align:center}', '  .throw2 .thac{display:inline-flex;align-items:center;min-height:36px;padding:0 4px}',
+  '  .thsrch .tmsgo{height:36px;min-height:36px}', '  .cv-bsres .cv-bshd .cv-bsx{min-width:36px;min-height:36px}', '  .cv-bsres .cv-bsone{min-height:36px;display:flex;align-items:center}',
+  '  .jtbar .uzstep.jstep.tmtg{margin:6px 0}',   /* 「테마 N」 이 서랍 머리 둘째 줄로 내려갈 때(폰·아이패드 서랍 폭 211) 둘레 36 이 윗줄 칩·아랫줄 장 머리(제 사각형을 지킨다 · z 3)에 안 닿게 위아래 6px(5px 은 칩 밑과 1px 안쪽이 겹쳤다) */
+  '  .tmr .tmx,.tmr .tmplus{min-width:36px;min-height:36px}}',
+  /* A-7 팝업 틀 — 조판기 팝업 전부 = 민법 oxwin(흰 바탕 · #cbd5e1 · 둥글기 12 · 그림자 · 머리 #f8fafc 검정 굵은 제목 · 회색 테두리 단추) · 종류별 색 걷음 · 폭·크기(k-c2uw · k-ncbook · k-claude · sized) 무변 */
+  '.pop{background:#fff;border:1px solid #cbd5e1;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.28)}',
+  '.pop.k-q,.pop.k-fn,.pop.k-cell{border-color:#cbd5e1}',
+  '.pop .ph,.pop.k-fn .ph,.pop.k-cell .ph{background:#f8fafc;color:#111827;padding:7px 10px;border-bottom:1px solid #e5e7eb}',
+  '.pop .ph .pt{font-size:13px;font-weight:800;color:#111827}',
+  '.pop .ph>button{font-size:12px;font-weight:700;color:#6b7280;border:1px solid #d1d5db;border-radius:6px;padding:2px 8px;background:#fff;line-height:1.5}',
+  '.pop .ph>button.pall,.pop.k-cell .ph>button.pall,.pop.k-fn .ph>button.pall{font-size:12px;font-weight:700;color:#6b7280;border:1px solid #d1d5db;border-radius:6px;padding:2px 8px;background:#fff;line-height:1.5}',
+  '.pop .prsz{border-radius:0 0 11px 0}',
+  '.pop .memoin{background:#fff;border:1px solid #cbd5e1}',
+  '.pop .memobtn .tool.on{background:#111827;border-color:#111827;color:#fff}',
+  '.pop .memobtn .tool:not(.on){background:#fff;border:1px solid #d1d5db;color:#6b7280}',
+  /* 머리 「이동 ↗」 — 글자만(테두리 0 · 파랑 #1d4ed8 · 600) */
+  '.pop.k-theme{width:620px}', '.pop.k-theme.tmofw{width:440px}',
+  /* A-8 8판 교재 창 검색 — 머리 안 둘째 줄 · 목록 폰 150 · PC 190 굴림 · 노란 상자(누른 곳 주황 테 · 누름 없음 · z 2) */
+  '.cv-booknav .cv-bs{flex:1 0 100%;display:flex;gap:6px;align-items:center;margin-top:2px}',
+  '.cv-booknav .cv-bs input{flex:0 1 260px;min-width:0;height:28px;box-sizing:border-box;font:inherit;font-size:12px;padding:2px 8px;border:1px solid #cbd5e1;border-radius:6px}',
+  '.cv-booknav .cv-bs .cv-bsgo{min-width:36px;min-height:36px;padding:0 6px;font-size:13px}',
+  '.cv-booknav .cv-bsres{flex:1 0 100%;font-size:12px;color:#374151}', '.cv-booknav .cv-bsres[hidden]{display:none}',
+  '.cv-bsres .cv-bshd{display:flex;align-items:center;gap:6px;padding:2px 0}', '.cv-bsres .cv-bshd .cv-bsx{margin-left:auto;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#6b7280;font-size:11.5px;padding:1px 7px;cursor:pointer}',
+  '.cv-bsres .cv-bslist{max-height:190px;overflow:auto;border-top:1px solid #eef0f3}', '@media (max-width:480px){.cv-bsres .cv-bslist{max-height:150px}}',
+  '.cv-bsres .cv-bspg{font-size:11px;font-weight:700;color:#6b7280;padding:4px 0 1px}',
+  '.cv-bsres .cv-bssn{padding:4px 6px;border-radius:5px;cursor:pointer;line-height:1.45;word-break:break-all}', '.cv-bsres .cv-bssn:hover{background:#f3f4f6}', '.cv-bsres .cv-bssn.on{background:#fef3c7}',
+  '.cv-bsres .cv-bssn mark{background:#fde68a;color:inherit;padding:0 1px;border-radius:2px}',
+  '.cv-bsres .cv-bsone{padding:4px 6px;color:#1d4ed8;font-weight:600;cursor:pointer}', '@media (pointer:coarse){.cv-bsres .cv-bssn{padding:10px 6px}}',   /* 터치 = 곳 줄 누름 높이 36 — 위 칸(4px 6px)보다 뒤에 둔다 */
+  '.cv-bshit{position:absolute;background:rgba(250,204,21,.38);border-radius:2px;pointer-events:none;z-index:2}', '.cv-bshit.cur{outline:2px solid #f97316}',
+  '.pop .ph .ptgo .plgb.tmgo,.pop .ph .ptgo .tmgo{margin-left:0;border:0;background:none;padding:0 2px;font-size:11.5px;font-weight:600;color:#1d4ed8;cursor:pointer;text-decoration:none}'
 ].join('\n'); document.head.appendChild(s); }catch(e){} })();
 </script>
 </body>
