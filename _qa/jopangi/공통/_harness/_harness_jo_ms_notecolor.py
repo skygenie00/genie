@@ -14,9 +14,10 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+_NR = _roots.need_n('⚙ note_color.py · 민소 교재 PDF')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
-CJH = r'N:\개인\claude\jopangi\공통\_harness'
+CJH = os.path.dirname(os.path.abspath(__file__))   # env_lanes_fix(9/29) — 같은 폴더(N: · genie _qa 같은 모양 · 옛: N: 고정 자리)
 sys.path.insert(0, CJH)
 import _harness_canvas_jari as CJ          # noqa: E402 — SEED(교재·기록 fetch 돌림) · VENDOR · route_filter
 from playwright.sync_api import sync_playwright   # noqa: E402
@@ -34,10 +35,10 @@ JOD = os.path.join(GENIE, 'jo')
 DATA = os.path.join(JOD, 'data')
 NEWF = ARG('--new', os.path.join(JOD, 'index.html'))
 BASEF = ARG('--base', '')
-NCPY = ARG('--nc', r'N:\개인\claude\jopangi\note_color.py')
+NCPY = ARG('--nc', os.path.join(_NR, 'jopangi', 'note_color.py'))
 WORK = os.path.join(tempfile.gettempdir(), 'h_notecolor')
 MB = _roots.mbpdf()
-PDFD = r'N:\개인\claude\jopangi\민소\_pdf'
+PDFD = os.path.join(_NR, 'jopangi', '민소', '_pdf')
 TESTS = io.open(os.path.join(HERE, '_harness_jo_ms_notecolor_tests.js'), encoding='utf-8').read()
 PHONE_UA = ('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1')
 READY = "!!window.__HN&&!!window.__HJ&&typeof render==='function'&&typeof popNote==='function'"

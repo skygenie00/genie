@@ -13,6 +13,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+_NR = _roots.need_n('민법 교재 낱말 굽기 스크립트(minbeop/script/_book_words_build.py)')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import io, json, os, re, sys, time, gzip, glob, shutil, hashlib, tempfile, subprocess, threading, socketserver, http.server, urllib.parse, collections
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -32,7 +33,7 @@ OUTF = ARG('--res', os.path.join(HERE, '_harness_jo_book8_result.txt'))
 MBP = ARG('--mbpdf', _roots.mbpdf())
 W8 = os.path.join(MBP, 'words', 'patent_hr8')
 PDF8 = os.path.join(JOP, '특상디', '_pdf', '특허법 해례 기출 객관식 제8판.pdf')
-BAKE = r'N:\개인\claude\minbeop\script\_book_words_build.py'
+BAKE = os.path.join(_NR, 'minbeop', 'script', '_book_words_build.py')
 sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', 'HEAD'] + (['--exam', _EXAM] if _EXAM else [])
 sys.path.insert(0, HERE)
 sys.path.insert(0, JOP)

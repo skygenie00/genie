@@ -28,7 +28,7 @@ OUT = sys.argv[sys.argv.index('--out') + 1] if '--out' in sys.argv else HERE
 ONLY = sys.argv[sys.argv.index('--only') + 1] if '--only' in sys.argv else ''
 SHOTS = os.path.join(OUT, '_canvas_jari_shots')
 WORK = os.path.join(tempfile.gettempdir(), 'h_canvas_jari')
-J = r'N:\개인\claude\jopangi'
+J = _roots.n('jopangi')   # env_lanes_fix(9/29) — None = N: 없음(클라우드) · 민소 교재 PDF · canvas 재료는 N: 에만(그 길은 404 · 이 하네스 main 은 need_n)
 REL = 'jo/index.html'
 JOD = os.path.join(GENIE, 'jo')
 DATA = os.path.join(JOD, 'data', 'omr', '민소')
@@ -107,7 +107,7 @@ def serve(tag, src, datamode='new'):
             if p.startswith('/__book/words/'):
                 return os.path.join(MBPDF, p[len('/__book/words/'):].replace('/', os.sep))
             if p.startswith('/__book/pdf/'):
-                return os.path.join(J, '민소', '_pdf', p[len('/__book/pdf/'):])   # 9/23 — 민소 교재 PDF 는 민소\_pdf\
+                return os.path.join(J, '민소', '_pdf', p[len('/__book/pdf/'):]) if J else os.path.join(out, '__N_없음__')   # 9/23 — 민소 교재 PDF 는 민소\_pdf\ · env_lanes_fix — N: 없으면 404
             if p.endswith('/canvas_match.alt.json'):
                 return os.path.join(WORK, 'canvas_match.alt.json')
             if p.endswith('/canvas_cand.alt.json'):
@@ -703,6 +703,7 @@ GR = None
 
 
 def main():
+    _roots.need_n('민소 교재 PDF · canvas 재료(민소/canvas)')   # env_lanes_fix(9/29) — 이 하네스 자신은 N: 재료가 있어야 돈다(불러 쓰는 하네스는 J=None 으로 그 길만 404)
     global GR
     os.makedirs(WORK, exist_ok=True)
     if not os.path.isfile(os.path.join(VENDOR, 'pdf.min.js')):

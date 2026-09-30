@@ -15,9 +15,10 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+_NR = _roots.need_n('⚙ jopangi 모듈 · timetable 분석 md')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import argparse, html as HT, json, os, re, subprocess, sys, shutil, hashlib, io
 sys.stdout.reconfigure(encoding='utf-8')
-sys.path.insert(0, r'N:\개인\claude\jopangi'); sys.path.insert(0, r'N:\개인\claude\timetable')
+sys.path.insert(0, os.path.join(_NR, 'jopangi')); sys.path.insert(0, os.path.join(_NR, 'timetable'))
 import grade_build as GB
 import analysis_sync as AS
 
@@ -61,7 +62,7 @@ T('D-1(9/17) index 최상위 grades[] 1건 — no 63 · cha 2 · subj 특허 · 
   and g0.get('md5') == hashlib.md5(open(os.path.join(ana, '63-2', '채점_특허.json'), 'rb').read()).hexdigest()[:8]
   and sorted(items) == ['63-2-꼬까', '63-2-햄찌'] and all(x['files'] == [] for x in items.values()), [gents0, items])
 os.makedirs(os.path.join(ana, '63-2'), exist_ok=True)
-old_md = io.open(r'N:\개인\claude\timetable\_분석_2차_63회_특허_햄찌.md', encoding='utf-8').read().replace('\r\n', '\n')
+old_md = io.open(os.path.join(_NR, 'timetable', '_분석_2차_63회_특허_햄찌.md'), encoding='utf-8').read().replace('\r\n', '\n')
 io.open(os.path.join(ana, '63-2', '특허_햄찌.md'), 'w', encoding='utf-8', newline='\n').write(old_md)
 vault_before = open(dst, 'rb').read()
 rep1 = AS.pred_sync(items, made, False, ana=ana, vault=vault)

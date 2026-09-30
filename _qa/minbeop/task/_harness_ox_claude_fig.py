@@ -15,6 +15,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+_NR = _roots.need_n('민법 task 재료(claude.json · M002.html)')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 from playwright.sync_api import sync_playwright
@@ -22,7 +23,7 @@ from playwright.sync_api import sync_playwright
 GENIE = _roots.genie()
 SPD = _roots.spd()
 HERE = os.path.dirname(os.path.abspath(__file__))
-TASKDIR = r'N:\개인\claude\minbeop\task'
+TASKDIR = os.path.join(_NR, 'minbeop', 'task')
 CLJSON = os.path.join(TASKDIR, 'claude.json')
 FIGSRC = os.path.join(TASKDIR, 'M002.html')
 WORK = os.path.join(tempfile.gettempdir(), 'h_claude_fig')

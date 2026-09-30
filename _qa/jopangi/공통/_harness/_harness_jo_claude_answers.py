@@ -26,7 +26,7 @@ from playwright.sync_api import sync_playwright
 GENIE = _roots.genie()
 SPD = _roots.spd()
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUTDIR = r'N:\개인\claude\jopangi'
+OUTDIR = _roots.n('jopangi')   # env_lanes_fix(9/29) — 옛 결과 자리(지금 안 씀) · N: 없으면 None
 WORK = os.path.join(tempfile.gettempdir(), 'h_jo_claude')
 REL = 'jo/index.html'
 JOD = os.path.join(GENIE, 'jo')

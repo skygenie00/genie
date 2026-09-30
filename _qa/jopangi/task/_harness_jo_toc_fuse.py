@@ -13,7 +13,7 @@ r"""_task_jo_toc_fuse §F 관문 — 데이터(원장 → jimun_7pan · mokcha_�
 import csv, hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 csv.field_size_limit(10 ** 9)
-CJH = r'N:\개인\claude\jopangi\공통\_harness'
+CJH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '공통', '_harness')   # env_lanes_fix(9/29) — 이 파일 자리 기준(N: · genie _qa 같은 모양 · 옛: N: 고정 자리)
 sys.path.insert(0, CJH)
 import _harness_canvas_jari as CJ          # noqa: E402 — SEED(기록 fetch 돌림 · 바깥 網 막음) · VENDOR · route_filter · NOISE
 from playwright.sync_api import sync_playwright   # noqa: E402

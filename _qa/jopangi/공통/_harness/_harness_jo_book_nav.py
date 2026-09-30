@@ -14,7 +14,7 @@
 """
 import hashlib, io, json, os, subprocess, sys, time
 sys.stdout.reconfigure(encoding='utf-8')
-CJH = r'N:\개인\claude\jopangi\공통\_harness'
+CJH = os.path.dirname(os.path.abspath(__file__))   # env_lanes_fix(9/29) — 같은 폴더(N: · genie _qa 같은 모양 · 옛: N: 고정 자리)
 sys.path.insert(0, CJH)
 import _harness_canvas_jari as CJ          # noqa: E402 — 틀(P · serve · ground · open_jari)
 from playwright.sync_api import sync_playwright   # noqa: E402

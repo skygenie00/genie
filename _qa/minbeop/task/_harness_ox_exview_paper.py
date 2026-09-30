@@ -16,6 +16,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+_NR = _roots.need_n('민법 OMR 마스터 엑셀 · minbeop/script')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse, urllib.request
 sys.stdout.reconfigure(encoding='utf-8')
 from playwright.sync_api import sync_playwright
@@ -23,8 +24,8 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 GENIE = _roots.genie()
 SPD = _roots.spd()
-MASTER = r'N:\개인\claude\minbeop\OXminbub_OMR_2026111111.xlsx'
-SCRIPT = r'N:\개인\claude\minbeop\script'
+MASTER = os.path.join(_NR, 'minbeop', 'OXminbub_OMR_2026111111.xlsx')
+SCRIPT = os.path.join(_NR, 'minbeop', 'script')
 WORK = os.path.join(tempfile.gettempdir(), 'h_exview')
 VENDOR0 = os.path.join(tempfile.gettempdir(), 'h_gichul', 'vendor')
 CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/'

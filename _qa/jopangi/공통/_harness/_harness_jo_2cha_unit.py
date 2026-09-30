@@ -15,6 +15,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+_NR = _roots.need_n('민소 2차 단원 매핑 json · ⚙ cha2_unit')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import copy, hashlib, http.server, importlib, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 from collections import Counter
 sys.stdout.reconfigure(encoding='utf-8')
@@ -26,7 +27,7 @@ OUT = sys.argv[sys.argv.index('--out') + 1] if '--out' in sys.argv else HERE
 ONLY = sys.argv[sys.argv.index('--only') + 1] if '--only' in sys.argv else ''
 SHOTS = os.path.join(OUT, '_2cha_unit_shots')
 WORK = os.path.join(tempfile.gettempdir(), 'h_jo_2cha_unit')
-J = r'N:\개인\claude\jopangi'
+J = os.path.join(_NR, 'jopangi')
 REL = 'jo/index.html'
 JOD = os.path.join(GENIE, 'jo')
 BASE_REV = 'd3dd927'

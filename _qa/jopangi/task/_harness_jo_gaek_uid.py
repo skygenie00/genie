@@ -15,10 +15,11 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+NR = _roots.n()   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) None — 쓰는 자리가 건너뛴다
 import csv, glob, hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse, collections
 sys.stdout.reconfigure(encoding='utf-8')
 csv.field_size_limit(10 ** 9)
-CJH = r'N:\개인\claude\jopangi\공통\_harness'
+CJH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '공통', '_harness')   # env_lanes_fix(9/29) — 이 파일 자리 기준(N: · genie _qa 같은 모양 · 옛: N: 고정 자리)
 sys.path.insert(0, CJH)
 import _harness_canvas_jari as CJ          # noqa: E402 — SEED · VENDOR · route_filter · NOISE
 from playwright.sync_api import sync_playwright   # noqa: E402
@@ -275,7 +276,7 @@ def data_gates():
                 for m in RX.findall(t):
                     if m in dead:
                         vc[os.path.relpath(os.path.join(root, f), vault).split(os.sep)[0]] += 1
-    for f in (glob.glob(r'N:\개인\claude\**\*.md', recursive=True) if vault != '' else []):
+    for f in (glob.glob(os.path.join(NR, '**', '*.md'), recursive=True) if vault != '' and NR else []):   # env_lanes_fix — N: 없으면(클라우드) 볼트 셈 건너뜀
         if '_지울것' in f or '_이전' in f:
             continue
         try:
@@ -284,7 +285,7 @@ def data_gates():
             continue
         for m in RX.findall(t):
             if m in dead:
-                nc[os.path.relpath(f, r'N:\개인\claude').split(os.sep)[0]] += 1
+                nc[os.path.relpath(f, NR).split(os.sep)[0]] += 1
     if vault != '':
         io.open(cache, 'w', encoding='utf-8').write(json.dumps({'sig': dsig, 't': time.time(), 'v': dict(vc), 'n': dict(nc)}, ensure_ascii=False))
         N('C8', u'볼트 노트 속 옛 uid(수만)', {'합': sum(vc.values()), '폴더': dict(vc.most_common(6))})

@@ -12,6 +12,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import _roots   # noqa: E402
+NR = _roots.need_n('N: 도구 · ⚙ jopangi · g_push.cmd · 원본 보관본')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 
 
 def ARG(k, d=None):
@@ -78,7 +79,7 @@ def summ(p):
 def b1():
     rows = json.load(open(CENSUS, encoding='utf-8'))
     files = sorted({r[0] for r in rows if os.path.splitext(r[0])[1].lower() in ('.py', '.cmd')})
-    now = fixed_lines(r'N:\개인\claude', files)
+    now = fixed_lines(NR, files)
     T('B-1', 'A-1-1 표의 파일 %d 에서 고정 자리 0(허용 = _roots.py · .cmd 의 if not defined *_ROOT set 줄)' % len(files), not now, dict(list(now.items())[:8]))
     before = fixed_lines(ORIG, files)
     T('B-1-헛', '헛잣대 — 착수 때(원본 보관본) 고정 자리 %d 파일 · %d 줄' % (len(before), sum(before.values())), bool(before), dict(list(before.items())[:3]))
@@ -106,7 +107,7 @@ def drop_wt(wt):
 
 
 def b2():
-    JP = os.path.join(r'N:\개인\claude', 'jopangi', 'task')
+    JP = os.path.join(NR, 'jopangi', 'task')
     F = os.path.join(G0, 'jo', 'data', 'jimun_7pan.json')
     raw = open(F, 'rb').read()
     A, B = 'ㄱ. ㄷ. ㅁ. (O)'.encode('utf-8'), 'ㄱ. ㄷ. ㅁ. (X)'.encode('utf-8')
@@ -141,7 +142,7 @@ def b3():
             q = os.path.join(dp, fn); rel = os.path.relpath(q, Q)
             if not fn.endswith(('.py', '.js')) or fn.lower().endswith(('.pdf', '.txt', '.png', '.jpg', '.json')):
                 bad.append(rel)
-            src = os.path.join(r'N:\개인\claude', rel)
+            src = os.path.join(NR, rel)
             if not os.path.isfile(src) or open(src, 'rb').read() != open(q, 'rb').read():
                 diff.append(rel)
     T('B-3', '_qa/ 사본 %d = N: 원본과 바이트 같음 · 스크립트(.py · .js) 말고 0 · .pdf · .txt · 그림 · 기록 0' % total, total > 0 and not bad and not diff, {'다름': diff[:5], '스크립트 아닌 것': bad[:5]})
@@ -158,7 +159,7 @@ def load_mod(path, name):
 
 
 def b4():
-    JOP = os.path.join(r'N:\개인\claude', 'jopangi')
+    JOP = os.path.join(NR, 'jopangi')
     wt = make_wt('el-b4')
     remote0 = git(G0, 'ls-remote', 'origin', 'refs/heads/main').stdout.split()[:1]
     log0 = git(G0, 'rev-parse', 'origin/main').stdout.strip()
@@ -213,7 +214,7 @@ def run_gpush(cmd_path, env):
 
 
 def b5():
-    GP = os.path.join(r'N:\개인\claude', 'g_push.cmd')
+    GP = os.path.join(NR, 'g_push.cmd')
     wt = make_wt('el-b5')
     try:
         git(wt, 'switch', '-c', 'worktree-el-b5')

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 r"""시험분석 md 동기화 (2026-09-05 · timetable/_task_tt_exam_pan2.md · §A 답 ④ 파일 규약)
     python analysis_sync.py [--dry]
-N:\개인\claude\timetable\_분석_*.md · _전략.md(채팅이 낸다 · 읽기만) → <SPD_ROOT>\exam\analysis\… 로 복사 + index.json 갱신(회차 · 사람 · 꼴 · 파일 · 강사 criteria 목록).
+<N_ROOT>\timetable\_분석_*.md · _전략.md(채팅이 낸다 · 읽기만) → <SPD_ROOT>\exam\analysis\… 로 복사 + index.json 갱신(회차 · 사람 · 꼴 · 파일 · 강사 criteria 목록).
 「md 를 떨구면 뜬다」 = 이 스크립트 한 번 + studyplandata push(사람이 mb_push 또는 Code 가 git).
 채점(9/16 · jopangi/_task_cha2_report.md §D) — genie jo/data/2cha_채점_<과목>.json(⚙ 산출)을 기출 회차별로 exam/analysis/<회>-2/채점_<과목>.json 에 복사 · 색인 = index 최상위 grades[](9/17 — items[].files[] 에 두면 새로고침 안 된 옛 tt 가 JSON 을 글 md 로 그린다) ·
 그 회차·과목·사람의 v2 레코드가 있으면 <과목>_<사람>.md 를 pred_md_from_grade() 로 덮어쓴다 · v2 가 없으면 md 그대로.
@@ -14,8 +14,9 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+_NR = _roots.need_n('timetable 분석 md(_분석_*.md)')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import os, re, sys, json, glob, hashlib, time
-N = r'N:\개인\claude\timetable'; SPD = _roots.spd(r'exam'); ANA = os.path.join(SPD, 'analysis')
+N = os.path.join(_NR, 'timetable'); SPD = _roots.spd(r'exam'); ANA = os.path.join(SPD, 'analysis')
 PEOPLE = ['꼬까', '햄찌']
 def rel(p): return p.replace('\\', '/')
 def parse_name(fn):

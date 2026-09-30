@@ -6,7 +6,7 @@
    _harness_jo_2cha_unit.py 의 서버·페이지 틀(P)을 그대로 빌려 쓴다(시드·網 막기 같음)."""
 import io, json, os, sys, importlib.util
 from collections import Counter
-HP = r'N:\개인\claude\jopangi\공통\_harness\_harness_jo_2cha_unit.py'
+HP = os.path.join(os.path.dirname(os.path.abspath(__file__)), '_harness_jo_2cha_unit.py')   # env_lanes_fix(9/29) — 같은 폴더(옛: N: 고정 자리)
 spec = importlib.util.spec_from_file_location('h2u', HP)
 h = importlib.util.module_from_spec(spec); spec.loader.exec_module(h)
 from playwright.sync_api import sync_playwright
