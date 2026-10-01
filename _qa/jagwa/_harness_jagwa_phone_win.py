@@ -134,11 +134,14 @@ def serve(app_text, subj, tag):
 
 
 class Pg:
-    def __init__(self, br, eng, app, subj, tag, phone):
+    def __init__(self, br, eng, app, subj, tag, phone, vp=None):
+        """vp(fix1 RF2) = 창 크기를 따로(PC 1440 · iPad 820) — 안 주면 종전(폰 390 · PC 1553) · touch = 폭 1100 이하면 손가락"""
         self.eng, self.phone = eng, phone
-        self.srv, port = serve(app, subj, tag + '_' + eng + ('_ph' if phone else '_pc'))
-        vp = {'width': 390, 'height': 844} if phone else {'width': 1553, 'height': 900}
-        self.ctx = br.new_context(viewport=vp, device_scale_factor=1, has_touch=True, is_mobile=bool(phone and eng == 'chromium'))
+        self.touch = phone if vp is None else vp['width'] <= 1100
+        self.srv, port = serve(app, subj, tag + '_' + eng + (('_%d' % vp['width']) if vp else ('_ph' if phone else '_pc')))
+        vp = vp or ({'width': 390, 'height': 844} if phone else {'width': 1553, 'height': 900})
+        self.vpw = vp
+        self.ctx = br.new_context(viewport=vp, device_scale_factor=1, has_touch=True, is_mobile=bool(self.touch and eng == 'chromium'))
         OKNET = ('http://127.0.0.1', 'https://cdnjs.cloudflare.com/', 'https://cdn.jsdelivr.net/', 'https://fonts.googleapis.com/', 'https://fonts.gstatic.com/')
 
         def _rt(rt):
@@ -172,7 +175,7 @@ class Pg:
         if not at or not at.get('on'):
             return False
         x, y = at['cx'], at['cy']
-        if not self.phone:
+        if not self.touch:
             self.pg.mouse.click(x, y)
         elif self.cdp:
             pt = {'x': x, 'y': y, 'radiusX': 22, 'radiusY': 22, 'force': 1, 'id': 1}
@@ -197,7 +200,7 @@ class Pg:
 
     def drag(self, x0, y0, x1, y1, n=12):
         """≡ 끌기 — 폰 Chromium = CDP 터치 · 그 밖 = 마우스"""
-        if self.cdp and self.phone:
+        if self.cdp and self.touch:
             def t(ty, x, y):
                 self.cdp.send('Input.dispatchTouchEvent', {'type': ty, 'touchPoints': ([] if ty == 'touchEnd' else [{'x': x, 'y': y, 'radiusX': 22, 'radiusY': 22, 'id': 1}])})
             t('touchStart', x0, y0)
@@ -224,11 +227,12 @@ class Pg:
             pass
 
 
-def both(br, eng, subj, phone, fn):
-    """NEW · BASE 한 벌씩"""
+def both(br, eng, subj, phone, fn, vp=None, whos=('NEW', 'BASE')):
+    """NEW · BASE 한 벌씩(vp · whos = fix1 RF2 — 창 크기 · 앱 고르기)"""
     out = {}
-    for who, app in (('NEW', APPS['NEW']), ('BASE', APPS['BASE'])):
-        q = Pg(br, eng, app, subj, who, phone)
+    for who in whos:
+        app = APPS[who]
+        q = Pg(br, eng, app, subj, who, phone, vp)
         try:
             out[who] = fn(q)
             out[who + '_err'] = q.errs + (q.ev("()=>__W.errs()") or [])
@@ -643,7 +647,320 @@ def rf(br, eng):
             T('RUN', '%s · RF %s 멈춤' % (eng, fn.__name__), False, repr(e)[:600])
 
 
-PARTS = [('1', g1), ('2', g2), ('3', g3), ('4', g4), ('7', g7), ('8', g8b), ('RF', rf)]
+# ── RF2  _task_jagwa_revfix0928_fix1 — 0928 검수 고침 여덟(칸마다 NEW · 「-헛」 = 바탕 HEAD(이 판 바로 앞 커밋)가 옛 결함을 보임) ──
+VP14 = {'width': 1440, 'height': 900}; VPIP = {'width': 820, 'height': 1180}; VPPH = {'width': 390, 'height': 844}
+PANEL = r"""(id)=>{const b=document.getElementById(id);const p=b&&(b.querySelector(':scope>.panel')||b);if(!p)return null;const r=p.getBoundingClientRect();
+  return {x:Math.round(r.left),y:Math.round(r.top),w:Math.round(r.width),h:Math.round(r.height),z:+(b.style.zIndex||getComputedStyle(b).zIndex)||0}}"""
+GRIPAT = r"""(id)=>{const b=document.getElementById(id);const g=b&&b.querySelector('.twgrip');if(!g)return null;const r=g.getBoundingClientRect();return {cx:r.left+r.width/2,cy:r.top+r.height/2}}"""
+
+
+def _resize(q, wid, w, h):
+    """창 오른쪽 아래 모서리(.twgrip)를 마우스로 끌어 w×h 로"""
+    p = q.ev(PANEL, wid); g = q.ev(GRIPAT, wid)
+    if not p or not g:
+        return None
+    q.pg.mouse.move(g['cx'], g['cy']); q.pg.mouse.down()
+    for i in range(1, 9):
+        q.pg.mouse.move(g['cx'] + (w - p['w']) * i / 8, g['cy'] + (h - p['h']) * i / 8); q.wait(16)
+    q.pg.mouse.up(); q.wait(300)
+    return q.ev(PANEL, wid)
+
+
+def _want(q, w, h):
+    vw, vh = q.vpw['width'], q.vpw['height']
+    return {'w': max(280, min(vw - 16, w)), 'h': max(200, min(vh - 16, h))}
+
+
+def rf2_1(br, eng):
+    """B1(검수 1) [공식] 목록 창 크기 기억 — 끌어 460×498 → 새로고침 → 다시 열기 = 그 크기(화면 안) · 기억 없을 때 PC 560×648 무변"""
+    for dn, vp in (('PC 1440', VP14), ('iPad 820', VPIP), ('폰 390', VPPH)):
+        def f(q):
+            out = {'처음': None}
+            q.ev("()=>{try{pwList('f')}catch(e){}}"); q.wait(500)
+            out['처음'] = q.ev(PANEL, 'pwl')
+            out['끈 뒤'] = _resize(q, 'pwl', 460, 498)
+            out['원함'] = _want(q, 460, 498)
+            _reboot(q); q.ev("()=>{try{pwList('f')}catch(e){}}"); q.wait(500)
+            out['새로고침 뒤'] = q.ev(PANEL, 'pwl')
+            return out
+        r = both(br, eng, 'phys', vp == VPPH, f, vp)
+        n, b = r['NEW'], r['BASE']
+        ok = bool(n['새로고침 뒤']) and abs(n['새로고침 뒤']['w'] - n['원함']['w']) <= 2 and abs(n['새로고침 뒤']['h'] - n['원함']['h']) <= 2
+        if dn == 'PC 1440':
+            ok = ok and n['처음'] and (n['처음']['w'], n['처음']['h']) == (560, 648)
+        T('RF2-B1', '%s %s [공식] 목록 창 끌어 460×498 → 새로고침 → 다시 열기 = %s(화면 안)%s' % (eng, dn, '%(w)d×%(h)d' % n['원함'], ' · 기억 없을 때 560×648' if dn == 'PC 1440' else ''), ok,
+          {k: n[k] for k in ('처음', '끈 뒤', '새로고침 뒤')})
+        T('RF2-B1-헛', '%s %s 헛잣대 바탕 — 새로고침 뒤 크기 기억 안 읽힘(첫 크기)' % (eng, dn), bool(b['새로고침 뒤']) and b['처음'] and (b['새로고침 뒤']['w'], b['새로고침 뒤']['h']) == (b['처음']['w'], b['처음']['h']),
+          {k: b[k] for k in ('처음', '새로고침 뒤')})
+
+
+def rf2_2(br, eng):
+    """B2(검수 2) shFloat 곁창(풀이 곁창 · 공식 창) 같은 잣대"""
+    OPEN = {'sol': "()=>{const r=DATA.find(x=>SOL[x[F.VLT]]);if(r)solSheet(r)}", 'type': "()=>{try{typeSheet(VNO)}catch(e){}}"}
+    for key, js in OPEN.items():
+        def f(q):
+            no = q.ev("()=>__W.noOf('PA0702')"); q.ev("n=>__W.openNo(n)", no); q.wait(500)
+            q.ev(js); q.wait(700)
+            out = {'처음': q.ev(PANEL, 'sh-' + key)}
+            out['끈 뒤'] = _resize(q, 'sh-' + key, 460, 498)
+            out['원함'] = _want(q, 460, 498)
+            _reboot(q); q.ev("n=>__W.openNo(n)", no); q.wait(500); q.ev(js); q.wait(700)
+            out['새로고침 뒤'] = q.ev(PANEL, 'sh-' + key)
+            return out
+        r = both(br, eng, 'phys', False, f, VP14)
+        n, b = r['NEW'], r['BASE']
+        ok = bool(n['새로고침 뒤']) and abs(n['새로고침 뒤']['w'] - n['원함']['w']) <= 2 and abs(n['새로고침 뒤']['h'] - n['원함']['h']) <= 2
+        T('RF2-B2', '%s PC 1440 곁창 %s 끌어 460×498 → 새로고침 → 다시 열기 = 460×498' % (eng, key), ok, {k: n[k] for k in ('처음', '끈 뒤', '새로고침 뒤')})
+        T('RF2-B2-헛', '%s 헛잣대 바탕 — 곁창 %s 크기 기억 안 읽힘(바탕 흠)' % (eng, key), bool(b['새로고침 뒤']) and (b['새로고침 뒤']['w'], b['새로고침 뒤']['h']) == (b['처음']['w'], b['처음']['h']),
+          {k: b[k] for k in ('처음', '새로고침 뒤')})
+
+
+def rf2_3(br, eng):
+    """B3(검수 5) PC 1440 · iPad 820 — 문제 창이 떠 있을 때 목록 창 첫 자리 = 오른쪽(자리 있으면 문제 창 옆 · 없으면 화면 오른쪽 끝) · 문제 창과 겹친 넓이 ≤ cedc251"""
+    OV = r"""()=>{const v=document.getElementById('view'),b=document.getElementById('pwl');const p=b&&b.querySelector('.panel');if(!v||!p)return null;
+      const a=v.getBoundingClientRect(),c=p.getBoundingClientRect(),w=Math.max(0,Math.min(a.right,c.right)-Math.max(a.left,c.left)),h=Math.max(0,Math.min(a.bottom,c.bottom)-Math.max(a.top,c.top));
+      return {view:[Math.round(a.left),Math.round(a.top),Math.round(a.width),Math.round(a.height)],list:[Math.round(c.left),Math.round(c.top),Math.round(c.width),Math.round(c.height)],over:Math.round(w*h),right:Math.round(innerWidth-c.right)}}"""
+    for dn, vp in (('PC 1440', VP14), ('iPad 820', VPIP)):
+        def f(q):
+            no = q.ev("()=>__W.noOf('PA0702')"); q.ev("n=>__W.openNo(n)", no); q.wait(600)
+            q.ev("()=>{try{pwList('f')}catch(e){}}"); q.wait(500)
+            return q.ev(OV)
+        r = both(br, eng, 'phys', False, f, vp, ('NEW', 'BASE', 'C0'))
+        n, b, c0 = r['NEW'], r['BASE'], r['C0']
+        okp = bool(n) and (n['right'] == 8 or n['list'][0] >= n['view'][0] + n['view'][2] + 7) and n['list'][1] == n['view'][1]
+        T('RF2-B3', '%s %s 목록 창 첫 자리 = 문제 창 오른쪽(자리 있으면) 또는 화면 오른쪽 끝(8) · 위 끝 = 문제 창 위 끝' % (eng, dn), okp, {'새': n})
+        ra = lambda x: round(x['over'] / (x['list'][2] * x['list'][3]), 3) if x else None
+        T('RF2-B3', '%s %s 겹친 넓이 %s ≤ cedc251 %s(글자 그대로) — 목록 창 넓이 비 새 %s · cedc251 %s(0928 A-2 로 창이 560×72%% · cedc251 = 600×62vh)' % (eng, dn, n and n['over'], c0 and c0['over'], ra(n), ra(c0)),
+          bool(n) and n['over'] <= (c0 or {}).get('over', -1), {'새': n, 'cedc251': c0})
+        T('RF2-B3-헛', '%s %s 헛잣대 바탕 — 목록 창이 화면 가운데(문제 창을 덮음 · 겹친 넓이 > cedc251)' % (eng, dn), bool(b) and b['over'] > (c0 or {}).get('over', 1e9), b)
+
+
+OMRPT = r"""()=>{const p=document.getElementById('omrPad'),g=p.querySelector('.ogrip'),b=p.querySelector('button[data-omr]');const gr=g.getBoundingClientRect(),br=b.getBoundingClientRect(),mid=(gr.right+br.left)/2,y=(gr.top+gr.bottom)/2;
+  return {gc:[gr.left+gr.width/2,y],gr1:[gr.right-1,y],m1:[mid-1,y],p1:[mid+1,y],b1:[br.left+br.width/2,(br.top+br.bottom)/2],mid:mid,gap:br.left-gr.right}}"""
+
+
+def rf2_4(br, eng):
+    """B4(검수 3) 폰 390 · iPad 820 — 마우스 포인터(터치 보정 없음)로 ≡ 가운데 · ≡ 오른쪽 −1 · 가운데 선 −1 = ≡ 잡기 · 가운데 선 +1 · ① 가운데 = ① · 끌기 60px 저장 · 새로고침 뒤 같음 · 손가락 흉내도 같음"""
+    PK = "()=>{if(!window.__pkOn){window.__pkOn=1;window.__pk=[];const o=window.omrPick;window.omrPick=function(c){window.__pk.push(c);return o.apply(this,arguments)}}return (window.__pk||[]).splice(0)}"   # 고른 답 셈(같은 답 두 번째는 채점 기록이 안 늘어 hist 로는 못 셈)
+
+    def f(q, mode):
+        no = q.ev("()=>__W.noOf('PA0702')"); q.ev("n=>__W.openNo(n)", no); q.wait(800)
+        q.ev("()=>{document.querySelectorAll('.sheet.shfloat').forEach(x=>x.remove())}")
+        out = {}
+        q.ev(PK)
+        for k in ('gc', 'gr1', 'm1', 'p1', 'b1'):
+            pt = q.ev(OMRPT); x, y = pt[k]
+            q.ev(PK); h0 = q.ev(HN); o0 = q.ev(OP)
+            if mode == 'mouse':
+                q.pg.mouse.move(x, y); q.pg.mouse.down()
+                for i in range(1, 7):
+                    q.pg.mouse.move(x + 60 * i / 6 if k in ('gc', 'gr1', 'm1') else x, y); q.wait(16)
+                q.pg.mouse.up(); q.wait(600)
+            else:
+                if k in ('gc', 'gr1', 'm1'):
+                    q.drag(x, y, x + 60, y)
+                else:
+                    q.press({'cx': x, 'cy': y, 'on': True}, 600)
+            o1 = q.ev(OP)
+            out[k] = {'고름': q.ev(PK), '채점': q.ev(HN) - h0, '옮김': bool(o1 and (o1.get('own') != (o0 or {}).get('own'))), 'x': round(x, 1)}
+            q.ev("()=>{document.querySelectorAll('.sheet.shfloat').forEach(x=>x.remove())}"); q.wait(200)   # 답을 고르면 풀이 곁창이 OMR 위에 뜬다 — 다음 누름 전에 걷는다
+            if k in ('gc', 'gr1', 'm1'):
+                out[k]['pos'] = o1
+        out['간격'] = round(pt['gap'], 1)
+        _reboot(q); q.ev("n=>__W.openNo(n)", no); q.wait(800)
+        out['새로고침 뒤'] = q.ev(OP)
+        return out
+    for dn, vp in (('폰 390', VPPH), ('iPad 820', VPIP)):
+        for mode in ('mouse', 'touch'):
+            r = both(br, eng, 'phys', vp == VPPH, lambda q: f(q, mode), vp)
+            n, b = r['NEW'], r['BASE']
+            okg = all(n[k]['옮김'] and not n[k]['고름'] for k in ('gc', 'gr1', 'm1'))
+            oko = all(n[k]['고름'] == ['①'] and not n[k]['옮김'] for k in ('p1', 'b1'))
+            last = n['m1'].get('pos') or {}
+            ok = okg and oko and (n['새로고침 뒤'] or {}).get('own') == last.get('own')
+            T('RF2-B4', '%s %s %s — ≡ 가운데·오른끝−1·가운데 선−1 = 잡기(60px 끌어 저장 · 채점 0) · 가운데 선+1·① 가운데 = ①(채점 +1) · 새로고침 뒤 같음 · 틈 %spx' % (eng, dn, '마우스' if mode == 'mouse' else '손가락', n['간격']),
+              ok, {k: n[k] for k in ('gc', 'gr1', 'm1', 'p1', 'b1')})
+            if mode == 'mouse':   # 손가락 흉내는 크로미움 터치 보정(0928 :active)이 바탕도 맞게 옮겨 잡아 헛잣대가 안 된다 — 마우스(보정 없음)만 잰다
+                T('RF2-B4-헛', '%s %s 마우스 헛잣대 바탕 — 가운데 선 ±1(틈)에서 잡기·① 둘 다 아님' % (eng, dn),
+                  not (b['m1']['옮김'] and b['p1']['고름'] == ['①']), {k: b[k] for k in ('m1', 'p1')})
+            else:
+                N('RF2-B4i', '%s %s 손가락 흉내 바탕(참고 · 크로미움 보정)' % (eng, dn), {k: b[k] for k in ('m1', 'p1')})
+
+
+ZTOP = r"""(ids)=>{const ps=ids.map(id=>{const b=document.getElementById(id);const p=b&&(b.querySelector(':scope>.panel')||b);return p?p.getBoundingClientRect():null});if(ps.some(x=>!x))return {miss:ids.filter((id,i)=>!ps[i])};
+  const [a,c]=ps,x0=Math.max(a.left,c.left),x1=Math.min(a.right,c.right),y0=Math.max(a.top,c.top),y1=Math.min(a.bottom,c.bottom);if(x1-x0<4||y1-y0<4)return {nov:true};
+  const at=document.elementFromPoint((x0+x1)/2,(y0+y1)/2),top=ids.find(id=>{const b=document.getElementById(id);return b&&at&&b.contains(at)})||(at?(at.id||at.className):null);
+  return {top:top,z:ids.map(id=>+(document.getElementById(id).style.zIndex||getComputedStyle(document.getElementById(id)).zIndex))}}"""
+
+
+def rf2_5(br, eng):
+    """B5(검수 4) 물리 PC #gguw ↔ [공식] · 지학 #bpl ↔ 📋 — 나중에 연 창이 위 · 머리 누름 = 그 창 위 · z 70~79"""
+    GG = "()=>{const r=DATA.find(x=>ggOf(GGU(x)).length>0)||DATA[0];ggUseWin(GGU(r),'')}"
+    def fp(q):
+        no = q.ev("()=>__W.noOf('PA0702')"); q.ev("n=>__W.openNo(n)", no); q.wait(500)
+        out = {}
+        q.ev(GG); q.wait(500); q.ev("()=>pwList('f')"); q.wait(500)
+        out['gguw→공식'] = q.ev(ZTOP, ['gguw', 'pwl'])
+        q.ev("()=>{['gguw','pwl'].forEach(id=>{const e=document.getElementById(id);if(e)e.remove()})}")
+        q.ev("()=>pwList('f')"); q.wait(500); q.ev(GG); q.wait(500)
+        out['공식→gguw'] = q.ev(ZTOP, ['gguw', 'pwl'])
+        return out
+    r = both(br, eng, 'phys', False, fp, VP14)
+    n, b = r['NEW'], r['BASE']
+    zs = [z for v in n.values() for z in (v or {}).get('z', [])]
+    ok = (n['gguw→공식'] or {}).get('top') == 'pwl' and (n['공식→gguw'] or {}).get('top') == 'gguw' and zs and all(70 <= z <= 79 for z in zs)
+    T('RF2-B5', '%s 물리 PC #gguw → [공식] = [공식] 위 · [공식] → #gguw = #gguw 위 · z 70~79' % eng, ok, n)
+    T('RF2-B5-헛', '%s 헛잣대 바탕 — #gguw(z80 고정)가 늘 위' % eng, (b['gguw→공식'] or {}).get('top') == 'gguw', b)
+
+    def fe(q):
+        no = q.ev("()=>DATA.find(r=>!isC(r))[F.NO]"); q.ev("n=>__W.openNo(n)", no); q.wait(500)
+        out = {}; sec = q.ev("()=>Object.keys(TOC.sec)[0]")
+        q.ev("n=>bplOpen(n)", no); q.wait(500); q.ev("s=>{try{jnOpen(s)}catch(e){}}", sec); q.wait(500)
+        out['bpl→📋'] = q.ev(ZTOP, ['bpl', 'jnw'])
+        q.ev("()=>{['bpl','jnw'].forEach(id=>{const e=document.getElementById(id);if(e)e.remove()})}")
+        q.ev("s=>{try{jnOpen(s)}catch(e){}}", sec); q.wait(500); q.ev("n=>bplOpen(n)", no); q.wait(500)
+        out['📋→bpl'] = q.ev(ZTOP, ['bpl', 'jnw'])
+        return out
+    r = both(br, eng, 'earth', False, fe, VP14)
+    n, b = r['NEW'], r['BASE']
+    zs = [z for v in n.values() for z in (v or {}).get('z', [])]
+    ok = (n['bpl→📋'] or {}).get('top') == 'jnw' and (n['📋→bpl'] or {}).get('top') == 'bpl' and zs and all(70 <= z <= 79 for z in zs)
+    T('RF2-B5', '%s 지학 PC #bpl → 📋 = 📋 위 · 📋 → #bpl = #bpl 위 · z 70~79' % eng, ok, n)
+    T('RF2-B5-헛', '%s 헛잣대 바탕 — #bpl(z76 고정) 차례가 연 차례와 다름' % eng, not ((b['bpl→📋'] or {}).get('top') == 'jnw' and (b['📋→bpl'] or {}).get('top') == 'bpl'), b)
+
+
+DLJS = r"""()=>{const b=document.getElementById('dl');b.classList.remove('hide');b.classList.remove('err');b.textContent='시험지 6개를 받았습니다';
+  const g=document.getElementById('ndGrip').getBoundingClientRect();const rg=document.createRange();rg.selectNodeContents(b);const t=[...rg.getClientRects()];
+  const bad=[];document.querySelectorAll('#esh *').forEach(e=>{const cs=getComputedStyle(e);if(cs.display==='none'||cs.visibility==='hidden')return;
+    if(![...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim()))return;const r=e.getBoundingClientRect();if(r.width<=0||r.top>420)return;
+    const q=document.createRange();q.selectNodeContents(e);const L=Math.min(...[...q.getClientRects()].map(x=>x.left));if(L<g.right+1)bad.push((e.id||e.className||e.tagName).slice(0,16)+'「'+e.textContent.trim().slice(0,10)+'」'+Math.round(L))});
+  const r=b.getBoundingClientRect();return {grip:Math.round(g.right),text0:t.length?Math.round(t[0].left):null,box:[Math.round(r.left),Math.round(r.width)],bad:bad}}"""
+
+
+def rf2_6(br, eng):
+    """B6(검수 6) 폰 390 세 과목 — 머리 아래 띠 첫 글자 x ≥ 손잡이 오른쪽 + 1 · 손잡이와 겹친 글자 0"""
+    for subj in ('phys', 'earth', 'bio'):
+        r = both(br, eng, subj, True, lambda q: q.ev(DLJS))
+        n, b = r['NEW'], r['BASE']
+        T('RF2-B6', '%s 폰 %s 띠 「시험지 6개를 받았습니다」 첫 글자 x %s ≥ 손잡이 오른쪽 %s + 1 · 머리 글자 겹침 0' % (eng, subj, n['text0'], n['grip']), n['text0'] >= n['grip'] + 1 and not n['bad'], n)
+        T('RF2-B6-헛', '%s 폰 %s 헛잣대 바탕 — 띠 글자가 손잡이에 붙음(x < 손잡이 + 1)' % (eng, subj), b['text0'] < b['grip'] + 1, b)
+
+
+HIT = r"""(sel)=>{const L=[...document.querySelectorAll(sel)].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&r.top>=0&&r.bottom<=innerHeight});const e=L[0];if(!e)return null;
+  const r=e.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,own=a=>!!a&&(a===e||e.contains(a));
+  let t=null,b=null;for(let y=Math.floor(r.top-24);y<=Math.ceil(r.bottom+24);y++){if(own(document.elementFromPoint(cx,y+0.5))){if(t===null)t=y;b=y+1}}
+  let l=null,rr=null;for(let x=Math.floor(r.left-24);x<=Math.ceil(r.right+24);x++){if(own(document.elementFromPoint(x+0.5,cy))){if(l===null)l=x;rr=x+1}}
+  return {vis:[Math.round(r.left*10)/10,Math.round(r.top*10)/10,Math.round(r.width*10)/10,Math.round(r.height*10)/10],hit:{w:l===null?0:rr-l,h:t===null?0:b-t,t,b,l,r:rr},lines:Math.round(r.height/parseFloat(getComputedStyle(e).lineHeight||'16')||1)}}"""
+TARGETS = [('phys', 'first', ['#fFoldBtn', '.pwchip.ph']), ('phys', 'jnw', ['#jnw .jgo', '.jnrow .jnans', '#jnwX']),
+           ('bio', 'mcw', ['#mcwX', '#mcwSel', '#mcwInk', '#mcwBk', '#mcwOmr']), ('earth', 'jnw', ['#jnwX'])]
+
+
+def rf2_7(br, eng):
+    """B7(검수 7) 폰 390 작은 누름 대상 — 누름 칸 ≥ 36(못 되면 값) · 보이는 사각형 = 바탕 · 이웃 누름 칸 겹침 0 · 지학 「닫기」 한 줄"""
+    def f(q, scr, sels):
+        if scr == 'jnw':
+            q.ev("()=>{try{jnOpen(Object.keys(TOC.sec)[0])}catch(e){}}"); q.wait(700)
+        elif scr == 'mcw':
+            q.ev("async()=>{try{await mcwOpen('all')}catch(e){}}"); q.wait(800)
+        return {s: q.ev(HIT, s) for s in sels}
+    for subj, scr, sels in TARGETS:
+        r = both(br, eng, subj, True, lambda q: f(q, scr, sels))
+        n, b = r['NEW'], r['BASE']
+        for s in sels:
+            x, y = n.get(s), b.get(s)
+            if not x:
+                T('RF2-B7', '%s 폰 %s %s %s — 없음' % (eng, subj, scr, s), False, x); continue
+            want36 = s not in ('#mcwSel',)
+            same = s == '#jnwX' or (y and x['vis'][2:] == y['vis'][2:])   # 보이는 크기(폭·높이) — 자리는 「닫기」가 한 줄이 되며 머리가 낮아져 위로 갈 수 있다
+            okk = (x['hit']['h'] >= 36 or s in ('#mcwInk', '#mcwBk', '#mcwOmr') and x['hit']['h'] >= 34 or not want36) and same
+            if s == '#jnwX':
+                okk = okk and x['vis'][3] < 30
+            T('RF2-B7', '%s 폰 %s %s %s — 누름 칸 %d×%d(보이는 %s×%s · 바탕 누름 %s)' % (eng, subj, scr, s, x['hit']['w'], x['hit']['h'], x['vis'][2], x['vis'][3], y and '%d×%d' % (y['hit']['w'], y['hit']['h'])),
+              okk, {'새': x, '바탕': y})
+        # 이웃 겹침 — 누름 칸 사각형끼리
+        bx = [(s, v['hit']) for s, v in n.items() if v and v['hit']['t'] is not None and v['hit']['l'] is not None]
+        ov = [(a[0], c[0]) for i, a in enumerate(bx) for c in bx[i + 1:] if min(a[1]['r'], c[1]['r']) - max(a[1]['l'], c[1]['l']) > 0.5 and min(a[1]['b'], c[1]['b']) - max(a[1]['t'], c[1]['t']) > 0.5]
+        T('RF2-B7', '%s 폰 %s %s 누름 칸 겹침 0' % (eng, subj, scr), not ov, ov)
+    r = both(br, eng, 'phys', True, lambda q: q.ev(HIT, '.pwchip.ph'))
+    T('RF2-B7-헛', '%s 폰 헛잣대 바탕 — [공식] 칩 누름 높이 < 36' % eng, (r['BASE'] or {}).get('hit', {}).get('h', 99) < 36, r['BASE'])
+
+
+def rf2_8(br, eng):
+    """B8(검수 8) 생물 폰 390 — 목록 맨 아래(굴림 끝) 마지막 줄 bottom ≤ 화면 높이 − 8 · 📋 창 굴림 끝 마지막 줄 ≤ 창 아래 − 8"""
+    LB = r"""()=>{window.scrollTo(0,1e9);const its=[...document.querySelectorAll('#list .item')];const last=its[its.length-1];
+      const tags=last?[...last.querySelectorAll('.tag,.jgo')].filter(t=>t.getBoundingClientRect().height>0).map(t=>Math.round(t.getBoundingClientRect().bottom)):[];
+      return {vh:innerHeight,last:last?Math.round(last.getBoundingClientRect().bottom):null,tagMax:tags.length?Math.max(...tags):null}}"""
+    JB = r"""async()=>{try{jnOpen(Object.keys(TOC.sec)[0])}catch(e){}await new Promise(r=>setTimeout(r,700));const b=document.getElementById('jnwBody');if(!b)return null;b.scrollTop=b.scrollHeight;
+      const p=b.getBoundingClientRect();const L=[...b.querySelectorAll('.tag,.jgo,.jnans,button')].filter(e=>e.getBoundingClientRect().height>0);return {bodyBottom:Math.round(p.bottom),last:L.length?Math.round(Math.max(...L.map(e=>e.getBoundingClientRect().bottom))):null}}"""
+    r = both(br, eng, 'bio', True, lambda q: {'목록': q.ev(LB), '📋': q.ev(JB)})
+    n, b = r['NEW'], r['BASE']
+    ok = n['목록']['last'] <= n['목록']['vh'] - 8 and (n['📋'] or {}).get('last', 1e9) <= (n['📋'] or {}).get('bodyBottom', 0) - 8
+    T('RF2-B8', '%s 생물 폰 목록 굴림 끝 마지막 줄 bottom %s ≤ %s − 8 · 📋 창 굴림 끝 %s ≤ %s − 8' % (eng, n['목록']['last'], n['목록']['vh'], (n['📋'] or {}).get('last'), (n['📋'] or {}).get('bodyBottom')), ok, n)
+    T('RF2-B8-헛', '%s 헛잣대 바탕 — 목록 마지막 줄이 화면 아래 끝에 붙음(> 높이 − 8)' % eng, b['목록']['last'] > b['목록']['vh'] - 8, b)
+
+
+SW2 = r"""(touch)=>{const vw=innerWidth,vh=innerHeight,de=document.documentElement;
+ const ACT='button,a[href],input,select,[onclick],.chip,.chchip,.pwchip,.jgo,[data-go],[data-omr],.ogrip';
+ const sig=e=>{let s=e.tagName.toLowerCase()+(e.id?'#'+e.id:'')+(e.classList.length?'.'+[...e.classList].slice(0,2).join('.'):'');const t=(e.textContent||'').replace(/\s+/g,' ').trim().replace(/\d+/g,'#').slice(0,10);return s+'「'+t+'」'};
+ const els=[...document.querySelectorAll(ACT)].filter(e=>{const cs=getComputedStyle(e);if(cs.display==='none'||cs.visibility==='hidden')return false;const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&r.bottom>0&&r.right>0&&r.top<vh&&r.left<vw});
+ const over=[],cover=[],small=[],coverBy={};
+ for(const e of els){const r=e.getBoundingClientRect();if(r.right>vw+1)over.push(sig(e));
+   const cx=Math.min(vw-1,Math.max(0,r.left+r.width/2)),cy=Math.min(vh-1,Math.max(0,r.top+r.height/2)),at=document.elementFromPoint(cx,cy);if(at&&!(at===e||e.contains(at)||at.contains(e))){const sg=sig(e),w=at.closest('.sheet')||at.closest('[id]');cover.push(sg);(coverBy[sg]=coverBy[sg]||[]).push(w?(w.id||w.className):at.tagName)}
+   if(touch){let h=0;for(let y=Math.floor(r.top-20);y<=Math.ceil(r.bottom+20);y++){const a=document.elementFromPoint(cx,y+0.5);if(a&&(a===e||e.contains(a)))h++}if(h<36)small.push(sig(e))}}
+ return {docow:de.scrollWidth-de.clientWidth,over,cover,small,coverBy}}"""
+
+
+def rf2_12(br, eng):
+    """B12 화면 훑기 — 세 과목 × PC 1440 · iPad 820 · 폰 390 · 첫 화면 · 문제 창 · 📋 · [공식] · 🃏 · #gguw — 새로 생긴 넘침·덮임·작은 누름(누름 칸 < 36) 0"""
+    import collections
+    def f(q, subj):
+        touch = q.touch; out = {}
+        out['첫 화면'] = q.ev(SW2, touch)
+        no = q.ev("()=>__W.noOf('PA0702')") if subj == 'phys' else q.ev("()=>DATA.find(r=>!isC(r))[F.NO]")
+        q.ev("n=>__W.openNo(n)", no); q.wait(500); out['문제 창'] = q.ev(SW2, touch)
+        q.ev("()=>{try{jnOpen(Object.keys(TOC.sec)[0])}catch(e){}}"); q.wait(600); out['📋'] = q.ev(SW2, touch)
+        if subj == 'phys':
+            q.ev("()=>{try{pwList('f')}catch(e){}}"); q.wait(500); out['[공식]'] = q.ev(SW2, touch)
+        q.ev("async()=>{try{await mcwOpen('all')}catch(e){}}"); q.wait(700); out['🃏'] = q.ev(SW2, touch)
+        q.ev("()=>{const r=DATA.find(x=>ggOf(GGU(x)).length>0)||DATA[0];try{ggUseWin(GGU(r),'')}catch(e){}}"); q.wait(500); out['#gguw'] = q.ev(SW2, touch)
+        return out
+    newonly, rows, acc = [], [], []
+    for subj in ('phys', 'earth', 'bio'):
+        for dn, vp in (('PC 1440', VP14), ('iPad 820', VPIP), ('폰 390', VPPH)):
+            r = both(br, eng, subj, vp == VPPH, lambda q: f(q, subj), vp)
+            for scr in r['NEW']:
+                nn, bb = r['NEW'][scr], (r['BASE'] or {}).get(scr) or {}
+                line = {'칸': '%s · %s · %s' % (subj, dn, scr), '쪽 넘침': [nn['docow'], bb.get('docow')]}
+                for cat in ('over', 'cover', 'small'):
+                    d = collections.Counter(nn[cat]) - collections.Counter(bb.get(cat) or [])
+                    line[cat] = [len(nn[cat]), len(bb.get(cat) or [])]
+                    for s, k in d.items():
+                        by = sorted(set((nn.get('coverBy') or {}).get(s) or [])) if cat == 'cover' else []
+                        if by == ['pwl'] and scr in ('[공식]', '🃏'):   # 뜻한 차이 — A-2 목록 창(#pwl) 첫 자리가 화면 오른쪽 끝(t = 문제 창 위)으로 옮겨 덮는 것(연 차례대로 위)
+                            acc.append({'칸': line['칸'], '신호': s, '수': k, '덮은 창': 'pwl'}); continue
+                        newonly.append({'칸': line['칸'], '종류': cat, '신호': s, '수': k, '덮은 것': by})
+                if nn['docow'] > (bb.get('docow') or 0):
+                    newonly.append({'칸': line['칸'], '종류': '쪽 넘침', '신호': '%s > %s' % (nn['docow'], bb.get('docow'))})
+                rows.append(line)
+    T('RF2-B12', '%s 화면 훑기 — 세 과목 × PC 1440 · iPad 820 · 폰 390 × 첫 화면·문제 창·📋·[공식]·🃏·#gguw — 새로 생긴 넘침·덮임·작은 누름 0(뜻한 차이 %d = 목록 창 자리 A-2)' % (eng, len(acc)), not newonly,
+      {'새로 생긴 것': newonly[:20], '뜻한 차이(A-2 목록 창이 덮음)': acc, '표': rows})
+    N('RF2-B12', '%s 뜻한 차이 — 목록 창(#pwl)이 화면 오른쪽 끝으로 옮겨 새로 덮은 것' % eng, acc)
+
+
+def rf2g(br, eng):
+    for fn in (rf2_1, rf2_2, rf2_3, rf2_4, rf2_5, rf2_6, rf2_7, rf2_8, rf2_12):
+        if ONLY2 and fn.__name__.split('_')[1] not in ONLY2:
+            continue
+        try:
+            fn(br, eng)
+        except Exception as e:
+            T('RUN', '%s · RF2 %s 멈춤' % (eng, fn.__name__), False, repr(e)[:600])
+
+
+ONLY2 = [x for x in (ARG('--rf2', '') or '').split(',') if x]   # fix1 RF2 — 칸 고르기(1,2,…,12)
+
+
+PARTS = [('1', g1), ('2', g2), ('3', g3), ('4', g4), ('7', g7), ('8', g8b), ('RF', rf), ('RF2', rf2g)]
 APPS = {}
 
 
@@ -651,6 +968,7 @@ def main():
     t0 = time.time()
     APPS['NEW'] = io.open(NEWF, encoding='utf-8').read()
     APPS['BASE'] = git('show', 'HEAD:jagwa/index.html').decode('utf-8')
+    APPS['C0'] = git('show', 'cedc251:jagwa/index.html').decode('utf-8')   # fix1 RF2-B3 — 겹친 넓이 잣대(cedc251)
     if not ONLY or '9' in ONLY:
         d9()
     with sync_playwright() as pw:

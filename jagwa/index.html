@@ -995,7 +995,7 @@ body[data-shell] .spectrum i.gap{background:transparent;border-radius:0;pointer-
 #view.win #navdr,#view.win #navTg{position:absolute}
 /* ★ phone_win A-1 — 폰(≤480) 문제 창 전체화면 규칙을 걷었다: 폰도 떠 있는 창(폭 화면−16 · 높이 86% · 가운데 · vwApply) · 꽉 채우기는 ⤢ */
 /* §F 교재 자리 목록 창 — `#bkq` 와 같은 규칙(배경 투명·안 막음) */
-#bpl{position:fixed;inset:0;z-index:76;background:transparent;pointer-events:none;display:block}
+#bpl{position:fixed;inset:0;z-index:70;background:transparent;pointer-events:none;display:block}
 #bpl.sheet{display:block;background:transparent}
 #bpl .panel{pointer-events:auto;position:fixed;right:12px;top:64px;left:auto;width:360px;max-width:92vw;height:56vh;
   max-width:none;max-height:none;padding:0;margin:0;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.3);overflow:hidden;display:flex;flex-direction:column}
@@ -1680,6 +1680,16 @@ function pwBtns(p){if(!p)return;p.querySelectorAll('button.btn').forEach(x=>{if(
   '@media (min-width:481px){.pwchip.ph{display:none!important}}',
   '@media (max-width:480px){body.ndon #fFold{padding-left:13px}}',   /* ★ revfix0928 A-6 — ▾ 가 서랍 손잡이(13px · 늘 보임)에 안 가린다 */
   '@media (max-width:480px){#fFoldBtn{position:relative}#fFoldBtn::before{content:"";position:absolute;left:-1px;top:50%;width:36px;height:36px;margin-top:-18px}}',   /* ★ revfix0929 A-6 — 누름 자리 36×36(왼쪽 끝 = 단추 왼쪽 → 손잡이 안 덮음 · 오른쪽 7px 는 다음 칩 앞 틈 8px 안) · 보이는 원 무변 */
+  /* ★ revfix0928_fix1 A-5 — 서재 머리 아래 띠(「시험지 N개를 받았습니다」 #dl)도 서랍 손잡이 폭(13)만큼 비킴(0928 A-6 접기 줄과 같은 방법 · 세 과목) */
+  '@media (max-width:480px){body.ndon #dl{margin-left:13px}}',
+  /* ★ revfix0928_fix1 A-6 — 폰 작은 누름 대상 → 누름 칸 36(보이는 크기 무변 · ::before 투명 누름 영역 · 세로만 넓힘 · 이웃과 안 겹치게)
+     [공식]·[개념] 칩 · 📋 창 문항 칩 · 정답·해설 · 🃏·📋 창 닫기 · 🃏 창 단추 셋 · 지학 📋 「닫기」 한 줄(nowrap) */
+  '@media (max-width:480px){.pwchip.ph,#jnw .jgo,.jnrow .jnans,#jnwX,#mcwX,#mcwInk,#mcwBk,#mcwOmr{position:relative}'
+   +'.pwchip.ph::before,#jnw .jgo::before,.jnrow .jnans::before,#jnwX::before,#mcwX::before{content:"";position:absolute;left:0;right:0;top:50%;height:36px;margin-top:-18px}'
+   +'#mcwInk::before,#mcwBk::before,#mcwOmr::before{content:"";position:absolute;left:0;right:0;top:50%;height:34px;margin-top:-17px}'
+   +'#jnwX,#mcwX{white-space:nowrap;min-width:36px}}',
+  /* ★ revfix0928_fix1 A-7 — 폰 서재 목록 · 📋 창 맨 아래 줄이 화면 안(아래 여백 = safe-area 아래 + 8) */
+  '@media (max-width:480px){body[data-shell] #list{padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 8px)}#jnwBody{padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 14px)}}',
   '.sheet.shfloat .panel button.btn.shlink{border:0;background:none;box-shadow:none;padding:2px 0;margin:6px 12px 0 0;min-height:0;width:auto;display:inline-block;font:inherit;font-size:12px;font-weight:500;color:var(--muted);text-decoration:underline;cursor:pointer}',
   '.pwchip{font:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--line);border-radius:999px;padding:3px 11px;background:var(--card);color:var(--ink);cursor:pointer;margin-left:6px;white-space:nowrap}',
   '#pwl{position:fixed;inset:0;background:transparent;pointer-events:none;display:block}',
@@ -1724,7 +1734,7 @@ function pwList(kind){
       bd.querySelectorAll('.pwc[data-cbk]').forEach(x=>x.onclick=ev=>{ev.stopPropagation();conceptView(x.dataset.cbk)})}
     bd.classList.toggle('hide');tri.textContent=bd.classList.contains('hide')?'▸':'▾'}});
   const key='pw'+kind;
-  if(typeof WIN==='object'&&!WIN[key])WIN[key]=shFirst(b);   /* ★ revfix0928 A-2 — PC 도 풀이 곁창과 같은 크기·자리(옛 600 × 62vh 는 근거 없는 값 · 폰 무변) */
+  if(typeof WIN==='object'&&!WIN[key])WIN[key]=shFirst(b,winSaved('jagwa.win.'+key));   /* ★ revfix0928 A-2 — PC 도 풀이 곁창과 같은 크기·자리 · ★ fix1 A-1 — 끌어 바꾼 크기 기억이 이긴다(옛 판은 WIN 을 먼저 채워 makeFloat 의 기억 읽기가 늘 건너뛰었다) */
   makeFloat(b,b.querySelector('.bplh'),key,'jagwa.win.'+key);pwTop(b);
 }
 /* 칩 — 폰: #fFoldBtn(▾) 바로 오른쪽 · PC: 검색 줄 「지우기」(#qClr) 오른쪽 · 물리만 */
@@ -2888,6 +2898,24 @@ function layoutOmr(){
     toast('OMR 자리를 저장했습니다 — 다음 문항에도 같은 자리에 그대로 적용됩니다');
   };
   g.addEventListener('pointerup',end); g.addEventListener('pointercancel',end);
+  /* ★ revfix0928_fix1 A-3 — ≡ 와 ① 사이를 좌표로 가른다(엔진 터치 보정 · 누름 대상에 안 기댐 — 사파리·펜·마우스 같음).
+     OMR 줄 세로 안에서 누른 x 가 「≡ 오른쪽 끝 ↔ ① 왼쪽 끝」 가운데 선보다 왼쪽이면 ≡ 잡기(끌기) · 오른쪽이면 그 자리 단추(틈이면 ①) —
+     엔진이 대상을 ≡·① 어느 쪽으로 옮겨 잡았든 x 로 다시 가른다. 단추 위 누름은 단추 그대로(① 가운데 톡 = 채점 +1 무변) */
+  let skipClick=0,pend=null;
+  p.addEventListener('pointerdown',e=>{
+    const bs=[...p.querySelectorAll('button[data-omr]')];if(!bs.length)return;
+    const gr=g.getBoundingClientRect(),b1=bs[0].getBoundingClientRect(),mid=(gr.right+b1.left)/2;
+    if(e.clientY<Math.min(gr.top,b1.top)||e.clientY>Math.max(gr.bottom,b1.bottom))return;
+    if(e.clientX<mid){if(g.contains(e.target))return;   /* ≡ 위 = 위 갈고리 그대로 */
+      try{g.setPointerCapture(e.pointerId)}catch(_){}
+      st={x:e.clientX,y:e.clientY,l:p.offsetLeft,t:p.offsetTop,moved:false};skipClick=Date.now();
+      e.preventDefault();e.stopPropagation();return}
+    const tb=bs.find(b=>{const r=b.getBoundingClientRect();return e.clientX>=r.left&&e.clientX<=r.right})||(e.clientX<b1.left?bs[0]:null);
+    if(!tb||e.target.closest('button')===tb)return;   /* 그 단추 위 = 단추 그대로 */
+    pend={b:tb,x:e.clientX,y:e.clientY,id:e.pointerId};e.preventDefault();e.stopPropagation()},{capture:true});
+  p.addEventListener('pointerup',e=>{if(!pend||pend.id!==e.pointerId)return;const b=pend.b,m=Math.hypot(e.clientX-pend.x,e.clientY-pend.y);pend=null;skipClick=Date.now();if(m<10)b.click()},{capture:true});
+  p.addEventListener('pointercancel',()=>{pend=null},{capture:true});
+  p.addEventListener('click',e=>{if(skipClick&&Date.now()-skipClick<800&&e.isTrusted){skipClick=0;e.preventDefault();e.stopImmediatePropagation()}},{capture:true});   /* 엔진이 옮겨 잡은 대상의 click(① 오눌림)은 먹는다 · 위 b.click() 은 isTrusted 거짓이라 지나감 */
 })();
 
 /* 탭하면 열림 · 끌면 이동 · 오른쪽 아래 모서리로 크기 조절 */
@@ -4775,6 +4803,10 @@ async function peekInk(no,cv,R){
 }
 /* §2 떠 있는 창 — 제목줄 = 손잡이(펜슬·손가락·마우스) · 오른쪽 아래 모서리 = 크기(280×200 ~ 화면−16) · 자리·크기는 세션 동안 WIN[key] 에(저장 안 함) */
 const WIN={};
+/* ★ revfix0928_fix1 A-1 — 창 크기 기억 읽기 하나(makeFloat 의 _pload 를 떼어 냄 · 같은 하한 280×200 · 새 키 없음) — 첫 자리를 정하는 곳(pwList · shFloat 의 shFirst)도 이것을 읽는다
+   ⚠ makeFloat 와 같은 <script> 덩이에 둔다(뒤 덩이의 함수는 앞 덩이가 도는 동안 아직 없다) */
+function winSaved(pkey){if(!pkey)return null;try{const v=JSON.parse(localStorage.getItem(pkey)||'null');
+  return (v&&+v.w>=280&&+v.h>=200)?{w:+v.w,h:+v.h}:null}catch(e){return null}}
 function makeFloat(sheet,handle,key,pkey){
   const p=sheet.querySelector('.panel')||(sheet.classList.contains('selfpanel')?sheet:null); if(!p||!handle)return;   /* 지학 목록판 §E — **더하기만** 한다. 지금 부르는 창은 전부 `.panel` 이 있어 한 글자도 안 달라진다 */
   const g=document.createElement('div');g.className='twgrip';p.appendChild(g);
@@ -4784,8 +4816,7 @@ function makeFloat(sheet,handle,key,pkey){
   const apply=st=>{p.classList.add('float');p.style.left=st.l+'px';p.style.top=st.t+'px';p.style.width=st.w+'px';p.style.height=st.h+'px'};
   /* 판 2 add2 §1-C — pkey 를 준 창만 크기를 기기 하나 값(localStorage)으로 기억한다.
      안 준 창(물리 twin·sub·bklist·snote·mcard)은 종전 그대로 세션 동안(WIN)만 — 한 글자도 안 달라진다. */
-  const _pload=()=>{if(!pkey)return null;try{const v=JSON.parse(localStorage.getItem(pkey)||'null');
-    return (v&&+v.w>=280&&+v.h>=200)?{w:+v.w,h:+v.h}:null}catch(e){return null}};
+  const _pload=()=>winSaved(pkey);   /* ★ revfix0928_fix1 A-1 — 읽기 하나(winSaved) */
   const _psave=()=>{if(!pkey||!WIN[key])return;try{localStorage.setItem(pkey,JSON.stringify({w:Math.round(WIN[key].w),h:Math.round(WIN[key].h)}))}catch(e){}};
   if(!WIN[key]){const s0=_pload();
     if(s0){const w=Math.max(280,Math.min(window.innerWidth-16,s0.w)),h=Math.max(200,Math.min(window.innerHeight-16,s0.h));
@@ -7841,15 +7872,18 @@ function cropFor(no){
    ⚠ 옛 시트의 안(글자·단추·id)은 한 글자도 안 바꾼다 — 겉틀만 띄운다. */
 /* 곁창 첫 자리·크기 = 문제 창 오른쪽 옆(자리가 없으면 가운데) · PC 폭 560 × 높이 72%(화면−40 안) ·
    ★ phone_win A-1 — 폰 = 화면−16 × 72% · 이미 뜬 곁창 수만큼 14px 내림(뒤 창 머리가 보이게) · ★ revfix0928 A-2 — [공식]·[개념] 목록 창도 이 함수 */
-function shFirst(b){
+function shFirst(b,sz){   /* sz = 기억 크기(winSaved) — 있으면 그 크기(화면 안 · 폰도) · 자리는 아래 규칙 그대로 */
   const v=document.getElementById('view');
   const vr=(v&&!v.classList.contains('hide'))?v.getBoundingClientRect():null;
   const _ph=pwPhone();
-  const w=_ph?window.innerWidth-16:Math.min(560,Math.max(320,window.innerWidth-40));
-  const hh=_ph?Math.round(window.innerHeight*0.72):Math.min(Math.round(window.innerHeight*0.72),window.innerHeight-40);
-  let l=Math.round((window.innerWidth-w)/2), t=Math.round((window.innerHeight-hh)/2);
+  let w=_ph?window.innerWidth-16:Math.min(560,Math.max(320,window.innerWidth-40));
+  let hh=_ph?Math.round(window.innerHeight*0.72):Math.min(Math.round(window.innerHeight*0.72),window.innerHeight-40);
+  if(sz){w=Math.max(280,Math.min(window.innerWidth-16,sz.w));hh=Math.max(200,Math.min(window.innerHeight-16,sz.h))}
+  /* ★ revfix0928_fix1 A-2 — 문제 창 오른쪽에 자리가 없으면 화면 가운데(= 문제 창 한가운데를 덮음) 대신 화면 오른쪽 끝 · t = 문제 창 위 끝(없으면 60) */
+  let l=Math.round(window.innerWidth-w-8), t=vr?Math.round(vr.top):60;
   if(vr&&vr.right+8+w<=window.innerWidth-8){l=Math.round(vr.right+8);t=Math.round(vr.top)}
-  if(_ph){l=8;t=Math.min(window.innerHeight-hh-8,Math.round((window.innerHeight-hh)/2)+14*pwSideN(b))}
+  l=Math.max(0,l);t=Math.max(0,Math.min(window.innerHeight-hh-8,t));
+  if(_ph){l=8;t=Math.max(0,Math.min(window.innerHeight-hh-8,Math.round((window.innerHeight-hh)/2)+14*pwSideN(b)))}
   return {l:l,t:t,w:w,h:hh};
 }
 function shFloat(b,key,title){
@@ -7865,7 +7899,7 @@ function shFloat(b,key,title){
   if(!h.querySelector('.shx')){
     const x=document.createElement('button');x.className='shx';x.type='button';
     x.title='닫기';x.textContent='✕';x.onclick=()=>b.remove();h.appendChild(x)}
-  if(typeof WIN==='object'&&!WIN[key])WIN[key]=shFirst(b);
+  if(typeof WIN==='object'&&!WIN[key])WIN[key]=shFirst(b,winSaved('jagwa.win.'+key));   /* ★ revfix0928_fix1 A-1 — 풀이 곁창 등도 크기 기억 */
   try{makeFloat(b,h,key,'jagwa.win.'+key)}catch(e){console.warn('shFloat',e)}
   pwBtns(p);   /* ★ phone_win A-5 — 아래 큰 단추 = 밑줄 글자 · 「닫기」 걷음(✕ 와 겹침) */
   if(!b.__pwz){b.__pwz=1;pwTop(b)}   /* ★ phone_win A-1 — 나중에 연 창이 위 */
@@ -8167,6 +8201,7 @@ function bplOpen(no,force){
     const t=$('#bktools [data-tool="crop"]'); if(t)t.click();
     cropFor(no)}};
   makeFloat(b,b.querySelector('.bplh'),'bplist','jagwa.win.bplist');
+  pwTop(b);   /* ★ revfix0928_fix1 A-4 — 지학·생물 목록판도 창 띠에(옛 판 = CSS z76 고정) */
 }
 function bplRefresh(no){if(HASBOOK&&document.getElementById('bpl')&&BPLNO===no)bplOpen(no,1)}
 
@@ -8924,6 +8959,7 @@ function ggUseWin(target,me){
                   h=Math.min(640,Math.round(window.innerHeight*0.8));
       WIN.gguse={w:w,h:h,l:Math.round((window.innerWidth-w)/2),t:Math.round((window.innerHeight-h)/2)}}}
   makeFloat(b,b.querySelector('.bplh'),'gguse','jagwa.win.gguse');
+  pwTop(b);   /* ★ revfix0928_fix1 A-4 — 창 띠(70~79)에 · 옛 판 = .sheet z80 고정(띠 밖 · 나중 연 [공식] 밑에 안 감) */
 }
 function ggChipHTML(uid,g,sc){
   return '<span class="ggnum '+ggOkCls(g.ok)+(g.bang?' bang':'')+'" data-ggtog="'+ea(uid+'|'+g.k+'|'+sc)+'"'
