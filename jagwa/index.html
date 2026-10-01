@@ -1679,6 +1679,7 @@ function pwBtns(p){if(!p)return;p.querySelectorAll('button.btn').forEach(x=>{if(
   '@media (max-width:480px){body[data-shell] #fSum{display:none!important}body[data-shell] #esh .erow.esearch>span.mut:first-child{display:none}.pwchip.pc{display:none!important}}',
   '@media (min-width:481px){.pwchip.ph{display:none!important}}',
   '@media (max-width:480px){body.ndon #fFold{padding-left:13px}}',   /* ★ revfix0928 A-6 — ▾ 가 서랍 손잡이(13px · 늘 보임)에 안 가린다 */
+  '@media (max-width:480px){#fFoldBtn{position:relative}#fFoldBtn::before{content:"";position:absolute;left:-1px;top:50%;width:36px;height:36px;margin-top:-18px}}',   /* ★ revfix0929 A-6 — 누름 자리 36×36(왼쪽 끝 = 단추 왼쪽 → 손잡이 안 덮음 · 오른쪽 7px 는 다음 칩 앞 틈 8px 안) · 보이는 원 무변 */
   '.sheet.shfloat .panel button.btn.shlink{border:0;background:none;box-shadow:none;padding:2px 0;margin:6px 12px 0 0;min-height:0;width:auto;display:inline-block;font:inherit;font-size:12px;font-weight:500;color:var(--muted);text-decoration:underline;cursor:pointer}',
   '.pwchip{font:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--line);border-radius:999px;padding:3px 11px;background:var(--card);color:var(--ink);cursor:pointer;margin-left:6px;white-space:nowrap}',
   '#pwl{position:fixed;inset:0;background:transparent;pointer-events:none;display:block}',
@@ -3583,7 +3584,7 @@ function navBuild(){
       const r=it.r, no=r[F.NO];
       nQ++; rows.push(no);
       const d=document.createElement('div');d.className='ndrow';d.dataset.no=no;
-      d.innerHTML='<span class="ndno">'+no+'</span><span class="ndt">'+esc(r[F.CODE])+esc(r[F.LV])+'-'+esc(titleOf(r))+'</span><span class="ndtail">'+ndTail(no)+'</span>';
+      d.innerHTML='<span class="ndno">'+no+'</span><span class="ndt">'+esc(r[F.CODE])+esc(r[F.LV])+' · '+esc(titleOf(r))+'</span><span class="ndtail">'+ndTail(no)+'</span>';   /* ★ revfix0929 A-5 — 번호 · 출처(「G25-62-09 · 62회 9번」 · 옛 「-」는 새 번호 뒤에서 「G25-62-09-62」로 읽혔다) */
       frag.appendChild(d); return}
     if(!it.uhd)return;                       /* 편·절 머리는 서랍에 안 세운다 */
     flushSec();
@@ -4442,7 +4443,9 @@ function stampAll(){
      took·del 은 값이 실제로 바뀐 칸만 · ahead = 내가 이겼는데 원격 값이 다른 칸 */
 async function recMerge(remote){
   const u=lsObj(U_KEY),gone=lsObj(GONE_KEY),shadow=lsObj(SHADOW_KEY);
-  const rU=remote.u||{},rG=remote.gone||{},rD=remote.data||{};
+  const rU=remote.u||{},rD=remote.data||{},rG=Object.assign({},remote.gone||{});
+  /* ★ revfix0929 A-1-3 — 원격의 옛 열쇠 묘비(옛 판 기기가 늦게 올린 것 포함)를 새 열쇠에도 비춘다 · 규칙 = jgTombMirror(새 칸에 자취 0 일 때만) · 원격 객체는 안 고친다 */
+  try{jgTombMirror(rG,(k,nw,kn)=>Object.prototype.hasOwnProperty.call(rD[k]||{},nw)||rU[kn]!=null)}catch(e){console.warn('jgTombMirror',e)}
   const byKey={};
   const add=s=>{const p=csplit(s);if(!byKey[p[0]])byKey[p[0]]=new Set();byKey[p[0]].add(p[1])};
   Object.keys(rU).forEach(add);Object.keys(rG).forEach(add);
@@ -4561,6 +4564,9 @@ async function jgMigrate(why){
     let ch=false;const sh=shadow[k];
     for(const o of Object.keys(cur)){const nw=M[o];if(!nw||typeof nw!=='string')continue;
       const ko=ckey(k,o),kn=ckey(k,nw);
+      /* ★ revfix0929 A-1-2 — 그 칸 묘비(옛·새 어느 쪽이든)가 값 도장보다 새로우면(같아도 — 바탕 병합에서 묘비가 이기는 것과 같게) 옮기지 않고 지운다 */
+      const tb=Math.max(gone[ko]||0,gone[kn]||0);
+      if(tb>0&&tb>=(u[ko]||0)){delete cur[o];delete u[ko];if(sh)delete sh[o];gone[ko]=tb;ch=true;n++;continue}
       if(has(cur,nw)){const so=u[ko]||0,sn=u[kn]||0;
         if(so>sn){console.warn('jagwa uid 옮김 — 옛·새 둘 다 · 옛 칸 도장이 늦어 이김',k,o,'→',nw,'버린 값',JSON.stringify(cur[nw]));cur[nw]=cur[o];u[kn]=so;if(sh&&has(sh,o))sh[nw]=sh[o]}
         else console.warn('jagwa uid 옮김 — 옛·새 둘 다 · 새 칸이 이김',k,o,'→',nw,'버린 값',JSON.stringify(cur[o]));}
@@ -4569,11 +4575,26 @@ async function jgMigrate(why){
     if(k==='ggref')for(const c of Object.keys(cur)){const a=cur[c];if(!Array.isArray(a)||!a.some(x=>typeof M[x]==='string'))continue;
       const b=a.map(x=>typeof M[x]==='string'?M[x]:x);if(sh&&has(sh,c)&&JSON.stringify(sh[c])===JSON.stringify(a))sh[c]=b;cur[c]=b;ch=true;n++}   /* 값 속 uid — 도장 그대로 · 더 긴 값이라 동률 병합에서 이긴다 */
     if(ch){touched.push(k);try{await put('kv',k,cur)}catch(e){console.warn('jgMigrate put',k,e)}}}
-  if(n){lsPut(U_KEY,u);lsPut(GONE_KEY,gone);lsPut(SHADOW_KEY,shadow);console.info('jagwa uid 옮김',why,n,touched);window.__JGMIG=(window.__JGMIG||0)+n;
-    try{if(typeof refreshUnits==='function')refreshUnits()}catch(e){}}
+  /* ★ revfix0929 A-1-1 — 이미 있는 옛 열쇠 묘비를 새 열쇠에 · 옛 묘비는 그대로(옛 판 기기용) · 안 읽힌 통은 다음 번(gg)에 */
+  const t=jgTombMirror(gone,(k,nw,kn)=>{const c=SYNC_REF[k]&&SYNC_REF[k].g();return !c||has(c,nw)||u[kn]!=null});
+  if(n||t){lsPut(U_KEY,u);lsPut(GONE_KEY,gone);lsPut(SHADOW_KEY,shadow);console.info('jagwa uid 옮김',why,n,touched,'묘비 비춤',t);window.__JGMIG=(window.__JGMIG||0)+n;
+    if(n)try{if(typeof refreshUnits==='function')refreshUnits()}catch(e){}}
   return n}
-function recAfterMerge(res){
-  if(CARD_LAYER)jgMigrate('merge').then(n=>{if(n)try{draw()}catch(e){}}).catch(e=>console.warn('jgMigrate',e));   /* ★ jagwa_uid — 옛 판 기기가 늦게 올린 옛 열쇠 */
+/* ★ revfix0929 A-1 — 옛 열쇠 묘비 「칸|옛uid」 → 「칸|새uid」(같은 시각). 새 칸에 아무 자취(값 · 도장 · 묘비)가 없을 때만 비춘다.
+   ⚠ 옮김 묘비(jgMigrate 가 값을 옮기며 찍는 「칸|옛uid」 = 그때 시각)는 늘 새 칸 값과 같이 다닌다 — 그것까지 비추면 옮긴 값이 묘비에 져서 지워진다
+     (10/1 원격 earth 에 옮김 묘비 373 개 · 새 칸 값 375 개). 새 칸에 제 도장·묘비가 있으면 그 칸 차례가 이미 있으므로 둔다.
+   G = 묘비 객체(고침) · live(k,새uid,새열쇠) = 그 쪽에 새 칸 자취가 있나 → 비춘 수. 멱등(두 번째 = 0) · 도장 새로 안 찍음 · 옛 데이터(옛uid 0)·물리 = 0 */
+function jgTombMirror(G,live){
+  if(!CARD_LAYER||!DATA.length)return 0;const M=jgO2N();if(!M.__any)return 0;let t=0;
+  for(const x of Object.keys(G)){const i=x.indexOf('|');if(i<0)continue;const k=x.slice(0,i);if(JG_KEYS.indexOf(k)<0)continue;
+    const nw=M[x.slice(i+1)];if(!nw||typeof nw!=='string')continue;const kn=ckey(k,nw);
+    if(G[kn]!=null||live(k,nw,kn))continue;G[kn]=G[x];t++}
+  return t}
+async function recAfterMerge(res){
+  /* ★ jagwa_uid — 옛 판 기기가 늦게 올린 옛 열쇠 · ★ revfix0929 A-2 — 옮김이 **끝난 뒤** 돌아간다(syncRecords 가 기다렸다 payload 를 짓는다).
+     옛 판은 .then 으로 흘려 보냈다 → jgMigrate 가 첫 통(bogi) 값을 옮기고 IndexedDB put 을 기다리는 사이 PUT 몸통이 지어졌다
+     (bogi 만 새 열쇠 · 나머지 통·도장 u 는 옛 열쇠 — 도장·묘비 lsPut 은 jgMigrate 맨 끝이라) */
+  if(CARD_LAYER){let n=0;try{n=await jgMigrate('merge')}catch(e){console.warn('jgMigrate',e)}if(n)try{draw()}catch(e){}}
   if(!res||!res.dirty.length)return;
   if(CARD_LAYER&&typeof refreshUnits==='function'&&DATA.length)refreshUnits();
   if(res.dirty.indexOf('conc')>=0)buildCQ();
@@ -4595,7 +4616,7 @@ async function syncRecords(force){
     if(sha){
       const txt=await ghRaw(REC_PATH);
       if(txt){try{remote=JSON.parse(txt)}catch(e){console.warn('원격 기록 파싱 실패',e)}}
-      if(remote){const m=await recMerge(remote);recTie+=m.tie||0;try{recAfterMerge(m)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}
+      if(remote){const m=await recMerge(remote);recTie+=m.tie||0;try{await recAfterMerge(m)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}   /* ★ revfix0929 A-2 — 옮김 끝 → 도장 → payload */
     }
     stampAll();
     let res=await ghPutJson(REC_PATH,JSON.stringify(recPayload(remote)),sha);
@@ -4604,7 +4625,7 @@ async function syncRecords(force){
       const txt2=await ghRaw(REC_PATH);
       let remote2=null;
       if(txt2){try{remote2=JSON.parse(txt2)}catch(e){}}
-      if(remote2){const m2=await recMerge(remote2);recTie+=m2.tie||0;try{recAfterMerge(m2)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}
+      if(remote2){const m2=await recMerge(remote2);recTie+=m2.tie||0;try{await recAfterMerge(m2)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}
       stampAll();
       res=await ghPutJson(REC_PATH,JSON.stringify(recPayload(remote2)),sha);
       if(res==='conflict')throw new Error('두 번 다 충돌');
@@ -6610,7 +6631,10 @@ var QRECT=null,QK=1,QRAF=0;
 function qPtF(e){if(!QRECT)return null;return[(e.clientX-QRECT.left)/QK,(e.clientY-QRECT.top)/QK]}
 function qFit(){                               /* 좁은 화면에서는 카드를 통째로 줄인다 — 획도 같은 비율로 따라간다 */
   const wrap=$('#cardwrap'), card=$('#card'); if(!wrap||!card)return 1;
-  const avail=Math.max(120,wrap.clientWidth-2);
+  /* ★ revfix0929 A-4 — clientWidth 는 #cardwrap 안쪽 여백(좌우 16)을 품는다. 옛 식(clientWidth−2)은 카드를 30px 넓게 줄여
+     폰 390 에서 카드 오른쪽 14px 가 창 틀 밖(overflow-x:hidden 에 잘림 — 〈보기〉 X · 「다음 →」 · 「마크 없음」). 이제 안쪽 폭 → 오른쪽 여백 = 왼쪽 여백.
+     PC·iPad 는 안쪽 폭이 760 을 넘어 k = 1 그대로 */
+  const wcs=getComputedStyle(wrap),avail=Math.max(120,wrap.clientWidth-(parseFloat(wcs.paddingLeft)||0)-(parseFloat(wcs.paddingRight)||0));
   /* ★ bookwin §I — 카드 층(지학 · add1 생물)은 두 손가락·Ctrl/⌘+휠 배율 QZ(세션 동안 · 저장 안 함)를 곱한다. 1 이면 옛 길 그대로.
      k>1 이면 가로 굴림 폭(margin-right) · 세로는 옛 식 그대로(margin-bottom = 높이×(k−1)). 필기 좌표(qPt)는 카드 rect 기준이라 무관하다. */
   if(HASBOOK&&typeof QZ==='number'&&QZ!==1){const kz=Math.min(1,avail/QCW)*QZ;
@@ -8380,6 +8404,11 @@ function shellPaint(){
     kd.innerHTML=[['','전체',T.length],['y','기출',nY],['n','기본',nN]].map(x=>
       '<button type="button" class="chchip'+((pastNow()||'')===x[0]?' on':'')+'" data-past="'+x[0]+'">'
       +x[1]+' '+x[2]+'</button>').join('');
+  } else if(CUR.KINDS){
+    /* ★ revfix0929 A-7 — 생물 = 과목 갈래(기출 · 타기출 · 예상) · 셈 = 목록 머리(#eCnts)와 같은 식 · 누르면 그 갈래만(FL.types · 지학 기출/확인문제와 같은 동작)
+       옛 판은 지학 칩(기출 = !isC 746 · 확인문제 0)을 그대로 그려 FL.past 만 바꿨다 — 생물 히트맵은 FL.types 를 봐 늘 같은 270 칸 */
+    kd.innerHTML=CUR.KINDS.map(k=>'<button type="button" class="chchip'+(FL.types.has(k)?' on':'')+'" data-kind="'+k+'">'+KIND_LAB[k]+' '+DATA.filter(r=>kindOf(r)===k).length+'</button>').join('');
+    kd.querySelectorAll('[data-kind]').forEach(el=>el.onclick=()=>{FL.types=new Set([el.dataset.kind]);FL.round='';draw()});
   } else {
   kd.innerHTML='<button type="button" class="chchip'+(FL.past!=='p'?' on':'')+'" data-past="y">기출 '+nG+'</button>'
     +'<button type="button" class="chchip'+(FL.past==='p'?' on':'')+'" data-past="p">확인문제 '+nC+'</button>';
@@ -9106,6 +9135,16 @@ var ES_NOS=[],ES_BANG=false,ES_CNT={t:'',link:false},ES_DK=[];
 var esNS=v=>String(v==null?'':v).toLowerCase().replace(/[\s\-]+/g,'');
 var esMark=(t,q)=>{t=String(t==null?'':t);const low=String(q||'').toLowerCase(),i=low?t.toLowerCase().indexOf(low):-1;
   return i<0?esc(t):esc(t.slice(0,i))+'<mark>'+esc(t.slice(i,i+low.length))+'</mark>'+esc(t.slice(i+low.length))};
+/* ★ revfix0929 A-3 — 데이터 줄바꿈 「⏎」: 찾기 비교에선 빈칸(esCmp · 빈칸 덩이는 하나) · 결과 줄·💬 조각에선 「 / 」(한 줄 그대로) · 카드는 무변.
+   esT1 = 「⏎」 덩이를 한 글자(\u0001)로 접은 글 — 그 글의 \u0001→빈칸·소문자가 esCmp 와 글자마다 맞아 <mark> 자리를 그대로 쓴다 · 물리는 안 탄다 */
+var esCmp=t=>String(t==null?'':t).replace(/(\s*⏎\s*)+/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
+var esT1=t=>String(t==null?'':t).replace(/(\s*⏎\s*)+/g,'\u0001').replace(/\s+/g,' ').trim();
+var esOut=s=>esc(String(s).replace(/\u0001/g,' / '));
+var esAt=(t1,q)=>{const qq=esCmp(q);return qq?t1.replace(/\u0001/g,' ').toLowerCase().indexOf(qq):-1};
+var esMk=(t1,q)=>{const i=esAt(t1,q),L=esCmp(q).length;
+  return i<0?esOut(t1):esOut(t1.slice(0,i))+'<mark>'+esOut(t1.slice(i,i+L))+'</mark>'+esOut(t1.slice(i+L))};
+var esSnip=(t,q)=>{const t1=esT1(t),st=Math.max(0,esAt(t1,q)-30);   /* 걸린 자리 앞 30 자부터 170 자(종전 선택지·해설 조각과 같은 꼴) */
+  return (st>0?'…':'')+esMk(t1.slice(st,st+170),q)+(t1.length>st+170?'…':'')};
 var esSrc=r=>(HASBOOK&&kindOf(r)==='G')?((+r[F.ROUND]||0)+'회 '+(+r[F.LNO]||0)+'번'):String(titleOf(r)||'');
 var esUnit=no=>(typeof unitOf==='function'&&typeof unitLabel==='function')?unitLabel(unitOf(no)):'';
 /* 💬 조각을 찾는 칸 차례(§A-2) — 선택지 → 〈보기〉 → 해설 → 해설2 → 보기 설명 → 참고 → 코멘트 */
@@ -9113,24 +9152,38 @@ function esFields(r){const bg=Array.isArray(r[F.BOGI])?r[F.BOGI]:[],rf=Array.isA
   return [['선택지',j((r[F.CH]||[]).map(x=>String(x==null?'':x)))],['보기',j(bg.map(b=>String((b&&b.내용)||'')))],
     ['해설',String(r[F.SOL]||'')],['해설2',String(r[F.SOL2]||'')],['보기 설명',j(bg.map(b=>String((b&&b.설명)||'')))],
     ['참고',j(rf.map(x=>j([String((x&&x.제목)||''),String((x&&x.글)||'')])))],['코멘트',String(noteOf(r[F.NO])||'')]]}
+/* ★ revfix0929 A-3 — 행마다 고정 칸(본문 · 선택지 · 〈보기〉 · 해설 · 해설2 · 보기 설명 · 참고)의 찾기 글(esCmp)을 한 번만 짓는다 —
+   타자마다 746 행 × 칸 일곱을 정규식 두 번씩 돌리면 esSearch 가 두 배 넘게 느려졌다(PC 중앙값 15 → 35ms). 고친 글자(tfix)·코멘트는 그때그때.
+   행 값이 갈리면(같은 행 배열에 다른 글) 다시 짓는다 — 칸 참조를 같이 쥔다 */
+var ES_RC=new WeakMap();
+function esRowCmp(r){let c=ES_RC.get(r);
+  if(!c||c.k[0]!==r[F.BODY]||c.k[1]!==r[F.CH]||c.k[2]!==r[F.BOGI]||c.k[3]!==r[F.SOL]||c.k[4]!==r[F.SOL2]||c.k[5]!==r[F.REF]){
+    c={k:[r[F.BODY],r[F.CH],r[F.BOGI],r[F.SOL],r[F.SOL2],r[F.REF]],b:esCmp(r[F.BODY]||''),f:esFields(r).slice(0,6).map(x=>[x[0],x[1],esCmp(x[1])])};ES_RC.set(r,c)}
+  return c}
 /* 한 행이 걸렸나 → null | {k:'body'|'id'|'src'|칸 이름, t:그 칸 글} */
 function esHit(r,q){
   if(!HASBOOK)return esPhysHit(r,q)?{k:String(r[F.BODY]).includes(q)?'body':'etc'}:null;
-  const low=q.toLowerCase(),uid=r[F.CODE];
-  if((String(r[F.BODY]||'')+' '+tfixHay(uid)).toLowerCase().includes(low))return {k:'body'};
-  for(const f of esFields(r))if(f[1]&&f[1].toLowerCase().includes(low))return {k:f[0],t:f[1]};
+  const low=esCmp(q),uid=r[F.CODE],c=esRowCmp(r),th=tfixHay(uid);   /* ★ revfix0929 A-3-3 — 「⏎」 = 빈칸 · 빈칸 덩이 하나(「자료해석 2탄」 = 「자료해석⏎2탄」) · ID·출처(아래)는 그대로 */
+  if(c.b.includes(low)||(th&&esCmp(String(r[F.BODY]||'')+' '+th).includes(low)))return {k:'body'};
+  for(const f of c.f)if(f[1]&&f[2].includes(low))return {k:f[0],t:f[1]};
+  {const cm=String(noteOf(r[F.NO])||'');if(cm&&esCmp(cm).includes(low))return {k:'코멘트',t:cm}}
   const ns=esNS(q);
   if(ns&&esNS(codeShow(r)).includes(ns))return {k:'id'};
   if(ns&&(esNS(esSrc(r)).includes(ns)||esNS(titleOf(r)).includes(ns)))return {k:'src'};
   return null}
 function esRowHTML(r,q,h){
-  const no=r[F.NO],body=String((HASBOOK?txtOf(r[F.CODE],'q'):r[F.BODY])||'').replace(/\s+/g,' ').trim(),src=esSrc(r);
+  const no=r[F.NO],src=esSrc(r);
   let l2;
-  if(h.k==='body')l2='<div class="qq">'+esMark(body.slice(0,140),q)+(body.length>140?'…':'')+'</div>';
-  else if(h.t!=null){const e=String(h.t).replace(/\s+/g,' '),i=e.toLowerCase().indexOf(q.toLowerCase()),st=Math.max(0,i-30);
-    const sn=(st>0?'…':'')+e.slice(st,st+170)+(e.length>st+170?'…':'');
-    l2='<div class="qq">'+esc(body.slice(0,60))+'…</div><div class="gl">💬 <i>'+esc(h.k)+'</i> '+esMark(sn,q)+'</div>'}
-  else l2='<div class="qq">'+esc(body.slice(0,70))+'…</div>';
+  if(!HASBOOK){const body=String(r[F.BODY]||'').replace(/\s+/g,' ').trim();   /* 물리 = 종전 그대로(h.t 없음) */
+    l2=h.k==='body'?'<div class="qq">'+esMark(body.slice(0,140),q)+(body.length>140?'…':'')+'</div>':'<div class="qq">'+esc(body.slice(0,70))+'…</div>'}
+  else{
+    /* ★ revfix0929 A-3-1·2 — 첫 문장(stem) 보이는 140 자 안에 그 말이 있으면 거기에 <mark> · 없으면(〈보기〉·가나다 줄 등 본문 뒤쪽) 💬 「본문」 조각 */
+    const uid=r[F.CODE],s1=esT1(txtOf(uid,'q')),si=esAt(s1,q),hd=n=>'<div class="qq">'+esOut(s1.slice(0,n))+'…</div>';
+    if(h.k==='body'&&si>=0&&si+esCmp(q).length<=140)l2='<div class="qq">'+esMk(s1.slice(0,140),q)+(s1.length>140?'…':'')+'</div>';
+    else if(h.k==='body'){const qq=esCmp(q),t=[String(r[F.BODY]||''),tfixHay(uid)].find(x=>esCmp(x).includes(qq))||String(r[F.BODY]||'');
+      l2=hd(60)+'<div class="gl">💬 <i>본문</i> '+esSnip(t,q)+'</div>'}
+    else if(h.t!=null)l2=hd(60)+'<div class="gl">💬 <i>'+esc(h.k)+'</i> '+esSnip(h.t,q)+'</div>';
+    else l2=hd(70)}
   return '<div class="ggres g3" data-esq="'+no+'"><div class="hd">'
     +'<span class="cd">'+(h.k==='id'?'<mark>'+esc(codeShow(r))+'</mark>':esc(codeShow(r)))+'</span>'
     +'<b>'+(h.k==='src'?'<mark>'+esc(src)+'</mark>':esc(src))+'</b>'
