@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PA1109 모션 — 공 하나 vs 두 물체 충돌</title>
+<style>
+:root{--bg:#ffffff;--card:#f4f3ef;--tx:#1f1f1e;--mu:#6b6a65;--ln:#c9c7bf;--vA:#0F6E56;--fc:#D85A30;--rc:#534AB7;--pb:#2F6FD0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1c1b;--card:#2a2a28;--tx:#ecebe6;--mu:#a8a69f;--ln:#55544f;--vA:#5DCAA5;--fc:#F0997B;--rc:#AFA9EC;--pb:#7FA6F2}}
+:root[data-theme="dark"]{--bg:#1c1c1b;--card:#2a2a28;--tx:#ecebe6;--mu:#a8a69f;--ln:#55544f;--vA:#5DCAA5;--fc:#F0997B;--rc:#AFA9EC;--pb:#7FA6F2}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+.w{padding:10px 16px;max-width:760px;margin:0 auto}
+.row{display:flex;align-items:center;gap:10px;margin:4px 0 8px}
+button{font:inherit;font-size:14px;padding:6px 12px;border:1px solid var(--ln);border-radius:8px;background:transparent;color:var(--tx);cursor:pointer}
+button:focus-visible{outline:2px solid var(--rc);outline-offset:2px}
+input[type=range]{flex:1;min-width:0}
+h2{font-size:15px;margin:14px 0 2px}
+h2 small{font-weight:400;color:var(--mu);font-size:12.5px}
+canvas{width:100%;display:block;height:190px}
+.eq{background:var(--card);border-radius:8px;padding:8px 12px;font-size:14px;line-height:1.7;font-variant-numeric:tabular-nums}
+.eq b{font-weight:600}
+.eq .k{color:var(--fc);font-weight:600}.eq .t{color:var(--pb);font-weight:600}
+#msg{font-size:14px;min-height:22px;margin-top:10px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin-top:12px}
+td,th{border-bottom:1px solid var(--ln);padding:6px 6px;text-align:left;vertical-align:top}
+th{color:var(--mu);font-weight:500}
+.tw{overflow-x:auto}
+</style></head><body>
+<div class="w">
+<div class="row"><button id="play" type="button">▶ 재생</button><input type="range" id="ts" min="0" max="4" step="0.01" value="0" aria-label="시간"><b id="tout" style="min-width:70px;font-variant-numeric:tabular-nums">t = 0.00</b></div>
+<div class="row" style="flex-wrap:wrap;margin-top:0"><button type="button" data-t="0.5">닿기 전</button><button type="button" data-t="1.5">닿는 중</button><button type="button" data-t="3">끝난 뒤</button><a href="phys_97.html" target="_blank" rel="noopener" style="font-size:14px;margin-left:auto;color:inherit">크게 보기 ↗</a></div>
+
+<h2>① 라켓 문제 — 공 <u>하나</u>만 본다 <small>PA1109 A 공 · m · v → −2v · Δt</small></h2>
+<canvas id="c1"></canvas>
+<div class="eq" id="e1"></div>
+
+<h2>② 두 물체 충돌 — 둘을 <u>한 묶음</u>으로 본다 <small>A 1kg · 2 → −1 · B 3kg · 0 → 1 (예시 값)</small></h2>
+<canvas id="c2"></canvas>
+<div class="eq" id="e2"></div>
+
+<div id="msg"></div>
+<div class="tw"><table>
+<tr><th></th><th>① 라켓 (공 하나)</th><th>② 두 물체 충돌</th></tr>
+<tr><td>힘 F 는</td><td>라켓이 <b>바깥에서</b> 줌 (외력)</td><td>A↔B 끼리 주고받음 (내력 · 작용·반작용)</td></tr>
+<tr><td>식</td><td>mv + FΔt = m(−2v)</td><td>A 식 + B 식 → +FΔt, −FΔt 상쇄</td></tr>
+<tr><td>결과</td><td>충격량 −3mv <b>남는다</b></td><td>총 운동량 <b>그대로</b> (운동량 보존)</td></tr>
+<tr><td>공통</td><td colspan="2">처음 + 충격량 = 나중 · <b>충격량은 왼쪽에만</b> · 오른쪽엔 나중 운동량만</td></tr>
+</table></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const c1=$('c1'),x1=c1.getContext('2d'),c2=$('c2'),x2=c2.getContext('2d'),ts=$('ts'),tout=$('tout'),play=$('play'),msg=$('msg');
+const TMAX=4;let t=0,run=false,last=0;
+const cs=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const tau=()=>Math.min(Math.max(t-1,0),1), inC=()=>t>=1&&t<2;
+/* ① 공 : m=1, v 1 → −2 (Δt=1) */
+const v1=()=>t<1?1:(t<2?1-3*(t-1):-2);
+const p1=()=>{const u=tau();let x=Math.min(t,1)-1+(u-1.5*u*u);if(t>2)x+=-2*(t-2);return x};
+/* ② A 1kg 2 → −1 · B 3kg 0 → 1 (탄성 · Δt=1 동안 일정한 힘 3) */
+const vA=()=>t<1?2:(t<2?2-3*(t-1):-1), vB=()=>t<1?0:(t<2?(t-1):1);
+function fit(c,x){const r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=r.width*d;c.height=r.height*d;x.setTransform(d,0,0,d,0,0)}
+function size(){fit(c1,x1);fit(c2,x2)}
+function arrow(g,a1,b1,a2,b2,c,w,dash){const a=Math.atan2(b2-b1,a2-a1),L=Math.hypot(a2-a1,b2-b1);g.strokeStyle=c;g.fillStyle=c;g.lineWidth=w;g.setLineDash(dash||[]);g.beginPath();g.moveTo(a1,b1);g.lineTo(a2,b2);g.stroke();g.setLineDash([]);if(L<4)return;g.beginPath();g.moveTo(a2,b2);g.lineTo(a2-9*Math.cos(a-.4),b2-9*Math.sin(a-.4));g.lineTo(a2-9*Math.cos(a+.4),b2-9*Math.sin(a+.4));g.closePath();g.fill()}
+function spring(g,a,b,y,c){const n=7,L=b-a;g.strokeStyle=c;g.lineWidth=1.6;g.beginPath();g.moveTo(a,y);for(let i=1;i<n;i++)g.lineTo(a+L*i/n,y+(i%2?-6:6));g.lineTo(b,y);g.stroke()}
+function bars(g,x0,yb,items,S){ /* 운동량 막대 : 0 선 기준 좌우 */
+  const mu=cs('--mu'),ln=cs('--ln');g.font='12px sans-serif';
+  items.forEach((it,i)=>{const y=yb+i*18;g.fillStyle=mu;g.fillText(it[0],x0,y+4);
+    const z=x0+150;g.strokeStyle=ln;g.lineWidth=1;g.beginPath();g.moveTo(z,y-7);g.lineTo(z,y+7);g.stroke();
+    g.fillStyle=it[2];g.fillRect(it[1]>=0?z:z+it[1]*S,y-5,Math.abs(it[1])*S,10);
+    g.fillStyle=it[2];g.fillText((it[1]>=0?'+':'')+it[1].toFixed(2),z+Math.max(it[1],0)*S+6,y+4)})}
+function draw1(){
+  const W=c1.clientWidth,H=c1.clientHeight,S=Math.min(40,W/14),R=13,y=70,xc=W*0.68;
+  const tx=cs('--tx'),ln=cs('--ln'),cv=cs('--vA'),fc=cs('--fc'),rc=cs('--rc'),pb=cs('--pb');
+  x1.clearRect(0,0,W,H);x1.strokeStyle=ln;x1.lineWidth=1;x1.beginPath();x1.moveTo(16,y+R+6);x1.lineTo(W-16,y+R+6);x1.stroke();
+  const x=xc+p1()*S,v=v1(),c=inC(),rx=c?x+R:xc+R;
+  x1.fillStyle=c?rc:ln;x1.fillRect(rx,y-26,6,52);x1.fillStyle=rc;x1.font='12px sans-serif';x1.fillText('라켓',rx+10,y-18);
+  x1.fillStyle=tx;x1.beginPath();x1.arc(x,y,R,0,7);x1.fill();
+  arrow(x1,x,y-R-8,x+v*26,y-R-8,cv,2.5);x1.fillStyle=cv;x1.fillText('v = '+(v>=0?'+':'')+v.toFixed(2),x-24,y-R-18);
+  if(c){arrow(x1,x,y,x-78-R,y,fc,3);x1.fillStyle=fc;x1.font='bold 12px sans-serif';x1.fillText('F (외력)',x-78-R,y+R+22);
+    arrow(x1,rx+8,y+14,rx+86,y+14,rc,2,[5,4]);x1.fillStyle=rc;x1.font='12px sans-serif';x1.fillText('반작용은 라켓 쪽 (공 식엔 없음)',Math.min(rx+10,W-190),y+34)}
+  bars(x1,16,y+54,[['공 p',v,pb],['받은 충격량',v-1,fc]],S*0.9);
+  const p=v, J=v-1;
+  $('e1').innerHTML=`<b>처음</b> m·v + <span class="k">충격량</span> = <b>나중</b><br>1 × (+1) + <span class="k">(${J>=0?'+':''}${J.toFixed(2)})</span> = <b>${p>=0?'+':''}${p.toFixed(2)}</b>`+(t>=2?` &nbsp;→ <span class="k">FΔt = −3mv</span> (−2mv 아님)`:'');
+}
+function draw2(){
+  const W=c2.clientWidth,H=c2.clientHeight,S=Math.min(40,W/14),R=13,y=70,xc=W*0.52,SL=26,BW=44;
+  const tx=cs('--tx'),ln=cs('--ln'),cv=cs('--vA'),fc=cs('--fc'),rc=cs('--rc'),pb=cs('--pb');
+  x2.clearRect(0,0,W,H);x2.strokeStyle=ln;x2.lineWidth=1;x2.beginPath();x2.moveTo(16,y+R+6);x2.lineTo(W-16,y+R+6);x2.stroke();
+  const u=tau(),xs=xc-SL;let fA,b;
+  if(t<1){fA=xs+2*S*(t-1);b=xc}else if(t<2){fA=xs+S*(2*u-1.5*u*u);b=xc+S*0.5*u*u}else{fA=xs+0.5*S-S*(t-2);b=xc+0.5*S+S*(t-2)}
+  const c=inC(),xA=fA-R;
+  spring(x2,c?fA:b-SL,b,y,tx);
+  x2.fillStyle=tx;x2.beginPath();x2.arc(xA,y,R,0,7);x2.fill();x2.fillRect(b,y-22,BW,R+22+6-6);
+  x2.fillStyle=cs('--bg');x2.font='bold 12px sans-serif';x2.fillText('B',b+17,y+2);x2.fillText('A',xA-4,y+4);
+  const a=vA(),bb=vB();
+  arrow(x2,xA,y-R-10,xA+a*26,y-R-10,cv,2.5);x2.fillStyle=cv;x2.font='12px sans-serif';x2.fillText('vA '+(a>=0?'+':'')+a.toFixed(2),xA-30,y-R-20);
+  arrow(x2,b+BW/2,y-32,b+BW/2+bb*26,y-32,cv,2.5);x2.fillStyle=cv;x2.fillText('vB '+(bb>=0?'+':'')+bb.toFixed(2),b+BW/2-10,y-42);
+  if(c){arrow(x2,xA,y+2,xA-78,y+2,fc,3);arrow(x2,b+BW,y+2,b+BW+78,y+2,fc,3);x2.fillStyle=fc;x2.font='bold 12px sans-serif';
+    x2.fillText('−F',xA-78,y+R+22);x2.fillText('+F  (작용·반작용 · 크기 같음)',Math.min(b+BW+10,W-200),y+R+22)}
+  const pA=1*a,pB=3*bb;
+  bars(x2,16,y+54,[['A p',pA,pb],['B p',pB,pb],['합 (A+B)',pA+pB,fc]],S*0.7);
+  const JA=pA-2,JB=pB;
+  $('e2').innerHTML=`A : 1×(+2) + <span class="k">(${JA>=0?'+':''}${JA.toFixed(2)})</span> = ${pA>=0?'+':''}${pA.toFixed(2)}<br>`+
+   `B : 3×0 + <span class="k">(${JB>=0?'+':''}${JB.toFixed(2)})</span> = ${pB>=0?'+':''}${pB.toFixed(2)}<br>`+
+   `더하면 : 2 + 0 + <span class="k">(${JA>=0?'+':''}${JA.toFixed(2)}) + (${JB>=0?'+':''}${JB.toFixed(2)}) = 0</span> → <span class="t">합 ${(pA+pB).toFixed(2)} 그대로 (운동량 보존)</span>`;
+}
+function draw(){draw1();draw2();tout.textContent='t = '+t.toFixed(2);
+  msg.textContent=t<1?'닿기 전 — ① 공 p = +1 · ② A p = +2, B p = 0, 합 2'
+   :t<2?'닿는 중 — ① 라켓 힘은 짝이 공 밖(라켓)에 있어 공의 충격량이 그대로 쌓인다 · ② A 가 받는 −F 와 B 가 받는 +F 가 같은 시간 동안 → 충격량이 서로 지워진다'
+   :'끝 — ① 공 충격량 −3mv 남음 (−2mv 아님) · ② A −3, B +3 → 합은 처음 2 그대로'}
+function setIcon(){play.textContent=run?'❚❚ 멈춤':'▶ 재생'}
+function loop(n){if(!run)return;const dt=last?(n-last)/1000:0;last=n;t=Math.min(TMAX,t+dt*.6);ts.value=t;draw();if(t>=TMAX){run=false;setIcon();return}requestAnimationFrame(loop)}
+play.onclick=()=>{if(t>=TMAX)t=0;run=!run;last=0;setIcon();if(run)requestAnimationFrame(loop)};
+ts.oninput=()=>{run=false;setIcon();t=+ts.value;draw()};
+document.querySelectorAll('button[data-t]').forEach(b=>b.onclick=()=>{run=false;setIcon();t=+b.dataset.t;ts.value=t;draw()});
+addEventListener('resize',()=>{size();draw()});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
+size();draw();
+</script>
+</body></html>
