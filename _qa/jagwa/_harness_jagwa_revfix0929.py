@@ -383,6 +383,46 @@ def b3(br, eng, app):
     return bool(ok), out
 
 
+PVJS = r"""(q)=>{ /* ★ physprev(10/2) — _task_jagwa_physprev 57줄(A-2-3): 물리만 t 로만 걸린 줄(only) · 조각이 t 인 줄(kind) · 결과 줄을 번호마다(rows) · 나머지 글(rest) */
+ const ph=typeof HASBOOK!=='undefined'&&!HASBOOK&&typeof pvHit==='function'&&typeof esHit==='function'&&typeof esPhysHit==='function';
+ const only=[],kind=[];
+ if(ph){ES_NOS.forEach(n=>{const r=DATA.find(x=>x[F.NO]===n);const h=r?esHit(r,q):null;if(h&&h.k==='prev')kind.push(n)});
+   const keep=window.pvHit;try{window.pvHit=undefined;ES_NOS.forEach(n=>{const r=DATA.find(x=>x[F.NO]===n);if(r&&!esPhysHit(r,q))only.push(n)})}finally{window.pvHit=keep}}
+ const box=document.getElementById('esres');
+ const rows=box?[...box.children].filter(e=>e.dataset&&e.dataset.esq).map(e=>[+e.dataset.esq,e.outerHTML]):[];
+ let rest='';if(box){const c=box.cloneNode(true);[...c.children].forEach(e=>{if(e.dataset&&e.dataset.esq)e.remove()});rest=c.innerHTML}
+ return {nos:ES_NOS.slice(),only,kind,rows,rest}}"""
+CAPNOTE = '<div class="bplnone">상위 100건만 표시했습니다. 검색어를 더 좁혀보세요.</div>'
+
+
+def pv_same(n, b):
+    """★ physprev(10/2) — 근거 = _task_jagwa_physprev 57줄(A-2-3) · 말 하나의 새 판(n) · 바탕(b) 결과를 맞댄다 → (같음, 적을 값)
+       집합 = 새 판 걸린 것 − t 로만 걸린 것 == 바탕 걸린 것 · 줄 HTML = 둘 다 보이는 줄 중 조각이 t 인 줄을 뺀 것끼리 같고 차례도 같음
+       · 바탕에 보이는데 새 판에 안 보이는 줄은 새 판이 100줄 상한에 닿았을 때만(t 로 더 걸려 밀림) · 나머지 글은 「상위 100건」 꼬리를 빼고 같음"""
+    if not isinstance(n, dict) or not isinstance(b, dict):
+        return n == b, {}
+    only, kind = set(n.get('only') or []), set(n.get('kind') or []) | set(b.get('kind') or [])
+    nn = [x for x in n['nos'] if x not in only]
+    bb = [x for x in b['nos'] if x not in set(b.get('only') or [])]
+    rn = [(x, h) for x, h in n['rows'] if x not in kind]
+    rb = [(x, h) for x, h in b['rows'] if x not in kind]
+    hn, hb = dict(rn), dict(rb)
+    common = [x for x, _ in rn if x in hb]
+    html_bad = [x for x in common if hn[x] != hb[x]]
+    order_ok = common == [x for x, _ in rb if x in hn]
+    miss = [x for x, _ in rb if x not in hn]
+    cap_ok = not miss or len(n['rows']) >= 100
+    extra = [x for x, _ in rn if x not in hb]
+    extra_ok = not extra or len(b['rows']) >= 100
+    rest_ok = n['rest'].replace(CAPNOTE, '') == b['rest'].replace(CAPNOTE, '') \
+        and ((CAPNOTE in n['rest']) == (len(n['nos']) > 100)) and ((CAPNOTE in b['rest']) == (len(b['nos']) > 100))
+    same = nn == bb and not html_bad and order_ok and cap_ok and extra_ok and rest_ok
+    info = {'t 로만': len(only), '조각 t': len(kind), '상한 밀림': len(miss)} if (only or kind or miss) else {}
+    if not same:
+        info.update({'집합 같음': nn == bb, '줄 HTML 다름': html_bad[:5], '차례': order_ok, '상한': [len(n['rows']), len(b['rows']), miss[:5]], '더 보임': extra[:5], '나머지 글': rest_ok})
+    return same, info
+
+
 def b3p(br, eng, app):
     """물리 — 걸린 집합(ES_NOS) · 결과 상자 HTML 을 말마다(바탕과 견준다)"""
     dv = Dev(br, eng).load(app, SPD, 'phys', rec={})
@@ -391,7 +431,7 @@ def b3p(br, eng, app):
         res = {}
         for q in Q:
             HS.typeq(dv, q)
-            res[q] = [dv.ev("()=>ES_NOS.slice()"), dv.ev("()=>(document.getElementById('esres')||{}).innerHTML||''")]
+            res[q] = dv.ev(PVJS, q)   # ★ physprev(10/2) — 걸린 집합 · 결과 줄을 번호마다(옛 [ES_NOS, innerHTML] 대신 · 맞대기는 pv_same)
         return res
     finally:
         dv.close()
@@ -659,9 +699,11 @@ def main():
                 if want('b3'):
                     ts = time.time()
                     pn, pb = b3p(br, eng, APPS['NEW']), b3p(br, eng, APPS['BASE'])
-                    diff = [q for q in pb if pn.get(q) != pb[q]]
+                    # ★ physprev(10/2 하위 에이전트 C) — _task_jagwa_physprev 57줄(A-2-3): 물리 t 로만 걸린 줄 · 조각이 t 인 줄 · 100줄 상한은 pv_same 이 가른다
+                    cmp = {q: pv_same(pn.get(q), pb[q]) for q in pb}
+                    diff = [q for q in pb if not cmp[q][0]]
                     R('b3', eng, 'B-3 A-3-4 물리 %d말 — 걸린 집합 · 결과 상자 HTML = 바탕(무변)  [바탕 = 기준]' % len(pb), not diff and len(pb) >= 15, None,
-                      {'말': list(pb), '다른 말': diff, '건': {q: len(pn[q][0]) for q in pn}})
+                      {'말': list(pb), '다른 말': diff, '건': {q: len((pn.get(q) or {}).get('nos') or []) for q in pn}, 'physprev': {q: v[1] for q, v in cmp.items() if v[1]}})
                     TIMES.append(('b3', '물리 말', round(time.time() - ts)))
                 if want('b8'):
                     ts = time.time()
