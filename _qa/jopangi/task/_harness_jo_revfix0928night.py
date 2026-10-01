@@ -208,6 +208,9 @@ def b23(p, b, eng):
         q.ev("()=>__B8.closeAll()")
 
 
+PH_BOOK = "()=>{const w=(POPS||[]).filter(x=>/^cv\\|book\\|/.test(x._pk||'')).pop();const h=w&&w.querySelector('.ph');return h?+h.getBoundingClientRect().height.toFixed(2):null}"   # ★ jo_theme(10/1) 쪽 창 머리 높이
+
+
 def b4(p, b, eng, br):
     """A-4 폰 교재 쪽 창 높이 ≥ 0.6 × 보이는 높이 · 화면 안 · 민소 교재 창 같은 잣대 · PC·아이패드 창 크기 무변(바탕과 같음)"""
     G = 'b4'
@@ -231,12 +234,13 @@ def b4(p, b, eng, br):
                     q.press(ra, how, 900)
                     q.ev("()=>__B8.bookReady()")
                     w8 = q.ev("()=>__RN.bookWin()")
-                    r8.append(dict(w8, press=(ra or {}).get('cy')) if w8 else w8)   # A-6(a) 9/30 — 누른 8판 줄 자리도 적는다(revfix0930 A-6 bkPlace 로 📚 창이 칩 아래 +6 에 가서 이 자리가 옮겨짐)
+                    r8.append(dict(w8, press=(ra or {}).get('cy'), ph=q.ev(PH_BOOK)) if w8 else w8)   # ★ jo_theme(10/1) 머리 높이 ph 도 · A-6(a) 9/30 — 누른 8판 줄 자리도 적는다(revfix0930 A-6 bkPlace 로 📚 창이 칩 아래 +6 에 가서 이 자리가 옮겨짐)
                 q.ev("()=>__B8.closeAll()")
                 q.ev("()=>{try{viewCanvas.book({book:'핵심',page:5},{clientX:100,clientY:%d});}catch(e){}}" % int(H * 0.85))
                 q.until("()=>{const w=(POPS||[]).filter(x=>/^cv\|book\|/.test(x._pk||'')).pop();return !!w&&(!!w.querySelector('.cv-bookpg canvas')||/받지 못했다/.test(w.textContent))}", ms=30000)   # 교재가 다 열린 뒤 잰다(받는 중 창은 낮다)
                 q.pg.wait_for_timeout(500)
                 rm = q.ev("()=>__RN.bookWin()")
+                rm = dict(rm, ph=q.ev(PH_BOOK)) if rm else rm   # ★ jo_theme(10/1) 머리 높이
                 sizes[(W, tag)] = {'8판': r8, '민소': rm}
             finally:
                 q.close()
@@ -252,9 +256,15 @@ def b4(p, b, eng, br):
         # A-6(a) 9/30 — revfix0930 A-6(bkPlace): PC·아이패드 📚 창이 누른 칩 아래(칩 아래 +6)로 간다(옛 = 누른 자리 +14 · 칩 y 300 → 창 314 → 316) → 창 안 8판 줄 누름 자리도 그만큼 옮겨진다.
         #   쪽 창은 누른 자리에 뜨므로(showPop 누른 자리 +34) 바닥에 붙지 않은 쪽 창은 누른 자리 차이만큼 같이 옮겨지는 것이 무변 · 바닥에 붙은 창(PC 셋 · 아이패드 칩 y 700 · 민소)은 자리 그대로 · 높이·폭은 그대로 잰다
         dy = lambda x, y: 0 if abs(y['rect']['b'] - (y['vv']['y'] + y['vv']['h'] - 8)) < 0.6 else (x.get('press') or 0) - (y.get('press') or 0)
-        same = all(x and y and abs(x['rect']['h'] - y['rect']['h']) < 0.6 and abs(x['rect']['w'] - y['rect']['w']) < 0.6 and abs(x['rect']['y'] - y['rect']['y'] - dy(x, y)) < 0.6 for x, y in zip(a1['8판'] + [a1['민소']], a2['8판'] + [a2['민소']]))
+        # ★ jo_theme(10/1) A-7 팝업 틀 — 머리(.ph) 높이가 바뀌었다(chromium 31.44 → 39 · webkit 34.44 → 39 · _task_jo_theme.md 81·82줄 · B-9 는 폭·끌기·크기 조절만 바탕과 같게)
+        #   → 높이 = 바탕 그대로(PC: 남은 자리로 정해짐) 또는 몸통(높이 − 머리) = 바탕(아이패드: 머리 + 내용) · 바닥에 붙은 창 위 끝 = 바탕 또는 머리 차만큼 위 · 폭 · 누른 줄 기준 자리는 그대로
+        pin = lambda y: abs(y['rect']['b'] - (y['vv']['y'] + y['vv']['h'] - 8)) < 0.6
+        dph = lambda x, y: (x.get('ph') or 0) - (y.get('ph') or 0)
+        hok = lambda x, y: abs(x['rect']['h'] - y['rect']['h']) < 0.6 or abs((x['rect']['h'] - (x.get('ph') or 0)) - (y['rect']['h'] - (y.get('ph') or 0))) < 0.6
+        yok = lambda x, y: abs(x['rect']['y'] - y['rect']['y'] - dy(x, y)) < 0.6 or (pin(y) and abs(x['rect']['y'] - y['rect']['y'] + dph(x, y)) < 0.6)
+        same = all(x and y and hok(x, y) and abs(x['rect']['w'] - y['rect']['w']) < 0.6 and yok(x, y) for x, y in zip(a1['8판'] + [a1['민소']], a2['8판'] + [a2['민소']]))
         T(G, '%s %s 창 크기·자리 = 바탕(무변%s)' % (eng, 'PC 1440×900' if W == 1440 else '아이패드 1024×1366', '' if W == 1440 else ' · 쪽 창 자리 = 누른 8판 줄 기준 — revfix0930 A-6'), same,
-          {'NEW': [x and dict(x['rect'], press=x.get('press')) for x in a1['8판'] + [a1['민소']]], 'BASE': [x and dict(x['rect'], press=x.get('press')) for x in a2['8판'] + [a2['민소']]]})
+          {'NEW': [x and dict(x['rect'], press=x.get('press'), ph=x.get('ph')) for x in a1['8판'] + [a1['민소']]], 'BASE': [x and dict(x['rect'], press=x.get('press'), ph=x.get('ph')) for x in a2['8판'] + [a2['민소']]]})
 
 
 # ══════════ 기출뷰 ══════════

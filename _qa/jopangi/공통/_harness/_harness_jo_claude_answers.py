@@ -577,7 +577,8 @@ def report(RES, base, new, rec0, only=''):
           and (w7.get('mok') or '').startswith('__mg') and w7.get('tab') == 'jimun', w7)
         j8 = n.get('J8') or {}
         T(p + 'J8 조문 팝업(%s) — 머리 옛 꼴(파란 띠 %s · 「%s」 · ≡ %s · mbwin %s)' % (j8.get('title'), j8.get('headBg'), j8.get('btn'), j8.get('drag'), j8.get('mbwin')),
-          j8.get('mbwin') is False and j8.get('headBg') == 'rgb(234, 241, 251)' and j8.get('btn') == '✕' and j8.get('drag') != 'none', j8)
+          # ★ jo_theme(10/1) A-7(_task_jo_theme.md 20·82줄) — 팝업 전부(Claude 창 포함) 머리 = #f8fafc → 머리 바탕은 옛 파란 띠 또는 A-7 틀 · mbwin 아님 · ✕ · 끌기 됨은 그대로
+          j8.get('mbwin') is False and j8.get('headBg') in ('rgb(234, 241, 251)', 'rgb(248, 250, 252)') and j8.get('btn') == '✕' and j8.get('drag') != 'none', j8)
         j9 = n.get('J9') or {}
         T(p + 'J9 ✎ 정정 → 글칸(%s) + 핵심 줄 남음(%s) · 딱지 없음(%s) · 단추 %s' % (j9.get('taStyle'), j9.get('coreAfterTa'), j9.get('fixtag'), j9.get('bar')),
           n.get('J9tap') is True and j9.get('ta') is True and j9.get('coreAfterTa') is True and j9.get('fixtag') is None

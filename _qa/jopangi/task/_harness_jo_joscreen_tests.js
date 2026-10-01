@@ -160,7 +160,7 @@ window.__JS = {
   /* ── 6 조문 팝업 ── */
   async popjo(law, k){ try{ closeAllPops(); }catch(e){} await popJo(law, k, { clientX: 300, clientY: 200 }, 1); await until(() => pops().some(p => p._pk === 'jo|' + law + '|' + k && !/불러오는 중/.test(txt(p.querySelector('.pt')))), 8000); await wait(150);
     const p = pops().find(x => x._pk === 'jo|' + law + '|' + k); if (!p) return null;
-    const b = [...p.querySelectorAll('button')].find(x => /뷰로 이동/.test(txt(x)));
+    const b = [...p.querySelectorAll('button')].find(x => /뷰로 이동|^이동 ↗$/.test(txt(x)));   /* ★ jo_theme A-7(10/1) — 「뷰로 이동 ↗」 → 「이동 ↗」(_task_jo_theme.md 85줄 · 동작 무변) */
     if (!b) return { found: false };
     const c = cs(b), ph = p.querySelector('.ph');
     return Object.assign(hitOn(b), { found: true, inHead: !!ph && ph.contains(b), inBody: !!p.querySelector('.pb') && p.querySelector('.pb').contains(b), bg: c.backgroundColor, fs: c.fontSize, fw: c.fontWeight, bw: c.borderTopWidth, color: c.color,

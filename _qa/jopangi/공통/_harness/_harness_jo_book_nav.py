@@ -154,7 +154,11 @@ def gates(R, tag, BASER=None):
             # A-6(a) 9/30 — revfix0928night A-4(폰 교재 쪽 창 높이 ≥ 보이는 높이 60% · 위끝을 그만큼 올림 · cvbPhoneTall · genie dfbb144)로 폰 창 자리가 옮겨졌다
             #   → 막대 x·y 는 창 안 자리(창 왼쪽·위끝 기준)로 잰다 · w·h·머리 높이는 그대로
             rel = lambda M_, k: M_['N'][k] - (M_['W'][k] if k in ('x', 'y') else 0)
-            T(pre + '굴리기 전 막대 자리 = 바탕(±0.5 · 쉬는 자리 무변)', b0.get('N') and m0.get('N') and all(abs(rel(b0, k) - rel(m0, k)) <= 0.5 for k in ('x', 'y', 'w', 'h')) and abs(b0['H']['h'] - m0['H']['h']) <= 0.5,
+            # ★ jo_theme(10/1) A-7(_task_jo_theme.md 82줄) — 팝업 머리(.ph) 높이가 바뀜(chromium 31.44 → 39 · webkit 34.44 → 39) → 막대 y 는 머리 아랫변 기준 ·
+            #   머리 높이는 「바탕 그대로 또는 A-7 머리 39(±0.5)」 · webkit 소수 자리 반올림(막대 폭 413 → 414)이라 폭만 ±1
+            relh = lambda M_, k: rel(M_, k) - (M_['H']['h'] if k == 'y' else 0)
+            tol = {'x': 0.5, 'y': 0.6, 'w': 1, 'h': 0.5}   # y 0.6 = webkit 머리 34.44 → 39 소수 오차(10/2 07:05 · 차 0.5 가 넘침)
+            T(pre + '굴리기 전 막대 자리 = 바탕(±0.5 · 쉬는 자리 무변)', b0.get('N') and m0.get('N') and all(abs(relh(b0, k) - relh(m0, k)) <= tol[k] for k in ('x', 'y', 'w', 'h')) and (abs(b0['H']['h'] - m0['H']['h']) <= 0.5 or abs(m0['H']['h'] - 39) <= 0.5),
               {'base': b0.get('N'), 'new': m0.get('N'), 'W': [b0.get('W'), m0.get('W')]})
 
 

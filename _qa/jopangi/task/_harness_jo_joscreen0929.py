@@ -705,9 +705,10 @@ def regress(br, url, R, src, base_src):
       const lab = recLabel('jopangi.jocheck');
       jckPut('특허법', '제9조', ''); stampAll();
       return {r1: r1, a: a, r2: r2, b: b, inPl: inPl, lab: lab}; }""")
-    R.ck(G, 'R3', all(('jopangi.' + k) in sk for k in old_keys) and sk[-1] == 'jopangi.jocheck' and len(sk) == len(old_keys) + 1
+    # ★ jo_theme(10/1) — SYNC_KEYS 끝에 jopangi.theme 더함(_task_jo_theme.md 44·104줄) → jocheck = 옛 키 바로 뒤 · 그 뒤는 뒤 판이 더한 키
+    R.ck(G, 'R3', all(('jopangi.' + k) in sk for k in old_keys) and len(sk) > len(old_keys) and sk[len(old_keys)] == 'jopangi.jocheck'
          and mg['a'] == {'상표법:제7조': '파'} and mg['b'] == {} and mg['inPl'] == {'특허법:제9조': '초'} and mg['lab'] == '☑ 조 체크 색',
-         '동기화: 키 %d → %d(끝 jocheck) · 원격 칸 받음 %s · 원격 묘비 지움 %s · 올릴 data %s · 이름 %s' % (len(old_keys), len(sk), mg['a'], mg['b'], mg['inPl'], mg['lab']))
+         '동기화: 키 %d → %d(옛 키 바로 뒤 jocheck · 그 뒤 %s) · 원격 칸 받음 %s · 원격 묘비 지움 %s · 올릴 data %s · 이름 %s' % (len(old_keys), len(sk), sk[len(old_keys) + 1:], mg['a'], mg['b'], mg['inPl'], mg['lab']))
     # R4 마크업 창 켜기 → 본문에 얹힘
     go_jo(pg, '특허법', '제55조', "S.mkWin=true;")
     pg.wait_for_function("() => document.querySelector('.pop.wm-mk .sh')", timeout=20000)
@@ -815,7 +816,9 @@ def main():
     ap.add_argument('--no-regress', action='store_true')
     a = ap.parse_args()
     src = open(a.html, encoding='utf-8').read()
-    base_src = open(a.base_html, encoding='utf-8').read() if a.base_html else src.replace(", 'jocheck']", "]")
+    # ★ jo_theme(10/1) — SYNC_KEYS 끝이 'jocheck', 'theme'] 으로 늘어 「끝의 , 'jocheck'] 떼기」가 안 먹어 옛 키 = 새 키(46 = 46)가 되던 것 →
+    #   'jocheck' 와 그 뒤 키(뒤 판이 더한 것)를 떼어 옛 키(이 판 앞)로 · 바탕(끝 = 'jocheck'])은 같은 결과(_task_jo_theme.md 44·104줄)
+    base_src = open(a.base_html, encoding='utf-8').read() if a.base_html else re.sub(r", 'jocheck'(?:, '[^']+')*\]", "]", src)
     only = set(x.strip().upper() for x in a.only.split(',') if x.strip())
     httpd, url = serve(a.html)
     R_ = R()

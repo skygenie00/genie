@@ -117,6 +117,24 @@ def blank_pdf(path, n=805):
         w.write(f)
 
 
+def _ln(src, dst):
+    """★ 로컬 윈도(10/2) — 심볼릭 링크 권한이 없으면(WinError 1314) 폴더 = 정션 · 파일 = 하드 링크(같은 볼륨) → 안 되면 복사 · 읽기만"""
+    try:
+        os.symlink(src, dst)
+        return
+    except OSError:
+        if os.name != 'nt':
+            raise
+    if os.path.isdir(src):
+        import _winapi
+        _winapi.CreateJunction(src, dst)
+        return
+    try:
+        os.link(src, dst)
+    except OSError:
+        shutil.copy2(src, dst)
+
+
 def build_overlay():
     """덧판 둘 — full(합성 재료 다) · none(테마·쪽 글 없음 = 404) · 나머지는 로컬 클론을 링크(읽기만)"""
     os.makedirs(TMP, exist_ok=True)
@@ -144,22 +162,22 @@ def build_overlay():
         for x in os.listdir(MBREAL):
             if x in ('words', 'pdf', 'theme') or x.startswith('.'):
                 continue
-            os.symlink(os.path.join(MBREAL, x), os.path.join(d, x))
+            _ln(os.path.join(MBREAL, x), os.path.join(d, x))
         os.makedirs(os.path.join(d, 'words'))
         for x in os.listdir(os.path.join(MBREAL, 'words')):
             if x != 'patent_hr8':
-                os.symlink(os.path.join(MBREAL, 'words', x), os.path.join(d, 'words', x))
+                _ln(os.path.join(MBREAL, 'words', x), os.path.join(d, 'words', x))
         w8 = os.path.join(d, 'words', 'patent_hr8')
         os.makedirs(w8)
         for x in os.listdir(os.path.join(MBREAL, 'words', 'patent_hr8')):
             if x not in ('책메타.json', '글.json.gz'):
-                os.symlink(os.path.join(MBREAL, 'words', 'patent_hr8', x), os.path.join(w8, x))
+                _ln(os.path.join(MBREAL, 'words', 'patent_hr8', x), os.path.join(w8, x))
         json.dump(meta, open(os.path.join(w8, '책메타.json'), 'w', encoding='utf-8'), ensure_ascii=False)
         os.makedirs(os.path.join(d, 'pdf'))
         for x in os.listdir(os.path.join(MBREAL, 'pdf')):
             if x != 'patent_hr8.pdf':
-                os.symlink(os.path.join(MBREAL, 'pdf', x), os.path.join(d, 'pdf', x))
-        os.symlink(pdf, os.path.join(d, 'pdf', 'patent_hr8.pdf'))
+                _ln(os.path.join(MBREAL, 'pdf', x), os.path.join(d, 'pdf', x))
+        _ln(pdf, os.path.join(d, 'pdf', 'patent_hr8.pdf'))
         if var == 'full':
             with gzip.open(os.path.join(w8, '글.json.gz'), 'wt', encoding='utf-8') as f:
                 json.dump(text, f, ensure_ascii=False)
@@ -613,6 +631,13 @@ def b6(br, src, tag, devs=(('폰390', PHONE), ('PC', PC))):
         p.pg.keyboard.type('없앨 글')
         p.press(p.ev("() => __RB.hitOn(document.querySelector('.jtbar .jckf'))"), 400) if False else None
         out = p.ev("() => { const e = document.querySelector('.jomt'); return e ? __RB.hitOn(e) : null; }")
+        # ★ 로컬 10/2 — 폰 390 에서 .jomt 위 30px 이 편집 중인 테마 줄(.r.tmr.tmon · ✓ 아래 여백) 안에 떨어져 「바깥」이 아니었다(elementsFromPoint 잼)
+        #   → 그 점이 편집 줄 안이면 서랍 안 · 마지막 줄 아래 빈 자리를 누른다(편집 줄 밖 · 폰에서 서랍 밖을 누르면 서랍이 닫혀 뒤 칸이 못 돎 · §B-6 「바깥 누름 → 취소」 그대로)
+        inrow = p.ev("a => { const e = document.elementFromPoint(a[0], a[1]); return !!(e && e.closest('.r.tmr.tmon, .tmed')); }", [out['cx'], out['cy'] - 30])
+        if inrow:
+            em = p.ev("() => { const t = document.querySelector('#slot > .tree'); if (!t) return null; const rs = [...t.querySelectorAll('.r')].filter(r => r.getClientRects().length); const tb = t.getBoundingClientRect(); const lb = rs.length ? rs[rs.length - 1].getBoundingClientRect().bottom : tb.top; const y = Math.min(lb + 40, tb.bottom - 10); return { cx: tb.left + 60, cy: y, ok: y > lb + 5 }; }")
+            if em and em.get('ok'):
+                out = dict(out, cx=em['cx'], cy=em['cy'] + 30)
         if p.touch:
             p.tap(out['cx'], out['cy'] - 30, 400)
         else:

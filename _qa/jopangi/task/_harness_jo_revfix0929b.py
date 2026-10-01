@@ -347,7 +347,8 @@ def N(g, name, detail=''):
 # ════════════════════════ 관문 ════════════════════════
 U_PIN, PIN_P, PIN_R = 'T1552093', 500, [0.154, 0.674, 0.862, 0.7265]   # 찍어 둔 자리를 심는 지문(P7-1662) · 해례 8판 p.500
 TOUCH_DEV = (('폰390', PHONE), ('iPad834', PAD))
-SIX = [('체크', '.tree .r button.jck', '.tree .r button.jck', True), ('접기1', '.tree .jtbar .jstep', '', True),
+# ★ jo_theme(10/1) — 접기1 선택자에 A-1 「테마 N」 칩(.uzstep.jstep.tmtg · 접기1 꼴)이 같이 잡혀 PC 「접기1 = 착수 판」이 어긋났다 → 그 칩을 뺀다(_task_jo_theme.md 14줄)
+SIX = [('체크', '.tree .r button.jck', '.tree .r button.jck', True), ('접기1', '.tree .jtbar .jstep:not(.tmtg)', '', True),
        ('팔레트', '.jckpal .jcksw, .jckpal .jckclr', '.jckpal .jcksw, .jckpal .jckclr', True), ('거름 줄', '.jckmenu .jckmo', '.jckmenu .jckmo', False),
        ('모드 글자', '.jomt .plgb.jomd', '.jomt .plgb.jomd', True), ('막대 둘째 줄', '.mk9bar .mk9r2 button.m2, #c2mark .mk9r2 button.m2', '.mk9r2 button.m2', True)]
 MEAS = r"""([sel, same, n]) => [...document.querySelectorAll(sel)].filter(__RB.vis).slice(0, n || 4).map(e => { e.scrollIntoView({block:'center'}); return __RB.tgt(e, same); })"""
@@ -868,6 +869,23 @@ def sweep_screens(br, src, tag, dev):
     return out, errs
 
 
+# ★ jo_theme(10/1) — 뜻한 바뀜 둘(근거): ① A-7(_task_jo_theme.md 85줄) 팝업 머리 「뷰로 이동 ↗」 → 「이동 ↗」(.tmgo · 동작 무변) = 같은 단추 → 이름표만 옛 것으로 맞춘다
+#   ② fix1 A-34-3(_task_jo_theme_fix1.md 57줄) 서랍 머리 거름 점(.bkmk.tmdot) 누름 = ::before 높이 36 · 가로는 이웃과 안 겹치는 만큼(36 안 되면 값을 적는다)
+#      → 새 「작은 누름」으로 잡히면 그 점을 따로 재어 높이 ≥ 36 · 가운데 · 가로챔 0 · 먼쪽 0 이면 받는다(가로 값은 적기 · 폭 조건 없음)
+B12_RENAME = {'small:button.plgb.tmgo:이동 ↗': 'small:button.plgb:뷰로 이동 ↗'}
+B12_DOT = 'small:i.bkmk.dot:'
+
+
+def b12_dot(br, src, tag, dev):
+    p = dev_page(br, tag, src, dev)
+    try:
+        p.ev("async () => await __RB.jo('특허법', '제6조', true)")
+        arr = p.ev(MEAS, ['.tree .jtbar .bkmk.tmdot', '', 1])
+    finally:
+        p.close()
+    return touch_ok('거름 점', arr, False, 36)
+
+
 def b12(br, src, base_src, tag):
     G = 'B12'
     ok = True
@@ -875,11 +893,20 @@ def b12(br, src, base_src, tag):
         n, en = sweep_screens(br, src, tag + 'N' + dn, dev)
         b, eb = sweep_screens(br, base_src, tag + 'B' + dn, dev)
         for scr in n:
-            new = sorted(set(n[scr]) - set(b.get(scr, [])))
-            gone = sorted(set(b.get(scr, [])) - set(n[scr]))
+            nn = set(B12_RENAME.get(x, x) for x in n[scr])   # ★ jo_theme(10/1) ① 이름표만 바뀐 단추
+            new = sorted(nn - set(b.get(scr, [])))
+            gone = sorted(set(b.get(scr, [])) - nn)
+            dot = None
+            if B12_DOT in new and dev in (PHONE, PAD):   # ★ jo_theme(10/1) ② 거름 점 = fix1 A-34-3 잣대로 따로 잰다
+                dot = b12_dot(br, src, tag + 'D' + dn, dev)
+                if dot[0]:
+                    new.remove(B12_DOT)
             good = not new
             ok = ok and good
-            T(G, '%s %s 새로 생긴 흠 0' % (dn, scr), good, {'새로': new[:6], '없어짐': len(gone), '남은(바탕에도 있음)': len(set(n[scr]) & set(b.get(scr, [])))})
+            det = {'새로': new[:6], '없어짐': len(gone), '남은(바탕에도 있음)': len(nn & set(b.get(scr, [])))}
+            if dot:
+                det['거름 점(fix1 A-34-3 · 높이 ≥ 36 · 가로 값 적기)'] = dot[1]
+            T(G, '%s %s 새로 생긴 흠 0' % (dn, scr), good, det)
         if en:
             ok = False
             T(G, '%s JS 오류' % dn, False, en[:3])

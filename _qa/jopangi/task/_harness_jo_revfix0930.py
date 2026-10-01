@@ -533,6 +533,11 @@ def b5(br, tag='b5', eng='chromium'):
             if nm == '본문 조 링크':
                 same = mn[nm] == mb[nm]
                 det = (mn[nm][:2], mb[nm][:2])
+            elif nm == '팝업 머리 단추':
+                # ★ jo_theme(10/1) A-7(_task_jo_theme.md 82줄) — 머리 단추 틀(12px 700 · 테두리 1px · 안쪽 2px 8px)로 보이는 크기가 바뀜 → 글자 차례 = 착수 HEAD · PC 누름 = 보이는 크기(±1 · 터치 넓힘이 PC 로 안 샘)
+                same, det = H.pc_same(mn[nm], mb[nm])   # ★ 10/2 바로잡음 — 옛 잣대(착수 HEAD 와 같음)를 먼저 받고 아니면 A-7 꼴(옛 머리 앱은 모두 닫기 누름 20 vs 보이는 18.9 라 ±1 에 안 듦)
+                same = same or ([x['t'] for x in mn[nm]] == [x['t'] for x in mb[nm]] and all(abs(x['dw'] - x['w']) <= 1 and abs(x['dh'] - x['h']) <= 1 for x in mn[nm]))
+                det = ([(x['t'], x['w'], x['h'], x['dw'], x['dh']) for x in mn[nm]], [(x['t'], x['w'], x['h'], x['dw'], x['dh']) for x in mb[nm]])
             else:
                 same, det = H.pc_same(mn[nm], mb[nm])
             ok &= same
@@ -552,7 +557,8 @@ VISN = r"""() => [...document.querySelectorAll('#slot > .tree .r')].filter(__RB.
 def tree_html(p, law):
     p.ev("async a => { localStorage.removeItem('jopangi_ui_jofold'); await __RB.jo(a, '제1조', true); }", law)
     p.wait(300)
-    return p.ev("() => { const t = document.querySelector('#slot > .tree'); return t ? t.innerHTML : null; }"), p.ev(TREEQ)
+    # ★ jo_theme(10/1) A-1(_task_jo_theme.md 14줄) — 머리 줄에 더해진 거름 점(.tmdot) · 「테마 N」(.tmtg)은 빼고 맞댄다(그 둘 말고 서랍 DOM 은 착수 HEAD 와 바이트 같음 · 10/2 잼)
+    return p.ev("() => { const t = document.querySelector('#slot > .tree'); if (!t) return null; const c = t.cloneNode(true); c.querySelectorAll('.tmtg, .tmdot').forEach(e => e.remove()); return c.innerHTML; }"), p.ev(TREEQ)
 
 
 def fold_seq(p, law):
@@ -738,10 +744,14 @@ def b8(br):
             rr = []
             for y in (300, 420, 600, 420):
                 at, b = H.open_box(p, H.U_PIN, y, True)
-                rr.append(b and [round(b['rect']['y']), round(b['rect']['b'])])
+                ph = p.ev("() => { const w = POPS.filter(x => /^cell\\|📚/.test(x._pk || '')).pop(); const h = w && w.querySelector('.ph'); return h ? +h.getBoundingClientRect().height.toFixed(2) : null; }")   # ★ jo_theme(10/1) 머리 높이
+                rr.append(b and [round(b['rect']['y']), round(b['rect']['b']), ph])
             rs[which] = rr
             p.close()
-        good = all(a and b and abs(a[0] - b[0]) <= 2 and abs(a[1] - b[1]) <= 2 for a, b in zip(rs['new'], rs['base']))
+        # ★ jo_theme(10/1) A-7(_task_jo_theme.md 82줄) — 창 머리(.ph) 높이가 바뀜(chromium 31.44 → 39) → 「그대로(±2)」 또는 「아래 끝 +머리 차 · 또는 바닥 붙은 창 위 끝 −머리 차(±2)」
+        dph = lambda a, b: (a[2] or 0) - (b[2] or 0)
+        same8 = lambda a, b: (abs(a[0] - b[0]) <= 2 and abs(a[1] - b[1]) <= 2) or (abs(a[0] - b[0]) <= 2 and abs(a[1] - b[1] - dph(a, b)) <= 2) or (abs(a[1] - b[1]) <= 2 and abs(a[0] - b[0] + dph(a, b)) <= 2)
+        good = all(a and b and same8(a, b) for a, b in zip(rs['new'], rs['base']))
         ok &= good
         T(G, '폰 390 교재 자리 창 = 착수 HEAD(±2 · 칩 y 300→420→600→420)', good, rs)
     return ok
@@ -768,11 +778,20 @@ def b9(br):
         n, en = sweep_more(br, app_src(NEW), 'b9N' + dn, dev)
         b, eb = sweep_more(br, app_src(BASE), 'b9B' + dn, dev)
         for scr in n:
-            new = sorted(set(n[scr]) - set(b.get(scr, [])))
-            gone = sorted(set(b.get(scr, [])) - set(n[scr]))
+            nn = set(H.B12_RENAME.get(x, x) for x in n[scr])   # ★ jo_theme(10/1) — revfix0929b B12 와 같은 고침: 「이동 ↗」 이름표 = 옛 「뷰로 이동 ↗」(A-7 85줄)
+            new = sorted(nn - set(b.get(scr, [])))
+            gone = sorted(set(b.get(scr, [])) - nn)
+            dot = None
+            if H.B12_DOT in new and dev in (PHONE, PAD):   # ★ 거름 점 = fix1 A-34-3(_task_jo_theme_fix1.md 57줄) 잣대로 따로 잰다(높이 ≥ 36 · 가운데 · 가로챔 0)
+                dot = H.b12_dot(br, app_src(NEW), 'b9D' + dn, dev)
+                if dot[0]:
+                    new.remove(H.B12_DOT)
             good = not new
             ok &= good
-            T(G, '%s %s 새로 생긴 흠 0' % (dn, scr), good, {'새로': new[:6], '없어짐': gone[:4], '남은(바탕에도 있음)': len(set(n[scr]) & set(b.get(scr, [])))})
+            det = {'새로': new[:6], '없어짐': gone[:4], '남은(바탕에도 있음)': len(nn & set(b.get(scr, [])))}
+            if dot:
+                det['거름 점(fix1 A-34-3 · 높이 ≥ 36 · 가로 값 적기)'] = dot[1]
+            T(G, '%s %s 새로 생긴 흠 0' % (dn, scr), good, det)
         en = [e for e in en if 'ResizeObserver loop' not in e]
         if en:
             ok = False

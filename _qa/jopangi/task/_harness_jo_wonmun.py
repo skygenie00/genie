@@ -197,8 +197,9 @@ def g_w2(p, b, eng):
         if jo == '제107조':
             T(G, u'단추 「✎ 마크업 0/95」 · 수 11px #9ca3af', bt.get('n') == '0/95' and (bt.get('ncs') or {}).get('fs') == '11px' and (bt.get('ncs') or {}).get('col') == 'rgb(156, 163, 175)', bt)
             css = w.get('css') or {}
-            T(G, u'창 틀 = 연결 창(흰 머리 · 테 #e5e7eb · 둥근 12 · 몸 #f9fafb) · 제목 「✎ 마크업 · 제107조 통상실시권 설정의 재정」 · 첫 줄 「켠 것 0 / 95 · 모두 켜기 · 모두 끄기 … ✎ 편집」',
-              (css.get('hd') or {}).get('bg') == 'rgb(255, 255, 255)' and (css.get('p') or {}).get('bc') == 'rgb(229, 231, 235)' and (css.get('p') or {}).get('br') == '12px'
+            # ★ jo_theme(10/1) fix1 #33(_task_jo_theme_fix1.md 28줄 · A-33) — 연결 창·원문 창(wm-mk)도 A-7 틀(머리 #f8fafc · 테 #cbd5e1)로 바뀜 → 색 두 칸을 짝으로 받는다(옛 틀 짝 또는 A-7 틀 짝)
+            T(G, u'창 틀 = 연결 창(흰 머리 · 테 #e5e7eb · 둥근 12 · 몸 #f9fafb · 또는 A-7 틀 머리 #f8fafc · 테 #cbd5e1) · 제목 「✎ 마크업 · 제107조 통상실시권 설정의 재정」 · 첫 줄 「켠 것 0 / 95 · 모두 켜기 · 모두 끄기 … ✎ 편집」',
+              ((css.get('hd') or {}).get('bg'), (css.get('p') or {}).get('bc')) in (('rgb(255, 255, 255)', 'rgb(229, 231, 235)'), ('rgb(248, 250, 252)', 'rgb(203, 213, 225)')) and (css.get('p') or {}).get('br') == '12px'
               and (css.get('bd') or {}).get('bg') == 'rgb(249, 250, 251)' and w.get('title') == u'✎ 마크업 · 제107조 통상실시권 설정의 재정'
               and re.sub(r'\s+', '', w.get('bar') or '') == u'켠것0/95모두켜기모두끄기✎편집', {'css': css, 'title': w.get('title'), 'bar': w.get('bar'), '자리': [w.get('x'), w.get('y'), w.get('w'), w.get('h')]})   # 단추 사이는 flex 틈이라 글자에 빈칸이 없다 — 빈칸을 다 빼고 맞댐
             mr = p.ev("()=>{const m=document.querySelector('#slot > .main').getBoundingClientRect();return [Math.round(m.left),Math.round(m.top),Math.round(m.right)]}")

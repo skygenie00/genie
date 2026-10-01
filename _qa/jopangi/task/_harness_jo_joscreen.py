@@ -611,11 +611,11 @@ def pop_gates(br, wk):
         try:
             p.ev("()=>__JS.jo('특허법','제29조',{panel:false})")
             g = p.ev("a=>__JS.popjo(a[0],a[1])", [u'상표법', u'제1조'])
-            ok = bool(g and g.get('found') and g['inHead'] and not g['inBody'] and g['afterTitle'] and g['bg'] in ('rgba(0, 0, 0, 0)', 'transparent') and g['fs'] == '11px' and g['bw'] == '0px')
+            ok = bool(g and g.get('found') and g['inHead'] and not g['inBody'] and g['afterTitle'] and g['bg'] in ('rgba(0, 0, 0, 0)', 'transparent') and g['fs'] in ('11px', '11.5px') and g['bw'] == '0px')   # ★ jo_theme A-7 — 11.5px(CSS .ptgo .plgb.tmgo)
             if tag == 'NEW':
                 clicked = p.click(g, 900)
                 st = p.ev("()=>__JS.state()")
-                T('6', u'조문 팝업(%s) 「뷰로 이동 ↗」 = 머리 줄 안 · 제목 바로 뒤 · 바탕 투명 · 11px · 누르면 그 조 뷰' % bname, ok and clicked and st['tab'] == 'jo' and st['law'] == u'상표법' and st['jo'] == u'제1조' and st['pops'] == 0,
+                T('6', u'조문 팝업(%s) 「이동 ↗」(옛 「뷰로 이동 ↗」 · jo_theme A-7) = 머리 줄 안 · 제목 바로 뒤 · 바탕 투명 · 11.5px · 누르면 그 조 뷰' % bname, ok and clicked and st['tab'] == 'jo' and st['law'] == u'상표법' and st['jo'] == u'제1조' and st['pops'] == 0,
                   {'단추': g, '누른 뒤': st})
             else:
                 T('6-헛', u'헛잣대 — 바탕 「뷰로 이동 ↗」 = 본문 맨 위 파란 알약', not ok, {'머리 안': g and g.get('inHead'), '본문 안': g and g.get('inBody'), '바탕': g and g.get('bg'), '크기': g and g.get('fs')})
