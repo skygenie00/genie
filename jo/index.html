@@ -8168,6 +8168,15 @@ function pitByPrec(){ const A = pitAll(); const n = Object.keys(A).length; if (P
   const map = {}; Object.keys(A).forEach(k => { const p = k.split(SEP); if (String(p[0] || '').indexOf('prec|') !== 0) return; const id = p[0].slice(5); const v = A[k] || {};
     (map[id] = map[id] || []).push({ key: k, tk: p[0], struct: p[1] || '', wi: p[2], word: p[3] || '', t: String(v.t || ''), who: pitWhoOf(v), ts: v.ts || '' }); });
   PITIDX = { rec: A, n: n, map: map }; return map; }
+/* ★ jo_c2memo — 카드 대상(card|<갈래>|<파일>) 메모 색인 · 2차 보드 줄·칸마다 pitAll 전체를 훑지 않는다(pitByPrec 꼴 · pitPut·별칭 옮기기가 무효화) */
+let PITCIDX = { rec: null, n: -1, map: {} };
+function pitByCard(){ const A = pitAll(); const n = Object.keys(A).length; if (PITCIDX.rec === A && PITCIDX.n === n) return PITCIDX.map;
+  const map = {}; Object.keys(A).forEach(k => { const p = k.split(SEP); if (String(p[0] || '').indexOf('card|') !== 0) return; const v = A[k] || {};
+    (map[p[0]] = map[p[0]] || []).push({ key: k, tk: p[0], struct: p[1] || '', wi: p[2], word: p[3] || '', t: String(v.t || ''), who: pitWhoOf(v), ts: v.ts || '' }); });
+  PITCIDX = { rec: A, n: n, map: map }; return map; }
+/* ★ jo_c2memo A-1·A-2 — 2차 보드 줄·칸 메모 칩 = 판례·조문 메모 칩 한 벌(pitChipEl · popPitListOf · skMemoGo) · 메모 0 이면 칩 없음 */
+function c2MemoChip(c){ const tk = 'card|' + S.boardKind + '|' + c.file;
+  return pitChipEl(pitByCard()[tk], '이 문제', ev => popPitListOf('pitlist|' + tk, '🗒 메모 — ' + c.file, pitByCard()[tk] || [], ev)); }
 /* ★ pop_moknote B-5 — 메모 칩 한 벌(판례 2단 카드 · 판례 3단 머리 · 조문 3단 머리) = 「🗒 N」 + 사람 딱지 + 클릭 = 메모 목록.
    목록은 대상키 하나(prec|<id> · jo|<법>:<조>)의 메모 — 판례는 pitByPrec 색인 그대로 · 조문은 pitListOf(같은 꼴). */
 function pitListOf(tk){ const A = pitAll(), out = [];
@@ -8199,7 +8208,7 @@ function pitPut(k, rec){
   pitAll();
   if (rec === null) delete PITREC[k];
   else PITREC[k] = Object.assign({}, rec, { ts: nowIso() });
-  try{ PITIDX.rec = null; }catch(e){}   /* ★ 메모 손질 — 색인 무효화 → 칩·건수 즉시 갱신 */
+  try{ PITIDX.rec = null; PITCIDX.rec = null; }catch(e){}   /* ★ 메모 손질 — 색인 무효화 → 칩·건수 즉시 갱신 · ★ jo_c2memo 카드 색인도 */
   return lsWrite(PIT_KEY, PITREC, '🗒 포스트잇');
 }
 function cmpAll(){ if (!CMPREC) CMPREC = lsRead(CMP_KEY); return CMPREC; }
@@ -8831,7 +8840,7 @@ function c2FoldMode(){let v=null;try{v=localStorage.getItem(C2FOLD_KEY);}catch(e
   if(C2FOLD_MODES.indexOf(v)>=0)return v; if(v==='1')return 'title'; if(v==='0')return 'all'; return innerWidth<=480?'title':'skel';}
 function c2Folded(){return c2FoldMode()==='title';}   /* 호환 — 「제목만」 */
 function c2CellEl(c,bodies){const hot=/⚠|누락/.test(c.x.논점||'');const cd=el('div','cell'+(hot?' hot':'')+(c.pass?'':' dim')+(S.cha2Sel===c.ck?' sel':''));cd.dataset.ck=c.ck;
-  const hd=el('div','chd');hd.appendChild(el('span','t',c.series||c.label));hd.appendChild(c2ScoreChip(c));c2PdfChips(c.info.pdfs).forEach(a=>hd.appendChild(a));cd.appendChild(hd);   /* ★ 2차 탭 판 1 add1 — §11 칩 여럿 */
+  const hd=el('div','chd');hd.appendChild(el('span','t',c.series||c.label));hd.appendChild(c2ScoreChip(c));{const mc=c2MemoChip(c);if(mc)hd.appendChild(mc);}c2PdfChips(c.info.pdfs).forEach(a=>hd.appendChild(a));cd.appendChild(hd);   /* ★ jo_c2memo — 사례 격자 칸 머리도 점수 칩 바로 뒤 */   /* ★ 2차 탭 판 1 add1 — §11 칩 여럿 */
   const ti=el('div','ctitle',c.title);ti.title='눌러서 크게 보기';ti.onclick=e=>{e.stopPropagation();popCard4(S.boardKind,c.file,e,1);};cd.appendChild(ti);
   const fm=c2FoldMode();
   if(fm==='title'){   /* 9/5 B-6 — 「제목만」: 문제 콜아웃 머리(있으면) + 「본문 ▾」 · 누르면 그때 본문(그림도) */
@@ -8927,6 +8936,7 @@ function c2RowEl(c, o){ o = o || {}; const hot = /⚠|누락/.test(c.x.논점 ||
   if (S.boardKind === 'GS' && c.series) t1.appendChild(el('span', 'c2ser', c.series));
   if (c.num) t1.appendChild(el('span', 'chip c-src c2n', '사례 ' + c.num));
   t1.appendChild(c2ScoreChip(c));
+  { const mc = c2MemoChip(c); if (mc) t1.appendChild(mc); }   /* ★ jo_c2memo — 점수 칩 바로 뒤(Claude 단추·PDF 칩 앞) · 걸침 줄도 같은 칩 · 칩 누름은 줄 누름(카드)과 안 섞임(pitChipEl 이 stopPropagation) */
   if (S.law === '민사소송법' && S.boardKind === '기출'){ const u = clMsUid(c.file); if (u) t1.appendChild(clBtnIf(u)); }   /* ★ ms_claude_editq C-3 — 점수 칩 바로 오른쪽 · 답이나 언급이 있을 때만 · 누르면 창만(줄 누름으로 안 번짐) */
   c2PdfChips(c.info.pdfs).forEach(a => t1.appendChild(a));
   m.appendChild(t1); r.appendChild(m);
@@ -16547,7 +16557,7 @@ function uidMigrate(why){
       if (P[nk] !== undefined){ if (same(P[nk], P[k])){ delete P[k]; n++; } else kept++; return; }
       P[nk] = P[k]; delete P[k]; n++;
     });
-    if (n){ lsWrite(PIT_KEY, P, '별칭 옮기기'); try{ PITREC = null; PITIDX.rec = null; }catch(e){} bump('postit', n); }
+    if (n){ lsWrite(PIT_KEY, P, '별칭 옮기기'); try{ PITREC = null; PITIDX.rec = null; PITCIDX.rec = null; }catch(e){} bump('postit', n); }
     UZ_PIT_KEPT = kept;
   })();
   (function(){                                       /* 형광펜 — 'card|1차객|<열쇠>' + SEP + … 합성 열쇠 */
