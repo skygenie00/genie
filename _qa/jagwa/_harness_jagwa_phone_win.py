@@ -594,10 +594,23 @@ def rf4(br, eng):
     """A-4 [공식] 첫 편 머리 「0. 단위·기초 · 1」 · 1~6편 머리 무변"""
     def f(q):
         q.ev("()=>pwList('f')"); q.wait(500)
-        return (q.ev("()=>__W.list()") or {}).get('heads')
+        L = q.ev("()=>__W.list()") or {}
+        if str(L.get('title') or '').startswith('📐 공식 · 공식 시트'):   # ★ 합치기 10/1 — physphone A-3 공식 시트(0편 = 탭 「단위·기초」)
+            u = q.ev("""()=>{const t=document.querySelector('#pwl [data-pft="u"]');if(!t)return null;t.click();
+              const b=document.getElementById('pwlBody');const x=b?b.textContent.replace(/\\s+/g,' ').trim():'';
+              const s0=document.querySelector('#pwl [data-pft="s"]');if(s0)s0.click();return {tab:__W.tx(t),body0:x.slice(0,40),unit:x.indexOf('단위')>=0,broken:/0\\.\\s*·\\s*1/.test(x)}}""")
+            q.wait(300)
+            return {'sheet': True, 'heads': (q.ev("()=>__W.list()") or {}).get('heads'), 'u': u}
+        return L.get('heads')
     r = both(br, eng, 'phys', False, f)
     n, b = r['NEW'] or [], r['BASE'] or []
-    T('RF4', '%s [공식] 첫 편 머리 = 「0. 단위·기초 · 1」 · 1~6편 머리 = 바탕' % eng, bool(n) and n[0] == '0. 단위·기초 · 1' and n[1:] == b[1:], n[:7])
+    if isinstance(n, dict) and n.get('sheet'):   # ★ 합치기 10/1 — physphone A-3(97883ef) 공식 시트 꼴: 탭 「단위·기초」 있음 · 몸에 「단위」 · 깨진 「0. · 1」 없음 · 장 머리 1~6 차례
+        hs, u = n.get('heads') or [], n.get('u') or {}
+        T('RF4', '%s [공식] 첫 편 머리 = 「0. 단위·기초 · 1」 · 1~6편 머리 = 바탕(★ physphone A-3 공식 시트 꼴 — 0편 = 탭 「단위·기초」 · 장 머리 1~6)' % eng,
+          u.get('tab') == '단위·기초' and u.get('unit') and not u.get('broken') and len(hs) == 6 and all(str(h).startswith('%d.' % (i + 1)) for i, h in enumerate(hs)), {'탭': u, '장 머리': hs})
+        n = []
+    else:
+        T('RF4', '%s [공식] 첫 편 머리 = 「0. 단위·기초 · 1」 · 1~6편 머리 = 바탕' % eng, bool(n) and n[0] == '0. 단위·기초 · 1' and n[1:] == b[1:], n[:7])
     T('RF4-헛', '%s 헛잣대 바탕 — 첫 편 머리 이름 빈칸(「0.  · 1」)' % eng, bool(b) and b[0].replace(' ', '') == '0.·1', b[:1])
 
 
@@ -889,9 +902,11 @@ def rf2_7(br, eng):
                 T('RF2-B7', '%s 폰 %s %s %s — 없음' % (eng, subj, scr, s), False, x); continue
             want36 = s not in ('#mcwSel',)
             same = s == '#jnwX' or (y and x['vis'][2:] == y['vis'][2:])   # 보이는 크기(폭·높이) — 자리는 「닫기」가 한 줄이 되며 머리가 낮아져 위로 갈 수 있다
+            if not same and s == '#jnw .jgo' and subj == 'phys' and y and x['vis'][2] <= y['vis'][2] + 0.5 and x['vis'][3] <= y['vis'][3] + 0.5:
+                same = True   # ★ 합치기 10/1 — physphone(97883ef CSS 「body[data-layer="pdf"] #jnw .jnrow .h .jgo … {font-size:10px}」) 물리 📋 줄 칩 글자를 줄였다 — 보이는 크기 ≤ 바탕
             okk = (x['hit']['h'] >= 36 or s in ('#mcwInk', '#mcwBk', '#mcwOmr') and x['hit']['h'] >= 34 or not want36) and same
             if s == '#jnwX':
-                okk = okk and x['vis'][3] < 30
+                okk = okk and (x['vis'][3] < 30 or (abs(x['vis'][2] - 36) < 1 and abs(x['vis'][3] - 36) < 1))   # ★ 합치기 10/1 — physphone A-4 「닫기」 → ✕ 36×36(한 줄 꺾임 없음)
             T('RF2-B7', '%s 폰 %s %s %s — 누름 칸 %d×%d(보이는 %s×%s · 바탕 누름 %s)' % (eng, subj, scr, s, x['hit']['w'], x['hit']['h'], x['vis'][2], x['vis'][3], y and '%d×%d' % (y['hit']['w'], y['hit']['h'])),
               okk, {'새': x, '바탕': y})
         # 이웃 겹침 — 누름 칸 사각형끼리
@@ -955,6 +970,9 @@ def rf2_12(br, eng):
                         by = sorted(set((nn.get('coverBy') or {}).get(s) or [])) if cat == 'cover' else []
                         if by == ['pwl'] and scr in ('[공식]', '🃏'):   # 뜻한 차이 — A-2 목록 창(#pwl) 첫 자리가 화면 오른쪽 끝(t = 문제 창 위)으로 옮겨 덮는 것(연 차례대로 위)
                             acc.append({'칸': line['칸'], '신호': s, '수': k, '덮은 창': 'pwl'}); continue
+                        if cat == 'cover' and by and set(by) <= {'mcw', 'gguw'} and (s.startswith('button#jnwX') or s.startswith('button#tTheory') or re.search('「(시트|백지 인출|단위·기초)」$', s)):
+                            # ★ 합치기 10/1 — physphone A-3(공식 시트 탭 셋 · #tTheory 「이론」) · A-4(📋 ✕) 단추가 나중에 연 창(🃏 · #gguw) 밑에 깔린 덮임 — 쌓임 차례 그대로 · 단추 이름·자리만 바뀜
+                            acc.append({'칸': line['칸'], '신호': s, '수': k, '덮은 창': by, '까닭': 'physphone A-3·A-4'}); continue
                         newonly.append({'칸': line['칸'], '종류': cat, '신호': s, '수': k, '덮은 것': by})
                 if nn['docow'] > (bb.get('docow') or 0):
                     newonly.append({'칸': line['칸'], '종류': '쪽 넘침', '신호': '%s > %s' % (nn['docow'], bb.get('docow'))})
