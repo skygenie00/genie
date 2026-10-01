@@ -1398,6 +1398,20 @@ body[data-layer="pdf"] .vbot .tools:not(#pRow1)>*{display:none!important}
 .esdh[data-esback]{cursor:pointer}
 .esdh .esb{margin-left:auto;color:var(--red);border-bottom:1px dashed currentColor;cursor:pointer}
 .esdh .esb.off{color:var(--muted);border-bottom:0;cursor:default}
+/* ★ jagwa_search_claude — 근거 검색 Claude 풀이(민법 꼴 값 그대로 · minbeop .clsrc 97~99 · .ggclhd 94~96 · 상자 clFieldBoxHTML 1636)
+   딱지 = 보이는 ID 옆(근거 · 댓글 · Claude) · Claude 조각·암기 상자 = 주황 왼줄 상자 · 머리 「C n」 = 「! K」 오른쪽(0 이면 회색 · 못 누름) */
+.ggres .clsrc{flex:none;font-size:10px;font-weight:800;border-radius:4px;padding:0 5px;border:1px solid #e5e7eb;color:#6b7280;background:#fff}
+.ggres .clsrc.gg{color:#1d4ed8;border-color:#bfdbfe}
+.ggres .clsrc.cl{color:#b45309;border-color:#fed7aa;background:#fff7ed}
+.ggres .glc{margin-top:4px;padding:4px 8px;border-left:2px solid #fdba74;background:#fff7ed;color:#b45309;overflow-wrap:anywhere}
+.ggres .gpbox{margin-top:4px;padding:4px 8px;border-left:2px solid #fdba74;background:#fff7ed;color:#b45309;font-weight:600;white-space:pre-wrap;overflow-wrap:anywhere}
+.esdh.cl{background:#fff7ed;color:#b45309}
+.esdh .esc{color:#b45309;border-bottom:1px dashed currentColor;cursor:pointer}
+.esdh .esc.off{color:var(--muted);border-bottom:0;cursor:default}
+.esdr .gpn{font-size:11px;font-weight:800;color:#b45309;border:1px solid #fed7aa;background:#fff;border-radius:4px;padding:0 5px}
+/* 터치 — 「!」·「C」 누름 높이 36(보이는 글자 그대로 · 투명 누름 영역 · 둘 사이 틈 8px 는 가운데서 4px 씩 나눔) · 머리 줄을 36 으로 세워 위아래 이웃(검색 줄·단원 줄)을 안 먹는다 */
+@media (pointer:coarse){.esdh{min-height:36px;box-sizing:border-box}.esdh .esb,.esdh .esc{position:relative}
+  .esdh .esb::before,.esdh .esc::before{content:"";position:absolute;left:-4px;right:-4px;top:50%;height:36px;margin-top:-18px}}
 .esdk{padding:4px 9px;font-size:11px;font-weight:700;color:#4A3E7A;border-bottom:1px dashed var(--line)}
 .esdr{display:flex;align-items:center;gap:6px;padding:6px 9px;border-bottom:1px dashed var(--line);cursor:pointer;font-size:12px;font-weight:700;color:#4A3E7A}
 .esdr:hover{background:var(--paper)}
@@ -8319,7 +8333,7 @@ function shellBuild(){
   const clr=document.createElement('button');clr.type='button';clr.className='ebtn';clr.id='qClr';clr.textContent='지우기';
   srch.appendChild(clr);
   const qc=document.createElement('span');qc.className='mut';qc.id='qCnt';srch.appendChild(qc);
-  qc.onclick=()=>{if(ES_CNT.link){ES_BANG=false;esDist()}};   /* ★ jagwa_search A-4 — 「근거 N개 ▸」 */
+  qc.onclick=()=>{if(ES_CNT.link){ES_BANG=false;ES_CL=false;esDist()}};   /* ★ jagwa_search A-4 — 「근거 N개 ▸」 */
   {const sp=$('#spec');if(sp)hm.appendChild(sp)}
   {const cn=$('#cnt');if(cn)bar.appendChild(cn)}
   {const os=document.getElementById('ordSeg');if(os)bar.appendChild(os)}
@@ -8333,7 +8347,7 @@ function shellBuild(){
   esh.querySelector('#hmTg').onclick=()=>{const on=localStorage.getItem(HM_FOLD_K)==='1';
     try{localStorage.setItem(HM_FOLD_K,on?'0':'1')}catch(e){}shellPaint()};
   sg.onclick=e=>{const b=e.target.closest('[data-sm]');if(!b)return;ggSearchMode(b.dataset.sm)};
-  clr.onclick=()=>{const q=$('#q');if(q)q.value='';FL.q='';ES_BANG=false;esSearch();draw()};   /* ★ jagwa_search — 칸·상자·개수 비움(근거 모드면 「근거 N개 ▸」) */
+  clr.onclick=()=>{const q=$('#q');if(q)q.value='';FL.q='';ES_BANG=false;ES_CL=false;esSearch();draw()};   /* ★ jagwa_search — 칸·상자·개수 비움(근거 모드면 「근거 N개 ▸」) */
   esh.querySelector('#eWk').onclick=()=>{FL.mark=FL.mark==='weak'?'':'weak';draw()};
   esh.querySelector('#eLs').onclick=()=>{FL.mark=FL.mark==='less'?'':'less';draw()};
   esh.querySelector('#rvF').onchange=e=>{FL.mark=e.target.value||'';draw()};
@@ -8517,7 +8531,7 @@ function ggSearchMode(m){
   const esh=document.getElementById('esh');if(!esh)return;
   esh.querySelectorAll('.seg2 [data-sm]').forEach(b=>b.classList.toggle('on',b.dataset.sm===GGMODE));
   const q=$('#q');if(q)q.placeholder=GGMODE==='g'?'근거·댓글에서 검색':'검색어를 입력하세요';
-  ES_BANG=false;esSearch();   /* ★ jagwa_search A-4 — 모드를 바꾸면 그 모드 규칙으로 같은 글을 다시 찾는다 · 「!」 풀림 */
+  ES_BANG=false;ES_CL=false;esSearch();   /* ★ jagwa_search A-4 — 모드를 바꾸면 그 모드 규칙으로 같은 글을 다시 찾는다 · 「!」 풀림 · ★ jagwa_search_claude 「C」 도 */
   draw();
 }
 
@@ -9063,14 +9077,20 @@ function ggPickLine(uid,low){
   if(!hit){for(const g of list){const x=(g&&Array.isArray(g.cs)?g.cs:[]).find(y=>y&&has(y.t));if(x){hit=g;c=x;break}}}
   hit=hit||list[0];
   return hit?(hit.i+'. '+one(ggFlat(hit))+(c?'\n↳ '+one(c.t):'')):''}
-function ggHits(q){
+function ggHits(q,cl){   /* ★ jagwa_search_claude — cl = 위 검색 줄('go') · Claude 풀이까지 찾고 걸린 곳(src)을 단다 · 카드 안 근거 찾기(pick)는 cl 없이 = 옛 그대로 */
   const low=String(q||'').toLowerCase().trim();
   const out=[];
-  DATA.filter(r=>!isC(r)).forEach(r=>{const uid=GGU(r),L=ggOf(uid);if(!L.length)return;
-    if(low){const hay=L.map(g=>ggFlat(g)+' '+(g.cs||[]).map(c=>c.t).join(' ')).join(' ').toLowerCase();
-      if(!hay.includes(low)&&!uid.toLowerCase().includes(low)&&!String(codeShow(r)).toLowerCase().includes(low)
+  DATA.filter(r=>!isC(r)).forEach(r=>{const uid=GGU(r),L=ggOf(uid),no=r[F.NO],gp=!!cl&&!!gptOf(no);if(!L.length&&!gp)return;
+    let src=null;
+    if(low){const hay=L.map(g=>ggFlat(g)+' '+(g.cs||[]).map(c=>c.t).join(' ')).join(' ').toLowerCase(),hitG=!!L.length&&hay.includes(low);
+      if(cl){const has=v=>String(v||'').toLowerCase().includes(low);
+        src={gg:L.some(g=>g&&has(ggFlat(g))),cm:L.some(g=>g&&Array.isArray(g.cs)&&g.cs.some(c=>c&&has(c.t))),cl:gp&&gpHit(no,low)};
+        if(hitG&&!src.gg&&!src.cm)src.gg=true}   /* 항목 경계를 건너 걸린 말 = 근거 */
+      if(!hitG&&!(src&&src.cl)&&!uid.toLowerCase().includes(low)&&!String(codeShow(r)).toLowerCase().includes(low)
          &&!(esNS(low)&&esNS(codeShow(r)).includes(esNS(low))))return}   /* ★ jagwa_search — ID 는 하이픈·띄어쓰기 무시(G953201 → G95-32-01) */
-    out.push({uid:uid,no:r[F.NO],line:ggPickLine(uid,low),bang:ggBangAny(uid),own:ggOwners(uid).length})});
+    const h={uid:uid,no:no,line:L.length?ggPickLine(uid,low):'',bang:ggBangAny(uid),own:ggOwners(uid).length};
+    if(cl)h.src=src||{gg:false,cm:false,cl:false};
+    out.push(h)});
   return out}
 /* add3 ③ — 카드 안 찾기와 위 검색 줄이 **같은 세 줄 꼴**을 쓴다(민법 3443~3467).
    mode 'pick' = 카드 안(누르면 연결 걸기) · 'go' = 위 검색 줄(누르면 문항 창).
@@ -9087,19 +9107,44 @@ function ggResRowHTML(h,q,mode,me,sc){
     +(mode==='pick'?'data-ggpick="'+ea(String(me)+'|'+h.uid+'|'+String(sc||''))+'"'
                    :'data-ggres="'+h.no+'"')+'>'
     +'<div class="hd"><span class="cd">'+esc(codeShow(r))+'</span>'
+    +(mode==='go'&&h.src?(h.src.gg?'<span class="clsrc gg">근거</span>':'')+(h.src.cm?'<span class="clsrc">댓글</span>':'')+(h.src.cl?'<span class="clsrc cl">Claude</span>':''):'')   /* ★ jagwa_search_claude — 걸린 곳 전부(민법 clSrcOf) */
     +'<b>'+esc((+r[F.ROUND]||0)+'회 '+(+r[F.LNO]||0)+'번')+'</b>'
     +'<span class="un">'+esc(unitLabel(unitOf(h.no)))+'</span>'
     +(h.bang?'<span class="ggbang on">!</span>':'')
     +(on?'':ggUseHTML(h.uid,'↩',me||''))
     +(on?'<span class="already">이미 넣음</span>':'')+'</div>'
     +'<div class="qq">'+esc(String(txtOf(h.uid,'q')).slice(0,70))+'…</div>'
-    +'<div class="gl">'+mark(line)+'</div></div>'}
+    /* ★ jagwa_search_claude — Claude 에서만 걸린 문항(또는 근거 없는 문항)은 근거 줄 대신 Claude 조각(민법 clSnip · <mark>) · 둘 다 걸리면 둘 다(민법 꼴)
+       h.nogl = 근거 줄 안 그림 · h.box = 아래 붙일 주황 상자(분포 목록 · A-3) */
+    +((h.nogl||(mode==='go'&&h.src&&(!h.line||(h.src.cl&&!h.src.gg&&!h.src.cm))))?'':'<div class="gl">'+mark(line)+'</div>')
+    +((mode==='go'&&h.src&&gptOf(h.no)&&(h.src.cl||!h.line))?'<div class="glc">'+mark(gpSnip(h.no,String(q||'').toLowerCase().trim()))+'</div>':'')
+    +(h.box||'')+'</div>'}
 function ggResLine(h,q){return ggResRowHTML(h,q,'go','','')}
 /* ══ jagwa_search (2026-09-29 · jagwa/_task_jagwa_search.md) — 검색 = 민법OX 꼴 ══
    목록은 안 거른다 · 결과 = #esres(근거 모드와 같은 상자) · 「N건」 = #qCnt · 100건까지 · 누름 = openView(no, 걸린 번호 전부).
    찾는 칸 — 생물·지학: 본문(+고친 글자) · 선택지 · 〈보기〉 · 해설 · 해설2 · 보기 설명 · 참고 · 코멘트 · 보이는 ID · 출처
              물리: 옛 목록 거름 식 그대로(esPhysHit). 켜 둔 갈래·단원·마크 필터는 안 본다(그 과목 DATA 전부). */
 var ES_NOS=[],ES_BANG=false,ES_CNT={t:'',link:false},ES_DK=[];
+/* ★ jagwa_search_claude — Claude 풀이(GP[no] md 하나 · gptOf) 를 근거 검색이 찾는다(민법 _task_ox_claude_answers §C 꼴)
+   ES_CL = 분포 「C」 켬(모듈 변수뿐 · 저장 안 함 · 민법 GG_CL_ONLY) — ES_BANG 을 푸는 자리에서 같이 푼다 · 「!」 와 배타
+   gpPlain = ** · # · 글머리 「- 」 · 표 기호(| · ---)를 뺀 평문(민법 clSnip 과 같은 식) · gpSnip = 걸린 자리 앞 30 · 90 자 */
+var ES_CL=false;
+var gpPlain=no=>String(gptOf(no)||'').replace(/\*\*/g,'').replace(/^#+\s*/gm,'').replace(/^\s*-\s+/gm,'').replace(/-{3,}/g,' ').replace(/\|/g,' ').replace(/\s+/g,' ').trim();
+var gpHit=(no,low)=>!!low&&!!gptOf(no)&&gpPlain(no).toLowerCase().includes(low);
+var gpSnip=(no,low)=>{const t=gpPlain(no),i=low?t.toLowerCase().indexOf(low):-1,st=Math.max(0,i-30);return (st?'…':'')+t.slice(st,st+90)+(st+90<t.length?'…':'')};
+/* A-3 암기 절 — 절 머리(GP_SEC 판정 · gpRender 와 같음) 머리 글에 「암기」가 든 첫 절의 몸(다음 절 머리 전까지) · ** 풀기 · 줄바꿈·글머리 「- 」 그대로
+   없으면 첫 절 몸의 첫 줄(절 머리가 하나도 없으면 글 첫 줄) → {all, first} */
+function gpMemo(no){
+  const L=String(gptOf(no)||'').replace(/\r\n?/g,'\n').split('\n'),H=[];
+  L.forEach((x,i)=>{const m=x.match(GP_SEC);if(m)H.push([i,m[2]||''])});
+  const body=k=>{const a=H[k][0]+1,b=k+1<H.length?H[k+1][0]:L.length;return L.slice(a,b).map(x=>x.replace(/\*\*([^*]+)\*\*/g,'$1')).join('\n').replace(/^\s*\n|\n\s*$/g,'').replace(/^\n+|\n+$/g,'')};
+  const one=t=>(String(t).split('\n').find(x=>x.trim())||'').trim();
+  const mk=H.findIndex(h=>h[1].indexOf('암기')>=0);
+  if(mk>=0){const a=body(mk);return {all:a,first:one(a)}}
+  const f=one(H.length?body(0):L.map(x=>x.replace(/\*\*([^*]+)\*\*/g,'$1')).join('\n'));
+  return {all:f,first:f}}
+var gpBoxHTML=(no,only)=>{if(!gptOf(no))return '';const m=gpMemo(no);
+  return '<div class="gpbox">'+esc((only?'Claude · '+m.all:'C · '+m.first))+'</div>'};
 var esNS=v=>String(v==null?'':v).toLowerCase().replace(/[\s\-]+/g,'');
 var esMark=(t,q)=>{t=String(t==null?'':t);const low=String(q||'').toLowerCase(),i=low?t.toLowerCase().indexOf(low):-1;
   return i<0?esc(t):esc(t.slice(0,i))+'<mark>'+esc(t.slice(i,i+low.length))+'</mark>'+esc(t.slice(i+low.length))};
@@ -9132,9 +9177,11 @@ function esRowHTML(r,q,h){
     +'<span class="cd">'+(h.k==='id'?'<mark>'+esc(codeShow(r))+'</mark>':esc(codeShow(r)))+'</span>'
     +'<b>'+(h.k==='src'?'<mark>'+esc(src)+'</mark>':esc(src))+'</b>'
     +'<span class="un">'+esc(esUnit(no))+'</span></div>'+l2+'</div>'}
-var esGgRows=()=>DATA.filter(r=>!isC(r)&&ggOf(GGU(r)).length>0);   /* ggHits 와 같은 모집단(확인문제 뺌) */
+/* ★ jagwa_search_claude A-1 — 분포 모집단 = 근거 있는 문항 ∪ Claude 풀이 있는 문항(확인문제 뺌 · 민법 fieldItems) · 개수 칸 N 은 근거만(민법 memoCount) */
+var esGgOnly=()=>DATA.filter(r=>!isC(r)&&ggOf(GGU(r)).length>0);
+var esGgRows=()=>DATA.filter(r=>!isC(r)&&(ggOf(GGU(r)).length>0||!!gptOf(r[F.NO])));   /* ggHits('go') 와 같은 모집단 */
 function esCntPaint(){const c=document.getElementById('qCnt');if(!c)return;
-  if(ES_CNT.link)ES_CNT.t='근거 '+esGgRows().length+'개 ▸';   /* 근거가 늘고 줄면 다시 센다 */
+  if(ES_CNT.link)ES_CNT.t='근거 '+esGgOnly().length+'개 ▸';   /* 근거가 늘고 줄면 다시 센다 · Claude 는 안 센다 */
   c.textContent=ES_CNT.t;c.classList.toggle('eslink',!!ES_CNT.link)}
 function esSearch(){
   const box=document.getElementById('esres');if(!box)return;
@@ -9154,22 +9201,30 @@ var esUK=u=>String(u||'').split('.').map(x=>String(+x||0).padStart(4,'0')).join(
 function esDist(){
   const box=document.getElementById('esres');if(!box)return;
   const all=esGgRows(),bang=r=>ggBangAny(GGU(r)),K=all.filter(bang).length;if(!K)ES_BANG=false;
-  const use=ES_BANG?all.filter(bang):all,m=new Map(),bm=new Map();
-  use.forEach(r=>{const u=(typeof unitOf==='function'?unitOf(r[F.NO]):'')||'';m.set(u,(m.get(u)||0)+1);if(bang(r))bm.set(u,(bm.get(u)||0)+1)});
+  const cl=r=>!!gptOf(r[F.NO]),C=all.filter(cl).length;if(!C)ES_CL=false;if(ES_BANG)ES_CL=false;   /* ★ jagwa_search_claude A-2 — 「C n」 = 모집단 안 Claude 풀이 문항 수 */
+  const use=ES_BANG?all.filter(bang):ES_CL?all.filter(cl):all,m=new Map(),bm=new Map(),cm=new Map();
+  use.forEach(r=>{const u=(typeof unitOf==='function'?unitOf(r[F.NO]):'')||'';m.set(u,(m.get(u)||0)+1);if(bang(r))bm.set(u,(bm.get(u)||0)+1);if(cl(r))cm.set(u,(cm.get(u)||0)+1)});
   ES_DK=[...m.keys()].sort((a,b)=>((!a)-(!b))||esUK(a).localeCompare(esUK(b)));   /* 단원 코드 차례 · 미분류 끝 */
   box.classList.remove('hide');box.scrollTop=0;
   if(!all.length){box.innerHTML='<div class="bplnone">근거 기록이 없습니다.</div>';return}
-  box.innerHTML='<div class="esdh'+(ES_BANG?' bang':'')+'">'+(ES_BANG?'근거 <b>! '+use.length+'건 · '+ES_DK.length+'개 단원</b>':'근거 '+use.length+'건 · '+ES_DK.length+'개 단원')
-    +'<span class="esb'+(K?'':' off')+'"'+(K?' data-esbang="1"':'')+'>! '+K+'</span></div>'
+  box.innerHTML='<div class="esdh'+(ES_BANG?' bang':ES_CL?' cl':'')+'">'+(ES_BANG?'근거 <b>! '+use.length+'건 · '+ES_DK.length+'개 단원</b>'
+      :ES_CL?'<span>근거 <b>C '+use.length+'건 · '+ES_DK.length+'개 단원</b> — Claude 풀이가 있는 것만 보는 중</span>':'근거 '+use.length+'건 · '+ES_DK.length+'개 단원')
+    +'<span class="esb'+(K?'':' off')+'"'+(K?' data-esbang="1"':'')+'>! '+K+'</span>'
+    +'<span class="esc'+(C?'':' off')+'"'+(C?' data-escl="1"':'')+'>C '+C+'</span></div>'   /* ★ jagwa_search_claude A-2 — 「! K」 오른쪽 · 0 이면 회색·못 누름 */
     +ES_DK.map((u,i)=>'<div class="esdr" data-esu="'+i+'"><span>'+esc(typeof unitLabel==='function'?unitLabel(u):u)+'</span><span class="rt">'
-      +(ES_BANG?'':'<span class="n">'+m.get(u)+'건</span>')+(bm.get(u)?'<span class="ggbang on">! '+bm.get(u)+'</span>':'')+'</span></div>').join('')}
+      +((ES_BANG||ES_CL)?'':'<span class="n">'+m.get(u)+'건</span>')+((bm.get(u)&&!ES_CL)?'<span class="ggbang on">! '+bm.get(u)+'</span>':'')
+      +((cm.get(u)&&!ES_BANG)?'<span class="gpn">C '+cm.get(u)+'</span>':'')+'</span></div>').join('')}
 function esDistList(i){
   const box=document.getElementById('esres');if(!box)return;const u=ES_DK[i];if(u===undefined)return esDist();
   let L=esGgRows().filter(r=>((typeof unitOf==='function'?unitOf(r[F.NO]):'')||'')===u);if(ES_BANG)L=L.filter(r=>ggBangAny(GGU(r)));
+  if(ES_CL)L=L.filter(r=>!!gptOf(r[F.NO]));   /* ★ jagwa_search_claude A-3 */
   box.classList.remove('hide');box.scrollTop=0;
   box.innerHTML='<div class="esdh" data-esback="1">◀ 단원 분포로</div>'
-    +'<div class="esdk">'+esc(typeof unitLabel==='function'?unitLabel(u):u)+' · '+L.length+'건'+(ES_BANG?' · 켜진 근거만':'')+'</div>'
-    +L.map(r=>{const uid=GGU(r);return ggResLine({uid:uid,no:r[F.NO],line:ggPickLine(uid,''),bang:ggBangAny(uid),own:ggOwners(uid).length},'')}).join('')}
+    +'<div class="esdk">'+esc(typeof unitLabel==='function'?unitLabel(u):u)+' · '+L.length+'건'+(ES_BANG?' · 켜진 근거만':'')+(ES_CL?' · Claude 풀이만':'')+'</div>'
+    /* 평소 = 근거 줄 + 주황 상자 「C · 암기 절 첫 줄」(풀이 있을 때 · 근거 없는 문항은 상자만) · 「C」 = 근거 줄 대신 「Claude · 암기 절 전부」 · 「!」 = 옛 그대로 */
+    +L.map(r=>{const uid=GGU(r),no=r[F.NO],hasG=ggOf(uid).length>0;
+      return ggResLine({uid:uid,no:no,line:hasG?ggPickLine(uid,''):'',bang:ggBangAny(uid),own:ggOwners(uid).length,
+        nogl:ES_CL||!hasG,box:ES_BANG?'':gpBoxHTML(no,ES_CL)},'')}).join('')}
 /* ★ jagwa_search A-5 — 물리 찾는 식 = 옛 목록 거름(pass 의 `!HASBOOK` 갈래)을 글자 그대로 옮긴 것 · FL.q → q */
 function esPhysHit(r,q){const s=q.toLowerCase(),no=r[F.NO];
   return !!(String(r[F.CODE]).toLowerCase().includes(s)||String(r[F.SUB]).includes(q)||String(r[F.BODY]).includes(q)
@@ -9179,7 +9234,7 @@ function esPhysHit(r,q){const s=q.toLowerCase(),no=r[F.NO];
 function ggResBox(q){
   const box=document.getElementById('esres');if(!box)return;
   if(GGMODE!=='g'){box.classList.add('hide');box.innerHTML='';return}
-  const hits=ggHits(q);
+  const hits=ggHits(q,true);   /* ★ jagwa_search_claude — Claude 풀이까지 */
   box.classList.remove('hide');
   box.innerHTML=hits.length?hits.map(h=>ggResLine(h,q)).join(''):'<div class="bplnone">찾은 근거가 없다</div>';
   return hits.length}   /* ★ jagwa_search — 개수 칸 「N건」 */
@@ -9411,7 +9466,8 @@ if(SHELL){
     if(el=hit('[data-esq]')){e.stopPropagation();openView(+el.getAttribute('data-esq'),ES_NOS.slice());return}   /* ★ jagwa_search — ▶ = 검색 결과 차례(필터 밖 갈래 포함) · 검색칸·상자 그대로 */
     if(el=hit('[data-esu]')){e.stopPropagation();esDistList(+el.getAttribute('data-esu'));return}
     if(el=hit('[data-esback]')){e.stopPropagation();esDist();return}
-    if(el=hit('[data-esbang]')){e.stopPropagation();ES_BANG=!ES_BANG;esDist();return}
+    if(el=hit('[data-esbang]')){e.stopPropagation();ES_BANG=!ES_BANG;if(ES_BANG)ES_CL=false;esDist();return}
+    if(el=hit('[data-escl]')){e.stopPropagation();ES_CL=!ES_CL;if(ES_CL)ES_BANG=false;esDist();return}   /* ★ jagwa_search_claude A-2 — 「!」 와 배타 */
     if(el=hit('[data-ggres]')){e.stopPropagation();openView(+el.getAttribute('data-ggres'));return}
     if(el=hit('[data-ggbang]')){e.stopPropagation();const v=par(el,'data-ggbang');ggBangToggle(v[0],v[1]);return}
     if(el=hit('[data-ggtog]')){e.stopPropagation();const v=par(el,'data-ggtog');
