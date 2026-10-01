@@ -207,7 +207,11 @@ def main():
                       {'길이': len(N['gpText'].get(no) or '')})
                 R(eng, 'add2 — 새 꼴 번호 셋(G18-55-02 · G3-059C · G03-40-05) 검색 = 그 문항 하나', all(v == [k] for k, v in N['search'].items()), None, N['search'])
                 R(eng, '이웃 148·150·83·85 — 모션 단추 0', not any(N['nb'].values()), None, N['nb'])
-                R(eng, '목록 — .tag.gp = 84·149 두 줄', sorted(N['list']) == [84, 149], sorted(B['list']) == [84, 149], {'NEW': N['list'], 'BASE': B['list']})
+                # ★ 2026-10-01 claude_e004 — 지학 111 을 더해 gpt 칸이 셋이 된다. 「84·149 두 줄」 은 값을 박은 잣대라 뒤 판마다 거짓 FAIL
+                #   → 「.tag.gp 줄 = 그 기록의 gpt 칸 번호 전부 · 84·149 가 든다」 로 갈음(바탕 = 두 칸 뺀 기록 → 84·149 없음 → FAIL 그대로)
+                wl = sorted(int(k) for k in (json.loads(rn.decode('utf-8'))['data'].get('gpt') or {}))
+                R(eng, '목록 — .tag.gp 줄 = 기록 gpt 칸 번호 전부(84·149 가 든다)', sorted(N['list']) == wl and {84, 149} <= set(wl),
+                  sorted(B['list']) == wl and {84, 149} <= set(B['list']), {'NEW': N['list'], 'BASE': B['list'], '기록 gpt': wl})
                 R(eng, '페이지 오류 0', not N['errs'], None, N['errs'])
                 dk = [k for k in N['keys'] if N['stores'].get(k) != B['stores'].get(k)]
                 R(eng, '빈 기기 — 동기화 뒤 gpt 말고 나머지 칸 %d 가 바탕과 같다(status·bogi·gg·unit·bpg …)' % len(N['keys']), not dk and N['keys'] == B['keys'], None,
@@ -272,7 +276,11 @@ def main():
     if how.startswith('적재 뒤'):
         fs = HU.git(SPD, 'diff', '--name-only', SEED_REV + '~1', SEED_REV).decode('utf-8').split()
         R('-', '적재 커밋 %s 이 건드린 파일 = earth/기록.json 하나(물리·생물 기록 무변)' % SEED_REV, fs == ['earth/기록.json'], None, fs)
-    R('-', 'motion/index.json = {"phys":[72],"earth":[149,84]}', json.loads(sn['motion/index.json']) == {'phys': [72], 'earth': [149, 84]}, json.loads(sb['motion/index.json']) == {'phys': [72], 'earth': [149, 84]}, sn['motion/index.json'].decode())
+    # ★ 2026-10-01 claude_p002·claude_e004 — 뒤 판이 phys 에 97 · earth 에 111 을 끝에 더한다. 「= {"phys":[72],"earth":[149,84]}」 는 값을 박은 잣대라
+    #   → 「earth 가 [149, 84] 로 시작(차례 그대로) · phys 맨 앞 72」 로 갈음(바탕 2998b9e = earth 없음 → FAIL 그대로)
+    jx, jy = json.loads(sn['motion/index.json']), json.loads(sb['motion/index.json'])
+    R('-', 'motion/index.json — earth 가 [149, 84] 로 시작(차례 그대로) · phys 맨 앞 72', (jx.get('earth') or [])[:2] == [149, 84] and (jx.get('phys') or [])[:1] == [72],
+      (jy.get('earth') or [])[:2] == [149, 84] and (jy.get('phys') or [])[:1] == [72], sn['motion/index.json'].decode())
     for no in NOS:
         f = 'motion/earth_%s.html' % no
         src = open(os.path.join(MAT, 'earth_%s.html' % no), 'rb').read()

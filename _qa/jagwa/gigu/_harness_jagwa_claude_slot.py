@@ -420,6 +420,15 @@ def run(mode, subj, src_text, secs=260, start='app.html'):
                 if not os.path.isfile(f):
                     self.send_response(404); self.end_headers(); return
                 b = open(f, 'rb').read()
+                if rel == subj + '/기록.json':
+                    # ★ 2026-10-01 claude_p002 — 물리 기록에 Claude 풀이 97(gpt 칸)을 적재하자 왕복 판(cross)이 visibilitychange 동기화로 그 칸을 받아
+                    #   CL-4 「지우기 → 목록 보라 태그 0」 이 1 로 FAIL 했다(실측 CL-1 태그 ["Claude","Claude"] · 앱은 옳다 · 바탕0 은 기록 gpt 가 72 하나라 안 드러남)
+                    #   → 기록 사본에서 gpt 칸과 그 도장만 비운다(CL2 9/30 _task_qa_baseline A-6(d) 와 같은 꼴 · 이 묶음은 제가 넣은 GP 로만 잰다 · 다른 칸 그대로)
+                    j = json.loads(b.decode('utf-8'))
+                    j.setdefault('data', {})['gpt'] = {}
+                    for kk in ('u', 'gone'):
+                        j[kk] = {x: y for x, y in (j.get(kk) or {}).items() if not str(x).startswith('gpt|')}
+                    b = json.dumps(j, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/octet-stream')
                 self.send_header('Content-Length', str(len(b)))
@@ -540,7 +549,10 @@ def static_checks():
         j = None
         N('CL-Z index.json 읽기 실패', str(e))
     # 2026-09-29 claude_e001 — 지학 149·84 를 더했다(earth 키). 이 묶음이 지킬 것은 물리 값 [72] 무변이다.
-    T('CL-Z motion/index.json 의 phys = [72] 무변(9/29 claude_e001 부터 earth 더함)', isinstance(j, dict) and j.get('phys') == [72], j)
+    # ★ 2026-10-01 claude_p002 — 물리 97 을 끝에 더했다(phys = [72, 97]). 「phys = [72]」 는 값을 박은 잣대라 뒤 판마다 거짓 FAIL
+    #   → 「phys 맨 앞 = 72 그대로」 로 갈음(72 가 빠지거나 앞자리를 내주면 여전히 FAIL)
+    T('CL-Z motion/index.json 의 phys 맨 앞 = 72 무변(9/29 claude_e001 부터 earth · 10/1 claude_p002 부터 phys 97 더함)',
+      isinstance(j, dict) and (j.get('phys') or [])[:1] == [72], j)
     T('CL-Z motion 폴더에 .pdf 가 없다(공개 저장소)',
       not [x for x in os.listdir(MOTDIR) if x.lower().endswith('.pdf')],
       os.listdir(MOTDIR))
