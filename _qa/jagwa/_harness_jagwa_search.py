@@ -313,6 +313,8 @@ def g13(dv, who):
             nos = dv.ev("()=>ES_NOS.slice()")
             base = dv.ev("()=>DATA.filter(r=>pass(r)).map(r=>r[F.NO])")   # FL.q 없이 = 지금 필터
             res[q] = sorted(set(nos) & set(base))
+            # ★ physprev(10/1) — A-2-3 미리보기 t 에서 걸린 번호(pvHit · 없으면 빈 목록)
+            res[q + '·pv'] = dv.ev("q=>(typeof pvHit==='function')?ES_NOS.filter(n=>{const r=DATA.find(x=>x[F.NO]===n);return !!r&&pvHit(r,q)}):[]", q)
             lst = dv.ev("()=>__S.cnt()")
             res[q + '·목록'] = lst
         else:
@@ -370,10 +372,13 @@ def main():
                 gate('g12', eng, '근거 모드 ID 하이픈 없이 → 걸림 · 「N건」', 'earth', g12)
                 if not ONLY or 'g13' in ONLY:
                     (okn, vn), (okb, vb) = both(br, eng, 'phys', g13)
-                    diff = {q: [vn.get(q), vb.get(q)] for q in vb if vn.get(q) != sorted(vb[q])}
+                    # ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2-3: 옛 ⊆ 새 · 더 걸린 문항이 모두 미리보기 t 에서 걸림(pvHit)이면 뜻한 바뀜
+                    _pv = lambda q: set(vb.get(q) or []) <= set(vn.get(q) or []) and (set(vn.get(q) or []) - set(vb.get(q) or [])) <= set(vn.get(q + '·pv') or [])
+                    diff = {q: [vn.get(q), vb.get(q)] for q in vb if vn.get(q) != sorted(vb[q]) and not _pv(q)}
+                    pvmore = {q: len(set(vn.get(q) or []) - set(vb.get(q) or [])) for q in vb if vn.get(q) != sorted(vb[q]) and _pv(q)}
                     same_list = len({v for k, v in vn.items() if k.endswith('·목록')}) == 1
                     R('g13', eng, '물리 20말 — 걸린 집합 = 옛 목록 거름 · 목록 안 거름(목록 수 한 값)', not diff and same_list and len(vb) >= 18, None,
-                      {'말 수': len(vb), '다른 말': diff, '목록 수': sorted({v for k, v in vn.items() if k.endswith('·목록')}), '말': list(vb)})
+                      {'말 수': len(vb), '다른 말': diff, '미리보기로 더 걸림(physprev)': pvmore, '목록 수': sorted({v for k, v in vn.items() if k.endswith('·목록')}), '말': list(vb)})
                 gate('g14', eng, '폰 390 — 접힘 열고 검색 → 상자가 검색 줄 밑 · 상자 안 가로 넘침 0 · 접으면 숨음', 'bio', g14, phone=True)
                 gate('g15', eng, '타자 빠르기 — 한 글자마다 esSearch 중앙값 < 50ms(PC)', 'bio', g15)
             finally:

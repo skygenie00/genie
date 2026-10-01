@@ -1615,7 +1615,8 @@ def static_checks():
     _kv = lambda t: set(re.findall(r"put\('kv','([^']+)'", t))
     _sr = lambda t: set(re.findall(r"SYNC_REF\.([A-Za-z_$][\w$]*)", t))
     T2('Z-15 새 kv·새 SYNC 키가 없다',
-       _kv(s) == _kv(base) and _sr(s) == _sr(base),
+       # ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2-1 받은 미리보기 표의 기기 사본 kv 'pvjson'(SYNC 아님 · SYNC_REF 새 키 0 그대로)
+       (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= {'pvjson'})) and _sr(s) == _sr(base),
        [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))])
     # ★ A-6(9/30) · shell_bio_phys 수행 결과 §A(9/21 · c9faff2) — 아랫줄 감추기는 교재 문 body[data-book](카드 층 = 지학·생물) · 물리는 add15 #pRow1 규칙(earth_shell Z-17)
     T2('Z-17 아랫줄 감추기는 교재 문(data-book) 안이다',

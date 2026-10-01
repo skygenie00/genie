@@ -244,7 +244,8 @@ BODY_CL2 = r"""
      if(back)back.click(); else $('#view').classList.add('hide');
      FL.past='';FL.q='';FL.unit='';FL.bigs=[];FL.subs=[];FL.round='';FL.mark='';FL.lv='';FL.star=false;FL.year='';
      draw(); await wait(900);
-     N('CL2 실측 목록 25줄',$$$('#list .item').slice(0,25).map(x=>txt(x)).join(' || '));
+     /* ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2: 물리만 미리보기 칸(.prev · .pvfig)을 두 판 모두 떼고 잰다(그 칸은 physprev 관문 B3 이 잰다) */
+     N('CL2 실측 목록 25줄',$$$('#list .item').slice(0,25).map(x=>{if(typeof HASBOOK!=='undefined'&&!HASBOOK){const c=x.cloneNode(true);c.querySelectorAll('.prev,.pvfig').forEach(e=>e.remove());return txt(c)}return txt(x)}).join(' || '));
      await openView(NO); await wait(1200);
      N('CL2 실측 아랫줄 글',txt(document.querySelector('.vbot')));
      const box=rowBox();
