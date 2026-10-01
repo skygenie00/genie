@@ -458,7 +458,9 @@ def main():
             T('NEW ' + subj, '6m 마우스 길게 누르기 = 바탕 그대로(무변)', la == lb, {'BASE': la, 'NEW': lb})
     ph = keep.get('phys') or {}
     if 'BASE' in ph and 'NEW' in ph:
-        T('NEW phys', '7 물리 문제 창 DOM · #stage 손가락 끌기 = 바탕', ph['BASE'] == ph['NEW'], ph)
+        # ★ 합치기 10/1(하위 에이전트 C) — physphone A-3 · A-5(97883ef)가 물리 문제 창 머리·근거 칸을 바꿨다(DOM 해시 · #stage 자리·높이) — 손가락 끌기 결과(move)만 바탕과 맞댄다
+        T('NEW phys', '7 물리 문제 창 DOM · #stage 손가락 끌기 = 바탕', ph['BASE'] == ph['NEW']
+          or ((ph['NEW'] or {}).get('move') is not None and (ph['NEW'] or {}).get('move') == (ph['BASE'] or {}).get('move')), ph)
     return report(t0, newmd5, bmd5)
 
 

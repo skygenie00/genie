@@ -1,0 +1,692 @@
+# -*- coding: utf-8 -*-
+r"""_task_jagwa_revfix0929 §B 관문 — 자과 검수 결함 고침(jagwa_uid · jagwa_search 검수 9/29) + 바탕 흠 넷
+
+  python _harness_jagwa_revfix0929.py [--new <앱>] [--base <앱 파일 | git rev>] [--eng chromium,webkit] [--only b1,b2,...] [--vendor <cdnjs 사본>] [--res <결과>]
+
+  NEW = genie 작업트리 jagwa/index.html · BASE(헛잣대) = 착수 때 genie HEAD(기본 HEAD — 이 판을 커밋한 뒤에는 --base <앞 커밋>)
+  데이터 = studyplandata 작업트리(새 uid · 옛uid 칸) · 옛 데이터 = 새 uid 커밋(jagwa_uid)^ 의 과목 폴더 맨 위 JSON(git show · 그림·PDF 없음)
+  기록 = studyplandata earth/기록.json 을 가짜 원격으로 — 작업트리 = 9/29 옛 열쇠 원격 · origin/main = 기기가 옮겨 올린 원격(읽기만)
+        PUT 은 앱 fetch 를 가로채 몸통만 모은다(밖으로 안 나감 · 기록 쓰기 0)
+  기기 하나 = 브라우저 문맥 하나(IndexedDB·localStorage 유지) — 같은 출처에서 앱·데이터·원격을 갈아 끼운다(_harness_jagwa_uid 의 Srv · __J)
+  관문마다 NEW 는 PASS · BASE 는 FAIL(헛잣대 열) — 지켜야 할 옛 동작 칸(바탕도 참)은 「바탕 = 기준」
+  --vendor = cdnjs.cloudflare.com/ajax/libs/… 사본 폴더(줄 때만 · cdnjs 가 막힌 곳) · 안 주면 cdnjs 그대로
+  ⚠ 자과앱 픽셀 게이트 없음(CLAUDE.md) — DOM 글자 · 자리 · 개수 · 실제 마우스·손가락 누름
+"""
+import io, json, os, re, sys, time, copy
+sys.stdout.reconfigure(encoding='utf-8')
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+_ARGV = sys.argv; sys.argv = [sys.argv[0]]   # 두 하네스는 들어올 때 sys.argv 를 읽는다 — 이 파일 인자를 안 보이게
+import _harness_jagwa_uid as HU      # noqa: E402  Srv · INIT · JS(__J) · git
+import _harness_jagwa_search as HS   # noqa: E402  SJS(__S) · typeq · st · PHQ_JS
+sys.argv = _ARGV
+
+
+def ARG(k, d=None):
+    return sys.argv[sys.argv.index(k) + 1] if k in sys.argv else d
+
+
+GENIE = HU.GENIE; SPD = HU.SPD
+NEWF = ARG('--new', os.path.join(GENIE, 'jagwa', 'index.html'))
+BASEF = ARG('--base', 'HEAD')
+ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
+ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
+VENDOR = ARG('--vendor')
+OUTF = ARG('--res', os.path.join(HERE, '_harness_jagwa_revfix0929_result.txt'))
+WORK = os.path.join(HU.tempfile.gettempdir(), 'h_jagwa_rf0929')
+os.makedirs(WORK, exist_ok=True)
+KEYS = ['bogi', 'unit', 'bpg', 'crop', 'tfix', 'gg', 'ggref', 'pick']
+ROWS = []   # (관문, 엔진, 이름, NEW ok, BASE ok | None, 잰 값)
+APPS = {}
+from playwright.sync_api import sync_playwright   # noqa: E402
+
+
+def R(g, eng, name, okn, okb, val):
+    ROWS.append((g, eng, name, okn, okb, val))
+    print('%s | 바탕 %s | %s · %s · %s | %s' % ('PASS' if okn else 'FAIL', {True: 'PASS', False: 'FAIL', None: '—'}[okb], g, eng, name,
+          (val if isinstance(val, str) else json.dumps(val, ensure_ascii=False, default=str))[:600]), flush=True)
+
+
+def want(g):
+    return not ONLY or g in ONLY
+
+
+# ══════════ 기기 ══════════
+OKNET = ('http://127.0.0.1', 'https://cdnjs.cloudflare.com/', 'https://cdn.jsdelivr.net/', 'https://fonts.googleapis.com/', 'https://fonts.gstatic.com/')
+
+
+def _route(rt):
+    u = rt.request.url
+    m = re.match(r'https://cdnjs\.cloudflare\.com/ajax/libs/(.+)$', u.split('?')[0]) if VENDOR else None
+    if m:   # cdnjs 사본(줄 때만)
+        f = os.path.join(VENDOR, *m.group(1).split('/'))
+        if os.path.isfile(f):
+            return rt.fulfill(path=f, content_type='text/css' if f.endswith('.css') else ('font/woff2' if f.endswith('.woff2') else 'application/javascript'))
+        return rt.abort()
+    return rt.continue_() if u.startswith(OKNET) else rt.abort()
+
+
+def _init9():
+    """HU.INIT + PUT 시각(performance.now) + console.info 자취(__LOG) — 옮김(jgMigrate 끝 줄)과 PUT 의 차례를 잰다"""
+    s = HU.INIT
+    a = "window.__err=[];window.__PUTS=[];"
+    b = "window.__PUTS.push({path,text:"
+    assert s.count(a) == 1 and s.count(b) == 1
+    s = s.replace(a, a + "window.__LOG=[];{const _ci=console.info.bind(console);console.info=function(){try{window.__LOG.push([performance.now()].concat([].slice.call(arguments,0,7).map(x=>(x&&typeof x==='object')?JSON.stringify(x):x)))}catch(e){}return _ci.apply(null,arguments)}}")
+    return s.replace(b, "window.__PUTS.push({t:performance.now(),path,text:")
+
+
+INIT9 = _init9()
+
+
+class Dev:
+    """기기 하나(문맥 하나) — load(앱, 데이터 폴더, 과목, 원격) 로 같은 출처에서 다시 연다 · vp = 창 크기 · touch 폰·iPad"""
+    def __init__(self, br, eng, vp=None, mobile=False):
+        self.eng = eng; self.S = HU.Srv()
+        self.vp = vp or {'width': 1553, 'height': 900}
+        self.phone = self.vp['width'] <= 480
+        self.ctx = br.new_context(viewport=self.vp, device_scale_factor=1, has_touch=True, is_mobile=bool(mobile and eng == 'chromium'))
+        self.ctx.route('**/*', _route)
+        self.pg = None; self.errs = []; self.cdp = None
+
+    def load(self, app, spd, subj, rec=None, wait=2500):
+        self.S.app = app; self.S.spd = spd; self.S.rec = dict(rec or {}); self.S.static = {}
+        if self.pg:
+            self.pg.close()
+        self.pg = self.ctx.new_page(); self.pg.set_default_timeout(150000)
+        self.pg.add_init_script(INIT9.replace('__SUBJ__', subj))
+        self.pg.on('pageerror', lambda e: self.errs.append('page: ' + str(e)[:200]))
+        self.pg.goto('http://127.0.0.1:%d/app.html' % self.S.port, wait_until='load')
+        self.pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>0', timeout=120000)
+        self.pg.evaluate(HU.JS); self.pg.evaluate(HS.SJS); self.pg.evaluate(J9)
+        for _ in range(120):
+            if self.ev("()=>__J.ready()"):
+                break
+            self.pg.wait_for_timeout(250)
+        self.pg.wait_for_timeout(wait)
+        self.cdp = self.ctx.new_cdp_session(self.pg) if self.eng == 'chromium' else None
+        return self
+
+    def ev(self, expr, arg=None):
+        return self.pg.evaluate(expr, arg) if arg is not None else self.pg.evaluate(expr)
+
+    def settle(self, n=60):
+        """기록 맞춤이 끝날 때까지(recBusy 거짓 · PUT 수 그대로)"""
+        last = -1
+        for _ in range(n):
+            st = self.ev("()=>({b:typeof recBusy!=='undefined'&&recBusy,n:(window.__PUTS||[]).length})")
+            if not st['b'] and st['n'] == last:
+                return st['n']
+            last = st['n']; self.pg.wait_for_timeout(300)
+        return last
+
+    def tap(self, x, y, wait=500):
+        """폰·iPad = 손가락(Chromium CDP r22 · WebKit touchscreen.tap) · PC = 마우스"""
+        if self.vp['width'] > 1100:
+            self.pg.mouse.click(x, y)
+        elif self.cdp:
+            pt = {'x': x, 'y': y, 'radiusX': 22, 'radiusY': 22, 'force': 1, 'id': 1}
+            self.cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [pt]}); self.pg.wait_for_timeout(60)
+            self.cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
+        else:
+            self.pg.touchscreen.tap(x, y)
+        self.pg.wait_for_timeout(wait)
+
+    def close(self):
+        try:
+            self.ctx.close()
+        except Exception:
+            pass
+        try:
+            self.S.srv.shutdown()
+        except Exception:
+            pass
+
+
+J9 = r"""
+window.__R9={
+ tx:e=>e?String(e.textContent||'').replace(/\s+/g,' ').trim():'',
+ R(e){if(!e)return null;const r=e.getBoundingClientRect();return {l:Math.round(r.left*10)/10,r:Math.round(r.right*10)/10,t:Math.round(r.top*10)/10,b:Math.round(r.bottom*10)/10,w:Math.round(r.width*10)/10,h:Math.round(r.height*10)/10}},
+ vis(e){if(!e||!e.isConnected)return false;const cs=getComputedStyle(e);if(cs.display==='none'||cs.visibility==='hidden')return false;const r=e.getBoundingClientRect();return r.width>0&&r.height>0},
+ noOf(c){const r=DATA.find(x=>x[F.CODE]===c||String(codeShow(x))===c);return r?r[F.NO]:0},
+ async open(no){try{closeView()}catch(e){}await new Promise(r=>setTimeout(r,200));await openView(no);await new Promise(r=>setTimeout(r,1500));return !document.getElementById('view').classList.contains('hide')},
+ log(){return (window.__LOG||[]).slice()},
+ puts(){return (window.__PUTS||[]).map(p=>({t:p.t,path:p.path,text:p.text}))},
+ ls(){const o={};[U_KEY,GONE_KEY,SHADOW_KEY].forEach(k=>o[k]=localStorage.getItem(k)||'');return o}
+};
+"""
+
+
+# ══════════ 데이터 · 원격 ══════════
+def old_data():
+    """새 uid 커밋 앞 판 — earth·bio 폴더 맨 위 JSON 만(git show · 그림·PDF 없음 = 404 · 기록 맞춤에 안 쓴다)"""
+    d = os.path.join(WORK, 'spd_old')
+    if os.path.isfile(os.path.join(d, 'earth', '문항.json')) and os.path.isfile(os.path.join(d, 'bio', '문항.json')):
+        return d
+    rev = HU.git(SPD, 'log', '--format=%h', '-1', '--grep=jagwa_uid', '--', 'earth/문항.json').decode().strip() or '4a01147'
+    for s in ('earth', 'bio'):
+        os.makedirs(os.path.join(d, s), exist_ok=True)
+        for p in HU.git(SPD, 'ls-tree', '--name-only', rev + '^', s + '/').decode('utf-8').split('\n'):
+            p = p.strip().strip('"')
+            if p.endswith('.json'):
+                open(os.path.join(d, p.replace('/', os.sep)), 'wb').write(HU.git(SPD, 'show', '%s^:%s' % (rev, p)))
+    return d
+
+
+def o2n(subj='earth'):
+    return {r['옛uid']: r['uid'] for r in json.loads(open(os.path.join(SPD, subj, '문항.json'), 'rb').read().decode('utf-8')) if r.get('옛uid')}
+
+
+def rec_old():
+    return open(os.path.join(SPD, 'earth', '기록.json'), 'rb').read()   # 작업트리 = 9/29 옛 열쇠 원격(44a39616 · 옛 열쇠 묘비 crop|G47-07 하나)
+
+
+def rec_now():
+    try:
+        b = HU.git(SPD, 'show', 'origin/main:earth/기록.json')
+        return b if b.strip().startswith(b'{') else None
+    except Exception:
+        return None
+
+
+def B(o):
+    return json.dumps(o, ensure_ascii=False).encode('utf-8')
+
+
+def keycount(body, O2N):
+    """몸통 셈 — data 옛 열쇠 · u 옛 열쇠 · gone 옛 열쇠 · data 새 열쇠"""
+    D = body.get('data', {}) or {}; U = body.get('u', {}) or {}; G = body.get('gone', {}) or {}
+    news = set(O2N.values())
+    old = lambda x: x.split('|', 1)[0] in KEYS and x.split('|', 1)[1] in O2N
+    return {'data 옛': sum(1 for k in KEYS for c in (D.get(k) or {}) if c in O2N),
+            'data 새': sum(1 for k in KEYS for c in (D.get(k) or {}) if c in news and c not in O2N),
+            'u 옛': sum(1 for x in U if old(x)), 'gone 옛': sum(1 for x in G if old(x)),
+            '통별 data 옛': {k: sum(1 for c in (D.get(k) or {}) if c in O2N) for k in KEYS}}
+
+
+def app_src(x):
+    if os.path.isfile(x):
+        return open(x, 'rb').read().replace(b'\r\n', b'\n')
+    return HU.git(GENIE, 'show', '%s:jagwa/index.html' % x)
+
+
+# ══════════ B-1 · B-2 기록 옮김 ══════════
+def _puts(dv):
+    return [dict(p, body=json.loads(p['text'])) for p in dv.ev("()=>__R9.puts()") if p.get('path') == 'earth/기록.json' and p.get('text')]
+
+
+def _r0(dt):
+    """9/29 원격(옛 열쇠) 에서 지운 칸 crop|G47-07 을 묘비 대신 값으로 — 도장 = 묘비 시각 + dt(ms)"""
+    R1 = json.loads(rec_old()); T1 = R1['gone']['crop|G47-07']
+    R0 = copy.deepcopy(R1); del R0['gone']['crop|G47-07']
+    R0['data']['crop']['G47-07'] = copy.deepcopy(next(iter(R1['data']['crop'].values())))
+    R0['u']['crop|G47-07'] = T1 + dt
+    return R0, T1
+
+
+def b1a(br, eng, app):
+    """옛 판 기기가 원격에서 지워진 옛 열쇠 칸을 가진 채 새 판 → 새 열쇠 칸 0 · PUT 0 · gone[새] · 멱등"""
+    R0, T1 = _r0(-86400000)
+    dv = Dev(br, eng)
+    try:
+        dv.load(app, old_data(), 'earth', rec={'earth/기록.json': B(R0)}); dv.settle()
+        had = dv.ev("()=>Object.prototype.hasOwnProperty.call(CROP,'G47-07')")
+        dv.load(app, SPD, 'earth', rec={'earth/기록.json': rec_old()}); dv.settle()
+        loc = dv.ev("()=>Object.prototype.hasOwnProperty.call(CROP,'G10-47-07')")
+        P = _puts(dv); last = P[-1]['body'] if P else {}
+        inp = sum(1 for p in P if 'G10-47-07' in ((p['body'].get('data') or {}).get('crop') or {}))
+        g = dv.ev("()=>__J.gone()")
+        ls1 = dv.ev("()=>__R9.ls()"); n2 = dv.ev("async()=>{try{return await jgMigrate('again')}catch(e){return 'ERR '+e}}"); ls2 = dv.ev("()=>__R9.ls()")
+        dv.load(app, SPD, 'earth', rec={'earth/기록.json': B(last)}); dv.settle()
+        mig2 = dv.ev("()=>__J.mig()"); P2 = _puts(dv); b2 = P2[-1]['body'] if P2 else {}
+        same2 = all(json.dumps(b2.get(k), sort_keys=True) == json.dumps(last.get(k), sort_keys=True) for k in ('data', 'u', 'gone'))
+        val = {'옛 판에서 값 가짐': had, '새 판 로컬 crop G10-47-07': loc, 'PUT 에 그 칸': '%d/%d' % (inp, len(P)),
+               '로컬 gone[crop|G10-47-07]': g.get('crop|G10-47-07'), 'PUT gone[crop|G10-47-07]': (last.get('gone') or {}).get('crop|G10-47-07'), '원격 묘비 T1': T1,
+               '두 번째 jgMigrate': n2, '바이트 같음(u·gone·shadow)': ls1 == ls2, '두 번째 열림 옮김': mig2, '두 번째 PUT data·u·gone = 첫': same2, '오류': dv.errs[:2]}
+        ok = had and not loc and inp == 0 and len(P) > 0 and g.get('crop|G10-47-07') and (last.get('gone') or {}).get('crop|G10-47-07') and n2 == 0 and ls1 == ls2 and mig2 == 0 and same2 and not dv.errs
+        return bool(ok), val
+    finally:
+        dv.close()
+
+
+def b1b(br, eng, app):
+    """반대 — 그 칸 도장이 묘비보다 새로우면 옮긴다(새 열쇠 칸 · PUT 에 있음)"""
+    R0, T1 = _r0(3600000)
+    dv = Dev(br, eng)
+    try:
+        dv.load(app, old_data(), 'earth', rec={'earth/기록.json': B(R0)}); dv.settle()
+        had = dv.ev("()=>Object.prototype.hasOwnProperty.call(CROP,'G47-07')")
+        dv.load(app, SPD, 'earth', rec={'earth/기록.json': rec_old()}); dv.settle()
+        loc = dv.ev("()=>Object.prototype.hasOwnProperty.call(CROP,'G10-47-07')")
+        P = _puts(dv); last = P[-1]['body'] if P else {}
+        inp = 'G10-47-07' in ((last.get('data') or {}).get('crop') or {})
+        u = (last.get('u') or {}).get('crop|G10-47-07')
+        return bool(had and loc and inp and u == T1 + 3600000), {'옛 판에서 값 가짐(도장 = 묘비 + 1시간)': had, '새 판 로컬 G10-47-07': loc, 'PUT data': inp, 'PUT u': u, '오류': dv.errs[:2]}
+    finally:
+        dv.close()
+
+
+def b1c(br, eng, app):
+    """이미 받은 옛 열쇠 묘비(옛 판에서 맞춤) → 새 판 jgMigrate 가 새 열쇠에 비춤(같은 시각) · PUT 에도"""
+    dv = Dev(br, eng)
+    try:
+        dv.load(app, old_data(), 'earth', rec={'earth/기록.json': rec_old()}); dv.settle()
+        g0 = dv.ev("()=>__J.gone()").get('crop|G47-07')
+        dv.load(app, SPD, 'earth', rec={'earth/기록.json': rec_old()}); dv.settle()
+        g = dv.ev("()=>__J.gone()"); P = _puts(dv); last = P[-1]['body'] if P else {}
+        lg = [x for x in dv.ev("()=>__R9.log()") if len(x) > 2 and x[1] == 'jagwa uid 옮김']
+        return bool(g0 and g.get('crop|G10-47-07') == g0 and (last.get('gone') or {}).get('crop|G10-47-07') == g0), \
+            {'옛 판 로컬 gone[crop|G47-07]': g0, '새 판 gone[crop|G10-47-07]': g.get('crop|G10-47-07'), 'PUT gone': (last.get('gone') or {}).get('crop|G10-47-07'),
+             '옛 묘비 그대로': g.get('crop|G47-07'), '옮김 자취': [x[1:7] for x in lg][:3]}
+    finally:
+        dv.close()
+
+
+def b1d(br, eng, app):
+    """안전 — 이미 옮긴 원격(origin/main · 옮김 묘비 373 + 새 칸 값)으로 빈 기기 → 새 칸 값 하나도 안 지움 · 옮김 묘비를 새 칸에 안 비춤"""
+    RN = rec_now()
+    if not RN:
+        return None, 'origin/main:earth/기록.json 없음(가져오지 않음) — 건너뜀'
+    O2N = o2n(); rn = json.loads(RN); D = rn.get('data', {})
+    want_k = {k: sorted((D.get(k) or {}).keys()) for k in KEYS}
+    dv = Dev(br, eng)
+    try:
+        dv.load(app, SPD, 'earth', rec={'earth/기록.json': RN}); dv.settle()
+        st = dv.ev("k=>__J.stores(k)", KEYS); P = _puts(dv); last = P[-1]['body'] if P else {}
+        loc_same = {k: sorted((st.get(k) or {}).keys()) == want_k[k] for k in KEYS}
+        put_same = {k: sorted(((last.get('data') or {}).get(k) or {}).keys()) == want_k[k] for k in KEYS}
+        G = last.get('gone') or {}
+        moved_new_tomb = [x for x in G if x.split('|', 1)[0] in KEYS and x.split('|', 1)[1] in set(O2N.values()) and x != 'crop|G10-47-07']
+        n_live = sum(len(v) for v in want_k.values())
+        ok = all(loc_same.values()) and all(put_same.values()) and not moved_new_tomb and len(P) > 0
+        return bool(ok), {'원격 새 칸 값': n_live, '로컬 칸 = 원격': all(loc_same.values()), 'PUT data 칸 = 원격': all(put_same.values()),
+                          '새 열쇠 묘비(crop|G10-47-07 밖)': len(moved_new_tomb), 'gone[crop|G10-47-07]': G.get('crop|G10-47-07'), '오류': dv.errs[:2]}
+    finally:
+        dv.close()
+
+
+def literal_rule():
+    """글자 그대로(모든 옛 묘비 → 새 열쇠 max) 라면 origin/main 원격에서 묘비에 질 새 칸 값 수(도장 ≤ 묘비)"""
+    RN = rec_now()
+    if not RN:
+        return None
+    O2N = o2n(); rn = json.loads(RN); D = rn.get('data', {}); U = rn.get('u', {}); G = rn.get('gone', {})
+    n = 0
+    for x, t in G.items():
+        k, o = x.split('|', 1)
+        if k in KEYS and o in O2N and O2N[o] in (D.get(k) or {}) and (U.get(k + '|' + O2N[o]) or 0) <= t:
+            n += 1
+    return {'옛 열쇠 묘비': sum(1 for x in G if x.split('|', 1)[0] in KEYS and x.split('|', 1)[1] in O2N), '지워질 새 칸 값': n,
+            '원격 savedAt': rn.get('savedAt'), '묘비 시각들': sorted({t for x, t in G.items() if x.split('|', 1)[0] in KEYS and x.split('|', 1)[1] in O2N})[-3:]}
+
+
+def b2(br, eng, app):
+    """빈 기기 첫 PUT — 옛 열쇠 원격(9/29) · 몸통 옛 열쇠 0 · u 옛 0 · 옛 열쇠 묘비 = 옮긴 칸 + 원래 묘비 · 차례 = 옮김 끝 → PUT"""
+    O2N = o2n(); R1 = json.loads(rec_old())
+    moved = sum(1 for k in KEYS for c in (R1['data'].get(k) or {}) if c in O2N)
+    orig = sum(1 for x in R1.get('gone', {}) if x.split('|', 1)[0] in KEYS and x.split('|', 1)[1] in O2N)
+    dv = Dev(br, eng)
+    try:
+        dv.load(app, SPD, 'earth', rec={'earth/기록.json': rec_old()}); dv.settle()
+        P = _puts(dv)
+        if not P:
+            return False, {'PUT': 0, '오류': dv.errs[:2]}
+        kc = keycount(P[0]['body'], O2N)
+        lg = [x for x in dv.ev("()=>__R9.log()") if len(x) > 2 and x[1] == 'jagwa uid 옮김' and x[2] == 'merge']
+        tm = lg[0][0] if lg else None
+        order = ('옮김 끝(%.0fms) → PUT(%.0fms)' % (tm, P[0]['t'])) if tm is not None and tm < P[0]['t'] else \
+                ('PUT(%.0fms) → 옮김 끝(%s)' % (P[0]['t'], ('%.0fms' % tm) if tm is not None else '없음'))
+        ok = kc['data 옛'] == 0 and kc['u 옛'] == 0 and kc['gone 옛'] == moved + orig and tm is not None and tm < P[0]['t']
+        return bool(ok), {'첫 PUT': {k: v for k, v in kc.items()}, '옮긴 칸 + 원래 묘비': '%d + %d' % (moved, orig), '차례': order,
+                          '옮김 자취': [x[2:6] for x in lg][:2], 'PUT 수': len(P)}
+    finally:
+        dv.close()
+
+
+# ══════════ B-3 검색 결과 줄 ══════════
+ROWJS = r"""()=>{const b=document.getElementById('esres');const rows=b?[...b.querySelectorAll('[data-esq]')]:[];
+  return {nl:rows.filter(d=>(d.textContent||'').includes('⏎')).length,boxNl:b?(b.textContent||'').split('⏎').length-1:0,
+    none:rows.filter(d=>!d.querySelector('mark')).map(d=>__R9.tx(d.querySelector('.cd'))),
+    body:rows.filter(d=>__R9.tx(d.querySelector('.gl i'))==='본문').length}}"""
+
+
+def _sq(dv, w):
+    HS.typeq(dv, w)
+    s = HS.st(dv); x = dv.ev(ROWJS)
+    return s, {'건': s['qcnt'], '줄': s['n'], '표시 없는 줄': len(x['none']), '⏎ 줄': x['nl'], '💬 본문': x['body'], '표시 없는 줄 보기': x['none'][:4]}
+
+
+def b3(br, eng, app):
+    out = {}
+    dv = Dev(br, eng).load(app, SPD, 'earth', rec={'earth/기록.json': rec_old()})
+    try:
+        for w in ('맨틀', '지진', '마그마', '이다'):
+            s, o = _sq(dv, w)
+            if w == '맨틀':
+                row = next((r for r in s['rows'] if r['code'] == 'G03-40-05'), None)
+                o['G03-40-05'] = {'칸': row['lab'], 'mark': row['marks'], '💬': row['chat']} if row else None
+            out['지학 ' + w] = o
+        out['오류 지학'] = dv.errs[:2]
+    finally:
+        dv.close()
+    dv = Dev(br, eng).load(app, SPD, 'bio', rec={})
+    try:
+        for w in ('DNA', '세포막', '효소', '오답해설', '정답해설', '이다', '자료해석 2탄', '자료해석⏎2탄'):
+            out['생물 ' + w] = _sq(dv, w)[1]
+        out['오류 생물'] = dv.errs[:2]
+    finally:
+        dv.close()
+    m = out['지학 맨틀']; g = m.get('G03-40-05') or {}
+    ok = (m['건'] == '42건' and m['표시 없는 줄'] == 0 and g.get('칸') == '본문' and g.get('mark', 0) >= 1
+          and out['생물 DNA']['표시 없는 줄'] == 0 and out['생물 오답해설']['⏎ 줄'] == 0 and out['생물 자료해석 2탄']['건'] == '1건'
+          and out['생물 자료해석⏎2탄']['건'] == '1건' and not out['오류 지학'] and not out['오류 생물'])
+    return bool(ok), out
+
+
+def b3p(br, eng, app):
+    """물리 — 걸린 집합(ES_NOS) · 결과 상자 HTML 을 말마다(바탕과 견준다)"""
+    dv = Dev(br, eng).load(app, SPD, 'phys', rec={})
+    try:
+        Q = dv.ev(HS.PHQ_JS)
+        res = {}
+        for q in Q:
+            HS.typeq(dv, q)
+            res[q] = [dv.ev("()=>ES_NOS.slice()"), dv.ev("()=>(document.getElementById('esres')||{}).innerHTML||''")]
+        return res
+    finally:
+        dv.close()
+
+
+# ══════════ B-4 폰 문항 창 카드 ══════════
+CARDJS = r"""()=>{const w=document.getElementById('cardwrap'),c=document.getElementById('card'),v=document.getElementById('view');
+  if(!w||!c||!__R9.vis(w)){const st=v&&v.querySelector('.stage,#stage');return {nocard:true,mode:v&&v.classList.contains('win')?'창':'전체',
+    viewOw:v?Math.max(0,v.scrollWidth-v.clientWidth):null,stage:st?__R9.R(st):null,view:__R9.R(v)}}
+  const pr=parseFloat(getComputedStyle(w).paddingRight)||0;
+  const sel=[...c.querySelectorAll('.ox button, button.vox, button.pl, #cLink, #cNext, .cmark')].filter(__R9.vis);
+  const bad=[];   /* 필기 층(#qink)·글상자 층(#qtxt)은 카드 전체를 덮는다(펜이 켜진 채 손가락 톡은 inkPierce 가 밑으로 넘김) — 그 층을 뺀 맨 위 */
+  const top=(x,y)=>document.elementsFromPoint(x,y).find(e=>!(e.closest&&e.closest('#qink,#qtxt')))||null;
+  /* 세로로만 굴린다 — scrollIntoView 는 overflow-x:hidden 틀도 옆으로 굴려 잘린 단추를 끌어온다(손가락으로는 못 하는 굴림) */
+  w.scrollLeft=0;const W0=w.getBoundingClientRect();
+  for(const b of sel){const r0=b.getBoundingClientRect();w.scrollTop+=(r0.top+r0.height/2)-(W0.top+W0.height/2);w.scrollLeft=0;
+    const r=b.getBoundingClientRect(),y=r.top+r.height/2;   /* 왼쪽 끝 · 가운데 · 오른쪽 끝 — 잘린 단추는 가운데는 눌려도 오른쪽 끝이 틀 밖이다 */
+    for(const x of [r.left+1.5,r.left+r.width/2,r.right-1.5]){const at=top(x,y);
+      if(!(at&&(at===b||b.contains(at)))){bad.push((b.id||b.className||b.tagName)+':'+__R9.tx(b).slice(0,8)+'@'+Math.round(x)+','+Math.round(y)+'→'+(at?(at.id||String(at.className).slice(0,16)||at.tagName):'없음'));break}}}
+  w.scrollLeft=0;const W=w.getBoundingClientRect(),C=c.getBoundingClientRect();
+  return {sl:w.scrollLeft,mode:v.classList.contains('win')?'창':'전체',wrap:[Math.round(W.left),Math.round(W.right)],card:[Math.round(C.left*10)/10,Math.round(C.right*10)/10],
+    gapL:Math.round((C.left-W.left)*10)/10,gapR:Math.round((W.right-C.right)*10)/10,inFrame:C.right<=W.right-pr+0.5,tf:c.style.transform,btn:sel.length,bad:bad.slice(0,6),
+    det:!!(c.querySelector('details')||{}).open}}"""
+SAMPLES = {'bio': ['B20-57-05', 'B01-38-01', 'B012T'], 'earth': ['G95-32-01', 'G1-010C', 'G03-40-05'], 'phys': None}
+
+
+def b4(br, eng, app):
+    out = {}; ok = True
+    for subj in ('bio', 'earth', 'phys'):
+        dv = Dev(br, eng, {'width': 390, 'height': 844}, mobile=True).load(app, SPD, subj, rec={'earth/기록.json': rec_old()} if subj == 'earth' else {})
+        try:
+            codes = SAMPLES[subj] or dv.ev("()=>[DATA[0],DATA[200],DATA[400]].filter(Boolean).map(r=>r[F.CODE])")
+            for cd in codes:
+                no = dv.ev("c=>__R9.noOf(c)", cd)
+                if not no:
+                    out['%s %s' % (subj, cd)] = '행 없음'; ok = False; continue
+                dv.ev("n=>__R9.open(n)", no)
+                m = [dv.ev(CARDJS)]
+                if not m[0].get('nocard'):
+                    dv.ev("()=>{const d=document.querySelector('#card details');if(d){d.open=true;d.dispatchEvent(new Event('toggle'))}}"); dv.pg.wait_for_timeout(500)
+                    m.append(dv.ev(CARDJS))
+                dv.ev("()=>{try{vwApply(false)}catch(e){}}"); dv.pg.wait_for_timeout(700)
+                m.append(dv.ev(CARDJS))
+                dv.ev("()=>{try{vwApply(true)}catch(e){}}"); dv.pg.wait_for_timeout(400)
+                for x in m:
+                    if x.get('nocard'):
+                        ok = ok and (x.get('viewOw') or 0) <= 1
+                    else:
+                        ok = ok and x['inFrame'] and abs(x['gapL'] - x['gapR']) <= 1 and not x['bad'] and x['btn'] > 0
+                out['%s %s' % (subj, cd)] = m
+                print('   b4 %s %s %s' % (subj, cd, ' | '.join(('%s 틀 밖' % x['mode']) if x.get('nocard') is None and False else
+                      ('%s 카드 없음 넘침 %s' % (x['mode'], x.get('viewOw'))) if x.get('nocard') else
+                      ('%s%s 여백 %s/%s 틀 안 %s 단추 %d 못 누름 %d' % (x['mode'], '·해설' if x.get('det') else '', x['gapL'], x['gapR'], x['inFrame'], x['btn'], len(x['bad']))) for x in m)), flush=True)
+            if dv.errs:
+                ok = False; out['오류 ' + subj] = dv.errs[:2]
+        finally:
+            dv.close()
+    return bool(ok), out
+
+
+# ══════════ B-5 서랍 줄 ══════════
+NDJS = r"""()=>{const L=[...document.querySelectorAll('.ndrow')];let dot=0,dash=0;const other=[];
+  L.forEach(d=>{const r=rec(+d.dataset.no);if(!r)return;const t=d.querySelector('.ndt').textContent,p=String(r[F.CODE])+String(r[F.LV]==null?'':r[F.LV]);
+    if(t.startsWith(p+' · '))dot++;else if(t.startsWith(p+'-'))dash++;else other.push(t.slice(0,30))});
+  const e=document.querySelector('.ndrow .ndt'),cs=e?getComputedStyle(e):null;
+  return {n:L.length,dot,dash,other:other.slice(0,4),sample:L.slice(0,2).map(d=>d.querySelector('.ndt').textContent),
+    font:cs?cs.fontFamily.slice(0,30)+' '+cs.fontSize+' '+cs.fontWeight:null,ell:cs?cs.textOverflow+'/'+cs.whiteSpace+'/'+cs.overflow:null}}"""
+
+
+def b5(br, eng, app):
+    out = {}; ok = True
+    for subj in ('bio', 'earth', 'phys'):
+        dv = Dev(br, eng).load(app, SPD, subj, rec={'earth/기록.json': rec_old()} if subj == 'earth' else {})
+        try:
+            x = dv.ev(NDJS); out[subj] = x
+            ok = ok and x['n'] > 0 and x['dash'] == 0 and x['dot'] == x['n']
+        finally:
+            dv.close()
+    return bool(ok), out
+
+
+# ══════════ B-6 폰 머리 접기 단추 ══════════
+FOLDJS = r"""()=>{const b=document.getElementById('fFoldBtn'),g=document.getElementById('ndGrip');if(!b||!__R9.vis(b))return null;
+  const R=b.getBoundingClientRect(),G=g&&__R9.vis(g)?g.getBoundingClientRect():null;
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9,n=0,onGrip=0;
+  for(let y=Math.floor(R.top-12);y<=Math.ceil(R.bottom+12);y++)for(let x=Math.max(0,Math.floor(R.left-14));x<=Math.ceil(R.right+16);x++){
+    const e=document.elementFromPoint(x+0.5,y+0.5);if(e&&(e===b||b.contains(e))){n++;x0=Math.min(x0,x);x1=Math.max(x1,x+1);y0=Math.min(y0,y);y1=Math.max(y1,y+1);if(G&&x<G.right)onGrip++}}
+  const nb=[...b.parentNode.children].filter(e=>e!==b&&__R9.vis(e)&&e.getBoundingClientRect().left>=R.right-1)[0]||null;
+  let nbOk=null;if(nb){const r=nb.getBoundingClientRect(),e=document.elementFromPoint(r.left+1,r.top+r.height/2);nbOk=!!e&&(e===nb||nb.contains(e))}
+  const up=b.parentNode.previousElementSibling;let upOk=null;if(up&&__R9.vis(up)){const r=up.getBoundingClientRect(),e=document.elementFromPoint(R.left+R.width/2,r.bottom-1);upOk=!(e&&(e===b||b.contains(e)))}
+  return {btn:__R9.R(b),grip:G?{l:Math.round(G.left),r:Math.round(G.right)}:null,hit:{l:x0,r:x1,t:y0,b:y1,w:x1-x0,h:y1-y0},onGrip,
+    next:nb?(nb.id||String(nb.className)).slice(0,20):null,nextOk:nbOk,upOk,fold:document.body.classList.contains('fold')}}"""
+
+
+def b6(br, eng, app):
+    out = {}; ok = True
+    for subj in ('phys', 'earth', 'bio'):
+        dv = Dev(br, eng, {'width': 390, 'height': 844}, mobile=True).load(app, SPD, subj, rec={'earth/기록.json': rec_old()} if subj == 'earth' else {})
+        try:
+            x = dv.ev(FOLDJS)
+            if not x:
+                out[subj] = '단추 없음'; ok = False; continue
+            f0 = x['fold']; b = x['btn']
+            dv.tap(b['l'] + b['w'] / 2, b['t'] + b['h'] / 2)
+            f1 = dv.ev("()=>document.body.classList.contains('fold')")
+            hx = x['hit']['r'] - 2; hy = (x['hit']['t'] + x['hit']['b']) / 2   # 누름 자리 오른쪽 끝(보이는 원 밖)
+            x2 = dv.ev(FOLDJS)
+            dv.tap(hx, hy)
+            f2 = dv.ev("()=>document.body.classList.contains('fold')")
+            x['톡 가운데'] = [f0, f1]; x['톡 누름 자리 끝(%.0f,%.0f)' % (hx, hy)] = [x2['fold'] if x2 else None, f2]
+            out[subj] = x
+            ok = ok and x['grip'] is not None and b['l'] >= x['grip']['r'] and x['hit']['w'] >= 36 and x['hit']['h'] >= 36 and x['onGrip'] == 0 \
+                and x['nextOk'] is not False and x['upOk'] is not False and f1 != f0 and f2 != f1
+        finally:
+            dv.close()
+    return bool(ok), out
+
+
+# ══════════ B-7 히트맵 갈래 칩 ══════════
+def b7(br, eng, app):
+    out = {}
+    HEAT = "()=>document.querySelectorAll('#spec i[title]').length"
+    CH = "()=>[...document.querySelectorAll('#eKind button')].map(b=>({t:__R9.tx(b),on:b.classList.contains('on'),r:__R9.R(b)}))"
+    for subj in ('bio', 'earth'):
+        dv = Dev(br, eng).load(app, SPD, subj, rec={'earth/기록.json': rec_old()} if subj == 'earth' else {})
+        try:
+            ch = dv.ev(CH); o = {'칩': [c['t'] for c in ch], '처음 켜짐': [c['t'] for c in ch if c['on']], '히트맵 처음': dv.ev(HEAT), '누름': []}
+            for i in range(len(ch)):
+                c = dv.ev(CH)[i]; r = c['r']
+                dv.pg.mouse.click(r['l'] + r['w'] / 2, r['t'] + r['h'] / 2); dv.pg.wait_for_timeout(500)
+                o['누름'].append({'칩': c['t'], '히트맵 칸': dv.ev(HEAT), '켜짐': [z['t'] for z in dv.ev(CH) if z['on']],
+                                 'FL.types': dv.ev("()=>FL.types?[...FL.types].join(''):''"), 'FL.past': dv.ev("()=>FL.past")})
+            out[subj] = o
+        finally:
+            dv.close()
+    num = lambda t: int(re.sub(r'\D', '', t) or -1)
+    bio = out['bio']; ea = out['earth']
+    ok = bio['칩'] == ['기출 270', '타기출 342', '예상 134'] and all(p['히트맵 칸'] == num(p['칩']) for p in bio['누름']) \
+        and ea['칩'] == ['기출 319', '확인문제 385'] and all(p['히트맵 칸'] == num(p['칩']) for p in ea['누름'])
+    return bool(ok), out
+
+
+# ══════════ B-8 화면 훑기(규칙 60) ══════════
+SWEEPJS = r"""(touch)=>{const vw=innerWidth,vh=innerHeight,de=document.documentElement;
+ const ACT='button,a[href],input,select,textarea,[onclick],[data-esq],[data-big],[data-past],[data-kind],.chip,.chchip,.ndrow,.item';
+ const sig=e=>{let s=e.tagName.toLowerCase()+(e.id?'#'+e.id:'')+(e.classList.length?'.'+[...e.classList].slice(0,2).join('.'):'');
+   const t=(e.textContent||'').replace(/\s+/g,' ').trim().replace(/\d+/g,'#').slice(0,14);
+   return s+((e.tagName==='BUTTON'||e.classList.contains('chip')||e.classList.contains('chchip'))?'「'+t+'」':'')};
+ const els=[...document.querySelectorAll(ACT)].filter(e=>{if(!__R9.vis(e))return false;const r=e.getBoundingClientRect();return r.bottom>0&&r.right>0&&r.top<vh&&r.left<vw});
+ const over=[],clip=[],cover=[],small=[];
+ for(const e of els){const r=e.getBoundingClientRect();
+   if(r.right>vw+1)over.push(sig(e));
+   let a=e.parentElement;while(a&&a!==document.body){const cs=getComputedStyle(a);if(/(hidden|clip|auto|scroll)/.test(cs.overflowX)){const ar=a.getBoundingClientRect();if(r.right>ar.right+1||r.left<ar.left-1)clip.push(sig(e));break}a=a.parentElement}
+   const cx=Math.min(vw-1,Math.max(0,r.left+r.width/2)),cy=Math.min(vh-1,Math.max(0,r.top+r.height/2)),at=document.elementFromPoint(cx,cy);
+   if(at&&!(at===e||e.contains(at)||at.contains(e)))cover.push(sig(e));
+   if(Math.min(r.width,r.height)<(touch?24:14))small.push(sig(e))}
+ const c=document.getElementById('card'),w=document.getElementById('cardwrap');
+ return {docow:de.scrollWidth-de.clientWidth,n:els.length,over,clip,cover,small,card:(c&&w&&__R9.vis(w))?{tf:c.style.transform,w:Math.round(c.getBoundingClientRect().width),wrap:w.clientWidth}:null}}"""
+VPS = [('PC', {'width': 1440, 'height': 900}, False), ('폰', {'width': 390, 'height': 844}, True), ('iPad', {'width': 820, 'height': 1180}, False)]
+SW_Q = {'bio': ('DNA', 'B20-57-05'), 'earth': ('맨틀', 'G03-40-05'), 'phys': ('속력', None)}
+# 뜻한 바뀜(새 판에만 있는 신호가 결함이 아님) — 신호 → 까닭
+# 히트맵 머리 줄(#eKind)은 목록·검색 결과·문항 창 뒤에도 보인다 → 칸 「*」 = 그 과목 모든 화면
+ACCEPT = {('bio', '*', 'button.chchip「타기출 #」'): 'A-7 생물 갈래 칩 — 바탕 「확인문제 0」 자리에 둘(타기출 · 예상) · 바탕 「기출」·「확인문제」 칩과 같은 chchip 꼴·크기(작은 누름·창 뒤 덮임도 바탕 칩과 같음)',
+          ('bio', '*', 'button.chchip「예상 #」'): 'A-7 생물 갈래 칩 — 같은 chchip 꼴·크기'}
+
+
+def accepted(subj, scr, sig):
+    return ACCEPT.get((subj, scr, sig)) or ACCEPT.get((subj, '*', sig))
+
+
+def sweep(br, eng, app):
+    out = {}
+    for vn, vp, mob in VPS:
+        touch = vn != 'PC'
+        for subj in ('bio', 'earth', 'phys'):
+            dv = Dev(br, eng, vp, mobile=mob).load(app, SPD, subj, rec={'earth/기록.json': rec_old()} if subj == 'earth' else {})
+            try:
+                out[(vn, subj, '목록')] = dv.ev(SWEEPJS, touch)
+                if dv.ev("()=>document.body.classList.contains('fold')&&!!document.getElementById('fFoldBtn')"):
+                    b = dv.ev("()=>__R9.R(document.getElementById('fFoldBtn'))")
+                    if b and b['w']:
+                        dv.tap(b['l'] + b['w'] / 2, b['t'] + b['h'] / 2)
+                if dv.ev("()=>{const s=document.getElementById('spec');return !!s&&!__R9.vis(s)}"):
+                    dv.ev("()=>{const t=document.getElementById('hmTg');if(t)t.click()}"); dv.pg.wait_for_timeout(400)
+                out[(vn, subj, '히트맵')] = dv.ev(SWEEPJS, touch)
+                HS.typeq(dv, SW_Q[subj][0])
+                out[(vn, subj, '검색 결과')] = dv.ev(SWEEPJS, touch)
+                HS.typeq(dv, '')
+                cd = SW_Q[subj][1]
+                no = dv.ev("c=>__R9.noOf(c)", cd) if cd else dv.ev("()=>DATA[0][F.NO]")
+                dv.ev("n=>__R9.open(n)", no)
+                out[(vn, subj, '문항 창')] = dv.ev(SWEEPJS, touch)
+                out[(vn, subj, '오류')] = dv.errs[:2]
+            finally:
+                dv.close()
+    return out
+
+
+def sweep_cmp(N, Bs):
+    """새 판에만 있는 신호(넘침·잘림·덮임·작은 누름 자리) — 칸마다 여러 벌 셈의 차"""
+    import collections
+    rows, newonly, acc = [], [], []
+    for key in N:
+        if key[2] == '오류':
+            continue
+        n, b = N[key], Bs.get(key) or {}
+        line = {'칸': '%s · %s · %s' % key, '쪽 넘침': [n['docow'], b.get('docow')]}
+        for cat in ('over', 'clip', 'cover', 'small'):
+            cn, cb = collections.Counter(n[cat]), collections.Counter(b.get(cat) or [])
+            d = cn - cb
+            line[cat] = [len(n[cat]), len(b.get(cat) or [])]
+            for s, k in d.items():
+                why = accepted(key[1], key[2], s)
+                (acc if why else newonly).append({'칸': line['칸'], '종류': cat, '신호': s, '수': k, **({'까닭': why} if why else {})})
+        if n['docow'] > (b.get('docow') or 0):
+            newonly.append({'칸': line['칸'], '종류': '쪽 넘침', '신호': '%d > %d' % (n['docow'], b.get('docow') or 0)})
+        if n.get('card') or b.get('card'):
+            line['카드'] = [n.get('card'), b.get('card')]
+        rows.append(line)
+    return rows, newonly, acc
+
+
+# ══════════ 돌림 ══════════
+GATES = [
+    ('b1', 'B-1 A-1 옛 판 기기가 원격에서 지워진 crop|G47-07 값을 가진 채 새 판 → 새 열쇠 칸 0 · PUT 0 · gone[crop|G10-47-07] · 멱등(두 번째 옮김 0 · 바이트 같음)', b1a, 'fix'),
+    ('b1', 'B-1 A-1 반대 — 도장이 묘비보다 새로우면 옮김', b1b, 'keep'),
+    ('b1', 'B-1 A-1-1 이미 받은 옛 열쇠 묘비 → 새 열쇠에 같은 시각(옛 묘비 그대로)', b1c, 'fix'),
+    ('b1', 'B-1 안전 — 이미 옮긴 원격(origin/main) 빈 기기: 새 칸 값 하나도 안 지움 · 옮김 묘비를 새 칸에 안 비춤', b1d, 'keep'),
+    ('b2', 'B-2 A-2 빈 기기 첫 PUT — 옛 열쇠 0 · u 옛 0 · 옛 묘비 = 옮긴 칸 + 원래 · 차례 옮김 끝 → PUT', b2, 'fix'),
+    ('b3', 'B-3 A-3 검색 — 지학 「맨틀」 42 · 표시 없는 줄 0 · G03-40-05 💬 본문 + mark · 생물 「DNA」 표시 없는 줄 0 · 「오답해설」 ⏎ 0 · 「자료해석 2탄」 1', b3, 'fix'),
+    ('b4', 'B-4 A-4 폰 390 문항 창 카드 — 세 과목 표본 셋 · 창·펼친 해설·전체 화면 · 카드 right ≤ 틀 안쪽 right · 좌우 여백 같음 · 단추 elementFromPoint = 제 단추', b4, 'fix'),
+    ('b5', 'B-5 A-5 서랍 줄 「번호 · 출처」 · 「-」로 붙은 줄 0(세 과목)', b5, 'fix'),
+    ('b6', 'B-6 A-6 폰 ▾ — 손잡이 오른쪽 · 누름 자리 ≥ 36×36 · 손잡이·이웃 안 덮음 · 손가락 톡(가운데 · 누름 자리 끝) = 접힘/펼침(세 과목)', b6, 'fix'),
+    ('b7', 'B-7 A-7 히트맵 갈래 칩 — 생물 270 · 342 · 134 · 누르면 히트맵 칸 = 그 수 · 지학 319 · 385 무변', b7, 'fix'),
+]
+
+
+def main():
+    APPS['NEW'] = app_src(NEWF); APPS['BASE'] = app_src(BASEF)
+    base_rev = BASEF if not os.path.isfile(BASEF) else os.path.basename(BASEF)
+    try:
+        base_rev = HU.git(GENIE, 'rev-parse', '--short', BASEF).decode().strip() or base_rev
+    except Exception:
+        pass
+    t0 = time.time(); TIMES = []
+    lit = literal_rule()
+    if lit:
+        print('INFO | 글자 그대로 규칙(모든 옛 묘비 → 새 열쇠 max)이면 origin/main 원격에서 지워질 새 칸 값 | %s' % json.dumps(lit, ensure_ascii=False))
+    with sync_playwright() as pw:
+        for eng in ENGS:
+            br = getattr(pw, eng).launch()
+            try:
+                for g, name, fn, kind in GATES:
+                    if not want(g):
+                        continue
+                    ts = time.time()
+                    res = {}
+                    for who in ('NEW', 'BASE'):
+                        try:
+                            res[who] = fn(br, eng, APPS[who])
+                        except Exception as e:
+                            res[who] = (False, 'ERR ' + repr(e)[:400])
+                    R(g, eng, name + ('  [바탕 = 기준]' if kind == 'keep' else ''), res['NEW'][0], res['BASE'][0], {'NEW': res['NEW'][1], 'BASE': res['BASE'][1]})
+                    TIMES.append((g, name[:40], round(time.time() - ts)))
+                if want('b3'):
+                    ts = time.time()
+                    pn, pb = b3p(br, eng, APPS['NEW']), b3p(br, eng, APPS['BASE'])
+                    diff = [q for q in pb if pn.get(q) != pb[q]]
+                    R('b3', eng, 'B-3 A-3-4 물리 %d말 — 걸린 집합 · 결과 상자 HTML = 바탕(무변)  [바탕 = 기준]' % len(pb), not diff and len(pb) >= 15, None,
+                      {'말': list(pb), '다른 말': diff, '건': {q: len(pn[q][0]) for q in pn}})
+                    TIMES.append(('b3', '물리 말', round(time.time() - ts)))
+                if want('b8'):
+                    ts = time.time()
+                    sn, sb = sweep(br, eng, APPS['NEW']), sweep(br, eng, APPS['BASE'])
+                    rows, newonly, acc = sweep_cmp(sn, sb)
+                    errs = {('%s · %s' % (k[0], k[1])): v for k, v in sn.items() if k[2] == '오류' and v}
+                    R('b8', eng, 'B-8 화면 훑기 — 서재 목록·히트맵·검색 결과·문항 창 × PC 1440 · 폰 390 · iPad 820 × 세 과목 — 새로 생긴 넘침·잘림·덮임·작은 누름 자리 0',
+                      not newonly and not errs, None, {'새로 생긴 것': newonly, '뜻한 바뀜': acc, '오류': errs, '표': rows})
+                    TIMES.append(('b8', '화면 훑기', round(time.time() - ts)))
+            finally:
+                br.close()
+    npass = sum(1 for r in ROWS if r[3]); nfail = sum(1 for r in ROWS if not r[3])
+    vac = [r for r in ROWS if r[4] is True and '기준' not in r[2]]
+    print('\n== PASS %d · FAIL %d · 헛잣대(바탕도 PASS · 기준 칸 밖) %d · %.0f초' % (npass, nfail, len(vac), time.time() - t0))
+    print('단계 초: ' + ' · '.join('%s %s %ds' % t for t in TIMES))
+    with io.open(OUTF, 'a', encoding='utf-8') as f:
+        f.write('\n==== %s · jagwa_revfix0929 · NEW %s · 바탕 %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), os.path.basename(NEWF), base_rev, ','.join(ENGS)))
+        if lit:
+            f.write('INFO | 글자 그대로 규칙이면 지워질 새 칸 값 | %s\n' % json.dumps(lit, ensure_ascii=False))
+        for g, eng, n, okn, okb, v in ROWS:
+            f.write('%s | 바탕 %s | %s · %s · %s | %s\n' % ('PASS' if okn else 'FAIL', {True: 'PASS', False: 'FAIL', None: '—'}[okb], g, eng, n,
+                    (v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, default=str))[:40000]))
+        f.write('== PASS %d · FAIL %d · 헛잣대 %d · 단계 초 %s\n' % (npass, nfail, len(vac), TIMES))
+    sys.exit(1 if nfail else 0)
+
+
+if __name__ == '__main__':
+    main()

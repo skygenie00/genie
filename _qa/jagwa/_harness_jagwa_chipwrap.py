@@ -41,8 +41,10 @@ window.__C={
  over(){const W=document.documentElement.clientWidth,L=document.getElementById('list'),bad=[];
    if(L)L.querySelectorAll('*').forEach(e=>{const r=e.getBoundingClientRect();if(r.width>0&&r.right>W+0.5)bad.push(String(e.className||e.tagName).slice(0,24)+':'+Math.round(r.right))});
    return {W,sw:document.documentElement.scrollWidth,n:bad.length,first:bad.slice(0,4),items:L?L.querySelectorAll('.item').length:0}},
- text(){const L=document.getElementById('list');return L?String(L.textContent||''):''},
- tags(){return [...document.querySelectorAll('#list .item .meta .tag')].slice(0,600).map(e=>{const r=e.getBoundingClientRect();return [Math.round(r.left*10)/10,Math.round(r.top*10)/10,Math.round(r.width*10)/10,Math.round(r.height*10)/10]})},
+ /* ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2: 물리(HASBOOK 거짓)만 미리보기 칸(.prev · .pvfig)을 두 판 모두 떼고 · 칩 세로 자리는 제 줄(.item) 위 끝 기준(줄이 길어져도 칩 자리 무변을 잰다 · 숨은 칩(크기 0)은 옛 값 그대로) · 카드 층은 옛 잣대 그대로 */
+ ph(){return typeof HASBOOK!=='undefined'&&!HASBOOK},
+ text(){const L=document.getElementById('list');if(!L)return '';if(!__C.ph())return String(L.textContent||'');const c=L.cloneNode(true);c.querySelectorAll('.prev,.pvfig').forEach(x=>x.remove());return String(c.textContent||'')},
+ tags(){const ph=__C.ph();return [...document.querySelectorAll('#list .item .meta .tag')].slice(0,600).map(e=>{const r=e.getBoundingClientRect(),it=(ph&&(r.width||r.height))?e.closest('.item'):null,t0=it?it.getBoundingClientRect().top:0;return [Math.round(r.left*10)/10,Math.round((r.top-t0)*10)/10,Math.round(r.width*10)/10,Math.round(r.height*10)/10]})},
  longest(){const t=[...document.querySelectorAll('#list .item .meta .tag.unit')];if(!t.length)return null;
    const e=t.reduce((a,b)=>(String(b.textContent).length>String(a.textContent).length?b:a));
    e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect(),cs=getComputedStyle(e);
@@ -85,6 +87,13 @@ def phone(br, eng, subj):
     return PW.both(br, eng, subj, True, f)
 
 
+def tags_eq(a, b, subj):
+    """★ physprev(10/1) — 물리 칩 세로 자리 = 제 줄 위 끝 기준 · 1px 안 차는 같은 자리(줄 높이 소수 반올림 차) · 카드 층은 옛 잣대(글자까지 같음) 그대로"""
+    if subj != 'phys':
+        return a == b
+    return len(a) == len(b) and all(x[0] == y[0] and x[2] == y[2] and x[3] == y[3] and abs(x[1] - y[1]) <= 1 for x, y in zip(a, b))
+
+
 def pc(br, eng, subj):
     def f(q):
         q.ev(CJS); q.wait(300)
@@ -118,8 +127,8 @@ def main():
                     T('Z', '%s 폰 %s 오류 0' % (eng, subj), not r['NEW_err'], r['NEW_err'][:3])
                     rp = pc(br, eng, subj)
                     T('C4', '%s PC %s — 칩 자리·크기 = 바탕(%d 칩) · 목록 글자 = 바탕 · 넘침 0' % (eng, subj, len(rp['NEW']['tags'])),
-                      rp['NEW']['tags'] == rp['BASE']['tags'] and rp['NEW']['text'] == rp['BASE']['text'] and rp['NEW']['over']['n'] == 0 and len(rp['NEW']['tags']) > 0,
-                      {'다른 칩': [i for i, (x, y) in enumerate(zip(rp['NEW']['tags'], rp['BASE']['tags'])) if x != y][:5], '글자': [rp['NEW']['text'], rp['BASE']['text']]})
+                      tags_eq(rp['NEW']['tags'], rp['BASE']['tags'], subj) and rp['NEW']['text'] == rp['BASE']['text'] and rp['NEW']['over']['n'] == 0 and len(rp['NEW']['tags']) > 0,
+                      {'다른 칩': [i for i, (x, y) in enumerate(zip(rp['NEW']['tags'], rp['BASE']['tags'])) if not tags_eq([x], [y], subj)][:5], '글자': [rp['NEW']['text'], rp['BASE']['text']]})
             finally:
                 br.close()
     npass = sum(1 for x in RES if x[2]); nfail = sum(1 for x in RES if not x[2])

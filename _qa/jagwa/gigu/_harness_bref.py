@@ -544,8 +544,9 @@ BODY_PHYS = r"""
         (shell_bio_phys 「물리에서 빠지는 것 … 〈보기〉 줄 고치기 · 원본 그림 ✕ · 글상자」 · 물리 SYNC_KEYS 에 tfix 없음 · 목록 미리보기는 물리 갈래 r[F.BODY] = S-25) */
      T('Y-3 add3 — 물리에는 brefBack·brefBackPaint 가 있어도(SHELL 블록) 안 쓴다 — HASBOOK=false',
        typeof HASBOOK!=='undefined'&&HASBOOK===false,[typeof brefBack,typeof brefBackPaint]);
-     T('Y-3 add3 — 물리에는 txtOf·stemOf·tfixOn 이 있어도(SHELL 블록) 고친 글자가 없다 — HASBOOK=false · SYNC_KEYS 에 tfix 없음',
-       typeof HASBOOK!=='undefined'&&HASBOOK===false&&SYNC_KEYS.indexOf('tfix')<0,
+     /* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef 본문 「물리 SYNC 키 tfix 하나 더함」)가 물리 TFIX 를 이름(nm)·공식(F|) 칸에만 쓴다 — 본문 글자 고침(q)은 여전히 없다 */
+     T('Y-3 add3 — 물리에는 txtOf·stemOf·tfixOn 이 있어도(SHELL 블록) 고친 글자가 없다 — HASBOOK=false · SYNC_KEYS 에 tfix 없음(★ physphone 뒤 = tfix 는 이름·공식 칸뿐 · 본문 q 0)',
+       typeof HASBOOK!=='undefined'&&HASBOOK===false&&(SYNC_KEYS.indexOf('tfix')<0||(typeof pnFix==='function'&&Object.keys(TFIX||{}).every(k=>!TFIX[k]||TFIX[k].q===undefined))),
        [typeof txtOf,typeof stemOf,typeof tfixOn]);
      T('Y-3 add3 — 물리 모아보기 팝업(mcardPop)은 열릴 수 없다 — 좌표표가 비어 JG=false(jogakAny() 거짓 · 9/21 부터 함수는 있다)',
        typeof jogakAny==='undefined'||jogakAny()===false,typeof jogakAny);
@@ -696,16 +697,20 @@ def static_checks():
     T2('S-22 add3 §3 — 세 자리가 txtOf 를 지난다',
        True
        # ★ _task_jagwa_earth_bookwin §J (2026-09-24) — 목록 줄 .prev 에 지학만 .fx · title 이 붙는다(글은 여전히 txtOf) — 꼴 대신 정규식으로
-       and __import__('re').search(r'<div class="prev[^"]*"[^>]*>\$\{esc\(txtOf\(r\[F\.CODE\],\'q\'\)\)\}</div>', s) is not None
+       and (__import__('re').search(r'<div class="prev[^"]*"[^>]*>\$\{esc\(txtOf\(r\[F\.CODE\],\'q\'\)\)\}</div>', s) is not None
+            # ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2: 물리만 미리보기 t(pvText · 받은 표 없으면 txtOf) · 카드 층은 txtOf 그대로
+            or __import__('re').search(r'<div class="prev[^"]*"[^>]*>\$\{esc\(\(PH&&typeof pvText===\'function\'\)\?pvText\(r\):txtOf\(r\[F\.CODE\],\'q\'\)\)\}</div>', s) is not None)
        and '<span class="ndt">${esc(String(txtOf(r[F.CODE],\'q\')).slice(0,28))}</span>' in s
        and '<div class="q">${esc(txtOf(uid,\'q\'))}</div>' in s)
     T2('S-23 add3 §3 ⓑ — 자르고 나서 esc 한다(엔티티가 가운데서 안 잘린다)',
        'esc(stemOf(r)).slice(0,28)' not in s)
     T2('S-24 add3 §3 — DATA 원본을 안 건드린다(D10) · 자동 매칭을 안 손댔다',
        'r[F.BODY]=' not in s and 'r[F.CH]=' not in s and 'autoUnit' not in s)
+    # ★ 합치기 10/1(하위 에이전트 C) — revfix0929 A-5(2bc1719 본문 「서랍 줄 「번호 · 출처」」)가 서랍 줄의 「-」를 「 · 」로 — 그 한 글자만 둘 다 받는다
     T2('S-25 add3 — 물리 갈래는 종전 자리 그대로다(1445 · 2553 줄)',
        '<div class="prev">${esc(r[F.BODY])||' in s
-       and "'</span><span class=\"ndt\">'+esc(r[F.CODE])+esc(r[F.LV])+'-'+esc(titleOf(r))+'</span>" in s)
+       and ("'</span><span class=\"ndt\">'+esc(r[F.CODE])+esc(r[F.LV])+'-'+esc(titleOf(r))+'</span>" in s
+            or "'</span><span class=\"ndt\">'+esc(r[F.CODE])+esc(r[F.LV])+' · '+esc(titleOf(r))+'</span>" in s))
     return out
 
 

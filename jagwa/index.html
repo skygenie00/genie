@@ -266,7 +266,7 @@ input,textarea,select,.tbox,.tbox *{-webkit-user-select:text;user-select:text;-w
 #omrPad .ogrip{width:26px;height:44px;border-radius:9px;border:1px solid #C4C2B9;
   background:rgba(255,255,255,.96);color:#8A8880;font-size:14px;cursor:move;
   box-shadow:0 1px 5px rgba(0,0,0,.18);display:grid;place-items:center;touch-action:none;user-select:none}
-#omrPad.drag .ogrip{background:#E2E6EC;border-color:var(--blue)}
+#omrPad.drag .ogrip,#omrPad .ogrip:active{background:#E2E6EC;border-color:var(--blue)}   /* ★ revfix0928 A-1 — :active 꼴이 있어야 크로미움 터치 보정이 ≡ 를 누를 것으로 본다(없으면 손가락이 ①·창으로 간다) */
 .brk{flex-basis:100%;height:0;margin:0}
 .tag.vm{padding:1.5px 5px;letter-spacing:1px}
 .tag.vm b{font-weight:700}
@@ -995,7 +995,7 @@ body[data-shell] .spectrum i.gap{background:transparent;border-radius:0;pointer-
 #view.win #navdr,#view.win #navTg{position:absolute}
 /* ★ phone_win A-1 — 폰(≤480) 문제 창 전체화면 규칙을 걷었다: 폰도 떠 있는 창(폭 화면−16 · 높이 86% · 가운데 · vwApply) · 꽉 채우기는 ⤢ */
 /* §F 교재 자리 목록 창 — `#bkq` 와 같은 규칙(배경 투명·안 막음) */
-#bpl{position:fixed;inset:0;z-index:76;background:transparent;pointer-events:none;display:block}
+#bpl{position:fixed;inset:0;z-index:70;background:transparent;pointer-events:none;display:block}
 #bpl.sheet{display:block;background:transparent}
 #bpl .panel{pointer-events:auto;position:fixed;right:12px;top:64px;left:auto;width:360px;max-width:92vw;height:56vh;
   max-width:none;max-height:none;padding:0;margin:0;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.3);overflow:hidden;display:flex;flex-direction:column}
@@ -1139,6 +1139,12 @@ body[data-shell] #list .gh-empty{margin-left:20px}
 .jnrow .h{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .jnrow .h .sp{flex:1}
 .jnrow .q{margin-top:4px;font-size:12.5px;line-height:1.55;color:var(--ink);white-space:pre-wrap}
+/* ★ physprev(2026-10-01) — 물리 미리보기 = 발문 전부(줄 수 안 자름 · 글자 크기 = 지학 미리보기 13px) + 발문 그림(높이 40px 안 · 줄 폭 60% 까지) */
+body[data-layer="pdf"] .item .prev.pv{display:block;-webkit-line-clamp:unset;line-clamp:unset;overflow:visible;overflow-wrap:anywhere}
+body[data-layer="pdf"] .jnrow .q.pv{overflow-wrap:anywhere}
+.pvfig{display:flex;align-items:flex-start;gap:6px;max-width:60%;margin-top:3px;min-height:40px}
+.pvfig[data-pvd]{min-height:0}
+.pvfig img{display:block;max-height:40px;max-width:100%;width:auto;height:auto;min-width:0;flex:0 1 auto;border-radius:3px;background:#fff}
 .jnrow .ggmine{margin-top:4px;border-left:2px solid var(--subj);background:var(--subj-soft);
   padding:4px 8px;font-size:12px;color:#20456A;white-space:pre-wrap;border-radius:0 6px 6px 0}
 .jnrow .jnans{margin-top:5px;font-size:11px;font-weight:700;color:#4A3E7A;background:#F5F3FB;
@@ -1398,6 +1404,20 @@ body[data-layer="pdf"] .vbot .tools:not(#pRow1)>*{display:none!important}
 .esdh[data-esback]{cursor:pointer}
 .esdh .esb{margin-left:auto;color:var(--red);border-bottom:1px dashed currentColor;cursor:pointer}
 .esdh .esb.off{color:var(--muted);border-bottom:0;cursor:default}
+/* ★ jagwa_search_claude — 근거 검색 Claude 풀이(민법 꼴 값 그대로 · minbeop .clsrc 97~99 · .ggclhd 94~96 · 상자 clFieldBoxHTML 1636)
+   딱지 = 보이는 ID 옆(근거 · 댓글 · Claude) · Claude 조각·암기 상자 = 주황 왼줄 상자 · 머리 「C n」 = 「! K」 오른쪽(0 이면 회색 · 못 누름) */
+.ggres .clsrc{flex:none;font-size:10px;font-weight:800;border-radius:4px;padding:0 5px;border:1px solid #e5e7eb;color:#6b7280;background:#fff}
+.ggres .clsrc.gg{color:#1d4ed8;border-color:#bfdbfe}
+.ggres .clsrc.cl{color:#b45309;border-color:#fed7aa;background:#fff7ed}
+.ggres .glc{margin-top:4px;padding:4px 8px;border-left:2px solid #fdba74;background:#fff7ed;color:#b45309;overflow-wrap:anywhere}
+.ggres .gpbox{margin-top:4px;padding:4px 8px;border-left:2px solid #fdba74;background:#fff7ed;color:#b45309;font-weight:600;white-space:pre-wrap;overflow-wrap:anywhere}
+.esdh.cl{background:#fff7ed;color:#b45309}
+.esdh .esc{color:#b45309;border-bottom:1px dashed currentColor;cursor:pointer}
+.esdh .esc.off{color:var(--muted);border-bottom:0;cursor:default}
+.esdr .gpn{font-size:11px;font-weight:800;color:#b45309;border:1px solid #fed7aa;background:#fff;border-radius:4px;padding:0 5px}
+/* 터치 — 「!」·「C」 누름 높이 36(보이는 글자 그대로 · 투명 누름 영역 · 둘 사이 틈 8px 는 가운데서 4px 씩 나눔) · 머리 줄을 36 으로 세워 위아래 이웃(검색 줄·단원 줄)을 안 먹는다 */
+@media (pointer:coarse){.esdh{min-height:36px;box-sizing:border-box}.esdh .esb,.esdh .esc{position:relative}
+  .esdh .esb::before,.esdh .esc::before{content:"";position:absolute;left:-4px;right:-4px;top:50%;height:36px;margin-top:-18px}}
 .esdk{padding:4px 9px;font-size:11px;font-weight:700;color:#4A3E7A;border-bottom:1px dashed var(--line)}
 .esdr{display:flex;align-items:center;gap:6px;padding:6px 9px;border-bottom:1px dashed var(--line);cursor:pointer;font-size:12px;font-weight:700;color:#4A3E7A}
 .esdr:hover{background:var(--paper)}
@@ -1580,7 +1600,7 @@ body[data-layer="card"] .item .prev.lp,body[data-layer="card"] #jnw .jnrow .q.lp
       <button class="tl" id="tLayerAdd">+회독</button>
       <button class="tl" id="tLayerEye">👁</button>
       <span class="sep"></span>
-      <button class="tl wide" id="tTheory">공식</button>
+      <button class="tl wide" id="tTheory">이론</button>
       <button class="tl wide" id="tConcept">개념</button>
       <button class="tl wide" id="tSol">풀이</button>
       <button class="tl wide" id="tAns">답 보기</button>
@@ -1663,9 +1683,11 @@ const DATA = [[1,2,"111",10,"역학","등속 운동, 등가속도 운동",1,0,"E
 /* ══ ★ _task_jagwa_phone_win — 폰 창 · 쌓임 · 틀 · 아래 단추 · [공식]·[개념] 목록 창 ══ */
 function pwPhone(){try{return window.matchMedia('(max-width:480px)').matches}catch(e){return window.innerWidth<=480}}
 /* 나중에 연 창이 위 = 바탕 창 띠(wzRaise · z 70~79)에 올림 — 띠 위(서브노트 80·82 · 참고 팝업 97 · OCR 확대 98)는 그대로 위 */
-/* 교재 없는 과목(HASBOOK 거짓 — 물리 등)은 wzRaise 가 없다 → 같은 띠 규칙(나중 것 위 · 끝 10개만 70~79)으로 이 판이 연 창을 쌓는다 */
+/* 교재 없는 과목(HASBOOK 거짓 — 물리 등)은 wzRaise 가 없다 → 같은 띠 규칙(나중 것 위 · 끝 10개만 70~79)으로 이 판이 연 창을 쌓는다
+   ★ physphone A-1 — 이제 §B(wzRaise)가 세 과목 공통이라 물리도 그 길을 탄다 · 아래 PWL 띠는 wzRaise 가 없을 때(SHELL 밖)만 남는 옛 길 */
 var PWL=[];
 function pwTop(el){if(!el)return;if(typeof window.wzRaise==='function'){window.wzRaise(el);return}
+  if(!el.__pwd){el.__pwd=1;el.addEventListener('pointerdown',()=>{if(el.id==='view'&&!el.classList.contains('win'))return;pwTop(el)},{capture:true,passive:true})}   /* ★ revfix0928 A-5 — 누르면 앞(올리기만 · 안 단추 동작 그대로) */
   for(let j=PWL.length-1;j>=0;j--)if(PWL[j]===el||!PWL[j].isConnected)PWL.splice(j,1);PWL.push(el);
   const n=PWL.length;PWL.forEach((x,j)=>{x.style.zIndex=String(70+Math.max(0,j-Math.max(0,n-10)))})}
 /* 이미 뜬 곁창 수(이 창 빼고) — 폰 새 곁창 14px 내림 */
@@ -1677,6 +1699,18 @@ function pwBtns(p){if(!p)return;p.querySelectorAll('button.btn').forEach(x=>{if(
 (function(){try{const s=document.createElement('style');s.id='pwcss';s.textContent=[
   '@media (max-width:480px){body[data-shell] #fSum{display:none!important}body[data-shell] #esh .erow.esearch>span.mut:first-child{display:none}.pwchip.pc{display:none!important}}',
   '@media (min-width:481px){.pwchip.ph{display:none!important}}',
+  '@media (max-width:480px){body.ndon #fFold{padding-left:13px}}',   /* ★ revfix0928 A-6 — ▾ 가 서랍 손잡이(13px · 늘 보임)에 안 가린다 */
+  '@media (max-width:480px){#fFoldBtn{position:relative}#fFoldBtn::before{content:"";position:absolute;left:-1px;top:50%;width:36px;height:36px;margin-top:-18px}}',   /* ★ revfix0929 A-6 — 누름 자리 36×36(왼쪽 끝 = 단추 왼쪽 → 손잡이 안 덮음 · 오른쪽 7px 는 다음 칩 앞 틈 8px 안) · 보이는 원 무변 */
+  /* ★ revfix0928_fix1 A-5 — 서재 머리 아래 띠(「시험지 N개를 받았습니다」 #dl)도 서랍 손잡이 폭(13)만큼 비킴(0928 A-6 접기 줄과 같은 방법 · 세 과목) */
+  '@media (max-width:480px){body.ndon #dl{margin-left:13px}}',
+  /* ★ revfix0928_fix1 A-6 — 폰 작은 누름 대상 → 누름 칸 36(보이는 크기 무변 · ::before 투명 누름 영역 · 세로만 넓힘 · 이웃과 안 겹치게)
+     [공식]·[개념] 칩 · 📋 창 문항 칩 · 정답·해설 · 🃏·📋 창 닫기 · 🃏 창 단추 셋 · 지학 📋 「닫기」 한 줄(nowrap) */
+  '@media (max-width:480px){.pwchip.ph,#jnw .jgo,.jnrow .jnans,#jnwX,#mcwX,#mcwInk,#mcwBk,#mcwOmr{position:relative}'
+   +'.pwchip.ph::before,#jnw .jgo::before,.jnrow .jnans::before,#jnwX::before,#mcwX::before{content:"";position:absolute;left:0;right:0;top:50%;height:36px;margin-top:-18px}'
+   +'#mcwInk::before,#mcwBk::before,#mcwOmr::before{content:"";position:absolute;left:0;right:0;top:50%;height:34px;margin-top:-17px}'
+   +'#jnwX,#mcwX{white-space:nowrap;min-width:36px}}',
+  /* ★ revfix0928_fix1 A-7 — 폰 서재 목록 · 📋 창 맨 아래 줄이 화면 안(아래 여백 = safe-area 아래 + 8) */
+  '@media (max-width:480px){body[data-shell] #list{padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 8px)}#jnwBody{padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 14px)}}',
   '.sheet.shfloat .panel button.btn.shlink{border:0;background:none;box-shadow:none;padding:2px 0;margin:6px 12px 0 0;min-height:0;width:auto;display:inline-block;font:inherit;font-size:12px;font-weight:500;color:var(--muted);text-decoration:underline;cursor:pointer}',
   '.pwchip{font:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--line);border-radius:999px;padding:3px 11px;background:var(--card);color:var(--ink);cursor:pointer;margin-left:6px;white-space:nowrap}',
   '#pwl{position:fixed;inset:0;background:transparent;pointer-events:none;display:block}',
@@ -1697,19 +1731,20 @@ function pwChName(c){try{return (typeof UNITS!=='undefined'&&UNITS.ch&&UNITS.ch[
 function pwLineHTML(n){   /* 개념 줄 — secHTML 한 줄 꼴 + 블록 표지(a) = CB 짝이면 오른쪽 끝 「문항 수 O n X n」 */
   if(n.t==='br')return '<div class="thbr"></div>';
   const img=n.g?'<div class="thpicbox"><a href="img/'+n.g+'.jpg" target="_blank" rel="noopener"><img class="thpic" src="img/'+n.g+'.jpg" alt="그림" loading="lazy" style="max-width:min(100%,'+Math.max(240,(n.gw||300)*1.5)+'px)"></a></div>':'';
-  const txt=String(n.x||'').trim()?'<div class="thl i'+(n.i||0)+'">'+esc(n.x)+'</div>':'';
+  const txt=String(n.x||'').trim()?'<div class="thl i'+(n.i||0)+'">'+thTxt(n.x)+'</div>':'';   /* ★ physphone A-6 — 배경색 span = 그 색 형광 · 다른 태그 = 글자만 · 「* 」「- 」 = 글머리 점 */
   let cnt='';if(n.a){const k=Object.keys(CB).find(q=>CB[q].i===n.a);const s=k?conceptStat(k):null;
     if(s&&s.t)cnt='<span class="pwc" data-cbk="'+k+'">'+s.t+(s.o?'<span class="o">O'+s.o+'</span>':'')+(s.x?'<span class="x">X'+s.x+'</span>':'')+'</span>'}
   return (txt||cnt?'<div class="pwln">'+txt+cnt+'</div>':'')+img}
 function pwList(kind){
   if(!SHELL||CARD_LAYER)return;
   const old=document.getElementById('pwl');if(old){if(old.dataset.kind===kind){old.remove();return}old.remove()}
+  if(kind==='f'){pfOpen();return}   /* ★ physphone A-3 — 위 「공식」 = 공식 시트(FRM) 세 탭(시트 · 백지 인출 · 단위·기초) · 옛 THEORY 목록은 문항 창 「이론」(theorySheet)에 그대로 */
   const isF=kind==='f', D=isF?THEORY:((typeof UNITS!=='undefined')?UNITS:{sec:[]}), secs=(D&&D.sec)||[];
   const b=document.createElement('div');b.className='sheet';b.id='pwl';b.dataset.kind=kind;
   const title=isF?'📐 공식 · 전체 · 물리 목차 '+secs.length+'단원':'💡 개념 · 전체 · 볼트 물리 폴더 '+secs.length+'파일';
   const by={};secs.forEach(s=>{const c=String(s.id).split('.')[0];(by[c]=by[c]||[]).push(s)});
   b.innerHTML='<div class="panel"><div class="bplh"><span>'+esc(title)+'</span><button type="button" class="shx" title="닫기">✕</button></div><div id="pwlBody">'
-    +Object.keys(by).sort((a,c)=>+a-+c).map(c=>'<div class="pwh">'+c+'. '+esc(pwChName(c))+' · '+by[c].length+'</div>'
+    +Object.keys(by).sort((a,c)=>+a-+c).map(c=>'<div class="pwh">'+c+'. '+esc(pwChName(c)||((by[c][0]||{}).t||''))+' · '+by[c].length+'</div>'   /* ★ revfix0928 A-4 — 편 이름 없으면 첫 절 제목 */
       +by[c].map(s=>{const has=(s.b||[]).some(n=>n.t!=='br');
         return '<div class="pwr'+(has?'':' none')+'" data-id="'+s.id+'"><span class="tri">'+(has?'▸':'')+'</span><span class="nm">'+s.id+' '+esc(s.t)+'</span></div><div class="pwb hide"></div>'}).join('')).join('')
     +'</div></div>';
@@ -1721,8 +1756,7 @@ function pwList(kind){
       bd.querySelectorAll('.pwc[data-cbk]').forEach(x=>x.onclick=ev=>{ev.stopPropagation();conceptView(x.dataset.cbk)})}
     bd.classList.toggle('hide');tri.textContent=bd.classList.contains('hide')?'▸':'▾'}});
   const key='pw'+kind;
-  if(pwPhone()&&typeof WIN==='object'&&!WIN[key]){const w=window.innerWidth-16,h=Math.round(window.innerHeight*0.72);
-    WIN[key]={l:8,t:Math.min(window.innerHeight-h-8,Math.round((window.innerHeight-h)/2)+14*pwSideN(b)),w:w,h:h}}
+  if(typeof WIN==='object'&&!WIN[key])WIN[key]=shFirst(b,winSaved('jagwa.win.'+key));   /* ★ revfix0928 A-2 — PC 도 풀이 곁창과 같은 크기·자리 · ★ fix1 A-1 — 끌어 바꾼 크기 기억이 이긴다(옛 판은 WIN 을 먼저 채워 makeFloat 의 기억 읽기가 늘 건너뛰었다) */
   makeFloat(b,b.querySelector('.bplh'),key,'jagwa.win.'+key);pwTop(b);
 }
 /* 칩 — 폰: #fFoldBtn(▾) 바로 오른쪽 · PC: 검색 줄 「지우기」(#qClr) 오른쪽 · 물리만 */
@@ -2886,6 +2920,24 @@ function layoutOmr(){
     toast('OMR 자리를 저장했습니다 — 다음 문항에도 같은 자리에 그대로 적용됩니다');
   };
   g.addEventListener('pointerup',end); g.addEventListener('pointercancel',end);
+  /* ★ revfix0928_fix1 A-3 — ≡ 와 ① 사이를 좌표로 가른다(엔진 터치 보정 · 누름 대상에 안 기댐 — 사파리·펜·마우스 같음).
+     OMR 줄 세로 안에서 누른 x 가 「≡ 오른쪽 끝 ↔ ① 왼쪽 끝」 가운데 선보다 왼쪽이면 ≡ 잡기(끌기) · 오른쪽이면 그 자리 단추(틈이면 ①) —
+     엔진이 대상을 ≡·① 어느 쪽으로 옮겨 잡았든 x 로 다시 가른다. 단추 위 누름은 단추 그대로(① 가운데 톡 = 채점 +1 무변) */
+  let skipClick=0,pend=null;
+  p.addEventListener('pointerdown',e=>{
+    const bs=[...p.querySelectorAll('button[data-omr]')];if(!bs.length)return;
+    const gr=g.getBoundingClientRect(),b1=bs[0].getBoundingClientRect(),mid=(gr.right+b1.left)/2;
+    if(e.clientY<Math.min(gr.top,b1.top)||e.clientY>Math.max(gr.bottom,b1.bottom))return;
+    if(e.clientX<mid){if(g.contains(e.target))return;   /* ≡ 위 = 위 갈고리 그대로 */
+      try{g.setPointerCapture(e.pointerId)}catch(_){}
+      st={x:e.clientX,y:e.clientY,l:p.offsetLeft,t:p.offsetTop,moved:false};skipClick=Date.now();
+      e.preventDefault();e.stopPropagation();return}
+    const tb=bs.find(b=>{const r=b.getBoundingClientRect();return e.clientX>=r.left&&e.clientX<=r.right})||(e.clientX<b1.left?bs[0]:null);
+    if(!tb||e.target.closest('button')===tb)return;   /* 그 단추 위 = 단추 그대로 */
+    pend={b:tb,x:e.clientX,y:e.clientY,id:e.pointerId};e.preventDefault();e.stopPropagation()},{capture:true});
+  p.addEventListener('pointerup',e=>{if(!pend||pend.id!==e.pointerId)return;const b=pend.b,m=Math.hypot(e.clientX-pend.x,e.clientY-pend.y);pend=null;skipClick=Date.now();if(m<10)b.click()},{capture:true});
+  p.addEventListener('pointercancel',()=>{pend=null},{capture:true});
+  p.addEventListener('click',e=>{if(skipClick&&Date.now()-skipClick<800&&e.isTrusted){skipClick=0;e.preventDefault();e.stopImmediatePropagation()}},{capture:true});   /* 엔진이 옮겨 잡은 대상의 click(① 오눌림)은 먹는다 · 위 b.click() 은 isTrusted 거짓이라 지나감 */
 })();
 
 /* 탭하면 열림 · 끌면 이동 · 오른쪽 아래 모서리로 크기 조절 */
@@ -3095,18 +3147,7 @@ function frmSheet(sub){
   document.body.appendChild(b);
   const body=b.querySelector('#fmBody'),hint=b.querySelector('#fmHint');
   let blank=false;
-  const rowHtml=(s,row,idx)=>{
-    const g=FR[frKey(s,row)]||'';
-    const dot=g?'<span class="frdot '+(g==='O'?'frO':'frX')+'"></span>':'';
-    if(!blank) return '<div class="frmrow">'+dot+'<div class="frf">'+row[0]+'</div>'+
-      '<div class="frc">조건 — '+row[1]+' &nbsp;·&nbsp; <b>함정</b> — '+row[2]+'</div></div>';
-    return '<div class="frmrow frhide" data-k="'+esc(frKey(s,row))+'">'+dot+
-      '<button class="btn sm" data-rv="1">공개 '+(idx+1)+'</button>'+
-      '<div class="frbody hide"><div class="frf">'+row[0]+'</div>'+
-      '<div class="frc">조건 — '+row[1]+' &nbsp;·&nbsp; <b>함정</b> — '+row[2]+'</div>'+
-      '<div style="margin-top:6px"><button class="btn sm" data-g="O" style="color:var(--teal)">썼다 O</button> '+
-      '<button class="btn sm" data-g="X" style="color:var(--red)">못 썼다 X</button></div></div></div>';
-  };
+  const rowHtml=(s,row,idx)=>frmRowHTML(s,row,idx,blank);   /* ★ physphone A-3 — 줄 꼴은 위 「공식」 시트·백지 인출과 한 함수(칸마다 길게 눌러 고치기 · 고친 글 = TFIX) */
   const render=()=>{
     hint.textContent=blank?'먼저 백지에 이 단원 공식을 전부 쓴 뒤, 한 줄씩 공개해서 O/X 로 자가채점하세요. 결과는 저장되어 백업에 실립니다.'
                           :'보기 전용. 인출 연습은 「백지 인출」 모드로.';
@@ -3117,14 +3158,7 @@ function frmSheet(sub){
   render();
   b.querySelector('#fmA').onclick=()=>{blank=false;b.querySelector('#fmA').classList.add('pri');b.querySelector('#fmB').classList.remove('pri');render()};
   b.querySelector('#fmB').onclick=()=>{blank=true;b.querySelector('#fmB').classList.add('pri');b.querySelector('#fmA').classList.remove('pri');render()};
-  body.onclick=async e=>{
-    const rv=e.target.closest('[data-rv]');
-    if(rv){const w=rv.parentElement.querySelector('.frbody');w.classList.remove('hide');rv.remove();kx(w);return}
-    const g=e.target.closest('[data-g]');
-    if(g){const rowEl=g.closest('.frmrow');FR[rowEl.dataset.k]=g.dataset.g;await saveFR();
-      rowEl.classList.add(g.dataset.g==='O'?'frokay':'frmiss');
-      g.parentElement.innerHTML='<span style="font-size:11.5px;color:var(--muted)">기록됨 — '+(g.dataset.g==='O'?'O':'X (주말 인출에서 다시)')+'</span>';}
-  };
+  body.onclick=frmBodyClick;   /* ★ physphone A-3 — 공개 · O/X 는 위 「공식」 백지 인출과 한 함수(FR 열쇠 = 원래 공식 글 · 무변) */
   b.querySelector('#fmX').onclick=()=>b.remove();
   b.onclick=e=>{if(e.target===b)b.remove()};
 }
@@ -3292,7 +3326,7 @@ function secHTML(sec){
     if(n.t==='tb')return `<div class="thtbw"><table class="thtb">`+n.rows.map((rw,ri)=>`<tr>`+rw.map(c=>{const tg=(ri===0&&n.hd)?'th':'td';return `<${tg}>${esc(c)}</${tg}>`}).join('')+`</tr>`).join('')+`</table></div>`;
     const img=n.g?`<div class="thpicbox"><a href="img/${n.g}.jpg" target="_blank" rel="noopener"><img class="thpic" src="img/${n.g}.jpg" alt="그림" loading="lazy" style="max-width:min(100%,${Math.max(240,(n.gw||300)*1.5)}px)" onerror="this.parentNode.parentNode.innerHTML='<span class=&quot;thimg&quot;>그림 (미등록)</span>'"></a></div>`:'';
     const ref=(n.r||[]).map(x=>`<span class="thref" data-ref="${esc(x)}">↗ ${esc(x)}</span>`).join('');
-    const txt=(String(n.x||'')+ref).trim()?`<div class="thl i${n.i}${n.s?' star':''}">${esc(n.x)}${ref}</div>`:'';
+    const txt=(String(n.x||'')+ref).trim()?`<div class="thl i${n.i}${n.s?' star':''}">${thTxt(n.x)}${ref}</div>`:'';   /* ★ physphone A-6 */
     return txt+img;
   }).join('')+'</div>';
 }
@@ -3582,7 +3616,7 @@ function navBuild(){
       const r=it.r, no=r[F.NO];
       nQ++; rows.push(no);
       const d=document.createElement('div');d.className='ndrow';d.dataset.no=no;
-      d.innerHTML='<span class="ndno">'+no+'</span><span class="ndt">'+esc(r[F.CODE])+esc(r[F.LV])+'-'+esc(titleOf(r))+'</span><span class="ndtail">'+ndTail(no)+'</span>';
+      d.innerHTML='<span class="ndno">'+no+'</span><span class="ndt">'+esc(r[F.CODE])+esc(r[F.LV])+' · '+esc(titleOf(r))+'</span><span class="ndtail">'+ndTail(no)+'</span>';   /* ★ revfix0929 A-5 — 번호 · 출처(「G25-62-09 · 62회 9번」 · 옛 「-」는 새 번호 뒤에서 「G25-62-09-62」로 읽혔다) */
       frag.appendChild(d); return}
     if(!it.uhd)return;                       /* 편·절 머리는 서랍에 안 세운다 */
     flushSec();
@@ -4441,7 +4475,9 @@ function stampAll(){
      took·del 은 값이 실제로 바뀐 칸만 · ahead = 내가 이겼는데 원격 값이 다른 칸 */
 async function recMerge(remote){
   const u=lsObj(U_KEY),gone=lsObj(GONE_KEY),shadow=lsObj(SHADOW_KEY);
-  const rU=remote.u||{},rG=remote.gone||{},rD=remote.data||{};
+  const rU=remote.u||{},rD=remote.data||{},rG=Object.assign({},remote.gone||{});
+  /* ★ revfix0929 A-1-3 — 원격의 옛 열쇠 묘비(옛 판 기기가 늦게 올린 것 포함)를 새 열쇠에도 비춘다 · 규칙 = jgTombMirror(새 칸에 자취 0 일 때만) · 원격 객체는 안 고친다 */
+  try{jgTombMirror(rG,(k,nw,kn)=>Object.prototype.hasOwnProperty.call(rD[k]||{},nw)||rU[kn]!=null)}catch(e){console.warn('jgTombMirror',e)}
   const byKey={};
   const add=s=>{const p=csplit(s);if(!byKey[p[0]])byKey[p[0]]=new Set();byKey[p[0]].add(p[1])};
   Object.keys(rU).forEach(add);Object.keys(rG).forEach(add);
@@ -4560,6 +4596,9 @@ async function jgMigrate(why){
     let ch=false;const sh=shadow[k];
     for(const o of Object.keys(cur)){const nw=M[o];if(!nw||typeof nw!=='string')continue;
       const ko=ckey(k,o),kn=ckey(k,nw);
+      /* ★ revfix0929 A-1-2 — 그 칸 묘비(옛·새 어느 쪽이든)가 값 도장보다 새로우면(같아도 — 바탕 병합에서 묘비가 이기는 것과 같게) 옮기지 않고 지운다 */
+      const tb=Math.max(gone[ko]||0,gone[kn]||0);
+      if(tb>0&&tb>=(u[ko]||0)){delete cur[o];delete u[ko];if(sh)delete sh[o];gone[ko]=tb;ch=true;n++;continue}
       if(has(cur,nw)){const so=u[ko]||0,sn=u[kn]||0;
         if(so>sn){console.warn('jagwa uid 옮김 — 옛·새 둘 다 · 옛 칸 도장이 늦어 이김',k,o,'→',nw,'버린 값',JSON.stringify(cur[nw]));cur[nw]=cur[o];u[kn]=so;if(sh&&has(sh,o))sh[nw]=sh[o]}
         else console.warn('jagwa uid 옮김 — 옛·새 둘 다 · 새 칸이 이김',k,o,'→',nw,'버린 값',JSON.stringify(cur[o]));}
@@ -4568,11 +4607,26 @@ async function jgMigrate(why){
     if(k==='ggref')for(const c of Object.keys(cur)){const a=cur[c];if(!Array.isArray(a)||!a.some(x=>typeof M[x]==='string'))continue;
       const b=a.map(x=>typeof M[x]==='string'?M[x]:x);if(sh&&has(sh,c)&&JSON.stringify(sh[c])===JSON.stringify(a))sh[c]=b;cur[c]=b;ch=true;n++}   /* 값 속 uid — 도장 그대로 · 더 긴 값이라 동률 병합에서 이긴다 */
     if(ch){touched.push(k);try{await put('kv',k,cur)}catch(e){console.warn('jgMigrate put',k,e)}}}
-  if(n){lsPut(U_KEY,u);lsPut(GONE_KEY,gone);lsPut(SHADOW_KEY,shadow);console.info('jagwa uid 옮김',why,n,touched);window.__JGMIG=(window.__JGMIG||0)+n;
-    try{if(typeof refreshUnits==='function')refreshUnits()}catch(e){}}
+  /* ★ revfix0929 A-1-1 — 이미 있는 옛 열쇠 묘비를 새 열쇠에 · 옛 묘비는 그대로(옛 판 기기용) · 안 읽힌 통은 다음 번(gg)에 */
+  const t=jgTombMirror(gone,(k,nw,kn)=>{const c=SYNC_REF[k]&&SYNC_REF[k].g();return !c||has(c,nw)||u[kn]!=null});
+  if(n||t){lsPut(U_KEY,u);lsPut(GONE_KEY,gone);lsPut(SHADOW_KEY,shadow);console.info('jagwa uid 옮김',why,n,touched,'묘비 비춤',t);window.__JGMIG=(window.__JGMIG||0)+n;
+    if(n)try{if(typeof refreshUnits==='function')refreshUnits()}catch(e){}}
   return n}
-function recAfterMerge(res){
-  if(CARD_LAYER)jgMigrate('merge').then(n=>{if(n)try{draw()}catch(e){}}).catch(e=>console.warn('jgMigrate',e));   /* ★ jagwa_uid — 옛 판 기기가 늦게 올린 옛 열쇠 */
+/* ★ revfix0929 A-1 — 옛 열쇠 묘비 「칸|옛uid」 → 「칸|새uid」(같은 시각). 새 칸에 아무 자취(값 · 도장 · 묘비)가 없을 때만 비춘다.
+   ⚠ 옮김 묘비(jgMigrate 가 값을 옮기며 찍는 「칸|옛uid」 = 그때 시각)는 늘 새 칸 값과 같이 다닌다 — 그것까지 비추면 옮긴 값이 묘비에 져서 지워진다
+     (10/1 원격 earth 에 옮김 묘비 373 개 · 새 칸 값 375 개). 새 칸에 제 도장·묘비가 있으면 그 칸 차례가 이미 있으므로 둔다.
+   G = 묘비 객체(고침) · live(k,새uid,새열쇠) = 그 쪽에 새 칸 자취가 있나 → 비춘 수. 멱등(두 번째 = 0) · 도장 새로 안 찍음 · 옛 데이터(옛uid 0)·물리 = 0 */
+function jgTombMirror(G,live){
+  if(!CARD_LAYER||!DATA.length)return 0;const M=jgO2N();if(!M.__any)return 0;let t=0;
+  for(const x of Object.keys(G)){const i=x.indexOf('|');if(i<0)continue;const k=x.slice(0,i);if(JG_KEYS.indexOf(k)<0)continue;
+    const nw=M[x.slice(i+1)];if(!nw||typeof nw!=='string')continue;const kn=ckey(k,nw);
+    if(G[kn]!=null||live(k,nw,kn))continue;G[kn]=G[x];t++}
+  return t}
+async function recAfterMerge(res){
+  /* ★ jagwa_uid — 옛 판 기기가 늦게 올린 옛 열쇠 · ★ revfix0929 A-2 — 옮김이 **끝난 뒤** 돌아간다(syncRecords 가 기다렸다 payload 를 짓는다).
+     옛 판은 .then 으로 흘려 보냈다 → jgMigrate 가 첫 통(bogi) 값을 옮기고 IndexedDB put 을 기다리는 사이 PUT 몸통이 지어졌다
+     (bogi 만 새 열쇠 · 나머지 통·도장 u 는 옛 열쇠 — 도장·묘비 lsPut 은 jgMigrate 맨 끝이라) */
+  if(CARD_LAYER){let n=0;try{n=await jgMigrate('merge')}catch(e){console.warn('jgMigrate',e)}if(n)try{draw()}catch(e){}}
   if(!res||!res.dirty.length)return;
   if(CARD_LAYER&&typeof refreshUnits==='function'&&DATA.length)refreshUnits();
   if(res.dirty.indexOf('conc')>=0)buildCQ();
@@ -4594,7 +4648,7 @@ async function syncRecords(force){
     if(sha){
       const txt=await ghRaw(REC_PATH);
       if(txt){try{remote=JSON.parse(txt)}catch(e){console.warn('원격 기록 파싱 실패',e)}}
-      if(remote){const m=await recMerge(remote);recTie+=m.tie||0;try{recAfterMerge(m)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}
+      if(remote){const m=await recMerge(remote);recTie+=m.tie||0;try{await recAfterMerge(m)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}   /* ★ revfix0929 A-2 — 옮김 끝 → 도장 → payload */
     }
     stampAll();
     let res=await ghPutJson(REC_PATH,JSON.stringify(recPayload(remote)),sha);
@@ -4603,7 +4657,7 @@ async function syncRecords(force){
       const txt2=await ghRaw(REC_PATH);
       let remote2=null;
       if(txt2){try{remote2=JSON.parse(txt2)}catch(e){}}
-      if(remote2){const m2=await recMerge(remote2);recTie+=m2.tie||0;try{recAfterMerge(m2)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}
+      if(remote2){const m2=await recMerge(remote2);recTie+=m2.tie||0;try{await recAfterMerge(m2)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}
       stampAll();
       res=await ghPutJson(REC_PATH,JSON.stringify(recPayload(remote2)),sha);
       if(res==='conflict')throw new Error('두 번 다 충돌');
@@ -4723,6 +4777,7 @@ function recBoot(){
   FR=(await get('kv','frm'))||{};
   MC=(await get('kv','mcard'))||{};
   LK=(await get('kv','link'))||{};
+  if(!CARD_LAYER)TFIX=(await get('kv','tfix'))||{};   /* ★ physphone A-2 — 물리도 고친 글(이름 nm · 공식 칸 f·c·t) · 동기화보다 먼저 읽는다(늦게 읽는 통 가드가 필요 없다) */
   if(CARD_LAYER){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};BP=(await get('kv','bpit'))||{};BPG=(await get('kv','bpg'))||{};SN=(await get('kv','snote'))||{};CROP=(await get('kv','crop'))||{};TXT=(await get('kv','txt'))||{};TFIX=(await get('kv','tfix'))||{};BREF=(await get('kv','bref'))||{};}
   const moved=await renumber();
   if(moved)setTimeout(()=>toast('문항 번호 재배열 — 기록 '+moved+'건을 옮겼습니다'),900);
@@ -4753,6 +4808,10 @@ async function peekInk(no,cv,R){
 }
 /* §2 떠 있는 창 — 제목줄 = 손잡이(펜슬·손가락·마우스) · 오른쪽 아래 모서리 = 크기(280×200 ~ 화면−16) · 자리·크기는 세션 동안 WIN[key] 에(저장 안 함) */
 const WIN={};
+/* ★ revfix0928_fix1 A-1 — 창 크기 기억 읽기 하나(makeFloat 의 _pload 를 떼어 냄 · 같은 하한 280×200 · 새 키 없음) — 첫 자리를 정하는 곳(pwList · shFloat 의 shFirst)도 이것을 읽는다
+   ⚠ makeFloat 와 같은 <script> 덩이에 둔다(뒤 덩이의 함수는 앞 덩이가 도는 동안 아직 없다) */
+function winSaved(pkey){if(!pkey)return null;try{const v=JSON.parse(localStorage.getItem(pkey)||'null');
+  return (v&&+v.w>=280&&+v.h>=200)?{w:+v.w,h:+v.h}:null}catch(e){return null}}
 function makeFloat(sheet,handle,key,pkey){
   const p=sheet.querySelector('.panel')||(sheet.classList.contains('selfpanel')?sheet:null); if(!p||!handle)return;   /* 지학 목록판 §E — **더하기만** 한다. 지금 부르는 창은 전부 `.panel` 이 있어 한 글자도 안 달라진다 */
   const g=document.createElement('div');g.className='twgrip';p.appendChild(g);
@@ -4762,8 +4821,7 @@ function makeFloat(sheet,handle,key,pkey){
   const apply=st=>{p.classList.add('float');p.style.left=st.l+'px';p.style.top=st.t+'px';p.style.width=st.w+'px';p.style.height=st.h+'px'};
   /* 판 2 add2 §1-C — pkey 를 준 창만 크기를 기기 하나 값(localStorage)으로 기억한다.
      안 준 창(물리 twin·sub·bklist·snote·mcard)은 종전 그대로 세션 동안(WIN)만 — 한 글자도 안 달라진다. */
-  const _pload=()=>{if(!pkey)return null;try{const v=JSON.parse(localStorage.getItem(pkey)||'null');
-    return (v&&+v.w>=280&&+v.h>=200)?{w:+v.w,h:+v.h}:null}catch(e){return null}};
+  const _pload=()=>winSaved(pkey);   /* ★ revfix0928_fix1 A-1 — 읽기 하나(winSaved) */
   const _psave=()=>{if(!pkey||!WIN[key])return;try{localStorage.setItem(pkey,JSON.stringify({w:Math.round(WIN[key].w),h:Math.round(WIN[key].h)}))}catch(e){}};
   if(!WIN[key]){const s0=_pload();
     if(s0){const w=Math.max(280,Math.min(window.innerWidth-16,s0.w)),h=Math.max(200,Math.min(window.innerHeight-16,s0.h));
@@ -4784,7 +4842,7 @@ function makeFloat(sheet,handle,key,pkey){
   g.addEventListener('pointerdown',e=>{const st=start();z={x:e.clientX,y:e.clientY,w:st.w,h:st.h};try{g.setPointerCapture(e.pointerId)}catch(_){}apply(st);e.preventDefault();e.stopPropagation()},{passive:false});
   g.addEventListener('pointermove',e=>{if(!z)return;const st=WIN[key];st.w=z.w+(e.clientX-z.x);st.h=z.h+(e.clientY-z.y);apply(clamp(st))});
   const zup=()=>{if(z)_psave();z=null};g.addEventListener('pointerup',zup);g.addEventListener('pointercancel',zup);
-  if(window.wzHook)try{wzHook(sheet,p)}catch(_){}   /* ★ bookwin §B — 카드 층(지학 · add1 생물)만 갈고리가 있다(창 무리에 올린다 · 물리는 없어 한 줄도 안 탄다) */
+  if(window.wzHook)try{wzHook(sheet,p)}catch(_){}   /* ★ bookwin §B — 창 무리에 올린다(누르면 · 불린 순간 앞) · ★ physphone A-1 — 물리도 갈고리가 있다(§B 가 SHELL 공통) */
 }
 /* §4 손필기 암기카드 — 새 키 mcard(SYNC 열한째) · 칸 기준 정규화 1/1000 정수 · 카드 20KB 상한 · 문항 필기(ink)와 저장소 따로 */
 const MC_MAX=20000;
@@ -5540,6 +5598,7 @@ function drawSpectrum(){
 }
 function row(r){
   const d=document.createElement('div');d.className='item'+(isC(r)?' ec':' eg');if(HASBOOK)d.dataset.uid=r[F.CODE];   /* ★ bookwin §J · add1 생물도 */
+  if(!HASBOOK)d.dataset.pv=GGU(r);   /* ★ physprev — 미리보기 표를 늦게 받으면 이 줄을 제자리에서 갈아 끼운다(pvPatch) */
   const no=r[F.NO],rep=reps(no),u=unitOf(no);
   /* ★ add11 — 물리 목록 줄에서 사라진 표시를 **옛 `row`(2082)의 조각 그대로** 되살린다.
      ⚠ 「YYYY 변리사」 연도 칩은 안 되살린다(사용자 9/21 — 코드 앞 두 자리가 연도다 · §A-0).
@@ -5549,7 +5608,7 @@ function row(r){
    <div class="body"><div class="meta">
      ${kindTag(r)}
      ${(PH&&r[F.STAR])?`<span class="star">${'★'.repeat(r[F.STAR])}</span>`:''}
-     <span class="sub">${esc(titleOf(r))}${PH?` · ${r[F.LNO]}`:''}</span>
+     <span class="sub${(PH&&pnFix(r))?' pnfx':''}">${esc((PH&&pnFix(r))||titleOf(r))}${(PH&&pnFix(r))?'<i class="pnpen"> ✎</i>':''}${PH?` · ${r[F.LNO]}`:''}</span>
      ${PH?`<span class="tag lv${r[F.LV]}">${r[F.LV]}</span>`:''}
      <span class="tag unit" data-unit="${esc(u)}">${esc(u?unitLabel(u):(isC(r)?'미매칭':'미분류'))}</span>
      ${bookChipSm(r)}
@@ -5565,7 +5624,7 @@ function row(r){
      ${SHELL?'':(c=>c?`<span class="cmt" data-cmt="${no}">${esc(c)}</span>`:`<span class="cmt empty" data-cmt="${no}">＋한줄</span>`)(noteOf(no))}
      ${SHELL&&mcCountOf(no)?`<span class="tag" style="cursor:default">🃏 ${mcCountOf(no)}</span>`:''}
      ${SHELL?`<span class="tag gg${ggBangAny(GGU(r))?' bang':''}${ggOf(GGU(r)).length?'':' hide'}" data-ggcnt="${esc(GGU(r))}">근거 ${ggOf(GGU(r)).length}${ggBangAny(GGU(r))?' !':''}</span>`:''}
-   </div><div class="prev${(HASBOOK&&tfixOn(r[F.CODE],'q'))?' fx':''}"${HASBOOK?' title="길게 눌러 글자 고치기"':''}>${esc(txtOf(r[F.CODE],'q'))}</div></div>${markBadge(no)}`;   /* add3 §3 ⓐ — 본문을 읽는 유일한 길 txtOf 를 지난다(고친 글자가 목록에도 보인다) */
+   </div><div class="prev${(HASBOOK&&tfixOn(r[F.CODE],'q'))?' fx':''}${(PH&&typeof pvOn==='function'&&pvOn(r))?' pv':''}"${HASBOOK?' title="길게 눌러 글자 고치기"':''}>${esc((PH&&typeof pvText==='function')?pvText(r):txtOf(r[F.CODE],'q'))}</div>${(PH&&typeof pvFigHTML==='function')?pvFigHTML(r):''}</div>${markBadge(no)}`;   /* add3 §3 ⓐ — 본문을 읽는 유일한 길 txtOf 를 지난다(고친 글자가 목록에도 보인다) · ★ physprev — 물리 = 미리보기 t 전부 + 발문 그림 칸(표가 없으면 txtOf 그대로) */
   d.onclick=e=>{const c=e.target.closest('.cmt'),p=e.target.closest('[data-page]'),un=e.target.closest('[data-unit]');
     {const tw=e.target.closest('[data-tw]');   /* add4 §5 — 옛 목록과 같은 시트 */
      if(tw){if(typeof twinSheet==='function')twinSheet(+tw.dataset.tw);return}}
@@ -5577,6 +5636,7 @@ function row(r){
     else if(p){ if(HASBOOK){bplOpen(no);return}                      /* §F 지학 목록 칩 = **목록 창만** — 문항을 열지 않는다 */
                 openView(no).then(()=>bookOpen(+p.dataset.page,true))}
     else openView(no,(SHELL&&LISTNOS.length)?LISTNOS.slice():undefined)};   /* §B ◀▶ 는 화면 목록 차례를 받는다 */
+  if(PH&&typeof pvWatch==='function')pvWatch(d);   /* ★ physprev — 그림 칸은 화면에 들 때 그린다 */
   return d;
 }
 
@@ -6609,7 +6669,10 @@ var QRECT=null,QK=1,QRAF=0;
 function qPtF(e){if(!QRECT)return null;return[(e.clientX-QRECT.left)/QK,(e.clientY-QRECT.top)/QK]}
 function qFit(){                               /* 좁은 화면에서는 카드를 통째로 줄인다 — 획도 같은 비율로 따라간다 */
   const wrap=$('#cardwrap'), card=$('#card'); if(!wrap||!card)return 1;
-  const avail=Math.max(120,wrap.clientWidth-2);
+  /* ★ revfix0929 A-4 — clientWidth 는 #cardwrap 안쪽 여백(좌우 16)을 품는다. 옛 식(clientWidth−2)은 카드를 30px 넓게 줄여
+     폰 390 에서 카드 오른쪽 14px 가 창 틀 밖(overflow-x:hidden 에 잘림 — 〈보기〉 X · 「다음 →」 · 「마크 없음」). 이제 안쪽 폭 → 오른쪽 여백 = 왼쪽 여백.
+     PC·iPad 는 안쪽 폭이 760 을 넘어 k = 1 그대로 */
+  const wcs=getComputedStyle(wrap),avail=Math.max(120,wrap.clientWidth-(parseFloat(wcs.paddingLeft)||0)-(parseFloat(wcs.paddingRight)||0));
   /* ★ bookwin §I — 카드 층(지학 · add1 생물)은 두 손가락·Ctrl/⌘+휠 배율 QZ(세션 동안 · 저장 안 함)를 곱한다. 1 이면 옛 길 그대로.
      k>1 이면 가로 굴림 폭(margin-right) · 세로는 옛 식 그대로(margin-bottom = 높이×(k−1)). 필기 좌표(qPt)는 카드 rect 기준이라 무관하다. */
   if(HASBOOK&&typeof QZ==='number'&&QZ!==1){const kz=Math.min(1,avail/QCW)*QZ;
@@ -7719,6 +7782,7 @@ exportData=async function(withPdf){
     /* ★ add5 §B-7 — 근거(gg·ggref)는 세 과목이 다 쓴다 → 맨 위에. 교재 묶음(card)은 카드 과목만. */
     gg:GG, ggref:GGREF};
   if(HASBOOK)out.card={bogi:BG,unit:UN,bpit:BP,bpg:BPG,snote:SN,mcard:MC,crop:CROP,txt:TXT,tfix:TFIX,bref:BREF};
+  else if(Object.keys(TFIX).length)out.tfix=TFIX;   /* ★ physphone A-2 — 물리 고친 글(이름 · 공식 칸)도 백업에 */
   inkKeys.forEach((k,i)=>out.ink[k]=inkVals[i]);
   if(withPdf){out.pdf={};for(const k of await keys('pdf')){if(String(k).startsWith('img:')||String(k).startsWith('snatt:'))continue;const buf=await get('pdf',k);let s='',u=new Uint8Array(buf);for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));out.pdf[k]=btoa(s)}}
   const blob=new Blob([JSON.stringify(out)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);
@@ -7735,6 +7799,7 @@ importData=async function(f){if(!f)return;let txt;try{txt=await f.text();const j
     /* ⚠ put 을 직접 부르지 않는다 — 저장 꼴 관문(Z-9·Z-15·Z-30)이 그 글자를 하나로 못 박았다 */
     if(j.gg){GG=j.gg;await saveGG()}
     if(j.ggref){GGREF=j.ggref;await saveGGREF()}
+    if(!HASBOOK&&j.tfix){TFIX=j.tfix;await saveTFIX()}   /* ★ physphone A-2 */
   }catch(e){toast('백업 파일을 읽지 못했습니다');return}
   await _imp0(new Blob([txt],{type:'application/json'}));if(DATA.length)refreshUnits();
 };
@@ -7814,6 +7879,22 @@ function cropFor(no){
    새 창틀을 짓지 않는다 — 📋·🃏 창이 쓰는 `makeFloat` 에 그대로 태운다.
    ⚠ 확인 창·설정(지우기 확인·동기화 도움말·설정·지학 편집 넷)은 **모달 그대로** 둔다(§A-5).
    ⚠ 옛 시트의 안(글자·단추·id)은 한 글자도 안 바꾼다 — 겉틀만 띄운다. */
+/* 곁창 첫 자리·크기 = 문제 창 오른쪽 옆(자리가 없으면 가운데) · PC 폭 560 × 높이 72%(화면−40 안) ·
+   ★ phone_win A-1 — 폰 = 화면−16 × 72% · 이미 뜬 곁창 수만큼 14px 내림(뒤 창 머리가 보이게) · ★ revfix0928 A-2 — [공식]·[개념] 목록 창도 이 함수 */
+function shFirst(b,sz){   /* sz = 기억 크기(winSaved) — 있으면 그 크기(화면 안 · 폰도) · 자리는 아래 규칙 그대로 */
+  const v=document.getElementById('view');
+  const vr=(v&&!v.classList.contains('hide'))?v.getBoundingClientRect():null;
+  const _ph=pwPhone();
+  let w=_ph?window.innerWidth-16:Math.min(560,Math.max(320,window.innerWidth-40));
+  let hh=_ph?Math.round(window.innerHeight*0.72):Math.min(Math.round(window.innerHeight*0.72),window.innerHeight-40);
+  if(sz){w=Math.max(280,Math.min(window.innerWidth-16,sz.w));hh=Math.max(200,Math.min(window.innerHeight-16,sz.h))}
+  /* ★ revfix0928_fix1 A-2 — 문제 창 오른쪽에 자리가 없으면 화면 가운데(= 문제 창 한가운데를 덮음) 대신 화면 오른쪽 끝 · t = 문제 창 위 끝(없으면 60) */
+  let l=Math.round(window.innerWidth-w-8), t=vr?Math.round(vr.top):60;
+  if(vr&&vr.right+8+w<=window.innerWidth-8){l=Math.round(vr.right+8);t=Math.round(vr.top)}
+  l=Math.max(0,l);t=Math.max(0,Math.min(window.innerHeight-hh-8,t));
+  if(_ph){l=8;t=Math.max(0,Math.min(window.innerHeight-hh-8,Math.round((window.innerHeight-hh)/2)+14*pwSideN(b)))}
+  return {l:l,t:t,w:w,h:hh};
+}
 function shFloat(b,key,title){
   if(!SHELL||!b)return b;
   const p=b.querySelector('.panel'); if(!p)return b;
@@ -7827,18 +7908,7 @@ function shFloat(b,key,title){
   if(!h.querySelector('.shx')){
     const x=document.createElement('button');x.className='shx';x.type='button';
     x.title='닫기';x.textContent='✕';x.onclick=()=>b.remove();h.appendChild(x)}
-  /* 처음 뜨는 자리 = 문제 창 오른쪽 옆(자리가 없으면 가운데) */
-  if(typeof WIN==='object'&&!WIN[key]){
-    const v=document.getElementById('view');
-    const vr=(v&&!v.classList.contains('hide'))?v.getBoundingClientRect():null;
-    const _ph=pwPhone();   /* ★ phone_win A-1 — 폰 곁창 = 화면−16 × 72% · 이미 뜬 곁창 수만큼 14px 내림(뒤 창 머리가 보이게) · PC 무변 */
-    const w=_ph?window.innerWidth-16:Math.min(560,Math.max(320,window.innerWidth-40));
-    const hh=_ph?Math.round(window.innerHeight*0.72):Math.min(Math.round(window.innerHeight*0.72),window.innerHeight-40);
-    let l=Math.round((window.innerWidth-w)/2), t=Math.round((window.innerHeight-hh)/2);
-    if(vr&&vr.right+8+w<=window.innerWidth-8){l=Math.round(vr.right+8);t=Math.round(vr.top)}
-    if(_ph){l=8;t=Math.min(window.innerHeight-hh-8,Math.round((window.innerHeight-hh)/2)+14*pwSideN(b))}
-    WIN[key]={l:l,t:t,w:w,h:hh};
-  }
+  if(typeof WIN==='object'&&!WIN[key])WIN[key]=shFirst(b,winSaved('jagwa.win.'+key));   /* ★ revfix0928_fix1 A-1 — 풀이 곁창 등도 크기 기억 */
   try{makeFloat(b,h,key,'jagwa.win.'+key)}catch(e){console.warn('shFloat',e)}
   pwBtns(p);   /* ★ phone_win A-5 — 아래 큰 단추 = 밑줄 글자 · 「닫기」 걷음(✕ 와 겹침) */
   if(!b.__pwz){b.__pwz=1;pwTop(b)}   /* ★ phone_win A-1 — 나중에 연 창이 위 */
@@ -8140,6 +8210,7 @@ function bplOpen(no,force){
     const t=$('#bktools [data-tool="crop"]'); if(t)t.click();
     cropFor(no)}};
   makeFloat(b,b.querySelector('.bplh'),'bplist','jagwa.win.bplist');
+  pwTop(b);   /* ★ revfix0928_fix1 A-4 — 지학·생물 목록판도 창 띠에(옛 판 = CSS z76 고정) */
 }
 function bplRefresh(no){if(HASBOOK&&document.getElementById('bpl')&&BPLNO===no)bplOpen(no,1)}
 
@@ -8319,7 +8390,7 @@ function shellBuild(){
   const clr=document.createElement('button');clr.type='button';clr.className='ebtn';clr.id='qClr';clr.textContent='지우기';
   srch.appendChild(clr);
   const qc=document.createElement('span');qc.className='mut';qc.id='qCnt';srch.appendChild(qc);
-  qc.onclick=()=>{if(ES_CNT.link){ES_BANG=false;esDist()}};   /* ★ jagwa_search A-4 — 「근거 N개 ▸」 */
+  qc.onclick=()=>{if(ES_CNT.link){ES_BANG=false;ES_CL=false;esDist()}};   /* ★ jagwa_search A-4 — 「근거 N개 ▸」 */
   {const sp=$('#spec');if(sp)hm.appendChild(sp)}
   {const cn=$('#cnt');if(cn)bar.appendChild(cn)}
   {const os=document.getElementById('ordSeg');if(os)bar.appendChild(os)}
@@ -8333,7 +8404,7 @@ function shellBuild(){
   esh.querySelector('#hmTg').onclick=()=>{const on=localStorage.getItem(HM_FOLD_K)==='1';
     try{localStorage.setItem(HM_FOLD_K,on?'0':'1')}catch(e){}shellPaint()};
   sg.onclick=e=>{const b=e.target.closest('[data-sm]');if(!b)return;ggSearchMode(b.dataset.sm)};
-  clr.onclick=()=>{const q=$('#q');if(q)q.value='';FL.q='';ES_BANG=false;esSearch();draw()};   /* ★ jagwa_search — 칸·상자·개수 비움(근거 모드면 「근거 N개 ▸」) */
+  clr.onclick=()=>{const q=$('#q');if(q)q.value='';FL.q='';ES_BANG=false;ES_CL=false;esSearch();draw()};   /* ★ jagwa_search — 칸·상자·개수 비움(근거 모드면 「근거 N개 ▸」) */
   esh.querySelector('#eWk').onclick=()=>{FL.mark=FL.mark==='weak'?'':'weak';draw()};
   esh.querySelector('#eLs').onclick=()=>{FL.mark=FL.mark==='less'?'':'less';draw()};
   esh.querySelector('#rvF').onchange=e=>{FL.mark=e.target.value||'';draw()};
@@ -8377,6 +8448,11 @@ function shellPaint(){
     kd.innerHTML=[['','전체',T.length],['y','기출',nY],['n','기본',nN]].map(x=>
       '<button type="button" class="chchip'+((pastNow()||'')===x[0]?' on':'')+'" data-past="'+x[0]+'">'
       +x[1]+' '+x[2]+'</button>').join('');
+  } else if(CUR.KINDS){
+    /* ★ revfix0929 A-7 — 생물 = 과목 갈래(기출 · 타기출 · 예상) · 셈 = 목록 머리(#eCnts)와 같은 식 · 누르면 그 갈래만(FL.types · 지학 기출/확인문제와 같은 동작)
+       옛 판은 지학 칩(기출 = !isC 746 · 확인문제 0)을 그대로 그려 FL.past 만 바꿨다 — 생물 히트맵은 FL.types 를 봐 늘 같은 270 칸 */
+    kd.innerHTML=CUR.KINDS.map(k=>'<button type="button" class="chchip'+(FL.types.has(k)?' on':'')+'" data-kind="'+k+'">'+KIND_LAB[k]+' '+DATA.filter(r=>kindOf(r)===k).length+'</button>').join('');
+    kd.querySelectorAll('[data-kind]').forEach(el=>el.onclick=()=>{FL.types=new Set([el.dataset.kind]);FL.round='';draw()});
   } else {
   kd.innerHTML='<button type="button" class="chchip'+(FL.past!=='p'?' on':'')+'" data-past="y">기출 '+nG+'</button>'
     +'<button type="button" class="chchip'+(FL.past==='p'?' on':'')+'" data-past="p">확인문제 '+nC+'</button>';
@@ -8517,7 +8593,7 @@ function ggSearchMode(m){
   const esh=document.getElementById('esh');if(!esh)return;
   esh.querySelectorAll('.seg2 [data-sm]').forEach(b=>b.classList.toggle('on',b.dataset.sm===GGMODE));
   const q=$('#q');if(q)q.placeholder=GGMODE==='g'?'근거·댓글에서 검색':'검색어를 입력하세요';
-  ES_BANG=false;esSearch();   /* ★ jagwa_search A-4 — 모드를 바꾸면 그 모드 규칙으로 같은 글을 다시 찾는다 · 「!」 풀림 */
+  ES_BANG=false;ES_CL=false;esSearch();   /* ★ jagwa_search A-4 — 모드를 바꾸면 그 모드 규칙으로 같은 글을 다시 찾는다 · 「!」 풀림 · ★ jagwa_search_claude 「C」 도 */
   draw();
 }
 
@@ -8719,7 +8795,7 @@ var mcwOpen=async function(sc){
   b.querySelector('#mcwInk').onclick=async()=>{const no=+sel.value;if(!no)return;await openView(no);mcardWin(no)};
   b.querySelector('#mcwBk').onclick=()=>mcPickGo(+sel.value,'book');
   b.querySelector('#mcwOmr').onclick=()=>mcPickGo(+sel.value,'omr');
-  makeFloat(b,b.querySelector('.bplh'),'mc','jagwa.win.mc');
+  makeFloat(b,b.querySelector('.bplh'),'mc','jagwa.win.mc');pwTop(b);   /* ★ revfix0928 A-3 — 🃏 창도 같은 결함(z77 고정) → 창 띠 */
   const body=b.querySelector('#mcwBody');
   if(!nos.length){body.innerHTML='<div class="bplnone">이 단원에는 아직 암기카드가 없습니다.</div>';return}
   body.innerHTML=nos.map(no=>{const r=rec(no);
@@ -8765,7 +8841,7 @@ function jnOpen(sec){
   b.innerHTML='<div class="panel"><div class="bplh"><span>📋 정리 · '+esc(sec+' '+((TOC.sec[sec]||{}).name||''))+'</span>'
     /* ★ add8 §A-2 — 과목 이름이 「지학」으로 박혀 있었다. `CUR.NAME` 을 쓴다. */
     +'<span class="mut" style="font-weight:500;margin-left:6px">'+esc(CUR.NAME)+' · '+total+'문항</span>'
-    +'<button id="jnwX">닫기</button></div><div id="jnwBody"></div></div>';
+    +'<button id="jnwX" class="shx" type="button" title="닫기">✕</button></div><div id="jnwBody"></div></div>';   /* ★ physphone A-4 — 「닫기」 → ✕ 하나(다른 창 .shx 꼴 · 누름 ≥ 36 · 제목 한 줄 말줄임 = CSS) */
   document.body.appendChild(b);
   b.querySelector('#jnwX').onclick=()=>b.remove();
   b.querySelector('#jnwBody').innerHTML=units.map(u=>{
@@ -8775,7 +8851,8 @@ function jnOpen(sec){
     ||('<div class="bplnone">'
        +((typeof FL!=='undefined'&&FL.past)?'이 분류에 든 문항이 없다':'이 절에 든 문항이 없다')
        +'</div>');
-  makeFloat(b,b.querySelector('.bplh'),'jn','jagwa.win.jn');
+  makeFloat(b,b.querySelector('.bplh'),'jn','jagwa.win.jn');pwTop(b);   /* ★ revfix0928 A-3 — 창 띠(나중 연 창이 위 · 물리는 누르면 앞도) */
+  if(!HASBOOK&&typeof pvWatch==='function')pvWatch(b);   /* ★ physprev — 그림 칸은 화면에 들 때 그린다 */
 }
 function jnRowHTML(r){
   /* ★ add10 §A-2 — 근거 열쇠는 **`GGU(r)`** 다(물리 = `P009` · 카드 층 = `F.CODE`).
@@ -8785,12 +8862,14 @@ function jnRowHTML(r){
   return '<div class="jnrow" data-no="'+no+'">'
     +'<div class="h">'+(bp?'<button class="tag page" data-bpl="'+no+'">📖 p'+bp+'</button>':'')
     +'<button class="jgo" data-go="'+no+'">'+esc(codeShow(r))+'</button>'
-    +'<span class="mut">'+esc(titleOf(r))+'</span>'
+    +(HASBOOK?'<span class="mut">'+esc(titleOf(r))+'</span>'
+      :'<span class="mut pnm'+(pnFix(r)?' fx':'')+'" data-pn="'+no+'" title="길게 눌러 이름 고치기">'+esc(pnName(r))+'</span>')   /* ★ physphone A-2 — 물리 이름 = 기출 「연도 출처 N번」 · 교재 = 원래 이름 · 고친 이름(TFIX nm) · 길게 눌러 그 자리 고치기 */
     +(mcCountOf(no)?'<span class="jcard" style="cursor:default">🃏 '+mcCountOf(no)+'</span>':'')
     +'<span class="ggrc">'+ggRefChipsHTML(gu,'jn-')+'</span>'
     /* ★ add10 §A-4 — 마크는 첫 화면 줄과 **같은 묶음**(`markBadge`) */
     +'<span class="sp"></span>'+(hist(no).length?markBadge(no):'<span class="mk">·</span>')+'</div>'
-    +'<div class="q'+((HASBOOK&&tfixOn(uid,'q'))?' fx':'')+'"'+(HASBOOK?' title="길게 눌러 글자 고치기"':'')+'>'+esc(txtOf(uid,'q'))+'</div>'
+    +'<div class="q'+((HASBOOK&&tfixOn(uid,'q'))?' fx':'')+((!HASBOOK&&typeof pvOn==='function'&&pvOn(r))?' pv':'')+'"'+(HASBOOK?' title="길게 눌러 글자 고치기"':'')+'>'+esc((!HASBOOK&&typeof pvText==='function')?pvText(r):txtOf(uid,'q'))+'</div>'
+    +((!HASBOOK&&typeof pvFigHTML==='function')?pvFigHTML(r):'')   /* ★ physprev — 물리 = 미리보기 t 전부 + 발문 그림 칸 */
     +(ggOf(gu).length?'<div class="ggmine">'+ggOf(gu).map(g=>'<div>'+esc(ggFlat(g))+'</div>').join('')+'</div>':'')
     +'<div class="ggrb" data-ggrb="'+ea(gu)+'|jn-">'+ggRefBoxHTML(gu,'jn-')+'</div>'
     +'<button class="jnans" data-jnans="'+no+'">정답·해설 ▸</button>'
@@ -8892,6 +8971,7 @@ function ggUseWin(target,me){
                   h=Math.min(640,Math.round(window.innerHeight*0.8));
       WIN.gguse={w:w,h:h,l:Math.round((window.innerWidth-w)/2),t:Math.round((window.innerHeight-h)/2)}}}
   makeFloat(b,b.querySelector('.bplh'),'gguse','jagwa.win.gguse');
+  pwTop(b);   /* ★ revfix0928_fix1 A-4 — 창 띠(70~79)에 · 옛 판 = .sheet z80 고정(띠 밖 · 나중 연 [공식] 밑에 안 감) */
 }
 function ggChipHTML(uid,g,sc){
   return '<span class="ggnum '+ggOkCls(g.ok)+(g.bang?' bang':'')+'" data-ggtog="'+ea(uid+'|'+g.k+'|'+sc)+'"'
@@ -9063,14 +9143,21 @@ function ggPickLine(uid,low){
   if(!hit){for(const g of list){const x=(g&&Array.isArray(g.cs)?g.cs:[]).find(y=>y&&has(y.t));if(x){hit=g;c=x;break}}}
   hit=hit||list[0];
   return hit?(hit.i+'. '+one(ggFlat(hit))+(c?'\n↳ '+one(c.t):'')):''}
-function ggHits(q){
+function ggHits(q,cl){   /* ★ jagwa_search_claude — cl = 위 검색 줄('go') · Claude 풀이까지 찾고 걸린 곳(src)을 단다 · 카드 안 근거 찾기(pick)는 cl 없이 = 옛 그대로 */
   const low=String(q||'').toLowerCase().trim();
   const out=[];
-  DATA.filter(r=>!isC(r)).forEach(r=>{const uid=GGU(r),L=ggOf(uid);if(!L.length)return;
-    if(low){const hay=L.map(g=>ggFlat(g)+' '+(g.cs||[]).map(c=>c.t).join(' ')).join(' ').toLowerCase();
-      if(!hay.includes(low)&&!uid.toLowerCase().includes(low)&&!String(codeShow(r)).toLowerCase().includes(low)
-         &&!(esNS(low)&&esNS(codeShow(r)).includes(esNS(low))))return}   /* ★ jagwa_search — ID 는 하이픈·띄어쓰기 무시(G953201 → G95-32-01) */
-    out.push({uid:uid,no:r[F.NO],line:ggPickLine(uid,low),bang:ggBangAny(uid),own:ggOwners(uid).length})});
+  DATA.filter(r=>!isC(r)).forEach(r=>{const uid=GGU(r),L=ggOf(uid),no=r[F.NO],gp=!!cl&&!!gptOf(no);if(!L.length&&!gp)return;
+    let src=null;
+    if(low){const hay=L.map(g=>ggFlat(g)+' '+(g.cs||[]).map(c=>c.t).join(' ')).join(' ').toLowerCase(),hitG=!!L.length&&hay.includes(low);
+      const idHit=uid.toLowerCase().includes(low)||String(codeShow(r)).toLowerCase().includes(low)
+         ||!!(esNS(low)&&esNS(codeShow(r)).includes(esNS(low)));   /* ★ jagwa_search — ID 는 하이픈·띄어쓰기 무시(G953201 → G95-32-01) */
+      if(cl){const has=v=>String(v||'').toLowerCase().includes(low);
+        src={gg:L.some(g=>g&&has(ggFlat(g))),cm:L.some(g=>g&&Array.isArray(g.cs)&&g.cs.some(c=>c&&has(c.t))),cl:gp&&gpHit(no,low),id:idHit};   /* ★ jagwa_search_claude_fix1 — id = ID 로 걸림(딱지 없음 · 근거 줄 그대로) */
+        if(hitG&&!src.gg&&!src.cm)src.gg=true}   /* 항목 경계를 건너 걸린 말 = 근거 */
+      if(!hitG&&!(src&&src.cl)&&!idHit)return}
+    const h={uid:uid,no:no,line:L.length?ggPickLine(uid,low):'',bang:ggBangAny(uid),own:ggOwners(uid).length};
+    if(cl)h.src=src||{gg:false,cm:false,cl:false,id:false};
+    out.push(h)});
   return out}
 /* add3 ③ — 카드 안 찾기와 위 검색 줄이 **같은 세 줄 꼴**을 쓴다(민법 3443~3467).
    mode 'pick' = 카드 안(누르면 연결 걸기) · 'go' = 위 검색 줄(누르면 문항 창).
@@ -9087,22 +9174,62 @@ function ggResRowHTML(h,q,mode,me,sc){
     +(mode==='pick'?'data-ggpick="'+ea(String(me)+'|'+h.uid+'|'+String(sc||''))+'"'
                    :'data-ggres="'+h.no+'"')+'>'
     +'<div class="hd"><span class="cd">'+esc(codeShow(r))+'</span>'
+    +(mode==='go'&&h.src?(h.src.gg?'<span class="clsrc gg">근거</span>':'')+(h.src.cm?'<span class="clsrc">댓글</span>':'')+(h.src.cl?'<span class="clsrc cl">Claude</span>':''):'')   /* ★ jagwa_search_claude — 걸린 곳 전부(민법 clSrcOf) */
     +'<b>'+esc((+r[F.ROUND]||0)+'회 '+(+r[F.LNO]||0)+'번')+'</b>'
     +'<span class="un">'+esc(unitLabel(unitOf(h.no)))+'</span>'
     +(h.bang?'<span class="ggbang on">!</span>':'')
     +(on?'':ggUseHTML(h.uid,'↩',me||''))
     +(on?'<span class="already">이미 넣음</span>':'')+'</div>'
     +'<div class="qq">'+esc(String(txtOf(h.uid,'q')).slice(0,70))+'…</div>'
-    +'<div class="gl">'+mark(line)+'</div></div>'}
+    /* ★ jagwa_search_claude — Claude 에서만 걸린 문항(또는 근거 없는 문항)은 근거 줄 대신 Claude 조각(민법 clSnip · <mark>) · 둘 다 걸리면 둘 다(민법 꼴)
+       h.nogl = 근거 줄 안 그림 · h.box = 아래 붙일 주황 상자(분포 목록 · A-3) */
+    +((h.nogl||(mode==='go'&&h.src&&(!h.line||(h.src.cl&&!h.src.gg&&!h.src.cm&&!h.src.id))))?'':'<div class="gl">'+mark(line)+'</div>')   /* ★ jagwa_search_claude_fix1 — ID 로 걸린 줄은 근거 줄 그대로 */
+    +((mode==='go'&&h.src&&gptOf(h.no)&&(h.src.cl||!h.line))?'<div class="glc">'+mark(gpSnip(h.no,String(q||'').toLowerCase().trim()))+'</div>':'')
+    +(h.box||'')+'</div>'}
 function ggResLine(h,q){return ggResRowHTML(h,q,'go','','')}
 /* ══ jagwa_search (2026-09-29 · jagwa/_task_jagwa_search.md) — 검색 = 민법OX 꼴 ══
    목록은 안 거른다 · 결과 = #esres(근거 모드와 같은 상자) · 「N건」 = #qCnt · 100건까지 · 누름 = openView(no, 걸린 번호 전부).
    찾는 칸 — 생물·지학: 본문(+고친 글자) · 선택지 · 〈보기〉 · 해설 · 해설2 · 보기 설명 · 참고 · 코멘트 · 보이는 ID · 출처
              물리: 옛 목록 거름 식 그대로(esPhysHit). 켜 둔 갈래·단원·마크 필터는 안 본다(그 과목 DATA 전부). */
 var ES_NOS=[],ES_BANG=false,ES_CNT={t:'',link:false},ES_DK=[];
+/* ★ jagwa_search_claude — Claude 풀이(GP[no] md 하나 · gptOf) 를 근거 검색이 찾는다(민법 _task_ox_claude_answers §C 꼴)
+   ES_CL = 분포 「C」 켬(모듈 변수뿐 · 저장 안 함 · 민법 GG_CL_ONLY) — ES_BANG 을 푸는 자리에서 같이 푼다 · 「!」 와 배타
+   gpPlain = ** · # · 글머리 「- 」 · 표 기호(| · ---)를 뺀 평문(민법 clSnip 과 같은 식) · gpSnip = 걸린 자리 앞 30 · 90 자 */
+var ES_CL=false;
+/* ★ jagwa_search_claude_fix1 — 맞댐·조각 글 = 풀이 md 에서 첫 줄(글 있는 첫 줄)이 제 ID 머리(「<보이는 ID> · <해> 변리사 … · 정답 …」 — 물리 72 · 지학 84 · 149 에서 잰 꼴)면 뗀 글
+   제 ID = codeShow · GGU(하이픈·띄어쓰기 무시) · 머리가 아니면 글 그대로 · 풀이 글·저장 꼴 무변 */
+var gpBodyMd=no=>{const md=String(gptOf(no)||''),L=md.replace(/\r\n?/g,'\n').split('\n'),i=L.findIndex(x=>x.trim());if(i<0)return md;
+  const r=rec(no),ids=r?[codeShow(r),GGU(r)].map(esNS).filter(Boolean):[],h=esNS(L[i].replace(/^[#*\s]+/,''));
+  return ids.some(x=>h.indexOf(x)===0)?L.slice(i+1).join('\n'):md};
+var gpPlain=no=>String(gpBodyMd(no)).replace(/\*\*/g,'').replace(/^#+\s*/gm,'').replace(/^\s*-\s+/gm,'').replace(/-{3,}/g,' ').replace(/\|/g,' ').replace(/\s+/g,' ').trim();
+var gpHit=(no,low)=>!!low&&!!gptOf(no)&&gpPlain(no).toLowerCase().includes(low);
+var gpSnip=(no,low)=>{const t=gpPlain(no),i=low?t.toLowerCase().indexOf(low):-1,st=Math.max(0,i-30);return (st?'…':'')+t.slice(st,st+90)+(st+90<t.length?'…':'')};
+/* A-3 암기 절 — 절 머리(GP_SEC 판정 · gpRender 와 같음) 머리 글에 「암기」가 든 첫 절의 몸(다음 절 머리 전까지) · ** 풀기 · 줄바꿈·글머리 「- 」 그대로
+   없으면 첫 절 몸의 첫 줄(절 머리가 하나도 없으면 글 첫 줄) → {all, first} */
+function gpMemo(no){
+  const L=String(gptOf(no)||'').replace(/\r\n?/g,'\n').split('\n'),H=[];
+  L.forEach((x,i)=>{const m=x.match(GP_SEC);if(m)H.push([i,m[2]||''])});
+  const body=k=>{const a=H[k][0]+1,b=k+1<H.length?H[k+1][0]:L.length;return L.slice(a,b).map(x=>x.replace(/\*\*([^*]+)\*\*/g,'$1')).join('\n').replace(/^\s*\n|\n\s*$/g,'').replace(/^\n+|\n+$/g,'')};
+  const one=t=>(String(t).split('\n').find(x=>x.trim())||'').trim();
+  const mk=H.findIndex(h=>h[1].indexOf('암기')>=0);
+  if(mk>=0){const a=body(mk);return {all:a,first:one(a)}}
+  const f=one(H.length?body(0):L.map(x=>x.replace(/\*\*([^*]+)\*\*/g,'$1')).join('\n'));
+  return {all:f,first:f}}
+var gpBoxHTML=(no,only)=>{if(!gptOf(no))return '';const m=gpMemo(no);
+  return '<div class="gpbox">'+esc((only?'Claude · '+m.all:'C · '+m.first))+'</div>'};
 var esNS=v=>String(v==null?'':v).toLowerCase().replace(/[\s\-]+/g,'');
 var esMark=(t,q)=>{t=String(t==null?'':t);const low=String(q||'').toLowerCase(),i=low?t.toLowerCase().indexOf(low):-1;
   return i<0?esc(t):esc(t.slice(0,i))+'<mark>'+esc(t.slice(i,i+low.length))+'</mark>'+esc(t.slice(i+low.length))};
+/* ★ revfix0929 A-3 — 데이터 줄바꿈 「⏎」: 찾기 비교에선 빈칸(esCmp · 빈칸 덩이는 하나) · 결과 줄·💬 조각에선 「 / 」(한 줄 그대로) · 카드는 무변.
+   esT1 = 「⏎」 덩이를 한 글자(\u0001)로 접은 글 — 그 글의 \u0001→빈칸·소문자가 esCmp 와 글자마다 맞아 <mark> 자리를 그대로 쓴다 · 물리는 안 탄다 */
+var esCmp=t=>String(t==null?'':t).replace(/(\s*⏎\s*)+/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
+var esT1=t=>String(t==null?'':t).replace(/(\s*⏎\s*)+/g,'\u0001').replace(/\s+/g,' ').trim();
+var esOut=s=>esc(String(s).replace(/\u0001/g,' / '));
+var esAt=(t1,q)=>{const qq=esCmp(q);return qq?t1.replace(/\u0001/g,' ').toLowerCase().indexOf(qq):-1};
+var esMk=(t1,q)=>{const i=esAt(t1,q),L=esCmp(q).length;
+  return i<0?esOut(t1):esOut(t1.slice(0,i))+'<mark>'+esOut(t1.slice(i,i+L))+'</mark>'+esOut(t1.slice(i+L))};
+var esSnip=(t,q)=>{const t1=esT1(t),st=Math.max(0,esAt(t1,q)-30);   /* 걸린 자리 앞 30 자부터 170 자(종전 선택지·해설 조각과 같은 꼴) */
+  return (st>0?'…':'')+esMk(t1.slice(st,st+170),q)+(t1.length>st+170?'…':'')};
 var esSrc=r=>(HASBOOK&&kindOf(r)==='G')?((+r[F.ROUND]||0)+'회 '+(+r[F.LNO]||0)+'번'):String(titleOf(r)||'');
 var esUnit=no=>(typeof unitOf==='function'&&typeof unitLabel==='function')?unitLabel(unitOf(no)):'';
 /* 💬 조각을 찾는 칸 차례(§A-2) — 선택지 → 〈보기〉 → 해설 → 해설2 → 보기 설명 → 참고 → 코멘트 */
@@ -9110,31 +9237,49 @@ function esFields(r){const bg=Array.isArray(r[F.BOGI])?r[F.BOGI]:[],rf=Array.isA
   return [['선택지',j((r[F.CH]||[]).map(x=>String(x==null?'':x)))],['보기',j(bg.map(b=>String((b&&b.내용)||'')))],
     ['해설',String(r[F.SOL]||'')],['해설2',String(r[F.SOL2]||'')],['보기 설명',j(bg.map(b=>String((b&&b.설명)||'')))],
     ['참고',j(rf.map(x=>j([String((x&&x.제목)||''),String((x&&x.글)||'')])))],['코멘트',String(noteOf(r[F.NO])||'')]]}
+/* ★ revfix0929 A-3 — 행마다 고정 칸(본문 · 선택지 · 〈보기〉 · 해설 · 해설2 · 보기 설명 · 참고)의 찾기 글(esCmp)을 한 번만 짓는다 —
+   타자마다 746 행 × 칸 일곱을 정규식 두 번씩 돌리면 esSearch 가 두 배 넘게 느려졌다(PC 중앙값 15 → 35ms). 고친 글자(tfix)·코멘트는 그때그때.
+   행 값이 갈리면(같은 행 배열에 다른 글) 다시 짓는다 — 칸 참조를 같이 쥔다 */
+var ES_RC=new WeakMap();
+function esRowCmp(r){let c=ES_RC.get(r);
+  if(!c||c.k[0]!==r[F.BODY]||c.k[1]!==r[F.CH]||c.k[2]!==r[F.BOGI]||c.k[3]!==r[F.SOL]||c.k[4]!==r[F.SOL2]||c.k[5]!==r[F.REF]){
+    c={k:[r[F.BODY],r[F.CH],r[F.BOGI],r[F.SOL],r[F.SOL2],r[F.REF]],b:esCmp(r[F.BODY]||''),f:esFields(r).slice(0,6).map(x=>[x[0],x[1],esCmp(x[1])])};ES_RC.set(r,c)}
+  return c}
 /* 한 행이 걸렸나 → null | {k:'body'|'id'|'src'|칸 이름, t:그 칸 글} */
 function esHit(r,q){
-  if(!HASBOOK)return esPhysHit(r,q)?{k:String(r[F.BODY]).includes(q)?'body':'etc'}:null;
-  const low=q.toLowerCase(),uid=r[F.CODE];
-  if((String(r[F.BODY]||'')+' '+tfixHay(uid)).toLowerCase().includes(low))return {k:'body'};
-  for(const f of esFields(r))if(f[1]&&f[1].toLowerCase().includes(low))return {k:f[0],t:f[1]};
+  if(!HASBOOK)return esPhysHit(r,q)?{k:String(r[F.BODY]).includes(q)?'body':((typeof pvHit==='function'&&pvHit(r,q))?'prev':'etc')}:null;   /* ★ physprev — t 에서만 걸림 = 'prev' */
+  const low=esCmp(q),uid=r[F.CODE],c=esRowCmp(r),th=tfixHay(uid);   /* ★ revfix0929 A-3-3 — 「⏎」 = 빈칸 · 빈칸 덩이 하나(「자료해석 2탄」 = 「자료해석⏎2탄」) · ID·출처(아래)는 그대로 */
+  if(c.b.includes(low)||(th&&esCmp(String(r[F.BODY]||'')+' '+th).includes(low)))return {k:'body'};
+  for(const f of c.f)if(f[1]&&f[2].includes(low))return {k:f[0],t:f[1]};
+  {const cm=String(noteOf(r[F.NO])||'');if(cm&&esCmp(cm).includes(low))return {k:'코멘트',t:cm}}
   const ns=esNS(q);
   if(ns&&esNS(codeShow(r)).includes(ns))return {k:'id'};
   if(ns&&(esNS(esSrc(r)).includes(ns)||esNS(titleOf(r)).includes(ns)))return {k:'src'};
   return null}
 function esRowHTML(r,q,h){
-  const no=r[F.NO],body=String((HASBOOK?txtOf(r[F.CODE],'q'):r[F.BODY])||'').replace(/\s+/g,' ').trim(),src=esSrc(r);
+  const no=r[F.NO],src=esSrc(r);
   let l2;
-  if(h.k==='body')l2='<div class="qq">'+esMark(body.slice(0,140),q)+(body.length>140?'…':'')+'</div>';
-  else if(h.t!=null){const e=String(h.t).replace(/\s+/g,' '),i=e.toLowerCase().indexOf(q.toLowerCase()),st=Math.max(0,i-30);
-    const sn=(st>0?'…':'')+e.slice(st,st+170)+(e.length>st+170?'…':'');
-    l2='<div class="qq">'+esc(body.slice(0,60))+'…</div><div class="gl">💬 <i>'+esc(h.k)+'</i> '+esMark(sn,q)+'</div>'}
-  else l2='<div class="qq">'+esc(body.slice(0,70))+'…</div>';
+  if(!HASBOOK){const body=String(r[F.BODY]||'').replace(/\s+/g,' ').trim();   /* 물리 = 종전 그대로(h.t 없음) */
+    l2=h.k==='body'?'<div class="qq">'+esMark(body.slice(0,140),q)+(body.length>140?'…':'')+'</div>'
+      :h.k==='prev'?'<div class="qq">'+pvSnip(r,q)+'</div>'   /* ★ physprev — t 에서만 걸린 줄 = t 조각(앞 30 자 · 140 자 · <mark>) */
+      :'<div class="qq">'+esc(body.slice(0,70))+'…</div>'}
+  else{
+    /* ★ revfix0929 A-3-1·2 — 첫 문장(stem) 보이는 140 자 안에 그 말이 있으면 거기에 <mark> · 없으면(〈보기〉·가나다 줄 등 본문 뒤쪽) 💬 「본문」 조각 */
+    const uid=r[F.CODE],s1=esT1(txtOf(uid,'q')),si=esAt(s1,q),hd=n=>'<div class="qq">'+esOut(s1.slice(0,n))+'…</div>';
+    if(h.k==='body'&&si>=0&&si+esCmp(q).length<=140)l2='<div class="qq">'+esMk(s1.slice(0,140),q)+(s1.length>140?'…':'')+'</div>';
+    else if(h.k==='body'){const qq=esCmp(q),t=[String(r[F.BODY]||''),tfixHay(uid)].find(x=>esCmp(x).includes(qq))||String(r[F.BODY]||'');
+      l2=hd(60)+'<div class="gl">💬 <i>본문</i> '+esSnip(t,q)+'</div>'}
+    else if(h.t!=null)l2=hd(60)+'<div class="gl">💬 <i>'+esc(h.k)+'</i> '+esSnip(h.t,q)+'</div>';
+    else l2=hd(70)}
   return '<div class="ggres g3" data-esq="'+no+'"><div class="hd">'
     +'<span class="cd">'+(h.k==='id'?'<mark>'+esc(codeShow(r))+'</mark>':esc(codeShow(r)))+'</span>'
     +'<b>'+(h.k==='src'?'<mark>'+esc(src)+'</mark>':esc(src))+'</b>'
     +'<span class="un">'+esc(esUnit(no))+'</span></div>'+l2+'</div>'}
-var esGgRows=()=>DATA.filter(r=>!isC(r)&&ggOf(GGU(r)).length>0);   /* ggHits 와 같은 모집단(확인문제 뺌) */
+/* ★ jagwa_search_claude A-1 — 분포 모집단 = 근거 있는 문항 ∪ Claude 풀이 있는 문항(확인문제 뺌 · 민법 fieldItems) · 개수 칸 N 은 근거만(민법 memoCount) */
+var esGgOnly=()=>DATA.filter(r=>!isC(r)&&ggOf(GGU(r)).length>0);
+var esGgRows=()=>DATA.filter(r=>!isC(r)&&(ggOf(GGU(r)).length>0||!!gptOf(r[F.NO])));   /* ggHits('go') 와 같은 모집단 */
 function esCntPaint(){const c=document.getElementById('qCnt');if(!c)return;
-  if(ES_CNT.link)ES_CNT.t='근거 '+esGgRows().length+'개 ▸';   /* 근거가 늘고 줄면 다시 센다 */
+  if(ES_CNT.link)ES_CNT.t='근거 '+esGgOnly().length+'개 ▸';   /* 근거가 늘고 줄면 다시 센다 · Claude 는 안 센다 */
   c.textContent=ES_CNT.t;c.classList.toggle('eslink',!!ES_CNT.link)}
 function esSearch(){
   const box=document.getElementById('esres');if(!box)return;
@@ -9154,32 +9299,41 @@ var esUK=u=>String(u||'').split('.').map(x=>String(+x||0).padStart(4,'0')).join(
 function esDist(){
   const box=document.getElementById('esres');if(!box)return;
   const all=esGgRows(),bang=r=>ggBangAny(GGU(r)),K=all.filter(bang).length;if(!K)ES_BANG=false;
-  const use=ES_BANG?all.filter(bang):all,m=new Map(),bm=new Map();
-  use.forEach(r=>{const u=(typeof unitOf==='function'?unitOf(r[F.NO]):'')||'';m.set(u,(m.get(u)||0)+1);if(bang(r))bm.set(u,(bm.get(u)||0)+1)});
+  const cl=r=>!!gptOf(r[F.NO]),C=all.filter(cl).length;if(!C)ES_CL=false;if(ES_BANG)ES_CL=false;   /* ★ jagwa_search_claude A-2 — 「C n」 = 모집단 안 Claude 풀이 문항 수 */
+  const use=ES_BANG?all.filter(bang):ES_CL?all.filter(cl):all,m=new Map(),bm=new Map(),cm=new Map();
+  use.forEach(r=>{const u=(typeof unitOf==='function'?unitOf(r[F.NO]):'')||'';m.set(u,(m.get(u)||0)+1);if(bang(r))bm.set(u,(bm.get(u)||0)+1);if(cl(r))cm.set(u,(cm.get(u)||0)+1)});
   ES_DK=[...m.keys()].sort((a,b)=>((!a)-(!b))||esUK(a).localeCompare(esUK(b)));   /* 단원 코드 차례 · 미분류 끝 */
   box.classList.remove('hide');box.scrollTop=0;
   if(!all.length){box.innerHTML='<div class="bplnone">근거 기록이 없습니다.</div>';return}
-  box.innerHTML='<div class="esdh'+(ES_BANG?' bang':'')+'">'+(ES_BANG?'근거 <b>! '+use.length+'건 · '+ES_DK.length+'개 단원</b>':'근거 '+use.length+'건 · '+ES_DK.length+'개 단원')
-    +'<span class="esb'+(K?'':' off')+'"'+(K?' data-esbang="1"':'')+'>! '+K+'</span></div>'
+  box.innerHTML='<div class="esdh'+(ES_BANG?' bang':ES_CL?' cl':'')+'">'+(ES_BANG?'근거 <b>! '+use.length+'건 · '+ES_DK.length+'개 단원</b>'
+      :ES_CL?'<span>근거 <b>C '+use.length+'건 · '+ES_DK.length+'개 단원</b> — Claude 풀이가 있는 것만 보는 중</span>':'근거 '+use.length+'건 · '+ES_DK.length+'개 단원')
+    +'<span class="esb'+(K?'':' off')+'"'+(K?' data-esbang="1"':'')+'>! '+K+'</span>'
+    +'<span class="esc'+(C?'':' off')+'"'+(C?' data-escl="1"':'')+'>C '+C+'</span></div>'   /* ★ jagwa_search_claude A-2 — 「! K」 오른쪽 · 0 이면 회색·못 누름 */
     +ES_DK.map((u,i)=>'<div class="esdr" data-esu="'+i+'"><span>'+esc(typeof unitLabel==='function'?unitLabel(u):u)+'</span><span class="rt">'
-      +(ES_BANG?'':'<span class="n">'+m.get(u)+'건</span>')+(bm.get(u)?'<span class="ggbang on">! '+bm.get(u)+'</span>':'')+'</span></div>').join('')}
+      +((ES_BANG||ES_CL)?'':'<span class="n">'+m.get(u)+'건</span>')+((bm.get(u)&&!ES_CL)?'<span class="ggbang on">! '+bm.get(u)+'</span>':'')
+      +((cm.get(u)&&!ES_BANG)?'<span class="gpn">C '+cm.get(u)+'</span>':'')+'</span></div>').join('')}
 function esDistList(i){
   const box=document.getElementById('esres');if(!box)return;const u=ES_DK[i];if(u===undefined)return esDist();
   let L=esGgRows().filter(r=>((typeof unitOf==='function'?unitOf(r[F.NO]):'')||'')===u);if(ES_BANG)L=L.filter(r=>ggBangAny(GGU(r)));
+  if(ES_CL)L=L.filter(r=>!!gptOf(r[F.NO]));   /* ★ jagwa_search_claude A-3 */
   box.classList.remove('hide');box.scrollTop=0;
   box.innerHTML='<div class="esdh" data-esback="1">◀ 단원 분포로</div>'
-    +'<div class="esdk">'+esc(typeof unitLabel==='function'?unitLabel(u):u)+' · '+L.length+'건'+(ES_BANG?' · 켜진 근거만':'')+'</div>'
-    +L.map(r=>{const uid=GGU(r);return ggResLine({uid:uid,no:r[F.NO],line:ggPickLine(uid,''),bang:ggBangAny(uid),own:ggOwners(uid).length},'')}).join('')}
+    +'<div class="esdk">'+esc(typeof unitLabel==='function'?unitLabel(u):u)+' · '+L.length+'건'+(ES_BANG?' · 켜진 근거만':'')+(ES_CL?' · Claude 풀이만':'')+'</div>'
+    /* 평소 = 근거 줄 + 주황 상자 「C · 암기 절 첫 줄」(풀이 있을 때 · 근거 없는 문항은 상자만) · 「C」 = 근거 줄 대신 「Claude · 암기 절 전부」 · 「!」 = 옛 그대로 */
+    +L.map(r=>{const uid=GGU(r),no=r[F.NO],hasG=ggOf(uid).length>0;
+      return ggResLine({uid:uid,no:no,line:hasG?ggPickLine(uid,''):'',bang:ggBangAny(uid),own:ggOwners(uid).length,
+        nogl:ES_CL||!hasG,box:ES_BANG?'':gpBoxHTML(no,ES_CL)},'')}).join('')}
 /* ★ jagwa_search A-5 — 물리 찾는 식 = 옛 목록 거름(pass 의 `!HASBOOK` 갈래)을 글자 그대로 옮긴 것 · FL.q → q */
 function esPhysHit(r,q){const s=q.toLowerCase(),no=r[F.NO];
   return !!(String(r[F.CODE]).toLowerCase().includes(s)||String(r[F.SUB]).includes(q)||String(r[F.BODY]).includes(q)
           ||String(noteOf(no)).includes(q)||typeOf(no).some(t=>t===q)||String(gptOf(no)).includes(q)
-          ||String(no)===q||String(r[F.VLT])===q)}
+          ||String(no)===q||String(r[F.VLT])===q
+          ||(typeof pvHit==='function'&&pvHit(r,q)))}   /* ★ physprev — 미리보기 t(그림 문제 속 발문 말)도 본다 */
 /* §D-7 위 검색 줄 「🔗 근거」 모드 */
 function ggResBox(q){
   const box=document.getElementById('esres');if(!box)return;
   if(GGMODE!=='g'){box.classList.add('hide');box.innerHTML='';return}
-  const hits=ggHits(q);
+  const hits=ggHits(q,true);   /* ★ jagwa_search_claude — Claude 풀이까지 */
   box.classList.remove('hide');
   box.innerHTML=hits.length?hits.map(h=>ggResLine(h,q)).join(''):'<div class="bplnone">찾은 근거가 없다</div>';
   return hits.length}   /* ★ jagwa_search — 개수 칸 「N건」 */
@@ -9411,7 +9565,8 @@ if(SHELL){
     if(el=hit('[data-esq]')){e.stopPropagation();openView(+el.getAttribute('data-esq'),ES_NOS.slice());return}   /* ★ jagwa_search — ▶ = 검색 결과 차례(필터 밖 갈래 포함) · 검색칸·상자 그대로 */
     if(el=hit('[data-esu]')){e.stopPropagation();esDistList(+el.getAttribute('data-esu'));return}
     if(el=hit('[data-esback]')){e.stopPropagation();esDist();return}
-    if(el=hit('[data-esbang]')){e.stopPropagation();ES_BANG=!ES_BANG;esDist();return}
+    if(el=hit('[data-esbang]')){e.stopPropagation();ES_BANG=!ES_BANG;if(ES_BANG)ES_CL=false;esDist();return}
+    if(el=hit('[data-escl]')){e.stopPropagation();ES_CL=!ES_CL;if(ES_CL)ES_BANG=false;esDist();return}   /* ★ jagwa_search_claude A-2 — 「!」 와 배타 */
     if(el=hit('[data-ggres]')){e.stopPropagation();openView(+el.getAttribute('data-ggres'));return}
     if(el=hit('[data-ggbang]')){e.stopPropagation();const v=par(el,'data-ggbang');ggBangToggle(v[0],v[1]);return}
     if(el=hit('[data-ggtog]')){e.stopPropagation();const v=par(el,'data-ggtog');
@@ -9577,7 +9732,9 @@ function ggPhysPaint(){
   /* ★ add13 §A-1 — 근거 줄은 문제 **위**다(`#stage` 의 맨 앞 · `#wrap` 앞).
      사용자 9/21 — 문제를 끝까지 내리지 않아도 근거를 보고 쓸 수 있어야 한다. */
   if(!box){box=document.createElement('div');box.id='ggphys'}
-  if(box.parentNode!==st||st.firstChild!==box)st.insertBefore(box,st.firstChild);
+  /* ★ physphone A-5 — 근거 칸 = 문항 창 머리(.vtop) 안 · 필기 도구 줄 바로 아랫줄(order 10 · 온 폭) · 따로 카드(여백·테두리) 걷음 · 기능 무변 · 머리 끌기에서 뺀다(data-nodrag) */
+  box.setAttribute('data-nodrag','1');
+  {const vt=document.querySelector('#view .vtop');if(vt){if(box.parentNode!==vt)vt.appendChild(box)}else if(box.parentNode!==st||st.firstChild!==box)st.insertBefore(box,st.firstChild)}
   box.innerHTML='<div class="ggtop"><div class="ggwrap">'+ggLineHTML(GGU(r),'qp-')+'</div></div>';
   try{ggRowsSync(box.querySelector('.ggrows'))}catch(e){}
 }
@@ -9634,7 +9791,7 @@ if(HASBOOK&&typeof showProblem==='function'&&!showProblem.__gptSync){
    생물만 다른 것 — 정리OMR 이 없어(HASJOGAK=false) OMRTAB 늘 false · 「이 쪽의 문항」 고르기 = BOOK_ROWS 'bpage'(차례만 §D) · 교재 조각 = 절마다 한 PDF.
    B 만진 창 맨 앞 · C ◀ 쪽 ▶ ↩ · D 이 쪽의 문항 연도순·문항 창 · E 📍 자리 직접 찍기 · G 찍는 중 이미 찍은 자리 · H·I 문제 창 손바닥·확대 · J 미리보기 고치기
    ★ 찍기 ≠ 오리기(사용자 9/24) — 찍기(📍·🃏) = 이 문항에 관련된 교재 부분 캡처 · 오리기 = OCR 이 틀린 문제·해설을 그림으로 고쳐 넣기. 한 길로 묶지 않는다. */
-if(HASBOOK){
+if(SHELL){   /* ★ physphone A-1(2026-09-30) — §B 창 무리를 교재 덩어리 밖(세 과목 공통)으로 — 물리도 누른 창이 맨 앞(pwTop 이 이 wzRaise 를 탄다 · makeFloat 창은 wzHook) · 지학·생물은 같은 코드라 무변 */
   /* ── §B 떠 있는 창 무리 — 마지막 만진 창이 맨 앞 ──
      z = 70 + 차례(보이는 창만 · 열 개 넘으면 오래된 것들이 70 에 눌림) — **띠를 70~79 안에서 돌린다.**
      모달 시트(.sheet 80)·#snsheet 90·#crmenu 95·#bkPop 96·토스트 99 는 늘 그 위(모달 z 는 안 건드린다).
@@ -9663,7 +9820,8 @@ if(HASBOOK){
      mo.observe(el,{attributes:true,attributeFilter:['class'],attributeOldValue:true});
      if(id!=='view'&&id!=='book')window.wzHook(el,el.querySelector('.panel'))})}   /* 이 덩어리보다 먼저 makeFloat 된 창 */
   addEventListener('resize',()=>{const v=document.getElementById('view');if(v&&wzOn(v)&&WZ.indexOf(v)<0)wzRaise(v);else wzPaint()});
-
+}
+if(HASBOOK){
   /* ── §C 교재 창 쪽 이동 — ◀ [쪽] ▶ · ↩ 전 쪽 · §E 📍 ── (머리줄 #bkInfo 바로 뒤 · 생물 DOM 에는 안 생긴다) */
   const bwCur=()=>{try{return (BK.open&&BK.pgs&&BK.pgs.length)?((bkCurPage()||{}).pr||0):0}catch(e){return 0}};
   const bwOk=n=>n>0&&(OMRTAB?BK.pgs.some(x=>x.pr===n):!!pieceFor(n));
@@ -9876,6 +10034,277 @@ if(HASBOOK){
 }
 }
 /*/EARTH:js*/
+/* ══════ ★ 2026-09-30 (_task_jagwa_physphone) — 물리 폰 화면 손질 ══════
+   A-1 누른 창 앞으로 = 위 §B(창 무리)를 SHELL 공통으로 옮김(이 덩어리 밖) · A-2 정리 창 줄 이름(기출 「연도 출처 N번」 · 교재 = 원래 이름) · 이름 길게 눌러 그 자리 고치기
+   A-3 위 「공식」 = 공식 시트(FRM) 세 탭(시트 · 백지 인출 · 단위·기초) · 공식·조건·함정 길게 눌러 고치기 · A-4 정리 창 ✕ · A-5 문항 창 머리 한 줄 · 물리 근거 칸 = 머리 안 · A-6 개념·이론 줄 글
+   고친 글 = 지학 「글자 고치기」 TFIX 꼴을 물리에 넓혔다(원본·볼트 무변 · 보이는 것만 갈아 끼움 · 새 kv 없음) — 물리 SYNC 키에 `tfix` 하나를 더한다(칸 도장·묘비·병합 = 다른 칸과 같은 recMerge)
+     이름 = TFIX['P'+번호 세 자리].nm(근거 열쇠 GGU 와 같다 · F.CODE 겹침 없음) · 공식 칸 = TFIX['F|'+섹션제목|원래 공식].f·c·t(FR 열쇠 = 원래 공식 글 그대로 → O/X 기록 무변)
+   ⚠ 옛 판 기기는 SYNC_KEYS 에 tfix 가 없어 올릴 때 data.tfix 를 빼고 올린다(도장 u 는 합집합이라 남는다) → 새 판 기기가 다음에 맞출 때 제 값으로 다시 싣는다(동률 · 제 것이 더 김) — 관문 「옛 판 기기」 칸이 잰다 */
+if(SHELL&&!HASBOOK&&SYNC_KEYS.indexOf('tfix')<0)SYNC_KEYS.push('tfix');
+var PN_SLOT='nm';
+var pnUid=r=>GGU(r);
+var pnFix=r=>(r&&!HASBOOK)?tfixRaw(pnUid(r),PN_SLOT):'';
+/* 기출(F.YEAR > 0) = 「연도 출처 N번」 — 변리사 PAyyNN 의 NN = 시험 문번(해마다 1~10 한 벌 · 2002~2026 250문항 겹침 0 실측 · 시험지 쪽 머리에도 PA 코드가 찍힌다) ·
+   다른 출처 기출(MD·PT 기출 PEMxxNN · 72)은 끝 두 자리가 교재 차례라 번호를 안 붙인다(「2012 MD기출」) · 교재 문항(연도 0) = 원래 이름(titleOf) */
+function pnAuto(r){const y=+r[F.YEAR]||0;if(!y)return titleOf(r);
+  const m=/^PA\d\d(\d\d)$/.exec(String(r[F.CODE]||''));
+  return (y+' '+String(r[F.SRC]||'')).trim()+(m?' '+(+m[1])+'번':'')}
+var pnName=r=>pnFix(r)||pnAuto(r);
+function pnPaint(no){const r=rec(no);if(!r)return;const fx=pnFix(r);
+  document.querySelectorAll('#jnw .jnrow .pnm[data-pn="'+no+'"]').forEach(x=>{x.textContent=pnName(r);x.classList.toggle('fx',!!fx)});
+  try{draw()}catch(e){}}   /* 첫 화면 목록 줄도 같은 이름 */
+function pnEdit(el){const no=+el.dataset.pn,r=rec(no);if(!r)return;
+  iedOpen(el,pnFix(r),pnAuto(r),async v=>{await tfixSet(pnUid(r),PN_SLOT,v);pnPaint(no)})}
+/* 공식 칸 — 열쇠 'F|'+frKey(원래 공식) · 칸 f(공식)·c(조건)·t(함정) · 원문 FRM · 볼트 「0. 공식시트 역학」 무변 */
+var FR_SLOT={f:0,c:1,t:2};
+var frFix=(k,sl)=>tfixRaw('F|'+k,sl);
+function frOrig(k,sl){for(const s of FRM)for(const row of s.r)if(frKey(s,row)===k)return String(row[FR_SLOT[sl]]||'');return ''}
+function frmRowHTML(s,row,idx,blank){
+  const k=frKey(s,row),g=FR[k]||'';
+  const dot=g?'<span class="frdot '+(g==='O'?'frO':'frX')+'"></span>':'';
+  const cell=(sl,tag,cls)=>{const fx=frFix(k,sl);return '<'+tag+' class="'+cls+'frcell'+(fx?' fx':'')+'" data-fk="'+ea(k)+'" data-fs="'+sl+'">'+(fx?esc(fx):row[FR_SLOT[sl]])+'</'+tag+'>'};
+  const main=cell('f','div','frf ')+'<div class="frc">조건 — '+cell('c','span','')+' &nbsp;·&nbsp; <b>함정</b> — '+cell('t','span','')+'</div>';
+  if(!blank)return '<div class="frmrow">'+dot+main+'</div>';
+  return '<div class="frmrow frhide" data-k="'+esc(k)+'">'+dot+
+    '<button class="btn sm" data-rv="1">공개 '+(idx+1)+'</button>'+
+    '<div class="frbody hide">'+main+
+    '<div style="margin-top:6px"><button class="btn sm" data-g="O" style="color:var(--teal)">썼다 O</button> '+
+    '<button class="btn sm" data-g="X" style="color:var(--red)">못 썼다 X</button></div></div></div>'}
+async function frmBodyClick(e){
+  const rv=e.target.closest('[data-rv]');
+  if(rv){const w=rv.parentElement.querySelector('.frbody');w.classList.remove('hide');rv.remove();kx(w);return}
+  const g=e.target.closest('[data-g]');
+  if(g){const rowEl=g.closest('.frmrow');FR[rowEl.dataset.k]=g.dataset.g;await saveFR();
+    rowEl.classList.add(g.dataset.g==='O'?'frokay':'frmiss');
+    g.parentElement.innerHTML='<span style="font-size:11.5px;color:var(--muted)">기록됨 — '+(g.dataset.g==='O'?'O':'X (주말 인출에서 다시)')+'</span>'}}
+function frPaintKey(k){
+  document.querySelectorAll('.frcell').forEach(x=>{if(x.dataset.fk!==k)return;const sl=x.dataset.fs,fx=frFix(k,sl);
+    x.innerHTML=fx?esc(fx):frOrig(k,sl);x.classList.toggle('fx',!!fx);try{kx(x)}catch(e){}})}
+function frEdit(el){const k=el.dataset.fk,sl=el.dataset.fs;if(!k||FR_SLOT[sl]==null)return;
+  iedOpen(el,frFix(k,sl),frOrig(k,sl),async v=>{await tfixSet('F|'+k,sl,v);frPaintKey(k)})}
+/* 그 자리 고치기 칸 — 입력 칸 + ✓(누름 ≥ 36) · Enter·✓ = 저장 · 바깥 누름·Esc = 취소 · 비우면(원래와 같으면) 원래로 */
+var IED=null;
+function iedOpen(el,cur,orig,save){
+  if(IED)IED.done(false);
+  const keep=el.innerHTML;orig=String(orig||'');
+  el.classList.add('ied');el.innerHTML='';
+  const inp=document.createElement('input');inp.className='iedin';inp.type='text';inp.value=cur||orig;inp.setAttribute('data-nodrag','1');inp.setAttribute('enterkeyhint','done');
+  const ok=document.createElement('button');ok.type='button';ok.className='iedok';ok.textContent='✓';ok.title='저장 (Enter)';ok.setAttribute('data-nodrag','1');
+  el.appendChild(inp);el.appendChild(ok);
+  let open=true;
+  const out=e=>{if(!el.contains(e.target))done(false)};
+  const done=async commit=>{if(!open)return;open=false;if(IED&&IED.el===el)IED=null;document.removeEventListener('pointerdown',out,true);
+    const v=String(inp.value||'').trim();el.classList.remove('ied');el.innerHTML=keep;
+    if(commit)await save(v===orig.trim()?'':v)};
+  IED={el,done};
+  inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();done(true)}else if(e.key==='Escape'){e.preventDefault();done(false)}});
+  ok.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();done(true)});
+  setTimeout(()=>{if(open)document.addEventListener('pointerdown',out,true)},0);
+  inp.focus();try{inp.select()}catch(_){}}
+/* 길게 누르기(500ms · 8px 넘게 움직이면 취소) = 그 자리 고치기 · 짧게 누름은 무변 · 길게 누른 뒤 click 한 번은 먹는다
+   500ms = 「길게」로 잡힘(테두리 표시) · 칸은 **손을 뗄 때** 연다 — 누르고 있는 동안 열면 손 뗌이 새 칸 위 톡(합성 mousedown)이 되어 입력 칸 포커스가 날아간다(9/30 관문 실측)
+   · 아이패드는 사용자 동작(손 뗌) 안에서 focus 해야 자판이 뜬다 · 그 손 뗌의 touchend 는 막아(preventDefault) 합성 마우스 톡·포커스 옮김을 없앤다 */
+if(SHELL){const SEL='#jnw .jnrow .pnm,.frcell';let lp=null,lpT=-1e9;
+  const fire=el=>{if(!el.isConnected)return;if(el.classList.contains('pnm'))pnEdit(el);else frEdit(el)};
+  const drop=L=>{clearTimeout(L.tm);L.el.classList.remove('lp','lpok')};
+  document.addEventListener('pointerdown',e=>{const el=e.target&&e.target.closest&&e.target.closest(SEL);if(!el||el.classList.contains('ied'))return;
+    if(lp)drop(lp);
+    lp={el,x:e.clientX,y:e.clientY,long:false};el.classList.add('lp');
+    lp.tm=setTimeout(()=>{if(!lp)return;lp.long=true;lp.el.classList.add('lpok')},500)},true);
+  document.addEventListener('pointermove',e=>{if(lp&&Math.hypot(e.clientX-lp.x,e.clientY-lp.y)>8){drop(lp);lp=null}},true);
+  const up=e=>{if(!lp)return;const L=lp;lp=null;drop(L);if(!L.long)return;
+    lpT=performance.now();if(e.type==='pointerup')fire(L.el)};
+  document.addEventListener('pointerup',up,true);document.addEventListener('pointercancel',up,true);
+  document.addEventListener('touchend',e=>{if(performance.now()-lpT<120&&e.cancelable)e.preventDefault()},{capture:true,passive:false});
+  document.addEventListener('click',e=>{if(performance.now()-lpT<700){lpT=-1e9;e.stopPropagation();e.preventDefault()}},true);
+  document.addEventListener('contextmenu',e=>{if(e.target&&e.target.closest&&(e.target.closest(SEL)||e.target.closest('.ied')))e.preventDefault()},true)}
+/* A-3 위 「공식」 — 장 → 단원(목차 TOC 차례) → FRM 묶음 · 한 묶음 = 처음 맞는 단원 자리 한 번(번호 없는 「벡터의 분해와 합성」도 u 로 그 단원 자리) · 공식 없는 장 = 한 줄 */
+var PF_TAB='s';
+function pfGroups(){const seen=new Set(),out={};
+  Object.keys(TOC.ch).sort((a,b)=>+a-+b).forEach(c=>{out[c]=[];
+    ((TOC.ch[c]||{}).secs||[]).forEach(sc=>{const nm=String((TOC.sec[sc]||{}).name||'');
+      FRM.forEach((s,gi)=>{if(!seen.has(gi)&&(s.u||[]).includes(nm)){seen.add(gi);out[c].push(gi)}})})});
+  FRM.forEach((s,gi)=>{if(seen.has(gi))return;const c=(/^(\d+)\./.exec(s.t)||[])[1]||'1';(out[c]=out[c]||[]).push(gi)});   /* 목차에 없는 단원 이름 — 제목 앞 번호의 장 끝(지금 0) */
+  return out}
+function pfBody(tab){
+  if(tab==='u'){const s0=(THEORY.sec||[]).find(x=>String(x.id)==='0');   /* 물리 목차 첫 절 「0 단위·기초」 그대로(머리 「0.」 없이) */
+    return s0?secHTML(s0).replace(/^<div class="thsec"><h3>[^<]*<\/h3>/,'<div class="thsec pfu">'):'<div class="bplnone">단위·기초 절이 없다</div>'}
+  const G=pfGroups(),blank=tab==='b';
+  return Object.keys(G).sort((a,b)=>+a-+b).map(c=>{const L=G[c],n=L.reduce((a,gi)=>a+FRM[gi].r.length,0);
+    const hd='<div class="pwh">'+c+'. '+esc(String((TOC.ch[c]||{}).name||pwChName(c)))+(L.length?' · '+L.length+'묶음 '+n+'식':'')+'</div>';
+    if(!L.length)return hd+'<div class="pwr none pfnone"><span class="tri"></span><span class="nm">공식 아직 없음</span></div>';
+    if(blank)return hd+L.map(gi=>{const s=FRM[gi];return '<h3 class="frmh">'+esc(s.t)+' — 공식 '+s.r.length+'개</h3>'+s.r.map((row,i)=>frmRowHTML(s,row,i,true)).join('')}).join('');
+    return hd+L.map(gi=>{const s=FRM[gi];return '<div class="pwr pfg" data-gi="'+gi+'"><span class="tri">▸</span><span class="nm">'+esc(s.t)+' · '+s.r.length+'식</span></div><div class="pwb hide"></div>'}).join('')}).join('')}
+function pfOpen(){
+  const b=document.createElement('div');b.className='sheet';b.id='pwl';b.dataset.kind='f';
+  const n=FRM.reduce((a,s)=>a+s.r.length,0);
+  b.innerHTML='<div class="panel"><div class="bplh"><span>📐 공식 · 공식 시트 '+FRM.length+'묶음 '+n+'식</span><button type="button" class="shx" title="닫기">✕</button></div>'
+    +'<div class="pftabs"><button type="button" data-pft="s">시트</button><button type="button" data-pft="b">백지 인출</button><button type="button" data-pft="u">단위·기초</button></div>'
+    +'<p class="pfhint"></p><div id="pwlBody"></div></div>';
+  document.body.appendChild(b);
+  b.querySelector('.bplh .shx').onclick=()=>b.remove();
+  const body=b.querySelector('#pwlBody'),hint=b.querySelector('.pfhint');
+  const paint=()=>{b.querySelectorAll('[data-pft]').forEach(x=>x.classList.toggle('on',x.dataset.pft===PF_TAB));
+    hint.textContent=PF_TAB==='b'?'먼저 백지에 공식을 전부 쓴 뒤, 한 줄씩 공개해서 O/X 로 자가채점하세요. 결과는 저장되어 기록에 실립니다.'
+      :PF_TAB==='u'?'물리 목차 「0 단위·기초」 — 배각공식 · 삼각비 · 벡터 분해 · 물리량·단위·기호':'장 → 단원 차례 · 누르면 그 묶음 공식 · 공식·조건·함정을 길게 눌러 고친다';
+    body.innerHTML=pfBody(PF_TAB);body.scrollTop=0;if(PF_TAB==='u')try{kx(body)}catch(e){}};
+  b.querySelectorAll('[data-pft]').forEach(x=>x.onclick=e=>{e.stopPropagation();PF_TAB=x.dataset.pft;paint()});
+  body.addEventListener('click',e=>{const g=e.target.closest('.pfg');
+    if(g){const bd=g.nextElementSibling,tri=g.querySelector('.tri'),s=FRM[+g.dataset.gi];if(!s||!bd)return;
+      if(!bd.dataset.done){bd.innerHTML=s.r.map((row,i)=>frmRowHTML(s,row,i,false)).join('');bd.dataset.done='1';try{kx(bd)}catch(e){}}
+      bd.classList.toggle('hide');tri.textContent=bd.classList.contains('hide')?'▸':'▾';return}
+    frmBodyClick(e)});
+  paint();
+  const key='pwf';
+  if(pwPhone()&&typeof WIN==='object'&&!WIN[key]){const w=window.innerWidth-16,h=Math.round(window.innerHeight*0.72);
+    WIN[key]={l:8,t:Math.min(window.innerHeight-h-8,Math.round((window.innerHeight-h)/2)+14*pwSideN(b)),w:w,h:h}}
+  makeFloat(b,b.querySelector('.bplh'),key,'jagwa.win.'+key);pwTop(b)}
+/* A-6 개념(UNITS) · 이론/공식(THEORY) 줄 글 — 배경색 span 은 그 색 형광(<mark>) · 허용 = background/background-color 하나 · 다른 태그·속성 = 태그를 걷고 글자만 ·
+   줄 앞 「* 」「- 」 = 글머리 점(들여쓰기 = 줄 i 칸 그대로) · 태그 이름은 진짜 HTML 이름만 본다(「<구분하기>」·「a<b」 같은 글은 글 그대로) */
+var TH_TAG=/<(\/?)(span|font|b|i|u|s|em|strong|mark|sup|sub|small|big|a|br|div|p|code|del|ins)((?:\s+[a-zA-Z_:][-\w:.]*(?:\s*=\s*(?:"[^"]*"|'[^']*'))?)*)\s*\/?>/gi;
+function thBg(attrs){const m=/\bstyle\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(attrs||'');if(!m)return '';
+  const st=m[1]!=null?m[1]:m[2],b=/background(?:-color)?\s*:\s*([^;]+)/i.exec(st);if(!b)return '';
+  const c=b[1].trim();return /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%a-z]+\)|[a-z]+)$/i.test(c)?c:''}
+function thTxt(x){let s=String(x==null?'':x),pre='';
+  const m=/^(\s*)[*-] /.exec(s);if(m){pre='<span class="thdot">•</span> ';s=m[1]+s.slice(m[0].length)}
+  if(s.indexOf('<')<0)return pre+esc(s);
+  let out='',last=0,t;const st=[];TH_TAG.lastIndex=0;
+  while((t=TH_TAG.exec(s))){out+=esc(s.slice(last,t.index));last=t.index+t[0].length;
+    if(t[2].toLowerCase()==='span'){if(!t[1]){const c=thBg(t[3]);st.push(c?1:0);if(c)out+='<mark class="thmk" style="background:'+c+'">'}else if(st.length&&st.pop())out+='</mark>'}}
+  out+=esc(s.slice(last));while(st.length)if(st.pop())out+='</mark>';
+  return pre+out}
+(function(){try{const s=document.createElement('style');s.id='physphone-css';s.textContent=[
+  /* A-2 물리 정리 창 줄 = 지학 값(번호 10px 800 · 이름 10px 700) · 고친 이름 = 옅은 파랑 + ✎ · 길게 누르는 동안 옅은 바탕 */
+  'body[data-layer="pdf"] #jnw .jnrow .h .mut{font-size:10px;font-weight:700}',
+  'body[data-layer="pdf"] #jnw .jnrow .h .jgo,body[data-layer="pdf"] #jnw .jnrow .h .jcard{font-size:10px}',
+  'body[data-layer="pdf"] #jnw .jnrow .h .pnm{flex:1000 1 0;min-width:0}',   /* 이름 칸 = 남는 폭(뒤 빈칸 .sp 보다 먼저) · 긴 교재 단원 이름은 그 칸 안에서 줄바꿈 — 마크 묶음이 다음 줄로 안 떨어진다 */
+  '#jnw .jnrow .pnm,.frcell{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}',
+  '#jnw .jnrow .pnm.fx,.item .sub.pnfx{color:#4F86D9}',
+  '#jnw .jnrow .pnm.fx::after{content:" ✎";font-weight:800}',
+  '.item .sub.pnfx .pnpen{font-style:normal;font-weight:800}',
+  '#jnw .jnrow .pnm.lp,.frcell.lp{background:var(--subj-soft);border-radius:4px}',
+  '#jnw .jnrow .pnm.lpok,.frcell.lpok{box-shadow:0 0 0 1.5px var(--subj)}',   /* 500ms 넘김 = 손 떼면 고치기 칸 */
+  '.frcell.fx{color:#3F72C4}','.frcell.fx::after{content:" ✎";color:#4F86D9;font-weight:800;font-size:10.5px}',
+  '.ied{display:inline-flex;align-items:center;gap:4px;max-width:100%;vertical-align:middle}',
+  '.iedin{font:inherit;font-size:13px;font-weight:500;padding:5px 7px;border:1.5px solid var(--subj);border-radius:6px;min-width:0;width:14em;max-width:calc(100% - 44px);background:#fff;color:var(--ink);box-sizing:border-box}',
+  '.iedok{flex:none;min-width:36px;min-height:36px;border:1px solid var(--subj);border-radius:8px;background:var(--subj);color:#fff;font-size:16px;font-weight:800;line-height:1;cursor:pointer;padding:0}',
+  /* A-3 위 「공식」 탭 */
+  '#pwl .pftabs{display:flex;gap:6px;padding:8px 12px 0;flex:none}',
+  '#pwl .pftabs button{font:inherit;font-size:12px;font-weight:700;padding:5px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);cursor:pointer}',
+  '#pwl .pftabs button.on{background:var(--ink);border-color:var(--ink);color:#fff}',
+  '#pwl .pfhint{font-size:11.5px;color:var(--muted);margin:6px 12px 0;flex:none}',
+  '#pwl .pwb .frmrow{margin-right:0}',
+  '@media (pointer:coarse){#pwl .pftabs button{min-height:36px}#pwl .pwr.pfg{min-height:36px;align-items:center}#pwl .frmrow .btn.sm{min-height:36px}}',   /* 손가락 누름 36(화면 훑기) */
+  /* A-4 정리 창 머리 — ✕ 하나(누름 36 · 머리 높이 그대로) · 제목 한 줄 말줄임 */
+  '#jnw .bplh>span:first-child{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+  '#jnw .bplh>.mut{flex:none;white-space:nowrap}',
+  '#jnw .bplh .shx{margin:-8px -6px -8px auto;padding:0;min-width:36px;min-height:36px;border:0;background:none;color:var(--muted);font-size:15px;line-height:1;cursor:pointer}',
+  '#jnw .bplh .shx:hover{color:var(--red)}',
+  /* A-5 문항 창 머리 — 창 모드 왼쪽 빈칸(손가락 기기 66px · 아이패드 「…」 비킴) 걷음(⤢ 화면 전체는 그대로) · 좁은 창 = 알약 둘째 줄 · 제목이 먼저 줄어 단추 줄이 한 줄 · 단추 누름 36 */
+  '@media (pointer:coarse){#view.win .vtop{padding-left:calc(env(safe-area-inset-left) + 10px)}}',
+  '@container (max-width:640px){#view .vtop #inkPill{order:9;margin-left:auto}#view .vtop .title{min-width:40px}}',
+  '@media (pointer:coarse){#view .vtop>.iconbtn,#view .vtop>#vLink{min-height:36px;min-width:36px}#view .vtop>#tm{min-height:36px}}',   /* #tm 은 제 최소 폭 56 그대로 */
+  /* A-5 물리 근거 칸 = 머리 안 · 필기 도구 줄 바로 아랫줄 · 따로 카드 걷음 */
+  '#view .vtop>#ggphys{order:10;flex:0 0 100%;max-width:none;margin:0;padding:0;box-sizing:border-box}',
+  '#view .vtop>#ggphys .ggtop{background:none;border:0;border-radius:0;padding:0}',
+  /* A-6 형광 · 글머리 점 */
+  '.thl mark.thmk{color:inherit;padding:0 1px;border-radius:2px}','.thl .thdot{color:var(--muted);font-weight:700}'
+].join('\n');document.head.appendChild(s)}catch(e){}})();
+/* ══════ ★ 2026-10-01 (_task_jagwa_physprev) — 물리 미리보기 = 발문 앞 글자(ABBYY) + 작은 그림 ══════
+   재료 = studyplandata phys/미리보기.json(비공개 · ⚙ N:\개인\claude\jagwa\moolri\_phys_prev_build.py)
+     {"P###": {c: F.CODE, t: 발문 전부(〈보기〉·선택지 앞까지), fig: [[x0,y0,x1,y1],…](쪽 크기로 나눈 값) | [] | "img", src: "abbyy|orig|none"}}
+     열쇠 = 물리 GGU(r) = 'P'+번호 세 자리 — F.CODE 는 겹친다(PEM0102 = 2번 · 14번 두 행)
+   PV = 받은 표 · 못 받거나 없으면 null → 지금처럼 BODY(txtOf) · 기기 kv 'pvjson' 에 사본(밖에서 열 때 · 원격이 404 면 사본도 지움)
+   줄 = 첫 화면 .prev · 📋 정리 창 .q — 글 = t 전부(줄 수 안 자름 · .pv) · 그 아래 그림 칸 .pvfig — 그릴 수 있을 때만(fig 이 있고 그 시험지 PDF 가 기기에 있음 · "img" = 앱 img/q<코드>.jpg)
+     받기 전에 그려진 줄은 받은 뒤 제자리에서 갈아 끼운다(목록을 다시 그리지 않음 · 굴린 자리 무변)
+   그림 = 기기 시험지 PDF(IndexedDB · locate 와 같은 쪽)에서 fig 자리만 높이 40px(기기 배율 ≤ 2) · 화면에 들 때만(IntersectionObserver · 여백 0)
+     한 번 그린 것은 PVIMG(메모리) · 그리기는 하나씩 차례로 · PDF 문서는 둘까지만 쥔다(먼저 연 것부터 놓음 · 뷰어 VDOC 는 같이 쓰고 안 놓음)
+   검색 = esPhysHit 가 t 도 본다(글 그대로 · 또는 빈칸을 다 뺀 꼴끼리) · 결과 줄 조각 = BODY 에서 걸리면 BODY(옛 그대로) · t 에서만 걸리면 t
+   문항 창·카드 본문·필기·가리개 무변(앱 시험지 111~666 그대로 · ABBYY PDF 는 앱에 안 넣는다) · 지학·생물(HASBOOK) 무변 = 함수마다 !HASBOOK 가드 */
+var PV=null,PVIMG=new Map(),PVDOCS=new Map(),PVQ=[],PVRUN=false,PVIO=null;
+var pvOf=r=>(PV&&r&&!HASBOOK)?(PV[GGU(r)]||null):null;
+var pvOn=r=>{const e=pvOf(r);return !!(e&&e.t)};
+var pvText=r=>{const e=pvOf(r);return (e&&e.t)?String(e.t):txtOf(r[F.CODE],'q')};
+function pvCanFig(r){const e=pvOf(r);if(!e||!e.fig)return false;
+  if(e.fig==='img')return r[F.FILE]==='IMG';
+  if(!Array.isArray(e.fig)||!e.fig.length)return false;
+  try{const lc=locate(r);return lc.id!=='IMG'&&!!HAVE[lc.id]}catch(_){return false}}
+var pvFigHTML=r=>pvCanFig(r)?'<div class="pvfig" data-pvf="'+GGU(r)+'"></div>':'';
+var pvNS=s=>String(s==null?'':s).replace(/\s+/g,'').toLowerCase();
+function pvHit(r,q){const e=pvOf(r);if(!e||!e.t||!q)return false;const t=String(e.t);
+  if(t.includes(q))return true;const nq=pvNS(q);return nq.length>=2&&pvNS(t).includes(nq)}
+function pvSnip(r,q){const t=String((pvOf(r)||{}).t||'').replace(/\s+/g,' ').trim();
+  let i=t.indexOf(q),L=String(q).length;
+  if(i<0){const nq=pvNS(q),idx=[];let ns='';for(let j=0;j<t.length;j++){if(!/\s/.test(t[j])){ns+=t[j].toLowerCase();idx.push(j)}}
+    const k=ns.indexOf(nq);if(k>=0){i=idx[k];L=idx[k+nq.length-1]-i+1}}
+  if(i<0)return esc(t.slice(0,140))+(t.length>140?'…':'');
+  const st=Math.max(0,i-30);
+  return (st?'…':'')+esc(t.slice(st,i))+'<mark>'+esc(t.slice(i,i+L))+'</mark>'+esc(t.slice(i+L,st+140))+(t.length>st+140?'…':'')}
+async function pvDoc(id){
+  if(typeof VDOC!=='undefined'&&VDOC&&VDOCID===id)return VDOC;
+  let p=PVDOCS.get(id);if(p){PVDOCS.delete(id);PVDOCS.set(id,p);return p}
+  p=(async()=>{const buf=await get('pdf',id);if(!buf)return null;return await pdfjsLib.getDocument({data:buf.slice(0)}).promise})();
+  PVDOCS.set(id,p);
+  while(PVDOCS.size>2){const k0=PVDOCS.keys().next().value,p0=PVDOCS.get(k0);PVDOCS.delete(k0);
+    Promise.resolve(p0).then(d=>{try{if(d&&d!==VDOC)d.destroy()}catch(_){}}).catch(()=>{})}
+  return p}
+function pvPut(el,urls){el.dataset.pvd='1';el.innerHTML=(urls||[]).map(u=>'<img alt="" draggable="false" src="'+ea(u)+'">').join('')}
+async function pvPaint(el){
+  const k=el.dataset.pvf,r=rec(+String(k).slice(1)),e=PV&&PV[k];
+  if(!e||!r){pvPut(el,[]);return}
+  if(PVIMG.has(k)){pvPut(el,PVIMG.get(k));return}
+  const urls=[];
+  if(e.fig==='img')urls.push('img/q'+r[F.CODE]+'.jpg');
+  else{const lc=locate(r);if(lc.id==='IMG'||!HAVE[lc.id]){pvPut(el,[]);return}
+    const doc=await pvDoc(lc.id);if(!doc){pvPut(el,[]);return}
+    const pg=await doc.getPage(Math.min(lc.page,doc.numPages)),v1=pg.getViewport({scale:1});
+    const dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+    for(const f of e.fig){if(!Array.isArray(f)||f.length<4)continue;
+      const x0=f[0]*v1.width,y0=f[1]*v1.height,w=(f[2]-f[0])*v1.width,h=(f[3]-f[1])*v1.height;if(w<2||h<2)continue;
+      const s=40*dpr/h,cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(w*s));cv.height=Math.max(1,Math.round(h*s));
+      const ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
+      await pg.render({canvasContext:ctx,viewport:pg.getViewport({scale:s}),transform:[1,0,0,1,-x0*s,-y0*s]}).promise;
+      urls.push(cv.toDataURL('image/png'))}}
+  PVIMG.set(k,urls);pvPut(el,urls)}
+async function pvRun(){if(PVRUN)return;PVRUN=true;
+  try{while(PVQ.length){const el=PVQ.shift();if(!el||!el.isConnected||el.dataset.pvd)continue;
+    try{await pvPaint(el)}catch(err){console.warn('물리 미리보기 그림',err);try{pvPut(el,[])}catch(_){}}}}
+  finally{PVRUN=false}}
+function pvWatch(root){
+  if(!PV||HASBOOK||!root||!root.querySelectorAll)return;
+  if(!PVIO&&typeof IntersectionObserver==='function')
+    PVIO=new IntersectionObserver(es=>{es.forEach(x=>{if(x.isIntersecting){PVIO.unobserve(x.target);PVQ.push(x.target)}});pvRun()},{rootMargin:'0px'});
+  root.querySelectorAll('.pvfig[data-pvf]:not([data-pvd])').forEach(el=>{
+    if(PVIMG.has(el.dataset.pvf)){pvPut(el,PVIMG.get(el.dataset.pvf));return}
+    if(PVIO)PVIO.observe(el);else{PVQ.push(el);pvRun()}})}
+/* 받기 전에 그려진 줄(첫 화면 목록 · 열린 📋 창)을 제자리에서 갈아 끼운다 */
+function pvPatch(){
+  if(HASBOOK)return;
+  const fix=(box,el,r)=>{if(!el)return;el.textContent=pvText(r);el.classList.toggle('pv',pvOn(r));
+    const old=box.querySelector('.pvfig'),want=pvCanFig(r);
+    if(old&&(!want||old.dataset.pvf!==GGU(r)))old.remove();
+    if(want&&!box.querySelector('.pvfig'))el.insertAdjacentHTML('afterend',pvFigHTML(r))};
+  document.querySelectorAll('#list .item[data-pv]').forEach(it=>{const r=rec(+String(it.dataset.pv).slice(1));if(r)fix(it,it.querySelector('.prev'),r)});
+  document.querySelectorAll('#jnw .jnrow[data-no]').forEach(jr=>{const r=rec(+jr.dataset.no);if(r)fix(jr,jr.querySelector('.q'),r)});
+  pvWatch(document)}
+async function pvLoad(){
+  if(!SHELL||HASBOOK)return;
+  try{const c=await get('kv','pvjson');if(c&&typeof c==='object'&&!PV){PV=c;pvPatch()}}catch(e){}
+  if(typeof recToken!=='function'||!recToken())return;
+  let t;try{t=await ghRaw('phys/미리보기.json')}catch(e){console.warn('물리 미리보기 받기',e);return}
+  if(t===null){if(PV){PV=null;pvPatch()}try{await del('kv','pvjson')}catch(_){}return}   /* 원격에 없음 = 지금처럼 BODY */
+  let o;try{o=JSON.parse(t)}catch(e){console.warn('물리 미리보기 읽기',e);return}
+  if(!o||typeof o!=='object'||Array.isArray(o))return;
+  PV=o;PVIMG.clear();try{await put('kv','pvjson',o)}catch(_){}
+  pvPatch()}
+if(SHELL&&!HASBOOK){
+  /* 받기(kv 사본 · 원격)는 첫 화면을 그린 **뒤에** 시작한다 — 첫 그리기는 바탕과 같은 일만 한다(긴 글 · 그림 칸은 pvPatch 가 제자리에서 갈아 끼움)
+     첫 draw 가 안 오면(빈 목록 등) 8초 뒤에라도 받는다 */
+  let pvGo=false;
+  const pvStart=()=>{if(pvGo)return;pvGo=true;
+    setTimeout(async()=>{for(let i=0;i<600&&!db;i++){await new Promise(r=>setTimeout(r,20))}try{await pvLoad()}catch(e){console.warn('물리 미리보기',e)}},0)};
+  {const _dPV=draw;draw=function(){const ret=_dPV.apply(this,arguments);try{if(PV)pvWatch(document.getElementById('list'))}catch(e){}pvStart();return ret}}
+  setTimeout(pvStart,8000)}
 </script>
 <script>
 /* ===== 학습로그 요약 (2026-08-11 추가) =====================================

@@ -2138,14 +2138,16 @@ BODY_PHYS = r"""
      const box=document.getElementById('ggphys');
      /* ★ add13 — 근거 줄은 문제 **위**다(사용자 9/21). 본판 §B-2 의 「아래」를 뒤집는다. */
      T('P-3 ★근거 목록이 문제 곁에 붙는다',!!box);
-     T('P-3 ★같은 스크롤 상자(.stage) 안이다',!!box&&box.parentElement.id==='stage',
-       box?box.parentElement.id:null);
+     /* ★ 합치기 10/1(하위 에이전트 C) — physphone A-5(97883ef 본문 「물리 근거 칸 = 머리 안 필기 도구 바로 아랫줄(따로 카드 걷음 · 기능 무변)」) — 새 자리(#view .vtop)도 받는다 */
+     const inVtop=!!box&&!!box.parentElement&&box.parentElement.classList.contains('vtop')&&!!box.closest('#view');
+     T('P-3 ★같은 스크롤 상자(.stage) 안이다(★ physphone A-5 뒤 = 문항 창 머리 .vtop 안)',!!box&&(box.parentElement.id==='stage'||inVtop),
+       box?(box.parentElement.id||box.parentElement.className):null);
      T('P-3 ★`#inkc` 밖이다(필기 덮개에 안 가린다)',!!box&&!box.closest('#inkc')&&!box.querySelector('#inkc'));
      T('P-3 ★PDF 묶음(.wrap) **앞**에 온다(add13 §B-1)',
        !!box&&!!document.querySelector('#stage .wrap')
        &&(document.querySelector('#stage .wrap').compareDocumentPosition(box)&2)!==0);
-     T('P-3 ★`#stage` 의 첫 자식이다',
-       !!box&&document.getElementById('stage').firstElementChild===box,
+     T('P-3 ★`#stage` 의 첫 자식이다(★ physphone A-5 뒤 = .vtop 안 필기 도구 줄 아래)',
+       !!box&&(document.getElementById('stage').firstElementChild===box||inVtop),
        (()=>{const f=document.getElementById('stage').firstElementChild;
          return f?(f.id||f.className):'없음'})());
      T('P-3 ★근거 줄 아래끝 ≤ 문제 위끝(겹침 0)',
@@ -2349,7 +2351,11 @@ BODY_PHYS = r"""
          const b=DATA.filter(r=>oldPass(r,q)).map(r=>r[F.NO]).join(',');
          if(typeof esSearch==='function'){inp.value=q;esSearch();
            if(q.replace(/\s+/g,'').length<2){if(ES_NOS.length||txt(document.getElementById('qCnt'))!=='두 글자 이상 입력하세요')bad.push([q,'한 글자',ES_NOS.length])}
-           else{const a=ES_NOS.join(',');if(a!==b)bad.push([q,ES_NOS.length,b.split(',').length])}}
+           else{const a=ES_NOS.join(',');if(a!==b){
+             /* ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2-3 「검색이 미리보기 t 도 본다」: 옛 집합 ⊆ 새 집합 · 더 걸린 문항이 모두 t 에서 걸린 것(pvHit)이면 뜻한 바뀜 */
+             const A=new Set(ES_NOS),B=b?b.split(',').map(Number):[],ex=ES_NOS.filter(n=>B.indexOf(n)<0);
+             const pvok=B.every(n=>A.has(n))&&ex.length>0&&typeof pvHit==='function'&&ex.every(n=>{const r=DATA.find(x=>x[F.NO]===n);return !!r&&pvHit(r,q)});
+             if(!pvok)bad.push([q,ES_NOS.length,b.split(',').length])}}}
          else{FL.q=q;const a=DATA.filter(pass).map(r=>r[F.NO]).join(',');if(a!==b)bad.push([q,a.split(',').length,b.split(',').length])}});
        if(typeof esSearch==='function'){inp.value='';esSearch()}
        FL.q=q0; draw(); await wait(250);
@@ -2778,14 +2784,17 @@ BODY_PHYS = r"""
        let b=document.getElementById('sh-ans'), p=b.querySelector('.panel');
        const h=p.querySelector('h2');
        const r0=p.getBoundingClientRect();
+       /* ★ 합치기 10/1(하위 에이전트 C) — revfix0928 A-2(fb47074) · fix1 A-2(cb56419 본문 「문제 창 오른쪽에 자리가 없으면 … 화면 오른쪽 끝(l = 폭 − w − 8)」) —
+          곁창 첫 자리가 화면 오른쪽 끝이면 +120 은 화면 끝에 막힌다(8 만 움직임) → 오른쪽에 120 자리가 없으면 왼쪽으로 120 끈다(움직인 만큼 재는 잣대는 그대로) */
+       const dx=(r0.right+120<=innerWidth-8)?120:-120;
        h.dispatchEvent(PE2('pointerdown',r0.left+40,r0.top+8));
-       h.dispatchEvent(PE2('pointermove',r0.left+160,r0.top+88));
-       h.dispatchEvent(PE2('pointerup',r0.left+160,r0.top+88));
+       h.dispatchEvent(PE2('pointermove',r0.left+40+dx,r0.top+88));
+       h.dispatchEvent(PE2('pointerup',r0.left+40+dx,r0.top+88));
        await wait(120);
        const r1=p.getBoundingClientRect();
-       T('P-15 ★제목 줄을 끌면 창이 그만큼 움직인다(+120,+80)',
-         Math.abs(r1.left-r0.left-120)<3&&Math.abs(r1.top-r0.top-80)<3,
-         [Math.round(r1.left-r0.left),Math.round(r1.top-r0.top)]);
+       T('P-15 ★제목 줄을 끌면 창이 그만큼 움직인다(+120,+80)(★ 첫 자리가 화면 오른쪽 끝이면 −120)',
+         Math.abs(r1.left-r0.left-dx)<3&&Math.abs(r1.top-r0.top-80)<3,
+         [Math.round(r1.left-r0.left),Math.round(r1.top-r0.top),dx]);
        const g=p.querySelector('.twgrip'), rg=g.getBoundingClientRect();
        g.dispatchEvent(PE2('pointerdown',rg.left+3,rg.top+3));
        g.dispatchEvent(PE2('pointermove',rg.left+203,rg.top+153));
@@ -3527,7 +3536,9 @@ BODY_XSIDE = r"""
    const vis=el=>!!el&&!el.classList.contains('hide');
    const tx=el=>el?String(el.textContent||'').replace(/\d+'\d{2}"/g,"·'··\"").replace(/\s+/g,' ').trim():'';
    snap.subj=SUBJ_ID;
-   snap.list=$$$('#list .item').slice(0,40).map(x=>tx(x)).join(' || ');
+   /* ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2 미리보기 칸(.prev 글 · .pvfig)은 두 판 모두 떼고 맞댄다(physprev 관문 B3 이 그 칸을 잰다) */
+   const npv=el=>{if(!el)return el;const c=el.cloneNode(true);c.querySelectorAll('.prev,.pvfig,.jnrow .q').forEach(x=>x.remove());return c};
+   snap.list=$$$('#list .item').slice(0,40).map(x=>tx(npv(x))).join(' || ');
    /* ★ A-6(a) 9/30 _task_qa_baseline — phone_win §A-2·§A-6(genie fb89ad2 · 결정로그 9/28 17:20 · 수행 결과 「X-11 phys esh DOM 글자 = §A-2 필터 글자 걷음 · §A-6 칩」):
         접기 단추 「필터 ▾」 → 「▾」 · 물리 [공식]·[개념] 칩(.pwchip) — 칩은 떼고 단추 글자는 「▾」 로 맞춘 뒤 잰다
         (동기화 칩 가림이 「필터」 앞에서만 멈춰, 새 판에선 「▾」 뒤 머리 줄을 통째로 먹던 것도 「▾」 앞에서 멈춘다) */
@@ -3553,10 +3564,12 @@ BODY_XSIDE = r"""
        const b=document.getElementById('bpl');if(b)b.remove();BPLNO=null;cropFor(null)}catch(e){snap.bplErr=String(e)}
    }
    try{const secs=Object.keys(TOC.sec);if(secs.length&&typeof jnOpen==='function'){jnOpen(secs[0]);await wait(700);
-     snap.jn=tx(document.getElementById('jnw')).slice(0,4000);
-     const q=$$$('#jnw .jnrow .q')[0];snap.jnq=q?[q.className,q.getAttribute('title')]:null;
+     /* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef 본문 「이름 = 기출 「연도 출처 N번」」) · A-4(「닫기」 → ✕) 는 뜻한 바뀜(physphone B2 · B4 가 잰다)
+        → 두 판 모두 줄 이름 칸(.jnrow .h .mut)과 닫기 단추(#jnwX)를 떼고 나머지 글자를 맞댄다 */
+     snap.jn=tx((e=>{if(!e)return e;const c=e.cloneNode(true);c.querySelectorAll('.jnrow .h .mut,#jnwX').forEach(x=>x.remove());return c})(npv(document.getElementById('jnw')))).slice(0,4000);   /* ★ physprev — .q · .pvfig 뗌 */
+     const q=$$$('#jnw .jnrow .q')[0];snap.jnq=q?[q.className.replace(/(^| )pv(?= |$)/,'').trim(),q.getAttribute('title')]:null;   /* ★ physprev — .q 의 pv 꼴 뗌 */
      const w=document.getElementById('jnw');if(w)w.remove()}}catch(e){snap.jnErr=String(e)}
-   {const it=$$$('#list .item')[0];snap.item=it?[it.className,Object.keys(it.dataset).join('+'),(it.querySelector('.prev')||{}).className||null]:null}
+   {const it=$$$('#list .item')[0];snap.item=it?[it.className,Object.keys(it.dataset).filter(k=>k!=='pv').join('+'),String((it.querySelector('.prev')||{}).className||'').replace(/(^| )pv(?= |$)/,'').trim()||null]:null}   /* ★ physprev — data-pv · .prev 의 pv 꼴 뗌 */
    N('X-11 스냅숏',{subj:SUBJ_ID,list:(snap.list||'').length,bkq:snap.bkq,names:snap.names});
    try{await __nativeFetch('/snap',{method:'POST',body:JSON.stringify(snap)})}catch(e){}
 """
@@ -4078,7 +4091,10 @@ def static_checks():
     #   `const w=Math.min(560,…` · `const hh=Math.min(…0.72…`) · #fFoldBtn 「필터 ▾」 HTML·paint 둘(A-2 「▾」 만) · OMR 폭 줄(A-3 비례) ·
     #   SHWIN 의 conceptStat 줄(A-4) · 개념 창 문제 누름의 `.sheet` 지우기·openView 둘(A-8) · wzCls 폰 제외(A-1 폰 문제 창도 떠 있는 창)
     T2('Z-13 지운 본판 줄이 거의 없다(손댄 자리뿐)',
-       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s) <= 320,   # ★ jagwa_search(9/29) 311 → 320 — 이 판이 떼거나 갈아 쓴 본판 줄 9(옛 pass 의 FL.q 덩이 · 입력칸 oninput · fltOn · 지우기 · 개수 칸 · 모드 바꾸기 · ggHits ID · ggResBox 끝) · 곁가지 0   # ★ jagwa_uid(9/29) 302 → 311 — 이 판이 갈아 쓴 줄 9(F 칸 OLDU · buildData 옛uid · 장 글자 셋 · codeShow · 차례 둘 · rowByUid · 번호 찾기 · 시동 jgMigrate) · 곁가지 0
+       # ★ 합치기 10/1(하위 에이전트 C) — 320 → 356. 늘어난 36줄은 전수로 짚었다(세 판이 갈아 쓴 줄뿐 · 어느 판에도 없는 줄 0):
+       #   physphone 22(공식 시트 frmRowHTML 로 옮긴 옛 rowHtml·body.onclick 줄 · #tTheory 「공식」 · 정리 창 「닫기」·이름 칸 · 개념 줄 글 thl)
+       #   · revfix0928_0929 9(recAfterMerge 두 줄 · 서랍 줄 「-」 · makeFloat _pload · qFit avail · recMerge 옛 열쇠 줄 · #bpl z · #omrPad .drag) · search_claude 5(ggHits · 결과 줄)
+       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s) <= 356,   # ★ jagwa_search(9/29) 311 → 320 — 이 판이 떼거나 갈아 쓴 본판 줄 9(옛 pass 의 FL.q 덩이 · 입력칸 oninput · fltOn · 지우기 · 개수 칸 · 모드 바꾸기 · ggHits ID · ggResBox 끝) · 곁가지 0   # ★ jagwa_uid(9/29) 302 → 311 — 이 판이 갈아 쓴 줄 9(F 칸 OLDU · buildData 옛uid · 장 글자 셋 · codeShow · 차례 둘 · rowByUid · 번호 찾기 · 시동 jgMigrate) · 곁가지 0
        sum(1 for ln in base.split('\n') if ln.strip() and ln not in s))
     # ── add2 가 둔 것(그대로) ──
     # ⚠ 부름 **수**가 아니라 **열쇠 이름**을 맞댄다 — 있는 키를 한 번 더 읽는 것은
@@ -4086,7 +4102,8 @@ def static_checks():
     _kv = lambda t: set(re.findall(r"put\('kv','([^']+)'", t))
     _sr = lambda t: set(re.findall(r"SYNC_REF\.([A-Za-z_$][\w$]*)", t))
     T2('Z-15 새 kv·새 SYNC 키가 없다',
-       _kv(s) == _kv(base) and _sr(s) == _sr(base),
+       # ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2-1 받은 미리보기 표의 기기 사본 kv 'pvjson'(SYNC 아님 · SYNC_REF 새 키 0 그대로)
+       (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= {'pvjson'})) and _sr(s) == _sr(base),
        [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))])
     T2('Z-17 아랫줄 감추기가 카드 층·물리로 갈렸다',
        'body[data-book] .vbot .tools>*{display:none!important}' in s
@@ -4148,7 +4165,8 @@ def static_checks():
        and len([1 for ln in s.split('\n')
                 if 'ISEA' in ln and 'var ISEA=' not in ln and '`ISEA`' not in ln
                 and not ln.lstrip().startswith(('/*', '*'))]) == 0
-       and "\nif(HASBOOK){\n  /* ── §B 떠 있는 창 무리" in s
+       and ("\nif(HASBOOK){\n  /* ── §B 떠 있는 창 무리" in s
+            or "\nif(SHELL){   /* ★ physphone A-1(2026-09-30) — §B 창 무리를 교재 덩어리 밖(세 과목 공통)으로" in s)   # ★ 합치기 10/1 — physphone A-1(97883ef)
        and "(typeof HASBOOK!=='undefined'&&HASBOOK&&window.INKG_EA)" in s
        and "data-${HASBOOK?'bkgo':'go'}" in s and "if(HASBOOK){bookListInto(p.pr,$('#bkqList'),null,true);return}" in s
        and "if(HASBOOK&&typeof QZ==='number'&&QZ!==1){" in s and "if(HASBOOK)d.dataset.uid=r[F.CODE];" in s,
@@ -4264,6 +4282,9 @@ def main():
                 #   그 낱말만 가리고 나머지 글자는 그대로 맞댄다 — 다른 데가 달라지면 여전히 FAIL 이다.
                 #   바뀌었다는 것 자체는 묶음 CL(_harness_jagwa_claude_slot.py)이 따로 잰다.
                 b1 = b1.replace('GPT', 'Claude')
+                if k == 'vbot':
+                    # ★ 합치기 10/1(하위 에이전트 C) — physphone A-3(97883ef 본문 「#tTheory 「공식」 → 「이론」」 · 세 과목 같은 단추) — 그 낱말만 옛 글자로 맞춘다(바탕 판을 돌려도 같게)
+                    a1 = a1.replace('👁 이론 개념', '👁 공식 개념', 1)
                 # ★ A-6(a) 9/30 _task_qa_baseline — jagwa_uid(genie 5e18424 + studyplandata 4a011475 · 결정로그 9/29 15:09 · _task_jagwa_uid.md 수행 결과 「남은 차이 … 지학 껍데기 E-1 ×3」):
                 #   ① 보이는 번호가 새 꼴(끝 두 자리 · G25-62-9 → G25-62-09) — 번호 꼴만 옛 꼴(바탕 앱 codeShow)로 맞춘다
                 #   ② 옛 앱은 새 번호 데이터에서 옛 열쇠 기록을 못 봐 카드 「📖 pN✓」(옮긴 교재 쪽 찍음)이 「✎」 로 선다 — 그 표시 한 글자만 가린다 · 나머지 글자는 그대로 맞댄다
@@ -4378,7 +4399,8 @@ def main():
             sa, sb = sa or {}, sb or {}
             nm = sa.get('names') or {}
             T2('X-11 %s — 새 이름(bkNav·PINFOR·wzHook·INKG_EA·QZ·refPaint·bwSpotsOn)이 안 생긴다' % m,
-               bool(nm) and not nm.get('bkNav') and all(v == 'undefined' for k, v in nm.items() if k != 'bkNav'), nm)
+               # ★ 합치기 10/1(하위 에이전트 C) — physphone A-1(97883ef 본문 「창 무리(wzRaise · wzHook)를 HASBOOK 밖(SHELL 공통)으로 — 물리도 누른 창이 맨 앞」) — wzHook 은 물리에도 있다
+               bool(nm) and not nm.get('bkNav') and all(v == 'undefined' for k, v in nm.items() if k not in ('bkNav', 'wzHook')) and nm.get('wzHook') in ('undefined', 'function'), nm)
             for k in sorted(set(sa) | set(sb)):
                 if k in ('names',):
                     continue

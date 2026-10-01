@@ -651,9 +651,11 @@ def main():
             lines.append('FAIL | CL-2 [%s] SYNC_KEYS 실행값을 못 받았다' % ko
                          + ' | ' + json.dumps([a, b], ensure_ascii=False))
             continue
-        lines.append(('PASS' if a == b else 'FAIL')
+        # ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef 본문 「물리 SYNC 키 tfix 하나 더함」) — 물리만 바탕 배열 끝에 tfix 하나를 받는다(생물·지학은 글자까지 같아야)
+        same = a == b or (sub == 'phys' and a == b + ['tfix'])
+        lines.append(('PASS' if same else 'FAIL')
                      + ' | CL-2 [%s] ★SYNC_KEYS 실행값이 바탕과 글자까지 같다(%d칸)' % (ko, len(b))
-                     + ('' if a == b else ' | ' + json.dumps([a, b], ensure_ascii=False)))
+                     + ('' if same else ' | ' + json.dumps([a, b], ensure_ascii=False)))
 
     pb = meas.get('physbase')
     if pb:

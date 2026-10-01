@@ -175,7 +175,7 @@ TESTS = r"""<script>
    const ST1=JSON.parse(JSON.stringify(ST));delete ST1[6];delete ST1[3];const B=JSON.parse(before);delete B[6];delete B[3];
    T('R-1 P 찍은 문항 밖의 기록 바이트 동일',JSON.stringify(ST1)===JSON.stringify(B));
    T('R-1 note JSON 바이트 동일',JSON.stringify(CMT)===CMT0);
-   T('R-1 SYNC_KEYS 14(10 + mcard · 2026-09-04 · + link 2026-09-05 필터 손질 B-4 · + gg·ggref 2026-09-21 셸 이식) · status·note',/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(앱 8168~8169) · 앞 열둘은 그대로 */SYNC_KEYS.length===14&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&SYNC_KEYS[0]==='status'&&SYNC_KEYS[1]==='note'&&SYNC_KEYS[10]==='mcard'&&SYNC_KEYS[11]==='link',SYNC_KEYS);
+   T('R-1 SYNC_KEYS 14(10 + mcard · 2026-09-04 · + link 2026-09-05 필터 손질 B-4 · + gg·ggref 2026-09-21 셸 이식) · status·note',/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(앱 8168~8169) · 앞 열둘은 그대로 *//* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef 본문 「물리 SYNC 키 tfix 하나 더함」) — 14 또는 끝에 tfix 하나 */(SYNC_KEYS.length===14||(SYNC_KEYS.length===15&&SYNC_KEYS[14]==='tfix'))&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&SYNC_KEYS[0]==='status'&&SYNC_KEYS[1]==='note'&&SYNC_KEYS[10]==='mcard'&&SYNC_KEYS[11]==='link',SYNC_KEYS);
    T('R-1 exportData 함수 있음',typeof exportData==='function');
 
    /* ===== N-2 코멘트 시트 검색 ===== */
@@ -324,7 +324,7 @@ def main():
     T2('상단 검색(pass 의 FL.q 줄) 무변',
        [l for l in s.split('\n') if 'noteOf(r[F.NO]).includes(FL.q)' in l] == [l for l in head.split('\n') if 'noteOf(r[F.NO]).includes(FL.q)' in l])
     T2('기록 꼴 주석 그대로(새 키 없음)', "let ST={};            // no -> {h:[{m:'O'|'X'|'Q', t:ts, s:초}]}" in s)
-    T2('조판기·화학 무접촉(이 파일은 phys 뿐)', 'minbeop' not in s.replace('민법앱(`minbeop/index.html`)의 실물을 읽고 옮겼다', '') and 'chem/' not in s)   # ★ A-6(a) 9/30 — listpop_add1(cd248a5) 주석 한 줄만 뺀다(phys P1 과 같음)
+    T2('조판기·화학 무접촉(이 파일은 phys 뿐)', 'minbeop' not in s.replace('민법앱(`minbeop/index.html`)의 실물을 읽고 옮겼다', '').replace('minbeop .clsrc 97~99 · .ggclhd 94~96', '') and 'chem/' not in s)   # ★ 합치기 10/1(하위 에이전트 C) — search_claude(e9de3b8) CSS 주석 한 줄도 뺀다(phys P1 과 같음)   # ★ A-6(a) 9/30 — listpop_add1(cd248a5) 주석 한 줄만 뺀다(phys P1 과 같음)
     T2('P11 파일 전체 백틱 수가 짝', s.count('`') % 2 == 0, s.count('`'))
     raw = open(SRC, 'rb').read()
     T2('CRLF 만(줄끝 섞임 없음)', raw.count(b'\r\n') == raw.count(b'\n'))
