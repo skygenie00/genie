@@ -724,7 +724,7 @@ def report(RES, G):
       GT['특허']['tot'] == {'기출': 269, '사례': 205, 'GS': 45, '판례': 637} and GT['상표']['tot'] == {'기출': 151, '사례': 5, 'GS': 331, '판례': 547}
       and GT['민소']['tot'] == {'기출': 135, '사례': 899, 'GS': 600, '판례': 3}, [GT[s]['tot'] for s in ('특허', '상표', '민소')])
     T('잣대 = 지시서 9.6(기출 5 · 사례 8 · 판례 24 · GS 0)', GT['특허']['cite'].get(N96) == {'기출': 5, '사례': 8, 'GS': 0, '판례': 24}, GT['특허']['cite'].get(N96))
-    T('잣대 = 번호 없는 노트 상표 1 · 민소 3(지시서) · 디보 1', [len(GT[s]['nonum']) for s in ('상표', '민소', '디보')] == [1, 3, 1], [GT[s]['nonum'] for s in ('상표', '민소', '디보')])
+    T('잣대 = 번호 없는 노트 상표 1 · 민소 0(9/24 볼트 밖으로 뺌) · 디보 1', [len(GT[s]['nonum']) for s in ('상표', '민소', '디보')] == [1, 0, 1], [GT[s]['nonum'] for s in ('상표', '민소', '디보')])   # A-6(d) 9/30 — 옛: 지시서 민소 3 · 9/24 13:1x 사용자가 번호 없는 셋을 볼트 밖으로(⚙ aa8ceae note_민소 84→81)
     T('잣대 = 줄 전체 ^id 특허 80 · 상표 24 · 민소 64(결정 14:0x)', GT.get('blk_only') == {'특허': 80, '상표': 24, '민소': 64}, GT.get('blk_only'))
     T('잣대 = fm 기출 카드 특허 기출 90 · 상표 기출 68 · 특허 사례 79(+ 디보 기출 64)',
       [len(GT['cards'][k]) for k in ('기출|특허', '기출|상표', '사례|특허', '기출|디보')] == [90, 68, 79, 64], [len(v) for v in GT['cards'].values()])
@@ -811,8 +811,8 @@ def report(RES, G):
                 T(E + 'G-C %s %d 전수 — 「2차 레일로」 0 · fm 칩 「기출:」 0 · 빈 top 줄 0' % (key, n),
                   len(sn_) == n and all(not v.get('none') and not v['rail'] and v['gi'] == 0 and v['emptyTop'] == 0 for v in sn_.values()),
                   [(k[:20], v.get('rail'), v.get('gi'), v.get('emptyTop')) for k, v in sn_.items() if v.get('none') or v.get('rail') or v.get('gi') or v.get('emptyTop')][:5])
-                bad = [k for k in sn_ if sn_[k].get('fm') != [c for c in (sb_.get(k) or {}).get('fm') or [] if not c.startswith('기출:')]]
-                T(E + 'G-C %s — 다른 fm 칩(연결판례·비고·중요도·사례번호…) = 바탕에서 「기출:」 만 뺀 것' % key, not bad and len(sb_) == n,
+                bad = [k for k in sn_ if sn_[k].get('fm') != [c for c in (sb_.get(k) or {}).get('fm') or [] if not c.startswith(('기출:', '연결사례:', '조문:'))]]   # A-6(a) 9/30 — c2card D-1: fm 「연결사례:」 칩은 ↩링크·✎ 연결로 · C-3: fm 「조문:」 칩은 설(N) + 조문 글자 링크(span.c2jo)로 바뀜(바탕 칩에서도 뺌)
+                T(E + 'G-C %s — 다른 fm 칩(연결판례·비고·중요도·사례번호…) = 바탕에서 「기출:」·「연결사례:」·「조문:」 만 뺀 것' % key, not bad and len(sb_) == n,
                   [(k[:20], sn_[k].get('fm'), (sb_.get(k) or {}).get('fm')) for k in bad[:3]])
                 badtop = [k for k in sn_ if [x['kids'] for x in sn_[k].get('top') or []] != [[c for c in x['kids'] if '2차 레일로' not in c] for x in (sb_.get(k) or {}).get('top') or [] if [c for c in x['kids'] if '2차 레일로' not in c]]]
                 T(E + 'G-C %s — top 줄 = 바탕 top 줄에서 레일로 단추만 뺀 것(점수·PDF 칩 그대로)' % key, not badtop, [(k[:20], sn_[k].get('top'), (sb_.get(k) or {}).get('top')) for k in badtop[:2]])
@@ -832,8 +832,8 @@ def report(RES, G):
                 Lw = (M.get('law') or {}).get(sh) or {}
                 b, lst = Lw.get('btn') or {}, Lw.get('list') or {}
                 n = GT[sh]['n']
-                T(E + 'G-D %s 단추 = 「목차노트 %d」 · 켜짐 · 자리 = 「사례 N」 알약 바로 오른쪽' % (sh, n), b.get('text') == '목차노트 %d' % n and not b.get('dis')
-                  and (b.get('prev') or '').startswith('사례') and g(b, 'rect', 'x') > g(b, 'prevR', 'r'), b)
+                T(E + 'G-D %s 단추 = 「목차노트 %d」 · 켜짐 · 자리 = 「2차」 탭 바로 오른쪽' % (sh, n), b.get('text') == '목차노트 %d' % n and not b.get('dis')
+                  and (b.get('prev') or '').startswith('2차') and g(b, 'rect', 'x') > g(b, 'prevR', 'r'), b)   # A-6(a) 9/30 — mok_popup_phone A-1·A-2: 「목차노트 N」 = 맨 윗줄 탭(「2차」 바로 오른쪽) · 보드 머리 단추 걷음 · 옛: 「사례 N」 알약 오른쪽
                 rows = lst.get('rows') or []
                 T(E + 'G-D %s 목록 — 머리 「📑 목차노트 — %s %d」 · 줄 수 = %d' % (sh, sh, n, n), lst.get('title') == '📑 목차노트 — %s %d' % (sh, n) and lst.get('n') == n, [lst.get('title'), lst.get('n')])
                 lr_, br_ = lst.get('rect') or {}, b.get('rect') or {}
@@ -859,7 +859,7 @@ def report(RES, G):
               cc.get('기출') == ('rgb(232, 240, 251)', 'rgb(47, 95, 179)', '10.5px') and cc.get('사례') == ('rgb(239, 234, 224)', 'rgb(107, 95, 69)', '10.5px')
               and cc.get('GS') == ('rgb(243, 232, 251)', 'rgb(122, 63, 176)', '10.5px') and cc.get('판례') == ('rgb(241, 241, 239)', 'rgb(119, 115, 107)', '10.5px'), cc)
             nr = P_.get('noteRead') or {}
-            T(E + 'G-D 특허 9.6 줄 누름 → 그 노트 팝업(머리 「📄 9.6…」 · 「2단」 딱지)', P_.get('rowTap') and nr.get('found') and '2단' in (nr.get('badge') or [])
+            T(E + 'G-D 특허 9.6 줄 누름 → 그 노트 팝업(머리 「📄 9.6…」 · 딱지 0)', P_.get('rowTap') and nr.get('found') and not (nr.get('badge') or [])   # A-6(a) 9/30 — mok_popup_phone C·D: 노트 팝업 머리 줄(「N단」 딱지 포함) 걷음 · 옛: 「2단」 딱지
               and (nr.get('title') or '').startswith('📄 ' + N96), [P_.get('rowTap'), nr.get('title'), nr.get('badge')])
             on = [r for r in g(P_, 'list2', 'rows') or [] if r['on']]
             T(E + 'G-D 누른 줄 = 옅은 파랑(#e8f0fb)으로 남음', len(on) == 1 and on[0]['note'] == N96 and on[0]['bg'] == 'rgb(232, 240, 251)', on)
@@ -995,8 +995,8 @@ def report(RES, G):
                 continue
             E2 = '[%s 아이패드 %d] ' % (eng, W)
             M2 = g(D, 'mok', 'law', '특허') or {}
-            T(E2 + '목차노트 단추 톡 → 목록 70 · 9.6 톡 → 노트(2단) · 노트 창이 화면 안(좌우·아래)', M2.get('tap') and g(M2, 'list', 'n') == 70 and M2.get('rowTap')
-              and '2단' in (g(M2, 'noteRead', 'badge') or []) and (g(M2, 'noteRead', 'rect', 'x') or -1) >= 0 and (g(M2, 'noteRead', 'rect', 'r') or 9e9) <= W + 0.5
+            T(E2 + '목차노트 단추 톡 → 목록 70 · 9.6 톡 → 노트(딱지 0) · 노트 창이 화면 안(좌우·아래)', M2.get('tap') and g(M2, 'list', 'n') == 70 and M2.get('rowTap')
+              and not (g(M2, 'noteRead', 'badge') or []) and (g(M2, 'noteRead', 'rect', 'x') or -1) >= 0 and (g(M2, 'noteRead', 'rect', 'r') or 9e9) <= W + 0.5   # A-6(a) 9/30 — mok_popup_phone C·D: 딱지 0(목록 70·톡·화면 안 조건 그대로)
               and (g(M2, 'noteRead', 'rect', 'y') or -1) >= 0 and (g(M2, 'noteRead', 'rect', 'b') or 9e9) <= H_OF[W] + 0.5,
               [M2.get('tap'), g(M2, 'list', 'n'), M2.get('rowTap'), g(M2, 'noteRead', 'rect')])
             a0, a1 = g(M2, 'note', 'pos') or {}, g(M2, 'noteAfter', 'pos') or {}

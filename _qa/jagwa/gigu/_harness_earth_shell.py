@@ -1460,11 +1460,19 @@ BODY_EARTH = r"""
    snap.esh=(()=>{const e=document.getElementById('esh'); if(!e)return '';
      const c=e.cloneNode(true); const rc=c.querySelector('#recChip'); if(rc)rc.remove();
      return String(c.textContent||'').replace(/\s+/g,' ').trim()})();
+   /* ★ A-6(a) 9/30 둘째 바퀴 — jagwa_uid(genie 5e18424 · 결정로그 9/29 15:09 · _task_jagwa_uid.md 235줄 「남은 차이(모두 뜻한 차이) … 바탕 쪽(옛 앱 + 새 데이터)이 기록을 못 봄」)와 같은 까닭:
+      사용자 글자 고침(tfix q · 옛 열쇠 G59-08)은 새 앱만 jgMigrate 로 옮겨 목록 줄에 보이고 바탕 앱(ab49775)은 못 본다(원본 글) —
+      목록 줄의 고친 글(.prev.fx)은 원본 글(txtOrig)로 되돌려 다시 찍는다(바탕엔 .fx 가 없어 그대로 · 나머지 글자는 그대로 맞댄다) */
+   snap.list=$$$('#list .item').slice(0,25).map(el=>{const c=el.cloneNode(true),p=c.querySelector('.prev.fx');
+     if(p&&el.dataset.uid&&typeof txtOrig==='function')p.textContent=txtOrig(el.dataset.uid,'q');
+     return String(c.textContent||'').replace(/\s+/g,' ').trim()}).join(' || ');
    await openView(rowByUid('G25-62-09')[F.NO]); await wait(1000);
    snap.view=$('#view').className;
    snap.vtop=String((($('#view .vtop')||{}).textContent)||'').replace(/\s+/g,' ').trim();
    snap.vbot=String((($('.vbot')||{}).textContent)||'').replace(/\s+/g,' ').trim();
-   snap.card=String((($('#card')||{}).textContent)||'').replace(/\s+/g,' ').trim().slice(0,600);
+   /* ★ A-6(a) 9/30 둘째 바퀴 — 같은 까닭: 사용자 조각(crop · 옛 열쇠 G62-09 · 문제 칸 1)을 밑준비가 kv 에 싣고 새 앱만 jgMigrate('boot') 로 옮겨 본다 —
+      문제 글 뒤 조각 떼기 ✕ 가 새 ✕✕(사용자 1 + P-4 1) / 바탕 ✕(P-4 1) 로 갈린다 → 조각 상자(.cropw)는 빼고 찍는다(나머지 글자는 그대로) */
+   snap.card=String(((c=>{if(!c)return {};const k=c.cloneNode(true);k.querySelectorAll('.cropw').forEach(x=>x.remove());return k})($('#card')).textContent)||'').replace(/\s+/g,' ').trim().slice(0,600);
    closeView(); await wait(250);
    try{await __nativeFetch('/snap',{method:'POST',body:JSON.stringify(snap)})}catch(e){}
 
@@ -3106,7 +3114,8 @@ BODY_X = r"""
    addEventListener('unhandledrejection',e=>{N('X 거부 스택',String((e.reason&&e.reason.stack)||e.reason).slice(0,700))});
    N('X 밑준비',{subj:SUBJ_ID,ISEA:ISEA,DATA:DATA.length,새판:NEW});
    const zOf=el=>el?(+getComputedStyle(el).zIndex||0):-1;
-   const byCode=cs=>DATA.find(r=>codeShow(r)===cs)||null;
+   /* ★ A-6(d) 9/30 _task_qa_baseline — jagwa_uid(9/29 · 5e18424) 뒤 표본 번호가 새 꼴(G25-62-09) · 바탕 앱(24f1a373)의 codeShow 는 옛 꼴이라 못 찾아 표본 0 → 데이터 uid(F.CODE)로도 찾는다(새 판은 codeShow 먼저 · 같은 줄) */
+   const byCode=cs=>DATA.find(r=>codeShow(r)===cs)||DATA.find(r=>r[F.CODE]===cs)||null;
    const noOf=cs=>{const r=byCode(cs);return r?r[F.NO]:0};
    const cur=()=>{try{const p=bkCurPage();return p?p.pr:0}catch(e){return 0}};
    const bkReady=async(ms)=>{await until(()=>BK.open&&BK.pgs&&BK.pgs.length>0&&!BK.loading&&cur()>0,ms||25000);await wait(250)};
@@ -3201,7 +3210,8 @@ BODY_X = r"""
      vwApply(true);await wait(300);
      {const mm=window.matchMedia;window.matchMedia=q=>(/max-width:480px/.test(String(q))?{matches:true,addListener(){},removeListener(){}}:mm.call(window,q));
       try{window.dispatchEvent(new Event('resize'));await wait(200);send(V,'pointerdown',10,10,'mouse',58);await wait(120);
-        T('X-B17 480px 이하(전화 꽉 참)에서는 문항 창이 무리에서 빠진다 — 교재를 덮지 않음(z 60 < 교재)',V.style.zIndex===''&&zOf(V)<zOf(B),[V.style.zIndex,zOf(V),zOf(B)])}
+        /* ★ A-6(a) 9/30 _task_qa_baseline — phone_win §A-1(genie fb89ad2 · 결정로그 9/28 16:27·17:20 · 수행 결과 「shell X-B17 = 폰 문제 창이 떠 있는 창이 되어 창 띠에 든다 · 나중에 연 창이 위」) */
+        T('X-B17 480px 이하에서도 문항 창이 창 띠(70~79)에 든다 — 누르면 교재 위(phone_win A-1 · 나중에 연 창이 위)',V.style.zIndex!==''&&zOf(V)>=70&&zOf(V)<80&&zOf(V)>zOf(B),[V.style.zIndex,zOf(V),zOf(B)])}
       finally{window.matchMedia=mm;window.dispatchEvent(new Event('resize'));await wait(450)}}   /* 물리 resize 손잡이(250ms 뒤 VNO 를 다시 읽음)가 문항이 열린 채 돌게 기다린다 */
      await closeAll();
    });
@@ -3518,8 +3528,12 @@ BODY_XSIDE = r"""
    const tx=el=>el?String(el.textContent||'').replace(/\d+'\d{2}"/g,"·'··\"").replace(/\s+/g,' ').trim():'';
    snap.subj=SUBJ_ID;
    snap.list=$$$('#list .item').slice(0,40).map(x=>tx(x)).join(' || ');
-   snap.esh=tx(document.getElementById('esh')||document.getElementById('lib'))
-     .replace(/[●○⟳]\s?(동기화됨( [^필]*?)?|토큰 없음|오프라인|동기화 실패|동기화 중)(?=필터)/g,'')
+   /* ★ A-6(a) 9/30 _task_qa_baseline — phone_win §A-2·§A-6(genie fb89ad2 · 결정로그 9/28 17:20 · 수행 결과 「X-11 phys esh DOM 글자 = §A-2 필터 글자 걷음 · §A-6 칩」):
+        접기 단추 「필터 ▾」 → 「▾」 · 물리 [공식]·[개념] 칩(.pwchip) — 칩은 떼고 단추 글자는 「▾」 로 맞춘 뒤 잰다
+        (동기화 칩 가림이 「필터」 앞에서만 멈춰, 새 판에선 「▾」 뒤 머리 줄을 통째로 먹던 것도 「▾」 앞에서 멈춘다) */
+   snap.esh=tx((e=>{if(!e)return e;const c=e.cloneNode(true);c.querySelectorAll('.pwchip').forEach(x=>x.remove());return c})(document.getElementById('esh')||document.getElementById('lib')))
+     .replace(/필터 ([▾▴])/,'$1')
+     .replace(/[●○⟳]\s?(동기화됨( [^필▾▴]*?)?|토큰 없음|오프라인|동기화 실패|동기화 중)(?=필터|[▾▴])/g,'')
      .replace(/[가-힣]+ 받는 중 — \d+\/\d+/g,'')   /* 동기화 칩 · 받는 중 진행 글자는 시각 탓이라 가린다 */
      .replace(/시험지 \d+개를 받았습니다|받아 둔 시험지가 모두 최신입니다/g,'');   /* ★ 9/27 — 시험지 받기 끝 알림(#dl · 숨어도 글자는 남는다)도 시각 탓 */
    snap.names={bkNav:!!document.getElementById('bkNav'),PINFOR:typeof window.PINFOR,wzHook:typeof window.wzHook,INKG_EA:typeof window.INKG_EA,QZ:typeof QZ,
@@ -3607,7 +3621,8 @@ BODY_XB = r"""
    N('XB 밑준비',{subj:SUBJ_ID,HASBOOK:HASBOOK,ISEA:ISEA,HASJOGAK:HASJOGAK,DATA:DATA.length,새판:NEW,
      이름:{wzHook:typeof window.wzHook,PINFOR:typeof window.PINFOR,INKG_EA:typeof window.INKG_EA,bwSpotsOn:typeof window.bwSpotsOn}});
    const zOf=el=>el?(+getComputedStyle(el).zIndex||0):-1;
-   const byCode=cs=>DATA.find(r=>codeShow(r)===cs)||null;
+   /* ★ A-6(d) 9/30 _task_qa_baseline — jagwa_uid(9/29 · 5e18424) 뒤 표본 번호가 새 꼴(B21-58-10 · B03-40-06) · 바탕 앱(f07e9d08)의 codeShow 는 옛 꼴이라 못 찾아 XB-E·F·J 묶음이 멈춤 → 데이터 uid(F.CODE)로도 찾는다(새 판은 codeShow 먼저 · 같은 줄) */
+   const byCode=cs=>DATA.find(r=>codeShow(r)===cs)||DATA.find(r=>r[F.CODE]===cs)||null;
    const noOf=cs=>{const r=byCode(cs);return r?r[F.NO]:0};
    const cur=()=>{try{const p=bkCurPage();return p?p.pr:0}catch(e){return 0}};
    const bkReady=async(ms)=>{await until(()=>BK.open&&BK.pgs&&BK.pgs.length>0&&!BK.loading&&cur()>0,ms||25000);await wait(250)};
@@ -4235,6 +4250,10 @@ def main():
                 if k in ('esh', 'vtop'):
                     # ★ add9 §A-1 — 「목차」 단추를 걷은 것은 **이 판이 뜻한 것**이다.
                     b1 = b1.replace('목차', '', 1)
+                if k == 'esh':
+                    # ★ A-6(a) 9/30 _task_qa_baseline — phone_win §A-2(genie fb89ad2 · 결정로그 9/28 17:20 · _task_jagwa_phone_win.md 수행 결과 「shell E-1 지학 껍데기 글 = §A-2 필터 글자 걷음」):
+                    #   접기 단추 「필터 ▾」 → 「▾」 — 그 글자만 맞춘다
+                    b1 = b1.replace('필터 ▾', '▾', 1)
                 if k == 'card':
                     # ★ add19 §A-1 — ▶ 차례가 바뀐 것은 **이 판이 뜻한 것**이다(첫 화면 차례를 따른다).
                     #   그 자리만 가리고 나머지 글자는 그대로 맞댄다. 바뀌었다는 것은 아래에서 따로 잰다.
@@ -4245,6 +4264,14 @@ def main():
                 #   그 낱말만 가리고 나머지 글자는 그대로 맞댄다 — 다른 데가 달라지면 여전히 FAIL 이다.
                 #   바뀌었다는 것 자체는 묶음 CL(_harness_jagwa_claude_slot.py)이 따로 잰다.
                 b1 = b1.replace('GPT', 'Claude')
+                # ★ A-6(a) 9/30 _task_qa_baseline — jagwa_uid(genie 5e18424 + studyplandata 4a011475 · 결정로그 9/29 15:09 · _task_jagwa_uid.md 수행 결과 「남은 차이 … 지학 껍데기 E-1 ×3」):
+                #   ① 보이는 번호가 새 꼴(끝 두 자리 · G25-62-9 → G25-62-09) — 번호 꼴만 옛 꼴(바탕 앱 codeShow)로 맞춘다
+                #   ② 옛 앱은 새 번호 데이터에서 옛 열쇠 기록을 못 봐 카드 「📖 pN✓」(옮긴 교재 쪽 찍음)이 「✎」 로 선다 — 그 표시 한 글자만 가린다 · 나머지 글자는 그대로 맞댄다
+                _rxU = re.compile(r'\b(G\d\d-\d\d-)0(\d)\b')
+                a1 = _rxU.sub(r'\1\2', a1); b1 = _rxU.sub(r'\1\2', b1)
+                if k == 'card':
+                    _rxP = re.compile(r'(📖 p\d+)[✓✎]')
+                    a1 = _rxP.sub(r'\1·', a1); b1 = _rxP.sub(r'\1·', b1)
                 # ★ add1 §A-2 (2026-09-22) — 카드 층에서 「Claude」가 **맨 오른쪽으로 옮겨졌다.**
                 #   아랫줄 글은 숨은 것까지 DOM 차례대로 이어 붙이므로 낱말 자리가 바뀐다.
                 #   자리만 맞춰 놓고 나머지 글자는 그대로 맞댄다(낱말이 사라지면 여전히 FAIL).
@@ -4266,7 +4293,10 @@ def main():
                 #   (한 판만 동기화가 끝나 「6회독↔5회독」 「🔗 근거 (1)↔(18)」 「안 품 286·맞음 27 ↔ 318·1」 — 같은 판을 다시 돌리면 PASS).
                 #   숫자만 가리고 낱말·틀은 그대로 맞댄다(낱말이 사라지거나 줄이 바뀌면 여전히 FAIL).
                 for _rx, _to in ((re.compile(r'\d+회독'), '#회독'), (re.compile(r'근거 \(\d+\)'), '근거 (#)'), (re.compile(r'근거 \d+'), '근거 #'),
-                                 (re.compile(r'(안 품|맞음|헷갈림|틀림|덜약점|약점) ?\d+'), r'\1 #')):
+                                 (re.compile(r'(안 품|맞음|헷갈림|틀림|덜약점|약점) ?\d+'), r'\1 #'),
+                                 # ★ A-6(d) 9/30 둘째 바퀴 — 목록 줄 끝 회독 딱지(markBadge · 마지막 넷에 차례 수 「3X4X5P6O」)의 차례 수도 기록 동기화 시각마다 갈린다
+                                 #   (위 「6회독↔5회독」과 같은 것 — G25-62-09 새 3~6 / 바탕 2~5 · 마크 넷 X X P O 는 같다) · 차례 수만 가리고 마크 글자는 그대로 맞댄다
+                                 (re.compile(r'\d+(?=[OX△P](?:\d+[OX△P])*(?:·\'··"|$| \|\| ))'), '#')):
                     a1 = _rx.sub(_to, a1); b1 = _rx.sub(_to, b1)
                 same = a1 == b1
                 if same or k not in ('list', 'hd', 'card', 'esh', 'vbot', 'vtop'):

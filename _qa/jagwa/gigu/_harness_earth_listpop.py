@@ -192,34 +192,36 @@ BODY_EARTH = r"""
      T('C-1 기출 목록이 319줄이다',L.length===319,L.length);
      const bad=L.filter(x=>!/^G\d{2}-\d{1,2}-\d{1,2}$/.test(x));
      T('C-1 319건 모두 G<연도2>-<회차>-<문번> 꼴이다',bad.length===0,bad.slice(0,6));
-     const want=DATA.filter(r=>!isC(r)).reduce((m,r)=>{m[r[F.CODE]]='G'+String((+r[F.ROUND])+1963).slice(2)+'-'+r[F.ROUND]+'-'+(+r[F.LNO]);return m},{});
+     const want=DATA.filter(r=>!isC(r)).reduce((m,r)=>{m[r[F.CODE]]='G'+String((+r[F.ROUND])+1963).slice(2)+'-'+r[F.ROUND]+'-'+String(+r[F.LNO]).padStart(2,'0');return m},{});   /* ★ 2026-09-30 A-6 — jagwa_uid §A-2 순번 두 자리(지학 순번 = 문번 · 319 어긋남 0) */
      const wrong=Object.keys(want).filter(u=>codeShow(rowByUid(u))!==want[u]);
      T('C-1 codeShow 가 319건 모두 규칙대로다',wrong.length===0,wrong.slice(0,5));
      T('C-1 화면 글자가 그 규칙 그대로다(319건 집합 동일)',
        JSON.stringify(L.slice().sort())===JSON.stringify(Object.values(want).sort()));
-     T('C-1 G39-02 → G02-39-2',codeShow(rowByUid('G39-02'))==='G02-39-2'&&L.indexOf('G02-39-2')>=0,codeShow(rowByUid('G39-02')));
-     T('C-1 G62-09 → G25-62-9',codeShow(rowByUid('G62-09'))==='G25-62-9'&&L.indexOf('G25-62-9')>=0,codeShow(rowByUid('G62-09')));
-     T('C-1 G63-01 → G26-63-1',codeShow(rowByUid('G63-01'))==='G26-63-1',codeShow(rowByUid('G63-01')));
-     T('C-1 ★uid(F.CODE)는 한 글자도 안 바뀌었다',
-       rowByUid('G39-02')[F.CODE]==='G39-02'&&rowByUid('G62-09')[F.CODE]==='G62-09');
+     T('C-1 G39-02 → G02-39-02',codeShow(rowByUid('G39-02'))==='G02-39-02'&&L.indexOf('G02-39-02')>=0,codeShow(rowByUid('G39-02')));
+     T('C-1 G62-09 → G25-62-09',codeShow(rowByUid('G62-09'))==='G25-62-09'&&L.indexOf('G25-62-09')>=0,codeShow(rowByUid('G62-09')));
+     T('C-1 G63-01 → G26-63-01',codeShow(rowByUid('G63-01'))==='G26-63-01',codeShow(rowByUid('G63-01')));
+     T('C-1 ★uid(F.CODE)는 새 번호다 — 옛 번호로 불러도 그 행(jagwa_uid)',
+       rowByUid('G39-02')[F.CODE]==='G02-39-02'&&rowByUid('G62-09')[F.CODE]==='G25-62-09');
      FL.past='p';draw();await wait(200);
      const C=nums();
      T('C-2 확인문제 목록 385줄',C.length===385,C.length);
-     T('C-2 확인문제 .num 은 종전 그대로 uid 다',C.every(x=>/^C\d-\d{3}$/.test(x)),C.slice(0,3));
+     T('C-2 확인문제 .num 은 종전 그대로 uid 다',C.every(x=>/^G\d-\d{3}C$/.test(x)),C.slice(0,3));
      FL.past='y';draw();await wait(200);
-     FL.q='G39-02';draw();await wait(160);
-     const n1=$$$('#list .item').length;
-     FL.q='G02-39-2';draw();await wait(160);
-     const n2=$$$('#list .item').length;
-     FL.q='';draw();await wait(160);
-     T('C-3 검색 「G39-02」 1건',n1===1,n1);
-     T('C-3 검색 「G02-39-2」 1건',n2===1,n2);
+     /* ★ 2026-09-30 A-6 — jagwa_search(9/29 eb1113e) A-1: 검색칸은 목록을 안 거르고 결과 상자(#esres)·「N건」(#qCnt) ·
+        첫 줄 4 · A-3-2: 번호는 보이는 ID(= 새 uid · jagwa_uid)로만 찾는다 — 옛 번호 G39-02 · 옛 보이는 꼴 G02-39-2 는 안 걸린다 */
+     $('#q').value='G39-02';esSearch();await wait(160);
+     const n1=ES_NOS.length+'|'+txt($('#qCnt'));
+     $('#q').value='G02-39-2';esSearch();await wait(160);
+     const n2=ES_NOS.length+'|'+txt($('#qCnt'));
+     $('#q').value='';esSearch();FL.q='';draw();await wait(160);
+     T('C-3 검색 「G39-02」 0건',n1==='0|0건',n1);
+     T('C-3 검색 「G02-39-2」 0건',n2==='0|0건',n2);
    });
 
    /* ══════════ M. §B 차례 모드 (게이트 2) ══════════ */
    await grp('M', async()=>{
      T('M-0 기본은 단원별이다(저장값이 없을 때)',ordMode()==='unit',ordMode());
-     T('M-0 「N문제 · 단원순」',/^319문제 · 단원순$/.test(txt($('#cnt'))),txt($('#cnt')));
+     T('M-0 「N문제」(모드 글자 없음 — add1 §A)',/^319문제$/.test(txt($('#cnt'))),txt($('#cnt')));
      const seg=document.getElementById('ordSeg');
      T('M-0 개수 줄 #cnt 바로 뒤에 모드 단추가 있다',!!seg&&$('#cnt').nextElementSibling===seg,!!seg);
      T('M-0 「회차별 │ 단원별」 두 칸 · 지금은 단원별이 켜짐',
@@ -236,14 +238,14 @@ BODY_EARTH = r"""
      T('M-1 절 머리·소단원 머리가 그대로 있다',$$$('#list .grouphd:not(.u)').length>0&&$$$('#list .grouphd.u').length>0,
        [$$$('#list .grouphd:not(.u)').length,$$$('#list .grouphd.u').length]);
      seg.querySelector('[data-o="round"]').click(); await wait(260);
-     T('M-2 회차별로 바뀌었다',ordMode()==='round'&&/^319문제 · 회차순$/.test(txt($('#cnt'))),[ordMode(),txt($('#cnt'))]);
-     const hd=$('#list .grouphd.u');
-     T('M-2 첫 머리가 「63회 · 2026년」이다',!!hd&&txt(hd.firstChild)==='63회 · 2026년',hd?txt(hd.firstChild):null);
+     T('M-2 회차별로 바뀌었다',ordMode()==='round'&&/^319문제$/.test(txt($('#cnt'))),[ordMode(),txt($('#cnt'))]);
+     const hd=$('#list .grouphd[data-rhd]');   /* ★ 2026-09-30 A-6 — add1 §B: 회차 머리 = 편 꼴(.grouphd.ch · data-rhd · ▾ 다음 .lb) */
+     T('M-2 첫 머리가 「63회 · 2026년」이다',!!hd&&txt(hd.querySelector('.lb'))==='63회 · 2026년',hd?txt(hd.querySelector('.lb')):null);
      T('M-2 그 머리에 「10문항」 칸이 있다',!!hd&&txt(hd.querySelector('.p'))==='10문항',hd?txt(hd.querySelector('.p')):null);
-     T('M-2 절 머리(.grouphd:not(.u))가 없다',$$$('#list .grouphd:not(.u)').length===0,$$$('#list .grouphd:not(.u)').length);
+     T('M-2 절 머리(.grouphd:not([data-rhd]))가 없다',$$$('#list .grouphd:not([data-rhd])').length===0,$$$('#list .grouphd:not([data-rhd])').length);
      T('M-2 빈 단원 줄(.gh-empty)이 없다',$$$('#list .gh-empty').length===0);
      const L2=nums();
-     T('M-2 첫 칸이 G26-63-1 이다',L2[0]==='G26-63-1',L2[0]);
+     T('M-2 첫 칸이 G26-63-01 이다',L2[0]==='G26-63-01',L2[0]);
      T('M-2 두 모드의 문항 수 합이 같다(319)',L1.length===319&&L2.length===319,[L1.length,L2.length]);
      T('M-2 두 모드가 **같은 319건**이다(집합 동일)',
        JSON.stringify(L1.slice().sort())===JSON.stringify(L2.slice().sort()));
@@ -263,11 +265,11 @@ BODY_EARTH = r"""
      FL.past='p';draw();await wait(220);
      T('M-5 확인문제에서 모드 단추가 숨는다',getComputedStyle(document.getElementById('ordSeg')).display==='none',
        getComputedStyle(document.getElementById('ordSeg')).display);
-     T('M-5 확인문제는 단원순 고정 · 385건',ordMode()==='unit'&&$$$('#list .item').length===385&&/단원순/.test(txt($('#cnt'))),
+     T('M-5 확인문제는 단원순 고정 · 385건',ordMode()==='unit'&&$$$('#list .item').length===385&&/^385문제$/.test(txt($('#cnt'))),
        [ordMode(),$$$('#list .item').length,txt($('#cnt'))]);
      T('M-5 저장값은 안 건드렸다',localStorage.getItem('jagwa.earth.order')==='round');
      FL.past='y';draw();await wait(220);
-     T('M-5 기출로 돌아오면 저장 모드(회차별)다',ordMode()==='round'&&nums()[0]==='G26-63-1',[ordMode(),nums()[0]]);
+     T('M-5 기출로 돌아오면 저장 모드(회차별)다',ordMode()==='round'&&nums()[0]==='G26-63-01',[ordMode(),nums()[0]]);
      treeGo('1.1.2'); await wait(400);
      T('M-6 목차 글자를 누르면 단원별로 바뀐다',ordMode()==='unit'&&localStorage.getItem('jagwa.earth.order')==='unit',
        [ordMode(),localStorage.getItem('jagwa.earth.order')]);
@@ -284,7 +286,7 @@ BODY_EARTH = r"""
      T('S-1 단원별 · 칸 차례가 목록 .num 과 1:1',
        JSON.stringify(cellsU.map(i=>i.title.split(' ')[0]))===JSON.stringify(nums()),
        [cellsU.slice(0,3).map(i=>i.title.split(' ')[0]),nums().slice(0,3)]);
-     T('S-1 단원별 · 장 경계마다 빈 칸',gapU.length>=1,gapU.length);
+     T('S-1 단원별 · 빈 칸 없음(add1 §A — 묶음 경계 빈 칸 걷음)',gapU.length===0,gapU.length);
      T('S-1 빈 칸은 안 눌린다',gapU.every(g=>!g.onclick)&&gapU.every(g=>getComputedStyle(g).pointerEvents==='none'));
      ordSet('round');draw();await wait(220);
      const lgR=legend();
@@ -292,7 +294,7 @@ BODY_EARTH = r"""
      T('S-2 회차별 · 색 칸 319',cellsR.length===319,cellsR.length);
      T('S-2 회차별 · 칸 차례가 목록 .num 과 1:1',
        JSON.stringify(cellsR.map(i=>i.title.split(' ')[0]))===JSON.stringify(nums()));
-     T('S-2 회차별 · 회차 경계마다 빈 칸(32~63회 = 31칸)',gapR.length===31,gapR.length);
+     T('S-2 회차별 · 빈 칸 없음(add1 §A — 묶음 경계 빈 칸 걷음)',gapR.length===0,gapR.length);
      T('S-3 범례 수가 두 모드에서 같다',lgU===lgR,[lgU,lgR]);
      ordSet('unit');draw();await wait(220);
      const c7=$$$('#spec i:not(.gap)')[7], want=nums()[7];
@@ -377,12 +379,14 @@ BODY_EARTH = r"""
      T('V-1 ◀▶ 목록이 화면 목록 차례다',JSON.stringify(VLIST)===JSON.stringify(LISTNOS),
        [VLIST.slice(0,4),LISTNOS.slice(0,4)]);
      const VH=document.documentElement.clientHeight;
-     /* 창은 가운데 72vw 라 줄 **통째**가 창 밖일 수는 없다 — 줄의 **왼쪽 끝 한 점**이 창 밖이면 된다 */
+     /* 창은 가운데 72vw 라 줄 **통째**가 창 밖일 수는 없다 — 줄의 **왼쪽 끝 또는 오른쪽 끝 한 점**이 창 밖이면 된다
+        (★ 2026-09-30 A-6 — add1 §A 서재 폭 56rem · add9 §A 상주 서랍(body.ndon 왼쪽 여백)으로 목록이 오른쪽으로 밀려 왼쪽 끝은 창 안에 든다) */
      let rowB=null,pxB=0,pyB=0;
      $$$('#list .item').some(el=>{const r=el.getBoundingClientRect();
        if(!(r.width>0&&r.height>0&&r.top>=4&&r.bottom<=VH-4))return false;
-       const x=r.left+6,y=r.top+r.height/2;
-       if(x<vr.left-4||x>vr.right+4||y<vr.top-4||y>vr.bottom+4){rowB=el;pxB=x;pyB=y;return true}
+       const y=r.top+r.height/2;
+       for(const x of [r.left+6,r.right-6])
+         if(x<vr.left-4||x>vr.right+4||y<vr.top-4||y>vr.bottom+4){rowB=el;pxB=x;pyB=y;return true}
        return false});
      T('V-2 창 밖에 목록 줄의 한 점이 남아 있다',!!rowB,[vr.left,vr.right,vr.top,vr.bottom]);
      if(rowB){
@@ -487,11 +491,13 @@ BODY_EARTH = r"""
 
    /* ══════════ P. §F 교재 자리 목록 창 (게이트 7) ══════════ */
    await grp('P', async()=>{
-     BPG['G62-09']={ps:[5],last:5};
-     BPG['G62-02']={ps:[5,9,191],last:9};
-     delete BPG['G63-01'];
+     /* ★ 2026-09-30 A-6 — jagwa_uid(9/29 5e18424): 기록 열쇠 = 새 번호(G62-09 → G25-62-09) · 옛 열쇠는 앱이 옮긴다(jgMigrate) — 새 열쇠로 넣고 옛 열쇠도 지운다 */
+     BPG['G25-62-09']={ps:[5],last:5};
+     BPG['G25-62-02']={ps:[5,9,191],last:9};
+     delete BPG['G26-63-01'];delete BPG['G62-09'];delete BPG['G62-02'];delete BPG['G63-01'];
      await saveBPG();
-     delete CROP['G62-09'];delete CROP['G62-02'];delete CROP['G63-01'];await saveCROP();
+     delete CROP['G62-09'];delete CROP['G62-02'];delete CROP['G63-01'];
+     delete CROP['G25-62-09'];delete CROP['G25-62-02'];delete CROP['G26-63-01'];await saveCROP();
      ordSet('unit');FL.q='';draw();await wait(260);
      const noA=rowByUid('G62-09')[F.NO], noB=rowByUid('G62-02')[F.NO], noC=rowByUid('G63-01')[F.NO];
      N('P 밑준비',{JOGAK:Object.keys(JOGAK).length,'62-9':!!jogakOf(rowByUid('G62-09')),'63-1':!!jogakOf(rowByUid('G63-01'))});
@@ -500,7 +506,7 @@ BODY_EARTH = r"""
      bplOpen(noA); await wait(250);
      let w=document.getElementById('bpl');
      T('P-1 목록 창이 뜬다',!!w&&!!w.querySelector('.panel'));
-     T('P-1 머리줄 한 줄 = 새 코드 + 닫기',txt(w.querySelector('.bplh span'))==='G25-62-9'&&!!w.querySelector('#bplX'),
+     T('P-1 머리줄 한 줄 = 새 코드 + 닫기',txt(w.querySelector('.bplh span'))==='G25-62-09'&&!!w.querySelector('#bplX'),
        txt(w.querySelector('.bplh')));
      let rows=[...w.querySelectorAll('#bplBody .bplrow')];
      T('P-1 고정 한 쪽 → 교재 줄 한 개 + 정리OMR 줄 한 개',rows.length===2,rows.length);
@@ -560,14 +566,14 @@ BODY_EARTH = r"""
        window.wzRaise?+getComputedStyle($('#book')).zIndex>+getComputedStyle(document.getElementById('bpl')).zIndex
          :+getComputedStyle(document.getElementById('bpl')).zIndex>+getComputedStyle($('#book')).zIndex,
        [getComputedStyle(document.getElementById('bpl')).zIndex,getComputedStyle($('#book')).zIndex]);
-     T('P-4 교재 창 머리줄에 「붙는 문항 G25-62-9」 칸이 보인다',
-       !!document.getElementById('bkFor')&&txt(document.getElementById('bkFor'))==='붙는 문항 G25-62-9',
+     T('P-4 교재 창 머리줄에 「붙는 문항 G25-62-09」 칸이 보인다',
+       !!document.getElementById('bkFor')&&txt(document.getElementById('bkFor'))==='붙는 문항 G25-62-09',
        txt(document.getElementById('bkFor')));
 
      /* ── 목록 칩 = 목록 창만(문항을 안 연다) ── */
      bkClose(); {const wx=document.getElementById('bpl'); if(wx)wx.remove();} BPLNO=null; cropFor(null);
      VNO=null; $('#view').classList.add('hide'); draw(); await wait(300);
-     const rowA=$$$('#list .item').find(el=>txt(el.querySelector('.num'))==='G25-62-9');
+     const rowA=$$$('#list .item').find(el=>txt(el.querySelector('.num'))==='G25-62-09');
      T('P-5 목록에 그 줄이 있다',!!rowA);
      const chip=rowA.querySelector('[data-page]');
      T('P-5 목록 칩이 「📖 p5」 다',!!chip&&txt(chip)==='📖 p5',txt(chip));
@@ -595,7 +601,7 @@ BODY_EARTH = r"""
      T('P-6 「◻ 오리기」가 교재 창을 열고 도구를 켠다',
        $('#book').classList.contains('win')&&!!$('#bktools [data-tool="crop"].on'),
        [$('#book').className,!!$('#bktools [data-tool="crop"].on')]);
-     T('P-6 붙는 문항 칸이 그 코드다',txt(document.getElementById('bkFor'))==='붙는 문항 G25-62-9',
+     T('P-6 붙는 문항 칸이 그 코드다',txt(document.getElementById('bkFor'))==='붙는 문항 G25-62-09',
        txt(document.getElementById('bkFor')));
      await bkGoto(7); await wait(900);
      N('P-7 교재 창이 보는 쪽',bkCurPage()?bkCurPage().pr:null);
@@ -603,11 +609,11 @@ BODY_EARTH = r"""
      const sh=document.getElementById('bpgSheet'), hb=sh.querySelector('#bpgHere');
      T('P-7 ★「지금 보는 쪽 담기」가 교재 **창**의 쪽을 읽는다',!!hb&&/\(p7\)/.test(txt(hb)),txt(hb));
      hb.click(); await wait(900);
-     T('P-7 그 쪽이 담겼다',((BPG['G62-09']||{}).ps||[]).indexOf(7)>=0,BPG['G62-09']);
+     T('P-7 그 쪽이 담겼다',((BPG['G25-62-09']||{}).ps||[]).indexOf(7)>=0,BPG['G25-62-09']);
      T('P-7 ★문항을 안 연 채로도 목록 칩이 그 자리에서 바뀐다',
-       VNO===null&&(()=>{const el=$$$('#list .item').find(x=>txt(x.querySelector('.num'))==='G25-62-9');
+       VNO===null&&(()=>{const el=$$$('#list .item').find(x=>txt(x.querySelector('.num'))==='G25-62-09');
          return !!el&&/\+1/.test(txt(el.querySelector('[data-page]')))})(),
-       (()=>{const el=$$$('#list .item').find(x=>txt(x.querySelector('.num'))==='G25-62-9');
+       (()=>{const el=$$$('#list .item').find(x=>txt(x.querySelector('.num'))==='G25-62-09');
          return el?txt(el.querySelector('[data-page]')):null})());
      T('P-7 목록 창 줄도 그 자리에서 늘었다',
        !!document.getElementById('bpl')&&$$$('#bplBody .bplrow').length===3,
@@ -615,29 +621,29 @@ BODY_EARTH = r"""
      if(document.getElementById('bpl'))await cap('P4_조각있음_고정둘',document.getElementById('bpl').querySelector('.panel').outerHTML);
 
      /* ── 문항을 안 연 채 오리기 ── */
-     const n0=((CROP['G62-09']||{}).q||[]).length;
+     const n0=((CROP['G25-62-09']||{}).q||[]).length;
      T('P-8 오리기 전 조각 0',n0===0,n0);
      cropOffer({p:7,r:[20,30,120,90]},()=>{},null); await wait(250);
      let menu=document.getElementById('crmenu');
      T('P-8 오리기 메뉴가 뜬다(문항을 안 열었는데도 막지 않는다)',!!menu);
      if(menu){menu.querySelector('[data-s="q"]').click(); await wait(1000);}
-     T('P-8 ★CROP[G62-09].q 가 +1 이다',((CROP['G62-09']||{}).q||[]).length===n0+1,(CROP['G62-09']||{}).q);
+     T('P-8 ★CROP[G62-09].q 가 +1 이다',((CROP['G25-62-09']||{}).q||[]).length===n0+1,(CROP['G25-62-09']||{}).q);
      T('P-8 그 문항을 안 열었다',VNO===null,VNO);
      draw(); await wait(300);
-     const rowA2=$$$('#list .item').find(el=>txt(el.querySelector('.num'))==='G25-62-9');
+     const rowA2=$$$('#list .item').find(el=>txt(el.querySelector('.num'))==='G25-62-09');
      rowA2.querySelector('.prev').click(); await until(()=>VNO!==null,8000); await wait(1200);
      T('P-9 ★열면 카드에 조각이 보인다',VNO===noA&&$$$('#card .crbox, #card .cropbox, #card .cropimg, #card canvas').length>0,
        [$$$('#card canvas').length,$('#card .q')?$('#card .q').className:null]);
      T('P-9 문제 칸 글자가 조각에 가려졌다(crophid)',!!$('#card .q.crophid'),$('#card .q')?$('#card .q').className:null);
      await openView(noB); await wait(800);
      T('P-10 다른 문항을 열면 붙는 문항이 비워진다',CROPFOR===null,CROPFOR);
-     const b0=((CROP['G62-02']||{}).q||[]).length;
+     const b0=((CROP['G25-62-02']||{}).q||[]).length;
      cropOffer({p:9,r:[10,20,90,70]},()=>{},null); await wait(250);
      {const m2=document.getElementById('crmenu'); if(m2)m2.querySelector('[data-s="q"]').click();}
      await wait(900);
-     T('P-10 ★조각이 지금 연 문항 B 에 붙는다',((CROP['G62-02']||{}).q||[]).length===b0+1
-       &&((CROP['G62-09']||{}).q||[]).length===n0+1,
-       [(CROP['G62-02']||{}).q,(CROP['G62-09']||{}).q]);
+     T('P-10 ★조각이 지금 연 문항 B 에 붙는다',((CROP['G25-62-02']||{}).q||[]).length===b0+1
+       &&((CROP['G25-62-09']||{}).q||[]).length===n0+1,
+       [(CROP['G25-62-02']||{}).q,(CROP['G25-62-09']||{}).q]);
      closeView(); await wait(240);
      /* ── 창 끌기·크기·유지 ── */
      {const w9=document.getElementById('bpl'); if(w9)w9.remove();} BPLNO=null;
@@ -676,8 +682,9 @@ BODY_EARTH = r"""
      const CW=D.documentElement.clientWidth, CH=D.documentElement.clientHeight;
      T('H-0 틀 안 화면 폭이 480px 아래다',W.innerWidth===390,[W.innerWidth,CW]);
      const v=D.getElementById('view'), vr=v.getBoundingClientRect();
-     T('H-1 ★폰에서 문항 창은 늘 꽉 찬다',v.classList.contains('win')
-       &&Math.abs(vr.width-CW)<2&&Math.abs(vr.height-CH)<2&&Math.abs(vr.left)<2&&Math.abs(vr.top)<2,
+     /* ★ 2026-09-30 A-6 — phone_win(9/28 fb89ad2) §A-1: 폰 문제 창 = 떠 있는 창(폭 화면−16 · 높이 86% · 가운데 · 크기 기억은 makeFloat 그대로 · 꽉 채우기는 ⤢) */
+     T('H-1 ★폰에서 문항 창은 떠 있는 창이다(폭 화면−16 · 좌 8 — phone_win §A-1)',v.classList.contains('win')
+       &&Math.abs(vr.width-(W.innerWidth-16))<2&&Math.abs(vr.left-8)<2&&vr.top>=6&&vr.bottom<=CH-6,
        [v.className,vr.width,vr.height,vr.left,vr.top,CW,CH]);
      const bp=D.querySelector('#book>.panel');
      T('H-2 폰에서 교재 창도 꽉 찬다',D.getElementById('book').classList.contains('win')
@@ -687,10 +694,10 @@ BODY_EARTH = r"""
    });
 
    /* ══════════ 남는 것 ══════════ */
-   T('Q-0 SYNC_KEYS 가 그대로 19개다',SYNC_KEYS.length===19&&SUBJ.earth.SYNC_KEYS.length===19,
+   T('Q-0 SYNC_KEYS 가 그대로 23개다',SYNC_KEYS.length===23&&SUBJ.earth.SYNC_KEYS.length===23,   /* ★ 2026-09-30 A-6 — add1 §G: gg·ggref·pick·link 넷 → 23 */
      [SYNC_KEYS.length,SUBJ.earth.SYNC_KEYS.length]);
-   T('Q-0 uid 열쇠가 그대로다 — rowByUid·unitOf 가 F.CODE 로 돈다',
-     rowByUid('G39-02')[F.CODE]==='G39-02'&&typeof unitOf(rowByUid('G39-02')[F.NO])==='string');
+   T('Q-0 uid 열쇠 = 새 번호(jagwa_uid) — rowByUid·unitOf 가 F.CODE 로 돈다',
+     rowByUid('G39-02')[F.CODE]==='G02-39-02'&&typeof unitOf(rowByUid('G39-02')[F.NO])==='string');
 """
 
 BODY_BIO = r"""
@@ -894,19 +901,21 @@ def static_checks():
     b = open(SRC, 'rb').read()
     s = b.replace(b'\r\n', b'\n').decode('utf-8')
     base = open(BASE, 'rb').read().replace(b'\r\n', b'\n').decode('utf-8')
+    # ★ 2026-09-30 A-6 (d) — Z-1·6·7·10·13 은 이 판(listpop 인도 a9f9fd4)의 패치 꼴을 잰다 — 지금 판은 뒤 판(add1 · shell_bio_phys c9faff2 · add16 · phone_win …)이 바꿨다
+    s_lp = subprocess.run(['git', '-C', GENIE, 'show', 'a9f9fd4:jagwa/index.html'], capture_output=True).stdout.replace(b'\r\n', b'\n').decode('utf-8')
     out = []
 
     def T2(name, cond, info=''):
         out.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
 
     # ⚠ 「블록이 열린 뒤」만 보면 안 된다 — 닫는 괄호 **뒤**여도 통과한다(9/20 실측 · Y-1 이 잡았다).
-    blk = s.find('\nif(CARD_LAYER){\n')
-    end = s.find('\n}\n/*/EARTH:js*/')
+    blk = s_lp.find('\nif(CARD_LAYER){\n')
+    end = s_lp.find('\n}\n/*/EARTH:js*/')
     keys = ['var ISEA=', 'var codeShow=', 'function ordBar(', 'var CROPFOR=', 'function cropFor(',
             'function vwApply(', 'function bplOpen(', 'function bplRefresh(']
     T2('Z-1 새 갈래 여덟이 전부 if(CARD_LAYER) **블록 안**이다 — 물리는 만들지도 않는다',
-       blk >= 0 and end > blk and all(blk < s.find(k) < end for k in keys),
-       [(k, s.find(k), blk, end) for k in keys if not (blk < s.find(k) < end)])
+       blk >= 0 and end > blk and all(blk < s_lp.find(k) < end for k in keys),
+       [(k, s_lp.find(k), blk, end) for k in keys if not (blk < s_lp.find(k) < end)])
     T2("Z-2 과목 문은 SUBJ_ID==='earth' 다 — CARD_LAYER 로 안 걸었다",
        "var ISEA=SUBJ_ID==='earth';" in s)
     T2('Z-3 uid 를 안 바꿨다 — r[F.CODE] 에 대입하는 자리가 없다',
@@ -917,22 +926,22 @@ def static_checks():
     T2('Z-5 makeFloat 은 **더하기만** 했다(`.panel` 갈래가 그대로 첫째다)',
        "const p=sheet.querySelector('.panel')||(sheet.classList.contains('selfpanel')?sheet:null);" in s)
     T2('Z-6 makeFloat 을 부르는 자리가 둘 늘었다(문항 창 · 목록 창)',
-       s.count('makeFloat(') == base.count('makeFloat(') + 2,
-       [s.count('makeFloat('), base.count('makeFloat(')])
+       s_lp.count('makeFloat(') == base.count('makeFloat(') + 2,
+       [s_lp.count('makeFloat('), base.count('makeFloat(')])
     T2('Z-7 「그림」 칩은 지학에서만 안 그린다(줄 자체는 남아 있다)',
-       '>그림</span>' in s and "(!ISEA&&r[F.FILE]==='IMG')" in s)
+       '>그림</span>' in s_lp and "(!ISEA&&r[F.FILE]==='IMG')" in s_lp)
     T2('Z-8 cropOffer 는 CROPFOR||VNO 한 곳에서만 갈린다',
        "const tno=(typeof CROPFOR!=='undefined'&&CROPFOR)||VNO;" in s and s.count('rec(tno)[F.CODE]') == 1)
     T2('Z-9 §F 에서 새로 지은 top-level 함수는 셋이다(bplOpen · bplRefresh · cropFor)',
        s.count('\nfunction bplOpen(') == 1 and s.count('\nfunction bplRefresh(') == 1
        and s.count('\nfunction cropFor(') == 1)
     T2('Z-10 CSS 는 전부 지학 문 안이다(body[data-subj="earth"] · #view.win · #bpl)',
-       'body[data-subj="earth"] .ordseg{' in s and '#view.win{' in s and '#bpl{' in s)
+       'body[data-subj="earth"] .ordseg{' in s_lp and '#view.win{' in s_lp and '#bpl{' in s_lp)
     T2('Z-11 줄끝이 CRLF 그대로다', b.count(b'\r\n') == b.count(b'\n'))
     T2('Z-12 원본 대비 늘기만 했다(지운 기능이 없다)', len(s) > len(base))
     T2('Z-13 지운 원본 줄이 없다 — 손댄 자리 밖은 그대로다',
-       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s) <= 25,
-       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s))
+       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s_lp) <= 25,
+       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s_lp))
     return out
 
 
@@ -947,14 +956,16 @@ def data_checks():
         out.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
 
     old_p = os.path.join(HERE, '_\ubb38\ud56d_before_bake.json')
-    new_p = os.path.join(SPDROOT, 'earth', '\ubb38\ud56d.json')
-    rec_p = os.path.join(SPDROOT, 'earth', '\uae30\ub85d.json')
-    if not os.path.exists(old_p):
+    # ★ 2026-09-30 A-6 (d) — 옛 본 파일은 N: 에 안 왔고(인도 때 N: 가 떨어져 스크래치패드 · 수행 결과 「미해결」) 지금 문항·기록은 뒤 판(jagwa_uid 4a011475 등)이
+    #   바꿨다 ⇒ 박기 커밋에서 읽는다: 옛 = 182e1f3~1 · 새 = 182e1f3 · 기록 = db8ea088(박기가 읽은 savedAt 2026-09-20T09:14:33Z)
+    _gs = lambda rev, rel: subprocess.run(['git', '-C', SPDROOT, 'show', rev + ':' + rel], capture_output=True).stdout
+    _ob = open(old_p, 'rb').read() if os.path.exists(old_p) else _gs('182e1f3~1', 'earth/\ubb38\ud56d.json')
+    if not _ob:
         T2('G-0 옛 본(_문항_before_bake.json)이 있다', False, old_p)
         return out
-    old = json.loads(io.open(old_p, encoding='utf-8').read())
-    new = json.loads(io.open(new_p, encoding='utf-8').read())
-    rec = json.loads(io.open(rec_p, encoding='utf-8').read())
+    old = json.loads(_ob.decode('utf-8'))
+    new = json.loads(_gs('182e1f3', 'earth/\ubb38\ud56d.json').decode('utf-8'))
+    rec = json.loads(_gs('db8ea088', 'earth/\uae30\ub85d.json').decode('utf-8'))
     UN, BPG = rec['data'].get('unit', {}), rec['data'].get('bpg', {})
     K단원, K쪽, K근거 = '\ub2e8\uc6d0', '\uad50\uc7ac\ucabd', '\ub2e8\uc6d0\uadfc\uac70'
 
@@ -1018,6 +1029,8 @@ def main():
            or ['earth', 'bio', 'phys', 'null']
     cur = open(SRC, encoding='utf-8', newline='').read()
     basetxt = open(BASE, encoding='utf-8', newline='').read()
+    # ★ 2026-09-30 A-6 (d) — 생물·물리 무변(B·Y)은 이 판 인도판(a9f9fd4)을 고침 전 사본과 맞댄다 — 지금 판은 뒤 판(shell_bio_phys c9faff2 등)이 생물·물리를 일부러 바꿨다
+    lptxt = subprocess.run(['git', '-C', GENIE, 'show', 'a9f9fd4:jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
     lines = []
     W = int(os.environ.get('HARNESS_WAIT', '1500'))
 
@@ -1028,7 +1041,7 @@ def main():
         ls, _ = run('earth', W, cur)
         lines += ls
     if 'bio' in want:
-        ls, sn = run('bio', W, cur)
+        ls, sn = run('bio', W, lptxt)
         lines += ls
         ls0, sn0 = run('biobase', W, basetxt)
         T2('B-3 고침 전 사본도 끝까지 돌았다', bool(sn and sn0), [bool(sn), bool(sn0)])
@@ -1040,7 +1053,7 @@ def main():
                 T2('B-3 ★생물 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sn.get(k) == sn0.get(k),
                    [str(sn.get(k))[:140], str(sn0.get(k))[:140]])
     if 'phys' in want:
-        ls, sn = run('phys', W, cur)
+        ls, sn = run('phys', W, lptxt)
         lines += ls
         ls0, sn0 = run('physbase', W, basetxt)
         T2('Y-3 고침 전 사본도 끝까지 돌았다', bool(sn and sn0), [bool(sn), bool(sn0)])

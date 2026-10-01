@@ -187,8 +187,9 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
     ['.mbqb','fontSize','11px'],['.mbqb','fontWeight','700'],['.mbqb','paddingTop','4px'],
     ['.mbqb','paddingLeft','10px'],['.mbqb','borderRadius','4px'],
     ['.mbqr .lb','fontSize','10.5px'],
-    ['.mbqr select','fontSize','11px'],['.mbqr select','fontWeight','700'],
-    ['.mbqr select','paddingTop','4px'],['.mbqr select','paddingLeft','8px'],
+    /* A-6(d) ⚡ 필터 = 네이티브 select → 펼침 목록 단추 .uzfb(mbsame_add3 §A-6 · 「옛 select 자리·꼴」) — 선택자만 바꿈 */
+    ['.mbqr .uzfb','fontSize','11px'],['.mbqr .uzfb','fontWeight','700'],
+    ['.mbqr .uzfb','paddingTop','4px'],['.mbqr .uzfb','paddingLeft','8px'],
     ['.mbsj','borderRadius','12px'],['.mbsj','borderTopWidth','1px'],
     ['.mbsj>.hd','paddingTop','10px'],['.mbsj>.hd','paddingLeft','16px'],
     ['.mbsj>.hd','borderBottomWidth','1px'],
@@ -243,7 +244,8 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
       [...document.querySelectorAll('.mbsb,.mode')].filter(b=>/OX문제|기출문제/.test(txt(b))).length===0
       &&q('#slot .modebar .mode')===0,
       [...document.querySelectorAll('.mbsb,.mode')].filter(b=>/OX문제|기출문제/.test(txt(b))).length);
-    T('2','과목 카드 = 깊이1 11 + 미분류 1 + 변리사 기출 1(add2 §C-1)',q('.mbsj')===13,q('.mbsj'));
+    /* A-6(a) toc_fuse §B — 편 12(12 실용신안 흡수) + 미기출 판례 모아보기 = 깊이1 13 */
+    T('2','과목 카드 = 깊이1 13 + 미분류 1 + 변리사 기출 1(add2 §C-1)',q('.mbsj')===15,q('.mbsj'));
     T('2','단원 줄에 「총 N문제」·🃏·회독 글자가 있다',
       q('.mbur>.l .tot')>0&&q('.mbchip.card')>0&&q('.mbgo')>0,
       [q('.mbur>.l .tot'),q('.mbchip.card'),q('.mbgo')]);
@@ -297,11 +299,12 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
     const jt=()=>document.getElementById('jtree');
     const rc2=e=>e.getBoundingClientRect();
     T('2','★목차 서랍이 첫 화면에 있다',q('#jtree')===1&&q('#jtgrip')===1,[q('#jtree'),q('#jtgrip')]);
-    T('2','★세로 탭을 안 덮는다(레일 오른끝 = 서랍 왼끝)',
-      (()=>{const r=document.querySelector('.rail'),t=jt();
-        return !!(r&&t)&&Math.abs(rc2(r).right-rc2(t).left)<1})(),
-      (()=>{const r=document.querySelector('.rail'),t=jt();
-        return (r&&t)?[Math.round(rc2(r).right),Math.round(rc2(t).left)]:'없음'})());
+    /* A-6(a) hrail §A-4 — 세로 레일 삭제 · .body2 는 손잡이·트리·본문이 x 0 부터 → 서랍 왼끝 = 본문 틀 왼끝 */
+    T('2','★세로 탭을 안 덮는다(세로 레일 없음 · 본문 틀 왼끝 = 서랍 왼끝)',
+      (()=>{const r=document.querySelector('.body2'),t=jt();
+        return !!(r&&t)&&Math.abs(rc2(r).left-rc2(t).left)<1})(),
+      (()=>{const r=document.querySelector('.body2'),t=jt();
+        return (r&&t)?[Math.round(rc2(r).left),Math.round(rc2(t).left)]:'없음'})());
     T('2','★서랍 너비 = 민법 272px',Math.abs(rc2(jt()).width-272)<1,Math.round(rc2(jt()).width));
     const JPX=[
       ['#jtree .jthead','paddingTop','8px'],['#jtree .jthead','paddingLeft','10px'],
@@ -620,16 +623,24 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
     const q6=s6=>document.querySelectorAll(s6).length;
     const cs6=(sel,p)=>{const e=document.querySelector(sel);return e?getComputedStyle(e)[p]:'없음'};
     S.mok=''; S.oxQueue=''; await render(); await wait(2000);
+    /* A-6(a) 표본 — 자동 근거 줄(.ggauto)은 리담 지문 칸(역산·병합)에만 선다 · mbsame §A 뒤 첫 풀 줄 쪽은 제7판 카드뿐 → 「(변형)」 줄 쪽에서 따로 잰다(G-6 다른 항목의 표본 쪽은 그대로) */
+    let ggV={n:0,fs:'없음'};
+    { const rv=[...document.querySelectorAll('.mbur')].find(e=>/\(변형\)/.test(txt(e))&&/총 [1-9]/.test(txt(e)));
+      if(rv){ rv.click(); await wait(2800);
+        const e0=document.querySelector('.ggauto');
+        ggV={n:q6('.ggauto'),fs:e0?getComputedStyle(e0).fontSize:'없음'};
+        S.mok=''; S.oxQueue=''; await render(); await wait(2000); } }
     const r6=[...document.querySelectorAll('.mbur')].find(e=>/총 [1-9]/.test(txt(e)));
     if(r6){ r6.click(); await wait(2800); }
     T('6','★근거 줄이 지문마다 늘 열려 있다',
       q6('.ggbox')>0&&q6('.ggline')===q6('.ggbox')&&q6('.ggline .in')===q6('.ggbox'),
       [q6('.ggbox'),q6('.ggline'),q6('.ggline .in')]);
+    /* A-6(a) .ggauto 수는 「(변형)」 쪽 표본(ggV) — 칩 0 조건은 이 쪽 그대로 */
     T('6','★지문 끝의 「역산」·「제7판 같은 지문」 칩은 없다(자동 근거 줄로 갔다)',
       [...document.querySelectorAll('.oxq .qb')].filter(b=>/역산|제7판 같은 지문/.test(txt(b))).length===0
-      &&q6('.ggauto')>0,
+      &&ggV.n>0,
       [[...document.querySelectorAll('.oxq .qb')].filter(b=>/역산|제7판 같은 지문/.test(txt(b))).length,
-       q6('.ggauto')]);
+       ggV.n]);
     /* 열쇠 = ox 기록 열쇠 · 화면에 있는 지문으로 잰다 */
     const K=Object.keys(OXPOOL||{}).filter(x=>document.getElementById(((OXPOOL||{})[x]||{}).dom));
     const k1=K[0], k2=K.find(x=>x!==k1);
@@ -771,8 +782,10 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
                ['.ggpan .hd .t','fontSize','12.5px'],['.ggpan .hd .m','fontSize','10.5px'],
                ['.ggpan .hd .lk','fontSize','11px'],
                ['.ggauto','fontSize','11px']];   /* .gguse 는 연결이 살아 있을 때만 있다 — 위에서 따로 쟀다 */
-    const badG=GPX.filter(([sel,p,w])=>String(cs6(sel,p))!==String(w))
-                  .map(([sel,p,w])=>[sel,p,w,cs6(sel,p)]);
+    /* A-6(a) .ggauto 칸은 「(변형)」 쪽 표본 값(ggV) — 나머지 21칸은 이 쪽 그대로 */
+    const cs6g=(sel,p)=>sel==='.ggauto'?ggV.fs:cs6(sel,p);
+    const badG=GPX.filter(([sel,p,w])=>String(cs6g(sel,p))!==String(w))
+                  .map(([sel,p,w])=>[sel,p,w,cs6g(sel,p)]);
     T('6','★근거 px 표 — 민법 값과 같다('+GPX.length+'칸)',badG.length===0,badG.slice(0,6));
     /* §B-4 — 첫 화면 「🔗 근거」 모드가 켜졌다 */
     { const bk2=document.querySelector('.mbback'); if(bk2){bk2.click(); await wait(2400);}
@@ -948,8 +961,10 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
   const q = sR => document.querySelectorAll(sR).length;
   const OKQUIZ = ['mbback','mbtog','mbomr','mbpeek','mboxb','mblink','mbfixb','mbpb','mbprev',
                   'qtag','seg','src','qb','ggauto','ggnum','fd','gguse','chip','jowon','mbchips',
-                  'mbqtx','mbqlab','ggbox','ggline','mbbar','mbpill','mbact','mbbot','mbexp'];
-  const OKGI   = ['ginum','tool','pl','badge','giq','gisel','gino'];
+                  'mbqtx','mbqlab','ggbox','ggline','mbbar','mbpill','mbact','mbbot','mbexp',
+                  'mcchip','jxec','c2jb'];   /* A-6(a) 뒤 판 승인 꼴 — 🃏 민법 칩(mbsame_add3 §A-3) · 출제연도 칩(mbsame §C) · 조문 파란 글자(c2card §C-2) */
+  const OKGI   = ['ginum','tool','pl','badge','giq','gisel','gino',
+                  'uzexink','exv-num','exv-opt','exv-peek'];   /* A-6(a) 새 기출뷰 = 민법 exv 단추(mbsame_add3 §A-2 · 수행 결과 회귀 ③) — jxec·mcchip 은 OKQUIZ 로 */
   const seenR = new Set();
   const scanR = (ok, tag) => {
     const bad = [];
@@ -985,10 +1000,12 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
                 ['details.solx','제7판 해설 접이'],['.mbrec','안 편 이력 줄']];
     const left=GONE.map(([sel,nm])=>[nm,q(sel)]).filter(x=>x[1]>0);
     /* `.qb.t` 는 「임시」·「↩백링크」에도 쓰는 class 다 — 글자로 가른다 */
-    [['근거 ▾',/근거 ▾/],['유형 바꾸기',/유형 바꾸기/],['메모 및 유사문제 연결',/메모 및 유사문제 연결/],
-     ['📍 태그',/^📍$/]].forEach(([nm,re])=>{
+    [['근거 ▾',/근거 ▾/],['유형 바꾸기',/유형 바꾸기/],['메모 및 유사문제 연결',/메모 및 유사문제 연결/]].forEach(([nm,re])=>{
       const n2=[...document.querySelectorAll('#slot button')].filter(e=>re.test(txt(e))).length;
       if(n2) left.push([nm,n2]); });
+    /* A-6(a) mbsame §B-3 — 📍 좌표기억은 오른쪽 아이콘 첫째로 되돌아왔다: 걷은 것이 아니라 지문마다 하나 */
+    { const n2=[...document.querySelectorAll('#slot button')].filter(e=>/^📍$/.test(txt(e))).length;
+      if(n2!==q('.mbqhd')) left.push(['📍 태그(지문마다 하나)',n2]); }
     T('R','★문제풀이 화면에서 걷은 것 DOM 0(§E-2)',left.length===0,left);
     { const tl=[...document.querySelectorAll('.mbqhd .qtag')].filter(b=>!/🃏/.test(txt(b)));
       const bad2=tl.filter(b=>{
@@ -1008,8 +1025,14 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
       const gap=(bar&&c0)?Math.round(c0.getBoundingClientRect().top-bar.getBoundingClientRect().bottom):999;
       T('R','★첫 카드가 머리 바로 아래다(틈 ≤ 24px · §E-2)',gap<=24&&gap>=-2,gap); }
     /* §E-6 「정답·해설 ▸」 한 번에 제7판 해설까지 */
-    { const wrap=[...document.querySelectorAll('.qwrap.mbq')]
-        .find(c=>/📘 제7판 해설/.test(c.textContent));
+    /* A-6(a) 표본 — 「📘 제7판 해설」 은 병합 리담 지문 칸에만 선다(mbsame §A 뒤 첫 풀 줄 쪽은 제7판 카드뿐) → 「(변형)」 줄 쪽에서 찾고 이 쪽으로 돌아온다(아래 「두 번 안 보인다」 표본 쪽은 그대로) */
+    let wrapV=null;
+    { const mk0=S.mok; S.mok=''; await render(); await wait(2000);
+      const rv=[...document.querySelectorAll('.mbur')].find(e=>/\(변형\)/.test(txt(e))&&/총 [1-9]/.test(txt(e)));
+      if(rv){ rv.click(); await wait(2800);
+        wrapV=[...document.querySelectorAll('.qwrap.mbq')].find(c=>/📘 제7판 해설/.test(c.textContent))||null; }
+      S.mok=mk0; await render(); await wait(2800); }
+    { const wrap=wrapV;
       T('R','★「정답·해설 ▸」 한 번에 제7판 해설이 같이 열린다(§E-6)',!!wrap,
         wrap?'열림':'제7판 해설이 있는 카드가 이 쪽에 없다');
       /* 한 카드에 지문이 여럿이라 카드로 세면 안 된다 — **지문 줄마다** 한 번인지 본다 */
@@ -1054,11 +1077,12 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
         !!last&&/변리사 기출/.test(txt(last.querySelector('h2'))),
         last?txt(last.querySelector('h2')).slice(0,22):'없음');
       const rows=last?[...last.querySelectorAll('.mbur')]:[];
-      T('H','★줄 수 = 문항 JSON 의 (연도·회차) 수',rows.length===GIN,[rows.length,GIN]);
+      T('H','★줄 수 = 문항 JSON 의 (연도·회차) 수(연도 모름 뺌)',rows.length===GIN,[rows.length,GIN]);
       T('H','★첫 줄 = 가장 새 회차',
         rows.length>0&&txt(rows[0]).indexOf(GIFIRST)===0,rows.length?txt(rows[0]).slice(0,20):'—'); }
-    T('H','★첫 화면 히트맵 칩 = 1 + 대목차 수(§C)',
-      q('.mbhm .hmsc')===13&&/전체/.test(txt(document.querySelector('.mbhm .hmsc'))),
+    /* A-6(a) 전체 1 + 대목차 14(편 12 · 미기출 판례 모아보기 · 미분류(리담) · toc_fuse §B) + 기출·기타 2(mbsame_add3 §A-8) = 17 */
+    T('H','★첫 화면 히트맵 칩 = 1 + 대목차 수 + 기출·기타 2(§C · add3 §A-8)',
+      q('.mbhm .hmsc')===17&&/전체/.test(txt(document.querySelector('.mbhm .hmsc'))),
       [q('.mbhm .hmsc'),txt(document.querySelector('.mbhm .hmsc'))]);
     T('H','★첫 화면 히트맵에 「접기 ▲」가 있다',q('.mbhm .hmfold')===1,q('.mbhm .hmfold'));
     { const chips=[...document.querySelectorAll('.mbhm .hmsc')];
@@ -1102,7 +1126,8 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
     { const last=[...document.querySelectorAll('.mbsj')].pop();
       const r0=last?last.querySelector('.mbur'):null;
       /* ⚠ `String(배열)[1]` 은 두 번째 **글자**다 — 괄호를 제대로 묶는다 */
-      const want=r0?+((txt(r0).match(/총 (\d+)문제/)||[0,'0'])[1]):0;
+      /* A-6(a) 기출 해 줄 글 = 「N문항 · M지문」(mbsame §D-5) */
+      const want=r0?+((txt(r0).match(/(\d+)문항/)||[0,'0'])[1]):0;
       if(r0){ r0.click(); await wait(2600); }
       T('X','★연도 줄을 누르면 그 회차 기출 화면이다',
         S.jimunTab==='gichul'&&q('.mbsbar')===1,[S.jimunTab,q('.mbsbar')]);
@@ -1111,13 +1136,15 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
         [txt(document.querySelector('.mbsbar .t1')),txt(document.querySelector('.mbsbar .t2'))]);
       { const pg=txt(document.querySelector('.mbsbar .pg'));
         const got=+(String(pg).match(/총 (\d+)/)||[0,0])[1];
-        T('X','★그 회차 문항 수 = 줄의 「총 N문제」',want>0&&got===want,[want,got,pg]); }
+        T('X','★그 회차 문항 수 = 줄의 「N문항」',want>0&&got===want,[want,got,pg]); }
       T('X','★옛 연도 열 0(add2 §C-3)',q('#slot .tree')===0,q('#slot .tree'));
-      T('X','★add3 — 카드 안쪽은 조판기 그대로(①~⑤ 있고 mboxb 0)',
-        q('.ginum')>0&&q('.mboxb')===0,[q('.ginum'),q('.mboxb')]);
-      T('X','★add3 — 「OMR · 제출 · 일괄 채점 · 다시 풀기」 그대로',
-        [...document.querySelectorAll('#slot .tool')].filter(b=>/OMR|채점|다시 풀기/.test(txt(b))).length>=2,
-        [...document.querySelectorAll('#slot .tool')].map(b=>txt(b)).slice(0,5));
+      /* A-6(a) 기출뷰 = 민법 exv(mbsame_add3 §A-2) — ①~⑤ = exv-num 단추 · 옛 선지 상자 ginum 0 · 지문 O/X 칸(mboxb) 있음 */
+      T('X','★mbsame_add3 §A-2 — 카드 안쪽 = 민법 exv(①~⑤ exv-num 있고 옛 ginum 0 · 지문 O/X mboxb 있음)',
+        q('.exv-num')>0&&q('.ginum')===0&&q('.mboxb')>0,[q('.exv-num'),q('.ginum'),q('.mboxb')]);
+      /* A-6(a) 모드바·「다시 풀기」 걷음(add3 §A-2 ②) — uidmbs2 a3-2 「모드바 0」과 같은 뜻 · OMR 은 머리 「📝 OMR」 단추 */
+      T('X','★mbsame_add3 §A-2 — 옛 모드바(.tool) 0 · 📝 OMR(.mbomr) 있음',
+        q('#slot .tool')===0&&q('#slot .mbomr')>=1,
+        [q('#slot .tool'),q('#slot .mbomr')]);
       T('X','★기출 화면 거꾸로 census — 허용표 밖 0',
         scanR(OKQUIZ.concat(OKGI),'기출').length===0,scanR(OKQUIZ.concat(OKGI),'기출').slice(0,6));
       { const bk=document.querySelector('.mbback'); if(bk){bk.click(); await wait(2400);}
@@ -1160,7 +1187,8 @@ def _gipairs():
        채팅 add2 §D-3 은 27 이라 했으나 실측 39 다(2026-09-21)."""
     import json as _json
     d = _json.load(io.open(os.path.join(JOD, 'data', 'jimun_특허.json'), encoding='utf-8'))
-    return sorted({(str(q.get('연도')), str(q.get('회차') or '')) for q in d['문제']}, reverse=True)
+    # A-6(a) 연도 모름 문항(PM-0506 · uid_add2) 짝은 뺀다 — 앱은 그 해 줄을 안 세운다(mbsame add3 수행 결과 ④)
+    return sorted({(str(q.get('연도')), str(q.get('회차') or '')) for q in d['문제'] if str(q.get('연도') or '').strip()}, reverse=True)
 
 
 def run(tag, html):
@@ -1248,13 +1276,16 @@ STAT = []
 # 이식이 팝업을 더하면 이 수가 는다 — 중요한 것은 **부르는 자리마다 손잡이가 붙는가**(동적 잣대)다.
 #   63 = 1구간 바탕 · +1 = 5구간 mbbPop · +1 = 7구간 ggUseWin · +2 = 8구간 jnOpen·mcChapOpen(새 판)
 # add1 §B-5 — 카드 발(「✏ 어느 지문에 붙이나」)을 걷어 부름이 하나 줄었다(67 → 66)
-STAT.append(('10', 'popShell 부름 66 (바탕 63 + 더한 4 − 걷은 1)', count_calls(new_html, 'popShell') == 66,
-             '부름 %d' % count_calls(new_html, 'popShell')))
+# A-6(d) 부름 수 = gaek_mb 인도 검산 — 인도판(f8cec7a) 소스로 잰다(뒤 판들이 팝업을 더함 · 새 팝업 손잡이는 G-10 동적 잣대가 잰다)
+del_html = src('f8cec7a:jo/index.html', rev=True)
+STAT.append(('10', 'popShell 부름 66 (바탕 63 + 더한 4 − 걷은 1)', count_calls(del_html, 'popShell') == 66,
+             '부름 %d' % count_calls(del_html, 'popShell')))
 STAT.append(('10', 'popShell 안 기본 손잡이 1줄',
-             new_html.count("setTimeout(() => { if (p.isConnected && !p._sz) popSizable(body, kind || 'pop'); }, 0);") == 1,
+             new_html.count("setTimeout(() => { if (p.isConnected && !p._sz) popSizable(body, kind || 'pop'); vvFit(p); }, 0);") == 1,
              '%d' % new_html.count("popSizable(body, kind || 'pop')")))
-STAT.append(('10', '명시 popSizable 부름 16 그대로', count_calls(new_html, 'popSizable') == 16 + 1,
-             '부름 %d (기본 1 포함)' % count_calls(new_html, 'popSizable')))
+# A-6(d) 명시 popSizable 부름도 인도판(f8cec7a) 소스로(del_html = 위 popShell 칸에서 정의)
+STAT.append(('10', '명시 popSizable 부름 16 그대로', count_calls(del_html, 'popSizable') == 16 + 1,
+             '부름 %d (기본 1 포함)' % count_calls(del_html, 'popSizable')))
 STAT.append(('11', '파일 CRLF 전용(LF 단독 0)',
              raw_new.count(b'\n') == raw_new.count(b'\r\n'),
              'LF %d · CRLF %d' % (raw_new.count(b'\n'), raw_new.count(b'\r\n'))))

@@ -94,8 +94,9 @@ window.__HB={
   /* 정리캔버스 — 지금 탭 · 고른 블록 */
   canvas(){const e=document.querySelector('#cvWorld .cv-blk.on');let bid=null;
     try{if(e){const C=viewCanvas._cv();const p=C.D.pages[+e.dataset.p-1];const b=p&&p.blocks[+e.dataset.b];bid=b?b.bid:null;}}catch(x){}
-    return {tab:S.tab,law:S.law,stage:!!document.getElementById('cvStage'),sel:e?e.dataset.p+'|'+e.dataset.b:null,bid,pops:pops().map(x=>x._pk)};},
-  async canvasWait(bid,ms){const t0=Date.now();while(Date.now()-t0<(ms||30000)){const c=__HB.canvas();if(c.stage&&c.bid===bid){await wait(300);return __HB.canvas();}await wait(80);}return __HB.canvas();},
+    const ow=pops().find(x=>(x._pk||'').indexOf('cv|omr|')===0),ost=ow&&ow._omr;   /* A-6(a) 9/30 — omrpop C-1: 정리OMR 팝업 목표 블록(ctx.bids) */
+    return {tab:S.tab,law:S.law,stage:!!document.getElementById('cvStage'),sel:e?e.dataset.p+'|'+e.dataset.b:null,bid,pops:pops().map(x=>x._pk),omr:ost&&ost.ctx?ost.ctx.bids.slice():null};},
+  async canvasWait(bid,ms){const t0=Date.now();while(Date.now()-t0<(ms||30000)){const c=__HB.canvas();if((c.stage&&c.bid===bid)||(c.omr&&c.omr.indexOf(bid)>=0)){await wait(300);return __HB.canvas();}await wait(80);}return __HB.canvas();},   /* A-6(a) 9/30 — 정리OMR 팝업 목표도 기다림(바탕 판은 옛 길 그대로) */
   jstate(k){try{return viewCanvas.jari&&viewCanvas.jari.state?viewCanvas.jari.state(k):(window.__jocvj?__jocvj.state(k):null);}catch(e){return 'ERR '+e;}},
   ls(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}},
   lsSet(k,v){localStorage.setItem(k,JSON.stringify(v));return true;},

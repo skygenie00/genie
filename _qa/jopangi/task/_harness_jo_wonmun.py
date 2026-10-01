@@ -25,7 +25,7 @@ _NEW, _DATA, _EXAM = ARG('--new'), ARG('--data'), ARG('--exam')
 ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jo_wonmun_result.txt'))
-sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', 'HEAD'] + (['--exam', _EXAM] if _EXAM else [])
+sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', '47b12e9'] + (['--exam', _EXAM] if _EXAM else [])   # A-6(d) 9/30 — 바탕 = 인도 때 HEAD 47b12e9(결정로그 9/28 00:18 「헛잣대 47b12e9」) · HEAD 로 두면 인도 뒤 헛잣대·바탕 대조가 새 판끼리 맞대 거꾸로 FAIL
 sys.path.insert(0, HERE)
 import _harness_jo_gaek_mbsame as M   # noqa: E402
 from playwright.sync_api import sync_playwright   # noqa: E402
@@ -324,8 +324,9 @@ def g_w4(p, b, eng):
     nb, bb = p.J("()=>__WM.body()"), b.J("()=>__WM.body()")
     ng, bg = p.J("()=>__WM.geo()"), b.J("()=>__WM.geo()")
     same_t = [l['t'] for l in nb] == [l['t'] for l in bb]
-    same_g = ng == bg
-    T(G, u'필기 조 — 본문 = 지금(바탕) 볼트 행 그대로(줄 글 · 글자 수 · 줄 높이 무변 · 모두 켠 모양)', same_t and same_g and len(nb) == len(bb),
+    dm = set(p.ev("()=>{const b=[...document.querySelectorAll('#slot .main .box')].find(x=>!x.classList.contains('fold')&&!x.closest('.pop'));return b?[...b.querySelectorAll(':scope > .ln')].filter(l=>l.querySelector('.dmn.dmnbr')).map(l=>l.dataset.ri==null?null:+l.dataset.ri):[]}") or [])   # ★ 9/30 A-6 — markfix A-5-4: 「다만,」 새 줄은 필기 조에도 는다(그 줄만 높아진다) — 높이 맞대기에서 그 줄만 뺀다
+    same_g = [g for g in ng if g['ri'] not in dm] == [g for g in bg if g['ri'] not in dm]
+    T(G, u'필기 조 — 본문 = 지금(바탕) 볼트 행 그대로(줄 글 · 글자 수 · 줄 높이 무변(「다만,」 새 줄 뺌) · 모두 켠 모양)', same_t and same_g and len(nb) == len(bb),
       {'줄': [len(nb), len(bb)], '글 같음': same_t, '높이 같음': same_g, '첫 높이 다름': next(([a, c] for a, c in zip(ng, bg) if a != c), None)})
     open_mk(p)
     w = p.J("()=>__WM.mkWin()")
@@ -549,22 +550,27 @@ def g_w8(p, b, eng):
     n = res['NEW']; w = n['win']
     rows = w.get('rows') or []
     r1 = next((r for r in rows if r['k'] == u'제132조의3'), {})
-    T(G, u'「📜 인용하는 조 5」(누름 가능) → 창 · 제목 「📜 인용하는 조 5 · 본문에 「제140조」를 적은 조」 · 5 줄(역인덱스 차례) · 폭 540',
-      n['chip'].get('cur') == 'pointer' and w.get('vis') and w.get('title') == u'📜 인용하는 조 5 · 본문에 「제140조」를 적은 조'
+    # ★ 9/30 A-6 — joscreen0929 A-3-1·2: 칩 「📜 인용하는 조 N」 → 「↩피N」(역인덱스 그대로) · 창 제목 「↩ 피인용 N · 본문에 「제N조」를 적은 조」
+    T(G, u'「↩피5」(누름 가능) → 창 · 제목 「↩ 피인용 5 · 본문에 「제140조」를 적은 조」 · 5 줄(역인덱스 차례) · 폭 540',
+      n['chip'].get('cur') == 'pointer' and w.get('vis') and w.get('title') == u'↩ 피인용 5 · 본문에 「제140조」를 적은 조'
       and [r['k'] for r in rows] == [u'제132조의3', u'제133조의2', u'제136조', u'제140조의2', u'제141조'] and w.get('w') == 540, {'칩': n['chip'], '제목': w.get('title'), '줄': [[r['cn'], r['ct']] for r in rows]})
     T(G, u'제132조의3 구절 — 「제140조제1항ㆍ제2항ㆍ제5항」 굵게 + #fef3c7 바탕 · 조사 「을」 뗌 · 조 번호 #2f6fd0',
       r1.get('b') == u'제140조제1항ㆍ제2항ㆍ제5항' and r1.get('bbg') == 'rgb(254, 243, 199)' and int(r1.get('bfw') or 0) >= 700 and (r1.get('cp') or '').find(u'제5항을 준용') >= 0, r1)
     N(G, u'구절 전부(원본[1:] · 앞 38자 · 뒤 28자)', [[r['k'], r['cp']] for r in rows])
-    T(G, u'창 아래 줄 「이 조가 적은 조 = 제135조 · 제136조 · 제138조 → 본문 속 조 링크」', w.get('foot') == u'이 조가 적은 조 = 제135조 · 제136조 · 제138조 → 본문 속 조 링크', w.get('foot'))
+    # ★ 9/30 A-6 — joscreen0929 A-3-4: 꼬리 줄 = 🔗인 목록과 같은 셈(원문 인용 · 앱 wmCiteOut · 옛 = 볼트 행 L 링크 「제135조 · 제136조 · 제138조」)
+    ins = p.ev("()=>get('jo_특허법_본문.json').then(B=>wmCiteOut(B.조['제140조'],'제140조'))") or []
+    nin = p.ev("()=>{const b=document.querySelector('#slot .conn .plgb.wmin');return b?+(b.textContent.replace(/[^0-9]/g,'')||-1):null}")
+    T(G, u'창 아래 줄 「이 조가 적은 조 = 🔗인 목록 → 본문 속 조 링크」(🔗인 칩 수와 같은 셈)', w.get('foot') == u'이 조가 적은 조 = ' + (u' · '.join(ins) if ins else u'없음') + u' → 본문 속 조 링크' and nin == len(ins), {'꼬리': w.get('foot'), '🔗인': ins, '칩 수': nin})
     p.press(p.J("k=>__WM.ciAt(k)", u'제132조의3'), 'touch', 1200)
     cur = p.J("()=>__WM.cur()")
-    T(G, u'손가락으로 제132조의3 줄 → 그 조문(S.jo) · 인용 창 닫힘', cur.get('jo') == u'제132조의3' and not p.J("()=>__WM.ciWin()").get('win'), cur)
+    pop = p.ev("()=>(typeof POPS!=='undefined'?POPS:[]).some(x=>x.isConnected&&x._pk==='jo|특허법|제132조의3')")   # ★ 9/30 A-6 — joscreen0929 A-3-3: 항목 누름 = 그 조 원문 팝업 · 목록 창 그대로(조 이동은 팝업 머리 「뷰로 이동 ↗」)
+    T(G, u'손가락으로 제132조의3 줄 → 제132조의3 원문 팝업 · 인용 창·조문(S.jo) 그대로', pop and cur.get('jo') == u'제140조' and p.J("()=>__WM.ciWin()").get('win'), {'S': cur, '원문 팝업': pop})
     # N = 0 조 — 흐림 · 누름 없음
     z = p.ev("()=>{return get('jo_링크역인덱스.json').then(ix=>get('jo_특허법_본문.json').then(B=>Object.keys(B.조).find(k=>!(ix['특허법:'+k]||[]).length)))}")
     go(p, '특허법', z)
     ch0 = p.J("()=>__WM.ciChip()")
     p.press(ch0, 'mouse', 700)
-    T(G, u'「📜 인용하는 조 0」(%s) — 지금처럼 누름 없음(cursor default · 창 없음)' % z, ch0.get('cur') == 'default' and not p.J("()=>__WM.ciWin()").get('win'), ch0)
+    T(G, u'「↩피0」(%s) — 지금처럼 누름 없음(cursor default · 창 없음)' % z, ch0.get('cur') == 'default' and not p.J("()=>__WM.ciWin()").get('win'), ch0)   # ★ 9/30 A-6 — joscreen0929 A-3: 0 칩 = 「↩피0」(흐림 · cursor default · 누름 없음)
     T(G + '-헛', u'헛잣대 바탕 — 칩 누름 없음(cursor default · 창 없음)', res['BASE']['chip'].get('cur') == 'default' and not res['BASE']['win'].get('win'), res['BASE'])
     fresh(p); fresh(b)
 

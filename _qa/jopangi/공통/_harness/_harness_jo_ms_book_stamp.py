@@ -73,7 +73,7 @@ def serve(tag, src, datamode='new'):
     if datamode == 'oldbook':
         for d in ('minso_hs', 'minso_yg'):
             f = os.path.join(out, 'oldmeta_' + d + '.json')
-            open(f, 'wb').write(git('show', 'HEAD~1:words/%s/책메타.json' % d, repo=MB))
+            open(f, 'wb').write(git('show', '9ee99fdc:words/%s/책메타.json' % d, repo=MB))   # A-6(d) 9/30 — 옛 책메타 = 인도 때 minbeoppdf HEAD~1(주석본 전 · pdfMd5 0ea571a8) · 옛: 'HEAD~1'(9/28 커밋 둘 뒤 726d41e0 = 새 책과 같은 책메타)
             oldmeta[d] = f
 
     class H(http.server.SimpleHTTPRequestHandler):
@@ -199,7 +199,7 @@ def ground():
         G['st_' + d] = by
         G['md5_' + d] = S['pdfMd5']
         G['meta_' + d] = json.load(open(os.path.join(MB, 'words', d, '책메타.json'), encoding='utf-8'))
-        G['old_' + d] = json.loads(git('show', 'HEAD~1:words/%s/책메타.json' % d, repo=MB))
+        G['old_' + d] = json.loads(git('show', '9ee99fdc:words/%s/책메타.json' % d, repo=MB))   # A-6(d) 9/30 — 옛 책메타 = 인도 때 minbeoppdf HEAD~1(주석본 전 · pdfMd5 0ea571a8) · 옛: 'HEAD~1'(9/28 커밋 둘 뒤 726d41e0 = 새 책과 같은 책메타) · 캐시 장면이 심는 옛 pdfMd5
     hs = G['st_minso_hs']
     G['P61'] = hs[61]
     G['AMB'] = next(p for p in sorted(hs) if any(r['st'] == 'ambig' and len(r.get('cands') or []) >= 2 for r in hs[p]))
@@ -274,7 +274,7 @@ def scen_A(br, eng):
         try:
             boot_ms(p); p.ev("__HB.reqClear()")
             open_book(p, '핵심', 61)
-            b = p.ev("([pk,n])=>__HB.bookWait(pk,n,90000)", ['cv|book|minso_hs', None])
+            b = p.ev("([pk,n])=>__HB.bookWait(pk,n,90000)", ['cv|book|minso_hs', 2 if dm == 'new' else None])   # A-6(d) 9/30 — 새 책은 도장 둘이 그려질 때까지 기다림(판 무관 흔들림 · 옛: None = 쪽만 그려지면 잼 · B 장면은 이미 n=2)
             p.pg.wait_for_timeout(1200)
             x = {'book': b, 'painted': p.ev("pk=>__HB.painted(pk,60000)", 'cv|book|minso_hs'), 'req': p.ev("__HB.req()"),
                  'grid': [p.ev("([pk,d,pg,r])=>__HB.grid(pk,d,pg,r,24,4)", ['cv|book|minso_hs', 'minso_hs', 61, r]) for r in rects],
@@ -797,7 +797,7 @@ def gates_C(R, tag):
     T(pre + '교재 줄 누름 → 교재 쪽 창 61 · 자리 강조 · 블록 ctx(「✓ 이 자리」·「📍 찍기」)', R.get('rowTap') and str(b.get('page')) == '61' and b.get('hl') and b.get('okBtn') == '✓ 이 자리' and b.get('pkBtn'),
       {k: b.get(k) for k in ('page', 'hl', 'okBtn', 'pkBtn', 'err')}, tag)
     c = R.get('canvas') or {}
-    T(pre + '캔버스 줄 누름 → 정리 탭 · 1L46 골라짐', R.get('cvTap') and c.get('tab') == 'omr' and c.get('bid') == '1L46' and not c.get('pops'), c, tag)
+    T(pre + '캔버스 줄 누름 → 정리OMR 팝업 · 목표 1L46 · 탭 무변', R.get('cvTap') and c.get('tab') == 'jo' and ('cv|omr|para|%s|8' % N131) in (c.get('pops') or []) and c.get('omr') == ['1L46'], c, tag)   # A-6(a) 9/30 — omrpop C-1: 📘 창 정리캔버스 줄 J.go(정리 탭) → 정리OMR 팝업(목표 = 그 블록) · 옛: tab omr · bid 1L46 · 팝업 0
     tg = R.get('toggle') or {}
     T(pre + '같은 📘 두 번 → 창 닫힘(popToggle)', tg.get('t1') and tg.get('w1') and tg.get('t2') and not tg.get('after'), tg, tag)
     if tag != 'NEW' or R['mode'] != 'desk':
@@ -863,7 +863,7 @@ def gates_pad(R, tag):
     b = R.get('book') or {}
     T(pre + '줄 톡 → 교재 쪽 창 61 · 강조 · ✓ 이 자리', R.get('rowTap') and str(b.get('page')) == '61' and b.get('hl') and b.get('ok') == '✓ 이 자리', b, tag)
     c = R.get('canvas') or {}
-    T(pre + '캔버스 줄 톡 → 정리 탭 1L46', R.get('cvTap') and c.get('bid') == '1L46', c, tag)
+    T(pre + '캔버스 줄 톡 → 정리OMR 팝업 · 목표 1L46', R.get('cvTap') and ('cv|omr|para|%s|8' % N131) in (c.get('pops') or []) and c.get('omr') == ['1L46'], c, tag)   # A-6(a) 9/30 — omrpop C-1: 📘 창 정리캔버스 줄 J.go(정리 탭) → 정리OMR 팝업(목표 = 그 블록) · 옛: bid 1L46(정리 탭)
     if tag == 'NEW':
         T(pre + '콘솔 오류 0', not R.get('errs'), R.get('errs'))
 
@@ -918,11 +918,12 @@ def gates_D(R, tag, BR=None):
 def data_gates(RES):
     G = GR
     # A-3 민법앱 교재 무변 — minbeoppdf 커밋이 민소 두 권 파일만 건드렸나
-    names = git('show', '--name-status', '--format=', 'HEAD', repo=MB).decode('utf-8', 'replace').splitlines()
+    DELIV_MB_REV = '127a7dc9'   # A-6(d) 9/30 — 인도 검산 새 쪽 = ms_book_stamp 인도 커밋(민소 두 권 pdf·책메타·stamp) · 옛: 'HEAD'(지금 70766166 = patent_hr8 대응표 · 9/28)
+    names = git('show', '--name-status', '--format=', DELIV_MB_REV, repo=MB).decode('utf-8', 'replace').splitlines()
     touched = [q for x in names if x.strip() for q in x.split('\t')[1:]]   # 이름 바꿈(R) 줄은 옛·새 두 경로
     okp = lambda f: f in ('pdf/26핵심민소ABBYY_주석_앱.pdf', 'pdf/26윤곽민소ABBYY_주석_앱.pdf', 'pdf/26핵심민소ABBYY.pdf', 'pdf/윤곽 민소법 기본서ABBYY.pdf',
                           'words/minso_hs/책메타.json', 'words/minso_yg/책메타.json', 'stamp/minso_hs.json', 'stamp/minso_yg.json')
-    I('minbeoppdf HEAD(%s) 바뀐 파일' % git('rev-parse', '--short', 'HEAD', repo=MB).decode().strip(), names)
+    I('minbeoppdf 인도 커밋(%s) 바뀐 파일' % DELIV_MB_REV, names)
     T('[A] 민법앱 교재 무변 — minbeoppdf 커밋이 민소 두 권(pdf · 책메타 · stamp)만 · 민법 책 words 0', touched and all(okp(f) for f in touched), touched)
     for d in ('minso_hs', 'minso_yg'):
         n, o = G['meta_' + d], G['old_' + d]

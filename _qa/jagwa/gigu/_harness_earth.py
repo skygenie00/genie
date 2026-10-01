@@ -56,13 +56,14 @@ TESTS = r"""<script>
    localStorage.setItem('tt.cfg',JSON.stringify({token:'github_pat_TEST',person:'검산'}));
    await loadEarthData(); draw(); await wait(50);
    T('E-3 문항 704 적재',DATA.length===704,DATA.length);
-   T('E-3 보기 705',DATA.reduce((a,r)=>a+(r[F.BOGI]||[]).length,0)===705,DATA.reduce((a,r)=>a+(r[F.BOGI]||[]).length,0));
+   /* ★ A-6(d) 9/30 — 지금 데이터: earth_jeongo(studyplandata 19bc5b2f · 9/27)가 원본에 없는 〈보기〉 ㅁ 줄 12 를 걷어 705 → 693(git show 셈 517b369c·182e1f37·352fc227 = 705 · 19bc5b2f·3c3a8b66·4a011475 = 693) */
+   T('E-3 보기 693',DATA.reduce((a,r)=>a+(r[F.BOGI]||[]).length,0)===693,DATA.reduce((a,r)=>a+(r[F.BOGI]||[]).length,0));
    T('E-3 그림 198',DATA.filter(r=>r[F.FILE]==='IMG').length===198);
    T('목차 115 항목 · 16 절',Object.keys(TOC.unit).length===115&&Object.keys(TOC.sec).length===16,[Object.keys(TOC.unit).length,Object.keys(TOC.sec).length]);
    T('E-2 index.json 절 16 + 부록 2',Object.keys(PIECES).length===18,Object.keys(PIECES).length);
    T('설정 블록 · DB earth1 · 경로',EARTH.DB==='earth1'&&PDF_DIR==='earth/pdf/'&&REC_PATH==='earth/기록.json'&&U_KEY==='earth_sync_u');
    T('M-2 과목 earth · IndexedDB earth1 열림 · SUBJ.phys 값 그대로(SYNC_KEYS 는 9/5 필터 손질로 12 = +link)',SUBJ_ID==='earth'&&db.name==='earth1'&&document.body.dataset.subj==='earth'&&SUBJ.phys.DB==='phys535'&&SUBJ.phys.PDF_DIR==='phys/pdf/'&&SUBJ.phys.REC_PATH==='phys/기록.json'&&SUBJ.phys.SYNC_PREFIX==='phys_sync_'&&SUBJ.phys.SYNC_KEYS.length===12,[db.name,SUBJ_ID]);
-   T('M-4 게이트(지학): 지학 조각 보임 · 물리 도구 숨김',getComputedStyle($('#ebody')).display!=='none'&&getComputedStyle($('#stage')).display==='none'&&getComputedStyle($('#btnFormula')).display==='none'&&getComputedStyle($('#tTheory')).display==='none'&&getComputedStyle($('#tCard')).display!=='none'&&getComputedStyle($('#btnTree')).display!=='none');
+   T('M-4 게이트(지학): 지학 조각 보임 · 물리 도구 숨김',getComputedStyle($('#ebody')).display!=='none'&&getComputedStyle($('#stage')).display==='none'&&getComputedStyle($('#btnFormula')).display==='none'&&getComputedStyle($('#tTheory')).display==='none'&&getComputedStyle($('#tCard')).display!=='none'&&!$('#btnTree'));   /* ★ A-6(a) 9/30 — 셸 add9 §A-1(68216cf): 「목차」 단추 #btnTree 걷음(없는 요소에 getComputedStyle → 하니스가 터짐 · col 288) */
    T('머리 = 「자과 서재 · 지학」 · <title> 자과 서재(생물 판 2 add4 · 9/5: 앱 이름 하나 · SUBJ.earth.TITLE 은 그대로) · 탭 셀 현재 = 지학',document.title==='자과 서재'&&$('.brand h1').textContent==='자과 서재 · 지학'&&SUBJ.earth.TITLE==='지학 기출 서재'&&$('#subjTabs .on').textContent==='지학',[document.title,$('.brand h1').textContent]);
    const cells=$$('#subjTabs button');
    T('A-1 셀 셋 「물리│생물│지학」 · 현재 과목 눌림 · 생물 살아 있음(앱 판 1 · 9/5)',cells.map(b=>b.textContent).join('│')==='물리│생물│지학'&&cells[2].classList.contains('on')&&!cells[1].classList.contains('off')&&!cells[1].getAttribute('aria-disabled')&&!cells[0].classList.contains('on'),cells.map(b=>b.className));
@@ -76,10 +77,11 @@ TESTS = r"""<script>
    T('A-2 bio1 IndexedDB 생기지 않음',!((await indexedDB.databases()).some(d=>d.name==='bio1')));
    T('A-3 층 조건 = CARD_LAYER · data-layer=card · 층에 earth 하드코딩 없음(캐시 키 earthdata 는 SUBJ_ID+data)',CARD_LAYER===true&&document.body.dataset.layer==='card'&&!!(await get('kv','earthdata')));
    T('M-3 물리 IndexedDB(phys535) 는 생기지도 않음',!((await indexedDB.databases()).some(d=>d.name==='phys535')));
-   T('E-8 SYNC_KEYS 19(… crop · txt · tfix · add1 bref)',SYNC_KEYS.length===19&&SYNC_KEYS[15]==='crop'&&SYNC_KEYS[16]==='txt'&&SYNC_KEYS[17]==='tfix'&&SYNC_KEYS[18]==='bref'&&SYNC_KEYS[10]==='mcard'&&SYNC_KEYS[11]==='bogi'&&SYNC_KEYS[12]==='unit'&&SYNC_KEYS[13]==='bpit'&&SYNC_KEYS[14]==='bpg'&&typeof SYNC_REF.bogi.g==='function'&&typeof SYNC_REF.bpit.g==='function',SYNC_KEYS);
+   /* ★ A-6(a) 9/30 둘째 바퀴 — listpop_add1 §G(genie cd248a5 · 결정로그 9/20 21:00 · 수행 결과 §G 「JS 가 끝에 넷을 더한다 … 합 23」): 지학 SYNC_KEYS 끝에 gg·ggref·pick·link → 23(지금 앱 8168~8169) · 앞 19 자리 조건은 그대로 */
+   T('E-8 SYNC_KEYS 23(… crop · txt · tfix · add1 bref)',SYNC_KEYS.length===23&&SYNC_KEYS[15]==='crop'&&SYNC_KEYS[16]==='txt'&&SYNC_KEYS[17]==='tfix'&&SYNC_KEYS[18]==='bref'&&SYNC_KEYS[10]==='mcard'&&SYNC_KEYS[11]==='bogi'&&SYNC_KEYS[12]==='unit'&&SYNC_KEYS[13]==='bpit'&&SYNC_KEYS[14]==='bpg'&&typeof SYNC_REF.bogi.g==='function'&&typeof SYNC_REF.bpit.g==='function',SYNC_KEYS);
    /* ===== E-5 트리 · 기본 필터 ===== */
    T('E-5 기본 필터 = 기출만(319)',filtered().length===319&&FL.past==='y',filtered().length);
-   treeOpen();await wait(20);
+   buildTree();await wait(20);   /* ★ A-6(a) 9/30 — 셸 add9 §A-6: treeOpen 은 빈 함수 — 그대로면 아래 3.4.5 줄(it)이 null 이라 다시 터진다 · #trlist 는 buildTree 가 그린다 */
    T('E-5 트리 항목 115 · 절 16 · 장 5',$$('#trlist .trit:not(.unm)').length===115&&$$('#trlist .trsec').length===16&&$$('#trlist .trch').length===5);
    $('#trTog').click();await wait(30);
    T('E-5 확인 토글 → 385',filtered().length===385&&FL.past==='p',filtered().length);
@@ -89,18 +91,22 @@ TESTS = r"""<script>
    const it=$('#trlist .trit[data-u="3.4.5"]');it.querySelector('.n').click();await wait(30);
    T('E-5 항목 숫자 클릭 → 그 단원 목록(FL.unit) · 수 = 기대 (9/7 두 손잡이: 글자=스크롤 · 숫자=필터)',FL.unit==='3.4.5'&&filtered().length===EXP.u345,[FL.unit,filtered().length,EXP.u345]);
    FL.unit='';draw();
-   /* ===== 필터 add1(9/5) 세 층 공통 손잡이 #trGrip — 지학 서랍 내용·토글·닫기 무변 ===== */
-   {treeOpen();await wait(40);const g5=$('#trGrip'),d5=$('#tree');const gb5=g5.getBoundingClientRect();
+   /* ===== 필터 add1(9/5) 세 층 공통 손잡이 #trGrip — 지학 서랍 내용·토글·닫기 무변 =====
+      ★ A-6(a) 9/30 둘째 바퀴 — 셸 add9 §A(genie 68216cf · 결정로그 9/21 15:44 · 수행 결과 §A 표): 옛 #tree(#trGrip · SET.tro/trw · body.tropen)는 걷었고(treeOpen 빈 함수)
+      그 구실은 상주 서랍 #navdr 이 맡는다 — #ndGrip 탭 = 접기(13px) · 끌기 = 너비(160~420 · 기본 236) · 기기별 localStorage jagwa.nd.fold/w.<과목> · 놓으면 SET.ndw ·
+      여백 body.ndon = --ndw · 닫기는 없다(늘 서 있다) → 같은 동작을 그 손잡이로 잰다(생물 _harness_bio.py A1 첫 바퀴 고침과 같은 꼴) ·
+      서랍 내용(#trlist 항목 115 · E-5 buildTree)·기출/확인 토글(#trTog — 상주 서랍 머리로 옮겨짐)·#trX 조건은 그대로 */
+   {treeOpen();await wait(40);const g5=$('#ndGrip'),d5=$('#navdr');const gb5=g5.getBoundingClientRect();
     const PE5=(t,el,x,y)=>el.dispatchEvent(new PointerEvent(t,{clientX:x,clientY:y,pointerId:5,pointerType:'mouse',bubbles:true,cancelable:true,isPrimary:true}));
     const tap5=async(x,y)=>{PE5('pointerdown',g5,x,y);await wait(10);PE5('pointerup',g5,x+1,y+1);await wait(60)};
-    T('A1 지학 #tree 손잡이 · 열리면 body.tropen(≥900 여백 272) · 폭 272',!!g5&&document.body.classList.contains('tropen')&&getComputedStyle(document.body).paddingLeft==='272px'&&Math.round(d5.getBoundingClientRect().width)===272,[getComputedStyle(document.body).paddingLeft]);
+    T('A1 지학 상주 서랍 #ndGrip 손잡이 · body.ndon(≥900 여백 236) · 폭 236',!!g5&&document.body.classList.contains('ndon')&&getComputedStyle(document.body).paddingLeft==='236px'&&Math.round(d5.getBoundingClientRect().width)===236,[getComputedStyle(document.body).paddingLeft,Math.round(d5.getBoundingClientRect().width)]);
     await tap5(gb5.left+6,gb5.top+200);
-    T('A1 탭 → 접힘 13px · 내용 숨김 · SET.tro=1 · 여백 13',d5.classList.contains('fold')&&Math.round(d5.getBoundingClientRect().width)===13&&getComputedStyle($('#trlist')).display==='none'&&SET.tro===1&&getComputedStyle(document.body).paddingLeft==='13px');
+    T('A1 탭 → 접힘 13px · 내용 숨김 · jagwa.nd.fold.earth=1 · 여백 13',d5.classList.contains('fold')&&Math.round(d5.getBoundingClientRect().width)===13&&getComputedStyle($('#ndList')).display==='none'&&localStorage.getItem('jagwa.nd.fold.earth')==='1'&&getComputedStyle(document.body).paddingLeft==='13px',[Math.round(d5.getBoundingClientRect().width),localStorage.getItem('jagwa.nd.fold.earth'),getComputedStyle(document.body).paddingLeft]);
     await tap5(6,200);
     PE5('pointerdown',g5,gb5.left+6,gb5.top+200);await wait(10);PE5('pointermove',g5,gb5.left+106,gb5.top+200);await wait(10);PE5('pointerup',g5,gb5.left+106,gb5.top+200);await wait(60);
-    T('A1 끌기 +100 → 372 · SET.trw · kv · 서랍 내용(항목 115)·기출/확인 토글·닫기 무변',!d5.classList.contains('fold')&&Math.round(d5.getBoundingClientRect().width)===372&&SET.trw===372&&((await get('kv','set'))||{}).trw===372&&$$('#trlist .trit:not(.unm)').length===115&&!!$('#trTog')&&getComputedStyle($('#trTog')).display!=='none'&&!!$('#trX'),[d5.getBoundingClientRect().width,SET.trw]);
-    trSetW(272);SET.trw=272;SET.tro=0;await put('kv','set',SET);treeClose();await wait(20);
-    T('A1 닫으면 body.tropen 해제 · 여백 0',!document.body.classList.contains('tropen')&&getComputedStyle(document.body).paddingLeft==='0px');}
+    T('A1 끌기 +100 → 336 · SET.ndw · kv · 서랍 내용(항목 115)·기출/확인 토글·닫기 무변',!d5.classList.contains('fold')&&Math.round(d5.getBoundingClientRect().width)===336&&SET.ndw===336&&((await get('kv','set'))||{}).ndw===336&&$$('#trlist .trit:not(.unm)').length===115&&!!$('#trTog')&&getComputedStyle($('#trTog')).display!=='none'&&!!$('#trX'),[d5.getBoundingClientRect().width,SET.ndw]);
+    ndSetW(236);delete SET.ndw;await put('kv','set',SET);treeClose();await wait(20);
+    T('A1 옛 서랍 닫기(treeClose)는 상주 서랍을 안 건드린다 · body.tropen 없음 · 여백 236',!document.body.classList.contains('tropen')&&document.body.classList.contains('ndon')&&getComputedStyle(document.body).paddingLeft==='236px',[getComputedStyle(document.body).paddingLeft]);}
    /* ===== E-4 카드 · 보기 O△X ===== */
    const g=DATA.find(r=>!isC(r)&&hasOX(r)&&(r[F.BOGI]||[]).length>=3);
    await openView(g[F.NO]);await wait(60);
@@ -142,7 +148,7 @@ TESTS = r"""<script>
    await bookOpen(208);await wait(2600);
    {let n=0;while(n++<60&&(!bkCurPage()||bkCurPage().pr!==208))await wait(200);}
    $('#bkQ').click();await wait(400);
-   T('E-6 「이 쪽의 문항」 208쪽 = CSV 집계',$$('#bkqList [data-no]').length===EXP.p208,[$$('#bkqList [data-no]').length,EXP.p208]);
+   T('E-6 「이 쪽의 문항」 208쪽 = 데이터(문항.json) 집계',$$('#bkqList [data-no]').length===EXP.p208,[$$('#bkqList [data-no]').length,EXP.p208]);
    $('#bkqX').click();await wait(100);
    T('E-6 조각이 IndexedDB pdf 에 캐시',!!(await get('pdf','3.4.pdf')));
    bkClose();await wait(200);   /* 아래 B-1 이 「닫힌 상태에서 열기」를 잰다 — 열어 둔 채로 넘기지 않는다 */
@@ -264,6 +270,10 @@ TESTS = r"""<script>
    chip().click();await wait(50);T('B-6 칩 누르면 같은 메모 팝업',!!$('#bkpit')&&$('#bkpitT').value==='검산 메모');$('#bkpitDel').click();await wait(80);
    T('B-6 지우기 → 키 없음 · 칩 없음',!Object.keys(BP).length&&!pw());
    /* ===== 판 2 add1 · 스크롤 C-1~C-5 (_task_jihak_app_pan2_add1.md §4) ===== */
+   /* ★ A-6(a) 9/30 둘째 바퀴 — listpop §D(genie a9f9fd4 · 결정로그 9/20 19:42): 「📖 교재」가 떠 있는 창(bkWin(true) · 1000×720)으로 열린다 —
+      C 묶음은 전체 화면 교재 모드(1400×900 · _task_jihak_app_pan2_add1.md §4 검산 · 9/10 3851bca 130/0)로 짰다. 창에서는 600px 왕복 동안 첫 타일(208|0|0)이
+      화면에 남아 캐시에서 다시 붙일 것이 없다(적중 0 · 렌더 0) → C 묶음만 전체 화면(⤢ 길 = bkWin(false) · listpop §D 가 남긴 길)으로 재고 끝에 되돌린다 · 잣대·수치 그대로 */
+   const bwC=BKWIN;bkWin(false);await wait(150);
    await bkOpen(208);await wait(600);zSetZoom(BK,1.5);await wait(700);
    const pC=BK.pgs.find(p=>p.pr===208);const protoC=Object.getPrototypeOf(await BK.pdfPage(pC));const origR=protoC.render;let rcnt=0;protoC.render=function(){rcnt++;return origR.apply(this,arguments)};
    const vpC=$('#bkvp'),vcr=vpC.getBoundingClientRect(),cxC=vcr.left+300,cyC=vcr.top+400;
@@ -301,6 +311,7 @@ TESTS = r"""<script>
    await bkGoto(215);let n5=0;while(n5++<80&&(BK.pgs.some(p=>p.txtP)||n5<3))await wait(100);const curC=bkCurPage();const withTx=BK.pgs.filter(p=>p.txt);
    T('C-5 텍스트층 = 보이는 쪽 ±1 만(span 있는 쪽 ≤ 5 · 현재 쪽 ±2 안)',withTx.length>=1&&withTx.length<=5&&withTx.every(p=>Math.abs(p.i-curC.i)<=2),[withTx.map(p=>p.pr),BK.pgs.filter(p=>p.txtP).map(p=>p.pr),BK.pgs.filter(p=>p.txterr).map(p=>[p.pr,p.txterr]),BK.moving,!!BK.vel,BK.stats.renders,curC.pr,bkTextRange(),window.__err,await (async()=>{const t0=performance.now();const pp=await BK.pdfPage(curC);const r=await Promise.race([pp.getTextContent().then(x=>x.items.length),new Promise(r=>setTimeout(()=>r('timeout'),4000))]);return [r,Math.round(performance.now()-t0)]})()]);
    protoC.render=origR;
+   bkWin(bwC);await wait(300);   /* ★ A-6(a) 9/30 둘째 바퀴 — C 묶음 끝 · 교재 창 모드 되돌림(아래 B-7·B-8 은 지금까지처럼 창에서) */
    /* B-7 서브노트 팝업 — 교재 모드 안 */
    $('#bkSub').click();await wait(1500);
    const sub=$('#sub'),pan=$('#sub .panel');const pr7=pan.getBoundingClientRect();
@@ -319,9 +330,11 @@ TESTS = r"""<script>
    await bkGoto(208);await wait(200);$('#bkQ').click();await wait(100);
    T('B-8 「문항 N」 팝업 = bookList 와 같은 건수(208쪽)',!$('#bkq').classList.contains('hide')&&$$('#bkqList [data-no]').length===EXP.p208&&+$('#bkQn').textContent===EXP.p208,[$$('#bkqList [data-no]').length,EXP.p208]);
    const pick=$('#bkqList [data-no]');const pickNo=+pick.dataset.no;pick.click();await wait(150);
-   T('B-8 누르면 교재 모드 닫고 그 문항',$('#book').classList.contains('hide')&&VNO===pickNo&&!$('#view').classList.contains('hide'),[VNO,pickNo]);
-   $('#btnBook').click();await wait(400);
-   T('B-8 「📖 교재」 로 돌아오면 같은 쪽(208)',BK.open&&bkCurPage()&&bkCurPage().pr===208,bkCurPage()&&bkCurPage().pr);
+   /* ★ A-6(a) 9/30 둘째 바퀴 — bookwin §D(genie 6c54347 · 결정로그 9/24 19:15 · _task_jagwa_earth_bookwin.md §D 「줄을 누르면 교재 창은 그대로 두고 문항 창(.win)이 떠서 맨 앞」 ·
+      앱 7537 bkQOpen 은 bkClose 를 안 넘긴다): 교재 창은 안 닫힌다 — 「📖 교재」(#btnBook 7202)는 토글이라 닫혔을 때만 눌러 되돌아온다 */
+   T('B-8 누르면 교재 창은 그대로 · 그 문항 창(bookwin §D)',!$('#book').classList.contains('hide')&&VNO===pickNo&&!$('#view').classList.contains('hide'),[VNO,pickNo]);
+   if(!BK.open)$('#btnBook').click();await wait(400);
+   T('B-8 교재 창이 열린 채 같은 쪽(208)(bookwin §D · 닫혔으면 「📖 교재」 로 다시 열어 잰다)',BK.open&&bkCurPage()&&bkCurPage().pr===208,bkCurPage()&&bkCurPage().pr);
    /* B-7 문항 모드 셋도 팝업 */
    bkClose();await wait(50);$('#tSub').click();await wait(200);
    T('B-7 문항 모드 #tSub → 같은 팝업(전체 화면 아님)',!sub.classList.contains('hide')&&getComputedStyle(pan).position==='fixed'&&pan.getBoundingClientRect().width<innerWidth-20&&!$('#sBack'));
@@ -427,8 +440,11 @@ def main():
     def loc(p):
         for k, v in idx.items():
             if v['인쇄시작'] <= p <= v['인쇄끝']: return [p, v['file'], p - v['pdf_offset']]
-    exp = {'u345': sum(1 for r in rows if r['유형'] == '기출' and r['단원'] == '3.4.5'),
-           'p208': sum(1 for r in rows if r['교재쪽'] == '208' or (r['유형'] == '확인' and r['문제쪽'] == '208') or (r['유형'] == '기출' and r['해설쪽'] == '208')),
+    # ★ A-6(d) 9/30 둘째 바퀴 — 3.4.5·208쪽 기대는 앱이 받는 그 데이터(SPD 문항.json)로 센다: listpop §G(studyplandata 182e1f37 · 결정로그 9/20 19:42)가 사용자 매칭 114건(단원·교재쪽)을
+    #   박아 CSV(박기 전 사본) 14/14 → 데이터 17/17(git show 셈 517b369c 14 · 182e1f37~cbd451ae 17) · 박힌 114 행의 교재쪽은 수(int)라 str 로 맞댄다 · E-1 표본 글·pages 는 그대로
+    qd = json.load(open(os.path.join(SPD, '문항.json'), encoding='utf-8'))
+    exp = {'u345': sum(1 for r in qd if r['유형'] == '기출' and str(r['단원']) == '3.4.5'),
+           'p208': sum(1 for r in qd if str(r['교재쪽']) == '208' or (r['유형'] == '확인' and str(r['문제쪽']) == '208') or (r['유형'] == '기출' and str(r['해설쪽']) == '208')),
            'pages': [loc(p) for p in (2, 74, 208, 240, 290, 489)]}
     html = html.replace('</body>', (TESTS_PHONE if phone else TESTS).replace('__EXP__', json.dumps(exp, ensure_ascii=False)) + '</body>', 1)
     open(APP, 'w', encoding='utf-8', newline='').write(html)
@@ -491,7 +507,7 @@ def main():
     T2('B-5 폰(≤480px)에서도 서랍 — #bktoc 에 시트(translateY) 규칙 0', not any('#bktoc' in x for x in m480), [x[:80] for x in m480 if '#bktoc' in x])
     T2('B-9 PDF 층 게이트에 #btnBook·#book·#bkq', 'body[data-layer="pdf"] #btnBook' in s and 'body[data-layer="pdf"] #book' in s and 'body[data-layer="pdf"] #bkq' in s)
     lay = s[s.index('/*EARTH:js*/'):s.index('/*/EARTH:js*/')]
-    T2('B-10 층 안 EARTH.·earthdata 0 · 새 코드는 if(CARD_LAYER) 안', 'EARTH.' not in lay and "'earthdata'" not in lay and lay.count('if(CARD_LAYER){') == 1)
+    T2('B-10 층 안 EARTH.·earthdata 0 · 새 코드는 층 머리 if(SHELL) 안(셸 세 과목 · 카드 몫은 if(HASBOOK))', 'EARTH.' not in lay and "'earthdata'" not in lay and lay.split('\n')[2] == 'if(SHELL){')   # ★ A-6(a) 9/30 — 셸 이식(c9faff2): 층 머리 if(CARD_LAYER){ → if(SHELL){
     T2('B-9 SUBJ.phys 다섯 값 무변(9/5 필터 손질: SYNC_KEYS 12째 link 반영)', "phys:{DB:'phys535', PDF_DIR:'phys/pdf/', REC_PATH:'phys/기록.json', SYNC_PREFIX:'phys_sync_'," in s and "SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','link']," in s)
     npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
     for x in lines: print(x)

@@ -52,7 +52,7 @@ REC = _roots.spd(r'jopangi\기록.json')
 SCAN = (2009, 2010, 2020, 2022, 2025)
 LAWS = (u'특허', u'상표', u'디보')
 LAB = u'[1-7ㄱㄴㄷㄹㅁㅂㅅ가나다라마바사]'
-STMT = re.compile(u'^(?:[TSD]\\d{6}' + LAB + u'(?:[hr]\\d?)?|[TSD]R\\d{4}' + LAB + u'|T[HJ]\\d{6}' + LAB + u'?|TX\\d{4}' + LAB + u'?|[TSD]RU\\d{4}' + LAB + u')$')   # ★ uid_add2 §D(9/27) — 연도 모르는 리담 문항 = TRU+PM 번호(TRU0506ㄱ)
+STMT = re.compile(u'^(?:[TSD]\\d{6}' + LAB + u'(?:[hr]\\d?)?|[TSD]R\\d{4}' + LAB + u'|T[HJ]\\d{6}' + LAB + u'?|TX\\d{4}' + LAB + u'?|[TSD]RU\\d{4}' + LAB + u'|T8N\\d{4})$')   # ★ A-6(a) 9/30 p8up A-1-8 새 uid 머리 T8N(8판 새 카드 19) · ★ uid_add2 §D(9/27) — 연도 모르는 리담 문항 = TRU+PM 번호(TRU0506ㄱ)
 QKEY = re.compile(u'^[TSD]\\d{6}$')          # 제7판 객관식(문항째) 열쇠 = 법+연도2+회차2+문번2
 SERVERS, RES = {}, []
 
@@ -90,7 +90,8 @@ def stmts(get):
                 out.append((law, z.get('uid') or '', z.get('t') or '', z.get('ox') or '', q[u'연도'], 'L:%s#%s' % (q['id'], z['n'])))
     P = get('jimun_7pan.json')
     for z in P[u'지문']:
-        out.append((u'특허', z.get('uid') or '', z.get('t') or '', z.get('ox') or '', '', 'P:' + z['id']))
+        p8 = z.get(u'판8') or {}   # ★ A-6(a) 9/30 — p8up A-1-2·3: 제7판 줄 글·답이 8판으로 바뀌어도 uid 는 7판 글로 지은 그대로(열쇠 무변) → uid 대조(C2·C3)는 7판 글(판8.t7)·옛 답(판8.a7)으로
+        out.append((u'특허', z.get('uid') or '', p8.get('t7') or z.get('t') or '', p8.get('a7') or z.get('ox') or '', '', 'P:' + z['id']))
     return out
 
 
@@ -156,7 +157,7 @@ def data_gates():
     U = M['units']
     # 못 찾음 목록 = 시험지에서 자리를 못 찾아 TR·SR·DR / TH 로 **남은** 지문(같은 글 합치기로 다른 uid 를 받은 것은 목록 밖)
     nfL = sorted(k for k, v in U.items() if v['how'] == 'R-notfound' and re.match(u'^[TSD]R', v['uid']))
-    nfP = sorted(k for k, v in U.items() if v['how'] == 'H-notfound' and v['uid'].startswith('TH'))
+    nfP = sorted(k for k, v in U.items() if v['how'] == 'H-notfound' and v['uid'].startswith('TH') and k != 'P|P7-1599')   # ★ A-6(a) 9/30 — p8up A-1-1 이 원장에서 지운 P7-1599(TH111599)는 N: 목록에만 남음
     ids_new = collections.Counter()
     objs_new = jnew('jimun_7pan.json')[u'객관식']
     for law, u, t, ox, y, w in NEWS + [(u'특허', z.get('uid') or '', '', '', '', 'P:' + z['id']) for z in objs_new]:   # 객관식 문항(P7-0390·0549)도
@@ -324,7 +325,8 @@ def data_gates():
     miss_n = sorted(set(p for _, _, b in book for p in b) - hn)
     miss_h = sorted(set(p for _, _, b in book for p in b) - hh)
     # 지시서 셈 「28 = P7-2058 + 27」 — 지금 목차 재료 `책` 에는 P7-2058 이 없다(toc_fuse 가 모아보기 자리를 추록 P7-0285 로) → 빠진 것 ⊆ {P7-2058}
-    T('E3', u'빠진 문항 ⊆ {P7-2058}(추록 대체)', set(miss_n) <= {'P7-2058'}, u'새 %s · 책에 P7-2058 %s' % (miss_n, any('P7-2058' in b for _, _, b in book)))
+    # ★ A-6(a) 9/30 — p8up(775457c) A-1-1 이 원장·마디에서 P7-1207 · P7-1599 를 지웠다(N: 목차 재료 `책` 에는 남음) → 빠진 것에 둘 더함
+    T('E3', u'빠진 문항 ⊆ {P7-2058}(추록 대체) + {P7-1207 · P7-1599}(8판 판올림이 지움)', set(miss_n) <= {'P7-2058', 'P7-1207', 'P7-1599'}, u'새 %s · 책에 P7-2058 %s' % (miss_n, any('P7-2058' in b for _, _, b in book)))
     T('E3-헛', u'빠진 문항 헛잣대(바탕)', len(set(miss_h) - {'P7-2058'}) == 27, u'바탕 %d %s…' % (len(miss_h), miss_h[:4]))
     cnt = TC.get(u'책수') or {}
     mism = []
@@ -579,7 +581,7 @@ def gichul_gate(br):
     src = src[:bb] + GSEED + src[bb:]
     lj_new = os.path.join(WORK, 'list_new.json')
     lj_old = os.path.join(WORK, 'list_old.json')
-    open(lj_old, 'wb').write(git('show', 'HEAD:gichul/pdf/list.json'))
+    open(lj_old, 'wb').write(git('show', '%s:gichul/pdf/list.json' % BASE_REV))   # ★ A-6(d) 9/30 — 옛 list.json = uid 판 앞 바탕(a9d72c1) · HEAD 는 17094a5 인도 뒤 이미 새 해시
     for mode in ('new', 'old'):
         out = os.path.join(WORK, 'gich_' + mode)
         shutil.rmtree(out, ignore_errors=True)
@@ -699,7 +701,7 @@ def cl_gates(br):
 
 def star_gates(br):
     new = io.open(NEWF, encoding='utf-8').read()
-    remote = io.open(REC, encoding='utf-8').read()
+    remote = git('show', 'aa5eb366:jopangi/기록.json', repo=_roots.spd()).decode('utf-8')   # ★ A-6(d) 9/30 — 인도 때(09-27 02:24) 기록으로 박음: studyplandata aa5eb366(⭐ 328 · 옛 열쇠 131) · 지금 클론(REC)은 기기가 이미 옮겨 ⭐ 351 · 옛 열쇠 0(_task_jo_wonmun.md 362)
     R0 = json.loads(remote)
     ox0 = R0['data']['jopangi.ox']
     A = json.load(io.open(os.path.join(UDIR, 'uid_alias.json'), encoding='utf-8'))
@@ -721,7 +723,7 @@ def star_gates(br):
         p.ev("()=>__HU.home('특허법')")
         s1 = p.ev("()=>__HU.stars()")
         keys = p.ev("()=>__HU.starKeys()")
-        T('E7', u'⭐ 옮긴 뒤 수 = 328 · 옛 열쇠 0', s1['pool'] == 328 and s1['store'] == 328 and s1['dead'] == 0,
+        T('E7', u'⭐ 옮긴 뒤 수 = 351 · 옛 열쇠 0', s1['pool'] == 351 and s1['store'] == 351 and s1['dead'] == 0,   # A-6(a) 9/30 — uid_add2(genie 6242678 · 09-27 18:15 「별칭 옮기기(포스트잇·split ⭐)」 · 앱 16530줄 bump('ox-tag')) — 옛 열쇠의 포스트잇(태그)만 있는 칸도 옮김 → 인도 때 기록(studyplandata aa5eb366)을 지금 앱으로 옮기면 ⭐ 328 + 포스트잇 23 = 351(첫 저장본 뒤 두 번째 실행 값 moved ox 131 · ox-tag 23)
           {'옮김': (mg or {}).get('last'), '셈': s1})
         # 표본 — 옛 T0845101 ⭐ → T084510ㄱr 카드 ⭐ 보임(진짜 포인터로 카드까지)
         k = u'T084510ㄱr'
@@ -750,7 +752,7 @@ def star_gates(br):
         p2.ev("()=>__HU.sync()")
         p2.ev("()=>__HU.home('특허법')")
         s3 = p2.ev("()=>__HU.stars()")
-        T('E7', u'옛 열쇠 되올린 원격(%d칸) 받은 뒤 ⭐ 수 같음 · 옛 열쇠 0' % back, s3['pool'] == 328 and s3['dead'] == 0,
+        T('E7', u'옛 열쇠 되올린 원격(%d칸) 받은 뒤 ⭐ 수 같음 · 옛 열쇠 0' % back, s3['pool'] == 351 and s3['dead'] == 0,   # A-6(a) 9/30 — 옮긴 뒤 수 351(위 칸과 같은 까닭)
           {'셈': s3, '옮기기': p2.ev("()=>__HU.migReady().last")})
         errs = p.errs_all() + p2.errs_all()
         T('APP', u'오류 0(⭐)', not errs, errs[:4])
@@ -769,7 +771,7 @@ def pdf_gates(br):
         p_new = os.path.join(PDFD, f)
         b = open(p_new, 'rb').read()
         ptt = subprocess.run(['pdftotext', '-enc', 'UTF-8', p_new, '-'], capture_output=True).stdout
-        old = git('show', 'HEAD:gichul/pdf/%s' % f)
+        old = git('show', '%s:gichul/pdf/%s' % (BASE_REV, f))   # ★ A-6(d) 9/30 — 옛 원본 = uid 판 앞 바탕 a9d72c1(HEAD 는 17094a5 인도 뒤 ABBYY 새 판)
         tmp = os.path.join(WORK, 'old_' + f)
         open(tmp, 'wb').write(old)
         pto = subprocess.run(['pdftotext', '-enc', 'UTF-8', tmp, '-'], capture_output=True).stdout
@@ -778,7 +780,7 @@ def pdf_gates(br):
         rows.append((y, len(b), hashlib.sha256(b).hexdigest()[:10], len(ptt), len(pto), kw))
         ok_all &= len(ptt) > 30000 and kw
     T('E5', u'산재법 다섯 해 글자층 > 30,000 B(pdftotext) · 세 법 낱말', ok_all, rows)
-    T('E5-헛', u'글자층 헛잣대(genie HEAD 원본 — 30,000 B 못 넘음)', all(r[4] < 30000 for r in rows), [(r[0], r[4]) for r in rows])
+    T('E5-헛', u'글자층 헛잣대(바탕 = uid 판 앞 원본 — 30,000 B 못 넘음)', all(r[4] < 30000 for r in rows), [(r[0], r[4]) for r in rows])
     # 새 list.json 사본 — 다섯 줄만 해시·바이트·쪽
     import pymupdf
     L2 = json.loads(json.dumps(L))
@@ -789,7 +791,8 @@ def pdf_gates(br):
             it['hash'] = hashlib.sha256(b).hexdigest()
             it['bytes'] = len(b)
             it['pages'] = len(pymupdf.open(os.path.join(PDFD, it['file'])))
-    same = sum(1 for a, b in zip(L['items'], L2['items']) if a == b)
+    Lb = json.loads(git('show', '%s:gichul/pdf/list.json' % BASE_REV).decode('utf-8'))   # ★ A-6(d) 9/30 — 「다섯 줄만 바뀜」은 uid 판 앞 바탕(a9d72c1) list.json 과 맞댄다(HEAD 는 17094a5 인도 뒤 이미 새 해시) · L(HEAD)은 새 사본(기출서재 칸이 받는 것) 그대로
+    same = sum(1 for a, b in zip(Lb['items'], L2['items']) if a == b)
     lj = os.path.join(WORK, 'list_new.json')
     io.open(lj, 'w', encoding='utf-8', newline='\n').write(json.dumps(L2, ensure_ascii=False, indent=1) + '\n')
     T('E5', u'list.json 새 사본 — 다섯 줄만 바뀜 · 해시 = 파일 sha256', same == len(L['items']) - 5 and all(

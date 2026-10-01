@@ -95,7 +95,7 @@
     mkBtn() { const b = QA('#slot .modebar .mode, #slot .jomt .jomd').find(x => /✎ 마크업/.test(T(x)));   /* 9/30 joscreen0929 합치기 — 모드 줄 글자화로 단추 = .jomt 안 .plgb.jomd(옛 .modebar .mode 도 받음) */ return JSON.stringify(Object.assign(ptOf(b), { t: b ? T(b) : null, n: b && Q('.mkn', b) ? T(Q('.mkn', b)) : null,
       ncs: b && Q('.mkn', b) ? (s => ({ fs: s.fontSize, col: s.color }))(getComputedStyle(Q('.mkn', b))) : null })); },
     jpChip() { const b = QA('#slot .conn .plgb').find(x => /☑ 정오문제/.test(T(x))); return JSON.stringify(Object.assign(ptOf(b), { t: b ? T(b) : null })); },
-    ciChip() { const b = QA('#slot .conn .plgb').find(x => /📜 인용하는 조/.test(T(x))); return JSON.stringify(Object.assign(ptOf(b), { t: b ? T(b) : null, cur: b ? getComputedStyle(b).cursor : null })); },
+    ciChip() { const b = QA('#slot .conn .plgb').find(x => /📜 인용하는 조|^↩피\d/.test(T(x)));   /* ★ 9/30 A-6 — joscreen0929 A-3: 「📜 인용하는 조 N」 → 「🔗인N」·「↩피N」 · 옛 칩 뜻(역인덱스) = ↩피 · 옛 글자도 받는다(바탕 47b12e9 헛잣대 w-8-헛) */ return JSON.stringify(Object.assign(ptOf(b), { t: b ? T(b) : null, cur: b ? getComputedStyle(b).cursor : null })); },
     /* ── 마크업 창 ── */
     mkWin() {
       const p = win('mk'); if (!p) return JSON.stringify({ win: false, pane: !!Q('#slot .jopane') });

@@ -77,7 +77,8 @@ BODY_EARTH = r"""
 
    /* ═══ C-1 저장 자리 ═══ */
    await grp('C-1', async()=>{
-     T('C-1 지학 SYNC_KEYS 18 · crop 16 · txt 17 · tfix 18째',SUBJ.earth.SYNC_KEYS.length===19&&SUBJ.earth.SYNC_KEYS[15]==='crop'&&SUBJ.earth.SYNC_KEYS[16]==='txt'&&SUBJ.earth.SYNC_KEYS[17]==='tfix',SUBJ.earth.SYNC_KEYS);
+     /* A-6(a) 9/30 — listpop_add1 §G(cd248a5)가 지학 SYNC_KEYS 끝에 gg·ggref·pick·link 를 JS 로 더해 23 — 옛 19키가 앞자리 그대로인지 잰다(키가 더 늘어도 안 뒤집힌다) */
+     T('C-1 지학 SYNC_KEYS 옛 19키 앞자리 그대로 · crop 16 · txt 17 · tfix 18째',SUBJ.earth.SYNC_KEYS.slice(0,19).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,bogi,unit,bpit,bpg,crop,txt,tfix,bref'&&SUBJ.earth.SYNC_KEYS[15]==='crop'&&SUBJ.earth.SYNC_KEYS[16]==='txt'&&SUBJ.earth.SYNC_KEYS[17]==='tfix',SUBJ.earth.SYNC_KEYS);
      T('C-1 생물 SYNC_KEYS 19 · crop·txt·tfix 포함',SUBJ.bio.SYNC_KEYS.length===20&&['crop','txt','tfix','bref'].every(k=>SUBJ.bio.SYNC_KEYS.indexOf(k)>=0),SUBJ.bio.SYNC_KEYS.length);
      T('C-1 물리 SYNC_KEYS 12 무변 · crop 없음',SUBJ.phys.SYNC_KEYS.length===12&&SUBJ.phys.SYNC_KEYS.indexOf('crop')<0,SUBJ.phys.SYNC_KEYS.length);
      T('C-1 SYNC_REF 에 crop 읽기/쓰기가 있다',!!SYNC_REF.crop&&typeof SYNC_REF.crop.g==='function'&&typeof SYNC_REF.crop.s==='function');
@@ -128,9 +129,9 @@ BODY_EARTH = r"""
      await wait(200);
      T('C-2 펜으로 끌면 네모가 선다 · 모서리 넷',$$$('.crbox').length===1&&$$$('.crbox i[data-h]').length===4,[$$$('.crbox').length,$$$('.crbox i[data-h]').length]);
      /* ④가 선 뒤라 「✎ 글자로 고치기」 줄이 살아 있다(①만 있던 판에서는 셋이었다 · 고친 자리) */
-     T('C-2 놓으면 메뉴가 뜬다 — 문제 칸 · 해설 칸 · 글자로 고치기 · 취소',!!document.getElementById('crmenu')&&$$$('#crmenu button').length===4,
+     T('C-2 놓으면 메뉴가 뜬다 — 문제 칸 · 해설 칸 · 글자로 고치기 · 취소',!!document.getElementById('crmenu')&&$$$('#crmenu button').length===5,   /* A-6(a) 9/30 — listpop_add1 §F(cd248a5) 「🃏 카드로 찍기」를 맨 위에 더했다(교재 탭 = 카드 · 문제 칸 · 해설 칸 · 글자 · 취소) */
        $$$('#crmenu button').map(b=>b.textContent));
-     T('C-2 붙이는 두 줄이 먼저고 취소가 끝이다',$$$('#crmenu button')[0].dataset.s==='q'&&$$$('#crmenu button')[1].dataset.s==='s'&&$$$('#crmenu button')[3].dataset.s==='');
+     T('C-2 🃏 카드로 찍기가 맨 위 · 붙이는 두 줄이 그다음 · 취소가 끝이다',$$$('#crmenu button')[0].dataset.s==='mc'&&$$$('#crmenu button')[1].dataset.s==='q'&&$$$('#crmenu button')[2].dataset.s==='s'&&$$$('#crmenu button')[4].dataset.s==='');
    });
 
    /* ═══ C-3 붙이면 OCR 글자가 가려진다 ═══ */
@@ -189,7 +190,8 @@ BODY_EARTH = r"""
 
    /* ═══════════ ② 글상자 txt ═══════════ */
    await grp('T-0', async()=>{
-     T('T-0 지학 SYNC_KEYS 19 · txt 가 17째',SUBJ.earth.SYNC_KEYS.length===19&&SUBJ.earth.SYNC_KEYS[16]==='txt',SUBJ.earth.SYNC_KEYS);
+     T('T-0 지학 SYNC_KEYS 옛 19키 앞자리 그대로 · txt 가 17째',SUBJ.earth.SYNC_KEYS.slice(0,19).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,bogi,unit,bpit,bpg,crop,txt,tfix,bref'&&   /* A-6(a) 9/30 — listpop_add1 §G(cd248a5) 끝에 gg·ggref·pick·link 더함 */
+       SUBJ.earth.SYNC_KEYS[16]==='txt',SUBJ.earth.SYNC_KEYS);
      T('T-0 생물 20 · 물리 12 무변',SUBJ.bio.SYNC_KEYS.length===20&&SUBJ.phys.SYNC_KEYS.length===12,[SUBJ.bio.SYNC_KEYS.length,SUBJ.phys.SYNC_KEYS.length]);
      T('T-0 SYNC_REF 에 txt',!!SYNC_REF.txt&&SYNC_REF.txt.g()===TXT);
      const bad0=TXTBAD; TXT['__B1']='배열이 아니다';
@@ -363,27 +365,34 @@ BODY_EARTH = r"""
      T('Q-1 카드 안쪽 폭을 760 으로 박았다',QCW===760&&Math.round($('#card').getBoundingClientRect().width/(($('#card').style.transform?parseFloat(/scale\(([\d.]+)\)/.exec($('#card').style.transform)[1]):1)))===760,
        [$('#card').getBoundingClientRect().width,$('#card').style.transform]);
      T('Q-1 잉크 층이 카드 안에 얹혔다 · viewBox 가 0 0 760 H',!!$('#card #qink')&&/^0 0 760 \d+/.test($('#card #qink').getAttribute('viewBox')),$('#card #qink')&&$('#card #qink').getAttribute('viewBox'));
-     T('Q-1 필기 도구가 카드 층에서 살아났다(펜·형광·지우개·↺·굵기·회독·👁)',
-       ['#tErase','#tUndo','#tW','#tLayer','#tLayerAdd','#tLayerEye'].every(x=>getComputedStyle($(x)).display!=='none')
-       &&$$$('.tools [data-pen]').every(x=>getComputedStyle(x).display!=='none'),
+     /* A-6(a) 9/30 — listpop_add2 §A · §A-4(20a7128): 펜·형광·지우개·↺ 는 머리줄 알약 #inkPill 로 옮겼고(.tools 에는 펜이 없다 — 옛 줄은 빈 표본이라 거저 참) 굵기 #tW 는 숨기고 값 「보통(2)」 */
+     T('Q-1 필기 도구가 카드 층에서 살아났다(펜·형광·지우개·↺·회독·👁 · 굵기는 숨김·값 2)',
+       ['#tErase','#tUndo','#tLayer','#tLayerAdd','#tLayerEye'].every(x=>getComputedStyle($(x)).display!=='none')
+       &&getComputedStyle($('#tW')).display==='none'&&$('#tW').value==='2'
+       &&$$$('#inkPill [data-pen]').length>0&&$$$('#inkPill [data-pen]').every(x=>getComputedStyle(x).display!=='none'),
        ['#tErase','#tUndo','#tW','#tLayer','#tLayerAdd','#tLayerEye'].map(x=>getComputedStyle($(x)).display));
      T('Q-1 물리 전용 도구는 그대로 숨어 있다(가리개·OMR·PDF 무대)',
        ['#mask','#omrPad','.stage'].every(x=>getComputedStyle($(x)).display==='none'));
      /* add2 §3·§6 — 문항 화면은 「보기」로 열린다. penon 이 붙으면 #qink(z-index 6)가 카드
         전면을 담요처럼 덮어 선택지·펼치기·이전다음이 전부 죽는다.
         ★ 픽셀이 아니라 쌓임 순서(elementsFromPoint)로 잰다 — CLAUDE.md 자과앱 게이트. */
-     T('Q-1 카드가 「보기」로 열린다(add2 ③)',
-       TOOL.mode==='view'&&!$('#card').classList.contains('penon'),[TOOL.mode,$('#card').className]);
-     T('Q-1 카드 도구줄에 「보기」 단추가 있고 켜져 있다(add2 ③)',
-       !!$('#tView')&&$('#tView').classList.contains('on'),!!$('#tView'));
-     T('Q-1 보기에서는 잉크 층이 안 잡힌다',
-       getComputedStyle($('#card #qink')).pointerEvents==='none',
+     /* A-6(a) 9/30 — 9/13 889cd8e(사용자 확정): 문항 카드 「보기」 단추(#tView)를 걷고 카드 층도 물리와 같이 「펜」으로 연다(recBoot setTool('pen')) ·
+        #qink 덮개가 카드를 덮어도 누름은 덮개 뚫기(2270f4d · inkPierce)가 밑으로 넘긴다 */
+     T('Q-1 카드가 「펜」으로 열린다(889cd8e · 「보기」 단추 걷음)',
+       TOOL.mode==='pen'&&$('#card').classList.contains('penon'),[TOOL.mode,$('#card').className]);
+     T('Q-1 카드 도구줄에 「보기」 단추가 없다(889cd8e 걷음)',
+       !$('#tView'),!!$('#tView'));
+     T('Q-1 펜으로 열리니 잉크 층이 잡힌다(누름은 덮개 뚫기가 밑으로 넘긴다 · 889cd8e)',
+       getComputedStyle($('#card #qink')).pointerEvents==='auto',
        getComputedStyle($('#card #qink')).pointerEvents);
-     T('Q-1 ★선택지 자리의 히트가 #qink 가 아니다(add2 ③ · elementsFromPoint)',(()=>{
+     T('Q-1 ★선택지 자리의 맨 위는 #qink 덮개 · 덮개 밑(underInk)이 그 선택지다(889cd8e · 2270f4d 덮개 뚫기 · elementsFromPoint)',(()=>{
        const b=$('#card .choices button')||$('#card .choices')||$('#card .q'); if(!b)return false;
        const r=b.getBoundingClientRect();
        const st=document.elementsFromPoint(r.left+r.width/2,r.top+r.height/2);
-       return st.length>0&&st[0].id!=='qink'&&!(st[0].closest&&st[0].closest('#qink'))})(),
+       /* A-6(a) 9/30 — 펜으로 열려 맨 위는 덮개다 · 짧게 톡은 inkPierce 가 덮개 밑(underInk · UNDER_HIT)으로 넘긴다 → 그 밑이 이 선택지인가 */
+       const ink=(st.length&&st[0].closest)?st[0].closest('#qink'):null;
+       const u=ink?underInk(r.left+r.width/2,r.top+r.height/2,ink):null;
+       return !!ink&&!!u&&(u===b||b.contains(u))})(),
        (()=>{const b=$('#card .choices button')||$('#card .choices')||$('#card .q'); if(!b)return '선택지 없음';
          const r=b.getBoundingClientRect();
          return document.elementsFromPoint(r.left+r.width/2,r.top+r.height/2).slice(0,3)
@@ -480,7 +489,8 @@ BODY_EARTH = r"""
    /* ═══════════ ④ 글자 고치기 tfix ═══════════ */
    let XU='', XR=null;
    await grp('X-1', async()=>{
-     T('X-1 지학 SYNC_KEYS 19 · tfix 가 18째',SUBJ.earth.SYNC_KEYS.length===19&&SUBJ.earth.SYNC_KEYS[17]==='tfix',SUBJ.earth.SYNC_KEYS);
+     T('X-1 지학 SYNC_KEYS 옛 19키 앞자리 그대로 · tfix 가 18째',SUBJ.earth.SYNC_KEYS.slice(0,19).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,bogi,unit,bpit,bpg,crop,txt,tfix,bref'&&   /* A-6(a) 9/30 — listpop_add1 §G(cd248a5) 끝에 gg·ggref·pick·link 더함 */
+       SUBJ.earth.SYNC_KEYS[17]==='tfix',SUBJ.earth.SYNC_KEYS);
      T('X-1 생물 20 · 물리 12 무변',SUBJ.bio.SYNC_KEYS.length===20&&SUBJ.phys.SYNC_KEYS.length===12,[SUBJ.bio.SYNC_KEYS.length,SUBJ.phys.SYNC_KEYS.length]);
      T('X-1 SYNC_REF 에 tfix',!!SYNC_REF.tfix&&SYNC_REF.tfix.g()===TFIX);
      T('X-1 담는 칸이 일곱 — 문제 · 보기 ①~⑤ · 해설',TFIX_SLOTS.length===7&&TFIX_SLOTS.join()==='q,c1,c2,c3,c4,c5,s',TFIX_SLOTS);
@@ -575,7 +585,7 @@ BODY_EARTH = r"""
      const cx=vr.left+vr.width/2, cy=vr.top+vr.height/2;
      PE('pointerdown',vp,cx,cy,'pen');PE('pointermove',vp,cx+110,cy+80,'pen');PE('pointerup',vp,cx+110,cy+80,'pen');
      await wait(250);
-     T('X-6 ④가 서니 메뉴에 「✎ 글자로 고치기」가 생겼다',$$$('#crmenu button').length===4
+     T('X-6 ④가 서니 메뉴에 「✎ 글자로 고치기」가 생겼다',$$$('#crmenu button').length===5   /* A-6(a) 9/30 — listpop_add1 §F(cd248a5) 🃏 카드로 찍기를 맨 위에 더함 */
        &&$$$('#crmenu button').some(b=>b.textContent.indexOf('글자로 고치기')>=0),$$$('#crmenu button').map(b=>b.textContent));
      $('#crmenu [data-s="fix"]').click(); await wait(400);
      T('X-6 누르면 고치기 시트가 뜨고 네모·메뉴가 사라진다',!!$('#tfxSheet')&&$$$('.crbox').length===0&&!document.getElementById('crmenu'));
@@ -594,27 +604,32 @@ BODY_PHYS = r"""
    snap.brand=document.querySelector('.brand').innerHTML;
    await grp('Y-1', async()=>{
      T('Y-1 목록이 그려졌다',snap.n>0,snap.n);
-     T('Y-1 물리는 crop 을 안 만든다 — cropList·cropAdd·cropPaint 가 undefined',
-       typeof cropList==='undefined'&&typeof cropAdd==='undefined'&&typeof cropPaint==='undefined'&&typeof cropBoxHtml==='undefined',
+     /* A-6(a) 9/30 — 카드 층 블록의 문이 c9faff2(shell_bio_phys)에서 if(SHELL)(세 과목 참)로 바뀌었고 add5 §A 원칙(c20ef05 · 「블록의 문 if(SHELL){ 는 그대로 두고 안에서 이름마다 가른다」)이 그대로 두어
+        물리에서도 함수는 만들어진다 → 물리 무변은 「안 만든다」가 아니라 「교재 갈래 HASBOOK 이 거짓」으로 선다(값은 info 에 typeof 로 남긴다 ·
+        물리 화면에 안 쓰이는 것은 아래 CROP 비어 있음 · 조각 칸 0 · 글상자 0 · 문항 잉크 층 0 이 잰다) */
+     T('Y-1 물리는 crop 을 안 쓴다 — cropList·cropAdd·cropPaint 는 SHELL 블록이라 있어도 HASBOOK=false',
+       typeof HASBOOK!=='undefined'&&HASBOOK===false,
        [typeof cropList,typeof cropAdd,typeof cropPaint]);
-     T('Y-1 교재 창(BK)·zWire 자체가 없다',typeof BK==='undefined'&&typeof zWire==='undefined',[typeof BK,typeof zWire]);
-     T('Y-1 SYNC_KEYS 12 에 crop 없음',SYNC_KEYS.length===12&&SYNC_KEYS.indexOf('crop')<0,SYNC_KEYS.length);
+     T('Y-1 교재 창(BK)·zWire 는 SHELL 블록이라 있어도 물리엔 교재 창이 안 뜬다(#book 숨음 · HASBOOK=false)',   /* A-6(a) 9/30 — c9faff2 · add5 §A 원칙 · body[data-layer="pdf"] #book{display:none!important} */
+       typeof HASBOOK!=='undefined'&&HASBOOK===false&&!!$('#book')&&getComputedStyle($('#book')).display==='none',[typeof BK,typeof zWire]);
+     T('Y-1 SYNC_KEYS 옛 12키 앞자리 그대로 · crop 없음',SYNC_KEYS.slice(0,12).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,link'&&   /* A-6(a) 9/30 — shell_bio_phys §E-7(c9faff2) 물리 끝에 gg·ggref 더함 */
+       SYNC_KEYS.indexOf('crop')<0,SYNC_KEYS.length);
      T('Y-1 CROP 전역은 비어 있다(카드 층에서만 채운다)',typeof CROP==='undefined'||JSON.stringify(CROP)==='{}',typeof CROP);
      T('Y-1 물리 화면에 조각 칸이 0개',$$$('.cropw').length===0&&$$$('.crophid').length===0);
-     T('Y-1 물리는 글상자도 안 만든다 — txtList·txtPaint·bkMyText 가 undefined',
-       typeof txtList==='undefined'&&typeof txtPaint==='undefined'&&typeof bkMyText==='undefined',
+     T('Y-1 물리는 글상자를 안 쓴다 — txtList·txtPaint·bkMyText 는 SHELL 블록이라 있어도 HASBOOK=false',   /* A-6(a) 9/30 — c9faff2 · add5 §A 원칙(위 crop 줄과 같은 까닭) */
+       typeof HASBOOK!=='undefined'&&HASBOOK===false,
        [typeof txtList,typeof txtPaint,typeof bkMyText]);
      T('Y-1 물리 화면에 글상자·목차 칩이 0개',$$$('.tbox').length===0&&$$$('.bkc').length===0);
      T('Y-1 SYNC_KEYS 에 txt 없음',SYNC_KEYS.indexOf('txt')<0);
-     T('Y-1 물리는 문항 필기(qink)도 안 만든다 — qLoad·qPaint·qWire 가 undefined',
-       typeof qLoad==='undefined'&&typeof qPaint==='undefined'&&typeof qWire==='undefined',
+     T('Y-1 물리는 문항 필기(qink)를 안 쓴다 — qLoad·qPaint·qWire 는 SHELL 블록이라 있어도 HASBOOK=false',   /* A-6(a) 9/30 — c9faff2 · add5 §A 원칙(위 crop 줄과 같은 까닭) */
+       typeof HASBOOK!=='undefined'&&HASBOOK===false,
        [typeof qLoad,typeof qPaint,typeof qWire]);
      T('Y-1 물리 paintInk·INK·LAYER 는 종전 값 그대로',
        typeof paintInk==='function'&&typeof INK==='object'&&typeof LAYER==='number',
        [typeof paintInk,typeof INK,typeof LAYER]);
      T('Y-1 물리 화면에 문항 잉크 층이 0개',$$$('#qink').length===0);
-     T('Y-1 물리는 tfix 도 안 만든다 — txtOf·tfixSet·tfixSheet 가 undefined',
-       typeof txtOf==='undefined'&&typeof tfixSet==='undefined'&&typeof tfixSheet==='undefined',
+     T('Y-1 물리는 tfix 를 안 쓴다 — txtOf·tfixSet·tfixSheet 는 SHELL 블록이라 있어도 HASBOOK=false',   /* A-6(a) 9/30 — c9faff2 · add5 §A 원칙(위 crop 줄과 같은 까닭) */
+       typeof HASBOOK!=='undefined'&&HASBOOK===false,
        [typeof txtOf,typeof tfixSet,typeof tfixSheet]);
      T('Y-1 SYNC_KEYS 에 tfix 없음',SYNC_KEYS.indexOf('tfix')<0);
    });
@@ -690,8 +705,10 @@ def static_checks():
     out = []
     def T2(name, cond, info=''):
         out.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
-    blk = s.find('\nif(CARD_LAYER){\n')
-    T2('S-1 crop 코드는 전부 if(CARD_LAYER) 안이다 — 물리는 만들지도 않는다',
+    # A-6(a) 9/30 — 카드 층 블록의 문이 c9faff2(shell_bio_phys)에서 `if(CARD_LAYER){` → `if(SHELL){` 로 바뀌었다(add5 §A 원칙 「블록의 문 if(SHELL){ 는 그대로 두고 안에서 이름마다 가른다」 · c20ef05)
+    #   → 같은 블록(/*EARTH:js*/ 뒤 첫 `if(SHELL){`)의 시작으로 잰다 · 물리도 이 블록을 돈다(물리 화면 몫은 HASBOOK 이 가른다)
+    blk = s.find('\nif(SHELL){\n', s.find('/*EARTH:js*/'))
+    T2('S-1 crop 코드는 전부 카드 층 블록(if(SHELL)) 안이다',
        blk >= 0 and all(s.find(k) > blk for k in ['var cropList=', 'var cropAdd=async function(', 'var cropDel=async function(',
                                                   'var cropPaint=', 'var cropBoxHtml=', 'function cropWire(',
                                                   'function cropHandles(', 'BK.onCrop=function(', 'BK.crop=true;']),
@@ -701,9 +718,10 @@ def static_checks():
        and 'var cropAdd=async function(' in s and 'var cropDel=async function(' in s)
     # add1(2026-09-08) — 같은 네모를 링크(bref)도 쓰게 되어 조건이 넓어졌다(고친 자리).
     T2('S-2 오리기·링크는 펜에서만 — 손가락은 종전 길로 흘려보낸다',
-       "if(e.pointerType!=='pen'&&SET.pencil){" in s
+       # A-6(a) 9/30 — 9/13 c62b2b2(pen_touch2 §1 · SET.pencil 스위치 없앰 → 「if(pointerType!=='pen') return」) · 9/24 bookwin §E(6c54347 · 📍 찍는 중 교재 창은 마우스도 네모)
+       "if(e.pointerType!=='pen'&&!(window.PINFOR&&Z===window.BK&&e.pointerType==='mouse')){" in s
        and "if(Z.crop&&(Z.tool==='crop'||(Z.bref&&Z.tool==='bref'))){" in s
-       and "if(e.pointerType!=='pen'&&SET.pencil)return;" in s)
+       and "if(e.pointerType!=='pen')return;      /* ⚠ 손가락은 지금처럼 스크롤이다(커밋 ① 규칙 그대로) */" in s)
     T2('S-3 도구줄 마크업 무접촉 · ★오리기 단추를 교재 창에 도로 그린다(2026-09-10) · BK.crop 플래그는 남는다',
        '<div class="stools" id="bktools"><span class="on" data-tool="view">보기</span><span data-tool="pen">펜</span><span data-tool="hl">형광</span><span data-tool' in s
        and s.count("sp.dataset.tool='crop'") == 1
@@ -726,7 +744,7 @@ def static_checks():
     T2('S-8 mcard 저장 꼴·MC_MAX·조각 좌표표 무접촉',
        'const MC_MAX=20000;' in s and "const saveMC=()=>put('kv','mcard',MC);" in s
        and 'var jogakAR=cell=>{const [x0,y0,x1,y1]=cell.r;return (x1-x0)/(y1-y0)};' in s)
-    T2('S-11 txt 코드도 전부 if(CARD_LAYER) 안이다',
+    T2('S-11 txt 코드도 전부 카드 층 블록(if(SHELL)) 안이다',   # A-6(a) 9/30 — 블록의 문 c9faff2 · 잣대 blk 는 S-1 머리에서 고쳤다
        blk >= 0 and all(s.find(k) > blk for k in ['var txtList=', 'function txtPaint(', 'function txtWireOne(',
                                                   'var txtAdd=async function(', 'function txtEl(', 'function bkMyText(', 'function bkTocChips(',
                                                   'function bkPopToggle(', 'function bkTocWire(']))
@@ -749,7 +767,7 @@ def static_checks():
     T2('S-18 물리 ndTail·ndPopToggle 소스 무변',
        'function ndTail(no){const m=lastM(no), w=weakState(no), c=noteOf(no);' in s
        and 'function ndPopToggle(no,chip){' in s and s.count('function ndPopToggle(') == 1)
-    T2('S-19 문항 필기 코드도 전부 if(CARD_LAYER) 안이다',
+    T2('S-19 문항 필기 코드도 전부 카드 층 블록(if(SHELL)) 안이다',   # A-6(a) 9/30 — 블록의 문 c9faff2 · 잣대 blk 는 S-1 머리에서 고쳤다
        blk >= 0 and all(s.find(k) > blk for k in ['var qLoad=async function(', 'function qPaint(', 'function qWire(',
                                                   'function qEraseAt(', 'var qUndo=async function(', 'var qEraseSheet=',
                                                   'function qFit(', 'function qSvg(']))
@@ -765,7 +783,7 @@ def static_checks():
     T2('S-23 카드 폭을 박았다 — 좁으면 통째로 줄인다(글이 다시 흐르지 않는다)',
        '#card{position:relative;width:760px;max-width:760px;transform-origin:top left}' in s
        and "card.style.transform='scale('+k+')'" in s)
-    T2('S-24 tfix 코드도 전부 if(CARD_LAYER) 안이다',
+    T2('S-24 tfix 코드도 전부 카드 층 블록(if(SHELL)) 안이다',   # A-6(a) 9/30 — 블록의 문 c9faff2 · 잣대 blk 는 S-1 머리에서 고쳤다
        blk >= 0 and all(s.find(k) > blk for k in ['var tfixRaw=', 'var txtOf=', 'var tfixSet=async function(',
                                                   'var tfixSheet=', 'function tfixLong(', 'var tfixHay=']))
     T2('S-25 본문을 읽는 길이 txtOf 하나다 — 화면이 stemOf/CH/SOL 를 직접 안 읽는다',
@@ -773,7 +791,8 @@ def static_checks():
        and "${esc(txtOf(uid,'q'))}" in s and "esc(txtOf(uid,'c'+(i+1)))" in s and "txtOf(uid,'s')" in s
        and "<div class=\"q${cropHas(uid,'q')?' crophid':''}\">${esc(stemOf(r))}</div>" not in s)
     T2('S-26 검색이 원본과 고친 글자를 둘 다 훑는다',
-       'tfixHay(r[F.CODE])].join(\' \').toLowerCase()' in s and 'r[F.BODY]' in s.split('const hay=[')[1][:200])
+       # A-6(a) 9/30 — jagwa_search(eb1113e · _task_jagwa_search.md A-1 · A-3)가 목록 거르기 hay 를 걷고 결과 상자 esHit 로 옮겼다 — 본문 원본 + 고친 글자(tfixHay) 둘 다 그대로
+       "if((String(r[F.BODY]||'')+' '+tfixHay(uid)).toLowerCase().includes(low))return {k:'body'};" in s)
     T2('S-27 DATA 원본 무변 — tfix 는 DATA 에 안 쓴다',
        'r[F.BODY]=' not in s and 'r[F.SOL]=' not in s and 'r[F.CH]=' not in s)
     T2('S-28 정답은 기존 ansfix 가 맡는다(tfix 칸에 없다)',

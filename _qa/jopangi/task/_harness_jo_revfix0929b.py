@@ -532,11 +532,12 @@ def meas_book(p):
     return out
 
 
-def touch_ok(nm, arr, need_w):
-    """설계(같은 갈래 이웃 끔) 높이 ≥ 36(좁은 것은 폭도) · 가운데 = 제 것 · 가로챔 0 · 가까운 쪽이 이김 0"""
+def touch_ok(nm, arr, need_w, mh=36):
+    """설계(같은 갈래 이웃 끔) 높이 ≥ 36(좁은 것은 폭도) · 가운데 = 제 것 · 가로챔 0 · 가까운 쪽이 이김 0
+       mh = 높이 문턱(수 · 또는 칸 차례 → 수) — ★ A-6(a) 9/30 B8 두 곳만 낮춤(revfix0930 A-3) · 나머지 36"""
     bad = []
-    for x in arr:
-        if x['dh'] < 36 or (need_w and x['dw'] < 36) or not x['center'] or x['steal'] or x['near']:
+    for i, x in enumerate(arr):
+        if x['dh'] < (mh(i) if callable(mh) else mh) or (need_w and x['dw'] < 36) or not x['center'] or x['steal'] or x['near']:
             bad.append(x)
     return (bool(arr) and not bad), [('%s %sx%s 설계 %sx%s 실제 %sx%s 가로챔 %s 먼쪽 %s' % (x['t'], x['w'], x['h'], x['dw'], x['dh'], x['ew'], x['eh'], x['steal'], x['near'])) for x in (bad or arr[:2])]
 
@@ -679,14 +680,18 @@ def b7(br, src, tag):
 
 def b8(br, src, base_src, tag):
     G = 'B8'
+    # ★ A-6(a) 9/30 _task_qa_baseline — revfix0930 A-3-2(넓힌 누름 영역은 이웃·머리 줄의 보이는 사각형을 안 먹음 · 부딪히면 가운데서 나눔):
+    #   모드 글자 위 둘레 8 → 4.5px(설계 32.5 · 재면 33~34) · 장 머리 바로 아래 첫 체크(제1조 · SIX 선택 차례 첫 칸) 36 → 33(머리 줄 덮개) — 그 둘만 문턱을 낮춘다
+    B8MH = {'모드 글자': 32, '체크': lambda i: 33 if i == 0 else 36}
+    B8LO = {'모드 글자': 32, '체크': 33}
     ok = True
     for dn, dev in TOUCH_DEV:
         p = dev_page(br, tag + dn, src, dev)
         m = meas_six(p)
         for nm, sel, same, need_w in SIX:
-            good, det = touch_ok(nm, m[nm], need_w)
+            good, det = touch_ok(nm, m[nm], need_w, B8MH.get(nm, 36))
             ok = ok and good
-            T(G, '%s %s 누름 ≥ 36' % (dn, nm), good, det)
+            T(G, '%s %s 누름 ≥ %d' % (dn, nm, B8LO.get(nm, 36)), good, det)
         ck = all(x['center'] for x in m['체크']) and all(x['center'] for x in m['조 번호'])
         ok = ok and ck
         T(G, '%s 체크 가운데 = 체크 · 조 번호 가운데 = 조 번호' % dn, ck, [(x['t'], x['center']) for x in m['체크'][:3] + m['조 번호'][:2]])

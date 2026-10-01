@@ -148,7 +148,14 @@ window.__JS = {
   c3pickInput(v){ const p = document.querySelector('#slot .c3pick input'); if (!p) return null; const r = hitOn(p); return r; },
   c3pickBtn(re){ const rx = new RegExp(re); const b = [...document.querySelectorAll('#slot .c3pick button')].find(x => rx.test(txt(x))); return b ? hitOn(b) : null; },
   c3pickSelAt(){ const s = document.querySelector('#slot .c3pick select'); return s ? hitOn(s) : null; },
-  c3hangRows(law, k, h){ return get('jo_' + law + '_본문.json').then(B => { const j = (B.조 || {})[k] || {}; return (j.행 || []).filter(r => (r.k || [])[0] === '항' && r.k[1] === h).map(r => r.t); }); },
+  c3hangRows(law, k, h){ return get('jo_' + law + '_본문.json').then(B => { const j = (B.조 || {})[k] || {};
+    /* ★ A-6(a) 9/30 — joscreen0929 A-6: 3법 카드 그 항 글 = 원문(조[k].원본 · 앱 c3HangLines 규칙: wmOrig 로 제목 줄에 붙은 ① 본문을 떼고 · 항 머리 ①~⑳ 로 구간 · '[' 줄에서 끊음 · 개정 꼬리 c3Clean) · 옛: 볼트 행(j.행 · 「지재처장」 등 볼트 글) */
+    const o = (j.원본 || []).slice(), m0 = o.length ? /^\s*(제\d+조(?:의\d+)?)\s*(\((?:[^()]|\([^()]*\))*\))?/.exec(o[0]) : null;
+    if (m0){ const rest = o[0].slice(m0[0].length).replace(/^\s+/, ''); if (rest.replace(/^(<[^<>]*>\s*)*/, '').trim()) o.splice(0, 1, o[0].slice(0, m0[0].length).replace(/\s+$/, ''), rest); }
+    let on = false; const out = [];
+    o.slice(1).forEach(t => { const s = String(t).trim(), m = /^([①-⑳])/.exec(s); if (m) on = (m[1] === h); else if (/^\[/.test(s)) on = false;
+      const t3 = on ? String(t).replace(/<(개정|신설|전문개정|본조신설|타법개정)[^<>]*>/g, '').replace(/\s+$/, '') : ''; if (t3.trim()) out.push(t3); });
+    return out; }); },
   themefix(){ try{ return JSON.parse(localStorage.getItem('jopangi.themefix') || '{}'); }catch(e){ return null; } },
   /* ── 6 조문 팝업 ── */
   async popjo(law, k){ try{ closeAllPops(); }catch(e){} await popJo(law, k, { clientX: 300, clientY: 200 }, 1); await until(() => pops().some(p => p._pk === 'jo|' + law + '|' + k && !/불러오는 중/.test(txt(p.querySelector('.pt')))), 8000); await wait(150);

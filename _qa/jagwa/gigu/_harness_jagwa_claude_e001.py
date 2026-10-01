@@ -276,7 +276,8 @@ def main():
     for no in NOS:
         f = 'motion/earth_%s.html' % no
         src = open(os.path.join(MAT, 'earth_%s.html' % no), 'rb').read()
-        R('-', '%s = 재료 바이트(md5 %s)' % (f, hashlib.md5(src).hexdigest()[:8]), sn.get(f) == src, None, len(sn.get(f) or b''))
+        # ★ A-6(d) 9/30 _task_qa_baseline — 줄끝만 뺀 바이트로 맞댄다: 새로 만든 작업트리(qa 워크트리 · core.autocrlf)는 CRLF 로 풀려(18,745 = 18,515 + 230) · git blob = 재료(LF) 그대로
+        R('-', '%s = 재료 바이트(md5 %s)' % (f, hashlib.md5(src).hexdigest()[:8]), (sn.get(f) or b'').replace(b'\r\n', b'\n') == src.replace(b'\r\n', b'\n'), None, len(sn.get(f) or b''))
         tx = (sn.get(f) or b'').decode('utf-8', 'replace')
         ext = re.findall(r'(?:src|href)\s*=\s*["\'](https?://[^"\']+)', tx)
         R('-', '%s — 바깥 스크립트 0 · 바깥 주소 = Google Fonts 뿐 · .pdf 0(공개 genie)' % f,

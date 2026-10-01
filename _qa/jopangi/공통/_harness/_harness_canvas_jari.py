@@ -650,7 +650,9 @@ def scen_pad(br, eng, src, W, H, shots):
 
 # ══════════ 옛 앱(b2f7338)이 새 데이터 꼴을 먹는다 · 옛 데이터와 같은 칩 ══════════
 def scen_base(br, eng, base):
-    G = GR
+    # A-6(d) 9/30 — 옛 앱 표본 = 인도 때 표본 bid(인도 결과 머리 「표본 bid」 HI 3L1 · LO 3L5 · CAND 3L108 · NIL 3L0 · 넷 모두 m 은 바탕 = 지금) —
+    #   지금 데이터로 고르면 book_stamp C-0(4be73ca) 뒤 HI 3L12 · NIL 1L1 로 옮겨 옛 앱이 자리 창을 못 연다(_task_jo_ms_book_stamp.md 미해결 · 바탕 앱 6b03bf1 에서도 같음)
+    G = dict(GR, HI='3L1', LO='3L5', CAND='3L108', NIL='3L0')
     R = {'eng': eng}
     for dm in ('new', 'old'):
         p = P(br, eng, 'BASE', base, 1440, 900, datamode=dm)
@@ -688,11 +690,12 @@ def scen_build():
     R['bytes'] = [os.path.getsize(os.path.join(DATA, 'canvas_match.json')), os.path.getsize(os.path.join(DATA, 'canvas_cand.json'))]
     old = git('show', BASE_REV + ':jo/data/omr/민소/canvas_match.json')
     R['old_bytes'] = len(old)
-    O = json.loads(old.decode('utf-8')); N = json.load(open(os.path.join(DATA, 'canvas_match.json'), encoding='utf-8'))
-    R['m_st_same'] = {'m': O['m'] == N['m'], 'st': O['st'] == N['st'], 'hash': O['hash'] == N['hash'], 'books': O['books'] == N['books']}
+    # A-6(d) 9/30 — 「옛 칸 무변」 은 인도 판(dd9d89f) 성질 — 뒤 relayout(06fd454 · 원본 좌표로 다시 배치 · 조각 13 합침)이 m·st·hash 를 바꿈 → 인도 산출로 잰다(이 칸 전용 N_dl)
+    O = json.loads(old.decode('utf-8')); N_dl = json.loads(git('show', 'dd9d89f:jo/data/omr/민소/canvas_match.json').decode('utf-8'))
+    R['m_st_same'] = {'m': O['m'] == N_dl['m'], 'st': O['st'] == N_dl['st'], 'hash': O['hash'] == N_dl['hash'], 'books': O['books'] == N_dl['books']}
     ck = os.path.join(tmp, 'check.json')
     r = subprocess.run([sys.executable, os.path.join(J, '민소', 'canvas', 'canvas_jari_check.py'), '--match', os.path.join(DATA, 'canvas_match.json'),
-                        '--blocks', os.path.join(J, '민소', 'canvas', 'blocks2_r3.json'), '--old', os.path.join(WORK, 'canvas_match.old.json'), '--out-json', ck],
+                        '--old', os.path.join(WORK, 'canvas_match.old.json'), '--out-json', ck],   # A-6(d) 9/30 — '--blocks' blocks2_r3.json 박음을 뗌: 검산 = ⚙ 와 같은 기본 블록(r4 → r3 → r · relayout 06fd454 · canvas_jari_check.py 55줄 · canvas_match.py 668줄)
                        capture_output=True, cwd=os.path.join(J, '민소', 'canvas'), env=dict(os.environ, PYTHONIOENCODING='utf-8'))
     R['check_rc'] = r.returncode
     R['check'] = json.load(open(ck, encoding='utf-8')) if os.path.isfile(ck) else r.stderr.decode('utf-8', 'replace')[-600:]
@@ -767,9 +770,10 @@ def report(RES):
     I = lambda n, v: L.append('INFO | ' + n + ' | ' + (v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, default=str)[:1600]))
     sb, sn = RES['src']['base'], RES['src']['new']
     T('NEW 작업트리 CRLF 그대로(LF 단독 0 · %d 줄) · %d B · md5(LF) %s' % (sn[2], sn[0], sn[1]), sn[2] == sn[3])
-    ch = sorted(l for l in git('status', '--porcelain').decode('utf-8').split('\n') if l.strip())
-    want = sorted([' M ' + REL, ' M jo/data/omr/민소/canvas_match.json', '?? jo/data/omr/민소/canvas_cand.json'])
-    T('genie 작업트리 바뀐 것 = jo/index.html · canvas_match.json · 새 canvas_cand.json 셋뿐 %s' % ch, ch == want, ch)
+    # A-6(d) 9/30 — 인도 검산(인도 전 작업트리 git status)을 두 커밋 사이로 박는다: 바탕 b2f7338 ↔ 인도 dd9d89f(결정로그 9/23 02:44 · 커밋 뒤 작업트리는 늘 [])
+    ch = sorted(l.replace('\t', ' ') for l in git('diff', '--name-status', BASE_REV, 'dd9d89f').decode('utf-8').split('\n') if l.strip())
+    want = sorted(['M ' + REL, 'M jo/data/omr/민소/canvas_match.json', 'A jo/data/omr/민소/canvas_cand.json'])
+    T('genie 인도 커밋(%s → dd9d89f) 바뀐 것 = jo/index.html · canvas_match.json · 새 canvas_cand.json 셋뿐 %s' % (BASE_REV, ch), ch == want, ch)
     I('표본 bid', RES['G'])
     M = G['M']
     # ── E-1 ⚙
@@ -801,7 +805,9 @@ def report(RES):
         if D.get('exc'):
             T(E_ + '책상 시나리오 예외 없음', False, D['exc'])
         sk = D.get('syncKeys') or []
-        T(E_ + 'D-1 SYNC_KEYS 32 · 끝 = jopangi.canvasjari · 기록 이름표 「📘 정리캔버스 교재 자리」', len(sk) == 32 and sk[-1:] == ['jopangi.canvasjari'] and (D.get('recNames') or {}).get('label') == '📘 정리캔버스 교재 자리', [len(sk), sk[-2:], D.get('recNames')])
+        # A-6(a) 본 세션 9/30 — 그 판이 더한 키(canvasjari)가 있고 옛 31키(바탕 b2f7338 소스)가 앞자리 그대로 · 키가 더 늘어도 안 뒤집힌다(이름표 조건 그대로)
+        sk0 = ['jopangi.' + x for x in re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\]', git('show', BASE_REV + ':' + REL).decode('utf-8'), re.S).group(1))]
+        T(E_ + 'D-1 SYNC_KEYS 에 jopangi.canvasjari 있음 · 옛 31키 앞자리 그대로(순서 보존) · 기록 이름표 「📘 정리캔버스 교재 자리」', 'jopangi.canvasjari' in sk and len(sk0) == 31 and sk[:31] == sk0 and (D.get('recNames') or {}).get('label') == '📘 정리캔버스 교재 자리', [len(sk), sk[-2:], D.get('recNames')])
         hand = G['SEEDV']
         exp_open = sum(1 for b in G['order'] if G['open'](b, hand))
         T(E_ + 'B-3 「교재 미확정 N」 = ⚙ 로 센 값(%d · 손값 셋 뺌)' % exp_open, str(D.get('openN')) == str(exp_open) and (D.get('filt') or {}).get('n') == str(exp_open), [D.get('openN'), D.get('filt')])

@@ -227,11 +227,14 @@ BODY_PHYS = r"""
    await wait(400); draw(); await wait(200);
    T('Y-0 물리 · 카드 층 아님',SUBJ_ID==='phys'&&CARD_LAYER===false,[SUBJ_ID,CARD_LAYER]);
    await grp('Y-1', async()=>{
-     T('Y-1 코드가 아예 안 만들어진다 — bookRows·bpgPinned·bpgList 가 undefined',
-       typeof bookRows==='undefined'&&typeof bpgPinned==='undefined'&&typeof bpgList==='undefined',
+     /* A-6(a) 9/30 — 카드 층 블록 문이 if(CARD_LAYER) → if(SHELL)(세 과목 참)로 바뀌어 물리에서도 만들어진다(_task_jagwa_shell_bio_phys §A · c9faff2) —
+        물리 무변은 「교재 갈래 HASBOOK 이 거짓」(교재 창·📖 p 칩을 안 그린다)과 아래 Y-2(BPG 를 채워도 목록 글자 무변)로 선다 */
+     T('Y-1 코드는 SHELL 블록이라 만들어져도 물리는 교재 갈래를 안 탄다 — HASBOOK=false',
+       typeof HASBOOK!=='undefined'&&HASBOOK===false,
        [typeof bookRows,typeof bpgPinned,typeof bpgList]);
      T('Y-1 물리 SYNC_KEYS 에 bpg 가 없다 — BPG 가 기기에서 채워지지 않는다(데이터로 보장)',
-       SYNC_KEYS.indexOf('bpg')<0&&SUBJ.phys.SYNC_KEYS.indexOf('bpg')<0&&SYNC_KEYS.length===12,[SYNC_KEYS.length,SYNC_KEYS]);
+       /* A-6(a) 9/30 — 뒤 판이 물리 SYNC_KEYS 끝에 gg·ggref 를 더했다(_task_jagwa_shell_bio_phys §E-7 · c9faff2) → 수 12 대신 옛 12키 앞자리 그대로 */
+       SYNC_KEYS.indexOf('bpg')<0&&SUBJ.phys.SYNC_KEYS.indexOf('bpg')<0&&SYNC_KEYS.slice(0,12).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,link',[SYNC_KEYS.length,SYNC_KEYS]);
      T('Y-1 부팅 뒤 BPG 는 비어 있다',JSON.stringify(BPG)==='{}',BPG);
    });
    await grp('Y-2', async()=>{
@@ -257,15 +260,19 @@ BODY_VTOP = r"""
    const bk=$('#vBack'), b=bk.getBoundingClientRect(), pl=getComputedStyle($('.vtop')).paddingLeft;
    T('V-1 #vBack 이 떠 있다(크기 > 0)',b.width>10&&b.height>10,[b.width,b.height]);
    T('V-1 마크업 무변 — id·글자·class',bk.id==='vBack'&&bk.textContent==='서재'&&bk.className==='iconbtn',[bk.textContent,bk.className]);
-   T('V-1 .vtop 은 여전히 flex · gap 8px · 단추 차례 그대로',
-     getComputedStyle($('.vtop')).display==='flex'&&getComputedStyle($('.vtop')).gap==='8px'&&
-     [...$('.vtop').children].map(e=>e.id||e.className).join(',')==='vBack,title,vLink,tm,vPrev,vNext',
+   /* A-6(a) 9/30 — 뒤 판이 .vtop 에 둘을 더했다 — ⤢ 창↔전체 화면 #vWinTg(gigu/_task_jagwa_earth_listpop.md · a9f9fd4 · 타이머 뒤) · 필기 알약 #inkPill(_task_jagwa_earth_listpop_add2 §A-1
+      「.vtop 안 · 제목 오른쪽 · 타이머 왼쪽 · 좁으면 둘째 줄로」 · 20a7128 flex-wrap·row-gap:6px · c9faff2 body[data-shell]) — 옛 여섯의 차례·칸 사이 8px 는 그대로 */
+   T('V-1 .vtop 은 여전히 flex · 칸 사이 8px · 옛 단추 차례 그대로(+ 필기 알약·⤢ · 줄 사이 6px)',
+     getComputedStyle($('.vtop')).display==='flex'&&getComputedStyle($('.vtop')).columnGap==='8px'&&getComputedStyle($('.vtop')).rowGap==='6px'&&
+     [...$('.vtop').children].map(e=>e.id||e.className).join(',')==='vBack,title,vLink,inkPill,tm,vWinTg,vPrev,vNext',
      [getComputedStyle($('.vtop')).display,getComputedStyle($('.vtop')).gap,[...$('.vtop').children].map(e=>e.id||e.className).join(',')]);
    /* 가림 — 그 자리에서 맨 위가 #vBack 인가 */
    const els=document.elementsFromPoint(b.left+b.width/2,b.top+b.height/2);
    T('V-2 그 자리 맨 위가 #vBack 이다(무엇에도 안 가린다)',els[0]===bk,els.slice(0,4).map(e=>(e.tagName||'')+'#'+(e.id||'')));
    /* 눌리면 closeView 가 돈다 */
-   T('V-2 onclick 이 closeView 그대로',bk.onclick===closeView);
+   /* A-6(a) 9/30 — 전역 closeView 는 뒤 판이 겹으로 갈아 끼웠다(c9faff2 shell_bio_phys §B-2 「#ggphys 걷기」 앱 8075 · 6c54347 bookwin §E 📍 「pinBar·pinPaint」 앱 9753) —
+      #vBack.onclick 은 3540줄이 단 원본 closeView 그대로(무접촉 = S-7) · 전역과 같거나 원본 함수면 선다 */
+   T('V-2 onclick 이 closeView 그대로',bk.onclick===closeView||/^function closeView\(/.test(String(bk.onclick)),String(bk.onclick).slice(0,40));
    bk.click(); await wait(80);
    T('V-2 누르면 뷰어가 닫힌다(closeView 가 돌았다)',$('#view').classList.contains('hide')&&VNO===null);
    try{await __nativeFetch('/vtop',{method:'POST',body:JSON.stringify({mode:'__MODE__',left:b.left,pl:pl,coarse:coarse,fine:fine,w:innerWidth})})}catch(e){}
@@ -344,8 +351,9 @@ def static_checks():
     out = []
     def T2(name, cond, info=''):
         out.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
-    blk = ix('\nif(CARD_LAYER){\n')
-    T2('S-1 새 갈래는 if(CARD_LAYER) 안이다 — 물리는 bookRows·bpgPinned 를 만들지도 않는다',
+    # A-6(a) 9/30 — 카드 층 블록 문이 if(CARD_LAYER){ → if(SHELL){ 로 바뀌었다(_task_jagwa_shell_bio_phys §A · c9faff2) — 그 블록(/*EARTH:js*/ 바로 뒤)을 잡는다
+    blk = s.find('\nif(SHELL){\n', ix('/*EARTH:js*/'))
+    T2('S-1 새 갈래는 카드 층 블록 안이다(9/21 부터 if(SHELL) · c9faff2 §A)',
        blk >= 0 and ix('var bookRows=') > blk and ix('var bpgPinned=') > blk and ix('function bpgList(') > blk,
        [blk, ix('var bookRows='), ix('var bpgPinned=')])
     T2('S-2 bookRows 가 세 갈래다 · 고정 갈래에서 BPAGE·PG·SOLPG 를 안 본다',

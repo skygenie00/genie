@@ -38,7 +38,7 @@ TESTS = E.TESTS.split(' async function run(){')[0].replace("if(m[1]==='zzikkapla
    T('A-2 열 넷(SOL2·BSENT·BSRC·SYNPG) · 해설2 있는 기출 240 · 대기 12',F.SOL2===26&&F.SYNPG===29&&DATA.filter(r=>r[F.SOL2]).length===240&&DATA.filter(r=>r[F.BSRC]==='절시작·대기').length===12,[DATA.filter(r=>r[F.SOL2]).length,DATA.filter(r=>r[F.BSRC]==='절시작·대기').length]);
    T('A-2 단원 전부 있음(미분류 0) · BIGS 12장',DATA.every(r=>r[F.UNIT])&&BIGS.length===12&&BIGS[0].startsWith('1. 생물의 구성물질'),[BIGS.length,BIGS[0]]);
    T('목차 12장 45절 · TOC.unit 45(항목 = 절)',Object.keys(TOC.ch).length===12&&Object.keys(TOC.sec).length===45&&Object.keys(TOC.unit).length===45);
-   treeOpen();await wait(30);
+   buildTree();await wait(30);   /* ★ A-6(a) 9/30 — 셸 add9 §A-6(genie 68216cf): treeOpen 은 빈 함수(옛 목차 서랍 #tree 걷음 · 안 뜨는 것은 earth_shell WD-1 이 세 과목에서 잰다) — #trlist 내용(2단)은 buildTree 가 그대로 그린다(treePick·절 줄 📄 가 쓰는 살아 있는 함수) */
    T('트리 = 장 12 · 절 45 · 항목 줄 0(2단 · 같은 키 한 줄) · 미매칭 줄 0',$$('#trlist .trch').length===12&&$$('#trlist .trsec').length===45&&$$('#trlist .trit').length===0,[$$('#trlist .trch').length,$$('#trlist .trsec').length,$$('#trlist .trit').length]);
    treePick('3.4');await wait(30);
    T('트리 절 클릭 → 그 절 목록(기출만) = CSV',FL.unit==='3.4'&&filtered().length===EXP.u34,[filtered().length,EXP.u34]);
@@ -105,7 +105,8 @@ TESTS = E.TESTS.split(' async function run(){')[0].replace("if(m[1]==='zzikkapla
    T('A-6 쪽 번호로 999 ＋고정 → ps 에 더해지고 last=999 · 칩 「📖 p999 +1」(판 1: 갈아치우기가 아니라 더하기 · 빼기는 ✕)',BPG[wu]&&BPG[wu].ps.indexOf(999)>=0&&BPG[wu].ps.indexOf(pSel)>=0&&BPG[wu].last===999&&$('#card .tag.page').textContent==='📖 p999 +1',[BPG[wu],$('#card .tag.page').textContent]);
    $('#cBpg').click();await wait(200);$('#bpgAuto').click();await wait(80);
    T('A-6 「자동값으로 되돌림」 → kv 삭제 · 배지 「대기」 복귀',!BPG[wu]&&!((await get('kv','bpg'))||{})[wu]&&$('#cBpg').textContent==='대기');
-   T('A-8 SYNC_KEYS 20(add1 +bref) · 15째 bpg · SYNC_REF.bpg',SYNC_KEYS.length===20&&SYNC_KEYS[14]==='bpg'&&SYNC_KEYS[13]==='bpit'&&typeof SYNC_REF.bpg.g==='function'&&SYNC_REF.bpg.g()===BPG);
+   /* ★ A-6(a) 9/30 — 셸 이식(genie c9faff2 · _task_jagwa_shell_bio_phys.md §E-7): 생물 SYNC_KEYS 뒤에 gg·ggref·pick·link 넷(24) — 옛 20키 앞자리 그대로(순서 보존) · 키가 더 늘어도 안 뒤집힌다 */
+   T('A-8 SYNC_KEYS 앞 20 그대로(add1 +bref · 셸 +gg·ggref·pick·link 는 뒤에) · 15째 bpg · SYNC_REF.bpg',SYNC_KEYS.slice(0,20).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,bogi,unit,bpit,bpg,snote,crop,txt,tfix,bref'&&SYNC_KEYS[14]==='bpg'&&SYNC_KEYS[13]==='bpit'&&typeof SYNC_REF.bpg.g==='function'&&SYNC_REF.bpg.g()===BPG);
    const snap=JSON.parse(JSON.stringify(BPG));SYNC_REF.bpg.s({[wu]:{p:5}});await wait(10);
    T('A-8 받기(s) → BPG 갈아 끼움 · bpgOf 반영',BPG[wu].p===5&&bpgOf(rec(w[F.NO]))===5);SYNC_REF.bpg.s(snap);await wait(10);T('A-8 되돌림',!BPG[wu]);
    T('A-8 지학 unit 매칭 팝업도 산다(✎ 칩 → matchSheet)',typeof matchSheet==='function'&&!!$('#cMatch'));
@@ -120,7 +121,8 @@ TESTS = E.TESTS.split(' async function run(){')[0].replace("if(m[1]==='zzikkapla
    T('§5 서브노트 = notes 저장소 bio/ (빈 판 · 정리판은 판 2)',CUR.NOTE_PATH==='bio/'&&(await notePath(1)).path==='bio/서브노트_1.pdf',await notePath(1));
    /* ===== 판 2 · 정리판 · 줄에 붙이는 층 snote · 수정 큐 · 앱 이름 (_task_bio_app_pan2.md §B + add2~add4 · §C-3~C-5) ===== */
    T('P2-0 add4 앱 이름 = <title> 자과 서재 · 머리 「자과 서재 · 생물」 · SUBJ.bio.TITLE/LOG/NAME 무변',document.title==='자과 서재'&&$('.brand h1').textContent==='자과 서재 · 생물'&&SUBJ.bio.TITLE==='생물 기출 서재'&&SUBJ.bio.LOG==='생물'&&CUR.NAME==='생물');
-   T('P2-1 SYNC_KEYS 20(add1 +bref) · 16째 snote · SYNC_REF.snote · SN 전역 · NOTE_JSON · 층 켜짐',SYNC_KEYS.length===20&&SYNC_KEYS[15]==='snote'&&SYNC_KEYS[16]==='crop'&&SYNC_KEYS[17]==='txt'&&SYNC_KEYS[18]==='tfix'&&SYNC_KEYS[19]==='bref'&&SYNC_REF.snote.g()===SN&&CUR.NOTE_JSON==='bio/정리판/'&&SN_ON===true&&typeof ghRawRepo==='function');
+   /* ★ A-6(a) 9/30 — A-8 과 같은 까닭(c9faff2 §E-7 · 생물 +gg·ggref·pick·link = 24) — 옛 20키 앞자리 그대로 */
+   T('P2-1 SYNC_KEYS 앞 20 그대로(add1 +bref · 셸 +gg·ggref·pick·link 는 뒤에) · 16째 snote · SYNC_REF.snote · SN 전역 · NOTE_JSON · 층 켜짐',SYNC_KEYS.slice(0,20).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,bogi,unit,bpit,bpg,snote,crop,txt,tfix,bref'&&SYNC_KEYS[15]==='snote'&&SYNC_KEYS[16]==='crop'&&SYNC_KEYS[17]==='txt'&&SYNC_KEYS[18]==='tfix'&&SYNC_KEYS[19]==='bref'&&SYNC_REF.snote.g()===SN&&CUR.NOTE_JSON==='bio/정리판/'&&SN_ON===true&&typeof ghRawRepo==='function');
    T('P2-2 지학 19(add1 +bref) · 물리 12 무변(9/5 필터 손질 +link) · 정리판 층은 NOTE_JSON 있는 과목만',SUBJ.earth.SYNC_KEYS.length===19&&SUBJ.earth.SYNC_KEYS[14]==='bpg'&&SUBJ.earth.SYNC_KEYS[15]==='crop'&&SUBJ.earth.SYNC_KEYS[16]==='txt'&&SUBJ.earth.SYNC_KEYS[17]==='tfix'&&SUBJ.earth.SYNC_KEYS[18]==='bref'&&SUBJ.earth.NOTE_JSON===undefined&&SUBJ.phys.NOTE_JSON===undefined&&SUBJ.phys.SYNC_KEYS.length===12);
    await snIndex(true);T('P2-3 index.json 받음 · 1.1 있음 · snHas 1.1=true · 9.9=false',!!SNOTE.idx&&!!SNOTE.idx['1.1']&&snHas('1.1')===true&&snHas('9.9')===false,SNOTE.idx);
    const q11=DATA.find(r=>kindOf(r)==='G'&&secOf(unitOf(r[F.NO]))==='1.1');await openView(q11[F.NO]);await wait(60);
@@ -175,14 +177,16 @@ TESTS = E.TESTS.split(' async function run(){')[0].replace("if(m[1]==='zzikkapla
    $('#bkSn').click();await wait(700);
    T('P2-11 교재 모드 툴바 「📄 정리판」 → 이 쪽 절(4.1) = 아직 없음',!!$('#bkSn')&&SNOTE.sec==='4.1'&&SNOTE.doc===null,[SNOTE.sec]);bkClose();await wait(50);
    treeOpen();await wait(30);T('P2-12 목차 서랍 절 줄 📄 45 · 1.1 만 살아 있음(index) · 1.2 흐림',$$('#trlist .snt').length===45&&!$('#trlist .snt[data-sn="1.1"]').classList.contains('none')&&$('#trlist .snt[data-sn="1.2"]').classList.contains('none'),$$('#trlist .snt').length);
-   $('#trlist .snt[data-sn="1.1"]').click();await wait(400);T('P2-12 📄 → 정리판 1.1 · 서랍은 그대로',SNOTE.sec==='1.1'&&!!SNOTE.doc&&!$('#tree').classList.contains('hide'));
-   /* 필터 add1(9/5): 생물 서랍에도 공통 손잡이 #trGrip — 탭 접기 · 끌기 · 여백 */
-   {const gB=$('#trGrip'),dB=$('#tree');const PEB=(t,x,y)=>gB.dispatchEvent(new PointerEvent(t,{clientX:x,clientY:y,pointerId:6,pointerType:'mouse',bubbles:true,cancelable:true,isPrimary:true}));
-    T('A1 생물 #tree 손잡이 · body.tropen 여백 272',!!gB&&document.body.classList.contains('tropen')&&getComputedStyle(document.body).paddingLeft==='272px');
-    PEB('pointerdown',265,200);await wait(10);PEB('pointerup',266,201);await wait(60);T('A1 생물 탭 → 접힘 13 · SET.tro',dB.classList.contains('fold')&&Math.round(dB.getBoundingClientRect().width)===13&&SET.tro===1);
+   $('#trlist .snt[data-sn="1.1"]').click();await wait(400);T('P2-12 📄 → 정리판 1.1 · 서랍은 그대로',SNOTE.sec==='1.1'&&!!SNOTE.doc&&!$('#navdr').classList.contains('hide'));   /* ★ A-6(a) 9/30 — 셸 add9 §A(68216cf): 서랍 = 첫 화면 왼쪽 상주 서랍 #navdr(옛 #tree 는 걷어 늘 숨음) */
+   /* 필터 add1(9/5): 생물 서랍에도 공통 손잡이 #trGrip — 탭 접기 · 끌기 · 여백
+      ★ A-6(a) 9/30 — 셸 add9 §A(68216cf): 옛 #tree(#trGrip · SET.tro/trw · body.tropen)는 걷었고 그 구실은 상주 서랍 #navdr 이 맡는다 —
+      #ndGrip 탭 = 접기(13px) · 끌기 = 너비(160~420 · 기본 236) · 기기별 localStorage jagwa.nd.fold/w.<과목> · 놓으면 SET.ndw · 여백 body.ndon = --ndw → 같은 세 동작을 그 손잡이로 잰다 */
+   {const gB=$('#ndGrip'),dB=$('#navdr');const PEB=(t,x,y)=>gB.dispatchEvent(new PointerEvent(t,{clientX:x,clientY:y,pointerId:6,pointerType:'mouse',bubbles:true,cancelable:true,isPrimary:true}));
+    T('A1 생물 상주 서랍 #ndGrip 손잡이 · body.ndon 여백 236',!!gB&&document.body.classList.contains('ndon')&&getComputedStyle(document.body).paddingLeft==='236px',[!!gB,getComputedStyle(document.body).paddingLeft]);
+    PEB('pointerdown',265,200);await wait(10);PEB('pointerup',266,201);await wait(60);T('A1 생물 탭 → 접힘 13 · jagwa.nd.fold.bio',dB.classList.contains('fold')&&Math.round(dB.getBoundingClientRect().width)===13&&localStorage.getItem('jagwa.nd.fold.bio')==='1',[dB.getBoundingClientRect().width,localStorage.getItem('jagwa.nd.fold.bio')]);
     PEB('pointerdown',5,200);await wait(10);PEB('pointerup',6,201);await wait(60);PEB('pointerdown',265,200);await wait(10);PEB('pointermove',365,200);await wait(10);PEB('pointerup',365,200);await wait(60);
-    T('A1 생물 끌기 +100 → 372 · SET.trw · 서랍 줄(절 45 · 📄) 무변',!dB.classList.contains('fold')&&Math.round(dB.getBoundingClientRect().width)===372&&SET.trw===372&&$$('#trlist .trsec').length===45&&$$('#trlist .snt').length===45);
-    trSetW(272);SET.trw=272;SET.tro=0;await put('kv','set',SET);}
+    T('A1 생물 끌기 +100 → 336 · SET.ndw · 서랍 줄(절 45 · 📄) 무변',!dB.classList.contains('fold')&&Math.round(dB.getBoundingClientRect().width)===336&&SET.ndw===336&&$$('#trlist .trsec').length===45&&$$('#trlist .snt').length===45,[dB.getBoundingClientRect().width,SET.ndw]);
+    ndSetW(236);delete SET.ndw;await put('kv','set',SET);}
    treeClose();
    await openView(q11[F.NO]);await wait(60);T('P2-4 없는 절 카드 칩 = 「📄 아직 없음」',(()=>{const r=DATA.find(x=>secOf(unitOf(x[F.NO]))==='1.2');return !!r&&snChip(r).includes('아직 없음')})());
    /* 백업/복원에 snote(+카드 층 키) */
@@ -282,10 +286,10 @@ def main():
     s = open(SRC, encoding='utf-8').read()
     samples = [r['문항'][:18] for r in rows if len(r['문항']) > 30][:5] + [r['해설'][:18] for r in rows if len(r['해설']) > 30][:3]
     T2('D11 앱에 생물 본문 문자열 0(표본 8)', not any(x in s for x in samples), [x for x in samples if x in s])
-    T2('배달 pdf 45 · 25MB 초과 0 · img 196', len(idx) == 45 and all(os.path.getsize(os.path.join(SPD, 'pdf', v['file'])) < 25 * 1048576 for v in idx.values()) and len([f for f in os.listdir(os.path.join(SPD, 'img')) if f.endswith('.jpg')]) == 196)
+    T2('배달 pdf 45 · 25MB 초과 0 · img 196', len(idx) == 45 and all(os.path.getsize(os.path.join(SPD, 'pdf', v['file'])) < 25 * 1048576 for v in idx.values()) and len([f for f in os.listdir(os.path.join(SPD, 'img')) if f.endswith('.jpg') and not f.startswith('ref')]) == 196)   # ★ A-6(d) 9/30 — 참고 그림 ref*.jpg 39 는 bio_ocrfix(studyplandata 550ee2e5 · 9/25)가 같은 폴더에 더한 것 · 문항 그림은 196 그대로
     T2('백틱 짝', s.count('`') % 2 == 0)
     lay = s[s.index('/*EARTH:js*/'):s.index('/*/EARTH:js*/')]
-    T2('층 안 EARTH.·earthdata·bio/ 하드코딩 0 · if(CARD_LAYER) 하나', 'EARTH.' not in lay and "'earthdata'" not in lay and "'bio/" not in lay and lay.count('if(CARD_LAYER){') == 1)
+    T2('층 안 EARTH.·earthdata·bio/ 하드코딩 0 · 층 머리 가드 = if(SHELL)(셸 세 과목 · 카드 몫은 if(HASBOOK))', 'EARTH.' not in lay and "'earthdata'" not in lay and "'bio/" not in lay and lay.split('\n')[2] == 'if(SHELL){')   # ★ A-6(a) 9/30 — 셸 이식(c9faff2): 층 머리 if(CARD_LAYER){ → if(SHELL){
     T2('A-9 물리 F 16 무변 · CIRC5 자리 값 무변 · SUBJ.phys 무변(9/5 필터 손질: SYNC_KEYS 12째 link 반영)', 'const F={NO:0,PG:1,FILE:2,FPG:3,BIG:4,SUB:5,LNO:6,STAR:7,TYPE:8,CODE:9,YEAR:10,SRC:11,LV:12,ANS:13,BODY:14,VLT:15};' in s and s.count("const CIRC5='①②③④⑤';") == 1 and "phys:{DB:'phys535', PDF_DIR:'phys/pdf/', REC_PATH:'phys/기록.json', SYNC_PREFIX:'phys_sync_',\n        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','link'],   /* 2026-09-05 필터 손질 B-4: link = 「연결」(한 방향 · 12째) */\n        TITLE:'물리 535 서재', LOG:'물리535', DATA:'인라인 DATA', NAME:'물리', ready:true}," in s.replace('\r\n', '\n'))
     T2('A-9 SUBJ.earth = 19 키(add1: +bref) · BOOK_PDF_ADD 11 · ready', "SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg','crop','txt','tfix','bref']," in s and "BOOK_PDF_ADD:11," in s and "TITLE:'지학 기출 서재', LOG:'지학', NAME:'지학', LAYER:true, ready:true}" in s)
     T2('A-10 제어문자 0 · U+FFFD 0', not any(ord(c) < 32 and c not in '\t\r\n' for c in s) and '\ufffd' not in s)

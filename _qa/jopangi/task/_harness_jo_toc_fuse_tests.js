@@ -86,7 +86,7 @@ window.__HT={
   async openMok(no){const i=Mi(no);S.mok='__mg'+i;S.oxPage=null;await __HT.rr();return i;},
   cards(){const map={};Object.values(VJ.P7map||{}).forEach(z=>{map['qb-'+k7(z)]=z;});
     return [...document.querySelectorAll('#slot .main .qwrap, #slot .main .jimun, #slot .main [id^="qb-"]')].filter(e=>e.id&&e.id.startsWith('qb-')).map(e=>{
-      const z=map[e.id];const seq=e.querySelector('.oxseq');return {id:e.id,p7:z?z.id:null,sun:z?z.순:null,seq:seq?txt(seq):null,inCase:!!e.closest('.p7case')};});},
+      const z=map[e.id];const seq=e.querySelector('.oxseq')||e.querySelector('.mlnbk');   /* A-6(a) 9/30 — mbsame §B-1: 머리 순번 .oxseq 걷고 지문 앞 책 번호 .mlnbk(「1번 - (1)」) · 옛 앱은 .oxseq 그대로 */return {id:e.id,p7:z?z.id:null,sun:z?z.순:null,seq:seq?txt(seq):null,inCase:!!e.closest('.p7case')};});},
   cases(){return [...document.querySelectorAll('#slot .main .p7case')].map(b=>({h:txt(b.querySelector('.p7cash')),t:txt(b.querySelector('.p7cast')).slice(0,40),n:b.querySelectorAll('[id^="qb-"]').length,vis:vis(b)}));},
   oxBtn(key,v){const c=document.getElementById('qb-'+key);if(!c)return null;const b=c.querySelector('.mboxb.'+v);return b?Object.assign(hitOn(b),{sel:b.classList.contains('sel')}):null;},
   oxRec(key){try{return oxOf(key)||null;}catch(e){return null;}},

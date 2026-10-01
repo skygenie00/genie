@@ -439,8 +439,9 @@ def g8b(br, eng):
 def d9():
     have = [g for g in NEW14 if os.path.isfile(os.path.join(IMG, 'p%s.jpg' % g))]
     T('9', 'jagwa/img 에 새 그림 14 장(p<ts>.jpg · 긴 변 1000 · JPEG) — %s' % IMG, len(have) == 14, {'있음': len(have)})
-    head = set(x for x in git('ls-tree', '--name-only', 'HEAD', 'jagwa/img/').decode('utf-8').split('\n') if x)
-    T('9-헛', '헛잣대 바탕(HEAD) — 그 14 장 없음', not any(('jagwa/img/p%s.jpg' % g) in head for g in NEW14), {'HEAD 에 있음': sum(1 for g in NEW14 if ('jagwa/img/p%s.jpg' % g) in head)})
+    # ★ A-6(d) 9/30 _task_qa_baseline — 헛잣대 바탕을 HEAD 가 아니라 인도 앞 판 fd911d5(penfinger_add2)로 박는다 — 인도(fb89ad2) 뒤 HEAD 에는 그 14 장이 이미 있다
+    head = set(x for x in git('ls-tree', '--name-only', 'fd911d5', 'jagwa/img/').decode('utf-8').split('\n') if x)
+    T('9-헛', '헛잣대 바탕(fd911d5) — 그 14 장 없음', not any(('jagwa/img/p%s.jpg' % g) in head for g in NEW14), {'fd911d5 에 있음': sum(1 for g in NEW14 if ('jagwa/img/p%s.jpg' % g) in head)})
 
 
 PARTS = [('1', g1), ('2', g2), ('3', g3), ('4', g4), ('7', g7), ('8', g8b)]
@@ -450,7 +451,7 @@ APPS = {}
 def main():
     t0 = time.time()
     APPS['NEW'] = io.open(NEWF, encoding='utf-8').read()
-    APPS['BASE'] = git('show', 'HEAD:jagwa/index.html').decode('utf-8')
+    APPS['BASE'] = git('show', 'fd911d5:jagwa/index.html').decode('utf-8')   # ★ A-6(d) 9/30 _task_qa_baseline — 헛잣대 바탕 = 인도 앞 판 fd911d5(penfinger_add2 · docstring 「바로 앞 인도판」 · 인도 결과 「BASE HEAD 775457c」 = 같은 jagwa) · 인도(fb89ad2) 뒤 HEAD 는 이 판 자신
     if not ONLY or '9' in ONLY:
         d9()
     with sync_playwright() as pw:
@@ -470,7 +471,7 @@ def main():
     npass = sum(1 for r in RES if r[2] is True); nfail = sum(1 for r in RES if r[2] is False)
     print('\n== PASS %d · FAIL %d · %.0f초' % (npass, nfail, time.time() - t0))
     with io.open(OUTF, 'a', encoding='utf-8') as f:
-        f.write('\n==== %s · phone_win · NEW %s(md5 LF %s) · BASE HEAD %s · 그림 %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), NEWF,
+        f.write('\n==== %s · phone_win · NEW %s(md5 LF %s) · BASE fd911d5 · genie HEAD %s · 그림 %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), NEWF,
                 hashlib.md5(APPS['NEW'].replace('\r\n', '\n').encode('utf-8')).hexdigest()[:8], git('rev-parse', '--short', 'HEAD').decode().strip(), IMG, ','.join(ENGS)))
         for g, n, ok, d in RES:
             f.write('%s | %s · %s | %s\n' % ({True: 'PASS', False: 'FAIL', None: 'INFO'}[ok], g, n, (d if isinstance(d, str) else json.dumps(d, ensure_ascii=False, default=str))[:900]))

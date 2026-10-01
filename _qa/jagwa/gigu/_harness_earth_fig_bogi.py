@@ -60,7 +60,7 @@ def _ensure_base():
         b = open(alt, 'rb').read()
         if hashlib.md5(b.replace(b'\r\n', b'\n')).hexdigest() == BASE_MD5:
             return alt
-    for rev in ('a9f9fd4~1', '57ebb08', 'HEAD~1'):
+    for rev in ('cd248a5', 'a9f9fd4~1', '57ebb08', 'HEAD~1'):   # ★ A-6(d) 9/30 — 고침 전 = cd248a5(fig_bogi 인도 d8a7d2e 바로 앞 · md5(LF) e6c34eb7 · git show 셈) — 'HEAD~1' 은 인도 때만 맞았다
         try:
             b = subprocess.run(['git', '-C', GENIE, 'show', rev + ':jagwa/index.html'],
                                capture_output=True).stdout
@@ -186,7 +186,10 @@ BODY_EARTH = r"""
    FL.past='y';FL.q='';FL.unit='';FL.bigs=[];FL.subs=[];FL.round='';FL.mark='';
    TFIX={};await saveTFIX();
    draw(); await wait(300);
-   const UF='G52-07';                       /* 그림 + 보기 ㄱ~ㄹ (화면 코드 G15-52-7) */
+   /* ★ A-6(a) 9/30 둘째 바퀴 — jagwa_uid(genie 5e18424 + studyplandata 4a011475 · 결정로그 9/29 15:09 · _task_jagwa_uid.md 234줄 「옛 번호를 박은 하네스 셋을 새 번호로」 —
+      이 하네스는 그때 바탕 사본을 못 찾아 못 돌아 빠졌다): 기록 열쇠 = 새 uid(renderCard uid=r[F.CODE] · ✕→tfixSet · O·△·X→BG) — 옛 G52-07 로 TFIX·BG·figHid·tfixAny 를 읽으면
+      비고, 바탕 앱(cd248a5 · rowByUid = F.CODE 만)은 옛 번호로 행을 못 찾아 헛잣대 run 이 밑준비에서 통째로 터진다 · ⚠ run() 의 지학 기록 박기(b90a4d52)와 짝 */
+   const UF='G15-52-07';                    /* 그림 + 보기 ㄱ~ㄹ (옛 uid G52-07 · 화면 코드 = 새 uid) */
    const NOF=rowByUid(UF)[F.NO];
    N('밑준비',{subj:SUBJ_ID,DATA:DATA.length,UF:UF,코드:codeShow(rowByUid(UF)),
               보기:(rowByUid(UF)[F.BOGI]||[]).map(b=>b.키)});
@@ -486,6 +489,10 @@ def run(mode, secs, src_text):
                 if not os.path.isfile(f):
                     self.send_response(404); self.end_headers(); return
                 b = open(f, 'rb').read()
+                if rel == 'earth/기록.json':   # ★ A-6(d) 9/30 둘째 바퀴 — 지학 기록은 인도(d8a7d2e · 9/20 21:36) 바로 앞 기록 커밋 b90a4d52(savedAt 9/20 12:35Z)로 박는다 —
+                    #   표본 G52-07 에 사용자가 인도 뒤 남긴 기록(글자 고침 7칸 25a5144b 9/21 00:15 · 〈보기〉 4칸 af848326 9/21 00:21)이 jagwa_uid 옮김(jgMigrate)으로
+                    #   표본 새 uid 칸에 들어와 B-0(✎)·A-3(고친 글자 있음) 을 흔든다 · 앞 커밋엔 둘 다 없다(git show 셈)
+                    b = subprocess.run(['git', '-C', SPDROOT, 'show', 'b90a4d52:earth/기록.json'], capture_output=True).stdout or b
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/octet-stream')
                 self.send_header('Content-Length', str(len(b)))
@@ -538,19 +545,21 @@ def static_checks():
     b = open(SRC, 'rb').read()
     s = b.replace(b'\r\n', b'\n').decode('utf-8')
     base = open(BASE, 'rb').read().replace(b'\r\n', b'\n').decode('utf-8')
+    # ★ A-6(d) 9/30 둘째 바퀴 — Z-1·Z-2·Z-11 은 이 판(fig_bogi 인도 d8a7d2e)의 패치 꼴을 잰다 — 지금 판은 뒤 판(add2·add3 · shell_bio_phys c9faff2 · …)이 바꿨다
+    s_fb = subprocess.run(['git', '-C', GENIE, 'show', 'd8a7d2e:jagwa/index.html'], capture_output=True).stdout.replace(b'\r\n', b'\n').decode('utf-8')
     out = []
 
     def T2(n, c, i=''):
         out.append(('PASS' if c else 'FAIL') + ' | ' + n + ('' if c else ' | ' + str(i)))
 
-    blk = s.find('\nif(CARD_LAYER){\n')
-    end = s.find('\n}\n/*/EARTH:js*/')
+    blk = s_fb.find('\nif(CARD_LAYER){\n')
+    end = s_fb.find('\n}\n/*/EARTH:js*/')
     keys = ['var tfixSlotsOf=', 'var figHid=', 'var tfixLabel=', 'var tfixBKey=']
-    T2('Z-1 새 갈래가 if(CARD_LAYER) 블록 안이다', blk >= 0 and all(blk < s.find(k) < end for k in keys),
-       [(k, s.find(k)) for k in keys if not (blk < s.find(k) < end)])
+    T2('Z-1 새 갈래가 if(CARD_LAYER) 블록 안이다', blk >= 0 and all(blk < s_fb.find(k) < end for k in keys),
+       [(k, s_fb.find(k)) for k in keys if not (blk < s_fb.find(k) < end)])
     T2('Z-2 새 kv·새 SYNC 키를 안 만들었다 — tfix 한 통뿐',
-       s.count("SYNC_REF.") == base.count("SYNC_REF.") and "put('kv','tfix',TFIX)" in s
-       and s.count("put('kv','") == base.count("put('kv','"))
+       s_fb.count("SYNC_REF.") == base.count("SYNC_REF.") and "put('kv','tfix',TFIX)" in s_fb
+       and s_fb.count("put('kv','") == base.count("put('kv','"))
     T2('Z-3 TFIX_SLOTS 에 fig 를 안 넣었다',
        "TFIX_SLOTS=['q','c1','c2','c3','c4','c5','s'];" in s and "'fig'" not in s.split('var tfixSlotsOf=')[1][:200])
     T2('Z-4 tfixAny·tfixHay 가 tfixSlotsOf 를 쓴다',
@@ -567,8 +576,8 @@ def static_checks():
     T2('Z-9 줄끝이 원본과 같다(CRLF)', b.count(b'\r\n') == b.count(b'\n') and b.count(b'\r\n') > 0)
     T2('Z-10 본판 대비 늘기만 했다', len(s) > len(base))
     T2('Z-11 지운 본판 줄이 손댄 자리뿐이다',
-       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s) <= 10,
-       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s))
+       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s_fb) <= 10,
+       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s_fb))
     return out
 
 
@@ -577,6 +586,9 @@ def main():
            or ['earth', 'bio', 'phys', 'null']
     cur = open(SRC, encoding='utf-8', newline='').read()
     basetxt = open(BASE, encoding='utf-8', newline='').read()
+    # ★ A-6(d) 9/30 둘째 바퀴 — 생물·물리 무변(B·Y)은 이 판 인도판(fig_bogi d8a7d2e)을 고침 전 사본(cd248a5)과 맞댄다 — 지금 판은 뒤 판(shell_bio_phys c9faff2 등)이
+    #   생물·물리를 일부러 바꿨다(결정로그 9/20 22:5x [사용자] · 9/21 02:10) · 첫 바퀴 earth_listpop 같은 꼴(a9f9fd4)
+    fbtxt = subprocess.run(['git', '-C', GENIE, 'show', 'd8a7d2e:jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
     lines = []
     W = int(os.environ.get('HARNESS_WAIT', '1500'))
 
@@ -587,7 +599,7 @@ def main():
         ls, _ = run('earth', W, cur)
         lines += ls
     if 'bio' in want:
-        ls, sn = run('bio', W, cur)
+        ls, sn = run('bio', W, fbtxt)
         lines += ls
         ls0, sn0 = run('biobase', W, basetxt)
         T2('B-3 고침 전 사본도 끝까지 돌았다', bool(sn and sn0), [bool(sn), bool(sn0)])
@@ -599,7 +611,7 @@ def main():
                 T2('B-3 ★생물 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sn.get(k) == sn0.get(k),
                    [str(sn.get(k))[:140], str(sn0.get(k))[:140]])
     if 'phys' in want:
-        ls, sn = run('phys', W, cur)
+        ls, sn = run('phys', W, fbtxt)
         lines += ls
         ls0, sn0 = run('physbase', W, basetxt)
         T2('Y-3 고침 전 사본도 끝까지 돌았다', bool(sn and sn0), [bool(sn), bool(sn0)])

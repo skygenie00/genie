@@ -34,7 +34,7 @@ MBP = ARG('--mbpdf', _roots.mbpdf())
 W8 = os.path.join(MBP, 'words', 'patent_hr8')
 PDF8 = os.path.join(JOP, '특상디', '_pdf', '특허법 해례 기출 객관식 제8판.pdf')
 BAKE = os.path.join(_NR, 'minbeop', 'script', '_book_words_build.py')
-sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', 'HEAD'] + (['--exam', _EXAM] if _EXAM else [])
+sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', '775457c'] + (['--exam', _EXAM] if _EXAM else [])   # A-6(d) 9/30 — 바탕 = 인도 때 HEAD 775457c(결과 머리 「바탕 HEAD 775457c」) · HEAD 로 두면 인도 뒤 헛잣대·바탕 대조가 새 판끼리 맞대 거꾸로 FAIL
 sys.path.insert(0, HERE)
 sys.path.insert(0, JOP)
 import _harness_jo_gaek_mbsame as M   # noqa: E402
@@ -481,8 +481,8 @@ def main():
     npass = sum(1 for r in RES if r[2] is True); nfail = sum(1 for r in RES if r[2] is False)
     print('\n== PASS %d · FAIL %d · %.0f초' % (npass, nfail, time.time() - t0))
     with io.open(OUTF, 'a', encoding='utf-8') as f:
-        f.write('\n==== %s · %s · NEW %s · 데이터 %s · 바탕 HEAD %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), 'book8', os.path.basename(_NEW), _DATA,
-                M.git('rev-parse', '--short', 'HEAD').decode().strip(), ','.join(ENGS)))
+        f.write('\n==== %s · %s · NEW %s · 데이터 %s · 바탕 %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), 'book8', os.path.basename(_NEW), _DATA,
+                M.git('rev-parse', '--short', M.BASE_REV).decode().strip(), ','.join(ENGS)))   # A-6(d) 적히는 바탕 = 실제 바탕
         for g, n, ok, d in RES:
             f.write('%s | %s · %s | %s\n' % ({True: 'PASS', False: 'FAIL', None: 'INFO'}[ok], g, n, (d if isinstance(d, str) else json.dumps(d, ensure_ascii=False, default=str))[:900]))
         f.write('== PASS %d · FAIL %d\n' % (npass, nfail))

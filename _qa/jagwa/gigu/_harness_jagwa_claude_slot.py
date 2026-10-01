@@ -474,6 +474,10 @@ def static_checks():
     raw = open(SRC, 'rb').read()
     s = raw.replace(b'\r\n', b'\n').decode('utf-8')
     base = base_text()
+    # ★ A-6(d) 9/30 _task_qa_baseline — 아래 셋(소스 「GPT」 한 줄 · syncGptBtn 수 · 사라진 바탕 줄)은 이 판(claude_slot) 인도 검산이다 → 새 쪽을 인도 판 f810502 로 박는다
+    #   (두 커밋 사이 0c19a60 ↔ f810502 · 인도 결과 _harness_jagwa_claude_slot_result_20260922.txt 176/0 · 결정로그 9/22 00:49). 뒤 판이 뜻해서 소스를 바꿨다 —
+    #   add1 007fde4 §A-3 syncGptBtn 3→7 · jagwa_search eb1113e A-1 이 옛 기록 주석(add5 · 「GPT」)이 든 FL.q 덩이를 뗌 · 사라진 줄 28 → 110(뒤 판 여럿). 그 밖 칸은 지금 소스(s)
+    s_dl = subprocess.run(['git', '-C', GENIE, 'show', 'f810502:jagwa/index.html'], capture_output=True).stdout.replace(b'\r\n', b'\n').decode('utf-8')
 
     # ── 줄끝 ──
     T('CL-Z 줄끝이 CRLF 그대로다(외톨이 LF 0)',
@@ -481,7 +485,7 @@ def static_checks():
       [raw.count(b'\r\n'), raw.replace(b'\r\n', b'').count(b'\n')])
 
     # ── §A-1 보이는 글자 ──
-    vis = [l for l in s.split('\n') if 'GPT' in l]
+    vis = [l for l in s_dl.split('\n') if 'GPT' in l]   # ★ A-6(d) — 인도 판 f810502(위 s_dl) · jagwa_search(eb1113e)가 그 주석 줄을 뗐다
     T('CL-Z 소스에 남은 「GPT」 는 옛 기록 주석 한 줄뿐이다',
       len(vis) == 1 and 'add5' in vis[0], [v.strip()[:90] for v in vis])
 
@@ -496,7 +500,7 @@ def static_checks():
                     (r'id="tGpt"', '단추 id tGpt'),
                     (r'class="tag gp"', '태그 class gp'),
                     (r'\bsyncGptBtn\b', 'syncGptBtn')]:
-        a, b = len(re.findall(pat, s)), len(re.findall(pat, base))
+        a, b = len(re.findall(pat, s_dl if ko == 'syncGptBtn' else s)), len(re.findall(pat, base))   # ★ A-6(d) — syncGptBtn 만 인도 판 f810502(add1 §A-3 이 부름 넷을 더함 · 이름은 그대로)
         T('CL-2 데이터 이름 무변 — %s : 바탕과 같은 수다' % ko, a == b and a > 0, [a, b])
 
     for i, ln in enumerate(base.split('\n')):
@@ -508,7 +512,7 @@ def static_checks():
     T('CL-Z 바탕보다 줄이 늘기만 했다',
       len(s.split('\n')) >= len(base.split('\n')),
       [len(s.split('\n')), len(base.split('\n'))])
-    gone = [l for l in set(base.split('\n')) - set(s.split('\n')) if l.strip()]
+    gone = [l for l in set(base.split('\n')) - set(s_dl.split('\n')) if l.strip()]   # ★ A-6(d) — 인도 판 f810502(위 s_dl)
     T('CL-Z 사라진 바탕 줄은 gptSheet·글자 고친 자리뿐이다 (%d줄)' % len(gone),
       len(gone) <= 48, [g.strip()[:70] for g in gone[:12]])
     N('CL-Z 사라진 바탕 줄', [g.strip()[:70] for g in gone])
@@ -525,7 +529,8 @@ def static_checks():
     # ── §A-3 파일 ──
     for f, mat in [('phys_72.html', os.path.join(MAT, 'phys_72.html'))]:
         p = os.path.join(MOTDIR, f)
-        ok = os.path.isfile(p) and open(p, 'rb').read() == open(mat, 'rb').read()
+        # ★ A-6(d) 9/30 _task_qa_baseline — 줄끝만 뺀 바이트로 맞댄다: 새로 만든 작업트리(qa 워크트리 · core.autocrlf)는 CRLF 로 풀림(6,159 = 6,093 + 66) · git blob = 재료(LF) 그대로
+        ok = os.path.isfile(p) and open(p, 'rb').read().replace(b'\r\n', b'\n') == open(mat, 'rb').read().replace(b'\r\n', b'\n')
         T('CL-Z motion/%s 이 재료와 바이트가 같다' % f, ok,
           [os.path.getsize(p) if os.path.isfile(p) else None, os.path.getsize(mat)])
     ij = os.path.join(MOTDIR, 'index.json')
@@ -613,16 +618,19 @@ def main():
         lines += [x.replace('| CL', '| [%s] CL' % tag, 1) for x in r]
 
     # ── 카드 층(생물·지학) 태그·✓ 는 바탕과 **같아야** 한다(글자만 달라진다) ──
+    # ★ A-6(a) 9/30 _task_qa_baseline — claude_slot_add1(genie 007fde4 · 결정로그 9/22 02:36 · _task_jagwa_claude_slot_add1.md §A-3 ✓ 따라오기 · §A-5 목록 줄 보라 태그
+    #   5308 `PH&&` 걷음)부터 카드 층도 물리처럼 글 넣은 줄에 보라 「Claude」 태그 하나 · 단추 「Claude ✓」 가 선다(바탕 0c19a60 은 태그 0 · 「GPT」) — 새 기대로
     for sub, ko in (('bio', '생물'), ('earth', '지학')):
         a, b = meas.get(sub), meas.get(sub + 'base')
         if a is None or b is None:
             continue
-        lines.append(('PASS' if a['tags'] == b['tags'] else 'FAIL')
-                     + ' | CL-1 [%s] 목록 보라 태그 동작이 바탕과 같다(물리 갈래라 둘 다 0개)' % ko
-                     + ('' if a['tags'] == b['tags'] else ' | ' + json.dumps([a['tags'], b['tags']], ensure_ascii=False)))
-        ok = (b['btn'] == 'GPT' and a['btn'] == 'Claude')
+        okt = a['tags'] == ['Claude'] and b['tags'] == []
+        lines.append(('PASS' if okt else 'FAIL')
+                     + ' | CL-1 [%s] 목록 보라 태그 = 글 넣은 줄 「Claude」 하나(add1 §A-5 · 바탕 0개)' % ko
+                     + ('' if okt else ' | ' + json.dumps([a['tags'], b['tags']], ensure_ascii=False)))
+        ok = (b['btn'] == 'GPT' and a['btn'] == 'Claude ✓')
         lines.append(('PASS' if ok else 'FAIL')
-                     + ' | CL-1 [%s] 툴바 단추 = 바탕 「GPT」 자리에 「Claude」(✓ 는 바탕도 안 붙는다)' % ko
+                     + ' | CL-1 [%s] 툴바 단추 = 바탕 「GPT」 자리에 「Claude ✓」(add1 §A-3 ✓ 따라옴 · 바탕은 ✓ 없음)' % ko
                      + ('' if ok else ' | ' + json.dumps([b['btn'], a['btn']], ensure_ascii=False)))
     # ── SYNC_KEYS **실행값**이 세 과목 다 바탕과 같은 배열인가(§B-2) ──
     for sub, ko in (('phys', '물리'), ('bio', '생물'), ('earth', '지학')):

@@ -57,7 +57,8 @@ window.__RP = {
           let half = false; const st = r.querySelector('.jstarn');
           if (st && st.firstChild && st.firstChild.nodeType === 3 && st.firstChild.nodeValue.length > 2){ const sr = st.getBoundingClientRect(), g = document.createRange();
             g.setStart(st.firstChild, 2); g.setEnd(st.firstChild, 3); const d = g.getBoundingClientRect(); half = d.left < sr.right - 0.5 && d.right > sr.right + 0.5; }
-          return { t: txt(nm), nmw: nr.w, base: true, no: { t: s.slice(0, i), clip: rr.right > nr.r + 0.5 }, half }; } }
+          return { t: txt(nm), nmw: nr.w, base: true, no: { t: s.slice(0, i), clip: rr.right > nr.r + 0.5 }, half,
+                   nmsw: nm.scrollWidth, nmcw: nm.clientWidth, to: getComputedStyle(nm).textOverflow, tip: nm.title || '' }; } }   /* ★ A-6(a) 셋째 바퀴 9/30 — 한 칸 글 줄(두 판 장·절 머리 · 바탕 조 줄)도 말줄임 값(scrollWidth · clientWidth · text-overflow)과 툴팁(title) — 넓은 서랍 잣대가 장 머리에 읽는다(revfix0930 A-5 · 이름 먼저 줄어듦) */
       return { t: txt(nm), nmw: nr.w, nmsw: nm.scrollWidth, nmcw: nm.clientWidth, to: getComputedStyle(nm).textOverflow,
                no: no ? { t: no.textContent, r: noR, clip: noR.r > nr.r + 0.5 || no.scrollWidth > no.clientWidth + 1 } : null,
                tt: tt ? { t: tt.textContent, sw: tt.scrollWidth, cw: tt.clientWidth, to: getComputedStyle(tt).textOverflow } : null,

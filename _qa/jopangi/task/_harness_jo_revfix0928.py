@@ -21,7 +21,7 @@ _NEW, _DATA, _EXAM = ARG('--new'), ARG('--data'), ARG('--exam')
 ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jo_revfix0928_result.txt'))
-sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', 'HEAD'] + (['--exam', _EXAM] if _EXAM else [])
+sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', 'b880a04'] + (['--exam', _EXAM] if _EXAM else [])   # A-6(d) 9/30 — 바탕 = 인도 때 HEAD b880a04(docstring 「jo_wonmun b880a04」 · 결정로그 9/28 07:40) · HEAD 로 두면 인도 뒤 헛잣대·바탕 대조가 새 판끼리 맞대 거꾸로 FAIL
 sys.path.insert(0, HERE)
 import _harness_jo_gaek_mbsame as M   # noqa: E402
 from playwright.sync_api import sync_playwright   # noqa: E402
@@ -208,6 +208,8 @@ def g_r1(p, b, eng):
         res = {}
         for who, q in (('NEW', p), ('BASE', b)):
             q.size(W, H)
+            if who == 'NEW':   # ★ 9/30 A-6 — revfix0929b A-6: 폰(≤480) 부팅 = 1차객 서랍 접힌 채 · 펼친 폰 서랍 바깥 첫 누름은 접기만(DRAWER_EAT) → PC 로 연 판을 줄였으니 폰은 부팅처럼 접고 PC·아이패드는 인도 때처럼 편다
+                q.ev("w=>{S.jtFold=w<=480;return 1}", W)
             res[who] = cf_flow(q, how)
         ok, part = cf_ok(res['NEW'])
         n = res['NEW']
@@ -401,12 +403,14 @@ def g_r4(p, b, eng):
     # 단원 풀이 알약 무변
     up = {}
     for who, q in (('NEW', p), ('BASE', b)):
+        q.ev("()=>{S.jtFold=false;return 1}")   # ★ 9/30 A-6 둘째 바퀴 — revfix0929b A-6: r-2 폰 새로고침이 남긴 1차객 서랍 접힘을 편다(바탕 b880a04 는 폰 부팅 접기가 없어 편 채 — 서랍 폭만큼 .mbbar 자리가 갈렸다 · r2 시험지 mainW 새 1540 · 바탕 1281)
         go_key(q, K0)
         up[who] = q.ev("()=>__RV.unitPill()")
     T(G, u'단원 풀이 알약(채점 ✓ · 마킹 · ◀ 이전) computed = 바탕 그대로', up['NEW'] and up['NEW']['pill'] and up['NEW'] == up['BASE'], {'NEW': up['NEW'], '다름': {k: [up['NEW'].get(k), up['BASE'].get(k)] for k in up['NEW'] if up['NEW'].get(k) != up['BASE'].get(k)} if up['NEW'] else None})
     # 서랍 해 머리 · 회차 줄
     dr = {}
     for who, q in (('NEW', p), ('BASE', b)):
+        q.ev("()=>{S.jtFold=false;return 1}")   # ★ 9/30 A-6 — revfix0929b A-6: r-2 폰(390) 새로고침이 폰 부팅 규칙으로 1차객 서랍을 접어 둔 채 돌아온다(r-7 treeHid 푸는 줄과 같은 까닭) — 편 서랍을 잰다
         home(q)
         q.ev("a=>__RV.exvGo(a[0],a[1])", [2026, 1])
         dr[who] = q.ev("()=>__RV.gy()")
@@ -555,14 +559,17 @@ def g_r7(p, b, eng):
         q.ev("()=>{S.treeW=212;return 1}")
         q.size(1440, 900)
     n2, b2 = names_stat(res['NEW'][212]), names_stat(res['BASE'][212])
-    T(G, u'212px 서랍 — 제2조 정의 이름 다 보임(64/64) · 제14조 ≥ 56 · 조 번호까지 가려진 줄 ≤ 5 · 오른쪽 세 칸 폭 무변',
-      n2['j2'][0] is not None and n2['j2'][0] >= n2['j2'][1] - 1 and (n2['j14'][0] or 0) >= 56 and n2['pClip'] <= 5 and n2['em'] == b2['em'] and n2['n'] == b2['n'],
+    # ★ 9/30 A-6 둘째 바퀴 — joscreen0929 A-1: 줄 끝 jcol3 = [빈칸 점][체크 단추](✏️M·🔗L 걷음 · CSS grid 30px 44px + 틈 4 = 78 · 넓은 서랍 .wide 44px 44px = 92) — 바탕 b880a04 의 세 칸(30·30·26 + 틈 = 94)과 맞대지 않고 새 틀 폭 한 자리로 잰다
+    T(G, u'212px 서랍 — 제2조 정의 이름 다 보임(64/64) · 제14조 ≥ 56 · 조 번호까지 가려진 줄 ≤ 5 · 오른쪽 두 칸(빈칸 점 · 체크) 폭 78 한 자리',
+      n2['j2'][0] is not None and n2['j2'][0] >= n2['j2'][1] - 1 and (n2['j14'][0] or 0) >= 56 and n2['pClip'] <= 5 and n2['em'] == [78] and n2['n'] == b2['n'],
       {'NEW': n2, '바탕': b2})
     T(G + '-헛', u'헛잣대 바탕 212 — 제2조 이름 잘림 · 조 번호 가려진 줄 > 5', b2['j2'][0] is not None and b2['j2'][0] < b2['j2'][1] - 1 and b2['pClip'] > 5, b2)
     for w in (260, 320):
         a, c = res['NEW'][w], res['BASE'][w]
-        same = [x for x, y in zip(a['rows'], c['rows']) if (x['cw'], x['sw'], (x['st'] or {}).get('cw'), x['em']) != (y['cw'], y['sw'], (y['st'] or {}).get('cw'), y['em'])]
-        T(G, u'%dpx 서랍 = 바탕과 같다(이름·★ 개정일·오른쪽 칸 폭 줄마다)' % w, a['n'] == c['n'] and not same and names_stat(a)['shr'] == 0, {'줄': a['n'], '다름': same[:3], 'NEW': names_stat(a)})
+        # ★ 9/30 A-6 둘째 바퀴 — 뒤 판이 줄 꼴을 바꿈: joscreen0929 A-1 줄 끝 두 칸(폭 78 · 넓은 서랍 92 · 이름 칸 +16) · revfix0928pm A-5 이름 = 번호(.jno) + 이름(.jtt 말줄임) 격자(span.nm 이 안 넘쳐 sw = cw) — 줄마다 이름 칸은 바탕보다 안 좁고 · ★ 개정일 칸 = 바탕 · 오른쪽 칸 = 새 틀 폭 한 자리
+        emw = 92 if w >= 300 else 78
+        same = [x for x, y in zip(a['rows'], c['rows']) if x['t'] != y['t'] or x['cw'] < y['cw'] - 1 or (x['st'] or {}).get('cw') != (y['st'] or {}).get('cw') or x['em'] != emw]
+        T(G, u'%dpx 서랍 — 줄마다 이름 칸 ≥ 바탕 · ★ 개정일 칸 = 바탕 · 오른쪽 두 칸(빈칸 점 · 체크) 폭 %d 한 자리' % (w, emw), a['n'] == c['n'] and not same and names_stat(a)['shr'] == 0, {'줄': a['n'], '다름': same[:3], 'NEW': names_stat(a)})
 
 
 BR = {}

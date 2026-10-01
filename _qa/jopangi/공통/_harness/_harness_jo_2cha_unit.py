@@ -265,6 +265,10 @@ def scen_desk(br, eng, tag, src):
                 at = p.ev("([c,x])=>__HU.rowAt(c,x)", [ck, 'title']); ok = p.click(at, 300)
                 R['pops'][ck] = {'ok': ok, 'pop': p.ev("__HU.popRead()")}
                 p.ev("__HU.closePops()")
+                # A-6(a) 줄 클릭 글자는 같은 카드를 popCard4 로 바로 연 새 판 글자와 맞댄다(바탕 d3dd927 팝업 글자는 뒤 판 pop_moknote·c2card·ms_claude_editq 가 바꿈)
+                p.ev("([k,f])=>{popCard4(k,f,null,1);return 1}", ['기출', ck.split('|', 2)[2]])
+                R['pops'][ck]['direct'] = p.ev("__HU.popRead()")
+                p.ev("__HU.closePops()")
             # D-2 단원별
             p.board('민사소송법', '기출', 'unit')
             R['seg_unit'] = p.ev("__HU.seg()")
@@ -300,7 +304,8 @@ def scen_desk(br, eng, tag, src):
             at = p.ev("([c,x,o,n])=>__HU.rowAt(c,x,o,n)", [CK251, 'edit', False, True]); R['twiceAt'] = at; p.click(at, 500)   # 같은 자리(스크롤 없이) 두 번째
             R['twice2'] = p.ev("()=>document.querySelectorAll('.pop.c2uw').length")
             # C-8 기록 왕복 · SYNC_KEYS
-            R['keys'] = p.ev("__HU.syncKeys()")
+            # A-6(a) 옛 키가 앞자리 그대로인지 재려고 SYNC_KEYS 전체 목록도 받는다
+            R['keys'] = p.ev("()=>Object.assign(__HU.syncKeys(),{all:SYNC_KEYS.slice()})")
             R['rec'] = p.ev("__HU.recRoundtrip()")
             # 되돌리기 → 원자리 · 칸 = {auto:true}
             p.board('민사소송법', '기출', 'unit')
@@ -566,11 +571,13 @@ def report(RES, base, new):
     sb, sn = RES['src']['base'], RES['src']['new']
     T('착수 바탕 %s = 969,250 B(CRLF) 판 · md5(LF) d8f33f90…' % BASE_REV, sb[1] == BASE_MD5_LF, sb)
     T('NEW 작업트리 CRLF 그대로(LF 단독 0 · %d 줄) · %d B · md5(LF) %s' % (sn[2], sn[0], sn[1]), sn[2] == sn[3], sn)
-    ch = sorted(l for l in git('status', '--porcelain').decode('utf-8').split('\n') if l.strip())
-    T('genie 작업트리 바뀐 것 = jo/index.html + jo/data/%s 둘뿐 %s' % (UNIT_FILE, ch), ch == sorted([' M ' + REL, '?? jo/data/' + UNIT_FILE]) or ch == sorted([' M ' + REL, 'A  jo/data/' + UNIT_FILE])
-       or (ch == [' M ' + REL] and git('ls-files', 'jo/data/' + UNIT_FILE).strip() != b''), ch)   # v4 부터 = 데이터는 54ced94 에 이미 올라 갔다
+    # A-6(d) 인도 검산 = 2cha_unit 두 커밋(54ced94·b2f7338 · 부모 d3dd927)이 바꾼 것 — 작업트리 git status 는 인도 전에만 선다
+    ch = sorted(l for l in git('diff', '--name-status', 'd3dd927', 'b2f7338').decode('utf-8').split('\n') if l.strip())
+    T('genie 작업트리 바뀐 것 = jo/index.html + jo/data/%s 둘뿐 %s' % (UNIT_FILE, ch), ch == sorted(['M\t' + REL, 'A\tjo/data/' + UNIT_FILE]), ch)
     nl, bl = new.replace('\r\n', '\n'), base.replace('\r\n', '\n')
-    skn = re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\]', nl, re.S).group(1))
+    # A-6(d) 「옛 30키 + 끝에 c2unit」 은 2cha_unit 판 성질 — 인도판(b2f7338) 소스로 잰다(뒤 판들이 키를 더함: dd9d89f canvasjari … ffafcb0 jocheck)
+    nl_c5 = git('show', 'b2f7338:' + REL).decode('utf-8').replace('\r\n', '\n')
+    skn = re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\]', nl_c5, re.S).group(1))
     skb = re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\]', bl, re.S).group(1))
     T('§C-5 SYNC_KEYS = 옛 30키 그대로 + 끝에 c2unit (31키)', skn == skb + ['c2unit'] and len(skn) == 31, [len(skb), skn[-3:]])
     T('§B-1 C2_UNIT_READY 상수 → c2UnitReady() 함수(상수 0)', 'C2_UNIT_READY' not in nl and 'function c2UnitReady()' in nl)
@@ -613,8 +620,8 @@ def report(RES, base, new):
           and all(t.startswith('📄 ') for t in g(cp, 'pop', 'titles') or []) and g(cp, 'pop', 'sel') is None, cp)
         for ck in POPS3:
             pn, pb = g(N, 'pops', ck) or {}, g(Bd, 'pops', ck) or {}
-            T(E + 'D-4 줄 클릭 → 카드 팝업 · 글자 = 바탕 .ctitle 클릭 팝업 그대로 — %s' % ck[:30],
-              pn.get('ok') and pb.get('ok') and g(pn, 'pop', 'n') == 1 and g(pn, 'pop', 'text') == g(pb, 'pop', 'text') and g(pn, 'pop', 'sel') == ck,
+            T(E + 'D-4 줄 클릭 → 카드 팝업 · 글자 = 같은 카드 popCard4 팝업 그대로 — %s' % ck[:30],
+              pn.get('ok') and pb.get('ok') and g(pn, 'pop', 'n') == 1 and g(pn, 'pop', 'text') == g(pn, 'direct', 'text') and g(pn, 'pop', 'sel') == ck,
               [pn.get('ok'), pb.get('ok'), (g(pn, 'pop', 'text') or '')[:80], (g(pb, 'pop', 'text') or '')[:80]])
         # D-2 단원별
         U0 = N.get('unit') or {}
@@ -688,7 +695,8 @@ def report(RES, base, new):
               [len(lr.get('rows') or []), sum(h['cnt'] for h in lr.get('heads', []))])
         # C-8
         ky, rc = N.get('keys') or {}, N.get('rec') or {}
-        T(E + 'C-5 SYNC_KEYS 31 · 끝 = jopangi.c2unit', ky.get('n') == 31 and ky.get('last') == 'jopangi.c2unit', ky)
+        # A-6(a) 본 세션 9/30 — 그 판이 더한 키(c2unit)가 있고 옛 30키(skb = d3dd927)가 앞자리 그대로 · 키가 더 늘어도 안 뒤집힌다
+        T(E + 'C-5 SYNC_KEYS 에 jopangi.c2unit 있음 · 옛 30키 앞자리 그대로(순서 보존)', ky.get('has') and (ky.get('all') or [])[:len(skb)] == ['jopangi.' + x for x in skb], ky)
         T(E + 'C-8 ⤓ 기록 — 내보내기에 c2unit 층 · 지웠다 들여오면 되살아남 · 건수에 듦 · 이름표 「🧩 2차 단원 …」',
           rc.get('inDump') and rc.get('mid') is None and rc.get('after') == rc.get('before') and rc.get('before') and rc.get('stat') and rc['stat'][0] >= 1
           and (rc.get('label') or '').startswith('🧩 2차 단원'), rc)

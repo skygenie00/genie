@@ -20,7 +20,7 @@ _NEW, _DATA, _EXAM = ARG('--new'), ARG('--data'), ARG('--exam')
 ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jo_hdrfold_result.txt'))
-sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', 'HEAD'] + (['--exam', _EXAM] if _EXAM else [])
+sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', '06b95c4'] + (['--exam', _EXAM] if _EXAM else [])   # A-6(d) 9/30 — 바탕 = 인도 때 HEAD 06b95c4(결정로그 9/28 11:48 「헛잣대 = 06b95c4 의 jo = d6cf661」) · HEAD 로 두면 인도 뒤 헛잣대·바탕 대조가 새 판끼리 맞대 거꾸로 FAIL
 sys.path.insert(0, HERE)
 import _harness_jo_gaek_mbsame as M   # noqa: E402
 from playwright.sync_api import sync_playwright   # noqa: E402
@@ -108,6 +108,8 @@ def g_h2(p, b, eng):
     for who, q in (('NEW', p), ('BASE', b)):
         q.size(W, H)
         q.ev("()=>{localStorage.removeItem('jopangi_ui');S.hdrFold=false;return 1}")
+        if who == 'NEW':   # ★ 9/30 A-6 — revfix0929b A-6: 폰 부팅 = 1차객 서랍 접힌 채 · 펼친 폰 서랍 바깥 첫 누름은 접기만(DRAWER_EAT) → 안 접으면 세모 첫 누름이 먹혀 h-2~h-5 가 한 박자 밀린다
+            q.ev("()=>{S.jtFold=true;return 1}")
         q.ev("l=>__HF.gaek(l)", u'특허법')
         s[who] = q.ev("()=>__HF.state()")
     q = p

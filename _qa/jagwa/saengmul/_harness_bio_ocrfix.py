@@ -209,8 +209,11 @@ def main():
     b2 = open(NEWQ, 'rb').read()
     T('H-4 적용 두 번 = 같은 결과(멱등) · 왕복 무변 · 검산 OK', b1 == b2 and 'OK  json 왕복 무변' in r1 and '검산 OK' in r1 and '바뀐 칸 0' in r2,
       {'1회': [x for x in r1.splitlines() if '칸' in x or 'md5' in x][:3], '2회': [x for x in r2.splitlines() if '칸' in x][:2]})
-    T('H-4b 옛 판에 입힌 결과 = studyplandata 로컬 지금 bio/문항.json(인도 뒤면 같아야 · 인도 전이면 로컬 = 옛 판)', b1 == now or now == raw,
-      {'옛': hashlib.md5(raw).hexdigest(), '입힌 결과': hashlib.md5(b1).hexdigest(), '로컬 지금': hashlib.md5(now).hexdigest()})
+    # ★ A-6(d) 9/30 — 「인도 뒤」 쪽 = 인도 커밋 b3bb3c3b(add2 인도 · 고침표(add1 499)·스크립트(add2 교재문장·비고 반각) 지금 판의 인도본 · md5 73f4c803) —
+    #   뒤 jagwa_uid(studyplandata 4a011475)가 uid 를 새 꼴로 바꿔 로컬 ≠ 입힌 결과(이 칸 전용 now_dl · 「인도 전이면 로컬 = 옛 판」 쪽은 그대로)
+    now_dl = subprocess.run(['git', '-C', SPDROOT, 'show', 'b3bb3c3b:bio/문항.json'], capture_output=True).stdout
+    T('H-4b 옛 판에 입힌 결과 = studyplandata 인도본 bio/문항.json(b3bb3c3b · add2 인도 = 고침표·스크립트 지금 판 · 인도 전이면 로컬 = 옛 판)', b1 == now_dl or now == raw,
+      {'옛': hashlib.md5(raw).hexdigest(), '입힌 결과': hashlib.md5(b1).hexdigest(), '인도본 b3bb3c3b': hashlib.md5(now_dl).hexdigest(), '로컬 지금': hashlib.md5(now).hexdigest()})
     D0 = json.loads(raw.decode('utf-8')); D1 = json.loads(b1.decode('utf-8'))
     by0 = {r['uid']: r for r in D0}; by1 = {r['uid']: r for r in D1}
     # ── H-1 census ──
@@ -296,10 +299,15 @@ def main():
         nb = pg.evaluate('DATA.length')
         br.close(); srv.shutdown()
         # 헛잣대 · DOM = HEAD(참고 없는 문항)
-        srv, br, pg = launch(pw, head_app, NEWQ, 'bio', 'head')
+        # ★ A-6(d) 9/30 — R-0·K-1 헛잣대의 「고치기 전 앱」 = 인도 때 HEAD f583f11(72a65b3 바로 앞) — HEAD 가 72a65b3 을 담은 뒤로 거저 FAIL(결정로그 9/27 09:08 · 9/28 08:27)
+        #   R-7·K-4(참고 없는 문항·지학·물리 DOM = HEAD)는 그대로 HEAD 로 잰다
+        base_app = subprocess.run(['git', '-C', GENIE, 'show', 'f583f11:jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
+        srv, br, pg = launch(pw, base_app, NEWQ, 'bio', 'base')
         B = probe_rows(pg, ['G57-05'] + [u for u in kset if u != 'G57-05'][:5])
         pg.evaluate("u=>__h.show(u)", 'G57-05'); pg.evaluate("u=>__h.open(u)", 'G57-05'); click_summary(pg); pg.wait_for_timeout(800)
         RH = pg.evaluate("()=>document.querySelectorAll('#card .ocrref').length")
+        br.close(); srv.shutdown()
+        srv, br, pg = launch(pw, head_app, NEWQ, 'bio', 'head')
         noref = [u for u in pool if '참고' not in by1[u]][:3]
         domH = {}
         for u in noref:
@@ -368,7 +376,7 @@ def main():
     T('R-5 크리티컬 탭으로 바꿔도 참고 칸 보임(탭 밖)', bool(bt) and R2 == [True], [bt, R2])
     T('R-6 📋 정리 창 「정답·해설 ▸」 펼침에도 참고 칸 · 그림', bool(J2) and J2.get('n') == 1 and J2.get('vis') == [True] and bool(J2.get('img')) and J2['img'][1] > 0, J2)
     T('R-7 참고 없는 문항 문항 창 DOM = HEAD(같은 새 데이터)', bool(noref) and all(domH[u] == domN[u] for u in noref), {u: domH[u] == domN[u] for u in noref})
-    T('R-0 헛잣대 — HEAD 앱에서 참고 칸 0', RH == 0, RH)
+    T('R-0 헛잣대 — 고치기 전 앱(f583f11 · 72a65b3 바로 앞)에서 참고 칸 0', RH == 0, RH)
     # K
     kc = [(u, (A.get(u) or {}).get('closed') or {}) for u in kset]
     closed_vis = [(u, sum(1 for v in (c.get('bv') or {}).values() if v)) for u, c in kc]
@@ -378,7 +386,7 @@ def main():
     T('K-2 펼침 보임 = 설명 수', all(a == b for _, a, b in open_ok), [x for x in open_ok if x[1] != x[2]][:5])
     T('K-2 다시 접기 0 · 다른 문항으로 넘어가도 0(문항마다 새로 열 때 닫힘)', all(n == 0 for _, n in recl), [x for x in recl if x[1]][:5])
     bh = (B.get('G57-05') or {}).get('closed') or {}
-    T('K-1 헛잣대 — HEAD 앱에서 G57-05 닫힘인데 설명 보임 3/3(FAIL 이어야 할 옛 동작)', sum(1 for v in (bh.get('bv') or {}).values() if v) == 3, bh.get('bv'))
+    T('K-1 헛잣대 — 고치기 전 앱(f583f11)에서 G57-05 닫힘인데 설명 보임 3/3(FAIL 이어야 할 옛 동작)', sum(1 for v in (bh.get('bv') or {}).values() if v) == 3, bh.get('bv'))
     T('K-3 새는 숨김 전수 — [hidden] 인데 화면 기준 보이는 요소 0(첫 화면 · 문항 닫힘·펼침 · 정리 창 · 교재 창)', all(not v for v in leak.values()), leak)
     T('K-4 지학·물리 첫 화면·문항 창 DOM 글자 = HEAD', all(v[0] == v[1] for v in other.values()), {k: [v[0][:80], v[1][:80]] if v[0] != v[1] else '같음' for k, v in other.items()})
     N('K-5 스크린샷(사람 눈 확인 · 게이트 아님)', [os.path.join(SHOTS, 'K_G57-05_닫힘.png'), os.path.join(SHOTS, 'K_G57-05_펼침.png')])

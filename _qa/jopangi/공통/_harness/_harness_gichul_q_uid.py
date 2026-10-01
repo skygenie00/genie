@@ -20,6 +20,26 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(os.environ.get('LOCALAPPDATA', ''), 'jopangi', '_out', 'data')
 LEDGER = os.path.join(os.path.dirname(os.path.dirname(HERE)), '특상디', '_1차객_원장.csv')   # 9/23 — 하네스는 공통\_harness\ · 원장은 특상디\
 BEFORE = sys.argv[sys.argv.index('--before') + 1] if '--before' in sys.argv else None
+
+
+def _gshow(rev, rel):
+    """A-6(d) 9/30 — 인도 때 산출을 genie git 에서 꺼낸다(사슬은 인자 없이 돌고 · LAD 산출은 뒤 ⚙ 가 바꾼다) · 못 꺼내면 b''"""
+    import subprocess
+    d = HERE
+    while not os.path.isfile(os.path.join(d, '_roots.py')) and os.path.dirname(d) != d:
+        d = os.path.dirname(d)
+    if d not in sys.path:
+        sys.path.append(d)
+    import _roots   # noqa: E402
+    return subprocess.run(['git', '-C', _roots.genie(), '-c', 'core.quotepath=false', 'show', rev + ':' + rel], capture_output=True).stdout
+
+
+if BEFORE is None:   # A-6(d) 9/30 — 인도 때 --before 로 준 「고치기 전 산출」 = genie 80d78d1(f47eedb 바로 앞) prec_특허_리스트.json — 거짓 349 · 원장짝없음 211(수행 결과 헛잣대 수 그대로)
+    _b = _gshow('80d78d1', 'jo/data/prec_특허_리스트.json')
+    if _b:
+        import tempfile
+        BEFORE = os.path.join(tempfile.gettempdir(), 'h_gichul_q_uid_before_80d78d1.json')
+        open(BEFORE, 'wb').write(_b)
 GA = {'특허': '특', '상표': '상', '디보': '디', '민소': '민'}
 
 R = []
@@ -87,6 +107,8 @@ def truth(law):
                 rd = str(row.get('회차') or '').strip()
                 if u and rd:
                     ledk.setdefault((rd, str(row.get('문번') or '').strip()), u)
+                    if str(row.get('리담순번') or '').strip():   # A-6(a) 9/30 — uid 판(_task_jo_gaek_uid.md 수행 결과 「원장 문번 칸」 · N: 29c9ca4 · genie 17094a5)이 2008 이후 리담 문항 문번 칸 「r순번」을 시험 문번으로 바꿨다 · 볼트 코드(1차-상-16-53-r7)는 옛 「r순번」 그대로라 그 열쇠도 둔다
+                        ledk.setdefault((rd, 'r' + str(row.get('리담순번')).strip()), u)
                 if not row.get('판례'):
                     continue
                 q = uid2q.get(u)
@@ -150,7 +172,10 @@ new = load('특허')
 if new is None:
     raise SystemExit('NG  빌드 산출물이 없다 — jo_build.py 를 먼저 돌려라 (%s)' % OUT)
 st = check('특허', '', new)
-T('3', '특허 — 원장짝없음 79', st['why'].get('원장짝없음') == 79, st['why'])
+# A-6(d) 9/30 — 79 는 인도(genie f47eedb) 산출 값 · 뒤 ⚙ 데이터가 바꿈(f3b74c9 toc_fuse 73 · 17094a5 uid 판 77 · 6242678 uid_add2 75 · e36829b uid_add3 66) → 인도 산출로 잰다(지금 값은 칸에 같이 적음)
+_w79 = _gshow('f47eedb', 'jo/data/prec_특허_리스트.json')
+why_dl = dict(collections.Counter(v for r in json.loads(_w79.decode('utf-8'))['판례'] for v in (r.get('기출문항없음') or {}).values())) if _w79 else {}
+T('3', '특허 — 원장짝없음 79', why_dl.get('원장짝없음') == 79, {'인도 f47eedb': why_dl, '지금': st['why']})
 T('4', '특허 — 판례 391', st['rows'] == 391, st['rows'])
 
 # 표본 여섯(§D-3) — 볼트 코드 → 그 문항이 어느 판례엔가 붙었는가
@@ -199,8 +224,11 @@ if BEFORE and os.path.isfile(BEFORE):
     T('6', '헛잣대 — 고치기 전 원장짝없음 211', owhy.get('원장짝없음') == 211, dict(owhy))
     T('4', '참이던 항목은 하나도 안 사라진다', not keep_miss,
       '사라짐 %d %s' % (len(keep_miss), keep_miss[:4]))
+    # A-6(d) 9/30 — 「무변」 은 인도 판(f47eedb) 성질 · 뒤 ⚙ 가 자동중요도를 바꿈(f3b74c9 87 · 17094a5 23 판례) → 인도 산출로 잰다(참이던 항목 칸은 지금 산출 N 그대로)
+    _wdl = _gshow('f47eedb', 'jo/data/prec_특허_리스트.json')
+    N_dl = {r['id']: r for r in json.loads(_wdl.decode('utf-8'))['판례']} if _wdl else N
     same = [k for k in ('기출표시', '기출', '자동중요도') if
-            all(O[i].get(k) == N.get(i, {}).get(k) for i in O)]
+            all(O[i].get(k) == N_dl.get(i, {}).get(k) for i in O)]
     T('4', '기출표시·기출·자동중요도 무변', len(same) == 3, same)
 else:
     T('6', '헛잣대 — 고치기 전 산출물을 --before 로 준다', False, '안 줌')

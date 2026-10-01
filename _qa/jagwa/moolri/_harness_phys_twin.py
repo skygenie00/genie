@@ -34,7 +34,9 @@ TESTS = r"""<script>
  const reddish=p=>p[0]>150&&p[0]-p[1]>40;
  const white=p=>p[0]>245&&p[1]>245&&p[2]>245;
  const ptr=(el,type,x,y,extra)=>el.dispatchEvent(new PointerEvent(type,Object.assign({bubbles:true,cancelable:true,clientX:x,clientY:y,pointerId:1,pointerType:'mouse',isPrimary:true,button:0},extra||{})));
- const drag=async(el,x0,y0,x1,y1)=>{ptr(el,'pointerdown',x0,y0);await wait(10);ptr(el,'pointermove',(x0+x1)/2,(y0+y1)/2);await wait(10);ptr(el,'pointermove',x1,y1);await wait(10);ptr(el,'pointerup',x1,y1);await wait(30)};
+ /* ★ A-6(a) 9/30 — 9/13 펜/손가락 가름(moolri/_task_jagwa_pen_touch2.md §1 「SET.pencil … ⇒ if(pointerType!=='pen') return」 · 수행 결과 §6-5 표 「암기카드 mcardWin — pen 필기 · touch·mouse 조작」 · genie c62b2b2 · 결정로그 2026-09-13):
+    카드 캔버스(#mcc)는 펜만 긋는다(앱 4856) — 그 캔버스에 긋는 끌기만 pointerType 'pen' 으로 던진다(창 제목줄·모서리·서랍 손잡이 끌기는 마우스 그대로) */
+ const drag=async(el,x0,y0,x1,y1)=>{const X=(el&&el.id==='mcc')?{pointerType:'pen'}:undefined;ptr(el,'pointerdown',x0,y0,X);await wait(10);ptr(el,'pointermove',(x0+x1)/2,(y0+y1)/2,X);await wait(10);ptr(el,'pointermove',x1,y1,X);await wait(10);ptr(el,'pointerup',x1,y1,X);await wait(30)};
  async function run(){
   try{
    renderPage=async()=>{};setupMask=async()=>{};paintInk=()=>{};
@@ -96,12 +98,16 @@ TESTS = r"""<script>
    T('T-3 최소 280×200',Math.round(r4.width)===280&&Math.round(r4.height)===200,[r4.width,r4.height]);
    $('#twX').click();await wait(20);
    /* ===== T-4 다른 시트 무변 ===== */
-   twinSheet(no);await wait(20);let p4=$('.sheet:not(.twin) .panel');
-   T('T-4 쌍둥이 잇기 시트: 아래 시트 그대로 · 그립 없음',!!p4&&getComputedStyle(p4).position==='static'&&!p4.querySelector('.twgrip'));
-   $('#twNo').click();await wait(10);
-   histSheet(no);await wait(20);p4=$('.sheet .panel');
-   T('T-4 마크 이력 시트 그대로',!!p4&&getComputedStyle(p4).position==='static'&&!p4.querySelector('.twgrip'));
-   $('#hClose').click();await wait(10);
+   /* ★ A-6(a) 9/30 — 셸 add16(0bee72b): 쌍둥이 잇기(twinSheet)는 「보는 시트」라 떠 있는 창(.sheet.shfloat#sh-twin · makeFloat 그립)으로 뜬다 ·
+      phone_win A-5(fb89ad2): 그 창 아래 「닫기」(#twNo)는 걷었다(✕ = .shx) · ⚠ 옛 선택자 '.sheet:not(.twin) .panel' 은 앞에 선 #book(.sheet) 을 잡는다 → 창 id 로 */
+   twinSheet(no);await wait(20);let p4=$('#sh-twin .panel');
+   T('T-4 쌍둥이 잇기 = 떠 있는 창(셸 add16 · float · 그립 있음)',!!p4&&p4.classList.contains('float')&&!!p4.querySelector('.twgrip'));
+   $('#sh-twin .shx').click();await wait(10);
+   /* ★ A-6(a) 9/30 — 셸 add16(0bee72b): 마크 이력(histSheet)도 「보는 시트」라 떠 있는 창(#sh-hist · makeFloat 그립)으로 뜬다(add16 §A-1 · 수행 결과 68줄 「histSheet 회독 이력 | hist | ○」 · 앱 SHWIN ['histSheet','hist']) —
+      옛 선택자 '.sheet .panel' 대신 창 id 로 · 위 쌍둥이 잇기와 같은 새 기대 · 설정 시트는 모달 그대로라(add16 §A-5) 아래 칸 무변 */
+   histSheet(no);await wait(20);p4=$('#sh-hist .panel');
+   T('T-4 마크 이력 = 떠 있는 창(셸 add16 · float · 그립 있음)',!!p4&&p4.classList.contains('float')&&!!p4.querySelector('.twgrip'));
+   $('#sh-hist .shx').click();await wait(10);   /* ★ A-6(a) 9/30 — phone_win A-5: 떠 있는 창(add16 · histSheet = sh-hist)의 「닫기」(#hClose)도 걷었다 → ✕ 로 닫는다(안 고치면 여기서 다시 터진다 · 위 「마크 이력」 칸 기대는 이 무리 목록 밖이라 그대로) */
    $('#btnSet').click();await wait(20);p4=$('.sheet .panel');
    T('T-4 설정 시트 그대로',!!p4&&getComputedStyle(p4).position==='static'&&!p4.querySelector('.twgrip'));
    $('#bClose').click();await wait(10);
@@ -119,13 +125,14 @@ TESTS = r"""<script>
    T('T-5 하한 160',Math.round(dr.getBoundingClientRect().width)===160);
    T('T-5 본문 여백이 따라감(≥900px)',getComputedStyle($('#stage')).paddingLeft==='160px',getComputedStyle($('#stage')).paddingLeft);
    ptr(grp,'pointerdown',gb.left+6,gb.top+200);await wait(10);ptr(grp,'pointermove',gb.left+8,gb.top+201);ptr(grp,'pointerup',gb.left+8,gb.top+201);await wait(30);
-   T('T-5 탭(4px 미만) → 접힘 · SET.nav=false',dr.classList.contains('hide')&&SET.nav===false&&!$('#view').classList.contains('ndopen'));
+   /* ★ A-6(a) 9/30 — 셸 add9 §A-2(68216cf): 서랍은 첫 화면 상주 서랍 — #ndGrip 탭 = 숨기기가 아니라 접기(.fold · 13px · 손잡이 남음) · 접힘은 기기별 localStorage(ND_FOLD_K = jagwa.nd.fold.<과목>)에 · SET.nav 는 안 바뀐다(add9 수행 결과 78줄 · 앱 3718~3722 onTap ndResFold) */
+   T('T-5 탭(4px 미만) → 접힘(상주 서랍 · .fold · 손잡이 남음 · 기기별 기억)',dr.classList.contains('fold')&&!dr.classList.contains('hide')&&localStorage.getItem(ND_FOLD_K)==='1',[dr.className,localStorage.getItem(ND_FOLD_K)]);
    $('#navTg').click();await wait(30);
    T('T-5 navTg 로 다시 열림 · 너비 유지',!dr.classList.contains('hide')&&Math.round(dr.getBoundingClientRect().width)===160);
    $('#view').style.removeProperty('--ndw');SET.ndw=300;ndSetW(SET.ndw);
    T('T-5 새로고침 흉내(SET.ndw → ndSetW) 너비 300',Math.round(dr.getBoundingClientRect().width)===300);
    /* ===== T-6 · T-9 SYNC ===== */
-   T('T-6 SYNC_KEYS 12(필터 손질 9/5: +link 열두째) · mcard 열한째',SYNC_KEYS.length===12&&SYNC_KEYS[10]==='mcard'&&SYNC_KEYS[11]==='link'&&SYNC_REF.mcard.g()===MC&&SYNC_REF.link.g()===LK);
+   T('T-6 SYNC_KEYS 14(필터 손질 9/5: +link 열두째) · mcard 열한째',/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(열셋째·열넷째 · 앱 8168~8169) */SYNC_KEYS.length===14&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&SYNC_KEYS[10]==='mcard'&&SYNC_KEYS[11]==='link'&&SYNC_REF.mcard.g()===MC&&SYNC_REF.link.g()===LK);
    /* ===== T-7 카드 쓰기 ===== */
    mcardWin(no);await wait(60);
    const mc=$('#mcc');T('T-7 카드 창 = 문제명 · 코멘트 · 캔버스 · 도구',!!$('.mcwin')&&$('.mcwin h2').textContent.includes(String(no))&&!!$('.mcnote')&&!!mc&&$$('.mct [data-t]').length===3);
@@ -160,8 +167,11 @@ TESTS = r"""<script>
    const nExp=DATA.filter(r=>r[F.SUB]===sub&&MC[r[F.NO]]).length;
    const ghSub=[...document.querySelectorAll('#list .grouphd')].find(h=>h.textContent.includes(sub));
    const ghBtn=ghSub&&[...ghSub.querySelectorAll('.ghbtn')].find(b=>b.textContent.startsWith('암기카드'));
-   T('T-8 단원줄 「암기카드 N」 = 카드 있는 문항 수',!!ghBtn&&ghBtn.textContent==='암기카드 '+nExp&&nExp===1,ghBtn&&ghBtn.textContent);
-   ghBtn.click();await wait(60);
+   /* ★ A-6(a) 9/30 — 지학 listpop_add1 §C(44줄 「🃏 가 갈음하는 것 = 절 머리 「암기카드 N」 단추 … mcardSheet 함수는 남긴다」 · cd248a5)가 셸 이식(c9faff2)으로 물리에도 — 절 머리 단추(.ghbtn)는 🃏 칩(.jcard[data-mc] · 누르면 🃏 창)이 갈음했다 ·
+      종이 모아보기 mcardSheet 는 남았다 — 그 단추가 부르던 그대로 mcardSheet(sub,sub) 를 직접 부른다(첫 바퀴 mcsheet 선례 · 화면에서 여는 길은 없다 · 아래 시트 잣대 그대로) */
+   const ghC=ghSub&&ghSub.querySelector('.jcard[data-mc]');
+   T('T-8 단원줄 🃏 칩(옛 「암기카드 N」 · listpop_add1 §C) = 카드 있는 문항 수',!ghBtn&&!!ghC&&ghC.textContent==='🃏 '+nExp&&nExp===1,[!!ghBtn,ghC&&ghC.textContent]);
+   mcardSheet(sub,sub);await wait(60);
    const cards=$$('.sheet .mcard');
    T('T-8 시트: 문항마다 카드 · 카드 있는 것 수 = mcard 수',cards.length===DATA.filter(r=>r[F.SUB]===sub).length&&$$('.sheet .mcard:not(.empty)').length===nExp,[cards.length,$$('.sheet .mcard:not(.empty)').length]);
    const my=$('.sheet .mcard[data-no="'+no+'"]');
@@ -177,11 +187,14 @@ TESTS = r"""<script>
    T('T-9 mcard 가 도장을 탄다(u 키 mcard|no)',!!U['mcard|'+no],Object.keys(U).filter(k=>k.startsWith('mcard')));
    delete MC[no];await saveMC();stampAll();
    T('T-9 지우면 묘비(gone)',!!lsObj(GONE_KEY)['mcard|'+no]);
-   T('M-1 과목 phys · IndexedDB phys535 · 저장소 셋(pdf·ink·kv) · SYNC_KEYS 12(9/5 필터 손질 +link)',SUBJ_ID==='phys'&&db.name==='phys535'&&[...db.objectStoreNames].sort().join()==='ink,kv,pdf'&&SYNC_KEYS.length===12&&document.body.dataset.subj==='phys',[db.name,[...db.objectStoreNames]]);
+   T('M-1 과목 phys · IndexedDB phys535 · 저장소 셋(pdf·ink·kv) · SYNC_KEYS 14(9/5 필터 손질 +link · 9/21 셸 +gg·ggref)',SUBJ_ID==='phys'&&db.name==='phys535'&&[...db.objectStoreNames].sort().join()==='ink,kv,pdf'&&/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(앱 8168~8169) */SYNC_KEYS.length===14&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&document.body.dataset.subj==='phys',[db.name,[...db.objectStoreNames]]);
    const gd=id=>getComputedStyle($(id)).display;
-   T('M-4 게이트(물리): 지학 조각 숨김(ebody·tBook·sub · bookpane 은 ebody 안) · #tree·#btnTree 는 9/5 필터 add1 로 물리도 씀(게이트에서 뺌 · 서랍은 .hide 로 닫힘 · 「목차」 칩 보임)',gd('#ebody')==='none'&&gd('#tree')==='none'&&$('#tree').classList.contains('hide')&&$('#bookpane').offsetParent===null&&gd('#btnTree')!=='none'&&gd('#tBook')==='none'&&gd('#sub')==='none',[gd('#ebody'),gd('#tree'),$('#bookpane').offsetParent,gd('#btnTree'),gd('#tBook'),gd('#sub')]);
+   /* ★ A-6(a) 9/30 — 셸 add9 §A-1(68216cf): 「목차」 단추 #btnTree 는 걷었다(없는 요소에 getComputedStyle → 하니스가 터짐) — 그 조건만 「없다」로(첫 바퀴 earth M-4 와 같은 고침) · 옛 #tree 는 숨은 채(treeOpen 빈 함수) */
+   T('M-4 게이트(물리): 지학 조각 숨김(ebody·tBook·sub · bookpane 은 ebody 안) · #tree 는 숨은 채(.hide · 상주 서랍이 갈음) · 「목차」 단추 #btnTree 는 걷음(add9 §A-1)',gd('#ebody')==='none'&&gd('#tree')==='none'&&$('#tree').classList.contains('hide')&&$('#bookpane').offsetParent===null&&!$('#btnTree')&&gd('#tBook')==='none'&&gd('#sub')==='none',[gd('#ebody'),gd('#tree'),$('#bookpane').offsetParent,!!$('#btnTree'),gd('#tBook'),gd('#sub')]);
    T('M-4 게이트(물리): 물리 도구 보임(stage·tTheory·tCard)',gd('#stage')!=='none'&&gd('#tTheory')!=='none'&&gd('#tCard')!=='none',[gd('#stage'),gd('#tTheory'),gd('#tCard')]);
-   T('M-4 게이트(물리): 지학 함수 없음(buildTree 는 9/5 필터 add1 부터 물리 자체 것 · treePick 두 단) · .sheet 잔존 0',typeof loadEarthData==='undefined'&&typeof buildTree==='function'&&typeof treePick==='function'&&typeof unitStats==='undefined'&&document.querySelectorAll('.sheet').length===0,[typeof loadEarthData,typeof buildTree,document.querySelectorAll('.sheet').length]);
+   /* ★ A-6(a) 9/30 — 셸 이식(c9faff2 · 층 문 if(CARD_LAYER) → if(SHELL)): 카드 층 블록이 물리에서도 돌아 loadEarthData(앱 5352)·unitStats(5767)가 물리에도 만들어진다 —
+      물리 무변은 「안 만든다」가 아니라 「카드 층 갈래를 안 탄다」(CARD_LAYER·HASBOOK 거짓 · loadEarthData 는 if(CARD_LAYER) 에서만 부름 — 앱 4734)로 선다(첫 바퀴 bref·bookrows_pin Y-1 과 같은 옮김) */
+   T('M-4 게이트(물리): 지학 함수는 SHELL 블록이라 있어도 물리는 카드 층 갈래를 안 탄다(CARD_LAYER·HASBOOK 거짓) · buildTree·treePick 물리 것 · .sheet 잔존 0',CARD_LAYER===false&&HASBOOK===false&&typeof buildTree==='function'&&typeof treePick==='function'&&document.querySelectorAll('.sheet').length===0,[typeof loadEarthData,typeof unitStats,typeof buildTree,document.querySelectorAll('.sheet').length]);
    T('머리 = 「자과 서재 · 물리」 · <title> 자과 서재(생물 판 2 add4 · 9/5: 앱 이름 하나 · SUBJ.phys.TITLE 「물리 535 서재」는 그대로) · 탭 셀 현재 = 물리 · 셀 셋 · 생물 살아 있음(앱 판 1 · 9/5) · data-layer=pdf',document.title==='자과 서재'&&$('.brand h1').textContent==='자과 서재 · 물리'&&SUBJ.phys.TITLE==='물리 535 서재'&&$('#subjTabs .on').textContent==='물리'&&$$('#subjTabs button').map(b=>b.textContent).join('│')==='물리│생물│지학'&&!$('#subjTabs [data-subj=bio]').classList.contains('off')&&document.body.dataset.layer==='pdf'&&CARD_LAYER===false);
    /* 생물 앱 판 1(9/5): 생물 셀은 켜졌다 — 클릭은 새로고침이라 reload=false 로만 검산 · 물리로 되돌린다 */
    T('A-2(물리) 생물 켜짐: subjSwitchTo(bio,false) → subj=bio · 되돌리면 phys',subjSwitchTo('bio',false)===true&&localStorage.getItem('subj')==='bio'&&subjSwitchTo('phys',false)===true&&subjResolve(localStorage.getItem('subj'))==='phys',localStorage.getItem('subj'));

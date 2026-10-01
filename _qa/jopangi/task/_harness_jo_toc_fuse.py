@@ -68,7 +68,7 @@ def jload_new(name):
 
 
 def jload_head(name):
-    return json.loads(git('show', 'HEAD:jo/data/' + name).decode('utf-8'))
+    return json.loads(git('show', 'f497f05:jo/data/' + name).decode('utf-8'))   # A-6(d) 9/30 — 바탕 데이터 = 인도 때 HEAD f497f05(docstring · 인도 결과 머리 「BASE = genie f497f05」)
 
 
 # ══════════ 데이터 관문 (F1~F4) ══════════
@@ -84,7 +84,8 @@ def data_gates():
     for tag, P7, MG in (('BASE', jload_head('jimun_7pan.json'), jload_head('mokcha_병합.json')),
                         ('NEW', jload_new('jimun_7pan.json'), jload_new('mokcha_병합.json'))):
         g = '데이터 %s' % tag
-        Z = P7['지문']
+        # A-6(d) 9/30 — F1~F1d 는 인도 데이터(genie f3b74c9 · toc_fuse ⚙ jo_pipe 데이터) 성질 — 뒤 판(uid 판 17094a5 · mbsame 59b8701 · 6242678 · p8up 775457c)이 jimun_7pan 을 바꿈 → NEW 쪽 F1 무리는 인도 데이터로(F2~F4 · 앱 관문은 지금 데이터 그대로)
+        Z = (json.loads(git('show', 'f3b74c9:jo/data/jimun_7pan.json').decode('utf-8')) if tag == 'NEW' else P7)['지문']
         ids = [z['id'] for z in Z]
         split = [z for z in Z if z.get('문항')]
         body = [z for z in Z if not z.get('문항')]
@@ -162,7 +163,7 @@ def data_gates():
           len(pids) == 140 and len(set(pids)) == 140 and own == [] and (g2.get('지문') or [None] * 3)[2:3] == ['P7-0285'],
           {'모아보기': len(pids), '본문에 없음': own, 'Ⅱ 3번': (g2.get('지문') or [None] * 3)[2:3]})
         if tag == 'NEW':
-            KEEP['data'] = {'M': M, 'P7': Z}
+            KEEP['data'] = {'M': M, 'P7': P7['지문']}   # A-6(d) 9/30 — 앱 관문(F5·F8·F10·F12 · 풀 셈)은 지금 데이터 그대로(위 Z 는 F1 무리 전용 인도 데이터)
 
 
 # ══════════ 앱 — 서버 · 쪽 ══════════
@@ -369,7 +370,8 @@ def scen(br, src, tag, touch=False):
         home()
         so = p.ev("()=>__HT.solo()")
         ch = p.ev("l=>__HT.cardHead(l)", '12 실용신안')
-        exp = KEEP.get('n12')
+        # A-6(a) 9/30 — mbsame_add2 ③·⑪(편 머리 한 줄 「총 N」 = 줄 넷 합 uzSub · 한 열쇠 한 번 · 거름 뒤 · 처음 = 기출 add3 §A-8) → 새 판 기대 = 앱 uzSub 셈 · 옛 앱(uzSub 없음)은 옛 셈(KEEP n12)
+        exp = p.ev("n=>typeof uzSub==='function'?uzSub(VJ.M,__HT.Mi(n)).length:null", '12') or KEEP.get('n12')
         T(g, 'F8a 첫 화면 편 줄 「12 실용신안 총 %s문제」 · 회독 칸(단추) · 🃏 · 17px 굵게 · 12px 16px · 편 머리 바탕(헛잣대: 바탕 「총 0문제」 머리)' % exp,
           bool(so) and so['text'].startswith('▸12 실용신안') and so['tot'] == '총 %s문제' % exp and so['go'] and so['card'] and so['fs'] == '17px' and so['fw'] == '700' and
           so['pad'] == '12px 16px' and so['bg'] == 'rgb(246, 244, 239)' and ch is None,
@@ -388,23 +390,25 @@ def scen(br, src, tag, touch=False):
         home()
         n38 = p.ev("l=>__HT.jtCount(l)", L_38)
         i38 = p.ev("n=>__HT.Mi(n)", '3.8')
+        # A-6(a) 9/30 — mbsame §A(머리 누름 = 본편이 비었으면 첫 줄 · 3.8 = 본편 0 · (미수록) 22) · add3(거른 뒤 첫 줄) → 기대 S.mok = 앱 mdpHeadSel · 옛 앱은 __mg<i>
+        sel38 = p.ev("i=>typeof mdpHeadSel==='function'?mdpHeadSel(i):'__mg'+i", i38)
         T(g, 'F9a 서랍 「3.8 명세서 기재불비」 이름 줄 = 머리 하나(헛잣대: 바탕 2)', n38 == 1, n38)
         at = p.ev("l=>__HT.jtName(l)", L_38)
         c = p.click(at, 900)
-        st = p.until("m=>__HT.state().mok===m?__HT.state():null", '__mg%s' % i38, 10000)
-        T(g, 'F9b 서랍 머리 이름 누름 → S.mok === __mg%s(바로 밑 문항)' % i38, c and bool(st), {'mok': p.ev("()=>__HT.state()")['mok'], 'at': at and at.get('at')})
+        st = p.until("m=>__HT.state().mok===m?__HT.state():null", sel38, 10000)
+        T(g, 'F9b 서랍 머리 이름 누름 → S.mok === %s(바로 밑 문항)' % sel38, c and bool(st), {'mok': p.ev("()=>__HT.state()")['mok'], 'at': at and at.get('at')})
         v0 = p.ev("l=>__HT.jtVis(l)", L_381)
         ar = p.ev("l=>__HT.jtArrow(l)", L_38)
         c2 = p.click(ar, 500)
         v1 = p.ev("l=>__HT.jtVis(l)", L_381); st2 = p.ev("()=>__HT.state()")
-        T(g, 'F9c 서랍 ▾ 누름 → 3.8.1 줄 안 보임 · S.mok 무변(헛잣대: 바탕 ▾ 없음)', c2 and v0 == [True] and v1 in ([], [False]) and st2['mok'] == '__mg%s' % i38,
+        T(g, 'F9c 서랍 ▾ 누름 → 3.8.1 줄 안 보임 · S.mok 무변(헛잣대: 바탕 ▾ 없음)', c2 and v0 == [True] and v1 in ([], [False]) and st2['mok'] == sel38,
           {'3.8.1 전': v0, '뒤': v1, 'mok': st2['mok'], '▾': ar and ar.get('t')})
         p.click(p.ev("l=>__HT.jtArrow(l)", L_38), 400)
         home()
         nh = p.ev("l=>__HT.homeNames(l)", L_38)
         hd = p.ev("l=>__HT.homeHead(l)", L_38)
         c3 = p.click(hd, 1000)
-        st3 = p.until("m=>__HT.state().mok===m?__HT.state():null", '__mg%s' % i38, 10000)
+        st3 = p.until("m=>__HT.state().mok===m?__HT.state():null", sel38, 10000)
         T(g, 'F9d 첫 화면 3.8 머리 한 줄(이름 한 번) · 머리 누름 → 열림(헛잣대: 바탕 = 안 열림 · 이름 둘)',
           nh == 1 and c3 and bool(st3) and bool(hd) and hd.get('go'), {'이름 수': nh, 'mok': p.ev("()=>__HT.state()")['mok'], 'title': hd and hd.get('title')})
 
@@ -452,12 +456,23 @@ def s10(p, g, tag):
     T(g, 'F10a 모아보기 Ⅱ 특허요건 첫 문항 O 찍기(mouse.click) → 본문 원래 마디(%s)에서도 같은 표시가 보임(같은 키 %s)' % (M[body_i]['no'], key),
       c and c2 and (rec or {}).get('m') == 'O' and bool(ob2) and ob2['sel'], {'rec': rec, '본문 O sel': ob2 and ob2['sel']})
     T(g, 'F10b 그 지문의 mokIndex = 먼저 나온 본문 마디(모아보기 아님)', mi == body_i, {'mokIndex': mi, '본문': body_i, '모아보기': iII})
+    # A-6(a) 9/30 — add3 §A-8(히트맵·첫 화면 = 기출/기타 · 「전체」 없어짐 · 모아보기(미기출) = 기타) — 기타 화면(칸 수 · 모아보기 카드)을 먼저 재고 기출로 되돌린다 · 옛 앱(UZGK 없음)은 한 화면 그대로
+    uz = p.ev("()=>typeof UZGK!=='undefined'")
+    htx = ctx_ = None
+    if uz:
+        p.ev("async()=>{UZGK='x';await __HT.home();return 1}")
+        htx = p.ev("()=>__HT.heat()"); ctx_ = p.ev("()=>__HT.cardTots()")
     p.ev("async()=>{if(typeof UZGK!=='undefined')UZGK='g';await __HT.home();return 1}")   # ★ mbsame_add3 §A-8 — 기출(처음 값)로 되돌림
     ht = p.ev("()=>__HT.heat()")
     ct = p.ev("()=>__HT.cardTots()")
-    pan = next((x for x in ct if x['h'] == '미기출 판례 모아보기'), None)
-    T(g, 'F10c 히트맵 「전체」 = 지문 풀(같은 키 한 번 · 모아보기 겹침 없음) = %s · 모아보기 카드 「총 140문제」' % KEEP.get('pool'),
-      bool(ht) and ht['sum'] == ht['pool'] == KEEP.get('pool') and bool(pan) and pan['tot'] == '총 140문제', {'heat': ht and {'sum': ht['sum'], 'pool': ht['pool']}, '모아보기': pan})
+    _pn = lambda x: re.sub(r'^[▾▸]\s*', '', (x or {}).get('h') or '') == '미기출 판례 모아보기'   # A-6(a) 9/30 셋째 — add3 §A-8 편 머리 이름 앞 ▾(uzTopArrow)를 떼고 이름을 맞댄다
+    pan = next((x for x in ((ctx_ if uz else ct) or []) if _pn(x)), None)
+    # A-6(a) 9/30 셋째 — 모아보기 140 열쇠도 기출/기타로 나뉜다(리담 선지와 uid 가 같은 두 줄 = 기출 · 앱 uzIdx) → 기타 카드 + 기출 카드 = 140 · 옛 앱(UZGK 없음)은 한 카드 140
+    pag = next((x for x in (ct or []) if _pn(x)), None) if uz else None
+    npan = sum(int(re.sub(r'\D', '', (x or {}).get('tot') or '') or 0) for x in (pan, pag))
+    sx = (htx or {}).get('sum', 0) if uz else 0
+    T(g, 'F10c 히트맵 기출 + 기타 = 지문 풀(같은 키 한 번 · 모아보기 겹침 없음) = %s · 모아보기 카드 기출 + 기타 「총 140문제」' % KEEP.get('pool'),
+      bool(ht) and ht['sum'] + sx == ht['pool'] == KEEP.get('pool') and bool(pan) and npan == 140, {'heat': ht and {'sum': ht['sum'], 'pool': ht['pool']}, '기타': sx, '모아보기': [pan, pag]})
     p.ev("k=>{try{oxClear(k)}catch(e){}return 1}", key)
 
 
@@ -491,8 +506,11 @@ def s12(p, g, tag):
 def other_law(br, src, tag):
     p = Pg(br, tag, src)
     try:
-        out = p.ev("""async()=>{try{closeAllPops();}catch(e){}S.law='상표법';S.tab='jimun';S.jimunTab='ox';S.mok='';S.oxQueue='';S.oxQ='';
-          await render();for(let i=0;i<200&&typeof busy!=='undefined'&&busy;i++)await new Promise(r=>setTimeout(r,25));await new Promise(r=>setTimeout(r,400));
+        # A-6(d) 9/30 셋째 — render() 는 busy 면 그리지 않고 돌아간다(모든 판 「if(busy)return」) · READY 는 부팅 render 끝을 안 기다려, 부팅이 늦으면 이 render 가 버려져 첫 화면이 안 선다(r3 바탕 null · r2 같은 앱·데이터 14:1 · 357:107)
+        #   → 한가해질 때까지 기다린 뒤 그리고, .mbdash·#jtlist 가 안 섰으면 두 번 더(재는 값 무변)
+        out = p.ev("""async()=>{const idle=async()=>{for(let i=0;i<400&&typeof busy!=='undefined'&&busy;i++)await new Promise(r=>setTimeout(r,25));};
+          for(let t=0;t<3;t++){try{closeAllPops();}catch(e){}S.law='상표법';S.tab='jimun';S.jimunTab='ox';S.mok='';S.oxQueue='';S.oxQ='';
+          await idle();await render();await idle();await new Promise(r=>setTimeout(r,400));if(document.querySelector('.mbdash')&&document.getElementById('jtlist'))break;}
           const d=document.querySelector('.mbdash'),j=document.getElementById('jtlist');
           const pos=e=>e?[...e.querySelectorAll('.n,.tot,.nm,.tx')].slice(0,80).map(x=>{const r=x.getBoundingClientRect();return Math.round(r.left)+','+Math.round(r.top)}).join(';'):'';
           return {dash:d?d.innerText.length+':'+d.querySelectorAll('*').length:null,jt:j?j.innerText.length+':'+j.querySelectorAll('*').length:null,pos:pos(d)+'|'+pos(j)};}""")
@@ -526,7 +544,7 @@ def report():
 
 def main():
     os.makedirs(WORK, exist_ok=True)
-    base_src = git('show', 'HEAD:jo/index.html').decode('utf-8')
+    base_src = git('show', 'f497f05:jo/index.html').decode('utf-8')   # A-6(d) 바탕 앱 = f497f05
     assert hashlib.md5(base_src.encode('utf-8')).hexdigest() == BASE_MD5, 'HEAD 가 바탕(f497f05)이 아니다'
     new_src = io.open(NEWF, encoding='utf-8', newline='').read()
     if not ONLY or 'data' in ONLY:
@@ -546,6 +564,11 @@ def main():
     for z in D['P7']:
         if not z.get('병합'):
             pool.add(z.get('uid') or 'P7:' + z['id'])
+    # A-6(a) 9/30 — mbsame §A 풀 정의(「풀 = 제7판 줄 전부 + 문항째 카드 + 흡수 안 된 리담 선지」) — 문항째 카드(선지 줄로 안 쪼갠 객관식 · 앱 MLN.obj) 열쇠를 더한다
+    _sp = {z['문항'] for z in D['P7'] if z.get('문항')}
+    for o in (jload_new('jimun_7pan.json').get('객관식') or []):
+        if o['id'] not in _sp:
+            pool.add(o.get('uid') or 'P7:' + o['id'])
     KEEP['pool'] = len(pool)
     with sync_playwright() as pw:
         br = pw.chromium.launch()
@@ -567,11 +590,13 @@ def main():
         if not ONLY or 'new' in ONLY:
             scen(br, new_src, 'NEW')
             other_law(br, new_src, 'NEW')
+            other_law(br, git('show', 'a9d72c1:jo/index.html').decode('utf-8'), 'DL')   # A-6(d) 9/30 — E 는 인도 판(a9d72c1 · md5(LF) c9a35c4f) 성질 — 뒤 판(add3 §A-8)이 상표 화면을 바꿈
         if not ONLY or 'touch' in ONLY:
             scen(br, new_src, 'NEW', touch=True)
         br.close()
-    if 'BASE' in KEEP.get('other', {}) and 'NEW' in KEEP.get('other', {}):
-        T('NEW 상표', 'E 상표 1차객 첫 화면·서랍 = 바탕(글자 수·요소 수·자리)', KEEP['other']['BASE'] == KEEP['other']['NEW'], KEEP['other'])
+    if 'BASE' in KEEP.get('other', {}) and 'DL' in KEEP.get('other', {}):
+        # A-6(d) 9/30 — 「상표 = 바탕」 은 toc_fuse 인도 판(genie a9d72c1) 성질 — 바탕 ↔ 인도 판 앱을 같은 데이터로 맞댄다(지금 판(add3 §A-8 기출/기타 칩 · 머리 · 필터 · 접기 — 의도) 값은 NOTE 줄 그대로)
+        T('NEW 상표', 'E 상표 1차객 첫 화면·서랍 — 인도 판(a9d72c1) = 바탕(글자 수·요소 수·자리)', KEEP['other']['BASE'] == KEEP['other']['DL'], KEEP['other'])
     report()
 
 

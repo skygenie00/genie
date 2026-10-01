@@ -68,13 +68,14 @@ window.__HC={
     const hit=nodes.find(([nn,a])=>mid>=a&&mid<a+nn.nodeValue.length);const rg=document.createRange();rg.setStart(hit[0],mid-hit[1]);rg.setEnd(hit[0],mid-hit[1]+1);const b=rg.getBoundingClientRect();
     return {cx:+(b.left+b.width/2).toFixed(2),cy:+(b.top+b.height/2).toFixed(2),on:true};},
   menu(){const m=document.querySelector('.pitmenu');return m?[...m.querySelectorAll('.mi')].map(txt):null;},
+  bar(){const b=document.querySelector('#c2mark:not([hidden])');return b?[...b.querySelectorAll('.mk9r2 button')].filter(x=>!x.hidden).map(txt):null;},   /* A-6(a) 9/30 — joscreen0929 A-5: 2차 문제 창 칠 막대 둘째 줄 */
   /* ── C ── */
   boardRows(){return [...document.querySelectorAll('#slot .cell.c2row[data-ck]')].map(r=>{const vis=[...r.querySelectorAll('[data-clbtn]')].filter(b=>!b.hidden);
     return {code:txt(r.querySelector('.c2code')),btn:vis.map(b=>({t:txt(b),cls:b.className,fw:cs(b,'fontWeight'),color:cs(b,'color'),fs:cs(b,'fontSize')})),ph:r.querySelectorAll('[data-clbtn][hidden]').length,
       afterScore:(()=>{const s=r.querySelector('.c-score');const b=vis[0];return !!(s&&b&&s.nextElementSibling===b);})()};});},
   async rowBtnAt(code){const r=[...document.querySelectorAll('#slot .cell.c2row[data-ck]')].find(x=>txt(x.querySelector('.c2code'))===code);if(!r)return null;const b=[...r.querySelectorAll('[data-clbtn]')].find(x=>!x.hidden);return b?scrollHit(b):{none:true};},
   async rowAt(code){const r=[...document.querySelectorAll('#slot .cell.c2row[data-ck]')].find(x=>txt(x.querySelector('.c2code'))===code);if(!r)return null;const t=r.querySelector('.c2t2')||r;return scrollHit(t);},
-  cardTabs(code){const p=popLike('🧾 기출 · '+code);if(!p)return null;const tabs=p.querySelector('.gtabs');return {pk:p._pk,tabs:[...tabs.children].map(b=>({t:txt(b),cls:b.className,on:b.classList.contains('on'),color:cs(b,'color'),bc:cs(b,'borderTopColor'),fw:cs(b,'fontWeight')}))};},
+  cardTabs(code){const p=popLike('🧾 기출 · '+code);if(!p)return null;const tabs=p.querySelector('.gtabs');return {pk:p._pk,tabs:[...tabs.children].map(b=>({t:txt(b),cls:b.className,on:b.classList.contains('on'),color:cs(b,'color'),bc:cs(b,'borderTopColor'),bw:cs(b,'borderTopWidth'),fw:cs(b,'fontWeight')}))};},   /* A-6(a) 9/30 — c2card B-2: Claude 탭 테두리 0 을 잰다 */
   async cardTabAt(code){const p=popLike('🧾 기출 · '+code);const b=p&&p.querySelector('.gtabs .cltab');return b?scrollHit(b):null;},
   async openCard(code){const k=await msKey(code);if(!k)return null;await popCard4('기출',k,{clientX:260,clientY:120},1);await wait(700);const p=popLike('🧾 기출 · '+code);return p?popInfo(p):null;},
   clWin(uid){const p=popBy('claude|'+uid);if(!p)return null;const w=p.querySelector('[data-clwin]');

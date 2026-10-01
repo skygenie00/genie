@@ -159,10 +159,12 @@ TESTS = r"""<script>
    const _spc=Element.prototype.setPointerCapture;Element.prototype.setPointerCapture=function(){};
    const before=(INK[LAYER]||[]).length;
    const pen0=SET.pencil;SET.pencil=false;
-   $('#inkc').dispatchEvent(new PointerEvent('pointerdown',{clientX:20,clientY:20,pointerId:11,pointerType:'mouse',bubbles:true,cancelable:true,isPrimary:true}));
+   /* A-6(a) 9/30 — 문항 필기(#inkc)는 **펜만**이다(moolri/_task_jagwa_pen_touch2 §1 「SET.pencil 21곳 → if(pointerType!=='pen') return」 · §6-5 갈래 표 「1 문항 필기 #inkc — pen 필기 · mouse 조작」 · c62b2b2)
+      → SET.pencil=false 로 마우스 획을 열던 길이 없어졌다 · 펜으로 누른다(재는 것 = HAVE 가 비어도 카드 층은 안 막힌다 그대로) */
+   $('#inkc').dispatchEvent(new PointerEvent('pointerdown',{clientX:20,clientY:20,pointerId:11,pointerType:'pen',bubbles:true,cancelable:true,isPrimary:true}));
    await wait(20);
    const after=(INK[LAYER]||[]).length;
-   $('#inkc').dispatchEvent(new PointerEvent('pointerup',{clientX:20,clientY:20,pointerId:11,pointerType:'mouse',bubbles:true,cancelable:true,isPrimary:true}));
+   $('#inkc').dispatchEvent(new PointerEvent('pointerup',{clientX:20,clientY:20,pointerId:11,pointerType:'pen',bubbles:true,cancelable:true,isPrimary:true}));
    SET.pencil=pen0;Element.prototype.setPointerCapture=_spc;HAVE={};haveKeys.forEach(k=>HAVE[k]=1);
    T('G-4 HAVE 빈 상태에서도 카드 층 문항 필기는 안 막힌다(획 하나 시작됨)',after===before+1,[before,after]);
 

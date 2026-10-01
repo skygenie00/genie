@@ -284,7 +284,7 @@ def scen(br, app, tag, subj, keep):
             p.ptap(a['x'], a['y']); t = p.ev("()=>__P.st()"); r4['선택지 ②'] = {'pick': t['pick'], '획': t['strokes'] - s['strokes'], '밑': a['under']}
         a = p.ev("()=>__P.at('.bogi .row .ox button[data-v=\"O\"]',.5,.5)")
         if a:
-            s = p.ev("()=>__P.st()"); p.ptap(a['x'], a['y']); t = p.ev("()=>__P.st()"); r4['〈보기〉 O'] = {'ox': t['ox'], '획': t['strokes'] - s['strokes']}
+            s = p.ev("()=>__P.st()"); p.ptap(a['x'], a['y']); t = p.ev("()=>__P.st()"); r4['〈보기〉 O'] = {'ox': t['ox'], 'ox0': s['ox'], '획': t['strokes'] - s['strokes']}   # ★ A-6(a) 9/30 — 누르기 전 O/X(4b 가 누름이 바꾼 칸을 맞댄다)
         a = p.ev("()=>__P.at('.vox[data-vmark=\"Q\"]',.5,.5)")
         if a:
             s = p.ev("()=>__P.st()"); p.ptap(a['x'], a['y']); t = p.ev("()=>__P.st()"); r4['표시 △'] = {'vox': t['vox'], '획': t['strokes'] - s['strokes'], '위': a['top']}
@@ -436,9 +436,22 @@ def main():
     for subj in ('bio', 'earth'):
         a, b = (keep.get('press') or {}).get('BASE' + subj), (keep.get('press') or {}).get('NEW' + subj)
         if a is not None and b is not None:
-            ga, gb = (a.get('근거 ＋') or {}).get('gg'), (b.get('근거 ＋') or {}).get('gg')
+            # ★ A-6(a) 9/30 _task_qa_baseline — jagwa_uid(genie 5e18424 + studyplandata 4a011475 · 결정로그 9/29 15:09 · _task_jagwa_uid.md 수행 결과 「남은 차이 … penfinger 4b 지학
+            #   = 바탕 쪽(옛 앱 + 새 데이터)이 기록을 못 봄」): 옛 앱(BASE 72a65b3)은 새 번호 데이터에서 옛 열쇠 기록(〈보기〉 O/X · 근거)을 못 봐 누르기 전 상태가 갈린다
+            #   → 〈보기〉 O 는 누름이 바꾼 칸(앞뒤 대칭차) · 근거 ＋ 는 늘어난 글자 수로 맞댄다 · 선택지·△·정답·해설·획 수는 그대로 같아야
+            def eff(r):
+                o = {}
+                for k, v in r.items():
+                    if k == '〈보기〉 O':
+                        o[k] = {'바뀐 칸': sorted(set(v.get('ox0') or []) ^ set(v.get('ox') or [])), '획': v.get('획')}
+                    elif k == '근거 ＋':
+                        g = v.get('gg') or [0, 0]
+                        o[k] = {'늘어난 글자': g[1] - g[0], '획': v.get('획')}
+                    else:
+                        o[k] = {kk: vv for kk, vv in v.items() if kk not in ('밑', '위')}
+                return o
             T('NEW ' + subj, '4b 펜 근거 ＋ = 바탕과 같은 결과 · 선택지·O/X·△·정답·해설 누름도 바탕과 같음',
-              ga == gb and {k: {kk: vv for kk, vv in v.items() if kk not in ('밑', '위')} for k, v in a.items()} == {k: {kk: vv for kk, vv in v.items() if kk not in ('밑', '위')} for k, v in b.items()},
+              eff(a) == eff(b),
               {'BASE': a, 'NEW': b})
         la, lb = (keep.get('mouse') or {}).get('BASE' + subj), (keep.get('mouse') or {}).get('NEW' + subj)
         if la is not None and lb is not None:

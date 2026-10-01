@@ -65,9 +65,17 @@ def scen(br, eng, tag, src, vp, W, H, pad):
     try:
         G = GR
         R['boot'] = p.ev("__HJ.boot()")
-        R['jari'] = CJ.open_jari(p, G, G['CAND'])
-        at = p.ev("([b,w,i])=>__HJ.jariAt(b,w,i)", [G['CAND'], 'card', 0]); p.click(at, 700)
-        R['book'] = p.ev("__HJ.bookReady()")
+        for _try in range(3):   # ★ A-6(d) 10/1 — WebKit 에서 캔버스가 다시 그려지는 사이(D=null)에 자리 창을 열면 앱 __jocvj.go 가 「D.pages」로 던진다
+            try:                #   (r5 ipad · r6 desk·phone 에서만 · r2·r3 없음 · canvas_relayout 흔들림과 같은 뿌리) → 준비 단계(자리 창 → 교재 창)만 두 번 더 · 재는 줄은 그대로
+                R['jari'] = CJ.open_jari(p, G, G['CAND'])
+                at = p.ev("([b,w,i])=>__HJ.jariAt(b,w,i)", [G['CAND'], 'card', 0]); p.click(at, 700)
+                R['book'] = p.ev("__HJ.bookReady()")
+                break
+            except Exception as e:
+                if not ('D.pages' in repr(e) or "reading 'pages'" in repr(e)) or _try == 2:   # 웹킷 「D.pages」 · 크롬 「reading 'pages'」(r7 chromium ipad)
+                    raise
+                R['retry'] = R.get('retry', 0) + 1
+                p.pg.wait_for_timeout(1500)
         if not R['book'].get('n'):
             R['exc'] = '교재 창이 안 열림'
             return R
@@ -143,8 +151,11 @@ def gates(R, tag, BASER=None):
           {'cvph': x.get('cvph'), 'H': x.get('H'), 'navTop': x.get('navTop')})
         if BASER and not BASER.get('exc'):
             b0 = BASER['m']['0']
-            T(pre + '굴리기 전 막대 자리 = 바탕(±0.5 · 쉬는 자리 무변)', b0.get('N') and m0.get('N') and all(abs(b0['N'][k] - m0['N'][k]) <= 0.5 for k in ('x', 'y', 'w', 'h')) and abs(b0['H']['h'] - m0['H']['h']) <= 0.5,
-              {'base': b0.get('N'), 'new': m0.get('N')})
+            # A-6(a) 9/30 — revfix0928night A-4(폰 교재 쪽 창 높이 ≥ 보이는 높이 60% · 위끝을 그만큼 올림 · cvbPhoneTall · genie dfbb144)로 폰 창 자리가 옮겨졌다
+            #   → 막대 x·y 는 창 안 자리(창 왼쪽·위끝 기준)로 잰다 · w·h·머리 높이는 그대로
+            rel = lambda M_, k: M_['N'][k] - (M_['W'][k] if k in ('x', 'y') else 0)
+            T(pre + '굴리기 전 막대 자리 = 바탕(±0.5 · 쉬는 자리 무변)', b0.get('N') and m0.get('N') and all(abs(rel(b0, k) - rel(m0, k)) <= 0.5 for k in ('x', 'y', 'w', 'h')) and abs(b0['H']['h'] - m0['H']['h']) <= 0.5,
+              {'base': b0.get('N'), 'new': m0.get('N'), 'W': [b0.get('W'), m0.get('W')]})
 
 
 def main():

@@ -116,7 +116,7 @@ window.__HM={
         const t='하네스 줄 <'+a.id+'> 끝';const i=t.indexOf('<'),j=t.indexOf('>')+1;
         const row={t:t,e:[{k:'P',a:i,b:j,j:a.id}]};const d=el('div','ln');d.appendChild(renderLine(row,{label:false,depth:a.d}));body.appendChild(d);
         host=body.parentNode;target=host.querySelector('.plink:not(.dead)');}
-      else if(site==='2094'){await popJo(a.law||'특허법',a.jo,null,a.d);await wait(600);host=popBy('jo|'+(a.law||'특허법')+'|'+a.jo);target=host&&host.querySelector('.joLink:not(.dead)');}
+      else if(site==='2094'){await popJo(a.law||'특허법',a.jo,null,a.d);await wait(600);host=popBy('jo|'+(a.law||'특허법')+'|'+a.jo);target=host&&host.querySelector('.joLink:not(.dead),.wmlk:not(.dead)');}   /* A-6(a) 9/30 — joscreen0929 A-2: 조문 팝업 몸 = 원문 → 조 링크 .wmlk */
       else if(site==='6230'){/* ⤷ 칩은 임베드 상자로 바뀌고(chip.replaceWith) 칩이 남는 곳은 상자 안 줄(inline:false)뿐인데 데이터에 중첩 임베드가 0 — 상자 안 줄을 지어 부른다 */
         const body=popShell('cell','하네스 — 상자 안 ⤷ 임베드 줄(지은 줄)','h|6230');showPop(null);
         const row={t:'하네스 임베드 줄',e:[{k:'E',a:0,b:0,to:a.to}]};const d=el('div','ln');d.appendChild(renderLine(row,{label:false,depth:a.d,inline:false}));body.appendChild(d);
@@ -153,6 +153,7 @@ window.__HM={
     else if(where==='note'){const p=lastPop();ln=p&&[...p.querySelectorAll('.ntrow > .ln')].find(l=>l._pit&&/[가-힣]{3,}/.test(l.textContent));}
     if(!ln)return null;const w=await wordIn(ln,2);if(w)w.line=txt(ln).slice(0,40);return w;},
   menu(){const m=document.querySelector('.pitmenu');return m?[...m.querySelectorAll('.mi')].map(txt):null;},
+  bar(){const b=document.querySelector('#jomk9:not([hidden])');return b?[...b.querySelectorAll('.mk9r2 button')].filter(x=>!x.hidden).map(txt):null;},   /* A-6(a) 9/30 — joscreen0929 A-5: 조문 줄 칠 막대 둘째 줄 */
   menuClear(){document.querySelectorAll('.pitmenu').forEach(x=>x.remove());try{getSelection().removeAllRanges();}catch(e){}return true;},
   selLen(){const s=getSelection();return s?String(s).length:0;},
   /* ── G 폰 ── */

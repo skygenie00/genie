@@ -89,8 +89,10 @@ TESTS = r"""<script>
    FL.mark='P';L=ids();T('P-2 「P」 = 6,7',L.join()==='6,7',L);
    FL.mark='weak';L=ids();T('W-2 「약점」 = 1,4,5',L.join()==='1,4,5',L);
    FL.mark='less';L=ids();T('W-2 「덜약점」 = 2,7,9',L.join()==='2,7,9',L);
-   FL.mark='';findChip('메모 있음').click();await wait(60);const memoRows=[...document.querySelectorAll('#memoSheet .memor')].map(d=>+d.dataset.no).sort((a,b)=>a-b);
-   T('N-2 「메모 있음」 = 시트(9/5 필터 손질 B-3 · 필터 아님) 줄 = 2,3,4,9',!!$('#memoSheet')&&memoRows.join()==='2,3,4,9',memoRows);$('#memoX').click();await wait(10);
+   /* ★ A-6(a) 9/30 — 셸 add6 §C-3(216dd4a): 물리 「메모 있음」 들머리(#fMemo · 옛 시트)는 걷었다 — 옛 코멘트는 근거로 갔고 갈 곳 = 「🃏 전체」(#mcAll) ·
+      #fEtc 의 「메모 있음」은 셸 이식(c9faff2) 뒤 카드 층 칩(숨은 줄 · 거르개 'note')이라 누르지 않는다(누르면 시트 대신 거르개가 걸리고 #memoX 가 없어 터졌다) */
+   FL.mark='';draw();await wait(60);
+   T('N-2 「메모 있음」 시트 들머리 = 물리에서 걷음(셸 add6 §C-3 · 갈 곳 = 🃏 전체)',!$('#fMemo')&&!!$('#mcAll'),[!!$('#fMemo'),!!$('#mcAll')]);
    T('「안 푼 것」 필터 없음(9/5 B-2) — FL.mark new 는 빈 목록',(()=>{FL.mark='new';const n=ids().length;FL.mark='';return n===0})());
    FL.mark='again';const again0=ids().join();T('「두 번 이상 틀림」 = 5',again0==='5',again0);
    FL.mark='';
@@ -98,7 +100,9 @@ TESTS = r"""<script>
 
    /* ===== 목록 이력 줄 · 볼트 표기 ===== */
    draw();
-   const item6=[...document.querySelectorAll('#list .item')].find(d=>d.querySelector('.num').textContent==='6');
+   /* ★ A-6(a) 9/30 — 셸 이식(c9faff2 · 층 문 if(CARD_LAYER) → if(SHELL)) 뒤 물리 목록 줄은 껍데기 row(층)다 — 번호 칸 .num 에 번호 대신 코드(codeShow(r) · 물리는 HASROUND 거짓이라 F.CODE · 6번 = PA0801)가 선다
+      (add11 §0-3 「껍데기 줄 row … .num = codeShow(r)」 · add12 §A-4) → 코드로 찾는다 · 이력 줄 .mk 꼴·P 검정 기대 그대로 */
+   const item6=[...document.querySelectorAll('#list .item')].find(d=>d.querySelector('.num').textContent===codeShow(rec(6)));
    T('P-1 목록 이력 줄 P 검정',!!item6&&!!item6.querySelector('.mk .h i.P')&&bg(item6.querySelector('.mk .h i.P'))===INK);
    T('P-1 볼트 표기 P 읽음(XOP)',(function(){const k=Object.keys(SOL)[0];const bak=SOL[k].f;SOL[k].f='PA0001 하-테스트 XOP';const v=vaultMark(1,k);const t=vaultTitle(k);SOL[k].f=bak;return v==='XOP'&&t==='테스트'})());
    T('P-1 볼트 표기 옛 값 그대로(XO)',(function(){const k=Object.keys(SOL)[0];const bak=SOL[k].f;SOL[k].f='PA1508하-PV그래프 XO';const v=vaultMark(1,k);SOL[k].f=bak;return v==='XO'})());
@@ -117,7 +121,10 @@ TESTS = r"""<script>
    T('N-1 코멘트 있는 행 = 🗒',!!nrow(2).querySelector('.ndc')&&!!nrow(4).querySelector('.ndc')&&nrow(2).querySelector('.ndc').textContent==='🗒');
 
    /* ===== N-1 팝오버 ===== */
-   nrow(2).querySelector('.ndc').click();await wait(30);
+   /* ★ A-6(d) 9/30 — 셸 add9 §A(68216cf): 상주 서랍은 #list 가 다시 그려지면 MutationObserver 가 80ms 뒤 ndResident·navBuild·navSync 를 부르고(앱 3738~3743),
+      navSync 는 첫머리에서 ndPopClose() 로 팝오버를 닫는다(9/4 규칙 그대로 · 3599) — 102줄 draw() 가 남긴 그 늦은 한 번이 클릭과 검사(30ms) 사이에 떨어지면
+      방금 연 팝오버가 닫힌다(9/30 r2 [null,6] → 124줄 getBoundingClientRect 로 터짐) · 늦은 다시 짓기를 먼저 흘려보내고 누른다(기대 무변) */
+   await wait(150);nrow(2).querySelector('.ndc').click();await wait(30);
    T('N-1 칩 클릭 = 팝오버(전문) · 이동 아님',!!$('#ndPop')&&$('#ndPop .txt').textContent===CMT[2]&&VNO===6,[$('#ndPop')&&$('#ndPop').textContent,VNO]);
    T('N-1 팝오버가 서랍 오른쪽에 뜬다',(function(){const p=$('#ndPop').getBoundingClientRect(),d=$('#navdr').getBoundingClientRect();return p.left>=d.right&&p.top>=0})(),$('#ndPop').getBoundingClientRect());
    document.body.click();await wait(30);
@@ -161,14 +168,14 @@ TESTS = r"""<script>
    T('이력 시트에서 P→O 고치기',lastM(6)==='O');
    document.querySelectorAll('.histrow')[1].querySelector('.sel button[data-m=P]').click();await wait(60);
    T('이력 시트에서 O→P 고치기',lastM(6)==='P');
-   $('#hClose').click();await wait(10);
+   $('#sh-hist .shx').click();await wait(10);   /* ★ A-6(a) 9/30 — 셸 add16(0bee72b): 마크 이력(histSheet)은 떠 있는 창(#sh-hist) · phone_win A-5(fb89ad2 · pwBtns): 그 창의 「닫기」(#hClose)는 걷었다 → ✕ 로 닫는다(phys_twin 첫 바퀴 고침과 같다 · 안 고치면 N-1 을 넘긴 뒤 여기서 다시 터진다) */
 
    /* ===== R-1 · again ===== */
    FL.mark='again';T('P-2 again 무변(X 만 센다)',ids().join()===again0,ids());FL.mark='';
    const ST1=JSON.parse(JSON.stringify(ST));delete ST1[6];delete ST1[3];const B=JSON.parse(before);delete B[6];delete B[3];
    T('R-1 P 찍은 문항 밖의 기록 바이트 동일',JSON.stringify(ST1)===JSON.stringify(B));
    T('R-1 note JSON 바이트 동일',JSON.stringify(CMT)===CMT0);
-   T('R-1 SYNC_KEYS 12(10 + mcard · 2026-09-04 · + link 2026-09-05 필터 손질 B-4) · status·note',SYNC_KEYS.length===12&&SYNC_KEYS[0]==='status'&&SYNC_KEYS[1]==='note'&&SYNC_KEYS[10]==='mcard'&&SYNC_KEYS[11]==='link',SYNC_KEYS);
+   T('R-1 SYNC_KEYS 14(10 + mcard · 2026-09-04 · + link 2026-09-05 필터 손질 B-4 · + gg·ggref 2026-09-21 셸 이식) · status·note',/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(앱 8168~8169) · 앞 열둘은 그대로 */SYNC_KEYS.length===14&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&SYNC_KEYS[0]==='status'&&SYNC_KEYS[1]==='note'&&SYNC_KEYS[10]==='mcard'&&SYNC_KEYS[11]==='link',SYNC_KEYS);
    T('R-1 exportData 함수 있음',typeof exportData==='function');
 
    /* ===== N-2 코멘트 시트 검색 ===== */
@@ -220,12 +227,17 @@ TESTS = r"""<script>
 
    /* ===== P-2 학습로그 · 개념 통계 ===== */
    closeView();await wait(10);
-   const lb=[...document.querySelectorAll('button')].find(b=>b.textContent==='📝 학습로그');lb.click();await wait(40);
+   /* ★ A-6(a) 9/30 — 셸 본판 §C(c9faff2 · jagwa/gigu/_task_jagwa_shell_bio_phys.md §C 52~55줄 · 수행 결과 §C 140~145줄): 오른쪽 아래 「📝 학습로그」 단추는 걷었고 openPanel·요약 코드는 IIFE 안에 그대로 둔다 —
+      부르는 길이 하나도 없다(openPanel 은 처음부터 전역이 아니다) · 까닭 = tt 데일리 모음이 각 앱 학습로그를 대신한다(9/1 결정) → 「단추 없음 · 여는 길 없음」이 새 기대 ·
+      아래 옛 두 칸은 단추가 있을 때만 잰다(지우지 않는다 · 지금 판에서는 안 돈다 — 첫 바퀴 ink_z 선례) */
+   const lb=[...document.querySelectorAll('button')].find(b=>b.textContent==='📝 학습로그');
+   T('P-2 학습로그 단추 걷음(셸 본판 §C · 여는 길 0 — openPanel 은 IIFE 안 · 요약 코드는 그대로)',!lb&&typeof openPanel==='undefined'&&!$('#plg-text'),[!!lb,typeof openPanel,!!$('#plg-text')]);
+   if(lb){lb.click();await wait(40);
    const txt=$('#plg-text').value;
    const nPh=Object.values(ST).reduce((a,v)=>a+v.h.filter(x=>x.m==='P').length,0);
    T('P-2 학습로그 P 열(합계 · P '+nPh+' = 오늘 이력의 P 수)',new RegExp('합계: .*· P '+nPh+'(\s|$)').test(txt),txt.split(String.fromCharCode(10)).slice(-2));
    T('P-2 학습로그 소단원 줄 P',/· P \d+\)/.test(txt),txt.split(String.fromCharCode(10)).slice(1,3));
-   $('#plg-close').click();
+   $('#plg-close').click();}   /* ★ A-6(a) 9/30 — 위 if(lb){ 의 짝(학습로그 단추가 있을 때만) */
    const cs=conceptStat(Object.keys(CQ)[0]||'x');
    T('P-2 conceptStat p 열',('p' in cs)&&('o' in cs)&&('n' in cs),cs);
 
@@ -312,7 +324,7 @@ def main():
     T2('상단 검색(pass 의 FL.q 줄) 무변',
        [l for l in s.split('\n') if 'noteOf(r[F.NO]).includes(FL.q)' in l] == [l for l in head.split('\n') if 'noteOf(r[F.NO]).includes(FL.q)' in l])
     T2('기록 꼴 주석 그대로(새 키 없음)', "let ST={};            // no -> {h:[{m:'O'|'X'|'Q', t:ts, s:초}]}" in s)
-    T2('조판기·화학 무접촉(이 파일은 phys 뿐)', 'minbeop' not in s and 'chem/' not in s)
+    T2('조판기·화학 무접촉(이 파일은 phys 뿐)', 'minbeop' not in s.replace('민법앱(`minbeop/index.html`)의 실물을 읽고 옮겼다', '') and 'chem/' not in s)   # ★ A-6(a) 9/30 — listpop_add1(cd248a5) 주석 한 줄만 뺀다(phys P1 과 같음)
     T2('P11 파일 전체 백틱 수가 짝', s.count('`') % 2 == 0, s.count('`'))
     raw = open(SRC, 'rb').read()
     T2('CRLF 만(줄끝 섞임 없음)', raw.count(b'\r\n') == raw.count(b'\n'))

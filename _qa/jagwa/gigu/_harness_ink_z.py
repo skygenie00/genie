@@ -94,6 +94,10 @@ TESTS = r"""<script>
 
    /* ═══ ④ 기기 하나에 하나인 pencil ═══ */
    await grp('Z-4', async()=>{
+   /* A-6(a) 9/30 — 펜슬 스위치 기계(pencilLoad·pencilSet·pencilOf·pencilUnify·PENCIL_KEY)를 걷었다(moolri/_task_jagwa_pen_touch2 §1 · 수행 결과 §6-4 「부르는 자리가 0이 되어 기계째 32줄 걷었다 ·
+      헤드리스에서 셋 다 undefined」 · c62b2b2 · _decisions 2026-09-13) — 필기는 언제나 펜만. 아래 옛 여섯 줄은 그 기계가 있을 때만 잰다(지우지 않는다 · 지금 판에서는 안 돈다) */
+   T('Z-4 펜슬 스위치 기계를 걷었다 — pencilUnify·pencilSet·pencilLoad·pencilOf 가 undefined',typeof pencilUnify==='undefined'&&typeof pencilSet==='undefined'&&typeof pencilLoad==='undefined'&&typeof pencilOf==='undefined',[typeof pencilUnify,typeof pencilSet,typeof pencilLoad,typeof pencilOf]);
+   if(typeof pencilUnify!=='function')return;
    T('Z-4 pencilUnify: 값이 다 같으면 그 값',typeof pencilUnify==='function'&&pencilUnify([true,true])===true&&pencilUnify([false,false])===false);
    T('Z-4 pencilUnify: 엇갈리면 false(푸는 쪽)',pencilUnify([true,false])===false&&pencilUnify([false,true,true])===false);
    T('Z-4 pencilUnify: 값이 하나도 없으면 false',pencilUnify([])===false&&pencilUnify([undefined,null])===false);

@@ -20,7 +20,7 @@ _NEW, _DATA, _EXAM = ARG('--new'), ARG('--data'), ARG('--exam')
 ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jo_cardfix_result.txt'))
-sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', 'HEAD'] + (['--exam', _EXAM] if _EXAM else [])
+sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', '6242678'] + (['--exam', _EXAM] if _EXAM else [])   # A-6(d) 9/30 — 바탕 = 인도 때 HEAD 6242678(결정로그 9/27 20:51 「헛잣대 6242678」) · HEAD 로 두면 인도 뒤 헛잣대·바탕 대조가 새 판끼리 맞대 거꾸로 FAIL
 sys.path.insert(0, HERE)
 import _harness_jo_gaek_mbsame as M   # noqa: E402
 from playwright.sync_api import sync_playwright   # noqa: E402

@@ -204,7 +204,14 @@ def law_counts():
         n1 = sum(1 for h in H if h.get('lv') == 1)
         n2 = sum(1 for h in H if h.get('lv') == 2)
         under2 = sum(1 for x in J if x.get('j') is not None and H[x['j']].get('lv') == 2)
-        out[law] = {'lv1': n1, 'lv2': n2, 'jo': len(J), 'fold1': n1, 'fold2': n1 + n2 + len(J) - under2, 'open': n1 + n2 + len(J)}
+        # ★ A-6(a) 9/30 _task_qa_baseline — revfix0930 A-4: 층 → 깊이(lv − 그 법 맨 위 lv + 1)로 단계 접기(민소 편 lv 0 → 접기1 편 · 접기2 +장 · 접기3 +절 · 펴기)
+        #   깊이 L 접기 = 깊이 ≤ L 머리 + 제 머리(j) 깊이 ≤ L−1 인 조 · 펴기 = 머리 전부 + 조 전부 · 맨 위 lv 1 인 세 법은 옛 식과 같은 값
+        top = min([h.get('lv', 1) for h in H] or [1])
+        dep = lambda h: h.get('lv', 1) - top + 1
+        o = {'lv1': n1, 'lv2': n2, 'jo': len(J), 'open': len(H) + len(J)}
+        for d in range(1, max([dep(h) for h in H] or [0]) + 1):
+            o['fold%d' % d] = sum(1 for h in H if dep(h) <= d) + sum(1 for x in J if x.get('j') is None or dep(H[x['j']]) <= d - 1)
+        out[law] = o
     return out
 
 
@@ -329,10 +336,10 @@ def b1(br, url, R):
             pg.click('.jtbar .jstep')
             idle(pg)
             c[tx] = pg.evaluate("document.querySelectorAll('.tree .r').length")
-        got[law] = {'fold1': c.get('접기1'), 'fold2': c.get('접기2'), 'open': c.get('펴기')}
+        got[law] = dict({'fold%d' % d: c.get('접기%d' % d) for d in (1, 2, 3) if d < 3 or '접기3' in c}, open=c.get('펴기'))   # ★ A-6(a) 9/30 — 깊이 셋(민소 편 층)이면 접기3 도
         R.note('%s 셈: lv1 %d · lv2 %d · 조 %d → 접기1 %s · 접기2 %s · 펴기 %s (자료 셈 %d · %d · %d)' % (
             law, exp[law]['lv1'], exp[law]['lv2'], exp[law]['jo'], got[law]['fold1'], got[law]['fold2'], got[law]['open'], exp[law]['fold1'], exp[law]['fold2'], exp[law]['open']))
-    R.ck(G, '1m', all(got[l] == {k: exp[l][k] for k in ('fold1', 'fold2', 'open')} for l in LAWS), '네 법 접기 셈 = 자료 셈')
+    R.ck(G, '1m', all(got[l] == {k: v for k, v in exp[l].items() if k.startswith('fold') or k == 'open'} for l in LAWS), '네 법 접기 셈 = 자료 셈')
     R.ck(G, '1z', not errs, 'JS 오류 %s' % errs[:3])
     ctx.close()
 

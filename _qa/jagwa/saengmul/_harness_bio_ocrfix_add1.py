@@ -143,8 +143,11 @@ def main():
     now = open(B.QJ, 'rb').read()
     T('A-6 쓰기 두 번 = 같은 바이트(멱등) · 왕복 무변 · 검산 OK · 두 번째 「바뀐 칸 0」', b1 == b2 and 'OK  json 왕복 무변' in r1 and '검산 OK' in r1 and '바뀐 칸 0' in r2,
       {'1회': [x for x in r1.splitlines() if x.startswith(('①', '②', '옛 md5'))][:3], '2회': [x for x in r2.splitlines() if '바뀐 칸' in x][:1]})
-    T('A-6 인도본(studyplandata 로컬 bio/문항.json) = 재생성(바탕 + 스크립트) — 인도 전이면 로컬 = 바탕', now == b1 or now == raw,
-      {'로컬': hashlib.md5(now).hexdigest()[:8], '재생성': hashlib.md5(b1).hexdigest()[:8], '바탕': hashlib.md5(raw).hexdigest()[:8]})
+    # ★ A-6(d) 9/30 — 인도본 = 인도 커밋 b3bb3c3b(add2 인도 · 고침표·스크립트 지금 판으로 다시 만들면 add2 인도본과 같다 · md5 73f4c803) —
+    #   뒤 jagwa_uid(studyplandata 4a011475)가 uid 를 새 꼴로 바꿔 로컬 ≠ 재생성(이 칸 전용 now_dl · 「인도 전이면 로컬 = 바탕」 쪽은 그대로)
+    now_dl = subprocess.run(['git', '-C', B.SPDROOT, 'show', 'b3bb3c3b:bio/문항.json'], capture_output=True).stdout
+    T('A-6 인도본(studyplandata b3bb3c3b bio/문항.json · 고침표·스크립트 지금 판의 인도 = add2) = 재생성(바탕 + 스크립트) — 인도 전이면 로컬 = 바탕', now_dl == b1 or now == raw,
+      {'인도본': hashlib.md5(now_dl).hexdigest()[:8], '로컬': hashlib.md5(now).hexdigest()[:8], '재생성': hashlib.md5(b1).hexdigest()[:8], '바탕': hashlib.md5(raw).hexdigest()[:8]})
     D0 = {r['uid']: r for r in json.loads(raw.decode('utf-8'))}
     D1 = {r['uid']: r for r in json.loads(b1.decode('utf-8'))}
     L = json.load(io.open(B.LISTS, encoding='utf-8'))

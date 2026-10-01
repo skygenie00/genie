@@ -158,7 +158,7 @@ def report():
 
 def main():
     os.makedirs(HT.WORK, exist_ok=True)
-    base_src = HT.git('show', 'HEAD:jo/index.html').decode('utf-8')
+    base_src = HT.git('show', 'f497f05:jo/index.html').decode('utf-8')   # A-6(d) 9/30 — 바탕 앱 = 인도 때 HEAD f497f05(docstring · 인도 결과 머리)
     assert hashlib.md5(base_src.encode('utf-8')).hexdigest() == HT.BASE_MD5
     new_src = io.open(HT.NEWF, encoding='utf-8', newline='').read()
     # 시안 — 바탕에 r.onclick 한 줄만(채팅 index_sr.html 과 같은 꼴 · C2 헛잣대)

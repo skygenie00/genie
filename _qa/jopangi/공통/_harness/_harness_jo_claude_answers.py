@@ -224,7 +224,8 @@ def main_scenario(s, new):
         R['J10fix'] = s.js("__HZT.fix()")
         R['J10win'] = s.js("u=>__HZT.win(u)", 'TR01053')
         R['J10card'] = s.js("u=>__HZT.card(u)", 'TR01053')
-        R['J10keys'] = s.js("()=>({n:SYNC_KEYS.length,last:SYNC_KEYS[SYNC_KEYS.length-1],u:Object.keys(JSON.parse(localStorage.getItem('jopangi_sync_u')||'{}')).filter(x=>x.indexOf('jopangi.clfix|')===0)})")
+        # A-6(a) 옛 키가 앞자리 그대로인지 재려고 SYNC_KEYS 전체 목록도 받는다
+        R['J10keys'] = s.js("()=>({n:SYNC_KEYS.length,all:SYNC_KEYS.slice(),last:SYNC_KEYS[SYNC_KEYS.length-1],u:Object.keys(JSON.parse(localStorage.getItem('jopangi_sync_u')||'{}')).filter(x=>x.indexOf('jopangi.clfix|')===0)})")
         # J11b — 20,001자 → 저장 안 됨 · 취소
         c = s.js("u=>__HZT.card(u)", 'TR01053')
         s.tap(((c or {}).get('btn') or {}).get('at')); W(400)
@@ -463,10 +464,13 @@ def report(RES, base, new, rec0, only=''):
     T('착수 %s = 지시서 G0-1 (904,215 B · md5 945242dd…)' % BASE_REV, len(bb) == 904215 and hashlib.md5(bb).hexdigest() == BASE_MD5, [len(bb), hashlib.md5(bb).hexdigest()])
     T('J21 NEW 작업트리 CRLF 그대로(LF 단독 0 · %d 줄) · U+FFFD 0 · %d B · md5(LF) %s' % (nb_raw.count(b'\r\n'), len(nb_raw), hashlib.md5(nb).hexdigest()),
       nb_raw.count(b'\n') == nb_raw.count(b'\r\n') and '\ufffd' not in new)
-    ch = [l for l in git('status', '--porcelain').decode('utf-8').split('\n') if l.strip()]
-    T('genie 작업트리 바뀐 파일 = jo/index.html 하나 %s' % ch, ch == [' M ' + REL], ch)
+    # A-6(d) 인도 검산 = Claude 답 칸 인도 커밋 dde3300(부모 7b9e214)이 바꾼 파일 — 작업트리 git status 는 인도 전에만 선다
+    ch = [l for l in git('diff', '--name-status', '7b9e214', 'dde3300').decode('utf-8').split('\n') if l.strip()]
+    T('genie 작업트리 바뀐 파일 = jo/index.html 하나 %s' % ch, ch == ['M\t' + REL], ch)
     sk = lambda s: re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\]', s.replace('\r\n', '\n'), re.S).group(1))
-    T('§F SYNC_KEYS = 옛 29키 그대로 + 끝에 clfix (30키)', sk(new) == sk(base) + ['clfix'] and len(sk(new)) == 30, [len(sk(base)), sk(new)[-3:]])
+    # A-6(d) 「옛 29키 + 끝에 clfix」 는 그 판 성질 — 인도판(dde3300) 소스로 잰다(뒤 판들이 키를 더함: 54ced94 c2unit … ffafcb0 jocheck)
+    new_del = git('show', 'dde3300:' + REL).decode('utf-8')
+    T('§F SYNC_KEYS = 옛 29키 그대로 + 끝에 clfix (30키)', sk(new_del) == sk(base) + ['clfix'] and len(sk(new_del)) == 30, [len(sk(base)), sk(new_del)[-3:]])
     nl = new.replace('\r\n', '\n')
     T('§A-2 받는 길 — CL_PATH 상수 · ghRaw(같은 저장소·raw·토큰) · recBoot 한 번 · syncRecords 안 한 번 · 저장소(localStorage·IndexedDB)에 안 넣는다',
       "const CL_PATH = 'jopangi/claude.json';" in nl and 'await ghRaw(CL_PATH)' in nl
@@ -523,12 +527,14 @@ def report(RES, base, new, rec0, only=''):
           b3.get('text') == 'Claude' and b3.get('color') == SUB and n.get('J3tap') is True and g(n, 'J3win', 'win') is True
           and g(n, 'J3win', 'note') == '이 지문에 걸린 Claude 답이 아직 없다. 채팅에서 물어보면 적립되고 여기 붙는다.' and g(n, 'J3win', 'answers') == [], [b3, n.get('J3win')])
         w5 = n.get('J5win') or {}
-        T(p + 'J1 톡 → Claude 창 · 제목 「%s」' % w5.get('title'), n.get('J1tap') is True and w5.get('win') is True and w5.get('title') == 'Claude · 2001년 5번(3) · TR01053', w5)
+        # A-6(a) 번호 글 「2001년 5번(3)」 → 「제7판 p.411」(mbsame §A 흡수) → 「H7 p.411」(revfix0928pm §A-2)
+        T(p + 'J1 톡 → Claude 창 · 제목 「%s」' % w5.get('title'), n.get('J1tap') is True and w5.get('win') is True and w5.get('title') == 'Claude · H7 p.411 · TR01053', w5)
         T(p + 'J5 창 틀 — 폭 %s · 머리 %s · 「%s」 %s · ≡ %s · 제목 %s · 테두리/둥근/그림자 %s'
           % (g(w5, 'rect', 2), w5.get('headBg'), w5.get('close'), w5.get('closeStyle'), w5.get('drag'), w5.get('titleStyle'), w5.get('popStyle')),
           g(w5, 'rect', 2) == 480 and w5.get('mbwin') is True and w5.get('headBg') == 'rgb(248, 250, 252)' and w5.get('close') == '닫기'
           and w5.get('closeStyle') == ['12px', '700', 'rgb(107, 114, 128)', '1px', 'rgb(209, 213, 219)', '6px', 'rgb(255, 255, 255)']
-          and w5.get('drag') == 'none' and w5.get('titleStyle') == ['13px', '800', 'rgb(17, 24, 39)'] and w5.get('headPad') == '7px 10px'
+          # A-6(a) 팝업 머리 ≡(.pdrag) 걷음 — pop_moknote §A-1(c9d5bc0) · 없는 요소의 display = None
+          and w5.get('drag') is None and w5.get('titleStyle') == ['13px', '800', 'rgb(17, 24, 39)'] and w5.get('headPad') == '7px 10px'
           and (w5.get('popStyle') or [None])[:3] == ['1px', 'rgb(203, 213, 225)', '12px'] and 'rgba(0, 0, 0, 0.28)' in (g(w5, 'popStyle', 3) or ''), w5)
         T(p + 'J5 글꼴 「%s」 · 본문 %s · 표 %s(칸선 %s · 머리칸 %s) · 지문 열쇠 %s · 핵심 %s'
           % ((w5.get('font') or '')[:40], w5.get('bodyStyle'), w5.get('tdFs'), w5.get('tdLine'), w5.get('thBg'), w5.get('uidStyle'), w5.get('coreStyle')),
@@ -553,9 +559,10 @@ def report(RES, base, new, rec0, only=''):
           % (j6.get('title'), [c[0] for c in (j6.get('chips') or [])], j6.get('num'), j6.get('gg'), j6.get('ox'), j6.get('bar'), j6.get('cl')),
           n.get('J6tap') is True and j6.get('pop') is True and j6.get('mbwin') is True and j6.get('width') == 520
           and [c[0] for c in (j6.get('chips') or [])] == ['변리사 01', '특허법 · ' + (g(n, 'boot', 'labels', 'TR01051') or '?'), 'TR01051']
-          and j6.get('num') == ['2001년 5번(1)', 'rgb(29, 78, 216)', '800'] and g(j6, 'txStyle', 0) == '13px' and abs(float((g(j6, 'txStyle', 1) or '0px')[:-2]) - 21.45) < 0.01 and j6.get('gg') is True and j6.get('ox') == 0
+          # A-6(a) 번호 글 「2001년 5번(1)」 → 「H7 p.388」(mbsame §A 흡수 · revfix0928pm §A-2) — 번호 칸·제목 둘
+          and j6.get('num') == ['H7 p.388', 'rgb(29, 78, 216)', '800'] and g(j6, 'txStyle', 0) == '13px' and abs(float((g(j6, 'txStyle', 1) or '0px')[:-2]) - 21.45) < 0.01 and j6.get('gg') is True and j6.get('ox') == 0
           and j6.get('ansHidden') is True and j6.get('bar') in (['정답·해설 보기', 'Claude↩', '✏️ 연결', '🃏 암기카드', '', '↪ 이 지문으로 이동'], ['정답·해설 보기', 'Claude↩', '✏️ 연결', '🃏 암기카드', '', '↪ 이동'])   # ★ jo_cardfix §A-5
-          and j6.get('cl') == ['Claude↩', SUB, '11.5px'] and j6.get('title') == '2001년 5번(1) · 특허법 · ' + (g(n, 'boot', 'labels', 'TR01051') or '?'), j6)
+          and j6.get('cl') == ['Claude↩', SUB, '11.5px'] and j6.get('title') == 'H7 p.388 · 특허법 · ' + (g(n, 'boot', 'labels', 'TR01051') or '?'), j6)
         T(p + 'J6 칩 꼴 %s' % [c[1:] for c in (j6.get('chips') or [])],
           [c[1:] for c in (j6.get('chips') or [])] == [['rgb(107, 33, 168)', 'rgb(243, 232, 255)', '10px', '1px', '5px'],
                                                        ['rgb(67, 56, 202)', 'rgb(238, 242, 255)', '10px', '1px', '5px'],
@@ -584,7 +591,8 @@ def report(RES, base, new, rec0, only=''):
         T(p + 'J10 창 딱지 「%s」 · 본문에 고친 줄 · 카드 단추 「%s」 · SYNC_KEYS %s(끝 %s) · 도장 %s'
           % (g(n, 'J10win', 'fixtag'), g(n, 'J10card', 'btn', 'text'), g(n, 'J10keys', 'n'), g(n, 'J10keys', 'last'), g(n, 'J10keys', 'u')),
           (g(n, 'J10win', 'fixtag') or '').startswith('정정 · 반영 전 · ') and g(n, 'J10card', 'btn', 'text') == 'Claude1정정'
-          and g(n, 'J10card', 'btn', 'kids', 1, 'bg') == 'rgb(255, 237, 213)' and g(n, 'J10keys', 'n') == 30 and g(n, 'J10keys', 'last') == 'jopangi.clfix'
+          # A-6(a) 본 세션 9/30 — 그 판이 더한 키(clfix)가 있고 옛 29키(sk(base) = f8cec7a)가 앞자리 그대로 · 키가 더 늘어도 안 뒤집힌다
+          and g(n, 'J10card', 'btn', 'kids', 1, 'bg') == 'rgb(255, 237, 213)' and (g(n, 'J10keys', 'all') or [])[:len(sk(base))] == ['jopangi.' + x for x in sk(base)] and 'jopangi.clfix' in (g(n, 'J10keys', 'all') or [])
           and g(n, 'J10keys', 'u') == ['jopangi.clfix|T901'] and g(n, 'J10win', 'ta') is False, [n.get('J10win'), n.get('J10card'), n.get('J10keys')])
         T(p + 'J11 20,001자 → 저장 안 됨(정정 그대로) · 「%s」 · 취소하면 읽기 판' % g(n, 'J11bWin', 'msg'),
           g(n, 'J11bTa', 'len') == 20001 and g(n, 'J11bWin', 'msg') == '20,000자까지 · 지금 20,001자' and n.get('J11bFix0') == n.get('J11bFix1')
@@ -616,7 +624,8 @@ def report(RES, base, new, rec0, only=''):
         T(p + 'J14 단원(%s) → 지문 목록 %s · TR01053 줄 상자 %s' % (n.get('J14unitIdx'), l14.get('ut'), [x[:2] for x in (r603.get('boxes') or [])]),
           n.get('J14unitTap') is True and (l14.get('back') == '← 🔗 근거 단원 목록으로') and (l14.get('ut') or '').endswith('건')
           and [x[0] for x in (r603.get('boxes') or [])] == ['gfbx', 'gfbx cl'] and (g(r603, 'boxes', 1, 1) or '').startswith('C1 · 제130조는')
-          and g(r603, 'boxes', 1, 2) == 'rgb(255, 247, 237)' and r603.get('id') == 'ID TR01053' and r603.get('no') == '2001년 5번(3)', l14)
+          # A-6(a) 번호 글 「H7 p.411」(mbsame §A 흡수 · revfix0928pm §A-2)
+          and g(r603, 'boxes', 1, 2) == 'rgb(255, 247, 237)' and r603.get('id') == 'ID TR01053' and r603.get('no') == 'H7 p.411', l14)
         p14 = n.get('J14pop') or {}
         T(p + 'J14 줄 톡 → 새 지문 팝업(%s · O/X %s)' % (p14.get('title'), p14.get('ox')), n.get('J14rowTap') is True and p14.get('pop') is True and p14.get('mbwin') is True and p14.get('ox') == 0, p14)
         cl14, bg14 = g(n, 'J14clList', 'list') or {}, g(n, 'J14bangList', 'list') or {}
@@ -628,7 +637,8 @@ def report(RES, base, new, rec0, only=''):
           and g(bg14, 'rows', 0, 'k') == 'TR01051', [cl14, bg14])
         s15, s15b = n.get('J15') or {}, b.get('J15') or {}
         T(p + 'J15 「과실」 → %s · %s · 딱지 %s · 한 줄 「%s」' % (s15.get('count'), g(s15, 'rows', 0, 'name'), g(s15, 'rows', 0, 'badges'), (g(s15, 'rows', 0, 'snip') or '')[:40]),
-          s15.get('count') == '1개' and (g(s15, 'rows', 0, 'name') or '').startswith('2001년 5번(3)') and g(s15, 'rows', 0, 'badges') == ['Claude']
+          # A-6(a) 번호 글 「H7 p.411」(mbsame §A 흡수 · revfix0928pm §A-2)
+          s15.get('count') == '1개' and (g(s15, 'rows', 0, 'name') or '').startswith('H7 p.411') and g(s15, 'rows', 0, 'badges') == ['Claude']
           and '과실' in (g(s15, 'rows', 0, 'snip') or '') and '|' not in (g(s15, 'rows', 0, 'snip') or '') and '**' not in (g(s15, 'rows', 0, 'snip') or '')
           and g(s15, 'rows', 0, 'snipStyle') == ['rgb(255, 247, 237)', 'rgb(253, 186, 116)'], s15)
         T(p + 'J15 헛잣대 BASE — 「과실」 %s' % s15b.get('count'), s15b.get('count') == '0개', s15b)
@@ -638,9 +648,11 @@ def report(RES, base, new, rec0, only=''):
         # J16
         j16, j16b = n.get('J16') or {}, b.get('J16') or {}
         t6 = j16.get('t603') or {}
+        # A-6(a) 📋 = 단원 줄 한 창(toc_fuse §B 묶음 8.3.4.7 · mbsame §D-7 · add3 §A-8 기출 거름) — 띠 1 · 줄 = 📋 단추 title 의 「지문 N」 · 머리 첫 단추 = 「✏️ 표시」(mbsame §D-7)
+        N16 = int((re.search(r'지문 (\d+)', g(n, 'J16btn', 'title') or '') or [0, 0])[1])
         T(p + 'J16 📋 정리 창(%s · 부제 「%s」) — 띠 %s · 줄 %s · 「정답·해설 ▸」 %s · O/X %s' % (j16.get('title'), j16.get('sub'), j16.get('bands'), j16.get('rows'), j16.get('pk'), j16.get('ox')),
-          n.get('J16tap') is True and j16.get('jn') is True and j16.get('mbwin') is True and len(j16.get('bands') or []) == 2 and j16.get('rows') == 75
-          and j16.get('pk') == 75 and j16.get('ox') == 0 and j16.get('sub') == '특허법 · 75지문' and j16.get('close') == '닫기'
+          n.get('J16tap') is True and j16.get('jn') is True and j16.get('mbwin') is True and len(j16.get('bands') or []) == 1 and j16.get('rows') == N16
+          and j16.get('pk') == N16 and j16.get('ox') == 0 and j16.get('sub') == '특허법 · %d지문' % N16 and j16.get('close') == '✏️ 표시'
           and j16.get('bandStyle') == ['11px', '800', 'rgb(55, 48, 163)', 'rgb(248, 250, 252)'], j16)
         T(p + 'J16 C 칩 선 줄 = %s · 나머지 %s줄 칩 0(숨은 자리표 %s) — 언급 둘(TR01051 · TR01054)은 이 묶음 밖(다른 단원)이다'
           % (j16.get('withChip'), (j16.get('rows') or 0) - len(j16.get('withChip') or []), j16.get('placeholders')),
@@ -654,7 +666,8 @@ def report(RES, base, new, rec0, only=''):
           t6.get('chip') == 'C1' and t6.get('chipAfterPk') is True and t6.get('chipStyle') == [ORANGE, '11px', '700', '0px', 'rgba(0, 0, 0, 0)', '8px']
           and t6.get('pk') == '정답·해설 ▸' and t6.get('pkStyle') == ['11px', '700', 'rgb(67, 56, 202)', 'rgb(238, 242, 255)', 'rgb(199, 210, 254)']
           and (t6.get('gg') or '').startswith('🔗 1. 제130조') and t6.get('ggStyle') == ['rgb(239, 246, 255)', 'rgb(96, 165, 250)']
-          and t6.get('mark') == 1 and t6.get('markText') == '전용실시권을' and t6.get('qqStyle') == ['12.5px', '20.3125px'] and t6.get('ansHidden') is True and t6.get('no') == '2001년 5번(3)', t6)
+          # A-6(a) 정리 창 번호 = 책 번호(mbsame_add3 §A-4 · TR01053 = 4번)
+          and t6.get('mark') == 1 and t6.get('markText') == '전용실시권을' and t6.get('qqStyle') == ['12.5px', '20.3125px'] and t6.get('ansHidden') is True and t6.get('no') == '4번', t6)
         T(p + 'J16 「정답·해설 ▸」 톡 → 펴짐(%s · 「%s」) · 다시 톡 → 접힘(%s · 「%s」)'
           % (g(n, 'J16open', 'ansVisible'), g(n, 'J16open', 'pk'), g(n, 'J16close', 'ansHidden'), g(n, 'J16close', 'pk')),
           n.get('J16ans1') is True and g(n, 'J16open', 'ansHidden') is False and g(n, 'J16open', 'ansVisible') is True and g(n, 'J16open', 'pk') == '정답·해설 ▾'
@@ -678,13 +691,15 @@ def report(RES, base, new, rec0, only=''):
     T('J17 claude.json 404 → CL_STATE ok(빈 것) · 카드 회색 「%s」 · 「근거 N개」 %s · 정리 창 칩 %s · 안내 0 · JS 오류 0'
       % (g(j17, 'card', 'btn', 'text'), g(j17, 'cnt', 'cnt'), g(j17, 'jn', 'withChip')),
       g(j17, 'load', 'state') == 'ok' and g(j17, 'load', 'by') == {} and g(j17, 'card', 'btn', 'text') == 'Claude' and g(j17, 'card', 'btn', 'color') == SUB
-      and not [t for t in (g(j17, 'reload', 'toasts') or []) if msg in t] and g(j17, 'jn', 'withChip') == [] and g(j17, 'jn', 'rows') == 75
+      # A-6(a) 정리 창 줄 수 = 정상 받기(J16 chromium) 때와 같은 묶음 줄 수(75 → 단원 줄 한 창)
+      and not [t for t in (g(j17, 'reload', 'toasts') or []) if msg in t] and g(j17, 'jn', 'withChip') == [] and g(j17, 'jn', 'rows') == g(RES.get('chromium/NEW') or {}, 'J16', 'rows')
       and not j17.get('err') and not j17.get('pageerror'), j17)
     T('J18 토큰 없음 → 단추 안 그림(보이는 %s · 숨은 자리표 %s / 아랫줄 %s) · 「%s」 %d번 · 두 번째 받기에도 한 번 · 앱 정상(정리 창 %s줄)'
       % (g(j18, 'card', 'visBtns'), g(j18, 'card', 'allBtns'), g(j18, 'card', 'mbbots'), msg, len([t for t in (g(j18, 'reload', 'toasts') or []) if msg in t]), g(j18, 'jn', 'rows')),
       g(j18, 'load', 'state') == 'fail' and g(j18, 'card', 'visBtns') == 0 and g(j18, 'card', 'btn', 'tag') == 'SPAN' and g(j18, 'card', 'btn', 'hidden') is True
       and g(j18, 'card', 'allBtns') == g(j18, 'card', 'mbbots') and len([t for t in (g(j18, 'reload', 'toasts') or []) if msg in t]) == 1
-      and g(j18, 'jn', 'rows') == 75 and g(j18, 'jn', 'withChip') == [] and not j18.get('err') and not j18.get('pageerror'), j18)
+      # A-6(a) 정리 창 줄 수 = 정상 받기(J16 chromium) 때와 같은 묶음 줄 수(75 → 단원 줄 한 창)
+      and g(j18, 'jn', 'rows') == g(RES.get('chromium/NEW') or {}, 'J16', 'rows') and g(j18, 'jn', 'withChip') == [] and not j18.get('err') and not j18.get('pageerror'), j18)
     T('J18 네트워크 실패(HTTP 500)도 같다 — 단추 안 그림 · 안내 한 번', g(j18n, 'load', 'state') == 'fail' and g(j18n, 'card', 'visBtns') == 0
       and len([t for t in (g(j18n, 'reload', 'toasts') or []) if msg in t]) == 1 and not j18n.get('err'), j18n)
     T('§A-2 받는 때 — 앱 시작(recBoot + 첫 syncRecords 겹침) %s번 · 받는 중에 겹쳐 부르면 한 번(%s) · syncRecords 가 돌면 한 번 더(%s)' % (a2.get('gets0'), a2.get('both'), a2.get('gets1')),

@@ -33,7 +33,7 @@ ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jo_uid_add3_result.txt'))
 LED = os.path.join(JOP, u'특상디', u'_1차객_원장.csv')
 NGIT = ['git', '-c', 'core.quotepath=false', '--git-dir=' + os.path.join(os.path.dirname(os.path.dirname(JOP)), 'claude-git')]
-sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', 'HEAD', '--exam', _EXAM]
+sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', 'fb89ad2', '--exam', _EXAM]   # A-6(d) 9/30 — 바탕 = 인도 때 HEAD fb89ad2(결과 머리 「바탕 HEAD fb89ad2」) · HEAD 면 인도 뒤 헛잣대가 거꾸로 FAIL
 sys.path.insert(0, HERE)
 sys.path.insert(0, JOP)
 import _harness_jo_gaek_mbsame as M   # noqa: E402
@@ -112,7 +112,8 @@ def d2():
                 moved[q['id']] = ks; continue
             bad.append((q['id'], ks))
         return bad, moved
-    bad, moved = check(bj, nj)
+    nj_d = json.loads(M.git('show', 'e36829b:jo/data/jimun_특허.json').decode('utf-8'))   # A-6(d) 9/30 — 이 항목(인도 검산)만 새 쪽 = uid_add3 인도 커밋 e36829b(뒤 판 revfix0928night A-7 정답 넷 · revfix0929 A-3 정답 둘이 지금 문항 행을 바꿈) · 아래 d2-헛 사본은 지금 데이터(nj) 그대로
+    bad, moved = check(bj, nj_d)
     T(G, '바탕 문항 %d 행 — 가른 여덟(%s)만 머리 칸이 바뀌고 나머지 바이트 무변(지문 · uid · id 포함)' % (len(bj['문제']), ' · '.join(sorted(moved))),
       not bad and sorted(moved) == sorted(SEAT), {'바뀐 여덟': moved, '어긋남': bad[:6]})
     brk = copy.deepcopy(nj)
@@ -364,8 +365,8 @@ def a3(p, b, eng):
         res[tag] = {'정답 있는 문항': n_gr, '심은 답': n_pick, '기록': q.ev("()=>__U3.yearOf(2009)"), '토스트': q.ev("()=>__HM.toasts()")[-1:]}
     nw = res['NEW']
     last = ((nw['기록'] or {}).get('grnd') or [{}])[-1]
-    T(G, '%s 2009 채점 — 분모 %s(= 정답 있는 문항 · 새 9 모두 듦) · 회독 한 줄 n 같음 · 토스트 「2009년 0/%s 맞음」 ⚠ 20 이 아닌 까닭 = 옛 리담 다섯(2009-46-1·4·6·9·11)이 원장 정답 빈칸' % (eng, nw['정답 있는 문항'], nw['정답 있는 문항']),
-      nw['정답 있는 문항'] == 15 and last.get('n') == 15 and ((nw['기록'] or {}).get('year') or {}).get('n') == 15, nw)
+    T(G, '%s 2009 채점 — 분모 %s(= 정답 있는 문항 · 새 9 모두 듦) · 회독 한 줄 n 같음 · 토스트 「2009년 0/%s 맞음」 ⚠ 20 이 아닌 까닭 = 옛 리담 넷(2009-46-1·4·6·11)이 원장 정답 빈칸(2009-46-9 = revfix0928night A-7 큐넷 정답)' % (eng, nw['정답 있는 문항'], nw['정답 있는 문항']),
+      nw['정답 있는 문항'] == 16 and last.get('n') == 16 and ((nw['기록'] or {}).get('year') or {}).get('n') == 16, nw)   # A-6(a) 9/30 — _task_jo_revfix0928night.md A-7 103줄 「2009-46-9(2009 2번) 정답 = 큐넷 … → 2009 채점 분모 16」 · 결정로그 9/29 08:33
     bw = res['BASE']
     T(G + '-헛', '%s 헛잣대 바탕 — 2009 분모 6(새 문항 없음)' % eng, bw['정답 있는 문항'] == 6 and (((bw['기록'] or {}).get('grnd') or [{}])[-1]).get('n') == 6, bw)
 
@@ -464,8 +465,8 @@ def main():
     npass = sum(1 for r in RES if r[2] is True); nfail = sum(1 for r in RES if r[2] is False)
     print('\n== PASS %d · FAIL %d · %.0f초' % (npass, nfail, time.time() - t0))
     with io.open(OUTF, 'a', encoding='utf-8') as f:
-        f.write('\n==== %s · %s · NEW %s · 데이터 %s · 바탕 HEAD %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), 'uid_add3', os.path.basename(_NEW), _DATA,
-                M.git('rev-parse', '--short', 'HEAD').decode().strip(), ','.join(ENGS)))
+        f.write('\n==== %s · %s · NEW %s · 데이터 %s · 바탕 %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), 'uid_add3', os.path.basename(_NEW), _DATA,
+                M.git('rev-parse', '--short', M.BASE_REV).decode().strip(), ','.join(ENGS)))   # A-6(d) 적히는 바탕 = 실제 바탕
         for g, n, ok, d in RES:
             f.write('%s | %s · %s | %s\n' % ({True: 'PASS', False: 'FAIL', None: 'INFO'}[ok], g, n, (d if isinstance(d, str) else json.dumps(d, ensure_ascii=False, default=str))[:900]))
         f.write('== PASS %d · FAIL %d\n' % (npass, nfail))

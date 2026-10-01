@@ -96,6 +96,8 @@ def serve(qjson, outdir, app=None):   # app = 앱 파일(없으면 genie 작업�
                 if not os.path.isfile(f):
                     self.send_response(404); self.end_headers(); return
                 b = open(f, 'rb').read()
+                if rel == 'earth/기록.json':   # ★ A-6(d) 9/30 — 사용자 기록은 인도 커밋(3c3a8b66 · jeongo_add2) 트리 것으로 — 뒤에 쌓인 〈보기〉 기록(G36-06 · studyplandata 03a84471 9/28 21:40)이
+                    b = blob('3c3a8b66', 'earth/기록.json')   #   탐침 표본(F-8 · 헛잣대)의 O 누름과 겹쳐 청록이 빠졌다(이미 선 값을 다시 누르면 해제)
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/octet-stream')
                 self.send_header('Content-Length', str(len(b)))
@@ -390,7 +392,10 @@ def main():
     _, (bo,), _ = apply(RAW_OCR, 'ocr', times=1)
     T('J-6 되살아나지 않음 — ocrfix 앞 데이터(182e1f37)에 한 번 입혀도 같은 바이트(판 1·2 로 다시 만든 뒤 한 번 돌리는 길)', bo == b1, {'같음': bo == b1, 'md5': hashlib.md5(bo).hexdigest()[:8]})
     cur = open(QJ, 'rb').read()
-    T('J-6 인도본(studyplandata earth/문항.json) = 재생성(BASE_JG + 스크립트)', cur == b1, {'인도본 md5': hashlib.md5(cur).hexdigest()[:8], '재생성 md5': hashlib.md5(b1).hexdigest()[:8], 'B': len(b1)})
+    # ★ A-6(d) 9/30 — 인도본 = 인도 커밋 3c3a8b66(jeongo_add2 · 고침표·스크립트 지금 판의 마지막 인도 · md5 0030556f) — 뒤 jagwa_uid(studyplandata 4a011475)가 uid 를 새 꼴로 바꿔
+    #   작업트리 ≠ 재생성(이 칸 전용 cur_dl · 머리 줄의 「인도본 md5」는 작업트리 그대로)
+    cur_dl = blob('3c3a8b66', 'earth/문항.json')
+    T('J-6 인도본(studyplandata earth/문항.json) = 재생성(BASE_JG + 스크립트)', cur_dl == b1, {'인도본 md5': hashlib.md5(cur_dl).hexdigest()[:8], '재생성 md5': hashlib.md5(b1).hexdigest()[:8], 'B': len(b1), '작업트리 md5': hashlib.md5(cur).hexdigest()[:8]})
     D1 = json.loads(b1.decode('utf-8'))
     BJ, BN = {r['uid']: r for r in DJG}, {r['uid']: r for r in D1}
     # ── H 묶음(ocrfix 9/24) — 바탕 = 182e1f37

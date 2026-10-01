@@ -75,7 +75,8 @@ TESTS = r"""<script>
 
    /* ═══ C. SYNC_KEYS ═══ */
    await grp('S-C', async()=>{
-     T('S-C 지학 SYNC_KEYS 19개 · … tfix 18 · bref 19',SUBJ.earth.SYNC_KEYS.length===19&&SUBJ.earth.SYNC_KEYS.indexOf('bpg')===14&&SUBJ.earth.SYNC_KEYS.indexOf('crop')===15,SUBJ.earth.SYNC_KEYS);
+     /* A-6(a) 9/30 — 뒤 판이 지학 SYNC_KEYS 끝에 gg·ggref·pick·link 넷을 더했다(gigu/_task_jagwa_earth_listpop_add1.md §G · cd248a5) → 수 19 대신 옛 19키 앞자리 그대로(bpg 15째 · crop 16째) */
+     T('S-C 지학 SYNC_KEYS 옛 19키 앞자리 그대로 · … tfix 18 · bref 19',SUBJ.earth.SYNC_KEYS.slice(0,19).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,bogi,unit,bpit,bpg,crop,txt,tfix,bref'&&SUBJ.earth.SYNC_KEYS.indexOf('bpg')===14&&SUBJ.earth.SYNC_KEYS.indexOf('crop')===15,SUBJ.earth.SYNC_KEYS);
      T('S-C 생물 SYNC_KEYS 20(add1 +bref) · 물리 12 무변',SUBJ.bio.SYNC_KEYS.length===20&&SUBJ.phys.SYNC_KEYS.length===12,[SUBJ.bio.SYNC_KEYS.length,SUBJ.phys.SYNC_KEYS.length]);
      T('S-C 지금 과목의 SYNC_KEYS 에 bpg · SYNC_REF 에 읽기/쓰기 있다',SYNC_KEYS.indexOf('bpg')>=0&&!!SYNC_REF.bpg&&typeof SYNC_REF.bpg.g==='function',SYNC_KEYS.length);
    });
@@ -250,14 +251,16 @@ def main():
 
     s = open(SRC, encoding='utf-8').read()
     ix = lambda t: s.find(t)   # 없으면 -1 — 안 고친 판에서도 예외 없이 FAIL 로 적힌다
-    blk = ix('\nif(CARD_LAYER){\n')
-    T2('S-P 물리 무접촉 — bookChip/bookChipSm 은 카드 층 안이라 물리는 이 함수를 만들지도 않는다',
+    # A-6(a) 9/30 — 카드 층 블록 문이 if(CARD_LAYER){ → if(SHELL){(세 과목 참)로 바뀌었다(_task_jagwa_shell_bio_phys §A · c9faff2) — 그 블록(/*EARTH:js*/ 바로 뒤)을 잡는다 ·
+    #   물리도 이제 이 함수들을 만든다 — 물리 몫은 bookChip 안 if(!CARD_LAYER) 옛 갈래(아래 「물리 갈래 본문은 글자까지 그대로」)가 지킨다
+    blk = s.find('\nif(SHELL){\n', ix('/*EARTH:js*/'))
+    T2('S-P 물리 무접촉 — bookChip/bookChipSm 은 카드 층 블록(9/21 부터 if(SHELL)) 안이고 물리는 그 안 if(!CARD_LAYER) 옛 갈래를 탄다',
        blk >= 0 and ix('var bookChip=') > blk and ix('var bookChipSm=') > blk)
     T2('S-P 물리 갈래 본문은 글자까지 그대로(조건만 CUR.KINDS→CARD_LAYER)',
        'if(!CARD_LAYER)return r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">교재 ${r[F.BPAGE]}쪽</span>`:\'\';' in s
        and 'if(!CARD_LAYER)return r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">${r[F.BPAGE]}쪽</span>`:\'\';' in s
        and 'CUR.KINDS)return r[F.BPAGE]' not in s)
-    T2('S-P 새 코드는 전부 if(CARD_LAYER) 안 (bpgList·bpgWrite·bpInk·bpgChips)',
+    T2('S-P 새 코드는 전부 카드 층 블록(9/21 부터 if(SHELL)) 안 (bpgList·bpgWrite·bpInk·bpgChips)',
        blk >= 0 and all(ix(k) > blk for k in ['function bpgList(', 'function bpgWrite(', 'async function bpInk(', 'function bpgChips(']))
     T2('S-P 잉크는 inkGet 으로만 잡는다 — bpInk 안에 get(\'ink\' 직접 호출 0',
        "await inkGet('bink:'+page,{w,h})" in s

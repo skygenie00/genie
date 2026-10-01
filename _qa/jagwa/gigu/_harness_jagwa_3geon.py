@@ -126,7 +126,9 @@ INK = r"""
        SET.pencil=was; try{drawing=wasD}catch(e){}
        return hit};
      const P_=t=>({touchType:t});
-     T('K-2 손가락 필기 모드에서는 늘 막는다(종전 그대로)',fire([P_('direct')],false,false)===true);
+     /* A-6(a) 9/30 — 손가락 필기 모드(SET.pencil 거짓)는 9/13 c62b2b2 로 없어졌다(pen_touch2 §1 「!SET.pencil 갈래(손가락 필기)는 죽은 길이니 지운다」 · stylusGuard 의 그 줄 걷음)
+        → 스위치와 무관하게 손가락 하나는 안 막는다(펜슬 모드 · 손가락 하나 줄과 같은 값) */
+     T('K-2 손가락 필기 모드는 없다 — SET.pencil 이 꺼져도 손가락 하나는 안 막는다(9/13 c62b2b2)',fire([P_('direct')],false,false)===false);
      T('K-2 펜슬 모드 · 펜슬 하나 — 막는다(종전 그대로)',fire([P_('stylus')],true,false)===true);
      T('K-2 펜슬 모드 · 손가락 하나 — 안 막는다(스크롤은 그대로 살아 있다)',fire([P_('direct')],true,false)===false);
      T('K-2 ★손바닥이 먼저 · 펜슬이 나중 — **막는다**(종전에는 touches[0] 만 봐서 새던 자리)',
@@ -210,10 +212,15 @@ BODY_EARTH = GATE + r"""
      /* 문제 카드 머리줄 칩 하나만 남았는가 — 그리고 누르면 창으로 뜨는가 */
      const chip=[...document.querySelectorAll('#card .cmeta [data-page]')];
      T('X-2 ★문제 윗줄(카드 머리줄)에 교재 칩이 하나 있다',chip.length===1,chip.map(x=>x.textContent));
-     chip[0].click(); await wait(2800);
+     /* A-6(a) 9/30 — 머리줄 📖 p 칩은 listpop §F(a9f9fd4)부터 「교재 자리 목록」 창(#bpl)을 연다 · 교재 창은 그 줄(data-bkgo · bookwin §A 6c54347)을 눌러 뜬다.
+        목록 창은 닫아 옛 차례와 같게 둔다(떠 있는 창이 뒤 묶음의 elementsFromPoint 를 가리지 않게 · 붙는 문항 CROPFOR 도 비운다).
+        ⚠ 칩이 목록 창만 열면 PR 이 X-1 의 208쪽에 머물러 X-6 이 X-1 글상자가 남은 쪽에서 옛 글상자를 집었다(X-6 FAIL 여섯의 뿌리) */
+     chip[0].click(); await wait(400);
+     {const row=$('#bpl [data-bkgo]'); if(row)row.click()} await wait(2800);
      let n=0;while(n++<60&&!bkCurPage())await wait(200);
+     {const x=$('#bplX'); if(x)x.click()} await wait(150);
      const b=$('#book'), p=$('#book>.panel');
-     T('X-2 ★칩을 누르면 **팝업 창**으로 뜬다(전체 화면이 아니다)',
+     T('X-2 ★칩 → 교재 자리 목록 창 줄을 누르면 **팝업 창**으로 뜬다(전체 화면이 아니다)',
        BK.open===true&&b.classList.contains('win')&&p.classList.contains('float'),
        [BK.open,b.className,p&&p.className]);
      T('X-2 창이 화면보다 작다',
@@ -590,11 +597,14 @@ BODY_PHYS = GATE + r"""
    snap.book=$('#book')?$('#book').className:'(없음)';
    await grp('Y-1', async()=>{
      T('Y-1 목록이 그려졌다',$$$('#list .item').length>0,$$$('#list .item').length);
-     T('Y-1 물리는 글상자·교재 창을 안 만든다',
-       typeof txtAdd==='undefined'&&typeof bkWin==='undefined'&&typeof bpTxtPaint==='undefined',
+     /* A-6(a) 9/30 — 카드 층 블록의 문이 c9faff2 에서 if(SHELL)(세 과목 참)로 바뀌었고 add5 §A 원칙(c20ef05)이 그대로 두어 물리에서도 함수는 만들어진다
+        → 물리 무변은 「안 만든다」가 아니라 「교재 갈래 HASBOOK 이 거짓」으로 선다(값은 info 에 typeof 로 남긴다 · 화면에 없는 것은 아래 줄들이 잰다) */
+     T('Y-1 물리는 글상자·교재 창을 안 쓴다 — txtAdd·bkWin·bpTxtPaint 는 SHELL 블록이라 있어도 HASBOOK=false',
+       typeof HASBOOK!=='undefined'&&HASBOOK===false,
        [typeof txtAdd,typeof bkWin,typeof bpTxtPaint]);
      T('Y-1 물리 화면에 「T 글상자」·「⧉ 창으로」 단추가 없다',!$('#bpTxt')&&!$('#bpWin'));
-     T('Y-1 교재 도구줄에 글상자가 안 붙는다',!$('#bktools [data-tool="txt"]'));
+     /* A-6(a) 9/30 — 글상자 도구는 카드 층 블록(if(SHELL) · c9faff2 · add5 §A)이 #bktools 에 붙인다 — 물리는 #book 이 body[data-layer="pdf"] 규칙으로 숨어 화면에 안 보인다 */
+     T('Y-1 교재 도구줄 글상자는 물리 화면에 안 보인다(카드 층 블록 if(SHELL) · #book 숨음)',(t=>!t||t.offsetParent===null)($('#bktools [data-tool="txt"]')));
      T('Y-1 #book 은 숨어 있다',!!$('#book')&&$('#book').classList.contains('hide'));
      /* ★물리는 `#ebody` 통째가 `body[data-layer="pdf"]` 규칙으로 숨는다 — 그 안의 #bookpane 은
         제 display 가 flex 여도 **화면에 없다.** 그래서 보이는가는 offsetParent 로 잰다. */
@@ -602,9 +612,9 @@ BODY_PHYS = GATE + r"""
        !!$('#ebody')&&getComputedStyle($('#ebody')).display==='none'
        &&$('#bookpane').offsetParent===null&&$('#tBook').offsetParent===null,
        [getComputedStyle($('#ebody')).display,$('#bookpane').offsetParent===null,$('#tBook').offsetParent===null]);
-     T('Y-1 물리에는 bookVisible 자체가 없다(카드 층 함수다 — 안 새 나갔다)',
-       typeof bookVisible==='undefined',typeof bookVisible);
-     T('Y-1 SYNC_KEYS 12 무변',SYNC_KEYS.length===12,SYNC_KEYS.length);
+     T('Y-1 물리에서 bookVisible 은 SHELL 블록이라 있어도 거짓이다 — 옆 칸을 안 그린다(안 새 나갔다)',   /* A-6(a) 9/30 — c9faff2 · add5 §A 원칙 · 블록의 bookVisible=()=>false */
+       typeof bookVisible!=='function'||bookVisible()===false,typeof bookVisible);
+     T('Y-1 SYNC_KEYS 옛 12키 앞자리 그대로',SYNC_KEYS.slice(0,12).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,link',SYNC_KEYS.length);   /* A-6(a) 9/30 — shell_bio_phys §E-7(c9faff2) 물리 끝에 gg·ggref 더함 */
    });
 """ + INK + r"""
    try{await __nativeFetch('/snap',{method:'POST',body:JSON.stringify(snap)})}catch(e){}
@@ -680,8 +690,10 @@ def static_checks():
     out = []
     def T2(name, cond, info=''):
         out.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
-    blk = s.find('\nif(CARD_LAYER){\n')
-    T2('S-1 §1·§3 코드는 전부 if(CARD_LAYER) 안이다 — 물리는 만들지도 않는다',
+    # A-6(a) 9/30 — 카드 층 블록의 문이 c9faff2(shell_bio_phys)에서 `if(CARD_LAYER){` → `if(SHELL){` 로 바뀌었다(add5 §A 원칙 「블록의 문 if(SHELL){ 는 그대로 두고 안에서 이름마다 가른다」 · c20ef05)
+    #   → 같은 블록(/*EARTH:js*/ 뒤 첫 `if(SHELL){`)의 시작으로 잰다 · 물리도 이 블록을 돈다(물리 화면 몫은 HASBOOK 이 가른다)
+    blk = s.find('\nif(SHELL){\n', s.find('/*EARTH:js*/'))
+    T2('S-1 §1·§3 코드는 전부 카드 층 블록(if(SHELL)) 안이다',
        blk >= 0 and all(s.find(k) > blk for k in
                         ['function bpTxtPaint(', 'function bkWin(', 'var txtFocus=function(', 'var txtBody=function(']),
        [s.find(k) - blk for k in ['function bpTxtPaint(', 'function bkWin(', 'var txtFocus=function(', 'var txtBody=function(']])
@@ -703,8 +715,8 @@ def static_checks():
        and 'async function bpInk(page,w,h){' in s)
     T2('S-6 ★손바닥 거르기·펜슬 전용(9/7)을 안 깼다',
        "if(drawing&&e.pointerType==='touch')return;" in s
-       and "if(SET.pencil&&e.pointerType!=='pen')return;" in s
-       and "if(e.pointerType==='touch'&&!SET.pencil&&e.isPrimary===false)return;" in s)
+       # A-6(a) 9/30 — 9/13 c62b2b2(pen_touch2 §1): SET.pencil 스위치를 없애 두 줄이 「if(e.pointerType!=='pen')return;」 한 줄이 됐다(손가락 필기 갈래는 죽은 길이라 걷음)
+       and "갈래는 죽은 길이라 같이 걷었다. */\n  if(e.pointerType!=='pen')return;" in s)
     T2('S-7 ★`.pen`(손가락 스크롤)을 안 죽였다 — touch-action:auto 그대로',
        '#inkc.pen{touch-action:auto}' in s)
     T2('S-8 stylusGuard 가 접점을 전부 훑고 긋는 중에는 무조건 막는다',
@@ -715,7 +727,8 @@ def static_checks():
        s.count('function makeFloat(') == 1
        and "makeFloat(b,$('#book .bkbar'),'book','jagwa.win.book');" in s)
     T2('S-10 makeFloat 손잡이 무시 목록만 넓혔다(더하기 · 지금 창 넷은 무변)',
-       "if(e.target.closest('button,[data-tool],#bktools,input,select'))return;" in s
+       # A-6(a) 9/30 — add18 §B-5(0c19a60)가 손잡이 무시 목록을 또 넓혔다(a · [data-nodrag] · textarea — iOS 서재·✕ click)
+       "if(e.target.closest('button,a,[data-tool],[data-nodrag],#bktools,input,select,textarea'))return;" in s
        and s.count("handle.addEventListener('pointerdown'") == 1)
     T2('S-11 「📖 크게」를 안 없앴다 — 창은 더하는 것이다',
        "$('#bpBig').onclick=()=>{bkWin(false);bkOpen(BOOK.page||undefined)};" in s
@@ -729,19 +742,23 @@ def static_checks():
        '@media (max-width:480px){#book.win>.panel:not(.float){left:0;top:0;right:0;bottom:0;width:auto;height:auto;border-radius:0}' in s
        and '#book.win>.panel.float{left:0!important;top:0!important;width:auto!important;height:auto!important;right:0;bottom:0;border-radius:0}}' in s)
     T2('S-18 백업 내보내기에 판 3 넷을 더했다 · 불러오기는 무접촉',
-       'card:{bogi:BG,unit:UN,bpit:BP,bpg:BPG,snote:SN,mcard:MC,crop:CROP,txt:TXT,tfix:TFIX,bref:BREF}};' in s
+       # A-6(a) 9/30 — add5(c20ef05)가 card 묶음을 카드 과목만 싣게 갈랐다(근거 gg·ggref 는 맨 위) — 넷은 그대로
+       'if(HASBOOK)out.card={bogi:BG,unit:UN,bpit:BP,bpg:BPG,snote:SN,mcard:MC,crop:CROP,txt:TXT,tfix:TFIX,bref:BREF};' in s
        and 'if(c.txt){TXT=c.txt;await put(' in s and s.count('importData=async function(f){') == 1)
     T2('S-19 옆 칸 글상자가 교재 전체 화면과 같은 통을 쓴다 — 새 키 규칙이 없다',
        s.count("'bink:'+BOOK.page") == 2 and 'var txtList=key=>' in s)
     T2('S-20 옆 칸을 카드 층에서만 걷는다 — 물리 규칙은 안 건드렸다',
-       'body[data-layer="card"] #bookpane,body[data-layer="card"] #tBook{display:none!important}' in s
+       # A-6(a) 9/30 — 9/13 ee2e1b7(사용자 확정)이 같은 규칙에 아랫줄 #tSub·#tMatch 를 더했다(카드 층만 · 물리 규칙 무접촉)
+       'body[data-layer="card"] #bookpane,body[data-layer="card"] #tBook,\nbody[data-layer="card"] #tSub,body[data-layer="card"] #tMatch{display:none!important}' in s
        and 'body[data-layer="pdf"] #tBook' in s)
     T2('S-21b 옆 칸이 하던 두 가지를 교재 창이 잇는다(bpgTouchLast · bpgChips)',
        'var _bkGoto_plain=bkGoto;' in s and 'await bpgTouchLast(+pr);bpgChips()' in s)
-    T2('S-21 교재를 부르는 길이 한 자리다 — bookOpen 만 갈아끼웠다(부르는 쪽 무접촉)',
+    T2('S-21 교재를 부르는 길이 한 자리다 — bookOpen 만 갈아끼웠다(부르는 쪽 칩 손잡이 하나 · §F 목록 창 갈래만 더함)',
        "bookOpen=async function(pr,show){bkWin(true);const r=await bkOpen(+pr||undefined);" in s
        and 'var _bookOpen_pane=bookOpen;' in s
-       and s.count("c.querySelectorAll('[data-page]').forEach(x=>x.onclick=e=>{e.preventDefault();bookOpen(+x.dataset.page,true)});") == 1)
+       # A-6(a) 9/30 — listpop §F(a9f9fd4): 머리줄 📖 p 칩 = 교재 자리 목록 창 갈래(HASBOOK) 한 줄을 더했다 · 나머지는 그대로 bookOpen
+       and s.count("c.querySelectorAll('[data-page]').forEach(x=>x.onclick=e=>{e.preventDefault();\n    if(HASBOOK&&x.dataset.bpl){bplOpen(r[F.NO]);return}") == 1
+       and "\n    bookOpen(+x.dataset.page,true)});" in s)
     T2('S-22 오리기 엔진을 새로 안 짰다 — 단추만 도로 그린다',
        s.count('function cropOffer(') == 1 and 'BK.onCrop=function(crop,clear){' in s
        and "sp.dataset.tool='crop';sp.textContent='◻ 오리기'" in s)
@@ -762,7 +779,9 @@ def static_checks():
        'txtPaint(h,qtKey(QUID),QCW,QCW,1,true)' in s
        and 'txtAdd(h,qtKey(QUID),QCW,QCW,1,' in s)
     T2('S-29 「T 글상자」 손잡이는 카드 층에서만 만든다',
-       blk >= 0 and s.find("b.id='tTxt'") > blk)
+       # A-6(a) 9/30 — 블록이 if(SHELL)(세 과목)이 된 뒤로 「카드 층에서만」은 안쪽 문 if(HASBOOK){ 가 맡는다(c9faff2 · shell_bio_phys §A 표 HASBOOK 「글상자」)
+       blk >= 0 and s.find("b.id='tTxt'") > blk
+       and "if(HASBOOK){const tb=document.querySelector('.vbot .tools');\n if(tb&&!document.getElementById('tTxt')){" in s)
     T2('S-26 빈 글상자에 폭을 준다',
        'min-width:2.6em' in s and 'min-width:7em' in s)
     T2('S-16 #book 감싸개는 한 겹뿐',

@@ -355,6 +355,14 @@ def run(mode, subj, src_text, secs=340):
                 if not os.path.isfile(f):
                     self.send_response(404); self.end_headers(); return
                 b = open(f, 'rb').read()
+                if subj in ('earth', 'bio') and rel == subj + '/기록.json':
+                    # ★ A-6(d) 9/30 _task_qa_baseline — claude_e001 적재(studyplandata cbd451ae · 결정로그 9/29 20:35)가 지학 기록에 Claude 풀이 둘(gpt 149·84)을 넣어
+                    #   CL2-5(글 넣은 줄 태그 1 · 글 없는 줄 0 · 지우면 0)가 그 둘을 더 센다 → 카드 층 기록 사본에서 gpt 칸과 그 도장만 비운다(claude_e001 하네스 recs() 바탕 꼴 · 다른 칸 그대로)
+                    j = json.loads(b.decode('utf-8'))
+                    j.setdefault('data', {})['gpt'] = {}
+                    for kk in ('u', 'gone'):
+                        j[kk] = {x: y for x, y in (j.get(kk) or {}).items() if not str(x).startswith('gpt|')}
+                    b = json.dumps(j, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/octet-stream')
                 self.send_header('Content-Length', str(len(b)))
@@ -415,6 +423,8 @@ def static_checks():
     raw = open(SRC, 'rb').read()
     s = raw.replace(b'\r\n', b'\n').decode('utf-8')
     base = base_text()
+    # ★ A-6(d) 9/30 _task_qa_baseline — 「사라진 바탕 줄」은 이 판(add1) 인도 검산이다 → 새 쪽을 인도 판 007fde4 로 박는다(두 커밋 사이 f810502 ↔ 007fde4 · 수행 결과 「소스 diff +43 / −9」)
+    s_dl = subprocess.run(['git', '-C', GENIE, 'show', '007fde4:jagwa/index.html'], capture_output=True).stdout.replace(b'\r\n', b'\n').decode('utf-8')
 
     T('CL2-Z 줄끝이 CRLF 그대로다(외톨이 LF 0)',
       raw.count(b'\r\n') > 9000 and raw.replace(b'\r\n', b'').count(b'\n') == 0,
@@ -422,7 +432,7 @@ def static_checks():
     T('CL2-Z 바탕보다 줄이 늘기만 했다',
       len(s.split('\n')) > len(base.split('\n')),
       [len(s.split('\n')), len(base.split('\n'))])
-    gone = [l for l in set(base.split('\n')) - set(s.split('\n')) if l.strip()]
+    gone = [l for l in set(base.split('\n')) - set(s_dl.split('\n')) if l.strip()]   # ★ A-6(d) — 인도 판 007fde4(위 s_dl)
     T('CL2-Z 사라진 바탕 줄이 열 줄 아래다(손댄 자리뿐)', len(gone) <= 10,
       [g.strip()[:80] for g in gone])
     out.append('NOTE | CL2-Z 사라진 바탕 줄 | '

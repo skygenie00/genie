@@ -54,12 +54,12 @@ def git(*a):
     return subprocess.run(['git', '-C', GENIE, '-c', 'core.quotepath=false'] + list(a), capture_output=True).stdout
 
 
-def head_tree(sub, dst):
-    """genie HEAD 의 폴더 하나를 풀어 둔다(바탕 데이터·시험지)"""
+def head_tree(sub, dst, rev=None):
+    """genie HEAD 의 폴더 하나를 풀어 둔다(바탕 데이터·시험지) · rev = 다른 커밋(★ A-6(d) 9/30 — reg_gates 인도 검산 박음 · 없으면 BASE_REV)"""
     if os.path.isdir(dst) and os.listdir(dst):
         return dst
     os.makedirs(dst, exist_ok=True)
-    raw = git('archive', '--format=tar', BASE_REV, sub)
+    raw = git('archive', '--format=tar', rev or BASE_REV, sub)
     with tarfile.open(fileobj=io.BytesIO(raw)) as tf:
         tf.extractall(dst)
     return dst
@@ -166,8 +166,12 @@ class Pg:
 
 
 def base_env():
-    hd = head_tree('jo/data', os.path.join(WORK, 'head', 'jo_data'))
-    he = head_tree('gichul/pdf', os.path.join(WORK, 'head', 'gichul_pdf'))
+    # A-6(d) 9/30 _task_qa_baseline — 바탕 캐시를 바탕 커밋마다 가른다. 옛: head/ 한 자리라, 캐시를 안 비우는 하네스(gaek_mbsame · cardfix · wonmun ·
+    #   revfix0928 · hdrfold · uidmbs2 · revfix0929)는 지난 실행 때 푼 다른 커밋 데이터를 바탕으로 다시 썼다(앱만 BASE_REV · 열쇠에도 안 잡히는 숨은 상태).
+    #   joscreen 은 이미 head_<BASE_REV> 로 가른다(그 파일 182줄). 기존 rmtree(WORK/head) 는 그대로 먹는다.
+    rv = git('rev-parse', '--short=7', BASE_REV).decode().strip() or BASE_REV
+    hd = head_tree('jo/data', os.path.join(WORK, 'head', rv, 'jo_data'))
+    he = head_tree('gichul/pdf', os.path.join(WORK, 'head', rv, 'gichul_pdf'))
     return git('show', '%s:jo/index.html' % BASE_REV).decode('utf-8'), os.path.join(hd, 'jo', 'data'), os.path.join(he, 'gichul', 'pdf')
 
 
@@ -206,7 +210,7 @@ def data_gates():
     bsplit = sum(1 for z in B['지문'] if z.get(u'문항') in {tr['P7 id'] for tr in T7})
     T('11-헛', u'헛잣대 — 바탕은 63 문항이 쪼갠 줄 0(한 줄씩·객관식)', bsplit == 0, {'바탕 쪼갠 줄': bsplit})
     # 시험지 목록(§C · add1 §B)
-    L0 = open(os.path.join(EXAM, 'list.json'), 'rb').read()
+    L0 = open(os.path.join(EXAM, 'list.json'), 'rb').read().replace(b'\r\n', b'\n')   # ★ A-6(d) 9/30 — 새 워크트리 체크아웃(core.autocrlf=true)이 CRLF 로 풀어도 blob(LF)과 맞대게
     Lh = git('show', '%s:gichul/pdf/list.json' % BASE_REV)   # blob 그대로(git archive 는 autocrlf 로 CRLF 가 된다)
     lists = {}
     for k in ('teukheo', 'sangpyo', 'dibo'):
@@ -842,8 +846,14 @@ def reg_gates(br):
     """§G-15 — 기록 열쇠 무변(바탕 풀 열쇠 ⊆ 새 풀 · 새 열쇠 = 새로 쪼갠 줄·문항째 카드뿐) · 다른 법(상표·디보)·특허 미분류 화면 글 대조(칩 글자 가림)"""
     ns, nd, ne = new_env()
     bs, bd, be = base_env()
+    # ★ A-6(d) 9/30 _task_qa_baseline — 15 두 칸(기록 열쇠 · 다른 법 화면 글)은 mbsame 인도 검산이다. 뒤 판(uid_add2·mbsame_add3 §A-8 · cardfix §A-10 · p8up · uid_add3)이
+    #   1차객 화면·데이터를 뜻해서 바꿔(_task_jo_gaek_mbsame.md 505 · _task_jo_p8up.md 182) 지금 판으로는 설 수 없다 → 그 두 칸만 새 쪽을 인도 판 59b8701(앱 + 데이터)로 박은
+    #   PIN 쪽으로 잰다(두 커밋 사이 17094a5 ↔ 59b8701) · 지금 판(NEW)은 INFO 대조 · 15-헛 이 그대로 쓴다
+    PIN = '59b8701'
+    ps = git('show', '%s:jo/index.html' % PIN).decode('utf-8')
+    pd = os.path.join(head_tree('jo/data', os.path.join(WORK, 'head', PIN, 'jo_data'), PIN), 'jo', 'data')
     shots, keys = {}, {}
-    for tag, src, data, exam in (('BASE', bs, bd, be), ('NEW', ns, nd, ne)):
+    for tag, src, data, exam in (('BASE', bs, bd, be), ('NEW', ns, nd, ne), ('PIN', ps, pd, ne)):
         p = Pg(br, 'reg' + tag, src, data, exam)
         try:
             out = {}
@@ -859,7 +869,7 @@ def reg_gates(br):
             shots[tag] = out
         finally:
             p.close()
-    P = json.load(io.open(os.path.join(DATA, 'jimun_7pan.json'), encoding='utf-8'))
+    P = json.load(io.open(os.path.join(pd, 'jimun_7pan.json'), encoding='utf-8'))   # ★ A-6(d) — 15 기록 열쇠는 PIN(인도 판) 데이터로 까닭 있는 새 열쇠를 센다
     newids = set()
     for z in P['지문']:
         if re.search(u'-[1-7ㄱ-ㅅ가-사]$', z['id']):
@@ -868,10 +878,10 @@ def reg_gates(br):
         newids.add(o['uid'])
     # ★ uid_add2 §D(9/27) — 우리 데이터에 없던 기출 문항을 넣었다(1998-35-5 · 2016 시험 3·4·11번 · 2018 시험 4번 · 연도 모름 PM-0506) — 그 선지 열쇠도 까닭 있는 새 열쇠
     NEWQ = {u'1998-35-5', u'2016-53-B3', u'2016-53-B4', u'2016-53-B11', u'2018-55-B4', u'--0506'}
-    for q in json.load(io.open(os.path.join(DATA, u'jimun_특허.json'), encoding='utf-8'))[u'문제']:
+    for q in json.load(io.open(os.path.join(pd, u'jimun_특허.json'), encoding='utf-8'))[u'문제']:
         if q['id'] in NEWQ:
             newids.update(z.get('uid') for z in q.get(u'지문') or [] if z.get('uid'))
-    b, n = set(keys['BASE']), set(keys['NEW'])
+    b, n = set(keys['BASE']), set(keys['PIN'])   # ★ A-6(d) — 새 쪽 = 인도 판(PIN)
     lost = sorted(b - n)
     extra = sorted(n - b)
     odd = [k for k in extra if k not in newids]
@@ -890,10 +900,10 @@ def reg_gates(br):
     same, chipln = {}, {}
     for k in shots['NEW']:
         A = [l for l in (CHIP.sub('', x).strip() for x in shots['BASE'].get(k, '').split('\n')) if l and l != u'·']
-        C = [l for l in (CHIP.sub('', x).strip() for x in shots['NEW'].get(k, '').split('\n')) if l and l != u'·']
+        C = [l for l in (CHIP.sub('', x).strip() for x in shots['PIN'].get(k, '').split('\n')) if l and l != u'·']
         sm = difflib.SequenceMatcher(None, A, C, autojunk=False)
         same[k] = [round(sm.ratio(), 4), len(A), len(C)]
-        chipln[k] = len(shots['NEW'].get(k, '').split('\n')) - len(shots['BASE'].get(k, '').split('\n'))
+        chipln[k] = len(shots['PIN'].get(k, '').split('\n')) - len(shots['BASE'].get(k, '').split('\n'))
     T('15', u'다른 법(상표·디보 첫 화면·미분류)·특허 미분류 화면 글 = 바탕(출제연도 칩 줄만 뺌) — 같은 줄 비율 1.0', all(v[0] == 1.0 and v[1] == v[2] for v in same.values()), {'같음': same, '더해진 줄(칩)': chipln})
     T('15-헛', u'헛잣대 — 칩 줄을 안 빼면 바뀐 조각이 잡힌다(대조가 눈을 뜨고 있다)', any(v['바뀐 조각'] > 0 for v in summ.values()), {k: v['바뀐 조각'] for k, v in summ.items()})
     io.open(os.path.join(WORK, 'reg_mbs_screens.json'), 'w', encoding='utf-8').write(json.dumps(shots, ensure_ascii=False))

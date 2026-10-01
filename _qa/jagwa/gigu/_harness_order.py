@@ -93,7 +93,9 @@ TESTS = r"""<script>
      for(let i=1;i<L.length;i++){const a=L[i-1],b=L[i];
        if((unitOf(a[F.NO])||'')!==(unitOf(b[F.NO])||''))continue;
        const qa=+a[F.ROUND]||0,qb=+b[F.ROUND]||0,la=+a[F.LNO]||0,lb=+b[F.LNO]||0;
-       if(qa>qb||(qa===qb&&la>lb)){ok=false;why=[a[F.CODE],b[F.CODE]];break}}
+       /* ★ A-6(a) 9/30 — 회차가 찬 과목(HASROUND · 지학 · 9/21 부터 생물도)은 같은 단원 안 **회차 내림**(최신 회차가 위) → 문번 오름이다
+          (gigu/_task_jagwa_earth_listpop.md §B 「같은 단원 안 차례를 회차 내림 → 문번 오름으로」 · genie a9f9fd4 · c9faff2 에서 ISEA → HASROUND · 앱 listSort) */
+       if(((typeof HASROUND==='function'&&HASROUND())?qa<qb:qa>qb)||(qa===qb&&la>lb)){ok=false;why=[a[F.CODE],b[F.CODE]];break}}
      T('O-2 같은 단원 안에서 회차 → 문항 번호',ok,why);
      const codes=$$('#list .item .num').map(x=>x.textContent);
      T('O-2 회차순으로 안 늘어선다(G32-01·G32-02·G32-03 이 잇달아 오지 않음)',
@@ -140,7 +142,13 @@ TESTS = r"""<script>
      /* 생물 목차는 2단(항목 = 절 자신)이라 .trit 줄이 0이다 — 그때는 절 줄을 집는다 */
      const rows=$$('#trlist .trit:not(.unm)').concat($$('#trlist .trsec'));
      const target=rows.find(el=>el.dataset.u&&$('#list [data-uhd="'+el.dataset.u+'"]'));
-     T('O-5 목차에서 목록과 이어지는 줄을 찾았다',!!target,[rows.length,$$('#trlist .trit').length,$$('#trlist .trsec').length]);
+     /* ★ A-6(a) 9/30 — 옛 목차 서랍(#tree · 글자 = 스크롤 · 숫자 = 필터 두 손잡이)은 add9 §A-6 이 걷었다(genie 68216cf · _decisions 2026-09-21 15:44 ·
+        수행 결과 §A 「treeOpen() 을 빈 함수 둘로 만들어 안 뜬다」 · 「목차」 단추 #btnTree 도 걷음) → 새 기대 = 옛 서랍 줄 0.
+        목차의 「단원으로 가기」는 상주 서랍 단원 머리 줄(#ndList .ndsec · 누르면 첫 화면 목록이 그 절로 · add9 §A-3)이 갈음한다 — 숫자 = 필터 손잡이는 없다.
+        옛 두 손잡이를 재던 아래 줄(O-5 둘로 갈림 · 숫자 너비 · 글자 클릭 · .at · O-6)은 옛 줄이 없어 건너뛴다(target 없음) */
+     try{navBuild()}catch(e){}
+     const nds=$$('#ndList .ndsec').filter(el=>el.dataset.sec&&$('#list [data-uhd="'+el.dataset.sec+'"]'));
+     T('O-5 목차에서 목록과 이어지는 줄을 찾았다',rows.length===0&&nds.length>0,[rows.length,$$('#ndList .ndsec').length,nds.length]);
      if(!target)return;
      const code=target.dataset.u;
      T('O-5 목차 줄이 글자·숫자 둘로 갈렸다',!!target.querySelector('.tlab')&&!!target.querySelector('.n'),code);
@@ -233,10 +241,13 @@ def main():
     s = open(SRC, encoding='utf-8').read()
     T2('O-7 부제 문자열이 파일에 없다(세 과목 공통 한 줄이었다)', '알기 쉬운 변리사' not in s)
     T2('O-7 죽은 CSS(.brand .sub) 도 안 남았다', '.brand .sub' not in s)
-    NEWDRAW = '\ndraw=function(){\n  drawFilters();drawSpectrum();\n  const L=listSort(filtered())'
-    BLK = '\nif(CARD_LAYER){\n'          # 카드 층 여는 줄(3340) — 3184 의 인라인 if 와 구분된다
+    # ★ A-6(a) 9/30 — 새 draw 셋째 줄이 두 번 바뀌었다: 두 모드(listpop §B · a9f9fd4 · `const L=_rnd?roundSort(filtered()):listSort(filtered())`)
+    #   → 서랍과 같은 재료(add19 §A-1 · 0c19a60 · `const _s=shellL(), _rnd=_s.rnd;`) — 바뀐 셋째 줄은 빼고 머리 두 줄로 잰다(지금 판 1곳 · 층 표지 뒤 — 파이썬으로 셈)
+    NEWDRAW = '\ndraw=function(){\n  drawFilters();drawSpectrum();\n'
+    # ★ A-6(a) 9/30 — 셸 이식(c9faff2)부터 층 머리 = if(SHELL){ 라 옛 글자가 없어 s.index(BLK) 가 ValueError(242줄) · if(SHELL){ 은 층 앞(서랍 3724줄)에도 있어 층 표지로 잰다
+    BLK = '/*EARTH:js*/'          # 카드 층 여는 줄(3340) — 3184 의 인라인 if 와 구분된다
     PHONE = '{const _drawP=draw;draw=function(){_drawP();foldSummary()}}'   # PHONE 절 껍데기(물리가 쓴다)
-    T2('O-8 새 draw 는 if(CARD_LAYER) 안에 하나뿐',
+    T2('O-8 새 draw 는 카드 층 블록 안에 하나뿐(9/21 부터 if(SHELL) · c9faff2 §A)',
        s.count(NEWDRAW) == 1 and s.index(BLK) < s.index(NEWDRAW), [s.count(NEWDRAW)])
     T2('O-8 물리 draw 와 PHONE 껍데기는 그대로(카드 층 밖 · 무변)',
        'function draw(){' in s and PHONE in s and s.index(PHONE) < s.index(BLK))

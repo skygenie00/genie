@@ -54,11 +54,11 @@ def git(*a):
     return subprocess.run(['git', '-C', GENIE, '-c', 'core.quotepath=false'] + list(a), capture_output=True).stdout
 
 
-def head_tree(sub, dst):
+def head_tree(sub, dst, rev=None):
     if os.path.isdir(dst) and os.listdir(dst):
         return dst
     os.makedirs(dst, exist_ok=True)
-    raw = git('archive', '--format=tar', BASE_REV, sub)
+    raw = git('archive', '--format=tar', rev or BASE_REV, sub)   # ★ A-6(d) 9/30 — rev = 인도 검산을 박을 커밋(reg_gates · 없으면 바탕)
     with tarfile.open(fileobj=io.BytesIO(raw)) as tf:
         tf.extractall(dst)
     return dst
@@ -239,9 +239,12 @@ def data_gates():
         Nw = json.load(io.open(os.path.join(DATA, 'jimun_%s.json' % law), encoding='utf-8'))
         KEYS = {x['k'] for x in json.load(io.open(os.path.join(DATA, 'jo_%s_목록.json' % {u'특허': u'특허법', u'상표': u'상표법'}[law]), encoding='utf-8'))[u'조']}
         res = JL.apply(JOP, law, B[u'문제'], KEYS)
-        diff = [(qa['id'], za['n']) for qa, qb in zip(B[u'문제'], Nw[u'문제']) for za, zb in zip(qa[u'지문'], qb[u'지문']) if za['jo'] != zb['jo']]
+        # ★ A-6(d) 9/30 _task_qa_baseline — 이 칸은 joscreen 인도 검산: 새 쪽 = 인도 판 539131a 데이터(두 커밋 사이 59b8701 ↔ 539131a) · 뒤 판(uid_add2 6242678 · uid_add3 e36829b …)이
+        #   jimun_특허 에 문항을 끼워 지금 데이터로는 자리 zip 이 어긋난다(_task_jo_cardfix.md 186 「8 = uid_add2 데이터 조」) · Nw(지금 데이터)는 아래 INFO 가 그대로 쓴다
+        Nd = json.loads(git('show', '539131a:jo/data/jimun_%s.json' % law).decode('utf-8'))
+        diff = [(qa['id'], za['n']) for qa, qb in zip(B[u'문제'], Nd[u'문제']) for za, zb in zip(qa[u'지문'], qb[u'지문']) if za['jo'] != zb['jo']]
         other = 0
-        for qa, qb in zip(B[u'문제'], Nw[u'문제']):
+        for qa, qb in zip(B[u'문제'], Nd[u'문제']):
             for za, zb in zip(qa[u'지문'], qb[u'지문']):
                 if {k: v for k, v in za.items() if k != 'jo'} != {k: v for k, v in zb.items() if k != 'jo'}:
                     other += 1
@@ -320,10 +323,10 @@ def rule_gates(br, pairs, want, p7want):
 # ══════════ 1 · 3 머리 · 본문 칸 ══════════
 def head_ok(h):
     it = h['items']
-    four = [x for x in it if re.match(u'^(📜|☑|⚖|🧾)', x['t'])]
+    four = [x for x in it if re.match(u'^(🔗인|↩피|☑|⚖|🧾)', x['t'])]   # ★ A-6(a) 9/30 — joscreen0929 A-3: 「📜 인용하는 조 N」 → 「🔗인N」·「↩피N」 둘(칩 넷 → 다섯)
     return (h['lawChip'] == 0 and not h['pre'] and re.match(u'^시행 \\d{4}-\\d{2}-\\d{2}$', h['sihaeng'] or '') and not h['connK']
             and not h['c3chip'] and not h['themeChip'] and not h['cardChip'] and not h['clock']
-            and len(four) == 4 and len(it) == 4
+            and len(four) == 5 and len(it) == 5
             and all(x['bg'] in ('rgba(0, 0, 0, 0)', 'transparent') and x['bw'] == '0px' and x['fs'] == '11px' and x['fw'] == '800' for x in four))
 
 
@@ -342,7 +345,7 @@ def head_gates(br, wk):
                     ok = bool(head_ok(h))
                     ed = p.ev("()=>__JS.hasEditLine()")
                     if tag == 'NEW':
-                        T('1', u'%s 제1조 머리(%s %d) — 법 칩·🕐·파일 이름·「이 조문 연결」·3법/테마/카드 칩 DOM 0 · 남은 칩 넷 = 바탕 투명·테 0·11px·800' % (law, bname, W), ok,
+                        T('1', u'%s 제1조 머리(%s %d) — 법 칩·🕐·파일 이름·「이 조문 연결」·3법/테마/카드 칩 DOM 0 · 남은 칩 다섯 = 바탕 투명·테 0·11px·800' % (law, bname, W), ok,
                           {'시행': h['sihaeng'], '칩': [(x['t'], x['bg'], x['bw'], x['fs'], x['fw']) for x in h['items']]})
                         T('3', u'%s 제1조 본문 칸(%s) — 「내 편집본」 글자 0' % (law, bname), not ed, {'본문 첫': p.ev("()=>__JS.bodyText()")[:60]})
                     else:
@@ -633,12 +636,12 @@ def drawer_gates(br, wk):
                 p.ev("w=>__JS.jo('특허법','제1조',{panel:false,treeW:w})", w)
                 res[w] = p.ev("()=>__JS.drawer()")
             if tag == 'NEW':
-                okc = all(len(v['bkLeft']) == 1 and len(v['edLeft']) == 1 and len(v['lkLeft']) <= 1 for v in res.values())
+                okc = all(len(v['bkLeft']) == 1 and len(v['edLeft']) == 0 and len(v['lkLeft']) <= 1 for v in res.values())   # ★ A-6(a) 9/30 — joscreen0929 A-1-1: 줄 끝 ✏️M·🔗L 걷음(✏️ 1 가지 → 0) · 빈칸 표지 1 가지 · 🔗 ≤ 1 그대로
                 lg = res[212]['legend']
-                T('7', u'서랍(%s) 212·260·320px — 빈칸 표지 왼쪽 끝 1 가지 · ✏️ 1 가지 · 🔗 1 가지' % bname, okc, {w: (v['bkLeft'], v['edLeft'], v['lkLeft']) for w, v in res.items()})
-                T('7', u'서랍(%s) — 막대 0 · 범례 새 글 · ✏️(U+FE0F) · ★ 개정일 = 이름 바로 뒤' % bname,
-                  all(v['bars'] == 0 for v in res.values()) and lg.startswith(u'●●● = 빈칸 내용·주체·기간 · 밑줄 색 = 통과율(≥90 초록 · ≥60 노랑 · 그 외 빨강) · 누르면 그 빈칸') and u'✏️N 내 형광·마크업 수 · 🔗N 인용 링크 수' in lg
-                  and bool(res[212]['edEmoji']) and bool(res[212]['starAfterName']) and res[212]['starAfterName']['prev'] == 'nm' and not res[212]['starAfterName']['inEm'],
+                T('7', u'서랍(%s) 212·260·320px — 빈칸 표지 왼쪽 끝 1 가지 · ✏️ 0 가지 · 🔗 1 가지' % bname, okc, {w: (v['bkLeft'], v['edLeft'], v['lkLeft']) for w, v in res.items()})
+                T('7', u'서랍(%s) — 막대 0 · 범례 새 글 · ✏️ 없음 · ★ 개정일 = 이름 바로 뒤' % bname,
+                  all(v['bars'] == 0 for v in res.values()) and lg.startswith(u'●●● = 빈칸 내용·주체·기간 · 밑줄 색 = 통과율(≥90 초록 · ≥60 노랑 · 그 외 빨강) · 누르면 그 빈칸') and u'☑N 정오문제 수 · 누르면 체크 색' in lg   # ★ A-6(a) 9/30 — joscreen0929 A-1-1: 범례 새 글 · ✏️ 걷음(다음 줄 = 줄에 ✏ 0)
+                  and res[212]['edEmoji'] is None and bool(res[212]['starAfterName']) and res[212]['starAfterName']['prev'] == 'nm' and not res[212]['starAfterName']['inEm'],
                   {'범례': lg, '✏': res[212]['edSample'], '★': res[212]['starAfterName']})
                 if bname == 'Chromium':
                     col = p.ev("()=>__JS.bkColor()")
@@ -748,9 +751,14 @@ def jn_gates(br):
 # ══════════ 10 회귀 — 조문 탭 밖 DOM(같은 새 데이터로 바탕 앱 ↔ 새 앱) · 기록 키 ══════════
 def reg_gates(br):
     E = envs3()
+    # ★ A-6(d) 9/30 _task_qa_baseline — 10 두 칸(화면 글 무변 · 기록 열쇠 무변)은 joscreen 인도 검산이다. 뒤 판(uid_add2·mbsame_add2/3 · cardfix · p8up · uid_add3 …)이
+    #   1차객 화면·데이터를 뜻해서 바꿔(_task_jo_cardfix.md 186 「앞 판 몫」) 지금 판으로는 설 수 없다 → 이 함수(EP)만 새 쪽을 인도 판 539131a 앱 + 데이터로 박는다(두 커밋 사이 59b8701 ↔ 539131a)
+    PIN = '539131a'
+    pin_d = os.path.join(head_tree('jo/data', os.path.join(WORK, 'head_' + PIN, 'jo_data'), PIN), 'jo', 'data')
+    EP = {'BASE': E['BASE'], 'BASEN': (E['BASE'][0], pin_d), 'NEW': (git('show', '%s:jo/index.html' % PIN).decode('utf-8'), pin_d)}
     shots, keys = {}, {}
     for tag in ('BASE', 'BASEN', 'NEW'):
-        src, data = E[tag]
+        src, data = EP[tag]
         p = Pg(br, 'reg' + tag, src, data, W=1440, H=1000)
         try:
             keys[tag] = p.ev("()=>__JS.gaekHome('특허법').then(()=>__JS.poolKeys())")

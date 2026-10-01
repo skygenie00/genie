@@ -74,6 +74,20 @@ def _ensure_base():
 
 
 BASE = _ensure_base()
+# ★ A-6(9/30) — 이 하네스의 인도 판(근거 가드 · genie 352bff7 · 2026-09-21 01:17 인도 · 358 PASS / 0 FAIL).
+#   생물·물리 「고침 전과 같다」(B-3·Y-3) 가운데 뒤 판(c9faff2 shell_bio_phys …)이 뜻대로 바꾼 칸만 이 판으로 잰다(main 참조).
+DLV_REV = '352bff7'
+_DLV = {}
+
+
+def _dlv_text():
+    """인도 판 앱 글 — git 에서 꺼낸다(N:·공개 저장소에 사본을 안 둔다 · D11). 못 꺼내면 빈 글(그 칸이 FAIL 로 드러난다)."""
+    if 't' not in _DLV:
+        b = subprocess.run(['git', '-C', GENIE, 'show', DLV_REV + ':jagwa/index.html'], capture_output=True).stdout
+        _DLV['t'] = b.decode('utf-8') if b else ''
+    return _DLV['t']
+
+
 SPDROOT = _roots.spd()
 OUT = os.path.join(os.environ.get('TEMP', '.'), 'hlistpop')
 os.makedirs(OUT, exist_ok=True)
@@ -208,8 +222,9 @@ BODY_EARTH = r"""
      /* 머리줄 자식 차례 */
      const head=esh.querySelector('.ehead');
      const seq=[...head.children].map(el=>el.id||el.tagName.toLowerCase()).filter(x=>x!=='span'||true);
-     T('A-2 머리줄 차례 = 제목 → 수 → (빈칸) → 과목탭 → 목차 → 교재 → 설정 → D-날 → 동기화',
-       seq.join(',')==='h1,eCnts,span,subjTabs,btnTree,btnBook,btnSet,examChip,recChip',seq);
+     /* ★ A-6(9/30) · add9 §A-1(9/21 · 68216cf) — 「목차」 단추(#btnTree)는 걷었다(왼쪽 상주 서랍이 그 구실) · earth_shell A-2 와 같다 */
+     T('A-2 머리줄 차례 = 제목 → 수 → (빈칸) → 과목탭 → 교재 → 설정 → D-날 → 동기화',
+       seq.join(',')==='h1,eCnts,span,subjTabs,btnBook,btnSet,examChip,recChip',seq);
      T('A-2 제목 18px 800',getComputedStyle(head.querySelector('h1')).fontSize==='18px'
        &&getComputedStyle(head.querySelector('h1')).fontWeight==='800',
        [getComputedStyle(head.querySelector('h1')).fontSize,getComputedStyle(head.querySelector('h1')).fontWeight]);
@@ -396,7 +411,7 @@ BODY_EARTH = r"""
 
    /* ══════════ 5. §D 근거 ══════════ */
    await grp('G', async()=>{
-     const A='G62-09', B='G39-02';
+     const A='G25-62-09', B='G02-39-02';   /* ★ A-6(9/30) · jagwa_uid(9/29 · 5e18424) — 근거·연결 열쇠 = 새 번호(옛 G62-09·G39-02) */
      const noA=rowByUid(A)[F.NO], noB=rowByUid(B)[F.NO];
      GG={};GGREF={};await saveGG();await saveGGREF();
      await openView(noA); await wait(600);
@@ -511,7 +526,9 @@ BODY_EARTH = r"""
      T('G-7 누르면 그 문항이 열린다',VNO!==null);
      closeView(); await wait(250);
      document.querySelector('#esh .seg2 [data-sm="q"]').click(); await wait(300);
-     T('G-7 「문제」로 돌아오면 상자가 닫힌다',document.getElementById('esres').classList.contains('hide'));
+     /* ★ A-6(9/30) · jagwa_search(9/29 · eb1113e) A-4-4 — 모드를 바꾸면 같은 칸 글을 그 모드 규칙으로 다시 찾는다(민법 setSearchMode 의 runSearch) · 옛 판 = 상자 닫힘 · earth_shell G-7 과 같다 */
+     T('G-7 「문제」로 돌아오면 같은 글(반지름)을 문제 규칙으로 다시 찾는다 — 문제 줄 · 근거 줄 0',GGMODE==='q'&&!document.getElementById('esres').classList.contains('hide')
+       &&$$$('#esres [data-esq]').length>=1&&$$$('#esres [data-ggres]').length===0,[$$$('#esres [data-esq]').length,$$$('#esres [data-ggres]').length]);
      /* 필터 둘 */
      {const f=document.getElementById('rvF');f.value='gg';f.dispatchEvent(new Event('change',{bubbles:true}));await wait(350)}
      T('G-8 「근거 있음」 = 2건',nums().length===2,nums().length);
@@ -619,7 +636,7 @@ BODY_EARTH = r"""
 
    /* ══════════ 7. §F 직접 찍기 ══════════ */
    await grp('P', async()=>{
-     const A='G62-09', noA=rowByUid(A)[F.NO];
+     const A='G25-62-09', noA=rowByUid(A)[F.NO];   /* ★ A-6(9/30) · jagwa_uid — 찍기(pick)·자르기(crop) 열쇠 = 새 번호(옛 G62-09) */
      PICK={};await savePICK();draw();await wait(250);
      /* 교재 탭 메뉴 */
      cropFor(noA);
@@ -770,9 +787,10 @@ BODY_EARTH = r"""
      /* ───── §B 아랫줄 다섯 ───── */
      {const kids=[...document.querySelectorAll('.vbot .tools>*')];
       const vis=kids.filter(el=>el.offsetParent!==null);
-      T('W-2 ★아랫줄에 보이는 것이 다섯뿐',vis.length===5,vis.map(el=>el.id||el.className));
-      T('W-2 ★그 다섯 = 회독 층 · +회독 · 👁 · 기록 · 암기카드',
-        vis.map(el=>el.id).join(',')==='tLayer,tLayerAdd,tLayerEye,tHist,tCard',vis.map(el=>el.id));
+      /* ★ A-6(9/30) · _task_jagwa_claude_slot_add1 §A-2(9/22 · 007fde4) — 맨 오른쪽에 「Claude」(#tGpt)가 하나 더 선다 · 앞 다섯 차례는 그대로 · earth_shell W-2 와 같다 */
+      T('W-2 ★아랫줄에 보이는 것이 여섯(다섯 + 맨 오른쪽 Claude)',vis.length===6,vis.map(el=>el.id||el.className));
+      T('W-2 ★그 여섯 = 회독 층 · +회독 · 👁 · 기록 · 암기카드 · Claude',
+        vis.map(el=>el.id).join(',')==='tLayer,tLayerAdd,tLayerEye,tHist,tCard,tGpt',vis.map(el=>el.id));
       T('W-2 오른쪽 맞춤',getComputedStyle($('.vbot .tools')).justifyContent==='flex-end',
         getComputedStyle($('.vbot .tools')).justifyContent);
       T('W-2 ★굵기 #tW 안 보임 · 값 2',$('#tW').offsetParent===null&&$('#tW').value==='2',
@@ -831,7 +849,7 @@ BODY_EARTH = r"""
         [lastM(no),$('#card .vox.vP').className]);}
 
      /* ───── §D 「✎ 여기서 고치기」 ───── */
-     {const U='G62-09', A='G39-02';
+     {const U='G25-62-09', A='G02-39-02';   /* ★ A-6(9/30) · jagwa_uid — 근거·연결 열쇠 = 새 번호(옛 G62-09·G39-02) */
       GG={};GGREF={};
       GG[U]=[{k:'g_t1',i:1,t:'ㄱ 처음 글',ok:'O',ts:1,
               parts:[{l:'ㄱ',t:'처음 글'}],cs:[{k:'c_t1',t:'댓글 처음',ts:1}]}];
@@ -999,7 +1017,7 @@ BODY_EARTH = r"""
 
    /* ══════════ 10. add3 ② 펜으로 근거 줄이 눌린다 ══════════ */
    await grp('N', async()=>{
-     const A='G39-02', U='G62-09';
+     const A='G02-39-02', U='G25-62-09';   /* ★ A-6(9/30) · jagwa_uid — 근거·연결 열쇠 = 새 번호(옛 G39-02·G62-09) */
      GG={};GGREF={};
      GG[U]=[{k:'g_n1',i:1,t:'ㄱ 남의 근거',ok:'O',ts:1,cs:[{k:'c_n1',t:'댓글',ts:1}]}];
      GG[A]=[{k:'g_n2',i:1,t:'내 근거 하나',ok:'O',ts:1,cs:[]}];
@@ -1150,7 +1168,7 @@ BODY_EARTH = r"""
 
    /* ══════════ 11. add3 ③ 쓰임 수 · 쓰임 목록 창 · 찾기 결과 줄 ══════════ */
    await grp('U', async()=>{
-     const T0='G62-09';
+     const T0='G25-62-09';   /* ★ A-6(9/30) · jagwa_uid — 근거·연결 열쇠 = 새 번호(옛 G62-09) · pool·ggHits 는 새 번호 */
      const pool=DATA.filter(r=>!isC(r)&&r[F.CODE]!==T0).map(r=>r[F.CODE]);
      const mk=n=>{GGREF={};pool.slice(0,n).forEach(u=>{GGREF[u]=[T0]})};
      GG={};GG[T0]=[{k:'g_u1',i:1,t:'ㄱ 쓰임 시험 근거',ok:'O',ts:1,
@@ -1287,7 +1305,7 @@ BODY_EARTH = r"""
         겹치면 헛잣대 거르개가 섞이므로 **「S」(동기화 가드)** 로 갈아 붙였다. */
    await grp('S', async()=>{
      const ls=k=>{try{return JSON.parse(localStorage.getItem(k)||'{}')}catch(e){return {}}};
-     const UID='G61-07';
+     const UID='G24-61-07';   /* ★ A-6(9/30) · jagwa_uid — 되살림 파일(earth/근거_되살림_20260921.json) 열쇠도 새 번호(studyplandata 4a011475 · 옛 G61-07) */
      const one=[{k:'g_t',i:1,t:'시험 근거',ok:'O',ts:1,cs:[]}];
      const clean=()=>{const sh=ls(SHADOW_KEY);delete sh.gg;lsPut(SHADOW_KEY,sh);
        const g=ls(GONE_KEY);delete g['gg|'+UID];lsPut(GONE_KEY,g);
@@ -1346,12 +1364,14 @@ BODY_BIO = r"""
    if(CUR.KINDS)FL.types=new Set(['G']);
    draw(); await wait(300);
    T('B-0 생물 카드 층 · 데이터 적재',SUBJ_ID==='bio'&&CARD_LAYER===true&&DATA.length>0,[SUBJ_ID,DATA.length]);
-   T('B-1 모드 단추를 안 만든다',!document.getElementById('ordSeg'));
+   /* ★ A-6(9/30) · _task_jagwa_shell_bio_phys §A HASROUND(9/21 · c9faff2) — 생물은 회차 찬 행 270 ⇒ 회차별│단원별 모드 단추를 그린다(물리는 Y-1 그대로 안 그림) */
+   T('B-1 모드 단추를 만든다(생물 HASROUND 참)',!!document.getElementById('ordSeg'));
    T('B-1 히트맵에 빈 칸이 없다',$$$('#spec i.gap').length===0,$$$('#spec i.gap').length);
    await openView(DATA[0][F.NO]); await wait(900);
-   T('B-2 생물 문항 화면은 **전체 화면**이다(win 없음 · ⤢ 없음 · 모서리 없음)',
-     !$('#view').classList.contains('win')&&!$('#view').classList.contains('float')
-     &&!document.getElementById('vWinTg')&&$$$('#view .twgrip').length===0,
+   /* ★ A-6(9/30) · _task_jagwa_shell_bio_phys §A SHELL 「문항 = 떠 있는 창」·§E-3(9/21 · c9faff2) — 생물 문항도 떠 있는 창 · ⤢ · 모서리 하나 */
+   T('B-2 생물 문항 화면은 **떠 있는 창**이다(win · ⤢ · 모서리)',
+     $('#view').classList.contains('win')&&$('#view').classList.contains('float')
+     &&!!document.getElementById('vWinTg')&&$$$('#view .twgrip').length===1,
      [$('#view').className,!!document.getElementById('vWinTg'),$$$('#view .twgrip').length]);
    snap.view=$('#view').className;
    snap.vT1=String($('#vT1').textContent||'');
@@ -1383,11 +1403,13 @@ BODY_BIO = r"""
 BODY_PHYS = r"""
    await wait(1200);
    T('Y-0 물리 층이다',SUBJ_ID==='phys'&&CARD_LAYER===false,[SUBJ_ID,CARD_LAYER]);
-   T('Y-1 카드 층 함수가 아예 없다',typeof ISEA==='undefined'&&typeof codeShow==='undefined'
-     &&typeof bplOpen==='undefined'&&typeof ordMode==='undefined'&&typeof cropFor==='undefined'
-     &&typeof vwApply==='undefined',
+   /* ★ A-6(9/30) · _task_jagwa_shell_bio_phys §A(9/21 · c9faff2) — 새 갈래는 if(SHELL) 블록으로 옮겨 물리도 돈다(Z-1) · 교재 몫은 HASBOOK 이 막는다 */
+   T('Y-1 카드 층 함수가 물리에도 있다(SHELL 블록)',typeof ISEA==='boolean'&&typeof codeShow==='function'
+     &&typeof bplOpen==='function'&&typeof ordMode==='function'&&typeof cropFor==='function'
+     &&typeof vwApply==='function',
      [typeof ISEA,typeof codeShow,typeof bplOpen,typeof ordMode,typeof cropFor,typeof vwApply]);
-   T('Y-1 #view 에 win 이 없고 ⤢ 도 없다',!$('#view').classList.contains('win')&&!document.getElementById('vWinTg'));
+   /* ★ A-6(9/30) · _task_jagwa_shell_bio_phys §A SHELL(9/21 · c9faff2) — 물리 문항도 떠 있는 창이라 ⤢(#vWinTg)가 선다 · 열기 전 #view 에 win 없음은 그대로 */
+   T('Y-1 #view 에 win 이 없고 ⤢ 는 있다(열기 전 · SHELL)',!$('#view').classList.contains('win')&&!!document.getElementById('vWinTg'));
    T('Y-1 목록 모드 단추를 안 만든다',!document.getElementById('ordSeg'));
    snap.cnt=String($('#cnt').textContent||'');
    snap.list=$$$('#list .item').slice(0,25).map(el=>String(el.textContent||'').replace(/\s+/g,' ').trim()).join(' || ');
@@ -1552,12 +1574,12 @@ def static_checks():
     def T2(name, cond, info=''):
         out.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
 
-    blk = s.find('\nif(CARD_LAYER){\n')
+    blk = s.find('\nif(SHELL){\n')   # ★ A-6(9/30) · shell_bio_phys §A(9/21 · c9faff2) — 카드 층 블록이 SHELL 블록(세 과목)이 됐다 · earth_shell Z-1 과 같다
     end = s.find('\n}\n/*/EARTH:js*/')
     keys = ['var ISEA=', 'function shellBuild(', 'function drawEarthList(', 'var mcwOpen=async function(',
             'function jnOpen(', 'function ggLineHTML(', 'var ggAdd=async function(', 'function ggCardHTML(',
             'var omrTab=async function(', 'var GG={}']
-    T2('Z-1 새 갈래가 전부 if(CARD_LAYER) **블록 안**이다 — 물리는 만들지도 않는다',
+    T2('Z-1 새 갈래가 전부 if(SHELL) **블록 안**이다(shell_bio_phys 부터 물리도 그 블록을 돈다)',
        blk >= 0 and end > blk and all(blk < s.find(k) < end for k in keys),
        [(k, s.find(k)) for k in keys if not (blk < s.find(k) < end)])
     T2('Z-2 새 갈래는 전부 ISEA 문 안이다(과목 문 무변)', "var ISEA=SUBJ_ID==='earth';" in s)
@@ -1577,18 +1599,27 @@ def static_checks():
     T2('Z-9 새 kv 는 셋뿐이다(gg · ggref · pick)',
        s.count("put('kv','gg',GG)") == 1 and s.count("put('kv','ggref',GGREF)") == 1
        and s.count("put('kv','pick',PICK)") == 1)
-    T2('Z-10 CSS 는 지학 문 안이다', 'body[data-subj="earth"] #lib{max-width:56rem' in s)
+    # ★ A-6(9/30) · shell_bio_phys 수행 결과 §A(9/21 · c9faff2) — CSS 지학 문 61 → body[data-shell] 51 · body[data-book] 10 · earth_shell Z-10 과 같은 자리
+    T2('Z-10 CSS 는 껍데기 문(data-shell) 안이다', 'body[data-shell] #lib{max-width:56rem' in s)
     T2('Z-11 줄끝이 CRLF 그대로다', b.count(b'\r\n') == b.count(b'\n'))
     T2('Z-12 본판 대비 늘기만 했다', len(s) > len(base))
+    # ★ A-6(9/30) — 인도 검산(이 판이 지운 본판 줄 수)은 두 커밋 사이로 박는다: 바탕 ab49775(_base_bp) ↔ 인도 판 DLV_REV(352bff7 · 셈 8).
+    #   지금 SRC 로 세면 뒤 판들(c9faff2 …)이 갈아 쓴 줄까지 센다(9/30 셈 320 — 그 몫은 earth_shell Z-13 이 판마다 전수로 잰다).
+    sD = (_dlv_text() or '').replace('\r\n', '\n')
     T2('Z-13 지운 본판 줄이 거의 없다(손댄 자리뿐)',
-       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s) <= 40,
-       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s))
+       bool(sD) and sum(1 for ln in base.split('\n') if ln.strip() and ln not in sD) <= 40,
+       sum(1 for ln in base.split('\n') if ln.strip() and ln not in sD) if sD else '(인도 판을 git 에서 못 꺼냄)')
     # ── add2 가 둔 것(그대로) ──
+    # ★ A-6(9/30) — 부름 **수**가 아니라 **열쇠 이름**을 맞댄다(9/21 13:43 ⓒ · earth_shell Z-15 와 같은 식).
+    #   add7(8fa2462)이 근거 가드에서 SYNC_REF.gg 를 더 읽고(1 → 7) add9(68216cf)가 #navdr 의 put('kv','set') 하나를 걷었다 — 둘 다 있는 키다.
+    _kv = lambda t: set(re.findall(r"put\('kv','([^']+)'", t))
+    _sr = lambda t: set(re.findall(r"SYNC_REF\.([A-Za-z_$][\w$]*)", t))
     T2('Z-15 새 kv·새 SYNC 키가 없다',
-       s.count("put('kv','") == base.count("put('kv','") and s.count('SYNC_REF.') == base.count('SYNC_REF.'),
-       [s.count("put('kv','"), base.count("put('kv','")])
-    T2('Z-17 아랫줄 감추기는 지학 문 안이다',
-       'body[data-subj="earth"] .vbot .tools>*{display:none!important}' in s
+       _kv(s) == _kv(base) and _sr(s) == _sr(base),
+       [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))])
+    # ★ A-6(9/30) · shell_bio_phys 수행 결과 §A(9/21 · c9faff2) — 아랫줄 감추기는 교재 문 body[data-book](카드 층 = 지학·생물) · 물리는 add15 #pRow1 규칙(earth_shell Z-17)
+    T2('Z-17 아랫줄 감추기는 교재 문(data-book) 안이다',
+       'body[data-book] .vbot .tools>*{display:none!important}' in s
        and s.count('.vbot .tools>*{display:none') == 1)
     T2('Z-19 단축키 줄 무변(일부러 죽여 둔 것)',
        s.count("if(e.key==='1')mark('O')") == base.count("if(e.key==='1')mark('O')")
@@ -1603,10 +1634,11 @@ def static_checks():
     T2('Z-22 ① 본디 setTool 은 한 글자도 안 건드렸다',
        "  TOOL.mode=mode;if(color)TOOL.color=color;TOOL.w=+$('#tW').value;" in s
        and s.count('function setTool(mode,color,el){') == base.count('function setTool(mode,color,el){'))
-    T2('Z-23 ② 근거 덩어리는 **한 겹**이다(.ggtop) · 물리엔 안 생긴다(ggCardHTML 은 ISEA)',
+    # ★ A-6(9/30) · shell_bio_phys §A·§B-2(9/21 · c9faff2) — ggCardHTML 문 = SHELL(세 과목) · 물리 근거 줄은 ggPhysPaint 가 #ggphys 에(earth_shell Z-23 과 같은 문)
+    T2('Z-23 ② 근거 덩어리는 **한 겹**이다(.ggtop) · ggCardHTML 문은 SHELL(물리 근거 줄 = #ggphys)',
        s.count("'<div class=\"ggtop\">'") == 1
        and '#card .ggtop{position:relative;z-index:8' in s
-       and "function ggCardHTML(r){\n  if(!ISEA)return '';" in s)
+       and "function ggCardHTML(r){\n  if(!SHELL)return '';" in s)
     T2('Z-24 ② UNDER_HIT·underInk·inkPierce 는 한 글자도 안 건드렸다(지시서 ⓑ)',
        s.count('const UNDER_HIT=') == 1
        and ".row[data-k],[data-c],[data-tfx],[data-go],[data-page],[data-no],.snt,.trit';" in s
@@ -1637,7 +1669,7 @@ def static_checks():
        'var GG_READY=false;' in s
        and 'SYNC_REF.gg   ={g:()=>GG_READY?GG:null' in s
        and 'SYNC_REF.ggref={g:()=>GG_READY?GGREF:null' in s
-       and 'SYNC_REF.pick ={g:()=>GG_READY?PICK:null' in s)
+       and 'if(HASBOOK)SYNC_REF.pick={g:()=>GG_READY?PICK:null' in s)   # ★ A-6(9/30) · shell_bio_phys §E-7(9/21 · c9faff2) — pick 은 교재가 있는 카드 층만(가드 GG_READY?…:null 그대로)
     T2('Z-41 `g()` 를 읽는 자리가 다 null 을 「아직 모름」으로 다룬다',
        s.count('const cur=SYNC_REF[k].g();\n    if(!cur)continue;') == 2
        and "const v=SYNC_REF[k].g(); if(v)await put('kv',k,v)" in s
@@ -1673,25 +1705,38 @@ def main():
         ls, sn = run('bio', W, cur)
         lines += ls
         ls0, sn0 = run('biobase', W, basetxt)
+        # ★ A-6(9/30) — 인도 검산 「고침 전과 같다」의 「고침 뒤」 쪽을 인도 판(DLV_REV)으로 박는다.
+        #   뒤 판(9/21 c9faff2 shell_bio_phys 「생물·물리에도」 · 그 뒤 판들)이 생물 화면을 뜻대로 바꿨다.
+        #   박는 칸 = 착수 때 FAIL 인 여섯(B3D)뿐 — 나머지 칸은 지금 판(sn)을 그대로 잰다.
+        _dt = _dlv_text()
+        snD = run('bio', W, _dt)[1] if _dt else None
+        B3D = ('list', 'cnt', 'hd', 'count', 'brand', 'view')
         T2('B-3 고침 전 사본도 끝까지 돌았다', bool(sn and sn0), [bool(sn), bool(sn0)])
         if sn and sn0:
             for k, ko in (('list', '목록 25줄'), ('cnt', '문항 수'), ('hd', '묶음 머리'),
                           ('count', '개수 줄'), ('spec', '히트맵 칸'), ('brand', '머리 칩 줄'),
                           ('view', '#view 클래스'), ('vT1', '문항 머리'), ('cmeta', '카드 머리줄'),
                           ('tools', '교재 도구줄'), ('book', '#book 클래스')):
-                T2('B-3 ★생물 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sn.get(k) == sn0.get(k),
-                   [str(sn.get(k))[:140], str(sn0.get(k))[:140]])
+                sk = (snD or {}) if k in B3D else sn
+                T2('B-3 ★생물 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sk.get(k) == sn0.get(k),
+                   [str(sk.get(k))[:140], str(sn0.get(k))[:140]])
     if 'phys' in want:
         ls, sn = run('phys', W, cur)
         lines += ls
         ls0, sn0 = run('physbase', W, basetxt)
+        # ★ A-6(9/30) — 인도 검산 「고침 전과 같다」의 「고침 뒤」 쪽을 인도 판(DLV_REV)으로 박는다(생물 B-3 과 같은 까닭).
+        #   박는 칸 = 착수 때 FAIL 인 다섯(Y3D)뿐 — 나머지 칸은 지금 판(sn)을 그대로 잰다.
+        _dt = _dlv_text()
+        snD = run('phys', W, _dt)[1] if _dt else None
+        Y3D = ('list', 'hd', 'count', 'brand', 'vtop')
         T2('Y-3 고침 전 사본도 끝까지 돌았다', bool(sn and sn0), [bool(sn), bool(sn0)])
         if sn and sn0:
             for k, ko in (('list', '목록 25줄'), ('cnt', '문항 수'), ('hd', '묶음 머리'),
                           ('count', '개수 줄'), ('spec', '히트맵 칸'), ('brand', '머리 칩 줄'),
                           ('view', '#view 클래스'), ('vtop', '문항 머리줄'), ('book', '#book 클래스')):
-                T2('Y-3 ★물리 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sn.get(k) == sn0.get(k),
-                   [str(sn.get(k))[:140], str(sn0.get(k))[:140]])
+                sk = (snD or {}) if k in Y3D else sn
+                T2('Y-3 ★물리 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sk.get(k) == sn0.get(k),
+                   [str(sk.get(k))[:140], str(sn0.get(k))[:140]])
     if 'null' in want:
         ls0, _ = run('earthbase', W, basetxt)
         fails = [x for x in ls0 if x.startswith('FAIL')]

@@ -33,6 +33,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, JOP)
 import _harness_jo_book8 as B8   # noqa: E402
 M = B8.M
+M.BASE_REV = 'dfbb144'   # A-6(d) 9/30 — 바탕 = 인도 때 HEAD dfbb144(결과 머리 「바탕 HEAD dfbb144」) · book8 의 바탕을 물려받지 않는다
 M.TESTS = M.TESTS + '\n' + io.open(os.path.join(HERE, '_harness_jo_markfix_tests.js'), encoding='utf-8').read()
 M.WORK = M.WORK + '_mf'
 from playwright.sync_api import sync_playwright   # noqa: E402
@@ -137,10 +138,10 @@ def b2(p, b, eng, br):
     drag(p, p.ev("a=>__MF.dragAB(a[0],a[1],a[2])", [ls, 3, 9]))
     b2_ = p.ev("()=>__MF.bar('jomk9')")
     b3_ = p.ev("()=>__MF.c2bar()")
-    sig = lambda B: [(x['cls'], x['m'], x['t'], x['w'], x['h']) for x in (B or {}).get('btns', []) if x['t'] != '🏷']
+    sig = lambda B: [(x['cls'], x['m'], x['t'], x['w'], x['h']) for x in (B or {}).get('btns', []) if x['t'] != '🏷' and x['cls'] != 'm2']   # ★ 9/30 A-6 — joscreen0929 A-5: 둘째 줄(🗒 메모 · ✎ 수정 · 🏷 태그 = button.m2)은 빼고 첫 줄 아홉만 맞댄다
     want = [('sw', m) for m in 'ygbrop'] + [('tx', 'u'), ('tx', 'ub'), ('tx', '')]
     ok = sig(b1_) == sig(b2_) == sig(b3_) and [(x[0], x[1]) for x in sig(b1_)] == want and all(x['t'] == 'U' and x['deco'] == 'underline' for x in b1_['btns'] if x['m'] in ('u', 'ub'))
-    T(G, '%s 막대 단추 = 형광 6 + 「U」 2(빨강·파랑 밑줄 글자) + 🧽 · 1차객·조문·2차 차례·크기 같음' % eng, ok, {'1차객': sig(b1_), '조문': sig(b2_), '2차': sig(b3_)})
+    T(G, '%s 막대 첫 줄 단추 = 형광 6 + 「U」 2(빨강·파랑 밑줄 글자) + 🧽 · 1차객·조문·2차 차례·크기 같음' % eng, ok, {'1차객': sig(b1_), '조문': sig(b2_), '2차': sig(b3_)})
     T(G, '%s PC 1400×900 마우스 선택 — 1차객 막대 top ≥ 선택 bottom + 8 · 화면 안' % eng, place_ok(b1_, sel), {'막대': b1_ and b1_['rect'], '선택': sel})
     # 화면 아래 끝 선택 → 위로
     unit(p, '__mg0')
@@ -193,7 +194,7 @@ def b3(p, b, eng):
     geo = all(abs(a['r'][k] - b_['r'][k]) <= 0.5 for a, b_ in zip(L0, L1) for k in ('y', 'h', 'w'))
     ks = [k for k in jm if k.startswith('특허법:제7조|')]
     T(G, '%s 제7조 본문 마우스 끌기 → 막대(도구 아홉 + 🏷 · 선택 아래) · 따로 뜨던 🏷 거품 0 → 밑줄 파랑 → jopangi.jomark 1 칸 · 그 줄 칠' % eng,
-      bar and bar['vis'] and len(bar['btns']) == 10 and bar['btns'][-1]['t'] == '🏷' and not bub and place_ok(bar, sel) and len(ks) == 1 and jm[ks[0]][0][2] == 'ub' and L1[0]['jmk'] >= 1,
+      bar and bar['vis'] and len([x for x in bar['btns'] if x['cls'] != 'm2']) == 9 and [x['t'] for x in bar['btns'] if x['cls'] == 'm2'] == ['🗒 메모', '✎ 수정', '🏷 태그'] and not bub and place_ok(bar, sel) and len(ks) == 1 and jm[ks[0]][0][2] == 'ub' and L1[0]['jmk'] >= 1,   # ★ 9/30 A-6 — joscreen0929 A-5-1: 🏷 = 둘째 줄 끝(🗒 메모 · ✎ 수정 · 🏷 태그)
       {'막대': bar and bar['rect'], '거품': bub, 'jomark': jm, '줄': L1[:1]})
     T(G, '%s 긋기 전후 줄 높이·폭·다음 줄 y 같음(±0.5px)' % eng, geo and len(L0) == len(L1), [[a['r'], b_['r']] for a, b_ in zip(L0, L1)][:3])
     # 필기 있는 조 · 필기 켜고 끄기 · 스티커 편집 · 빈칸 모드
@@ -347,8 +348,8 @@ def main():
     npass = sum(1 for r in RES if r[2] is True); nfail = sum(1 for r in RES if r[2] is False)
     print('\n== PASS %d · FAIL %d · %.0f초' % (npass, nfail, time.time() - t0))
     with io.open(OUTF, 'a', encoding='utf-8') as f:
-        f.write('\n==== %s · %s · NEW %s · 데이터 %s · 바탕 HEAD %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), 'markfix', os.path.basename(_NEW), _DATA,
-                M.git('rev-parse', '--short', 'HEAD').decode().strip(), ','.join(ENGS)))
+        f.write('\n==== %s · %s · NEW %s · 데이터 %s · 바탕 %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), 'markfix', os.path.basename(_NEW), _DATA,
+                M.git('rev-parse', '--short', M.BASE_REV).decode().strip(), ','.join(ENGS)))   # A-6(d) 적히는 바탕 = 실제 바탕
         for g, n, ok, d in RES:
             f.write('%s | %s · %s | %s\n' % ({True: 'PASS', False: 'FAIL', None: 'INFO'}[ok], g, n, (d if isinstance(d, str) else json.dumps(d, ensure_ascii=False, default=str))[:900]))
         f.write('== PASS %d · FAIL %d\n' % (npass, nfail))

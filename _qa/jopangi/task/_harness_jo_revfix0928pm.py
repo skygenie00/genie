@@ -368,9 +368,16 @@ def a5(p, b, eng):
         halfb = [r['t'] for r in db if r.get('half')]
         T(G + '-헛', '%s 글꼴 %s 헛잣대 바탕 서랍 212 — 「★ 2…」 날짜 첫 숫자가 칩 끝에 반쯤 걸친 줄 있음(text-overflow clip)' % (eng, fname), bool(halfb), {'반쯤': halfb[:4], '번호 가림(이 글꼴에선 0 일 수 있음 · 지시서 §0 ⑤)': clipb[:4]})
         w3n, w3b = drawer(p, 320, font), drawer(b, 320, font)
-        same = len(w3n) == len(w3b) and all(x['t'] == y['t'] and abs(x['nmw'] - y['nmw']) < 0.6 for x, y in zip(w3n, w3b))
-        T(G, '%s 글꼴 %s 넓은 서랍 320 — 줄 글자 · 이름 칸 폭 = 바탕(±0.5)' % (eng, fname), same,
-          {'줄': [len(w3n), len(w3b)], '다른 줄': [(x['t'], x['nmw'], y['nmw']) for x, y in zip(w3n, w3b) if x['t'] != y['t'] or abs(x['nmw'] - y['nmw']) >= 0.6][:5]})
+        # ★ A-6(a) 둘째 바퀴 9/30 — joscreen0929 A-1-6 이 절(lv2) 머리 글 앞에 접기 표지(▾/▸)를 더했다(바탕 e36829b 「제1절 국제출원절차」 → 「▾ 제1절 국제출원절차」 · 특허 제10장 절 둘)
+        #   → 새 쪽 글 앞 표지 하나만 빼고 맞댄다(장 머리는 두 판 다 표지가 있어 그대로 같음) · 폭 「좁아지지 않음」 조건 그대로
+        # ★ A-6(a) 셋째 바퀴 9/30 — revfix0930 A-5 가 장 머리를 한 줄로 했다(이름 flex:1 1 auto · min-width 0 말줄임 · 범위 오른쪽 flex:none 늘 다 보임 · 「좁으면 이름이 먼저 줄어든다」)
+        #   바탕 e36829b 장 머리 이름은 flexShrink 0(제 글 폭 그대로 · revfix0929b A-11 이 걷음)이라 긴 장 이름(특허 제10장)은 넓은 서랍 320 에서도 새 판이 좁다(245.84 → 205.03 = 그 판 관문 B7 PC320 long sw 246 · cw 205 · ellipsis · title)
+        #   → 장 머리 줄(바탕 글 앞 ▾/▸)만: 바탕보다 좁으면 말줄임(text-overflow ellipsis · scrollWidth > clientWidth) + 툴팁(title = 이름 전체)일 때 PASS · 다른 줄 폭 조건 그대로
+        head_ell = lambda x, y: bool(re.match(u'^[▾▸] ', y['t'])) and x.get('to') == 'ellipsis' and x.get('nmsw', 0) > x.get('nmcw', 0) and ' '.join((x.get('tip') or '').split()) == re.sub(u'^[▾▸] ', u'', x['t'])
+        ok_row = lambda x, y: (x['t'] == y['t'] or re.sub(u'^[▾▸] ', u'', x['t']) == y['t']) and (x['nmw'] > y['nmw'] - 0.6 or head_ell(x, y))
+        same = len(w3n) == len(w3b) and all(ok_row(x, y) for x, y in zip(w3n, w3b))   # ★ A-6(a) 9/30 — joscreen0929 A-1(줄 끝 ✏️·🔗 → 점+체크 · 179 → 195) · revfix0930 A-5(장 머리 이름 flex 78 → 184)로 이름 칸이 넓어짐 → 「바탕보다 좁아지지 않음」 · 줄 수 · 줄 글자 = 바탕 그대로
+        T(G, '%s 글꼴 %s 넓은 서랍 320 — 줄 글자 = 바탕 · 이름 칸 폭 ≥ 바탕 − 0.5(장 머리가 좁아지면 말줄임 + 툴팁)' % (eng, fname), same,
+          {'줄': [len(w3n), len(w3b)], '어긋난 줄(새 글 · 바탕 글 · 새 폭 · 바탕 폭)': [(x['t'], y['t'], x['nmw'], y['nmw']) for x, y in zip(w3n, w3b) if not ok_row(x, y)][:5]})
     p.ev("()=>{S.treeW=212;S.tab='jimun';return render()}")
     b.ev("()=>{S.treeW=212;S.tab='jimun';return render()}")
 

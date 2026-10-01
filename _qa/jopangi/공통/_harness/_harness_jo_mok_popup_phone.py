@@ -37,6 +37,7 @@ DATA = os.path.join(JOD, 'data')
 BASE_REV = 'c9d5bc0'
 BASE_MD5_LF = 'c541b24092c083cbb1dbd4f7c55ab827'
 BASE_SIZE = 1017845
+PC_BASE = {'jo': 'd42248d', 'card': 'bd8cfdf'}   # A-6(a) 9/30 — PC 무변 대조의 바뀐 뒤 바탕: jo = 조문 팝업을 마지막으로 바꾼 판(revfix0929b · md5(LF) a5e43ca8) · card = c2card 인도판(c5210438) · note·prec 는 BASE_REV 그대로
 TESTS = io.open(os.path.join(HERE, '_harness_jo_mok_popup_phone_tests.js'), encoding='utf-8').read()
 IPAD_UA = ('Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1')
 PHONE_UA = ('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1')
@@ -189,6 +190,7 @@ class P:
         m = self.pg.mouse
         m.move(x, y); m.down(); self.pg.wait_for_timeout(ms)
         menu = self.ev("__HM.menu()")
+        self.last_bar = self.ev("__HM.bar()")   # A-6(a) 9/30 — joscreen0929 A-5: 조문 줄 칠 막대 둘째 줄(누르는 동안 · mouseup 전)
         m.up(); self.pg.wait_for_timeout(200)
         return menu
 
@@ -415,9 +417,11 @@ def scen_lp(br, eng, tag, src, W=1440, H=900, mode='desk'):
                 if touch:
                     V['how'] = p.longpress(at['cx'], at['cy'], touch=True)
                     V['menu'] = p.ev("__HM.menu()")
+                    V['bar'] = p.ev("__HM.bar()")   # A-6(a) 9/30 — joscreen0929 A-5
                 else:
                     V['how'] = 'mouse(trusted) 760ms'
                     V['menu'] = p.longpress(at['cx'], at['cy'])
+                    V['bar'] = getattr(p, 'last_bar', None)   # A-6(a) 9/30 — 누르는 동안 읽은 칠 막대 둘째 줄
                 V['menuAfterUp'] = p.ev("__HM.menu()")
             R['where'][name] = V
             p.ev("__HM.menuClear()")
@@ -578,6 +582,9 @@ def main():
                     for W, H, mode in ((390, 844, 'phone'), (768, 1024, 'pad'), (1024, 768, 'pad')):
                         run('phone', 'phone/%s/%s/%d' % (eng, tag, W), scen_phone, brs[eng], eng, tag, src, W, H, mode, shots=(W == 390))
                     run('pc', 'pc/%s/%s' % (eng, tag), scen_pc, brs[eng], eng, tag, src)
+                    if tag == 'NEW':   # A-6(a) 9/30 — PC 무변 바탕을 팝업마다(PC_BASE)
+                        for _nm, _rv in PC_BASE.items():
+                            run('pc', 'pc/%s/B_%s' % (eng, _nm), scen_pc, brs[eng], eng, 'B_' + _nm, git('show', _rv + ':' + REL).decode('utf-8'))
         finally:
             for b in brs.values():
                 b.close()
@@ -622,7 +629,7 @@ def report(RES, G):
     I('시간(초)', RES.get('sec'))
     GT = RES.get('G') or G
     I('잣대 — 목차노트 수 NF()', GT['nf'])
-    CNT_T('잣대 = 지시서 목차노트 수(특허 70 · 상표 99 · 민소 84 · 디보 49)', GT['nf'] == {'특허': 70, '상표': 99, '민소': 84, '디보': 49}, GT['nf'])
+    CNT_T('잣대 = 목차노트 수(특허 70 · 상표 99 · 민소 81 · 디보 49 — 9/24 민소 번호 없는 셋 볼트 밖)', GT['nf'] == {'특허': 70, '상표': 99, '민소': 81, '디보': 49}, GT['nf'])   # A-6(d) 9/30 — 옛: 지시서 민소 84 · 9/24 13:1x 사용자 결정 → ⚙ aa8ceae 84→81
     I('잣대 — 데이터 속 <사건번호> 링크(k:P) 수 · 0 이면 2084 자리는 지은 줄로 잰다', GT.get('plinkData'))
     I('잣대 — 10.1 노트 ⤷ 임베드 수 · 9.6 노트 블록 칩 수', [GT.get('emb101'), GT.get('bl96')])
     for eng in ENGS:
@@ -725,6 +732,9 @@ def report(RES, G):
                     Tt('F 예외 없음', False, Fd['exc'])
                 for wh, lab in (('jo', '조문 줄'), ('prec', '판례 요약 줄'), ('card', '2차 카드 줄'), ('note', '노트 팝업 줄')):
                     V = g(Fd, 'where', wh) or {}
+                    if wh == 'jo':   # A-6(a) 9/30 — joscreen0929 A-5: 조문 줄 = 칠 막대 하나(둘째 줄) · .pitmenu 0 · 판례·2차 카드·노트 줄은 .pitmenu 그대로(A-5-6)
+                        Tt('F 마우스 0.5초 누름 → 칠 막대 둘째 줄(🗒 메모 · ✎ 수정 · 🏷 태그) · .pitmenu 0 — %s' % lab, not V.get('menu') and V.get('bar') == ['🗒 메모', '✎ 수정', '🏷 태그'], {'at': V.get('at'), 'menu': V.get('menu'), 'bar': V.get('bar')})
+                        continue
                     Tt('F 마우스 0.5초 누름 → 메뉴(🗒 메모 붙이기 / ✎ 수정) — %s' % lab, bool(V.get('menu')) and any('메모 붙이기' in x for x in V['menu']) and any('수정' in x for x in V['menu']), {'at': V.get('at'), 'menu': V.get('menu')})
                 V = g(Fd, 'where', 'drag') or {}
                 Tt('F 마우스로 끌어 긁으면 메뉴 없음 · 선택 남음', bool(V.get('at')) and not V.get('menuDuring') and not V.get('menu') and (V.get('sel') or 0) > 0, V)
@@ -732,6 +742,9 @@ def report(RES, G):
             if Fp and eng == 'chromium':
                 for wh in ('note_touch', 'jo_touch'):
                     V = g(Fp, 'where', wh) or {}
+                    if wh == 'jo_touch':   # A-6(a) 9/30 — joscreen0929 A-5(관문 B-5 5a 와 같은 기대)
+                        Tt('F 터치 길게 누름(CDP) → 칠 막대 둘째 줄(🗒 메모 · ✎ 수정 · 🏷 태그) · .pitmenu 0 — %s' % wh, not V.get('menu') and V.get('bar') == ['🗒 메모', '✎ 수정', '🏷 태그'], V)
+                        continue
                     Tt('F 터치 길게 누름(CDP) → 메뉴 그대로 — %s' % wh, bool(V.get('menu')) and any('메모 붙이기' in x for x in V['menu']), V)
             # ── G ──
             for W, H in ((390, 844), (768, 1024), (1024, 768)):
@@ -799,8 +812,11 @@ def report(RES, G):
                 if Pn and Pb:
                     for nm in ('jo', 'note', 'prec', 'card'):
                         a, b = g(Pn, 'one', nm) or {}, g(Pb, 'one', nm) or {}
-                        Tt('PC 1890×907 %s 팝업 자리·크기·꼴 = 바탕' % nm, bool(a) and a.get('rect') == b.get('rect') and a.get('style') == b.get('style') and a.get('cls') == b.get('cls'), {'new': [a.get('rect'), a.get('style')], 'base': [b.get('rect'), b.get('style')]})
-                        Tt('PC 1890×907 %s 팝업 DOM 글자·요소 수 = 바탕(걷은 줄 제외)' % nm, bool(a) and a.get('text') == b.get('text') and a.get('n') == b.get('n'), {'new': [a.get('n'), (a.get('text') or '')[:160]], 'base': [b.get('n'), (b.get('text') or '')[:160]]})
+                        bn = g(RES.get('pc/%s/B_%s' % (eng, nm)), 'one', nm) or {}   # A-6(a) 9/30 — 바뀐 뒤 바탕(PC_BASE): jo = 자리·DOM · card = DOM 만 · note·prec 는 c9d5bc0 그대로
+                        bp, tp = (bn, '바뀐 뒤 바탕 ' + PC_BASE[nm]) if nm == 'jo' else (b, '바탕')
+                        bd, td = (bn, '바뀐 뒤 바탕 ' + PC_BASE[nm]) if nm in PC_BASE else (b, '바탕')
+                        Tt('PC 1890×907 %s 팝업 자리·크기·꼴 = %s' % (nm, tp), bool(a) and a.get('rect') == bp.get('rect') and a.get('style') == bp.get('style') and a.get('cls') == bp.get('cls'), {'new': [a.get('rect'), a.get('style')], 'base': [bp.get('rect'), bp.get('style')]})
+                        Tt('PC 1890×907 %s 팝업 DOM 글자·요소 수 = %s(걷은 줄 제외)' % (nm, td), bool(a) and a.get('text') == bd.get('text') and a.get('n') == bd.get('n'), {'new': [a.get('n'), (a.get('text') or '')[:160]], 'base': [bd.get('n'), (bd.get('text') or '')[:160]]})
                     for tab in ('jo', 'prec', 'cha2'):
                         a, b = g(Pn, 'lay', tab) or {}, g(Pb, 'lay', tab) or {}
                         same = all(a.get(k) == b.get(k) for k in ('slot', 'tree', 'plist', 'laws', 'top'))

@@ -198,8 +198,8 @@ TESTS = r"""<script>
      ['status','set','maskpos','omrpos','note','qtype','conc','gpt','twin','ansfix','frm','ink']
        .every(k=>exportData.toString().indexOf(k+':')>=0));
    T('P6 importData 가 예전 그대로 열세 갈래를 읽는다(status…pdf)',
-     (importData.toString().match(/if\(j\./g)||[]).length===13,
-     (importData.toString().match(/if\(j\./g)||[]).length);
+     (_imp0.toString().match(/if\(j\./g)||[]).length===13&&/await _imp0\(/.test(importData.toString()),   /* ★ A-6(a) 9/30 — 셸 이식(c9faff2)부터 물리도 층 importData(감쌈 · 근거 gg·ggref = add5 §B-7)를 거쳐 옛 importData(_imp0)로 넘긴다 — 열세 갈래는 _imp0 에 그대로 */
+     [(_imp0.toString().match(/if\(j\./g)||[]).length,/await _imp0\(/.test(importData.toString())]);
 
    /* ===== P11 : 사용법 팝업 템플릿 리터럴 ===== */
    const help=showSyncHelp.toString();
@@ -409,7 +409,7 @@ def main():
         lines.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
     s = open(SRC, encoding='utf-8').read()
     T2('P5 소스에 ink 동기화가 없다', "'ink'" not in s.split('SYNC_KEYS=')[1].split(']')[0])
-    T2('P1 minbeop 무접촉(이 파일은 phys 뿐)', 'minbeop' not in s)
+    T2('P1 minbeop 무접촉(이 파일은 phys 뿐)', 'minbeop' not in s.replace('민법앱(`minbeop/index.html`)의 실물을 읽고 옮겼다', ''))   # ★ A-6(a) 9/30 — 지학 listpop_add1(genie cd248a5)이 「민법앱 실물을 읽고 옮겼다」 주석 한 줄을 남김(코드 접촉 아님) — 그 주석만 빼고 잰다
     T2('A-4 토큰을 HTML 에 박지 않았다', 'github_pat_' not in s.replace('github_pat_\u2026', ''))
     T2('A-5 도장 10초·동기화 180초', ',10000)' in s and ',180000)' in s)
     body = s

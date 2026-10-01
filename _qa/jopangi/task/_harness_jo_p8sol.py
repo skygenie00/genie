@@ -28,7 +28,7 @@ _EXAM = ARG('--exam', _roots.genie(r'gichul\pdf'))
 ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jo_p8sol_result.txt'))
-_BASE = ARG('--base', 'HEAD')
+_BASE = ARG('--base', 'cc7b3f5')   # A-6(d) 9/30 — 기본 바탕 = 인도 때 HEAD cc7b3f5(결과 머리 「바탕 cc7b3f5」 · docstring 「jo_revfix0928pm cc7b3f5」)
 sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', _BASE, '--exam', _EXAM]
 sys.path.insert(0, HERE)
 sys.path.insert(0, JOP)
@@ -161,9 +161,26 @@ def d1():
             if not ks <= {'sol', '판8'}:
                 badkey.append([i, sorted(ks)])
     top = sorted(k for k in set(old) | set(new) if k != '지문' and old.get(k) != new.get(k))
-    T(G, '바뀐 줄 = 재료 표(명칭만·바뀜·잘림 + 새 카드 sol) %d · 바뀐 칸 = sol·판8 뿐 · 지문 수 같음 · 머리 칸 = 판8_해설 하나' % len(want),
-      chg == want and not badkey and not extra and len(bo) == len(bn) and top == ['판8_해설'],
-      {'바뀜': len(chg), '표': len(want), '표 밖': sorted(chg - want)[:8], '빠짐': sorted(want - chg)[:8], '다른 칸': badkey[:5], '머리': top})
+    # A-6(d) 9/30 — 「바뀐 줄」(인도 검산)만 새 쪽 = p8sol 인도 커밋 6073142 · 재료 표 = 인도 때 판(N: 저장소 e51d8d9 · 지금 파일은 revfix0929 6c67b58 이 320→304 로) — 뒤 판 revfix0928night A-9 병합 67 · revfix0929 A-1 16 줄이 지금 원장을 바꿈. 위 chg(「ox 무변」)·bn(「판8.s7」·표본)은 지금 데이터 그대로
+    import subprocess
+    new_d = jl(M.git('show', '6073142:jo/data/jimun_7pan.json'))
+    src_d = jl(subprocess.run(['git', '--git-dir=' + os.path.join(os.path.dirname(_roots.n_root() or ''), 'claude-git'), 'show', 'e51d8d9:jopangi/특상디/_p8up/_p8sol.json'], capture_output=True).stdout)
+    bn_d = {z['id']: z for z in new_d['지문']}
+    want_d = {i for i, v in src_d['rows'].items() if v['cat'] in ('명칭만', '바뀜', '잘림')} | {i for i, v in src_d['new'].items() if v['sol8'] and not v['유제']}
+    chg_d, extra_d, badkey_d = set(), [], []
+    for i in bn_d:
+        a, b = bo.get(i), bn_d[i]
+        if a is None:
+            extra_d.append(i); continue
+        ks = {k for k in set(a) | set(b) if a.get(k) != b.get(k)}
+        if ks:
+            chg_d.add(i)
+            if not ks <= {'sol', '판8'}:
+                badkey_d.append([i, sorted(ks)])
+    top_d = sorted(k for k in set(old) | set(new_d) if k != '지문' and old.get(k) != new_d.get(k))
+    T(G, '바뀐 줄 = 재료 표(명칭만·바뀜·잘림 + 새 카드 sol) %d · 바뀐 칸 = sol·판8 뿐 · 지문 수 같음 · 머리 칸 = 판8_해설 하나' % len(want_d),
+      chg_d == want_d and not badkey_d and not extra_d and len(bo) == len(bn_d) and top_d == ['판8_해설'],
+      {'바뀜': len(chg_d), '표': len(want_d), '표 밖': sorted(chg_d - want_d)[:8], '빠짐': sorted(want_d - chg_d)[:8], '다른 칸': badkey_d[:5], '머리': top_d})
     s7 = [i for i in bn if (bn[i].get('판8') or {}).get('s7') is not None]
     s7ok = all(bn[i]['판8']['s7'] == (bo[i].get('sol') or '') for i in s7)
     p8keep = all({k: v for k, v in bn[i]['판8'].items() if k != 's7'} == ((bo[i].get('판8') or {'cat': '해설'}) if bo[i].get('판8') else {'cat': '해설'}) for i in s7)
@@ -184,15 +201,15 @@ def d1():
         return {
             '1209ㄴㅁ': g('P7-1209-ㄴ').startswith('ㄴ, ㅁ (△)') and g('P7-1209-ㅁ') == g('P7-1209-ㄴ') and 'ㄷ.' not in g('P7-1209-ㄴ') and g('P7-1209-ㄴ').rstrip().endswith('생각된다.'),
             '1209ㄹ': g('P7-1209-ㄹ').startswith('ㄹ') and '간접침해가 성립한다' in g('P7-1209-ㄹ') and 'ㄷ.' not in g('P7-1209-ㄹ'),
-            '0549-2': g('P7-0549-2').startswith('② (O) ③ (X)') and len(g('P7-0549-2')) > 100,
+            '0549-2': g('P7-0549-2') == '② (O)',   # A-6(a) 9/30 — revfix0929 A-1 이 「공동 해설 전문」을 옛 sol(표지만)로 되돌림(_task_jo_revfix0929.md §0 ① 47줄 · 결정로그 9/29 13:13)
             '0826': '法193①' in g('P7-0826') and '194①' not in g('P7-0826'),
             '0144': g('P7-0144').startswith('지식재산처장 또는 심판장'),
             '0292ㄱ': g('P7-0292-ㄱ').rstrip().endswith('없\n다.') or g('P7-0292-ㄱ').rstrip().endswith('없다.'),
             'P8-0001': len(g('P8-0001')) > 50 and not g('P8-0002'),
         }
     sn, sb = smp(bn), smp(bo)
-    T(G, '줄 표본 — 1209 ㄴ·ㅁ(△ · ㄷ 앞까지) · 1209 ㄹ(8판 ㄹ 조각) · 0549-2(공동 해설 전문) · 0826(8판 法193①) · 0144(명칭) · 0292-ㄱ(잘린 끝 되살림) · 새 카드 sol · [유제] 빈칸', all(sn.values()), sn)
-    T(G + '-헛', '헛잣대 바탕 데이터 — 표본이 하나도 안 맞음(새 카드 [유제] 빈칸 칸 빼고)', not any(v for k, v in sb.items()), sb)
+    T(G, '줄 표본 — 1209 ㄴ·ㅁ(△ · ㄷ 앞까지) · 1209 ㄹ(8판 ㄹ 조각) · 0549-2(옛 sol 「② (O)」 — revfix0929 되돌림) · 0826(8판 法193①) · 0144(명칭) · 0292-ㄱ(잘린 끝 되살림) · 새 카드 sol · [유제] 빈칸', all(sn.values()), sn)
+    T(G + '-헛', '헛잣대 바탕 데이터 — 표본이 하나도 안 맞음(새 카드 [유제] 빈칸 칸 · 0549-2 빼고 — revfix0929 가 바탕 글로 되돌림)', not any(v for k, v in sb.items() if k != '0549-2'), sb)   # A-6(a) 바탕 cc7b3f5 의 0549-2 sol 도 「② (O)」 — 그 줄은 헛잣대가 못 됨
 
 
 # ══════════ 앱 ══════════

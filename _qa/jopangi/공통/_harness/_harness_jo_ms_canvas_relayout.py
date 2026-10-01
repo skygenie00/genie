@@ -370,7 +370,8 @@ def scen_diff():
     """민소 정리 탭 밖 무변 — 바탕 ↔ 새 판 앱 diff 의 모든 바뀐 줄이 정리캔버스 모듈(viewCanvas IIFE) 안이거나 cv- CSS 줄인가"""
     import difflib
     a = git('show', BASE_REV + ':jo/index.html').decode('utf-8').splitlines()
-    b = io.open(NEWF, encoding='utf-8').read().replace('\r\n', '\n').splitlines()
+    DIFF_NEW_REV = '06fd454'   # A-6(d) 9/30 — 인도 검산 새 쪽 = canvas_relayout 인도판(md5(LF) 3898dea6 · 인도 결과 머리 NEW) · 옛: NEWF(지금 판 — 그 뒤 판들이 정리 탭 밖을 고쳐 헛돎)
+    b = git('show', DIFF_NEW_REV + ':jo/index.html').decode('utf-8').replace('\r\n', '\n').splitlines()
     def rng(L):
         i0 = next(i for i, l in enumerate(L) if l.startswith('const viewCanvas = (() => {'))
         i1 = next(i for i, l in enumerate(L) if i > i0 and l.startswith('/* ══ 정리캔버스(민소) 끝 ══ */'))
@@ -1003,13 +1004,15 @@ SPD = _roots.spd(r'jopangi\기록.json')
 
 
 def scen_real(br):
+    REC_REV = 'cf358420'   # A-6(d) 9/30 — 실제 기록 = 인도 때 studyplandata(savedAt 2026-09-23T17:53Z · canvas hash 94d50c76 · op 29 · 옛 배치) · 옛: 지금 클론(9/24 13:08 c845a11c 부터 새 배치 71e49579 로 옮겨져 바탕 재생이 헛돎)
     if not os.path.exists(SPD):
         say(None, '실제 기록 옮기기', 'studyplandata 클론 없음'); return
-    R0 = json.load(open(SPD, encoding='utf-8')); d = R0.get('data') or {}
+    _rb = git('show', REC_REV + ':jopangi/기록.json', repo=os.path.dirname(os.path.dirname(SPD)))
+    R0 = json.loads(_rb) if _rb else json.load(open(SPD, encoding='utf-8')); d = R0.get('data') or {}
     rec = {k: (d[k] if isinstance(d[k], str) else json.dumps(d[k], ensure_ascii=False)) for k in __import__('itertools').chain(['jopangi.canvas', 'jopangi.canvasink', 'jopangi.canvaslink', 'jopangi.canvasmemo', 'jopangi.canvaspin', 'jopangi.canvasjari']) if k in d}
     LOG0 = json.loads(rec.get('jopangi.canvas', '{}')).get('민소') or {}
     from collections import Counter
-    say(None, 'G0-5 실제 기록 census(studyplandata %s · savedAt %s)' % (git('rev-parse', '--short', 'HEAD', repo=os.path.dirname(os.path.dirname(SPD))).decode().strip(), R0.get('savedAt')),
+    say(None, 'G0-5 실제 기록 census(studyplandata %s · savedAt %s)' % ((REC_REV if _rb else git('rev-parse', '--short', 'HEAD', repo=os.path.dirname(os.path.dirname(SPD))).decode().strip()), R0.get('savedAt')),
         'canvas hash %s · op %d %s · 뒤 조각 id 에 걸린 op %d · 필기 쪽 %d · 링크 %d · 메모 %d · 핀 %d · 손값 %d' % (
             LOG0.get('hash'), len(LOG0.get('ops', [])), dict(Counter(o['t'] for o in LOG0.get('ops', []))),
             sum(1 for o in LOG0.get('ops', []) for f in ('id', 'after', 'bid', 'at', 'sib', 'nbid') if o.get(f) in ('3L109', '3L703', '4L10', '4L16', '4L23', '4L36', '4L108', '8L1', '8L26', '8L42', '8L43', '8L55', '8L149')),

@@ -30,6 +30,7 @@ sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--eng', ','.join(ENGS)
 sys.path.insert(0, HERE); sys.path.insert(0, JOP)
 import _harness_jo_revfix0928night as RN   # noqa: E402  (B8 · M · __RN · __U3 · open_year · to_q)
 B8, M = RN.B8, RN.M
+M.BASE_REV = 'c3c33ca'   # A-6(d) 9/30 — 바탕 = 인도 때 HEAD c3c33ca(결과 머리 「바탕 HEAD c3c33ca」) · RN(book8) 바탕을 물려받지 않는다
 M.TESTS = M.TESTS + '\n' + '\n'.join(io.open(os.path.join(HERE, f), encoding='utf-8').read() for f in
                                      ('_harness_jo_uidmbs2_tests.js', '_harness_jo_revfix0928pm_tests.js', '_harness_jo_p8sol_tests.js'))
 M.WORK = M.WORK + '_r29'
@@ -63,7 +64,7 @@ def N(grp, name, detail=''):
 def d1():
     G = 'd1'
     nb = {z['id']: z for z in RN.new('jimun_7pan.json')['지문']}
-    hb = {z['id']: z for z in RN.head('jimun_7pan.json')['지문']}
+    hb = {z['id']: z for z in json.loads(M.git('show', 'c3c33ca:jo/data/jimun_7pan.json').decode('utf-8'))['지문']}   # A-6(d) 바탕 데이터 = 이 판 인도 때 HEAD c3c33ca(RN.head 는 revfix0928night 바탕)
     got = {k: (nb.get(k) or {}).get('sol') for k in OLD}
     T(G, '16 줄 sol = 표의 옛 sol(바이트)', got == OLD, {k: v for k, v in got.items() if v != OLD[k]})
     T(G + '-헛', '헛잣대 바탕 — 16 줄이 다른 표지 글을 달고 있음', all(len(MARKX.findall((hb.get(k) or {}).get('sol') or '')) > 1 for k in OLD),
@@ -79,7 +80,7 @@ def d1():
     T(G, 'P8S 셈 — 잘림 5 · 같음 1862 · 명칭만 172 · 바뀜 112', src['셈']['갈래'].get('잘림') == 5 and src['셈']['갈래'].get('같음') == 1862 and src['셈']['갈래'].get('명칭만') == 172 and src['셈']['갈래'].get('바뀜') == 112, src['셈']['갈래'])
     # A-3 데이터
     nq = {q['id']: q for q in RN.new('jimun_특허.json')['문제']}
-    hq = {q['id']: q for q in RN.head('jimun_특허.json')['문제']}
+    hq = {q['id']: q for q in json.loads(M.git('show', 'c3c33ca:jo/data/jimun_특허.json').decode('utf-8'))['문제']}   # A-6(d) 바탕 데이터 = c3c33ca
     a = {i: (nq[i].get('정답'), hq[i].get('정답')) for i in ('2013-50-8', '2013-50-18')}
     T(G, '2013-50-8(12번) 정답 4 · 2013-50-18(6번) 정답 2(바탕 빈칸)', a == {'2013-50-8': ('4', ''), '2013-50-18': ('2', '')}, a)
     qd = sorted(k for k in set(nq) | set(hq) if nq.get(k) != hq.get(k))
@@ -281,8 +282,8 @@ def main():
     npass = sum(1 for r in RES if r[2] is True); nfail = sum(1 for r in RES if r[2] is False)
     print('\n== PASS %d · FAIL %d · %.0f초' % (npass, nfail, time.time() - t0))
     with io.open(OUTF, 'a', encoding='utf-8') as f:
-        f.write('\n==== %s · revfix0929 · NEW %s · 데이터 %s · 바탕 HEAD %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), os.path.basename(_NEW or ''), _DATA,
-                M.git('rev-parse', '--short', 'HEAD').decode().strip(), ','.join(ENGS)))
+        f.write('\n==== %s · revfix0929 · NEW %s · 데이터 %s · 바탕 %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), os.path.basename(_NEW or ''), _DATA,
+                M.git('rev-parse', '--short', M.BASE_REV).decode().strip(), ','.join(ENGS)))   # A-6(d) 적히는 바탕 = 실제 바탕
         for g, n, ok, d in RES:
             f.write('%s | %s · %s | %s\n' % ({True: 'PASS', False: 'FAIL', None: 'INFO'}[ok], g, n, (d if isinstance(d, str) else json.dumps(d, ensure_ascii=False, default=str))[:1500]))
         f.write('== PASS %d · FAIL %d\n' % (npass, nfail))

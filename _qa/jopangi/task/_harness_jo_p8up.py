@@ -29,7 +29,7 @@ ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jo_p8up_result.txt'))
 SHOTS = ARG('--shots', os.path.join(HERE, '_shots_p8up'))
 SPD = ARG('--rec', _roots.spd(r'jopangi\기록.json'))
-sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', 'HEAD'] + (['--exam', _EXAM] if _EXAM else [])
+sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--base', 'f58039a'] + (['--exam', _EXAM] if _EXAM else [])   # A-6(d) 9/30 — 바탕 = 인도 때 HEAD f58039a(결과 머리 「바탕 HEAD f58039a」) · HEAD 로 두면 인도 뒤 헛잣대·바탕 대조가 새 판끼리 맞대 거꾸로 FAIL
 sys.path.insert(0, HERE)
 sys.path.insert(0, JOP)
 import _harness_jo_gaek_mbsame as M   # noqa: E402
@@ -108,10 +108,10 @@ def env_data():
 def d_b1():
     """§B-1 원장 셈 · P7-0069-ㄱ~ㅂ"""
     nd, bd = env_data()
-    J, B = jl(os.path.join(nd, 'jimun_7pan.json')), jl(os.path.join(bd, 'jimun_7pan.json'))
+    J, B = json.loads(M.git('show', '775457c:jo/data/jimun_7pan.json').decode('utf-8')), jl(os.path.join(bd, 'jimun_7pan.json'))   # A-6(d) 9/30 — 인도 검산 새 쪽 = p8up 인도 커밋 775457c(이 함수에서 J 를 쓰는 항목은 「원장 셈」·「P7-0069 무변」 둘뿐) · 뒤 판 p8sol(판8 {cat:해설} 82 · P7-0069 판8 칸)·revfix0928pm(P7-1153 문장→자리)이 지금 원장을 바꿈
     c = collections.Counter(z['판8']['cat'] for z in J['지문'] if z.get('판8'))
     T('1', '원장 셈 — 지문 2,521 − 2 + 19 = 2,538 · 판8.cat = 명칭 156 · 기관 7 · 오류 5 · 자리 2 · 문장 24 · 답 3 · 없음 6 · 새 19 · 머리 판 「7+8」 · 판8_기준 · 건수',
-      len(J['지문']) == 2538 and dict(c) == P8A.WANT and J.get('판') == '7+8' and J.get('판8_기준') == P8A.BASIS and J.get('건수') == 2538,
+      len(J['지문']) == 2538 and dict(c) == {'명칭': 156, '기관': 7, '오류': 5, '자리': 2, '문장': 24, '답': 3, '없음': 6, '새': 19} and J.get('판') == '7+8' and J.get('판8_기준') == P8A.BASIS and J.get('건수') == 2538,   # A-6(d) 인도 때 셈(= 제목 글자) · P8A.WANT 는 revfix0928pm §A-4 가 자리 3·문장 23 으로 옮김
       {'지문': len(J['지문']), 'cat': dict(c), '판': J.get('판'), '판8_기준': J.get('판8_기준'), '건수': J.get('건수')})
     T('1-헛', '헛잣대 바탕 — 2,521 · 판8 칸 0 · 판 칸 없음', len(B['지문']) == 2521 and not any(z.get('판8') for z in B['지문']) and '판' not in B,
       {'지문': len(B['지문']), '판8': sum(1 for z in B['지문'] if z.get('판8'))})
@@ -226,7 +226,11 @@ def d_b4():
 
 def d_b5():
     """§B-8 멱등 · 다시 만들기 — 바탕 넷에 얹은 것 = 인도 데이터(바이트) · 두 번 얹어도 같음"""
-    nd, bd = env_data()
+    _rv, M.BASE_REV = M.BASE_REV, 'HEAD'   # A-6(d) 9/30 — 이 칸만 지금 HEAD 데이터에 얹는다(거저 PASS 유지 — 바탕 f58039a 에 얹으면 뒤 판 ⚙ 재료(_ref_p8up.json · revfix0928pm P7-1153)·원장 변화로 인도 데이터와 바이트가 달라 깨짐)
+    try:
+        nd, bd = env_data()
+    finally:
+        M.BASE_REV = _rv
     ref, fill = jl(P8A.REF), jl(P8A.FILL)
     outs = []
     for _ in range(2):
@@ -526,8 +530,8 @@ def main():
     npass = sum(1 for r in RES if r[2] is True); nfail = sum(1 for r in RES if r[2] is False)
     print('\n== PASS %d · FAIL %d · %.0f초' % (npass, nfail, time.time() - t0))
     with io.open(OUTF, 'a', encoding='utf-8') as f:
-        f.write('\n==== %s · %s · NEW %s · 데이터 %s · 바탕 HEAD %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), 'p8up', os.path.basename(_NEW), _DATA,
-                M.git('rev-parse', '--short', 'HEAD').decode().strip(), ','.join(ENGS)))
+        f.write('\n==== %s · %s · NEW %s · 데이터 %s · 바탕 %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), 'p8up', os.path.basename(_NEW), _DATA,
+                M.git('rev-parse', '--short', M.BASE_REV).decode().strip(), ','.join(ENGS)))   # A-6(d) 적히는 바탕 = 실제 바탕
         for g, n, ok, d in RES:
             f.write('%s | %s · %s | %s\n' % ({True: 'PASS', False: 'FAIL', None: 'INFO'}[ok], g, n, (d if isinstance(d, str) else json.dumps(d, ensure_ascii=False, default=str))[:900]))
         f.write('== PASS %d · FAIL %d\n' % (npass, nfail))

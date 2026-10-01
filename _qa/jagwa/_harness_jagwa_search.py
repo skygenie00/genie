@@ -348,7 +348,8 @@ HU_BR = [None]
 
 def main():
     APPS['NEW'] = open(NEWF, 'rb').read().replace(b'\r\n', b'\n')
-    APPS['BASE'] = HU.git(GENIE, 'show', 'HEAD:jagwa/index.html') if BASEF == 'HEAD' else open(BASEF, 'rb').read().replace(b'\r\n', b'\n')
+    # ★ A-6(d) 9/30 _task_qa_baseline — 헛잣대 바탕(기본값 'HEAD')을 인도 앞 판 5e18424(jagwa_uid)로 박는다 — 인도(eb1113e) 뒤 HEAD 의 pass() 는 FL.q 를 안 봐(A-1) g13 「옛 목록 거름」이 577 전부가 된다
+    APPS['BASE'] = HU.git(GENIE, 'show', '5e18424:jagwa/index.html') if BASEF == 'HEAD' else open(BASEF, 'rb').read().replace(b'\r\n', b'\n')
     t0 = time.time()
     with sync_playwright() as pw:
         for eng in ENGS:
@@ -381,7 +382,7 @@ def main():
     vac = [r for r in ROWS if r[4] is True]
     print('\n== PASS %d · FAIL %d · 헛잣대(바탕도 PASS) %d · %.0f초' % (npass, nfail, len(vac), time.time() - t0))
     with io.open(OUTF, 'a', encoding='utf-8') as f:
-        f.write('\n==== %s · jagwa_search · NEW %s · 바탕 genie HEAD %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), os.path.basename(NEWF),
+        f.write('\n==== %s · jagwa_search · NEW %s · 바탕 5e18424 · genie HEAD %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), os.path.basename(NEWF),
                 HU.git(GENIE, 'rev-parse', '--short', 'HEAD').decode().strip(), ','.join(ENGS)))
         for g, eng, n, okn, okb, v in ROWS:
             f.write('%s | 바탕 %s | %s · %s · %s | %s\n' % ('PASS' if okn else 'FAIL', {True: 'PASS', False: 'FAIL', None: '—'}[okb], g, eng, n,

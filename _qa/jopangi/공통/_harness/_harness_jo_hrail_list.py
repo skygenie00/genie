@@ -244,10 +244,20 @@ def scen_desk(br, eng, tag, src):
             R['pops'][ck] = {'title': pop_by(p, L, K, ck, 'title')}
             if tag == 'NEW':
                 R['pops'][ck]['code'] = pop_by(p, L, K, ck, 'code')
+                # A-6(a) 줄 클릭 글자는 같은 카드를 popCard4 로 바로 연 새 판 글자와 맞댄다(바탕 dde3300 팝업 글자는 뒤 판 pop_moknote·c2card·ms_claude_editq 가 바꿈)
+                p.ev("__HR.closePops()")
+                p.ev("([k,f])=>{popCard4(k,f,null,1);return 1}", [K, ck.split('|', 2)[2]])
+                R['pops'][ck]['direct'] = {'pop': p.ev("__HR.popRead()")}
+                p.ev("__HR.closePops()")
         # 점수 칩(채점 4건 × 특허·민소) — 누르면 채점 탭 팝업(옛 칸 머리 칩과 같은 길)
         R['scorepop'] = {}
         for L, ck in [('특허법', 'card|기출|특기출 26-63-4-공지예외(30조)·소권범(자유실시기술)'), ('민사소송법', 'card|기출|민기출 26-63-1')]:
             R['scorepop'][ck] = pop_by(p, L, '기출', ck, 'score')
+            if tag == 'NEW':   # A-6(a) 채점 탭 글자 = 같은 카드를 popCard4(…, '채점')(점수 칩 onclick 과 같은 부름)로 바로 연 새 판 글자
+                p.ev("__HR.closePops()")
+                p.ev("f=>{popCard4('기출',f,null,1,null,'채점');return 1}", ck.split('|', 2)[2])
+                R['scorepop'][ck]['direct'] = p.ev("__HR.popRead()")
+                p.ev("__HR.closePops()")
         if tag == 'NEW':
             # 연도·회차 단추 = 목록 내림 ↔ 오름
             p.ev("([l,k])=>__HR.board(l,k)", ['특허법', '기출'])
@@ -381,6 +391,8 @@ def scen_pix(br, base, new):
                 a, b = Image.open(d['BASE']).convert('RGB'), Image.open(d['NEW']).convert('RGB')
                 if a.size != b.size:
                     res[s] = {'same': False, 'size': [a.size, b.size]}; continue
+                if s == '#slot .plist':   # A-6(a) c2card §F 정렬 이름(「해례·회차 순」→「회차 순」/「사례 순」) — 정렬 select 자리만 칠해 빼고 잰다
+                    a.paste((0, 0, 0), (13, 7, 116, 32)); b.paste((0, 0, 0), (13, 7, 116, 32))
                 # 맨 윗줄 1px = 머리 아래 테두리가 스며든 줄(본문 위 y 가 .86 이라 잘라 찍을 때 들어온다 · 바탕 --line → 새 #d9d5cb 지시서 값)
                 top = ImageChops.difference(a.crop((0, 0, a.size[0], 1)), b.crop((0, 0, b.size[0], 1)))
                 d2 = ImageChops.difference(a.crop((0, 1, a.size[0], a.size[1])), b.crop((0, 1, b.size[0], b.size[1])))
@@ -407,6 +419,34 @@ def NOISE(x):
 
 def SHORTN(L):
     return {'특허법': '특허', '상표법': '상표', '디자인보호법': '디보', '민사소송법': '민소'}[L]
+
+
+def JIMUN_N(L):
+    """A-6(a) 1차객 탭 수 새 셈 — 앱 railCounts(2150~2154) 규칙: 같은 uid 는 한 번(toc_fuse 9/26 · uid 판 9/27) · 특허는 z.병합 뺌 + jimun_7pan ox O/X"""
+    sh = {'특허법': '특허', '상표법': '상표', '디자인보호법': '디보'}.get(L)
+    if not sh:
+        return None
+    j = json.load(io.open(os.path.join(JOD, 'data', 'jimun_' + sh + '.json'), encoding='utf-8'))
+    ks, n = set(), 0
+    for q in j.get('문제') or []:
+        for z in q.get('지문') or []:
+            if sh == '특허' and z.get('병합'):
+                continue
+            u = z.get('uid')
+            if not (u and u in ks):
+                n += 1
+            if u:
+                ks.add(u)
+    if sh == '특허':
+        P = json.load(io.open(os.path.join(JOD, 'data', 'jimun_7pan.json'), encoding='utf-8'))
+        for z in P.get('지문') or []:
+            if z.get('ox') in ('O', 'X'):
+                u = z.get('uid')
+                if not (u and u in ks):
+                    n += 1
+                    if u:
+                        ks.add(u)
+    return '{:,}'.format(n)
 
 
 # ══════════ 아이패드 — 진짜 터치(톡) · 팝업 머리 끌기 ══════════
@@ -503,16 +543,19 @@ def report(RES, base, new):
     sb, sn = RES['src']['base'], RES['src']['new']
     T('착수 바탕 %s = 959,738 B(CRLF) 판 · md5(LF) d2fc1e5d…' % BASE_REV, sb[1] == BASE_MD5_LF, sb)
     T('NEW 작업트리 CRLF 그대로(LF 단독 0 · %d 줄) · %d B · md5(LF) %s' % (sn[2], sn[0], sn[1]), sn[2] == sn[3], sn)
-    ch = [l for l in git('status', '--porcelain').decode('utf-8').split('\n') if l.strip()]
-    T('genie 작업트리 바뀐 파일 = jo/index.html 하나 %s' % ch, ch == [' M ' + REL], ch)
+    # A-6(d) 인도 검산 = hrail 두 커밋(36234e9·d3dd927 · 부모 33be370)이 바꾼 파일 — 작업트리 git status 는 인도 전에만 선다
+    ch = [l for l in git('diff', '--name-status', '33be370', 'd3dd927').decode('utf-8').split('\n') if l.strip()]
+    T('genie 작업트리 바뀐 파일 = jo/index.html 하나 %s' % ch, ch == ['M\t' + REL], ch)
     nl = new.replace('\r\n', '\n'); bl = base.replace('\r\n', '\n')
     T('§A-4 소스에 세로 레일이 없다(마크업 id="rail" · CSS .rail · $(\'#rail\') 0)',
       'id="rail"' not in nl and '.rail{' not in nl and '.rail .rb' not in nl and "$('#rail')" not in nl)
     T('§0 8/23 결정 주석은 남고 「8/23 → 9/22 가로 탭으로」 한 줄이 붙었다',
       '8/23 사용자 결정.' in nl and '8/23 → 9/22 가로 탭으로' in nl)
+    # A-6(d) 「SYNC_KEYS 무변」 은 hrail 판 성질 — 인도판(d3dd927) 소스로 잰다(뒤 판들이 키를 더함: 54ced94 c2unit … ffafcb0 jocheck · c2ord 두 글자는 지금 판 nl 그대로)
+    nl_c1 = git('show', 'd3dd927:' + REL).decode('utf-8').replace('\r\n', '\n')
     T('§C-1 jopangi_ui.c2ord — 읽기(round|unit) · uiSave 에 c2ord · SYNC_KEYS 무변',
       "c2ord:S.c2ord||'round'" in nl and "u4.c2ord==='round'||u4.c2ord==='unit'" in nl
-      and re.search(r'const SYNC_KEYS = \[(.+?)\]', nl, re.S).group(1) == re.search(r'const SYNC_KEYS = \[(.+?)\]', bl, re.S).group(1))
+      and re.search(r'const SYNC_KEYS = \[(.+?)\]', nl_c1, re.S).group(1) == re.search(r'const SYNC_KEYS = \[(.+?)\]', bl, re.S).group(1))
     for eng in ('chromium', 'webkit'):
         B, N = RES.get('desk/%s/BASE' % eng), RES.get('desk/%s/NEW' % eng)
         if not B or not N:
@@ -526,10 +569,16 @@ def report(RES, base, new):
             cb, cn = g(B, 'census', k, 'c') or {}, g(N, 'census', k, 'c') or {}
             ib = [(x['label'], x['n'], x['on']) for x in cb.get('items', [])]
             inn = [(x['label'], x['n'], x['on']) for x in cn.get('items', [])]
-            if ib != inn or cb.get('host') != 'rail' or cn.get('host') != 'hrail' or not ib:
+            # A-6(a) 바탕 #rail 에 뒤 판 둘만 입힌 기대 — ① 「2차」 바로 뒤 「목차노트」 칸(mok_popup_phone §A) ② 1차객 수 = 같은 uid 한 번(JIMUN_N)
+            ibx = []
+            for x in ib:
+                ibx.append((x[0], JIMUN_N(k.split('|')[0]), x[2]) if x[0] == '1차객 ' else x)
+                if x[0] == '2차 ':
+                    ibx += [y for y in inn if y[0] == '목차노트 ' and y[2] is False][:1] or [('목차노트 ', None, False)]
+            if ibx != inn or cb.get('host') != 'rail' or cn.get('host') != 'hrail' or not ib:
                 bad.append([k, ib, inn])
             rows.append([k, ' · '.join('%s%s%s' % (a.strip(), (' ' + n) if n else '', '●' if o else '') for a, n, o in inn)])
-        T(E + '관문 A census — 20 상태(법 넷 × 탭 다섯) #hrail 칸 수·글자·수·켜짐 = 바탕 #rail 글자 그대로', not bad and len(rows) == 20, bad[:3])
+        T(E + '관문 A census — 20 상태(법 넷 × 탭 다섯) #hrail 칸 수·글자·수·켜짐 = 바탕 #rail 글자 + 목차노트 칸 · 1차객 새 셈(같은 uid 한 번)', not bad and len(rows) == 20, bad[:3])
         if eng == 'chromium':
             I(E + 'census 표(NEW #hrail · ● 켜짐)', '\n        ' + '\n        '.join('%s : %s' % (a, b) for a, b in rows))
         hB, hN = B.get('hdr') or {}, N.get('hdr') or {}
@@ -617,10 +666,11 @@ def report(RES, base, new):
             bt = {x['ck']: (x['title'], x['score'], x['pdf']) for x in bb.get('rows', [])}
             mism = [x['ck'] for x in bn.get('rows', []) if bt.get(x['ck']) != (x['title'], x['score'], x['pdf'])]
             T(E + '양방향 %s — 줄마다 논점·점수 칩·해설 칩 = 바탕 칸의 .ctitle·머리 칩 글자 그대로' % k, not mism, mism[:3])
-            bad_form = [x['ck'] for x in bn.get('rows', []) if x['kids'] != ['c2code', 'c2mid', 'c2r3'] or not x['t1kids'] or x['t1kids'][0] != 'chip c-src c2k'
-                        or x['t1kids'][1] != 'c2rn' or not re.match(r'^\d{2}-\d+-\d+$', x['code']) or x['kind'] != K0
-                        or any(c not in ('chip c-src c2k', 'c2rn', 'chip c-src c2n') and not c.startswith('chip c-score') and c != 'chip c-pdf' for c in x['t1kids'])]
-            T(E + '없던 것이 서 있지 않다 %s — 줄 = 코드 │ 갈래 칩 · 회·번 · (사례번호) · 점수 칩 · (해설) / 논점 │ 빈 칸 · 코드 YY-회-N' % k, not bad_form, bad_form[:3])
+            # A-6(a) 2cha_unit §B-8 줄 꼴(제목 .c2t2 먼저 · 갈래 칩 c2k·회번 c2rn 뺌 · GS 시리즈 c2ser) · 민소 기출 숨은 Claude 자리표('' · ms_claude_editq C-3 · 답 있으면 mbcl)
+            bad_form = [x['ck'] for x in bn.get('rows', []) if x['kids'] != ['c2code', 'c2mid', 'c2r3'] or not x['t1kids'] or x['t1kids'][0] != 'c2t2'
+                        or not re.match(r'^\d{2}-\d+-\d+$', x['code']) or x['kind'] != ''
+                        or any(c not in ('c2t2', 'c2ser', 'chip c-src c2n', '') and not c.startswith('chip c-score') and c != 'chip c-pdf' and not c.startswith('mbcl') for c in x['t1kids'])]
+            T(E + '없던 것이 서 있지 않다 %s — 줄 = 코드 │ 논점 · (시리즈) · (사례번호) · 점수 칩 · (Claude) · (해설) │ 셋째 칸 · 코드 YY-회-N' % k, not bad_form, bad_form[:3])
             T(E + '%s — 격자 전용 것(열 머리 .gh · cellnone · .grid) 0 · 목록 1 · 바탕은 격자' % k, bn.get('gh') == 0 and bn.get('cellnone') == 0 and bn.get('grid') == 0 and bn.get('list') == 1
               and bb.get('grid') == 1, [bn.get('gh'), bn.get('cellnone'), bn.get('grid'), bn.get('list'), bb.get('grid')])
             T(E + '%s — 미배치 상자·하단 배지 = 바탕 · 2단 목록(prow) 글자·1단 필터 글자 = 바탕' % k, bn.get('unpl') == bb.get('unpl') and bn.get('badge') == bb.get('badge')
@@ -635,9 +685,10 @@ def report(RES, base, new):
               [bn.get('bar'), bb.get('bar')])
             sg = bn.get('seg') or {}
             btn = sg.get('btn') or [{}, {}]
-            T(E + '%s — #ordSeg 회차별 켜짐(--exc · 흰 · 굵게) · 단원별 disabled · .45 · 툴팁' % k,
+            # A-6(a) 2cha_unit §B-1 — 민소 기출만 「단원별」 켬 · 나머지는 흐림 + 툴팁 까닭별(「GS 단원 데이터 없음」/「<법> 기출 단원 데이터 없음」)
+            T(E + '%s — #ordSeg 회차별 켜짐(--exc · 흰 · 굵게) · 단원별 %s' % (k, '켬(민소 기출 단원 데이터 · 2cha_unit §B-1)' if k == '민사소송법|기출' else 'disabled · .45 · 툴팁'),
               btn[0].get('t') == '회차별' and btn[0].get('on') and btn[0].get('bg') == 'rgb(47, 111, 208)' and btn[0].get('fw') == '700'
-              and btn[1].get('t') == '단원별' and btn[1].get('dis') and btn[1].get('op') == '0.45' and btn[1].get('title') == '단원 매칭 데이터 대기 — 볼트 목차(특·상·디·민소) · 문제 단위'
+              and btn[1].get('t') == '단원별' and ((not btn[1].get('dis') and btn[1].get('op') == '1') if k == '민사소송법|기출' else (btn[1].get('dis') and btn[1].get('op') == '0.45' and btn[1].get('title') == ('GS 단원 데이터 없음' if K0 == 'GS' else SHORTN(L0) + ' 기출 단원 데이터 없음')))
               and bb.get('seg') is None, btn)
         # 사례 = 격자 그대로 · 단추 없음
         for L0, K0 in SAK:
@@ -668,8 +719,8 @@ def report(RES, base, new):
         for ck, d in (N.get('pops') or {}).items():
             db = g(B, 'pops', ck, 'title') or {}
             pn, pb = g(d, 'title', 'pop') or {}, g(db, 'pop') or {}
-            T(E + '줄 클릭(논점 줄 · 진짜 마우스) → .pop 1개 · 글자 = 바탕 .ctitle 클릭 팝업 그대로 — %s' % ck[:40],
-              g(d, 'title', 'clicked') and db.get('clicked') and pn.get('n') == 1 and pb.get('n') == 1 and pn.get('text') == pb.get('text') and len(pn.get('text') or '') > 40
+            T(E + '줄 클릭(논점 줄 · 진짜 마우스) → .pop 1개 · 글자 = 같은 카드 popCard4 팝업 그대로 — %s' % ck[:40],
+              g(d, 'title', 'clicked') and db.get('clicked') and pn.get('n') == 1 and pb.get('n') == 1 and pn.get('text') == g(d, 'direct', 'pop', 'text') and len(pn.get('text') or '') > 40
               and pn.get('sel') == ck,
               {'new': [g(d, 'title', 'clicked'), pn.get('n'), (pn.get('text') or '')[:120], pn.get('sel')], 'base': [db.get('clicked'), pb.get('n'), (pb.get('text') or '')[:120]], 'at': g(d, 'title', 'at')})
             pc = g(d, 'code', 'pop') or {}
@@ -677,8 +728,8 @@ def report(RES, base, new):
               [g(d, 'code', 'clicked'), pc.get('n'), (pc.get('text') or '')[:80]])
         for ck, d in (N.get('scorepop') or {}).items():
             db = g(B, 'scorepop', ck) or {}
-            T(E + '점수 칩 → 채점 탭 팝업 = 바탕 칸 머리 칩과 같은 글자 — %s' % ck[:30], d.get('clicked') and db.get('clicked') and g(d, 'pop', 'n') == 1
-              and g(d, 'pop', 'text') == g(db, 'pop', 'text') and g(d, 'pop', 'tab') == '채점', [g(d, 'pop', 'tab'), (g(d, 'pop', 'text') or '')[:80], (g(db, 'pop', 'text') or '')[:80]])
+            T(E + '점수 칩 → 채점 탭 팝업 = 같은 카드 popCard4(채점) 글자 — %s' % ck[:30], d.get('clicked') and db.get('clicked') and g(d, 'pop', 'n') == 1
+              and g(d, 'pop', 'text') == g(d, 'direct', 'text') and g(d, 'pop', 'tab') == '채점', [g(d, 'pop', 'tab'), (g(d, 'pop', 'text') or '')[:80], (g(db, 'pop', 'text') or '')[:80]])
         graded = [(x['ck'], x['score']) for kk in ('특허법|기출', '민사소송법|기출') for x in (g(N, 'boards', kk) or {}).get('rows', []) if x['score'] != '미채점']
         graded_b = [(x['ck'], x['score']) for kk in ('특허법|기출', '민사소송법|기출') for x in (g(B, 'boards', kk) or {}).get('rows', []) if x['score'] != '미채점']
         T(E + '채점 칩 전부(특허 4 · 민소 4) 글자 = 바탕 칸 머리 칩', len(graded) == 8 and sorted(graded) == sorted(graded_b), [graded, graded_b])

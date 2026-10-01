@@ -39,11 +39,11 @@ window.__HM = {
     const placed = new Set(); M.forEach(n => (n.리담 || []).forEach(x => placed.add(x)));
     (VJ.qs || []).forEach(q => { if (!placed.has(q.id)) return; (q.지문 || []).forEach(z => { out.lidPlaced++; const c = mlnClass(q, z);
       if (c === 'a') out.absorbed++; if (c === 'v' && MLN.p7uid.has(z.uid)) out.vAbs++; }); });
-    M.forEach((n, i) => { const d = mlnDirect(M, i, VJ.P7map, VJ.byId); out.nodes++; out.b += d.b.length; out.n += d.n.length; out.u += d.u.length; out.v += d.v.length; });
+    M.forEach((n, i) => { const d = mlnDirect(M, i, VJ.P7map, VJ.byId); out.nodes++; out.b += d.b.length; out.n += d.n.length; out.u += d.u.length; out.u8 = (out.u8 || 0) + d.u.filter(c => c.kind !== 'Z').length; out.v += d.v.length; });
     /* 리담 선지는 붙은 마디(들)마다 한 번 — 한 문항이 두 마디에 붙으면 두 번 센다 */
     let lidSeen = 0; M.forEach(n => (n.리담 || []).forEach(id => { const q = VJ.byId[id]; if (q) lidSeen += (q.지문 || []).length; }));
     let absSeen = 0; M.forEach(n => (n.리담 || []).forEach(id => { const q = VJ.byId[id]; if (q) (q.지문 || []).forEach(z => { if (mlnClass(q, z) === 'a') absSeen++; }); }));
-    out.lidSeen = lidSeen; out.absSeen = absSeen; out.sumOK = (out.u + out.v + absSeen) === lidSeen;
+    out.lidSeen = lidSeen; out.absSeen = absSeen; out.sumOK = (out.u - (out.u8 || 0) + out.v + absSeen) === lidSeen;   /* ★ A-6(a) 9/30 — p8up A-1-9: (미수록) 줄에 선 8판 새 카드(kind ≠ Z · 19)는 리담 선지가 아니다 */
     return out;
   },
   /* add1 머리 셈 쪼개 보기 — 그 마디와 아래 전부의 줄 셈(본편 · 미수록 · 변형) · 붙은 리담 선지 중 흡수(본편 제7판 줄로 감) */

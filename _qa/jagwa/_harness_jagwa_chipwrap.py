@@ -94,7 +94,7 @@ def pc(br, eng, subj):
 
 def main():
     PW.APPS['NEW'] = io.open(NEWF, encoding='utf-8').read()
-    PW.APPS['BASE'] = PW.git('show', 'HEAD:jagwa/index.html').decode('utf-8')
+    PW.APPS['BASE'] = PW.git('show', 'eb1113e:jagwa/index.html').decode('utf-8')   # ★ A-6(d) 9/30 _task_qa_baseline — 헛잣대 바탕 = 인도 앞 판 eb1113e(jagwa_search · 인도 결과 머리 「바탕 genie HEAD eb1113e」) · 인도(95cc766) 뒤 HEAD 는 이 판 자신
     t0 = time.time()
     with sync_playwright() as pw:
         for eng in ENGS:
@@ -125,7 +125,7 @@ def main():
     npass = sum(1 for x in RES if x[2]); nfail = sum(1 for x in RES if not x[2])
     print('\n== PASS %d · FAIL %d · %.0f초' % (npass, nfail, time.time() - t0))
     with io.open(OUTF, 'a', encoding='utf-8') as fo:
-        fo.write('\n==== %s · chipwrap · NEW %s · 바탕 genie HEAD %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), os.path.basename(NEWF),
+        fo.write('\n==== %s · chipwrap · NEW %s · 바탕 eb1113e · genie HEAD %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), os.path.basename(NEWF),
                  PW.git('rev-parse', '--short', 'HEAD').decode().strip(), ','.join(ENGS)))
         for g, nm, ok, d in RES:
             fo.write('%s | %s · %s | %s\n' % ('PASS' if ok else 'FAIL', g, nm, (d if isinstance(d, str) else json.dumps(d, ensure_ascii=False, default=str))[:1200]))

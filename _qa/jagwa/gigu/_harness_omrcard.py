@@ -206,7 +206,8 @@ TESTS = r"""<script>
  /* 캔버스에 한 획 긋기 */
  async function zzDraw(cv){
    const rc=cv.getBoundingClientRect();
-   const P=(t,x,y)=>cv.dispatchEvent(new PointerEvent(t,{clientX:x,clientY:y,pointerId:9,pointerType:'mouse',bubbles:true,cancelable:true,isPrimary:true}));
+   /* A-6(a) 9/30 — 카드 필기는 **펜만**이다(moolri/_task_jagwa_pen_touch2 §6-5 갈래 표 「3 암기카드 mcardWin — pen 필기 · mouse 조작」 · c62b2b2 · mcardWin 「if(e.pointerType!=='pen')return」) → 펜으로 긋는다 */
+   const P=(t,x,y)=>cv.dispatchEvent(new PointerEvent(t,{clientX:x,clientY:y,pointerId:9,pointerType:'pen',bubbles:true,cancelable:true,isPrimary:true}));
    P('pointerdown',rc.left+rc.width*0.2,rc.top+rc.height*0.3);
    await wait(20);P('pointermove',rc.left+rc.width*0.5,rc.top+rc.height*0.5);
    await wait(20);P('pointermove',rc.left+rc.width*0.7,rc.top+rc.height*0.4);
@@ -272,8 +273,9 @@ def main():
 
     s = open(SRC, encoding='utf-8').read()
     ix = lambda t: s.find(t)
-    blk = ix('\nif(CARD_LAYER){\n')
-    T2('O-P 조각 코드는 전부 if(CARD_LAYER) 안 · 물리 층에서도 보이게 var 식으로 둔다(블록 안 async function 은 전역에 안 올라온다)',
+    # A-6(a) 9/30 — 카드 층 블록 문이 if(CARD_LAYER){ → if(SHELL){ 로 바뀌었다(_task_jagwa_shell_bio_phys §A · c9faff2) — 그 블록(/*EARTH:js*/ 바로 뒤)을 잡는다
+    blk = s.find('\nif(SHELL){\n', ix('/*EARTH:js*/'))
+    T2('O-P 조각 코드는 전부 카드 층 블록(9/21 부터 if(SHELL)) 안 · 물리 층에서도 보이게 var 식으로 둔다(블록 안 async function 은 전역에 안 올라온다)',
        blk >= 0 and all(ix(k) > blk for k in ['var JOGAK=', 'var loadJogak=async function(', 'var omrDoc=async function(', 'var jogakPaint=async function(']))
     T2('O-P 새 동작은 좌표표가 있을 때만 — typeof 가드까지 걸어 물리에서 함수가 없어도 안 죽는다',
        "const JG=(typeof jogakAny==='function')&&jogakAny();" in s

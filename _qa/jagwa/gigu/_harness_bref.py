@@ -77,7 +77,9 @@ BODY_EARTH = r"""
    T('A-0 지학 카드 층 · 데이터 적재',CARD_LAYER===true&&SUBJ_ID==='earth'&&DATA.length>0,[SUBJ_ID,DATA.length]);
 
    await grp('A-0', async()=>{
-     T('A-0 지학 SYNC_KEYS 19 · bref 가 19째',SUBJ.earth.SYNC_KEYS.length===19&&SUBJ.earth.SYNC_KEYS[18]==='bref',SUBJ.earth.SYNC_KEYS);
+     /* A-6(a) 9/30 — 뒤 판이 지학 SYNC_KEYS 끝에 gg·ggref·pick·link 넷을 더했다(gigu/_task_jagwa_earth_listpop_add1.md §G · cd248a5) →
+        이 판(pan3 add1)이 더한 bref 가 19째 · 옛 18키가 앞자리 그대로(순서 보존) · 키가 더 늘어도 안 뒤집힌다(본 세션 9/30 판단) */
+     T('A-0 지학 SYNC_KEYS 에 bref 가 19째 · 옛 18키 앞자리 그대로',SUBJ.earth.SYNC_KEYS[18]==='bref'&&SUBJ.earth.SYNC_KEYS.slice(0,18).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,bogi,unit,bpit,bpg,crop,txt,tfix',SUBJ.earth.SYNC_KEYS);
      T('A-0 생물 20 · 물리 12 무변',SUBJ.bio.SYNC_KEYS.length===20&&SUBJ.phys.SYNC_KEYS.length===12,[SUBJ.bio.SYNC_KEYS.length,SUBJ.phys.SYNC_KEYS.length]);
      T('A-0 SYNC_REF 에 bref',!!SYNC_REF.bref&&SYNC_REF.bref.g()===BREF);
      const bad0=BREFBAD; BREF['__X']=[{r:[1,2],to:0}];
@@ -125,8 +127,9 @@ BODY_EARTH = r"""
      {const [x0,y0]=spotOf(bkCurPage(),0.2,0.2),[x1,y1]=spotOf(bkCurPage(),0.45,0.38);
       drag(vp,x0,y0,x1,y1,'pen'); await wait(280);
       T('A-1 펜으로 끌면 네모가 선다',$$$('#bkover .crbox').length===1,$$$('#bkover .crbox').length);}
-     T('A-1 커밋 ①과 **똑같은 메뉴** 넷',!!document.getElementById('crmenu')&&$$$('#crmenu button').length===4
-       &&$$$('#crmenu button').map(b=>b.dataset.s).join()==='q,s,fix,',$$$('#crmenu button').map(b=>b.textContent));
+     /* A-6(a) 9/30 — 오리기 메뉴 맨 위에 「🃏 카드로 찍기」(data-s="mc")가 더해졌다(gigu/_task_jagwa_earth_listpop_add1.md §F 「cropOffer 메뉴에 🃏 카드로 찍기를 맨 위에 더한다」 · cd248a5 · HASBOOK) — 커밋 ① 넷은 그 뒤 차례 그대로 */
+     T('A-1 커밋 ①과 **똑같은 메뉴** 넷 + 맨 위 「🃏 카드로 찍기」',!!document.getElementById('crmenu')&&$$$('#crmenu button').length===5
+       &&$$$('#crmenu button').map(b=>b.dataset.s).join()==='mc,q,s,fix,',$$$('#crmenu button').map(b=>b.textContent));
      $('#crmenu [data-s="q"]').click(); await wait(900);
      T('A-1 붙이면 **그 문항의** crop 이 는다(새 저장 없이 kv crop 그대로)',cropList(UID,'q').length===n0+1,[cropList(UID,'q').length,n0]);
      T('A-1 붙은 조각의 쪽이 지금 보던 쪽이다',cropList(UID,'q')[n0].p===PR,[cropList(UID,'q')[n0].p,PR]);
@@ -474,8 +477,10 @@ BODY_EARTH = r"""
 
    /* ⑪ 수가 안 늘었다 */
    await grp('C-5', async()=>{
-     T('C-5 ⑪ SYNC_KEYS 가 **안 늘었다** — 지학 19 · 생물 20 · 물리 12',
-       SUBJ.earth.SYNC_KEYS.length===19&&SUBJ.bio.SYNC_KEYS.length===20&&SUBJ.phys.SYNC_KEYS.length===12,
+     /* A-6(a) 9/30 — 뒤 판이 지학 SYNC_KEYS 끝에 넷을 더했다(listpop_add1 §G · cd248a5 — 런타임 push · 생물·물리 SUBJ 표는 지학 실행에서 무변)
+        → add3 이 늘리지 않았다 = 지학 옛 19키가 앞자리 그대로 · 생물 20 · 물리 12(표) — 키가 더 늘어도 안 뒤집힌다 */
+     T('C-5 ⑪ add3 은 SYNC_KEYS 를 안 늘렸다 — 지학 옛 19키 앞자리 그대로 · 생물 20 · 물리 12',
+       SUBJ.earth.SYNC_KEYS.slice(0,19).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,bogi,unit,bpit,bpg,crop,txt,tfix,bref'&&SUBJ.bio.SYNC_KEYS.length===20&&SUBJ.phys.SYNC_KEYS.length===12,
        [SUBJ.earth.SYNC_KEYS.length,SUBJ.bio.SYNC_KEYS.length,SUBJ.phys.SYNC_KEYS.length]);
      T('C-5 ⑪ bref 가 지학 19째 그대로',SUBJ.earth.SYNC_KEYS[18]==='bref',SUBJ.earth.SYNC_KEYS[18]);
      /* ⚠ SYNC_REF 는 **과목 전체** 표라 이 과목 SYNC_KEYS 보다 크다(link·snote 등) — 뒤집어 잰다 */
@@ -492,7 +497,8 @@ BODY_BIO = r"""
    await loadEarthData(); draw(); await wait(120);
    T('G-0 생물 카드 층',CARD_LAYER===true&&SUBJ_ID==='bio'&&DATA.length>0,[SUBJ_ID,DATA.length]);
    await grp('G-1', async()=>{
-     T('G-1 생물 SYNC_KEYS 20 · bref 포함',SYNC_KEYS.length===20&&SYNC_KEYS.indexOf('bref')>=0,SYNC_KEYS.length);
+     /* A-6(a) 9/30 — 뒤 판이 생물 SYNC_KEYS 끝에 gg·ggref·pick·link 넷을 더했다(_task_jagwa_shell_bio_phys §E-7 · c9faff2 「카드 층 = 넷」) → 옛 20키 앞자리 그대로 · bref 포함 */
+     T('G-1 생물 SYNC_KEYS 옛 20키 앞자리 그대로 · bref 포함',SYNC_KEYS.slice(0,20).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,bogi,unit,bpit,bpg,snote,crop,txt,tfix,bref'&&SYNC_KEYS.indexOf('bref')>=0,SYNC_KEYS.length);
      T('G-1 A·B 함수가 생물에서도 산다',typeof cropOffer==='function'&&typeof brefPaint==='function'&&typeof brefPop==='function');
      const r=DATA.find(x=>+x[F.BPAGE]>0)||DATA[0];
      await openView(r[F.NO]); await wait(400);
@@ -516,26 +522,33 @@ BODY_PHYS = r"""
    snap.pgbar=document.querySelector('.pgbar')?document.querySelector('.pgbar').innerHTML:'(없음)';
    await grp('Y-1', async()=>{
      T('Y-1 목록이 그려졌다',$$$('#list .item').length>0,$$$('#list .item').length);
-     T('Y-1 물리는 bref 를 안 만든다 — brefList·brefPop·brefAsk 가 undefined',
-       typeof brefList==='undefined'&&typeof brefPop==='undefined'&&typeof brefAsk==='undefined',
-       [typeof brefList,typeof brefPop,typeof brefAsk]);
-     T('Y-1 cropOffer 도 없다',typeof cropOffer==='undefined');
-     T('Y-1 SYNC_KEYS 12 에 bref 없음',SYNC_KEYS.length===12&&SYNC_KEYS.indexOf('bref')<0,SYNC_KEYS.length);
+     /* A-6(a) 9/30 — 카드 층 블록 문이 if(CARD_LAYER) → if(SHELL)(세 과목 참)로 바뀌어 물리에서도 그 함수들이 만들어진다(_task_jagwa_shell_bio_phys §A · c9faff2 · 물리를 덮는 이름은 add5 c20ef05 가 if(HASBOOK) 로 되살림)
+        — 물리 무변은 「안 만든다」가 아니라 「교재 갈래 HASBOOK 이 거짓 · bref 가 물리 기록에 없다」로 선다 */
+     T('Y-1 물리는 bref 를 안 쓴다 — 함수는 SHELL 블록이라 있어도 HASBOOK=false · SYNC_KEYS 에 bref 없음',
+       typeof HASBOOK!=='undefined'&&HASBOOK===false&&SYNC_KEYS.indexOf('bref')<0,
+       [typeof brefList,typeof brefPop,typeof brefAsk,typeof HASBOOK!=='undefined'&&HASBOOK]);
+     T('Y-1 cropOffer 는 SHELL 블록이라 있어도 물리는 오리기를 안 쓴다 — HASBOOK=false · SYNC_KEYS 에 crop 없음',typeof HASBOOK!=='undefined'&&HASBOOK===false&&SYNC_KEYS.indexOf('crop')<0,[typeof cropOffer,SYNC_KEYS.indexOf('crop')]);   /* A-6(a) 9/30 — 위와 같은 까닭(c9faff2 §A) */
+     /* A-6(a) 9/30 — 뒤 판이 물리 SYNC_KEYS 끝에 gg·ggref 를 더했다(_task_jagwa_shell_bio_phys §E-7 · c9faff2 「물리 = gg·ggref 둘」) → 수 12 대신 옛 12키 앞자리 그대로 · bref 없음 */
+     T('Y-1 SYNC_KEYS 옛 12키 앞자리 그대로 · bref 없음',SYNC_KEYS.slice(0,12).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,link'&&SYNC_KEYS.indexOf('bref')<0,SYNC_KEYS.length);
      T('Y-1 BREF 전역은 비어 있다',typeof BREF==='undefined'||JSON.stringify(BREF)==='{}',typeof BREF);
-     T('Y-1 물리 화면에 링크 표·오리기 단추가 0개',$$$('.brefm').length===0&&!$('#bpCrop')&&!$('#bpRef'));
-     T('Y-1 교재 도구줄에 오리기·글상자·링크가 안 붙는다(물리는 교재 창을 안 쓴다)',
-       !$('#bktools [data-tool="crop"]')&&!$('#bktools [data-tool="txt"]')&&!$('#bktools [data-tool="bref"]'));
+     /* A-6(a) 9/30 — #bpCrop·#bpRef·교재 도구줄 셋은 SHELL 블록(c9faff2 §A)이 물리에도 붙이지만 물리는 옆 칸 #ebody·교재 창 #book 을 숨긴다
+        (앱 781 body[data-layer="pdf"] #ebody,…,#book{display:none!important}) → 「화면에」 = 보이는 것 */
+     T('Y-1 물리 화면에 링크 표·오리기 단추가 0개',$$$('.brefm,#bpCrop,#bpRef').every(e=>e.getClientRects().length===0),$$$('.brefm,#bpCrop,#bpRef').map(e=>e.id||e.className));
+     T('Y-1 교재 도구줄의 오리기·글상자·링크가 물리 화면에 안 보인다(물리는 교재 창을 안 쓴다)',
+       ['crop','txt','bref'].every(t=>{const e=$('#bktools [data-tool="'+t+'"]');return !e||e.getClientRects().length===0}));
    });
 
    await grp('Y-3', async()=>{
      /* 판 3 add3 — 물리 무변은 「값이 같다」가 아니라 **그 갈래가 아예 안 만들어진다**로 잰다(CLAUDE.md 9/7) */
-     T('Y-3 add3 — 물리에는 brefBack·brefBackPaint 가 아예 없다(if(CARD_LAYER) 안)',
-       typeof brefBack==='undefined'&&typeof brefBackPaint==='undefined',[typeof brefBack,typeof brefBackPaint]);
-     T('Y-3 add3 — 물리에는 txtOf·stemOf·tfixOn 이 없다(§3 의 세 자리는 카드 층 전용)',
-       typeof txtOf==='undefined'&&typeof stemOf==='undefined'&&typeof tfixOn==='undefined',
+     /* A-6(a) 9/30 — 「아예 없다」는 카드 층 블록 문 if(CARD_LAYER) → if(SHELL)(c9faff2 §A)로 뒤집혔다 — 물리는 교재 갈래(HASBOOK)가 거짓이라 그 자리들을 안 탄다
+        (shell_bio_phys 「물리에서 빠지는 것 … 〈보기〉 줄 고치기 · 원본 그림 ✕ · 글상자」 · 물리 SYNC_KEYS 에 tfix 없음 · 목록 미리보기는 물리 갈래 r[F.BODY] = S-25) */
+     T('Y-3 add3 — 물리에는 brefBack·brefBackPaint 가 있어도(SHELL 블록) 안 쓴다 — HASBOOK=false',
+       typeof HASBOOK!=='undefined'&&HASBOOK===false,[typeof brefBack,typeof brefBackPaint]);
+     T('Y-3 add3 — 물리에는 txtOf·stemOf·tfixOn 이 있어도(SHELL 블록) 고친 글자가 없다 — HASBOOK=false · SYNC_KEYS 에 tfix 없음',
+       typeof HASBOOK!=='undefined'&&HASBOOK===false&&SYNC_KEYS.indexOf('tfix')<0,
        [typeof txtOf,typeof stemOf,typeof tfixOn]);
-     T('Y-3 add3 — 물리 모아보기 팝업(mcardPop)은 열릴 수 없다 — jogakAny 가 없어 JG=false',
-       typeof jogakAny==='undefined',typeof jogakAny);
+     T('Y-3 add3 — 물리 모아보기 팝업(mcardPop)은 열릴 수 없다 — 좌표표가 비어 JG=false(jogakAny() 거짓 · 9/21 부터 함수는 있다)',
+       typeof jogakAny==='undefined'||jogakAny()===false,typeof jogakAny);
      T('Y-3 add3 — 물리 목록 미리보기는 종전 자리를 그대로 쓴다(r[F.BODY])',
        $$$('#list .item .prev').length>0,$$$('#list .item .prev').length);
      T('Y-3 add3 — 물리 화면에 되돌아가는 칩이 0개',$$$('.brefback').length===0&&$$$('.brefbackbar').length===0,
@@ -616,7 +629,8 @@ def static_checks():
     out = []
     def T2(name, cond, info=''):
         out.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
-    blk = s.find('\nif(CARD_LAYER){\n')
+    # A-6(a) 9/30 — 카드 층 블록 문이 if(CARD_LAYER){ → if(SHELL){ 로 바뀌었다(_task_jagwa_shell_bio_phys §A · c9faff2) — 그 블록(/*EARTH:js*/ 바로 뒤)을 잡는다
+    blk = s.find('\nif(SHELL){\n', s.find('/*EARTH:js*/'))
     T2('S-1 ★오리는 코드가 한 벌이다 — 교재 전체 화면과 문항 교재 칸이 같은 cropOffer 를 부른다',
        s.count('function cropOffer(') == 1 and s.count('cropOffer(') == 3
        and 'BK.onCrop=function(crop,clear){' in s and 'cropOffer(cell,clear,at);' in s,
@@ -626,8 +640,9 @@ def static_checks():
     T2('S-3 crop 저장 꼴 무변 — 새 저장을 안 만들었다',
        'a.push({p:cell.p,r:cell.r.map(v=>+v.toFixed(1))});' in s and s.count('var cropAdd=async function(') == 1)
     T2('S-4 옆 칸도 펜에서만 오린다 — 손가락은 종전 길',
-       "if(e.pointerType!=='pen'&&SET.pencil)return;      /* ⚠ 손가락은 지금처럼 스크롤이다(커밋 ① 규칙 그대로) */" in s)
-    T2('S-5 bref 코드는 전부 if(CARD_LAYER) 안이다',
+       # A-6(a) 9/30 — 펜슬 스위치를 걷어 「언제나 펜만」이 됐다(moolri/_task_jagwa_pen_touch2 §1 · c62b2b2 · _decisions 2026-09-13) — 그 줄의 &&SET.pencil 만 빠졌다
+       "if(e.pointerType!=='pen')return;      /* ⚠ 손가락은 지금처럼 스크롤이다(커밋 ① 규칙 그대로) */" in s)
+    T2('S-5 bref 코드는 전부 카드 층 블록 안이다(9/21 부터 if(SHELL) · c9faff2 §A)',
        blk >= 0 and all(s.find(k) > blk for k in ['var brefList=', 'var brefSet=async function(', 'var brefAsk=',
                                                   'function brefPaint(', 'var brefPop=async function(',
                                                   'function bkBrefAll(', 'function bpBrefPaint(']))

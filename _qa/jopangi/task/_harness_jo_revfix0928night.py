@@ -33,6 +33,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, JOP)
 import _harness_jo_book8 as B8   # noqa: E402  (M · serve · /__book/ · __B8 도구)
 M = B8.M
+M.BASE_REV = '6073142'   # A-6(d) 9/30 — 바탕 = 인도 때 HEAD 6073142(결과 머리 「바탕 HEAD 6073142」) · book8 의 바탕을 물려받지 않는다
 M.TESTS = M.TESTS + '\n' + io.open(os.path.join(HERE, '_harness_jo_uid_add3_tests.js'), encoding='utf-8').read() \
     + '\n' + io.open(os.path.join(HERE, '_harness_jo_revfix0928night_tests.js'), encoding='utf-8').read()
 M.WORK = M.WORK + '_rn'
@@ -59,7 +60,7 @@ def jl(b):
 
 
 def head(f):
-    return jl(M.git('show', 'HEAD:jo/data/' + f))
+    return jl(M.git('show', '6073142:jo/data/' + f))   # A-6(d) 바탕 데이터 = 인도 때 HEAD 6073142
 
 
 def new(f):
@@ -71,9 +72,10 @@ def d1():
     """바뀐 칸 = 할 일 칸만 · 없어진 id·uid 0 · uid_alias 무변 · 정답 = 큐넷 · 조합 선지 다섯 = 옮겨 적은 글"""
     G = 'd1'
     a, b = head('jimun_특허.json'), new('jimun_특허.json')
-    A, Bq = {q['id']: q for q in a['문제']}, {q['id']: q for q in b['문제']}
+    b_d = jl(M.git('show', 'dfbb144:jo/data/jimun_특허.json'))   # A-6(d) 9/30 — 「jimun_특허 바뀐 칸」(인도 검산)만 새 쪽 = 인도 커밋 dfbb144(뒤 판 revfix0929 A-3 이 2013 정답 둘을 더함) · 아래 「정답 넷」(Bq)은 지금 데이터 그대로
+    A, Bq, Bq_d = {q['id']: q for q in a['문제']}, {q['id']: q for q in b['문제']}, {q['id']: q for q in b_d['문제']}
     c = collections.Counter(); qch = []
-    for i, qb in Bq.items():
+    for i, qb in Bq_d.items():
         qa = A.get(i)
         if qa is None:
             c['새 문항'] += 1; continue
@@ -84,12 +86,12 @@ def d1():
             for k in set(za) | set(zb):
                 if za.get(k) != zb.get(k):
                     c['선지.' + k] += 1
-    gone = set(A) - set(Bq)
-    ua = {z.get('uid') for q in a['문제'] for z in q['지문']} - {z.get('uid') for q in b['문제'] for z in q['지문']}
+    gone = set(A) - set(Bq_d)
+    ua = {z.get('uid') for q in a['문제'] for z in q['지문']} - {z.get('uid') for q in b_d['문제'] for z in q['지문']}
     ok = dict(c) == {'문항.정답': 4, '선지.sol': 65, '선지.sol7': 65} and not gone and not ua and all(ANS.get(i) == v for i, k, _, v in qch)
     T(G, 'jimun_특허 — 바뀐 칸 = 문항 정답 4(큐넷) · 선지 sol 65 + sol7 65(A-6) · 없어진 문항·uid 0', ok, {'셈': dict(c), '정답': qch, '없어짐': [len(gone), len(ua)]})
-    p, q = head('jimun_7pan.json'), new('jimun_7pan.json')
-    P, Q = {z['id']: z for z in p['지문']}, {z['id']: z for z in q['지문']}
+    p, q_d = head('jimun_7pan.json'), jl(M.git('show', 'dfbb144:jo/data/jimun_7pan.json'))   # A-6(d) 9/30 — 「jimun_7pan 바뀐 칸」(인도 검산)만 새 쪽 = 인도 커밋 dfbb144(뒤 판 revfix0929 A-1 이 16 줄 sol 을 되돌림) · 지금 원장은 g6·g9 가 잰다
+    P, Q = {z['id']: z for z in p['지문']}, {z['id']: z for z in q_d['지문']}
     ch = collections.Counter(tuple(sorted(k for k in set(P[i]) | set(Q[i]) if P[i].get(k) != Q[i].get(k))) for i in Q if i in P and P[i] != Q[i])
     mg = [i for i in Q if i in P and Q[i].get('병합') == 'Y' and P[i].get('병합') != 'Y']
     T(G, 'jimun_7pan — 바뀐 칸 = 병합 67(A-9 · add3 시험지 줄과 같은 uid 인 7판 줄) · 다른 칸·줄 무변 · 지문 수 같음', dict(ch) == {('병합',): 67} and len(mg) == 67 and len(P) == len(Q),
@@ -228,7 +230,8 @@ def b4(p, b, eng, br):
                     ra = q.ev("()=>__B8.rowAt(0)")
                     q.press(ra, how, 900)
                     q.ev("()=>__B8.bookReady()")
-                    r8.append(q.ev("()=>__RN.bookWin()"))
+                    w8 = q.ev("()=>__RN.bookWin()")
+                    r8.append(dict(w8, press=(ra or {}).get('cy')) if w8 else w8)   # A-6(a) 9/30 — 누른 8판 줄 자리도 적는다(revfix0930 A-6 bkPlace 로 📚 창이 칩 아래 +6 에 가서 이 자리가 옮겨짐)
                 q.ev("()=>__B8.closeAll()")
                 q.ev("()=>{try{viewCanvas.book({book:'핵심',page:5},{clientX:100,clientY:%d});}catch(e){}}" % int(H * 0.85))
                 q.until("()=>{const w=(POPS||[]).filter(x=>/^cv\|book\|/.test(x._pk||'')).pop();return !!w&&(!!w.querySelector('.cv-bookpg canvas')||/받지 못했다/.test(w.textContent))}", ms=30000)   # 교재가 다 열린 뒤 잰다(받는 중 창은 낮다)
@@ -246,8 +249,12 @@ def b4(p, b, eng, br):
     T(G + '-헛', '%s 헛잣대 바탕 폰 — 8판 쪽 창 가운데 높이 < 0.6×보이는 높이인 것 있음' % eng, not all(chk(w) for w in bb['8판']), [w and w['rect'] for w in bb['8판']])
     for W in (1440, 1024):
         a1, a2 = sizes[(W, 'NEW')], sizes[(W, 'BASE')]
-        same = all(x and y and abs(x['rect']['h'] - y['rect']['h']) < 0.6 and abs(x['rect']['w'] - y['rect']['w']) < 0.6 and abs(x['rect']['y'] - y['rect']['y']) < 0.6 for x, y in zip(a1['8판'] + [a1['민소']], a2['8판'] + [a2['민소']]))
-        T(G, '%s %s 창 크기·자리 = 바탕(무변)' % (eng, 'PC 1440×900' if W == 1440 else '아이패드 1024×1366'), same, {'NEW': [x and x['rect'] for x in a1['8판'] + [a1['민소']]], 'BASE': [x and x['rect'] for x in a2['8판'] + [a2['민소']]]})
+        # A-6(a) 9/30 — revfix0930 A-6(bkPlace): PC·아이패드 📚 창이 누른 칩 아래(칩 아래 +6)로 간다(옛 = 누른 자리 +14 · 칩 y 300 → 창 314 → 316) → 창 안 8판 줄 누름 자리도 그만큼 옮겨진다.
+        #   쪽 창은 누른 자리에 뜨므로(showPop 누른 자리 +34) 바닥에 붙지 않은 쪽 창은 누른 자리 차이만큼 같이 옮겨지는 것이 무변 · 바닥에 붙은 창(PC 셋 · 아이패드 칩 y 700 · 민소)은 자리 그대로 · 높이·폭은 그대로 잰다
+        dy = lambda x, y: 0 if abs(y['rect']['b'] - (y['vv']['y'] + y['vv']['h'] - 8)) < 0.6 else (x.get('press') or 0) - (y.get('press') or 0)
+        same = all(x and y and abs(x['rect']['h'] - y['rect']['h']) < 0.6 and abs(x['rect']['w'] - y['rect']['w']) < 0.6 and abs(x['rect']['y'] - y['rect']['y'] - dy(x, y)) < 0.6 for x, y in zip(a1['8판'] + [a1['민소']], a2['8판'] + [a2['민소']]))
+        T(G, '%s %s 창 크기·자리 = 바탕(무변%s)' % (eng, 'PC 1440×900' if W == 1440 else '아이패드 1024×1366', '' if W == 1440 else ' · 쪽 창 자리 = 누른 8판 줄 기준 — revfix0930 A-6'), same,
+          {'NEW': [x and dict(x['rect'], press=x.get('press')) for x in a1['8판'] + [a1['민소']]], 'BASE': [x and dict(x['rect'], press=x.get('press')) for x in a2['8판'] + [a2['민소']]]})
 
 
 # ══════════ 기출뷰 ══════════
@@ -374,7 +381,7 @@ def g7(p, b, eng):
     for tag, q in (('NEW', p), ('BASE', b)):
         B8.home(q)
         r[tag] = {y: q.ev("y=>__U3.gradable(y)", y) for y in (2009, 2013, 2018, 2020)}
-    T(G, '%s 채점 분모(정답 있는 문항) — 2009 16 · 2013 18(12·6번 = 선지 글이 시험지와 달라 빈칸 그대로 · A-7-2) · 2018 20 · 2020 20 · 정답 값 = 큐넷(d1 표)' % eng, r['NEW'] == {2009: 16, 2013: 18, 2018: 20, 2020: 20}, r)
+    T(G, '%s 채점 분모(정답 있는 문항) — 2009 16 · 2013 20(12·6번 = revfix0929 A-3 큐넷 정답) · 2018 20 · 2020 20 · 정답 값 = 큐넷(d1 표)' % eng, r['NEW'] == {2009: 16, 2013: 20, 2018: 20, 2020: 20}, r)   # A-6(a) 9/30 — _task_jo_revfix0929.md A-3 · 결정로그 9/29 13:13 「2013 12번 ④ 6번 ② 분모 20」
     T(G + '-헛', '%s 헛잣대 바탕 — 2009 15 · 2013 17 · 2018·2020 19' % eng, r['BASE'] == {2009: 15, 2013: 17, 2018: 19, 2020: 19}, r['BASE'])
 
 
@@ -495,8 +502,8 @@ def main():
     npass = sum(1 for r in RES if r[2] is True); nfail = sum(1 for r in RES if r[2] is False)
     print('\n== PASS %d · FAIL %d · %.0f초' % (npass, nfail, time.time() - t0))
     with io.open(OUTF, 'a', encoding='utf-8') as f:
-        f.write('\n==== %s · %s · NEW %s · 데이터 %s · 바탕 HEAD %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), 'revfix0928night', os.path.basename(_NEW), _DATA,
-                M.git('rev-parse', '--short', 'HEAD').decode().strip(), ','.join(ENGS)))
+        f.write('\n==== %s · %s · NEW %s · 데이터 %s · 바탕 %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), 'revfix0928night', os.path.basename(_NEW), _DATA,
+                M.git('rev-parse', '--short', M.BASE_REV).decode().strip(), ','.join(ENGS)))   # A-6(d) 적히는 바탕 = 실제 바탕
         for g, n, ok, d in RES:
             f.write('%s | %s · %s | %s\n' % ({True: 'PASS', False: 'FAIL', None: 'INFO'}[ok], g, n, (d if isinstance(d, str) else json.dumps(d, ensure_ascii=False, default=str))[:900]))
         f.write('== PASS %d · FAIL %d\n' % (npass, nfail))

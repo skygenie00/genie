@@ -437,7 +437,7 @@ def run_app(br, eng, src, tag, fx, base=False):
             r = p.H('markRowRect', 0, 2, 11)
             p.mdrag(r['x0'], r['y0'], r['x1'], r['y1'], wait=500)
             mb = p.H('markBar')
-            say(mb['shown'] and mb['below'] and len(mb['btns']) == 9, pfx + 'E-2 드래그 → 도구 아홉이 선택 아래', mb)
+            say(mb['shown'] and mb['below'] and sum(1 for x in mb['btns'] if x is not None) == 9 and mb['btns'].count(None) == 2, pfx + 'E-2 드래그 → 도구 아홉이 선택 아래', mb)   # A-6(a) 9/30 — joscreen0929 A-5-1: 2차 막대에 둘째 줄(🗒 메모 · ✎ 수정 · data-m 없음) 더해져 단추 9 → 11 · 도구 아홉(data-m) 그대로
             p.click(p.H('markBtnHit', 'y'), 400)
             mk = p.H('marks'); k0 = r['key']
             say(mk.get(k0) == [[2, 12, 'y']], pfx + 'E-3 형광 y → jopangi.c2mark 칸 [[2,12,y]]', mk.get(k0))

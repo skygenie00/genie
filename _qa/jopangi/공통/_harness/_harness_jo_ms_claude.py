@@ -215,7 +215,7 @@ def scen_b(br, eng, tag, src):
         at = p.ev("k=>__HC.lineAt(k)", pk); R['at'] = at
         if at and at.get('on'):
             m = p.pg.mouse; m.move(at['cx'], at['cy']); m.down(); p.pg.wait_for_timeout(760)
-            R['menu'] = p.ev("__HC.menu()"); m.up(); p.pg.wait_for_timeout(200)
+            R['menu'] = p.ev("__HC.menu()"); R['bar'] = p.ev("__HC.bar()"); m.up(); p.pg.wait_for_timeout(200)   # A-6(a) 9/30 — joscreen0929 A-5: 칠 막대 둘째 줄(누르는 동안 · mouseup 전)
         R['errs'] = p.ev("__HC.errs()") + p.errs
     except Exception as e:
         R['exc'] = repr(e)[:600]
@@ -603,7 +603,7 @@ def report(RES):
                 inf = B.get('info') or {}
                 Tt('B 콜아웃 팝업에 안내 글 0(「제목의 ˅ 를 눌러 접고 편다 …」)', bool(inf) and not any('제목의' in x for x in inf.get('cdim') or []), inf)
                 Tt('B 접기 그대로(제목 있는 콜아웃에서 ˅ 누르면 줄이 접히고 다시 누르면 펴진다)', bool((B.get('htog') or {}).get('changed')) and g(B, 'htog', 'hidden2') == g(B, 'htog', 'hidden0'), {'pick': B.get('pick'), 'htog': B.get('htog')})
-                Tt('B 길게 누르기 메뉴 그대로(마우스 0.5초 → 🗒 메모 · ✎ 수정)', bool(B.get('menu')) and any('메모' in x for x in B['menu']), {'at': B.get('at'), 'menu': B.get('menu')})
+                Tt('B 길게 누르기 → 칠 막대 둘째 줄(마우스 0.5초 → 🗒 메모 · ✎ 수정 · .pitmenu 0)', not B.get('menu') and B.get('bar') == ['🗒 메모', '✎ 수정'], {'at': B.get('at'), 'menu': B.get('menu'), 'bar': B.get('bar')})   # A-6(a) 9/30 — joscreen0929 A-5: 2차 문제 창 = 칠 막대 하나(2차 막대엔 🏷 없음) · 옛: .pitmenu 「메모」
             for mode in ('c', 'pad'):
                 C = RES.get('%s/%s/%s' % (mode, eng, tag))
                 if not C:
@@ -626,7 +626,7 @@ def report(RES):
                 tb = C.get('tabs') or {}
                 tl = [t['t'] for t in tb.get('tabs') or []]
                 cl = [t for t in tb.get('tabs') or [] if 'cltab' in t['cls']]
-                Tt('C %s카드 팝업 탭 = 문제·해설·채점·「Claude 1」(주황 · 테두리 #fed7aa)' % M, tl == ['문제', '해설', '채점', 'Claude 1'] and len(cl) == 1 and cl[0]['color'] == ORANGE and cl[0]['bc'] == 'rgb(254, 215, 170)', tb)
+                Tt('C %s카드 팝업 탭 = 문제·해설·채점·「Claude 1」·「접기 0」(주황 글자 · 테두리 0)' % M, tl == ['문제', '해설', '채점', 'Claude 1', '접기 0'] and len(cl) == 1 and cl[0]['color'] == ORANGE and cl[0].get('bw') == '0px', tb)   # A-6(a) 9/30 — c2card B-1 「접기 n」 · B-2 Claude 탭 테두리·바탕 없음 · 옛: 탭 넷 · 테두리 #fed7aa
                 at2 = C.get('afterTab') or {}
                 on = [t['t'] for t in g(at2, 'tabs', 'tabs') or [] if t['on']]
                 Tt('C %s탭 「Claude 1」 → 새 팝업 창 · 카드 탭 무변(문제 켜짐 그대로)' % M, bool(C.get('tabTap')) and len(at2.get('pops') or []) == 2 and (at2.get('pops') or [{}])[-1].get('pk') == 'claude|' + MS_CODE and on == ['문제'],
