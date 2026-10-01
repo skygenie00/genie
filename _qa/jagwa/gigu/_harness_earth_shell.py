@@ -2351,7 +2351,11 @@ BODY_PHYS = r"""
          const b=DATA.filter(r=>oldPass(r,q)).map(r=>r[F.NO]).join(',');
          if(typeof esSearch==='function'){inp.value=q;esSearch();
            if(q.replace(/\s+/g,'').length<2){if(ES_NOS.length||txt(document.getElementById('qCnt'))!=='두 글자 이상 입력하세요')bad.push([q,'한 글자',ES_NOS.length])}
-           else{const a=ES_NOS.join(',');if(a!==b)bad.push([q,ES_NOS.length,b.split(',').length])}}
+           else{const a=ES_NOS.join(',');if(a!==b){
+             /* ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2-3 「검색이 미리보기 t 도 본다」: 옛 집합 ⊆ 새 집합 · 더 걸린 문항이 모두 t 에서 걸린 것(pvHit)이면 뜻한 바뀜 */
+             const A=new Set(ES_NOS),B=b?b.split(',').map(Number):[],ex=ES_NOS.filter(n=>B.indexOf(n)<0);
+             const pvok=B.every(n=>A.has(n))&&ex.length>0&&typeof pvHit==='function'&&ex.every(n=>{const r=DATA.find(x=>x[F.NO]===n);return !!r&&pvHit(r,q)});
+             if(!pvok)bad.push([q,ES_NOS.length,b.split(',').length])}}}
          else{FL.q=q;const a=DATA.filter(pass).map(r=>r[F.NO]).join(',');if(a!==b)bad.push([q,a.split(',').length,b.split(',').length])}});
        if(typeof esSearch==='function'){inp.value='';esSearch()}
        FL.q=q0; draw(); await wait(250);
@@ -3532,7 +3536,9 @@ BODY_XSIDE = r"""
    const vis=el=>!!el&&!el.classList.contains('hide');
    const tx=el=>el?String(el.textContent||'').replace(/\d+'\d{2}"/g,"·'··\"").replace(/\s+/g,' ').trim():'';
    snap.subj=SUBJ_ID;
-   snap.list=$$$('#list .item').slice(0,40).map(x=>tx(x)).join(' || ');
+   /* ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2 미리보기 칸(.prev 글 · .pvfig)은 두 판 모두 떼고 맞댄다(physprev 관문 B3 이 그 칸을 잰다) */
+   const npv=el=>{if(!el)return el;const c=el.cloneNode(true);c.querySelectorAll('.prev,.pvfig,.jnrow .q').forEach(x=>x.remove());return c};
+   snap.list=$$$('#list .item').slice(0,40).map(x=>tx(npv(x))).join(' || ');
    /* ★ A-6(a) 9/30 _task_qa_baseline — phone_win §A-2·§A-6(genie fb89ad2 · 결정로그 9/28 17:20 · 수행 결과 「X-11 phys esh DOM 글자 = §A-2 필터 글자 걷음 · §A-6 칩」):
         접기 단추 「필터 ▾」 → 「▾」 · 물리 [공식]·[개념] 칩(.pwchip) — 칩은 떼고 단추 글자는 「▾」 로 맞춘 뒤 잰다
         (동기화 칩 가림이 「필터」 앞에서만 멈춰, 새 판에선 「▾」 뒤 머리 줄을 통째로 먹던 것도 「▾」 앞에서 멈춘다) */
@@ -3560,10 +3566,10 @@ BODY_XSIDE = r"""
    try{const secs=Object.keys(TOC.sec);if(secs.length&&typeof jnOpen==='function'){jnOpen(secs[0]);await wait(700);
      /* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef 본문 「이름 = 기출 「연도 출처 N번」」) · A-4(「닫기」 → ✕) 는 뜻한 바뀜(physphone B2 · B4 가 잰다)
         → 두 판 모두 줄 이름 칸(.jnrow .h .mut)과 닫기 단추(#jnwX)를 떼고 나머지 글자를 맞댄다 */
-     snap.jn=tx((e=>{if(!e)return e;const c=e.cloneNode(true);c.querySelectorAll('.jnrow .h .mut,#jnwX').forEach(x=>x.remove());return c})(document.getElementById('jnw'))).slice(0,4000);
-     const q=$$$('#jnw .jnrow .q')[0];snap.jnq=q?[q.className,q.getAttribute('title')]:null;
+     snap.jn=tx((e=>{if(!e)return e;const c=e.cloneNode(true);c.querySelectorAll('.jnrow .h .mut,#jnwX').forEach(x=>x.remove());return c})(npv(document.getElementById('jnw')))).slice(0,4000);   /* ★ physprev — .q · .pvfig 뗌 */
+     const q=$$$('#jnw .jnrow .q')[0];snap.jnq=q?[q.className.replace(/(^| )pv(?= |$)/,'').trim(),q.getAttribute('title')]:null;   /* ★ physprev — .q 의 pv 꼴 뗌 */
      const w=document.getElementById('jnw');if(w)w.remove()}}catch(e){snap.jnErr=String(e)}
-   {const it=$$$('#list .item')[0];snap.item=it?[it.className,Object.keys(it.dataset).join('+'),(it.querySelector('.prev')||{}).className||null]:null}
+   {const it=$$$('#list .item')[0];snap.item=it?[it.className,Object.keys(it.dataset).filter(k=>k!=='pv').join('+'),String((it.querySelector('.prev')||{}).className||'').replace(/(^| )pv(?= |$)/,'').trim()||null]:null}   /* ★ physprev — data-pv · .prev 의 pv 꼴 뗌 */
    N('X-11 스냅숏',{subj:SUBJ_ID,list:(snap.list||'').length,bkq:snap.bkq,names:snap.names});
    try{await __nativeFetch('/snap',{method:'POST',body:JSON.stringify(snap)})}catch(e){}
 """
@@ -4096,7 +4102,8 @@ def static_checks():
     _kv = lambda t: set(re.findall(r"put\('kv','([^']+)'", t))
     _sr = lambda t: set(re.findall(r"SYNC_REF\.([A-Za-z_$][\w$]*)", t))
     T2('Z-15 새 kv·새 SYNC 키가 없다',
-       _kv(s) == _kv(base) and _sr(s) == _sr(base),
+       # ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2-1 받은 미리보기 표의 기기 사본 kv 'pvjson'(SYNC 아님 · SYNC_REF 새 키 0 그대로)
+       (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= {'pvjson'})) and _sr(s) == _sr(base),
        [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))])
     T2('Z-17 아랫줄 감추기가 카드 층·물리로 갈렸다',
        'body[data-book] .vbot .tools>*{display:none!important}' in s

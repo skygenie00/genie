@@ -1139,6 +1139,12 @@ body[data-shell] #list .gh-empty{margin-left:20px}
 .jnrow .h{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .jnrow .h .sp{flex:1}
 .jnrow .q{margin-top:4px;font-size:12.5px;line-height:1.55;color:var(--ink);white-space:pre-wrap}
+/* ★ physprev(2026-10-01) — 물리 미리보기 = 발문 전부(줄 수 안 자름 · 글자 크기 = 지학 미리보기 13px) + 발문 그림(높이 40px 안 · 줄 폭 60% 까지) */
+body[data-layer="pdf"] .item .prev.pv{display:block;-webkit-line-clamp:unset;line-clamp:unset;overflow:visible;overflow-wrap:anywhere}
+body[data-layer="pdf"] .jnrow .q.pv{overflow-wrap:anywhere}
+.pvfig{display:flex;align-items:flex-start;gap:6px;max-width:60%;margin-top:3px;min-height:40px}
+.pvfig[data-pvd]{min-height:0}
+.pvfig img{display:block;max-height:40px;max-width:100%;width:auto;height:auto;min-width:0;flex:0 1 auto;border-radius:3px;background:#fff}
 .jnrow .ggmine{margin-top:4px;border-left:2px solid var(--subj);background:var(--subj-soft);
   padding:4px 8px;font-size:12px;color:#20456A;white-space:pre-wrap;border-radius:0 6px 6px 0}
 .jnrow .jnans{margin-top:5px;font-size:11px;font-weight:700;color:#4A3E7A;background:#F5F3FB;
@@ -5592,6 +5598,7 @@ function drawSpectrum(){
 }
 function row(r){
   const d=document.createElement('div');d.className='item'+(isC(r)?' ec':' eg');if(HASBOOK)d.dataset.uid=r[F.CODE];   /* ★ bookwin §J · add1 생물도 */
+  if(!HASBOOK)d.dataset.pv=GGU(r);   /* ★ physprev — 미리보기 표를 늦게 받으면 이 줄을 제자리에서 갈아 끼운다(pvPatch) */
   const no=r[F.NO],rep=reps(no),u=unitOf(no);
   /* ★ add11 — 물리 목록 줄에서 사라진 표시를 **옛 `row`(2082)의 조각 그대로** 되살린다.
      ⚠ 「YYYY 변리사」 연도 칩은 안 되살린다(사용자 9/21 — 코드 앞 두 자리가 연도다 · §A-0).
@@ -5617,7 +5624,7 @@ function row(r){
      ${SHELL?'':(c=>c?`<span class="cmt" data-cmt="${no}">${esc(c)}</span>`:`<span class="cmt empty" data-cmt="${no}">＋한줄</span>`)(noteOf(no))}
      ${SHELL&&mcCountOf(no)?`<span class="tag" style="cursor:default">🃏 ${mcCountOf(no)}</span>`:''}
      ${SHELL?`<span class="tag gg${ggBangAny(GGU(r))?' bang':''}${ggOf(GGU(r)).length?'':' hide'}" data-ggcnt="${esc(GGU(r))}">근거 ${ggOf(GGU(r)).length}${ggBangAny(GGU(r))?' !':''}</span>`:''}
-   </div><div class="prev${(HASBOOK&&tfixOn(r[F.CODE],'q'))?' fx':''}"${HASBOOK?' title="길게 눌러 글자 고치기"':''}>${esc(txtOf(r[F.CODE],'q'))}</div></div>${markBadge(no)}`;   /* add3 §3 ⓐ — 본문을 읽는 유일한 길 txtOf 를 지난다(고친 글자가 목록에도 보인다) */
+   </div><div class="prev${(HASBOOK&&tfixOn(r[F.CODE],'q'))?' fx':''}${(PH&&typeof pvOn==='function'&&pvOn(r))?' pv':''}"${HASBOOK?' title="길게 눌러 글자 고치기"':''}>${esc((PH&&typeof pvText==='function')?pvText(r):txtOf(r[F.CODE],'q'))}</div>${(PH&&typeof pvFigHTML==='function')?pvFigHTML(r):''}</div>${markBadge(no)}`;   /* add3 §3 ⓐ — 본문을 읽는 유일한 길 txtOf 를 지난다(고친 글자가 목록에도 보인다) · ★ physprev — 물리 = 미리보기 t 전부 + 발문 그림 칸(표가 없으면 txtOf 그대로) */
   d.onclick=e=>{const c=e.target.closest('.cmt'),p=e.target.closest('[data-page]'),un=e.target.closest('[data-unit]');
     {const tw=e.target.closest('[data-tw]');   /* add4 §5 — 옛 목록과 같은 시트 */
      if(tw){if(typeof twinSheet==='function')twinSheet(+tw.dataset.tw);return}}
@@ -5629,6 +5636,7 @@ function row(r){
     else if(p){ if(HASBOOK){bplOpen(no);return}                      /* §F 지학 목록 칩 = **목록 창만** — 문항을 열지 않는다 */
                 openView(no).then(()=>bookOpen(+p.dataset.page,true))}
     else openView(no,(SHELL&&LISTNOS.length)?LISTNOS.slice():undefined)};   /* §B ◀▶ 는 화면 목록 차례를 받는다 */
+  if(PH&&typeof pvWatch==='function')pvWatch(d);   /* ★ physprev — 그림 칸은 화면에 들 때 그린다 */
   return d;
 }
 
@@ -8844,6 +8852,7 @@ function jnOpen(sec){
        +((typeof FL!=='undefined'&&FL.past)?'이 분류에 든 문항이 없다':'이 절에 든 문항이 없다')
        +'</div>');
   makeFloat(b,b.querySelector('.bplh'),'jn','jagwa.win.jn');pwTop(b);   /* ★ revfix0928 A-3 — 창 띠(나중 연 창이 위 · 물리는 누르면 앞도) */
+  if(!HASBOOK&&typeof pvWatch==='function')pvWatch(b);   /* ★ physprev — 그림 칸은 화면에 들 때 그린다 */
 }
 function jnRowHTML(r){
   /* ★ add10 §A-2 — 근거 열쇠는 **`GGU(r)`** 다(물리 = `P009` · 카드 층 = `F.CODE`).
@@ -8859,7 +8868,8 @@ function jnRowHTML(r){
     +'<span class="ggrc">'+ggRefChipsHTML(gu,'jn-')+'</span>'
     /* ★ add10 §A-4 — 마크는 첫 화면 줄과 **같은 묶음**(`markBadge`) */
     +'<span class="sp"></span>'+(hist(no).length?markBadge(no):'<span class="mk">·</span>')+'</div>'
-    +'<div class="q'+((HASBOOK&&tfixOn(uid,'q'))?' fx':'')+'"'+(HASBOOK?' title="길게 눌러 글자 고치기"':'')+'>'+esc(txtOf(uid,'q'))+'</div>'
+    +'<div class="q'+((HASBOOK&&tfixOn(uid,'q'))?' fx':'')+((!HASBOOK&&typeof pvOn==='function'&&pvOn(r))?' pv':'')+'"'+(HASBOOK?' title="길게 눌러 글자 고치기"':'')+'>'+esc((!HASBOOK&&typeof pvText==='function')?pvText(r):txtOf(uid,'q'))+'</div>'
+    +((!HASBOOK&&typeof pvFigHTML==='function')?pvFigHTML(r):'')   /* ★ physprev — 물리 = 미리보기 t 전부 + 발문 그림 칸 */
     +(ggOf(gu).length?'<div class="ggmine">'+ggOf(gu).map(g=>'<div>'+esc(ggFlat(g))+'</div>').join('')+'</div>':'')
     +'<div class="ggrb" data-ggrb="'+ea(gu)+'|jn-">'+ggRefBoxHTML(gu,'jn-')+'</div>'
     +'<button class="jnans" data-jnans="'+no+'">정답·해설 ▸</button>'
@@ -9237,7 +9247,7 @@ function esRowCmp(r){let c=ES_RC.get(r);
   return c}
 /* 한 행이 걸렸나 → null | {k:'body'|'id'|'src'|칸 이름, t:그 칸 글} */
 function esHit(r,q){
-  if(!HASBOOK)return esPhysHit(r,q)?{k:String(r[F.BODY]).includes(q)?'body':'etc'}:null;
+  if(!HASBOOK)return esPhysHit(r,q)?{k:String(r[F.BODY]).includes(q)?'body':((typeof pvHit==='function'&&pvHit(r,q))?'prev':'etc')}:null;   /* ★ physprev — t 에서만 걸림 = 'prev' */
   const low=esCmp(q),uid=r[F.CODE],c=esRowCmp(r),th=tfixHay(uid);   /* ★ revfix0929 A-3-3 — 「⏎」 = 빈칸 · 빈칸 덩이 하나(「자료해석 2탄」 = 「자료해석⏎2탄」) · ID·출처(아래)는 그대로 */
   if(c.b.includes(low)||(th&&esCmp(String(r[F.BODY]||'')+' '+th).includes(low)))return {k:'body'};
   for(const f of c.f)if(f[1]&&f[2].includes(low))return {k:f[0],t:f[1]};
@@ -9250,7 +9260,9 @@ function esRowHTML(r,q,h){
   const no=r[F.NO],src=esSrc(r);
   let l2;
   if(!HASBOOK){const body=String(r[F.BODY]||'').replace(/\s+/g,' ').trim();   /* 물리 = 종전 그대로(h.t 없음) */
-    l2=h.k==='body'?'<div class="qq">'+esMark(body.slice(0,140),q)+(body.length>140?'…':'')+'</div>':'<div class="qq">'+esc(body.slice(0,70))+'…</div>'}
+    l2=h.k==='body'?'<div class="qq">'+esMark(body.slice(0,140),q)+(body.length>140?'…':'')+'</div>'
+      :h.k==='prev'?'<div class="qq">'+pvSnip(r,q)+'</div>'   /* ★ physprev — t 에서만 걸린 줄 = t 조각(앞 30 자 · 140 자 · <mark>) */
+      :'<div class="qq">'+esc(body.slice(0,70))+'…</div>'}
   else{
     /* ★ revfix0929 A-3-1·2 — 첫 문장(stem) 보이는 140 자 안에 그 말이 있으면 거기에 <mark> · 없으면(〈보기〉·가나다 줄 등 본문 뒤쪽) 💬 「본문」 조각 */
     const uid=r[F.CODE],s1=esT1(txtOf(uid,'q')),si=esAt(s1,q),hd=n=>'<div class="qq">'+esOut(s1.slice(0,n))+'…</div>';
@@ -9315,7 +9327,8 @@ function esDistList(i){
 function esPhysHit(r,q){const s=q.toLowerCase(),no=r[F.NO];
   return !!(String(r[F.CODE]).toLowerCase().includes(s)||String(r[F.SUB]).includes(q)||String(r[F.BODY]).includes(q)
           ||String(noteOf(no)).includes(q)||typeOf(no).some(t=>t===q)||String(gptOf(no)).includes(q)
-          ||String(no)===q||String(r[F.VLT])===q)}
+          ||String(no)===q||String(r[F.VLT])===q
+          ||(typeof pvHit==='function'&&pvHit(r,q)))}   /* ★ physprev — 미리보기 t(그림 문제 속 발문 말)도 본다 */
 /* §D-7 위 검색 줄 「🔗 근거」 모드 */
 function ggResBox(q){
   const box=document.getElementById('esres');if(!box)return;
@@ -10197,6 +10210,101 @@ function thTxt(x){let s=String(x==null?'':x),pre='';
   /* A-6 형광 · 글머리 점 */
   '.thl mark.thmk{color:inherit;padding:0 1px;border-radius:2px}','.thl .thdot{color:var(--muted);font-weight:700}'
 ].join('\n');document.head.appendChild(s)}catch(e){}})();
+/* ══════ ★ 2026-10-01 (_task_jagwa_physprev) — 물리 미리보기 = 발문 앞 글자(ABBYY) + 작은 그림 ══════
+   재료 = studyplandata phys/미리보기.json(비공개 · ⚙ N:\개인\claude\jagwa\moolri\_phys_prev_build.py)
+     {"P###": {c: F.CODE, t: 발문 전부(〈보기〉·선택지 앞까지), fig: [[x0,y0,x1,y1],…](쪽 크기로 나눈 값) | [] | "img", src: "abbyy|orig|none"}}
+     열쇠 = 물리 GGU(r) = 'P'+번호 세 자리 — F.CODE 는 겹친다(PEM0102 = 2번 · 14번 두 행)
+   PV = 받은 표 · 못 받거나 없으면 null → 지금처럼 BODY(txtOf) · 기기 kv 'pvjson' 에 사본(밖에서 열 때 · 원격이 404 면 사본도 지움)
+   줄 = 첫 화면 .prev · 📋 정리 창 .q — 글 = t 전부(줄 수 안 자름 · .pv) · 그 아래 그림 칸 .pvfig — 그릴 수 있을 때만(fig 이 있고 그 시험지 PDF 가 기기에 있음 · "img" = 앱 img/q<코드>.jpg)
+     받기 전에 그려진 줄은 받은 뒤 제자리에서 갈아 끼운다(목록을 다시 그리지 않음 · 굴린 자리 무변)
+   그림 = 기기 시험지 PDF(IndexedDB · locate 와 같은 쪽)에서 fig 자리만 높이 40px(기기 배율 ≤ 2) · 화면에 들 때만(IntersectionObserver · 여백 0)
+     한 번 그린 것은 PVIMG(메모리) · 그리기는 하나씩 차례로 · PDF 문서는 둘까지만 쥔다(먼저 연 것부터 놓음 · 뷰어 VDOC 는 같이 쓰고 안 놓음)
+   검색 = esPhysHit 가 t 도 본다(글 그대로 · 또는 빈칸을 다 뺀 꼴끼리) · 결과 줄 조각 = BODY 에서 걸리면 BODY(옛 그대로) · t 에서만 걸리면 t
+   문항 창·카드 본문·필기·가리개 무변(앱 시험지 111~666 그대로 · ABBYY PDF 는 앱에 안 넣는다) · 지학·생물(HASBOOK) 무변 = 함수마다 !HASBOOK 가드 */
+var PV=null,PVIMG=new Map(),PVDOCS=new Map(),PVQ=[],PVRUN=false,PVIO=null;
+var pvOf=r=>(PV&&r&&!HASBOOK)?(PV[GGU(r)]||null):null;
+var pvOn=r=>{const e=pvOf(r);return !!(e&&e.t)};
+var pvText=r=>{const e=pvOf(r);return (e&&e.t)?String(e.t):txtOf(r[F.CODE],'q')};
+function pvCanFig(r){const e=pvOf(r);if(!e||!e.fig)return false;
+  if(e.fig==='img')return r[F.FILE]==='IMG';
+  if(!Array.isArray(e.fig)||!e.fig.length)return false;
+  try{const lc=locate(r);return lc.id!=='IMG'&&!!HAVE[lc.id]}catch(_){return false}}
+var pvFigHTML=r=>pvCanFig(r)?'<div class="pvfig" data-pvf="'+GGU(r)+'"></div>':'';
+var pvNS=s=>String(s==null?'':s).replace(/\s+/g,'').toLowerCase();
+function pvHit(r,q){const e=pvOf(r);if(!e||!e.t||!q)return false;const t=String(e.t);
+  if(t.includes(q))return true;const nq=pvNS(q);return nq.length>=2&&pvNS(t).includes(nq)}
+function pvSnip(r,q){const t=String((pvOf(r)||{}).t||'').replace(/\s+/g,' ').trim();
+  let i=t.indexOf(q),L=String(q).length;
+  if(i<0){const nq=pvNS(q),idx=[];let ns='';for(let j=0;j<t.length;j++){if(!/\s/.test(t[j])){ns+=t[j].toLowerCase();idx.push(j)}}
+    const k=ns.indexOf(nq);if(k>=0){i=idx[k];L=idx[k+nq.length-1]-i+1}}
+  if(i<0)return esc(t.slice(0,140))+(t.length>140?'…':'');
+  const st=Math.max(0,i-30);
+  return (st?'…':'')+esc(t.slice(st,i))+'<mark>'+esc(t.slice(i,i+L))+'</mark>'+esc(t.slice(i+L,st+140))+(t.length>st+140?'…':'')}
+async function pvDoc(id){
+  if(typeof VDOC!=='undefined'&&VDOC&&VDOCID===id)return VDOC;
+  let p=PVDOCS.get(id);if(p){PVDOCS.delete(id);PVDOCS.set(id,p);return p}
+  p=(async()=>{const buf=await get('pdf',id);if(!buf)return null;return await pdfjsLib.getDocument({data:buf.slice(0)}).promise})();
+  PVDOCS.set(id,p);
+  while(PVDOCS.size>2){const k0=PVDOCS.keys().next().value,p0=PVDOCS.get(k0);PVDOCS.delete(k0);
+    Promise.resolve(p0).then(d=>{try{if(d&&d!==VDOC)d.destroy()}catch(_){}}).catch(()=>{})}
+  return p}
+function pvPut(el,urls){el.dataset.pvd='1';el.innerHTML=(urls||[]).map(u=>'<img alt="" draggable="false" src="'+ea(u)+'">').join('')}
+async function pvPaint(el){
+  const k=el.dataset.pvf,r=rec(+String(k).slice(1)),e=PV&&PV[k];
+  if(!e||!r){pvPut(el,[]);return}
+  if(PVIMG.has(k)){pvPut(el,PVIMG.get(k));return}
+  const urls=[];
+  if(e.fig==='img')urls.push('img/q'+r[F.CODE]+'.jpg');
+  else{const lc=locate(r);if(lc.id==='IMG'||!HAVE[lc.id]){pvPut(el,[]);return}
+    const doc=await pvDoc(lc.id);if(!doc){pvPut(el,[]);return}
+    const pg=await doc.getPage(Math.min(lc.page,doc.numPages)),v1=pg.getViewport({scale:1});
+    const dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+    for(const f of e.fig){if(!Array.isArray(f)||f.length<4)continue;
+      const x0=f[0]*v1.width,y0=f[1]*v1.height,w=(f[2]-f[0])*v1.width,h=(f[3]-f[1])*v1.height;if(w<2||h<2)continue;
+      const s=40*dpr/h,cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(w*s));cv.height=Math.max(1,Math.round(h*s));
+      const ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
+      await pg.render({canvasContext:ctx,viewport:pg.getViewport({scale:s}),transform:[1,0,0,1,-x0*s,-y0*s]}).promise;
+      urls.push(cv.toDataURL('image/png'))}}
+  PVIMG.set(k,urls);pvPut(el,urls)}
+async function pvRun(){if(PVRUN)return;PVRUN=true;
+  try{while(PVQ.length){const el=PVQ.shift();if(!el||!el.isConnected||el.dataset.pvd)continue;
+    try{await pvPaint(el)}catch(err){console.warn('물리 미리보기 그림',err);try{pvPut(el,[])}catch(_){}}}}
+  finally{PVRUN=false}}
+function pvWatch(root){
+  if(!PV||HASBOOK||!root||!root.querySelectorAll)return;
+  if(!PVIO&&typeof IntersectionObserver==='function')
+    PVIO=new IntersectionObserver(es=>{es.forEach(x=>{if(x.isIntersecting){PVIO.unobserve(x.target);PVQ.push(x.target)}});pvRun()},{rootMargin:'0px'});
+  root.querySelectorAll('.pvfig[data-pvf]:not([data-pvd])').forEach(el=>{
+    if(PVIMG.has(el.dataset.pvf)){pvPut(el,PVIMG.get(el.dataset.pvf));return}
+    if(PVIO)PVIO.observe(el);else{PVQ.push(el);pvRun()}})}
+/* 받기 전에 그려진 줄(첫 화면 목록 · 열린 📋 창)을 제자리에서 갈아 끼운다 */
+function pvPatch(){
+  if(HASBOOK)return;
+  const fix=(box,el,r)=>{if(!el)return;el.textContent=pvText(r);el.classList.toggle('pv',pvOn(r));
+    const old=box.querySelector('.pvfig'),want=pvCanFig(r);
+    if(old&&(!want||old.dataset.pvf!==GGU(r)))old.remove();
+    if(want&&!box.querySelector('.pvfig'))el.insertAdjacentHTML('afterend',pvFigHTML(r))};
+  document.querySelectorAll('#list .item[data-pv]').forEach(it=>{const r=rec(+String(it.dataset.pv).slice(1));if(r)fix(it,it.querySelector('.prev'),r)});
+  document.querySelectorAll('#jnw .jnrow[data-no]').forEach(jr=>{const r=rec(+jr.dataset.no);if(r)fix(jr,jr.querySelector('.q'),r)});
+  pvWatch(document)}
+async function pvLoad(){
+  if(!SHELL||HASBOOK)return;
+  try{const c=await get('kv','pvjson');if(c&&typeof c==='object'&&!PV){PV=c;pvPatch()}}catch(e){}
+  if(typeof recToken!=='function'||!recToken())return;
+  let t;try{t=await ghRaw('phys/미리보기.json')}catch(e){console.warn('물리 미리보기 받기',e);return}
+  if(t===null){if(PV){PV=null;pvPatch()}try{await del('kv','pvjson')}catch(_){}return}   /* 원격에 없음 = 지금처럼 BODY */
+  let o;try{o=JSON.parse(t)}catch(e){console.warn('물리 미리보기 읽기',e);return}
+  if(!o||typeof o!=='object'||Array.isArray(o))return;
+  PV=o;PVIMG.clear();try{await put('kv','pvjson',o)}catch(_){}
+  pvPatch()}
+if(SHELL&&!HASBOOK){
+  /* 받기(kv 사본 · 원격)는 첫 화면을 그린 **뒤에** 시작한다 — 첫 그리기는 바탕과 같은 일만 한다(긴 글 · 그림 칸은 pvPatch 가 제자리에서 갈아 끼움)
+     첫 draw 가 안 오면(빈 목록 등) 8초 뒤에라도 받는다 */
+  let pvGo=false;
+  const pvStart=()=>{if(pvGo)return;pvGo=true;
+    setTimeout(async()=>{for(let i=0;i<600&&!db;i++){await new Promise(r=>setTimeout(r,20))}try{await pvLoad()}catch(e){console.warn('물리 미리보기',e)}},0)};
+  {const _dPV=draw;draw=function(){const ret=_dPV.apply(this,arguments);try{if(PV)pvWatch(document.getElementById('list'))}catch(e){}pvStart();return ret}}
+  setTimeout(pvStart,8000)}
 </script>
 <script>
 /* ===== 학습로그 요약 (2026-08-11 추가) =====================================

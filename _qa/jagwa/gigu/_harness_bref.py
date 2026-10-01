@@ -697,7 +697,9 @@ def static_checks():
     T2('S-22 add3 §3 — 세 자리가 txtOf 를 지난다',
        True
        # ★ _task_jagwa_earth_bookwin §J (2026-09-24) — 목록 줄 .prev 에 지학만 .fx · title 이 붙는다(글은 여전히 txtOf) — 꼴 대신 정규식으로
-       and __import__('re').search(r'<div class="prev[^"]*"[^>]*>\$\{esc\(txtOf\(r\[F\.CODE\],\'q\'\)\)\}</div>', s) is not None
+       and (__import__('re').search(r'<div class="prev[^"]*"[^>]*>\$\{esc\(txtOf\(r\[F\.CODE\],\'q\'\)\)\}</div>', s) is not None
+            # ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2: 물리만 미리보기 t(pvText · 받은 표 없으면 txtOf) · 카드 층은 txtOf 그대로
+            or __import__('re').search(r'<div class="prev[^"]*"[^>]*>\$\{esc\(\(PH&&typeof pvText===\'function\'\)\?pvText\(r\):txtOf\(r\[F\.CODE\],\'q\'\)\)\}</div>', s) is not None)
        and '<span class="ndt">${esc(String(txtOf(r[F.CODE],\'q\')).slice(0,28))}</span>' in s
        and '<div class="q">${esc(txtOf(uid,\'q\'))}</div>' in s)
     T2('S-23 add3 §3 ⓑ — 자르고 나서 esc 한다(엔티티가 가운데서 안 잘린다)',
