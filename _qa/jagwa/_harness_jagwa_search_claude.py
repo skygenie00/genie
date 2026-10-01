@@ -11,6 +11,8 @@ r"""_task_jagwa_search_claude §B 관문 — 자과 근거 검색에 Claude 풀�
   PUT 은 앱 fetch 를 가로채 몸통만 모은다(밖으로 안 나감 · 기록 쓰기 0) · 기기 하나 = 문맥 하나(_harness_jagwa_uid 의 Srv · __J)
   관문마다 NEW 는 PASS · BASE 는 FAIL(헛잣대 열) — 바탕도 참이어야 하는 칸(무변 칸)은 「바탕 = 기준」
   --vendor = cdnjs.cloudflare.com/ajax/libs/… 사본 폴더(줄 때만 · cdnjs 가 막힌 곳)
+  fix1(_task_jagwa_search_claude_fix1) = B-8 · B-9 — ID 로 찾으면 근거 줄 그대로(맨 바탕 cedc251 과 맞댐) · 풀이 본문 말은 e9de3b8 그대로(--base e9de3b8 로 헛잣대)
+    기대 「Claude」 딱지·조각 = 풀이 md 에서 첫 줄 제 ID 머리를 뗀 글에 그 말이 있을 때(앱과 따로 파이썬으로 셈)
   ⚠ 자과앱 픽셀 게이트 없음(CLAUDE.md) — DOM 글자 · 자리 · 개수 · 실제 마우스·손가락 누름
 """
 import io, json, os, re, sys, time, copy, collections
@@ -472,6 +474,73 @@ GATES = [
 ]
 
 
+# ══════════ fix1 — ID 검색 · 본문 말 ══════════
+IDQ = ['G09-46-10', 'G0946 10', 'G03-40-05']                 # B-8 지학 근거 모드 — 문항 ID(하이픈·띄어쓰기 없이도)
+BODYQ = {'earth': ['심발 = 섭입만', 'G01-38-04'],            # B-9 풀이 본문 말(149 본문이 G01-38-04 를 인용)
+         'phys': ['가로는 고집', '합성 암기팁 둘째 줄']}      # 물리 72 본문 · 97(합성) 본문
+VIS = {'earth': {84: 'G03-40-05', 149: 'G09-46-10'}, 'phys': {72: 'PA2502'}}   # 풀이 첫 줄 머리 = 「<보이는 ID> · <해> 변리사 … · 정답 …」(착수 때 잼)
+
+
+def gp_body_plain(md, vis):
+    """앱 gpPlain(fix1)과 따로 지은 같은 규칙 — 글 있는 첫 줄이 제 ID 로 시작하면 떼고 · ** · # · 글머리 · --- · | 를 뺀 평문"""
+    L = str(md or '').replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    i = next((j for j, x in enumerate(L) if x.strip()), -1)
+    ns = lambda v: re.sub(r'[\s\-]+', '', str(v)).lower()
+    if i >= 0 and vis and ns(re.sub(r'^[#*\s]+', '', L[i])).startswith(ns(vis)):
+        L = L[i + 1:]
+    t = '\n'.join(L).replace('**', '')
+    t = re.sub(r'^#+\s*', '', t, flags=re.M); t = re.sub(r'^\s*-\s+', '', t, flags=re.M)
+    t = re.sub(r'-{3,}', ' ', t).replace('|', ' ')
+    return re.sub(r'\s+', ' ', t).strip()
+
+
+def search_rows(br, eng, app, subj, queries):
+    """근거 모드 검색 결과 줄(문항 · 딱지 · 근거 줄 수 · Claude 조각) · 그 줄 근거·댓글 글(딱지 기대 셈에 씀)"""
+    if subj == 'earth':
+        dv, gp = earth_dev(br, eng, app)
+    else:
+        rec, gp = rec_of(subj); dv = Dev(br, eng); dv.load(app, subj, rec)
+    try:
+        dv.ev("()=>__C9.gmode()"); dv.pg.wait_for_timeout(300)
+        out, hay = {}, {}
+        for q in queries:
+            typeq(dv, q)
+            out[q] = [{k: r[k] for k in ('no', 'cd', 'tags', 'gl', 'glc')} for r in dv.ev("()=>__C9.rows()")]
+            for r in out[q]:
+                if r['no'] not in hay:
+                    hay[r['no']] = dv.ev("n=>__C9.rowHay(n)", r['no'])
+        return out, gp, hay, dv.errs[:2]
+    finally:
+        dv.close()
+
+
+def b8_check(RA, RC, gp, hay):
+    """RA(새 판 · 바탕) 를 cedc251(RC) 와 맞댐 — cedc251 줄마다 근거 줄 수 같음 · 딱지 = 본문 걸림이면 「Claude」 하나 · 아니면 없음 · 조각 = 본문 걸림일 때만 · 더 걸린 줄 = 본문 걸림뿐"""
+    bad = []
+    for q in IDQ:
+        a = {r['no']: r for r in RA.get(q, [])}; c = {r['no']: r for r in RC.get(q, [])}
+        if not c:
+            bad.append([q, 'cedc251 결과 0']); continue
+        body = lambda no: gp_body_plain(gp.get(str(no), ''), VIS['earth'].get(no)) if str(no) in gp else ''
+        for no, rc in c.items():
+            ra = a.get(no)
+            if not ra:
+                bad.append([q, no, '줄 없음']); continue
+            hitb = q.lower() in body(no).lower()
+            if q.lower() in (hay.get(no) or ''):   # 근거·댓글에도 그 말 — 이 칸 잣대 밖(ID 검색에선 없음)
+                bad.append([q, no, '근거·댓글에도 걸림(잣대 밖)']); continue
+            if ra['gl'] != rc['gl']:
+                bad.append([q, no, '근거 줄', ra['gl'], rc['gl']])
+            if ra['tags'] != (['Claude'] if hitb else []):
+                bad.append([q, no, '딱지', ra['tags'], ['Claude'] if hitb else []])
+            if bool(ra['glc']) != hitb:
+                bad.append([q, no, '조각', bool(ra['glc']), hitb])
+        extra = [no for no in a if no not in c and not (q.lower() in body(no).lower())]
+        if extra:
+            bad.append([q, '본문 걸림 아닌데 더 걸린 줄', extra])
+    return bad
+
+
 def main():
     APPS['NEW'] = app_src(NEWF); APPS['BASE'] = app_src(BASEF)
     base_rev = BASEF
@@ -497,7 +566,7 @@ def main():
                             res[who] = (False, 'ERR ' + repr(e)[:400])
                     if g == 'b1' and isinstance(res['NEW'][1], dict) and isinstance(res['BASE'][1], dict):
                         hn = [re.sub(r'<span class="clsrc[^"]*">[^<]*</span>', '', h) for h in res['NEW'][1].get('근거에만', {}).get('html', [])]
-                        hb = res['BASE'][1].get('근거에만', {}).get('html', [])
+                        hb = [re.sub(r'<span class="clsrc[^"]*">[^<]*</span>', '', h) for h in res['BASE'][1].get('근거에만', {}).get('html', [])]   # fix1 — 바탕이 e9de3b8(딱지 있음)이어도 같은 잣대
                         same = hn == hb and len(hb) > 0
                         res['NEW'] = (res['NEW'][0] and same, dict(res['NEW'][1], **{'근거에만 DOM = 바탕 + 딱지': same}))
                         for v in (res['NEW'][1], res['BASE'][1]):
@@ -521,6 +590,32 @@ def main():
                     R('b6', eng, 'B-6 화면 훑기 — 근거 결과·분포·분포 C·목록 C × PC 1440 · 폰 390 · iPad 820 — 새로 생긴 넘침·잘림·덮임 0 · 「!」·「C」 터치 누름 높이 ≥ 36',
                       not newonly and not errs and hok, None, {'새로 생긴 것': newonly, '뜻한 바뀜': acc, '누름': hits, '오류': errs, '표': rows})
                     TIMES.append(('b6', round(time.time() - ts)))
+                if want('b8'):   # fix1 B-8 — ID 검색 = cedc251(근거 줄 · 딱지 · 조각) · 본문 걸림만 「Claude」
+                    ts = time.time()
+                    C0 = app_src('cedc251')
+                    rn, gpn, hn, en = search_rows(br, eng, APPS['NEW'], 'earth', IDQ)
+                    rb, _, hb, eb = search_rows(br, eng, APPS['BASE'], 'earth', IDQ)
+                    rc, _, hc, ec = search_rows(br, eng, C0, 'earth', IDQ)
+                    badn, badb = b8_check(rn, rc, gpn, {**hc, **hn}), b8_check(rb, rc, gpn, {**hc, **hb})
+                    R('b8', eng, 'B-8 지학 근거 모드 「G09-46-10」·「G0946 10」·「G03-40-05」 → 결과 줄·근거 줄·딱지 = cedc251(근거 줄 1 · 본문에 없으면 딱지·조각 0)',
+                      not badn and not en, not badb, {'틀린 것(새)': badn, '틀린 것(바탕)': badb, '새': rn, '바탕': rb, 'cedc251': rc,
+                                                   '본문 걸림(머리 뗀 풀이 글)': {q: [no for no in VIS['earth'] if q.lower() in gp_body_plain(gpn.get(str(no), ''), VIS['earth'][no]).lower()] for q in IDQ},
+                                                   '머리 줄': {no: str(gpn.get(str(no), '')).split('\n')[0][:60] for no in VIS['earth']}})
+                    TIMES.append(('b8', round(time.time() - ts)))
+                if want('b9'):   # fix1 B-9 — 풀이 본문 말 = e9de3b8 그대로(지학 · 물리 72 · 97)
+                    ts = time.time()
+                    E9 = app_src('e9de3b8')
+                    out, ok9 = {}, True
+                    for subj in ('earth', 'phys'):
+                        rn, gpn, _, en = search_rows(br, eng, APPS['NEW'], subj, BODYQ[subj])
+                        re9, _, _, _ = search_rows(br, eng, E9, subj, BODYQ[subj])
+                        nm = lambda X: {q: sorted([r['no'], r['tags'], r['gl'], bool(r['glc'])] for r in X[q]) for q in X}
+                        hit = {q: [r for r in rn[q] if 'Claude' in r['tags'] and r['glc']] for q in rn}
+                        oks = nm(rn) == nm(re9) and all(hit[q] for q in rn) and not en
+                        out[subj] = {'새': rn, 'e9de3b8': re9, '같음': nm(rn) == nm(re9), '조각 글 같음': {q: [r['glc'] for r in rn[q]] == [r['glc'] for r in re9[q]] for q in rn}}
+                        ok9 = ok9 and oks
+                    R('b9', eng, 'B-9 풀이 본문 말(「심발 = 섭입만」 · 「G01-38-04」 · 물리 72 · 97 본문 말) → 결과 줄·딱지·근거 줄·조각 = e9de3b8  [바탕 = 기준]', ok9, None, out)
+                    TIMES.append(('b9', round(time.time() - ts)))
             finally:
                 br.close()
     npass = sum(1 for r in ROWS if r[3]); nfail = sum(1 for r in ROWS if not r[3])

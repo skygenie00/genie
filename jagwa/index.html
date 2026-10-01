@@ -9083,13 +9083,14 @@ function ggHits(q,cl){   /* ★ jagwa_search_claude — cl = 위 검색 줄('go'
   DATA.filter(r=>!isC(r)).forEach(r=>{const uid=GGU(r),L=ggOf(uid),no=r[F.NO],gp=!!cl&&!!gptOf(no);if(!L.length&&!gp)return;
     let src=null;
     if(low){const hay=L.map(g=>ggFlat(g)+' '+(g.cs||[]).map(c=>c.t).join(' ')).join(' ').toLowerCase(),hitG=!!L.length&&hay.includes(low);
+      const idHit=uid.toLowerCase().includes(low)||String(codeShow(r)).toLowerCase().includes(low)
+         ||!!(esNS(low)&&esNS(codeShow(r)).includes(esNS(low)));   /* ★ jagwa_search — ID 는 하이픈·띄어쓰기 무시(G953201 → G95-32-01) */
       if(cl){const has=v=>String(v||'').toLowerCase().includes(low);
-        src={gg:L.some(g=>g&&has(ggFlat(g))),cm:L.some(g=>g&&Array.isArray(g.cs)&&g.cs.some(c=>c&&has(c.t))),cl:gp&&gpHit(no,low)};
+        src={gg:L.some(g=>g&&has(ggFlat(g))),cm:L.some(g=>g&&Array.isArray(g.cs)&&g.cs.some(c=>c&&has(c.t))),cl:gp&&gpHit(no,low),id:idHit};   /* ★ jagwa_search_claude_fix1 — id = ID 로 걸림(딱지 없음 · 근거 줄 그대로) */
         if(hitG&&!src.gg&&!src.cm)src.gg=true}   /* 항목 경계를 건너 걸린 말 = 근거 */
-      if(!hitG&&!(src&&src.cl)&&!uid.toLowerCase().includes(low)&&!String(codeShow(r)).toLowerCase().includes(low)
-         &&!(esNS(low)&&esNS(codeShow(r)).includes(esNS(low))))return}   /* ★ jagwa_search — ID 는 하이픈·띄어쓰기 무시(G953201 → G95-32-01) */
+      if(!hitG&&!(src&&src.cl)&&!idHit)return}
     const h={uid:uid,no:no,line:L.length?ggPickLine(uid,low):'',bang:ggBangAny(uid),own:ggOwners(uid).length};
-    if(cl)h.src=src||{gg:false,cm:false,cl:false};
+    if(cl)h.src=src||{gg:false,cm:false,cl:false,id:false};
     out.push(h)});
   return out}
 /* add3 ③ — 카드 안 찾기와 위 검색 줄이 **같은 세 줄 꼴**을 쓴다(민법 3443~3467).
@@ -9116,7 +9117,7 @@ function ggResRowHTML(h,q,mode,me,sc){
     +'<div class="qq">'+esc(String(txtOf(h.uid,'q')).slice(0,70))+'…</div>'
     /* ★ jagwa_search_claude — Claude 에서만 걸린 문항(또는 근거 없는 문항)은 근거 줄 대신 Claude 조각(민법 clSnip · <mark>) · 둘 다 걸리면 둘 다(민법 꼴)
        h.nogl = 근거 줄 안 그림 · h.box = 아래 붙일 주황 상자(분포 목록 · A-3) */
-    +((h.nogl||(mode==='go'&&h.src&&(!h.line||(h.src.cl&&!h.src.gg&&!h.src.cm))))?'':'<div class="gl">'+mark(line)+'</div>')
+    +((h.nogl||(mode==='go'&&h.src&&(!h.line||(h.src.cl&&!h.src.gg&&!h.src.cm&&!h.src.id))))?'':'<div class="gl">'+mark(line)+'</div>')   /* ★ jagwa_search_claude_fix1 — ID 로 걸린 줄은 근거 줄 그대로 */
     +((mode==='go'&&h.src&&gptOf(h.no)&&(h.src.cl||!h.line))?'<div class="glc">'+mark(gpSnip(h.no,String(q||'').toLowerCase().trim()))+'</div>':'')
     +(h.box||'')+'</div>'}
 function ggResLine(h,q){return ggResRowHTML(h,q,'go','','')}
@@ -9129,7 +9130,12 @@ var ES_NOS=[],ES_BANG=false,ES_CNT={t:'',link:false},ES_DK=[];
    ES_CL = 분포 「C」 켬(모듈 변수뿐 · 저장 안 함 · 민법 GG_CL_ONLY) — ES_BANG 을 푸는 자리에서 같이 푼다 · 「!」 와 배타
    gpPlain = ** · # · 글머리 「- 」 · 표 기호(| · ---)를 뺀 평문(민법 clSnip 과 같은 식) · gpSnip = 걸린 자리 앞 30 · 90 자 */
 var ES_CL=false;
-var gpPlain=no=>String(gptOf(no)||'').replace(/\*\*/g,'').replace(/^#+\s*/gm,'').replace(/^\s*-\s+/gm,'').replace(/-{3,}/g,' ').replace(/\|/g,' ').replace(/\s+/g,' ').trim();
+/* ★ jagwa_search_claude_fix1 — 맞댐·조각 글 = 풀이 md 에서 첫 줄(글 있는 첫 줄)이 제 ID 머리(「<보이는 ID> · <해> 변리사 … · 정답 …」 — 물리 72 · 지학 84 · 149 에서 잰 꼴)면 뗀 글
+   제 ID = codeShow · GGU(하이픈·띄어쓰기 무시) · 머리가 아니면 글 그대로 · 풀이 글·저장 꼴 무변 */
+var gpBodyMd=no=>{const md=String(gptOf(no)||''),L=md.replace(/\r\n?/g,'\n').split('\n'),i=L.findIndex(x=>x.trim());if(i<0)return md;
+  const r=rec(no),ids=r?[codeShow(r),GGU(r)].map(esNS).filter(Boolean):[],h=esNS(L[i].replace(/^[#*\s]+/,''));
+  return ids.some(x=>h.indexOf(x)===0)?L.slice(i+1).join('\n'):md};
+var gpPlain=no=>String(gpBodyMd(no)).replace(/\*\*/g,'').replace(/^#+\s*/gm,'').replace(/^\s*-\s+/gm,'').replace(/-{3,}/g,' ').replace(/\|/g,' ').replace(/\s+/g,' ').trim();
 var gpHit=(no,low)=>!!low&&!!gptOf(no)&&gpPlain(no).toLowerCase().includes(low);
 var gpSnip=(no,low)=>{const t=gpPlain(no),i=low?t.toLowerCase().indexOf(low):-1,st=Math.max(0,i-30);return (st?'…':'')+t.slice(st,st+90)+(st+90<t.length?'…':'')};
 /* A-3 암기 절 — 절 머리(GP_SEC 판정 · gpRender 와 같음) 머리 글에 「암기」가 든 첫 절의 몸(다음 절 머리 전까지) · ** 풀기 · 줄바꿈·글머리 「- 」 그대로
