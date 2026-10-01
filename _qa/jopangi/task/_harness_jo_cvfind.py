@@ -341,6 +341,8 @@ def scen_desk(br, src, tag, G):
             p.ev("l=>__HC.boot('jo',l)", law)
             p.ev("async()=>{await __HC.mokOpen();return await __HC.listPainted(30000)}")
             h = p.ev("()=>__HC.listHtml()")
+            # ★ jo_mokchip(10/1) — 칩(span.ck)에 단 누름 꼴(data-k · role · tabindex · title 꼬리 「— 누르면 그 목록」)은 뜻한 차이라 빼고 맞댄다(규칙 57 · 그 잣대만 고침)
+            h = re.sub(r'(<span class="ck [^"]*")([^>]*)>', lambda m: m.group(1) + re.sub(r' (?:data-k|role|tabindex)="[^"]*"', '', m.group(2)).replace(' — 누르면 그 목록', '') + '>', h or '')
             out[law] = hashlib.md5((h or '').encode('utf-8')).hexdigest() + ':%d' % len(h or '')
         KEEP.setdefault('lawdom', {})[tag] = out
         N(g, 'A6 다른 법 목차노트 목록 DOM(md5:길이) — 바탕과 맞대기는 끝에', out)

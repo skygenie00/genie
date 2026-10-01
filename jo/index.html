@@ -214,6 +214,10 @@ sup.pitwho{font-size:8px;padding:0 3px;margin-left:1px;height:auto;vertical-alig
 .mklist .mkr .n{margin-left:auto;flex:none;display:flex;gap:3px;font-weight:400}
 .mklist .ck{font-size:10.5px;padding:0 6px;border-radius:8px;line-height:17px;white-space:nowrap}
 .mklist .ck-g{background:#e8f0fb;color:#2f5fb3} .mklist .ck-s{background:#efeae0;color:#6b5f45} .mklist .ck-gs{background:#f3e8fb;color:#7a3fb0} .mklist .ck-p{background:#f1f1ef;color:#77736b}
+/* ★ jo_mokchip A-1-5·6 — 칩 누름(꼴 무변 · 새 색 없음) · 터치 = 누름 둘레를 줄 안쪽 위아래 끝까지 · 가로는 이웃 칩과 틈 3 을 반씩 */
+.mklist .ck[role=button]{cursor:pointer;position:relative}
+.mklist .ck[role=button]:hover{filter:brightness(.95)}
+@media (pointer:coarse){.mklist .ck[role=button]::before{content:"";position:absolute;left:-1.5px;right:-1.5px;top:-6px;bottom:-5px}}
 /* ★ pop_moknote F — ✎ 블록번호 칩 · 막힘 까닭 줄 */
 .chip.eqlock{background:#f2f0ea;color:#6b675f;font-size:10.5px;padding:0 7px;margin:0;white-space:nowrap}
 .eqwhy{display:flex;gap:6px;align-items:center;flex-wrap:wrap;color:#b91c1c;font-size:11.5px;margin:3px 0 0} .eqwhy .tool{font-size:11px;padding:1px 8px}
@@ -7036,11 +7040,17 @@ function mokCmp(a, b){ const x = mokNum(a), y = mokNum(b);
   else if (x || y) return x ? -1 : 1;   /* 번호 없는 노트는 맨 아래 */
   return a < b ? -1 : a > b ? 1 : 0; }
 let MOKCITE = null;
-function mokCite(B){ if (MOKCITE && MOKCITE.B === B) return MOKCITE.m;
-  const m = {}; Object.keys(B || {}).forEach(k => { const i = k.indexOf('#^'); if (i < 0) return; const f = k.slice(0, i), v = B[k] || {};
-    const o = m[f] || (m[f] = { 기출: new Set(), 사례: new Set(), GS: new Set(), 판례: new Set() });
-    ['기출', '사례', 'GS', '판례'].forEach(c => (v[c] || []).forEach(x => o[c].add(x))); });
-  MOKCITE = { B: B, m: m }; return m; }
+/* ★ jo_mokchip A-1-2 — Set 에 넣는 차례 = 노트 줄(N[노트].행) 위에서 그 블록(^id)이 처음 나온 차례 · 줄에 없는 블록(열쇠만)은 그 뒤에 열쇠 차례
+   → 칩 수(.size)와 칩 목록 창 카드(차례대로 펼침)가 이 한 함수에서 나온다(세는 곳 하나 · 수는 옛 판과 같다) */
+function mokCite(B, N){ if (MOKCITE && MOKCITE.B === B && MOKCITE.N === N) return MOKCITE.m;
+  const m = {}, ids = {};
+  Object.keys(B || {}).forEach(k => { const i = k.indexOf('#^'); if (i < 0) return; const f = k.slice(0, i); (ids[f] || (ids[f] = [])).push(k.slice(i + 2)); });
+  Object.keys(ids).forEach(f => { const rows = ((N || {})[f] || {}).행 || [], at = {};
+    rows.forEach((r, j) => { if (r && r.id && at[r.id] == null) at[r.id] = j; });
+    const o = m[f] = { 기출: new Set(), 사례: new Set(), GS: new Set(), 판례: new Set() };
+    ids[f].map((id, j) => [id, at[id] != null ? at[id] : rows.length + j]).sort((a, b) => a[1] - b[1])
+      .forEach(([id]) => { const v = B[f + '#^' + id] || {}; ['기출', '사례', 'GS', '판례'].forEach(c => (v[c] || []).forEach(x => o[c].add(x))); }); });
+  MOKCITE = { B: B, N: N, m: m }; return m; }
 /* ══ ★ _task_jo_ms_omrpop A(2026-09-24) — 목차노트 목록(민소) 끝 목차 이름 앞 압정 → 정리OMR 팝업(viewCanvas.jari.omr) ══
    붙일 줄 = 딸린 목차가 없는 끝 목차 — 번호 = 이름 앞 \d+(.\d+)*(끝 점이 있든 없든 · mokNum 은 끝 점이 있어야 잡혀 따로 잰다) · 딸림 = 다른 줄 번호가 이 번호로 시작하고 더 길다
      · 편 머리(N.==…==)도 같은 규칙 · 번호 없는 노트는 붙인다 · 안 붙는 줄은 같은 폭 빈자리(visibility:hidden — 이름 줄 맞춤 무변) · 수는 그릴 때마다 센다
@@ -7082,7 +7092,7 @@ function mokPinPaint(load){ const bs = document.querySelectorAll('.mkpop .mkomr:
   if (!M && load) J.ensure().then(() => mokPinPaint(false)).catch(() => {}); }
 async function popMokNote(btn, ev){
   const key = 'moknote|' + PLAW(); if (popToggle(key)) return;
-  const { N, B } = await noteData(); const names = Object.keys(N || {}).sort(mokCmp); const cite = mokCite(B);
+  const { N, B } = await noteData(); const names = Object.keys(N || {}).sort(mokCmp); const cite = mokCite(B, N);
   if (POPS.find(x => x._pk === key)) return;   /* 받는 사이 두 번 눌렀으면 하나만 */
   const body = popShell('cell', '📑 목차노트 — ' + PLAW() + ' ' + names.length, key); const p = body.parentNode;
   p.classList.add('mkpop');
@@ -7100,7 +7110,13 @@ async function popMokNote(btn, ev){
     r.appendChild(el('span', 'nm', f));
     const cs = el('span', 'n'), C0 = cite[f];
     [['기출', 'ck-g'], ['사례', 'ck-s'], ['GS', 'ck-gs'], ['판례', 'ck-p']].forEach(([k, cl]) => { const v = C0 ? C0[k].size : 0; if (!v) return;
-      const c = el('span', 'ck ' + cl, k + ' ' + v); c.title = '이 노트를 인용한 ' + k + ' 수(같은 카드는 한 번)'; cs.appendChild(c); });
+      const c = el('span', 'ck ' + cl, k + ' ' + v); c.title = '이 노트를 인용한 ' + k + ' 수(같은 카드는 한 번) — 누르면 그 목록';
+      c.dataset.k = k; c.setAttribute('role', 'button'); c.tabIndex = 0;   /* ★ jo_mokchip A-1 — 칩 누름 = 그 노트 블록 전부에서 모은 카드 목록(노트 팝업 안 블록 칩과 같은 창) · 줄 누름(노트 팝업)과 안 섞임 */
+      const go = e3 => { e3.stopPropagation(); L.querySelectorAll('.mkr.on').forEach(q => q.classList.remove('on')); r.classList.add('on'); mokOpenList(f, k, e3, p); };
+      c.onclick = go;
+      c.onkeydown = e3 => { if (e3.key !== 'Enter' && e3.key !== ' ') return; e3.preventDefault(); const q = c.getBoundingClientRect();
+        go({ stopPropagation: () => e3.stopPropagation(), clientX: q.left, clientY: q.bottom }); };   /* 글쇠 = 칩 자리를 누른 것처럼(showPop 이 clientX·Y 를 쓴다) */
+      cs.appendChild(c); });
     r.appendChild(cs);
     r.onclick = e2 => { e2.stopPropagation(); L.querySelectorAll('.mkr.on').forEach(q => q.classList.remove('on')); r.classList.add('on'); mokOpenNote(f, e2, p); };
     L.appendChild(r); });
@@ -7113,6 +7129,19 @@ async function popMokNote(btn, ev){
 async function mokOpenNote(f, ev, lp){
   await popNote(f, null, ev, 2);
   const np = POPS.find(x => x._pk === 'note|' + PLAW() + '|' + f + '|'); if (!np) return;
+  mokPlace(np, lp);
+}
+/* ★ jo_mokchip A-1 — 목차노트 줄 칩(기출·사례·GS·판례) → popNoteList(갈래, 노트 이름, 모은 카드) — 새 창 함수 없음 · 제목 끝 #^ 없음 · 같은 칩 다시 = 닫힘(popToggle)
+   카드 = mokCite 의 Set(칩 수 그대로 · 차례 = 노트 줄 차례) · 자리 = 노트 팝업과 같은 규칙(mokPlace) · popSizable 'list' 기억 자리가 있으면 그것 */
+async function mokOpenList(f, k, ev, lp){
+  const { N, B } = await noteData(); const C0 = mokCite(B, N)[f];
+  await popNoteList(k, f, C0 ? [...C0[k]] : [], ev, 2);
+  const np = POPS.find(x => x._pk === 'cell|🔗 ' + k + ' — ' + f.slice(0, 40)); if (np) mokPlace(np, lp, 'list');
+}
+/* ★ jo_mokchip A-1-4 — 목차노트 목록(lp) 옆 자리(노트 팝업 · 칩 목록 창이 같이 쓴다 · mokOpenNote 에서 떼어 낸 옛 식 그대로)
+   kind = 그 창의 popSizable 기억 갈래 — 기억 자리(x)가 있으면 손대지 않는다(노트 팝업은 kind 없이 = 옛 그대로) */
+function mokPlace(np, lp, kind){
+  if (kind && ((S.popCfg || {})[kind] || {}).x != null) return;
   const B = vvBox();   /* ★ mok_popup_phone G-1 */
   if (vvPhone() && lp && lp.isConnected){
     const W = Math.round(B.w - 16), H = Math.round(B.h - 16), g = 8, lh = Math.round((H - g) * 0.3), nh = H - g - lh, X = Math.round(B.x + 8), Y = Math.round(B.y + 8);
