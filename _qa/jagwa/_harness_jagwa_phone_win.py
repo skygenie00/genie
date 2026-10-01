@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 r"""_task_jagwa_phone_win §B 관문 — 자과 서재: 폰 창 크기 · 머리 · OMR 비례 · 떠 있는 창 틀 · 곁창 아래 단추 · [공식]·[개념] · 다 팝업 · 그림
 
-  python _harness_jagwa_phone_win.py [--new <앱>] [--img <그림 폴더>] [--eng chromium,webkit] [--only 1,2,...] [--res <결과>]
+  python _harness_jagwa_phone_win.py [--new <앱>] [--img <그림 폴더>] [--eng chromium,webkit] [--only 1,2,...,RF] [--res <결과>] [--vendor <cdnjs 사본 폴더>]
+
+  묶음 RF = _task_jagwa_revfix0928(9/28 검수 고침 여섯 · 칸마다 NEW 열 + 「-헛」 열 = 바탕(HEAD)이 옛 결함을 보이는지 · 헛 칸 PASS = 잣대가 산다)
+    RF1 폰 OMR ≡ 손가락 · RF2 PC 목록 창 크기 · RF3 📋·🃏 창 쌓임 · RF4 [공식] 0편 이름 · RF5 물리 누르면 앞 · RF6 폰 ▾ 가림
+  --vendor = cdnjs 사본(경로 꼴 /ajax/libs/ 뒤 그대로 · 클라우드처럼 cdnjs 가 막힌 곳만 · 안 주면 종전 그대로 진짜 cdnjs)
 
   NEW  = --new(없으면 genie 작업트리 jagwa/index.html) · BASE = genie HEAD jagwa/index.html(바로 앞 인도판 = penfinger_add2 fd911d5) — 칸마다 헛잣대(바탕에서 FAIL)
   화면 = 폰 390×844(hasTouch · 손가락 = Chromium CDP 터치 r22 · WebKit touchscreen.tap) · PC 1553×900(마우스)
@@ -29,6 +33,7 @@ IMG = ARG('--img', os.path.join(GENIE, 'jagwa', 'img'))
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
 ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jagwa_phone_win_result.txt'))
+VENDOR = ARG('--vendor')   # revfix0928 — cdnjs 사본(클라우드) · 없으면 종전 길
 _argv = sys.argv; sys.argv = [sys.argv[0]]
 import _harness_jagwa_penfinger as H   # noqa: E402  (INIT · SPDROOT)
 sys.argv = _argv
@@ -135,7 +140,17 @@ class Pg:
         vp = {'width': 390, 'height': 844} if phone else {'width': 1553, 'height': 900}
         self.ctx = br.new_context(viewport=vp, device_scale_factor=1, has_touch=True, is_mobile=bool(phone and eng == 'chromium'))
         OKNET = ('http://127.0.0.1', 'https://cdnjs.cloudflare.com/', 'https://cdn.jsdelivr.net/', 'https://fonts.googleapis.com/', 'https://fonts.gstatic.com/')
-        self.ctx.route('**/*', lambda rt: rt.continue_() if rt.request.url.startswith(OKNET) else rt.abort())
+
+        def _rt(rt):
+            u = rt.request.url
+            m = re.match(r'https://cdnjs\.cloudflare\.com/ajax/libs/(.+)$', u.split('?')[0]) if VENDOR else None
+            if m:   # cdnjs 사본(줄 때만)
+                f = os.path.join(VENDOR, *m.group(1).split('/'))
+                if os.path.isfile(f):
+                    return rt.fulfill(path=f, content_type='text/css' if f.endswith('.css') else ('font/woff2' if f.endswith('.woff2') else 'application/javascript'))
+                return rt.abort()
+            return rt.continue_() if u.startswith(OKNET) else rt.abort()
+        self.ctx.route('**/*', _rt)
         self.ctx.add_init_script(H.INIT.replace('__SUBJ__', subj))
         self.pg = self.ctx.new_page(); self.pg.set_default_timeout(120000)
         self.errs = []
@@ -443,7 +458,192 @@ def d9():
     T('9-헛', '헛잣대 바탕(HEAD) — 그 14 장 없음', not any(('jagwa/img/p%s.jpg' % g) in head for g in NEW14), {'HEAD 에 있음': sum(1 for g in NEW14 if ('jagwa/img/p%s.jpg' % g) in head)})
 
 
-PARTS = [('1', g1), ('2', g2), ('3', g3), ('4', g4), ('7', g7), ('8', g8b)]
+# ── RF  _task_jagwa_revfix0928 — 9/28 검수 고침 여섯(칸마다 NEW · 「-헛」 = 바탕 HEAD 가 옛 결함을 보임) ──
+PD = r"""()=>{window.__pd=[];if(!window.__pdOn){window.__pdOn=1;document.addEventListener('pointerdown',e=>{const t=e.target;(window.__pd=window.__pd||[]).push({c:String(t.className||t.tagName).slice(0,30),o:(t.dataset&&t.dataset.omr)||'',ty:e.pointerType})},true)}return true}"""
+HN = "()=>{try{return hist(VNO).length}catch(e){return -1}}"
+OP = "()=>{try{return {own:OPOS[VNO]||null,def:OPOS.def||null}}catch(e){return null}}"
+
+
+def _reboot(q):
+    q.pg.reload(wait_until='load')
+    q.pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>0', timeout=90000)
+    q.wait(2500)
+    q.ev(JS)
+
+
+def rf1(br, eng):
+    """A-1 폰 OMR ≡ 손가락 — 누름 대상 = ≡ · 채점 0 · 60px 끌어 저장 · 새로고침 뒤 같음 · ① 톡 무변"""
+    def f(q):
+        no = q.ev("()=>__W.noOf('PA0702')"); q.ev("n=>__W.openNo(n)", no); q.wait(800)
+        q.ev(PD)
+        out = {'h0': q.ev(HN)}
+        g = q.ev("()=>__W.at('#omrPad .ogrip')")
+        q.press(g, 600)
+        out['누름'] = q.ev("()=>window.__pd.splice(0)")[:2]
+        out['h_tap'] = q.ev(HN) - out['h0']
+        q.ev("()=>{document.querySelectorAll('.sheet.shfloat').forEach(x=>x.remove())}")
+        g = q.ev("()=>__W.at('#omrPad .ogrip')")
+        o0 = q.ev(OP)
+        out['끌기'] = q.drag(g['cx'], g['cy'], g['cx'] + 60, g['cy']) if g and g.get('on') else None
+        out['pos'] = q.ev(OP)
+        out['o0'] = o0
+        out['h_drag'] = q.ev(HN) - out['h0']
+        _reboot(q)
+        q.ev("n=>__W.openNo(n)", no); q.wait(800)
+        out['pos2'] = q.ev(OP)
+        q.ev(PD)
+        h1 = q.ev(HN)
+        b1 = q.ev("()=>__W.at('#omrPad button[data-omr=\"①\"]')")
+        q.press(b1, 700)
+        out['① 누름'] = q.ev("()=>window.__pd.splice(0)")[:1]
+        out['h_one'] = q.ev(HN) - h1
+        return out
+    r = both(br, eng, 'phys', True, f)
+    n, b = r['NEW'], r['BASE']
+    tg = lambda x: (x or [{}])[0]
+    ok1 = tg(n['누름']).get('c', '').startswith('ogrip') and n['h_tap'] == 0
+    T('RF1', '%s 폰 PA0702 ≡ 가운데 손가락(%s) → pointerdown 대상 = ≡ · 채점 기록 0' % (eng, 'CDP r22' if eng == 'chromium' else 'tap'), ok1, {'대상': n['누름'], '채점 늘어남': n['h_tap']})
+    T('RF1-헛', '%s 헛잣대 바탕 — 대상 ≡ 아님(①·창) 또는 채점 늘어남' % eng, not tg(b['누름']).get('c', '').startswith('ogrip') or b['h_tap'] > 0, {'대상': b['누름'], '채점 늘어남': b['h_tap']})
+    pos, pos2 = (n['pos'] or {}), (n['pos2'] or {})
+    ok2 = bool(pos.get('own')) and pos.get('own') == pos.get('def') and pos.get('own') != (n['o0'] or {}).get('own') and pos2.get('own') == pos.get('own') and n['h_drag'] == 0
+    T('RF1', '%s ≡ 손가락 60px 끌어 놓기(%s) → OPOS[문항] = 새 자리(= def) · 새로고침 뒤 같음 · 채점 0' % (eng, n['끌기']), ok2, {'전': n['o0'], '뒤': pos, '새로고침 뒤': pos2, '채점': n['h_drag']})
+    T('RF1-헛', '%s 헛잣대 바탕 — 손가락 끌기 뒤 OPOS null(저장 안 됨)' % eng, not (b['pos'] or {}).get('own'), b['pos'])
+    T('RF1', '%s ① 가운데 손가락 톡 → ① 눌림(채점 +1 · 무변)' % eng, tg(n['① 누름']).get('o') == '①' and n['h_one'] == 1, {'대상': n['① 누름'], '채점': n['h_one']})
+    T('Z', '%s 오류 0(RF1 NEW)' % eng, not r['NEW_err'], r['NEW_err'][:4])
+
+
+def rf2(br, eng):
+    """A-2 PC [공식]·[개념] 목록 창 = 풀이 곁창 크기·자리(560 × 곁창 높이) · 폰 374×608 무변"""
+    def f(q):
+        no = q.ev("()=>__W.noOf('PA0702')"); q.ev("n=>__W.openNo(n)", no); q.wait(600)
+        out = {}
+        for k in ('f', 'c'):
+            q.ev("k=>{const o=document.getElementById('pwl');if(o)o.remove();try{delete WIN['pw'+k]}catch(e){}pwList(k)}", k); q.wait(500)
+            out[k] = (q.ev("()=>__W.list()") or {}).get('rect')
+            q.ev("()=>{const o=document.getElementById('pwl');if(o)o.remove()}")
+        q.ev("()=>{try{delete WIN.sol}catch(e){}const r=DATA.find(x=>SOL[x[F.VLT]]);if(r)solSheet(r)}"); q.wait(700)
+        s = q.ev("()=>__W.side('sh-sol')")
+        out['곁창'] = s and s.get('rect')
+        return out
+    r = both(br, eng, 'phys', False, f)
+    n, b = r['NEW'], r['BASE']
+    sd = n['곁창'] or {}
+    ok = bool(sd) and all(n[k] and abs(n[k]['w'] - 560) <= 2 and abs(n[k]['h'] - sd['h']) <= 2 and abs(n[k]['x'] - sd['x']) <= 2 and abs(n[k]['y'] - sd['y']) <= 2 for k in ('f', 'c'))
+    T('RF2', '%s PC [공식]·[개념] 목록 창 = 560 × 풀이 곁창 높이(± 2) · 자리 = 곁창 첫 자리' % eng, ok, {'공식': n['f'], '개념': n['c'], '풀이 곁창': sd})
+    T('RF2-헛', '%s 헛잣대 바탕 — PC 목록 창 600 × 62vh' % eng, bool(b['f']) and abs(b['f']['w'] - 600) <= 2 and abs(b['f']['h'] - 558) <= 2, {'공식': b['f'], '풀이 곁창': b['곁창']})
+
+    def fph(q):
+        q.ev("()=>{try{delete WIN.pwf}catch(e){}pwList('f')}"); q.wait(500)
+        return (q.ev("()=>__W.list()") or {}).get('rect')
+    r2 = both(br, eng, 'phys', True, fph)
+    T('RF2', '%s 폰 [공식] 목록 창 374×608 무변(= 바탕)' % eng, bool(r2['NEW']) and r2['NEW'] == r2['BASE'] and abs(r2['NEW']['w'] - 374) <= 1 and abs(r2['NEW']['h'] - 608) <= 1, [r2['NEW'], r2['BASE']])
+
+
+OVER = r"""(ids)=>{const ps=ids.map(id=>{const b=document.getElementById(id);const p=b&&b.querySelector('.panel');return p?p.getBoundingClientRect():null});if(ps.some(x=>!x))return {miss:ids.filter((id,i)=>!ps[i])};
+  const [a,c]=ps,x0=Math.max(a.left,c.left),x1=Math.min(a.right,c.right),y0=Math.max(a.top,c.top),y1=Math.min(a.bottom,c.bottom);if(x1-x0<4||y1-y0<4)return {nov:true};
+  const at=document.elementFromPoint((x0+x1)/2,(y0+y1)/2),top=ids.find(id=>{const b=document.getElementById(id);return b&&at&&b.contains(at)})||(at?(at.id||at.className):null);
+  return {top:top,z:ids.map(id=>document.getElementById(id).style.zIndex||getComputedStyle(document.getElementById(id)).zIndex)}}"""
+
+
+def rf3(br, eng):
+    """A-3 📋 창 · 🃏 창도 창 띠 — 📋 → [공식] = 목록 위 · [공식] → 📋 = 📋 위 · 띠 z 70~79(띠 위 창 차례 무변)"""
+    def f(q):
+        no = q.ev("()=>__W.noOf('PA0702')"); q.ev("n=>__W.openNo(n)", no); q.wait(600)
+        q.ev("()=>{document.querySelectorAll('.sheet.shfloat').forEach(x=>x.remove())}")
+        out = {}
+        sec = q.ev("()=>Object.keys(TOC.sec)[0]")
+        q.ev("s=>{try{jnOpen(s)}catch(e){}}", sec); q.wait(500); q.ev("()=>pwList('f')"); q.wait(500)
+        out['📋→공식'] = q.ev(OVER, ['jnw', 'pwl'])
+        q.ev("()=>{['jnw','pwl'].forEach(id=>{const e=document.getElementById(id);if(e)e.remove()})}")
+        q.ev("()=>pwList('f')"); q.wait(500); q.ev("s=>{try{jnOpen(s)}catch(e){}}", sec); q.wait(500)
+        out['공식→📋'] = q.ev(OVER, ['jnw', 'pwl'])
+        q.ev("()=>{['jnw','pwl'].forEach(id=>{const e=document.getElementById(id);if(e)e.remove()})}")
+        q.ev("async()=>{try{await mcwOpen('all')}catch(e){}}"); q.wait(600); q.ev("()=>pwList('f')"); q.wait(500)
+        out['🃏→공식'] = q.ev(OVER, ['mcw', 'pwl'])
+        out['띠 z'] = q.ev("()=>{const z=sel=>{const e=document.querySelector(sel);return e?getComputedStyle(e).zIndex:null};return {jnw:document.getElementById('jnw')?document.getElementById('jnw').style.zIndex:null,pwl:(document.getElementById('pwl')||{style:{}}).style.zIndex,mcw:(document.getElementById('mcw')||{style:{}}).style.zIndex}}")
+        return out
+    for phone in (True, False):
+        dn = '폰' if phone else 'PC'
+        r = both(br, eng, 'phys', phone, f)
+        n, b = r['NEW'], r['BASE']
+        ok = (n['📋→공식'] or {}).get('top') == 'pwl' and (n['공식→📋'] or {}).get('top') == 'jnw' and (n['🃏→공식'] or {}).get('top') == 'pwl'
+        zs = [int(v) for v in (n['띠 z'] or {}).values() if v not in (None, '')]
+        ok = ok and bool(zs) and all(70 <= z <= 79 for z in zs)
+        T('RF3', '%s %s 📋 → [공식] = 목록 위 · [공식] → 📋 = 📋 위 · 🃏 → [공식] = 목록 위 · z 모두 띠 70~79(서브노트 80·참고 97·OCR 98 아래 그대로)' % (eng, dn), ok, n)
+        T('RF3-헛', '%s %s 헛잣대 바탕 — 📋 → [공식] 에서 📋(z75 고정)가 위' % (eng, dn), (b['📋→공식'] or {}).get('top') == 'jnw', {'📋→공식': b['📋→공식'], '🃏→공식': b['🃏→공식']})
+
+
+def rf4(br, eng):
+    """A-4 [공식] 첫 편 머리 「0. 단위·기초 · 1」 · 1~6편 머리 무변"""
+    def f(q):
+        q.ev("()=>pwList('f')"); q.wait(500)
+        return (q.ev("()=>__W.list()") or {}).get('heads')
+    r = both(br, eng, 'phys', False, f)
+    n, b = r['NEW'] or [], r['BASE'] or []
+    T('RF4', '%s [공식] 첫 편 머리 = 「0. 단위·기초 · 1」 · 1~6편 머리 = 바탕' % eng, bool(n) and n[0] == '0. 단위·기초 · 1' and n[1:] == b[1:], n[:7])
+    T('RF4-헛', '%s 헛잣대 바탕 — 첫 편 머리 이름 빈칸(「0.  · 1」)' % eng, bool(b) and b[0].replace(' ', '') == '0.·1', b[:1])
+
+
+def rf5(br, eng):
+    """A-5 물리 — 문제 창 → 풀이 곁창(곁창 위) → 문제 창 머리 누름 = 문제 창 위 · 곁창 안 단추(✕) 동작 무변"""
+    OV = r"""()=>{const v=document.getElementById('view'),s=document.getElementById('sh-sol');const p=s&&s.querySelector('.panel');if(!v||!p)return {miss:true};
+      const a=v.getBoundingClientRect(),c=p.getBoundingClientRect(),x0=Math.max(a.left,c.left),x1=Math.min(a.right,c.right),y0=Math.max(a.top,c.top),y1=Math.min(a.bottom,c.bottom);
+      if(x1-x0<4||y1-y0<4)return {nov:true};
+      const at=document.elementFromPoint((x0+x1)/2,(y0+y1)/2);return {top:v.contains(at)?'view':(s.contains(at)?'sol':(at?at.id||at.className:null)),zv:v.style.zIndex,zs:s.style.zIndex}}"""
+    HD = r"""()=>{const v=document.getElementById('view'),h=v.querySelector('.vtop'),s=document.getElementById('sh-sol');const r=h.getBoundingClientRect(),c=s.querySelector('.panel').getBoundingClientRect();
+      const t=v.querySelector('#title');if(t){const q=t.getBoundingClientRect(),x=q.left+q.width/2,y=q.top+q.height/2,a=document.elementFromPoint(x,y);   /* 제목 가운데(단추와 멀다 · 손가락 보정이 이웃 단추로 안 감) */
+        if(a&&v.contains(a)&&!a.closest('button,a,input,select,[data-tool]')&&!(x>=c.left&&x<=c.right&&y>=c.top&&y<=c.bottom))return {cx:Math.round(x),cy:Math.round(y),on:true,at:'title'}}
+      for(let y=r.top+4;y<r.bottom-4;y+=4)for(let x=r.left+40;x<r.right-6;x+=8){if(x>=c.left-2&&x<=c.right+2&&y>=c.top-2&&y<=c.bottom+2)continue;const a=document.elementFromPoint(x,y);
+        if(a&&v.contains(a)&&!a.closest('button,a,input,select,[data-tool]'))return {cx:Math.round(x),cy:Math.round(y),on:true,at:(a.id||a.className||a.tagName).slice(0,20)}}return null}"""
+    SOL = "()=>{const r=DATA.find(x=>x[F.NO]===VNO&&SOL[x[F.VLT]])||DATA.find(x=>SOL[x[F.VLT]]);if(r)solSheet(r)}"
+
+    def f(q):
+        no = q.ev("()=>__W.noOf('PA0702')"); q.ev("n=>__W.openNo(n)", no); q.wait(700)
+        q.ev(SOL); q.wait(800)
+        out = {}
+        x = q.ev("()=>{const b=document.querySelector('#sh-sol .panel .shx');return b?__W.hit(b):null}")
+        q.press(x, 600)
+        out['✕ 닫힘'] = q.ev("()=>!document.getElementById('sh-sol')")
+        q.ev(SOL); q.wait(800)
+        out['열고'] = q.ev(OV)
+        hd = q.ev(HD)
+        q.press(hd, 600)
+        out['머리 누름'] = q.ev(OV)
+        out['머리 자리'] = hd
+        return out
+    for phone in (False, True):
+        dn = '폰' if phone else 'PC'
+        r = both(br, eng, 'phys', phone, f)
+        n, b = r['NEW'], r['BASE']
+        ok = (n['열고'] or {}).get('top') == 'sol' and (n['머리 누름'] or {}).get('top') == 'view'
+        T('RF5', '%s %s 물리 문제 창 → 풀이 곁창(곁창 위) → 문제 창 머리 누름(%s) → 문제 창 위' % (eng, dn, '손가락' if phone else '마우스'), ok, {'열고': n['열고'], '누른 뒤': n['머리 누름'], '자리': n['머리 자리']})
+        T('RF5-헛', '%s %s 헛잣대 바탕 — 문제 창 머리를 눌러도 곁창이 위' % (eng, dn), (b['머리 누름'] or {}).get('top') == 'sol', {'누른 뒤': b['머리 누름'], '자리': b['머리 자리']})
+        T('RF5', '%s %s 곁창 안 단추(✕) 누름 = 닫힘(= 바탕 · 올리기만 더함)' % (eng, dn), n['✕ 닫힘'] is True and b['✕ 닫힘'] is True, [n['✕ 닫힘'], b['✕ 닫힘']])
+
+
+def rf6(br, eng):
+    """A-6 폰 ▾ — 왼쪽 끝+2 · 가운데 · 오른쪽 끝−2 = #fFoldBtn · #ndGrip 그대로(폭 13) · PC 머리 무변"""
+    FB = r"""()=>{const b=document.getElementById('fFoldBtn'),g=document.getElementById('ndGrip');const r=b.getBoundingClientRect(),y=r.top+r.height/2;
+      const at=[r.left+2,r.left+r.width/2,r.right-2].map(x=>{const a=document.elementFromPoint(x,y);return a?(a.id||a.className):null});const gr=g.getBoundingClientRect();
+      return {at:at,fold:__W.R(b),grip:{w:Math.round(gr.width),x:Math.round(gr.left),vis:__W.vis(g)}}}"""
+    for subj in ('phys', 'earth', 'bio'):
+        r = both(br, eng, subj, True, lambda q: q.ev(FB))
+        n, b = r['NEW'], r['BASE']
+        T('RF6', '%s 폰 %s ▾ 왼쪽+2 · 가운데 · 오른쪽−2 = #fFoldBtn · 서랍 손잡이 그대로(폭 13 · 보임)' % (eng, subj), n['at'] == ['fFoldBtn'] * 3 and n['grip']['w'] == 13 and n['grip']['vis'], n)
+        T('RF6-헛', '%s 폰 %s 헛잣대 바탕 — ▾ 왼쪽 끝이 손잡이(#ndGrip) 밑' % (eng, subj), b['at'][0] == 'ndGrip', b)
+    r2 = both(br, eng, 'phys', False, lambda q: q.ev("()=>__W.pcHead()"))
+    T('RF6', '%s PC 머리 글 = 바탕(무변)' % eng, r2['NEW'] == r2['BASE'], [r2['NEW'][:120], r2['BASE'][:120]])
+
+
+def rf(br, eng):
+    for fn in (rf1, rf2, rf3, rf4, rf5, rf6):
+        try:
+            fn(br, eng)
+        except Exception as e:
+            T('RUN', '%s · RF %s 멈춤' % (eng, fn.__name__), False, repr(e)[:600])
+
+
+PARTS = [('1', g1), ('2', g2), ('3', g3), ('4', g4), ('7', g7), ('8', g8b), ('RF', rf)]
 APPS = {}
 
 

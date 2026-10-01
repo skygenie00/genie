@@ -266,7 +266,7 @@ input,textarea,select,.tbox,.tbox *{-webkit-user-select:text;user-select:text;-w
 #omrPad .ogrip{width:26px;height:44px;border-radius:9px;border:1px solid #C4C2B9;
   background:rgba(255,255,255,.96);color:#8A8880;font-size:14px;cursor:move;
   box-shadow:0 1px 5px rgba(0,0,0,.18);display:grid;place-items:center;touch-action:none;user-select:none}
-#omrPad.drag .ogrip{background:#E2E6EC;border-color:var(--blue)}
+#omrPad.drag .ogrip,#omrPad .ogrip:active{background:#E2E6EC;border-color:var(--blue)}   /* ★ revfix0928 A-1 — :active 꼴이 있어야 크로미움 터치 보정이 ≡ 를 누를 것으로 본다(없으면 손가락이 ①·창으로 간다) */
 .brk{flex-basis:100%;height:0;margin:0}
 .tag.vm{padding:1.5px 5px;letter-spacing:1px}
 .tag.vm b{font-weight:700}
@@ -1666,6 +1666,7 @@ function pwPhone(){try{return window.matchMedia('(max-width:480px)').matches}cat
 /* 교재 없는 과목(HASBOOK 거짓 — 물리 등)은 wzRaise 가 없다 → 같은 띠 규칙(나중 것 위 · 끝 10개만 70~79)으로 이 판이 연 창을 쌓는다 */
 var PWL=[];
 function pwTop(el){if(!el)return;if(typeof window.wzRaise==='function'){window.wzRaise(el);return}
+  if(!el.__pwd){el.__pwd=1;el.addEventListener('pointerdown',()=>{if(el.id==='view'&&!el.classList.contains('win'))return;pwTop(el)},{capture:true,passive:true})}   /* ★ revfix0928 A-5 — 누르면 앞(올리기만 · 안 단추 동작 그대로) */
   for(let j=PWL.length-1;j>=0;j--)if(PWL[j]===el||!PWL[j].isConnected)PWL.splice(j,1);PWL.push(el);
   const n=PWL.length;PWL.forEach((x,j)=>{x.style.zIndex=String(70+Math.max(0,j-Math.max(0,n-10)))})}
 /* 이미 뜬 곁창 수(이 창 빼고) — 폰 새 곁창 14px 내림 */
@@ -1677,6 +1678,7 @@ function pwBtns(p){if(!p)return;p.querySelectorAll('button.btn').forEach(x=>{if(
 (function(){try{const s=document.createElement('style');s.id='pwcss';s.textContent=[
   '@media (max-width:480px){body[data-shell] #fSum{display:none!important}body[data-shell] #esh .erow.esearch>span.mut:first-child{display:none}.pwchip.pc{display:none!important}}',
   '@media (min-width:481px){.pwchip.ph{display:none!important}}',
+  '@media (max-width:480px){body.ndon #fFold{padding-left:13px}}',   /* ★ revfix0928 A-6 — ▾ 가 서랍 손잡이(13px · 늘 보임)에 안 가린다 */
   '.sheet.shfloat .panel button.btn.shlink{border:0;background:none;box-shadow:none;padding:2px 0;margin:6px 12px 0 0;min-height:0;width:auto;display:inline-block;font:inherit;font-size:12px;font-weight:500;color:var(--muted);text-decoration:underline;cursor:pointer}',
   '.pwchip{font:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--line);border-radius:999px;padding:3px 11px;background:var(--card);color:var(--ink);cursor:pointer;margin-left:6px;white-space:nowrap}',
   '#pwl{position:fixed;inset:0;background:transparent;pointer-events:none;display:block}',
@@ -1709,7 +1711,7 @@ function pwList(kind){
   const title=isF?'📐 공식 · 전체 · 물리 목차 '+secs.length+'단원':'💡 개념 · 전체 · 볼트 물리 폴더 '+secs.length+'파일';
   const by={};secs.forEach(s=>{const c=String(s.id).split('.')[0];(by[c]=by[c]||[]).push(s)});
   b.innerHTML='<div class="panel"><div class="bplh"><span>'+esc(title)+'</span><button type="button" class="shx" title="닫기">✕</button></div><div id="pwlBody">'
-    +Object.keys(by).sort((a,c)=>+a-+c).map(c=>'<div class="pwh">'+c+'. '+esc(pwChName(c))+' · '+by[c].length+'</div>'
+    +Object.keys(by).sort((a,c)=>+a-+c).map(c=>'<div class="pwh">'+c+'. '+esc(pwChName(c)||((by[c][0]||{}).t||''))+' · '+by[c].length+'</div>'   /* ★ revfix0928 A-4 — 편 이름 없으면 첫 절 제목 */
       +by[c].map(s=>{const has=(s.b||[]).some(n=>n.t!=='br');
         return '<div class="pwr'+(has?'':' none')+'" data-id="'+s.id+'"><span class="tri">'+(has?'▸':'')+'</span><span class="nm">'+s.id+' '+esc(s.t)+'</span></div><div class="pwb hide"></div>'}).join('')).join('')
     +'</div></div>';
@@ -1721,8 +1723,7 @@ function pwList(kind){
       bd.querySelectorAll('.pwc[data-cbk]').forEach(x=>x.onclick=ev=>{ev.stopPropagation();conceptView(x.dataset.cbk)})}
     bd.classList.toggle('hide');tri.textContent=bd.classList.contains('hide')?'▸':'▾'}});
   const key='pw'+kind;
-  if(pwPhone()&&typeof WIN==='object'&&!WIN[key]){const w=window.innerWidth-16,h=Math.round(window.innerHeight*0.72);
-    WIN[key]={l:8,t:Math.min(window.innerHeight-h-8,Math.round((window.innerHeight-h)/2)+14*pwSideN(b)),w:w,h:h}}
+  if(typeof WIN==='object'&&!WIN[key])WIN[key]=shFirst(b);   /* ★ revfix0928 A-2 — PC 도 풀이 곁창과 같은 크기·자리(옛 600 × 62vh 는 근거 없는 값 · 폰 무변) */
   makeFloat(b,b.querySelector('.bplh'),key,'jagwa.win.'+key);pwTop(b);
 }
 /* 칩 — 폰: #fFoldBtn(▾) 바로 오른쪽 · PC: 검색 줄 「지우기」(#qClr) 오른쪽 · 물리만 */
@@ -7814,6 +7815,19 @@ function cropFor(no){
    새 창틀을 짓지 않는다 — 📋·🃏 창이 쓰는 `makeFloat` 에 그대로 태운다.
    ⚠ 확인 창·설정(지우기 확인·동기화 도움말·설정·지학 편집 넷)은 **모달 그대로** 둔다(§A-5).
    ⚠ 옛 시트의 안(글자·단추·id)은 한 글자도 안 바꾼다 — 겉틀만 띄운다. */
+/* 곁창 첫 자리·크기 = 문제 창 오른쪽 옆(자리가 없으면 가운데) · PC 폭 560 × 높이 72%(화면−40 안) ·
+   ★ phone_win A-1 — 폰 = 화면−16 × 72% · 이미 뜬 곁창 수만큼 14px 내림(뒤 창 머리가 보이게) · ★ revfix0928 A-2 — [공식]·[개념] 목록 창도 이 함수 */
+function shFirst(b){
+  const v=document.getElementById('view');
+  const vr=(v&&!v.classList.contains('hide'))?v.getBoundingClientRect():null;
+  const _ph=pwPhone();
+  const w=_ph?window.innerWidth-16:Math.min(560,Math.max(320,window.innerWidth-40));
+  const hh=_ph?Math.round(window.innerHeight*0.72):Math.min(Math.round(window.innerHeight*0.72),window.innerHeight-40);
+  let l=Math.round((window.innerWidth-w)/2), t=Math.round((window.innerHeight-hh)/2);
+  if(vr&&vr.right+8+w<=window.innerWidth-8){l=Math.round(vr.right+8);t=Math.round(vr.top)}
+  if(_ph){l=8;t=Math.min(window.innerHeight-hh-8,Math.round((window.innerHeight-hh)/2)+14*pwSideN(b))}
+  return {l:l,t:t,w:w,h:hh};
+}
 function shFloat(b,key,title){
   if(!SHELL||!b)return b;
   const p=b.querySelector('.panel'); if(!p)return b;
@@ -7827,18 +7841,7 @@ function shFloat(b,key,title){
   if(!h.querySelector('.shx')){
     const x=document.createElement('button');x.className='shx';x.type='button';
     x.title='닫기';x.textContent='✕';x.onclick=()=>b.remove();h.appendChild(x)}
-  /* 처음 뜨는 자리 = 문제 창 오른쪽 옆(자리가 없으면 가운데) */
-  if(typeof WIN==='object'&&!WIN[key]){
-    const v=document.getElementById('view');
-    const vr=(v&&!v.classList.contains('hide'))?v.getBoundingClientRect():null;
-    const _ph=pwPhone();   /* ★ phone_win A-1 — 폰 곁창 = 화면−16 × 72% · 이미 뜬 곁창 수만큼 14px 내림(뒤 창 머리가 보이게) · PC 무변 */
-    const w=_ph?window.innerWidth-16:Math.min(560,Math.max(320,window.innerWidth-40));
-    const hh=_ph?Math.round(window.innerHeight*0.72):Math.min(Math.round(window.innerHeight*0.72),window.innerHeight-40);
-    let l=Math.round((window.innerWidth-w)/2), t=Math.round((window.innerHeight-hh)/2);
-    if(vr&&vr.right+8+w<=window.innerWidth-8){l=Math.round(vr.right+8);t=Math.round(vr.top)}
-    if(_ph){l=8;t=Math.min(window.innerHeight-hh-8,Math.round((window.innerHeight-hh)/2)+14*pwSideN(b))}
-    WIN[key]={l:l,t:t,w:w,h:hh};
-  }
+  if(typeof WIN==='object'&&!WIN[key])WIN[key]=shFirst(b);
   try{makeFloat(b,h,key,'jagwa.win.'+key)}catch(e){console.warn('shFloat',e)}
   pwBtns(p);   /* ★ phone_win A-5 — 아래 큰 단추 = 밑줄 글자 · 「닫기」 걷음(✕ 와 겹침) */
   if(!b.__pwz){b.__pwz=1;pwTop(b)}   /* ★ phone_win A-1 — 나중에 연 창이 위 */
@@ -8719,7 +8722,7 @@ var mcwOpen=async function(sc){
   b.querySelector('#mcwInk').onclick=async()=>{const no=+sel.value;if(!no)return;await openView(no);mcardWin(no)};
   b.querySelector('#mcwBk').onclick=()=>mcPickGo(+sel.value,'book');
   b.querySelector('#mcwOmr').onclick=()=>mcPickGo(+sel.value,'omr');
-  makeFloat(b,b.querySelector('.bplh'),'mc','jagwa.win.mc');
+  makeFloat(b,b.querySelector('.bplh'),'mc','jagwa.win.mc');pwTop(b);   /* ★ revfix0928 A-3 — 🃏 창도 같은 결함(z77 고정) → 창 띠 */
   const body=b.querySelector('#mcwBody');
   if(!nos.length){body.innerHTML='<div class="bplnone">이 단원에는 아직 암기카드가 없습니다.</div>';return}
   body.innerHTML=nos.map(no=>{const r=rec(no);
@@ -8775,7 +8778,7 @@ function jnOpen(sec){
     ||('<div class="bplnone">'
        +((typeof FL!=='undefined'&&FL.past)?'이 분류에 든 문항이 없다':'이 절에 든 문항이 없다')
        +'</div>');
-  makeFloat(b,b.querySelector('.bplh'),'jn','jagwa.win.jn');
+  makeFloat(b,b.querySelector('.bplh'),'jn','jagwa.win.jn');pwTop(b);   /* ★ revfix0928 A-3 — 창 띠(나중 연 창이 위 · 물리는 누르면 앞도) */
 }
 function jnRowHTML(r){
   /* ★ add10 §A-2 — 근거 열쇠는 **`GGU(r)`** 다(물리 = `P009` · 카드 층 = `F.CODE`).
