@@ -87,7 +87,7 @@ TESTS = r"""<script>
    /* ★ A-6(a) 9/30 — 셸 이식(c9faff2 · physRowBuild 앱 9584~9597): 물리 아랫줄 단추는 #pRow1 로 옮겨져 「… 공식 · 개념 · 쌍둥이 · Claude · 유형 · 연결」 차례다 — 연결 바로 앞 = 유형(#tType) */
    T('④ 뷰어 아랫줄 「연결」(#tLink · #pRow1 · 유형 오른쪽) · 칩 #vLink 숨김(0)',!!$('#tLink')&&$('#tLink').previousElementSibling.id==='tType'&&$('#tLink').textContent==='연결'&&getComputedStyle($('#vLink')).display==='none');
    /* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(앱 8168~8169) — SYNC_KEYS 가 SUBJ.phys.SYNC_KEYS 와 같은 배열이라(앱 4355) 둘 다 14 · SUBJ 소스 글자는 12 그대로(아래 파일 층 잣대) */
-   T('④ SYNC_KEYS 14(끝에 gg·ggref) · 12째 link · SYNC_REF.link · SUBJ.phys 도 같은 배열 14 · 지학 19 · 생물 20(add1 +bref)',SYNC_KEYS.length===14&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&SYNC_KEYS[11]==='link'&&SYNC_REF.link.g()===LK&&SUBJ.phys.SYNC_KEYS.length===14&&SUBJ.earth.SYNC_KEYS.length===19&&SUBJ.bio.SYNC_KEYS.length===20);
+   T('④ SYNC_KEYS 14(끝에 gg·ggref) · 12째 link · SYNC_REF.link · SUBJ.phys 도 같은 배열 14 · 지학 19 · 생물 20(add1 +bref)',/* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef 본문 「물리 SYNC 키 tfix 하나 더함」) — 14 또는 끝에 tfix 하나 */(SYNC_KEYS.length===14||(SYNC_KEYS.length===15&&SYNC_KEYS[14]==='tfix'))&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&SYNC_KEYS[11]==='link'&&SYNC_REF.link.g()===LK&&SUBJ.phys.SYNC_KEYS.length===SYNC_KEYS.length&&SUBJ.earth.SYNC_KEYS.length===19&&SUBJ.bio.SYNC_KEYS.length===20);
    $('#tLink').click();await wait(40);
    /* ★ A-6(a) 9/30 — 셸 add16(0bee72b): 연결 시트(linkSheet)는 「보는 시트」라 떠 있는 창 #sh-link(앱 SHWIN ['linkSheet','link'] · shFloat 이 id 를 sh-<key> 로) · 안의 #lkList·#lkq·#lkres 는 그대로 ·
       phone_win A-5(fb89ad2 · pwBtns): 그 창의 「닫기」(#lkX)는 걷었다 → 아래 닫기는 전부 ✕(.shx) */

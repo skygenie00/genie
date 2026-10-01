@@ -306,7 +306,12 @@ def main():
                 g149, g84 = (jn['data'].get('gpt') or {}).get('149'), (jn['data'].get('gpt') or {}).get('84')
                 body = json.loads(N['body']) if N['body'] else None
                 bgp = (body or {}).get('data', {}).get('gpt') or {}
-                okb_ = body is None or (bgp.get(NO) == MD and bgp.get('149') == g149 and bgp.get('84') == g84 and set(body.get('gone') or {}) <= set(jn.get('gone') or {}))
+                # ★ 합치기 10/1(하위 에이전트 C) — revfix0929 A-1-3(2bc1719) 원격 옛 열쇠 묘비 → 새 열쇠 비춤(같은 칸 · 같은 시각)은 늘어난 묘비가 아니다
+                _jg = jn.get('gone') or {}
+                _o2n = {r_['옛uid']: r_['uid'] for r_ in json.loads(open(os.path.join(SPD, 'earth', '문항.json'), 'rb').read().decode('utf-8')) if r_.get('옛uid')}
+                _mir = lambda k_, t_: any(j.split('|', 1)[0] == k_.split('|', 1)[0] and _o2n.get(j.split('|', 1)[1]) == k_.split('|', 1)[1] and _jg[j] == t_ for j in _jg if '|' in j)
+                okb_ = body is None or (bgp.get(NO) == MD and bgp.get('149') == g149 and bgp.get('84') == g84
+                                        and all(k_ in _jg or _mir(k_, t_) for k_, t_ in (body.get('gone') or {}).items()))
                 ok6 = N['gpText'].get(NO) == MD and N['gpText'].get('149') == g149 == mat('earth_149.md') and N['gpText'].get('84') == g84 == mat('earth_84.md') \
                     and B['gpText'].get('149') == g149 and B['gpText'].get('84') == g84
                 R(eng, 'B-4 빈 기기 — 동기화 뒤 GP[111] = 재료 글자 전수(%d자) · GP[149]·GP[84] = 기록 값 무변' % len(MD), ok6, B['gpText'].get(NO) == MD,

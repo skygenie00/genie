@@ -386,7 +386,12 @@ def g7(br, eng):
         out['공식 칩'] = c
         if c:
             q.press(c, 900); out['공식'] = q.ev("()=>__W.list()")
-            q.press(q.ev("()=>__W.rowAt('1.1.1')"), 1200); out['공식 1.1.1'] = q.ev("()=>__W.rowBody('1.1.1')")
+            if str((out['공식'] or {}).get('title') or '').startswith('📐 공식 · 공식 시트'):   # ★ 합치기(10/1) — physphone A-3 공식 시트: 첫 묶음 줄(.pfg)을 연다
+                q.press(q.ev("()=>{const r=document.querySelector('#pwl .pwr.pfg');return r?__W.hit(r):null}"), 1200)
+                out['공식 묶음 0'] = q.ev("()=>{const r=document.querySelector('#pwl .pwr.pfg');const b=r&&r.nextElementSibling;return b?{open:!b.classList.contains('hide'),tri:__W.tx(r.querySelector('.tri')),rows:b.querySelectorAll('.frmrow').length,katex:b.querySelectorAll('.katex').length,groups:document.querySelectorAll('#pwl .pwr.pfg').length,frm:(typeof FRM!=='undefined')?FRM.length:-1}:null}")
+                q.press(q.ev("()=>{const r=document.querySelector('#pwl .pwr.pfg');return r?__W.hit(r):null}"), 600)   # 접어 둔다(뒤 칸 무변)
+            else:
+                q.press(q.ev("()=>__W.rowAt('1.1.1')"), 1200); out['공식 1.1.1'] = q.ev("()=>__W.rowBody('1.1.1')")
         c2 = q.ev("()=>__W.chip('개념')")
         out['개념 칩'] = c2
         if c2:
@@ -414,10 +419,17 @@ def g7(br, eng):
     T('7', '%s 폰 칩 둘 「공식」「개념」 — ▾ 바로 오른쪽(같은 줄 · 차례)' % eng, [c['t'] for c in ch] == ['공식', '개념'] and all(abs(c['r']['y'] - fr.get('y', -99)) <= 4 and c['r']['x'] > fr.get('x', 999) for c in ch), {'▾': fr, '칩': ch})
     T('7-헛', '%s 헛잣대 바탕 — 칩 없음' % eng, not b['head']['chips'] and not b.get('공식 칩'), b['head']['chips'])
     L = n.get('공식') or {}
+    # ★ 합치기(10/1 하위 에이전트 C) — physphone A-3(97883ef): 물리 위 「공식」 = 공식 시트(FRM 묶음) · 창 자리·크기는 같음 → 공식 시트면 그 꼴로 잰다(옛 목록 창이면 옛 잣대 그대로)
+    sheet = str(L.get('title') or '').startswith('📐 공식 · 공식 시트')
+    g0 = n.get('공식 묶음 0') or {}
+    rect_ok = bool(L.get('rect')) and abs(L['rect']['w'] - 374) <= 1 and abs(L['rect']['h'] - 608) <= 1 and abs(L['rect']['x'] - 8) <= 1
     T('7', '%s [공식] 목록 창 — 머리 「📐 공식 · 전체 · 물리 목차 51단원」 · 51 줄 · 폭 374 · 높이 72%%(608) · 좌 8' % eng,
-      L.get('title') == '📐 공식 · 전체 · 물리 목차 51단원' and len(L.get('rows') or []) == 51 and L.get('rect') and abs(L['rect']['w'] - 374) <= 1 and abs(L['rect']['h'] - 608) <= 1 and abs(L['rect']['x'] - 8) <= 1, L)
+      (L.get('title') == '📐 공식 · 전체 · 물리 목차 51단원' and len(L.get('rows') or []) == 51 and rect_ok) if not sheet else
+      (rect_ok and g0.get('groups', 0) > 0 and g0.get('groups') == g0.get('frm')), L if not sheet else {'공식 시트(physphone A-3)': True, 'title': L.get('title'), 'rect': L.get('rect'), '묶음 줄': g0.get('groups'), 'FRM': g0.get('frm')})
     fb = n.get('공식 1.1.1') or {}
-    T('7', '%s [공식] 1.1.1 ▸ 손가락 → 본문 펼침 · 「▾」 · 들여 씀 16 · 수식(KaTeX)' % eng, fb.get('open') and fb.get('tri') == '▾' and fb.get('lines', 0) > 3 and abs(fb.get('indent', 0) - 16) <= 1 and fb.get('katex', 0) > 0, fb)
+    T('7', '%s [공식] 1.1.1 ▸ 손가락 → 본문 펼침 · 「▾」 · 들여 씀 16 · 수식(KaTeX)' % eng,
+      (fb.get('open') and fb.get('tri') == '▾' and fb.get('lines', 0) > 3 and abs(fb.get('indent', 0) - 16) <= 1 and fb.get('katex', 0) > 0) if not sheet else
+      (g0.get('open') and g0.get('tri') == '▾' and g0.get('rows', 0) > 0 and g0.get('katex', 0) > 0), fb if not sheet else {'공식 시트 첫 묶음(physphone A-3 · 1.1.1 줄 없음)': g0})
     C = n.get('개념') or {}
     nt = {x['id']: x for x in (C.get('rows') or [])}
     T('7', '%s [개념] 목록 창 — 「💡 개념 · 전체 · 볼트 물리 폴더 51파일」 · 51 줄 · 1.1.2·3.1.3·6.1.3 세모 없음(빈 파일)' % eng,
@@ -641,11 +653,15 @@ def rf6(br, eng):
 
 
 def rf(br, eng):
-    for fn in (rf1, rf2, rf3, rf4, rf5, rf6):
-        try:
-            fn(br, eng)
-        except Exception as e:
-            T('RUN', '%s · RF %s 멈춤' % (eng, fn.__name__), False, repr(e)[:600])
+    _b = APPS['BASE']; APPS['BASE'] = APPS.get('BRF', _b)   # ★ 합치기(10/1) — RF 「-헛」 바탕 = cedc251(아래 main 의 BRF 줄)
+    try:
+        for fn in (rf1, rf2, rf3, rf4, rf5, rf6):
+            try:
+                fn(br, eng)
+            except Exception as e:
+                T('RUN', '%s · RF %s 멈춤' % (eng, fn.__name__), False, repr(e)[:600])
+    finally:
+        APPS['BASE'] = _b
 
 
 # ── RF2  _task_jagwa_revfix0928_fix1 — 0928 검수 고침 여덟(칸마다 NEW · 「-헛」 = 바탕 HEAD(이 판 바로 앞 커밋)가 옛 결함을 보임) ──
@@ -949,13 +965,17 @@ def rf2_12(br, eng):
 
 
 def rf2g(br, eng):
-    for fn in (rf2_1, rf2_2, rf2_3, rf2_4, rf2_5, rf2_6, rf2_7, rf2_8, rf2_12):
-        if ONLY2 and fn.__name__.split('_')[1] not in ONLY2:
-            continue
-        try:
-            fn(br, eng)
-        except Exception as e:
-            T('RUN', '%s · RF2 %s 멈춤' % (eng, fn.__name__), False, repr(e)[:600])
+    _b = APPS['BASE']; APPS['BASE'] = APPS.get('BRF2', _b)   # ★ 합치기(10/1) — RF2 「-헛」 바탕 = 2bc1719(아래 main 의 BRF2 줄)
+    try:
+        for fn in (rf2_1, rf2_2, rf2_3, rf2_4, rf2_5, rf2_6, rf2_7, rf2_8, rf2_12):
+            if ONLY2 and fn.__name__.split('_')[1] not in ONLY2:
+                continue
+            try:
+                fn(br, eng)
+            except Exception as e:
+                T('RUN', '%s · RF2 %s 멈춤' % (eng, fn.__name__), False, repr(e)[:600])
+    finally:
+        APPS['BASE'] = _b
 
 
 ONLY2 = [x for x in (ARG('--rf2', '') or '').split(',') if x]   # fix1 RF2 — 칸 고르기(1,2,…,12)
@@ -970,6 +990,10 @@ def main():
     APPS['NEW'] = io.open(NEWF, encoding='utf-8').read()
     APPS['BASE'] = git('show', 'fd911d5:jagwa/index.html').decode('utf-8')   # ★ A-6(d) 9/30 _task_qa_baseline — 헛잣대 바탕 = 인도 앞 판 fd911d5(penfinger_add2 · docstring 「바로 앞 인도판」 · 인도 결과 「BASE HEAD 775457c」 = 같은 jagwa) · 인도(fb89ad2) 뒤 HEAD 는 이 판 자신
     APPS['C0'] = git('show', 'cedc251:jagwa/index.html').decode('utf-8')   # fix1 RF2-B3 — 겹친 넓이 잣대(cedc251)
+    # ★ 합치기(10/1 하위 에이전트 C) — 합집합으로 BASE 가 fd911d5 가 되자 RF·RF2 가 「pwList is not defined」로 멈췄다(fd911d5 에는 pwList 가 없다)
+    #   RF 「-헛」 = 그 묶음을 잰 클라우드의 바탕 HEAD = cedc251(fb47074 의 부모) · RF2 「-헛」 = cb56419 본문 「헛잣대 = 이 판 바로 앞 커밋 2bc1719」 — rf() · rf2g() 가 도는 동안만 BASE 로 쓴다
+    APPS['BRF'] = git('show', 'cedc251:jagwa/index.html').decode('utf-8')
+    APPS['BRF2'] = git('show', '2bc1719:jagwa/index.html').decode('utf-8')
     if not ONLY or '9' in ONLY:
         d9()
     with sync_playwright() as pw:

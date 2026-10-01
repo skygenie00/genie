@@ -631,7 +631,8 @@ BODY_PHYS = r"""
      T('Y-1 물리는 tfix 를 안 쓴다 — txtOf·tfixSet·tfixSheet 는 SHELL 블록이라 있어도 HASBOOK=false',   /* A-6(a) 9/30 — c9faff2 · add5 §A 원칙(위 crop 줄과 같은 까닭) */
        typeof HASBOOK!=='undefined'&&HASBOOK===false,
        [typeof txtOf,typeof tfixSet,typeof tfixSheet]);
-     T('Y-1 SYNC_KEYS 에 tfix 없음',SYNC_KEYS.indexOf('tfix')<0);
+     /* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef 본문 「물리 SYNC 키 tfix 하나 더함」) — 물리 tfix 는 이름(nm)·공식(F|) 칸뿐 · 본문 글자 고침(q) 없음 */
+     T('Y-1 SYNC_KEYS 에 tfix 없음(★ physphone 뒤 = tfix 는 이름·공식 칸뿐 · 본문 q 0)',SYNC_KEYS.indexOf('tfix')<0||(typeof pnFix==='function'&&Object.keys(TFIX||{}).every(k=>!TFIX[k]||TFIX[k].q===undefined)));
    });
    try{await __nativeFetch('/snap',{method:'POST',body:JSON.stringify(snap)})}catch(e){}
 """
@@ -792,7 +793,10 @@ def static_checks():
        and "<div class=\"q${cropHas(uid,'q')?' crophid':''}\">${esc(stemOf(r))}</div>" not in s)
     T2('S-26 검색이 원본과 고친 글자를 둘 다 훑는다',
        # A-6(a) 9/30 — jagwa_search(eb1113e · _task_jagwa_search.md A-1 · A-3)가 목록 거르기 hay 를 걷고 결과 상자 esHit 로 옮겼다 — 본문 원본 + 고친 글자(tfixHay) 둘 다 그대로
-       "if((String(r[F.BODY]||'')+' '+tfixHay(uid)).toLowerCase().includes(low))return {k:'body'};" in s)
+       "if((String(r[F.BODY]||'')+' '+tfixHay(uid)).toLowerCase().includes(low))return {k:'body'};" in s
+       # ★ 합치기 10/1(하위 에이전트 C) — revfix0929 A-3(2bc1719 본문 「행마다 고정 칸 찾기 글 한 번만(esRowCmp)」)이 같은 뜻(본문 원본 + 고친 글자 tfixHay)을 esCmp 꼴로 다시 썼다
+       or ("const low=esCmp(q),uid=r[F.CODE],c=esRowCmp(r),th=tfixHay(uid);" in s
+           and "if(c.b.includes(low)||(th&&esCmp(String(r[F.BODY]||'')+' '+th).includes(low)))return {k:'body'};" in s))
     T2('S-27 DATA 원본 무변 — tfix 는 DATA 에 안 쓴다',
        'r[F.BODY]=' not in s and 'r[F.SOL]=' not in s and 'r[F.CH]=' not in s)
     T2('S-28 정답은 기존 ansfix 가 맡는다(tfix 칸에 없다)',

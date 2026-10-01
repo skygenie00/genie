@@ -409,7 +409,7 @@ def main():
         lines.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
     s = open(SRC, encoding='utf-8').read()
     T2('P5 소스에 ink 동기화가 없다', "'ink'" not in s.split('SYNC_KEYS=')[1].split(']')[0])
-    T2('P1 minbeop 무접촉(이 파일은 phys 뿐)', 'minbeop' not in s.replace('민법앱(`minbeop/index.html`)의 실물을 읽고 옮겼다', ''))   # ★ A-6(a) 9/30 — 지학 listpop_add1(genie cd248a5)이 「민법앱 실물을 읽고 옮겼다」 주석 한 줄을 남김(코드 접촉 아님) — 그 주석만 빼고 잰다
+    T2('P1 minbeop 무접촉(이 파일은 phys 뿐)', 'minbeop' not in s.replace('민법앱(`minbeop/index.html`)의 실물을 읽고 옮겼다', '').replace('minbeop .clsrc 97~99 · .ggclhd 94~96', ''))   # ★ 합치기 10/1(하위 에이전트 C) — search_claude(e9de3b8) CSS 주석 「minbeop .clsrc 97~99 · .ggclhd 94~96」(민법 값 출처 표기 · 코드 접촉 아님)도 뺀다   # ★ A-6(a) 9/30 — 지학 listpop_add1(genie cd248a5)이 「민법앱 실물을 읽고 옮겼다」 주석 한 줄을 남김(코드 접촉 아님) — 그 주석만 빼고 잰다
     T2('A-4 토큰을 HTML 에 박지 않았다', 'github_pat_' not in s.replace('github_pat_\u2026', ''))
     T2('A-5 도장 10초·동기화 180초', ',10000)' in s and ',180000)' in s)
     body = s

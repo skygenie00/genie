@@ -132,7 +132,7 @@ TESTS = r"""<script>
    $('#view').style.removeProperty('--ndw');SET.ndw=300;ndSetW(SET.ndw);
    T('T-5 새로고침 흉내(SET.ndw → ndSetW) 너비 300',Math.round(dr.getBoundingClientRect().width)===300);
    /* ===== T-6 · T-9 SYNC ===== */
-   T('T-6 SYNC_KEYS 14(필터 손질 9/5: +link 열두째) · mcard 열한째',/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(열셋째·열넷째 · 앱 8168~8169) */SYNC_KEYS.length===14&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&SYNC_KEYS[10]==='mcard'&&SYNC_KEYS[11]==='link'&&SYNC_REF.mcard.g()===MC&&SYNC_REF.link.g()===LK);
+   T('T-6 SYNC_KEYS 14(필터 손질 9/5: +link 열두째) · mcard 열한째',/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(열셋째·열넷째 · 앱 8168~8169) *//* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef) 물리 SYNC 키 끝에 tfix 하나 */(SYNC_KEYS.length===14||(SYNC_KEYS.length===15&&SYNC_KEYS[14]==='tfix'))&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&SYNC_KEYS[10]==='mcard'&&SYNC_KEYS[11]==='link'&&SYNC_REF.mcard.g()===MC&&SYNC_REF.link.g()===LK);
    /* ===== T-7 카드 쓰기 ===== */
    mcardWin(no);await wait(60);
    const mc=$('#mcc');T('T-7 카드 창 = 문제명 · 코멘트 · 캔버스 · 도구',!!$('.mcwin')&&$('.mcwin h2').textContent.includes(String(no))&&!!$('.mcnote')&&!!mc&&$$('.mct [data-t]').length===3);
@@ -187,7 +187,7 @@ TESTS = r"""<script>
    T('T-9 mcard 가 도장을 탄다(u 키 mcard|no)',!!U['mcard|'+no],Object.keys(U).filter(k=>k.startsWith('mcard')));
    delete MC[no];await saveMC();stampAll();
    T('T-9 지우면 묘비(gone)',!!lsObj(GONE_KEY)['mcard|'+no]);
-   T('M-1 과목 phys · IndexedDB phys535 · 저장소 셋(pdf·ink·kv) · SYNC_KEYS 14(9/5 필터 손질 +link · 9/21 셸 +gg·ggref)',SUBJ_ID==='phys'&&db.name==='phys535'&&[...db.objectStoreNames].sort().join()==='ink,kv,pdf'&&/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(앱 8168~8169) */SYNC_KEYS.length===14&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&document.body.dataset.subj==='phys',[db.name,[...db.objectStoreNames]]);
+   T('M-1 과목 phys · IndexedDB phys535 · 저장소 셋(pdf·ink·kv) · SYNC_KEYS 14(9/5 필터 손질 +link · 9/21 셸 +gg·ggref)',SUBJ_ID==='phys'&&db.name==='phys535'&&[...db.objectStoreNames].sort().join()==='ink,kv,pdf'&&/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(앱 8168~8169) *//* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef) 물리 SYNC 키 끝에 tfix 하나 */(SYNC_KEYS.length===14||(SYNC_KEYS.length===15&&SYNC_KEYS[14]==='tfix'))&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&document.body.dataset.subj==='phys',[db.name,[...db.objectStoreNames]]);
    const gd=id=>getComputedStyle($(id)).display;
    /* ★ A-6(a) 9/30 — 셸 add9 §A-1(68216cf): 「목차」 단추 #btnTree 는 걷었다(없는 요소에 getComputedStyle → 하니스가 터짐) — 그 조건만 「없다」로(첫 바퀴 earth M-4 와 같은 고침) · 옛 #tree 는 숨은 채(treeOpen 빈 함수) */
    T('M-4 게이트(물리): 지학 조각 숨김(ebody·tBook·sub · bookpane 은 ebody 안) · #tree 는 숨은 채(.hide · 상주 서랍이 갈음) · 「목차」 단추 #btnTree 는 걷음(add9 §A-1)',gd('#ebody')==='none'&&gd('#tree')==='none'&&$('#tree').classList.contains('hide')&&$('#bookpane').offsetParent===null&&!$('#btnTree')&&gd('#tBook')==='none'&&gd('#sub')==='none',[gd('#ebody'),gd('#tree'),$('#bookpane').offsetParent,!!$('#btnTree'),gd('#tBook'),gd('#sub')]);

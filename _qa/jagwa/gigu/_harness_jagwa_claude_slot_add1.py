@@ -568,6 +568,9 @@ def main():
         if a is None or b is None:
             lines.append('FAIL | CL2-6 물리 %s 실측을 못 받았다' % ko)
             continue
+        if key == 'CL2 실측 아랫줄 글' and isinstance(a, str):
+            # ★ 합치기 10/1(하위 에이전트 C) — physphone A-3(97883ef 본문 「#tTheory 「공식」 → 「이론」」) — 그 단추 글자만 옛 글자로 맞춘다(바탕 판을 돌려도 같게)
+            a = a.replace('암기카드이론개념', '암기카드공식개념', 1)
         lines.append(('PASS' if a == b else 'FAIL')
                      + ' | CL2-6 ★물리 %s 가 바탕과 같다' % ko
                      + ('' if a == b else ' | ' + _firstdiff(a, b)))
