@@ -6998,7 +6998,7 @@ function ncSelPick(){ const sel = getSelection(); if (!sel || sel.isCollapsed ||
 document.addEventListener('mouseup', () => setTimeout(ncSelPick, 10));
 document.addEventListener('touchend', () => setTimeout(ncSelPick, 350));
 async function popNoteList(label,key,items,ev,depth){
-  const _pk23=('cell')+'|'+('🔗 '+label+' — '+key.slice(0,40)); if(popToggle(_pk23))return; const body=popShell('cell', '🔗 '+label+' — '+key.slice(0,40), _pk23);   /* ★ 상표 손질 6 — 키 종류|제목 */
+  const _pk23=('cell')+'|'+('🔗 '+label+' — '+key); if(popToggle(_pk23))return; const body=popShell('cell', '🔗 '+label+' — '+key.slice(0,40), _pk23);   /* ★ 상표 손질 6 — 키 종류|제목 · ★ jo_mokchip_fix1 — 키는 자르지 않은 key(제목만 앞 40자) · 40자 넘는 노트 이름에서 목차 칩 창과 블록 칩 창(…#^id)이 같은 키가 되어 서로 닫던 것 */
   showPop(ev); popSizable(body,'list');   /* ★ 판 4 add2 §3 */
   const arr=(items||[]).map(x=>typeof x==='string'?{kind:label,v:x}:x);
   const groups={}; arr.forEach(x=>{(groups[x.kind]=groups[x.kind]||[]).push(x.v);});
@@ -7136,7 +7136,7 @@ async function mokOpenNote(f, ev, lp){
 async function mokOpenList(f, k, ev, lp){
   const { N, B } = await noteData(); const C0 = mokCite(B, N)[f];
   await popNoteList(k, f, C0 ? [...C0[k]] : [], ev, 2);
-  const np = POPS.find(x => x._pk === 'cell|🔗 ' + k + ' — ' + f.slice(0, 40)); if (np) mokPlace(np, lp, 'list');
+  const np = POPS.find(x => x._pk === 'cell|🔗 ' + k + ' — ' + f); if (np) mokPlace(np, lp, 'list');   /* ★ jo_mokchip_fix1 — popNoteList 와 같은 키(자르지 않음) */
 }
 /* ★ jo_mokchip A-1-4 — 목차노트 목록(lp) 옆 자리(노트 팝업 · 칩 목록 창이 같이 쓴다 · mokOpenNote 에서 떼어 낸 옛 식 그대로)
    kind = 그 창의 popSizable 기억 갈래 — 기억 자리(x)가 있으면 손대지 않는다(노트 팝업은 kind 없이 = 옛 그대로) */

@@ -7,6 +7,8 @@ r"""_task_jo_mokchip §B 관문 — 목차노트 창 줄 칩(기출·사례·GS�
   데이터 = genie jo/data(실물 · note_backlink · note_<법> 읽기만) · 원격 = 같은 출처만(밖 주소 404 · 기록 쓰기 0)
   도구 = _qa/jopangi/공통/_harness/_harness_jo_mok_popup_phone.py 의 serve(SEED · __HM) · P(책상 1440 마우스 · 아이패드 834 · 폰 390 터치)를 불러 쓴다
   기대 카드 = 데이터에서 파이썬으로 센 것(노트 줄 위에서 블록이 처음 나온 차례 · 줄에 없는 블록은 그 뒤 열쇠 차례 · 같은 값 한 번)
+  fix1(_task_jo_mokchip_fix1) = B12 · B13 — 40자 넘는 노트 이름에서 목차 칩 창과 블록 칩 창(…#^id) 키가 같아지던 것(--base 00a93ea 로 헛잣대)
+    창 찾기는 새 키(자르지 않음)와 00a93ea 까지의 키(앞 40자)를 둘 다 받는다 — B1~B11 은 어느 바탕에서도 같은 잣대
 """
 import os as _os_r, sys as _sys_r
 _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
@@ -41,6 +43,9 @@ sys.argv = _argv
 LAWS = [('특허법', '특허'), ('상표법', '상표'), ('민사소송법', '민소'), ('디자인보호법', '디보')]
 KINDS = ['기출', '사례', 'GS', '판례']
 N1 = '1.3.1.{법정}직사토(보독관)'
+# fix1 — 긴 노트 이름(UTF-16 40 · 44자) · 「기출」 블록 칩이 둘 이상인 노트
+LONG = [('민사소송법', '7.7.1.{보참}(후발)보조참가(71조)-없어불판사,보피공주다,없어방실', '0f8334', '09b8fb'),
+        ('상표법', '5.9.{민사}{침}(107){손}(109)산정(110)법손(111){신}{부}', 'd400ce', '6314a5')]
 ROWS = []
 APPS = {}
 
@@ -115,15 +120,21 @@ window.__MK={
  pops(){return POPS.filter(p=>p.isConnected).map(p=>({k:p._pk,t:__MK.tx(p.querySelector('.pt')),grp:[...p.querySelectorAll('.pb .grp')].map(__MK.tx),
    res:[...p.querySelectorAll('.pb .res')].map(d=>__MK.tx(d.querySelector('b'))),r:__MK.R(p),z:+p.style.zIndex||0}))},
  on(n){const r=__MK.row(n);return !!(r&&r.classList.contains('on'))},
- key:(k,n)=>'cell|🔗 '+k+' — '+String(n).slice(0,40),
+ key:(k,n)=>'cell|🔗 '+k+' — '+String(n),
+ keyCut:(k,n)=>'cell|🔗 '+k+' — '+String(n).slice(0,40),   /* 00a93ea 까지 — 창 키도 앞 40자 */
+ findList(k,n){return POPS.find(x=>x._pk===__MK.key(k,n))||POPS.find(x=>x._pk===__MK.keyCut(k,n))||null},
+ lists(){return POPS.filter(p=>p.isConnected&&String(p._pk||'').indexOf('cell|🔗 ')===0).map(p=>p._pk)},
+ raise(p){if(!p)return false;p.style.zIndex=++POPZ;try{popAllSync()}catch(_){}return true},   /* 하네스 준비만 — 누를 창을 맨 위로(폰에서 창끼리 겹침) */
+ raiseMk(){return __MK.raise(__MK.mk())},
+ raiseNote(n){return __MK.raise(POPS.find(x=>x._pk==='note|'+PLAW()+'|'+n+'|'))},
  closeExceptMk(){POPS.slice().forEach(p=>{if((p._pk||'').indexOf('moknote|')!==0)closeOne(p)});return POPS.length},
  async waitPop(pk,ms){for(let i=0;i<(ms||3000)/50;i++){const p=POPS.find(x=>x._pk===pk);if(p&&p.querySelector('.pb .grp,.pb .cdim'))return true;await new Promise(r=>setTimeout(r,50))}return false},
  /* B-2 — 칩마다 JS 누름 → 창 줄 · 수 · 같은 값 두 번 · 노트 팝업 */
  async sweepChips(limit){const p=__MK.mk();if(!p)return null;const out=[];let n=0;
    for(const r of [...p.querySelectorAll('.mklist .mkr')]){const f=r.dataset.note;
      for(const c of [...r.querySelectorAll('.ck')]){if(limit&&n>=limit)return out;n++;
-       const [k,v]=__MK.tx(c).split(' ');const pk=__MK.key(k,f);c.click();
-       let q=null;for(let i=0;i<80;i++){q=POPS.find(x=>x._pk===pk);if(q&&q.querySelector('.pb .grp,.pb .cdim'))break;await new Promise(z=>setTimeout(z,25))}
+       const [k,v]=__MK.tx(c).split(' ');c.click();
+       let q=null;for(let i=0;i<80;i++){q=__MK.findList(k,f);if(q&&q.querySelector('.pb .grp,.pb .cdim'))break;await new Promise(z=>setTimeout(z,25))}
        const np=POPS.find(x=>(x._pk||'').indexOf('note|')===0);
        out.push({f,k,v:+v,key:!!q,grp:q?__MK.tx(q.querySelector('.pb .grp')):null,res:q?[...q.querySelectorAll('.pb .res')].map(d=>__MK.tx(d.querySelector('b'))):null,note:!!np});
        __MK.closeExceptMk();await new Promise(z=>setTimeout(z,10))}}
@@ -383,6 +394,65 @@ def g8(br, eng, who):
         q.close()
 
 
+def _note_open(q, f):
+    q.ev("()=>__MK.raiseMk()")
+    q.click(q.ev("n=>__MK.at(__MK.row(n)&&__MK.row(n).querySelector('.nm'))", f), 1500)
+
+
+def _block_press(q, f, bid):
+    q.ev("n=>__MK.raiseNote(n)", f)
+    at = q.ev("([n,id])=>__MK.at(__MK.blockChip(n,id,'기출'))", [f, bid])
+    q.click(at, 1300)
+    return at
+
+
+def _toc_press(q, f):
+    q.ev("()=>__MK.raiseMk()")
+    return press_chip(q, f, '기출', 1300)
+
+
+def g12(br, eng, who):
+    """B12 긴 노트(민소 7.7.1 · 상표 5.9.) × PC 1440 · 폰 390 — 목차 칩 「기출」 창 + 노트 팝업 블록 칩 「기출 N」 창이 같이 뜸(두 차례) · 같은 칩 다시 = 그 창만 닫힘"""
+    out = {}; ok = True
+    for dn in ('PC', '폰'):
+        for law, f, bid, _ in LONG:
+            q = page(br, eng, who, dn)
+            try:
+                open_mok(q, law)
+                kA, kB = 'cell|🔗 기출 — ' + f, 'cell|🔗 기출 — ' + f + '#^' + bid
+                D = {}
+                _toc_press(q, f); _note_open(q, f); D['블록 칩'] = _block_press(q, f, bid)
+                D['목차 → 블록'] = q.ev("()=>__MK.lists()")
+                _toc_press(q, f); D['목차 칩 다시'] = q.ev("()=>__MK.lists()")
+                q.ev("()=>__MK.closeExceptMk()")
+                _note_open(q, f); _block_press(q, f, bid); _toc_press(q, f)
+                D['블록 → 목차'] = q.ev("()=>__MK.lists()")
+                _block_press(q, f, bid); D['블록 칩 다시'] = q.ev("()=>__MK.lists()")
+                okd = (sorted(D['목차 → 블록']) == sorted([kA, kB]) and D['목차 칩 다시'] == [kB]
+                       and sorted(D['블록 → 목차']) == sorted([kA, kB]) and D['블록 칩 다시'] == [kA])
+                out['%s %s' % (dn, f[:6])] = D; ok = ok and okd
+            finally:
+                q.close()
+    return ok, out
+
+
+def g13(br, eng, who):
+    """B13 같은 긴 노트의 블록 칩 둘(다른 ^id) → 창 둘 × PC 1440 · 폰 390"""
+    out = {}; ok = True
+    for dn in ('PC', '폰'):
+        for law, f, b1, b2 in LONG:
+            q = page(br, eng, who, dn)
+            try:
+                open_mok(q, law)
+                _note_open(q, f); _block_press(q, f, b1); _block_press(q, f, b2)
+                L = q.ev("()=>__MK.lists()")
+                want = sorted(['cell|🔗 기출 — ' + f + '#^' + b1, 'cell|🔗 기출 — ' + f + '#^' + b2])
+                out['%s %s' % (dn, f[:6])] = L; ok = ok and sorted(L) == want
+            finally:
+                q.close()
+    return ok, out
+
+
 def g11(br, eng, who):
     """B11 화면 훑기 — 목차노트 창(네 법) · 목록 창 · 노트 팝업 × PC · 아이패드 · 폰 — 쪽 넘침 · 창 화면 밖 · 창 안 가로 넘침 · 줄 넘침"""
     out = {}
@@ -440,6 +510,8 @@ GATES = [('b1', 'B1 민소 「1.3.1.{법정}직사토(보독관)」 「기출 3�
          ('b6', 'B6 자리 — PC 1440 · 아이패드 834 = 목록 창 오른쪽(노트 팝업 규칙 mokPlace) · 화면 안 · 폰 390 = 위 30% / 아래 70% · 겹침 0', g6, 'fix'),
          ('b7', 'B7 터치(아이패드 834 · 폰 390) — 칩 탭 = 목록 창 · 틈·위·아래 탭 = 칩 또는 줄 하나 · 누름 칸 겹침 0 · 줄 밖 0 · 값', g7, 'fix'),
          ('b8', 'B8 노트 팝업 블록 칩 「기출 2」(^271d19) → 같은 창(제목 끝 #^271d19 · 2건) = 바탕과 같음', g8, 'keep'),
+         ('b12', 'B12 긴 노트 이름(민소 7.7.1 · 40자 · 상표 5.9. · 44자) × PC 1440 · 폰 390 — 목차 칩 「기출」 창과 노트 팝업 블록 칩 「기출 N」 창이 같이 뜸(목차 → 블록 · 블록 → 목차) · 같은 칩 다시 = 그 창만 닫힘', g12, 'fix'),
+         ('b13', 'B13 같은 긴 노트의 블록 칩 둘(다른 ^id) → 창 둘 × PC 1440 · 폰 390', g13, 'fix'),
          ('b11', 'B11 화면 훑기 — 목차노트 창(네 법) · 목록 창 · 노트 팝업 × PC · 아이패드 · 폰 — 새로 생긴 쪽 넘침 · 창 화면 밖 · 창 안 가로 넘침 0', g11, 'keep')]
 
 
