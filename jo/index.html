@@ -63,10 +63,10 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   background:var(--panel);padding:8px 0;font-size:12.5px}
 .tree.hid{display:none}
 .tree .h{padding:3px 13px;color:#9a958b;font-size:11px}
-.tree .r{padding:5px 13px;display:flex;justify-content:space-between;gap:6px;align-items:center;cursor:pointer}
-.tree .r:hover{background:#efece4}
-.tree .r span.nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tree .r em{font-style:normal;color:#a5a19a;font-size:11px;display:inline-flex;gap:5px;align-items:center;flex-shrink:0}
+.tree .r,.pop .tmof .r.tmr,.pop .tmres .r.tmr{padding:5px 13px;display:flex;justify-content:space-between;gap:6px;align-items:center;cursor:pointer}
+.tree .r:hover,.pop .tmof .r.tmr:hover,.pop .tmres .r.tmr:hover{background:#efece4}
+.tree .r span.nm,.pop .tmof .r.tmr span.nm,.pop .tmres .r.tmr span.nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree .r em,.pop .tmof .r.tmr em,.pop .tmres .r.tmr em{font-style:normal;color:#a5a19a;font-size:11px;display:inline-flex;gap:5px;align-items:center;flex-shrink:0}
 .tree .r.on{background:#e8effb;border-left:3px solid var(--exc);padding-left:10px}
 .tree .r.on span.nm{color:var(--exc);font-weight:700}
 .tree .r.on em{color:var(--exc)}
@@ -2832,7 +2832,7 @@ async function viewJo(){
   lg.innerHTML='<span style="color:'+BK_COLOR.내용+'">●</span><span style="color:'+BK_COLOR.주체+'">●</span><span style="color:'+BK_COLOR.기간+'">●</span>'+
                ' = 빈칸 내용·주체·기간 · 밑줄 색 = 통과율(<span style="color:#16a34a">≥90 초록</span> · <span style="color:#d97706">≥60 노랑</span> · <span style="color:#dc2626">그 외 빨강</span>) · 누르면 그 빈칸<br>'+
                '☑N 정오문제 수 · 누르면 체크 색';
-  tree.appendChild(lg);
+  if(!(S.treeTheme&&S.law===TM_LAW&&tmHas()))tree.appendChild(lg);   /* ★ jo_theme_fix1 A-41 — 테마 줄일 때 범례(조 줄 점·밑줄 뜻) 없음 · 목차로 오면 바탕 그대로 */
   slot.appendChild(tree);
   slot.appendChild(handle('tree'));
 
@@ -17753,9 +17753,9 @@ function jtOwnRows(box, M, i, label, subj){
   '.pop .ph .ptgo{flex:none;display:inline-flex;align-items:center}',
   '.pop .ph .ptgo .plgb{margin-left:0;font-size:11px;color:var(--exc)}',
   '.tree .r .jstarn{flex:none;font-size:10px}',
-  '.tree .r em.jcol3{display:inline-grid;grid-template-columns:30px 30px 26px;column-gap:4px;align-items:center;justify-items:start;margin-left:auto;flex:none}',
-  '.tree .r em.jcol3.wide{grid-template-columns:44px 30px 26px}',
-  '.tree .r em.jcol3 > span{white-space:nowrap}',
+  '.tree .r em.jcol3,.pop .tmof .r.tmr em.jcol3,.pop .tmres .r.tmr em.jcol3{display:inline-grid;grid-template-columns:30px 30px 26px;column-gap:4px;align-items:center;justify-items:start;margin-left:auto;flex:none}',
+  '.tree .r em.jcol3.wide,.pop .tmof .r.tmr em.jcol3.wide,.pop .tmres .r.tmr em.jcol3.wide{grid-template-columns:44px 30px 26px}',
+  '.tree .r em.jcol3 > span,.pop .tmof .r.tmr em.jcol3 > span,.pop .tmres .r.tmr em.jcol3 > span{white-space:nowrap}',
   '.thwrap.c3 .thcols{flex-wrap:wrap;overflow-x:visible}',
   '.thwrap.c3 .thcols > .thcol{min-width:min(190px,100%);max-width:min(240px,100%)}',   /* 좁은 가운데 칸(아이패드 820 · 패널 열림 ≈ 240px)에서도 카드가 줄 밖으로 안 나간다 */
   '.thwrap.c3.shut{padding:6px 10px}',
@@ -18965,8 +18965,8 @@ function cfRowEl(r, key, cur, back, onPick){
   /* A-7 좁은 서랍 ★ 개정일 = 이름보다 먼저 줄어든다(오른쪽 세 칸 폭 무변) */
   '.tree .r .jstarn.jsshr{flex:0 1000 auto;min-width:1.1em;overflow:hidden;white-space:nowrap;text-overflow:clip}',
   /* ★ revfix0928pm A-5 — 서랍 조 줄 = 번호 칸(줄지 않음 · 빈칸은 이름 조각 앞 pre — 번호 칸 최소폭에 안 든다) + 이름 칸(줄며 끝 …) · 이름 칸 = grid(번호 max-content · 이름 minmax(0,max-content)) — 넓으면 글 전체 · 좁으면 이름만 줄고 번호 아래로는 안 준다 */
-  '.tree .r span.nm.jnm2{display:grid;grid-template-columns:max-content minmax(0,max-content);min-width:min-content;overflow:hidden}',
-  '.tree .r span.nm.jnm2>.jno{white-space:nowrap}',
+  '.tree .r span.nm.jnm2,.pop .tmof .r.tmr span.nm.jnm2,.pop .tmres .r.tmr span.nm.jnm2{display:grid;grid-template-columns:max-content minmax(0,max-content);min-width:min-content;overflow:hidden}',
+  '.tree .r span.nm.jnm2>.jno,.pop .tmof .r.tmr span.nm.jnm2>.jno,.pop .tmres .r.tmr span.nm.jnm2>.jno{white-space:nowrap}',
   '.tree .r .jstarn.jsshr{display:inline-flex;flex-wrap:wrap;align-items:flex-start;height:1.5em;line-height:1.5em;text-overflow:clip}',
   '.tree .r .jstarn>.jsd{white-space:pre}',
   '.tree .r span.nm.jnm2>.jtt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:pre}',
@@ -20042,8 +20042,8 @@ async function joPanelMount(slot){
 
 (function(){
   const css = [
-    '.wml .wmlk{cursor:pointer;text-decoration:underline dotted #9ca3af;text-decoration-thickness:1px;text-underline-offset:3px}',
-    '.wml .wmlk.dead{cursor:default}',
+    '.wml .wmlk,.thl .wmlk,.throw2 .wmlk{cursor:pointer;text-decoration:underline dotted #9ca3af;text-decoration-thickness:1px;text-underline-offset:3px}',   /* ★ jo_theme_fix1 A-31 — 테마 창 글·목록 줄 조 링크도 본문 링크 꼴(글자색 = 정리omr run 색 그대로) */
+    '.wml .wmlk.dead,.thl .wmlk.dead,.throw2 .wmlk.dead{cursor:default}',
     '.wml .wmrev{color:#9ca3af;font-size:.92em}',
     '.pop.wmwin>.ph .pt{font:800 13px system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#1f2937;flex:1;min-width:0}',
     '.pop.wmwin>.ph{padding:9px 12px;cursor:move}',
@@ -20290,8 +20290,8 @@ function pitLong(lineEl, target, struct, text, pref, ev){
 
 (function(){ try{ const s = document.createElement('style'); s.id = 'joscreen0929-css'; s.textContent = [
   /* A-1 서랍 */
-  '.tree .r em.jcol3{grid-template-columns:30px 44px}', '.tree .r em.jcol3.wide{grid-template-columns:44px 44px}',   /* 체크 칸 44px = 아이콘 + 세 자리 수(특허 제29조 298 · 상표 제34조 169) */
-  '.tree .r .jno{cursor:pointer;text-decoration:underline dotted;text-decoration-thickness:1px;text-underline-offset:3px}',
+  '.tree .r em.jcol3,.pop .tmof .r.tmr em.jcol3,.pop .tmres .r.tmr em.jcol3{grid-template-columns:30px 44px}', '.tree .r em.jcol3.wide,.pop .tmof .r.tmr em.jcol3.wide,.pop .tmres .r.tmr em.jcol3.wide{grid-template-columns:44px 44px}',   /* 체크 칸 44px = 아이콘 + 세 자리 수(특허 제29조 298 · 상표 제34조 169) */
+  '.tree .r .jno,.pop .tmof .r .jno,.pop .tmres .r .jno{cursor:pointer;text-decoration:underline dotted;text-decoration-thickness:1px;text-underline-offset:3px}',
   '.tree .r .jno:focus-visible{outline:2px solid #93c5fd;outline-offset:1px;border-radius:2px}',
   'button.jck{display:inline-flex;align-items:center;gap:3px;background:transparent;border:0;padding:1px 2px;margin:0;cursor:pointer;font:800 11px/1 system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#1d7a3e;border-radius:4px}',
   'button.jck:hover{background:#e7e3d9}', 'button.jck .jcki{flex:none;display:block}',
@@ -20523,11 +20523,14 @@ function tmLines(t){
 function tmSvgs(t){ const D = TM.d || { boxes: {} }; return (t.boxes || []).map(bk => ({ bk: bk, b: D.boxes && D.boxes[bk] })).filter(x => x.b && x.b.svg); }
 function tmSvgTexts(x, t){ const out = []; try { const doc = new DOMParser().parseFromString(String(x.b.svg), 'image/svg+xml'); doc.querySelectorAll('text').forEach((n, i) => { const e = t.l[x.bk + '|s' + i]; out.push(e != null ? String(e) : (n.textContent || '')); }); } catch (e) {} return out; }
 function tmText(t){ return tmLines(t).map(L => L.runs.map(r => r.t || '').join('')).concat(...tmSvgs(t).map(x => tmSvgTexts(x, t))).join('\n'); }
-/* 이 테마의 두문자 = 글에 나오는 사전 열쇠(긴 말 먼저) + 이 테마 목록 창에서 더한 것(t) · 색 = 처음 나온 run 색 */
+/* 이 테마의 두문자(긴 말 먼저) = 글 run·SVG 글에 나옴 · 이 테마 목록 창에서 더한 것(t) · 테마 이름(고친 이름)에 나옴 ·
+   여러 조 두문자(사전 조 둘 이상)인데 그 조가 전부 이 테마 특허법 조 안 — 색 = 글에 처음 나온 run 색(글에 없으면 빈 = 기본 글자색) · 「두N」 · 목록 창 · 테마 창 굵게가 다 이 함수 */
 function tmThAcr(t){
   const A = tmAcr(), words = Object.keys(A).sort((a, b) => b.length - a.length), out = [], seen = new Set();
   const runs = []; tmLines(t).forEach(L => L.runs.forEach(r => runs.push(r))); tmSvgs(t).forEach(x => tmSvgTexts(x, t).forEach(s => runs.push({ t: s, c: '' })));
-  words.forEach(w => { if (seen.has(w)) return; const r = runs.find(q => String(q.t || '').indexOf(w) >= 0); if (r || A[w].t === t.id){ seen.add(w); out.push({ w: w, m: A[w].m, jo: A[w].jo, c: (r && r.c) || '' }); } });
+  const mine = new Set(tmJoAll(t).map(tmLawKey).filter(x => x[0] === TM_LAW).map(x => x[1])), nm = String(t.n || '');
+  words.forEach(w => { if (seen.has(w)) return; const r = runs.find(q => String(q.t || '').indexOf(w) >= 0), jo = A[w].jo || [];
+    if (r || A[w].t === t.id || nm.indexOf(w) >= 0 || (jo.length > 1 && jo.every(k => mine.has(k)))){ seen.add(w); out.push({ w: w, m: A[w].m, jo: A[w].jo, c: (r && r.c) || '' }); } });
   return out;
 }
 function tmJoAll(t){ return t.jo.map(k => TM_LAW + ':' + k).concat(t.lk); }
@@ -20587,7 +20590,10 @@ function tmTreeRows(tree, kk){
   tree.appendChild(add);
 }
 function tmThemeCount(kk){ const ix = kk ? ['내용', '주체', '기간'].indexOf(kk) : -1; return tmModel().filter(t => ix < 0 || (t.bk && t.bk[ix])).length; }
-/* ── 글 표시 — 조 인용(링크) · 주체 낱말(점선) · 두문자(굵게 · 누르면 뜻) ── */
+/* ── 글 표시 — 조 인용(링크) · 주체 낱말(점선) · 두문자(굵게 · 누르면 뜻) ──
+   다른 법 머리(fix1 A-32): 두 글자(시규 · 민소) = 앞 글자와 상관없이 늘 머리(「및시규11조」 = 시규 → 링크 없음 · 「준용민소16조」 = 민사소송법 제16조) ·
+   한 글자(상 · 디) 앞에 한글이 붙으면 어느 법인지 못 가른다 → 링크 없음(「법원은상33조」 「이상5조」 — 특허법으로 잇지 않는다) ·
+   앞이 공백·괄호·쉼표·줄 처음이면 그 법(「(상227조)」 = 상표법) · 머리 없는 수 = 특허법(「특226조」) */
 const TM_OTHER = { '시규': null, '민소': '민사소송법', '상': '상표법', '디': '디자인보호법' };
 const TM_JO_RX = /(시규|민소|상|디)?\s?(\d{1,3})(?:조(?:의(\d{1,2}))?(?:\s?[①-⑳])?|-(\d{1,2})(?:조)?(?:\s?[①-⑳])?|의(\d{1,2})(?:조)?(?:\s?[①-⑳])?|([①-⑳]))/g;
 function tmMarks(s, ctx){
@@ -20595,8 +20601,8 @@ function tmMarks(s, ctx){
   ctx.acr.forEach(w => { let i = -1; while ((i = s.indexOf(w, i + 1)) >= 0) take(i, i + w.length, 'acr', w); });
   TM_JO_RX.lastIndex = 0; let m;
   while ((m = TM_JO_RX.exec(s))){
-    let a = m.index, pre = m[1] || '';
-    if (pre){ const before = s[a - 1]; if (before && /[가-힣]/.test(before)){ a += pre.length; pre = ''; while (s[a] === ' ') a++; } }   /* 「이상5조」의 상 = 법 머리 아님 */
+    const a = m.index, pre = m[1] || '';
+    if (pre.length === 1 && /[가-힣]/.test(s[a - 1] || '')) continue;   /* 한 글자 머리 앞 한글 = 못 가름 → 링크 없음 */
     if (/\d/.test(s[a - 1] || '')) continue;
     const n = m[2], sub = m[3] || m[4] || m[5] || '';
     if ((m[4] || m[5]) && m[0].indexOf('조') < 0){ const nx = s[m.index + m[0].length] || ''; if (/[가-힣]/.test(nx) && !/[조항호]/.test(nx)) continue; }   /* 「1-2년」 「3의2배」 = 조 아님 */
@@ -20607,7 +20613,7 @@ function tmMarks(s, ctx){
   ctx.subj.forEach(w => { let i = -1; while ((i = s.indexOf(w, i + 1)) >= 0) take(i, i + w.length, 'subj', w); });
   return out.sort((p, q) => p.a - q.a);
 }
-function tmCtx(t){ return { acr: tmThAcr(t).map(x => x.w).concat(Object.keys(tmAcr())).filter((w, i, a) => a.indexOf(w) === i).sort((a, b) => b.length - a.length), subj: tmSubj() }; }
+function tmCtx(t){ return { acr: tmThAcr(t).map(x => x.w), subj: tmSubj() }; }   /* fix1 A-38-3 — 굵게 = tmThAcr 하나(긴 말 먼저 그대로) */
 function tmFill(host, s, color, ctx, svg){
   const mk = (tag, cls, txt) => { const n = svg ? document.createElementNS('http://www.w3.org/2000/svg', 'tspan') : document.createElement(tag); n.setAttribute('class', cls); n.textContent = txt; return n; };
   let i = 0;
@@ -20841,20 +20847,15 @@ try { if (typeof SK_ICON === 'object' && SK_ICON) SK_ICON.thm = '🧩'; } catch 
 /* ── CSS — 테마 줄·창 · A-7 팝업 틀(조판기 전부 = 민법 oxwin 값 · 종류별 색 걷음 · 폭·크기 무변) ── */
 (function(){ try{ const s = document.createElement('style'); s.id = 'jo-theme-css'; s.textContent = [
   /* A-1 서랍 — 테마 줄 = 조 줄(.r) 꼴 · 「두N」 갈색 · 「§N」 회색 · 글자만(테두리 0) · 거름 점 = 조 줄 점과 같은 크기 · 빈 = 회색 테두리 흰 바탕 */
-  '.tree .r.tmr .jno{white-space:nowrap}',
+  '.tree .r.tmr .jno,.pop .tmof .r.tmr .jno,.pop .tmres .r.tmr .jno{white-space:nowrap}',
   '.tmr em.jcol3 .tmd2{font-size:11px;color:#b45309}', '.tmr em.jcol3 .tms{font-size:11px;color:#6b7280}', '.tmr em.jcol3 .tmds{cursor:pointer}',
   '.tree .r.tmaddr{cursor:pointer}', '.tree .r.tmaddr .jtt,.tmadd .jtt{color:#9ca3af;font-size:11.5px;cursor:pointer}',
-  '.jtbar .bkmk.tmdot{align-self:center;width:12px;height:12px;border-radius:50%;border:1.5px solid #9ca3af;background:#fff;box-sizing:border-box;cursor:pointer;flex:none}',
+  '.jtbar .bkmk.tmdot{align-self:center;border:1.5px solid #9ca3af;background:#fff;box-sizing:border-box;cursor:pointer;flex:none}',   /* fix1 A-37 — 지름 = .bkmk.dot 8px · 빈 = 8px 고리 · 켜짐 = BK_COLOR(테·바탕 같은 색) */
   '.jtbar .bkmk.tmdot.on{border-width:1.5px}',
   '.tmr .tmx{margin-left:6px;flex:none;border:0;background:none;color:#9ca3af;font-size:12px;cursor:pointer;padding:0 2px}', '.tmr .tmx:hover{color:#dc2626}',
   '.tmr .tmplus{margin-left:6px;flex:none;border:0;background:none;color:#2563eb;font-size:14px;font-weight:800;cursor:pointer;padding:0 2px}',
-  '.pop .tmof .r.tmr,.pop .tmres .r.tmr{padding:5px 4px;border-radius:6px;display:flex;justify-content:space-between;gap:6px;align-items:center;cursor:pointer}',
-  '.pop .tmof .r.tmr:hover,.pop .tmres .r.tmr:hover{background:#efece4}',
-  '.pop .tmof .r.tmr span.nm,.pop .tmres .r.tmr span.nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-  '.pop .tmof .r.tmr em,.pop .tmres .r.tmr em{font-style:normal;color:#a5a19a;font-size:11px;align-items:center;flex-shrink:0}',
-  '.pop .tmof .r.tmr em.jcol3,.pop .tmres .r.tmr em.jcol3{display:inline-grid;grid-template-columns:30px 44px;column-gap:4px;justify-items:start;margin-left:auto;flex:none}',
-  '.pop .tmof .r.tmr em.jcol3.wide,.pop .tmres .r.tmr em.jcol3.wide{grid-template-columns:44px 44px}',
-  '.tmr em.jcol3 .tmds{display:inline-flex;gap:3px;white-space:nowrap;justify-self:stretch}',   /* 칸(44px) 가득 — 줄마다 누름 둘레 가로 자리가 같다(글자 폭 따라 흔들리면 이웃 줄 쪽이 더 가까운 점이 생긴다) */
+  '.tmr .tmx,.tmr .tmplus{line-height:1}',   /* fix1 A-36 — 창 끝 ✕ · ＋ 가 줄 높이를 안 늘린다(줄 = 서랍 줄 높이) */
+  '.tmr em.jcol3 .tmds{display:inline-flex;gap:3px;white-space:nowrap;justify-self:stretch;line-height:18px}',   /* 칸(44px) 가득 · 높이 18(정수) — 줄마다 누름 둘레(36)가 줄과 꼭 겹친다(글자 폭·소수 높이로 흔들리면 이웃 줄 쪽이 더 가까운 점이 생긴다) */
   '.thsrch{display:flex;gap:6px;align-items:center;margin:10px 0 4px}', '.thsrch input{flex:1;min-width:0;height:30px;box-sizing:border-box;font:inherit;font-size:12.5px;padding:3px 8px;border:1px solid #cbd5e1;border-radius:6px}',
   '.thsrch .tmsgo{height:30px;min-width:36px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer}',
   /* A-2 테마 창 글 — 글자색·줄·들여쓰기 그대로 · 주체 = 점선 밑줄(바탕 없음) · 두문자 = 굵게 · 조 인용 = 조문 팝업 링크 */
@@ -20878,19 +20879,19 @@ try { if (typeof SK_ICON === 'object' && SK_ICON) SK_ICON.thm = '🧩'; } catch 
   '.tmon{display:block}', '.tmlp{background:#fef3c7;border-radius:4px}',
   '[data-tmed]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}',
   '@media (pointer:coarse){.tree .r.tmr,.tree .r.tmaddr{min-height:36px;box-sizing:border-box}.pop .tmof .r.tmr,.pop .tmres .r.tmr{min-height:36px}.tmadd .jtt{display:inline-block;padding:9px 0}',
-  '  .jtbar .bkmk.tmdot{position:relative}.jtbar .bkmk.tmdot::before{content:"";position:absolute;left:50%;top:50%;width:36px;height:36px;transform:translate(-50%,-50%)}',
-  '  .jtbar .bkmk.tmdot{margin:0 12px}',   /* 둘레 36 이 이웃(전체 N ▾ · 접기1) 둘레와 안 겹치게 */
-  '  .tmr em.jcol3 .tmds{position:relative}.tmr em.jcol3 .tmds::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:36px;transform:translate(-50%,-50%)}',
+  '  .jtbar .bkmk.tmdot{position:relative}.jtbar .bkmk.tmdot::before{content:"";position:absolute;left:-5.5px;right:-1.5px;top:50%;height:36px;margin-top:-18px}',   /* fix1 A-34 — 누름 높이 36(머리 위아래 여백 안) · 가로 = 점 왼쪽 4px(칩까지 1px 남김) ~ 점 오른쪽 끝(접기 단추 둘레가 「펴기」 때 점 옆까지 온다) = 12px · 기준 = 테 1.5px 안쪽 */
+  '  .tmr em.jcol3 .tmds{position:relative}.tmr em.jcol3 .tmds::before{content:"";position:absolute;left:0;right:0;top:50%;height:36px;margin-top:-18px}',   /* 둘레 = 칸 폭(44 · 늘임) × 36 — transform 안 씀(크로미움이 transform 상자는 정수 px 로 넓혀 맞힘 → 줄 자리가 소수일 때 윗줄 1px 를 먹는다) */
   '  .tmadd .jtt{display:inline-block;padding:10px 0;min-width:36px;text-align:center}', '  .throw2 .thac{display:inline-flex;align-items:center;min-height:36px;padding:0 4px}',
   '  .thsrch .tmsgo{height:36px;min-height:36px}', '  .cv-bsres .cv-bshd .cv-bsx{min-width:36px;min-height:36px}', '  .cv-bsres .cv-bsone{min-height:36px;display:flex;align-items:center}',
-  '  .jtbar .uzstep.jstep.tmtg{margin:6px 0}',   /* 「테마 N」 이 서랍 머리 둘째 줄로 내려갈 때(폰·아이패드 서랍 폭 211) 둘레 36 이 윗줄 칩·아랫줄 장 머리(제 사각형을 지킨다 · z 3)에 안 닿게 위아래 6px(5px 은 칩 밑과 1px 안쪽이 겹쳤다) */
-  '  .tmr .tmx,.tmr .tmplus{min-width:36px;min-height:36px}}',
+  '  .tmr .tmx,.tmr .tmplus{min-width:36px;position:relative}.tmr .tmx::before,.tmr .tmplus::before{content:"";position:absolute;left:0;right:0;top:50%;height:36px;margin-top:-18px}',   /* 누름 36 = 둘레(줄 36 안 · 줄 높이 무변) */
+  '  .jtbar .bkmk.tmdot{margin-right:3px}}',   /* fix1 A-34 — 접기 단추가 「펴기」(좁음)일 때 제 둘레 36 이 점 테두리에 1px 닿아 점 오른쪽 틈 3px(한 줄 · 높이 무변) */
   /* A-7 팝업 틀 — 조판기 팝업 전부 = 민법 oxwin(흰 바탕 · #cbd5e1 · 둥글기 12 · 그림자 · 머리 #f8fafc 검정 굵은 제목 · 회색 테두리 단추) · 종류별 색 걷음 · 폭·크기(k-c2uw · k-ncbook · k-claude · sized) 무변 */
-  '.pop{background:#fff;border:1px solid #cbd5e1;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.28)}',
+  '.pop,.pop.cflw{background:#fff;border:1px solid #cbd5e1;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.28)}',   /* fix1 A-33 — 🔗 연결 창 · 원문 창(마크업 · 정오문제 · 인용 = .cflw.wmwin)도 같은 틀 */
   '.pop.k-q,.pop.k-fn,.pop.k-cell{border-color:#cbd5e1}',
-  '.pop .ph,.pop.k-fn .ph,.pop.k-cell .ph{background:#f8fafc;color:#111827;padding:7px 10px;border-bottom:1px solid #e5e7eb}',
-  '.pop .ph .pt{font-size:13px;font-weight:800;color:#111827}',
-  '.pop .ph>button{font-size:12px;font-weight:700;color:#6b7280;border:1px solid #d1d5db;border-radius:6px;padding:2px 8px;background:#fff;line-height:1.5}',
+  '.pop .ph,.pop.k-fn .ph,.pop.k-cell .ph,.pop.cflw>.ph{background:#f8fafc;border-bottom:1px solid #e5e7eb}',
+  '.pop .ph,.pop.k-fn .ph,.pop.k-cell .ph{color:#111827;padding:7px 10px}',   /* 연결 창·원문 창 머리 여백·끌기는 제 규칙 그대로 */
+  '.pop .ph .pt,.pop.cflw>.ph .cftt,.pop.wmwin>.ph .pt{font-size:13px;font-weight:800;color:#111827}',
+  '.pop .ph>button,.pop.cflw>.ph>button.cfx,.pop.wmwin>.ph>button.cfx{font-size:12px;font-weight:700;color:#6b7280;border:1px solid #d1d5db;border-radius:6px;padding:2px 8px;background:#fff;line-height:1.5}',
   '.pop .ph>button.pall,.pop.k-cell .ph>button.pall,.pop.k-fn .ph>button.pall{font-size:12px;font-weight:700;color:#6b7280;border:1px solid #d1d5db;border-radius:6px;padding:2px 8px;background:#fff;line-height:1.5}',
   '.pop .prsz{border-radius:0 0 11px 0}',
   '.pop .memoin{background:#fff;border:1px solid #cbd5e1}',

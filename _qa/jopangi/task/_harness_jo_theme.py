@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 r"""_task_jo_theme §B 관문 — 조문 「테마」(서랍 테마 줄·거름 점 · 테마 창 · 목록 창 · 조문 「테마 N」 · 고치기 · 동기화 · 검색) · 팝업 틀 · 8판 교재 창 검색 · 화면 훑기
 
-  python _harness_jo_theme.py [--new <앱>] [--base <앱 파일 | genie git 판>] [--vendor <pdf.js 3.11.174 폴더>] [--eng chromium,webkit] [--only B1,..,B14,WK] [--res <결과>] [--yardstick]
+  python _harness_jo_theme.py [--new <앱>] [--base <앱 파일 | genie git 판>] [--prev <판>] [--vendor <pdf.js 3.11.174 폴더>] [--eng chromium,webkit] [--only B1,..,B24,WK] [--res <결과>] [--yardstick [--yard-app <판>]]
+
+  fix1(_task_jo_theme_fix1 · 8d1383d 위 고침 여덟) = B15~B24 — B15 테마 글 조 링크 꼴 · B16 다른 법 머리 · B17 연결 창·원문 창 틀 · B18 폰 서랍 머리 한 줄 ·
+    B19 창 테마 줄 = 서랍 줄 · B20 거름 점 8px · B21 두문자 이름·여러 조 길 · B22 테마 모드 범례 없음 · B23 본판 B1~B14 다시 · B24 화면 훑기(+ 🔗 연결 창 · 원문 창 셋 · 찾기 결과)
+    PREV = 8d1383d(본판 · 「안쪽 = 8d1383d」 · 「PC 무변」) · 헛잣대 = --yardstick --yard-app 8d1383d --only B15,..,B22
 
   NEW  = 이 판 앱(기본 genie jo/index.html) · BASE = 착수 HEAD(기본 genie git 판 cedc251) — --yardstick 이면 BASE 를 NEW 자리에 넣어 B1~B12 가 저마다 FAIL 해야 통과
     (B13 회귀 · B14 화면 훑기 = 새 판 흠 − 바탕 흠이라 헛잣대 해당 없음)
@@ -33,7 +37,9 @@ def ARG(k, d=None):
 
 NEW = ARG('--new', _roots.genie('jo', 'index.html'))
 BASE = ARG('--base', 'cedc251')
+PREV = ARG('--prev', '8d1383d')   # fix1 — 본판 커밋(「안쪽 = 8d1383d」 · 「PC 무변」 잣대)
 YARD = '--yardstick' in sys.argv
+YAPP = ARG('--yard-app', BASE)    # 헛잣대 앱 — 본판 B1~B12 = cedc251 · fix1 B15~B22 = 8d1383d(--yard-app 8d1383d)
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
 ONLY = [x.strip().upper() for x in (ARG('--only', '') or '').split(',') if x.strip()]
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jo_theme_result.txt'))
@@ -66,19 +72,23 @@ def L(ind, *runs):
 
 
 SVG3 = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 160">'
-        '<text x="10" y="24" font-size="15" fill="#000000">{분변분재 기간}</text>'
-        '<text x="10" y="54" font-size="13" fill="#d40000">분변분재 = 52조 · 53조 · 52-2 · 67-2</text>'
+        '<text x="10" y="24" font-size="15" fill="#000000">{분변 분재 기간}</text>'
+        '<text x="10" y="54" font-size="13" fill="#d40000">분변 분재 = 52조 · 53조 · 52-2 · 67-2</text>'
         '<text x="10" y="84" font-size="13" fill="#0000ff">출원인은 서른 날 안에 낸다</text>'
         '<path d="M10 100 L200 100" stroke="#d40000" fill="none" stroke-width="2"/>'
         '<path d="M10 120 Q100 150 200 120" stroke="#0000ff" fill="none"/>'
         '<path d="M220 40 L400 140" stroke="#ff6100" fill="none"/></svg>')
+# fix1 B-0 보탬 — 다른 법 머리 가르기 줄(임의 글 · 실제 정리omr 글 아님) · 분변분재 기간 글·SVG 에 「분변분재」 없음(이름 · 여러 조 길로만 붙는다)
+A32_LINE = '제5조및시규11조에따라 · 준용민소16조 · 법원은상33조를 · 이상5조 · (상227조)(디217조) · 특226조 · 시규11조'
+A32_WANT = [['5조', '특허법', '제5조'], ['민소16조', '민사소송법', '제16조'], ['상227조', '상표법', '제227조'], ['디217조', '디자인보호법', '제217조'], ['226조', '특허법', '제226조']]
 BOXES = {
     'b1': {'p': 1, 'r': [0.05, 0.08, 0.46, 0.34], 'svg': None, 'lines': [
         L(0, ('{주체능력}', C_BK)),
         L(1, ('가) 특허청장은 3조 및 4조의 절차를 밟는다', C_BK)),
         L(1, ('나) 심사관 5조 · 7-2 는 ', C_RD), ('출원인에게 알린다(11조)', C_BL)),
         L(2, ('다) 특허권자와 대리인은 13조 16조 25조를 본다', C_OR)),
-        L(2, ('라) 46조 62조 (133③) 206조 — 전용실시권자·통상실시권자', C_PU))]},
+        L(2, ('라) 46조 62조 (133③) 206조 — 전용실시권자·통상실시권자', C_PU)),
+        L(1, (A32_LINE, C_BK))]},
     'b2': {'p': 2, 'r': [0.52, 0.08, 0.95, 0.40], 'svg': None, 'lines': [
         L(0, ('{기일기간}', C_BK)),
         L(1, ('정사소2만1 → 16조 · ', C_RD), ('책사소2만1 → 17조', C_BL)),
@@ -92,8 +102,9 @@ THEMES = [
     {'id': 't02', 'n': '기일기간', 'boxes': ['b2'], 'region': None, 'jo': ['3', '14', '15', '16', '17', '46', '63', '147', '186', '190', '224-2'], 'bk': [1, 1, 1]},
     {'id': 't03', 'n': '분변분재 기간', 'boxes': ['b3'], 'region': {'p': 3, 'r': [0.10, 0.20, 0.60, 0.50]}, 'jo': ['52', '53', '52-2', '67-2'], 'bk': [0, 0, 1]},
 ]
-ACR = {'정사소2만1': {'m': '합성 뜻 하나', 'jo': ['16']}, '책사소2만1': {'m': '', 'jo': ['17']}, '분변분재': {'m': '합성 뜻 넷', 'jo': ['52', '53', '52-2', '67-2']}}
-PLANT = {'t01': {'lines': 5, 'links': 12, 'subj': 7, 'acr': 0}, 't02': {'lines': 5, 'links': 12, 'subj': 1, 'acr': 2}, 't03': {'svgtext': 3, 'path': 3, 'links': 4, 'acr': 1}}
+ACR = {'정사소2만1': {'m': '합성 뜻 하나', 'jo': ['16']}, '책사소2만1': {'m': '', 'jo': ['17']}, '분변분재': {'m': '합성 뜻 넷', 'jo': ['52', '53', '52-2', '67-2']},
+       '출심삼1사': {'m': '합성 뜻 다섯', 'jo': ['3', '14', '300']}}   # fix1 — 여러 조 두문자인데 조 하나(300)가 어느 테마에도 없음 → 안 붙어야
+PLANT = {'t01': {'lines': 6, 'links': 17, 'subj': 8, 'acr': 0}, 't02': {'lines': 5, 'links': 12, 'subj': 1, 'acr': 2}, 't03': {'svgtext': 3, 'path': 3, 'links': 4, 'acr': 1}}
 Q_BOOK = '보정을무효로'
 
 
@@ -281,6 +292,12 @@ window.__TM = {
     dots: [...r.querySelectorAll('.bkm3 .bkmk')].map(d => hex(getComputedStyle(d).backgroundColor)), h: Math.round(r.getBoundingClientRect().height) })); },
   joRows(){ return [...document.querySelectorAll('#slot .tree .r[data-jo]')].length; },
   dot(){ const d = document.querySelector('.jtbar .tmdot'); return d ? { bg: hex(getComputedStyle(d).backgroundColor), bd: hex(getComputedStyle(d).borderTopColor), chip: txt(document.querySelector('.jtbar .jckf')) } : null; },
+  deco(e){ if (!e) return null; const c = getComputedStyle(e); return { line: c.textDecorationLine, style: c.textDecorationStyle, dcol: c.textDecorationColor, th: c.textDecorationThickness, off: c.textUnderlineOffset, cur: c.cursor, col: c.color }; },
+  frame(w){ if (!w) return null; const c = getComputedStyle(w), ph = w.querySelector(':scope > .ph'), h = getComputedStyle(ph), t = ph.querySelector('.cftt') || ph.querySelector('.pt'), tc = getComputedStyle(t),
+      xb = ph.querySelector(':scope > button.cfx') || ph.querySelector(':scope > button:not(.pall)'), xc = getComputedStyle(xb), bd = w.querySelector(':scope > .pb'), r = w.getBoundingClientRect();
+    return { bg: c.backgroundColor, bd: c.borderTopColor, bw: c.borderTopWidth, rad: c.borderTopLeftRadius, sh: c.boxShadow, hbg: h.backgroundColor, hbd: h.borderBottomColor, hbw: h.borderBottomWidth,
+      ts: tc.fontSize, tw: tc.fontWeight, tc: tc.color, xc: xc.color, xbd: xc.borderTopColor, xbw: xc.borderTopWidth, xr: xc.borderTopLeftRadius, xbg: xc.backgroundColor,
+      inner: { hpad: h.padding, hcur: h.cursor, bbg: bd ? getComputedStyle(bd).backgroundColor : null, bpad: bd ? getComputedStyle(bd).padding : null, w: Math.round(r.width), rsz: !!w.querySelector(':scope > .prsz'), font: c.fontSize + ' ' + c.fontFamily.slice(0, 20) } }; },
   subjOn(){ return [...document.querySelectorAll('#slot .tree .r[data-jo] .bkm3')].filter(b => { const d = b.querySelectorAll('.bkmk')[1]; return d && !!d.style.background; }).length; },
   sweep(sel, touch){ const out = []; const sig = e => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '.' + String(e.className && e.className.baseVal !== undefined ? e.className.baseVal : e.className).split(' ').filter(x => x && !/^(on|cur|hid|z|sel|fold|tmlp|tmon)$/.test(x)).slice(0, 2).join('.') + ':' + txt(e).replace(/\d+/g, '#').slice(0, 14));
     const se = document.scrollingElement; if (se.scrollWidth > innerWidth + 1) out.push('page-hscroll');
@@ -1000,6 +1017,14 @@ def _exp_move(g, dn):
     return f
 
 
+def _exp_only(name, sig):
+    """그 칸의 새로 생긴 흠 = 지시서가 정한 그 하나뿐"""
+    def f(raw):
+        v = _cell(raw, name)
+        return isinstance(v, dict) and v.get('새로') == [sig]
+    return f
+
+
 def _exp_hdbtn(raw):
     """팝업 머리 단추 = 바탕과 같은 단추(글자 차례) · 높이 = A-7 틀 값(12px · 줄 1.5 · 위아래 2px · 테 1px = 24)"""
     try:
@@ -1038,13 +1063,17 @@ def _exp_pinwin(raw):
 EXPECT = {'revfix0929b': (
     ('B8 · PC 접기1 = 착수 판', 'A-1 서랍 머리 「테마 N」 = 접기1 꼴(.uzstep.jstep) 하나 더 — 접기1 크기·자리는 바탕 그대로(잣대: 새 판 목록 = 바탕 목록 + 「테마 N」 하나)', _exp_step),
     ('B12 · 폰390 조문 팝업 새로 생긴 흠 0', 'A-7 머리 「뷰로 이동 ↗」 → 「이동 ↗」(같은 단추 · 글자·색만 · 바탕에서도 작던 단추 — 잣대: 새로 = 그 단추 하나)', _exp_move('B12', '폰390')),
-    ('B12 · iPad834 조문 팝업 새로 생긴 흠 0', 'A-7 머리 「뷰로 이동 ↗」 → 「이동 ↗」(위와 같음)', _exp_move('B12', 'iPad834'))),
+    ('B12 · iPad834 조문 팝업 새로 생긴 흠 0', 'A-7 머리 「뷰로 이동 ↗」 → 「이동 ↗」(위와 같음)', _exp_move('B12', 'iPad834')),
+    ('B12 · 폰390 조문 화면(서랍) 새로 생긴 흠 0', 'fix1 A-34-3 거름 점 누름 = 높이 36 · 가로 = 이웃 누름과 안 겹치는 만큼(14) — 지시서가 정한 값(잣대: 새로 = 그 점 하나)', _exp_only('B12 · 폰390 조문 화면(서랍) 새로 생긴 흠 0', 'small:i.bkmk.dot:')),
+    ('B12 · iPad834 조문 화면(서랍) 새로 생긴 흠 0', 'fix1 A-34-3 거름 점 가로 14(위와 같음)', _exp_only('B12 · iPad834 조문 화면(서랍) 새로 생긴 흠 0', 'small:i.bkmk.dot:'))),
     'revfix0930': (
     ('B5 · PC 팝업 머리 단추 = 착수 HEAD', 'A-7 팝업 머리 단추 = 민법 oxwin 값(12px 700 · 테 #d1d5db · 둥글기 6 · 2px 8px) — 크기가 틀 값으로(잣대: 같은 단추 · 높이 24)', _exp_hdbtn),
     ('B6 · 특허 · 상표 · 디보 서랍 DOM · 접기 글자·동작 = 착수 HEAD', 'A-1 서랍 머리 거름 점(세 법) + 「테마 N」(특허) — 접기 글자·동작 = 바탕(잣대) · 나머지 DOM = 바탕은 이 하네스 B1(특허 · 상표 · 디보)이 잰다', _exp_fold),
     ('B8 · 폰 390 교재 자리 창 = 착수 HEAD', 'A-7 머리(여백 7px 10px · 밑줄 1px · 제목 13px) = 창 머리 31.4 → 39px — 창이 그만큼 큼(잣대: 한쪽 끝 그대로 · 모든 자리 같은 d ≤ 12)', _exp_pinwin),
     ('B9 · 폰390 조문 팝업 새로 생긴 흠 0', 'A-7 「뷰로 이동 ↗」 → 「이동 ↗」(같은 단추 · 바탕 흠이 새 이름으로 · ✕ 는 틀 값으로 커져 흠에서 빠짐)', _exp_move('B9', '폰390')),
-    ('B9 · iPad834 조문 팝업 새로 생긴 흠 0', 'A-7 「뷰로 이동 ↗」 → 「이동 ↗」(위와 같음)', _exp_move('B9', 'iPad834')))}
+    ('B9 · iPad834 조문 팝업 새로 생긴 흠 0', 'A-7 「뷰로 이동 ↗」 → 「이동 ↗」(위와 같음)', _exp_move('B9', 'iPad834'))) + tuple(
+    ('B9 · %s 조문 화면(%s) 새로 생긴 흠 0' % (dn, w), 'fix1 A-34-3 거름 점 누름 = 높이 36 · 가로 = 이웃 누름과 안 겹치는 만큼(14) — 지시서가 정한 값(잣대: 새로 = 그 점 하나)',
+     _exp_only('B9 · %s 조문 화면(%s) 새로 생긴 흠 0' % (dn, w), 'small:i.bkmk.dot:')) for dn in ('폰390', 'iPad834') for w in ('서랍', '민소 서랍'))}
 
 
 def reg_parse(txt):
@@ -1158,6 +1187,10 @@ B14_SAME = {'small:button.tool.jckf:주체 # ▾': 'small:button.tool.jckf:전�
             'small:button.plgb.tmgo:이동 ↗': 'small:button.plgb:뷰로 이동 ↗'}        # A-7 「뷰로 이동 ↗」 → 「이동 ↗」(같은 단추 · 글자·색만)
 
 
+# 지시서가 값을 정한 것 — 흠으로 세지 않되 칸마다 적는다(fix1 A-34-3: 거름 점 누름 = 높이 36 · 가로는 이웃 누름과 안 겹치는 만큼 → 14 · 결과 절에 값)
+ACCEPT = {'small:i.bkmk.dot:': 'fix1 A-34-3 거름 점 누름 가로 = 이웃과 안 겹치는 만큼(14) · 높이 36'}
+
+
 def b14(br, src, base_src, tag):
     G = 'B14'
     ok = True
@@ -1166,11 +1199,397 @@ def b14(br, src, base_src, tag):
         b, eb = sweep_screens(br, base_src, tag + 'B' + dn, dev, base=True)
         for scr in n:
             nn, bb = {B14_SAME.get(x, x) for x in n[scr]}, set(b.get(scr, []))
-            new = sorted(nn - bb)
+            new = sorted(nn - bb - set(ACCEPT))
             good = not new
             ok = ok and good
             T(G, '%s %s 새로 생긴 흠 0' % (dn, scr), good, {'새로': new[:8], '없어짐': sorted(bb - nn)[:4], '남은(바탕에도)': len(nn & bb),
-                                                      '글자만 바뀐 같은 요소': sorted(set(n[scr]) & set(B14_SAME))})
+                                                      '글자만 바뀐 같은 요소': sorted(set(n[scr]) & set(B14_SAME)), '지시서가 정한 값': sorted(nn & set(ACCEPT))})
+        if en:
+            ok = False
+            T(G, '%s JS 오류' % dn, False, en[:3])
+    return ok
+
+
+# ════════════════════════ _task_jo_theme_fix1 — B15~B24(8d1383d 위 고침 여덟 · 헛잣대 = 8d1383d 에서 B15~B22 FAIL) ════════════════════════
+FW = {'bg': 'rgb(255, 255, 255)', 'bd': 'rgb(203, 213, 225)', 'bw': '1px', 'rad': '12px', 'sh': 'rgba(0, 0, 0, 0.28) 0px 12px 40px 0px', 'hbg': 'rgb(248, 250, 252)',
+      'hbd': 'rgb(229, 231, 235)', 'hbw': '1px', 'ts': '13px', 'tw': '800', 'tc': 'rgb(17, 24, 39)', 'xc': 'rgb(107, 114, 128)', 'xbd': 'rgb(209, 213, 219)', 'xbw': '1px', 'xr': '6px', 'xbg': 'rgb(255, 255, 255)'}
+WINS = [('🔗 연결 창', 'cflw'), ('원문 창 마크업', 'mk'), ('원문 창 정오문제', 'jp'), ('원문 창 인용', 'ci')]
+# 창 하나만 열고 [data-fw] 표 — 연결 창 = cfLinkWin(카드 열쇠) · 원문 창 = 바탕 상태값(S.mkWin · S.joPanel · S.ciWin)으로 그리기(render 는 겹 부름을 버리므로 뜰 때까지 다시 부름)
+OPENW = r"""async (k) => { closeAllPops(true); S.mkWin = false; S.joPanel = false; S.ciWin = ''; document.querySelectorAll('[data-fw]').forEach(x => x.removeAttribute('data-fw'));
+  const find = () => k === 'cflw' ? POPS.find(x => x._cflw && (x._pk || '').indexOf('cflw|') === 0) : wmWinOf(k);
+  if (k === 'cflw') cfLinkWin('T1552093', null);
+  else { if (k === 'mk') S.mkWin = true; if (k === 'jp') S.joPanel = true; if (k === 'ci'){ S.ciWin = S.law + ':' + S.jo; S.ciKind = 'in'; } }
+  for (let i = 0; i < 60; i++){ const w = find(); if (w){ w.setAttribute('data-fw', '1'); await __TM.wait(150); return true; } if (k !== 'cflw' && i % 8 === 0) render(); await __TM.wait(100); }
+  return false; }"""
+CLOSEW = "async () => { closeAllPops(true); S.mkWin = false; S.joPanel = false; S.ciWin = ''; await __TM.wait(50); }"
+
+
+def b15(br, src, tag):
+    """A-31 테마 창 글 속 조 링크 = 본문 링크(.wml .wmlk) 꾸밈 그대로 · 글자색 = 그 run 색 · 누르면 popJo"""
+    G = 'B15'
+    p = page(br, tag, src, PC)
+    jo(p, '제3조')
+    body = p.ev("() => __TM.deco(document.querySelector('#slot .main .wml .wmlk'))")
+    p.ev("() => tmWin('t02', null)")
+    p.wait(500)
+    th = p.ev("() => { const w = __TM.pop('theme|t02'); return [...w.querySelectorAll('.thl a.wmlk')].map(a => Object.assign(__TM.deco(a), { run: __TM.hex(a.closest('.thl > span, .thl span[style]') ? getComputedStyle(a.closest('.thl > span, .thl span[style]')).color : ''), me: __TM.hex(getComputedStyle(a).color), k: a.dataset.law + ':' + a.dataset.k })); }")
+    keys = ('line', 'style', 'dcol', 'th', 'off', 'cur')
+    same = bool(body) and bool(th) and all(all(x[k] == body[k] for k in keys) for x in th)
+    runc = bool(th) and all(x['me'] == x['run'] for x in th)
+    g1 = same and runc and body['line'] == 'underline' and body['style'] == 'dotted' and body['cur'] == 'pointer'
+    T(G, '테마 창 .thl a.wmlk 꾸밈 = 본문 .wml .wmlk(밑줄 · 점선 · 색 · 굵기 · 간격 · 손가락) · 글자색 = 그 run 색', g1,
+      {'본문': body, '테마 링크 수': len(th or []), '첫 링크': (th or [None])[0], '다른 것': [x['k'] for x in (th or []) if not all(x[k] == body[k] for k in keys) or x['me'] != x['run']][:4]})
+    a = p.ev("() => { const w = __TM.pop('theme|t02'); const l = [...w.querySelectorAll('.thl .wmlk')].find(x => x.dataset.k === '제16조' && x.dataset.law === '특허법'); return l ? __RB.hitOn(l) : null; }")
+    p.press(a, 1500)
+    g2 = p.ev("() => !!POPS.find(x => x._pk === 'jo|특허법|제16조')")
+    T(G, '누르면 popJo(jo|특허법|제16조 · 바탕과 같음)', g2, g2)
+    ok = g1 and g2 and not p.errs
+    if p.errs:
+        T(G, 'JS 오류', False, p.errs[:3])
+    p.close()
+    return ok
+
+
+def b16(br, src, tag):
+    """A-32 다른 법 머리 — 두 글자(시규·민소) = 늘 머리 · 한 글자(상·디) 앞 한글 = 링크 없음 · 머리 없는 수 = 특허법 · 실제 재료 모양(B3) 링크 수 무변"""
+    G = 'B16'
+    p = page(br, tag, src, PC)
+    jo(p, '제3조')
+    p.ev("() => tmWin('t01', null)")
+    p.wait(500)
+    got = p.ev("t => { const w = __TM.pop('theme|t01'); const l = [...w.querySelectorAll('.thl')].find(x => x.textContent.indexOf(t) >= 0); return l ? [...l.querySelectorAll('.wmlk')].map(a => [a.textContent, a.dataset.law, a.dataset.k]) : null; }", A32_LINE[:8])
+    g1 = got == A32_WANT
+    T(G, '「%s」 링크 = 제5조 특허 · 민소16조 → 민사소송법 · (상227조) 상표법 · (디217조) 디자인보호법 · 특226조 특허 / 및시규11조 · 법원은상33조 · 이상5조 · 공백 뒤 시규11조 = 0' % A32_LINE, g1, {'링크': got, '바람': A32_WANT})
+    a = p.ev("() => { const w = __TM.pop('theme|t01'); const l = [...w.querySelectorAll('.thl .wmlk')].find(x => x.dataset.law === '민사소송법'); return l ? __RB.hitOn(l) : null; }")
+    p.press(a, 1500)
+    g2 = p.ev("() => !!POPS.find(x => x._pk === 'jo|민사소송법|제16조')")
+    T(G, '「민소16조」 누름 → jo|민사소송법|제16조', g2, g2)
+    p.ev("() => closeAllPops(true)")
+    p.ev("() => tmWin('t02', null)")
+    p.wait(400)
+    n2 = p.ev("() => __TM.pop('theme|t02').querySelectorAll('.thl .wmlk').length")
+    p.ev("() => tmWin('t03', null)")
+    p.wait(400)
+    n3 = p.ev("() => __TM.pop('theme|t03').querySelectorAll('.thfig .wmlk').length")
+    g3 = n2 == PLANT['t02']['links'] and n3 == PLANT['t03']['links']
+    T(G, '실제 재료 모양 회귀 = 본판 B3 조 링크 수 무변(기일기간 %d · 분변분재 svg %d)' % (PLANT['t02']['links'], PLANT['t03']['links']), g3, [n2, n3])
+    ok = g1 and g2 and g3 and not p.errs
+    if p.errs:
+        T(G, 'JS 오류', False, p.errs[:3])
+    p.close()
+    return ok
+
+
+def _drag(q, sel):
+    """머리 끌기(+80, +40) · 크기 손잡이 끌기(+60, +50) → [자리, 크기]"""
+    d = q.ev("""s => { const w = document.querySelector(s); w.style.left = '300px'; w.style.top = '160px'; const h = w.querySelector(':scope > .ph').getBoundingClientRect(), z = w.querySelector(':scope > .prsz');
+      return { hx: h.left + 40, hy: h.top + h.height / 2, ok: !!z }; }""", sel)
+    q.pg.mouse.move(d['hx'], d['hy'])
+    q.pg.mouse.down()
+    q.pg.mouse.move(d['hx'] + 80, d['hy'] + 40, steps=5)
+    q.pg.mouse.up()
+    q.wait(200)
+    pos = q.ev("s => { const w = document.querySelector(s); return [Math.round(parseFloat(w.style.left)), Math.round(parseFloat(w.style.top))]; }", sel)
+    sz = None
+    if d['ok']:
+        z = q.ev("s => { const r = document.querySelector(s).querySelector(':scope > .prsz').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }", sel)
+        q.pg.mouse.move(z[0], z[1])
+        q.pg.mouse.down()
+        q.pg.mouse.move(z[0] + 60, z[1] + 50, steps=5)
+        q.pg.mouse.up()
+        q.wait(200)
+        sz = q.ev("s => { const r = document.querySelector(s).getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }", sel)
+    return [pos, sz]
+
+
+def b17(br, src, prev_src, tag):
+    """A-33 🔗 연결 창 · 원문 창 셋 = A-7 틀 값(popShell 10종과 같은 값) · 안쪽(머리 여백 · 끌기 · 본문 바탕 · 폭 · 크기 조절) = 8d1383d"""
+    G = 'B17'
+    res = {}
+    for nm_, s_ in (('new', src), ('prev', prev_src)):
+        p = page(br, tag + nm_, s_, PC)
+        jo(p, '제6조')
+        ref = p.ev("() => { const b = popShell('', '틀', 'frame|ref'); const o = __TM.frame(b.parentNode); closeOne(b.parentNode); return o; }")
+        out, dr = {}, {}
+        for wn, k in WINS:
+            out[wn] = p.ev("() => __TM.frame(document.querySelector('[data-fw]'))") if p.ev(OPENW, k) else None
+            if out[wn] and k in ('cflw', 'mk'):
+                dr[wn] = _drag(p, '[data-fw]')
+        p.ev(CLOSEW)
+        res[nm_] = (ref, out, dr, p.errs[:])
+        p.close()
+    ref, out, dr, errs = res['new']
+    _, outp, drp, _ = res['prev']
+    bad = {wn: {k: f[k] for k in FW if f[k] != FW[k]} if f else '안 뜸' for wn, f in out.items()}
+    g1 = all(v == {} for v in bad.values())
+    T(G, '연결 창 · 마크업 · 정오문제 · 인용 창 틀 = §A-33-1 값(테 #cbd5e1 · 12 · 그림자 · 머리 #f8fafc · 밑줄 #e5e7eb · 제목 13 800 #111827 · ✕ = 머리 단추 꼴)', g1, {'어긋남': bad})
+    g2 = bool(ref) and all(f and all(f[k] == ref[k] for k in FW) for f in out.values())
+    T(G, '네 창 틀 = popShell 틀(본판 B9 값)과 같음', g2, {'popShell': {k: ref[k] for k in ('bd', 'rad', 'hbg', 'tc', 'xbd')} if ref else None})
+    inner = {wn: (out[wn] or {}).get('inner') for wn in out}
+    innerp = {wn: (outp[wn] or {}).get('inner') for wn in outp}
+    g3 = all(inner[wn] and inner[wn] == innerp.get(wn) for wn in inner)
+    T(G, '안쪽 = 8d1383d(머리 여백 · 끌기 cursor · 본문 바탕·여백 · 폭 · 크기 손잡이 · 글꼴)', g3, {wn: [inner[wn], innerp.get(wn)] for wn in inner if inner[wn] != innerp.get(wn)} or inner['🔗 연결 창'])
+    g4 = dr == drp and len(dr) == 2
+    T(G, '끌기 · 크기 조절 = 8d1383d(연결 창 · 마크업 창)', g4, {'새 판': dr, '8d1383d': drp})
+    ok = g1 and g2 and g3 and g4 and not errs
+    if errs:
+        T(G, 'JS 오류', False, errs[:3])
+    return ok
+
+
+HEAD = r"""() => { const b = document.querySelector('.jtbar'), r = b.getBoundingClientRect(), tr = document.querySelector('#slot .tree').getBoundingClientRect();
+  const it = ['.jckf', '.tmdot', '.jstep:not(.tmtg)', '.tmtg'].map(s => b.querySelector(s)).filter(Boolean).map(e => { const q = e.getBoundingClientRect(); return { c: e.className.split(' ').pop(), l: Math.round(q.left * 10) / 10, t: Math.round(q.top * 10) / 10, w: Math.round(q.width * 10) / 10, h: Math.round(q.height * 10) / 10, cy: q.top + q.height / 2, r: q.right }; });
+  return { h: Math.round(r.height * 10) / 10, it: it, trL: tr.left, trR: tr.right, vw: innerWidth }; }"""
+TGT3 = r"""() => { const d = document.querySelector('.jtbar .tmdot'), s = document.querySelector('.jtbar .jstep:not(.tmtg)'), t = document.querySelector('.jtbar .tmtg'); d.scrollIntoView({block: 'center'});
+  const f = x => { const a = __RB.tgt(x, ''); return { dw: a.dw, dh: a.dh, steal: a.steal, near: a.near, center: a.center, ex: a.ex }; }; return { step: __TM.txt(s), dot: f(d), stp: f(s), tm: f(t), hb: __RB.hitBox(d) }; }"""
+
+
+def b18(br, src, base_src, prev_src, tag):
+    """A-34 폰·아이패드 서랍 머리 한 줄 · 높이 = 바탕 cedc251 ±1 · 거름 점 누름 높이 ≥ 36 · 둘레 겹침 0(접기 단추 글자 셋 다) · 화면 밖 0 · 거름 점 순환 무변 · PC 무변"""
+    G = 'B18'
+    ok = True
+    for dn, dev in (('폰390', PHONE), ('iPad834', PAD)):
+        p = page(br, tag + dn, src, dev)
+        jo(p, '제3조')
+        pb = page(br, tag + 'B' + dn, base_src, dev)
+        jo(pb, '제3조')
+        hb = pb.ev("() => Math.round(document.querySelector('.jtbar').getBoundingClientRect().height * 10) / 10")
+        pb.close()
+        hd = p.ev(HEAD)
+        cy0 = hd['it'][0]['cy'] if hd['it'] else 0
+        one = len(hd['it']) == 4 and all(abs(x['cy'] - cy0) <= 2 for x in hd['it'])
+        g1 = one and abs(hd['h'] - hb) <= 1
+        ok = ok and g1
+        T(G, '%s 서랍 머리 한 줄(넷 가운데 높이 ±2) · 높이 = 바탕 cedc251 ±1' % dn, g1, {'높이': [hd['h'], hb], '넷': [[x['c'], x['l'], x['t'], x['w'], x['h']] for x in hd['it']]})
+        tg = []
+        for i in range(3):
+            tg.append(p.ev(TGT3))
+            p.ev("() => document.querySelector('.jtbar .jstep:not(.tmtg)').click()")
+            p.idle(300)
+        g2 = all(m['dot']['dh'] >= 36 and m['dot']['center'] and m['dot']['steal'] == 0 and m['dot']['near'] == 0 and m['stp']['steal'] == 0 and m['tm']['steal'] == 0 for m in tg)
+        ok = ok and g2
+        T(G, '%s 거름 점 누름 높이 ≥ 36 · 가로 %s · 둘레 겹침 0(접기 단추 「%s」 셋 다 · 거름 점·접기·테마 N 가로챔 0)' % (dn, tg[0]['dot']['dw'], ' · '.join(m['step'] for m in tg)), g2,
+          [{'접기': m['step'], '점': [m['dot']['dw'], m['dot']['dh'], m['dot']['steal'], m['dot']['near']], '접기 둘레': [m['stp']['dw'], m['stp']['dh'], m['stp']['steal']], '테마 N': [m['tm']['dw'], m['tm']['dh'], m['tm']['steal']]} for m in tg])
+        off = [x['c'] for x in hd['it'] if x['l'] < hd['trL'] - 0.5 or x['r'] > min(hd['trR'], hd['vw']) + 0.5]
+        g3 = not off
+        ok = ok and g3
+        T(G, '%s 머리 요소 화면·서랍 밖 0' % dn, g3, off)
+        seq = []
+        for i in range(4):
+            p.press(at(p, '.jtbar .tmdot'), 450)
+            seq.append(p.ev("() => __TM.dot().bg"))
+        g4 = seq == [BKC[0], BKC[1], BKC[2], '#ffffff']
+        ok = ok and g4
+        T(G, '%s 거름 점 손가락 네 번 = 파 → 보 → 초 → 빈(본판 B2 무변)' % dn, g4, seq)
+        if p.errs:
+            ok = False
+            T(G, '%s JS 오류' % dn, False, p.errs[:3])
+        p.close()
+    pc = {}
+    for nm_, s_ in (('new', src), ('prev', prev_src)):
+        q = page(br, tag + 'pc' + nm_, s_, PC2)
+        jo(q, '제3조')
+        pc[nm_] = q.ev(HEAD)
+        q.close()
+    a, b = pc['new'], pc['prev']
+    keep = lambda h: [[x['c'], x['t'], x['h']] for x in h['it'] if x['c'] != 'tmdot']
+    g5 = a['h'] == b['h'] and keep(a) == keep(b)
+    ok = ok and g5
+    T(G, 'PC 서랍 머리 = 8d1383d(높이 · 칩·접기·테마 N 줄 자리 — 거름 점만 12 → 8)', g5, {'새 판': [a['h'], keep(a)], '8d1383d': [b['h'], keep(b)]})
+    return ok
+
+
+ROW = r"""(sel) => [...document.querySelectorAll(sel)].filter(__TM.vis).map(r => { const c = getComputedStyle(r), j = r.querySelector('.jno'), jc = getComputedStyle(j), rr = r.getBoundingClientRect(), jr = j.getBoundingClientRect(), em = r.querySelector('em.jcol3').getBoundingClientRect();
+  const tail = [...r.children].filter(x => x.matches('.tmx, .tmplus')).reduce((s, x) => s + x.getBoundingClientRect().width + parseFloat(getComputedStyle(x).marginLeft || 0) + parseFloat(c.columnGap || 0), 0);
+  return { id: r.dataset.tm, h: Math.round(rr.height), pl: c.paddingLeft, jx: Math.round(jr.left - rr.left), deco: jc.textDecorationLine + ' ' + jc.textDecorationStyle, fs: jc.fontSize, col: jc.color, rad: c.borderTopLeftRadius,
+    dots: [...r.querySelectorAll('.bkm3 .bkmk')].map(d => Math.round(d.getBoundingClientRect().width)), emR: Math.round(rr.right - em.right - tail) }; })"""
+ROWK = ('h', 'pl', 'jx', 'deco', 'fs', 'col', 'rad', 'dots', 'emR')
+
+
+def b19(br, src, tag):
+    """A-36 같은 테마 — 서랍 줄 ↔ 연결 창 줄 ↔ 찾기 결과 줄: 높이 · 안쪽 13 · 이름 점선 밑줄 · 글자 크기·색 · 점 지름 · 「두N §N」 자리(✕·＋ 칸 빼고) 같음 · ✕/＋ 누름 ≥ 36 · 줄 누름 → 테마 창"""
+    G = 'B19'
+    ok = True
+    for dn, dev in (('PC', PC), ('폰390', PHONE)):
+        p = page(br, tag + dn, src, dev)
+        jo(p, '제3조')
+        p.press(at(p, '.jtbar .tmtg'), 500)
+        tree = {r['id']: r for r in p.ev(ROW, '#slot .tree .r.tmr')}
+        p.press(at(p, '.jtbar .tmtg'), 500)
+        p.ev("() => { closeAllPops(true); tmOfWin('특허법', '제3조', null); }")
+        p.wait(500)
+        p.ev("() => { const w = document.querySelector('.pop.tmofw'); w.querySelector('.thsrch input').value = '분변'; w.querySelector('.thsrch .tmsgo').click(); }")
+        p.wait(400)
+        res = p.ev(ROW, '.pop .tmres .r.tmr')
+        plus = p.ev("() => { const b = document.querySelector('.pop .tmres .tmplus'); return b ? __RB.hitBox(b) : null; }")
+        p.press(p.ev("() => __RB.hitOn(document.querySelector('.pop .tmres .tmplus'))"), 500)
+        p.wait(300)
+        of = p.ev(ROW, '.pop .tmof .r.tmr')
+        x = p.ev("() => { const b = document.querySelector('.pop .tmof .tmx'); return b ? __RB.hitBox(b) : null; }")
+        rows = [('연결 창', r) for r in of] + [('찾기 결과', r) for r in res]
+        diff = [(w, r['id'], {k: [r[k], tree.get(r['id'], {}).get(k)] for k in ROWK if r[k] != tree.get(r['id'], {}).get(k) and not (k == 'emR' and abs(r[k] - tree.get(r['id'], {}).get(k, -99)) <= 1)}) for w, r in rows]
+        diff = [d for d in diff if d[2]]
+        g1 = len(of) == 3 and len(res) == 1 and not diff and all(r['pl'] == '13px' and r['deco'] == 'underline dotted' for _, r in rows)
+        ok = ok and g1
+        T(G, '%s 서랍 줄 = 연결 창 줄 3 = 찾기 결과 줄(높이 · 안쪽 13 · 이름 점선 · 글자 · 점 지름 · 「두N §N」 자리 · 둥글기 0)' % dn, g1, {'다름': diff[:4], '서랍 t01': tree.get('t01'), '창 t01': (of or [None])[0]})
+        if p.touch:
+            g2 = bool(x) and bool(plus) and x['h'] >= 36 and x['w'] >= 36 and plus['h'] >= 36 and plus['w'] >= 36
+            ok = ok and g2
+            T(G, '%s ✕ · ＋ 누름 ≥ 36' % dn, g2, {'✕': x and [x['w'], x['h']], '＋': plus and [plus['w'], plus['h']]})
+        a = p.ev("() => __RB.hitOn(document.querySelector('.pop .tmof .r.tmr[data-tm=t01] .jno'))")
+        p.press(a, 600)
+        g3 = bool(p.ev("() => __TM.pop('theme|t01')"))
+        ok = ok and g3
+        T(G, '%s 연결 창 줄 누름 → 테마 창(무변)' % dn, g3, g3)
+        if p.errs:
+            ok = False
+            T(G, '%s JS 오류' % dn, False, p.errs[:3])
+        p.close()
+    return ok
+
+
+def b20(br, src, tag):
+    """A-37 거름 점 지름 8 = 조 줄 .bkmk.dot · 켜진 색 = BK_COLOR 셋 · 빈 = 8px 고리"""
+    G = 'B20'
+    ok = True
+    for dn, dev in (('PC', PC), ('폰390', PHONE)):
+        p = page(br, tag + dn, src, dev)
+        jo(p, '제3조')
+        sz = p.ev("() => { const t = document.querySelector('.jtbar .tmdot').getBoundingClientRect(), r = document.querySelector('#slot .tree .r[data-jo] .bkm3 .bkmk.dot').getBoundingClientRect(); return { dot: [t.width, t.height], row: [r.width, r.height] }; }")
+        bk = p.ev("() => [BK_COLOR.내용, BK_COLOR.주체, BK_COLOR.기간].map(x => String(x).toLowerCase())")
+        st = [p.ev("() => { const d = document.querySelector('.jtbar .tmdot'), c = getComputedStyle(d), r = d.getBoundingClientRect(); return [__TM.hex(c.backgroundColor), __TM.hex(c.borderTopColor), r.width, r.height]; }")]
+        for i in range(4):
+            p.press(at(p, '.jtbar .tmdot'), 450)
+            st.append(p.ev("() => { const d = document.querySelector('.jtbar .tmdot'), c = getComputedStyle(d), r = d.getBoundingClientRect(); return [__TM.hex(c.backgroundColor), __TM.hex(c.borderTopColor), r.width, r.height]; }"))
+        g = sz['dot'] == sz['row'] == [8, 8] and [x[0] for x in st[1:4]] == bk and all(x[2:] == [8, 8] for x in st) and st[0][:2] == ['#ffffff', '#9ca3af'] and st[4][:2] == ['#ffffff', '#9ca3af']
+        ok = ok and g
+        T(G, '%s 거름 점 지름 8 = 조 줄 점 · 켜짐 = BK_COLOR(%s) · 빈 = 8px 고리(#9ca3af · 흰)' % (dn, ' · '.join(bk)), g, {'크기': sz, '차례': st})
+        p.close()
+    return ok
+
+
+def b21(br, src, tag):
+    """A-38 두문자 붙이기 넓힘 — 이름 길 · 여러 조(⊆ 테마 조) 길 · 조 하나 밖 = 안 붙음 · 기일기간 두2 무변 · 이름 고치면 다시 셈"""
+    G = 'B21'
+    p = page(br, tag, src, PHONE)
+    jo(p, '제3조')
+    p.press(at(p, '.jtbar .tmtg'), 500)
+    rows = {r['id']: r['d2'] for r in p.ev("() => __TM.rows()")}
+    th = dict(p.ev("() => tmModel().map(t => [t.id, tmThAcr(t).map(x => x.w).sort()])"))
+    intext = p.ev("() => { const t = tmModel().find(x => x.id === 't03'); return tmText(t).indexOf('분변분재') >= 0; }")
+    g1 = rows.get('t03') == '두1' and th.get('t03') == ['분변분재'] and not intext
+    T(G, '{분변분재 기간} 「두1」 — 글·SVG 에 「분변분재」 없음(이름 · 여러 조 길로 붙음)', g1, {'줄': rows, '두문자': th, '글에 있음': intext})
+    p.ev("() => tmListWin('t03', null)")
+    p.wait(600)
+    r3 = p.ev("() => { const w = __TM.pop('themelist|t03'); const r = w && w.querySelector('.throw2.tmmulti'); return r ? [__TM.txt(r.querySelector('.tmjs')), __TM.txt(r.querySelector('.tmar'))] : null; }")
+    g2 = r3 == ['52조 · 53조 · 52-2조 · 67-2조', '분변분재']
+    T(G, '목록 창 맨 위 줄 「52조 · 53조 · 52-2조 · 67-2조 | 분변분재」(본판 B4 무변)', g2, r3)
+    g3 = all('출심삼1사' not in v for v in th.values()) and rows.get('t02') == '두2' and th.get('t02') == ['정사소2만1', '책사소2만1'] and rows.get('t01') == '두0'
+    T(G, '여러 조 두문자인데 조 하나 밖(출심삼1사 = 3·14·300) = 어느 테마에도 안 붙음 · 기일기간 「두2」 · 주체능력 「두0」 무변', g3, {'줄': rows, '두문자': th})
+    p.ev("() => closeAllPops(true)")
+    out = []
+    for name in ('분변·분재 기간 책사소2만1', '분변·분재 기간'):
+        a = p.ev("() => __RB.hitOn(document.querySelector('#slot .tree .r.tmr[data-tm=t03] .jno'))")
+        lp(p, a, 700)
+        type_ok(p, name)
+        p.idle(300)
+        out.append([name, {r['id']: r['d2'] for r in p.ev("() => __TM.rows()")}.get('t03'), dict(p.ev("() => tmModel().map(t => [t.id, tmThAcr(t).map(x => x.w).sort()])")).get('t03'), (rec(p).get('t03') or {}).get('n')])
+    g4 = out[0][1] == '두2' and out[0][2] == ['분변분재', '책사소2만1'] and out[1][1] == '두1' and out[1][2] == ['분변분재'] and out[1][3] == '분변·분재 기간'
+    T(G, '이름 길게 눌러 고침 → 고친 이름으로 다시 셈(「분변·분재 기간 책사소2만1」 = 두2 · 「분변·분재 기간」 = 두1 — 이름 길 빠져도 여러 조 길로 분변분재)', g4, out)
+    ok = g1 and g2 and g3 and g4 and not p.errs
+    if p.errs:
+        T(G, 'JS 오류', False, p.errs[:3])
+    p.close()
+    return ok
+
+
+def b22(br, src, base_src, tag):
+    """A-41 테마 줄 서랍 = 범례 0 · 「목차」 → 1(outerHTML = 바탕) · 재료 404 → 1"""
+    G = 'B22'
+    p = page(br, tag, src, PC)
+    jo(p, '제3조')
+    n0 = p.ev("() => document.querySelectorAll('#slot .tree .legend').length")
+    p.press(at(p, '.jtbar .tmtg'), 500)
+    n1 = p.ev("() => document.querySelectorAll('#slot .tree .legend').length")
+    p.press(at(p, '.jtbar .tmtg'), 500)
+    lg = p.ev("() => [...document.querySelectorAll('#slot .tree .legend')].map(x => x.outerHTML)")
+    pb = page(br, tag + 'B', base_src, PC)
+    jo(pb, '제3조')
+    lgb = pb.ev("() => [...document.querySelectorAll('#slot .tree .legend')].map(x => x.outerHTML)")
+    pb.close()
+    g1 = n0 == 1 and n1 == 0 and len(lg) == 1 and lg == lgb
+    T(G, '테마 줄 서랍 .legend 0 · 「목차」 → 1(outerHTML = 바탕 cedc251)', g1, {'목차': n0, '테마': n1, '돌아옴': len(lg), '= 바탕': lg == lgb})
+    p.close()
+    q = page(br, 'none:' + tag, src, PC)
+    jo(q, '제3조')
+    n4 = q.ev("() => ({ lg: document.querySelectorAll('#slot .tree .legend').length, btn: (document.querySelector('.jtbar .tmtg') || {}).disabled })")
+    q.close()
+    g2 = n4 == {'lg': 1, 'btn': True}
+    T(G, '재료 404(테마 0 · 테마 줄 아님) → 범례 1', g2, n4)
+    return g1 and g2
+
+
+def sweep_fix1(br, src, tag, dev, base=False):
+    """B-24 화면 — 서랍(목차 · 테마 · 거름) · 테마 창 · 목록 창 · 연결 창 · 찾기 결과 · 🔗 연결 창 · 원문 창 셋(바탕엔 테마 화면 없음)"""
+    p = page(br, tag, src, dev)
+    touch = dev in (PHONE, PAD)
+    sw = lambda sel: p.ev("a => __TM.sweep(a[0], a[1])", [sel, touch])
+    mark = "k => { document.querySelectorAll('[data-sw]').forEach(x => x.removeAttribute('data-sw')); const w = __TM.pop(k); if (w) w.setAttribute('data-sw', '1'); }"
+    out = {}
+    jo(p, '제3조')
+    out['서랍 목차'] = sw('#slot .tree')
+    if not base:   # 바탕(cedc251)엔 테마 줄·거름 점이 없어 같은 서랍(목차)을 잰다 — 본판 B14 와 같은 길
+        p.ev("() => document.querySelector('.jtbar .tmtg').click()")
+        p.idle(300)
+    out['서랍 테마'] = sw('#slot .tree')
+    if not base:
+        p.ev("() => document.querySelector('.jtbar .tmtg').click()")
+        p.idle(300)
+        p.ev("() => { tmDotSet(2); render(); }")
+        p.idle(300)
+    out['서랍 거름'] = sw('#slot .tree')
+    if not base:
+        p.ev("() => { tmDotSet(0); render(); }")
+        p.idle(300)
+        for k, js, key in (('테마 창', "() => tmWin('t02', null)", 'theme|t02'), ('목록 창', "() => tmListWin('t02', null)", 'themelist|t02'), ('연결 창', "() => tmOfWin('특허법', '제3조', null)", 'themeof|')):
+            p.ev("() => closeAllPops(true)")
+            p.ev(js)
+            p.wait(700)
+            p.ev(mark, key)
+            out[k] = sw('[data-sw="1"]')
+        p.ev("() => { const w = document.querySelector('.pop.tmofw'); w.querySelector('.thsrch input').value = '분변'; w.querySelector('.thsrch .tmsgo').click(); }")
+        p.wait(400)
+        p.ev(mark, 'themeof|')
+        out['찾기 결과'] = sw('[data-sw="1"]')
+    p.ev("() => closeAllPops(true)")
+    if p.ev(OPENW, 'cflw'):
+        out['🔗 연결 창'] = sw('[data-fw="1"]')
+    jo(p, '제6조')
+    for wn, k in WINS[1:]:
+        if p.ev(OPENW, k):
+            out[wn] = sw('[data-fw="1"]')
+    p.ev(CLOSEW)
+    errs = p.errs[:]
+    p.close()
+    return out, errs
+
+
+def b24(br, src, base_src, tag):
+    G = 'B24'
+    ok = True
+    for dn, dev in (('폰390', PHONE), ('iPad834', PAD), ('PC', PC2)):
+        n, en = sweep_fix1(br, src, tag + 'N' + dn, dev)
+        b, eb = sweep_fix1(br, base_src, tag + 'B' + dn, dev, base=True)
+        for scr in n:
+            nn, bb = {B14_SAME.get(x, x) for x in n[scr]}, set(b.get(scr, []))
+            new = sorted(nn - bb - set(ACCEPT))
+            good = not new
+            ok = ok and good
+            T(G, '%s %s 새로 생긴 흠 0' % (dn, scr), good, {'새로': new[:8], '바탕 흠(바탕 cedc251 에도)': sorted(nn & bb)[:6], '없어짐': sorted(bb - nn)[:4], '지시서가 정한 값': sorted(nn & set(ACCEPT))})
+        miss = [w for w in ('🔗 연결 창', '원문 창 마크업', '원문 창 정오문제', '원문 창 인용') if w not in n]
+        if miss:
+            ok = False
+            T(G, '%s 창 안 뜸' % dn, False, miss)
         if en:
             ok = False
             T(G, '%s JS 오류' % dn, False, en[:3])
@@ -1185,19 +1604,21 @@ def webkit_try(pw):
         return None
 
 
-ORDER = ['B%d' % i for i in range(1, 15)]
+ORDER = ['B%d' % i for i in range(1, 25)]
 
 
 def main():
     from playwright.sync_api import sync_playwright
     t0 = time.time()
+    base_src = app_src(BASE)
     if YARD:
-        src = app_src(BASE)
-        base_src = src
-        print('헛잣대 — 앱 = %s(착수 HEAD) · B1~B12 가 저마다 FAIL 해야 통과' % BASE)
+        src = app_src(YAPP)
+        print('헛잣대 — 앱 = %s · 고른 관문이 저마다 FAIL 해야 통과(본판 B1~B12 = cedc251 · fix1 B15~B22 = 8d1383d)' % YAPP)
     else:
-        src, base_src = app_src(NEW), app_src(BASE)
-        print('관문 _task_jo_theme · 앱 = %s · 바탕 = %s · 덧판 = %s' % (NEW, BASE, OVER['full']))
+        src = app_src(NEW)
+        print('관문 _task_jo_theme(+fix1) · 앱 = %s · 바탕 = %s · fix1 바탕 = %s · 덧판 = %s' % (NEW, BASE, PREV, OVER['full']))
+    prev_cache = {}
+    prev_src = lambda: prev_cache.setdefault('s', app_src(PREV))
     got, tm = {}, {}
     with sync_playwright() as pw:
         br = pw.chromium.launch()
@@ -1205,11 +1626,14 @@ def main():
                  ('B4', lambda: b4(br, src, 'b4')), ('B5', lambda: b5(br, src, 'b5')), ('B6', lambda: b6(br, src, 'b6')),
                  ('B7', lambda: b7(br, src, base_src, 'b7')), ('B8', lambda: b8(br, src, base_src, 'b8')), ('B9', lambda: b9(br, src, base_src, 'b9')),
                  ('B10', lambda: b10(br, src, base_src, 'b10')), ('B11', lambda: b11(br, src, 'b11')), ('B12', lambda: b12(br, src, base_src, 'b12')),
-                 ('B14', lambda: b14(br, src, base_src, 'b14'))]
+                 ('B14', lambda: b14(br, src, base_src, 'b14')),
+                 ('B15', lambda: b15(br, src, 'b15')), ('B16', lambda: b16(br, src, 'b16')), ('B17', lambda: b17(br, src, prev_src(), 'b17')),
+                 ('B18', lambda: b18(br, src, base_src, prev_src(), 'b18')), ('B19', lambda: b19(br, src, 'b19')), ('B20', lambda: b20(br, src, 'b20')),
+                 ('B21', lambda: b21(br, src, 'b21')), ('B22', lambda: b22(br, src, base_src, 'b22')), ('B24', lambda: b24(br, src, base_src, 'b24'))]
         for g, fn in steps:
             if ONLY and g not in ONLY:
                 continue
-            if YARD and g == 'B14':
+            if YARD and g in ('B14', 'B24'):
                 N(g, '헛잣대 해당 없음', '화면 훑기 = 새 판 흠 − 바탕 흠 · 바탕끼리 견주면 늘 0')
                 continue
             print('── %s' % g, flush=True)
@@ -1240,6 +1664,10 @@ def main():
             got['B13'] = False
             T('B13', '돌다 멈춤', False, str(e).splitlines()[0][:300])
         tm['B13'] = time.time() - t1
+    if not YARD and all(('B%d' % i) in got for i in range(1, 15)):   # fix1 B-23 — 본판 B1~B14 다시(같은 실행) · 바뀐 값은 결과 절
+        bad = [g for g in ['B%d' % i for i in range(1, 15)] if not got[g]]
+        got['B23'] = not bad
+        T('B23', '본판 B1~B14 다시 = 모두 PASS(fix1 바탕 8d1383d 위 · 합성 재료 보탬 뒤)', got['B23'], {'FAIL 관문': bad})
     lines = []
     print('\n══ 요약 (%.0f초)%s' % (time.time() - t0, ' — 헛잣대' if YARD else ''))
     for g in [x for x in ORDER if x in got]:
