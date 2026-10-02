@@ -10035,6 +10035,7 @@ function qpBody(hit, k, pop, isOpen, setOpen){
   const ch = el('div', 'qpchips');
   ch.appendChild(el('span', 'qpc1', hit.kind === 'P' ? gEd(hit.z) : '변리사 ' + String(hit.q.연도).slice(2)));   /* ★ revfix0928pm A-2 — 판 이름 칩 H7 · H8 */
   ch.appendChild(el('span', 'qpc2', (hit.law || S.law) + (lab && (!hit.law || hit.law === S.law) ? ' · ' + lab : '')));   /* ★ jo_cardfix §A-3 */
+  try{ ewmMarks(ch, k, hit.kind === 'P' ? { kind: 'P', z: hit.z } : { kind: 'L', q: hit.q, z: hit.z }); }catch(e){}   /* ★ exam_wrong_mark — 문제 창(출제연도 칩 없음) = ID 칩 바로 앞 · 펼침 = 칩 줄 아래 */
   ch.appendChild(el('span', 'qpc3', k));
   cfLinkChips(ch, k);   /* ★ jo_cardfix §A-4 — 문제 창에도 ↩링크N · ↩백링크N */
   w.appendChild(ch);
@@ -16625,6 +16626,7 @@ addEventListener('resize',()=>{
 readHash();
 render();
 try{ recBoot(); }catch(e){ console.warn('recsync boot', e); }   /* ★ recsync — 시작 1회 · 10초 도장 · 3분 동기화 */
+setTimeout(() => { try{ ewmLoad(); }catch(e){} }, 0);   /* ★ exam_wrong_mark — 시험 기록은 첫 화면 뒤 한 번(화면을 막지 않는다) */
 
 /* ★ 2차 기출 폴더 판(9/4 · _task_jo_2cha_gichul_folder.md §4-2) — 기록 키 1회 이사(멱등 · 옛 키는 둔다 · jopangi.migr 표시)
    표 = ⚙ 2cha_이름표.json(옛 stem → 새 stem) · 포스트잇 card|사례|<옛>␟… → card|기출|<새>␟… · 필기 cell|<옛> → cell|<새> · 마크업 card|사례|<옛>… 도 같은 규칙
@@ -17097,7 +17099,90 @@ function mlnPanChip(host, key, cases){
   host.appendChild(b);
 }
 /* 출제연도 칩 자리(§C · jxeChips 가 채운다 — 그 판이 없으면 비운다) */
-function mlnYearChips(host, key, ctx){ try{ if (typeof jxeChips === 'function') jxeChips(host, key, ctx); }catch(e){ console.warn('[jxe]', e); } }
+function mlnYearChips(host, key, ctx){ try{ if (typeof jxeChips === 'function') jxeChips(host, key, ctx); }catch(e){ console.warn('[jxe]', e); }
+  try{ ewmMarks(host, key, ctx); }catch(e){ console.warn('[ewm]', e); } }   /* ★ exam_wrong_mark — 출제연도 칩 바로 뒤 「63-13-X」(칩을 그리는 자리 전부 = 이 함수 하나) */
+/* ══ _task_exam_wrong_mark — 실제 1차 시험에서 틀린 문제 「<회>-<번>-X」(조판기 · 민법OX · 자과 같은 꼴 · 아티팩트 「63회 틀린 문제 표시」 v6) ══
+   원천 = studyplandata exam/꼬까.json(tt 시험 기록 · 읽기만 · SYNC 키 아님) · items[] 중 cha 1 · mode q · del 아님 → q[] 중 ok === false · 화학 뺌 · 회 = no(없으면 id 머리) · 회차를 박지 않는다
+   짝 = 리담 문제(연도 = 회 + 1963 · 시험문번 = 번)의 지문 전부 → 열쇠 = 지문 uid(같은 uid 책 카드 · 특허 제7판 병합 · 상표 뷰객 쌍도) ·
+        책 지문 · 문항째 카드 = 그 법 책 줄의 uid 꼴(S·T·D + 해 + 회 + 번) 또는 시험문번 + 해(연도들 · 「YY 변리」) — 리담에 없는 문제(상표 61회 22번)도 같은 길 · 문항째 = 밑줄 없음
+   접힘 = 글자만 11px 800 #dc2626 · 펼침 = 머리 줄 아래 한 줄(H7 .qsub 값) 「내 답 ④ · 정답 ② · 평균 정답률 73.0%」 · 다시 누르면 접힘 · 저장 안 함
+   받기 실패·토큰 없음 = 표시 없음(오류 창 없음) · 첫 화면을 막지 않는다(시작 뒤 한 번 받고 · 받으면 1차객 화면만 다시 그림) · 거르개·셈에 안 넣는다 */
+var EWM = { st: '', rows: [], map: null, vj: null, law: '', mln: false };
+function ewmRows(j){
+  const out = [];
+  ((j && j.items) || []).forEach(it => { if (!it || it.cha !== 1 || it.mode !== 'q' || it.del) return;
+    const r = +it.no || parseInt(String(it.id || ''), 10); if (!r) return;
+    (it.q || []).forEach(x => { if (!x || x.ok !== false || String(x.s || '') === '화학') return;
+      out.push({ r: r, s: String(x.s || ''), i: +x.i, my: String(x.my == null ? '' : x.my), ans: String(x.ans == null ? '' : x.ans), rate: x.rate }); }); });
+  return out;
+}
+function ewmLoad(){
+  if (EWM.st) return; EWM.st = 'wait';
+  if (!syncToken()){ EWM.st = 'none'; return; }
+  ghRaw('exam/꼬까.json').then(t => { EWM.rows = ewmRows(t ? JSON.parse(t) : null); EWM.st = 'ok'; EWM.map = null;
+    if (EWM.rows.length && S.tab === 'jimun'){ try{ render(); }catch(e){} } }).catch(() => { EWM.st = 'fail'; EWM.rows = []; });
+}
+function ewmYear(z){ const ys = (z && z.연도들) || []; if (ys.length) return String(ys[0]);
+  const m = /(\d{2})\s*변리/.exec(String((z && z.태그) || '')); return m ? String((+m[1] >= 60 ? 1900 : 2000) + (+m[1])) : ''; }
+function ewmMap(){
+  const mln = !!(MLN && MLN.ok);   /* 문항째 카드(MLN.obj)는 늦게 온다 — 오면 다시 짠다 */
+  if (EWM.map && EWM.vj === VJ && EWM.law === S.law && EWM.mln === mln) return EWM.map;
+  const m = {}; EWM.map = m; EWM.vj = VJ; EWM.law = S.law; EWM.mln = mln;
+  const LAWN = { '특허': '특허법', '상표': '상표법', '디보': '디자인보호법' };
+  const rows = (EWM.rows || []).filter(x => LAWN[x.s] === S.law);
+  if (!VJ || !rows.length) return m;
+  const add = (k, x, sel) => { if (!k) return; const L = m[k] = m[k] || []; if (!L.some(v => v.r === x.r && v.i === x.i)) L.push({ r: x.r, i: x.i, my: x.my, ans: x.ans, rate: x.rate, sel: sel }); };
+  const byYN = {};
+  (VJ.qs || []).forEach(q => { const k = String(q.연도) + '|' + String(q.시험문번 || ''); (byYN[k] = byYN[k] || []).push(q); });
+  const P = VJ.P7map || {}, O = (MLN && MLN.ok && MLN.obj) || {};
+  const lab = z => { const pu = jxeParseUid(z.uid); const v = pu && pu.lab ? pu.lab : (z.선지 != null ? String(z.선지) : ''); return /^\d$/.test(v) ? v : null; };   /* 선지 번호(보기 ㄱ·ㄴ = 밑줄 없음) */
+  rows.forEach(x => {
+    const y = String(x.r + 1963);
+    (byYN[y + '|' + x.i] || []).forEach(q => (q.지문 || []).forEach(z => add(oxKeyLid(q, z), x, z.기호 && !/^\d$/.test(String(z.기호)) ? null : String(z.n))));   /* 리담 문제 지문 전부 · 열쇠 = 지문 uid(같은 uid 책 카드가 같이 받는다) */
+    const hit = z => { if (String(z.시험문번 || '') === String(x.i) && ewmYear(z) === y) return true;
+      const pu = jxeParseUid(z.uid); return !!(pu && pu.law === S.law && pu.no === x.i && String(pu.y) === y); };
+    Object.keys(P).forEach(id => { const z = P[id]; if (z && hit(z)) add(oxKeyP7(z), x, lab(z)); });   /* 책 지문 — 리담에 없는 문제(상표 61회 22번 꼴)도 같은 길 */
+    Object.keys(O).forEach(id => { const o = O[id]; if (o && hit(o)) add(oxKeyP7(o), x, null); });   /* 문항째 카드 = 밑줄 없음 */
+  });
+  return m;
+}
+function ewmCirc(v){ const C = '①②③④⑤⑥⑦⑧⑨'; const a = String(v || '').split(/[,\s]+/).filter(Boolean); return a.length ? a.map(n => /^[1-9]$/.test(n) ? C.charAt(+n - 1) : n).join('') : '—'; }
+function ewmRate(v){ const n = parseFloat(v); return isFinite(n) ? n.toFixed(1) + '%' : '—'; }
+function ewmMarks(host, key, ctx){
+  if (typeof EWM === 'undefined' || !EWM || EWM.st !== 'ok' || !EWM.rows.length || !key) return;
+  const ms = (ewmMap()[key] || []).slice().sort((a, b) => a.r - b.r || a.i - b.i);
+  ms.forEach((mk, o) => {
+    const b = el('button', 'ewmx', mk.r + '-' + mk.i + '-X'); b.type = 'button'; b.dataset.ewm = mk.r + '-' + mk.i;
+    b.title = '실제 ' + mk.r + '회 1차 ' + mk.i + '번 — 틀림 · 누르면 내 답 · 정답 · 평균 정답률';
+    b.onclick = ev => { ev.stopPropagation(); ewmToggle(b, host, mk, ctx, o); };
+    host.appendChild(b);
+  });
+}
+function ewmLine(mk, sel){
+  /* 글 셋만 「내 답 ④ · 정답 ② · 평균 정답률 73.0%」 · 이 지문 = 내가 고른 선지 · 정답 선지면 그 칸만 <u>(span 없음 · 민법OX 와 한 꼴) */
+  const ln = el('div', 'ewml'), has = v => sel != null && /^[1-9]$/.test(String(sel)) && String(v || '').split(/[,\s]+/).indexOf(String(sel)) >= 0;
+  [['내 답 ' + ewmCirc(mk.my), has(mk.my)], ['정답 ' + ewmCirc(mk.ans), has(mk.ans)], ['평균 정답률 ' + ewmRate(mk.rate), false]].forEach((p, n) => {
+    if (n) ln.appendChild(document.createTextNode(' · '));
+    ln.appendChild(p[1] ? el('u', 'u', p[0]) : document.createTextNode(p[0])); });
+  return ln;
+}
+function ewmToggle(b, host, mk, ctx, o){
+  if (b._ewl && b._ewl.isConnected){ b._ewl.remove(); b._ewl = null; return; }
+  const anc = b.closest('.mbqhd') || b.closest('.jntop') || host;
+  const ln = ewmLine(mk, (ctx && ctx.kind !== 'O') ? mk.sel : null); ln.dataset.o = o;
+  let ref = anc; while (ref.nextElementSibling && ref.nextElementSibling.classList.contains('ewml') && +ref.nextElementSibling.dataset.o < o) ref = ref.nextElementSibling;
+  ref.after(ln); b._ewl = ln;
+}
+(function(){ try{ const s = document.createElement('style'); s.id = 'ewmcss'; s.textContent = [
+  '.ewmx{display:inline-block;background:transparent;border:0;padding:0 2px;margin:0;font-family:inherit;font-size:11px;font-weight:800;line-height:16.5px;color:#dc2626;white-space:nowrap;vertical-align:middle;cursor:pointer}',
+  '.ewml{font-size:10.5px;color:#8a867d;margin:2px 0 4px;padding-left:4px}',   /* H7 .qsub 값 그대로 */
+  '.ewml .u{text-decoration:underline;text-underline-offset:2px}',
+  /* 터치 누름 영역(revfix0929b A-3 꼴) — 표시 = 머리 칩(.qb)과 같은 둘레(위 17px) + 제 사각형 덮개 · 출제연도 칩도 제 사각형 덮개
+     (표시가 서서 칩 줄이 접히면 아랫줄 .qb 둘레가 윗줄 출제연도 칩을 먹던 것 — 보이는 꼴·PC 마우스 무변) */
+  '@media (pointer:coarse){.mbqhd button.ewmx,.mbqhd button.jxec{position:relative}'
+    + '.mbqhd button.ewmx::before{content:"";position:absolute;left:0;right:0;top:-17px;bottom:0;z-index:1}'
+    + '.mbqhd button.ewmx::after,.mbqhd button.jxec::after{content:"";position:absolute;inset:0;z-index:3}}'
+].join('\n'); document.head.appendChild(s); }catch(e){} })();
 /* ── 리담 선지 한 줄 = 카드 하나((미수록)·(변형)·큐) ── */
 function mlnLidCard(q, z, no, ln, ni, opt){
   const k = oxKeyLid(q, z);
@@ -19037,6 +19122,7 @@ function cfHeadChips(key, ev){
   const sv = hd && hd.querySelector('.qb.v:not(.qexp)'), yc = hd && hd.querySelector('.jxec'), idc = hd && hd.querySelector('.qb.id');
   out.push(mk(sv, 'qb v', r ? r.src : ''));
   if (yc) out.push(mk(yc, 'jxec', ''));
+  if (hd) hd.querySelectorAll('.ewmx').forEach(x => out.push(mk(x, 'ewmx', '')));   /* ★ exam_wrong_mark — 출제연도 칩 사본 뒤 「63-13-X」 사본(누름 없음 · 펼침은 카드에서) */
   out.push(mk(idc, 'qb id', r ? r.uid : key));
   out.forEach(e => e.classList.remove('fd'));
   return out;
