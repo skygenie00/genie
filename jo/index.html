@@ -7172,7 +7172,9 @@ async function popPrec4(id,ev,depth,law,q){   /* ★ 손질 9(9/5) — law = 다
   const body=popShell('cell','⚖ '+(p?(p.사건번호||id):id)+(p&&p.전합?' [전합]':'')+(lawX!==S.law?' · '+LK:''),'prec|'+LK+'|'+id);
   showPop(ev); popSizable(body,'prec');   /* ★ 판 4 add2 §3 */
   if(!p){ body.appendChild(el('div','cdim','리스트에 없는 판례 — '+id)); return; }
-  const hd=el('div','memobtn'); const go=el('button','tool on','판례 갈래로 이동 ↗'); go.onclick=()=>{closeAllPops();precGo(id,lawX,'요약');render();};   /* ★ prec3 §B-5 */ hd.appendChild(go);   /* ★ 손질 9 — 문구 통일 · 깃발 */
+  const hd=el('div','memobtn');
+  {const pt3=body.parentNode.querySelector(':scope > .ph .pt'),gw=el('span','ptgo'),go=el('button','plgb tmgo','이동 ↗');go.type='button';go.title='이 판례를 판례 갈래(요약)로 연다';
+   go.onclick=()=>{closeAllPops();precGo(id,lawX,'요약');render();};gw.appendChild(go);if(pt3)pt3.after(gw);else hd.appendChild(gw);}   /* ★ prec3 §B-5 · ★ jo_theme_fix2 B-6 — 「판례 갈래로 이동 ↗」(몸 첫 줄 검정 단추) → 머리 제목 뒤 「이동 ↗」 글자(A-7 뷰로·보드로와 한 꼴 · 동작 무변) */
   if(p.요약본)hd.appendChild(qaBtnEl(p));   /* ★ QA 판 add1 §2 — [검수 완] · 요약본이 있는 행만 */
   {const _qb=qaBadgeEl(p); if(_qb)hd.appendChild(_qb);}
   if(p.설명별칭)hd.appendChild(el('span','chip c-alias',p.설명별칭)); hd.appendChild(el('span','cdim',(p.설명줄||p.사건명||'').slice(0,80))); body.appendChild(hd);
@@ -10086,11 +10088,11 @@ async function popPan(caseNo, selfKey, ev){
         const sec = F[p.id] || {};
         if (sec.판결요지){ const bx = el('div', 'box');
           bx.appendChild(el('pre', 'raw', sec.판결요지)); body.appendChild(bx); }
-        else body.appendChild(el('div', 'cdim', '요약이 없다 — 「판례 갈래로 이동」에서 전문을 본다'));
+        else body.appendChild(el('div', 'cdim', '요약이 없다 — 머리 「이동 ↗」(판례 갈래)에서 전문을 본다'));
       }
-      const go = el('button', 'tool on', '판례 갈래로 이동 ↗');
-      go.onclick = () => { precGo(p.id, null, '요약'); closeAllPops(); render(); };   /* ★ prec3 §B-5 */   /* ★ 손질 9 — 깃발 */
-      body.appendChild(go);
+      { const pt3 = body.parentNode.querySelector(':scope > .ph .pt'), gw = el('span', 'ptgo'), go = el('button', 'plgb tmgo', '이동 ↗'); go.type = 'button'; go.title = '이 판례를 판례 갈래(요약)로 연다';
+        go.onclick = () => { precGo(p.id, null, '요약'); closeAllPops(); render(); };   /* ★ prec3 §B-5 */   /* ★ 손질 9 — 깃발 */
+        gw.appendChild(go); if (pt3) pt3.after(gw); else body.appendChild(gw); }   /* ★ jo_theme_fix2 B-6 — 「판례 갈래로 이동 ↗」(몸 끝 단추) → 머리 제목 뒤 「이동 ↗」 글자(A-7 꼴 · 동작 무변) */
     } else {
       body.appendChild(el('div', 'cdim', '원본·요약본에 없다'));   /* ★ v3-N §1 */
     }
@@ -15042,7 +15044,7 @@ const skRun=async e=>{   /* ★ 손질 8 — §2 300ms 디바운스 — 아래 $
       out.forEach(r=>skRow(box,'jo',r.k+(r.t?' '+r.t:''),r.x,SHORT[r.law],
         ev=>{closeSk();popJo(r.law,r.k,ev,1);}));
       /* ★ jo_theme A-6 — 테마(특허법) — 결과 줄 = 「{테마} 조각」 → 테마 창 */
-      if(lawsOn.indexOf(TM_LAW)>=0){const th=tmSearch(q);if(th.length){box.appendChild(el('div','grp','🧩 테마 — '+th.length+'건'));
+      if(lawsOn.indexOf(TM_LAW)>=0){const th=tmSearch(q);if(th.length){box.appendChild(el('div','grp','테마 — '+th.length+'건'));   /* ★ jo_theme_fix2 B-4 — 머리 🧩 뗌(Claude 머리와 같은 꼴) · 결과 줄 아이콘 칸 없음(SK_ICON.thm 걷음) */
         th.forEach(h=>skRow(box,'thm','{'+h.t.n+'}',h.x,'테마',ev=>{closeSk();tmWin(h.t.id,ev);}));}}
     }catch(err){box.appendChild(el('div','grp','📖 조문 — 읽지 못했다'));}
   }
@@ -20632,8 +20634,19 @@ function tmThemeCount(kk){ const ix = kk ? ['내용', '주체', '기간'].indexO
 /* ── 글 표시 — 조 인용(링크) · 주체 낱말(점선) · 두문자(굵게 · 누르면 뜻) ──
    다른 법 머리(fix1 A-32): 두 글자(시규 · 민소) = 앞 글자와 상관없이 늘 머리(「및시규11조」 = 시규 → 링크 없음 · 「준용민소16조」 = 민사소송법 제16조) ·
    한 글자(상 · 디) 앞에 한글이 붙으면 어느 법인지 못 가른다 → 링크 없음(「법원은상33조」 「이상5조」 — 특허법으로 잇지 않는다) ·
-   앞이 공백·괄호·쉼표·줄 처음이면 그 법(「(상227조)」 = 상표법) · 머리 없는 수 = 특허법(「특226조」) */
+   앞이 공백·괄호·쉼표·줄 처음이면 그 법(「(상227조)」 = 상표법) · 머리 없는 수 = 특허법(「특226조」) ·
+   fix2 B-1 — 머리 없는 수 바로 앞(공백 하나 · 따옴표 · 「제」까지)에 법 이름이 붙으면 그 법(「민법750조」 「시행령5조」 「PCT“제19조”」 「상표법90조」 「민소법451조」) ·
+   괄호는 법 이름 목록 뒤만(「디보(36조)」 「민소법(451①8)」 — 「국내법(55조)」 같은 「…법(」 은 무변) · 이 앱에 그 법 조문이 있으면(LAWS) 그 법 링크 · 없으면 링크 없음 · 「방법」 「위법」 꼴은 법 이름 아님 */
 const TM_OTHER = { '시규': null, '민소': '민사소송법', '상': '상표법', '디': '디자인보호법' };
+const TM_LAWNM = '민사소송법|민소법|민소|민사집행법|민집법|민집|상표법|상표|디자인보호법|디자인법|디자인|디보|실용신안법|실용신안|실용|특허법|특허|시행령|시행규칙|시규|PCT|파리조약|조약|민법';
+const TM_LAWT1 = new RegExp('(' + TM_LAWNM + ')\\s?[“"「]?\\s?(?:제\\s?)?$'), TM_LAWT3 = new RegExp('(' + TM_LAWNM + ')\\s?[(（]\\s?$'), TM_LAWT2 = /([가-힣]+법)\s?[“"「]?\s?(?:제\s?)?$/;
+const TM_LAWOF = { '민사소송법': '민사소송법', '민소법': '민사소송법', '민소': '민사소송법', '상표법': '상표법', '상표': '상표법', '디자인보호법': '디자인보호법', '디자인법': '디자인보호법', '디자인': '디자인보호법', '디보': '디자인보호법', '특허법': TM_LAW, '특허': TM_LAW };
+function tmLawBefore(s, a){   /* 0 = 앞에 법 이름 없음 · null = 이 앱에 없는 법 · 문자열 = 그 법 */
+  const sl = s.slice(Math.max(0, a - 14), a); let m = TM_LAWT1.exec(sl) || TM_LAWT3.exec(sl);
+  if (!m){ m = TM_LAWT2.exec(sl); if (m && /(?:방|수|기|용|문|어|화|편|위|적|불|합|입)법$/.test(m[1])) m = null; }
+  if (!m) return 0;
+  const lw = TM_LAWOF[m[1]]; return (lw && LAWS.indexOf(lw) >= 0) ? lw : null;
+}
 const TM_JO_RX = /(시규|민소|상|디)?\s?(\d{1,3})(?:조(?:의(\d{1,2}))?(?:\s?[①-⑳])?|-(\d{1,2})(?:조)?(?:\s?[①-⑳])?|의(\d{1,2})(?:조)?(?:\s?[①-⑳])?|([①-⑳]))/g;
 function tmMarks(s, ctx){
   const out = [], take = (a, b, kind, x) => { if (out.some(q => a < q.b && b > q.a)) return; out.push({ a: a, b: b, kind: kind, x: x }); };
@@ -20645,8 +20658,9 @@ function tmMarks(s, ctx){
     if (/\d/.test(s[a - 1] || '')) continue;
     const n = m[2], sub = m[3] || m[4] || m[5] || '';
     if ((m[4] || m[5]) && m[0].indexOf('조') < 0){ const nx = s[m.index + m[0].length] || ''; if (/[가-힣]/.test(nx) && !/[조항호]/.test(nx)) continue; }   /* 「1-2년」 「3의2배」 = 조 아님 */
-    const law = pre ? TM_OTHER[pre] : TM_LAW;
+    let law = pre ? TM_OTHER[pre] : TM_LAW;
     if (pre && !law){ continue; }   /* 시규 = 이 앱에 없는 법 → 링크 없음 */
+    if (!pre){ const lb = tmLawBefore(s, a); if (lb === null) continue; if (lb) law = lb; }   /* fix2 B-1 — 앞에 붙은 법 이름 */
     take(a, m.index + m[0].length, 'jo', { law: law, k: '제' + n + '조' + (sub ? '의' + sub : '') });
   }
   ctx.subj.forEach(w => { let i = -1; while ((i = s.indexOf(w, i + 1)) >= 0) take(i, i + w.length, 'subj', w); });
@@ -20665,15 +20679,34 @@ function tmFill(host, s, color, ctx, svg){
     i = q.b; });
   if (i < s.length) host.appendChild(document.createTextNode(s.slice(i)));
 }
+/* fix2 B-7 — 구역 SVG 그림: data URI(png·jpeg·webp) 그대로 · 따로 둔 그림(theme/patent_hr8/img/ · 테마 재료 옆) = 창 열 때 cvbGh(민법앱 mbGhGet 꼴 · 토큰 · raw)로 받아 blob URL ·
+   받은 것은 기기에 재움(IndexedDB · 테마 재료와 같은 칸 · 못 받으면 재운 것) · 그 밖 href(javascript: · http · 다른 자리) = 그 image 를 지움 */
+const TM_IMG_DIR = 'theme/patent_hr8/img/', TM_IMG = {};
+function tmImgSrc(h){ h = String(h || '').trim();
+  if (/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+\/=\s]+$/i.test(h)) return { data: h };
+  const m = /^(?:\.\/)?(?:theme\/patent_hr8\/)?img\/([A-Za-z0-9_][A-Za-z0-9._-]*\.(?:webp|png|jpe?g))$/i.exec(h);
+  return (m && m[1].indexOf('..') < 0) ? { path: TM_IMG_DIR + m[1] } : null; }
+function tmImgUrl(path){
+  if (!TM_IMG[path]) TM_IMG[path] = (async () => { const H = tmHs(); if (!H) return null; const k = 'themeimg:' + path, last = H.stat.last; let buf = null;
+    try { buf = await H.gh(path, 'buf'); } catch (e) {} H.stat.last = last;   /* 교재 창 문구를 흔들지 않는다(tmLoad 와 같음) */
+    if (buf){ try { await H.put(k, buf); } catch (e) {} } else { try { buf = await H.get(k); } catch (e) {} }
+    if (!buf){ delete TM_IMG[path]; return null; }   /* 다음에 창을 열면 다시 받는다 */
+    return URL.createObjectURL(new Blob([buf], { type: /\.webp$/i.test(path) ? 'image/webp' : (/\.png$/i.test(path) ? 'image/png' : 'image/jpeg') })); })();
+  return TM_IMG[path]; }
 function tmSvgEl(x, t, ctx){
   let doc = null; try { doc = new DOMParser().parseFromString(String(x.b.svg), 'image/svg+xml'); } catch (e) { return null; }
   const svg = doc && doc.documentElement; if (!svg || svg.nodeName.toLowerCase() !== 'svg') return null;
-  svg.querySelectorAll('script,foreignObject,iframe,image,use').forEach(n => n.remove());
+  svg.querySelectorAll('script,foreignObject,iframe,use').forEach(n => n.remove());
+  const XL = 'http://www.w3.org/1999/xlink', hrefOf = n => n.getAttribute('href') || n.getAttributeNS(XL, 'href') || '', dropHref = n => { n.removeAttribute('href'); n.removeAttributeNS(XL, 'href'); };
+  svg.querySelectorAll('image').forEach(n => { const ok = tmImgSrc(hrefOf(n)); dropHref(n); if (!ok){ n.remove(); return; }
+    if (ok.data) n.setAttribute('href', ok.data); else n.setAttribute('data-tmimg', ok.path); });
+  svg.querySelectorAll('*').forEach(n => { if (n.nodeName.toLowerCase() !== 'image' && (n.hasAttribute('href') || n.hasAttributeNS(XL, 'href')) && hrefOf(n).trim().charAt(0) !== '#') dropHref(n); });   /* 그림 밖 href = 제 안 자리(#)만 */
   svg.querySelectorAll('*').forEach(n => [...n.attributes].forEach(a => { if (/^on/i.test(a.name) || /javascript:/i.test(a.value)) n.removeAttribute(a.name); }));
   [...svg.attributes].forEach(a => { if (/^on/i.test(a.name)) svg.removeAttribute(a.name); });
   svg.querySelectorAll('text').forEach((n, i) => { const e = t.l[x.bk + '|s' + i]; const s = e != null ? String(e) : (n.textContent || '');
     while (n.firstChild) n.removeChild(n.firstChild); tmFill(n, s, '', ctx, true); n.setAttribute('data-tmed', 'svgline'); n.setAttribute('data-key', x.bk + '|s' + i); });
   const node = document.importNode(svg, true); node.removeAttribute('width'); node.removeAttribute('height');
+  node.querySelectorAll('image[data-tmimg]').forEach(n => { tmImgUrl(n.getAttribute('data-tmimg')).then(u => { if (u) n.setAttribute('href', u); }); });   /* fix2 B-7 — 따로 둔 그림 */
   const w = el('div', 'thfig'); w.appendChild(node);
   w.addEventListener('click', ev => { if (ev.target.closest && ev.target.closest('.wmlk,.thac,.thsb')) return; if (TMLP.eat()) return; w.classList.toggle('big'); });
   return w;
@@ -20691,10 +20724,7 @@ function tmBody(body, t){
     const bk = (tmLines(t).slice(-1)[0] || {}).bk || (t.boxes || [])[0] || '_', used = Object.keys(t.l).concat(tmLines(t).map(L => L.key)).filter(k => k.indexOf(bk + '|') === 0).map(k => +k.slice(bk.length + 1)).filter(n => n >= 0);
     const D = TM.d || { boxes: {} }, n0 = ((D.boxes[bk] || {}).lines || []).length, n = Math.max(n0, ...used.map(x => x + 1), 0);
     tmEditRec(r => { const o = r[t.id] = r[t.id] || {}; o.l = o.l || {}; o.l[bk + '|' + n] = v; }); tmRefresh(); }, { ph: '더할 줄 글' }); };
-  wrap.appendChild(add);
-  const pgs = (t.boxes || []).map(bk => ((TM.d || { boxes: {} }).boxes[bk] || {}).p).filter(p => p != null);
-  const uniq = pgs.filter((p, i) => pgs.indexOf(p) === i);
-  if (uniq.length) wrap.appendChild(el('div', 'thsrc', '정리omr ' + uniq.join('·') + '쪽'));
+  wrap.appendChild(add);   /* fix2 B-5 — 꼬리 줄 「정리omr N쪽」 걷음(창 = 제목 + 글뿐) */
   body.appendChild(wrap);
   tmWire(wrap, A);
 }
@@ -20882,7 +20912,6 @@ function tmLong(t){
       unlink(); o['jo-'] = (o['jo-'] || []).filter(x => tmJoKey(x) !== nk); if (!(o['jo+'] || []).some(x => tmJoKey(x) === nk)) o['jo+'] = (o['jo+'] || []).concat([tmJoShort(nk)]); }); tmRefresh(); }, { ph: '조 번호(비우면 연결 풂)' }); return; }
 }
 TM.p = tmLoad().then(() => tmRerender()).catch(() => { TM.st = 'none'; });
-try { if (typeof SK_ICON === 'object' && SK_ICON) SK_ICON.thm = '🧩'; } catch (e) {}   /* A-6 검색 결과 줄 아이콘 칸(다른 갈래와 같은 자리) */
 /* ── CSS — 테마 줄·창 · A-7 팝업 틀(조판기 전부 = 민법 oxwin 값 · 종류별 색 걷음 · 폭·크기 무변) ── */
 (function(){ try{ const s = document.createElement('style'); s.id = 'jo-theme-css'; s.textContent = [
   /* A-1 서랍 — 테마 줄 = 조 줄(.r) 꼴 · 「두N」 갈색 · 「§N」 회색 · 글자만(테두리 0) · 거름 점 = 조 줄 점과 같은 크기 · 빈 = 회색 테두리 흰 바탕 */
@@ -20904,7 +20933,7 @@ try { if (typeof SK_ICON === 'object' && SK_ICON) SK_ICON.thm = '🧩'; } catch 
   '.thacm{font-size:11.5px;color:#374151;margin:1px 0 3px 1.2em;line-height:1.5}', '.thacm.none{color:#9ca3af}',
   '.thfig{margin:6px 0;cursor:zoom-in}', '.thfig svg{display:block;max-width:100%;height:auto}', '.thfig.big{cursor:zoom-out}', '.thfig.big svg{width:100%}',
   '.thfig svg .wmlk{fill:var(--exc);cursor:pointer;text-decoration:underline}', '.thfig svg .thsb{text-decoration:underline dotted}', '.thfig svg .thac{font-weight:800}',
-  '.thsrc{margin-top:8px;font-size:11px;color:#9ca3af}', '.tmadd{margin-top:6px}',
+  '.tmadd{margin-top:6px}',
   /* A-3 목록 창 줄 */
   '.throw2{display:flex;align-items:center;gap:8px;min-height:36px;padding:2px 2px;border-bottom:1px solid #f1f5f9;cursor:pointer}',
   '.throw2 .tmjs{color:#6b7280;font-size:11.5px;flex:1;min-width:0}', '.throw2 .tmjn{color:#1d4ed8;font-weight:800;flex:none}',
@@ -20918,7 +20947,7 @@ try { if (typeof SK_ICON === 'object' && SK_ICON) SK_ICON.thm = '🧩'; } catch 
   '.tmon{display:block}', '.tmlp{background:#fef3c7;border-radius:4px}',
   '[data-tmed]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}',
   '@media (pointer:coarse){.tree .r.tmr,.tree .r.tmaddr{min-height:36px;box-sizing:border-box}.pop .tmof .r.tmr,.pop .tmres .r.tmr{min-height:36px}.tmadd .jtt{display:inline-block;padding:9px 0}',
-  '  .jtbar .bkmk.tmdot{position:relative}.jtbar .bkmk.tmdot::before{content:"";position:absolute;left:-5.5px;right:-1.5px;top:50%;height:36px;margin-top:-18px}',   /* fix1 A-34 — 누름 높이 36(머리 위아래 여백 안) · 가로 = 점 왼쪽 4px(칩까지 1px 남김) ~ 점 오른쪽 끝(접기 단추 둘레가 「펴기」 때 점 옆까지 온다) = 12px · 기준 = 테 1.5px 안쪽 */
+  '  .jtbar .bkmk.tmdot{position:relative}.jtbar .bkmk.tmdot::before{content:"";position:absolute;left:-3.5px;right:-1.5px;top:50%;height:36px;margin-top:-18px}',   /* fix1 A-34 — 누름 높이 36(머리 위아래 여백 안) · 기준 = 테 1.5px 안쪽 · ★ fix2 B-3 — 가로 = 점 왼쪽 2px ~ 점 오른쪽 끝 = 10px(옛 왼쪽 4px · 칩과 틈 1px 는 크로미움 누름 판정에서 칩 오른쪽 끝을 먹었다) · 칩(틈 5px)까지 3px · 접기 단추 둘레(「펴기」)까지 3px */
   '  .tmr em.jcol3 .tmds{position:relative}.tmr em.jcol3 .tmds::before{content:"";position:absolute;left:0;right:0;top:50%;height:36px;margin-top:-18px}',   /* 둘레 = 칸 폭(44 · 늘임) × 36 — transform 안 씀(크로미움이 transform 상자는 정수 px 로 넓혀 맞힘 → 줄 자리가 소수일 때 윗줄 1px 를 먹는다) */
   '  .tmadd .jtt{display:inline-block;padding:10px 0;min-width:36px;text-align:center}', '  .throw2 .thac{display:inline-flex;align-items:center;min-height:36px;padding:0 4px}',
   '  .thsrch .tmsgo{height:36px;min-height:36px}', '  .cv-bsres .cv-bshd .cv-bsx{min-width:36px;min-height:36px}', '  .cv-bsres .cv-bsone{min-height:36px;display:flex;align-items:center}',

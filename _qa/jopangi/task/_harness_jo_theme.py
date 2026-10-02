@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 r"""_task_jo_theme §B 관문 — 조문 「테마」(서랍 테마 줄·거름 점 · 테마 창 · 목록 창 · 조문 「테마 N」 · 고치기 · 동기화 · 검색) · 팝업 틀 · 8판 교재 창 검색 · 화면 훑기
 
-  python _harness_jo_theme.py [--new <앱>] [--base <앱 파일 | genie git 판>] [--prev <판>] [--vendor <pdf.js 3.11.174 폴더>] [--eng chromium,webkit] [--only B1,..,B24,WK] [--res <결과>] [--yardstick [--yard-app <판>]]
+  python _harness_jo_theme.py [--new <앱>] [--base <앱 파일 | genie git 판>] [--prev <판>] [--base2 <판>] [--theme <테마.json.gz>] [--vendor <pdf.js 3.11.174 폴더>] [--eng chromium,webkit] [--only B1,..,B30,WK] [--res <결과>] [--yardstick [--yard-app <판>]]
+
+  fix2(_task_jo_theme_fix2 §B · 바탕 main eacc28e = --base2) = B25~B30 — §C 클라우드 칸: B25 관문 2 다른 법 잘못 이음 0 · B26 관문 3 감긴 줄 · B27 관문 4 거름 점 누름 점 표본 ·
+    B28 관문 5 🧩 · .thsrc · 판례 팝업 「이동 ↗」 · B29 관문 5-2 구역 SVG 그림 · B30 관문 7 화면 훑기 — 재료 = 덧판 real(실제 테마 재료 + 시험 테마 tz1)
+    헛잣대 = --yardstick --yard-app eacc28e --only B25,B26,B27,B28,B29(B30 = 새 판 흠 − 바탕 흠이라 해당 없음)
 
   fix1(_task_jo_theme_fix1 · 8d1383d 위 고침 여덟) = B15~B24 — B15 테마 글 조 링크 꼴 · B16 다른 법 머리 · B17 연결 창·원문 창 틀 · B18 폰 서랍 머리 한 줄 ·
     B19 창 테마 줄 = 서랍 줄 · B20 거름 점 8px · B21 두문자 이름·여러 조 길 · B22 테마 모드 범례 없음 · B23 본판 B1~B14 다시 · B24 화면 훑기(+ 🔗 연결 창 · 원문 창 셋 · 찾기 결과)
@@ -225,7 +229,7 @@ def serve_theme(tag, src):
     if tag in SERVERS:
         return SERVERS[tag][1]
     body = H.inject(src).encode('utf-8')
-    mb = OVER['none'] if tag.startswith('none:') else OVER['full']
+    mb = OVER['none'] if tag.startswith('none:') else (OVER['real'] if tag.startswith('real:') else OVER['full'])   # fix2 — real: = 실제 테마 재료 덧판
 
     class Hd(SimpleHTTPRequestHandler):
         def log_message(self, *a):
@@ -782,7 +786,7 @@ def b8(br, src, base_src, tag):
     jo(p)
     r = p.ev(SK, ['정사소', ['jo']])
     th = [x for x in r['rows'] if x['tag'] == '테마']
-    g1 = '🧩 테마 — 1건' in r['grp'] and len(th) == 1 and th[0]['h'] == '{기일기간}' and '정사소' in th[0]['x']
+    g1 = any(g in r['grp'] for g in ('테마 — 1건', '🧩 테마 — 1건')) and len(th) == 1 and th[0]['h'] == '{기일기간}' and '정사소' in th[0]['x']   # fix2 B-4 — 머리 🧩 뗌(「테마 — N건」 · 옛 판 머리도 받음)
     T(G, '🔍 「정사소」 → 결과 줄 「{기일기간} …」', g1, r)
     a = p.ev("() => { const d = [...document.querySelectorAll('#skres .res')].find(x => __TM.txt(x.querySelector('b')) === '{기일기간}'); return d ? __RB.hitOn(d) : null; }")
     p.press(a, 700)
@@ -794,7 +798,7 @@ def b8(br, src, base_src, tag):
     for q in ('기간', '특허청장'):
         rn = p.ev(SK, [q, ['jo', 'prec']])
         rb = pb.ev(SK, [q, ['jo', 'prec']])
-        gn = [g for g in rn['grp'] if not g.startswith('🧩 테마')]
+        gn = [g for g in rn['grp'] if not g.startswith(('🧩 테마', '테마 — '))]
         same[q] = (gn == rb['grp'], [x for x in rn['rows'] if x['tag'] != '테마'] == rb['rows'], gn[:2], rb['grp'][:2])
     pb.close()
     g3 = all(v[0] and v[1] for v in same.values())
@@ -1621,6 +1625,451 @@ def b24(br, src, base_src, tag):
     return ok
 
 
+# ════════════════════════ _task_jo_theme_fix2 §C 클라우드 칸 — B25~B30(헛잣대 = eacc28e · --yardstick --yard-app eacc28e --only B25,..,B29) ════════════════════════
+#   B25 = 관문 2 다른 법 잘못 이음 0 · B26 = 관문 3 감긴 줄 · B27 = 관문 4 거름 점 누름 점 표본 · B28 = 관문 5 🧩 · .thsrc · 판례 팝업 「이동 ↗」 ·
+#   B29 = 관문 5-2 구역 SVG 그림 · B30 = 관문 7 화면 훑기(서랍 · 테마 창 셋 · 목록 창 · 검색 · 판례 팝업 × 폰 390 · iPad 834 · PC 1440)
+#   재료 = 덧판 real: 실제 테마 재료(minbeoppdf theme/patent_hr8/테마.json.gz · 클론에 없으면 git origin/main · --theme 로 줌) + 시험 테마 tz1(구역 SVG 그림 · 임의 그림)
+#   D11 — 실제 박스 글은 돌 때 읽기만(하네스에 글 0) · 시험 그림 = PIL 로 만든 색 칸(글 없음)
+BASE2 = ARG('--base2', 'eacc28e')   # fix2 바탕(main eacc28e)
+
+
+def _real_theme():
+    f = ARG('--theme') or os.path.join(MBREAL, 'theme', 'patent_hr8', '테마.json.gz')
+    if os.path.isfile(f):
+        return open(f, 'rb').read(), f
+    b = subprocess.run(['git', '-C', MBREAL, 'show', 'origin/main:theme/patent_hr8/테마.json.gz'], capture_output=True).stdout
+    return (b or None), MBREAL + ' git origin/main'
+
+
+def _img(w, h, cols, fmt):
+    from PIL import Image
+    im = Image.new('RGB', (w, h), cols[0])
+    if len(cols) > 1:
+        im.paste(Image.new('RGB', (w // 2, h), cols[1]), (w // 2, 0))
+    bio = io.BytesIO()
+    im.save(bio, fmt, **({'quality': 90} if fmt == 'WEBP' else {}))
+    return bio.getvalue()
+
+
+ZOK_C, ZREL_C = (46, 125, 50), (21, 101, 192)   # 시험 그림 색(data URI 왼쪽 = 초록 · 따로 둔 webp = 파랑)
+TZ_PNG = _img(600, 200, [ZOK_C, (249, 168, 37)], 'PNG')
+TZ_WEBP = _img(360, 180, [ZREL_C], 'WEBP')
+TZ_SVG = ('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 400 300">'
+          '<text x="10" y="20" font-size="14" fill="#000000">시험 그림 구역 — 52조</text>'
+          '<image id="zok" x="10" y="30" width="380" height="127" href="data:image/png;base64,' + base64.b64encode(TZ_PNG).decode() + '"/>'
+          '<image id="zrel" x="10" y="165" width="180" height="90" href="img/zt1.webp"/>'
+          '<image id="zjs" x="200" y="165" width="40" height="40" href="javascript:alert(1)"/>'
+          '<image id="zhttp" x="250" y="165" width="40" height="40" xlink:href="http://example.com/x.png"/>'
+          '<image id="zhttps" x="300" y="165" width="40" height="40" href="https://example.com/y.webp"/>'
+          '<image id="zsvg" x="350" y="165" width="40" height="40" href="data:image/svg+xml;base64,PHN2Zy8+"/>'
+          '<image id="zup" x="200" y="215" width="40" height="40" href="img/../../x.webp"/>'
+          '<a id="zout" href="http://example.com/"><text x="10" y="280" font-size="12" fill="#0000ff">바깥 주소 글</text></a>'
+          '<path d="M10 290 L390 290" stroke="#d40000" stroke-width="2" fill="none"/></svg>')
+TZ_BAD = ['zjs', 'zhttp', 'zhttps', 'zsvg', 'zup']
+
+
+def build_real():
+    raw, where = _real_theme()
+    if not raw:
+        return None, {'자리': where, '잼': '테마 재료 없음'}
+    md5 = hashlib.md5(raw).hexdigest()
+    D = json.loads(gzip.decompress(raw).decode('utf-8'))
+    nreal = (len(D.get('themes') or []), len(D.get('boxes') or {}))
+    D['boxes']['zt1'] = {'p': 1, 'r': [0.1, 0.1, 0.5, 0.3], 'svg': TZ_SVG, 'lines': []}
+    D['themes'].append({'id': 'tz1', 'n': '시험 그림 구역', 'boxes': ['zt1'], 'region': {'p': 1, 'r': [0.1, 0.1, 0.5, 0.3]}, 'jo': ['52'], 'bk': [0, 0, 1]})
+    d = os.path.join(TMP, 'mbp_real')
+    shutil.rmtree(d, ignore_errors=True)
+    os.makedirs(os.path.join(d, 'theme', 'patent_hr8', 'img'))
+    for x in os.listdir(OVER['full']):
+        if x != 'theme':
+            _ln(os.path.join(OVER['full'], x), os.path.join(d, x))
+    with gzip.open(os.path.join(d, 'theme', 'patent_hr8', '테마.json.gz'), 'wt', encoding='utf-8') as f:
+        json.dump(D, f, ensure_ascii=False)
+    open(os.path.join(d, 'theme', 'patent_hr8', 'img', 'zt1.webp'), 'wb').write(TZ_WEBP)
+    OVER['real'] = d
+    return D, {'자리': where, 'md5': md5[:8], '테마': nreal[0], '박스': nreal[1], '시험 테마': 'tz1(박스 zt1 · 그림 둘 + 지울 href 다섯 + 바깥 a)', 'webp': len(TZ_WEBP), 'png': len(TZ_PNG)}
+
+
+REAL = {}
+
+
+def real_info():
+    if 'D' not in REAL:
+        REAL['D'], REAL['info'] = build_real()
+    return REAL['D'], REAL['info']
+
+
+def rpage(br, tag, src, dev):
+    """덧판 real 쪽 — 실제 테마 재료가 다 실렸는지(테마 수 = 재료 + 시험 1)를 같이 본다"""
+    p = page(br, 'real:' + tag, src, dev)
+    p.ev("async () => { for (let i = 0; i < 200 && !(TM.d && TM.d.themes && TM.d.themes.some(t => t.id === 'tz1')); i++) await __TM.wait(50); }")
+    return p
+
+
+# ── B25 관문 2 — 다른 법 잘못 이음(실제 박스 글 전수 · 창에 그린 링크) ──
+LINKS = r"""async () => { const out = []; const ids = tmModel().map(t => t.id).filter(id => id !== 'tz1');
+  for (const id of ids){ closeAllPops(true); tmWin(id, null); await __TM.wait(15); const w = __TM.pop('theme|' + id); if (!w) continue;
+    w.querySelectorAll('.thl').forEach(d => d.querySelectorAll('.wmlk').forEach(a => { const r = document.createRange(); r.setStart(d, 0); r.setEndBefore(a);
+      out.push([id, d.dataset.key, r.toString().slice(-16), a.textContent, a.dataset.law || '', a.dataset.k || '']); })); }
+  closeAllPops(true); return { n: ids.length, links: out }; }"""
+LAW_NM = sorted(['민사소송법', '민소법', '민소', '민사집행법', '민집법', '민집', '상표법', '상표', '디자인보호법', '디자인법', '디자인', '디보', '실용신안법', '실용신안', '실용',
+                 '특허법', '특허', '시행령', '시행규칙', '시규', 'PCT', '파리조약', '조약', '민법'], key=len, reverse=True)
+LAW_APP = {'민사소송법': '민사소송법', '민소법': '민사소송법', '민소': '민사소송법', '상표법': '상표법', '상표': '상표법', '디자인보호법': '디자인보호법', '디자인법': '디자인보호법',
+           '디자인': '디자인보호법', '디보': '디자인보호법', '특허법': '특허법', '특허': '특허법'}
+PRE_LAW = {'민소': '민사소송법', '상': '상표법', '디': '디자인보호법'}
+
+
+def named_law(pre, wide):
+    """링크 바로 앞에 붙은 법 — None = 이름 없음 · '-' = 이 앱에 없는 법 · 그 밖 = 법 이름(앱 LAWS)
+       좁게(지시서 셈) = 이름 + 공백 하나 · 넓게 = + 따옴표 · 「제」 · 목록 이름 뒤 괄호(「…법(」 은 이름 목록만)"""
+    s = pre
+    if wide:
+        s = re.sub(r'\s?[“"「]?\s?(?:제\s?)?$', '', s, count=1)
+    else:
+        s = re.sub(r'\s$', '', s, count=1)
+    cands = [s]
+    if wide:
+        m = re.search(r'\s?[(（]\s?$', pre)
+        if m:
+            cands.append(('(', pre[:m.start()]))
+    for c in cands:
+        paren = isinstance(c, tuple)
+        t = c[1] if paren else c
+        for nm in LAW_NM:
+            if t.endswith(nm):
+                return LAW_APP.get(nm, '-')
+        if not paren:
+            m = re.search(r'([가-힣]+법)$', t)
+            if m and not re.search(r'(?:방|수|기|용|문|어|화|편|위|적|불|합|입)법$', m.group(1)):
+                return LAW_APP.get(m.group(1), '-')
+    return None
+
+
+def wrong_links(links, wide):
+    """넓게 = 링크마다 맞는 법(이름 없으면 특허법)과 대조 · 좁게(지시서 셈) = 이름 + 공백 하나로 앞에 법 이름이 잡힌 링크만 대조"""
+    bad, plain = [], []
+    for th, key, pre, txt, law, k in links:
+        t = txt.lstrip()
+        pfx = next((x for x in ('민소', '상', '디') if t.startswith(x)), None)
+        if pfx:
+            exp = PRE_LAW[pfx]
+        else:
+            nl = named_law(pre, wide)
+            if nl is None and not wide:
+                continue
+            exp = '특허법' if nl is None else nl
+            if nl is None:
+                plain.append((th, key, pre, txt, law, k))
+        if exp != law:
+            bad.append({'테마': th, '줄': key, '앞': pre[-8:], '링크': txt, '법': law, '맞는 법': exp if exp != '-' else '(링크 없음)'})
+    return bad, plain
+
+
+MARKS = r"""(cases) => cases.map(s => tmMarks(s, { acr: [], subj: [] }).filter(q => q.kind === 'jo').map(q => [s.slice(q.a, q.b).trim(), q.x.law, q.x.k]))"""
+MARK_CASES = [('특226조', [['226조', '특허법', '제226조']]), ('46조 · 16② · 42-2', [['46조', '특허법', '제46조'], ['16②', '특허법', '제16조'], ['42-2', '특허법', '제42조의2']]),
+              ('민법750조', []), ('민법 제750조', []), ('시행령5조', []), ('PCT“제19조”', []), ('PCT제34조', []), ('민집법300조', []), ('파리조약4조', []),
+              ('상표법90조', [['90조', '상표법', '제90조']]), ('민소법451조', [['451조', '민사소송법', '제451조']]), ('디보(36조)', [['36조', '디자인보호법', '제36조']]),
+              ('국내법(55조)', [['55조', '특허법', '제55조']]), ('특허법 제2조', [['2조', '특허법', '제2조']]), ('방법 3조', [['3조', '특허법', '제3조']]), ('(상227조)', [['상227조', '상표법', '제227조']])]
+
+
+def b25(br, src, base_src, tag):
+    G = 'B25'
+    D, info = real_info()
+    if not D:
+        T(G, '실제 테마 재료', False, info)
+        return False
+    N(G, '재료', info)
+    got = {}
+    for nm, s in (('new', src), ('base', base_src)):
+        p = rpage(br, tag + nm, s, PC)
+        jo(p)
+        got[nm] = p.ev(LINKS)
+        if nm == 'new':
+            mk = p.ev(MARKS, [c for c, _ in MARK_CASES])
+            errs = p.errs[:]
+        p.close()
+    n, b = got['new']['links'], got['base']['links']
+    nb_w, n_plain = wrong_links(n, True)
+    bb_w, b_plain = wrong_links(b, True)
+    nb_n, _ = wrong_links(n, False)
+    bb_n, _ = wrong_links(b, False)
+    g1 = not nb_w and not nb_n and got['new']['n'] >= 70
+    T(G, '실제 박스 글 전수(테마 %d · 창 링크 %d · 바탕 %d) — 다른 법 잘못 이음 0(지시서 셈 = 법 이름 + 공백 · 넓힌 셈 = + 따옴표·「제」·이름 뒤 괄호)' % (got['new']['n'], len(n), len(b)), g1,
+      {'새 판 잘못(좁게 · 넓게)': [len(nb_n), len(nb_w)], '바탕 eacc28e 잘못(좁게 · 넓게)': [len(bb_n), len(bb_w)], '새 판 남은 것': nb_w[:5], '바탕 표본': bb_w[:30]})
+    key = lambda L: sorted(tuple(x) for x in L)
+    g2 = key(n_plain) == key(b_plain) and all(x[4] == '특허법' for x in n_plain)
+    T(G, '앞에 법 이름 없는 링크(「특226조」 · 머리 없는 수) = 특허법 · 바탕과 같음', g2, {'새 판': len(n_plain), '바탕': len(b_plain), '다른 것': [list(x) for x in set(map(tuple, n_plain)) ^ set(map(tuple, b_plain))][:6]})
+    exp = [w for _, w in MARK_CASES]
+    g3 = mk == exp
+    T(G, '규칙 표본(tmMarks · 임의 글) — 「특226조」·머리 없는 수 = 특허 · 민법·시행령·PCT·민집법·파리조약 = 링크 없음 · 상표법·민소법·디보 = 그 법 · 「국내법(55조)」 = 특허(무변)', g3,
+      {c: [m, w] for (c, w), m in zip(MARK_CASES, mk) if m != w} or len(MARK_CASES))
+    if errs:
+        T(G, 'JS 오류', False, errs[:3])
+    return g1 and g2 and g3 and not errs
+
+
+# ── B26 관문 3 — 감긴 줄(폰 390 · 실제 박스 글 전수) ──
+WRAP = r"""async () => { const ids = tmModel().map(t => t.id).filter(id => id !== 'tz1'); let n = 0, wr = 0; const bad = [], first = {};
+  for (const id of ids){ closeAllPops(true); tmWin(id, null); await __TM.wait(15); const w = __TM.pop('theme|' + id); if (!w) continue; const pl = w.querySelector('.pb').getBoundingClientRect().left;
+    w.querySelectorAll('.thl').forEach(d => { n++; const rg = document.createRange(); rg.selectNodeContents(d); const rs = [...rg.getClientRects()].filter(r => r.width > 0); if (!rs.length) return;
+      const lines = {}; rs.forEach(r => { const k = Math.round(r.top + r.height / 2); const j = Object.keys(lines).find(q => Math.abs(q - k) < 6); const kk = j != null ? j : k; lines[kk] = Math.min(lines[kk] == null ? 1e9 : lines[kk], r.left); });
+      const ys = Object.keys(lines).map(Number).sort((a, b) => a - b), x0 = lines[ys[0]]; first[id + '|' + d.dataset.key] = Math.round((x0 - pl) * 10) / 10;
+      if (ys.length > 1){ wr++; ys.slice(1).forEach(y => { if (Math.abs(lines[y] - x0) > 1) bad.push([id, d.dataset.key, Math.round(x0 * 10) / 10, Math.round(lines[y] * 10) / 10]); }); } }); }
+  closeAllPops(true); return { themes: ids.length, lines: n, wrapped: wr, bad: bad.length, ex: bad.slice(0, 6), first }; }"""
+
+
+def b26(br, src, base_src, tag):
+    G = 'B26'
+    D, info = real_info()
+    if not D:
+        T(G, '실제 테마 재료', False, info)
+        return False
+    got = {}
+    for nm, s in (('new', src), ('base', base_src)):
+        p = rpage(br, tag + nm, s, PHONE)
+        jo(p)
+        got[nm] = p.ev(WRAP)
+        if p.errs:
+            T(G, '%s JS 오류' % nm, False, p.errs[:3])
+        p.close()
+    a, b = got['new'], got['base']
+    g1 = a['wrapped'] > 0 and a['bad'] == 0
+    T(G, '폰 390 감긴 .thl 둘째 줄부터 왼쪽 x = 첫 줄 글 시작 x(±1) — 줄 %d · 감긴 %d · 어긋남 %d' % (a['lines'], a['wrapped'], a['bad']), g1,
+      {'새 판': [a['lines'], a['wrapped'], a['bad'], a['ex']], '바탕 eacc28e': [b['lines'], b['wrapped'], b['bad'], b['ex']]})
+    diff = [k for k in a['first'] if abs(a['first'][k] - b['first'].get(k, -999)) > 0.5]
+    g2 = not diff and len(a['first']) == len(b['first'])
+    T(G, '첫 줄 자리 무변(줄마다 첫 글자 x = 바탕 ±0.5)', g2, {'줄': len(a['first']), '다른 줄': diff[:6]})
+    return g1 and g2
+
+
+# ── B27 관문 4 — 거름 점 누름 점 표본(둘레 네 모서리 · 가장자리 가운데) ──
+DOT8 = r"""(inset) => { const b = document.querySelector('.jtbar'), d = b && b.querySelector('.tmdot'); if (!d) return null; d.scrollIntoView({block: 'center'});
+  const on = (x, y, t) => { const a = document.elementFromPoint(x, y); return !!a && (a === t || t.contains(a)); };
+  const who = (x, y) => { const a = document.elementFromPoint(x, y); if (!a) return null; if (a === d || d.contains(a)) return 'dot'; const c = a.closest('button, [role=button]'); return c ? String(c.className).split(' ').pop() : String(a.className || a.tagName).split(' ').pop(); };
+  const others = [...b.querySelectorAll('button, [role=button]')].filter(x => x !== d), keep = others.map(x => x.style.pointerEvents); others.forEach(x => { x.style.pointerEvents = 'none'; });
+  const r = d.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2; let L = cx, R = cx, T = cy, B = cy;
+  while (on(L - 0.25, cy, d) && L > cx - 60) L -= 0.25; while (on(R + 0.25, cy, d) && R < cx + 60) R += 0.25; while (on(cx, T - 0.25, d) && T > cy - 60) T -= 0.25; while (on(cx, B + 0.25, d) && B < cy + 60) B += 0.25;
+  others.forEach((x, i) => { x.style.pointerEvents = keep[i]; });
+  const P8 = (l, t, rr, bb) => { const m = inset, mx = (l + rr) / 2, my = (t + bb) / 2; return [[l + m, t + m], [mx, t + m], [rr - m, t + m], [rr - m, my], [rr - m, bb - m], [mx, bb - m], [l + m, bb - m], [l + m, my]]; };
+  const dotPts = P8(L, T, R, B).map(([x, y]) => who(x, y));
+  const area = e => { const q = e.getBoundingClientRect(), ps = getComputedStyle(e, '::before'); let l = q.left, t = q.top, rr = q.right, bb = q.bottom;
+    if (ps.content && ps.content !== 'none' && ps.position === 'absolute'){ const w = Math.max(q.width, 36), h = Math.max(q.height, 36), x0 = q.left + q.width / 2, y0 = q.top + q.height / 2; l = Math.min(l, x0 - w / 2); rr = Math.max(rr, x0 + w / 2); t = Math.min(t, y0 - h / 2); bb = Math.max(bb, y0 + h / 2); }
+    return [l, t, rr, bb]; };
+  const nb = ['.jckf', '.jstep:not(.tmtg)', '.tmtg'].map(s => b.querySelector(s)).filter(Boolean).map(e => { const a = area(e), pts = P8(...a).map(([x, y]) => who(x, y)); return { c: String(e.className).split(' ').pop(), t: __TM.txt(e), a: a.map(v => Math.round(v * 100) / 100), dot: pts.filter(x => x === 'dot').length, pts }; });
+  const ps = getComputedStyle(d, '::before'), rd = v => Math.round(v * 100) / 100, chip = b.querySelector('.jckf').getBoundingClientRect(), fold = nb.find(x => x.c === 'jstep');
+  return { dot: [rd(r.left), rd(r.right)], css: [ps.left, ps.right, ps.height], tap: [rd(L), rd(T), rd(R), rd(B), rd(R - L), rd(B - T)], dotPts, dotOk: dotPts.every(x => x === 'dot'), nb,
+    gapChip: rd(L - chip.right), gapFold: fold ? rd(fold.a[0] - R) : null }; }"""
+
+
+def b27(br, src, tag, eng='chromium', devs=(('폰390', PHONE), ('iPad834', PAD))):
+    G = 'B27' if eng == 'chromium' else 'B27-wk'
+    ok = True
+    for dn, dev in devs:
+        p = page(br, tag + dn, src, dev)   # 엔진 = br(WebKit 이면 손가락 탭 길 · dev_page 가 br 에서 잡는다)
+        jo(p, '제3조')
+        if not p.ev("() => !!document.querySelector('.jtbar .tmdot')"):
+            T(G, '%s 거름 점 없음' % dn, False, None)
+            p.close()
+            return False
+        rows = []
+        for dot in (0, 2):
+            p.ev("(v) => { tmDotSet(v); render(); }", dot)
+            p.idle(300)
+            for i in range(3):
+                m = p.ev(DOT8, 0.25)
+                rows.append(dict(m, dotst=dot, step=p.ev("() => __TM.txt(document.querySelector('.jtbar .jstep:not(.tmtg)'))"), chip=p.ev("() => __TM.txt(document.querySelector('.jtbar .jckf'))")))
+                p.ev("() => document.querySelector('.jtbar .jstep:not(.tmtg)').click()")
+                p.idle(300)
+        p.ev("() => { tmDotSet(0); render(); }")
+        g = all(r['dotOk'] and all(x['dot'] == 0 for x in r['nb']) and r['tap'][5] >= 36 for r in rows)
+        ok = ok and g
+        r0 = rows[0]
+        T(G, '%s 거름 점 누름 점 표본 8 = 거름 점 · 이웃(칩 · 접기 · 테마 N) 표본에 거름 점 0 · 높이 ≥ 36 — 접기 셋 × 점 빈·주체 = %d 칸' % (dn, len(rows)), g,
+          {'가로(점 · CSS ::before left/right · 누름 l/r/폭 · 칩까지 · 접기 둘레까지)': [r0['dot'], r0['css'][:2], [r0['tap'][0], r0['tap'][2], r0['tap'][4]], r0['gapChip'], r0['gapFold']],
+           '높이': r0['tap'][5], '칸': [{'점': r['dotst'], '접기': r['step'], '칩': r['chip'], '점 표본': r['dotPts'] if not r['dotOk'] else 8, '이웃': {x['c'] + ' ' + x['t']: x['dot'] for x in r['nb']}, '누름': r['tap'][4:], '칩 틈': r['gapChip'], '접기 틈': r['gapFold']} for r in rows]})
+        if p.errs:
+            ok = False
+            T(G, '%s JS 오류' % dn, False, p.errs[:3])
+        p.close()
+    return ok
+
+
+# ── B28 관문 5 — 🧩 0(검색 결과 · 갈래 머리) · .thsrc 0 · 판례 팝업 「갈래로 이동」 0 · 「이동 ↗」 둘 ──
+PRECPOP = r"""async (which) => { closeAllPops(true); S.law = '특허법'; const E = { clientX: 200, clientY: 160 };
+  const P = await get(PF('리스트')); const p = (P.판례 || []).find(x => x.id === '2021후10374') || (P.판례 || [])[0];
+  if (which === 'prec4') await popPrec4(p.id, E, 1); else await popPan(String(p.사건번호 || p.id), '', E);
+  await __TM.wait(400); const w = POPS[POPS.length - 1]; if (!w) return null; const t = w.textContent || '';
+  const g = [...w.querySelectorAll('button')].filter(b => /이동 ↗/.test(b.textContent));
+  return { id: p.id, pk: w._pk, gal: (t.match(/갈래로 이동/g) || []).length, go: (t.match(/이동 ↗/g) || []).length, inHead: g.filter(b => b.closest('.ph')).length, cls: g.map(b => b.className), title: g.map(b => b.title) }; }"""
+
+
+def b28(br, src, tag):
+    G = 'B28'
+    D, info = real_info()
+    if not D:
+        T(G, '실제 테마 재료', False, info)
+        return False
+    ok = True
+    p = rpage(br, tag, src, PC)
+    jo(p)
+    r = p.ev(SK, ['우선권', ['jo']])
+    allt = p.ev("() => document.getElementById('skres').textContent")
+    th = [x for x in r['rows'] if x['tag'] == '테마']
+    g1 = '🧩' not in allt and len(th) > 0 and any(g.startswith('테마 — ') for g in r['grp']) and all(x['ic'] == '' for x in th)
+    ok = ok and g1
+    T(G, '🔍 「우선권」 — 테마 머리 「테마 — N건」 · 결과 줄 아이콘 없음 · 🧩 글자 0(검색 칸 전체)', g1, {'머리': r['grp'], '테마 줄': len(th), '아이콘': sorted({x['ic'] for x in th}), '🧩': allt.count('🧩')})
+    p.ev("() => closeSk()")
+    src_rows = []
+    for tid in ('t01', 't06', 'tz1'):
+        p.ev("() => closeAllPops(true)")
+        p.ev("(t) => tmWin(t, null)", tid)
+        p.wait(300)
+        src_rows.append(p.ev("(t) => { const w = __TM.pop('theme|' + t); return w ? [t, w.querySelectorAll('.thsrc').length, /정리omr\\s*[\\d·]+쪽/.test(w.textContent)] : [t, null, null]; }", tid))
+    g2 = all(x[1] == 0 and x[2] is False for x in src_rows)
+    ok = ok and g2
+    T(G, '테마 창 셋(t01 · t06 · tz1) 꼬리 줄 .thsrc 0 · 「정리omr N쪽」 글 0', g2, src_rows)
+    pp = [p.ev(PRECPOP, w) for w in ('prec4', 'pan')]
+    g3 = all(x and x['gal'] == 0 and x['go'] == 1 and x['inHead'] == 1 for x in pp) and sum(x['go'] for x in pp if x) == 2
+    ok = ok and g3
+    T(G, '판례 팝업 둘(popPrec4 · popPan) — 「갈래로 이동」 글자 0 · 「이동 ↗」 = 머리 글자 하나씩(둘)', g3, pp)
+    a = p.ev("async () => { closeAllPops(true); await __TM.wait(50); const P = await get(PF('리스트')); const p = P.판례.find(x => x.id === '2021후10374') || P.판례[0]; await popPrec4(p.id, { clientX: 200, clientY: 160 }, 1); await __TM.wait(300); const b = POPS[POPS.length - 1].querySelector('.ph .ptgo .tmgo'); return b ? __RB.hitOn(b) : null; }")
+    p.press(a, 700)
+    st = p.ev("() => ({ tab: S.tab, prec: S.prec, pops: POPS.length })")
+    g4 = st['tab'] == 'prec' and st['pops'] == 0 and bool(st['prec'])
+    ok = ok and g4
+    T(G, '머리 「이동 ↗」 누름 → 판례 갈래(요약) · 팝업 닫힘(동작 무변)', g4, st)
+    if p.errs:
+        ok = False
+        T(G, 'JS 오류', False, p.errs[:3])
+    p.close()
+    return ok
+
+
+# ── B29 관문 5-2 — 시험 테마 구역 SVG 그림 ──
+FIG = r"""async () => { closeAllPops(true); tmWin('tz1', null); const w = await __RB.until(() => __TM.pop('theme|tz1'), 5000); if (!w) return null;
+  const f = w.querySelector('.thfig'), svg = f && f.querySelector('svg'); if (!svg) return { fig: false };
+  await __RB.until(() => { const z = svg.querySelector('#zrel'); return z && /^blob:/.test(z.getAttribute('href') || ''); }, 6000);
+  f.scrollIntoView({ block: 'center' }); await __TM.wait(200);
+  const XL = 'http://www.w3.org/1999/xlink', R = e => { const q = e.getBoundingClientRect(); return [q.left, q.top, q.right, q.bottom].map(v => Math.round(v * 10) / 10); };
+  const imgs = [...svg.querySelectorAll('image')].map(n => ({ id: n.id, href: (n.getAttribute('href') || n.getAttributeNS(XL, 'href') || '').slice(0, 22), r: R(n) }));
+  const hrefs = [...svg.querySelectorAll('*')].map(n => [n.nodeName, n.getAttribute('href') || n.getAttributeNS(XL, 'href') || '']).filter(x => x[1]);
+  const pb = w.querySelector('.pb'), pc = getComputedStyle(pb), pr = pb.getBoundingClientRect(), cl = pr.left + parseFloat(pc.paddingLeft) + pb.clientLeft, cr = pr.left + pb.clientLeft + pb.clientWidth - parseFloat(pc.paddingRight);
+  return { fig: true, imgs, bad: hrefs.filter(x => /^(javascript:|https?:|\/\/)/i.test(x[1].trim())), outA: !!svg.querySelector('#zout') && !svg.querySelector('#zout').hasAttribute('href') && !svg.querySelector('#zout').hasAttributeNS(XL, 'href'),
+    svg: R(svg), box: [Math.round(cl * 10) / 10, Math.round(cr * 10) / 10], vw: innerWidth, big: f.classList.contains('big') }; }"""
+
+
+def _px(p, r, fx=0.5):
+    """r = [l, t, r, b] 안 (가로 fx · 세로 가운데) 화소(쪽 그림)"""
+    from PIL import Image
+    x, y = r[0] + (r[2] - r[0]) * fx, (r[1] + r[3]) / 2
+    png = p.pg.screenshot(clip={'x': max(0, x - 2), 'y': max(0, y - 2), 'width': 4, 'height': 4})
+    return Image.open(io.BytesIO(png)).convert('RGB').getpixel((2, 2))
+
+
+def _near(c, want, tol=40):
+    return all(abs(a - b) <= tol for a, b in zip(c, want))
+
+
+def b29(br, src, tag):
+    G = 'B29'
+    D, info = real_info()
+    if not D:
+        T(G, '실제 테마 재료', False, info)
+        return False
+    ok = True
+    for dn, dev in (('폰390', PHONE), ('iPad834', PAD), ('PC', PC2)):
+        p = rpage(br, tag + dn, src, dev)
+        jo(p)
+        f = p.ev(FIG)
+        if not f or not f.get('fig'):
+            T(G, '%s 시험 테마 그림 창' % dn, False, f)
+            ok = False
+            p.close()
+            continue
+        ids = [x['id'] for x in f['imgs']]
+        im = {x['id']: x for x in f['imgs']}
+        g1 = ids == ['zok', 'zrel'] and im['zok']['href'].startswith('data:image/png;base64') and im['zrel']['href'].startswith('blob:') and not f['bad'] and f['outA']
+        col = {k: _px(p, im[k]['r'], 0.25 if k == 'zok' else 0.5) for k in ('zok', 'zrel') if k in im}   # zok 왼쪽 반 = 초록
+        g2 = g1 and _near(col['zok'], ZOK_C) and _near(col['zrel'], ZREL_C)
+        inside = lambda r, b: r[0] >= b[0] - 1 and r[2] <= b[2] + 1
+        fit = f['svg'][0] >= f['box'][0] - 1 and f['svg'][2] <= f['box'][1] + 1 and all(inside(x['r'], f['svg']) for x in f['imgs'])
+        scr = all(x['r'][0] >= -0.5 and x['r'][2] <= f['vw'] + 0.5 for x in f['imgs']) and f['svg'][0] >= -0.5 and f['svg'][2] <= f['vw'] + 0.5
+        a = p.ev("() => { const f = __TM.pop('theme|tz1').querySelector('.thfig'); const r = (f.querySelector('#zok') || f.querySelector('svg')).getBoundingClientRect(); return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, on: true }; }")   # 바탕(그림 지움)이면 svg 가운데
+        p.press(a, 500)
+        f2 = p.ev("""() => { const f = __TM.pop('theme|tz1').querySelector('.thfig'), s = f.querySelector('svg').getBoundingClientRect(); return { big: f.classList.contains('big'), svg: [s.left, s.right], vw: innerWidth,
+          imgs: [...f.querySelectorAll('image')].map(n => { const q = n.getBoundingClientRect(); return [q.left, q.right]; }) }; }""")
+        g3 = fit and scr and f2['big'] and all(x[0] >= -0.5 and x[1] <= f2['vw'] + 0.5 for x in f2['imgs']) and f2['svg'][0] >= -0.5 and f2['svg'][1] <= f2['vw'] + 0.5
+        g = g1 and g2 and g3
+        ok = ok and g
+        T(G, '%s 시험 테마 그림 — data URI(png) · 따로 둔 webp(img/ → blob) 보임 · javascript:·http·https·svg·../ href 지워짐 · 바깥 a href 지움 · 창 폭 맞춤 · 화면 밖 0 · 누르면 .big(화면 밖 0)' % dn, g,
+          {'image': ids, 'href': {k: im[k]['href'] for k in im}, '가운데 색': {k: list(v) for k, v in col.items()}, '남은 나쁜 href': f['bad'], '바깥 a': f['outA'], 'svg': f['svg'], '창 안 폭': f['box'], 'vw': f['vw'],
+           '그림 자리': {x['id']: x['r'] for x in f['imgs']}, '누른 뒤': f2})
+        if p.errs:
+            ok = False
+            T(G, '%s JS 오류' % dn, False, p.errs[:3])
+        p.close()
+    return ok
+
+
+# ── B30 관문 7 — 화면 훑기(서랍 · 테마 창 셋 · 목록 창 · 검색 · 판례 팝업 × 세 기기) · 새 판 흠 − 바탕(eacc28e) 흠 ──
+FIX2_SAME = {'small:button.plgb.tmgo:이동 ↗': 'small:button.tool:판례 갈래로 이동 ↗'}   # B-6 같은 단추 — 몸 검정 단추 → 머리 글자(지시서가 꼴을 정함)
+
+
+def sweep_fix2(br, src, tag, dev):
+    p = rpage(br, tag, src, dev)
+    touch = dev in (PHONE, PAD)
+    sw = lambda sel: p.ev("a => __TM.sweep(a[0], a[1])", [sel, touch])
+    mark = "k => { document.querySelectorAll('[data-sw]').forEach(x => x.removeAttribute('data-sw')); const w = __TM.pop(k) || POPS[POPS.length - 1]; if (w) w.setAttribute('data-sw', '1'); }"
+    out = {}
+    jo(p, '제3조')
+    p.ev("() => document.querySelector('.jtbar .tmtg').click()")
+    p.idle(300)
+    out['서랍 테마'] = sw('#slot .tree')
+    p.ev("() => document.querySelector('.jtbar .tmtg').click()")
+    p.idle(300)
+    for k, js, key in (('테마 창 t02', "() => tmWin('t02', null)", 'theme|t02'), ('테마 창 t06', "() => tmWin('t06', null)", 'theme|t06'), ('테마 창 tz1', "() => tmWin('tz1', null)", 'theme|tz1'),
+                       ('목록 창', "() => tmListWin('t06', null)", 'themelist|t06')):
+        p.ev("() => closeAllPops(true)")
+        p.ev(js)
+        p.wait(700)
+        p.ev(mark, key)
+        out[k] = sw('[data-sw="1"]')
+    p.ev("() => closeAllPops(true)")
+    p.ev(SK, ['우선권', ['jo', 'prec']])
+    out['검색'] = sw('#sk')
+    p.ev("() => closeSk()")
+    for w in ('prec4', 'pan'):
+        p.ev(PRECPOP, w)
+        p.ev(mark, 'zz')
+        out['판례 팝업 ' + w] = sw('[data-sw="1"]')
+    p.ev("() => closeAllPops(true)")
+    errs = p.errs[:]
+    p.close()
+    return out, errs
+
+
+def b30(br, src, base_src, tag):
+    G = 'B30'
+    D, info = real_info()
+    if not D:
+        T(G, '실제 테마 재료', False, info)
+        return False
+    ok = True
+    for dn, dev in (('폰390', PHONE), ('iPad834', PAD), ('PC', PC2)):
+        n, en = sweep_fix2(br, src, tag + 'N' + dn, dev)
+        b, eb = sweep_fix2(br, base_src, tag + 'B' + dn, dev)
+        for scr in n:
+            nn, bb = {FIX2_SAME.get(x, x) for x in n[scr]}, set(b.get(scr, []))
+            new = sorted(nn - bb)
+            good = not new
+            ok = ok and good
+            T(G, '%s %s 새로 생긴 흠 0(넘침·잘림·겹침·작은 누름)' % (dn, scr), good, {'새로': new[:8], '바탕 흠(eacc28e 에도)': sorted(nn & bb)[:6], '없어짐': sorted(bb - nn)[:4], '같은 단추 글자만': sorted(set(n[scr]) & set(FIX2_SAME))})
+        if en:
+            ok = False
+            T(G, '%s JS 오류' % dn, False, en[:3])
+    return ok
+
+
 def webkit_try(pw):
     try:
         return pw.webkit.launch()
@@ -1629,7 +2078,7 @@ def webkit_try(pw):
         return None
 
 
-ORDER = ['B%d' % i for i in range(1, 25)]
+ORDER = ['B%d' % i for i in range(1, 31)]
 
 
 def main():
@@ -1644,6 +2093,7 @@ def main():
         print('관문 _task_jo_theme(+fix1) · 앱 = %s · 바탕 = %s · fix1 바탕 = %s · 덧판 = %s' % (NEW, BASE, PREV, OVER['full']))
     prev_cache = {}
     prev_src = lambda: prev_cache.setdefault('s', app_src(PREV))
+    base2_src = lambda: prev_cache.setdefault('b2', app_src(BASE2))   # fix2 바탕 eacc28e
     got, tm = {}, {}
     with sync_playwright() as pw:
         br = pw.chromium.launch()
@@ -1654,11 +2104,13 @@ def main():
                  ('B14', lambda: b14(br, src, base_src, 'b14')),
                  ('B15', lambda: b15(br, src, 'b15')), ('B16', lambda: b16(br, src, 'b16')), ('B17', lambda: b17(br, src, prev_src(), 'b17')),
                  ('B18', lambda: b18(br, src, base_src, prev_src(), 'b18')), ('B19', lambda: b19(br, src, 'b19')), ('B20', lambda: b20(br, src, 'b20')),
-                 ('B21', lambda: b21(br, src, 'b21')), ('B22', lambda: b22(br, src, base_src, 'b22')), ('B24', lambda: b24(br, src, base_src, 'b24'))]
+                 ('B21', lambda: b21(br, src, 'b21')), ('B22', lambda: b22(br, src, base_src, 'b22')), ('B24', lambda: b24(br, src, base_src, 'b24')),
+                 ('B25', lambda: b25(br, src, base2_src(), 'b25')), ('B26', lambda: b26(br, src, base2_src(), 'b26')), ('B27', lambda: b27(br, src, 'b27')),
+                 ('B28', lambda: b28(br, src, 'b28')), ('B29', lambda: b29(br, src, 'b29')), ('B30', lambda: b30(br, src, base2_src(), 'b30'))]
         for g, fn in steps:
             if ONLY and g not in ONLY:
                 continue
-            if YARD and g in ('B14', 'B24'):
+            if YARD and g in ('B14', 'B24', 'B30'):
                 N(g, '헛잣대 해당 없음', '화면 훑기 = 새 판 흠 − 바탕 흠 · 바탕끼리 견주면 늘 0')
                 continue
             print('── %s' % g, flush=True)
@@ -1674,7 +2126,7 @@ def main():
         if 'webkit' in ENGS and not YARD and (not ONLY or 'WK' in ONLY):
             wk = webkit_try(pw)
             if wk:
-                for g, fn in (('B1', lambda: b1(wk, src, base_src, 'wk1')), ('B6', lambda: b6(wk, src, 'wk6', devs=(('폰390', PHONE),)))):
+                for g, fn in (('B1', lambda: b1(wk, src, base_src, 'wk1')), ('B6', lambda: b6(wk, src, 'wk6', devs=(('폰390', PHONE),))), ('B27', lambda: b27(wk, src, 'wk27', eng='webkit'))):
                     try:
                         fn()
                     except Exception as e:
