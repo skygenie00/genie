@@ -7,6 +7,7 @@
   쓰는 것: <표 폴더>\\_check.md(B-3 표본 · 바뀌었을 때만) · %TEMP% 시험 굽기(표 사본 · gz) — 배달된 출력·N: 표는 안 고친다
   B-1 박스 · B-2 표 초안(메모리 — 사용자가 표를 손질해도 안 흔들린다 · N: 표 = 초안인지는 정보 줄) · B-3 표본 · B-4 구역 SVG(시험 구역 줄을 임시 표에 더해 굽고 · 하네스가 따로 센 run·Ink 와 맞댐)
   B-5 테마.json.gz(크기 · 두 번 굽기 md5 · 한 줄 고침 = 그 테마만) · B-6 글.json.gz · B-7 D11 · genie 무변
+  fix2(2026-10-02) — B-2 박스 칸 잣대 = 큰 박스 70(초안 거리 규칙 걷음 · _task_jo_theme_fix2 §A-1) · 묶음·구역 그림·테마 점 관문 = _harness_theme_fix2.py
   헛잣대: 프1 맞대기를 1pt 민 박스(짝 ≈ 0) · 빈 구역(text 0 · path 0) · minbeoppdf 착수 바탕 70766166(두 출력 없음)
   ⚠ 색 — 지시서 「색 종류 ≤ 8」 은 §0-1 의 8 색 목록을 잣대로 쓴 것인데 실측은 26 색이다(2026-10-01). 색이 제대로 읽혔는지는
      「글자 색 = 프1 같은 자리 색」 159,787/159,787 로 갈음해 잰다(갈음 줄로 찍는다 · 채팅 확인 대기).
@@ -229,16 +230,18 @@ def main():
     listed = [int(k) for t in themes for k in t['boxes']]
     textk = sorted(k for k in nsc if nsc[k])
     dup = [k for k, n in collections.Counter(listed).items() if n > 1]
-    T('B-2', '박스 칸 = 글 있는 148 전부 한 번씩(+k 포함 · 빠짐 0 · 두 번 0)', sorted(listed) == textk,
-      '칸 %d · 빠짐 %d · 두 번 %d · 글 없는 박스 %d' % (len(listed), len(set(textk) - set(listed)), len(dup), len([k for k in listed if not nsc[k]])))
+    # 옛 잣대 고침(2026-10-02 · _task_jo_theme_fix2 §A-1 · 사용자 10/2 09:17 「작은 박스 가까운 큰 박스에 붙임 — 누가 정했어」) — 초안의 거리 규칙(+k)을 걷었다:
+    #   초안 박스 칸 = 큰 박스 70 한 번씩 · 작은 조각·그림 도장 0(묶음은 표 = 채팅 그림 검수 _theme_small_1002.csv 가 정한다 · 그 관문 = _harness_theme_fix2 A-2·A-3)
+    T('B-2', '박스 칸 = 큰 박스 70 한 번씩(작은 조각·그림 0 · 빠짐 0 · 두 번 0 — fix2 §A-1 거리 규칙 걷음 · 옛 「글 있는 148 전부 +k」 갈음)', sorted(listed) == sorted(big) and not dup,
+      '칸 %d · 큰 박스 %d · 작은 조각 %d · 두 번 %d · 글 없는 박스 %d' % (len(listed), len(big), len([k for k in listed if 0 < nsc[k] < TB.BIG]), len(dup), len([k for k in listed if not nsc[k]])))
     bigc = sum(1 for k in big if any(law == TB.LAW for _s, law in TB.cites(TB.box_text(lay[k]), jd['jo_keys'])))
     filled = sum(1 for t in themes if t['jo'])
     T('B-2', '조 칸 채워진 줄 = 특허법 조 인용 있는 큰 박스 수(70)', filled == bigc == 70, '%d · %d' % (filled, bigc))
     st = dr.get('acr_stat', {})
     T('B-2', '두문자 후보 수', len(acr) >= 1, '%d (규칙 %s → 합성어 거름 %s → 겹침 거름 %s)' % (len(acr), st.get('acr_rule'), st.get('acr_seg'), st.get('acr_final')))
     T('B-2', '주체 수 ≥ 15', len(subj) >= 15, len(subj))
-    bk111 = sum(1 for t in themes if t['bk'] == [1, 1, 1])
-    INFO('B-2', 'bk 111 인 줄(조 여럿의 OR 이라 대개 셋 다 켜짐)', '%d/%d' % (bk111, len(themes)))
+    bkn = sum(1 for t in themes if t['bk'] is None)
+    INFO('B-2', '초안 bk 칸 빈칸(굽을 때 테마 점 새 규칙으로 셈 — fix2 §A-4 · 옛 「bk 111 인 줄」 정보 갈음)', '%d/%d' % (bkn, len(themes)))
     same = all(os.path.isfile(os.path.join(tables, f)) and open(os.path.join(tables, f), 'rb').read() == dr[key]
                for f, key in ((TB.F_THEME, 'theme'), (TB.F_ACR, 'acr'), (TB.F_SUBJ, 'subj')))
     INFO('B-2', 'N: 표 = 초안 바이트(손질 전)', '예' if same else '아니오(손질됐거나 없음 — B-5 는 그 표로 잰다)')

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """⚙ 정리omr 테마 재료 — theme/patent_hr8/테마.json.gz + 표 초안(_테마\\테마.csv · 두문자.csv · 주체.txt)
-   (jopangi/task/_task_jo_theme_data.md A-1 · 2026-10-01 · 파일 꼴 정본 = _task_jo_theme.md §A-0)
+   (jopangi/task/_task_jo_theme_data.md A-1 · 2026-10-01 · 파일 꼴 정본 = _task_jo_theme.md §A-0
+    · 2026-10-02 _task_jo_theme_fix2 §A — 거리 묶음 걷음 · 구역 그림 · 테마 점 새 규칙)
 
-  python _theme_build.py                 만든다(표가 없으면 초안을 먼저 쓴다 · 있으면 안 덮는다 · 테마.json.gz 는 바뀌었을 때만 쓴다 · 멱등)
+  python _theme_build.py                 만든다(표가 없으면 초안을 먼저 쓴다 · 있으면 안 덮는다 · 테마.json.gz · img\\<k>.webp 는 바뀌었을 때만 쓴다 · 멱등)
   python _theme_build.py --check         만들지 않고 값만(§B) — 표·gz 를 쓰지 않는다(표가 없으면 메모리 초안으로 잰다)
   python _theme_build.py --tables <폴더> --out <파일>    다른 표 폴더 · 다른 출력(하네스가 쓴다 · 기본 = N: _테마 · MBPDF_ROOT)
 
@@ -18,26 +19,41 @@
     줄 = 기준선 y 가 줄 첫 글자에서 ±0.6pt · x 차례 · 공백 = 도장 속 실제 공백 글리프 그대로(폭 0.57pt — 지시서의 「틈 > 폭 중앙값×1.45」
          만으로는 이 공백을 못 잡아 낱말이 붙는다 · 2026-10-01 실측) + 글리프 없이 뛴 자리(틈 > 박스 글자 폭 중앙값×1.45)에 공백 하나
     ind = round((줄 첫 글자 x − 박스 왼쪽) / 2.7) · run = 글자색이 바뀔 때 끊음(#rrggbb · 공백은 앞 run 에 붙음) · 줄 앞뒤 공백은 뺀다
-  초안 규칙
+  초안 규칙(표가 없을 때 처음 한 번만 — 박스 묶음은 표가 정본이다)
     테마  = 큰 박스(공백 뺀 글자 200 이상) 한 줄씩 · 이름 = 첫 줄 머리 {…} 안 글(없으면 「N.」·「3.3.」 번호 떼고 첫 줄 24자)
-            · 작은 조각 = 같은 쪽 사각 거리 가장 가까운 큰 박스 줄에 +k
+            · 작은 조각·그림 도장은 초안에 안 붙인다 — 어느 테마에 갈지는 표(사람 · 채팅 그림 검수)가 정한다
+              (옛 「같은 쪽 사각 거리 가장 가까운 큰 박스에 +k」 규칙은 걷었다 — 근거 없이 들어간 규칙 · _task_jo_theme_fix2 §A-1 · 2026-10-02)
             · 조 = 그 줄 박스 글의 조 인용 중 특허법(목록에 있는 조)만 — 「…법」 이름(민법·상표법·민집법·민소법 …) · 시규 · 민소 · 시행령 · PCT 머리는
               다른 법으로 빼고 · 한 글자 머리(상·디)는 앞이 한글이 아니면 다른 법 · 앞이 한글이면 못 가름(_task_jo_theme_fix1 A-32 와 같은 규칙)
-            · bk = 그 조들의 blank_특허.json 점 OR
+            · bk = 빈칸(굽을 때 아래 「테마 점」 규칙으로 센다)
+  테마 점 bk = [내용, 주체, 기간](표 bk 칸이 비었을 때 · 적으면 그 값 — _task_jo_theme_fix2 §A-4 · 사용자 10/1 00:38 「그 테마 글에 그 갈래가 있으면 켜짐」)
+    내용 = 테마 조 가운데 blank_특허.json 내용 빈칸이 있는 조가 있음(옛 규칙 그대로)
+    주체 = 테마 글(박스 글 · 구역 SVG 글 · 이름 말고)에 주체 목록(주체.txt) 낱말이 하나라도 있음
+    기간 = ① 테마 박스(구역 포함) 위에 초록 형광펜 획 — Ink /C (0,1,0) 진한 초록 · (0.694,1,0) 연두 · 굵기 ≥ 2.5pt
+             (획 점 사각의 가운데가 든 박스 · 두 박스에 들면 획에 가장 가까운 글자의 박스 · 구역 사각에 들면 그 구역 테마 ·
+              1.3pt 초록(✓·낙서) · 0.78pt 초록 펜 그림 · 노랑 형광펜은 뺀다) — 사용자 10/2 09:27 · 09:37
+           ② 또는 테마 글(이름 말고)에 「기간」 낱말이 그대로 있음 · 테마에서만(조문 줄 점 무변)
     두문자 = 한글 2~8 + 숫자 0~3 낱말 · (같은 박스 두 번 이상) 또는 (글자가 모두 검정 아닌 한 색) · 사전(법조문 낱말·조 제목·흔한 법률어) 밖
             → 사전 낱말(2자 이상)·한 글자 접사·조사로만 나뉘는 합성어 · 조 인용 꼴 · 「…때/것/판례」 꼴을 뺀다
             → 다른 후보 + 사전 낱말로 된 구(「존기연출원」)를 뺀다 · 조 = 그 말이 든 줄의 특허법 조 인용
     주체  = 법조문 줄의 「…장·…관·…인·…자(·…원)」 명사 · 빈도 5 이상 · 조사가 붙어 나온 적 있음(서술격 「-인」 거름) · 「…출원」·행위말 뺌
   표(사용자 정본 · N:) — 처음 한 번 초안을 쓰고, 있으면 안 덮는다. 손질 뒤 이 ⚙ 를 다시 돌리면 그대로 다시 굽는다.
     테마.csv  id,이름,박스,구역,조,bk
-      박스 = 「k +k +k」(빈칸 가름 · 앞 + 는 ⚙ 가 가장 가까운 큰 박스에 붙인 작은 조각 표시 — 떼거나 옮겨도 된다 · 뜻은 같다)
-      구역 = 「쪽 x0 y0 x1 y1」(pt · 위 기준 · 쪽 841.8×595.32) — 적으면 그 사각 안 박스 글 + 펜 획을 SVG 하나로 그린다(앱 = 박스 글 대신 SVG)
-      조   = 「3 4 7-2 133」(특허법 조 · 「16②」 → 「16」 · 「42-2」 · 「36의2」 = 그 조) · bk = 「110」(내용·주체·기간 · 비우면 조에서 다시 셈)
+      박스 = 「k k k」(빈칸 가름 · 옛 표의 앞 + 표시는 읽을 때 무시한다 — 뜻은 같다)
+      구역 = 「쪽 x0 y0 x1 y1」(pt · 위 기준 · 쪽 841.8×595.32) — 적으면 그 사각을 SVG 하나로 그린다(앱 = 박스 글 대신 SVG):
+             구역 박스 = 그 테마 박스 칸의 박스 중 가운데가 사각 안인 것(줄 글에서 빠지고 SVG 로만 보인다)
+             · 글 = 구역 박스의 글자 중 사각 안(남의 박스 글자는 안 그린다 — 테마 밖 박스 조각·같은 테마 큰 박스 글이 SVG 에 겹쳐 나오지 않게 · fix2)
+             · 그림 도장 = 그림이면 <image>(원본 해상도 webp) · 벡터면 <path> · 펜 획 = 점이 모두 사각 안인 Ink
+      조   = 「3 4 7-2 133」(특허법 조 · 「16②」 → 「16」 · 「42-2」 · 「36의2」 = 그 조) · bk = 「110」(내용·주체·기간 · 비우면 위 「테마 점」 규칙으로 셈)
     두문자.csv 말,뜻,조   주체.txt 한 줄 하나(빈 줄 · # 줄 무시) — 엑셀이 CP949 로 저장해도 읽는다(utf-8 → cp949 차례)
-  출력 = <MBPDF_ROOT>\\theme\\patent_hr8\\테마.json.gz
+  출력 = <MBPDF_ROOT>\\theme\\patent_hr8\\테마.json.gz (+ 구역 그림 = 같은 폴더 img\\<k>.webp)
     { pdfMd5(주석1 PDF), boxes:{k:{p,r,lines:[{ind,runs:[{t,c}]}],svg:null}}, themes:[{id,n,boxes,region,jo,bk}], acr:{말:{m,jo}}, subj:[…] }
     구역 테마 = 구역 박스 「<id>r」 하나({p, r(구역/쪽), lines:[], svg}) + 구역 밖 박스 — 앱 tmSvgs 가 svg 있는 박스를, tmLines 가 없는 박스를 그린다.
-    압축형 JSON · gzip mtime 0 · 집합·사전 순회는 모두 정렬 → 같은 재료·같은 표면 바이트까지 같다.
+    구역 그림(_task_jo_theme_fix2 §A-3) — 그림 도장을 한 장씩 제자리 PDF 로 떼어 pymupdf 로 원본 그림 해상도(그림 XObject 의 가로·세로 화소) ·
+      투명 바탕으로 그려 webp(q90 · 투명 있으면 RGBA)로. 모두 data URI 로 넣은 gz 가 1 MB 를 넘으면 그림은 img\\<k>.webp 따로 두고
+      <image href="theme/patent_hr8/img/<k>.webp">(minbeoppdf 저장소 안 자리 · 앱이 창 열 때 받는다) · 넘지 않으면 href="data:image/webp;base64,…".
+      모양이 없는 도장(BBox 0 · 내용 「q Q」)은 그릴 것이 없어 건너뛴다.
+    압축형 JSON · gzip mtime 0 · 집합·사전 순회는 모두 정렬 → 같은 재료·같은 표면 바이트까지 같다(그림 webp 도 같은 바이트 — 2026-10-02 실측).
   D11 — 쓰기 전에 출력 JSON 을 _d11_scan(메일·휴대전화·토큰 꼴 · 워터마크 해시)으로 본다 · 걸림 0 일 때만 쓴다(값은 안 찍는다).
 """
 import os as _os_r, sys as _sys_r   # env_lanes — _roots.py 를 위 폴더에서 찾는다
@@ -45,7 +61,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
-import argparse, collections, csv, gzip, hashlib, io, json, math, os, re, statistics, sys, time
+import argparse, base64, collections, csv, gzip, hashlib, io, json, math, os, re, statistics, sys, time
 from xml.sax.saxutils import escape as _xesc
 
 PDF_NAME = '26특허해례정리omr주석1.pdf'
@@ -62,6 +78,18 @@ SUBJ_MIN = 5                 # 주체 = 본문 빈도 5 이상
 F_THEME, F_ACR, F_SUBJ = '테마.csv', '두문자.csv', '주체.txt'
 H_THEME = ['id', '이름', '박스', '구역', '조', 'bk']
 H_ACR = ['말', '뜻', '조']
+# 테마 점 — 기간(_task_jo_theme_fix2 §A-4 · 사용자 10/2 09:27 · 09:37)
+GREEN_C = ('#00ff00', '#b1ff00')   # Ink /C (0,1,0) 진한 초록 · (0.694,1,0) 연두(hexcol 로 바꾼 꼴)
+GREEN_W = 2.5                      # 굵기 ≥ 2.5pt — 1.3pt 초록(✓ 표·낙서) · 0.78pt 초록 펜 그림은 빠진다(2026-10-02 실측 2.598 = 46 획)
+KIGAN = '기간'
+# 구역 그림(_task_jo_theme_fix2 §A-3)
+IMG_DIR = 'img'                            # 출력 gz 옆 img\<k>.webp
+IMG_HREF = 'theme/patent_hr8/img/'         # SVG <image href> — minbeoppdf 저장소 안 자리(앱이 창 열 때 받는다)
+IMG_Q, IMG_METHOD = 90, 4                  # webp 손실 q90 · method 4(같은 그림 = 같은 바이트 · 2026-10-02 실측)
+EMBED_MAX = 1 << 20                        # 그림을 data URI 로 넣은 테마.json.gz 가 이보다 크면 그림은 따로 파일
+BLEND = {'/Multiply': 'multiply', '/Screen': 'screen', '/Overlay': 'overlay', '/Darken': 'darken', '/Lighten': 'lighten',
+         '/ColorDodge': 'color-dodge', '/ColorBurn': 'color-burn', '/HardLight': 'hard-light', '/SoftLight': 'soft-light',
+         '/Difference': 'difference', '/Exclusion': 'exclusion', '/Hue': 'hue', '/Saturation': 'saturation', '/Color': 'color', '/Luminosity': 'luminosity'}
 
 
 def P(*a):
@@ -171,8 +199,22 @@ def extract(pdf_path):
                 elif a.get('/Border') is not None and len(a.get('/Border')) >= 3:
                     w = float(a.get('/Border')[2])
                 op = float(a.get('/CA')) if a.get('/CA') is not None else 1.0
+                bm = None
+                # 형광펜 획 — 모양(/AP /N) ExtGState 의 /CA 0.5 · /BM /Multiply(235 획 · 2026-10-02 실측) — 주석 /CA 가 없으면 모양 값을 쓴다
+                #   (안 읽으면 SVG 에서 형광펜이 불투명하게 글자·그림을 덮는다 · fix2 그림 확인에서 찾음)
+                ap = a.get('/AP')
+                if ap is not None and ap.get('/N') is not None:
+                    eg = (ap.N.get('/Resources') or {}).get('/ExtGState') or {}
+                    for _nm in sorted(eg.keys(), key=str):
+                        g = eg[_nm]
+                        if g.get('/BM') is not None and str(g.get('/BM')) not in ('/Normal', '/Compatible'):
+                            bm = BLEND.get(str(g.get('/BM')))
+                            if bm is None:
+                                raise SystemExit('★Ink %d쪽 #%d 섞기 %s 를 모른다 — 판독기를 고쳐야 한다. 멈춘다.' % (p, ai, g.get('/BM')))
+                        if a.get('/CA') is None and g.get('/CA') is not None:
+                            op = float(g.get('/CA'))
                 j = len(inks)
-                inks.append(dict(j=j, p=p, pts=strokes, c=col, w=1.0 if w is None else w, op=op))
+                inks.append(dict(j=j, p=p, pts=strokes, c=col, w=1.0 if w is None else w, op=op, bm=bm))
                 order[p].append(('I', j))
     buf = io.BytesIO()
     dst.save(buf)
@@ -191,7 +233,7 @@ def extract(pdf_path):
                                      % (b['k'], t, str(c.get('fontname')).split('+', 1)[-1]))
                 b['chars'].append(dict(t=t, x0=float(c['x0']), x1=float(c['x1']), b=b['H'] - float(m[5]),
                                        size=float(c['size']), c=hexcol(c.get('non_stroking_color')), i=i))
-    return dict(boxes=boxes, inks=inks, order=order)
+    return dict(boxes=boxes, inks=inks, order=order, pdf=pdf_path)
 
 
 def load_pdf1(pdf1_path, pages=(1, 2, 3, 4, 5)):
@@ -671,43 +713,29 @@ def theme_name(lines):
     return s2[:NAME_LEN].strip()
 
 
-def rect_dist(a, b):
-    dx = max(0.0, max(a[0], b[0]) - min(a[2], b[2]))
-    dy = max(0.0, max(a[1], b[1]) - min(a[3], b[3]))
-    return math.hypot(dx, dy)
-
-
 def box_text(lay):
     return '\n'.join(''.join(r['t'] for r in ln['runs']) for ln in lay['lines'])
 
 
+def theme_jos(ks, lay, jd):
+    """박스들 글의 특허법 조 인용(짧은꼴 · 번호순) — 표 조 칸 초안 규칙(지금 규칙)"""
+    jos = set()
+    for k in ks:
+        for s, law in cites(box_text(lay[k]), jd['jo_keys']):
+            if law == LAW:
+                jos.add(s)
+    return sorted(jos, key=jo_sort_key)
+
+
 def draft_tables(X, lay, jd):
-    """표 셋 초안(바이트) + 셈 — 큰 박스 70 = 한 줄씩 · 작은 조각 = 같은 쪽 가장 가까운 큰 박스에 +k"""
+    """표 셋 초안(바이트) + 셈 — 큰 박스 70 = 한 줄씩 · 작은 조각·그림 도장은 안 붙인다(표가 정한다 · fix2 §A-1 거리 규칙 걷음) · bk 빈칸"""
     boxes = X['boxes']
     nsc = {b['k']: sum(1 for c in b['chars'] if c['t'] != ' ') for b in boxes}
     big = [b['k'] for b in boxes if nsc[b['k']] >= BIG]
     small = [b['k'] for b in boxes if 0 < nsc[b['k']] < BIG]
-    att = collections.defaultdict(list)
-    orphan = []
-    for k in small:
-        cand = [(rect_dist(boxes[k]['rect'], boxes[g]['rect']), g) for g in big if boxes[g]['p'] == boxes[k]['p']]
-        if not cand:
-            orphan.append(k)
-            continue
-        att[min(cand)[1]].append(k)
-    if orphan:
-        raise SystemExit('★같은 쪽에 큰 박스가 없는 작은 조각 %s — 붙일 곳을 못 정한다. 멈춘다.' % orphan)
     trows = []
     for i, g in enumerate(big, 1):
-        ks = [g] + sorted(att[g])
-        jos = set()
-        for k in ks:
-            for s, law in cites(box_text(lay[k]), jd['jo_keys']):
-                if law == LAW:
-                    jos.add(s)
-        jos = sorted(jos, key=jo_sort_key)
-        f = bk_of(jos, jd['bk'])
-        trows.append(['t%02d' % i, theme_name(lay[g]['lines']), ' '.join([str(g)] + ['+%d' % k for k in sorted(att[g])]), '', ' '.join(jos), ''.join(map(str, f))])
+        trows.append(['t%02d' % i, theme_name(lay[g]['lines']), str(g), '', ' '.join(theme_jos([g], lay, jd)), ''])
     ast = {}
     acr = acr_candidates(lay, jd, ast)
     arows = []
@@ -721,7 +749,7 @@ def draft_tables(X, lay, jd):
     subj = subj_candidates(jd)
     return dict(theme=write_csv_bytes(H_THEME, trows), acr=write_csv_bytes(H_ACR, arows),
                 subj=('\n'.join(w for w, _n in subj) + '\n').encode('utf-8'),
-                n_theme=len(trows), n_acr=len(arows), n_subj=len(subj), big=big, small=small, att=att, acr_list=acr, subj_list=subj, acr_stat=ast)
+                n_theme=len(trows), n_acr=len(arows), n_subj=len(subj), big=big, small=small, att={}, acr_list=acr, subj_list=subj, acr_stat=ast)
 
 
 def parse_region(s, row, fname):
@@ -840,16 +868,261 @@ def svg_runs(gl, inside):
     return runs
 
 
-def svg_parts(X, lay, p, reg):
-    """구역(쪽 p · [x0,y0,x1,y1] pt 위 기준) 안 — 주석 차례대로 text 조각 · Ink path. 돌려줌 (조각 목록, text 수, path 수)
-       글자 = 글리프 가운데(x · 기준선 − 0.35×크기)가 구역 안 · Ink = 모든 점이 구역 안"""
+# ── 구역 그림 도장(_task_jo_theme_fix2 §A-3) ──
+_PIC_SRC = {}    # PDF 자리 → (pikepdf.Pdf, [(쪽, 도장 주석, 쪽 높이)] — 도장 차례 = k)
+_PIC = {}        # (PDF 자리, k) → 모양 갈래
+_WEBP = {}       # (PDF 자리, k) → webp 바이트
+_VEC_OPS_PATH = {'m', 'l', 'c', 'v', 'y', 'h', 're'}
+_VEC_OPS_IGNORE = {'q', 'Q', 'W', 'W*', 'ri', 'i', 'w', 'j', 'J', 'M', 'd', 'cs', 'CS'}
+_VEC_OPS_PAINT = {'f': ('fill', 'nonzero'), 'F': ('fill', 'nonzero'), 'f*': ('fill', 'evenodd'),
+                  'S': ('stroke', None), 's': ('stroke', None), 'B': ('both', 'nonzero'), 'B*': ('both', 'evenodd'),
+                  'b': ('both', 'nonzero'), 'b*': ('both', 'evenodd')}
+
+
+def _stamp_list(pdf_path):
+    if pdf_path not in _PIC_SRC:
+        import pikepdf
+        src = pikepdf.open(pdf_path)
+        lst = []
+        for pi, pg in enumerate(src.pages):
+            H = float(pg.MediaBox[3])
+            for a in pg.get('/Annots', []):
+                if str(a.get('/Subtype')) == '/Stamp':
+                    lst.append((pi + 1, a, H))
+        _PIC_SRC[pdf_path] = (src, lst)
+    return _PIC_SRC[pdf_path][1]
+
+
+def _form_place(a):
+    """도장 Rect · 모양 BBox → (x0, y0, x1, y1 PDF 좌표, sx, sy, tx, ty) — extract() 와 같은 자리 맞춤"""
+    rc = [float(v) for v in a.Rect]
+    x0, y0, x1, y1 = min(rc[0], rc[2]), min(rc[1], rc[3]), max(rc[0], rc[2]), max(rc[1], rc[3])
+    bb = [float(v) for v in a.AP.N.BBox]
+    bx0, by0, bx1, by1 = min(bb[0], bb[2]), min(bb[1], bb[3]), max(bb[0], bb[2]), max(bb[1], bb[3])
+    sx = (x1 - x0) / (bx1 - bx0) if bx1 > bx0 else 1.0
+    sy = (y1 - y0) / (by1 - by0) if by1 > by0 else 1.0
+    return x0, y0, x1, y1, sx, sy, x0 - bx0 * sx, y0 - by0 * sy
+
+
+def _mmul(a, b):
+    """PDF 행렬 곱 a×b (a 먼저 적용) — [a b c d e f]"""
+    return [a[0] * b[0] + a[1] * b[2], a[0] * b[1] + a[1] * b[3], a[2] * b[0] + a[3] * b[2], a[2] * b[1] + a[3] * b[3],
+            a[4] * b[0] + a[5] * b[2] + b[4], a[4] * b[1] + a[5] * b[3] + b[5]]
+
+
+def _vec_paths(k, a, H):
+    """벡터 도장 모양 → [{segs:[(명령, 점…)], fill, fop, rule, stroke, sop, sw}](점 = 쪽 위 기준 pt) · 모르는 연산자·꼴이면 멈춘다(짐작 안 함)"""
+    import pikepdf
+    n = a.AP.N
+    x0, y0, x1, y1, sx, sy, tx, ty = _form_place(a)
+    base = [sx, 0, 0, sy, tx, ty]
+    res = n.get('/Resources') or {}
+    egs = res.get('/ExtGState') or {}
+    st = dict(ctm=[1, 0, 0, 1, 0, 0], fc='#000000', sc='#000000', fop=1.0, sop=1.0, lw=1.0)
+    stack, path, out = [], [], []
+
+    def P2(x, y):
+        m = _mmul(st['ctm'], base)
+        X_ = m[0] * x + m[2] * y + m[4]
+        Y_ = m[1] * x + m[3] * y + m[5]
+        return (X_, H - Y_)
+
+    def col(ops):
+        v = tuple(float(q) for q in ops)
+        return hexcol(v)
+    cur = None
+    for operands, op in pikepdf.parse_content_stream(n):
+        op = str(op)
+        if op == 'q':
+            stack.append(dict(st, ctm=list(st['ctm'])))
+        elif op == 'Q':
+            if stack:
+                st = stack.pop()
+        elif op == 'cm':
+            st['ctm'] = _mmul([float(q) for q in operands], st['ctm'])
+        elif op == 're':
+            x, y, w, h = (float(q) for q in operands)
+            path.append(('M',) + P2(x, y))
+            path.append(('L',) + P2(x + w, y))
+            path.append(('L',) + P2(x + w, y + h))
+            path.append(('L',) + P2(x, y + h))
+            path.append(('Z',))
+            cur = (x, y)
+        elif op == 'm':
+            x, y = (float(q) for q in operands)
+            path.append(('M',) + P2(x, y))
+            cur = (x, y)
+        elif op == 'l':
+            x, y = (float(q) for q in operands)
+            path.append(('L',) + P2(x, y))
+            cur = (x, y)
+        elif op == 'c':
+            v = [float(q) for q in operands]
+            path.append(('C',) + P2(v[0], v[1]) + P2(v[2], v[3]) + P2(v[4], v[5]))
+            cur = (v[4], v[5])
+        elif op == 'v':
+            v = [float(q) for q in operands]
+            path.append(('C',) + P2(*cur) + P2(v[0], v[1]) + P2(v[2], v[3]))
+            cur = (v[2], v[3])
+        elif op == 'y':
+            v = [float(q) for q in operands]
+            path.append(('C',) + P2(v[0], v[1]) + P2(v[2], v[3]) + P2(v[2], v[3]))
+            cur = (v[2], v[3])
+        elif op == 'h':
+            path.append(('Z',))
+        elif op in ('sc', 'scn', 'rg', 'g', 'k'):
+            st['fc'] = col(operands)
+        elif op in ('SC', 'SCN', 'RG', 'G', 'K'):
+            st['sc'] = col(operands)
+        elif op == 'gs':
+            g = egs.get(str(operands[0]))
+            if g is None:
+                raise SystemExit('★벡터 도장 k%d — ExtGState %s 를 못 찾았다. 멈춘다.' % (k, operands[0]))
+            for key in g.keys():
+                if key not in ('/Type', '/ca', '/CA', '/SMask', '/BM', '/AIS'):
+                    raise SystemExit('★벡터 도장 k%d — ExtGState %s 의 %s 를 모른다. 판독기를 고쳐야 한다. 멈춘다.' % (k, operands[0], key))
+            sm = g.get('/SMask')
+            if sm is not None and str(sm) != '/None':
+                raise SystemExit('★벡터 도장 k%d — ExtGState SMask 는 벡터로 옮기지 못한다. 멈춘다.' % k)
+            if g.get('/ca') is not None:
+                st['fop'] = float(g.get('/ca'))
+            if g.get('/CA') is not None:
+                st['sop'] = float(g.get('/CA'))
+        elif op == 'w':
+            st['lw'] = float(operands[0])
+        elif op == 'n':
+            path = []
+        elif op in _VEC_OPS_PAINT:
+            what, rule = _VEC_OPS_PAINT[op]
+            if op in ('s', 'b', 'b*'):
+                path.append(('Z',))
+            m = _mmul(st['ctm'], base)
+            scale = math.sqrt(abs(m[0] * m[3] - m[1] * m[2]))
+            out.append(dict(segs=list(path), fill=st['fc'] if what in ('fill', 'both') else None, fop=st['fop'], rule=rule,
+                            stroke=st['sc'] if what in ('stroke', 'both') else None, sop=st['sop'], sw=st['lw'] * scale))
+            path = []
+        elif op in _VEC_OPS_IGNORE:
+            continue
+        else:
+            raise SystemExit('★벡터 도장 k%d — 연산자 %s 를 모른다. 판독기를 고쳐야 한다. 멈춘다.' % (k, op))
+    return out
+
+
+def pic_info(X, k):
+    """그림 도장(글 없는 도장) 모양 갈래 — kind 'img'(그림 XObject · nat = 가장 큰 그림의 가로·세로 화소) · 'vec'(칠·선 연산 → vec) · 'empty'(그릴 것 없음)"""
+    key = (X['pdf'], k)
+    if key in _PIC:
+        return _PIC[key]
+    p, a, H = _stamp_list(X['pdf'])[k]
+    n = a.AP.N
+    nat = None
+    for _nm, o in sorted((n.get('/Resources') or {}).get('/XObject', {}).items(), key=lambda kv: str(kv[0])):
+        if str(o.get('/Subtype')) == '/Image':
+            wh = (int(o.get('/Width')), int(o.get('/Height')))
+            if nat is None or wh[0] * wh[1] > nat[0] * nat[1]:
+                nat = wh
+        elif str(o.get('/Subtype')) == '/Form':
+            raise SystemExit('★그림 도장 k%d 안에 Form XObject — 판독기를 고쳐야 한다. 멈춘다.' % k)
+    if nat is not None:
+        r = dict(kind='img', nat=nat)
+    else:
+        vec = _vec_paths(k, a, H)
+        r = dict(kind='vec', vec=vec) if vec else dict(kind='empty')
+    _PIC[key] = r
+    return r
+
+
+def pic_webp(X, k):
+    """그림 도장 k → webp 바이트 — 제자리 한 장 PDF(Rect 크기 쪽 · 모양 XObject 하나) 를 pymupdf 로 원본 그림 해상도 · 투명 바탕으로 그림
+       (가로 배율 = 그림 가로 화소 / Rect 가로 pt · 세로도 따로) · 알파가 모두 255 면 RGB · webp q90 method 4"""
+    key = (X['pdf'], k)
+    if key in _WEBP:
+        return _WEBP[key]
+    import pikepdf, pymupdf
+    from PIL import Image
+    info = pic_info(X, k)
+    if info['kind'] != 'img':
+        raise SystemExit('★k%d 는 그림 도장이 아니다(%s) — 멈춘다.' % (k, info['kind']))
+    p, a, H = _stamp_list(X['pdf'])[k]
+    x0, y0, x1, y1, sx, sy, tx, ty = _form_place(a)
+    W_, H_ = x1 - x0, y1 - y0
+    dst = pikepdf.new()
+    fx = dst.copy_foreign(a.AP.N)
+    page = pikepdf.Dictionary(Type=pikepdf.Name.Page, MediaBox=[0, 0, W_, H_],
+                              Resources=pikepdf.Dictionary(XObject=pikepdf.Dictionary(X0=fx)))
+    page.Contents = dst.make_stream(('q %.6f 0 0 %.6f %.6f %.6f cm /X0 Do Q' % (sx, sy, tx - x0, ty - y0)).encode())
+    dst.pages.append(pikepdf.Page(page))
+    buf = io.BytesIO()
+    dst.save(buf)
+    doc = pymupdf.open('pdf', buf.getvalue())
+    nat = info['nat']
+    pix = doc[0].get_pixmap(matrix=pymupdf.Matrix(nat[0] / W_, nat[1] / H_), alpha=True)
+    im = Image.frombytes('RGBA', (pix.width, pix.height), pix.samples)
+    if im.getchannel('A').getextrema()[0] == 255:
+        im = im.convert('RGB')
+    out = io.BytesIO()
+    im.save(out, 'WEBP', quality=IMG_Q, method=IMG_METHOD)
+    data = out.getvalue()
+    doc.close()
+    _WEBP[key] = data
+    return data
+
+
+def _vec_svg(v, rx0, ry0):
+    d = []
+    for s in v['segs']:
+        if s[0] == 'Z':
+            d.append('Z')
+        else:
+            pts = s[1:]
+            d.append(s[0] + ' '.join('%s %s' % (fnum(pts[i] - rx0), fnum(pts[i + 1] - ry0)) for i in range(0, len(pts), 2)))
+    at = ['d="%s"' % ' '.join(d)]
+    if v['fill']:
+        at.append('fill="%s"' % v['fill'])
+        if v['fop'] < 1:
+            at.append('fill-opacity="%s"' % fnum(v['fop']))
+        if v['rule'] == 'evenodd':
+            at.append('fill-rule="evenodd"')
+    else:
+        at.append('fill="none"')
+    if v['stroke']:
+        at.append('stroke="%s" stroke-width="%s"' % (v['stroke'], fnum(v['sw'])))
+        if v['sop'] < 1:
+            at.append('stroke-opacity="%s"' % fnum(v['sop']))
+    return '<path %s/>' % ' '.join(at)
+
+
+def svg_parts(X, lay, p, reg, members=None, pics=None, href=None):
+    """구역(쪽 p · [x0,y0,x1,y1] pt 위 기준) 안 — 주석 차례대로 text 조각 · 그림 도장 · Ink path.
+       글자 = members(구역 박스 k 집합 · None = 그 쪽 모든 도장 — 옛 꼴) 글리프 중 가운데(x · 기준선 − 0.35×크기)가 구역 안
+       그림 도장 = pics(k 집합) — 그림이면 <image href=href(k)> · 벡터면 <path> · 모양 없으면 건너뜀
+       Ink = 모든 점이 구역 안
+       돌려줌 dict(parts, text, path(Ink), image, vpath(벡터 도장 path), texts(구역 박스 글 — 글리프 줄마다 구역 안 글자 · 테마 점 찾기용))"""
     rx0, ry0, rx1, ry1 = reg
     inside_pt = lambda x, y: rx0 <= x <= rx1 and ry0 <= y <= ry1
     inside_g = lambda g, gl: inside_pt((g['x0'] + g['x1']) / 2, gl['b'] - g['size'] * 0.35)
-    parts, nt, npth = [], 0, 0
+    pics = pics or set()
+    parts, nt, npth, nimg, nvec, texts = [], 0, 0, 0, 0, []
     for kind, idx in X['order'].get(p, []):
         if kind == 'S':
+            if idx in pics:
+                info = pic_info(X, idx)
+                if info['kind'] == 'img':
+                    r = X['boxes'][idx]['rect']
+                    parts.append('<image x="%s" y="%s" width="%s" height="%s" preserveAspectRatio="none" href="%s"/>' % (
+                        fnum(r[0] - rx0), fnum(r[1] - ry0), fnum(r[2] - r[0]), fnum(r[3] - r[1]), _xesc(href(idx), {'"': '&quot;'})))
+                    nimg += 1
+                elif info['kind'] == 'vec':
+                    for v in info['vec']:
+                        parts.append(_vec_svg(v, rx0, ry0))
+                        nvec += 1
+                continue
+            if members is not None and idx not in members:
+                continue
             for gl in lay[idx]['glines']:
+                tl = ''.join(g['t'] for g in gl['g'] if inside_g(g, gl)).strip()
+                if tl:
+                    texts.append(tl)
                 for r in svg_runs(gl, inside_g):
                     gs = r['g']
                     parts.append('<text x="%s" y="%s" font-size="%s" fill="%s" textLength="%s" lengthAdjust="spacingAndGlyphs">%s</text>' % (
@@ -863,17 +1136,19 @@ def svg_parts(X, lay, p, reg):
                 continue
             d = ' '.join('M' + ' L'.join('%s %s' % (fnum(x - rx0), fnum(y - ry0)) for x, y in s) for s in ink['pts'] if s)
             extra = (' stroke-opacity="%s"' % fnum(ink['op'])) if ink['op'] < 1 else ''
+            if ink.get('bm'):
+                extra += ' style="mix-blend-mode:%s"' % ink['bm']   # 형광펜 = 곱하기 섞기(아래 글자·그림이 비친다 — PDF 모양 그대로)
             parts.append('<path d="%s" fill="none" stroke="%s" stroke-width="%s" stroke-linecap="round" stroke-linejoin="round"%s/>' % (
                 d, ink['c'], fnum(ink['w']), extra))
             npth += 1
-    return parts, nt, npth
+    return dict(parts=parts, text=nt, path=npth, image=nimg, vpath=nvec, texts=texts)
 
 
-def make_svg(X, lay, p, reg):
-    parts, nt, npth = svg_parts(X, lay, p, reg)
+def make_svg(X, lay, p, reg, members=None, pics=None, href=None):
+    sp = svg_parts(X, lay, p, reg, members, pics, href)
     W, H = reg[2] - reg[0], reg[3] - reg[1]
-    s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %s %s">%s</svg>' % (fnum(W), fnum(H), ''.join(parts))
-    return s, nt, npth
+    s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %s %s">%s</svg>' % (fnum(W), fnum(H), ''.join(sp['parts']))
+    return s, sp
 
 
 # ───────────────────────── 7. 굽기 ─────────────────────────
@@ -885,45 +1160,147 @@ def layout_all(X):
     return lay
 
 
-def bake(X, lay, pdf_md5, themes, acr, subj, jd):
-    boxes = collections.OrderedDict()
-    for b in X['boxes']:
-        W, H = b['W'], b['H']
-        r = b['rect']
-        boxes[str(b['k'])] = {'p': b['p'], 'r': [round(r[0] / W, 5), round(r[1] / H, 5), round(r[2] / W, 5), round(r[3] / H, 5)],
-                              'lines': lay[b['k']]['lines'], 'svg': None}
-    tout, svginfo = [], {}
-    for t in themes:
-        ks = list(t['boxes'])
-        region = None
-        if t['region']:
-            p, reg = t['region']
-            pw = [b for b in X['boxes'] if b['p'] == p]
-            if not pw and p not in X['order']:
-                raise SystemExit('★%s %d줄 구역 쪽 %d 이 PDF 에 없다 — 멈춘다.' % (F_THEME, t['row'], p))
-            W, H = X['boxes'][0]['W'], X['boxes'][0]['H']
-            svg, nt, npth = make_svg(X, lay, p, reg)
-            rk = t['id'] + 'r'
-            if rk in boxes:
-                raise SystemExit('★구역 박스 열쇠 %s 가 겹친다 — 멈춘다.' % rk)
-            rr = [round(reg[0] / W, 5), round(reg[1] / H, 5), round(reg[2] / W, 5), round(reg[3] / H, 5)]
-            boxes[rk] = {'p': p, 'r': rr, 'lines': [], 'svg': svg}
-            region = {'p': p, 'r': rr}
-            keep = []
+def green_marks(X, lay):
+    """테마 점 「기간」 ① — 초록·연두 형광펜 획(GREEN_C · 굵기 ≥ GREEN_W) → [{j, p, cx, cy, k}]
+       k = 획 점 사각 가운데가 든 박스 · 둘 이상이면 획 사각에 가장 가까운 글자의 박스(같으면 작은 사각 · 작은 k) · 없으면 None"""
+    out = []
+    for ink in X['inks']:
+        if ink['c'] not in GREEN_C or ink['w'] < GREEN_W:
+            continue
+        pts = [q for s in ink['pts'] for q in s]
+        if not pts:
+            continue
+        xs, ys = [q[0] for q in pts], [q[1] for q in pts]
+        sb = [min(xs), min(ys), max(xs), max(ys)]
+        cx, cy = (sb[0] + sb[2]) / 2, (sb[1] + sb[3]) / 2
+        cand = [b for b in X['boxes'] if b['p'] == ink['p'] and b['rect'][0] <= cx <= b['rect'][2] and b['rect'][1] <= cy <= b['rect'][3]]
+        k = None
+        if len(cand) == 1:
+            k = cand[0]['k']
+        elif cand:
+            best = None
+            for b in cand:
+                dmin = float('inf')
+                for gl in lay[b['k']]['glines']:
+                    for g in gl['g']:
+                        if g['t'] == ' ':
+                            continue
+                        gb = [g['x0'], gl['b'] - g['size'] * 0.8, g['x1'], gl['b'] + g['size'] * 0.2]
+                        dx = max(0.0, max(gb[0], sb[0]) - min(gb[2], sb[2]))
+                        dy = max(0.0, max(gb[1], sb[1]) - min(gb[3], sb[3]))
+                        dmin = min(dmin, math.hypot(dx, dy))
+                r = b['rect']
+                key = (dmin, (r[2] - r[0]) * (r[3] - r[1]), b['k'])
+                if best is None or key < best[0]:
+                    best = (key, b['k'])
+            k = best[1]
+        out.append(dict(j=ink['j'], p=ink['p'], cx=cx, cy=cy, k=k, n=len(cand)))
+    return out
+
+
+def bake_full(X, lay, pdf_md5, themes, acr, subj, jd):
+    """돌려줌 (obj, raw, blob, info) — info = dict(svg={테마 id: 구역 셈}, bk={테마 id: 점 근거}, imgs={k: webp}(따로 둘 때만),
+       mode('none' 구역 그림 없음 · 'embed' data URI · 'file' img\\<k>.webp), gz_embed(data URI 로 넣었을 때 gz 바이트), marks(초록 획))"""
+    nsc = {b['k']: sum(1 for c in b['chars'] if c['t'] != ' ') for b in X['boxes']}
+    marks = green_marks(X, lay)
+    subj_l = sorted(set(subj))
+
+    def build(mode):
+        boxes = collections.OrderedDict()
+        for b in X['boxes']:
+            W, H = b['W'], b['H']
+            r = b['rect']
+            boxes[str(b['k'])] = {'p': b['p'], 'r': [round(r[0] / W, 5), round(r[1] / H, 5), round(r[2] / W, 5), round(r[3] / H, 5)],
+                                  'lines': lay[b['k']]['lines'], 'svg': None}
+        if mode == 'embed':
+            href = lambda k: 'data:image/webp;base64,' + base64.b64encode(pic_webp(X, k)).decode('ascii')
+        else:
+            href = lambda k: IMG_HREF + '%d.webp' % k
+        tout, svginfo, bkinfo, used = [], {}, {}, set()
+        for t in themes:
+            ks = list(t['boxes'])
+            region = None
+            texts = []
+            if t['region']:
+                p, reg = t['region']
+                pw = [b for b in X['boxes'] if b['p'] == p]
+                if not pw and p not in X['order']:
+                    raise SystemExit('★%s %d줄 구역 쪽 %d 이 PDF 에 없다 — 멈춘다.' % (F_THEME, t['row'], p))
+                W, H = X['boxes'][0]['W'], X['boxes'][0]['H']
+                mem, keep = [], []
+                for k in ks:
+                    bb = X['boxes'][int(k)]
+                    cx, cy = (bb['rect'][0] + bb['rect'][2]) / 2, (bb['rect'][1] + bb['rect'][3]) / 2
+                    (mem if (bb['p'] == p and reg[0] <= cx <= reg[2] and reg[1] <= cy <= reg[3]) else keep).append(k)
+                members = {int(k) for k in mem if nsc[int(k)] > 0}
+                pics = {int(k) for k in mem if nsc[int(k)] == 0}
+                svg, sp = make_svg(X, lay, p, reg, members, pics, href)
+                rk = t['id'] + 'r'
+                if rk in boxes:
+                    raise SystemExit('★구역 박스 열쇠 %s 가 겹친다 — 멈춘다.' % rk)
+                rr = [round(reg[0] / W, 5), round(reg[1] / H, 5), round(reg[2] / W, 5), round(reg[3] / H, 5)]
+                boxes[rk] = {'p': p, 'r': rr, 'lines': [], 'svg': svg}
+                region = {'p': p, 'r': rr}
+                # 구역 박스 글자 중 구역 밖(줄 글에서도 빠져 어디에도 안 보일 글자) — 관문 0
+                lost = 0
+                for k in sorted(members):
+                    for gl in lay[k]['glines']:
+                        for g in gl['g']:
+                            if g['t'] != ' ':
+                                gx, gy = (g['x0'] + g['x1']) / 2, gl['b'] - g['size'] * 0.35
+                                if not (reg[0] <= gx <= reg[2] and reg[1] <= gy <= reg[3]):
+                                    lost += 1
+                kinds = {k: pic_info(X, k)['kind'] for k in sorted(pics)}
+                used |= {k for k, v in kinds.items() if v == 'img'}
+                svginfo[t['id']] = dict(p=p, reg=reg, text=sp['text'], path=sp['path'], image=sp['image'], vpath=sp['vpath'],
+                                        bytes=len(svg.encode('utf-8')), members=sorted(members), pics=kinds, lost=lost)
+                texts += sp['texts']
+                ks = [rk] + keep
             for k in ks:
-                bb = X['boxes'][int(k)]
-                cx, cy = (bb['rect'][0] + bb['rect'][2]) / 2, (bb['rect'][1] + bb['rect'][3]) / 2
-                if not (bb['p'] == p and reg[0] <= cx <= reg[2] and reg[1] <= cy <= reg[3]):
-                    keep.append(k)
-            ks = [rk] + keep
-            svginfo[t['id']] = dict(p=p, reg=reg, text=nt, path=npth, bytes=len(svg.encode('utf-8')))
-        bk = t['bk'] if t['bk'] is not None else bk_of(t['jo'], jd['bk'])
-        tout.append({'id': t['id'], 'n': t['n'], 'boxes': ks, 'region': region, 'jo': t['jo'], 'bk': bk})
-    obj = collections.OrderedDict([('pdfMd5', pdf_md5), ('boxes', boxes), ('themes', tout),
-                                   ('acr', collections.OrderedDict((w, {'m': v['m'], 'jo': v['jo']}) for w, v in acr.items())),
-                                   ('subj', list(subj))])
-    raw = json.dumps(obj, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
-    return obj, raw, gzip.compress(raw, compresslevel=9, mtime=0), svginfo
+                if k in boxes and not boxes[k]['svg']:
+                    texts += [''.join(r['t'] for r in ln['runs']) for ln in lay[int(k)]['lines']]
+            if t['bk'] is not None:
+                bk = t['bk']
+                bkinfo[t['id']] = dict(src='표')
+            else:
+                c0 = bk_of(t['jo'], jd['bk'])[0]
+                sw = sorted({w for w in subj_l if any(w in s for s in texts)})
+                kg = sum(s.count(KIGAN) for s in texts)
+                gm = []
+                for m in marks:
+                    on = (m['k'] is not None and str(m['k']) in t['boxes'])
+                    if not on and t['region']:
+                        p, reg = t['region']
+                        on = m['p'] == p and reg[0] <= m['cx'] <= reg[2] and reg[1] <= m['cy'] <= reg[3]
+                    if on:
+                        gm.append(m['j'])
+                bk = [c0, 1 if sw else 0, 1 if (gm or kg) else 0]
+                bkinfo[t['id']] = dict(src='셈', subj=sw, kigan=kg, green=gm)
+            tout.append({'id': t['id'], 'n': t['n'], 'boxes': ks, 'region': region, 'jo': t['jo'], 'bk': bk})
+        obj = collections.OrderedDict([('pdfMd5', pdf_md5), ('boxes', boxes), ('themes', tout),
+                                       ('acr', collections.OrderedDict((w, {'m': v['m'], 'jo': v['jo']}) for w, v in acr.items())),
+                                       ('subj', list(subj))])
+        raw = json.dumps(obj, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+        return obj, raw, gzip.compress(raw, compresslevel=9, mtime=0), svginfo, bkinfo, used
+
+    obj, raw, blob, svginfo, bkinfo, used = build('file')
+    mode, gz_embed, imgs = 'none', None, {}
+    if used:
+        e = build('embed')
+        gz_embed = len(e[2])
+        if gz_embed <= EMBED_MAX:
+            obj, raw, blob, svginfo, bkinfo, used = e
+            mode = 'embed'
+        else:
+            mode = 'file'
+            imgs = {k: pic_webp(X, k) for k in sorted(used)}
+    return obj, raw, blob, dict(svg=svginfo, bk=bkinfo, imgs=imgs, mode=mode, gz_embed=gz_embed, marks=marks)
+
+
+def bake(X, lay, pdf_md5, themes, acr, subj, jd):
+    """옛 꼴(하네스 _harness_theme_data 가 부른다) — (obj, raw, blob, 구역 셈)"""
+    obj, raw, blob, info = bake_full(X, lay, pdf_md5, themes, acr, subj, jd)
+    return obj, raw, blob, info['svg']
 
 
 def d11_check(raw_text, name):
@@ -1008,14 +1385,27 @@ def run(pdf, pdf1, tables, out, jodir, check=False, skip_pdf1=False, quiet=False
     else:
         tables_used = tables
     themes, acr, subj = read_tables(tables_used, len(boxes))
-    obj, raw, blob, svginfo = bake(X, lay, pdf_md5, themes, acr, subj, jd)
+    t2 = time.time()
+    obj, raw, blob, info = bake_full(X, lay, pdf_md5, themes, acr, subj, jd)
+    svginfo, imgs = info['svg'], info['imgs']
+    bkd = collections.Counter(''.join(map(str, t['bk'])) for t in obj['themes'])
     st.update(n_theme=len(obj['themes']), n_acr=len(obj['acr']), n_subj=len(obj['subj']), gz=len(blob), raw=len(raw),
-              md5=hashlib.md5(blob).hexdigest(), svg=svginfo, pdfMd5=pdf_md5)
+              md5=hashlib.md5(blob).hexdigest(), svg=svginfo, pdfMd5=pdf_md5, bkinfo=info['bk'], img_mode=info['mode'],
+              gz_embed=info['gz_embed'], imgs={k: (len(v), hashlib.md5(v).hexdigest()) for k, v in imgs.items()},
+              marks=info['marks'], bk_dist=dict(sorted(bkd.items(), reverse=True)), t_bake=time.time() - t2)
     if not quiet:
-        P('테마.json.gz %d B(풀면 %d) · md5 %s · 박스 %d(구역 박스 %d) · 테마 %d · 두문자 %d · 주체 %d' % (
-            len(blob), len(raw), st['md5'], len(obj['boxes']), len(svginfo), st['n_theme'], st['n_acr'], st['n_subj']))
+        P('테마.json.gz %d B(풀면 %d) · md5 %s · 박스 %d(구역 박스 %d) · 테마 %d · 두문자 %d · 주체 %d · %.1fs' % (
+            len(blob), len(raw), st['md5'], len(obj['boxes']), len(svginfo), st['n_theme'], st['n_acr'], st['n_subj'], st['t_bake']))
+        kg = sum(1 for t in obj['themes'] if t['bk'][2])
+        P('테마 점 bk(내용·주체·기간) 분포 %s · 기간 켜짐 %d(초록 획 %d · 「기간」 글 %d) · 초록 획 %d(박스 못 찾음 %d)' % (
+            ' · '.join('(%s) %d' % (','.join(k), n) for k, n in st['bk_dist'].items()), kg,
+            sum(1 for v in info['bk'].values() if v.get('green')), sum(1 for v in info['bk'].values() if v.get('kigan')),
+            len(info['marks']), sum(1 for m in info['marks'] if m['k'] is None)))
+        P('구역 그림 — %s · 따로 둔 그림 %d 장 %d B · (모두 data URI 로 넣으면 gz %s B · 문턱 %d B)' % (
+            info['mode'], len(imgs), sum(len(v) for v in imgs.values()), info['gz_embed'], EMBED_MAX))
         for tid, v in svginfo.items():
-            P('  구역 %s — %d쪽 %s · text %d · path %d · %d B' % (tid, v['p'], [fnum(x) for x in v['reg']], v['text'], v['path'], v['bytes']))
+            P('  구역 %s — %d쪽 %s · text %d · path %d · 그림 %d · 벡터 %d · %d B · 구역 밖 글자 %d' % (
+                tid, v['p'], [fnum(x) for x in v['reg']], v['text'], v['path'], v['image'], v['vpath'], v['bytes'], v['lost']))
     d = d11_check(raw.decode('utf-8'), 'theme/patent_hr8/테마.json.gz')
     if d is None:
         P('[d11] NG — _d11_scan · _d11_hash.txt 를 못 읽었다 · 쓰지 않는다')
@@ -1026,11 +1416,37 @@ def run(pdf, pdf1, tables, out, jodir, check=False, skip_pdf1=False, quiet=False
         P('[d11] 걸림 %d (%s) — 쓰지 않는다 · 값은 안 찍는다' % (d[0], ' · '.join('%s %d' % kv for kv in sorted(d[1].items()))))
         return st, 1, obj, blob
     if not quiet:
-        P('[d11] 테마.json · 걸림 0')
+        P('[d11] 테마.json · 걸림 0(그림은 글 검사 밖 — minbeoppdf 비공개에만 둔다)')
+    img_dir = os.path.join(os.path.dirname(out), IMG_DIR)
+    plan = []
+    for k in sorted(imgs):
+        pth = os.path.join(img_dir, '%d.webp' % k)
+        cur = open(pth, 'rb').read() if os.path.isfile(pth) else None
+        plan.append((k, pth, imgs[k], 'same' if cur == imgs[k] else ('new' if cur is None else 'diff')))
+    stale = sorted(f for f in (os.listdir(img_dir) if os.path.isdir(img_dir) else [])
+                   if f.endswith('.webp') and not (f[:-5].isdigit() and int(f[:-5]) in imgs))
+    st['img_stale'] = stale
+    if stale:
+        P('⚠ %s 에 지금 표가 안 쓰는 그림 %d — 지우지 않는다(사람이 본다): %s' % (img_dir, len(stale), ' '.join(stale)))
     if check:
         cur = open(out, 'rb').read() if os.path.isfile(out) else None
-        P('--check: 쓰지 않음 · 있는 파일 %s' % ('없음' if cur is None else ('같음(바이트)' if cur == blob else '다름 — 만들면 바뀐다')))
+        P('--check: 쓰지 않음 · 있는 파일 %s · 그림 같음 %d · 다름 %d · 없음 %d' % (
+            '없음' if cur is None else ('같음(바이트)' if cur == blob else '다름 — 만들면 바뀐다'),
+            sum(1 for x in plan if x[3] == 'same'), sum(1 for x in plan if x[3] == 'diff'), sum(1 for x in plan if x[3] == 'new')))
         return st, 0, obj, blob
+    nw = 0
+    for k, pth, data, state in plan:
+        if state == 'same':
+            continue
+        os.makedirs(img_dir, exist_ok=True)
+        with open(pth, 'wb') as f:
+            f.write(data)
+        if open(pth, 'rb').read() != data:
+            raise SystemExit('★되읽기 대조가 어긋났다: %s' % pth)
+        nw += 1
+    st['img_wrote'] = nw
+    if plan and not quiet:
+        P('그림 %d 장 중 %d 장 씀 → %s' % (len(plan), nw, img_dir))
     if os.path.isfile(out) and open(out, 'rb').read() == blob:
         if not quiet:
             P('변화 없음 — 쓰지 않음(%s)' % out)
