@@ -12927,7 +12927,7 @@ function p7Card(z,seq,opt){
     const bits=[];
     if(z.쪽)bits.push('p.'+z.쪽);else if(p8Is(z))bits.push(p8No(z.판8));   /* ★ p8up — 8판 새 카드 = 8판 자리 */
     if(z.리담)bits.push('리담 '+z.리담.연도+'년 '+z.리담.문항+'번 ('+z.리담.선지+')');
-    bits.push(z.병합?'리담과 흡수됨 — 기록 공유':(z.리담?'리담과 글이 다름 — 기록 따로':(p8Is(z)?'해례 8판에만 있는 지문':(z.판?'뷰객 '+String(z.판).slice(1)+'판 단독':'제7판 단독'))));   /* ★ uid 판(9/27) — 리담 참조가 있는데 병합이 아니면 uid 가 갈린 행 */
+    bits.push(z.병합?'리담과 흡수됨 — 기록 공유':(z.리담?'리담과 글이 다름 — 기록 따로':(p8Is(z)?'해례 8판에만 있는 지문':(z.판5&&z.판5.cat==='새'?'뷰객 5판에만 있는 지문':(z.판?'뷰객 '+String(z.판).slice(1)+'판 단독':'제7판 단독')))));   /* ★ uid 판(9/27) — 리담 참조가 있는데 병합이 아니면 uid 가 갈린 행 */
     if(z.유제)bits.push('유제');
     sub.textContent=bits.join(' · ');
     const pb=el('button','qb v qexp',gEd(z));   /* ★ p8up — 8판 새 카드는 「8판」 · ★ revfix0928pm A-2 — H7 · H8 */
@@ -16970,6 +16970,12 @@ function mlnCaseBoxL(q, no){
 /* ★ p8up A-3 — 해례 8판 표시(원장 판8 칸 · 판8_리담 표) · 글자만(cardfix 머리 칩 꼴) · 색 셋 */
 var P8L = {}, P8N = new Set();   /* P8N = 8판 새 카드 uid — 단원 이름표(MBK2M)가 (미수록) 줄의 제7판 uid 를 건너뛸 때 이것은 안 건너뛴다 */
 const P8_AT = Date.parse('2026-09-28T14:30:00+09:00');   /* 8판 판올림 인도 시각 — 이보다 앞선 풀이 기록 = 7판 글로 푼 것 */
+/* ★ sp_view5 §D — 판 고침 표시 = 법 갈래(줄의 판 칸 · 특허 해례 = 판8 · 상표 뷰객 = 판5) · 칩 꼴·색·크기 = 8판 그대로(.p8c · 새 꼴 없음) · 특허 글자 무변
+   판5 = { cat: 같음·글·답·없음·새, t4: 4판 글, a4: 4판 정오(답 바뀜), s4: 4판 해설 } — 원장 §C(p8up 판8 꼴) · 5판에 없음 줄은 판 「V4」 그대로 */
+const P5_AT = 0;   /* 5판 판올림 인도 시각 — 로컬이 합칠 때 넣는다(0 = 옛 풀이 「4판 글」 곁 표시 끔) */
+const P8V = { k: '판8', neu: '8판', old: '7판', bk: '해례', at: P8_AT, txt: '문장', t: 't7', a: 'a7', na: z => z.ox };
+const P5V = { k: '판5', neu: '5판', old: '4판', bk: '뷰객', at: P5_AT, txt: '글', t: 't4', a: 'a4', na: z => (z.ox != null ? z.ox : (z.답 || '?')) };
+function pvOf(z){ return z && z.판8 ? P8V : (z && z.판5 ? P5V : null); }
 function p8New(c){ return !!(c && c.kind === 'P' && c.z && c.z.판8 && c.z.판8.cat === '새'); }
 function p8Is(z){ return !!(z && z.판8 && z.판8.cat === '새'); }
 function p8No(p){ const n = String((p && p.no8) || '').replace(/\.$/, ''); return 'H8 p.' + p.p8 + ' ' + (/유제/.test(n) ? n : n + '번'); }   /* ★ revfix0928pm A-2 — 「H8 p.N N번」 */
@@ -16979,35 +16985,36 @@ function p7PageLab(z){ return p8Is(z) ? 'H8 p.' + z.판8.p8 : gEd(z) + ' p.' + (
    사용자가 고친 해설(qfixOf(k).exp)이 보이는 줄은 상자에 「(내가 고친 해설이 보이는 중)」 한 줄 · 명칭만·새 카드 = 표시 없음(s7 없음) */
 function p8SolWrap(s7, k, node){
   if (!s7) return node;
+  const V = (s7 && s7.V) || P8V, sx = (s7 && s7.V) ? s7.s : s7;   /* ★ sp_view5 §D — 상표 5판 = { s: 4판 해설, V } · 특허 = 글(옛 그대로) */
   const w = el('div', 'p8sw'), hd = el('div', 'p8sh');
-  const b = el('button', 'p8c g', '8판 해설 고침'); b.type = 'button'; b.title = '누르면 7판 해설(한 번 더 누르면 접힘)';
+  const b = el('button', 'p8c g', V.neu + ' 해설 고침'); b.type = 'button'; b.title = '누르면 ' + V.old + ' 해설(한 번 더 누르면 접힘)';
   b.onclick = ev => { ev.stopPropagation();
     const old = w.querySelector(':scope > .p8t7'); if (old){ old.remove(); return; }
-    const d = el('div', 'p8t7'); d.appendChild(el('b', '', '7판 해설')); d.appendChild(document.createTextNode(p7Text(s7)));
+    const d = el('div', 'p8t7'); d.appendChild(el('b', '', V.old + ' 해설')); d.appendChild(document.createTextNode(p7Text(sx)));
     let f = null; try{ f = k ? qfixOf(k) : null; }catch(e){}
     if (f && typeof f.exp === 'string') d.appendChild(el('div', 'p8fx', '(내가 고친 해설이 보이는 중)'));
     w.appendChild(d); };
   hd.appendChild(b); w.appendChild(hd); w.appendChild(node); return w;
 }
-function p8S7(z){ return (z && z.판8 && z.판8.s7) || ''; }
+function p8S7(z){ return (z && z.판8 && z.판8.s7) || ((z && z.판5 && z.판5.s4) ? { s: z.판5.s4, V: P5V } : ''); }   /* ★ sp_view5 §D — 상표 = 4판 해설 + 판 갈래 */
 function p8Chip(host, z, card){
-  const p = z && z.판8; if (!p) return;
+  const V = pvOf(z), p = V && z[V.k]; if (!p) return;   /* ★ sp_view5 §D — 특허 판8 · 상표 판5 같은 길(글자만 판 갈래) */
   let t = '', c = '';
-  if (p.cat === '문장'){ t = '8판 고침'; c = 'g'; }
-  else if (p.cat === '답'){ t = '8판 고침 · 답 ' + (p.a7 || '?') + '→' + z.ox; c = 'r'; }
-  else if (p.cat === '없음'){ t = '8판에 없음'; c = 'g'; }
-  else if (p.cat === '새'){ t = '8판 새'; c = 'n'; }
-  else return;   /* 명칭 · 기관 · 오류 · 자리 = 표시 없음(글만 8판) */
-  const tog = (p.cat === '문장' || p.cat === '답') && p.t7;
+  if (p.cat === V.txt){ t = V.neu + ' 고침'; c = 'g'; }
+  else if (p.cat === '답'){ t = V.neu + ' 고침 · 답 ' + (p[V.a] || '?') + '→' + V.na(z); c = 'r'; }
+  else if (p.cat === '없음'){ t = V.neu + '에 없음'; c = 'g'; }
+  else if (p.cat === '새'){ t = V.neu + ' 새'; c = 'n'; }
+  else return;   /* 같음 · 명칭 · 기관 · 오류 · 자리 = 표시 없음(글만 새 판) */
+  const tog = (p.cat === V.txt || p.cat === '답') && p[V.t];
   const b = el(tog ? 'button' : 'span', 'p8c ' + c, t); if (tog) b.type = 'button';
-  b.title = tog ? '누르면 7판 글(한 번 더 누르면 접힘)' : (p.cat === '새' ? '해례 8판에만 있는 지문' : '해례 8판에서 빠진 지문 — 카드·기록은 그대로');
+  b.title = tog ? '누르면 ' + V.old + ' 글(한 번 더 누르면 접힘)' : (p.cat === '새' ? V.bk + ' ' + V.neu + '에만 있는 지문' : V.bk + ' ' + V.neu + '에서 빠진 지문 — 카드·기록은 그대로');
   if (tog) b.onclick = ev => { ev.stopPropagation();
     const old = card.querySelector(':scope > .p8t7'); if (old){ old.remove(); return; }
-    const d = el('div', 'p8t7'); d.appendChild(el('b', '', '7판 글')); d.appendChild(document.createTextNode(p7Text(p.t7)));
+    const d = el('div', 'p8t7'); d.appendChild(el('b', '', V.old + ' 글')); d.appendChild(document.createTextNode(p7Text(p[V.t])));
     const hd = card.querySelector(':scope > .mbqhd'); if (hd) hd.after(d); else card.prepend(d); };
   host.appendChild(b);
-  if (p.cat === '답'){ let r = null; try{ r = oxOf(oxKeyP7(z)); }catch(e){}   /* 옛 풀이 기록(8판 전) = 7판 답으로 푼 것 */
-    if (r && r.p && Date.parse(r.ts || '') < P8_AT) host.appendChild(el('span', 'p8c g p8old', '7판 글')); }
+  if (p.cat === '답' && V.at){ let r = null; try{ r = oxOf(oxKeyP7(z)); }catch(e){}   /* 옛 풀이 기록(새 판 전) = 옛 판 답으로 푼 것 */
+    if (r && r.p && Date.parse(r.ts || '') < V.at) host.appendChild(el('span', 'p8c g p8old', V.old + ' 글')); }
 }
 /* 이미 앱 리담 카드인 8판 지문 — 「8판 p.N N번」(지문 uid · 없으면 문항 통째 표) */
 function p8LidChip(host, z, q){
@@ -17243,6 +17250,7 @@ function mlnObjCard(o, no){
   pb.onclick = ev => { ev.stopPropagation(); sub.style.display = sub.style.display === 'none' ? '' : 'none'; };
   h.appendChild(pb);
   h.appendChild(mcChip(k));
+  if (o.판5) p8Chip(h, o, card);   /* ★ sp_view5 §D — 상표 문항째 카드도 5판 표시(🃏 바로 뒤 · 특허 문항째 = 무변) */
   const tb = el('span', 'mbtags t'); if (S.law === '특허법' && typeof pinTag === 'function') pinTag(k, tb); oxTagBar(k, tb); h.appendChild(tb);
   card.appendChild(h);
   { const rw = el('div', 'mbrecw hide'); rw.dataset.rk = k; card.appendChild(rw); }
