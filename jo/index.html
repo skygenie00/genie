@@ -2067,7 +2067,8 @@ function drawTop(){
   const lw=$('#laws');lw.innerHTML='';
   hdrFoldPaint();   /* ★ hdrfold */
   LAWS.forEach(L=>{const b=el('button','pill'+(S.law===L?' on':''),SHORT[L]);
-    b.onclick=()=>{S.law=L;S.jo=null;S.prec=null;pfClearY();   /* ★ prec3 §A-5 — 법을 바꾸면 고른 회차를 비운다 */
+    b.onclick=()=>{if(S.law!==L){S.mok=null;S.oxPage=null;S.oxQueue='';}   /* ★ sp_view4 §D-7 — 법을 바꾸면 1차객 마디·큐를 비운다(그 법 첫 화면 · 옛: 특허 마디 → 상표·디보 「'마디' null」) */
+      S.law=L;S.jo=null;S.prec=null;pfClearY();   /* ★ prec3 §A-5 — 법을 바꾸면 고른 회차를 비운다 */
       if(S.tab==='jimun'&&L==='민사소송법')S.tab='jo';render();};lw.appendChild(b);});
   const lt=$('#lblToggle');
   // ⚠ 라벨 전체 토글도 글자 수를 바꾼다 — 필기가 있으면 잠근다(§4-2)
@@ -2153,8 +2154,9 @@ async function railCounts(){
     const sh=SHORT[S.law], j=await get('jimun_'+sh+'.json');
     let n=0;const _ks=new Set();   /* ★ toc_fuse(9/26) — 같은 지문(uid)은 한 번만(객관식 선지 줄 P7-nnnn-k 는 리담 선지와 uid 를 나눠 쓴다) */
     /* ★ uid 판(9/27) — 같은 uid 는 한 번 */
-    (j.문제||[]).forEach(q=>(q.지문||[]).forEach(z=>{if(!(sh==='특허'&&z.병합)){if(!(z.uid&&_ks.has(z.uid)))n++;if(z.uid)_ks.add(z.uid);}}));
-    if(sh==='특허'){try{const P=await get('jimun_7pan.json');
+    const _bk=gBook(sh);   /* ★ sp_view4 add2 §A-3 — 책 지문 갈래 표(특허 = 제7판 · 상표 = 뷰객 4판) · uid 한 번(같은 uid 쌍 = 한 문제) */
+    (j.문제||[]).forEach(q=>(q.지문||[]).forEach(z=>{if(!(_bk&&z.병합)){if(!(z.uid&&_ks.has(z.uid)))n++;if(z.uid)_ks.add(z.uid);}}));
+    if(_bk){try{const P=await get(_bk.j);
       (P.지문||[]).filter(z=>z.ox==='O'||z.ox==='X').forEach(z=>{if(!(z.uid&&_ks.has(z.uid))){n++;if(z.uid)_ks.add(z.uid);}});}catch(e){}}
     set('jimun',n.toLocaleString());
   }catch(e){set('jimun','—');}}
@@ -6251,7 +6253,7 @@ function inkBind(cv, key){
 /* ══ 필기 찾기 · 점만 지우기 · 이 화면 지우기 (2026-08-26 · 사용자 지적) ══ */
 function inkKeyLabel(key){
   const i = key.indexOf('|'), h = i < 0 ? key : key.slice(0, i), t = i < 0 ? '' : key.slice(i + 1);
-  const nm = { jo:'조문', prec:'판례', cell:'2차 셀', q:'1차객 문항', q7:'제7판 지문' }[h] || h;
+  const nm = (h === 'q7' && /^V\d-/.test(t)) ? '뷰객 지문' : ({ jo:'조문', prec:'판례', cell:'2차 셀', q:'1차객 문항', q7:'제7판 지문' }[h] || h);   /* ★ sp_view4 — 상표 책 카드 필기(V4-) */
   return nm + ' · ' + t;
 }
 function inkIsDot(st){
@@ -6317,8 +6319,9 @@ async function inkGo(key){
       if (m) S.omrPage = +m[1];
       S.tab = 'omr'; S.omrPick = null;
     } else if (h === 'q7'){
-      S.law = '특허법'; S.tab = 'jimun'; S.jimunTab = 'ox'; S.oxQueue = '';
-      try{ const ix = await mokIndex(); const mi = ix.p7[t];
+      const lw7 = /^V\d-/.test(t) ? '상표법' : '특허법';   /* ★ sp_view4 — 상표 책 카드 필기(V4-) = 상표 그 단원 */
+      S.law = lw7; S.tab = 'jimun'; S.jimunTab = 'ox'; S.oxQueue = '';
+      try{ const ix = await mokIndex(SHORT[lw7]); const mi = ix.p7[t];
         if (mi !== undefined){ S.mok = '__mg' + mi; S.oxPage = null; } }catch(e){}
     } else if (h === 'q'){
       let law = null, q = null;
@@ -9849,13 +9852,21 @@ function tyPut(k, v){
   TYREC = A; lsWrite(TY_KEY, A, '🏷 유형 확정');
 }
 const TY_NAME = { jo: '조문형', mix: '조문+판례', pan: '판례형' };   // ★ v3-F §3 — 배지줄 표기
+/* ★ sp_view4 §D-2 — 상표 OX = 책 태그 넷(조문·판례·이론·심사기준 · 둘 이상이면 「+」로 이은 값 · 글자는 「·」) · 객관식·특허·디보 = 옛 값(jo·mix·pan) 그대로 */
+const TY_TAG = { '조문': 'tjo', '판례': 'tpan', '이론': 'th', '심사기준': 'sg' }, TY_TAGNM = { tjo: '조문', tpan: '판례', th: '이론', sg: '심사기준' };
+const TY_TAGRX = /^(tjo|tpan|th|sg)(\+(tjo|tpan|th|sg))*$/;
+function tyTagCode(tags){ const out = []; (tags || []).forEach(t => { const c = TY_TAG[String(t).trim()]; if (c && out.indexOf(c) < 0) out.push(c); }); return out.join('+'); }
+function tyHas(eff, c){ return TY_TAGRX.test(String(eff || '')) && String(eff).split('+').indexOf(c) >= 0; }
+function tyLabel(eff){ return TY_NAME[eff] || (TY_TAGRX.test(String(eff || '')) ? String(eff).split('+').map(c => TY_TAGNM[c]).join('·') : ''); }
+function tyCls(eff){ if (!eff) return 'none'; if (!TY_TAGRX.test(eff)) return eff; const a = eff.split('+'); return a.length > 1 ? 'mix' : a[0] === 'tjo' ? 'jo' : a[0] === 'tpan' ? 'pan' : 'tg'; }
 /* ★ v3-J §0-0 — 배지와 거르기가 같은 값을 본다: eff = 손확정(tyOf) || 초안(draft).
    초안 — 리담 카드 = 컴파일러 갈래(코드화) · 제7판 = 근거 조문/판례 유무(p7Card 와 같은 셈). */
 const TY_CODE = { '조문형': 'jo', '판례형': 'pan', '조문+판례': 'mix', '혼합': 'mix' };
 function tyDraftL(q){ return TY_CODE[String(q.갈래 || '').trim()] || ''; }
 function tyDraftP(z){
+  if (z && Array.isArray(z.유형태그) && z.유형태그.length) return tyTagCode(z.유형태그);   /* ★ sp_view4 §D-2 — 상표 OX = 책 태그 그대로 */
   const lk = (typeof P7LID !== 'undefined' && P7LID) ? P7LID[z.id] : null;
-  const JOS = p7Jo(z.sol, lk ? (lk.z.jo || []) : []);
+  const JOS = p7Jo(z.sol, lk ? (lk.z.jo || []) : [], gLaw(z));   /* ★ sp_view4 add1 §A-2 — 그 카드의 법 */
   const cases = [];
   if (lk && (lk.z.pan || '').trim()) panNo(lk.z.pan).forEach(c => cases.push(c));
   panNo(z.sol).forEach(c => { if (cases.indexOf(c) < 0) cases.push(c); });
@@ -9887,10 +9898,10 @@ function logicBox(row, key){
   d.appendChild(rw);
   row.appendChild(d);
 }
-function typePop(k, ev){
+function typePop(k, ev, draft){
   const _pk31=('q')+'|'+('🏷 유형 확정 — ' + linkDisp(k)); if(popToggle(_pk31))return; const body=popShell('q', '🏷 유형 확정 — ' + linkDisp(k), _pk31);   /* ★ 상표 손질 6 — 키 종류|제목 */
   const cur = tyOf(k);
-  [['jo', '조문형'], ['mix', '혼합'], ['pan', '판례형']].forEach(p2 => {
+  (TY_TAGRX.test(String(draft || '')) ? [['tjo', '조문'], ['tpan', '판례'], ['th', '이론'], ['sg', '심사기준']] : [['jo', '조문형'], ['mix', '혼합'], ['pan', '판례형']]).forEach(p2 => {   /* ★ sp_view4 §D-2 — 상표 OX 카드 = 책 태그 넷 */
     const b = el('button', 'tool' + (cur === p2[0] ? ' on' : ''), p2[1]);
     b.onclick = () => { tyPut(k, p2[0]); closePop(); render(); };
     body.appendChild(b);
@@ -10010,7 +10021,7 @@ function qpAnsSol(hit){
   const z = hit.z;
   if (hit.kind === 'P'){
     let raw = z.ox, sol = z.sol || '';
-    if (!raw && z.리담 && z.리담.ox) raw = z.리담.ox;
+    if (!raw && !z.판 && z.리담 && z.리담.ox) raw = z.리담.ox;   /* ★ sp_view4 §D-4 — 상표(뷰객) 정오 = 책만 */
     if (z.병합 && (z.리담해설 || '').trim()) sol = (sol ? sol + '\n\n' : '') + '📗 리담 해설\n' + z.리담해설;
     return { raw: raw || '', sol: sol };
   }
@@ -10022,7 +10033,7 @@ function qpBody(hit, k, pop, isOpen, setOpen){
   const z = hit.z, w = el('div', 'qp2');
   const lab = (MBK2M[k] && MBK2M[k].label) || '';
   const ch = el('div', 'qpchips');
-  ch.appendChild(el('span', 'qpc1', hit.kind === 'P' ? (p8Is(hit.z) ? 'H8' : 'H7') : '변리사 ' + String(hit.q.연도).slice(2)));   /* ★ revfix0928pm A-2 — 판 이름 칩 H7 · H8 */
+  ch.appendChild(el('span', 'qpc1', hit.kind === 'P' ? gEd(hit.z) : '변리사 ' + String(hit.q.연도).slice(2)));   /* ★ revfix0928pm A-2 — 판 이름 칩 H7 · H8 */
   ch.appendChild(el('span', 'qpc2', (hit.law || S.law) + (lab && (!hit.law || hit.law === S.law) ? ' · ' + lab : '')));   /* ★ jo_cardfix §A-3 */
   ch.appendChild(el('span', 'qpc3', k));
   cfLinkChips(ch, k);   /* ★ jo_cardfix §A-4 — 문제 창에도 ↩링크N · ↩백링크N */
@@ -10450,6 +10461,19 @@ async function joPanelIdx(){
         });
       });
     }
+    else if (gBook(subj)){   /* ★ sp_view4 add2 §A-1 — 조문 탭 정오문제 창(JOPANE) = 상표 책 지문도 · 그 법 조 목록 */
+      const bk = gBook(subj), P7 = await get(bk.j);
+      await gJoLoad(bk.law);
+      p7Link(JM, P7);
+      P7.지문.forEach(z => {
+        if (z.병합) return;
+        const lk = (P7LID || {})[z.id];
+        p7Jo(z.sol, lk ? (lk.z.jo || []) : [], bk.law).forEach(x => {
+          if (!x.law) return;
+          (JOPANE[x.k] = JOPANE[x.k] || { L: [], P: [] }).P.push(z);
+        });
+      });
+    }
   }catch(e){}
   return JOPANE;
 }
@@ -10547,15 +10571,15 @@ function mbTypeChip(key, draft, jos, host, jsid){
   const jos0 = jos || [];
   if (jsid) jos = jnJo(jsid, jos0);
   const fix = tyOf(key), eff = tyEff(key, draft);
-  const raw = eff ? TY_NAME[eff] : '';                       /* 저장값 이름 */
+  const raw = eff ? tyLabel(eff) : '';                       /* 저장값 이름 · ★ sp_view4 — 상표 책 태그(tyLabel) */
   const lbl = raw === '조문+판례' ? '혼합' : raw;            /* 보이는 글자만 갈음 */
   const list = (jos || []).filter(Boolean);
   const shown = list.slice(0, 2);
   const tail = list.length > shown.length ? (' 외 ' + (list.length - shown.length)) : '';
-  const chip = el('span', 'mbtype ' + (eff || 'none') + (fix ? ' fix' : ' draft'));
+  const chip = el('span', 'mbtype ' + tyCls(eff) + (fix ? ' fix' : ' draft'));
   const tb = el('button', 'seg ty', lbl || '유형?');
   tb.title = (fix ? '직접 확정한 값' : '초안 — 눌러 확정') + ' · 저장값 ' + (raw || '없음');
-  tb.onclick = ev => { ev.stopPropagation(); typePop(key, ev); };
+  tb.onclick = ev => { ev.stopPropagation(); typePop(key, ev, draft); };
   chip.appendChild(tb);
   uzBkSeg(chip, jsid || key, eff);   /* ★ revfix0928 A-3 — 지문 열쇠(표시·창·저장·바깥 필터가 같은 열쇠) · ★ mbsame_add3 §A-7 — 「조문형」 바로 오른쪽 빈칸 종류 글자(따로 칩 없음) */
   shown.forEach(c => {
@@ -11240,8 +11264,10 @@ function oxPickRow(row, key, raw, sol, extra, chips, autos, opt){
    옛 값(wrong 등)이 S.oxFilter 에 남아 있어도 어느 분기에도 안 걸려 전체로 동작한다. */
 function oxKeep(key, draft){
   const eff = tyEff(key, draft);
-  if (S.oxFilter === 'jo')  return eff === 'jo' || eff === 'mix';
-  if (S.oxFilter === 'pan') return eff === 'pan' || eff === 'mix';
+  if (!uzTyList().some(x => x[0] === S.oxFilter)) return true;   /* ★ sp_view4 — 다른 법에서 고른 값(상표 이론·심사기준 ↔ 특허 조문+판례) = 이 법에서 전체 */
+  if (S.oxFilter === 'jo')  return eff === 'jo' || eff === 'mix' || tyHas(eff, 'tjo');   /* ★ sp_view4 — 상표 「조문」 = 책 태그 조문 + 객관식 조문형·혼합 */
+  if (S.oxFilter === 'pan') return eff === 'pan' || eff === 'mix' || tyHas(eff, 'tpan');
+  if (S.oxFilter === 'th' || S.oxFilter === 'sg') return tyHas(eff, S.oxFilter);   /* ★ sp_view4 — 이론 · 심사기준(상표만) */
   if (S.oxFilter === 'mix') return eff === 'mix';
   if (S.oxFilter === 'untype')  return !tyOf(key);
   return true;
@@ -11385,7 +11411,7 @@ function mokNos(cards){
 /* ★ toc_fuse(9/26) — 종합사례 상자(민법 case-box 꼴 · 「[종합사례 원문] - N번」 + 사례·보기 글) */
 function p7CaseBox(z, no){
   const b = el('div', 'p7case');
-  b.appendChild(el('div', 'p7cash', '[종합사례 원문] - ' + (z.책번호 || no) + '번'));   /* ★ mbsame §B-1 — 책 번호 */
+  b.appendChild(el('div', 'p7cash', '[종합사례 원문] - ' + ((z.판 ? gV4Num(z.책번호) : z.책번호) || no) + '번'));   /* ★ mbsame §B-1 — 책 번호 · ★ sp_view4 — 뷰객 「B2-S6」 → 6 */
   b.appendChild(el('div', 'p7cast', cfFixCase(oxKeyP7(z), String(z.사례 || ''))));   /* ★ jo_cardfix §A-7 — 고친 원문 먼저 */
   return b;
 }
@@ -11585,8 +11611,9 @@ function rsltPop(scope, keys, label, ev){
    사용자가 뒤에 끈 것은 존중한다 — 이 1회 플래그가 재점화를 막는다. */
 const AUTO_KEY = 'jopangi_auto';
 function autoImportant(JM, subj){
-  if (subj !== '특허') return;          // 목차·제7판 짝이 있는 특허 원장에만 돈다
-  try{ if ((JSON.parse(localStorage.getItem(AUTO_KEY) || '{}') || {}).important) return; }
+  if (!gBook(subj)) return;          // 목차·책 짝이 있는 원장에만 돈다(특허 제7판 · ★ sp_view4 add2 §A-5 상표 뷰객 4판)
+  const AK = subj === '특허' ? AUTO_KEY : AUTO_KEY + '_' + subj;   /* ★ sp_view4 — 플래그는 법마다(특허 = 옛 키 그대로) */
+  try{ if ((JSON.parse(localStorage.getItem(AK) || '{}') || {}).important) return; }
   catch(e){}
   const A = oxAll(); let n = 0;
   (JM.문제 || []).forEach(q => giAns(q).forEach(no => {
@@ -11599,7 +11626,7 @@ function autoImportant(JM, subj){
     n++;
   }));
   if (n){ OXREC = A; lsWrite(OX_KEY, A, '1차객 풀이'); }   // ⚠ lsWrite 는 한 번(§7)
-  try{ localStorage.setItem(AUTO_KEY, JSON.stringify({ important: 'v1', at: nowIso() })); }
+  try{ localStorage.setItem(AK, JSON.stringify({ important: 'v1', at: nowIso() })); }
   catch(e){}
   if (n) toast('⭐ 정답표 지목 지문 ' + n + '개에 중요 태그를 켰다(1회)');
 }
@@ -11775,6 +11802,30 @@ let LNKIDX = null;
    길은 둘 — ① 리담 짝이 있으면 그쪽 근거를 물려받는다(정본 · 실측 859건 전건 매칭)
              ② 없으면 해설 본문에서 뽑는다(사건번호 실측 396지문 · 고유 293) */
 let JOKEY = null, PANIDX = null, P7LID = null;
+/* ★ sp_view4(cloudD · 본판 §D-1 · add2 §A-3·§A-4) — 1차객 책 갈래 표. 특허 = 해례 제7판(옛 파일 그대로) · 상표 = 뷰객 4판(add3 §B — jimun_7pan 과 같은 머리 · 마디 = OMR 단원) · 그 밖 = 책 없음.
+   책 줄의 법 = 줄의 판 값(「V4」·「V5」 = 상표법 · 판 칸 없음 = 특허법) · 판 칩 = 줄의 판 값(판 칸 없음 = 옛 H7·H8) · 조 목록 = jo_<그 법>_목록(특허법 = JOKEY 그대로). */
+function gBook(subj){
+  return subj === '특허' ? { j: 'jimun_7pan.json', m: 'mokcha_병합.json', law: '특허법' }
+       : subj === '상표' ? { j: 'jimun_상표_뷰객.json', m: 'mokcha_상표.json', law: '상표법' } : null;
+}
+function gEd(z){ return (z && z.판) ? String(z.판) : (p8Is(z) ? 'H8' : 'H7'); }
+function gLaw(z){ return (z && /^V\d/.test(String(z.판 || ''))) ? '상표법' : '특허법'; }
+var JOKEYS = {};
+function gJoKey(law){ return (!law || law === '특허법') ? JOKEY : (JOKEYS[law] || null); }
+async function gJoLoad(law){
+  if (!law || law === '특허법'){ if (!JOKEY){ const JL = await get('jo_특허법_목록.json'); JOKEY = {}; JL.조.forEach(x => { JOKEY[x.k] = x.t || ''; }); } return JOKEY; }
+  if (!JOKEYS[law]){ const JL = await get('jo_' + law + '_목록.json'), o = {}; JL.조.forEach(x => { o[x.k] = x.t || ''; }); JOKEYS[law] = o; }
+  return JOKEYS[law];
+}
+/* 뷰객 책번호 → 보이는 번호(「B2-S6」 → 6 · 「A1-OX5(a)」 → 5 · 종합 「1-22」 → 22) · 이름표 「OX 5 (a)」·「6번 - ②」(아티팩트 v7 꼴) */
+function gV4Num(bn){ bn = String(bn || ''); const m = /(?:^|-)(?:OX|S)(\d+)/.exec(bn) || /-(\d+)(?:\([a-z]\))?$/.exec(bn); return m ? m[1] : bn; }
+function gCirc(x){ const n = parseInt(x, 10); return (n >= 1 && n <= 7) ? '①②③④⑤⑥⑦'.charAt(n - 1) : '(' + x + ')'; }
+/* 표장 그림 칸 — 창 폭 맞춤 · 옆 글은 최소 7em(자리가 모자라면 아래 줄로 · 폰에서 한 글자 폭으로 짓눌리지 않게) */
+(function(){ try{ const s = document.createElement('style'); s.id = 'spview4css'; s.textContent = '.mbq .oxq > .v4img{flex:0 1 auto;max-width:100%}.mbq .oxq > .v4img + .mbqtx{min-width:7em}'; document.head.appendChild(s); }catch(e){} })();
+function gV4Lab(z){ const bn = String(z.책번호 || ''), n = gV4Num(bn);
+  if (z.문항) return n + '번 - ' + gCirc(z.선지);
+  const sub = /\(([a-z])\)\s*$/.exec(bn);
+  return /OX/.test(bn) ? 'OX ' + n + (sub ? ' (' + sub[1] + ')' : '') : n + '번'; }
 /* ★ v3-N §1 — PANIDX 지연 구축. 조문 탭으로 직행하면 1차객 로더가 안 돌아 null 이었고,
    popPan 이 요약본이든 수집본이든 전부 「수집본 없음」을 냈다(실측 :4657·:5733·:7027). */
 async function panIdx(){
@@ -12681,22 +12732,22 @@ function p7Text(t){
    `특허법 제11조` 로 적힌 해설 356건이 통째로 칩을 못 받고 있었다.
    실측 681건 중 — 딴 법 이름이 앞에 붙은 66건 제외 · 특허법 조문 목록 밖 25건 제외 → 590 채택. */
 /* ★ joscreen §F-1(add1 §A-2) — 옛 JO_OTHER(앞 14자 창)는 걷고 joOtherLaw(⚙ jo_link.other_law 와 한 규칙 · 이름 목록 ⊇ 옛 목록)를 쓴다 */
-function p7Jo(sol, extra){
-  const out=[], seen={}, s=String(sol||'');
+function p7Jo(sol, extra, law){   /* ★ sp_view4 add1 §A-1 — law = 그 카드의 법(없으면 특허법 · 특허 결과 바이트 무변) */
+  const out=[], seen={}, s=String(sol||''), LW=law||'특허법', JK=gJoKey(LW);
   const add=(k,law)=>{if(k&&!seen[k]){seen[k]=1;out.push({k:k,law:law});}};
   s.replace(/法\s*(\d+)(?:조)?(?:의\s*(\d+))?/g,(m,a,b)=>{
     add('제'+a+'조'+(b?'의'+b:''),true);return m;});
   const RX=/제\s?(\d+)조(?:의\s?(\d+))?/g; let m2;
   while((m2=RX.exec(s))){
-    if(joOtherLaw(s,m2[1]+(m2[2]?'의'+m2[2]:''),'특허법'))continue;   /* ★ joscreen §F-1 — 다른 법 이름 앞(같은 어절 · 괄호 하나 건너 · 복합 이름 먼저) · 「특허법 제N조」·「法N」 있으면 남김 */
+    if(joOtherLaw(s,m2[1]+(m2[2]?'의'+m2[2]:''),LW))continue;   /* ★ joscreen §F-1 — 다른 법 이름 앞(같은 어절 · 괄호 하나 건너 · 복합 이름 먼저) · 「특허법 제N조」·「法N」 있으면 남김 */
     const k='제'+m2[1]+'조'+(m2[2]?'의'+m2[2]:'');
-    if(JOKEY&&!JOKEY[k])continue;      // 목록에 없는 번호는 딴 법이거나 삭제조다
+    if(JK&&!JK[k])continue;      // 목록에 없는 번호는 딴 법이거나 삭제조다
     add(k,true);
   }
   s.replace(/施規\s*(\d+)(?:의\s*(\d+))?/g,(m,a,b)=>{
     add('施規 '+a+(b?'의'+b:''),false);return m;});
   // 리담 짝에서 물려받은 근거조문 — 해설 파싱보다 이쪽이 정본이다
-  (extra||[]).forEach(c=>{const k=joKeyOf(c);if(!JOKEY||JOKEY[k])add(k,true);});
+  (extra||[]).forEach(c=>{const k=joKeyOf(c);if(!JK||JK[k])add(k,true);});
   return out.slice(0,5);
 }
 /* ★ 조문은 뷰로 옮겨 가지 않고 **팝업**으로 띄운다(사용자 확정 8/26).
@@ -12832,7 +12883,7 @@ function p7Card(z,seq,opt){
    sb7.onclick=ev=>{ev.stopPropagation();mbRecToggle(card);};
    h.appendChild(sb7);}
   const lk=(P7LID||{})[z.id];
-  const JOS0=p7Jo(z.sol, lk?(lk.z.jo||[]):[]);
+  const _lw=gLaw(z), JOS0=p7Jo(z.sol, lk?(lk.z.jo||[]):[], _lw);   /* ★ sp_view4 add1 §A-1 — 그 카드의 법(상표 = 상표법 조 목록 · 다른 법 앞 조 = 링크 없음) */
   const JOS=JOS0.filter(x=>!jnHas(oxKeyP7(z),x.k));   /* ★ joscreen §F-1 — 「이 조 아님」 손값 */
   const cases=[];
   if(lk&&(lk.z.pan||'').trim())panNo(lk.z.pan).forEach(c=>cases.push(c));
@@ -12843,9 +12894,9 @@ function p7Card(z,seq,opt){
     /* ★ gaek_mb §C-10 — 민법 유형 칩. 조문 조각은 popJo 로 바로 간다(펼침은 유형 글자 밖에서) */
     mbTypeChip(tk7, tyDraftP(z), JOS0.map(x=>x.k), h, tk7);   /* ★ joscreen §F-1 */
     JOS.forEach(x=>{
-      const a=el('button','c2jb',c2JoText('특허법',joShort(x.k)));   /* ★ c2card C-2② — 특허 1차객 해설 JOS 칩 = 파란 글자 */
+      const a=el('button','c2jb',c2JoText(_lw,joShort(x.k)));   /* ★ c2card C-2② — 특허 1차객 해설 JOS 칩 = 파란 글자 */
       jnWire(a,tk7,JOS0.map(y=>y.k));   /* ★ joscreen §F-1 — 길게 누르면 「이 조 아님 ×」 */
-      if(x.law)a.onclick=ev=>{ev.stopPropagation();popJo('특허법',x.k,ev,1);};
+      if(x.law)a.onclick=ev=>{ev.stopPropagation();popJo(_lw,x.k,ev,1);};
       else{a.title='시행규칙은 앱에 데이터가 없다 — 표시만';a.style.opacity='.6';a.style.cursor='default';}
       chipBox7.appendChild(a);
     });
@@ -12864,6 +12915,7 @@ function p7Card(z,seq,opt){
    idb7.title='교재 자리 — 정리OMR';
    idb7.onclick=ev=>{ev.stopPropagation(); mbbPop(tk7,ev);};
    h.appendChild(idb7);}
+  if(z.판&&z.책번호){const bk7=el('span','qb id mbbk',String(z.책번호));bk7.title='책번호';h.appendChild(bk7);}   /* ★ sp_view4 §D-2 — 책번호 칩(uid 칩과 같은 꼴 · 상표 책 줄만) */
   /* ★ jo_cardfix §A-1·§A-4·§A-9 — 민법 차례(ID · 🔗 판 · ↩링크 · ↩백링크) · 📎 유제 칩 걷음(사용자 「가」 — 유제 카드는 본문 밑 그대로) · 📖 원 기출은 그 뒤 */
   if(MLN&&MLN.ok)mlnPanChip(h,tk7,cases);
   cfLinkChips(h,tk7);
@@ -12874,10 +12926,10 @@ function p7Card(z,seq,opt){
     const bits=[];
     if(z.쪽)bits.push('p.'+z.쪽);else if(p8Is(z))bits.push(p8No(z.판8));   /* ★ p8up — 8판 새 카드 = 8판 자리 */
     if(z.리담)bits.push('리담 '+z.리담.연도+'년 '+z.리담.문항+'번 ('+z.리담.선지+')');
-    bits.push(z.병합?'리담과 흡수됨 — 기록 공유':(z.리담?'리담과 글이 다름 — 기록 따로':(p8Is(z)?'해례 8판에만 있는 지문':'제7판 단독')));   /* ★ uid 판(9/27) — 리담 참조가 있는데 병합이 아니면 uid 가 갈린 행 */
+    bits.push(z.병합?'리담과 흡수됨 — 기록 공유':(z.리담?'리담과 글이 다름 — 기록 따로':(p8Is(z)?'해례 8판에만 있는 지문':(z.판?'뷰객 '+String(z.판).slice(1)+'판 단독':'제7판 단독'))));   /* ★ uid 판(9/27) — 리담 참조가 있는데 병합이 아니면 uid 가 갈린 행 */
     if(z.유제)bits.push('유제');
     sub.textContent=bits.join(' · ');
-    const pb=el('button','qb v qexp',p8Is(z)?'H8':'H7');   /* ★ p8up — 8판 새 카드는 「8판」 · ★ revfix0928pm A-2 — H7 · H8 */
+    const pb=el('button','qb v qexp',gEd(z));   /* ★ p8up — 8판 새 카드는 「8판」 · ★ revfix0928pm A-2 — H7 · H8 */
     pb.title='누르면 출처 정보 한 줄이 펼쳐진다';
     pb.onclick=ev=>{ev.stopPropagation();
       sub.style.display=sub.style.display==='none'?'':'none';};
@@ -12896,10 +12948,11 @@ function p7Card(z,seq,opt){
   {const q7=el('div','oxq');
    const bl=(typeof mlnBookLab==='function'?mlnBookLab(z):'')||(seq?seq+'번'+(z.문항?' - ('+z.선지+')':''):'');   /* ★ mbsame §B-1 — 책 번호 「25번」「25-유제」「12번 - (3)」 */
    if(bl)q7.appendChild(el('b','mbqlab mlnbk',bl));
+   if(z.img){const iw=el('span','v4img');iw.style.cssText='display:inline-block;max-width:100%;vertical-align:middle;margin-right:6px';iw.appendChild(vimgEl(z.img));q7.appendChild(iw);}   /* ★ sp_view4 §D-3 — 표장 그림 = 지문 자리(창 폭 맞춤 · 누르면 크게 · 남은 글자는 옆에) */
    {const _t7=cfFixQ(tk7,p7Text(z.t)),bsp7=el('span','mbqtx');mkcPaint(bsp7,tk7,'q',_t7);q7.appendChild(bsp7);} row.appendChild(q7);}   /* ★ jo_cardfix §A-7 · ★ markfix A-1 — 7판 카드 지문 글도 형광펜(열쇠 = 기록 열쇠 · 흡수 줄은 uid = 리담 카드와 같은 열쇠) */
   // 정오 = 원장의 유효정오. 없으면 리담 것으로 보강하되 출처를 밝힌다
   let ox=z.ox, from='유효정오';
-  if(!ox&&z.리담&&z.리담.ox){ox=z.리담.ox;from='리담 보강';}
+  if(!ox&&!z.판&&z.리담&&z.리담.ox){ox=z.리담.ox;from='리담 보강';}   /* ★ sp_view4 §D-4 — 상표(뷰객) 정오 = 책만(리담으로 메우지 않음) */
   let sol7=z.sol||'';
   if(z.병합&&(z.리담해설||'').trim())
     sol7=(sol7?sol7+'\n\n':'')+'📗 리담 해설\n'+z.리담해설;
@@ -14353,7 +14406,7 @@ function vjPrep(JM, P7, MG, subj, drawer){
   const byId={};JM.문제.forEach(q=>byId[q.id]=q);
   lnkBuild(JM);              // 같은 판례·조문 색인 (한 번만)
   p7Link(JM, P7);            // 제7판 지문 → 리담 선지 짝 (근거 물려받기)
-  autoImportant(JM, subj);   // ★ v3-C §7 — ⭐ 정답표 지목 지문 1회 자동 태그
+  autoImportant(JM, subj);   // ★ v3-C §7 · ★ sp_view4 add2 §A-5 — 상표도(플래그 법마다) — ⭐ 정답표 지목 지문 1회 자동 태그
   /* ★ v3-D §0 — 순번·마디 경로 계산용 스냅샷. 순번은 그릴 때만 계산하고 저장하지 않는다 */
   {const _pm={};if(P7)P7.지문.forEach(z=>_pm[z.id]=z);
    VJ={M:(MG&&MG.마디)||[],byId:byId,P7map:_pm,qs:JM.문제||[]};
@@ -14367,15 +14420,16 @@ function vjPrep(JM, P7, MG, subj, drawer){
 /* ★ revfix0928 A-5 — 조문 탭 ☑ 정오문제 창: MLN 이 이 법 것으로 준비 안 됐으면 1차객 준비부를 같은 함수로(1차객 탭을 안 거쳐도 같은 칩 · 서랍은 안 건드림) */
 async function jpMlnReady(){
   const subj = SHORT[S.law];
-  if (subj !== '특허' || (MLN && MLN.ok && MLN._subj === subj)) return;
+  const bk = gBook(subj);   /* ★ sp_view4 add2 §A-3 — 책이 있는 법(특허 · 상표) · 파일 = 책 갈래 표 */
+  if (!bk || (MLN && MLN.ok && MLN._subj === subj)) return;
   try{
     const JM = await get('jimun_' + subj + '.json'); if (!JM) return;
     let P7 = null, MG = null;
-    try{ P7 = await get('jimun_7pan.json'); }catch(e){}
-    try{ MG = await get('mokcha_병합.json'); }catch(e){}
-    try{ if (!JOKEY){ const JL = await get('jo_특허법_목록.json'); JOKEY = {}; JL.조.forEach(x => { JOKEY[x.k] = x.t || ''; }); } }catch(e){}
+    try{ P7 = await get(bk.j); }catch(e){}
+    try{ MG = await get(bk.m); }catch(e){}
+    try{ await gJoLoad(bk.law); }catch(e){}
     try{ await panIdx(); }catch(e){}
-    try{ if (!OMRMAP2){ OMRMETA2 = await get('omr/특허/omr_meta.json'); OMRMAP2 = (await get('omr/특허/omr_map.json')).map || {}; } }catch(e){}
+    if (subj === '특허') try{ if (!OMRMAP2){ OMRMETA2 = await get('omr/특허/omr_meta.json'); OMRMAP2 = (await get('omr/특허/omr_map.json')).map || {}; } }catch(e){}
     vjPrep(JM, P7, MG, subj, false);
   }catch(e){ console.warn('[jpMln]', e); }
 }
@@ -14402,11 +14456,19 @@ async function viewJimun(){
     try{OMRMETA2=await get('omr/특허/omr_meta.json');
         OMRMAP2=(await get('omr/특허/omr_map.json')).map||{};}catch(e){}
   }
+  else if(gBook(subj)){   /* ★ sp_view4 §D-1 — 상표 = 뷰객 4판 책 지문 + OMR 단원 목차(특허 길 그대로 · 정리OMR·📍 = 특허만) */
+    const _bk=gBook(subj);
+    try{P7=await get(_bk.j);}catch(e){}
+    try{await gJoLoad(_bk.law);}catch(e){}
+    await panIdx();
+    try{MG=await get(_bk.m);}catch(e){}
+  }
   if(!JM){
     const m=el('div','main');
     m.appendChild(emptyBox('📝',subj+' 1차객 — 데이터 없음','리담 추출 대기'));
     slot.appendChild(m);return;}
 
+  if(S.mok&&S.mok.startsWith('__mg')&&!(MG&&(MG.마디||[])[mlnParse(S.mok).i])){S.mok=null;S.oxPage=null;}   /* ★ sp_view4 §D-7 — 이 법 목차에 없는 마디(다른 법에서 고른 것) = 첫 화면 */
   const byId=vjPrep(JM,P7,MG,subj,true);   /* ★ revfix0928 A-5 — 준비부를 함수로(조문 탭 ☑ 정오문제 창도 같이 쓴다) */
   /* ★ gaek_mb §C-13 — 📐 논리 → 근거 흡수. 한 번만 돌고(깃발) 두 번 돌려도 +0 이다. */
   try{ggEatLogicOnce()}catch(e){console.warn('ggEatLogicOnce',e)}
@@ -14698,7 +14760,7 @@ async function viewJimun(){
           /* ★ mbsame §A·§B-4 — 리담 선지 카드(Z) · 문항째 카드(O) · 상자 = 사례·보기·조건 발문일 때만(단순 「옳지 않은 것은?」 은 줄만) */
           const card = c.kind === 'L' ? qCard(c.q, null, c.no) : c.kind === 'Z' ? mlnLidCard(c.q, c.z, c.no, c.ln, i)
                      : c.kind === 'O' ? mlnObjCard(c.o, c.no) : p7Card(c.z, c.no);
-          const q = (c.kind === 'P' && c.z.문항 && c.z.사례 && (!(MLN && MLN.ok) || mlnBoxP(c.z))) ? 'P:' + c.z.문항
+          const q = (c.kind === 'P' && c.z.문항 && (c.z.사례 || c.z.판) && (!(MLN && MLN.ok) || mlnBoxP(c.z))) ? 'P:' + c.z.문항
                   : (c.kind === 'Z' && mlnBoxL(c.q)) ? 'L:' + c.q.id : null;
           if (q && q !== cq){ cbox = c.kind === 'Z' ? mlnCaseBoxL(c.q, c.no) : p7CaseBox(c.z, c.no); main.appendChild(cbox); }
           cq = q;
@@ -14754,7 +14816,7 @@ async function viewJimun(){
         list=JM.문제.filter(q=>!placed.has(q.id)).filter(q=>(q.지문||[]).some(z=>_uk.has(oxKeyLid(q,z))));
         main.appendChild(el('div','badge','미분류 '+list.length+'문항 — 근거조문이 없거나 마디 제목에 조문이 안 적혀 못 붙은 것'));
       }else{
-        const node=MK.마디.find(n=>n.파일===S.mok);
+        const node=MK?MK.마디.find(n=>n.파일===S.mok):null;   /* ★ sp_view4 §D-7 — 목차 파일 없는 법(상표·디보)에서 옛 마디 값 */
         list=((IDX||{})[S.mok]||[]).map(id=>byId[id]).filter(Boolean);
         const b=el('div','badge',(node?node.제목:'')+' — '+list.length+'문항'+
           (node&&node.조.length?('  ·  조문 '+node.조.map(c=>c.replace('특-','제')+'조').join(' · ')):''));
@@ -14972,8 +15034,15 @@ function skCut(t,q){
    제7판 지문이 어느 마디에 걸렸는지 되짚는 역색인이 없어 미뤄 뒀는데,
    `mokcha_병합.json` 의 마디마다 `지문`(제7판 ID)·`리담`(문항 ID) 목록이 이미 있다 —
    그걸 뒤집으면 한 번에 만들어진다. */
-let MOKIDX = null;
-async function mokIndex(){
+let MOKIDX = null, MOKIDXS = {};
+async function mokIndex(subj){
+  const bk = (subj && subj !== '특허') ? gBook(subj) : null;   /* ★ sp_view4 — 상표 = 책 목차(mokcha_상표) · 특허·그 밖 = 옛 병합 목차 그대로 */
+  if (bk){ if (MOKIDXS[subj]) return MOKIDXS[subj];
+    const ix = MOKIDXS[subj] = { p7: {}, lid: {} };
+    try{ const MG = await get(bk.m); (MG.마디 || []).forEach((n, i) => {
+      (n.지문 || []).forEach(id => { if (ix.p7[id] === undefined) ix.p7[id] = i; });
+      (n.리담 || []).forEach(id => { if (ix.lid[id] === undefined) ix.lid[id] = i; }); }); }catch(e){}
+    return ix; }
   if (MOKIDX) return MOKIDX;
   MOKIDX = { p7: {}, lid: {} };
   try{
@@ -14985,8 +15054,9 @@ async function mokIndex(){
   }catch(e){}
   return MOKIDX;
 }
-async function gotoJimun(kind, id, dom, ln){
-  const ix = await mokIndex();
+async function gotoJimun(kind, id, dom, ln, law){
+  if (law && law !== S.law && LAWS.indexOf(law) >= 0){ S.law = law; S.jo = null; S.prec = null; S.mok = null; S.oxQueue = ''; if (typeof pfClearY === 'function') pfClearY(); }   /* ★ sp_view4 add2 §A-3 — 다른 법 책 지문(🔍 결과) = 그 법으로 */
+  const ix = await mokIndex(SHORT[S.law]);
   let i = (kind === 'P' ? ix.p7 : ix.lid)[id];
   if (i === undefined && kind === 'P' && MLN && MLN.ok && /^P7-\d{4}$/.test(String(id))){ const k2 = Object.keys(ix.p7).find(x => x.indexOf(id + '-') === 0); if (k2) i = ix.p7[k2]; }   /* ★ mbsame — 문항째 카드 · 쪼갠 문항 */
   if (i === undefined){ toast('이 지문이 걸린 마디를 찾지 못했다 — 목차에 안 붙은 지문이다'); return; }
@@ -14995,6 +15065,8 @@ async function gotoJimun(kind, id, dom, ln){
   if (p8n && typeof uzGkPass === 'function'){ const k8 = String(dom || '').replace(/^qb-/, ''); if (!uzGkPass(k8)) UZGK = uzIsGi(k8) ? 'g' : 'x'; }
   S.tab = 'jimun'; S.jimunTab = 'ox'; S.oxQueue = ''; S.mok = (MLN && MLN.ok && kind === 'L' && (ln === 'u' || ln === 'v')) ? mlnSel(i, ln) : (p8n ? mlnSel(i, 'u') : '__mg' + i); S.oxPage = null;
   closeAllPops(); await render();
+  if (!document.getElementById(dom) && kind === 'P' && VJ && VJ.P7map && (VJ.P7map[id] || {}).판 && typeof uzGkPass === 'function'){   /* ★ sp_view4 — 상표 책 카드가 기출/기타 거름에 걸렸으면 그 쪽으로(8판 새 카드 선례 · 특허 무변) */
+    const k4 = String(dom || '').replace(/^qb-/, ''); if (!uzGkPass(k4)){ UZGK = uzIsGi(k4) ? 'g' : 'x'; await render(); } }
   /* ★ v3-C §6-2 — 목표 카드가 다른 쪽이면 그 쪽으로 넘긴다 */
   const pg = (OXDOMPG || {})[dom];
   if (pg != null && pg !== S.oxPage){ S.oxPage = pg; S.oxPageJump = true; await render(); }
@@ -15009,7 +15081,7 @@ function popJimun(title,body,ev,go){
   const _pk48=('q')+'|'+('📝 '+title); if(popToggle(_pk48))return; const b=popShell('q', '📝 '+title, _pk48);   /* ★ 상표 손질 6 — 키 종류|제목 */
   if(go){
     const g=el('button','tool on','그 지문으로 가기 ↗');
-    g.onclick=()=>gotoJimun(go.kind,go.id,go.dom);
+    g.onclick=()=>gotoJimun(go.kind,go.id,go.dom,undefined,go.law);   /* ★ sp_view4 — 다른 법 책 지문은 그 법으로 */
     b.appendChild(g);
   }
   body.forEach(x=>b.appendChild(el('div',x[0],x[1])));
@@ -15109,6 +15181,16 @@ const skRun=async e=>{   /* ★ 손질 8 — §2 300ms 디바운스 — 아래 $
           out.push({h:(p8Is(z)?'H8 '+z.태그+' p.'+z.판8.p8:'H7 '+z.태그+' p.'+(z.쪽||'—')),x:skCut(z.t,q),   /* ★ p8up — 8판 새 카드 · ★ revfix0928pm A-2 — H7 · H8 */
                     t:z.t,ox:z.ox,sol:z.sol,tag:(p8Is(z)?'H8':'H7'),p7:1,   /* ★ revfix0928pm A-2 — 판정은 갈래 값 p7(글자 아님) */
                     go:{kind:'P',id:z.id,dom:'qb-'+(z.uid||('P7:'+z.id))}});
+      }
+      for(const lawB of ['상표법']){   /* ★ sp_view4 add2 §A-3 — 상표 책 지문(뷰객 4판)도 검색에 · 판 칩 = 줄의 판 값 · 가기 = 그 법으로 */
+        if(!SKLAW[lawB])continue;
+        let PB=null;try{PB=await get(gBook(SHORT[lawB]).j);}catch(e2){}
+        if(PB)for(const z of PB.지문){
+          if(out.length>=60)break;
+          if(String(z.t||'').includes(q))
+            out.push({h:gEd(z)+' '+z.태그+' p.'+(z.쪽||'—'),x:skCut(z.t,q),t:z.t,ox:z.ox,sol:z.sol,tag:gEd(z),p7:1,
+                      go:{kind:'P',id:z.id,dom:'qb-'+(z.uid||('P7:'+z.id)),law:lawB}});
+        }
       }
       box.appendChild(el('div','grp','📝 지문 — '+out.length+'건'));
       out.forEach(r=>skRow(box,'jimun',r.h,r.x,r.tag,
@@ -16784,7 +16866,7 @@ function mlnClass(q, z){
 }
 /* 뷰 데이터를 받을 때 한 번(특허만 — 제7판이 있는 법) */
 function mlnBuild(JM, P7, M, subj){
-  MLN = { ok: !!(P7 && M && M.length && subj === '특허'), p7uid: new Set(), obj: {}, yuje: {}, par: {}, lid: {},
+  MLN = { ok: !!(P7 && M && M.length && gBook(subj)), p7uid: new Set(), obj: {}, yuje: {}, par: {}, lid: {},   /* ★ sp_view4 §D-1 — 책이 있는 법(특허 제7판 · 상표 뷰객 4판) */
           p7node: {}, lidnode: {}, dc: {}, box: {}, sim: {}, gram: null, p7ids: [], sun: {}, qlines: {}, hOf: {} };
   if (!MLN.ok) return;
   const P = P7.지문 || [];
@@ -16866,7 +16948,9 @@ function mlnBoxy(stem, texts){
   return !(texts.length && texts.every(sent));
 }
 function mlnBoxP(z){   /* 제7판 쪼갠 문항 */
-  const q = z.문항; if (!q || !z.사례) return false;
+  const q = z.문항; if (!q) return false;
+  if (z.판) return true;   /* ★ sp_view4 §D-5 — 상표(뷰객) 객관식 선지 카드는 늘 발문 상자 안(mlnBoxy 「단순 발문 = 상자 없음」 안 탐 · 특허·디보 무변) */
+  if (!z.사례) return false;
   if (MLN.box['P:' + q] == null) MLN.box['P:' + q] = mlnBoxy(z.사례, (MLN.qlines[q] || []).map(x => x.t));
   return MLN.box['P:' + q];
 }
@@ -16888,7 +16972,7 @@ function p8New(c){ return !!(c && c.kind === 'P' && c.z && c.z.판8 && c.z.판8.
 function p8Is(z){ return !!(z && z.판8 && z.판8.cat === '새'); }
 function p8No(p){ const n = String((p && p.no8) || '').replace(/\.$/, ''); return 'H8 p.' + p.p8 + ' ' + (/유제/.test(n) ? n : n + '번'); }   /* ★ revfix0928pm A-2 — 「H8 p.N N번」 */
 /* 제7판 줄 자리 글 — 8판 새 카드는 제7판 쪽이 없다(「8판 p.N」) */
-function p7PageLab(z){ return p8Is(z) ? 'H8 p.' + z.판8.p8 : 'H7 p.' + ((z && z.쪽) || '—'); }   /* ★ revfix0928pm A-2 */
+function p7PageLab(z){ return p8Is(z) ? 'H8 p.' + z.판8.p8 : gEd(z) + ' p.' + ((z && z.쪽) || '—'); }   /* ★ revfix0928pm A-2 */
 /* ★ p8sol §A-3 — 해설 칸 머리 「8판 해설 고침」(판8.s7 이 있는 줄만 · 회색 11px 700) → 해설 아래 흐린 상자 「7판 해설」 · 한 번 더 누르면 접힘
    사용자가 고친 해설(qfixOf(k).exp)이 보이는 줄은 상자에 「(내가 고친 해설이 보이는 중)」 한 줄 · 명칭만·새 카드 = 표시 없음(s7 없음) */
 function p8SolWrap(s7, k, node){
@@ -16939,6 +17023,7 @@ function mlnBookLab(z){
   if (z.판8 && z.판8.cat === '새') return p8No(z.판8);   /* ★ p8up — 8판 새 카드 = 책번호 자리에 「8판 p.N N번」 */
   const bn = String(z.책번호 || '');
   if (!bn) return '';
+  if (z.판) return gV4Lab(z);   /* ★ sp_view4 §D-8 — 뷰객 「OX 2」·「6번 - ②」(아티팩트 v7) */
   if (z.문항) return bn + '번 - (' + z.선지 + ')';
   return /유제/.test(bn) ? bn : bn + '번';
 }
@@ -17060,14 +17145,15 @@ function mlnObjCard(o, no){
   const k = oxKeyP7(o), rec = oxOf(k) || {};
   const card = el('div', 'qwrap mbq mlno'); card.id = 'qb-' + k;
   const h = el('div', 'qhd mbqhd');
-  const sb = el('button', 'qb v', o.태그 || (p8Is(o) ? 'H8' : 'H7')); sb.title = '풀이 기록';   /* ★ revfix0928pm A-2 */ sb.onclick = ev => { ev.stopPropagation(); mbRecToggle(card); };
+  const sb = el('button', 'qb v', o.태그 || gEd(o)); sb.title = '풀이 기록';   /* ★ revfix0928pm A-2 */ sb.onclick = ev => { ev.stopPropagation(); mbRecToggle(card); };
   h.appendChild(sb);
   mbTypeChip(k, tyDraftP(o), [], h);
   mlnYearChips(h, k, { kind: 'O', o: o });
   const idb = el('button', 'qb id', o.uid || ('ID ' + o.id)); idb.title = '교재 자리 — 정리OMR'; idb.onclick = ev => { ev.stopPropagation(); mbbPop(k, ev); };
   h.appendChild(idb);
+  if (o.판 && o.책번호){ const bk = el('span', 'qb id mbbk', String(o.책번호)); bk.title = '책번호'; h.appendChild(bk); }   /* ★ sp_view4 §D-2 */
   cfLinkChips(h, k);   /* ★ jo_cardfix §A-4 */
-  const pb = el('button', 'qb v qexp', p8Is(o) ? 'H8' : 'H7'); const sub = el('div', 'qsub'); sub.style.display = 'none';   /* ★ revfix0928pm A-2 */
+  const pb = el('button', 'qb v qexp', gEd(o)); const sub = el('div', 'qsub'); sub.style.display = 'none';   /* ★ revfix0928pm A-2 */
   sub.textContent = ['p.' + (o.쪽 || '—'), '객관식 · 문항째 한 카드(계산·날짜·순서·빈칸 등)', '답 ' + (o.답 || '—')].join(' · ');
   pb.onclick = ev => { ev.stopPropagation(); sub.style.display = sub.style.display === 'none' ? '' : 'none'; };
   h.appendChild(pb);
@@ -18152,6 +18238,8 @@ function uzDraft(k){
   UZD.m.set(k, d); return d;
 }
 const UZ_TY = [['all', '전체'], ['jo', '조문형'], ['pan', '판례형'], ['mix', '조문+판례'], ['untype', '미확정']];
+const UZ_TY_S = [['all', '전체'], ['jo', '조문'], ['pan', '판례'], ['th', '이론'], ['sg', '심사기준'], ['untype', '미확정']];   /* ★ sp_view4 §D-2 — 상표 거르기 = 책 태그 넷(+ 전체 · 미확정) */
+function uzTyList(){ return S.law === '상표법' ? UZ_TY_S : UZ_TY; }
 const UZ_BK = ['내용', '주체', '기간'];
 function uzBkSel(){ return (S.oxFilter === 'jo' && Array.isArray(S.oxBk)) ? UZ_BK.filter(x => S.oxBk.indexOf(x) >= 0) : []; }
 function uzGkPass(k){ return UZGK === 'x' ? !uzIsGi(k) : uzIsGi(k); }
@@ -18182,7 +18270,9 @@ function uzCardKeys(c){
   if (c.kind === 'L') return (c.q.지문 || []).map(z => oxKeyLid(c.q, z));
   return [oxKeyP7(c.z)];
 }
-function uzCards(cards){ return (cards || []).filter(c => uzCardKeys(c).some(uzPass)); }
+function uzCards(cards){ return (cards || []).filter(c => (c.kind === 'P' && c.z && c.z.판) ? uzV4Pass(c) : uzCardKeys(c).some(uzPass)); }
+/* ★ sp_view4 §D-6 — 상표 책 카드 = 제 카드 초안으로 거른다(같은 uid 쌍 두 카드는 초안이 다르다 — OX 태그 ↔ 객관식 해설 · 열쇠 하나 초안이면 한쪽이 숨는다) */
+function uzV4Pass(c){ const k = oxKeyP7(c.z); return uzGkPass(k) && ((S.oxFilter && S.oxFilter !== 'all') ? oxKeep(k, tyDraftP(c.z)) : true) && uzBkPass(k); }
 /* 풀 나눔 — 머리 「기출 N · 기타 M」(풀 그대로) · 칩(유형·빈칸 거름을 지난 수 = 고르면 보일 칸 수) */
 function uzSplit(tyToo){
   const P = OXPOOL; if (!P) return null;
@@ -18205,7 +18295,7 @@ function uzGkChips(sc){
 /* ── 바깥 필터(§A-6) — 네이티브 select 대신 펼침 목록 · 유형 하나 + (조문형일 때만) 빈칸 종류 여럿 ── */
 var UZFM_OPEN = 0;
 function uzFilterLabel(){
-  const t = (UZ_TY.find(x => x[0] === (S.oxFilter || 'all')) || UZ_TY[0])[1], b = uzBkSel();
+  const TL = uzTyList(), t = (TL.find(x => x[0] === (S.oxFilter || 'all')) || TL[0])[1], b = uzBkSel();   /* ★ sp_view4 — 법마다 목록 */
   return t + (b.length ? ' · ' + b.join('·') : '');
 }
 function uzFilterBtn(qr){
@@ -18220,7 +18310,7 @@ function uzFilterBtn(qr){
 function uzFilterMenu(w){
   const old = w.querySelector('.uzfm'); if (old){ old.remove(); return; }
   const m = el('div', 'uzfm');
-  UZ_TY.forEach(p => {
+  uzTyList().forEach(p => {
     const r = el('button', 'uzfo' + ((S.oxFilter || 'all') === p[0] ? ' on' : ''), p[1]); r.type = 'button'; r.dataset.uzty = p[0];
     r.onclick = ev => { ev.stopPropagation(); m.remove(); if ((S.oxFilter || 'all') === p[0]) return; S.oxFilter = p[0]; render(); };   /* 유형을 바꾸면 닫힘 */
     m.appendChild(r);
@@ -18324,7 +18414,7 @@ async function bktOmrLoad(){
 setTimeout(() => { bktOmrLoad().then(d => { try{ if (Object.keys(d || {}).length && S.tab === 'jimun') render(); }catch(e){} }); }, 700);
 /* 유형 칩 안 글자 — 유형이 조문형·혼합(조문이 끼는 것)일 때만 · 찍기 전 = 회색 점선 밑줄 「빈칸?」 · 찍은 값 = 밑줄 없음(여럿이면 첫 종류 색) */
 function uzBkSeg(chip, key, eff){
-  if (!(eff === 'jo' || eff === 'mix') || !key) return;
+  if (!(eff === 'jo' || eff === 'mix' || tyHas(eff, 'tjo')) || !key) return;   /* ★ sp_view4 — 상표 OX 책 태그 「조문」도(거르기 「조문」 = 빈칸 종류 더 거름과 같은 값) */
   const v = bkOf(key), src = bkSrc(key), none = v.length === 1 && v[0] === '없음';
   chip.appendChild(el('i', 'dot', '·'));
   const b = el('button', 'seg bk' + (v.length ? (none ? ' no' : '') : ' q'), v.length ? v.join('·') : '빈칸?');
@@ -18770,7 +18860,7 @@ function uzExvHead(main, H){
 function uzBookNo(b){ b = String(b == null ? '' : b); return /^\d+$/.test(b) ? b + '번' : b; }
 function uzJnInfo(k, hit){
   const e = uzIdx().get(k) || {};
-  if (e.P) return { no: uzBookNo(e.P.책번호) || (p8Is(e.P) ? p8No(e.P.판8) : ''), src: String(e.P.태그 || (p8Is(e.P) ? 'H8' : 'H7')), stem: String(e.P.사례 || '').trim(), qid: e.P.문항 ? 'P:' + e.P.문항 : '' };
+  if (e.P) return { no: uzBookNo(e.P.책번호) || (p8Is(e.P) ? p8No(e.P.판8) : ''), src: String(e.P.태그 || gEd(e.P)), stem: String(e.P.사례 || '').trim(), qid: e.P.문항 ? 'P:' + e.P.문항 : '' };
   if (hit && hit.kind === 'L'){ const q = hit.q; return { no: (q.시험문번 || q.문번) + '번', src: String(q.연도 || '').slice(2) + ' 변리', stem: String(q.발문 || '').trim(), qid: 'L:' + q.id }; }
   return { no: '', src: '', stem: '', qid: '' };
 }
@@ -18844,7 +18934,7 @@ function cfIsOther(k){ const L = cfLawOf(k); return L !== S.law && LAWS3APP.inde
 function cfLoad(law){
   const D = CF_DATA[law];
   if (D) return D.wait || Promise.resolve(D);
-  const p = Promise.all([get('jimun_' + SHORT[law] + '.json').catch(() => null), law === '특허법' ? get('jimun_7pan.json').catch(() => null) : Promise.resolve(null)])
+  const p = Promise.all([get('jimun_' + SHORT[law] + '.json').catch(() => null), gBook(SHORT[law]) ? get(gBook(SHORT[law]).j).catch(() => null) : Promise.resolve(null)])
     .then(([J, P7x]) => {
       const m = new Map();
       ((J && J.문제) || []).forEach(q => (q.지문 || []).forEach(z => { const k = oxKeyLid(q, z); if (!m.has(k)) m.set(k, { kind: 'L', q: q, z: z }); }));
@@ -18894,7 +18984,7 @@ function cfRow(k, h){
   const no = L ? ((h.q.시험문번 ? h.q.시험문번 : '?') + '번(' + (z.기호 || z.n) + ')') : (mlnBookLab(z) || '?번');
   const where = law + ' · ' + (lab || (L ? (h.q.연도 + ' 제' + h.q.회차 + '회') : p7PageLab(z)));
   const t = L ? String(z.t || '') : p7Text(z.t);
-  const r = { k: k, law: law, uid: String(z.uid || k), no: no, where: where, src: L ? (String(h.q.연도 || '').slice(2) + ' 변리') : String(z.태그 || (p8Is(z) ? 'H8' : 'H7')), t: cfFixQ(k, t) };   /* ★ revfix0928pm A-2 */
+  const r = { k: k, law: law, uid: String(z.uid || k), no: no, where: where, src: L ? (String(h.q.연도 || '').slice(2) + ' 변리') : String(z.태그 || gEd(z)), t: cfFixQ(k, t) };   /* ★ revfix0928pm A-2 */
   r.hay = [r.uid, r.no, r.src, r.where, r.t].join('\n').toLowerCase();
   return r;
 }
