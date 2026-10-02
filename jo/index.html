@@ -6582,17 +6582,22 @@ async function popJo(law, k, ev, depth, hl){
     const L = await get('jo_' + law + '_목록.json');
     const B = await get('jo_' + law + '_본문.json');
     const ti = (L.조.find(x => x.k === k) || {}).t || '';
+    const dl = (!B.조[k] && L.삭제 && L.삭제[k] != null) ? String(L.삭제[k]) : null;   /* ★ popjo_fix B-1 — 현행 법에서 삭제된 조 = ⚙ 목록 새 칸 「삭제」(법 원문 「제N조 삭제 <날짜>」 의 날짜 글 그대로) · 조 배열·본문엔 없다 */
     const pt = pop.querySelector('.pt');
     if (pt){
-      pt.textContent = (SHORT[law] || law) + ' ' + k + (ti ? ' ' + ti : '');   /* ★ c2card C-1 — 📖 뗌 */
-      { const gw = el('span', 'ptgo'), gb = el('button', 'plgb tmgo', '이동 ↗'); gb.type = 'button';   /* ★ jo_theme A-7 — 「뷰로 이동 ↗」 → 「이동 ↗」 글자(동작 무변) */ gb.title = '이 조를 조문 뷰로 연다';
-        gb.onclick = ev2 => { ev2.stopPropagation(); goJo(law, k, hl); }; gw.appendChild(gb); pt.after(gw); }   /* ★ joscreen §D(㉓) — 알약 단추 → 머리 제목 바로 뒤 글자(.plgb · 11px · 파랑 · 바탕 없음) */
+      pt.textContent = dl != null ? law + ' ' + k + ' (삭제)' : (SHORT[law] || law) + ' ' + k + (ti ? ' ' + ti : '');   /* ★ c2card C-1 — 📖 뗌 · ★ popjo_fix B-1 — 삭제 조 제목 「특허법 제26조 (삭제)」 */
+      if (dl == null){ const gw = el('span', 'ptgo'), gb = el('button', 'plgb tmgo', '이동 ↗'); gb.type = 'button';   /* ★ jo_theme A-7 — 「뷰로 이동 ↗」 → 「이동 ↗」 글자(동작 무변) */ gb.title = '이 조를 조문 뷰로 연다';
+        gb.onclick = ev2 => { ev2.stopPropagation(); goJo(law, k, hl); }; gw.appendChild(gb); pt.after(gw); }   /* ★ popjo_fix B-1 — 삭제 조는 「이동 ↗」 숨김(조문 뷰에 없는 조) · ★ joscreen §D(㉓) — 알약 단추 → 머리 제목 바로 뒤 글자(.plgb · 11px · 파랑 · 바탕 없음) */
       if (hl && hl.hang)   /* ★ v3-H §3 — 머리 「→ 제N항」 칩 · ★ c2card C-3 — 항이 둘 이상이면 머리에 다 적는다(칠하기는 첫 항) · ★ joscreen0929 A-2-3 — 칩은 제목 밖(제목만 말줄임) */
         pt.after(el('span', 'ptchip', '→ 제' + (hl.hangs && hl.hangs.length > 1 ? hl.hangs.join('·') : hl.hang) + '항' + (hl.ho ? ' 제' + hl.ho + '호' : '')));
     }
     body.innerHTML = '';
     /* ★ mok_popup_phone D — 「2단 — 여기 링크는 팝업 대신 뷰로 이동한다」 딱지는 걷었다(깊이 딱지 0 · 링크는 늘 새 팝업) */
     const j = B.조[k];
+    if (!j && dl != null){   /* ★ popjo_fix B-1 — 몸 = 원문 줄 꼴(.ln.wml · 조문 본문 원문 줄과 같은 글꼴·크기) 한 줄 「제26조 삭제 <2011.12.2>」 · 둘 다 없으면 아래 옛 문구 그대로 */
+      body.appendChild(el('div', 'ln wml', k + ' 삭제 <' + dl + '>'));
+      popPlace(pop, anc); setTimeout(() => popPlace(pop, anc), 0);
+      return; }
     if (!j){ body.appendChild(el('div', 'cdim', '본문을 찾지 못했다 — ' + k)); return; }
     /* ★ joscreen0929 A-2 — 몸 = 조문 본문 상자와 같은 원문 줄(wmBuild·wmLineEl · 어디서 열어도) · 켠 것만 얹는다(markfix A-4 규칙 · 필기 조도 글은 원문) ·
        내 칠(jomark) · 「다만,」 새 줄 · 조 링크(.wmlk → 다시 popJo) · 볼트 머리글·태그·두문자·메모 줄·링크 찌꺼기는 켜지 않으면 안 나온다 */
@@ -14077,7 +14082,7 @@ function popWmCtx(law, k, j, L){
   const b = wmBuild(J2, k); wmKeys(b.items);
   const rec = mkonGet(base), st = { k: new Set(rec ? rec.k || [] : []), s: new Set(rec ? rec.s || [] : []), x: new Set(rec ? rec.x || [] : []) };
   const on = {};
-  b.items.forEach(it => { on[it.id] = (pinned && !rec && it.g === 'mk' && WM_PINOK[it.sub]) ? true : wmOnOf(st, it); });
+  b.items.forEach(it => { on[it.id] = wmOnOf(st, it); });   /* ★ popjo_fix B-2(10/2) — 팝업 = 켠 것 기록(mkon)만(사용자 17:53 「처음엔 다 원문 · 조문 파트에서 마크업 켠 것이나 따로 밑줄·형광펜 친 것 있을 때만 모든 팝업에」) · 팝업에는 필기가 안 얹히므로 필기 유무가 꾸밈을 켜지 않는다(옛: 필기 조 + 기록 없음 = 꾸밈 다섯 켬 · joscreen0929 A-2) · 조문 화면 wmCtx·lockOf 무변 */
   const mk = {}; b.lines.forEach(Ln => (Ln.m || []).forEach(m => { if (Ln.ri != null) mk[Ln.ri + '|' + m.a + '|' + m.b + '|' + m.t + '|' + (m.v || '')] = m.id || m.w || ''; }));
   const popM = ri => (ap.eff[ri] || []).filter(m => { const id = mk[ri + '|' + m.a + '|' + m.b + '|' + m.t + '|' + (m.v || '')]; return !id || on[id]; });
   return { mode: 'wm', base: base, law: law, jo: k, j: j, rows: rows, b: b, st: st, on: on, pinned: pinned, lockOf: () => false, need: {}, titles: TT, popM: popM };
