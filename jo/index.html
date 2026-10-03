@@ -10620,6 +10620,7 @@ function mbbPop(key, ev){
   const wrap = el('div', 'mbblist');
   if (S.law !== '특허법'){
     wrap.appendChild(el('div', 'mbbnone', '정리OMR 은 특허만 있다'));
+    { const B = bookTb(S.law); if (B){ const hb = el('div', 'mbb8'); hb.dataset.p8u = key; hb.dataset.bk = B.id; wrap.appendChild(hb); p8BookFill(hb, key); } }   /* ★ sp_book5 §A-4 — 상표 = 뷰객 5판 줄(특허 8판 줄 꼴·길 그대로 · 책 = 책 표) */
     body.appendChild(wrap); return;
   }
   const info = (typeof pinInfo === 'function') ? pinInfo(key) : null;
@@ -10657,14 +10658,22 @@ function mbbPop(key, ev){
    줄 = 목차노트 「교재 자리」 창 ncRow 꼴(책 이름 · 인쇄 쪽 · PDF 쪽 · 확신 글자 · 둘째 줄 = 그 자리 글자층 글 · 저장 안 함) · 2~4등 = 접힌 「후보 N」 ·
    찍어 둔 자리(jopangi.canvasjari 칸 p8|<uid>)가 있으면 그것 하나 + 그림 + 「자동으로 되돌리기」(대응표보다 먼저) · 대응표에 없으면 「해례 8판 — 자리 없음 · 직접 찍기」 한 줄 ·
    누름 = 정리캔버스 교재 창(같은 cvbDoc · cv-bookhl 칠함 · ◀▶ · 쪽 입력) · 「📍 자리 직접 찍기」 = 그 창 📍 찍기(ctx.save → 칸 p8|<uid>) */
-const P8B = 'patent_hr8';
-let P8MAP = null;
-async function p8Map(){ if (P8MAP) return P8MAP; const H = viewCanvas.hsBook; let old = null; try { old = await H.get('bookmap:' + P8B); } catch (e) {}
-  let fresh = null; try { fresh = await H.gh('words/' + P8B + '/대응.json', 'json'); } catch (e) {}
-  if (fresh && fresh._meta){ try { await H.put('bookmap:' + P8B, fresh); } catch (e) {} }
-  const m = (fresh && fresh._meta) ? fresh : ((old && old._meta) ? old : null); if (m) P8MAP = m; return m; }
+/* ★ sp_book5 §A-4 — 책 표 한 벌(법 → 1차객 교재) · 박혀 있던 patent_hr8 자리(대응표 · 찍은 자리 칸 · 문구 · 쪽 수 · 교재 이름 · 교재 찾기 · 고아 셈 · 테마 재료 길)를 이 표로 ·
+   특허 = 해례 8판(옛 글자·칸·값 그대로) · 상표 = 뷰객 5판(minbeoppdf words/tm_view5 · pdf/tm_view5.pdf · 인쇄 쪽 = PDF 쪽 − 11 = 책메타 printOffset) ·
+   id = 교재 docid · k = 손값 칸 머리(jopangi.canvasjari 「k|uid」) · nm = 줄·문구 이름 · full = 교재 창 이름 · pages = 찍기 첫 쪽 어림 위 끝 */
+const BOOK_TB = { '특허법': { id: 'patent_hr8', k: 'p8', nm: '해례 8판', full: '특허법 해례 8판', pages: 805 },
+                  '상표법': { id: 'tm_view5', k: 'v5', nm: '뷰객 5판', full: '상표법 뷰객 5판', pages: 549 } };
+const BOOK_K = new RegExp('^(?:' + Object.values(BOOK_TB).map(b => b.k).join('|') + ')\\|');   /* 1차객 교재 손값 칸(정리캔버스 블록 열쇠가 아니다) */
+function bookTb(law){ return BOOK_TB[law] || null; }
+function bookTbById(id){ return Object.values(BOOK_TB).find(b => b.id === id) || null; }
+const P8B = BOOK_TB['특허법'].id;
+let P8MAP = null; const BKMAP = {};   /* 대응표 — 책마다(특허 = P8MAP 도 같이) */
+async function p8Map(B){ B = B || BOOK_TB['특허법']; if (BKMAP[B.id]) return BKMAP[B.id]; const H = viewCanvas.hsBook; let old = null; try { old = await H.get('bookmap:' + B.id); } catch (e) {}
+  let fresh = null; try { fresh = await H.gh('words/' + B.id + '/대응.json', 'json'); } catch (e) {}
+  if (fresh && fresh._meta){ try { await H.put('bookmap:' + B.id, fresh); } catch (e) {} }
+  const m = (fresh && fresh._meta) ? fresh : ((old && old._meta) ? old : null); if (m){ BKMAP[B.id] = m; if (B.id === P8B) P8MAP = m; } return m; }
 function p8Fr(s){ return (s && s.r) ? Object.assign({}, s, { r: s.r.map(v => v / 2000) }) : s; }   /* 대응표 r(0~2000) → 쪽 비(0~1 · 손값·그림·글자층 글과 같은 꼴) */
-function p8Guess(uid){ try { const z = Object.values((VJ && VJ.P7map) || {}).find(x => x.uid === uid); const p = +((z && ((z.판8 && z.판8.pdf8) || z.pdf쪽)) || 0); return p ? Math.min(805, p) : 1; } catch (e) { return 1; } }
+function p8Guess(uid, B){ B = B || BOOK_TB['특허법']; try { const z = Object.values((VJ && VJ.P7map) || {}).find(x => x.uid === uid); const p = +((z && ((B.id === P8B && z.판8 && z.판8.pdf8) || z.pdf쪽)) || 0); return p ? Math.min(B.pages, p) : 1; } catch (e) { return 1; } }   /* ★ sp_book5 — 상표 = 책 줄 pdf쪽(5판) */
 /* 8판 줄 — 목차노트 「교재 자리」 ncRow 꼴 그대로 · 둘째 줄 = 그 자리 글자층 글 40자(지시서 A-4 · 저장 안 함) */
 function p8Row(J, bk, s, tag, go){ const r = el('div', 'mbbrow'); r.dataset.book = bk; r.dataset.p = s.p;
   const hd = el('div', 'hd'); hd.appendChild(el('span', 'k', J.name(bk))); hd.appendChild(el('span', 'p', 'p.' + J.pr(bk, s.p))); hd.appendChild(el('span', 'm', 'PDF ' + s.p));   /* ★ revfix0928night A-2 — 8판 줄 「p.N」(민법·정리캔버스 줄 「N쪽」 무변) */
@@ -10673,27 +10682,28 @@ function p8Row(J, bk, s, tag, go){ const r = el('div', 'mbbrow'); r.dataset.book
   J.words(bk, s.p).then(w => { const t = ncSnip(w, s); sn.textContent = t ? t.slice(0, 40) + '…' : ''; ncSnFit(sn); }).catch(() => {});
   r.onclick = ev => { ev.stopPropagation(); go(ev); }; return r; }
 async function p8BookFill(host, uid){
-  const J = viewCanvas.jari; host.innerHTML = ''; host.appendChild(el('div', 'ncb-sec', '교재'));
-  const wait = el('div', 'mbbnone', '해례 8판 자리를 받는 중…'); host.appendChild(wait);
-  let M = null; try { M = await p8Map(); } catch (e) { M = null; }
-  try { await J.meta8(); } catch (e) {}
+  const B = bookTbById(host.dataset.bk) || BOOK_TB['특허법'], bk = B.id;   /* ★ sp_book5 §A-4 — 그 줄 자리의 책(상표 = data-bk · 특허 = 칸 없음 = 해례 8판) · 글자·칸·값 = 책 표 */
+  const J = viewCanvas.jari, kb = J.kb(bk); host.innerHTML = ''; host.appendChild(el('div', 'ncb-sec', '교재'));
+  const wait = el('div', 'mbbnone', B.nm + ' 자리를 받는 중…'); host.appendChild(wait);
+  let M = null; try { M = await p8Map(B); } catch (e) { M = null; }
+  try { await J.metaB(bk); } catch (e) {}
   if (!host.isConnected) return; wait.remove();
-  const rows = ((M && M[uid]) || []).map(p8Fr), pin = J.k8.get(uid);
-  const ctx = pick => ({ b: 'p8|' + uid, pick: !!pick, save: v => { J.k8.put(uid, { by: 'hand', b: P8B, p: v.p, r: v.r, t: Date.now(), who: (typeof syncWho === 'function' ? (syncWho() || '') : '') });
-      toast('교재 자리를 찍었다 — 해례 8판 p.' + J.pr(P8B, v.p)); p8BookRefresh(uid); } });
-  const open = (s, ev, pick) => J.book8(Object.assign({ book: P8B, page: s.p }, s.r ? { r: s.r, cf: s.c || '' } : {}), ev, ctx(pick));
+  const rows = ((M && M[uid]) || []).map(p8Fr), pin = kb.get(uid);
+  const ctx = pick => ({ b: B.k + '|' + uid, pick: !!pick, save: v => { kb.put(uid, { by: 'hand', b: bk, p: v.p, r: v.r, t: Date.now(), who: (typeof syncWho === 'function' ? (syncWho() || '') : '') });
+      toast('교재 자리를 찍었다 — ' + B.nm + ' p.' + J.pr(bk, v.p)); p8BookRefresh(uid); } });
+  const open = (s, ev, pick) => J.book8(Object.assign({ book: bk, page: s.p }, s.r ? { r: s.r, cf: s.c || '' } : {}), ev, ctx(pick));
   if (pin){ const s = { p: pin.p, r: pin.r };
-    host.appendChild(p8Row(J, P8B, s, '찍어 둔 자리', ev => open(s, ev)));
-    host.appendChild(ncPic(J, P8B, s, ev => open(s, ev)));
-    const rv = el('button', 'ncb-more', '자동으로 되돌리기'); rv.onclick = ev => { ev.stopPropagation(); J.k8.put(uid, { auto: true, t: Date.now() }); p8BookRefresh(uid); }; host.appendChild(rv); }
+    host.appendChild(p8Row(J, bk, s, '찍어 둔 자리', ev => open(s, ev)));
+    host.appendChild(ncPic(J, bk, s, ev => open(s, ev)));
+    const rv = el('button', 'ncb-more', '자동으로 되돌리기'); rv.onclick = ev => { ev.stopPropagation(); kb.put(uid, { auto: true, t: Date.now() }); p8BookRefresh(uid); }; host.appendChild(rv); }
   else if (rows.length){
-    host.appendChild(p8Row(J, P8B, rows[0], rows[0].c ? '확신 ' + rows[0].c : '', ev => open(rows[0], ev)));
-    if (rows.length > 1){ const b = el('button', 'ncb-more', '후보 ' + Math.min(2, rows.length - 1)), box = el('div'); box.hidden = true; box.dataset.more = P8B;   /* ★ revfix0928night A-3 — 2·3등만(민법 slice(1,3)) */
-      b.onclick = ev => { ev.stopPropagation(); if (!box.childNodes.length) rows.slice(1, 3).forEach(s => box.appendChild(p8Row(J, P8B, s, '후보', ev2 => open(s, ev2)))); box.hidden = !box.hidden; try { mbWinFit(host.closest('.pop')); } catch (e) {} };
+    host.appendChild(p8Row(J, bk, rows[0], rows[0].c ? '확신 ' + rows[0].c : '', ev => open(rows[0], ev)));
+    if (rows.length > 1){ const b = el('button', 'ncb-more', '후보 ' + Math.min(2, rows.length - 1)), box = el('div'); box.hidden = true; box.dataset.more = bk;   /* ★ revfix0928night A-3 — 2·3등만(민법 slice(1,3)) */
+      b.onclick = ev => { ev.stopPropagation(); if (!box.childNodes.length) rows.slice(1, 3).forEach(s => box.appendChild(p8Row(J, bk, s, '후보', ev2 => open(s, ev2)))); box.hidden = !box.hidden; try { mbWinFit(host.closest('.pop')); } catch (e) {} };
       host.appendChild(b); host.appendChild(box); } }
-  else host.appendChild(el('div', 'mbbnone', '해례 8판 — 자리 없음 · 직접 찍기'));
-  const pk = el('button', 'ncb-more p8pick', '📍 자리 직접 찍기'); pk.title = '해례 8판 쪽 창에서 이 지문 자리를 끌어 찍는다(두 손가락 = 스크롤)';
-  pk.onclick = ev => { ev.stopPropagation(); open(pin ? { p: pin.p, r: pin.r } : (rows[0] || { p: p8Guess(uid) }), ev, true); };
+  else host.appendChild(el('div', 'mbbnone', B.nm + ' — 자리 없음 · 직접 찍기'));
+  const pk = el('button', 'ncb-more p8pick', '📍 자리 직접 찍기'); pk.title = B.nm + ' 쪽 창에서 이 지문 자리를 끌어 찍는다(두 손가락 = 스크롤)';
+  pk.onclick = ev => { ev.stopPropagation(); open(pin ? { p: pin.p, r: pin.r } : (rows[0] || { p: p8Guess(uid, B) }), ev, true); };
   host.appendChild(pk);
   try { ncPicFit(host); } catch (e) {} }   /* ★ revfix0929b A-2 — 그림 없는 창도 그림 창과 같은 맞춤(폰은 누른 자리 아래 한도를 먼저 풀어 위로 올릴 수 있게 · 둘째 글이 안 와도) */
 function p8BookRefresh(uid){ document.querySelectorAll('.mbb8[data-p8u]').forEach(h => { if (h.dataset.p8u === uid && h.isConnected) p8BookFill(h, uid); }); }
@@ -15570,7 +15580,7 @@ const viewCanvas = (() => {
   const jariBlocks = () => { const out = []; if (D) D.pages.forEach(p => p.blocks.forEach(b => { if (b.k !== '헤딩' && !b.del) out.push({ p, b }); })); return out; };
   const jariOpenN = () => jariBlocks().filter(o => jariOpen(o.b)).length;
   function jariBadges(){ const n = document.getElementById('cvJariN'); if (n) n.textContent = jariOpenN();
-    const w = document.getElementById('cvJariOrph'); if (!w) return; const A = jariAll(); const orph = Object.keys(A).filter(k => jariOk(A[k]) && !BK.get(k) && !/^p8\|/.test(k));   /* ★ book8 — 1차객 8판 칸(p8|uid)은 블록이 아니다 */
+    const w = document.getElementById('cvJariOrph'); if (!w) return; const A = jariAll(); const orph = Object.keys(A).filter(k => jariOk(A[k]) && !BK.get(k) && !BOOK_K.test(k));   /* ★ book8 — 1차객 8판 칸(p8|uid)은 블록이 아니다 · ★ sp_book5 — 책 표 칸 전부(p8 · v5) */
     w.textContent = orph.length ? '교재 확정 ' + orph.length + ' 고아' : ''; w.style.display = orph.length ? '' : 'none';
     w.title = orph.length ? '손값의 블록이 지금 데이터에 없다(데이터 판이 바뀜) — 칸은 남겨 두었다 · 지우는 건 사람: ' + orph.slice(0, 8).join(', ') : ''; }
   /* 손값이 바뀐 뒤 — 칩 · 열린 자리 창 · 머리 수 · 필터 */
@@ -15964,7 +15974,7 @@ const viewCanvas = (() => {
   const CVB_NAME = { minso_hs: '핵심 민소', minso_yg: '윤곽 민소',
     minso_gc: '윤곽 민사소송법 기출집', minso_hb: '민소 핸드북', minso_63_jgd: '63회 해설 정경대', minso_63_kjy: '63회 해설 김중연', minso_63_kwak: '63회 총평 곽준형',
     tk_63_hgs: '홍기석 해설', tk_63_hanbit: '한빛 해설', tk_63_phj: '박형준 풀답안', tk_63_phj_s3: '박형준 보충', tk_63_pjh: '박지환 총평',
-    patent_hr8: '특허법 해례 8판' };   /* ★ book8 A-4 — 1차객 「📚 교재 자리」 8판 쪽 창 */   /* ★ c2card G-1 — 해설 자료 열 권(이름만 · CVB_DOCID 는 정리캔버스 교재 둘 그대로 — 그 목록을 도는 곳이 있어 무변으로 둔다) */
+    ...Object.fromEntries(Object.values(BOOK_TB).map(b => [b.id, b.full])) };   /* ★ book8 A-4 — 1차객 「📚 교재 자리」 8판 쪽 창 · ★ sp_book5 — 책 표(특허 해례 8판 · 상표 뷰객 5판) */   /* ★ c2card G-1 — 해설 자료 열 권(이름만 · CVB_DOCID 는 정리캔버스 교재 둘 그대로 — 그 목록을 도는 곳이 있어 무변으로 둔다) */
   const CVB = { meta: {}, doc: {}, stat: {}, db: null, stamp: {}, text: {} };   /* ★ jo_theme A-8 — text = 쪽 글(검색) */   /* ★ book_stamp B-3 — stamp = 교재 도장 → 출처(docid → {쪽: [줄]} · 못 받으면 null) */
   const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
   function cvbTok(){ try { return (typeof syncToken === 'function' ? syncToken() : String((JSON.parse(localStorage.getItem('tt.cfg') || '{}')).token || '').trim()); } catch (e) { return ''; } }
@@ -16168,7 +16178,7 @@ const viewCanvas = (() => {
     const head = el('div', 'cv-booknav'); const view = el('div', 'cv-bookview'); host.innerHTML = ''; host.appendChild(head); host.appendChild(view);
     /* ★ jo_theme A-8 — 8판 교재 창 검색 · 머리(◀ 쪽 ▶ · 📍 찍기 줄 = .cv-booknav · sticky · --cvph 아래) 안 둘째 줄 = 검색칸 · 그 아래 목록 → 누르면 쪽 이동 + 노란 상자(누른 곳 주황 테) ·
        쪽 글이 없으면(404 · 판 다름) 검색칸 0 · 찍기·저장·자리 잠금·맞춤·칩 안 덮기 무변 · 다른 교재 창 DOM 무변(8판만) · retarget = 결과·상자 지움(검색어 남김) */
-    const BS = docid === 'patent_hr8' ? { tx: null, res: null, sel: null, open: true, box: el('div', 'cv-bs'), list: el('div', 'cv-bsres') } : null;
+    const BS = bookTbById(docid) ? { tx: null, res: null, sel: null, open: true, box: el('div', 'cv-bs'), list: el('div', 'cv-bsres') } : null;   /* ★ sp_book5 — 책 표의 책(해례 8판 · 뷰객 5판) */
     if (BS){
       const inp = el('input'); inp.type = 'text'; inp.placeholder = '교재에서 찾기 — 두 글자부터'; inp.setAttribute('enterkeyhint', 'search');
       const go = el('button', 'cv-bsgo', '🔍'); go.type = 'button'; go.title = '찾기(Enter)';
@@ -16548,10 +16558,13 @@ const viewCanvas = (() => {
   viewCanvas.jari.omrClip = (k, m, t) => omrClip(k, m, t);
   /* ★ book8 A-4 — 1차객 「📚 교재 자리」 해례 8판 줄 — 쪽 창 = 이 교재 창(같은 cvbDoc · 📍 찍기) · 손값 = 같은 기록 키(jopangi.canvasjari)의 칸 p8|<uid> */
   viewCanvas.jari.book8 = (m, ev, ctx) => bookShow(m, ev, ctx);
-  viewCanvas.jari.meta8 = () => cvbMeta('patent_hr8');
-  viewCanvas.jari.k8 = { get: u => { const v = jariAll()['p8|' + u]; return jariOk(v) ? v : null; },
-    raw: u => jariAll()['p8|' + u] || null,
-    put: (u, v) => { const A = jariAll(); A['p8|' + u] = v; if (lsWrite(K.jari, A, '📚 교재 자리(해례 8판)')){ try { syncRecords(); } catch (e) {} } return true; } };   /* ★ cvfind A — 목차노트 목록 토글 밑 찍은 자리 그림 */
+  viewCanvas.jari.metaB = d => cvbMeta(d);   /* ★ sp_book5 — 책 표의 책 */
+  viewCanvas.jari.kb = d => { const B = bookTbById(d) || BOOK_TB['특허법'];   /* ★ sp_book5 — 손값 칸 = 「책 표 k|uid」(특허 p8 · 상표 v5) */
+    return { get: u => { const v = jariAll()[B.k + '|' + u]; return jariOk(v) ? v : null; },
+      raw: u => jariAll()[B.k + '|' + u] || null,
+      put: (u, v) => { const A = jariAll(); A[B.k + '|' + u] = v; if (lsWrite(K.jari, A, '📚 교재 자리(' + B.nm + ')')){ try { syncRecords(); } catch (e) {} } return true; } }; };
+  viewCanvas.jari.meta8 = () => cvbMeta(P8B);
+  viewCanvas.jari.k8 = viewCanvas.jari.kb(P8B);   /* ★ cvfind A — 목차노트 목록 토글 밑 찍은 자리 그림 */
   viewCanvas.metaWarm = async () => { for (const d of Object.values(CVB_DOCID)){ if (CVB.meta[d]) continue; try { const x = await cvbGet('bookmeta:' + d); if (x && x.docid) CVB.meta[d] = x; } catch (e) {} } };   /* ★ jari_cand B-1 — 네트워크 없이 IDB 만 */
   viewCanvas.hsBook = { doc: cvbDoc, meta: cvbMeta, gh: cvbGh, why: cvbWhy, get: cvbGet, put: cvbPut, stat: CVB.stat, name: d => CVB_NAME[d] || d };   /* ★ c2card G-6 — 해설 쪽 창이 교재 창과 같은 길 */
   return viewCanvas;
@@ -20682,7 +20695,8 @@ document.addEventListener('pointerdown', ev => {
      원본 재료 무수정 · 지움 = 묘비(gone) · 두문자를 목록 창 「＋ 두문자」로 더하면 그 테마 id 를 t 에 적는다(글에 없는 두문자도 그 테마 두문자가 되게 — 모양에 없던 칸 하나)
    ⚠ 옛 판 기기는 SYNC_KEYS 에 theme 이 없어 올릴 때 data 에서 빠진다(도장 u 는 합집합이라 남는다) → 새 판 기기가 다음 맞춤 때 동률(제 값이 더 김)로 다시 싣는다(physphone tfix 와 같은 길)
    ⚠ 시안 규칙 — 실물 이웃 요소의 꼴 그대로 · 새 칩·알약·탭 줄·범례 없음 · 글자로만 · 같은 것은 어디서나 한 꼴(테마 줄 = 서랍 · 연결 창 · 찾기 결과 한 함수 tmRowEl) */
-const TM_PATH = 'theme/patent_hr8/테마.json.gz', TM_IDB = 'theme:patent_hr8', TM_KEY = REC_PRE + 'theme', TM_LAW = '특허법';
+const TM_LAW = '특허법', TM_BOOK = BOOK_TB[TM_LAW].id;   /* ★ sp_book5 — 테마 재료 책 = 책 표(테마는 특허만 · 상표 테마 재료 없음) */
+const TM_PATH = 'theme/' + TM_BOOK + '/테마.json.gz', TM_IDB = 'theme:' + TM_BOOK, TM_KEY = REC_PRE + 'theme';
 const TM_CELL = ['acr', 'link', 'subj+', 'subj-'];   /* 테마 id 가 아닌 칸 */
 const TM = { d: null, st: 'wait', p: null };
 async function tmGunzip(buf){ try { const st = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip')); return JSON.parse(await new Response(st).text()); } catch (e) { return null; } }
@@ -20870,10 +20884,11 @@ function tmFill(host, s, color, ctx, svg){
 }
 /* fix2 B-7 — 구역 SVG 그림: data URI(png·jpeg·webp) 그대로 · 따로 둔 그림(theme/patent_hr8/img/ · 테마 재료 옆) = 창 열 때 cvbGh(민법앱 mbGhGet 꼴 · 토큰 · raw)로 받아 blob URL ·
    받은 것은 기기에 재움(IndexedDB · 테마 재료와 같은 칸 · 못 받으면 재운 것) · 그 밖 href(javascript: · http · 다른 자리) = 그 image 를 지움 */
-const TM_IMG_DIR = 'theme/patent_hr8/img/', TM_IMG = {};
+const TM_IMG_DIR = 'theme/' + TM_BOOK + '/img/', TM_IMG = {};
+const TM_IMG_RX = new RegExp('^(?:\\./)?(?:theme/' + TM_BOOK + '/)?img/([A-Za-z0-9_][A-Za-z0-9._-]*\\.(?:webp|png|jpe?g))$', 'i');   /* ★ sp_book5 — 책 표(옛 글자 그대로의 꼴) */
 function tmImgSrc(h){ h = String(h || '').trim();
   if (/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+\/=\s]+$/i.test(h)) return { data: h };
-  const m = /^(?:\.\/)?(?:theme\/patent_hr8\/)?img\/([A-Za-z0-9_][A-Za-z0-9._-]*\.(?:webp|png|jpe?g))$/i.exec(h);
+  const m = TM_IMG_RX.exec(h);
   return (m && m[1].indexOf('..') < 0) ? { path: TM_IMG_DIR + m[1] } : null; }
 function tmImgUrl(path){
   if (!TM_IMG[path]) TM_IMG[path] = (async () => { const H = tmHs(); if (!H) return null; const k = 'themeimg:' + path, last = H.stat.last; let buf = null;
