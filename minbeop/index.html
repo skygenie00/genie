@@ -2219,6 +2219,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                토큰이 없거나 오프라인이어도 `syncRecords` 는 끝을 맺는다 — 실패해도 돌도록 두 갈래에 다 건다. */
             syncRecords().then(ggMergeBoots, ggMergeBoots);   /* ★ 09-15 (_task_ox_logic_merge §A-5) — 메모 → 논리 흡수를 한 곳에서 · 옮긴 게 있으면 force 동기화 한 번 */
             loadExamSettings();
+            try { if (typeof ewmLoad === 'function') ewmLoad(); } catch (e) { }   /* ★ exam_wrong_mark — 시험 기록(exam/꼬까.json) 읽기만 · 첫 화면 뒤 한 번 · 기다리지 않는다 */
             mbCheckNew();                                    /* 📥 새 문항 알림 — 딱지만 받는다 */
             setInterval(() => { if (document.visibilityState === 'visible') { stampAll(); recPaint(); } }, 10000);
             setInterval(() => { if (document.visibilityState === 'visible') syncRecords(); }, 180000);
@@ -3122,6 +3123,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                                 ${sourceBadge}
                                 ${typeBadge}
                                 ${examBadges}
+                                ${(typeof ewmMbHTML === 'function' ? ewmMbHTML(item) : '')}
                                 ${bookChipHTML(item)}
                                 ${item.pending ? '' : samePanryeChipHTML(item, true)}
                                 ${item.pending ? '' : `<span data-lkchips="${item.id}" class="contents" style="display:contents">${myLinkChipHTML(item)}</span>`}
@@ -10440,6 +10442,7 @@ function openQPopup(id) {
         + '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">'
         + (q.source ? '<span style="font-size:10px;font-weight:800;color:#6b21a8;background:#f3e8ff;border:1px solid #e9d5ff;border-radius:5px;padding:1px 6px">' + escHtml(q.source) + '</span>' : '')
         + '<span style="font-size:10px;font-weight:700;color:#4338ca;background:#eef2ff;border:1px solid #e0e7ff;border-radius:5px;padding:1px 6px">' + escHtml(qWhere(q)) + '</span>'
+        + (typeof ewmMbHTML === 'function' ? ewmMbHTML(q) : '')   /* ★ exam_wrong_mark — 문항 팝업(출제 칩 없음) = ID 칩 바로 앞 · 누르면 칩 줄 아래 한 줄 */
         + '<span style="font-size:10px;font-weight:700;color:#9ca3af;background:#f9fafb;border:1px solid #e5e7eb;border-radius:5px;padding:1px 6px">' + q.id + '</span>'
         + '</div>'
         + '<div style="font-size:13px;line-height:1.65;color:#1f2937;white-space:pre-wrap">'
@@ -10955,6 +10958,7 @@ function jnRowHTML(q) {
         + bookChipHTML(q)
         + `<button type="button" onclick="openQPopup('${escAttr(id)}')" title="문항 팝업" class="text-[10px] font-bold text-indigo-700 cursor-pointer hover:bg-indigo-50 rounded px-1">${q.displayNo}${escHtml(q.subNum || '')}번</button>`
         + jnExamChips(q)   /* ★ 2026-09-26 (_task_ox_exview_paper §F-1) — 번호 뒤 출제연도 칩(모든 정리 창 · 누르면 그 해 시험지 쪽) */
+        + (typeof ewmMbHTML === 'function' ? ewmMbHTML(q) : '')   /* ★ exam_wrong_mark — 출제 칩 바로 뒤 「61-12-X」 · 누르면 행 머리 아래 한 줄 */
         + (q.source ? `<span class="text-[10px] font-bold text-purple-700">${escHtml(q.source)}</span>` : '')
         + `<span id="jn-gg-refchips-${escHtml(id)}" class="contents" style="display:contents">${ggRefChipsHTML(id, 'jn-')}</span>`   /* ★ 09-15 (_task_ox_card_simple §E) — 칩을 누르면 아래 연결한 근거 상자(범위 jn-) */
         + samePanryeChipHTML(q, true) + `<span data-lkchips="${escHtml(id)}" style="display:contents">` + myLinkChipHTML(q, true) + `</span>`   /* ★ 09-15 (_task_ox_card_simple_add7) — 「↩링크N」「↩백링크N」 · 저장 뒤 linkChipsRepaint 가 갈아 끼운다 */
@@ -12363,6 +12367,7 @@ function lwHeadChips(owner) {
     const m = (q.examMeta || [])[0];
     if (m || (box && box.querySelector('button[data-exam]')))
         out.push(mk('button[data-exam]', 'bg-gray-100 text-gray-600 text-[11px] font-bold px-2 py-0.5 rounded-md border border-gray-200 whitespace-nowrap', m ? (m.year + ':' + (m.no || '') + ':' + (CIR[m.opt] || (m.opt || ''))) : ''));
+    if (typeof ewmOf === 'function') ewmOf(owner).forEach(x => out.push(lwEl('span', 'ewmx cfhc', x.r + '-' + x.i + '-X')));   /* ★ exam_wrong_mark — 출제 칩 사본 뒤 「61-12-X」 사본(누름 없음 · 펼침은 카드에서) */
     out.push(mk('button[onclick^="mbBookOpen"]', 'text-[10px] px-1.5 py-0.5 rounded border bg-gray-50 text-gray-500 border-gray-200 font-bold whitespace-nowrap', 'ID ' + owner));
     return out;
 }
@@ -12469,6 +12474,94 @@ function lwOpen(owner, ev) {
     '#oxwin-lk .cfft{margin-top:7px;font-size:10.5px;color:#9ca3af}',
     /* 문항 팝업 「↪ 이동」 = 글자만 */
     'button.qpgo{background:none !important;border:0 !important;padding:0 !important;color:#1d4ed8 !important;font-size:12px !important;font-weight:700 !important;cursor:pointer}'
+].join('\n'); document.head.appendChild(s); } catch (e) { } })();
+
+/* ══ ★ _task_exam_wrong_mark — 실제 1차 시험(tt 기록)에서 틀린 문제 「<회>-<번>-X」(조판기 · 민법OX · 자과 같은 꼴 · 아티팩트 「63회 틀린 문제 표시」 v6) ══
+   원천 = studyplandata exam/꼬까.json(ghRaw · mbToken 그대로 · 읽기만 · SYNC 키 아님) · items[] 중 cha 1 · mode q · del 아님 → q[] 중 ok === false · 화학 뺌 · 민법 줄만 · 회차를 박지 않는다
+   짝 = 문항마스터 회차·문번(examMeta round·no · 해 = 회 + 1963) → 그 문항 지문(Q-id) 전부 · 한 지문이 61·63 둘 다면 나란히
+   자리 = 출제 칩 바로 뒤(문제풀이 카드 · 연도별 기출뷰 · 정리 창 행 전부) · 문항 팝업(출제 칩 없음) = ID 칩 앞 · 연결 창 머리 = 사본(누름 없음)
+   접힘 = 글자만 11px 800 #dc2626 · 펼침 = 머리 줄 아래 한 줄(조판기 H7 .qsub 값) 「내 답 ① · 정답 ③ · 평균 정답률 60.8%」 · 다시 누르면 접힘 · 저장 안 함
+   밑줄 = 이 지문이 내가 고른 선지 · 정답 선지(보기 ㄱ·ㄴ·ㄷ 지문 = 없음) · 받기 실패·토큰 없음 = 표시 없음(오류 창 없음)
+   첫 화면을 막지 않는다 — 기록 시동 때 한 번 받고, 오면 이미 그려진 출제 칩 뒤에만 끼워 넣는다(다시 그리지 않음 · 고른 O/X 그대로) · 거르개·셈에 안 넣는다
+   이 블록은 마지막 스크립트 닫는 태그 바로 앞(주석에도 그 태그 글자를 쓰지 않는다). */
+var EWM = { st: '', rows: [], idx: null, qd: null, qn: -1 };
+function ewmRows(j) {
+    const out = [];
+    ((j && j.items) || []).forEach(it => {
+        if (!it || it.cha !== 1 || it.mode !== 'q' || it.del) return;
+        const r = +it.no || parseInt(String(it.id || ''), 10); if (!r) return;
+        (it.q || []).forEach(x => {
+            if (!x || x.ok !== false || String(x.s || '') === '화학') return;
+            out.push({ r: r, s: String(x.s || ''), i: +x.i, my: String(x.my == null ? '' : x.my), ans: String(x.ans == null ? '' : x.ans), rate: x.rate });
+        });
+    });
+    return out;
+}
+function ewmLoad() {
+    if (EWM.st) return; EWM.st = 'wait';
+    if (!mbToken()) { EWM.st = 'none'; return; }
+    ghRaw('exam/꼬까.json').then(t => {
+        EWM.rows = ewmRows(t ? JSON.parse(t) : null); EWM.st = 'ok'; EWM.idx = null;
+        if (EWM.rows.length) { try { ewmPaintAll(); } catch (e) { } }
+    }).catch(() => { EWM.st = 'fail'; EWM.rows = []; });
+}
+function ewmIdx() {
+    const qd = (typeof quizData !== 'undefined' && quizData) || [];
+    if (EWM.idx && EWM.qd === qd && EWM.qn === qd.length) return EWM.idx;
+    const m = {}; EWM.idx = m; EWM.qd = qd; EWM.qn = qd.length;
+    const by = {};
+    EWM.rows.forEach(x => { if (x.s === '민법') by[x.r + '|' + x.i] = x; });
+    qd.forEach(q => (q.examMeta || []).forEach(em => {
+        const x = by[(+em.round || (+em.year - 1963)) + '|' + (+em.no || 0)];
+        if (!x) return;
+        const L = m[q.id] = m[q.id] || [];
+        if (L.some(v => v.r === x.r && v.i === x.i)) return;
+        L.push({ r: x.r, i: x.i, my: x.my, ans: x.ans, rate: x.rate, sel: /^[ㄱ-ㅎ]$/.test(String(em.optRaw || '')) ? '' : String(+em.opt || '') });   /* 보기 ㄱ·ㄴ·ㄷ 지문 = 밑줄 없음 */
+    }));
+    Object.keys(m).forEach(k => m[k].sort((a, b) => a.r - b.r || a.i - b.i));
+    return m;
+}
+function ewmOf(id) { return (EWM.st === 'ok' && EWM.rows.length && id) ? (ewmIdx()[id] || []) : []; }
+function ewmMbHTML(q) {
+    return ewmOf(q && q.id).map((x, o) => `<button type="button" class="ewmx" data-ewm="${x.r}-${x.i}" data-ewq="${escHtml(q.id)}" data-o="${o}" onclick="ewmToggle(this,event)" title="실제 ${x.r}회 1차 ${x.i}번 — 틀림 · 누르면 내 답 · 정답 · 평균 정답률">${x.r}-${x.i}-X</button>`).join('');
+}
+function ewmCirc(v) { const C = '①②③④⑤⑥⑦⑧⑨'; const a = String(v || '').split(/[,\s]+/).filter(Boolean); return a.length ? a.map(n => /^[1-9]$/.test(n) ? C.charAt(+n - 1) : n).join('') : '—'; }
+function ewmRate(v) { const n = parseFloat(v); return isFinite(n) ? n.toFixed(1) + '%' : '—'; }
+function ewmLineEl(x) {
+    /* 글 셋만 · 이 지문 = 내가 고른 선지 · 정답 선지면 그 칸만 <u>(span 없음 — 카드 OMR 번호 찾기 '.flex.items-start span' 에 안 걸린다) */
+    const ln = document.createElement('div'); ln.className = 'ewml';
+    const has = v => /^[1-9]$/.test(x.sel || '') && String(v || '').split(/[,\s]+/).indexOf(x.sel) >= 0;
+    [['내 답 ' + ewmCirc(x.my), has(x.my)], ['정답 ' + ewmCirc(x.ans), has(x.ans)], ['평균 정답률 ' + ewmRate(x.rate), false]].forEach((p, n) => {
+        if (n) ln.appendChild(document.createTextNode(' · '));
+        if (p[1]) { const u = document.createElement('u'); u.className = 'u'; u.textContent = p[0]; ln.appendChild(u); }
+        else ln.appendChild(document.createTextNode(p[0]));
+    });
+    return ln;
+}
+function ewmToggle(btn, ev) {
+    if (ev) ev.stopPropagation();
+    if (btn._ewl && btn._ewl.isConnected) { btn._ewl.remove(); btn._ewl = null; return; }
+    const x = ewmOf(btn.dataset.ewq).find(v => v.r + '-' + v.i === btn.dataset.ewm); if (!x) return;
+    const o = +btn.dataset.o || 0, ln = ewmLineEl(x); ln.dataset.o = o;
+    let ref = btn.closest('.question-box > div') || btn.closest('[data-jnrow] > div') || btn.parentElement;   /* 카드 머리 줄 · 정리 창 행 머리 · 문항 팝업 칩 줄 */
+    while (ref.nextElementSibling && ref.nextElementSibling.classList.contains('ewml') && +ref.nextElementSibling.dataset.o < o) ref = ref.nextElementSibling;
+    ref.after(ln); btn._ewl = ln;
+}
+/* 기록이 늦게 오면 — 이미 그려진 카드 머리 · 정리 창 행의 마지막 출제 칩 뒤에만 끼운다(열린 문항 팝업 · 연결 창은 다시 열면) */
+function ewmPaintAll() {
+    const put = (row, id) => {
+        if (!row || row.querySelector('.ewmx')) return;
+        const html = ewmMbHTML({ id: id }); if (!html) return;
+        const ex = row.querySelectorAll('button[data-exam]'), last = ex[ex.length - 1];
+        if (last) last.insertAdjacentHTML('afterend', html);
+    };
+    document.querySelectorAll('.question-box[id^="q-box-"]').forEach(b => put(b.firstElementChild, b.id.slice(6)));
+    document.querySelectorAll('[data-jnrow]').forEach(r => put(r.firstElementChild, r.getAttribute('data-jnrow')));
+}
+(function () { try { const s = document.createElement('style'); s.id = 'ewmcss'; s.textContent = [
+    '.ewmx{display:inline-block;background:transparent;border:0;padding:0 2px;margin:0;font-family:inherit;font-size:11px;font-weight:800;line-height:16.5px;color:#dc2626;white-space:nowrap;vertical-align:middle;cursor:pointer}',
+    '.ewml{font-size:10.5px;color:#8a867d;margin:2px 0 4px;padding-left:4px}',   /* 조판기 H7 .qsub 값 그대로 */
+    '.ewml .u{text-decoration:underline;text-underline-offset:2px}'
 ].join('\n'); document.head.appendChild(s); } catch (e) { } })();
 
 </script>

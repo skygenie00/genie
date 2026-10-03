@@ -10040,6 +10040,7 @@ function qpBody(hit, k, pop, isOpen, setOpen){
   const ch = el('div', 'qpchips');
   ch.appendChild(el('span', 'qpc1', hit.kind === 'P' ? gEd(hit.z) : '변리사 ' + String(hit.q.연도).slice(2)));   /* ★ revfix0928pm A-2 — 판 이름 칩 H7 · H8 */
   ch.appendChild(el('span', 'qpc2', (hit.law || S.law) + (lab && (!hit.law || hit.law === S.law) ? ' · ' + lab : '')));   /* ★ jo_cardfix §A-3 */
+  try{ ewmMarks(ch, k, hit.kind === 'P' ? { kind: 'P', z: hit.z } : { kind: 'L', q: hit.q, z: hit.z }); }catch(e){}   /* ★ exam_wrong_mark — 문제 창(출제연도 칩 없음) = ID 칩 바로 앞 · 펼침 = 칩 줄 아래 */
   ch.appendChild(el('span', 'qpc3', k));
   cfLinkChips(ch, k);   /* ★ jo_cardfix §A-4 — 문제 창에도 ↩링크N · ↩백링크N */
   w.appendChild(ch);
@@ -10619,6 +10620,7 @@ function mbbPop(key, ev){
   const wrap = el('div', 'mbblist');
   if (S.law !== '특허법'){
     wrap.appendChild(el('div', 'mbbnone', '정리OMR 은 특허만 있다'));
+    { const B = bookTb(S.law); if (B){ const hb = el('div', 'mbb8'); hb.dataset.p8u = key; hb.dataset.bk = B.id; wrap.appendChild(hb); p8BookFill(hb, key); } }   /* ★ sp_book5 §A-4 — 상표 = 뷰객 5판 줄(특허 8판 줄 꼴·길 그대로 · 책 = 책 표) */
     body.appendChild(wrap); return;
   }
   const info = (typeof pinInfo === 'function') ? pinInfo(key) : null;
@@ -10656,14 +10658,22 @@ function mbbPop(key, ev){
    줄 = 목차노트 「교재 자리」 창 ncRow 꼴(책 이름 · 인쇄 쪽 · PDF 쪽 · 확신 글자 · 둘째 줄 = 그 자리 글자층 글 · 저장 안 함) · 2~4등 = 접힌 「후보 N」 ·
    찍어 둔 자리(jopangi.canvasjari 칸 p8|<uid>)가 있으면 그것 하나 + 그림 + 「자동으로 되돌리기」(대응표보다 먼저) · 대응표에 없으면 「해례 8판 — 자리 없음 · 직접 찍기」 한 줄 ·
    누름 = 정리캔버스 교재 창(같은 cvbDoc · cv-bookhl 칠함 · ◀▶ · 쪽 입력) · 「📍 자리 직접 찍기」 = 그 창 📍 찍기(ctx.save → 칸 p8|<uid>) */
-const P8B = 'patent_hr8';
-let P8MAP = null;
-async function p8Map(){ if (P8MAP) return P8MAP; const H = viewCanvas.hsBook; let old = null; try { old = await H.get('bookmap:' + P8B); } catch (e) {}
-  let fresh = null; try { fresh = await H.gh('words/' + P8B + '/대응.json', 'json'); } catch (e) {}
-  if (fresh && fresh._meta){ try { await H.put('bookmap:' + P8B, fresh); } catch (e) {} }
-  const m = (fresh && fresh._meta) ? fresh : ((old && old._meta) ? old : null); if (m) P8MAP = m; return m; }
+/* ★ sp_book5 §A-4 — 책 표 한 벌(법 → 1차객 교재) · 박혀 있던 patent_hr8 자리(대응표 · 찍은 자리 칸 · 문구 · 쪽 수 · 교재 이름 · 교재 찾기 · 고아 셈 · 테마 재료 길)를 이 표로 ·
+   특허 = 해례 8판(옛 글자·칸·값 그대로) · 상표 = 뷰객 5판(minbeoppdf words/tm_view5 · pdf/tm_view5.pdf · 인쇄 쪽 = PDF 쪽 − 11 = 책메타 printOffset) ·
+   id = 교재 docid · k = 손값 칸 머리(jopangi.canvasjari 「k|uid」) · nm = 줄·문구 이름 · full = 교재 창 이름 · pages = 찍기 첫 쪽 어림 위 끝 */
+const BOOK_TB = { '특허법': { id: 'patent_hr8', k: 'p8', nm: '해례 8판', full: '특허법 해례 8판', pages: 805 },
+                  '상표법': { id: 'tm_view5', k: 'v5', nm: '뷰객 5판', full: '상표법 뷰객 5판', pages: 549 } };
+const BOOK_K = new RegExp('^(?:' + Object.values(BOOK_TB).map(b => b.k).join('|') + ')\\|');   /* 1차객 교재 손값 칸(정리캔버스 블록 열쇠가 아니다) */
+function bookTb(law){ return BOOK_TB[law] || null; }
+function bookTbById(id){ return Object.values(BOOK_TB).find(b => b.id === id) || null; }
+const P8B = BOOK_TB['특허법'].id;
+let P8MAP = null; const BKMAP = {};   /* 대응표 — 책마다(특허 = P8MAP 도 같이) */
+async function p8Map(B){ B = B || BOOK_TB['특허법']; if (BKMAP[B.id]) return BKMAP[B.id]; const H = viewCanvas.hsBook; let old = null; try { old = await H.get('bookmap:' + B.id); } catch (e) {}
+  let fresh = null; try { fresh = await H.gh('words/' + B.id + '/대응.json', 'json'); } catch (e) {}
+  if (fresh && fresh._meta){ try { await H.put('bookmap:' + B.id, fresh); } catch (e) {} }
+  const m = (fresh && fresh._meta) ? fresh : ((old && old._meta) ? old : null); if (m){ BKMAP[B.id] = m; if (B.id === P8B) P8MAP = m; } return m; }
 function p8Fr(s){ return (s && s.r) ? Object.assign({}, s, { r: s.r.map(v => v / 2000) }) : s; }   /* 대응표 r(0~2000) → 쪽 비(0~1 · 손값·그림·글자층 글과 같은 꼴) */
-function p8Guess(uid){ try { const z = Object.values((VJ && VJ.P7map) || {}).find(x => x.uid === uid); const p = +((z && ((z.판8 && z.판8.pdf8) || z.pdf쪽)) || 0); return p ? Math.min(805, p) : 1; } catch (e) { return 1; } }
+function p8Guess(uid, B){ B = B || BOOK_TB['특허법']; try { const z = Object.values((VJ && VJ.P7map) || {}).find(x => x.uid === uid); const p = +((z && ((B.id === P8B && z.판8 && z.판8.pdf8) || z.pdf쪽)) || 0); return p ? Math.min(B.pages, p) : 1; } catch (e) { return 1; } }   /* ★ sp_book5 — 상표 = 책 줄 pdf쪽(5판) */
 /* 8판 줄 — 목차노트 「교재 자리」 ncRow 꼴 그대로 · 둘째 줄 = 그 자리 글자층 글 40자(지시서 A-4 · 저장 안 함) */
 function p8Row(J, bk, s, tag, go){ const r = el('div', 'mbbrow'); r.dataset.book = bk; r.dataset.p = s.p;
   const hd = el('div', 'hd'); hd.appendChild(el('span', 'k', J.name(bk))); hd.appendChild(el('span', 'p', 'p.' + J.pr(bk, s.p))); hd.appendChild(el('span', 'm', 'PDF ' + s.p));   /* ★ revfix0928night A-2 — 8판 줄 「p.N」(민법·정리캔버스 줄 「N쪽」 무변) */
@@ -10672,27 +10682,28 @@ function p8Row(J, bk, s, tag, go){ const r = el('div', 'mbbrow'); r.dataset.book
   J.words(bk, s.p).then(w => { const t = ncSnip(w, s); sn.textContent = t ? t.slice(0, 40) + '…' : ''; ncSnFit(sn); }).catch(() => {});
   r.onclick = ev => { ev.stopPropagation(); go(ev); }; return r; }
 async function p8BookFill(host, uid){
-  const J = viewCanvas.jari; host.innerHTML = ''; host.appendChild(el('div', 'ncb-sec', '교재'));
-  const wait = el('div', 'mbbnone', '해례 8판 자리를 받는 중…'); host.appendChild(wait);
-  let M = null; try { M = await p8Map(); } catch (e) { M = null; }
-  try { await J.meta8(); } catch (e) {}
+  const B = bookTbById(host.dataset.bk) || BOOK_TB['특허법'], bk = B.id;   /* ★ sp_book5 §A-4 — 그 줄 자리의 책(상표 = data-bk · 특허 = 칸 없음 = 해례 8판) · 글자·칸·값 = 책 표 */
+  const J = viewCanvas.jari, kb = J.kb(bk); host.innerHTML = ''; host.appendChild(el('div', 'ncb-sec', '교재'));
+  const wait = el('div', 'mbbnone', B.nm + ' 자리를 받는 중…'); host.appendChild(wait);
+  let M = null; try { M = await p8Map(B); } catch (e) { M = null; }
+  try { await J.metaB(bk); } catch (e) {}
   if (!host.isConnected) return; wait.remove();
-  const rows = ((M && M[uid]) || []).map(p8Fr), pin = J.k8.get(uid);
-  const ctx = pick => ({ b: 'p8|' + uid, pick: !!pick, save: v => { J.k8.put(uid, { by: 'hand', b: P8B, p: v.p, r: v.r, t: Date.now(), who: (typeof syncWho === 'function' ? (syncWho() || '') : '') });
-      toast('교재 자리를 찍었다 — 해례 8판 p.' + J.pr(P8B, v.p)); p8BookRefresh(uid); } });
-  const open = (s, ev, pick) => J.book8(Object.assign({ book: P8B, page: s.p }, s.r ? { r: s.r, cf: s.c || '' } : {}), ev, ctx(pick));
+  const rows = ((M && M[uid]) || []).map(p8Fr), pin = kb.get(uid);
+  const ctx = pick => ({ b: B.k + '|' + uid, pick: !!pick, save: v => { kb.put(uid, { by: 'hand', b: bk, p: v.p, r: v.r, t: Date.now(), who: (typeof syncWho === 'function' ? (syncWho() || '') : '') });
+      toast('교재 자리를 찍었다 — ' + B.nm + ' p.' + J.pr(bk, v.p)); p8BookRefresh(uid); } });
+  const open = (s, ev, pick) => J.book8(Object.assign({ book: bk, page: s.p }, s.r ? { r: s.r, cf: s.c || '' } : {}), ev, ctx(pick));
   if (pin){ const s = { p: pin.p, r: pin.r };
-    host.appendChild(p8Row(J, P8B, s, '찍어 둔 자리', ev => open(s, ev)));
-    host.appendChild(ncPic(J, P8B, s, ev => open(s, ev)));
-    const rv = el('button', 'ncb-more', '자동으로 되돌리기'); rv.onclick = ev => { ev.stopPropagation(); J.k8.put(uid, { auto: true, t: Date.now() }); p8BookRefresh(uid); }; host.appendChild(rv); }
+    host.appendChild(p8Row(J, bk, s, '찍어 둔 자리', ev => open(s, ev)));
+    host.appendChild(ncPic(J, bk, s, ev => open(s, ev)));
+    const rv = el('button', 'ncb-more', '자동으로 되돌리기'); rv.onclick = ev => { ev.stopPropagation(); kb.put(uid, { auto: true, t: Date.now() }); p8BookRefresh(uid); }; host.appendChild(rv); }
   else if (rows.length){
-    host.appendChild(p8Row(J, P8B, rows[0], rows[0].c ? '확신 ' + rows[0].c : '', ev => open(rows[0], ev)));
-    if (rows.length > 1){ const b = el('button', 'ncb-more', '후보 ' + Math.min(2, rows.length - 1)), box = el('div'); box.hidden = true; box.dataset.more = P8B;   /* ★ revfix0928night A-3 — 2·3등만(민법 slice(1,3)) */
-      b.onclick = ev => { ev.stopPropagation(); if (!box.childNodes.length) rows.slice(1, 3).forEach(s => box.appendChild(p8Row(J, P8B, s, '후보', ev2 => open(s, ev2)))); box.hidden = !box.hidden; try { mbWinFit(host.closest('.pop')); } catch (e) {} };
+    host.appendChild(p8Row(J, bk, rows[0], rows[0].c ? '확신 ' + rows[0].c : '', ev => open(rows[0], ev)));
+    if (rows.length > 1){ const b = el('button', 'ncb-more', '후보 ' + Math.min(2, rows.length - 1)), box = el('div'); box.hidden = true; box.dataset.more = bk;   /* ★ revfix0928night A-3 — 2·3등만(민법 slice(1,3)) */
+      b.onclick = ev => { ev.stopPropagation(); if (!box.childNodes.length) rows.slice(1, 3).forEach(s => box.appendChild(p8Row(J, bk, s, '후보', ev2 => open(s, ev2)))); box.hidden = !box.hidden; try { mbWinFit(host.closest('.pop')); } catch (e) {} };
       host.appendChild(b); host.appendChild(box); } }
-  else host.appendChild(el('div', 'mbbnone', '해례 8판 — 자리 없음 · 직접 찍기'));
-  const pk = el('button', 'ncb-more p8pick', '📍 자리 직접 찍기'); pk.title = '해례 8판 쪽 창에서 이 지문 자리를 끌어 찍는다(두 손가락 = 스크롤)';
-  pk.onclick = ev => { ev.stopPropagation(); open(pin ? { p: pin.p, r: pin.r } : (rows[0] || { p: p8Guess(uid) }), ev, true); };
+  else host.appendChild(el('div', 'mbbnone', B.nm + ' — 자리 없음 · 직접 찍기'));
+  const pk = el('button', 'ncb-more p8pick', '📍 자리 직접 찍기'); pk.title = B.nm + ' 쪽 창에서 이 지문 자리를 끌어 찍는다(두 손가락 = 스크롤)';
+  pk.onclick = ev => { ev.stopPropagation(); open(pin ? { p: pin.p, r: pin.r } : (rows[0] || { p: p8Guess(uid, B) }), ev, true); };
   host.appendChild(pk);
   try { ncPicFit(host); } catch (e) {} }   /* ★ revfix0929b A-2 — 그림 없는 창도 그림 창과 같은 맞춤(폰은 누른 자리 아래 한도를 먼저 풀어 위로 올릴 수 있게 · 둘째 글이 안 와도) */
 function p8BookRefresh(uid){ document.querySelectorAll('.mbb8[data-p8u]').forEach(h => { if (h.dataset.p8u === uid && h.isConnected) p8BookFill(h, uid); }); }
@@ -12931,7 +12942,7 @@ function p7Card(z,seq,opt){
     const bits=[];
     if(z.쪽)bits.push('p.'+z.쪽);else if(p8Is(z))bits.push(p8No(z.판8));   /* ★ p8up — 8판 새 카드 = 8판 자리 */
     if(z.리담)bits.push('리담 '+z.리담.연도+'년 '+z.리담.문항+'번 ('+z.리담.선지+')');
-    bits.push(z.병합?'리담과 흡수됨 — 기록 공유':(z.리담?'리담과 글이 다름 — 기록 따로':(p8Is(z)?'해례 8판에만 있는 지문':(z.판?'뷰객 '+String(z.판).slice(1)+'판 단독':'제7판 단독'))));   /* ★ uid 판(9/27) — 리담 참조가 있는데 병합이 아니면 uid 가 갈린 행 */
+    bits.push(z.병합?'리담과 흡수됨 — 기록 공유':(z.리담?'리담과 글이 다름 — 기록 따로':(p8Is(z)?'해례 8판에만 있는 지문':(z.판5&&z.판5.cat==='새'?'뷰객 5판에만 있는 지문':(z.판?'뷰객 '+String(z.판).slice(1)+'판 단독':'제7판 단독')))));   /* ★ uid 판(9/27) — 리담 참조가 있는데 병합이 아니면 uid 가 갈린 행 */
     if(z.유제)bits.push('유제');
     sub.textContent=bits.join(' · ');
     const pb=el('button','qb v qexp',gEd(z));   /* ★ p8up — 8판 새 카드는 「8판」 · ★ revfix0928pm A-2 — H7 · H8 */
@@ -15569,7 +15580,7 @@ const viewCanvas = (() => {
   const jariBlocks = () => { const out = []; if (D) D.pages.forEach(p => p.blocks.forEach(b => { if (b.k !== '헤딩' && !b.del) out.push({ p, b }); })); return out; };
   const jariOpenN = () => jariBlocks().filter(o => jariOpen(o.b)).length;
   function jariBadges(){ const n = document.getElementById('cvJariN'); if (n) n.textContent = jariOpenN();
-    const w = document.getElementById('cvJariOrph'); if (!w) return; const A = jariAll(); const orph = Object.keys(A).filter(k => jariOk(A[k]) && !BK.get(k) && !/^p8\|/.test(k));   /* ★ book8 — 1차객 8판 칸(p8|uid)은 블록이 아니다 */
+    const w = document.getElementById('cvJariOrph'); if (!w) return; const A = jariAll(); const orph = Object.keys(A).filter(k => jariOk(A[k]) && !BK.get(k) && !BOOK_K.test(k));   /* ★ book8 — 1차객 8판 칸(p8|uid)은 블록이 아니다 · ★ sp_book5 — 책 표 칸 전부(p8 · v5) */
     w.textContent = orph.length ? '교재 확정 ' + orph.length + ' 고아' : ''; w.style.display = orph.length ? '' : 'none';
     w.title = orph.length ? '손값의 블록이 지금 데이터에 없다(데이터 판이 바뀜) — 칸은 남겨 두었다 · 지우는 건 사람: ' + orph.slice(0, 8).join(', ') : ''; }
   /* 손값이 바뀐 뒤 — 칩 · 열린 자리 창 · 머리 수 · 필터 */
@@ -15963,7 +15974,7 @@ const viewCanvas = (() => {
   const CVB_NAME = { minso_hs: '핵심 민소', minso_yg: '윤곽 민소',
     minso_gc: '윤곽 민사소송법 기출집', minso_hb: '민소 핸드북', minso_63_jgd: '63회 해설 정경대', minso_63_kjy: '63회 해설 김중연', minso_63_kwak: '63회 총평 곽준형',
     tk_63_hgs: '홍기석 해설', tk_63_hanbit: '한빛 해설', tk_63_phj: '박형준 풀답안', tk_63_phj_s3: '박형준 보충', tk_63_pjh: '박지환 총평',
-    patent_hr8: '특허법 해례 8판' };   /* ★ book8 A-4 — 1차객 「📚 교재 자리」 8판 쪽 창 */   /* ★ c2card G-1 — 해설 자료 열 권(이름만 · CVB_DOCID 는 정리캔버스 교재 둘 그대로 — 그 목록을 도는 곳이 있어 무변으로 둔다) */
+    ...Object.fromEntries(Object.values(BOOK_TB).map(b => [b.id, b.full])) };   /* ★ book8 A-4 — 1차객 「📚 교재 자리」 8판 쪽 창 · ★ sp_book5 — 책 표(특허 해례 8판 · 상표 뷰객 5판) */   /* ★ c2card G-1 — 해설 자료 열 권(이름만 · CVB_DOCID 는 정리캔버스 교재 둘 그대로 — 그 목록을 도는 곳이 있어 무변으로 둔다) */
   const CVB = { meta: {}, doc: {}, stat: {}, db: null, stamp: {}, text: {} };   /* ★ jo_theme A-8 — text = 쪽 글(검색) */   /* ★ book_stamp B-3 — stamp = 교재 도장 → 출처(docid → {쪽: [줄]} · 못 받으면 null) */
   const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
   function cvbTok(){ try { return (typeof syncToken === 'function' ? syncToken() : String((JSON.parse(localStorage.getItem('tt.cfg') || '{}')).token || '').trim()); } catch (e) { return ''; } }
@@ -16167,7 +16178,7 @@ const viewCanvas = (() => {
     const head = el('div', 'cv-booknav'); const view = el('div', 'cv-bookview'); host.innerHTML = ''; host.appendChild(head); host.appendChild(view);
     /* ★ jo_theme A-8 — 8판 교재 창 검색 · 머리(◀ 쪽 ▶ · 📍 찍기 줄 = .cv-booknav · sticky · --cvph 아래) 안 둘째 줄 = 검색칸 · 그 아래 목록 → 누르면 쪽 이동 + 노란 상자(누른 곳 주황 테) ·
        쪽 글이 없으면(404 · 판 다름) 검색칸 0 · 찍기·저장·자리 잠금·맞춤·칩 안 덮기 무변 · 다른 교재 창 DOM 무변(8판만) · retarget = 결과·상자 지움(검색어 남김) */
-    const BS = docid === 'patent_hr8' ? { tx: null, res: null, sel: null, open: true, box: el('div', 'cv-bs'), list: el('div', 'cv-bsres') } : null;
+    const BS = bookTbById(docid) ? { tx: null, res: null, sel: null, open: true, box: el('div', 'cv-bs'), list: el('div', 'cv-bsres') } : null;   /* ★ sp_book5 — 책 표의 책(해례 8판 · 뷰객 5판) */
     if (BS){
       const inp = el('input'); inp.type = 'text'; inp.placeholder = '교재에서 찾기 — 두 글자부터'; inp.setAttribute('enterkeyhint', 'search');
       const go = el('button', 'cv-bsgo', '🔍'); go.type = 'button'; go.title = '찾기(Enter)';
@@ -16547,10 +16558,13 @@ const viewCanvas = (() => {
   viewCanvas.jari.omrClip = (k, m, t) => omrClip(k, m, t);
   /* ★ book8 A-4 — 1차객 「📚 교재 자리」 해례 8판 줄 — 쪽 창 = 이 교재 창(같은 cvbDoc · 📍 찍기) · 손값 = 같은 기록 키(jopangi.canvasjari)의 칸 p8|<uid> */
   viewCanvas.jari.book8 = (m, ev, ctx) => bookShow(m, ev, ctx);
-  viewCanvas.jari.meta8 = () => cvbMeta('patent_hr8');
-  viewCanvas.jari.k8 = { get: u => { const v = jariAll()['p8|' + u]; return jariOk(v) ? v : null; },
-    raw: u => jariAll()['p8|' + u] || null,
-    put: (u, v) => { const A = jariAll(); A['p8|' + u] = v; if (lsWrite(K.jari, A, '📚 교재 자리(해례 8판)')){ try { syncRecords(); } catch (e) {} } return true; } };   /* ★ cvfind A — 목차노트 목록 토글 밑 찍은 자리 그림 */
+  viewCanvas.jari.metaB = d => cvbMeta(d);   /* ★ sp_book5 — 책 표의 책 */
+  viewCanvas.jari.kb = d => { const B = bookTbById(d) || BOOK_TB['특허법'];   /* ★ sp_book5 — 손값 칸 = 「책 표 k|uid」(특허 p8 · 상표 v5) */
+    return { get: u => { const v = jariAll()[B.k + '|' + u]; return jariOk(v) ? v : null; },
+      raw: u => jariAll()[B.k + '|' + u] || null,
+      put: (u, v) => { const A = jariAll(); A[B.k + '|' + u] = v; if (lsWrite(K.jari, A, '📚 교재 자리(' + B.nm + ')')){ try { syncRecords(); } catch (e) {} } return true; } }; };
+  viewCanvas.jari.meta8 = () => cvbMeta(P8B);
+  viewCanvas.jari.k8 = viewCanvas.jari.kb(P8B);   /* ★ cvfind A — 목차노트 목록 토글 밑 찍은 자리 그림 */
   viewCanvas.metaWarm = async () => { for (const d of Object.values(CVB_DOCID)){ if (CVB.meta[d]) continue; try { const x = await cvbGet('bookmeta:' + d); if (x && x.docid) CVB.meta[d] = x; } catch (e) {} } };   /* ★ jari_cand B-1 — 네트워크 없이 IDB 만 */
   viewCanvas.hsBook = { doc: cvbDoc, meta: cvbMeta, gh: cvbGh, why: cvbWhy, get: cvbGet, put: cvbPut, stat: CVB.stat, name: d => CVB_NAME[d] || d };   /* ★ c2card G-6 — 해설 쪽 창이 교재 창과 같은 길 */
   return viewCanvas;
@@ -16630,6 +16644,7 @@ addEventListener('resize',()=>{
 readHash();
 render();
 try{ recBoot(); }catch(e){ console.warn('recsync boot', e); }   /* ★ recsync — 시작 1회 · 10초 도장 · 3분 동기화 */
+setTimeout(() => { try{ ewmLoad(); }catch(e){} }, 0);   /* ★ exam_wrong_mark — 시험 기록은 첫 화면 뒤 한 번(화면을 막지 않는다) */
 
 /* ★ 2차 기출 폴더 판(9/4 · _task_jo_2cha_gichul_folder.md §4-2) — 기록 키 1회 이사(멱등 · 옛 키는 둔다 · jopangi.migr 표시)
    표 = ⚙ 2cha_이름표.json(옛 stem → 새 stem) · 포스트잇 card|사례|<옛>␟… → card|기출|<새>␟… · 필기 cell|<옛> → cell|<새> · 마크업 card|사례|<옛>… 도 같은 규칙
@@ -16973,6 +16988,12 @@ function mlnCaseBoxL(q, no){
 /* ★ p8up A-3 — 해례 8판 표시(원장 판8 칸 · 판8_리담 표) · 글자만(cardfix 머리 칩 꼴) · 색 셋 */
 var P8L = {}, P8N = new Set();   /* P8N = 8판 새 카드 uid — 단원 이름표(MBK2M)가 (미수록) 줄의 제7판 uid 를 건너뛸 때 이것은 안 건너뛴다 */
 const P8_AT = Date.parse('2026-09-28T14:30:00+09:00');   /* 8판 판올림 인도 시각 — 이보다 앞선 풀이 기록 = 7판 글로 푼 것 */
+/* ★ sp_view5 §D — 판 고침 표시 = 법 갈래(줄의 판 칸 · 특허 해례 = 판8 · 상표 뷰객 = 판5) · 칩 꼴·색·크기 = 8판 그대로(.p8c · 새 꼴 없음) · 특허 글자 무변
+   판5 = { cat: 같음·글·답·없음·새, t4: 4판 글, a4: 4판 정오(답 바뀜), s4: 4판 해설 } — 원장 §C(p8up 판8 꼴) · 5판에 없음 줄은 판 「V4」 그대로 */
+const P5_AT = Date.parse('2026-10-04T08:19:00+09:00');   /* 5판 판올림 인도 시각 — 이보다 앞선 풀이 기록 = 4판 글로 푼 것(10/4 push + 20 분 · P8_AT 선례) */
+const P8V = { k: '판8', neu: '8판', old: '7판', bk: '해례', at: P8_AT, txt: '문장', t: 't7', a: 'a7', na: z => z.ox };
+const P5V = { k: '판5', neu: '5판', old: '4판', bk: '뷰객', at: P5_AT, txt: '글', t: 't4', a: 'a4', na: z => (z.ox != null ? z.ox : (z.답 || '?')) };
+function pvOf(z){ return z && z.판8 ? P8V : (z && z.판5 ? P5V : null); }
 function p8New(c){ return !!(c && c.kind === 'P' && c.z && c.z.판8 && c.z.판8.cat === '새'); }
 function p8Is(z){ return !!(z && z.판8 && z.판8.cat === '새'); }
 function p8No(p){ const n = String((p && p.no8) || '').replace(/\.$/, ''); return 'H8 p.' + p.p8 + ' ' + (/유제/.test(n) ? n : n + '번'); }   /* ★ revfix0928pm A-2 — 「H8 p.N N번」 */
@@ -16982,35 +17003,36 @@ function p7PageLab(z){ return p8Is(z) ? 'H8 p.' + z.판8.p8 : gEd(z) + ' p.' + (
    사용자가 고친 해설(qfixOf(k).exp)이 보이는 줄은 상자에 「(내가 고친 해설이 보이는 중)」 한 줄 · 명칭만·새 카드 = 표시 없음(s7 없음) */
 function p8SolWrap(s7, k, node){
   if (!s7) return node;
+  const V = (s7 && s7.V) || P8V, sx = (s7 && s7.V) ? s7.s : s7;   /* ★ sp_view5 §D — 상표 5판 = { s: 4판 해설, V } · 특허 = 글(옛 그대로) */
   const w = el('div', 'p8sw'), hd = el('div', 'p8sh');
-  const b = el('button', 'p8c g', '8판 해설 고침'); b.type = 'button'; b.title = '누르면 7판 해설(한 번 더 누르면 접힘)';
+  const b = el('button', 'p8c g', V.neu + ' 해설 고침'); b.type = 'button'; b.title = '누르면 ' + V.old + ' 해설(한 번 더 누르면 접힘)';
   b.onclick = ev => { ev.stopPropagation();
     const old = w.querySelector(':scope > .p8t7'); if (old){ old.remove(); return; }
-    const d = el('div', 'p8t7'); d.appendChild(el('b', '', '7판 해설')); d.appendChild(document.createTextNode(p7Text(s7)));
+    const d = el('div', 'p8t7'); d.appendChild(el('b', '', V.old + ' 해설')); d.appendChild(document.createTextNode(p7Text(sx)));
     let f = null; try{ f = k ? qfixOf(k) : null; }catch(e){}
     if (f && typeof f.exp === 'string') d.appendChild(el('div', 'p8fx', '(내가 고친 해설이 보이는 중)'));
     w.appendChild(d); };
   hd.appendChild(b); w.appendChild(hd); w.appendChild(node); return w;
 }
-function p8S7(z){ return (z && z.판8 && z.판8.s7) || ''; }
+function p8S7(z){ return (z && z.판8 && z.판8.s7) || ((z && z.판5 && z.판5.s4) ? { s: z.판5.s4, V: P5V } : ''); }   /* ★ sp_view5 §D — 상표 = 4판 해설 + 판 갈래 */
 function p8Chip(host, z, card){
-  const p = z && z.판8; if (!p) return;
+  const V = pvOf(z), p = V && z[V.k]; if (!p) return;   /* ★ sp_view5 §D — 특허 판8 · 상표 판5 같은 길(글자만 판 갈래) */
   let t = '', c = '';
-  if (p.cat === '문장'){ t = '8판 고침'; c = 'g'; }
-  else if (p.cat === '답'){ t = '8판 고침 · 답 ' + (p.a7 || '?') + '→' + z.ox; c = 'r'; }
-  else if (p.cat === '없음'){ t = '8판에 없음'; c = 'g'; }
-  else if (p.cat === '새'){ t = '8판 새'; c = 'n'; }
-  else return;   /* 명칭 · 기관 · 오류 · 자리 = 표시 없음(글만 8판) */
-  const tog = (p.cat === '문장' || p.cat === '답') && p.t7;
+  if (p.cat === V.txt){ t = V.neu + ' 고침'; c = 'g'; }
+  else if (p.cat === '답'){ t = V.neu + ' 고침 · 답 ' + (p[V.a] || '?') + '→' + V.na(z); c = 'r'; }
+  else if (p.cat === '없음'){ t = V.neu + '에 없음'; c = 'g'; }
+  else if (p.cat === '새'){ t = V.neu + ' 새'; c = 'n'; }
+  else return;   /* 같음 · 명칭 · 기관 · 오류 · 자리 = 표시 없음(글만 새 판) */
+  const tog = (p.cat === V.txt || p.cat === '답') && p[V.t];
   const b = el(tog ? 'button' : 'span', 'p8c ' + c, t); if (tog) b.type = 'button';
-  b.title = tog ? '누르면 7판 글(한 번 더 누르면 접힘)' : (p.cat === '새' ? '해례 8판에만 있는 지문' : '해례 8판에서 빠진 지문 — 카드·기록은 그대로');
+  b.title = tog ? '누르면 ' + V.old + ' 글(한 번 더 누르면 접힘)' : (p.cat === '새' ? V.bk + ' ' + V.neu + '에만 있는 지문' : V.bk + ' ' + V.neu + '에서 빠진 지문 — 카드·기록은 그대로');
   if (tog) b.onclick = ev => { ev.stopPropagation();
     const old = card.querySelector(':scope > .p8t7'); if (old){ old.remove(); return; }
-    const d = el('div', 'p8t7'); d.appendChild(el('b', '', '7판 글')); d.appendChild(document.createTextNode(p7Text(p.t7)));
+    const d = el('div', 'p8t7'); d.appendChild(el('b', '', V.old + ' 글')); d.appendChild(document.createTextNode(p7Text(p[V.t])));
     const hd = card.querySelector(':scope > .mbqhd'); if (hd) hd.after(d); else card.prepend(d); };
   host.appendChild(b);
-  if (p.cat === '답'){ let r = null; try{ r = oxOf(oxKeyP7(z)); }catch(e){}   /* 옛 풀이 기록(8판 전) = 7판 답으로 푼 것 */
-    if (r && r.p && Date.parse(r.ts || '') < P8_AT) host.appendChild(el('span', 'p8c g p8old', '7판 글')); }
+  if (p.cat === '답' && V.at){ let r = null; try{ r = oxOf(oxKeyP7(z)); }catch(e){}   /* 옛 풀이 기록(새 판 전) = 옛 판 답으로 푼 것 */
+    if (r && r.p && Date.parse(r.ts || '') < V.at) host.appendChild(el('span', 'p8c g p8old', V.old + ' 글')); }
 }
 /* 이미 앱 리담 카드인 8판 지문 — 「8판 p.N N번」(지문 uid · 없으면 문항 통째 표) */
 function p8LidChip(host, z, q){
@@ -17102,7 +17124,90 @@ function mlnPanChip(host, key, cases){
   host.appendChild(b);
 }
 /* 출제연도 칩 자리(§C · jxeChips 가 채운다 — 그 판이 없으면 비운다) */
-function mlnYearChips(host, key, ctx){ try{ if (typeof jxeChips === 'function') jxeChips(host, key, ctx); }catch(e){ console.warn('[jxe]', e); } }
+function mlnYearChips(host, key, ctx){ try{ if (typeof jxeChips === 'function') jxeChips(host, key, ctx); }catch(e){ console.warn('[jxe]', e); }
+  try{ ewmMarks(host, key, ctx); }catch(e){ console.warn('[ewm]', e); } }   /* ★ exam_wrong_mark — 출제연도 칩 바로 뒤 「63-13-X」(칩을 그리는 자리 전부 = 이 함수 하나) */
+/* ══ _task_exam_wrong_mark — 실제 1차 시험에서 틀린 문제 「<회>-<번>-X」(조판기 · 민법OX · 자과 같은 꼴 · 아티팩트 「63회 틀린 문제 표시」 v6) ══
+   원천 = studyplandata exam/꼬까.json(tt 시험 기록 · 읽기만 · SYNC 키 아님) · items[] 중 cha 1 · mode q · del 아님 → q[] 중 ok === false · 화학 뺌 · 회 = no(없으면 id 머리) · 회차를 박지 않는다
+   짝 = 리담 문제(연도 = 회 + 1963 · 시험문번 = 번)의 지문 전부 → 열쇠 = 지문 uid(같은 uid 책 카드 · 특허 제7판 병합 · 상표 뷰객 쌍도) ·
+        책 지문 · 문항째 카드 = 그 법 책 줄의 uid 꼴(S·T·D + 해 + 회 + 번) 또는 시험문번 + 해(연도들 · 「YY 변리」) — 리담에 없는 문제(상표 61회 22번)도 같은 길 · 문항째 = 밑줄 없음
+   접힘 = 글자만 11px 800 #dc2626 · 펼침 = 머리 줄 아래 한 줄(H7 .qsub 값) 「내 답 ④ · 정답 ② · 평균 정답률 73.0%」 · 다시 누르면 접힘 · 저장 안 함
+   받기 실패·토큰 없음 = 표시 없음(오류 창 없음) · 첫 화면을 막지 않는다(시작 뒤 한 번 받고 · 받으면 1차객 화면만 다시 그림) · 거르개·셈에 안 넣는다 */
+var EWM = { st: '', rows: [], map: null, vj: null, law: '', mln: false };
+function ewmRows(j){
+  const out = [];
+  ((j && j.items) || []).forEach(it => { if (!it || it.cha !== 1 || it.mode !== 'q' || it.del) return;
+    const r = +it.no || parseInt(String(it.id || ''), 10); if (!r) return;
+    (it.q || []).forEach(x => { if (!x || x.ok !== false || String(x.s || '') === '화학') return;
+      out.push({ r: r, s: String(x.s || ''), i: +x.i, my: String(x.my == null ? '' : x.my), ans: String(x.ans == null ? '' : x.ans), rate: x.rate }); }); });
+  return out;
+}
+function ewmLoad(){
+  if (EWM.st) return; EWM.st = 'wait';
+  if (!syncToken()){ EWM.st = 'none'; return; }
+  ghRaw('exam/꼬까.json').then(t => { EWM.rows = ewmRows(t ? JSON.parse(t) : null); EWM.st = 'ok'; EWM.map = null;
+    if (EWM.rows.length && S.tab === 'jimun'){ try{ render(); }catch(e){} } }).catch(() => { EWM.st = 'fail'; EWM.rows = []; });
+}
+function ewmYear(z){ const ys = (z && z.연도들) || []; if (ys.length) return String(ys[0]);
+  const m = /(\d{2})\s*변리/.exec(String((z && z.태그) || '')); return m ? String((+m[1] >= 60 ? 1900 : 2000) + (+m[1])) : ''; }
+function ewmMap(){
+  const mln = !!(MLN && MLN.ok);   /* 문항째 카드(MLN.obj)는 늦게 온다 — 오면 다시 짠다 */
+  if (EWM.map && EWM.vj === VJ && EWM.law === S.law && EWM.mln === mln) return EWM.map;
+  const m = {}; EWM.map = m; EWM.vj = VJ; EWM.law = S.law; EWM.mln = mln;
+  const LAWN = { '특허': '특허법', '상표': '상표법', '디보': '디자인보호법' };
+  const rows = (EWM.rows || []).filter(x => LAWN[x.s] === S.law);
+  if (!VJ || !rows.length) return m;
+  const add = (k, x, sel) => { if (!k) return; const L = m[k] = m[k] || []; if (!L.some(v => v.r === x.r && v.i === x.i)) L.push({ r: x.r, i: x.i, my: x.my, ans: x.ans, rate: x.rate, sel: sel }); };
+  const byYN = {};
+  (VJ.qs || []).forEach(q => { const k = String(q.연도) + '|' + String(q.시험문번 || ''); (byYN[k] = byYN[k] || []).push(q); });
+  const P = VJ.P7map || {}, O = (MLN && MLN.ok && MLN.obj) || {};
+  const lab = z => { const pu = jxeParseUid(z.uid); const v = pu && pu.lab ? pu.lab : (z.선지 != null ? String(z.선지) : ''); return /^\d$/.test(v) ? v : null; };   /* 선지 번호(보기 ㄱ·ㄴ = 밑줄 없음) */
+  rows.forEach(x => {
+    const y = String(x.r + 1963);
+    (byYN[y + '|' + x.i] || []).forEach(q => (q.지문 || []).forEach(z => add(oxKeyLid(q, z), x, z.기호 && !/^\d$/.test(String(z.기호)) ? null : String(z.n))));   /* 리담 문제 지문 전부 · 열쇠 = 지문 uid(같은 uid 책 카드가 같이 받는다) */
+    const hit = z => { if (String(z.시험문번 || '') === String(x.i) && ewmYear(z) === y) return true;
+      const pu = jxeParseUid(z.uid); return !!(pu && pu.law === S.law && pu.no === x.i && String(pu.y) === y); };
+    Object.keys(P).forEach(id => { const z = P[id]; if (z && hit(z)) add(oxKeyP7(z), x, lab(z)); });   /* 책 지문 — 리담에 없는 문제(상표 61회 22번 꼴)도 같은 길 */
+    Object.keys(O).forEach(id => { const o = O[id]; if (o && hit(o)) add(oxKeyP7(o), x, null); });   /* 문항째 카드 = 밑줄 없음 */
+  });
+  return m;
+}
+function ewmCirc(v){ const C = '①②③④⑤⑥⑦⑧⑨'; const a = String(v || '').split(/[,\s]+/).filter(Boolean); return a.length ? a.map(n => /^[1-9]$/.test(n) ? C.charAt(+n - 1) : n).join('') : '—'; }
+function ewmRate(v){ const n = parseFloat(v); return isFinite(n) ? n.toFixed(1) + '%' : '—'; }
+function ewmMarks(host, key, ctx){
+  if (typeof EWM === 'undefined' || !EWM || EWM.st !== 'ok' || !EWM.rows.length || !key) return;
+  const ms = (ewmMap()[key] || []).slice().sort((a, b) => a.r - b.r || a.i - b.i);
+  ms.forEach((mk, o) => {
+    const b = el('button', 'ewmx', mk.r + '-' + mk.i + '-X'); b.type = 'button'; b.dataset.ewm = mk.r + '-' + mk.i;
+    b.title = '실제 ' + mk.r + '회 1차 ' + mk.i + '번 — 틀림 · 누르면 내 답 · 정답 · 평균 정답률';
+    b.onclick = ev => { ev.stopPropagation(); ewmToggle(b, host, mk, ctx, o); };
+    host.appendChild(b);
+  });
+}
+function ewmLine(mk, sel){
+  /* 글 셋만 「내 답 ④ · 정답 ② · 평균 정답률 73.0%」 · 이 지문 = 내가 고른 선지 · 정답 선지면 그 칸만 <u>(span 없음 · 민법OX 와 한 꼴) */
+  const ln = el('div', 'ewml'), has = v => sel != null && /^[1-9]$/.test(String(sel)) && String(v || '').split(/[,\s]+/).indexOf(String(sel)) >= 0;
+  [['내 답 ' + ewmCirc(mk.my), has(mk.my)], ['정답 ' + ewmCirc(mk.ans), has(mk.ans)], ['평균 정답률 ' + ewmRate(mk.rate), false]].forEach((p, n) => {
+    if (n) ln.appendChild(document.createTextNode(' · '));
+    ln.appendChild(p[1] ? el('u', 'u', p[0]) : document.createTextNode(p[0])); });
+  return ln;
+}
+function ewmToggle(b, host, mk, ctx, o){
+  if (b._ewl && b._ewl.isConnected){ b._ewl.remove(); b._ewl = null; return; }
+  const anc = b.closest('.mbqhd') || b.closest('.jntop') || host;
+  const ln = ewmLine(mk, (ctx && ctx.kind !== 'O') ? mk.sel : null); ln.dataset.o = o;
+  let ref = anc; while (ref.nextElementSibling && ref.nextElementSibling.classList.contains('ewml') && +ref.nextElementSibling.dataset.o < o) ref = ref.nextElementSibling;
+  ref.after(ln); b._ewl = ln;
+}
+(function(){ try{ const s = document.createElement('style'); s.id = 'ewmcss'; s.textContent = [
+  '.ewmx{display:inline-block;background:transparent;border:0;padding:0 2px;margin:0;font-family:inherit;font-size:11px;font-weight:800;line-height:16.5px;color:#dc2626;white-space:nowrap;vertical-align:middle;cursor:pointer}',
+  '.ewml{font-size:10.5px;color:#8a867d;margin:2px 0 4px;padding-left:4px}',   /* H7 .qsub 값 그대로 */
+  '.ewml .u{text-decoration:underline;text-underline-offset:2px}',
+  /* 터치 누름 영역(revfix0929b A-3 꼴) — 표시 = 머리 칩(.qb)과 같은 둘레(위 17px) + 제 사각형 덮개 · 출제연도 칩도 제 사각형 덮개
+     (표시가 서서 칩 줄이 접히면 아랫줄 .qb 둘레가 윗줄 출제연도 칩을 먹던 것 — 보이는 꼴·PC 마우스 무변) */
+  '@media (pointer:coarse){.mbqhd button.ewmx,.mbqhd button.jxec{position:relative}'
+    + '.mbqhd button.ewmx::before{content:"";position:absolute;left:0;right:0;top:-17px;bottom:0;z-index:1}'
+    + '.mbqhd button.ewmx::after,.mbqhd button.jxec::after{content:"";position:absolute;inset:0;z-index:3}}'
+].join('\n'); document.head.appendChild(s); }catch(e){} })();
 /* ── 리담 선지 한 줄 = 카드 하나((미수록)·(변형)·큐) ── */
 function mlnLidCard(q, z, no, ln, ni, opt){
   const k = oxKeyLid(q, z);
@@ -17163,6 +17268,7 @@ function mlnObjCard(o, no){
   pb.onclick = ev => { ev.stopPropagation(); sub.style.display = sub.style.display === 'none' ? '' : 'none'; };
   h.appendChild(pb);
   h.appendChild(mcChip(k));
+  if (o.판5) p8Chip(h, o, card);   /* ★ sp_view5 §D — 상표 문항째 카드도 5판 표시(🃏 바로 뒤 · 특허 문항째 = 무변) */
   const tb = el('span', 'mbtags t'); if (S.law === '특허법' && typeof pinTag === 'function') pinTag(k, tb); oxTagBar(k, tb); h.appendChild(tb);
   card.appendChild(h);
   { const rw = el('div', 'mbrecw hide'); rw.dataset.rk = k; card.appendChild(rw); }
@@ -19042,6 +19148,7 @@ function cfHeadChips(key, ev){
   const sv = hd && hd.querySelector('.qb.v:not(.qexp)'), yc = hd && hd.querySelector('.jxec'), idc = hd && hd.querySelector('.qb.id');
   out.push(mk(sv, 'qb v', r ? r.src : ''));
   if (yc) out.push(mk(yc, 'jxec', ''));
+  if (hd) hd.querySelectorAll('.ewmx').forEach(x => out.push(mk(x, 'ewmx', '')));   /* ★ exam_wrong_mark — 출제연도 칩 사본 뒤 「63-13-X」 사본(누름 없음 · 펼침은 카드에서) */
   out.push(mk(idc, 'qb id', r ? r.uid : key));
   out.forEach(e => e.classList.remove('fd'));
   return out;
@@ -20588,7 +20695,8 @@ document.addEventListener('pointerdown', ev => {
      원본 재료 무수정 · 지움 = 묘비(gone) · 두문자를 목록 창 「＋ 두문자」로 더하면 그 테마 id 를 t 에 적는다(글에 없는 두문자도 그 테마 두문자가 되게 — 모양에 없던 칸 하나)
    ⚠ 옛 판 기기는 SYNC_KEYS 에 theme 이 없어 올릴 때 data 에서 빠진다(도장 u 는 합집합이라 남는다) → 새 판 기기가 다음 맞춤 때 동률(제 값이 더 김)로 다시 싣는다(physphone tfix 와 같은 길)
    ⚠ 시안 규칙 — 실물 이웃 요소의 꼴 그대로 · 새 칩·알약·탭 줄·범례 없음 · 글자로만 · 같은 것은 어디서나 한 꼴(테마 줄 = 서랍 · 연결 창 · 찾기 결과 한 함수 tmRowEl) */
-const TM_PATH = 'theme/patent_hr8/테마.json.gz', TM_IDB = 'theme:patent_hr8', TM_KEY = REC_PRE + 'theme', TM_LAW = '특허법';
+const TM_LAW = '특허법', TM_BOOK = BOOK_TB[TM_LAW].id;   /* ★ sp_book5 — 테마 재료 책 = 책 표(테마는 특허만 · 상표 테마 재료 없음) */
+const TM_PATH = 'theme/' + TM_BOOK + '/테마.json.gz', TM_IDB = 'theme:' + TM_BOOK, TM_KEY = REC_PRE + 'theme';
 const TM_CELL = ['acr', 'link', 'subj+', 'subj-'];   /* 테마 id 가 아닌 칸 */
 const TM = { d: null, st: 'wait', p: null };
 async function tmGunzip(buf){ try { const st = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip')); return JSON.parse(await new Response(st).text()); } catch (e) { return null; } }
@@ -20776,10 +20884,11 @@ function tmFill(host, s, color, ctx, svg){
 }
 /* fix2 B-7 — 구역 SVG 그림: data URI(png·jpeg·webp) 그대로 · 따로 둔 그림(theme/patent_hr8/img/ · 테마 재료 옆) = 창 열 때 cvbGh(민법앱 mbGhGet 꼴 · 토큰 · raw)로 받아 blob URL ·
    받은 것은 기기에 재움(IndexedDB · 테마 재료와 같은 칸 · 못 받으면 재운 것) · 그 밖 href(javascript: · http · 다른 자리) = 그 image 를 지움 */
-const TM_IMG_DIR = 'theme/patent_hr8/img/', TM_IMG = {};
+const TM_IMG_DIR = 'theme/' + TM_BOOK + '/img/', TM_IMG = {};
+const TM_IMG_RX = new RegExp('^(?:\\./)?(?:theme/' + TM_BOOK + '/)?img/([A-Za-z0-9_][A-Za-z0-9._-]*\\.(?:webp|png|jpe?g))$', 'i');   /* ★ sp_book5 — 책 표(옛 글자 그대로의 꼴) */
 function tmImgSrc(h){ h = String(h || '').trim();
   if (/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+\/=\s]+$/i.test(h)) return { data: h };
-  const m = /^(?:\.\/)?(?:theme\/patent_hr8\/)?img\/([A-Za-z0-9_][A-Za-z0-9._-]*\.(?:webp|png|jpe?g))$/i.exec(h);
+  const m = TM_IMG_RX.exec(h);
   return (m && m[1].indexOf('..') < 0) ? { path: TM_IMG_DIR + m[1] } : null; }
 function tmImgUrl(path){
   if (!TM_IMG[path]) TM_IMG[path] = (async () => { const H = tmHs(); if (!H) return null; const k = 'themeimg:' + path, last = H.stat.last; let buf = null;
