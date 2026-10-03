@@ -6749,9 +6749,9 @@ function popSizable(body, kind){
   let x0 = 0, y0 = 0, w0 = 0, h0 = 0, on = false;
   rs.addEventListener('pointerdown', ev => { ev.stopPropagation(); ev.preventDefault(); on = true; x0 = ev.clientX; y0 = ev.clientY; const r = p.getBoundingClientRect(); w0 = r.width; h0 = r.height; try{ rs.setPointerCapture(ev.pointerId); }catch(e){} });
   rs.addEventListener('pointermove', ev => { if (!on) return; const L = parseFloat(p.style.left) || 0, T = parseFloat(p.style.top) || 0, B = vvBox();   /* ★ mok_popup_phone G-1·G-3 — 보이는 화면 기준 · 최소 폭 = min(360, 화면 폭 − 16) */
-    const w = Math.max(Math.min(360, B.w - 16), Math.min(B.x + B.w - L - 4, w0 + ev.clientX - x0)), h = Math.max(240, Math.min(B.y + B.h - T - 4, h0 + ev.clientY - y0));
+    const w = Math.max(Math.min(360, B.w - 16), Math.min(B.x + B.w - L - 4, w0 + ev.clientX - x0)), h = Math.max(Math.min(240, h0), h0 + ev.clientY - y0);   /* ★ popsize — 세로 = 손가락 그대로(위 한계 없음 · 화면 밖 허용 · 창 안 올림) · 최소 = min(240, 잡을 때 높이) */
     p.classList.add('sized'); p.style.width = w + 'px'; p.style.height = h + 'px';
-    if (vvPhone()) p.style.maxHeight = (B.y + B.h - T - 4) + 'px'; });   /* ★ book_stamp D-2 — 폰: 기억 없는 팝업은 vvFit 의 인라인 max-height(60vh)가 .sized 를 이겨 손잡이로 안 늘었다 */
+    p.style.maxHeight = 'none'; });   /* ★ popsize(book_stamp D-2 넓힘) — 폰·PC 모두 끄는 동안 인라인 max-height(vvFit 60vh · 목차노트 화면 아래까지 등)를 푼다 — 그 값이 .sized 를 이겨 손잡이로 안 늘었다 */
   const end = ev => { if (!on) return; on = false; try{ rs.releasePointerCapture(ev.pointerId); }catch(e){} save(true); };
   rs.addEventListener('pointerup', end); rs.addEventListener('pointercancel', end);
   p.appendChild(rs);
@@ -20662,7 +20662,7 @@ function wmWin(kind, title, w, h, at){
   rs.addEventListener('pointerdown', ev => { ev.stopPropagation(); ev.preventDefault(); on = true; sx = ev.clientX; sy = ev.clientY; const r = p.getBoundingClientRect(); w0 = r.width; h0 = r.height; try{ rs.setPointerCapture(ev.pointerId); }catch(e){} });
   rs.addEventListener('pointermove', ev => { if (!on) return; const B2 = vvBox(), L = parseFloat(p.style.left) || 0, T = parseFloat(p.style.top) || 0;
     p.style.width = Math.max(280, Math.min(B2.x + B2.w - L - 4, w0 + ev.clientX - sx)) + 'px';
-    p.style.height = Math.max(180, Math.min(B2.y + B2.h - T - 4, h0 + ev.clientY - sy)) + 'px'; p.style.maxHeight = 'none'; });
+    p.style.height = Math.max(Math.min(180, h0), h0 + ev.clientY - sy) + 'px'; p.style.maxHeight = 'none'; });   /* ★ popsize — 세로 = 손가락 그대로(위 한계 없음 · 화면 밖 허용) · 최소 = min(180, 잡을 때 높이) */
   const end = ev => { if (!on) return; on = false; try{ rs.releasePointerCapture(ev.pointerId); }catch(e){}
     if (kind === 'jp'){ const r = p.getBoundingClientRect(); S.joPanelW = Math.round(r.width); S.joPanelH = Math.round(r.height); uiSave(); } };
   rs.addEventListener('pointerup', end); rs.addEventListener('pointercancel', end);
