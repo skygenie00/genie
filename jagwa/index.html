@@ -4742,6 +4742,7 @@ function recBoot(){
   stampAll();
   syncRecords();
   loadExamSettings();
+  try{ewmLoad()}catch(e){}   /* ★ exam_wrong_mark — 시험 기록(exam/꼬까.json) 읽기만 · 첫 그리기 뒤 한 번 · 기다리지 않는다 */
   setInterval(()=>{if(document.visibilityState==='visible'){stampAll();recPaint()}},10000);
   setInterval(()=>{if(document.visibilityState==='visible')syncRecords()},180000);
   document.addEventListener('visibilitychange',()=>{
@@ -10305,6 +10306,67 @@ if(SHELL&&!HASBOOK){
     setTimeout(async()=>{for(let i=0;i<600&&!db;i++){await new Promise(r=>setTimeout(r,20))}try{await pvLoad()}catch(e){console.warn('물리 미리보기',e)}},0)};
   {const _dPV=draw;draw=function(){const ret=_dPV.apply(this,arguments);try{if(PV)pvWatch(document.getElementById('list'))}catch(e){}pvStart();return ret}}
   setTimeout(pvStart,8000)}
+
+/* ══ ★ _task_exam_wrong_mark — 실제 1차 시험(tt 기록)에서 틀린 문제 「<회>-<번>-X」(조판기 · 민법OX · 자과 같은 꼴 · 아티팩트 「63회 틀린 문제 표시」 v6) ══
+   원천 = studyplandata exam/꼬까.json(ghRaw · recToken 그대로 · 읽기만 · SYNC 키 아님) · items[] 중 cha 1 · mode q · del 아님 → q[] 중 ok === false · 화학 뺌 · 회차를 박지 않는다
+   짝 = 보이는 ID — 물리 PA + 해 끝 두 자리 + 번호 두 자리(61-1 = PA2401) · 생물 B<yy>-<회>-<번−20>(63-21 = B26-63-01) · 지학 G<yy>-<회>-<번−30>(61-40 = G24-61-10) → 문항 줄 CODE(= uid)
+   자리 = 문제 창 머리 제목 바로 옆(제목은 줄임표로 줄고 표시는 안 잘림) · 펼침 = 머리 아래 한 줄(조판기 H7 .qsub 값) · 문항째라 밑줄 없음 · 다시 누르면 접힘 · 저장 안 함
+   받기 실패·토큰 없음 = 표시 없음(오류 창 없음) · 첫 화면을 막지 않는다(기록 시동 때 한 번 · 오면 열린 문제 창만 다시) · 거르개·셈에 안 넣는다 · 화학 서재(chem)는 안 건드린다
+   표시가 없으면 머리 DOM 은 바탕 그대로(제목 감쌈 · 펼침 칸은 처음 붙일 때 만든다) */
+const EWM={st:'',rows:[],vno:null};
+function ewmRows(j){const out=[];
+  ((j&&j.items)||[]).forEach(it=>{if(!it||it.cha!==1||it.mode!=='q'||it.del)return;
+    const r=+it.no||parseInt(String(it.id||''),10);if(!r)return;
+    (it.q||[]).forEach(x=>{if(!x||x.ok!==false||String(x.s||'')==='화학')return;
+      out.push({r:r,s:String(x.s||''),i:+x.i,my:String(x.my==null?'':x.my),ans:String(x.ans==null?'':x.ans),rate:x.rate})})});
+  return out}
+function ewmLoad(){if(EWM.st)return;EWM.st='wait';
+  if(typeof recToken!=='function'||!recToken()){EWM.st='none';return}
+  ghRaw('exam/꼬까.json').then(t=>{EWM.rows=ewmRows(t?JSON.parse(t):null);EWM.st='ok';
+    try{const v=$('#view');if(VNO&&v&&!v.classList.contains('hide'))ewmView()}catch(e){}}).catch(()=>{EWM.st='fail';EWM.rows=[]})}
+function ewmCode(x){const yy=String(x.r+1963).slice(2),p2=n=>String(n).padStart(2,'0');
+  if(x.s==='물리'&&x.i>=1&&x.i<=10)return 'PA'+yy+p2(x.i);
+  if(x.s==='생물'&&x.i>=21&&x.i<=30)return 'B'+yy+'-'+x.r+'-'+p2(x.i-20);
+  if(x.s==='지학'&&x.i>=31&&x.i<=40)return 'G'+yy+'-'+x.r+'-'+p2(x.i-30);
+  return ''}
+function ewmOf(r){if(EWM.st!=='ok'||!EWM.rows.length||!r)return [];const c=String(r[F.CODE]||'');
+  return c?EWM.rows.filter(x=>ewmCode(x)===c).sort((a,b)=>a.r-b.r||a.i-b.i):[]}
+function ewmCirc(v){const C='①②③④⑤⑥⑦⑧⑨';const a=String(v||'').split(/[,\s]+/).filter(Boolean);return a.length?a.map(n=>/^[1-9]$/.test(n)?C.charAt(+n-1):n).join(''):'—'}
+function ewmRate(v){const n=parseFloat(v);return isFinite(n)?n.toFixed(1)+'%':'—'}
+function ewmView(){
+  const hold=document.getElementById('ewmhold'),same=EWM.vno===VNO;EWM.vno=VNO;
+  if(hold&&!same)hold.textContent='';   /* 다른 문항 = 앞 문항의 펼침 줄 걷음 · 같은 문항을 다시 그림(동기화·글 고침·조각) = 펼친 줄 그대로 */
+  const ms=VNO?ewmOf(rec(VNO)):[];
+  let h=document.getElementById('ewmh');
+  if(!ms.length){if(h)h.textContent='';if(hold)hold.textContent='';return}
+  if(!h){const t1=$('#vT1');if(!t1||!t1.parentNode)return;
+    const row=document.createElement('div');row.className='ewt1';t1.parentNode.insertBefore(row,t1);row.appendChild(t1);
+    h=document.createElement('span');h.id='ewmh';row.appendChild(h)}
+  h.textContent='';
+  ms.forEach((x,o)=>{const b=document.createElement('button');b.type='button';b.className='ewmx';b.dataset.ewm=x.r+'-'+x.i;b.textContent=x.r+'-'+x.i+'-X';
+    b.title='실제 '+x.r+'회 1차 '+x.i+'번 — 틀림 · 누르면 내 답 · 정답 · 평균 정답률';
+    b._ewl=hold?hold.querySelector('.ewml[data-o="'+o+'"]'):null;   /* 다시 그린 표시 = 펼쳐 둔 줄과 다시 잇기 */
+    b.onclick=ev=>{ev.stopPropagation();ewmToggle(b,x,o)};h.appendChild(b)})}
+function ewmToggle(b,x,o){
+  if(b._ewl&&b._ewl.isConnected){b._ewl.remove();b._ewl=null;return}
+  let hold=document.getElementById('ewmhold');
+  if(!hold){const vt=$('#view .vtop');if(!vt)return;hold=document.createElement('div');hold.id='ewmhold';vt.after(hold)}
+  const ln=document.createElement('div');ln.className='ewml';ln.dataset.o=o;
+  ln.textContent='내 답 '+ewmCirc(x.my)+' · 정답 '+ewmCirc(x.ans)+' · 평균 정답률 '+ewmRate(x.rate);   /* 문항째 = 밑줄 없음 */
+  hold.insertBefore(ln,[...hold.children].find(c=>+c.dataset.o>o)||null);b._ewl=ln}
+if(typeof showProblem==='function'&&!showProblem.__ewm){
+  const _spE=showProblem;
+  const _e=async function(){const x=await _spE.apply(this,arguments);try{ewmView()}catch(e){console.warn('ewm',e)}return x};
+  _e.__ewm=1;showProblem=_e}
+(function(){try{const s=document.createElement('style');s.id='ewmcss';s.textContent=[
+  '.vtop .ewt1{display:flex;align-items:center;min-width:0}',
+  '.vtop .ewt1>.t1{flex:0 1 auto;min-width:0}',
+  '#ewmh{flex:none;margin-left:4px;white-space:nowrap}','#ewmh:empty{display:none}',   /* 표시 없는 문항 = 제목 폭 바탕 그대로 */
+  '.ewmx{display:inline-block;background:transparent;border:0;padding:0 2px;margin:0;font-family:inherit;font-size:11px;font-weight:800;line-height:16.5px;color:#dc2626;white-space:nowrap;vertical-align:middle;cursor:pointer}',
+  '#ewmhold{flex:none;padding:0 10px}',   /* 머리(.vtop)와 같은 옆 여백 */
+  '@media (pointer:coarse){#ewmhold{padding-left:calc(env(safe-area-inset-left) + 66px)}#view.win>#ewmhold{padding-left:calc(env(safe-area-inset-left) + 10px)}}',
+  '.ewml{font-size:10.5px;color:#8a867d;margin:2px 0 4px;padding-left:4px}'   /* 조판기 H7 .qsub 값 그대로 */
+].join('\n');document.head.appendChild(s)}catch(e){}})();
 </script>
 <script>
 /* ===== 학습로그 요약 (2026-08-11 추가) =====================================
