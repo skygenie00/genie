@@ -64,6 +64,12 @@ def _ln(src, dst):
     except OSError:
         if os.name != 'nt':
             raise
+        if os.path.isdir(src):   # ★ 10/3 로컬(사용자 허용) — 윈도 symlink 권한 없음(WinError 1314) · 폴더(jo/data/omr)는 파일마다 hard link 로(안 되면 복사) · copy2 는 폴더를 못 연다
+            try:
+                shutil.copytree(src, dst, copy_function=os.link)
+            except OSError:
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+            return
         try:
             os.link(src, dst)
         except OSError:

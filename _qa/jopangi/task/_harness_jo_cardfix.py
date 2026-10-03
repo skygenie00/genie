@@ -143,7 +143,7 @@ def g_c2(p, b, eng):
             out[(who, how)] = {'btn': bool(at and at.get('on')), 'w': w, 'w2': w2, 'errs': q.errs_all()[e0:e0 + 3]}
         n, bb = out[('NEW', how)], out[('BASE', how)]
         w, w2 = n['w'] or {}, n['w2'] or {}
-        rows = [r['uid'] for r in (w2.get('rows') or [])]
+        rows = [r['uid'] for r in (w2.get('rows') or []) if not str(r.get('uid') or '').startswith('SV')]   # ★ sp_view4(10/3) — 상표 1차객 책 카드(uid SV… · 뷰객 4판 · _task_jo_sp_view4 §C · add1 §A-1)도 찾기 풀에 든다 · 10/3 잼: 「조문」 → SVE3OX06(OX 6 · 상표법 · V4 p.342) 한 줄 더 · 세 법 옛 줄 셋은 그대로 잰다(보고 줄엔 V4 줄도 남는다)
         T(G, u'TR06092 「✏️ 연결」(%s) → 떠 있는 창 440 · 제목 칩 「06 변리」「2006:?:②」「TR06092」 · 찾기 칸 초점 · 오류 0' % how,
           n['btn'] and w.get('vis') and w.get('w') == 440 and w.get('chips') == [u'06 변리', u'2006:?:②', 'TR06092'] and w.get('focus') and not n['errs'],
           {'창': {k: w.get(k) for k in ('vis', 'w', 'title', 'chips', 'focus', 'inTag')}, '오류': n['errs']})

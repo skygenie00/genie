@@ -368,11 +368,13 @@ def chip_gates(br):
         for law in (u'상표법', u'디자인보호법'):
             p.ev("l=>__HM.home(l)", law)
             k = p.ev("""()=>{const q=(VJ.qs||[]).find(q=>String(q.연도)==='2016'&&q.시험문번);return q?oxKeyLid(q,q.지문[0]):null}""")
-            p.ev("()=>__HM.go('__미분류')")
-            p.ev("k=>{const P=(OXPOOL||{})[k];const pg=(OXDOMPG||{})[P&&P.dom];return pg!=null?__HM.page(pg):null}", k)
-            cc = p.ev("""k=>{const q=(VJ.qs||[]).find(q=>q.지문.some(z=>oxKeyLid(q,z)===k));const c=document.getElementById('qb-'+q.id);if(!c)return null;
+            p.ev("k=>__HM.goKey(k)", k); p.pg.wait_for_timeout(1500); gk = p.ev("k=>__HM.goKey(k)", k) or {}   # ★ sp_view4(10/3) — 상표 1차객 = 책 목차 56 마디(_task_jo_sp_view4 §C-1 · add3 §B mokcha_상표) → 리담 카드가 마디에 놓이고(미분류 밖) 책 카드 꼴 qb-<uid> · 10/3 잼: 2016-53-1 = __mg54(8.3 기타쟁점) · qb-S1653221 · 칩 2016:22:① · 시험지 창 bd 1 · 마디로 못 가는 법(디보)은 옛 길(미분류)
+            if not gk.get('ok'):
+                p.ev("()=>__HM.go('__미분류')")
+                p.ev("k=>{const P=(OXPOOL||{})[k];const pg=(OXDOMPG||{})[P&&P.dom];return pg!=null?__HM.page(pg):null}", k)
+            cc = p.ev("""([k,dm])=>{const q=(VJ.qs||[]).find(q=>q.지문.some(z=>oxKeyLid(q,z)===k));const c=document.getElementById(dm||('qb-'+q.id));if(!c)return null;
               const b=[...c.querySelectorAll('.jxec')].find(x=>/^2016:\\d+:/.test(x.textContent));if(!b)return null;b.scrollIntoView({block:'center'});
-              const r=b.getBoundingClientRect();const at=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {cx:r.left+r.width/2,cy:r.top+r.height/2,on:!!at&&(at===b||b.contains(at)),t:b.textContent}}""", k)
+              const r=b.getBoundingClientRect();const at=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {cx:r.left+r.width/2,cy:r.top+r.height/2,on:!!at&&(at===b||b.contains(at)),t:b.textContent}}""", [k, gk.get('dom') if gk.get('ok') else None])
             p.click(cc, 2500)
             f = '2016-1-%s' % ('sangpyo' if law == u'상표법' else 'dibo')
             pw = p.until("f=>{const x=__HM.pop('^cv\\\\|exam\\\\|'+f);return x&&x.canvas&&x.bdVis?x:null}", f, ms=20000)

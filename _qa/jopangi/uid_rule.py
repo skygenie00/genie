@@ -134,7 +134,8 @@ def units_of(rows):
             U.append(Unit(key='L:%d' % i, ident=u'L|' + src, row=i, side='L', law=law, year=yr,
                           text=r[u'문제'], n=norm(r[u'문제']), ans=r[u'정답'], label=lab, q=(law, f, sun), sun=int(sun),
                           mun=mun, variant=(r[u'출처'] == u'기출변형'), old=r['uid']))
-        p7 = src if src.startswith('P7-') else (r[u'짝 ID'] or u'')
+        pid = r[u'짝 ID'] or u''
+        p7 = src if src.startswith('P7-') else (pid if pid.startswith('P7-') else u'')   # ★ sp_view4 §C(10/3) — 「V4-」 짝(상표 뷰객 책)은 특허 책 단위가 아니다
         if p7:
             m = re.match(u'^(P7-\\d{4})(?:-(\\d|[ㄱ-ㅅ가나다라마바사]))?$', p7)   # mbsame §A-4(9/27) — 조합형은 보기 글자 줄로 쪼갠다
             kind, ys = tag_parse(r[u'태그'])
@@ -627,6 +628,8 @@ def verify_ledger(rows):
         L, P = by[i].get('L'), by[i].get('P')
         if u'|' in (r[u'소스'] or u''):
             want = ((L.uid if L else u''), (P.uid if (P and L and P.uid != L.uid) else u''))
+            if (r.get(u'짝 ID') or u'').startswith('V4-'):   # ★ sp_view4 §C(10/3) — 상표 뷰객 짝 행 uid7(책 쪽 SV uid)은 view4_build 관문 V4U 가 잰다
+                want = (want[0], r.get('uid7') or u'')
         else:
             want = ((P.uid if P else (r['uid'] or u'')), u'')
         have = ((r['uid'] or u''), (r.get('uid7') or u''))

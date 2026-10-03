@@ -427,18 +427,19 @@ def JIMUN_N(L):
     if not sh:
         return None
     j = json.load(io.open(os.path.join(JOD, 'data', 'jimun_' + sh + '.json'), encoding='utf-8'))
+    bk = {'특허': 'jimun_7pan.json', '상표': 'jimun_상표_뷰객.json'}.get(sh)   # ★ sp_view4 add2 §A-3(10/3) — 앱 railCounts gBook: 상표도 책(뷰객 4판) 지문을 더한다(병합 리담 뺌 · 같은 uid 한 번) · 10/3 잼: 상표 2,337 = 앱 · 책 파일이 없는 옛 데이터는 리담만(바탕 1,100)
     ks, n = set(), 0
     for q in j.get('문제') or []:
         for z in q.get('지문') or []:
-            if sh == '특허' and z.get('병합'):
+            if bk and z.get('병합'):
                 continue
             u = z.get('uid')
             if not (u and u in ks):
                 n += 1
             if u:
                 ks.add(u)
-    if sh == '특허':
-        P = json.load(io.open(os.path.join(JOD, 'data', 'jimun_7pan.json'), encoding='utf-8'))
+    if bk and os.path.isfile(os.path.join(JOD, 'data', bk)):
+        P = json.load(io.open(os.path.join(JOD, 'data', bk), encoding='utf-8'))
         for z in P.get('지문') or []:
             if z.get('ox') in ('O', 'X'):
                 u = z.get('uid')

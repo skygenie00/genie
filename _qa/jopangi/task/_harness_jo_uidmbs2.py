@@ -781,13 +781,27 @@ def g_u4(p, b, eng):
     N(G, u'pdf 504 · 3번 카드 출제연도 칩 — 같은 해 리담과 글이 똑같지 않아(닮음 ≥0.95 · 똑같음 0) 합치지 않음 → 2025 칩 없음(보고)', {'줄': z, '칩': chips})
 
 
+def un_pool(law):
+    """★ sp_view4(10/3 · _task_jo_sp_view4 §C-1 목차 · add3 §B mokcha_상표.json) — u-6 「칩 = 서랍 = 풀」 의 풀(OXPOOL)은 상표 · 디보에 목차가 없어 리담 전부가 미분류이던 때 잣대다.
+    목차(mokcha_<법>.json 마디)가 생긴 법은 미분류 = 어느 마디 리담 목록에도 없는 문항의 지문 수(앱 셈과 따로 데이터로) · 10/3 잼: 상표 = 2003-40-7 · 9 · 10 세 문항 15 = 칩 15 · 목차 파일이 없으면 None(옛 잣대)"""
+    sh = {u'상표법': u'상표', u'디자인보호법': u'디보'}.get(law)
+    f = os.path.join(M.DATA, u'mokcha_%s.json' % sh) if sh else ''
+    if not sh or not os.path.isfile(f):
+        return None
+    placed = set(x for n in (json.load(io.open(f, encoding='utf-8')).get(u'마디') or []) for x in (n.get(u'리담') or []))
+    J = json.load(io.open(os.path.join(M.DATA, u'jimun_%s.json' % sh), encoding='utf-8'))
+    return sum(len(q.get(u'지문') or []) for q in (J.get(u'문제') or []) if q.get('id') not in placed)
+
+
 def g_u6(p, b, eng):
     G = 'u-6'
     for law in ('상표법', '디자인보호법'):
         home(p, law)
         c = p.ev("()=>__UZ.hmChip('^미분류')")
         dl = p.ev("()=>__UZ.drawerLeaf('미분류 (리담)')")
-        pool = p.ev("()=>Object.keys(OXPOOL||{}).length")
+        pool = un_pool(law)   # ★ sp_view4(10/3) — 목차가 생긴 법(상표)은 미분류 풀 = 어느 마디에도 없는 리담 문항의 지문 수(데이터로 셈) · 목차 없는 법은 옛 잣대(OXPOOL)
+        if pool is None:
+            pool = p.ev("()=>Object.keys(OXPOOL||{}).length")
         home(b, law)
         cb = b.ev("()=>__UZ.hmChip('^미분류')")
         T(G, u'%s 히트맵 「미분류 (리담)」 칩 = 서랍(레일) = 풀' % law, bool(c and dl and c['n'] == int(dl['n']) == pool), {'칩': c, '서랍': dl, '풀': pool})

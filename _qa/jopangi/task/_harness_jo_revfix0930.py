@@ -554,6 +554,14 @@ TREEQ = r"""() => { const t = document.querySelector('#slot > .tree'); if (!t) r
 VISN = r"""() => [...document.querySelectorAll('#slot > .tree .r')].filter(__RB.vis).length"""
 
 
+JCK = re.compile(r'<button class="jck[^"]*"[^>]*>.*?</button>', re.S)   # ★ sp_view4(10/3) — 서랍 줄 「정오문제 N」 단추(B6 g5 상표)
+
+
+def jck_counts(h):
+    """★ sp_view4(10/3) — 서랍 줄마다 「정오문제 N」 수(단추 없거나 0 이면 0)"""
+    return [int(m.group(1)) if m else 0 for m in (re.search(r'<span class="jckn">(\d+)</span>', r) for r in re.findall(r'<div class="r[^"]*"[^>]*>(.*?)</div>', h or '', re.S))]
+
+
 def tree_html(p, law):
     p.ev("async a => { localStorage.removeItem('jopangi_ui_jofold'); await __RB.jo(a, '제1조', true); }", law)
     p.wait(300)
@@ -632,6 +640,11 @@ def b6(br):
             hn, _qn = tree_html(p, law)
             hb, _qb = tree_html(pb, law)
             fn, fb = fold_seq(p, law), fold_seq(pb, law)
+            if law == '상표법':   # ★ sp_view4(10/3) — 상표 책 카드(뷰객 4판)가 조문에 이어져(_task_jo_sp_view4 add1 §A-1) 서랍 「정오문제 N」 단추(.jck)만 바뀐다 · 10/3 잼: 단추 뺀 DOM 바이트 같음 · 수 합 1,028 → 2,202 · 는 줄 190 · 준 줄 0 · 새 단추 88 → 단추는 빼고 맞대고 줄마다 수가 줄지 않는지 따로 본다
+                cn, cb = jck_counts(hn), jck_counts(hb)
+                down = [i for i, (a, b) in enumerate(zip(cn, cb)) if a < b] if len(cn) == len(cb) else ['줄 수 다름 %d/%d' % (len(cn), len(cb))]
+                same.append((law, JCK.sub('', hn or '') == JCK.sub('', hb or '') and not down, fn == fb, fn, {'정오문제 수 합(새 · 바탕)': [sum(cn), sum(cb)], '준 줄': down[:5]}))
+                continue
             same.append((law, hn == hb, fn == fb, fn))
         g5 = all(s[1] and s[2] for s in same)
         ok &= g5
