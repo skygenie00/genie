@@ -125,7 +125,7 @@ def units_of(rows):
                 m = re.search(u'기호=(\\S)', r[u'로그'] or u'')
                 lab = SYM.get(m.group(1)) if m else None
                 if not lab:
-                    lab = u'ㄱㄴㄷㄹㅁㅂㅅ'[int(sel[1:]) - 1]
+                    lab = u'ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋ'[int(sel[1:]) - 1]   # ★ sp_gichul §C(10/3) — 보기 여덟(2005-42-24 ㄱ~ㅇ · 「ㅇ」 은 SYM 밖) · 일곱까지 무변
             else:
                 lab = sel
             mun = int(r[u'문번']) if re.fullmatch(r'\d+', r[u'문번'] or u'') else None
@@ -628,7 +628,7 @@ def verify_ledger(rows):
         L, P = by[i].get('L'), by[i].get('P')
         if u'|' in (r[u'소스'] or u''):
             want = ((L.uid if L else u''), (P.uid if (P and L and P.uid != L.uid) else u''))
-            if (r.get(u'짝 ID') or u'').startswith('V4-'):   # ★ sp_view4 §C(10/3) — 상표 뷰객 짝 행 uid7(책 쪽 SV uid)은 view4_build 관문 V4U 가 잰다
+            if (r.get(u'짝 ID') or u'').startswith(('V4-', 'V5-')):   # ★ sp_view4 §C(10/3) — 상표 뷰객 짝 행 uid7(책 쪽 SV uid)은 view4_build 관문 V4U 가 잰다 · ★ sp_view5 §C(10/3) 「V5-」 도
                 want = (want[0], r.get('uid7') or u'')
         else:
             want = ((P.uid if P else (r['uid'] or u'')), u'')
