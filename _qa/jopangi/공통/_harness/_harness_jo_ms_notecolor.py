@@ -14,6 +14,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · regress = NEW 만(바탕 안 풀고 안 띄움 · ⚙ note_color.py 안 굽고 산출 파일 읽기 · 81 노트는 표본 40 · 세 기기 동기화는 canvas_jari E-6 ⑤ 로 합침) · smoke = 기본 점검 칸만(chromium) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안
 _NR = _roots.need_n('⚙ note_color.py · 민소 교재 PDF')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
@@ -49,7 +50,7 @@ RED, BLUE, PINK = 'rgb(212, 0, 0)', 'rgb(0, 0, 255)', 'rgb(255, 0, 163)'
 NAVY, ORANGE = 'rgb(0, 84, 163)', 'rgb(255, 97, 0)'
 SERVERS = {}
 RES = []
-NCJSON = os.path.join(WORK, 'note_color.json')
+NCJSON = (os.path.join(WORK, 'note_color.json') if QJ.GATE else os.path.join(DATA, 'omr', '민소', 'note_color.json'))
 
 
 def T(grp, name, ok, detail=''):
@@ -114,6 +115,7 @@ def serve(tag, src):
 class Pg:
     def __init__(self, br, eng, tag, src, W, H, phone=False, q='tok=1', who='꼬까'):
         self.eng, self.tag, self.phone, self.who = eng, tag, phone, who
+        QJ.launch('base' if tag == 'BASE' else 'new')   # 셈(§B-4) — 바탕(BASE) 판을 띄운 수 · NEW 를 띄운 수
         self.port = serve(tag, src)
         if phone:
             self.ctx = br.new_context(viewport={'width': W, 'height': H}, device_scale_factor=2, is_mobile=True, has_touch=True, user_agent=PHONE_UA)
@@ -155,6 +157,8 @@ class Pg:
         return True
 
     def shot(self, name):
+        if QJ.REGRESS:   # regress — 눈으로 볼 스크린샷은 안 찍는다(판정 칸 아님 · 찍고 0.5초씩 되읽기)
+            return 'regress — 안 찍음'
         d = os.path.join(OUT, '_notecolor_shots'); os.makedirs(d, exist_ok=True)
         f = os.path.join(d, name + '.png')
         try:
@@ -197,21 +201,31 @@ def span_at(line, w, k=0):
 def scen_data():
     g = '데이터'
     os.makedirs(WORK, exist_ok=True)
-    outs = []
-    for i in (1, 2):
-        o = os.path.join(WORK, 'nc_%d.json' % i)
-        r = subprocess.run([sys.executable, NCPY, '--data', DATA, '--out', o], capture_output=True)
-        outs.append(o)
-        print('  note_color.py', i, r.returncode, r.stdout.decode('utf-8', 'replace').strip()[:200])
-    b1, b2 = open(outs[0], 'rb').read(), open(outs[1], 'rb').read()
-    shutil.copy(outs[0], NCJSON)
+    if QJ.GATE:
+        outs = []
+        for i in (1, 2):
+            o = os.path.join(WORK, 'nc_%d.json' % i)
+            r = subprocess.run([sys.executable, NCPY, '--data', DATA, '--out', o], capture_output=True)
+            outs.append(o)
+            print('  note_color.py', i, r.returncode, r.stdout.decode('utf-8', 'replace').strip()[:200])
+        b1, b2 = open(outs[0], 'rb').read(), open(outs[1], 'rb').read()
+        shutil.copy(outs[0], NCJSON)
+    else:
+        b1 = open(NCJSON, 'rb').read()   # regress — note_color.py 두 번 굽기 · 같은 바이트 대조(D2)는 gate 만 → genie 에 올라간 산출 파일(앱이 받는 그 파일)을 읽는다
     d = json.loads(b1)
     st = {'dict': len(d['dict']), 'notes': len(d['loc']), 'words': sum(len(x[2]) for v in d['loc'].values() for x in v)}
     T(g, 'D1 note_color.json 사전 · loc 노트 · 낱말 수 = 시안 값(33 · 53 · 632)', st == PROTO, {'새로': st, '시안': PROTO, 'hash': d.get('hash')})
-    T(g, 'D2 같은 입력 두 번 = 같은 바이트', b1 == b2, [hashlib.md5(b1).hexdigest()[:12], hashlib.md5(b2).hexdigest()[:12], len(b1)])
+    if QJ.GATE:
+        T(g, 'D2 같은 입력 두 번 = 같은 바이트', b1 == b2, [hashlib.md5(b1).hexdigest()[:12], hashlib.md5(b2).hexdigest()[:12], len(b1)])
     T(g, 'D3 노트 글자는 싣지 않는다(낱말·행 번호만 — 꼴 {v, hash, dict, loc})', set(d) == {'v', 'hash', 'dict', 'loc'}
       and all(len(x) == 3 and isinstance(x[0], int) and isinstance(x[1], int) for v in d['loc'].values() for x in v), sorted(d))
     return d
+
+
+JS_P6_ONE = """f=>{const out={q:0,pan:0,jo:0,ex:[]};const L=__HN.lines(f)||[];
+          L.forEach(l=>{const R=[];const add=(rx,k)=>{let m;rx.lastIndex=0;while((m=rx.exec(l.t)))R.push([m.index,m.index+m[0].length,k]);};
+            add(/"[^"]{1,40}"/g,'q');add(/“[^”]{1,40}”/g,'q');add(/<판례>/g,'pan');add(/\\(\\d+조[^)]{0,6}\\)/g,'jo');
+            l.sp.forEach(x=>{if(x.r==='loc'||x.r==='dict')return;const h=R.find(r=>x.s>=r[0]&&x.e<=r[1]);if(h){out[h[2]]++;if(out.ex.length<4)out.ex.push(f.slice(0,10)+'|'+l.ri+'|'+x.w+'|'+x.r);}});});return out;}"""   # regress — P6(따옴표 · <판례> · (N조) 를 규칙으로 칠한 수)의 줄 검사 JS(원본과 같은 본문 · 노트 열기 · 노트 for 만 뺐다)
 
 
 # ══════════ 책상 ══════════
@@ -224,42 +238,70 @@ def scen_desk(br, eng, src, tag, CEN):
         # ── 칠하기 census(81 노트) ──
         tot = {}
         lines131 = None
-        for f in names:
+        if QJ.REGRESS:   # regress — 표본: 81 노트 가운데 40(씨앗 고정 · 1.3.1 은 늘 든다 — P1~P5 · P7 이 이 노트 줄을 쓴다) · P6 칸의 줄 검사를 같은 노트 열기에 얹는다(81 노트를 또 열지 않는다)
+            pick = QJ.sample(names, 40, 'notecolor:P0')
+            if N131 not in pick:
+                pick = pick + [N131]
+            if QJ.SMOKE:   # smoke — 1.3.1 하나만(P1 · P7 칸이 이 줄을 쓴다)
+                pick = [N131]
+            bad6 = {'q': 0, 'pan': 0, 'jo': 0, 'ex': []}
+        for f in (names if QJ.GATE else pick):
             p.ev("async f=>await __HN.note(f)", f)
             c = p.ev("f=>__HN.census(f)", f) or {'c': {}}
             for k, v in c['c'].items():
                 tot[k] = tot.get(k, 0) + v
             if f == N131:
                 lines131 = p.ev("f=>__HN.lines(f)", f)
+            if QJ.REGRESS and not QJ.SMOKE:   # regress — P6 줄 검사(같은 JS · 이미 열린 노트)
+                _o = p.ev(JS_P6_ONE, f) or {}
+                for _k in ('q', 'pan', 'jo'):
+                    bad6[_k] += _o.get(_k, 0)
+                for _x in (_o.get('ex') or []):
+                    if len(bad6['ex']) < 4:
+                        bad6['ex'].append(_x)
         CEN[tag + eng] = tot
-        T(g, 'P0 81 노트를 모두 열어 칠했다(규칙별 수는 표 · 채팅 값과 나란히)', len(names) == 81 and sum(tot.values()) > 0,
-          {'새로': tot, '채팅': CHAT, 'notes': len(names)})
+        if QJ.GATE:
+            T(g, 'P0 81 노트를 모두 열어 칠했다(규칙별 수는 표 · 채팅 값과 나란히)', len(names) == 81 and sum(tot.values()) > 0,
+              {'새로': tot, '채팅': CHAT, 'notes': len(names)})
+        else:
+            if QJ.want('P0'):   # smoke — 81 노트 census 는 안 잰다
+                T(g, 'P0 81 노트를 모두 열어 칠했다(규칙별 수는 표 · 채팅 값과 나란히)', len(names) == 81 and sum(tot.values()) > 0,
+                  {'새로': tot, '채팅': CHAT, 'notes': len(names), '(표본 %d/%d)' % (len(pick), len(names)): '씨앗 고정 · 1.3.1 포함'})
         L = lines131 or []
         r7 = find_row(L, 'X<-관할-{사}')
         sx = span_at(r7, 'X')
         T(g, 'P1 1.3.1 「X<-관할-{사}…」 X 빨강', bool(sx) and sx['r'] == 'ox' and sx['color'] == RED, {'t': r7 and r7['t'][:30], 'sp': sx})
         r5, r6 = find_row(L, '원칙)'), find_row(L, '예외)')
         s5, s6 = span_at(r5, '원칙)'), span_at(r6, '예외)')
-        T(g, 'P2 「원칙)」 빨강 · 「예외)」 파랑', bool(s5) and bool(s6) and s5['color'] == RED and s6['color'] == BLUE and s5['r'] == 'pe' and s6['r'] == 'pe'
-          and s5['w'] == '원칙)' and s6['w'] == '예외)', {'원칙': s5, '예외': s6})
+        if QJ.want('P2'):
+            T(g, 'P2 「원칙)」 빨강 · 「예외)」 파랑', bool(s5) and bool(s6) and s5['color'] == RED and s6['color'] == BLUE and s5['r'] == 'pe' and s6['r'] == 'pe'
+              and s5['w'] == '원칙)' and s6['w'] == '예외)', {'원칙': s5, '예외': s6})
         r14 = find_row(L, 'Ⅲ.{토}')
         s14 = span_at(r14, '토')
-        T(g, 'P3 「Ⅲ.{토}」 토 빨강(괄호 안 글만)', bool(s14) and s14['color'] == RED and s14['r'] == 'hb' and s14['w'] == '토', {'t': r14 and r14['t'][:20], 'sp': s14})
+        if QJ.want('P3'):
+            T(g, 'P3 「Ⅲ.{토}」 토 빨강(괄호 안 글만)', bool(s14) and s14['color'] == RED and s14['r'] == 'hb' and s14['w'] == '토', {'t': r14 and r14['t'][:20], 'sp': s14})
         r20 = find_row(L, '(2) {8조}')
         s20 = span_at(r20, '8조')
-        T(g, 'P4 「(2) {8조}」 는 안 칠함({N조} 뺌)', bool(r20) and s20 is None, {'t': r20 and r20['t'][:20], 'sp': s20})
+        if QJ.want('P4'):
+            T(g, 'P4 「(2) {8조}」 는 안 칠함({N조} 뺌)', bool(r20) and s20 is None, {'t': r20 and r20['t'][:20], 'sp': s20})
         r51 = find_row(L, '③ 관할권')
         s51 = span_at(r51, '전속관할')
-        T(g, 'P5 「③ 관할권 … 전속관할」 빨강', bool(s51) and s51['color'] == RED, {'t': r51 and r51['t'][:30], 'sp': s51})
+        if QJ.want('P5'):
+            T(g, 'P5 「③ 관할권 … 전속관할」 빨강', bool(s51) and s51['color'] == RED, {'t': r51 and r51['t'][:30], 'sp': s51})
         # 따옴표 · <판례> · (N조) 안 칠 수(규칙 아님 — 81 노트 전체)
-        bad = p.ev("""async names=>{const out={q:0,pan:0,jo:0,ex:[]};for(const f of names){await __HN.note(f);const L=__HN.lines(f)||[];
+        bad = bad6 if QJ.REGRESS else p.ev("""async names=>{const out={q:0,pan:0,jo:0,ex:[]};for(const f of names){await __HN.note(f);const L=__HN.lines(f)||[];
           L.forEach(l=>{const R=[];const add=(rx,k)=>{let m;rx.lastIndex=0;while((m=rx.exec(l.t)))R.push([m.index,m.index+m[0].length,k]);};
             add(/"[^"]{1,40}"/g,'q');add(/“[^”]{1,40}”/g,'q');add(/<판례>/g,'pan');add(/\\(\\d+조[^)]{0,6}\\)/g,'jo');
             l.sp.forEach(x=>{if(x.r==='loc'||x.r==='dict')return;const h=R.find(r=>x.s>=r[0]&&x.e<=r[1]);if(h){out[h[2]]++;if(out.ex.length<4)out.ex.push(f.slice(0,10)+'|'+l.ri+'|'+x.w+'|'+x.r);}});});}return out;}""", names)
-        T(g, 'P6 따옴표 · <판례> · (N조) 를 규칙(O·X·Δ · 원칙)예외) · 두문자)으로 칠한 수 0', bool(bad) and bad['q'] == 0 and bad['pan'] == 0 and bad['jo'] == 0, bad)
+        if QJ.want('P6'):
+            T(g, 'P6 따옴표 · <판례> · (N조) 를 규칙(O·X·Δ · 원칙)예외) · 두문자)으로 칠한 수 0', bool(bad) and bad['q'] == 0 and bad['pan'] == 0 and bad['jo'] == 0, bad)
         h = p.ev("f=>__HN.head(f)", N131) if p.ev("async f=>await __HN.note(f)", N131) else None
         T(g, 'P7 노트 팝업 머리 「정리 색」(켬 주황 굵게 · 11px · 아이콘 없음) · 「✎ 색 N」 은 0 이면 없음', bool(h) and not h.get('none') and h['on'] and h['onColor'] == 'rgb(180, 83, 9)'
           and int(h['onW']) >= 600 and h['fs'] == '11px' and h['icons'] == 0 and h['me'] == '' and h['t'] == '정리 색', h)
+        if QJ.SMOKE:   # smoke — P1 · P7 · Z(책상) 만(P0 census · P2~P6 · 고치기 · 켜고 끄기 · 임베드 상자는 안 잰다)
+            er = [x for x in p.errs + (p.ev("()=>__HN.errs()") or []) if not CJ.NOISE(x)]
+            T(g, 'Z 페이지 오류 0(잡음 빼고)', not er, er[:6])
+            return
         # ── 고치기 ──
         at = p.ev("([f,ri,w])=>__HN.at(f,ri,w,0)", [N131, r7['ri'] if r7 else 7, 'X'])
         p.click(at, 350)
@@ -381,7 +423,7 @@ def scen_desk(br, eng, src, tag, CEN):
 def scen_other(br, base, new):
     g = 'NEW 다른 법 노트 무변'
     out = {}
-    for tag, src in (('BASE', base), ('NEW', new)):
+    for tag, src in ((('BASE', base), ('NEW', new)) if QJ.GATE else (('NEW', new),)):
         p = Pg(br, 'chromium', tag, src, 1440, 900)
         try:
             R = {}
@@ -394,8 +436,14 @@ def scen_other(br, base, new):
             out[tag] = R
         finally:
             p.close()
-    a, b = out.get('BASE', {}), out.get('NEW', {})
-    d = [k for k in a if a.get(k) != b.get(k)]
+    if QJ.GATE:
+        a, b = out.get('BASE', {}), out.get('NEW', {})
+        d = [k for k in a if a.get(k) != b.get(k)]
+    else:
+        b = out.get('NEW', {})
+        _md = lambda s: None if s is None else hashlib.md5(s.encode('utf-8')).hexdigest()
+        a = QJ.base('O1@chromium/dom', {k: _md(v) for k, v in b.items()})   # regress — 기준 칸: 바탕 노트 팝업 본문 = 기준 스냅샷(노트마다 md5 · 바탕 앱 안 띄움 · 스냅샷 없으면 NEW 값 = 첫 기록)
+        d = [k for k in a if a.get(k) != _md(b.get(k))]
     T(g, 'O1 특허 · 상표 · 디보 노트 팝업 본문 DOM = 바탕(법마다 앞 여섯 노트)', bool(a) and a.keys() == b.keys() and not d and not any('class="nc' in (v or '') for v in b.values()),
       {'n': len(a), 'diff': d[:4]})
 
@@ -495,29 +543,37 @@ def main():
     t0 = time.time()
     os.makedirs(WORK, exist_ok=True); os.makedirs(OUT, exist_ok=True)
     new = io.open(NEWF, encoding='utf-8').read()
-    base = io.open(BASEF, encoding='utf-8').read() if BASEF else git('show', 'HEAD:jo/index.html').decode('utf-8')
+    if QJ.GATE:
+        base = io.open(BASEF, encoding='utf-8').read() if BASEF else git('show', 'HEAD:jo/index.html').decode('utf-8')
+    else:
+        base = ''   # regress — 바탕 앱 풀기 0(git show 안 부름)
     md = lambda s: hashlib.md5(s.replace('\r\n', '\n').encode('utf-8')).hexdigest()
     run = lambda x: not ONLY or x in ONLY
-    scen_data()
+    if not QJ.SMOKE:
+        scen_data()
     CEN = {}
     with sync_playwright() as pw:
         cr = pw.chromium.launch()
-        if run('base'):
+        if run('base') and QJ.GATE:   # regress — 바탕(헛잣대) 책상 장면 0
             scen_desk(cr, 'chromium', base, 'BASE', CEN)
         if run('desk'):
-            scen_desk(cr, 'chromium', new, 'NEW', CEN)
-        if run('other'):
-            scen_other(cr, base, new)
-        if run('phone'):
-            scen_phone(cr, 'chromium', new)
-        if run('sync'):
+            with QJ.stage('desk NEW chromium'):
+                scen_desk(cr, 'chromium', new, 'NEW', CEN)
+        if run('other') and not QJ.SMOKE:
+            with QJ.stage('other 법 무변'):
+                scen_other(cr, base, new)
+        if run('phone') and not QJ.SMOKE:
+            with QJ.stage('phone chromium'):
+                scen_phone(cr, 'chromium', new)
+        if run('sync') and QJ.GATE:   # regress — 세 기기 동기화 되살림(S1~S4 · 옛 판 기기 = 바탕 앱)은 canvas_jari E-6 ⑤ 로 합침(옛 31키 모사 기기) · 바탕 띄움 0
             scen_sync(cr, base, new)
         cr.close()
-        if run('wk'):
+        if run('wk') and not QJ.SMOKE:
             wk = pw.webkit.launch()
-            scen_desk(wk, 'webkit', new, 'NEW', CEN)
+            with QJ.stage('desk NEW webkit'):
+                scen_desk(wk, 'webkit', new, 'NEW', CEN)
             wk.close()
-    return report(t0, md(new), md(base), CEN)
+    return report(t0, md(new), (md(base) if QJ.GATE else '(regress — 바탕 안 풀음)'), CEN)
 
 
 if __name__ == '__main__':

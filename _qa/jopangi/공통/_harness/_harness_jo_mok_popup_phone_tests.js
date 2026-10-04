@@ -182,6 +182,7 @@ window.__HM={
     if(nm==='jo')await popJo('특허법','제129조',E,1);else if(nm==='note')await popNote(a_N96(),null,E,1);else if(nm==='prec')await popPrec4('2021후10374',E,1);else if(nm==='card')await popCard4('기출','특기출 25-62-1',E,1);
     await wait(900);const p=lastPop();if(!p)return null;const c=p.cloneNode(true);
     c.querySelectorAll(':scope > .pb > .memobtn').forEach(x=>{if(/이 노트가 인용/.test(txt(x)))x.remove();});
+    if(nm==='card')c.querySelectorAll('.c2miss,.c2lnkw').forEach(x=>x.remove());   /* ★ ⑧ A-8-1 · A-9-4(사용자 10/3 08:22·08:32 누락 · 09:33 설문 연결) — 옛: 카드 팝업 DOM 요소 전부 셈 → 새: ⑧ 이 카드 창 본문(opt.c2deco)에 더한 꾸밈은 뺀다 = 헤딩 줄마다 「누락」 단추 .c2miss(1) · 설문 줄(rh1) 고리 칸 .c2lnkw(칸 · 단추 · svg · path = 4) · 특기출 25-62-1 = 헤딩 38 + 설문 5×4 = 58 = 463 − 405 · card 만(다른 팝업에 새면 FAIL 로 남게) */
     return {rect:R(p),z:null,cls:p.className,style:{w:p.style.width,h:p.style.height,mh:p.style.maxHeight,l:p.style.left,t:p.style.top},text:c.textContent.replace(/\s+/g,' ').slice(0,4000),n:c.querySelectorAll('*').length,
       html:c.innerHTML.replace(/ style="[^"]*"/g,'').length};},
   layout(){const q=s=>R(document.querySelector(s));return {top:q('header.topbar'),hs:q('#hsrow'),slot:q('#slot'),main:q('#slot > .main'),tree:q('#slot > .tree'),plist:q('#slot > .plist'),badges:q('#hbadges'),hrail:q('#hrail'),laws:q('#laws')};}

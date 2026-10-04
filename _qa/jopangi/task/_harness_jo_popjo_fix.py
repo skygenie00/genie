@@ -2,7 +2,9 @@
 r"""_task_jo_popjo_fix §C 관문 — 조문 팝업 둘: 삭제 조 「본문을 찾지 못했다」 · 필기 조 꾸밈 기본 켜짐
 
   python _harness_jo_popjo_fix.py [--new <앱>] [--base <앱 파일 | genie git 판 = 83c230f>] [--data <jo/data>] [--base-data <git 판 = 83c230f>]
-                                  [--spd <studyplandata>] [--res <결과>] [--shots <폴더>] [--eng chromium,webkit] [--only C1,C2,C3,C4]
+                                  [--spd <studyplandata>] [--res <결과>] [--shots <폴더>] [--eng chromium,webkit] [--only C1,C2,C3,C4] [--mode gate|regress|smoke]
+  --mode(_task_qa_slim 10/4) — 없으면 gate(= 이 판 앞과 같음) · regress = NEW 만(바탕 앱 · 바탕 데이터 git 풀기 0 · 헛잣대 Y1~Y4 와 옛 앱 + 새 데이터 칸은 관문만 ·
+    바탕이 기댓값인 칸(C1a 삭제 줄 칩 수 · C3 jomark 칠 수)은 기준 스냅샷) · smoke = regress 가운데 C2(T2461181 → 삭제 조 팝업) 만
 
   새 = --new 앱 + --data(새 데이터) · 헛잣대 = --base 앱 + 같은 데이터(지시서 「83c230f · 같은 데이터」) ·
   C1 은 바탕 앱 + 바탕 데이터(git --base-data 판 · 바뀐 파일만 덧판)도 센다(§0-3 「61 + α」)
@@ -26,6 +28,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402  _task_qa_slim(10/4) — --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다(이 줄은 다른 import · 인자 읽기보다 먼저)
 import json, os, re, sys, time, shutil, subprocess, tempfile, threading, urllib.parse   # noqa: E402
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer   # noqa: E402
 try:
@@ -70,6 +73,7 @@ def base_data_overlay(rev):
     """바탕 데이터 = 지금 DATA 위에 git 판 rev 의 jo/data 가운데 바이트가 다른 파일만 덧판(126MB 를 다 꺼내지 않는다)"""
     d = os.path.join(TMP, 'bdata_' + rev)
     os.makedirs(d, exist_ok=True)
+    QJ.sub('git:archive')   # 셈만 — 바탕 데이터 git 풀기(regress · smoke 는 0 이어야 한다)
     names = [x for x in git('ls-tree', '--name-only', rev, 'jo/data/').decode('utf-8').splitlines() if x.endswith('.json')]
     got = []
     for nm in names:
@@ -252,7 +256,8 @@ def c1_count(p, law):
 def run_c1(br, src_new, src_base, newroots, baseroots):
     G = 'C1'
     rows = {}
-    for nm, src, roots in (('새', src_new, newroots), ('바탕 앱 · 같은 데이터', src_base, newroots), ('바탕 앱 · 바탕 데이터', src_base, baseroots)):
+    for nm, src, roots in ((('새', src_new, newroots), ('바탕 앱 · 같은 데이터', src_base, newroots), ('바탕 앱 · 바탕 데이터', src_base, baseroots)) if QJ.GATE else (('새', src_new, newroots),)):   # regress · smoke — 바탕 앱 둘은 안 띄운다
+        QJ.launch('new' if nm == '새' else 'base')
         p = Pg(br, 'c1' + nm, src, roots, PC)
         rows[nm] = {law: c1_count(p, law) for law in ('특허법', '상표법', '디자인보호법')}
         rows[nm]['JS 오류'] = p.errs[:3]
@@ -263,26 +268,36 @@ def run_c1(br, src_new, src_base, newroots, baseroots):
         N(G, '%s — 갈래(결과 → 누른 자리 → 칩 수)' % nm, {law: rows[nm][law]['갈래'] for law in ('특허법', '상표법', '디자인보호법')})
     T(G, '세 법 1차객 카드 jo 칩·유형 칩·해설 조 칩 → popJo 「본문을 찾지 못했다」 칩 셈 = 0', tot['새'] == 0 and not rows['새']['JS 오류'],
       {'새': tot['새'], '못찾음 조(새)': {law: rows['새'][law]['못찾음 조'] for law in ('특허법', '상표법', '디자인보호법') if rows['새'][law]['못찾음 조']}, 'JS 오류': rows['새']['JS 오류']})
-    T('Y1', 'C1 헛잣대(바탕 앱 83c230f · 같은 데이터) = FAIL(물림)', tot['바탕 앱 · 같은 데이터'] > 0, {'바탕 앱 · 같은 데이터': tot['바탕 앱 · 같은 데이터'], '바탕 앱 · 바탕 데이터(§0-3 61 + α)': tot['바탕 앱 · 바탕 데이터']})
-    T(G, '옛 앱(83c230f) + 새 데이터(목록 새 칸 「삭제」 · 디-331 뺀 jimun_디보) — 세 법 1차객 카드를 다 지어 눌러도 JS 오류 0(열어 둔 탭 · 옛 판 기기)',
-      not rows['바탕 앱 · 같은 데이터']['JS 오류'] and all(rows['바탕 앱 · 같은 데이터'][law]['누름'] == rows['새'][law]['누름'] for law in ('특허법', '상표법', '디자인보호법')),
-      {'JS 오류': rows['바탕 앱 · 같은 데이터']['JS 오류'], '누름(옛 앱 = 새 앱)': {law: [rows['바탕 앱 · 같은 데이터'][law]['누름'], rows['새'][law]['누름']] for law in ('특허법', '상표법', '디자인보호법')}})
+    if QJ.GATE:   # 관문만 — 헛잣대 Y1 · 옛 앱 + 새 데이터(바탕 앱을 띄워야 뜻이 있다)
+        T('Y1', 'C1 헛잣대(바탕 앱 83c230f · 같은 데이터) = FAIL(물림)', tot['바탕 앱 · 같은 데이터'] > 0, {'바탕 앱 · 같은 데이터': tot['바탕 앱 · 같은 데이터'], '바탕 앱 · 바탕 데이터(§0-3 61 + α)': tot['바탕 앱 · 바탕 데이터']})
+        T(G, '옛 앱(83c230f) + 새 데이터(목록 새 칸 「삭제」 · 디-331 뺀 jimun_디보) — 세 법 1차객 카드를 다 지어 눌러도 JS 오류 0(열어 둔 탭 · 옛 판 기기)',
+          not rows['바탕 앱 · 같은 데이터']['JS 오류'] and all(rows['바탕 앱 · 같은 데이터'][law]['누름'] == rows['새'][law]['누름'] for law in ('특허법', '상표법', '디자인보호법')),
+          {'JS 오류': rows['바탕 앱 · 같은 데이터']['JS 오류'], '누름(옛 앱 = 새 앱)': {law: [rows['바탕 앱 · 같은 데이터'][law]['누름'], rows['새'][law]['누름']] for law in ('특허법', '상표법', '디자인보호법')}})
     # 삭제 조 갈래 — 새 판에서 삭제 줄로 열린 칩 = 바탕(같은 데이터)에서 못 찾던 삭제 조 칩
     dl_new = sum(rows['새'][law]['삭제 줄 칩'] for law in ('특허법', '상표법', '디자인보호법'))
     DLK = {law: set(json.load(open(os.path.join(DATA, 'jo_%s_목록.json' % law), encoding='utf-8')).get('삭제') or {}) for law in ('특허법', '상표법', '디자인보호법')}
     nf_del_new = sum(v for law in DLK for lk, v in rows['새'][law]['못찾음 조'].items() if lk.split(' ', 1)[1] in DLK[law])
-    nf_del_base = sum(v for law in DLK for lk, v in rows['바탕 앱 · 같은 데이터'][law]['못찾음 조'].items() if lk.split(' ', 1)[1] in DLK[law])
+    nf_del_base = sum(v for law in DLK for lk, v in rows['바탕 앱 · 같은 데이터'][law]['못찾음 조'].items() if lk.split(' ', 1)[1] in DLK[law]) if QJ.GATE else None
     rest = {law: {lk: v for lk, v in rows['새'][law]['못찾음 조'].items() if lk.split(' ', 1)[1] not in DLK[law]} for law in DLK}
-    T(G, 'C1a 삭제 조 칩(§B-1 몫) — 「본문을 찾지 못했다」 0 · 모두 「제N조 삭제 <날짜>」 줄 · 디-331 칩 0(데이터에서 뺌)',
-      nf_del_new == 0 and dl_new == nf_del_base and dl_new > 0 and not any('제331조' in lk for law in DLK for lk in rows['새'][law]['못찾음 조']),
-      {'새 삭제 줄 칩': dl_new, '새 삭제 조 못찾음': nf_del_new, '바탕(같은 데이터) 삭제 조 못찾음': nf_del_base,
-       '디-331(바탕 데이터 · 바탕 앱)': rows['바탕 앱 · 바탕 데이터']['디자인보호법']['못찾음 조'].get('디자인보호법 제331조', 0)})
+    if QJ.GATE:
+        T(G, 'C1a 삭제 조 칩(§B-1 몫) — 「본문을 찾지 못했다」 0 · 모두 「제N조 삭제 <날짜>」 줄 · 디-331 칩 0(데이터에서 뺌)',
+          nf_del_new == 0 and dl_new == nf_del_base and dl_new > 0 and not any('제331조' in lk for law in DLK for lk in rows['새'][law]['못찾음 조']),
+          {'새 삭제 줄 칩': dl_new, '새 삭제 조 못찾음': nf_del_new, '바탕(같은 데이터) 삭제 조 못찾음': nf_del_base,
+           '디-331(바탕 데이터 · 바탕 앱)': rows['바탕 앱 · 바탕 데이터']['디자인보호법']['못찾음 조'].get('디자인보호법 제331조', 0)})
+    else:   # regress · smoke — 바탕 앱 값(nf_del_base) 대신 기준 스냅샷의 「삭제 줄 칩 수」(삭제 조 칩이 삭제 줄로 열리는 수 무변)
+        dl_eq = QJ.same('C1a@삭제줄칩', dl_new)
+        T(G, 'C1a 삭제 조 칩(§B-1 몫) — 「본문을 찾지 못했다」 0 · 모두 「제N조 삭제 <날짜>」 줄 · 디-331 칩 0(데이터에서 뺌)',
+          nf_del_new == 0 and dl_eq and dl_new > 0 and not any('제331조' in lk for law in DLK for lk in rows['새'][law]['못찾음 조']),
+          {'새 삭제 줄 칩': dl_new, '새 삭제 조 못찾음': nf_del_new, '기준(지난 판 삭제 줄 칩)': QJ.base('C1a@삭제줄칩', dl_new), '기준 출처': QJ.base_note('C1a@삭제줄칩')})
     N(G, 'C1 남은 못찾음(삭제 조 밖 · 이 판 자리 밖) — 갈래', {'조': {law: v for law, v in rest.items() if v},
       '까닭': {'施規': '7판 유형 칩(mbTypeChip)이 「施規 N」 조각도 popJo(S.law, \'施規\') 로 연다(해설 조 칩은 누름 없음)',
               '제267조': '7판 해설 「(民法267)」 → p7Jo 「法 N」 갈래(JOKEY 안 봄) → 특허법 제267조',
               '제22조의2': '7판 해설 「(法22의2①)」(실용신안법) → p7Jo 「法 N」 갈래 → 특허법 제22조의2'}})
-    N(G, '삭제 조 칩 — 새 판에서 「제N조 삭제 <날짜>」 로 열린 칩 · 바탕 데이터의 디-331 은 데이터에서 뺌', {'새 삭제 줄 칩': dl_new, '새 못찾음': tot['새'],
-      '바탕(같은 데이터) 못찾음': tot['바탕 앱 · 같은 데이터'], '바탕(바탕 데이터) 못찾음': tot['바탕 앱 · 바탕 데이터']})
+    if QJ.GATE:
+        N(G, '삭제 조 칩 — 새 판에서 「제N조 삭제 <날짜>」 로 열린 칩 · 바탕 데이터의 디-331 은 데이터에서 뺌', {'새 삭제 줄 칩': dl_new, '새 못찾음': tot['새'],
+          '바탕(같은 데이터) 못찾음': tot['바탕 앱 · 같은 데이터'], '바탕(바탕 데이터) 못찾음': tot['바탕 앱 · 바탕 데이터']})
+    else:
+        N(G, '삭제 조 칩 — 새 판에서 「제N조 삭제 <날짜>」 로 열린 칩 · 바탕 데이터의 디-331 은 데이터에서 뺌', {'새 삭제 줄 칩': dl_new, '새 못찾음': tot['새']})
     return rows
 
 
@@ -433,6 +448,7 @@ def run_c3(br, src_new, src_base, roots):
         N(G, 'studyplandata 기록 못 읽음', str(e)[:160])
     mkon = {('특허법:' + k): rec['특허법:' + k] for k in MKON3 if ('특허법:' + k) in rec}
     N(G, 'mkon 기록(studyplandata jopangi/기록.json · 읽기만)', {'켠 조': sorted(mkon), '열쇠 수': {k: sum(len(v.get(x) or []) for x in ('k', 's', 'x')) for k, v in mkon.items()}})
+    QJ.launch('new')
     p = Pg(br, 'c3pick', src_new, roots, PC)
     pin = p.ev(PICK)
     cand = sorted([k for k, n in pin.items() if n > 0 and k not in MKON3], key=lambda k: (-pin[k], k))
@@ -445,34 +461,52 @@ def run_c3(br, src_new, src_base, roots):
     places = [('유형 칩', tg.get('card')), ('근거 조 칩', tg.get('card')), ('2차 카드 조 링크', tg.get('c2')), ('테마', tg.get('theme')), ('본문 조 링크', tg.get('body'))]
     inkk = sorted(set(sample + MKON3 + [t['k'] for _, t in places if t]))
     S3 = {}
-    for nm, src, ink in (('새 · 필기', src_new, True), ('새 · 필기 없음', src_new, False), ('바탕 · 필기', src_base, True)):
+    for nm, src, ink in ((('새 · 필기', src_new, True), ('새 · 필기 없음', src_new, False), ('바탕 · 필기', src_base, True)) if QJ.GATE else (('새 · 필기', src_new, True), ('새 · 필기 없음', src_new, False))):   # regress · smoke — 바탕 앱 쪽은 안 띄운다
+        QJ.launch('base' if nm.startswith('바탕') else 'new')
         q = Pg(br, 'c3' + nm, src, roots, PC, ls=seed(inkk if ink else [], mkon, jm))
         S3[nm] = {k: sig_of(q, k) for k in sample + MKON3}
         S3[nm]['__err'] = q.errs[:3]
         q.close()
     # ① 표본 3 — 필기 + 기록 없음 = 꾸밈 0 · 글 = 필기 없을 때
-    a = {k: {'꾸밈(새·필기)': len((S3['새 · 필기'][k] or {}).get('deco') or []), '꾸밈(바탕·필기)': len((S3['바탕 · 필기'][k] or {}).get('deco') or []),
-             '글 같음(필기 有無)': (S3['새 · 필기'][k] or {}).get('text') == (S3['새 · 필기 없음'][k] or {}).get('text'), '줄': (S3['새 · 필기'][k] or {}).get('n')} for k in sample}
+    if QJ.GATE:
+        a = {k: {'꾸밈(새·필기)': len((S3['새 · 필기'][k] or {}).get('deco') or []), '꾸밈(바탕·필기)': len((S3['바탕 · 필기'][k] or {}).get('deco') or []),
+                 '글 같음(필기 有無)': (S3['새 · 필기'][k] or {}).get('text') == (S3['새 · 필기 없음'][k] or {}).get('text'), '줄': (S3['새 · 필기'][k] or {}).get('n')} for k in sample}
+    else:   # regress · smoke — 바탕·필기 칸이 없다
+        a = {k: {'꾸밈(새·필기)': len((S3['새 · 필기'][k] or {}).get('deco') or []),
+                 '글 같음(필기 有無)': (S3['새 · 필기'][k] or {}).get('text') == (S3['새 · 필기 없음'][k] or {}).get('text'), '줄': (S3['새 · 필기'][k] or {}).get('n')} for k in sample}
     T(G, '필기 있는 조 + mkon 없음 표본 3 — 팝업 꾸밈 0 · 글 = 필기 없을 때와 같음(원문 줄만)', len(sample) == 3 and all(v['꾸밈(새·필기)'] == 0 and v['글 같음(필기 有無)'] and (v['줄'] or 0) > 0 for v in a.values()), a)
-    T('Y3', 'C3 표본 헛잣대(바탕 앱 · 같은 필기) = 꾸밈 > 0(물림)', all(v['꾸밈(바탕·필기)'] > 0 for v in a.values()), {k: v['꾸밈(바탕·필기)'] for k, v in a.items()})
+    if QJ.GATE:   # 관문만 — 헛잣대 Y3(바탕 앱 · 같은 필기)
+        T('Y3', 'C3 표본 헛잣대(바탕 앱 · 같은 필기) = 꾸밈 > 0(물림)', all(v['꾸밈(바탕·필기)'] > 0 for v in a.values()), {k: v['꾸밈(바탕·필기)'] for k, v in a.items()})
     # ② mkon 켠 조 — 필기 있어도 없을 때와 같은 꾸밈(켠 것만) · 꾸밈 > 0
     b = {}
     for k in MKON3:
-        s1, s0, sb = S3['새 · 필기'][k] or {}, S3['새 · 필기 없음'][k] or {}, S3['바탕 · 필기'][k] or {}
+        s1, s0, sb = S3['새 · 필기'][k] or {}, S3['새 · 필기 없음'][k] or {}, ((S3.get('바탕 · 필기') or {}).get(k) or {})   # regress · smoke 는 바탕·필기 칸이 없다 → {}
         b[k] = {'기록': ('특허법:' + k) in mkon, '꾸밈(새·필기)': len(s1.get('deco') or []), '꾸밈(새·필기 없음)': len(s0.get('deco') or []), '같음': s1.get('deco') == s0.get('deco') and s1.get('text') == s0.get('text'),
                 '바탕 같음': sb.get('deco') == s1.get('deco'), '꼴': sorted(set(x[1] for x in (s1.get('deco') or [])))}
+    if QJ.REGRESS:   # 바탕·필기 칸이 없어 「바탕 같음」(헛잣대 INFO 몫)은 뺀다
+        for v in b.values():
+            v.pop('바탕 같음', None)
     T(G, 'mkon 켠 조(특허 제55조 · 제132조의5 · 제16조) — 필기 있어도 없을 때와 같은 꾸밈(켠 것만 · > 0)', all(v['기록'] and v['같음'] and v['꾸밈(새·필기)'] > 0 for v in b.values()), b)
-    N('Y3', 'mkon 켠 조 헛잣대 — 기록 있는 조는 옛 판도 켠 것만이라 바탕 = 새(안 물림 · 무변 확인)', {k: v['바탕 같음'] for k, v in b.items()})
+    if QJ.GATE:   # 관문만 — 헛잣대 Y3 INFO
+        N('Y3', 'mkon 켠 조 헛잣대 — 기록 있는 조는 옛 판도 켠 것만이라 바탕 = 새(안 물림 · 무변 확인)', {k: v['바탕 같음'] for k, v in b.items()})
     # ③ jomark 칠 = 그대로
     if jm:
         k0 = sample[0]
         c = {nm: (S3[nm][k0] or {}).get('jmk') for nm in S3 if nm != '__err'}
-        T(G, 'jomark 칠 = 그대로(%s 첫 줄 · 새·필기 = 새·필기 없음 = 바탕·필기 · > 0)' % k0, len(set(c.values())) == 1 and list(c.values())[0] > 0, c)
+        if QJ.GATE:
+            T(G, 'jomark 칠 = 그대로(%s 첫 줄 · 새·필기 = 새·필기 없음 = 바탕·필기 · > 0)' % k0, len(set(c.values())) == 1 and list(c.values())[0] > 0, c)
+        else:   # regress · smoke — 바탕·필기 값 = 기준 스냅샷(새·필기 = 새·필기 없음 = 기준 · > 0)
+            vals = list(c.values())
+            v0 = vals[0] if vals else None
+            eq = QJ.same('C3@jomark', v0)
+            c['기준'] = QJ.base_note('C3@jomark')
+            T(G, 'jomark 칠 = 그대로(%s 첫 줄 · 새·필기 = 새·필기 없음 = 바탕·필기 · > 0)' % k0, len(set(vals)) == 1 and v0 is not None and v0 > 0 and eq, c)
     else:
         T(G, 'jomark 칠 — 칠할 줄 못 찾음', False, sample)
     # ④ 여는 자리 다섯 — 진짜 누름(PC 마우스)
     pl = {}
-    for nm, src in (('새', src_new), ('바탕', src_base)):
+    for nm, src in ((('새', src_new), ('바탕', src_base)) if QJ.GATE else (('새', src_new),)):   # regress · smoke — 바탕 앱은 안 띄운다
+        QJ.launch('base' if nm == '바탕' else 'new')
         q = Pg(br, 'c3pl' + nm, src, roots, PC, ls=seed(inkk, mkon, jm))
         for place, t in places:
             if not t:
@@ -488,7 +522,8 @@ def run_c3(br, src_new, src_base, roots):
         q.close()
     good = all(pl[pc]['새'].get('누름') and pl[pc]['새'].get('꾸밈') == 0 and (pl[pc]['새'].get('줄') or 0) > 0 for pc, _ in places)
     T(G, '여는 자리 다섯(유형 칩 · 근거 조 칩 · 2차 카드 조 링크 · 테마 · 본문 조 링크) 진짜 누름 — 필기 조 팝업 꾸밈 0', good and not pl['__err']['새'], {pc: pl[pc]['새'] for pc, _ in places})
-    T('Y3', '여는 자리 다섯 헛잣대(바탕 앱) = 꾸밈 > 0(물림)', all((pl[pc]['바탕'].get('꾸밈') or 0) > 0 for pc, _ in places), {pc: pl[pc]['바탕'] for pc, _ in places})
+    if QJ.GATE:   # 관문만 — 헛잣대 Y3(바탕 앱)
+        T('Y3', '여는 자리 다섯 헛잣대(바탕 앱) = 꾸밈 > 0(물림)', all((pl[pc]['바탕'].get('꾸밈') or 0) > 0 for pc, _ in places), {pc: pl[pc]['바탕'] for pc, _ in places})
     if S3['새 · 필기']['__err'] or S3['새 · 필기 없음']['__err']:
         T(G, 'JS 오류 0', False, [S3['새 · 필기']['__err'], S3['새 · 필기 없음']['__err']])
     return {'표본': a, 'mkon': b, '자리': pl}
@@ -514,16 +549,18 @@ C4_JS = r"""async (A) => { await __RB.home('특허법'); const P7 = await get('j
 def run_c4(br, src_new, src_base, roots):
     G = 'C4'
     res = {}
-    for nm, src in (('새', src_new), ('바탕', src_base)):
+    for nm, src in ((('새', src_new), ('바탕', src_base)) if QJ.GATE else (('새', src_new),)):   # regress · smoke — 바탕 앱은 안 띄운다
+        QJ.launch('base' if nm == '바탕' else 'new')
         p = Pg(br, 'c4' + nm, src, roots, PC)
         res[nm] = p.ev(C4_JS, {'ids': P7SIX, 'bad': B3JO})
         res[nm]['__err'] = p.errs[:3]
         p.close()
     hn = sum(len((v or {}).get('hit') or []) for k, v in res['새'].items() if k != '__err')
-    hb = sum(len((v or {}).get('hit') or []) for k, v in res['바탕'].items() if k != '__err')
+    hb = sum(len((v or {}).get('hit') or []) for k, v in res['바탕'].items() if k != '__err') if QJ.GATE else None
     T(G, '§B-3 7판 6 곳 — 카드 칩이 특허법 제27조 · 제31조 · 제48조로 잇는 것 0', hn == 0 and all(res['새'].get(i) for i in P7SIX) and not res['새']['__err'],
       {i: {'칩': (res['새'][i] or {}).get('clicks'), 'p7Jo': (res['새'][i] or {}).get('jos')} for i in P7SIX})
-    N('Y4', 'C4 바탕(83c230f) 도 %d — %s' % (hb, '「이미 막힘」(코드 무변)' if hb == 0 else '바탕은 이었다'), {i: (res['바탕'][i] or {}).get('why') for i in P7SIX})
+    if QJ.GATE:   # 관문만 — 헛잣대 Y4 INFO(바탕 앱)
+        N('Y4', 'C4 바탕(83c230f) 도 %d — %s' % (hb, '「이미 막힘」(코드 무변)' if hb == 0 else '바탕은 이었다'), {i: (res['바탕'][i] or {}).get('why') for i in P7SIX})
     N(G, '6 곳 카드 칩 조마다 해설에 처음 나온 자리의 앞 글 · 앱 원문 줄 규칙(wmAutoOther · 다른 법 사슬) 판정 — 사람이 읽어 가를 재료(지시서 §B-3 밖은 사용자 결정)',
       {i: (res['새'][i] or {}).get('chain') for i in P7SIX if (res['새'][i] or {}).get('chain')})
     return res
@@ -535,14 +572,24 @@ def main():
     t0 = time.time()
     os.makedirs(TMP, exist_ok=True)
     src_new = H.app_src(NEW)
-    src_base = H.app_src(BASE)
-    bd, changed = base_data_overlay(BDREV)
-    newroots, baseroots = [DATA], [bd, DATA]
+    if QJ.GATE:
+        src_base = H.app_src(BASE)
+        QJ.sub('git:show-app')
+        bd, changed = base_data_overlay(BDREV)
+        newroots, baseroots = [DATA], [bd, DATA]
+    else:   # regress · smoke — 바탕 앱 · 바탕 데이터(git 풀기 · 현재 데이터와 바이트 대조)는 안 푼다
+        src_base, bd, changed = None, None, []
+        newroots, baseroots = [DATA], None
     L = json.load(open(os.path.join(DATA, 'jo_특허법_목록.json'), encoding='utf-8'))
     want_date = (L.get('삭제') or {}).get('제26조')
-    N('C0', '재료', {'앱': NEW, '바탕 앱': BASE, '데이터': DATA, '바탕 데이터': '%s(바뀐 파일 %d 덧판: %s)' % (BDREV, len(changed), ', '.join(changed)),
-                    '목록 삭제 칸': {law: len(json.load(open(os.path.join(DATA, 'jo_%s_목록.json' % law), encoding='utf-8')).get('삭제') or {}) for law in ('특허법', '상표법', '디자인보호법', '민사소송법')},
-                    '제26조 날짜': want_date})
+    if QJ.GATE:
+        N('C0', '재료', {'앱': NEW, '바탕 앱': BASE, '데이터': DATA, '바탕 데이터': '%s(바뀐 파일 %d 덧판: %s)' % (BDREV, len(changed), ', '.join(changed)),
+                        '목록 삭제 칸': {law: len(json.load(open(os.path.join(DATA, 'jo_%s_목록.json' % law), encoding='utf-8')).get('삭제') or {}) for law in ('특허법', '상표법', '디자인보호법', '민사소송법')},
+                        '제26조 날짜': want_date})
+    else:   # regress · smoke — 바탕 앱 · 바탕 데이터 칸 없음
+        N('C0', '재료', {'앱': NEW, '데이터': DATA,
+                        '목록 삭제 칸': {law: len(json.load(open(os.path.join(DATA, 'jo_%s_목록.json' % law), encoding='utf-8')).get('삭제') or {}) for law in ('특허법', '상표법', '디자인보호법', '민사소송법')},
+                        '제26조 날짜': want_date})
     with sync_playwright() as pw:
         br = pw.chromium.launch()
         steps = [('C1', lambda: run_c1(br, src_new, src_base, newroots, baseroots)),
@@ -552,20 +599,28 @@ def main():
         for g, fn in steps:
             if ONLY and g not in ONLY:
                 continue
+            if not QJ.want(g, smoke=(g == 'C2')):   # smoke — T2461181 「유형? · 26」 → 삭제 조 팝업(10/2 83c230f 결함) 한 곳만
+                continue
             print('── %s' % g, flush=True)
             t1 = time.time()
+            _qs = QJ.stage(g)   # 단계 시간(§B-3) — launch.json stages
+            _qs.__enter__()
             try:
                 if g == 'C2':
+                    QJ.launch('new', 2)
                     ok, out = run_c2(br, src_new, newroots, want_date, '새', SHOTS)
                     T('C2', 'T2461181 「유형? · 26」 진짜 누름 → 「특허법 제26조 (삭제)」 · 몸 「제26조 삭제 <%s>」 한 줄(.ln.wml) · 「이동 ↗」 없음 · 글꼴 = 보통 조 원문 줄 (폰 390 · PC)' % want_date,
                       all(ok.values()), {dn: {k: v for k, v in out[dn].items() if k != '팝업'} for dn in ('폰390', 'PC')} | {'몸': {dn: (out[dn]['팝업'] or {}).get('body') for dn in ('폰390', 'PC')},
                                                                                                                   '제목': {dn: (out[dn]['팝업'] or {}).get('title') for dn in ('폰390', 'PC')}, '그림': out.get('그림')})
-                    okb, outb = run_c2(br, src_base, newroots, want_date, '바탕')
-                    T('Y2', 'C2 헛잣대(바탕 앱 · 같은 데이터) = FAIL(물림)', not any(okb.values()), {dn: {'제목': (outb[dn]['팝업'] or {}).get('title'), '몸': (outb[dn]['팝업'] or {}).get('body')} for dn in ('폰390', 'PC')})
+                    if QJ.GATE:   # 관문만 — 헛잣대 Y2(바탕 앱 쪽 둘)
+                        QJ.launch('base', 2)
+                        okb, outb = run_c2(br, src_base, newroots, want_date, '바탕')
+                        T('Y2', 'C2 헛잣대(바탕 앱 · 같은 데이터) = FAIL(물림)', not any(okb.values()), {dn: {'제목': (outb[dn]['팝업'] or {}).get('title'), '몸': (outb[dn]['팝업'] or {}).get('body')} for dn in ('폰390', 'PC')})
                 else:
                     fn()
             except Exception as e:
                 T(g, '돌다 멈춤', False, str(e).splitlines()[0][:300])
+            _qs.__exit__(None, None, None)
             print('   (%s %.0f초)' % (g, time.time() - t1), flush=True)
         br.close()
         if 'webkit' in ENGS and (not ONLY or 'C2' in ONLY):
@@ -573,6 +628,7 @@ def main():
             if wk:
                 print('── C2 WebKit(폰 390 · PC)', flush=True)
                 try:
+                    QJ.launch('new', 2)
                     ok, out = run_c2(wk, src_new, newroots, want_date, '새wk')
                     T('C2', 'WebKit — T2461181 「유형? · 26」 → 「특허법 제26조 (삭제)」 · 삭제 줄 한 줄 (폰 390 · PC)', all(ok.values()),
                       {dn: {'제목': (out[dn]['팝업'] or {}).get('title'), '몸': (out[dn]['팝업'] or {}).get('body'), '누름': out[dn]['누름'], 'JS 오류': out[dn]['JS 오류']} for dn in ('폰390', 'PC')})

@@ -12,6 +12,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import _harness_jo_toc_fuse as HT          # noqa: E402 — 같은 서버·쪽(Pg)·도구(__HT)
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) A-1 · HT(toc_fuse)가 먼저 QJ 를 불러 --mode · --snap-in · --snap-out 을 뗐다 · gate = 인자 없음 = 이 판 앞과 같다
 from playwright.sync_api import sync_playwright   # noqa: E402
 
 OUT = HT.ARG('--out', HERE)
@@ -55,8 +56,10 @@ def scen(br, src, tag):
           c and bool(qp) and qp['mbqp'] and bool(rs1) and rs1['vis'] and len(rs1['rows']) == len(rs['rows']) and (inp or {}).get('v') == Q1 and
           st1['mok'] == st0['mok'] == '' and st1['tab'] == st0['tab'] == 'jimun' and st1['jt'] == 'ox',
           {'key': k, 'pop': qp, '목록': rs1 and [rs1['vis'], len(rs1['rows'])], 'q': inp and inp.get('v'), 'mok': [st0['mok'], st1['mok']], 'tab': st1['tab']})
-        if tag == 'NEW':
+        if tag == 'NEW' and QJ.GATE:
             p.shot('NEW_C1_popup')
+        if QJ.SMOKE:   # smoke — C1 · Z 만(C2 · C4 · C3 · C5 는 안 잰다)
+            return
         z0 = (p.ev("k=>__HT.qPop(k)", k) or {}).get('z', 0)
         p.ev("()=>{const p=POPS[POPS.length-1];return 1}")
         # 다른 창을 하나 더 띄워 맨 앞을 뺏은 뒤 같은 줄을 다시 누른다(맨 앞으로 오는지)
@@ -109,7 +112,7 @@ def scen(br, src, tag):
         T(g, 'C3 「🔗 근거」 모드 · 글이 긴 지문(%s) 누름 → 팝업 몸통만 굴려 근거 줄(.ggbox)이 몸통 안에 보임 — 윗변 몸통 위 0~16px, 뒤 글이 짧으면 굴림 끝(scrollTop 최대)에서 멈춤 · 뒤 페이지 scrollY 무변(헛잣대: 바탕 팝업 없음 · 시안 굴림 0 → 근거 줄이 몸통 밖)' % kk,
           c and kk == k and (top_ok or end_ok) and sy2 == sy1,
           {'scroll': sc, '윗변 0~16': top_ok, '굴림 끝': end_ok, 'scrollY': [sy0, sy1, sy2]})
-        if tag == 'NEW':
+        if tag == 'NEW' and QJ.GATE:
             p.shot('NEW_C3_gg')
 
     def c5():
@@ -128,6 +131,8 @@ def scen(br, src, tag):
           c1 and c2 and len(n1) == n0 + 1 and bool(qk) and not any(x['k'] == qk[0] for x in n2), {'창 수': [n0, len(n1), len(n2)], '지문 창': qk[:1]})
 
     for nm, fn in (('C1·C2·C4', c12), ('C3', c3), ('C5', c5)):
+        if QJ.SMOKE and nm != 'C1·C2·C4':
+            continue
         sec(nm, fn)
     es = p.errs_all()
     T(g, 'Z 페이지 오류 0', not es, es[:5])
@@ -158,19 +163,24 @@ def report():
 
 def main():
     os.makedirs(HT.WORK, exist_ok=True)
-    base_src = HT.git('show', 'f497f05:jo/index.html').decode('utf-8')   # A-6(d) 9/30 — 바탕 앱 = 인도 때 HEAD f497f05(docstring · 인도 결과 머리)
-    assert hashlib.md5(base_src.encode('utf-8')).hexdigest() == HT.BASE_MD5
+    if QJ.GATE:   # regress — 바탕 앱 풀기 · 시안 짓기 0(바탕 · 시안 판은 헛잣대 몫 · gate 만)
+        QJ.sub('git:show-app')
+        base_src = HT.git('show', 'f497f05:jo/index.html').decode('utf-8')   # A-6(d) 9/30 — 바탕 앱 = 인도 때 HEAD f497f05(docstring · 인도 결과 머리)
+        assert hashlib.md5(base_src.encode('utf-8')).hexdigest() == HT.BASE_MD5
     new_src = io.open(HT.NEWF, encoding='utf-8', newline='').read()
-    # 시안 — 바탕에 r.onclick 한 줄만(채팅 index_sr.html 과 같은 꼴 · C2 헛잣대)
-    b = base_src.replace('\r\n', '\n')
-    old = "    r.onclick = () => linkGo(k);\n    box.appendChild(r);\n  });\n  if (hit.length > 200)"
-    assert b.count(old) == 1
-    sian = b.replace(old, "    r.onclick = ev => popCard(k, ev);\n    box.appendChild(r);\n  });\n  if (hit.length > 200)")
+    if QJ.GATE:
+        # 시안 — 바탕에 r.onclick 한 줄만(채팅 index_sr.html 과 같은 꼴 · C2 헛잣대)
+        b = base_src.replace('\r\n', '\n')
+        old = "    r.onclick = () => linkGo(k);\n    box.appendChild(r);\n  });\n  if (hit.length > 200)"
+        assert b.count(old) == 1
+        sian = b.replace(old, "    r.onclick = ev => popCard(k, ev);\n    box.appendChild(r);\n  });\n  if (hit.length > 200)")
     with sync_playwright() as pw:
         br = pw.chromium.launch()
-        scen(br, base_src, 'BASE')
-        scen(br, sian, 'SIAN')
-        scen(br, new_src, 'NEW')
+        if QJ.GATE:   # regress — 바탕(BASE) · 시안(SIAN) 장면은 안 돈다(헛잣대 칸 몫)
+            scen(br, base_src, 'BASE')
+            scen(br, sian, 'SIAN')
+        with QJ.stage('scen NEW'):
+            scen(br, new_src, 'NEW')
         br.close()
     report()
 

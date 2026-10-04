@@ -21,6 +21,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안
 import base64, hashlib, io, json, os, re, subprocess, sys, tempfile, threading, time, traceback, urllib.parse   # noqa: E402
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer   # noqa: E402
 try:
@@ -38,9 +39,12 @@ def ARG(k, d=None):
 
 NEW = ARG('--new', _roots.genie('jo', 'index.html'))
 BASE = ARG('--base', '281c93f')   # cloud/jo_sp_book5 끝 = 이 판의 바탕
-YARD = '--yardstick' in sys.argv
+YARD = '--yardstick' in sys.argv and QJ.GATE   # 헛잣대(바탕을 띄움)는 gate 몫
 ONLY = [x.strip().upper() for x in (ARG('--only', '') or '').split(',') if x.strip()]
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
+if QJ.SMOKE:   # smoke: Chromium PC 만 · 칸 = B0(합성 기록 꼴) · B1(머리 줄) + 페이지 오류 0
+    ONLY = ['B0', 'B1']
+    ENGS = [x for x in ENGS if x == 'chromium']
 TMPD = os.path.join(tempfile.gettempdir(), 'h_jo_c2board')
 OUTF = ARG('--res', os.path.join(TMPD, '_harness_jo_2cha_minso_board_result.txt'))
 SHOTS = ARG('--shots', os.path.join(TMPD, 'shots'))
@@ -225,6 +229,7 @@ class P:
     """한 쪽(page) — 판(tag) · 기기(dev) · 엔진"""
     def __init__(self, br, eng, tag, src, dev='pc', q='seed=1'):
         self.eng, self.tag, self.dev = eng, tag, dev
+        QJ.launch('base' if tag == 'BASE' else 'new')
         d = DEV[dev]
         self.touch = d['touch']
         port = serve(tag, src)
@@ -404,6 +409,9 @@ def B2(p, pb):
         th = {'bandGapMax': round(b0['bandGapMax'] - 8 + 0.5, 1), 'bandH': round(b0['bandH'] - 4 + 0.5, 1), 'rowH': round(b0['rowH'] - 18 + 0.5, 1)}
     else:
         th = {'bandGapMax': 6.5, 'bandH': 24.5, 'rowH': 28.5}
+    if QJ.REGRESS:   # regress: 바탕(281c93f)을 안 띄운다 — 기준 = 앞 인도판 같은 폭(PC 900 · 옆 두 칸 접음) 값 + 0.5(글꼴 흔들림 여유) · 처음 기록은 지금 값 · 값은 다른 조건이 거짓이어도 늘 스냅샷에 적는다
+        _bz = QJ.base('B2@' + p.eng, {k: (n or {}).get(k) for k in ('total', 'bandGapMax', 'bandH', 'rowH')})
+        th = {k: (_bz[k] + 0.5 if isinstance(_bz.get(k), (int, float)) else 1e9) for k in ('bandGapMax', 'bandH', 'rowH')}
     T(g, 'PC 900(옆 두 칸 접음 = 시안 폭) — 편 띠 사이 ≤ 바탕 − 8 · 편 띠 높이 ≤ 바탕 − 4 · 24-61-2 줄(단원 칩 가림) ≤ 바탕 − 18 (±0.5) · 지시서 §B-2 절대값 → 상대(글꼴 무관) · 채팅 10/4 01:0x',
       n and all(n.get(k) is not None for k in ('bandGapMax', 'bandH', 'rowH')) and n['bandGapMax'] <= th['bandGapMax'] and n['bandH'] <= th['bandH'] and n['rowH'] <= th['rowH'],
       dict(n or {}, listW=(p.board() or {}).get('listW'), 바탕=b0 and {k: b0.get(k) for k in ('bandGapMax', 'bandH', 'rowH')}, 기준=th))
@@ -411,6 +419,9 @@ def B2(p, pb):
         # 옛(fix8 전): pb.go(o) · b0 = pb.ev("c=>__C2.gaps(c)", '24-61-2') 가 여기 있었다 — 위로 옮김(상대 잣대가 먼저 쓴다 · 잰 차례는 그대로 새 판 → 바탕)
         T(g, '보드 전체 높이 바탕보다 줄어듦(같은 데이터 · 같은 폭)', n and b0 and n['total'] < b0['total'],
           {'new': {k: n[k] for k in ('total', 'bandGapMax', 'bandH', 'band2head', 'bar2band', 'rowH')}, 'base': b0 and {k: b0[k] for k in ('total', 'bandGapMax', 'bandH', 'band2head', 'bar2band', 'rowH')}})
+    if QJ.REGRESS:   # regress: 「바탕보다 줄어듦」 = 앞 인도판보다 안 늘어남(+0.5)
+        T(g, '보드 전체 높이 바탕보다 줄어듦(같은 데이터 · 같은 폭)', bool(n) and n.get('total') is not None and n['total'] <= (_bz['total'] if isinstance(_bz.get('total'), (int, float)) else 1e9) + 0.5,
+          {'new': {k: (n or {}).get(k) for k in ('total', 'bandGapMax', 'bandH', 'rowH')}, '기준': QJ.base_note('B2@' + p.eng), 'base': _bz})
 
 
 def B3(p):
@@ -1006,7 +1017,9 @@ def B16(p, pb):
     T(g, '휠 굴림 됨', t1 > t0, [t0, t1])
     j = p.ev("()=>__C2.jimun()")
     jb = pb.ev("()=>__C2.jimun()") if pb else None
-    T(g, '1차객 탭 .main = 바탕과 같음(c2on 없음)', not j['c2on'] and (jb is None or j['sb'] == jb['sb']), [j, jb])
+    if QJ.REGRESS:   # 기준: 1차객 탭 .main 스크롤바(j['sb'])가 앞 인도판 같은 값(스냅샷) — 바탕 판은 안 띄운다
+        _jsb = QJ.same('B16-1차객sb@' + p.eng, j['sb'])
+    T(g, '1차객 탭 .main = 바탕과 같음(c2on 없음)', not j['c2on'] and ((jb is None or j['sb'] == jb['sb']) if QJ.GATE else _jsb), [j, jb])
     p.go({'c2ord': 'unit'})
     expand(p, '24-61-2', True)
     p.click(p.ev("([c,s,k,x])=>__C2.lnkBtn(c,s,k,x)", ['24-61-2', 'Ⅰ.', False, None]))
@@ -1059,30 +1072,31 @@ def BS(br, eng, src_new, src_base):
     a.ev("()=>__C2.syncNow()"); a.idle(300)
     T(g, '아이패드에서 다 지움(묘비) → PC 받은 뒤 그 칸 없음(칸 단위 · 묘비 이김)', a.ev("()=>__C2.missLS()") == {} and any(k.startswith('jopangi.c2miss|') for k in (REMOTE.json() or {}).get('gone', {})), a.ev("()=>__C2.missLS()"))
     b.ev("()=>__C2.syncNow()"); b.close()   # 아이패드 몫 끝 — 열어 두면 제 때(4초 뒤 · 3분) 맞추기가 옛 판 순서 사이에 끼어 되살림을 앞당긴다
-    a.ev("o=>__C2.setMiss(o)", {TK2461 + '|요건,방식-1임특특서': {'h': [{'ts': '2026-10-03T03:00:00.000Z', 'who': '햄찌', 'r': 'x'}]}})
-    a.ev("()=>__C2.syncNow()"); a.idle(300)
-    c = P(br, eng, 'BASE', src_base, 'pc900', 'seed=1&rec=0')
-    c.ev("()=>__C2.syncNow()"); c.idle(500)
-    cp = c.ev("()=>__C2.pit()"); cp[PK_C] = dict(cp.get(PK_C) or PIT0[PK_C])
-    cp[PK_C]['t'] = '옛 판 기기에서 고침(합성)'; c.ev("o=>__C2.setPit(o)", cp)
-    c.ev("()=>__C2.syncNow()"); c.idle(300)
-    rm2 = REMOTE.json() or {}
-    lost = 'jopangi.c2miss' not in rm2.get('data', {}) and 'jopangi.c2qlink' not in rm2.get('data', {})
-    stamps = [k for k in rm2.get('u', {}) if k.startswith('jopangi.c2miss|') or k.startswith('jopangi.c2qlink|')]
-    N(g, '옛 판(바탕) 기기가 올린 원격 — 새 키 data 빠짐 · 도장은 남음(theme 키 선례)', {'data_빠짐': lost, '도장': len(stamps)})
-    a.ev("()=>__C2.syncNow()"); a.idle(400)
-    rm3 = REMOTE.json() or {}
-    T(g, '새 판 기기가 다음 맞추기에서 되살림(원격 data 에 c2miss · c2qlink 다시) · 옛 판의 postit 고침은 받음',
-      lost and len(stamps) >= 2 and len(rm3.get('data', {}).get('jopangi.c2miss') or {}) == 1 and len(rm3.get('data', {}).get('jopangi.c2qlink') or {}) == 1 and a.ev("()=>__C2.pit()").get(PK_C, {}).get('t') == '옛 판 기기에서 고침(합성)',
-      [lost, len(stamps), sorted((rm3.get('data', {}).get('jopangi.c2miss') or {}).keys()), a.ev("()=>__C2.pit()").get(PK_C, {}).get('t')])
-    # 옛 판 기기가 댓글 단 메모를 pitEdit 으로 고치면 re 가 사라지는가(정한 것 7 — 값만 적음)
-    c.ev("()=>__C2.syncNow()"); c.idle(300)
-    c.ev("([k,v])=>__C2.pitEditSave(k,v)", [PK_B, '옛 판 pitEdit 고침(합성)']); c.idle(500)
-    c.ev("()=>__C2.syncNow()"); c.idle(300)
-    a.ev("()=>__C2.syncNow()"); a.idle(300)
-    va = a.ev("()=>__C2.pit()").get(PK_B) or {}
-    N(g, '옛 판 기기에서 댓글 단 메모를 고침 → 새 판이 받은 값(⚠ 정한 것 7 — 모든 기기가 새 판을 받으면 사라지는 한계)', {'t': va.get('t'), 're': va.get('re'), 're_사라짐': not va.get('re')})
-    for x in (a, c):
+    if QJ.GATE:   # 옛 판(바탕 281c93f) 기기 몫 — regress 는 바탕을 안 띄운다(처리안 「관문만」)
+        a.ev("o=>__C2.setMiss(o)", {TK2461 + '|요건,방식-1임특특서': {'h': [{'ts': '2026-10-03T03:00:00.000Z', 'who': '햄찌', 'r': 'x'}]}})
+        a.ev("()=>__C2.syncNow()"); a.idle(300)
+        c = P(br, eng, 'BASE', src_base, 'pc900', 'seed=1&rec=0')
+        c.ev("()=>__C2.syncNow()"); c.idle(500)
+        cp = c.ev("()=>__C2.pit()"); cp[PK_C] = dict(cp.get(PK_C) or PIT0[PK_C])
+        cp[PK_C]['t'] = '옛 판 기기에서 고침(합성)'; c.ev("o=>__C2.setPit(o)", cp)
+        c.ev("()=>__C2.syncNow()"); c.idle(300)
+        rm2 = REMOTE.json() or {}
+        lost = 'jopangi.c2miss' not in rm2.get('data', {}) and 'jopangi.c2qlink' not in rm2.get('data', {})
+        stamps = [k for k in rm2.get('u', {}) if k.startswith('jopangi.c2miss|') or k.startswith('jopangi.c2qlink|')]
+        N(g, '옛 판(바탕) 기기가 올린 원격 — 새 키 data 빠짐 · 도장은 남음(theme 키 선례)', {'data_빠짐': lost, '도장': len(stamps)})
+        a.ev("()=>__C2.syncNow()"); a.idle(400)
+        rm3 = REMOTE.json() or {}
+        T(g, '새 판 기기가 다음 맞추기에서 되살림(원격 data 에 c2miss · c2qlink 다시) · 옛 판의 postit 고침은 받음',
+          lost and len(stamps) >= 2 and len(rm3.get('data', {}).get('jopangi.c2miss') or {}) == 1 and len(rm3.get('data', {}).get('jopangi.c2qlink') or {}) == 1 and a.ev("()=>__C2.pit()").get(PK_C, {}).get('t') == '옛 판 기기에서 고침(합성)',
+          [lost, len(stamps), sorted((rm3.get('data', {}).get('jopangi.c2miss') or {}).keys()), a.ev("()=>__C2.pit()").get(PK_C, {}).get('t')])
+        # 옛 판 기기가 댓글 단 메모를 pitEdit 으로 고치면 re 가 사라지는가(정한 것 7 — 값만 적음)
+        c.ev("()=>__C2.syncNow()"); c.idle(300)
+        c.ev("([k,v])=>__C2.pitEditSave(k,v)", [PK_B, '옛 판 pitEdit 고침(합성)']); c.idle(500)
+        c.ev("()=>__C2.syncNow()"); c.idle(300)
+        a.ev("()=>__C2.syncNow()"); a.idle(300)
+        va = a.ev("()=>__C2.pit()").get(PK_B) or {}
+        N(g, '옛 판 기기에서 댓글 단 메모를 고침 → 새 판이 받은 값(⚠ 정한 것 7 — 모든 기기가 새 판을 받으면 사라지는 한계)', {'t': va.get('t'), 're': va.get('re'), 're_사라짐': not va.get('re')})
+    for x in ((a, c) if QJ.GATE else (a,)):
         x.close()
     REMOTE.clear()
 
@@ -1224,9 +1238,14 @@ def run_suite(br, eng, tag, src, src_base=None, yard=False):
 
 
 def main():
-    src_new, src_base = app_src(NEW), app_src(BASE)
+    if QJ.GATE:
+        QJ.sub('git:show-app')
+        src_new, src_base = app_src(NEW), app_src(BASE)
+    else:
+        src_new, src_base = app_src(NEW), None   # regress · smoke: 바탕 앱을 안 푼다(git show 0) — B2 · B16 · B-S 의 바탕 쪽은 pb=None 길 · 기준(스냅샷)
     print('NEW  = %s · md5(LF) %s · %d B(LF)' % (NEW, md5lf(src_new), len(src_new.replace('\r\n', '\n').encode('utf-8'))))
-    print('BASE = %s · md5(LF) %s' % (BASE, md5lf(src_base)))
+    if QJ.GATE:
+        print('BASE = %s · md5(LF) %s' % (BASE, md5lf(src_base)))
     os.makedirs(TMPD, exist_ok=True)
     phases = {}
     with sync_playwright() as pw:

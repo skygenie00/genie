@@ -9,12 +9,19 @@
   ?keep=1 = 새로고침해도 저장소를 안 비운다 · ?alt=1 = 2cha_단원_민소.json 대신 자동값을 바꾼 사본(D-6)
 
 쓰기 : python _harness_jo_2cha_unit.py [--out 폴더] [--only desk|sync|pad|wide|build]
+
+★ yard8(10/4 · ⑧ _task_jo_2cha_minso_board 합친 뒤 옛 잣대 고침 · 칸 이름은 그대로 — 누를 자리 · 읽는 때만 바꿈 · 옛 줄은 「옛(yard8 전)」 주석):
+  ⑧ A-10-1·A-10-2(사용자 10/3 09:07) — 단원 칩은 평소 가림(S.c2uv · 저장 안 함) · 「✎ 단원」 단추 자리 = 토글 「단원 N ▸」(.c2ue) → 칩을 읽는 칸은 먼저 편다(SHOW_CHIPS · 토글 톡)
+  ⑧ A-10-3 · 정한 것 3(사용자 말 없음 · 시안 09:08 답 4) — ✎ 단원 창은 토글 「단원 N」 0.5초 길게 누름으로 열린다(톡 = 칩 펴기) → P.hold
+  ⑧ A-4-3(사용자 10/3 07:19) · A-5-3·4(07:30 바로잡음) — 제목 누름 = 본문 펴기(카드 창 안 뜸) · 코드 숫자 = 카드 창 → 「줄 클릭 → 카드 팝업」 칸 누를 자리 = 코드 숫자(CODE_AT)
+  옛 판(⑧ 전)에서도 같은 코드가 돈다 — 칩이 늘 보이면 토글 톡을 건너뛰고 · 길게 누름도 click 이라 ✎ 단추가 같은 창을 연다.
 """
 import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
 _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안 · ⚠ 뿌리(2cha_unit_b7 이 h 로 씀): P · serve · SEED · TESTS · NOISE · 상수는 gate · regress 어느 쪽에서도 안 바꾼다
 _NR = _roots.need_n('민소 2차 단원 매핑 json · ⚙ cha2_unit')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import copy, hashlib, http.server, importlib, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 from collections import Counter
@@ -72,6 +79,18 @@ if(Q.get('keep')!=='1'){try{localStorage.clear();}catch(e){}
 try{if(navigator.serviceWorker)navigator.serviceWorker.register=function(){return Promise.reject(new Error('sw blocked'));};}catch(e){}
 </script>"""
 READY = "!!window.__HU&&typeof render==='function'&&typeof popCard4==='function'"
+# ★ yard8 — ⑧ 뒤 길 도구(앱 동작 무변 · 하네스가 S 를 읽고 쓰고 render 를 부르는 것뿐)
+# 모든 줄의 단원 칩을 편다 = 앱 토글 onclick(S.c2uv[ck] = true → render)과 같은 효과를 줄마다 누르지 않고 한 번에(저장 안 함 · 앱 9020 · 9032)
+SHOW_CHIPS = ("async()=>{S.c2uv=S.c2uv||{};[...document.querySelectorAll('#slot .main .c2row[data-ck]')].forEach(r=>{S.c2uv[r.dataset.ck]=true});"
+              "for(let i=0;i<200&&busy;i++)await __HU.wait(25);await render();for(let i=0;i<200&&busy;i++)await __HU.wait(25);await __HU.wait(500);return Object.keys(S.c2uv).length}")
+IDLE = "async()=>{for(let i=0;i<200&&busy;i++)await __HU.wait(25);await __HU.wait(300);return !busy}"   # render 잠금(busy) 풀림 + 0.3초
+HAS_CHIP = "c=>{const r=[...document.querySelectorAll('#slot .main .c2row')].find(x=>x.dataset.ck===c);return !!(r&&r.querySelector('.c2r3 .c2uc'))}"   # 그 줄에 단원 칩이 보이나
+# 코드 숫자 글 가운데(두루마리 .c2q1 비킴 · ⑧ A-5-3) — 가운데 점이 글 위인지 elementFromPoint 로 확인 · 화면 안
+CODE_AT = ("async (ck)=>{const r=[...document.querySelectorAll('#slot .main .c2row')].find(x=>x.dataset.ck===ck);const c=r&&r.querySelector('.c2code');if(!c)return null;"
+           "c.scrollIntoView({block:'center',inline:'nearest'});await __HU.wait(250);"
+           "const t=c.firstChild;let b;if(t&&t.nodeType===3){const g=document.createRange();g.selectNodeContents(t);b=g.getBoundingClientRect()}else{b=c.getBoundingClientRect()}"
+           "const cx=b.left+b.width/2,cy=b.top+b.height/2,a=document.elementFromPoint(cx,cy);"
+           "return {cx:cx,cy:cy,on:!!a&&(a===c||c.contains(a))&&cy>0&&cy<innerHeight&&cx>0&&cx<innerWidth}}")
 
 
 def git(*a, repo=GENIE):
@@ -167,6 +186,25 @@ class P:
         self.pg.wait_for_timeout(wait)
         return True
 
+    def hold(self, at, wait=700, ms=700):
+        """★ ⑧ A-10-3 · 정한 것 3(사용자 말 없음 · 시안 09:08 답 4) — 0.5초 길게 누름(앱 c2Long 500ms · 8px 안 움직임 · 뒤따르는 click 은 앱이 삼킴).
+        ✎ 단원 창 = 토글 「단원 N」 길게 누름(옛 판 ✎ 단추 톡 → 길게 눌러도 click 이라 같은 창이 열림) · 책상 = 마우스 down → 대기 → up ·
+        아이패드 크롬 = CDP 터치(drag 와 같은 길) · 아이패드 웹킷 = 신뢰 마우스(웹킷은 톡만 진짜 터치 — drag 와 같은 도구 한계) ·
+        누르기 전 120ms = scrollIntoView 가 낸 스크롤 알림이 누름 뒤에 와서 떠 있는 것을 닫지 않게(⑧ 하네스 long 과 같은 까닭)"""
+        if not at or not at.get('on'):
+            return False
+        self.pg.wait_for_timeout(120)
+        x, y = at['cx'], at['cy']
+        if self.cdp:
+            self.cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': x, 'y': y, 'id': 1}]})
+            self.pg.wait_for_timeout(ms)
+            self.cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
+        else:
+            m = self.pg.mouse
+            m.move(x, y); m.down(); self.pg.wait_for_timeout(ms); m.up()
+        self.pg.wait_for_timeout(wait)
+        return True
+
     def drag(self, x0, y0, x1, y1, n=12):
         if self.cdp:
             def t(ty, x, y):
@@ -215,7 +253,8 @@ def ground():
 def edit_flow(p, R, pre, via_search=None):
     """✎ 25-62-1 — 설문 (2) 에 2.3 더하기 · 주단원 7.8.2 · 저장 (via_search = 찾기 칸에 글자를 쳐서 고르기)"""
     at = p.ev("([c,x])=>__HU.rowAt(c,x)", [CK251, 'edit']); R[pre + 'editAt'] = at
-    R[pre + 'editOk'] = p.click(at, 700)
+    # 옛(yard8 전): R[pre + 'editOk'] = p.click(at, 700)
+    R[pre + 'editOk'] = p.hold(at, 700)   # ★ ⑧ A-10-3 · 정한 것 3 · 사용자 말 없음(시안 09:08 답 4) — ✎ 단추 톡 → 「단원 N」 토글 0.5초 길게(톡 = 칩 펴기)
     R[pre + 'win0'] = p.ev("__HU.win()")
     at = p.ev("([k,a])=>__HU.winAt(k,a)", ['add', '(2)']); p.click(at, 400)
     R[pre + 'pick'] = p.ev("__HU.pickItems()")
@@ -238,6 +277,7 @@ def edit_flow(p, R, pre, via_search=None):
 
 # ══════════ 책상 1440×900 — D-2·3·4·5·6·8 · C-8 ══════════
 def scen_desk(br, eng, tag, src):
+    QJ.launch('base' if tag == 'BASE' else 'new')
     p = P(br, eng, tag, src, 1440, 900)
     R = {'eng': eng, 'tag': tag}
     try:
@@ -255,14 +295,26 @@ def scen_desk(br, eng, tag, src):
                 p.ev("__HU.closePops()")
         else:
             R['list'] = p.ev("__HU.listRead()")
+            if QJ.SMOKE:   # smoke 칸 = D-10(회차별 76줄 꼴) · D-2(단원 머리 40) · JS 오류 0 — 회차별 줄을 읽고 단원별을 한 번 그려 읽고 끝
+                p.board('민사소송법', '기출', 'unit')
+                R['seg_unit'] = p.ev("__HU.seg()")
+                R['unit'] = p.ev("__HU.unitRead()")
+                R['errs'] = p.ev("__HU.errs()") + p.errs
+                return R
             # D-4 칩 누름 → 노트 팝업(카드 팝업 아님) · 줄 누름 → 카드 팝업(바탕과 같은 글자)
+            # ★ ⑧ A-10-1·A-10-2 · 사용자 10/3 09:07 — 옛: 칩이 늘 보임 → 새: 평소 가림 · 첫 칸(76줄 칩 하나 + 단추)은 다 편 채 읽고(listOpen) · 칩 누름 칸은 다시 가린 뒤 그 줄 「단원 N ▸」 톡으로 연 칩을 누른다
+            p.ev(SHOW_CHIPS); R['listOpen'] = p.ev("__HU.listRead()")
+            p.ev("()=>{S.c2uv={};return 1}"); p.board('민사소송법', '기출', 'round')   # 다시 가림(앱 처음 꼴)
+            if not p.ev(HAS_CHIP, POPS3[0]):   # 옛 판(⑧ 전)은 칩이 늘 보여 건너뜀
+                tg = p.ev("([c,x])=>__HU.rowAt(c,x)", [POPS3[0], 'edit']); R['chipTog'] = p.click(tg, 700); p.ev(IDLE)
             at = p.ev("([c,x])=>__HU.rowAt(c,x)", [POPS3[0], 'chip']); ok = p.click(at, 300)
             R['chipPop'] = {'at': at, 'ok': ok, 'pop': p.ev("__HU.popRead()")}
             p.ev("__HU.closePops()")
             R['pops'] = {}
             for ck in POPS3:
                 p.board('민사소송법', '기출', 'round')
-                at = p.ev("([c,x])=>__HU.rowAt(c,x)", [ck, 'title']); ok = p.click(at, 300)
+                # 옛(yard8 전): at = p.ev("([c,x])=>__HU.rowAt(c,x)", [ck, 'title']); ok = p.click(at, 300)
+                at = p.ev(CODE_AT, ck); ok = p.click(at, 300)   # ★ ⑧ A-4-3(제목 누름 = 본문 펴기 · 카드 창 안 뜸 · 사용자 10/3 07:19) · A-5-3·4(코드 숫자 = 카드 창 · 07:30 바로잡음) — 제목 → 코드 숫자
                 R['pops'][ck] = {'ok': ok, 'pop': p.ev("__HU.popRead()")}
                 p.ev("__HU.closePops()")
                 # A-6(a) 줄 클릭 글자는 같은 카드를 popCard4 로 바로 연 새 판 글자와 맞댄다(바탕 d3dd927 팝업 글자는 뒤 판 pop_moknote·c2card·ms_claude_editq 가 바꿈)
@@ -296,12 +348,13 @@ def scen_desk(br, eng, tag, src):
             R['d5_reload'] = p.ev("__HU.unitRead()")
             R['d5_reload_hand'] = p.ev("k=>__HU.hand(k)", '민소|25-62-1')
             p.board('민사소송법', '기출', 'round')
+            p.ev(SHOW_CHIPS)   # ★ ⑧ A-10-1 · 사용자 10/3 09:07 — 새로고침하면 칩이 다시 가려진다(S.c2uv 저장 안 함) → 칩을 읽기 전에 편다
             R['d5_round'] = p.ev("__HU.listRead()")
             # 같은 ✎ 두 번 = 닫힘(팝업 틀 규칙)
             p.board('민사소송법', '기출', 'unit')
-            at = p.ev("([c,x])=>__HU.rowAt(c,x)", [CK251, 'edit']); p.click(at, 500)
+            at = p.ev("([c,x])=>__HU.rowAt(c,x)", [CK251, 'edit']); p.hold(at, 500)   # ★ ⑧ A-10-3 · 정한 것 3 — 옛 p.click → 0.5초 길게
             R['twice1'] = p.ev("()=>document.querySelectorAll('.pop.c2uw').length")
-            at = p.ev("([c,x,o,n])=>__HU.rowAt(c,x,o,n)", [CK251, 'edit', False, True]); R['twiceAt'] = at; p.click(at, 500)   # 같은 자리(스크롤 없이) 두 번째
+            at = p.ev("([c,x,o,n])=>__HU.rowAt(c,x,o,n)", [CK251, 'edit', False, True]); R['twiceAt'] = at; p.hold(at, 500)   # 같은 자리(스크롤 없이) 두 번째 · ★ ⑧ A-10-3 — 옛 p.click → 0.5초 길게
             R['twice2'] = p.ev("()=>document.querySelectorAll('.pop.c2uw').length")
             # C-8 기록 왕복 · SYNC_KEYS
             # A-6(a) 옛 키가 앞자리 그대로인지 재려고 SYNC_KEYS 전체 목록도 받는다
@@ -309,13 +362,13 @@ def scen_desk(br, eng, tag, src):
             R['rec'] = p.ev("__HU.recRoundtrip()")
             # 되돌리기 → 원자리 · 칸 = {auto:true}
             p.board('민사소송법', '기출', 'unit')
-            at = p.ev("([c,x])=>__HU.rowAt(c,x)", [CK251, 'edit']); p.click(at, 600)
+            at = p.ev("([c,x])=>__HU.rowAt(c,x)", [CK251, 'edit']); p.hold(at, 600)   # ★ ⑧ A-10-3 · 정한 것 3 — 옛 p.click → 0.5초 길게
             R['rev_win'] = p.ev("__HU.win()")
             at = p.ev("([k])=>__HU.winAt(k)", ['rev']); R['revOk'] = p.click(at, 1200); p.ev("__HU.quiet()")
             R['rev_after'] = p.ev("__HU.unitRead()")
             R['rev_hand'] = p.ev("k=>__HU.hand(k)", '민소|25-62-1')
             # 고친 게 없으면 저장해도 손값을 안 만든다
-            at = p.ev("([c,x])=>__HU.rowAt(c,x)", ['card|기출|민기출 26-63-1', 'edit']); p.click(at, 600)
+            at = p.ev("([c,x])=>__HU.rowAt(c,x)", ['card|기출|민기출 26-63-1', 'edit']); p.hold(at, 600)   # ★ ⑧ A-10-3 · 정한 것 3 — 옛 p.click → 0.5초 길게
             at = p.ev("([k])=>__HU.winAt(k)", ['save']); p.click(at, 800); p.ev("__HU.quiet()")
             R['nochange_hand'] = p.ev("k=>__HU.hand(k)", '민소|26-63-1')
             # D-6 손값이 ⚙ 자동값(바뀐 사본)을 이긴다
@@ -324,7 +377,7 @@ def scen_desk(br, eng, tag, src):
             p.load('tok=1&keep=1&alt=1'); p.board('민사소송법', '기출', 'unit')
             R['d6_alt_hand'] = p.ev("__HU.unitRead()")
             R['d6_alt_loaded'] = p.ev("()=>((C2U['민소']||{}).문제||{})['25-62-1']")
-            at = p.ev("([c,x])=>__HU.rowAt(c,x)", [CK251, 'edit']); p.click(at, 600)
+            at = p.ev("([c,x])=>__HU.rowAt(c,x)", [CK251, 'edit']); p.hold(at, 600)   # ★ ⑧ A-10-3 · 정한 것 3 — 옛 p.click → 0.5초 길게
             at = p.ev("([k])=>__HU.winAt(k)", ['rev']); p.click(at, 1200); p.ev("__HU.quiet()")
             R['d6_alt_auto'] = p.ev("__HU.unitRead()")
             p.load('tok=1&keep=1'); p.board('민사소송법', '기출', 'unit')
@@ -346,11 +399,16 @@ def scen_desk(br, eng, tag, src):
 # ══════════ D-7 두 기기 동기화 (chromium) · 옛 판 기기 창 ══════════
 def scen_sync(br, base, new):
     R = {}
+    QJ.launch('new', 2)
     A = P(br, 'chromium', 'NEW', new, 1440, 900, who='꼬까')
     B = P(br, 'chromium', 'NEW', new, 1440, 900, who='햄찌')
-    C = P(br, 'chromium', 'BASE', base, 1440, 900, who='옛판')
+    if QJ.GATE:   # 옛 판 기기 = 바탕 — regress 는 바탕을 안 띄운다(⑤ 는 「관문만」)
+        QJ.launch('base')
+        C = P(br, 'chromium', 'BASE', base, 1440, 900, who='옛판')
+    else:
+        C = None
     try:
-        for x in (A, B, C):
+        for x in ((A, B, C) if QJ.GATE else (A, B)):
             x.ev("__HU.quiet()"); x.ev("f=>__HU.sync(f)", False); x.ev("__HU.quiet()")
         # ① A 손값 → 올림
         A.board('민사소송법', '기출', 'unit'); edit_flow(A, R, 'A_')
@@ -367,7 +425,7 @@ def scen_sync(br, base, new):
         R['Bunit'] = B.ev("__HU.unitRead()"); R['Bhand'] = B.ev("k=>__HU.hand(k)", '민소|25-62-1')
         A.board('민사소송법', '기출', 'unit'); R['Aunit'] = A.ev("__HU.unitRead()")
         # ③ B 되돌리기 → 올림
-        at = B.ev("([c,x])=>__HU.rowAt(c,x)", [CK251, 'edit']); B.click(at, 600)
+        at = B.ev("([c,x])=>__HU.rowAt(c,x)", [CK251, 'edit']); B.hold(at, 600)   # ★ ⑧ A-10-3 · 정한 것 3 — 옛 B.click → 0.5초 길게
         at = B.ev("([k])=>__HU.winAt(k)", ['rev']); R['BrevOk'] = B.click(at, 1200); B.ev("__HU.quiet()"); B.ev("__HU.stamp()")
         R['B2'] = B.ev("f=>__HU.sync(f)", True)
         P2 = B.ev("__HU.remoteGet()")['text']
@@ -378,34 +436,39 @@ def scen_sync(br, base, new):
         R['A2'] = A.ev("f=>__HU.sync(f)", False); A.ev("__HU.quiet()")
         A.board('민사소송법', '기출', 'unit')
         R['Aunit2'] = A.ev("__HU.unitRead()"); R['Ahand2'] = A.ev("k=>__HU.hand(k)", '민소|25-62-1')
-        # ⑤ 옛 판 기기 C(d3dd927) — A 가 다시 손값을 올린 원격(P3)을 받아 제 변경과 함께 올린다 → P4 · 새 판 A 가 다시 맞춘다 → P5
-        A.board('민사소송법', '기출', 'unit'); edit_flow(A, R, 'A3_'); A.ev("__HU.quiet()"); A.ev("__HU.stamp()")
-        R['A3'] = A.ev("f=>__HU.sync(f)", True)
-        P3 = A.ev("__HU.remoteGet()")['text']
-        C.ev("([t,h])=>__HU.remoteSet(t,h)", [P3, 'S3'])
-        C.ev("()=>{try{lsWrite('jopangi.editq',[{k:'hz1',target:'note',st:'대기',t:Date.now()}],'수정 큐');}catch(e){}return 1}"); C.ev("__HU.quiet()"); C.ev("__HU.stamp()")
-        R['C1'] = C.ev("f=>__HU.sync(f)", True)
-        P4 = C.ev("__HU.remoteGet()")['text']
-        p4 = json.loads(P4)
-        R['P4'] = {'has': 'jopangi.c2unit' in p4['data'], 'u': p4['u'].get('jopangi.c2unit|민소|25-62-1'),
-                   'gone': [k for k in (p4.get('gone') or {}) if k.startswith('jopangi.c2unit|')], 'keys': len(p4['data'])}
-        A.ev("([t,h])=>__HU.remoteSet(t,h)", [P4, 'S4'])
-        R['A4'] = A.ev("f=>__HU.sync(f)", False); A.ev("__HU.quiet()")
-        P5 = A.ev("__HU.remoteGet()")
-        p5 = json.loads(P5['text'])
-        R['P5'] = {'puts': P5.get('puts'), 'cell': (p5['data'].get('jopangi.c2unit') or {}).get('민소|25-62-1')}
-        R['Ahand4'] = A.ev("k=>__HU.hand(k)", '민소|25-62-1')
-        R['errs'] = [A.ev("__HU.errs()") + A.errs, B.ev("__HU.errs()") + B.errs, C.ev("__HU.errs()") + C.errs]
+        if QJ.GATE:   # ⑤ 옛 판 기기(바탕 d3dd927) 몫 — regress 는 바탕을 안 띄운다(처리안 「관문만」)
+            # ⑤ 옛 판 기기 C(d3dd927) — A 가 다시 손값을 올린 원격(P3)을 받아 제 변경과 함께 올린다 → P4 · 새 판 A 가 다시 맞춘다 → P5
+            A.board('민사소송법', '기출', 'unit'); edit_flow(A, R, 'A3_'); A.ev("__HU.quiet()"); A.ev("__HU.stamp()")
+            R['A3'] = A.ev("f=>__HU.sync(f)", True)
+            P3 = A.ev("__HU.remoteGet()")['text']
+            C.ev("([t,h])=>__HU.remoteSet(t,h)", [P3, 'S3'])
+            C.ev("()=>{try{lsWrite('jopangi.editq',[{k:'hz1',target:'note',st:'대기',t:Date.now()}],'수정 큐');}catch(e){}return 1}"); C.ev("__HU.quiet()"); C.ev("__HU.stamp()")
+            R['C1'] = C.ev("f=>__HU.sync(f)", True)
+            P4 = C.ev("__HU.remoteGet()")['text']
+            p4 = json.loads(P4)
+            R['P4'] = {'has': 'jopangi.c2unit' in p4['data'], 'u': p4['u'].get('jopangi.c2unit|민소|25-62-1'),
+                       'gone': [k for k in (p4.get('gone') or {}) if k.startswith('jopangi.c2unit|')], 'keys': len(p4['data'])}
+            A.ev("([t,h])=>__HU.remoteSet(t,h)", [P4, 'S4'])
+            R['A4'] = A.ev("f=>__HU.sync(f)", False); A.ev("__HU.quiet()")
+            P5 = A.ev("__HU.remoteGet()")
+            p5 = json.loads(P5['text'])
+            R['P5'] = {'puts': P5.get('puts'), 'cell': (p5['data'].get('jopangi.c2unit') or {}).get('민소|25-62-1')}
+            R['Ahand4'] = A.ev("k=>__HU.hand(k)", '민소|25-62-1')
+        if QJ.GATE:
+            R['errs'] = [A.ev("__HU.errs()") + A.errs, B.ev("__HU.errs()") + B.errs, C.ev("__HU.errs()") + C.errs]
+        else:
+            R['errs'] = [A.ev("__HU.errs()") + A.errs, B.ev("__HU.errs()") + B.errs]
     except Exception as e:
         R['exc'] = repr(e)[:600]
     finally:
-        for x in (A, B, C):
+        for x in ((A, B, C) if QJ.GATE else (A, B)):
             x.close()
     return R
 
 
 # ══════════ D-9 아이패드 진짜 터치 ══════════
 def scen_pad(br, eng, src, W, H, shots):
+    QJ.launch('new')
     p = P(br, eng, 'NEW', src, W, H, pad=True)
     R = {'eng': eng, 'W': W}
     try:
@@ -418,7 +481,7 @@ def scen_pad(br, eng, src, W, H, shots):
         R['after'] = p.ev("__HU.unitRead()")
         R['hand'] = p.ev("k=>__HU.hand(k)", '민소|25-62-1')
         # 창 끌기
-        at = p.ev("([c,x])=>__HU.rowAt(c,x)", [CK251, 'edit']); p.click(at, 700)
+        at = p.ev("([c,x])=>__HU.rowAt(c,x)", [CK251, 'edit']); p.hold(at, 700)   # ★ ⑧ A-10-3 · 정한 것 3 — 옛 p.click(손가락 톡) → 0.5초 길게(크롬 CDP 터치 · 웹킷 마우스)
         w0 = p.ev("__HU.win()")
         hd = (w0 or {}).get('head') or {}
         if hd.get('on'):
@@ -442,6 +505,7 @@ def scen_pad(br, eng, src, W, H, shots):
 def scen_wide(br, eng, src, shots):
     R = {'eng': eng, 'w': {}}
     for W, H in [(1440, 900), (1024, 768), (768, 1024)]:
+        QJ.launch('new')
         p = P(br, eng, 'NEW', src, W, H)
         try:
             for mode in ('round', 'unit'):
@@ -478,25 +542,29 @@ def scen_build():
     R['fields'] = sorted({k for v in d['문제'].values() for k in v} | {k for v in d['문제'].values() for s in v['설문'] for k in s}
                          | {k for v in d['문제'].values() for s in v['설문'] for u in s['단원'] for k in u})
     R['s'] = dict(Counter(u['s'] for v in d['문제'].values() for s in v['설문'] for u in s['단원']))
-    # 두 번 돌려 바이트 같음 — 모듈을 따로 두 번(노트 = genie note_민소.json)
-    sys.path.insert(0, J)
-    import jo_common as JC
-    CU = importlib.import_module('cha2_unit')
-    outs = []
-    for k in (1, 2):
-        od = os.path.join(WORK, 'build%d' % k); shutil.rmtree(od, ignore_errors=True); os.makedirs(od)
-        shutil.copy(os.path.join(JOD, 'data', 'note_민소.json'), od)
+    if QJ.GATE:   # 굽기 재현성(⚙ 두 번 돌려 바이트 같음) = ⚙ 판 자기 관문의 몫 — regress 는 굽지 않고 산출 파일만 읽는다(A-6)
+        QJ.sub('python:bake', 2)
+        # 두 번 돌려 바이트 같음 — 모듈을 따로 두 번(노트 = genie note_민소.json)
+        sys.path.insert(0, J)
+        import jo_common as JC
+        CU = importlib.import_module('cha2_unit')
+        outs = []
+        for k in (1, 2):
+            od = os.path.join(WORK, 'build%d' % k); shutil.rmtree(od, ignore_errors=True); os.makedirs(od)
+            shutil.copy(os.path.join(JOD, 'data', 'note_민소.json'), od)
 
-        def dump(name, obj, od=od):
-            with open(os.path.join(od, name), 'w', encoding='utf-8') as fh:
-                json.dump(obj, fh, ensure_ascii=False, separators=(',', ':'))
-        G, W0 = JC.Checks(), []
-        CU.build(J, od, dump, G, W0)
-        outs.append((open(os.path.join(od, UNIT_FILE), 'rb').read(), [(r['코드'], r['판정'], r['실측']) for r in G.rows], W0))
-    R['idem'] = outs[0][0] == outs[1][0]
-    R['same_as_staged'] = outs[0][0] == b
-    R['gates'] = outs[0][1]
-    R['warn'] = outs[0][2]
+            def dump(name, obj, od=od):
+                with open(os.path.join(od, name), 'w', encoding='utf-8') as fh:
+                    json.dump(obj, fh, ensure_ascii=False, separators=(',', ':'))
+            G, W0 = JC.Checks(), []
+            CU.build(J, od, dump, G, W0)
+            outs.append((open(os.path.join(od, UNIT_FILE), 'rb').read(), [(r['코드'], r['판정'], r['실측']) for r in G.rows], W0))
+        R['idem'] = outs[0][0] == outs[1][0]
+        R['same_as_staged'] = outs[0][0] == b
+        R['gates'] = outs[0][1]
+        R['warn'] = outs[0][2]
+    else:
+        R['idem'] = None; R['same_as_staged'] = None; R['gates'] = []; R['warn'] = []
     # D11 — 논점표 문자열이 산출 파일 글자 안에(노트 이름 칸 포함 전체) 있는가 · 노트 이름 밖
     T = json.load(open(os.path.join(J, '민소', '_민소2차_단원매핑', '_민소2차_논점표.json'), encoding='utf-8'))
     lines = sorted({(s.get('논점') or '').strip() for q in T for s in q.get('설문') or [] if (s.get('논점') or '').strip()})
@@ -512,7 +580,11 @@ def main():
     os.makedirs(WORK, exist_ok=True)
     new_raw = open(os.path.join(GENIE, REL), 'rb').read()
     new = new_raw.decode('utf-8')
-    base_b = git('show', BASE_REV + ':' + REL)
+    if QJ.GATE:
+        QJ.sub('git:show-app')
+        base_b = git('show', BASE_REV + ':' + REL)
+    else:
+        base_b = b''   # regress · smoke: 바탕 앱을 안 푼다(git show 0)
     base = base_b.decode('utf-8')
     # D-6 사본 — 25-62-1 의 자동 주단원·설문을 바꾼다(1.4 이송 하나)
     d = json.load(open(os.path.join(JOD, 'data', UNIT_FILE), encoding='utf-8'))
@@ -523,27 +595,27 @@ def main():
                    'new': [len(new_raw), hashlib.md5(new_raw.replace(b'\r\n', b'\n')).hexdigest(), new_raw.count(b'\r\n'), new_raw.count(b'\n')]},
            'ground': ground()}
     t00 = time.time()
-    if not ONLY or ONLY == 'build':
+    if (not ONLY or ONLY == 'build') and not QJ.SMOKE:   # smoke: D-1 은 smoke 칸 아님
         RES['build'] = scen_build()
     with sync_playwright() as pw:
-        brs = {e: getattr(pw, e).launch() for e in ('chromium', 'webkit')}
+        brs = {e: getattr(pw, e).launch() for e in (('chromium',) if QJ.SMOKE else ('chromium', 'webkit'))}   # smoke: Chromium 만
         try:
-            for eng in ('chromium', 'webkit'):
+            for eng in (('chromium',) if QJ.SMOKE else ('chromium', 'webkit')):
                 if not ONLY or ONLY == 'desk':
-                    for tag, src in (('BASE', base), ('NEW', new)):
+                    for tag, src in ((('NEW', new),) if QJ.REGRESS else (('BASE', base), ('NEW', new))):   # regress: NEW 만 — 바탕 기준 칸은 스냅샷(report)
                         t0 = time.time(); print('… desk %s/%s' % (eng, tag), flush=True)
                         RES['desk/%s/%s' % (eng, tag)] = scen_desk(brs[eng], eng, tag, src)
                         print('   %.1fs %s' % (time.time() - t0, RES['desk/%s/%s' % (eng, tag)].get('exc', '')), flush=True)
-                if not ONLY or ONLY == 'pad':
+                if (not ONLY or ONLY == 'pad') and not QJ.SMOKE:
                     for W, H in [(768, 1024), (1024, 768)]:
                         t0 = time.time(); print('… pad %s %d' % (eng, W), flush=True)
-                        RES['pad/%s/%d' % (eng, W)] = scen_pad(brs[eng], eng, new, W, H, shots=(eng == 'webkit'))
+                        RES['pad/%s/%d' % (eng, W)] = scen_pad(brs[eng], eng, new, W, H, shots=(eng == 'webkit' and QJ.GATE))
                         print('   %.1fs %s' % (time.time() - t0, RES['pad/%s/%d' % (eng, W)].get('exc', '')), flush=True)
-                if not ONLY or ONLY == 'wide':
+                if (not ONLY or ONLY == 'wide') and not QJ.SMOKE:
                     t0 = time.time(); print('… wide %s' % eng, flush=True)
-                    RES['wide/%s' % eng] = scen_wide(brs[eng], eng, new, shots=(eng == 'chromium'))
+                    RES['wide/%s' % eng] = scen_wide(brs[eng], eng, new, shots=(eng == 'chromium' and QJ.GATE))
                     print('   %.1fs' % (time.time() - t0), flush=True)
-            if not ONLY or ONLY == 'sync':
+            if (not ONLY or ONLY == 'sync') and not QJ.SMOKE:
                 t0 = time.time(); print('… sync chromium', flush=True)
                 RES['sync'] = scen_sync(brs['chromium'], base, new)
                 print('   %.1fs %s' % (time.time() - t0, RES['sync'].get('exc', '')), flush=True)
@@ -561,25 +633,57 @@ def NOISE(x):
     return 'ResizeObserver loop' in x or 'Failed to load resource' in x
 
 
+def report_smoke(RES, T, I, g, L):
+    """smoke 칸 = D-10(회차별 76줄 꼴) · D-2(단원 머리 40) · JS 오류 0 — chromium NEW 한 쪽(scen_desk 가 회차별 줄 · 단원별을 읽고 멈춘다)"""
+    eng = 'chromium'
+    N = RES.get('desk/%s/NEW' % eng) or {}
+    E = '[%s] ' % eng
+    if N.get('exc'):
+        T(E + '책상 시나리오 예외 0', False, [N.get('exc')])
+    lst = N.get('list') or {}
+    rows = lst.get('rows', [])
+    _s10 = QJ.same('D-10줄수@' + eng, len(rows))   # 기준 값은 다른 조건이 거짓이어도 늘 스냅샷에 적는다
+    T(E + 'D-10 회차별 76줄 — .c2k·.c2rn 0 · 첫 줄 첫 자식 = 제목(.c2t2) · 줄 수 = 바탕 격자 셀',
+      len(rows) == 76 and all(r['k'] == 0 and r['rn'] == 0 and r['first'] == 'c2t2' for r in rows) and _s10,
+      [len(rows), [r for r in rows if r['k'] or r['rn'] or r['first'] != 'c2t2'][:2], QJ.base_note('D-10줄수@' + eng)])
+    U0 = N.get('unit') or {}
+    heads_u = [h for h in U0.get('heads', []) if not h['none']]
+    cnt = {re.match(r'^(\d+(?:\.\d+)*)', h['unit']).group(1): int(h['n'].replace('문제 ', '')) for h in heads_u}
+    T(E + 'D-2 단원 머리 수 = 주단원 쓰인 단원 수(40) · 머리마다 「문제 N」 = §0 표 · 줄 합 76 · 머리 아래 줄 수 = 문제 N',
+      len(heads_u) == 40 and cnt == TABLE0 and len(U0.get('rows', [])) == 76 and all(h['rows'] == int(h['n'].replace('문제 ', '')) for h in heads_u),
+      [len(heads_u), sorted(set(cnt.items()) ^ set(TABLE0.items()))[:4], len(U0.get('rows', []))])
+    en = [x for x in (N.get('errs') or []) if not NOISE(x)]
+    T(E + 'JS 오류 0(NEW · ResizeObserver loop·자원 404 줄은 뺌)', not en, en[:4])
+    p = sum(1 for x in L if x.startswith('PASS')); f = sum(1 for x in L if x.startswith('FAIL'))
+    body = '\n'.join(L) + '\n\n합계  PASS %d · FAIL %d  (%.0f초)\n' % (p, f, RES.get('sec', 0))
+    print(body)
+    wr(os.path.join(OUT, '_harness_jo_2cha_unit_result.txt'), body)
+
+
 def report(RES, base, new):
     L = []
     T = lambda n, c, i=None: L.append(('PASS' if c else 'FAIL') + ' | ' + n + ('' if c or i is None else ' | ' + json.dumps(i, ensure_ascii=False)[:900]))
     I = lambda n, v: L.append('INFO | ' + n + ' | ' + (v if isinstance(v, str) else json.dumps(v, ensure_ascii=False)[:1600]))
     g = lambda d, *ks: __import__('functools').reduce(lambda a, k: (a[k] if isinstance(a, list) and isinstance(k, int) and -len(a) <= k < len(a)
                                                                     else (a or {}).get(k) if isinstance(a, dict) else None), ks, d)
+    if QJ.SMOKE:   # smoke: D-10 · D-2 · JS 오류 0 만
+        return report_smoke(RES, T, I, g, L)
     G = RES['ground']
     sb, sn = RES['src']['base'], RES['src']['new']
-    T('착수 바탕 %s = 969,250 B(CRLF) 판 · md5(LF) d8f33f90…' % BASE_REV, sb[1] == BASE_MD5_LF, sb)
+    if QJ.GATE:   # 바탕 md5 = 헛잣대 재료(처리안 「관문만」)
+        T('착수 바탕 %s = 969,250 B(CRLF) 판 · md5(LF) d8f33f90…' % BASE_REV, sb[1] == BASE_MD5_LF, sb)
     T('NEW 작업트리 CRLF 그대로(LF 단독 0 · %d 줄) · %d B · md5(LF) %s' % (sn[2], sn[0], sn[1]), sn[2] == sn[3], sn)
-    # A-6(d) 인도 검산 = 2cha_unit 두 커밋(54ced94·b2f7338 · 부모 d3dd927)이 바꾼 것 — 작업트리 git status 는 인도 전에만 선다
-    ch = sorted(l for l in git('diff', '--name-status', 'd3dd927', 'b2f7338').decode('utf-8').split('\n') if l.strip())
-    T('genie 작업트리 바뀐 것 = jo/index.html + jo/data/%s 둘뿐 %s' % (UNIT_FILE, ch), ch == sorted(['M\t' + REL, 'A\tjo/data/' + UNIT_FILE]), ch)
+    if QJ.GATE:   # 인도 커밋 diff(git) = 그 판에만 뜻 있는 칸(처리안 「관문만」)
+        # A-6(d) 인도 검산 = 2cha_unit 두 커밋(54ced94·b2f7338 · 부모 d3dd927)이 바꾼 것 — 작업트리 git status 는 인도 전에만 선다
+        ch = sorted(l for l in git('diff', '--name-status', 'd3dd927', 'b2f7338').decode('utf-8').split('\n') if l.strip())
+        T('genie 작업트리 바뀐 것 = jo/index.html + jo/data/%s 둘뿐 %s' % (UNIT_FILE, ch), ch == sorted(['M\t' + REL, 'A\tjo/data/' + UNIT_FILE]), ch)
     nl, bl = new.replace('\r\n', '\n'), base.replace('\r\n', '\n')
-    # A-6(d) 「옛 30키 + 끝에 c2unit」 은 2cha_unit 판 성질 — 인도판(b2f7338) 소스로 잰다(뒤 판들이 키를 더함: dd9d89f canvasjari … ffafcb0 jocheck)
-    nl_c5 = git('show', 'b2f7338:' + REL).decode('utf-8').replace('\r\n', '\n')
-    skn = re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\]', nl_c5, re.S).group(1))
-    skb = re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\]', bl, re.S).group(1))
-    T('§C-5 SYNC_KEYS = 옛 30키 그대로 + 끝에 c2unit (31키)', skn == skb + ['c2unit'] and len(skn) == 31, [len(skb), skn[-3:]])
+    if QJ.GATE:   # 「옛 30키 + 끝에 c2unit」 = 인도판(b2f7338) 대 바탕(d3dd927) 소스 맞댐 — 역사 값(처리안 「관문만」) · regress 는 아래 C-5 칸이 앞 인도판 키 목록과 앞자리를 맞댄다
+        # A-6(d) 「옛 30키 + 끝에 c2unit」 은 2cha_unit 판 성질 — 인도판(b2f7338) 소스로 잰다(뒤 판들이 키를 더함: dd9d89f canvasjari … ffafcb0 jocheck)
+        nl_c5 = git('show', 'b2f7338:' + REL).decode('utf-8').replace('\r\n', '\n')
+        skn = re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\]', nl_c5, re.S).group(1))
+        skb = re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\]', bl, re.S).group(1))
+        T('§C-5 SYNC_KEYS = 옛 30키 그대로 + 끝에 c2unit (31키)', skn == skb + ['c2unit'] and len(skn) == 31, [len(skb), skn[-3:]])
     T('§B-1 C2_UNIT_READY 상수 → c2UnitReady() 함수(상수 0)', 'C2_UNIT_READY' not in nl and 'function c2UnitReady()' in nl)
     # ── D-1 ⚙
     B0 = RES.get('build') or {}
@@ -587,14 +691,17 @@ def report(RES, base, new):
         T('D-1 ⚙ — 생성 JSON 76문제 · 칸 = 법·갈래·문제 · 문제 칸 = 주·설문 · 설문 칸 = no·단원 · 단원 칸 = n·s(책 글자 칸 없음)',
           B0['n'] == 76 and B0['keys'] == ['갈래', '문제', '법'] and B0['fields'] == sorted({'주', '설문', 'no', '단원', 'n', 's'}), [B0['n'], B0['keys'], B0['fields']])
         T('D-1 주단원 분포 = §0 표 그대로(40 단원 · 합 76)', B0['dist'] == TABLE0, sorted(set(B0['dist'].items()) ^ set(TABLE0.items())))
-        T('D-1 두 번 돌려 바이트 같음 · genie 에 옮긴 파일과 같음 %s' % B0['file'], B0['idem'] and B0['same_as_staged'], [B0['idem'], B0['same_as_staged']])
+        if QJ.GATE:   # 굽기 재현성 = ⚙ 판 자기 관문의 몫(처리안 「관문만」) — regress 는 굽지 않는다
+            T('D-1 두 번 돌려 바이트 같음 · genie 에 옮긴 파일과 같음 %s' % B0['file'], B0['idem'] and B0['same_as_staged'], [B0['idem'], B0['same_as_staged']])
         T('D-1 A-2 D11 — 논점표 %d줄 중 파일에 든 것은 볼트 노트 이름 속 낱말뿐(노트 이름 밖 0 · U1 %s)' % (B0['nj_lines'], [x[1] for x in B0['gates'] if x[0] == 'U1']),
-          B0['nj_only_in_names'] and [x for x in B0['gates'] if x[0] == 'U1' and x[1] == 'OK'], [B0['nj_in_file'], B0['gates']])
+          B0['nj_only_in_names'] and ([x for x in B0['gates'] if x[0] == 'U1' and x[1] == 'OK'] if QJ.GATE else True), [B0['nj_in_file'], B0['gates']])   # regress: ⚙ 자기 점검 U1 은 안 굽는다 — 논점표 낱말이 노트 이름 속뿐인가(파일 읽기)만
         I('D-1 파일에 든 논점표 낱말(모두 볼트 노트 이름 속 — note_민소.json 에 이미 공개)', B0['nj_in_file'])
         I('D-1 출처 분포 · ⚙ 경고', {'s': B0['s'], 'warn': B0['warn']})
     for eng in ('chromium', 'webkit'):
         Bd, N = RES.get('desk/%s/BASE' % eng), RES.get('desk/%s/NEW' % eng)
-        if not Bd or not N:
+        if QJ.REGRESS:
+            Bd = {}   # regress: 바탕 안 띄움 — 바탕 값을 쓰는 칸(D-10 줄 수 · D-2 카드 집합 · C-5 키 앞자리)은 기준(앞 인도판 스냅샷)
+        if (not Bd and QJ.GATE) or not N:
             continue
         E = '[%s] ' % eng
         if Bd.get('exc') or N.get('exc'):
@@ -602,8 +709,11 @@ def report(RES, base, new):
         # D-10 줄 꼴 · 회차 머리
         lst = N.get('list') or {}
         rows = lst.get('rows', [])
+        if QJ.REGRESS:   # 기준 값(앞 인도판 줄 수)은 다른 조건이 거짓이어도 늘 스냅샷에 적는다
+            _s10 = QJ.same('D-10줄수@' + eng, len(rows))
         T(E + 'D-10 회차별 76줄 — .c2k·.c2rn 0 · 첫 줄 첫 자식 = 제목(.c2t2) · 줄 수 = 바탕 격자 셀',
-          len(rows) == 76 and all(r['k'] == 0 and r['rn'] == 0 and r['first'] == 'c2t2' for r in rows) and len(rows) == len(Bd.get('cells') or []),
+          len(rows) == 76 and all(r['k'] == 0 and r['rn'] == 0 and r['first'] == 'c2t2' for r in rows)
+          and (len(rows) == len(Bd.get('cells') or []) if QJ.GATE else _s10),
           [len(rows), len(Bd.get('cells') or []), [r for r in rows if r['k'] or r['rn'] or r['first'] != 'c2t2'][:2]])
         heads = lst.get('heads', [])
         T(E + 'D-10 회차 머리 수 = 회차 수(19) · 머리마다 문제 수 합 76 · 머리 글자 「N회 · YYYY년 · n문제」',
@@ -614,14 +724,16 @@ def report(RES, base, new):
           heads and all(h['fs'] == '17px' and 'monospace' in (h['ff'] or '') and h['bb'] == '2px' and h['mt'] == '20px' for h in heads)
           and all((r['alt'] == (i % 2 == 1)) for i, h in enumerate(heads) for r in rows if r['round'] == h['round']), heads[:1])
         # D-4 셋째 칸 — 주단원 칩 · ✎ · 칩 누름 = 노트 팝업(카드 팝업 아님) · 줄 누름 = 카드 팝업 글자 = 바탕
-        T(E + 'D-4 회차별 76줄 전부 주단원 칩 하나 + ✎ 단원', all(len(r['chips']) == 1 and r['edit'] for r in rows), [r['code'] for r in rows if len(r['chips']) != 1 or not r['edit']][:4])
+        # 옛(yard8 전): T(E + 'D-4 회차별 76줄 전부 주단원 칩 하나 + ✎ 단원', all(len(r['chips']) == 1 and r['edit'] for r in rows), [r['code'] for r in rows if len(r['chips']) != 1 or not r['edit']][:4])
+        rows4 = (N.get('listOpen') or lst).get('rows', [])   # ★ ⑧ A-10-1·A-10-2 · 사용자 10/3 09:07 — 칩은 평소 가림 → 「단원 N ▸」를 다 편 채(listOpen) 읽은 줄에서 칩 하나 + 단원 단추(.c2ue) · 평소(가림) 꼴은 위 D-10 칸들이 그대로 잰다
+        T(E + 'D-4 회차별 76줄 전부 주단원 칩 하나 + ✎ 단원', all(len(r['chips']) == 1 and r['edit'] for r in rows4), [r['code'] for r in rows4 if len(r['chips']) != 1 or not r['edit']][:4])
         cp = N.get('chipPop') or {}
         T(E + 'D-4 주단원 칩 누름 → 노트 팝업 1개(「📄 <노트>」) · 카드 팝업 안 열림', cp.get('ok') and g(cp, 'pop', 'n') == 1
           and all(t.startswith('📄 ') for t in g(cp, 'pop', 'titles') or []) and g(cp, 'pop', 'sel') is None, cp)
         for ck in POPS3:
             pn, pb = g(N, 'pops', ck) or {}, g(Bd, 'pops', ck) or {}
             T(E + 'D-4 줄 클릭 → 카드 팝업 · 글자 = 같은 카드 popCard4 팝업 그대로 — %s' % ck[:30],
-              pn.get('ok') and pb.get('ok') and g(pn, 'pop', 'n') == 1 and g(pn, 'pop', 'text') == g(pn, 'direct', 'text') and g(pn, 'pop', 'sel') == ck,
+              pn.get('ok') and (pb.get('ok') if QJ.GATE else True) and g(pn, 'pop', 'n') == 1 and g(pn, 'pop', 'text') == g(pn, 'direct', 'text') and g(pn, 'pop', 'sel') == ck,
               [pn.get('ok'), pb.get('ok'), (g(pn, 'pop', 'text') or '')[:80], (g(pb, 'pop', 'text') or '')[:80]])
         # D-2 단원별
         U0 = N.get('unit') or {}
@@ -631,7 +743,10 @@ def report(RES, base, new):
           len(heads_u) == 40 and cnt == TABLE0 and len(U0.get('rows', [])) == 76 and all(h['rows'] == int(h['n'].replace('문제 ', '')) for h in heads_u),
           [len(heads_u), sorted(set(cnt.items()) ^ set(TABLE0.items()))[:4], len(U0.get('rows', []))])
         cks = [r['ck'] for r in U0.get('rows', [])]
-        T(E + 'D-2 각 카드 한 번씩만(중복 0 · 바탕 카드 집합과 같음) · 단원 없음 0', len(cks) == len(set(cks)) == 76 and sorted(cks) == sorted(Bd.get('cells') or []) and U0.get('none') == 0,
+        if QJ.REGRESS:   # 기준 값(앞 인도판 카드 집합 = 개수 · md5)은 다른 조건이 거짓이어도 늘 스냅샷에 적는다
+            _s2 = QJ.same('D-2카드집합@' + eng, [len(cks), hashlib.md5(json.dumps(sorted(cks), ensure_ascii=False).encode('utf-8')).hexdigest()])
+        T(E + 'D-2 각 카드 한 번씩만(중복 0 · 바탕 카드 집합과 같음) · 단원 없음 0', len(cks) == len(set(cks)) == 76
+          and (sorted(cks) == sorted(Bd.get('cells') or []) if QJ.GATE else _s2) and U0.get('none') == 0,
           [len(cks), len(set(cks)), U0.get('none')])
         pys = sorted({h['unit'].split('.')[0] for h in heads_u})
         T(E + 'D-2 편 띠 = 문제 있는 편만(%s) · 분홍 띠 꼴(#FBDCE8 · #8A3B62)' % ','.join(pys),
@@ -696,7 +811,11 @@ def report(RES, base, new):
         # C-8
         ky, rc = N.get('keys') or {}, N.get('rec') or {}
         # A-6(a) 본 세션 9/30 — 그 판이 더한 키(c2unit)가 있고 옛 30키(skb = d3dd927)가 앞자리 그대로 · 키가 더 늘어도 안 뒤집힌다
-        T(E + 'C-5 SYNC_KEYS 에 jopangi.c2unit 있음 · 옛 30키 앞자리 그대로(순서 보존)', ky.get('has') and (ky.get('all') or [])[:len(skb)] == ['jopangi.' + x for x in skb], ky)
+        if QJ.GATE:
+            T(E + 'C-5 SYNC_KEYS 에 jopangi.c2unit 있음 · 옛 30키 앞자리 그대로(순서 보존)', ky.get('has') and (ky.get('all') or [])[:len(skb)] == ['jopangi.' + x for x in skb], ky)
+        else:   # regress: 옛 30키(바탕 d3dd927 소스) 대신 앞 인도판의 키 목록이 앞자리 그대로(순서 보존 · 키가 더 늘어도 안 뒤집힌다)
+            _kp = QJ.base('C-5키@' + eng, list(ky.get('all') or []))
+            T(E + 'C-5 SYNC_KEYS 에 jopangi.c2unit 있음 · 옛 30키 앞자리 그대로(순서 보존)', ky.get('has') and list(ky.get('all') or [])[:len(_kp)] == list(_kp), dict(ky, 기준=QJ.base_note('C-5키@' + eng)))
         T(E + 'C-8 ⤓ 기록 — 내보내기에 c2unit 층 · 지웠다 들여오면 되살아남 · 건수에 듦 · 이름표 「🧩 2차 단원 …」',
           rc.get('inDump') and rc.get('mid') is None and rc.get('after') == rc.get('before') and rc.get('before') and rc.get('stat') and rc['stat'][0] >= 1
           and (rc.get('label') or '').startswith('🧩 2차 단원'), rc)
@@ -716,11 +835,12 @@ def report(RES, base, new):
         T('D-7 ③ B 되돌리기 → 올림(칸 = auto:true · 묘비 0) → ④ A 받기 → 자동 자리(4.1.1) · A 칸 = auto:true(되살아나지 않음)',
           S7.get('BrevOk') and (g(S7, 'P2', 'cell') or {}).get('auto') is True and not g(S7, 'P2', 'gone') and wA2.get(CK251) == U411
           and (S7.get('Ahand2') or {}).get('auto') is True, [S7.get('P2'), wA2.get(CK251), S7.get('Ahand2')])
-        I('D-7 ⑤ 옛 판 기기(d3dd927)가 손값 든 원격을 받아 올린 기록', S7.get('P4'))
-        T('D-7 ⑤ 옛 판 기기는 c2unit 을 지우지 않는다 — 묘비 0 · u 도장은 남는다(합집합)', not g(S7, 'P4', 'gone') and g(S7, 'P4', 'u'), S7.get('P4'))
-        T('D-7 ⑤ 새 판 기기 A 가 다음 맞추기에서 되살려 올린다(원격 칸 = 손값 7.8.2)', g(S7, 'P5', 'cell', 'main') == U782 and (S7.get('Ahand4') or {}).get('main') == U782,
-          [S7.get('P5'), S7.get('Ahand4')])
-        I('D-7 ⑤ 옛 판 기기가 올릴 때 data 에서 c2unit 이 빠지나(민법 G16 · 조판기 J19 와 같은 창)', {'옛 판이 올린 data 에 c2unit': g(S7, 'P4', 'has')})
+        if QJ.GATE:   # ⑤ 옛 판 기기(바탕 d3dd927) 몫 — regress 는 바탕을 안 띄운다(처리안 「관문만」)
+            I('D-7 ⑤ 옛 판 기기(d3dd927)가 손값 든 원격을 받아 올린 기록', S7.get('P4'))
+            T('D-7 ⑤ 옛 판 기기는 c2unit 을 지우지 않는다 — 묘비 0 · u 도장은 남는다(합집합)', not g(S7, 'P4', 'gone') and g(S7, 'P4', 'u'), S7.get('P4'))
+            T('D-7 ⑤ 새 판 기기 A 가 다음 맞추기에서 되살려 올린다(원격 칸 = 손값 7.8.2)', g(S7, 'P5', 'cell', 'main') == U782 and (S7.get('Ahand4') or {}).get('main') == U782,
+              [S7.get('P5'), S7.get('Ahand4')])
+            I('D-7 ⑤ 옛 판 기기가 올릴 때 data 에서 c2unit 이 빠지나(민법 G16 · 조판기 J19 와 같은 창)', {'옛 판이 올린 data 에 c2unit': g(S7, 'P4', 'has')})
         ee = [x for es in (S7.get('errs') or []) for x in es if not NOISE(x)]
         T('D-7 JS 오류 0(세 기기)', not ee, ee[:4])
     # D-9

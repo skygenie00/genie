@@ -15,6 +15,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · regress = NEW 만(바탕 bd8cfdf 안 풀고 안 띄움 · 헛잣대 책상 장면 0 · 바탕 값 칸 A8 은 기준 스냅샷 · 세 기기 동기화는 canvas_jari E-6 ⑤ 로 합침) · smoke = 기본 점검 칸만(chromium) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안
 _NR = _roots.need_n('민소 교재 PDF')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
@@ -142,6 +143,7 @@ def serve(tag, src):
 class Pg:
     def __init__(self, br, eng, tag, src, W, H, phone=False, q='tok=1', who='꼬까'):
         self.eng, self.tag, self.phone, self.who = eng, tag, phone, who
+        QJ.launch('base' if tag == 'BASE' else 'new')   # 셈(§B-4) — 바탕(BASE) 판을 띄운 수 · NEW 를 띄운 수
         self.port = serve(tag, src)
         if phone:
             self.ctx = br.new_context(viewport={'width': W, 'height': H}, device_scale_factor=2, is_mobile=True, has_touch=True, user_agent=PHONE_UA)
@@ -207,6 +209,8 @@ class Pg:
         return 'mouse(trusted)'
 
     def shot(self, name):
+        if QJ.REGRESS:   # regress — 눈으로 볼 스크린샷은 안 찍는다(판정 칸 아님 · 찍고 0.5초씩 되읽기)
+            return 'regress — 안 찍음'
         d = os.path.join(OUT, '_omrpop_shots'); os.makedirs(d, exist_ok=True)
         f = os.path.join(d, name + '.png')
         try:
@@ -276,6 +280,8 @@ def scen_desk(br, eng, src, tag, G, keepA=None):
         T(g, 'A1 압정 수 = 끝 목차 수 · 빈자리 = 나머지(목록을 그릴 때 센다)', len(rows) == len(G['names']) and len(pins) == len(G['leaf']) and len(gaps) == len(G['nonleaf'])
           and sorted(r['note'] for r in pins) == G['leaf'] and all(r['first'] for r in pins + gaps),
           {'rows': len(rows), 'pins': len(pins), 'gaps': len(gaps), 'leaf': len(G['leaf']), 'nonleaf': len(G['nonleaf'])})
+        if QJ.SMOKE:   # smoke — A1(압정 수 · 빈자리 수 = 목록 첫 화면)까지만(A2~A7 은 안 잰다)
+            return
         byn = {r['note']: r for r in rows}
         want_pin = [f for f in G['names'] if f.startswith(('1.3.1.', '2.3. ', '9.==재심'))]
         want_gap = [f for f in G['names'] if f.startswith(('1.3. ', '2.2. ', '1.==소송주체'))]
@@ -486,7 +492,7 @@ def scen_desk(br, eng, src, tag, G, keepA=None):
 
     try:
         for nm, fn in (('A', secA), ('B', secB), ('P', secP), ('C', secC)):
-            if not SECS or nm in SECS:
+            if (not SECS or nm in SECS) and (not QJ.SMOKE or nm == 'A'):   # smoke — A 묶음만
                 sec(nm, fn)
         er = [x for x in p.errs + (p.ev("()=>__HO.errs()") or []) if not CJ.NOISE(x)]
         T(g, 'Z 페이지 오류 0(ResizeObserver loop · 자원 못 받음 잡음 빼고)', not er, er[:6])
@@ -628,34 +634,44 @@ def main():
     os.makedirs(WORK, exist_ok=True); os.makedirs(OUT, exist_ok=True)
     new = io.open(NEWF, encoding='utf-8').read()
     newmd5 = hashlib.md5(new.replace('\r\n', '\n').encode('utf-8')).hexdigest()
-    if BASEF:
-        base = io.open(BASEF, encoding='utf-8').read()
+    if QJ.GATE:
+        if BASEF:
+            base = io.open(BASEF, encoding='utf-8').read()
+        else:
+            base = git('show', BASE_REV + ':jo/index.html').decode('utf-8')
     else:
-        base = git('show', BASE_REV + ':jo/index.html').decode('utf-8')
+        base = ''   # regress — 바탕 앱 풀기 0(git show 안 부름)
     bmd5 = hashlib.md5(base.replace('\r\n', '\n').encode('utf-8')).hexdigest()
     G = ground()
     print('땅값', {'hash': G['hash'], 'notes': len(G['names']), 'leaf': len(G['leaf']), 'gray': G['gray'], 'gray_bn만': G['gray_bn'], '1.3.1': len(G['by'].get(N131, [])), 'b35': G['b35']}, flush=True)
-    T('땅값', 'G0-3 canvas_meta hash', G['hash'] == HASH, G['hash'])
-    T('땅값', 'BASE = c2card 인도 판(bd8cfdf · c5210438)', bmd5 == BASE_MD5, bmd5)
+    if QJ.want('G0-3'):
+        T('땅값', 'G0-3 canvas_meta hash', G['hash'] == HASH, G['hash'])
+    if QJ.GATE:
+        T('땅값', 'BASE = c2card 인도 판(bd8cfdf · c5210438)', bmd5 == BASE_MD5, bmd5)
     run = lambda x: not ONLY or x in ONLY
     A = {}
     with sync_playwright() as pw:
         cr = pw.chromium.launch()
-        if run('base'):
+        if run('base') and QJ.GATE:   # regress — 바탕(헛잣대) 책상 장면 0
             scen_desk(cr, 'chromium', base, 'BASE', G, A)
         if run('desk'):
-            scen_desk(cr, 'chromium', new, 'NEW', G, A)
-        if run('phone'):
-            scen_phone(cr, 'chromium', new, 'NEW', G)
-        if run('sync'):
+            with QJ.stage('desk NEW chromium'):
+                scen_desk(cr, 'chromium', new, 'NEW', G, A)
+        if run('phone') and not QJ.SMOKE:
+            with QJ.stage('phone NEW chromium'):
+                scen_phone(cr, 'chromium', new, 'NEW', G)
+        if run('sync') and QJ.GATE:   # regress — 세 기기 동기화 되살림(S1~S4 · 옛 판 기기 = 바탕 앱)은 canvas_jari E-6 ⑤ 로 합침(옛 31키 모사 기기) · 바탕 띄움 0
             scen_sync(cr, base, new, G)
         cr.close()
-        wk = pw.webkit.launch()
-        if run('wk'):
-            scen_desk(wk, 'webkit', new, 'NEW', G, A)
-        if run('wkphone'):
-            scen_phone(wk, 'webkit', new, 'NEW', G)
-        wk.close()
+        if not QJ.SMOKE:
+            wk = pw.webkit.launch()
+            if run('wk'):
+                with QJ.stage('desk NEW webkit'):
+                    scen_desk(wk, 'webkit', new, 'NEW', G, A)
+            if run('wkphone'):
+                with QJ.stage('phone NEW webkit'):
+                    scen_phone(wk, 'webkit', new, 'NEW', G)
+            wk.close()
     # A — 이름 줄 x 가 바탕과 같음(빈자리 덕 · 모든 줄): 줄 안 이름 자리의 차가 모든 줄에서 같은 값
     if 'BASEchromium' in A and 'NEWchromium' in A and A['BASEchromium'] and A['NEWchromium']:
         bb = {r['note']: r['nr']['x'] - r['rr']['x'] for r in A['BASEchromium']['rows']}
@@ -663,6 +679,12 @@ def main():
         d = sorted({round(nn[f] - bb[f], 2) for f in nn if f in bb})
         T('NEW chromium 책상', 'A8 이름 줄 x = 바탕 + 같은 값(빈자리 덕 · 모든 줄 · 압정 줄과 빈자리 줄이 같다)', len(nn) == len(bb) and len(d) == 1,
           {'dx': d, 'rows': len(nn), '뜻': '압정 11 − 5(margin) + 8(gap) = 14px 만큼 모든 줄이 같이 민다 — 줄끼리의 맞춤(들여쓰기)은 바탕 그대로'})
+    elif QJ.REGRESS and not QJ.SMOKE and 'NEWchromium' in A and A['NEWchromium']:   # regress — 기준 칸: 바탕 이름 줄 x = 기준 스냅샷(바탕 앱 안 띄움 · 스냅샷 없으면 NEW 값 = 첫 기록)
+        nn = {r['note']: r['nr']['x'] - r['rr']['x'] for r in A['NEWchromium']['rows']}
+        bb = QJ.base('A8@chromium/namex', nn)
+        d = sorted({round(nn[f] - bb[f], 2) for f in nn if f in bb})
+        T('NEW chromium 책상', 'A8 이름 줄 x = 바탕 + 같은 값(빈자리 덕 · 모든 줄 · 압정 줄과 빈자리 줄이 같다)', len(nn) == len(bb) and len(d) == 1,
+          {'dx': d, 'rows': len(nn), '기준': QJ.base_note('A8@chromium/namex'), '뜻': '바탕 값 = 기준 스냅샷(NEW 가 같은 줄마다 잰 이름 줄 x) — 모든 줄이 같은 값만큼 밀렸나'})
     return report(t0, NEWF, BASEF or BASE_REV, newmd5)
 
 

@@ -17,6 +17,10 @@ r"""_task_jo_popsize §B 관문 — 팝업 크기 손잡이: 세로는 손가락
     B5 폰 목차노트 → 노트 창 손잡이 +200 → 늘어남 · 화면 밖 · 기억 높이(popCfg.note) · 다시 열면(값)
     B6 원문 창(wmWin · 조문 ✎ 마크업 창 · 특허 제140조) 손잡이 +300(아래 화면 밖) → 그 높이(아이패드 가로 · PC)
     B7 가로·창 옮기기 무변 — B1~B6 의 폭 · left · 머리 끌기(좌우·위아래) · 손잡이 가로 끌기 결과 = 바탕
+    ※ 10/4 잣대 고침(prsz_pin 뒤 꼴 · 근거 = _task_jo_prsz_pin 첫 줄 「손잡이가 창 오른쪽 아래 모서리에 선다」 · 사용자 10/4 02:34 「아래 부분과 핸들이 안 보이도록 해도 되니까」 ·
+       결정로그 10/4 13:0x [채팅] 「하네스 잣대 고칠 것 = popsize 손잡이 화면 밖 칸(prsz_pin 뒤 꼴로)」 「다시 줄일 땐 머리를 위로 끌어 올린 뒤」):
+       창 아래가 화면 밖이면 손잡이도 화면 밖이라 못 잡는다 → B1 −150 · B2 +60 · B2 손잡이 ←90 은 잡기 전에 lift(머리를 위로 끌어 창 아래 = 화면 − 40)
+       · 새 판·바탕 같은 규칙(창 아래로 가름 — 바탕 sticky 손잡이는 화면 안이어도 같이 끌어 올려 B7 맞대기 자리를 맞춤) · 「위 무변」 = 끌어 올린 뒤 자리와 맞댐
     훑기 네 기기 — 가로 넘침 0 · 창 머리 화면 안(다시 잡힘) · 그림
   결과 = 화면 PASS/FAIL 줄 · --res 파일(기본 = 임시 폴더 · _qa 에 결과를 쓰지 않는다)
 """
@@ -399,6 +403,17 @@ def head(p, getw, dx, dy):
     return getw(p)
 
 
+def lift(p, getw, room=40):
+    """prsz_pin 뒤 꼴(10/4 고침 · 머리글 ※) — 창 아래가 화면 밖이면(손잡이도 화면 밖) 머리를 (아래 − 화면 + room) 만큼 위로 끌고 → (끈 뒤 창, 끈 거리 · 0 = 안 끎 · None = 머리 못 잡음)"""
+    w = getw(p)
+    if not w or w['b'] <= w['vh'] - 4:
+        return w, 0
+    dy = -round(w['b'] - w['vh'] + room)
+    if head(p, getw, 0, dy) is None:
+        return getw(p), None
+    return getw(p), dy
+
+
 def geo(w):
     return None if not w else {'x': w['x'], 'y': w['y'], 'w': w['w'], 'h': w['h'], 'b': w['b']}
 
@@ -418,10 +433,12 @@ def B1(br, eng, sn, sb):
         TB(g, '손잡이 +150 → 높이 = 잡을 때 + 150(280) · 위 무변 · 아래 화면 밖 허용(줄이지 않음)',
            lambda v: v[1] and eq(v[1]['h'], exp1(v[0])) and eq(v[1]['y'], v[0]['y']) and (v[0]['y'] + exp1(v[0]) <= v[1]['vh'] or v[1]['b'] > v[1]['vh']),
            [geo(w0n), dict(geo(w1n) or {}, vh=(w1n or {}).get('vh'))], [geo(w0b), dict(geo(w1b) or {}, vh=(w1b or {}).get('vh'))] if b else None)
+        l2 = both(a, b, lambda p: lift(p, cw))   # prsz_pin 뒤 꼴 — 아래가 화면 밖이면 머리를 먼저 위로(10/4 고침 · 머리글 ※)
+        N(g, '−150 앞 lift(prsz_pin 뒤 꼴 · 머리를 위로 끈 거리)', {'new': l2[0][1], 'base': l2[1][1] if b else None})
         w2n, w2b = both(a, b, lambda p: grip(p, cw, 0, -150))
         TB(g, '이어서 −150 → max(min(240, 잡을 때 높이), 잡을 때 − 150)(= 240) · 위 무변',
            lambda v: v[1] and eq(v[1]['h'], max(min(240, v[0]['h']), v[0]['h'] - 150)) and eq(v[1]['y'], v[0]['y']),
-           [geo(w1n), geo(w2n)], [geo(w1b), geo(w2b)] if b else None)
+           [geo(l2[0][0]), geo(w2n)], [geo(l2[1][0]), geo(w2b)] if b else None)
         for i, (vn, vb) in enumerate([(w0n, w0b), (w1n, w1b), (w2n, w2b)]):
             same(g, ['처음', '+150', '−150'][i], vn and [vn['x'], vn['w']], vb and [vb['x'], vb['w']])
         a.shot('B1'); b and b.shot('B1')
@@ -442,16 +459,19 @@ def B2(br, eng, sn, sb):
         s1 = both(a, b, lambda p: head(p, cw, 0, -600))
         s2 = both(a, b, lambda p: grip(p, cw, 0, 400))
         s3 = both(a, b, lambda p: head(p, cw, 0, 500))
+        l4 = both(a, b, lambda p: lift(p, cw))   # prsz_pin 뒤 꼴 — 아래가 화면 밖이라 머리를 먼저 위로(10/4 고침 · 머리글 ※ · 새 판·바탕 같은 거리)
         s4 = both(a, b, lambda p: grip(p, cw, 0, 60))
-        pick = lambda k: [geo(x[k]) for x in ((w0n, w0b), s1, s2, s3, s4)]
+        pick = lambda k: [geo(x[k]) for x in ((w0n, w0b), s1, s2, s3, s4)] + [geo(l4[k][0]) if l4[k] else None]   # [5] = 잡을 때(lift 뒤)
+        N(g, '+60 앞 lift(prsz_pin 뒤 꼴 · 머리를 위로 끈 거리)', {'new': l4[0][1], 'base': l4[1][1] if b else None})
         vn, vb = pick(0), (pick(1) if b else None)
         TB(g, '머리 위로 600 → 위 = 처음 − 600(%d)' % round(w0n['y'] - 600), lambda v: v[1] and eq(v[1]['y'], v[0]['y'] - 600) and eq(v[1]['h'], v[0]['h']), vn[:2], vb and vb[:2])
         TB(g, '손잡이 +400 → 높이 = 처음 + 400(530) · 위 무변', lambda v: v[2] and eq(v[2]['h'], v[1]['h'] + 400) and eq(v[2]['y'], v[1]['y']), vn[:3], vb and vb[:3])
         TB(g, '머리 아래로 500 → 위 + 500 · 아래 화면 밖', lambda v: v[3] and eq(v[3]['y'], v[2]['y'] + 500) and v[3]['b'] > DEV['padP']['H'], vn[:4], vb and vb[:4])
-        TB(g, '손잡이 +60 → 높이 = 잡을 때 + 60(590 · 바탕 240) · 위 무변', lambda v: v[4] and eq(v[4]['h'], v[3]['h'] + 60) and eq(v[4]['y'], v[3]['y']), vn, vb)
+        TB(g, '손잡이 +60 → 높이 = 잡을 때 + 60(590 · 바탕 240) · 위 무변', lambda v: v[4] and v[5] and eq(v[4]['h'], v[5]['h'] + 60) and eq(v[4]['y'], v[5]['y']), vn, vb)
         # B7 재료 — 머리 끌기 좌우 · 손잡이 가로
         s5 = both(a, b, lambda p: head(p, cw, -180, 0))
         s6 = both(a, b, lambda p: head(p, cw, 120, -40))
+        both(a, b, lambda p: lift(p, cw))   # prsz_pin 뒤 꼴(10/4 고침) — 손잡이 화면 밖이면 머리를 먼저 위로 · 「손잡이 ←90」 맞대기는 [x, w] 라 y 무관
         s7 = both(a, b, lambda p: grip(p, cw, -90, 0))
         for i, (x, y) in enumerate(((w0n, w0b), s1, s2, s3, s4, s5, s6, s7)):
             nm = ['처음', '머리 ↑600', '손잡이 +400', '머리 ↓500', '손잡이 +60', '머리 ←180', '머리 →120·↑40', '손잡이 ←90'][i]

@@ -15,6 +15,8 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) A-1 · 인자 --mode(gate | regress | smoke) · --snap-in · --snap-out 을 여기서 뗀다 · gate = 인자 없음 = 이 판 앞과 같다 · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안
+#   regress = NEW 만 띄움(바탕 앱 a9d72c1 · 바탕 데이터 f3b74c9 안 풀고 git archive · 바탕 PDF pdftotext 0 · 헛잣대 칸 끔 · 「줄 수 무변」 E2 는 기준 스냅샷 · 볼트 · N: 노트 훑기 안 함) · smoke = 데이터 C1 + 앱 C6 + APP 만
 NR = _roots.n()   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) None — 쓰는 자리가 건너뛴다
 import csv, glob, hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse, collections
 sys.stdout.reconfigure(encoding='utf-8')
@@ -40,7 +42,7 @@ GENIE = CJ.GENIE
 JOD = os.path.join(GENIE, 'jo')
 DATA = ARG('--data', os.path.join(JOD, 'data'))
 NEWF = ARG('--new', os.path.join(JOD, 'index.html'))
-PDFD = ARG('--pdf', os.path.join(tempfile.gettempdir(), 'uid_abbyy'))
+PDFD = ARG('--pdf', os.path.join(tempfile.gettempdir(), 'uid_abbyy') if QJ.GATE else os.path.join(GENIE, 'gichul', 'pdf'))   # regress — 산재법 PDF 다섯 = 산출 파일(genie gichul/pdf 인도본 · list.json 해시와 같음)만 읽는다(gate 는 그대로 TEMP\uid_abbyy · --pdf 로 바꿀 수 있음)
 BASE_REV, BASE_MD5, BASE_DATA_REV = 'a9d72c1', 'c9a35c4f', 'f3b74c9'
 WORK = os.path.join(tempfile.gettempdir(), 'h_gaekuid')
 TESTS = io.open(os.path.join(HERE, '_harness_jo_gaek_uid_tests.js'), encoding='utf-8').read()
@@ -78,6 +80,7 @@ def jnew(name):
 
 
 def jhead(name):
+    QJ.sub('git:show-app')   # 셈(§B-4) — 바탕 데이터(f3b74c9) 풀기 · gate 에서도 동작 무변
     return json.loads(git('show', '%s:jo/data/%s' % (BASE_DATA_REV, name)).decode('utf-8'))
 
 
@@ -104,9 +107,9 @@ def g_form(S, tag):
 
 
 def data_gates():
-    NEWS, HEADS = stmts(jnew), stmts(jhead)
+    NEWS, HEADS = stmts(jnew), (stmts(jhead) if QJ.GATE else [])   # regress — 바탕 데이터(f3b74c9)를 git show 로 풀지 않는다(HEADS 비움 · 바탕 쪽 헛잣대 칸은 gate 만)
     # C-1 꼴 전수
-    for S, tag in ((NEWS, 'NEW'), (HEADS, 'BASE')):
+    for S, tag in (((NEWS, 'NEW'), (HEADS, 'BASE')) if QJ.GATE else (((NEWS, 'NEW'),) if not QJ.SMOKE else ())):   # smoke — C1(지금 원래 FAIL 이라 smoke 칸으로 안 씀)은 안 잰다
         bad, ge51, p7 = g_form(S, tag)
         if tag == 'NEW':   # uid 없음이 맞는 줄 = 조합 선지 줄(「ㄱ, ㄴ」 · 2026-63 상표 28·디보 36) — 지시서 A-1
             bad = [(w, u) for w, u in bad if not (not u and any(s[5] == w and UR.is_combo_text(s[2]) for s in S))]
@@ -132,15 +135,18 @@ def data_gates():
         return [k for k in m if len(m[k]) > 1 or len(a[k]) > 1]
     nb = uniq_bad(NEWS)
     T('C2', u'유일 — 글·정답이 다른데 uid 같음', not nb, u'%d %s' % (len(nb), nb[:3]))
-    hb = uniq_bad(HEADS)
-    if hb:
-        T('C2-헛', u'유일 헛잣대(바탕)', True, u'바탕 FAIL %d %s' % (len(hb), hb[:3]))
-    else:   # 바탕도 유일 — 일부러 두 글에 같은 uid 를 준 사본으로 잣대가 거저 참이 아님을 보인다
-        fake = list(NEWS)
-        a = next(i for i, s in enumerate(fake) if s[1] and s[0] == u'특허')
-        b = next(i for i, s in enumerate(fake) if s[1] and s[0] == u'특허' and UR.norm(s[2]) != UR.norm(fake[a][2]))
-        fake[b] = (fake[b][0], fake[a][1]) + fake[b][2:]
-        T('C2-헛', u'유일 헛잣대(바탕도 유일 → 깨뜨린 사본)', bool(uniq_bad(fake)), u'바탕 0 · 사본 %d' % len(uniq_bad(fake)))
+    if not QJ.want('C2-헛'):   # smoke — C2(smoke 칸 · 데이터 유일)까지만
+        return
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔(바탕 데이터 HEADS 가 비어 있다)
+        hb = uniq_bad(HEADS)
+        if hb:
+            T('C2-헛', u'유일 헛잣대(바탕)', True, u'바탕 FAIL %d %s' % (len(hb), hb[:3]))
+        else:   # 바탕도 유일 — 일부러 두 글에 같은 uid 를 준 사본으로 잣대가 거저 참이 아님을 보인다
+            fake = list(NEWS)
+            a = next(i for i, s in enumerate(fake) if s[1] and s[0] == u'특허')
+            b = next(i for i, s in enumerate(fake) if s[1] and s[0] == u'특허' and UR.norm(s[2]) != UR.norm(fake[a][2]))
+            fake[b] = (fake[b][0], fake[a][1]) + fake[b][2:]
+            T('C2-헛', u'유일 헛잣대(바탕도 유일 → 깨뜨린 사본)', bool(uniq_bad(fake)), u'바탕 0 · 사본 %d' % len(uniq_bad(fake)))
     # C-3 같은 글 한 uid
     def same_bad(S):
         m = collections.defaultdict(set)
@@ -149,9 +155,10 @@ def data_gates():
             if n and n not in UR.PLACEHOLDER:
                 m[(law, ox, n)].add(u)
         return [(k[0], sorted(v)) for k, v in m.items() if len(v) > 1]
-    ns, hs = same_bad(NEWS), same_bad(HEADS)
+    ns, hs = same_bad(NEWS), (same_bad(HEADS) if QJ.GATE else [])
     T('C3', u'같은 글 한 uid', not ns, u'어긋난 묶음 %d %s' % (len(ns), ns[:2]))
-    T('C3-헛', u'같은 글 헛잣대(바탕)', bool(hs), u'바탕 %d 묶음(채팅 셈 92 안팎)' % len(hs))
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+        T('C3-헛', u'같은 글 헛잣대(바탕)', bool(hs), u'바탕 %d 묶음(채팅 셈 92 안팎)' % len(hs))
     # C-4 2008 이후 — TR·TH 로 남은 수 = 못 찾음 목록 · §B 표본
     M = json.load(io.open(os.path.join(UDIR, 'exam_match.json'), encoding='utf-8'))
     U = M['units']
@@ -179,8 +186,9 @@ def data_gates():
     T('C4', u'§B 표본(2008 이후)', all(w in g for _, g, w in got), got)
     # 지시서 표 조건부 표본 — 시험지 대조가 가른 값(보고 · T0946093 「시험지와 같으면」 · T0845101 → 지시서 T084510ㄱ)
     N('C4', u'§B 조건부 표본', [(o, by_old(o)) for o in ('T0946093', 'T0946093P7', 'T0845101')])
-    hp = {z['id']: z for z in jhead('jimun_7pan.json')[u'지문']}
-    T('C4-헛', u'§B 표본 헛잣대(바탕 데이터)', (hp.get('P7-0036') or {}).get('uid') != 'T1350065h', u'바탕 P7-0036 uid %s' % (hp.get('P7-0036') or {}).get('uid'))
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔(바탕 데이터 jhead 를 안 푼다)
+        hp = {z['id']: z for z in jhead('jimun_7pan.json')[u'지문']}
+        T('C4-헛', u'§B 표본 헛잣대(바탕 데이터)', (hp.get('P7-0036') or {}).get('uid') != 'T1350065h', u'바탕 P7-0036 uid %s' % (hp.get('P7-0036') or {}).get('uid'))
     # C-5 2007 이전·사법·미기출 · 법 섞임
     B7 = [('T0340742', ['TR03071']), ('T0542513', ['TR03071']), ('T0542511', ['TH050004', 'SR03093']), ('T9734727', [u'TR9704가'])]
     got = [(o, by_old(o), w) for o, w in B7]
@@ -196,11 +204,12 @@ def data_gates():
             cross[u].add(law)
     xl = [u for u, v in cross.items() if len(v) > 1]
     T('C5', u'법 섞임 0(원장 uid 법 글자 · 두 법 데이터가 같은 uid)', not mix and not xl, u'원장 %d %s · 데이터 %d %s' % (len(mix), mix[:3], len(xl), xl[:3]))
-    hx = collections.defaultdict(set)
-    for law, u, *_ in HEADS:
-        if u:
-            hx[u].add(law)
-    T('C5-헛', u'법 섞임 헛잣대(바탕)', any(len(v) > 1 for v in hx.values()), u'바탕 두 법 같은 uid %d' % sum(1 for v in hx.values() if len(v) > 1))
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+        hx = collections.defaultdict(set)
+        for law, u, *_ in HEADS:
+            if u:
+                hx[u].add(law)
+        T('C5-헛', u'법 섞임 헛잣대(바탕)', any(len(v) > 1 for v in hx.values()), u'바탕 두 법 같은 uid %d' % sum(1 for v in hx.values() if len(v) > 1))
     # C-8 남은 옛 uid — 앱 데이터 파일(ou · uid_alias.json 빼고)
     A = json.load(io.open(os.path.join(UDIR, 'uid_alias.json'), encoding='utf-8'))
     dead = set(k for k in A['map'] if not k.startswith('P7:'))
@@ -238,16 +247,19 @@ def data_gates():
         return c
     cn = old_in(DATA, jnew)
     T('C8', u'앱 데이터 안 옛 uid 0(ou·uid_alias 빼고)', not cn, dict(cn))
-    hfiles = [l for l in git('ls-tree', '--name-only', BASE_DATA_REV, 'jo/data/').decode('utf-8').split('\n') if l.endswith('.json')]
-    hc = collections.Counter()
-    tmpd = os.path.join(WORK, 'headdata')
-    os.makedirs(tmpd, exist_ok=True)
-    for p in hfiles:
-        f = os.path.basename(p)
-        if f.startswith('jimun'):
-            open(os.path.join(tmpd, f), 'wb').write(git('show', '%s:%s' % (BASE_DATA_REV, p)))
-    hc = old_in(tmpd, lambda f: json.load(io.open(os.path.join(tmpd, f), encoding='utf-8')))
-    T('C8-헛', u'옛 uid 헛잣대(바탕 jimun 파일)', bool(hc), dict(hc))
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔(바탕 데이터 git ls-tree · git show 0)
+        QJ.sub('git:show-app')
+        hfiles = [l for l in git('ls-tree', '--name-only', BASE_DATA_REV, 'jo/data/').decode('utf-8').split('\n') if l.endswith('.json')]
+        hc = collections.Counter()
+        tmpd = os.path.join(WORK, 'headdata')
+        os.makedirs(tmpd, exist_ok=True)
+        for p in hfiles:
+            f = os.path.basename(p)
+            if f.startswith('jimun'):
+                QJ.sub('git:show-app')
+                open(os.path.join(tmpd, f), 'wb').write(git('show', '%s:%s' % (BASE_DATA_REV, p)))
+        hc = old_in(tmpd, lambda f: json.load(io.open(os.path.join(tmpd, f), encoding='utf-8')))
+        T('C8-헛', u'옛 uid 헛잣대(바탕 jimun 파일)', bool(hc), dict(hc))
     # 볼트 · N: 노트 속 옛 uid — 수만(고치지 않는다)
     vault = os.path.expanduser(r"~\Documents\PA's archive")
     vc, nc = collections.Counter(), collections.Counter()
@@ -260,6 +272,15 @@ def data_gates():
             vault = None
     except Exception:
         pass
+    if QJ.REGRESS and vault is not None:   # regress — 볼트 · N: 노트(md) 훑기(마이박스 10 분 · INFO 수만 · 판정 없음)는 안 한다 → 캐시가 있으면(낡았어도) 그 수를 · 없으면 건너뜀 한 줄
+        try:
+            C0 = json.load(io.open(cache, encoding='utf-8'))
+            vc, nc = collections.Counter(C0['v']), collections.Counter(C0['n'])
+            N('C8', u'볼트 노트 속 옛 uid(수만 · 캐시)', {'합': sum(vc.values()), '폴더': dict(vc.most_common(6)), 'regress': '훑지 않음 · 캐시 그대로'})
+            N('C8', u'N: 노트(md) 속 옛 uid(수만 · 캐시)', {'합': sum(nc.values()), '폴더': dict(nc.most_common(6)), 'regress': '훑지 않음 · 캐시 그대로'})
+        except Exception:
+            N('C8', u'볼트 · N: 노트 속 옛 uid(수만)', u'regress — 훑지 않음(캐시 없음)')
+        vault = ''
     if vault is None:
         N('C8', u'볼트 노트 속 옛 uid(수만 · 캐시)', {'합': sum(vc.values()), '폴더': dict(vc.most_common(6))})
         N('C8', u'N: 노트(md) 속 옛 uid(수만 · 캐시)', {'합': sum(nc.values()), '폴더': dict(nc.most_common(6))})
@@ -310,24 +331,30 @@ def data_gates():
                     inl += 1
         return n, inl
     nh, ni = heads(jnew)
-    bh, bi = heads(jhead)
-    T('E1', u'쪽 머리글 0(지문·해설·선지 줄)', nh == 0, u'새 %d · 바탕 %d' % (nh, bh))
-    T('E1-헛', u'머리글 헛잣대(바탕)', bh >= 18, u'바탕 %d(지시서 18 + 쪽 번호 붙은 꼴)' % bh)
-    T('E2', u'본문 속 「제N편」 줄 수 무변', ni == bi, u'새 %d · 바탕 %d' % (ni, bi))
+    bh, bi = heads(jhead) if QJ.GATE else (None, None)   # regress — 바탕 데이터를 안 푼다(E2 의 바탕 값은 기준 스냅샷)
+    if QJ.GATE:
+        T('E1', u'쪽 머리글 0(지문·해설·선지 줄)', nh == 0, u'새 %d · 바탕 %d' % (nh, bh))
+        T('E1-헛', u'머리글 헛잣대(바탕)', bh >= 18, u'바탕 %d(지시서 18 + 쪽 번호 붙은 꼴)' % bh)
+        T('E2', u'본문 속 「제N편」 줄 수 무변', ni == bi, u'새 %d · 바탕 %d' % (ni, bi))
+    else:   # regress — E1 은 NEW 조건(머리글 0)만 그대로(바탕 수는 안 찍음) · E2 = 처리안 기준: 바탕 값을 기준 스냅샷 E2@inl(바로 앞 인도 판이 잰 「제N편」 줄 수)로(스냅샷 없으면 첫 기록)
+        T('E1', u'쪽 머리글 0(지문·해설·선지 줄)', nh == 0, u'새 %d' % nh)
+        bi = QJ.base('E2@inl', ni)
+        T('E2', u'본문 속 「제N편」 줄 수 무변', ni == bi, u'새 %d · 기준 %d(%s)' % (ni, bi, QJ.base_note('E2@inl')))
     # ── E3 빠진 문항
     TC = json.load(io.open(TOC, encoding='utf-8'))
     def have_ids(get):
         P = get('jimun_7pan.json')
         s = set(re.sub(u'-\\d$', u'', z['id']) for z in P[u'지문']) | set(z['id'] for z in P[u'객관식'])
         return s
-    hn, hh = have_ids(jnew), have_ids(jhead)
+    hn, hh = have_ids(jnew), (have_ids(jhead) if QJ.GATE else set())   # regress — 바탕 데이터를 안 푼다(hh 비움 · miss_h 는 E3-헛 에서만 쓴다)
     book = [(m['no'], m[u'제목'], m[u'책']) for m in TC[u'마디']]     # 모아보기(FP) 마디도
     miss_n = sorted(set(p for _, _, b in book for p in b) - hn)
     miss_h = sorted(set(p for _, _, b in book for p in b) - hh)
     # 지시서 셈 「28 = P7-2058 + 27」 — 지금 목차 재료 `책` 에는 P7-2058 이 없다(toc_fuse 가 모아보기 자리를 추록 P7-0285 로) → 빠진 것 ⊆ {P7-2058}
     # ★ A-6(a) 9/30 — p8up(775457c) A-1-1 이 원장·마디에서 P7-1207 · P7-1599 를 지웠다(N: 목차 재료 `책` 에는 남음) → 빠진 것에 둘 더함
     T('E3', u'빠진 문항 ⊆ {P7-2058}(추록 대체) + {P7-1207 · P7-1599}(8판 판올림이 지움)', set(miss_n) <= {'P7-2058', 'P7-1207', 'P7-1599'}, u'새 %s · 책에 P7-2058 %s' % (miss_n, any('P7-2058' in b for _, _, b in book)))
-    T('E3-헛', u'빠진 문항 헛잣대(바탕)', len(set(miss_h) - {'P7-2058'}) == 27, u'바탕 %d %s…' % (len(miss_h), miss_h[:4]))
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+        T('E3-헛', u'빠진 문항 헛잣대(바탕)', len(set(miss_h) - {'P7-2058'}) == 27, u'바탕 %d %s…' % (len(miss_h), miss_h[:4]))
     cnt = TC.get(u'책수') or {}
     mism = []
     for no, t, b in book:
@@ -342,8 +369,9 @@ def data_gates():
           and (led.get(k[2:]) or {}).get(u'문번', '').isdigit()]
     sp = [k for k, v in U.items() if k.startswith('P|') and v['pos'] and int(v['pos'][0]) in SCAN and v['how'] in ('pos', 'pos-h', 'pos-h-ans', 'obj-pos')]
     T('E6', u'산재법 다섯 해 — 시험 문번 받은 특허·상표·디보 지문', len(sc) > 0 and len(sp) > 0, u'리담 %d · 제7판 %d' % (len(sc), len(sp)))
-    hs2 = [s for s in HEADS if s[4] and int(s[4]) in SCAN and re.match(u'^[TSD]\\d{6}', s[1]) and int(s[1][5:7]) >= 51]
-    N('E6', u'바탕 = 그 해 리담 문번 모름은 임시 번호(71↑) — 그림 판독·글자층 대조 없이 시험 문번 0', u'바탕 임시 번호 지문 %d' % len(hs2))
+    if QJ.GATE:   # 바탕 데이터 INFO(처리안 관문만) — regress 에서 끔
+        hs2 = [s for s in HEADS if s[4] and int(s[4]) in SCAN and re.match(u'^[TSD]\\d{6}', s[1]) and int(s[1][5:7]) >= 51]
+        N('E6', u'바탕 = 그 해 리담 문번 모름은 임시 번호(71↑) — 그림 판독·글자층 대조 없이 시험 문번 0', u'바탕 임시 번호 지문 %d' % len(hs2))
     N('E6', u'못 찾음(리담 문항)', [(k[0], k[1], k[2], y, n, s1) for (k, y, n, s1, s2) in [tuple(x) for x in M['_meta']['rep'].get('notfoundL_list', [])]] or M['_meta']['rep'].get('notfoundL'))
 
 
@@ -407,6 +435,7 @@ def serve(tag, src, data, alias_off=False, cl=False, slow_alias=0):
 
 class Pg:
     def __init__(self, br, tag, src, data, remote=None, alias_off=False, keep=False, W=1440, H=900, port=None, ctx=None, cl=False, slow_alias=0):
+        QJ.launch('base' if tag in ('appBASE', 'e1base', 'clBASE', 'regBASE') else 'new')   # 셈(§B-4) — 바탕 앱을 띄우는 태그 넷(gate 에서도 동작 무변)
         self.port = port or serve(tag, src, data, alias_off, cl, slow_alias)
         self.ctx = ctx or br.new_context(viewport={'width': W, 'height': H}, device_scale_factor=1)
         self.ctx.route('**/*', CJ.route_filter)
@@ -469,9 +498,13 @@ SEARCH = [('T0845511P7', u'T084508ㅁ'), ('T0542511', 'TH050004'), ('T0340742', 
 
 def app_gates(br):
     new = io.open(NEWF, encoding='utf-8').read()
-    base = git('show', '%s:jo/index.html' % BASE_REV).decode('utf-8')
-    assert hashlib.md5(base.encode('utf-8')).hexdigest()[:8] == BASE_MD5
-    for tag, src, data in (('NEW', new, DATA), ('BASE', base, DATA)):
+    if QJ.GATE:   # regress — 바탕 앱(a9d72c1)을 안 푼다(git show 0 · 바탕 md5 확인도 gate 만)
+        QJ.sub('git:show-app')
+        base = git('show', '%s:jo/index.html' % BASE_REV).decode('utf-8')
+        assert hashlib.md5(base.encode('utf-8')).hexdigest()[:8] == BASE_MD5
+    else:
+        base = ''
+    for tag, src, data in ((('NEW', new, DATA), ('BASE', base, DATA)) if QJ.GATE else (('NEW', new, DATA),)):   # regress — NEW 만(바탕 안 띄움)
         p = Pg(br, 'app' + tag, src, data)
         try:
             p.ev("()=>__HU.home('특허법')")
@@ -487,7 +520,7 @@ def app_gates(br):
                 T('C6', u'옛 uid 키보드 치고 Enter → 새 uid 지문 팝업 보임', ok, res)
             else:
                 T('C6-헛', u'별칭 찾기 헛잣대(바탕 앱 + 새 데이터)', not ok, res)
-            if tag == 'NEW':
+            if tag == 'NEW' and QJ.want('C7'):   # smoke — C6(smoke 칸) · 앱 오류 0(smoke 칸)만(C7 · E1 은 안 잼)
                 # C-7 기록 키 — 표본 카드 O 를 page.mouse → 기록 키 = 새 uid(리담 줄 T084510ㄱr)
                 k = u'T084510ㄱr'
                 p.ev("()=>__HU.closeAll()")
@@ -581,8 +614,11 @@ def gichul_gate(br):
     src = src[:bb] + GSEED + src[bb:]
     lj_new = os.path.join(WORK, 'list_new.json')
     lj_old = os.path.join(WORK, 'list_old.json')
-    open(lj_old, 'wb').write(git('show', '%s:gichul/pdf/list.json' % BASE_REV))   # ★ A-6(d) 9/30 — 옛 list.json = uid 판 앞 바탕(a9d72c1) · HEAD 는 17094a5 인도 뒤 이미 새 해시
-    for mode in ('new', 'old'):
+    if QJ.GATE:   # regress — 옛 list.json(바탕 a9d72c1)은 E5-헛(헛잣대) 몫이라 안 푼다
+        QJ.sub('git:show-app')
+        open(lj_old, 'wb').write(git('show', '%s:gichul/pdf/list.json' % BASE_REV))   # ★ A-6(d) 9/30 — 옛 list.json = uid 판 앞 바탕(a9d72c1) · HEAD 는 17094a5 인도 뒤 이미 새 해시
+    for mode in (('new', 'old') if QJ.GATE else ('new',)):   # regress — 'old'(E5-헛)는 안 돎
+        QJ.launch('new')   # 셈(§B-4) — 기출서재 앱(HEAD · 바탕 아님)
         out = os.path.join(WORK, 'gich_' + mode)
         shutil.rmtree(out, ignore_errors=True)
         os.makedirs(out)
@@ -667,9 +703,13 @@ def cl_gates(br):
     """A17 — Claude 답이 옛 uid(죽은 별칭)로 적혀 있어도 새 uid 카드에 붙는다(색인 · 언급 · 카드 단추 · 진짜 포인터로 창).
        NEW 는 별칭표를 3초 늦게 내준다(답이 먼저 와 옛 열쇠로 색인된 뒤 다시 색인하는 길) · 헛잣대 둘 = 별칭표 없는 판 · 바탕 앱 + 새 데이터."""
     new = io.open(NEWF, encoding='utf-8').read()
-    base = git('show', '%s:jo/index.html' % BASE_REV).decode('utf-8')
+    if QJ.GATE:   # regress — 바탕 앱(a9d72c1)을 안 푼다(git show 0)
+        QJ.sub('git:show-app')
+        base = git('show', '%s:jo/index.html' % BASE_REV).decode('utf-8')
+    else:
+        base = ''
     ks = [CL_OLD, CL_NEW, CL_MOLD, CL_MNEW]
-    for tag, src, kw in ((u'NEW', new, {'slow_alias': 3}), (u'NEW-별칭없음', new, {'alias_off': True}), (u'BASE', base, {})):
+    for tag, src, kw in (((u'NEW', new, {'slow_alias': 3}), (u'NEW-별칭없음', new, {'alias_off': True}), (u'BASE', base, {})) if QJ.GATE else ((u'NEW', new, {'slow_alias': 3}),)):   # regress — NEW 만(별칭 없는 판 · 바탕 앱은 헛잣대라 안 띄움)
         p = Pg(br, 'cl' + tag, src, DATA, cl=True, **kw)
         try:
             p.ev("()=>__HU.home('특허법')")
@@ -706,14 +746,15 @@ def star_gates(br):
     ox0 = R0['data']['jopangi.ox']
     A = json.load(io.open(os.path.join(UDIR, 'uid_alias.json'), encoding='utf-8'))
     # 헛잣대 먼저 — 별칭표 없는 판(옮기기 꺼짐)
-    p = Pg(br, 'starOFF', new, DATA, remote=remote, alias_off=True)
-    try:
-        p.ev("()=>__HU.home('특허법')")
-        p.until("()=>(window.__REMOTE||{}).puts>=1", ms=25000)
-        s0 = p.ev("()=>__HU.stars()")
-        T('E7-헛', u'옮기기 끈 판 = ⭐ 44 이상 사라짐', 328 - s0['pool'] >= 44, s0)
-    finally:
-        p.close()
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+        p = Pg(br, 'starOFF', new, DATA, remote=remote, alias_off=True)
+        try:
+            p.ev("()=>__HU.home('특허법')")
+            p.until("()=>(window.__REMOTE||{}).puts>=1", ms=25000)
+            s0 = p.ev("()=>__HU.stars()")
+            T('E7-헛', u'옮기기 끈 판 = ⭐ 44 이상 사라짐', 328 - s0['pool'] >= 44, s0)
+        finally:
+            p.close()
     ctx = br.new_context(viewport={'width': 1440, 'height': 900}, device_scale_factor=1)
     port = serve('starON', new, DATA)
     p = Pg(br, 'starON', new, DATA, remote=remote, port=port, ctx=ctx)
@@ -766,21 +807,31 @@ def pdf_gates(br):
     L = json.loads(git('show', 'HEAD:gichul/pdf/list.json').decode('utf-8'))
     items = {it['file']: it for it in L['items']}
     ok_all, rows = True, []
+    if QJ.REGRESS:   # regress — 산출 PDF 다섯이 없으면 죽지 않고 이 칸 FAIL 한 줄로 알린다(gate 는 그대로 — 원래대로 열다가 죽는다)
+        miss = ['%d-1-sanjae.pdf' % y for y in SCAN if not os.path.isfile(os.path.join(PDFD, '%d-1-sanjae.pdf' % y))]
+        if miss:
+            T('E5', u'산재법 다섯 해 글자층 > 30,000 B(pdftotext) · 세 법 낱말', False, u'산출 PDF 없음 %s (폴더 %s)' % (miss, PDFD))
+            return
     for y in SCAN:
         f = '%d-1-sanjae.pdf' % y
         p_new = os.path.join(PDFD, f)
         b = open(p_new, 'rb').read()
+        QJ.sub('pdftotext')   # 셈 — 새 산출 PDF 의 글자층(data 칸 · regress 에서도 한다)
         ptt = subprocess.run(['pdftotext', '-enc', 'UTF-8', p_new, '-'], capture_output=True).stdout
-        old = git('show', '%s:gichul/pdf/%s' % (BASE_REV, f))   # ★ A-6(d) 9/30 — 옛 원본 = uid 판 앞 바탕 a9d72c1(HEAD 는 17094a5 인도 뒤 ABBYY 새 판)
-        tmp = os.path.join(WORK, 'old_' + f)
-        open(tmp, 'wb').write(old)
-        pto = subprocess.run(['pdftotext', '-enc', 'UTF-8', tmp, '-'], capture_output=True).stdout
+        if QJ.GATE:   # regress — 옛 원본 PDF(바탕 a9d72c1)를 git show 로 풀어 pdftotext 하는 것은 E5-헛(헛잣대) 몫 — 안 한다
+            QJ.sub('git:show-app')
+            QJ.sub('pdftotext')
+            old = git('show', '%s:gichul/pdf/%s' % (BASE_REV, f))   # ★ A-6(d) 9/30 — 옛 원본 = uid 판 앞 바탕 a9d72c1(HEAD 는 17094a5 인도 뒤 ABBYY 새 판)
+            tmp = os.path.join(WORK, 'old_' + f)
+            open(tmp, 'wb').write(old)
+            pto = subprocess.run(['pdftotext', '-enc', 'UTF-8', tmp, '-'], capture_output=True).stdout
         txt = ptt.decode('utf-8', 'ignore')
         kw = all(k in txt for k in (u'특허', u'상표', u'디자인'))
-        rows.append((y, len(b), hashlib.sha256(b).hexdigest()[:10], len(ptt), len(pto), kw))
+        rows.append((y, len(b), hashlib.sha256(b).hexdigest()[:10], len(ptt), len(pto) if QJ.GATE else None, kw))   # regress — 다섯째 칸(바탕 글자층) None = 안 잼
         ok_all &= len(ptt) > 30000 and kw
     T('E5', u'산재법 다섯 해 글자층 > 30,000 B(pdftotext) · 세 법 낱말', ok_all, rows)
-    T('E5-헛', u'글자층 헛잣대(바탕 = uid 판 앞 원본 — 30,000 B 못 넘음)', all(r[4] < 30000 for r in rows), [(r[0], r[4]) for r in rows])
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+        T('E5-헛', u'글자층 헛잣대(바탕 = uid 판 앞 원본 — 30,000 B 못 넘음)', all(r[4] < 30000 for r in rows), [(r[0], r[4]) for r in rows])
     # 새 list.json 사본 — 다섯 줄만 해시·바이트·쪽
     import pymupdf
     L2 = json.loads(json.dumps(L))
@@ -791,13 +842,16 @@ def pdf_gates(br):
             it['hash'] = hashlib.sha256(b).hexdigest()
             it['bytes'] = len(b)
             it['pages'] = len(pymupdf.open(os.path.join(PDFD, it['file'])))
-    Lb = json.loads(git('show', '%s:gichul/pdf/list.json' % BASE_REV).decode('utf-8'))   # ★ A-6(d) 9/30 — 「다섯 줄만 바뀜」은 uid 판 앞 바탕(a9d72c1) list.json 과 맞댄다(HEAD 는 17094a5 인도 뒤 이미 새 해시) · L(HEAD)은 새 사본(기출서재 칸이 받는 것) 그대로
-    same = sum(1 for a, b in zip(Lb['items'], L2['items']) if a == b)
+    if QJ.GATE:   # regress — 「다섯 줄만 바뀜」 칸은 그 판에만 뜻 있는 칸(바탕 a9d72c1 list.json 과 맞댐 · 처리안 관문만)이라 바탕 list.json 을 안 푼다
+        QJ.sub('git:show-app')
+        Lb = json.loads(git('show', '%s:gichul/pdf/list.json' % BASE_REV).decode('utf-8'))   # ★ A-6(d) 9/30 — 「다섯 줄만 바뀜」은 uid 판 앞 바탕(a9d72c1) list.json 과 맞댄다(HEAD 는 17094a5 인도 뒤 이미 새 해시) · L(HEAD)은 새 사본(기출서재 칸이 받는 것) 그대로
+        same = sum(1 for a, b in zip(Lb['items'], L2['items']) if a == b)
     lj = os.path.join(WORK, 'list_new.json')
     io.open(lj, 'w', encoding='utf-8', newline='\n').write(json.dumps(L2, ensure_ascii=False, indent=1) + '\n')
-    T('E5', u'list.json 새 사본 — 다섯 줄만 바뀜 · 해시 = 파일 sha256', same == len(L['items']) - 5 and all(
-        it['hash'] == hashlib.sha256(open(os.path.join(PDFD, it['file']), 'rb').read()).hexdigest()
-        for it in L2['items'] if re.match(r'^(2009|2010|2020|2022|2025)-1-sanjae\.pdf$', it['file'])), u'무변 %d / %d · 사본 %s' % (same, len(L['items']), lj))
+    if QJ.GATE:   # 그 판에만 뜻 있는 칸(처리안 관문만) — regress 에서 끔(새 list.json 사본 자체는 위에서 그대로 만든다 · 기출서재 E5 칸이 받는다)
+        T('E5', u'list.json 새 사본 — 다섯 줄만 바뀜 · 해시 = 파일 sha256', same == len(L['items']) - 5 and all(
+            it['hash'] == hashlib.sha256(open(os.path.join(PDFD, it['file']), 'rb').read()).hexdigest()
+            for it in L2['items'] if re.match(r'^(2009|2010|2020|2022|2025)-1-sanjae\.pdf$', it['file'])), u'무변 %d / %d · 사본 %s' % (same, len(L['items']), lj))
     N('E5', u'새 list.json 사본(인도 때 genie 에 넣을 값)', lj)
 
 
@@ -857,26 +911,35 @@ def report():
 def main():
     os.makedirs(WORK, exist_ok=True)
     if not ONLY or 'data' in ONLY:
-        data_gates()
-    if not ONLY or 'pdf' in ONLY:
-        pdf_gates(None)
+        with QJ.stage('data'):
+            data_gates()
+    if (not ONLY or 'pdf' in ONLY) and not QJ.SMOKE:   # smoke — 데이터 C1 · 앱 C6 · APP 만
+        with QJ.stage('pdf'):
+            pdf_gates(None)
     if not ONLY or set(ONLY) & {'app', 'cl', 'star', 'pdf', 'reg'}:
         with sync_playwright() as pw:
             br = pw.chromium.launch()
             try:
                 if not ONLY or 'app' in ONLY:
-                    app_gates(br)
-                    e1_base(br)
-                if not ONLY or 'pdf' in ONLY:
-                    gichul_gate(br)
-                if not ONLY or 'app' in ONLY or 'cl' in ONLY:
-                    cl_gates(br)
-                if not ONLY or 'star' in ONLY:
-                    star_gates(br)
-                if not ONLY or 'reg' in ONLY:
-                    if not os.path.isdir(os.path.join(WORK, 'headdata_full')):
-                        e1_base(br)
-                    reg_gates(br)
+                    with QJ.stage('app'):
+                        app_gates(br)
+                    if QJ.GATE:   # regress — E1-헛(바탕 앱 + 바탕 데이터 트리 git archive)은 gate 만
+                        with QJ.stage('e1_base'):
+                            e1_base(br)
+                if (not ONLY or 'pdf' in ONLY) and not QJ.SMOKE:
+                    with QJ.stage('gichul'):
+                        gichul_gate(br)
+                if (not ONLY or 'app' in ONLY or 'cl' in ONLY) and not QJ.SMOKE:
+                    with QJ.stage('cl'):
+                        cl_gates(br)
+                if (not ONLY or 'star' in ONLY) and not QJ.SMOKE:
+                    with QJ.stage('star'):
+                        star_gates(br)
+                if (not ONLY or 'reg' in ONLY) and QJ.GATE:   # regress — C9 화면 글 바탕 대조(INFO · 바탕 앱 + 바탕 데이터 트리)는 gate 만
+                    with QJ.stage('reg'):
+                        if not os.path.isdir(os.path.join(WORK, 'headdata_full')):
+                            e1_base(br)
+                        reg_gates(br)
             finally:
                 br.close()
     sys.exit(1 if report() else 0)

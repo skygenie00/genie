@@ -15,6 +15,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안
 import hashlib
 import http.server
 import io
@@ -35,6 +36,12 @@ OUT = os.path.join(os.environ.get('TEMP', '.'), 'hjogaek')
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 os.makedirs(OUT, exist_ok=True)
 ONLY = sys.argv[sys.argv.index('--only') + 1] if '--only' in sys.argv else ''
+if QJ.REGRESS:
+    ONLY = 'new'   # regress · smoke = NEW 만 — 바탕(HEAD 8401e68) 판은 안 풀고(git:show-app 0) 안 띄운다(전수표 argv 가 이미 --only new)
+if QJ.SMOKE:
+    # smoke 칸 없음 — 이 하네스는 한 쪽에서 §G-10 → §X 까지 앞 칸이 만든 화면 상태에 뒤 칸이 기대며 이어 도는 한 덩어리라 앞부분만 떼면 싸지도 않고 상태가 안 맞는다(1차객 첫 화면 smoke 는 gaek_mbsame 쪽 칸)
+    print('INFO | smoke 칸 없음 | 1차객 팝업 크기·첫 화면·서랍·카드 하네스는 한 덩어리로 이어 돈다 — 첫 화면 smoke 는 gaek_mbsame 칸', flush=True)
+    sys.exit(0)
 
 PROBE = r"""<script>
 const GIN = __GIN__, GIFIRST = '__GIFIRST__';
@@ -102,15 +109,15 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
       '기억 '+(m.w||0).toFixed(0)+'×'+(m.h||0).toFixed(0)+' · 다시 '+r.width.toFixed(0)+'×'+r.height.toFixed(0)); }
   { clean(); const {p}=mk('q'); await wait(40);
     const rs=p.querySelector('.prsz'); p.style.left='60px'; p.style.top='60px';
-    if(!rs) T('10','최소 360×240', false, '손잡이 없음');
+    if(!rs) T('10','최소 360×min(240, 잡을 때 높이)', false, '손잡이 없음');
     else{
-      const x=rc(rs).left+3,y=rc(rs).top+3;
+      const x=rc(rs).left+3,y=rc(rs).top+3, h0=rc(p).height;   /* ★ popsize §A-1 · 사용자 10/4 02:34 — 옛: 높이 최소 240 고정(빈 팝업도 240 으로 튐) → 새: min(240, 잡을 때 높이) — 잡을 때 높이 h0 를 재 두고 기댓값으로(popsize 수행 결과 실측 = 빈 q 팝업 360×59) · 폭 최소 360 무변 · 240 바닥은 popsize B4 가 잰다 */
       rs.dispatchEvent(PE('pointerdown',x,y));
       rs.dispatchEvent(PE('pointermove',x-900,y-900));
       rs.dispatchEvent(PE('pointerup',x-900,y-900));
       await wait(30); const r=rc(p);
-      T('10','최소 360×240', Math.abs(r.width-360)<2&&Math.abs(r.height-240)<2,
-        r.width.toFixed(0)+'×'+r.height.toFixed(0)); } }
+      T('10','최소 360×min(240, 잡을 때 높이)', Math.abs(r.width-360)<2&&Math.abs(r.height-Math.min(240,h0))<2,
+        r.width.toFixed(0)+'×'+r.height.toFixed(0)+' (잡을 때 높이 '+h0.toFixed(0)+' → 기대 '+Math.min(240,h0).toFixed(0)+')'); } }
   { clean(); const {p}=mk('q'); await wait(60);
     const before=rc(p).width;
     p.querySelector('.ph').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));
@@ -1181,6 +1188,196 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
 })();
 </script>"""
 
+# ── regress(_task_qa_slim A-2) — PROBE 의 고정 대기 `await wait(N)` → 조건 기다림 `await WU(N,'표지')` ──────────────────
+#   gate 의 PROBE 는 위 문자열 그대로(한 글자도 안 바뀐다) — regress 에서만 _regress_probe 가 실행 때 글을 바꿔 끼운다.
+#   표지 = 앱이 이미 내놓는 것(busy · 요소 · 글 · POPS) · 표지가 안 참이면 옛 ms 만큼 기다린 뒤 이어 간다(최대 = 옛 고정 대기 → 옛과 같은 시간 · 같은 값).
+#   표지 목록 · 남는 고정 대기(줄마다 까닭) = _qa_slim_out\_a2\_harness_jo_gaek_mb_표지.md · 표에 없는 `await wait(N)` 는 그대로 고정 대기.
+_REG_SITES = {
+    # PROBE 안 줄 번호(`<script>` 줄 = 1): (옛 고정 대기 ms, 표지 이름)
+    132: (2600, 'FIRST'),
+    218: (2600, 'QUIZ'),
+    229: (2500, 'FIRST'),
+    234: (700, 'SRCH'),
+    238: (400, 'SRCH_CLR'),
+    244: (2400, 'QWEAK'),
+    250: (2400, 'QBACK'),
+    255: (2200, 'FIRSTJT'),
+    325: (2400, 'QUIZJT'),
+    334: (900, 'TABJO'),
+    336: (900, 'TABGI'),
+    340: (1500, 'FIRSTJTV'),
+    345: (2000, 'FIRST'),
+    352: (2800, 'QUIZ'),
+    427: (2500, 'MARKSEL'),
+    435: (2600, 'GRADED'),
+    454: (1800, 'QUIZI'),
+    455: (2200, 'FIRST'),
+    469: (2000, 'FIRST'),
+    471: (2800, 'QUIZ'),
+    481: (500, 'POP1'),
+    486: (900, 'POPJO'),
+    495: (2600, 'TYMIX'),
+    500: (2000, 'QUIZID'),
+    504: (700, 'IDPOP'),
+    526: (2200, 'FIRST'),
+    535: (2000, 'FIRST'),
+    537: (2800, 'QUIZPILL'),
+    578: (2200, 'FIRST'),
+    587: (2000, 'FIRST'),
+    591: (2800, 'QUIZAUTO'),
+    594: (2000, 'FIRST'),
+    596: (2800, 'QUIZGG'),
+    665: (2600, 'GGREF'),
+    690: (2600, 'GGHOT'),
+    699: (600, 'POPGGU'),
+    707: (2400, 'GGLINE'),
+    728: (2200, 'GGPX'),
+    753: (2400, 'FIRSTGG'),
+    757: (2400, 'QMODEG'),
+    760: (500, 'SRCHCNT'),
+    764: (1800, 'FIRST'),
+    773: (1800, 'IDLE'),
+    774: (2200, 'FIRST'),
+    782: (2200, 'FIRST9'),
+    788: (700, 'POPJN'),
+    794: (2800, 'QUIZMK'),
+    813: (2600, 'MKBACK'),
+    821: (2500, 'MKOFF'),
+    826: (2500, 'MKON'),
+    830: (2200, 'MKCARDS'),
+    838: (2400, 'QUIZI'),
+    841: (600, 'POPMC'),
+    850: (2400, 'INKOFF'),
+    866: (2200, 'FIRST'),
+    873: (2200, 'FIRST'),
+    875: (2800, 'QUIZPAN'),
+    889: (1400, 'POPPREC'),
+    916: (2200, 'FIRST'),
+    949: (2200, 'FIRST'),
+    951: (2800, 'QUIZ'),
+    953: (400, 'PEEKOPEN'),
+    956: (2600, 'GRADED'),
+    957: (1800, 'QUIZI'),
+    992: (2000, 'FIRST'),
+    994: (2800, 'QUIZP7'),
+    996: (2800, 'QUIZ'),
+    1009: (2400, 'FIRST'),
+    1026: (800, 'POPJN2'),
+    1093: (2600, 'GICHUL'),
+    1112: (2400, 'FIRSTOX'),
+    1118: (1200, 'IDLE'),
+    1123: (1800, 'IDLE'),
+    1126: (1800, 'IDLE'),
+}
+_REG_JS = r"""
+ /* ── regress(_task_qa_slim A-2) 조건 기다림 — 앱이 이미 내놓는 표지(busy · 요소 · 글 · POPS)가 참이 되면 바로 이어 간다 · 안 참이면 옛 고정 대기(ms)만큼 기다린 뒤 이어 간다 ── */
+ window.__uw=[];
+ const __Q=s=>document.querySelectorAll(s).length;
+ const __IDLE=()=>!(typeof busy!=='undefined'&&busy);
+ const __LP=()=>{try{return (POPS&&POPS.length)?POPS[POPS.length-1]:null}catch(e){return null}};
+ const __TT=p=>p?txt(p.querySelector('.pt')):'';
+ const __JT=()=>document.getElementById('jtree');
+ const __ROWS=()=>[...document.querySelectorAll('.mbur')].some(e=>/총 [1-9]/.test(txt(e)));
+ const __FIRST=()=>__Q('.mbh')===1&&__Q('.mbh .mbhd h1')===1&&__Q('.mbsr')===1&&__Q('.mbhm .hmwrap')===1&&__Q('.mbqr')===1&&__Q('.mbsj')>=11&&__ROWS();
+ const __QUIZ=()=>!!S.mok&&__Q('.mbh')===0&&__Q('#slot .qwrap')>0;
+ const __OPEN=()=>[...document.querySelectorAll('.mbexp')].some(e=>e.style.display!=='none');
+ const __CONDS={
+  FIRST:()=>__FIRST(),
+  FIRSTJT:()=>__FIRST()&&__Q('#jtree')===1&&__Q('#jtgrip')===1&&__Q('.jtch')>0&&__Q('.jtit')>0&&__Q('.jdbar')>0,
+  FIRSTJTV:()=>__FIRST()&&!!__JT()&&__JT().style.display!=='none',
+  FIRSTGG:()=>__FIRST()&&[...document.querySelectorAll('.mbsr .mbsb')].some(b=>/🔗 근거/.test(txt(b))),
+  FIRST9:()=>__FIRST()&&__Q('.mbchip.jn')>0,
+  FIRSTOX:()=>__FIRST()&&S.jimunTab==='ox',
+  QUIZ:()=>__QUIZ(),
+  QUIZJT:()=>__QUIZ()&&__Q('.jtit.cur')===1&&__Q('.jtit .now')===1,
+  QUIZPILL:()=>__QUIZ()&&__Q('.mbbar')>=1&&__Q('.mbpill')>=1,
+  QUIZAUTO:()=>__QUIZ()&&__Q('.ggauto')>0,
+  QUIZGG:()=>__QUIZ()&&__Q('.ggbox')>0,
+  QUIZMK:()=>__QUIZ()&&__Q('.mbqtx[data-mk]')>0,
+  QUIZPAN:()=>__QUIZ()&&__Q('.mbact .chip.panb, .mbact .cfpan')>0,
+  QUIZP7:()=>__QUIZ()&&[...document.querySelectorAll('.qwrap.mbq')].some(c=>/📘 제7판 해설/.test(c.textContent)),
+  QUIZI:()=>__Q('#slot .qwrap')>0,
+  QUIZID:()=>__Q('#slot .qwrap')>0&&__Q('.qb.id')>0,
+  QWEAK:()=>S.oxQueue==='weak'&&__Q('.mbh')===0&&__Q('.mbback')>0,
+  QBACK:()=>!S.oxQueue&&__Q('.mbh')===1,
+  QMODEG:()=>S.oxQMode==='g',
+  SRCH:()=>__Q('.mbres .rr')>0&&/개$/.test(txt(document.querySelector('.mbsr .cnt'))),
+  SRCH_CLR:()=>{const r=document.querySelector('.mbres');return !!r&&r.classList.contains('hide')},
+  SRCHCNT:()=>/개$/.test(txt(document.querySelector('.mbsr .cnt'))),
+  TABJO:()=>!!__JT()&&__JT().style.display==='none',
+  TABGI:()=>!!__JT()&&__JT().style.display!=='none'&&__JT().querySelectorAll('.jtch').length>0,
+  MARKSEL:()=>__Q('.mboxb.sel')>=1,
+  GRADED:()=>__OPEN(),
+  PEEKOPEN:()=>__OPEN(),
+  POP1:()=>!!POPS&&POPS.length>=1,
+  POPJO:()=>/조|⚖/.test(__TT(__LP())),
+  POPGGU:()=>/근거를 쓰는 지문/.test(__TT(__LP())),
+  POPJN:()=>/📋 정리/.test(__TT(__LP())),
+  POPPREC:()=>/^⚖ /.test(__TT(__LP())),
+  POPMC:()=>{const p=__LP();return !!p&&p.querySelectorAll('.mcgrp').length===1&&p.querySelectorAll('.mcgrp .hd .go').length===1},
+  POPJN2:()=>{const p=__LP();return !!p&&p.querySelectorAll('.jnsub').length>=1&&!!p.querySelector('.cdim')},
+  IDPOP:()=>{const p=__LP();return !!p&&/교재 자리/.test(__TT(p))&&p.querySelectorAll('.mbbrow').length>=2},
+  TYMIX:()=>[...document.querySelectorAll('.mbtype .seg.ty')].some(e=>txt(e)==='혼합'),
+  GGREF:()=>__Q('.ggrefbox .ggrefrow')>=1,
+  GGHOT:()=>{const g=document.querySelector('.gguse');return !!g&&g.classList.contains('hot')},
+  GGLINE:()=>__Q('.ggline .fd')>0,
+  GGPX:()=>['.ggline','.ggline .lb','.ggline .in','.ggline .fd','.ggnum','.ggpan','.ggpan .hd','.ggpan .hd .t','.ggpan .hd .m','.ggpan .hd .lk'].every(s=>!!document.querySelector(s)),
+  MKBACK:()=>__Q('mark.mkc')>=1,
+  MKOFF:()=>__Q('.mbqtx[data-mk]')>0&&__Q('mark.mkc')===0,
+  MKON:()=>__Q('mark.mkc')>=1,
+  MKCARDS:()=>__Q('.mbqtx[data-mk]')>0,
+  INKOFF:()=>['.ggline .in','.mbpeek','.mboxb','.mbqtx'].every(s=>!!document.querySelector(s)),
+  GICHUL:()=>S.jimunTab==='gichul'&&__Q('.mbsbar')===1&&__Q('.exv-num')>0&&__Q('.mboxb')>0&&__Q('#slot .mbomr')>=1,
+  IDLE:()=>true
+ };
+ const WU=async(ms,tag)=>{
+  const t0=performance.now(), f=__CONDS[tag]; let ok=false;
+  for(;;){
+   let v=false; try{ v=__IDLE()&&(f?!!f():true); }catch(e){}
+   if(v){ ok=true; break; }
+   if(performance.now()-t0>=ms) break;
+   await wait(25);
+  }
+  if(ok) await wait(80);   /* 표지가 참인 뒤 한 박자 — 같은 틱에 이어 일어나는 그리기 · setTimeout 0 이 지나가게 */
+  window.__uw.push([tag,Math.round(performance.now()-t0),ok]);
+ };
+"""
+
+
+def _regress_probe(p):
+    import re as _re
+    anchor = 'const wait=ms=>new Promise(r=>setTimeout(r,ms));'
+    assert p.count(anchor) == 1, 'PROBE 의 wait 정의를 못 찾음'
+    seen = []
+
+    def sub(m):
+        rel = 1 + p.count('\n', 0, m.start())
+        if rel not in _REG_SITES:
+            return m.group(0)   # 표지 없는 자리 = 옛 고정 대기 그대로
+        ms, tag = _REG_SITES[rel]
+        assert ms == int(m.group(1)), 'PROBE %d 줄 대기가 표와 다르다: %s' % (rel, m.group(0))
+        seen.append(rel)
+        return "await WU(%d,'%s')" % (ms, tag)
+    q = _re.sub(r'await wait\((\d+)\)', sub, p)
+    assert sorted(seen) == sorted(_REG_SITES), '표에 있는데 PROBE 에 없는 자리: %s' % sorted(set(_REG_SITES) - set(seen))
+    tail = 'out.err=window.__err||[]; }'
+    assert q.count(tail) == 1, 'PROBE go() 끝을 못 찾음'
+    q = q.replace(tail, 'out.err=window.__err||[]; out.uw=window.__uw||[]; }')
+    return q.replace(anchor, anchor + _REG_JS, 1)
+
+
+def _uw_note(uw):
+    """regress — 조건 기다림 셈 한 줄(INFO · 판정 아님) — 시간 초과 표지가 어디인지"""
+    uw = uw if isinstance(uw, list) else []
+    miss = {}
+    for w in uw:
+        if not w[2]:
+            miss[w[0]] = miss.get(w[0], 0) + 1
+    n_ok = sum(1 for w in uw if w[2])
+    print('INFO | 기다림 표지(regress) | 조건 기다림 %d회 · 참 %d · 시간 초과 %d(옛 고정 대기만큼 기다림) · 걸린 시간 합 %.1f초 · 시간 초과 표지 %s'
+          % (len(uw), n_ok, len(uw) - n_ok, sum(w[1] for w in uw) / 1000.0,
+             ', '.join('%s×%d' % kv for kv in sorted(miss.items())) or '없음'))
+
 
 def _gipairs():
     """문항 JSON 의 (연도·회차) 짝 — **남이 준 수를 믿지 않고 직접 센다.**
@@ -1192,9 +1389,12 @@ def _gipairs():
 
 
 def run(tag, html):
+    QJ.launch('new' if tag == 'new' else 'base')
     _pr = _gipairs()
     probe = (PROBE.replace('__GIN__', str(len(_pr)))
                   .replace('__GIFIRST__', _pr[0][0] + '년 제' + _pr[0][1] + '회'))
+    if QJ.REGRESS:   # regress — 고정 대기 → 조건 기다림(위 _REG_SITES · __CONDS)
+        probe = _regress_probe(probe)
     io.open(os.path.join(OUT, 'index.html'), 'w', encoding='utf-8', newline='').write(
         html.replace('</body>', probe + '</body>', 1))
     done = threading.Event(); box = {}
@@ -1243,7 +1443,11 @@ def src(path_or_rev, rev=False):
 
 
 new_html = src(NEW)
-head_html = src(BASE_REV + ':jo/index.html', rev=True)
+if QJ.GATE:
+    QJ.sub('git:show-app')
+    head_html = src(BASE_REV + ':jo/index.html', rev=True)
+else:
+    head_html = ''   # regress — 바탕(HEAD) 판 소스는 안 푼다(ONLY = 'new' 라 안 쓰임 · git:show-app 0)
 
 res = {}
 if ONLY != 'head': res['new'] = run('new', new_html)
@@ -1277,15 +1481,18 @@ STAT = []
 #   63 = 1구간 바탕 · +1 = 5구간 mbbPop · +1 = 7구간 ggUseWin · +2 = 8구간 jnOpen·mcChapOpen(새 판)
 # add1 §B-5 — 카드 발(「✏ 어느 지문에 붙이나」)을 걷어 부름이 하나 줄었다(67 → 66)
 # A-6(d) 부름 수 = gaek_mb 인도 검산 — 인도판(f8cec7a) 소스로 잰다(뒤 판들이 팝업을 더함 · 새 팝업 손잡이는 G-10 동적 잣대가 잰다)
-del_html = src('f8cec7a:jo/index.html', rev=True)
-STAT.append(('10', 'popShell 부름 66 (바탕 63 + 더한 4 − 걷은 1)', count_calls(del_html, 'popShell') == 66,
-             '부름 %d' % count_calls(del_html, 'popShell')))
+if QJ.GATE:   # 처리안 「관문만」 — 인도판(f8cec7a) 소스를 git show 로 풀어 세는 칸 · NEW 와 무관한 상수 → regress 는 안 풂(git:show-app 0)
+    QJ.sub('git:show-app')
+    del_html = src('f8cec7a:jo/index.html', rev=True)
+    STAT.append(('10', 'popShell 부름 66 (바탕 63 + 더한 4 − 걷은 1)', count_calls(del_html, 'popShell') == 66,
+                 '부름 %d' % count_calls(del_html, 'popShell')))
 STAT.append(('10', 'popShell 안 기본 손잡이 1줄',
              new_html.count("setTimeout(() => { if (p.isConnected && !p._sz) popSizable(body, kind || 'pop'); vvFit(p); }, 0);") == 1,
              '%d' % new_html.count("popSizable(body, kind || 'pop')")))
 # A-6(d) 명시 popSizable 부름도 인도판(f8cec7a) 소스로(del_html = 위 popShell 칸에서 정의)
-STAT.append(('10', '명시 popSizable 부름 16 그대로', count_calls(del_html, 'popSizable') == 16 + 1,
-             '부름 %d (기본 1 포함)' % count_calls(del_html, 'popSizable')))
+if QJ.GATE:   # 처리안 「관문만」(위 popShell 칸과 같은 인도판 소스)
+    STAT.append(('10', '명시 popSizable 부름 16 그대로', count_calls(del_html, 'popSizable') == 16 + 1,
+                 '부름 %d (기본 1 포함)' % count_calls(del_html, 'popSizable')))
 STAT.append(('11', '파일 CRLF 전용(LF 단독 0)',
              raw_new.count(b'\n') == raw_new.count(b'\r\n'),
              'LF %d · CRLF %d' % (raw_new.count(b'\n'), raw_new.count(b'\r\n'))))
@@ -1311,6 +1518,8 @@ def show(tag, r, stat=()):
 
 rows_new = show('새 판', res.get('new', {}), STAT) if 'new' in res else []
 rows_head = show('HEAD (헛잣대 §G-13)', res.get('head', {})) if 'head' in res else []
+if QJ.REGRESS:
+    _uw_note((res.get('new') or {}).get('uw'))
 
 if 'new' in res and 'head' in res:
     # HEAD 에서도 PASS 가 **맞는** 항목 — 새 기능이 아니라 「안 바뀌었나」를 재는 관문이다

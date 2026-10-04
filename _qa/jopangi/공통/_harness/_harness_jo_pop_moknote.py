@@ -17,6 +17,11 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402  — _task_qa_slim: --mode · --snap-in · --snap-out 을 여기서 뗀다(아래 인자 읽기는 이 판 앞과 같다)
+# --mode gate|regress|smoke (_task_qa_slim 2026-10-04 · 인자 없으면 gate = 이 판 앞과 같다 · gate 경로는 원본과 글자까지 같다 — 갈래는 `if QJ.REGRESS:` · `X if QJ.GATE else Y` 로만)
+#   regress = NEW 만 띄운다(바탕 풀기 · 띄우기 · git 0 · 헛잣대 칸은 gate 에서만) · 바탕 값을 기댓값으로 쓰던 칸(G-C 둘 · G-E ⑩ · ⑭ ⑮ ⑯)은 기준 스냅샷(QJ.base) ·
+#     G-C 2차 카드 전수 → 표본(법 · 갈래마다 씨앗 고정 50 + 처음 · 끝 · 점수 카드) · 캡처 안 찍음
+#   smoke = pops 시나리오(G-A)만 · Chromium 만
 import hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 from collections import Counter
 sys.stdout.reconfigure(encoding='utf-8')
@@ -37,6 +42,7 @@ DATA = os.path.join(JOD, 'data')
 BASE_REV = 'dd9d89f'
 BASE_MD5_LF = 'ce234cd4332a8fd76797e10a3f1c4b35'
 TESTS = io.open(os.path.join(HERE, '_harness_jo_pop_moknote_tests.js'), encoding='utf-8').read()
+SMOKE_SCEN = ('pops',)   # smoke — pops 시나리오(G-A 팝업 일곱 종 머리 · 끌기 · 일곱 종 열림 · JS 오류 0)만
 IPAD_UA = ('Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 '
            '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1')
 SEP = '\u001f'
@@ -129,6 +135,7 @@ def route_filter(route):
 class P:
     def __init__(self, br, eng, tag, src, W, H, pad=False, q='h=1', who='꼬까'):
         self.eng, self.tag, self.pad, self.W, self.H = eng, tag, pad, W, H
+        QJ.launch('base' if tag == 'BASE' else 'new')   # 띄움 셈(§B-4) — regress 에서 base 0
         self.port = serve(tag, src)
         kw = dict(viewport={'width': W, 'height': H}, locale='ko-KR', timezone_id='Asia/Seoul')
         if pad:
@@ -380,6 +387,18 @@ def scen_pit(br, eng, tag, src, pad=False, W=1440, H=900, shots=False):
 
 
 # ══════════ G-C 2차 카드 팝업 전수 ══════════
+def card_pick(key, cks):
+    """gate = 전수(cks 그대로) · regress = 표본 — 처음 · 끝 · 점수 카드(CK_SCORE) · 씨앗 고정 50(QJ.sample · 원래 차례 그대로)"""
+    if QJ.GATE:
+        return cks
+    pick = set(QJ.sample(cks, 50, 'pop_moknote-cards-' + key))
+    if cks:
+        pick.add(cks[0]); pick.add(cks[-1])
+    if CK_SCORE in cks:
+        pick.add(CK_SCORE)
+    return [c for c in cks if c in pick]
+
+
 def scen_cards(br, eng, tag, src, G):
     p = P(br, eng, tag, src, 1440, 900)
     R = {'eng': eng, 'tag': tag, 'scan': {}}
@@ -388,7 +407,7 @@ def scen_cards(br, eng, tag, src, G):
             kind, sh = key.split('|')
             law = [l for l, s in LAWS if s == sh][0]
             p.ev("([l,k])=>__HP.board(l,k)", [law, kind])
-            R['scan'][key] = p.ev("([k,l])=>__HP.cardScan(k,l)", [kind, cks])
+            R['scan'][key] = p.ev("([k,l])=>__HP.cardScan(k,l)", [kind, cks if QJ.GATE else card_pick(key, cks)])
         R['errs'] = p.ev("__HP.errs()") + p.errs
     except Exception as e:
         R['exc'] = repr(e)[:600]
@@ -461,6 +480,9 @@ def scen_note(br, eng, tag, src, G, oldkey=None):
             R['newSave'] = p.click(sv, 900)
         raw = p.ev("__HP.pitsRaw()") or {}
         R['newKeys'] = [k for k in raw if k.startswith('note|특허|' + N96 + SEP)]
+        if QJ.REGRESS and tag == 'NEW':   # regress 기준 — 바탕 판이 만든 키 대신 앞 인도판(스냅샷)이 만든 키 · 첫 기록이면 지금 키 자신
+            oldkey = QJ.base('G-E-oldkey@%s' % eng, R['newKeys'][0] if R['newKeys'] else None)
+            R['oldkeyRef'] = oldkey
         # 옛 키(BASE 에서 만든 키)를 심고 다시 연다 — 같은 단어에 밑줄·깃발(고아 0)
         if oldkey:
             p.ev("o=>__HP.seedPits(o,true)", {oldkey: {'t': '옛 판에서 붙인 메모', 'who': '햄찌', 'at': PIT_TS, 'ts': PIT_TS}})
@@ -648,7 +670,11 @@ def scen_shots(br, src, G):
 
 def main():
     os.makedirs(WORK, exist_ok=True)
-    base_b = git('show', BASE_REV + ':' + REL)
+    if QJ.GATE:
+        QJ.sub('git:show-app')
+        base_b = git('show', BASE_REV + ':' + REL)
+    else:
+        base_b = b''   # regress — 바탕을 풀지 않는다(git:show-app 0)
     new_raw = open(NEWF, 'rb').read()
     base, new = base_b.decode('utf-8'), new_raw.decode('utf-8')
     RES = {'src': {'base': [len(base_b), hashlib.md5(base_b).hexdigest()],
@@ -661,33 +687,43 @@ def main():
         try:
             oldkey = None
             for eng in ENGS:
-                for tag, src in (('BASE', base), ('NEW', new)):
+                if QJ.SMOKE and eng != 'chromium':
+                    continue   # smoke — Chromium 만(규칙 57 · pops 에 터치 칸 없음)
+                for tag, src in (('BASE', base), ('NEW', new)) if QJ.GATE else (('NEW', new),):
                     def run(name, fn, *a, **k):
                         if ONLY and ONLY != name:
                             return
+                        if QJ.SMOKE and name not in SMOKE_SCEN:
+                            return
                         t0 = time.time(); print('… %s %s/%s' % (name, eng, tag), flush=True)
-                        RES['%s/%s/%s' % (name, eng, tag)] = r = fn(*a, **k)
+                        if QJ.REGRESS:
+                            with QJ.stage('%s·%s' % (name, eng)):
+                                RES['%s/%s/%s' % (name, eng, tag)] = r = fn(*a, **k)
+                        else:
+                            RES['%s/%s/%s' % (name, eng, tag)] = r = fn(*a, **k)
                         print('   %.1fs %s' % (time.time() - t0, (r or {}).get('exc', '')), flush=True)
                     run('pops', scen_pops, brs[eng], eng, tag, src)
-                    run('pit', scen_pit, brs[eng], eng, tag, src, shots=(tag == 'NEW' and eng == 'chromium'))
+                    run('pit', scen_pit, brs[eng], eng, tag, src, shots=(tag == 'NEW' and eng == 'chromium' and QJ.GATE))   # regress — 캡처 안 찍음(사용자용)
                     run('cards', scen_cards, brs[eng], eng, tag, src, G)
-                    run('mok', scen_mok, brs[eng], eng, tag, src, shots=(tag == 'NEW' and eng == 'chromium'))
+                    run('mok', scen_mok, brs[eng], eng, tag, src, shots=(tag == 'NEW' and eng == 'chromium' and QJ.GATE))
                     run('note', scen_note, brs[eng], eng, tag, src, G, oldkey=oldkey if tag == 'NEW' else None)
                     if tag == 'BASE' and oldkey is None:
                         nk = (RES.get('note/%s/BASE' % eng) or {}).get('newKeys') or []
                         oldkey = nk[0] if nk else None
                         RES['oldkey'] = oldkey
-                    run('eq', scen_eq, brs[eng], eng, tag, src, G, shots=(tag == 'NEW' and eng == 'chromium'))
-                if not ONLY or ONLY == 'pad':
+                    if QJ.REGRESS:
+                        RES['oldkey/%s' % eng] = (RES.get('note/%s/NEW' % eng) or {}).get('oldkeyRef')   # regress — 엔진마다 기준 키(report 의 G-E ⑩)
+                    run('eq', scen_eq, brs[eng], eng, tag, src, G, shots=(tag == 'NEW' and eng == 'chromium' and QJ.GATE))
+                if not QJ.SMOKE and (not ONLY or ONLY == 'pad'):
                     for W, H in ((768, 1024), (1024, 768)):
                         t0 = time.time(); print('… pad %s %d' % (eng, W), flush=True)
-                        RES['pad/%s/%d' % (eng, W)] = scen_pad(brs[eng], eng, new, W, H, G, shots=(eng == 'webkit' and W == 768))
+                        RES['pad/%s/%d' % (eng, W)] = scen_pad(brs[eng], eng, new, W, H, G, shots=(eng == 'webkit' and W == 768 and QJ.GATE))
                         print('   %.1fs' % (time.time() - t0), flush=True)
-                if not ONLY or ONLY == 'wide':
+                if not QJ.SMOKE and (not ONLY or ONLY == 'wide'):
                     t0 = time.time(); print('… wide %s' % eng, flush=True)
                     RES['wide/%s' % eng] = scen_wide(brs[eng], eng, new)
                     print('   %.1fs' % (time.time() - t0), flush=True)
-            if (not ONLY or ONLY == 'shots') and 'chromium' in brs:
+            if QJ.GATE and (not ONLY or ONLY == 'shots') and 'chromium' in brs:   # regress — 캡처 안 찍음(사용자용)
                 RES['shots'] = scen_shots(brs['chromium'], new, G)
         finally:
             for b in brs.values():
@@ -695,7 +731,7 @@ def main():
             for srv, _ in SERVERS.values():
                 srv.shutdown()
     RES['sec'] = round(time.time() - t00, 1)
-    json.dump(RES, io.open(os.path.join(WORK, 'raw.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1, default=str)
+    json.dump(RES, io.open(os.path.join(WORK, 'raw.json' if QJ.GATE else 'raw_regress.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1, default=str)   # regress 는 따로(gate 의 raw.json · --report 를 안 덮는다)
     report(RES, G)
 
 
@@ -706,13 +742,23 @@ def NOISE(x):
 def report(RES, G):
     L = []
     T = lambda n, c, i=None: L.append(('PASS' if c else 'FAIL') + ' | ' + n + ('' if c or i is None else ' | ' + json.dumps(i, ensure_ascii=False, default=str)[:900]))
+    if QJ.REGRESS:
+        def Tn(n, c, i=None, note=''):
+            """regress — T 와 같되 값 끝 말(note = 기준 스냅샷 출처 · 표본 n/N)을 붙인다 · 기준 · 표본 칸만 쓴다"""
+            body = '' if c or i is None else json.dumps(i, ensure_ascii=False, default=str)[:900]
+            if note:
+                body = (body + ' ' + note).strip()
+            L.append(('PASS' if c else 'FAIL') + ' | ' + n + (' | ' + body if body else ''))
     I = lambda n, v: L.append('INFO | ' + n + ' | ' + (v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, default=str)[:1600]))
     g = lambda d, *ks: __import__('functools').reduce(lambda a, k: (a[k] if isinstance(a, list) and isinstance(k, int) and -len(a) <= k < len(a)
                                                                     else (a or {}).get(k) if isinstance(a, dict) else None), ks, d)
     near = lambda a, b, t=1: a is not None and b is not None and abs(a - b) <= t
     sb, sn = RES['src']['base'], RES['src']['new']
-    I('바탕 BASE = %s:%s' % (BASE_REV, REL), '%d B · md5 %s' % tuple(sb))
-    T('바탕 md5 = 지시서(1,000,662 B · ce234cd4…)', sb[1] == BASE_MD5_LF and sb[0] == 1000662, sb)
+    if QJ.GATE:
+        I('바탕 BASE = %s:%s' % (BASE_REV, REL), '%d B · md5 %s' % tuple(sb))
+        T('바탕 md5 = 지시서(1,000,662 B · ce234cd4…)', sb[1] == BASE_MD5_LF and sb[0] == 1000662, sb)
+    else:
+        I('바탕 BASE', '(regress — 바탕 안 띄움 · 바탕 md5 칸은 gate 에서만)')
     I('새 판 NEW', '%d B · md5(LF) %s · CRLF %d · %s' % tuple(sn))
     I('시간(초)', RES.get('sec'))
     GT = RES.get('G') or G
@@ -720,14 +766,15 @@ def report(RES, G):
     I('잣대 — 인용 카드 수 합(갈래마다 서로 다른 값)', {sh: GT[sh]['tot'] for _, sh in LAWS})
     I('잣대 — 번호 없는 노트(맨 아래)', {sh: GT[sh]['nonum'] for _, sh in LAWS})
     I('잣대 — 줄 전체가 ^id(앞뒤 공백만)', GT.get('blk_only'))
-    T('잣대 = 지시서 칩 합(특허 269·205·45·637 / 상표 151·5·331·547 / 민소 135·899·600·3)',
-      GT['특허']['tot'] == {'기출': 269, '사례': 205, 'GS': 45, '판례': 637} and GT['상표']['tot'] == {'기출': 151, '사례': 5, 'GS': 331, '판례': 547}
-      and GT['민소']['tot'] == {'기출': 135, '사례': 899, 'GS': 600, '판례': 3}, [GT[s]['tot'] for s in ('특허', '상표', '민소')])
-    T('잣대 = 지시서 9.6(기출 5 · 사례 8 · 판례 24 · GS 0)', GT['특허']['cite'].get(N96) == {'기출': 5, '사례': 8, 'GS': 0, '판례': 24}, GT['특허']['cite'].get(N96))
-    T('잣대 = 번호 없는 노트 상표 1 · 민소 0(9/24 볼트 밖으로 뺌) · 디보 1', [len(GT[s]['nonum']) for s in ('상표', '민소', '디보')] == [1, 0, 1], [GT[s]['nonum'] for s in ('상표', '민소', '디보')])   # A-6(d) 9/30 — 옛: 지시서 민소 3 · 9/24 13:1x 사용자가 번호 없는 셋을 볼트 밖으로(⚙ aa8ceae note_민소 84→81)
-    T('잣대 = 줄 전체 ^id 특허 80 · 상표 24 · 민소 64(결정 14:0x)', GT.get('blk_only') == {'특허': 80, '상표': 24, '민소': 64}, GT.get('blk_only'))
-    T('잣대 = fm 기출 카드 특허 기출 90 · 상표 기출 68 · 특허 사례 79(+ 디보 기출 64)',
-      [len(GT['cards'][k]) for k in ('기출|특허', '기출|상표', '사례|특허', '기출|디보')] == [90, 68, 79, 64], [len(v) for v in GT['cards'].values()])
+    if QJ.want('G0'):   # smoke 는 앱 칸만(데이터 잣대 G0-* 다섯은 gate · regress 에서)
+        T('잣대 = 지시서 칩 합(특허 269·205·45·637 / 상표 151·5·331·547 / 민소 135·899·600·3)',
+          GT['특허']['tot'] == {'기출': 269, '사례': 205, 'GS': 45, '판례': 637} and GT['상표']['tot'] == {'기출': 151, '사례': 5, 'GS': 331, '판례': 547}
+          and GT['민소']['tot'] == {'기출': 135, '사례': 899, 'GS': 600, '판례': 3}, [GT[s]['tot'] for s in ('특허', '상표', '민소')])
+        T('잣대 = 지시서 9.6(기출 5 · 사례 8 · 판례 24 · GS 0)', GT['특허']['cite'].get(N96) == {'기출': 5, '사례': 8, 'GS': 0, '판례': 24}, GT['특허']['cite'].get(N96))
+        T('잣대 = 번호 없는 노트 상표 1 · 민소 0(9/24 볼트 밖으로 뺌) · 디보 1', [len(GT[s]['nonum']) for s in ('상표', '민소', '디보')] == [1, 0, 1], [GT[s]['nonum'] for s in ('상표', '민소', '디보')])   # A-6(d) 9/30 — 옛: 지시서 민소 3 · 9/24 13:1x 사용자가 번호 없는 셋을 볼트 밖으로(⚙ aa8ceae note_민소 84→81)
+        T('잣대 = 줄 전체 ^id 특허 80 · 상표 24 · 민소 64(결정 14:0x)', GT.get('blk_only') == {'특허': 80, '상표': 24, '민소': 64}, GT.get('blk_only'))
+        T('잣대 = fm 기출 카드 특허 기출 90 · 상표 기출 68 · 특허 사례 79(+ 디보 기출 64)',
+          [len(GT['cards'][k]) for k in ('기출|특허', '기출|상표', '사례|특허', '기출|디보')] == [90, 68, 79, 64], [len(v) for v in GT['cards'].values()])
     for eng in ENGS:
         E = '[%s] ' % eng
         # ── G-A ──
@@ -823,6 +870,26 @@ def report(RES, G):
             T(E + 'G-C 점수 있는 카드(특허 26-63-1) — top 줄에 점수 칩 그대로', any('점' in c and 'c-alias' in c for t in sc.get('top') or [] for c in t['kids']), sc.get('top'))
             en = [x for x in (CN.get('errs') or []) if not NOISE(x)]
             T(E + 'G-C JS 오류 0', not en, en[:4])
+        elif QJ.REGRESS and CN:   # regress — 같은 칸 id · 표본 카드만 · 바탕 스캔(CB) 대신 기준 스냅샷(앞 인도판의 같은 카드 값 · 없으면 지금 값 자신 = 첫 기록)
+            for key in GT['cards']:
+                sn_ = {x['ck']: x for x in (CN.get('scan') or {}).get(key) or []}
+                nlab = len(GT['cards'][key]); n = len(card_pick(key, GT['cards'][key]))
+                smp = '(표본 %d/%d)' % (n, nlab)
+                Tn(E + 'G-C %s %d 전수 — 「2차 레일로」 0 · fm 칩 「기출:」 0 · 빈 top 줄 0' % (key, nlab),
+                  len(sn_) == n and all(not v.get('none') and not v['rail'] and v['gi'] == 0 and v['emptyTop'] == 0 for v in sn_.values()),
+                  [(k[:20], v.get('rail'), v.get('gi'), v.get('emptyTop')) for k, v in sn_.items() if v.get('none') or v.get('rail') or v.get('gi') or v.get('emptyTop')][:5], note=smp)
+                bcid = 'G-C@%s/%s' % (eng, key)
+                sb_ = QJ.base(bcid, {ck: {'fm': v.get('fm'), 'top': v.get('top')} for ck, v in sn_.items()})
+                bnote = QJ.base_note(bcid) + ' ' + smp
+                bad = [k for k in sn_ if k in sb_ and sn_[k].get('fm') != [c for c in (sb_.get(k) or {}).get('fm') or [] if not c.startswith(('기출:', '연결사례:', '조문:'))]]
+                Tn(E + 'G-C %s — 다른 fm 칩(연결판례·비고·중요도·사례번호…) = 바탕에서 「기출:」·「연결사례:」·「조문:」 만 뺀 것' % key, not bad,
+                  [(k[:20], sn_[k].get('fm'), (sb_.get(k) or {}).get('fm')) for k in bad[:3]], note=bnote)
+                badtop = [k for k in sn_ if k in sb_ and [x['kids'] for x in sn_[k].get('top') or []] != [[c for c in x['kids'] if '2차 레일로' not in c] for x in (sb_.get(k) or {}).get('top') or [] if [c for c in x['kids'] if '2차 레일로' not in c]]]
+                Tn(E + 'G-C %s — top 줄 = 바탕 top 줄에서 레일로 단추만 뺀 것(점수·PDF 칩 그대로)' % key, not badtop, [(k[:20], sn_[k].get('top'), (sb_.get(k) or {}).get('top')) for k in badtop[:2]], note=bnote)
+            sc = {x['ck']: x for x in (CN.get('scan') or {}).get('기출|특허') or []}.get(CK_SCORE) or {}
+            T(E + 'G-C 점수 있는 카드(특허 26-63-1) — top 줄에 점수 칩 그대로', any('점' in c and 'c-alias' in c for t in sc.get('top') or [] for c in t['kids']), sc.get('top'))
+            en = [x for x in (CN.get('errs') or []) if not NOISE(x)]
+            T(E + 'G-C JS 오류 0', not en, en[:4])
         # ── G-D ──
         M = RES.get('mok/%s/NEW' % eng)
         if M:
@@ -912,8 +979,11 @@ def report(RES, G):
                 if not good:
                     ok_o = False; bad_o.append(k)
             T(E + 'G-E 상표·민소 노트 여섯 — 글자 = row.t · 계단 식 · 탭 폭 0', ok_o and len(NN.get('others') or {}) == 6, bad_o)
-            ok_ = RES.get('oldkey')
-            T(E + 'G-E ★ 새 판에서 줄1 「정정심판{136조}」 에 붙인 포스트잇 키 = 바탕 판에서 붙인 키(이사 0)', ok_ and (NN.get('newKeys') or [None])[0] == ok_, [ok_, NN.get('newKeys')])
+            ok_ = RES.get('oldkey/%s' % eng) if QJ.REGRESS else RES.get('oldkey')   # regress — 기준 스냅샷의 키(엔진마다)
+            if QJ.GATE:
+                T(E + 'G-E ★ 새 판에서 줄1 「정정심판{136조}」 에 붙인 포스트잇 키 = 바탕 판에서 붙인 키(이사 0)', ok_ and (NN.get('newKeys') or [None])[0] == ok_, [ok_, NN.get('newKeys')])
+            else:
+                Tn(E + 'G-E ★ 새 판에서 줄1 「정정심판{136조}」 에 붙인 포스트잇 키 = 바탕 판에서 붙인 키(이사 0)', ok_ and (NN.get('newKeys') or [None])[0] == ok_, [ok_, NN.get('newKeys')], note=QJ.base_note('G-E-oldkey@%s' % eng))
             ol = NN.get('oldLine') or {}
             T(E + 'G-E ★ 옛 키(바탕 판에서 만든 키)를 새 판에 심으면 같은 단어에 밑줄 · 깃발(고아 0)', ol.get('pitw') and len(ol['pitw']) == 1 and ol['pitw'][0]['w'] == '정정심판{136조}'
               and ol.get('flags') and all('orph' not in f['cls'] for f in ol['flags']), ol)
@@ -932,6 +1002,17 @@ def report(RES, G):
                 en_, eb_ = g(NN, 'n96', 'emb') or [], g(NB, 'n96', 'emb') or []
                 T(E + 'G-E 노트 팝업 안 임베드 상자 줄(%d) — 들여쓰기·줄 간격·탭 = 바탕과 같음(노트 줄만 바뀐다)' % len(en_), en_ and en_ == eb_,
                   [x for x in zip(en_, eb_) if x[0] != x[1]][:3])
+            if QJ.REGRESS:   # regress — 바탕 판 측정(NB) 대신 기준 스냅샷(앞 인도판의 같은 표 · 없으면 지금 값 자신 = 첫 기록) · 같은 칸 id
+                _bcid = 'G-E-base@%s' % eng
+                _sn = QJ.base(_bcid, {'sumPad': NN.get('sumPad'), 'cardPad': NN.get('cardPad'), 'emb': g(NN, 'n96', 'emb') or []})
+                _bn = QJ.base_note(_bcid)
+                Tn(E + 'G-E 요약본 줄 들여쓰기 = 바탕과 같음(padding 표 %d줄)' % len(NN.get('sumPad') or []), NN.get('sumPad') == _sn.get('sumPad') and NN.get('sumPad'),
+                  [x for x in zip(NN.get('sumPad') or [], _sn.get('sumPad') or []) if x[0] != x[1]][:3], note=_bn)
+                Tn(E + 'G-E 2차 카드 본문·임베드 상자 줄 들여쓰기 = 바탕과 같음(padding 표 %d줄)' % len(NN.get('cardPad') or []), NN.get('cardPad') == _sn.get('cardPad') and NN.get('cardPad'),
+                  [x for x in zip(NN.get('cardPad') or [], _sn.get('cardPad') or []) if x[0] != x[1]][:3], note=_bn)
+                en_, eb_ = g(NN, 'n96', 'emb') or [], _sn.get('emb') or []
+                Tn(E + 'G-E 노트 팝업 안 임베드 상자 줄(%d) — 들여쓰기·줄 간격·탭 = 바탕과 같음(노트 줄만 바뀐다)' % len(en_), en_ and en_ == eb_,
+                  [x for x in zip(en_, eb_) if x[0] != x[1]][:3], note=_bn)
             en = [x for x in (NN.get('errs') or []) if not NOISE(x)]
             T(E + 'G-E JS 오류 0', not en, en[:4])
         if NB and not NB.get('exc'):

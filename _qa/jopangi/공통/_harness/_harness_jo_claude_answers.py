@@ -19,6 +19,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안
 import hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 from playwright.sync_api import sync_playwright
@@ -160,6 +161,7 @@ class S:
 
 
 def open_page(pw_br, eng, tag, src, extra='', query='tok=1&cl=file'):
+    QJ.launch('base' if tag == 'BASE' else 'new')
     srv, port = serve('%s_%s%s' % (tag, eng, extra), src)
     ctx = pw_br.new_context(viewport={'width': 1024, 'height': 768}, device_scale_factor=2, is_mobile=True, has_touch=True, user_agent=IPAD_UA)
     ctx.route('**/*', route_filter)
@@ -180,6 +182,10 @@ def main_scenario(s, new):
     plain = (R['boot'] or {}).get('plain')
     R['J4'] = s.js("__HZT.rx()")
     R['J1'] = s.js("u=>__HZT.card(u)", 'TR01053')
+    if QJ.SMOKE:   # smoke 칸 = 부트(JS 오류) · §A 받기 · J4 정규식 · J1 카드 Claude 단추 — 여기까지 읽고 끝
+        R['err'] = s.js("__HZT.errs()")
+        R['ro'] = s.js("__HZT.roCount()")
+        return R
     R['J2a'] = s.js("u=>__HZT.card(u)", 'TR01051')
     R['J2b'] = s.js("u=>__HZT.card(u)", 'TR01054')
     R['J3'] = s.js("u=>__HZT.card(u)", plain)
@@ -379,10 +385,13 @@ def run_j19(base, new, rec0):
     with sync_playwright() as pw:
         br = pw.chromium.launch()
         A, sa, ca, ea = open_page(br, 'chromium', 'NEW', new, '_A')
-        B, sb, cb, eb = open_page(br, 'chromium', 'BASE', base, '_B')
-        C, sc, cc, ec = open_page(br, 'chromium', 'NEW', new, '_C')
+        if QJ.GATE:   # 옛 판 기기 B(바탕) · 새 판 C — regress 는 A 하나(① 만)
+            B, sb, cb, eb = open_page(br, 'chromium', 'BASE', base, '_B')
+            C, sc, cc, ec = open_page(br, 'chromium', 'NEW', new, '_C')
+        else:
+            B = C = None
         try:
-            for x in (A, B, C):
+            for x in ((A, B, C) if QJ.GATE else (A,)):
                 x.js("__HZT.boot()")
                 x.js("f=>__HZT.sync(f)", False)                   # 부트 동기화가 끝나게
                 x.pg.evaluate("()=>clearTimeout(recTouchT)")
@@ -394,39 +403,43 @@ def run_j19(base, new, rec0):
             P1 = J(A.pg.evaluate("__HZT.remoteGet()"))['text']
             p1 = json.loads(P1)
             R['P1'] = {'data': 'jopangi.clfix' in p1['data'], 'fix': p1['data'].get('jopangi.clfix'), 'u': p1['u'].get('jopangi.clfix|T901'), 'keys': len(p1['data'])}
-            # ② 옛 판 기기 B — P1 을 받아 합치고, 제 변경 하나를 올린다(force)
-            B.js("__HZT.stamp()")
-            B.pg.evaluate("()=>__HZT.tagToggle()"); B.pg.evaluate("()=>clearTimeout(recTouchT)"); B.js("__HZT.stamp()")
-            B.pg.evaluate("([t,h])=>__HZT.remoteSet(t,h)", [P1, 'S1'])
-            R['B1'] = B.js("f=>__HZT.sync(f)", True)
-            P2 = J(B.pg.evaluate("__HZT.remoteGet()"))['text']
-            p2 = json.loads(P2)
-            R['P2'] = {'data': 'jopangi.clfix' in p2['data'], 'u': p2['u'].get('jopangi.clfix|T901'), 'keys': len(p2['data']),
-                       'gone': [x for x in (p2.get('gone') or {}) if x.startswith('jopangi.clfix|')],
-                       'tag': ((p2['data'].get('jopangi.ox') or {}).get('TR01053') or {}).get('tg')}
-            R['Blocal'] = B.pg.evaluate("k=>__HZT.ls(k)", 'jopangi.clfix')
-            # ③ 새 판 기기 A — P2 를 받는다(강제 아님)
-            A.pg.evaluate("([t,h])=>__HZT.remoteSet(t,h)", [P2, 'S2'])
-            R['A2'] = A.js("f=>__HZT.sync(f)", False)
-            P3 = J(A.pg.evaluate("__HZT.remoteGet()"))
-            p3 = json.loads(P3['text'])
-            R['P3'] = {'puts': P3.get('puts'), 'data': 'jopangi.clfix' in p3['data'], 'fix': p3['data'].get('jopangi.clfix'),
-                       'tag': ((p3['data'].get('jopangi.ox') or {}).get('TR01053') or {}).get('tg')}
-            R['Alocal'] = A.pg.evaluate("k=>__HZT.ls(k)", 'jopangi.clfix')
-            # ④ 새 판 기기 C(정정 없음) — P2 를 먼저 · 그다음 P3
-            C.js("__HZT.stamp()")
-            C.pg.evaluate("([t,h])=>__HZT.remoteSet(t,h)", [P2, 'S2'])
-            R['C1'] = C.js("f=>__HZT.sync(f)", False)
-            R['Clocal1'] = C.pg.evaluate("k=>__HZT.ls(k)", 'jopangi.clfix')
-            C.pg.evaluate("([t,h])=>__HZT.remoteSet(t,h)", [P3['text'], 'S3'])
-            R['C2'] = C.js("f=>__HZT.sync(f)", False)
-            R['Clocal2'] = C.pg.evaluate("k=>__HZT.ls(k)", 'jopangi.clfix')
-            R['err'] = [A.js("__HZT.errs()"), B.js("__HZT.errs()"), C.js("__HZT.errs()")]
+            if QJ.GATE:   # ② ③ ④ = 옛 판 기기(바탕 f8cec7a)가 끼는 흐름 — regress 는 바탕을 안 띄운다(처리안 「관문만」)
+                # ② 옛 판 기기 B — P1 을 받아 합치고, 제 변경 하나를 올린다(force)
+                B.js("__HZT.stamp()")
+                B.pg.evaluate("()=>__HZT.tagToggle()"); B.pg.evaluate("()=>clearTimeout(recTouchT)"); B.js("__HZT.stamp()")
+                B.pg.evaluate("([t,h])=>__HZT.remoteSet(t,h)", [P1, 'S1'])
+                R['B1'] = B.js("f=>__HZT.sync(f)", True)
+                P2 = J(B.pg.evaluate("__HZT.remoteGet()"))['text']
+                p2 = json.loads(P2)
+                R['P2'] = {'data': 'jopangi.clfix' in p2['data'], 'u': p2['u'].get('jopangi.clfix|T901'), 'keys': len(p2['data']),
+                           'gone': [x for x in (p2.get('gone') or {}) if x.startswith('jopangi.clfix|')],
+                           'tag': ((p2['data'].get('jopangi.ox') or {}).get('TR01053') or {}).get('tg')}
+                R['Blocal'] = B.pg.evaluate("k=>__HZT.ls(k)", 'jopangi.clfix')
+                # ③ 새 판 기기 A — P2 를 받는다(강제 아님)
+                A.pg.evaluate("([t,h])=>__HZT.remoteSet(t,h)", [P2, 'S2'])
+                R['A2'] = A.js("f=>__HZT.sync(f)", False)
+                P3 = J(A.pg.evaluate("__HZT.remoteGet()"))
+                p3 = json.loads(P3['text'])
+                R['P3'] = {'puts': P3.get('puts'), 'data': 'jopangi.clfix' in p3['data'], 'fix': p3['data'].get('jopangi.clfix'),
+                           'tag': ((p3['data'].get('jopangi.ox') or {}).get('TR01053') or {}).get('tg')}
+                R['Alocal'] = A.pg.evaluate("k=>__HZT.ls(k)", 'jopangi.clfix')
+                # ④ 새 판 기기 C(정정 없음) — P2 를 먼저 · 그다음 P3
+                C.js("__HZT.stamp()")
+                C.pg.evaluate("([t,h])=>__HZT.remoteSet(t,h)", [P2, 'S2'])
+                R['C1'] = C.js("f=>__HZT.sync(f)", False)
+                R['Clocal1'] = C.pg.evaluate("k=>__HZT.ls(k)", 'jopangi.clfix')
+                C.pg.evaluate("([t,h])=>__HZT.remoteSet(t,h)", [P3['text'], 'S3'])
+                R['C2'] = C.js("f=>__HZT.sync(f)", False)
+                R['Clocal2'] = C.pg.evaluate("k=>__HZT.ls(k)", 'jopangi.clfix')
+            if QJ.GATE:
+                R['err'] = [A.js("__HZT.errs()"), B.js("__HZT.errs()"), C.js("__HZT.errs()")]
+            else:
+                R['err'] = [A.js("__HZT.errs()")]
         except Exception as e:
             R['exc'] = str(e)[:900]
-        for c in (ca, cb, cc):
+        for c in ((ca, cb, cc) if QJ.GATE else (ca,)):
             c.close()
-        for sv in (sa, sb, sc):
+        for sv in ((sa, sb, sc) if QJ.GATE else (sa,)):
             sv.shutdown()
         br.close()
     return R
@@ -435,23 +448,52 @@ def run_j19(base, new, rec0):
 def main():
     os.makedirs(WORK, exist_ok=True)
     new = io.open(os.path.join(GENIE, REL), encoding='utf-8', newline='').read()
-    base = git('show', BASE_REV + ':' + REL).decode('utf-8')
-    rec0 = git('show', 'origin/main:jopangi/기록.json', repo=SPD).decode('utf-8')
+    if QJ.GATE:
+        QJ.sub('git:show-app')
+        base = git('show', BASE_REV + ':' + REL).decode('utf-8')
+    else:
+        base = ''   # regress · smoke: 바탕 앱을 안 푼다(git show 0)
+    if QJ.SMOKE:   # smoke: J19 는 smoke 칸 아님 — 원격 시작값(기록.json)도 안 읽는다
+        rec0 = ''
+    else:
+        QJ.sub('git:show-data')   # 데이터(studyplandata 기록.json origin/main)를 읽는 git show — 바탕 앱 풀기가 아니다(J19 ① 의 원격 시작값)
+        rec0 = git('show', 'origin/main:jopangi/기록.json', repo=SPD).decode('utf-8')
     RES = {}
     only = sys.argv[sys.argv.index('--only') + 1] if '--only' in sys.argv else ''
-    for eng in ('webkit', 'chromium'):
-        for tag, src in (('BASE', base), ('NEW', new)):
+    for eng in (('chromium',) if QJ.SMOKE else ('webkit', 'chromium')):   # smoke: Chromium 만
+        for tag, src in ((('NEW', new),) if QJ.REGRESS else (('BASE', base), ('NEW', new))):   # regress: NEW 만 — 바탕 칸은 헛잣대(gate 몫)
             k = '%s/%s' % (eng, tag)
             if only and only not in k:
                 continue
             t0 = time.time(); print('… ' + k, flush=True)
             RES[k] = run_main(eng, tag, src)
             print('   %.1fs%s' % (time.time() - t0, ('  EXC ' + RES[k]['exc']) if RES[k].get('exc') else ''), flush=True)
-    if not only:
+    if not only and not QJ.SMOKE:   # smoke: J17 · J18 · A-2 · J19 는 smoke 칸 아님
         t0 = time.time(); print('… J17·J18·A-2', flush=True); RES['j1718'] = run_j17_j18(new); print('   %.1fs' % (time.time() - t0), flush=True)
         t0 = time.time(); print('… J19', flush=True); RES['j19'] = run_j19(base, new, rec0); print('   %.1fs' % (time.time() - t0), flush=True)
     json.dump(RES, io.open(os.path.join(WORK, 'raw.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     report(RES, base, new, rec0, only)
+
+
+def report_smoke(RES, T, ORANGE, L):
+    """smoke 칸 = [chromium] NEW 부트 · §A 받기 · J1 카드 Claude 단추 — main_scenario 가 J1 까지 읽고 멈춘다(chromium NEW 한 쪽)"""
+    eng, tag = 'chromium', 'NEW'
+    d = RES.get('%s/%s' % (eng, tag)) or {}
+    errs = (d.get('err') or []) + [e for e in (d.get('pageerror') or []) if not e.startswith('ResizeObserver loop')]
+    T('[%s] %s 부트 · 특허 1차객 지문 %s · JS 오류 %d (ResizeObserver 알림 %s — 브라우저 알림 · 따로 셈)' % (eng, tag, g(d, 'boot', 'pool'), len(errs), d.get('ro')), (g(d, 'boot', 'pool') or 0) > 2000 and not d.get('exc') and not errs,
+      [d.get('exc'), errs[:4]])
+    n = d
+    p = '[%s] ' % eng
+    bt = n.get('boot') or {}
+    T(p + '§A 받기 — CL_STATE %s · 직접 %s · 언급 %s' % (bt.get('cl'), bt.get('by'), sorted((bt.get('ment') or {}).keys())),
+      bt.get('cl') == 'ok' and bt.get('by') == {'TR01053': ['T901'], 'SR02011': ['S901']} and sorted((bt.get('ment') or {}).keys()) == sorted(['SR02012', 'TR01054', 'TR01051']), bt)
+    b1 = g(n, 'J1', 'btn') or {}
+    T(p + 'J1 TR01053 카드 — 「✏️ 연결」 바로 앞(%s) 주황 「%s」 · 11px · 테두리·바탕 없음 · 높이 %s ↔ 연결 %s'
+      % (g(n, 'J1', 'next'), b1.get('text'), g(b1, 'at', 'h'), g(n, 'J1', 'lnk', 'at', 'h')),
+      b1.get('text') == 'Claude1' and b1.get('color') == ORANGE and b1.get('fs') == '11px' and b1.get('fw') == '700' and g(n, 'J1', 'next') == '✏️ 연결'
+      and (b1.get('bd') or '').startswith('0px') and b1.get('bg') in ('rgba(0, 0, 0, 0)', 'transparent') and b1.get('title') == 'T901 답'
+      and abs((g(b1, 'at', 'h') or 0) - (g(n, 'J1', 'lnk', 'at', 'h') or 99)) <= 1.5 and g(n, 'J1', 'n') == 1, n.get('J1'))
+    return finish(L)
 
 
 def report(RES, base, new, rec0, only=''):
@@ -459,18 +501,23 @@ def report(RES, base, new, rec0, only=''):
     T = lambda n, c, i=None: L.append(('PASS' if c else 'FAIL') + ' | ' + n + ('' if c or i is None else ' | ' + json.dumps(i, ensure_ascii=False)[:900]))
     I = lambda n, v: L.append('INFO | ' + n + ' | ' + json.dumps(v, ensure_ascii=False)[:1400])
     ORANGE, SUB = 'rgb(180, 83, 9)', 'rgb(107, 103, 95)'
+    if QJ.SMOKE:   # smoke: 부트 · §A 받기 · J4 · J1 만
+        return report_smoke(RES, T, ORANGE, L)
     # ══ 소스 · 파일
     bb = base.encode('utf-8'); nb_raw = open(os.path.join(GENIE, REL), 'rb').read(); nb = nb_raw.replace(b'\r\n', b'\n')
-    T('착수 %s = 지시서 G0-1 (904,215 B · md5 945242dd…)' % BASE_REV, len(bb) == 904215 and hashlib.md5(bb).hexdigest() == BASE_MD5, [len(bb), hashlib.md5(bb).hexdigest()])
+    if QJ.GATE:   # 바탕 md5 = 헛잣대 재료(처리안 「관문만」)
+        T('착수 %s = 지시서 G0-1 (904,215 B · md5 945242dd…)' % BASE_REV, len(bb) == 904215 and hashlib.md5(bb).hexdigest() == BASE_MD5, [len(bb), hashlib.md5(bb).hexdigest()])
     T('J21 NEW 작업트리 CRLF 그대로(LF 단독 0 · %d 줄) · U+FFFD 0 · %d B · md5(LF) %s' % (nb_raw.count(b'\r\n'), len(nb_raw), hashlib.md5(nb).hexdigest()),
       nb_raw.count(b'\n') == nb_raw.count(b'\r\n') and '\ufffd' not in new)
-    # A-6(d) 인도 검산 = Claude 답 칸 인도 커밋 dde3300(부모 7b9e214)이 바꾼 파일 — 작업트리 git status 는 인도 전에만 선다
-    ch = [l for l in git('diff', '--name-status', '7b9e214', 'dde3300').decode('utf-8').split('\n') if l.strip()]
-    T('genie 작업트리 바뀐 파일 = jo/index.html 하나 %s' % ch, ch == ['M\t' + REL], ch)
+    if QJ.GATE:   # 인도 커밋 diff(git) = 그 판에만 뜻 있는 칸(처리안 「관문만」)
+        # A-6(d) 인도 검산 = Claude 답 칸 인도 커밋 dde3300(부모 7b9e214)이 바꾼 파일 — 작업트리 git status 는 인도 전에만 선다
+        ch = [l for l in git('diff', '--name-status', '7b9e214', 'dde3300').decode('utf-8').split('\n') if l.strip()]
+        T('genie 작업트리 바뀐 파일 = jo/index.html 하나 %s' % ch, ch == ['M\t' + REL], ch)
     sk = lambda s: re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\]', s.replace('\r\n', '\n'), re.S).group(1))
-    # A-6(d) 「옛 29키 + 끝에 clfix」 는 그 판 성질 — 인도판(dde3300) 소스로 잰다(뒤 판들이 키를 더함: 54ced94 c2unit … ffafcb0 jocheck)
-    new_del = git('show', 'dde3300:' + REL).decode('utf-8')
-    T('§F SYNC_KEYS = 옛 29키 그대로 + 끝에 clfix (30키)', sk(new_del) == sk(base) + ['clfix'] and len(sk(new_del)) == 30, [len(sk(base)), sk(new_del)[-3:]])
+    if QJ.GATE:   # 「옛 29키 + 끝에 clfix」 = 인도판(dde3300) 대 바탕(f8cec7a) 소스 맞댐 — 역사 값(처리안 「관문만」) · regress 는 J10 칸이 앞 인도판 키 목록과 앞자리를 맞댄다
+        # A-6(d) 「옛 29키 + 끝에 clfix」 는 그 판 성질 — 인도판(dde3300) 소스로 잰다(뒤 판들이 키를 더함: 54ced94 c2unit … ffafcb0 jocheck)
+        new_del = git('show', 'dde3300:' + REL).decode('utf-8')
+        T('§F SYNC_KEYS = 옛 29키 그대로 + 끝에 clfix (30키)', sk(new_del) == sk(base) + ['clfix'] and len(sk(new_del)) == 30, [len(sk(base)), sk(new_del)[-3:]])
     nl = new.replace('\r\n', '\n')
     T('§A-2 받는 길 — CL_PATH 상수 · ghRaw(같은 저장소·raw·토큰) · recBoot 한 번 · syncRecords 안 한 번 · 저장소(localStorage·IndexedDB)에 안 넣는다',
       "const CL_PATH = 'jopangi/claude.json';" in nl and 'await ghRaw(CL_PATH)' in nl
@@ -516,7 +563,8 @@ def report(RES, base, new, rec0, only=''):
           b1.get('text') == 'Claude1' and b1.get('color') == ORANGE and b1.get('fs') == '11px' and b1.get('fw') == '700' and g(n, 'J1', 'next') == '✏️ 연결'
           and (b1.get('bd') or '').startswith('0px') and b1.get('bg') in ('rgba(0, 0, 0, 0)', 'transparent') and b1.get('title') == 'T901 답'
           and abs((g(b1, 'at', 'h') or 0) - (g(n, 'J1', 'lnk', 'at', 'h') or 99)) <= 1.5 and g(n, 'J1', 'n') == 1, n.get('J1'))
-        T(p + 'J1 헛잣대 BASE — 같은 카드에 Claude 단추 없음', g(b, 'J1', 'card') is True and g(b, 'J1', 'btn') is None and g(b, 'J1', 'n') == 0, b.get('J1'))
+        if QJ.GATE:   # 헛잣대(바탕에서 FAIL 이어야 하는 칸) — J1 같은 카드에 Claude 단추 없음(바탕 f8cec7a)
+            T(p + 'J1 헛잣대 BASE — 같은 카드에 Claude 단추 없음', g(b, 'J1', 'card') is True and g(b, 'J1', 'btn') is None and g(b, 'J1', 'n') == 0, b.get('J1'))
         for key, nm in (('J2a', 'TR01051'), ('J2b', 'TR01054')):
             b2 = g(n, key, 'btn') or {}
             T(p + 'J2 %s 카드 — 회색 「Claude」 + 주황 「↩」(10px 800) · title 「%s」' % (nm, b2.get('title')),
@@ -589,11 +637,14 @@ def report(RES, base, new, rec0, only=''):
         T(p + 'J10 고쳐서 저장 → jopangi.clfix.T901.done === false · md 에 고친 줄 · ts 숫자',
           n.get('J10edit') is True and n.get('J10save') is True and g(fx, 'T901', 'done') is False and '하네스정정줄' in (g(fx, 'T901', 'md') or '')
           and isinstance(g(fx, 'T901', 'ts'), int), [n.get('J10ta'), {k: (v if k != 'md' else len(v)) for k, v in (fx.get('T901') or {}).items()}])
+        if QJ.REGRESS:   # 기준: 옛 29키(바탕 f8cec7a 소스) 대신 앞 인도판 키 목록이 앞자리 그대로(순서 보존 · 키가 더 늘어도 안 뒤집힌다) — 값은 다른 조건이 거짓이어도 늘 스냅샷에 적는다
+            _kp = QJ.base('J10키@' + eng, list(g(n, 'J10keys', 'all') or []))
+            _kc = list(g(n, 'J10keys', 'all') or [])[:len(_kp)] == list(_kp)
         T(p + 'J10 창 딱지 「%s」 · 본문에 고친 줄 · 카드 단추 「%s」 · SYNC_KEYS %s(끝 %s) · 도장 %s'
           % (g(n, 'J10win', 'fixtag'), g(n, 'J10card', 'btn', 'text'), g(n, 'J10keys', 'n'), g(n, 'J10keys', 'last'), g(n, 'J10keys', 'u')),
           (g(n, 'J10win', 'fixtag') or '').startswith('정정 · 반영 전 · ') and g(n, 'J10card', 'btn', 'text') == 'Claude1정정'
           # A-6(a) 본 세션 9/30 — 그 판이 더한 키(clfix)가 있고 옛 29키(sk(base) = f8cec7a)가 앞자리 그대로 · 키가 더 늘어도 안 뒤집힌다
-          and g(n, 'J10card', 'btn', 'kids', 1, 'bg') == 'rgb(255, 237, 213)' and (g(n, 'J10keys', 'all') or [])[:len(sk(base))] == ['jopangi.' + x for x in sk(base)] and 'jopangi.clfix' in (g(n, 'J10keys', 'all') or [])
+          and g(n, 'J10card', 'btn', 'kids', 1, 'bg') == 'rgb(255, 237, 213)' and ((g(n, 'J10keys', 'all') or [])[:len(sk(base))] == ['jopangi.' + x for x in sk(base)] if QJ.GATE else _kc) and 'jopangi.clfix' in (g(n, 'J10keys', 'all') or [])
           and g(n, 'J10keys', 'u') == ['jopangi.clfix|T901'] and g(n, 'J10win', 'ta') is False, [n.get('J10win'), n.get('J10card'), n.get('J10keys')])
         T(p + 'J11 20,001자 → 저장 안 됨(정정 그대로) · 「%s」 · 취소하면 읽기 판' % g(n, 'J11bWin', 'msg'),
           g(n, 'J11bTa', 'len') == 20001 and g(n, 'J11bWin', 'msg') == '20,000자까지 · 지금 20,001자' and n.get('J11bFix0') == n.get('J11bFix1')
@@ -603,7 +654,8 @@ def report(RES, base, new, rec0, only=''):
         T(p + 'J12 「🔗 근거」 빈 칸 → 「%s」(N = 근거 ∪ Claude = %s) · 꼴 %s' % (c12.get('cnt'), c12.get('want'), c12.get('style')),
           c12.get('cnt') == '근거 3개 ▸' and c12.get('want') == 3 and c12.get('lk') is True
           and c12.get('style') == ['rgb(37, 99, 235)', '700', 'underline', '11px'], c12)
-        T(p + 'J12 헛잣대 BASE — 같은 자리 「%s」' % c12b.get('cnt'), c12b.get('cnt') == '' and c12b.get('lk') is False, c12b)
+        if QJ.GATE:   # 헛잣대(바탕에서 FAIL 이어야 하는 칸) — J12 바탕 같은 자리 빈칸
+            T(p + 'J12 헛잣대 BASE — 같은 자리 「%s」' % c12b.get('cnt'), c12b.get('cnt') == '' and c12b.get('lk') is False, c12b)
         d12 = n.get('J12dist') or {}
         T(p + 'J12 톡 → 단원 목록 · 머리 「%s」 · 「!」 %s · 「C」 %s' % (d12.get('head'), d12.get('bang'), d12.get('c')),
           n.get('J12tap') is True and d12.get('hidden') is False and (d12.get('head') or '').startswith('🔗 근거 3건 · ') and (d12.get('head') or '').endswith('— 단원을 누르면 목록이 나옵니다 · ! 2 · C1')
@@ -642,7 +694,8 @@ def report(RES, base, new, rec0, only=''):
           s15.get('count') == '1개' and (g(s15, 'rows', 0, 'name') or '').startswith('H7 p.411') and g(s15, 'rows', 0, 'badges') == ['Claude']
           and '과실' in (g(s15, 'rows', 0, 'snip') or '') and '|' not in (g(s15, 'rows', 0, 'snip') or '') and '**' not in (g(s15, 'rows', 0, 'snip') or '')
           and g(s15, 'rows', 0, 'snipStyle') == ['rgb(255, 247, 237)', 'rgb(253, 186, 116)'], s15)
-        T(p + 'J15 헛잣대 BASE — 「과실」 %s' % s15b.get('count'), s15b.get('count') == '0개', s15b)
+        if QJ.GATE:   # 헛잣대(바탕에서 FAIL 이어야 하는 칸) — J15 바탕 「과실」 0개
+            T(p + 'J15 헛잣대 BASE — 「과실」 %s' % s15b.get('count'), s15b.get('count') == '0개', s15b)
         s15c = n.get('J15b') or {}
         T(p + 'J15 근거로 걸린 줄(「침해 추정 규정」) → %s · 딱지 %s(근거만 · Claude 한 줄 없음)' % (s15c.get('count'), g(s15c, 'rows', 0, 'badges')),
           s15c.get('count') == '1개' and g(s15c, 'rows', 0, 'badges') == ['근거'] and g(s15c, 'rows', 0, 'snip') is None, s15c)
@@ -676,10 +729,11 @@ def report(RES, base, new, rec0, only=''):
         T(p + 'J16 C1 칩 톡 → Claude 창(%s) · 번호 톡 → 새 지문 팝업(%s)' % (g(n, 'J16chipWin', 'answers'), g(n, 'J16noPop', 'title')),
           n.get('J16chipTap') is True and g(n, 'J16chipWin', 'win') is True and g(n, 'J16chipWin', 'answers') == ['T901']
           and n.get('J16noTap') is True and g(n, 'J16noPop', 'pop') is True and g(n, 'J16noPop', 'mbwin') is True, [n.get('J16chipWin'), n.get('J16noPop')])
-        T(p + 'J16 헛잣대 BASE — 옛 창은 근거 붙은 지문만(%s줄 · TR01053 형광펜 %s) · 「정답·해설」 0' % (j16b.get('oldRows'), g(j16b, 'oldT603', 'mark')),
-          j16b.get('jn') is True and j16b.get('rows') == 0 and 0 < (j16b.get('oldRows') or 0) < 75 and g(j16b, 'oldT603', 'mark') == 1, j16b)
+        if QJ.GATE:   # 헛잣대(바탕에서 FAIL 이어야 하는 칸) — J16 바탕 옛 창
+            T(p + 'J16 헛잣대 BASE — 옛 창은 근거 붙은 지문만(%s줄 · TR01053 형광펜 %s) · 「정답·해설」 0' % (j16b.get('oldRows'), g(j16b, 'oldT603', 'mark')),
+              j16b.get('jn') is True and j16b.get('rows') == 0 and 0 < (j16b.get('oldRows') or 0) < 75 and g(j16b, 'oldT603', 'mark') == 1, j16b)
         I(p + 'J16 묶음 📋 자리', n.get('J16btn'))
-        for tag, d in (('BASE', b), ('NEW', n)):
+        for tag, d in ((('NEW', n),) if QJ.REGRESS else (('BASE', b), ('NEW', n))):
             bad = [x for x in (d.get('J21') or []) if x[2] != 'ok']
             T(p + 'J21 %s 스크립트 블록 %d개 파서 통과(%s)' % (tag, len(d.get('J21') or []), 'JSC' if eng == 'webkit' else 'V8'), (d.get('J21') or []) and not bad, bad)
         T(p + '「Claude 답을 못 받았다」 안내 0(정상 받기)', not [t for t in (n.get('toasts') or []) if 'Claude' in t], n.get('toasts'))
@@ -710,15 +764,16 @@ def report(RES, base, new, rec0, only=''):
     I('J19 흐름 — ① 새 판 A 가 정정을 올림 ② 옛 판 B(f8cec7a) 가 그 원격을 받아 제 변경과 함께 올림 ③ A 가 다시 맞춤 ④ 정정 없는 새 판 C',
       {k: G19.get(k) for k in ('P1', 'P2', 'Blocal', 'P3', 'A2', 'C1', 'C2', 'exc')})
     T('J19 ① 새 판이 올린 기록에 data["jopangi.clfix"].T901 · u 도장', g(G19, 'P1', 'data') is True and g(G19, 'P1', 'fix', 'T901', 'done') is False and g(G19, 'P1', 'u'), G19.get('P1'))
-    T('J19 ② 옛 판 기기는 제 저장소에 jopangi.clfix 를 만들지 않는다(모르는 키 · 병합이 건드리지 않는다)', G19.get('Blocal') is None, G19.get('Blocal'))
-    T('J19 ② 옛 판 기기는 정정을 **지우지 않는다** — 묘비(gone) 0 · u 도장은 남는다(합집합)', g(G19, 'P2', 'gone') == [] and bool(g(G19, 'P2', 'u')), G19.get('P2'))
-    I('J19 ② 잰 것 — 옛 판(f8cec7a) 기기가 올린 기록: data["jopangi.clfix"] %s · u 도장 %s · data 키 %s개(옛 recPayload 는 제 SYNC_KEYS 29키만 담는다)'
-      % ('있음' if g(G19, 'P2', 'data') else '**없음(빠짐)**', '있음' if g(G19, 'P2', 'u') else '없음', g(G19, 'P2', 'keys')), G19.get('P2'))
-    T('J19 ② 옛 판 기기가 올린 파일의 data 에도 jopangi.clfix 가 남는가(민법 G16 과 같은 잣대 · 빠지면 보고에 그대로)', g(G19, 'P2', 'data') is True, G19.get('P2'))
-    T('J19 ③ 새 판 기기 A 가 다음 맞추기에서 되살려 올린다(올림 %s · 옛 판 기기의 변경도 그대로 %s)' % (g(G19, 'P3', 'puts'), g(G19, 'P3', 'tag')),
-      g(G19, 'P3', 'data') is True and g(G19, 'P3', 'fix', 'T901', 'md') == 'A 기기 정정본' and g(G19, 'P3', 'puts') == 1 and g(G19, 'P3', 'tag') == {'important': 1}, G19.get('P3'))
-    T('J19 ④ 새 판 기기 C — 빠진 원격에서는 못 받고(%s) 되살린 원격에서 받는다(%s)' % ('T901 없음' if 'T901' not in (G19.get('Clocal1') or '') else 'T901 있음', 'T901' if G19.get('Clocal2') and 'T901' in G19.get('Clocal2') else G19.get('Clocal2')),
-      'T901' not in (G19.get('Clocal1') or '') and 'A 기기 정정본' in (G19.get('Clocal2') or ''), [G19.get('Clocal1'), G19.get('Clocal2')])
+    if QJ.GATE:   # ② ③ ④ = 옛 판 기기(바탕 f8cec7a)가 끼는 흐름(처리안 「관문만」) — regress 는 A 하나로 ① 만
+        T('J19 ② 옛 판 기기는 제 저장소에 jopangi.clfix 를 만들지 않는다(모르는 키 · 병합이 건드리지 않는다)', G19.get('Blocal') is None, G19.get('Blocal'))
+        T('J19 ② 옛 판 기기는 정정을 **지우지 않는다** — 묘비(gone) 0 · u 도장은 남는다(합집합)', g(G19, 'P2', 'gone') == [] and bool(g(G19, 'P2', 'u')), G19.get('P2'))
+        I('J19 ② 잰 것 — 옛 판(f8cec7a) 기기가 올린 기록: data["jopangi.clfix"] %s · u 도장 %s · data 키 %s개(옛 recPayload 는 제 SYNC_KEYS 29키만 담는다)'
+          % ('있음' if g(G19, 'P2', 'data') else '**없음(빠짐)**', '있음' if g(G19, 'P2', 'u') else '없음', g(G19, 'P2', 'keys')), G19.get('P2'))
+        T('J19 ② 옛 판 기기가 올린 파일의 data 에도 jopangi.clfix 가 남는가(민법 G16 과 같은 잣대 · 빠지면 보고에 그대로)', g(G19, 'P2', 'data') is True, G19.get('P2'))
+        T('J19 ③ 새 판 기기 A 가 다음 맞추기에서 되살려 올린다(올림 %s · 옛 판 기기의 변경도 그대로 %s)' % (g(G19, 'P3', 'puts'), g(G19, 'P3', 'tag')),
+          g(G19, 'P3', 'data') is True and g(G19, 'P3', 'fix', 'T901', 'md') == 'A 기기 정정본' and g(G19, 'P3', 'puts') == 1 and g(G19, 'P3', 'tag') == {'important': 1}, G19.get('P3'))
+        T('J19 ④ 새 판 기기 C — 빠진 원격에서는 못 받고(%s) 되살린 원격에서 받는다(%s)' % ('T901 없음' if 'T901' not in (G19.get('Clocal1') or '') else 'T901 있음', 'T901' if G19.get('Clocal2') and 'T901' in G19.get('Clocal2') else G19.get('Clocal2')),
+          'T901' not in (G19.get('Clocal1') or '') and 'A 기기 정정본' in (G19.get('Clocal2') or ''), [G19.get('Clocal1'), G19.get('Clocal2')])
     T('J19 JS 오류 0(세 기기)', not any(G19.get('err') or [[1]]), G19.get('err'))
     return finish(L)
 

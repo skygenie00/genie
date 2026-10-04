@@ -12,6 +12,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(인자 없으면 gate = 이 판 앞과 같음) · regress = NEW 만 띄움(바탕 539131a 안 풀고 안 띄움 · 헛잣대 칸 끔 · 바탕 값 칸은 기준 스냅샷 · ⚙ 재실행 · git show 0) · 앱 표지 기다림(A-2) · smoke = 기본 점검 칸만
 import io, json, os, re, sys, time, subprocess, collections
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -33,9 +34,50 @@ from playwright.sync_api import sync_playwright   # noqa: E402
 M.TESTS = M.TESTS + '\n' + io.open(os.path.join(HERE, '_harness_jo_uidmbs2_tests.js'), encoding='utf-8').read()
 M.WORK = M.WORK + '_uz'
 RES = []
+# ★ _task_qa_slim A-2(regress 에서만 · gate 는 옛 고정 대기 그대로 — 고친 줄은 `X if QJ.GATE or not _A2[..] else 0` 꼴이라 gate 로 접으면 옛 숫자): 앱이 이미 내놓는 표지를 기다린다.
+#   자리마다 켜고 끄는 스위치 — 5 번 돌려 흔들림이 늘면 그 자리만 False 로 되돌린다. 표지 목록 = R\_qa_slim_out\_a2\_harness_jo_uidmbs2_표지.md
+#   기다림 상한 = 옛 고정 대기와 같다(표지가 안 서면 옛 대기만큼 기다린 뒤 그대로 잰다 — 옛 판보다 덜 기다리는 일은 표지가 선 때뿐).
+_A2 = {'a2_open': True, 'a2_opt': True, 'a2_next': True, 'a6_menu': True, 'jn_win': True, 'a7_pop': True, 'c2_tap': True, 'c3_pop': True, 'c11_pop': True, 'u7_next': True}
+_JNROWS = "()=>{const w=__UZ.jn();return !!w&&w.rows>0}"                                          # 정리 창(📋)이 서고 줄(.jnr)이 그려짐
+_UZFM = "()=>!!document.querySelector('#slot .mbqr .uzfm')"                                       # 필터 목록(.uzfm)이 열림
+_BKPOP = "()=>(__HM.popKeys()||[]).some(x=>/빈칸 종류 확정/.test(x))"                              # 「🏷 빈칸 종류 확정」 창이 뜸
+_EXOPT = "()=>{const s=__UZ.exvNumState('1',1);return !!(s&&s.sel)}"                              # 기출뷰 1번 ① 단추에 sel
+_EXNO6 = "()=>{const q=document.querySelector('#slot .exv-q');return !!q&&q.dataset.exno==='6'}"   # 「다음 5문제 ▶」 뒤 첫 문항 = 6번
+_MOKU = "()=>/~u$/.test(S.mok||'')"                                                                # 줄 톡 → S.mok 가 ~u 줄
+_C3POP = "()=>(POPS||[]).some(x=>/📝 지문 T1350065$/.test(x._pk||''))"                            # 📖 원 기출 → 리담 지문 창
+_C11NAV = "()=>{const p=(POPS||[]).find(x=>/📄/.test((x.querySelector('.ph')||{}).textContent||''));return !!p&&!!p.querySelector(':scope > .ph .jxe-nav')}"   # 시험지 창이 서고 ◀ ▶ 가 머리에 붙음
+_EXSIG = "()=>[...document.querySelectorAll('#slot .exv-q')].map(q=>q.dataset.exno).join('|')"
+_EXSIGCHG = "s=>[...document.querySelectorAll('#slot .exv-q')].map(q=>q.dataset.exno).join('|')!==s"   # 기출뷰 쪽이 바뀜(문항 번호 목록)
+_C7_YEARS = tuple(sorted({'2019', '2020', '2026'} | set(QJ.sample(['2021', '2022', '2023', '2024', '2025'], 2, 'uidmbs2.c7'))))   # regress 표본 — 처음 · 끝 · 지난 FAIL 해(2020 18번) + 씨앗 고정 둘(8 해 중 5)
+
+
+def _a2(q, key, js, cap_ms, what, arg=None, settle=0):
+    """regress(A-2) — 고정 대기 대신 앱 표지를 기다린다(상한 = 옛 고정 대기) · 스위치 _A2[key] 가 False 면 아무것도 안 한다(그 자리에는 옛 고정 대기가 이미 걸려 있다)"""
+    if _A2[key]:
+        QJ.until(q.pg, js, cap_ms, what, arg=arg)
+        if settle:
+            QJ.sleep(settle, '표지 뒤 창 마무리(%s)' % key, page=q.pg)
+
+
+# _task_qa_slim(10/4) regress 도우미 — 기준 칸(처리안 기준)의 값 끝에 「기댓값이 어디서 왔나」를 붙인다(QJ.base_note) · 표본 칸은 「(표본 n/N)」
+_PEND = []
+
+
+def _bn(*cids):
+    _PEND.append(' · '.join(sorted({QJ.base_note(c) for c in cids})))
+
+
+def _with_note(d, note):
+    if isinstance(d, str):
+        return (d + ' · ' if d else '') + note
+    if isinstance(d, dict):
+        return dict(d, **{'기준': note})
+    return {'값': d, '기준': note}
 
 
 def T(grp, name, ok, detail=''):
+    if QJ.REGRESS and _PEND:   # 기준 칸 · 표본 칸 — 값 끝에 말을 붙인다
+        detail = _with_note(detail, _PEND.pop())
     RES.append((grp, name, bool(ok), detail))
     print('%s | %s · %s | %s' % ('PASS' if ok else 'FAIL', grp, name, (detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False, default=str))[:420]), flush=True)
 
@@ -67,6 +109,9 @@ class Pg(M.Pg):
 
 def envs():
     ns, nd, ne = M.new_env()
+    if QJ.REGRESS:   # regress — 바탕(539131a) 앱 git show · 데이터 git archive 0(바탕 칸은 None)
+        return (ns, nd, ne), (None, None, None)
+    QJ.sub('git:show-app'); QJ.sub('git:archive', 2)   # 셈(§B-4) — M.base_env 가 부르는 둘(gate 에서도 동작 무변)
     bs, bd, be = M.base_env()
     return (ns, nd, ne), (bs, bd, be)
 
@@ -97,7 +142,9 @@ def home(p, law='특허법', gk='g'):
 # ══════════ mbsame_add3 §B-8 기출/기타 · §B-6 필터 · §B-8 접기·정렬·「필터」 ══════════
 def g_a8(p, b, eng):
     G = 'a3-8'
-    home(p); home(b)
+    home(p)
+    if QJ.GATE:
+        home(b)
     h = p.ev("()=>__UZ.hm()")
     chips = {c['t'].split(' ')[0]: c for c in h['chips']}
     gi, gx = [c for c in h['chips'] if c['gk'] == 'g'], [c for c in h['chips'] if c['gk'] == 'x']
@@ -112,9 +159,10 @@ def g_a8(p, b, eng):
       {'기출': ng, '기타': nx, '범례 안 품': anhp, '구분': sep, '머리': h['head']})
     T(G, u'기출 — 1 특허제도 칩 = 카드 「총 N문제」 = 서랍 머리(한 함수) · 1.1 목적 「문항 없음」·📋 없음',
       bool(c1 and c1['n'] == d1 == k1 and r11 and r11['none'] and not r11['jn']), {'칩': c1, '카드': d1, '서랍': k1, '1.1 목적': r11})
-    hb = b.ev("()=>__UZ.hm()")
-    T(G + '-헛', u'헛잣대 바탕 — 기출/기타 칩 없음 · 1 특허제도 칩 68', not [c for c in hb['chips'] if c['gk']] and (b.ev("()=>__UZ.hmChip('^1\\\\. 특허제도')") or {}).get('n') == 68,
-      {'바탕 칩': [c['t'] for c in hb['chips']][:4]})
+    if QJ.GATE:   # 헛잣대(관문만)
+        hb = b.ev("()=>__UZ.hm()")
+        T(G + '-헛', u'헛잣대 바탕 — 기출/기타 칩 없음 · 1 특허제도 칩 68', not [c for c in hb['chips'] if c['gk']] and (b.ev("()=>__UZ.hmChip('^1\\\\. 특허제도')") or {}).get('n') == 68,
+          {'바탕 칩': [c['t'] for c in hb['chips']][:4]})
     for how in ('mouse', 'touch'):
         at = p.ev("()=>__UZ.gkAt('x')")
         p.press(at, how, 1500)
@@ -126,7 +174,9 @@ def g_a8(p, b, eng):
         r11x = p.ev("()=>__UZ.rowTot('1.1 목적')")
         jn = None
         if r11x and r11x['jn']:
-            p.press(p.ev("()=>__UZ.rowAt('1.1 목적','.mbchip.jn')"), how, 1200)
+            p.press(p.ev("()=>__UZ.rowAt('1.1 목적','.mbchip.jn')"), how, 1200 if QJ.GATE or not _A2['jn_win'] else 0)
+            if QJ.REGRESS:
+                _a2(p, 'jn_win', _JNROWS, 1200, 'jn_win: 📋 정리 창 줄', settle=100)
             jn = p.ev("()=>__UZ.jn()")
             p.ev("()=>__HM.closeAll()")
         T(G, u'「기타」 누름(%s) → 기타 %d · 칩 = 카드 = 서랍 · 미분류·변리사 기출 카드·서랍 줄 DOM 0 · 1.1 목적 📋 12 줄' % (how, nx),
@@ -155,18 +205,25 @@ def g_a8(p, b, eng):
 
 def g_a6(p, b, eng):
     G = 'a3-6'
-    home(p); home(b)
+    home(p)
+    if QJ.GATE:
+        home(b)
     fb = p.ev("()=>__UZ.fbtn()")
     lab = p.ev("()=>__UZ.label()")
     T(G, u'「거르기」 → 「필터」 · 고르개 = 단추(네이티브 select 아님)', bool(fb and fb['kind'] == 'btn' and lab == u'필터'), {'단추': fb and fb.get('t'), '글자': lab})
-    T(G + '-헛', u'헛잣대 바탕 — select · 「거르기」', (b.ev("()=>__UZ.fbtn()") or {}).get('kind') == 'select' and b.ev("()=>__UZ.label()") == u'거르기', b.ev("()=>__UZ.label()"))
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — select · 「거르기」', (b.ev("()=>__UZ.fbtn()") or {}).get('kind') == 'select' and b.ev("()=>__UZ.label()") == u'거르기', b.ev("()=>__UZ.label()"))
     for how in ('mouse', 'touch'):
         home(p)
-        p.press(p.ev("()=>__UZ.fbtn()"), how, 500)
+        p.press(p.ev("()=>__UZ.fbtn()"), how, 500 if QJ.GATE or not _A2['a6_menu'] else 0)
+        if QJ.REGRESS:
+            _a2(p, 'a6_menu', _UZFM, 500, 'a6_menu: 필터 단추 → 목록')
         m0 = p.ev("()=>__UZ.fmenu()")
         p.press(p.ev("()=>__UZ.fopt('jo')"), how, 1200)
         m1 = p.ev("()=>__UZ.fmenu()")
-        p.press(p.ev("()=>__UZ.fbtn()"), how, 500)
+        p.press(p.ev("()=>__UZ.fbtn()"), how, 500 if QJ.GATE or not _A2['a6_menu'] else 0)
+        if QJ.REGRESS:
+            _a2(p, 'a6_menu', _UZFM, 500, 'a6_menu: 필터 단추 → 목록')
         m2 = p.ev("()=>__UZ.fmenu()")
         p.press(p.ev("()=>__UZ.fbk('주체')"), how, 1500)
         m3 = p.ev("()=>__UZ.fmenu()")
@@ -187,28 +244,35 @@ def g_a6(p, b, eng):
         dw = p.ev("()=>__UZ.drawerLeaf('1.1 목적')")
         jn = None
         if r11 and r11['jn']:
-            p.press(p.ev("()=>__UZ.rowAt('1.1 목적','.mbchip.jn')"), how, 1200)
+            p.press(p.ev("()=>__UZ.rowAt('1.1 목적','.mbchip.jn')"), how, 1200 if QJ.GATE or not _A2['jn_win'] else 0)
+            if QJ.REGRESS:
+                _a2(p, 'jn_win', _JNROWS, 1200, 'jn_win: 📋 정리 창 줄', settle=100)
             jn = p.ev("()=>__UZ.jn()"); p.ev("()=>__HM.closeAll()")
-        p.press(p.ev("()=>__UZ.fbtn()"), how, 500)
+        p.press(p.ev("()=>__UZ.fbtn()"), how, 500 if QJ.GATE or not _A2['a6_menu'] else 0)
+        if QJ.REGRESS:
+            _a2(p, 'a6_menu', _UZFM, 500, 'a6_menu: 필터 단추 → 목록')
         p.press(p.ev("()=>__UZ.fopt('all')"), how, 1200)
         r11a = p.ev("()=>__UZ.rowTot('1.1 목적')")
         T(G, u'조문형만(%s · 기타) → 1.1 목적 셈 = 서랍 = 📋 행 · 부제 「거름 조문형」 · 「전체」 → 12' % how,
           bool(r11 and dw and jn and r11['tot'] == int(dw['n']) == jn['rows'] and u'거름 조문형' in jn['sub'] and r11a and r11a['tot'] == 12),
           {'1.1 셈': r11 and r11['tot'], '서랍': dw, '📋': jn and [jn['rows'], jn['sub']], '전체': r11a})
         p.ev("()=>{S.oxFilter='all';S.oxBk=[];}")
-    # 헛잣대 — 바탕 다섯 값 모두 12
-    vals = []
-    for v in ('all', 'jo', 'pan', 'mix', 'untype'):
-        b.ev("v=>{S.oxFilter=v}", v); b.ev("()=>render()"); b.pg.wait_for_timeout(700)
-        vals.append((b.ev("()=>__UZ.rowTot('1.1 목적')") or {}).get('tot'))
-    b.ev("()=>{S.oxFilter='all'}")
-    T(G + '-헛', u'헛잣대 바탕 — 첫 화면 1.1 목적 다섯 값 모두 12(필터가 첫 화면에 안 걸림)', vals == [12] * 5, vals)
+    if QJ.GATE:   # 헛잣대(관문만) — 바탕 필터 다섯 값
+        # 헛잣대 — 바탕 다섯 값 모두 12
+        vals = []
+        for v in ('all', 'jo', 'pan', 'mix', 'untype'):
+            b.ev("v=>{S.oxFilter=v}", v); b.ev("()=>render()"); b.pg.wait_for_timeout(700)
+            vals.append((b.ev("()=>__UZ.rowTot('1.1 목적')") or {}).get('tot'))
+        b.ev("()=>{S.oxFilter='all'}")
+        T(G + '-헛', u'헛잣대 바탕 — 첫 화면 1.1 목적 다섯 값 모두 12(필터가 첫 화면에 안 걸림)', vals == [12] * 5, vals)
     home(p)
 
 
 def g_a8b(p, b, eng):
     G = 'a3-8b'
-    home(p); home(b)
+    home(p)
+    if QJ.GATE:
+        home(b)
     for how in ('mouse', 'touch'):
         a = p.ev("()=>__UZ.topArrow(1)")
         p.press(a, how, 1200)
@@ -218,7 +282,8 @@ def g_a8b(p, b, eng):
         c2 = p.ev("()=>__UZ.cardBody(1)")
         T(G, u'편 머리 ▾ 누름(%s) → 그 편 단원 줄 보임 0 · 서랍 같은 편 ▸ · 다시 누르면 폄' % how,
           bool(a and c1 and c1['rows'] == 0 and c1['arrow'] == u'▸' and dh == u'▸' and c2 and c2['rows'] > 0 and c2['arrow'] == u'▾'), {'▾': a and a.get('t'), '접힘': c1, '서랍': dh, '폄': c2})
-    T(G + '-헛', u'헛잣대 바탕 — 편 머리 ▾ 없음', b.ev("()=>__UZ.topArrow(1)") is None, None)
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — 편 머리 ▾ 없음', b.ev("()=>__UZ.topArrow(1)") is None, None)
     seq, st0 = [], p.ev("()=>__UZ.step()")
     vis_ = []
     for i in range(4):
@@ -232,12 +297,14 @@ def g_a8b(p, b, eng):
       {'글자': seq, '꼴': st0 and {k: st0[k] for k in ('bw', 'bs', 'bg', 'fs', 'fw', 'color')}})
     T(G, u'첫 누름 → 편 카드 몸 0 · 둘째 → 깊이 3↑ 보임 0 · 깊이 2 보임 · 넷째(펴기) → 되돌림',
       bool(vis_[0]['편1'] == 0 and vis_[1]['편2']['d3'] == 0 and vis_[1]['편2']['d4'] == 0 and vis_[1]['편2']['d2'] > 0 and vis_[3]['편2']['d3'] > 0), vis_)
-    T(G + '-헛', u'헛잣대 바탕 — 단계 글자 없음', b.ev("()=>__UZ.step()") is None, None)
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — 단계 글자 없음', b.ev("()=>__UZ.step()") is None, None)
     p.ev("()=>{S.mbCh={};S.jtCh={};}"); home(p)
     x11, x12, x221 = p.ev("()=>__UZ.nameX('1.1 목적')"), p.ev("()=>__UZ.nameX('1.2 국제조약')"), p.ev("()=>__UZ.nameX('2.2.1 주체 능력')")
     T(G, u'줄 정렬 — 1.1 목적 · 1.2 국제조약 이름 x 같음 · 2.2.1 = +14', bool(x11 is not None and x11 == x12 and x221 is not None and abs(x221 - x11 - 14) < 0.6), {'1.1': x11, '1.2': x12, '2.2.1': x221})
-    bx11, bx12 = b.ev("()=>__UZ.nameX('1.1 목적')"), b.ev("()=>__UZ.nameX('1.2 국제조약')")
-    T(G + '-헛', u'헛잣대 바탕 — 1.2 국제조약 이름이 22px 밀림', bool(bx11 is not None and bx12 is not None and abs(bx12 - bx11 - 22) < 1.5), {'1.1': bx11, '1.2': bx12})
+    if QJ.GATE:   # 헛잣대(관문만)
+        bx11, bx12 = b.ev("()=>__UZ.nameX('1.1 목적')"), b.ev("()=>__UZ.nameX('1.2 국제조약')")
+        T(G + '-헛', u'헛잣대 바탕 — 1.2 국제조약 이름이 22px 밀림', bool(bx11 is not None and bx12 is not None and abs(bx12 - bx11 - 22) < 1.5), {'1.1': bx11, '1.2': bx12})
 
 
 BK_WANT = {'TH000128': ['주체'], 'TH000131': ['주체'], 'T1855025h': ['주체'], 'TH000144': ['주체'], 'TH000149': ['주체'], 'TH000152': ['주체'],
@@ -250,28 +317,32 @@ def d_a7():
     G = 'a3-7d'
     J = json.load(io.open(os.path.join(_DATA, 'bktype_omr.json'), encoding='utf-8'))
     T(G, u'bktype_omr.json = 9/27 사용자 확인 14(uid · 값) 그대로', J == BK_WANT, {'다름': {k: [J.get(k), v] for k, v in BK_WANT.items() if J.get(k) != v}, '더': [k for k in J if k not in BK_WANT]})
-    env = dict(os.environ, JOPANGI_APPDATA=_DATA, PYTHONIOENCODING='utf-8', PYTHONDONTWRITEBYTECODE='1')
-    code = ("import sys,json;sys.path.insert(0,r'%s');import _omr_bktype as OB;r,rep=OB.extract();"
-            "print(json.dumps({'res':r,'marks':[[m['page'],list(m['rect']),m['uid'],m['val']] for m in rep['marks']]},ensure_ascii=False))") % os.path.dirname(HERE)
-    out = subprocess.run([sys.executable, '-c', code], capture_output=True, env=env, timeout=900)
-    try:
-        X = json.loads(out.stdout.decode('utf-8').strip().splitlines()[-1])
-    except Exception as e:
-        X = {'res': None, 'marks': [], 'err': out.stderr.decode('utf-8', 'replace')[-400:]}
-    T(G, u'다시 돌려도 같음(⚙ _omr_bktype 한 번 더 · 멱등)', X.get('res') == J, X.get('err', ''))
-    OM = json.load(io.open(os.path.join(_DATA, 'omr', u'특허', 'omr_map.json'), encoding='utf-8'))['map']
-    diff = []
-    for pg, (x0, y0, x1, y1), uid, val in X.get('marks', []):
-        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-        hit = [k for k, b in OM.items() if b['page'] == pg and b['y'] - 1 <= cy <= b['y'] + b['h'] + 1 and b['x'] - 10 <= cx <= b['x'] + b['w']]
-        if hit != [uid]:
-            diff.append((uid, hit[:2]))
-    T(G + '-헛', u'헛잣대 — 옛 기계 표 omr_map.json 으로 같은 자리를 맞대면 14 중 다름(쓰지 않는 까닭)', len(diff) > 0, {'다름': len(diff), '보기': diff[:6]})
+    if QJ.GATE:   # 처리안 관문만(a3-7d#2 · 헛) — ⚙ _omr_bktype.extract 를 subprocess 로 다시 돌림(굽기 재현성 = ⚙ 판 관문의 몫 · 되묻지 말고 정한 것 2)
+        QJ.sub('python:bake')
+        env = dict(os.environ, JOPANGI_APPDATA=_DATA, PYTHONIOENCODING='utf-8', PYTHONDONTWRITEBYTECODE='1')
+        code = ("import sys,json;sys.path.insert(0,r'%s');import _omr_bktype as OB;r,rep=OB.extract();"
+                "print(json.dumps({'res':r,'marks':[[m['page'],list(m['rect']),m['uid'],m['val']] for m in rep['marks']]},ensure_ascii=False))") % os.path.dirname(HERE)
+        out = subprocess.run([sys.executable, '-c', code], capture_output=True, env=env, timeout=900)
+        try:
+            X = json.loads(out.stdout.decode('utf-8').strip().splitlines()[-1])
+        except Exception as e:
+            X = {'res': None, 'marks': [], 'err': out.stderr.decode('utf-8', 'replace')[-400:]}
+        T(G, u'다시 돌려도 같음(⚙ _omr_bktype 한 번 더 · 멱등)', X.get('res') == J, X.get('err', ''))
+        OM = json.load(io.open(os.path.join(_DATA, 'omr', u'특허', 'omr_map.json'), encoding='utf-8'))['map']
+        diff = []
+        for pg, (x0, y0, x1, y1), uid, val in X.get('marks', []):
+            cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+            hit = [k for k, b in OM.items() if b['page'] == pg and b['y'] - 1 <= cy <= b['y'] + b['h'] + 1 and b['x'] - 10 <= cx <= b['x'] + b['w']]
+            if hit != [uid]:
+                diff.append((uid, hit[:2]))
+        T(G + '-헛', u'헛잣대 — 옛 기계 표 omr_map.json 으로 같은 자리를 맞대면 14 중 다름(쓰지 않는 까닭)', len(diff) > 0, {'다름': len(diff), '보기': diff[:6]})
 
 
 def g_a7(p, b, eng):
     G = 'a3-7'
-    home(p); home(b)
+    home(p)
+    if QJ.GATE:
+        home(b)
     p.ev("()=>__UZ.bkLoad()")
     res = {}
     for k in ('TH000128', 'T185510ㅂ', 'T2562154', 'T2562153'):
@@ -286,7 +357,9 @@ def g_a7(p, b, eng):
         home(p)
         go_key(p, 'T2663011')
         row0 = p.ev("k=>__UZ.chipRow(k)", 'T2663011')
-        p.press(p.ev("k=>__UZ.bkAt(k)", 'T2663011'), how, 800)
+        p.press(p.ev("k=>__UZ.bkAt(k)", 'T2663011'), how, 800 if QJ.GATE or not _A2['a7_pop'] else 0)
+        if QJ.REGRESS:
+            _a2(p, 'a7_pop', _BKPOP, 800, 'a7_pop: 칩 안 글자 → 빈칸 종류 확정 창')
         pop = p.ev("()=>__HM.popKeys().find(x=>/빈칸 종류 확정/.test(x))")
         p.press(p.ev("v=>__UZ.bkPopBtn(v)", u'내용'), how, 900)
         p.press(p.ev("v=>__UZ.bkPopBtn(v)", u'기간'), how, 900)
@@ -303,11 +376,15 @@ def g_a7(p, b, eng):
     T(G, u'새로고침 뒤 유지(기록 jopangi.bktype · SYNC_KEYS 에 · uid 옮기기 목록에)', bool(row2 and row2['bk'] and row2['bk']['t'] == u'내용·기간' and 'jopangi.bktype' in (p.ev("()=>__UZ.syncKeys()") or [])),
       {'기록': rec, '뒤': row2 and row2['bk'], 'SYNC': len(p.ev("()=>__UZ.syncKeys()") or [])})
     # 지우기 → 빈칸?
-    p.press(p.ev("k=>__UZ.bkAt(k)", 'T2663011'), 'mouse', 800)
+    p.press(p.ev("k=>__UZ.bkAt(k)", 'T2663011'), 'mouse', 800 if QJ.GATE or not _A2['a7_pop'] else 0)
+    if QJ.REGRESS:
+        _a2(p, 'a7_pop', _BKPOP, 800, 'a7_pop: 칩 안 글자 → 빈칸 종류 확정 창')
     p.press(p.ev("v=>__UZ.bkPopBtn(v)", u'지우기'), 'mouse', 900)
     row3 = p.ev("k=>__UZ.chipRow(k)", 'T2663011'); p.ev("()=>__HM.closeAll()")
     go_key(p, 'TH000128')
-    p.press(p.ev("k=>__UZ.bkAt(k)", 'TH000128'), 'mouse', 800)
+    p.press(p.ev("k=>__UZ.bkAt(k)", 'TH000128'), 'mouse', 800 if QJ.GATE or not _A2['a7_pop'] else 0)
+    if QJ.REGRESS:
+        _a2(p, 'a7_pop', _BKPOP, 800, 'a7_pop: 칩 안 글자 → 빈칸 종류 확정 창')
     p.press(p.ev("v=>__UZ.bkPopBtn(v)", u'지우기'), 'mouse', 900)
     row4 = p.ev("k=>__UZ.chipRow(k)", 'TH000128'); p.ev("()=>__HM.closeAll()")
     T(G, u'「지우기」 → 「빈칸?」 · OMR 표시 지문(TH000128)도 기록 빈 값이 덮어 「빈칸?」', bool(row3 and row3['bk']['t'] == u'빈칸?' and row4 and row4['bk']['t'] == u'빈칸?'), {'T2663011': row3 and row3['bk'], 'TH000128': row4 and row4['bk']})
@@ -317,22 +394,24 @@ def g_a7(p, b, eng):
     cen = p.ev("""async()=>{const M=VJ.M;let n=0,bad=[];for(let i=0;i<Math.min(M.length,40);i++){for(const ln of ['b','u']){const ks=mlnKeys(M,i,ln,VJ.P7map,VJ.byId);if(!ks.length)continue;
       await __HM.go(mlnSel(i,ln));document.querySelectorAll('#slot .mbtype .seg.bk').forEach(b=>{n++;const k=b.dataset.bk;const want=(BKTOMR||{})[k];if(b.textContent!==(want?want.join('·'):'빈칸?'))bad.push([k,b.textContent]);});}}return {n,bad:bad.slice(0,6)}}""")
     T(G, u'찍기 전 모든 지문 = 「빈칸?」(초안 0 · OMR 표시 14 만 값) — 마디 40 줄 전수', bool(cen and cen['n'] > 100 and not cen['bad']), cen)
-    T(G + '-헛', u'헛잣대 바탕 — 유형 칩 안 빈칸 종류 글자 없음', not b.ev("()=>document.querySelectorAll('.mbtype .seg.bk').length") and not b.ev("()=>__UZ.has('bkOf')"), None)
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — 유형 칩 안 빈칸 종류 글자 없음', not b.ev("()=>document.querySelectorAll('.mbtype .seg.bk').length") and not b.ev("()=>__UZ.has('bkOf')"), None)
     home(p)
 
 
 def g_a7s(p, b, eng):
     """§B-7 「다른 기기 흉내(원격 기록)로 옮겨짐」 — 원격 기록.json 에 jopangi.bktype 칸을 심고 동기화 → 이 기기 칩 · 헛잣대 = 바탕 앱(그 키를 모른다)"""
     G = 'a3-7'
-    REC = subprocess.run(['git', '-C', _roots.spd(), 'show', 'origin/main:jopangi/기록.json'], capture_output=True).stdout.decode('utf-8')
+    REC = (subprocess.run(['git', '-C', _roots.spd(), 'show', 'origin/main:jopangi/기록.json'], capture_output=True).stdout.decode('utf-8') if QJ.GATE else io.open(_roots.spd(r'jopangi\기록.json'), encoding='utf-8').read())
     d = json.loads(REC)
     d['data']['jopangi.bktype'] = {'T2663011': {'v': [u'주체'], 'ts': '2026-09-27T05:00:00.000Z'}}
     d.setdefault('u', {})['jopangi.bktype|T2663011'] = int(time.time() * 1000)
     txt = json.dumps(d, ensure_ascii=False)
     (ns, nd, ne), (bs, bd, be) = envs()
     res = {}
-    for who, env in (('NEW', (ns, nd, ne)), ('BASE', (bs, bd, be))):
+    for who, env in ((('NEW', (ns, nd, ne)), ('BASE', (bs, bd, be))) if QJ.GATE else (('NEW', (ns, nd, ne)),)):
         q = Pg(BR[eng], eng, 'bks' + who, env[0], env[1], env[2], remote=txt)
+        QJ.launch('base' if who == 'BASE' else 'new')   # 새 컨텍스트 = 원격 시드가 컨텍스트 init 스크립트(window.__REMOTE)라 한 페이지로 이을 수 없다
         try:
             home(q, gk='g')
             q.ev("()=>__HM.sync()")
@@ -344,21 +423,28 @@ def g_a7s(p, b, eng):
         finally:
             q.close()
     T(G, u'다른 기기 흉내 — 원격 기록.json 의 jopangi.bktype(T2663011 주체) → 동기화 → 이 기기 칩 「조문형·주체」(밑줄 없음)', bool(res['NEW']['bk'] and res['NEW']['bk']['t'] == u'주체' and ' q' not in res['NEW']['bk']['cls']), res['NEW'])
-    T(G + '-헛', u'헛잣대 바탕 — 그 키를 모른다(칩 안 글자 없음)', not res['BASE']['bk'], res['BASE'])
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — 그 키를 모른다(칩 안 글자 없음)', not res['BASE']['bk'], res['BASE'])
 
 
 def g_a1(p, b, eng):
     G = 'a3-1'
-    home(p); home(b)
-    for who, q in (('NEW', p), ('BASE', b)):
+    home(p)
+    if QJ.GATE:
+        home(b)
+    for who, q in ((('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),)):
         q.ev("()=>__UZ.seedGi('2026',{sub:'2026-09-03T04:42:00Z',n:10,right:0},(()=>{const o={};for(let i=21;i<=30;i++)o['특허:2026:'+i]={ok:false,g:1,ts:'2026-09-03T04:42:00Z'};return o})())")
         home(q)
-    rn, rb = p.ev("()=>__UZ.grRow('2026')"), b.ev("()=>__UZ.grRow('2026')")
+    if QJ.GATE:
+        rn, rb = p.ev("()=>__UZ.grRow('2026')"), b.ev("()=>__UZ.grRow('2026')")
+    else:
+        rn = p.ev("()=>__UZ.grRow('2026')")
     T(G, u'원격 기록 흉내(gi.year 특허:2026 n10 right0 + gi 21~30 {ok:false,g:1}) → 2026 줄 회독 상자 0 · 「1회독」 단추', bool(rn and not rn['boxes'] and rn['go'] == u'1회독'), rn)
-    T(G + '-헛', u'헛잣대 바탕 — 「1회독 0/10 X10」 상자 보임', bool(rb and rb['boxes'] and '0/10' in rb['boxes'][0]['t']), rb)
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — 「1회독 0/10 X10」 상자 보임', bool(rb and rb['boxes'] and '0/10' in rb['boxes'][0]['t']), rb)
     # 회독 상자 = 단추 → 비교 창 · 기출뷰 안 열림(마우스·손가락)
     rec = [{'date': '2026-09-20', 'ts': '2026-09-20T01:00:00Z', 'ok': 16, 'n': 20, 'ms': 2280000, 'picks': {str(i): '1' for i in range(1, 21)}, 'st': {'cf': 2, 'fk': 1, 'x': 9, 'n': 98}}]
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in ((('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),)):
         q.ev("r=>__UZ.seedGround('2026',r)", rec); home(q)
     for how in ('mouse', 'touch'):
         home(p)
@@ -367,11 +453,12 @@ def g_a1(p, b, eng):
         cm, tab = p.ev("()=>__UZ.cmp()"), p.ev("()=>S.jimunTab")
         p.ev("()=>__HM.closeAll()")
         T(G, u'회독 상자 누름(%s) → 회독 비교 창 보임(문항 × 회독) · 기출뷰 안 열림' % how, bool(at and at.get('tag') == 'BUTTON' and cm and cm['vis'] and cm['rounds'] == 1 and cm['chips'] >= 20 and tab == 'ox'), {'상자': at and at.get('tag'), '창': cm, '탭': tab})
-    home(b)
-    at = b.ev("()=>__UZ.grBoxAt('2026',0)")
-    b.click(at, 1200)
-    T(G + '-헛', u'헛잣대 바탕 — 상자 누름 → 기출뷰가 열림(줄 누름으로 샘)', b.ev("()=>S.jimunTab") == 'gichul', b.ev("()=>S.jimunTab"))
-    b.ev("()=>{S.jimunTab='ox'}")
+    if QJ.GATE:   # 헛잣대(관문만) — 바탕 상자 누름
+        home(b)
+        at = b.ev("()=>__UZ.grBoxAt('2026',0)")
+        b.click(at, 1200)
+        T(G + '-헛', u'헛잣대 바탕 — 상자 누름 → 기출뷰가 열림(줄 누름으로 샘)', b.ev("()=>S.jimunTab") == 'gichul', b.ev("()=>S.jimunTab"))
+        b.ev("()=>{S.jimunTab='ox'}")
     # 아랫줄 = 제출 때 스냅숏(스냅숏 있는 회독 · 그 뒤 지문 X 를 바꿔도 무변) · 옛 회독(스냅숏 없음) = 비움
     home(p)
     r1 = p.ev("()=>__UZ.grRow('2026')")
@@ -385,7 +472,7 @@ def g_a1(p, b, eng):
       bool(r1 and r1['boxes'] and r1['boxes'][0]['l2'][1:] == [u'🌀2 ⚠1 X9 /98'] and r2['boxes'][0]['l2'] == r1['boxes'][0]['l2'] and r3 and len(r3['boxes'][0]['l2']) == 1),
       {'처음': r1 and r1['boxes'], '지문 X 뒤': r2 and r2['boxes'], '옛 회독': r3 and r3['boxes']})
     p.ev("k=>{const A=oxAll();delete A[k];OXREC=A;lsWrite(OX_KEY,A,'하네스')}", k0)
-    for q in (p, b):
+    for q in ((p, b) if QJ.GATE else (p,)):
         q.ev("()=>{const G=giAll();Object.keys(G).filter(k=>k.indexOf('특허:2026:')===0).forEach(k=>delete G[k]);GIREC=G;lsWrite(GI_KEY,G,'하네스');const Y=giYAll();delete Y['특허:2026'];GIYREC=Y;lsWrite(GIY_KEY,Y,'하네스');const A=grndAll();delete A['특허:2026'];GRNDREC=A;lsWrite(GRND_KEY,A,'하네스');}")
 
 
@@ -393,18 +480,22 @@ def g_a2(p, b, eng):
     G = 'a3-2'
     for how in ('mouse', 'touch'):
         home(p)
-        p.press(p.ev("()=>__UZ.rowAt ? __HM.at('#slot .mbur[data-giy=\"2026\"] .nm') : null"), how, 2500)
+        p.press(p.ev("()=>__UZ.rowAt ? __HM.at('#slot .mbur[data-giy=\"2026\"] .nm') : null"), how, 2500 if QJ.GATE or not _A2['a2_open'] else 0)   # regress — 바로 아래 p.until(.exv-q) 가 표지
         p.until("()=>document.querySelectorAll('#slot .exv-q').length>0", ms=15000)
         e = p.ev("()=>__UZ.exv()")
         dy = p.ev("()=>__UZ.drawerYears()")
         q1 = (e['qs'] or [{}])[0]
         at = p.ev("()=>__UZ.exvNum('1',1)")
-        p.press(at, how, 600)
+        p.press(at, how, 600 if QJ.GATE or not _A2['a2_opt'] else 0)
+        if QJ.REGRESS:
+            _a2(p, 'a2_opt', _EXOPT, 600, 'a2_opt: ① 누름 → 고름(sel)')
         s1 = p.ev("()=>__UZ.exvNumState('1',1)")
         p.until("()=>{const q=document.querySelector('#slot .exv-q[data-exno=\"5\"] .exv-sel');return q&&/③/.test(q.textContent)}", ms=20000)
         e5 = p.ev("()=>__UZ.exv()")
         s5 = next((q['sel'] for q in e5['qs'] if q['no'] == '5'), '')
-        p.press(p.ev("()=>__UZ.exvNext()"), how, 1500)
+        p.press(p.ev("()=>__UZ.exvNext()"), how, 1500 if QJ.GATE or not _A2['a2_next'] else 0)
+        if QJ.REGRESS:
+            _a2(p, 'a2_next', _EXNO6, 1500, 'a2_next: ▶ 다음 5문제 → 첫 문항 6번')
         e6 = p.ev("()=>__UZ.exv()")
         T(G, u'2026 특허 열기(%s) → 서랍 첫 줄 「2026년 제63회」 · 머리 「1~5번 / 총 20문제」 · 모드바 0 · 1번 머리 「1.」 굵게(15px 800) · 지문 칸 5 · 칩 줄 보임 · ⭐ 0 · ① 누름 → 고름(바탕 파랑) · 5번 「③ ㄱ, ㄷ, ㄹ」 · 「다음 5문제 ▶」 → 6번' % how,
           bool(dy and dy[0]['t'] == u'2026년 제63회' and dy[0]['now'] and u'1~5번 / 총 20문제' in e['head'] and e['modebar'] == 0 and q1.get('head', '').startswith('1.') and (q1.get('noStyle') or {}).get('fontWeight') == '800'
@@ -412,36 +503,51 @@ def g_a2(p, b, eng):
                and e6['qs'] and e6['qs'][0]['no'] == '6'),
           {'서랍': dy[:2], '머리': e['head'], '모드바': e['modebar'], '1번': q1, '①': s1, '5번': s5, '다음': e6['qs'][0]['no'] if e6['qs'] else None, '알약': e['pill']})
         p.ev("()=>{const G=giAll();Object.keys(G).filter(k=>k.indexOf('특허:2026:')===0).forEach(k=>delete G[k]);GIREC=G;lsWrite(GI_KEY,G,'하네스');S.exvPg={};}")
-    home(b)
-    b.ev("()=>__HM.gi('2026')")
-    eb = b.ev("()=>__UZ.exv()")
-    T(G + '-헛', u'헛잣대 바탕 — 모드바 있음 · 옛 선지 상자(gich·ginum)', eb['modebar'] > 0 and eb['oldBoxes'] > 0, {'모드바': eb['modebar'], '옛 상자': eb['oldBoxes']})
-    home(b)
+    if QJ.GATE:   # 헛잣대(관문만)
+        home(b)
+        b.ev("()=>__HM.gi('2026')")
+        eb = b.ev("()=>__UZ.exv()")
+        T(G + '-헛', u'헛잣대 바탕 — 모드바 있음 · 옛 선지 상자(gich·ginum)', eb['modebar'] > 0 and eb['oldBoxes'] > 0, {'모드바': eb['modebar'], '옛 상자': eb['oldBoxes']})
+        home(b)
 
 
 def g_a3(p, b, eng, mb_ref):
     G = 'a3-3'
-    home(p); home(b)
-    for q in (p, b):
+    home(p)
+    if QJ.GATE:
+        home(b)
+    for q in ((p, b) if QJ.GATE else (p,)):
         if not go_key(q, 'T2663011'):
             q.ev("s=>__HM.go(s)", '__미분류')
-    n, o = p.ev("k=>__UZ.chipRow(k)", 'T2663011'), b.ev("k=>__UZ.chipRow(k)", 'T2663011')
+    if QJ.GATE:
+        n, o = p.ev("k=>__UZ.chipRow(k)", 'T2663011'), b.ev("k=>__UZ.chipRow(k)", 'T2663011')
+    else:
+        # regress — 처리안 기준(a3-3#무변): 바탕(539131a) 출처 · ID 칩 꼴 = 기준 스냅샷(NEW 의 같은 칩 꼴)
+        n = p.ev("k=>__UZ.chipRow(k)", 'T2663011')
+        o = QJ.base('a3-3@%s/chip' % eng, {'src': n and n['src'], 'id': n and n['id']})
     keys = ['fontSize', 'fontWeight', 'color', 'backgroundColor', 'borderTopColor', 'borderTopStyle', 'borderTopWidth', 'paddingTop', 'paddingLeft', 'borderTopLeftRadius', 'h']
     same = lambda a, r: {k: (a or {}).get(k) for k in keys if (a or {}).get(k) != (r or {}).get(k)}
     dt, dy, dm = same(n and n['type'], mb_ref['typeJo']), same(n and n['year'], mb_ref['year']), same(n and n['mc'], mb_ref['mc'])
     T(G, u'T2663011 유형·출제연도·🃏 칩 computed = 민법 Q0275(글자 크기·굵기·색·바탕·테·여백·높이 · 유형 색은 같은 유형끼리)', bool(n and not dt and not dy and not dm), {'유형 다름': dt, '연도 다름': dy, '🃏 다름': dm, '민법': mb_ref.get('_src')})
+    if QJ.REGRESS:
+        _bn('a3-3@%s/chip' % eng)
     T(G, u'출처 칩·ID 칩 = 바탕 판과 같음(무변) · 글 「26 변리」·「T2663011」·「조문형·빈칸?·7의2」', bool(n and o and n['src'] == o['src'] and n['id'] == o['id'] and n['srcT'] == u'26 변리' and n['idT'] == 'T2663011' and n['typeT'].startswith(u'조문형') and u'7의2' in n['typeT']),
       {'출처': [n and n['src'], o and o['src']], '글': [n and n['srcT'], n and n['typeT']]})
-    T(G + '-헛', u'헛잣대 바탕 — 유형·연도·🃏 칩이 민법과 다름', bool(o and (same(o['type'], mb_ref['typeJo']) or same(o['year'], mb_ref['year']) or same(o['mc'], mb_ref['mc']))),
-      {'유형': same(o and o['type'], mb_ref['typeJo']), '연도': same(o and o['year'], mb_ref['year']), '🃏': same(o and o['mc'], mb_ref['mc'])})
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — 유형·연도·🃏 칩이 민법과 다름', bool(o and (same(o['type'], mb_ref['typeJo']) or same(o['year'], mb_ref['year']) or same(o['mc'], mb_ref['mc']))),
+          {'유형': same(o and o['type'], mb_ref['typeJo']), '연도': same(o and o['year'], mb_ref['year']), '🃏': same(o and o['mc'], mb_ref['mc'])})
 
 
 def g_a45(p, b, eng):
     G = 'a3-4'
-    home(p, gk='x'); home(b)
+    home(p, gk='x')
+    if QJ.GATE:
+        home(b)
     for how in ('mouse', 'touch'):
         home(p, gk='x')
-        p.press(p.ev("()=>__UZ.rowAt('1.1 목적','.mbchip.jn')"), how, 1500)
+        p.press(p.ev("()=>__UZ.rowAt('1.1 목적','.mbchip.jn')"), how, 1500 if QJ.GATE or not _A2['jn_win'] else 0)
+        if QJ.REGRESS:
+            _a2(p, 'jn_win', _JNROWS, 1500, 'jn_win: 📋 정리 창 줄', settle=100)
         w, r0 = p.ev("()=>__UZ.jn()"), p.ev("()=>__UZ.jnFirstRow()")
         order = [k['c'].split(' ')[0] for k in (r0 or {}).get('kids', [])]
         T(G, u'1.1 목적 📋(%s · 기타) → 창 600×720 · 첫 줄 = 「TJ0100001 · 1번 · 01 사법 … 기록 없음(오른쪽 끝)」 · ✏️ 표시 켜짐 = 주황' % how,
@@ -456,12 +562,13 @@ def g_a45(p, b, eng):
                and (s1['style'] or {}).get('fontWeight') == '900' and (s1['style'] or {}).get('color') == 'rgb(55, 48, 163)'),
           {'TJ0100001': s1, 'TJ0100002': s2 and s2['stem'], 'TJ150003ㄱ': s3 and s3['stem'], '발문 없는 줄': noStem[:4]})
         p.ev("()=>__HM.closeAll()")
-    home(b)
-    b.click(b.ev("()=>__UZ.rowAt('1.1 목적','.mbchip.jn')"), 1500)
-    wb, rb0 = b.ev("()=>__UZ.jn()"), b.ev("()=>__UZ.jnFirstRow()")
-    T(G + '-헛', u'헛잣대 바탕 — 첫 줄 「제7판 p.2」 · 창 440 폭 · 발문 줄 0', bool(wb and wb['w'] == 440 and rb0 and rb0['kids'][0]['t'].startswith(u'제7판 p.') and not any(k['c'] == 'jnstem' for k in wb['kids'])),
-      {'창': wb and [wb['w'], wb['h']], '첫 줄': rb0 and rb0['kids'][:3]})
-    b.ev("()=>__HM.closeAll()")
+    if QJ.GATE:   # 헛잣대(관문만)
+        home(b)
+        b.click(b.ev("()=>__UZ.rowAt('1.1 목적','.mbchip.jn')"), 1500)
+        wb, rb0 = b.ev("()=>__UZ.jn()"), b.ev("()=>__UZ.jnFirstRow()")
+        T(G + '-헛', u'헛잣대 바탕 — 첫 줄 「제7판 p.2」 · 창 440 폭 · 발문 줄 0', bool(wb and wb['w'] == 440 and rb0 and rb0['kids'][0]['t'].startswith(u'제7판 p.') and not any(k['c'] == 'jnstem' for k in wb['kids'])),
+          {'창': wb and [wb['w'], wb['h']], '첫 줄': rb0 and rb0['kids'][:3]})
+        b.ev("()=>__HM.closeAll()")
     home(p)
 
 
@@ -485,57 +592,78 @@ def g_c1(p, b, eng):
     T(G, u'P7-1394 답 ⑤(데이터) · ㄴ 카드 「정답·해설 ▸」(마우스) → 「ㄴ (O)」 해설 보임(빨간 추록) · P7-0069 여섯 줄 카드 보임 · 정오 ㄱO ㄴO ㄷX ㄹX ㅁO ㅂO',
       bool(card and card['vis'] and ans and (u'정답 O' in ans or ans.lstrip().startswith(u'ㄴ (O)')) and ob.get(u'답') == u'⑤' and all(cards) and ''.join((z or {}).get('ox', '?') for z in z0069) == 'OOXXOO'),
       {'ㄴ 카드': card, '해설 칸': ans, '객관식 답': ob, '0069 정오': ''.join((z or {}).get('ox', '?') for z in z0069), '0069 카드': cards})
-    home(b)
-    bP = json.load(io.open(os.path.join(M.base_env()[1], 'jimun_7pan.json'), encoding='utf-8'))
-    bans = next((o.get(u'답') for o in bP[u'객관식'] if o['id'] == 'P7-1394'), None)
-    T(G + '-헛', u'헛잣대 바탕 — P7-1394 답 ④ · ㄴ X · P7-0069 여섯 줄 없음', bans != u'⑤' and (b.ev("id=>__UZ.p7(id)", 'P7-1394-ㄴ') or {}).get('ox') == 'X' and not b.ev("id=>__UZ.p7(id)", 'P7-0069-ㄱ'),
-      {'답': b.ev("id=>__UZ.obj(id)", 'P7-1394'), 'ㄴ': b.ev("id=>__UZ.p7(id)", 'P7-1394-ㄴ')})
+    if QJ.GATE:   # 헛잣대(관문만) — 바탕 데이터 git archive
+        home(b)
+        bP = json.load(io.open(os.path.join(M.base_env()[1], 'jimun_7pan.json'), encoding='utf-8'))
+        bans = next((o.get(u'답') for o in bP[u'객관식'] if o['id'] == 'P7-1394'), None)
+        T(G + '-헛', u'헛잣대 바탕 — P7-1394 답 ④ · ㄴ X · P7-0069 여섯 줄 없음', bans != u'⑤' and (b.ev("id=>__UZ.p7(id)", 'P7-1394-ㄴ') or {}).get('ox') == 'X' and not b.ev("id=>__UZ.p7(id)", 'P7-0069-ㄱ'),
+          {'답': b.ev("id=>__UZ.obj(id)", 'P7-1394'), 'ㄴ': b.ev("id=>__UZ.p7(id)", 'P7-1394-ㄴ')})
 
 
 def g_c2(p, b, eng):
     G = 'a2-2'
-    for q in (p, b):
+    for q in ((p, b) if QJ.GATE else (p,)):
         home(q)
     r = p.ev("()=>{const rs=[...document.querySelectorAll('#slot .mbur')].filter(x=>/^12 실용신안/.test((x.querySelector('.nm')||{}).textContent||''));return rs.map(x=>({t:x.querySelector('.nm').textContent.trim(),tot:(/총 (\\d+)/.exec(x.textContent)||[])[1],vis:x.getBoundingClientRect().height>0}))}")
     u = [x for x in (r or []) if u'(미수록)' in x['t']]
     at = p.ev("()=>__UZ.rowAt('12 실용신안 (미수록)')")
-    p.tap(at, 1500)
+    p.tap(at, 1500 if QJ.GATE or not _A2['c2_tap'] else 0)
+    if QJ.REGRESS:
+        _a2(p, 'c2_tap', _MOKU, 1500, 'c2_tap: 줄 톡 → S.mok ~u')
     mok = p.ev("()=>S.mok")
-    rb = b.ev("()=>[...document.querySelectorAll('#slot .mbur')].filter(x=>/^12 실용신안/.test((x.querySelector('.nm')||{}).textContent||'')).map(x=>x.querySelector('.nm').textContent.trim())")
+    if QJ.GATE:
+        rb = b.ev("()=>[...document.querySelectorAll('#slot .mbur')].filter(x=>/^12 실용신안/.test((x.querySelector('.nm')||{}).textContent||'')).map(x=>x.querySelector('.nm').textContent.trim())")
     T(G, u'첫 화면 「12 실용신안」 → (미수록) 15 줄 보임 · 손가락 톡 → 그 줄(~u) · 머리 셈 = 줄 넷 합', bool(u and u[0]['tot'] == '15' and u[0]['vis'] and mok and mok.endswith('~u')), {'줄': r, '톡': mok})
-    T(G + '-헛', u'헛잣대 바탕 — (미수록) 줄 없음', not any(u'(미수록)' in x for x in (rb or [])), rb)
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — (미수록) 줄 없음', not any(u'(미수록)' in x for x in (rb or [])), rb)
 
 
 def g_c3(p, b, eng):
     G = 'a2-3'
-    for q, who in ((p, 'NEW'), (b, 'BASE')):
+    for q, who in (((p, 'NEW'), (b, 'BASE')) if QJ.GATE else ((p, 'NEW'),)):
         home(q); go_key(q, 'T1350065h')
     res = {}
-    for q, who in ((p, 'NEW'), (b, 'BASE')):
+    for q, who in (((p, 'NEW'), (b, 'BASE')) if QJ.GATE else ((p, 'NEW'),)):
         bb = q.ev("([k,r])=>__HM.btnIn(k,r)", ['T1350065h', u'^📖'])
-        q.click(bb, 1200)
+        q.click(bb, 1200 if QJ.GATE or not _A2['c3_pop'] else 0)
+        if QJ.REGRESS:
+            _a2(q, 'c3_pop', _C3POP, 1200, 'c3_pop: 📖 원 기출 → 리담 지문 창')
         pw = q.ev("()=>{const p=(POPS||[]).find(x=>/📝 지문 T1350065$/.test(x._pk||''));if(!p)return null;const h=(p.querySelector('.ph')||{}).textContent||'';const s=sidFind('T1350065');return {vis:p.getBoundingClientRect().height>0,head:h.slice(0,80),q:s&&s.q?s.q.id:null,unk:/미분류/.test(h)}}")
         res[who] = pw
         q.ev("()=>__HM.closeAll()")
     T(G, u'pdf 18 · 29번 T1350065h 「📖 원 기출」 → 리담 2013-50-18 ⑤ 팝업(찾은 문항 2013-50-18 · 제목 단원 = 붙은 마디 (미수록) · 미분류 아님)', bool(res['NEW'] and res['NEW']['vis'] and res['NEW']['q'] == '2013-50-18' and not res['NEW']['unk']), res['NEW'])
-    T(G + '-헛', u'헛잣대 바탕 — 2004-41-15(미분류)가 뜬다', bool(res['BASE'] and (res['BASE']['q'] == '2004-41-15' or res['BASE']['unk'])), res['BASE'])
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — 2004-41-15(미분류)가 뜬다', bool(res['BASE'] and (res['BASE']['q'] == '2004-41-15' or res['BASE']['unk'])), res['BASE'])
 
 
 def g_c4(p, b, eng):
     G = 'a2-4'
-    home(p); home(b)
-    nb, bb = p.ev("q=>__UZ.boxOf(q)", '2023-60-18'), b.ev("q=>__UZ.boxOf(q)", '2023-60-18')
-    cn, cb = p.ev("()=>__UZ.boxes()"), b.ev("()=>__UZ.boxes()")
-    T(G, u'리담 2023-60-18(시험 13번) · T2360131 상자 아님(발문 끝 「(다툼이 있는 경우 판례에 의함)」 걷고 판정) · 상자 수 보고', nb is False and cb and cn['boxy'] < cb['boxy'], {'NEW': cn, '바탕': cb})
-    T(G + '-헛', u'헛잣대 바탕 — 2023-60-18 상자', bb is True, bb)
+    home(p)
+    if QJ.GATE:
+        home(b)
+    if QJ.GATE:
+        nb, bb = p.ev("q=>__UZ.boxOf(q)", '2023-60-18'), b.ev("q=>__UZ.boxOf(q)", '2023-60-18')
+    else:
+        nb = p.ev("q=>__UZ.boxOf(q)", '2023-60-18')
+    if QJ.GATE:
+        cn, cb = p.ev("()=>__UZ.boxes()"), b.ev("()=>__UZ.boxes()")
+    else:
+        # regress — 처리안 기준(a2-4): 바탕 상자 수 = 기준 스냅샷(NEW 의 같은 셈) · 「바탕보다 줄어듦」은 인도 때 잼 → 지금은 「안 늘어남」
+        cn = p.ev("()=>__UZ.boxes()")
+        cb = {'boxy': QJ.base('a2-4@%s/boxy' % eng, (cn or {}).get('boxy'))}
+        _bn('a2-4@%s/boxy' % eng)
+    T(G, u'리담 2023-60-18(시험 13번) · T2360131 상자 아님(발문 끝 「(다툼이 있는 경우 판례에 의함)」 걷고 판정) · 상자 수 보고', (nb is False and cb and cn['boxy'] < cb['boxy']) if QJ.GATE else (nb is False and cb and cn['boxy'] <= cb['boxy']), {'NEW': cn, '바탕': cb})
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — 2023-60-18 상자', bb is True, bb)
 
 
 def g_c56(p, b, eng, br):
     G = 'a2-5'
     (ns, nd, ne), (bs, bd, be) = envs()
-    for W in (820, 390):
-        for who, env in (('NEW', (ns, nd, ne)), ('BASE', (bs, bd, be))):
+    for W in ((820, 390) if not QJ.SMOKE else (390,)):
+        for who, env in ((('NEW', (ns, nd, ne)), ('BASE', (bs, bd, be))) if QJ.GATE else (('NEW', (ns, nd, ne)),)):
             q = Pg(br, eng, 'rec%d%s' % (W, who), env[0], env[1], env[2], W=W, H=900)
+            QJ.launch('base' if who == 'BASE' else 'new')   # 새 컨텍스트 — 폭(820 · 390)이 달라 부팅 때 정해지는 값이 다르다
             try:
                 home(q, gk='g')
                 sel = go_key(q, 'T2057183')
@@ -562,33 +690,40 @@ def g_c56(p, b, eng, br):
 
 def g_c7(p, b, eng):
     G = 'a2-7'
-    home(p); home(b)
+    home(p)
+    if QJ.GATE:
+        home(b)
     n = p.ev("()=>__UZ.band('특허법','2020',18,3)")
-    o = b.ev("()=>__UZ.band('특허법','2020',18,3)")
+    if QJ.GATE:
+        o = b.ev("()=>__UZ.band('특허법','2020',18,3)")
     def inside(r):
         if not r or not r.get('band'):
             return True
         y4 = [y0 for m, y0, y1 in r['opts'] if m == u'④']
         return (r['band']['y1'] <= y4[0] + 0.001) if y4 else (r['band']['y1'] - r['band']['y0'] <= 0.08)   # ④ 를 못 잡으면 띠 높이(선지 하나 ≤ 0.08)
     T(G, u'2020 18번 ③ 띠 = ③ 선지만(④ 줄 위에서 끝) 또는 띠 없음', inside(n), n)
-    T(G + '-헛', u'헛잣대 바탕 — ③ 띠가 ④·⑤·쪽 꼬리까지 덮음', not inside(o), o)
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — ③ 띠가 ④·⑤·쪽 꼬리까지 덮음', not inside(o), o)
     tot = {'NEW': [0, 0], 'BASE': [0, 0]}
     per = {}
-    for y in ('2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026'):
-        for who, q in (('NEW', p), ('BASE', b)):
+    for y in (('2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026') if QJ.GATE else _C7_YEARS):
+        for who, q in ((('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),)):
             truth = q.ev("""async y=>{const rec=await jxeIndex(JXE_LAWF['특허법'],jxeFile('특허법',y));const out={};Object.keys(rec.no).forEach(n=>{const h=rec.no[n],L=rec.lines,end=h.nx>=0?h.nx:L.length;let cont=false;
               for(let i=h.i;i<end;i++){const l=L[i];if(l.p>h.p&&!(l.t.replace(/\\s/g,'').length<=8&&(l.y0>0.93||l.y0<0.07)))cont=true;}out[n]=cont;});return out}""", y)
             cuts = q.ev("y=>__UZ.cutAll('특허법',y)", y) or {}
             fp = [k for k, v in cuts.items() if v['cut'] and not truth.get(k)]
             tot[who][0] += len(fp); tot[who][1] += len([k for k, v in cuts.items() if truth.get(k) and not v['cut']])
             per.setdefault(y, {})[who] = len(fp)
+    if QJ.REGRESS:   # 처리안 표본 — 8 해 PDF 글자층 훑기를 5 해로(처음 2019 · 끝 2026 · 2020 18번 + 씨앗 고정 둘)
+        _PEND.append('(표본 %d/8)' % len(_C7_YEARS))
     T(G, u'「다음 쪽에 이어짐」 거짓 0(2019~2026 특허 · 참 = 그 문항 글줄이 다음 쪽까지 감)', tot['NEW'][0] == 0, {'해마다 거짓': per, '놓침': tot['NEW'][1]})
-    T(G + '-헛', u'헛잣대 바탕 — 거짓 이어짐 있음', tot['BASE'][0] > 0, tot['BASE'])
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — 거짓 이어짐 있음', tot['BASE'][0] > 0, tot['BASE'])
 
 
 def g_c9(p, b, eng):
     G = 'a2-9'
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in ((('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),)):
         home(q, gk='g'); go_key(q, 'TH0211521')
         q.ev("()=>__UZ.toastClear()")
         at = q.ev("k=>__HM.chipAt(k,'^2002')", 'TH0211521')
@@ -632,27 +767,30 @@ def g_c10(p, b, eng):
 def g_c11(p, b, eng, mb_ref):
     G = 'a2-11'
     res = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in ((('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),)):
         home(q, gk='g'); go_key(q, 'T2663011')
         q.ev("()=>{S.popCfg=S.popCfg||{};delete S.popCfg.bookpg;delete S.popCfg.canvas}")
         at = q.ev("k=>__HM.chipAt(k,'^2026')", 'T2663011')
         cs0 = q.ev("k=>{const idc=[...document.querySelectorAll('.qb.id')].find(b=>b.textContent.trim()===k);const hd=idc&&(idc.closest('.mbqhd')||idc.closest('.qhd'));const c=hd&&hd.querySelector('.jxec');if(!c)return null;const s=getComputedStyle(c);return {pt:s.paddingTop,pl:s.paddingLeft,h:Math.round(c.getBoundingClientRect().height*10)/10}}", 'T2663011')
         if not at:
             at = q.ev("k=>{const idc=[...document.querySelectorAll('.qb.id')].find(b=>b.textContent.trim()===k);const hd=idc&&(idc.closest('.mbqhd')||idc.closest('.qhd'));const c=hd&&hd.querySelector('.jxec');if(!c)return null;c.scrollIntoView({block:'center'});const r=c.getBoundingClientRect();const e=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {cx:r.left+r.width/2,cy:r.top+r.height/2,on:!!e&&(e===c||c.contains(e)),t:c.textContent}}", 'T2663011')
-        q.click(at, 2500)
+        q.click(at, 2500 if QJ.GATE or not _A2['c11_pop'] else 0)
+        if QJ.REGRESS:
+            _a2(q, 'c11_pop', _C11NAV, 2500, 'c11_pop: 시험지 창 + ◀ ▶ 머리', settle=100)
         w = q.ev("()=>{const p=(POPS||[]).find(x=>/📄/.test((x.querySelector('.ph')||{}).textContent||''));if(!p)return null;const hd=p.querySelector(':scope > .ph');return {w:Math.round(p.getBoundingClientRect().width),navInHead:!!(hd&&hd.querySelector('.jxe-nav')),navBody:!!p.querySelector('.pb .jxe-nav, .jxe-nav:not(.ph .jxe-nav)')}}")
         res[who] = {'칩': cs0, '창': w}
         q.ev("()=>__HM.closeAll()")
     n = res['NEW']
     T(G, u'시험지 창 = 민법(폭 560 · ◀ ▶ 창 머리) · 출제연도 칩 여백 2px 8px = 민법 실물(Q0275)',
       bool(n['창'] and n['창']['w'] == 560 and n['창']['navInHead'] and n['칩'] and n['칩']['pt'] == mb_ref['year']['paddingTop'] and n['칩']['pl'] == mb_ref['year']['paddingLeft']), n)
-    o = res['BASE']
-    T(G + '-헛', u'헛잣대 바탕 — 폭 440 · ◀ ▶ 본문 위 · 칩 여백 1px 7px', bool(o['창'] and o['창']['w'] == 440 and not o['창']['navInHead'] and o['칩'] and o['칩']['pl'] == '7px'), o)
+    if QJ.GATE:   # 헛잣대(관문만)
+        o = res['BASE']
+        T(G + '-헛', u'헛잣대 바탕 — 폭 440 · ◀ ▶ 본문 위 · 칩 여백 1px 7px', bool(o['창'] and o['창']['w'] == 440 and not o['창']['navInHead'] and o['칩'] and o['칩']['pl'] == '7px'), o)
 
 
 def g_c12(p, b, eng):
     G = 'a2-12'
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in ((('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),)):
         home(q, gk='x')
         i = q.ev("()=>__HM.nodeByTitle('^목적$')")
         q.ev("s=>__HM.go(s)", '__mg%d' % i)
@@ -714,7 +852,7 @@ def d_u():
 def g_u1(p, b, eng):
     G = 'u-1'
     res = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in ((('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),)):
         q.ev("([k,v])=>{const P=JSON.parse(localStorage.getItem('jopangi.postit')||'{}');P[k]=v;localStorage.setItem('jopangi.postit',JSON.stringify(P));}", [PIT_OLD, {'t': u'하네스 포스트잇', 'who': u'나', 'ts': '2026-09-01T00:00:00Z'}])
         reload_keep(q)
         q.until("()=>typeof UIDMIG_LAST==='undefined'||!!UIDMIG_LAST", ms=15000)
@@ -728,13 +866,14 @@ def g_u1(p, b, eng):
         res[who] = {'깃발': bool(fl and fl.get('vis')), '옛 열쇠': len(old or []), '새 열쇠': len(newk or []), '두 번째 옮김': (mig2 or {}).get('moved', {}).get('postit', 0) if mig2 else None}
     n = res['NEW']
     T(G, u'포스트잇 — 옛 열쇠 q|T0845101… 심고 켬 → 리담 2008-45-10 ㉠(T084510ㄱr) 카드에 포스트잇 보임 · 옛 열쇠 0 · 두 번째 켜기 옮김 0', bool(n['깃발'] and n['옛 열쇠'] == 0 and n['새 열쇠'] == 1 and not n['두 번째 옮김']), n)
-    T(G + '-헛', u'헛잣대 바탕 — 안 보임(옛 열쇠 그대로)', not res['BASE']['깃발'] and res['BASE']['옛 열쇠'] == 1, res['BASE'])
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — 안 보임(옛 열쇠 그대로)', not res['BASE']['깃발'] and res['BASE']['옛 열쇠'] == 1, res['BASE'])
 
 
 def g_u2(p, b, eng):
     G = 'u-2'
     res = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in ((('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),)):
         q.ev("()=>{const O=JSON.parse(localStorage.getItem('jopangi.ox')||'{}');O['T0138611']={tg:{important:1},p:'O',ok:true,ts:'2026-09-01T00:00:00Z'};localStorage.setItem('jopangi.ox',JSON.stringify(O));}")
         reload_keep(q)
         q.until("()=>typeof UIDMIG_LAST==='undefined'||!!UIDMIG_LAST", ms=15000); q.pg.wait_for_timeout(800)
@@ -748,13 +887,14 @@ def g_u2(p, b, eng):
         res[who] = r
     n = res['NEW']
     T(G, u'split ⭐ — T0138611 ⭐ → TR01044 · TH011518 두 카드 ⭐ 켜짐 보임 · 풀이 기록은 한쪽만', bool(n['TR01044']['⭐'] and n['TH011518']['⭐'] and [n['TR01044']['풀이'], n['TH011518']['풀이']].count('O') == 1), n)
-    T(G + '-헛', u'헛잣대 바탕 — TH011518 ⭐ 꺼짐', not res['BASE']['TH011518']['⭐'], res['BASE'])
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — TH011518 ⭐ 꺼짐', not res['BASE']['TH011518']['⭐'], res['BASE'])
 
 
 def g_u3(p, b, eng):
     G = 'u-3'
     res = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in ((('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),)):
         home(q, gk='g')
         inp = q.ev("()=>__HM.at('#slot .mbsr input')")
         q.click(inp, 200)
@@ -767,7 +907,8 @@ def g_u3(p, b, eng):
     n = res['NEW']
     T(G, u'🔍 split 옛 uid T0845075 → 두 줄 모두 「옛 uid · 갈라짐」 딱지(「ID」 딱지 0) · Enter → 팝업 둘',
       bool(n['줄'] and len(n['줄']) >= 2 and all(any(u'갈라짐' in x for x in r['badge']) for r in n['줄'][:2]) and not any('ID' == x for r in n['줄'] for x in r['badge']) and len(n['팝업']) == 2), n)
-    T(G + '-헛', u'헛잣대 바탕 — 첫 줄 「ID」 딱지 · Enter 팝업 없음', bool(res['BASE']['줄'] and any('ID' == x for r in res['BASE']['줄'] for x in r['badge']) and not res['BASE']['팝업']), res['BASE'])
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — 첫 줄 「ID」 딱지 · Enter 팝업 없음', bool(res['BASE']['줄'] and any('ID' == x for r in res['BASE']['줄'] for x in r['badge']) and not res['BASE']['팝업']), res['BASE'])
 
 
 def g_u4(p, b, eng):
@@ -802,17 +943,21 @@ def g_u6(p, b, eng):
         pool = un_pool(law)   # ★ sp_view4(10/3) — 목차가 생긴 법(상표)은 미분류 풀 = 어느 마디에도 없는 리담 문항의 지문 수(데이터로 셈) · 목차 없는 법은 옛 잣대(OXPOOL)
         if pool is None:
             pool = p.ev("()=>Object.keys(OXPOOL||{}).length")
-        home(b, law)
-        cb = b.ev("()=>__UZ.hmChip('^미분류')")
+        if QJ.GATE:   # 바탕 칩(헛잣대 재료)
+            home(b, law)
+            cb = b.ev("()=>__UZ.hmChip('^미분류')")
         T(G, u'%s 히트맵 「미분류 (리담)」 칩 = 서랍(레일) = 풀' % law, bool(c and dl and c['n'] == int(dl['n']) == pool), {'칩': c, '서랍': dl, '풀': pool})
-        T(G + '-헛', u'%s 헛잣대 바탕 — 칩 ≠ 풀(겹친 열쇠)' % law, bool(cb and cb['n'] != b.ev("()=>Object.keys(OXPOOL||{}).length")), cb)
-    home(p); home(b)
+        if QJ.GATE:   # 헛잣대(관문만)
+            T(G + '-헛', u'%s 헛잣대 바탕 — 칩 ≠ 풀(겹친 열쇠)' % law, bool(cb and cb['n'] != b.ev("()=>Object.keys(OXPOOL||{}).length")), cb)
+    home(p)
+    if QJ.GATE:
+        home(b)
 
 
 def g_u7(p, b, eng):
     G = 'u-7'
     res = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in ((('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),)):
         home(q)
         out = {}
         for y, nos in (('2016', ['3', '4', '11', '13']), ('2018', ['4'])):
@@ -825,17 +970,22 @@ def g_u7(p, b, eng):
                 nb = q.ev("()=>__UZ.exvNext()")
                 if not nb:
                     break
-                q.click(nb, 1200)
+                if QJ.REGRESS:
+                    _sg = q.ev(_EXSIG)
+                q.click(nb, 1200 if QJ.GATE or not _A2['u7_next'] else 0)
+                if QJ.REGRESS:
+                    _a2(q, 'u7_next', _EXSIGCHG, 1200, 'u7_next: ▶ 다음 → 문항 번호 목록이 바뀜', arg=_sg)
             out[y] = [n for n in nos if n in seen]
         q.ev("()=>{S.jimunTab='ox';S.exvPg={}}")
         out['1998'] = q.ev("()=>(VJ.qs||[]).some(q=>String(q.연도)==='1998'&&/A와 B가 특허권을 공유한/.test(q.발문||''))")
         res[who] = out
     n = res['NEW']
     T(G, u'새 문항 앱 — 기출뷰 2016 → 3·4·11·13번 · 2018 → 4번 보임 · 1998 「A와 B가 특허권을 공유한」 문항', n['2016'] == ['3', '4', '11', '13'] and n['2018'] == ['4'] and n['1998'], n)
-    T(G + '-헛', u'헛잣대 바탕 — 2016 3·4·11 · 2018 4 없음', res['BASE']['2016'] != ['3', '4', '11', '13'] and res['BASE']['2018'] != ['4'], res['BASE'])
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — 2016 3·4·11 · 2018 4 없음', res['BASE']['2016'] != ['3', '4', '11', '13'] and res['BASE']['2018'] != ['4'], res['BASE'])
     # 조문 패널 — 특허법 제99조에 1998-35-5 선지(★ jo_wonmun 뒤로는 오른쪽 패널 대신 떠 있는 정오문제 창 · 두 꼴 다 읽는다)
     pans = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in ((('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),)):
         pans[who] = q.ev("""async()=>{try{closeAllPops();}catch(e){}S.tab='jo';S.law='특허법';S.jo='제99조';S.joPanel=true;S.joPanelP=0;await render();
           const w=ms=>new Promise(r=>setTimeout(r,ms));for(let i=0;i<100&&!(document.querySelector('#slot .jopane')||document.querySelector('.pop.wm-jp'));i++)await w(100);
           const ids=new Set();for(let pg=0;pg<12;pg++){S.joPanelP=pg;await render();await w(300);const cs=[...document.querySelectorAll('#slot .jopane > [id^="jp-"], .pop.wm-jp .jpcards > [id^="jp-"]')].map(c=>c.id.slice(3));const n0=ids.size;cs.forEach(x=>ids.add(x));if(ids.size===n0&&pg>0)break;}
@@ -843,7 +993,8 @@ def g_u7(p, b, eng):
           S.joPanelP=0;const a=[...ids];return {n:a.length,tr:a.filter(x=>/^TR8903/.test(x)),chips:y98,y1998:!!(y98||[]).some(t=>/^1998/.test(t))}}""")
         q.ev("()=>{S.tab='jimun';S.jimunTab='ox';S.joPanel=false;render()}"); q.pg.wait_for_timeout(1200)
     T(G, u'조문 패널 — 특허법 제99조 정오문제에 1998-35-5(PM-0311 · 1989 3번과 같은 글 = TR8903x 한 uid) 선지 보임 · 카드에 1998 출제연도 칩', bool(pans['NEW'] and len(pans['NEW']['tr']) >= 4 and pans['NEW']['y1998']), pans['NEW'])
-    T(G + '-헛', u'헛잣대 바탕 — 같은 선지(1989 3번)는 있으나 1998 칩 없음', not (pans['BASE'] or {}).get('y1998'), pans['BASE'])
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — 같은 선지(1989 3번)는 있으나 1998 칩 없음', not (pans['BASE'] or {}).get('y1998'), pans['BASE'])
 
 
 MBREF = {'chromium': _MBREF, 'webkit': _MBREFWK}
@@ -889,10 +1040,11 @@ def g_a28(p, b, eng):
     bad = {gk: {k: v for k, v in r.items() if not (v[0] == v[1] == v[2])} for gk, r in res.items()}
     T(G, u'히트맵 대목차 칩 = 첫 화면 편 카드 「총 N」 = 서랍 편 머리 — 편 전부 · 기출 %d 편 · 기타 %d 편' % (len(res['g']), len(res['x'])),
       bool(res['g']) and bool(res['x']) and not bad['g'] and not bad['x'], {'기출 [칩, 카드, 서랍]': res['g'], '기타': res['x'], '어긋남': bad})
-    home(b)
-    rb = triple(b)
-    badb = {k: v for k, v in rb.items() if not (v[0] == v[1] == v[2])}
-    T(G + '-헛', u'헛잣대 바탕 — 칩 · 카드 · 서랍이 어긋난 편 있음', bool(badb), {'어긋남 [칩, 카드, 서랍]': badb})
+    if QJ.GATE:   # 헛잣대(관문만) — 바탕 편 칩
+        home(b)
+        rb = triple(b)
+        badb = {k: v for k, v in rb.items() if not (v[0] == v[1] == v[2])}
+        T(G + '-헛', u'헛잣대 바탕 — 칩 · 카드 · 서랍이 어긋난 편 있음', bool(badb), {'어긋남 [칩, 카드, 서랍]': badb})
 
 
 BR = {}
@@ -900,27 +1052,44 @@ PARTS = [('a8', g_a8), ('a6', g_a6), ('a8b', g_a8b), ('a7', g_a7), ('a7s', g_a7s
          ('c1', g_c1), ('c2', g_c2), ('c3', g_c3), ('c4', g_c4), ('c56', g_c56w), ('c7', g_c7), ('c9', g_c9), ('c10', g_c10), ('c11', g_c11w), ('c12', g_c12),
          ('u1', g_u1), ('u2', g_u2), ('u3', g_u3), ('u4', g_u4), ('u6', g_u6), ('u7', g_u7)]
 DPARTS = [('a7d', d_a7), ('ud', d_u)]
+SMOKE_PARTS = {'a28': ('chromium',), 'c56': ('chromium', 'webkit')}   # smoke(_task_qa_slim A-4) — a28(1차객 첫 화면 칩 = 카드 = 서랍 편 머리 · Chromium) · c56(폰 390 손가락 기록 칸 톡 → 출처 · × · Chromium + WebKit = 폰 폭 터치) · ERR(Chromium) · 그 밖은 건넘
 
 
 def run_engine(pw, eng):
+    if QJ.SMOKE and not any(eng in v for v in SMOKE_PARTS.values()):   # smoke — 이 엔진에서 잴 smoke 칸이 없으면 브라우저도 안 띄운다
+        return
     br = getattr(pw, eng).launch()
     BR[eng] = br
     (ns, nd, ne), (bs, bd, be) = envs()
     try:
-        p = Pg(br, eng, 'uzN', ns, nd, ne)
-        b = Pg(br, eng, 'uzB', bs, bd, be)
+        if not (QJ.SMOKE and not any(k != 'c56' and eng in v for k, v in SMOKE_PARTS.items())):
+            p = Pg(br, eng, 'uzN', ns, nd, ne)
+            QJ.launch('new')
+        else:
+            p = None   # smoke — c56 만 도는 엔진은 제 컨텍스트라 NEW 한 페이지를 안 띄운다
+        if QJ.GATE:
+            b = Pg(br, eng, 'uzB', bs, bd, be)
+            QJ.launch('base')
+        else:
+            b = None   # regress — 바탕 Pg 를 안 띄운다
         try:
             for k, fn in PARTS:
                 if ONLY and k not in ONLY:
+                    continue
+                if QJ.SMOKE and eng not in SMOKE_PARTS.get(k, ()):
                     continue
                 print('── %s · %s' % (eng, k), flush=True)
                 try:
                     fn(p, b, eng)
                 except Exception as e:
                     T('RUN', u'%s · %s 묶음이 멈춤' % (eng, k), False, repr(e)[:600])
-            T('ERR', u'%s — NEW 앱 오류 0' % eng, not p.errs_all(), p.errs_all()[:6])
+            if not QJ.SMOKE or p is not None:
+                T('ERR', u'%s — NEW 앱 오류 0' % eng, not p.errs_all(), p.errs_all()[:6])
         finally:
-            p.close(); b.close()
+            if not QJ.SMOKE or p is not None:
+                p.close()
+            if QJ.GATE:
+                b.close()
     finally:
         br.close()
 
@@ -929,7 +1098,7 @@ def main():
     os.makedirs(M.WORK, exist_ok=True)
     t0 = time.time()
     for k, fn in DPARTS:
-        if not ONLY or k in ONLY:
+        if (not ONLY or k in ONLY) and not QJ.SMOKE:
             try:
                 fn()
             except Exception as e:

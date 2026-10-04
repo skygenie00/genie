@@ -13,6 +13,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안
 _NR = _roots.need_n('민법 교재 낱말 굽기 스크립트(minbeop/script/_book_words_build.py)')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import io, json, os, re, sys, time, gzip, glob, shutil, hashlib, tempfile, subprocess, threading, socketserver, http.server, urllib.parse, collections
 sys.stdout.reconfigure(encoding='utf-8')
@@ -29,6 +30,8 @@ _DATA = ARG('--data', _roots.genie(r'jo\data'))
 _EXAM = ARG('--exam')
 ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
+if QJ.SMOKE:   # smoke: Chromium 만(이 하네스의 앱 칸은 1440 폭 — 폰 폭 WebKit 터치 칸이 없다)
+    ENGS = [x for x in ENGS if x == 'chromium']
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jo_book8_result.txt'))
 MBP = ARG('--mbpdf', _roots.mbpdf())
 W8 = os.path.join(MBP, 'words', 'patent_hr8')
@@ -194,41 +197,56 @@ def d_b1():
       meta.get('pages') == 805 and meta.get('pdfMd5') == '94f115f0a0e2d4387278e600e12fb753' and meta.get('printOffset') == -10
       and len(glob.glob(os.path.join(W8, 'ox_book_patent_hr8_p*.json.gz'))) == 805 and len(meta.get('pageHash') or []) == 805,
       {k: meta.get(k) for k in ('docid', 'file', 'pages', 'pdfMd5', 'printOffset', 'unit', 'norm', 'wmDropped')})
+    if QJ.SMOKE:   # smoke 칸 = 1-1(책메타 · 쪽 파일 수 805) 하나 — 805 쪽 읽기는 건넘
+        return
     at = ph = band = 0
     for p in range(1, 806):
         cs = page_chars(p)
         s = ''.join(c for c, _, _ in cs)
         at += s.count('@'); ph += len(re.findall(r'(?<!\d)01[016789][-.]?\d{3,4}[-.]?\d{4}(?!\d)', s)); band += sum(1 for _, _, y in cs if y >= 1974)
     T(G, '글자층 805 쪽 — 「@」 0 · 휴대전화 꼴(앞뒤 숫자 없음) 0 · 쪽 아래 띠(y ≥ 1974 = 830pt) 글자 0', at == 0 and ph == 0 and band == 0, {'@': at, '전화 꼴': ph, '아래 띠': band})
-    import pymupdf
-    doc = pymupdf.open(PDF8)
-    raw = sum(1 for pg in doc for b in pg.get_text('rawdict')['blocks'] if b.get('type') == 0 for l in b['lines']
-              if WMRX.search(''.join(c['c'] for s in l['spans'] for c in s['chars'])))
-    T(G + '-헛', '헛잣대 — 원본 PDF 글자층(빼기 전)에는 워터마크 꼴 줄이 있다(센 수만 · 값 안 찍음)', raw > 0, {'워터마크 꼴 줄': raw})
+    if QJ.GATE:
+        import pymupdf
+        doc = pymupdf.open(PDF8)
+        raw = sum(1 for pg in doc for b in pg.get_text('rawdict')['blocks'] if b.get('type') == 0 for l in b['lines']
+                  if WMRX.search(''.join(c['c'] for s in l['spans'] for c in s['chars'])))
+        T(G + '-헛', '헛잣대 — 원본 PDF 글자층(빼기 전)에는 워터마크 꼴 줄이 있다(센 수만 · 값 안 찍음)', raw > 0, {'워터마크 꼴 줄': raw})
     # 멱등 — 새 자리에 두 번 굽기 → 쪽 바이트 = 올린 것 · 책메타(builtAt 빼고) 같음 · 두 번째 = 첫 번째(바이트)
-    tmp = os.path.join(tempfile.gettempdir(), 'h_book8_bake')
-    shutil.rmtree(tmp, ignore_errors=True)
-    env = dict(os.environ, MINBEOP_BOOK_OUT=tmp, PYTHONIOENCODING='utf-8')
-    outs = []
-    for _ in range(2):
-        subprocess.run([sys.executable, BAKE, 'patent_hr8'], env=env, capture_output=True)
-        d = os.path.join(tmp, 'patent_hr8')
-        outs.append({f: hashlib.md5(open(os.path.join(d, f), 'rb').read()).hexdigest() for f in os.listdir(d)})
-    mine = {f: hashlib.md5(open(os.path.join(W8, f), 'rb').read()).hexdigest() for f in os.listdir(W8) if f.endswith('.gz')}
-    m2 = jl(os.path.join(tmp, 'patent_hr8', '책메타.json'))
-    same_meta = {k: v for k, v in m2.items() if k != 'builtAt'} == {k: v for k, v in meta.items() if k != 'builtAt'}
-    T(G, '멱등 — 새 자리에 두 번 구움 → 두 번째 = 첫 번째(806 파일 바이트) · 쪽 805 = 올린 것(바이트) · 책메타 = 올린 것(builtAt 빼고)',
-      outs[0] == outs[1] and all(outs[0].get(f) == h for f, h in mine.items()) and len(mine) == 805 and same_meta,
-      {'파일': len(outs[0]), '쪽 같음': sum(1 for f, h in mine.items() if outs[0].get(f) == h), '책메타': same_meta})
+    if QJ.GATE:
+        tmp = os.path.join(tempfile.gettempdir(), 'h_book8_bake')
+        shutil.rmtree(tmp, ignore_errors=True)
+        env = dict(os.environ, MINBEOP_BOOK_OUT=tmp, PYTHONIOENCODING='utf-8')
+        outs = []
+        QJ.sub('python:bake', 2)
+        for _ in range(2):
+            subprocess.run([sys.executable, BAKE, 'patent_hr8'], env=env, capture_output=True)
+            d = os.path.join(tmp, 'patent_hr8')
+            outs.append({f: hashlib.md5(open(os.path.join(d, f), 'rb').read()).hexdigest() for f in os.listdir(d)})
+        mine = {f: hashlib.md5(open(os.path.join(W8, f), 'rb').read()).hexdigest() for f in os.listdir(W8) if f.endswith('.gz')}
+        m2 = jl(os.path.join(tmp, 'patent_hr8', '책메타.json'))
+        same_meta = {k: v for k, v in m2.items() if k != 'builtAt'} == {k: v for k, v in meta.items() if k != 'builtAt'}
+        T(G, '멱등 — 새 자리에 두 번 구움 → 두 번째 = 첫 번째(806 파일 바이트) · 쪽 805 = 올린 것(바이트) · 책메타 = 올린 것(builtAt 빼고)',
+          outs[0] == outs[1] and all(outs[0].get(f) == h for f, h in mine.items()) and len(mine) == 805 and same_meta,
+          {'파일': len(outs[0]), '쪽 같음': sum(1 for f, h in mine.items() if outs[0].get(f) == h), '책메타': same_meta})
+    else:
+        # regress: ⚙ 굽기를 다시 안 돈다(굽기 재현성 = 굽기 판 자기 관문 몫 · _task_qa_slim 정한 것 2) → 산출 파일만 읽는다: 쪽 805 md5 = 책메타 pageHash(굽던 때 쪽 바이트 md5) · 쪽 파일 805
+        mine = {f: hashlib.md5(open(os.path.join(W8, f), 'rb').read()).hexdigest() for f in os.listdir(W8) if re.match(r'^ox_book_patent_hr8_p\d+\.json\.gz$', f)}   # 쪽 파일만(글.json.gz 는 10/2 에 같은 폴더에 생긴 다른 산출 — gate 의 `.gz 전부` 잣대는 그래서 지금 806 개로 FAIL)
+        _ph = meta.get('pageHash') or []
+        _bp = [mine.get('ox_book_patent_hr8_p%d.json.gz' % _i) for _i in range(1, 806)]
+        T(G, '멱등 — 새 자리에 두 번 구움 → 두 번째 = 첫 번째(806 파일 바이트) · 쪽 805 = 올린 것(바이트) · 책메타 = 올린 것(builtAt 빼고)',
+          len(mine) == 805 and _bp == _ph,
+          {'파일': len(mine), '쪽 같음': sum(1 for _a, _b in zip(_bp, _ph) if _a == _b), '굽기 안 함': 'regress — 쪽 md5 = 책메타 pageHash 로 갈음(두 번 굽기 · 책메타 대조는 gate)'})
     # 원격 = 로컬(비공개 저장소 · 받는 쪽 md5)
-    git = lambda *a: subprocess.run(['git', '-C', MBP, '-c', 'core.quotepath=false'] + list(a), capture_output=True)
-    git('fetch', '-q')
-    rem = {}
-    for f in ('pdf/patent_hr8.pdf', 'words/patent_hr8/책메타.json', 'words/patent_hr8/대응.json', 'words/patent_hr8/ox_book_patent_hr8_p401.json.gz'):
-        b = git('show', 'origin/main:' + f).stdout
-        loc = open(os.path.join(MBP, f.replace('/', os.sep)), 'rb').read() if os.path.exists(os.path.join(MBP, f.replace('/', os.sep))) else None
-        rem[f] = [hashlib.md5(b).hexdigest()[:8] if b else None, hashlib.md5(loc).hexdigest()[:8] if loc else None]
-    T(G, '비공개 저장소 원격(origin/main) = 로컬 md5 — pdf(94f115f0) · 책메타 · 대응.json · 쪽 한 장', all(a and a == b for a, b in rem.values()) and rem['pdf/patent_hr8.pdf'][0] == '94f115f0', rem)
+    if QJ.GATE:
+        git = lambda *a: subprocess.run(['git', '-C', MBP, '-c', 'core.quotepath=false'] + list(a), capture_output=True)
+        QJ.sub('git:fetch')
+        git('fetch', '-q')
+        rem = {}
+        for f in ('pdf/patent_hr8.pdf', 'words/patent_hr8/책메타.json', 'words/patent_hr8/대응.json', 'words/patent_hr8/ox_book_patent_hr8_p401.json.gz'):
+            b = git('show', 'origin/main:' + f).stdout
+            loc = open(os.path.join(MBP, f.replace('/', os.sep)), 'rb').read() if os.path.exists(os.path.join(MBP, f.replace('/', os.sep))) else None
+            rem[f] = [hashlib.md5(b).hexdigest()[:8] if b else None, hashlib.md5(loc).hexdigest()[:8] if loc else None]
+        T(G, '비공개 저장소 원격(origin/main) = 로컬 md5 — pdf(94f115f0) · 책메타 · 대응.json · 쪽 한 장', all(a and a == b for a, b in rem.values()) and rem['pdf/patent_hr8.pdf'][0] == '94f115f0', rem)
 
 
 def d_b2():
@@ -267,26 +285,27 @@ def d_b2():
         out[u] = {'id': i, '쪽': r and r['p'], '인쇄': r and r['p'] - 10, 'how': r and r['how'], 'c': r and r.get('c'), '자리 글 ⊇ 지문 글': bool(q) and q in got, '지문 길이': len(q), '자리 글 길이': len(got)}
     T(G, '표본 셋 — P7-0000-1(TJ0100001) · P7-0089(T2562011 · 12-유제) · T1552093(제140조 창) — 1등 자리 상자 안 글자층 ⊇ 지문 글', all(v['자리 글 ⊇ 지문 글'] for v in out.values()), out)
     # 채팅 표와 다른 까닭(1등 쪽 다름) — 갈래만
-    P = BM.load_pages()
-    cat = collections.Counter(); ex = collections.defaultdict(list)
-    for u, v in ref.items():
-        r = (rows.get(u) or [None])[0]
-        if r and r['p'] == v['p8pdf']:
-            continue
-        z = by.get(u); t = BM.norm(BM.strip_tags(BM.p7text(BM.stmt(z['t'])))) if z else ''
-        cp = v['p8pdf']
-        if not r:
-            c = '여기 못 찾음(8판에 없음)'
-        elif cp in P and t and t in P[cp]['m']:
-            c = '같은 글 두 자리 — 여기 = 번호 바로 뒤·발문 뒤·어림 쪽 쪽'
-        elif cp > BM.BODY_END and r['p'] <= BM.BODY_END:
-            c = '채팅 = 뒤 묶음 되풀이 · 여기 = 본문'
-        elif cp in P and t[:24] and t[:24] in P[cp]['m']:
-            c = '채팅 쪽엔 앞 24자만 같음(다른 지문) · 여기 = 통째'
-        else:
-            c = '채팅 쪽에 그 글 없음 · 여기 = %s' % r['how']
-        cat[c] += 1; ex[c].append('%s %s→%s' % (v['id'], cp, r['p'] if r else None))
-    N(G, '채팅 표(앞 24자)와 1등 쪽이 다른 %d — 까닭 갈래' % sum(cat.values()), {c: [n, ex[c][:6]] for c, n in cat.most_common()})
+    if QJ.GATE:
+        P = BM.load_pages()
+        cat = collections.Counter(); ex = collections.defaultdict(list)
+        for u, v in ref.items():
+            r = (rows.get(u) or [None])[0]
+            if r and r['p'] == v['p8pdf']:
+                continue
+            z = by.get(u); t = BM.norm(BM.strip_tags(BM.p7text(BM.stmt(z['t'])))) if z else ''
+            cp = v['p8pdf']
+            if not r:
+                c = '여기 못 찾음(8판에 없음)'
+            elif cp in P and t and t in P[cp]['m']:
+                c = '같은 글 두 자리 — 여기 = 번호 바로 뒤·발문 뒤·어림 쪽 쪽'
+            elif cp > BM.BODY_END and r['p'] <= BM.BODY_END:
+                c = '채팅 = 뒤 묶음 되풀이 · 여기 = 본문'
+            elif cp in P and t[:24] and t[:24] in P[cp]['m']:
+                c = '채팅 쪽엔 앞 24자만 같음(다른 지문) · 여기 = 통째'
+            else:
+                c = '채팅 쪽에 그 글 없음 · 여기 = %s' % r['how']
+            cat[c] += 1; ex[c].append('%s %s→%s' % (v['id'], cp, r['p'] if r else None))
+        N(G, '채팅 표(앞 24자)와 1등 쪽이 다른 %d — 까닭 갈래' % sum(cat.values()), {c: [n, ex[c][:6]] for c, n in cat.most_common()})
 
 
 # ══════════ 앱 관문 ══════════
@@ -303,6 +322,8 @@ def g_a3(p, b, eng):
     D = jl(os.path.join(W8, '대응.json'))
     for u, i in SAMPLE:
         for how in (('mouse', 'touch') if u == SAMPLE[1][0] else ('mouse',)):
+            if QJ.SMOKE and not (u == SAMPLE[1][0] and how == 'mouse'):   # smoke 칸 = a3-2(T2562011 · 마우스)
+                continue
             via = open_card(p, u)
             at, bx = open_box(p, u, how)
             bx = p.ev("()=>__B8.snipReady()") or bx
@@ -321,9 +342,10 @@ def g_a3(p, b, eng):
             T(G, '%s %s(%s) %s · 카드 = ' % (eng, u, i, '마우스' if how == 'mouse' else '손가락') + ('단원 줄' if via == 'unit' else '🔍 검색 → 지문 팝업(마디에 안 붙은 지문)') + ' — ID 칩 → 「📚 교재 자리」: 정리OMR 줄 아래 「특허법 해례 8판 · %s쪽(revfix0928night 뒤 p.N) · PDF %s · 확신 %s」 + 둘째 줄 그 자리 글 · 「다음 판에서…」 0 → 줄 누름 → 교재 창 PDF %s · 칠한 자리 = 대응표 r(±0.2%%)'
               % (r0 and r0['p'] - 10, r0 and r0['p'], r0 and r0.get('c'), r0 and r0['p']),
               ok1 and ok2, {'칩': at, '창': bx, '쪽 창': bk, '대응 r%': want})
-    go_key(b, SAMPLE[1][0])
-    at, bb = open_box(b, SAMPLE[1][0])
-    T(G + '-헛', '%s 헛잣대 바탕 — 「📚 교재 자리」에 8판 줄 없음 · 「다음 판에서…」 글 있음' % eng, bool(bb) and not bb.get('p8u') and bb.get('next'), bb)
+    if QJ.GATE:
+        go_key(b, SAMPLE[1][0])
+        at, bb = open_box(b, SAMPLE[1][0])
+        T(G + '-헛', '%s 헛잣대 바탕 — 「📚 교재 자리」에 8판 줄 없음 · 「다음 판에서…」 글 있음' % eng, bool(bb) and not bb.get('p8u') and bb.get('next'), bb)
     p.ev("()=>__B8.closeAll()")
 
 
@@ -365,6 +387,7 @@ def g_a4(p, b, eng, br):
     q = None
     try:
         q = Pg(br, eng, 'b8R', ns, nd, ne, remote=remote)
+        QJ.launch('new')
         q.until("()=>typeof syncRecords==='function'", ms=5000)
         q.ev("()=>syncRecords(true)"); q.pg.wait_for_timeout(1500)
         go_key(q, u)
@@ -389,9 +412,10 @@ def g_a4(p, b, eng, br):
         q.ev("()=>{S.law='특허법';S.tab='jimun';S.jimunTab='ox';return render();}")
         q.pg.wait_for_timeout(800)
         return o
-    orph, orphb = orph_of(p), orph_of(b)
+    orph, orphb = orph_of(p), (orph_of(b) if QJ.GATE else None)
     T(G, '%s 민소 정리 탭 캔버스 머리 「교재 확정 N 고아」 — 1차객 8판 칸(p8|uid)은 세지 않음(배지 숨음)' % eng, bool(orph) and not orph.get('vis'), orph)
-    T(G + '-헛', '%s 헛잣대 바탕 — 같은 칸을 「교재 확정 1 고아」로 센다' % eng, bool(orphb) and orphb.get('vis') and '고아' in (orphb.get('t') or ''), orphb)
+    if QJ.GATE:
+        T(G + '-헛', '%s 헛잣대 바탕 — 같은 칸을 「교재 확정 1 고아」로 센다' % eng, bool(orphb) and orphb.get('vis') and '고아' in (orphb.get('t') or ''), orphb)
 
 
 def g_a5(p, b, eng):
@@ -443,22 +467,32 @@ def run_engine(pw, eng):
     br = getattr(pw, eng).launch()
     BR[eng] = br
     ns, nd, ne = M.new_env()
-    bs, bd, be = M.base_env()
+    if QJ.GATE:
+        QJ.sub('git:show-app'); QJ.sub('git:archive', 2)
+        bs, bd, be = M.base_env()
     try:
         p = Pg(br, eng, 'p8N', ns, nd, ne)
-        b = Pg(br, eng, 'p8B', bs, bd, be)
+        QJ.launch('new')
+        b = Pg(br, eng, 'p8B', bs, bd, be) if QJ.GATE else None
+        if QJ.GATE:
+            QJ.launch('base')
         try:
             for k, fn in PARTS:
                 if ONLY and k not in ONLY:
                     continue
+                if QJ.SMOKE and k != 'a3':
+                    continue
                 print('── %s · %s' % (eng, k), flush=True)
                 try:
-                    fn(p, b, eng, br) if k == 'a4' else fn(p, b, eng)
+                    with QJ.stage('%s:%s' % (eng, k)):
+                        fn(p, b, eng, br) if k == 'a4' else fn(p, b, eng)
                 except Exception as e:
                     T('RUN', u'%s · %s 묶음이 멈춤' % (eng, k), False, repr(e)[:600])
             T('ERR', u'%s — NEW 앱 오류 0' % eng, not p.errs_all(), p.errs_all()[:6])
         finally:
-            p.close(); b.close()
+            p.close()
+            if QJ.GATE:
+                b.close()
     finally:
         br.close()
 
@@ -468,9 +502,12 @@ def main():
     os.makedirs(M.WORK, exist_ok=True)
     t0 = time.time()
     for k, fn in DPARTS:
+        if QJ.SMOKE and k != 'd1':
+            continue
         if not ONLY or k in ONLY:
             try:
-                fn()
+                with QJ.stage('data:' + k):
+                    fn()
             except Exception as e:
                 T('RUN', u'%s 데이터 묶음이 멈춤' % k, False, repr(e)[:600])
     if not ONLY or any(k in ONLY for k, _ in PARTS):

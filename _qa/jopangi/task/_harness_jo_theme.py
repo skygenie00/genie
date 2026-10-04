@@ -21,11 +21,17 @@ r"""_task_jo_theme §B 관문 — 조문 「테마」(서랍 테마 줄·거름 
   자리 = _roots(GENIE_ROOT · MBPDF_ROOT) — 클라우드: GENIE_ROOT=/home/user/genie MBPDF_ROOT=/home/user/minbeoppdf
   WebKit = 터치 칸(B1 · B6)만 · 이 컴퓨터에 WebKit 이 없으면 「안 잼」
 """
+# --mode gate|regress|smoke (qa_slim 2026-10-04 · 없으면 gate = 지금과 같음 · 판 관문)
+#   regress = NEW 만 띄운다(바탕 cedc251 · 8d1383d · eacc28e 판 풀기·띄우기 0) · 바탕 값이 기댓값인 칸 = 바탕 스냅샷(QJ.base) · B13(하위 하네스 4번) · B23(집계) · 헛잣대 칸은 gate 에서만 ·
+#             고정 대기 → 앱이 내놓는 표지(상한 = gate 의 그 ms · 환경변수 QA_SLIM_KEEP_FIXED=<자리 이름 쉼표 · *> 로 흔들리는 자리만 고정 대기로 되돌림) ·
+#             B14 · B24 = 기기마다 앱 한 번 띄워 화면을 이어서(같은 화면 한 번) · 덧판·H 바꿔 끼우기는 처음 쓸 때
+#   smoke   = regress 가운데 B3-1 · B7-1 · B7-2 만
 import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
 _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — qa_slim(2026-10-04) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다
 import base64, gzip, hashlib, io, json, os, re, shutil, sys, tempfile, threading, time, subprocess, urllib.parse   # noqa: E402
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer   # noqa: E402
 try:
@@ -65,6 +71,63 @@ def git(*a):
 
 
 app_src = H.app_src
+
+# ── qa_slim(2026-10-04) regress 도우미 — 이름이 `_rg` · `_RG` 로 시작하는 것 = gate 에서 안 쓰는 갈래(gate 에서 도는 줄은 원래 글 그대로 · `if QJ.GATE:` 안 · 줄마다 `if QJ.GATE else` 로 갈림) ──
+_RG_KEEP = set(x for x in (os.environ.get('QA_SLIM_KEEP_FIXED') or '').split(',') if x)   # 흔들리는 자리만 고정 대기로 되돌리는 손잡이(자리 이름 쉼표 · * = 전부)
+_RG_STATE = {'installed': False, 'over': False}
+_RG_SMOKE_GATES = ('B3', 'B7')   # smoke 칸(B3-1 · B7-1 · B7-2)이 든 관문
+# 표지 = 앱이 이미 내놓는 것만(요소 · 글 · 클래스 · busy · __TM 하네스 표지) — 목록 = _qa_slim_out\_a2\_harness_jo_theme_표지.md
+_RG_NOT_BUSY = "!(typeof busy !== 'undefined' && busy)"
+_RG_TM_ON = r"() => { const b = document.querySelector('.jtbar .tmtg'); return !!b && b.textContent.trim() === '목차' && !(typeof busy !== 'undefined' && busy) && document.querySelectorAll('#slot .tree .r.tmr').length > 0; }"
+_RG_TM_OFF = r"() => { const b = document.querySelector('.jtbar .tmtg'); return !!b && /^테마 \d+$/.test(b.textContent.trim()) && !(typeof busy !== 'undefined' && busy) && document.querySelectorAll('#slot .tree .r.tmr').length === 0 && document.querySelectorAll('#slot .tree .r[data-jo]').length > 0; }"
+_RG_DOT = r"(v) => { const d = document.querySelector('.jtbar .tmdot'); return !!d && tmDotGet() === v && d.classList.contains('on') === (v !== 0) && !(typeof busy !== 'undefined' && busy); }"
+_RG_WIN = r"(k) => { const w = __TM.pop(k); return !!w && !!w.querySelector('.tmbody, .tmlist, .tmof, .thsrch') && !!w.querySelector(':scope > .prsz'); }"
+_RG_JOPOP = r"(k) => { const w = POPS.find(x => x._pk === k); return !!w && !/불러오는 중/.test((w.querySelector('.pt') || {}).textContent || ''); }"
+_RG_JOGO = r"() => { const w = POPS.filter(x => (x._pk || '').indexOf('jo|') === 0).pop(); return !!w && !!w.querySelector('.ph .ptgo button'); }"
+_RG_TMJO = r"(t) => { const b = document.querySelector('.jomt .tmjo'); return !!b && b.textContent.trim() === t && !(typeof busy !== 'undefined' && busy); }"
+_RG_ACRM = r"(on) => { const w = __TM.pop('theme|t02'); return !!w && (!!w.querySelector('.thacm') === on); }"
+_RG_ED = r"() => document.querySelectorAll('.tmed').length >= 1"
+_RG_NOED = r"() => document.querySelectorAll('.tmed').length === 0 && !(typeof busy !== 'undefined' && busy)"
+_RG_STEP = r"(o) => { const s = document.querySelector('.jtbar .jstep:not(.tmtg)'); if (!s) return false; if (s.disabled) return !(typeof busy !== 'undefined' && busy); return s.textContent.trim() !== o && !(typeof busy !== 'undefined' && busy); }"
+
+
+def _rg_eng(br):
+    return br.browser_type.name
+
+
+def _rg_cid(br, name, *parts):
+    """기준 칸 id — 엔진 · 기기 · 법 …을 붙여 한 실행 안에서 겹치지 않게(QJ.base)"""
+    return '%s@%s%s' % (name, _rg_eng(br), ''.join('/' + str(x) for x in parts))
+
+
+def _rg_md5(s):
+    """큰 DOM · 긴 글은 md5 로 기준 스냅샷에 둔다"""
+    return hashlib.md5(('' if s is None else str(s)).encode('utf-8')).hexdigest()
+
+
+def _rg_wait(p, ms, js, what, arg=None):
+    """고정 대기 대신 표지를 기다린다 — 상한 = gate 의 고정 대기와 같은 ms(못 만나면 gate 와 같은 시간) · 표지 없으면(js=None) 고정 대기 + 까닭(QJ.sleep)"""
+    if js is None:
+        QJ.sleep(ms, what, p.pg)   # page 를 넘겨 기다리는 동안 route · 요청이 돈다(time.sleep 은 Playwright 동기 API 에서 멈춘다)
+    elif what in _RG_KEEP or '*' in _RG_KEEP:
+        p.wait(ms)
+    else:
+        QJ.until(p.pg, js, ms, what, arg)
+
+
+def _rg_press(p, a, ms, js, what, arg=None):
+    """p.press(a, ms) 의 regress 갈래 — 누를 수 있으면 눌러 놓고 표지를 기다린다(못 누르면 gate 처럼 기다림 없이 False)"""
+    ok = p.press(a, 0)
+    if ok:
+        _rg_wait(p, ms, js, what, arg)
+    return ok
+
+
+def _rg_idle(p, extra, js, what, arg=None):
+    """p.idle(extra) 의 regress 갈래 — busy 끝남은 그대로 기다리고 뒤에 붙는 고정 extra ms 만 표지로"""
+    p.idle(0)
+    _rg_wait(p, extra, js, what, arg)
+
 
 # ════════════════════════ B-0 합성 재료 ════════════════════════
 SUBJ = ['특허청장', '심사관', '출원인', '특허권자', '대리인', '전용실시권자', '통상실시권자', '법원']   # 여덟 · 「심판」 「기일」 「분변」 은 제 테마 밖 글에 없다(찾기 칸 값이 갈린다)
@@ -192,7 +255,36 @@ def build_overlay():
     return out, md5
 
 
-OVER, PDFMD5 = build_overlay()
+class _RgLazyOver(dict):
+    """regress(A-2-4) — 덧판(full · none)을 import 때 짓지 않고 처음 읽을 때 짓는다 · gate 는 import 때 지금과 같은 입력으로 짓는다"""
+
+    def _rg_fill(self):
+        if not _RG_STATE['over']:
+            _RG_STATE['over'] = True
+            out, _md5 = build_overlay()
+            for k, v in out.items():
+                dict.setdefault(self, k, v)
+
+    def __getitem__(self, k):
+        if not dict.__contains__(self, k):   # 이미 있는 키(real · 쓴 값)는 짓지 않고 돌려준다
+            self._rg_fill()
+        return dict.__getitem__(self, k)
+
+    def get(self, k, d=None):
+        if not dict.__contains__(self, k):
+            self._rg_fill()
+        return dict.get(self, k, d)
+
+    def __contains__(self, k):
+        if not dict.__contains__(self, k):
+            self._rg_fill()
+        return dict.__contains__(self, k)
+
+
+if QJ.GATE:
+    OVER, PDFMD5 = build_overlay()
+else:
+    OVER = _RgLazyOver()
 
 # ════════════════════════ 가짜 원격(기록) ════════════════════════
 class Remote:
@@ -218,9 +310,10 @@ SEED_REC = r"""
   return nf(location.origin+'/__rec/'+rest2,{method:o.method||'GET',headers:h2,body:o.body});}
 """
 _anchor = " if(/cdnjs\\.cloudflare\\.com"
-if SEED_REC not in H.SEED:
-    assert _anchor in H.SEED, 'revfix0929b SEED 모양이 바뀌었다'
-    H.SEED = H.SEED.replace(_anchor, SEED_REC + _anchor, 1)
+if QJ.GATE:
+    if SEED_REC not in H.SEED:
+        assert _anchor in H.SEED, 'revfix0929b SEED 모양이 바뀌었다'
+        H.SEED = H.SEED.replace(_anchor, SEED_REC + _anchor, 1)
 SERVERS = {}
 
 
@@ -295,7 +388,8 @@ def serve_theme(tag, src):
     return srv.server_address[1]
 
 
-H.serve = serve_theme   # 도구 하네스의 Pg 가 이 서버를 쓴다(덧판 · 가짜 원격)
+if QJ.GATE:
+    H.serve = serve_theme   # 도구 하네스의 Pg 가 이 서버를 쓴다(덧판 · 가짜 원격)
 
 # ════════════════════════ 이 판 도구 __TM ════════════════════════
 TM_TOOLS = r"""<script>
@@ -345,14 +439,33 @@ window.__TM = {
 };
 })();
 </script>"""
-if TM_TOOLS not in H.TOOLS:
-    H.TOOLS = H.TOOLS + '\n' + TM_TOOLS
+if QJ.GATE:
+    if TM_TOOLS not in H.TOOLS:
+        H.TOOLS = H.TOOLS + '\n' + TM_TOOLS
+
+
+def _rg_install():
+    """regress(A-2-4) — import 때 안 한 H 바꿔 끼우기(SEED · serve · TOOLS)를 처음 앱을 띄울 때 한다(page 가 부른다) · gate 는 import 때 위 `if QJ.GATE:` 줄들"""
+    if _RG_STATE['installed']:
+        return
+    _RG_STATE['installed'] = True
+    if SEED_REC not in H.SEED:
+        assert _anchor in H.SEED, 'revfix0929b SEED 모양이 바뀌었다'
+        H.SEED = H.SEED.replace(_anchor, SEED_REC + _anchor, 1)
+    H.serve = serve_theme
+    if TM_TOOLS not in H.TOOLS:
+        H.TOOLS = H.TOOLS + '\n' + TM_TOOLS
 
 EXP_ROWS = {'t01': ('{주체능력}', '두0', '§12', [1, 1, 0]), 't02': ('{기일기간}', '두2', '§11', [1, 1, 1]), 't03': ('{분변분재 기간}', '두1', '§4', [0, 0, 1])}
 BKC = ['#2563eb', '#7c3aed', '#059669']
 
 
 def page(br, tag, src, dev, ls=None, keep_remote=False):
+    # qa_slim A-2 — regress 도 관문마다 새 컨텍스트(= 앱 한 번 새로)다: 이 앱의 칸 사이 상태 일부가 메모리라(S.treeTheme · S.popCfg · TM.d · TMED)
+    #   localStorage · IndexedDB 를 비우고 render() 로 되돌려도 안 돌아온다 → 한 쪽을 이어 쓰면 칸 사이 누출이 조용히 틀린다. 합쳐 쓴 곳 = B14 + B24 의 훑기(_rg_sweep_union) 하나뿐.
+    if QJ.REGRESS:
+        _rg_install()
+        QJ.launch('new')   # regress 는 NEW 앱만 띄운다(바탕 띄우기는 gate 에서만 · 그 자리마다 QJ.launch('base'))
     if not keep_remote:
         REMOTE.clear()   # 관문마다 새 원격 — 앞 관문이 올린 기록(4초 뒤 저절로 맞춤)이 새 기기로 새어 들지 않게
     p = H.dev_page(br, tag, src, dev, ls=ls)
@@ -377,10 +490,10 @@ def lp(p, a, ms=700):
     else:
         p.pg.mouse.move(a['cx'], a['cy'])
         p.pg.mouse.down()
-        p.wait(ms)
+        p.wait(ms) if QJ.GATE else QJ.sleep(ms, '길게 누름 유지(마우스 down→up 길이 = 입력 · 앱 450ms 타이머 · 표지 아님)', p.pg)
         p.pg.mouse.up()
-        p.wait(350)
-    return True
+        p.wait(350) if QJ.GATE else QJ.sleep(350, '길게 누름 뗀 뒤 입력 칸(.tmed) 열림 — 칸이 이미 있는 두 번째 누름이 있어 공통 표지 없음', p.pg)
+    return True   # (손가락 길 = 도구 하네스 H.long_press 안 고정 대기 ms + 350 — 읽기만 · regress 에서도 그대로)
 
 
 def rec(p):
@@ -393,17 +506,19 @@ def b1(br, src, base_src, tag):
     for dn, dev in (('PC', PC), ('폰390', PHONE)):
         p = page(br, tag + dn, src, dev)
         jo(p)
-        pb = page(br, tag + 'B' + dn, base_src, dev)
-        jo(pb)
-        base_tree = pb.ev("() => document.querySelector('#slot .tree').outerHTML")
-        pb.close()
+        if QJ.GATE:
+            QJ.launch('base')
+            pb = page(br, tag + 'B' + dn, base_src, dev)
+            jo(pb)
+            base_tree = pb.ev("() => document.querySelector('#slot .tree').outerHTML")
+            pb.close()
         tree0 = p.ev("() => __TM.treeSkel()")
         b = p.ev("() => { const b = document.querySelector('.jtbar .tmtg'); if (!b) return null; const s = document.querySelector('.jtbar .jstep:not(.tmtg)'); const cs = getComputedStyle(b), c2 = s ? getComputedStyle(s) : null;"
                  " return { t: __TM.txt(b), cls: b.className, same: !!c2 && cs.fontSize === c2.fontSize && cs.fontWeight === c2.fontWeight && cs.color === c2.color && cs.borderTopWidth === c2.borderTopWidth && cs.backgroundColor === c2.backgroundColor, hit: __RB.hitBox(b) }; }")
         g1 = bool(b) and b['t'] == '테마 3' and 'uzstep' in b['cls'] and 'jstep' in b['cls'] and b['same'] and (not p.touch or (b['hit']['h'] >= 36 and b['hit']['w'] >= 36))
         ok = ok and g1
         T(G, '%s 「테마 3」 글자 = 「접기1」 꼴(.uzstep.jstep) · 누름 ≥ 36(손가락)' % dn, g1, b)
-        p.press(at(p, '.jtbar .tmtg'), 500)
+        p.press(at(p, '.jtbar .tmtg'), 500) if QJ.GATE else _rg_press(p, at(p, '.jtbar .tmtg'), 500, _RG_TM_ON, 'B1.tmtg')
         rows = p.ev("() => __TM.rows()")
         want = [(k,) + v for k, v in EXP_ROWS.items()]
         good = len(rows) == 3 and all(r['id'] == w[0] and r['t'] == w[1] and r['d2'] == w[2] and r['s'] == w[3] and 'r' in r['cls'].split() and
@@ -413,28 +528,42 @@ def b1(br, src, base_src, tag):
         ok = ok and g2
         T(G, '%s 테마 줄 3(.r 꼴 · 점 색 = bk · 「두N」 「§N」 값%s)' % (dn, ' · 줄 높이 ≥ 36' if p.touch else ''), g2, rows)
         t2 = p.ev("() => __TM.txt(document.querySelector('.jtbar .tmtg'))")
-        p.press(at(p, '.jtbar .tmtg'), 500)
+        p.press(at(p, '.jtbar .tmtg'), 500) if QJ.GATE else _rg_press(p, at(p, '.jtbar .tmtg'), 500, _RG_TM_OFF, 'B1.tmtg')
         tree1 = p.ev("() => __TM.treeSkel()")
-        g3 = t2 == '목차' and tree1 == tree0 == base_tree
-        ok = ok and g3
-        T(G, '%s 「목차」 → 조 줄 복원 · 서랍 outerHTML = 바탕(테마 글자 · 거름 점 빼고)' % dn, g3, {'글자': t2, '처음 = 복원': tree0 == tree1, '= 바탕': tree1 == base_tree, '길이': [len(tree1 or ''), len(base_tree or '')]})
+        if QJ.GATE:
+            g3 = t2 == '목차' and tree1 == tree0 == base_tree
+            ok = ok and g3
+            T(G, '%s 「목차」 → 조 줄 복원 · 서랍 outerHTML = 바탕(테마 글자 · 거름 점 빼고)' % dn, g3, {'글자': t2, '처음 = 복원': tree0 == tree1, '= 바탕': tree1 == base_tree, '길이': [len(tree1 or ''), len(base_tree or '')]})
+        else:
+            bt = QJ.base(_rg_cid(br, 'B1.3', dn), [_rg_md5(tree0), len(tree0 or '')])   # 기준 = 바탕 판(앞 인도판) 같은 기기 서랍 뼈대(테마 글자 · 거름 점 뺀 outerHTML)의 md5 · 길이
+            g3 = t2 == '목차' and tree1 == tree0 and _rg_md5(tree1) == bt[0]
+            ok = ok and g3
+            T(G, '%s 「목차」 → 조 줄 복원 · 서랍 outerHTML = 바탕(테마 글자 · 거름 점 빼고)' % dn, g3, {'글자': t2, '처음 = 복원': tree0 == tree1, '= 바탕': _rg_md5(tree1) == bt[0], '길이': [len(tree1 or ''), bt[1]], '기준': QJ.base_note(_rg_cid(br, 'B1.3', dn))})
         if p.errs:
             ok = False
             T(G, '%s JS 오류' % dn, False, p.errs[:3])
         p.close()
     # 다른 두 법 서랍 = 거름 점 하나만 더(「테마 N」 은 특허법만) · 나머지 outerHTML = 바탕
-    p, pb = page(br, tag + 'L', src, PC), page(br, tag + 'LB', base_src, PC)
+    if QJ.GATE:
+        QJ.launch('base')
+        p, pb = page(br, tag + 'L', src, PC), page(br, tag + 'LB', base_src, PC)
+    else:
+        p = page(br, tag + 'L', src, PC)
     oth = {}
     for law in ('상표법', '디자인보호법'):
-        for q in (p, pb):
+        for q in ((p, pb) if QJ.GATE else (p,)):
             q.ev("async a => await __RB.jo(a[0], a[1], true)", [law, '제1조'])
         n = p.ev("() => ({ dot: document.querySelectorAll('.jtbar .tmdot').length, tg: document.querySelectorAll('.jtbar .tmtg').length, skel: __TM.treeSkel() })")
-        oth[law] = {'점': n['dot'], '테마 글자': n['tg'], '= 바탕': n['skel'] == pb.ev("() => document.querySelector('#slot .tree').outerHTML")}
+        if QJ.GATE:
+            oth[law] = {'점': n['dot'], '테마 글자': n['tg'], '= 바탕': n['skel'] == pb.ev("() => document.querySelector('#slot .tree').outerHTML")}
+        else:
+            oth[law] = {'점': n['dot'], '테마 글자': n['tg'], '= 바탕': QJ.same(_rg_cid(br, 'B1.4', law), _rg_md5(n['skel']))}   # 기준 = 바탕 판(앞 인도판) 같은 법 서랍 뼈대 md5
     g4 = all(v['점'] == 1 and v['테마 글자'] == 0 and v['= 바탕'] for v in oth.values())
     ok = ok and g4
     T(G, 'PC 상표 · 디보 서랍 = 거름 점 하나만 더(「테마 N」 없음) · 나머지 outerHTML = 바탕', g4, oth)
     p.close()
-    pb.close()
+    if QJ.GATE:
+        pb.close()
     return ok
 
 
@@ -450,19 +579,23 @@ def b2(br, src, base_src, tag):
     seq = [p.ev("() => __TM.dot()")]
     cnt = {}
     for i in range(4):
-        p.press(at(p, '.jtbar .tmdot'), 450)
+        p.press(at(p, '.jtbar .tmdot'), 450) if QJ.GATE else _rg_press(p, at(p, '.jtbar .tmdot'), 450, _RG_DOT, 'B2.dot', (i + 1) % 4)
         d = p.ev("() => __TM.dot()")
         seq.append(d)
         cnt[i] = (p.ev("() => __TM.joRows()"), d['chip'])
         if i == 1:
             subj_rows = p.ev("() => __TM.subjOn()")
-            p.press(at(p, '.jtbar .tmtg'), 500)
+            p.press(at(p, '.jtbar .tmtg'), 500) if QJ.GATE else _rg_press(p, at(p, '.jtbar .tmtg'), 500, _RG_TM_ON, 'B2.tmtg')
             th = [r['id'] for r in p.ev("() => __TM.rows()")]
-            p.press(at(p, '.jtbar .tmtg'), 500)
-    pb = page(br, tag + 'B', base_src, PC)
-    jo(pb)
-    base_subj = pb.ev("() => [...document.querySelectorAll('#slot .tree .r[data-jo] .bkm3')].filter(b => { const d = b.querySelectorAll('.bkmk')[1]; return d && !!d.style.background; }).length")
-    pb.close()
+            p.press(at(p, '.jtbar .tmtg'), 500) if QJ.GATE else _rg_press(p, at(p, '.jtbar .tmtg'), 500, _RG_TM_OFF, 'B2.tmtg')
+    if QJ.GATE:
+        QJ.launch('base')
+        pb = page(br, tag + 'B', base_src, PC)
+        jo(pb)
+        base_subj = pb.ev("() => [...document.querySelectorAll('#slot .tree .r[data-jo] .bkm3')].filter(b => { const d = b.querySelectorAll('.bkmk')[1]; return d && !!d.style.background; }).length")
+        pb.close()
+    else:
+        base_subj = QJ.base(_rg_cid(br, 'B2.subj'), cnt[1][0])   # 기준 = 바탕 판(앞 인도판)의 보라(주체) 거름 때 조 줄 수 = 주체 점 켜진 조 수
     cols = [x['bg'] for x in seq]
     g1 = cols == ['#ffffff', BKC[0], BKC[1], BKC[2], '#ffffff'] and seq[0]['bd'] != '#ffffff'
     T(G, '누름 4번 = 빈 → 파 → 보 → 초 → 빈', g1, cols)
@@ -486,7 +619,7 @@ def b3(br, src, tag):
         p.close()
         return False
     p.ev("() => tmWin('t02', null)")
-    p.wait(500)
+    p.wait(500) if QJ.GATE else _rg_wait(p, 500, _RG_WIN, 'B3.win', 'theme|t02')
     w = p.ev("""() => { const w = __TM.pop('theme|t02'); if (!w) return null; const hd = w.querySelector('.ph');
       return { t: __TM.txt(w.querySelector('.pt')), hdKids: [...hd.children].map(e => e.tagName.toLowerCase() + '.' + e.className), thl: w.querySelectorAll('.thl').length,
         cols: [...w.querySelectorAll('.thl')].map(l => [...l.children].map(s => __TM.hex(s.style.color))), lk: w.querySelectorAll('.wmlk').length, sb: w.querySelectorAll('.thsb').length, ac: w.querySelectorAll('.thac').length }; }""")
@@ -494,22 +627,27 @@ def b3(br, src, tag):
     g1 = bool(w) and w['t'] == '{기일기간} · 두2 §11' and w['thl'] == PLANT['t02']['lines'] and w['cols'] == want_cols and w['lk'] == PLANT['t02']['links'] and w['sb'] == PLANT['t02']['subj'] and w['ac'] == PLANT['t02']['acr'] \
         and all(not re.search(r'tm|jo', k) for k in w['hdKids'][1:])
     T(G, '테마 창 제목 「{기일기간} · 두2 §11」 · 머리에 조 목록 0 · .thl 줄 수 · run 색 · 조 링크 · 주체 · 두문자 = 재료', g1, w)
+    if QJ.SMOKE:   # smoke — B3-1 만(나머지 칸은 건넘)
+        if p.errs:
+            T(G, 'JS 오류', False, p.errs[:3])
+        p.close()
+        return bool(g1) and not p.errs
     a = p.ev("""() => { const w = __TM.pop('theme|t02'); const l = [...w.querySelectorAll('.wmlk')].find(x => x.dataset.k === '제16조' && x.dataset.law === '특허법'); return l ? __RB.hitOn(l) : null; }""")
-    p.press(a, 1500)
+    p.press(a, 1500) if QJ.GATE else _rg_press(p, a, 1500, _RG_JOPOP, 'B3.jo16', 'jo|특허법|제16조')
     g2 = p.ev("() => !!POPS.find(x => x._pk === 'jo|특허법|제16조')")
     other = p.ev("() => { const w = __TM.pop('theme|t02'); const l = [...w.querySelectorAll('.wmlk')].map(x => x.dataset.law + ':' + x.dataset.k); return l; }")
     T(G, '조 링크 누름 → 조문 팝업(키 jo|특허법|제16조) · 다른 법(민소) 링크 · 시규 = 링크 없음', g2 and '민사소송법:제16조' in other and len([x for x in other if x.startswith('특허법:제3조')]) == 1, {'열림': g2, '링크': other})
     p.ev("() => { const p0 = POPS.find(x => x._pk === 'jo|특허법|제16조'); if (p0) closeOne(p0); }")
     a = p.ev("() => { const w = __TM.pop('theme|t02'); return __RB.hitOn(w.querySelector('.thac')); }")
-    p.press(a, 300)
+    p.press(a, 300) if QJ.GATE else _rg_press(p, a, 300, _RG_ACRM, 'B3.acr', True)
     m1 = p.ev("() => { const w = __TM.pop('theme|t02'); const m = w.querySelector('.thacm'); return m ? __TM.txt(m) : null; }")
     a = p.ev("() => { const w = __TM.pop('theme|t02'); return __RB.hitOn(w.querySelector('.thac')); }")
-    p.press(a, 300)
+    p.press(a, 300) if QJ.GATE else _rg_press(p, a, 300, _RG_ACRM, 'B3.acr', False)
     m2 = p.ev("() => { const w = __TM.pop('theme|t02'); return !!w.querySelector('.thacm'); }")
     g3 = bool(m1) and m1.startswith('정사소2만1') and not m2
     T(G, '두문자 누름 → 그 자리 아래 뜻 한 줄 토글', g3, [m1, m2])
     p.ev("() => tmWin('t03', null)")
-    p.wait(500)
+    p.wait(500) if QJ.GATE else _rg_wait(p, 500, _RG_WIN, 'B3.win', 'theme|t03')
     s = p.ev("() => { const w = __TM.pop('theme|t03'); return w ? { svg: w.querySelectorAll('.thfig svg').length, text: w.querySelectorAll('.thfig svg text').length, path: w.querySelectorAll('.thfig svg path').length, lk: w.querySelectorAll('.thfig .wmlk').length, thl: w.querySelectorAll('.thl').length } : null; }")
     g4 = bool(s) and s['svg'] == 1 and s['text'] == PLANT['t03']['svgtext'] and s['path'] == PLANT['t03']['path'] and s['lk'] == PLANT['t03']['links'] and s['thl'] == 0
     T(G, '분변분재 = svg(text 수 · path 수 = 재료 · 글 속 조 링크)', g4, s)
@@ -529,17 +667,17 @@ def b4(br, src, tag):
         p.close()
         return False
     p.ev("() => tmListWin('t03', null)")
-    p.wait(700)
+    p.wait(700) if QJ.GATE else _rg_wait(p, 700, _RG_WIN, 'B4.list', 'themelist|t03')
     r3 = p.ev("() => { const w = __TM.pop('themelist|t03'); const r = w && w.querySelector('.throw2'); return r ? { l: __TM.txt(r.querySelector('.tmjs')), r: __TM.txt(r.querySelector('.tmar')), h: Math.round(r.getBoundingClientRect().height) } : null; }")
     g1 = bool(r3) and r3['l'] == '52조 · 53조 · 52-2조 · 67-2조' and r3['r'] == '분변분재' and r3['h'] >= 36
     T(G, '분변분재 맨 위 줄 = 「52조 · 53조 · 52-2조 · 67-2조 | 분변분재」(≥ 36)', g1, r3)
     p.ev("() => tmListWin('t02', null)")
-    p.wait(700)
+    p.wait(700) if QJ.GATE else _rg_wait(p, 700, _RG_WIN, 'B4.list', 'themelist|t02')
     r16 = p.ev("() => { const w = __TM.pop('themelist|t02'); const r = [...w.querySelectorAll('.throw2.tmjr')].find(x => x.dataset.lk === '특허법:제16조'); return r ? { n: __TM.txt(r.querySelector('.tmjn')), t: __TM.txt(r.querySelector('.tmjt')), r: __TM.txt(r.querySelector('.tmar')), c: getComputedStyle(r.querySelector('.tmjn')).color } : null; }")
     g2 = bool(r16) and r16['n'] == '제16조' and r16['r'] == '정사소2만1' and r16['t'] != '' and r16['c'] == 'rgb(29, 78, 216)'
     T(G, '기일기간 16조 줄 오른쪽 「정사소2만1」(제N조 파랑 굵게 · 제목)', g2, r16)
     a = p.ev("() => { const w = __TM.pop('themelist|t02'); const r = [...w.querySelectorAll('.throw2.tmjr')].find(x => x.dataset.lk === '특허법:제14조'); return __RB.hitOn(r.querySelector('.tmjt')); }")
-    p.press(a, 1500)
+    p.press(a, 1500) if QJ.GATE else _rg_press(p, a, 1500, _RG_JOPOP, 'B4.jo14', 'jo|특허법|제14조')
     g3 = p.ev("() => !!POPS.find(x => x._pk === 'jo|특허법|제14조')")
     T(G, '조 줄 누름 → 조문 팝업', g3, g3)
     ok = bool(g1 and g2 and g3) and not p.errs
@@ -551,14 +689,14 @@ def b4(br, src, tag):
 
 def b5(br, src, tag):
     G = 'B5'
-    p = page(br, tag, src, PC)
+    p = page(br, tag, src, PC)   # regress: 새 컨텍스트 — 테마 기록(link)을 쓰는 칸이라 앞 칸이 남긴 기록 · 연결 창 상태가 새면 안 된다(기록 꼴이 다름)
     jo(p, '제3조')
     tb = p.ev("() => { const b = document.querySelector('.jomt .tmjo'); return b ? { t: __TM.txt(b), c: __TM.hex(getComputedStyle(b).color), n: getComputedStyle(b.querySelector('.n')).fontWeight, bd: getComputedStyle(b).borderTopWidth, bg: getComputedStyle(b).backgroundColor } : null; }")
     g1 = bool(tb) and tb['t'] == '테마 2' and tb['c'] == '#a16207' and int(tb['n']) >= 700 and tb['bg'] in ('rgba(0, 0, 0, 0)', 'transparent')
     T(G, '제3조 「테마 2」(#a16207 · 숫자 굵게 · 알약 없음) — 합성 재료의 조 목록 그대로면 제3조 = 주체능력 · 기일기간 둘', g1, tb)
-    p.press(at(p, '.jomt .tmjo'), 500)
+    p.press(at(p, '.jomt .tmjo'), 500) if QJ.GATE else _rg_press(p, at(p, '.jomt .tmjo'), 500, _RG_WIN, 'B5.ofwin', 'themeof|특허법|제3조')
     p.ev("() => { document.querySelector('.jtbar .tmtg').click(); }")
-    p.idle(300)
+    p.idle(300) if QJ.GATE else _rg_idle(p, 300, _RG_TM_ON, 'B5.tmtg')
     sk = p.ev("""() => { const w = __TM.pop('themeof|특허법|제3조'); if (!w) return null; const rs = [...w.querySelectorAll('.tmof .r.tmr')];
       const tr = [...document.querySelectorAll('#slot .tree .r.tmr')]; const by = id => tr.find(x => x.dataset.tm === id);
       return { t: __TM.txt(w.querySelector('.pt')), n: rs.length, same: rs.every(r => { const d = by(r.dataset.tm); return d && __TM.skel(d) === __TM.skel(r); }), x: rs.map(r => !!r.querySelector('.tmx')) }; }""")
@@ -570,20 +708,20 @@ def b5(br, src, tag):
     g3 = r_sim == [] and r_gi == [] and r_bb == [['t03', True]]
     T(G, '찾기 「심판」 → 0 · 「기일」 → 0(기일기간은 이미 이음 — 결과 줄마다 ＋ 가 있게 이은 테마는 뺀다) · 「분변」 → 1(끝 ＋)', g3, {'심판': r_sim, '기일': r_gi, '분변': r_bb})
     a = p.ev("() => { const w = __TM.pop('themeof|특허법|제3조'); const r = w.querySelector('.tmres .r.tmr[data-tm=t03] .tmplus'); return r ? __RB.hitOn(r) : null; }")
-    p.press(a, 700)
+    p.press(a, 700) if QJ.GATE else _rg_press(p, a, 700, _RG_TMJO, 'B5.link', '테마 3')
     rc = rec(p)
     st = p.ev("() => { const w = __TM.pop('themeof|특허법|제3조'); return { t: __TM.txt(w.querySelector('.pt')), x: [...w.querySelectorAll('.tmof .r.tmr')].map(r => [r.dataset.tm, !!r.querySelector('.tmx')]), btn: __TM.txt(document.querySelector('.jomt .tmjo')) }; }")
     g4 = (rc.get('link') or {}).get('특허법:제3조') == ['t03'] and st['btn'] == '테마 3' and ['t03', True] in st['x'] and st['t'] == '제3조 · 테마 3'
     T(G, '＋ → 기록 link["특허법:제3조"] · 「테마 3」 · 그 줄만 끝 ✕', g4, {'link': rc.get('link'), '창': st})
     a = p.ev("() => { const w = __TM.pop('themeof|특허법|제3조'); const r = w.querySelector('.tmof .r.tmr[data-tm=t03] .tmx'); return r ? __RB.hitOn(r) : null; }")
-    p.press(a, 700)
+    p.press(a, 700) if QJ.GATE else _rg_press(p, a, 700, _RG_TMJO, 'B5.link', '테마 2')
     rc = rec(p)
     st2 = p.ev("() => __TM.txt(document.querySelector('.jomt .tmjo'))")
     g5 = not (rc.get('link') or {}).get('특허법:제3조') and st2 == '테마 2'
     T(G, '줄 끝 ✕ → 풂(「테마 2」)', g5, {'link': rc.get('link'), '글자': st2})
     jo(p, '제4조')
     n4 = p.ev("() => __TM.txt(document.querySelector('.jomt .tmjo'))")
-    p.press(at(p, '.jomt .tmjo'), 500)
+    p.press(at(p, '.jomt .tmjo'), 500) if QJ.GATE else _rg_press(p, at(p, '.jomt .tmjo'), 500, _RG_WIN, 'B5.ofwin', 'themeof|특허법|제4조')
     r4 = p.ev("""async () => { const w = __TM.pop('themeof|특허법|제4조'); const i = w.querySelector('.thsrch input'); i.value = '기일'; w.querySelector('.thsrch .tmsgo').click(); await __TM.wait(200);
       return [...__TM.pop('themeof|특허법|제4조').querySelectorAll('.tmres .r.tmr')].map(r => r.dataset.tm); }""")
     g6 = n4 == '테마 1' and r4 == ['t02']
@@ -606,16 +744,16 @@ def type_ok(p, text):
     else:
         p.pg.keyboard.press('Backspace')
     a = p.ev("() => { const b = document.querySelector('.tmed .tmok'); return b ? __RB.hitOn(b) : null; }")
-    p.press(a, 600)
+    p.press(a, 600) if QJ.GATE else _rg_press(p, a, 600, None, 'type_ok 저장 뒤 tmRefresh(render) — 효과(이름 · 줄 · 두문자 · 조 지움 · 새 테마)마다 표지가 달라 공통 표지 없음')
 
 
 def b6(br, src, tag, devs=(('폰390', PHONE), ('PC', PC))):
     G = 'B6'
     ok = True
     for dn, dev in devs:
-        p = page(br, tag + dn, src, dev)
+        p = page(br, tag + dn, src, dev)   # regress: 새 컨텍스트 — 이름 · 줄 · 두문자 · 조 지움 · 새 테마로 jopangi.theme 기록을 바꾸는 칸(기록 꼴이 다름)
         jo(p)
-        p.press(at(p, '.jtbar .tmtg'), 500)
+        p.press(at(p, '.jtbar .tmtg'), 500) if QJ.GATE else _rg_press(p, at(p, '.jtbar .tmtg'), 500, _RG_TM_ON, 'B6.tmtg')
         a = p.ev("() => __RB.hitOn(document.querySelector('#slot .tree .r.tmr[data-tm=t02] .jno'))")
         lp(p, a, 700)
         e = p.ev(EDITOR)
@@ -624,7 +762,7 @@ def b6(br, src, tag, devs=(('폰390', PHONE), ('PC', PC))):
         type_ok(p, '기일·기간')
         nm = p.ev("() => __TM.txt(document.querySelector('#slot .tree .r.tmr[data-tm=t02] .jno'))")
         p.ev("() => tmWin('t02', null)")
-        p.wait(400)
+        p.wait(400) if QJ.GATE else _rg_wait(p, 400, _RG_WIN, 'B6.win', 'theme|t02')
         wt = p.ev("() => __TM.txt(__TM.pop('theme|t02').querySelector('.pt'))")
         rc = rec(p)
         g2 = nm == '{기일·기간}' and wt.startswith('{기일·기간}') and (rc.get('t02') or {}).get('n') == '기일·기간'
@@ -643,9 +781,9 @@ def b6(br, src, tag, devs=(('폰390', PHONE), ('PC', PC))):
             if em and em.get('ok'):
                 out = dict(out, cx=em['cx'], cy=em['cy'] + 30)
         if p.touch:
-            p.tap(out['cx'], out['cy'] - 30, 400)
+            p.tap(out['cx'], out['cy'] - 30, 400) if QJ.GATE else (p.tap(out['cx'], out['cy'] - 30, 0), _rg_wait(p, 400, _RG_NOED, 'B6.cancel'))
         else:
-            p.click(out['cx'], out['cy'] - 30, 400)
+            p.click(out['cx'], out['cy'] - 30, 400) if QJ.GATE else (p.click(out['cx'], out['cy'] - 30, 0), _rg_wait(p, 400, _RG_NOED, 'B6.cancel'))
         cancel = p.ev("() => ({ n: document.querySelectorAll('.tmed').length, t: __TM.txt(document.querySelector('#slot .tree .r.tmr[data-tm=t01] .jno')) })")
         g3 = cancel['n'] == 0 and cancel['t'] == '{주체능력}' and not (rec(p).get('t01') or {}).get('n')
         T(G, '%s 바깥 누름 → 취소' % dn, g3, cancel)
@@ -658,7 +796,7 @@ def b6(br, src, tag, devs=(('폰390', PHONE), ('PC', PC))):
         if dn == '폰390' or len(devs) == 1:
             # 테마 창 줄 · 두문자 뜻 · 목록 창 조 줄 지움 · 「＋ 테마」 · 두 칸 동시 0
             p.ev("() => tmWin('t02', null)")
-            p.wait(400)
+            p.wait(400) if QJ.GATE else _rg_wait(p, 400, _RG_WIN, 'B6.win', 'theme|t02')
             a = p.ev("() => { const w = __TM.pop('theme|t02'); return __RB.hitOn(w.querySelectorAll('.thl')[2]); }")
             lp(p, a, 700)
             e2 = p.ev(EDITOR)
@@ -672,7 +810,7 @@ def b6(br, src, tag, devs=(('폰390', PHONE), ('PC', PC))):
             g6 = ((rec(p).get('acr') or {}).get('책사소2만1') or {}).get('m') == '합성 뜻 둘'
             T(G, '%s 두문자 뜻 적기 → 기록 acr.m' % dn, g6, rec(p).get('acr'))
             p.ev("() => tmListWin('t02', null)")
-            p.wait(600)
+            p.wait(600) if QJ.GATE else _rg_wait(p, 600, _RG_WIN, 'B6.list', 'themelist|t02')
             a = p.ev("() => { const w = __TM.pop('themelist|t02'); const r = [...w.querySelectorAll('.throw2.tmjr')].find(x => x.dataset.lk === '특허법:제190조'); return __RB.hitOn(r.querySelector('.tmjn')); }")
             lp(p, a, 700)
             type_ok(p, '')
@@ -682,7 +820,7 @@ def b6(br, src, tag, devs=(('폰390', PHONE), ('PC', PC))):
             T(G, '%s 목록 창 조 줄 지움 → jo- · 줄 빠짐' % dn, g7, {'jo-': (rc.get('t02') or {}).get('jo-'), '남은 줄 수': len(lst)})
             p.ev("() => closeAllPops(true)")
             a = p.ev("() => __RB.hitOn(document.querySelector('#slot .tree .r.tmaddr'))")
-            p.press(a, 500)
+            p.press(a, 500) if QJ.GATE else _rg_press(p, a, 500, _RG_ED, 'B6.addr')
             type_ok(p, '새 합성 테마')
             rows2 = p.ev("() => __TM.rows().map(r => r.t)")
             g8 = '{새 합성 테마}' in rows2 and any((v or {}).get('n') == '새 합성 테마' for k, v in rec(p).items() if k.startswith('u'))
@@ -711,10 +849,14 @@ def b7(br, src, base_src, tag):
     G = 'B7'
     ok = True
     REMOTE.clear()
-    A = page(br, tag + 'A', src, PC)
-    last = A.ev("() => SYNC_KEYS[SYNC_KEYS.length - 1]")
-    g0 = last == 'jopangi.theme'
-    T(G, '새 키 jopangi.theme · SYNC_KEYS 끝', g0, last)
+    A = page(br, tag + 'A', src, PC)   # regress: 새 컨텍스트 — 기기 A · B 가 가짜 원격을 나눠 쓰는 두 기기 흉내(문맥 둘이 한 짝)
+    # ★ ⑧ A-8-4 · A-9-3(사용자 10/3 08:22·08:32 누락 기록 · 09:33 설문 연결) — 옛: SYNC_KEYS 맨 끝 == jopangi.theme → 새: theme 뒤에 ⑧ 이 더한 jopangi.c2miss · jopangi.c2qlink(이 차례)까지만 온다
+    #   ⑧ 없는 판 = theme 이 맨 끝도 맞다(바탕을 같은 칸으로 다시 돌려도 안 어긋남) · theme 이 없거나 theme 뒤에 다른 키가 오면 FAIL
+    ks = A.ev("() => SYNC_KEYS.slice()")
+    tail = ks[ks.index('jopangi.theme') + 1:] if 'jopangi.theme' in ks else None
+    g0 = tail in ([], ['jopangi.c2miss', 'jopangi.c2qlink'])
+    if QJ.want('B7-0'):
+        T(G, '새 키 jopangi.theme · SYNC_KEYS 끝', g0, {'theme 뒤': tail, '끝 셋': ks[-3:]})
     A.ev("() => { const r = JSON.parse(localStorage.getItem('jopangi.theme') || '{}'); r.t01 = { n: '주체능력A' }; localStorage.setItem('jopangi.theme', JSON.stringify(r)); }")
     e1 = A.ev(SYNC)
     r1 = (REMOTE.rec() or {})
@@ -725,10 +867,17 @@ def b7(br, src, base_src, tag):
     B.ev(SYNC)
     jo(B)
     B.ev("() => document.querySelector('.jtbar .tmtg').click()")
-    B.idle(300)
+    B.idle(300) if QJ.GATE else _rg_idle(B, 300, _RG_TM_ON, 'B7.tmtg')
     bn = B.ev("() => __TM.rows().map(r => r.t)")
     g2 = '{주체능력A}' in bn
     T(G, '새 기기 B 맞춤 → 받은 이름이 서랍에', g2, bn)
+    if QJ.SMOKE:   # smoke — B7-1 · B7-2(동기화 한 바퀴)만
+        for q in (A, B):
+            if q.errs:
+                ok = False
+                T(G, 'JS 오류', False, q.errs[:3])
+            q.close()
+        return ok and g1 and g2
     # 칸 단위 병합 — A 는 t02 이름 · B 는 두문자 사전(acr 칸) · 서로 다른 칸이라 둘 다 산다
     A.ev("() => { const r = JSON.parse(localStorage.getItem('jopangi.theme') || '{}'); r.t02 = { n: '기일기간A' }; localStorage.setItem('jopangi.theme', JSON.stringify(r)); }")
     B.ev("() => { const r = JSON.parse(localStorage.getItem('jopangi.theme') || '{}'); r.acr = { '책사소2만1': { m: 'B 가 적은 뜻' } }; localStorage.setItem('jopangi.theme', JSON.stringify(r)); }")
@@ -749,30 +898,32 @@ def b7(br, src, base_src, tag):
     r4 = REMOTE.rec() or {}
     g4 = had and 'link' not in rec(A) and bool((r4.get('gone') or {}).get('jopangi.theme|link'))
     T(G, '묘비 — B 가 지운 칸(link) = A 에서도 지워짐 · 원격 gone 도장', g4, {'A 가 받았었나': had, 'A 지금': list(rec(A).keys()), 'gone': {k: v for k, v in (r4.get('gone') or {}).items() if 'theme' in k}})
-    # 옛 판 기기(키 없음) 올림 → data 에서 빠짐 → 새 판 A 다시 맞춤 → 되살아남
-    O = page(br, tag + 'O', base_src, PC, keep_remote=True)
-    O.ev(SYNC)
-    r5 = REMOTE.rec() or {}
-    lost = 'jopangi.theme' not in (r5.get('data') or {})
-    keep_u = any(k.startswith('jopangi.theme|') for k in (r5.get('u') or {}))
-    C = page(br, tag + 'C', src, PC, keep_remote=True)
-    C.ev(SYNC)
-    c0 = rec(C)
-    A.ev(SYNC)
-    r6 = REMOTE.rec() or {}
-    back = ((r6.get('data') or {}).get('jopangi.theme') or {}).get('t01', {}).get('n') == '주체능력A'
-    C.ev(SYNC)
-    c1 = rec(C)
-    N(G, '옛 판 기기 틈(잰 것)', {'옛 판 올림 뒤 data.jopangi.theme': '빠짐' if lost else '남음', '도장 u': '남음' if keep_u else '빠짐', '그 사이 새 기기 C': c0 or '못 받음',
-                             '새 판 A 다시 맞춤 뒤': '되살아남' if back else '안 돌아옴', 'C 다시 맞춤 뒤 t01': (c1.get('t01') or {}).get('n')})
-    g5 = lost and keep_u and back and (c1.get('t01') or {}).get('n') == '주체능력A' and not O.errs
-    T(G, '옛 판 기기(키 없음) 올림 뒤 새 판 다시 맞춤 → 되살아남(새 기기도 받음 · 옛 판 오류 0)', g5, {'빠짐': lost, 'u': keep_u, '되살아남': back, 'C': c1.get('t01'), '옛 판 오류': O.errs[:2]})
-    for q in (A, B, O, C):
+    if QJ.GATE:   # 옛 판 기기(키 없음)의 틈 — 바탕 앱(키를 모르는 옛 판)을 기기로 띄우는 칸 = 이 판(테마 키를 더한 판) 인도 때만 뜻 있다 → regress 에서 끔(세 기기 되살림 일반 시나리오는 gaek_mbsame 10s · claude_answers J19 가 잰다)
+        # 옛 판 기기(키 없음) 올림 → data 에서 빠짐 → 새 판 A 다시 맞춤 → 되살아남
+        QJ.launch('base')
+        O = page(br, tag + 'O', base_src, PC, keep_remote=True)
+        O.ev(SYNC)
+        r5 = REMOTE.rec() or {}
+        lost = 'jopangi.theme' not in (r5.get('data') or {})
+        keep_u = any(k.startswith('jopangi.theme|') for k in (r5.get('u') or {}))
+        C = page(br, tag + 'C', src, PC, keep_remote=True)
+        C.ev(SYNC)
+        c0 = rec(C)
+        A.ev(SYNC)
+        r6 = REMOTE.rec() or {}
+        back = ((r6.get('data') or {}).get('jopangi.theme') or {}).get('t01', {}).get('n') == '주체능력A'
+        C.ev(SYNC)
+        c1 = rec(C)
+        N(G, '옛 판 기기 틈(잰 것)', {'옛 판 올림 뒤 data.jopangi.theme': '빠짐' if lost else '남음', '도장 u': '남음' if keep_u else '빠짐', '그 사이 새 기기 C': c0 or '못 받음',
+                                 '새 판 A 다시 맞춤 뒤': '되살아남' if back else '안 돌아옴', 'C 다시 맞춤 뒤 t01': (c1.get('t01') or {}).get('n')})
+        g5 = lost and keep_u and back and (c1.get('t01') or {}).get('n') == '주체능력A' and not O.errs
+        T(G, '옛 판 기기(키 없음) 올림 뒤 새 판 다시 맞춤 → 되살아남(새 기기도 받음 · 옛 판 오류 0)', g5, {'빠짐': lost, 'u': keep_u, '되살아남': back, 'C': c1.get('t01'), '옛 판 오류': O.errs[:2]})
+    for q in ((A, B, O, C) if QJ.GATE else (A, B)):
         if q.errs:
             ok = False
             T(G, 'JS 오류', False, q.errs[:3])
         q.close()
-    return ok and g0 and g1 and g2 and g3 and g4 and g5
+    return ok and g0 and g1 and g2 and g3 and g4 and (g5 if QJ.GATE else True)
 
 
 SK = r"""async ([q, scopes]) => { openSk(); Object.keys(SKON).forEach(k => { SKON[k] = scopes.indexOf(k) >= 0; }); skPaint(); const i = document.getElementById('skin'); i.value = q; await skRun({ target: i });
@@ -789,18 +940,27 @@ def b8(br, src, base_src, tag):
     g1 = any(g in r['grp'] for g in ('테마 — 1건', '🧩 테마 — 1건')) and len(th) == 1 and th[0]['h'] == '{기일기간}' and '정사소' in th[0]['x']   # fix2 B-4 — 머리 🧩 뗌(「테마 — N건」 · 옛 판 머리도 받음)
     T(G, '🔍 「정사소」 → 결과 줄 「{기일기간} …」', g1, r)
     a = p.ev("() => { const d = [...document.querySelectorAll('#skres .res')].find(x => __TM.txt(x.querySelector('b')) === '{기일기간}'); return d ? __RB.hitOn(d) : null; }")
-    p.press(a, 700)
+    p.press(a, 700) if QJ.GATE else _rg_press(p, a, 700, r"() => !!POPS.find(x => x._pk === 'theme|t02') && document.getElementById('sk').style.display === 'none'", 'B8.skgo')
     g2 = p.ev("() => !!POPS.find(x => x._pk === 'theme|t02') && document.getElementById('sk').style.display === 'none'")
     T(G, '결과 줄 누름 → 테마 창', g2, g2)
-    pb = page(br, tag + 'B', base_src, PC)
-    jo(pb)
+    if QJ.GATE:
+        QJ.launch('base')
+        pb = page(br, tag + 'B', base_src, PC)
+        jo(pb)
     same = {}
     for q in ('기간', '특허청장'):
         rn = p.ev(SK, [q, ['jo', 'prec']])
-        rb = pb.ev(SK, [q, ['jo', 'prec']])
+        if QJ.GATE:
+            rb = pb.ev(SK, [q, ['jo', 'prec']])
         gn = [g for g in rn['grp'] if not g.startswith(('🧩 테마', '테마 — '))]
-        same[q] = (gn == rb['grp'], [x for x in rn['rows'] if x['tag'] != '테마'] == rb['rows'], gn[:2], rb['grp'][:2])
-    pb.close()
+        if QJ.GATE:
+            same[q] = (gn == rb['grp'], [x for x in rn['rows'] if x['tag'] != '테마'] == rb['rows'], gn[:2], rb['grp'][:2])
+        else:
+            rows_n = _rg_md5(json.dumps([x for x in rn['rows'] if x['tag'] != '테마'], ensure_ascii=False, sort_keys=True))
+            sn = QJ.base(_rg_cid(br, 'B8.3', q), {'grp': gn, 'rows': rows_n})   # 기준 = 바탕 판(앞 인도판) 같은 검색의 갈래 머리 · 결과 줄(md5)
+            same[q] = (gn == sn['grp'], rows_n == sn['rows'], gn[:2], sn['grp'][:2])
+    if QJ.GATE:
+        pb.close()
     g3 = all(v[0] and v[1] for v in same.values())
     T(G, '조문·판례 결과 무변(바탕과 갈래 머리 수·줄 같음)', g3, same)
     ok = g1 and g2 and g3 and not p.errs
@@ -818,24 +978,31 @@ FRAME = r"""(kinds) => kinds.map(k => { const b = popShell(k, '틀 ' + (k || '�
 
 def b9(br, src, base_src, tag):
     G = 'B9'
-    p = page(br, tag, src, PC)
+    p = page(br, tag, src, PC)   # regress: 새 컨텍스트 — 끌기 · 크기 조절이 S.popCfg(팝업 크기 기억 · 메모리)를 바꿔 뒤 관문의 창 폭을 흔든다
     jo(p)
     fr = p.ev(FRAME, KINDS)
-    pb = page(br, tag + 'B', base_src, PC)
-    jo(pb)
-    frb = pb.ev(FRAME, KINDS)
+    if QJ.GATE:
+        QJ.launch('base')
+        pb = page(br, tag + 'B', base_src, PC)
+        jo(pb)
+        frb = pb.ev(FRAME, KINDS)
     good = [f for f in fr if f['bg'] == 'rgb(255, 255, 255)' and f['bd'] == 'rgb(203, 213, 225)' and f['bw'] == '1px' and f['rad'] == '12px' and 'rgba(0, 0, 0, 0.28)' in f['sh'] and f['hbg'] == 'rgb(248, 250, 252)'
             and f['ptw'] == '800' and f['ptc'] == 'rgb(17, 24, 39)' and f['xb'] == 'rgb(209, 213, 219)' and f['xc'] == 'rgb(107, 114, 128)']
     g1 = len(good) == len(KINDS)
     T(G, 'popShell 10종 — .pop 흰/#cbd5e1/12/그림자 · .ph #f8fafc · 제목 800 #111827 · ✕ 회색 테두리 · k-q·k-fn·k-cell 색 0', g1, {'맞음': len(good), '어긋남': [f for f in fr if f not in good][:3]})
-    g2 = [f['w'] for f in fr] == [f['w'] for f in frb]
-    T(G, '폭 = 바탕(종류별 폭 유지)', g2, {'새 판': [f['w'] for f in fr], '바탕': [f['w'] for f in frb]})
+    if QJ.GATE:
+        g2 = [f['w'] for f in fr] == [f['w'] for f in frb]
+        T(G, '폭 = 바탕(종류별 폭 유지)', g2, {'새 판': [f['w'] for f in fr], '바탕': [f['w'] for f in frb]})
+    else:
+        wb = QJ.base(_rg_cid(br, 'B9.2'), [f['w'] for f in fr])   # 기준 = 바탕 판(앞 인도판) popShell 종류별 폭
+        g2 = [f['w'] for f in fr] == wb
+        T(G, '폭 = 바탕(종류별 폭 유지)', g2, {'새 판': [f['w'] for f in fr], '바탕': wb})
     memo = p.ev("""async () => { pitEdit('jo|특허법:제3조', '0', 0, '틀', null); await __TM.wait(300); const w = POPS[POPS.length - 1]; const ta = w.querySelector('textarea.memoin'), sv = w.querySelector('.memobtn .tool.on'), dl = [...w.querySelectorAll('.memobtn .tool')].find(b => !b.classList.contains('on'));
       const o = { ta: getComputedStyle(ta).backgroundColor, tab: getComputedStyle(ta).borderTopColor, sv: getComputedStyle(sv).backgroundColor, svc: getComputedStyle(sv).color, dl: dl ? getComputedStyle(dl).borderTopColor : null }; closeOne(w); return o; }""")
     g3 = memo['ta'] == 'rgb(255, 255, 255)' and memo['tab'] == 'rgb(203, 213, 225)' and memo['sv'] == 'rgb(17, 24, 39)' and memo['svc'] == 'rgb(255, 255, 255)' and memo['dl'] == 'rgb(209, 213, 219)'
     T(G, '메모 창 textarea 흰 · 저장 #111827 · 🗑 삭제 회색 테두리', g3, memo)
     a = p.ev("() => { const l = document.querySelector('#slot .main .box .wmlk'); return l ? __RB.hitOn(l) : null; }")
-    p.press(a, 1500)
+    p.press(a, 1500) if QJ.GATE else _rg_press(p, a, 1500, _RG_JOGO, 'B9.jo')
     go1 = p.ev("() => { const w = POPS.filter(x => (x._pk || '').indexOf('jo|') === 0).pop(); const b = w && w.querySelector('.ph .ptgo button'); return b ? { t: __TM.txt(b), bw: getComputedStyle(b).borderTopWidth, c: getComputedStyle(b).color, fw: getComputedStyle(b).fontWeight } : null; }")
     p.ev("() => closeAllPops(true)")
     jo(p, '제29조')
@@ -846,26 +1013,30 @@ def b9(br, src, base_src, tag):
     g4 = ok_go(go1) and ok_go(go2) and not go2.get('inBody')
     T(G, '머리 「이동 ↗」 글자(테두리 0 · #1d4ed8 · 600) 두 곳(조문 팝업 · 2차 문제 창)', g4, {'조문': go1, '2차': go2})
     drag = []
-    for q in (p, pb):
+    for q in ((p, pb) if QJ.GATE else (p,)):
         d = q.ev("""async () => { closeAllPops(true); const b = popShell('', '끌기', 'drag|x'); const w = b.parentNode; w.style.left = '300px'; w.style.top = '200px'; await __TM.wait(50);
           const h = w.querySelector('.ph').getBoundingClientRect(), s = w.querySelector('.prsz'); return { hx: h.left + 60, hy: h.top + h.height / 2, sx: s ? s.getBoundingClientRect().left + 8 : null, sy: s ? s.getBoundingClientRect().top + 8 : null }; }""")
         q.pg.mouse.move(d['hx'], d['hy'])
         q.pg.mouse.down()
         q.pg.mouse.move(d['hx'] + 80, d['hy'] + 40, steps=5)
         q.pg.mouse.up()
-        q.wait(200)
+        q.wait(200) if QJ.GATE else QJ.sleep(200, '머리 끌기 놓은 뒤 자리 안착 — pointer 끝 처리(S.popCfg 저장) 표지 없음', q.pg)
         pos = q.ev("() => { const w = POPS[POPS.length - 1]; return [Math.round(parseFloat(w.style.left)), Math.round(parseFloat(w.style.top))]; }")
         s2 = q.ev("() => { const s = POPS[POPS.length - 1].querySelector('.prsz'); const r = s.getBoundingClientRect(); return [r.left + 8, r.top + 8]; }")
         q.pg.mouse.move(s2[0], s2[1])
         q.pg.mouse.down()
         q.pg.mouse.move(s2[0] + 60, s2[1] + 50, steps=5)
         q.pg.mouse.up()
-        q.wait(200)
+        q.wait(200) if QJ.GATE else QJ.sleep(200, '크기 손잡이(.prsz) 끌어 놓은 뒤 크기 안착 — pointer 끝 처리 표지 없음', q.pg)
         sz = q.ev("() => { const w = POPS[POPS.length - 1]; const r = w.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }")
         drag.append((pos, sz))
-    pb.close()
-    g5 = drag[0] == drag[1]
-    T(G, '끌기·크기 조절 = 바탕', g5, {'새 판': drag[0], '바탕': drag[1]})
+    if QJ.GATE:
+        pb.close()
+        g5 = drag[0] == drag[1]
+        T(G, '끌기·크기 조절 = 바탕', g5, {'새 판': drag[0], '바탕': drag[1]})
+    else:
+        g5 = QJ.same(_rg_cid(br, 'B9.5'), drag[0])   # 기준 = 바탕 판(앞 인도판)의 끌기 자리 · 크기 조절 크기(크기 손잡이 .prsz 를 끌어 잰다 — popsize 회귀가 이 칸을 본다)
+        T(G, '끌기·크기 조절 = 바탕', g5, {'새 판': drag[0], '바탕': QJ.base(_rg_cid(br, 'B9.5'), drag[0])})
     ok = g1 and g2 and g3 and g4 and g5 and not p.errs
     if p.errs:
         T(G, 'JS 오류', False, p.errs[:3])
@@ -877,20 +1048,33 @@ def b10(br, src, base_src, tag):
     G = 'B10'
     CMP = {'cX1': {'id': 'cX1', 'name': '관문 비교', 'cols': [{'law': '특허법', 'k': '제3조'}]}}
     out = {}
-    for which, s in (('new', src), ('base', base_src)):
-        p = page(br, tag + which, s, PC, ls={'jopangi.compare': CMP})
+    if QJ.GATE:
+        QJ.launch('base')
+    for which, s in ((('new', src), ('base', base_src)) if QJ.GATE else (('new', src),)):
+        p = page(br, tag + which, s, PC, ls={'jopangi.compare': CMP})   # regress: 새 컨텍스트 — 기록 꼴이 다르다(jopangi.compare 를 심은 쪽)
         jo(p, '제3조')
         out[which] = p.ev("""() => { const m = document.querySelector('#slot .main'); const c3 = m.querySelector('.thwrap.c3');
           return { thbot: !!document.getElementById('thbot'), chip: m.querySelectorAll('.chip.c-theme').length, lab: [...m.querySelectorAll('.conn .k')].map(e => __TM.txt(e)), c3: c3 ? c3.outerHTML : null, cmp: localStorage.getItem('jopangi.compare') }; }""")
         p.close()
-    n, b = out['new'], out['base']
-    g1 = not n['thbot'] and n['chip'] == 0 and '🧩 테마·비교' not in n['lab'] and b['thbot'] and b['chip'] >= 1
-    T(G, '옛 「🧩 테마·비교 / ＋ 비교 만들기」 줄 0(바탕엔 있음)', g1, {'새 판': [n['thbot'], n['chip'], n['lab']], '바탕': [b['thbot'], b['chip'], b['lab']]})
-    g2 = n['c3'] == b['c3'] and n['c3'] is not None
-    T(G, '「3법 비교」 패널 = 바탕(outerHTML)', g2, {'같음': n['c3'] == b['c3'], '있음': n['c3'] is not None})
-    g3 = json.loads(n['cmp'] or '{}') == CMP == json.loads(b['cmp'] or '{}')
-    T(G, 'jopangi.compare 무변', g3, n['cmp'])
-    return g1 and g2 and g3
+    if QJ.GATE:
+        n, b = out['new'], out['base']
+        g1 = not n['thbot'] and n['chip'] == 0 and '🧩 테마·비교' not in n['lab'] and b['thbot'] and b['chip'] >= 1
+        T(G, '옛 「🧩 테마·비교 / ＋ 비교 만들기」 줄 0(바탕엔 있음)', g1, {'새 판': [n['thbot'], n['chip'], n['lab']], '바탕': [b['thbot'], b['chip'], b['lab']]})
+        g2 = n['c3'] == b['c3'] and n['c3'] is not None
+        T(G, '「3법 비교」 패널 = 바탕(outerHTML)', g2, {'같음': n['c3'] == b['c3'], '있음': n['c3'] is not None})
+        g3 = json.loads(n['cmp'] or '{}') == CMP == json.loads(b['cmp'] or '{}')
+        T(G, 'jopangi.compare 무변', g3, n['cmp'])
+        return g1 and g2 and g3
+    else:
+        n = out['new']
+        g1 = not n['thbot'] and n['chip'] == 0 and '🧩 테마·비교' not in n['lab']   # 「바탕엔 있음」(헛잣대)은 gate 에서만 — regress 의 바탕 판엔 옛 줄이 이미 없다
+        T(G, '옛 「🧩 테마·비교 / ＋ 비교 만들기」 줄 0(바탕엔 있음)', g1, {'새 판': [n['thbot'], n['chip'], n['lab']], '바탕': '(regress — 바탕을 안 띄움)'})
+        c3b = QJ.base(_rg_cid(br, 'B10.2'), _rg_md5(n['c3']))   # 기준 = 바탕 판(앞 인도판) 「3법 비교」 패널 outerHTML md5
+        g2 = n['c3'] is not None and _rg_md5(n['c3']) == c3b
+        T(G, '「3법 비교」 패널 = 바탕(outerHTML)', g2, {'같음': _rg_md5(n['c3']) == c3b, '있음': n['c3'] is not None})
+        g3 = json.loads(n['cmp'] or '{}') == CMP   # 바탕 쪽 기댓값은 심은 CMP 와 같다(앱이 안 고침) — NEW 만으로 잰다
+        T(G, 'jopangi.compare 무변', g3, n['cmp'])
+        return g1 and g2 and g3
 
 
 BOOK = r"""async ([page, ctx]) => { closeAllPops(true); window.__saved = null; viewCanvas.jari.book8({ book: 'patent_hr8', page: page }, null, ctx ? { save: x => { window.__saved = x; } } : undefined);
@@ -901,7 +1085,7 @@ BW = "() => POPS.find(x => x._pk === 'cv|book|patent_hr8')"
 def b11(br, src, tag):
     G = 'B11'
     ok = True
-    p = page(br, tag, src, PC)
+    p = page(br, tag, src, PC)   # regress: 새 컨텍스트 — 8판 교재 창(pdf.js 캔버스 · 쪽 글 · 찍기 상자 상태)을 새로 연다
     opened = p.ev(BOOK, [300, True])
     for _ in range(40):
         if p.ev("() => { const w = POPS.find(x => x._pk === 'cv|book|patent_hr8'); return !!(w && w.querySelector('.cv-bs input')); }"):
@@ -916,7 +1100,7 @@ def b11(br, src, tag):
     g2 = not r['hid'] and r['hd'].startswith('「보정을 무효로」 총 2쪽 · 3곳') and r['pg'] == ['p.45 PDF 55 · 2곳', 'p.766 PDF 776 · 1곳'] and r['mk'] == [Q_BOOK] * 3
     T(G, '「보정을 무효로」 → 총 2쪽 · 3곳(공백 뺀 부분 문자열 · 조각 = 앞 14 · mark · 뒤 14)', g2, r)
     a = p.ev("() => __RB.hitOn(POPS.find(x => x._pk === 'cv|book|patent_hr8').querySelector('.cv-bssn'))")
-    p.press(a, 400)
+    p.press(a, 400) if QJ.GATE else _rg_press(p, a, 400, r"() => { const w = POPS.find(x => x._pk === 'cv|book|patent_hr8'); return !!(w && w._cvb && w._cvb.st.p === 55); }", 'B11.snip')
     for _ in range(60):
         if p.ev("() => POPS.find(x => x._pk === 'cv|book|patent_hr8').querySelectorAll('.cv-bshit').length > 0"):
             break
@@ -928,16 +1112,16 @@ def b11(br, src, tag):
     g4 = bx['one'] == '1/3곳 · p.45 목록 ▾' and not bx['list']
     T(G, '목록 접힘 = 한 줄 「k/M곳 · p.N 목록 ▾」', g4, bx['one'])
     p.ev("() => POPS.find(x => x._pk === 'cv|book|patent_hr8').querySelector('[data-nx]').click()")
-    p.wait(900)
+    p.wait(900) if QJ.GATE else QJ.sleep(900, '교재 다음 쪽 — 그 쪽 글 비동기 · 상자 0건이 기대라 「나타남」 표지 없음', p.pg)
     nx = p.ev("() => { const w = POPS.find(x => x._pk === 'cv|book|patent_hr8'); return [w._cvb.st.p, w.querySelectorAll('.cv-bshit').length]; }")
     p.ev("() => POPS.find(x => x._pk === 'cv|book|patent_hr8').querySelector('[data-pv]').click()")
-    p.wait(1200)
+    p.wait(1200) if QJ.GATE else QJ.sleep(1200, '교재 이전 쪽 — 쪽 글 비동기 + 상자 다시 그림(앞 쪽 상자 2 가 나타남 표지는 55쪽 글 도착 뒤 · 0↔2 사이를 가르는 표지 없음)', p.pg)
     pv = p.ev("() => { const w = POPS.find(x => x._pk === 'cv|book|patent_hr8'); return [w._cvb.st.p, [...new Set([...w.querySelectorAll('.cv-bshit')].map(h => h.dataset.k))].length]; }")
     g5 = nx == [56, 0] and pv[0] == 55 and pv[1] == 2
     T(G, '◀▶ 넘기면 그 쪽 상자만(56 = 0 · 55 = 2)', g5, {'▶': nx, '◀': pv})
     # 찍기 유지 — 📍 찍기 → 끌어 상자 → 이 자리 저장 = 부른 쪽 저장
     p.ev("() => POPS.find(x => x._pk === 'cv|book|patent_hr8').querySelector('[data-pk]').click()")
-    p.wait(300)
+    p.wait(300) if QJ.GATE else _rg_wait(p, 300, r"() => { const w = POPS.find(x => x._pk === 'cv|book|patent_hr8'); return !!(w && w.querySelector('.cv-pickov')); }", 'B11.pickov')
     ov = p.ev("""() => { const w = POPS.find(x => x._pk === 'cv|book|patent_hr8'), o = w.querySelector('.cv-pickov'); if (!o) return null; const r = o.getBoundingClientRect(), pr = w.getBoundingClientRect(), nav = w.querySelector('.cv-booknav').getBoundingClientRect();
       const top = Math.max(r.top, nav.bottom) + 30, bot = Math.min(r.bottom, pr.bottom) - 30; if (bot - top < 80) return null; const y = top + (bot - top) * 0.3; return { x: r.left + r.width * 0.3, y: y, w: r.width, at: document.elementFromPoint(r.left + r.width * 0.3, y) === o }; }""")
     if ov:
@@ -945,9 +1129,9 @@ def b11(br, src, tag):
         p.pg.mouse.down()
         p.pg.mouse.move(ov['x'] + 120, ov['y'] + 50, steps=6)
         p.pg.mouse.up()
-        p.wait(300)
+        p.wait(300) if QJ.GATE else QJ.sleep(300, '찍기 상자 끌어 놓은 뒤 상자 안착 — pointer 끝 처리 표지 없음', p.pg)
     sv = p.ev("() => { const w = POPS.find(x => x._pk === 'cv|book|patent_hr8'); const b = w && w.querySelector('[data-sv]'); return b ? __RB.hitOn(b) : null; }")
-    p.press(sv, 600)
+    p.press(sv, 600) if QJ.GATE else _rg_press(p, sv, 600, "() => !!window.__saved", 'B11.saved')
     saved = p.ev("() => window.__saved")
     g6 = bool(ov) and bool(saved) and saved.get('p') == 55 and len(saved.get('r') or []) == 4
     T(G, '찍기 유지(📍 찍기 → 끌기 → 이 자리 저장 = 부른 쪽 저장)', g6, {'덮개': bool(ov), '저장': saved})
@@ -968,9 +1152,9 @@ def b11(br, src, tag):
         ok = False
         T(G, 'JS 오류', False, p.errs[:3])
     p.close()
-    q = page(br, 'none:' + tag, src, PC)
+    q = page(br, 'none:' + tag, src, PC)   # regress: 새 컨텍스트 — none: 덧판 = 쪽 글 404(재료가 다름)
     q.ev(BOOK, [300, True])
-    q.wait(1500)
+    q.wait(1500) if QJ.GATE else QJ.sleep(1500, '쪽 글 404 → 검색칸이 안 생김을 보는 칸 — 안 생기는 것을 기다리므로 표지 없음(상한 대기)', q.pg)
     n0 = q.ev("() => { const w = POPS.find(x => x._pk === 'cv|book|patent_hr8'); return w ? { bs: !!w.querySelector('.cv-bs'), canvas: !!w.querySelector('.cv-bookpg canvas') } : null; }")
     g9 = bool(n0) and not n0['bs'] and n0['canvas']
     T(G, '쪽 글 404 → 칸 0(교재 창은 그대로)', g9, n0)
@@ -984,7 +1168,7 @@ def b11(br, src, tag):
 
 def b12(br, src, base_src, tag):
     G = 'B12'
-    p = page(br, 'none:' + tag, src, PC)
+    p = page(br, 'none:' + tag, src, PC)   # regress: 새 컨텍스트 — none: 덧판 = 테마 재료 404(재료가 다름 · TM.st 가 'none')
     jo(p, '제3조')
     st = p.ev("() => ({ st: typeof TM === 'object' ? TM.st : null, btn: (() => { const b = document.querySelector('.jtbar .tmtg'); return b ? { t: __TM.txt(b), dis: b.disabled } : null; })(), jo: (() => { const b = document.querySelector('.jomt .tmjo'); return b ? { t: __TM.txt(b), c: __TM.hex(getComputedStyle(b).color) } : null; })() })")
     g1 = st['st'] == 'none' and st['btn'] == {'t': '테마 0', 'dis': True} and st['jo'] == {'t': '테마 0', 'c': '#9ca3af'}
@@ -993,20 +1177,26 @@ def b12(br, src, base_src, tag):
     for sel in ('.jomt .tmjo', '.jtbar .tmtg'):
         a = at(p, sel)
         if a:
-            p.press(a, 500)
+            p.press(a, 500) if QJ.GATE else _rg_press(p, a, 500, None, 'B12 재료 404 — 눌러도 창이 안 뜸을 보는 칸(안 생기는 것을 기다림 · 표지 없음)')
     n1 = p.ev("() => POPS.length")
     err = p.ev("() => ({ toast: [...document.querySelectorAll('#toasts .toast')].map(t => __TM.txt(t)), err: __RB.errs() })")
     g2 = n0 == n1 == 0 and not err['toast'] and not err['err'] and not p.errs
     T(G, '창 안 뜸 · 오류 문구 0', g2, {'창': [n0, n1], '문구': err})
     tree = p.ev("() => __TM.treeSkel()")
     jomt = p.ev("() => { const m = document.querySelector('.jomt').cloneNode(true); m.querySelectorAll('.tmjo').forEach(x => x.remove()); return m.outerHTML; }")
-    pb = page(br, 'none:' + tag + 'B', base_src, PC)
-    jo(pb, '제3조')
-    tree_b = pb.ev("() => document.querySelector('#slot .tree').outerHTML")
-    jomt_b = pb.ev("() => document.querySelector('.jomt').outerHTML")
-    pb.close()
-    g3 = tree == tree_b and jomt == jomt_b
-    T(G, '나머지 DOM = 바탕(서랍 · 모드 줄 — 테마 글자·점 빼고)', g3, {'서랍': tree == tree_b, '모드 줄': jomt == jomt_b})
+    if QJ.GATE:
+        QJ.launch('base')
+        pb = page(br, 'none:' + tag + 'B', base_src, PC)
+        jo(pb, '제3조')
+        tree_b = pb.ev("() => document.querySelector('#slot .tree').outerHTML")
+        jomt_b = pb.ev("() => document.querySelector('.jomt').outerHTML")
+        pb.close()
+        g3 = tree == tree_b and jomt == jomt_b
+        T(G, '나머지 DOM = 바탕(서랍 · 모드 줄 — 테마 글자·점 빼고)', g3, {'서랍': tree == tree_b, '모드 줄': jomt == jomt_b})
+    else:
+        bv = QJ.base(_rg_cid(br, 'B12.3'), [_rg_md5(tree), _rg_md5(jomt)])   # 기준 = 바탕 판(앞 인도판) 재료 404 서랍 뼈대 · 모드 줄(테마 글자 뺀 것) md5
+        g3 = _rg_md5(tree) == bv[0] and _rg_md5(jomt) == bv[1]
+        T(G, '나머지 DOM = 바탕(서랍 · 모드 줄 — 테마 글자·점 빼고)', g3, {'서랍': _rg_md5(tree) == bv[0], '모드 줄': _rg_md5(jomt) == bv[1]})
     p.close()
     return g1 and g2 and g3
 
@@ -1123,6 +1313,7 @@ def reg_run(fn, app_text, which):
     cmd = [sys.executable, os.path.join(HERE, fn), '--new', af, '--eng', 'chromium', '--res', os.path.join(d, 'result.txt')]
     if '--vendor' in sys.argv:
         cmd += ['--vendor', ARG('--vendor')]
+    QJ.sub('python:harness')   # B13 = 하위 하네스 subprocess(gate 만 — regress 는 0)
     t0 = time.time()
     try:
         cp = subprocess.run(cmd, capture_output=True, timeout=3000, cwd=d, env=dict(os.environ, PYTHONIOENCODING='utf-8'))
@@ -1220,14 +1411,118 @@ B14_SAME = {'small:button.tool.jckf:주체 # ▾': 'small:button.tool.jckf:전�
 ACCEPT = {'small:i.bkmk.dot:': 'fix1 A-34-3 거름 점 누름 가로 = 이웃과 안 겹치는 만큼(14) · 높이 36'}
 
 
+_RG_SW = {}   # (엔진, 기기 이름) → {'out': {화면: 흠 목록}, 'errs': {화면: [JS 오류]}} — 기기마다 한 번 재고 B14 · B24 가 같이 쓴다
+_RG_B14_SCREENS = ('서랍 테마', '서랍 거름', '테마 창', '목록 창', '연결 창', '조문 팝업', '메모 창', '8판 창')
+_RG_B24_SCREENS = ('서랍 목차', '서랍 테마', '서랍 거름', '테마 창', '목록 창', '연결 창', '찾기 결과', '🔗 연결 창', '원문 창 마크업', '원문 창 정오문제', '원문 창 인용')
+
+
+def _rg_sweep_union(br, src, tag, dev, dn):
+    """regress(A-2) — 새 컨텍스트 하나(이 기기 · 같은 재료 · 기록 꼴 같음)에서 B14 · B24 화면을 이어서 잰다 · 화면마다 앞뒤 정리(closeAllPops · 점 0 · 서랍 목차)는 gate 판 sweep_screens · sweep_fix1 과 같은 길 ·
+       JS 오류는 화면마다 그 화면을 재는 동안 난 것만 붙인다"""
+    key = (_rg_eng(br), dn)
+    if key in _RG_SW:
+        return _RG_SW[key]
+    p = page(br, tag + 'U' + dn, src, dev)
+    touch = dev in (PHONE, PAD)
+    sw = lambda sel: p.ev("a => __TM.sweep(a[0], a[1])", [sel, touch])
+    mark = "k => { document.querySelectorAll('[data-sw]').forEach(x => x.removeAttribute('data-sw')); const w = __TM.pop(k); if (w) w.setAttribute('data-sw', '1'); }"
+    out, errs = {}, {}
+    jo(p, '제3조')
+    e0 = len(p.errs)
+    out['서랍 목차'] = sw('#slot .tree')
+    errs['서랍 목차'] = p.errs[e0:]
+    e0 = len(p.errs)
+    p.ev("() => document.querySelector('.jtbar .tmtg').click()")
+    _rg_idle(p, 300, _RG_TM_ON, 'sweep.tmtg')
+    out['서랍 테마'] = sw('#slot .tree')
+    errs['서랍 테마'] = p.errs[e0:]
+    e0 = len(p.errs)
+    p.ev("() => { document.querySelector('.jtbar .tmtg').click(); }")
+    _rg_idle(p, 300, _RG_TM_OFF, 'sweep.tmtg')
+    p.ev("() => { tmDotSet(2); render(); }")
+    _rg_idle(p, 300, _RG_DOT, 'sweep.dot', 2)
+    out['서랍 거름'] = sw('#slot .tree')
+    errs['서랍 거름'] = p.errs[e0:]
+    p.ev("() => { tmDotSet(0); render(); }")
+    _rg_idle(p, 300, _RG_DOT, 'sweep.dot', 0)
+    for k, js, wkey in (('테마 창', "() => tmWin('t02', null)", 'theme|t02'), ('목록 창', "() => tmListWin('t02', null)", 'themelist|t02'),
+                        ('연결 창', "() => tmOfWin('특허법', '제3조', null)", 'themeof|')):
+        e0 = len(p.errs)
+        p.ev("() => closeAllPops(true)")
+        p.ev(js)
+        _rg_wait(p, 700, _RG_WIN, 'sweep.win', wkey)
+        p.ev(mark, wkey)
+        out[k] = sw('[data-sw="1"]')
+        errs[k] = p.errs[e0:]
+    # B24 만 — 연결 창에서 「분변」 찾기 결과
+    e0 = len(p.errs)
+    p.ev("() => { const w = document.querySelector('.pop.tmofw'); w.querySelector('.thsrch input').value = '분변'; w.querySelector('.thsrch .tmsgo').click(); }")
+    _rg_wait(p, 400, r"() => { const w = document.querySelector('.pop.tmofw'); return !!w && w.querySelectorAll('.tmres .r.tmr').length > 0; }", 'sweep.search')
+    p.ev(mark, 'themeof|')
+    out['찾기 결과'] = sw('[data-sw="1"]')
+    errs['찾기 결과'] = p.errs[e0:]
+    # B14 만 — 조문 팝업 · 메모 창 · 8판 창
+    e0 = len(p.errs)
+    p.ev("() => closeAllPops(true)")
+    a = p.ev("() => { const l = document.querySelector('#slot .main .box .wmlk'); return l ? __RB.hitOn(l) : null; }")
+    _rg_press(p, a, 1500, _RG_JOGO, 'sweep.jo')
+    p.ev("() => { const w = POPS.filter(x => (x._pk || '').indexOf('jo|') === 0).pop(); if (w) w.setAttribute('data-sw', '1'); }")
+    out['조문 팝업'] = sw('[data-sw="1"]')
+    errs['조문 팝업'] = p.errs[e0:]
+    e0 = len(p.errs)
+    p.ev("() => { document.querySelectorAll('[data-sw]').forEach(x => x.removeAttribute('data-sw')); closeAllPops(true); }")
+    p.ev("async () => { pitEdit('jo|특허법:제3조', '0', 0, '틀', null); await __TM.wait(300); POPS[POPS.length - 1].setAttribute('data-sw', '1'); }")
+    out['메모 창'] = sw('[data-sw="1"]')
+    errs['메모 창'] = p.errs[e0:]
+    e0 = len(p.errs)
+    p.ev("() => { document.querySelectorAll('[data-sw]').forEach(x => x.removeAttribute('data-sw')); closeAllPops(true); }")
+    p.ev(BOOK, [300, True])
+    _rg_wait(p, 4000, r"() => { const w = POPS.find(x => x._pk === 'cv|book|patent_hr8'); return !!(w && w.querySelector('.cv-bs input')); }", 'sweep.bookinput')
+    p.ev("""async () => { const w = POPS.find(x => x._pk === 'cv|book|patent_hr8'); const i = w.querySelector('.cv-bs input'); i.value = '보정을 무효로'; w.querySelector('.cv-bs .cv-bsgo').click(); await __TM.wait(300); }""")
+    p.ev("() => { const w = POPS.find(x => x._pk === 'cv|book|patent_hr8'); if (w) w.setAttribute('data-sw', '1'); }")
+    out['8판 창'] = sw('[data-sw="1"]')
+    errs['8판 창'] = p.errs[e0:]
+    # B24 만 — 🔗 연결 창 · 원문 창 셋
+    e0 = len(p.errs)
+    p.ev("() => closeAllPops(true)")
+    if p.ev(OPENW, 'cflw'):
+        out['🔗 연결 창'] = sw('[data-fw="1"]')
+    errs['🔗 연결 창'] = p.errs[e0:]
+    jo(p, '제6조')
+    for wn, wk in WINS[1:]:
+        e0 = len(p.errs)
+        if p.ev(OPENW, wk):
+            out[wn] = sw('[data-fw="1"]')
+        errs[wn] = p.errs[e0:]
+    p.ev(CLOSEW)
+    p.close()
+    _RG_SW[key] = {'out': out, 'errs': errs}
+    return _RG_SW[key]
+
+
+def _rg_sweep_view(br, src, tag, dev, dn, screens):
+    """한 관문이 보는 화면만(gate 의 그 관문과 같은 차례) → (n, en)"""
+    u = _rg_sweep_union(br, src, tag, dev, dn)
+    n = {s: u['out'][s] for s in screens if s in u['out']}
+    en = [e for s in screens for e in u['errs'].get(s, [])]
+    return n, en
+
+
 def b14(br, src, base_src, tag):
     G = 'B14'
     ok = True
     for dn, dev in (('폰390', PHONE), ('iPad834', PAD), ('PC', PC2)):
-        n, en = sweep_screens(br, src, tag + 'N' + dn, dev)
-        b, eb = sweep_screens(br, base_src, tag + 'B' + dn, dev, base=True)
+        if QJ.GATE:
+            n, en = sweep_screens(br, src, tag + 'N' + dn, dev)
+            QJ.launch('base')
+            b, eb = sweep_screens(br, base_src, tag + 'B' + dn, dev, base=True)
+        else:
+            n, en = _rg_sweep_view(br, src, tag, dev, dn, _RG_B14_SCREENS)   # regress: 기기마다 앱 하나로 B14 · B24 화면을 이어서(A-2)
         for scr in n:
-            nn, bb = {B14_SAME.get(x, x) for x in n[scr]}, set(b.get(scr, []))
+            if QJ.GATE:
+                nn, bb = {B14_SAME.get(x, x) for x in n[scr]}, set(b.get(scr, []))
+            else:
+                nn, bb = {B14_SAME.get(x, x) for x in n[scr]}, {B14_SAME.get(x, x) for x in QJ.base(_rg_cid(br, 'B14.sweep', dn, scr), sorted(n[scr]))}   # 기준 = 바탕 판(앞 인도판) 같은 화면 흠 목록(이름 바꿈 B14_SAME 를 양쪽에)
             new = sorted(nn - bb - set(ACCEPT))
             good = not new
             ok = ok and good
@@ -1260,7 +1555,7 @@ def b15(br, src, tag):
     jo(p, '제3조')
     body = p.ev("() => __TM.deco(document.querySelector('#slot .main .wml .wmlk'))")
     p.ev("() => tmWin('t02', null)")
-    p.wait(500)
+    p.wait(500) if QJ.GATE else _rg_wait(p, 500, _RG_WIN, 'B15.win', 'theme|t02')
     th = p.ev("() => { const w = __TM.pop('theme|t02'); return [...w.querySelectorAll('.thl a.wmlk')].map(a => Object.assign(__TM.deco(a), { run: __TM.hex(a.closest('.thl > span, .thl span[style]') ? getComputedStyle(a.closest('.thl > span, .thl span[style]')).color : ''), me: __TM.hex(getComputedStyle(a).color), k: a.dataset.law + ':' + a.dataset.k })); }")
     keys = ('line', 'style', 'dcol', 'th', 'off', 'cur')
     same = bool(body) and bool(th) and all(all(x[k] == body[k] for k in keys) for x in th)
@@ -1268,10 +1563,13 @@ def b15(br, src, tag):
     g1 = same and runc and body['line'] == 'underline' and body['style'] == 'dotted' and body['cur'] == 'pointer'
     T(G, '테마 창 .thl a.wmlk 꾸밈 = 본문 .wml .wmlk(밑줄 · 점선 · 색 · 굵기 · 간격 · 손가락) · 글자색 = 그 run 색', g1,
       {'본문': body, '테마 링크 수': len(th or []), '첫 링크': (th or [None])[0], '다른 것': [x['k'] for x in (th or []) if not all(x[k] == body[k] for k in keys) or x['me'] != x['run']][:4]})
-    a = p.ev("() => { const w = __TM.pop('theme|t02'); const l = [...w.querySelectorAll('.thl .wmlk')].find(x => x.dataset.k === '제16조' && x.dataset.law === '특허법'); return l ? __RB.hitOn(l) : null; }")
-    p.press(a, 1500)
-    g2 = p.ev("() => !!POPS.find(x => x._pk === 'jo|특허법|제16조')")
-    T(G, '누르면 popJo(jo|특허법|제16조 · 바탕과 같음)', g2, g2)
+    if QJ.GATE:
+        a = p.ev("() => { const w = __TM.pop('theme|t02'); const l = [...w.querySelectorAll('.thl .wmlk')].find(x => x.dataset.k === '제16조' && x.dataset.law === '특허법'); return l ? __RB.hitOn(l) : null; }")
+        p.press(a, 1500)
+        g2 = p.ev("() => !!POPS.find(x => x._pk === 'jo|특허법|제16조')")
+        T(G, '누르면 popJo(jo|특허법|제16조 · 바탕과 같음)', g2, g2)
+    else:
+        g2 = True   # 합침 → B3-2(같은 테마 창 t02 에서 같은 제16조 링크를 눌러 같은 팝업 키 jo|특허법|제16조 를 보는 칸 · B3-2 가 민소 링크 · 시규까지 더 잼)
     ok = g1 and g2 and not p.errs
     if p.errs:
         T(G, 'JS 오류', False, p.errs[:3])
@@ -1285,23 +1583,26 @@ def b16(br, src, tag):
     p = page(br, tag, src, PC)
     jo(p, '제3조')
     p.ev("() => tmWin('t01', null)")
-    p.wait(500)
+    p.wait(500) if QJ.GATE else _rg_wait(p, 500, _RG_WIN, 'B16.win', 'theme|t01')
     got = p.ev("t => { const w = __TM.pop('theme|t01'); const l = [...w.querySelectorAll('.thl')].find(x => x.textContent.indexOf(t) >= 0); return l ? [...l.querySelectorAll('.wmlk')].map(a => [a.textContent, a.dataset.law, a.dataset.k]) : null; }", A32_LINE[:8])
     g1 = got == A32_WANT
     T(G, '「%s」 링크 = 제5조 특허 · 민소16조 → 민사소송법 · (상227조) 상표법 · (디217조) 디자인보호법 · 특226조 특허 / 및시규11조 · 법원은상33조 · 이상5조 · 공백 뒤 시규11조 = 0' % A32_LINE, g1, {'링크': got, '바람': A32_WANT})
     a = p.ev("() => { const w = __TM.pop('theme|t01'); const l = [...w.querySelectorAll('.thl .wmlk')].find(x => x.dataset.law === '민사소송법'); return l ? __RB.hitOn(l) : null; }")
-    p.press(a, 1500)
+    p.press(a, 1500) if QJ.GATE else _rg_press(p, a, 1500, _RG_JOPOP, 'B16.jo', 'jo|민사소송법|제16조')
     g2 = p.ev("() => !!POPS.find(x => x._pk === 'jo|민사소송법|제16조')")
     T(G, '「민소16조」 누름 → jo|민사소송법|제16조', g2, g2)
-    p.ev("() => closeAllPops(true)")
-    p.ev("() => tmWin('t02', null)")
-    p.wait(400)
-    n2 = p.ev("() => __TM.pop('theme|t02').querySelectorAll('.thl .wmlk').length")
-    p.ev("() => tmWin('t03', null)")
-    p.wait(400)
-    n3 = p.ev("() => __TM.pop('theme|t03').querySelectorAll('.thfig .wmlk').length")
-    g3 = n2 == PLANT['t02']['links'] and n3 == PLANT['t03']['links']
-    T(G, '실제 재료 모양 회귀 = 본판 B3 조 링크 수 무변(기일기간 %d · 분변분재 svg %d)' % (PLANT['t02']['links'], PLANT['t03']['links']), g3, [n2, n3])
+    if QJ.GATE:
+        p.ev("() => closeAllPops(true)")
+        p.ev("() => tmWin('t02', null)")
+        p.wait(400)
+        n2 = p.ev("() => __TM.pop('theme|t02').querySelectorAll('.thl .wmlk').length")
+        p.ev("() => tmWin('t03', null)")
+        p.wait(400)
+        n3 = p.ev("() => __TM.pop('theme|t03').querySelectorAll('.thfig .wmlk').length")
+        g3 = n2 == PLANT['t02']['links'] and n3 == PLANT['t03']['links']
+        T(G, '실제 재료 모양 회귀 = 본판 B3 조 링크 수 무변(기일기간 %d · 분변분재 svg %d)' % (PLANT['t02']['links'], PLANT['t03']['links']), g3, [n2, n3])
+    else:
+        g3 = True   # 합침 → B3-1(기일기간 t02 조 링크 수 = PLANT) · B3-4(분변분재 t03 svg 조 링크 수 = PLANT) — 같은 재료 · 같은 수를 B3 가 이미 잰다
     ok = g1 and g2 and g3 and not p.errs
     if p.errs:
         T(G, 'JS 오류', False, p.errs[:3])
@@ -1317,7 +1618,7 @@ def _drag(q, sel):
     q.pg.mouse.down()
     q.pg.mouse.move(d['hx'] + 80, d['hy'] + 40, steps=5)
     q.pg.mouse.up()
-    q.wait(200)
+    q.wait(200) if QJ.GATE else QJ.sleep(200, '머리 끌기 놓은 뒤 자리 안착 — pointer 끝 처리(S.popCfg 저장) 표지 없음', q.pg)
     pos = q.ev("s => { const w = document.querySelector(s); return [Math.round(parseFloat(w.style.left)), Math.round(parseFloat(w.style.top))]; }", sel)
     sz = None
     if d['ok']:
@@ -1326,7 +1627,7 @@ def _drag(q, sel):
         q.pg.mouse.down()
         q.pg.mouse.move(z[0] + 60, z[1] + 50, steps=5)
         q.pg.mouse.up()
-        q.wait(200)
+        q.wait(200) if QJ.GATE else QJ.sleep(200, '크기 손잡이(.prsz) 끌어 놓은 뒤 크기 안착 — pointer 끝 처리 표지 없음', q.pg)
         sz = q.ev("s => { const r = document.querySelector(s).getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }", sel)
     return [pos, sz]
 
@@ -1335,7 +1636,9 @@ def b17(br, src, prev_src, tag):
     """A-33 🔗 연결 창 · 원문 창 셋 = A-7 틀 값(popShell 10종과 같은 값) · 안쪽(머리 여백 · 끌기 · 본문 바탕 · 폭 · 크기 조절) = 8d1383d"""
     G = 'B17'
     res = {}
-    for nm_, s_ in (('new', src), ('prev', prev_src)):
+    if QJ.GATE:
+        QJ.launch('base')
+    for nm_, s_ in ((('new', src), ('prev', prev_src)) if QJ.GATE else (('new', src),)):
         p = page(br, tag + nm_, s_, PC)
         jo(p, '제6조')
         ref = p.ev("() => { const b = popShell('', '틀', 'frame|ref'); const o = __TM.frame(b.parentNode); closeOne(b.parentNode); return o; }")
@@ -1348,16 +1651,22 @@ def b17(br, src, prev_src, tag):
         res[nm_] = (ref, out, dr, p.errs[:])
         p.close()
     ref, out, dr, errs = res['new']
-    _, outp, drp, _ = res['prev']
+    if QJ.GATE:
+        _, outp, drp, _ = res['prev']
     bad = {wn: {k: f[k] for k in FW if f[k] != FW[k]} if f else '안 뜸' for wn, f in out.items()}
     g1 = all(v == {} for v in bad.values())
     T(G, '연결 창 · 마크업 · 정오문제 · 인용 창 틀 = §A-33-1 값(테 #cbd5e1 · 12 · 그림자 · 머리 #f8fafc · 밑줄 #e5e7eb · 제목 13 800 #111827 · ✕ = 머리 단추 꼴)', g1, {'어긋남': bad})
     g2 = bool(ref) and all(f and all(f[k] == ref[k] for k in FW) for f in out.values())
     T(G, '네 창 틀 = popShell 틀(본판 B9 값)과 같음', g2, {'popShell': {k: ref[k] for k in ('bd', 'rad', 'hbg', 'tc', 'xbd')} if ref else None})
     inner = {wn: (out[wn] or {}).get('inner') for wn in out}
-    innerp = {wn: (outp[wn] or {}).get('inner') for wn in outp}
+    if QJ.GATE:
+        innerp = {wn: (outp[wn] or {}).get('inner') for wn in outp}
+    else:
+        innerp = QJ.base(_rg_cid(br, 'B17.3'), inner)   # 기준 = 바탕 판(앞 인도판)의 안쪽 값(머리 여백 · 끌기 cursor · 본문 바탕 · 폭 · 크기 손잡이 .prsz · 글꼴)
     g3 = all(inner[wn] and inner[wn] == innerp.get(wn) for wn in inner)
     T(G, '안쪽 = 8d1383d(머리 여백 · 끌기 cursor · 본문 바탕·여백 · 폭 · 크기 손잡이 · 글꼴)', g3, {wn: [inner[wn], innerp.get(wn)] for wn in inner if inner[wn] != innerp.get(wn)} or inner['🔗 연결 창'])
+    if QJ.REGRESS:
+        drp = QJ.base(_rg_cid(br, 'B17.4'), dr)   # 기준 = 바탕 판(앞 인도판)의 끌기 자리 · 크기 조절 크기(크기 손잡이 .prsz 를 끌어 잰다 — popsize 회귀가 이 칸을 본다)
     g4 = dr == drp and len(dr) == 2
     T(G, '끌기 · 크기 조절 = 8d1383d(연결 창 · 마크업 창)', g4, {'새 판': dr, '8d1383d': drp})
     ok = g1 and g2 and g3 and g4 and not errs
@@ -1380,11 +1689,15 @@ def b18(br, src, base_src, prev_src, tag):
     for dn, dev in (('폰390', PHONE), ('iPad834', PAD)):
         p = page(br, tag + dn, src, dev)
         jo(p, '제3조')
-        pb = page(br, tag + 'B' + dn, base_src, dev)
-        jo(pb, '제3조')
-        hb = pb.ev("() => Math.round(document.querySelector('.jtbar').getBoundingClientRect().height * 10) / 10")
-        pb.close()
+        if QJ.GATE:
+            QJ.launch('base')
+            pb = page(br, tag + 'B' + dn, base_src, dev)
+            jo(pb, '제3조')
+            hb = pb.ev("() => Math.round(document.querySelector('.jtbar').getBoundingClientRect().height * 10) / 10")
+            pb.close()
         hd = p.ev(HEAD)
+        if QJ.REGRESS:
+            hb = QJ.base(_rg_cid(br, 'B18.1', dn), hd['h'])   # 기준 = 바탕 판(앞 인도판) 같은 기기 서랍 머리 높이(±1)
         cy0 = hd['it'][0]['cy'] if hd['it'] else 0
         one = len(hd['it']) == 4 and all(abs(x['cy'] - cy0) <= 2 for x in hd['it'])
         g1 = one and abs(hd['h'] - hb) <= 1
@@ -1394,7 +1707,7 @@ def b18(br, src, base_src, prev_src, tag):
         for i in range(3):
             tg.append(p.ev(TGT3))
             p.ev("() => document.querySelector('.jtbar .jstep:not(.tmtg)').click()")
-            p.idle(300)
+            p.idle(300) if QJ.GATE else _rg_idle(p, 300, _RG_STEP, 'B18.step', tg[-1]['step'])
         g2 = all(m['dot']['dh'] >= 36 and m['dot']['center'] and m['dot']['steal'] == 0 and m['dot']['near'] == 0 and m['stp']['steal'] == 0 and m['tm']['steal'] == 0 for m in tg)
         ok = ok and g2
         T(G, '%s 거름 점 누름 높이 ≥ 36 · 가로 %s · 둘레 겹침 0(접기 단추 「%s」 셋 다 · 거름 점·접기·테마 N 가로챔 0)' % (dn, tg[0]['dot']['dw'], ' · '.join(m['step'] for m in tg)), g2,
@@ -1405,7 +1718,7 @@ def b18(br, src, base_src, prev_src, tag):
         T(G, '%s 머리 요소 화면·서랍 밖 0' % dn, g3, off)
         seq = []
         for i in range(4):
-            p.press(at(p, '.jtbar .tmdot'), 450)
+            p.press(at(p, '.jtbar .tmdot'), 450) if QJ.GATE else _rg_press(p, at(p, '.jtbar .tmdot'), 450, _RG_DOT, 'B18.dot', (i + 1) % 4)
             seq.append(p.ev("() => __TM.dot().bg"))
         g4 = seq == [BKC[0], BKC[1], BKC[2], '#ffffff']
         ok = ok and g4
@@ -1415,12 +1728,18 @@ def b18(br, src, base_src, prev_src, tag):
             T(G, '%s JS 오류' % dn, False, p.errs[:3])
         p.close()
     pc = {}
-    for nm_, s_ in (('new', src), ('prev', prev_src)):
+    if QJ.GATE:
+        QJ.launch('base')
+    for nm_, s_ in ((('new', src), ('prev', prev_src)) if QJ.GATE else (('new', src),)):
         q = page(br, tag + 'pc' + nm_, s_, PC2)
         jo(q, '제3조')
         pc[nm_] = q.ev(HEAD)
         q.close()
-    a, b = pc['new'], pc['prev']
+    if QJ.GATE:
+        a, b = pc['new'], pc['prev']
+    else:
+        a = pc['new']
+        b = QJ.base(_rg_cid(br, 'B18.5'), a)   # 기준 = 바탕 판(앞 인도판) 같은 PC 서랍 머리(HEAD 값 통째 — 같은 꼴이라 아래 줄 그대로)
     keep = lambda h: [[x['c'], x['t'], x['h']] for x in h['it'] if x['c'] != 'tmdot']
     g5 = a['h'] == b['h'] and keep(a) == keep(b)
     ok = ok and g5
@@ -1440,19 +1759,19 @@ def b19(br, src, tag):
     G = 'B19'
     ok = True
     for dn, dev in (('PC', PC), ('폰390', PHONE)):
-        p = page(br, tag + dn, src, dev)
+        p = page(br, tag + dn, src, dev)   # regress: 새 컨텍스트 — ＋ 로 연결 기록(link)을 쓰는 칸(기록 꼴이 다름)
         jo(p, '제3조')
-        p.press(at(p, '.jtbar .tmtg'), 500)
+        p.press(at(p, '.jtbar .tmtg'), 500) if QJ.GATE else _rg_press(p, at(p, '.jtbar .tmtg'), 500, _RG_TM_ON, 'B19.tmtg')
         tree = {r['id']: r for r in p.ev(ROW, '#slot .tree .r.tmr')}
-        p.press(at(p, '.jtbar .tmtg'), 500)
+        p.press(at(p, '.jtbar .tmtg'), 500) if QJ.GATE else _rg_press(p, at(p, '.jtbar .tmtg'), 500, _RG_TM_OFF, 'B19.tmtg')
         p.ev("() => { closeAllPops(true); tmOfWin('특허법', '제3조', null); }")
-        p.wait(500)
+        p.wait(500) if QJ.GATE else _rg_wait(p, 500, _RG_WIN, 'B19.ofwin', 'themeof|특허법|제3조')
         p.ev("() => { const w = document.querySelector('.pop.tmofw'); w.querySelector('.thsrch input').value = '분변'; w.querySelector('.thsrch .tmsgo').click(); }")
-        p.wait(400)
+        p.wait(400) if QJ.GATE else _rg_wait(p, 400, r"() => { const w = document.querySelector('.pop.tmofw'); return !!w && w.querySelectorAll('.tmres .r.tmr').length > 0; }", 'B19.search')
         res = p.ev(ROW, '.pop .tmres .r.tmr')
         plus = p.ev("() => { const b = document.querySelector('.pop .tmres .tmplus'); return b ? __RB.hitBox(b) : null; }")
-        p.press(p.ev("() => __RB.hitOn(document.querySelector('.pop .tmres .tmplus'))"), 500)
-        p.wait(300)
+        p.press(p.ev("() => __RB.hitOn(document.querySelector('.pop .tmres .tmplus'))"), 500) if QJ.GATE else _rg_press(p, p.ev("() => __RB.hitOn(document.querySelector('.pop .tmres .tmplus'))"), 500, r"() => document.querySelectorAll('.pop .tmof .r.tmr').length >= 3 && !(typeof busy !== 'undefined' && busy)", 'B19.plus')
+        p.wait(300) if QJ.GATE else QJ.sleep(300, '＋ 눌러 연결한 뒤 연결 창 · 서랍 다시 그림(tmRefresh → render) 끝 — 위 표지(연결 줄 3 · busy 끝)가 이미 기다렸으나 gate 의 마지막 안착 300ms 는 남긴다', p.pg)
         of = p.ev(ROW, '.pop .tmof .r.tmr')
         x = p.ev("() => { const b = document.querySelector('.pop .tmof .tmx'); return b ? __RB.hitBox(b) : null; }")
         rows = [('연결 창', r) for r in of] + [('찾기 결과', r) for r in res]
@@ -1466,7 +1785,7 @@ def b19(br, src, tag):
             ok = ok and g2
             T(G, '%s ✕ · ＋ 누름 ≥ 36' % dn, g2, {'✕': x and [x['w'], x['h']], '＋': plus and [plus['w'], plus['h']]})
         a = p.ev("() => __RB.hitOn(document.querySelector('.pop .tmof .r.tmr[data-tm=t01] .jno'))")
-        p.press(a, 600)
+        p.press(a, 600) if QJ.GATE else _rg_press(p, a, 600, r"() => !!__TM.pop('theme|t01')", 'B19.rowwin')
         g3 = bool(p.ev("() => __TM.pop('theme|t01')"))
         ok = ok and g3
         T(G, '%s 연결 창 줄 누름 → 테마 창(무변)' % dn, g3, g3)
@@ -1488,7 +1807,7 @@ def b20(br, src, tag):
         bk = p.ev("() => [BK_COLOR.내용, BK_COLOR.주체, BK_COLOR.기간].map(x => String(x).toLowerCase())")
         st = [p.ev("() => { const d = document.querySelector('.jtbar .tmdot'), c = getComputedStyle(d), r = d.getBoundingClientRect(); return [__TM.hex(c.backgroundColor), __TM.hex(c.borderTopColor), r.width, r.height]; }")]
         for i in range(4):
-            p.press(at(p, '.jtbar .tmdot'), 450)
+            p.press(at(p, '.jtbar .tmdot'), 450) if QJ.GATE else _rg_press(p, at(p, '.jtbar .tmdot'), 450, _RG_DOT, 'B20.dot', (i + 1) % 4)
             st.append(p.ev("() => { const d = document.querySelector('.jtbar .tmdot'), c = getComputedStyle(d), r = d.getBoundingClientRect(); return [__TM.hex(c.backgroundColor), __TM.hex(c.borderTopColor), r.width, r.height]; }"))
         g = sz['dot'] == sz['row'] == [8, 8] and [x[0] for x in st[1:4]] == bk and all(x[2:] == [8, 8] for x in st) and st[0][:2] == ['#ffffff', '#9ca3af'] and st[4][:2] == ['#ffffff', '#9ca3af']
         ok = ok and g
@@ -1500,19 +1819,22 @@ def b20(br, src, tag):
 def b21(br, src, tag):
     """A-38 두문자 붙이기 넓힘 — 이름 길 · 여러 조(⊆ 테마 조) 길 · 조 하나 밖 = 안 붙음 · 기일기간 두2 무변 · 이름 고치면 다시 셈"""
     G = 'B21'
-    p = page(br, tag, src, PHONE)
+    p = page(br, tag, src, PHONE)   # regress: 새 컨텍스트 — 이름을 길게 눌러 고치며 jopangi.theme 기록을 바꾼다(기록 꼴이 다름)
     jo(p, '제3조')
-    p.press(at(p, '.jtbar .tmtg'), 500)
+    p.press(at(p, '.jtbar .tmtg'), 500) if QJ.GATE else _rg_press(p, at(p, '.jtbar .tmtg'), 500, _RG_TM_ON, 'B21.tmtg')
     rows = {r['id']: r['d2'] for r in p.ev("() => __TM.rows()")}
     th = dict(p.ev("() => tmModel().map(t => [t.id, tmThAcr(t).map(x => x.w).sort()])"))
     intext = p.ev("() => { const t = tmModel().find(x => x.id === 't03'); return tmText(t).indexOf('분변분재') >= 0; }")
     g1 = rows.get('t03') == '두1' and th.get('t03') == ['분변분재'] and not intext
     T(G, '{분변분재 기간} 「두1」 — 글·SVG 에 「분변분재」 없음(이름 · 여러 조 길로 붙음)', g1, {'줄': rows, '두문자': th, '글에 있음': intext})
-    p.ev("() => tmListWin('t03', null)")
-    p.wait(600)
-    r3 = p.ev("() => { const w = __TM.pop('themelist|t03'); const r = w && w.querySelector('.throw2.tmmulti'); return r ? [__TM.txt(r.querySelector('.tmjs')), __TM.txt(r.querySelector('.tmar'))] : null; }")
-    g2 = r3 == ['52조 · 53조 · 52-2조 · 67-2조', '분변분재']
-    T(G, '목록 창 맨 위 줄 「52조 · 53조 · 52-2조 · 67-2조 | 분변분재」(본판 B4 무변)', g2, r3)
+    if QJ.GATE:
+        p.ev("() => tmListWin('t03', null)")
+        p.wait(600)
+        r3 = p.ev("() => { const w = __TM.pop('themelist|t03'); const r = w && w.querySelector('.throw2.tmmulti'); return r ? [__TM.txt(r.querySelector('.tmjs')), __TM.txt(r.querySelector('.tmar'))] : null; }")
+        g2 = r3 == ['52조 · 53조 · 52-2조 · 67-2조', '분변분재']
+        T(G, '목록 창 맨 위 줄 「52조 · 53조 · 52-2조 · 67-2조 | 분변분재」(본판 B4 무변)', g2, r3)
+    else:
+        g2 = True   # 합침 → B4-1(분변분재 목록 창 맨 위 줄 「52조 · 53조 · 52-2조 · 67-2조 | 분변분재」 + 높이 ≥ 36 — 이 칸의 글을 이미 더 엄하게 잰다)
     g3 = all('출심삼1사' not in v for v in th.values()) and rows.get('t02') == '두2' and th.get('t02') == ['정사소2만1', '책사소2만1'] and rows.get('t01') == '두0'
     T(G, '여러 조 두문자인데 조 하나 밖(출심삼1사 = 3·14·300) = 어느 테마에도 안 붙음 · 기일기간 「두2」 · 주체능력 「두0」 무변', g3, {'줄': rows, '두문자': th})
     p.ev("() => closeAllPops(true)")
@@ -1521,7 +1843,7 @@ def b21(br, src, tag):
         a = p.ev("() => __RB.hitOn(document.querySelector('#slot .tree .r.tmr[data-tm=t03] .jno'))")
         lp(p, a, 700)
         type_ok(p, name)
-        p.idle(300)
+        p.idle(300) if QJ.GATE else _rg_idle(p, 300, None, 'B21 이름 고친 뒤 두문자 다시 셈 — 서랍 줄 다시 그림(render) 뒤 안착 · 표지 없음(type_ok 가 이미 600ms 기다림)')
         out.append([name, {r['id']: r['d2'] for r in p.ev("() => __TM.rows()")}.get('t03'), dict(p.ev("() => tmModel().map(t => [t.id, tmThAcr(t).map(x => x.w).sort()])")).get('t03'), (rec(p).get('t03') or {}).get('n')])
     g4 = out[0][1] == '두2' and out[0][2] == ['분변분재', '책사소2만1'] and out[1][1] == '두1' and out[1][2] == ['분변분재'] and out[1][3] == '분변·분재 기간'
     T(G, '이름 길게 눌러 고침 → 고친 이름으로 다시 셈(「분변·분재 기간 책사소2만1」 = 두2 · 「분변·분재 기간」 = 두1 — 이름 길 빠져도 여러 조 길로 분변분재)', g4, out)
@@ -1538,18 +1860,22 @@ def b22(br, src, base_src, tag):
     p = page(br, tag, src, PC)
     jo(p, '제3조')
     n0 = p.ev("() => document.querySelectorAll('#slot .tree .legend').length")
-    p.press(at(p, '.jtbar .tmtg'), 500)
+    p.press(at(p, '.jtbar .tmtg'), 500) if QJ.GATE else _rg_press(p, at(p, '.jtbar .tmtg'), 500, _RG_TM_ON, 'B22.tmtg')
     n1 = p.ev("() => document.querySelectorAll('#slot .tree .legend').length")
-    p.press(at(p, '.jtbar .tmtg'), 500)
+    p.press(at(p, '.jtbar .tmtg'), 500) if QJ.GATE else _rg_press(p, at(p, '.jtbar .tmtg'), 500, _RG_TM_OFF, 'B22.tmtg')
     lg = p.ev("() => [...document.querySelectorAll('#slot .tree .legend')].map(x => x.outerHTML)")
-    pb = page(br, tag + 'B', base_src, PC)
-    jo(pb, '제3조')
-    lgb = pb.ev("() => [...document.querySelectorAll('#slot .tree .legend')].map(x => x.outerHTML)")
-    pb.close()
+    if QJ.GATE:
+        QJ.launch('base')
+        pb = page(br, tag + 'B', base_src, PC)
+        jo(pb, '제3조')
+        lgb = pb.ev("() => [...document.querySelectorAll('#slot .tree .legend')].map(x => x.outerHTML)")
+        pb.close()
+    else:
+        lgb = QJ.base(_rg_cid(br, 'B22.1'), lg)   # 기준 = 바탕 판(앞 인도판) 같은 서랍 범례 outerHTML
     g1 = n0 == 1 and n1 == 0 and len(lg) == 1 and lg == lgb
     T(G, '테마 줄 서랍 .legend 0 · 「목차」 → 1(outerHTML = 바탕 cedc251)', g1, {'목차': n0, '테마': n1, '돌아옴': len(lg), '= 바탕': lg == lgb})
     p.close()
-    q = page(br, 'none:' + tag, src, PC)
+    q = page(br, 'none:' + tag, src, PC)   # regress: 새 컨텍스트 — none: 덧판 = 테마 재료 404(재료가 다름)
     jo(q, '제3조')
     n4 = q.ev("() => ({ lg: document.querySelectorAll('#slot .tree .legend').length, btn: (document.querySelector('.jtbar .tmtg') || {}).disabled })")
     q.close()
@@ -1607,10 +1933,17 @@ def b24(br, src, base_src, tag):
     G = 'B24'
     ok = True
     for dn, dev in (('폰390', PHONE), ('iPad834', PAD), ('PC', PC2)):
-        n, en = sweep_fix1(br, src, tag + 'N' + dn, dev)
-        b, eb = sweep_fix1(br, base_src, tag + 'B' + dn, dev, base=True)
+        if QJ.GATE:
+            n, en = sweep_fix1(br, src, tag + 'N' + dn, dev)
+            QJ.launch('base')
+            b, eb = sweep_fix1(br, base_src, tag + 'B' + dn, dev, base=True)
+        else:
+            n, en = _rg_sweep_view(br, src, tag, dev, dn, _RG_B24_SCREENS)   # regress: B14 가 잰 기기 앱 하나에서 같은 화면은 그대로 · 이 관문 몫 화면(서랍 목차 · 찾기 결과 · 🔗 연결 창 · 원문 창 셋)을 더한 것(A-2)
         for scr in n:
-            nn, bb = {B14_SAME.get(x, x) for x in n[scr]}, set(b.get(scr, []))
+            if QJ.GATE:
+                nn, bb = {B14_SAME.get(x, x) for x in n[scr]}, set(b.get(scr, []))
+            else:
+                nn, bb = {B14_SAME.get(x, x) for x in n[scr]}, {B14_SAME.get(x, x) for x in QJ.base(_rg_cid(br, 'B24.sweep', dn, scr), sorted(n[scr]))}   # 기준 = 바탕 판(앞 인도판) 같은 화면 흠 목록
             new = sorted(nn - bb - set(ACCEPT))
             good = not new
             ok = ok and good
@@ -1637,6 +1970,7 @@ def _real_theme():
     f = ARG('--theme') or os.path.join(MBREAL, 'theme', 'patent_hr8', '테마.json.gz')
     if os.path.isfile(f):
         return open(f, 'rb').read(), f
+    QJ.sub('git:show-data')   # 클론에 테마 재료가 없을 때만 git 에서 꺼내는 길(드문 갈래 — regress 에서도 이 길이면 센다)
     b = subprocess.run(['git', '-C', MBREAL, 'show', 'origin/main:theme/patent_hr8/테마.json.gz'], capture_output=True).stdout
     return (b or None), MBREAL + ' git origin/main'
 
@@ -1701,7 +2035,7 @@ def real_info():
 
 def rpage(br, tag, src, dev):
     """덧판 real 쪽 — 실제 테마 재료가 다 실렸는지(테마 수 = 재료 + 시험 1)를 같이 본다"""
-    p = page(br, 'real:' + tag, src, dev)
+    p = page(br, 'real:' + tag, src, dev)   # regress: 새 컨텍스트 — real: 덧판 = 실제 테마 재료 + 시험 테마 tz1(재료가 다름 · 한 기기당 한 쪽씩)
     p.ev("async () => { for (let i = 0; i < 200 && !(TM.d && TM.d.themes && TM.d.themes.some(t => t.id === 'tz1')); i++) await __TM.wait(50); }")
     return p
 
@@ -1780,7 +2114,9 @@ def b25(br, src, base_src, tag):
         return False
     N(G, '재료', info)
     got = {}
-    for nm, s in (('new', src), ('base', base_src)):
+    if QJ.GATE:
+        QJ.launch('base')
+    for nm, s in ((('new', src), ('base', base_src)) if QJ.GATE else (('new', src),)):
         p = rpage(br, tag + nm, s, PC)
         jo(p)
         got[nm] = p.ev(LINKS)
@@ -1788,11 +2124,22 @@ def b25(br, src, base_src, tag):
             mk = p.ev(MARKS, [c for c, _ in MARK_CASES])
             errs = p.errs[:]
         p.close()
-    n, b = got['new']['links'], got['base']['links']
+    if QJ.GATE:
+        n, b = got['new']['links'], got['base']['links']
+    else:
+        n = got['new']['links']
     nb_w, n_plain = wrong_links(n, True)
-    bb_w, b_plain = wrong_links(b, True)
+    if QJ.GATE:
+        bb_w, b_plain = wrong_links(b, True)
     nb_n, _ = wrong_links(n, False)
-    bb_n, _ = wrong_links(b, False)
+    if QJ.GATE:
+        bb_n, _ = wrong_links(b, False)
+    else:
+        bsn = QJ.base(_rg_cid(br, 'B25'), {'links': len(n), 'wrong': [len(nb_n), len(nb_w)], 'plain': [list(x) for x in n_plain], 'ex': nb_w[:30]})   # 기준 = 바탕 판(앞 인도판) 같은 실제 박스 글 링크 수 · 잘못 이음 수 · 법 이름 없는 링크
+        b = [0] * bsn['links']   # 바탕 링크 수(라벨 · 값에 len 으로 쓴다)
+        b_plain = [tuple(x) for x in bsn['plain']]
+        bb_n = [0] * bsn['wrong'][0]
+        bb_w = list(bsn['ex']) + [0] * max(0, bsn['wrong'][1] - len(bsn['ex']))
     g1 = not nb_w and not nb_n and got['new']['n'] >= 70
     T(G, '실제 박스 글 전수(테마 %d · 창 링크 %d · 바탕 %d) — 다른 법 잘못 이음 0(지시서 셈 = 법 이름 + 공백 · 넓힌 셈 = + 따옴표·「제」·이름 뒤 괄호)' % (got['new']['n'], len(n), len(b)), g1,
       {'새 판 잘못(좁게 · 넓게)': [len(nb_n), len(nb_w)], '바탕 eacc28e 잘못(좁게 · 넓게)': [len(bb_n), len(bb_w)], '새 판 남은 것': nb_w[:5], '바탕 표본': bb_w[:30]})
@@ -1825,14 +2172,20 @@ def b26(br, src, base_src, tag):
         T(G, '실제 테마 재료', False, info)
         return False
     got = {}
-    for nm, s in (('new', src), ('base', base_src)):
+    if QJ.GATE:
+        QJ.launch('base')
+    for nm, s in ((('new', src), ('base', base_src)) if QJ.GATE else (('new', src),)):
         p = rpage(br, tag + nm, s, PHONE)
         jo(p)
         got[nm] = p.ev(WRAP)
         if p.errs:
             T(G, '%s JS 오류' % nm, False, p.errs[:3])
         p.close()
-    a, b = got['new'], got['base']
+    if QJ.GATE:
+        a, b = got['new'], got['base']
+    else:
+        a = got['new']
+        b = QJ.base(_rg_cid(br, 'B26'), a)   # 기준 = 바탕 판(앞 인도판) 같은 폰 감긴 줄 셈 · 줄마다 첫 글자 자리(같은 꼴이라 아래 줄 그대로)
     g1 = a['wrapped'] > 0 and a['bad'] == 0
     T(G, '폰 390 감긴 .thl 둘째 줄부터 왼쪽 x = 첫 줄 글 시작 x(±1) — 줄 %d · 감긴 %d · 어긋남 %d' % (a['lines'], a['wrapped'], a['bad']), g1,
       {'새 판': [a['lines'], a['wrapped'], a['bad'], a['ex']], '바탕 eacc28e': [b['lines'], b['wrapped'], b['bad'], b['ex']]})
@@ -1874,12 +2227,12 @@ def b27(br, src, tag, eng='chromium', devs=(('폰390', PHONE), ('iPad834', PAD))
         rows = []
         for dot in (0, 2):
             p.ev("(v) => { tmDotSet(v); render(); }", dot)
-            p.idle(300)
+            p.idle(300) if QJ.GATE else _rg_idle(p, 300, _RG_DOT, 'B27.dot', dot)
             for i in range(3):
                 m = p.ev(DOT8, 0.25)
                 rows.append(dict(m, dotst=dot, step=p.ev("() => __TM.txt(document.querySelector('.jtbar .jstep:not(.tmtg)'))"), chip=p.ev("() => __TM.txt(document.querySelector('.jtbar .jckf'))")))
                 p.ev("() => document.querySelector('.jtbar .jstep:not(.tmtg)').click()")
-                p.idle(300)
+                p.idle(300) if QJ.GATE else _rg_idle(p, 300, _RG_STEP, 'B27.step', rows[-1]['step'])
         p.ev("() => { tmDotSet(0); render(); }")
         g = all(r['dotOk'] and all(x['dot'] == 0 for x in r['nb']) and r['tap'][5] >= 36 for r in rows)
         ok = ok and g
@@ -1923,7 +2276,7 @@ def b28(br, src, tag):
     for tid in ('t01', 't06', 'tz1'):
         p.ev("() => closeAllPops(true)")
         p.ev("(t) => tmWin(t, null)", tid)
-        p.wait(300)
+        p.wait(300) if QJ.GATE else _rg_wait(p, 300, _RG_WIN, 'B28.win', 'theme|' + tid)
         src_rows.append(p.ev("(t) => { const w = __TM.pop('theme|' + t); return w ? [t, w.querySelectorAll('.thsrc').length, /정리omr\\s*[\\d·]+쪽/.test(w.textContent)] : [t, null, null]; }", tid))
     g2 = all(x[1] == 0 and x[2] is False for x in src_rows)
     ok = ok and g2
@@ -1933,7 +2286,7 @@ def b28(br, src, tag):
     ok = ok and g3
     T(G, '판례 팝업 둘(popPrec4 · popPan) — 「갈래로 이동」 글자 0 · 「이동 ↗」 = 머리 글자 하나씩(둘)', g3, pp)
     a = p.ev("async () => { closeAllPops(true); await __TM.wait(50); const P = await get(PF('리스트')); const p = P.판례.find(x => x.id === '2021후10374') || P.판례[0]; await popPrec4(p.id, { clientX: 200, clientY: 160 }, 1); await __TM.wait(300); const b = POPS[POPS.length - 1].querySelector('.ph .ptgo .tmgo'); return b ? __RB.hitOn(b) : null; }")
-    p.press(a, 700)
+    p.press(a, 700) if QJ.GATE else _rg_press(p, a, 700, r"() => S.tab === 'prec' && !(typeof busy !== 'undefined' && busy) && POPS.length === 0", 'B28.go')
     st = p.ev("() => ({ tab: S.tab, prec: S.prec, pops: POPS.length })")
     g4 = st['tab'] == 'prec' and st['pops'] == 0 and bool(st['prec'])
     ok = ok and g4
@@ -1995,7 +2348,7 @@ def b29(br, src, tag):
         fit = f['svg'][0] >= f['box'][0] - 1 and f['svg'][2] <= f['box'][1] + 1 and all(inside(x['r'], f['svg']) for x in f['imgs'])
         scr = all(x['r'][0] >= -0.5 and x['r'][2] <= f['vw'] + 0.5 for x in f['imgs']) and f['svg'][0] >= -0.5 and f['svg'][2] <= f['vw'] + 0.5
         a = p.ev("() => { const f = __TM.pop('theme|tz1').querySelector('.thfig'); const r = (f.querySelector('#zok') || f.querySelector('svg')).getBoundingClientRect(); return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, on: true }; }")   # 바탕(그림 지움)이면 svg 가운데
-        p.press(a, 500)
+        p.press(a, 500) if QJ.GATE else _rg_press(p, a, 500, r"() => { const w = __TM.pop('theme|tz1'); const f = w && w.querySelector('.thfig'); return !!f && f.classList.contains('big'); }", 'B29.big')
         f2 = p.ev("""() => { const f = __TM.pop('theme|tz1').querySelector('.thfig'), s = f.querySelector('svg').getBoundingClientRect(); return { big: f.classList.contains('big'), svg: [s.left, s.right], vw: innerWidth,
           imgs: [...f.querySelectorAll('image')].map(n => { const q = n.getBoundingClientRect(); return [q.left, q.right]; }) }; }""")
         g3 = fit and scr and f2['big'] and all(x[0] >= -0.5 and x[1] <= f2['vw'] + 0.5 for x in f2['imgs']) and f2['svg'][0] >= -0.5 and f2['svg'][1] <= f2['vw'] + 0.5
@@ -2023,15 +2376,15 @@ def sweep_fix2(br, src, tag, dev):
     out = {}
     jo(p, '제3조')
     p.ev("() => document.querySelector('.jtbar .tmtg').click()")
-    p.idle(300)
+    p.idle(300) if QJ.GATE else _rg_idle(p, 300, _RG_TM_ON, 'B30.tmtg')
     out['서랍 테마'] = sw('#slot .tree')
     p.ev("() => document.querySelector('.jtbar .tmtg').click()")
-    p.idle(300)
+    p.idle(300) if QJ.GATE else _rg_idle(p, 300, _RG_TM_OFF, 'B30.tmtg')
     for k, js, key in (('테마 창 t02', "() => tmWin('t02', null)", 'theme|t02'), ('테마 창 t06', "() => tmWin('t06', null)", 'theme|t06'), ('테마 창 tz1', "() => tmWin('tz1', null)", 'theme|tz1'),
                        ('목록 창', "() => tmListWin('t06', null)", 'themelist|t06')):
         p.ev("() => closeAllPops(true)")
         p.ev(js)
-        p.wait(700)
+        p.wait(700) if QJ.GATE else _rg_wait(p, 700, _RG_WIN, 'B30.win', key)
         p.ev(mark, key)
         out[k] = sw('[data-sw="1"]')
     p.ev("() => closeAllPops(true)")
@@ -2057,9 +2410,14 @@ def b30(br, src, base_src, tag):
     ok = True
     for dn, dev in (('폰390', PHONE), ('iPad834', PAD), ('PC', PC2)):
         n, en = sweep_fix2(br, src, tag + 'N' + dn, dev)
-        b, eb = sweep_fix2(br, base_src, tag + 'B' + dn, dev)
+        if QJ.GATE:
+            QJ.launch('base')
+            b, eb = sweep_fix2(br, base_src, tag + 'B' + dn, dev)
         for scr in n:
-            nn, bb = {FIX2_SAME.get(x, x) for x in n[scr]}, set(b.get(scr, []))
+            if QJ.GATE:
+                nn, bb = {FIX2_SAME.get(x, x) for x in n[scr]}, set(b.get(scr, []))
+            else:
+                nn, bb = {FIX2_SAME.get(x, x) for x in n[scr]}, {FIX2_SAME.get(x, x) for x in QJ.base(_rg_cid(br, 'B30.sweep', dn, scr), sorted(n[scr]))}   # 기준 = 바탕 판(앞 인도판) 같은 화면 흠 목록(같은 단추 글자 바뀜 FIX2_SAME 를 양쪽에)
             new = sorted(nn - bb)
             good = not new
             ok = ok and good
@@ -2084,32 +2442,56 @@ ORDER = ['B%d' % i for i in range(1, 31)]
 def main():
     from playwright.sync_api import sync_playwright
     t0 = time.time()
-    base_src = app_src(BASE)
+    if QJ.GATE:
+        QJ.sub('git:show-app')
+        base_src = app_src(BASE)
+    else:
+        base_src = None   # regress — 바탕 판을 풀지 않는다(바탕 값 = 기준 스냅샷 · git show 0)
+        if YARD:
+            raise SystemExit('--yardstick 은 gate 에서만(헛잣대 = 바탕 판을 NEW 자리에 넣는다)')
     if YARD:
         src = app_src(YAPP)
         print('헛잣대 — 앱 = %s · 고른 관문이 저마다 FAIL 해야 통과(본판 B1~B12 = cedc251 · fix1 B15~B22 = 8d1383d)' % YAPP)
     else:
         src = app_src(NEW)
-        print('관문 _task_jo_theme(+fix1) · 앱 = %s · 바탕 = %s · fix1 바탕 = %s · 덧판 = %s' % (NEW, BASE, PREV, OVER['full']))
+        if QJ.GATE:
+            print('관문 _task_jo_theme(+fix1) · 앱 = %s · 바탕 = %s · fix1 바탕 = %s · 덧판 = %s' % (NEW, BASE, PREV, OVER['full']))
+        else:
+            print('관문 _task_jo_theme(+fix1) — %s · 앱 = %s · 바탕 = 기준 스냅샷(바탕 판을 안 띄운다)' % (QJ.MODE, NEW))
     prev_cache = {}
     prev_src = lambda: prev_cache.setdefault('s', app_src(PREV))
     base2_src = lambda: prev_cache.setdefault('b2', app_src(BASE2))   # fix2 바탕 eacc28e
     got, tm = {}, {}
     with sync_playwright() as pw:
         br = pw.chromium.launch()
-        steps = [('B1', lambda: b1(br, src, base_src, 'b1')), ('B2', lambda: b2(br, src, base_src, 'b2')), ('B3', lambda: b3(br, src, 'b3')),
-                 ('B4', lambda: b4(br, src, 'b4')), ('B5', lambda: b5(br, src, 'b5')), ('B6', lambda: b6(br, src, 'b6')),
-                 ('B7', lambda: b7(br, src, base_src, 'b7')), ('B8', lambda: b8(br, src, base_src, 'b8')), ('B9', lambda: b9(br, src, base_src, 'b9')),
-                 ('B10', lambda: b10(br, src, base_src, 'b10')), ('B11', lambda: b11(br, src, 'b11')), ('B12', lambda: b12(br, src, base_src, 'b12')),
-                 ('B14', lambda: b14(br, src, base_src, 'b14')),
-                 ('B15', lambda: b15(br, src, 'b15')), ('B16', lambda: b16(br, src, 'b16')), ('B17', lambda: b17(br, src, prev_src(), 'b17')),
-                 ('B18', lambda: b18(br, src, base_src, prev_src(), 'b18')), ('B19', lambda: b19(br, src, 'b19')), ('B20', lambda: b20(br, src, 'b20')),
-                 ('B21', lambda: b21(br, src, 'b21')), ('B22', lambda: b22(br, src, base_src, 'b22')), ('B24', lambda: b24(br, src, base_src, 'b24')),
-                 ('B25', lambda: b25(br, src, base2_src(), 'b25')), ('B26', lambda: b26(br, src, base2_src(), 'b26')), ('B27', lambda: b27(br, src, 'b27')),
-                 ('B28', lambda: b28(br, src, 'b28')), ('B29', lambda: b29(br, src, 'b29')), ('B30', lambda: b30(br, src, base2_src(), 'b30'))]
+        if QJ.GATE:
+            steps = [('B1', lambda: b1(br, src, base_src, 'b1')), ('B2', lambda: b2(br, src, base_src, 'b2')), ('B3', lambda: b3(br, src, 'b3')),
+                     ('B4', lambda: b4(br, src, 'b4')), ('B5', lambda: b5(br, src, 'b5')), ('B6', lambda: b6(br, src, 'b6')),
+                     ('B7', lambda: b7(br, src, base_src, 'b7')), ('B8', lambda: b8(br, src, base_src, 'b8')), ('B9', lambda: b9(br, src, base_src, 'b9')),
+                     ('B10', lambda: b10(br, src, base_src, 'b10')), ('B11', lambda: b11(br, src, 'b11')), ('B12', lambda: b12(br, src, base_src, 'b12')),
+                     ('B14', lambda: b14(br, src, base_src, 'b14')),
+                     ('B15', lambda: b15(br, src, 'b15')), ('B16', lambda: b16(br, src, 'b16')), ('B17', lambda: b17(br, src, prev_src(), 'b17')),
+                     ('B18', lambda: b18(br, src, base_src, prev_src(), 'b18')), ('B19', lambda: b19(br, src, 'b19')), ('B20', lambda: b20(br, src, 'b20')),
+                     ('B21', lambda: b21(br, src, 'b21')), ('B22', lambda: b22(br, src, base_src, 'b22')), ('B24', lambda: b24(br, src, base_src, 'b24')),
+                     ('B25', lambda: b25(br, src, base2_src(), 'b25')), ('B26', lambda: b26(br, src, base2_src(), 'b26')), ('B27', lambda: b27(br, src, 'b27')),
+                     ('B28', lambda: b28(br, src, 'b28')), ('B29', lambda: b29(br, src, 'b29')), ('B30', lambda: b30(br, src, base2_src(), 'b30'))]
+        else:   # regress — 바탕 판 인자 없음(바탕 값 = 기준 스냅샷) · 바탕 풀기(prev_src · base2_src) 안 부름
+            steps = [('B1', lambda: b1(br, src, None, 'b1')), ('B2', lambda: b2(br, src, None, 'b2')), ('B3', lambda: b3(br, src, 'b3')),
+                     ('B4', lambda: b4(br, src, 'b4')), ('B5', lambda: b5(br, src, 'b5')), ('B6', lambda: b6(br, src, 'b6')),
+                     ('B7', lambda: b7(br, src, None, 'b7')), ('B8', lambda: b8(br, src, None, 'b8')), ('B9', lambda: b9(br, src, None, 'b9')),
+                     ('B10', lambda: b10(br, src, None, 'b10')), ('B11', lambda: b11(br, src, 'b11')), ('B12', lambda: b12(br, src, None, 'b12')),
+                     ('B14', lambda: b14(br, src, None, 'b14')),
+                     ('B15', lambda: b15(br, src, 'b15')), ('B16', lambda: b16(br, src, 'b16')), ('B17', lambda: b17(br, src, None, 'b17')),
+                     ('B18', lambda: b18(br, src, None, None, 'b18')), ('B19', lambda: b19(br, src, 'b19')), ('B20', lambda: b20(br, src, 'b20')),
+                     ('B21', lambda: b21(br, src, 'b21')), ('B22', lambda: b22(br, src, None, 'b22')), ('B24', lambda: b24(br, src, None, 'b24')),
+                     ('B25', lambda: b25(br, src, None, 'b25')), ('B26', lambda: b26(br, src, None, 'b26')), ('B27', lambda: b27(br, src, 'b27')),
+                     ('B28', lambda: b28(br, src, 'b28')), ('B29', lambda: b29(br, src, 'b29')), ('B30', lambda: b30(br, src, None, 'b30'))]
         for g, fn in steps:
             if ONLY and g not in ONLY:
                 continue
+            if QJ.SMOKE:
+                if g not in _RG_SMOKE_GATES:
+                    continue   # smoke — B3-1 · B7-1 · B7-2 가 든 관문만
             if YARD and g in ('B14', 'B24', 'B30'):
                 N(g, '헛잣대 해당 없음', '화면 훑기 = 새 판 흠 − 바탕 흠 · 바탕끼리 견주면 늘 0')
                 continue
@@ -2123,7 +2505,9 @@ def main():
             tm[g] = time.time() - t1
             print('   (%s %.0f초)' % (g, tm[g]), flush=True)
         br.close()
-        if 'webkit' in ENGS and not YARD and (not ONLY or 'WK' in ONLY):
+        if QJ.SMOKE:
+            pass   # smoke — WebKit 칸 없음(WebKit 은 터치 칸 B1 · B6 · B27 뿐 · smoke 칸 아님)
+        elif 'webkit' in ENGS and not YARD and (not ONLY or 'WK' in ONLY):
             wk = webkit_try(pw)
             if wk:
                 for g, fn in (('B1', lambda: b1(wk, src, base_src, 'wk1')), ('B6', lambda: b6(wk, src, 'wk6', devs=(('폰390', PHONE),))), ('B27', lambda: b27(wk, src, 'wk27', eng='webkit'))):
@@ -2132,19 +2516,20 @@ def main():
                     except Exception as e:
                         T(g + '-wk', 'WebKit 돌다 멈춤', False, str(e).splitlines()[0][:200])
                 wk.close()
-    if not YARD and (not ONLY or 'B13' in ONLY):
-        print('── B13', flush=True)
-        t1 = time.time()
-        try:
-            got['B13'] = bool(b13(src, base_src))
-        except Exception as e:
-            got['B13'] = False
-            T('B13', '돌다 멈춤', False, str(e).splitlines()[0][:300])
-        tm['B13'] = time.time() - t1
-    if not YARD and all(('B%d' % i) in got for i in range(1, 15)):   # fix1 B-23 — 본판 B1~B14 다시(같은 실행) · 바뀐 값은 결과 절
-        bad = [g for g in ['B%d' % i for i in range(1, 15)] if not got[g]]
-        got['B23'] = not bad
-        T('B23', '본판 B1~B14 다시 = 모두 PASS(fix1 바탕 8d1383d 위 · 합성 재료 보탬 뒤)', got['B23'], {'FAIL 관문': bad})
+    if QJ.GATE:   # B13(하위 하네스 revfix0929b · revfix0930 를 NEW · 바탕에 통째로 4번 = subprocess 4번) · B23(B1~B14 집계) = gate 에서만 — regress 는 그 두 하네스가 저마다 사슬에서 돈다(합침)
+        if not YARD and (not ONLY or 'B13' in ONLY):
+            print('── B13', flush=True)
+            t1 = time.time()
+            try:
+                got['B13'] = bool(b13(src, base_src))
+            except Exception as e:
+                got['B13'] = False
+                T('B13', '돌다 멈춤', False, str(e).splitlines()[0][:300])
+            tm['B13'] = time.time() - t1
+        if not YARD and all(('B%d' % i) in got for i in range(1, 15)):   # fix1 B-23 — 본판 B1~B14 다시(같은 실행) · 바뀐 값은 결과 절
+            bad = [g for g in ['B%d' % i for i in range(1, 15)] if not got[g]]
+            got['B23'] = not bad
+            T('B23', '본판 B1~B14 다시 = 모두 PASS(fix1 바탕 8d1383d 위 · 합성 재료 보탬 뒤)', got['B23'], {'FAIL 관문': bad})
     lines = []
     print('\n══ 요약 (%.0f초)%s' % (time.time() - t0, ' — 헛잣대' if YARD else ''))
     for g in [x for x in ORDER if x in got]:

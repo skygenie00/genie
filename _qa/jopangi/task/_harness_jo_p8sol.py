@@ -12,6 +12,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(인자 없으면 gate = 이 판 앞과 같음) · regress = NEW 만 띄움(바탕 cc7b3f5 안 풀고 안 띄움 · 헛잣대 칸 끔 · 바탕 값 칸은 기준 스냅샷) · smoke = 기본 점검 칸만
 import io, json, os, re, sys, time, shutil, collections, hashlib
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -52,7 +53,29 @@ SHOT_PAGES = (39, 237, 371, 256, 53, 372, 373, 235, 353)
 SHOTS = ARG('--shots', os.path.join(os.environ.get('TEMP', HERE), 'p8sol_shots'))
 
 
+# _task_qa_slim(10/4) regress 도우미 — 기준 칸(처리안 기준)의 값 끝에 「기댓값이 어디서 왔나」를 붙인다(QJ.base_note: 스냅샷 · 첫 기록)
+_PEND = []
+
+
+def _bn(cid):
+    _PEND.append(QJ.base_note(cid))
+
+
+def _with_note(d, note):
+    if isinstance(d, str):
+        return (d + ' · ' if d else '') + note
+    if isinstance(d, dict):
+        return dict(d, **{'기준': note})
+    return {'값': d, '기준': note}
+
+
+def _h8(o):
+    return hashlib.md5(json.dumps(o, ensure_ascii=False, sort_keys=True, default=str).encode('utf-8')).hexdigest()
+
+
 def T(grp, name, ok, detail=''):
+    if QJ.REGRESS and _PEND:   # 기준 칸 — 기댓값 출처를 값 끝에
+        detail = _with_note(detail, _PEND.pop())
     RES.append((grp, name, bool(ok), detail))
     print('%s | %s · %s | %s' % ('PASS' if ok else 'FAIL', grp, name, (detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False, default=str))[:420]), flush=True)
 
@@ -146,54 +169,79 @@ def d1():
     import _p8sol_apply as A
     import _p8sol_build as B
     new = jl(open(os.path.join(_DATA, 'jimun_7pan.json'), 'rb').read())
-    old = jl(M.git('show', '%s:jo/data/jimun_7pan.json' % _BASE))
+    if QJ.GATE:   # 바탕 cc7b3f5 데이터 git show — regress 는 안 꺼낸다(① · 헛 = 관문만 · ② ③ ⑤ = 기준 스냅샷)
+        QJ.sub('git:show-data')
+        old = jl(M.git('show', '%s:jo/data/jimun_7pan.json' % _BASE))
     src = jl(open(A.SRC, 'rb').read())
-    bo, bn = {z['id']: z for z in old['지문']}, {z['id']: z for z in new['지문']}
+    if QJ.GATE:
+        bo, bn = {z['id']: z for z in old['지문']}, {z['id']: z for z in new['지문']}
+    else:
+        bn = {z['id']: z for z in new['지문']}
     want = {i for i, v in src['rows'].items() if v['cat'] in ('명칭만', '바뀜', '잘림')} | {i for i, v in src['new'].items() if v['sol8'] and not v['유제']}
-    chg, extra, badkey = set(), [], []
-    for i in bn:
-        a, b = bo.get(i), bn[i]
-        if a is None:
-            extra.append(i); continue
-        ks = {k for k in set(a) | set(b) if a.get(k) != b.get(k)}
-        if ks:
-            chg.add(i)
-            if not ks <= {'sol', '판8'}:
-                badkey.append([i, sorted(ks)])
-    top = sorted(k for k in set(old) | set(new) if k != '지문' and old.get(k) != new.get(k))
-    # A-6(d) 9/30 — 「바뀐 줄」(인도 검산)만 새 쪽 = p8sol 인도 커밋 6073142 · 재료 표 = 인도 때 판(N: 저장소 e51d8d9 · 지금 파일은 revfix0929 6c67b58 이 320→304 로) — 뒤 판 revfix0928night A-9 병합 67 · revfix0929 A-1 16 줄이 지금 원장을 바꿈. 위 chg(「ox 무변」)·bn(「판8.s7」·표본)은 지금 데이터 그대로
-    import subprocess
-    new_d = jl(M.git('show', '6073142:jo/data/jimun_7pan.json'))
-    src_d = jl(subprocess.run(['git', '--git-dir=' + os.path.join(os.path.dirname(_roots.n_root() or ''), 'claude-git'), 'show', 'e51d8d9:jopangi/특상디/_p8up/_p8sol.json'], capture_output=True).stdout)
-    bn_d = {z['id']: z for z in new_d['지문']}
-    want_d = {i for i, v in src_d['rows'].items() if v['cat'] in ('명칭만', '바뀜', '잘림')} | {i for i, v in src_d['new'].items() if v['sol8'] and not v['유제']}
-    chg_d, extra_d, badkey_d = set(), [], []
-    for i in bn_d:
-        a, b = bo.get(i), bn_d[i]
-        if a is None:
-            extra_d.append(i); continue
-        ks = {k for k in set(a) | set(b) if a.get(k) != b.get(k)}
-        if ks:
-            chg_d.add(i)
-            if not ks <= {'sol', '판8'}:
-                badkey_d.append([i, sorted(ks)])
-    top_d = sorted(k for k in set(old) | set(new_d) if k != '지문' and old.get(k) != new_d.get(k))
-    T(G, '바뀐 줄 = 재료 표(명칭만·바뀜·잘림 + 새 카드 sol) %d · 바뀐 칸 = sol·판8 뿐 · 지문 수 같음 · 머리 칸 = 판8_해설 하나' % len(want_d),
-      chg_d == want_d and not badkey_d and not extra_d and len(bo) == len(bn_d) and top_d == ['판8_해설'],
-      {'바뀜': len(chg_d), '표': len(want_d), '표 밖': sorted(chg_d - want_d)[:8], '빠짐': sorted(want_d - chg_d)[:8], '다른 칸': badkey_d[:5], '머리': top_d})
+    if QJ.GATE:   # 처리안 관문만(d1①) — 인도 검산: 옛 커밋끼리(6073142 ↔ cc7b3f5 · 재료 e51d8d9) 맞대 지금 데이터와 무관
+        chg, extra, badkey = set(), [], []
+        for i in bn:
+            a, b = bo.get(i), bn[i]
+            if a is None:
+                extra.append(i); continue
+            ks = {k for k in set(a) | set(b) if a.get(k) != b.get(k)}
+            if ks:
+                chg.add(i)
+                if not ks <= {'sol', '판8'}:
+                    badkey.append([i, sorted(ks)])
+        top = sorted(k for k in set(old) | set(new) if k != '지문' and old.get(k) != new.get(k))
+        # A-6(d) 9/30 — 「바뀐 줄」(인도 검산)만 새 쪽 = p8sol 인도 커밋 6073142 · 재료 표 = 인도 때 판(N: 저장소 e51d8d9 · 지금 파일은 revfix0929 6c67b58 이 320→304 로) — 뒤 판 revfix0928night A-9 병합 67 · revfix0929 A-1 16 줄이 지금 원장을 바꿈. 위 chg(「ox 무변」)·bn(「판8.s7」·표본)은 지금 데이터 그대로
+        import subprocess
+        new_d = jl(M.git('show', '6073142:jo/data/jimun_7pan.json'))
+        src_d = jl(subprocess.run(['git', '--git-dir=' + os.path.join(os.path.dirname(_roots.n_root() or ''), 'claude-git'), 'show', 'e51d8d9:jopangi/특상디/_p8up/_p8sol.json'], capture_output=True).stdout)
+        bn_d = {z['id']: z for z in new_d['지문']}
+        want_d = {i for i, v in src_d['rows'].items() if v['cat'] in ('명칭만', '바뀜', '잘림')} | {i for i, v in src_d['new'].items() if v['sol8'] and not v['유제']}
+        chg_d, extra_d, badkey_d = set(), [], []
+        for i in bn_d:
+            a, b = bo.get(i), bn_d[i]
+            if a is None:
+                extra_d.append(i); continue
+            ks = {k for k in set(a) | set(b) if a.get(k) != b.get(k)}
+            if ks:
+                chg_d.add(i)
+                if not ks <= {'sol', '판8'}:
+                    badkey_d.append([i, sorted(ks)])
+        top_d = sorted(k for k in set(old) | set(new_d) if k != '지문' and old.get(k) != new_d.get(k))
+        T(G, '바뀐 줄 = 재료 표(명칭만·바뀜·잘림 + 새 카드 sol) %d · 바뀐 칸 = sol·판8 뿐 · 지문 수 같음 · 머리 칸 = 판8_해설 하나' % len(want_d),
+          chg_d == want_d and not badkey_d and not extra_d and len(bo) == len(bn_d) and top_d == ['판8_해설'],
+          {'바뀜': len(chg_d), '표': len(want_d), '표 밖': sorted(chg_d - want_d)[:8], '빠짐': sorted(want_d - chg_d)[:8], '다른 칸': badkey_d[:5], '머리': top_d})
     s7 = [i for i in bn if (bn[i].get('판8') or {}).get('s7') is not None]
-    s7ok = all(bn[i]['판8']['s7'] == (bo[i].get('sol') or '') for i in s7)
-    p8keep = all({k: v for k, v in bn[i]['판8'].items() if k != 's7'} == ((bo[i].get('판8') or {'cat': '해설'}) if bo[i].get('판8') else {'cat': '해설'}) for i in s7)
+    if QJ.GATE:
+        s7ok = all(bn[i]['판8']['s7'] == (bo[i].get('sol') or '') for i in s7)
+        p8keep = all({k: v for k, v in bn[i]['판8'].items() if k != 's7'} == ((bo[i].get('판8') or {'cat': '해설'}) if bo[i].get('판8') else {'cat': '해설'}) for i in s7)
+    else:
+        # regress — 처리안 기준(d1②): 바탕(cc7b3f5) 대신 기준 스냅샷 = NEW 의 s7 글(= 옛 sol) 해시 · 판8 칸(s7 뺀) 해시
+        _cur = {'n': len(s7), 's7': _h8([[i, bn[i]['판8']['s7']] for i in sorted(s7)]), 'p8': _h8([[i, {k: v for k, v in bn[i]['판8'].items() if k != 's7'}] for i in sorted(s7)])}
+        _bv = QJ.base('d1②/s7', _cur)
+        s7ok, p8keep = _cur['s7'] == _bv['s7'], _cur['p8'] == _bv['p8']
+        _bn('d1②/s7')
     nbak = sum(1 for i in s7 if src['rows'][i]['cat'] == '바뀜')
     T(G, '판8.s7 = 바뀜 줄만 %d(= 옛 sol 그대로) · 판8 칸이 있던 줄은 cat 무변 · 없던 줄은 {cat:해설}' % len(s7), s7ok and p8keep and nbak == len(s7) == 112,
       {'s7': len(s7), '바뀜': nbak, 's7=옛 sol': s7ok, 'cat 무변': p8keep})
-    wm_old = sum(len(B.WMX.findall(z.get('sol') or '')) for z in old['지문'])
+    if QJ.GATE:
+        wm_old = sum(len(B.WMX.findall(z.get('sol') or '')) for z in old['지문'])
     wm_new = sum(len(B.WMX.findall(z.get('sol') or '')) for z in new['지문'])
+    if QJ.REGRESS:   # 처리안 기준(d1③) — 바탕 워터마크 꼴 수 = 기준 스냅샷(NEW 의 같은 셈 · 「늘지 않음」)
+        wm_old = QJ.base('d1③/wm', wm_new)
+        _bn('d1③/wm')
     T(G, '워터마크 꼴(「@」·휴대전화) 글자 — 새 sol 에 늘지 않음(바탕 %d · 이 판 %d)' % (wm_old, wm_new), wm_new <= wm_old, [wm_old, wm_new])
-    again = jl(open(os.path.join(_DATA, 'jimun_7pan.json'), 'rb').read())
-    log, bad = A.apply(again, src)
-    T(G, '⚙ _p8sol_apply — 이 판 데이터에 한 번 더 = 그대로(None)', log is None and not bad, {'log': log, 'bad': bad[:3]})
-    ox = [i for i in chg if (bo[i].get('ox') != bn[i].get('ox'))]
+    if QJ.GATE:   # 처리안 관문만(d1④) — ⚙ [6e] 다시 얹기 = 굽기 재현성(⚙ 판 관문의 몫 · 되묻지 말고 정한 것 2)
+        QJ.sub('python:bake')
+        again = jl(open(os.path.join(_DATA, 'jimun_7pan.json'), 'rb').read())
+        log, bad = A.apply(again, src)
+        T(G, '⚙ _p8sol_apply — 이 판 데이터에 한 번 더 = 그대로(None)', log is None and not bad, {'log': log, 'bad': bad[:3]})
+    if QJ.GATE:
+        ox = [i for i in chg if (bo[i].get('ox') != bn[i].get('ox'))]
+    else:
+        # regress — 처리안 기준(d1⑤): 바탕(cc7b3f5) ox 대신 기준 스냅샷 = NEW 의 지문별 ox 해시(바뀌면 목록 한 줄)
+        _cur = {'n': len(bn), 'ox': _h8(sorted([i, bn[i].get('ox')] for i in bn))}
+        ox = [] if _cur == QJ.base('d1⑤/ox', _cur) else ['(기준 스냅샷과 다름)']
+        _bn('d1⑤/ox')
     T(G, 'ox 무변(P7-1209 ㄴ·ㅁ = X 그대로)', not ox and bn['P7-1209-ㄴ']['ox'] == 'X' and bn['P7-1209-ㅁ']['ox'] == 'X', {'ox 바뀜': ox})
     # 표본 — 이 판 / 바탕(헛잣대)
     def smp(D):
@@ -207,17 +255,21 @@ def d1():
             '0292ㄱ': g('P7-0292-ㄱ').rstrip().endswith('없\n다.') or g('P7-0292-ㄱ').rstrip().endswith('없다.'),
             'P8-0001': len(g('P8-0001')) > 50 and not g('P8-0002'),
         }
-    sn, sb = smp(bn), smp(bo)
+    if QJ.GATE:
+        sn, sb = smp(bn), smp(bo)
+    else:
+        sn = smp(bn)
     T(G, '줄 표본 — 1209 ㄴ·ㅁ(△ · ㄷ 앞까지) · 1209 ㄹ(8판 ㄹ 조각) · 0549-2(옛 sol 「② (O)」 — revfix0929 되돌림) · 0826(8판 法193①) · 0144(명칭) · 0292-ㄱ(잘린 끝 되살림) · 새 카드 sol · [유제] 빈칸', all(sn.values()), sn)
-    T(G + '-헛', '헛잣대 바탕 데이터 — 표본이 하나도 안 맞음(새 카드 [유제] 빈칸 칸 · 0549-2 빼고 — revfix0929 가 바탕 글로 되돌림)', not any(v for k, v in sb.items() if k != '0549-2'), sb)   # A-6(a) 바탕 cc7b3f5 의 0549-2 sol 도 「② (O)」 — 그 줄은 헛잣대가 못 됨
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', '헛잣대 바탕 데이터 — 표본이 하나도 안 맞음(새 카드 [유제] 빈칸 칸 · 0549-2 빼고 — revfix0929 가 바탕 글로 되돌림)', not any(v for k, v in sb.items() if k != '0549-2'), sb)   # A-6(a) 바탕 cc7b3f5 의 0549-2 sol 도 「② (O)」 — 그 줄은 헛잣대가 못 됨
 
 
 # ══════════ 앱 ══════════
 def a1(p, b, eng):
     """바뀜 줄 — 해설 칸 머리 「8판 해설 고침」(회색 11px 700 · 해설 글 바로 위 왼쪽) → 누름 → 해설 아래 「7판 해설」 상자 = 옛 sol → 다시 → 접힘"""
     G = 'a1'
-    for rid in (ROW_S7, ROW_S7B):
-        for how in (('mouse', 'touch') if eng == 'chromium' else ('mouse', 'touch')):
+    for rid in ((ROW_S7,) if QJ.SMOKE else (ROW_S7, ROW_S7B)):   # smoke — 첫 줄 하나만
+        for how in ((('mouse', 'touch') if eng == 'chromium' else ('mouse', 'touch')) if not QJ.SMOKE else ('mouse',)):
             k, c = open_card(p, rid, how)
             z = p.ev("i=>__PS.z(i)", rid)
             s7 = re.sub(r'\s+', ' ', (z or {}).get('판8', {}).get('s7') or '')[:30]
@@ -232,8 +284,9 @@ def a1(p, b, eng):
             p.press(p.ev("k=>__PS.btnAt(k)", k), how, 400)
             c2 = p.ev("k=>__PS.card(k)", k)
             T(G, '%s %s %s — 한 번 더 → 접힘' % (eng, how, rid), bool(c2) and not c2.get('box') and c2.get('btn') == '8판 해설 고침', {'box': (c2 or {}).get('box')})
-        kb, cb = open_card(b, rid)
-        T(G + '-헛', '%s %s 헛잣대 바탕 — 단추 없음' % (eng, rid), bool(cb) and not cb.get('btn'), cb)
+        if QJ.GATE:   # 헛잣대(관문만)
+            kb, cb = open_card(b, rid)
+            T(G + '-헛', '%s %s 헛잣대 바탕 — 단추 없음' % (eng, rid), bool(cb) and not cb.get('btn'), cb)
 
 
 def a2(p, b, eng):
@@ -243,10 +296,11 @@ def a2(p, b, eng):
         k, c = open_card(p, rid)
         ok = bool(c) and not c.get('all') and c.get('expVis') and (need is None or need in (c.get('sol') or '')) and '해설 없음' not in (c.get('sol') or '')
         T(G, '%s %s %s — 「8판 해설 고침」 없음 · 해설 글 = 8판' % (eng, lab, rid), ok, c)
-    kb, cb = open_card(b, ROW_NEW)
-    T(G + '-헛', '%s 헛잣대 바탕 — 새 카드 %s 해설 없음' % (eng, ROW_NEW), bool(cb) and '해설 없음' in (cb.get('sol') or ''), cb)
-    kb, cb = open_card(b, ROW_NM)
-    T(G + '-헛', '%s 헛잣대 바탕 — %s 해설 글 = 7판(특허청장)' % (eng, ROW_NM), bool(cb) and '특허청장' in (cb.get('sol') or ''), cb)
+    if QJ.GATE:   # 헛잣대 둘(관문만)
+        kb, cb = open_card(b, ROW_NEW)
+        T(G + '-헛', '%s 헛잣대 바탕 — 새 카드 %s 해설 없음' % (eng, ROW_NEW), bool(cb) and '해설 없음' in (cb.get('sol') or ''), cb)
+        kb, cb = open_card(b, ROW_NM)
+        T(G + '-헛', '%s 헛잣대 바탕 — %s 해설 글 = 7판(특허청장)' % (eng, ROW_NM), bool(cb) and '특허청장' in (cb.get('sol') or ''), cb)
 
 
 def a3(p, b, eng):
@@ -277,18 +331,20 @@ def a4(p, b, eng):
     qp1 = p.ev("()=>__PS.qpop()")
     T(G, '%s 문제 창 %s — 단추 · 누름 → 「7판 해설」 상자' % (eng, ROW_S7), ok0 and (qp1 or {}).get('boxVis') and (qp1.get('box') or '').startswith('7판 해설'), {'앞': qp, '뒤': qp1 and qp1.get('box', '')[:80]})
     p.ev("()=>__HM.closeAll()")
-    kb = b.ev("i=>__PS.keyP7(i)", ROW_S7)
-    qb = mb_pop(b, kb)
-    T(G + '-헛', '%s 헛잣대 바탕 문제 창 — 단추 없음' % eng, bool(qb) and not qb.get('btn'), qb)
-    b.ev("()=>__HM.closeAll()")
+    if QJ.GATE:   # 헛잣대(관문만) — 바탕 문제 창
+        kb = b.ev("i=>__PS.keyP7(i)", ROW_S7)
+        qb = mb_pop(b, kb)
+        T(G + '-헛', '%s 헛잣대 바탕 문제 창 — 단추 없음' % eng, bool(qb) and not qb.get('btn'), qb)
+        b.ev("()=>__HM.closeAll()")
     for rid in (ROW_S7B, ROW_S7):
         ex = p.ev("i=>__PS.exvProbe(i)", rid)
         if ex and ex.get('none'):
             N(G, '%s 기출뷰 지문 상자 %s — 그 지문이 든 기출 문항 없음(%s)' % (eng, rid, ex['none']), ex)
             continue
         T(G, '%s 기출뷰 지문 상자 %s(uzExvBox 직접 · DOM) — 단추 「8판 해설 고침」' % (eng, rid), bool(ex) and ex.get('btn') == '8판 해설 고침', ex)
-        exb = b.ev("i=>__PS.exvProbe(i)", rid)
-        T(G + '-헛', '%s 헛잣대 바탕 기출뷰 %s — 단추 없음' % (eng, rid), bool(exb) and not exb.get('btn') and not exb.get('none'), exb)
+        if QJ.GATE:   # 헛잣대(관문만) — 바탕 기출뷰 지문 상자
+            exb = b.ev("i=>__PS.exvProbe(i)", rid)
+            T(G + '-헛', '%s 헛잣대 바탕 기출뷰 %s — 단추 없음' % (eng, rid), bool(exb) and not exb.get('btn') and not exb.get('none'), exb)
         break
 
 
@@ -297,7 +353,11 @@ def a5(p, b, eng):
     G = 'a5'
     for rid in SAME3:
         k, c = open_card(p, rid)
-        kb, cb = open_card(b, rid)
+        if QJ.GATE:
+            kb, cb = open_card(b, rid)
+        else:
+            cb = {'sol': QJ.base('a5@%s/%s' % (eng, rid), (c or {}).get('sol', ''))}   # regress — 처리안 기준(a5): 바탕(cc7b3f5) 해설 글 = 기준 스냅샷(NEW 의 같은 줄 글)
+            _bn('a5@%s/%s' % (eng, rid))
         T(G, '%s 같음 %s — 해설 글 = 바탕 · 「8판 해설 고침」 없음' % (eng, rid),
           bool(c) and bool(cb) and c.get('sol') and c.get('sol') == cb.get('sol') and not c.get('all'), {'NEW': (c or {}).get('sol', '')[:60], 'BASE': (cb or {}).get('sol', '')[:60]})
 
@@ -307,6 +367,7 @@ def a6(p, b, eng, br):
     G = 'a6'
     ns, nd, ne = M.new_env()
     q = Pg(br, eng, 'psP', ns, nd, ne, W=390, H=844)
+    QJ.launch('new')
     try:
         k, c = open_card(q, ROW_PH, 'touch')
         z = q.ev("i=>__PS.z(i)", ROW_PH)
@@ -329,7 +390,8 @@ def s1(p, b, eng):
     G = 's1'
     if eng != 'chromium':
         return
-    os.makedirs(SHOTS, exist_ok=True)
+    if QJ.GATE:
+        os.makedirs(SHOTS, exist_ok=True)
     src = json.loads(open(os.path.join(JOP, '특상디', '_p8up', '_p8sol.json'), 'rb').read().decode('utf-8'))
     ws = lambda t: re.sub(r'\s+', '', t or '')
     for rid in SHOT_ROWS:
@@ -337,43 +399,57 @@ def s1(p, b, eng):
         if rid in SHOT_OPEN:
             p.press(p.ev("k=>__PS.btnAt(k)", k), 'mouse', 400)
         f = os.path.join(SHOTS, 'card_%s.png' % rid)
-        try:
-            p.pg.locator('[id="qb-%s"]' % k).screenshot(path=f)
-        except Exception as e:
-            f = 'ERR ' + repr(e)[:80]
+        if QJ.GATE:   # 사진(눈으로 보는 것 · 게이트 밖) — regress 는 안 찍는다
+            try:
+                p.pg.locator('[id="qb-%s"]' % k).screenshot(path=f)
+            except Exception as e:
+                f = 'ERR ' + repr(e)[:80]
         v = src['rows'].get(rid) or src['new'].get(rid) or {}
         want = v.get('sol8')
         dom = p.ev("k=>{const c=document.getElementById('qb-'+k);const w=c&&c.querySelector('.mbexp');const s=w&&(w.querySelector('.p8sw > :not(.p8sh):not(.p8t7)')||w.querySelector('.sol'));return s?s.textContent:null}", k)
         ok = bool(dom) and (want is None or ws(dom) == ws(want) or (ws(dom).startswith(ws(want)) and ws(dom)[len(ws(want)):].startswith('📗리담해설')))   # 리담과 흡수된 줄은 뒤에 「📗 리담 해설」(바탕 그대로)
         T(G, '%s 표본 %s — 카드 해설 글 = ⚙ 8판 글%s · 사진 %s' % (eng, rid, '' if want else '(같음 줄 = 옛 글 그대로)', os.path.basename(f)), ok,
           {'dom': (dom or '')[:80], 'pdf8': v.get('pdf8'), 'cat': v.get('cat')})
-    try:
-        import pymupdf, _p8sol_build as B
-        d = pymupdf.open(B.PDF8)
-        for pno in sorted(set(SHOT_PAGES)):
-            pg = d[pno - 1]; r = pg.rect
-            pg.get_pixmap(dpi=100, clip=pymupdf.Rect(0, 0, r.width, r.height * 0.93)).save(os.path.join(SHOTS, 'p8_pdf%d.png' % pno))
-        N(G, '8판 쪽 그림(아래 띠 잘라 냄 · 값 안 옮김) — %s' % SHOTS, sorted(set(SHOT_PAGES)))
-    except Exception as e:
-        N(G, '8판 쪽 그림 못 뜸', repr(e)[:200])
+    if QJ.GATE:   # 8판 쪽 그림(pymupdf 렌더 · 사람 눈용) — regress 는 안 한다
+        try:
+            import pymupdf, _p8sol_build as B
+            d = pymupdf.open(B.PDF8)
+            for pno in sorted(set(SHOT_PAGES)):
+                pg = d[pno - 1]; r = pg.rect
+                pg.get_pixmap(dpi=100, clip=pymupdf.Rect(0, 0, r.width, r.height * 0.93)).save(os.path.join(SHOTS, 'p8_pdf%d.png' % pno))
+            N(G, '8판 쪽 그림(아래 띠 잘라 냄 · 값 안 옮김) — %s' % SHOTS, sorted(set(SHOT_PAGES)))
+        except Exception as e:
+            N(G, '8판 쪽 그림 못 뜸', repr(e)[:200])
 
 
 BR = {}
 PARTS = [('a1', a1), ('a2', a2), ('a3', a3), ('a4', a4), ('a5', a5), ('a6', a6), ('s1', s1)]
 DPARTS = [('d1', d1)]
+SMOKE_PARTS = {'a1': ('chromium',), 'a6': ('chromium', 'webkit')}   # smoke(_task_qa_slim A-4) — a1(단추 · 상자 · 접힘 · PC 첫 줄 마우스) · a6(폰 손가락 · WebKit 도) · 그 밖은 건넘
 
 
 def run_engine(pw, eng):
+    if QJ.SMOKE and not any(eng in v for v in SMOKE_PARTS.values()):   # smoke — 이 엔진에서 잴 smoke 칸이 없으면 브라우저도 안 띄운다
+        return
     br = getattr(pw, eng).launch()
     BR[eng] = br
     ns, nd, ne = M.new_env()
-    bs, bd, be = M.base_env()
+    if QJ.GATE:   # regress — 바탕 앱 · 데이터를 풀지 않는다(git show · git archive 0)
+        QJ.sub('git:show-app'); QJ.sub('git:archive', 2)
+        bs, bd, be = M.base_env()
     try:
         p = Pg(br, eng, 'psN', ns, nd, ne)
-        b = Pg(br, eng, 'psB', bs, bd, be)
+        QJ.launch('new')
+        if QJ.GATE:
+            b = Pg(br, eng, 'psB', bs, bd, be)
+            QJ.launch('base')
+        else:
+            b = None   # regress — 바탕 Pg 를 안 띄운다
         try:
             for k, fn in PARTS:
                 if ONLY and k not in ONLY:
+                    continue
+                if QJ.SMOKE and eng not in SMOKE_PARTS.get(k, ()):
                     continue
                 print('── %s · %s' % (eng, k), flush=True)
                 try:
@@ -382,7 +458,9 @@ def run_engine(pw, eng):
                     T('RUN', u'%s · %s 묶음이 멈춤' % (eng, k), False, repr(e)[:600])
             T('ERR', u'%s — NEW 앱 오류 0' % eng, not p.errs_all(), p.errs_all()[:6])
         finally:
-            p.close(); b.close()
+            p.close()
+            if QJ.GATE:
+                b.close()
     finally:
         br.close()
 
@@ -392,7 +470,7 @@ def main():
     os.makedirs(M.WORK, exist_ok=True)
     t0 = time.time()
     for k, fn in DPARTS:
-        if not ONLY or k in ONLY:
+        if (not ONLY or k in ONLY) and not QJ.SMOKE:
             try:
                 fn()
             except Exception as e:
@@ -406,7 +484,7 @@ def main():
     print('\n== PASS %d · FAIL %d · %.0f초' % (npass, nfail, time.time() - t0))
     with io.open(OUTF, 'a', encoding='utf-8') as f:
         f.write('\n==== %s · %s · NEW %s · 데이터 %s · 바탕 %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), 'p8sol', os.path.basename(_NEW), _DATA,
-                M.git('rev-parse', '--short', _BASE).decode().strip(), ','.join(ENGS)))
+                (M.git('rev-parse', '--short', _BASE).decode().strip() if QJ.GATE else '(regress · 바탕 안 띄움)'), ','.join(ENGS)))
         for g, n, ok, d in RES:
             f.write('%s | %s · %s | %s\n' % ({True: 'PASS', False: 'FAIL', None: 'INFO'}[ok], g, n, (d if isinstance(d, str) else json.dumps(d, ensure_ascii=False, default=str))[:900]))
         f.write('== PASS %d · FAIL %d\n' % (npass, nfail))

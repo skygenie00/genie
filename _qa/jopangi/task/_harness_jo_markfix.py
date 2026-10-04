@@ -12,6 +12,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안
 import io, json, os, re, sys, time, shutil
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -27,6 +28,8 @@ _DATA = ARG('--data', _roots.genie(r'jo\data'))
 _EXAM = ARG('--exam', _roots.genie(r'gichul\pdf'))
 ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
+if QJ.SMOKE:   # smoke: Chromium 만
+    ENGS = [x for x in ENGS if x == 'chromium']
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jo_markfix_result.txt'))
 sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--exam', _EXAM, '--eng', ','.join(ENGS)]
 sys.path.insert(0, HERE)
@@ -95,12 +98,15 @@ def place_ok(bar, sel):
 def b1(p, b, eng):
     G = 'b1'
     out, outb = {}, {}
-    for i in range(12):
-        unit(p, '__mg%d' % i); out[i] = p.ev("()=>__MF.cards()")
-        unit(b, '__mg%d' % i); outb[i] = b.ev("()=>__MF.cards()")
-    n = sum(v['n'] for v in out.values()); mk = sum(v['mk'] for v in out.values()); mkb = sum(v['mk'] for v in outb.values())
-    T(G, '%s 첫 12 단원 7판 카드 지문 글 %d — data-mk %d(= 카드 수)' % (eng, n, mk), n > 50 and mk == n, {i: [v['n'], v['mk']] for i, v in out.items()})
-    T(G + '-헛', '%s 헛잣대 바탕 — data-mk 0' % eng, mkb == 0, mkb)
+    if not QJ.SMOKE:
+        for i in range(12):
+            unit(p, '__mg%d' % i); out[i] = p.ev("()=>__MF.cards()")
+            if QJ.GATE:
+                unit(b, '__mg%d' % i); outb[i] = b.ev("()=>__MF.cards()")
+        n = sum(v['n'] for v in out.values()); mk = sum(v['mk'] for v in out.values()); mkb = sum(v['mk'] for v in outb.values())
+        T(G, '%s 첫 12 단원 7판 카드 지문 글 %d — data-mk %d(= 카드 수)' % (eng, n, mk), n > 50 and mk == n, {i: [v['n'], v['mk']] for i, v in out.items()})
+        if QJ.GATE:
+            T(G + '-헛', '%s 헛잣대 바탕 — data-mk 0' % eng, mkb == 0, mkb)
     # 긋기 — 마우스 끌기 → 막대 → 노랑 → 저장 → 새로고침 뒤 그대로
     unit(p, '__mg0')
     c = p.ev("()=>__MF.firstCardText()")
@@ -116,6 +122,8 @@ def b1(p, b, eng):
     T(G, '%s 7판 카드 글 마우스 끌기 → 막대(선택 아래) → 노랑 → jopangi.markup 「card|1차객|」 1 · 칠 · 새로고침 뒤 그대로' % eng,
       bool(c) and bar and bar['vis'] and len(keys) == 1 and marks and len(marks) == 1 and after and after[0] == 1,
       {'카드': c, '막대': bar and bar['rect'], '선택': sel, '열쇠': keys, '칠': marks, '새로고침 뒤': after})
+    if QJ.SMOKE:   # smoke 칸 = b1-2(카드 글 끌기 → 막대 → 노랑 → 새로고침 뒤 그대로) — b1-3 · b1-4 는 건넘
+        return
     # ✏️ 표시
     p.ev("()=>{S.mkOff=true;return render()}"); p.pg.wait_for_timeout(500)
     off = p.ev("()=>document.querySelectorAll('#slot mark.mkc').length")
@@ -162,6 +170,7 @@ def b2(p, b, eng, br):
     # 폰 390×844 · 확대 1.5
     ns, nd, ne = M.new_env()
     q = B8.Pg(br, eng, 'mfP', ns, nd, ne, W=390, H=844)
+    QJ.launch('new')
     try:
         res = {}
         for zoom in (1.0, 1.5):
@@ -196,6 +205,8 @@ def b3(p, b, eng):
     T(G, '%s 제7조 본문 마우스 끌기 → 막대(도구 아홉 + 🏷 · 선택 아래) · 따로 뜨던 🏷 거품 0 → 밑줄 파랑 → jopangi.jomark 1 칸 · 그 줄 칠' % eng,
       bar and bar['vis'] and len([x for x in bar['btns'] if x['cls'] != 'm2']) == 9 and [x['t'] for x in bar['btns'] if x['cls'] == 'm2'] == ['🗒 메모', '✎ 수정', '🏷 태그'] and not bub and place_ok(bar, sel) and len(ks) == 1 and jm[ks[0]][0][2] == 'ub' and L1[0]['jmk'] >= 1,   # ★ 9/30 A-6 — joscreen0929 A-5-1: 🏷 = 둘째 줄 끝(🗒 메모 · ✎ 수정 · 🏷 태그)
       {'막대': bar and bar['rect'], '거품': bub, 'jomark': jm, '줄': L1[:1]})
+    if QJ.SMOKE:   # smoke 칸 = b3-1(제7조 끌기 → 막대 → 밑줄 → jomark 1) — 나머지는 건넘
+        return
     T(G, '%s 긋기 전후 줄 높이·폭·다음 줄 y 같음(±0.5px)' % eng, geo and len(L0) == len(L1), [[a['r'], b_['r']] for a, b_ in zip(L0, L1)][:3])
     # 필기 있는 조 · 필기 켜고 끄기 · 스티커 편집 · 빈칸 모드
     p.ev("()=>__MF.inkSeed('jo|특허법:제7조')")
@@ -230,10 +241,11 @@ def b3(p, b, eng):
     T(G, '%s 막대 「🏷」 → 태그 스티커 창(stkAttachPop · 옛 거품과 같은 창)' % eng, any(('붙이기' in x or '스티커' in x) for x in pops), pops)
     p.ev("()=>{try{closeAllPops()}catch(e){}}")
     # 헛잣대 — 바탕은 거품 · 막대 없음
-    jo(b, *JO7)
-    ls = b.ev("()=>__MF.lineSel(0)")
-    drag(b, b.ev("a=>__MF.dragAB(a[0],a[1],a[2])", [ls, 3, 9]))
-    T(G + '-헛', '%s 헛잣대 바탕 — 조문 긁기 = 🏷 거품 · 막대 없음' % eng, b.ev("()=>__MF.bub()") and not (b.ev("()=>__MF.bar('jomk9')") or {}).get('vis'), '')
+    if QJ.GATE:
+        jo(b, *JO7)
+        ls = b.ev("()=>__MF.lineSel(0)")
+        drag(b, b.ev("a=>__MF.dragAB(a[0],a[1],a[2])", [ls, 3, 9]))
+        T(G + '-헛', '%s 헛잣대 바탕 — 조문 긁기 = 🏷 거품 · 막대 없음' % eng, b.ev("()=>__MF.bub()") and not (b.ev("()=>__MF.bar('jomk9')") or {}).get('vis'), '')
 
 
 # ══════════ A-4 팝업 ══════════
@@ -241,19 +253,32 @@ def b4(p, b, eng):
     G = 'b4'
     out = {}
     for tag, q in (('NEW', p), ('BASE', b)):
+        if tag == 'BASE' and QJ.REGRESS:   # regress: 바탕 판을 안 띄운다
+            continue
         jo(q, *JO7)
         hd = q.ev("()=>{const s=document.querySelector('#slot .mkn');return s?s.textContent:null}")
         q.ev("()=>{popJo('특허법','제7조',{clientX:700,clientY:300},1)}"); q.pg.wait_for_timeout(1200)
         out[tag] = {'마크업': hd, '팝업': q.ev("()=>__MF.popMarks('jo|특허법|제7조')") or q.ev("()=>{const p=(POPS||[]).filter(x=>/제7조/.test(x._pk||'')).pop();return p?p._pk:null}")}
         q.ev("()=>{try{closeAllPops()}catch(e){}}")
-    T(G, '%s 제7조 「✎ 마크업 %s」(켠 기록 없음) — 조문 팝업 볼트 마크업 칠·빨간 글 %s(바탕 %s)' % (eng, out['NEW']['마크업'], (out['NEW']['팝업'] or {}).get('n'), (out['BASE']['팝업'] or {}).get('n')),
-      (out['NEW']['팝업'] or {}).get('n') == 0 and ((out['BASE']['팝업'] or {}).get('n') or 0) >= 3, out)
+    if QJ.GATE:
+        T(G, '%s 제7조 「✎ 마크업 %s」(켠 기록 없음) — 조문 팝업 볼트 마크업 칠·빨간 글 %s(바탕 %s)' % (eng, out['NEW']['마크업'], (out['NEW']['팝업'] or {}).get('n'), (out['BASE']['팝업'] or {}).get('n')),
+          (out['NEW']['팝업'] or {}).get('n') == 0 and ((out['BASE']['팝업'] or {}).get('n') or 0) >= 3, out)
+    else:
+        # 바탕 ≥ 3 은 「그 칸이 눈을 뜨고 있다」는 바탕 쪽 조건(헛잣대) — gate 몫. regress 는 NEW 의 볼트 마크업 0 만
+        T(G, '%s 제7조 「✎ 마크업 %s」(켠 기록 없음) — 조문 팝업 볼트 마크업 칠·빨간 글 %s(바탕 #)' % (eng, out['NEW']['마크업'], (out['NEW']['팝업'] or {}).get('n')),
+          (out['NEW']['팝업'] or {}).get('n') == 0, out)
     # 하나 켬 → 팝업에도 그 하나
     jo(p, *JO7)
     it = p.ev("()=>{const X=WMX;const it=X&&X.b.items.find(x=>x.g==='mk');if(!it)return null;mkonSet(X.base,{k:[it.key],s:[],x:[]});return it.key}")
     p.ev("()=>{popJo('특허법','제7조',{clientX:700,clientY:300},1)}"); p.pg.wait_for_timeout(1200)
     one = p.ev("()=>__MF.popMarks('jo|특허법|제7조')")
-    T(G, '%s 「✎ 마크업」에서 하나 켬(%s) → 팝업에도 그 하나 · 내 칠(jomark)도 팝업에 보임' % (eng, it), bool(one) and one['n'] >= 1 and one['n'] < ((out['BASE']['팝업'] or {}).get('n') or 99) and one['jmk'] >= 1, one)
+    if QJ.GATE:
+        T(G, '%s 「✎ 마크업」에서 하나 켬(%s) → 팝업에도 그 하나 · 내 칠(jomark)도 팝업에 보임' % (eng, it), bool(one) and one['n'] >= 1 and one['n'] < ((out['BASE']['팝업'] or {}).get('n') or 99) and one['jmk'] >= 1, one)
+    else:
+        # 「하나 켠 팝업의 마크 수 < 바탕(켠 것 없이 전부 보이던 옛 판) 전부」 — 바탕 수는 regress 에서 못 구한다 → 하나 켠 팝업의 마크 수가 이 판 앞 인도판 값(스냅샷)과 같음으로 갈음
+        _n4 = one['n'] if one else None
+        _ok4 = QJ.same('b4-2@' + eng, _n4)
+        T(G, '%s 「✎ 마크업」에서 하나 켬(%s) → 팝업에도 그 하나 · 내 칠(jomark)도 팝업에 보임' % (eng, it), bool(one) and one['n'] >= 1 and _ok4 and one['jmk'] >= 1, dict(one or {}, 기준=QJ.base_note('b4-2@' + eng)))
     p.ev("()=>{mkonSet('특허법:제7조',{k:[],s:[],x:[]});try{closeAllPops()}catch(e){}}")
 
 
@@ -262,11 +287,18 @@ def b6(p, b, eng):
     G = 'b6'
     for law, k in DMN:
         jo(p, law, k); d = p.ev("()=>__MF.dmn('#slot .box')"); tn = p.ev("()=>__MF.lineTexts()")
-        jo(b, law, k); db = b.ev("()=>__MF.dmn('#slot .box')"); tb = b.ev("()=>__MF.lineTexts()")
+        if QJ.GATE:
+            jo(b, law, k); db = b.ev("()=>__MF.dmn('#slot .box')"); tb = b.ev("()=>__MF.lineTexts()")
         br = (d or {}).get('br', [])
         ok = bool(br) and all(x['prevTop'] is not None and x['top'] > x['prevTop'] + 5 and x['rowX'] is not None and abs(x['left'] - x['rowX']) <= 1 and int(x['fw']) >= 700 and x['color'] == BLUE for x in br)
-        T(G, '%s %s %s — 「다만,」 %d 곳: 앞 글보다 한 줄 아래 · 왼쪽 x = 행 글 시작 x(±1) · 굵기 ≥ 700 · 색 %s · 줄 글자 = 바탕' % (eng, law, k, len(br), BLUE), ok and tn == tb, {'NEW': br[:3], '글자 같음': tn == tb})
-        T(G + '-헛', '%s %s %s 헛잣대 바탕 — 줄 안 바뀜(.dmn 0)' % (eng, law, k), not (db or {}).get('br'), db)
+        if QJ.GATE:
+            T(G, '%s %s %s — 「다만,」 %d 곳: 앞 글보다 한 줄 아래 · 왼쪽 x = 행 글 시작 x(±1) · 굵기 ≥ 700 · 색 %s · 줄 글자 = 바탕' % (eng, law, k, len(br), BLUE), ok and tn == tb, {'NEW': br[:3], '글자 같음': tn == tb})
+        else:
+            # 기준 칸 — 그 조 줄 글자 = 바탕(이 판 앞 인도판) 스냅샷
+            _ok6 = QJ.same('b6@%s/%s/%s' % (eng, law, k), tn)
+            T(G, '%s %s %s — 「다만,」 %d 곳: 앞 글보다 한 줄 아래 · 왼쪽 x = 행 글 시작 x(±1) · 굵기 ≥ 700 · 색 %s · 줄 글자 = 바탕' % (eng, law, k, len(br), BLUE), ok and _ok6, {'NEW': br[:3], '글자 같음': _ok6, '기준': QJ.base_note('b6@%s/%s/%s' % (eng, law, k))})
+        if QJ.GATE:
+            T(G + '-헛', '%s %s %s 헛잣대 바탕 — 줄 안 바뀜(.dmn 0)' % (eng, law, k), not (db or {}).get('br'), db)
     # 이미 첫머리 — 새 줄 안 생김
     hd = p.ev("""async()=>{const B=await get('jo_상표법_본문.json');for(const [k,j] of Object.entries(B.조||{})){for(const r of (j.행||[])){if(/^\\s*다만,/.test(r.t||''))return k;}}return null}""")
     if hd:
@@ -292,8 +324,16 @@ def b5(p, b, eng):
     G = 'b5'
     res = {}
     for tag, q in (('NEW', p), ('BASE', b)):
+        if tag == 'BASE' and QJ.REGRESS:   # regress: 바탕 판을 안 띄운다
+            continue
         res[tag] = b5one(q)
-    T(G, '%s 기출뷰 리담 선지 글 마우스 길게 누르기 700ms(선택 없음) — 뜨는 창 = 바탕과 같음 · 칠 막대 안 뜸' % eng, res['NEW'] is not None and res['NEW'][0] == res['BASE'][0] and not res['NEW'][1], res)
+    if QJ.GATE:
+        T(G, '%s 기출뷰 리담 선지 글 마우스 길게 누르기 700ms(선택 없음) — 뜨는 창 = 바탕과 같음 · 칠 막대 안 뜸' % eng, res['NEW'] is not None and res['NEW'][0] == res['BASE'][0] and not res['NEW'][1], res)
+    else:
+        # 기준 칸 — 뜨는 창 목록 = 바탕(이 판 앞 인도판) 스냅샷 · 칠 막대 안 뜸은 NEW 조건 그대로
+        _p5 = res['NEW'][0] if res['NEW'] is not None else None
+        _ok5 = QJ.same('b5@' + eng, _p5)
+        T(G, '%s 기출뷰 리담 선지 글 마우스 길게 누르기 700ms(선택 없음) — 뜨는 창 = 바탕과 같음 · 칠 막대 안 뜸' % eng, res['NEW'] is not None and _ok5 and not res['NEW'][1], dict(res, 기준=QJ.base_note('b5@' + eng)))
 
 
 def b5one(p):
@@ -317,22 +357,32 @@ def run_engine(pw, eng):
     br = getattr(pw, eng).launch()
     BR[eng] = br
     ns, nd, ne = M.new_env()
-    bs, bd, be = M.base_env()
+    if QJ.GATE:
+        QJ.sub('git:show-app'); QJ.sub('git:archive', 2)
+        bs, bd, be = M.base_env()
     try:
         p = B8.Pg(br, eng, 'mfN', ns, nd, ne, W=1400, H=900)
-        b = B8.Pg(br, eng, 'mfB', bs, bd, be, W=1400, H=900)
+        QJ.launch('new')
+        b = B8.Pg(br, eng, 'mfB', bs, bd, be, W=1400, H=900) if QJ.GATE else None
+        if QJ.GATE:
+            QJ.launch('base')
         try:
             for k, fn in PARTS:
                 if ONLY and k not in ONLY:
                     continue
+                if QJ.SMOKE and k not in ('b1', 'b3'):   # smoke 칸 = b1-2 · b3-1
+                    continue
                 print('── %s · %s' % (eng, k), flush=True)
                 try:
-                    fn(p, b, eng, br) if k in WITH_BR else fn(p, b, eng)
+                    with QJ.stage('%s:%s' % (eng, k)):
+                        fn(p, b, eng, br) if k in WITH_BR else fn(p, b, eng)
                 except Exception as e:
                     T('RUN', u'%s · %s 묶음이 멈춤' % (eng, k), False, repr(e)[:600])
             T('ERR', u'%s — NEW 앱 오류 0' % eng, not p.errs_all(), p.errs_all()[:6])
         finally:
-            p.close(); b.close()
+            p.close()
+            if QJ.GATE:
+                b.close()
     finally:
         br.close()
 

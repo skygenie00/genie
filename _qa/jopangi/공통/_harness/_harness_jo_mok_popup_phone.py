@@ -18,6 +18,12 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402  — _task_qa_slim: --mode · --snap-in · --snap-out 을 여기서 뗀다(아래 인자 읽기는 이 판 앞과 같다 · mokchip 이 이 파일을 불러올 때는 mokchip 이 먼저 불러 둔 같은 모듈)
+# --mode gate|regress|smoke (_task_qa_slim 2026-10-04 · 인자 없으면 gate = 이 판 앞과 같다 · gate 경로는 원본과 글자까지 같다 — 갈래는 `if QJ.REGRESS:` · `X if QJ.GATE else Y` 로만 ·
+#   mokchip 이 P · serve · SEED · READY · __HM 을 불러 쓰므로 P · serve · SEED · READY · 상수 · 짝 JS 는 gate · regress 어느 쪽에서도 안 바꾼다 — regress 갈래는 부르는 자리에서 가른다)
+#   regress = NEW 만 띄운다(바탕 풀기 · 바탕 띄우기 · git 0 · PC 무변 바탕 둘도 안 띄움) · 바탕 값을 기댓값으로 쓰던 칸(C 칩 수 · G > 640 옆 두 칸 · PC 무변)은 기준 스냅샷(QJ.base) ·
+#     엔진 × 화면마다 앱 한 번(시나리오 사이 = p.close() 가 reset) · 머리 탭 수 · 목록 · 노트 팝업은 앱 표지로 기다림 · 캡처 안 찍음
+#   smoke = rail 시나리오(특허·조문 · 민소·2차 두 칸 — A-1 · 콘솔 오류 0)만 · Chromium 만
 import hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -28,6 +34,14 @@ OUT = ARG('--out', HERE)
 ONLY = ARG('--only', '')
 ENGS = [ARG('--eng')] if ARG('--eng') else ['chromium', 'webkit']
 TAGS = [ARG('--tag')] if ARG('--tag') else ['BASE', 'NEW']
+if QJ.REGRESS:   # regress · smoke — 바탕(BASE)은 안 띄운다
+    TAGS = ['NEW']
+# ── _task_qa_slim — regress(A-1) · 앱 한 번 띄움(A-2) 상수 ──
+T_UP = 6000      # 앱 반응(창 뜸 · 닫힘) 기다림 한도(ms) — 반응이 있으면 그 즉시 · 한도까지 가는 것은 반응이 없는(FAIL 갈래) 때뿐
+T_LOAD = 30000   # 첫 자료 읽기(머리 탭 수 · 정리 탭 화면) 한도(ms) — 같은 뜻
+T_TAIL = 80      # 눌린 뒤 「팝업이 더 뜨지 않나」 보는 여유(ms)
+SMOKE_SCEN = ('rail',)                          # smoke — rail 시나리오만(A-1 · 콘솔 오류 0)
+SMOKE_TABS = {('특허', 'jo'), ('민소', 'cha2')}   # smoke 에서 도는 (법 · 탭) — 조문 탭 하나 · 2차 탭 하나
 NEWF = ARG('--new', os.path.join(GENIE, 'jo', 'index.html'))
 WORK = os.path.join(tempfile.gettempdir(), 'h_jo_mok_popup_phone')
 SHOTS = os.path.join(OUT, '_mok_popup_phone_shots')
@@ -204,6 +218,163 @@ class P:
             pass
 
 
+# ══════════ _task_qa_slim A-2 — regress: 엔진 × 화면마다 앱을 한 번만 띄우고 시나리오 사이는 되돌려 잇는다 ══════════
+# (gate 는 시나리오마다 P(...) 새 컨텍스트 그대로 · P 는 안 고친다: 목차노트 칩 하네스(mokchip)가 P 를 불러 쓴다)
+RJS = r"""
+window.__RJ={
+ /* 두 프레임 + 안전 타이머 — 앱 ResizeObserver → hdrFit(앱 2139) 이 한 번 돈 뒤 */
+ frames(){return new Promise(res=>{let d=false;const f=()=>{if(!d){d=true;res(true)}};try{requestAnimationFrame(()=>requestAnimationFrame(f))}catch(_){f()}setTimeout(f,300)})},
+ /* 머리 탭 수가 다 차고(앱 railCounts 2146 — set() 이 #hrail b[data-n] 마다 글자를 채운다) 목차노트 단추가 켜짐(앱 2167 mb.disabled=!n) · render 끝(busy 꺼짐) */
+ railDone(){const bs=[...document.querySelectorAll('#hrail b[data-n]')],m=document.getElementById('mokBtn');
+   return bs.length>0&&bs.every(b=>String(b.textContent||'').trim()!=='')&&!!m&&!m.disabled&&typeof busy!=='undefined'&&!busy},
+ async untilRail(ms){const t0=performance.now();while(performance.now()-t0<ms){if(__RJ.railDone())return true;await new Promise(r=>setTimeout(r,25))}return false},
+ /* 앱 상태 S 첫 기록(부팅 끝 직후) — reset 이 이 값으로 되돌린다(JSON 으로 못 적는 값은 건드리지 않는다) */
+ snap(){const o={};for(const k of Object.keys(S)){let v;try{v=JSON.stringify(S[k])}catch(e){v=undefined}o[k]=(typeof v==='string')?v:null}window.__S0=o;return Object.keys(o).length},
+ /* IndexedDB — 있는 DB 만 열어 저장소 내용을 비운다(DB 를 지우지 않는다 · 앱이 열어 둔 DB 를 막지 않게 · 앱 15970 ox_master_db) */
+ async idbClear(){try{if(!(window.indexedDB&&indexedDB.databases))return 0;const ds=(await indexedDB.databases())||[];let n=0;
+   for(const d of ds){if(!d||!d.name)continue;
+     await new Promise(res=>{let done=false;const fin=()=>{if(!done){done=true;res(true)}};setTimeout(fin,600);
+       try{const rq=indexedDB.open(d.name);rq.onerror=fin;rq.onblocked=fin;
+         rq.onsuccess=()=>{const db=rq.result;try{const ns=[...db.objectStoreNames];if(!ns.length){db.close();return fin()}
+           const tx=db.transaction(ns,'readwrite');ns.forEach(x=>tx.objectStore(x).clear());n++;
+           tx.oncomplete=()=>{try{db.close()}catch(_){}fin()};tx.onerror=()=>{try{db.close()}catch(_){}fin()};tx.onabort=()=>{try{db.close()}catch(_){}fin()}}
+         catch(e){try{db.close()}catch(_){}fin()}}}catch(e){fin()}})}
+   return n}catch(e){return -1}},
+ /* 시나리오 사이 되돌림 — 팝업 닫기 · S 첫 값(팝업 자리·크기 기억 · 서랍 · 조문·판례 선택 …) · 굴림 0 · localStorage(SEED 와 같은 첫 상태) · 오류 목록 · 세는 것 · IndexedDB */
+ async reset(){
+   try{__HM.clean()}catch(e){}
+   try{for(let i=0;i<320&&busy;i++)await new Promise(r=>setTimeout(r,25))}catch(e){}
+   try{const o=window.__S0;if(o){for(const k of Object.keys(S)){if(!(k in o))delete S[k]}for(const k of Object.keys(o)){if(o[k]!==null){try{S[k]=JSON.parse(o[k])}catch(e){}}}}}catch(e){}
+   try{document.querySelectorAll('#slot .main,#slot .tree,#slot .plist,#slot .qlwrap').forEach(n=>{n.scrollTop=0});const h=document.getElementById('hrail');if(h)h.scrollLeft=0;window.scrollTo(0,0)}catch(e){}
+   try{localStorage.clear();localStorage.setItem('tt.cfg',JSON.stringify({person:'꼬까'}))}catch(e){}
+   try{if(window.__ERR)window.__ERR.length=0}catch(e){}
+   try{__HM.spyReset()}catch(e){}
+   try{await __RJ.idbClear()}catch(e){}
+   return true}
+};
+/* __HM.go — 짝 JS 의 go 와 같은 일(clean → idle → S 바꿈 → render → idle) · 끝의 고정 450ms 만 앱 표지(머리 탭 수 다 참 · 단추 켜짐 · 두 프레임)로 — regress 쪽 페이지에서만 */
+__HM.go=async function(law,tab,o){__HM.clean();for(let i=0;i<320&&busy;i++)await new Promise(r=>setTimeout(r,25));
+  S.law=law;S.tab=tab;
+  if(tab==='cha2'){S.boardKind='기출';S.series='';S.yearFilter='';S.cha2Sel=null;S.cha2Filter={};}
+  if(tab==='prec'){S.precQ='';S.precFilter={};}
+  Object.assign(S,o||{});await render();for(let i=0;i<320&&busy;i++)await new Promise(r=>setTimeout(r,25));
+  await __RJ.untilRail(15000);await __RJ.frames();
+  return {tab:S.tab,law:S.law}};
+0;   /* 마지막 값이 함수면 Playwright evaluate 가 그 함수를 불러 버린다(식이 함수면 자동 호출) — 함수 아닌 값으로 끝낸다 */
+"""
+# 앱이 이미 내놓는 표지(팝업 키 · 줄 · 머리 탭 글) — 표지 목록 = _qa_slim_out/_a2/_harness_jo_mok_popup_phone_표지.md
+JS_MOK_OPEN = "()=>{const p=POPS.find(x=>(x._pk||'').indexOf('moknote|')===0);return !!p&&p.querySelectorAll('.mklist .mkr').length>0}"   # 목차노트 목록 팝업 + 줄(앱 popMokNote 7125)이 찼다
+JS_MOK_GONE = "()=>!POPS.find(x=>(x._pk||'').indexOf('moknote|')===0)"                                                               # 같은 단추 다시 = 닫힘(앱 popToggle 3197)
+JS_NOTE_OPEN = "n=>!!POPS.find(x=>x._pk==='note|'+PLAW()+'|'+n+'|')"                                                               # 노트 팝업 키(앱 popNote 6786) — 줄은 만들 때 한 번에 찬다
+JS_OMR_DONE = "()=>S.tab==='omr'&&__RJ.railDone()"                                                                                   # 「정리」 탭으로 다시 그림 끝 · 머리 탭 수 다 참(앱 drawRail 2131 의 sl 되돌림 포함)
+
+
+def _wait(pg, ms, why):
+    """regress 의 남는 고정 대기 — QJ.sleep(…, page=pg) = page.wait_for_timeout(그동안 ctx.route 콜백 · 요청이 돈다 — time.sleep 은 Playwright 동기 API 에서 route 를 멈춘다) + QJ 대기 셈"""
+    QJ.sleep(ms, why, page=pg)
+
+
+class RigP(P):
+    """regress 전용 — P(뿌리 · 안 고침)와 같은 맥락(서버 · 화면 · route · goto · READY)을 한 번만 만들고 시나리오 사이는 reset 으로 되돌려 쓴다.
+    P 와 다른 점 셋 — ① 끝의 고정 1.5초 → 앱 표지(첫 render 끝 = busy 꺼짐) ② click 의 고정 대기 = _wait(까닭 · page.wait_for_timeout) ③ close() = 닫지 않고 되돌림(진짜 닫기는 shut)"""
+
+    def __init__(self, br, eng, tag, src, W, H, mode='desk'):
+        self.eng, self.tag, self.W, self.H, self.mode = eng, tag, W, H, mode
+        self.touch = mode in ('phone', 'pad')
+        self.port = serve(tag, src)
+        kw = dict(viewport={'width': W, 'height': H}, locale='ko-KR', timezone_id='Asia/Seoul')
+        if mode == 'phone':
+            self.ctx = br.new_context(device_scale_factor=3, is_mobile=True, has_touch=True, user_agent=PHONE_UA, **kw)
+        elif mode == 'pad':
+            self.ctx = br.new_context(device_scale_factor=2, is_mobile=True, has_touch=True, user_agent=IPAD_UA, **kw)
+        else:
+            self.ctx = br.new_context(device_scale_factor=1, **kw)
+        self.ctx.route('**/*', route_filter)
+        self.pg = self.ctx.new_page()
+        self.errs = []
+        self.pg.on('pageerror', lambda e: self.errs.append('page: ' + str(e)[:240]))
+        self.pg.on('console', lambda m: self.errs.append('console: ' + m.text[:240]) if m.type == 'error' else None)
+        self.cdp = self.ctx.new_cdp_session(self.pg) if (eng == 'chromium' and self.touch) else None
+        self.dead = False
+        self.pg.goto('http://127.0.0.1:%d/index.html?h=1' % self.port, wait_until='load', timeout=120000)
+        self.pg.wait_for_function(READY, timeout=120000)
+        QJ.until(self.pg, "()=>typeof busy!=='undefined'&&!busy", T_LOAD, '앱 첫 render 끝(busy 꺼짐 · 앱 16561)')   # P 의 고정 1.5초 자리
+        self.ev("()=>new Promise(r=>{let d=false;const f=()=>{if(!d){d=true;r(true)}};try{requestAnimationFrame(()=>requestAnimationFrame(f))}catch(_){f()}setTimeout(f,300)})")
+
+    def tap(self, at):
+        """P.click 에서 누르기만(뒤 고정 대기 없음)"""
+        if self.touch:
+            self.pg.touchscreen.tap(at['cx'], at['cy'])
+        else:
+            self.pg.mouse.click(at['cx'], at['cy'])
+
+    def click(self, at, wait=600):
+        """P.click 과 같은 누르기 · 뒤 고정 대기는 _wait(까닭) — 표지를 단 자리는 hit() 가 대신한다"""
+        if not at or not at.get('on'):
+            return False
+        self.tap(at)
+        _wait(self.pg, wait, '누른 뒤 앱 반응 — 완료 표지가 팝업 종류마다 달라 고정(_a2 표지 문서 「남는 고정 대기」)')
+        return True
+
+    def close(self):
+        """시나리오 함수들의 finally: p.close() — 닫지 않고 되돌린다"""
+        try:
+            self.pg.evaluate("()=>__RJ.reset()")
+            self.errs[:] = []
+        except Exception:
+            self.dead = True
+
+    def shut(self):
+        P.close(self)
+
+
+class Rig(object):
+    """regress — (엔진, 화면) 마다 RigP 하나"""
+
+    def __init__(self):
+        self.pool = {}
+
+    def lease(self, br, eng, tag, src, W, H, mode):
+        key = (eng, W, H, mode)
+        q = self.pool.get(key)
+        if q is not None and (q.dead or q.pg.is_closed()):
+            self.pool.pop(key, None)
+            try:
+                q.shut()
+            except Exception:
+                pass
+            q = None
+        if q is None:
+            QJ.launch('new')
+            q = RigP(br, eng, tag, src, W, H, mode)
+            q.ev(RJS)
+            q.ev("()=>__RJ.snap()")
+            self.pool[key] = q
+        return q
+
+    def shut(self):
+        for q in list(self.pool.values()):
+            try:
+                q.shut()
+            except Exception:
+                pass
+        self.pool.clear()
+
+
+RIG = Rig()
+
+
+def rhit(p, at, js, arg, what):
+    """regress 누르기 — 누른 뒤 고정 wait 대신 앱 표지(js)가 참이 될 때까지(gate 는 호출 자리의 `p.click(at, wait)` 그대로 — 원본 줄)"""
+    if not at or not at.get('on'):
+        return False
+    p.tap(at)
+    QJ.until(p.pg, js, T_LOAD if js is JS_OMR_DONE else T_UP, what, arg)
+    p.ev("()=>__RJ.frames()")
+    _wait(p.pg, T_TAIL, '눌린 뒤 팝업이 더 뜨는지(S.tab 무변 · 목록 팝업만 같은 칸) 보는 여유 — 앱 표지 뒤에 남는 유일한 고정 대기')
+    return True
+
+
 # ══════════ 잣대 — 데이터에서 센 값 ══════════
 def ground():
     G = {'nf': {}}
@@ -222,23 +393,27 @@ def ground():
 
 # ══════════ A — 가로 탭 「목차노트 N」(책상 1440×900 · 마우스) ══════════
 def scen_rail(br, eng, tag, src, G):
-    p = P(br, eng, tag, src, 1440, 900)
+    if QJ.GATE:
+        QJ.launch('new' if tag == 'NEW' else 'base')
+    p = P(br, eng, tag, src, 1440, 900) if QJ.GATE else RIG.lease(br, eng, tag, src, 1440, 900, 'desk')
     R = {'eng': eng, 'tag': tag, 'has': None, 'v': {}}
     try:
         R['has'] = p.ev("__HM.has()")
         for law, sh in LAWS:
             for tab in TABS[sh]:
+                if QJ.SMOKE and (sh, tab) not in SMOKE_TABS:
+                    continue
                 k = sh + '|' + tab
                 p.ev("([l,t])=>__HM.go(l,t)", [law, tab])
-                p.pg.wait_for_timeout(250)
+                p.pg.wait_for_timeout(250) if QJ.GATE else _wait(p.pg, 250, '탭 화면 레이아웃 안정(머리 줄 hdrFit · 배지 줄) — 앱 표지 없음(go 가 머리 탭 수 · 두 프레임까지는 기다린다)')
                 V = {'rail': p.ev("__HM.rail()"), 'st0': p.ev("__HM.state()")}
                 at = p.ev("__HM.mokAt()")
                 V['at'] = at
-                V['tap'] = p.click(at, 1200)
+                V['tap'] = p.click(at, 1200) if QJ.GATE else rhit(p, at, JS_MOK_OPEN, None, '목차노트 탭 누름 = 목록 팝업 줄 참(앱 popMokNote 7125)')
                 V['list'] = p.ev("__HM.mokList()"); V['st1'] = p.ev("__HM.state()"); V['mr'] = p.ev("__HM.mokRect()")
                 V['rail1'] = p.ev("__HM.rail()")
                 at2 = p.ev("__HM.mokAt()")
-                V['tap2'] = p.click(at2, 700)
+                V['tap2'] = p.click(at2, 700) if QJ.GATE else rhit(p, at2, JS_MOK_GONE, None, '목차노트 탭 다시 누름 = 목록 팝업 닫힘(앱 popToggle 3197)')
                 V['list2'] = p.ev("__HM.mokList()"); V['st2'] = p.ev("__HM.state()")
                 R['v'][k] = V
         R['errs'] = p.ev("__HM.errs()") + p.errs
@@ -251,18 +426,20 @@ def scen_rail(br, eng, tag, src, G):
 
 # ══════════ B·C — 목록 안내 글 · 노트 머리 줄 · 줄 칩 수 · 깊이 딱지 ══════════
 def scen_bc(br, eng, tag, src, G):
-    p = P(br, eng, tag, src, 1440, 900)
+    if QJ.GATE:
+        QJ.launch('new' if tag == 'NEW' else 'base')
+    p = P(br, eng, tag, src, 1440, 900) if QJ.GATE else RIG.lease(br, eng, tag, src, 1440, 900, 'desk')
     R = {'eng': eng, 'tag': tag, 'law': {}}
     try:
         for law, sh in LAWS:
             p.ev("([l,t])=>__HM.go(l,t)", [law, 'cha2'])
             L = {}
             at = p.ev("__HM.mokAt()")
-            L['tap'] = p.click(at, 1200)
+            L['tap'] = p.click(at, 1200) if QJ.GATE else rhit(p, at, JS_MOK_OPEN, None, '목차노트 탭 누름 = 목록 팝업 줄 참(앱 popMokNote 7125)')
             L['list'] = p.ev("__HM.mokList()")
             at = p.ev("n=>__HM.mokRowAt(n)", N96 if sh == '특허' else '')
             L['rowAt'] = at
-            L['rowTap'] = p.click(at, 1400)
+            L['rowTap'] = p.click(at, 1400) if QJ.GATE else rhit(p, at, JS_NOTE_OPEN, (at or {}).get('note'), '목록 줄 누름 = 노트 팝업 뜸(앱 popNote 6786 · mokOpenNote 7148)')
             nm = (at or {}).get('note')
             if nm:
                 p.ev("n=>__HM.noteWait(n)", nm)
@@ -280,7 +457,9 @@ def scen_bc(br, eng, tag, src, G):
 
 # ══════════ D — 깊이 1→2→3→4→5→6 실제로 눌러 쌓기(책상 · 마우스) ══════════
 def scen_depth(br, eng, tag, src, G):
-    p = P(br, eng, tag, src, 1440, 900)
+    if QJ.GATE:
+        QJ.launch('new' if tag == 'NEW' else 'base')
+    p = P(br, eng, tag, src, 1440, 900) if QJ.GATE else RIG.lease(br, eng, tag, src, 1440, 900, 'desk')
     R = {'eng': eng, 'tag': tag, 'steps': []}
     S_ = R['steps']
 
@@ -289,8 +468,8 @@ def scen_depth(br, eng, tag, src, G):
     try:
         p.ev("([l,t])=>__HM.go(l,t)", ['특허법', 'cha2'])
         p.ev("__HM.spyReset()")
-        at = p.ev("__HM.mokAt()"); snap('1 목록(탭)', at, p.click(at, 1200))
-        at = p.ev("n=>__HM.mokRowAt(n)", N96); snap('2 노트(목록 줄)', at, p.click(at, 1400))
+        at = p.ev("__HM.mokAt()"); snap('1 목록(탭)', at, p.click(at, 1200) if QJ.GATE else rhit(p, at, JS_MOK_OPEN, None, '목차노트 탭 누름 = 목록 팝업 줄 참(앱 popMokNote 7125)'))
+        at = p.ev("n=>__HM.mokRowAt(n)", N96); snap('2 노트(목록 줄)', at, p.click(at, 1400) if QJ.GATE else rhit(p, at, JS_NOTE_OPEN, N96, '목록 줄 누름 = 노트 팝업 뜸(앱 popNote 6786)'))
         p.ev("n=>__HM.noteWait(n)", N96)
         at = p.ev("([s,t])=>__HM.chipAtTop(s,t)", ['.ntbl .chip.c-prec', '^판례 ']); snap('3 목록(노트 줄 칩 판례)', at, p.click(at, 1200))
         # 4 — 목록의 판례 줄 → 판례 팝업 · 그 안에 누를 링크가 없으면 닫고 다음 줄(최대 8)
@@ -338,7 +517,9 @@ JO_CANDS = ['제129조', '제133조', '제132조', '제94조', '제128조', '제
 
 
 def scen_probe(br, eng, tag, src, G):
-    p = P(br, eng, tag, src, 1440, 900)
+    if QJ.GATE:
+        QJ.launch('new' if tag == 'NEW' else 'base')
+    p = P(br, eng, tag, src, 1440, 900) if QJ.GATE else RIG.lease(br, eng, tag, src, 1440, 900, 'desk')
     R = {'eng': eng, 'tag': tag, 'site': {}}
     try:
         for site, a in PROBES:
@@ -365,11 +546,13 @@ def scen_probe(br, eng, tag, src, G):
 
 # ══════════ E — 「모두 닫기」(책상 마우스 · 아이패드 터치) ══════════
 def scen_all(br, eng, tag, src, W=1440, H=900, mode='desk'):
-    p = P(br, eng, tag, src, W, H, mode)
+    if QJ.GATE:
+        QJ.launch('new' if tag == 'NEW' else 'base')
+    p = P(br, eng, tag, src, W, H, mode) if QJ.GATE else RIG.lease(br, eng, tag, src, W, H, mode)
     R = {'eng': eng, 'tag': tag, 'W': W, 'mode': mode}
     try:
         p.ev("([l,t])=>__HM.go(l,t)", ['특허법', 'cha2'])
-        p.ev("()=>popJo('특허법','제129조',{clientX:300,clientY:180},1)"); p.pg.wait_for_timeout(700)
+        p.ev("()=>popJo('특허법','제129조',{clientX:300,clientY:180},1)"); p.pg.wait_for_timeout(700) if QJ.GATE else _wait(p.pg, 700, '조문 팝업 본문(원문 줄)이 팝업 뜬 뒤 비동기로 참 — 표지 없음')
         R['one'] = {'pall': p.ev("__HM.pallAll()"), 'top': p.ev("__HM.topInfo()")}
         R['two'] = p.ev("__HM.openTwo()")
         R['twoPall'] = p.ev("__HM.pallAll()")
@@ -392,7 +575,7 @@ def scen_all(br, eng, tag, src, W=1440, H=900, mode='desk'):
         R['afterAll'] = p.ev("__HM.state()")
         # Esc = 맨 위 하나(closePop 그대로)
         p.ev("__HM.openTwo()")
-        p.pg.keyboard.press('Escape'); p.pg.wait_for_timeout(400)
+        p.pg.keyboard.press('Escape'); p.pg.wait_for_timeout(400) if QJ.GATE else _wait(p.pg, 400, 'Esc 뒤 맨 위 팝업 닫힘 · 「모두 닫기」 단추 옮김(popAllSync) 반영 — 표지 없음(닫힘 뒤 남은 팝업 수를 읽는 칸)')
         R['esc'] = p.ev("__HM.state()")
         R['escPall'] = p.ev("__HM.pallAll()")
         R['errs'] = p.ev("__HM.errs()") + p.errs
@@ -405,11 +588,13 @@ def scen_all(br, eng, tag, src, W=1440, H=900, mode='desk'):
 
 # ══════════ F — 마우스 길게 누르기(조문 줄 · 판례 요약 줄 · 2차 카드 줄 · 노트 팝업 줄) · 긁기 · 터치 ══════════
 def scen_lp(br, eng, tag, src, W=1440, H=900, mode='desk'):
-    p = P(br, eng, tag, src, W, H, mode)
+    if QJ.GATE:
+        QJ.launch('new' if tag == 'NEW' else 'base')
+    p = P(br, eng, tag, src, W, H, mode) if QJ.GATE else RIG.lease(br, eng, tag, src, W, H, mode)
     R = {'eng': eng, 'tag': tag, 'W': W, 'mode': mode, 'where': {}}
     try:
         def one(name, prep, where, touch=False):
-            p.ev(prep); p.pg.wait_for_timeout(900)
+            p.ev(prep); p.pg.wait_for_timeout(900) if QJ.GATE else _wait(p.pg, 900, '화면 · 팝업이 다 그려진 뒤 줄에 길게 누르기 핸들러(앱 pitWire · l._pit)가 붙음 — 표지 없음')
             p.ev("__HM.menuClear()")
             at = p.ev("w=>__HM.lineAt(w)", where)
             V = {'at': at}
@@ -431,16 +616,16 @@ def scen_lp(br, eng, tag, src, W=1440, H=900, mode='desk'):
             one('card', "(async()=>{await __HM.go('특허법','cha2');await popCard4('기출','%s',null,1);})()" % CK_2562, 'card')
             one('note', "(async()=>{await __HM.go('특허법','cha2');await popNote('%s',null,null,1);})()" % N96, 'note')
             # 긁기 — 누른 채 80px 끌면 메뉴 없이 선택이 남는다
-            p.ev("(async()=>{await __HM.go('특허법','jo',{jo:'제129조',joMode:'본문'});})()"); p.pg.wait_for_timeout(900)
+            p.ev("(async()=>{await __HM.go('특허법','jo',{jo:'제129조',joMode:'본문'});})()"); p.pg.wait_for_timeout(900) if QJ.GATE else _wait(p.pg, 900, '조문 화면 줄에 길게 누르기 핸들러(앱 pitWire · l._pit)가 붙음 — 표지 없음')
             at = p.ev("w=>__HM.lineAt(w)", 'jo')
             V = {'at': at}
             if at and at.get('on'):
                 m = p.pg.mouse; m.move(at['cx'], at['cy']); m.down()
                 for i in range(1, 11):
                     m.move(at['cx'] + 8 * i, at['cy']); p.pg.wait_for_timeout(20)
-                p.pg.wait_for_timeout(700)
+                p.pg.wait_for_timeout(700) if QJ.GATE else _wait(p.pg, 700, '끌어 긁는 동안 길게 누르기 임계(0.5초)가 지나도록 둠 — 시간 자체가 잣대(그 시간 동안 메뉴가 안 뜨는지 봄)')
                 V['menuDuring'] = p.ev("__HM.menu()")
-                m.up(); p.pg.wait_for_timeout(200)
+                m.up(); p.pg.wait_for_timeout(200) if QJ.GATE else _wait(p.pg, 200, 'mouseup 뒤 메뉴·선택 반영 — 표지 없음')
                 V['menu'] = p.ev("__HM.menu()"); V['sel'] = p.ev("__HM.selLen()")
             R['where']['drag'] = V
         else:
@@ -456,13 +641,15 @@ def scen_lp(br, eng, tag, src, W=1440, H=900, mode='desk'):
 
 # ══════════ G — 폰 · 아이패드(보이는 폭 · 팝업 화면 안 · 끌기 60px · 30/70 · 서랍 · 맨 윗줄) ══════════
 def scen_phone(br, eng, tag, src, W, H, mode, shots=False):
-    p = P(br, eng, tag, src, W, H, mode)
+    if QJ.GATE:
+        QJ.launch('new' if tag == 'NEW' else 'base')
+    p = P(br, eng, tag, src, W, H, mode) if QJ.GATE else RIG.lease(br, eng, tag, src, W, H, mode)
     R = {'eng': eng, 'tag': tag, 'W': W, 'H': H, 'mode': mode, 'tabs': {}}
     try:
         R['start'] = p.ev("__HM.state()")
         for law, sh in LAWS:
             for tab in TABS[sh]:
-                p.ev("([l,t])=>__HM.go(l,t)", [law, tab]); p.pg.wait_for_timeout(300)
+                p.ev("([l,t])=>__HM.go(l,t)", [law, tab]); p.pg.wait_for_timeout(300) if QJ.GATE else _wait(p.pg, 300, '탭 화면 가로 넘침(scrollWidth) 재기 전 레이아웃 안정 — 앱 표지 없음(글꼴 · 그림이 늦게 들어올 수 있다)')
                 v = p.ev("__HM.vv()")
                 if v['sw'] > v['cw']:
                     v['off'] = p.ev("__HM.offenders()")
@@ -472,13 +659,13 @@ def scen_phone(br, eng, tag, src, W, H, mode, shots=False):
         p.ev("([l,t])=>__HM.go(l,t)", ['특허법', 'jo'])
         R['railEnd'] = p.ev("__HM.railScrollEnd()")
         at = p.ev("k=>__HM.railTabAt(k)", 'omr'); R['railAt'] = at
-        R['railTap'] = p.click(at, 1500)
+        R['railTap'] = p.click(at, 1500) if QJ.GATE else rhit(p, at, JS_OMR_DONE, None, '「정리」 탭 톡 = 정리 탭 그림 끝 · 머리 탭 수 다 참 · 민 자리 되돌림(앱 drawRail 2131)')
         R['railAfter'] = p.ev("__HM.railState()")
         # 목차노트 목록 → 노트(진짜 터치 톡)
         p.ev("([l,t])=>__HM.go(l,t)", ['특허법', 'cha2'])
-        at = p.ev("__HM.mokAt()"); R['mokAt'] = at; R['mokTap'] = p.click(at, 1300)
+        at = p.ev("__HM.mokAt()"); R['mokAt'] = at; R['mokTap'] = p.click(at, 1300) if QJ.GATE else rhit(p, at, JS_MOK_OPEN, None, '목차노트 탭 톡 = 목록 팝업 줄 참(앱 popMokNote 7125)')
         R['list'] = p.ev("__HM.mokList()")
-        at = p.ev("n=>__HM.mokRowAt(n)", N96); R['rowTap'] = p.click(at, 1500)
+        at = p.ev("n=>__HM.mokRowAt(n)", N96); R['rowTap'] = p.click(at, 1500) if QJ.GATE else rhit(p, at, JS_NOTE_OPEN, N96, '목록 줄 톡 = 노트 팝업 뜸 · 위 30 · 아래 70 자리(앱 popNote 6786 · mokPlace 7162)')
         p.ev("n=>__HM.noteWait(n)", N96)
         R['split'] = {'list': p.ev("__HM.mokList()"), 'note': p.ev("n=>__HM.noteInfo(n)", N96), 'vv': p.ev("__HM.vv()"), 'in': p.ev("__HM.popsInVV()")}
         if shots:
@@ -487,7 +674,7 @@ def scen_phone(br, eng, tag, src, W, H, mode, shots=False):
         R['kinds'] = p.ev("__HM.openKinds()")
         # 머리 끌기 — 노트 팝업 하나 · 왼쪽 끝까지 · 오른쪽 끝까지 · 아래 끝까지(60px 규칙)
         p.ev("__HM.clean()")
-        p.ev("n=>popNote(n,null,{clientX:120,clientY:200},1)", N96); p.pg.wait_for_timeout(900)
+        p.ev("n=>popNote(n,null,{clientX:120,clientY:200},1)", N96); p.pg.wait_for_timeout(900) if QJ.GATE else _wait(p.pg, 900, '노트 팝업이 떠 자리 잡은 뒤(showPop · vvFit 다음 틱) 머리 끌기 — 앱 표지 있음(note| 키)이나 끌기 시작 자리를 popInfo 로 읽기 전 안정 여유')
         k = 'note|특허|' + N96 + '|'
         D = {'r0': (p.ev("k=>__HM.popInfo(k)", k) or {}).get('rect')}
         hd = p.ev("k=>__HM.headFree(k)", k); D['hL'] = hd
@@ -529,7 +716,9 @@ def scen_phone(br, eng, tag, src, W, H, mode, shots=False):
 
 # ══════════ PC 무변 — 1890×907 · 팝업 하나의 자리·크기·DOM ══════════
 def scen_pc(br, eng, tag, src):
-    p = P(br, eng, tag, src, 1890, 907)
+    if QJ.GATE:
+        QJ.launch('new' if tag == 'NEW' else 'base')
+    p = P(br, eng, tag, src, 1890, 907) if QJ.GATE else RIG.lease(br, eng, tag, src, 1890, 907, 'desk')
     R = {'eng': eng, 'tag': tag, 'one': {}, 'lay': {}}
     try:
         p.ev("([l,t])=>__HM.go(l,t)", ['특허법', 'jo'])
@@ -549,7 +738,11 @@ def scen_pc(br, eng, tag, src):
 
 def main():
     os.makedirs(WORK, exist_ok=True)
-    base_b = git('show', BASE_REV + ':' + REL)
+    if QJ.GATE:
+        QJ.sub('git:show-app')
+        base_b = git('show', BASE_REV + ':' + REL)
+    else:
+        base_b = b''   # regress — 바탕을 풀지 않는다(git:show-app 0)
     new_raw = open(NEWF, 'rb').read()
     base, new = base_b.decode('utf-8'), new_raw.decode('utf-8')
     RES = {'src': {'base': [len(base_b), hashlib.md5(base_b).hexdigest()],
@@ -568,8 +761,14 @@ def main():
                     def run(name, key, fn, *a, **k):
                         if ONLY and ONLY != name:
                             return
+                        if QJ.SMOKE and (name not in SMOKE_SCEN or eng != 'chromium'):   # smoke — rail · Chromium 만(규칙 57 · rail 에 터치 칸 없음)
+                            return
                         t0 = time.time(); print('… %s %s' % (key, time.strftime('%H:%M:%S')), flush=True)
-                        RES[key] = r = fn(*a, **k)
+                        if QJ.REGRESS:
+                            with QJ.stage(key):
+                                RES[key] = r = fn(*a, **k)
+                        else:
+                            RES[key] = r = fn(*a, **k)
                         print('   %.1fs %s' % (time.time() - t0, (r or {}).get('exc', '')), flush=True)
                     run('rail', 'rail/%s/%s' % (eng, tag), scen_rail, brs[eng], eng, tag, src, G)
                     run('bc', 'bc/%s/%s' % (eng, tag), scen_bc, brs[eng], eng, tag, src, G)
@@ -580,19 +779,22 @@ def main():
                     run('lp', 'lp/%s/%s/desk' % (eng, tag), scen_lp, brs[eng], eng, tag, src)
                     run('lp', 'lp/%s/%s/pad' % (eng, tag), scen_lp, brs[eng], eng, tag, src, 1024, 768, 'pad')
                     for W, H, mode in ((390, 844, 'phone'), (768, 1024, 'pad'), (1024, 768, 'pad')):
-                        run('phone', 'phone/%s/%s/%d' % (eng, tag, W), scen_phone, brs[eng], eng, tag, src, W, H, mode, shots=(W == 390))
+                        run('phone', 'phone/%s/%s/%d' % (eng, tag, W), scen_phone, brs[eng], eng, tag, src, W, H, mode, shots=(W == 390 and QJ.GATE))   # regress — 캡처 안 찍음(사용자용)
                     run('pc', 'pc/%s/%s' % (eng, tag), scen_pc, brs[eng], eng, tag, src)
-                    if tag == 'NEW':   # A-6(a) 9/30 — PC 무변 바탕을 팝업마다(PC_BASE)
+                    if tag == 'NEW' and QJ.GATE:   # A-6(a) 9/30 — PC 무변 바탕을 팝업마다(PC_BASE) · regress 는 바탕을 안 띄운다(기준 스냅샷)
                         for _nm, _rv in PC_BASE.items():
+                            QJ.sub('git:show-app')
                             run('pc', 'pc/%s/B_%s' % (eng, _nm), scen_pc, brs[eng], eng, 'B_' + _nm, git('show', _rv + ':' + REL).decode('utf-8'))
         finally:
+            if QJ.REGRESS:
+                RIG.shut()
             for b in brs.values():
                 b.close()
             for srv, _ in SERVERS.values():
                 srv.shutdown()
     RES['sec'] = round(time.time() - t00, 1)
-    raw = os.path.join(WORK, 'raw.json')
-    if os.path.exists(raw) and (ONLY or len(ENGS) < 2 or len(TAGS) < 2):
+    raw = os.path.join(WORK, 'raw.json' if QJ.GATE else 'raw_regress.json')   # regress 는 따로(gate 의 raw.json · --report 를 안 덮는다)
+    if QJ.GATE and os.path.exists(raw) and (ONLY or len(ENGS) < 2 or len(TAGS) < 2):
         old = json.load(io.open(raw, encoding='utf-8'))
         old.update(RES); RES = old
     json.dump(RES, io.open(raw, 'w', encoding='utf-8'), ensure_ascii=False, indent=1, default=str)
@@ -615,6 +817,14 @@ def report(RES, G):
             NULL.setdefault(key, []).append(bool(c)); return
         CNT['PASS' if c else 'FAIL'] += 1
         L.append(('PASS' if c else 'FAIL') + ' | ' + n + ('' if c or i is None else ' | ' + json.dumps(i, ensure_ascii=False, default=str)[:900]))
+    if QJ.REGRESS:
+        def Tr(n, c, i=None, tag='NEW', eng='', note=''):
+            """regress — T 와 같되 값 끝 말(note = 기준 스냅샷 출처)을 붙인다 · 기준 칸만 쓴다"""
+            CNT['PASS' if c else 'FAIL'] += 1
+            body = '' if c or i is None else json.dumps(i, ensure_ascii=False, default=str)[:900]
+            if note:
+                body = (body + ' ' + note).strip()
+            L.append(('PASS' if c else 'FAIL') + ' | ' + n + (' | ' + body if body else ''))
 
     def I(n, v):
         L.append('INFO | ' + n + ' | ' + (v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, default=str)[:1800]))
@@ -622,20 +832,27 @@ def report(RES, G):
                                                                     else (a or {}).get(k) if isinstance(a, dict) else None), ks, d)
     near = lambda a, b, t=1.0: a is not None and b is not None and abs(a - b) <= t
     sb, sn = RES['src']['base'], RES['src']['new']
-    I('바탕 BASE = %s:%s' % (BASE_REV, REL), '%d B · md5 %s' % tuple(sb))
+    if QJ.GATE:
+        I('바탕 BASE = %s:%s' % (BASE_REV, REL), '%d B · md5 %s' % tuple(sb))
+    else:
+        I('바탕 BASE', '(regress — 바탕 안 띄움 · 바탕 md5 칸은 gate 에서만)')
     CNT_T = lambda n, c, i=None: T(n, c, i)
-    CNT_T('바탕 md5 = 지시서(1,017,845 B · c541b240…)', sb[1] == BASE_MD5_LF and sb[0] == BASE_SIZE, sb)
+    if QJ.GATE:
+        CNT_T('바탕 md5 = 지시서(1,017,845 B · c541b240…)', sb[1] == BASE_MD5_LF and sb[0] == BASE_SIZE, sb)
     I('새 판 NEW', '%d B · md5(LF) %s · CRLF %d · %s' % tuple(sn))
     I('시간(초)', RES.get('sec'))
     GT = RES.get('G') or G
     I('잣대 — 목차노트 수 NF()', GT['nf'])
-    CNT_T('잣대 = 목차노트 수(특허 70 · 상표 99 · 민소 81 · 디보 49 — 9/24 민소 번호 없는 셋 볼트 밖)', GT['nf'] == {'특허': 70, '상표': 99, '민소': 81, '디보': 49}, GT['nf'])   # A-6(d) 9/30 — 옛: 지시서 민소 84 · 9/24 13:1x 사용자 결정 → ⚙ aa8ceae 84→81
+    if QJ.want('잣대'):   # smoke 는 앱 칸만(데이터 잣대는 gate · regress 에서)
+        CNT_T('잣대 = 목차노트 수(특허 70 · 상표 99 · 민소 81 · 디보 49 — 9/24 민소 번호 없는 셋 볼트 밖)', GT['nf'] == {'특허': 70, '상표': 99, '민소': 81, '디보': 49}, GT['nf'])   # A-6(d) 9/30 — 옛: 지시서 민소 84 · 9/24 13:1x 사용자 결정 → ⚙ aa8ceae 84→81
     I('잣대 — 데이터 속 <사건번호> 링크(k:P) 수 · 0 이면 2084 자리는 지은 줄로 잰다', GT.get('plinkData'))
     I('잣대 — 10.1 노트 ⤷ 임베드 수 · 9.6 노트 블록 칩 수', [GT.get('emb101'), GT.get('bl96')])
     for eng in ENGS:
         E = '[%s] ' % eng
         for tag in TAGS:
             Tt = lambda n, c, i=None: T(E + n, c, i, tag)
+            if QJ.REGRESS:
+                Ttr = lambda n, c, i=None, note='': Tr(E + n, c, i, tag, note=note)
             # ── A ──
             A = RES.get('rail/%s/%s' % (eng, tag))
             if A:
@@ -645,6 +862,8 @@ def report(RES, G):
                     I(E + 'A 함수 있음(NEW)', A.get('has'))
                 for law, sh in LAWS:
                     for tab in TABS[sh]:
+                        if QJ.SMOKE and (sh, tab) not in SMOKE_TABS:
+                            continue
                         V = g(A, 'v', sh + '|' + tab) or {}
                         rl = V.get('rail') or {}
                         ks = [t['k'] or t['id'] for t in (rl.get('tabs') or [])]
@@ -675,8 +894,13 @@ def report(RES, G):
                     Tt('C %s 노트 팝업 머리 아래 줄(.memobtn) 0 · 「이 노트가 인용」 0' % sh, bool(nt) and nt.get('memobtn') == 0 and not any('이 노트가 인용' in x for x in (nt.get('memoTxt') or [])), {'memobtn': nt.get('memobtn'), 'memoTxt': nt.get('memoTxt')})
                     Tt('C %s 깊이 딱지(「N단」) 0 — 노트 팝업(깊이 2)' % sh, bool(nt) and not nt.get('badges'), nt.get('badges'))
                     if tag == 'NEW':
-                        bb = g(RES, 'bc/%s/BASE' % eng, 'law', sh, 'note') or {}
-                        Tt('C %s 줄 칩 수 = 바탕(%s)' % (sh, bb.get('chips')), bool(nt) and nt.get('chips') == bb.get('chips') and nt.get('rows') == bb.get('rows'), {'new': [nt.get('chips'), nt.get('rows')], 'base': [bb.get('chips'), bb.get('rows')]})
+                        if QJ.REGRESS:   # regress — 기준 스냅샷(앞 인도판의 같은 칸 값 · 없으면 지금 값 자신 = 첫 기록)
+                            bcid = 'C-chips@%s/%s' % (eng, sh)
+                            bb = QJ.base(bcid, {'chips': nt.get('chips'), 'rows': nt.get('rows')})
+                            Ttr('C %s 줄 칩 수 = 바탕(%s)' % (sh, bb.get('chips')), bool(nt) and nt.get('chips') == bb.get('chips') and nt.get('rows') == bb.get('rows'), {'new': [nt.get('chips'), nt.get('rows')], 'base': [bb.get('chips'), bb.get('rows')]}, note=QJ.base_note(bcid))
+                        else:
+                            bb = g(RES, 'bc/%s/BASE' % eng, 'law', sh, 'note') or {}
+                            Tt('C %s 줄 칩 수 = 바탕(%s)' % (sh, bb.get('chips')), bool(nt) and nt.get('chips') == bb.get('chips') and nt.get('rows') == bb.get('rows'), {'new': [nt.get('chips'), nt.get('rows')], 'base': [bb.get('chips'), bb.get('rows')]})
             # ── D 사슬 ──
             Dd = RES.get('depth/%s/%s' % (eng, tag))
             if Dd:
@@ -766,8 +990,12 @@ def report(RES, G):
                 if W <= 640:
                     Tt('G %s팝업 다섯 종(조문·노트·카드·판례·목록)이 보이는 화면 안' % M, len(ks) == 5 and not bad, bad or ks)
                 elif tag == 'NEW':
-                    I(E + 'G %s(> 640 · G-6 그대로) 팝업 다섯 종 — 화면 밖으로 삐져나간 것(내용이 뒤에 와서 늘어난 팝업 · 바탕과 같은지 대조)' % M,
-                      {'new': bad, 'base': [(k['nm'], g(k, 'info', 'rect')) for k in (g(RES, 'phone/%s/BASE/%d' % (eng, W), 'kinds') or []) if k.get('info') and not (lambda r, v: r['x'] >= v['x'] - 0.5 and r['y'] >= v['y'] - 0.5 and r['r'] <= v['x'] + v['w'] + 0.5 and r['b'] <= v['y'] + v['h'] + 0.5)(k['info']['rect'], k['vv'])]})
+                    if QJ.REGRESS:   # regress — 정보 줄(판정 없음) · 바탕 대신 기준 스냅샷
+                        I(E + 'G %s(> 640 · G-6 그대로) 팝업 다섯 종 — 화면 밖으로 삐져나간 것(내용이 뒤에 와서 늘어난 팝업 · 바탕과 같은지 대조)' % M,
+                          {'new': bad, 'base(기준 스냅샷)': QJ.base('G-out@%s/%d' % (eng, W), bad)})
+                    else:
+                        I(E + 'G %s(> 640 · G-6 그대로) 팝업 다섯 종 — 화면 밖으로 삐져나간 것(내용이 뒤에 와서 늘어난 팝업 · 바탕과 같은지 대조)' % M,
+                          {'new': bad, 'base': [(k['nm'], g(k, 'info', 'rect')) for k in (g(RES, 'phone/%s/BASE/%d' % (eng, W), 'kinds') or []) if k.get('info') and not (lambda r, v: r['x'] >= v['x'] - 0.5 and r['y'] >= v['y'] - 0.5 and r['r'] <= v['x'] + v['w'] + 0.5 and r['b'] <= v['y'] + v['h'] + 0.5)(k['info']['rect'], k['vv'])]})
                 D = Gp.get('drag') or {}
                 rL, rR, rD = D.get('rL') or {}, D.get('rR') or {}, D.get('rD') or {}
                 if W <= 640:
@@ -800,32 +1028,51 @@ def report(RES, G):
                 else:
                     Tt('G %s(> 640) 끌기 한계 그대로 — 왼쪽 끝 x = 0 · 오른쪽 끝 x = 폭 − 60 · 아래 끝 y = 높이 − 34' % M, near(rL.get('x'), 0, 1.0) and near(rR.get('x'), W - 60, 1.0) and near(rD.get('y'), H - 34, 1.0), {'rL': rL, 'rR': rR, 'rD': rD})
                     if tag == 'NEW':
-                        b0 = RES.get('phone/%s/BASE/%d' % (eng, W)) or {}
-                        Tt('G %s(> 640) 옆 두 칸 = 바탕 그대로(서랍 아님 · 시작 상태 같음)' % M, g(Gp, 'drawer', 'd0', 'tree', 'pos') == g(b0, 'drawer', 'd0', 'tree', 'pos') and g(Gp, 'drawer', 'd0', 'tree', 'hid') == g(b0, 'drawer', 'd0', 'tree', 'hid'),
-                           {'new': g(Gp, 'drawer', 'd0', 'tree'), 'base': g(b0, 'drawer', 'd0', 'tree')})
+                        if QJ.REGRESS:   # regress — 기준 스냅샷(같은 모양 {drawer:{d0:{tree:{pos,hid}}}} 로 감싸 아래 식을 그대로 쓴다)
+                            bcid = 'G-tree@%s/%d' % (eng, W)
+                            b0 = {'drawer': {'d0': {'tree': QJ.base(bcid, {'pos': g(Gp, 'drawer', 'd0', 'tree', 'pos'), 'hid': g(Gp, 'drawer', 'd0', 'tree', 'hid')})}}}
+                            Ttr('G %s(> 640) 옆 두 칸 = 바탕 그대로(서랍 아님 · 시작 상태 같음)' % M, g(Gp, 'drawer', 'd0', 'tree', 'pos') == g(b0, 'drawer', 'd0', 'tree', 'pos') and g(Gp, 'drawer', 'd0', 'tree', 'hid') == g(b0, 'drawer', 'd0', 'tree', 'hid'),
+                                {'new': g(Gp, 'drawer', 'd0', 'tree'), 'base': g(b0, 'drawer', 'd0', 'tree')}, note=QJ.base_note(bcid))
+                        else:
+                            b0 = RES.get('phone/%s/BASE/%d' % (eng, W)) or {}
+                            Tt('G %s(> 640) 옆 두 칸 = 바탕 그대로(서랍 아님 · 시작 상태 같음)' % M, g(Gp, 'drawer', 'd0', 'tree', 'pos') == g(b0, 'drawer', 'd0', 'tree', 'pos') and g(Gp, 'drawer', 'd0', 'tree', 'hid') == g(b0, 'drawer', 'd0', 'tree', 'hid'),
+                               {'new': g(Gp, 'drawer', 'd0', 'tree'), 'base': g(b0, 'drawer', 'd0', 'tree')})
                 if tag == 'NEW':
                     errs = [x for x in (Gp.get('errs') or []) if not NOISE(x)]
                     Tt('G %s콘솔 오류 0' % M, not errs, errs[:6])
             # ── PC 무변 ──
             if tag == 'NEW':
                 Pn, Pb = RES.get('pc/%s/NEW' % eng), RES.get('pc/%s/BASE' % eng)
-                if Pn and Pb:
+                if Pn and (Pb or QJ.REGRESS):
                     for nm in ('jo', 'note', 'prec', 'card'):
                         a, b = g(Pn, 'one', nm) or {}, g(Pb, 'one', nm) or {}
-                        bn = g(RES.get('pc/%s/B_%s' % (eng, nm)), 'one', nm) or {}   # A-6(a) 9/30 — 바뀐 뒤 바탕(PC_BASE): jo = 자리·DOM · card = DOM 만 · note·prec 는 c9d5bc0 그대로
+                        bn = g(RES.get('pc/%s/B_%s' % (eng, nm)), 'one', nm) or {}   # A-6(a) 9/30 — 바뀐 뒤 바탕(PC_BASE): jo = 자리·DOM · card = DOM 만 · note·prec 는 c9d5bc0 그대로 · ★ ⑧ A-8-1 · A-9-4(사용자 10/3 08:22·08:32·09:33) — card DOM 은 ⑧ 꾸밈(.c2miss · .c2lnkw)을 뺀 값으로 센다(_harness_jo_mok_popup_phone_tests.js pcOne · 옛 405 ↔ ⑧ 463 = 405 + 58)
                         bp, tp = (bn, '바뀐 뒤 바탕 ' + PC_BASE[nm]) if nm == 'jo' else (b, '바탕')
                         bd, td = (bn, '바뀐 뒤 바탕 ' + PC_BASE[nm]) if nm in PC_BASE else (b, '바탕')
-                        Tt('PC 1890×907 %s 팝업 자리·크기·꼴 = %s' % (nm, tp), bool(a) and a.get('rect') == bp.get('rect') and a.get('style') == bp.get('style') and a.get('cls') == bp.get('cls'), {'new': [a.get('rect'), a.get('style')], 'base': [bp.get('rect'), bp.get('style')]})
-                        Tt('PC 1890×907 %s 팝업 DOM 글자·요소 수 = %s(걷은 줄 제외)' % (nm, td), bool(a) and a.get('text') == bd.get('text') and a.get('n') == bd.get('n'), {'new': [a.get('n'), (a.get('text') or '')[:160]], 'base': [bd.get('n'), (bd.get('text') or '')[:160]]})
+                        if QJ.REGRESS:   # regress — 바탕 판(c9d5bc0 · 바뀐 뒤 바탕) 대신 앞 인도판의 같은 팝업 값(기준 스냅샷 · 없으면 지금 값 자신 = 첫 기록)
+                            bcid = 'PC-%s@%s' % (nm, eng)
+                            bp = bd = QJ.base(bcid, {k2: a.get(k2) for k2 in ('rect', 'style', 'cls', 'text', 'n')})
+                            Ttr('PC 1890×907 %s 팝업 자리·크기·꼴 = %s' % (nm, tp), bool(a) and a.get('rect') == bp.get('rect') and a.get('style') == bp.get('style') and a.get('cls') == bp.get('cls'), {'new': [a.get('rect'), a.get('style')], 'base': [bp.get('rect'), bp.get('style')]}, note=QJ.base_note(bcid))
+                            Ttr('PC 1890×907 %s 팝업 DOM 글자·요소 수 = %s(걷은 줄 제외)' % (nm, td), bool(a) and a.get('text') == bd.get('text') and a.get('n') == bd.get('n'), {'new': [a.get('n'), (a.get('text') or '')[:160]], 'base': [bd.get('n'), (bd.get('text') or '')[:160]]}, note=QJ.base_note(bcid))
+                        else:
+                            Tt('PC 1890×907 %s 팝업 자리·크기·꼴 = %s' % (nm, tp), bool(a) and a.get('rect') == bp.get('rect') and a.get('style') == bp.get('style') and a.get('cls') == bp.get('cls'), {'new': [a.get('rect'), a.get('style')], 'base': [bp.get('rect'), bp.get('style')]})
+                            Tt('PC 1890×907 %s 팝업 DOM 글자·요소 수 = %s(걷은 줄 제외)' % (nm, td), bool(a) and a.get('text') == bd.get('text') and a.get('n') == bd.get('n'), {'new': [a.get('n'), (a.get('text') or '')[:160]], 'base': [bd.get('n'), (bd.get('text') or '')[:160]]})
                     for tab in ('jo', 'prec', 'cha2'):
                         a, b = g(Pn, 'lay', tab) or {}, g(Pb, 'lay', tab) or {}
-                        same = all(a.get(k) == b.get(k) for k in ('slot', 'tree', 'plist', 'laws', 'top'))
-                        Tt('PC 1890×907 %s 탭 본문 자리(slot·tree·plist·머리 줄) = 바탕' % tab, same, {k: [a.get(k), b.get(k)] for k in ('slot', 'tree', 'plist', 'laws', 'top') if a.get(k) != b.get(k)})
+                        if QJ.REGRESS:   # regress — 기준 스냅샷
+                            bcid = 'PC-lay-%s@%s' % (tab, eng)
+                            b = QJ.base(bcid, {k2: a.get(k2) for k2 in ('slot', 'tree', 'plist', 'laws', 'top')})
+                            same = all(a.get(k) == b.get(k) for k in ('slot', 'tree', 'plist', 'laws', 'top'))
+                            Ttr('PC 1890×907 %s 탭 본문 자리(slot·tree·plist·머리 줄) = 바탕' % tab, same, {k: [a.get(k), b.get(k)] for k in ('slot', 'tree', 'plist', 'laws', 'top') if a.get(k) != b.get(k)}, note=QJ.base_note(bcid))
+                        else:
+                            same = all(a.get(k) == b.get(k) for k in ('slot', 'tree', 'plist', 'laws', 'top'))
+                            Tt('PC 1890×907 %s 탭 본문 자리(slot·tree·plist·머리 줄) = 바탕' % tab, same, {k: [a.get(k), b.get(k)] for k in ('slot', 'tree', 'plist', 'laws', 'top') if a.get(k) != b.get(k)})
                     I(E + 'PC 1890×907 탭 줄(#hrail · 목차노트 탭이 더해져 넓어짐 — 뜻한 차이)', {'new': g(Pn, 'lay', 'jo', 'hrail'), 'base': g(Pb, 'lay', 'jo', 'hrail')})
     # ── 헛잣대 표 ──
     tot = sum(len(v) for v in NULL.values()); fails = sum(1 for v in NULL.values() for x in v if not x)
     L.append('')
-    L.append('── 헛잣대(규칙 ⑩) — 같은 잣대를 바탕 %s 에 돌린 결과: %d 중 FAIL %d · PASS %d ──' % (BASE_REV, tot, fails, tot - fails))
+    if QJ.GATE:   # regress — 헛잣대(바탕에 같은 잣대 돌리기)는 gate 에서만
+        L.append('── 헛잣대(규칙 ⑩) — 같은 잣대를 바탕 %s 에 돌린 결과: %d 중 FAIL %d · PASS %d ──' % (BASE_REV, tot, fails, tot - fails))
     grp = {}
     for n, v in NULL.items():
         key = re.sub(r'^\[[a-z]+\] ', '', n)

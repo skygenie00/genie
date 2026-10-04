@@ -362,7 +362,28 @@ def argv_tpl(r, app):
     return a.get(app, a.get('*', []))
 
 
-def key_of(r, app, ctx):
+# ── 실행 모드(_task_qa_slim A-1 · 10/4) ───────────────────────────────────────────────────────────
+# 전수표 줄에 modes 칸이 있는 jo 하네스만 — argv 의 「{mode}」 자리가 gate 면 빈 것(이 판 앞과 같은 argv) ·
+# regress · smoke 면 --mode <m> --snap-out <out>\snap.json [--snap-in <바탕 저장본 옆 .base.json>].
+# modes 칸이 없는 줄(다른 앱 · 아직 안 고친 하네스)은 열쇠 · argv 가 이 판 앞과 같다(§B-7).
+MODE_APPS = ('jo',)
+
+
+def mode_of(r, app, ctx):
+    ms = r.get('modes') or []
+    if app not in MODE_APPS or not ms:
+        return None
+    m = getattr(ctx, 'mode', None) or ('regress' if 'regress' in ms else 'gate')
+    if m == 'smoke' and 'smoke' not in ms:
+        return 'regress' if 'regress' in ms else 'gate'
+    return m if m in ms else 'gate'
+
+
+def snap_path(app, key):
+    return os.path.join(RESD, app, '%s.base.json' % key)
+
+
+def key_of(r, app, ctx, snap=None):
     # key_skip = 열쇠에서 뺄 입력 꼴(fnmatch · 전수표 줄 칸) — 판정에 안 쓰이는 INFO 셈만 읽는 파일(gaek_uid C8: N: md 전부 · 볼트 전부 — 결정로그 한 줄에도 열쇠가 바뀌었다 · 10/1)
     skip = r.get('key_skip') or []
     ins = [p for p in sorted(r.get('inputs') or []) if not any(fnmatch.fnmatchcase(p, s) for s in skip)]
@@ -370,6 +391,11 @@ def key_of(r, app, ctx):
              'in': {p: in_hash(p, ctx) for p in ins}}
     if skip:
         parts['skip'] = skip
+    m = mode_of(r, app, ctx)
+    if m:
+        parts['mode'] = m                    # A-1-3 — gate 결과와 regress 결과가 섞이지 않게
+        if snap and m != 'gate' and os.path.isfile(snap):
+            parts['snap'] = fmd5(snap)       # 기준 칸 판정이 맞댄 바탕 스냅샷
     k = hashlib.sha1(json.dumps(parts, sort_keys=True, ensure_ascii=False).encode('utf-8')).hexdigest()[:16]
     return k, parts
 
@@ -553,13 +579,19 @@ def trace_roots(ctx):
     return rs
 
 
-def fill(tpl, ctx, app, out):
+def fill(tpl, ctx, app, out, mode=None, snap=None):
     appf = os.path.join(ctx.root, *APP_FILE.get(app, 'jo/index.html').split('/'))
     m = {'{app}': appf, '{data}': os.path.join(ctx.root, 'jo', 'data'), '{exam}': os.path.join(ctx.root, 'gichul', 'pdf'),
          '{out}': out, '{res}': os.path.join(out, 'result.txt'), '{genie}': ctx.root, '{n}': NR or '',
          '{mbpdf}': _roots.root('MBPDF_ROOT'), '{spd}': _roots.root('SPD_ROOT')}
     res = []
     for a in tpl:
+        if a == '{mode}':                    # A-1-3 — gate(또는 모드 없음)면 빈 자리 = 이 판 앞 argv
+            if mode and mode != 'gate':
+                res += ['--mode', mode, '--snap-out', os.path.join(out, 'snap.json')]
+                if snap and os.path.isfile(snap):
+                    res += ['--snap-in', snap]
+            continue
         for k, v in m.items():
             a = a.replace(k, v)
         res.append(a)
@@ -653,6 +685,8 @@ def traced_inputs(recs, r_row, app, tpl):
                 continue
             if d['r'] == 'genie' and d['p'].startswith('.claude/'):
                 continue
+            if d['r'] == 'n' and d['p'].startswith('_qa_results/'):
+                continue   # 10/4 — regress --snap-in 으로 읽은 바탕 스냅샷(<열쇠>.base.json)은 입력이 아니다(열쇠의 snap 칸이 이미 담음 · 입력에 들면 다음 판 바탕 열쇠가 안 맞음 — ⑧ 회귀 기록 47)
             got.add('%s:%s' % rp)
     by = {}
     for x in got:
@@ -676,9 +710,10 @@ def traced_inputs(recs, r_row, app, tpl):
     return sorted(x for x in res if x.endswith('/**') or not any(x.startswith(d + '/') for d in dirs))
 
 
-def run_one(r, app, ctx, c, label='', note=''):
+def run_one(r, app, ctx, c, label='', note='', snap=None):
     name = rname(r)
     tpl = argv_tpl(r, app)
+    md = mode_of(r, app, ctx)
     if r.get('skip'):
         return {'harness': r['file'], 'name': name, 'skip': r['skip'], 'items': [], 'sec': 0}
     if not NR:
@@ -699,7 +734,7 @@ def run_one(r, app, ctx, c, label='', note=''):
                 'PYTHONPATH': TRACE_DIR + (os.pathsep + env['PYTHONPATH'] if env.get('PYTHONPATH') else '')})
     for k, v in (r.get('env') or {}).items():
         env[k] = v
-    argv = [sys.executable, hfile(r)] + fill(tpl, ctx, app, out)
+    argv = [sys.executable, hfile(r)] + fill(tpl, ctx, app, out, md, snap)
     pre_dirty = ctx.dirty() if not ctx.owned else None
     t0 = time.time()
     to = r.get('timeout') or 3600
@@ -764,22 +799,47 @@ def run_one(r, app, ctx, c, label='', note=''):
         items.append({'id': '(항목 없음)', 'st': 'FAIL', 't': '(PASS/FAIL 줄 0 · rc=%s)' % rc, 'v': 'rc=%s' % rc, 'vh': 'noitems'})
     # 입력(추적) → 전수표 · 열쇠는 새 입력으로
     ins = traced_inputs(recs, r, app, tpl)
-    if (r.get('inputs_src') or '').startswith('정적') or not r.get('inputs'):
+    if md in ('gate', 'smoke') and r.get('inputs') and not (r.get('inputs_src') or '').startswith('정적'):
+        pass   # 10/4 — 모드 있는 줄은 regress 추적만 전수표 입력에 합친다(smoke 는 읽는 파일이 적어 폴더 통째(/**) 대신 낱개가 · gate 는 바탕 몫 파일이 더 들어 regress 저장본 열쇠를 흔든다 · book8 +4 사고)
+    elif (r.get('inputs_src') or '').startswith('정적') or not r.get('inputs'):
         r['inputs'] = sorted(ins)            # 첫 추적 — 짐작한 입력을 잰 값으로 갈아 넣는다
+        r['inputs_src'] = '추적'
     else:
         r['inputs'] = sorted(set(r['inputs']) | set(ins))
-    r['inputs_src'] = '추적'
-    r['last_sec'] = sec
-    key, parts = key_of(r, app, ctx)
+        r['inputs_src'] = '추적'
+    if md in (None, 'gate', 'regress'):
+        r['last_sec' if md != 'regress' else 'last_sec_regress'] = sec   # A-1 — regress 시간은 따로(gate last_sec 은 사슬 어림 · 관문 몫)
+    key, parts = key_of(r, app, ctx, snap)
     rec = {'harness': r['file'], 'name': name, 'app': app, 'key': key, 'keyparts': parts, 'genie': ctx.head, 'root': ctx.label,
            'when': time.strftime('%Y-%m-%d %H:%M:%S'), 'sec': sec, 'rc': rc, 'src': src, 'counts': counts(items), 'items': items,
            'argv': [os.path.basename(a) if os.path.isabs(a) else a for a in argv[2:]], 'restore': rest, 'wt': wt_note,
            'raw': text[:400000], 'err': stderr[-3000:], 'note': note, 'label': label}
+    if md:
+        rec['mode'] = md
+    sj = None
+    if md and md != 'gate':
+        sp_out = os.path.join(out, 'snap.json')
+        sj = open(sp_out, 'rb').read().decode('utf-8') if os.path.isfile(sp_out) else None
+        lp = os.path.join(out, 'launch.json')
+        rec['launch'] = jload(lp) if os.path.isfile(lp) else None   # §B-4 — 바탕 띄움 · 하위 하네스 · 굽기 셈
+        rec['snap_in'] = os.path.basename(snap) if snap and os.path.isfile(snap) else ''
     rp = res_path(app, key, label)
     nwrite(rp, jdump(rec)) if NR else _w(rp, jdump(rec))
     if label and label != 'again' and not os.path.exists(res_path(app, key)):
         mp = res_path(app, key)            # 이름표 실행도 그 열쇠의 저장본 칸이 비었으면 채운다(첫 결과 = 저장본)
         nwrite(mp, jdump(rec)) if NR else _w(mp, jdump(rec))
+    if sj is not None and label != 'again':
+        # A-1-3 — 기준 칸 스냅샷 = 저장본 옆 <열쇠>.base.json · 바탕 스냅샷과 맞댄 새 판 결과는 스냅샷 없는 열쇠로도 둔다
+        # (인도 판의 회귀 결과가 곧 다음 판의 저장본 — 다음 compare 의 바탕 열쇠는 스냅샷 없이 셈)
+        keys = [key]
+        if parts.get('snap'):
+            k0, _ = key_of(r, app, ctx)
+            keys.append(k0)
+            if not os.path.exists(res_path(app, k0)):
+                r0 = dict(rec, key=k0, note=(note + ' · 스냅샷 없는 열쇠로도 둠').strip(' ·'))
+                nwrite(res_path(app, k0), jdump(r0)) if NR else _w(res_path(app, k0), jdump(r0))
+        for k in keys:
+            nwrite(snap_path(app, k), sj) if NR else _w(snap_path(app, k), sj)
     return rec
 
 
@@ -887,6 +947,16 @@ def lst(v):
     return [x for x in (v or '').split(',') if x] if isinstance(v, str) else None
 
 
+def arg_mode(args):
+    """--mode gate|regress|smoke — 없으면 None(jo = regress · 판 관문은 --mode gate) · --scope smoke 만이면 smoke"""
+    m = args.get('--mode') if isinstance(args.get('--mode'), str) else None
+    if m and m not in ('gate', 'regress', 'smoke'):
+        raise SystemExit('--mode 는 gate | regress | smoke')
+    if not m and lst(args.get('--scope')) == ['smoke']:
+        m = 'smoke'
+    return m
+
+
 def cmd_run(args, pos):
     app = pos[0]
     c = census_load()
@@ -895,8 +965,10 @@ def cmd_run(args, pos):
         raise SystemExit('돌릴 하네스 0 — 앱·범위를 볼 것')
     lf = lock()
     ctx = ctx_from(args)
+    ctx.mode = arg_mode(args)
     runid = time.strftime('%Y%m%d-%H%M') + '_run' + ('_' + args['--label'] if args.get('--label') else '')
-    say('== run %s · 하네스 %d · genie %s (%s) · %s' % (app, len(rows), ctx.head[:7], ctx.root or '분리 워크트리 — 돌릴 때 꺼냄', runid))
+    say('== run %s · 하네스 %d · genie %s (%s) · %s · 모드 %s' % (app, len(rows), ctx.head[:7], ctx.root or '분리 워크트리 — 돌릴 때 꺼냄', runid,
+                                                          ctx.mode or ('regress(jo 기본)' if app in MODE_APPS else '없음')))
     recs, t0 = [], time.time()
     try:
         for r in rows:
@@ -957,7 +1029,12 @@ def classify(base_items, new_items):
             out['같음'] += 1
     for i, n in N.items():
         if i not in B and n['st'] in ('PASS', 'FAIL'):
-            out['바탕 측정 바뀜' if n.get('b') else '새 항목'].append((None, n))
+            if n['st'] == 'FAIL' and not n.get('b'):
+                # _task_qa_slim(10/4) — 바탕에 없던 칸이 새 판에서 FAIL = 새 FAIL(바탕 b=None) · 10/4 묶은 회귀에서 2cha_unit_b7 「.ysel 예외」 ·
+                # ms_canvas_relayout 웹킷 예외가 「사라진 + 새 항목」으로 숨어 「한 번 더」도 안 돌았다(§B-1 조사 · 결정로그 10/4 07:49)
+                out['새 FAIL'].append((None, n))
+            else:
+                out['바탕 측정 바뀜' if n.get('b') else '새 항목'].append((None, n))
     return out
 
 
@@ -987,6 +1064,7 @@ def cmd_plan(args, pos):
     rows = rows_for(c, app, lst(args.get('--scope')), lst(args.get('--only')))
     bctx = ctx_from(args, 'base')
     nctx = ctx_from(args)
+    bctx.mode = nctx.mode = arg_mode(args)
     try:
         nb = nn = 0
         for r, bk, nk, sk in plan(app, rows, bctx, nctx):
@@ -1015,8 +1093,10 @@ def cmd_compare(args, pos):
     lf = lock()
     bctx = ctx_from(args, 'base')
     nctx = ctx_from(args)
+    bctx.mode = nctx.mode = arg_mode(args)
     runid = time.strftime('%Y%m%d-%H%M') + '_compare'
-    say('== compare %s · 하네스 %d · 바탕 %s · 새 판 %s (%s) · 범위 %s' % (app, len(rows), bctx.head[:7], nctx.head[:7], nctx.root or '분리 워크트리', scope or '전체'))
+    say('== compare %s · 하네스 %d · 바탕 %s · 새 판 %s (%s) · 범위 %s · 모드 %s' % (app, len(rows), bctx.head[:7], nctx.head[:7], nctx.root or '분리 워크트리', scope or '전체',
+                                                                  nctx.mode or ('regress(jo 기본)' if app in MODE_APPS else '없음')))
     t0 = time.time()
     rep = []
     try:
@@ -1034,15 +1114,19 @@ def cmd_compare(args, pos):
                 bsec = base.get('sec', 0)
                 say(line_of(base) + ' [바탕]')
                 bk = base.get('key', bk)
-            nk, _ = key_of(r, app, nctx)
+            # A-1-3 — regress · smoke: 새 판의 기준 칸은 바탕 저장본 옆 스냅샷(<바탕 열쇠>.base.json)과 맞댄다
+            sp = snap_path(app, bk) if mode_of(r, app, nctx) not in (None, 'gate') else None
+            sp = sp if sp and os.path.isfile(sp) else None
+            nk0, _ = key_of(r, app, nctx)
+            nk, _ = key_of(r, app, nctx, sp)
             nsec = 0
-            if nk == bk:
+            if nk0 == bk:
                 new = base
-                say('%s %-26s 새 판 입력 = 바탕 입력(열쇠 %s) — 안 돎' % (time.strftime('%H:%M:%S'), rname(r), nk))
+                say('%s %-26s 새 판 입력 = 바탕 입력(열쇠 %s) — 안 돎' % (time.strftime('%H:%M:%S'), rname(r), nk0))
             else:
                 new = load_rec(app, nk) if args.get('--reuse') else None
                 if new is None:
-                    new = run_one(r, app, nctx, c, note='compare 새 판')
+                    new = run_one(r, app, nctx, c, note='compare 새 판', snap=sp)
                     census_save(c)
                     nsec = new.get('sec', 0)
                     say(line_of(new) + ' [새 판]')
@@ -1052,7 +1136,7 @@ def cmd_compare(args, pos):
             cl = classify(base['items'], new['items'])
             fl = []
             if not args.get('--no-flaky') and (cl['새 FAIL'] or cl['FAIL 값 바뀜']) and new is not base:
-                again = run_one(r, app, nctx, c, label='again', note='흔들림 확인')
+                again = run_one(r, app, nctx, c, label='again', note='흔들림 확인', snap=sp)
                 say(line_of(again) + ' [한 번 더]')
                 nsec += again.get('sec', 0)
                 A = {x['id']: x for x in again['items']}

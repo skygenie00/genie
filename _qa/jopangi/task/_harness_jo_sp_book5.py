@@ -2,7 +2,9 @@
 r"""_task_jo_sp_book5(+_add1) §B-3~§B-6 관문 — 상표 1차객 「📚 교재 자리」 뷰객 5판(tm_view5) · 책 표 한 벌(특허 patent_hr8 무변) · 앱(시험 데이터)
 
   python _harness_jo_sp_book5.py [--new <앱 파일 | genie git 판>] [--base <판>] [--eng chromium,webkit] [--only B3,B4,..] [--res <결과(기본 = 임시 폴더)>] [--yardstick]
-        [--vendor <pdf.js 3.11.174 폴더>] [--exam <시험지 폴더>] [--mbpdf <minbeoppdf 클론>]
+        [--vendor <pdf.js 3.11.174 폴더>] [--exam <시험지 폴더>] [--mbpdf <minbeoppdf 클론>] [--mode gate|regress|smoke]
+  --mode(_task_qa_slim 10/4) — 없으면 gate(= 이 판 앞과 같음) · regress = NEW 만(바탕 판 풀기 · 띄우기 0 · B6 의 특허 8판 무변 칸 = 기준 스냅샷 · patent_hr8 박힌 자리 칸은 소스 글자만 읽음) ·
+    smoke = regress 가운데 B3 · B3-폰(WebKit 폰 포함) 만
 
   저장소 자료 = 하네스 route 사본(book8 하네스 꼴 · 같은 출처 /__book/) — minbeoppdf 클론 위에 덧판:
     words/tm_view5/ = _fx_sp_book5(지어낸 값: 책메타 pages 549 · printOffset −11 · 쪽 글자층 다섯 쪽 · 글.json.gz · 대응.json 표본 uid 셋) ·
@@ -26,6 +28,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402  _task_qa_slim(10/4) — --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다(이 줄은 다른 import · 인자 읽기보다 먼저)
 import collections, gzip, hashlib, io, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.parse   # noqa: E402
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer   # noqa: E402
 import threading   # noqa: E402
@@ -291,8 +294,9 @@ H.serve = serve_b5   # revfix0929b Pg 가 모듈 이름 serve 로 부른다 · s
 _TAGN = [0]
 
 
-def open_pg(br, src, dev=PC, ls=None, keep_remote=False, tag=None):
-    """새 쪽 = 새 기기(가짜 원격 비움) · keep_remote = 같은 원격을 보는 다른 기기 · tag 같으면 같은 서버(같은 앱)"""
+def open_pg(br, src, dev=PC, ls=None, keep_remote=False, tag=None, kind='new'):
+    """새 쪽 = 새 기기(가짜 원격 비움) · keep_remote = 같은 원격을 보는 다른 기기 · tag 같으면 같은 서버(같은 앱) · kind = 띄움 셈('new' | 'base' — 셈만)"""
+    QJ.launch(kind)
     if not keep_remote:
         SV.REMOTE.clear()
     if tag is None:
@@ -597,13 +601,13 @@ def b6(br, src, base_src):
                 continue
             out.append(s[ln0:s.find('\n', a)].strip()[:90])
         return out
-    pn, pb = places(src), places(base_src)
+    pn, pb = places(src), (places(base_src) if base_src is not None else [])   # regress · smoke — 바탕 소스는 없다(새 소스 글자만 읽음)
     ok &= T('B6', 'patent_hr8 박힌 자리 = 책 표 하나(주석 밖 글자 %d · 바탕 %d)' % (len(pn), len(pb)), len(pn) == 1 and 'BOOK_TB' in pn[0], {'새': pn, '바탕': pb})
     if YARD:
         return ok
     got = {}
-    for who, s in (('new', src), ('base', base_src)):
-        p = open_pg(br, s)
+    for who, s in ((('new', src), ('base', base_src)) if QJ.GATE else (('new', src),)):   # regress · smoke — 바탕 판은 안 띄운다(특허 8판 무변 칸 = 기준 스냅샷)
+        p = open_pg(br, s, kind=who)
         try:
             out = {}
             for c in P8S:
@@ -641,21 +645,39 @@ def b6(br, src, base_src):
             got[who] = out
         finally:
             p.close()
-    n, b = got['new'], got['base']
+    n = got['new']
+    b = got['base'] if QJ.GATE else None
     def brief(x):
         return {'omr': x.get('omr'), 'rows': x.get('rows'), 'btns': x.get('btns'), 'html md5': hashlib.md5((x.get('html') or '').encode('utf-8')).hexdigest()[:12]} if x else None
-    for c in P8S:
-        ok &= T('B6', '특허 %s(%s) 「📚 교재 자리」 — 정리OMR 줄 · 8판 칸 DOM(줄 · 둘째 줄 글 · 단추) = 바탕' % (c[1], c[3]), n.get(c[3]) == b.get(c[3]) and bool((n.get(c[3]) or {}).get('html')),
-                {'새': brief(n.get(c[3])), '바탕': brief(b.get(c[3]))})
-    ok &= T('B6', '특허 8판 교재 창(1등 줄) — 제목 · 머리 · 쪽 · 노란 상자 · 「교재에서 찾기」 칸 · 찾기 쪽·곳 수 = 바탕', n.get('book') == b.get('book') and bool(n.get('book')) and n['book'].get('title') == '📘 특허법 해례 8판'
-            and n['book'].get('bs') and bool((n['book'].get('찾기') or {}).get('줄')), {'새': n.get('book'), '바탕': b.get('book')})
-    ok &= T('B6', '특허 찍기 → 저장 — 칸 p8|uid {by · b:patent_hr8 · p · r} · 알림 「해례 8판 p.N」 = 바탕 · v5 칸 0', n.get('pick') == b.get('pick') and (n.get('pick') or {}).get('rec', {}).get('b') == DOC8 and '해례 8판 p.' in (n.get('pick') or {}).get('toast', ''),
-            {'새': n.get('pick'), '바탕': b.get('pick')})
-    na, ba = dict(n.get('api') or {}), dict(b.get('api') or {})
-    nm5 = na.pop('name5', None)
-    ba.pop('name5', None)
-    ok &= T('B6', 'k8 · meta8 · book8 · p8Guess(표본 셋 · 특허 재료 뒤) · 8판 이름 = 바탕 · 5판 이름 「상표법 뷰객 5판」', na == ba and na.get('k8') and nm5 == '상표법 뷰객 5판' and any(x and x > 1 for x in (na.get('guess') or [])),
-            {'새': n.get('api'), '바탕': b.get('api')})
+    if QJ.GATE:
+        for c in P8S:
+            ok &= T('B6', '특허 %s(%s) 「📚 교재 자리」 — 정리OMR 줄 · 8판 칸 DOM(줄 · 둘째 줄 글 · 단추) = 바탕' % (c[1], c[3]), n.get(c[3]) == b.get(c[3]) and bool((n.get(c[3]) or {}).get('html')),
+                    {'새': brief(n.get(c[3])), '바탕': brief(b.get(c[3]))})
+        ok &= T('B6', '특허 8판 교재 창(1등 줄) — 제목 · 머리 · 쪽 · 노란 상자 · 「교재에서 찾기」 칸 · 찾기 쪽·곳 수 = 바탕', n.get('book') == b.get('book') and bool(n.get('book')) and n['book'].get('title') == '📘 특허법 해례 8판'
+                and n['book'].get('bs') and bool((n['book'].get('찾기') or {}).get('줄')), {'새': n.get('book'), '바탕': b.get('book')})
+        ok &= T('B6', '특허 찍기 → 저장 — 칸 p8|uid {by · b:patent_hr8 · p · r} · 알림 「해례 8판 p.N」 = 바탕 · v5 칸 0', n.get('pick') == b.get('pick') and (n.get('pick') or {}).get('rec', {}).get('b') == DOC8 and '해례 8판 p.' in (n.get('pick') or {}).get('toast', ''),
+                {'새': n.get('pick'), '바탕': b.get('pick')})
+        na, ba = dict(n.get('api') or {}), dict(b.get('api') or {})
+        nm5 = na.pop('name5', None)
+        ba.pop('name5', None)
+        ok &= T('B6', 'k8 · meta8 · book8 · p8Guess(표본 셋 · 특허 재료 뒤) · 8판 이름 = 바탕 · 5판 이름 「상표법 뷰객 5판」', na == ba and na.get('k8') and nm5 == '상표법 뷰객 5판' and any(x and x > 1 for x in (na.get('guess') or [])),
+                {'새': n.get('api'), '바탕': b.get('api')})
+    else:   # regress · smoke — 바탕 판은 안 띄운다: 특허 8판 칸 DOM(md5) · 교재 창 · 찍기 기록 · api = 기준 스냅샷(칸마다)
+        bn = {c[3]: QJ.base('B6-카드@' + c[3], brief(n.get(c[3]))) for c in P8S}
+        bbook = QJ.base('B6-book', n.get('book'))
+        bpick = QJ.base('B6-pick', n.get('pick'))
+        na = dict(n.get('api') or {})
+        nm5 = na.pop('name5', None)
+        bapi = QJ.base('B6-api', na)
+        for c in P8S:
+            ok &= T('B6', '특허 %s(%s) 「📚 교재 자리」 — 정리OMR 줄 · 8판 칸 DOM(줄 · 둘째 줄 글 · 단추) = 바탕' % (c[1], c[3]), QJ.norm(brief(n.get(c[3]))) == bn[c[3]] and bool((n.get(c[3]) or {}).get('html')),
+                    {'새': brief(n.get(c[3])), '기준': bn[c[3]], '기준 출처': QJ.base_note('B6-카드@' + c[3])})
+        ok &= T('B6', '특허 8판 교재 창(1등 줄) — 제목 · 머리 · 쪽 · 노란 상자 · 「교재에서 찾기」 칸 · 찾기 쪽·곳 수 = 바탕', QJ.norm(n.get('book')) == bbook and bool(n.get('book')) and n['book'].get('title') == '📘 특허법 해례 8판'
+                and n['book'].get('bs') and bool((n['book'].get('찾기') or {}).get('줄')), {'새': n.get('book'), '기준': bbook, '기준 출처': QJ.base_note('B6-book')})
+        ok &= T('B6', '특허 찍기 → 저장 — 칸 p8|uid {by · b:patent_hr8 · p · r} · 알림 「해례 8판 p.N」 = 바탕 · v5 칸 0', QJ.norm(n.get('pick')) == bpick and (n.get('pick') or {}).get('rec', {}).get('b') == DOC8 and '해례 8판 p.' in (n.get('pick') or {}).get('toast', ''),
+                {'새': n.get('pick'), '기준': bpick, '기준 출처': QJ.base_note('B6-pick')})
+        ok &= T('B6', 'k8 · meta8 · book8 · p8Guess(표본 셋 · 특허 재료 뒤) · 8판 이름 = 바탕 · 5판 이름 「상표법 뷰객 5판」', QJ.norm(na) == bapi and na.get('k8') and nm5 == '상표법 뷰객 5판' and any(x and x > 1 for x in (na.get('guess') or [])),
+                {'새': n.get('api'), '기준': bapi, '기준 출처': QJ.base_note('B6-api')})
     return ok
 
 
@@ -682,10 +704,14 @@ def main():
     from playwright.sync_api import sync_playwright
     t0 = time.time()
     src = app_src(NEW)
-    base_src = app_src(BASE)
-    if YARD:
+    if QJ.GATE:
+        base_src = app_src(BASE)
+        QJ.sub('git:show-app')
+    else:   # regress · smoke — 바탕 판은 안 푼다(특허 8판 무변 칸 = 기준 스냅샷)
+        base_src = None
+    if YARD and QJ.GATE:
         src = base_src
-    print('══ sp_book5 §A-4 %s · 바탕 %s · 앱 md5(LF) %s · 바탕 %s · /__book/ 덧판 %s' % ('헛잣대' if YARD else '새 판', BASE, md5lf(src), md5lf(base_src), BOOK))
+    print('══ sp_book5 §A-4 %s · 바탕 %s · 앱 md5(LF) %s · 바탕 %s · /__book/ 덧판 %s' % ('헛잣대' if YARD else '새 판', BASE, md5lf(src), md5lf(base_src) if base_src is not None else '-', BOOK))
     got, times = {}, {}
     with sync_playwright() as pw:
         br = pw.chromium.launch()
@@ -694,16 +720,21 @@ def main():
         for g, fn in steps:
             if ONLY and not any(g.upper() == o or g.upper().startswith(o) for o in ONLY):
                 continue
+            if not QJ.want(g, smoke=g in ('B3', 'B3-폰')):   # smoke — 상표 책 카드 칩 → 교재 자리 창 → 교재 창(PC · 폰)
+                continue
             if YARD and g == 'B0':
                 continue
             print('── %s' % g, flush=True)
             t1 = time.time()
+            _qs = QJ.stage(g)   # 단계 시간(§B-3) — launch.json stages
+            _qs.__enter__()
             try:
                 got[g] = bool(fn())
             except Exception as e:
                 got[g] = False
                 T(g, '돌다 멈춤', False, repr(e)[:300])
             times[g] = round(time.time() - t1)
+            _qs.__exit__(None, None, None)
             print('   (%s %d초)' % (g, times[g]), flush=True)
         br.close()
         if 'webkit' in ENGS and not YARD and (not ONLY or any(o.startswith('B3') for o in ONLY)):

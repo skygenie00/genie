@@ -17,6 +17,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) A-1 · 인자 --mode(gate | regress | smoke) · --snap-in · --snap-out 을 여기서 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import copy, hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 from collections import Counter
 sys.stdout.reconfigure(encoding='utf-8')
@@ -334,6 +335,7 @@ def open_jari(p, G, bid):
 def scen_desk(br, eng, src):
     G = GR
     R = {'eng': eng}
+    QJ.launch('new')
     p = P(br, eng, 'NEW', src, 1440, 900)
     try:
         p.ev("([k,v])=>__HJ.lsSet(k,v)", ['jopangi.canvasjari', G['SEEDV']])
@@ -343,6 +345,9 @@ def scen_desk(br, eng, src):
         R['openN'] = p.ev("()=>__HJ.hj('openN')")
         R['filt'] = p.ev("__HJ.filt()")
         R['recNames'] = p.ev("__HJ.recNames()")
+        if QJ.SMOKE:   # smoke — 첫 화면 칸(B-3 교재 미확정 N) · 동기화 키(D-1) · JS 오류 0 만 — 칩 · 거르기 · 자리 창 · 교재 창 · 직접 찍기는 안 잰다
+            R['errs'] = [x for x in p.ev("__HJ.errs()") + p.errs if not NOISE(x)]
+            return R
         # E-2 칩 — 교재를 열기 전(인쇄 쪽 = PDF 쪽 · 핵심은 같다)
         R['chips'] = {}
         for nm in ('HI', 'LO', 'CAND', 'NIL', 'HC', 'HH', 'HN'):
@@ -453,7 +458,7 @@ def scen_desk(br, eng, src):
         # D-4 ⤓ 기록
         R['rec'] = p.ev("__HJ.recRoundtrip()")
         R['errs'] = [x for x in p.ev("__HJ.errs()") + p.errs if not NOISE(x)]
-        if eng == 'chromium':
+        if eng == 'chromium' and QJ.GATE:   # regress — 눈으로 볼 스크린샷 석 장은 안 찍는다(판정 칸 아님 · 자리 창 · 교재 창을 또 열어야 한다)
             try:
                 os.makedirs(SHOTS, exist_ok=True)
                 open_jari(p, G, G['LO']); p.pg.screenshot(path=os.path.join(WORK, 'shot_1440_lo.png'))
@@ -483,6 +488,7 @@ def scen_alt(br, eng, src):
     M['cand'] = 'canvas_cand.alt.json'
     wr(os.path.join(WORK, 'canvas_match.alt.json'), json.dumps(M, ensure_ascii=False, separators=(',', ':')).encode('utf-8'))
     wr(os.path.join(WORK, 'canvas_cand.alt.json'), json.dumps({'hash': M['hash'], 'c': Cc}, ensure_ascii=False, separators=(',', ':')).encode('utf-8'))
+    QJ.launch('new')
     p = P(br, eng, 'NEW', src, 1440, 900)
     try:
         p.ev("([k,v])=>__HJ.lsSet(k,v)", ['jopangi.canvasjari', G['SEEDV']])
@@ -508,9 +514,20 @@ def scen_sync(br, base, new):
     R = {}
     CAND = G['CAND']
     kk = next((i for i, x in enumerate(G['C'][CAND]) if x['b'] == '핵심' and x['p'] == 333), 1)
+    QJ.launch('new', 2)
     A = P(br, 'chromium', 'NEW', new, 1440, 900, who='꼬까')
     B = P(br, 'chromium', 'NEW', new, 1440, 900, who='햄찌')
-    C = P(br, 'chromium', 'BASE', base, 1440, 900, who='옛판')
+    if QJ.GATE:
+        QJ.launch('base')
+        C = P(br, 'chromium', 'BASE', base, 1440, 900, who='옛판')
+    else:
+        # regress — 바탕 앱(b2f7338)을 띄우지 않는다(바탕 띄움 0). 「옛 판 기기」 = 이 키(canvasjari)를 모르는 기기 = NEW 앱에서 SYNC_KEYS 를 옛 판(b2f7338)의 31키로 자른 기기.
+        #   근거(앱 소스 · 10/4 git show b2f7338 대조): recPayload · recMerge · stampAll · cellsOf · cellsPut 은 b2f7338 과 지금 앱이 글자까지 같고(함수 본문 5 개 == ) 옛 SYNC_KEYS 31키 = 지금 앞 31키(canvasjari 없음) —
+        #   recPayload 는 data 를 SYNC_KEYS 만 돌며 담고 u · gone 은 원격 것과 합집합으로 싣는다 · recMerge 는 SYNC_KEYS 만 병합한다 → 키 목록만 같으면 옛 판과 같은 길(data 에서 키가 빠지고 u 도장만 남아 올라감).
+        #   새 컨텍스트가 필요한 까닭: 기기마다 저장소(기록)가 따로여야 한다.
+        QJ.launch('new')
+        C = P(br, 'chromium', 'NEW', new, 1440, 900, who='옛판')
+        C.ev("()=>{SYNC_KEYS.splice(31);return SYNC_KEYS.length}")   # 옛 판 31키만 남긴다(앞 31키 = b2f7338 의 SYNC_KEYS · D-1 칸이 이 앞자리를 지킨다)
     try:
         for x in (A, B, C):
             x.ev("__HJ.quiet()"); x.ev("f=>__HJ.sync(f)", False); x.ev("__HJ.quiet()")
@@ -573,6 +590,7 @@ def scen_sync(br, base, new):
 def scen_pad(br, eng, src, W, H, shots):
     G = GR
     R = {'eng': eng, 'W': W}
+    QJ.launch('new')
     p = P(br, eng, 'NEW', src, W, H, pad=True)
     try:
         p.ev("__HJ.boot()")
@@ -655,6 +673,7 @@ def scen_base(br, eng, base):
     G = dict(GR, HI='3L1', LO='3L5', CAND='3L108', NIL='3L0')
     R = {'eng': eng}
     for dm in ('new', 'old'):
+        QJ.launch('base')
         p = P(br, eng, 'BASE', base, 1440, 900, datamode=dm)
         try:
             R[dm] = {'boot': p.ev("__HJ.boot()"), 'chips': {}}
@@ -713,38 +732,53 @@ def main():
         raise SystemExit('pdf.js vendor 없음: ' + VENDOR)
     new_raw = open(os.path.join(GENIE, REL), 'rb').read()
     new = new_raw.decode('utf-8')
-    base_b = git('show', BASE_REV + ':' + REL)
-    base = base_b.decode('utf-8')
-    wr(os.path.join(WORK, 'canvas_match.old.json'), git('show', BASE_REV + ':jo/data/omr/민소/canvas_match.json'))
+    if QJ.GATE:
+        QJ.sub('git:show-app')
+        base_b = git('show', BASE_REV + ':' + REL)
+        base = base_b.decode('utf-8')
+        QJ.sub('git:show-data')
+        wr(os.path.join(WORK, 'canvas_match.old.json'), git('show', BASE_REV + ':jo/data/omr/민소/canvas_match.json'))
+    else:
+        base_b, base = b'', None   # regress — 바탕 앱 풀기 · 옛 산출 풀기 0(바탕 값은 저장된 기준 스냅샷 · 옛 판 기기는 scen_sync 의 모사 기기)
     GR = ground()
     RES = {'src': {'base': [len(base_b), hashlib.md5(base_b).hexdigest()],
                    'new': [len(new_raw), hashlib.md5(new_raw.replace(b'\r\n', b'\n')).hexdigest(), new_raw.count(b'\r\n'), new_raw.count(b'\n')]},
            'G': {k: GR[k] for k in ('HI', 'LO', 'LOY', 'CAND', 'NIL', 'HC', 'HH', 'HN', 'PICK')}}
     t00 = time.time()
-    if not ONLY or ONLY == 'build':
+    if QJ.GATE and (not ONLY or ONLY == 'build'):   # regress — ⚙ canvas_match.py 두 번 + canvas_jari_check.py 한 번(하위 프로세스 굽기)은 안 돈다 · 굽기 재현성은 ⚙ 판 관문 몫
         t0 = time.time(); print('… build', flush=True)
+        QJ.sub('python:bake', 3)
         RES['build'] = scen_build(); print('   %.1fs' % (time.time() - t0), flush=True)
     with sync_playwright() as pw:
-        brs = {e: getattr(pw, e).launch() for e in ('chromium', 'webkit')}
+        brs = {e: getattr(pw, e).launch() for e in (('chromium',) if QJ.SMOKE else ('chromium', 'webkit'))}   # smoke — WebKit 은 폰 폭 터치 칸만(이 smoke 칸은 없다)
         try:
             for eng in ('chromium', 'webkit'):
+                if QJ.SMOKE and eng == 'webkit':
+                    continue
                 if not ONLY or ONLY == 'desk':
                     t0 = time.time(); print('… desk %s' % eng, flush=True)
-                    RES['desk/' + eng] = scen_desk(brs[eng], eng, new); print('   %.1fs %s' % (time.time() - t0, RES['desk/' + eng].get('exc', '')), flush=True)
-                if not ONLY or ONLY == 'alt':
+                    with QJ.stage('desk ' + eng):
+                        RES['desk/' + eng] = scen_desk(brs[eng], eng, new)
+                    print('   %.1fs %s' % (time.time() - t0, RES['desk/' + eng].get('exc', '')), flush=True)
+                if not QJ.SMOKE and (not ONLY or ONLY == 'alt'):
                     t0 = time.time(); print('… alt %s' % eng, flush=True)
-                    RES['alt/' + eng] = scen_alt(brs[eng], eng, new); print('   %.1fs %s' % (time.time() - t0, RES['alt/' + eng].get('exc', '')), flush=True)
-                if not ONLY or ONLY == 'base':
+                    with QJ.stage('alt ' + eng):
+                        RES['alt/' + eng] = scen_alt(brs[eng], eng, new)
+                    print('   %.1fs %s' % (time.time() - t0, RES['alt/' + eng].get('exc', '')), flush=True)
+                if QJ.GATE and (not ONLY or ONLY == 'base'):   # regress — 옛 앱(b2f7338) 시나리오(옛 앱이 새 데이터를 먹어도 되는가)는 gate 만
                     t0 = time.time(); print('… base %s' % eng, flush=True)
                     RES['base/' + eng] = scen_base(brs[eng], eng, base); print('   %.1fs' % (time.time() - t0), flush=True)
-                if not ONLY or ONLY == 'pad':
+                if not QJ.SMOKE and (not ONLY or ONLY == 'pad'):
                     for W, H in [(768, 1024), (1024, 768)]:
                         t0 = time.time(); print('… pad %s %d' % (eng, W), flush=True)
-                        RES['pad/%s/%d' % (eng, W)] = scen_pad(brs[eng], eng, new, W, H, shots=(eng == 'webkit' and W == 768))
+                        with QJ.stage('pad %s %d' % (eng, W)):
+                            RES['pad/%s/%d' % (eng, W)] = scen_pad(brs[eng], eng, new, W, H, shots=(eng == 'webkit' and W == 768))
                         print('   %.1fs %s' % (time.time() - t0, RES['pad/%s/%d' % (eng, W)].get('exc', '')), flush=True)
-            if not ONLY or ONLY == 'sync':
+            if not QJ.SMOKE and (not ONLY or ONLY == 'sync'):
                 t0 = time.time(); print('… sync chromium', flush=True)
-                RES['sync'] = scen_sync(brs['chromium'], base, new); print('   %.1fs %s' % (time.time() - t0, RES['sync'].get('exc', '')), flush=True)
+                with QJ.stage('sync chromium'):
+                    RES['sync'] = scen_sync(brs['chromium'], base, new)
+                print('   %.1fs %s' % (time.time() - t0, RES['sync'].get('exc', '')), flush=True)
         finally:
             for b in brs.values():
                 b.close()
@@ -769,12 +803,15 @@ def report(RES):
     T = lambda n, c, i=None: L.append(('PASS' if c else 'FAIL') + ' | ' + n + ('' if c or i is None else ' | ' + json.dumps(i, ensure_ascii=False, default=str)[:900]))
     I = lambda n, v: L.append('INFO | ' + n + ' | ' + (v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, default=str)[:1600]))
     sb, sn = RES['src']['base'], RES['src']['new']
-    T('NEW 작업트리 CRLF 그대로(LF 단독 0 · %d 줄) · %d B · md5(LF) %s' % (sn[2], sn[0], sn[1]), sn[2] == sn[3])
-    # A-6(d) 9/30 — 인도 검산(인도 전 작업트리 git status)을 두 커밋 사이로 박는다: 바탕 b2f7338 ↔ 인도 dd9d89f(결정로그 9/23 02:44 · 커밋 뒤 작업트리는 늘 [])
-    ch = sorted(l.replace('\t', ' ') for l in git('diff', '--name-status', BASE_REV, 'dd9d89f').decode('utf-8').split('\n') if l.strip())
-    want = sorted(['M ' + REL, 'M jo/data/omr/민소/canvas_match.json', 'A jo/data/omr/민소/canvas_cand.json'])
-    T('genie 인도 커밋(%s → dd9d89f) 바뀐 것 = jo/index.html · canvas_match.json · 새 canvas_cand.json 셋뿐 %s' % (BASE_REV, ch), ch == want, ch)
-    I('표본 bid', RES['G'])
+    if not QJ.SMOKE:
+        T('NEW 작업트리 CRLF 그대로(LF 단독 0 · %d 줄) · %d B · md5(LF) %s' % (sn[2], sn[0], sn[1]), sn[2] == sn[3])
+    if QJ.GATE:   # regress — 두 커밋(b2f7338 ↔ dd9d89f) 사이 git diff = 그 판에만 뜻 있는 칸(하위 프로세스 git)
+        # A-6(d) 9/30 — 인도 검산(인도 전 작업트리 git status)을 두 커밋 사이로 박는다: 바탕 b2f7338 ↔ 인도 dd9d89f(결정로그 9/23 02:44 · 커밋 뒤 작업트리는 늘 [])
+        ch = sorted(l.replace('\t', ' ') for l in git('diff', '--name-status', BASE_REV, 'dd9d89f').decode('utf-8').split('\n') if l.strip())
+        want = sorted(['M ' + REL, 'M jo/data/omr/민소/canvas_match.json', 'A jo/data/omr/민소/canvas_cand.json'])
+        T('genie 인도 커밋(%s → dd9d89f) 바뀐 것 = jo/index.html · canvas_match.json · 새 canvas_cand.json 셋뿐 %s' % (BASE_REV, ch), ch == want, ch)
+    if not QJ.SMOKE:
+        I('표본 bid', RES['G'])
     M = G['M']
     # ── E-1 ⚙
     B = RES.get('build')
@@ -796,6 +833,18 @@ def report(RES):
           (A4.get('short9_in_range_top4') or 0) > (A4.get('null_random4_in_range') or 1), A4)
         I('E-1 A-4 ⓐ 전부', A4)
         I('E-1 확신 · m≠c · 미확정', {'cf': E.get('cf'), 'm1_ne_c1': E.get('m1_ne_c1'), 'unconfirmed': E.get('unconfirmed'), 'toc': [E.get('toc_notes'), E.get('toc_books')]})
+    elif QJ.REGRESS and not QJ.SMOKE:
+        # regress — ⚙ 를 다시 굽지 않는다(canvas_match.py 두 번 · canvas_jari_check.py 는 하위 프로세스 · 매처를 통째로 다시 돌림). 산출 파일(canvas_match.json 의 키 · 후보 파일)만 읽는 칸 셋.
+        #   안 도는 칸(gate 만): 두 번 돌려 바이트 같음 · 옛 칸 무변(b2f7338 ↔ dd9d89f) · 같은 프로세스 다시 재기 · D11 · A-4 ⓐ 헛잣대 — 굽기 재현성 · 고정 커밋 대조 · 교재 글 재료가 드는 칸은 ⚙ 판 관문 몫
+        Cc = G['C']
+        dist = Counter(len(v) for v in Cc.values())
+        n_c = sum(1 for b in Cc if Cc[b])
+        n4 = sum(v for k, v in dist.items() if int(k) >= 4)
+        T('E-1 A-5 — 합쳐 2 MB 를 넘어 c 를 canvas_cand.json 으로 뗌 · 본 파일에 cn(후보 수) · cand 가리킴', bool(M.get('cand')) and 'c' not in M and isinstance(M.get('cn'), dict), sorted(M.keys()))
+        T('E-1 c 가 있는 블록 %s / %s · 넷 이상 %d · 4 미만 까닭 = note 없음·구간 없음·0 hit 로 갈라 셈' % (n_c, len(G['order']), n4), bool(n_c), {'dist': dict(sorted(dist.items())), '산출 파일만': '후보 파일의 후보 수 분포(4 미만 까닭은 check 스크립트 · gate)'})
+        ns_ = list(M.get('st') or {})
+        got_ = [b for b in ns_ if Cc.get(b)]
+        T('E-1 none·short %s 중 후보 생김 %s(목표 ≥ 1,289)' % (len(ns_), len(got_)), len(got_) >= 1289, {'산출 파일만': 'canvas_match.json 의 st(none·short) × 후보 파일'})
     # ── 책상
     for eng in ('chromium', 'webkit'):
         D = RES.get('desk/' + eng)
@@ -806,11 +855,19 @@ def report(RES):
             T(E_ + '책상 시나리오 예외 없음', False, D['exc'])
         sk = D.get('syncKeys') or []
         # A-6(a) 본 세션 9/30 — 그 판이 더한 키(canvasjari)가 있고 옛 31키(바탕 b2f7338 소스)가 앞자리 그대로 · 키가 더 늘어도 안 뒤집힌다(이름표 조건 그대로)
-        sk0 = ['jopangi.' + x for x in re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\]', git('show', BASE_REV + ':' + REL).decode('utf-8'), re.S).group(1))]
+        if QJ.GATE:
+            sk0 = ['jopangi.' + x for x in re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\]', git('show', BASE_REV + ':' + REL).decode('utf-8'), re.S).group(1))]
+        else:
+            sk0 = QJ.base('D-1@%s/sk31' % eng, sk[:31])   # regress — 기준 칸: 옛 31키 앞자리 = 바탕(저장된 기준 스냅샷 · 바탕 앱 풀기 0)
         T(E_ + 'D-1 SYNC_KEYS 에 jopangi.canvasjari 있음 · 옛 31키 앞자리 그대로(순서 보존) · 기록 이름표 「📘 정리캔버스 교재 자리」', 'jopangi.canvasjari' in sk and len(sk0) == 31 and sk[:31] == sk0 and (D.get('recNames') or {}).get('label') == '📘 정리캔버스 교재 자리', [len(sk), sk[-2:], D.get('recNames')])
+        if QJ.REGRESS:   # 기준 칸 — 기댓값이 어디서 왔나(저장된 기준 스냅샷 · 첫 기록)를 줄 끝에
+            L[-1] += ' | ' + QJ.base_note('D-1@%s/sk31' % eng)
         hand = G['SEEDV']
         exp_open = sum(1 for b in G['order'] if G['open'](b, hand))
         T(E_ + 'B-3 「교재 미확정 N」 = ⚙ 로 센 값(%d · 손값 셋 뺌)' % exp_open, str(D.get('openN')) == str(exp_open) and (D.get('filt') or {}).get('n') == str(exp_open), [D.get('openN'), D.get('filt')])
+        if QJ.SMOKE:   # smoke — D-1 · B-3 · JS 오류 0 만(아래 칩 · 자리 창 · 교재 창 칸은 smoke 에서 안 잰다)
+            T(E_ + 'JS 오류 0', not D.get('errs'), D.get('errs'))
+            continue
         off0 = {}                                            # 교재를 열기 전 — 인쇄 쪽 = PDF 쪽
         for nm in ('HI', 'LO', 'CAND', 'NIL', 'HC', 'HH', 'HN'):
             c = (D.get('chips') or {}).get(nm) or {}

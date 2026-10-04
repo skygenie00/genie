@@ -28,6 +28,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안 · regress 는 조판기(jo) 실행에만
 import hashlib, io, json, os, re, statistics, subprocess, sys, tempfile, threading, time, urllib.parse   # noqa: E402
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer   # noqa: E402
 try:
@@ -387,6 +388,7 @@ def ntag(pre):
 
 
 def jo_open(br, src, dev=PC, ls=None, delay=0, mode='ok'):
+    QJ.launch('new')
     EXAM_MODE['m'] = mode
     tag = ntag('ewj')
     SV.DATA_FOR[tag] = jo_overlay()
@@ -430,19 +432,20 @@ def jo_c1(br, src, tag):
             want = {k: sorted(v) for k, v in exp[law].items()}
             ok &= T('C1-jo', '%s 앱 표 = 하네스 셈(열쇠 %d · 표시 %d)' % (SHORT[law], len(want), sum(len(v) for v in want.values())),
                     got == want, {'앱': None if got is None else {'열쇠': len(got), '다른 것': sorted(set(got) ^ set(want))[:8]}, '하네스': sorted(want)[:12]})
-        # 화면 — 연도별 기출뷰(해마다 · 쪽 전부) · 리담 지문 하나 = 표시 하나(그 해 틀림 줄)
-        cases = [('특허법', '2024'), ('특허법', '2026'), ('특허법', '2025'), ('특허법', '2023'), ('상표법', '2024'), ('상표법', '2026'), ('디자인보호법', '2026')]
-        for law, y in cases:
-            r = p.ev(JO_EXV, [law, y]) or {}
-            marks = r.get('marks') or []
-            want = sorted('%s|%s' % (k, ri) for k, v in exp[law].items() if k in lid[law] and lid[law][k] == int(y) for ri in v)
-            gotk = sorted('%s|%s' % (m['k'], m['ewm']) for m in marks)
-            wtxt = sorted(set(w.split('|')[1] + '-X' for w in want))
-            ok &= T('C1-jo', '기출뷰 %s %s — 표시 %d(기대 %d)' % (SHORT[law], y, len(marks), len(want)),
-                    gotk == want and r.get('n', 0) > 0, {'문항': r.get('n'), '쪽': r.get('nPg'), '글자': sorted(set(m['t'] for m in marks)), '기대 글자': wtxt,
-                                                       '다른 것': sorted(set(gotk) ^ set(want))[:6]})
-        excl = [x for x in WX if LAWN.get(x['s'])]
-        N('C1-jo', '뺀 줄 — 위 기출뷰 2023(점수만) · 2025(지운 회차) 표시 0 · 2024 의 4번(맞힘)·6번(2차) 지문 = 표 밖', [(x['r'], x['s'], x['i'], x['why']) for x in excl])
+        if QJ.want('C1-jo-기출뷰'):   # smoke 칸 아님(smoke = 위 앱 표 셋)
+            # 화면 — 연도별 기출뷰(해마다 · 쪽 전부) · 리담 지문 하나 = 표시 하나(그 해 틀림 줄)
+            cases = [('특허법', '2024'), ('특허법', '2026'), ('특허법', '2025'), ('특허법', '2023'), ('상표법', '2024'), ('상표법', '2026'), ('디자인보호법', '2026')]
+            for law, y in cases:
+                r = p.ev(JO_EXV, [law, y]) or {}
+                marks = r.get('marks') or []
+                want = sorted('%s|%s' % (k, ri) for k, v in exp[law].items() if k in lid[law] and lid[law][k] == int(y) for ri in v)
+                gotk = sorted('%s|%s' % (m['k'], m['ewm']) for m in marks)
+                wtxt = sorted(set(w.split('|')[1] + '-X' for w in want))
+                ok &= T('C1-jo', '기출뷰 %s %s — 표시 %d(기대 %d)' % (SHORT[law], y, len(marks), len(want)),
+                        gotk == want and r.get('n', 0) > 0, {'문항': r.get('n'), '쪽': r.get('nPg'), '글자': sorted(set(m['t'] for m in marks)), '기대 글자': wtxt,
+                                                           '다른 것': sorted(set(gotk) ^ set(want))[:6]})
+            excl = [x for x in WX if LAWN.get(x['s'])]
+            N('C1-jo', '뺀 줄 — 위 기출뷰 2023(점수만) · 2025(지운 회차) 표시 0 · 2024 의 4번(맞힘)·6번(2차) 지문 = 표 밖', [(x['r'], x['s'], x['i'], x['why']) for x in excl])
         return ok
     finally:
         p.close()
@@ -592,6 +595,8 @@ def jo_c4(br, src, base_src, tag):
     ok = True
     exv_n = "async () => { const r = await (%s)(['특허법', '2024']); return r ? r.marks.length : -1; }" % JO_EXV.strip()
     for nm, kw in (('토큰 없음', {'ls': NO_TOKEN}), ('404(기록 없음)', {'mode': '404'})):
+        if QJ.SMOKE and nm != '토큰 없음':
+            continue   # smoke = 토큰 없음 한 칸(표시 0 · 오류 0 · 알림 0)
         p = jo_open(br, src, **kw)
         try:
             st = ewm_wait(p)
@@ -601,26 +606,30 @@ def jo_c4(br, src, base_src, tag):
                     {'EWM.st': st, '기출뷰 2024 특허 표시': n, '쪽 오류': p.errs[:3], 'h': h})
         finally:
             p.close()
-    ok &= first_screen('jo', br, src, base_src, jo_open, 'C4-jo')
-    # 늦게 와도(5초) — 펴 둔 기출뷰에 저절로
-    p = jo_open(br, src, delay=5000)
-    try:
-        r0 = p.ev(exv_n)
-        until(p, "() => window.__ewmH && window.__ewmH.tEx > 0", 12000)
-        p.wait(1500)
-        ew(p)
-        n1 = len(p.ev("() => __EW.list('#slot')") or [])
-        ok &= T('C4-jo', '기록이 5초 늦게 와도 — 펴 둔 기출뷰에 저절로 붙음', r0 == 0 and n1 > 0, {'오기 전': r0, '온 뒤(그 쪽)': n1})
-    finally:
-        p.close()
+    if QJ.want('C4-jo-나머지'):   # smoke 칸 아님(첫 화면 시각 · 늦게 와도)
+        ok &= first_screen('jo', br, src, base_src, jo_open, 'C4-jo')
+        # 늦게 와도(5초) — 펴 둔 기출뷰에 저절로
+        p = jo_open(br, src, delay=5000)
+        try:
+            r0 = p.ev(exv_n)
+            until(p, "() => window.__ewmH && window.__ewmH.tEx > 0", 12000)
+            p.wait(1500)
+            ew(p)
+            n1 = len(p.ev("() => __EW.list('#slot')") or [])
+            ok &= T('C4-jo', '기록이 5초 늦게 와도 — 펴 둔 기출뷰에 저절로 붙음', r0 == 0 and n1 > 0, {'오기 전': r0, '온 뒤(그 쪽)': n1})
+        finally:
+            p.close()
     return ok
 
 
 def first_screen(app, br, src, base_src, opener, g, runs=3, delay=5000):
     """첫 화면 시각(쪽 첫머리 기준 · READY 가 처음 참이 된 때) — 새 판 · 바탕 번갈아 runs 번 · 시험 기록 5초 늦게 · 화면이 기록보다 먼저"""
+    if QJ.REGRESS and app == 'jo':
+        runs = 1   # regress(jo) — 표본 1/3: 새 판만 1 번(바탕 판 부팅 3 번 · 새 판 2 번 뺌 — 한 번에 새 판은 기록 5초를 기다려 6 초 안팎)
     tn, tb, before = [], [], []
     for i in range(runs):
-        for who, s, arr in (('new', src, tn), ('base', base_src, tb)):
+        for who, s, arr in ((('new', src, tn), ('base', base_src, tb)) if (QJ.GATE or app != 'jo') else (('new', src, tn),)):   # regress(jo) — 바탕 판은 안 띄운다
+            QJ.launch(who)
             p = opener(br, s, delay=delay)
             try:
                 h = until(p, "() => window.__ewmH && window.__ewmH.t1 > 0 ? window.__ewmH : null", 60000)
@@ -630,8 +639,15 @@ def first_screen(app, br, src, base_src, opener, g, runs=3, delay=5000):
                     before.append((round((h or {}).get('t1') or 0), round(hh.get('tEx') or 0)))
             finally:
                 p.close()
-    mn, mb = statistics.median(tn), statistics.median(tb)
+    if QJ.GATE or app != 'jo':
+        mn, mb = statistics.median(tn), statistics.median(tb)
+    else:
+        mn = statistics.median(tn)
+        mb = QJ.base('C4-%s@first/mn' % app, mn)   # 바탕 중앙값 = 바탕 판 regress 가 남긴 기준 스냅샷(없으면 첫 기록 = 새 판 자신)
+        tb = [mb]
     first = all(a > 0 and b > 0 and a < b for a, b in before)
+    if QJ.REGRESS and app == 'jo':
+        before = before + ['(표본 1/3 · 새 판만 · 바탕 중앙값 = 기준 스냅샷 · %s)' % QJ.base_note('C4-%s@first/mn' % app)]
     return T(g, '첫 화면 시각 — 새 판 %dms · 바탕 %dms(중앙값 %d번) · 화면이 기록(5초 늦춤)보다 먼저' % (mn, mb, runs),
              first and mn <= mb * 1.25 + 300, {'새 판': tn, '바탕': tb, '(첫 화면, 기록 옴)': before})
 
@@ -1196,14 +1212,20 @@ def main():
     from playwright.sync_api import sync_playwright
     t0 = time.time()
     srcs = {a: app_src(a, NEWA[a]) for a in APPS}
-    bases = {a: app_src(a, BASE) for a in APPS}
+    if QJ.GATE:
+        bases = {a: app_src(a, BASE) for a in APPS}
+    else:
+        # regress · smoke(jo) — 바탕(afd6339) 앱 글은 jo 에서만 안 푼다(git:show-app 0 · 첫 화면 시각의 바탕 중앙값 = 기준 스냅샷) · mb · jg 는 그대로
+        bases = {a: (None if a == 'jo' else app_src(a, BASE)) for a in APPS}
     if YARD:
         srcs = dict(bases)
     print('══ exam_wrong_mark %s · 바탕 %s · 시험 기록 %s(md5 %s)' % ('헛잣대' if YARD else '새 판', BASE, os.path.relpath(FX, HERE), hashlib.md5(EXB).hexdigest()[:8]))
     for a in APPS:
-        print('   %s 앱 md5(LF) %s · 바탕 %s' % (NAME[a], md5lf(srcs[a]), md5lf(bases[a])))
+        print('   %s 앱 md5(LF) %s · 바탕 %s' % (NAME[a], md5lf(srcs[a]), md5lf(bases[a]) if (QJ.GATE or bases[a] is not None) else '(regress — 안 읽음)'))
     N('C0', '틀림 줄(시험 기록 · 하네스 거르기)', ['%s %d-%d' % (x['s'], x['r'], x['i']) for x in WR])
     N('C0', '뺀 줄', ['%s %d-%d %s' % (x['s'], x['r'], x['i'], x['why']) for x in WX])
+    if QJ.REGRESS:
+        N('C0', 'regress 갈래(jo)', '조판기 새 판만 · 바탕(%s) 판은 안 띄움 · 첫 화면 시각 = 새 판 1 번 + 바탕 중앙값은 기준 스냅샷(QJ.base) · 민법 · 자과 실행은 gate 그대로' % BASE)
     got, times, census = {}, {}, {'jo': [], 'mb': [], 'jg': []}
     with sync_playwright() as pw:
         br = pw.chromium.launch()
@@ -1220,6 +1242,8 @@ def main():
         for g, fn in steps:
             if ONLY and not any(g.upper() == o or g.upper().startswith(o) for o in ONLY):
                 continue
+            if QJ.SMOKE and g not in ('C1-jo', 'C4-jo'):
+                continue   # smoke = 조판기 C1(앱 표 셋) · C4(토큰 없음) 만
             if YARD and g.startswith('C4'):
                 N(g, '헛잣대 해당 없음', '바탕엔 표시가 없어 「기록 못 받음 = 표시 0」을 가를 수 없다')
                 continue
@@ -1233,7 +1257,7 @@ def main():
             times[g] = round(time.time() - t1)
             print('   (%s %d초)' % (g, times[g]), flush=True)
         br.close()
-        if 'webkit' in ENGS and not YARD:
+        if 'webkit' in ENGS and not YARD and not QJ.SMOKE:
             wk = webkit_try(pw)
             if wk:
                 try:

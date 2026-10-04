@@ -19,6 +19,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) A-1 · 인자 --mode(gate | regress | smoke) · --snap-in · --snap-out 을 여기서 뗀다(argparse 가 모르는 인자로 죽지 않게) · gate = 인자 없음 = 이 판 앞과 같다
 import argparse
 import json
 import os
@@ -110,6 +111,7 @@ class R:
 
 # ─────────────── 쪽 여는 도구 ───────────────
 def new_page(br, url, phone=False, ui=None, ls=None, errs=None):
+    QJ.launch('new')
     kw = dict(viewport=PHONE, is_mobile=True, has_touch=True, device_scale_factor=3) if phone else dict(viewport=PC)
     ctx = br.new_context(**kw)
     ctx.route(lambda u: not u.startswith('http://127.0.0.1'), lambda route: route.abort())
@@ -709,6 +711,10 @@ def regress(br, url, R, src, base_src):
     R.ck(G, 'R3', all(('jopangi.' + k) in sk for k in old_keys) and len(sk) > len(old_keys) and sk[len(old_keys)] == 'jopangi.jocheck'
          and mg['a'] == {'상표법:제7조': '파'} and mg['b'] == {} and mg['inPl'] == {'특허법:제9조': '초'} and mg['lab'] == '☑ 조 체크 색',
          '동기화: 키 %d → %d(옛 키 바로 뒤 jocheck · 그 뒤 %s) · 원격 칸 받음 %s · 원격 묘비 지움 %s · 올릴 data %s · 이름 %s' % (len(old_keys), len(sk), sk[len(old_keys) + 1:], mg['a'], mg['b'], mg['inPl'], mg['lab']))
+    if QJ.SMOKE:   # smoke — R1 · R2 · R3 · Rz 만(R4~R11 · Ry 는 안 잰다)
+        R.ck(G, 'Rz', not errs, 'JS 오류 %s' % errs[:3])
+        ctx.close()
+        return
     # R4 마크업 창 켜기 → 본문에 얹힘
     go_jo(pg, '특허법', '제55조', "S.mkWin=true;")
     pg.wait_for_function("() => document.querySelector('.pop.wm-mk .sh')", timeout=20000)
@@ -833,13 +839,16 @@ def main():
         for name, fn in steps:
             if only and name not in only:
                 continue
+            if QJ.SMOKE and name != 'R':
+                continue
             print('── %s' % name, flush=True)
             try:
-                fn()
+                with QJ.stage(name):
+                    fn()
             except Exception as e:
                 R_.ck(name, 'ERR', False, '돌다 멈춤: %s' % str(e).splitlines()[0][:300])
         br.close()
-        if a.webkit and not a.yardstick:
+        if a.webkit and not a.yardstick and not QJ.SMOKE:
             print('── WebKit(터치 칸 B-2 폰 · B-5)', flush=True)
             try:
                 wk = p.webkit.launch()

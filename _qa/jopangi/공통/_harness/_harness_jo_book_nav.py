@@ -17,6 +17,8 @@ sys.stdout.reconfigure(encoding='utf-8')
 CJH = os.path.dirname(os.path.abspath(__file__))   # env_lanes_fix(9/29) — 같은 폴더(N: · genie _qa 같은 모양 · 옛: N: 고정 자리)
 sys.path.insert(0, CJH)
 import _harness_canvas_jari as CJ          # noqa: E402 — 틀(P · serve · ground · open_jari)
+import _qa_jo_common as QJ                 # noqa: E402 — _task_qa_slim(10/4) A-1 · 이 파일엔 5줄 머리가 없어 CJ 바로 뒤에 둔다(CJ 가 머리 뒤에서 QJ 를 먼저 불러 --mode · --snap-in · --snap-out 을 뗀다 · 아래 ARG 읽기보다 앞) · gate = 인자 없음 = 이 판 앞과 같다
+#   --mode regress = NEW 만 띄움(바탕 2e230f2 안 풀고 안 띄움 · 헛잣대 칸 · 바탕 md5 칸 끔 · 「굴리기 전 막대 자리 = 바탕」은 기준 스냅샷) · --mode smoke = chromium 책상·폰 · 굴리기 전 첫 화면 칸 + 콘솔 오류 0 만
 from playwright.sync_api import sync_playwright   # noqa: E402
 
 
@@ -61,6 +63,7 @@ def tap(p, x, y, wait=500):
 
 def scen(br, eng, tag, src, vp, W, H, pad):
     R = {'eng': eng, 'tag': tag, 'vp': vp}
+    QJ.launch('base' if tag == 'BASE' else 'new')   # 셈(§B-4) — gate 에서도 동작 무변
     p = CJ.P(br, eng, 'NAV' + tag, src, W, H, pad=pad)
     try:
         G = GR
@@ -133,6 +136,10 @@ def gates(R, tag, BASER=None):
     m = R['m']
     m0 = m['0']
     T(pre + '굴리기 전 — 머리 세 점·✕ 맨 위 = 머리 · 막대 맨 위 = 막대', all(h['in'] for h in m0['hits']) and (m0['xh'] or {}).get('in') and (m0['nh'] or {}).get('in'), m0, tag)
+    if QJ.SMOKE:   # smoke — 굴리기 전 첫 화면 칸(sc0) + 콘솔 오류 0 만(굴림 · ▶ · 끌기 · ✕ · --cvph · 기준 칸은 smoke 에서 안 잰다)
+        if tag == 'NEW':
+            T(pre + '콘솔 오류 0', not R.get('errs'), R.get('errs'))
+        return
     for k in ('120', '400', 'max'):
         x = m[k]
         if not x.get('sc') or x['sc'] < 30:
@@ -160,12 +167,26 @@ def gates(R, tag, BASER=None):
             tol = {'x': 0.5, 'y': 0.6, 'w': 1, 'h': 0.5}   # y 0.6 = webkit 머리 34.44 → 39 소수 오차(10/2 07:05 · 차 0.5 가 넘침)
             T(pre + '굴리기 전 막대 자리 = 바탕(±0.5 · 쉬는 자리 무변)', b0.get('N') and m0.get('N') and all(abs(relh(b0, k) - relh(m0, k)) <= tol[k] for k in ('x', 'y', 'w', 'h')) and (abs(b0['H']['h'] - m0['H']['h']) <= 0.5 or abs(m0['H']['h'] - 39) <= 0.5),
               {'base': b0.get('N'), 'new': m0.get('N'), 'W': [b0.get('W'), m0.get('W')]})
+        if QJ.REGRESS:   # 처리안 기준(rest) — 바탕 2e230f2 를 안 띄운다 · 「굴리기 전 막대 자리 = 바탕」은 NEW 값(막대 x·y 를 창 왼쪽·위끝 · 머리 높이로 뺀 자리 + w·h + 머리 높이)을 기준 스냅샷(바로 앞 인도 판이 잰 값)과 gate 와 같은 허용 오차로 맞댄다 · 스냅샷 없으면 첫 기록
+            _tol = {'x': 0.5, 'y': 0.6, 'w': 1, 'h': 0.5}
+            _cid = 'rest@%s/%s' % (R['eng'], R['vp'])
+            _n0 = m0.get('N')
+            _cur = {'N': {k: round(_n0[k] - (m0['W'][k] if k in ('x', 'y') else 0) - (m0['H']['h'] if k == 'y' else 0), 2) for k in ('x', 'y', 'w', 'h')}, 'Hh': m0['H']['h']} if _n0 else None
+            _bv = QJ.base(_cid, _cur)
+            T(pre + '굴리기 전 막대 자리 = 바탕(±0.5 · 쉬는 자리 무변)',
+              _cur and _bv and all(abs(_bv['N'][k] - _cur['N'][k]) <= _tol[k] for k in ('x', 'y', 'w', 'h')) and (abs(_bv['Hh'] - _cur['Hh']) <= 0.5 or abs(_cur['Hh'] - 39) <= 0.5),
+              {'base': _bv, 'new': _cur, '기준': QJ.base_note(_cid)})
+            L.append('INFO | %s굴리기 전 막대 자리 기댓값 출처 | %s' % (pre, QJ.base_note(_cid)))   # 기준 스냅샷이 있었나 · 첫 기록인가
 
 
 def main():
-    base_b = subprocess.run(['git', '-C', CJ.GENIE, 'show', BASE_REV + ':jo/index.html'], capture_output=True).stdout
+    if QJ.GATE:   # regress · smoke — 바탕 앱(2e230f2)을 안 푼다(git show 0) · 바탕 md5 칸은 관문만
+        QJ.sub('git:show-app')
+        base_b = subprocess.run(['git', '-C', CJ.GENIE, 'show', BASE_REV + ':jo/index.html'], capture_output=True).stdout
+    else:
+        base_b = b''
     new_raw = open(NEWF, 'rb').read()
-    RES = {'src': {'base': [len(base_b), hashlib.md5(base_b).hexdigest()],
+    RES = {'src': {'base': ([len(base_b), hashlib.md5(base_b).hexdigest()] if QJ.GATE else None),
                    'new': [len(new_raw), hashlib.md5(new_raw.replace(b'\r\n', b'\n')).hexdigest(), new_raw.count(b'\r\n'), NEWF]}}
     global GR
     GR = CJ.ground()
@@ -174,13 +195,14 @@ def main():
     os.makedirs(CJ.WORK, exist_ok=True)
     srcs = {'BASE': base_b.decode('utf-8'), 'NEW': new_raw.decode('utf-8')}
     with sync_playwright() as pw:
-        brs = {e: getattr(pw, e).launch() for e in ('chromium', 'webkit')}
+        brs = {e: getattr(pw, e).launch() for e in (('chromium', 'webkit') if not QJ.SMOKE else ('chromium',))}   # smoke — WebKit 은 폰 폭 터치 칸만(이 smoke 칸은 없다)
         try:
-            for eng in [e for e in ('chromium', 'webkit') if ARG('--eng') in (None, e)]:
-                for vp, W, H, pad in [v for v in VPS if ARG('--vp') in (None, v[0])]:
-                    for tag in ('BASE', 'NEW'):
+            for eng in [e for e in ('chromium', 'webkit') if ARG('--eng') in (None, e) and (not QJ.SMOKE or e == 'chromium')]:
+                for vp, W, H, pad in [v for v in VPS if ARG('--vp') in (None, v[0]) and (not QJ.SMOKE or v[0] != 'ipad')]:   # smoke — PC · 폰 두 폭
+                    for tag in (('BASE', 'NEW') if QJ.GATE else ('NEW',)):   # regress — NEW 만(바탕 안 띄움)
                         t0 = time.time(); print('… %s %s %s %s' % (eng, vp, tag, time.strftime('%H:%M:%S')), flush=True)
-                        RES['%s/%s/%s' % (eng, vp, tag)] = r = scen(brs[eng], eng, tag, srcs[tag], vp, W, H, pad)
+                        with QJ.stage('%s %s %s' % (eng, vp, tag)):
+                            RES['%s/%s/%s' % (eng, vp, tag)] = r = scen(brs[eng], eng, tag, srcs[tag], vp, W, H, pad)
                         print('   %.1fs %s' % (time.time() - t0, r.get('exc', '')), flush=True)
         finally:
             for b in brs.values():
@@ -194,8 +216,11 @@ def main():
 
 
 def report(RES):
-    L.append('INFO | 바탕 BASE = %s:jo/index.html | %d B · md5 %s' % (BASE_REV, RES['src']['base'][0], RES['src']['base'][1]))
-    T('바탕 md5 = %s…(genie 2e230f2 · ms_claude_editq 인도 판)' % BASE_MD5[:8], RES['src']['base'][1] == BASE_MD5, RES['src']['base'])
+    if QJ.GATE:   # regress — 바탕 앱을 안 풀었다(바탕 md5 칸 = 처리안 관문만)
+        L.append('INFO | 바탕 BASE = %s:jo/index.html | %d B · md5 %s' % (BASE_REV, RES['src']['base'][0], RES['src']['base'][1]))
+        T('바탕 md5 = %s…(genie 2e230f2 · ms_claude_editq 인도 판)' % BASE_MD5[:8], RES['src']['base'][1] == BASE_MD5, RES['src']['base'])
+    else:
+        L.append('INFO | 바탕 BASE 안 띄움(%s) — 바탕 값 칸(굴리기 전 막대 자리)은 기준 스냅샷과 맞댄다 · 바탕 앱 풀기 0' % QJ.MODE)
     L.append('INFO | 새 판 NEW | %d B · md5(LF) %s · CRLF %d · %s' % tuple(RES['src']['new']))
     L.append('INFO | 후보 블록(자리 창 → 카드 0 → 교재 창) | %s' % RES.get('CAND'))
     L.append('INFO | 시간(초) | %s' % RES.get('sec'))
@@ -213,12 +238,13 @@ def report(RES):
             if B.get('m'):
                 x = B['m'].get('400') or {}
                 L.append('INFO | [%s %s] 바탕 굴림 400 — 머리 가운데 점 맨 위 = %s · ✕ 자리 맨 위 = %s' % (eng, vp, [h.get('at') for h in x.get('hits') or []], (x.get('xh') or {}).get('at')))
-    tot = sum(len(v) for v in NULL.values()); fails = sum(1 for v in NULL.values() for x in v if not x)
-    L.append('')
-    L.append('── 헛잣대(규칙 ⑩) — 같은 잣대를 바탕 %s 에 돌린 결과: %d 중 FAIL %d · PASS %d ──' % (BASE_REV, tot, fails, tot - fails))
-    for n in NULL:
-        v = NULL[n]
-        L.append('BASE | %s | %s' % (n, 'FAIL' if not all(v) else 'PASS'))
+    if QJ.GATE:   # regress — 헛잣대 표(바탕 BASE 줄)는 관문만
+        tot = sum(len(v) for v in NULL.values()); fails = sum(1 for v in NULL.values() for x in v if not x)
+        L.append('')
+        L.append('── 헛잣대(규칙 ⑩) — 같은 잣대를 바탕 %s 에 돌린 결과: %d 중 FAIL %d · PASS %d ──' % (BASE_REV, tot, fails, tot - fails))
+        for n in NULL:
+            v = NULL[n]
+            L.append('BASE | %s | %s' % (n, 'FAIL' if not all(v) else 'PASS'))
     body = '\n'.join(L) + '\n\n합계  PASS %d · FAIL %d  (%s초)\n' % (CNT['PASS'], CNT['FAIL'], RES.get('sec'))
     print(body[-4000:])
     p = os.path.join(OUT, '_harness_jo_book_nav_result.txt')

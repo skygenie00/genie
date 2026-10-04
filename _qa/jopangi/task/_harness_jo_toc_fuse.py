@@ -16,6 +16,7 @@ csv.field_size_limit(10 ** 9)
 CJH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '공통', '_harness')   # env_lanes_fix(9/29) — 이 파일 자리 기준(N: · genie _qa 같은 모양 · 옛: N: 고정 자리)
 sys.path.insert(0, CJH)
 import _harness_canvas_jari as CJ          # noqa: E402 — SEED(기록 fetch 돌림 · 바깥 網 막음) · VENDOR · route_filter · NOISE
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) A-1 · 이 파일엔 5줄 머리가 없어 CJ 바로 뒤에 둔다(CJ 가 머리 뒤에서 QJ 를 먼저 불러 --mode · --snap-in · --snap-out 을 뗀다) · gate = 인자 없음 = 이 판 앞과 같다
 from playwright.sync_api import sync_playwright   # noqa: E402
 
 
@@ -68,6 +69,7 @@ def jload_new(name):
 
 
 def jload_head(name):
+    QJ.sub('git:show-data')
     return json.loads(git('show', 'f497f05:jo/data/' + name).decode('utf-8'))   # A-6(d) 9/30 — 바탕 데이터 = 인도 때 HEAD f497f05(docstring · 인도 결과 머리 「BASE = genie f497f05」)
 
 
@@ -166,6 +168,53 @@ def data_gates():
             KEEP['data'] = {'M': M, 'P7': P7['지문']}   # A-6(d) 9/30 — 앱 관문(F5·F8·F10·F12 · 풀 셈)은 지금 데이터 그대로(위 Z 는 F1 무리 전용 인도 데이터)
 
 
+def data_gates_regress():
+    """regress — 데이터 관문: 바탕(f497f05)·고정 커밋(f3b74c9) 데이터는 안 푼다(git 0 · F1 무리와 헛잣대 몫은 gate) · 지금 산출 파일(mokcha_병합 · 목차 · 골든)만 읽는 F2~F4 + 앱 관문이 쓸 KEEP['data']"""
+    TOCJ = json.load(open(TOC, encoding='utf-8'))
+    G = json.load(open(GOLD, encoding='utf-8'))['마디']
+    P7, MG = jload_new('jimun_7pan.json'), jload_new('mokcha_병합.json')
+    g = '데이터 NEW'
+    # F2 — 골든 대조(마디 147 · no · 제목 · 깊이 · 조 · 리담) · 소제목 = 좌표 재계산(골든은 글 차례라 대조 안 함 · 표는 보고서)
+    M = MG['마디']
+    sk = len(M) == len(G) and all(a.get('no', '') == b['no'] and a['제목'] == b['제목'] and a['깊이'] == b['깊이'] for a, b in zip(M, G))
+    T(g, 'F2a 마디 147 · no·제목·깊이 = 골든(헛잣대: 바탕 136마디)', sk, {'마디': len(M), '골든': len(G)})
+    if len(M) == len(G):
+        gjo = lambda b: [x.get('c', x.get('sep')) for x in (b.get('조') or [])]
+        jd = [(a['no'], a.get('조'), gjo(b)) for a, b in zip(M, G) if (a.get('조') or []) != gjo(b)]
+        T(g, 'F2b 조 = 골든(단 3.8.3 「42④⑧」 은 ⑧ 까지 — 골든 mkmg 가 항 첫 글자만 읽은 것 · 한 곳)',
+          jd == [('3.8.3', ['특-42-4', '특-42-8'], ['특-42-4'])], jd[:4])
+        rd = [(a['no'] or a['id'], sorted(set(a['리담']) - set(b['리담'])), sorted(set(b['리담']) - set(a['리담']))) for a, b in zip(M, G) if set(a['리담']) != set(b['리담'])]
+        T(g, 'F2c 리담 = 골든(145마디) · 두 마디는 문항 담기가 바로잡혀 옮김(2019-56-14 : 7.3.2 PBP → 7.3.3 젭슨)',
+          rd == [('7.3.2', [], ['2019-56-14']), ('7.3.3', ['2019-56-14'], [])] and sum(len(a['리담']) for a in M) == 373, rd[:4])
+        subs = [(a['no'], a.get('소제목')) for a in M if a.get('소제목')]
+        T(g, 'F2d 소제목 = 좌표 원장 재계산 67마디 · 3.3 신규성 비움 · 8.3.2.3 Ⅱ 별칭 = {당}통실허심판(138)',
+          len(subs) == 67 and not next((a for a in M if a['no'] == '3.3'), {}).get('소제목') and
+          any(len(x) == 3 and x[2] == '{당}통실허심판(138)' for x in next((a for a in M if a['no'] == '8.3.2.3'), {}).get('소제목', [])),
+          {'마디': len(subs)})
+    else:
+        T(g, 'F2b~d 조·리담·소제목(마디 수가 달라 못 맞댐)', False, len(M))
+    # F3 — OMR 칸 ↔ 책 번호 문항
+    if '책수' in TOCJ and len(M) == len(TOCJ['마디']):
+        omr = TOCJ['OMR']
+        bk = TOCJ['책수']
+        ok104 = sum(1 for k in omr if bk.get(k) == omr[k])
+        diff = [(m['no'], bk.get(m['id']), omr[m['id']]) for m in TOCJ['마디'] if m['id'] in omr and bk.get(m['id']) != omr[m['id']]]
+        T(g, 'F3 OMR 칸 합 1,680 · 책 절 107 중 104 = OMR 칸 수 · 예외 셋(사용자 9/26 18:27 · 책대로) = 진보성 37/38 · 확대선 21/22(책이 6·18번 건너뜀) · 침해 총설 4/3',
+          sum(omr.values()) == 1680 and ok104 == 104 and diff == [('3.4', 37, 38), ('3.7', 21, 22), ('8.3.1', 4, 3)], {'104': ok104, '3': diff})
+    else:
+        T(g, 'F3 OMR 칸 ↔ 책 번호 문항(재료와 마디가 안 맞음 — 바탕)', False, {'마디': len(M)})
+    # F4 — 모아보기 140 = 전부 본문 원본 id(새 id 0) · Ⅱ 3번 = 추록 P7-0285(9/26 18:27 사용자 「빨간 글 우선」 · P7-2058 대신)
+    pan = [m for m in M if str(m.get('id', '')).startswith('FP')]
+    pids = [z for m in pan for z in m['지문']]
+    bodyids = {z for m in M if not str(m.get('id', '')).startswith('FP') for z in m['지문']}
+    own = [z for z in pids if z not in bodyids]
+    g2 = next((m for m in pan if str(m.get('제목', '')).startswith('Ⅱ')), {})
+    T(g, 'F4 모아보기 140 = 전부 본문 마디 id(새 id 0) · Ⅱ 특허요건 3번 = 추록 P7-0285(P7-2058 대신)(헛잣대: 바탕 모아보기 없음)',
+      len(pids) == 140 and len(set(pids)) == 140 and own == [] and (g2.get('지문') or [None] * 3)[2:3] == ['P7-0285'],
+      {'모아보기': len(pids), '본문에 없음': own, 'Ⅱ 3번': (g2.get('지문') or [None] * 3)[2:3]})
+    KEEP['data'] = {'M': M, 'P7': P7['지문']}
+
+
 # ══════════ 앱 — 서버 · 쪽 ══════════
 def serve(tag, src, mode='new'):
     key = tag + '|' + mode
@@ -215,6 +264,7 @@ def serve(tag, src, mode='new'):
 
 class Pg:
     def __init__(self, br, tag, src, W=1440, H=900, touch=False, mode='new'):
+        QJ.launch('base' if tag in ('BASE', 'SIAN', 'DL') else 'new')
         self.tag, self.touch = tag, touch
         self.port = serve(tag, src, mode)
         self.ctx = br.new_context(viewport={'width': W, 'height': H}, device_scale_factor=1, has_touch=touch)
@@ -323,7 +373,7 @@ def scen(br, src, tag, touch=False):
           clicked and bool(pop) and pop['vis'] and pop['title'] == '특허 제3조 미성년자 등의 행위능력' and st1['mok'] == st0['mok'] == '',
           {'칩': at and {k: at.get(k) for k in ('text', 'on', 'at', 'fs', 'fw')}, 'pop': pop, 'mok': [st0['mok'], st1['mok']]})
         T(g, 'F6c 서랍 칩 글자 9.5px · 굵기 500', bool(at) and at.get('fs') == '9.5px' and at.get('fw') == '500', at and [at.get('fs'), at.get('fw')])
-        if tag == 'NEW' and not touch:
+        if tag == 'NEW' and not touch and QJ.GATE:
             p.shot('NEW_F6_drawer_chip_pop')
         p.ev("()=>__HT.closeAll()"); p.pg.wait_for_timeout(200)
         at2 = p.ev("([l,c])=>__HT.homeChip(l,c)", [L_221, '특3'])
@@ -346,7 +396,7 @@ def scen(br, src, tag, touch=False):
         T(g, 'F7a 1.2 국제조약 ▸ 누름 → 목록 보임(7줄) · 「▾」 · S.mok 무변 · 처음엔 접힘(헛잣대: 바탕 ▸ 없음)',
           c1 and bool(l0) and l0.get('list') and not l0['vis'] and l1['vis'] and len(l1['rows']) == 7 and (t1 or {}).get('t') == '▾' and st1['mok'] == st0['mok'] == '',
           {'전': l0 and l0.get('vis'), '뒤': l1 and {'vis': l1.get('vis'), 'n': len(l1.get('rows') or [])}, '글': (t1 or {}).get('t'), 'mok': st1['mok'], 'rows': (l1 or {}).get('rows', [])[:3]})
-        if tag == 'NEW' and not touch:
+        if tag == 'NEW' and not touch and QJ.GATE:
             p.shot('NEW_F7_sub_open')
         c2 = p.click(p.ev("l=>__HT.subTg(l)", L_12), 400)
         l2 = p.ev("l=>__HT.subList(l)", L_12); t2 = p.ev("l=>__HT.subTg(l)", L_12)
@@ -361,7 +411,7 @@ def scen(br, src, tag, touch=False):
         l3 = p.ev("l=>__HT.subList(l)", L_8323)
         T(g, 'F7e 8.3.2.3 목록에 「Ⅱ 통상실시권 허여심판 = {당}통실허심판(138)  8문제」', bool(l3) and l3.get('vis') and any('= {당}통실허심판(138)' in r['t'] for r in l3['rows']),
           (l3 or {}).get('rows'))
-        if tag == 'NEW' and not touch:
+        if tag == 'NEW' and not touch and QJ.GATE:
             p.shot('NEW_F7_sub_8323')
         p.click(p.ev("l=>__HT.subTg(l)", L_8323), 300)
 
@@ -376,6 +426,8 @@ def scen(br, src, tag, touch=False):
           bool(so) and so['text'].startswith('▸12 실용신안') and so['tot'] == '총 %s문제' % exp and so['go'] and so['card'] and so['fs'] == '17px' and so['fw'] == '700' and
           so['pad'] == '12px 16px' and so['bg'] == 'rgb(246, 244, 239)' and ch is None,
           {'solo': so and {k: so[k] for k in ('text', 'tot', 'goTxt', 'fs', 'fw', 'pad', 'bg')}, '옛 머리': ch})
+        if QJ.SMOKE:   # smoke — F8a(첫 화면 편 줄) · Z(페이지 오류 0) 만 — F8b · F8c 는 안 잰다
+            return
         T(g, 'F8b 「12. 실용신안」 줄이 따로 없다(첫 화면에 그 이름 한 번)', p.ev("l=>__HT.homeNames(l)", '12 실용신안') == 1 and p.ev("l=>__HT.homeNames(l)", '12. 실용신안') == 0,
           [p.ev("l=>__HT.homeNames(l)", '12 실용신안'), p.ev("l=>__HT.homeNames(l)", '12. 실용신안')])
         i12 = p.ev("n=>__HT.Mi(n)", '12')
@@ -423,8 +475,10 @@ def scen(br, src, tag, touch=False):
           {'줄': len(sun), '순 앞': sun[:6]})
 
     for nm, fn in (('F6', s6), ('F7', s7), ('F8', s8), ('F9', s9), ('F5', s5)):
+        if QJ.SMOKE and nm != 'F8':
+            continue
         sec(nm, fn)
-    if not touch:
+    if not touch and not QJ.SMOKE:
         sec('F10', lambda: s10(p, g, tag))
         sec('F12', lambda: s12(p, g, tag))
     es = p.errs_all()
@@ -498,7 +552,7 @@ def s12(p, g, tag):
             okb = not any(x['inCase'] for x in cs)
         T(g, 'F12 객관식 %s → 선지 줄 5 · 번호 「N번 - (1)~(5)」 · %s' % (pid, '종합사례 상자 한 벌 「[종합사례 원문] - N번」' if box else '상자 없음(단순 「…설명으로 옳지 않은 것은?」)'),
           len(cs) == 5 and okseq and okb, {'번호': seq, '상자': bx[:2], '마디': M[i]['no']})
-        if tag == 'NEW' and box:
+        if tag == 'NEW' and box and QJ.GATE:
             p.shot('NEW_F12_case_box')
 
 
@@ -544,11 +598,20 @@ def report():
 
 def main():
     os.makedirs(WORK, exist_ok=True)
-    base_src = git('show', 'f497f05:jo/index.html').decode('utf-8')   # A-6(d) 바탕 앱 = f497f05
-    assert hashlib.md5(base_src.encode('utf-8')).hexdigest() == BASE_MD5, 'HEAD 가 바탕(f497f05)이 아니다'
+    if QJ.GATE:
+        QJ.sub('git:show-app')
+        base_src = git('show', 'f497f05:jo/index.html').decode('utf-8')   # A-6(d) 바탕 앱 = f497f05
+        assert hashlib.md5(base_src.encode('utf-8')).hexdigest() == BASE_MD5, 'HEAD 가 바탕(f497f05)이 아니다'
+    else:
+        base_src = None   # regress — 바탕 앱 풀기 · 띄우기 0
     new_src = io.open(NEWF, encoding='utf-8', newline='').read()
     if not ONLY or 'data' in ONLY:
-        data_gates()
+        if QJ.GATE:
+            data_gates()
+        elif QJ.SMOKE:
+            KEEP['data'] = {'M': jload_new('mokcha_병합.json')['마디'], 'P7': jload_new('jimun_7pan.json')['지문']}   # smoke — 데이터 관문 안 돔(F8a 의 기대 셈에 쓸 재료만)
+        else:
+            data_gates_regress()
     else:
         KEEP['data'] = {'M': jload_new('mokcha_병합.json')['마디'], 'P7': jload_new('jimun_7pan.json')['지문']}
     D = KEEP['data']
@@ -572,10 +635,13 @@ def main():
     KEEP['pool'] = len(pool)
     with sync_playwright() as pw:
         br = pw.chromium.launch()
-        if not ONLY or 'base' in ONLY:
-            scen(br, base_src, 'BASE')
+        if not QJ.SMOKE and (not ONLY or 'base' in ONLY):
+            if QJ.GATE:   # regress — 바탕 장면(헛잣대 칸 몫)은 안 돈다
+                scen(br, base_src, 'BASE')
             # F5 헛잣대 — 2.2.1 지문 목록을 거꾸로 준 재료(순 정렬이 없으면 거꾸로 그린다)
             for tag, src in (('BASE', base_src), ('NEW', new_src)):
+                if QJ.REGRESS and tag == 'BASE':   # regress — F5b 는 NEW 만(바탕 거꾸로 재료는 헛잣대)
+                    continue
                 p = Pg(br, tag, src, mode='rev')
                 try:
                     p.ev("async()=>await __HT.home()")
@@ -586,17 +652,27 @@ def main():
                       len(sun) > 5 and all(sun[i] < sun[i + 1] for i in range(len(sun) - 1)), {'순 앞': sun[:6]})
                 finally:
                     p.close()
-            other_law(br, base_src, 'BASE')
+            if QJ.GATE:
+                other_law(br, base_src, 'BASE')
         if not ONLY or 'new' in ONLY:
-            scen(br, new_src, 'NEW')
-            other_law(br, new_src, 'NEW')
-            other_law(br, git('show', 'a9d72c1:jo/index.html').decode('utf-8'), 'DL')   # A-6(d) 9/30 — E 는 인도 판(a9d72c1 · md5(LF) c9a35c4f) 성질 — 뒤 판(add3 §A-8)이 상표 화면을 바꿈
-        if not ONLY or 'touch' in ONLY:
-            scen(br, new_src, 'NEW', touch=True)
+            with QJ.stage('scen NEW 책상'):
+                scen(br, new_src, 'NEW')
+            if not QJ.SMOKE:
+                other_law(br, new_src, 'NEW')
+            if QJ.GATE:   # regress — 인도 판(a9d72c1) 앱 풀기 · 띄우기 0(E 칸은 기준 스냅샷)
+                QJ.sub('git:show-app')
+                other_law(br, git('show', 'a9d72c1:jo/index.html').decode('utf-8'), 'DL')   # A-6(d) 9/30 — E 는 인도 판(a9d72c1 · md5(LF) c9a35c4f) 성질 — 뒤 판(add3 §A-8)이 상표 화면을 바꿈
+        if not QJ.SMOKE and (not ONLY or 'touch' in ONLY):
+            with QJ.stage('scen NEW 손가락'):
+                scen(br, new_src, 'NEW', touch=True)
         br.close()
     if 'BASE' in KEEP.get('other', {}) and 'DL' in KEEP.get('other', {}):
         # A-6(d) 9/30 — 「상표 = 바탕」 은 toc_fuse 인도 판(genie a9d72c1) 성질 — 바탕 ↔ 인도 판 앱을 같은 데이터로 맞댄다(지금 판(add3 §A-8 기출/기타 칩 · 머리 · 필터 · 접기 — 의도) 값은 NOTE 줄 그대로)
         T('NEW 상표', 'E 상표 1차객 첫 화면·서랍 — 인도 판(a9d72c1) = 바탕(글자 수·요소 수·자리)', KEEP['other']['BASE'] == KEEP['other']['DL'], KEEP['other'])
+    elif QJ.REGRESS and 'NEW' in KEEP.get('other', {}):
+        # regress — 바탕(f497f05) · 인도 판(a9d72c1) 앱을 안 띄운다 → 같은 칸을 「지금 판의 상표 1차객 화면 = 바탕(저장된 기준 스냅샷)」으로(기준 칸)
+        ov = KEEP['other']['NEW']
+        T('NEW 상표', 'E 상표 1차객 첫 화면·서랍 — 인도 판(a9d72c1) = 바탕(글자 수·요소 수·자리)', QJ.same('E@NEW', ov), dict(ov, 기준=QJ.base_note('E@NEW')))
     report()
 
 

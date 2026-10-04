@@ -17,6 +17,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · regress = NEW 만(바탕 6b03bf1 안 풀고 안 띄움 · 헛잣대 칸 끔 · 바탕 값 칸은 기준 스냅샷 --snap-in/--snap-out) · smoke = 기본 점검 칸만(chromium) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안
 _NR = _roots.need_n('민소 교재 PDF · annot 초안 json(공통/_재료)')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import copy, hashlib, http.server, io, json, os, random, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
@@ -71,6 +72,7 @@ def serve(tag, src, datamode='new'):
     io.open(os.path.join(out, 'index.html'), 'w', encoding='utf-8', newline='\n').write(html)
     oldmeta = {}
     if datamode == 'oldbook':
+        QJ.sub('git:show-data', 2)   # 옛 책메타 둘(minbeoppdf 9ee99fdc) — 옛 책 장면(A)의 픽스처 · 바탕 앱이 아니다(regress 에서도 읽는다)
         for d in ('minso_hs', 'minso_yg'):
             f = os.path.join(out, 'oldmeta_' + d + '.json')
             open(f, 'wb').write(git('show', '9ee99fdc:words/%s/책메타.json' % d, repo=MB))   # A-6(d) 9/30 — 옛 책메타 = 인도 때 minbeoppdf HEAD~1(주석본 전 · pdfMd5 0ea571a8) · 옛: 'HEAD~1'(9/28 커밋 둘 뒤 726d41e0 = 새 책과 같은 책메타)
@@ -114,6 +116,7 @@ class P:
     def __init__(self, br, eng, tag, src, W, H, mode='desk', q='tok=1', datamode='new'):
         self.eng, self.tag, self.mode, self.q = eng, tag, mode, q
         self.pad = mode in ('pad', 'phone')
+        QJ.launch('base' if tag == 'BASE' else 'new')   # 셈(§B-4) — 바탕(BASE) 판을 띄운 수 · NEW 를 띄운 수(옛 책 · 캐시 장면도 NEW 앱)
         self.port = serve(tag, src, datamode)
         if mode == 'pad':
             self.ctx = br.new_context(viewport={'width': W, 'height': H}, device_scale_factor=2, is_mobile=True, has_touch=True, user_agent=IPAD_UA)
@@ -168,6 +171,8 @@ class P:
         return 'mouse(trusted)'
 
     def shot(self, name):
+        if QJ.REGRESS:   # regress — 눈으로 볼 스크린샷은 안 찍는다(판정 칸 아님 · 찍고 0.5초씩 되읽기)
+            return 'regress — 안 찍음'
         os.makedirs(os.path.join(OUT, '_book_stamp_shots'), exist_ok=True)
         f = os.path.join(OUT, '_book_stamp_shots', name + '.png')
         try:
@@ -199,6 +204,7 @@ def ground():
         G['st_' + d] = by
         G['md5_' + d] = S['pdfMd5']
         G['meta_' + d] = json.load(open(os.path.join(MB, 'words', d, '책메타.json'), encoding='utf-8'))
+        QJ.sub('git:show-data')   # 옛 책메타(minbeoppdf 9ee99fdc) — 캐시 장면이 심는 옛 pdfMd5 · 책메타 대조
         G['old_' + d] = json.loads(git('show', '9ee99fdc:words/%s/책메타.json' % d, repo=MB))   # A-6(d) 9/30 — 옛 책메타 = 인도 때 minbeoppdf HEAD~1(주석본 전 · pdfMd5 0ea571a8) · 옛: 'HEAD~1'(9/28 커밋 둘 뒤 726d41e0 = 새 책과 같은 책메타) · 캐시 장면이 심는 옛 pdfMd5
     hs = G['st_minso_hs']
     G['P61'] = hs[61]
@@ -333,6 +339,9 @@ def scen_B(br, eng, tag, mode='desk', W=1440, H=900):
         open_book(p, '핵심', 61)
         R['b61'] = b = p.ev("([pk,n])=>__HB.bookWait(pk,n,90000)", [BK, 2 if tag == 'NEW' else None])
         R['pops0'] = p.ev("__HB.pops()")
+        if QJ.SMOKE:   # smoke — 핵심 61 도장 둘 · 콘솔 오류 0 까지만(누름 · 출처 창 · ambig · 판례탭은 안 잰다)
+            R['errs'] = [e for e in p.ev("__HB.errs()") + p.errs if not NOISE(e)]
+            return R
         # 76 누름 → 출처 새 팝업
         i76 = stamp_idx(b, '↗ 핵심 p.76')
         at = p.ev("([pk,i])=>__HB.stampAt(pk,i)", [BK, i76]) if i76 is not None else None
@@ -418,6 +427,8 @@ def scen_C(br, eng, tag, mode='desk', W=1440, H=900):
         boot_ms(p)
         R['note'] = p.ev("f=>__HB.note(f)", N131)
         R['grey'] = p.ev("__HB.greyRef()")
+        if QJ.SMOKE:   # smoke — 1.3.1 칩 줄 · 📘 한 칸까지만(창 · 교재 · 합치기는 안 잰다)
+            return R
         at = p.ev("([f,r,t])=>__HB.chipAt(f,r,t)", [N131, 8, '📘']); R['chip8'] = at
         R['tap8'] = p.click(at, 900)
         R['w8'] = p.ev("([f,e])=>__HB.ncbWait(f,e,90000)", [N131, 8]) if R['tap8'] else None
@@ -691,7 +702,7 @@ def gates_B(R, tag):
     st = b.get('stamps') or []
     ok = [s for s in st if s['st'] == 'ok']
     T(pre + '핵심 61 — ok 테두리 2 · 꼬리표 「↗ 윤곽 p.47」「↗ 핵심 p.76」', len(ok) == 2 and sorted(s['tag'] for s in ok) == ['↗ 윤곽 p.47', '↗ 핵심 p.76'], st, tag)
-    if tag == 'NEW' and ok:
+    if tag == 'NEW' and ok and QJ.want('B-style'):   # smoke — 테두리 꼴 칸은 안 잰다
         s = ok[0]
         T(pre + '테두리 2px #2563eb · 안 칠 8% · 꼬리표 10.5px 700 흰 글자 파란 바탕',
           s['bw'] == '2px' and s['bc'] == 'rgb(37, 99, 235)' and s['bg'] == 'rgba(37, 99, 235, 0.08)' and (s['tg'] or {}).get('fs') == '10.5px' and (s['tg'] or {}).get('fw') == '700'
@@ -702,6 +713,9 @@ def gates_B(R, tag):
             x0, y0, x1, y1 = r['rect']
             exp['↗ %s p.%d' % (r['to']['book'], r['to']['p'])] = r['rect']
         I(pre + '도장 자리(%) — 앱 / 데이터 rect', [(s['tag'], s['l'], s['t'], s['w'], s['h'], exp.get(s['tag'])) for s in ok])
+    if QJ.SMOKE:   # smoke — 핵심 61 도장 둘 + 콘솔 오류 0 까지만
+        T(pre + '콘솔 오류 0', not R.get('errs'), R.get('errs'))
+        return
     n0, n1, n2 = len(R.get('pops0') or []), len(R.get('pops1') or []), len(R.get('pops2') or [])
     s76 = R.get('src76') or {}
     T(pre + '76 누름 → 새 팝업 1(POPS +1 · 출처 창 cv|src|minso_hs|76)', R.get('tap76') and n1 == n0 + 1 and 'cv|src|minso_hs|76' in (R.get('pops1') or []), {'at': R.get('at76'), 'p0': R.get('pops0'), 'p1': R.get('pops1')}, tag)
@@ -764,6 +778,8 @@ def gates_C(R, tag):
     tb = {x['i']: x['chips'] for x in nt.get('tbl') or []}
     ids, new = G['expect'](N131)
     T(pre + '1.3.1 행 7~8 · 9~10(^id 없음 · 짝 있음) 끝 줄에 칩 줄 + 📘', [c['t'] for c in tb.get(8, [])] == ['📘'] and [c['t'] for c in tb.get(10, [])] == ['📘'], {8: tb.get(8), 10: tb.get(10)}, tag)
+    if QJ.SMOKE:   # smoke — 1.3.1 칩 줄 한 칸만
+        return
     idc = {i: [c['t'] for c in tb.get(i, [])] for i in ids}
     T(pre + '^id 문단(%d) — 📍 칩 0 · 📘 1' % len(ids), all(v.count('📘') == 1 and not any(t.startswith('📍') for t in v) for v in idc.values()), idc, tag)
     T(pre + '칩 줄 = ^id 행 ∪ 짝 있는 문단 끝(1.3.1 · 새 줄 %d)' % len(new), sorted(tb) == sorted(set(ids) | set(new)), {'dom': sorted(tb), 'ids': ids, 'new': new}, tag)
@@ -868,6 +884,22 @@ def gates_pad(R, tag):
         T(pre + '콘솔 오류 0', not R.get('errs'), R.get('errs'))
 
 
+def base_snap_D(eng, N):
+    """regress — gates_D 의 「= 바탕」 칸(PC 1890 · 1024 의 카드 팝업 · #hrail · 민소 노트 팝업)이 쓰는 바탕 값을 저장된 기준 스냅샷으로 대신한다
+    (바탕 6b03bf1 을 띄우던 D/BASE 장면 0 · 스냅샷에 없으면 NEW 값 자신 = 첫 기록 · cid = D@<엔진>/<폭>/<자리>)"""
+    out = {}
+    for W in (1890, 1024):
+        k = 'pc%d' % W
+        x = (N or {}).get(k) or {}
+        if x.get('exc'):
+            continue
+        c = 'D@%s/%d' % (eng, W)
+        out[k] = {q: {'rect': QJ.base('%s/%s' % (c, q), (x.get(q) or {}).get('rect'))} for q in ('card0', 'card1', 'card2')}
+        out[k]['rail'] = {'rect': QJ.base(c + '/rail', (x.get('rail') or {}).get('rect')), 'sb': QJ.base(c + '/rail.sb', (x.get('rail') or {}).get('sb'))}
+        out[k]['note'] = QJ.base(c + '/note', x.get('note'))
+    return out
+
+
 def gates_D(R, tag, BR=None):
     pre = '[D %s %s] ' % (R['eng'], tag)
     if R.get('exc'):
@@ -918,13 +950,14 @@ def gates_D(R, tag, BR=None):
 def data_gates(RES):
     G = GR
     # A-3 민법앱 교재 무변 — minbeoppdf 커밋이 민소 두 권 파일만 건드렸나
-    DELIV_MB_REV = '127a7dc9'   # A-6(d) 9/30 — 인도 검산 새 쪽 = ms_book_stamp 인도 커밋(민소 두 권 pdf·책메타·stamp) · 옛: 'HEAD'(지금 70766166 = patent_hr8 대응표 · 9/28)
-    names = git('show', '--name-status', '--format=', DELIV_MB_REV, repo=MB).decode('utf-8', 'replace').splitlines()
-    touched = [q for x in names if x.strip() for q in x.split('\t')[1:]]   # 이름 바꿈(R) 줄은 옛·새 두 경로
-    okp = lambda f: f in ('pdf/26핵심민소ABBYY_주석_앱.pdf', 'pdf/26윤곽민소ABBYY_주석_앱.pdf', 'pdf/26핵심민소ABBYY.pdf', 'pdf/윤곽 민소법 기본서ABBYY.pdf',
-                          'words/minso_hs/책메타.json', 'words/minso_yg/책메타.json', 'stamp/minso_hs.json', 'stamp/minso_yg.json')
-    I('minbeoppdf 인도 커밋(%s) 바뀐 파일' % DELIV_MB_REV, names)
-    T('[A] 민법앱 교재 무변 — minbeoppdf 커밋이 민소 두 권(pdf · 책메타 · stamp)만 · 민법 책 words 0', touched and all(okp(f) for f in touched), touched)
+    if QJ.GATE:
+        DELIV_MB_REV = '127a7dc9'   # A-6(d) 9/30 — 인도 검산 새 쪽 = ms_book_stamp 인도 커밋(민소 두 권 pdf·책메타·stamp) · 옛: 'HEAD'(지금 70766166 = patent_hr8 대응표 · 9/28)
+        names = git('show', '--name-status', '--format=', DELIV_MB_REV, repo=MB).decode('utf-8', 'replace').splitlines()
+        touched = [q for x in names if x.strip() for q in x.split('\t')[1:]]   # 이름 바꿈(R) 줄은 옛·새 두 경로
+        okp = lambda f: f in ('pdf/26핵심민소ABBYY_주석_앱.pdf', 'pdf/26윤곽민소ABBYY_주석_앱.pdf', 'pdf/26핵심민소ABBYY.pdf', 'pdf/윤곽 민소법 기본서ABBYY.pdf',
+                              'words/minso_hs/책메타.json', 'words/minso_yg/책메타.json', 'stamp/minso_hs.json', 'stamp/minso_yg.json')
+        I('minbeoppdf 인도 커밋(%s) 바뀐 파일' % DELIV_MB_REV, names)
+        T('[A] 민법앱 교재 무변 — minbeoppdf 커밋이 민소 두 권(pdf · 책메타 · stamp)만 · 민법 책 words 0', touched and all(okp(f) for f in touched), touched)
     for d in ('minso_hs', 'minso_yg'):
         n, o = G['meta_' + d], G['old_' + d]
         diff = sorted(k for k in set(n) | set(o) if n.get(k) != o.get(k))
@@ -967,7 +1000,10 @@ GR = None
 
 
 def main():
-    base_b = git('show', BASE_REV + ':jo/index.html')
+    if QJ.GATE:
+        base_b = git('show', BASE_REV + ':jo/index.html')
+    else:
+        base_b = b''   # regress — 바탕 앱 풀기 0(git show 안 부름)
     new_raw = open(NEWF, 'rb').read()
     RES = {'src': {'base': [len(base_b), hashlib.md5(base_b).hexdigest()],
                    'new': [len(new_raw), hashlib.md5(new_raw.replace(b'\r\n', b'\n')).hexdigest(), new_raw.count(b'\r\n'), NEWF]}}
@@ -978,30 +1014,31 @@ def main():
     RES['G']['LAYERS'] = {k: ({q: v[q] for q in ('f', 'end', 'L', 'chip')} if v else None) for k, v in GR['LAYERS'].items()}
     os.makedirs(WORK, exist_ok=True)
     t00 = time.time()
-    engs = [e for e in ('chromium', 'webkit') if ARG('--eng') in (None, e)]
+    engs = [e for e in ('chromium', 'webkit') if ARG('--eng') in (None, e) and (not QJ.SMOKE or e == 'chromium')]   # smoke — chromium 만(이 하네스의 smoke 칸은 책상 폭 둘)
     with sync_playwright() as pw:
         brs = {e: getattr(pw, e).launch() for e in engs}
-        sbb = {'chromium': pw.chromium.launch(ignore_default_args=['--hide-scrollbars'])} if 'chromium' in engs else {}
+        sbb = {'chromium': pw.chromium.launch(ignore_default_args=['--hide-scrollbars'])} if 'chromium' in engs and not QJ.SMOKE else {}
         try:
             for eng in engs:
                 br = brs[eng]
                 def run(key, fn, *a):
                     t0 = time.time(); print('… %s %s' % (key, time.strftime('%H:%M:%S')), flush=True)
-                    RES[key] = r = fn(*a)
+                    with QJ.stage(key):
+                        RES[key] = r = fn(*a)
                     print('   %.1fs %s' % (time.time() - t0, (r or {}).get('exc', '') if isinstance(r, dict) else ''), flush=True)
-                if ONLY in ('', 'a'):
+                if ONLY in ('', 'a') and not QJ.SMOKE:   # smoke — A(옛 책 · 캐시)는 안 잰다
                     run('A/%s' % eng, scen_A, br, eng)
                 if ONLY in ('', 'b'):
-                    for tag in ('BASE', 'NEW'):
+                    for tag in (('BASE', 'NEW') if QJ.GATE else ('NEW',)):   # regress — 바탕(헛잣대) 장면 0
                         run('B/%s/%s' % (eng, tag), scen_B, br, eng, tag)
                 if ONLY in ('', 'c'):
-                    for tag in ('BASE', 'NEW'):
+                    for tag in (('BASE', 'NEW') if QJ.GATE else ('NEW',)):   # regress — 바탕(헛잣대) 장면 0
                         run('C/%s/%s' % (eng, tag), scen_C, br, eng, tag)
-                if ONLY in ('', 'pad'):
-                    for tag in ('BASE', 'NEW'):
+                if ONLY in ('', 'pad') and not QJ.SMOKE:
+                    for tag in (('BASE', 'NEW') if QJ.GATE else ('NEW',)):   # regress — 바탕(헛잣대) 장면 0
                         run('PAD/%s/%s' % (eng, tag), scen_pad, br, eng, tag)
-                if ONLY in ('', 'd'):
-                    for tag in ('BASE', 'NEW'):
+                if ONLY in ('', 'd') and not QJ.SMOKE:
+                    for tag in (('BASE', 'NEW') if QJ.GATE else ('NEW',)):   # regress — D/BASE 장면 0(바탕 값은 기준 스냅샷 · report 의 base_snap_D)
                         run('D/%s/%s' % (eng, tag), scen_D, br, eng, tag, sbb.get(eng))
         finally:
             for b in list(brs.values()) + list(sbb.values()):
@@ -1027,8 +1064,9 @@ def report(RES):
     global GR
     if GR is None:
         GR = ground()
-    I('바탕 BASE = %s:jo/index.html' % BASE_REV, '%d B · md5 %s' % tuple(RES['src']['base']))
-    T('바탕 md5 = %s…(genie 6b03bf1 · 교재 창 막대 고침 인도 판)' % BASE_MD5[:8], RES['src']['base'][1] == BASE_MD5, RES['src']['base'])
+    if QJ.GATE:
+        I('바탕 BASE = %s:jo/index.html' % BASE_REV, '%d B · md5 %s' % tuple(RES['src']['base']))
+        T('바탕 md5 = %s…(genie 6b03bf1 · 교재 창 막대 고침 인도 판)' % BASE_MD5[:8], RES['src']['base'][1] == BASE_MD5, RES['src']['base'])
     I('새 판 NEW', '%d B · md5(LF) %s · CRLF %d · %s' % tuple(RES['src']['new']))
     I('픽스처', RES.get('G'))
     I('시간(초)', RES.get('sec'))
@@ -1047,15 +1085,22 @@ def report(RES):
         b = RES.get('D/%s/BASE' % eng)
         if b:
             gates_D(b, 'BASE')
+        if QJ.REGRESS and RES.get('D/%s/NEW' % eng):   # regress — 「= 바탕」 칸(PC 카드 · #hrail · 노트 자리) 기댓값 = 기준 스냅샷
+            b = base_snap_D(eng, RES['D/%s/NEW' % eng])
         if RES.get('D/%s/NEW' % eng):
             gates_D(RES['D/%s/NEW' % eng], 'NEW', b)
-    data_gates(RES)
-    tot = sum(len(v) for v in NULL.values()); fails = sum(1 for v in NULL.values() for x in v if not x)
-    L.append('')
-    L.append('── 헛잣대(규칙 ⑩) — 같은 잣대를 바탕 %s 에 돌린 결과: %d 중 FAIL %d · PASS %d ──' % (BASE_REV, tot, fails, tot - fails))
-    for n in NULL:
-        v = NULL[n]
-        L.append('BASE | %s | %s' % (n, 'FAIL' if not all(v) else 'PASS'))
+    if not QJ.SMOKE:
+        data_gates(RES)
+    if QJ.GATE:
+        tot = sum(len(v) for v in NULL.values()); fails = sum(1 for v in NULL.values() for x in v if not x)
+        L.append('')
+        L.append('── 헛잣대(규칙 ⑩) — 같은 잣대를 바탕 %s 에 돌린 결과: %d 중 FAIL %d · PASS %d ──' % (BASE_REV, tot, fails, tot - fails))
+        for n in NULL:
+            v = NULL[n]
+            L.append('BASE | %s | %s' % (n, 'FAIL' if not all(v) else 'PASS'))
+    else:
+        L.append('')
+        L.append('── 헛잣대(규칙 ⑩) — regress: 바탕 판을 안 띄운다(헛잣대 칸은 gate 에서만 · 처리표 「관문만」) ──')
     body = '\n'.join(L) + '\n\n합계  PASS %d · FAIL %d  (%s초)\n' % (CNT['PASS'], CNT['FAIL'], RES.get('sec'))
     print(body[-6000:])
     p = os.path.join(OUT, '_harness_jo_ms_book_stamp_result.txt')

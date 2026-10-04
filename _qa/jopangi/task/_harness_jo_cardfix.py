@@ -7,6 +7,12 @@ r"""_task_jo_cardfix §B(9/27) 관문 하네스 — 칩 줄 · 연결 창 · 카
   누름 = 진짜 포인터(page.mouse · 손가락 = Chromium CDP 터치 r22 · WebKit touchscreen.tap) · 보임 = display ≠ none · 높이 > 0 · 자리 = elementFromPoint
   틀 = mbsame 하네스(_harness_jo_gaek_mbsame.py)의 serve·Pg·__HM · uidmbs2 도구(__UZ) · 이 판 도구(__CF).
 """
+import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
+_d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
+while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
+    _d_r = _os_r.path.dirname(_d_r)
+_sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) A-1: --mode gate|regress|smoke(인자 없으면 gate = 이 판 앞과 같음) · regress = NEW 만 띄움(바탕 6242678 안 풀고 안 띄움 · 헛잣대 칸 끔)
 import io, json, os, re, sys, time
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -62,6 +68,9 @@ class Pg(M.Pg):
 
 
 def envs():
+    if QJ.REGRESS:   # regress(_task_qa_slim A-1) — 바탕 6242678 앱·데이터를 풀지 않는다(git show · git archive 0 · 바탕 Pg 도 안 띄움)
+        return M.new_env(), (None, None, None)
+    QJ.sub('git:show-app'); QJ.sub('git:archive')   # 셈(§B-4) — M.base_env 가 부르는 둘(gate 에서도 동작 무변)
     return M.new_env(), M.base_env()
 
 
@@ -97,7 +106,7 @@ def gkOf(p, k):
 def g_c1(p, b, eng):
     G = 'c-1'
     res = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in (('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),):   # regress — NEW 만
         res[who] = {}
         for k in ('T1249085', 'TJ080011'):
             go_key(q, k, gkOf(q, k))
@@ -111,8 +120,9 @@ def g_c1(p, b, eng):
     T(G, u'T1249085 머리 「🔗 판 2」 = 앞 칩 오른쪽 끝 + gap 4(±1) · margin-left 0 · 태그 묶음 오른쪽 끝', ok_pan and ok_tag, {'판': pan, '태그': tg, '줄': n1.get('flow')})
     n2 = res['NEW'].get('TJ080011') or {}
     T(G, u'TJ080011 머리 「📎 유제」 칩 없음(걷음) · 태그 묶음 오른쪽 끝', n2 and not n2.get('yj') and abs(((n2.get('tags') or {}).get('r') or 0) - ((n2.get('tags') or {}).get('hdR') or 0)) < 2, n2)
-    b1 = ((res['BASE'].get('T1249085') or {}).get('pan') or {})
-    T(G + '-헛', u'헛잣대 바탕 — 「🔗 판 2」 margin-left 가 큼(가운데 뜸)', bool(b1) and float(str(b1.get('ml') or '0').replace('px', '') or 0) > 50, b1)
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+        b1 = ((res['BASE'].get('T1249085') or {}).get('pan') or {})
+        T(G + '-헛', u'헛잣대 바탕 — 「🔗 판 2」 margin-left 가 큼(가운데 뜸)', bool(b1) and float(str(b1.get('ml') or '0').replace('px', '') or 0) > 50, b1)
 
 
 # ══════════ §B-2 연결 창 · §B-3 카드 연결 표시 · §B-4 이동 글자 ══════════
@@ -121,11 +131,11 @@ K0 = 'TR06092'
 
 def g_c2(p, b, eng):
     G = 'c-2'
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in (('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),):   # regress — NEW 만
         q.ev("o=>__CF.seedLk(o)", {K0: ['T2259185']})
     out = {}
     for how in ('mouse', 'touch'):
-        for who, q in (('NEW', p), ('BASE', b)):
+        for who, q in (('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),):   # regress — NEW 만
             q.ev("o=>__CF.seedLk(o)", {K0: ['T2259185']})
             go_key(q, K0, gkOf(q, K0))
             q.ev("()=>__CF.winClose()")
@@ -141,7 +151,7 @@ def g_c2(p, b, eng):
                     break
                 q.pg.wait_for_timeout(300)
             out[(who, how)] = {'btn': bool(at and at.get('on')), 'w': w, 'w2': w2, 'errs': q.errs_all()[e0:e0 + 3]}
-        n, bb = out[('NEW', how)], out[('BASE', how)]
+        n, bb = out[('NEW', how)], (out[('BASE', how)] if QJ.GATE else None)   # regress — 바탕 칸은 헛잣대뿐(관문만)
         w, w2 = n['w'] or {}, n['w2'] or {}
         rows = [r['uid'] for r in (w2.get('rows') or []) if not str(r.get('uid') or '').startswith('SV')]   # ★ sp_view4(10/3) — 상표 1차객 책 카드(uid SV… · 뷰객 4판 · _task_jo_sp_view4 §C · add1 §A-1)도 찾기 풀에 든다 · 10/3 잼: 「조문」 → SVE3OX06(OX 6 · 상표법 · V4 p.342) 한 줄 더 · 세 법 옛 줄 셋은 그대로 잰다(보고 줄엔 V4 줄도 남는다)
         T(G, u'TR06092 「✏️ 연결」(%s) → 떠 있는 창 440 · 제목 칩 「06 변리」「2006:?:②」「TR06092」 · 찾기 칸 초점 · 오류 0' % how,
@@ -153,10 +163,11 @@ def g_c2(p, b, eng):
           len(rows) == 3 and set(rows) == {'T2259185', 'TR07023', 'S1855224'} and t22.get('has') and float(t22.get('op') or 1) < 0.6 and not t07.get('has')
           and t22.get('no') == u'25번' and t07.get('no') == u'13번' and s18.get('no') == u'22번(4)' and (s18.get('wh') or '') == u'상표법 · 2018 제55회',
           {'줄': w2.get('rows'), '걸린': w2.get('cur')})
-        bw, bw2 = bb['w'] or {}, bb['w2'] or {}
-        T(G + '-헛', u'헛잣대 바탕(%s) — 제목 「✏ 메모 및 유사문제 연결 — 2006년 9번(2)」 · 찾기 칸 초점 없음(ta 오류) · 「조문」 = 지금 법 본문만(세 줄 못 됨)' % how,
-          (u'2006년 9번(2)' in (bw.get('title') or '')) and len(bw2.get('rows') or []) < 3 and not bw.get('focus') and any(('ta is not defined' in e) or ("Can't find variable: ta" in e) for e in bb['errs']),
-          {'제목': bw.get('title'), '줄': len(bw2.get('rows') or []), '초점': bw.get('focus'), '오류': bb['errs']})
+        if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+            bw, bw2 = bb['w'] or {}, bb['w2'] or {}
+            T(G + '-헛', u'헛잣대 바탕(%s) — 제목 「✏ 메모 및 유사문제 연결 — 2006년 9번(2)」 · 찾기 칸 초점 없음(ta 오류) · 「조문」 = 지금 법 본문만(세 줄 못 됨)' % how,
+              (u'2006년 9번(2)' in (bw.get('title') or '')) and len(bw2.get('rows') or []) < 3 and not bw.get('focus') and any(('ta is not defined' in e) or ("Can't find variable: ta" in e) for e in bb['errs']),
+              {'제목': bw.get('title'), '줄': len(bw2.get('rows') or []), '초점': bw.get('focus'), '오류': bb['errs']})
     # 번호 누름 = 문제 창 · 연결 안 늘어남 → 줄 나머지 = 연결 → 새로고침 뒤 유지 → ✕ → 1 → 상표 연결 → ↩링크2 · 상표 번호 → 상표 문제 창
     q = p
     q.ev("o=>__CF.seedLk(o)", {K0: ['T2259185']})
@@ -207,21 +218,22 @@ def g_c2(p, b, eng):
 def g_c3(p, b, eng):
     G = 'c-3'
     res = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in (('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),):   # regress — NEW 만
         q.ev("o=>__CF.seedLk(o)", {K0: ['T2259185']})
         go_key(q, K0, gkOf(q, K0))
         res[who] = {'lines': q.ev("k=>__CF.lnkLines(k)", K0), 'chip': q.ev("k=>__CF.headLkChip(k)", K0)}
     n = res['NEW']; c = (n['chip'] or {}).get('cs') or {}
     T(G, u'카드 「🔗 관련 문제」 줄 DOM 0 · 머리 「↩링크1」 바탕 투명 · 테 0 · 색 #1e3a8a', n['lines'] == [] and (n['chip'] or {}).get('t') == u'↩링크1'
       and c.get('backgroundColor') in ('rgba(0, 0, 0, 0)', 'transparent') and c.get('borderTopWidth') == '0px' and c.get('color') == 'rgb(30, 58, 138)', n)
-    bb = res['BASE']
-    T(G + '-헛', u'헛잣대 바탕 — 「↩ 내가 연결한 1」 알약 · 「관련 문제」 줄', (bb['chip'] or {}).get('t') == u'↩ 내가 연결한 1' and bool(bb['lines']), bb)
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+        bb = res['BASE']
+        T(G + '-헛', u'헛잣대 바탕 — 「↩ 내가 연결한 1」 알약 · 「관련 문제」 줄', (bb['chip'] or {}).get('t') == u'↩ 내가 연결한 1' and bool(bb['lines']), bb)
 
 
 def g_c4(p, b, eng):
     G = 'c-4'
     res = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in (('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),):   # regress — NEW 만
         go_key(q, K0, gkOf(q, K0))
         q.ev("()=>__CF.winClose()")
         q.ev("k=>popCard(k,null)", 'TR07023')
@@ -233,9 +245,10 @@ def g_c4(p, b, eng):
     p.press(g, 'mouse', 1200)
     moved = p.ev("k=>{const c=document.getElementById('qb-'+k)||[...document.querySelectorAll('.qb.id')].find(b=>b.textContent.trim()===k);if(!c)return null;const r=c.getBoundingClientRect();return {y:Math.round(r.top),vis:r.height>0&&r.top<innerHeight&&r.bottom>0}}", 'TR07023')
     T(G, u'문제 창 「↪ 이동」 = 글자만(바탕 투명 · 테 0 · #1d4ed8 12px 700) · 누름 → 그 지문 자리', ok and bool(moved and moved.get('vis')), {'이동': g, '자리': moved})
-    gb = (res['BASE'].get('go') or {})
-    T(G + '-헛', u'헛잣대 바탕 — 「↪ 이 지문으로 이동」 파란 단추', gb.get('t') == u'↪ 이 지문으로 이동' and ((gb.get('cs') or {}).get('backgroundColor') not in ('rgba(0, 0, 0, 0)', 'transparent')), gb)
-    for q in (p, b):
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+        gb = (res['BASE'].get('go') or {})
+        T(G + '-헛', u'헛잣대 바탕 — 「↪ 이 지문으로 이동」 파란 단추', gb.get('t') == u'↪ 이 지문으로 이동' and ((gb.get('cs') or {}).get('backgroundColor') not in ('rgba(0, 0, 0, 0)', 'transparent')), gb)
+    for q in (p, b) if QJ.GATE else (p,):   # regress — 바탕 Pg 없음
         q.ev("()=>__CF.winClose()")
 
 
@@ -244,7 +257,7 @@ def g_c5(p, b, eng):
     G = 'c-5'
     res = {}
     for how in ('mouse', 'touch'):
-        for who, q in (('NEW', p), ('BASE', b)):
+        for who, q in (('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),):   # regress — NEW 만
             q.ev("([k,t])=>__CF.ggSeed(k,t)", [K0, u'제201조 제1항 국어번역문'])
             go_key(q, K0, gkOf(q, K0))
             q.press(q.ev("k=>__CF.ggNum(k)", K0), how, 500)
@@ -267,8 +280,9 @@ def g_c5(p, b, eng):
           and ((s1.get('ta') or {}).get('v') == u'쓰던 댓글') and n['bang'] is True, {'칸': s1, '번호': nc})
         s2 = n['s2'] or {}
         T(G, u'다시 누름(%s) → 되돌림(칸 보임 · 분홍 없음 · 기록 끔)' % how, s2.get('vis') and (s2.get('cs') or {}).get('backgroundColor') != 'rgb(255, 245, 245)', s2)
-        bb = res[('BASE', how)]
-        T(G + '-헛', u'헛잣대 바탕(%s) — 「!」 누르면 칸이 닫힘(display none)' % how, ((bb['s1'] or {}).get('disp') == 'none'), bb['s1'])
+        if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+            bb = res[('BASE', how)]
+            T(G + '-헛', u'헛잣대 바탕(%s) — 「!」 누르면 칸이 닫힘(display none)' % how, ((bb['s1'] or {}).get('disp') == 'none'), bb['s1'])
 
 
 # ══════════ §B-6 정정 ══════════
@@ -278,7 +292,7 @@ K6 = 'TR06092'
 def g_c6(p, b, eng):
     G = 'c-6'
     res = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in (('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),):   # regress — NEW 만
         q.ev("()=>__CF.prep()")
         home(q)
         n0 = (q.ev("()=>__CF.headFixN()") or {}).get('n', 0)
@@ -291,8 +305,9 @@ def g_c6(p, b, eng):
         res[who] = {'n0': n0, 'pan': pan, 'dlg': q.dialogs[d0:], 'prompt': q.ev("()=>window.__PROMPTS")}
     n = res['NEW']
     T(G, u'「✎ 정정」 → 해설 밑 노란 칸 보임(prompt 0 · dialog 0) · 문제·해설·종합사례 원문 글칸 셋 · 정답 O/X', (n['pan'] or {}).get('on') and not n['dlg'] and not n['prompt'] and (n['pan'] or {}).get('n') == 3, n)
-    bb = res['BASE']
-    T(G + '-헛', u'헛잣대 바탕 — prompt 를 부른다 · 노란 칸 없음', (bool(bb['dlg']) or (bb['prompt'] or 0) > 0) and not (bb['pan'] or {}).get('on'), bb)
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+        bb = res['BASE']
+        T(G + '-헛', u'헛잣대 바탕 — prompt 를 부른다 · 노란 칸 없음', (bool(bb['dlg']) or (bb['prompt'] or 0) > 0) and not (bb['pan'] or {}).get('on'), bb)
     q = p
     raw = q.ev("k=>(OXPOOL[k]||{}).ans", K6)
     alt = 'X' if raw == 'O' else 'O'
@@ -335,7 +350,7 @@ def g_c6(p, b, eng):
 def g_c7(p, b, eng):
     G = 'c-7'
     res = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in (('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),):   # regress — NEW 만
         k = 'T1249085'
         go_key(q, k, gkOf(q, k))
         q.press(q.ev("k=>__CF.peek(k)", k), 'mouse', 400)
@@ -343,14 +358,15 @@ def g_c7(p, b, eng):
     n = res['NEW'] or {}; c = n.get('cs') or {}
     T(G, u'T1249085 해설 펼침 → 「🏛 2009다19093」 둥근 0 · 바탕 투명 · 「같은 지문」 글자 0', n.get('t') == u'🏛 2009다19093' and c.get('borderTopLeftRadius') == '0px'
       and c.get('backgroundColor') in ('rgba(0, 0, 0, 0)', 'transparent') and not n.get('same'), n)
-    bb = res['BASE'] or {}
-    T(G + '-헛', u'헛잣대 바탕 — 알약(둥근 · 바탕) · 「같은 지문 N」', ((bb.get('cs') or {}).get('borderTopLeftRadius') not in ('0px', None)) and bb.get('same'), bb)
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+        bb = res['BASE'] or {}
+        T(G + '-헛', u'헛잣대 바탕 — 알약(둥근 · 바탕) · 「같은 지문 N」', ((bb.get('cs') or {}).get('borderTopLeftRadius') not in ('0px', None)) and bb.get('same'), bb)
 
 
 def g_c8(p, b, eng):
     G = 'c-8'
     res = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in (('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),):   # regress — NEW 만
         k = 'TJ080011'
         sel = go_key(q, k, gkOf(q, k))
         seq = q.ev("s=>__CF.cardSeq(s)", sel) or []
@@ -362,13 +378,14 @@ def g_c8(p, b, eng):
         res[who] = {'next': seq[i + 1] if 0 <= i < len(seq) - 1 else None, 'yj': yj, 'sel': sel}
     n = res['NEW']
     T(G, u'1.2 국제조약 — 단원 카드 차례 TJ080011(8번) 바로 다음 T0946093r(8-유제) 그대로 · 「📎 유제」 DOM 0(기출·기타 둘 다)', n['next'] == 'T0946093r' and not any(n['yj'].values()), n)
-    T(G + '-헛', u'헛잣대 바탕 — 「📎 유제」 칩 있음', any((v or 0) > 0 for v in res['BASE']['yj'].values()), res['BASE'])
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+        T(G + '-헛', u'헛잣대 바탕 — 「📎 유제」 칩 있음', any((v or 0) > 0 for v in res['BASE']['yj'].values()), res['BASE'])
 
 
 def g_c9(p, b, eng):
     G = 'c-9'
     res = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in (('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),):   # regress — NEW 만
         r = {}
         for gk in ('g', 'x'):
             home(q, gk=gk)
@@ -381,33 +398,50 @@ def g_c9(p, b, eng):
     T(G, u'특허 첫 화면 칩 = 서랍 = 첫 화면 카드 「미분류 (리담)」 = 미분류 열쇠 수(%s) · 미분류 열쇠 ∩ 마디 카드 열쇠 = 0 · 기타 = 0(리담 = 기출)' % want,
       bool(want) and (g['chip'] or {}).get('n') == want and (g['drawer'] or {}).get('n') == want and g['card'] == want and (g['keys'] or {}).get('both') == 0
       and not (n['x']['chip'] or {}).get('n'), n)
-    bb = res['BASE']['g']
-    T(G + '-헛', u'헛잣대 바탕 — 마디 카드에 선 열쇠를 미분류에서도 셈(칩 > 새 칩 · 교집합 > 0)', ((bb['chip'] or {}).get('n') or 0) > (want or 0) and ((bb['keys'] or {}).get('both') or 0) > 0, bb)
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+        bb = res['BASE']['g']
+        T(G + '-헛', u'헛잣대 바탕 — 마디 카드에 선 열쇠를 미분류에서도 셈(칩 > 새 칩 · 교집합 > 0)', ((bb['chip'] or {}).get('n') or 0) > (want or 0) and ((bb['keys'] or {}).get('both') or 0) > 0, bb)
 
 
 BR = {}
 PARTS = [('c1', g_c1), ('c2', g_c2), ('c3', g_c3), ('c4', g_c4), ('c5', g_c5), ('c6', g_c6), ('c7', g_c7), ('c8', g_c8), ('c9', g_c9)]
+SMOKE_PARTS = {'c1': ('chromium',), 'c9': ('chromium',)}   # smoke(_task_qa_slim A-4) — c-1 두 칸(칩 줄) · c-9(첫 화면 칩 = 서랍 = 카드) · ERR · Chromium 만(폰 폭 손가락 칸 없음 → WebKit 안 띄움)
 
 
 def run_engine(pw, eng):
+    if QJ.SMOKE and not any(eng in v for v in SMOKE_PARTS.values()):   # smoke — 이 엔진에서 잴 smoke 칸이 없으면 브라우저도 안 띄운다
+        return
     br = getattr(pw, eng).launch()
     BR[eng] = br
     (ns, nd, ne), (bs, bd, be) = envs()
     try:
         p = Pg(br, eng, 'cfN', ns, nd, ne)
-        b = Pg(br, eng, 'cfB', bs, bd, be)
+        QJ.launch('new')
+        if QJ.GATE:   # regress — 바탕 Pg 를 띄우지 않는다(b = None)
+            b = Pg(br, eng, 'cfB', bs, bd, be)
+            QJ.launch('base')
+        else:
+            b = None
         try:
             for k, fn in PARTS:
                 if ONLY and k not in ONLY:
                     continue
+                if QJ.SMOKE and eng not in SMOKE_PARTS.get(k, ()):
+                    continue
                 print('── %s · %s' % (eng, k), flush=True)
                 try:
-                    fn(p, b, eng)
+                    if QJ.GATE:
+                        fn(p, b, eng)
+                    else:
+                        with QJ.stage('%s·%s' % (eng, k)):
+                            fn(p, b, eng)
                 except Exception as e:
                     T('RUN', u'%s · %s 묶음이 멈춤' % (eng, k), False, repr(e)[:600])
             T('ERR', u'%s — NEW 앱 오류 0' % eng, not p.errs_all(), p.errs_all()[:6])
         finally:
-            p.close(); b.close()
+            p.close()
+            if QJ.GATE:
+                b.close()
     finally:
         br.close()
 

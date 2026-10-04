@@ -14,6 +14,8 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) A-1 · 인자 --mode(gate | regress | smoke) · --snap-in · --snap-out 을 여기서 뗀다 · gate = 인자 없음 = 이 판 앞과 같다 · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안
+#   regress = NEW 만 띄움(바탕 앱 06fd454 안 풀고 안 띄움 · EDITQ(⚙ editq_apply.py plan · apply subprocess) 0 · 바탕과 맞대던 셋(A-6 검색 수 · C 「⚖ 원문」 DOM · G-6 해설 탭 DOM)은 기준 스냅샷) · smoke = chromium 책상 NEW 의 A-1 · E-1 · 페이지 오류 0 만
 _NR = _roots.need_n('민소 해설 재료(_hsul_proto · hsul 보고) · ⚙ editq_apply')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
@@ -30,7 +32,7 @@ def ARG(k, d=None):
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = ARG('--out', HERE)
 ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
-ENGS = [ARG('--eng')] if ARG('--eng') else ['chromium', 'webkit']
+ENGS = [ARG('--eng')] if ARG('--eng') else (['chromium'] if QJ.SMOKE else ['chromium', 'webkit'])   # smoke — chromium 책상만(WebKit 은 폰 폭 터치 칸만 · 이 smoke 칸은 없다)
 GENIE = CJ.GENIE
 JOD = os.path.join(GENIE, 'jo')
 NEWF = ARG('--new', os.path.join(JOD, 'index.html'))
@@ -95,6 +97,7 @@ def serve(tag, src):
 
 class P:
     def __init__(self, br, eng, tag, src, W, H, mode='desk', q='tok=1'):
+        QJ.launch('base' if tag.startswith('base') else 'new')   # 셈(§B-4) — 바탕 판은 태그가 base 로 시작(gate 에서도 동작 무변)
         self.eng, self.tag, self.mode = eng, tag, mode
         self.touch = mode in ('pad', 'phone')
         self.port = serve(tag, src)
@@ -224,6 +227,17 @@ def run_app(br, eng, src, tag, fx, base=False):
     try:
         has = p.H('has')
         say(True if not base else None, pfx + '앱 도구', has)
+        if QJ.SMOKE:   # smoke — A-1(2차 카드 번호 헤딩 18줄 칩 두 칸) · E-1(⑦ 문제 팝업 줄 = 형광펜 대상) · 페이지 오류 0 만(나머지 칸은 안 잼 · 칸 글은 아래 gate 칸과 같음)
+            o = p.H('open', '기출', '민소', '민기출 25-62-4')
+            hs = p.H('heads') or []
+            h2 = [h for h in hs if h['lv'] >= 2]
+            chips = [h for h in h2 if h['a'] is not None and h['b'] is not None]
+            say(len(h2) == 18 and len(chips) == 18, pfx + 'A-1 25-62-4 번호 헤딩 18줄에 칩 두 칸', '헤딩 %d · 칩 %d' % (len(h2), len(chips)))
+            p.load('tok=1'); p.H('open', '기출', '민소', '민기출 25-62-4')
+            c = p.H('callout', 'question')
+            say(len(c['rows']) >= 1 and c['sel'] == 'text', pfx + 'E-1 ⑦ 문제 팝업 줄 = 형광펜 대상 · 글 선택 됨', (c['pk'], len(c['rows']), c['sel']))
+            say(not [e for e in p.errs if 'harness' not in e], pfx + '페이지 오류 0', p.errs[:4])
+            return
         # ── A 칩 ──
         if not ONLY or 'A' in ONLY:
             o = p.H('open', '기출', '민소', '민기출 25-62-4')
@@ -672,49 +686,76 @@ def main():
     fx = fixtures()
     say(None, '고정물', fx)
     new_src = open(NEWF, 'rb').read().decode('utf-8')
-    base_b = git('show', BASE_REV + ':jo/index.html')
-    say(hashlib.md5(base_b.replace(b'\r\n', b'\n')).hexdigest() == BASE_MD5, 'BASE = %s md5(LF) %s' % (BASE_REV, BASE_MD5[:8]))
-    base_src = base_b.decode('utf-8')
+    if QJ.GATE:   # regress — 바탕 앱(06fd454)을 안 푼다(git show 0 · 바탕 md5 칸 BASE-md5 는 관문만)
+        QJ.sub('git:show-app')
+        base_b = git('show', BASE_REV + ':jo/index.html')
+        say(hashlib.md5(base_b.replace(b'\r\n', b'\n')).hexdigest() == BASE_MD5, 'BASE = %s md5(LF) %s' % (BASE_REV, BASE_MD5[:8]))
+        base_src = base_b.decode('utf-8')
+    else:
+        base_src = ''
     say(None, 'NEW = %s md5(LF) %s' % (NEWF, hashlib.md5(new_src.replace('\r\n', '\n').encode('utf-8')).hexdigest()))
-    if not ONLY or 'C' in ONLY:
+    if (not ONLY or 'C' in ONLY) and not QJ.SMOKE:   # smoke — 데이터 칸(C-3 census · G 짝)은 안 잰다(앱 칸 A-1 · E-1 · 오류 0 만)
         cards, ok, bad, bads = c2jo_census()
         other = {k: v for k, v in bads.items() if re.match(r'^(부경|민(?!소)|의정서|등록령|상법)', k)}
         say(len(bads) - len(other) <= 1, 'C-3 fm 조문 census — 카드 %d · 낱말 읽음 %d · 못 읽음 %d(앱에 없는 법 %d · 그 밖 %d) — 못 읽은 것은 글자 그대로' % (cards, ok, bad, sum(other.values()), bad - sum(other.values())), bads)
-    if not ONLY or 'G' in ONLY:
-        run_gdata()
-    if not ONLY or 'EQ' in ONLY:
-        run_editq()
+    if (not ONLY or 'G' in ONLY) and not QJ.SMOKE:
+        with QJ.stage('G 데이터'):
+            run_gdata()
+    if (not ONLY or 'EQ' in ONLY) and QJ.GATE:   # regress — D-4 는 ⚙ editq_apply.py 를 볼트 사본에 plan · apply subprocess 로 돌려 재는 칸(굽기와 같은 갈래 · ⚙ 판 관문 몫)이라 안 한다(subprocess 0)
+        with QJ.stage('D-4 editq'):
+            run_editq()
     with sync_playwright() as pw:
         for eng in ENGS:
             br = getattr(pw, eng).launch()
             try:
-                run_app(br, eng, base_src, 'base', fx, base=True)
-                run_app(br, eng, new_src, 'new', fx)
+                if QJ.GATE:   # regress — 바탕 판(헛잣대 · 맞대기 재료) 한 번은 gate 만
+                    with QJ.stage('앱 바탕 ' + eng):
+                        run_app(br, eng, base_src, 'base', fx, base=True)
+                with QJ.stage('앱 NEW ' + eng):
+                    run_app(br, eng, new_src, 'new', fx)
             finally:
                 br.close()
-        if 'chromium' in ENGS and (not ONLY or 'GAPP' in ONLY or 'A' in ONLY or 'E' in ONLY):
+        if 'chromium' in ENGS and (not ONLY or 'GAPP' in ONLY or 'A' in ONLY or 'E' in ONLY) and not QJ.SMOKE:   # smoke — 토큰 없는 기기 · 아이패드 · 폰 칸은 안 잰다
             br = pw.chromium.launch()
             try:
                 if not ONLY or 'GAPP' in ONLY:
-                    run_notoken(br, new_src)
+                    with QJ.stage('토큰 없음'):
+                        run_notoken(br, new_src)
                 if not ONLY or 'A' in ONLY or 'C' in ONLY:
-                    run_touch(br, new_src)
+                    with QJ.stage('아이패드'):
+                        run_touch(br, new_src)
                 if not ONLY or 'E' in ONLY:
-                    run_phone(br, new_src)
+                    with QJ.stage('폰'):
+                        run_phone(br, new_src)
             finally:
                 br.close()
     # 바탕과 같음
     for eng in ENGS:
-        if 'search' in RESV and ('base' + eng) in RESV['search']:
-            a, b = RESV['search'].get('base' + eng), RESV['search'].get('new' + eng)
-            say(None if a == 0 else (a == b and a is not None), '[%s] A-6 통합 검색 「문학판검」 결과 수 = 바탕%s' % (eng, ' — 두 판 0건(앱 통합 검색 범위에 목차노트 글이 없다 · 헛잣대라 게이트 아님)' if a == 0 else ''), (a, b))
-        if 'won' in RESV and ('base' + eng) in RESV['won']:
-            a, b = RESV['won'].get('base' + eng), RESV['won'].get('new' + eng)
-            say(bool(a) and a == b, '[%s] C 「⚖ … 원문」 DOM · 링크 = 바탕' % eng, (len(a or []), (a or [''])[:2]))
-        if 'hs_other' in RESV and ('base' + eng) in RESV['hs_other']:
-            a, b = RESV['hs_other']['base' + eng], RESV['hs_other']['new' + eng]
-            for nm in a:
-                say(a[nm] == b[nm], '[%s] G-6 %s 해설 탭 = 바탕(DOM)' % (eng, nm), (len(a[nm][1] or ''), len(b[nm][1] or ''), b[nm][0]))
+        if QJ.GATE:
+            if 'search' in RESV and ('base' + eng) in RESV['search']:
+                a, b = RESV['search'].get('base' + eng), RESV['search'].get('new' + eng)
+                say(None if a == 0 else (a == b and a is not None), '[%s] A-6 통합 검색 「문학판검」 결과 수 = 바탕%s' % (eng, ' — 두 판 0건(앱 통합 검색 범위에 목차노트 글이 없다 · 헛잣대라 게이트 아님)' if a == 0 else ''), (a, b))
+            if 'won' in RESV and ('base' + eng) in RESV['won']:
+                a, b = RESV['won'].get('base' + eng), RESV['won'].get('new' + eng)
+                say(bool(a) and a == b, '[%s] C 「⚖ … 원문」 DOM · 링크 = 바탕' % eng, (len(a or []), (a or [''])[:2]))
+            if 'hs_other' in RESV and ('base' + eng) in RESV['hs_other']:
+                a, b = RESV['hs_other']['base' + eng], RESV['hs_other']['new' + eng]
+                for nm in a:
+                    say(a[nm] == b[nm], '[%s] G-6 %s 해설 탭 = 바탕(DOM)' % (eng, nm), (len(a[nm][1] or ''), len(b[nm][1] or ''), b[nm][0]))
+        else:   # 처리안 기준 셋 — 바탕 06fd454 를 안 띄운다 · NEW 값을 기준 스냅샷(바로 앞 인도 판이 잰 값)에 맞댄다(칸 id · 글 같음 · 스냅샷 없으면 첫 기록 = 줄 끝 「기준 …」)
+            if 'search' in RESV and ('new' + eng) in RESV['search']:
+                b = RESV['search']['new' + eng]
+                a = QJ.base('search@' + eng, b)
+                say(None if a == 0 else (a == b and a is not None), '[%s] A-6 통합 검색 「문학판검」 결과 수 = 바탕%s' % (eng, ' — 두 판 0건(앱 통합 검색 범위에 목차노트 글이 없다 · 헛잣대라 게이트 아님)' if a == 0 else ''), (a, b, QJ.base_note('search@' + eng)))
+            if 'won' in RESV and ('new' + eng) in RESV['won']:
+                b = RESV['won']['new' + eng]
+                a = QJ.base('won@' + eng, b)
+                say(bool(a) and a == b, '[%s] C 「⚖ … 원문」 DOM · 링크 = 바탕' % eng, (len(a or []), (a or [''])[:2], QJ.base_note('won@' + eng)))
+            if 'hs_other' in RESV and ('new' + eng) in RESV['hs_other']:
+                red = {nm: [v[0], hashlib.md5((v[1] or '').encode('utf-8')).hexdigest(), len(v[1] or '')] for nm, v in RESV['hs_other']['new' + eng].items()}   # 큰 DOM(해설 탭 innerHTML)은 md5 · 길이로
+                a = QJ.base('hs@' + eng, red)
+                for nm in a:
+                    say(a[nm] == red.get(nm), '[%s] G-6 %s 해설 탭 = 바탕(DOM)' % (eng, nm), (a[nm][2], (red.get(nm) or [None, None, None])[2], (red.get(nm) or [None])[0], QJ.base_note('hs@' + eng)))
     np_ = sum(1 for r in RES if r[0] == 'PASS'); nf = sum(1 for r in RES if r[0] == 'FAIL'); ni = sum(1 for r in RES if r[0] == 'INFO')
     body = '# _harness_jo_c2card 결과 %s (%.0f초)\n\nPASS %d · FAIL %d · INFO %d\n\n' % (time.strftime('%m-%d %H:%M'), time.time() - T0, np_, nf, ni) + \
            '\n'.join('%s | %s | %s' % (a, b, str(c)[:600]) for a, b, c in RES) + '\n'

@@ -15,6 +15,7 @@ JOP = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(JOP, u'공통', u'_harness'))
 sys.path.insert(0, JOP)
 import _harness_canvas_jari as CJ          # noqa: E402 — SEED · VENDOR · route_filter · NOISE
+import _qa_jo_common as QJ                 # noqa: E402 — _task_qa_slim(10/4) A-1 · 이 파일엔 5줄 머리가 없어 CJ 바로 뒤에 둔다(CJ 가 머리 뒤에서 QJ 를 먼저 불러 --mode · --snap-in · --snap-out 을 뗀다) · gate = 인자 없음 = 이 판 앞과 같다
 import jo_link as JL                       # noqa: E402 — ⚙ 규칙(8-R 대조)
 from playwright.sync_api import sync_playwright   # noqa: E402
 
@@ -32,6 +33,11 @@ ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
 BASE_REV = ARG('--base', '59b8701')
 WORK = os.path.join(tempfile.gettempdir(), 'h_joscreen')
 TESTS = io.open(os.path.join(HERE, '_harness_jo_joscreen_tests.js'), encoding='utf-8').read()
+if QJ.REGRESS:   # regress 전용 — 주입하는 도구 글(tests.js)의 __JS.jo() 기다림 조건을 앱 지금 꼴에 맞춘다(gate 는 옛 글 그대로 · 파일은 안 고침)
+    #   tests.js 56~57줄 good() 은 「#slot .tree .jtbar 첫 단추 글 = 전체 N」 이 될 때까지(rnd 30초 한도) 기다리는데 앱 첫 단추(jckFltChip 20409 · joscreen0929 A-1-5 9/29 이후)는 「전체 N ▾」 라
+    #   NEW 앱에서는 늘 거짓 → __JS.jo() 가 호출마다 30초를 채운다(regress 08:51 실행: head · panel 의 NEW 쪽 13 번 ≈ 6.5분 + 12 표본 83 조 × 30초 ≈ 41분 → 멈춘 듯 보였다). 「 ▾」 를 떼고 맞댄다.
+    if TESTS.count("txt(b) === '전체 ' + nLaw") == 1:
+        TESTS = TESTS.replace("txt(b) === '전체 ' + nLaw", "txt(b).replace(' ▾', '') === '전체 ' + nLaw")
 READY = "!!window.__JS&&typeof render==='function'"
 RES = []
 SERVERS = {}
@@ -58,6 +64,7 @@ def head_tree(sub, dst, rev=None):
     if os.path.isdir(dst) and os.listdir(dst):
         return dst
     os.makedirs(dst, exist_ok=True)
+    QJ.sub('git:archive')
     raw = git('archive', '--format=tar', rev or BASE_REV, sub)   # ★ A-6(d) 9/30 — rev = 인도 검산을 박을 커밋(reg_gates · 없으면 바탕)
     with tarfile.open(fileobj=io.BytesIO(raw)) as tf:
         tf.extractall(dst)
@@ -108,6 +115,7 @@ def serve(tag, src, data):
 
 class Pg:
     def __init__(self, br, tag, src, data, keep=False, W=1440, H=900, touch=False, ctx=None, port=None):
+        QJ.launch('base' if 'BASE' in tag else 'new')   # 태그에 BASE 가 들면 바탕 앱(BASE · BASEN) — regress 에서는 0 이어야 한다
         self.port = port or serve(tag, src, data)
         self.br = br
         self.ctx = ctx or br.new_context(viewport={'width': W, 'height': H}, device_scale_factor=1, has_touch=touch)
@@ -123,7 +131,11 @@ class Pg:
     def open(self, keep=False):
         self.pg.goto('http://127.0.0.1:%d/index.html?tok=1&who=%s%s' % (self.port, urllib.parse.quote('꼬까'), '&keep=1' if keep else ''), wait_until='load', timeout=180000)
         self.pg.wait_for_function(READY, timeout=180000)
-        self.pg.wait_for_timeout(700)
+        if QJ.GATE:
+            self.pg.wait_for_timeout(700)
+        else:
+            # A-2 — 부팅 고정 700ms 대신 앱이 내놓는 표지: render() 락 busy 가 풀림(= 부팅 render 끝). 안 풀려도 3초 뒤 넘어간다(그 뒤 __JS.jo 가 rnd 로 다시 기다린다)
+            QJ.until(self.pg, "()=>typeof busy==='undefined'||!busy", 3000, 'Pg.open 부팅 render 끝(app busy=false)')
 
     def ev(self, expr, arg=None):
         return self.pg.evaluate(expr, arg) if arg is not None else self.pg.evaluate(expr)
@@ -132,7 +144,10 @@ class Pg:
         if not at or not at.get('on'):
             return False
         self.pg.mouse.click(at['cx'], at['cy'])
-        self.pg.wait_for_timeout(wait)
+        if QJ.GATE:
+            self.pg.wait_for_timeout(wait)
+        else:
+            QJ.sleep(wait, 'click 뒤 앱 반응(표지 없음 · 호출마다 다른 반응 — 3법 칸 · 패널 · 팝업 · 서랍)', page=self.pg)
         return True
 
     def hold(self, x, y, ms=600, wait=400):
@@ -141,7 +156,10 @@ class Pg:
         self.pg.mouse.down()
         self.pg.wait_for_timeout(ms)
         self.pg.mouse.up()
-        self.pg.wait_for_timeout(wait)
+        if QJ.GATE:
+            self.pg.wait_for_timeout(wait)
+        else:
+            QJ.sleep(wait, 'hold 뒤 앱 반응(길게 누르기가 연 칸 · 취소 칸은 「안 열림」을 재므로 표지 없음)', page=self.pg)
 
     def _cdp(self):
         if not self.cdp:
@@ -154,7 +172,10 @@ class Pg:
         self._cdp().send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [pt]})
         self.pg.wait_for_timeout(ms)
         self._cdp().send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
-        self.pg.wait_for_timeout(wait)
+        if QJ.GATE:
+            self.pg.wait_for_timeout(wait)
+        else:
+            QJ.sleep(wait, 'touch 뒤 앱 반응(표지 없음)', page=self.pg)
 
     def pen(self, x, y, ms=600, wait=400):
         """펜 — CDP 마우스 사건 pointerType pen"""
@@ -163,7 +184,10 @@ class Pg:
         c.send('Input.dispatchMouseEvent', {'type': 'mousePressed', 'x': x, 'y': y, 'button': 'left', 'buttons': 1, 'clickCount': 1, 'pointerType': 'pen', 'force': 0.5})
         self.pg.wait_for_timeout(ms)
         c.send('Input.dispatchMouseEvent', {'type': 'mouseReleased', 'x': x, 'y': y, 'button': 'left', 'buttons': 0, 'clickCount': 1, 'pointerType': 'pen'})
-        self.pg.wait_for_timeout(wait)
+        if QJ.GATE:
+            self.pg.wait_for_timeout(wait)
+        else:
+            QJ.sleep(wait, 'pen 뒤 앱 반응(표지 없음)', page=self.pg)
 
     def type(self, s):
         self.pg.keyboard.type(s)
@@ -179,6 +203,7 @@ class Pg:
 
 
 def base_env():
+    QJ.sub('git:show-app')
     hd = head_tree('jo/data', os.path.join(WORK, 'head_' + BASE_REV, 'jo_data'))
     return git('show', '%s:jo/index.html' % BASE_REV).decode('utf-8'), os.path.join(hd, 'jo', 'data')
 
@@ -200,6 +225,8 @@ def envs():
 
 def envs3():
     """BASE = 바탕 앱 + 바탕 데이터 · BASEN = 바탕 앱 + 새 데이터(UI 만 가르는 헛잣대) · NEW"""
+    if QJ.REGRESS:   # regress — 바탕 판은 안 띄우고 안 푼다(헛잣대 칸 몫) · NEW 만
+        return {'NEW': new_env()}
     bs, bd = base_env()
     ns, nd = new_env()
     return {'BASE': (bs, bd), 'BASEN': (bs, nd), 'NEW': (ns, nd)}
@@ -299,9 +326,155 @@ def data_gates():
     return pairs, want, p7want
 
 
+# ══════════ regress 전용(gate 에서 안 불림) — 데이터 관문 · 전 조 본문 없음 셈 · 12 표본(A-3 · A-6) ══════════
+LAW3 = ((u'특허법', u'특허', u'특'), (u'상표법', u'상표', u'상'), (u'디자인보호법', u'디보', u'디'))
+
+
+def _jk(n):
+    """'42의2' → '제42조의2' · '42' → '제42조' (data_gates 의 「앱 조 목록에 없는 조」 셈과 같은 식)"""
+    return (u'제' + n.replace(u'의', u'조의') if u'의' in n else u'제' + n + u'조')
+
+
+def _jload(name):
+    return json.load(io.open(os.path.join(DATA, name), encoding='utf-8'))
+
+
+def nobody_sweep():
+    """전 조 「본문 없음」 셈 — 렌더 없이 산출 파일만 읽어 전수로(83c230f 특허 제26조 「본문을 찾지 못했다」 갈래).
+    앱 popJo(law, k) 의 갈래를 그대로 센다(앱 소스 popJo): 본문 B.조[k] 가 있으면 본문 · 없고 목록 L.삭제[k] 가 null 이 아니면 「k 삭제 <날짜>」 한 줄 · 둘 다 없으면 「본문을 찾지 못했다 — k」 ·
+    본문이 있어도 원본(원문 줄)이 비면 「원문 줄이 없다 — k」. 셀 조 = 앱 조 목록(268·244·238) ∪ 삭제 조 ∪ 1차객 지문 jo 칸이 잇는 조(특허 · 상표 · 디보)."""
+    out, bad = {}, 0
+    for law, short, pfx in LAW3:
+        L, B = _jload('jo_%s_목록.json' % law), _jload('jo_%s_본문.json' % law)
+        dels = L.get(u'삭제') or {}
+        keys = [x['k'] for x in L[u'조']]
+        cand = collections.OrderedDict((k, u'목록') for k in keys)
+        for k in dels:
+            cand.setdefault(k, u'삭제')
+        for q in _jload('jimun_%s.json' % short)[u'문제']:
+            for z in q[u'지문']:
+                for c in z.get('jo') or []:
+                    n = JL.jo_num(c, pfx)
+                    if n:
+                        cand.setdefault(_jk(n), u'지문')
+        n_body = n_del = 0
+        miss, nolines = [], []
+        for k in cand:
+            j = B[u'조'].get(k)
+            if k in B[u'조'] and j not in (None, False, 0, ''):
+                n_body += 1
+                if not (j.get(u'원본') or []):
+                    nolines.append(k)
+            elif dels.get(k) is not None:
+                n_del += 1
+            else:
+                miss.append(k)
+        bad += len(miss) + len(nolines)
+        out[law] = {u'조': len(cand), u'본문': n_body, u'삭제': n_del, u'본문 없음': miss[:6], u'원문 줄 없음': nolines[:6]}
+    return bad == 0, out
+
+
+def data_gates_regress():
+    """regress — 데이터 관문: ⚙ jo_link 를 다시 굽지(JL.apply) 않고 고정 커밋(59b8701 · 539131a) 데이터도 안 푼다(git archive · show 0 — 「8」 인도 데이터 지문 조 · 갈래 수 · 짝지은 행 칸은 gate 만).
+    지금 산출 파일(DATA)만 읽는다 — 새 칸 12 「전 조 본문 없음」 · 앱 조 목록 밖 조 INFO · 8-R 대조 재료(리담 해설 · 제7판 해설 — gate 는 바탕 59b8701 의 리담 해설 · regress 는 지금 데이터)."""
+    ok, sw = nobody_sweep()
+    T('12', u'전 조 본문 없음 0 — 목록 조 · 삭제 조 · 1차객 지문이 잇는 조 전부 본문 또는 「삭제」 글이 있다(렌더 없이 산출 파일 셈 · 특허 268 · 상표 244 · 디보 238 · 83c230f 특허 제26조 「본문을 찾지 못했다」 갈래)', ok, sw)
+    if QJ.SMOKE:
+        return None, None, None
+    pairs, want = [], []
+    for law, short, pfx in LAW3[:2]:
+        Nw = _jload('jimun_%s.json' % short)
+        have = {x['k'] for x in _jload('jo_%s_목록.json' % law)[u'조']}
+        gone = collections.Counter()
+        for q in Nw[u'문제']:
+            for z in q[u'지문']:
+                for c in z['jo']:
+                    n = JL.jo_num(c, pfx)
+                    k = _jk(n) if n else None
+                    if k and k not in have:
+                        gone[k] += 1
+        N('8', u'%s — 앱 조 목록에 없는 조(삭제 조 등 · 조문 화면이 없어 패널로 못 봄)로 이은 지문 조 수' % short, dict(gone.most_common()))
+        for q in Nw[u'문제']:
+            for z in q[u'지문']:
+                for c in z['jo']:
+                    n = JL.jo_num(c, pfx)
+                    if n is None:
+                        continue
+                    pairs.append([z.get('sol') or '', n, law])
+                    want.append(JL.other_law(n, z.get('sol') or '', law))
+    P7 = _jload('jimun_7pan.json')
+    JK = {x['k'] for x in _jload('jo_특허법_목록.json')[u'조']}
+    p7want = {z['id']: p7jo_py(z.get('sol') or '', JK) for z in P7[u'지문']}
+    return pairs, want, p7want
+
+
+def sample12():
+    """12(전 조 칩 N = 패널 「전체」 N)의 표본 조(A-3) — 법마다 첫 · 끝 · 본문이 가장 긴 · 가지(제N조의M) 첫 · 끝 · 1차객 지문이 가장 많이 잇는 셋 + 고정 씨앗 20(QJ.sample).
+    → ({법: [조…]}, 표본 수, 전 조 수). 「전 조 본문 없음」은 위 nobody_sweep 이 렌더 없이 전수로 잰다."""
+    out, n_s, n_all = {}, 0, 0
+    for law, short, pfx in LAW3:
+        L, B = _jload('jo_%s_목록.json' % law), _jload('jo_%s_본문.json' % law)
+        keys = [x['k'] for x in L[u'조']]
+        ln = lambda k: sum(len(t) for t in ((B[u'조'].get(k) or {}).get(u'원본') or []))
+        cnt = collections.Counter()
+        for q in _jload('jimun_%s.json' % short)[u'문제']:
+            for z in q[u'지문']:
+                for c in z.get('jo') or []:
+                    n = JL.jo_num(c, pfx)
+                    if n:
+                        cnt[_jk(n)] += 1
+        have = set(keys)
+        br_ = [k for k in keys if u'의' in k]
+        pick = []
+        for k in [keys[0], keys[-1], max(keys, key=ln)] + br_[:1] + br_[-1:] + [k for k, _ in cnt.most_common() if k in have][:3]:
+            if k not in pick:
+                pick.append(k)
+        pick += QJ.sample([k for k in keys if k not in pick], 20, 'joscreen12')
+        out[law] = pick
+        n_s += len(pick)
+        n_all += len(keys)
+    return out, n_s, n_all
+
+
+# 12 표본 렌더 — 법마다 표본 조를 하나씩 열어(패널 · 전체 · 첫 쪽) 칩 N 과 패널 「전체」 N 을 맞댄다. tests.js chipVsPanelAll 의 한 조 몫을 그대로 옮긴 것(조 목록만 표본).
+#   chipVsPanelAll 이 쓰는 tests.js 안 지역 함수(rnd · idle · until · PANE)는 밖에서 못 부르므로 같은 것을 여기서 다시 짓는다. __JS.jo() 는 안 쓴다(그 기다림 조건이 앱 첫 단추 「전체 N ▾」 와
+#   어긋나 NEW 앱에서는 호출마다 30초 한도를 채운다 — 아래 TESTS 고침). 조마다 20초 한도 · 법마다 300초 예산(넘으면 남은 조를 건너뛰고 diff 에 「시간 초과」 를 적어 FAIL 로 드러낸다 — 끝없이 기다리지 않는다).
+JS_SOME = r"""async ([law, keys]) => {
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const txt = e => e ? (e.textContent || '').replace(/\s+/g, ' ').trim() : '';
+  const PANE = () => document.querySelector('#slot .jopane') || document.querySelector('.pop.wm-jp');
+  const idle = async () => { for (let i = 0; i < 400 && (typeof busy !== 'undefined' && busy); i++) await wait(25); };
+  const until = async (f, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms){ try{ const v = f(); if (v) return v; }catch(e){} await wait(40); } try{ return f(); }catch(e){ return null; } };
+  const rnd = async (good, ms) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < ms){
+      await idle();
+      document.querySelectorAll('#slot > *').forEach(e => { e.dataset.jsold = '1'; });
+      await render(); await idle();
+      const ok = await until(() => { const ch = [...document.querySelectorAll('#slot > *')]; return ch.length > 0 && !ch.some(e => e.dataset.jsold) && (!good || good()); }, 3000);
+      if (ok) return true;
+    }
+    return false;
+  };
+  const out = { n: 0, diff: [], stale: 0 };
+  const T0 = Date.now();
+  for (const k of keys){
+    if (Date.now() - T0 > 300000){ out.diff.push(['(시간 초과 — 남은 조 건너뜀)', null, null]); break; }
+    S.tab = 'jo'; S.law = law; S.jo = k; S.joPanel = true; S.joPanelF = 'all'; S.joPanelP = 0;
+    const ok = await rnd(() => { const t = document.querySelector('#slot .jotitle .no'); return !!t && txt(t) === k && !!PANE(); }, 20000);
+    if (!ok) out.stale++;
+    const a = __JS.chipN(), b = __JS.panelAll(); out.n++;
+    if (a !== b) out.diff.push([k, a, b]);
+  }
+  return out;
+}"""
+
+
 def rule_gates(br, pairs, want, p7want):
     E = envs3()
     for tag in ('BASE', 'NEW'):
+        if QJ.REGRESS and tag == 'BASE':   # regress — 바탕 앱(joOtherLaw 없음)은 헛잣대 몫
+            continue
         src, data = E[tag]
         p = Pg(br, 'rule' + tag, src, data)
         try:
@@ -333,9 +506,13 @@ def head_ok(h):
 def head_gates(br, wk):
     E = envs3()
     for tag in ('BASE', 'NEW'):
+        if QJ.REGRESS and tag == 'BASE':   # regress — 바탕 머리(옛 꼴)는 헛잣대 몫
+            continue
         src, data = E[tag]
         for bname, b, W in (('Chromium', br, 1440), ('WebKit', wk, 820)):
             if tag == 'BASE' and bname == 'WebKit':
+                continue
+            if QJ.SMOKE and bname == 'WebKit':   # smoke — WebKit 은 터치 칸만(이 smoke 칸 없음)
                 continue
             p = Pg(b, 'head' + tag + bname, src, data, W=W, H=1000)
             try:
@@ -363,6 +540,8 @@ def panel_gates(br, wk):
     want1 = [AM.get(x, x) for x in WANT1]
     not1 = [AM.get(x, x) for x in NOT1] + ['TR91043']
     for tag in ('BASE', 'BASEN', 'NEW'):
+        if QJ.REGRESS and tag != 'NEW':   # regress — 바탕 · 바탕앱+새데이터 판은 헛잣대 몫
+            continue
         src, data = E[tag]
         p = Pg(br, 'panel' + tag, src, data, W=1440, H=1000)
         try:
@@ -420,15 +599,24 @@ def panel_gates(br, wk):
             p.close()
     # 12 전 조 칩 = 패널(렌더 · Chromium)
     for tag in ('BASE', 'NEW'):
+        if QJ.REGRESS and tag == 'BASE':   # regress — 바탕 칩(리담만) ≠ 패널은 헛잣대 몫 · 750 조를 NEW·BASE 로 두 번 렌더하던 것의 절반
+            continue
         src, data = E[tag]
+        if QJ.REGRESS:
+            SMP = sample12()   # A-3 — 표본 조(전 조 렌더 750 → 표본 · 「전 조 본문 없음」은 data_gates_regress 가 전수로) · 쪽을 띄우기 전에 셈(파이썬이 JSON 을 읽는 동안 쪽의 route 가 멎지 않게)
         p = Pg(br, 'all' + tag, src, data, W=1440, H=900)
         try:
             out = {}
             for law in (u'특허법', u'상표법', u'디자인보호법'):
-                out[law] = p.ev("l=>__JS.chipVsPanelAll(l)", law)
+                if QJ.GATE:
+                    out[law] = p.ev("l=>__JS.chipVsPanelAll(l)", law)
+                else:
+                    out[law] = p.ev(JS_SOME, [law, SMP[0][law]])
             if tag == 'NEW':
                 T('12', u'전 조 칩 N = 패널 「전체」 N(특허 268 · 상표 244 · 디보 238 · 다름 0)', all(not v['diff'] for v in out.values()),
                   {k: (v['n'], len(v['diff']), v['diff'][:3]) for k, v in out.items()})
+                if QJ.REGRESS:   # 표본으로 줄인 칸은 같은 id 에 「(표본 n/N)」을 값 끝에
+                    RES[-1] = RES[-1][:3] + ('%s (표본 %d/%d)' % (json.dumps(RES[-1][3], ensure_ascii=False, default=str), SMP[1], SMP[2]),)
             else:
                 T('12-헛', u'헛잣대 — 바탕 칩(리담만) ≠ 패널 조 수(채팅 198)', any(v['diff'] for v in out.values()), {k: (v['n'], len(v['diff'])) for k, v in out.items()})
         finally:
@@ -452,8 +640,13 @@ def open_c3(p, tag):
     if p.ev("()=>{const w=__JS.c3();return !!(w&&w.cols&&w.cols.length)}"):
         return True
     at = p.ev("()=>__JS.c3fold()") if tag == 'NEW' else p.ev("()=>__JS.atText('#slot .main .conn button','3법 대응')")
-    ok = p.click(at, 900)
-    p.ev("()=>__JS.wait(300)")
+    if QJ.GATE:
+        ok = p.click(at, 900)
+        p.ev("()=>__JS.wait(300)")
+    else:
+        ok = p.click(at, 0)   # A-2 — 누른 뒤 고정 900 + 300ms 대신 표지: 3법 칸 카드(.thcols > .thcol)가 선다
+        if ok:
+            QJ.until(p.pg, "()=>{const w=__JS.c3();return !!(w&&w.cols&&w.cols.length)}", 4000, 'open_c3 3법 칸 카드 섬(__JS.c3().cols)')
     return ok and p.ev("()=>{const w=__JS.c3();return !!(w&&w.cols&&w.cols.length)}")
 
 
@@ -472,7 +665,11 @@ def typein(p, v):
     for i in range(2):
         at = p.ev("()=>__JS.c3pickInput()")
         p.click(at, 200)
-        p.pg.keyboard.press('Control+A'); p.type(v); p.pg.wait_for_timeout(700)
+        p.pg.keyboard.press('Control+A'); p.type(v)
+        if QJ.GATE:
+            p.pg.wait_for_timeout(700)
+        else:
+            QJ.sleep(700, 'typein — 글 친 뒤 항 목록(select) 갱신 대기(앱 입력 지연 · 표지 없음)', page=p.pg)
         pk = p.ev("()=>__JS.c3pick()")
         if pk and pk.get('inp') == v:
             return dict(pk, tries=i + 1)
@@ -484,6 +681,8 @@ def c3_gates(br, wk):
     E = envs3()
     # 4 — 꼴(1280 크로미움 · 820 웹킷) · 헛잣대 바탕
     for tag, b, bname, W in (('NEW', br, 'Chromium', 1280), ('NEW', wk, 'WebKit', 820), ('BASE', br, 'Chromium', 1280)):
+        if QJ.REGRESS and tag == 'BASE':   # regress — 바탕 3법 칸(옛 꼴)은 헛잣대 몫
+            continue
         src, data = E[tag]
         p = Pg(b, 'c3' + tag + bname, src, data, W=W, H=1000, touch=(bname == 'WebKit'))
         try:
@@ -504,6 +703,8 @@ def c3_gates(br, wk):
             p.close()
     # 5 — 길게 누르기(마우스 · 손가락 · 펜) · 조/항 바꾸기 · 자동 짝 · 짧게 누르기 · 새로고침
     for tag in ('BASEN', 'NEW'):
+        if QJ.REGRESS and tag == 'BASEN':   # regress — 바탕 앱(길게 누르기 없음)은 헛잣대 몫
+            continue
         src, data = E[tag]
         p = Pg(br, 'lp' + tag, src, data, W=1280, H=1000, touch=True)
         try:
@@ -545,7 +746,11 @@ def c3_gates(br, wk):
             # 35 · ② → 그 항 줄만
             h = p.ev("()=>__JS.c3headAt('상표')"); p.hold(h['px'], h['py'], 600)
             pk = typein(p, '35')
-            p.pg.select_option('#slot .c3pick select', u'②'); p.pg.wait_for_timeout(200)
+            p.pg.select_option('#slot .c3pick select', u'②')
+            if QJ.GATE:
+                p.pg.wait_for_timeout(200)
+            else:
+                QJ.sleep(200, '항 ② 고른 뒤 select 반영 대기(표지 없음)', page=p.pg)
             p.click(p.ev("()=>__JS.c3pickBtn('^바꾸기$')"), 1200)
             body = p.ev("()=>__JS.c3body('상표')")
             rows = p.ev("()=>__JS.c3hangRows('상표법','제35조','②')")
@@ -564,7 +769,11 @@ def c3_gates(br, wk):
             T('5', u'「자동 짝으로」 → 상표 카드 = 제1조 · 손값 지움', bool(sang) and sang[0]['k'] == u'제1조' and u'상표법' not in (tf.get(u'특허법:제1조') or {}), {'카드': sang and sang[0]['k'], 'themefix': tf})
             # 짧게 누름 = 조문 팝업(칸 안 열림)
             h = p.ev("()=>__JS.c3headAt('상표')")
-            p.pg.mouse.click(h['bx']['cx'], h['bx']['cy']); p.pg.wait_for_timeout(900)
+            p.pg.mouse.click(h['bx']['cx'], h['bx']['cy'])
+            if QJ.GATE:
+                p.pg.wait_for_timeout(900)
+            else:
+                QJ.until(p.pg, "()=>__JS.popKeys().indexOf('jo|상표법|제1조')>=0", 3000, '짧게 누름 → 조문 팝업 창 키(__JS.popKeys)')   # A-2 — 표지: 앱 POPS 의 창 열쇠
             T('5', u'짧게 누름(조 글자) → 조문 팝업 · 칸 안 열림', u'jo|상표법|제1조' in (p.ev("()=>__JS.popKeys()") or []) and p.ev("()=>__JS.c3pick()") is None, p.ev("()=>__JS.popKeys()"))
             p.ev("()=>{try{closeAllPops()}catch(e){}}")
             # 새로고침 뒤 유지 — 제104조로 두고 keep=1 로 다시 열기
@@ -593,7 +802,11 @@ def c3_gates(br, wk):
         pk = p.ev("()=>__JS.c3pick()")
         p.ev("()=>__JS.jo('특허법','제1조',{panel:false})")
         h = p.ev("()=>__JS.c3headAt('상표')")
-        p.pg.touchscreen.tap(h['bx']['cx'], h['bx']['cy']); p.pg.wait_for_timeout(900)
+        p.pg.touchscreen.tap(h['bx']['cx'], h['bx']['cy'])
+        if QJ.GATE:
+            p.pg.wait_for_timeout(900)
+        else:
+            QJ.until(p.pg, "()=>__JS.popKeys().indexOf('jo|상표법|제1조')>=0", 3000, 'WebKit 톡 → 조문 팝업 창 키(__JS.popKeys)')
         keys = p.ev("()=>__JS.popKeys()")
         T('5', u'WebKit 820 — 마우스 600ms 누름 → 칸 열림 · 톡(짧게) → 조문 팝업(칸 안 열림)', bool(pk and pk['vis'] and pk['under']) and u'jo|상표법|제1조' in (keys or []) and p.ev("()=>__JS.c3pick()") is None,
           {'칸': pk, '팝업': keys})
@@ -606,6 +819,8 @@ def c3_gates(br, wk):
 def pop_gates(br, wk):
     E = envs3()
     for tag, b, bname, W in (('NEW', br, 'Chromium', 1440), ('NEW', wk, 'WebKit', 820), ('BASE', br, 'Chromium', 1440)):
+        if QJ.REGRESS and tag == 'BASE':   # regress — 바탕 「뷰로 이동 ↗」(파란 알약)은 헛잣대 몫
+            continue
         src, data = E[tag]
         p = Pg(b, 'pop' + tag + bname, src, data, W=W, H=1000)
         try:
@@ -628,6 +843,8 @@ def pop_gates(br, wk):
 def drawer_gates(br, wk):
     E = envs3()
     for tag, b, bname in (('NEW', br, 'Chromium'), ('NEW', wk, 'WebKit'), ('BASE', br, 'Chromium')):
+        if QJ.REGRESS and tag == 'BASE':   # regress — 바탕 서랍(옛 꼴)은 헛잣대 몫
+            continue
         src, data = E[tag]
         p = Pg(b, 'dr' + tag + bname, src, data, W=(820 if bname == 'WebKit' else 1440), H=1000)
         try:
@@ -668,6 +885,8 @@ def drawer_gates(br, wk):
 def card_gates(br):
     E = envs3()
     for tag in ('BASEN', 'NEW'):
+        if QJ.REGRESS and tag == 'BASEN':   # regress — 바탕 앱 패널 카드(리담 전용 꼴)는 헛잣대 몫
+            continue
         src, data = E[tag]
         p = Pg(br, 'card' + tag, src, data, W=1440, H=1000)
         try:
@@ -698,6 +917,8 @@ def card_gates(br):
 def jn_gates(br):
     E = envs3()
     for tag in ('BASEN', 'NEW'):
+        if QJ.REGRESS and tag == 'BASEN':   # regress — 바탕 앱(「이 조 아님」 칸 없음)은 헛잣대 몫
+            continue
         src, data = E[tag]
         p = Pg(br, 'jn' + tag, src, data, W=1440, H=1000)
         try:
@@ -810,28 +1031,37 @@ def main():
     os.makedirs(WORK, exist_ok=True)
     pairs = want = p7want = None
     if not ONLY or 'data' in ONLY or 'rule' in ONLY:
-        pairs, want, p7want = data_gates()
+        if QJ.GATE:
+            pairs, want, p7want = data_gates()
+        else:
+            pairs, want, p7want = data_gates_regress()   # regress — ⚙ 재굽기 · 고정 커밋 git 0 · 산출 파일만
     parts = [('rule', None), ('head', head_gates), ('panel', panel_gates), ('c3', c3_gates), ('pop', pop_gates), ('drawer', drawer_gates),
              ('card', card_gates), ('jn', jn_gates), ('reg', reg_gates)]
     if any(not ONLY or k in ONLY for k, _ in parts):
         with sync_playwright() as pw:
             br = pw.chromium.launch()
-            wk = pw.webkit.launch()
+            wk = None if QJ.SMOKE else pw.webkit.launch()   # smoke — WebKit 은 터치 칸만(이 smoke 칸 없음)
             try:
                 for k, fn in parts:
                     if ONLY and k not in ONLY:
                         continue
+                    if QJ.REGRESS and k == 'reg':   # regress — 「10」(조문 탭 밖 화면 글 · 기록 열쇠)은 두 쪽 다 고정 커밋(59b8701 · 539131a) 대조 — 지금 앱을 안 쓴다
+                        continue
+                    if QJ.SMOKE and k != 'head':   # smoke — 「1」 조문 머리(Chromium)만 + 12 「전 조 본문 없음」(데이터)
+                        continue
                     try:
-                        if k == 'rule':
-                            rule_gates(br, pairs, want, p7want)
-                        elif fn in (head_gates, panel_gates, c3_gates, pop_gates, drawer_gates):
-                            fn(br, wk)
-                        else:
-                            fn(br)
+                        with QJ.stage(k):
+                            if k == 'rule':
+                                rule_gates(br, pairs, want, p7want)
+                            elif fn in (head_gates, panel_gates, c3_gates, pop_gates, drawer_gates):
+                                fn(br, wk)
+                            else:
+                                fn(br)
                     except Exception as e:
                         T('RUN', u'%s 묶음이 멈춤' % k, False, repr(e)[:600])
             finally:
-                wk.close()
+                if not QJ.SMOKE:
+                    wk.close()
                 br.close()
     sys.exit(1 if report() else 0)
 

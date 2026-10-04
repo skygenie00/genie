@@ -22,11 +22,15 @@ r"""_task_jo_theme_fix2 §C-1 관문(로컬 · 새 데이터) — 합친 앱(§B
   도구 = 같은 폴더 _harness_jo_theme(덧판 · 서버 · __TM · 가짜 원격) → _harness_jo_revfix0929b(SEED · __RB · 기기 · 결과 줄)
   D11 — 이 파일에 정리omr 글 0(테마 id · 지시서가 적은 이름·낱말만) · 실제 글은 돌 때 재료에서 읽기만 · 그림은 --shots 자리(N:)에만
 """
+# --mode gate|regress|smoke (qa_slim 2026-10-04 · 없으면 gate = 지금과 같음)
+#   regress = NEW 앱 + 새 재료만(옛 재료 git 꺼내기 · 바탕 앱 풀기 · 헛잣대 Y1~Y10 · 앱 띄우기 넷 = 0) · 고정 대기 → 표지(상한 = gate 의 그 ms) · 덧판·H 바꿔 끼우기는 TH 가 처음 쓸 때
+#   smoke   = regress 가운데 C1 · C2(서랍 「테마 N」 · 테마 줄 이름)만
 import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
 _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — qa_slim(2026-10-04) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · TH(_harness_jo_theme)를 가져오기 전에 먼저(인자 읽기보다 먼저)
 import gzip, hashlib, io, json, os, re, shutil, subprocess, sys, time   # noqa: E402
 try:
     sys.stdout.reconfigure(encoding='utf-8')
@@ -59,6 +63,14 @@ NO_TXT = {'t06': '[분할출원]', 't29': '국제예비심사'}
 SHOT_IDS = ['t72', 't74', 't73', 't52', 't37', 't71']
 BK_KIGAN = '#059669'
 OVERS = {}
+_RG_SMOKE_CELLS = ('C1', 'C2')   # smoke 칸(서랍 「테마 N」 = 재료 테마 수 · 테마 줄 이름)
+_RG_DOT_CHG = r"(o) => { const d = document.querySelector('.jtbar .tmdot'); const v = tmDotGet(); return !!d && v !== o && d.classList.contains('on') === (v !== 0) && !(typeof busy !== 'undefined' && busy); }"
+
+
+def _rg_dot_press(p, ms=450):
+    """regress — 거름 점 한 번 누름 + 점 값이 바뀌고 서랍 다시 그림(busy 끝)을 기다린다(표지 = tmDotGet · .tmdot.on · busy)"""
+    o = p.ev("() => tmDotGet()")
+    return TH._rg_press(p, TH.at(p, '.jtbar .tmdot'), ms, _RG_DOT_CHG, 'C.dot', o)
 
 
 # ════════════════════════ 재료 · 덧판 ════════════════════════
@@ -142,7 +154,7 @@ def ink(p, tid, i):
     r = p.ev(IMG_AT, [tid, i])
     if not r:
         return None
-    p.wait(120)
+    p.wait(120) if QJ.GATE else QJ.sleep(120, '그림 scrollIntoView 뒤 자리 안착 — 앱 표지 없음(스크린샷 직전 한 번 더 자리를 잰다)', p.pg)
     r = p.ev(IMG_AT, [tid, i])
     x0, y0, x1, y1 = max(0, r[0]), max(0, r[1]), min(r[4], r[0] + r[2]), min(r[5], r[1] + r[3])
     if x1 - x0 < 2 or y1 - y0 < 2:
@@ -185,10 +197,14 @@ def measure(br, cfg, src, want, tag, full=True):
     M['ntm'] = p.ev("() => (TM.d && TM.d.themes || []).length")
     if full:
         M['drawer'] = p.ev(DRAWER)
+        if QJ.SMOKE:   # smoke — C1 · C2(서랍)만
+            M['errs'] += p.errs[:3]
+            p.close()
+            return M
         for _ in range(3):
-            p.press(TH.at(p, '.jtbar .tmdot'), 450)
+            p.press(TH.at(p, '.jtbar .tmdot'), 450) if QJ.GATE else _rg_dot_press(p)
         M['kigan'] = p.ev(DRAWER)
-        p.press(TH.at(p, '.jtbar .tmdot'), 450)
+        p.press(TH.at(p, '.jtbar .tmdot'), 450) if QJ.GATE else _rg_dot_press(p)
         M['t71'] = p.ev(WIN, 't71')
         for tid in ('t06', 't29'):
             M[tid] = p.ev(WIN, tid)
@@ -211,7 +227,7 @@ def measure(br, cfg, src, want, tag, full=True):
             a = p.ev("id => { const e = __TM.pop('theme|' + id).querySelector('.thfig .wmlk'); e.scrollIntoView({block: 'center'}); return __RB.hitOn(e); }", tid)
             d = p.ev("id => { const e = __TM.pop('theme|' + id).querySelector('.thfig .wmlk'); return [e.textContent, e.dataset.law || TM_LAW, e.dataset.k]; }", tid)
             lk['링크'] = d
-            p.press(a, 700)
+            p.press(a, 700) if QJ.GATE else TH._rg_press(p, a, 700, TH._RG_JOPOP, 'C4.jo', 'jo|%s|%s' % (d[1], d[2]))
             lk['pop'] = p.ev("key => !!POPS.find(x => x._pk === key)", 'jo|%s|%s' % (d[1], d[2]))
             lk['pops'] = p.ev("() => POPS.map(x => x._pk).slice(-3)")
         M['link'] = lk
@@ -356,7 +372,11 @@ def main():
     from playwright.sync_api import sync_playwright
     t0 = time.time()
     raw_new = open(os.path.join(MBREAL, 'theme', 'patent_hr8', '테마.json.gz'), 'rb').read()
-    raw_old = subprocess.run(['git', '-C', MBREAL, 'show', OLDT + ':theme/patent_hr8/테마.json.gz'], capture_output=True).stdout
+    if QJ.GATE:
+        QJ.sub('git:show-data')
+        raw_old = subprocess.run(['git', '-C', MBREAL, 'show', OLDT + ':theme/patent_hr8/테마.json.gz'], capture_output=True).stdout
+    else:
+        raw_old = None   # regress — 옛 재료(헛잣대)를 git 에서 꺼내지 않는다
     D, want = load(raw_new)
     want_old = load(raw_old)[1] if raw_old else None
     imgdir = os.path.join(MBREAL, 'theme', 'patent_hr8', 'img')
@@ -369,33 +389,42 @@ def main():
     if raw_old:
         overlay('old', raw_old)
     src = H.app_src(NEW)
-    base_src = H.app_src(BASE)
+    if QJ.GATE:
+        QJ.sub('git:show-app')
+        base_src = H.app_src(BASE)
     with sync_playwright() as pw:
         br = pw.chromium.launch()
         print('── 새 앱 + 새 재료', flush=True)
         M = measure(br, 'new', src, want, 'n')
         J = judge(M, want)
         for c in sorted(J, key=lambda x: int(x[1:])):
+            if QJ.SMOKE:
+                if c not in _RG_SMOKE_CELLS:
+                    continue
             T(c, DESC[c], J[c][0], J[c][1])
         if M['errs']:
             T('C0', 'JS 오류 0(새 짝)', False, M['errs'])
-        print('── 헛잣대 — 옛 재료(%s) + 새 앱 · 새 재료 + 바탕 앱(%s)' % (OLDT, BASE), flush=True)
-        YD = judge(measure(br, 'old', src, want, 'yd'), want) if raw_old else {}
-        YA = judge(measure(br, 'new', base_src, want, 'ya', full=False), want)
-        for c in sorted(J, key=lambda x: int(x[1:])):
-            yj = (YD if YARD_OF[c] == 'data' else YA).get(c)
-            which = '옛 재료 %s' % OLDT if YARD_OF[c] == 'data' else '바탕 앱 %s' % BASE
-            if yj is None:
-                N('Y' + c[1:], '%s 헛잣대(%s) — 못 잼' % (c, which))
-            elif not yj[0]:
-                T('Y' + c[1:], '%s 헛잣대(%s) = FAIL(물림)' % (c, which), True, yj[1])
-            else:
-                N('Y' + c[1:], '%s 헛잣대(%s) 안 삶 — 바탕도 PASS' % (c, which), yj[1])
+        if QJ.GATE:   # 헛잣대 Y1~Y10(옛 재료 + 새 앱 · 새 재료 + 바탕 앱 = 앱 띄움 넷) = gate 에서만 — regress 는 새 재료 + NEW 앱만
+            QJ.launch('base', 2)
+            print('── 헛잣대 — 옛 재료(%s) + 새 앱 · 새 재료 + 바탕 앱(%s)' % (OLDT, BASE), flush=True)
+            YD = judge(measure(br, 'old', src, want, 'yd'), want) if raw_old else {}
+            YA = judge(measure(br, 'new', base_src, want, 'ya', full=False), want)
+            for c in sorted(J, key=lambda x: int(x[1:])):
+                yj = (YD if YARD_OF[c] == 'data' else YA).get(c)
+                which = '옛 재료 %s' % OLDT if YARD_OF[c] == 'data' else '바탕 앱 %s' % BASE
+                if yj is None:
+                    N('Y' + c[1:], '%s 헛잣대(%s) — 못 잼' % (c, which))
+                elif not yj[0]:
+                    T('Y' + c[1:], '%s 헛잣대(%s) = FAIL(물림)' % (c, which), True, yj[1])
+                else:
+                    N('Y' + c[1:], '%s 헛잣대(%s) 안 삶 — 바탕도 PASS' % (c, which), yj[1])
         if SHOTS:
             print('── 그림 확인(C11)', flush=True)
             shots(br, src, want, SHOTS)
         br.close()
-        if 'webkit' in ENGS:
+        if QJ.SMOKE:
+            pass   # smoke — WebKit 칸 없음(C10-wk 는 smoke 칸 아님)
+        elif 'webkit' in ENGS:
             wk = TH.webkit_try(pw)
             if wk:
                 print('── WebKit iPad 834 — 그림 뜸 · 풀림(INFO)', flush=True)

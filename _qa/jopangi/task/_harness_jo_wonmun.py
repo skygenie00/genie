@@ -12,6 +12,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(인자 없으면 gate = 이 판 앞과 같음) · regress = NEW 만 띄움(바탕 47b12e9 안 풀고 안 띄움 · 헛잣대 칸 끔 · 바탕 값 칸은 기준 스냅샷 · 옛 판 기기 = NEW 앱에서 SYNC_KEYS 의 mkon 을 뺀 흉내) · smoke = 기본 점검 칸만
 import io, json, os, re, sys, time
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -39,7 +40,30 @@ EX107 = {'항 소제목': 13, '따옴표': 2, '지식재산처 → 지재처': 4
 EX140 = {'색 글자': 24, '형광': 3, '밑줄': 1, '각주': 3, '개정 꼬리표': 2, '조 이름표': 4}
 
 
+# _task_qa_slim(10/4) regress 도우미 — 기준 칸(처리안 기준)의 값 끝에 「기댓값이 어디서 왔나」를 붙인다(QJ.base_note · 여럿이면 하나로 합침)
+_PEND = []
+
+
+def _bn(*cids):
+    _PEND.append(' · '.join(sorted({QJ.base_note(c) for c in cids})))
+
+
+def _with_note(d, note):
+    if isinstance(d, str):
+        return (d + ' · ' if d else '') + note
+    if isinstance(d, dict):
+        return dict(d, **{'기준': note})
+    return {'값': d, '기준': note}
+
+
+def _h8(o):
+    import hashlib
+    return hashlib.md5(json.dumps(o, ensure_ascii=False, sort_keys=True, default=str).encode('utf-8')).hexdigest()[:10]
+
+
 def T(grp, name, ok, detail=''):
+    if QJ.REGRESS and _PEND:   # 기준 칸 — 기댓값 출처를 값 끝에
+        detail = _with_note(detail, _PEND.pop())
     RES.append((grp, name, bool(ok), detail))
     print('%s | %s · %s | %s' % ('PASS' if ok else 'FAIL', grp, name, (detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False, default=str))[:420]), flush=True)
 
@@ -77,6 +101,9 @@ class Pg(M.Pg):
 
 
 def envs():
+    if QJ.REGRESS:   # regress — 바탕(47b12e9) 앱 git show · 데이터 git archive 0(바탕 칸은 None)
+        return M.new_env(), (None, None, None)
+    QJ.sub('git:show-app'); QJ.sub('git:archive', 2)   # 셈(§B-4) — M.base_env 가 부르는 둘(gate 에서도 동작 무변)
     return M.new_env(), M.base_env()
 
 
@@ -87,6 +114,14 @@ def fresh(q):
 
 
 def go(q, law, jo):
+    if not QJ.GATE:
+        # regress·smoke — 앱 render() 는 busy 면 아무것도 안 하고 돌아간다(jo/index.html `let busy` · render 첫 줄 · 큐 없음) → 부팅·새로고침 그리기와 겹치면 본문이 앞 조 그대로
+        #   (ⓐ 10/4 09:45 regress 만 FAIL: w-1 「본문 줄 2 · 같음 0 · 첫 다름 = 제1조 글」 · w-3 「모두 끄기」 — 바탕 창을 안 띄워 NEW 부팅 직후 바로 잼 ·
+        #    w-3 「새로고침 뒤에도 그대로」 굵게 null 은 gate 에서도 같은 값 FAIL = 같은 경합) → busy 가 풀린 틈에 같은 평가 안에서 부른다(그 사이 다른 그리기가 못 낌)
+        q.ev("async a=>{for(let i=0;i<800&&typeof busy!=='undefined'&&busy;i++)await new Promise(r=>setTimeout(r,25));return __WM.go(a[0],a[1]);}", [law, jo])
+        QJ.until(q.pg, "()=>typeof busy==='undefined'||!busy", 20000, 'wonmun go — 이 조 그리기 끝(busy 풀림)')
+        QJ.sleep(250, 'wonmun go — gate 와 같은 뒷정리 틈(그리기 뒤 setTimeout scrBack · precScrollKick)', q.pg)
+        return
     q.ev("a=>__WM.go(a[0],a[1])", [law, jo])
     q.pg.wait_for_timeout(250)
 
@@ -105,7 +140,7 @@ def g_w1(p, b, eng):
     G = 'w-1'
     for jo, n_want in (('제140조', 16), ('제107조', 26)):
         res = {}
-        for who, q in (('NEW', p), ('BASE', b)):
+        for who, q in ((('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),)):
             fresh(q); go(q, '특허법', jo)
             res[who] = {'body': q.J("()=>__WM.body()"), 'orig': q.J("a=>__WM.orig(a[0],a[1])", ['특허법', jo])}
         n = res['NEW']; orig = n['orig'] or []
@@ -120,16 +155,18 @@ def g_w1(p, b, eng):
             T(G, u'특허 제140조 본문 줄 글 = 원본[1:] 16/16 · 색·형광·밑줄·굵게 0 · 이름표 0 · 각주 번호 0 · 「<개정 2016.2.29>」 2개 회색', ok, det)
         else:
             T(G, u'특허 제107조 본문 줄 글 = 원본[1:] 26/26 · 꾸밈·이름표·각주 번호 0', ok, det)
-        bb = res['BASE']['body']; bt = [l['t'] for l in bb]
-        T(G + '-헛', u'헛잣대 바탕 %s — 본문 = 볼트 행 글(원본과 다름)' % jo, sum(1 for i, t in enumerate(bt) if i < len(orig) and t == orig[i]) < n_want, {'바탕 줄': len(bt), '같음': sum(1 for i, t in enumerate(bt) if i < len(orig) and t == orig[i])})
-    if eng == 'chromium':
+        if QJ.GATE:   # 헛잣대(관문만)
+            bb = res['BASE']['body']; bt = [l['t'] for l in bb]
+            T(G + '-헛', u'헛잣대 바탕 %s — 본문 = 볼트 행 글(원본과 다름)' % jo, sum(1 for i, t in enumerate(bt) if i < len(orig) and t == orig[i]) < n_want, {'바탕 줄': len(bt), '같음': sum(1 for i, t in enumerate(bt) if i < len(orig) and t == orig[i])})
+    if eng == 'chromium' and not QJ.SMOKE:   # smoke 는 네 법 전 조 훑기를 건넘
         allr = {}
         for law in LAWS:
             allr[law] = p.J("l=>__WM.allOff(l)", law)
         tot = sum((allr[l] or {}).get('n', 0) for l in LAWS); bad = sum((allr[l] or {}).get('bad', 99) for l in LAWS)
         T(G, u'네 법 전 조(%d) — 모두 끈 본문 줄 글 = 원본 줄 · 다름 0(렌더러 wmLineEl 그대로 · 창·기록 없이)' % tot, tot == 1273 and bad == 0, allr)
-        bl = b.J("l=>__WM.allOff(l)", '특허법')
-        T(G + '-헛', u'헛잣대 바탕 — 원문 렌더러 없음', (bl or {}).get('err') == 'no wm', bl)
+        if QJ.GATE:   # 헛잣대(관문만)
+            bl = b.J("l=>__WM.allOff(l)", '특허법')
+            T(G + '-헛', u'헛잣대 바탕 — 원문 렌더러 없음', (bl or {}).get('err') == 'no wm', bl)
 
 
 # ══════════ §B-2 마크업 창 ══════════
@@ -154,6 +191,8 @@ def types_of(w):
 
 def cmp_all_on(p, b, law, jo):
     """NEW 모두 켜기 본문 ↔ BASE(지금 화면 = 볼트 행) — 짝 볼트 행(ri)마다 글 · 꾸밈 도장 · 각주 번호 · 이름표"""
+    if QJ.REGRESS:   # regress — 처리안 기준(w-2 「= 바탕」): 바탕 볼트 행(BASE 앱) 대신 기준 스냅샷 = NEW 의 같은 줄 글 · 꾸밈 도장 · 각주 번호 · 이름표
+        return cmp_all_on_snap(p, law, jo)
     nb = p.J("()=>__WM.body()"); ns = p.J("()=>__WM.sig()")
     bb = b.J("()=>__WM.body()"); bs = b.J("()=>__WM.sig()")
     nby = {}; nsy = {}
@@ -176,6 +215,33 @@ def cmp_all_on(p, b, law, jo):
         if m['sup'] != l['sup'] or m['lbl'] != l['lbl']:
             cnt.append([ri, m['sup'], l['sup'], m['lbl'], l['lbl']])
     return {'law': law, 'jo': jo, 'new 줄': len(nb), 'base 줄': len(bb), '바탕에만': miss, '원문에만(짝 없는 원문 줄)': only_new, '빈칸·점 차이': wsd, '글 다름': diff, '꾸밈 다름': sigd[:6], '꾸밈 다름 수': len(sigd), '각주·이름표 수 다름': cnt}
+
+
+def cmp_all_on_snap(p, law, jo):
+    """regress(처리안 기준) — NEW 모두 켜기 본문 ↔ 기준 스냅샷(줄마다 글 · 꾸밈 도장 · 각주 번호 · 이름표 해시) — cmp_all_on 과 같은 꼴을 돌려준다(공백·점 차이는 따로 안 가름 = 기준과 다르면 글 다름)"""
+    nb = p.J("()=>__WM.body()"); ns = p.J("()=>__WM.sig()")
+    sg = {}
+    for l, s in zip(nb, ns):
+        if l['ri'] is not None:
+            sg[l['ri']] = s['s']
+    cur = {'n': len(nb), 'rows': {str(l['ri']): [_h8(l['t']), _h8(sg.get(l['ri'])), l['sup'], l['lbl']] for l in nb if l['ri'] is not None}}
+    bv = QJ.base('w-2@%s/%s/%s' % (p.eng, law, jo), cur)
+    brow, nrow = bv.get('rows') or {}, cur['rows']
+    tx = {str(l['ri']): l['t'] for l in nb if l['ri'] is not None}
+    only_new = [l['t'][:40] for l in nb if l['ri'] is None]
+    miss, diff, sigd, cnt = [], [], [], []
+    for ri, v in brow.items():
+        if ri not in nrow:
+            miss.append([int(ri), '(기준 스냅샷에만)'])
+            continue
+        m = nrow[ri]
+        if m[0] != v[0]:
+            diff.append([int(ri), tx[ri][:50], '(기준과 다름)'])
+        elif m[1] != v[1]:
+            sigd.append([int(ri), None, None, None, tx[ri][:13]])
+        if m[2] != v[2] or m[3] != v[3]:
+            cnt.append([int(ri), m[2], v[2], m[3], v[3]])
+    return {'law': law, 'jo': jo, 'new 줄': len(nb), 'base 줄': bv.get('n'), '바탕에만': miss, '원문에만(짝 없는 원문 줄)': only_new, '빈칸·점 차이': [], '글 다름': diff, '꾸밈 다름': sigd[:6], '꾸밈 다름 수': len(sigd), '각주·이름표 수 다름': cnt}
 
 
 def g_w2(p, b, eng):
@@ -211,10 +277,13 @@ def g_w2(p, b, eng):
               and pv.get('메모 줄', ['', ''])[1] == '켜면 줄' and pv.get('각주', ['', ''])[1] == '각주' and pv.get('색 글자', ['', ''])[1] in ('빨강 글자', '파랑 글자', '보라 글자', '글자색 글자'), pv)
         # 모두 켜기 → 지금 화면(볼트 행)
         p.press(p.J("a=>__WM.mkAt(a)", 'all'), 'mouse', 900)
-        fresh(b); go(b, '특허법', jo)
+        if QJ.GATE:   # 바탕 쪽 그리기(regress 는 기준 스냅샷)
+            fresh(b); go(b, '특허법', jo)
         c = cmp_all_on(p, b, '특허법', jo)
         res[jo] = c
         w2 = p.J("()=>__WM.mkWin()")
+        if QJ.REGRESS:
+            _bn('w-2@%s/특허법/%s' % (eng, jo))
         T(G, u'%s 「모두 켜기」 → 본문 글 = 볼트 행 글(바탕 지금 화면) · 다름은 빈칸·점만(목록) · 꾸밈 도장·각주 번호·이름표 수 같음 · 켠 것 %d/%d' % (jo, tot, tot),
           not c['바탕에만'] and not c['글 다름'] and not c['꾸밈 다름 수'] and not c['각주·이름표 수 다름'] and re.search(u'켠 것 %d / %d' % (tot, tot), re.sub(r'\s+', ' ', w2.get('bar') or '')), c)
         p.press(p.J("a=>__WM.mkAt(a)", 'none'), 'mouse', 900)
@@ -228,15 +297,21 @@ def g_w2(p, b, eng):
         if not p.J("()=>__WM.mkWin()").get('items'):
             more.append({'law': law, 'jo': jo, '항목': 0}); continue
         p.press(p.J("a=>__WM.mkAt(a)", 'all'), 'mouse', 900)
-        fresh(b); go(b, law, jo)
+        if QJ.GATE:   # 바탕 쪽 그리기(regress 는 기준 스냅샷)
+            fresh(b); go(b, law, jo)
         more.append(cmp_all_on(p, b, law, jo))
     bad = [m for m in more if m.get('바탕에만') or m.get('글 다름') or m.get('꾸밈 다름 수') or m.get('각주·이름표 수 다름')]
+    if QJ.REGRESS:
+        _bn(*['w-2@%s/%s/%s' % (eng, m['law'], m['jo']) for m in more if '항목' not in m])
     T(G, u'표본 12 조(네 법) 「모두 켜기」 = 지금 화면 — 바탕에만 있는 줄 0 · 글 다름 0 · 꾸밈 다름 0', not bad, {'다름': bad[:3], '빈칸·점': [[m['jo'], len(m.get('빈칸·점 차이') or [])] for m in more], '원문에만': [[m['jo'], m.get('원문에만(짝 없는 원문 줄)')] for m in more if m.get('원문에만(짝 없는 원문 줄)')]})
-    fresh(p); fresh(b)
-    go(b, '특허법', '제107조')
-    b.press(b.J("()=>__WM.mkBtn()"), 'mouse', 700)
-    T(G + '-헛', u'헛잣대 바탕 — 「✎ 마크업」 = 스티커 편집 켜기(창 없음)', not b.J("()=>__WM.mkWin()").get('win'), {'창': b.J("()=>__WM.mkWin()").get('win'), 'S': b.J("()=>__WM.cur()")})
-    fresh(b)
+    fresh(p)
+    if QJ.GATE:
+        fresh(b)
+    if QJ.GATE:   # 헛잣대(관문만)
+        go(b, '특허법', '제107조')
+        b.press(b.J("()=>__WM.mkBtn()"), 'mouse', 700)
+        T(G + '-헛', u'헛잣대 바탕 — 「✎ 마크업」 = 스티커 편집 켜기(창 없음)', not b.J("()=>__WM.mkWin()").get('win'), {'창': b.J("()=>__WM.mkWin()").get('win'), 'S': b.J("()=>__WM.cur()")})
+        fresh(b)
 
 
 # ══════════ §B-3 켜기·저장 ══════════
@@ -267,8 +342,12 @@ def g_w3(p, b, eng):
     p.press(p.J("a=>__WM.mkAt(a)", 'none'), 'mouse', 900)
     T(G, u'「모두 끄기」 → jopangi.mkon 칸 지움', p.J("a=>__WM.mkon(a)", u'특허법:제107조') is None and u'특허법:제107조' not in json.loads(p.ev("()=>__WM.mkonRaw()") or '{}'), p.ev("()=>__WM.mkonRaw()"))
     sk = p.J("()=>__WM.syncKeys()") or []   # SYNC_KEYS 는 앞머리 jopangi. 를 붙인 꼴
-    T(G, u'SYNC_KEYS 에 jopangi.mkon(43번째 · 끝)', len(sk) >= 43 and sk[42] == 'jopangi.mkon', [len(sk)] + sk[-3:])   # ★ jo_markfix(9/29) — 44번째 jopangi.jomark 가 뒤에 붙음 · mkon 은 43번째 그대로
-    T(G + '-헛', u'헛잣대 바탕 — SYNC_KEYS 에 jopangi.mkon 없음', 'jopangi.mkon' not in (b.J("()=>__WM.syncKeys()") or []), len(b.J("()=>__WM.syncKeys()") or []))
+    if QJ.REGRESS:   # 처리안 회귀 + 덧붙임(겹침 SYNC_KEYS 셈 — 2cha_unit C-5 · joscreen0929 R3 · theme B7 를 이 칸이 대신) — 바탕 목록의 앞자리가 그대로여야 한다(새 열쇠는 끝에만 붙음)
+        _bk = QJ.base('w-3@%s/SYNC_KEYS' % eng, sk)
+        _bn('w-3@%s/SYNC_KEYS' % eng)
+    T(G, u'SYNC_KEYS 에 jopangi.mkon(43번째 · 끝)', (len(sk) >= 43 and sk[42] == 'jopangi.mkon') if QJ.GATE else (len(sk) >= 43 and sk[42] == 'jopangi.mkon' and sk[:len(_bk)] == _bk), [len(sk)] + sk[-3:])   # ★ jo_markfix(9/29) — 44번째 jopangi.jomark 가 뒤에 붙음 · mkon 은 43번째 그대로
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — SYNC_KEYS 에 jopangi.mkon 없음', 'jopangi.mkon' not in (b.J("()=>__WM.syncKeys()") or []), len(b.J("()=>__WM.syncKeys()") or []))
 
 
 def g_w3s(br, eng):
@@ -297,33 +376,47 @@ def g_w3s(br, eng):
             out['B 본문 굵게'] = bdev.J("a=>__WM.charStyle(a)", u'(불실시)')
         finally:
             bdev.close()
-        c = Pg(br, eng, 'wmSC', bs, bd, be, remote=t1)
-        try:
-            c.ev("()=>__HM.home('특허법')"); c.ev("()=>__HM.sync()")
-            t2 = c.ev("()=>__HM.remote()")
-        finally:
-            c.close()
-        d2 = json.loads(t2 or '{}').get('data', {})
-        out['C(옛 판) 올린 뒤'] = 'jopangi.mkon' in d2
-        a.ev("t=>__HM.setRemote(t)", t2); a.ev("()=>__HM.sync()")
-        d3 = json.loads(a.ev("()=>__HM.remote()") or '{}').get('data', {})
-        out['A 다시 맞춘 뒤'] = 'jopangi.mkon' in d3
-        out['A 값'] = a.J("a=>__WM.mkon(a)", u'특허법:제107조')
+        if not QJ.SMOKE:   # smoke — A → B(두 기기)까지만 · 옛 판 C 다리는 건넘
+            c = (Pg(br, eng, 'wmSC', bs, bd, be, remote=t1) if QJ.GATE else Pg(br, eng, 'wmSC', ns, nd, ne, remote=t1))   # regress — 바탕 앱 대신 NEW 앱(아래에서 mkon 열쇠를 뺌)
+            QJ.launch('base' if QJ.GATE else 'new')
+            try:
+                if QJ.REGRESS:   # 옛 판 기기 흉내 — 앱의 recPayload · recMerge 는 SYNC_KEYS 만 돈다(jo/index.html 3395 · 3434 · 3467 · 3520) → mkon 열쇠를 빼면 올릴 때 data 에서 빠지고 도장 u 만 합집합으로 남는다(앱 20589 주석 「옛 판 기기는 SYNC_KEYS 에 theme 이 없어 올릴 때 data 에서 빠진다」와 같은 길)
+                    c.ev("()=>{try{const i=SYNC_KEYS.indexOf('jopangi.mkon');if(i>=0)SYNC_KEYS.splice(i,1);return i}catch(e){return 'err '+e}}")
+                c.ev("()=>__HM.home('특허법')"); c.ev("()=>__HM.sync()")
+                t2 = c.ev("()=>__HM.remote()")
+            finally:
+                c.close()
+            d2 = json.loads(t2 or '{}').get('data', {})
+            out['C(옛 판) 올린 뒤'] = 'jopangi.mkon' in d2
+            a.ev("t=>__HM.setRemote(t)", t2); a.ev("()=>__HM.sync()")
+            d3 = json.loads(a.ev("()=>__HM.remote()") or '{}').get('data', {})
+            out['A 다시 맞춘 뒤'] = 'jopangi.mkon' in d3
+            out['A 값'] = a.J("a=>__WM.mkon(a)", u'특허법:제107조')
     finally:
         a.close()
     T(G, u'두 기기 같음 — 새 판 A 「항 소제목」 켜기 → 올림 → 새 판 B 받음 = 같은 값 · B 본문 「(불실시)」 굵게', out.get('A 올림') and out.get('B 받음') == va and int(((out.get('B 본문 굵게') or {}).get('fw')) or 0) >= 700, out)
-    N(G, u'옛 판(바탕) 기기가 올리면 mkon 이 원격 data 에서 빠지는가(qfix·bktype 와 같은 창)', out.get('C(옛 판) 올린 뒤'))
-    T(G, u'옛 판 C 가 뺀 뒤 새 판 A 가 다음 맞추기에서 되살려 올림 · A 값 그대로', out.get('A 다시 맞춘 뒤') and out.get('A 값') == va, out)
+    if not QJ.SMOKE:
+        N(G, u'옛 판(바탕) 기기가 올리면 mkon 이 원격 data 에서 빠지는가(qfix·bktype 와 같은 창)', out.get('C(옛 판) 올린 뒤'))
+        T(G, u'옛 판 C 가 뺀 뒤 새 판 A 가 다음 맞추기에서 되살려 올림 · A 값 그대로', out.get('A 다시 맞춘 뒤') and out.get('A 값') == va, out)
 
 
 # ══════════ §B-4 필기 있는 조 ══════════
 def g_w4(p, b, eng):
     G = 'w-4'
     K = u'jo|특허법:제107조'
-    for q in (p, b):
+    for q in ((p, b) if QJ.GATE else (p,)):
         fresh(q); q.ev("k=>__WM.inkSeed(k)", K); go(q, '특허법', '제107조')
-    nb, bb = p.J("()=>__WM.body()"), b.J("()=>__WM.body()")
-    ng, bg = p.J("()=>__WM.geo()"), b.J("()=>__WM.geo()")
+    if QJ.GATE:
+        nb, bb = p.J("()=>__WM.body()"), b.J("()=>__WM.body()")
+        ng, bg = p.J("()=>__WM.geo()"), b.J("()=>__WM.geo()")
+    else:
+        # regress — 처리안 기준(w-4): 바탕(47b12e9) 볼트 행 대신 기준 스냅샷 = NEW 의 같은 필기 조 본문 줄 글 · 줄 높이
+        nb = p.J("()=>__WM.body()")
+        ng = p.J("()=>__WM.geo()")
+        _bv = QJ.base('w-4@%s/body' % eng, {'t': [l['t'] for l in nb], 'g': ng})
+        bb = [{'t': t_} for t_ in _bv['t']]
+        bg = _bv['g']
+        _bn('w-4@%s/body' % eng)
     same_t = [l['t'] for l in nb] == [l['t'] for l in bb]
     dm = set(p.ev("()=>{const b=[...document.querySelectorAll('#slot .main .box')].find(x=>!x.classList.contains('fold')&&!x.closest('.pop'));return b?[...b.querySelectorAll(':scope > .ln')].filter(l=>l.querySelector('.dmn.dmnbr')).map(l=>l.dataset.ri==null?null:+l.dataset.ri):[]}") or [])   # ★ 9/30 A-6 — markfix A-5-4: 「다만,」 새 줄은 필기 조에도 는다(그 줄만 높아진다) — 높이 맞대기에서 그 줄만 뺀다
     same_g = [g for g in ng if g['ri'] not in dm] == [g for g in bg if g['ri'] not in dm]
@@ -353,37 +446,50 @@ def g_w4(p, b, eng):
     ts = p.J("()=>__WM.toasts()")
     st2 = p.J("a=>__WM.mkon(a)", u'특허법:제107조') or {}
     T(G, u'잠긴 항목(항 소제목) 누름 → toast 「%s」 · 기록 무변' % LOCKMSG, any(LOCKMSG in t for t in ts) and st2 == st, {'toast': ts, 'mkon': st2})
-    for q in (p, b):
+    for q in ((p, b) if QJ.GATE else (p,)):
         q.ev("k=>__WM.inkClear(k)", K); fresh(q)
 
 
 # ══════════ §B-5 ✎ 편집 ══════════
 def g_w5(p, b, eng):
     G = 'w-5'
-    for q in (p, b):
+    for q in ((p, b) if QJ.GATE else (p,)):
         fresh(q); q.ev("b=>__WM.orphanSeed(b)", u'특허법:제107조'); go(q, '특허법', '제107조')
     open_mk(p)
     p.press(p.J("a=>__WM.mkAt(a)", 'edit'), 'mouse', 900)
-    b.press(b.J("()=>__WM.mkBtn()"), 'mouse', 900)   # 바탕 = ✎ 마크업 이 곧 스티커 편집
-    nb, bb = p.J("()=>__WM.body()"), b.J("()=>__WM.body()")
-    ns, bs = p.J("()=>__WM.stickBar()"), b.J("()=>__WM.stickBar()")
+    if QJ.GATE:
+        b.press(b.J("()=>__WM.mkBtn()"), 'mouse', 900)   # 바탕 = ✎ 마크업 이 곧 스티커 편집
+    if QJ.GATE:
+        nb, bb = p.J("()=>__WM.body()"), b.J("()=>__WM.body()")
+        ns, bs = p.J("()=>__WM.stickBar()"), b.J("()=>__WM.stickBar()")
+    else:
+        # regress — 처리안 기준(w-5): 바탕(47b12e9) 편집 모드(= ✎ 마크업) 대신 기준 스냅샷 = NEW 의 같은 줄 글 · 스티커 수 · 고아 기록
+        nb = p.J("()=>__WM.body()")
+        ns = p.J("()=>__WM.stickBar()")
+        _bv = QJ.base('w-5@%s/edit' % eng, {'t': [l['t'] for l in nb], 'stk': ns.get('stk'), 'orphan': ns.get('orphan')})
+        bb = [{'t': t_} for t_ in _bv['t']]
+        bs = {'stk': _bv['stk'], 'orphan': _bv['orphan']}
+        _bn('w-5@%s/edit' % eng)
     T(G, u'✎ 편집 켜면 본문 = 볼트 행 전부(바탕 편집 모드와 줄 글 같음) · 스티커 수 같음 · 고아 기록 무변', [l['t'] for l in nb] == [l['t'] for l in bb] and ns.get('on') and ns.get('stk') == bs.get('stk') and ns.get('orphan') == bs.get('orphan') == u'고아 기록 1',
       {'줄': [len(nb), len(bb)], 'new 바': ns, 'base 바': bs})
     res = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in ((('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),)):
         q.press(q.J("i=>__WM.stkAt(i)", 0), 'mouse', 700)
         r0 = q.J("()=>__WM.stkPop()") or {}
         if r0.get('btns'):
             r0['btns'] = [x for x in r0['btns'] if x != u'모두 닫기']   # 떠 있는 창이 둘 이상이면 맨 위 창에 붙는 단추(마크업 창이 떠 있는 NEW 만) — 스티커 창 몫이 아니다
         res[who] = r0
         q.ev("()=>__WM.closePops()")
+    if QJ.REGRESS:   # 처리안 기준(w-5 스티커 창 단추) — 바탕 단추 = 기준 스냅샷(NEW 의 같은 단추)
+        res['BASE'] = QJ.base('w-5@%s/stkpop' % eng, res['NEW'])
+        _bn('w-5@%s/stkpop' % eng)
     T(G, u'스티커 누름 → 지우기·유형·색 창 무변(단추 같음)', (res['NEW'] or {}).get('on') and res['NEW'] == res['BASE'], res)
     w = p.J("()=>__WM.mkWin()")
     T(G, u'✎ 편집 켜진 동안 창은 그대로 뜬다 · 단추 「✎ 편집 켜짐」', w.get('win') and u'✎ 편집 켜짐' in (w.get('bar') or ''), w.get('bar'))
     p.press(p.J("a=>__WM.mkAt(a)", 'edit'), 'mouse', 900)
     nb2 = p.J("()=>__WM.body()")
     T(G, u'✎ 편집 끄면 다시 원문(모두 꺼짐)', all(l['wm'] for l in nb2) and not p.J("()=>__WM.stickBar()").get('on'), {'줄': len(nb2)})
-    for q in (p, b):
+    for q in ((p, b) if QJ.GATE else (p,)):
         fresh(q)
 
 
@@ -431,9 +537,12 @@ def g_w6(p, b, eng):
     n2 = len(p.J("a=>__WM.mks(a)", u'특허법:제107조') or [])
     T(G, u'원문에만 있는 글자(「지식재산처장」 — 지재처 항목 꺼짐) 긁기 → 거품 누름 = 막음 · toast · 새 기록 0', pts2 and any(u'원문에만 있는 글자' in t for t in ts) and n2 == n1 and not p.J("()=>__WM.attPop()"),
       {'toast': ts, '기록': [n1, n2]})
-    fresh(b); go(b, '특허법', '제107조')
-    T(G + '-헛', u'헛잣대 바탕 — 본문에 원문 글자 「지식재산처장」 이 없다(볼트 글 「지재처장」)', not b.J("a=>__WM.selPts(a[0],a[1])", [u'지식재산처장', 0]), None)
-    fresh(p); fresh(b)
+    if QJ.GATE:   # 헛잣대(관문만)
+        fresh(b); go(b, '특허법', '제107조')
+        T(G + '-헛', u'헛잣대 바탕 — 본문에 원문 글자 「지식재산처장」 이 없다(볼트 글 「지재처장」)', not b.J("a=>__WM.selPts(a[0],a[1])", [u'지식재산처장', 0]), None)
+    fresh(p)
+    if QJ.GATE:
+        fresh(b)
 
 
 # ══════════ §B-7 정오문제 창 ══════════
@@ -441,14 +550,21 @@ def g_w7(br, eng):
     G = 'w-7'
     (ns, nd, ne), (bs, bd, be) = envs()
     p = Pg(br, eng, 'wmJN', ns, nd, ne, W=1890, H=870)
-    b = Pg(br, eng, 'wmJB', bs, bd, be, W=1890, H=870)
+    QJ.launch('new')
+    if QJ.GATE:
+        b = Pg(br, eng, 'wmJB', bs, bd, be, W=1890, H=870)
+        QJ.launch('base')
+    else:
+        b = None   # regress — 바탕 Pg 를 안 띄운다
     try:
         res = {}
-        for who, q in (('NEW', p), ('BASE', b)):
+        for who, q in ((('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),)):
             fresh(q); go(q, '특허법', '제140조')
             res[who + '0'] = q.J("()=>__WM.jpWin()")
             q.press(q.J("()=>__WM.jpChip()"), 'mouse', 1200)
             res[who] = q.J("()=>__WM.jpWin()")
+        if QJ.REGRESS:
+            res['BASE'] = {}   # regress — 바탕 창 안 띄움(값 칸 「바탕 본문 폭」 은 비어 나옴)
         n = res['NEW']
         T(G, u'칩 「☑ 정오문제 11」 → 떠 있는 창 보임 · 오른쪽 패널·손잡이 DOM 0 · 본문 폭 1665±2(1890×870)', n.get('vis') and not n.get('pane') and not n.get('handle') and abs((n.get('mainW') or 0) - 1665) <= 2,
           {'창': [n.get('x'), n.get('y'), n.get('w'), n.get('h')], '본문 폭': n.get('mainW'), '바탕 본문 폭': res['BASE'].get('mainW'), '열기 전': res['NEW0'].get('mainW')})
@@ -475,7 +591,9 @@ def g_w7(br, eng):
           and [x['t'] for x in (n2.get('bar') or []) if x['on']] == [u'전체 11', '2'] and [x['t'] for x in (n3.get('bar') or [])] == [u'전체 11', u'해례 5', u'리담 6'] and not n3.get('nav') and len(n3.get('cards') or []) == 5,
           {'2쪽': (n2.get('nav') or {}).get('t'), '해례': [x['t'] for x in (n3.get('bar') or [])], '카드': len(n3.get('cards') or [])})
         keys = p.J("()=>__WM.jpKeys()") or []
-        p.ev("k=>__WM.oxClearAll(k)", keys); b.ev("k=>__WM.oxClearAll(k)", keys)
+        p.ev("k=>__WM.oxClearAll(k)", keys)
+        if QJ.GATE:
+            b.ev("k=>__WM.oxClearAll(k)", keys)
         p.ev("()=>__WM.rr()")
         k1 = keys[0] if keys else None
         p.press(p.J("a=>__WM.jpAt(a[0],a[1])", ['ox', {'k': k1, 'v': 'O'}]), 'mouse', 1200)
@@ -515,12 +633,15 @@ def g_w7(br, eng):
         p.press(p.J("a=>__WM.jpAt(a[0],a[1])", ['rgx', k1]), 'mouse', 900)
         r1b = p.J("k=>__WM.rec(k)", k1)
         T(G, u'창 안 풀이 기록 칸 × 두 번 → 지워짐(rec 없음 · 묘비)', (not r1b or not r1b.get('p')) and len(p.J("k=>__WM.recGone(k)", k1) or []) >= 1, {'rec': r1b, '묘비': p.J("k=>__WM.recGone(k)", k1), '×': x1})
-        bb = res['BASE']
-        T(G + '-헛', u'헛잣대 바탕 — 오른쪽 패널(창 없음) · 「✅ 채점」 있음', not bb.get('win') and bb.get('pane') and (bb.get('grade') or 0) >= 1, bb)
+        if QJ.GATE:   # 헛잣대(관문만)
+            bb = res['BASE']
+            T(G + '-헛', u'헛잣대 바탕 — 오른쪽 패널(창 없음) · 「✅ 채점」 있음', not bb.get('win') and bb.get('pane') and (bb.get('grade') or 0) >= 1, bb)
         p.ev("k=>__WM.oxClearAll(k)", keys)
         T('ERR', u'%s — 정오 창 NEW 앱 오류 0' % eng, not p.errs_all(), p.errs_all()[:6])
     finally:
-        p.close(); b.close()
+        p.close()
+        if QJ.GATE:
+            b.close()
 
 
 def go_key(q, k):
@@ -543,7 +664,7 @@ def go_key(q, k):
 def g_w8(p, b, eng):
     G = 'w-8'
     res = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in ((('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),)):
         fresh(q); go(q, '특허법', '제140조')
         ch = q.J("()=>__WM.ciChip()")
         q.press(ch, 'mouse' if who == 'NEW' else 'mouse', 900)
@@ -572,24 +693,37 @@ def g_w8(p, b, eng):
     ch0 = p.J("()=>__WM.ciChip()")
     p.press(ch0, 'mouse', 700)
     T(G, u'「↩피0」(%s) — 지금처럼 누름 없음(cursor default · 창 없음)' % z, ch0.get('cur') == 'default' and not p.J("()=>__WM.ciWin()").get('win'), ch0)   # ★ 9/30 A-6 — joscreen0929 A-3: 0 칩 = 「↩피0」(흐림 · cursor default · 누름 없음)
-    T(G + '-헛', u'헛잣대 바탕 — 칩 누름 없음(cursor default · 창 없음)', res['BASE']['chip'].get('cur') == 'default' and not res['BASE']['win'].get('win'), res['BASE'])
-    fresh(p); fresh(b)
+    if QJ.GATE:   # 헛잣대(관문만)
+        T(G + '-헛', u'헛잣대 바탕 — 칩 누름 없음(cursor default · 창 없음)', res['BASE']['chip'].get('cur') == 'default' and not res['BASE']['win'].get('win'), res['BASE'])
+    fresh(p)
+    if QJ.GATE:
+        fresh(b)
 
 
 BR = {}
 PARTS = [('w1', g_w1), ('w2', g_w2), ('w3', g_w3), ('w4', g_w4), ('w5', g_w5), ('w6', g_w6), ('w8', g_w8)]
+SMOKE_PARTS = {'w1': ('chromium',), 'w3s': ('chromium',)}   # smoke(_task_qa_slim A-4) — w1(제140조 · 제107조 본문 = 원본 · 꾸밈 0) · w3s(두 기기 A → B 같음 · 동기화 한 바퀴) · ERR(Chromium) · 폰 폭 칸이 없어 WebKit 은 건넘
 
 
 def run_engine(pw, eng):
+    if QJ.SMOKE and not any(eng in v for v in SMOKE_PARTS.values()):   # smoke — 이 엔진에서 잴 smoke 칸이 없으면 브라우저도 안 띄운다
+        return
     br = getattr(pw, eng).launch()
     BR[eng] = br
     (ns, nd, ne), (bs, bd, be) = envs()
     try:
         p = Pg(br, eng, 'wmN', ns, nd, ne)
-        b = Pg(br, eng, 'wmB', bs, bd, be)
+        QJ.launch('new')
+        if QJ.GATE:
+            b = Pg(br, eng, 'wmB', bs, bd, be)
+            QJ.launch('base')
+        else:
+            b = None   # regress — 바탕 Pg 를 안 띄운다
         try:
             for k, fn in PARTS:
                 if ONLY and k not in ONLY:
+                    continue
+                if QJ.SMOKE and eng not in SMOKE_PARTS.get(k, ()):
                     continue
                 print('── %s · %s' % (eng, k), flush=True)
                 try:
@@ -598,9 +732,13 @@ def run_engine(pw, eng):
                     T('RUN', u'%s · %s 묶음이 멈춤' % (eng, k), False, repr(e)[:600])
             T('ERR', u'%s — NEW 앱 오류 0' % eng, not p.errs_all(), p.errs_all()[:6])
         finally:
-            p.close(); b.close()
+            p.close()
+            if QJ.GATE:
+                b.close()
         for k, fn in (('w7', g_w7), ('w3s', g_w3s)):
             if ONLY and k not in ONLY:
+                continue
+            if QJ.SMOKE and eng not in SMOKE_PARTS.get(k, ()):
                 continue
             print('── %s · %s' % (eng, k), flush=True)
             try:

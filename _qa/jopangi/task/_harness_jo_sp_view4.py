@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 r"""_task_jo_sp_view4_cloudD §C 관문 — 상표 1차객 책 카드(뷰객 4판) 앱 · 시험 데이터(_fx_sp_view4 · 지어낸 글)
 
-  python _harness_jo_sp_view4.py [--new <앱 파일 | genie git 판>] [--base <판>] [--fx <시험 데이터 폴더>] [--eng chromium,webkit] [--only C1,C2-3,..] [--res <결과(기본 = 임시 폴더)>] [--yardstick] [--vendor <pdf.js>] [--exam <시험지 폴더>]
+  python _harness_jo_sp_view4.py [--new <앱 파일 | genie git 판>] [--base <판>] [--fx <시험 데이터 폴더>] [--eng chromium,webkit] [--only C1,C2-3,..] [--res <결과(기본 = 임시 폴더)>] [--yardstick] [--vendor <pdf.js>] [--exam <시험지 폴더>] [--mode gate|regress|smoke]
+  --mode(_task_qa_slim 10/4) — 없으면 gate(= 이 판 앞과 같음) · regress = NEW 만(바탕 판 풀기 · 띄우기 0 · 좁은 헛잣대 C1c-헛 · C2-1-헛 · 전수 표 C2-5 는 관문만 ·
+    바탕이 기댓값인 칸(C1i · C2-4 특허 ⭐ · C2-6 · C5)은 기준 스냅샷) · smoke = regress 가운데 C1a · C1b(C1b · C1c · C1e) · C3 만
 
   본판 §E-3(앱) · add1 §B · add2 §B 1~6 · cloudD §C-2 를 시험 데이터로 잰다.
   시험 데이터 = 같은 폴더 _fx_sp_view4/(jimun_상표_뷰객.json · mokcha_상표.json · 표장 그림 webp) — add3 §B 꼴 · 책 글 0(D11).
@@ -16,6 +18,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402  _task_qa_slim(10/4) — --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다(이 줄은 다른 import · 인자 읽기보다 먼저)
 import base64, hashlib, json, os, re, shutil, subprocess, sys, tempfile, threading, time, urllib.parse   # noqa: E402
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer   # noqa: E402
 try:
@@ -392,6 +395,7 @@ def collect_all(p):
 # ════════════════════════ C1 — 본판 §E-3(앱) ════════════════════════
 def c1a(br, src, tag):
     """서랍 = OMR 단원(시험 목차 마디 전부 · 차례 그대로) + 맨 아래 「변리사 기출」(해 줄)"""
+    QJ.launch('new')
     p = open_pg(br, src, PC, tag)
     try:
         go_saeng(p)
@@ -426,6 +430,7 @@ def c1b(got):
 
 
 def c1b_u(br, src, tag):
+    QJ.launch('new')
     p = open_pg(br, src, PC, tag)
     try:
         go_saeng(p)
@@ -471,6 +476,7 @@ def c1c_yard(br, src, tag):
     if line not in src:
         return N('C1c-헛', '좁은 헛잣대 해당 없음', '그 줄 없음(바탕 판)')
     s2 = src.replace(line, "  if (false) return true;   /* ★ sp_view4 §D-5", 1)
+    QJ.launch('new')
     p = open_pg(br, s2, PC, tag)
     try:
         r, cs = unit_cards(p, UNIT_OF['V4-A1-S1-1'], 'x')
@@ -502,6 +508,7 @@ def pair_flow(p, uid, ids, val='O'):
 
 def c1d(br, src, tag, dev=PC, eng='chromium', g='C1d'):
     REMOTE.clear()
+    QJ.launch('new')
     p = H.dev_page(br, tag, src, dev, eng=eng)
     sv(p)
     try:
@@ -550,6 +557,7 @@ def c1e(got):
 
 def c1f(br, src, tag):
     """짝 카드 해설 = 책 해설 + 「📗 리담 해설」(리담 해설이 비면 그 줄 없음) · 정오 = 책(리담으로 메우지 않음)"""
+    QJ.launch('new')
     p = open_pg(br, src, PC, tag)
     try:
         go_saeng(p)
@@ -595,6 +603,7 @@ def c1g(br, src, tag):
     allok, info = True, {}
     rid = next(r['id'] for r in ROWS if r.get('img'))
     for nm, dev in DEVS:
+        QJ.launch('new')
         p = open_pg(br, src, dev, tag + nm)
         try:
             go_saeng(p)
@@ -638,6 +647,7 @@ def ty_expect(got, flt):
 
 def c1h(br, src, tag, got):
     """태그 거르기 넷(상표 = 조문·판례·이론·심사기준) — 펼침 목록에서 손으로 고르면 단원 카드가 그 값만 · 특허 목록 무변"""
+    QJ.launch('new')
     p = open_pg(br, src, PC, tag)
     try:
         go_saeng(p)
@@ -683,19 +693,30 @@ def exv_text(p, law, year):
 
 def c1i(br, src, base_src, tag):
     """연도별 기출 보기 무변(상표 해 셋 · 바탕 = 83c230f) · 2025 62회 = 정답 칸이 차면 채점(시험 덧판)"""
-    pn, pb = open_pg(br, src, PC, tag + 'n'), open_pg(br, base_src, PC, tag + 'b')
+    if QJ.GATE:
+        QJ.launch('new')
+        QJ.launch('base')
+        pn, pb = open_pg(br, src, PC, tag + 'n'), open_pg(br, base_src, PC, tag + 'b')
+    else:   # regress · smoke — 바탕 판은 안 띄운다(기출뷰 글 무변 = 기준 스냅샷의 md5 · 길이)
+        QJ.launch('new')
+        pn, pb = open_pg(br, src, PC, tag + 'n'), None
     try:
         same = {}
         for y in ('2024', '2016', '2010'):
-            a, b = exv_text(pn, '상표법', y), exv_text(pb, '상표법', y)
-            same[y] = (a == b, len(a))
+            if QJ.GATE:
+                a, b = exv_text(pn, '상표법', y), exv_text(pb, '상표법', y)
+                same[y] = (a == b, len(a))
+            else:
+                a = exv_text(pn, '상표법', y)
+                same[y] = (QJ.same('C1i@%s' % y, [hashlib.md5(a.encode('utf-8')).hexdigest(), len(a)]), len(a))
         ok1 = all(v[0] and v[1] > 200 for v in same.values())
-        T('C1i', '연도별 기출 보기 무변 — 상표 2024 · 2016 · 2010 기출뷰 글 = 바탕(83c230f)', ok1, same)
+        T('C1i', '연도별 기출 보기 무변 — 상표 2024 · 2016 · 2010 기출뷰 글 = 바탕(83c230f)', ok1, same if QJ.GATE else dict(same, **{'기준': QJ.base_note('C1i@2024')}))
         t25 = exv_text(pn, '상표법', '2025')
         N('C1i', '2025 62회(지금 공개 데이터)', '「최종정답이 아직 없다」 %s · jimun_상표.json 2025 정답 칸 0(데이터 몫 — 로컬 원장)' % ('보임' if '최종정답이 아직 없다' in t25 else '안 보임'))
     finally:
         pn.close()
-        pb.close()
+        if pb is not None:
+            pb.close()
     # 덧판 — 2025 문항 정답 칸을 채운 시험 jimun_상표.json(앱 무변 · 같은 함수 giGradable 이 채점한다)
     d25 = os.path.join(TMP, 'data25')
     shutil.rmtree(d25, ignore_errors=True)
@@ -711,6 +732,7 @@ def c1i(br, src, base_src, tag):
             n25 += 1
     json.dump(J, open(os.path.join(d25, 'jimun_상표.json'), 'w', encoding='utf-8'), ensure_ascii=False)
     DATA_FOR[tag + '25'] = d25
+    QJ.launch('new')
     p = open_pg(br, src, PC, tag + '25')
     try:
         t = exv_text(p, '상표법', '2025')
@@ -725,6 +747,7 @@ def c1j(br, src, tag):
     """특허 단원을 보던 상태에서 상표·디보로 바꿈 → 오류 0 · 그 법 첫 화면(「'마디' null」 0)"""
     out, okk = {}, True
     for to in ('상표', '디보'):
+        QJ.launch('new')
         p = open_pg(br, src, PC, tag + to)
         try:
             go_law_click(p, '특허')
@@ -783,6 +806,7 @@ def click_chips(p, d, sel, real):
 
 def jo_cells(br, src, tag, g='C2-1'):
     """조문·판례 링크 — 표본 15(손 누름) · 다른 법 인용 3 · 전수(상표 책 카드 칩 전부 · 쪽 안 누름)"""
+    QJ.launch('new')
     p = open_pg(br, src, PC, tag)
     try:
         go_saeng(p)
@@ -860,6 +884,7 @@ def jo_yard(br, src, tag):
     if a not in src or b not in src:
         return N('C2-1-헛', '좁은 헛잣대 해당 없음', '바탕 판')
     s2 = src.replace(a, "LW='특허법'", 1).replace(b, "const _lw='특허법', JOS0", 1)
+    QJ.launch('new')
     p = open_pg(br, s2, PC, tag)
     try:
         go_saeng(p)
@@ -906,6 +931,7 @@ def sk_run(p, q):
 
 def c2_2(br, src, tag):
     """🔍 검색 — 책에만 있는 지문 표본 5(창작 2 · OX 3)의 글 조각 → 결과(판 칩 V4) → 눌러 지문 창 → 「그 지문으로 가기」 = 상표 그 카드 · 특허에서 찾아도 상표로"""
+    QJ.launch('new')
     p = open_pg(br, src, PC, tag)
     try:
         go_saeng(p)
@@ -946,6 +972,7 @@ S_PAIRW = 'V4-A2-OX29'
 
 def c2_3(br, src, tag):
     """서랍 문제 수 = 데이터(uid 한 번) · 문제 창 · ✏️ 연결(찾기) 창 · 📋 정리 창 = 책 줄 표본 5 · 판 칩 V4(H7 0)"""
+    QJ.launch('new')
     p = open_pg(br, src, PC, tag)
     try:
         go_saeng(p)
@@ -1043,6 +1070,7 @@ def c2_4(br, src, base_src, tag):
     """⭐ 정답 선지 자동 중요 — 상표 정답표 지목 선지 표본 5 = 처음 열 때 켜짐(책 카드에 ⭐) · 끈 뒤 새로고침해도 꺼진 채 · 플래그 법마다 · 특허 ⭐ 무변
     새 기기 = 빈 기록 — 가짜 원격(기록 동기화)도 쪽마다 비운다(앞 칸 쪽이 올린 기록이 섞이지 않게)"""
     REMOTE.clear()
+    QJ.launch('new')
     p = open_pg(br, src, PC, tag)
     try:
         go_saeng(p)
@@ -1073,8 +1101,9 @@ def c2_4(br, src, base_src, tag):
         p.close()
     # 특허 ⭐ 무변 — 새 기기(빈 기록)에서 특허 1차객을 처음 열 때 켜지는 열쇠 = 바탕과 같음
     sets = {}
-    for nm, s in (('새', src), ('바탕', base_src)):
+    for nm, s in ((('새', src), ('바탕', base_src)) if QJ.GATE else (('새', src),)):   # regress · smoke — 바탕 판은 안 띄운다
         REMOTE.clear()
+        QJ.launch('base' if nm == '바탕' else 'new')
         q = open_pg(br, s, PC, tag + nm)
         try:
             go_law_click(q, '특허')
@@ -1083,9 +1112,16 @@ def c2_4(br, src, base_src, tag):
             sets[nm] = q.ev("() => { const A = oxAll(); return [Object.keys(A).filter(k => ((A[k] || {}).tg || {}).important).sort(), !!localStorage.getItem('jopangi_auto'), localStorage.getItem('jopangi_auto_상표')]; }")
         finally:
             q.close()
-    ok2 = sets['새'][0] == sets['바탕'][0] and sets['새'][1] == sets['바탕'][1] and len(sets['새'][0]) > 0 and sets['새'][2] is None
-    return T('C2-4', '특허 ⭐ 무변 — 특허 1차객을 처음 열 때 켜지는 열쇠 %d = 바탕 %d(같은 목록) · 특허 플래그 같음 · 상표 플래그 안 생김' % (len(sets['새'][0]), len(sets['바탕'][0])), ok2,
-             {'새': [len(sets['새'][0]), sets['새'][1], sets['새'][2]], '바탕': [len(sets['바탕'][0]), sets['바탕'][1]]}) and ok
+    if QJ.GATE:
+        ok2 = sets['새'][0] == sets['바탕'][0] and sets['새'][1] == sets['바탕'][1] and len(sets['새'][0]) > 0 and sets['새'][2] is None
+        return T('C2-4', '특허 ⭐ 무변 — 특허 1차객을 처음 열 때 켜지는 열쇠 %d = 바탕 %d(같은 목록) · 특허 플래그 같음 · 상표 플래그 안 생김' % (len(sets['새'][0]), len(sets['바탕'][0])), ok2,
+                 {'새': [len(sets['새'][0]), sets['새'][1], sets['새'][2]], '바탕': [len(sets['바탕'][0]), sets['바탕'][1]]}) and ok
+    # regress · smoke — 바탕 열쇠 목록 대신 기준 스냅샷(열쇠 수 · 목록 md5 · 특허 플래그)
+    h24 = hashlib.md5(json.dumps(sets['새'][0], ensure_ascii=False).encode('utf-8')).hexdigest()
+    bv24 = QJ.base('C2-4@특허', {'n': len(sets['새'][0]), 'h': h24, 'flag': sets['새'][1]})
+    ok2 = h24 == bv24['h'] and sets['새'][1] == bv24['flag'] and len(sets['새'][0]) > 0 and sets['새'][2] is None
+    return T('C2-4', '특허 ⭐ 무변 — 특허 1차객을 처음 열 때 켜지는 열쇠 %d = 바탕 %d(같은 목록) · 특허 플래그 같음 · 상표 플래그 안 생김' % (len(sets['새'][0]), bv24['n']), ok2,
+             {'새': [len(sets['새'][0]), sets['새'][1], sets['새'][2]], '바탕': [bv24['n'], bv24['flag']], '기준': QJ.base_note('C2-4@특허')}) and ok
 
 
 # ════════════════════════ C2-5 — 전수 표(add2 §A-6 · §0 일곱 무리 · 83c230f 글자 그대로 · 주석 줄 뺌) ════════════════════════
@@ -1218,16 +1254,25 @@ def pat_snapshot(p):
 
 def c2_6(br, src, base_src, tag):
     a, b = {}, {}
-    for d, s, nm in ((a, src, 'n'), (b, base_src, 'b')):
+    for d, s, nm in (((a, src, 'n'), (b, base_src, 'b')) if QJ.GATE else ((a, src, 'n'),)):   # regress · smoke — 바탕 판은 안 띄운다
+        QJ.launch('base' if nm == 'b' else 'new')
         p = open_pg(br, s, PC, tag + nm)
         try:
             d.update(pat_snapshot(p))
         finally:
             p.close()
-    diff = [k for k in a if a.get(k) != b.get(k)]
+    if QJ.GATE:
+        diff = [k for k in a if a.get(k) != b.get(k)]
+    else:   # regress · smoke — 바탕 값 = 기준 스냅샷(레일 · 첫 화면 · 카드 · 정오문제 창 · 거르기 · 검색 — 칸마다 md5)
+        am = {k: hashlib.md5(json.dumps(v, ensure_ascii=False, sort_keys=True, default=str).encode('utf-8')).hexdigest() for k, v in a.items()}
+        bm = QJ.base('C2-6', am)
+        diff = [k for k in a if am.get(k) != bm.get(k)]
     ncard = sum(len(v) for k, v in a.items() if k.startswith('카드'))
+    det26 = {'다름': diff[:6], '검색 줄': len(a.get('검색', []))}
+    if QJ.REGRESS:
+        det26['기준'] = QJ.base_note('C2-6')
     return T('C2-6', '특허 1차객 무변 — 레일 수 · 첫 화면 · 단원 %d 곳 카드 %d(출처·유형 칩·조 칩·판례 칩·판 칩·이름표·상자) · 정오문제 창 · 거르기 셈 · 검색 = 바탕' % (len(PAT_UNITS), ncard),
-             not diff and ncard > 0, {'다름': diff[:6], '검색 줄': len(a.get('검색', []))})
+             not diff and ncard > 0, det26)
 
 
 def c5(br, src, base_src, tag):
@@ -1235,7 +1280,8 @@ def c5(br, src, base_src, tag):
     allok, info = True, {}
     for nm, dev in DEVS:
         snap = {}
-        for who, s in (('n', src), ('b', base_src)):
+        for who, s in ((('n', src), ('b', base_src)) if QJ.GATE else (('n', src),)):   # regress · smoke — 바탕 판은 안 띄운다
+            QJ.launch('base' if who == 'b' else 'new')
             p = open_pg(br, s, dev, tag + nm + who)
             try:
                 go_law_click(p, '특허')
@@ -1248,9 +1294,16 @@ def c5(br, src, base_src, tag):
                 snap[who] = (h, u, dr, p.ev("() => document.querySelectorAll('#slot .qwrap').length"))
             finally:
                 p.close()
-        same = [snap['n'][k] == snap['b'][k] for k in range(4)]
+        if QJ.GATE:
+            same = [snap['n'][k] == snap['b'][k] for k in range(4)]
+        else:   # regress · smoke — 바탕 글 대신 기준 스냅샷(첫 화면 · 단원 · 서랍 글 md5 + 카드 수)
+            nh = [hashlib.md5(snap['n'][k].encode('utf-8')).hexdigest() for k in range(3)] + [snap['n'][3]]
+            bh = QJ.base('C5@%s' % nm, nh)
+            same = [nh[k] == bh[k] for k in range(4)]
         info[nm] = {'첫 화면': same[0], '단원': same[1], '서랍': same[2], '카드 수': snap['n'][3]}
         allok &= all(same) and snap['n'][3] > 0
+    if QJ.REGRESS:
+        info['기준'] = QJ.base_note('C5@%s' % DEVS[0][0])
     return T('C5', '특허 1차객 화면 무변 — 폰 390 · iPad 834 · PC 1440 첫 화면·단원 화면·서랍 글 = 바탕(83c230f)', allok, info)
 
 
@@ -1263,6 +1316,7 @@ SWEEP_JS = r"""() => { const vw = innerWidth, sw = document.scrollingElement.scr
 def c4(br, src, tag, shots=None):
     allok, info = True, {}
     for nm, dev in DEVS:
+        QJ.launch('new')
         p = open_pg(br, src, dev, tag + nm)
         rec = {}
         try:
@@ -1322,8 +1376,12 @@ def webkit_try(pw):
 def main():
     from playwright.sync_api import sync_playwright
     t0 = time.time()
-    base_src = H.app_src(BASE)
-    src = base_src if YARD else H.app_src(NEW)
+    if QJ.GATE:
+        base_src = H.app_src(BASE)
+        QJ.sub('git:show-app')
+    else:   # regress · smoke — 바탕 판은 안 푼다(바탕이 기댓값인 칸 = 기준 스냅샷)
+        base_src = None
+    src = base_src if (YARD and QJ.GATE) else H.app_src(NEW)
     print('%s _task_jo_sp_view4_cloudD · 앱 = %s · 바탕 = %s · 시험 데이터 = %s(줄 %d · 객관식 %d · 마디 %d)' % ('헛잣대 —' if YARD else '관문', BASE if YARD else NEW, BASE, FX, len(ROWS), len(OBJS), len(MD)), flush=True)
     shots = os.path.join(os.path.dirname(os.path.abspath(OUTF)), 'shots_sp_view4') if not YARD else None
     if shots:
@@ -1334,6 +1392,7 @@ def main():
         shared = {}
 
         def c1_core():
+            QJ.launch('new')
             p = open_pg(br, src, PC, 'core')
             try:
                 go_saeng(p)
@@ -1357,17 +1416,24 @@ def main():
         for g, fn in steps:
             if ONLY and not any(g.upper() == o or g.upper().startswith(o) for o in ONLY):
                 continue
+            if QJ.REGRESS and g in ('C1c-헛', 'C2-1-헛', 'C2-5'):   # 관문만 — 좁은 헛잣대 둘(새 판 소스를 되돌려 띄움) · 전수 표(바탕 앱 소스 대조)
+                continue
+            if not QJ.want(g, smoke=g in ('C1a', 'C1b', 'C3')):   # smoke — 서랍 OMR 단원 · 단원 카드(수·상자·칩) · 같은 uid 쌍 손가락 풀이
+                continue
             if YARD and g in SAME:
                 N(g, '헛잣대 해당 없음', '바탕 = 바탕(무변 잠금 · 좁은 헛잣대는 새 판 칸에서 돎)')
                 continue
             print('── %s' % g, flush=True)
             t1 = time.time()
+            _qs = QJ.stage(g)   # 단계 시간(§B-3) — launch.json stages
+            _qs.__enter__()
             try:
                 got[g] = bool(fn())
             except Exception as e:
                 got[g] = False
                 T(g, '돌다 멈춤', False, str(e).splitlines()[0][:300])
             times[g] = round(time.time() - t1)
+            _qs.__exit__(None, None, None)
             print('   (%s %d초)' % (g, times[g]), flush=True)
         br.close()
         if 'webkit' in ENGS and not YARD and (not ONLY or 'C3' in ONLY):

@@ -16,6 +16,9 @@ sys.stdout.reconfigure(encoding='utf-8')
 CJH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '공통', '_harness')   # env_lanes_fix(9/29) — 이 파일 자리 기준(N: · genie _qa 같은 모양 · 옛: N: 고정 자리)
 sys.path.insert(0, CJH)
 import _harness_canvas_jari as CJ          # noqa: E402 — SEED(기록·교재 fetch 돌림 · 바깥 網 막음) · VENDOR · route_filter · NOISE
+import _qa_jo_common as QJ                 # noqa: E402 — _task_qa_slim(10/4) A-1 · 이 파일엔 5줄 머리가 없어 CJ 바로 뒤에 둔다(CJ 가 머리 뒤에서 QJ 를 먼저 불러 --mode · --snap-in · --snap-out 을 뗀다 · 아래 ARG 읽기보다 앞) · gate = 인자 없음 = 이 판 앞과 같다
+#   --mode regress = NEW 만 띄움(바탕 905169d 안 풀고 안 띄움 · 헛잣대 칸 · 바탕 md5 칸 끔 · 「= 바탕」 넷(A1c · A6 · B8c · D15)은 기준 스냅샷 · 스크린샷 안 찍음)
+#   --mode smoke   = regress 가운데 책상 NEW 한 갈래의 A1·A2 · B8 · D11 · Z 만(터치 문맥 · 헛잣대 · 나머지 칸은 안 잼)
 from playwright.sync_api import sync_playwright   # noqa: E402
 
 
@@ -219,13 +222,15 @@ def grp_of(G, prefix):
 # ══════════ 책상(마우스) ══════════
 def scen_desk(br, src, tag, G):
     g = '%s 책상' % tag
+    QJ.launch('base' if tag == 'BASE' else 'new')   # 셈(§B-4) — gate 에서도 동작 무변
     p = Pg(br, tag, src, 1440, 900)
     NOTES = G['notes5']; N131, N14 = NOTES[0], NOTES[2]
     k131 = 'note|' + N131
 
     def sec(name, fn):   # 묶음마다 따로 — 앞 묶음이 깨져도(바탕 판 · 헛잣대) 뒤 묶음을 잰다
         try:
-            fn()
+            with QJ.stage('%s %s' % (g, name)):
+                fn()
         except Exception as ex:
             T(g, name + ' 묶음 예외', False, repr(ex)[:400])
 
@@ -242,6 +247,8 @@ def scen_desk(br, src, tag, G):
           vis == sorted(NOTES) and len(tg) == len(G['leaf']) and all(r['note'] in G['leaf'] for r in tg),
           {'보임': len(vis), '토글': len(tg), '끝 목차': len(G['leaf']), '손값 없는데 보임': [r['note'] for r in rows if r['tgVis'] and r['note'] not in NOTES][:3], '넣은 값': {k[:8]: v for k, v in (seeded or {}).items()}})
         KEEP.setdefault('namex', {})[tag] = {r['note']: round(r['nr']['x'] - r['rr']['x'], 2) for r in rows if r.get('nr') and r.get('rr')}
+        if not QJ.want('A1b'):   # smoke — A1·A2(smoke 칸)까지만(A1b 이후는 smoke 에서 안 잰다)
+            return
         t131 = row(L, N131)
         T(g, 'A1b 토글 자리 = 줄 들여쓰기 칸(left = paddingLeft − 15px) · 9px 꺾쇠 · aria-expanded=false',
           bool(t131.get('tr')) and near(t131['tr']['x'] - t131['rr']['x'], int(t131['pl'][:-2]) - 15, 0.6) and t131.get('aria') == 'false',
@@ -260,7 +267,7 @@ def scen_desk(br, src, tag, G):
             and r.get('open') and r.get('aria') == 'true' and L['mkcw'] == 1 and c['ol'] == ['solid', '2px', 'rgb(249, 115, 22)'] and c['pg'] == 1 and c['ln'] > 10
         T(g, 'A3 1.3.1 › mouse.click → 펼침 1 · 보기 칸 높이 = 네모 높이(±1px) · 주황 테(2px #f97316) = 칸과 같은 자리 · 발 「N쪽 · 영역 지정」 · ⌄',
           ok, {'v': c and c['v'], 'bx': c and c['bx'], 'ratio': round(ratio, 3), 'foot': c and c['foot'], 'open': r.get('open'), 'ol': c and c['ol'], 'pg': c and c['pg'], 'ln': c and c['ln']})
-        p.shot('%s_A_open' % tag) if tag == 'NEW' else None
+        p.shot('%s_A_open' % tag) if (tag == 'NEW' and QJ.GATE) else None   # regress — 눈으로 볼 스크린샷은 판정 칸이 아니라 안 찍는다
         p.click(p.ev("n=>__HC.tgAt(n)", N131), 400)
         L = p.ev("()=>__HC.list()"); r = row(L, N131)
         T(g, 'A3b 다시 누르면 접힘(펼친 칸 0 · › · aria-expanded=false)', bool(L) and L['mkcw'] == 0 and r.get('open') is False and r.get('aria') == 'false', {'mkcw': L and L['mkcw'], 'open': r.get('open')})
@@ -292,7 +299,7 @@ def scen_desk(br, src, tag, G):
         T(g, 'A4a Ctrl+휠 4번 → 확대(배율 ↑ · 끌기 손 모양) · 마우스 밑 쪽 자리 그대로(±1px) · 목록은 안 굴러감',
           c1['s'] > c0['s'] * 1.3 and c1['z'] and near(u0, u1, 1) and near(w0, w1, 1) and (s0 or {}).get('st') == (s1 or {}).get('st'),
           {'s': [c0['s'], c1['s']], 'z': c1['z'], 'under': [[round(u0, 1), round(w0, 1)], [round(u1, 1), round(w1, 1)]], 'list': [(s0 or {}).get('st'), (s1 or {}).get('st')]})
-        if tag == 'NEW':
+        if tag == 'NEW' and QJ.GATE:   # regress — 스크린샷 안 찍음
             p.shot('%s_A_zoom' % tag)
         pt = p.ev("([n,x,y])=>__HC.clipPt(n,x,y)", [N131, .5, .5])
         p.drag(pt['x'], pt['y'], pt['x'] - 60, pt['y'] - 40)
@@ -360,6 +367,8 @@ def scen_desk(br, src, tag, G):
         n = int(re.search(r'— (\d+)건', gr['h']).group(1)) if gr and re.search(r'— (\d+)건', gr['h']) else None
         T(g, 'B8 민소+특허 · 「%s」 → 「📖 정리 — N건」 = 정리 탭 검색칸 수(#cvQn) · 민소 줄 = min(40, N)(헛잣대: 바탕 0건)' % Q_MS,
           bool(gr) and n is not None and str(n) == nq['n'] and n > 0 and len(ms) == min(40, n), {'머리': gr and gr['h'], 'cvQn': nq['n'], '민소 줄': len(ms)})
+        if not QJ.want('B8b'):   # smoke — B8(smoke 칸)까지만(B8b 이후는 smoke 에서 안 잰다)
+            return
         T(g, 'B8b 줄 꼴 — 머리 「N쪽 · 목차노트」 · 꼬리표 「민소 · 정리」(메모면 · 메모) · 문맥 줄에 검색어 굵게 · 아이콘 📖',
           bool(ms) and all(re.match(r'^\d+쪽( · .+)?$', x['head']) and x['tag'] in ('민소 · 정리', '민소 · 정리 · 메모') and x['ctxB'] == Q_MS and x['hasctx'] and x['icon'] == '📖' for x in ms),
           {'첫 줄': ms[:2]})
@@ -396,7 +405,7 @@ def scen_desk(br, src, tag, G):
         p.pg.fill('#cvQ', ''); p.pg.type('#cvQ', Q_MS, delay=20); p.pg.wait_for_timeout(700)
         hi = p.ev("()=>__HC.hitsInfo()"); cv0 = p.ev("()=>__HC.cv()"); st = p.ev("()=>__HC.stage()")
         kk = 5 if hi and hi['n'] > 5 else 0
-        if tag == 'NEW':
+        if tag == 'NEW' and QJ.GATE:   # regress — 스크린샷 안 찍음
             p.shot('%s_C_before' % tag)
         at = p.ev("k=>__HC.hitRowAt(k)", kk)
         p.click(at, 450)
@@ -408,7 +417,7 @@ def scen_desk(br, src, tag, G):
         T(g, 'C9·C10 vz 0.35 · 「%s」 · 목록 %d번째 줄 mouse.click → 0.4초 뒤 vz 2 · 찾은 글자 = (목록 오른쪽 ~ 무대 오른쪽) 가운데 ±60 · 무대 세로 가운데 ±60(무대 끝이면 화면 안·목록에 안 가림) · 그 줄 .cur(헛잣대: 바탕 무변)' % (Q_MS, kk + 1),
           bool(at and at.get('on')) and near(cv1['vz'], 2, 0.01) and (centred or onscr) and (hi2 or {}).get('cur') == [kk],
           {'vz': [cv0['vz'], cv1['vz']], 'vxy': [[cv0['vx'], cv0['vy']], [cv1['vx'], cv1['vy']]], 'mark': m and [m['cx'], m['cy']], 'target': [round(tx), round(ty)], 'centred': centred, 'onscr': onscr, 'cur': (hi2 or {}).get('cur'), 'at': at and at.get('at')})
-        if tag == 'NEW':
+        if tag == 'NEW' and QJ.GATE:   # regress — 스크린샷 안 찍음
             p.shot('%s_C_after' % tag)
         p.ev("v=>__HC.cvSet(v)", {'vz': 3}); p.pg.wait_for_timeout(200)
         k2 = 8 if hi and hi['n'] > 8 else 1
@@ -457,6 +466,8 @@ def scen_desk(br, src, tag, G):
           bool(at and at.get('on')) and stt['tab'] == 'jo' and sk['disp'] == 'none' and s.get('n') == 1 and s.get('title') == '🔍 정리 · 민소 %s쪽' % n6
           and s.get('sfn') == '6 / %d' % len(H) and s.get('pin') == 1 and inside(s.get('pinR'), s.get('vr')) and s.get('zoomUi') == 0,
           {'tab': stt['tab'], 'sk': sk['disp'], 'n': s.get('n'), 'title': s.get('title'), 'sfn': s.get('sfn'), 'pin': s.get('pin'), 'pinR': s.get('pinR'), 'vr': s.get('vr'), 'where': s.get('where'), 'msg': s.get('msg')})
+        if not QJ.want('D11a'):   # smoke — D11(smoke 칸 · 정리 결과 팝업이 뜸)까지만
+            return
         if not s.get('n'):
             return
         T(g, 'D11a 꼴 — 막대 ◀ ▶ + 목차노트 이름 · 발 「「검색어」 · 휠·두 손가락 = 확대 · 끌기 = 옮기기」 + 「정리 탭 이 자리로 →」 · 첫 크기 폭 min(820, 화면−24) · 높이 min(화면×0.74, 680) · 가운데',
@@ -465,7 +476,8 @@ def scen_desk(br, src, tag, G):
         pr, vr = s.get('pinR') or {}, s.get('vr') or {}
         T(g, 'D11e 첫 배율 1.6 · 찾은 글자(주황)가 보기 칸 가운데(±10px — 스크롤 막대 몫)', near(s['s'], 1.6, 1e-6) and near(pr.get('cx'), vr.get('cx'), 10) and near(pr.get('cy'), vr.get('cy'), 10),
           {'s': s['s'], 'pin': [pr.get('cx'), pr.get('cy')], 'view': [vr.get('cx'), vr.get('cy')]})
-        p.shot('%s_D_minso' % tag)
+        if QJ.GATE:   # regress — 스크린샷 안 찍음
+            p.shot('%s_D_minso' % tag)
         # 휠(Ctrl 없이) — 팝업 안에서 확대 · 뒤로 안 샘
         v = s['vr']; p.pg.mouse.move(v['cx'], v['cy']); p.pg.wait_for_timeout(80); p.pg.mouse.wheel(0, -120); p.pg.wait_for_timeout(300)
         s1 = p.ev("()=>__HC.sf()")
@@ -522,7 +534,8 @@ def scen_desk(br, src, tag, G):
           s.get('n') == 1 and s.get('title') == '🔍 정리 · 특허 %s쪽' % p1 and s.get('imgs') == tm.get('cols', 0) * tm.get('rows', 0) and s.get('imgOk') == s.get('imgs')
           and s.get('pin') == 1 and inside(s.get('pinR'), s.get('vr')) and p.ev("()=>S.tab") == 'jo' and bool(s.get('imgSz')) and near(s['imgSz'][0][0], s['imgSz'][0][1], 1),
           {'title': s.get('title'), 'imgs': [s.get('imgOk'), s.get('imgs')], 'imgSz': s.get('imgSz'), 'pin': s.get('pin'), 'pinR': s.get('pinR'), 'vr': s.get('vr'), 'where': s.get('where')})
-        p.shot('%s_D_patent' % tag)
+        if QJ.GATE:   # regress — 스크린샷 안 찍음
+            p.shot('%s_D_patent' % tag)
         # D13b — 특허 「정리 탭 이 자리로 →」(민소 탭에서)
         p.click(p.ev("()=>__HC.sfAt('go')"), 300)
         p.until("()=>S.law==='특허법'&&S.tab==='omr'?1:0", None, 20000); p.pg.wait_for_timeout(500)
@@ -546,7 +559,8 @@ def scen_desk(br, src, tag, G):
 
     try:
         for nm, fn in (('A', secA), ('A6', secA6), ('B', secB), ('C', secC), ('D', secD), ('D15', secD15)):
-            sec(nm, fn)
+            if QJ.want(nm, smoke=nm in ('A', 'B', 'D')):   # smoke — A(A1·A2) · B(B8) · D(D11)만
+                sec(nm, fn)
         er = p.errs_all()
         T(g, 'Z 페이지 오류 0', not er, er[:6])
     finally:
@@ -556,6 +570,7 @@ def scen_desk(br, src, tag, G):
 # ══════════ 터치 문맥(touchscreen.tap · CDP 한 손가락) ══════════
 def scen_touch(br, src, tag, G):
     g = '%s 터치' % tag
+    QJ.launch('base' if tag == 'BASE' else 'new')   # 셈(§B-4) — gate 에서도 동작 무변
     p = Pg(br, tag + 'T', src, 1440, 900, touch=True)
     NOTES = G['notes5']; N131 = NOTES[0]
     try:
@@ -634,7 +649,7 @@ def report(t0, newf, basef, newmd5, bmd5, G):
     base = [x for x in RES if x[2] is not None and x[0].startswith('BASE')]
     np_, nf = sum(1 for x in new if x[2]), sum(1 for x in new if not x[2])
     bp, bf = sum(1 for x in base if x[2]), sum(1 for x in base if not x[2])
-    lines += ['', '헛잣대(BASE) — PASS %d · FAIL %d (새 기능 잣대는 FAIL 이어야 잣대 — 페이지 오류·손값 없는 줄 같은 무변 잣대는 PASS)' % (bp, bf),
+    lines += ['', ('헛잣대(BASE) — PASS %d · FAIL %d (새 기능 잣대는 FAIL 이어야 잣대 — 페이지 오류·손값 없는 줄 같은 무변 잣대는 PASS)' % (bp, bf)) if QJ.GATE else '헛잣대(BASE) — 안 돎(%s · 바탕 %s 안 띄움 · 「= 바탕」 넷은 기준 스냅샷)' % (QJ.MODE, BASE_REV),
               '합계(NEW)  PASS %d · FAIL %d  (%.0f초)' % (np_, nf, time.time() - t0)]
     txt = '\n'.join(lines) + '\n'
     f = os.path.join(OUT, '_harness_jo_cvfind_result.txt')
@@ -651,24 +666,38 @@ def main():
     os.makedirs(WORK, exist_ok=True); os.makedirs(OUT, exist_ok=True)
     new = io.open(NEWF, encoding='utf-8').read()
     newmd5 = hashlib.md5(new.replace('\r\n', '\n').encode('utf-8')).hexdigest()
-    base = io.open(BASEF, encoding='utf-8').read() if BASEF else git('show', BASE_REV + ':jo/index.html').decode('utf-8')
+    if QJ.GATE:   # regress · smoke — 바탕 앱(905169d)을 안 푼다(git show 0 · --base 파일도 안 읽음)
+        QJ.sub('git:show-app')
+        base = io.open(BASEF, encoding='utf-8').read() if BASEF else git('show', BASE_REV + ':jo/index.html').decode('utf-8')
+    else:
+        base = ''
     bmd5 = hashlib.md5(base.replace('\r\n', '\n').encode('utf-8')).hexdigest()
     G = ground()
     print('땅값', {'hash': G['hash'], 'notes': len(G['names']), 'leaf': len(G['leaf']), 'notes5': G['notes5']}, flush=True)
-    T('땅값', 'BASE = 이 판 바로 앞(905169d · 9bc75cae)', bmd5 == BASE_MD5, bmd5)
+    if QJ.GATE:   # regress — 바탕 md5 칸(땅값1)은 관문만
+        T('땅값', 'BASE = 이 판 바로 앞(905169d · 9bc75cae)', bmd5 == BASE_MD5, bmd5)
     T('땅값', '손값 넣을 다섯 = 모두 끝 목차', all(f in G['leaf'] for f in G['notes5']), G['notes5'])
     run = lambda x: not ONLY or x in ONLY
     with sync_playwright() as pw:
         cr = pw.chromium.launch()
-        if run('base'):
-            scen_desk(cr, base, 'BASE', G)
+        if run('base') and QJ.GATE:   # regress — 바탕 시나리오(헛잣대 · 맞대기 재료)는 gate 만
+            with QJ.stage('책상 BASE'):
+                scen_desk(cr, base, 'BASE', G)
         if run('desk'):
-            scen_desk(cr, new, 'NEW', G)
-        if run('base'):
-            scen_touch(cr, base, 'BASE', G)
-        if run('touch'):
-            scen_touch(cr, new, 'NEW', G)
+            with QJ.stage('책상 NEW'):
+                scen_desk(cr, new, 'NEW', G)
+        if run('base') and QJ.GATE:
+            with QJ.stage('터치 BASE'):
+                scen_touch(cr, base, 'BASE', G)
+        if run('touch') and not QJ.SMOKE:   # smoke — 터치 문맥은 안 잰다(smoke 칸 없음)
+            with QJ.stage('터치 NEW'):
+                scen_touch(cr, new, 'NEW', G)
         cr.close()
+    if QJ.REGRESS and not QJ.SMOKE:   # 처리안 기준 넷(A1c · A6 · B8c · D15) — 바탕 905169d 를 안 띄운다 · NEW 값을 기준 스냅샷(바로 앞 인도 판이 잰 값)에 맞댄다 · 스냅샷 없으면 NEW 자신(첫 기록)
+        for _k, _cid in (('namex', 'A1c@namex'), ('lawdom', 'A6@lawdom'), ('ptn', 'B8c@ptn'), ('other', 'D15@other')):
+            if 'NEW' in KEEP.get(_k, {}):
+                KEEP[_k]['BASE'] = QJ.base(_cid, KEEP[_k]['NEW'])
+        N('NEW 책상', '기준 칸 기댓값 출처(A1c · A6 · B8c · D15)', {c: QJ.base_note(c) for c in ('A1c@namex', 'A6@lawdom', 'B8c@ptn', 'D15@other')})
     g = 'NEW 책상'
     nx = KEEP.get('namex', {})
     if 'BASE' in nx and 'NEW' in nx:
@@ -684,7 +713,7 @@ def main():
     ot = KEEP.get('other', {})
     if 'BASE' in ot and 'NEW' in ot:
         T(g, 'D15 다른 범위(조문·판례) 첫 줄 누름 동작 = 바탕(탭·법·뜬 창·검색창)', ot['NEW'] == ot['BASE'], {'NEW': ot['NEW'], 'BASE': ot['BASE']})
-    return report(t0, NEWF, BASEF or BASE_REV, newmd5, bmd5, G)
+    return report(t0, NEWF, (BASEF or BASE_REV) if QJ.GATE else '(안 띄움)', newmd5, bmd5 if QJ.GATE else '-', G)
 
 
 if __name__ == '__main__':

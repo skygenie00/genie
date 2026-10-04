@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 r"""_task_jo_revfix0930 §B 관문 — 다른 법 인용 링크(볼트 · 데이터 · 화면) · 1차객 서랍 넘침 · 터치 누름 자리 · 민소 편 목록 · 장 머리 한 줄 · 교재 자리 창 자리 · 화면 훑기
 
-  python _harness_jo_revfix0930.py [--new <앱>] [--base <앱 파일 | genie git 판>] [--data <새 데이터 폴더>] [--eng chromium,webkit] [--only B1,..,B9,WK] [--res <결과>] [--yardstick]
+  python _harness_jo_revfix0930.py [--new <앱>] [--base <앱 파일 | genie git 판>] [--data <새 데이터 폴더>] [--eng chromium,webkit] [--only B1,..,B9,WK] [--res <결과>] [--yardstick] [--mode gate|regress|smoke]
+  --mode(_task_qa_slim 10/4) — 없으면 gate(= 이 판 앞과 같음) · regress = NEW 만(바탕 앱 · 바탕 데이터 git 풀기 0 · 바탕이 기댓값인 칸 = 기준 스냅샷 ·
+    B2 의 바탕 데이터 비교 칸은 관문만 · B9 는 revfix0929b B12 가 이미 훑는 여덟 화면을 빼고 덧붙은 둘만 · B7 은 revfix0929b B11 의 잣대(빈 범위 · 민소 편 범위 꼴)를 같이 본다) · smoke = regress 가운데 B3 만
 
   NEW  = 이 판 앱(기본 genie jo/index.html) · 데이터 = genie jo/data(⚙ 로 다시 만든 것) · BASE = 착수 HEAD(기본 genie 9143a83 · 앱과 jo/data 둘 다 그 판)
   --yardstick = BASE 앱 + BASE 데이터 + 고치기 전 볼트 사본(jopangi/task/_vault_before_0930)으로 B1~B8 이 저마다 FAIL 해야 통과 · B9 화면 훑기 = 새 판 흠 − 바탕 흠이라 해당 없음
@@ -14,6 +16,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402  _task_qa_slim(10/4) — --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다(이 줄은 다른 import · 인자 읽기보다 먼저)
 import collections, hashlib, io, json, os, re, sys, tempfile, time, subprocess   # noqa: E402
 try:
     sys.stdout.reconfigure(encoding='utf-8')
@@ -46,6 +49,7 @@ def data_dir(rev):
     if os.path.isfile(os.path.join(d, '_ok')):
         return d
     os.makedirs(d, exist_ok=True)
+    QJ.sub('git:archive')   # 셈만 — 바탕 데이터 git 풀기(regress · smoke 는 0 이어야 한다)
     names = [x for x in git('ls-tree', '--name-only', rev, 'jo/data/').decode('utf-8').split('\n') if x]
     for n in names:
         b = git('show', '%s:%s' % (rev, n))
@@ -124,6 +128,8 @@ if RF_TOOLS not in H.TOOLS:
 
 
 def app_src(x):
+    if x == BASE and x != NEW:
+        QJ.sub('git:show-app')   # 셈만 — 바탕 판 앱 풀기(regress · smoke 는 0 이어야 한다)
     return H.app_src(x)
 
 
@@ -284,9 +290,10 @@ def b2(br):
     g3 = all(w not in (idx.get(k) or []) for k, w in chk)
     ok &= g3
     T(G, '역인덱스 — 특허 제108조 ∌ 제165조 · 특허 제35조 ∌ 제209조 · 디보 제7조 ∌ 제196조', g3, {k: idx.get(k) for k, _ in chk})
+    QJ.launch('new')
     pn = H.dev_page(br, 'b2n', app_src(BASE if YARD else NEW), PC)
     pres = [v[2] for v in L1.values()]
-    if not YARD:
+    if not YARD and QJ.GATE:   # regress · smoke — 바탕 데이터(git 풀기) · 바탕 앱 비교 칸(g4 · g5 · INFO 둘)은 관문만 · 규칙 한 벌(g6)은 새 데이터 글 + SAMPLE 로 잰다
         BD = data_dir(BASE)
         L0 = all_L(BD)
         pres += [v[2] for v in L0.values()]
@@ -302,6 +309,7 @@ def b2(br):
         citing = collections.defaultdict(set)
         for k in gone:
             citing[k[0]].add(k[1])
+        QJ.launch('base')
         pb = H.dev_page(br, 'b2b', app_src(BASE), PC)
         ins = {}
         for law in LAWS:
@@ -346,6 +354,7 @@ B3Q = r"""(a) => { const [head, word] = a; const box = document.querySelector('#
 def b3(br):
     G = 'B3'
     ok = True
+    QJ.launch('new')
     p = H.dev_page(br, 'b3', app_src(BASE if YARD else NEW), PC2)
     cases = [('특허법', '제165조', '「민사소송법」 제98조부터 제103조까지, 제107조제1항ㆍ제2항, ', '제108조', ['제108조', '제111조', '제112조']),
              ('디자인보호법', '제173조', '헤이그협정 ', '제1조', ['제1조']),
@@ -402,13 +411,16 @@ def b4(br, tag='b4', eng='chromium'):
     ok = True
     src = app_src(BASE if YARD else NEW)
     for dn, dev in (('폰390', PHONE), ('iPad834', PAD)):
+        QJ.launch('new')
         p = H.dev_page(br, tag + dn, src, dev)
         q = jt_open(p)
         good = bool(q) and q['sw'] <= q['cw'] and q['zeroLab'] == 0
         ok &= good
         T(G, '%s 1차객 문제 서랍 가로 넘침 0 · 이름 0 폭 줄 0' % dn, good, q and {'sw': q['sw'], 'cw': q['cw'], '넘친 줄': q['over'], '이름 0 폭': q['zeroLab'], '칩 달린 줄': q['labs']})
         p.close()
-    if eng == 'chromium' and not YARD:
+    if eng == 'chromium' and not YARD and QJ.GATE:
+        QJ.launch('new')
+        QJ.launch('base')
         pn, pb = H.dev_page(br, tag + 'pcN', src, PC), H.dev_page(br, tag + 'pcB', app_src(BASE), PC)
         qn, qb = jt_open(pn), jt_open(pb)
         same_dom = pn.ev("() => document.getElementById('jtlist').innerHTML") == pb.ev("() => document.getElementById('jtlist').innerHTML")
@@ -419,6 +431,20 @@ def b4(br, tag='b4', eng='chromium'):
           {'DOM 같음': same_dom, '넘침(새/바탕)': [qn['sw'] - qn['cw'], qb['sw'] - qb['cw']], '크기 바뀐 줄': len(diff), '바탕 넘친 줄': qb['over']})
         pn.close()
         pb.close()
+    elif eng == 'chromium' and not YARD:   # regress · smoke — 착수 HEAD 는 안 띄운다: PC 서랍 DOM(md5) · 줄 크기 · 넘침 = 기준 스냅샷
+        QJ.launch('new')
+        pn = H.dev_page(br, tag + 'pcN', src, PC)
+        qn = jt_open(pn)
+        dom = pn.ev("() => document.getElementById('jtlist').innerHTML")
+        dmd5 = hashlib.md5((dom or '').encode('utf-8')).hexdigest()
+        qb = QJ.base('B4-PC', {'dom': dmd5, 'rows': qn['rows'], 'sw': qn['sw'], 'cw': qn['cw'], 'over': qn['over']})
+        same_dom = dmd5 == qb['dom']
+        diff = [i for i, (a, b) in enumerate(zip(qn['rows'], qb['rows'])) if a != b]
+        good = same_dom and qn['sw'] <= qn['cw'] and len(qn['rows']) == len(qb['rows']) and len(diff) <= len(qb['over'])
+        ok &= good
+        T(G, 'PC — DOM = 착수 HEAD · 넘침 0(착수 HEAD 도 넘쳤다 → 넘친 줄만 크기 바뀜)', good,
+          {'DOM 같음': same_dom, '넘침(새/바탕)': [qn['sw'] - qn['cw'], qb['sw'] - qb['cw']], '크기 바뀐 줄': len(diff), '바탕 넘친 줄': qb['over'], '기준': QJ.base_note('B4-PC')})
+        pn.close()
     return ok
 
 
@@ -492,6 +518,7 @@ def b5(br, tag='b5', eng='chromium'):
     ok = True
     src = app_src(BASE if YARD else NEW)
     for dn, dev in (('폰390', PHONE), ('iPad834', PAD)):
+        QJ.launch('new')
         p = H.dev_page(br, tag + dn, src, dev)
         m = meas_four(p)
         for nm, arr in m.items():
@@ -524,7 +551,9 @@ def b5(br, tag='b5', eng='chromium'):
             ok = False
             T(G, '%s JS 오류' % dn, False, er[:3])
         p.close()
-    if eng == 'chromium' and not YARD:
+    if eng == 'chromium' and not YARD and QJ.GATE:
+        QJ.launch('new')
+        QJ.launch('base')
         pn, pb = H.dev_page(br, tag + 'pcN', src, PC), H.dev_page(br, tag + 'pcB', app_src(BASE), PC)
         mn, mb = meas_four(pn), meas_four(pb)
         for nm in mn:
@@ -544,6 +573,28 @@ def b5(br, tag='b5', eng='chromium'):
             T(G, 'PC %s = 착수 HEAD' % nm, same, det)
         pn.close()
         pb.close()
+    elif eng == 'chromium' and not YARD:   # regress · smoke — 착수 HEAD 는 안 띄운다: PC 네 곳 누름 크기 = 기준 스냅샷(칸마다 · gate 와 같은 규칙)
+        QJ.launch('new')
+        pn = H.dev_page(br, tag + 'pcN', src, PC)
+        mn = meas_four(pn)
+        for nm in mn:
+            if nm.endswith(' 자리'):
+                continue
+            cid = 'B5-PC@%s' % nm
+            if nm == '본문 조 링크':
+                kb = QJ.base(cid, mn[nm])
+                same = QJ.norm(mn[nm]) == kb
+                det = (mn[nm][:2], kb[:2], QJ.base_note(cid))
+            else:
+                ka = [(x['t'], x['w'], x['h'], x['dw'], x['dh']) for x in mn[nm]]
+                kb = QJ.base(cid, ka)
+                same = QJ.norm(ka) == kb
+                if nm == '팝업 머리 단추':   # ★ jo_theme(10/1) A-7 — 글자 차례 = 기준 · PC 누름 = 보이는 크기(±1) (gate 와 같은 규칙 · 바탕 쪽 값만 기준 스냅샷)
+                    same = same or ([x[0] for x in ka] == [x[0] for x in kb] and all(abs(x[3] - x[1]) <= 1 and abs(x[4] - x[2]) <= 1 for x in ka))
+                det = (ka[:3], kb[:3], QJ.base_note(cid))
+            ok &= same
+            T(G, 'PC %s = 착수 HEAD' % nm, same, det)
+        pn.close()
     return ok
 
 
@@ -603,6 +654,7 @@ def b6(br):
     ok &= g1
     T(G, '민소 목록 편 %d — 층 ≠ 장 층 · from/to = 하위 첫~마지막 조 · 제1편 = 제1조~제247조' % len(pyeon), g1, {'편': rows, '장 층': sorted(lv_jang)})
     src = app_src(BASE if YARD else NEW)
+    QJ.launch('new')
     p = H.dev_page(br, 'b6n', src, PC)
     _, q = tree_html(p, '민사소송법')
     pads = {}
@@ -633,7 +685,8 @@ def b6(br):
     g4 = not mism
     ok &= g4
     T(G, '화면 머리 범위(revfix0929b 하위 셈 길) = 데이터 from~to(네 법 · 둘이 다르면 FAIL)', g4, mism[:5])
-    if not YARD:
+    if not YARD and QJ.GATE:
+        QJ.launch('base')
         pb = H.dev_page(br, 'b6b', app_src(BASE), PC)
         same = []
         for law in ('특허법', '상표법', '디자인보호법'):
@@ -652,6 +705,25 @@ def b6(br):
         _, qo = tree_html(pb, '민사소송법')
         N(G, '옛 앱 + 새 데이터 — 민소 서랍(보고용 · 새로고침 안 한 탭 · 아이패드 PWA)', {'머리 갈래': dict(collections.Counter(h[0] for h in qo['heads'])), '접기': fold_seq(pb, '민사소송법')})
         pb.close()
+    elif not YARD:   # regress · smoke — 착수 HEAD 는 안 띄운다: 특 · 상 · 디 서랍 DOM(md5) · 접기 글자·동작 = 기준 스냅샷(법마다 · gate 와 같은 규칙) · 옛 앱 + 새 데이터 INFO 는 관문만
+        same = []
+        for law in ('특허법', '상표법', '디자인보호법'):
+            hn, _qn = tree_html(p, law)
+            fn = fold_seq(p, law)
+            cid = 'B6-g5@%s' % law
+            if law == '상표법':   # ★ sp_view4(10/3) — 서랍 줄 「정오문제 N」 단추(.jck)는 빼고 DOM 을 맞대고 줄마다 수가 줄지 않는지 따로 본다
+                cn = jck_counts(hn)
+                dmd5 = hashlib.md5(JCK.sub('', hn or '').encode('utf-8')).hexdigest()
+                bv = QJ.base(cid, {'dom': dmd5, 'fold': fn, 'cn': cn})
+                down = [i for i, (a, b) in enumerate(zip(cn, bv['cn'])) if a < b] if len(cn) == len(bv['cn']) else ['줄 수 다름 %d/%d' % (len(cn), len(bv['cn']))]
+                same.append((law, dmd5 == bv['dom'] and not down, fn == bv['fold'], fn, {'정오문제 수 합(새 · 기준)': [sum(cn), sum(bv['cn'])], '준 줄': down[:5], '기준': QJ.base_note(cid)}))
+                continue
+            dmd5 = hashlib.md5((hn or '').encode('utf-8')).hexdigest()
+            bv = QJ.base(cid, {'dom': dmd5, 'fold': fn})
+            same.append((law, dmd5 == bv['dom'], fn == bv['fold'], fn))
+        g5 = all(s[1] and s[2] for s in same)
+        ok &= g5
+        T(G, '특허 · 상표 · 디보 서랍 DOM · 접기 글자·동작 = 착수 HEAD', g5, same)
     T(G, 'JS 오류', not p.errs, p.errs[:3])
     ok &= not p.errs
     p.close()
@@ -673,6 +745,7 @@ def b7(br):
     ok = True
     src = app_src(BASE if YARD else NEW)
     for nm, dev, tw in (('폰390', PHONE, None), ('iPad834', PAD, None), ('PC212', PC, 212), ('PC276', PC, 276), ('PC320', PC, 320)):
+        QJ.launch('new')
         p = H.dev_page(br, 'b7' + nm, src, dev)
         for law in LAWS:
             p.ev("async a => { localStorage.removeItem('jopangi_ui_jofold'); if (a[1]) { S.treeW = a[1]; document.documentElement.style.setProperty('--trw', a[1] + 'px'); } await __RB.jo(a[0], '제1조', true); }", [law, tw])
@@ -681,6 +754,15 @@ def b7(br):
             if law == '특허법' and q and q['long']:
                 L0 = q['long'][0]
                 good = good and bool(L0['title']) and (L0['sw'] <= L0['cw'] or L0['to'] == 'ellipsis')
+            if QJ.REGRESS:   # 합침 ← revfix0929b B11(같은 서랍 5 화면 × 4 법) — B11 의 빈 범위 0 · 민소 편 범위 꼴(제N조~제N조)을 같은 서랍에서 같이 본다(더 엄하게)
+                q11 = p.ev(H.B11Q)
+                g11 = bool(q11) and not q11['empty']
+                ex11 = {}
+                if law == '민사소송법':
+                    ex11 = {k: (q11 or {}).get('rng', {}).get(k) for k in ('제2편 제', '제3편 상')}
+                    g11 = g11 and all(v and re.match(r'^제\d+조(의\d+)?~제\d+조(의\d+)?$', v) for v in ex11.values())
+                good = good and g11
+                q = dict(q or {}, **{'B11 합침': {'빈 범위': (q11 or {}).get('empty'), '민소 편 범위': ex11}})
             ok &= good
             T(G, '%s %s 머리 높이 30±2 · 범위 잘림 0 · 서랍 넘침 0' % (nm, law), good, q)
         p.close()
@@ -704,6 +786,7 @@ def b8(br):
     src = app_src(BASE if YARD else NEW)
     for (W, Hh, touch) in ((1440, 900, False), (1511, 1043, False), (834, 1194, True)):
         ys = (300, 500, 700, 850)
+        QJ.launch('new')
         p = H.Pg(br, 'chromium', 'b8%d' % W, src, W, Hh, touch=touch, dsf=2 if touch else 1)
         p.ev("async () => await __RB.home('특허법')")
         p.ev("() => __RB.wordsDelay(400)")
@@ -748,7 +831,8 @@ def b8(br):
         p.close()
     if not YARD:
         rs = {}
-        for which, s in (('new', src), ('base', app_src(BASE))):
+        for which, s in ((('new', src), ('base', app_src(BASE))) if QJ.GATE else (('new', src),)):   # regress · smoke — 착수 HEAD 는 안 띄운다(칩 y 네 곳 위치 = 기준 스냅샷)
+            QJ.launch(which)
             p = H.Pg(br, 'chromium', 'b8ph' + which, s, 390, 844, touch=True, dsf=3)
             p.ev("async () => await __RB.home('특허법')")
             p.ev("a => __RB.pinSeed(a[0], a[1], a[2])", [H.U_PIN, H.PIN_P, H.PIN_R])
@@ -764,6 +848,9 @@ def b8(br):
         # ★ jo_theme(10/1) A-7(_task_jo_theme.md 82줄) — 창 머리(.ph) 높이가 바뀜(chromium 31.44 → 39) → 「그대로(±2)」 또는 「아래 끝 +머리 차 · 또는 바닥 붙은 창 위 끝 −머리 차(±2)」
         dph = lambda a, b: (a[2] or 0) - (b[2] or 0)
         same8 = lambda a, b: (abs(a[0] - b[0]) <= 2 and abs(a[1] - b[1]) <= 2) or (abs(a[0] - b[0]) <= 2 and abs(a[1] - b[1] - dph(a, b)) <= 2) or (abs(a[1] - b[1]) <= 2 and abs(a[0] - b[0] + dph(a, b)) <= 2)
+        if QJ.REGRESS:   # regress · smoke — 착수 HEAD 대신 기준 스냅샷(칩 y 네 곳의 [창 위 · 아래 · 머리 높이])
+            rs['base'] = QJ.base('B8-폰', rs['new'])
+            rs['기준'] = QJ.base_note('B8-폰')
         good = all(a and b and same8(a, b) for a, b in zip(rs['new'], rs['base']))
         ok &= good
         T(G, '폰 390 교재 자리 창 = 착수 HEAD(±2 · 칩 y 300→420→600→420)', good, rs)
@@ -771,8 +858,13 @@ def b8(br):
 
 
 # ════════════════════════ B9 화면 훑기 ════════════════════════
-def sweep_more(br, src, tag, dev):
-    out, errs = H.sweep_screens(br, src, tag, dev)
+def sweep_more(br, src, tag, dev, extra_only=False, kind='new'):
+    if extra_only:   # regress · smoke — 앞 여덟 화면은 revfix0929b B12 가 같은 함수(H.sweep_screens)로 같은 앱 · 같은 데이터를 훑는다(합침) → 덧붙은 둘만
+        out, errs = {}, []
+    else:
+        QJ.launch(kind)
+        out, errs = H.sweep_screens(br, src, tag, dev)
+    QJ.launch(kind)
     p = H.dev_page(br, tag + 'x', src, dev)
     touch = dev in (PHONE, PAD)
     p.ev("async () => await __RB.jo('민사소송법', '제30조', true)")
@@ -788,14 +880,21 @@ def b9(br):
     G = 'B9'
     ok = True
     for dn, dev in (('PC', PC), ('폰390', PHONE), ('iPad834', PAD)):
-        n, en = sweep_more(br, app_src(NEW), 'b9N' + dn, dev)
-        b, eb = sweep_more(br, app_src(BASE), 'b9B' + dn, dev)
+        if QJ.GATE:
+            n, en = sweep_more(br, app_src(NEW), 'b9N' + dn, dev)
+            b, eb = sweep_more(br, app_src(BASE), 'b9B' + dn, dev, False, 'base')
+        else:   # regress · smoke — 바탕 판 훑기는 안 한다 · 앞 여덟 화면은 revfix0929b B12 몫 → 덧붙은 둘(민소 서랍 · 1차객 서랍)만 · 바탕 흠 = 기준 스냅샷
+            n, en = sweep_more(br, app_src(NEW), 'b9N' + dn, dev, True)
+            b, eb = {}, []
         for scr in n:
             nn = set(H.B12_RENAME.get(x, x) for x in n[scr])   # ★ jo_theme(10/1) — revfix0929b B12 와 같은 고침: 「이동 ↗」 이름표 = 옛 「뷰로 이동 ↗」(A-7 85줄)
+            if QJ.REGRESS:
+                b[scr] = QJ.base('B9@%s/%s' % (dn, scr), sorted(nn))
             new = sorted(nn - set(b.get(scr, [])))
             gone = sorted(set(b.get(scr, [])) - nn)
             dot = None
             if H.B12_DOT in new and dev in (PHONE, PAD):   # ★ 거름 점 = fix1 A-34-3(_task_jo_theme_fix1.md 57줄) 잣대로 따로 잰다(높이 ≥ 36 · 가운데 · 가로챔 0)
+                QJ.launch('new')
                 dot = H.b12_dot(br, app_src(NEW), 'b9D' + dn, dev)
                 if dot[0]:
                     new.remove(H.B12_DOT)
@@ -804,6 +903,8 @@ def b9(br):
             det = {'새로': new[:6], '없어짐': gone[:4], '남은(바탕에도 있음)': len(nn & set(b.get(scr, [])))}
             if dot:
                 det['거름 점(fix1 A-34-3 · 높이 ≥ 36 · 가로 값 적기)'] = dot[1]
+            if QJ.REGRESS:
+                det['기준'] = QJ.base_note('B9@%s/%s' % (dn, scr))
             T(G, '%s %s 새로 생긴 흠 0' % (dn, scr), good, det)
         en = [e for e in en if 'ResizeObserver loop' not in e]
         if en:
@@ -824,19 +925,24 @@ def main():
         for g, fn in steps:
             if ONLY and g not in ONLY:
                 continue
+            if not QJ.want(g, smoke=(g == 'B3')):   # smoke — 다른 법 인용 글자 링크(0930 의 핵심 결함) 한 곳만
+                continue
             if YARD and g == 'B9':
                 N(g, '헛잣대 해당 없음', '화면 훑기 = 새 판 흠 − 바탕 흠 · 바탕끼리 견주면 늘 0(잣대가 아니라 잠금)')
                 continue
             print('── %s' % g, flush=True)
             t1 = time.time()
+            _qs = QJ.stage(g)   # 단계 시간(§B-3) — launch.json stages
+            _qs.__enter__()
             try:
                 got[g] = bool(fn())
             except Exception as e:
                 got[g] = False
                 T(g, '돌다 멈춤', False, str(e).splitlines()[0][:300])
+            _qs.__exit__(None, None, None)
             print('   (%s %.0f초)' % (g, time.time() - t1), flush=True)
         br.close()
-        if 'webkit' in ENGS and not YARD and (not ONLY or 'WK' in ONLY):
+        if 'webkit' in ENGS and not YARD and (not ONLY or 'WK' in ONLY) and not QJ.SMOKE:   # smoke — WebKit 은 폰 폭 터치 smoke 칸이 없어 안 띄움
             wk = H.webkit_try(pw)
             if wk:
                 for g, fn in (('B4', lambda: b4(wk, 'wk4', 'webkit')), ('B5', lambda: b5(wk, 'wk5', 'webkit'))):

@@ -7,6 +7,12 @@
    시험문번인가」·「원장짝없음 수」·「빠진 것 0」·「멱등」·헛잣대.
 재료 = 빌드 산출(`%LOCALAPPDATA%\\jopangi\\_out\\data`) · 원장 CSV · 문항 JSON.
 """
+import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
+_d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
+while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
+    _d_r = _os_r.path.dirname(_d_r)
+_sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안
 import collections
 import csv
 import hashlib
@@ -34,7 +40,7 @@ def _gshow(rev, rel):
     return subprocess.run(['git', '-C', _roots.genie(), '-c', 'core.quotepath=false', 'show', rev + ':' + rel], capture_output=True).stdout
 
 
-if BEFORE is None:   # A-6(d) 9/30 — 인도 때 --before 로 준 「고치기 전 산출」 = genie 80d78d1(f47eedb 바로 앞) prec_특허_리스트.json — 거짓 349 · 원장짝없음 211(수행 결과 헛잣대 수 그대로)
+if BEFORE is None and QJ.GATE:   # (regress = 건너뜀 — 아래 헛잣대 · 옛→새 칸이 gate 몫이라 재료도 안 꺼낸다) A-6(d) 9/30 — 인도 때 --before 로 준 「고치기 전 산출」 = genie 80d78d1(f47eedb 바로 앞) prec_특허_리스트.json — 거짓 349 · 원장짝없음 211(수행 결과 헛잣대 수 그대로)
     _b = _gshow('80d78d1', 'jo/data/prec_특허_리스트.json')
     if _b:
         import tempfile
@@ -172,71 +178,77 @@ new = load('특허')
 if new is None:
     raise SystemExit('NG  빌드 산출물이 없다 — jo_build.py 를 먼저 돌려라 (%s)' % OUT)
 st = check('특허', '', new)
-# A-6(d) 9/30 — 79 는 인도(genie f47eedb) 산출 값 · 뒤 ⚙ 데이터가 바꿈(f3b74c9 toc_fuse 73 · 17094a5 uid 판 77 · 6242678 uid_add2 75 · e36829b uid_add3 66) → 인도 산출로 잰다(지금 값은 칸에 같이 적음)
-_w79 = _gshow('f47eedb', 'jo/data/prec_특허_리스트.json')
-why_dl = dict(collections.Counter(v for r in json.loads(_w79.decode('utf-8'))['판례'] for v in (r.get('기출문항없음') or {}).values())) if _w79 else {}
-T('3', '특허 — 원장짝없음 79', why_dl.get('원장짝없음') == 79, {'인도 f47eedb': why_dl, '지금': st['why']})
-T('4', '특허 — 판례 391', st['rows'] == 391, st['rows'])
+if QJ.GATE:   # 처리안 「관문만」 — 인도 커밋(f47eedb) 산출을 git 에서 꺼내 79 와 맞대는 칸 · 판정에 현재 산출을 안 쓴다(「지금」 값은 글자만)
+    # A-6(d) 9/30 — 79 는 인도(genie f47eedb) 산출 값 · 뒤 ⚙ 데이터가 바꿈(f3b74c9 toc_fuse 73 · 17094a5 uid 판 77 · 6242678 uid_add2 75 · e36829b uid_add3 66) → 인도 산출로 잰다(지금 값은 칸에 같이 적음)
+    _w79 = _gshow('f47eedb', 'jo/data/prec_특허_리스트.json')
+    why_dl = dict(collections.Counter(v for r in json.loads(_w79.decode('utf-8'))['판례'] for v in (r.get('기출문항없음') or {}).values())) if _w79 else {}
+    T('3', '특허 — 원장짝없음 79', why_dl.get('원장짝없음') == 79, {'인도 f47eedb': why_dl, '지금': st['why']})
+if QJ.want('4'):   # smoke 칸 아님(smoke = check('특허') 의 1 · 2)
+    T('4', '특허 — 판례 391', st['rows'] == 391, st['rows'])
 
-# 표본 여섯(§D-3) — 볼트 코드 → 그 문항이 어느 판례엔가 붙었는가
-uid2q, byid, A, B, ledk = truth('특허')
-WANT = {'13-50-7': '2013-50-12', '10-47-14': '2010-47-10', '07-44-r2': '2007-44-2',
-        '22-59-16': '2022-59-20', '26-63-7': '2026-63-8', '25-62-13': '2025-62-10'}
-allids = set()
-for r in new['판례']:
-    for q in (r.get('기출문항') or []):
-        allids.add(q['id'])
-miss = [k for k, v in WANT.items() if v not in allids]
-T('3', '표본 여섯 — 채팅 표와 같은 문항 id 가 붙었다', not miss, '못 붙은 것 %s' % miss)
-r81 = next((x for x in new['판례'] if x['id'] == '81후64'), None)
-T('3', '81후64 → 2021-58-14(시험문번 17)',
-  bool(r81) and [(q['id'], q.get('no')) for q in (r81.get('기출문항') or [])] == [('2021-58-14', '17')],
-  [(q['id'], q.get('no')) for q in (r81.get('기출문항') or [])] if r81 else '없음')
+if QJ.want('3-표본'):   # smoke 칸 아님
+    # 표본 여섯(§D-3) — 볼트 코드 → 그 문항이 어느 판례엔가 붙었는가
+    uid2q, byid, A, B, ledk = truth('특허')
+    WANT = {'13-50-7': '2013-50-12', '10-47-14': '2010-47-10', '07-44-r2': '2007-44-2',
+            '22-59-16': '2022-59-20', '26-63-7': '2026-63-8', '25-62-13': '2025-62-10'}
+    allids = set()
+    for r in new['판례']:
+        for q in (r.get('기출문항') or []):
+            allids.add(q['id'])
+    miss = [k for k, v in WANT.items() if v not in allids]
+    T('3', '표본 여섯 — 채팅 표와 같은 문항 id 가 붙었다', not miss, '못 붙은 것 %s' % miss)
+    r81 = next((x for x in new['판례'] if x['id'] == '81후64'), None)
+    T('3', '81후64 → 2021-58-14(시험문번 17)',
+      bool(r81) and [(q['id'], q.get('no')) for q in (r81.get('기출문항') or [])] == [('2021-58-14', '17')],
+      [(q['id'], q.get('no')) for q in (r81.get('기출문항') or [])] if r81 else '없음')
 
 # 상표·민소 — 같은 잣대
-for law in ('상표', '디보', '민소'):
-    check(law, '', load(law))
+if QJ.want('1-상표디보민소'):   # smoke 칸 아님
+    for law in ('상표', '디보', '민소'):
+        check(law, '', load(law))
 
 # ── §D-4 빠진 것 0 · §D-6 헛잣대 ────────────────────────────────────────
-if BEFORE and os.path.isfile(BEFORE):
-    old = load('특허', BEFORE)
-    O = {r['id']: r for r in old['판례']}
-    N = {r['id']: r for r in new['판례']}
-    uid2q, byid, A, B, ledk = truth('특허')
-    obad, keep_miss = 0, []
-    for i, r in O.items():
-        # ⚠ 헛잣대는 **ⓐ∪ⓑ 만**으로 잰다 — 셋째 원천(ⓒ 볼트 코드)은 고치기 전엔 없던 길이다.
-        #   ⓒ 를 넣으면 13 이 되살아나 347 이 된다(2026-09-21 실측).
-        ok_ids = A.get(i, set()) | B.get(i, set())
-        cur = {q['id'] for q in (N.get(i, {}).get('기출문항') or [])}
-        for q in (r.get('기출문항') or []):
-            if q['id'] not in ok_ids:
-                obad += 1
-            elif q['id'] not in cur:
-                keep_miss.append((i, q['id']))
-    # 채팅이 잰 값은 360 이다. 내 셈은 **uid 로 이은 참값**을 잣대로 삼아 그보다 크게 나온다 —
-    # 잣대의 구실(고치기 전에는 크게 거짓 · 고친 뒤 0)은 같다. 두 수를 다 적는다.
-    T('6', '헛잣대 — 고치기 전에는 크게 거짓(채팅 셈 360)', obad >= 300, '%d (채팅 360)' % obad)
-    owhy = collections.Counter()
-    for r in O.values():
-        for c, v in (r.get('기출문항없음') or {}).items():
-            owhy[v] += 1
-    T('6', '헛잣대 — 고치기 전 원장짝없음 211', owhy.get('원장짝없음') == 211, dict(owhy))
-    T('4', '참이던 항목은 하나도 안 사라진다', not keep_miss,
-      '사라짐 %d %s' % (len(keep_miss), keep_miss[:4]))
-    # A-6(d) 9/30 — 「무변」 은 인도 판(f47eedb) 성질 · 뒤 ⚙ 가 자동중요도를 바꿈(f3b74c9 87 · 17094a5 23 판례) → 인도 산출로 잰다(참이던 항목 칸은 지금 산출 N 그대로)
-    _wdl = _gshow('f47eedb', 'jo/data/prec_특허_리스트.json')
-    N_dl = {r['id']: r for r in json.loads(_wdl.decode('utf-8'))['판례']} if _wdl else N
-    same = [k for k in ('기출표시', '기출', '자동중요도') if
-            all(O[i].get(k) == N_dl.get(i, {}).get(k) for i in O)]
-    T('4', '기출표시·기출·자동중요도 무변', len(same) == 3, same)
-else:
-    T('6', '헛잣대 — 고치기 전 산출물을 --before 로 준다', False, '안 줌')
+if QJ.GATE:   # 처리안 「관문만」 — 고치기 전(80d78d1) · 인도 판(f47eedb) 산출을 git 에서 꺼내 맞대는 칸들 = 특정 커밋 전후 대조 · regress 는 안 도는 칸(git 0)
+    if BEFORE and os.path.isfile(BEFORE):
+        old = load('특허', BEFORE)
+        O = {r['id']: r for r in old['판례']}
+        N = {r['id']: r for r in new['판례']}
+        uid2q, byid, A, B, ledk = truth('특허')
+        obad, keep_miss = 0, []
+        for i, r in O.items():
+            # ⚠ 헛잣대는 **ⓐ∪ⓑ 만**으로 잰다 — 셋째 원천(ⓒ 볼트 코드)은 고치기 전엔 없던 길이다.
+            #   ⓒ 를 넣으면 13 이 되살아나 347 이 된다(2026-09-21 실측).
+            ok_ids = A.get(i, set()) | B.get(i, set())
+            cur = {q['id'] for q in (N.get(i, {}).get('기출문항') or [])}
+            for q in (r.get('기출문항') or []):
+                if q['id'] not in ok_ids:
+                    obad += 1
+                elif q['id'] not in cur:
+                    keep_miss.append((i, q['id']))
+        # 채팅이 잰 값은 360 이다. 내 셈은 **uid 로 이은 참값**을 잣대로 삼아 그보다 크게 나온다 —
+        # 잣대의 구실(고치기 전에는 크게 거짓 · 고친 뒤 0)은 같다. 두 수를 다 적는다.
+        T('6', '헛잣대 — 고치기 전에는 크게 거짓(채팅 셈 360)', obad >= 300, '%d (채팅 360)' % obad)
+        owhy = collections.Counter()
+        for r in O.values():
+            for c, v in (r.get('기출문항없음') or {}).items():
+                owhy[v] += 1
+        T('6', '헛잣대 — 고치기 전 원장짝없음 211', owhy.get('원장짝없음') == 211, dict(owhy))
+        T('4', '참이던 항목은 하나도 안 사라진다', not keep_miss,
+          '사라짐 %d %s' % (len(keep_miss), keep_miss[:4]))
+        # A-6(d) 9/30 — 「무변」 은 인도 판(f47eedb) 성질 · 뒤 ⚙ 가 자동중요도를 바꿈(f3b74c9 87 · 17094a5 23 판례) → 인도 산출로 잰다(참이던 항목 칸은 지금 산출 N 그대로)
+        _wdl = _gshow('f47eedb', 'jo/data/prec_특허_리스트.json')
+        N_dl = {r['id']: r for r in json.loads(_wdl.decode('utf-8'))['판례']} if _wdl else N
+        same = [k for k in ('기출표시', '기출', '자동중요도') if
+                all(O[i].get(k) == N_dl.get(i, {}).get(k) for i in O)]
+        T('4', '기출표시·기출·자동중요도 무변', len(same) == 3, same)
+    else:
+        T('6', '헛잣대 — 고치기 전 산출물을 --before 로 준다', False, '안 줌')
 
 # ── §D-7 재실행 멱등 ────────────────────────────────────────────────────
 def md5(p):
     return hashlib.md5(open(p, 'rb').read()).hexdigest()
-T('7', '산출물 md5(이 판)', True, md5(os.path.join(OUT, 'prec_특허_리스트.json'))[:16])
+if QJ.want('7'):   # smoke 칸 아님
+    T('7', '산출물 md5(이 판)', True, md5(os.path.join(OUT, 'prec_특허_리스트.json'))[:16])
 
 ng = [x for x in R if not x[2]]
 print('== _task_jo_gichul_q_uid 관문 — %d항 · PASS %d · FAIL %d =='

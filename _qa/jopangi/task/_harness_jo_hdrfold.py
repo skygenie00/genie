@@ -7,6 +7,12 @@ r"""_task_jo_hdrfold §B(9/27) 관문 하네스 — 「민소」 칩 오른쪽 �
   누름 = 진짜 포인터(page.mouse · 손가락 = Chromium CDP 터치 r22 · WebKit touchscreen.tap) · 보임 = display ≠ none · 높이 > 0
   틀 = mbsame 하네스(_harness_jo_gaek_mbsame.py)의 serve·Pg·__HM · 이 판 도구(__HF).
 """
+import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
+_d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
+while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
+    _d_r = _os_r.path.dirname(_d_r)
+_sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) A-1: --mode gate|regress|smoke(인자 없으면 gate = 이 판 앞과 같음) · regress = NEW 만 띄움(바탕 06b95c4 안 풀고 안 띄움 · 헛잣대 칸 끔 · 바탕 값 칸은 기준 스냅샷)
 import io, json, os, sys, time
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -66,6 +72,9 @@ class Pg(M.Pg):
 
 
 def envs():
+    if QJ.REGRESS:   # regress(_task_qa_slim A-1) — 바탕 06b95c4 앱·데이터를 풀지 않는다(git show · git archive 0 · 바탕 Pg 도 안 띄움)
+        return M.new_env(), (None, None, None)
+    QJ.sub('git:show-app'); QJ.sub('git:archive')   # 셈(§B-4) — M.base_env 가 부르는 둘(gate 에서도 동작 무변)
     return M.new_env(), M.base_env()
 
 
@@ -88,7 +97,7 @@ def g_h1(p, b, eng):
     G = 'h-1'
     for vp, (W, H), how in ((u'폰', PHONE, 'touch'), ('PC', PC, 'mouse')):
         res = {}
-        for who, q in (('NEW', p), ('BASE', b)):
+        for who, q in (('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),):   # regress — NEW 만(바탕 안 띄움)
             q.size(W, H)
             q.ev("l=>__HF.gaek(l)", u'특허법')
             res[who] = q.ev("()=>__HF.btn()")
@@ -98,14 +107,15 @@ def g_h1(p, b, eng):
           n.get('has') and n.get('prevId') == 'laws' and n.get('sameRow') and n.get('text') == u'▴' and n.get('title') == u'머리 접기 / 펴기' and n.get('on')
           and cs.get('fontSize') == '13px' and cs.get('color') == 'rgb(107, 114, 128)' and cs.get('backgroundColor') in ('rgba(0, 0, 0, 0)', 'transparent') and cs.get('borderTopWidth') == '0px'
           and cs.get('paddingLeft') == '8px' and cs.get('paddingRight') == '8px', n)
-        T(G + '-헛', u'헛잣대 바탕 %s — 세모 없음' % vp, not res['BASE'].get('has'), res['BASE'])
+        if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+            T(G + '-헛', u'헛잣대 바탕 %s — 세모 없음' % vp, not res['BASE'].get('has'), res['BASE'])
 
 
 def g_h2(p, b, eng):
     G = 'h-2'
     W, H = PHONE
     s = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in (('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),):   # regress — NEW 만
         q.size(W, H)
         q.ev("()=>{localStorage.removeItem('jopangi_ui');S.hdrFold=false;return 1}")
         if who == 'NEW':   # ★ 9/30 A-6 — revfix0929b A-6: 폰 부팅 = 1차객 서랍 접힌 채 · 펼친 폰 서랍 바깥 첫 누름은 접기만(DRAWER_EAT) → 안 접으면 세모 첫 누름이 먹혀 h-2~h-5 가 한 박자 밀린다
@@ -114,12 +124,17 @@ def g_h2(p, b, eng):
         s[who] = q.ev("()=>__HF.state()")
     q = p
     s0 = s['NEW']
+    if QJ.REGRESS:   # 처리안 기준(h-3) — 바탕 「본문 위 끝」 = 기준 스냅샷(NEW 처음 펼친 값 · 바탕 06b95c4 와 ±1 이라고 인도 때 잼 · 스냅샷 없으면 첫 기록)
+        s['BASE'] = {'slotTop': QJ.base('h-3@%s/slotTop' % eng, s0.get('slotTop'))}
     q.press(q.ev("()=>__HF.btn()"), 'touch', 900)
     s1 = q.ev("()=>__HF.state()"); b1 = q.ev("()=>__HF.btn()")
     T(G, u'폰 특허 1차객 — 손가락 누름 → 「▾」 · 다섯 요소 display none · 본문(#slot) 위 끝 ≤ 50 · 가로 넘침 0 · 로고·법 칩·세모 보임',
       all(v == 'vis' for v in s0['five'].values()) and b1.get('text') == u'▾' and all(v == 'none' for v in s1['five'].values()) and (s1.get('slotTop') or 999) <= 50 and s1.get('over') == 0
       and s1.get('logo') and s1.get('lawsVis') and s1.get('btnVis'), {'전': s0, '뒤': s1, '세모': b1.get('text')})
-    T(G + '-헛', u'헛잣대 바탕 폰 — 본문 위 끝 > 50(채팅 290)', (s['BASE'].get('slotTop') or 0) > 50, s['BASE'])
+    if QJ.GATE:   # 헛잣대(처리안 관문만) — regress 에서 끔
+        T(G + '-헛', u'헛잣대 바탕 폰 — 본문 위 끝 > 50(채팅 290)', (s['BASE'].get('slotTop') or 0) > 50, s['BASE'])
+    if not QJ.want('h-3'):   # smoke — h-2(폰 손가락 접힘)까지만 · 뒤 칸(h-3~h-5)은 이 접힘 상태에 이어 짐
+        return
     q.press(q.ev("()=>__HF.btn()"), 'touch', 900)
     s2 = q.ev("()=>__HF.state()")
     T('h-3', u'다시 누름 → 다섯 요소 되살아남 · 「▴」 · 본문 위 끝 = 바탕 값(±1)', all(v == 'vis' for v in s2['five'].values()) and q.ev("()=>__HF.btn()").get('text') == u'▴'
@@ -158,11 +173,15 @@ def g_h6(p, b, eng):
     G = 'h-6'
     W, H = PC
     hd = {}
-    for who, q in (('NEW', p), ('BASE', b)):
+    for who, q in (('NEW', p), ('BASE', b)) if QJ.GATE else (('NEW', p),):   # regress — NEW 만
         q.size(W, H)
         q.ev("()=>{S.hdrFold=false;return 1}")
         q.ev("l=>__HF.gaek(l)", u'특허법')
         hd[who] = q.ev("()=>__HF.head()")
+    if QJ.REGRESS:   # 처리안 기준(h-6 첫 칸) — 바탕 머리 = 기준 스냅샷(NEW 의 세모 뺀 자식 id · 머리 높이 · 검색줄 높이 · 바탕 06b95c4 와 같다고 인도 때 잼 · 스냅샷 없으면 첫 기록)
+        _n = hd['NEW']
+        _bv = QJ.base('h-6@%s/head' % eng, {'ids': [k['id'] for k in _n['kids'] if k['id'] != 'hdrFold'], 'h': _n['h'], 'hs': _n['hs']})
+        hd['BASE'] = {'kids': [{'id': x} for x in _bv['ids']], 'h': _bv['h'], 'hs': _bv['hs']}
     n, bb = hd['NEW'], hd['BASE']
     ids_n = [k['id'] for k in n['kids']]; ids_b = [k['id'] for k in bb['kids']]
     T(G, u'PC 1553 펼침 — 머리 = 바탕과 같음(세모만 더해짐 · 머리·검색줄 높이 같음)', [x for x in ids_n if x != 'hdrFold'] == ids_b and 'hdrFold' in ids_n and abs(n['h'] - bb['h']) <= 0.5 and abs((n['hs'] or 0) - (bb['hs'] or 0)) <= 0.5,
@@ -176,26 +195,42 @@ def g_h6(p, b, eng):
 
 
 PARTS = [('h1', g_h1), ('h2', g_h2), ('h6', g_h6)]
+SMOKE_PARTS = {'h1': ('chromium',), 'h2': ('chromium', 'webkit')}   # smoke(_task_qa_slim A-4) — h-1 두 칸(DOM 만) · h-2(폰 손가락 접힘 → WebKit 도) · ERR(엔진마다) · 그 밖은 건넘
 
 
 def run_engine(pw, eng):
+    if QJ.SMOKE and not any(eng in v for v in SMOKE_PARTS.values()):   # smoke — 이 엔진에서 잴 smoke 칸이 없으면 브라우저도 안 띄운다
+        return
     br = getattr(pw, eng).launch()
     (ns, nd, ne), (bs, bd, be) = envs()
     try:
         p = Pg(br, eng, 'hfN', ns, nd, ne)
-        b = Pg(br, eng, 'hfB', bs, bd, be)
+        QJ.launch('new')
+        if QJ.GATE:   # regress — 바탕 Pg 를 띄우지 않는다(b = None)
+            b = Pg(br, eng, 'hfB', bs, bd, be)
+            QJ.launch('base')
+        else:
+            b = None
         try:
             for k, fn in PARTS:
                 if ONLY and k not in ONLY:
                     continue
+                if QJ.SMOKE and eng not in SMOKE_PARTS.get(k, ()):
+                    continue
                 print('── %s · %s' % (eng, k), flush=True)
                 try:
-                    fn(p, b, eng)
+                    if QJ.GATE:
+                        fn(p, b, eng)
+                    else:
+                        with QJ.stage('%s·%s' % (eng, k)):
+                            fn(p, b, eng)
                 except Exception as e:
                     T('RUN', u'%s · %s 묶음이 멈춤' % (eng, k), False, repr(e)[:600])
             T('ERR', u'%s — NEW 앱 오류 0' % eng, not p.errs_all(), p.errs_all()[:6])
         finally:
-            p.close(); b.close()
+            p.close()
+            if QJ.GATE:
+                b.close()
     finally:
         br.close()
 

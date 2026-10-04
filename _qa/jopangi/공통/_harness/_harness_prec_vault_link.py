@@ -6,6 +6,12 @@
 재는 것 = DOM 실물(있는가·몇 개인가·눌러서 무엇이 열리는가). 픽셀은 안 찍는다(CLAUDE.md 검산 게이트 절).
 網은 막는다 — fetch 는 같은 서버 `data/` 만.
 """
+import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
+_d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
+while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
+    _d_r = _os_r.path.dirname(_d_r)
+_sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안
 import http.server, os, socketserver, subprocess, sys, threading, time, socket, json, base64, struct, urllib.request, urllib.parse, shutil, hashlib
 sys.stdout.reconfigure(encoding='utf-8')
 APP = sys.argv[1]
@@ -79,7 +85,8 @@ def serve():
     html = open(APP, encoding='utf-8', newline='').read()
     i = html.find('<meta charset'); j = html.find('>', i) + 1
     open(os.path.join(OUT, 'index.html'), 'w', encoding='utf-8', newline='').write(html[:j] + SEED + html[j:])
-    shutil.copytree(DATA, os.path.join(OUT, 'data'))
+    if QJ.GATE:
+        shutil.copytree(DATA, os.path.join(OUT, 'data'))
 
     class H(http.server.SimpleHTTPRequestHandler):
         def __init__(self, *a, **k):
@@ -87,29 +94,39 @@ def serve():
 
         def log_message(self, *a, **k):
             pass
+        if QJ.REGRESS:   # regress — data 폴더를 복사하지 않고 DATA 에서 바로 낸다(읽는 파일은 같다 · 128MB 복사 · 임시 폴더 잔재 0)
+            def translate_path(self, path):
+                p = urllib.parse.unquote(path.split('?', 1)[0].split('#', 1)[0])
+                if p.startswith('/data/'):
+                    return os.path.join(DATA, *[x for x in p[6:].split('/') if x and x not in ('.', '..')])
+                return super().translate_path(path)
     srv = socketserver.ThreadingTCPServer(('127.0.0.1', 0), H); port = srv.server_address[1]
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     s = socket.socket(); s.bind(('127.0.0.1', 0)); dbg = s.getsockname()[1]; s.close()
     prof = os.path.join(OUT, 'prof')
+    QJ.launch('new')
     proc = subprocess.Popen([r"C:\Program Files\Google\Chrome\Application\chrome.exe", '--headless=new', '--disable-gpu',
                              '--no-first-run', '--hide-scrollbars', '--user-data-dir=' + prof,
                              '--window-size=%d,900' % max(W, 500), '--remote-debugging-port=%d' % dbg,
                              'http://127.0.0.1:%d/index.html' % port], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     targets = None
-    for _ in range(80):
+    for _ in range(80 if QJ.GATE else 400):
         try:
             targets = json.loads(urllib.request.urlopen('http://127.0.0.1:%d/json' % dbg, timeout=2).read().decode())
             if any(t.get('type') == 'page' for t in targets):
                 break
         except Exception:
             pass
-        time.sleep(0.25)
+        time.sleep(0.25 if QJ.GATE else 0.05)
     ws = WS(next(t for t in targets if t.get('type') == 'page')['webSocketDebuggerUrl']); ws.call('Page.enable')
-    for _ in range(80):
+    for _ in range(80 if QJ.GATE else 400):
         if ev(ws, "typeof precLinkGlyphs==='function'&&typeof vlPrec==='function'&&typeof S!=='undefined'&&!!S"):
             break
-        time.sleep(0.5)
-    time.sleep(2)
+        time.sleep(0.5 if QJ.GATE else 0.1)
+    if QJ.GATE:
+        time.sleep(2)
+    else:
+        _boot_wait(ws, 2000)   # regress — 고정 2초 → 앱 표지(busy · #slot) · 최대 2초
     return ws, proc, srv
 
 
@@ -344,12 +361,148 @@ var glyphText=g=>g?[...g.querySelectorAll('.plgb')].map(b=>b.textContent.trim())
  }catch(e){ R.push('FAIL | 하네스 예외 | '+String(e&&e.stack||e)); }
  return R.join('\n');})()"""
 
+# ── regress(_task_qa_slim A-2) — TEST 의 고정 대기 `await wait(N)` → 조건 기다림 `await WU(N,'표지')` ──────────────────
+#   gate 의 TEST 는 위 문자열 그대로(한 글자도 안 바뀐다) — regress 에서만 _regress_test 가 실행 때 글을 바꿔 끼운다.
+#   표지 = 앱이 이미 내놓는 것(busy · 요소 · 글 · 팝업) · 표지가 안 참이면 옛 ms 만큼 기다린 뒤 이어 간다(최대 = 옛 고정 대기 → 옛과 같은 시간 · 같은 값).
+#   표지 목록 = _qa_slim_out\_a2\_harness_prec_vault_link_표지.md · 되돌리기 = 아래 표에서 그 줄을 지운다.
+_REG_SITES = {
+    # TEST 안 줄 번호(`var wait=…` 줄 = 1): (옛 고정 대기 ms, 표지 이름, 대기 뒤 한 박자 ms · None = 기본 80)
+    3: (700, 'LIST', None),
+    19: (600, 'LINKWIN', None),
+    25: (800, 'VAULTPOP', None),
+    33: (600, 'BACKWIN', None),
+    44: (600, 'LINKWIN', None),
+    51: (900, 'SARAE_CHIP', None),
+    56: (900, 'SARAE_POP', None),
+    71: (700, 'IDLE', None),
+    77: (900, 'GI6', None),
+    85: (1600, 'GIPOP', None),
+    89: (600, 'IDLE', None),
+    94: (800, 'GI_2301', None),
+    99: (800, 'GI_1CHA4', None),
+    102: (800, 'GI_METRO', None),
+    107: (700, 'IDLE', None),
+    114: (900, 'GI_A2', None),
+    122: (1400, 'NOCARD_POP', None),
+    128: (500, 'NOCARD_GONE', None),
+    131: (1000, 'ANYPOP', None),
+    134: (800, 'GI_1CHA_ROW', None),
+    138: (1000, 'ANYPOP', None),
+    144: (600, 'LOOP_1CHA', None),
+    146: (600, 'ANYPOP', 200),
+    147: (400, 'IDLE', None),
+    150: (700, 'IDLE', None),
+    156: (700, 'LINKWIN', None),
+    160: (1800, 'LINKROW', None),
+    166: (700, 'IDLE', None),
+    172: (600, 'IDLE', None),
+    181: (900, 'GI_SANGPYO3', None),
+    186: (800, 'SARAE_CHIP', None),
+    190: (700, 'IDLE', None),
+    193: (400, 'IDLE', None),
+    202: (800, 'IDLE', None),
+}
+_REG_JS = r"""
+/* ── regress(_task_qa_slim A-2) 조건 기다림 — 앱이 이미 내놓는 표지(busy · 요소 · 글 · 팝업)가 참이 되면 바로 이어 간다 · 안 참이면 옛 고정 대기(ms)만큼 기다린 뒤 이어 간다 ── */
+window.__uw=[];
+var __Q=s=>document.querySelectorAll(s).length;
+var __IDLE=()=>!(typeof busy!=='undefined'&&busy);
+var __pops=()=>[...document.querySelectorAll('.pop')];
+var __pt=p=>(p.textContent||'');
+var __chips=()=>[...document.querySelectorAll('.pdesc .chip.c-gi')].map(c=>c.textContent.trim());
+var __CONDS={
+ LIST:()=>__Q('.plg .plgb')>0,
+ LINKWIN:()=>__pops().some(p=>__pt(p).indexOf('↩ 링크')>=0&&p.querySelectorAll('.plwl .res').length>0),
+ BACKWIN:()=>__pops().some(p=>__pt(p).indexOf('↩ 백링크')>=0&&p.querySelectorAll('.plwl .res').length>0),
+ VAULTPOP:()=>__pops().some(p=>__pt(p).indexOf('2025후10169')>=0&&__pt(p).indexOf('↩ 링크')<0),
+ SARAE_CHIP:()=>[...document.querySelectorAll('.chip')].some(c=>c.textContent.trim()==='🧾 사례 2'),
+ SARAE_POP:()=>__pops().some(p=>{const t=__pt(p);return t.indexOf('🧾 사례')>=0&&t.indexOf('특사례 2-3-2')>=0&&t.indexOf('추가사례3(A)')>=0&&p.querySelectorAll('.res').length>0}),
+ GI6:()=>__Q('.pdesc .chip.c-gi')===6,
+ GIPOP:()=>S.law==='특허법'&&__pops().some(p=>__pt(p).indexOf('특기출 16-53-3')>=0),
+ GI_2301:()=>__chips().indexOf('2차-특-26-63-4 M')>=0,
+ GI_1CHA4:()=>__chips().filter(x=>/^1차-/.test(x)).length===4,
+ GI_METRO:()=>__chips().indexOf('2차-특-19-56-3')>=0&&__Q('.pdesc .chip.c-theme')===2,
+ GI_A2:()=>__chips().indexOf('1차-상-07-44-r7')>=0&&__chips().indexOf('1차-특-20-57-17')>=0&&!!document.querySelector('.pdesc .gilgd'),
+ NOCARD_POP:()=>__pops().some(p=>{const t=__pt(p);return t.indexOf('문항 카드가 없다')>=0&&t.indexOf('원장 짝이 없다')>=0&&[...p.querySelectorAll('button')].some(b=>/기출뷰로/.test(b.textContent))}),
+ NOCARD_GONE:()=>!__pops().some(p=>__pt(p).indexOf('문항 카드가 없다')>=0),
+ ANYPOP:()=>__Q('.pop')>0,
+ GI_1CHA_ROW:()=>__chips().some(x=>/^1차-특-12-49/.test(x)),
+ LOOP_1CHA:()=>__chips().some(x=>/^1차-/.test(x)),
+ LINKROW:()=>S.law==='특허법'&&__pops().some(p=>__pt(p).indexOf('98후1921')>=0),
+ GI_SANGPYO3:()=>__chips().filter(x=>/^2차-/.test(x)).length===3,
+ IDLE:()=>true
+};
+var WU=async(ms,tag,xtra)=>{
+ const t0=performance.now(), f=__CONDS[tag]; let ok=false;
+ for(;;){
+  let v=false; try{ v=__IDLE()&&(f?!!f():true); }catch(e){}
+  if(v){ ok=true; break; }
+  if(performance.now()-t0>=ms) break;
+  await wait(25);
+ }
+ if(ok) await wait(xtra===undefined?80:xtra);   /* 표지가 참인 뒤 한 박자 — 같은 틱에 이어 일어나는 그리기 · setTimeout 0 이 지나가게(누름 뒤 탭 무변 칸은 200) */
+ window.__uw.push([tag,Math.round(performance.now()-t0),ok]);
+};
+"""
+
+
+def _regress_test(t):
+    import re as _re
+    anchor = 'var wait=ms=>new Promise(r=>setTimeout(r,ms));'
+    assert t.count(anchor) == 1, 'TEST 의 wait 정의를 못 찾음'
+    seen = []
+
+    def sub(m):
+        rel = 1 + t.count('\n', 0, m.start())
+        if rel not in _REG_SITES:
+            return m.group(0)   # 표지 없는 자리 = 옛 고정 대기 그대로
+        ms, tag, xtra = _REG_SITES[rel]
+        assert ms == int(m.group(1)), 'TEST %d 줄 대기가 표와 다르다: %s' % (rel, m.group(0))
+        seen.append(rel)
+        return "await WU(%d,'%s'%s)" % (ms, tag, '' if xtra is None else ',%d' % xtra)
+    q = _re.sub(r'await wait\((\d+)\)', sub, t)
+    assert sorted(seen) == sorted(_REG_SITES), '표에 있는데 TEST 에 없는 자리: %s' % sorted(set(_REG_SITES) - set(seen))
+    return q.replace(anchor, anchor + _REG_JS, 1)
+
+
+def _boot_wait(ws, ms):
+    """regress — 앱 부팅(첫 render)이 끝났다는 표지: 전역 busy 가 false 이고 #slot 에 화면이 있다(최대 ms)"""
+    t0 = time.time()
+    while time.time() - t0 < ms / 1000.0:
+        if ev(ws, "!(typeof busy!=='undefined'&&busy)&&!!document.querySelector('#slot > *')") is True:
+            time.sleep(0.1)
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def _uw_note(js):
+    """regress — 조건 기다림 셈 한 줄(INFO · 판정 아님) — 시간 초과 표지가 어디인지"""
+    try:
+        uw = json.loads(js) if isinstance(js, str) else []
+    except Exception:
+        uw = []
+    miss = {}
+    for w in uw:
+        if not w[2]:
+            miss[w[0]] = miss.get(w[0], 0) + 1
+    n_ok = sum(1 for w in uw if w[2])
+    print('INFO | 기다림 표지(regress) | 조건 기다림 %d회 · 참 %d · 시간 초과 %d(옛 고정 대기만큼 기다림) · 걸린 시간 합 %.1f초 · 시간 초과 표지 %s'
+          % (len(uw), n_ok, len(uw) - n_ok, sum(w[1] for w in uw) / 1000.0,
+             ', '.join('%s×%d' % kv for kv in sorted(miss.items())) or '없음'))
+
 
 def main():
+    if QJ.SMOKE:
+        # smoke 칸 없음 — 판례탭 볼트 링크 하네스는 한 쪽에서 앞 칸이 만든 목록 · 팝업 상태로 이어 도는 한 덩어리라 앞부분만 떼면 싸지도 않고 상태가 안 맞는다
+        print('INFO | smoke 칸 없음 | 판례탭 볼트 링크 하네스는 한 쪽에서 이어 도는 한 덩어리', flush=True)
+        return 0
     ws, proc, srv = serve()
     try:
-        out = ev(ws, TEST)
+        out = ev(ws, TEST if QJ.GATE else _regress_test(TEST))
         print(out if isinstance(out, str) else json.dumps(out, ensure_ascii=False))
+        if QJ.REGRESS:
+            _uw_note(ev(ws, "JSON.stringify(window.__uw || [])"))
         ok = isinstance(out, str) and 'FAIL' not in out
         print('\n=== %s ===' % ('PASS 전부' if ok else 'FAIL 있음'))
         return 0 if ok else 3

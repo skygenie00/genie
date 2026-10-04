@@ -18,6 +18,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안
 import hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -29,6 +30,10 @@ OUT = ARG('--out', HERE)
 ONLY = ARG('--only', '')
 ENGS = [ARG('--eng')] if ARG('--eng') else ['chromium', 'webkit']
 TAGS = [ARG('--tag')] if ARG('--tag') else ['BASE', 'NEW']
+if QJ.REGRESS:   # regress · smoke: 바탕(BASE) 판을 안 띄운다 — 바탕 결과는 헛잣대 표뿐(판정 아님 · gate 몫) · 처리안 「관문만」
+    TAGS = ['NEW']
+if QJ.SMOKE:     # smoke: Chromium 만(WebKit 은 폰 폭 터치 칸만 · 이 하네스 smoke 칸은 PC 폭)
+    ENGS = ['chromium']
 NEWF = ARG('--new', os.path.join(GENIE, 'jo', 'index.html'))
 TOOL = ARG('--tool', os.path.join(JOPANGI, 'editq_apply.py'))
 WORK = os.path.join(tempfile.gettempdir(), 'h_jo_ms_claude')
@@ -147,6 +152,7 @@ def route_filter(route):
 class P:
     def __init__(self, br, eng, tag, src, W=1440, H=900, pad=False, q='cl=file'):
         self.eng, self.tag, self.pad = eng, tag, pad
+        QJ.launch('base' if tag == 'BASE' else 'new')
         self.port = serve(tag, src)
         kw = dict(viewport={'width': W, 'height': H}, locale='ko-KR', timezone_id='Asia/Seoul')
         if pad:
@@ -224,6 +230,30 @@ def scen_b(br, eng, tag, src):
     return R
 
 
+# ★ ⑧ 2cha_minso_board — NEW 보드 줄 읽기·누르기 도구(바탕·옛 도구 __HC 는 그대로 — 바탕 509c10b 은 옛 꼴 줄이라 바탕에는 쓰지 않는다)
+GRAYC = 'rgb(154, 149, 139)'   # ★ ⑧ A-11-1 · 사용자 10/3 12:16 — 「Claude」 글자 단추 글색 #9a958b(주황 rgb(180, 83, 9) 아님)
+# 줄 Claude 글자 단추 읽기 — ⑧ A-11-1·A-11-3: .c2t1 맨 끝 span.c2pb 안 button.c2pbtn.cl[data-clword] (옛 주황 [data-clbtn] 는 뺐다 → old = 그 수 · 0 이어야 한다)
+ROWS_CL = r"""()=>{const txt=e=>e?(e.textContent||'').replace(/\s+/g,' ').trim():'';
+  return [...document.querySelectorAll('#slot .cell.c2row[data-ck]')].map(r=>{const t1=r.querySelector('.c2t1'),pb=t1?t1.querySelector(':scope > .c2pb'):null,b=r.querySelector('.c2pb .c2pbtn.cl[data-clword]'),s=b?getComputedStyle(b):null;
+    return {code:txt(r.querySelector('.c2code')),n:r.querySelectorAll('[data-clword]').length,old:r.querySelectorAll('[data-clbtn]').length,
+      btn:b?{t:txt(b),fw:s.fontWeight,color:s.color,fs:s.fontSize}:null,atEnd:!!(b&&pb&&t1.lastElementChild===pb&&pb.lastElementChild===b)};});}"""
+# 줄 Claude 글자 단추 누를 자리 — __HC.rowBtnAt(옛 [data-clbtn])과 같은 꼴(scrollIntoView → hitOn)
+ROW_CL_AT = r"""async (code)=>{const txt=e=>e?(e.textContent||'').replace(/\s+/g,' ').trim():'';
+  const r=[...document.querySelectorAll('#slot .cell.c2row[data-ck]')].find(x=>txt(x.querySelector('.c2code'))===code);
+  if(!r)return null;const b=r.querySelector('.c2pb .c2pbtn.cl[data-clword]');if(!b)return {none:true};
+  try{b.scrollIntoView({block:'center',inline:'nearest'});}catch(e){}await new Promise(f=>setTimeout(f,200));
+  const q=b.getBoundingClientRect(),x=q.left+q.width/2,y=q.top+q.height/2,s=y>0&&y<innerHeight&&x>0&&x<innerWidth,a=s?document.elementFromPoint(x,y):null;
+  return {x:+q.left.toFixed(2),y:+q.top.toFixed(2),w:+q.width.toFixed(2),h:+q.height.toFixed(2),cx:+x.toFixed(2),cy:+y.toFixed(2),on:!!a&&(a===b||b.contains(a))&&s,at:a?String(a.className||a.tagName).slice(0,40):null,onScreen:s};}"""
+# 줄 코드 숫자 누를 자리 — ⑧ A-5-3: 코드 글자(.c2code 의 글자 노드) 한가운데(안에 두루마리 단추 .c2q1 이 있어도 그것을 피한다 · ⑧ 하네스 rowPart('code') 와 같은 길)
+ROW_CODE_AT = r"""async (code)=>{const txt=e=>e?(e.textContent||'').replace(/\s+/g,' ').trim():'';
+  const r=[...document.querySelectorAll('#slot .cell.c2row[data-ck]')].find(x=>txt(x.querySelector('.c2code'))===code);
+  if(!r)return null;const c=r.querySelector('.c2code');if(!c)return null;
+  try{c.scrollIntoView({block:'center',inline:'nearest'});}catch(e){}await new Promise(f=>setTimeout(f,200));
+  const t=c.firstChild;let q;if(t&&t.nodeType===3){const g=document.createRange();g.selectNodeContents(t);q=g.getBoundingClientRect();}else{q=c.getBoundingClientRect();}
+  const x=q.left+q.width/2,y=q.top+q.height/2,s=y>0&&y<innerHeight&&x>0&&x<innerWidth,a=s?document.elementFromPoint(x,y):null;
+  return {x:+q.left.toFixed(2),y:+q.top.toFixed(2),w:+q.width.toFixed(2),h:+q.height.toFixed(2),cx:+x.toFixed(2),cy:+y.toFixed(2),on:!!a&&(a===c||c.contains(a))&&s,at:a?String(a.className||a.tagName).slice(0,40):null,onScreen:s};}"""
+
+
 def scen_c(br, eng, tag, src, pad=False):
     p = P(br, eng, tag, src, 1024 if pad else 1440, 768 if pad else 900, pad=pad)
     R = {'eng': eng, 'tag': tag, 'pad': pad}
@@ -232,13 +262,21 @@ def scen_c(br, eng, tag, src, pad=False):
         R['cl'] = p.ev("__HC.clReady()")
         p.ev("([l,t])=>__HC.go(l,t)", ['민사소송법', 'cha2'])
         R['rows'] = p.ev("__HC.boardRows()")
+        R['rowsCl'] = p.ev(ROWS_CL) if tag == 'NEW' else []   # ★ ⑧ A-11 · 사용자 10/3 12:16 — NEW 줄 Claude 글자 단추(.c2pbtn.cl[data-clword]) 읽기 · 바탕은 단추가 없다(빈 값)
+        if QJ.SMOKE:   # smoke 칸 = C-Claude1 · C-Claude↩ · C-다른줄 · C-오류 — 줄 단추 읽기뿐(누름 · 카드 탭 · 다른 법 보드는 안 쟀다)
+            R['errs'] = p.ev("__HC.errs()") + p.errs
+            return R
         # 줄 단추 누름 = 창만
-        at = p.ev("c=>__HC.rowBtnAt(c)", MS_CODE[4:]); R['rowBtnAt'] = at
+        # ★ ⑧ A-11-1·A-11-3 · 사용자 10/3 12:16 — 옛: 줄 점수 칩 옆 주황 [data-clbtn](clBtnIf) → 새: .c2t1 맨 끝 span.c2pb 안 「Claude N」 글자 단추 button.c2pbtn.cl[data-clword](주황 clBtnIf 는 뺐다) · 바탕은 옛 꼴 그대로
+        at = p.ev(ROW_CL_AT, MS_CODE[4:]) if tag == 'NEW' else p.ev("c=>__HC.rowBtnAt(c)", MS_CODE[4:])
+        R['rowBtnAt'] = at
         R['rowBtnTap'] = p.click(at, 900)
         R['afterRowBtn'] = {'pops': p.ev("__HC.pops()"), 'win': p.ev("u=>__HC.clWin(u)", MS_CODE)}
         p.ev("__HC.clean()")
         # 카드 팝업(줄 누름) → 탭 「Claude 1」 → 새 창 · 카드 탭 무변
-        at = p.ev("c=>__HC.rowAt(c)", MS_CODE[4:]); R['rowTap'] = p.click(at, 1200)
+        # ★ ⑧ A-4-3 · 사용자 10/3 07:19 — 제목(.c2t2) 누름 = 본문 펴기(카드 창 안 뜸) / ⑧ A-5-3 · 사용자 10/3 07:19(07:30 바로잡음) — 코드 숫자 누름 = 카드 창 · 옛: 줄 제목 누름 → 새: 코드 글자 한가운데 누름 · 바탕은 제목 그대로
+        at = p.ev(ROW_CODE_AT, MS_CODE[4:]) if tag == 'NEW' else p.ev("c=>__HC.rowAt(c)", MS_CODE[4:])
+        R['rowTap'] = p.click(at, 1200)
         R['tabs'] = p.ev("c=>__HC.cardTabs(c)", MS_CODE)
         at = p.ev("c=>__HC.cardTabAt(c)", MS_CODE); R['tabAt'] = at
         R['tabTap'] = p.click(at, 900)
@@ -506,13 +544,17 @@ def scen_ereal():
 
 def main():
     os.makedirs(WORK, exist_ok=True)
-    base_b = git('show', BASE_REV + ':' + REL)
+    if QJ.GATE:
+        QJ.sub('git:show-app')
+        base_b = git('show', BASE_REV + ':' + REL)
+    else:
+        base_b = b''   # regress · smoke: 바탕 앱을 안 푼다(git show 0)
     new_raw = open(NEWF, 'rb').read()
     base, new = base_b.decode('utf-8'), new_raw.decode('utf-8')
     RES = {'src': {'base': [len(base_b), hashlib.md5(base_b).hexdigest()],
                    'new': [len(new_raw), hashlib.md5(new_raw.replace(b'\r\n', b'\n')).hexdigest(), new_raw.count(b'\r\n'), NEWF]}}
     t00 = time.time()
-    if not ONLY or ONLY == 'e':
+    if (not ONLY or ONLY == 'e') and not QJ.SMOKE:   # smoke: editq_apply 도구 시험(E)은 smoke 칸 아님
         print('… e', flush=True); RES['e'] = scen_e()
     if ONLY == 'ereal' or (not ONLY and ARG('--eres')):   # 전체 판에 --eres 를 주면 실제 반영 대조도 같이(결과 한 파일)
         RES['ereal'] = scen_ereal()
@@ -527,6 +569,8 @@ def main():
 
                         def run(name, key, fn, *a, **k):
                             if ONLY and ONLY != name:
+                                return
+                            if QJ.SMOKE and name != 'c':   # smoke: C(PC 폭 보드 줄 단추 읽기)만
                                 return
                             t0 = time.time(); print('… %s %s' % (key, time.strftime('%H:%M:%S')), flush=True)
                             RES[key] = r = fn(*a, **k)
@@ -574,8 +618,9 @@ def report(RES):
                                                                     else (a or {}).get(k) if isinstance(a, dict) else None), ks, d)
     cg = lambda q: [x for x in ((q or {}).get('grp') or []) if x.startswith('Claude')]   # 결과 머리 줄(끝의 「↵ 열기 · Esc 닫기」 안내 줄은 뺀다)
     sb, sn = RES['src']['base'], RES['src']['new']
-    I('바탕 BASE = %s:%s' % (BASE_REV, REL), '%d B · md5 %s' % tuple(sb))
-    T('바탕 md5 = mok_popup_phone 인도 판(1,031,441 B · 3aefbb3f…)', sb[1] == BASE_MD5_LF and sb[0] == BASE_SIZE, sb)
+    if QJ.GATE:   # 처리안 「관문만」 — 바탕 md5 = 그 판 인도 커밋(헛잣대 재료) · regress 는 바탕을 안 푼다
+        I('바탕 BASE = %s:%s' % (BASE_REV, REL), '%d B · md5 %s' % tuple(sb))
+        T('바탕 md5 = mok_popup_phone 인도 판(1,031,441 B · 3aefbb3f…)', sb[1] == BASE_MD5_LF and sb[0] == BASE_SIZE, sb)
     I('새 판 NEW', '%d B · md5(LF) %s · CRLF %d · %s' % tuple(sn))
     I('시간(초)', RES.get('sec'))
     for eng in ENGS:
@@ -616,10 +661,22 @@ def report(RES):
                 r2 = [r for r in rows if r['code'] == MS_MENT[4:]]
                 others = [r for r in rows if r['code'] not in (MS_CODE[4:], MS_MENT[4:]) and r['btn']]
                 if mode == 'c':
-                    Tt('C 보드 %s 줄 「Claude 1」(700 · 주황 · 점수 칩 바로 오른쪽)' % MS_CODE[4:], len(r1) == 1 and len(r1[0]['btn']) == 1 and r1[0]['btn'][0]['t'] == 'Claude1'
-                       and r1[0]['btn'][0]['fw'] == '700' and r1[0]['btn'][0]['color'] == ORANGE and r1[0]['afterScore'], r1)
-                    Tt('C 보드 %s 줄 「Claude ↩」(언급만 · 회색 「Claude」 + 주황 ↩)' % MS_MENT[4:], len(r2) == 1 and len(r2[0]['btn']) == 1 and r2[0]['btn'][0]['t'] == 'Claude↩' and r2[0]['btn'][0]['fw'] != '700', r2)
+                    # ★ ⑧ A-11-1·A-11-3 · 사용자 10/3 12:16 — NEW 줄 Claude 단추 = .c2t1 맨 끝 span.c2pb 안 button.c2pbtn.cl[data-clword](rowsCl) · 바탕 509c10b 은 단추가 없어 rowsCl 이 빈 값 = 헛잣대 FAIL 그대로
+                    rc = C.get('rowsCl') or []
+                    r1c = [r for r in rc if r['code'] == MS_CODE[4:]]
+                    r2c = [r for r in rc if r['code'] == MS_MENT[4:]]
+                    #   옛: 「Claude1」(공백 없음) · 700 · 주황 rgb(180, 83, 9) · 점수 칩 바로 오른쪽(afterScore) → 새: 「Claude 1」(A-11-3 「Claude N」 · 공백) · 600 · #9a958b rgb(154, 149, 139)(A-11-1) · .c2t1 맨 끝 .c2pb 의 맨 끝(atEnd) · 옛 [data-clbtn] 0(A-11-3 같은 일 두 단추 금지)
+                    Tt('C 보드 %s 줄 「Claude 1」(700 · 주황 · 점수 칩 바로 오른쪽)' % MS_CODE[4:], len(r1c) == 1 and r1c[0]['n'] == 1 and r1c[0]['old'] == 0 and bool(r1c[0]['btn']) and r1c[0]['btn']['t'] == 'Claude 1'
+                       and r1c[0]['btn']['fw'] == '600' and r1c[0]['btn']['color'] == GRAYC and r1c[0]['atEnd'], r1c)
+                    if not QJ.SMOKE:   # smoke 칸 = C-Claude1 · C-다른줄 · C-오류 (「Claude ↩」 는 gate · regress 만)
+                        #   옛: 「Claude↩」(언급만 · 회색 「Claude」 + 주황 ↩ · 700 아님) → 새: 「Claude」(A-11-3 — 글은 늘 「Claude」 · 수 N 은 답이 있을 때만 · ↩ 는 옛 clBtnIf 몫이라 글에서 빠졌다) · 700 아님(600)
+                        Tt('C 보드 %s 줄 「Claude ↩」(언급만 · 회색 「Claude」 + 주황 ↩)' % MS_MENT[4:], len(r2c) == 1 and r2c[0]['n'] == 1 and r2c[0]['old'] == 0 and bool(r2c[0]['btn']) and r2c[0]['btn']['t'] == 'Claude' and r2c[0]['btn']['fw'] != '700', r2c)
                     Tt('C 보드 다른 %d줄 단추 0(자리표만 숨김)' % max(0, len(rows) - 2), len(rows) == 76 and not others, {'rows': len(rows), 'others': others[:3]})
+                if QJ.SMOKE:   # smoke 칸 = 위 셋 + 콘솔 오류 — 누름 · 카드 탭 · 다른 법 보드는 안 쟀다(scen_c 가 줄 단추 읽기에서 멈춤)
+                    if tag == 'NEW':
+                        errs = [x for x in (C.get('errs') or []) if not NOISE(x)]
+                        Tt('C %s콘솔 오류 0' % M, not errs, errs[:6])
+                    continue
                 ab = C.get('afterRowBtn') or {}
                 Tt('C %s줄 단추 누름 = 창만(카드 안 열림 · 창 제목 「Claude · %s · %s」)' % (M, MS_CODE, MS_NAME), bool(C.get('rowBtnTap')) and [p['pk'] for p in ab.get('pops') or []] == ['claude|' + MS_CODE]
                    and g(ab, 'win', 'title') == 'Claude · %s · %s' % (MS_CODE, MS_NAME), {'tap': C.get('rowBtnTap'), 'pops': [p['pk'] for p in ab.get('pops') or []], 'title': g(ab, 'win', 'title')})
@@ -716,15 +773,16 @@ def report(RES):
               and all((v[0] or 0) < (v[1] or 0) for v in (rm.get('u') or {}).values()), rm)
         if Er.get('data') is not None:
             I('E 실제 — genie jo/data 바뀐 파일', Er.get('data'))
-    tot = sum(len(v) for v in NULL.values()); fails = sum(1 for v in NULL.values() for x in v if not x)
-    L.append('')
-    L.append('── 헛잣대(규칙 ⑩) — 같은 잣대를 바탕 %s 에 돌린 결과: %d 중 FAIL %d · PASS %d ──' % (BASE_REV, tot, fails, tot - fails))
-    grp = {}
-    for n, v in NULL.items():
-        key = re.sub(r'^\[[a-z]+\] ', '', n)
-        a = grp.setdefault(key, [0, 0]); a[0] += sum(1 for x in v if not x); a[1] += len(v)
-    for k in sorted(grp):
-        L.append('BASE | %s | FAIL %d / %d' % (k, grp[k][0], grp[k][1]))
+    if QJ.GATE:   # 헛잣대 표 = 바탕을 띄운 gate 몫(regress · smoke 는 바탕 0)
+        tot = sum(len(v) for v in NULL.values()); fails = sum(1 for v in NULL.values() for x in v if not x)
+        L.append('')
+        L.append('── 헛잣대(규칙 ⑩) — 같은 잣대를 바탕 %s 에 돌린 결과: %d 중 FAIL %d · PASS %d ──' % (BASE_REV, tot, fails, tot - fails))
+        grp = {}
+        for n, v in NULL.items():
+            key = re.sub(r'^\[[a-z]+\] ', '', n)
+            a = grp.setdefault(key, [0, 0]); a[0] += sum(1 for x in v if not x); a[1] += len(v)
+        for k in sorted(grp):
+            L.append('BASE | %s | FAIL %d / %d' % (k, grp[k][0], grp[k][1]))
     body = '\n'.join(L) + '\n\n합계  PASS %d · FAIL %d  (%s초)\n' % (CNT['PASS'], CNT['FAIL'], RES.get('sec'))
     print(body[-3000:])
     wr(os.path.join(OUT, '_harness_jo_ms_claude_result.txt'), body)

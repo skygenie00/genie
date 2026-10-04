@@ -15,6 +15,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · regress = NEW 만(바탕 4be73ca 앱 · 옛 산출 안 풀고 안 띄움 · 헛잣대 장면 0 · 눈 확인 그림 · 원본 PDF 재계산 · 고정 커밋 diff 는 gate 만 · 바탕 값 칸은 기준 스냅샷 --snap-in/--snap-out) · smoke = 기본 점검 칸만(chromium) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안
 _NR = _roots.need_n('민소 canvas 재료 · 정리OMR PDF')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import copy, hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
@@ -32,6 +33,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = ARG('--out', HERE)
 ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
 ENGS = [ARG('--eng')] if ARG('--eng') else ['chromium', 'webkit']
+if QJ.SMOKE:   # smoke — chromium 만(이 하네스의 smoke 칸은 책상 폭 둘)
+    ENGS = [e for e in ENGS if e == 'chromium']
 GENIE = CJ.GENIE
 JOD = os.path.join(GENIE, 'jo')
 NEWF = ARG('--new', os.path.join(JOD, 'index.html'))
@@ -49,6 +52,11 @@ READY = "!!window.__HR&&typeof render==='function'&&typeof viewCanvas==='functio
 PITCH = 1.35
 SERVERS = {}
 RES = []
+
+# regress — 바탕 4be73ca(불변 커밋)에서 한 번 잰 값. 옛 산출(git show 15 개) · 바탕 앱으로 옮기기 픽스처 만들기를 regress 가 안 한다(gate 는 그대로 풀고 만든다).
+PICKS_FROZEN = ('3L505', '3L386', ('3L366', '3L381'))   # pick_blocks(바탕 canvas_p3 쪽) — 편집 관문 세 대상(지울 블록 · 윗줄 합칠 줄 · 합칠 블록 쌍)
+O_FROZEN = {3: {'oy': 2413.7, 'lines': [{'id': '3L20', 'x': 433.3, 'x1': 482.7, 'y': 2523.24, 'h': 2.7, 'r': [{'t': '·'}]}, {'id': '3L356', 'x': 703.4, 'x1': 815.6, 'y': 2833.17, 'h': 2.7, 'r': [{'t': '·'}]}, {'id': '3L461', 'x': 538.0, 'x1': 555.2, 'y': 2921.62, 'h': 2.7, 'r': [{'t': '·'}]}, {'id': '3L462', 'x': 374.0, 'x1': 385.7, 'y': 2923.46, 'h': 2.7, 'r': [{'t': '·'}]}]}}   # 바탕 3쪽의 줄 넷 + oy — 픽스처 카드 · 필기 획 셋에 가장 가까운 옛 줄(nearest 가 고르는 것 · 글은 자리표시)
+MIG_FX_FROZEN = json.loads('{"jopangi.canvas":"{\\"민소\\":{\\"hash\\":\\"94d50c76\\",\\"ops\\":[{\\"t\\":\\"card\\",\\"n\\":3,\\"id\\":\\"3Nmupxposizp1\\",\\"x\\":1180,\\"y\\":2883.66,\\"ts\\":1790883360454},{\\"t\\":\\"text\\",\\"id\\":\\"3Nmupxposizp1\\",\\"s\\":\\"C1\\",\\"ts\\":1790883361550},{\\"t\\":\\"eraseshape\\",\\"n\\":3,\\"key\\":\\"l:511.9,2598.2,511.9,2726.7\\",\\"ts\\":1790883368039},{\\"t\\":\\"eraseshape\\",\\"n\\":3,\\"key\\":\\"l:512.2,2594.6,512.2,2725.7\\",\\"ts\\":1790883368044}]}}","jopangi.canvasink":"{\\"민소\\":{\\"p3\\":[{\\"c\\":\\"#111\\",\\"w\\":1.2,\\"k\\":\\"pen\\",\\"p\\":[[540.4,511.8,1],[541.9,511.9,1],[543.5,511.9,1],[545,512,1],[546.6,512,1],[548.2,512.1,1],[549.7,512.1,1],[551.3,512.2,1],[552.9,512.2,1]]},{\\"c\\":\\"#111\\",\\"w\\":1.2,\\"k\\":\\"pen\\",\\"p\\":[[373.6,513.7,1],[375.2,513.7,1],[376.7,513.8,1],[378.3,513.8,1],[379.9,513.9,1],[381.4,513.9,1],[383,514,1],[384.5,514,1],[386.1,514.1,1]]},{\\"c\\":\\"#111\\",\\"w\\":1.2,\\"k\\":\\"pen\\",\\"p\\":[[437.1,113.4,1],[438.6,113.5,1],[440.2,113.5,1],[441.7,113.6,1],[443.3,113.6,1],[444.9,113.7,1],[446.4,113.8,1],[448,113.8,1],[449.6,113.9,1]]}]}}","jopangi.canvasmemo":"{\\"3L461\\":\\"메모461\\",\\"3L703\\":\\"메모703\\",\\"8L42\\":\\"메모8L42\\"}","jopangi.canvaspin":"{\\"3L461\\":{\\"ts\\":1790000000000}}","jopangi.canvaslink":"{\\"3L461\\":[{\\"to\\":{\\"k\\":\\"block\\",\\"key\\":\\"2L1149\\"},\\"why\\":\\"\\",\\"show\\":false,\\"t\\":1790883355933}],\\"8L40\\":[{\\"to\\":{\\"k\\":\\"block\\",\\"key\\":\\"8L42\\"},\\"why\\":\\"\\",\\"show\\":false,\\"t\\":1790883358958}]}","jopangi.canvasjari":null,"_ops":[{"t":"card","n":3,"id":"3Nmupxposizp1","x":1180,"y":2883.66,"ts":1790883360454},{"t":"text","id":"3Nmupxposizp1","s":"C1","ts":1790883361550},{"t":"eraseshape","n":3,"key":"l:511.9,2598.2,511.9,2726.7","ts":1790883368039},{"t":"eraseshape","n":3,"key":"l:512.2,2594.6,512.2,2725.7","ts":1790883368044}],"_ink":[{"c":"#111","w":1.2,"k":"pen","p":[[540.4,511.8,1],[541.9,511.9,1],[543.5,511.9,1],[545,512,1],[546.6,512,1],[548.2,512.1,1],[549.7,512.1,1],[551.3,512.2,1],[552.9,512.2,1]]},{"c":"#111","w":1.2,"k":"pen","p":[[373.6,513.7,1],[375.2,513.7,1],[376.7,513.8,1],[378.3,513.8,1],[379.9,513.9,1],[381.4,513.9,1],[383,514,1],[384.5,514,1],[386.1,514.1,1]]},{"c":"#111","w":1.2,"k":"pen","p":[[437.1,113.4,1],[438.6,113.5,1],[440.2,113.5,1],[441.7,113.6,1],[443.3,113.6,1],[444.9,113.7,1],[446.4,113.8,1],[448,113.8,1],[449.6,113.9,1]]}]}')   # 바탕 앱(4be73ca)이 실제 조작으로 만든 옮기기 픽스처 — 10/2 04:36 gate 실행의 WORK\mig_fixture.json 그대로
 
 
 def say(ok, name, detail=''):
@@ -124,6 +132,7 @@ def serve(tag, src, datamode):
 class P:
     def __init__(self, br, eng, tag, src, W, H, datamode, mode='desk', q='tok=1'):
         self.eng, self.tag, self.mode = eng, tag, mode
+        QJ.launch('base' if tag == 'BASE' else 'new')   # 셈(§B-4) — 바탕(BASE) 판을 띄운 수 · NEW 를 띄운 수
         self.pad = mode == 'pad'
         self.port = serve(tag, src, datamode)
         if self.pad:
@@ -244,6 +253,72 @@ def nearest(lines, x, y):
 
 
 # ══════════ 데이터 관문 ══════════
+def scen_data_regress():
+    """regress — 산출 파일만 읽는 자료 칸(_task_qa_slim A-6) · 칸 글은 gate 와 같다.
+    안 한다(처리표 「관문만」 · gate 만): 옛 산출(바탕 4be73ca git show) 풀기 · 원본 PDF 재계산(G0-3 · G0-4 · A-2 · A-5) · ⚙ 모듈(canvas_relayout · canvas_note · canvas_ids) 재계산 ·
+    목차노트 판정 표(add1 · B-3 · 바탕 canvas_match 와 대조) · 고정 두 커밋의 앱 diff.
+    옛 값을 기댓값으로 쓰던 칸(줄 id · 블록 bid · 줄 글 = 바탕)은 지금 산출의 지문(md5)을 저장된 기준 스냅샷과 맞댄다(스냅샷 없으면 첫 기록)."""
+    N = load_pages(NEWD)
+    meta_n = json.load(open(os.path.join(NEWD, 'canvas_meta.json'), encoding='utf-8'))
+    remap = json.load(open(os.path.join(NEWD, 'canvas_remap.json'), encoding='utf-8'))
+    r4 = open(os.path.join(CV, 'blocks2_r4.json'), 'rb').read()
+    OLD_HASH = '94d50c76'   # 바탕 데이터 hash — gate 의 G0-3 칸이 blocks2_r3 md5 앞 8 과 같다고 단정하는 값(불변)
+    say(meta_n['hash'] == hashlib.md5(r4).hexdigest()[:8] == remap['to'] and remap['from'] == OLD_HASH, 'A-1·C-3 새 데이터 hash = blocks2_r4 md5 앞 8 = remap.to · remap.from = 바탕 hash',
+        '%s · r4 %s · remap %s→%s' % (meta_n['hash'], hashlib.md5(r4).hexdigest()[:8], remap['from'], remap['to']))
+    dg = lambda v: hashlib.md5(json.dumps(v, ensure_ascii=False, sort_keys=True).encode('utf-8')).hexdigest()
+    idn = {n: [l['id'] for l in N[n]['lines']] for n in N}; bn = {n: [b['bid'] for b in N[n]['blocks']] for n in N}
+    say(QJ.same('data-ids', dg(idn)), '줄 id 목록(차례·개수) = 바탕', '줄 %d · 지문 기준 %s' % (sum(map(len, idn.values())), QJ.base_note('data-ids')))
+    say(QJ.same('data-bids', dg(bn)), '블록 bid 목록 = 바탕(del·to 달린 것 포함)', '블록 %d · del %d · 지문 기준 %s' % (sum(map(len, bn.values())),
+                                                                                      sum(1 for n in N for b in N[n]['blocks'] if b.get('del')), QJ.base_note('data-bids')))
+    tails = {l['id']: l.get('to') for n in N for l in N[n]['lines'] if l.get('del')}
+    delb = {b['bid']: b.get('to') for n in N for b in N[n]['blocks'] if b.get('del')}
+    say(len(tails) == 13 and all(tails.values()), 'B-2 뒤 조각 줄 13 = {del, r:[], to}', sorted(tails.items()))
+    say(all(delb.values()), 'B-2 del 블록마다 to', '%d %s' % (len(delb), sorted(delb.items())))
+    NT = {l['id']: ltxt(l) for n in N for l in N[n]['lines']}
+    say(QJ.same('data-text', dg(NT)), '줄 글 = 바탕(합친 13 · (cid: 2 만 다름)', '줄 글 %d · 지문 기준 %s' % (len(NT), QJ.base_note('data-text')))
+    # 겹침 ⊆ overlap_ref 42(합친 뒤 id)
+    REFO = json.load(open(os.path.join(PROTO, 'overlap_ref.json'), encoding='utf-8'))
+    fl = lambda k: tails.get(k) or k
+    refp = {tuple(sorted((fl(x['a']), fl(x['b'])))) for x in REFO}
+    newp = set()
+    for n in N:
+        rows = [[l['id'], l['y'], l['x'], l.get('x1', l['x']), l['h'], 1 if l.get('del') else 0, ltxt(l)] for l in N[n]['lines']]
+        newp |= overlaps_rows(rows)
+    say(newp <= refp, '전 줄 쌍 글 상자 겹침 ⊆ overlap_ref 42 짝', '새 판 %d 짝 · 참값 %d · 새 짝 %s · 없어진 짝 %s' % (len(newp), len(refp), sorted(newp - refp)[:10], sorted(refp - newp)))
+    REF = json.load(open(os.path.join(PROTO, 'origy_ref.json'), encoding='utf-8'))   # 원본 y 참값(gate 는 A-2 가 읽는다)
+    # 원본에 없는 빈자리 — 줄마다 위에서 가로로 겹치는 가장 가까운 줄과의 새 간격 − 1.4 × 원본 간격(밀림으로 더 벌어진 몫)
+    big, top = [], []
+    for n in N:
+        L = [l for l in N[n]['lines'] if not l.get('del') and ltxt(l).strip() and l['id'] in REF]
+        for l in L:
+            w = (l['x'], max(l['x1'], l['x'] + 3))
+            up = [q for q in L if q is not l and q['y'] < l['y'] - 0.05 and hov((q['x'], q['x1']), w)]
+            if not up:
+                continue
+            a = max(up, key=lambda q: q['y'])
+            do = REF[l['id']] - REF[a['id']]
+            if do > 0:
+                ex = (l['y'] - a['y']) - 1.4 * do
+                top.append((round(ex, 2), l['id'], a['id']))
+    top.sort(reverse=True)
+    say(not [x for x in top if x[0] > 10], '원본에 없는 빈자리 — 원본 간격 × 1.4 보다 10pt 넘게 더 벌어진 자리 0', '3pt 넘는 자리 %d %s' % (sum(1 for x in top if x[0] > 3), [x for x in top if x[0] > 3]))
+    rep_r = json.load(open(os.path.join(CV, '_relayout_report.json'), encoding='utf-8'))['rep']
+    dfl = [x[0] for x in rep_r.get('deflate', [])]
+    say(sorted(dfl) == sorted(['3L3', '3L15', '5L4', '6L686', '6L687', '8L508']) and all(N[int(i.split('L')[0])]['lines'][int(i.split('L')[1])]['h'] <= 3 for i in dfl),
+        'A-3a 부푼 줄 높이 바로잡기(글자 크기의 3배 + 1pt 넘는 줄 → 글자 크기)', rep_r.get('deflate'))
+    # 쪽 높이 · cols
+    ph = [N[n]['ph'] for n in N]
+    say(all(abs(v - 1107.3) < 0.05 for i, v in enumerate(ph) if i != 9) and abs(ph[9] - 1117.9) < 0.05 and all(N[n].get('cols') == [] for n in N)
+        and not any('col' in l for n in N for l in N[n]['lines']), 'A-3 쪽 높이 1,107.3(10쪽 1,117.9) · cols [] · 줄 col 없음', ph)
+    # A-6 sid · remap sk
+    sids_ok = all(o.get('sid') == '%d%s%d' % (n, tag, i) for n in N for key, tag in (('shapes', 'S'), ('imgs', 'I'), ('bars', 'B'), ('hls', 'H')) for i, o in enumerate(N[n].get(key) or []))
+    nsh = sum(len(N[n]['shapes']) for n in N)
+    say(sids_ok and len(remap['sk']) == nsh == 738, 'A-6 도형 sid = {n}S·I·B·H{i} · remap.sk = 옛 도형 열쇠 738', 'sk %d · 도형 %d' % (len(remap['sk']), nsh))
+    say(all(len(x) == 4 and isinstance(x[0], str) and all(isinstance(v, (int, float)) for v in x[1:]) for pg in remap['pages'].values() for x in pg['L'])
+        and set(remap) == {'from', 'to', 'pages', 'sk'},
+        'C-3 remap 은 좌표·id 만(줄 글 없음 · D11)', '쪽 %d · 줄 %d' % (len(remap['pages']), sum(len(pg['L']) for pg in remap['pages'].values())))
+
+
 def scen_data():
     import pymupdf
     sys.path.insert(0, CV)
@@ -459,6 +534,21 @@ def compose(a_png, b_png, out, cap):
     return out
 
 
+def scen_eye_regress(br):
+    """regress — 눈 확인(11쪽 원본|앱 나란히 그림 · 확대 표본 19장 · 원본 PDF 렌더 · PIL 합성 · 장마다 N: 쓰고 0.5초 되읽기)은 안 한다(처리표 「관문만」 · 사람이 보는 그림).
+    11쪽을 다 그려 보며 페이지 오류 0 만 잰다(smoke 는 1 · 3 · 11쪽)."""
+    src = io.open(NEWF, encoding='utf-8').read()
+    p = P(br, 'chromium', 'EYE', src, 2600, 2600, 'new')
+    try:
+        p.ev("__HR.boot()"); p.ev("__HR.eyeCss()")
+        for n in ((1, 3, 11) if QJ.SMOKE else range(1, 12)):
+            p.ev("async n=>await __HR.fitPage(n, 0.5)", n)
+            p.w(700)
+        say(not p.errs and not p.ev("__HR.errs()"), '눈 확인 — 페이지 오류 0', p.errs[:3])
+    finally:
+        p.close()
+
+
 def scen_eye(br):
     import pymupdf
     doc = pymupdf.open(PDF)
@@ -569,7 +659,7 @@ def sayer(tag):
 def scen_edit(br, eng, tag, src, dm):
     R = {'eng': eng, 'tag': tag}
     Pg = load_pages(BASED if dm == 'base' else NEWD)[3]
-    dl, mu, mg = pick_blocks(load_pages(BASED)[3])
+    dl, mu, mg = PICKS_FROZEN if QJ.REGRESS else pick_blocks(load_pages(BASED)[3])
     p = P(br, eng, tag, src, 1440, 900, dm)
     pre = '편집 %s %s — ' % (tag, eng)
     S_ = sayer(tag)
@@ -590,6 +680,8 @@ def scen_edit(br, eng, tag, src, dm):
         newl = [r for r in L1 if r[0] not in rowsd(L0)]
         S_(bool(R['e1_ed']) and len(newl) == 1 and R['e1_ops'] and R['e1_ops'][0]['t'] == 'new' and abs(newl[0][1] - (l['y'] + l['h'] * PITCH)) < 0.02,
             pre + 'E-1 3.4.1(3L461) 두 번 눌러 편집 → Enter = 새 줄 한 줄(op new)', '편집 %s · 새 줄 %s · op %s' % (R['e1_ed'], newl[:1], R['e1_ops']))
+        if QJ.SMOKE:   # smoke — E-1 첫 칸(두 번 눌러 편집 → Enter = 새 줄)까지만
+            return R
         ok, d = gate_shift(L0, L1, ['3L461'], round(l['h'] * PITCH, 2)); S_(ok, pre + 'E-1 새 줄 → 가로로 겹치는 아래 줄만 내려감 · 같은 높이 옆 자리 줄 그대로 · 새 겹침 0', d)
         R['e1_col'] = 'col' in json.dumps(R['e1_ops'])
         S_(not R['e1_col'] and bool(R['e1_ops']) and R['e1_ops'][0].get('v') == 2, pre + 'C-1 새 op 에 col 칸 없음 · v:2', R['e1_ops'])
@@ -811,18 +903,24 @@ def scen_pad(br, eng, src):
             v3 = p.ev("__HR.info()")
             G1 = p.ev("n=>__HR.geo(n)", 3)
             # 바탕 — 같은 자리(그림 3I0 의 바탕 좌표)에서 같은 두 손가락(✍ 필기 · 펜)
-            b = P(p.pg.context.browser, eng, 'BASE', git('show', BASE_REV + ':jo/index.html').decode('utf-8'), 1024, 1366, 'base', mode='pad')
-            try:
-                b.ev("__HR.boot()"); ink_on(b, 'pen')
-                im = json.load(open(os.path.join(BASED, 'canvas_p3.json'), encoding='utf-8'))['imgs'][0]
-                sb = b.ev("a=>__HR.center(a[0],a[1],a[2])", [im['x'] + im['w'] / 2, im['y'] + im['h'] / 2, 1.2])
-                w0 = b.ev("__HR.info()")
-                b.t2((sb['x'], sb['y']), (sb['x'] + 80, sb['y']), (sb['x'] + 120, sb['y'] + 90), (sb['x'] + 200, sb['y'] + 90))
-                w1 = b.ev("__HR.info()")
-                b.t2((sb['x'] - 40, sb['y']), (sb['x'] + 40, sb['y']), (sb['x'] - 140, sb['y']), (sb['x'] + 140, sb['y']))
-                w3 = b.ev("__HR.info()")
-            finally:
-                b.close()
+            if QJ.GATE:
+                b = P(p.pg.context.browser, eng, 'BASE', git('show', BASE_REV + ':jo/index.html').decode('utf-8'), 1024, 1366, 'base', mode='pad')
+                try:
+                    b.ev("__HR.boot()"); ink_on(b, 'pen')
+                    im = json.load(open(os.path.join(BASED, 'canvas_p3.json'), encoding='utf-8'))['imgs'][0]
+                    sb = b.ev("a=>__HR.center(a[0],a[1],a[2])", [im['x'] + im['w'] / 2, im['y'] + im['h'] / 2, 1.2])
+                    w0 = b.ev("__HR.info()")
+                    b.t2((sb['x'], sb['y']), (sb['x'] + 80, sb['y']), (sb['x'] + 120, sb['y'] + 90), (sb['x'] + 200, sb['y'] + 90))
+                    w1 = b.ev("__HR.info()")
+                    b.t2((sb['x'] - 40, sb['y']), (sb['x'] + 40, sb['y']), (sb['x'] - 140, sb['y']), (sb['x'] + 140, sb['y']))
+                    w3 = b.ev("__HR.info()")
+                finally:
+                    b.close()
+            else:
+                # regress — 바탕(4be73ca) 판을 안 띄운다(바탕 띄움 0) · 바탕 값(두 손가락 끌기 판 움직임 · 벌리기 배율 비) = 기준 스냅샷(NEW 가 같은 손짓에 한 값 · 스냅샷 없으면 첫 기록)
+                _bp = QJ.base('pad-pan@%s/dxy' % eng, [v1['vx'] - v0['vx'], v1['vy'] - v0['vy']])
+                _bz = QJ.base('pad-zoom@%s/ratio' % eng, v3['vz'] / v2['vz'])
+                w0 = {'vx': 0, 'vy': 0}; w1 = {'vx': _bp[0], 'vy': _bp[1], 'vz': 1.0}; w3 = {'vz': _bz}
             dn = (v1['vx'] - v0['vx'], v1['vy'] - v0['vy']); db = (w1['vx'] - w0['vx'], w1['vy'] - w0['vy'])
             say(v1['ops'] == n0 and G1 == G0 and abs(dn[0] - db[0]) <= 3 and abs(dn[1] - db[1]) <= 3,
                 pre + '두 손가락 끌기(도형 위에서 시작) = 바탕과 같은 판 움직임 · op 0 · 도형 그대로', '새 판 Δ(%.0f, %.0f) · 바탕 Δ(%.0f, %.0f) · ops %d→%d' % (dn[0], dn[1], db[0], db[1], n0, v1['ops']))
@@ -852,77 +950,81 @@ def type_pop(p, js_open, sel, text):
 
 
 def scen_mig(br):
-    O = load_pages(BASED); N = load_pages(NEWD)
-    base_src = git('show', BASE_REV + ':jo/index.html').decode('utf-8')
+    O = (load_pages(BASED) if QJ.GATE else O_FROZEN); N = load_pages(NEWD)
+    if QJ.GATE:
+        base_src = git('show', BASE_REV + ':jo/index.html').decode('utf-8')
     new_src = io.open(NEWF, encoding='utf-8').read()
     FX = {}
     # ① 바탕 판에서 기록 만들기
-    p = P(br, 'chromium', 'BASE', base_src, 1440, 900, 'base')
-    pre = '옮기기 픽스처(바탕 4be73ca) — '
-    try:
-        p.ev("__HR.boot()")
-        opener = "()=>{const c=viewCanvas._cv();const p=c.D.pages[%d];const b=p.blocks.find(x=>x.bid==='%s');c.openPop(p,b,'%s',{clientX:320,clientY:160},[]);}"
-        ok1 = type_pop(p, opener % (2, '3L461', 'memo'), '.cv-pop textarea', '메모461')
-        p.ev("()=>closeAllPops()"); p.w(300)
-        ok2 = type_pop(p, opener % (2, '3L703', 'memo'), '.cv-pop textarea', '메모703')
-        p.ev("()=>closeAllPops()"); p.w(300)
-        b8 = next(b for b in O[8]['blocks'] if b['bid'] == '8L42')
-        ok3 = type_pop(p, opener % (7, '8L42', 'memo'), '.cv-pop textarea', '메모8L42')
-        p.ev("()=>closeAllPops()"); p.w(300)
-        p.ev("()=>lsWrite(REC_PRE+'canvaspin',Object.assign(lsRead(REC_PRE+'canvaspin'),{'3L461':{ts:1790000000000}}),'★ 정리캔버스 핀')")
-        # 링크 — 3L461 → 「일부청구」 블록 하나 · 8L30 옆 블록 → 8L42(to.key)
-        def link(page_i, bid, q, want=None):
-            ok = type_pop(p, opener % (page_i, bid, 'link'), '.cv-lfind input', q)
-            btn = p.ev("w=>{const bs=[...document.querySelectorAll('.cv-lres button')];const rows=[...document.querySelectorAll('.cv-lres .cv-lrow')];let i=0;"
-                       "if(w){i=rows.findIndex(r=>r.textContent.indexOf(w)>=0);if(i<0)return null;const b=rows[i].querySelector('button');if(!b)return null;const r=b.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};}"
-                       "const b=bs[0];if(!b)return null;const r=b.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}}", want or '')
-            if btn:
-                p.click(btn['x'], btn['y'], 500)
+    if QJ.GATE:
+        p = P(br, 'chromium', 'BASE', base_src, 1440, 900, 'base')
+        pre = '옮기기 픽스처(바탕 4be73ca) — '
+        try:
+            p.ev("__HR.boot()")
+            opener = "()=>{const c=viewCanvas._cv();const p=c.D.pages[%d];const b=p.blocks.find(x=>x.bid==='%s');c.openPop(p,b,'%s',{clientX:320,clientY:160},[]);}"
+            ok1 = type_pop(p, opener % (2, '3L461', 'memo'), '.cv-pop textarea', '메모461')
             p.ev("()=>closeAllPops()"); p.w(300)
-            return bool(btn)
-        t42 = ltxt(O[8]['lines'][b8['ls'][0]])[:8]
-        ok4 = link(2, '3L461', '일부청구')
-        ok5 = link(7, '8L40', t42)
-        # 카드 — 3쪽 빈 곳 두 번 누름 → 글 「C1」 → ✓
-        Pg = O[3]
-        y = Pg['oy'] + 470
-        ex = next(x for x in range(1180, 700, -20) if not any(l['y'] - 8 < y < l['y'] + l['h'] + 8 and l['x'] - 8 < x < l['x1'] + 8 for l in Pg['lines'] if not l.get('del')))
-        s = p.ev("a=>__HR.center(a[0],a[1],1.0)", [ex, y])
-        p.pg.mouse.dblclick(s['x'], s['y']); p.w(600)
-        p.pg.keyboard.type('C1', delay=30); p.w(200)
-        okb = p.ev("()=>{const b=document.querySelector('.cv-edtip b[data-k=\"ok\"]');if(!b)return null;const r=b.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}}")
-        if okb:
-            p.click(okb['x'], okb['y'], 500)
-        # 필기 — 3쪽 줄 셋 곁에 펜 획(✍ 켜고 펜)
-        ink_on(p, 'pen')
-        strokes = []
-        for lid in ('3L461', '3L462', '3L20'):
-            l = p.ev("id=>__HR.lineOf(id)", lid)
-            s = p.ev("a=>__HR.center(a[0],a[1],1.2)", [l['x'] + min(10, (l['x1'] - l['x']) / 2), l['y'] + l['h'] + 1.2])
-            p.mdrag(s['x'] - 30, s['y'], s['x'] + 30, s['y'] + 2, n=8, wait=300)
-            strokes.append(lid)
-        # 옛 지우개 — 3쪽 선(l) 하나(eraseshape)
-        ink_on(p, 'erase')
-        L = [s for s in Pg['shapes'] if s['k'] == 'l']
-        tgt = None
-        for s0 in L:
-            mx, my = (s0['x'] + s0['x2']) / 2, (s0['y'] + s0['y2']) / 2
-            if any(abs(my - (l['y'] + l['h'] + 1.2)) < 6 for l in Pg['lines'] if l['id'] in ('3L461', '3L462', '3L20')):
-                continue
-            tgt = s0; break
-        s = p.ev("a=>__HR.center(a[0],a[1],1.2)", [(tgt['x'] + tgt['x2']) / 2, (tgt['y'] + tgt['y2']) / 2])
-        p.mdrag(s['x'], s['y'], s['x'] + 2, s['y'] + 1, n=2, wait=400)
-        FX = p.ev("__HR.ls()")
-        FX['_ops'] = p.ev("__HR.ops()")
-        FX['_ink'] = (json.loads(FX['jopangi.canvasink'] or '{}').get('민소') or {}).get('p3') or []
-        say(ok1 and ok2 and ok3 and ok4 and ok5 and bool(okb), pre + '메모 3L461·3L703·8L42 · 핀 3L461 · 링크 3L461→ · →8L42 · 카드 · 필기 · 지우개 — 바탕 앱에서 만듦',
-            'ops %s · 획 %d · 링크 %s' % ([o['t'] for o in FX['_ops']], len(FX['_ink']), FX['jopangi.canvaslink']))
-    except Exception as e:
-        say(False, pre + '예외', repr(e)[:300])
-        p.close(); return
-    finally:
-        p.close()
-    json.dump(FX, open(os.path.join(WORK, 'mig_fixture.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+            ok2 = type_pop(p, opener % (2, '3L703', 'memo'), '.cv-pop textarea', '메모703')
+            p.ev("()=>closeAllPops()"); p.w(300)
+            b8 = next(b for b in O[8]['blocks'] if b['bid'] == '8L42')
+            ok3 = type_pop(p, opener % (7, '8L42', 'memo'), '.cv-pop textarea', '메모8L42')
+            p.ev("()=>closeAllPops()"); p.w(300)
+            p.ev("()=>lsWrite(REC_PRE+'canvaspin',Object.assign(lsRead(REC_PRE+'canvaspin'),{'3L461':{ts:1790000000000}}),'★ 정리캔버스 핀')")
+            # 링크 — 3L461 → 「일부청구」 블록 하나 · 8L30 옆 블록 → 8L42(to.key)
+            def link(page_i, bid, q, want=None):
+                ok = type_pop(p, opener % (page_i, bid, 'link'), '.cv-lfind input', q)
+                btn = p.ev("w=>{const bs=[...document.querySelectorAll('.cv-lres button')];const rows=[...document.querySelectorAll('.cv-lres .cv-lrow')];let i=0;"
+                           "if(w){i=rows.findIndex(r=>r.textContent.indexOf(w)>=0);if(i<0)return null;const b=rows[i].querySelector('button');if(!b)return null;const r=b.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};}"
+                           "const b=bs[0];if(!b)return null;const r=b.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}}", want or '')
+                if btn:
+                    p.click(btn['x'], btn['y'], 500)
+                p.ev("()=>closeAllPops()"); p.w(300)
+                return bool(btn)
+            t42 = ltxt(O[8]['lines'][b8['ls'][0]])[:8]
+            ok4 = link(2, '3L461', '일부청구')
+            ok5 = link(7, '8L40', t42)
+            # 카드 — 3쪽 빈 곳 두 번 누름 → 글 「C1」 → ✓
+            Pg = O[3]
+            y = Pg['oy'] + 470
+            ex = next(x for x in range(1180, 700, -20) if not any(l['y'] - 8 < y < l['y'] + l['h'] + 8 and l['x'] - 8 < x < l['x1'] + 8 for l in Pg['lines'] if not l.get('del')))
+            s = p.ev("a=>__HR.center(a[0],a[1],1.0)", [ex, y])
+            p.pg.mouse.dblclick(s['x'], s['y']); p.w(600)
+            p.pg.keyboard.type('C1', delay=30); p.w(200)
+            okb = p.ev("()=>{const b=document.querySelector('.cv-edtip b[data-k=\"ok\"]');if(!b)return null;const r=b.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}}")
+            if okb:
+                p.click(okb['x'], okb['y'], 500)
+            # 필기 — 3쪽 줄 셋 곁에 펜 획(✍ 켜고 펜)
+            ink_on(p, 'pen')
+            strokes = []
+            for lid in ('3L461', '3L462', '3L20'):
+                l = p.ev("id=>__HR.lineOf(id)", lid)
+                s = p.ev("a=>__HR.center(a[0],a[1],1.2)", [l['x'] + min(10, (l['x1'] - l['x']) / 2), l['y'] + l['h'] + 1.2])
+                p.mdrag(s['x'] - 30, s['y'], s['x'] + 30, s['y'] + 2, n=8, wait=300)
+                strokes.append(lid)
+            # 옛 지우개 — 3쪽 선(l) 하나(eraseshape)
+            ink_on(p, 'erase')
+            L = [s for s in Pg['shapes'] if s['k'] == 'l']
+            tgt = None
+            for s0 in L:
+                mx, my = (s0['x'] + s0['x2']) / 2, (s0['y'] + s0['y2']) / 2
+                if any(abs(my - (l['y'] + l['h'] + 1.2)) < 6 for l in Pg['lines'] if l['id'] in ('3L461', '3L462', '3L20')):
+                    continue
+                tgt = s0; break
+            s = p.ev("a=>__HR.center(a[0],a[1],1.2)", [(tgt['x'] + tgt['x2']) / 2, (tgt['y'] + tgt['y2']) / 2])
+            p.mdrag(s['x'], s['y'], s['x'] + 2, s['y'] + 1, n=2, wait=400)
+            FX = p.ev("__HR.ls()")
+            FX['_ops'] = p.ev("__HR.ops()")
+            FX['_ink'] = (json.loads(FX['jopangi.canvasink'] or '{}').get('민소') or {}).get('p3') or []
+            say(ok1 and ok2 and ok3 and ok4 and ok5 and bool(okb), pre + '메모 3L461·3L703·8L42 · 핀 3L461 · 링크 3L461→ · →8L42 · 카드 · 필기 · 지우개 — 바탕 앱에서 만듦',
+                'ops %s · 획 %d · 링크 %s' % ([o['t'] for o in FX['_ops']], len(FX['_ink']), FX['jopangi.canvaslink']))
+        except Exception as e:
+            say(False, pre + '예외', repr(e)[:300])
+            p.close(); return
+        finally:
+            p.close()
+        json.dump(FX, open(os.path.join(WORK, 'mig_fixture.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    else:
+        FX = MIG_FX_FROZEN   # regress — 바탕 앱(4be73ca)을 안 띄운다(바탕 띄움 0) · 같은 조작으로 만든 불변 픽스처(위 상수)
     memo0 = json.loads(FX['jopangi.canvasmemo']); link0 = json.loads(FX['jopangi.canvaslink'])
     # ② 새 판 — 기록을 넣고(그림자까지 도장) 다시 연다
     p = P(br, 'chromium', 'NEW', new_src, 1440, 900, 'new')
@@ -1003,6 +1105,57 @@ def scen_mig(br):
 SPD = _roots.spd(r'jopangi\기록.json')
 
 
+def scen_real_regress(br):
+    """regress — 사용자 실제 기록(G0-5) 옮기기: NEW 만 돈다(바탕 4be73ca 앱으로 옛 배치에서 재생하던 장면 0). 바탕과 맞대던 칸(재생 ok 수 · 카드 옆 글)은 기준 스냅샷과 맞댄다.
+    기록 = 인도 때 studyplandata 고정 커밋(git show 읽기 · 'git:show-data')."""
+    REC_REV = 'cf358420'   # A-6(d) 9/30 — 실제 기록 = 인도 때 studyplandata(savedAt 2026-09-23T17:53Z · canvas hash 94d50c76 · op 29 · 옛 배치) · 옛: 지금 클론(9/24 13:08 c845a11c 부터 새 배치 71e49579 로 옮겨져 바탕 재생이 헛돎)
+    if not os.path.exists(SPD):
+        say(None, '실제 기록 옮기기', 'studyplandata 클론 없음'); return
+    QJ.sub('git:show-data')
+    _rb = git('show', REC_REV + ':jopangi/기록.json', repo=os.path.dirname(os.path.dirname(SPD)))
+    R0 = json.loads(_rb) if _rb else json.load(open(SPD, encoding='utf-8')); d = R0.get('data') or {}
+    rec = {k: (d[k] if isinstance(d[k], str) else json.dumps(d[k], ensure_ascii=False)) for k in __import__('itertools').chain(['jopangi.canvas', 'jopangi.canvasink', 'jopangi.canvaslink', 'jopangi.canvasmemo', 'jopangi.canvaspin', 'jopangi.canvasjari']) if k in d}
+    LOG0 = json.loads(rec.get('jopangi.canvas', '{}')).get('민소') or {}
+    from collections import Counter
+    say(None, 'G0-5 실제 기록 census(studyplandata %s · savedAt %s)' % ((REC_REV if _rb else git('rev-parse', '--short', 'HEAD', repo=os.path.dirname(os.path.dirname(SPD))).decode().strip()), R0.get('savedAt')),
+        'canvas hash %s · op %d %s · 뒤 조각 id 에 걸린 op %d · 필기 쪽 %d · 링크 %d · 메모 %d · 핀 %d · 손값 %d' % (
+            LOG0.get('hash'), len(LOG0.get('ops', [])), dict(Counter(o['t'] for o in LOG0.get('ops', []))),
+            sum(1 for o in LOG0.get('ops', []) for f in ('id', 'after', 'bid', 'at', 'sib', 'nbid') if o.get(f) in ('3L109', '3L703', '4L10', '4L16', '4L23', '4L36', '4L108', '8L1', '8L26', '8L42', '8L43', '8L55', '8L149')),
+            len(json.loads(rec.get('jopangi.canvasink', '{}')).get('민소') or {}), len(json.loads(rec.get('jopangi.canvaslink', '{}'))),
+            len(json.loads(rec.get('jopangi.canvasmemo', '{}'))), len(json.loads(rec.get('jopangi.canvaspin', '{}'))), len(json.loads(rec.get('jopangi.canvasjari', '{}')))))
+    out = {}
+    for tag, src, dm in (('NEW', io.open(NEWF, encoding='utf-8').read(), 'new'),):
+        p = P(br, 'chromium', tag, src, 1440, 900, dm)
+        try:
+            for k, v in rec.items():
+                p.ev("a=>__HR.lsSet(a[0],a[1])", [k, v])
+            p.load('tok=1&keep=1'); p.ev("__HR.boot()")
+            info = p.ev("__HR.info()")
+            cards = p.ev("ids=>{const c=viewCanvas._cv();const out={};for(const p of c.D.pages)for(const l of p.lines)if(ids.includes(l.id))out[l.id]=[p.n,l.x,l.y];return out;}",
+                         [o['id'] for o in LOG0.get('ops', []) if o['t'] == 'card'])
+            lines = {n: p.ev("n=>__HR.lines(n)", n) for n in sorted({v[0] for v in cards.values()})}
+            out[tag] = {'info': info, 'cards': cards, 'lines': lines, 'log': (p.ev("k=>__HR.lsGet(k)", 'jopangi.canvas') or {}).get('민소') or {}, 'errs': p.errs[:3] + p.ev("__HR.errs()")}
+        finally:
+            p.close()
+    n = out['NEW']
+    _rp = n['info']['replay']
+    _ok = QJ.base('real-replay@chromium/ok', _rp['ok'])   # 기준 칸: 바탕 재생 ok 수 = 기준 스냅샷(스냅샷 없으면 NEW 값 = 첫 기록)
+    say(_rp['bad'] == 0 and _rp['ok'] == _ok and not _rp['stale'] and not n['info']['stale'],
+        '실제 기록 — 바탕 재생 ↔ 새 판(옮긴 뒤) 재생 · 못 한 것 0 · 「판이 바뀜」 없음', '새 판 %s · MIG %s · 바탕 재생 ok %s(%s)' % (_rp, n['info']['mig'], _ok, QJ.base_note('real-replay@chromium/ok')))
+    say(n['log'].get('hash') == n['info']['hash'] and all(o.get('v') == 2 for o in n['log'].get('ops', [])) and len(n['log'].get('ops', [])) == len(LOG0.get('ops', [])),
+        '실제 기록 — 편집 로그 hash = 새 판 · op %d 전부 v:2' % len(LOG0.get('ops', [])), n['log'].get('hash'))
+    Ln = {pn: [{'id': r[0], 'y': r[1], 'x': r[2], 'x1': r[3], 'h': r[4], 'del': r[5], 'r': [{'t': r[6]}]} for r in n['lines'][pn]] for pn in n['lines']}
+    res = []
+    for cid in sorted(n['cards']):
+        pn, nx, ny = n['cards'][cid]
+        nn = nearest(Ln[pn], nx, ny)
+        res.append((cid, nn[0], round(nn[1], 2)))
+    # 기준 칸: 카드마다 새 판에서 가장 가까운 줄(id · 거리) = 기준 스냅샷 — 옛 판 가장 가까운 줄과 맞대던 것(바탕 앱 재생)을 대신한다
+    say(QJ.same('real-card@chromium/res', res) and len(res) == sum(1 for o in LOG0.get('ops', []) if o['t'] == 'card'), '실제 기록 — 카드 %d 모두 같은 글 옆(옛 판 가장 가까운 줄과의 거리 차 ≤ 1pt)' % len(res),
+        '새 판 카드 → 가장 가까운 줄 · 거리 %s · 기준 %s' % (res[:5], QJ.base_note('real-card@chromium/res')))
+    say(not n['errs'], '실제 기록 — 페이지 오류 0', n['errs'])
+
+
 def scen_real(br):
     REC_REV = 'cf358420'   # A-6(d) 9/30 — 실제 기록 = 인도 때 studyplandata(savedAt 2026-09-23T17:53Z · canvas hash 94d50c76 · op 29 · 옛 배치) · 옛: 지금 클론(9/24 13:08 c845a11c 부터 새 배치 71e49579 로 옮겨져 바탕 재생이 헛돎)
     if not os.path.exists(SPD):
@@ -1073,34 +1226,54 @@ def main():
     open(os.path.join(WORK, 'nope.json'), 'w').write('')
     if '--report' in sys.argv:
         RES.extend(json.load(open(os.path.join(WORK, 'res.json'), encoding='utf-8'))); write_result(); return
-    base_data()
-    b = git('show', BASE_REV + ':jo/index.html')
-    assert hashlib.md5(b).hexdigest() == BASE_MD5
-    base_src = b.decode('utf-8')
+    if QJ.GATE:
+        base_data()
+        b = git('show', BASE_REV + ':jo/index.html')
+        assert hashlib.md5(b).hexdigest() == BASE_MD5
+        base_src = b.decode('utf-8')
+    else:
+        base_src = ''   # regress — 바탕 앱 · 바탕 데이터(4be73ca) 풀기 0(git show 안 부름)
     new_src = io.open(NEWF, encoding='utf-8').read()
     want = lambda k: not ONLY or k in ONLY
-    if want('data'):
-        scen_data()
+    if want('data') and not QJ.SMOKE:   # smoke — 자료 칸은 안 잰다
+        if QJ.GATE:
+            scen_data()
+        else:
+            scen_data_regress()
     with sync_playwright() as pw:
         brs = {}
         for eng in ENGS:
             brs[eng] = getattr(pw, eng).launch()
         try:
             if want('eye') and 'chromium' in brs:
-                scen_eye(brs['chromium'])
+                if QJ.GATE:
+                    scen_eye(brs['chromium'])
+                else:
+                    with QJ.stage('eye'):
+                        scen_eye_regress(brs['chromium'])
             for eng in ENGS:
                 if want('edit'):
-                    scen_edit(brs[eng], eng, 'BASE', base_src, 'base')
-                    scen_edit(brs[eng], eng, 'NEW', new_src, 'new')
-                if want('shape'):
-                    scen_shape(brs[eng], eng, 'BASE', base_src, 'base')
-                    scen_shape(brs[eng], eng, 'NEW', new_src, 'new')
-                if want('pad'):
-                    scen_pad(brs[eng], eng, new_src)
-            if want('mig') and 'chromium' in brs:
-                scen_mig(brs['chromium'])
-            if want('real') and 'chromium' in brs:
-                scen_real(brs['chromium'])
+                    if QJ.GATE:
+                        scen_edit(brs[eng], eng, 'BASE', base_src, 'base')
+                    with QJ.stage('edit NEW %s' % eng):
+                        scen_edit(brs[eng], eng, 'NEW', new_src, 'new')
+                if want('shape') and not QJ.SMOKE:
+                    if QJ.GATE:
+                        scen_shape(brs[eng], eng, 'BASE', base_src, 'base')
+                    with QJ.stage('shape NEW %s' % eng):
+                        scen_shape(brs[eng], eng, 'NEW', new_src, 'new')
+                if want('pad') and not QJ.SMOKE:
+                    with QJ.stage('pad %s' % eng):
+                        scen_pad(brs[eng], eng, new_src)
+            if want('mig') and 'chromium' in brs and not QJ.SMOKE:
+                with QJ.stage('mig'):
+                    scen_mig(brs['chromium'])
+            if want('real') and 'chromium' in brs and not QJ.SMOKE:
+                if QJ.GATE:
+                    scen_real(brs['chromium'])
+                else:
+                    with QJ.stage('real'):
+                        scen_real_regress(brs['chromium'])
         finally:
             for x in brs.values():
                 x.close()

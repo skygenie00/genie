@@ -2,7 +2,8 @@
 r"""_task_jo_sp_view5 §D 관문 — 상표 1차객 책 카드에 뷰객 5판 얹기(앱 · 시험 데이터) · p8up 앱 길을 법 갈래로(판8 · 판5)
 
   python _harness_jo_sp_view5.py [--new <앱 파일 | genie git 판>] [--base <판>] [--eng chromium,webkit] [--only E1,E2,..] [--res <결과(기본 = 임시 폴더)>] [--yardstick]
-        [--vendor <pdf.js 3.11.174 폴더>] [--exam <시험지 폴더>]
+        [--vendor <pdf.js 3.11.174 폴더>] [--exam <시험지 폴더>] [--mode gate|regress|smoke]
+  --mode(_task_qa_slim 10/4) — 없으면 gate(= 이 판 앞과 같음) · regress = NEW 만(바탕 판 풀기 · 띄우기 0 · E5 의 특허 8판 무변 칸 = 기준 스냅샷) · smoke = regress 가운데 E1 · E2-폰 · E2-wk 만
 
   시험 데이터 = sp_view4 시험 데이터(_fx_sp_view4 · 뷰객 4판 · 지어낸 글)를 하네스가 돌릴 때 5판 꼴로 바꾼 덧판(파일을 따로 두지 않는다):
     책 줄 판 「V4」→「V5」 · 판5 = { cat: 같음·글·답·없음·새, t4, a4, s4 }(원장 §C · p8up 판8 꼴) · 5판에 없음 줄 = 판 「V4」 그대로 · 새 줄 = 단원 1.1 끝(새 uid 머리)
@@ -24,6 +25,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402  _task_qa_slim(10/4) — --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다(이 줄은 다른 import · 인자 읽기보다 먼저)
 import copy, hashlib, io, json, os, re, subprocess, sys, tempfile, time   # noqa: E402
 try:
     sys.stdout.reconfigure(encoding='utf-8')
@@ -148,7 +150,8 @@ def overlay():
 _TAGN = [0]
 
 
-def open_pg(br, src, dev=PC):
+def open_pg(br, src, dev=PC, kind='new'):
+    QJ.launch(kind)   # 띄움 셈만('new' | 'base')
     _TAGN[0] += 1
     tag = 'v5_%d' % _TAGN[0]
     SV.DATA_FOR[tag] = overlay()
@@ -330,8 +333,8 @@ SWEEP_JS = r"""async () => {   /* 특허 책 카드 전수 — 그 법 VJ.P7map 
 def e5(br, src, base_src, tag):
     ok = True
     got = {}
-    for who, s in (('new', src), ('base', base_src)):
-        p = open_pg(br, s)
+    for who, s in ((('new', src), ('base', base_src)) if QJ.GATE else (('new', src),)):   # regress · smoke — 바탕 판은 안 띄운다(특허 8판 무변 칸 = 기준 스냅샷)
+        p = open_pg(br, s, kind=who)
         try:
             out = {}
             for nm, rid in P8S.items():
@@ -351,7 +354,13 @@ def e5(br, src, base_src, tag):
             got[who] = out
         finally:
             p.close()
-    n, b = got['new'], got['base']
+    n = got['new']
+    if QJ.GATE:
+        b = got['base']
+    else:   # regress · smoke — 바탕 판은 안 띄운다: 특허 8판 표본 넷 · 「8판 해설 고침」 · 책 카드 전수 해시 = 기준 스냅샷(칸마다)
+        b = {nm: QJ.base('E5@' + nm, n[nm]) for nm in P8S}
+        b['해설'] = QJ.base('E5@해설', n['해설'])
+        b['전수'] = QJ.base('E5@전수', n.get('전수'))
     for nm in P8S:
         ok &= T('E5', '특허 8판 %s(%s) — 칩 글·꼴·제목·자리 · 판 칩 · 책번호 자리 · 칩 줄 글 = 바탕' % (nm, P8S[nm]), n[nm] == b[nm] and bool(n[nm].get('p8')), {'새': n[nm].get('p8') or n[nm], '바탕': b[nm].get('p8') or b[nm]})
     ok &= T('E5', '특허 「8판 해설 고침」 → 「7판 해설」 = 바탕', n['해설'] == b['해설'] and n['해설'].get('단추') == '8판 해설 고침' and (n['해설'].get('상자') or {}).get('lab') == '7판 해설', n['해설'])
@@ -377,10 +386,14 @@ def main():
     from playwright.sync_api import sync_playwright
     t0 = time.time()
     src = app_src(NEW)
-    base_src = app_src(BASE)
-    if YARD:
+    if QJ.GATE:
+        base_src = app_src(BASE)
+        QJ.sub('git:show-app')
+    else:   # regress · smoke — 바탕 판은 안 푼다(특허 8판 무변 칸 = 기준 스냅샷)
+        base_src = None
+    if YARD and QJ.GATE:
         src = base_src
-    print('══ sp_view5 §D %s · 바탕 %s · 앱 md5(LF) %s · 바탕 %s' % ('헛잣대' if YARD else '새 판', BASE, md5lf(src), md5lf(base_src)))
+    print('══ sp_view5 §D %s · 바탕 %s · 앱 md5(LF) %s · 바탕 %s' % ('헛잣대' if YARD else '새 판', BASE, md5lf(src), md5lf(base_src) if base_src is not None else '-'))
     N('E0', '시험 데이터(5판 꼴)', {'줄': len(FJ5['지문']), '객관식': len(FJ5.get('객관식', [])), '판5': sorted((r['id'], r['판5']['cat']) for r in FJ5['지문'] + FJ5.get('객관식', []) if r.get('판5'))})
     got, times = {}, {}
     with sync_playwright() as pw:
@@ -390,17 +403,22 @@ def main():
         for g, fn in steps:
             if ONLY and not any(g.upper() == o or g.upper().startswith(o) for o in ONLY):
                 continue
+            if not QJ.want(g, smoke=g in ('E1', 'E2-폰')):   # smoke — 칩 꼴(PC) · 「5판 고침」 누름(폰 손가락 · WebKit 폰은 아래 E2-wk)
+                continue
             if YARD and g == 'E5':
                 N(g, '헛잣대 해당 없음', '바탕 = 바탕(특허 무변 잠금은 새 판 칸에서 돎)')
                 continue
             print('── %s' % g, flush=True)
             t1 = time.time()
+            _qs = QJ.stage(g)   # 단계 시간(§B-3) — launch.json stages
+            _qs.__enter__()
             try:
                 got[g] = bool(fn())
             except Exception as e:
                 got[g] = False
                 T(g, '돌다 멈춤', False, str(e).splitlines()[0][:300])
             times[g] = round(time.time() - t1)
+            _qs.__exit__(None, None, None)
             print('   (%s %d초)' % (g, times[g]), flush=True)
         br.close()
         if 'webkit' in ENGS and not YARD and (not ONLY or any(o.startswith('E2') for o in ONLY)):

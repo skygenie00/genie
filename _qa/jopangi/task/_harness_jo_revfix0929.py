@@ -12,6 +12,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안
 import io, json, os, re, sys, time
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -24,6 +25,8 @@ def ARG(k, d=None):
 
 ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
+if QJ.SMOKE:   # smoke: Chromium 만
+    ENGS = [x for x in ENGS if x == 'chromium']
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jo_revfix0929_result.txt'))
 _NEW, _DATA = ARG('--new'), ARG('--data', _roots.genie(r'jo\data'))
 sys.argv = [sys.argv[0], '--new', _NEW, '--data', _DATA, '--eng', ','.join(ENGS)]
@@ -64,15 +67,20 @@ def N(grp, name, detail=''):
 def d1():
     G = 'd1'
     nb = {z['id']: z for z in RN.new('jimun_7pan.json')['지문']}
-    hb = {z['id']: z for z in json.loads(M.git('show', 'c3c33ca:jo/data/jimun_7pan.json').decode('utf-8'))['지문']}   # A-6(d) 바탕 데이터 = 이 판 인도 때 HEAD c3c33ca(RN.head 는 revfix0928night 바탕)
+    if QJ.GATE:
+        QJ.sub('git:show-data')
+        hb = {z['id']: z for z in json.loads(M.git('show', 'c3c33ca:jo/data/jimun_7pan.json').decode('utf-8'))['지문']}   # A-6(d) 바탕 데이터 = 이 판 인도 때 HEAD c3c33ca(RN.head 는 revfix0928night 바탕)
     got = {k: (nb.get(k) or {}).get('sol') for k in OLD}
     T(G, '16 줄 sol = 표의 옛 sol(바이트)', got == OLD, {k: v for k, v in got.items() if v != OLD[k]})
-    T(G + '-헛', '헛잣대 바탕 — 16 줄이 다른 표지 글을 달고 있음', all(len(MARKX.findall((hb.get(k) or {}).get('sol') or '')) > 1 for k in OLD),
-      {k: ((hb.get(k) or {}).get('sol') or '')[:30] for k in SAMP})
-    ch = sorted(k for k in set(nb) | set(hb) if nb.get(k) != hb.get(k))
-    fld = sorted({f for k in ch for f in set((nb.get(k) or {})) | set((hb.get(k) or {})) if (nb.get(k) or {}).get(f) != (hb.get(k) or {}).get(f)})
-    T(G, '바뀐 줄 = 16(표의 줄) · 칸 = sol 뿐 · 잘림 되살림 8 줄 무변', ch == sorted(OLD) and fld == ['sol'] and all(nb[k] == hb[k] for k in CUT8),
-      {'바뀐 줄 수': len(ch), '표 밖': [k for k in ch if k not in OLD][:8], '칸': fld})
+    if QJ.SMOKE:   # smoke 칸 = d1#1(16 줄 sol = 표의 옛 sol) 하나
+        return
+    if QJ.GATE:
+        T(G + '-헛', '헛잣대 바탕 — 16 줄이 다른 표지 글을 달고 있음', all(len(MARKX.findall((hb.get(k) or {}).get('sol') or '')) > 1 for k in OLD),
+          {k: ((hb.get(k) or {}).get('sol') or '')[:30] for k in SAMP})
+        ch = sorted(k for k in set(nb) | set(hb) if nb.get(k) != hb.get(k))
+        fld = sorted({f for k in ch for f in set((nb.get(k) or {})) | set((hb.get(k) or {})) if (nb.get(k) or {}).get(f) != (hb.get(k) or {}).get(f)})
+        T(G, '바뀐 줄 = 16(표의 줄) · 칸 = sol 뿐 · 잘림 되살림 8 줄 무변', ch == sorted(OLD) and fld == ['sol'] and all(nb[k] == hb[k] for k in CUT8),
+          {'바뀐 줄 수': len(ch), '표 밖': [k for k in ch if k not in OLD][:8], '칸': fld})
     T(G, '표본 셋(P7-0003-ㄱ · P7-0409-1 · P7-1805-4) sol 에 다른 표지 0(표지 하나)', all(len(MARKX.findall(nb[k]['sol'])) == 1 for k in SAMP), {k: nb[k]['sol'] for k in SAMP})
     raw = open(os.path.join(_DATA, 'jimun_7pan.json'), 'rb').read().decode('utf-8')
     T(G, '워터마크 꼴 0(jimun_7pan · _p8sol.json)', not WMX.search(raw) and not WMX.search(open(os.path.join(JOP, '특상디', '_p8up', '_p8sol.json'), 'rb').read().decode('utf-8')), '')
@@ -80,12 +88,20 @@ def d1():
     T(G, 'P8S 셈 — 잘림 5 · 같음 1862 · 명칭만 172 · 바뀜 112', src['셈']['갈래'].get('잘림') == 5 and src['셈']['갈래'].get('같음') == 1862 and src['셈']['갈래'].get('명칭만') == 172 and src['셈']['갈래'].get('바뀜') == 112, src['셈']['갈래'])
     # A-3 데이터
     nq = {q['id']: q for q in RN.new('jimun_특허.json')['문제']}
-    hq = {q['id']: q for q in json.loads(M.git('show', 'c3c33ca:jo/data/jimun_특허.json').decode('utf-8'))['문제']}   # A-6(d) 바탕 데이터 = c3c33ca
-    a = {i: (nq[i].get('정답'), hq[i].get('정답')) for i in ('2013-50-8', '2013-50-18')}
-    T(G, '2013-50-8(12번) 정답 4 · 2013-50-18(6번) 정답 2(바탕 빈칸)', a == {'2013-50-8': ('4', ''), '2013-50-18': ('2', '')}, a)
-    qd = sorted(k for k in set(nq) | set(hq) if nq.get(k) != hq.get(k))
-    fq = sorted({f for k in qd for f in set(nq.get(k) or {}) | set(hq.get(k) or {}) if (nq.get(k) or {}).get(f) != (hq.get(k) or {}).get(f)})
-    T(G, 'jimun_특허 바뀐 문항 = 둘 · 칸 = 정답 뿐(선지 글·정오·uid·해설 무변)', qd == ['2013-50-18', '2013-50-8'] and fq == ['정답'], {'문항': qd[:6], '칸': fq})
+    if QJ.GATE:
+        QJ.sub('git:show-data')
+        hq = {q['id']: q for q in json.loads(M.git('show', 'c3c33ca:jo/data/jimun_특허.json').decode('utf-8'))['문제']}   # A-6(d) 바탕 데이터 = c3c33ca
+    if QJ.GATE:
+        a = {i: (nq[i].get('정답'), hq[i].get('정답')) for i in ('2013-50-8', '2013-50-18')}
+        T(G, '2013-50-8(12번) 정답 4 · 2013-50-18(6번) 정답 2(바탕 빈칸)', a == {'2013-50-8': ('4', ''), '2013-50-18': ('2', '')}, a)
+    else:
+        # regress: 바탕 데이터(c3c33ca)를 안 푼다 — 정답 값은 NEW 쪽만(「바탕 빈칸」은 인도 때 바탕 조건 · gate 몫)
+        a = {i: nq[i].get('정답') for i in ('2013-50-8', '2013-50-18')}
+        T(G, '2013-50-8(12번) 정답 4 · 2013-50-18(6번) 정답 2(바탕 빈칸)', a == {'2013-50-8': '4', '2013-50-18': '2'}, a)
+    if QJ.GATE:
+        qd = sorted(k for k in set(nq) | set(hq) if nq.get(k) != hq.get(k))
+        fq = sorted({f for k in qd for f in set(nq.get(k) or {}) | set(hq.get(k) or {}) if (nq.get(k) or {}).get(f) != (hq.get(k) or {}).get(f)})
+        T(G, 'jimun_특허 바뀐 문항 = 둘 · 칸 = 정답 뿐(선지 글·정오·uid·해설 무변)', qd == ['2013-50-18', '2013-50-8'] and fq == ['정답'], {'문항': qd[:6], '칸': fq})
 
 
 # ══════════ A-1 카드 DOM ══════════
@@ -113,6 +129,8 @@ def a1(p, b, eng):
         return
     ws = lambda t: re.sub(r'\s+', '', t or '')
     for tag, q in (('NEW', p), ('헛', b)):
+        if tag == '헛' and QJ.REGRESS:   # regress: 바탕 판을 안 띄운다
+            continue
         res = {}
         for rid in SAMP:
             k, dom = open_card(q, rid)
@@ -140,9 +158,12 @@ def a2(p, b, eng, br, phone=False):
     if not phone and eng != 'chromium':
         return
     ns, nd, ne = M.new_env()
-    bs, bd, be = M.base_env()
-    for tag, src, dd, ee in (('NEW', ns, nd, ne), ('헛', bs, bd, be)):
+    if QJ.GATE:
+        QJ.sub('git:show-app'); QJ.sub('git:archive', 2)
+        bs, bd, be = M.base_env()
+    for tag, src, dd, ee in ((('NEW', ns, nd, ne), ('헛', bs, bd, be)) if QJ.GATE else (('NEW', ns, nd, ne),)):
         q = B8.Pg(br, eng, 'r29W%d%s' % (W, tag), src, dd, ee, W=W, H=H)
+        QJ.launch('new' if tag == 'NEW' else 'base')
         try:
             B8.home(q)
             q.ev("a=>__RN.pinSeed(a[0],a[1],a[2])", [U_PIN, PIN_P, PIN_R])
@@ -169,7 +190,9 @@ def probe(p, b, eng, br):
     if eng != 'chromium':
         return
     bs, bd, be = M.base_env()
+    QJ.sub('git:show-app'); QJ.sub('git:archive', 2)
     q = B8.Pg(br, eng, 'r29probe', bs, bd, be, W=1440, H=900)
+    QJ.launch('base')
     try:
         B8.home(q)
         q.ev("a=>__RN.pinSeed(a[0],a[1],a[2])", [U_PIN, PIN_P, PIN_R])
@@ -198,6 +221,8 @@ def a3(p, b, eng):
         return
     NB = {}
     for tag, q in (('헛', b), ('NEW', p)):
+        if tag == '헛' and QJ.REGRESS:   # regress: 바탕 판을 안 띄운다
+            continue
         B8.home(q)
         q.ev("()=>{window.confirm=()=>true;}")
         ans = {'2013-50-8': 4, '2013-50-18': 2}
@@ -224,6 +249,8 @@ def a3(p, b, eng):
         yr = q.ev("()=>__U3.yearOf(2013)")
         oks = {i: (q.ev("k=>(giAll()[k]||{}).ok", got[i]['키']) if got[i]['키'] else None) for i in ans}
         n = {y: q.ev("y=>((VJ&&VJ.qs)||[]).filter(q=>String(q.연도)===y&&giGradable(q)).length", y) for y in ('2009', '2010', '2013', '2018', '2020')}
+        if QJ.REGRESS:   # 기준 칸 — 해마다 채점 가능 수(2009 · 2010 · 2018 · 2020 = 무변)는 바탕(이 판 앞 인도판) 스냅샷과 같아야 한다(바탕 앱을 안 띄움)
+            NB = {y: QJ.base('a3@n/' + y, n[y]) for y in ('2009', '2010', '2018', '2020')}
         if tag == 'NEW':
             T(G, '%s 2013 — 12번 ④ · 6번 ② 누름 → O · 「전체 채점 ✓」 분모 20 · 채점 가능 수 2009 16 · 2010 20 · 2013 20 · 2018 20 · 2020 20' % eng,
               oks == {'2013-50-8': True, '2013-50-18': True} and ((yr or {}).get('year') or {}).get('n') == 20 and n.get('2013') == 20 and all(n[y] == NB[y] for y in ('2009', '2010', '2018', '2020')),
@@ -239,29 +266,41 @@ PARTS = [('probe', probe), ('a1', a1), ('a2', a2), ('a2p', None), ('a3', a3)]
 def run_engine(pw, eng):
     br = getattr(pw, eng).launch()
     ns, nd, ne = M.new_env()
-    bs, bd, be = M.base_env()
+    if QJ.GATE:
+        QJ.sub('git:show-app'); QJ.sub('git:archive', 2)
+        bs, bd, be = M.base_env()
     try:
         p = B8.Pg(br, eng, 'r29N', ns, nd, ne)
-        b = B8.Pg(br, eng, 'r29B', bs, bd, be)
+        QJ.launch('new')
+        b = B8.Pg(br, eng, 'r29B', bs, bd, be) if QJ.GATE else None
+        if QJ.GATE:
+            QJ.launch('base')
         try:
             for k, fn in PARTS:
                 if ONLY and k not in ONLY:
+                    continue
+                if QJ.REGRESS and k == 'probe':   # probe = 바탕 앱으로 재는 INFO(판정 없음) — gate 만
+                    continue
+                if QJ.SMOKE and k != 'a1':   # smoke 칸 = a1(카드 정답·해설 DOM 글 = 표 값) · d1#1
                     continue
                 if eng == 'webkit' and k != 'a2p':
                     continue   # WebKit = A-2 폰 칸만(§B)
                 print('── %s · %s' % (eng, k), flush=True)
                 try:
-                    if k == 'a2p':
-                        a2(p, b, eng, br, phone=True)
-                    elif k in ('a2', 'probe'):
-                        fn(p, b, eng, br)
-                    else:
-                        fn(p, b, eng)
+                    with QJ.stage('%s:%s' % (eng, k)):
+                        if k == 'a2p':
+                            a2(p, b, eng, br, phone=True)
+                        elif k in ('a2', 'probe'):
+                            fn(p, b, eng, br)
+                        else:
+                            fn(p, b, eng)
                 except Exception as e:
                     T('RUN', '%s · %s 묶음이 멈춤' % (eng, k), False, repr(e)[:600])
             T('ERR', '%s — NEW 앱 오류 0' % eng, not p.errs_all(), p.errs_all()[:6])
         finally:
-            p.close(); b.close()
+            p.close()
+            if QJ.GATE:
+                b.close()
     finally:
         br.close()
 
@@ -271,7 +310,8 @@ def main():
     t0 = time.time()
     if not ONLY or 'd1' in ONLY:
         try:
-            d1()
+            with QJ.stage('d1'):
+                d1()
         except Exception as e:
             T('RUN', 'd1 멈춤', False, repr(e)[:600])
     if not ONLY or any(k in ONLY for k, _ in PARTS):
