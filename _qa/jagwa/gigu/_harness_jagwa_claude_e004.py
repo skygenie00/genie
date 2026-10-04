@@ -2,7 +2,11 @@
 r"""_task_jagwa_claude_e004 관문 「CE4」 — 지학 G06-43-02(no 111) Claude 풀이 · 북극성·평행 광선 모션(canvas 셋)
 (2026-10-01 · 같은 길 = _task_jagwa_claude_e001(+add1·add2) CE1 · 물리 짝 = _harness_jagwa_claude_p002.py(CP2) 꼴)
 
-  python _harness_jagwa_claude_e004.py [--eng chromium] [--res <결과>] [--base <genie 커밋>] [--seed <studyplandata 커밋>]
+  python _harness_jagwa_claude_e004.py [--eng chromium] [--res <결과>] [--base <genie 커밋>] [--seed <studyplandata 커밋>] [--no 111|119]
+
+  --no = 번호(기본 111 — 옛 줄 글자 · 잣대 그대로) · 10/4 _task_jagwa_claude_e008 §B 「CE4 하네스를 번호 인자로」:
+         119 = 지학 G06-43-10 일주 운동 그림(svg 한 장 · 움직임 없음) — 모션 잣대가 canvas 셋 · 「▶ 공전」 · 프리셋 대신 svg#fig 1 · 지평선 ellipse 6 ·
+         다른 모션 번호(149 · 84 · 111) 단추 · GP 무변 · 결과 파일 = _harness_jagwa_claude_e004_119_result.txt
 
   NEW  = genie 작업트리 jagwa/motion/*(earth_111.html · index.json 의 earth 끝에 111)
          + 지학 기록 = studyplandata 작업트리 earth/기록.json — gpt["111"] = 재료면 「적재 뒤 실물」 · 아니면 HEAD 기록에 두 칸을 더한 사본(「합성」)
@@ -35,13 +39,22 @@ def ARG(k, d=None):
 
 GENIE = HU.GENIE; SPD = HU.SPD
 ENGS = [x for x in (ARG('--eng', 'chromium') or '').split(',') if x]
-OUTF = ARG('--res', os.path.join(HERE, '_harness_jagwa_claude_e004_result.txt'))
+NO = ARG('--no', '111')   # 10/4 _task_jagwa_claude_e008 「CE4 하네스를 번호 인자로」 — 기본 111(옛 줄 글자 그대로)
+SPEC = {   # 번호마다 다른 것 — 문제 번호 · 창 머리 · 읽기 판 셈 · 이웃(단추 0) · 다른 모션 번호(단추 · GP 그대로) · 모션 꼴
+    '111': dict(code='G06-43-02', head='G06-43-02 · 43회 2번', want={'h3': 6, 'h3t': '①②③④⑤⑥', 'li': 17, 'ol': 0, 'tb': 1, 'th': 3, 'tr': 4, 'b': 7},
+                neigh=(110, 112), others=(149, 84), kind='canvas'),
+    '119': dict(code='G06-43-10', head='G06-43-10 · 43회 10번', want={'h3': 6, 'h3t': '①②③④⑤⑥', 'li': 12, 'ol': 0, 'tb': 1, 'th': 3, 'tr': 4, 'b': 6},
+                neigh=(118, 120), others=(149, 84, 111), kind='svg', ell=6),   # e008 §0-4 재료 셈 · §B-2 · §B-3
+}[NO]
+OUTF = ARG('--res', os.path.join(HERE, '_harness_jagwa_claude_e004_result.txt' if NO == '111' else '_harness_jagwa_claude_e004_%s_result.txt' % NO))
 MAT = _roots.n('jagwa', 'gigu', 'claude_motion')   # N: 에만 있는 재료 — _qa 사본으로 돌려도 N: 에서 읽는다(env_lanes_fix A-2)
-SUBJ, NO, RP = 'earth', '111', 'earth/기록.json'
-CODE, HEADP = 'G06-43-02', 'G06-43-02 · 43회 2번'
-MOTF = 'jagwa/motion/earth_111.html'
-WANT = {'h3': 6, 'h3t': '①②③④⑤⑥', 'li': 17, 'ol': 0, 'tb': 1, 'th': 3, 'tr': 4, 'b': 7}
-NEIGH = (110, 112)
+SUBJ, RP = 'earth', 'earth/기록.json'
+CODE, HEADP = SPEC['code'], SPEC['head']
+MOTF = 'jagwa/motion/earth_%s.html' % NO
+WANT = SPEC['want']
+NEIGH = SPEC['neigh']
+OTHERS = SPEC['others']
+NSURI = ('http://www.w3.org/2000/svg', 'http://www.w3.org/1999/xlink')   # svg 이름공간 글자(불러오기 아님) — 119 그림 재료에 있다
 PRIME = '″'   # 「″」(재료·지시서 둘 다 U+2033)
 OLDNUM = re.compile(r'G\d\d-\d\d-\d(?!\d)|(?<![A-Za-z0-9])C\d-\d{3}')   # 옛 꼴 번호(CE1 add2 와 같은 꼴)
 ROWS = []
@@ -58,7 +71,7 @@ def mat(f):
     return io.open(os.path.join(MAT, f), encoding='utf-8', newline='').read().replace('\r\n', '\n')
 
 
-MD = mat('earth_111.md')
+MD = mat('earth_%s.md' % NO)
 
 
 def dumps(d):
@@ -133,7 +146,7 @@ window.__C={
    const big=[...d.querySelectorAll('a')].find(x=>/크게 보기/.test(x.textContent));
    const r=f.getBoundingClientRect();
    return {src:f.getAttribute('src'),status:st,same:new URL(f.src,location.href).origin===location.origin,h:Math.round(r.height),
-     canvas:d.querySelectorAll('canvas').length,cw:[...d.querySelectorAll('canvas')].map(c=>c.width),card:d.querySelectorAll('svg.card').length,
+     canvas:d.querySelectorAll('canvas').length,cw:[...d.querySelectorAll('canvas')].map(c=>c.width),card:d.querySelectorAll('svg.card').length,svg:d.querySelectorAll('svg#fig').length,ell:d.querySelectorAll('svg#fig ellipse').length,
      big:big?[big.getAttribute('href'),big.getAttribute('target')]:null,p1:__C.tx(d.getElementById('p1')),m11:__C.tx(d.getElementById('m11')),
      text:d.body?d.body.textContent:''}},
  fdoc(){return document.getElementById('gpMotFrame').contentDocument},
@@ -191,7 +204,7 @@ def run_side(br, eng, who, app, rec, stat):
             click(dv, '#gpMot'); dv.pg.wait_for_timeout(1800)
             o['frame'] = dv.ev("()=>__C.frame()")
             fr = o['frame'] or {}
-            if fr.get('same') and fr.get('canvas'):
+            if fr.get('same') and fr.get('canvas') and SPEC['kind'] == 'canvas':   # 「▶ 공전」 · 프리셋은 111 canvas 그림만(119 = svg 한 장 · 움직임 없음)
                 try:
                     fl = dv.pg.frame_locator('#gpMotFrame')
                     h0 = dv.ev("()=>__C.pix('c1')"); dv.pg.wait_for_timeout(500); h0b = dv.ev("()=>__C.pix('c1')")   # 정지 대조 — 누르기 앞 0.5초 동안 안 바뀐다
@@ -207,7 +220,7 @@ def run_side(br, eng, who, app, rec, stat):
         dv.ev("()=>__C.closeSheets()")
         out[NO] = o
         mb = {}
-        for n in NEIGH + (149, 84):   # 이웃 번호 — 모션 단추 0 · 149·84 는 단추 그대로
+        for n in NEIGH + OTHERS:   # 이웃 번호 — 모션 단추 0 · 다른 모션 번호(149·84 · 119 판은 111 도)는 단추 그대로
             dv.ev("n=>__C.open(n)", n); click(dv, '#tGpt'); dv.pg.wait_for_timeout(900)
             s = dv.ev("()=>__C.sheet()"); mb[n] = {'sheet': bool(s), 'mot': bool(s and s['mot'])}; dv.ev("()=>__C.closeSheets()")
         out['nb'] = mb
@@ -266,37 +279,45 @@ def main():
                 ok1 = n['btn']['btn'] == 'Claude ✓' and n['btn']['last'] and n['btn']['vis'] and n['clicked'] and s.get('read') and not s.get('edit') \
                     and p == HEADP and 'undefined' not in p and ' ·  ' not in p and not p.endswith('·') and s.get('h2', '').startswith('%s번 Claude 풀이' % NO)
                 okb1 = b['btn']['btn'] == 'Claude ✓' and bool(sbs.get('read'))
-                R(eng, 'B-1 111 — 아랫줄 맨 오른쪽 「Claude ✓」 · 창 머리 둘째 줄 「%s」(undefined·빈 「 · 」 0) · 읽기 판이 먼저' % HEADP, ok1, okb1,
+                R(eng, 'B-1 %s — 아랫줄 맨 오른쪽 「Claude ✓」 · 창 머리 둘째 줄 「%s」(undefined·빈 「 · 」 0) · 읽기 판이 먼저' % (NO, HEADP), ok1, okb1,
                   {'단추': n['btn'], '제목': s.get('h2'), '머리': p, '바탕 단추': b['btn']['btn'], '바탕 읽기 판': sbs.get('read')})
                 head = [x.strip() for x in MD.split('\n\n')[0].replace('**', '').split('\n')]
                 p1 = [x.strip() for x in (s.get('p1') or '').split('\n')]
                 ok2 = all(s.get(k) == v for k, v in WANT.items()) and s.get('script') == 0 and p1 == head
-                R(eng, 'B-2 읽기 판 — h3.gph 6(①~⑥) · ul.gpul li 17 · ol.gpol li 0 · table.gptb 1(th 3 · tbody tr 4) · <b> 7 · script 0 · 원문 첫 문단 %d줄 = 첫 p' % len(head),
+                R(eng, 'B-2 읽기 판 — h3.gph %d(①~⑥) · ul.gpul li %d · ol.gpol li %d · table.gptb %d(th %d · tbody tr %d) · <b> %d · script 0 · 원문 첫 문단 %d줄 = 첫 p' % (
+                    WANT['h3'], WANT['li'], WANT['ol'], WANT['tb'], WANT['th'], WANT['tr'], WANT['b'], len(head)),
                   ok2, all(sbs.get(k) == v for k, v in WANT.items()), dict({k: s.get(k) for k in list(WANT) + ['script']}, 첫문단=p1 == head, 첫문단줄=len(p1)))
                 f = n.get('frame') or {}
                 old = OLDNUM.findall(s.get('text', '') + ' ' + f.get('text', ''))
                 R(eng, 'B-2 읽기 판·모션 글자에 옛 꼴 번호(G\\d\\d-\\d\\d-\\d(?!\\d) · C\\d-\\d{3}) 0', not old and bool(s.get('text')) and bool(f.get('text')), None, old[:5])
-                ok3 = s.get('mot') and s.get('motTx') == '▶ 모션' and f.get('src') == 'motion/earth_111.html' and f.get('status') == 200 and f.get('same') \
-                    and abs((f.get('h') or 0) - 480) <= 2 and f.get('canvas') == 3 and all((x or 0) > 0 for x in (f.get('cw') or [0])) and f.get('big') == ['earth_111.html', '_blank']
-                R(eng, 'B-3 111 모션 — 「▶ 모션」 · iframe motion/earth_111.html 200 · 같은 출처 · 480px · iframe 안 canvas 3(폭 잡음) · 「크게 보기」 earth_111.html _blank', ok3,
-                  bool(sbs.get('mot')), {k: f.get(k) for k in ('src', 'status', 'same', 'h', 'canvas', 'cw', 'big')})
-                px = f.get('pix') or {}
-                okp = bool(px.get('앞')) and px.get('앞') not in ('empty',) and px.get('앞') == px.get('0.5초 뒤(누르기 앞)') and px.get('뒤') != px.get('앞') \
-                    and isinstance(px.get('바뀐 ms'), int) and 0 <= px['바뀐 ms'] <= 1000
-                R(eng, 'B-3 「▶ 공전 (1년)」 진짜 누름 → 1초 안에 캔버스 ① 픽셀이 바뀜(누르기 앞 0.5초는 그대로 = 정지 대조)', okp, None, dict(px, err=f.get('err')))
-                m11 = f.get('m11') or {}
-                okm = PRIME in (m11.get('뒤') or '') and PRIME not in (m11.get('앞') or '') and m11.get('단추') == '실제 (약 430광년)'
-                R(eng, 'B-3 프리셋 「실제 (약 430광년)」 진짜 누름 → #m11 글자에 「″」(누르기 앞에는 없음)', okm, None, m11)
+                if SPEC['kind'] == 'canvas':
+                    ok3 = s.get('mot') and s.get('motTx') == '▶ 모션' and f.get('src') == 'motion/earth_111.html' and f.get('status') == 200 and f.get('same') \
+                        and abs((f.get('h') or 0) - 480) <= 2 and f.get('canvas') == 3 and all((x or 0) > 0 for x in (f.get('cw') or [0])) and f.get('big') == ['earth_111.html', '_blank']
+                    R(eng, 'B-3 111 모션 — 「▶ 모션」 · iframe motion/earth_111.html 200 · 같은 출처 · 480px · iframe 안 canvas 3(폭 잡음) · 「크게 보기」 earth_111.html _blank', ok3,
+                      bool(sbs.get('mot')), {k: f.get(k) for k in ('src', 'status', 'same', 'h', 'canvas', 'cw', 'big')})
+                    px = f.get('pix') or {}
+                    okp = bool(px.get('앞')) and px.get('앞') not in ('empty',) and px.get('앞') == px.get('0.5초 뒤(누르기 앞)') and px.get('뒤') != px.get('앞') \
+                        and isinstance(px.get('바뀐 ms'), int) and 0 <= px['바뀐 ms'] <= 1000
+                    R(eng, 'B-3 「▶ 공전 (1년)」 진짜 누름 → 1초 안에 캔버스 ① 픽셀이 바뀜(누르기 앞 0.5초는 그대로 = 정지 대조)', okp, None, dict(px, err=f.get('err')))
+                    m11 = f.get('m11') or {}
+                    okm = PRIME in (m11.get('뒤') or '') and PRIME not in (m11.get('앞') or '') and m11.get('단추') == '실제 (약 430광년)'
+                    R(eng, 'B-3 프리셋 「실제 (약 430광년)」 진짜 누름 → #m11 글자에 「″」(누르기 앞에는 없음)', okm, None, m11)
+                else:   # svg 그림(119 · 움직임 없음) — e008 §B-3
+                    ok3 = s.get('mot') and s.get('motTx') == '▶ 모션' and f.get('src') == 'motion/earth_%s.html' % NO and f.get('status') == 200 and f.get('same') \
+                        and abs((f.get('h') or 0) - 480) <= 2 and f.get('svg') == 1 and f.get('ell') == SPEC['ell'] and f.get('canvas') == 0 and f.get('big') == ['earth_%s.html' % NO, '_blank']
+                    R(eng, 'B-3 %s 모션 — 「▶ 모션」 · iframe motion/earth_%s.html 200 · 같은 출처 · 480px · iframe 안 svg#fig 1 · 그 안 ellipse(지평선) %d · canvas 0 · 「크게 보기」 earth_%s.html _blank' % (
+                        NO, NO, SPEC['ell'], NO), ok3, bool(sbs.get('mot')), {k: f.get(k) for k in ('src', 'status', 'same', 'h', 'svg', 'ell', 'canvas', 'big')})
                 merr = [x for x in (N['cerr'] or []) if 'motion/' in x]
                 R(eng, 'B-3 모션 iframe 쪽 콘솔 오류 0 · 페이지 오류(pageerror) 0', not merr and not N['errs'], None, {'모션': merr, 'pageerror': N['errs'], '앱 콘솔(참고)': N['cerr'][:4]})
                 mp = (N['mot'] or {}).get('earth') if isinstance(N['mot'], dict) else None
                 mbb = (B['mot'] or {}).get('earth') if isinstance(B['mot'], dict) else None
                 j0 = json.loads(sb['motion/index.json'])
                 want_me = (j0.get('earth') or []) + [int(NO)]
-                R(eng, 'B-3 지학 모션 번호(MOT.earth) = 바탕 %s + 111 로 시작 — 지금 %s' % (j0.get('earth'), mp), (mp or [])[:len(want_me)] == want_me,
+                R(eng, 'B-3 지학 모션 번호(MOT.earth) = 바탕 %s + %s 로 시작 — 지금 %s' % (j0.get('earth'), NO, mp), (mp or [])[:len(want_me)] == want_me,
                   (mbb or [])[:len(want_me)] == want_me, {'NEW': mp, 'BASE': mbb})
                 nb = N['nb']
-                R(eng, 'B-3 이웃 110·112 — 모션 단추 0(창은 뜸) · 149·84 — 모션 단추 그대로', all(nb[k]['sheet'] and not nb[k]['mot'] for k in NEIGH) and nb[149]['mot'] and nb[84]['mot'],
+                R(eng, 'B-3 이웃 %s — 모션 단추 0(창은 뜸) · %s — 모션 단추 그대로' % ('·'.join(map(str, NEIGH)), '·'.join(map(str, OTHERS))),
+                  all(nb[k]['sheet'] and not nb[k]['mot'] for k in NEIGH) and all(nb[k]['mot'] for k in OTHERS),
                   None, nb)
                 Pn, Pb = phys_side(br, eng, app, sn), phys_side(br, eng, app, sb)
                 okph = {k: Pn[k] for k in (72, 97)} == {k: Pb[k] for k in (72, 97)} and Pn[72]['mot'] and Pn[72]['src'] == 'motion/phys_72.html' and Pn['gp'] == Pb['gp']
@@ -304,22 +325,23 @@ def main():
                 # ── B-4 데이터 ──
                 gk = [k for k in N['keys'] if N['stores'].get(k) != B['stores'].get(k)]
                 g149, g84 = (jn['data'].get('gpt') or {}).get('149'), (jn['data'].get('gpt') or {}).get('84')
+                gO = {k: (jn['data'].get('gpt') or {}).get(str(k)) for k in OTHERS}   # 다른 Claude 칸(이 판이 안 건드림 · 119 판은 111 도)
                 body = json.loads(N['body']) if N['body'] else None
                 bgp = (body or {}).get('data', {}).get('gpt') or {}
                 # ★ 합치기 10/1(하위 에이전트 C) — revfix0929 A-1-3(2bc1719) 원격 옛 열쇠 묘비 → 새 열쇠 비춤(같은 칸 · 같은 시각)은 늘어난 묘비가 아니다
                 _jg = jn.get('gone') or {}
                 _o2n = {r_['옛uid']: r_['uid'] for r_ in json.loads(open(os.path.join(SPD, 'earth', '문항.json'), 'rb').read().decode('utf-8')) if r_.get('옛uid')}
                 _mir = lambda k_, t_: any(j.split('|', 1)[0] == k_.split('|', 1)[0] and _o2n.get(j.split('|', 1)[1]) == k_.split('|', 1)[1] and _jg[j] == t_ for j in _jg if '|' in j)
-                okb_ = body is None or (bgp.get(NO) == MD and bgp.get('149') == g149 and bgp.get('84') == g84
+                okb_ = body is None or (bgp.get(NO) == MD and all(bgp.get(str(k)) == gO[k] for k in OTHERS)
                                         and all(k_ in _jg or _mir(k_, t_) for k_, t_ in (body.get('gone') or {}).items()))
-                ok6 = N['gpText'].get(NO) == MD and N['gpText'].get('149') == g149 == mat('earth_149.md') and N['gpText'].get('84') == g84 == mat('earth_84.md') \
-                    and B['gpText'].get('149') == g149 and B['gpText'].get('84') == g84
-                R(eng, 'B-4 빈 기기 — 동기화 뒤 GP[111] = 재료 글자 전수(%d자) · GP[149]·GP[84] = 기록 값 무변' % len(MD), ok6, B['gpText'].get(NO) == MD,
-                  {'111 길이': len(N['gpText'].get(NO) or ''), '149 같음': N['gpText'].get('149') == g149, '84 같음': N['gpText'].get('84') == g84})
+                ok6 = N['gpText'].get(NO) == MD and all(N['gpText'].get(str(k)) == gO[k] == mat('earth_%d.md' % k) and B['gpText'].get(str(k)) == gO[k] for k in OTHERS)
+                R(eng, 'B-4 빈 기기 — 동기화 뒤 GP[%s] = 재료 글자 전수(%d자) · %s = 기록 값 무변' % (NO, len(MD), '·'.join('GP[%d]' % k for k in OTHERS)), ok6, B['gpText'].get(NO) == MD,
+                  dict({'%s 길이' % NO: len(N['gpText'].get(NO) or '')}, **{'%d 같음' % k: N['gpText'].get(str(k)) == gO[k] for k in OTHERS}))
                 st111 = ((N['stores'].get('status') or {}).get(NO))
-                R(eng, 'B-4 빈 기기 — gpt 말고 동기화 칸 %d 가 바탕과 같다(status.111 = Q 그대로) · GP 칸 = 바탕 + 111(지워진 칸 0) · 올린 몸통 gpt 셋 · 묘비 늘지 않음' % len(N['keys']),
+                R(eng, 'B-4 빈 기기 — gpt 말고 동기화 칸 %d 가 바탕과 같다(status.%s = Q 그대로) · GP 칸 = 바탕 + %s(지워진 칸 0) · 올린 몸통 gpt %s · 묘비 늘지 않음' % (
+                    len(N['keys']), NO, NO, {3: '셋', 4: '넷'}.get(len(OTHERS) + 1, len(OTHERS) + 1)),
                   not gk and N['keys'] == B['keys'] and set(N['gp']) == set(B['gp']) | {int(NO)} and okb_ and st111 == (jn['data'].get('status') or {}).get(NO), None,
-                  {'다른 칸': gk, 'GP': [N['gp'], B['gp']], 'status.111': st111, '올린 몸통': 'PUT 없음' if body is None else 'gpt %s' % sorted(bgp, key=int)})
+                  {'다른 칸': gk, 'GP': [N['gp'], B['gp']], 'status.%s' % NO: st111, '올린 몸통': 'PUT 없음' if body is None else 'gpt %s' % sorted(bgp, key=int)})
                 # 기록 있는 기기 — 111 없는 기록으로 먼저 열고 5번 △(카드 안 [data-vmark=Q])를 진짜로 눌러(내 칸이 더 새것) 둔 뒤 적재 뒤 원격을 받는다
                 dv = dv_open(br, eng, app, SUBJ, rb, sn)
                 try:
@@ -334,40 +356,41 @@ def main():
                     body = json.loads(dv.ev("p=>__J.lastPut(p)", RP) or '{}')
                     bd = body.get('data', {})
                     same = {k: before.get(k) == after.get(k) for k in keys}
-                    ok = cq and h1 == h0 + 1 and gp.get(NO) == MD and gp.get('149') == g149 and gp.get('84') == g84 and all(same.values()) \
+                    ok = cq and h1 == h0 + 1 and gp.get(NO) == MD and all(gp.get(str(k)) == gO[k] for k in OTHERS) and all(same.values()) \
                         and len(((after.get('status') or {}).get('5') or {}).get('h') or []) == h1 \
                         and (bd.get('gpt') or {}).get(NO) == MD and len(((bd.get('status') or {}).get('5') or {}).get('h') or []) == h1
-                    R(eng, 'B-4 기록 있는 기기 — 동기화 뒤 GP[111] = 재료 · GP[149]·[84] 무변 · 다른 칸 %d 무변 · 내 새 칸(5번 △ 진짜 누름) 안 덮임 · 올린 몸통에 111·5번 둘 다' % len(keys),
-                      ok, None, {'다른 칸': [k for k in keys if not same[k]], 'GP111': len(gp.get(NO) or ''), '5번 회독': [h0, h1], '누름': cq})
+                    R(eng, 'B-4 기록 있는 기기 — 동기화 뒤 GP[%s] = 재료 · GP[%s] 무변 · 다른 칸 %d 무변 · 내 새 칸(5번 △ 진짜 누름) 안 덮임 · 올린 몸통에 %s·5번 둘 다' % (
+                        NO, ']·['.join(map(str, OTHERS)), len(keys), NO),
+                      ok, None, {'다른 칸': [k for k in keys if not same[k]], 'GP%s' % NO: len(gp.get(NO) or ''), '5번 회독': [h0, h1], '누름': cq})
                 finally:
                     dv.close()
                 # 내 것이 더 새것 — 111 없는 기록 기기에서 111 Claude 창에 써서 저장(진짜 누름 · 원격 도장보다 뒤) → 적재 뒤 원격을 받아도 안 덮인다
                 dv = dv_open(br, eng, app, SUBJ, rb, sn)
                 try:
-                    MY = '내가 먼저 쓴 111번(검산)'
+                    MY = '내가 먼저 쓴 %s번(검산)' % NO
                     dv.ev("n=>__C.open(n)", int(NO)); click(dv, '#tGpt'); dv.pg.wait_for_timeout(700)
                     dv.pg.locator('#gpIn').fill(MY); click(dv, '#gpSave'); dv.pg.wait_for_timeout(700)
                     dv.ev("()=>__C.closeSheets()"); dv.ev("()=>{try{closeView()}catch(e){}}"); dv.ev("()=>__J.sync()")
                     load(dv, app, SUBJ, rn, sn)
-                    g = dv.ev("()=>({a:GP[111]||'',b:GP[149]||'',c:GP[84]||''})")
+                    g = dv.ev("([n,os])=>({a:GP[n]||'',b:GP[149]||'',c:GP[84]||'',o:Object.fromEntries(os.map(k=>[k,GP[k]||'']))})", [int(NO), list(OTHERS)])
                     body = json.loads(dv.ev("p=>__J.lastPut(p)", RP) or '{}')
                     bg = body.get('data', {}).get('gpt') or {}
-                    ok = g['a'] == MY and g['b'] == g149 and g['c'] == g84 and bg.get(NO) == MY and bg.get('149') == g149
-                    R(eng, 'B-4 내 것이 더 새것 — 원격 도장 뒤에 고친 GP[111] 은 원격이 못 덮는다(claude_slot CL-6 ⓒ 잣대) · GP[149]·[84] 그대로 · 올린 몸통도 내 것', ok, None,
-                      {'111': g['a'][:24], '149·84 같음': g['b'] == g149 and g['c'] == g84, '올린 111': (bg.get(NO) or '')[:24]})
+                    ok = g['a'] == MY and all(g['o'].get(str(k)) == gO[k] for k in OTHERS) and bg.get(NO) == MY and bg.get('149') == g149
+                    R(eng, 'B-4 내 것이 더 새것 — 원격 도장 뒤에 고친 GP[%s] 은 원격이 못 덮는다(claude_slot CL-6 ⓒ 잣대) · GP[%s] 그대로 · 올린 몸통도 내 것' % (NO, ']·['.join(map(str, OTHERS))), ok, None,
+                      {NO: g['a'][:24], '·'.join(map(str, OTHERS)) + ' 같음': all(g['o'].get(str(k)) == gO[k] for k in OTHERS), '올린 %s' % NO: (bg.get(NO) or '')[:24]})
                 finally:
                     dv.close()
                 # ── B-5 목록 ──
                 want = sorted(int(k) for k in (jn['data'].get('gpt') or {}))
-                okl = N['list']['tags'] == want and int(NO) in want and {149, 84} <= set(want) and N['list']['txt'] == ['Claude']
-                R(eng, 'B-5 목록 — .tag.gp 「Claude」 줄 = 기록 gpt 칸 번호 %s(111·149·84) · 다른 줄 0' % want, okl, B['list']['tags'] == want,
+                okl = N['list']['tags'] == want and int(NO) in want and set(OTHERS) <= set(want) and N['list']['txt'] == ['Claude']
+                R(eng, 'B-5 목록 — .tag.gp 「Claude」 줄 = 기록 gpt 칸 번호 %s(%s) · 다른 줄 0' % (want, '·'.join([NO] + [str(k) for k in OTHERS])), okl, B['list']['tags'] == want,
                   {'NEW': N['list'], 'BASE 태그': B['list']['tags']})
                 base_fail[eng] = {'B-1': not okb1, 'B-3': not bool(sbs.get('mot')) and (mbb or [])[:len(want_me)] != want_me, 'B-5': B['list']['tags'] != want}
             finally:
                 br.close()
     # ── 헛잣대 · 정적 ──
     for eng, bf in base_fail.items():
-        R(eng, 'B-7 헛잣대 — 바탕(이 판 앞 motion · 111 없는 기록)에서 B-1·B-3·B-5 가 FAIL', all(bf.values()), None, bf)
+        R(eng, 'B-7 헛잣대 — 바탕(이 판 앞 motion · %s 없는 기록)에서 B-1·B-3·B-5 가 FAIL' % NO, all(bf.values()), None, bf)
     if LANE:
         lf = git1(GENIE, 'diff', '--name-only', LANE + '~1', LANE).split()
         jx = json.loads(HU.git(GENIE, 'show', LANE + ':jagwa/motion/index.json').decode('utf-8'))
@@ -379,10 +402,10 @@ def main():
         where = 'genie 작업트리(커밋 전)'
     R('-', 'B-6 jagwa/index.html 바이트 무변 — 작업트리 = HEAD · %s 가 바꾼 파일 = motion 둘뿐 %s' % (where, lf),
       wt == app and sorted(lf) == sorted(['jagwa/motion/index.json', MOTF]), None, hashlib.md5(wt).hexdigest()[:8])
-    R('-', 'A-2 이 판이 남긴 motion/index.json(%s) = 앞 판 값의 earth 끝에 111 만 더함 — earth %s → %s · phys %s 무변 · 키 무변' % (where, j1.get('earth'), jx.get('earth'), j1.get('phys')),
+    R('-', 'A-2 이 판이 남긴 motion/index.json(%s) = 앞 판 값의 earth 끝에 %s 만 더함 — earth %s → %s · phys %s 무변 · 키 무변' % (where, NO, j1.get('earth'), jx.get('earth'), j1.get('phys')),
       jx.get('earth') == (j1.get('earth') or []) + [int(NO)] and jx.get('phys') == j1.get('phys') and set(jx) == set(j1), None, json.dumps(jx))
     j, j0 = json.loads(sn['motion/index.json']), json.loads(sb['motion/index.json'])
-    R('-', 'A-2 지금 motion/index.json — earth 가 바탕 %s + [111] 로 시작 · phys 가 바탕 %s 로 시작(값·차례 무변 · 뒤 판이 끝에 더한 것만 허용) · 바탕 키 다 있음' % (j0.get('earth'), j0.get('phys')),
+    R('-', 'A-2 지금 motion/index.json — earth 가 바탕 %s + [%s] 로 시작 · phys 가 바탕 %s 로 시작(값·차례 무변 · 뒤 판이 끝에 더한 것만 허용) · 바탕 키 다 있음' % (j0.get('earth'), NO, j0.get('phys')),
       (j.get('earth') or [])[:len(j0.get('earth') or []) + 1] == (j0.get('earth') or []) + [int(NO)] and (j.get('phys') or [])[:len(j0.get('phys') or [])] == (j0.get('phys') or [])
       and set(j0) <= set(j), False, sn['motion/index.json'].decode().strip())
     SEED = seed_rev()
@@ -400,9 +423,9 @@ def main():
         y = json.loads(json.dumps(do))
         for z in (x, y):
             z.pop('savedAt', None)
-        R('-', 'A-3 적재(%s) — 바꾼 파일 = earth/기록.json 하나 · data.gpt["111"] = 재료 · u["gpt|111"] 둘(+savedAt)만 더함 · status.111 등 다른 칸·gone 무변(물리·생물 기록 무변)' % where,
+        R('-', 'A-3 적재(%s) — 바꾼 파일 = earth/기록.json 하나 · data.gpt["%s"] = 재료 · u["gpt|%s"] 둘(+savedAt)만 더함 · status.%s 등 다른 칸·gone 무변(물리·생물 기록 무변)' % (where, NO, NO, NO),
           x == y and dn['data']['gpt'][NO] == MD and isinstance(dn['u'].get('gpt|' + NO), int) and fs == [RP], None,
-          {'파일': fs, '도장': dn['u'].get('gpt|' + NO), 'savedAt': [do.get('savedAt'), dn.get('savedAt')], 'status.111': (dn['data'].get('status') or {}).get(NO)})
+          {'파일': fs, '도장': dn['u'].get('gpt|' + NO), 'savedAt': [do.get('savedAt'), dn.get('savedAt')], 'status.%s' % NO: (dn['data'].get('status') or {}).get(NO)})
     else:
         R('-', 'A-3 적재(%s) — 아직 적재 전(합성 기록으로 잼)' % where, None, None, '')
     P = json.loads(open(os.path.join(SPD, 'phys', '기록.json'), 'rb').read().decode('utf-8'))
@@ -410,8 +433,8 @@ def main():
     Bi = json.loads(open(os.path.join(SPD, 'bio', '기록.json'), 'rb').read().decode('utf-8'))
     R('-', 'B-6 물리 gpt["97"] = 재료 phys_97.md 글자 그대로 · gpt["72"] 있음(무변) · 생물 gpt = %s' % json.dumps(Bi['data'].get('gpt')),
       pg.get('97') == mat('phys_97.md') and bool(pg.get('72')), None, {'물리 gpt': sorted(pg, key=int)})
-    f = 'motion/earth_111.html'
-    src = open(os.path.join(MAT, 'earth_111.html'), 'rb').read()
+    f = 'motion/earth_%s.html' % NO
+    src = open(os.path.join(MAT, 'earth_%s.html' % NO), 'rb').read()
     R('-', 'A-1 %s = 재료 바이트(줄끝만 뺀 대조 · 재료 %d B · md5 %s)' % (f, len(src), hashlib.md5(src).hexdigest()[:8]),
       (sn.get(f) or b'').replace(b'\r\n', b'\n') == src.replace(b'\r\n', b'\n'), None, len(sn.get(f) or b''))
     ix = git1(GENIE, 'ls-files', '-s', '--', MOTF).split()
@@ -421,15 +444,22 @@ def main():
     else:
         R('-', 'A-1 %s — 아직 git 에 안 올림(blob 대조는 스테이징 뒤)' % f, None, None, '')
     tx = (sn.get(f) or b'').decode('utf-8', 'replace')
-    R('-', '%s — 바깥 스크립트·글꼴·주소 0(<script src · <link · @import · http) · canvas 3 · .pdf 0(공개 genie · D11)' % f,
-      not re.search(r'<script[^>]*\bsrc\s*=', tx) and not re.search(r'<link\b', tx) and '@import' not in tx and not re.findall(r'https?://', tx)
-      and tx.count('<canvas') == 3 and '.pdf' not in tx.lower(), None, re.findall(r'https?://[^\s"\'<>]+', tx)[:3])
+    if SPEC['kind'] == 'canvas':
+        R('-', '%s — 바깥 스크립트·글꼴·주소 0(<script src · <link · @import · http) · canvas 3 · .pdf 0(공개 genie · D11)' % f,
+          not re.search(r'<script[^>]*\bsrc\s*=', tx) and not re.search(r'<link\b', tx) and '@import' not in tx and not re.findall(r'https?://', tx)
+          and tx.count('<canvas') == 3 and '.pdf' not in tx.lower(), None, re.findall(r'https?://[^\s"\'<>]+', tx)[:3])
+    else:   # svg 그림 — 「http」 는 svg 이름공간 글자뿐이어야(불러오기 아님)
+        urls = [u for u in re.findall(r'https?://[^\s"\'<>]+', tx) if u not in NSURI]
+        R('-', '%s — 바깥 스크립트·글꼴·주소 0(<script src · <link · @import · http — svg 이름공간 글자만 허용) · svg#fig 1 · canvas 0 · .pdf 0(공개 genie · D11)' % f,
+          not re.search(r'<script[^>]*\bsrc\s*=', tx) and not re.search(r'<link\b', tx) and '@import' not in tx and not urls
+          and len(re.findall(r'<svg[^>]*\bid=["\']fig["\']', tx)) == 1 and tx.count('<canvas') == 0 and '.pdf' not in tx.lower(), None,
+          {'주소(이름공간 뺌)': urls[:3], '이름공간': [u for u in re.findall(r'https?://[^\s"\'<>]+', tx) if u in NSURI][:2]})
     R('-', 'motion 폴더에 .pdf 0', not [k for k in sn if k.lower().endswith('.pdf')], None, sorted(sn))
     npass = sum(1 for r in ROWS if r[2] is True); nfail = sum(1 for r in ROWS if r[2] is False)
     print('\n== PASS %d · FAIL %d · %.0f초 · 기록 %s' % (npass, nfail, time.time() - t0, how))
     with io.open(OUTF, 'a', encoding='utf-8') as fo:
-        fo.write('\n==== %s · claude_e004 CE4 · 기록 %s · genie HEAD %s · 바탕 %s · 이 판 커밋 %s · studyplandata HEAD %s · 적재 %s · 엔진 %s ====\n' % (
-            time.strftime('%Y-%m-%d %H:%M'), how, git1(GENIE, 'rev-parse', '--short', 'HEAD'), BASE_REV, LANE or '-',
+        fo.write('\n==== %s · claude_e004 CE4%s · 기록 %s · genie HEAD %s · 바탕 %s · 이 판 커밋 %s · studyplandata HEAD %s · 적재 %s · 엔진 %s ====\n' % (
+            time.strftime('%Y-%m-%d %H:%M'), '' if NO == '111' else ' · 번호 %s' % NO, how, git1(GENIE, 'rev-parse', '--short', 'HEAD'), BASE_REV, LANE or '-',
             git1(SPD, 'rev-parse', '--short', 'HEAD'), SEED or '-', ','.join(ENGS)))
         for eng, nm, okn, okb, v in ROWS:
             fo.write('%s | 바탕 %s | %s · %s | %s\n' % ({True: 'PASS', False: 'FAIL', None: 'INFO'}[okn], {True: 'PASS', False: 'FAIL', None: '—'}[okb], eng, nm,
