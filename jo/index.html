@@ -6733,6 +6733,37 @@ function hfoldWire(ents, docKey, opts){
   apply();
   return { F: F, key: e => docKey + '|' + e.ri, apply: apply };   /* ★ c2card B-1 */
 }
+/* ★ jo_prsz_pin(10/4) — 크기 손잡이(.prsz)를 창 오른쪽 아래 모서리에 세운다(글이 짧아도 · 늘려도 · 다시 열어도).
+   손잡이 = 창 맨 끝 칸 · CSS 252 sticky 라 글이 창보다 길어 굴러갈 때만 창 아래에 붙고, 글이 짧으면 글 바로 뒤(흐름 자리)에 섰다
+   (popsize 로 창을 크게 늘릴 수 있게 되며 드러남 · 폰 목차노트 칩 창은 열자마자 403px 떠 있었다).
+   prszPin = 손잡이 위 여백(CSS 값 · 보통 −16px)에 남는 높이(창 안쪽 아래 끝 − 손잡이 아래 끝)를 더한다 · 남는 높이 ≤ 0(굴러감 · flex 창 omrpop·cflw·sfpop)이면 CSS 값 그대로(sticky 가 지금처럼 붙음).
+   남는 높이는 getBoundingClientRect(소수)로 재어 내림 — offsetTop 반올림으로 1px 넘쳐 창에 스크롤바가 생기지 않게. */
+function prszPin(p, rs){
+  if (!p || !rs || rs.parentNode !== p) return;
+  rs.style.marginTop = '';
+  const gap = Math.floor(p.getBoundingClientRect().top + p.clientTop + p.clientHeight - rs.getBoundingClientRect().bottom);
+  if (gap > 0) rs.style.marginTop = ((parseFloat(getComputedStyle(rs).marginTop) || 0) + gap) + 'px';
+}
+/* prszWatch = 창과 창의 직계 자식(머리 .ph · 본문 .pb · 발 줄 등 · 손잡이 빼고)을 ResizeObserver 하나로 지켜보고 바뀔 때마다 prszPin —
+   첫 알림 = 열 때(기억 크기 applyCfg · vvFit · mokPlace 뒤) · 창 크기 · 본문 글 펴고 접기(sized 창은 창 크기가 그대로라 자식을 봐야 받는다).
+   직계 자식이 나중에 붙으면(MutationObserver childList) 그것도 지켜봄 · 창 style·class 가 바뀌어도(MutationObserver attributes) 잼 —
+   더블클릭 기억 지움(applyCfg(null) = 높이 '')은 남은 손잡이 여백이 글 높이를 받쳐 창 크기가 그대로라 ResizeObserver 가 안 올 수 있다.
+   prszPin 은 알림 안에서 바로 하지 않고 다음 그림 틀(requestAnimationFrame · 한 틀에 한 번)에서 — 알림 안에서 여백을 풀어 자동 높이 창이 줄면
+   크롬이 「ResizeObserver loop completed with undelivered notifications」 오류를 낸다(관문 B0 실측). 끄는 동안은 pointermove 가 바로 부른다.
+   창이 떨어져 나가면(닫힘) 둘 다 끊음 · ResizeObserver 가 없는 브라우저는 한 번만 */
+function prszWatch(p, rs){
+  if (typeof ResizeObserver !== 'function'){ prszPin(p, rs); return; }
+  let mo = null, raf = 0;
+  const stop = () => { ro.disconnect(); if (mo) mo.disconnect(); };
+  const pin = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; if (!p.isConnected){ stop(); return; } prszPin(p, rs); }); };
+  const ro = new ResizeObserver(pin);
+  const watch = n => { if (n && n.nodeType === 1 && n !== rs) ro.observe(n); };
+  ro.observe(p); [...p.children].forEach(watch);
+  if (typeof MutationObserver === 'function'){
+    mo = new MutationObserver(ms => { ms.forEach(m => m.addedNodes.forEach(watch)); pin(); });
+    mo.observe(p, { childList: true, attributes: true, attributeFilter: ['style', 'class'] });
+  }
+}
 /* 팝업 크기·자리 — 오른쪽 아래 모서리 끌기(최소 360×240) · 머리 끌기(터치도) · 종류별 jopangi_ui.pop_<종류> · 머리 더블클릭 = 기본 */
 function popSizable(body, kind){
   const p = body.parentNode; if (!p || p._sz) return; p._sz = kind;
@@ -6751,10 +6782,11 @@ function popSizable(body, kind){
   rs.addEventListener('pointermove', ev => { if (!on) return; const L = parseFloat(p.style.left) || 0, T = parseFloat(p.style.top) || 0, B = vvBox();   /* ★ mok_popup_phone G-1·G-3 — 보이는 화면 기준 · 최소 폭 = min(360, 화면 폭 − 16) */
     const w = Math.max(Math.min(360, B.w - 16), Math.min(B.x + B.w - L - 4, w0 + ev.clientX - x0)), h = Math.max(Math.min(240, h0), h0 + ev.clientY - y0);   /* ★ popsize — 세로 = 손가락 그대로(위 한계 없음 · 화면 밖 허용 · 창 안 올림) · 최소 = min(240, 잡을 때 높이) */
     p.classList.add('sized'); p.style.width = w + 'px'; p.style.height = h + 'px';
-    p.style.maxHeight = 'none'; });   /* ★ popsize(book_stamp D-2 넓힘) — 폰·PC 모두 끄는 동안 인라인 max-height(vvFit 60vh · 목차노트 화면 아래까지 등)를 푼다 — 그 값이 .sized 를 이겨 손잡이로 안 늘었다 */
+    p.style.maxHeight = 'none'; prszPin(p, rs); });   /* ★ popsize(book_stamp D-2 넓힘) — 폰·PC 모두 끄는 동안 인라인 max-height(vvFit 60vh · 목차노트 화면 아래까지 등)를 푼다 — 그 값이 .sized 를 이겨 손잡이로 안 늘었다 */
   const end = ev => { if (!on) return; on = false; try{ rs.releasePointerCapture(ev.pointerId); }catch(e){} save(true); };
   rs.addEventListener('pointerup', end); rs.addEventListener('pointercancel', end);
   p.appendChild(rs);
+  prszWatch(p, rs);   /* ★ jo_prsz_pin — 손잡이를 창 모서리에(열 때 · 크기·글이 바뀔 때마다 · 끄는 동안은 pointermove 가 바로) */
   if (hd){
     hd.addEventListener('mouseup', () => save());
     hd.addEventListener('dblclick', ev => { if (ev.target.closest('button')) return; delete (S.popCfg || {})[kind]; applyCfg(null); uiSave(); });
