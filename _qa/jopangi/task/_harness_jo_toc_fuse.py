@@ -423,7 +423,8 @@ def scen(br, src, tag, touch=False):
         # A-6(a) 9/30 — mbsame_add2 ③·⑪(편 머리 한 줄 「총 N」 = 줄 넷 합 uzSub · 한 열쇠 한 번 · 거름 뒤 · 처음 = 기출 add3 §A-8) → 새 판 기대 = 앱 uzSub 셈 · 옛 앱(uzSub 없음)은 옛 셈(KEEP n12)
         exp = p.ev("n=>typeof uzSub==='function'?uzSub(VJ.M,__HT.Mi(n)).length:null", '12') or KEEP.get('n12')
         T(g, 'F8a 첫 화면 편 줄 「12 실용신안 총 %s문제」 · 회독 칸(단추) · 🃏 · 17px 굵게 · 12px 16px · 편 머리 바탕(헛잣대: 바탕 「총 0문제」 머리)' % exp,
-          bool(so) and so['text'].startswith('▸12 실용신안') and so['tot'] == '총 %s문제' % exp and so['go'] and so['card'] and so['fs'] == '17px' and so['fw'] == '700' and
+          # 옛 줄(ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」): bool(so) and so['text'].startswith('▸12 실용신안') and so['tot'] == '총 %s문제' % exp and so['go'] and so['card'] and so['fs'] == '17px' and so['fw'] == '700' and
+          bool(so) and so['text'].startswith('▸12 실용신안') and (re.fullmatch(u'(?:총 )?(\\d+)(?:문제)?', so['tot'] or u'') or [None, None])[1] == str(exp) and so['go'] and so['card'] and so['fs'] == '17px' and so['fw'] == '700' and
           so['pad'] == '12px 16px' and so['bg'] == 'rgb(246, 244, 239)' and ch is None,
           {'solo': so and {k: so[k] for k in ('text', 'tot', 'goTxt', 'fs', 'fw', 'pad', 'bg')}, '옛 머리': ch})
         if QJ.SMOKE:   # smoke — F8a(첫 화면 편 줄) · Z(페이지 오류 0) 만 — F8b · F8c 는 안 잰다

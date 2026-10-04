@@ -39,6 +39,8 @@ SRC = E.SRC
 CHROME = E.CHROME
 SPDROOT = E.SPDROOT
 MAT = os.path.join(HERE, 'claude_motion')
+if not os.path.isdir(MAT):   # ★ 거울 사본(옛 잣대 고침 사본)에서 돌 때 — 재료(채팅이 만든 md · html)는 N: 에만 있다(자리만 · 의미 무변)
+    MAT = E._roots.n('jagwa', 'gigu', 'claude_motion') or MAT
 MOTDIR = os.path.join(GENIE, 'jagwa', 'motion')
 OUT = os.path.join(os.environ.get('TEMP', '.'), 'hclaudeslot')
 os.makedirs(OUT, exist_ok=True)
@@ -82,6 +84,8 @@ BODY_CL = r"""
    FL.past='';FL.q='';FL.unit='';FL.bigs=[];FL.subs=[];FL.round='';FL.mark='';FL.lv='';FL.star=false;FL.year='';
    draw(); await wait(600);
    const NO = P?72:((DATA[0]||[])[F.NO]);
+   /* ★ uid_unify 옛 잣대 고침(2026-10-04 · 근거 gigu/_task_jagwa_uid_unify.md §A-1) — 카드 층(지학·생물)의 GP · kv.gpt 열쇠는 번호가 아니라 uid(앱 qk(no)) · 물리와 옛 판(qk 없음)은 번호 그대로 */
+   const KY = (typeof qk==='function')?qk(NO):NO;
    N('CL 밑준비',{subj:SUBJ_ID,DATA:DATA.length,NO:NO,
      SHELL:(typeof SHELL==='undefined'?null:SHELL),
      CARD:(typeof CARD_LAYER==='undefined'?null:CARD_LAYER),
@@ -116,7 +120,8 @@ BODY_CL = r"""
    /* ══════════ CL-1 화면 글자 (세 과목) ══════════ */
    await grp('CL1', async()=>{
      if(NO==null){T('CL-1 문항이 있다',false,null);return}
-     GP[NO]=MD; await saveGP();
+     /* 옛: GP[NO]=MD; await saveGP(); — ★ uid_unify §A-1 카드 층은 GP[uid] */
+     GP[KY]=MD; await saveGP();
      draw(); await wait(700);
      const tags=$$$('#list .item .tag.gp').map(x=>txt(x));
      await openView(NO); await wait(1100);
@@ -133,8 +138,12 @@ BODY_CL = r"""
      N('CL-1 실측 태그·단추',{tags:tags.slice(0,4),btn:txt(btn)});
      gptSheet(NO); await wait(700);
      const sh=sheetNow();
+     /* 옛: T('CL-1 창 제목 = 「N번 Claude 풀이」', !!sh&&txt(sh.querySelector('h2')).indexOf(NO+'번 Claude 풀이')===0, sh?txt(sh.querySelector('h2')):null);
+        ★ uid_unify §C-1 — 카드 층 창은 둘째 줄 #gpSub 가 있는 새 꼴: 제목 = 「<uid> Claude · 정답 …」 · 번호 글자 0 (물리·옛 판 창은 위 옛 줄 그대로) */
      T('CL-1 창 제목 = 「N번 Claude 풀이」',
-       !!sh&&txt(sh.querySelector('h2')).indexOf(NO+'번 Claude 풀이')===0,
+       !!sh&&(sh.querySelector('.panel>#gpSub')
+              ? (txt(sh.querySelector('h2')).indexOf(String(rec(NO)[F.CODE])+' Claude')===0&&txt(sh.querySelector('h2')).indexOf('번')<0)
+              : txt(sh.querySelector('h2')).indexOf(NO+'번 Claude 풀이')===0),
        sh?txt(sh.querySelector('h2')):null);
      const all=bodyText(), hit=all.indexOf('GPT');
      T('CL-1 ★화면 글자에 「GPT」 가 0곳이다',
@@ -148,8 +157,9 @@ BODY_CL = r"""
      T('CL-2 SYNC_KEYS 에 gpt 가 그대로 있다',SYNC_KEYS.indexOf('gpt')>=0,SYNC_KEYS.indexOf('gpt'));
      N('CL-2 SYNC_KEYS',SYNC_KEYS.slice());
      const kv=await get('kv','gpt');
+     /* 옛: T('CL-2 ★IndexedDB 칸 이름이 gpt 그대로고 글이 같다', !!kv&&kv[NO]===MD,kv?Object.keys(kv).length:null); — ★ uid_unify §A-1 카드 층 열쇠 = uid */
      T('CL-2 ★IndexedDB 칸 이름이 gpt 그대로고 글이 같다',
-       !!kv&&kv[NO]===MD,kv?Object.keys(kv).length:null);
+       !!kv&&kv[KY]===MD,kv?Object.keys(kv).length:null);
    });
 
    if(P){
@@ -509,7 +519,9 @@ def static_checks():
                     (r'id="tGpt"', '단추 id tGpt'),
                     (r'class="tag gp"', '태그 class gp'),
                     (r'\bsyncGptBtn\b', 'syncGptBtn')]:
-        a, b = len(re.findall(pat, s_dl if ko == 'syncGptBtn' else s)), len(re.findall(pat, base))   # ★ A-6(d) — syncGptBtn 만 인도 판 f810502(add1 §A-3 이 부름 넷을 더함 · 이름은 그대로)
+        # 옛 줄: a, b = len(re.findall(pat, s_dl if ko == 'syncGptBtn' else s)), len(re.findall(pat, base))
+        _s = re.sub(r'(?m)^const UID_KEYS=\[.*$', '', s) if ko.startswith('SHPERQ') else s   # ★ uid_unify §A 옮김 열쇠 목록 한 줄은 데이터 이름이 아님(10/5)
+        a, b = len(re.findall(pat, s_dl if ko == 'syncGptBtn' else _s)), len(re.findall(pat, base))   # ★ A-6(d) — syncGptBtn 만 인도 판 f810502(add1 §A-3 이 부름 넷을 더함 · 이름은 그대로)
         T('CL-2 데이터 이름 무변 — %s : 바탕과 같은 수다' % ko, a == b and a > 0, [a, b])
 
     for i, ln in enumerate(base.split('\n')):

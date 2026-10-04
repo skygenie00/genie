@@ -494,10 +494,16 @@ def b4(br, eng, app):
 
 # ══════════ B-5 서랍 줄 ══════════
 NDJS = r"""()=>{const L=[...document.querySelectorAll('.ndrow')];let dot=0,dash=0;const other=[];
+  /* ★ uid_unify 옛 잣대 고침 G-1(2026-10-04 · 근거 gigu/_task_jagwa_uid_unify.md §G-1 · 사용자 10/4 16:45 「uid 랑 중복되니까 nn회 n번 없애」) — 서랍 줄 .ndt 는 카드 층 기출(uid = ^[BG]\d\d-\d+-\d+$)에서 「번호 · 출처」 가 아니라 번호만(uid + 난이도 글자) ·
+     확인문제 · 타기출 · 예상 · 물리 · 옛 판은 옛 「번호 · 출처」 그대로 — uid 줄 수는 uid 로 센다(기준은 이 하네스가 정규식으로 가린다 · 앱 ynUid 는 「새 판인가」 갈래에만 쓴다) */
+  let uid=0;const NEWERA=typeof ynUid==='function',HB=typeof HASBOOK!=='undefined'&&!!HASBOOK;
   L.forEach(d=>{const r=rec(+d.dataset.no);if(!r)return;const t=d.querySelector('.ndt').textContent,p=String(r[F.CODE])+String(r[F.LV]==null?'':r[F.LV]);
+    /* 옛: if(NEWERA&&HB&&/^[BG]\d\d-\d+-\d+$/.test(String(r[F.CODE]))){…} — 채팅 10/4 23:1x 판정 (가) 로 G-1 은 지학만(앱 ynUid = ^G) */
+    if(NEWERA&&HB&&(typeof ynUid==='function'?ynUid(r):/^G\d\d-\d+-\d+$/.test(String(r[F.CODE])))){if(t===p)uid++;else other.push(t.slice(0,30));return}
     if(t.startsWith(p+' · '))dot++;else if(t.startsWith(p+'-'))dash++;else other.push(t.slice(0,30))});
   const e=document.querySelector('.ndrow .ndt'),cs=e?getComputedStyle(e):null;
   return {n:L.length,dot,dash,other:other.slice(0,4),sample:L.slice(0,2).map(d=>d.querySelector('.ndt').textContent),
+    uid,   /* ★ uid_unify G-1 — 기출 uid 줄 수 */
     font:cs?cs.fontFamily.slice(0,30)+' '+cs.fontSize+' '+cs.fontWeight:null,ell:cs?cs.textOverflow+'/'+cs.whiteSpace+'/'+cs.overflow:null}}"""
 
 
@@ -507,7 +513,8 @@ def b5(br, eng, app):
         dv = Dev(br, eng).load(app, SPD, subj, rec={'earth/기록.json': rec_old()} if subj == 'earth' else {})
         try:
             x = dv.ev(NDJS); out[subj] = x
-            ok = ok and x['n'] > 0 and x['dash'] == 0 and x['dot'] == x['n']
+            # 옛 줄: ok = ok and x['n'] > 0 and x['dash'] == 0 and x['dot'] == x['n']
+            ok = ok and x['n'] > 0 and x['dash'] == 0 and x['dot'] + x.get('uid', 0) == x['n']   # ★ uid_unify §G-1 — 기출 uid 줄(번호만) + 「번호 · 출처」 줄 = 줄 수
         finally:
             dv.close()
     return bool(ok), out

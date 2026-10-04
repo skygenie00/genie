@@ -68,7 +68,7 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
  function mk(kind,key){ const b=popShell(kind,'하네스 '+(kind||'(빈)'),key||('H|'+kind+'|'+Math.random()));
                         try{showPop(null)}catch(e){} return {b:b,p:b.parentNode}; }
  const rc=e=>e.getBoundingClientRect();
- const txt=e=>(e?String(e.textContent||'').replace(/\s+/g,' ').trim():'');
+ const txt=e=>(e?String(e.textContent||'').replace(/\s+/g,' ').trim():''); const totOk=e=>{const t=e&&e.querySelector('.tot');return !!t&&/^(?:총 )?[1-9]\d*(?:문제)?$/.test(txt(t));}; /* ★ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」 — 첫 화면 단원 줄 .tot 가 0 아닌 수(옛 「총 N문제」 · 새 「N」 둘 다) · 아래 /총 [1-9]/.test(txt(e)) 자리마다 totOk(e) · 줄 번호표(_REG_SITES)에 묶여 줄을 못 늘려 같은 줄 끝에 붙임 */
 
  async function gates(){
   /* ══ §G-10 — popShell 이 만드는 팝업 전부에 크기 손잡이 ══ */
@@ -257,7 +257,7 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
       q('.mbur>.l .tot')>0&&q('.mbchip.card')>0&&q('.mbgo')>0,
       [q('.mbur>.l .tot'),q('.mbchip.card'),q('.mbgo')]);
     /* 흐름 — 단원 줄 → 문제풀이 → 「← 목차」 → 첫 화면 */
-    const row=[...document.querySelectorAll('.mbur')].find(e=>/총 [1-9]/.test(txt(e)));
+    const row=[...document.querySelectorAll('.mbur')].find(e=>totOk(e)); /* 옛: /총 [1-9]/.test(txt(e)) */
     T('2','풀 것이 있는 단원 줄을 찾았다',!!row,row?txt(row).slice(0,40):null);
     if(row){
       row.click(); await wait(2600);
@@ -393,7 +393,7 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
   } else {
     const q=s3=>document.querySelectorAll(s3).length;
     const cs3=(sel,p)=>{const e=document.querySelector(sel);return e?getComputedStyle(e)[p]:'없음'};
-    const row=[...document.querySelectorAll('.mbur')].find(e=>/총 [1-9]/.test(txt(e)));
+    const row=[...document.querySelectorAll('.mbur')].find(e=>totOk(e)); /* 옛: /총 [1-9]/.test(txt(e)) */
     if(row){ row.click(); await wait(2800); }
     T('3','★카드가 그려졌다',q('#slot .qwrap')>0&&q('#slot .qwrap.mbq')===q('#slot .qwrap'),
       [q('#slot .qwrap'),q('#slot .qwrap.mbq')]);
@@ -512,7 +512,7 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
     const badJ=JS.filter(([a,b])=>joShort(a)!==b).map(([a,b])=>[a,b,joShort(a)]);
     T('4','★짧은 조문 꼴 표 — 지시서 보기 그대로('+JS.length+'칸)',badJ.length===0,badJ);
     S.mok=''; S.oxQueue=''; await render(); await wait(2000);
-    const row4=[...document.querySelectorAll('.mbur')].find(e=>/총 [1-9]/.test(txt(e)));
+    const row4=[...document.querySelectorAll('.mbur')].find(e=>totOk(e)); /* 옛: /총 [1-9]/.test(txt(e)) */
     if(row4){ row4.click(); await wait(2800); }
     T('4','★머리에 유형 칩이 있다',q4('.mbtype')>0&&q4('.mbtype .seg.ty')>0,
       [q4('.mbtype'),q4('.mbtype .seg.ty')]);
@@ -578,7 +578,7 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
     const q8=s8=>document.querySelectorAll(s8).length;
     const cs8=(sel,p)=>{const e=document.querySelector(sel);return e?getComputedStyle(e)[p]:'없음'};
     S.mok=''; S.oxQueue=''; await render(); await wait(2000);
-    const r8=[...document.querySelectorAll('.mbur')].find(e=>/총 [1-9]/.test(txt(e)));
+    const r8=[...document.querySelectorAll('.mbur')].find(e=>totOk(e)); /* 옛: /총 [1-9]/.test(txt(e)) */
     if(r8){ r8.click(); await wait(2800); }
     T('8','★옛 뜬 알약·떠 있는 두 단추가 없다(#oxpill·#oxfab)',
       q8('#oxpill')===0&&q8('#oxfab')===0,[q8('#oxpill'),q8('#oxfab')]);
@@ -632,12 +632,12 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
     S.mok=''; S.oxQueue=''; await render(); await wait(2000);
     /* A-6(a) 표본 — 자동 근거 줄(.ggauto)은 리담 지문 칸(역산·병합)에만 선다 · mbsame §A 뒤 첫 풀 줄 쪽은 제7판 카드뿐 → 「(변형)」 줄 쪽에서 따로 잰다(G-6 다른 항목의 표본 쪽은 그대로) */
     let ggV={n:0,fs:'없음'};
-    { const rv=[...document.querySelectorAll('.mbur')].find(e=>/\(변형\)/.test(txt(e))&&/총 [1-9]/.test(txt(e)));
+    { const rv=[...document.querySelectorAll('.mbur')].find(e=>/\(변형\)/.test(txt(e))&&totOk(e)); /* 옛: /총 [1-9]/.test(txt(e)) */
       if(rv){ rv.click(); await wait(2800);
         const e0=document.querySelector('.ggauto');
         ggV={n:q6('.ggauto'),fs:e0?getComputedStyle(e0).fontSize:'없음'};
         S.mok=''; S.oxQueue=''; await render(); await wait(2000); } }
-    const r6=[...document.querySelectorAll('.mbur')].find(e=>/총 [1-9]/.test(txt(e)));
+    const r6=[...document.querySelectorAll('.mbur')].find(e=>totOk(e)); /* 옛: /총 [1-9]/.test(txt(e)) */
     if(r6){ r6.click(); await wait(2800); }
     T('6','★근거 줄이 지문마다 늘 열려 있다',
       q6('.ggbox')>0&&q6('.ggline')===q6('.ggbox')&&q6('.ggline .in')===q6('.ggbox'),
@@ -829,13 +829,13 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
     T('9','★단원 줄에 📋 이 있다',q9('.mbchip.jn')>0,q9('.mbchip.jn'));
     { closeAllPops();
       const jb=[...document.querySelectorAll('.mbur')]
-        .filter(r=>/총 [1-9]/.test(txt(r))).map(r=>r.querySelector('.mbchip.jn'))[0];
+        .filter(r=>totOk(r)).map(r=>r.querySelector('.mbchip.jn'))[0]; /* 옛: /총 [1-9]/.test(txt(r)) */
       if(jb){ jb.click(); await wait(700);
         const p=(POPS||[])[POPS.length-1];
         T('9','★📋 을 누르면 정리 창이 뜬다',
           !!p&&/📋 정리/.test(txt(p.querySelector('.pt'))),p?txt(p.querySelector('.pt')).slice(0,24):'안 뜸');
         closeAllPops(); } }
-    const row9=[...document.querySelectorAll('.mbur')].find(e=>/총 [1-9]/.test(txt(e)));
+    const row9=[...document.querySelectorAll('.mbur')].find(e=>totOk(e)); /* 옛: /총 [1-9]/.test(txt(e)) */
     if(row9){ row9.click(); await wait(2800); }
     /* 형광펜 — 지문 글칸이 형광펜을 받는다 */
     const h9=document.querySelector('.mbqtx[data-mk]');
@@ -916,7 +916,7 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
     T('5','★🏛 판례번호 칩이 있다(§C-15)',false,'panGo 없음 — 이 판 밖');
   } else {
     S.mok=''; S.oxQueue=''; await render(); await wait(2200);
-    const row5=[...document.querySelectorAll('.mbur')].find(e=>/총 [1-9]/.test(txt(e)));
+    const row5=[...document.querySelectorAll('.mbur')].find(e=>totOk(e)); /* 옛: /총 [1-9]/.test(txt(e)) */
     if(row5){ row5.click(); await wait(2800); }
     const pbs=[...document.querySelectorAll('.mbact .chip.panb, .mbact .cfpan')];   /* ★ jo_cardfix §A-8 — 🏛 판례번호 = 글자 단추 cfpan(옛 알약 chip.panb) */
     T('5','★🏛 판례번호 칩이 액션 바에 있다',pbs.length>0,pbs.length);
@@ -992,7 +992,7 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
     T('R','★거꾸로 census — 허용표 밖 0',false,'MBHEAD 없음 — 이 판 밖');
   } else {
     S.jimunTab='ox'; S.mok=''; S.oxQueue=''; await render(); await wait(2200);
-    const rowR=[...document.querySelectorAll('.mbur')].find(e=>/총 [1-9]/.test(txt(e)));
+    const rowR=[...document.querySelectorAll('.mbur')].find(e=>totOk(e)); /* 옛: /총 [1-9]/.test(txt(e)) */
     if(rowR){ rowR.click(); await wait(2800); }
     let badR = scanR(OKQUIZ, '해설닫힘');
     { const pk=document.querySelector('.mbpeek'); if(pk){pk.click(); await wait(400);} }
@@ -1035,7 +1035,7 @@ const GIN = __GIN__, GIFIRST = '__GIFIRST__';
     /* A-6(a) 표본 — 「📘 제7판 해설」 은 병합 리담 지문 칸에만 선다(mbsame §A 뒤 첫 풀 줄 쪽은 제7판 카드뿐) → 「(변형)」 줄 쪽에서 찾고 이 쪽으로 돌아온다(아래 「두 번 안 보인다」 표본 쪽은 그대로) */
     let wrapV=null;
     { const mk0=S.mok; S.mok=''; await render(); await wait(2000);
-      const rv=[...document.querySelectorAll('.mbur')].find(e=>/\(변형\)/.test(txt(e))&&/총 [1-9]/.test(txt(e)));
+      const rv=[...document.querySelectorAll('.mbur')].find(e=>/\(변형\)/.test(txt(e))&&totOk(e)); /* 옛: /총 [1-9]/.test(txt(e)) */
       if(rv){ rv.click(); await wait(2800);
         wrapV=[...document.querySelectorAll('.qwrap.mbq')].find(c=>/📘 제7판 해설/.test(c.textContent))||null; }
       S.mok=mk0; await render(); await wait(2800); }
@@ -1277,7 +1277,7 @@ _REG_JS = r"""
  const __LP=()=>{try{return (POPS&&POPS.length)?POPS[POPS.length-1]:null}catch(e){return null}};
  const __TT=p=>p?txt(p.querySelector('.pt')):'';
  const __JT=()=>document.getElementById('jtree');
- const __ROWS=()=>[...document.querySelectorAll('.mbur')].some(e=>/총 [1-9]/.test(txt(e)));
+ const __ROWS=()=>[...document.querySelectorAll('.mbur')].some(e=>totOk(e)); /* 옛: /총 [1-9]/.test(txt(e)) */
  const __FIRST=()=>__Q('.mbh')===1&&__Q('.mbh .mbhd h1')===1&&__Q('.mbsr')===1&&__Q('.mbhm .hmwrap')===1&&__Q('.mbqr')===1&&__Q('.mbsj')>=11&&__ROWS();
  const __QUIZ=()=>!!S.mok&&__Q('.mbh')===0&&__Q('#slot .qwrap')>0;
  const __OPEN=()=>[...document.querySelectorAll('.mbexp')].some(e=>e.style.display!=='none');

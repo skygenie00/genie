@@ -31,8 +31,10 @@ window.__UZ = {
   cards(){ return [...document.querySelectorAll('#slot .mbdash > .mbsj')].map(c => { const h = c.querySelector(':scope > .hd h2'); const so = c.querySelector('.mbur.mbsolo');
     return { t: h ? txt(h) : ('[solo] ' + txt(so)), tot: h ? txt(h.querySelector('.tot')) : txt(so && so.querySelector('.tot')), arrow: h ? txt(h.querySelector('.uztar')) : null, rows: c.querySelectorAll('.mbur').length }; }); },
   cardTot(no){ const c = [...document.querySelectorAll('#slot .mbdash > .mbsj')].find(x => { const b = x.querySelector(':scope > .hd h2 b'); return b && txt(b) === String(no); });
-    if (!c) { const so = [...document.querySelectorAll('#slot .mbur.mbsolo')].find(r => new RegExp('^' + no + ' ').test(txt(r.querySelector('.nm')))); return so ? (+(/총 (\d+)/.exec(txt(so.querySelector('.tot'))) || [0, -1])[1]) : null; }
-    const m = /총 (\d+)/.exec(txt(c.querySelector(':scope > .hd .tot'))); return m ? +m[1] : null; },
+    /* 옛(ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」): if (!c) { const so = [...document.querySelectorAll('#slot .mbur.mbsolo')].find(r => new RegExp('^' + no + ' ').test(txt(r.querySelector('.nm')))); return so ? (+(/총 (\d+)/.exec(txt(so.querySelector('.tot'))) || [0, -1])[1]) : null; } */
+    if (!c) { const so = [...document.querySelectorAll('#slot .mbur.mbsolo')].find(r => new RegExp('^' + no + ' ').test(txt(r.querySelector('.nm')))); return so ? (+(/(?:총 )?(\d+)/.exec(txt(so.querySelector('.tot'))) || [0, -1])[1]) : null; }
+    /* 옛(ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」): const m = /총 (\d+)/.exec(txt(c.querySelector(':scope > .hd .tot'))); return m ? +m[1] : null; }, */
+    const m = /(?:총 )?(\d+)/.exec(txt(c.querySelector(':scope > .hd .tot'))); return m ? +m[1] : null; },
   drawerHead(nm){ const r = [...document.querySelectorAll('#jtlist .jtch')].find(x => txt(x.querySelector('.jtnm')) === nm); return r ? +txt(r.querySelector(':scope > .n')) : null; },
   /* 서랍 편 줄 수 — 편 번호로(자식 있는 편 = .jtch · 한 줄 편(12 실용신안) = .jtit 로 그려진다) */
   drawerTop(no){ const rx = new RegExp('^' + no + '\\.?\\s'); const rs = [...document.querySelectorAll('#jtlist .jtch, #jtlist .jtit')].filter(x => rx.test(txt(x.querySelector('.jtnm, .tx'))));
@@ -41,7 +43,8 @@ window.__UZ = {
   drawerLeaf(nm){ const r = [...document.querySelectorAll('#jtlist .jtit')].find(x => txt(x.querySelector('.tx')) === nm); return r ? { n: txt(r.querySelector('.n')), vis: vis(r) } : null; },
   hmChip(re){ const rx = new RegExp(re); const b = [...document.querySelectorAll('#slot .mbhm .hmscs .hmsc')].find(x => rx.test(txt(x))); return b ? { t: txt(b), n: +(txt(b.querySelector('b')).replace(/,/g, '') || -1) } : null; },
   rowTot(nm){ const r = [...document.querySelectorAll('#slot .mbur')].find(x => txt(x.querySelector('.nm')) === nm); if (!r) return null;
-    const m = /총 (\d+)문제/.exec(txt(r)); return { tot: m ? +m[1] : null, none: /문항 없음/.test(txt(r)), jn: !!r.querySelector('.mbchip.jn'), vis: vis(r) }; },
+    /* 옛(ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」): const m = /총 (\d+)문제/.exec(txt(r)); return { tot: m ? +m[1] : null, none: /문항 없음/.test(txt(r)), jn: !!r.querySelector('.mbchip.jn'), vis: vis(r) }; }, */
+    const m = /^(?:총 )?(\d+)(?:문제)?$/.exec(txt(r.querySelector('.tot'))); return { tot: m ? +m[1] : null, none: /문항 없음/.test(txt(r)), jn: !!r.querySelector('.mbchip.jn'), vis: vis(r) }; },
   rowAt(nm, sel){ const r = [...document.querySelectorAll('#slot .mbur')].find(x => txt(x.querySelector('.nm')) === nm); const e = r && (sel ? r.querySelector(sel) : r); return e ? hitOn(e) : null; },
   giCardN(){ return document.querySelectorAll('#slot .mbur[data-giy]').length; },
   unkCard(){ return [...document.querySelectorAll('#slot .mbsj .hd h2')].some(h => /미분류/.test(txt(h))); },

@@ -707,10 +707,19 @@ def static_checks():
     T2('S-24 add3 §3 — DATA 원본을 안 건드린다(D10) · 자동 매칭을 안 손댔다',
        'r[F.BODY]=' not in s and 'r[F.CH]=' not in s and 'autoUnit' not in s)
     # ★ 합치기 10/1(하위 에이전트 C) — revfix0929 A-5(2bc1719 본문 「서랍 줄 「번호 · 출처」」)가 서랍 줄의 「-」를 「 · 」로 — 그 한 글자만 둘 다 받는다
+    # 옛 줄: T2('S-25 add3 — 물리 갈래는 종전 자리 그대로다(1445 · 2553 줄)',
+    # 옛 줄:    '<div class="prev">${esc(r[F.BODY])||' in s
+    # 옛 줄:    and ("'</span><span class=\"ndt\">'+esc(r[F.CODE])+esc(r[F.LV])+'-'+esc(titleOf(r))+'</span>" in s
+    # 옛 줄:         or "'</span><span class=\"ndt\">'+esc(r[F.CODE])+esc(r[F.LV])+' · '+esc(titleOf(r))+'</span>" in s))
+    # ★ uid_unify G-1(10/4 · 근거 gigu/_task_jagwa_uid_unify.md §G-1 「서랍 .ndt → G25-62-09」 · 앱 3664행 · 채팅 10/4 23:1x 판정 (가) = 지학만) — 서랍 줄의 글자 식이
+    #   `esc(r[F.CODE])+esc(r[F.LV])+(ynUid(r)?'':' · '+esc(titleOf(r)))` 로 한 줄에 갈렸다. 물리는 ynUid 가 거짓(`HASBOOK&&` 문) → **else 쪽 ` · `+titleOf 가 종전 글자 그대로** —
+    #   그래서 셋째 꼴(ynUid 갈래)은 ① else 쪽이 옛 글자와 같고 ② ynUid 가 `HASBOOK&&` 로 막혀 물리가 새 갈래를 아예 못 타는 것까지 재야 받는다(값 비교만으로 끝내지 않는다 · 옛 판은 위 두 꼴 그대로).
     T2('S-25 add3 — 물리 갈래는 종전 자리 그대로다(1445 · 2553 줄)',
        '<div class="prev">${esc(r[F.BODY])||' in s
        and ("'</span><span class=\"ndt\">'+esc(r[F.CODE])+esc(r[F.LV])+'-'+esc(titleOf(r))+'</span>" in s
-            or "'</span><span class=\"ndt\">'+esc(r[F.CODE])+esc(r[F.LV])+' · '+esc(titleOf(r))+'</span>" in s))
+            or "'</span><span class=\"ndt\">'+esc(r[F.CODE])+esc(r[F.LV])+' · '+esc(titleOf(r))+'</span>" in s
+            or ("'</span><span class=\"ndt\">'+esc(r[F.CODE])+esc(r[F.LV])+(ynUid(r)?'':' · '+esc(titleOf(r)))+'</span>" in s
+                and __import__('re').search(r'var ynUid=r.{2}!!\(HASBOOK&&', s) is not None)))
     return out
 
 

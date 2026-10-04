@@ -198,7 +198,9 @@ TESTS = r"""<script>
      ['status','set','maskpos','omrpos','note','qtype','conc','gpt','twin','ansfix','frm','ink']
        .every(k=>exportData.toString().indexOf(k+':')>=0));
    T('P6 importData 가 예전 그대로 열세 갈래를 읽는다(status…pdf)',
-     (_imp0.toString().match(/if\(j\./g)||[]).length===13&&/await _imp0\(/.test(importData.toString()),   /* ★ A-6(a) 9/30 — 셸 이식(c9faff2)부터 물리도 층 importData(감쌈 · 근거 gg·ggref = add5 §B-7)를 거쳐 옛 importData(_imp0)로 넘긴다 — 열세 갈래는 _imp0 에 그대로 */
+     /* 옛 줄: (_imp0.toString().match(/if\(j\./g)||[]).length===13&&/await _imp0\(/.test(importData.toString()), */
+     (_imp0.toString().match(/if\(j\./g)||[]).length===13&&(/await _imp0\(/.test(importData.toString())||(/await _imp2\(f\)/.test(importData.toString())&&/uidMigrateImport\(\)/.test(importData.toString())&&typeof uidMigrateImport==='function'&&/^async function uidMigrateImport\(\)\{\s*if\(!CARD_LAYER\|\|!DATA_V\)return 0;/.test(uidMigrateImport.toString()))),   /* ★ uid_unify §A-2(10/4) — 들이기 뒤 옮김: uid 감쌈(_imp2 · 블록 const)이 층 importData 를 한 겹 더 감싸 끝에 uidMigrateImport — 물리는 그 첫 줄 !CARD_LAYER 로 0 · 열세 갈래는 _imp0 그대로 */
+     /* ★ A-6(a) 9/30 — 셸 이식(c9faff2)부터 물리도 층 importData(감쌈 · 근거 gg·ggref = add5 §B-7)를 거쳐 옛 importData(_imp0)로 넘긴다 — 열세 갈래는 _imp0 에 그대로 */
      [(_imp0.toString().match(/if\(j\./g)||[]).length,/await _imp0\(/.test(importData.toString())]);
 
    /* ===== P11 : 사용법 팝업 템플릿 리터럴 ===== */

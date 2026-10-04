@@ -114,7 +114,8 @@ window.__CF = {
       return { n: n, absorbed: ab }; }catch(e){ return { err: String(e).slice(0, 120) }; } },
   unkChip(){ const b = [...document.querySelectorAll('#slot .mbhm .hmscs .hmsc')].find(x => /미분류/.test(txt(x))); return b ? { t: txt(b), n: +(txt(b.querySelector('b')).replace(/,/g, '') || -1) } : null; },
   unkDrawer(){ const r = [...document.querySelectorAll('#jtlist .jtit, #jtlist .jtch')].find(x => /미분류/.test(txt(x))); return r ? { t: txt(r).slice(0, 40), n: +(txt(r.querySelector('.n')).replace(/,/g, '') || -1), vis: vis(r) } : null; },
-  unkCard(){ const c = [...document.querySelectorAll('#slot .mbdash > .mbsj')].find(x => /미분류/.test(txt(x.querySelector('.hd')))); const m = c ? /총 (\d+)/.exec(txt(c.querySelector('.hd .tot'))) : null; return m ? +m[1] : null; },
+  /* 옛(ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」): unkCard(){ const c = [...document.querySelectorAll('#slot .mbdash > .mbsj')].find(x => /미분류/.test(txt(x.querySelector('.hd')))); const m = c ? /총 (\d+)/.exec(txt(c.querySelector('.hd .tot'))) : null; return m ? +m[1] : null; }, */
+  unkCard(){ const c = [...document.querySelectorAll('#slot .mbdash > .mbsj')].find(x => /미분류/.test(txt(x.querySelector('.hd')))); const m = c ? /(?:총 )?(\d+)/.exec(txt(c.querySelector('.hd .tot'))) : null; return m ? +m[1] : null; },
   errs(){ return (window.__ERR || []).filter(e => !/^ResizeObserver loop/.test(e)).slice(0, 20); }
 };
 })();

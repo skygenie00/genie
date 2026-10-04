@@ -323,6 +323,66 @@ def m5(br, eng, bodyA):
         dv.close()
 
 
+# ★ uid_unify 옛 잣대 고침(2026-10-04 · 근거 gigu/_task_jagwa_uid_unify.md §A-1 · §A-2 · §B-1) ───────────────────────────────────────────────
+#   카드 층(지학·생물) 기록 열쇠가 문항 차례 번호(F.NO)에서 uid 로 바뀌었다 — 번호가 열쇠였던 통(UID_STORES)은 **열 때** uid 로 옮겨 올라간다
+#   (옛 칸 묘비는 gone 에 · 도장·값은 옛 칸 그대로). 그래서 「새 앱 + 옛 데이터」 의 올린 몸통 data 는 번호 열쇠 통만 열쇠가 바뀌고(§B-1 셈 무변 ·
+#   값 그대로) 나머지 칸(bogi · unit · bpg · crop · tfix · gg · ggref …)은 바이트 그대로여야 한다. 옛 판(uid 열쇠 도입 앞)이면 옛 잣대 그대로.
+UID_STORES = ['status', 'note', 'qtype', 'conc', 'gpt', 'twin', 'ansfix', 'frm', 'maskpos', 'omrpos', 'mcard', 'link', 'txt']   # 앱 UID_KEYS(§A-2) — txt 는 「card:<번호>」 칸만
+_NUMK = re.compile(r'[1-9]\d*')
+_CARDK = re.compile(r'card:([1-9]\d*)')
+
+
+def uidk(app):
+    """그 앱이 카드 층 기록 열쇠를 uid 로 쓰는 판인가(§A-1 의 qk(no) 한 함수가 있나) — 옛 판이면 False"""
+    return b'function qk(no)' in (app or b'')
+
+
+def n2u(spd_dir, subj):
+    """문항.json 차례 → uid 표(번호 n = 차례 + 1 · 앱 buildData 의 F.NO · 그 기기가 읽은 문항.json 으로 만든다 — §A-2)"""
+    items = json.loads(open(os.path.join(spd_dir, subj, '문항.json'), 'rb').read().decode('utf-8'))
+    return {str(i + 1): it['uid'] for i, it in enumerate(items)}
+
+
+def uidnorm(data, n2u_):
+    """기록 data 의 번호 열쇠(UID_STORES) → uid 열쇠 · twin·link 값 속 번호도 uid(§A-2) — 표 밖 번호는 그대로 · 같은 칸이 번호·uid 둘이면 uid 칸을 둔다.
+       번호 열쇠판과 uid 열쇠판의 올린 몸통을 같은 꼴로 맞대려는 것이다(값·도장은 안 건드린다)."""
+    d = json.loads(json.dumps(data or {}))
+    out = {}
+    for k, v in d.items():
+        if k in UID_STORES and isinstance(v, dict):
+            cells, late = {}, []
+            for c, x in v.items():
+                nc, moved = c, False
+                if k == 'txt':
+                    m = _CARDK.fullmatch(c)
+                    if m and m.group(1) in n2u_:
+                        nc, moved = 'card:' + n2u_[m.group(1)], True
+                elif _NUMK.fullmatch(c) and c in n2u_:
+                    nc, moved = n2u_[c], True
+                if k in ('twin', 'link') and isinstance(x, list):
+                    x = [n2u_.get(str(y), y) if isinstance(y, (int, str)) and _NUMK.fullmatch(str(y)) else y for y in x]
+                if moved:
+                    late.append((nc, x))
+                else:
+                    cells[nc] = x
+            for nc, x in late:
+                cells.setdefault(nc, x)
+            out[k] = cells
+        else:
+            out[k] = v
+    return out
+
+
+def numkeys(data):
+    """UID_STORES 안에 번호 열쇠로 남은 칸 수(§A-1 — 새 판은 번호 열쇠를 쓰지 않는다)"""
+    n = 0
+    for k in UID_STORES:
+        v = (data or {}).get(k)
+        if isinstance(v, dict):
+            n += sum(1 for c in v if (_CARDK.fullmatch(c) if k == 'txt' else _NUMK.fullmatch(c)))
+    return n
+
+
 def a8(br, eng):
     """새 앱 + 옛 데이터 = 바탕 앱과 같은 화면 · 올린 몸통 같음 · 옮김 0"""
     G = 'a8'
@@ -336,8 +396,19 @@ def a8(br, eng):
         finally:
             dv.close()
     n, b = out['NEW'], out['BASE']
+    # ★ uid_unify 옛 잣대 고침(§A-2 · §B-1) — 새 앱(uid 열쇠판)은 번호 열쇠 통을 uid 로 옮겨 올리니 `올린 data = 바탕` 은 「번호 열쇠 통만 열쇠가 다르고 값은 같다 · 번호 열쇠 0」 로 읽는다.
+    #   (칸 이름은 그대로 — 옛 줄은 아래 주석 · 옛 판이면 갈래로 그대로 쓴다. 이 하네스는 NEW 앱 = 작업트리 · BASE 앱 = genie HEAD 인데 줄(워크트리)에서 HEAD = 후보라 둘이 같은 앱이면 uid 열쇠끼리 맞댄다)
+    # 옛 줄:  T(G, '%s 새 앱 + 옛 데이터(옛uid 없음) — 보이는 번호·목록 = 바탕 · 올린 data = 바탕 · 옮김 0' % eng,
+    #           [x[3] for x in n['rows']] == [x[3] for x in b['rows']] and n['list'] == b['list'] and n['data'] == b['data'] and n['mig'] == 0, {'목록 표본': n['list'][:3], '옮김': n['mig']})
+    un = uidk(APPS['NEW'])
+    if un:
+        n2u_ = n2u(BD, 'earth')
+        same_data = uidnorm(n['data'], n2u_) == uidnorm(b['data'], n2u_) and numkeys(n['data']) == 0
+    else:
+        same_data = n['data'] == b['data']
     T(G, '%s 새 앱 + 옛 데이터(옛uid 없음) — 보이는 번호·목록 = 바탕 · 올린 data = 바탕 · 옮김 0' % eng,
-      [x[3] for x in n['rows']] == [x[3] for x in b['rows']] and n['list'] == b['list'] and n['data'] == b['data'] and n['mig'] == 0, {'목록 표본': n['list'][:3], '옮김': n['mig']})
+      [x[3] for x in n['rows']] == [x[3] for x in b['rows']] and n['list'] == b['list'] and same_data and n['mig'] == 0,
+      {'목록 표본': n['list'][:3], '옮김': n['mig'], 'uid 열쇠판': un, '번호 열쇠 남음(새·바탕)': [numkeys(n['data']), numkeys(b['data'])]})
 
 
 def a679(br, eng, phone=False):

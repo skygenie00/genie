@@ -60,6 +60,184 @@ def mat(f):
 MD = mat('phys_97.md')
 
 
+def _old_mat(k):   # 번호 k 의 옛 재료 글(earth_<번호>.md)
+    return mat('earth_%d.md' % k)
+
+
+# ★ uid_unify 옛 잣대 고침(2026-10-04 · 근거 gigu/_task_jagwa_uid_unify.md §A-1 · §A-2 · §C-1 · §C-2 · §C-3 · §D-1 · §D-2 · §0-6) ───────────────────────────────
+#   카드 층(지학) 기록 열쇠 = uid(번호 F.NO 는 화면 자리 번호일 뿐) · Claude 풀이 창 새 꼴(제목 「<uid> Claude · 정답 …」 · 둘째 줄 = 왼쪽 QA 줄 + 오른쪽 「▶ 모션」 글자 ·
+#   옛 #gpMotBar 줄 없음 · 읽기 판은 QA 첫 줄을 뺀 나머지) · 모션 파일 motion/earth_<uid>.html · motion/index.json 의 earth = uid 문자열.
+#   UIDK(그 앱이 uid 열쇠판인가)가 거짓이면(옛 판 · 바탕) 아래 도우미는 옛 값 그대로 돌려준다 — 옛 줄은 바꾼 자리마다 「# 옛 줄:」 주석으로 남겼다.
+#   값을 박지 않는다 — 번호 → uid 는 문항.json 에서 · 하네스가 박아 둔 code 는 닻(§0-6)으로 맞대 본다.
+import posixpath   # noqa: E402
+UIDK = b'function qk(no)' in HU.git(GENIE, 'show', 'HEAD:jagwa/index.html')   # 앱이 카드 층 기록 열쇠를 uid 로 쓰는 판인가(§A-1 의 qk(no))
+_ITEMS = json.loads(open(os.path.join(SPD, 'earth', '문항.json'), 'rb').read().decode('utf-8'))
+N2U = {str(i + 1): it['uid'] for i, it in enumerate(_ITEMS)}   # 화면 번호(= 문항.json 차례 + 1) → uid
+U2N = {u: n for n, u in N2U.items()}
+UID_STORES = ['status', 'note', 'qtype', 'conc', 'gpt', 'twin', 'ansfix', 'frm', 'maskpos', 'omrpos', 'mcard', 'link', 'txt']   # 앱 UID_KEYS(§A-2)
+GP_QA = re.compile(r'^(지학|생물)QA [EB]\d{3} · 질문일 \d{4}-\d{2}-\d{2}$')
+GP_SEC = re.compile(r'^\s*([①-⑩])\s*(.*)$')
+GP_UL = re.compile(r'^\s*-\s+')
+GP_OL = re.compile(r'^\s*\d+\.\s+')
+GP_BOLD = re.compile(r'\*\*([^*]+)\*\*')
+GP_ANS_CHO = re.compile(r'^[ㄱ-ㅎ㉠-㉽,\s]+$')
+CIRC_ = '①②③④⑤⑥⑦⑧'
+
+
+def mat_uid(uid):
+    """D-2 새 재료(earth_<uid>.md · QA 첫 줄) — 없으면 None(N: 에서 이름이 소문자로 보여도 윈도는 같은 파일)"""
+    for nm in (uid, uid.lower()):
+        f = os.path.join(MAT, 'earth_%s.md' % nm)
+        if os.path.isfile(f):
+            return io.open(f, encoding='utf-8', newline='').read().replace('\r\n', '\n')
+    return None
+
+
+def gkey(no):
+    """GP · status … 통의 칸 열쇠 — uid 열쇠판이면 그 번호의 uid · 옛 판이면 번호 글자"""
+    return N2U.get(str(no), str(no)) if UIDK else str(no)
+
+
+def gp_expect(rj, no, uid):
+    """그 기록(원격)을 받은 기기의 GP[uid] 글 — 번호 칸 · uid 칸 둘 다면 도장이 늦은 쪽(같으면 uid 칸)이 이긴다(§A-2) · 둘 다 없으면 None"""
+    g = (rj.get('data') or {}).get('gpt') or {}
+    u = rj.get('u') or {}
+    a, b = g.get(str(no)), g.get(uid)
+    if a is not None and b is not None:
+        return a if (u.get('gpt|%s' % no) or 0) > (u.get('gpt|%s' % uid) or 0) else b
+    return b if b is not None else a
+
+
+def gpx(rj, no):
+    """이 번호 칸의 글(그 기록 기준) — 옛 판이면 옛 줄 그대로 번호 칸"""
+    return gp_expect(rj, no, N2U[str(no)]) if UIDK else (rj['data'].get('gpt') or {}).get(str(no))
+
+
+def rec_get(d, no):
+    """기록 칸에서 이 번호의 값 — 번호 칸이 없으면(uid 열쇠로 옮겨 올린 기록) 그 번호의 uid 칸"""
+    d = d or {}
+    return d.get(str(no)) if (str(no) in d or not UIDK) else d.get(N2U.get(str(no)))
+
+
+def known_mat(k, t):
+    """글이 그 번호의 재료다 — 옛 재료(earth_<번호>.md) 또는 D-2 새 재료(earth_<uid>.md)"""
+    return t == _old_mat(k) or bool(UIDK and t is not None and t == mat_uid(N2U[str(k)]))
+
+
+def uidify(st):
+    """바탕 판 motion 묶음(옛 번호 이름 · 번호 목록)을 uid 열쇠판 앱이 읽는 꼴로 — earth_<번호>.html → earth_<uid>.html · index.json 의 earth = uid 문자열(§D-1) · 파일 바이트는 그대로"""
+    out = {}
+    for k, v in st.items():
+        m = re.fullmatch(r'motion/earth_(\d+)\.html', k)
+        if m and m.group(1) in N2U:
+            out['motion/earth_%s.html' % N2U[m.group(1)]] = v
+        elif k == 'motion/index.json':
+            j = json.loads(v.decode('utf-8'))
+            if 'earth' in j:
+                j['earth'] = [N2U.get(str(x), x) if isinstance(x, int) else x for x in (j.get('earth') or [])]
+            out[k] = json.dumps(j, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+        else:
+            out[k] = v
+    return out
+
+
+def gp_qa_split(src):
+    """앱 gpQaSplit 과 같은 규칙(§C-3) — 풀이 글 첫 줄이 「지학QA E008 · 질문일 2026-10-04」 꼴이면 (그 줄, 그 줄과 바로 뒤 빈 줄을 뺀 나머지) · 아니면 ('', 통째)"""
+    t = str(src or '')
+    L = t.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    if not L or not GP_QA.match(L[0].strip()):
+        return '', t
+    rest = L[1:]
+    while rest and not rest[0].strip():
+        rest.pop(0)
+    return L[0].strip(), '\n'.join(rest)
+
+
+def _gp_sep(r):
+    return '-' in r and re.fullmatch(r'[\s|:\-]+', r) is not None
+
+
+def _gp_cells(r):
+    r = re.sub(r'\|$', '', re.sub(r'^\|', '', r.strip()))
+    return [x.strip() for x in r.split('|')]
+
+
+def gp_counts(src):
+    """앱 gpRender 문법(빈 줄 · | 표 · ①~⑩ 절 머리 · - 글머리 · 1. 번호 · 그 밖 문단 · **굵게**)으로 읽기 판 DOM 개수를 글에서 센다 — 옛 재료는 옛 하네스가 박아 둔 값과 같다(오프라인 대조)"""
+    L = str(src or '').replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    c = dict(h3=0, h3t='', li=0, ol=0, tb=0, th=0, tr=0, b=0)
+    i = 0
+    while i < len(L):
+        x = L[i]
+        if not x.strip():
+            i += 1
+            continue
+        if '|' in x:
+            rows = []
+            while i < len(L) and '|' in L[i]:
+                rows.append(L[i])
+                i += 1
+            body = [r for r in rows if not _gp_sep(r)]
+            head = body.pop(0) if (len(rows) > 1 and _gp_sep(rows[1]) and body) else None
+            c['tb'] += 1
+            if head is not None:
+                hc = _gp_cells(head)
+                c['th'] += len(hc)
+                c['b'] += sum(len(GP_BOLD.findall(z)) for z in hc)
+            for r in body:
+                rc = _gp_cells(r)
+                c['tr'] += 1
+                c['b'] += sum(len(GP_BOLD.findall(z)) for z in rc)
+            continue
+        m = GP_SEC.match(x)
+        if m:
+            c['h3'] += 1
+            c['h3t'] += m.group(1)
+            c['b'] += len(GP_BOLD.findall(m.group(2)))
+            i += 1
+            continue
+        if GP_UL.match(x):
+            while i < len(L) and GP_UL.match(L[i]):
+                c['li'] += 1
+                c['b'] += len(GP_BOLD.findall(GP_UL.sub('', L[i], count=1)))
+                i += 1
+            continue
+        if GP_OL.match(x):
+            while i < len(L) and GP_OL.match(L[i]):
+                c['ol'] += 1
+                c['b'] += len(GP_BOLD.findall(GP_OL.sub('', L[i], count=1)))
+                i += 1
+            continue
+        while i < len(L) and L[i].strip() and '|' not in L[i] and not GP_SEC.match(L[i]) and not GP_UL.match(L[i]) and not GP_OL.match(L[i]):
+            c['b'] += len(GP_BOLD.findall(L[i]))
+            i += 1
+    return c
+
+
+def gpt_title(it):
+    """§C-1 — 제목 = uid + ' Claude' + (정답 있으면 ' · 정답 ' + CIRC[정답−1] [+ ' ' + 자음 선택지 글(㉠㉡… → ㄱㄴ… · 쉼표+빈칸 → ·)] [+ ' (옳지 않은 것)'])"""
+    s = str(it['uid']) + ' Claude'
+    try:
+        a = int(str(it.get('정답') or '').strip() or 0)
+    except ValueError:
+        a = 0
+    if 1 <= a <= len(CIRC_):
+        s += ' · 정답 ' + CIRC_[a - 1]
+        ch = it.get('선택지') or []
+        t = str(ch[a - 1] if a - 1 < len(ch) else '').strip()
+        if t and GP_ANS_CHO.match(t):
+            t = re.sub(r'[㉠-㉽]', lambda m_: 'ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ'[ord(m_.group(0)) - 0x3260] if ord(m_.group(0)) - 0x3260 < 14 else m_.group(0), t)
+            s += ' ' + re.sub(r'\s+', '', re.sub(r'\s*,\s*', '·', t))
+        if '옳지 않은' in str(it.get('문항') or ''):
+            s += ' (옳지 않은 것)'
+    return s
+
+
+def mk(no):
+    """지학 모션 열쇠(§D-1) — uid 열쇠판이면 uid · 옛 판이면 번호 글자"""
+    return N2U[str(no)] if UIDK else str(no)
+
+
 def dumps(d):
     return json.dumps(d, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
 
@@ -127,7 +305,8 @@ window.__C={
      li:rd?rd.querySelectorAll('ul.gpul li').length:0,ol:rd?rd.querySelectorAll('ol.gpol li').length:0,
      tb:rd?rd.querySelectorAll('table').length:0,b:rd?rd.querySelectorAll('b').length:0,script:rd?rd.querySelectorAll('script').length:0,
      p1:rd?((rd.querySelector('p.gpp')||{}).innerText||''):'',text:rd?rd.textContent:'',
-     mot:(()=>{const m=s.querySelector('#gpMotBar');return !!m&&m.style.display!=='none'})(),motTx:__C.tx(s.querySelector('#gpMot'))}},
+     /* 옛: mot:(()=>{const m=s.querySelector('#gpMotBar');return !!m&&m.style.display!=='none'})(),motTx:__C.tx(s.querySelector('#gpMot'))}}, — ★ uid_unify §C-2 카드 층(지학) 창은 #gpMotBar 줄이 없고 둘째 줄(#gpSub) 오른쪽에 「▶ 모션」(#gpMot) · 물리 창은 옛 꼴 그대로 */
+     mot:(()=>{const m=s.querySelector('#gpMotBar');return (!!m&&m.style.display!=='none')||!!s.querySelector('#gpSub #gpMot')})(),motTx:__C.tx(s.querySelector('#gpMot'))}},
  closeSheets(){document.querySelectorAll('.sheet').forEach(x=>x.remove())},
  async frame(){const f=document.getElementById('gpMotFrame');if(!f)return null;
    for(let i=0;i<60;i++){try{const d=f.contentDocument;if(d&&d.readyState==='complete'&&d.body&&d.body.children.length)break}catch(e){}await new Promise(r=>setTimeout(r,150))}
@@ -248,6 +427,9 @@ def earth_side(br, eng, app, stat):
 def main():
     rn, rb, how = recs()
     sn, sb = statics()
+    sb_raw = sb   # 옛 번호 이름 그대로(라벨 · 옛 값 표시용) — 아래 sb 는 uid 열쇠판 앱에 먹이려고 지학 모션 이름·목록을 uid 로 옮긴 것(§D-1 · 물리 쪽은 그대로)
+    if UIDK:
+        sb = uidify(sb)
     app = HU.git(GENIE, 'show', 'HEAD:jagwa/index.html')
     wt = open(os.path.join(GENIE, 'jagwa', 'index.html'), 'rb').read().replace(b'\r\n', b'\n')
     jn, jb = json.loads(rn.decode('utf-8')), json.loads(rb.decode('utf-8'))
@@ -301,8 +483,10 @@ def main():
                   (mb or [])[:len(want_mp)] == want_mp, {'NEW': mp, 'BASE': mb})
                 R(eng, 'B-2 물리 96·98 — 모션 단추 0(창은 뜸)', all(v['sheet'] and not v['mot'] for v in N['nb'].values()), None, N['nb'])
                 En, Eb = earth_side(br, eng, app, sn), earth_side(br, eng, app, sb)
-                oke = all(En[k]['mot'] and En[k]['status'] == 200 and En[k]['card'] == 1 and En[k]['src'] == 'motion/earth_%d.html' % k for k in (149, 84)) \
-                    and {k: En[k] for k in (149, 84)} == {k: Eb[k] for k in (149, 84)}
+                # 옛 줄: oke = all(En[k]['mot'] and En[k]['status'] == 200 and En[k]['card'] == 1 and En[k]['src'] == 'motion/earth_%d.html' % k for k in (149, 84)) \
+                # 옛 줄: and {k: En[k] for k in (149, 84)} == {k: Eb[k] for k in (149, 84)}
+                oke = all(En[k]['mot'] and En[k]['status'] == 200 and En[k]['card'] == 1 and En[k]['src'] == 'motion/earth_%s.html' % mk(k) for k in (149, 84)) \
+                    and {k: En[k] for k in (149, 84)} == {k: Eb[k] for k in (149, 84)}   # ★ uid_unify §D-1 — 지학 모션 파일 = earth_<uid>.html · 바탕 motion 도 uid 이름·목록으로 옮겨 맞댄다
                 R(eng, 'B-2 지학 149·84 — 모션 단추·iframe(motion/earth_149·84.html 200 · svg.card 1) = 바탕(무변)', oke, None, {'NEW': {k: En[k] for k in (149, 84)}, '같음': oke})
                 merr = [x for x in (N['cerr'] or []) if 'motion/' in x]
                 R(eng, 'B-2 모션 iframe 쪽 콘솔 오류 0 · 앱 페이지 오류 0', not merr and not N['errs'], None, {'모션': merr, '앱 pageerror': N['errs'], '앱 콘솔(참고)': N['cerr'][:4]})
@@ -381,7 +565,9 @@ def main():
     R('-', 'A-1 이 판이 남긴 motion/index.json(%s) = 앞 판 값에 phys 97 만 더함 — phys %s → %s · earth %s 무변 · 키 무변' % (where, j1.get('phys'), jx.get('phys'), j1.get('earth')),
       jx.get('phys') == (j1.get('phys') or []) + [97] and jx.get('earth') == j1.get('earth') and set(jx) == set(j1), None, json.dumps(jx))
     j, j0 = json.loads(sn['motion/index.json']), json.loads(sb['motion/index.json'])
-    R('-', 'A-1 지금 motion/index.json — phys 가 바탕 %s + [97] 로 시작 · earth 가 바탕 %s 로 시작(값·차례 무변 · 뒤 판이 끝에 더한 것만 허용) · 바탕 키 다 있음' % (j0.get('phys'), j0.get('earth')),
+    # 옛 줄: R('-', 'A-1 지금 motion/index.json — phys 가 바탕 %s + [97] 로 시작 · earth 가 바탕 %s 로 시작(값·차례 무변 · 뒤 판이 끝에 더한 것만 허용) · 바탕 키 다 있음' % (j0.get('phys'), j0.get('earth')),
+    j0r = json.loads(sb_raw['motion/index.json'])   # 옛 번호 그대로 — 라벨용(판이 달라도 같은 줄 이름) · 조건의 j0 는 uid 로 옮긴 바탕 목록(§D-1)
+    R('-', 'A-1 지금 motion/index.json — phys 가 바탕 %s + [97] 로 시작 · earth 가 바탕 %s 로 시작(값·차례 무변 · 뒤 판이 끝에 더한 것만 허용) · 바탕 키 다 있음' % (j0r.get('phys'), j0r.get('earth')),
       (j.get('phys') or [])[:len(j0.get('phys') or []) + 1] == (j0.get('phys') or []) + [97] and (j.get('earth') or [])[:len(j0.get('earth') or [])] == (j0.get('earth') or [])
       and set(j0) <= set(j), False, sn['motion/index.json'].decode().strip())
     # 적재가 두 칸(+savedAt)만 더했나
@@ -409,7 +595,8 @@ def main():
     eg = E['data'].get('gpt') or {}
     Bi = json.loads(open(os.path.join(SPD, 'bio', '기록.json'), 'rb').read().decode('utf-8'))
     R('-', 'B-5 지학 gpt["149"]·["84"] = 재료 글자 그대로(무변) · 생물 gpt = %s' % json.dumps(Bi['data'].get('gpt')),
-      eg.get('149') == mat('earth_149.md') and eg.get('84') == mat('earth_84.md'), None, {'지학 gpt': sorted(eg, key=int)})
+      # 옛 줄: eg.get('149') == mat('earth_149.md') and eg.get('84') == mat('earth_84.md'), None, {'지학 gpt': sorted(eg, key=int)})
+      eg.get('149') == mat('earth_149.md') and eg.get('84') == mat('earth_84.md'), None, {'지학 gpt': sorted(eg, key=lambda z_: (0, int(z_), '') if z_.isdigit() else (1, 0, z_))})   # ★ uid_unify §D-2 — 원격 gpt 에 uid 열쇠 칸이 더해질 수 있다(번호 칸은 그대로)
     # 모션 파일
     f = 'motion/phys_97.html'
     src = open(os.path.join(MAT, 'phys_97.html'), 'rb').read()

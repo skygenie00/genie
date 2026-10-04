@@ -465,7 +465,9 @@ def b1(br, src, base_src, tag):
 
 
 ROWS = r"""() => [...document.querySelectorAll('#jnw .jnrow')].map(r => { const h = r.querySelector('.h'), g = h.querySelector('.jgo'), n = h.querySelector('.mut'), k = [...h.children].filter(__H.vis).pop();
-  return {no: +r.dataset.no, go: __H.tx(g), name: __H.tx(n), gf: getComputedStyle(g).fontSize + ' ' + getComputedStyle(g).fontWeight, nf: getComputedStyle(n).fontSize + ' ' + getComputedStyle(n).fontWeight,
+  /* 옛: return {no: +r.dataset.no, go: __H.tx(g), name: __H.tx(n), gf: getComputedStyle(g).fontSize + ' ' + getComputedStyle(g).fontWeight, nf: getComputedStyle(n).fontSize + ' ' + getComputedStyle(n).fontWeight, */
+  /* ★ uid_unify G-1(10/4 · gigu/_task_jagwa_uid_unify.md §G-1) — 새 판 카드 층(지학) 기출 uid 줄은 .mut(이름)을 안 그린다(n = null) → nf 만 빈칸으로(이름 있는 줄 · 물리 줄은 옛 식 값 그대로) */
+  return {no: +r.dataset.no, go: __H.tx(g), name: __H.tx(n), gf: getComputedStyle(g).fontSize + ' ' + getComputedStyle(g).fontWeight, nf: n ? getComputedStyle(n).fontSize + ' ' + getComputedStyle(n).fontWeight : '',
     drop: !!k && k !== g && (k.getBoundingClientRect().top - g.getBoundingClientRect().top) > Math.max(8, g.getBoundingClientRect().height * 0.6)}; })"""
 
 
@@ -486,6 +488,28 @@ PNM = r"""(no) => { const e = document.querySelector('#jnw .jnrow[data-no="' + n
 LIST = r"""(code) => { const it = [...document.querySelectorAll('#list .item')].find(x => { const n = x.querySelector('.num'); return n && n.textContent.trim() === code; }); if (!it) return null; const s = it.querySelector('.sub'); return {sub: __H.tx(s), fx: s.classList.contains('pnfx')}; }"""
 
 
+# ★ uid_unify G-1(10/4) — .jnrow .h 안에 임시 .mut 를 넣어 CSS 규칙(줄 머리 이름 글자)만 재는 JS · 이름 있는 줄이 한 줄도 없을 때만 쓴다
+MUTPROBE = r"""() => { const h = document.querySelector('#jnw .jnrow .h'); if (!h) return null; const s = document.createElement('span'); s.className = 'mut'; s.textContent = 'x'; h.appendChild(s);
+  const c = getComputedStyle(s), v = c.fontSize + ' ' + c.fontWeight; s.remove(); return v; }"""
+
+
+def earth_ref(pe, re_):
+    """지학 정리 창의 (번호 글자, 이름 글자) 기준 — 이름(.mut)이 있는 첫 줄. 옛 판은 모든 줄에 이름이 있어 첫 줄 = 옛 식(re_[0]) 그대로.
+    새 판(§G-1)은 기출 uid 줄이 이름을 안 그리므로 이름 있는 줄(확인문제 등)이 나오는 절까지 훑고 · 끝내 없으면 CSS 규칙 값을 임시 .mut 로 잰다."""
+    r0 = next((r for r in re_ if r['nf']), None)
+    if r0 is None and re_:
+        for sec in (pe.ev("() => Object.keys(TOC.sec)") or [])[1:]:
+            pe.ev("s => jnOpen(s)", sec)
+            pe.wait(120)
+            r0 = next((r for r in pe.ev(ROWS) if r['nf']), None)
+            if r0:
+                break
+    if r0:
+        return (r0['gf'], r0['nf'])
+    nf = pe.ev(MUTPROBE)
+    return (re_[0]['gf'], nf) if re_ and nf else None
+
+
 def b2(br, src, base_src, tag):
     G = 'B2'
     ok = True
@@ -494,7 +518,8 @@ def b2(br, src, base_src, tag):
     pe.ev("s => jnOpen(s)", pe.ev("() => Object.keys(TOC.sec)[0]"))
     pe.wait(400)
     re_ = pe.ev(ROWS)
-    ef = (re_[0]['gf'], re_[0]['nf']) if re_ else None
+    # 옛 줄: ef = (re_[0]['gf'], re_[0]['nf']) if re_ else None
+    ef = earth_ref(pe, re_)   # ★ uid_unify G-1 — 이름(.mut) 있는 첫 줄 기준(옛 판 = re_[0] 그대로)
     nf = sorted(set((r['gf'], r['nf']) for r in rn.values()))
     g1 = nf == [ef]
     ok = ok and g1

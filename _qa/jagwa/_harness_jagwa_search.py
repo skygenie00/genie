@@ -146,7 +146,9 @@ def g2(dv, who):
 
 def g3(dv, who):
     out = {}
-    dv.ev("()=>{const r=DATA.find(x=>!noteOf(x[F.NO])&&String(x[F.BODY]).length>20);CMT[r[F.NO]]='검산용코멘트말씨하나 둘 셋 넷 다섯';return r[F.NO]}")
+    # 옛 줄: dv.ev("()=>{const r=DATA.find(x=>!noteOf(x[F.NO])&&String(x[F.BODY]).length>20);CMT[r[F.NO]]='검산용코멘트말씨하나 둘 셋 넷 다섯';return r[F.NO]}")
+    # ★ uid_unify §A-1(10/5) — 카드 층 메모리 dict 는 uid 열쇠(qk) · 번호로 심으면 noteOf 가 못 봄(cand_v 에서 g3 「코멘트 표본 없음」)
+    dv.ev("()=>{const r=DATA.find(x=>!noteOf(x[F.NO])&&String(x[F.BODY]).length>20);CMT[typeof qk==='function'?qk(r[F.NO]):r[F.NO]]='검산용코멘트말씨하나 둘 셋 넷 다섯';return r[F.NO]}")
     for lab in ('선택지', '보기', '해설', '해설2', '보기 설명', '참고', '코멘트'):
         sm = dv.ev("l=>__S.sample(l)", lab)
         if not sm:

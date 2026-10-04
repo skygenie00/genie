@@ -142,8 +142,12 @@ BODY_CL2 = r"""
      const pt=txt(p);
      N('CL2 실측 창 머리 둘째 줄',pt);
      T('CL2-4 ★둘째 줄에 undefined 가 없다',pt.indexOf('undefined')<0,pt);
+     /* 옛: T('CL2-4 ★둘째 줄이 빈 「 · 」 로 시작하지 않는다', pt.length>2&&pt.charAt(0)!=='·'&&pt.indexOf('·')>0,pt);
+        ★ uid_unify §C-2 — 카드 층 창 둘째 줄(#gpSub)은 「코드 · 이름」 이 아니라 왼쪽 QA 줄(없으면 빈칸) + 오른쪽 「▶ 모션」(있을 때만) · 앞이 「 · 」 로 시작하지 않고 빈 「 ·  」 가 없다 + (빈칸 또는 QA 줄 꼴) 로 읽는다 */
      T('CL2-4 ★둘째 줄이 빈 「 · 」 로 시작하지 않는다',
-       pt.length>2&&pt.charAt(0)!=='·'&&pt.indexOf('·')>0,pt);
+       (sh&&sh.querySelector('.panel>#gpSub'))
+         ? (pt.charAt(0)!=='·'&&pt.indexOf(' ·  ')<0&&/^((지학|생물)QA [EB]\d{3} · 질문일 \d{4}-\d{2}-\d{2})?(▶ 모션)?$/.test(pt))
+         : (pt.length>2&&pt.charAt(0)!=='·'&&pt.indexOf('·')>0),pt);
      /* 글이 없으니 고치기 판이 먼저다 */
      const ta=sh.querySelector('#gpIn');
      T('CL2-3 글이 없으면 textarea 부터',!!ta);
@@ -165,8 +169,9 @@ BODY_CL2 = r"""
        txt(document.getElementById('tGpt')));
      /* 그 과목 통에만 들어갔나 */
      const kv=await get('kv','gpt');
+     /* 옛: T('CL2-3 ★글이 그 과목 IndexedDB 에만 들어갔다', !!kv&&!!kv[NO]&&CUR.DB.indexOf(SUBJ_ID.slice(0,3))>=0&&REC_PATH.indexOf(SUBJ_ID)===0, — ★ uid_unify §A-1 카드 층 kv.gpt 열쇠 = uid(앱 qk) · 옛 판은 번호 */
      T('CL2-3 ★글이 그 과목 IndexedDB 에만 들어갔다',
-       !!kv&&!!kv[NO]&&CUR.DB.indexOf(SUBJ_ID.slice(0,3))>=0&&REC_PATH.indexOf(SUBJ_ID)===0,
+       !!kv&&!!kv[(typeof qk==='function')?qk(NO):NO]&&CUR.DB.indexOf(SUBJ_ID.slice(0,3))>=0&&REC_PATH.indexOf(SUBJ_ID)===0,
        [CUR.DB,REC_PATH,kv?Object.keys(kv):null]);
    });
 

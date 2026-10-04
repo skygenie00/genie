@@ -806,10 +806,12 @@ def depth_gates(br):
         heads = {}
         for no in ('8.2.3', '8.3.2', '8.3.3', '8.3.4', '9.1.2'):
             h = p.ev("n=>__HM.head(n)", no)
-            heads[no] = h and re.search(u'총 (\\d+)문제', h['t']).group(1)
+            # 옛 줄(ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」): heads[no] = h and re.search(u'총 (\\d+)문제', h['t']).group(1)
+            heads[no] = h and (re.search(u'(\\d+)', h['tot'] or u'') or [None, None])[1]
         dw = p.ev("()=>__HM.drawerCounts()")
         dmap = {no: dw.get('H:' + p.ev("n=>{const i=__HM.nodeIdx(n);const M=VJ.M;return (M[i].no?M[i].no+' ':'')+M[i].제목}", no)) for no in heads}
-        zero = p.ev("()=>[...document.querySelectorAll('#slot .mbur.mdph')].filter(r=>/총 0문제/.test(r.textContent)).length")
+        # 옛 줄(ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」): zero = p.ev("()=>[...document.querySelectorAll('#slot .mbur.mdph')].filter(r=>/총 0문제/.test(r.textContent)).length")
+        zero = p.ev("()=>[...document.querySelectorAll('#slot .mbur.mdph')].filter(r=>/^(?:총 )?0(?:문제)?$/.test(((r.querySelector('.tot')||{}).textContent||'').trim())).length")
         T('D1', u'add1 머리 셈 — 첫 화면 머리 = 서랍 같은 마디 셈(다름 0) · 「총 0문제」 머리 0', all(str(dmap[k]) == str(v) for k, v in heads.items()) and zero == 0, {'첫 화면': heads, '서랍': dmap, '총0': zero})
         N('D1', u'add1 머리 셈 쪼개 보기 — 그 마디와 아래 전부: 본편 b · (미수록) u · (변형) v(셈 = b+u+v) · 붙은 리담 선지 lid 중 흡수 abs(본편 제7판 줄로 감)',
           {no: p.ev("n=>__HM.subCensus(n)", no) for no in heads})
@@ -851,7 +853,8 @@ def depth_gates(br):
         try:
             q.ev("()=>__HM.home('특허법')")
             hb = q.ev("n=>__HM.head(n)", '8.3.2')
-            z0 = q.ev("()=>[...document.querySelectorAll('#slot .mbur')].filter(r=>/총 0문제/.test(r.textContent)&&/^.?8\\.2\\.3|^.?8\\.3\\.[234]|^.?9\\.1\\.2/.test(r.querySelector('.nm')?r.querySelector('.nm').textContent.trim():'')).length")
+            # 옛 줄(ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」): z0 = q.ev("()=>[...document.querySelectorAll('#slot .mbur')].filter(r=>/총 0문제/.test(r.textContent)&&/^.?8\\.2\\.3|^.?8\\.3\\.[234]|^.?9\\.1\\.2/.test(r.querySelector('.nm')?r.querySelector('.nm').textContent.trim():'')).length")
+            z0 = q.ev("()=>[...document.querySelectorAll('#slot .mbur')].filter(r=>/^(?:총 )?0(?:문제)?$/.test(((r.querySelector('.tot')||{}).textContent||'').trim())&&/^.?8\\.2\\.3|^.?8\\.3\\.[234]|^.?9\\.1\\.2/.test(r.querySelector('.nm')?r.querySelector('.nm').textContent.trim():'')).length")
             T('D1·D2·D3-헛', u'헛잣대 — 바탕 첫 화면에 깊이 3 머리 줄 없음 · 그 다섯이 「총 0문제」', not hb and z0 == 5, {'머리': hb, '총0': z0})
             bdw = q.ev("()=>__HM.drawerCounts()")
             N('D1-헛', u'바탕 서랍 머리 셈(같은 다섯 마디 · 본판 §A 전 셈)',

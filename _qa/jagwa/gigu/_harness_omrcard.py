@@ -42,6 +42,8 @@ TESTS = r"""<script>
 (function(){
  const R=[]; const T=(n,c,i)=>R.push((c?'PASS':'FAIL')+' | '+n+(c?'':' | '+JSON.stringify(i===undefined?null:i)));
  const CARD=(typeof CARD_LAYER!=='undefined')&&CARD_LAYER;
+ /* ★ uid_unify 옛 잣대 고침(2026-10-04 · 근거 gigu/_task_jagwa_uid_unify.md §A-1) — 카드 층(지학)의 mcard 칸 열쇠는 문항 번호가 아니라 uid(qk(no)) · 옛 판(바탕 4754b1d)은 qk 가 없어 번호 그대로 */
+ const MK=n=>(typeof qk==='function')?qk(n):n;
  const __nativeFetch=window.fetch.bind(window);
  window.fetch=async function(url,opt){
   opt=opt||{};const u=String(url);
@@ -139,15 +141,20 @@ TESTS = r"""<script>
      /* 획 하나 그리고 — MC 에 조각이 안 들어가는지 */
      const before=JSON.stringify(MC).length;
      await zzDraw(fg);
-     T('O-C 획 하나 = MC 에 1획 · 조각은 안 들어간다(획 좌표는 1/1000 정수뿐)',
+     /* 옛: T('O-C 획 하나 = MC 에 1획 · 조각은 안 들어간다(획 좌표는 1/1000 정수뿐)',
        MC[NO]&&MC[NO].s.length===1&&MC[NO].s[0].p.every(v=>Number.isInteger(v)&&v>=0&&v<=1000),
-       MC[NO]&&MC[NO].s[0].p.slice(0,6));
+       MC[NO]&&MC[NO].s[0].p.slice(0,6)); */
+     T('O-C 획 하나 = MC 에 1획 · 조각은 안 들어간다(획 좌표는 1/1000 정수뿐)',
+       MC[MK(NO)]&&MC[MK(NO)].s.length===1&&MC[MK(NO)].s[0].p.every(v=>Number.isInteger(v)&&v>=0&&v<=1000),
+       MC[MK(NO)]&&MC[MK(NO)].s[0].p.slice(0,6));
      T('O-C MC 바이트가 조각 크기만큼 늘지 않았다(1KB 미만 증가)',JSON.stringify(MC).length-before<1024,JSON.stringify(MC).length-before);
      /* 「내 필기 전부 지움」 — 배경은 남는다 */
      const _c=window.confirm; window.confirm=()=>true;
      $('#mcClear').click(); await wait(300); window.confirm=_c;
+     /* 옛: T('O-C 「내 필기 전부 지움」 → MC[no] 만 사라지고 배경은 남는다',
+       !MC[NO]&&!!$('.mccv canvas.bg')&&$('.mccv canvas.bg').width>50,[!!MC[NO],!!$('.mccv canvas.bg')]); */
      T('O-C 「내 필기 전부 지움」 → MC[no] 만 사라지고 배경은 남는다',
-       !MC[NO]&&!!$('.mccv canvas.bg')&&$('.mccv canvas.bg').width>50,[!!MC[NO],!!$('.mccv canvas.bg')]);
+       !MC[MK(NO)]&&!!$('.mccv canvas.bg')&&$('.mccv canvas.bg').width>50,[!!MC[MK(NO)],!!$('.mccv canvas.bg')]);
      /* 토글 끄면 배경만 감춰진다 */
      $('#mcJg').click(); await wait(150);
      T('O-C 토글 끔 → 배경 감춤 · localStorage 기기 값',getComputedStyle($('.mccv canvas.bg')).display==='none'&&localStorage.getItem('jagwa.jogak')==='0');
@@ -281,7 +288,9 @@ def main():
        "const JG=(typeof jogakAny==='function')&&jogakAny();" in s
        and "const _jg=(typeof jogakOf==='function')?jogakOf(r):null;" in s and 'if(_jg){' in s)
     T2('O-P mcard 저장 꼴·상한 무변', 'const MC_MAX=20000;' in s and "const saveMC=()=>put('kv','mcard',MC);" in s)
-    T2('O-P 조각을 MC 에 넣는 코드 0', 'MC[no]=card' in s and 'jogak' not in s[ix('const end=async()=>{ if(!live)return;'):ix('const end=async()=>{ if(!live)return;') + 600])
+    # 옛 줄: T2('O-P 조각을 MC 에 넣는 코드 0', 'MC[no]=card' in s and 'jogak' not in s[ix('const end=async()=>{ if(!live)return;'):ix('const end=async()=>{ if(!live)return;') + 600])
+    UIDK = 'function qk(no)' in s   # ★ uid_unify 옛 잣대 고침(§A-1) — 카드 층 기록 열쇠 = uid 인 판(앱 글에 qk(no))은 mcardWin 저장 줄이 MC[qk(no)]=card · 옛 판(바탕)은 MC[no]=card
+    T2('O-P 조각을 MC 에 넣는 코드 0', ('MC[qk(no)]=card' if UIDK else 'MC[no]=card') in s and 'jogak' not in s[ix('const end=async()=>{ if(!live)return;'):ix('const end=async()=>{ if(!live)return;') + 600])
     T2('O-P 백틱 짝', s.count('`') % 2 == 0)
     if SUBJ == 'earth':
         J = json.loads(io.open(os.path.join(SPD, '조각.json'), encoding='utf-8').read())

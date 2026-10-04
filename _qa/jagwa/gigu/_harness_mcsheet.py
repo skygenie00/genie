@@ -83,6 +83,9 @@ BODY_EARTH = r"""
       (gigu/_task_jagwa_earth_listpop_add1.md §C · cd248a5 if(rd&&!ISEA) → c9faff2 if(rd&&!SHELL) 세 과목). 종이 모아보기 mcardSheet 는 남아 있어
       (§C 「mcardSheet 함수는 남긴다」) 아래 묶음은 그 단추가 부르던 그대로 직접 부른다 — 화면에서 여는 길은 없다(재는 것 = 종이 꼴 · 크기 · 배치 그대로) */
    const MCALL=()=>mcardSheet(null,'전 문항');
+   /* ★ uid_unify A-1(10/4 · 근거 gigu/_task_jagwa_uid_unify.md §A 약속 1 「mcard 통 포함 — 열쇠 함수 qk(no) 한 곳」 · 앱 mcardSheet/mcardWin 의 MC[qk(no)]) —
+      카드 잉크 MC 의 열쇠 = 카드 층 uid · 옛 판(qk 없음 · 바탕 4754b1d)은 번호 그대로. 번호로 심으면 앱이 못 읽고 stampAll 의 uidGuard 가 uid 칸으로 옮겨 번호 칸이 비어 버린다 */
+   const MK=n=>typeof qk==='function'?qk(n):n;
 
    /* ═══ M-1 목록 머리 단추 ═══ */
    await grp('M-1', async()=>{
@@ -258,8 +261,10 @@ BODY_EARTH = r"""
    /* ═══ M-12 카드 좌표 무변 ═══ */
    await grp('M-12', async()=>{
      const no=DATA[0][F.NO];
-     MC[no]={s:[{c:'#B03A2E',w:2,hl:0,p:[100,120,300,420,700,880]}]};
-     const snap=JSON.stringify(MC[no]);
+     /* 옛: MC[no]={s:[{c:'#B03A2E',w:2,hl:0,p:[100,120,300,420,700,880]}]};
+     const snap=JSON.stringify(MC[no]); */
+     MC[MK(no)]={s:[{c:'#B03A2E',w:2,hl:0,p:[100,120,300,420,700,880]}]};
+     const snap=JSON.stringify(MC[MK(no)]);
      delete WIN['mcard'];try{localStorage.removeItem('jagwa.win.mcard')}catch(e){}
      await openView(no); await wait(300); mcardWin(no); await wait(300);
      const p=document.querySelector('.mcwin .panel'), cv0=document.querySelector('.mccv').getBoundingClientRect();
@@ -272,9 +277,12 @@ BODY_EARTH = r"""
      T('M-12 카드 창 크기도 기기 하나 값으로 적힌다',!!JSON.parse(localStorage.getItem('jagwa.win.mcard')||'null'));
      const cv1=document.querySelector('.mccv').getBoundingClientRect();
      T('M-12 그리는 바닥 비율이 그대로다(같은 식으로 다시 잰다)',Math.abs(cv1.width/cv1.height-ar0)<0.06,[ar0,cv1.width/cv1.height,cv1.width,cv1.height]);
-     T('M-12 획의 상대 좌표가 전건 같다(창 크기는 mcard 에 안 들어간다)',JSON.stringify(MC[no])===snap,[JSON.stringify(MC[no]).slice(0,80),snap.slice(0,80)]);
+     /* 옛: T('M-12 획의 상대 좌표가 전건 같다(창 크기는 mcard 에 안 들어간다)',JSON.stringify(MC[no])===snap,[JSON.stringify(MC[no]).slice(0,80),snap.slice(0,80)]); */
+     /* 판정은 같다(MC[열쇠] 의 글자 == 처음 심은 글자) — 값이 없을 때 .slice 로 예외가 나 아래 정리 줄이 건너뛰어지던 info 만 String() 으로 감쌌다(예외 0 · 뒤 칸이 같이 끊기지 않게) */
+     T('M-12 획의 상대 좌표가 전건 같다(창 크기는 mcard 에 안 들어간다)',JSON.stringify(MC[MK(no)])===snap,[String(JSON.stringify(MC[MK(no)])).slice(0,80),snap.slice(0,80)]);
      document.querySelectorAll('.sheet').forEach(x=>{if(x.classList.contains('mcwin'))x.remove()});
-     delete MC[no]; closeView(); await wait(80);
+     /* 옛: delete MC[no]; closeView(); await wait(80); */
+     delete MC[MK(no)]; closeView(); await wait(80);
    });
 
    /* ═══ M-14 조각 배경 — 눈에 들어온 칸만 그린다(칸·캔버스는 다 만든다) ═══ */
@@ -497,12 +505,16 @@ BODY_EARTH = r"""
    /* ── N-7 카드 좌표 무변 · 누르는 법 종전대로 ── */
    await grp('N-7', async()=>{
      const no=DATA[0][F.NO];
-     MC[no]={s:[{c:'#B03A2E',w:2,hl:0,p:[110,130,310,430,710,890]}]};
-     const snap=JSON.stringify(MC[no]);
+     /* 옛: MC[no]={s:[{c:'#B03A2E',w:2,hl:0,p:[110,130,310,430,710,890]}]};
+     const snap=JSON.stringify(MC[no]); */
+     MC[MK(no)]={s:[{c:'#B03A2E',w:2,hl:0,p:[110,130,310,430,710,890]}]};
+     const snap=JSON.stringify(MC[MK(no)]);
      const w=document.getElementById('mcW');w.value='8';w.onchange();await wait(500);
      w.value='20';w.onchange();await wait(500);
-     T('N-7 칸 크기를 바꿔도 획의 상대 좌표가 전건 같다',JSON.stringify(MC[no])===snap,[JSON.stringify(MC[no]).slice(0,60)]);
-     try{localStorage.removeItem('jagwa.mcn')}catch(e){}delete MC[no];
+     /* 옛: T('N-7 칸 크기를 바꿔도 획의 상대 좌표가 전건 같다',JSON.stringify(MC[no])===snap,[JSON.stringify(MC[no]).slice(0,60)]);
+     try{localStorage.removeItem('jagwa.mcn')}catch(e){}delete MC[no]; */
+     T('N-7 칸 크기를 바꿔도 획의 상대 좌표가 전건 같다',JSON.stringify(MC[MK(no)])===snap,[String(JSON.stringify(MC[MK(no)])).slice(0,60)]);   /* info 만 String() — 위 M-12 와 같은 까닭 */
+     try{localStorage.removeItem('jagwa.mcn')}catch(e){}delete MC[MK(no)];
      await openMC(600);
      const el=document.querySelector('.mcpaper .mcard'), r=el.getBoundingClientRect();
      PE('pointerdown',el,r.left+4,r.top+4);await wait(520);PE('pointerup',el,r.left+4,r.top+4);el.click();await wait(250);

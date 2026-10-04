@@ -57,7 +57,8 @@ window.__HM = {
   },
   firstScreenCounts(){
     const rows = [...document.querySelectorAll('#slot .mbur')], out = {};
-    rows.forEach(r => { const nm = txt(r.querySelector('.nm')), m = /총 (\d+)문제/.exec(txt(r)); if (nm && m) out[nm] = +m[1]; });
+    /* 옛(ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」): rows.forEach(r => { const nm = txt(r.querySelector('.nm')), m = /총 (\d+)문제/.exec(txt(r)); if (nm && m) out[nm] = +m[1]; }); */
+    rows.forEach(r => { const nm = txt(r.querySelector('.nm')), m = /^(?:총 )?(\d+)(?:문제)?$/.exec(txt(r.querySelector('.tot'))); if (nm && m) out[nm] = +m[1]; });
     const lines = rows.filter(r => /\((미수록|변형|판신설)\)$/.test(txt(r.querySelector('.nm')))).length;
     return { rows: rows.length, lines: lines, map: out };
   },
@@ -200,7 +201,8 @@ window.__HM = {
   mkPut(key){ try{ const A = mkAll(); A[mkcKey(key, 'q', 0, 4, 'y', '하네스')] = { ts: nowIso() }; MKS = A; lsWrite(MK_KEY, A, '형광펜'); return Object.keys(A).length; }catch(e){ return String(e); } },
   /* ── add1 깊이 ── */
   head(no){ const i = this.nodeIdx(no); const r = document.querySelector('#slot .mbur.mdph[data-mdp="' + i + '"]'); if (!r) return null;
-    const nm = r.querySelector('.nm'); return Object.assign(hitOn(r.querySelector('.mdpar') || r), { t: txt(r), i: i, fw: nm ? getComputedStyle(nm).fontWeight : null, fs: nm ? getComputedStyle(nm).fontSize : null, nmx: nm ? nm.getBoundingClientRect().left : null }); },
+    /* 옛(ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」): const nm = r.querySelector('.nm'); return Object.assign(hitOn(r.querySelector('.mdpar') || r), { t: txt(r), i: i, fw: nm ? getComputedStyle(nm).fontWeight : null, fs: nm ? getComputedStyle(nm).fontSize : null, nmx: nm ? nm.getBoundingClientRect().left : null }); }, */
+    const nm = r.querySelector('.nm'); return Object.assign(hitOn(r.querySelector('.mdpar') || r), { t: txt(r), tot: txt(r.querySelector('.tot')), i: i, fw: nm ? getComputedStyle(nm).fontWeight : null, fs: nm ? getComputedStyle(nm).fontSize : null, nmx: nm ? nm.getBoundingClientRect().left : null }); },
   headName(no){ const i = this.nodeIdx(no); const r = document.querySelector('#slot .mbur.mdph[data-mdp="' + i + '"] .nm'); return r ? hitOn(r) : null; },
   kidRows(no){ const i = this.nodeIdx(no), M = VJ.M, d = M[i].깊이; const names = [];
     for (let j = i + 1; j < M.length && M[j].깊이 > d; j++) names.push(labOf(j));

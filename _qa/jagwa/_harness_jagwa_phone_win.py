@@ -881,6 +881,10 @@ HIT = r"""(sel)=>{const L=[...document.querySelectorAll(sel)].filter(e=>{const r
   let t=null,b=null;for(let y=Math.floor(r.top-24);y<=Math.ceil(r.bottom+24);y++){if(own(document.elementFromPoint(cx,y+0.5))){if(t===null)t=y;b=y+1}}
   let l=null,rr=null;for(let x=Math.floor(r.left-24);x<=Math.ceil(r.right+24);x++){if(own(document.elementFromPoint(x+0.5,cy))){if(l===null)l=x;rr=x+1}}
   return {vis:[Math.round(r.left*10)/10,Math.round(r.top*10)/10,Math.round(r.width*10)/10,Math.round(r.height*10)/10],hit:{w:l===null?0:rr-l,h:t===null?0:b-t,t,b,l,r:rr},lines:Math.round(r.height/parseFloat(getComputedStyle(e).lineHeight||'16')||1)}}"""
+# ★ uid_unify G-1(10/4 · gigu/_task_jagwa_uid_unify.md §G-1) — 생물 🃏 창 #mcwSel 옵션 글자에서 기출 uid 줄의 「 · NN회 N번」 이 걷혀 보이는 폭이 줄었다(앱 mcwOpen).
+#   G-1 의 전제(uid 회·번 = 데이터 회차·문번)는 지학만 맞다(생물 기출 uid 270 중 260 은 뒷자리가 문번이 아니다 · 본 세션 10/4 23:05) → 생물은 사용자 결정 전 = 뜻한 차이로 **안** 받는다(False).
+#   결정 (가) 생물도 걷음 → True(새 판에만 ynUid 가 있고 높이 같고 폭이 바탕 이하면 받음) · (다) 지학만 → False 그대로(앱이 생물 줄을 되살리면 옛 잣대로 PASS).
+G1_BIO = False
 TARGETS = [('phys', 'first', ['#fFoldBtn', '.pwchip.ph']), ('phys', 'jnw', ['#jnw .jgo', '.jnrow .jnans', '#jnwX']),
            ('bio', 'mcw', ['#mcwX', '#mcwSel', '#mcwInk', '#mcwBk', '#mcwOmr']), ('earth', 'jnw', ['#jnwX'])]
 
@@ -904,6 +908,9 @@ def rf2_7(br, eng):
             same = s == '#jnwX' or (y and x['vis'][2:] == y['vis'][2:])   # 보이는 크기(폭·높이) — 자리는 「닫기」가 한 줄이 되며 머리가 낮아져 위로 갈 수 있다
             if not same and s == '#jnw .jgo' and subj == 'phys' and y and x['vis'][2] <= y['vis'][2] + 0.5 and x['vis'][3] <= y['vis'][3] + 0.5:
                 same = True   # ★ 합치기 10/1 — physphone(97883ef CSS 「body[data-layer="pdf"] #jnw .jnrow .h .jgo … {font-size:10px}」) 물리 📋 줄 칩 글자를 줄였다 — 보이는 크기 ≤ 바탕
+            if not same and s == '#mcwSel' and subj == 'bio' and G1_BIO and y and re.search(r'\bynUid\s*=', APPS['NEW']) and not re.search(r'\bynUid\s*=', APPS['BASE']) \
+                    and x['vis'][3] == y['vis'][3] and x['vis'][2] <= y['vis'][2] + 0.5:
+                same = True   # ★ uid_unify G-1 — (스위치 G1_BIO 켬) 옵션 글자 「uid · NN회 N번」 → 「uid」 로 폭만 줄었다(높이 같음)
             okk = (x['hit']['h'] >= 36 or s in ('#mcwInk', '#mcwBk', '#mcwOmr') and x['hit']['h'] >= 34 or not want36) and same
             if s == '#jnwX':
                 okk = okk and (x['vis'][3] < 30 or (abs(x['vis'][2] - 36) < 1 and abs(x['vis'][3] - 36) < 1))   # ★ 합치기 10/1 — physphone A-4 「닫기」 → ✕ 36×36(한 줄 꺾임 없음)

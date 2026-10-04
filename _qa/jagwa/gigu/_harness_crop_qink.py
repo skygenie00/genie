@@ -316,6 +316,9 @@ BODY_EARTH = r"""
    await grp('T-5', async()=>{
      bkClose(); await wait(200);
      const no=VNO||DATA[0][F.NO];
+     /* ★ uid_unify A-1(10/4 · 근거 gigu/_task_jagwa_uid_unify.md §A 약속 1 「txt 의 card:<번호> 칸 · mcard 통 — 열쇠 함수 qk(no) 한 곳」 · 앱 mcardWin 의 cardKey='card:'+qk(no) · MC[qk(no)]) —
+        글상자 통(TXT)의 암기카드 칸 = card:<uid> · 카드 잉크 MC 의 열쇠 = uid · 옛 판(qk 없음 · 바탕 4754b1d)은 번호 그대로 */
+     const MK=n=>typeof qk==='function'?qk(n):n;
      if(!VNO)await openView(no);
      mcardWin(no); await wait(400);
      const t=$('.mcwin .mct [data-t="txt"]');
@@ -323,20 +326,28 @@ BODY_EARTH = r"""
      t.click(); await wait(60);
      const box=$('.mcwin .mccv'), br=box.getBoundingClientRect();
      const cv=$('.mcwin #mcc');
-     const ink0=((MC[no]||{s:[]}).s||[]).length;
+     /* 옛: const ink0=((MC[no]||{s:[]}).s||[]).length; */
+     const ink0=((MC[MK(no)]||{s:[]}).s||[]).length;
      cv.dispatchEvent(new PointerEvent('pointerdown',{clientX:br.left+br.width/2,clientY:br.top+br.height/2,pointerId:5,pointerType:'pen',bubbles:true,cancelable:true}));
      await wait(250);
      const el=box.querySelector('.tbox');
      T('T-5 찍으면 카드에도 글상자가 선다',!!el,box.querySelectorAll('.tbox').length);
      el.textContent='카드 글상자 시험';
      el.dispatchEvent(new Event('blur')); await wait(400);
-     T('T-5 키가 card:<no> 꼴',txtList('card:'+no).length===1,[Object.keys(TXT).filter(k=>k.indexOf('card:')===0)]);
+     /* 옛: T('T-5 키가 card:<no> 꼴',txtList('card:'+no).length===1,[Object.keys(TXT).filter(k=>k.indexOf('card:')===0)]);
      T('T-5 좌표가 1/1000(카드 잉크와 같은 기준)',(function(){const q=txtList('card:'+no)[0];
        return q.x>1&&q.x<1000&&q.y>1&&q.y<1000&&Number.isInteger(q.x)})(),txtList('card:'+no)[0]);
-     T('T-5 카드 잉크(MC)는 안 늘었다',((MC[no]||{s:[]}).s||[]).length===ink0,[((MC[no]||{s:[]}).s||[]).length,ink0]);
+     T('T-5 카드 잉크(MC)는 안 늘었다',((MC[no]||{s:[]}).s||[]).length===ink0,[((MC[no]||{s:[]}).s||[]).length,ink0]); */
+     /* 라벨은 그대로(card:<no> — 저장본 항목 id 유지) · 새 판의 칸 이름은 card:<uid>(MK) · 좌표 칸은 q 가 없으면 예외 대신 FAIL(예외로 아래 정리 줄이 건너뛰어지던 것) ·
+        카드 잉크 칸은 헛참을 바로잡음 — 후보에서 번호 열쇠로 읽으면 MC[번호] 가 늘 비어 「안 늘었다」 가 거저 참이었다 */
+     T('T-5 키가 card:<no> 꼴',txtList('card:'+MK(no)).length===1,[Object.keys(TXT).filter(k=>k.indexOf('card:')===0)]);
+     T('T-5 좌표가 1/1000(카드 잉크와 같은 기준)',(function(){const q=txtList('card:'+MK(no))[0];
+       return !!q&&q.x>1&&q.x<1000&&q.y>1&&q.y<1000&&Number.isInteger(q.x)})(),txtList('card:'+MK(no))[0]);
+     T('T-5 카드 잉크(MC)는 안 늘었다',((MC[MK(no)]||{s:[]}).s||[]).length===ink0,[((MC[MK(no)]||{s:[]}).s||[]).length,ink0]);
      T('T-5 세 자리 키가 다 다르다(bink:·note:·card:)',
        Object.keys(TXT).some(k=>k.indexOf('bink:')===0)&&Object.keys(TXT).some(k=>k.indexOf('card:')===0),Object.keys(TXT));
-     delete TXT['card:'+no]; await saveTXT();
+     /* 옛: delete TXT['card:'+no]; await saveTXT(); */
+     delete TXT['card:'+MK(no)]; await saveTXT();
      document.querySelectorAll('.sheet').forEach(x=>{if(x.classList.contains('mcwin'))x.remove()});
    });
 

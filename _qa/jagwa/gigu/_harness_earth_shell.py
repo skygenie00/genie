@@ -537,7 +537,10 @@ BODY_EARTH = r"""
        $$$('#list .item .tag.gg').filter(x=>x.offsetParent!==null).map(x=>txt(x)));
      /* 코멘트 흡수 — 흉내 3건 */
      GG={};await saveGG();
-     CMT[rec(noA)[F.NO]]='옛 코멘트 1';CMT[rowByUid('G26-63-01')[F.NO]]='옛 코멘트 2';CMT[rowByUid('G25-62-02')[F.NO]]='옛 코멘트 3';
+     /* 옛: CMT[rec(noA)[F.NO]]='옛 코멘트 1';CMT[rowByUid('G26-63-01')[F.NO]]='옛 코멘트 2';CMT[rowByUid('G25-62-02')[F.NO]]='옛 코멘트 3'; */
+     /* ★ uid_unify A-1(10/4 · 근거 gigu/_task_jagwa_uid_unify.md §A-1 · 앱 ggEatNotes `rec(uidNo(열쇠))`) — 카드 층 코멘트 CMT 의 열쇠 = uid(qk). 번호 열쇠로 심으면 앱이 못 읽어 0건이 된다 · 옛 판(qk 없음)은 번호 그대로 */
+     const uk9=n=>typeof qk==='function'?qk(n):n;
+     CMT[uk9(rec(noA)[F.NO])]='옛 코멘트 1';CMT[uk9(rowByUid('G26-63-01')[F.NO])]='옛 코멘트 2';CMT[uk9(rowByUid('G25-62-02')[F.NO])]='옛 코멘트 3';
      await saveNote();
      const n1=await ggEatNotes(); await wait(300);
      T('G-9 ★옛 코멘트 3건이 근거로 옮겨진다',n1===3&&ggOf(A).length===1&&Object.keys(CMT).length===0,
@@ -1208,10 +1211,17 @@ BODY_EARTH = r"""
       T('U-4 ★찾기 결과 줄이 세 줄 꼴(머리줄·문제 글·근거 줄)',
         !!row&&!!row.querySelector('.hd')&&!!row.querySelector('.qq')&&!!row.querySelector('.gl'),
         row?row.innerHTML.slice(0,160):null);
-      T('U-4 머리줄 = 코드 칩 · 회차·번호 · 단원',
+      /* 옛: T('U-4 머리줄 = 코드 칩 · 회차·번호 · 단원',
         !!row&&!!row.querySelector('.hd .cd')&&!!row.querySelector('.hd b')&&!!row.querySelector('.hd .un')
         &&/\d+회 \d+번/.test(txt(row.querySelector('.hd b'))),
-        row?txt(row.querySelector('.hd')):null);
+        row?txt(row.querySelector('.hd')):null); */
+      /* ★ uid_unify G-1(10/4 · 근거 gigu/_task_jagwa_uid_unify.md §G-1 · 앱 ggResRowHTML `(ynUid(r)?'':'<b>회·번</b>')`) — 기출 uid 줄(지학 G25-62-09)은 .cd 에 uid 가 이미 있어 회·번 <b> 를 안 그린다 · 옛 판(ynUid 없음)은 옛 식 그대로 */
+      {const yn4=typeof ynUid==='function'&&!!row&&ynUid(rowByUid(T0));
+       T('U-4 머리줄 = 코드 칩 · 회차·번호 · 단원',
+        !!row&&!!row.querySelector('.hd .cd')&&!!row.querySelector('.hd .un')
+        &&(yn4?(!row.querySelector('.hd b')&&!/\d+회 \d+번/.test(txt(row.querySelector('.hd')))&&txt(row.querySelector('.hd .cd'))===codeShow(rowByUid(T0)))
+               :(!!row.querySelector('.hd b')&&/\d+회 \d+번/.test(txt(row.querySelector('.hd b'))))),
+        row?txt(row.querySelector('.hd')):null)}
       T('U-4 ★이미 연결한 줄 = 「이미 넣음」 + 흐림',
         !!row&&row.classList.contains('on')&&txt(row).indexOf('이미 넣음')>=0
         &&getComputedStyle(row).opacity==='0.5',
@@ -3346,6 +3356,10 @@ BODY_X = r"""
      const fs=q=>{const e=$$$(q)[0];return e?[parseFloat(getComputedStyle(e).fontSize),getComputedStyle(e).fontWeight]:null};
      const S={jnh:fs('#jnw .jnh'),mut:fs('#jnw .jnrow .h .mut'),jgo:fs('#jnw .jnrow .h .jgo'),page:fs('#jnw .jnrow .h .tag.page'),
        q:fs('#jnw .jnrow .q'),jnans:fs('#jnw .jnrow .jnans')};
+     /* ★ uid_unify G-1(10/4 · 근거 gigu/_task_jagwa_uid_unify.md §G-1 · 앱 jnRowHTML `(HASBOOK?(ynUid(r)?'':'<span class="mut">…'):…)`) — 새 판 지학 📋 정리 창 줄은 기출 uid 줄이라 .mut(이름)을 안 그린다(줄에 .mut 0 → S.mut = null)
+        → 줄 머리 .mut 의 CSS 규칙 글자(10px 굵게)만 .jnrow .h 안에 임시 .mut 를 넣어 잰다 · 옛 판 = 줄의 .mut 그대로(이 갈래를 안 탄다) */
+     if(!S.mut&&typeof ynUid==='function'){const h=$$$('#jnw .jnrow .h')[0];if(h){const sp=document.createElement('span');sp.className='mut';sp.textContent='x';h.appendChild(sp);
+       S.mut=[parseFloat(getComputedStyle(sp).fontSize),getComputedStyle(sp).fontWeight];sp.remove()}}
      N('X-F 크기',S);
      T('X-F1 단원 머리 11px',S.jnh&&S.jnh[0]===11,S.jnh);
      T('X-F2 줄 머리(.mut) 10px 굵게',S.mut&&S.mut[0]===10&&+S.mut[1]>=700,S.mut);
@@ -3764,6 +3778,11 @@ BODY_XB = r"""
      const sec=(unitOf(G58)||'1.1').split('.').slice(0,2).join('.');jnOpen(sec);await wait(800);
      const fs=q=>{const e=$$$(q)[0];return e?[parseFloat(getComputedStyle(e).fontSize),getComputedStyle(e).fontWeight]:null};
      const S={jnh:fs('#jnw .jnh'),mut:fs('#jnw .jnrow .h .mut'),q:fs('#jnw .jnrow .q'),jnans:fs('#jnw .jnrow .jnans')};
+     /* ★ uid_unify G-1(10/4) — 생물도 기출 uid 줄에서 .mut 을 안 그리게 됐으나 G-1 의 전제(uid 회·번 = 데이터 회차·문번)는 지학만 맞다(생물 기출 uid 270 중 260 은 뒷자리가 문번이 아니다 · 본 세션 10/4 23:05) → 사용자 결정 전 = 안 받는다.
+        결정 (가) 생물도 걷음 → G1_BIO_JS=true(줄 머리 .mut 의 CSS 규칙 글자를 임시 .mut 로 잼) · (다) 지학만 → false 그대로(앱이 생물 줄 이름을 되살리면 줄의 .mut 로 PASS) */
+     const G1_BIO_JS=false;
+     if(G1_BIO_JS&&!S.mut&&typeof ynUid==='function'){const h=$$$('#jnw .jnrow .h')[0];if(h){const sp=document.createElement('span');sp.className='mut';sp.textContent='x';h.appendChild(sp);
+       S.mut=[parseFloat(getComputedStyle(sp).fontSize),getComputedStyle(sp).fontWeight];sp.remove()}}
      N('XB-F 크기',{sec,S});
      T('XB-F1 줄 머리(.mut) 10px 굵게',!!S.mut&&S.mut[0]===10&&+S.mut[1]>=700,S.mut);
      T('XB-F2 단원 머리 11px · 문제 글 12.5px(그대로)',!!S.jnh&&S.jnh[0]===11&&!!S.q&&S.q[0]===12.5,[S.jnh,S.q]);
@@ -4090,11 +4109,21 @@ def static_checks():
     #   폰 #view.win 전체화면 @media 한 줄(A-1 걷음) · 문제 창·곁창 첫 크기 넷(`if(!WIN.view&&!saved){const w=…` · `h=Math.min(860,…` ·
     #   `const w=Math.min(560,…` · `const hh=Math.min(…0.72…`) · #fFoldBtn 「필터 ▾」 HTML·paint 둘(A-2 「▾」 만) · OMR 폭 줄(A-3 비례) ·
     #   SHWIN 의 conceptStat 줄(A-4) · 개념 창 문제 누름의 `.sheet` 지우기·openView 둘(A-8) · wzCls 폰 제외(A-1 폰 문제 창도 떠 있는 창)
+    # ★ uid_unify(10/4 · 앱 cand_u ec2f144 = uid_unify ①②④③ + ggmath + add1) — 356 → 453. 늘어난 97줄은 전수로 짚었다(`jgfix/_work2/z13_newly_missing.txt` · 앱 4754b1d 대 cand_u 로
+    #   「본판(_base_bp)에 있던 줄 가운데 4754b1d 에는 있었는데 cand_u 에서 사라진 줄」을 전수 대조 — 97줄 모두 이 판들이 갈아 쓴 줄 · 곁가지로 사라진 줄 0 · 도로 살아난 줄 0):
+    #   ① 66 = §A-1 기록 열쇠 번호 → uid(qk(no)) — QT·CMT·ST·TW·LK·GP·CX·AFIX·MC·MPOS·OPOS 읽고 쓰는 줄 · ink 열쇠 inkK · 값 속 번호(twin·link) · 모션 열쇠 motHas  · 마커 `qk(no){`
+    #   ④ 24 = §G-1 「NN회 N번」 걷기(ynUid) · §G-2 서랍 회독마다 마크 · 목록 카드 회독 칩 · §G-3-2 다음 회독(lastMV · cmarkHTML · lastPick · showProblem · QR)  · 마커 `var ynUid=`
+    #   ggmath 5 = 근거 글 그리는 자리 다섯 esc(…) → ggMath(…) · 마커 `ggMath(src){`   ·   add1 2 = 서랍 ndTail · 목록 카드 row 의 ewmTagHTML · 마커 `ewmTagHTML(r){`   ·   ②·③ = 0(창은 줄을 더하고 · 재료는 파일 이름)
+    #   마커가 앱에 있는 만큼만 올린다 → 일부만 들어간 판 · 바탕 4754b1d 는 옛 문턱(356)이 그대로다.
+    # 옛 줄: _Z13_UID = (('qk(no){', 66), ('var ynUid=', 24), ('ggMath(src){', 5), ('ewmTagHTML(r){', 2))
+    #   + 10/5 cand_v fef1655 「+회독」 결함 고침 1 = 카드 층 `#tLayerAdd` 핸들러 한 줄(QR=Math.max(1,…) → QR=Math.max(QR,1,…)) · 마커 = 고친 식
+    _Z13_UID = (('qk(no){', 66), ('var ynUid=', 24), ('ggMath(src){', 5), ('ewmTagHTML(r){', 2), ('QR=Math.max(QR,1,...qRounds())+1', 1))
     T2('Z-13 지운 본판 줄이 거의 없다(손댄 자리뿐)',
        # ★ 합치기 10/1(하위 에이전트 C) — 320 → 356. 늘어난 36줄은 전수로 짚었다(세 판이 갈아 쓴 줄뿐 · 어느 판에도 없는 줄 0):
        #   physphone 22(공식 시트 frmRowHTML 로 옮긴 옛 rowHtml·body.onclick 줄 · #tTheory 「공식」 · 정리 창 「닫기」·이름 칸 · 개념 줄 글 thl)
        #   · revfix0928_0929 9(recAfterMerge 두 줄 · 서랍 줄 「-」 · makeFloat _pload · qFit avail · recMerge 옛 열쇠 줄 · #bpl z · #omrPad .drag) · search_claude 5(ggHits · 결과 줄)
-       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s) <= 356,   # ★ jagwa_search(9/29) 311 → 320 — 이 판이 떼거나 갈아 쓴 본판 줄 9(옛 pass 의 FL.q 덩이 · 입력칸 oninput · fltOn · 지우기 · 개수 칸 · 모드 바꾸기 · ggHits ID · ggResBox 끝) · 곁가지 0   # ★ jagwa_uid(9/29) 302 → 311 — 이 판이 갈아 쓴 줄 9(F 칸 OLDU · buildData 옛uid · 장 글자 셋 · codeShow · 차례 둘 · rowByUid · 번호 찾기 · 시동 jgMigrate) · 곁가지 0
+       # 옛 줄: sum(1 for ln in base.split('\n') if ln.strip() and ln not in s) <= 356,   # ★ jagwa_search(9/29) 311 → 320 — 이 판이 떼거나 갈아 쓴 본판 줄 9(옛 pass 의 FL.q 덩이 · 입력칸 oninput · fltOn · 지우기 · 개수 칸 · 모드 바꾸기 · ggHits ID · ggResBox 끝) · 곁가지 0   # ★ jagwa_uid(9/29) 302 → 311 — 이 판이 갈아 쓴 줄 9(F 칸 OLDU · buildData 옛uid · 장 글자 셋 · codeShow · 차례 둘 · rowByUid · 번호 찾기 · 시동 jgMigrate) · 곁가지 0
+       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s) <= 356 + sum(n for _mk, n in _Z13_UID if _mk in s),   # ★ uid_unify — 356 + 마커가 있는 만큼(최대 97 = 453)
        sum(1 for ln in base.split('\n') if ln.strip() and ln not in s))
     # ── add2 가 둔 것(그대로) ──
     # ⚠ 부름 **수**가 아니라 **열쇠 이름**을 맞댄다 — 있는 키를 한 번 더 읽는 것은
@@ -4103,7 +4132,10 @@ def static_checks():
     _sr = lambda t: set(re.findall(r"SYNC_REF\.([A-Za-z_$][\w$]*)", t))
     T2('Z-15 새 kv·새 SYNC 키가 없다',
        # ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2-1 받은 미리보기 표의 기기 사본 kv 'pvjson'(SYNC 아님 · SYNC_REF 새 키 0 그대로)
-       (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= {'pvjson'})) and _sr(s) == _sr(base),
+       # 옛 줄: (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= {'pvjson'})) and _sr(s) == _sr(base),
+       # ★ uid_unify A-3(10/4 · gigu/_task_jagwa_uid_unify.md §A-3 「로컬: 기기마다 처음 옮길 때 한 번, IndexedDB kv 에 bak_uid = {at, 통별 옛 값 전부, u, gone}」) — 새 로컬 kv `bak_uid` 하나(SYNC 아님 · SYNC_REF 새 키 0 그대로).
+       #   앱에 put('kv','bak_uid',…) 가 있을 때만 허용한다. ⚠ 이 잣대는 4754b1d 가 아니라 본판(_base_bp · 고침 전) 대비라 pvjson 은 옛 판에서도 늘 차집합에 든다(위 허용) — 새 FAIL 의 몫은 bak_uid 하나였다.
+       (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set())))) and _sr(s) == _sr(base),
        [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))])
     T2('Z-17 아랫줄 감추기가 카드 층·물리로 갈렸다',
        'body[data-book] .vbot .tools>*{display:none!important}' in s
@@ -4244,11 +4276,33 @@ def _xbbase_text():
     raise SystemExit('NG  add1 고침 전 사본(md5 %s)을 못 찾았다' % XBBASE_MD5)
 
 
+def g1_e1_norm(k, a1, b1):
+    """★ uid_unify(10/4 · gigu/_task_jagwa_uid_unify.md §G-1 §G-2 §G-3-2) — E-1 「지학 … 이(가) 고침 전과 글자까지 같다」 에서 이 판이 뜻하고 바꾼 글자만 **바탕(고침 전 판 = 옛 앱) 쪽 글자 b1** 에서 뗀다.
+    새 판(앱 글에 ynUid)일 때만 부른다 · 지학 기출 uid(G..) 줄만(이 묶음은 지학뿐 · 생물 G-1 은 사용자 결정 대기) · 뗄 글자는 바탕 쪽 b1 에만 있는 것이라 새 판 쪽 a1 에 그 글자가 남아 있으면 여전히 FAIL(예외 vbot: 옵션 개수 자체가 뜻한 차이라 두 쪽을 한 옵션으로 접는다).
+    — 목록(list): ① 기출 uid 줄 `.meta .sub` 「NN회 N번」 안 그림(§G-1) ② 카드 층 「N회독」 칩 걷음(§G-2)
+    — 문항 머리줄(vtop): `#vT1` = 「G25-62-09 (2025)」 — 「 · NN회 N번」 안 그림(§G-1)
+    — 카드 글(card): `.cmeta` 둘째 칩 titleOf 안 그림(§G-1) · 오른쪽 위 `.cmark` = 이번 열람 마크만(없으면 빈칸 — 「O 맞음」 · 「마크 없음」 대신)(§G-3-2)
+    — 아랫줄(vbot): 회독 고르개 — 지난 회독이 있으면 다음 회독이 옵션으로 하나 더 선다(필기 QR = max(잉크 최대 회독, 지난 회독 수 + 1) · §G-3-2)"""
+    if k == 'list':
+        b1 = re.sub(r'(\bG\d\d-\d+-\d+ 기출) \d+회 \d+번(?= )', r'\1', b1)
+        b1 = b1.replace(' #회독', '')
+    elif k == 'vtop':
+        b1 = re.sub(r'(\bG\d\d-\d+-\d+) · \d+회 \d+번', r'\1', b1)
+    elif k == 'card':
+        b1 = re.sub(r'(기출)\d+회 \d+번 ', r'\1 ', b1)
+        b1 = re.sub(r' (?:[OX△P] (?:맞음|헷갈림|틀림|패스)|마크 없음)(?= )', '', b1)
+    elif k == 'vbot':
+        a1 = re.sub(r'(#회독){2,}', '#회독', a1)
+        b1 = re.sub(r'(#회독){2,}', '#회독', b1)
+    return a1, b1
+
+
 def main():
     want = [a for a in sys.argv[1:] if a in ('earth', 'bio', 'phys', 'null', 'x', 'xb')] \
            or ['earth', 'bio', 'phys', 'null', 'x', 'xb']
     cur = open(SRC, encoding='utf-8', newline='').read()
     basetxt = open(BASE, encoding='utf-8', newline='').read()
+    _G1E = bool(re.search(r'\bynUid\s*=', cur)) and not re.search(r'\bynUid\s*=', basetxt)   # ★ uid_unify — 새 판(앱 글에 ynUid)일 때만 E-1 에서 뜻한 차이를 뗀다(바탕 4754b1d 는 옛 잣대 그대로)
     lines = []
     W = int(os.environ.get('HARNESS_WAIT', '1500'))
 
@@ -4319,6 +4373,9 @@ def main():
                                  #   (위 「6회독↔5회독」과 같은 것 — G25-62-09 새 3~6 / 바탕 2~5 · 마크 넷 X X P O 는 같다) · 차례 수만 가리고 마크 글자는 그대로 맞댄다
                                  (re.compile(r'\d+(?=[OX△P](?:\d+[OX△P])*(?:·\'··"|$| \|\| ))'), '#')):
                     a1 = _rx.sub(_to, a1); b1 = _rx.sub(_to, b1)
+                # ★ uid_unify(10/4 · §G-1 §G-2 §G-3-2 · 위 g1_e1_norm) — 새 판일 때만 · 바탕 쪽 글자에서 뜻한 차이만 뗀다
+                if _G1E:
+                    a1, b1 = g1_e1_norm(k, a1, b1)
                 same = a1 == b1
                 if same or k not in ('list', 'hd', 'card', 'esh', 'vbot', 'vtop'):
                     info = [a1[:170], b1[:170]]

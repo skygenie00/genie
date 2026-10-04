@@ -40,6 +40,22 @@ ROWS = []
 APPS = {}
 from playwright.sync_api import sync_playwright   # noqa: E402
 
+# ★ uid_unify G-1(2026-10-04 · gigu/_task_jagwa_uid_unify.md §G-1 · 근거 = 사용자 10/4 16:45 「uid 랑 중복되니까 nn회 n번 없애」) — 통합 검색 줄(ggResRowHTML · esRowHTML)은 기출 uid 줄에서 .cd(uid) 바로 뒤 「NN회 N번」 <b> 를 안 그린다.
+#   G-1 의 전제(uid 의 회·번 = 데이터 회차·문번)는 지학만 맞다 — 생물 기출 uid 270 중 260 은 뒷자리가 문번이 아니다(본 세션 10/4 23:05 · 예 B00-37-01 = 37회 21번) → 생물 갈래는 사용자 결정 전.
+#   그래서 뜻한 차이로 받는 것은 지학 기출 uid(G..)뿐이다 · 생물(B..) 줄은 바탕과 같아야 한다(다르면 FAIL 이 그대로 보인다 = 「결정 대기 — 생물 G-1」).
+#   결정이 (가) 생물도 걷음이면 G1_PFX = 'GB' · (다) 지학만이면 'G' 그대로. 새 판(앱 글에 ynUid)과 바탕이 같은 갈래면(옛 판끼리 · 새 판끼리) 아무것도 안 뗀다 = 옛 잣대 그대로.
+G1_PFX = 'G'
+STRIP = {'NEW': False, 'BASE': False}   # main() 이 앱 글로 채운다 — 「새 판에만 ynUid 가 있으면」 바탕 쪽 줄 HTML 에서 지학 기출 uid 줄의 <b>NN회 N번</b> 을 뗀 뒤 맞댄다(NEW = BASE − 회·번)
+G1_N = {'떼어 낸 줄': 0}
+
+
+def g1_strip(h):
+    """줄 HTML 에서 기출 uid(G1_PFX) .cd 바로 뒤의 <b>NN회 N번</b>(<mark> 이 씌워졌어도)을 뗀다"""
+    out = re.sub(r'(<span class="cd">(?:<mark>)?[%s]\d\d-\d+-\d+(?:</mark>)?</span>)<b>(?:<mark>)?\d+회 \d+번(?:</mark>)?</b>' % G1_PFX, r'\1', h)
+    if out != h:
+        G1_N['떼어 낸 줄'] += 1
+    return out
+
 
 def R(g, eng, name, okn, okb, val):
     ROWS.append((g, eng, name, okn, okb, val))
@@ -78,11 +94,13 @@ window.__C9={
      units:[...document.querySelectorAll('#esres .esdr')].map(d=>({t:__C9.tx(d.querySelector('span')),n:d.querySelectorAll('.n').length,c:__C9.tx(d.querySelector('.gpn'))}))}},
  gp(){return Object.keys(GP).filter(k=>GP[k]).map(Number).sort((a,b)=>a-b)},
  ggN(){return DATA.filter(r=>!isC(r)&&ggOf(GGU(r)).length>0).length},
- unionN(){return DATA.filter(r=>!isC(r)&&(ggOf(GGU(r)).length>0||!!(GP[r[F.NO]]))).length},
+ /* 옛: unionN(){return DATA.filter(r=>!isC(r)&&(ggOf(GGU(r)).length>0||!!(GP[r[F.NO]]))).length}, */
+ unionN(){return DATA.filter(r=>!isC(r)&&(ggOf(GGU(r)).length>0||!!(GP[typeof qk==='function'?qk(r[F.NO]):r[F.NO]]))).length},   /* ★ uid_unify A-1 — 카드 층 GP 열쇠 = uid(qk) · 옛 판(qk 없음) = 번호 */
  ggHay(){return DATA.filter(r=>!isC(r)).map(r=>ggOf(GGU(r)).map(g=>ggFlat(g)+' '+(g.cs||[]).map(c=>c.t).join(' ')).join(' ')+' '+GGU(r)+' '+codeShow(r)).join(' ').toLowerCase()},
  rowHay(no){const r=DATA[no-1];return r?ggOf(GGU(r)).map(g=>ggFlat(g)+' '+(g.cs||[]).map(c=>c.t).join(' ')).join(' ').toLowerCase():''},
  uidOf(no){const r=DATA[no-1];return r?GGU(r):''},
- noGg(){const r=DATA.find(x=>!isC(x)&&!ggOf(GGU(x)).length&&!GP[x[F.NO]]);return r?r[F.NO]:0}
+ /* 옛: noGg(){const r=DATA.find(x=>!isC(x)&&!ggOf(GGU(x)).length&&!GP[x[F.NO]]);return r?r[F.NO]:0} */
+ noGg(){const r=DATA.find(x=>!isC(x)&&!ggOf(GGU(x)).length&&!GP[typeof qk==='function'?qk(x[F.NO]):x[F.NO]]);return r?r[F.NO]:0}   /* ★ uid_unify A-1 — 같은 까닭 */
 };
 """
 
@@ -583,6 +601,8 @@ def b8_check(RA, RC, gp, hay):
 
 def main():
     APPS['NEW'] = app_src(NEWF); APPS['BASE'] = app_src(BASEF)
+    _yn = lambda a: re.search(rb'\bynUid\s*=', a) is not None   # ★ uid_unify G-1 — 앱 글에 ynUid(기출 uid 판별)가 있나 · 새 판에만 있으면 바탕 쪽 줄에서 회·번 <b> 를 뗀 뒤 맞댄다
+    STRIP['BASE'] = _yn(APPS['NEW']) and not _yn(APPS['BASE']); STRIP['NEW'] = _yn(APPS['BASE']) and not _yn(APPS['NEW'])
     base_rev = BASEF
     try:
         base_rev = HU.git(GENIE, 'rev-parse', '--short', BASEF).decode().strip() or BASEF
@@ -607,6 +627,11 @@ def main():
                     if g == 'b1' and isinstance(res['NEW'][1], dict) and isinstance(res['BASE'][1], dict):
                         hn = [re.sub(r'<span class="clsrc[^"]*">[^<]*</span>', '', h) for h in res['NEW'][1].get('근거에만', {}).get('html', [])]
                         hb = [re.sub(r'<span class="clsrc[^"]*">[^<]*</span>', '', h) for h in res['BASE'][1].get('근거에만', {}).get('html', [])]   # fix1 — 바탕이 e9de3b8(딱지 있음)이어도 같은 잣대
+                        # ★ uid_unify G-1 — 새 판에만 ynUid 가 있으면 옛 쪽 줄에서 지학 기출 uid 줄의 <b>NN회 N번</b> 을 뗀 뒤 맞댄다(새 판 줄에 그 <b> 가 남아 있으면 안 떼므로 여전히 FAIL)
+                        if STRIP['NEW']:
+                            hn = [g1_strip(h) for h in hn]
+                        if STRIP['BASE']:
+                            hb = [g1_strip(h) for h in hb]
                         same = hn == hb and len(hb) > 0
                         res['NEW'] = (res['NEW'][0] and same, dict(res['NEW'][1], **{'근거에만 DOM = 바탕 + 딱지': same}))
                         for v in (res['NEW'][1], res['BASE'][1]):
@@ -617,10 +642,19 @@ def main():
                     ts = time.time()
                     pn, pb = b5(br, eng, APPS['NEW']), b5(br, eng, APPS['BASE'])
                     # ★ physprev(10/2 하위 에이전트 C) — _task_jagwa_physprev 57줄(A-2-3): 물리 t 로만 걸린 줄 · 조각이 t 인 줄 · 100줄 상한은 pv_same 이 가른다
-                    cmp = {q: pv_same(pn.get(q), pb[q]) for q in pb}
+                    # 옛 줄: cmp = {q: pv_same(pn.get(q), pb[q]) for q in pb}
+                    def _g1(v, on):   # ★ uid_unify G-1 — 줄 HTML 에서 지학 기출 uid 줄의 <b>NN회 N번</b> 을 뗀 사본(on 이 거짓이면 그대로)
+                        if not on or not isinstance(v, dict):
+                            return v
+                        return dict(v, rows=[[x, g1_strip(h)] for x, h in v['rows']])
+                    G1_N['떼어 낸 줄'] = 0
+                    cmp = {q: pv_same(_g1(pn.get(q), STRIP['NEW']), _g1(pb[q], STRIP['BASE'])) for q in pb}
                     diff = [q for q in pb if not cmp[q][0]]
+                    # 옛 줄: R('b5', eng, 'B-5 기출 검색 무변 — 생물·지학·물리 말 다섯씩 · 걸린 집합 · 결과 상자 HTML = 바탕  [바탕 = 기준]', not diff and len(pb) == 15, None,
+                    # 옛 줄: {'다른 말': diff, '건': {q: len((pn.get(q) or {}).get('nos') or []) for q in pn}, 'physprev': {q: v[1] for q, v in cmp.items() if v[1]}})
                     R('b5', eng, 'B-5 기출 검색 무변 — 생물·지학·물리 말 다섯씩 · 걸린 집합 · 결과 상자 HTML = 바탕  [바탕 = 기준]', not diff and len(pb) == 15, None,
-                      {'다른 말': diff, '건': {q: len((pn.get(q) or {}).get('nos') or []) for q in pn}, 'physprev': {q: v[1] for q, v in cmp.items() if v[1]}})
+                      {'다른 말': diff, '건': {q: len((pn.get(q) or {}).get('nos') or []) for q in pn}, 'physprev': {q: v[1] for q, v in cmp.items() if v[1]},
+                       'G-1(지학 기출 uid 회·번 <b> 걷음만 받음 · 생물은 결정 대기)': {'갈래': STRIP, '받은 접두': G1_PFX, '뗀 줄 수': G1_N['떼어 낸 줄'], '생물 다른 말': [q for q in diff if q.startswith('bio ')]}})
                     TIMES.append(('b5', round(time.time() - ts)))
                 if want('b6'):
                     ts = time.time()

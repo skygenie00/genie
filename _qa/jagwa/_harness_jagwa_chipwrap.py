@@ -17,6 +17,7 @@ while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.d
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
 import io, json, os, sys, time, hashlib
+import re   # ★ uid_unify 옛 잣대 고침 — NEW 앱 글에서 §G-1 새 판(ynUid)을 가린다(main)
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -35,6 +36,15 @@ import _harness_jagwa_phone_win as PW   # noqa: E402
 sys.argv = _argv
 from playwright.sync_api import sync_playwright   # noqa: E402
 RES = []
+# ★ uid_unify 옛 잣대 고침(2026-10-04 · 근거 gigu/_task_jagwa_uid_unify.md §G-1 · §G-2 · _add1) ──────────────────────────────────────────────────────────────────────────────
+#   목록 줄(.item .meta)에서 새 판이 **뜻해서** 바꾼 것 셋 = ① §G-1 카드 층 기출 uid 줄(^[BG]\d\d-\d+-\d+$)의 .sub(titleOf = 「NN회 N번」)를 안 그림(사용자 10/4 16:45 「uid 랑 중복되니까 nn회 n번 없애」)
+#   ② §G-2 카드 층(HASBOOK) 목록 줄의 「N회독」 칩을 안 그림(앱 `(rep&&!HASBOOK)` · 물리 줄은 그대로) ③ _add1 시험 틀림 .ewmt 를 더함(앱 `${kindTag(r)}${ewmTagHTML(r)}` · 데이터가 있을 때만 — 이 하네스의 데이터에는 꼬까 시험 틀림 파일이 없어 늘 0).
+#   그래서 C2(폰 목록 글자 = 바탕) · C4(PC 칩 자리·크기 · 목록 글자 = 바탕)는 **새 판(NEW 앱 글에 ynUid)과 맞댈 때만** 바탕(옛 판 eb1113e · ynUid 없음) 쪽 DOM 에서 같은 ①②를 걷고(칩 자리는 걷은 DOM 으로 다시 잰다) ·
+#   새 판 쪽에서는 ③ 만 걷고 맞댄다 — 새 판에 .sub · N회독이 남아 있으면 바탕에서만 걷었으니 어긋나 FAIL(걷지 않은 것도 잡는다 · 걷은 개수는 값에 남긴다). 옛 판끼리(바탕 4754b1d 의 저장본)는 아무것도 안 걷음 = 옛 잣대 그대로.
+#   ⚠ 생물 §G-1 은 **결정 대기** — 생물 기출 uid 270 중 260 은 뒷자리가 문번이 아니라(지시서 §G-1 의 「uid 회·번 = 데이터 회차·문번」 은 지학만 맞다) .sub 를 걷으면 연도·문번이 사라진다.
+#   G1_BIO = False 면 생물 줄은 .sub 를 걷지 않고 바탕과 그대로 맞댄다(= 새 판이 .sub 를 걷은 만큼 FAIL 로 남는다 · 결정이 「지학만」이면 이대로 맞다). 결정이 「지시서대로(생물도 걷음)」면 아래 한 줄을 True 로 바꾼다(손으로 재 볼 때는 실행에 --g1bio).
+G1_BIO = '--g1bio' in sys.argv
+NEWG1 = False   # main() 이 NEW 앱 글에서 가린다 — 앱 글에 ynUid(§G-1 새 판)가 있으면 참
 
 CJS = """
 window.__C={
@@ -43,7 +53,19 @@ window.__C={
    return {W,sw:document.documentElement.scrollWidth,n:bad.length,first:bad.slice(0,4),items:L?L.querySelectorAll('.item').length:0}},
  /* ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2: 물리(HASBOOK 거짓)만 미리보기 칸(.prev · .pvfig)을 두 판 모두 떼고 · 칩 세로 자리는 제 줄(.item) 위 끝 기준(줄이 길어져도 칩 자리 무변을 잰다 · 숨은 칩(크기 0)은 옛 값 그대로) · 카드 층은 옛 잣대 그대로 */
  ph(){return typeof HASBOOK!=='undefined'&&!HASBOOK},
- text(){const L=document.getElementById('list');if(!L)return '';if(!__C.ph())return String(L.textContent||'');const c=L.cloneNode(true);c.querySelectorAll('.prev,.pvfig').forEach(x=>x.remove());return String(c.textContent||'')},
+ /* ★ uid_unify 옛 잣대 고침(2026-10-04 · §G-1 · §G-2 · _add1) — 새 판과 맞댈 때만(window.__CG1) 목록 줄에서 뜻한 차이만 걷는다 · 아니면 아무것도 안 함(옛 잣대 그대로)
+    · 어느 판이든 .ewmt(시험 틀림 표시 · _add1 이 더한 것)
+    · 옛 판(바탕 · typeof ynUid 없음) 카드 층(HASBOOK)만: 기출 uid 줄(window.__CG1SUB 가 참인 과목)의 .meta > .sub(§G-1) · 「N회독」 .tag 칩(§G-2) — 새 판(ynUid 있음)은 이미 안 그렸으니 걷지 않는다(남았으면 어긋나 FAIL)
+    걷은 개수 = window.__CUTN */
+ cut(c){window.__CUTN=0;if(!window.__CG1||!c)return 0;let n=0;
+   c.querySelectorAll('.ewmt').forEach(x=>{x.remove();n++});
+   if(typeof ynUid!=='function'&&typeof HASBOOK!=='undefined'&&HASBOOK)c.querySelectorAll('.item').forEach(it=>{
+     if(window.__CG1SUB&&/^[BG][0-9][0-9]-[0-9]+-[0-9]+$/.test(String(it.dataset.uid||'')))it.querySelectorAll('.meta > .sub').forEach(x=>{x.remove();n++});
+     it.querySelectorAll('.meta > .tag').forEach(x=>{if(/^[0-9]+회독$/.test(String(x.textContent||'').trim())){x.remove();n++}})});
+   window.__CUTN=n;return n},
+ cutLive(){return __C.cut(document.getElementById('list'))},   /* 살아 있는 #list 에서 걷는다 — 칩 자리(getBoundingClientRect)를 걷은 DOM 으로 재려고 */
+ /* 옛: text(){const L=document.getElementById('list');if(!L)return '';if(!__C.ph())return String(L.textContent||'');const c=L.cloneNode(true);c.querySelectorAll('.prev,.pvfig').forEach(x=>x.remove());return String(c.textContent||'')}, */
+ text(){const L=document.getElementById('list');if(!L)return '';if(!__C.ph()&&!window.__CG1)return String(L.textContent||'');const c=L.cloneNode(true);if(__C.ph())c.querySelectorAll('.prev,.pvfig').forEach(x=>x.remove());__C.cut(c);return String(c.textContent||'')},
  tags(){const ph=__C.ph();return [...document.querySelectorAll('#list .item .meta .tag')].slice(0,600).map(e=>{const r=e.getBoundingClientRect(),it=(ph&&(r.width||r.height))?e.closest('.item'):null,t0=it?it.getBoundingClientRect().top:0;return [Math.round(r.left*10)/10,Math.round((r.top-t0)*10)/10,Math.round(r.width*10)/10,Math.round(r.height*10)/10]})},
  longest(){const t=[...document.querySelectorAll('#list .item .meta .tag.unit')];if(!t.length)return null;
    const e=t.reduce((a,b)=>(String(b.textContent).length>String(a.textContent).length?b:a));
@@ -54,6 +76,28 @@ window.__C={
  unitNow(){return (typeof FL!=='undefined'&&FL)?String(FL.unit||''):null}
 };
 """
+
+
+def cg1(q, subj):
+    """★ uid_unify 옛 잣대 고침 — 새 판(NEWG1)과 맞댈 때만 목록 줄에서 뜻한 차이를 걷게 이 페이지에 표시를 둔다(아니면 옛 잣대 그대로)
+       window.__CG1 = 새 판과 맞대는 중 · window.__CG1SUB = 이 과목은 §G-1 .sub 걷음을 허용하나(지학 = 허용 · 생물 = G1_BIO(결정 대기) · 물리 = 해당 없음)"""
+    sub = (subj == 'earth') or (subj == 'bio' and G1_BIO)
+    q.ev("()=>{window.__CG1=%s;window.__CG1SUB=%s}" % ('true' if NEWG1 else 'false', 'true' if sub else 'false'))
+
+
+def cutdict(n, b, subj):
+    """새 판과 맞댈 때만(물리 뺌) — 이 칸에서 걷은 개수(NEW · 바탕)와 생물 §G-1 결정 대기 표시. 값에 남겨 걷은 만큼이 보이게 한다"""
+    if not NEWG1 or subj == 'phys':
+        return {}
+    d = {'걷음 NEW·바탕': [n.get('cut'), b.get('cut')]}
+    if subj == 'bio' and not G1_BIO:
+        d['결정 대기'] = '생물 G-1(기출 uid 줄 .sub 걷음) — 걷지 않고 맞댄다 · G1_BIO=True 로 바꾸면 걷고 맞댄다'
+    return d
+
+
+def cutinfo(n, b, subj):
+    d = cutdict(n, b, subj)
+    return [d] if d else []
 
 
 def T(grp, name, ok, detail=''):
@@ -76,7 +120,9 @@ def open_head(q):
 def phone(br, eng, subj):
     def f(q):
         open_head(q)
+        cg1(q, subj)   # ★ uid_unify 옛 잣대 고침 — 새 판과 맞댈 때만 걷는 표시(아니면 옛 잣대 그대로)
         o = {'over': q.ev("()=>__C.over()"), 'text': md(q.ev("()=>__C.text()")), 'fold': q.ev("()=>document.body.classList.contains('fold')")}
+        o['cut'] = q.ev("()=>window.__CUTN||0")   # 이 쪽 목록 글자에서 걷은 개수(.text() 가 마지막으로 걷은 값 · 아무것도 안 걷으면 0)
         if subj == 'bio':
             lg = q.ev("()=>__C.longest()")
             o['long'] = lg
@@ -97,12 +143,18 @@ def tags_eq(a, b, subj):
 def pc(br, eng, subj):
     def f(q):
         q.ev(CJS); q.wait(300)
-        return {'tags': q.ev("()=>__C.tags()"), 'text': md(q.ev("()=>__C.text()")), 'over': q.ev("()=>__C.over()")}
+        # 옛 줄: return {'tags': q.ev("()=>__C.tags()"), 'text': md(q.ev("()=>__C.text()")), 'over': q.ev("()=>__C.over()")}
+        cg1(q, subj)   # ★ uid_unify 옛 잣대 고침 — 새 판과 맞댈 때만 걷는 표시(아니면 옛 잣대 그대로)
+        ov = q.ev("()=>__C.over()")   # 넘침은 걷기 앞에서 잰다(옛 값 그대로)
+        cn = q.ev("()=>__C.cutLive()")   # 새 판과 맞댈 때만 DOM 에서 뜻한 차이를 걷는다(그 밖엔 0) — 칩 자리는 걷은 DOM 으로 다시 잰다
+        return {'tags': q.ev("()=>__C.tags()"), 'text': md(q.ev("()=>__C.text()")), 'over': ov, 'cut': cn}
     return PW.both(br, eng, subj, False, f)
 
 
 def main():
     PW.APPS['NEW'] = io.open(NEWF, encoding='utf-8').read()
+    global NEWG1   # ★ uid_unify 옛 잣대 고침 — NEW 앱 글에 ynUid 가 있으면 §G-1·§G-2 새 판(바탕 4754b1d 와 인도 앞 판 eb1113e 는 없다)
+    NEWG1 = re.search(r'\b(?:var|let|const|function)\s+ynUid\b', PW.APPS['NEW']) is not None
     PW.APPS['BASE'] = PW.git('show', 'eb1113e:jagwa/index.html').decode('utf-8')   # ★ A-6(d) 9/30 _task_qa_baseline — 헛잣대 바탕 = 인도 앞 판 eb1113e(jagwa_search · 인도 결과 머리 「바탕 genie HEAD eb1113e」) · 인도(95cc766) 뒤 HEAD 는 이 판 자신
     t0 = time.time()
     with sync_playwright() as pw:
@@ -117,7 +169,8 @@ def main():
                       {'NEW': n['over'], '바탕': b['over']})
                     if subj == 'bio':
                         T('C1-헛', '%s 헛잣대 바탕 — 폰 생물 목록이 가로로 넘침' % eng, b['over']['n'] > 0 and b['over']['sw'] > b['over']['W'], b['over'])
-                    T('C2', '%s 폰 %s — 목록 글자 = 바탕' % (eng, subj), n['text'] == b['text'], [n['text'], b['text']])
+                    # 옛 줄: T('C2', '%s 폰 %s — 목록 글자 = 바탕' % (eng, subj), n['text'] == b['text'], [n['text'], b['text']])
+                    T('C2', '%s 폰 %s — 목록 글자 = 바탕' % (eng, subj), n['text'] == b['text'], [n['text'], b['text']] + cutinfo(n, b, subj))
                     if subj == 'bio':
                         lg, lb = n.get('long') or {}, b.get('long') or {}
                         T('C3', '%s 폰 생물 가장 긴 단원 칩 — 화면 안 · 칩 안 두 줄 이상 · 손가락 톡 → 그 단원으로 거름' % eng,
@@ -128,7 +181,8 @@ def main():
                     rp = pc(br, eng, subj)
                     T('C4', '%s PC %s — 칩 자리·크기 = 바탕(%d 칩) · 목록 글자 = 바탕 · 넘침 0' % (eng, subj, len(rp['NEW']['tags'])),
                       tags_eq(rp['NEW']['tags'], rp['BASE']['tags'], subj) and rp['NEW']['text'] == rp['BASE']['text'] and rp['NEW']['over']['n'] == 0 and len(rp['NEW']['tags']) > 0,
-                      {'다른 칩': [i for i, (x, y) in enumerate(zip(rp['NEW']['tags'], rp['BASE']['tags'])) if not tags_eq([x], [y], subj)][:5], '글자': [rp['NEW']['text'], rp['BASE']['text']]})
+                      # 옛 줄: {'다른 칩': [i for i, (x, y) in enumerate(zip(rp['NEW']['tags'], rp['BASE']['tags'])) if not tags_eq([x], [y], subj)][:5], '글자': [rp['NEW']['text'], rp['BASE']['text']]})
+                      {**{'다른 칩': [i for i, (x, y) in enumerate(zip(rp['NEW']['tags'], rp['BASE']['tags'])) if not tags_eq([x], [y], subj)][:5], '글자': [rp['NEW']['text'], rp['BASE']['text']]}, **cutdict(rp['NEW'], rp['BASE'], subj)})
             finally:
                 br.close()
     npass = sum(1 for x in RES if x[2]); nfail = sum(1 for x in RES if not x[2])

@@ -540,7 +540,11 @@ BODY_EARTH = r"""
        $$$('#list .item .tag.gg').filter(x=>x.offsetParent!==null).map(x=>txt(x)));
      /* 코멘트 흡수 — 흉내 3건 */
      GG={};await saveGG();
-     CMT[rec(noA)[F.NO]]='옛 코멘트 1';CMT[rowByUid('G63-01')[F.NO]]='옛 코멘트 2';CMT[rowByUid('G62-02')[F.NO]]='옛 코멘트 3';
+     /* 옛: CMT[rec(noA)[F.NO]]='옛 코멘트 1';CMT[rowByUid('G63-01')[F.NO]]='옛 코멘트 2';CMT[rowByUid('G62-02')[F.NO]]='옛 코멘트 3'; */
+     /* ★ uid_unify A-1(10/4 · 근거 gigu/_task_jagwa_uid_unify.md §A-1 · 앱 ggEatNotes 의 rec(uidNo(열쇠))) — 카드 층 코멘트 CMT 의 열쇠 = uid(qk).
+        번호 열쇠로 심으면 앱이 못 읽어 3건이 그대로 남는다([0,0,3]) · 옛 판(qk 없음 · 바탕 4754b1d)은 번호 그대로 */
+     const uk9=n=>typeof qk==='function'?qk(n):n;
+     CMT[uk9(rec(noA)[F.NO])]='옛 코멘트 1';CMT[uk9(rowByUid('G63-01')[F.NO])]='옛 코멘트 2';CMT[uk9(rowByUid('G62-02')[F.NO])]='옛 코멘트 3';
      await saveNote();
      const n1=await ggEatNotes(); await wait(300);
      T('G-9 ★옛 코멘트 3건이 근거로 옮겨진다',n1===3&&ggOf(A).length===1&&Object.keys(CMT).length===0,
@@ -1209,10 +1213,18 @@ BODY_EARTH = r"""
       T('U-4 ★찾기 결과 줄이 세 줄 꼴(머리줄·문제 글·근거 줄)',
         !!row&&!!row.querySelector('.hd')&&!!row.querySelector('.qq')&&!!row.querySelector('.gl'),
         row?row.innerHTML.slice(0,160):null);
-      T('U-4 머리줄 = 코드 칩 · 회차·번호 · 단원',
+      /* 옛: T('U-4 머리줄 = 코드 칩 · 회차·번호 · 단원',
         !!row&&!!row.querySelector('.hd .cd')&&!!row.querySelector('.hd b')&&!!row.querySelector('.hd .un')
         &&/\d+회 \d+번/.test(txt(row.querySelector('.hd b'))),
-        row?txt(row.querySelector('.hd')):null);
+        row?txt(row.querySelector('.hd')):null); */
+      /* ★ uid_unify G-1(10/4 · 근거 gigu/_task_jagwa_uid_unify.md §G-1 · 앱 ggResRowHTML 의 (ynUid(r)?'':'<b>회·번</b>') · 채팅 10/4 23:1x 판정 (가) = 지학만) —
+         지학 기출 uid 줄(T0 = G25-62-09)은 .cd 에 uid 가 이미 있어 회·번 <b> 를 안 그린다 · 옛 판(ynUid 없음 · 바탕 4754b1d)은 옛 식 그대로 */
+      {const yn4=typeof ynUid==='function'&&!!row&&ynUid(rowByUid(T0));
+       T('U-4 머리줄 = 코드 칩 · 회차·번호 · 단원',
+        !!row&&!!row.querySelector('.hd .cd')&&!!row.querySelector('.hd .un')
+        &&(yn4?(!row.querySelector('.hd b')&&!/\d+회 \d+번/.test(txt(row.querySelector('.hd')))&&txt(row.querySelector('.hd .cd'))===codeShow(rowByUid(T0)))
+               :(!!row.querySelector('.hd b')&&/\d+회 \d+번/.test(txt(row.querySelector('.hd b'))))),
+        row?txt(row.querySelector('.hd')):null)}
       T('U-4 ★이미 연결한 줄 = 「이미 넣음」 + 흐림',
         !!row&&row.classList.contains('on')&&txt(row).indexOf('이미 넣음')>=0
         &&getComputedStyle(row).opacity==='0.5',
@@ -1616,7 +1628,11 @@ def static_checks():
     _sr = lambda t: set(re.findall(r"SYNC_REF\.([A-Za-z_$][\w$]*)", t))
     T2('Z-15 새 kv·새 SYNC 키가 없다',
        # ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2-1 받은 미리보기 표의 기기 사본 kv 'pvjson'(SYNC 아님 · SYNC_REF 새 키 0 그대로)
-       (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= {'pvjson'})) and _sr(s) == _sr(base),
+       # 옛 줄: (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= {'pvjson'})) and _sr(s) == _sr(base),
+       # ★ uid_unify A-3(10/4 · gigu/_task_jagwa_uid_unify.md §A 약속 3 「로컬: 기기마다 처음 옮길 때 한 번, IndexedDB kv 에 bak_uid = {at, 통별 옛 값 전부, u, gone}」) —
+       #   새 로컬 kv `bak_uid` 하나(SYNC 아님 · SYNC_REF 새 키 0 그대로). 앱에 put('kv','bak_uid',…) 가 있을 때만 허용한다(앱 4785행 · 바탕 4754b1d 는 옛 허용 그대로).
+       #   ⚠ 이 잣대는 4754b1d 가 아니라 본판(_base_bp · 고침 전) 대비라 pvjson 은 옛 판에서도 늘 차집합에 든다(위 허용) — 새 FAIL 의 몫은 bak_uid 하나였다.
+       (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set())))) and _sr(s) == _sr(base),
        [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))])
     # ★ A-6(9/30) · shell_bio_phys 수행 결과 §A(9/21 · c9faff2) — 아랫줄 감추기는 교재 문 body[data-book](카드 층 = 지학·생물) · 물리는 add15 #pRow1 규칙(earth_shell Z-17)
     T2('Z-17 아랫줄 감추기는 교재 문(data-book) 안이다',
@@ -1693,6 +1709,10 @@ def main():
            or ['earth', 'bio', 'phys', 'null']
     cur = open(SRC, encoding='utf-8', newline='').read()
     basetxt = open(BASE, encoding='utf-8', newline='').read()
+    # ★ uid_unify G-3-2(10/4 · gigu/_task_jagwa_uid_unify.md §G-3-2 「카드 .cmark = 이번 열람 마크만(없으면 .cmark 빈칸)」 · 앱 cmarkHTML) — 카드 층(지학·생물 둘 다)의 카드 머리 오른쪽 마크가
+    #   「마크 없음」 대신 빈칸이다. G-1(회·번 걷기)은 채팅 10/4 23:1x 판정 (가)로 지학만이라 생물 회·번은 그대로(vT1 · cmeta 의 titleOf 칩 — 잣대 무변)이고, 이 하나만 뜻한 차이로 남는다.
+    #   새 판(앱 글에 cmarkHTML 정의)일 때만 B-3 카드 머리줄에서 **바탕(고침 전 판) 쪽 글자의 끝 「 마크 없음」** 만 뗀다 — 새 판 쪽에 남아 있으면 여전히 FAIL.
+    _G32 = bool(re.search(r'\bvar cmarkHTML\s*=', cur)) and not re.search(r'\bvar cmarkHTML\s*=', basetxt)
     lines = []
     W = int(os.environ.get('HARNESS_WAIT', '1500'))
 
@@ -1719,8 +1739,13 @@ def main():
                           ('view', '#view 클래스'), ('vT1', '문항 머리'), ('cmeta', '카드 머리줄'),
                           ('tools', '교재 도구줄'), ('book', '#book 클래스')):
                 sk = (snD or {}) if k in B3D else sn
-                T2('B-3 ★생물 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sk.get(k) == sn0.get(k),
-                   [str(sk.get(k))[:140], str(sn0.get(k))[:140]])
+                # 옛 줄: T2('B-3 ★생물 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sk.get(k) == sn0.get(k),
+                # 옛 줄:    [str(sk.get(k))[:140], str(sn0.get(k))[:140]])
+                a1, b1 = sk.get(k), sn0.get(k)
+                if _G32 and k == 'cmeta' and isinstance(b1, str):
+                    b1 = re.sub(r' 마크 없음$', '', b1)   # §G-3-2 — 바탕 쪽 글자의 끝 「마크 없음」(새 판은 빈칸)
+                T2('B-3 ★생물 %s 이(가) 고침 전과 **글자까지** 같다' % ko, a1 == b1,
+                   [str(a1)[:140], str(b1)[:140]])
     if 'phys' in want:
         ls, sn = run('phys', W, cur)
         lines += ls

@@ -64,7 +64,8 @@ window.__HR={
   /* 1차객 세 화면 — 첫 화면(.mbh) · 문제풀이(.mbsbar) · 기출 */
   async jim(screen){clean();await idle();S.law='특허법';S.tab='jimun';S.jimunTab='ox';S.mok='';S.oxQueue='';S.jtFold=false;S.jtW=272;
     await render();await idle();await wait(900);
-    if(screen==='solve'){const row=[...document.querySelectorAll('.mbur')].find(e=>/총 [1-9]/.test(txt(e)));
+    /* 옛(ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」): if(screen==='solve'){const row=[...document.querySelectorAll('.mbur')].find(e=>/총 [1-9]/.test(txt(e))); */
+    if(screen==='solve'){const row=[...document.querySelectorAll('.mbur')].find(e=>/^(?:총 )?[1-9]\d*(?:문제)?$/.test(txt(e.querySelector('.tot'))));
       if(!row)return {err:'풀 단원 줄 없음'};row.click();await wait(300);await idle();await wait(1500);}
     if(screen==='gichul'){S.jimunTab='gichul';await render();await idle();await wait(1200);}
     const main=document.querySelector('#slot .main');if(main)main.scrollTop=0;await wait(150);

@@ -5,6 +5,7 @@
 (function(){
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 const txt=e=>e?(e.textContent||'').replace(/\s+/g,' ').trim():'';
+const noTot=h=>{if(!h)return '';const c=h.cloneNode(true);c.querySelectorAll('.tot').forEach(t=>t.remove());return txt(c);};   /* ★ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」 — 카드 머리 h2 에서 .tot(옛 「총 N문제」 · 새 「N」)를 떼고 이름만 · cardHead · cardTots 가 쓴다 */
 const R=e=>{if(!e)return null;const r=e.getBoundingClientRect();
   return {x:+r.left.toFixed(2),y:+r.top.toFixed(2),w:+r.width.toFixed(2),h:+r.height.toFixed(2),r:+r.right.toFixed(2),b:+r.bottom.toFixed(2),
           cx:+(r.left+r.width/2).toFixed(2),cy:+(r.top+r.height/2).toFixed(2)};};
@@ -69,13 +70,15 @@ window.__HT={
   homeHead(label){const h=__HT.homeHeadEl(label);if(!h)return null;const n=h.querySelector('.nm');
     return Object.assign(hitOn(n),{go:h.classList.contains('mbhgo'),title:h.title||'',tot:txt(h.querySelector('.tot'))});},
   homeNames(label){return [...document.querySelectorAll('.mbdash .nm')].filter(n=>txt(n)===label).length;},
-  cardHead(label){const hs=[...document.querySelectorAll('.mbdash .mbsj > .hd h2')];const h=hs.find(x=>txt(x).replace(/총 \d+문제$/,'').trim()===label);
+  /* 옛(ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」): cardHead(label){const hs=[...document.querySelectorAll('.mbdash .mbsj > .hd h2')];const h=hs.find(x=>txt(x).replace(/총 \d+문제$/,'').trim()===label); */
+  cardHead(label){const hs=[...document.querySelectorAll('.mbdash .mbsj > .hd h2')];const h=hs.find(x=>noTot(x)===label);
     return h?{t:txt(h),vis:vis(h)}:null;},
   solo(){const r=document.querySelector('.mbdash .mbur.mbsolo');if(!r)return null;const n=r.querySelector('.nm');
     return Object.assign(hitOn(n),{text:txt(r.querySelector('.l')),tot:txt(r.querySelector('.tot')),go:!!r.querySelector('.mbgo'),goTxt:txt(r.querySelector('.mbgo')),
       card:!!r.querySelector('.mbchip.card'),fs:cs(n,'fontSize'),fw:cs(n,'fontWeight'),pad:cs(r,'padding'),bg:cs(r,'backgroundColor'),sbt:!!r.querySelector('.mbsbt')});},
   cardTots(){return [...document.querySelectorAll('.mbdash .mbsj')].map(c=>{const h=c.querySelector(':scope > .hd h2');const s=c.querySelector(':scope > .mbur.mbsolo');
-    return {h:h?txt(h).replace(/총 \d+문제$/,'').trim():(s?txt(s.querySelector('.nm')):''),tot:h?txt(h.querySelector('.tot')):txt(s&&s.querySelector('.tot'))};});},
+    /* 옛(ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」): return {h:h?txt(h).replace(/총 \d+문제$/,'').trim():(s?txt(s.querySelector('.nm')):''),tot:h?txt(h.querySelector('.tot')):txt(s&&s.querySelector('.tot'))};});}, */
+    return {h:h?noTot(h):(s?txt(s.querySelector('.nm')):''),tot:h?txt(h.querySelector('.tot')):txt(s&&s.querySelector('.tot'))};});},
   heat(){const hb=document.querySelector('.mbhm');if(!hb)return null;const lg=[...hb.querySelectorAll('.hmlg')].map(x=>txt(x));
     let n=0;lg.forEach(t=>{const m=/(\d[\d,]*)\s*$/.exec(t);if(m)n+=+m[1].replace(/,/g,'');});
     return {lg,sum:n,pool:Object.keys(OXPOOL||{}).length,tops:[...hb.querySelectorAll('.hmsc')].map(b=>txt(b))};},

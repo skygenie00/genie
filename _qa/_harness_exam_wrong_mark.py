@@ -22,6 +22,21 @@ r"""_task_exam_wrong_mark §C 관문 — 실제 1차 시험(61·63회)에서 틀
   자리 = _roots(GENIE_ROOT · SPD_ROOT) — 민법 문항 = SPD minbeop/문항마스터.json · 자과 생물·지학 = SPD(읽기만 · 쪽 안에서만 · 결과엔 ID 만)
   클라우드 = cdn 막힘 → --vendor(cdnjs 사본) · --tw(민법 Tailwind — 앱이 쓰는 클래스를 Tailwind v3 로 미리 구운 CSS · 없으면 cdn.tailwindcss.com 그대로)
   WebKit = 터치 칸(C3 폰 · iPad)만 · 이 컴퓨터에 WebKit 이 없으면 「안 잼」
+
+  ★ JG2 (uid_unify_add1 · 2026-10-04) — 자과 서랍 줄 · 첫 화면 목록 카드 · 목차 「지금 목록」 줄의 「<회>-<번>-X」(클래스 .ewmt · 글자만 · 누름 없음)
+    위 C1~C4 는 그대로 — 더한 칸 JG2-B1 ~ JG2-B5 · 이 칸만 = --only JG2(JG2-B1 처럼 하나만도) · 앱만 = --apps jg --eng chromium
+      python _harness_exam_wrong_mark.py --apps jg --eng chromium --only JG2 --jg <새 판 jagwa/index.html> [--jgbase 4754b1d] [--real <진짜 exam/꼬까.json 사본>]
+    B1 지어낸 기록 · 세 자리(서랍 줄 · 목록 카드 · 문제를 연 뒤 지금 목록 줄) · 거르개 줄 0 · 자리 · 꼴 · 헛잣대(바탕에서 셋 다 0)
+    B2 받기 늦음 — 응답을 잡아 둔 채 서랍 · 목록을 굴려 두고 풀어 줌(세 자리에 나타남 · 쪽 · 서랍 스크롤 자리 그대로) · 문제를 연 채 풀어 줌(지금 목록 줄) · 2초 늦춤 첫 화면 시각 바탕 ±10%
+    B3 토큰 없음 · 404 = 표시 0 · 오류 0 · 알림 0 / B4 폭 1440 · 834 · 390(서랍 줄 높이 무변 · 카드 가로 넘침 0 · 표시 글자 위를 눌러도 그 문제가 열림) / B5 진짜 기록(--real · 읽기만 · 수만 적음)
+    헛잣대 = --jgbase(기본 4754b1d = uid_unify ④ 앞 바탕 · ④ 가 서면 그 커밋으로) — --yardstick 이면 JG2 칸이 바탕을 새 판 자리에 놓고 저마다 FAIL 해야(B3 = 해당 없음)
+    진짜 기록 먹이는 길 = 가짜 원격(XRemoteReal)이 api.github.com/…/contents/exam/꼬까.json 자리에 --real 파일 바이트를 줌(기본 SPD_ROOT\exam\꼬까.json · 읽기만 — SPD 클론에 쓰지도 · fetch · pull 도 안 함)
+    ⚠ 목차 「지금 목록」(#trq)은 앱에서 #tree 의 hide 가 영영 안 벗겨져(죽은 길) 사용자 눈엔 안 보인다 — 줄 글자(DOM)로만 잰다 · 물리는 앱이 문제를 열어도 안 채움(B2 「문제를 연 채」 에서 잼)
+  ★ JG2 add1 검수 고침(2026-10-04 · 본 세션이 가름 — 앱 결함이 아니라 잣대 쪽 · 칸 이름은 그대로 · 옛 줄은 주석으로 남김)
+    B1 「표시 자리 · 꼴」 목록 카드 — 제목 칸(.sub)이 있는 줄 = 옛 잣대 그대로(표시 바로 뒤가 ★ 또는 .sub) · 제목 칸이 없는 줄(uid_unify §G-1 이 기출 uid 줄의 .sub 를 안 그린다 · 생물 · 지학) = 기출 칩(kindTag .tag.tg) 바로 뒤 · .meta 안
+    B2 「늦게 오면」 — 크롬 = 쪽 스크롤 같음 또는 기준 카드 이동 ≤ 1px(크롬의 스크롤 고정이 위쪽 높이 변화를 scrollTop 으로 갚아 화면은 제자리 · 값 칸에 둘 다) · 값 칸에 위쪽 높이 변화 재기(참고 · 판정 아님)
+      · WebKit 칸 = --jg2eng chromium,webkit(기본 chromium = 지금처럼 크롬만 · webkit 만 쓰면 그 칸만) — 스크롤 고정이 없어 scrollTop 같음이 증거가 못 되므로 기준 카드 이동 ≤ 1px 만으로 판정
+    B3 「토큰 없음」 생물 · 지학 — 문항은 비공개 저장소에서 토큰으로 받아 IndexedDB 에 두는 과목이라 처음부터 토큰이 없으면 물리에 머문다 → 토큰 있게 한 번 열어 받아 둔 뒤 토큰만 지우고 다시 연다(조판기·민법 C4-mb 와 같은 길) · 물리 = 옛 길(처음부터 토큰 없음)
 """
 import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
 _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
@@ -1184,6 +1199,660 @@ def jg_c4(br, src, base_src, tag):
     return ok
 
 
+# ════════════════════════ 자과 2 — uid_unify_add1 (2026-10-04 · jagwa/gigu/_task_jagwa_uid_unify_add1.md §B) ════════════════════════
+# 시험 틀림 「61-40-X」 가 문제 창 머리(위 C1~C4)뿐 아니라 서랍 줄 · 첫 화면 목록 카드 · 목차 「지금 목록」 줄에도(클래스 .ewmt · 글자만 · 누름 없음 · 거르개·셈·정렬 안 넣음).
+# 위 C1~C4 는 한 글자도 안 바꿨다 — 더한 칸 = JG2-B1 ~ JG2-B5 · 이 칸만 = --only JG2 (앱만 = --apps jg --eng chromium · 새 판 = --jg <jagwa/index.html>)
+JGBASE = ARG('--jgbase', '4754b1d')   # JG2 헛잣대 바탕(genie 커밋 · 파일도 됨) — uid_unify ④ 판이 서면 그 커밋으로 바꾼다(앱을 고치는 칸이 아니라 바탕만 갈아 끼운다)
+REAL = ARG('--real', _roots.spd('exam', '꼬까.json'))   # B5 진짜 시험 기록 사본 — 읽기만(studyplandata 클론에 쓰지도 · fetch · pull 하지도 않는다) · 결과엔 수만 적는다
+JG3 = ('phys', 'bio', 'earth')
+JG2_WAIT = 1500 if YARD else 8000   # 표시가 셈에 닿기를 기다리는 한도(ms) — 헛잣대(바탕)는 끝내 안 닿으니 짧게
+JG2ENG = [x for x in (ARG('--jg2eng', 'chromium') or '').split(',') if x]   # (add1 검수 10/4) JG2-B2 「늦게 오면」 을 어느 엔진으로 돌릴지 — 기본 chromium = 지금처럼 크롬만 · `chromium,webkit` = 크롬 칸 뒤에 WebKit 칸을 더함 · `webkit` = WebKit 칸만(스크롤 고정이 없어 scrollTop 은 그대로인데 카드가 밀릴 수 있다)
+PWH = {}   # main() 이 Playwright 핸들을 둔다 — JG2-B2 WebKit 길이 쓴다
+SPEC02 = {(63, '물리'): 4, (63, '생물'): 3, (63, '지학'): 2, (61, '물리'): 7, (61, '생물'): 1, (61, '지학'): 1}   # 지시서 바탕 _task_exam_wrong_mark §0-2 의 자과 줄(= 18)
+_JGB = {}
+
+
+def jg2_base_src():
+    """JG2 바탕 앱 글(--jgbase · 기본 4754b1d = 이 판 앞) — 한 번만 푼다"""
+    if 'v' not in _JGB:
+        QJ.sub('git:show-app')
+        _JGB['v'] = app_src('jg', JGBASE)
+    return _JGB['v']
+
+
+_JGH = {}
+
+
+def jg2_hdr(src):
+    """JG2 첫 단계가 한 번만 — 어느 앱 · 어느 바탕 · 진짜 기록 사본이 있는가(값은 안 적는다)"""
+    if _JGH:
+        return
+    _JGH['x'] = 1
+    try:
+        real = '있음(%d B)' % os.path.getsize(REAL)
+    except Exception:
+        real = '없음'
+    N('JG2', '새 판 · 바탕 · 지어낸 기록 · 진짜 기록 사본', {'새 판 md5(LF)': md5lf(src), '바탕': JGBASE, '바탕 md5(LF)': md5lf(jg2_base_src()), '지어낸 기록': os.path.relpath(FX, HERE), '진짜 기록 사본': real, '헛잣대 모드': YARD})
+
+
+# ── 쪽 첫머리(PROBE 와 같은 것 + 응답 잡아 두기) — D < 0 이면 exam/꼬까.json 응답을 손으로 풀 때까지 잡아 둔다(window.__ewmRelease()) · D ≥ 0 은 PROBE 그대로 ──
+PROBE2 = r"""<script>/* exam_wrong_mark 하네스 JG2 — D < 0 = 응답을 잡아 둠(__ewmRelease() 로 푼다) */(function(){ var D = __D__, READY = __R__;
+ var H = window.__ewmH = { t1: 0, tEx: 0, nEx: 0, held: 0, alerts: 0, errs: [] };
+ var gate = D < 0 ? { open: false, q: [] } : null;
+ window.__ewmRelease = function(){ if (!gate) return 0; gate.open = true; var q = gate.q.splice(0); q.forEach(function(f){ f(); }); return q.length; };
+ window.addEventListener('error', function(e){ H.errs.push(String(e.message || '').slice(0, 160)); });
+ window.addEventListener('unhandledrejection', function(e){ H.errs.push('reject: ' + String((e.reason && e.reason.message) || e.reason).slice(0, 160)); });
+ var of = window.fetch;
+ window.fetch = function(u, o){ var s = String((u && u.url) || u), d = s; try{ d = decodeURIComponent(s); }catch(e){}
+   if (/exam\/꼬까\.json/.test(d)){ H.nEx++; var go = function(){ return of.call(window, u, o).then(function(r){ H.tEx = performance.now(); return r; }, function(e){ H.tEx = performance.now(); throw e; }); };
+     if (gate && !gate.open){ H.held++; return new Promise(function(res){ gate.q.push(res); }).then(go); }
+     return D > 0 ? new Promise(function(res){ setTimeout(res, D); }).then(go) : go(); }
+   return of.apply(window, arguments); };
+ var iv = setInterval(function(){ try{ if (!H.t1 && READY()){ H.t1 = performance.now(); clearInterval(iv); } }catch(e){} }, 20);
+ window.alert = function(){ H.alerts++; };
+})();</script>"""
+
+
+def with_probe2(app, src, delay=0):
+    b = src.index('<body')
+    bb = src.index('>', b) + 1
+    return src[:bb] + PROBE2.replace('__D__', str(int(delay))).replace('__R__', READY[app]) + src[bb:]
+
+
+# ── 쪽 도구 2(서랍 줄 · 목록 카드 · 지금 목록 줄의 .ewmt) — 열쇠 = 문항 uid(F.CODE) · 서랍 줄 = data-no · 목록 카드 = data-uid(생물·지학) / data-pv=P+번호(물리) · 지금 목록 = data-no ──
+EW2 = r"""() => { if (window.__EW2) return 1;
+const txt = e => e ? (e.textContent || '').replace(/\s+/g, ' ').trim() : '';
+const codeOf = no => { try { const r = rec(no); return r ? String(r[F.CODE]) : ''; } catch (e) { return ''; } };
+const itemCode = it => { if (!it) return ''; const d = it.dataset || {}; if (d.uid) return String(d.uid);
+  if (d.pv) { const n = parseInt(String(d.pv).replace(/^\D+/, ''), 10); return n ? codeOf(n) : ''; } return ''; };
+const add = (o, k, t) => { (o[k] = o[k] || []).push(t); };
+const noOf = c => { const r = DATA.find(x => String(x[F.CODE]) === c); return r ? r[F.NO] : 0; };
+const rowOf = no => document.querySelector('#ndList .ndrow[data-no="' + no + '"]');
+const trqOf = no => document.querySelector('#trq .trqr[data-no="' + no + '"]');
+const itemOf = c => [...document.querySelectorAll('#list .item')].find(it => itemCode(it) === c) || null;
+const cs = e => e ? __EW.cssOf(e) : null;
+const R1 = v => Math.round(v * 10) / 10;
+window.__EW2 = {
+  noOf: noOf,
+  /* 세 자리의 .ewmt — 열쇠(uid)별 글자 · 개수 · 줄 수 */
+  collect: () => { const out = { drawer: {}, list: {}, trq: {} };
+    document.querySelectorAll('#ndList .ewmt').forEach(e => { const r = e.closest('.ndrow'); add(out.drawer, r ? codeOf(+r.dataset.no) : '(줄 밖)', txt(e)); });
+    document.querySelectorAll('#list .ewmt').forEach(e => { const r = e.closest('.item'); add(out.list, r ? itemCode(r) : '(카드 밖)', txt(e)); });
+    document.querySelectorAll('#trq .ewmt').forEach(e => { const r = e.closest('.trqr'); add(out.trq, r ? codeOf(+r.dataset.no) : '(줄 밖)', txt(e)); });
+    out.n = { drawer: document.querySelectorAll('#ndList .ewmt').length, list: document.querySelectorAll('#list .ewmt').length, trq: document.querySelectorAll('#trq .ewmt').length, all: document.querySelectorAll('.ewmt').length,
+      drawerRows: document.querySelectorAll('#ndList .ndrow').length, listItems: document.querySelectorAll('#list .item').length, trqRows: document.querySelectorAll('#trq .trqr').length };
+    return out; },
+  /* 한 문항의 표시 자리 · 꼴 — 서랍 = 꼬리(.ndtail) 맨 앞 · 목록 = .meta 안 · 뒤가 ★ 또는 제목(.sub) · 지금 목록 = 발문(.ndt) 바로 뒤 */
+  place: c => { const no = noOf(c), row = rowOf(no), it = itemOf(c), tq = trqOf(no);
+    const d = row ? row.querySelector('.ewmt') : null, ls = it ? [...it.querySelectorAll('.ewmt')] : [], l = ls.length ? ls[ls.length - 1] : null, t = tq ? tq.querySelector('.ewmt') : null;
+    const sib = e => e ? String(e.className || e.tagName).slice(0, 24) : '';
+    return { no: no, row: !!row, card: !!it, trq: !!tq,
+      d: d ? { tail: d.parentElement.classList.contains('ndtail'), first: d === d.parentElement.firstElementChild, css: cs(d) } : null,
+      /* 옛 줄(add1 검수 전): l: l ? { meta: l.parentElement.classList.contains('meta'), nextOk: !!(l.nextElementSibling && l.nextElementSibling.matches('.star, .sub')), next: sib(l.nextElementSibling), prev: sib(l.previousElementSibling), css: cs(l) } : null, */
+      l: l ? { meta: l.parentElement.classList.contains('meta'), nextOk: !!(l.nextElementSibling && l.nextElementSibling.matches('.star, .sub')), next: sib(l.nextElementSibling), prev: sib(l.previousElementSibling),
+        sub: [...l.parentElement.children].some(x => x.classList.contains('sub')), prevKind: (() => { let q = l.previousElementSibling; while (q && q.classList.contains('ewmt')) q = q.previousElementSibling; return !!(q && q.matches('.tag.tg')); })(), css: cs(l) } : null,
+      t: t ? { afterNdt: !!(t.previousElementSibling && t.previousElementSibling.classList.contains('ndt')), css: cs(t) } : null }; },
+  /* 서랍 줄 높이 · 가로 넘침 — 표시를 켠 채 · 끈 채(그 줄의 .ewmt 만 display:none) 잰 값 */
+  rowH: no => { const row = rowOf(no); if (!row) return null; const tags = [...row.querySelectorAll('.ewmt')];
+    const meas = () => { const r = row.getBoundingClientRect(), nd = row.querySelector('.ndt'); return { h: Math.round(r.height * 100) / 100, sw: row.scrollWidth, cw: row.clientWidth, ndt: nd ? Math.round(nd.getBoundingClientRect().width) : -1 }; };
+    const a = meas(); tags.forEach(t => { t.style.display = 'none'; }); const b = meas(); tags.forEach(t => { t.style.display = ''; });
+    return { n: tags.length, on: a, off: b }; },
+  /* 목록 카드 가로 넘침 — 카드 · .meta · 쪽 전체 · 표시가 카드 안에 서는지 · 표시를 켠 채 · 끈 채 */
+  cardOv: c => { const it = itemOf(c); if (!it) return null; const m = it.querySelector('.meta'), tags = [...it.querySelectorAll('.ewmt')]; if (!tags.length) return { n: 0 };
+    const se = document.scrollingElement || document.documentElement;
+    const meas = () => ({ sw: it.scrollWidth, cw: it.clientWidth, msw: m ? m.scrollWidth : 0, mcw: m ? m.clientWidth : 0, psw: se.scrollWidth, vw: innerWidth, h: R1(it.getBoundingClientRect().height) });
+    const last = tags[tags.length - 1], R = it.getBoundingClientRect(), r = last.getBoundingClientRect();
+    const a = Object.assign(meas(), { n: tags.length, tagL: R1(r.left), tagR: R1(r.right), cardL: R1(R.left), cardR: R1(R.right) });
+    tags.forEach(t => { t.style.display = 'none'; }); const b = meas(); tags.forEach(t => { t.style.display = ''; });
+    return { on: a, off: b }; },
+  /* 누를 표시 고르기 · 굴림이 멎을 때까지 · 누른 뒤 상태 */
+  pickTag: (kind, c) => { document.querySelectorAll('.ewmt[data-ewp2]').forEach(x => x.removeAttribute('data-ewp2'));
+    const no = noOf(c); let e = null;
+    if (kind === 'drawer') { const r = rowOf(no); e = r ? r.querySelector('.ewmt') : null; }
+    else if (kind === 'list') { const it = itemOf(c); e = it ? it.querySelector('.ewmt') : null; }
+    else { const t = trqOf(no); e = t ? t.querySelector('.ewmt') : null; }
+    if (!e) return null; e.setAttribute('data-ewp2', '1'); return __EW.hitOf(e); },
+  settleTag: async () => { const e = document.querySelector('.ewmt[data-ewp2]'); if (!e) return null; let last = '', same = 0;
+    for (let i = 0; i < 60 && same < 3; i++) { await new Promise(r => setTimeout(r, 100)); const r = e.getBoundingClientRect(), k = Math.round(r.left) + ',' + Math.round(r.top); if (k === last) same++; else { same = 0; last = k; } }
+    return __EW.hitOf(e); },
+  state: () => ({ vno: (typeof VNO === 'undefined') ? null : VNO, hide: document.getElementById('view').classList.contains('hide') }),
+  /* 스크롤 자리 — 쪽(첫 화면 목록) · 서랍(#ndList) · 기준 카드(첫 화면에 온전히 보이는 첫 카드 또는 a)의 위치 */
+  scrollSet: (y, dy) => { const se = document.scrollingElement || document.documentElement, L = document.getElementById('ndList');
+    se.scrollTop = Math.max(0, Math.min(y, se.scrollHeight - innerHeight - 40)); if (L) L.scrollTop = Math.max(0, Math.min(dy, L.scrollHeight - L.clientHeight - 20)); return 1; },
+  scrollGet: a => { const se = document.scrollingElement || document.documentElement, L = document.getElementById('ndList'); let it = null, code = a || '';
+    if (code) it = itemOf(code);
+    else { it = [...document.querySelectorAll('#list .item')].find(x => { const r = x.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }) || null; code = it ? itemCode(it) : ''; }
+    return { y: Math.round(se.scrollTop), nd: L ? Math.round(L.scrollTop) : -1, ndMax: L ? Math.round(L.scrollHeight - L.clientHeight) : -1, pageMax: Math.round(se.scrollHeight - innerHeight),
+      anchor: code, anchorTop: it ? R1(it.getBoundingClientRect().top) : null }; },
+  /* 위쪽 높이 변화 재기(add1 검수 10/4 · 참고 · 판정 아님) — tagOld = 지금 있는 목록 카드 노드에 표시(다시 그렸으면 사라진다) · topSnap(a) = 기준 카드(a)의 문서 위치 · 쪽 높이 · 목록 높이 · 그 위 카드마다 [uid, 높이, 머리 .meta, 발문 .prev, 그림 칸 .pvfig, 그림 칸 상태] */
+  tagOld: () => { document.querySelectorAll('#list .item').forEach(x => x.setAttribute('data-ew2old', '1')); return 1; },
+  topSnap: a => { const se = document.scrollingElement || document.documentElement, items = [...document.querySelectorAll('#list .item')], k = a ? items.findIndex(x => itemCode(x) === a) : -1;
+    const hh = e => e ? R1(e.getBoundingClientRect().height) : 0, anc = k >= 0 ? items[k] : null, above = k > 0 ? items.slice(0, k) : [];
+    const figE = x => { const f = x.querySelector('.pvfig'); return !f ? 'none' : ((f.firstElementChild || (f.textContent || '').trim()) ? 'filled' : 'empty'); };
+    return { absTop: anc ? R1(anc.getBoundingClientRect().top + se.scrollTop) : null, sh: se.scrollHeight, listH: hh(document.getElementById('list')), n: items.length, kept: items.filter(x => x.hasAttribute('data-ew2old')).length,
+      rows: above.map(x => [itemCode(x), hh(x), hh(x.querySelector('.meta')), hh(x.querySelector('.prev')), hh(x.querySelector('.pvfig')), figE(x)]) }; }
+};
+return 1; }"""
+JG2_OPEN = r"""async ([c]) => { const r = DATA.find(x => String(x[F.CODE]) === c); if (!r) return { err: 'no ' + c };
+  await openView(r[F.NO]); for (let i = 0; i < 40 && VNO !== r[F.NO]; i++) await new Promise(z => setTimeout(z, 50)); await new Promise(z => setTimeout(z, 1200));
+  return { no: r[F.NO], vno: VNO, hide: document.getElementById('view').classList.contains('hide') }; }"""
+JG2_CLOSE = "() => { const v = document.getElementById('view'); if (v && !v.classList.contains('hide')) { try { closeView(); } catch (e) {} } return 1; }"
+JG2_FOLD = r"""([on]) => { try { ndResFold(on); return 1; } catch (e) { return String(e).slice(0, 80); } }"""   # 서랍 접기 · 펴기(앱 함수 그대로 — 좁은 폭은 접힌 채 시작한다)
+JG2_WARN = r"""() => { if (window.__warns) return 1; window.__warns = []; const w = console.warn;
+  console.warn = function(){ try { window.__warns.push([].slice.call(arguments).map(a => String((a && a.message) || a)).join(' ').slice(0, 200)); } catch (e) {} return w.apply(console, arguments); }; return 1; }"""
+
+
+class XRemoteReal(XRemote):
+    """가짜 원격 — 시험 기록 자리에 진짜 기록 사본(REAL 파일 바이트 · 읽기만)을 준다 · 그 밖은 XRemote 그대로(기록·settings = 새 기기 · 문항 = SPD 로컬 사본)"""
+
+    def __init__(self, raw):
+        super().__init__('ok')
+        self.raw = raw
+
+    def get(self, repo, path):
+        if path == 'exam/꼬까.json':
+            return self.raw
+        return super().get(repo, path)
+
+
+def jg2_open(br, src, subj='phys', dev=PC, delay=0, mode='ok', token=True, gate=False, remote=None, who='new'):
+    """자과 쪽 하나(jg_open 과 같은 길 · 이 칸만의 쪽 첫머리 PROBE2 + 쪽 도구 EW2) — gate=True 면 시험 기록 응답을 잡아 둔다 · remote = 진짜 기록 사본 등"""
+    init0 = PP.INIT
+    if not token:
+        PP.INIT = PP.INIT.replace("JSON.stringify({token:'harness-token',person:'__WHO__'})", "JSON.stringify({person:'__WHO__'})")
+    try:
+        QJ.launch(who)
+        p = PP.Pg(br, br.browser_type.name, ntag('ewg'), with_probe2('jg', src, -1 if gate else delay), subj, dev, who='꼬까', remote=remote or XRemote(mode))
+    finally:
+        PP.INIT = init0
+    ew(p)
+    p.ev(EW2)
+    return p
+
+
+# ── 기댓값 — 시험 기록(지어낸 것 · 진짜 사본)에서 하네스가 따로 센다(앱 ewmOf 를 안 쓴다) ──
+def jg2_expect(rows):
+    """{과목: {uid: ['61-40-X', …(회·번 순)]}} — 틀림 줄(ex_rows 가 이미 ok true · 화학 · 지운 회차 · 2차 · 점수만 을 뺀 것)을 앱이 보이는 ID(jg_code)로"""
+    exp = {s: {} for s in JG3}
+    for x in rows:
+        c, s = jg_code(x), JG_CODE.get(x['s'])
+        if c and s:
+            exp[s].setdefault(c, []).append('%d-%d-X' % (x['r'], x['i']))
+    for s in exp:
+        for c in exp[s]:
+            exp[s][c].sort(key=lambda t: tuple(int(q) for q in t[:-2].split('-')))
+    return exp
+
+
+def jg2_want(subj):
+    return jg2_expect(WR)[subj]
+
+
+def jg2_eq(got, want):
+    return {k: list(v) for k, v in (got or {}).items()} == {k: list(v) for k, v in (want or {}).items()}
+
+
+def jg2_diff(got, want):
+    g, w = got or {}, want or {}
+    return {'앱만': sorted(set(g) - set(w))[:6], '셈만': sorted(set(w) - set(g))[:6], '글자 다름': sorted(k for k in set(g) & set(w) if list(g[k]) != list(w[k]))[:6]}
+
+
+def jg2_opened(o):
+    """JG2_OPEN 결과 — 그 문항이 정말 열렸나(없는 코드 = err · 번호 없음이 거저 같아지지 않게)"""
+    return bool(o) and bool(o.get('no')) and o.get('vno') == o.get('no') and o.get('hide') is False
+
+
+# ── add1 검수 고침(2026-10-04) — 값 판정 함수(브라우저 없이 가짜 값으로 시험할 수 있게 순수 함수로) ──
+def jg2_l_ok(l):
+    """목록 카드 표시 자리(.meta 안) — 제목 칸(.sub)이 있는 줄 = 옛 잣대 그대로(표시 바로 뒤가 ★ 또는 제목 .sub) ·
+    제목 칸이 없는 줄(uid_unify §G-1 이 기출 uid 줄의 .sub 를 안 그린다 — 생물 · 지학) = 기출 칩(kindTag .tag.tg) 바로 뒤(또는 옛 잣대대로 ★ 앞)"""
+    if not l or not l.get('meta'):
+        return False
+    if l.get('sub') is False:   # 제목 칸 없음 — 새 값(sub · prevKind)이 없으면(None) 옛 잣대로
+        return bool(l.get('nextOk')) or bool(l.get('prevKind'))
+    return bool(l.get('nextOk'))
+
+
+def jg2_scroll_keep(eng, mv_y, shift):
+    """늦게 온 뒤 「스크롤 자리 그대로」(= 사용자가 보는 자리가 안 튐) — (통과, 까닭)
+    크롬 = 기준 카드 이동 ≤ 1px(10/5 조임 — 쪽 스크롤 같음만으로는 통과 안 함 · 크롬의 스크롤 고정(overflow-anchor)이 위쪽 높이 변화를 scrollTop 으로 갚으면 쪽 스크롤은 달라도 화면은 제자리 · 값 칸에 둘 다)
+    WebKit = 스크롤 고정이 없다 — scrollTop 은 그대로인데 카드가 밀릴 수 있어 scrollTop 같음은 증거가 못 된다 → 기준 카드 이동 ≤ 1px 만"""
+    held = shift is not None and abs(shift) <= 1
+    if eng == 'webkit':
+        return held, (('기준 카드 제자리(이동 %s px)' % shift) if held else ('튐 — 기준 카드 이동 %s px(쪽 스크롤 이동 %s px)' % (shift, mv_y)))
+    # 옛 줄(다섯째 일꾼 판): if mv_y <= 1: return True, …(쪽 스크롤 같음이면 통과) — scrollTop 그대로 · 카드 밀림을 통과시켜 조임(본 세션 10/5 00:0x)
+    if shift is None:   # 기준 카드를 못 잼 — 쪽 스크롤 같음으로만
+        return mv_y <= 1, '기준 카드 못 잼 · 쪽 스크롤 이동 %s px' % mv_y
+    if held:
+        return True, '기준 카드 제자리(이동 %s px · 쪽 스크롤 이동 %s px%s)' % (shift, mv_y, ' — 크롬의 스크롤 고정이 위쪽 높이 변화를 갚음' if mv_y > 1 else '')
+    return False, '튐 — 쪽 스크롤 %s px · 기준 카드 이동 %s px' % (mv_y, shift)
+
+
+def jg2_top_diff(s0, s1):
+    """위쪽 높이 변화 재기(참고 · 판정 아님) — 풀기 직전(s0) · 온 뒤(s1)의 topSnap 을 맞댄다: 기준 카드의 문서 위치 변화(= 그 위에서 줄거나 는 높이) · 어느 카드의 어느 칸(머리 · 발문 · 그림 칸)이 바뀌었나 · 목록을 다시 그렸나(옛 카드 노드 남음)"""
+    if not s0 or not s1:
+        return {'재지 못함': {'전': bool(s0), '후': bool(s1)}}
+    r0 = {r[0]: r for r in (s0.get('rows') or [])}
+    r1 = {r[0]: r for r in (s1.get('rows') or [])}
+    both = sorted(set(r0) & set(r1))
+    ch = [{'카드': u, '높이': [r0[u][1], r1[u][1]], '머리': [r0[u][2], r1[u][2]], '발문': [r0[u][3], r1[u][3]], '그림 칸': [r0[u][4], r1[u][4]], '그림 상태': [r0[u][5], r1[u][5]]}
+          for u in both if abs(r0[u][1] - r1[u][1]) > 0.5]
+
+    def cnt(rs):
+        o = {}
+        for r in rs.values():
+            o[r[5]] = o.get(r[5], 0) + 1
+        return o
+
+    def dl(a, b):
+        return None if a is None or b is None else round(b - a, 1)
+    dsum = round(sum(r1[u][1] - r0[u][1] for u in both), 1)
+    dabs = dl(s0.get('absTop'), s1.get('absTop'))
+    return {'기준 카드 문서 위치 변화(px)': dabs, '쪽 높이 변화(px)': dl(s0.get('sh'), s1.get('sh')), '목록 높이 변화(px)': dl(s0.get('listH'), s1.get('listH')),
+            '위 카드 수(전 · 후 · 둘 다)': [len(r0), len(r1), len(both)], '위 카드 높이 합 변화(px · 둘 다 있는 카드)': dsum, '카드 높이 밖에서 온 변화(px · 문서 위치 변화 − 위 카드 높이 합 변화)': (None if dabs is None else round(dabs - dsum, 1)),
+            '높이 바뀐 위 카드 수': len(ch), '표본(최대 4)': ch[:4], '그림 칸 상태(전 · 후)': [cnt(r0), cnt(r1)],
+            '카드 수(전 · 후)': [s0.get('n'), s1.get('n')], '옛 카드 노드 남음(전 · 후)': [s0.get('kept'), s1.get('kept')]}
+
+
+def jg2_open_notoken(br, src, subj, dev=PC):
+    """토큰 없음 쪽(JG2-B3) — 물리 = 처음부터 토큰 없이(문항이 파일 안 · 옛 길 그대로) · 생물 · 지학 = 문항을 비공개 저장소에서 토큰으로 받아 IndexedDB 에 두는 과목이라
+    처음부터 토큰이 없으면 그 과목을 못 열어 물리에 머문다(add1 검수 · 값 「서랍 줄 · 카드 · 지금 목록 줄」 [577, 577, 0] = 물리 줄 수) → 토큰 있게 한 번 열어 문항을 받아 둔 뒤
+    토큰만 지우고(tt.cfg 에 person 만) 다시 연다 — 조판기 · 민법 C4-mb 와 같은 길. 같은 문맥(IndexedDB 그대로) · sessionStorage 가 남아 쪽 첫머리 INIT 이 토큰을 되살리지 않는다.
+    쪽 오류는 토큰 없는 부팅 것만 센다(첫 열기 것은 수만 '길' 에 적고 비운다)"""
+    if subj == 'phys':
+        p = jg2_open(br, src, subj, dev, token=False)
+        p.ew2way = '처음부터 토큰 없음(물리 · 옛 길)'
+        return p
+    p = jg2_open(br, src, subj, dev)   # 토큰 있게 — 문항(IndexedDB kv)을 받아 둔다
+    try:
+        n0 = p.ev("() => typeof DATA === 'undefined' ? -1 : DATA.length")
+        e0 = len(p.errs)
+        del p.errs[:]
+        p.ev("() => { localStorage.setItem('tt.cfg', JSON.stringify({ person: '꼬까' })); return 1; }")
+        p.reload()   # 쪽이 새로 서므로 하네스 도구(__EW · __EW2)를 다시 건다
+        ew(p)
+        p.ev(EW2)
+        p.ew2way = '토큰 있게 한 번 열어 문항을 받아 둔 뒤 토큰만 지우고 다시 열음(생물 · 지학 · 받아 둔 문항 줄 %s · 첫 열기 쪽 오류 %d)' % (n0, e0)
+    except Exception:
+        p.close()
+        raise
+    return p
+
+
+def jg2_settle(p, total, ms=None):
+    """서랍 · 목록 표시가 셈에 닿을 때까지(서랍은 다시 짓기가 80ms 늦게 따라온다) — 닿으면 400ms 더 두고 한 번 더 읽는다(그 뒤 더 늘거나 줄지 않는지)"""
+    ms = ms or JG2_WAIT
+    t0 = time.time()
+    c = None
+    while time.time() - t0 < ms / 1000.0:
+        c = p.ev("() => __EW2.collect()")
+        n = (c or {}).get('n') or {}
+        if n.get('drawer') == total and n.get('list') == total:
+            break
+        p.wait(200)
+    p.wait(400)
+    return p.ev("() => __EW2.collect()") or c or {}
+
+
+def jg2_press(p, kind, code, no):
+    """표시 글자(.ewmt) 한가운데를 진짜로 눌러(PC 마우스 · 폰·아이패드 손가락) 그 문제가 열리는지 — 서랍 줄 · 목록 카드"""
+    p.ev(JG2_CLOSE)
+    p.wait(500)
+    at = p.ev("([k, c]) => __EW2.pickTag(k, c)", [kind, code])
+    if at:
+        at = p.ev("() => __EW2.settleTag()")
+    pressed = press_at(p, at, 900)
+    st = p.ev("() => __EW2.state()") or {}
+    ok = bool(pressed) and bool(no) and st.get('vno') == no and st.get('hide') is False
+    p.ev(JG2_CLOSE)
+    p.wait(600)
+    return {'눌림': bool(pressed), '보임': bool(at and at.get('on')), '열린 문항': st.get('vno'), '기대': no, '창 열림': st.get('hide') is False, 'ok': ok}
+
+
+# ── B-1 — 지어낸 기록 · 세 자리(서랍 줄 · 목록 카드 · 그 문제를 연 뒤 「지금 목록」 줄) · 과목마다 + 거르개 줄 0 + 헛잣대(바탕에서 셋 다 0) ──
+def jg2_b1(br, src):
+    jg2_hdr(src)
+    ok = True
+    for subj in JG3:
+        want = jg2_want(subj)
+        codes = sorted(want)
+        total = sum(len(v) for v in want.values())
+        lab = ', '.join('%s %s' % (cd, ' '.join(want[cd])) for cd in codes)
+        p = jg2_open(br, src, subj, PC)
+        try:
+            st = ewm_wait(p)
+            c = jg2_settle(p, total)
+            n0 = c.get('n') or {}
+            ok &= T('JG2-B1', '%s 서랍 줄 — 틀림 줄마다 「회-번-X」 하나씩(%s)' % (subj, lab), jg2_eq(c.get('drawer'), want) and total > 0,
+                    {'EWM.st': st, '다른 것': jg2_diff(c.get('drawer'), want), '서랍 줄 수': n0.get('drawerRows'), '표시 수': n0.get('drawer')})
+            ok &= T('JG2-B1', '%s 목록 카드 — 틀림 줄마다 「회-번-X」 하나씩(%s)' % (subj, lab), jg2_eq(c.get('list'), want) and total > 0,
+                    {'다른 것': jg2_diff(c.get('list'), want), '카드 수': n0.get('listItems'), '표시 수': n0.get('list')})
+            o = p.ev(JG2_OPEN, [codes[0]]) or {}   # 그 문제를 연 뒤 — 「지금 목록」(#trq) 은 문제를 열어야 선다
+            c2 = p.ev("() => __EW2.collect()") or {}
+            n2 = c2.get('n') or {}
+            opened = jg2_opened(o)
+            trq_rows = n2.get('trqRows') or 0
+            if subj == 'phys' and trq_rows == 0:
+                # 물리는 앱이 「지금 목록」 을 안 채운다(navSync 갈래가 카드 층(생물·지학)만 — 바탕도 같다) → 문제를 연 채 기록이 늦게 오는 길(JG2-B2)에서 잰다
+                N('JG2-B1', '%s 지금 목록 줄 — 문제를 연 뒤에도 앱이 안 채움(줄 0 · 바탕 같음) → JG2-B2 「문제를 연 채 늦게 와도」 에서 잼' % subj,
+                  {'열림': opened, '지금 목록 줄 수': trq_rows, '표시 수': n2.get('trq')})
+            else:
+                ok &= T('JG2-B1', '%s 지금 목록 줄 — 문제를 연 뒤 틀림 줄마다 「회-번-X」 하나씩(%s)' % (subj, lab), opened and trq_rows > 0 and jg2_eq(c2.get('trq'), want) and total > 0,
+                        {'열림': opened, '다른 것': jg2_diff(c2.get('trq'), want), '지금 목록 줄 수': trq_rows, '표시 수': n2.get('trq')})
+            ok &= T('JG2-B1', '%s 그 밖 자리 0 — 문서 전체 표시 수 = 서랍 + 목록 + 지금 목록(문제 창 머리 · 다른 면에 새지 않음)' % subj,
+                    n2.get('all') == (n2.get('drawer') or 0) + (n2.get('list') or 0) + (n2.get('trq') or 0) and (n2.get('all') or 0) > 0, n2)
+            pl = {cd: p.ev("([x]) => __EW2.place(x)", [cd]) for cd in codes}   # 자리 · 꼴(열어 둔 채라 지금 목록 줄도 있다)
+            okp = total > 0
+            for cd in codes:
+                z = pl[cd] or {}
+                d, l, t = z.get('d') or {}, z.get('l') or {}, z.get('t') or {}
+                okp = okp and bool(d) and bool(d.get('tail')) and bool(d.get('first')) and css_ok(d.get('css'), MARK_CSS)
+                # 옛 줄(add1 검수 전): okp = okp and bool(l) and bool(l.get('meta')) and bool(l.get('nextOk')) and css_ok(l.get('css'), MARK_CSS)
+                okp = okp and jg2_l_ok(l) and css_ok(l.get('css'), MARK_CSS)   # 제목 칸(.sub)이 없는 줄(uid_unify §G-1 · 생물 · 지학)은 기출 칩 바로 뒤면 맞는 자리 — 제목 칸이 있으면 옛 잣대 그대로
+                if trq_rows > 0:
+                    okp = okp and bool(t) and bool(t.get('afterNdt')) and css_ok(t.get('css'), MARK_CSS)
+            ok &= T('JG2-B1', '%s 표시 자리 · 꼴 — 서랍 = 꼬리 맨 앞 · 목록 = 기출 칩 뒤 .meta 안(★·제목 앞) · 지금 목록 = 발문 바로 뒤 · 11px 800 #dc2626 글자만' % subj, okp, pl)
+            if subj == 'phys':   # 거르개 줄(ok true · 지운 회차 · 2차 · 점수만) — 줄은 앱에 있고(거저 참 아님) 표시만 0
+                fl = {cd: p.ev("([x]) => __EW2.place(x)", [cd]) for cd in ('PA2402', 'PA2501', 'PA2403', 'PA2305')}
+                ok &= T('JG2-B1', 'phys 거르개 줄(맞힘 PA2402 · 지운 회차 PA2501 · 2차 PA2403 · 점수만 PA2305) — 서랍 줄 · 목록 카드는 있고 표시 0',
+                        all(z and z.get('row') and z.get('card') and not z.get('d') and not z.get('l') for z in fl.values()), fl)
+        finally:
+            p.close()
+        pb = jg2_open(br, jg2_base_src(), subj, PC, who='base')   # 헛잣대 — 바탕에 같은 시험 기록으로 같은 셋 자리를 센다
+        try:
+            sb = ewm_wait(pb)
+            pb.wait(1500)
+            cb0 = (pb.ev("() => __EW2.collect()") or {}).get('n') or {}
+            ob = pb.ev(JG2_OPEN, [codes[0]]) or {}
+            cb = pb.ev("() => __EW2.collect()") or {}
+            nb = cb.get('n') or {}
+            N('JG2-B1 BASE', '%s 바탕 .ewmt — 서랍 · 목록 · 지금 목록(문제를 연 뒤)' % subj,
+              {'바탕': JGBASE, 'EWM.st': sb, '서랍': nb.get('drawer'), '목록': nb.get('list'), '지금 목록': nb.get('trq'), '서랍 줄 수': nb.get('drawerRows'), '카드 수': nb.get('listItems'), '지금 목록 줄 수': nb.get('trqRows'), '열기 전 합': cb0.get('all')})
+            ok &= T('JG2-B1', '%s 헛잣대 — 바탕에서 서랍 · 목록 · 지금 목록 표시 모두 0(줄은 있다)' % subj,
+                    nb.get('all') == 0 and (nb.get('drawerRows') or 0) > 0 and (nb.get('listItems') or 0) > 0 and jg2_opened(ob),
+                    {'바탕': JGBASE, '서랍': nb.get('drawer'), '목록': nb.get('list'), '지금 목록': nb.get('trq'), '서랍 줄 수': nb.get('drawerRows'), '카드 수': nb.get('listItems')})
+        finally:
+            pb.close()
+    return ok
+
+
+# ── B-2 — 받기 늦음 · (a) 응답을 잡아 둔 채 서랍·목록을 굴려 두고 풀어 줌 → 세 자리에 나타남 · 스크롤 자리 그대로 · (b) 문제를 연 채 풀어 줌 → 지금 목록 줄도 · (c) 응답 2초 늦춤 → 첫 그리기 시각 ±10% ──
+# 옛 줄(add1 검수 전): def jg2_b2_late(br, src, subj):
+def jg2_b2_late(br, src, subj, eng='chromium', parts='ab'):   # eng = 열린 브라우저 엔진(chromium · webkit) · parts = 'ab'(옛 길 그대로) · 'a'(WebKit 길 — 스크롤 칸만)
+    want = jg2_want(subj)
+    codes = sorted(want)
+    total = sum(len(v) for v in want.values())
+    ok = True
+    p = jg2_open(br, src, subj, PC, gate=True)   # (a) 목록 · 서랍 · 스크롤
+    try:
+        p.ev(JG2_WARN)
+        until(p, "() => (window.__ewmH && window.__ewmH.held >= 1) ? 1 : 0", 10000)   # 앱이 기록을 달라고 한 요청이 잡힐 때까지(풀기 전 상태를 거저 참 없이)
+        sc = {}
+        for _ in range(4):   # 쪽 · 서랍을 굴려 둔다(뒤늦은 다시 그리기로 0 으로 돌아가면 다시 굴림 — 풀기 직전에 읽은 값을 기준으로 쓴다)
+            p.ev("() => __EW2.scrollSet(1500, 600)")
+            p.wait(700)
+            sc = p.ev("() => __EW2.scrollGet('')") or {}
+            if (sc.get('y') or 0) >= 300 and (sc.get('nd') or 0) >= 100:
+                break
+        p.ev("() => __EW2.tagOld()")   # 위쪽 높이 변화 재기(참고) — 풀기 직전 기준 카드 위 카드들의 높이 · 옛 카드 노드 표시(다시 그렸나)
+        snap0 = p.ev("([a]) => __EW2.topSnap(a)", [sc.get('anchor')]) or {}
+        pre = p.ev("() => ({ st: EWM.st, h: window.__ewmH, c: __EW2.collect().n })") or {}
+        released = p.ev("() => window.__ewmRelease()")
+        st = ewm_wait(p)
+        c = jg2_settle(p, total)
+        sc1 = p.ev("([a]) => __EW2.scrollGet(a)", [sc.get('anchor')]) or {}
+        snap1 = p.ev("([a]) => __EW2.topSnap(a)", [sc.get('anchor')]) or {}
+        h = p.ev("() => window.__ewmH") or {}
+        warns = [w for w in (p.ev("() => window.__warns || []") or []) if str(w).startswith('ewm')]
+        n = c.get('n') or {}
+        before = pre.get('st') == 'wait' and (pre.get('h') or {}).get('held', 0) >= 1 and (pre.get('c') or {}).get('all') == 0   # 풀기 전에 정말 아직 안 온 상태(거저 참 아님)
+        mv_y = abs((sc1.get('y') or 0) - (sc.get('y') or 0))
+        mv_nd = abs((sc1.get('nd') or 0) - (sc.get('nd') or 0))
+        shift = None if sc1.get('anchorTop') is None or sc.get('anchorTop') is None else round(sc1['anchorTop'] - sc['anchorTop'], 1)   # 기준 카드가 화면에서 움직인 px(= 사용자 눈에 튄 만큼)
+        keep, keep_why = jg2_scroll_keep(eng, mv_y, shift)   # 크롬 = 쪽 스크롤 같음 또는 기준 카드 이동 ≤ 1px · WebKit = 기준 카드 이동 ≤ 1px(스크롤 고정이 없어 scrollTop 같음은 증거가 못 된다)
+        # 옛 줄(add1 검수 전): ok_a = (before and (released or 0) >= 1 and total > 0 and jg2_eq(c.get('drawer'), want) and jg2_eq(c.get('list'), want)
+        #                              and (sc.get('y') or 0) >= 300 and (sc.get('nd') or 0) >= 100 and mv_y <= 1 and mv_nd <= 1 and not warns and not p.errs and not h.get('errs'))
+        ok_a = (before and (released or 0) >= 1 and total > 0 and jg2_eq(c.get('drawer'), want) and jg2_eq(c.get('list'), want)
+                and (sc.get('y') or 0) >= 300 and (sc.get('nd') or 0) >= 100 and keep and mv_nd <= 1 and not warns and not p.errs and not h.get('errs'))
+        # 옛 줄(add1 검수 전): ok &= T('JG2-B2', '%s 늦게 오면 — 오기 전 표시 0 · 온 뒤 서랍 · 목록에 틀림 줄마다 하나씩 · 쪽 · 서랍 스크롤 자리 그대로 · 경고 0' % subj, ok_a,
+        # (옛 값 칸 끝에 「'기준 카드 위치 이동(px · 참고)': …」 가 참고 값이었다 — 지금은 판정에 든다)
+        lab_a = ('%s 늦게 오면 — 오기 전 표시 0 · 온 뒤 서랍 · 목록에 틀림 줄마다 하나씩 · 쪽 · 서랍 스크롤 자리 그대로 · 경고 0' % subj) if eng != 'webkit' else \
+            ('%s 늦게 오면(WebKit · 스크롤 고정 없음) — 오기 전 표시 0 · 온 뒤 서랍 · 목록에 틀림 줄마다 하나씩 · 기준 카드 제자리(이동 ≤ 1px) · 서랍 스크롤 자리 그대로 · 경고 0' % subj)
+        ok &= T('JG2-B2', lab_a, ok_a,
+                {'엔진': eng, '오기 전': {'EWM.st': pre.get('st'), '잡힌 요청': (pre.get('h') or {}).get('held'), '표시 합': (pre.get('c') or {}).get('all')}, '푼 요청 수': released, '온 뒤': {'EWM.st': st, '서랍': n.get('drawer'), '목록': n.get('list')},
+                 '다른 것': {'서랍': jg2_diff(c.get('drawer'), want), '목록': jg2_diff(c.get('list'), want)},
+                 '쪽 스크롤(전 → 후)': [sc.get('y'), sc1.get('y')], '쪽 스크롤 이동(px)': mv_y, '기준 카드 위치 이동(px)': shift, '자리 판정': keep_why,
+                 '서랍 스크롤(전 → 후)': [sc.get('nd'), sc1.get('nd')],
+                 '위쪽 높이 변화(참고 · 판정 아님)': jg2_top_diff(snap0, snap1),
+                 '경고': warns[:3], '쪽 오류': p.errs[:2]})
+    finally:
+        p.close()
+    if parts == 'a':   # WebKit 길 = 스크롤 칸만(문제를 연 채 길(b)은 엔진과 무관)
+        return ok
+    p = jg2_open(br, src, subj, PC, gate=True)   # (b) 문제를 연 채 — 지금 목록 줄(물리도 이 길로 선다) · 문제 창 머리는 옛 칸 그대로
+    try:
+        p.ev(JG2_WARN)
+        until(p, "() => (window.__ewmH && window.__ewmH.held >= 1) ? 1 : 0", 10000)
+        o = p.ev(JG2_OPEN, [codes[0]]) or {}
+        pre = p.ev("() => ({ st: EWM.st, h: window.__ewmH, c: __EW2.collect().n })") or {}
+        released = p.ev("() => window.__ewmRelease()")
+        st = ewm_wait(p)
+        t0 = time.time()
+        c = {}
+        while time.time() - t0 < JG2_WAIT / 1000.0:   # 세 자리 다 닿을 때까지
+            c = p.ev("() => __EW2.collect()") or {}
+            nn = c.get('n') or {}
+            if nn.get('drawer') == total and nn.get('list') == total and nn.get('trq') == total:
+                break
+            p.wait(200)
+        p.wait(400)
+        c = p.ev("() => __EW2.collect()") or c
+        hd = p.ev("() => [...document.querySelectorAll('#view .vtop .ewmx')].map(m => m.textContent.trim())") or []
+        warns = [w for w in (p.ev("() => window.__warns || []") or []) if str(w).startswith('ewm')]
+        n = c.get('n') or {}
+        h = p.ev("() => window.__ewmH") or {}
+        before = pre.get('st') == 'wait' and (pre.get('h') or {}).get('held', 0) >= 1 and (pre.get('c') or {}).get('all') == 0
+        ok_b = (jg2_opened(o) and before and (released or 0) >= 1 and total > 0 and jg2_eq(c.get('trq'), want) and jg2_eq(c.get('drawer'), want) and jg2_eq(c.get('list'), want)
+                and hd == want[codes[0]] and not warns and not p.errs and not h.get('errs'))
+        ok &= T('JG2-B2', '%s 문제를 연 채 늦게 와도 — 지금 목록 · 서랍 · 목록에 틀림 줄마다 하나씩 · 문제 창 머리도 그대로 · 경고 0' % subj, ok_b,
+                {'열림': jg2_opened(o), '오기 전': {'EWM.st': pre.get('st'), '잡힌 요청': (pre.get('h') or {}).get('held'), '표시 합': (pre.get('c') or {}).get('all')}, '푼 요청 수': released,
+                 '온 뒤': {'EWM.st': st, '서랍': n.get('drawer'), '목록': n.get('list'), '지금 목록': n.get('trq'), '지금 목록 줄 수': n.get('trqRows')},
+                 '다른 것': {'지금 목록': jg2_diff(c.get('trq'), want)}, '문제 창 머리': hd, '경고': warns[:3], '쪽 오류': p.errs[:2]})
+    finally:
+        p.close()
+    return ok
+
+
+def jg2_b2_first(br, src, subj, runs=3, delay=2000):
+    """(c) 응답을 2초 늦춰도 첫 화면 시각은 바탕과 같다(±10% — 잡음 바닥 +150ms) · 화면이 기록보다 먼저 — 새 판 · 바탕 번갈아 runs 번 중앙값"""
+    if YARD:
+        N('JG2-B2', '%s 첫 화면 시각 — 헛잣대 해당 없음' % subj, '바탕끼리 맞대면 거저 참')
+        return True
+    base_src = jg2_base_src()
+    tn, tb, pairs = [], [], []
+    for i in range(runs):
+        for who, s, arr in (('new', src, tn), ('base', base_src, tb)):
+            p = jg2_open(br, s, subj, PC, delay=delay, who=who)
+            try:
+                h = until(p, "() => window.__ewmH && window.__ewmH.t1 > 0 ? window.__ewmH : null", 60000)
+                arr.append(round((h or {}).get('t1') or 0))
+                if who == 'new':
+                    hh = until(p, "() => window.__ewmH && window.__ewmH.tEx > 0 ? window.__ewmH : null", 15000) or {}
+                    pairs.append((round((h or {}).get('t1') or 0), round(hh.get('tEx') or 0)))
+            finally:
+                p.close()
+    mn, mb = statistics.median(tn), statistics.median(tb)
+    first = all(a > 0 and b > 0 and a < b for a, b in pairs)
+    lim = max(mb * 1.10, mb + 150)
+    return T('JG2-B2', '%s 첫 화면 시각(기록 2초 늦춤) — 바탕 ±10%%(잡음 바닥 +150ms) 안 · 화면이 기록보다 먼저' % subj, first and mn <= lim,
+             {'새 판(ms)': tn, '바탕(ms)': tb, '중앙값': [mn, mb], '허용 상한(ms)': round(lim), '(첫 화면, 기록 옴)': pairs, '바탕 판': JGBASE})
+
+
+def jg2_b2_wk(src):
+    """(add1 검수 10/4) 「늦게 오면」 (a) 를 WebKit 으로도 — 스크롤 고정이 없다(크롬은 위쪽 높이 변화를 scrollTop 으로 갚지만 WebKit 은 scrollTop 은 그대로인데 카드가 밀릴 수 있다)"""
+    if YARD:
+        N('JG2-B2', 'WebKit 길 — 헛잣대 해당 없음', '바탕끼리 맞대면 거저 참(바탕엔 표시가 없다)')
+        return True
+    wk = webkit_try(PWH.get('pw'))
+    if not wk:
+        N('JG2-B2', 'WebKit 길 — 못 돌림(--jg2eng 로 청했으나 이 컴퓨터에 WebKit 이 없다)', 'WK 줄 참고')
+        return True
+    ok = True
+    try:
+        for subj in JG3:
+            ok &= jg2_b2_late(wk, src, subj, eng='webkit', parts='a')
+    finally:
+        wk.close()
+    return ok
+
+
+# 옛 줄(add1 검수 전): def jg2_b2(br, src): … for subj in JG3: ok &= jg2_b2_late(br, src, subj) / for subj in JG3: ok &= jg2_b2_first(br, src, subj) / return ok  (아래 — 크롬 갈래는 그대로 `if` 안으로)
+def jg2_b2(br, src):
+    jg2_hdr(src)
+    ok = True
+    if 'chromium' in JG2ENG:   # 기본 = 크롬만(지금처럼) · --jg2eng webkit 이면 크롬 칸은 건너뛴다
+        for subj in JG3:
+            ok &= jg2_b2_late(br, src, subj)
+        for subj in JG3:
+            ok &= jg2_b2_first(br, src, subj)
+    if 'webkit' in JG2ENG:
+        ok &= jg2_b2_wk(src)
+    return ok
+
+
+# ── B-3 — 토큰 없음 · 404(기록 없음) = 표시 0 · 오류 0 · 알림 0 (세 자리 모두 · 문제를 연 뒤 지금 목록도) ──
+def jg2_b3(br, src):
+    jg2_hdr(src)
+    ok = True
+    for subj in JG3:
+        codes = sorted(jg2_want(subj))
+        for nm, kw, ask in (('토큰 없음', {'token': False}, False), ('404(기록 없음)', {'mode': '404'}, True)):
+            # 옛 줄(add1 검수 전): p = jg2_open(br, src, subj, PC, **kw)   — 생물 · 지학은 처음부터 토큰이 없으면 그 과목을 못 열어 물리에 머물렀다(값 [577, 577, 0] = 물리 줄 수)
+            p = jg2_open_notoken(br, src, subj, PC) if nm == '토큰 없음' else jg2_open(br, src, subj, PC, **kw)
+            try:
+                st = ewm_wait(p)
+                p.wait(1500)
+                c = p.ev("() => __EW2.collect()") or {}
+                o = p.ev(JG2_OPEN, [codes[0]]) or {}
+                c2 = p.ev("() => __EW2.collect()") or {}
+                h = p.ev("() => window.__ewmH") or {}
+                errs = p.ev("() => (window.__err || []).slice(0, 4)") or []
+                n1, n2 = c.get('n') or {}, c2.get('n') or {}
+                seen = (n1.get('drawerRows') or 0) > 0 and (n1.get('listItems') or 0) > 0 and jg2_opened(o)   # 줄은 있다(거저 참 아님)
+                asked = (h.get('nEx') or 0) >= 1 if ask else h.get('nEx') == 0   # 404 = 요청이 갔다 · 토큰 없음 = 요청도 안 감
+                ok &= T('JG2-B3', '%s %s — 표시 0 · 오류 0 · 알림 0(서랍 · 목록 · 지금 목록)' % (subj, nm),
+                        seen and asked and n1.get('all') == 0 and n2.get('all') == 0 and not p.errs and not h.get('errs') and not h.get('alerts'),   # window.__err(PP INIT 이 더 일찍 건 귀)는 값으로만 남긴다 — 옛 C4 와 같은 잣대(p.errs · h.errs · 알림)
+                        # 옛 줄(add1 검수 전): {'EWM.st': st, '표시 합(열기 전 · 뒤)': [n1.get('all'), n2.get('all')], '서랍 줄 · 카드 · 지금 목록 줄': [n1.get('drawerRows'), n1.get('listItems'), n2.get('trqRows')], '기록 요청 수': h.get('nEx'),
+                        {'길': getattr(p, 'ew2way', ''), 'EWM.st': st, '표시 합(열기 전 · 뒤)': [n1.get('all'), n2.get('all')], '서랍 줄 · 카드 · 지금 목록 줄': [n1.get('drawerRows'), n1.get('listItems'), n2.get('trqRows')], '기록 요청 수': h.get('nEx'),
+                         '쪽 오류': p.errs[:3], 'h.errs': h.get('errs'), '알림': h.get('alerts'), '__err': errs})
+            finally:
+                p.close()
+    return ok
+
+
+# ── B-4 — 폭 1440 · 834 · 390: 서랍 줄 높이 무변 · 목록 카드 가로 넘침 0 · 표시 글자 위를 눌러도 그 문제가 열림 ──
+def jg2_ov(m):
+    return max(m['sw'] - m['cw'], m['msw'] - m['mcw'], m['psw'] - m['vw'])
+
+
+def jg2_row_ok(h, n):
+    if not h or h.get('n') != n or not h.get('on') or not h.get('off'):
+        return False
+    a, b = h['on'], h['off']
+    return a['h'] > 0 and abs(a['h'] - b['h']) <= 0.5 and (a['sw'] - a['cw']) <= max(1, (b['sw'] - b['cw']) + 0.5)
+
+
+def jg2_card_ok(h, n):
+    if not h or not h.get('on') or not h.get('off') or h['on'].get('n') != n:
+        return False
+    a, b = h['on'], h['off']
+    oa, ob = jg2_ov(a), jg2_ov(b)
+    return (oa <= 1 or oa <= ob + 0.5) and a['tagR'] <= a['cardR'] + 0.5 and a['tagL'] >= a['cardL'] - 0.5
+
+
+def jg2_b4(br, src):
+    jg2_hdr(src)
+    ok = True
+    for subj in JG3:
+        want = jg2_want(subj)
+        codes = sorted(want)
+        total = sum(len(v) for v in want.values())
+        for dn, dev in DEVS:
+            p = jg2_open(br, src, subj, dev)
+            try:
+                ewm_wait(p)
+                jg2_settle(p, total)
+                nos = {cd: p.ev("([x]) => __EW2.noOf(x)", [cd]) for cd in codes}
+                fo = p.ev(JG2_FOLD, [False])   # 좁은 폭은 접힌 채 시작한다 — 펴고 잰다(펼침 뒤 400ms 유령 click 막이가 풀리게 기다린다)
+                p.wait(900)
+                hs = {cd: p.ev("([x]) => __EW2.rowH(x)", [nos[cd]]) for cd in codes}
+                ok &= T('JG2-B4', '%s %s 서랍 줄 — 한 줄 유지(표시를 껐다 켠 높이 무변 · 가로 넘침 안 늘어남)' % (dn, subj), total > 0 and all(jg2_row_ok(hs[cd], len(want[cd])) for cd in codes),
+                        dict({cd: (None if not hs[cd] else {'표시 수': hs[cd].get('n'), '높이(켬 · 끔)': [(hs[cd].get('on') or {}).get('h'), (hs[cd].get('off') or {}).get('h')],
+                                                            '제목 폭(켬 · 끔)': [(hs[cd].get('on') or {}).get('ndt'), (hs[cd].get('off') or {}).get('ndt')]}) for cd in codes}, **{'서랍 펴기': fo}))
+                pr = {cd: jg2_press(p, 'drawer', cd, nos[cd]) for cd in codes}
+                ok &= T('JG2-B4', '%s %s 서랍 줄 누름 — 표시 글자 위를 눌러도 그 문제가 열림' % (dn, subj), total > 0 and all(pr[cd]['ok'] for cd in codes), pr)
+                p.ev(JG2_FOLD, [True])   # 목록을 가리지 않게 접는다
+                p.wait(900)
+                cv = {cd: p.ev("([x]) => __EW2.cardOv(x)", [cd]) for cd in codes}
+                ok &= T('JG2-B4', '%s %s 목록 카드 — 가로 넘침 0(표시 때문에 늘지 않음 · 표시가 카드 안에 섬)' % (dn, subj), total > 0 and all(jg2_card_ok(cv[cd], len(want[cd])) for cd in codes),
+                        {cd: (None if not cv[cd] or not cv[cd].get('on') else {'넘침 px(켬 · 끔)': [jg2_ov(cv[cd]['on']), jg2_ov(cv[cd]['off'])], '카드 높이(켬 · 끔)': [cv[cd]['on'].get('h'), cv[cd]['off'].get('h')],
+                                                                              '표시 가로(왼 · 오른 · 카드 오른)': [cv[cd]['on'].get('tagL'), cv[cd]['on'].get('tagR'), cv[cd]['on'].get('cardR')]}) for cd in codes})
+                pc = {cd: jg2_press(p, 'list', cd, nos[cd]) for cd in codes}
+                ok &= T('JG2-B4', '%s %s 목록 카드 누름 — 표시 글자 위를 눌러도 그 문제가 열림' % (dn, subj), total > 0 and all(pc[cd]['ok'] for cd in codes), pc)
+            finally:
+                p.close()
+    return ok
+
+
+# ── B-5 — 진짜 기록(읽기만 · 값은 안 적고 수만): 자과 표시 문항 수 = 기록의 자과 틀림 줄(지시서 §0-2 = 18) 중 앱에 있는 문항 수 ──
+def jg2_b5(br, src):
+    jg2_hdr(src)
+    try:
+        raw = open(REAL, 'rb').read()
+        real = json.loads(raw.decode('utf-8'))
+    except Exception as e:
+        N('JG2-B5', '진짜 시험 기록 사본을 못 읽음 — 안 잼(--real <exam/꼬까.json 사본>)', str(e).splitlines()[0][:120])
+        return not YARD
+    rows, drop = ex_rows(real)
+    exp = jg2_expect(rows)
+    cnt = {}
+    for x in rows:
+        if x['s'] in ('물리', '생물', '지학'):
+            cnt[(x['r'], x['s'])] = cnt.get((x['r'], x['s']), 0) + 1
+    tot = sum(cnt.values())
+    same = {k: cnt.get(k, 0) for k in SPEC02} == SPEC02 and tot == sum(SPEC02.values())
+    N('JG2-B5', '진짜 기록 사본 — 자과 틀림 줄 수(수만) · 지시서 §0-2(= 18)와 %s' % ('같음' if same else '다름'),
+      {'합': tot, '지시서 §0-2 합': sum(SPEC02.values()), '회 · 과목별': {'%d회 %s' % k: v for k, v in sorted(cnt.items(), reverse=True)}, '사본 크기(B)': len(raw)})
+    ok = True
+    shown = {}
+    for subj in JG3:
+        e = exp[subj]
+        lines = sum(len(v) for v in e.values())
+        p = jg2_open(br, src, subj, PC, remote=XRemoteReal(raw))
+        try:
+            st = ewm_wait(p)
+            present = p.ev("([cs]) => cs.filter(c => DATA.some(r => String(r[F.CODE]) === c))", [sorted(e)]) or []
+            want = {c: e[c] for c in present}
+            total = sum(len(v) for v in want.values())
+            c = jg2_settle(p, total)
+            n1 = c.get('n') or {}
+            o = (p.ev(JG2_OPEN, [sorted(want)[0]]) or {}) if want else {}
+            c2 = p.ev("() => __EW2.collect()") or {}
+            n2 = c2.get('n') or {}
+            tr = n2.get('trqRows') or 0
+            trq_ok = True if (subj == 'phys' and tr == 0) else (tr > 0 and jg2_eq(c2.get('trq'), want))   # 물리 = 앱이 지금 목록을 안 채운다(JG2-B1 · B2 참고)
+            shown[subj] = [lines, total, n1.get('drawer'), n1.get('list'), n2.get('trq')]
+            ok &= T('JG2-B5', '%s 진짜 기록 — 표시 문항 수 = 기록의 틀림 줄 중 앱에 있는 수(서랍 · 목록 · 지금 목록)' % subj,
+                    total > 0 and jg2_eq(c.get('drawer'), want) and jg2_eq(c.get('list'), want) and jg2_opened(o) and trq_ok,
+                    {'EWM.st': st, '기록 줄': lines, '앱에 있음': total, '서랍': n1.get('drawer'), '목록': n1.get('list'), '지금 목록': n2.get('trq'), '지금 목록 줄 수': tr,
+                     '앱에 없는 줄': lines - total, '쪽 오류 수': len(p.errs)})
+        finally:
+            p.close()
+    N('JG2-B5', '진짜 기록 — 자과 표시 문항 수 합계(서랍 · 목록 · 기록 줄 · 앱에 있음 · 지시서 §0-2 합)',
+      {'서랍': sum((v[2] or 0) for v in shown.values()), '목록': sum((v[3] or 0) for v in shown.values()), '기록 줄': sum(v[0] for v in shown.values()), '앱에 있음': sum(v[1] for v in shown.values()), '지시서 §0-2': sum(SPEC02.values())})
+    return ok
+
+
 # ════════════════════════ 돌림 ════════════════════════
 def census_table(census):
     rows = {}
@@ -1228,6 +1897,7 @@ def main():
         N('C0', 'regress 갈래(jo)', '조판기 새 판만 · 바탕(%s) 판은 안 띄움 · 첫 화면 시각 = 새 판 1 번 + 바탕 중앙값은 기준 스냅샷(QJ.base) · 민법 · 자과 실행은 gate 그대로' % BASE)
     got, times, census = {}, {}, {'jo': [], 'mb': [], 'jg': []}
     with sync_playwright() as pw:
+        PWH['pw'] = pw   # (add1 검수) JG2-B2 WebKit 길이 쓴다
         br = pw.chromium.launch()
         steps = []
         if 'jo' in APPS:
@@ -1239,6 +1909,15 @@ def main():
         if 'jg' in APPS:
             steps += [('C1-jg', lambda: jg_c1(br, srcs['jg'], 'c1g')), ('C2-jg', lambda: jg_c2(br, srcs['jg'], 'c2g')),
                       ('C3-jg', lambda: jg_c3(br, srcs['jg'], 'c3g', census['jg'])), ('C4-jg', lambda: jg_c4(br, srcs['jg'], bases['jg'], 'c4g'))]
+        if 'jg' in APPS:   # JG2(uid_unify_add1) — 서랍 줄 · 목록 카드 · 지금 목록 줄 표시 · 위 C1~C4 는 그대로 · --only JG2 로 이 칸만 · --yardstick 이면 바탕(--jgbase)을 새 판 자리에(B3 는 해당 없음)
+            _jg2 = (lambda: jg2_base_src()) if YARD else (lambda: srcs['jg'])
+            steps += [('JG2-B1', lambda: jg2_b1(br, _jg2())), ('JG2-B2', lambda: jg2_b2(br, _jg2()))]
+            if YARD:
+                if not ONLY or any('JG2-B3'.startswith(o) for o in ONLY):
+                    N('JG2-B3', '헛잣대 해당 없음', '바탕엔 표시가 없어 「기록 못 받음 = 표시 0」을 가를 수 없다')
+            else:
+                steps += [('JG2-B3', lambda: jg2_b3(br, _jg2()))]
+            steps += [('JG2-B4', lambda: jg2_b4(br, _jg2())), ('JG2-B5', lambda: jg2_b5(br, _jg2()))]
         for g, fn in steps:
             if ONLY and not any(g.upper() == o or g.upper().startswith(o) for o in ONLY):
                 continue

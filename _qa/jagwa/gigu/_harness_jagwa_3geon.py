@@ -291,9 +291,14 @@ BODY_EARTH = GATE + r"""
      T('X-4 카드 도구줄에 「T 글상자」',!!t);
      t.click(); await wait(60);
      const box=$('.mcwin .mccv'), br=box.getBoundingClientRect(), cv=$('.mcwin #mcc');
-     await tryTxt('X-4 암기카드',box,'card:'+no,async()=>{
+     /* ★ uid_unify 옛 잣대 고침(2026-10-04 · 근거 gigu/_task_jagwa_uid_unify.md §A-1 · §A-2 「txt 는 card:<번호> 칸」) — 카드 층(지학)의 암기카드 글상자 칸 = card:<uid>(앱 cardKey='card:'+qk(no)) · 옛 판(바탕 4754b1d · qk 없음)은 card:<번호> */
+     const ck='card:'+((typeof qk==='function')?qk(no):no);
+     /* 옛: await tryTxt('X-4 암기카드',box,'card:'+no,async()=>{
+       PE('pointerdown',cv,br.left+br.width/2,br.top+br.height/2,'pen')}); */
+     await tryTxt('X-4 암기카드',box,ck,async()=>{
        PE('pointerdown',cv,br.left+br.width/2,br.top+br.height/2,'pen')});
-     delete TXT['card:'+no]; await saveTXT();
+     /* 옛: delete TXT['card:'+no]; await saveTXT(); */
+     delete TXT[ck]; await saveTXT();
      document.querySelectorAll('.sheet.mcwin').forEach(x=>x.remove());
    });
 
@@ -741,10 +746,20 @@ def static_checks():
     T2('S-17 폰(≤480)에서는 창이 전체 화면으로 떨어진다(서브노트 창의 폰 규칙 그대로)',
        '@media (max-width:480px){#book.win>.panel:not(.float){left:0;top:0;right:0;bottom:0;width:auto;height:auto;border-radius:0}' in s
        and '#book.win>.panel.float{left:0!important;top:0!important;width:auto!important;height:auto!important;right:0;bottom:0;border-radius:0}}' in s)
+    # 옛 줄: T2('S-18 백업 내보내기에 판 3 넷을 더했다 · 불러오기는 무접촉',
+    # 옛 줄: # A-6(a) 9/30 — add5(c20ef05)가 card 묶음을 카드 과목만 싣게 갈랐다(근거 gg·ggref 는 맨 위) — 넷은 그대로
+    # 옛 줄: 'if(HASBOOK)out.card={bogi:BG,unit:UN,bpit:BP,bpg:BPG,snote:SN,mcard:MC,crop:CROP,txt:TXT,tfix:TFIX,bref:BREF};' in s
+    # 옛 줄: and 'if(c.txt){TXT=c.txt;await put(' in s and s.count('importData=async function(f){') == 1)
+    # ★ uid_unify 옛 잣대 고침 §A-2 — 앱이 카드 층 기록 열쇠를 uid 로 쓰는 판(앱 글에 qk(no))은 들이기 뒤에 「옛 백업(번호 열쇠) → uid」 옮김(uidMigrateImport)을 하려고 importData 를 **감싸는** 래퍼 하나를 더 세운다 —
+    #   옛 본체(`importData=async function(f){if(!f)return;let txt;…` · `if(c.txt){TXT=c.txt;await put(`)는 한 글자도 안 바뀐다(무접촉) · 새 것은 옛 것을 `_imp2(f)` 로 부를 뿐 → 「정의 글자」가 하나가 아니라 둘이다. 옛 판(바탕)은 옛 식 그대로(하나)
+    UIDK = 'function qk(no)' in s
+    _n_imp = s.count('importData=async function(f){')
+    _imp_ok = (_n_imp == 1) if not UIDK else (_n_imp == 2 and s.count('importData=async function(f){if(!f)return;let txt;') == 1
+                                              and 'const _imp2=importData;importData=async function(f){' in s and 'await _imp2(f)' in s)
     T2('S-18 백업 내보내기에 판 3 넷을 더했다 · 불러오기는 무접촉',
        # A-6(a) 9/30 — add5(c20ef05)가 card 묶음을 카드 과목만 싣게 갈랐다(근거 gg·ggref 는 맨 위) — 넷은 그대로
        'if(HASBOOK)out.card={bogi:BG,unit:UN,bpit:BP,bpg:BPG,snote:SN,mcard:MC,crop:CROP,txt:TXT,tfix:TFIX,bref:BREF};' in s
-       and 'if(c.txt){TXT=c.txt;await put(' in s and s.count('importData=async function(f){') == 1)
+       and 'if(c.txt){TXT=c.txt;await put(' in s and _imp_ok, [_n_imp, UIDK])
     T2('S-19 옆 칸 글상자가 교재 전체 화면과 같은 통을 쓴다 — 새 키 규칙이 없다',
        s.count("'bink:'+BOOK.page") == 2 and 'var txtList=key=>' in s)
     T2('S-20 옆 칸을 카드 층에서만 걷는다 — 물리 규칙은 안 건드렸다',

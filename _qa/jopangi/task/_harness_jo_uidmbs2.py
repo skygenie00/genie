@@ -230,7 +230,8 @@ def g_a6(p, b, eng):
         r23 = p.ev("()=>__UZ.rowTot('2.3 기일기간-절차수행')")
         p.press(p.ev("()=>__UZ.fbk('기간')"), how, 1500)
         btn = (p.ev("()=>__UZ.fbtn()") or {}).get('t')
-        tot2 = p.ev("()=>{let n=0;document.querySelectorAll('#slot .mbdash > .mbsj').forEach(c=>{if(c.querySelector('.mbur[data-giy]')||/미분류/.test((c.querySelector(':scope > .hd h2')||{}).textContent||''))return;const t=c.querySelector(':scope > .hd .tot');const m=t&&/총 (\\d+)/.exec(t.textContent);if(m)n+=+m[1]});return n}")   # 「변리사 기출」 카드(문항 수)는 뺀다
+        # 옛 줄(ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」): tot2 = p.ev("()=>{let n=0;document.querySelectorAll('#slot .mbdash > .mbsj').forEach(c=>{if(c.querySelector('.mbur[data-giy]')||/미분류/.test((c.querySelector(':scope > .hd h2')||{}).textContent||''))return;const t=c.querySelector(':scope > .hd .tot');const m=t&&/총 (\\d+)/.exec(t.textContent);if(m)n+=+m[1]});return n}")   # 「변리사 기출」 카드(문항 수)는 뺀다
+        tot2 = p.ev("()=>{let n=0;document.querySelectorAll('#slot .mbdash > .mbsj').forEach(c=>{if(c.querySelector('.mbur[data-giy]')||/미분류/.test((c.querySelector(':scope > .hd h2')||{}).textContent||''))return;const t=c.querySelector(':scope > .hd .tot');const m=t&&/(?:총 )?(\\d+)/.exec(t.textContent);if(m)n+=+m[1]});return n}")   # 「변리사 기출」 카드(문항 수)는 뺀다
         T(G, u'필터 단추 누름(%s) → 목록(유형 다섯 · 점선) · 조문형 고르면 닫힘 · 다시 열면 점선 아래 내용·주체·기간(색 = BK_COLOR) · 조문형 아니면 안내 한 줄' % how,
           bool(m0 and m0['vis'] and len(m0['opts']) == 5 and m0['sep'] and not m0['bk'] and m0['note'] and m1 is None and m2 and len(m2['bk']) == 3 and all(x['vis'] for x in m2['bk'])),
           {'처음': m0, '고른 뒤': m1, '다시': m2 and m2['bk']})
@@ -604,7 +605,8 @@ def g_c2(p, b, eng):
     G = 'a2-2'
     for q in ((p, b) if QJ.GATE else (p,)):
         home(q)
-    r = p.ev("()=>{const rs=[...document.querySelectorAll('#slot .mbur')].filter(x=>/^12 실용신안/.test((x.querySelector('.nm')||{}).textContent||''));return rs.map(x=>({t:x.querySelector('.nm').textContent.trim(),tot:(/총 (\\d+)/.exec(x.textContent)||[])[1],vis:x.getBoundingClientRect().height>0}))}")
+    # 옛 줄(ewm_list add1 · 사용자 10/4 23:00 「총·문제 글자 지움」): r = p.ev("()=>{const rs=[...document.querySelectorAll('#slot .mbur')].filter(x=>/^12 실용신안/.test((x.querySelector('.nm')||{}).textContent||''));return rs.map(x=>({t:x.querySelector('.nm').textContent.trim(),tot:(/총 (\\d+)/.exec(x.textContent)||[])[1],vis:x.getBoundingClientRect().height>0}))}")
+    r = p.ev("()=>{const rs=[...document.querySelectorAll('#slot .mbur')].filter(x=>/^12 실용신안/.test((x.querySelector('.nm')||{}).textContent||''));return rs.map(x=>({t:x.querySelector('.nm').textContent.trim(),tot:(/^(?:총 )?(\\d+)(?:문제)?$/.exec(((x.querySelector('.tot')||{}).textContent||'').trim())||[])[1],vis:x.getBoundingClientRect().height>0}))}")
     u = [x for x in (r or []) if u'(미수록)' in x['t']]
     at = p.ev("()=>__UZ.rowAt('12 실용신안 (미수록)')")
     p.tap(at, 1500 if QJ.GATE or not _A2['c2_tap'] else 0)
