@@ -418,9 +418,10 @@ JO_EXV = r"""async ([law, y]) => { const w = ms => new Promise(r => setTimeout(r
   for (let i = 0; i < 100 && typeof busy !== 'undefined' && busy; i++) await w(100);
   const n = (typeof MBHEAD !== 'undefined' && MBHEAD && MBHEAD.list) ? MBHEAD.list.length : 0, nPg = Math.max(1, Math.ceil(n / 5)), pk = PLAW() + ':' + y, out = [];
   for (let pg = 0; pg < nPg; pg++){ S.exvPg[pk] = pg; await render(); for (let i = 0; i < 100 && typeof busy !== 'undefined' && busy; i++) await w(100); await w(200);
-    out.push(...__EW.list('#slot')); }
+    { const ms = __EW.marks('#slot'), ls = __EW.list('#slot'); ls.forEach((m, j) => { const h = ms[j] && ms[j].closest('.exv-head'); if (h){ m.h = 1; m.no = (h.closest('.exv-q') || { dataset: {} }).dataset.exno || ''; } }); out.push(...ls); } }   /* ★ ewm_list J6(10/5) — 문항 머리 표시(.exv-head)는 h · 그 문항 번호 no(옛 줄: out.push(...__EW.list('#slot'))) */
   S.exvPg[pk] = 0; await render(); await w(200);
-  return { n: n, nPg: nPg, marks: out, boxes: document.querySelectorAll('#slot .uzexb').length }; }"""
+  const nos = ((typeof MBHEAD !== 'undefined' && MBHEAD && MBHEAD.list) || []).map(q => { try{ return String(giNo(q)); }catch(e){ return ''; } });   /* ★ ewm_list J6(10/5) — 그 해 기출뷰에 선 문항 번호 */
+  return { n: n, nPg: nPg, marks: out, nos: nos, boxes: document.querySelectorAll('#slot .uzexb').length }; }"""
 JO_EXV_GO = r"""async ([law, y, k]) => { const w = ms => new Promise(r => setTimeout(r, ms)); try{ closeAllPops(); }catch(e){}
   S.law = law; S.tab = 'jimun'; S.exvPg = S.exvPg || {}; mbGiGo(y);
   for (let i = 0; i < 150 && !document.querySelector('#slot .exv-q'); i++) await w(100);
@@ -442,11 +443,19 @@ def jo_c1(br, src, tag):
     try:
         st = ewm_wait(p)
         N('C1-jo', '시험 기록 받음', {'EWM.st': st, '틀림 줄(하네스)': len(WR), '뺀 줄(까닭)': sorted(set(x['why'] for x in WX))})
+        # ★ ewm_list J6(10/5 · _task_ewm_list.md J6) — 이 판 앱은 ewmMap 에 문항 열쇠 'Q|해|번'(그 법 틀림 줄마다 · 기출뷰 문항 머리 표시용)을 세운다 · 옛 앱(바탕)엔 없음 = 옛 잣대 그대로
+        HASQ = bool(p.ev("() => typeof ewmMap === 'function' && String(ewmMap).indexOf(\"'Q|'\") >= 0"))
         for law in LAWS:
             got = p.ev(JO_MAP, law)
             want = {k: sorted(v) for k, v in exp[law].items()}
+            wq = {}
+            if HASQ:
+                for x in WR:
+                    if LAWN.get(x['s']) == law:
+                        wq.setdefault('Q|%d|%d' % (x['r'] + 1963, x['i']), set()).add('%d-%d' % (x['r'], x['i']))
+                want.update({k: sorted(v) for k, v in wq.items()})
             ok &= T('C1-jo', '%s 앱 표 = 하네스 셈(열쇠 %d · 표시 %d)' % (SHORT[law], len(want), sum(len(v) for v in want.values())),
-                    got == want, {'앱': None if got is None else {'열쇠': len(got), '다른 것': sorted(set(got) ^ set(want))[:8]}, '하네스': sorted(want)[:12]})
+                    got == want, {'앱': None if got is None else {'열쇠': len(got), '다른 것': sorted(set(got) ^ set(want))[:8]}, '하네스': sorted(want)[:12], '문항 열쇠': len(wq)})
         if QJ.want('C1-jo-기출뷰'):   # smoke 칸 아님(smoke = 위 앱 표 셋)
             # 화면 — 연도별 기출뷰(해마다 · 쪽 전부) · 리담 지문 하나 = 표시 하나(그 해 틀림 줄)
             cases = [('특허법', '2024'), ('특허법', '2026'), ('특허법', '2025'), ('특허법', '2023'), ('상표법', '2024'), ('상표법', '2026'), ('디자인보호법', '2026')]
@@ -454,11 +463,17 @@ def jo_c1(br, src, tag):
                 r = p.ev(JO_EXV, [law, y]) or {}
                 marks = r.get('marks') or []
                 want = sorted('%s|%s' % (k, ri) for k, v in exp[law].items() if k in lid[law] and lid[law][k] == int(y) for ri in v)
-                gotk = sorted('%s|%s' % (m['k'], m['ewm']) for m in marks)
+                # ★ ewm_list J6(10/5) — 문항 머리(.exv-head) 표시는 따로: 이 판 앱 = 그 해 기출뷰에 선 틀린 문항마다 하나(「번|회-번」) · 옛 앱 = 0
+                heads = [m for m in marks if m.get('h')]
+                body = [m for m in marks if not m.get('h')]
+                nos = set(r.get('nos') or [])
+                wantH = sorted(set('%d|%d-%d' % (x['i'], x['r'], x['i']) for x in WR if LAWN.get(x['s']) == law and x['r'] + 1963 == int(y) and str(x['i']) in nos)) if HASQ else []
+                gotH = sorted('%s|%s' % (m.get('no'), m['ewm']) for m in heads)
+                gotk = sorted('%s|%s' % (m['k'], m['ewm']) for m in body)   # 옛 줄: for m in marks(머리 표시가 없던 앱)
                 wtxt = sorted(set(w.split('|')[1] + '-X' for w in want))
-                ok &= T('C1-jo', '기출뷰 %s %s — 표시 %d(기대 %d)' % (SHORT[law], y, len(marks), len(want)),
-                        gotk == want and r.get('n', 0) > 0, {'문항': r.get('n'), '쪽': r.get('nPg'), '글자': sorted(set(m['t'] for m in marks)), '기대 글자': wtxt,
-                                                           '다른 것': sorted(set(gotk) ^ set(want))[:6]})
+                ok &= T('C1-jo', '기출뷰 %s %s — 표시 %d(기대 %d)' % (SHORT[law], y, len(marks), len(want) + len(wantH)),
+                        gotk == want and gotH == wantH and r.get('n', 0) > 0, {'문항': r.get('n'), '쪽': r.get('nPg'), '글자': sorted(set(m['t'] for m in marks)), '기대 글자': wtxt,
+                                                           '다른 것': sorted(set(gotk) ^ set(want))[:6], '머리': gotH, '기대 머리': wantH})
             excl = [x for x in WX if LAWN.get(x['s'])]
             N('C1-jo', '뺀 줄 — 위 기출뷰 2023(점수만) · 2025(지운 회차) 표시 0 · 2024 의 4번(맞힘)·6번(2차) 지문 = 표 밖', [(x['r'], x['s'], x['i'], x['why']) for x in excl])
         return ok

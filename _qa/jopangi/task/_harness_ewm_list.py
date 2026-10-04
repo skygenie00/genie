@@ -3,11 +3,13 @@ r"""_task_ewm_list §B 관문 — 시험 틀림 수 「61x1 63x2」(조판기 ·
 
   python _harness_ewm_list.py [--jo <앱 | genie 판>] [--mb <앱 | genie 판>] [--base 67e423e] [--apps jo,mb] [--only B1,B2,..]
         [--tw <Tailwind CSS 사본>] [--res <결과 파일>] [--shots <그림 폴더>]
+        [--real [<진짜 exam/꼬까.json 사본>]]   ← 진짜 기록으로 B-1 만 다시 · 값은 안 적고 수만(아래 「--real」) · 안 주면 지금까지 그대로
 
   NEW  = genie 작업트리 jo/index.html · minbeop/index.html(고친 판) · BASE = 바탕 main 67e423e — 두 판을 같은 기기 · 같은 차례로 늘 같이 돌려
          헛잣대(바탕 FAIL 이어야 하는 칸)와 무변 칸(바탕과 같은 값)을 한 번에 센다 · 바탕을 못 읽으면 바탕 칸은 「안 잼」
   시험 기록 = 하네스가 실행 중에 지어냄(exam_rec · 값 지어냄 · 저장소에 파일로 안 둠) — 가짜 원격이 studyplandata exam/꼬까.json 자리에 준다
     ⚠ 진짜 기록(SPD exam/꼬까.json · minbeop/기록.json · claude.json)은 열지 않는다 — 가짜 원격은 그 자리를 지어낸 기록 · 메모리(새 기기) · 404 로만 대답한다
+    ⚠ 예외는 --real 하나(2026-10-05) — 그때만 exam/꼬까.json 자리에 지어낸 기록 대신 진짜 기록 사본(기본 SPD exam/꼬까.json · 읽기만)을 준다 · minbeop/기록.json · claude.json 은 그때도 안 연다
     61회 · 63회(cha 1 · mode q) 특허 · 상표 · 디보 · 민법 틀린 줄 + ok true 줄 · 화학 줄 · 지운 회차(62) · 2차(63) · 점수만(61) 을 섞음
   데이터 = 조판기 genie jo/data(읽기만) · 민법 SPD minbeop/문항마스터 · 문항메타 · 기출키(읽기만 · 쪽 안에서만 · 결과엔 수 · 열쇠만)
   기대값 = 하네스가 따로 셈(앱 ewmMap · ewmIdx · ewmCountTxt 안 씀) —
@@ -29,6 +31,14 @@ r"""_task_ewm_list §B 관문 — 시험 틀림 수 「61x1 63x2」(조판기 ·
     B0 새 판 페이지 오류 0
   엔진 = Chromium(터치 칸 아님 · 834 · 390 = 모바일 뷰포트 + 마우스 누름) · 클라우드 = cdn 막힘 → --tw(민법 Tailwind v3 로 미리 구운 CSS)
   결과 = 화면 PASS/FAIL 줄 · --res(기본 = 임시 폴더 · _qa 에 결과를 쓰지 않는다) · 그림 = --shots(기본 = 임시 폴더)
+  --real [<exam/꼬까.json 사본>]  (2026-10-05 · 지시서 _task_ewm_list §C 「진짜 기록으로 B-1 다시 · 값은 안 적고 수만」 · 선례 _harness_exam_wrong_mark.py --real)
+    가짜 원격이 exam/꼬까.json 자리에 지어낸 기록 대신 **진짜 기록 사본 바이트**를 준다(기본 = SPD exam/꼬까.json · 읽기만 — studyplandata 클론에 쓰지도 · fetch · pull 도 안 한다)
+    도는 것 = B-1 만(표시 수 = 하네스 셈 · 서랍 · 첫 화면 줄 · 하네스 지도 = 앱 ewmMap · ewmIdx · 앱이 읽은 틀림 줄 수 = 하네스가 읽은 수) + 같은 쪽에서 읽는 회차 줄(이름 B2 · 수만)
+    찍는 것 = 수만 — 줄 수 · 표시한 줄 수 · 표시 문제 수 합 · 하네스 셈 문제 수 합 · 어긋난 줄 수(줄은 그 화면 목록 안 차례 「#n」) ·
+          회 · 번 · 정오 · 점수 · 줄 이름 · 앱이 낸 글(.ewmn) · 지도 열쇠는 출력 · 결과 파일 어디에도 안 적는다 · 예외 · 쪽 오류 글은 따옴표 안 · 숫자를 가려서만 ·
+          헛패스 막기 = 표시가 걸린 줄이 서랍 · 첫 화면에 각각 1 개 넘어야 PASS
+    새 판만 연다(바탕 = --base <커밋> 을 줄 때만 같이 열어 헛잣대로 센다) · 진짜 기록 사본을 못 읽으면 「진짜 기록 필요」 한 줄 · 종료 코드 3(클라우드 불가) · 지어낸 기록 칸(위 B1~B7)은 안 돈다
+    예) python _harness_ewm_list.py --real --jo <genie 판>/jo/index.html --mb <genie 판>/minbeop/index.html --res <결과 파일>
 """
 import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
 _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
@@ -67,6 +77,18 @@ IPHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/
 DEV = {1440: dict(W=1440, H=900, mob=False), 834: dict(W=834, H=1194, mob=True, ua=IPAD_UA), 390: dict(W=390, H=844, mob=True, ua=IPHONE_UA)}
 WIDTHS = (1440, 834, 390)
 DELAY = 2000   # B4 — 기록 응답 늦춤(ms)
+
+
+def real_arg():
+    """--real [<exam/꼬까.json 사본>] — 값이 없거나 다음이 --옵션이면 기본 자리(SPD exam/꼬까.json · 읽기만) · 옵션이 없으면 None(= 지금까지 그대로)"""
+    if '--real' not in sys.argv:
+        return None
+    i = sys.argv.index('--real') + 1
+    nx = sys.argv[i] if i < len(sys.argv) else ''
+    return nx if nx and not nx.startswith('--') else _roots.spd('exam', '꼬까.json')
+
+
+REAL = real_arg()   # 진짜 시험 기록으로 B-1 만 다시(아래 「--real」 블록 · 값은 안 적고 수만) — None 이면 이 파일은 지금까지와 똑같이 돈다
 
 RES = []    # (묶음, 이름, 새 판 판정 True/False/None(INFO), 값)
 YARD = []   # (묶음, 이름, 바탕 판정) — 같은 잣대를 바탕 값에(헛잣대 칸만 · 다 FAIL 이어야 함)
@@ -166,6 +188,70 @@ def ex_rows(j):
 
 
 WR, WX = ex_rows(EXJ)
+
+
+# ── --real: 지어낸 기록 대신 진짜 기록 사본(읽기만) — 가짜 원격 Remote.get 은 EXB 를 그대로 주니 EXB 만 진짜 사본 바이트로 바꾸면 된다 ──
+def _jint(v):
+    """JS 의 +v 처럼 읽는다(숫자 · 숫자 글) — 정수면 int · 불리언 · 없음 · 정수 아님은 None"""
+    try:
+        if isinstance(v, bool) or v is None:
+            return None
+        f = float(v)
+        return int(f) if f == int(f) else None
+    except Exception:
+        return None
+
+
+def _js_one(v):
+    """JS 의 v === 1 (숫자 1 만 · 글 '1' · true 는 아님)"""
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and v == 1
+
+
+def ex_rows_real(j):
+    """ex_rows 와 같은 거름(cha 1 · mode q · 지움 아님 · ok === false · 화학 뺌 · 회 = no 없으면 id 머리)을 진짜 기록 꼴에 견디게 — (틀림 줄 · 뺀 줄 · 수 표).
+    회가 없는 항목(앱 ewmRows 는 통째로 건너뜀) · 번이 정수가 아닌 줄은 따로 센다 · 값은 어디에도 안 담는다(수 표 = 개수뿐)"""
+    keep, drop = [], []
+    info = {'항목 수': 0, '시험 회차 항목 수(cha 1 · mode q · 지움 아님)': 0, '읽지 못한 항목 수(회 없음)': 0, '읽지 못한 줄 수(번이 정수 아님)': 0}
+    for it in (j or {}).get('items') or []:
+        if not isinstance(it, dict):
+            continue
+        info['항목 수'] += 1
+        m = re.match(r'\s*\d+', str(it.get('id') or ''))
+        r = _jint(it.get('no')) or (int(m.group(0)) if m else 0)
+        why = '2차' if not _js_one(it.get('cha')) else ('점수만' if it.get('mode') != 'q' else ('지운 회차' if it.get('del') else ''))
+        if not why:
+            info['시험 회차 항목 수(cha 1 · mode q · 지움 아님)'] += 1
+            if not r:
+                info['읽지 못한 항목 수(회 없음)'] += 1
+                continue
+        for x in it.get('q') or []:
+            if not isinstance(x, dict):
+                continue
+            i = _jint(x.get('i'))
+            if i is None:
+                info['읽지 못한 줄 수(번이 정수 아님)'] += 1
+                continue
+            w = why or ('맞힘' if x.get('ok') is not False else ('화학' if str(x.get('s') or '') == '화학' else ''))
+            row = {'r': r, 's': str(x.get('s') or ''), 'i': i}
+            if w:
+                row['why'] = w
+                drop.append(row)
+            else:
+                keep.append(row)
+    return keep, drop, info
+
+
+REAL_INFO = None
+if REAL:
+    try:
+        _raw = open(REAL, 'rb').read()
+        _jr = json.loads(_raw.decode('utf-8'))
+    except Exception as _e:
+        print('진짜 기록 필요 — --real 사본을 못 읽음(%s) · 지어낸 기록 칸은 --real 없이 돌린다' % type(_e).__name__, flush=True)
+        sys.exit(3)
+    EXJ, EXB = _jr, _raw
+    WR, WX, REAL_INFO = ex_rows_real(_jr)
+    REAL_INFO.update({'크기(B)': len(_raw), 'md5(앞 8)': hashlib.md5(_raw).hexdigest()[:8]})
 LAWS = ('특허법', '상표법', '디자인보호법')
 LAWN = {'특허': '특허법', '상표': '상표법', '디보': '디자인보호법'}
 
@@ -1330,6 +1416,301 @@ def B5_B7(br, app, srcs, pages, QM=None, QMX=None):
               {k: [v['over']['sw'], v['over']['iw']] for k, v in n.items()})
 
 
+# ════════════════════════ --real — 진짜 시험 기록으로 B-1 다시(값은 안 적고 수만) ════════════════════════
+# (2026-10-05 · 지시서 _task_ewm_list §C · 선례 _harness_exam_wrong_mark.py --real) 위 REAL 블록이 EXB(가짜 원격이 exam/꼬까.json 자리에 주는 바이트)를 진짜 기록 사본으로 바꿔 둔다.
+# 줄 읽기 · 판정은 위 B-1(jo_rows · __ML.drawerAll · __ML.dash · judge)과 같은 길 · 같은 조건이고 찍는 것만 수로 바꿨다(judge_real = judge 와 같은 값 — 전표의 단위 맞대기).
+# 안 찍는 것: 회 · 번 · 정오 · 점수 · 줄 이름 · 앱이 낸 글(.ewmn) · 지도 열쇠 · 예외 글(따옴표 안 · 숫자는 가림) — 어긋난 줄은 그 화면 목록 안 차례 「#n」 으로만 가리킨다.
+LAWB = {'특허': '특허법', '상표': '상표법', '디보': '디자인보호법', '민법': '민법'}
+REAL_ROWS_JS = "() => { if (typeof EWM === 'undefined' || !EWM || !EWM.rows) return null; const by = {}; EWM.rows.forEach(x => { by[x.s] = (by[x.s] || 0) + 1; }); return { st: EWM.st, n: EWM.rows.length, by: by }; }"
+
+
+def mask(s, n=160):
+    """진짜 기록 모드에서 자유 글(예외 · 쪽 오류)을 찍을 때 — 따옴표 안 · 숫자를 가린다(값이 새지 않게)"""
+    s = re.sub(r'\s+', ' ', str(s))
+    for q in ('"', "'", '`'):
+        s = re.sub(q + '[^' + q + ']*' + q, q + q, s)
+    return re.sub(r'\d+', '#', s)[:n]
+
+
+def exc_brief(e):
+    """예외 → 종류 · 부른 자리(함수:줄) · 가린 글 — KeyError 의 열쇠 같은 값이 든 글은 mask 로 가린다"""
+    try:
+        where = ' > '.join('%s:%d' % (f.name, f.lineno) for f in traceback.extract_tb(e.__traceback__)[-4:])
+    except Exception:
+        where = '?'
+    return '%s @ %s | %s' % (type(e).__name__, where, mask(e, 120))
+
+
+def _tok(s):
+    """「61x1 63x2」 → (문제 수 합 · 칸 수 · 읽지 못한 조각 수) — 회 · 번호는 돌려주지 않는다"""
+    tot = cells = unread = 0
+    for t in (s or '').split():
+        m = re.fullmatch(r'\d+x(\d+)', t)
+        if m:
+            tot += int(m.group(1))
+            cells += 1
+        else:
+            unread += 1
+    return tot, cells, unread
+
+
+def judge_real(rows, ry=None, ky=('h', 'l', 's')):
+    """judge 와 같은 조건 · 같은 차례로 줄을 판정하되 값 대신 수만 남긴다 — 줄은 그 화면 목록 안 차례 「#n」(1 부터)"""
+    st = {'rows': 0, 'amb': 0, 'nokey': 0, 'nmis': 0, 'nz': 0, 'zero': 0, 'dedup': 0, 'excl': 0, 'shown': 0, 'bad': 0, 'extra': 0, 'miss': 0, 'diff': 0,
+          'tg': 0, 'tw': 0, 'unread': 0, 'zbad': 0, 'y': 0, 'ynz': 0, 'ybad': 0, 'ytg': 0, 'ytw': 0, 'at': [], 'yat': [], 'zat': []}
+    for n, r in enumerate(rows or [], 1):
+        k = r.get('k')
+        if k in ky:
+            st['rows'] += 1
+            if r.get('amb'):
+                st['amb'] += 1
+                continue
+            if r.get('keysN') is None:
+                st['nokey'] += 1
+                continue
+            if r.get('n') is not None and r['n'] != r['keysN']:
+                st['nmis'] += 1
+            if r['exp']:
+                st['nz'] += 1
+            else:
+                st['zero'] += 1
+            if r['naive'] != r['exp']:
+                st['dedup'] += 1
+            if r['expX'] != r['exp']:
+                st['excl'] += 1
+            got, want = (r.get('ewmn') or ''), r['exp']
+            tg, cg, ug = _tok(got)
+            tw, cw, uw = _tok(want)
+            st['tg'] += tg
+            st['tw'] += tw
+            st['unread'] += ug
+            if got:
+                st['shown'] += 1
+            if got != want:
+                st['bad'] += 1
+                st['extra' if not want else ('miss' if not got else 'diff')] += 1
+                if len(st['at']) < 8:
+                    st['at'].append('#%d(표시 %d칸 %d문제 · 셈 %d칸 %d문제)' % (n, cg, tg, cw, tw))
+        elif k == 'y':
+            st['y'] += 1
+            got, want = (r.get('ewmn') or ''), (ry or {}).get(str(r.get('y')), '')
+            tg, cg, ug = _tok(got)
+            tw, cw, uw = _tok(want)
+            st['ytg'] += tg
+            st['ytw'] += tw
+            if want:
+                st['ynz'] += 1
+            if got != want:
+                st['ybad'] += 1
+                if len(st['yat']) < 8:
+                    st['yat'].append('#%d(표시 %d문제 · 셈 %d문제)' % (n, tg, tw))
+        else:
+            if r.get('ewmn'):
+                st['zbad'] += 1
+                if len(st['zat']) < 8:
+                    st['zat'].append('#%d' % n)
+    return st
+
+
+def ok_real(st):
+    """ok_rows 와 같은 뜻 — 줄이 있고 · 어긋난 줄 0 · 열쇠 못 찾은 줄 0 · 머리 · 카드에 글자 0"""
+    return bool(st and st['rows'] > 0 and not st['bad'] and not st['nokey'] and not st['zbad'])
+
+
+def ok_yr(st):
+    """ok_y 와 같은 뜻 — 회차 줄이 있고 · 어긋난 줄 0"""
+    return bool(st and st['y'] > 0 and not st['ybad'])
+
+
+def real_brief(st):
+    return {'줄': st['rows'], '표시한 줄': st['shown'], '셈이 있는 줄': st['nz'], '셈이 없는 줄': st['zero'], '표시 문제 수 합': st['tg'], '하네스 셈 문제 수 합': st['tw'],
+            '어긋난 줄 수': st['bad'], '어긋난 줄': st['at'], '(표시만 · 셈만 · 둘 다 다름)': [st['extra'], st['miss'], st['diff']], '열쇠 못 찾은 줄': st['nokey'],
+            '이름 겹쳐 건너뜀': st['amb'], '머리 · 카드에 글자': st['zbad'], '읽지 못한 조각': st['unread']}
+
+
+def real_ybrief(st):
+    return {'회차 줄': st['y'], '셈이 있는 회차 줄': st['ynz'], '표시 문제 수 합': st['ytg'], '하네스 셈 문제 수 합': st['ytw'], '어긋난 줄 수': st['ybad'], '어긋난 줄': st['yat']}
+
+
+def union_cnt(rows, pairs):
+    """union_rep 의 값(문제 목록)은 이 함수 밖으로 안 내보내고 개수만"""
+    u = union_rep(rows, pairs)
+    return {'기록의 틀린 문제': len({tuple(p) for p in pairs}), '단원 줄에 걸린 서로 다른 문제': len(u['합집합']), '단원 줄에 없는 문제': len(u['단원에 없음']),
+            '기록에 없는데 줄에 있는 문제': len(u['기록에 없는데 줄에']), '두 줄 넘게 걸친 문제': len(u['걸친 문제'])}
+
+
+def real_note():
+    """기록 사본의 수 표(값 없음) — 크기 · 항목 수 · 틀림 줄 수(법별) · 뺀 줄 수(까닭별)"""
+    by, why = {}, {}
+    for x in WR:
+        k = LAWB.get(x['s'], '그 밖(자과 등 · 이 판 밖)')
+        by[k] = by.get(k, 0) + 1
+    for x in WX:
+        why[x['why']] = why.get(x['why'], 0) + 1
+    d = dict(REAL_INFO or {})
+    d.update({'틀림 줄 수(합)': len(WR), '틀림 줄 수(법별)': by, '뺀 줄 수(까닭별)': why})
+    return d
+
+
+def real_rows_check(p, app):
+    """앱이 기록에서 읽은 틀림 줄 수(EWM.rows) = 하네스가 읽은 수 — 읽기 단계만 따로(과목별 수 비교 · 값 없음)"""
+    got = p.ev(REAL_ROWS_JS) or {}
+    want = {}
+    for x in WR:
+        want[x['s']] = want.get(x['s'], 0) + 1
+    gb = got.get('by') or {}
+    dif = sum(1 for s in set(gb) | set(want) if gb.get(s, 0) != want.get(s, 0))
+    T('B1', '%s 진짜 기록 — 앱이 읽은 틀림 줄 수 = 하네스가 읽은 수(과목별 · 화학 뺌 · cha 1 · mode q · 지움 아님)' % NAME[app],
+      got.get('n') == len(WR) and dif == 0 and len(WR) > 0, {'앱 줄 수': got.get('n'), '하네스 줄 수': len(WR), '과목별로 다른 수': dif, 'EWM.st': got.get('st')})
+
+
+def real_judge_lines(nm, where, sn, sb):
+    """서랍 · 첫 화면 한 화면의 판정 줄들(B1 표시 수 · 열쇠 맞춤 · 중복 · B2 회차 줄) — 바탕(sb)이 있으면 같은 잣대를 헛잣대로"""
+    g1 = '%s %s 단원 · 장 줄 「<회>x<수>」 표시 = 하네스 셈(진짜 기록 · 수만)' % (nm, where)
+    T('B1', g1, ok_real(sn), real_brief(sn))
+    if sb is not None:
+        YARD.append(('B1', g1, ok_real(sb)))
+    T('B1', '%s %s 줄 열쇠 맞춤(하네스 열쇠 수 = 줄에 적힌 수 · 수만)' % (nm, where), sn['rows'] > 0 and not sn['nmis'] and not sn['nokey'],
+      {'줄': sn['rows'], '수 다른 줄': sn['nmis'], '열쇠 못 찾은 줄': sn['nokey'], '이름 겹쳐 건너뜀': sn['amb']})
+    N('B1', '%s %s 중복 · 뺀 줄(수만)' % (nm, where), {'같은 문제 지문 여럿 걸린 줄(중복 없이 셈)': sn['dedup'], 'ok true · 지운 회차 · 2차 · 점수만이 걸린 줄(뺀 값)': sn['excl'], '셈이 있는 줄': sn['nz']})
+    g2 = '%s %s 회차 줄 = 그 회 틀린 문제 수(진짜 기록 · 수만)' % (nm, where)
+    T('B2', g2, ok_yr(sn), real_ybrief(sn))
+    if sb is not None:
+        YARD.append(('B2', g2, ok_yr(sb)))
+
+
+def B1_real_jo(pn, pb):
+    nz = {'서랍': 0, '첫 화면': 0}
+    real_rows_check(pn, 'jo')
+    for law in LAWS:
+        pairs = wr_of(law)
+        ry = round_exp(pairs)
+        nm = '조판기 %s' % law
+        rn = jo_rows(pn, law)
+        rb = jo_rows(pb, law) if pb else None
+        cm = rn['cmp'] or {}
+        N('B1', '%s 진짜 기록 — 기록의 틀린 문제 수 · 뺀 문제 수 · 하네스 지도 열쇠 수' % nm,
+          {'기록의 틀린 문제': len({tuple(p) for p in pairs}), '뺀 문제(ok true · 화학 등)': len({tuple(p) for p in wx_of(law)}), '지도 열쇠': (rn['map'] or {}).get('n')})
+        T('B1', '%s 진짜 기록 — 하네스 지도 = 앱 ewmMap(Q| 문항 열쇠 뺀 열쇠 · 다른 열쇠 0)' % nm, bool(cm) and cm.get('nd') == 0,
+          {'열쇠 수': cm.get('n'), '앱과 다른 열쇠 수': cm.get('nd'), 'MLN': rn['mln']})
+        for where, key in (('서랍', 'dr'), ('첫 화면', 'da')):
+            sn = judge_real((rn[key] or {}).get('rows'), ry)
+            sb = judge_real((rb[key] or {}).get('rows'), ry) if rb else None
+            if (rn[key] or {}).get('empty') and not sn['rows'] and not sn['y'] and (not rb or (rb[key] or {}).get('empty')):
+                N('B1', '%s %s — 빈 화면(바탕 같음 · 줄 없음 = 해당 없음)' % (nm, where), {'rows': 0})
+                continue
+            nz[where] += sn['nz']
+            real_judge_lines(nm, where, sn, sb)
+        N('B2', '%s 회차 줄 ↔ 서랍 단원 줄 문제 집합(수만)' % nm, union_cnt((rn['dr'] or {}).get('rows'), pairs))
+    T('B1', '조판기 진짜 기록 — 서랍 · 첫 화면 모두 표시가 걸린 줄이 있다(표본 0건 PASS 아님)', nz['서랍'] > 0 and nz['첫 화면'] > 0, nz)
+
+
+def B1_real_mb(pn, pb, QM, QMX):
+    pairs = wr_of('민법')
+    ry = round_exp(pairs)
+    nz = {'서랍': 0, '첫 화면': 0}
+    out = {}
+    for p in [x for x in (pn, pb) if x]:
+        p.ev("([a, b]) => __ML.setMap(a, b)", [QM, QMX])
+        out[p.tag] = {'cmp': p.ev("() => __ML.mapCmp()"), 'dr': p.ev("() => __ML.drawerAll()"), 'da': p.ev("() => __ML.dash()")}
+    rn, rb = out['NEW'], out.get('BASE')
+    real_rows_check(pn, 'mb')
+    cm = rn['cmp'] or {}
+    T('B1', '민법 진짜 기록 — 하네스 지도(문항마스터 파이썬) = 앱 ewmIdx(Q: 문항 열쇠 뺀 열쇠 · 다른 열쇠 0)', bool(cm) and cm.get('nd') == 0,
+      {'열쇠 수': cm.get('n'), '앱과 다른 열쇠 수': cm.get('nd'), '지도 Q-id 수': len(QM)})
+    for where, key in (('서랍', 'dr'), ('첫 화면', 'da')):
+        sn = judge_real((rn[key] or {}).get('rows'), ry)
+        sb = judge_real((rb[key] or {}).get('rows'), ry) if rb else None
+        nz[where] += sn['nz']
+        real_judge_lines('민법', where, sn, sb)
+    N('B2', '민법 회차 줄 ↔ 서랍 단원 줄 문제 집합(수만)', union_cnt((rn['dr'] or {}).get('rows'), pairs))
+    T('B1', '민법 진짜 기록 — 서랍 · 첫 화면 모두 표시가 걸린 줄이 있다(표본 0건 PASS 아님)', nz['서랍'] > 0 and nz['첫 화면'] > 0, nz)
+
+
+def main_real():
+    """--real — 진짜 기록으로 B-1 만(+ 같은 쪽에서 읽는 회차 줄) · 값은 안 적고 수만 · 새 판만(--base <커밋> 을 줄 때만 헛잣대로 바탕도)"""
+    os.makedirs(TMPD, exist_ok=True)
+    yard_on = bool(ARG('--base'))
+    srcs = {}
+    for app in APPS:
+        sn = app_src(app, NEWA[app])
+        sb = app_src(app, BASE) if yard_on else None
+        if sn is None:
+            T('B0', '%s 새 판 앱 글을 못 읽음' % NAME[app], False, '')
+            return 1
+        srcs[app] = [('NEW', sn)] + ([('BASE', sb)] if sb else [])
+        print('INFO | %s 새 판 md5(LF) %s · %s B · 바탕 %s' % (NAME[app], md5lf(sn), len(sn.encode('utf-8')),
+              ('%s md5(LF) %s' % (BASE, md5lf(sb))) if sb else ('%s 을 못 읽어 안 엶' % BASE if yard_on else '안 엶(--base <커밋> 을 주면 헛잣대로 같이 돈다)')), flush=True)
+    QM, QMX = mb_maps() if 'mb' in APPS else ({}, {})
+    N('기록', '진짜 시험 기록 사본(읽기만 · 값은 안 적고 수만)', real_note())
+    if 'mb' in APPS:
+        N('기록', '민법 하네스 지도(문항마스터 파이썬 · 수만)', {'틀림이 걸린 Q-id 수': len(QM), '뺀 줄까지 걸린 Q-id 수': len(QMX)})
+    with sync_playwright() as pw:
+        br = pw.chromium.launch()
+        for app in APPS:
+            t1 = time.time()
+            pages = {tag: Pg(br, app, tag, src, 1440) for tag, src in srcs[app]}
+            for p in pages.values():
+                st = p.ewm_ok()
+                if p.tag == 'NEW':
+                    T('B0', '%s 진짜 기록 받음(EWM.st = ok)' % NAME[app], st == 'ok', {'EWM.st': st})
+                else:
+                    N('B0', '%s %s 기록 받기 EWM.st' % (NAME[app], p.tag), st)
+            pn, pb = pages['NEW'], pages.get('BASE')
+            STEP.append(('%s 쪽 열기' % NAME[app], round(time.time() - t1)))
+            t2 = time.time()
+            try:
+                if app == 'jo':
+                    B1_real_jo(pn, pb)
+                else:
+                    B1_real_mb(pn, pb, QM, QMX)
+            except Exception as e:
+                T('B1', '%s B1 실행 오류(진짜 기록 · 글은 따옴표 안 · 숫자를 가림)' % NAME[app], False, exc_brief(e))
+            STEP.append(('%s B1' % NAME[app], round(time.time() - t2)))
+            for p in pages.values():
+                p.close()
+        br.close()
+    base_msgs = {re.sub(r' @\d*$', '', m) for k, v in ERRS.items() if ' BASE' in k for m in v}
+    for k, v in ERRS.items():
+        if ' NEW' in k:
+            own = [m for m in v if re.sub(r' @\d*$', '', m) not in base_msgs]
+            T('B0', '%s 페이지 오류 0(바탕에도 같은 글로 나는 오류는 값만 · %d · 진짜 기록 · 글은 가림)' % (k, len(v) - len(own)), not own,
+              {'새 판만': len(own), '바탕과 같음': len(v) - len(own), '글(따옴표 안 · 숫자를 가림)': sorted({mask(m, 100) for m in own})[:3]})
+        else:
+            N('B0', '%s 페이지 오류 수' % k, {'수': len(v)})
+    n_pass = sum(1 for r in RES if r[2] is True)
+    n_fail = sum(1 for r in RES if r[2] is False)
+    y_bad = [y for y in YARD if y[2]]
+    lines = ['', '=' * 100, '_harness_ewm_list --real — PASS %d · FAIL %d · INFO %d · %d초 (진짜 기록 · 값은 안 적고 수만)' % (
+        n_pass, n_fail, sum(1 for r in RES if r[2] is None), round(time.time() - T0))]
+    if YARD:
+        lines += ['헛잣대(바탕 %s · 같은 차례 · FAIL 이어야 함): %d 칸 중 바탕이 통과한 칸 %d' % (BASE, len(YARD), len(y_bad))]
+        lines += ['  바탕 통과(헛잣대 실패): %s · %s' % (g, nm) for g, nm, _ in y_bad]
+    lines += ['자리 수(★ ewm_list 표지): ' + ' · '.join('%s %d' % (NAME[a], census(a)) for a in APPS)]
+    lines += ['단계별 초: ' + ' · '.join('%s %d' % s for s in STEP)]
+    lines += ['FAIL: %s · %s' % (r[0], r[1]) for r in RES if r[2] is False]
+    print('\n'.join(lines), flush=True)
+    outf = ARG('--res', os.path.join(TMPD, '_harness_ewm_list_real_result.txt'))
+    os.makedirs(os.path.dirname(outf), exist_ok=True)
+    with open(outf, 'w', encoding='utf-8') as f:
+        for g, nm, ok, d in RES:
+            f.write('%s | %s · %s | %s\n' % ('INFO' if ok is None else ('PASS' if ok else 'FAIL'), g, nm, _s(d)))
+        f.write('\n'.join(lines) + '\n')
+    print('결과 파일: %s' % outf, flush=True)
+    return 0 if not n_fail and not y_bad else 1
+
+
+def main_real_safe():
+    """main_real 을 감싸 — 어떤 예외도 값이 든 글이 아니라 mask 한 글로만 찍는다(진짜 기록 모드의 규칙)"""
+    try:
+        return main_real()
+    except SystemExit:
+        raise
+    except BaseException as e:
+        print('FAIL | B0 · --real 실행 중단 | ' + exc_brief(e), flush=True)
+        return 1
+
+
 def census(app):
     """자리 수 — 새 판 글에서 ewm_list 자리 표지 셈(★ ewm_list)"""
     s = app_src(app, NEWA[app]) or ''
@@ -1401,4 +1782,4 @@ def main():
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(main_real_safe() if REAL else main())
