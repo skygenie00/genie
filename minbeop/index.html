@@ -2788,7 +2788,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                             ${flat ? '' : `
                             <div class="flex items-baseline gap-2 mb-1.5" data-trchap="${escAttr(subject)}|||${escAttr(chapMain)}">
                                 <span class="font-extrabold text-gray-800 text-sm">${chapMain}</span>
-                                <span class="text-[11px] text-gray-400 font-semibold">총 ${chapTotal}문제</span>
+                                <span class="text-[11px] text-gray-400 font-semibold">총 ${chapTotal}문제</span>${ewmNHtml(ewmChapTxt(subject, entries.map(e => e[0])))}
                             </div>`}
                             <div class="divide-y divide-gray-50">
                     `;
@@ -2837,7 +2837,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                                 <div class="flex items-baseline gap-2 min-w-0 basis-full sm:basis-auto">
                                     ${flat ? '' : '<span class="text-gray-300 text-xs shrink-0">›</span>'}
                                     <span class="${flat ? 'font-extrabold text-gray-800 text-sm' : 'font-semibold text-gray-700 text-[13px]'} truncate">${String(info.sub).replace(/^20\d\d\s+/, '')}</span>
-                                    ${subject === '변리사 기출' ? exvDashCount(chapLabel, info.count, countStyle) : `<span class="text-[11px] ${countStyle} whitespace-nowrap shrink-0">총 ${info.count}문제</span>`}
+                                    ${subject === '변리사 기출' ? exvDashCount(chapLabel, info.count, countStyle) : `<span class="text-[11px] ${countStyle} whitespace-nowrap shrink-0">총 ${info.count}문제</span>`}${ewmNHtml(ewmChapTxt(subject, [chapLabel]))}
                                     <button data-mcchap="${subject}|||${chapLabel}" onclick="event.stopPropagation();openChapCards('${escAttr(subject)}','${escAttr(chapLabel)}')"
                                         title="이 단원의 암기카드"
                                         class="text-[10px] font-bold text-fuchsia-700 bg-fuchsia-50 border border-fuchsia-200 rounded px-1.5 py-0.5 whitespace-nowrap shrink-0 hover:bg-fuchsia-100 transition" style="opacity:${info.cards ? 1 : .55}">🃏${info.cards ? ' ' + info.cards : ''}</button>${jnBtn}
@@ -6008,7 +6008,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                             <span class="text-[10px] font-bold text-gray-400 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">ID ${q.id}</span>
                             <span class="text-[10px] font-bold text-indigo-700">${escHtml(where)}</span>
                             ${q.source ? `<span class="text-[10px] font-bold text-purple-700">${escHtml(q.source)}</span>` : ''}
-                            ${srcM ? (srcM.gg ? '<span class="clsrc gg">근거</span>' : '') + (srcM.cm ? '<span class="clsrc">댓글</span>' : '') + (srcM.cl.length ? '<span class="clsrc cl">Claude</span>' : '') : ''}
+                            ${srcM ? (srcM.gg ? '<span class="clsrc gg">근거</span>' : '') + (srcM.cm ? '<span class="clsrc">댓글</span>' : '') + (srcM.cl.length ? '<span class="clsrc cl">Claude</span>' : '') : ''}${ewmMbHTML(q, 'span')}
                         </div>
                         <div class="text-[12px] text-gray-800 leading-relaxed">${body}</div>
                     </button>`;
@@ -11266,8 +11266,8 @@ function trBuild(focus) {
         const folded = !!chFold[ck];
         const cTot = ents.reduce((n, e) => n + e[1].idsF.length, 0);
         const hasCur = onQuiz && ents.some(e => `${subj}|||${e[0]}` === curRow);
-        html += `<div class="trch${hasCur ? ' cur' : ''}" onclick="trChFold('${trEsc(ck).replace(/'/g, "\\'")}')">`
-             +  `<span>${folded ? '▸' : '▾'}</span><span>${trEsc(chapMain)}</span><span class="n">${cTot}</span></div>`;
+        html += `<div class="trch${hasCur ? ' cur' : ''}" data-trck="${trEsc(ck)}" onclick="trChFold('${trEsc(ck).replace(/'/g, "\\'")}')">`
+             +  `<span>${folded ? '▸' : '▾'}</span><span>${trEsc(chapMain)}</span><span class="n">${cTot}</span>${subj === '변리사 기출' ? '' : ewmNHtml(ewmCountTxt(ents.flatMap(e => e[1].idsF)))}</div>`;   /* ★ ewm_list M1 — 장 머리(그 장 아래 합) · 변리사 기출 = 줄에만 */
         if (folded) { nLine += ents.length; nQ += cTot; continue; }
         for (const [label, r] of ents) {
             nLine++; nQ += r.idsF.length;
@@ -11290,7 +11290,7 @@ function trBuild(focus) {
                 const done = r.idsF.length - c[0];
                 body = `<div class="l1">${isCur ? '<span class="now">지금</span>' : ''}`
                      + `<span class="tx">${trEsc(r.sub)}</span>`
-                     + `<span class="n">${onQuiz ? (done + '/' + r.idsF.length) : r.idsF.length}</span></div>`
+                     + `<span class="n">${onQuiz ? (done + '/' + r.idsF.length) : r.idsF.length}</span>${ewmNHtml(subj === '변리사 기출' ? ewmRoundTxt(ewmYearOf(label)) : ewmCountTxt(r.idsF))}</div>`   /* ★ ewm_list M1 · M2 */
                      + `<div title="${trEsc(trTip(c))}">${trBarHtml(c)}</div>`;
                 const chips = [];
                 hs.forEach((h, i) => {
@@ -11680,7 +11680,7 @@ function exvPaperHTML(pageData, H) {
     byNo.forEach((items, no) => {
         const key = exvKey(no, y), combo = exvIsCombo(y, no, items), g = exvGK(y, no);
         const stem = (items.find(x => x.stem) || {}).stem || (g && escHtml(g.stem)) || '';
-        html += `<div class="exv-q" data-exq="${key}"><div class="exv-head"><span class="exv-no">${no}.</span><span class="exv-stem">${stem}</span><span class="exv-res" data-exres="${key}"></span></div>`;
+        html += `<div class="exv-q" data-exq="${key}"><div class="exv-head"><span class="exv-no">${no}.</span><span class="exv-stem">${stem}</span>${ewmMbHTML({ id: 'Q:' + key })}<span class="exv-res" data-exres="${key}"></span></div>`;
         if (combo) {
             html += '<div class="exv-bogi">' + items.map(it => H[it.id] || '').join('') + '</div>';
             html += `<div class="exv-sel" data-exsel="${key}">${exvSelHTML(key)}</div>`;
@@ -12511,6 +12511,7 @@ function ewmIdx() {
     const m = {}; EWM.idx = m; EWM.qd = qd; EWM.qn = qd.length;
     const by = {};
     EWM.rows.forEach(x => { if (x.s === '민법') by[x.r + '|' + x.i] = x; });
+    Object.values(by).forEach(x => { m['Q:' + (x.r + 1963) + ':' + x.i] = [{ r: x.r, i: x.i, my: x.my, ans: x.ans, rate: x.rate, sel: '' }]; });   /* ★ ewm_list M6 — 문항 열쇠(기출뷰 문항 머리 · 밑줄 없음) */
     qd.forEach(q => (q.examMeta || []).forEach(em => {
         const x = by[(+em.round || (+em.year - 1963)) + '|' + (+em.no || 0)];
         if (!x) return;
@@ -12522,8 +12523,9 @@ function ewmIdx() {
     return m;
 }
 function ewmOf(id) { return (EWM.st === 'ok' && EWM.rows.length && id) ? (ewmIdx()[id] || []) : []; }
-function ewmMbHTML(q) {
-    return ewmOf(q && q.id).map((x, o) => `<button type="button" class="ewmx" data-ewm="${x.r}-${x.i}" data-ewq="${escHtml(q.id)}" data-o="${o}" onclick="ewmToggle(this,event)" title="실제 ${x.r}회 1차 ${x.i}번 — 틀림 · 누르면 내 답 · 정답 · 평균 정답률">${x.r}-${x.i}-X</button>`).join('');
+function ewmMbHTML(q, tag) {   /* ★ ewm_list M5 — tag 'span' = 단추 안 자리(검색 결과 줄이 통째 단추) · 꼴·누름 같음 */
+    const t = tag === 'span' ? 'span' : 'button', a = t === 'span' ? 'role="button" tabindex="0"' : 'type="button"';
+    return ewmOf(q && q.id).map((x, o) => `<${t} ${a} class="ewmx" data-ewm="${x.r}-${x.i}" data-ewq="${escHtml(q.id)}" data-o="${o}" onclick="ewmToggle(this,event)" title="실제 ${x.r}회 1차 ${x.i}번 — 틀림 · 누르면 내 답 · 정답 · 평균 정답률">${x.r}-${x.i}-X</${t}>`).join('');
 }
 function ewmCirc(v) { const C = '①②③④⑤⑥⑦⑧⑨'; const a = String(v || '').split(/[,\s]+/).filter(Boolean); return a.length ? a.map(n => /^[1-9]$/.test(n) ? C.charAt(+n - 1) : n).join('') : '—'; }
 function ewmRate(v) { const n = parseFloat(v); return isFinite(n) ? n.toFixed(1) + '%' : '—'; }
@@ -12547,6 +12549,45 @@ function ewmToggle(btn, ev) {
     while (ref.nextElementSibling && ref.nextElementSibling.classList.contains('ewml') && +ref.nextElementSibling.dataset.o < o) ref = ref.nextElementSibling;
     ref.after(ln); btn._ewl = ln;
 }
+/* ★ ewm_list(10/4) — 줄 끝 시험 틀림 수 「61x1 63x2」(사용자 10/4 20:4x 「틀린 문제 수만 · 글자로 작게」 · 조판기와 한 꼴) ·
+   단원·장 줄 = 그 줄 Q-id 들 → ewmOf → (회, 번) 중복 없이(틀린 문제 하나가 지문 여럿에 붙는다) → 회차 오름차순 「<회>x<수>」 · 없으면 ''
+   회차 줄(서랍 · 첫 화면 「변리사 기출」 해 줄) = 그 회 틀린 민법 문제 수(EWM.rows · 회 = 해 − 1963) · 글자만(.ewmn) · 누름 없음 · 거르개·셈·정렬 무변
+   서랍 = trBuild 의 r.idsF · 첫 화면 = chapUidsOf · 기록이 늦게 오면 ewmPaintAll → ewmPaintCounts 가 제자리에만(renderDashboard 안 부름 · 스크롤 무변) */
+function ewmCountTxt(ids) {
+    if (!(EWM.st === 'ok' && EWM.rows.length) || !ids || !ids.length) return '';
+    const seen = new Set(), by = {};
+    ids.forEach(id => ewmOf(id).forEach(x => { const k = x.r + '|' + x.i; if (seen.has(k)) return; seen.add(k); by[x.r] = (by[x.r] || 0) + 1; }));
+    return Object.keys(by).map(Number).sort((a, b) => a - b).map(r => r + 'x' + by[r]).join(' ');
+}
+function ewmRoundTxt(y) {
+    if (!(EWM.st === 'ok' && EWM.rows.length)) return '';
+    const r = (+y) - 1963, seen = new Set();
+    EWM.rows.forEach(x => { if (x.s === '민법' && x.r === r) seen.add(x.i); });
+    return seen.size ? r + 'x' + seen.size : '';
+}
+function ewmYearOf(label) { return (/^(\d{4})년/.exec(String(label || '')) || [])[1] || ''; }
+function ewmNHtml(txt) { return txt ? `<span class="ewmn" title="실제 1차 시험에서 틀린 문제 수(회차x수)">${txt}</span>` : ''; }
+function ewmChapTxt(subject, labels) {   /* 첫 화면 단원 줄 · 장 머리 — 변리사 기출 = 그 회 · 그 밖 = chapUidsOf 합(중복 없이) */
+    if (!(EWM.st === 'ok' && EWM.rows.length)) return '';
+    if (subject === '변리사 기출') return labels.length === 1 ? ewmRoundTxt(ewmYearOf(labels[0])) : '';
+    return ewmCountTxt([...new Set(labels.flatMap(l => chapUidsOf(subject, l)))]);
+}
+function ewmPaintCounts() {
+    const put = (ref, txt) => { if (!ref) return; const nx = ref.nextElementSibling; if (nx && nx.classList.contains('ewmn')) nx.remove(); if (txt) ref.insertAdjacentHTML('afterend', ewmNHtml(txt)); };
+    const totOf = box => box && ([...box.children].find(e => e.matches('[data-exvcount]')) || [...box.children].find(e => e.tagName === 'SPAN' && /^총 \d+문제$/.test((e.textContent || '').trim())));
+    document.querySelectorAll('[data-trrow]').forEach(row => { const a = row.getAttribute('data-trrow').split('|||'); put(totOf(row.firstElementChild), ewmChapTxt(a[0], [a[1]])); });
+    document.querySelectorAll('[data-trchap]').forEach(h => { const a = h.getAttribute('data-trchap').split('|||');
+        const labs = [...(h.parentElement || h).querySelectorAll('[data-trrow]')].map(r => r.getAttribute('data-trrow').split('|||')[1]);
+        put(totOf(h), ewmChapTxt(a[0], labs)); });
+    if (!document.querySelector('#trlist [data-trk], #trlist [data-trck]')) return;
+    const G = trScan().G;
+    document.querySelectorAll('#trlist [data-trk]').forEach(it => { const a = it.getAttribute('data-trk').split('|||'), n = it.querySelector('.l1 > .n');
+        if (a[0] === '변리사 기출') { put(n, ewmRoundTxt(ewmYearOf(a[1]))); return; }
+        const chs = G[a[0]] || {}, r = (chs[trChapOf(chs, a[1])] || {})[a[1]]; put(n, ewmCountTxt(r ? r.idsF : [])); });
+    document.querySelectorAll('#trlist [data-trck]').forEach(h => { const a = h.getAttribute('data-trck').split('|||');
+        if (a[0] === '변리사 기출') return;
+        put(h.querySelector(':scope > .n'), ewmCountTxt(Object.values((G[a[0]] || {})[a[1]] || {}).flatMap(r => r.idsF))); });
+}
 /* 기록이 늦게 오면 — 이미 그려진 카드 머리 · 정리 창 행의 마지막 출제 칩 뒤에만 끼운다(열린 문항 팝업 · 연결 창은 다시 열면) */
 function ewmPaintAll() {
     const put = (row, id) => {
@@ -12557,11 +12598,15 @@ function ewmPaintAll() {
     };
     document.querySelectorAll('.question-box[id^="q-box-"]').forEach(b => put(b.firstElementChild, b.id.slice(6)));
     document.querySelectorAll('[data-jnrow]').forEach(r => put(r.firstElementChild, r.getAttribute('data-jnrow')));
+    document.querySelectorAll('.exv-q[data-exq] > .exv-head').forEach(h => { if (h.querySelector('.ewmx')) return;   /* ★ ewm_list M6 — 기출뷰 문항 머리 */
+        const html = ewmMbHTML({ id: 'Q:' + h.parentElement.getAttribute('data-exq') }), rs = h.querySelector('.exv-res'); if (html && rs) rs.insertAdjacentHTML('beforebegin', html); });
+    try { ewmPaintCounts(); } catch (e) { }   /* ★ ewm_list — 서랍 · 첫 화면 줄 끝 수(제자리 · renderDashboardCardCounts 꼴) */
 }
 (function () { try { const s = document.createElement('style'); s.id = 'ewmcss'; s.textContent = [
     '.ewmx{display:inline-block;background:transparent;border:0;padding:0 2px;margin:0;font-family:inherit;font-size:11px;font-weight:800;line-height:16.5px;color:#dc2626;white-space:nowrap;vertical-align:middle;cursor:pointer}',
     '.ewml{font-size:10.5px;color:#8a867d;margin:2px 0 4px;padding-left:4px}',   /* 조판기 H7 .qsub 값 그대로 */
-    '.ewml .u{text-decoration:underline;text-underline-offset:2px}'
+    '.ewml .u{text-decoration:underline;text-underline-offset:2px}',
+    '.ewmn{display:inline;flex:none;font-size:10.5px;font-weight:700;color:#dc2626;background:transparent;border:0;padding:0;margin:0 0 0 4px;white-space:nowrap}'   /* ★ ewm_list — 줄 끝 「61x1 63x2」 글자만 */
 ].join('\n'); document.head.appendChild(s); } catch (e) { } })();
 
 </script>
