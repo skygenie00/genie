@@ -1176,7 +1176,7 @@ body.inkon .main,body.inkon .pop{user-select:none}
 .mbur>.l .nm{font-size:13px;font-weight:600;color:var(--ink);line-height:19.5px;
      overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mbur.flat>.l .nm{font-size:14px;font-weight:800;line-height:20px}
-.mbur>.l .tot{font-size:11px;font-weight:600;color:var(--exc);line-height:16.5px;white-space:nowrap;flex:none}
+.mbur>.l .tot{font-size:11px;font-weight:600;color:var(--ink);line-height:16.5px;white-space:nowrap;flex:none}
 .mbur>.r{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px;
      flex:none;margin-left:auto}
 .mbchip{font-size:10px;font-weight:700;line-height:15px;padding:2px 6px;border-radius:4px;
@@ -14060,7 +14060,7 @@ function mbUnitRow(M, i, sel, label, keys, subj, flat, jn){
   /* ★ add1 §D-3 — 제7판 차례에만 있는 마디는 옅은 노랑(옛 `qlRow` 판정·색 그대로) */
   L.appendChild(el('span', 'nm' + ((nd && nd.출처 === '제7판') ? ' p7only' : ''), label));
   if (nd) mbJoChips(nd, L);   /* ★ toc_fuse(9/26) D-1 — 이름 바로 뒤 조문 칩 */
-  L.appendChild(el('span', 'tot', '총 ' + total + '문제'));
+  L.appendChild(el('span', 'tot', String(total)));
   ewmNAdd(L, ewmCountTxt(keys));   /* ★ ewm_list J3 — 단원 줄 */
   /* ★ add2 §A-1 — 민법 차례는 「이름 · 총 N문제 · 🃏 N · 📋」다(민법 2391 주석 —
      묶음의 첫 행이면 🃏 **바로 오른쪽에** 📋). 2구간이 📋 을 앞에 두었던 것을 바로잡는다. */
@@ -14140,7 +14140,7 @@ function mbDash(main, MG, JM, byId, P7, subj){
     });
   }
   let card = null, chap = null, cardTot = 0, cardHd = null;
-  const flush = () => { if (card){ if (cardHd) cardHd.textContent = '총 ' + (cardHd._n != null ? cardHd._n : cardTot) + '문제';   /* ★ mbsame_add2 ⑪ — 편 머리 = uzSub(히트맵 칩과 같은 함수 · 접어도 무변) */
+  const flush = () => { if (card){ if (cardHd) cardHd.textContent = String(cardHd._n != null ? cardHd._n : cardTot);   /* ★ mbsame_add2 ⑪ — 편 머리 = uzSub(히트맵 칩과 같은 함수 · 접어도 무변) */
     dash.appendChild(card); } card = null; chap = null; cardTot = 0; cardHd = null; };
   const rowInto = (i, flat) => {
     /* ★ mbsame §A — 끝 마디마다 단원 줄 넷(본편 · (판신설) · (미수록) · (변형)) · 0 인 줄은 안 그린다 · 줄마다 📋(그 줄 지문) */
@@ -14177,7 +14177,7 @@ function mbDash(main, MG, JM, byId, P7, subj){
           const L0 = lines.length ? lines[0] : ['b', own];
           const r = mbUnitRow(M, i, lines.length ? mlnSel(i, L0[0]) : '__mg' + i, nm0 + (L0[0] !== 'b' ? MLN_NAME[L0[0]] : ''), L0[1], subj, true, null);
           r.classList.add('mbsolo');
-          if (lines.length > 1){ const tt0 = r.querySelector(':scope > .l > .tot'); if (tt0) tt0.textContent = '총 ' + uzSub(M, i).length + '문제';
+          if (lines.length > 1){ const tt0 = r.querySelector(':scope > .l > .tot'); if (tt0) tt0.textContent = String(uzSub(M, i).length);
             const e0 = tt0 && tt0.nextElementSibling; if (e0 && e0.classList.contains('ewmn')) e0.remove(); const n0 = ewmNEl(ewmCountTxt(uzSub(M, i))); if (n0 && tt0){ tt0.after(n0); tt0.parentElement.classList.add('ewmh'); } }   /* ★ ewm_list J3 — 머리 셈 = uzSub 와 같은 범위 */
           card.appendChild(r);
           if (r._subList) card.appendChild(r._subList);
@@ -14216,7 +14216,7 @@ function mbDash(main, MG, JM, byId, P7, subj){
       const own = keyOf(i);
       let sub = 0;
       for (let j = i + 1; j < M.length && M[j].깊이 > d; j++) sub += keyOf(j).length;
-      tt.textContent = '총 ' + uzSub(M, i).length + '문제';   /* ★ mbsame_add2 ⑪ — uzSub */
+      tt.textContent = String(uzSub(M, i).length);   /* ★ mbsame_add2 ⑪ — uzSub */
       /* ★ toc_fuse(9/26) D-5 — 장 머리에 제 문항이 있으면 같은 이름 줄을 또 세우지 않는다.
          머리 전체가 누름 자리(바로 밑 문항 · 칩·📋 은 제 일) · 검색 결과의 「· 단원」 은 머리 이름으로(MBK2M) */
       if (own.length){ cardTot += own.length;
@@ -14243,7 +14243,7 @@ function mbDash(main, MG, JM, byId, P7, subj){
     const c2 = el('div', 'mbsj');
     const hd = el('div', 'hd');
     const h2 = el('h2', ''); h2.appendChild(document.createTextNode('미분류 (리담)'));
-    const tt = el('span', 'tot', '총 ' + unk.length + '문제'); h2.appendChild(tt);
+    const tt = el('span', 'tot', String(unk.length)); h2.appendChild(tt);
     hd.appendChild(h2); c2.appendChild(hd);
     const ch = el('div', 'mbch'); c2.appendChild(ch);
     ch.appendChild(mbUnitRow(M, 'un', '__미분류', '미분류 (리담)', unk, subj, true,
@@ -14283,7 +14283,7 @@ function mbGiCard(JM){
   const hd = el('div', 'hd');
   const h2 = el('h2', '');
   h2.appendChild(document.createTextNode('변리사 기출'));
-  h2.appendChild(el('span', 'tot', '총 ' + gs.reduce((a, g) => a + g.n, 0) + '문제'));
+  h2.appendChild(el('span', 'tot', String(gs.reduce((a, g) => a + g.n, 0))));
   hd.appendChild(h2); c.appendChild(hd);
   const ch = el('div', 'mbch'); c.appendChild(ch);
   gs.forEach(g => {
@@ -18606,7 +18606,7 @@ function mdpHead(box, M, i, label, keyOf, GRP){
   L.appendChild(mdpArrow(i));
   L.appendChild(el('span', 'nm mdpnm' + (M[i].출처 === '제7판' ? ' p7only' : ''), label));
   mbJoChips(M[i], L);
-  L.appendChild(el('span', 'tot', '총 ' + allK.length + '문제'));
+  L.appendChild(el('span', 'tot', String(allK.length)));
   ewmNAdd(L, ewmCountTxt(allK));   /* ★ ewm_list J3 — 깊은 머리(그 머리 아래 합) */
   const cards = allK.reduce((a, k) => a + mcCount(k), 0);
   const nb = el('button', 'mbchip card', '🃏' + cards); nb.title = '이 머리 아래 암기카드'; nb.style.opacity = cards ? '1' : '.55';
