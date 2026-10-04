@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>G06-43-10 그림 — 일주 운동 북반구·남반구</title>
+<style>
+/* 정리omr(지학기출omr) 03 천체 칸의 천구 그림 배치 그대로 — 북점 N 왼쪽 · 남점 S 오른쪽 · 천정 위 · 천저 아래 · 동점 뒤(위) · 서점 앞(아래) */
+:root{--bg:#ffffff;--tx:#1f1f1e;--mu:#6b6a65;--ln:#d6d4cc;--hz:#2f6fd0;--hzf:rgba(120,170,235,.22);--eq:#d62f4b;--cp:#2E8B3E;--rs:#E07A1F;--dn:#9a9a9a;--st:#1E5BD8;--hl:rgba(245,232,60,.55);--card:#f7f6f2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1c1b;--tx:#ecebe6;--mu:#a8a69f;--ln:#45443f;--hz:#7fa6f2;--hzf:rgba(120,170,235,.16);--eq:#f07a8a;--cp:#6CCB80;--rs:#F0A35E;--dn:#77756f;--st:#8FB3F5;--hl:rgba(235,220,60,.30);--card:#24241f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1c1c1b;--tx:#ecebe6;--mu:#a8a69f;--ln:#45443f;--hz:#7fa6f2;--hzf:rgba(120,170,235,.16);--eq:#f07a8a;--cp:#6CCB80;--rs:#F0A35E;--dn:#77756f;--st:#8FB3F5;--hl:rgba(235,220,60,.30);--card:#24241f;color-scheme:dark}
+body{background:var(--bg);color:var(--tx);font-family:"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+.w{padding-inline:16px;padding-block:10px 24px;max-width:760px;margin:0 auto}
+svg{width:100%;height:auto;display:block}
+.memo{margin-top:8px;font-size:15px;line-height:1.75}
+.memo b{color:var(--eq)}
+</style></head><body>
+<div class="w">
+<div style="display:flex;align-items:center;gap:8px;margin:2px 0 6px"><b style="font-size:14px">G06-43-10 · 일주 운동 북반구 · 남반구</b><a href="earth_119.html" target="_blank" rel="noopener" style="font-size:14px;margin-left:auto;color:inherit">크게 보기 ↗</a></div>
+<svg id="fig" viewBox="0 0 560 945" role="img" aria-label="위도별 천구 일주 운동 북반구 남반구 비교"></svg>
+<div class="memo">
+  <div>· <b>남반구 = 정리omr 천구를 위아래로 뒤집은 것</b> — 보이는 극이 남쪽(S) · 천구의 적도가 북쪽(N)으로 기울어 높다</div>
+  <div>· 아래 칸 동·서·남·북 : 남반구는 북반구의 <b>좌우 거울</b> · 기울기는 늘 적도 쪽</div>
+  <div>· <b>적도</b> = 남·북 같다(일주권 수직) · <b>극</b> = 일주권이 지평선과 나란</div>
+  <div style="color:var(--mu);font-size:13px">· 천구 = 밖에서 본 그림(정리omr 배치) · 아래 칸 = 그 자리에 선 사람이 그 방향을 볼 때</div>
+</div>
+</div>
+<script>
+const NS='http://www.w3.org/2000/svg',svg=document.getElementById('fig');
+const rad=d=>d*Math.PI/180;
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);(p||svg).appendChild(e);return e}
+function txt(x,y,s,a,p){const e=el('text',Object.assign({x,y,'text-anchor':'middle',fill:'var(--tx)','font-size':12},a||{}),p);e.textContent=s;return e}
+function head(g,x,y,ang,col,h){h=h||7;el('polygon',{points:[[x,y],[x-h*Math.cos(ang-.5),y-h*Math.sin(ang-.5)],[x-h*Math.cos(ang+.5),y-h*Math.sin(ang+.5)]].map(p=>p.join(',')).join(' '),fill:col},g)}
+const SI=0.30,CO=Math.sqrt(1-SI*SI);
+/* 천구 하나 : x = 남(S) 오른쪽 · y = 천정 위 · z = 서(W) 앞쪽 */
+function sphere(cx,cy,R,phi,title,sub){
+  const g=el('g',{});
+  const P=(X,Y,Z)=>[cx+X*R,cy-Y*R*CO+Z*R*SI];
+  txt(cx,cy-R-34,title,{'font-weight':700,'font-size':15},g);if(sub)txt(cx,cy-R-18,sub,{fill:'var(--mu)','font-size':11.5},g);
+  el('circle',{cx,cy,r:R,fill:'none',stroke:'var(--ln)','stroke-width':1.5},g);
+  /* 지평선 */
+  el('ellipse',{cx,cy,rx:R,ry:R*SI,fill:'var(--hzf)',stroke:'var(--hz)','stroke-width':1.8},g);
+  const f=rad(phi),Pn=[-Math.cos(f),Math.sin(f),0],e2=[Math.sin(f),Math.cos(f),0],e1=[0,0,1];
+  /* 축 */
+  const pv=phi>=0?Pn:Pn.map(v=>-v);/* 보이는 극 */
+  const [ax0,ay0]=P(-pv[0]*1.12,-pv[1]*1.12,0),[ax1,ay1]=P(pv[0]*1.12,pv[1]*1.12,0);
+  el('line',{x1:ax0,y1:ay0,x2:ax1,y2:ay1,stroke:'var(--mu)','stroke-width':1,'stroke-dasharray':'4 3'},g);
+  /* 일주권 */
+  const decs=Math.abs(phi)>80?[70,40,-40,-70]:Math.abs(phi)<1?[60,30,0,-30,-60]:[68,30,0,-30,-68];
+  for(const d of decs){const dd=rad(d),c=Math.sin(dd),r=Math.cos(dd);
+    const pt=t=>{const X=c*Pn[0]+r*(Math.cos(t)*e2[0]+Math.sin(t)*e1[0]),Y=c*Pn[1]+r*(Math.cos(t)*e2[1]+Math.sin(t)*e1[1]),Z=c*Pn[2]+r*(Math.cos(t)*e2[2]+Math.sin(t)*e1[2]);return [X,Y,Z]};
+    /* 분류 */
+    let vis=0,N=120;const pts=[];for(let i=0;i<=N;i++){const t=-Math.PI+2*Math.PI*i/N,q=pt(t);pts.push([t,q]);if(q[1]>1e-3)vis++}
+    const cls=d===0?'eq':vis===N+1?'cp':vis===0?'dn':'rs';
+    const col={eq:'var(--eq)',cp:'var(--cp)',rs:'var(--rs)',dn:'var(--dn)'}[cls];
+    /* 위·아래 나눠 그리기 */
+    let seg=[],up=null;const flush=()=>{if(seg.length>1)el('polyline',{points:seg.map(p=>p.join(',')).join(' '),fill:'none',stroke:col,'stroke-width':up?2.2:1.3,'stroke-dasharray':up?'':'3 3'},g);seg=[]};
+    for(const [t,q] of pts){const u=q[1]>=-1e-3;if(up!==null&&u!==up){seg.push(P(...q));flush()}up=u;seg.push(P(...q))}flush();
+    /* 화살 : 보이는 가장 높은 곳 */
+    let best=null;const want=Math.abs(phi)>80?Math.PI/2:-Math.PI/3;for(const [t,q] of pts){if(q[1]>0.02&&(!best||Math.abs(t-want)<Math.abs(best[0]-want)))best=[t,q]}
+    if(best){const [t,q]=best;const [x0,y0]=P(...pt(t-0.05)),[x1,y1]=P(...q);head(g,x1,y1,Math.atan2(y1-y0,x1-x0),col,8)}
+  }
+  /* 극 별 */
+  const [px,py]=P(...pv);el('circle',{cx:px,cy:py,r:3,fill:'var(--st)'},g);
+  if(Math.abs(phi)<1){txt(px+(pv[0]<0?14:-14),py+16,phi>=0?'★ 천구 북극':'★ 천구 남극',{'text-anchor':pv[0]<0?'start':'end',fill:'var(--st)','font-weight':700,'font-size':11.5},g)}
+  else if(Math.abs(phi)<89){txt(px+(pv[0]<0?-6:6),py-8,phi>=0?'★ 천구 북극':'★ 천구 남극',{'text-anchor':pv[0]<0?'end':'start',fill:'var(--st)','font-weight':700,'font-size':11.5},g)}
+  else txt(px,py-8,phi>0?'★ 천구 북극 = 천정':'★ 천구 남극 = 천정',{fill:'var(--st)','font-weight':700,'font-size':11.5},g);
+  /* 글자 */
+  if(Math.abs(phi)<89)txt(cx,cy-R-4,'천정',{'font-size':11.5},g);txt(cx,cy+R+13,'천저',{'font-size':11.5},g);
+  txt(cx-R-4,cy+4,'N',{'text-anchor':'end','font-weight':700},g);txt(cx+R+4,cy+4,'S',{'text-anchor':'start','font-weight':700},g);
+  txt(cx,cy-R*SI-3,'동',{'font-size':11.5,fill:'var(--hz)'},g);txt(cx,cy+R*SI+13,'서',{'font-size':11.5,fill:'var(--hz)'},g);
+  return g}
+/* 동서남북 작은 칸 */
+function strip(x,y,W,specs,col,hlIdx){const cw=W/4,ch=40,HZ=30;const names=['동','서','남','북'];
+  for(let i=0;i<4;i++){const ox=x+i*cw,g=el('g',{});
+    el('rect',{x:ox+2,y,width:cw-4,height:ch,rx:5,fill:i===hlIdx?'var(--hl)':'var(--card)'},g);
+    el('line',{x1:ox+2,y1:y+HZ,x2:ox+cw-2,y2:y+HZ,stroke:'var(--mu)','stroke-width':1},g);
+    txt(ox+cw/2,y+ch-1,names[i],{'font-size':10,fill:'var(--mu)'},g);
+    const [k,d]=specs[i],cx=ox+cw/2,L=(a,b,c,e)=>{el('line',{x1:a,y1:b,x2:c,y2:e,stroke:col,'stroke-width':1.8},g);head(g,c,e,Math.atan2(e-b,c-a),col,5)};
+    if(k==='rise')for(const o of [-10,6])L(cx+o-d*6,y+HZ-3,cx+o+d*6,y+HZ-22);
+    if(k==='set')for(const o of [-10,6])L(cx+o-d*6,y+HZ-22,cx+o+d*6,y+HZ-3);
+    if(k==='arc'){const r=20,c=y+HZ+8;el('path',{d:`M${cx-16},${y+HZ-3} A${r},${r} 0 0 1 ${cx+16},${y+HZ-3}`,fill:'none',stroke:col,'stroke-width':1.8},g);d>0?head(g,cx+16,y+HZ-3,1.25,col,5):head(g,cx-16,y+HZ-3,Math.PI-1.25,col,5)}
+    if(k==='circ'){const yy=y+(d[1]?HZ:14),r=8;el('circle',{cx,cy:yy,r:1.8,fill:col},g);
+      if(d[1])el('path',{d:`M${cx-r},${yy} A${r},${r} 0 0 1 ${cx+r},${yy}`,fill:'none',stroke:col,'stroke-width':1.8},g);else el('circle',{cx,cy:yy,r,fill:'none',stroke:col,'stroke-width':1.8},g);
+      head(g,cx+d[0]*4,yy-r,d[0]>0?0:Math.PI,col,5)}
+    if(k==='hor')for(const yy of [10,20])L(d>0?ox+10:ox+cw-10,y+yy,d>0?ox+cw-10:ox+10,y+yy);
+  }}
+const GAP=300;const ROWS=[
+ {phi:[37,-37],t:['북반구 중위도','남반구 중위도'],s:['북위 37°','남위 37°'],
+  st:[[['rise',1],['set',1],['arc',1],['circ',[-1,0]]],[['rise',-1],['set',-1],['circ',[1,0]],['arc',-1]]],hl:[1,-1]},
+ {phi:[0.001,-0.001],t:['적도','적도'],s:['북반구 쪽','남반구 쪽 — 같다'],
+  st:[[['rise',0],['set',0],['circ',[1,1]],['circ',[-1,1]]],[['rise',0],['set',0],['circ',[1,1]],['circ',[-1,1]]]],hl:[-1,-1]},
+ {phi:[90,-90],t:['북극','남극'],s:['북위 90°','남위 90°'],
+  st:[[['hor',1],['hor',1],['hor',1],['hor',1]],[['hor',-1],['hor',-1],['hor',-1],['hor',-1]]],hl:[-1,-1]}];
+const COLX=[140,420],R=88;
+ROWS.forEach((row,j)=>{const cy=150+j*GAP;
+  for(let i=0;i<2;i++){sphere(COLX[i],cy,R,row.phi[i],row.t[i],row.s[i]);
+    strip(COLX[i]-120,cy+R+22,240,row.st[i],i?'var(--eq)':'var(--st)',row.hl[i]);
+    if(row.hl[i]>=0)txt(COLX[i]-120+60*row.hl[i]+56,cy+R+22+11,'이 문제',{'text-anchor':'end','font-size':9.5,'font-weight':700},null)}});
+/* 범례 */
+const ly=938;[['var(--cp)','주극성'],['var(--rs)','출몰성'],['var(--eq)','천구의 적도'],['var(--dn)','전몰성 · 지평선 아래(점선)']].forEach(([c,s],i)=>{const x=40+i*120;el('line',{x1:x,y1:ly-4,x2:x+18,y2:ly-4,stroke:c,'stroke-width':2.4});txt(x+22,ly,s,{'text-anchor':'start','font-size':11.5,fill:'var(--mu)'})});
+</script>
+</body></html>
