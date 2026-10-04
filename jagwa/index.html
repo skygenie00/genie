@@ -1794,19 +1794,38 @@ function keys(s){return new Promise(ok=>{const r=tx(s,'readonly').getAllKeys();r
 function all(s){return new Promise(ok=>{const r=tx(s,'readonly').getAll();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>ok([])})}
 
 /* ---------------- 상태 ---------------- */
-let ST={};            // no -> {h:[{m:'O'|'X'|'Q', t:ts, s:초}]}
+/* ═══ ★ uid_unify A-1 (2026-10-04 · gigu/_task_jagwa_uid_unify.md) — 카드 층(지학·생물)의 기록 열쇠 = uid ═══
+   F.NO(= 문항.json 차례 + 1)는 **화면 안에서만 쓰는 자리 번호**다 — 문항을 끼워 넣거나 순서를 바꾸면 달라진다.
+   저장·동기화·백업에는 번호를 남기지 않는다 — ST·CMT·QT·CX·GP·TW·AFIX·FR·MPOS·OPOS·MC·LK(+ txt 의 `card:<번호>` 칸 · 값 속 번호 twin·link)는
+   uid(r[F.CODE])가 열쇠다. 읽고 쓰는 자리는 **qk(no) 한 함수**를 지난다 — 카드 층이면 uid · 물리면 번호 그대로(물리의 열쇠·값·코드 경로 무변).
+   uidNo(uid) = 그 반대(값 속 uid · 통 열쇠 → 화면 번호). 번호 열쇠로 쓰는 코드가 남아 있으면 stampAll 의 가드(uidGuard)가 콘솔 오류와 함께 uid 로 옮겨 막는다(관문 B-5). */
+var DATA_V=0, UID_BUSY=0, _unV=-1, _unN=-1, _unMap=null, UID_UNK=new Set();
+function qk(no){
+  if(!CARD_LAYER)return no;
+  if(!DATA_V)return '';   /* 문항(buildData)을 아직 못 읽었다 — 그때까지 카드 층의 DATA 는 물리 인라인 행이라 그 번호로 열쇠를 지으면 물리 코드(PA0509…)가 된다 */
+  const r=DATA[no-1];
+  if(r&&r[F.CODE])return String(r[F.CODE]);
+  if(no){try{console.error('uid 열쇠 — 문항 번호 '+no+' 에 행이 없다(번호를 열쇠로 안 쓴다)')}catch(e){}}
+  return '';
+}
+function uidNo(u){
+  if(!CARD_LAYER||!DATA_V)return undefined;
+  if(!_unMap||_unV!==DATA_V||_unN!==DATA.length){_unMap=new Map();DATA.forEach(r=>{if(r[F.CODE])_unMap.set(String(r[F.CODE]),r[F.NO])});_unV=DATA_V;_unN=DATA.length}
+  return _unMap.get(String(u))}
+const inkK=no=>String(qk(no));   /* IndexedDB ink 스토어의 문항 필기 열쇠 — 카드 층 uid · 물리 번호 글자 */
+let ST={};            // no -> {h:[{m:'O'|'X'|'Q', t:ts, s:초}]}   · 카드 층 = uid -> …(★ uid_unify)
 let SET={rot:{},zoom:1,mask:true,maskH:1,pencil:false,timer:true,autoNext:false,omrMask:true};
 let MPOS={};          // no -> {u,v,w,h}  가리개 수동 위치
 let OPOS={};          // no -> {u,v}  OMR 패드 수동 위치 · 'def' 는 다음 문항 기본값
 const TYPES=['공식','계산','함정','개념'];
 const TD={"13": ["계산", "함정"], "65": ["공식", "함정"], "66": ["공식", "계산"], "72": ["계산"], "73": ["계산"], "76": ["공식"], "88": ["함정"], "103": ["계산"], "124": ["공식"], "126": ["계산", "함정"], "140": ["계산", "함정"], "142": ["계산", "함정"], "145": ["계산"], "148": ["공식", "계산"], "157": ["계산", "함정"], "161": ["계산"], "166": ["함정"], "175": ["함정"], "178": ["계산", "함정"], "180": ["공식"], "204": ["계산", "함정"], "201": ["함정"], "207": ["함정"], "256": ["계산", "함정"], "257": ["함정"], "258": ["공식", "계산", "함정"], "269": ["계산", "함정"], "217": ["공식", "계산"], "218": ["계산", "함정"], "223": ["계산", "함정"], "236": ["공식"], "239": ["공식", "함정"], "240": ["함정"], "245": ["함정"], "251": ["함정"], "275": ["함정"], "282": ["계산", "함정"], "289": ["계산", "함정"], "298": ["계산", "함정"], "316": ["개념"], "336": ["공식"], "340": ["함정"], "364": ["함정"], "372": ["함정"], "370": ["함정"], "378": ["함정", "개념"], "389": ["함정"], "412": ["함정"], "413": ["함정"], "417": ["공식", "개념"], "418": ["개념"], "420": ["계산"], "423": ["함정"], "426": ["함정"], "437": ["함정"], "439": ["공식", "개념"], "442": ["함정"], "457": ["공식", "함정"], "447": ["함정"], "450": ["개념"], "459": ["함정"], "460": ["함정"], "476": ["계산"], "481": ["함정"], "485": ["공식"], "495": ["계산", "함정"], "497": ["함정"], "498": ["함정"], "499": ["계산"], "502": ["공식"], "501": ["공식"], "509": ["공식"], "517": ["함정"], "525": ["계산", "함정"], "531": ["계산"], "538": ["공식"], "536": ["계산"], "541": ["공식", "함정"], "546": ["계산"], "549": ["계산"], "554": ["계산"], "559": ["계산"], "556": ["계산"], "552": ["공식"], "561": ["계산"], "567": ["개념"], "575": ["공식"]};
 let QT={};
-const typeOf=no=>QT[no]||TD[no]||[];
-const typeFixed=no=>!!QT[no];
+const typeOf=no=>QT[qk(no)]||TD[no]||[];
+const typeFixed=no=>!!QT[qk(no)];
 const saveQT=()=>put('kv','qtype',QT);
 let CMT={};           // no -> '한줄 코멘트'  (kv/note · 백업에 함께 실린다)
 /* ⚠ 이름은 CMT 다. NOTE 는 아래에서 옵시디언 목차 경로가 이미 쓰고 있다 */
-const noteOf=no=>CMT[no]||'';
+const noteOf=no=>CMT[qk(no)]||'';
 const saveNote=()=>put('kv','note',CMT);
 
 const RENUM_V=CARD_LAYER?0:2;   /* 지학은 번호 재배열 없음 */
@@ -1839,7 +1858,7 @@ function migrate(){
       ST[k]={h};ch=1}}
   return ch;
 }
-const hist=no=>((ST[no]||{}).h)||[];
+const hist=no=>((ST[qk(no)]||{}).h)||[];
 const lastM=no=>{const h=hist(no);return h.length?h[h.length-1].m:''};
 /* ★ 약점 · 덜약점 — 이력에서 그릴 때 계산한다(저장 안 함 · 새 키 없음). 조판기 1차객 5상태 규칙.
    h 를 앞에서부터 걸으며  X·Q → 약점 / 약점에서 O → 덜약점 / 덜약점에서 O → 졸업(없음) / P 는 건너뜀.
@@ -2317,10 +2336,12 @@ function vaultTitle(vlt){
 let titleOf=r=>vaultTitle(r[F.VLT])||r[F.SUB];   /* 지학 층이 갈아 끼운다 */
 let TW={};            // no -> [쌍둥이 문항번호] · kv/twin · 양방향으로 저장한다
 let LK={};            // no -> [연결 문항번호] · kv/link · **한 방향**으로 저장 · 표시는 양방향(linksOf 가 역방향을 센다) · SYNC 12째 (2026-09-05 필터 손질 B-4 · 쌍둥이와 별개 칸)
-const twinsOf=no=>(TW[no]||[]).filter(x=>x!==no&&rec(x));
+const twinsOf=no=>CARD_LAYER?(TW[qk(no)]||[]).map(uidNo).filter(x=>x&&x!==no).sort((p,q)=>p-q):(TW[no]||[]).filter(x=>x!==no&&rec(x));   /* ★ uid_unify — 카드 층 값 = uid · 화면 번호로 되돌려 번호 차례로 */
 const saveTW=()=>put('kv','twin',TW);
 async function twinLink(a,b,on){
-  const add=(x,y)=>{const s=new Set(TW[x]||[]);on?s.add(y):s.delete(y);
+  const add=(x,y)=>{
+    if(CARD_LAYER){const kx=qk(x),ky=qk(y),s=new Set(TW[kx]||[]);on?s.add(ky):s.delete(ky);const v=[...s].sort();v.length?TW[kx]=v:delete TW[kx];return}   /* ★ uid_unify — 열쇠·값 모두 uid */
+    const s=new Set(TW[x]||[]);on?s.add(y):s.delete(y);
     const v=[...s].sort((p,q)=>p-q); v.length?TW[x]=v:delete TW[x];};
   add(a,b);add(b,a);await saveTW();
 }
@@ -2368,12 +2389,16 @@ async function twinPeek(no,onGo){
 /* ---------------- 「연결」 — 이 문항 ↔ 관련 문항 (2026-09-05 · _task_phys_filter_fix.md B-4 · 채팅 (b) 별개 link 키) ----------------
    저장 LK[no]=[no…] 한 방향(민법OX 백링크 규칙) · 표시 linksOf(no) = 정방향 ∪ 역방향 · 쌍둥이(거의 같은 문제 · twin)와 다른 칸 · 칩 🔗 N(뷰어 · 목록) → 시트 · 시트 줄 → twinPeek(문항 팝업) */
 const saveLK=()=>put('kv','link',LK);
-const linksOf=no=>{const s=new Set(LK[no]||[]);for(const k in LK)if((LK[k]||[]).includes(no))s.add(+k);return [...s].filter(x=>x!==no&&rec(x)).sort((p,q)=>p-q)};
-async function linkSet(a,b,on){const st=new Set(LK[a]||[]);on?st.add(b):st.delete(b);const v=[...st].sort((p,q)=>p-q);v.length?LK[a]=v:delete LK[a];await saveLK();linkChip();if($('#view').classList.contains('hide'))draw()}
+const linksOf=no=>{
+  if(CARD_LAYER){const me=qk(no),s=new Set(LK[me]||[]);for(const k in LK)if((LK[k]||[]).includes(me))s.add(k);return [...s].map(uidNo).filter(x=>x&&x!==no).sort((p,q)=>p-q)}   /* ★ uid_unify — 열쇠·값 = uid · 화면 번호로 되돌려 번호 차례로 */
+  const s=new Set(LK[no]||[]);for(const k in LK)if((LK[k]||[]).includes(no))s.add(+k);return [...s].filter(x=>x!==no&&rec(x)).sort((p,q)=>p-q)};
+async function linkSet(a,b,on){
+  if(CARD_LAYER){const ka=qk(a),kb=qk(b),st=new Set(LK[ka]||[]);on?st.add(kb):st.delete(kb);const v=[...st].sort();v.length?LK[ka]=v:delete LK[ka];await saveLK();linkChip();if($('#view').classList.contains('hide'))draw();return}   /* ★ uid_unify */
+  const st=new Set(LK[a]||[]);on?st.add(b):st.delete(b);const v=[...st].sort((p,q)=>p-q);v.length?LK[a]=v:delete LK[a];await saveLK();linkChip();if($('#view').classList.contains('hide'))draw()}
 function linkChip(){const c=$('#vLink');if(!c)return;const n=VNO?linksOf(VNO).length:0;c.textContent=n?'🔗 '+n:'🔗';c.classList.toggle('on',n>0)}
 function linkSheet(no){
   const b=document.createElement('div');b.className='sheet';b.id='linkSheet';
-  const draw=()=>{const fw=LK[no]||[],all=linksOf(no);
+  const draw=()=>{const fw=CARD_LAYER?(LK[qk(no)]||[]).map(uidNo):(LK[no]||[]),all=linksOf(no);
     b.innerHTML=`<div class="panel"><h2>${no}번 연결 <span class="mcc">${esc(rec(no)[F.CODE])}</span></h2>
       <p>관련 있는 문항을 잇는다. 저장은 한 방향(${no} → 상대) · 표시는 양방향. 쌍둥이(거의 같은 문제)와는 다른 칸.</p>
       <div class="lklist" id="lkList">${all.length?all.map(x=>{const r=rec(x);const mine=fw.includes(x);
@@ -2475,7 +2500,7 @@ function draw(){
     if(k!==cur){cur=k;const h=document.createElement('div');h.className='grouphd';h.textContent=k;
       const _s=r[F.SUB];
       if(frmFor(_s).length){const x=document.createElement('button');x.className='ghbtn';x.textContent='공식';x.onclick=e=>{e.stopPropagation();frmSheet(_s)};h.appendChild(x)}
-      {const x=document.createElement('button');x.className='ghbtn';const _n=DATA.filter(r=>r[F.SUB]===_s&&MC[r[F.NO]]).length;x.textContent='암기카드'+(_n?' '+_n:'');x.onclick=e=>{e.stopPropagation();mcardSheet(_s,_s)};h.appendChild(x)}   /* §4-3 손필기 카드 수 · 볼트 카드는 시트 아래 줄 */
+      {const x=document.createElement('button');x.className='ghbtn';const _n=DATA.filter(r=>r[F.SUB]===_s&&MC[qk(r[F.NO])]).length;x.textContent='암기카드'+(_n?' '+_n:'');x.onclick=e=>{e.stopPropagation();mcardSheet(_s,_s)};h.appendChild(x)}   /* §4-3 손필기 카드 수 · 볼트 카드는 시트 아래 줄 */
       frag.appendChild(h)}
     frag.appendChild(row(r))});
   box.appendChild(frag);
@@ -2604,7 +2629,7 @@ async function showProblem(){
   linkChip();
   $('#vT2').textContent=`${bigLabel(r[F.BIG])} › ${r[F.SUB]}`+(r[F.TYPE]?` · ${r[F.TYPE]}`:'')+` · ${r[F.LV]}`+(r[F.YEAR]?` · ${r[F.YEAR]} ${r[F.SRC]}`:'')+` · ${r[F.CODE]}`+(r[F.VLT]?` · 볼트 ${r[F.VLT]}`:'')+` · 교재 ${r[F.PG]}쪽`;
   // ink
-  const saved=await get('ink',String(VNO));
+  const saved=await get('ink',inkK(VNO));
   INK=saved||{0:[]};LAYERS=Math.max(1,Object.keys(INK).length);LAYER=LAYERS-1;
   fillLayerSel();
   $('#inkc').classList.remove('pen');   /* ★ 2026-09-13 — 도로 끈다. touch-action:none 을 지켜야
@@ -2796,7 +2821,7 @@ function eraseAt(x,y){
   }
   paintInk();
 }
-let saveT;function saveInk(){clearTimeout(saveT);saveT=setTimeout(()=>put('ink',String(VNO),INK),300)}
+let saveT;function saveInk(){clearTimeout(saveT);saveT=setTimeout(()=>put('ink',inkK(VNO),INK),300)}
 
 /* ---------------- 레이어 ---------------- */
 function fillLayerSel(){
@@ -2840,7 +2865,7 @@ async function detectAnswer(page){
 }
 
 async function setupMask(page){
-  MASK = MPOS[VNO] || (page?await detectAnswer(page):null) || {u:0.27,v:0.10,w:0.71,h:0.030};
+  MASK = MPOS[qk(VNO)] || (page?await detectAnswer(page):null) || {u:0.27,v:0.10,w:0.71,h:0.030};
   updateMask();
 }
 function updateMask(){
@@ -2851,7 +2876,7 @@ function updateMask(){
   layoutMask();
 }
 function layoutMask(){
-  const m=$('#mask'),f=MPOS[VNO]?1:SET.maskH;
+  const m=$('#mask'),f=MPOS[qk(VNO)]?1:SET.maskH;
   const [ax,ay]=normToCss(MASK.u,MASK.v);
   const [bx,by]=normToCss(MASK.u+MASK.w,MASK.v+MASK.h*f);
   m.style.left=Math.round(Math.min(ax,bx))+'px';
@@ -2872,11 +2897,11 @@ function layoutOmr(){
   p.style.transformOrigin='0 0';p.style.transform=Math.abs(_k-1)<0.001?'':'scale('+_k+')';
   const cover=!!SET.omrMask && !!SET.mask;      // OMR 이 가리개를 겸하는 모드
   p.classList.toggle('cover',cover);
-  const own=OPOS[VNO]||OPOS.def;
+  const own=OPOS[qk(VNO)]||OPOS.def;
   let L,T;
   if(own){ const q=normToCss(own.u,own.v); L=q[0]; T=q[1]; }
   else{
-    const f=MPOS[VNO]?1:SET.maskH;
+    const f=MPOS[qk(VNO)]?1:SET.maskH;
     const a=normToCss(MASK.u,MASK.v), b=normToCss(MASK.u+MASK.w,MASK.v+MASK.h*f);
     const ax=a[0],ay=a[1],bx=b[0],by=b[1];
     L=Math.min(ax,bx);
@@ -2915,7 +2940,7 @@ function layoutOmr(){
     if(!moved||!VNO)return;
     const q=cssToNorm(p.offsetLeft,p.offsetTop);
     const pos={u:q[0],v:q[1]};
-    OPOS[VNO]=pos; OPOS.def=pos;
+    OPOS[qk(VNO)]=pos; OPOS.def=pos;
     await put('kv','omrpos',OPOS);
     toast('OMR 자리를 저장했습니다 — 다음 문항에도 같은 자리에 그대로 적용됩니다');
   };
@@ -2969,7 +2994,7 @@ function layoutOmr(){
     const a=cssToNorm(l,t), b=cssToNorm(l+w,t+h);
     MASK={u:Math.min(a[0],b[0]),v:Math.min(a[1],b[1]),
           w:Math.abs(b[0]-a[0]),h:Math.abs(b[1]-a[1])};
-    MPOS[VNO]=MASK;await put('kv','maskpos',MPOS);
+    MPOS[qk(VNO)]=MASK;await put('kv','maskpos',MPOS);
     layoutOmr();
     toast('이 문제의 가리개 위치를 저장했습니다');
   };
@@ -3001,7 +3026,7 @@ function typeSheet(no){
   const close=()=>b.remove();
   const commit=async()=>{
     const v=TYPES.filter(t=>cur.has(t));
-    QT[no]=v;
+    QT[qk(no)]=v;
     await saveQT(); close();
     if($('#view').classList.contains('hide'))draw(); else syncTypeBtn();
     toast(v.length?'유형 저장 — '+v.join(' · '):'유형을 비웠습니다');
@@ -3179,14 +3204,14 @@ function cardSheet(code,sub,label){
 
 /* ---------------- 「메모 있음」 시트 (2026-09-05 · _task_phys_filter_fix.md B-3) ----------------
    N = 한줄 코멘트(kv note) ∪ 손필기 카드(kv mcard) ∪ 볼트 카드(MCARDS q:[코드]) · 대단원별 · 줄 = 코드 · 코멘트 첫 줄 · 💬(코멘트 → noteSheet) 🃏(카드 → memoCard) · 코드 → 그 문항 · 정렬 = 코드 순 */
-const memoHas=r=>!!(noteOf(r[F.NO])||MC[r[F.NO]]||cardsFor(r[F.CODE]).length);
+const memoHas=r=>!!(noteOf(r[F.NO])||MC[qk(r[F.NO])]||cardsFor(r[F.CODE]).length);
 function memoSheet(){
   const L=DATA.filter(memoHas).slice().sort((a,b)=>jgSortKey(a).localeCompare(jgSortKey(b))||a[F.NO]-b[F.NO]);   /* ★ jagwa_uid — 차례 = 옛 번호 글자(지금과 같은 차례) */
-  const nC=L.filter(r=>noteOf(r[F.NO])).length, nK=L.filter(r=>MC[r[F.NO]]||cardsFor(r[F.CODE]).length).length;
+  const nC=L.filter(r=>noteOf(r[F.NO])).length, nK=L.filter(r=>MC[qk(r[F.NO])]||cardsFor(r[F.CODE]).length).length;
   const b=document.createElement('div');b.className='sheet';b.id='memoSheet';
   let h=`<div class="panel frmpanel"><h2>📝 메모 있음 ${L.length} · 코멘트 ${nC} · 암기카드 ${nK}</h2>`;
   BIGS.forEach(big=>{const rows=L.filter(r=>r[F.BIG]===big);if(!rows.length)return;
-    h+=`<h3 class="frmh">${esc(bigLabel(big))} <small>${rows.length}</small></h3><div class="memol">`+rows.map(r=>{const no=r[F.NO],c=noteOf(no),k=!!(MC[no]||cardsFor(r[F.CODE]).length);
+    h+=`<h3 class="frmh">${esc(bigLabel(big))} <small>${rows.length}</small></h3><div class="memol">`+rows.map(r=>{const no=r[F.NO],c=noteOf(no),k=!!(MC[qk(no)]||cardsFor(r[F.CODE]).length);
       return `<div class="memor" data-no="${no}"><b class="mcode" data-go="${no}">${esc(r[F.CODE])}</b><span class="mtxt">${esc(String(c||'').split('\n')[0])}</span>${c?`<i class="mi" data-cmt="${no}" title="코멘트">💬</i>`:''}${k?`<i class="mi" data-card="${no}" title="암기카드">🃏</i>`:''}</div>`}).join('')+'</div>'});
   if(!L.length)h+='<p style="font-size:12.5px">코멘트·암기카드가 있는 문항이 아직 없다.</p>';
   h+='<button class="btn pri" id="memoX" style="margin-top:12px">닫기</button></div>';b.innerHTML=h;
@@ -3198,7 +3223,7 @@ function memoSheet(){
 }
 /* 카드 팝업 — 손필기 = 뷰어 #tCard 와 같은 창(mcardWin) · 볼트 = cardSheet · 둘 다면 손필기 창 아래 줄에 「볼트 카드 N장」(단원줄 시트와 같은 꼴) */
 function memoCard(no){const r=rec(no);if(!r)return;const vault=cardsFor(r[F.CODE]);
-  if(MC[no]||!vault.length){mcardWin(no);
+  if(MC[qk(no)]||!vault.length){mcardWin(no);
     if(vault.length&&MCW){const p=MCW.querySelector('.panel');const btn=document.createElement('button');btn.className='chip';btn.id='mcwVault';btn.textContent='볼트 카드 '+vault.length+'장';btn.onclick=()=>cardSheet(r[F.CODE],null,no+'. '+titleOf(r));p.appendChild(btn)}}
   else cardSheet(r[F.CODE],null,no+'. '+titleOf(r));
 }
@@ -3228,7 +3253,7 @@ function noteSheet(no){
   const close=()=>b.remove();
   const commit=async()=>{
     const v=inp.value.trim();
-    if(v)CMT[no]=v; else delete CMT[no];
+    if(v)CMT[qk(no)]=v; else delete CMT[qk(no)];
     await saveNote();
     close();
     if($('#view').classList.contains('hide'))draw(); else {syncNoteBtn();navSync()}   /* 서랍의 🗒 칩을 넣고 뺀다 */
@@ -3244,7 +3269,7 @@ function noteSheet(no){
   const qIn=b.querySelector('#ntQ'), res=b.querySelector('#ntRes');
   let qt=null, shown=50;
   const words=q=>q.toLowerCase().split(/\s+/).filter(Boolean);
-  const hits=ws=>ws.length?Object.keys(CMT).map(Number).filter(k=>rec(k)&&CMT[k]&&ws.every(w=>CMT[k].toLowerCase().includes(w))).sort((a,z)=>a-z):[];
+  const hits=ws=>ws.length?Object.keys(CMT).map(k=>CARD_LAYER?uidNo(k):+k).filter(k=>rec(k)&&noteOf(k)&&ws.every(w=>noteOf(k).toLowerCase().includes(w))).sort((a,z)=>a-z):[];   /* ★ uid_unify — 카드 층 열쇠 = uid → 화면 번호 */
   const excerpt=(t,ws)=>{let s=esc(t);
     ws.forEach(w=>{const re=new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');s=s.replace(re,x=>'\u0001'+x+'\u0002')});
     return s.replace(/\u0001/g,'<mark>').replace(/\u0002/g,'</mark>')};
@@ -3252,7 +3277,7 @@ function noteSheet(no){
     if(!q){res.innerHTML='';return}
     res.innerHTML=`<div class="rh">코멘트에 「${esc(q)}」 · ${L.length}건</div>`+
       L.slice(0,shown).map(k=>{const r=rec(k),m=lastM(k);
-        return `<button class="ri${k===no?' me':''}" data-no="${k}"><b>${k}</b><span class="rs">${esc(r[F.SUB])}</span><span class="rx">${excerpt(CMT[k],ws)}</span>${m?`<i class="rk rk${m}">${mGlyph(m)}</i>`:''}</button>`}).join('')+
+        return `<button class="ri${k===no?' me':''}" data-no="${k}"><b>${k}</b><span class="rs">${esc(r[F.SUB])}</span><span class="rx">${excerpt(noteOf(k),ws)}</span>${m?`<i class="rk rk${m}">${mGlyph(m)}</i>`:''}</button>`}).join('')+
       (L.length>shown?`<button class="btn sm" id="ntMore" style="margin-top:6px">더 보기 (${L.length-shown})</button>`:'');
     res.querySelectorAll('.ri').forEach(x=>x.onclick=()=>twinPeek(+x.dataset.no,close));
     const mo=res.querySelector('#ntMore'); if(mo)mo.onclick=()=>{shown+=50;paint()};};
@@ -3299,7 +3324,7 @@ function buildCQ(){
   CQ=m;
 }
 let GP={};            /* no -> 'Claude 풀이 원문'  (붙여넣어 두는 곳) */
-const gptOf=no=>GP[no]||'';
+const gptOf=no=>GP[qk(no)]||'';
 const saveGP=()=>put('kv','gpt',GP);
 $('#tTwin').onclick=()=>{if(VNO)twinSheet(VNO)};
 $('#tCard').onclick=()=>{if(!VNO)return;mcardWin(VNO)};   /* §4-1 이 문항의 손필기 카드 창 · 볼트 카드는 단원 시트 아래 줄로 */
@@ -3307,7 +3332,7 @@ let CX={};            /* no -> [개념키]  사람이 직접 이은 것 */
 const saveCX=async()=>{const r=await put('kv','conc',CX);buildCQ();return r};
 const conceptKeys=r=>{
   const a=(CL[r[F.CODE]]||[]).slice();
-  (CX[r[F.NO]]||[]).forEach(k=>{if(CB[k]&&!a.includes(k))a.push(k)});
+  (CX[qk(r[F.NO])]||[]).forEach(k=>{if(CB[k]&&!a.includes(k))a.push(k)});
   return a;
 };
 const conceptsOf=r=>conceptKeys(r).map(k=>({k,...CB[k]}));
@@ -3468,7 +3493,7 @@ function conceptPick(r){
       cur.has(k)?cur.delete(k):cur.add(k); build()});
     b.querySelector('#cpNo').onclick=()=>b.remove();
     b.querySelector('#cpSave').onclick=async()=>{
-      CX[no]=[...cur].filter(k=>!fixed.has(k));
+      CX[qk(no)]=[...cur].filter(k=>!fixed.has(k));
       await saveCX(); b.remove();
       toast('개념 '+cur.size+'개 연결됨');
     };
@@ -3960,7 +3985,7 @@ function gptSheet(no){
     /* back=true 면 저장 뒤 읽기 판으로 돌아온다. 글이 비면 옛 판처럼 닫는다. */
     const commit=async(back)=>{
       const v=ta.value.trim();
-      if(v)GP[no]=v; else delete GP[no];
+      if(v)GP[qk(no)]=v; else delete GP[qk(no)];
       await saveGP();
       if(back&&v)showRead(); else close();
       done(v);
@@ -4010,7 +4035,7 @@ function syncMarkBtns(){
 async function mark(m){
   const h=hist(VNO).slice();
   h.push({m,t:Date.now(),s:TM.sec||0});
-  ST[VNO]={h};await saveST();
+  ST[qk(VNO)]={h};await saveST();
   tmStop();syncMarkBtns();
   const label=MLABEL[m]||m;
   toast(`${h.length}회독 · ${label}${TM.sec?' · '+secFmt(TM.sec):''}`);
@@ -4029,7 +4054,7 @@ async function loadAfix(){ if(!AFIX) AFIX=(await get('kv','ansfix'))||{}; return
 function rawAns(no){ const r=rec(no); return r?String(r[F.ANS]||''):'' }
 function ansOf(no){                 // 채점에 쓸 정답 배열 (없으면 [])
   if(OMR_SKIP[no])return [];
-  const fx=(AFIX||{})[no];
+  const fx=(AFIX||{})[qk(no)];
   if(fx&&CIRC5.includes(fx))return [fx];
   if(OMR_MULTI[no])return OMR_MULTI[no];
   const a=rawAns(no).trim();
@@ -4059,7 +4084,7 @@ async function omrPick(ch){
   const hit=ok.includes(ch);
   const h=hist(VNO).slice();
   h.push({m:hit?'O':'X',t:Date.now(),s:TM.sec||0,a:ch});
-  ST[VNO]={h};await saveST();
+  ST[qk(VNO)]={h};await saveST();
   tmStop();syncMarkBtns();
   omrResult(VNO,ch,hit,ok);
   if(hit&&SET.autoNext)setTimeout(()=>go(1),900);
@@ -4089,10 +4114,10 @@ function ansFixSheet(no){
     <button class="btn" id="afClose" style="margin-top:8px">닫기</button></div>`;
   const close=()=>b.remove();
   b.querySelectorAll('[data-af]').forEach(x=>x.onclick=async()=>{
-    AFIX[no]=x.dataset.af;await put('kv','ansfix',AFIX);
+    AFIX[qk(no)]=x.dataset.af;await put('kv','ansfix',AFIX);
     toast(`${no}번 정답을 ${x.dataset.af} 로 고쳤습니다`);close();syncOmr()});
   b.querySelector('#afClear').onclick=async()=>{
-    delete AFIX[no];await put('kv','ansfix',AFIX);
+    delete AFIX[qk(no)];await put('kv','ansfix',AFIX);
     toast('교재 값으로 되돌렸습니다');close();syncOmr()};
   b.querySelector('#afClose').onclick=close;
   b.onclick=e=>{if(e.target===b)close()};
@@ -4152,14 +4177,14 @@ function histSheet(no){
         <span class="sec">${x.a?x.a+' ':''}${x.s?secFmt(x.s):''}</span>
         <button class="rm">✕</button>`;
       r.querySelectorAll('.sel button').forEach(btn=>btn.onclick=async()=>{
-        x.m=btn.dataset.m;ST[no]={h};await saveST();build();drawSpectrum();if(VNO===no)syncMarkBtns()});
+        x.m=btn.dataset.m;ST[qk(no)]={h};await saveST();build();drawSpectrum();if(VNO===no)syncMarkBtns()});
       r.querySelector('.rm').onclick=async()=>{
-        h.splice(i,1);h.length?ST[no]={h}:delete ST[no];await saveST();build();drawSpectrum();
+        h.splice(i,1);h.length?ST[qk(no)]={h}:delete ST[qk(no)];await saveST();build();drawSpectrum();
         if(VNO===no)syncMarkBtns()};
       box.appendChild(r);
     });
     b.querySelector('#hAdd').onclick=async()=>{
-      const nh=hist(no).slice();nh.push({m:'O',t:Date.now(),s:0});ST[no]={h:nh};await saveST();build();drawSpectrum()};
+      const nh=hist(no).slice();nh.push({m:'O',t:Date.now(),s:0});ST[qk(no)]={h:nh};await saveST();build();drawSpectrum()};
     b.querySelector('#hClose').onclick=()=>{b.remove();if(!$('#view').classList.contains('hide'))syncMarkBtns();else draw()};
   };
   build();
@@ -4440,6 +4465,7 @@ function recSaveToken(t){
    ⚠ 회독은 예외 — status[문항].h[].t 가 진짜 시각이다. 새로 만들지 않는다. */
 const stTime=v=>{const h=(v||{}).h;return(h&&h.length)?(h[h.length-1].t||0):0};
 function stampAll(){
+  if(CARD_LAYER&&!UID_BUSY&&DATA_V){try{uidGuard()}catch(e){console.error('uidGuard',e)}}   /* ★ uid_unify A-4 — 번호 열쇠로 쓴 칸은 도장 찍기 전에 막는다 */
   const now=Date.now();
   const u=lsObj(U_KEY),gone=lsObj(GONE_KEY),shadow=lsObj(SHADOW_KEY);
   let n=0;
@@ -4478,6 +4504,7 @@ async function recMerge(remote){
   const rU=remote.u||{},rD=remote.data||{},rG=Object.assign({},remote.gone||{});
   /* ★ revfix0929 A-1-3 — 원격의 옛 열쇠 묘비(옛 판 기기가 늦게 올린 것 포함)를 새 열쇠에도 비춘다 · 규칙 = jgTombMirror(새 칸에 자취 0 일 때만) · 원격 객체는 안 고친다 */
   try{jgTombMirror(rG,(k,nw,kn)=>Object.prototype.hasOwnProperty.call(rD[k]||{},nw)||rU[kn]!=null)}catch(e){console.warn('jgTombMirror',e)}
+  try{uidTombMirror(rG,(k,nw,kn)=>Object.prototype.hasOwnProperty.call(rD[k]||{},nw)||rU[kn]!=null)}catch(e){console.warn('uidTombMirror',e)}   /* ★ uid_unify A-2 — 원격의 번호 열쇠 묘비(옛 판 기기가 늦게 올린 것 포함)를 uid 칸에도 · 규칙 = jgTombMirror(새 칸에 자취 0 일 때만) */
   const byKey={};
   const add=s=>{const p=csplit(s);if(!byKey[p[0]])byKey[p[0]]=new Set();byKey[p[0]].add(p[1])};
   Object.keys(rU).forEach(add);Object.keys(rG).forEach(add);
@@ -4622,11 +4649,133 @@ function jgTombMirror(G,live){
     const nw=M[x.slice(i+1)];if(!nw||typeof nw!=='string')continue;const kn=ckey(k,nw);
     if(G[kn]!=null||live(k,nw,kn))continue;G[kn]=G[x];t++}
   return t}
+/* ═══ ★ uid_unify A-2 — 번호 열쇠 → uid 옮김(카드 층 · jgMigrate 와 같은 길 · 같은 규칙) ═══
+   통 = UID_KEYS(번호가 열쇠인 통 열셋 — txt 는 `card:<번호>` 칸만) · 칸 열쇠 번호 → uid · 값 속 번호(twin·link)도 uid.
+   옮길 때: 도장 u · 그림자 shadow = 옛 칸 값 그대로(새로 안 찍는다) · 옛 칸 묘비 gone["통|번호"] = 지금(옛 판 기기용) ·
+   옛·새 둘 다 있으면 도장이 늦은 쪽이 이기고 진 값은 콘솔 · 그 칸 묘비(옛·새 어느 쪽이든)가 값 도장보다 새로우면(같아도) 옮기지 않고 지운다 ·
+   이미 있는 번호 묘비는 새 칸에 아무 자취가 없을 때만 「통|uid」 로 비춘다 · 늦게 읽는 통(null)은 건너뛴다 · 멱등 · 옛 데이터(번호 열쇠 0)면 아무것도 안 한다.
+   번호 → uid 표 = 이 기기가 지금 읽은 문항.json = DATA(번호 n ↔ DATA[n-1]) · 표 밖 번호는 옮기지 않고 그대로 두며 콘솔에 한 번 남긴다.
+   `link` 는 이 앱 SYNC_KEYS 밖(기기 하나 값)이라 도장·묘비 없이 열쇠·값만 바꾼다. */
+const UID_KEYS=['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','link','txt'];   /* frm = 열쇠가 「섹션|공식」 글이라 실제로는 옮길 칸 0 */
+const UID_NUM=/^[1-9]\d*$/, UID_CARD=/^card:([1-9]\d*)$/;
+function uidOfNum(s){if(!DATA_V||!UID_NUM.test(String(s)))return null;const r=DATA[+s-1];return (r&&r[F.CODE])?String(r[F.CODE]):null}
+function uidCell(k,c){   /* 칸 열쇠 c 가 번호 열쇠면 uid 열쇠를 · 아니면 null */
+  if(k==='txt'){const m=UID_CARD.exec(c);if(!m)return null;const u=uidOfNum(m[1]);return u?'card:'+u:null}
+  return uidOfNum(c)}
+const uidNumLike=(k,c)=>k==='txt'?UID_CARD.test(c):UID_NUM.test(c);
+function uidVal(a){   /* 값 속 번호 → uid · 바뀐 것이 없으면 null */
+  if(!Array.isArray(a))return null;let ch=false;
+  const b=a.map(x=>{const u=(typeof x==='number'||typeof x==='string')?uidOfNum(x):null;if(u){ch=true;return u}return x});
+  return ch?b:null}
+function uidScan(){   /* 옮길 칸이 있나(묘비 비춤은 안 센다) */
+  let n=0;
+  for(const k of UID_KEYS){const ref=SYNC_REF[k];if(!ref)continue;const cur=ref.g();if(!cur||typeof cur!=='object')continue;
+    for(const o of Object.keys(cur)){if(uidCell(k,o)){n++;continue}if((k==='twin'||k==='link')&&uidVal(cur[o]))n++}}
+  return n}
+/* 이미 있는 번호 묘비 「통|번호」 → 「통|uid」(같은 시각). 새 칸에 아무 자취(값 · 도장 · 묘비)가 없을 때만 — jgTombMirror 와 같은 조건. 멱등 · 옛 데이터·물리 = 0 */
+function uidTombMirror(G,live){
+  if(!CARD_LAYER||!DATA_V)return 0;let t=0;
+  for(const x of Object.keys(G)){const i=x.indexOf('|');if(i<0)continue;const k=x.slice(0,i);if(UID_KEYS.indexOf(k)<0)continue;
+    const nw=uidCell(k,x.slice(i+1));if(!nw)continue;const kn=ckey(k,nw);
+    if(G[kn]!=null||live(k,nw,kn))continue;G[kn]=G[x];t++}
+  return t}
+/* 메모리에서 옮긴다(await 없음 — 통 열셋이 한 번에 선다) · 돌려주는 flush() 가 도장·묘비·그림자(localStorage)를 쓴다 — 부르는 쪽이 IndexedDB 에 통을 쓴 뒤에 부른다(jgMigrate 와 같은 차례) */
+function uidMigrateMem(why){
+  if(!CARD_LAYER||!DATA_V)return null;
+  const u=lsObj(U_KEY),gone=lsObj(GONE_KEY),shadow=lsObj(SHADOW_KEY),now=Date.now(),has=(o,c)=>!!o&&Object.prototype.hasOwnProperty.call(o,c);
+  let n=0,v=0;const touched=[],moved=[],unk=[];
+  for(const k of UID_KEYS){
+    const ref=SYNC_REF[k];if(!ref)continue;const cur=ref.g();if(!cur||typeof cur!=='object')continue;   /* 늦게 읽는 통이 아직이면 null — 건너뛴다(9/20 묘비 사고) */
+    const sync=SYNC_KEYS.indexOf(k)>=0,sh=sync?shadow[k]:null;
+    let ch=false;
+    for(const o of Object.keys(cur)){
+      const nw=uidCell(k,o);
+      if(!nw){if(uidNumLike(k,o))unk.push(k+'|'+o);continue}
+      const ko=ckey(k,o),kn=ckey(k,nw);
+      if(sync){const tb=Math.max(gone[ko]||0,gone[kn]||0);
+        if(tb>0&&tb>=(u[ko]||0)){delete cur[o];delete u[ko];if(sh)delete sh[o];gone[ko]=tb;ch=true;n++;moved.push(ko);continue}}   /* 묘비가 값 도장보다 새로우면(같아도 — 병합에서 묘비가 이기는 것과 같게) 옮기지 않고 지운다 */
+      if(has(cur,nw)){const so=sync?(u[ko]||0):0,sn=sync?(u[kn]||0):0;
+        if(so>sn){console.warn('uid 열쇠 옮김 — 번호·uid 둘 다 · 번호 칸 도장이 늦어 이김',k,o,'→',nw,'버린 값',JSON.stringify(cur[nw]));cur[nw]=cur[o];u[kn]=so;if(sh&&has(sh,o))sh[nw]=sh[o]}
+        else console.warn('uid 열쇠 옮김 — 번호·uid 둘 다 · uid 칸이 이김',k,o,'→',nw,'버린 값',JSON.stringify(cur[o]))}
+      else{cur[nw]=cur[o];if(sync&&u[ko])u[kn]=u[ko];if(sh&&has(sh,o)&&!has(sh,nw))sh[nw]=sh[o]}   /* 도장·그림자 = 옛 칸 그대로(새로 안 찍는다) */
+      delete cur[o];if(sync){delete u[ko];if(sh)delete sh[o];gone[ko]=Math.max(gone[ko]||0,now)}
+      ch=true;n++;moved.push(ko)}
+    if(k==='twin'||k==='link')for(const c of Object.keys(cur)){const b=uidVal(cur[c]);if(!b)continue;   /* 값 속 번호 — 도장은 그대로 · 그림자가 옛 값과 같으면 그림자도(ggref 와 같다) */
+      if(sh&&has(sh,c)&&JSON.stringify(sh[c])===JSON.stringify(cur[c]))sh[c]=b;cur[c]=b;ch=true;v++}
+    if(ch)touched.push(k)}
+  const t=uidTombMirror(gone,(k,nw,kn)=>{const c=SYNC_REF[k]&&SYNC_REF[k].g();return !c||has(c,nw)||u[kn]!=null});
+  if(unk.length){const fresh=unk.filter(x=>!UID_UNK.has(x));if(fresh.length){fresh.forEach(x=>UID_UNK.add(x));console.warn('uid 열쇠 옮김 — 표 밖 번호(옮기지 않고 그대로 둔다)',fresh.slice(0,20),fresh.length)}}
+  if(!n&&!v&&!t)return {n:0,v:0,t:0,touched:[],moved:[],why:why,flush(){}};
+  return {n:n,v:v,t:t,touched:touched,moved:moved,why:why,flush(){lsPut(U_KEY,u);lsPut(GONE_KEY,gone);lsPut(SHADOW_KEY,shadow)}}}
+var UID_BAK=0, UID_Q=Promise.resolve();
+async function uidMigrateRun(why){
+  if(!CARD_LAYER||!DATA_V)return 0;
+  let need=false;
+  if(!UID_BAK&&uidScan()>0){let b=null;try{b=await get('kv','bak_uid')}catch(e){}if(b)UID_BAK=1;else need=true}   /* 처음 옮길 때 한 번 — 이미 있으면 다시 안 찍는다 */
+  let snap=null;
+  if(need){snap={at:Date.now(),stores:{},u:lsObj(U_KEY),gone:lsObj(GONE_KEY)};   /* 옮기기 전 값 — 아래 uidMigrateMem 이 바꾸기 전에 뜬다 */
+    for(const k of UID_KEYS){const ref=SYNC_REF[k],cur=ref&&ref.g();if(cur&&typeof cur==='object')snap.stores[k]=JSON.parse(JSON.stringify(cur))}}
+  const c=uidMigrateMem(why);
+  let n=0;
+  if(c){
+    if(snap&&(c.n||c.v)){try{if(await put('kv','bak_uid',snap))UID_BAK=1;else console.error('uid 옮김 — bak_uid 저장 실패')}catch(e){console.error('uid 옮김 — bak_uid',e)}}
+    let ok=true;
+    for(const k of c.touched){const d=SYNC_REF[k].g();if(!d)continue;let r=0;try{r=await put('kv',k,d)}catch(e){r=0}if(!r){ok=false;console.error('uid 옮김 — kv 저장 실패',k)}}
+    if(ok){c.flush();n=c.n+c.v;
+      if(c.n||c.v||c.t){console.info('uid 열쇠 옮김',why,c.n,c.v,c.touched,'묘비 비춤',c.t);window.__UIDMIG=(window.__UIDMIG||0)+n}
+      if(c.touched.indexOf('conc')>=0){try{buildCQ()}catch(e){}}}
+  }
+  if(why==='data'){try{n+=await uidMigrateInk()}catch(e){console.warn('uidMigrateInk',e)}}
+  return n}
+/* jgMigrate 와 이 옮김은 같은 도장 u · 묘비 gone · 그림자(localStorage)를 읽고 쓴다 — 한 줄로 세워 서로 덮지 않게 한다 */
+function uidMigrate(why){UID_BUSY++;const p=UID_Q.then(()=>uidMigrateRun(why));UID_Q=p.catch(()=>{}).then(()=>{UID_BUSY--});return p}   /* 부르는 순간부터 끝날 때까지 가드 끔 */
+const _jgMigrate0=jgMigrate;
+jgMigrate=function(why){UID_BUSY++;const p=UID_Q.then(()=>_jgMigrate0(why));UID_Q=p.catch(()=>{}).then(()=>{UID_BUSY--});return p};
+/* ink 스토어의 번호 글자 열쇠(물리 꼴 문항 필기 `String(VNO)`) → uid. diag:·qink:·bink:·ink_orphan: 은 번호 글자가 아니라 안 건드린다.
+   새 자리에 쓰고 읽어 본 뒤에 옛 자리를 지운다 · 새 자리에 이미 있으면 옛 것은 ink_orphan:<번호> 로 둔다(덮지 않는다) */
+async function uidInkOrphan(key,raw){let k='ink_orphan:'+key;for(let i=2;i<=20&&(await get('ink',k))!==undefined;i++)k='ink_orphan:'+key+'#'+i;await put('ink',k,raw);return k}   /* inkOrphan(카드 층 블록 안 async 함수 — 밖에서 안 보인다)과 같은 자리 규칙 */
+async function uidMigrateInk(){
+  if(!CARD_LAYER||!DATA_V)return 0;
+  let ks=[];try{ks=await keys('ink')}catch(e){return 0}
+  let n=0;
+  for(const k of ks){const s=String(k);if(!UID_NUM.test(s))continue;
+    const uid=uidOfNum(s);
+    if(!uid){if(!UID_UNK.has('ink|'+s)){UID_UNK.add('ink|'+s);console.warn('uid 열쇠 옮김 — ink 표 밖 번호(그대로 둔다)',s)}continue}
+    const raw=await get('ink',k);if(raw===undefined||raw===null)continue;
+    const ex=await get('ink',uid);
+    if(ex!==undefined&&ex!==null){console.warn('uid 열쇠 옮김 — ink 번호·uid 둘 다 · 번호 쪽은 ink_orphan 으로 둔다',s,'→',uid);await uidInkOrphan(s,raw)}
+    else if(!(await put('ink',uid,raw)))continue;
+    const back=await get('ink',uid);if(back===undefined||back===null)continue;
+    await del('ink',k);n++}
+  if(n){console.info('uid 열쇠 옮김 ink',n);window.__UIDINK=(window.__UIDINK||0)+n}
+  return n}
+/* 들이기(백업 복원) 뒤 — 통이 통째로 바뀐 직후라 도장·묘비 규칙 없이 **열쇠만** 바꾼다(들인 값이 옛 묘비에 지는 일이 없게). 도장은 이어서 stampAll 이 찍는다 */
+async function uidMigrateImport(){
+  if(!CARD_LAYER||!DATA_V)return 0;
+  const has=(o,c)=>!!o&&Object.prototype.hasOwnProperty.call(o,c);let n=0;const touched=[];
+  for(const k of UID_KEYS){const ref=SYNC_REF[k];if(!ref)continue;const cur=ref.g();if(!cur||typeof cur!=='object')continue;let ch=false;
+    for(const o of Object.keys(cur)){const nw=uidCell(k,o);if(!nw)continue;
+      if(has(cur,nw))console.warn('uid 열쇠 옮김(들이기) — 번호·uid 둘 다 · uid 칸이 이김',k,o,'→',nw);else cur[nw]=cur[o];
+      delete cur[o];ch=true;n++}
+    if(k==='twin'||k==='link')for(const c of Object.keys(cur)){const b=uidVal(cur[c]);if(b){cur[c]=b;ch=true;n++}}
+    if(ch)touched.push(k)}
+  for(const k of touched){const d=SYNC_REF[k].g();if(d)await put('kv',k,d)}
+  try{n+=await uidMigrateInk()}catch(e){console.warn('uidMigrateInk',e)}
+  if(n){console.info('uid 열쇠 옮김(들이기)',n,touched);window.__UIDMIG=(window.__UIDMIG||0)+n;try{draw()}catch(e){}}
+  return n}
+/* ★ A-4 가드 — 번호 열쇠로 쓴 칸이 남아 있으면(쓰는 코드 경로가 남은 것) 도장을 찍기 전에 uid 로 옮기고 콘솔 오류를 남긴다. 병합·들이기 도중(UID_BUSY)에는 안 돈다 */
+function uidGuard(){
+  if(!uidScan())return 0;
+  const c=uidMigrateMem('guard');if(!c||!(c.n||c.v))return 0;
+  c.flush();c.touched.forEach(k=>{const d=SYNC_REF[k].g();if(d)put('kv',k,d)});
+  console.error('uid 열쇠 — 번호 열쇠로 쓴 칸이 있다(막음 · uid 로 옮김)',c.moved.slice(0,10),c.n+c.v);
+  window.__UIDGUARD=(window.__UIDGUARD||0)+c.n+c.v;
+  return c.n+c.v}
 async function recAfterMerge(res){
   /* ★ jagwa_uid — 옛 판 기기가 늦게 올린 옛 열쇠 · ★ revfix0929 A-2 — 옮김이 **끝난 뒤** 돌아간다(syncRecords 가 기다렸다 payload 를 짓는다).
      옛 판은 .then 으로 흘려 보냈다 → jgMigrate 가 첫 통(bogi) 값을 옮기고 IndexedDB put 을 기다리는 사이 PUT 몸통이 지어졌다
      (bogi 만 새 열쇠 · 나머지 통·도장 u 는 옛 열쇠 — 도장·묘비 lsPut 은 jgMigrate 맨 끝이라) */
-  if(CARD_LAYER){let n=0;try{n=await jgMigrate('merge')}catch(e){console.warn('jgMigrate',e)}if(n)try{draw()}catch(e){}}
+  if(CARD_LAYER){let n=0;try{n=await jgMigrate('merge')}catch(e){console.warn('jgMigrate',e)}try{n+=await uidMigrate('merge')}catch(e){console.warn('uidMigrate',e)}if(n)try{draw()}catch(e){}}   /* ★ uid_unify A-2 — 번호 열쇠(옛 판 기기가 늦게 올린 것 포함)도 같은 자리에서 */
   if(!res||!res.dirty.length)return;
   if(CARD_LAYER&&typeof refreshUnits==='function'&&DATA.length)refreshUnits();
   if(res.dirty.indexOf('conc')>=0)buildCQ();
@@ -4648,7 +4797,7 @@ async function syncRecords(force){
     if(sha){
       const txt=await ghRaw(REC_PATH);
       if(txt){try{remote=JSON.parse(txt)}catch(e){console.warn('원격 기록 파싱 실패',e)}}
-      if(remote){const m=await recMerge(remote);recTie+=m.tie||0;try{await recAfterMerge(m)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}   /* ★ revfix0929 A-2 — 옮김 끝 → 도장 → payload */
+      if(remote){UID_BUSY++;try{const m=await recMerge(remote);recTie+=m.tie||0;try{await recAfterMerge(m)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}finally{UID_BUSY--}}   /* ★ revfix0929 A-2 — 옮김 끝 → 도장 → payload · ★ uid_unify — 병합 도중(번호 칸이 잠깐 들어온다)에는 stampAll 가드가 안 돈다 */
     }
     stampAll();
     let res=await ghPutJson(REC_PATH,JSON.stringify(recPayload(remote)),sha);
@@ -4657,7 +4806,7 @@ async function syncRecords(force){
       const txt2=await ghRaw(REC_PATH);
       let remote2=null;
       if(txt2){try{remote2=JSON.parse(txt2)}catch(e){}}
-      if(remote2){const m2=await recMerge(remote2);recTie+=m2.tie||0;try{await recAfterMerge(m2)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}
+      if(remote2){UID_BUSY++;try{const m2=await recMerge(remote2);recTie+=m2.tie||0;try{await recAfterMerge(m2)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}finally{UID_BUSY--}}
       stampAll();
       res=await ghPutJson(REC_PATH,JSON.stringify(recPayload(remote2)),sha);
       if(res==='conflict')throw new Error('두 번 다 충돌');
@@ -4797,7 +4946,7 @@ function recBoot(){
 /* ═══════ 쌍둥이 미리보기 필기 · 떠 있는 창 · 손필기 암기카드 (2026-09-04 · _task_phys_twin_drawer.md) ═══════ */
 /* §1 미리보기 캔버스 위에 그 문항의 필기(ink)를 그린다 — paintInk 와 같은 규칙(옛 층 0.30 · 형광 0.32 · 굵기 (hl?9:w)*scale/2 · HIDEOLD 존중) · 읽기 전용 */
 async function peekInk(no,cv,R){
-  const ink=await get('ink',String(no)); if(!ink)return 0;
+  const ink=await get('ink',inkK(no)); if(!ink)return 0;
   const layers=Object.keys(ink).map(Number).sort((a,b)=>a-b); if(!layers.length)return 0;
   const cur=layers[layers.length-1], g=cv.getContext('2d'); let n=0;
   const px=(u,v)=>{const{W,H,rot}=R; if(rot===90)return[(1-v)*W,u*H]; if(rot===180)return[(1-u)*W,(1-v)*H]; if(rot===270)return[v*W,(1-u)*H]; return[u*W,v*H]};
@@ -4854,10 +5003,10 @@ function mcPaint(cv,card,live){
     g.save(); g.globalAlpha=s.hl?0.32:1; g.strokeStyle=s.c; g.lineWidth=(s.hl?9:s.w)*(W/360); g.lineCap=s.hl?'butt':'round'; g.lineJoin='round'; g.beginPath();
     for(let i=0;i<s.p.length;i+=2){const x=s.p[i]/1000*W,y=s.p[i+1]/1000*H;i?g.lineTo(x,y):g.moveTo(x,y)} g.stroke(); g.restore(); });
 }
-function mcErase(no,u,v){const card=MC[no];if(!card)return;const R=30;
+function mcErase(no,u,v){const card=MC[qk(no)];if(!card)return;const R=30;
   for(let i=card.s.length-1;i>=0;i--){const s=card.s[i];for(let k=0;k<s.p.length;k+=2){if(Math.hypot(s.p[k]-u,s.p[k+1]-v)<R){card.s.splice(i,1);break}}}
-  if(!card.s.length)delete MC[no]}
-async function mcSave(no,st){await saveMC();if(st)st(MC[no]?`저장됨 · ${Math.round(JSON.stringify(MC[no]).length/1024*10)/10}KB · 기기 간 동기화`:'')}
+  if(!card.s.length)delete MC[qk(no)]}
+async function mcSave(no,st){await saveMC();if(st)st(MC[qk(no)]?`저장됨 · ${Math.round(JSON.stringify(MC[qk(no)]).length/1024*10)/10}KB · 기기 간 동기화`:'')}
 let MCW=null;
 function mcardWin(no){
   if(MCW){MCW.remove();MCW=null}
@@ -4871,11 +5020,11 @@ function mcardWin(no){
   const cv=b.querySelector('#mcc'),box=b.querySelector('.mccv');let tool='pen';
   const st=t=>{const el=b.querySelector('#mcSt');if(el)el.textContent=t};
   const size=()=>{const dpr=Math.max(1,Math.min(3,window.devicePixelRatio||1));const w=box.clientWidth,h=box.clientHeight;if(!w||!h)return;
-    cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.width=w+'px';cv.style.height=h+'px';mcPaint(cv,MC[no])};
+    cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.width=w+'px';cv.style.height=h+'px';mcPaint(cv,MC[qk(no)])};
   size();try{new ResizeObserver(()=>{size();if(typeof cardTxtPaint==='function')cardTxtPaint()}).observe(box)}catch(e){}
-  st(MC[no]?`${Math.round(JSON.stringify(MC[no]).length/1024*10)/10}KB · 기기 간 동기화`:'');
+  st(MC[qk(no)]?`${Math.round(JSON.stringify(MC[qk(no)]).length/1024*10)/10}KB · 기기 간 동기화`:'');
   b.querySelectorAll('.mct [data-t]').forEach(x=>x.onclick=()=>{tool=x.dataset.t;b.querySelectorAll('.mct [data-t]').forEach(y=>y.classList.toggle('on',y===x))});
-  b.querySelector('#mcClear').onclick=async()=>{if(!MC[no])return;if(!confirm('이 카드를 전부 지울까요?'))return;delete MC[no];await saveMC();mcPaint(cv,null);st('지웠습니다')};
+  b.querySelector('#mcClear').onclick=async()=>{if(!MC[qk(no)])return;if(!confirm('이 카드를 전부 지울까요?'))return;delete MC[qk(no)];await saveMC();mcPaint(cv,null);st('지웠습니다')};
   b.querySelector('#mcX').onclick=()=>{b.remove();MCW=null};
   makeFloat(b,b.querySelector('h2'),'mcard',CARD_LAYER?'jagwa.win.mcard':null);   /* add2 §1-C — 카드 층에서만 크기를 기억한다(물리는 종전대로 세션 동안만) */
   b.onclick=e=>{if(e.target===b){b.remove();MCW=null}};
@@ -4901,7 +5050,7 @@ function mcardWin(no){
   const pt=e=>{const rc=cv.getBoundingClientRect();return[Math.max(0,Math.min(1000,Math.round((e.clientX-rc.left)/rc.width*1000))),Math.max(0,Math.min(1000,Math.round((e.clientY-rc.top)/rc.height*1000)))]};
   /* 판 3 ② — 카드 글상자. 좌표는 **카드 잉크와 같은 1/1000** 이라 창 크기가 바뀌어도 같은 자리다.
      ⚠ 획과 다른 통(TXT)이라 지우개가 안 지운다. */
-  const cardKey='card:'+no;
+  const cardKey='card:'+qk(no);   /* ★ uid_unify — 글상자 통(txt)의 암기카드 칸 = card:<uid>(물리는 글상자 층이 없어 무변) */
   /* ⚠ 이 함수는 층 밖(물리도 지나간다)이다 — 카드 층에서만 글상자를 만든다.
      블록 안 `function` 선언은 이름만 뜨고 값은 블록이 돌아야 들어간다(물리에서는 undefined). */
   const cardTxt=CARD_LAYER&&typeof txtPaint==='function';
@@ -4913,17 +5062,17 @@ function mcardWin(no){
       txtAdd(box,cardKey,box.clientWidth||1,box.clientHeight||1,1000,u/1000*(box.clientWidth||1),v/1000*(box.clientHeight||1),cardTxtPaint);
       return}
     if(e.pointerType!=='pen')return; try{cv.setPointerCapture(e.pointerId)}catch(_){} const[u,v]=pt(e);
-    if(tool==='erase'){mcErase(no,u,v);mcPaint(cv,MC[no]);live={erase:1};return}
+    if(tool==='erase'){mcErase(no,u,v);mcPaint(cv,MC[qk(no)]);live={erase:1};return}
     live={c:tool==='hl'?'#F2C230':TOOL.color,w:TOOL.w,hl:tool==='hl'?1:0,p:[u,v]};e.preventDefault()},{passive:false});
   cv.addEventListener('pointermove',e=>{ if(!live)return; const evs=(e.getCoalescedEvents&&e.getCoalescedEvents().length)?e.getCoalescedEvents():[e];
-    if(live.erase){evs.forEach(ev=>{const[u,v]=pt(ev);mcErase(no,u,v)});mcPaint(cv,MC[no]);return}
-    evs.forEach(ev=>{const[u,v]=pt(ev);const n=live.p.length;if(n<2||live.p[n-2]!==u||live.p[n-1]!==v)live.p.push(u,v)});mcPaint(cv,MC[no],live);e.preventDefault()},{passive:false});
+    if(live.erase){evs.forEach(ev=>{const[u,v]=pt(ev);mcErase(no,u,v)});mcPaint(cv,MC[qk(no)]);return}
+    evs.forEach(ev=>{const[u,v]=pt(ev);const n=live.p.length;if(n<2||live.p[n-2]!==u||live.p[n-1]!==v)live.p.push(u,v)});mcPaint(cv,MC[qk(no)],live);e.preventDefault()},{passive:false});
   const end=async()=>{ if(!live)return; const s=live; live=null;
     if(s.erase){await mcSave(no,st);return}
-    if(s.p.length<4){mcPaint(cv,MC[no]);return}
-    const card=MC[no]||{w:box.clientWidth,h:box.clientHeight,s:[]}; card.s.push(s);
-    if(JSON.stringify(card).length>MC_MAX){card.s.pop();toast('너무 많이 그렸다 — 카드 하나 20KB 상한');mcPaint(cv,MC[no]);return}
-    MC[no]=card;mcPaint(cv,card);await mcSave(no,st)};
+    if(s.p.length<4){mcPaint(cv,MC[qk(no)]);return}
+    const card=MC[qk(no)]||{w:box.clientWidth,h:box.clientHeight,s:[]}; card.s.push(s);
+    if(JSON.stringify(card).length>MC_MAX){card.s.pop();toast('너무 많이 그렸다 — 카드 하나 20KB 상한');mcPaint(cv,MC[qk(no)]);return}
+    MC[qk(no)]=card;mcPaint(cv,card);await mcSave(no,st)};
   cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
   ['touchstart','touchmove'].forEach(k=>cv.addEventListener(k,e=>{const t=e.touches&&e.touches[0];if(!t)return;if(t.touchType==='stylus')e.preventDefault()},{passive:false}));
 }
@@ -5016,7 +5165,7 @@ function mcardSheet(sub,label){
       col.chTxt=ch?(ch+'. '+((TOC.ch[ch]||{}).name||'')):'미분류';
       lastCh=ch});
     const colHTML=col=>{
-      const cards=col.rows.map(r=>{const no=r[F.NO],mk=lastM(no),c=MC[no],jg=jogakOf(r);
+      const cards=col.rows.map(r=>{const no=r[F.NO],mk=lastM(no),c=MC[qk(no)],jg=jogakOf(r);
         return `<div class="mcard${(c||jg)?'':' empty'}" data-no="${no}" style="width:${cardW}px;height:${cardH}px">`+
           `<div class="k">${jg?`<div class="mcph"></div><canvas class="bg" data-bg="${no}"></canvas>`:''}${c?`<canvas data-cv="${no}"></canvas>`:(jg?'':'＋')}</div>`+
           `<div class="t" style="height:${lblH}px;font-size:${fs}px"><b>${esc(lblOf(r))}</b>${c?'<i class="pen">✎</i>':''}${mk?`<span class="m m${mk}">${mGlyph(mk)}</span>`:''}</div></div>`}).join('');
@@ -5067,18 +5216,18 @@ function mcardSheet(sub,label){
     let qs=(sub===null||sub===undefined)?DATA.slice():DATA.filter(r=>r[F.SUB]===sub);   /* add2 §1-A — 목록 머리 「암기카드」는 sub 없이 부른다 = 전 문항 */
     if(JG)qs=qs.slice().sort(mode==='round'?ordRound:ordUnit);
     else if(sort==='mark'){const ord={X:0,Q:1,'':2,P:3,O:4};qs=qs.slice().sort((a,z)=>(ord[lastM(a[F.NO])]??2)-(ord[lastM(z[F.NO])]??2)||a[F.NO]-z[F.NO])}
-    const n=qs.filter(r=>MC[r[F.NO]]).length;
+    const n=qs.filter(r=>MC[qk(r[F.NO])]).length;
     const bar=JG?`<div class="mcbar"><span class="seg"><b class="${mode==='unit'?'on':''}" data-m="unit">단원별</b><b class="${mode==='round'?'on':''}" data-m="round">회차별</b></span>
       <label>열당 <input type="range" id="mcW" min="${NPC_MIN}" max="${NPC_MAX}" step="1" value="${npc}"><b id="mcNv">${npc}</b></label>
       <span class="sp" style="flex:1"></span><span class="n">내 카드 ${Object.keys(MC).length}장 · 합계 ${kb()}KB</span></div>`:'';
     if(JG)paperFill(qs,bar);
     else b.innerHTML=`<div class="panel frmpanel"><h2>암기카드 — ${esc(label)}</h2><p>${JG?'짧게 누르면 조각 크게 · 길게 누르면 그 문항 팝업.':'내가 쓴 카드 '+n+'장 · 문항마다 문제명 · 코멘트 · 필기. 카드를 누르면 크게 · 길게 누르면 그 문제로.'}</p>${bar}
-      <div class="mcgrid"${JG?` style="grid-template-columns:repeat(auto-fill,minmax(${cw}px,1fr))"`:''}>${qs.map(r=>{const no=r[F.NO],m=lastM(no),c=MC[no];const jg=JG?jogakOf(r):null;
+      <div class="mcgrid"${JG?` style="grid-template-columns:repeat(auto-fill,minmax(${cw}px,1fr))"`:''}>${qs.map(r=>{const no=r[F.NO],m=lastM(no),c=MC[qk(no)];const jg=JG?jogakOf(r):null;
         return `<div class="mcard${(c||jg)?'':' empty'}" data-no="${no}"><div class="t"><b>${JG?esc((r[F.ROUND]||'?')+'회 '+(r[F.LNO]||'?')+'번'):no+'. '+esc(titleOf(r))}</b><span class="mcc">${esc(r[F.CODE])}</span>${c?'<i class="pen">✎</i>':''}${m?`<span class="m m${m}">${mGlyph(m)}</span>`:''}</div>
           <div class="c">${noteOf(no)?'🗒 '+esc(noteOf(no)):'<span style="color:var(--muted)">🗒 (코멘트 없음)</span>'}</div>
           <div class="k"${JG&&jg?` style="height:${Math.round(cw/jogakAR(jg))}px"`:''}>${jg?`<canvas class="bg" data-bg="${no}"></canvas>`:''}${c?`<canvas data-cv="${no}"></canvas>`:(JG?(jg?'':'＋ 새 카드'):'카드 없음 · 문제에서 「암기카드」')}</div></div>`}).join('')}</div>
       <div class="mcfoot"><button class="chip" id="mcVault">볼트 카드 ${cardsFor(null,sub).length}장</button>${JG?'':`<button class="chip" id="mcSort">순서: ${sort==='no'?'문항번호':'마크순'} ▾</button>`}<span class="sp"></span><button class="btn sm pri" id="mcClose">닫기</button></div></div>`;
-    b.querySelectorAll('canvas[data-cv]').forEach(cv=>{const no=+cv.dataset.cv,k=cv.parentElement;cv.width=Math.max(2,k.clientWidth*2);cv.height=Math.max(2,k.clientHeight*2);cv.style.width='100%';cv.style.height='100%';mcPaint(cv,MC[no])});
+    b.querySelectorAll('canvas[data-cv]').forEach(cv=>{const no=+cv.dataset.cv,k=cv.parentElement;cv.width=Math.max(2,k.clientWidth*2);cv.height=Math.max(2,k.clientHeight*2);cv.style.width='100%';cv.style.height='100%';mcPaint(cv,MC[qk(no)])});
     /* 조각 배경 — 눈에 들어온 칸만 그린다(add2). 전 문항이면 칸이 704개라 한꺼번에 그리면
        pdf.js 가 수십 초를 먹는다(실측 한 판 35초). 칸·캔버스는 다 만들어 두고 그리기만 미룬다.
        add3 뒷정리 — ① 아직 안 그린 칸에 자리표시자(.mcph) → 「조각 없는 칸」과 눈으로 갈린다
@@ -5120,7 +5269,7 @@ function mcardSheet(sub,label){
       el.onpointermove=e=>{if(tm&&Math.hypot(e.clientX-sx,e.clientY-sy)>8){clearTimeout(tm);tm=null;long=true}};   /* 8px 넘게 움직이면 스크롤로 본다 */
       el.onpointerup=el.onpointerleave=el.onpointercancel=()=>{clearTimeout(tm);tm=null};
       el.onclick=()=>{if(long){long=false;return}
-        if(JG&&!MC[no]&&!jogakOf(rec(no))){document.querySelectorAll('.sheet').forEach(x=>x.remove());openView(no).then(()=>mcardWin(no));return}
+        if(JG&&!MC[qk(no)]&&!jogakOf(rec(no))){document.querySelectorAll('.sheet').forEach(x=>x.remove());openView(no).then(()=>mcardWin(no));return}
         mcardBig(no)}});
     if(JG){b.querySelectorAll('.mcbar [data-m]').forEach(x=>x.onclick=()=>{mode=x.dataset.m;try{localStorage.setItem('jagwa.mcmode',mode)}catch(e){}draw()});
       const w=b.querySelector('#mcW');if(w)w.oninput=w.onchange=()=>{npc=Math.round(+w.value);
@@ -5164,7 +5313,7 @@ function mcardBig(no){
     <div class="mccv big"><canvas id="mcb"></canvas></div>
     <button class="btn" id="mcEdit" style="margin-top:10px">이 문제로 가서 쓰기</button><button class="btn pri" id="mcBX" style="margin-top:8px">닫기</button></div>`;
   document.body.appendChild(b);
-  const cv=b.querySelector('#mcb'),k=cv.parentElement;cv.width=Math.max(2,k.clientWidth*2);cv.height=Math.max(2,k.clientHeight*2);cv.style.width='100%';cv.style.height='100%';mcPaint(cv,MC[no]);
+  const cv=b.querySelector('#mcb'),k=cv.parentElement;cv.width=Math.max(2,k.clientWidth*2);cv.height=Math.max(2,k.clientHeight*2);cv.style.width='100%';cv.style.height='100%';mcPaint(cv,MC[qk(no)]);
   {const jg=(typeof jogakOf==='function')?jogakOf(r):null;   /* 짧게 누름 = 조각 크게 보기(판 2 §1-D(3)) */
    if(jg&&jogakOn()){const bg=document.createElement('canvas');bg.className='bg';k.insertBefore(bg,k.firstChild);
      jogakPaint(bg,jg,k.clientWidth).catch(()=>{bg.remove()})}}
@@ -5429,6 +5578,7 @@ loadEarthData=async function(){
     return false;
   }
   buildData(j.items,j.toc,j.pieces||{});
+  try{await uidMigrate('data')}catch(e){console.warn('uidMigrate',e)}   /* ★ uid_unify A-2 — 열 때(문항을 다 읽은 뒤 · 도장·올림 전) 번호 열쇠 → uid */
   if(CUR.JOGAK_PATH){try{await loadJogak()}catch(e){console.warn('jogak',e)}}   /* 조각 좌표표 — 없는 과목(생물)에서는 부르지도 않는다(부팅 차례를 한 틱도 안 민다 · 판 2 §2) */
   return true;
 }
@@ -5448,6 +5598,7 @@ function buildData(items,toc,pieces){
       it.해설2||'',it.교재문장||'',it.문장근거||'',it.SYNAPSE쪽||'',Array.isArray(it.참고)?it.참고:[],it.옛uid||''];   /* ★ jagwa_uid — F.OLDU */   /* ★ bio ocrfix §J — F.REF(30) = 참고 상자(생물 · 없으면 빈 칸) */
     DATA.push(row);
   });
+  DATA_V++;   /* ★ uid_unify — 번호 ↔ uid 표가 다시 선다(uidNo 캐시) */
   refreshUnits();
   BIGS.length=0;(CUR.CH_LIST||['1','2','3','4','5']).forEach(c=>BIGS.push(c+'. '+(TOC.ch[c]||{}).name));
   FL.past='y';FL.types=new Set(['G']);FL.unit='';FL.round='';SET.nav=false;
@@ -5805,7 +5956,7 @@ pickChoice=async function(k){
   if(h.length&&h[h.length-1].auto&&h[h.length-1].t>=VSEEN)h.pop();
   const ok=r[F.ANS]&&String(k)===String(r[F.ANS]);
   h.push({m:ok?'O':'X',t:Date.now(),s:TM.sec||0,a:k,auto:1});
-  ST[VNO]={h};await saveST();tmStop();syncMarkBtns();
+  ST[qk(VNO)]={h};await saveST();tmStop();syncMarkBtns();
   $('#card').querySelectorAll('.choices button').forEach(b=>b.classList.toggle('pick',b.dataset.c===String(k)));
   if(!CARD.open){$('#cDet').open=true}
   toast(ok?'맞음 — O 로 기록':'틀림 — X 로 기록');
@@ -5815,7 +5966,7 @@ mark=async function(m){
   const h=hist(VNO).slice();
   if(h.length&&h[h.length-1].auto&&h[h.length-1].t>=VSEEN)h.pop();
   h.push({m,t:Date.now(),s:TM.sec||0});
-  ST[VNO]={h};await saveST();tmStop();syncMarkBtns();
+  ST[qk(VNO)]={h};await saveST();tmStop();syncMarkBtns();
   toast(`${h.length}회독 · ${MLABEL[m]||m}${TM.sec?' · '+secFmt(TM.sec):''}`);
   if(SET.autoNext)setTimeout(()=>go(1),380);
 }
@@ -5897,7 +6048,7 @@ draw=function(){
     const h=document.createElement('div');h.className='grouphd';h.dataset.uhd=secCode;
     h.textContent=bigLabel(big)+' · '+sub;
     if(typeof frmFor==='function'&&frmFor(sub).length){const x=document.createElement('button');x.className='ghbtn';x.textContent='공식';x.onclick=e=>{e.stopPropagation();frmSheet(sub)};h.appendChild(x)}
-    {const x=document.createElement('button');x.className='ghbtn';const n=DATA.filter(r=>r[F.SUB]===sub&&MC[r[F.NO]]).length;
+    {const x=document.createElement('button');x.className='ghbtn';const n=DATA.filter(r=>r[F.SUB]===sub&&MC[qk(r[F.NO])]).length;
      x.textContent='암기카드'+(n?' '+n:'');x.onclick=e=>{e.stopPropagation();mcardSheet(sub,sub)};h.appendChild(x)}
     frag.appendChild(h)};
   const unitHd=(code,page,n)=>{
@@ -7804,6 +7955,8 @@ importData=async function(f){if(!f)return;let txt;try{txt=await f.text();const j
   }catch(e){toast('백업 파일을 읽지 못했습니다');return}
   await _imp0(new Blob([txt],{type:'application/json'}));if(DATA.length)refreshUnits();
 };
+/* ★ uid_unify — 옛 백업(번호 열쇠 · 번호 글자 ink 열쇠)을 들여도 uid 열쇠로 옮겨 둔다. 들이는 도중에는 stampAll 가드를 끈다. */
+{const _imp2=importData;importData=async function(f){if(!f)return;UID_BUSY++;try{await _imp2(f);try{await uidMigrateImport()}catch(e){console.warn('uidMigrateImport',e)}}finally{UID_BUSY--}}}
 
 /* ───────────── 시동 뒤 ───────────── */
 /* 토큰을 처음 넣으면 다시 켜지 않아도 데이터를 받는다 · 데이터가 없으면 목록 자리에 안내 */
@@ -8289,7 +8442,7 @@ var ggBangAny=uid=>ggOf(uid).some(g=>g&&g.bang);
 var pkOf=uid=>{const a=PICK[uid];return Array.isArray(a)?a:[]};
 /* 🃏 한 장 = 손필기 한 장 + 찍은 자리 개수. **`crop`(문제·해설 칸에 붙인 통째 칸)은 카드가 아니다.** */
 var mcCountOf=no=>{const r=rec(no);if(!r)return 0;
-  return (MC[no]?1:0)+pkOf(r[F.CODE]).length};
+  return (MC[qk(no)]?1:0)+pkOf(r[F.CODE]).length};
 var mcCountIn=nos=>nos.reduce((a,no)=>a+mcCountOf(no),0);
 
 /* ── §B 접힘 — 기기 하나 값(SYNC 밖) · 열쇠 c<장> s<절> u<소단원> r<회차> ── */
@@ -8803,7 +8956,7 @@ var mcwOpen=async function(sc){
     const ps=pkOf(r[F.CODE]);
     return '<div class="mcwq"><div class="h"><button class="jgo" data-go="'+no+'">'+esc(codeShow(r))+' 보기</button>'
       +'<span class="mut">'+esc(titleOf(r))+'</span></div>'
-      +(MC[no]?'<div class="mcwc"><div class="t">✍ 손필기 암기카드</div><div class="k"><canvas data-ink="'+no+'"></canvas></div></div>':'')
+      +(MC[qk(no)]?'<div class="mcwc"><div class="t">✍ 손필기 암기카드</div><div class="k"><canvas data-ink="'+no+'"></canvas></div></div>':'')
       +ps.map((p,i)=>'<div class="mcwc"><div class="t">'+(p.doc==='omr'?'📄 정리OMR · '+p.p+'쪽':'📖 교재 · p'+p.p)+' 찍은 자리'
         +'<button class="cx" data-px="'+no+':'+i+'" title="빼기">✕</button></div>'
         +'<div class="k"><canvas data-pick="'+no+':'+i+'"></canvas></div></div>').join('')
@@ -8815,7 +8968,7 @@ var mcwOpen=async function(sc){
     const jg=(typeof jogakOf==='function')?jogakOf(rec(no)):null;
     if(jg&&jogakOn()){const bg=document.createElement('canvas');bg.className='bg';k.insertBefore(bg,k.firstChild);
       jogakPaint(bg,jg,k.clientWidth).catch(()=>{bg.remove()})}
-    mcPaint(cv,MC[no])});
+    mcPaint(cv,MC[qk(no)])});
   body.querySelectorAll('canvas[data-pick]').forEach(cv=>{
     const [no,i]=cv.dataset.pick.split(':');const r=rec(+no);const p=pkOf(GGU(r))[+i];if(!p)return;
     const w=cv.parentElement.clientWidth||320;
@@ -9376,7 +9529,7 @@ var ggEatNotes=async function(){
   const moved=[];
   for(const no of Object.keys(CMT||{})){
     const t=String(CMT[no]||'').trim(); if(!t)continue;
-    const r=rec(+no); if(!r)continue;
+    const r=CARD_LAYER?rec(uidNo(no)):rec(+no); if(!r)continue;   /* ★ uid_unify — 카드 층 코멘트 열쇠 = uid */
     const uid=GGU(r); if(!uid)continue;
     const list=ggOf(uid).slice();
     if(list.some(g=>String(g.t||'').trim()===t)){moved.push(no);continue}   /* 이미 옮겼다 */
@@ -10393,7 +10546,7 @@ if(typeof showProblem==='function'&&!showProblem.__ewm){
   function rowOf(no) {
     if (!ROW) {
       ROW = {};
-      try { DATA.forEach(function (r) { ROW[String(r[F.NO])] = r; }); } catch (e) {}
+      try { DATA.forEach(function (r) { ROW[String(r[F.NO])] = r; if (CARD_LAYER) ROW[String(r[F.CODE])] = r; }); } catch (e) {}   /* ★ uid_unify — 카드 층 status 열쇠 = uid */
     }
     return ROW[String(no)] || null;
   }
