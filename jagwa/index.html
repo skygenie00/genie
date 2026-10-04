@@ -1185,6 +1185,16 @@ body[data-layer="pdf"] .jnrow .q.pv{overflow-wrap:anywhere}
 .ggpan{margin-top:6px;border:1px solid var(--line);border-radius:8px;background:var(--paper);overflow:hidden}
 .ggpan.bang{background:#FDF3F1;border-left:3px solid var(--red)}
 .ggpan .hd{display:flex;gap:7px;align-items:flex-start;padding:6px 9px;border-bottom:1px solid var(--line);background:var(--card)}
+/* ★ jagwa_ggmath — 근거 글 수식 꼴(세로 분수 · 루트 한 선) */
+.gm-frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.86em;line-height:1.2;margin:0 .12em}
+.gm-frac>.n{border-bottom:1px solid currentColor;padding:0 .2em .1em}
+.gm-frac>.d{padding:.15em .2em 0}
+.gm-frac sup{vertical-align:.45em}
+.gm-root{display:inline-flex;align-items:stretch;vertical-align:-.28em;white-space:nowrap;margin:0 .05em}
+.gm-root:has(.gm-frac){vertical-align:middle}
+.gm-root>svg{flex:none;width:.62em;height:auto;align-self:stretch;overflow:visible;display:block}
+.gm-root>svg path{fill:none;stroke:currentColor;stroke-width:1.1px;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:square}
+.gm-root>.a{display:inline-block;border-top:1.1px solid currentColor;padding:.14em .14em 0 .06em;line-height:1.2}
 .ggpan .hd .t{flex:1;min-width:0;font-size:12.5px;color:var(--ink);white-space:pre-wrap}
 .ggpan .hd .t .pl{display:block}
 .ggpan .hd .t .pl i{font-style:normal;font-weight:800;color:var(--subj);margin-right:4px}
@@ -9102,7 +9112,7 @@ function jnRowHTML(r){
     +'<span class="sp"></span>'+(hist(no).length?markBadge(no):'<span class="mk">·</span>')+'</div>'
     +'<div class="q'+((HASBOOK&&tfixOn(uid,'q'))?' fx':'')+((!HASBOOK&&typeof pvOn==='function'&&pvOn(r))?' pv':'')+'"'+(HASBOOK?' title="길게 눌러 글자 고치기"':'')+'>'+esc((!HASBOOK&&typeof pvText==='function')?pvText(r):txtOf(uid,'q'))+'</div>'
     +((!HASBOOK&&typeof pvFigHTML==='function')?pvFigHTML(r):'')   /* ★ physprev — 물리 = 미리보기 t 전부 + 발문 그림 칸 */
-    +(ggOf(gu).length?'<div class="ggmine">'+ggOf(gu).map(g=>'<div>'+esc(ggFlat(g))+'</div>').join('')+'</div>':'')
+    +(ggOf(gu).length?'<div class="ggmine">'+ggOf(gu).map(g=>'<div>'+ggMath(ggFlat(g))+'</div>').join('')+'</div>':'')
     +'<div class="ggrb" data-ggrb="'+ea(gu)+'|jn-">'+ggRefBoxHTML(gu,'jn-')+'</div>'
     +'<button class="jnans" data-jnans="'+no+'">정답·해설 ▸</button>'
     +'<div class="jnansb hide"><b>정답 '+esc(r[F.ANS]?(CIRC[+r[F.ANS]-1]||r[F.ANS]):'—')+'</b>'
@@ -9173,11 +9183,14 @@ function ggUseWin(target,me){
   const owners=ggUseSort(ggOwners(target)), r0=rowByUid(target);
   const gtext=ggOf(target).map(g=>g.i+'. '+ggFlat(g)
     +((g.cs||[]).length?'\n'+g.cs.map(c=>'  ↳ '+String((c&&c.t)||'')).join('\n'):'')).join('\n');
+  /* ★ jagwa_ggmath — 근거 줄은 ggMath · 댓글 줄은 esc(같은 글자 차례) */
+  const gtextH=ggOf(target).map(g=>esc(g.i+'. ')+ggMath(ggFlat(g))
+    +((g.cs||[]).length?esc('\n'+g.cs.map(c=>'  ↳ '+String((c&&c.t)||'')).join('\n')):'')).join('\n');
   const head='<div class="gguh"><div class="ln">'
     +'<span class="cd">'+esc(r0?codeShow(r0):String(target))+'</span>'
     +'<span class="un">'+esc(r0?ggWhere(r0):'지금 데이터에 없음')+'</span></div>'
     +(r0?'<div class="qq">'+esc(String(txtOf(target,'q')).slice(0,120))+'</div>':'')
-    +(gtext?'<div class="gg">'+esc(gtext)+'</div>':'')+'</div>';
+    +(gtext?'<div class="gg">'+gtextH+'</div>':'')+'</div>';
   const sep='<div class="gsep">이 근거를 걸어 둔 문항 '+owners.length+'</div>';
   const rows=owners.map(u=>{const r=rowByUid(u);
     if(!r)return '<div class="gguR none">'+esc(String(u))+' — 지금 데이터에 없음</div>';
@@ -9215,12 +9228,69 @@ function ggCsHTML(cs,gk,uid,sc){
     +(gk!=null?'<button class="lk" data-ggce="'+ea(uid+'|'+gk+'|'+String(c.k||'')+'|'+sc)+'">고치기</button>'
       +'<button class="lk red" data-ggcd="'+ea(uid+'|'+gk+'|'+String(c.k||'')+'|'+sc)+'">지우기</button>':'')
     +'</div>').join('')}
+/* ★ jagwa_ggmath (2026-10-04 · jagwa/gigu/_task_jagwa_ggmath.md) — 근거 글 → 수식 꼴 HTML. 저장은 친 글자 그대로 · 보이는 자리에서만 부른다.
+   a/b 세로 분수(O/X · X/O 와 낱말 속 km/h · 글자 뒤 숫자 r2 는 그대로) · ^ _ 첨자(묶음은 괄호까지) · 루트(…)/루트숫자 = SVG 한 선
+   · 띄어 쓴 「비례」 ∝ · =/= ≠ · ~= ≒ · 반시계방향 ↺ · 시계방향 ↻ · 그냥 괄호는 그대로(분수 칸일 때만 빠짐) */
+var WORD=/[A-Za-z0-9가-힣α-ωΑ-Ω]/;
+function ggMath(src){
+  const s=String(src||'');let i=0;
+  function group(){let d=0,j=i;for(;j<s.length;j++){if(s[j]==='(')d++;else if(s[j]===')'){d--;if(d===0)break}}
+    if(d!==0||j>=s.length)return null;const inner=s.slice(i+1,j);i=j+1;return {html:ggMath(inner),inner,paren:true}}
+  function script(){/* ^ · _ 뒤 */
+    if(s[i]==='('){const g=group();return g?{html:'('+g.html+')'}:null}   /* 첨자 묶음은 괄호도 보인다(사용자 18:24) */
+    let m=/^[-−+]?\d+(\.\d+)?/.exec(s.slice(i));if(m){i+=m[0].length;return {html:esc(m[0].replace('-','−'))}}
+    m=/^[A-Za-zα-ωΑ-Ω]+/.exec(s.slice(i));if(m){i+=m[0].length;return {html:esc(m[0])}}
+    return null}
+  function post(h){/* 첨자 꼬리 붙이기 */
+    while(i<s.length&&(s[i]==='^'||s[i]==='_')){const t=s[i],k=i;i++;const g=script();if(!g){i=k;break}
+      h+=(t==='^'?'<sup>':'<sub>')+g.html+(t==='^'?'</sup>':'</sub>')}
+    return h}
+  function root(){/* 루트( … ) · 루트123 */
+    if(s.startsWith('루트',i)){const k=i;i+=2;let g=null;
+      if(s[i]==='(')g=group();else{const m=/^\d+(\.\d+)?/.exec(s.slice(i));if(m){i+=m[0].length;g={html:esc(m[0])}}}
+      if(g)return '<span class="gm-root"><svg viewBox="0 0 10 20" preserveAspectRatio="none" aria-hidden="true"><path d="M0.5,12 L2.6,10.6 L5.2,19.4 L9.6,0.55 L10.6,0.55"/></svg><span class="a">'+g.html+'</span></span>';
+      i=k}return null}
+  function atom(edge){/* 분수 칸 하나 — 숫자(뒤에 붙은 글자 포함 · 2GM) · 글자 한 자(Δ 붙으면 둘) · ( ) 묶음 · 루트 */
+    const k=i;if(edge&&k>0&&WORD.test(s[k-1]))return null;
+    let html=null,single=null,plain=null;
+    const r=root();if(r!=null)html=r;
+    else if(s[i]==='('){const g=group();if(!g){i=k;return null}
+      const tail=post('');   /* 괄호는 분수 칸일 때만 빠진다(가로줄이 묶음) · 그냥 괄호·첨자 붙은 괄호는 그대로 보인다 */
+      html=tail?'('+g.html+')'+tail:g.html;plain='('+g.html+')'+tail}
+    else{let m=/^\d+(\.\d+)?([A-Za-zα-ωΑ-Ω]*)/.exec(s.slice(i));
+      if(m){i+=m[0].length;html=esc(m[0])}
+      else if((m=/^Δ?[A-Za-zα-ωΑ-Ω]/.exec(s.slice(i)))){single=m[0];i+=single.length;html=esc(single)}
+      else return null}
+    if(plain==null)html=post(html);
+    if(i<s.length&&(/[A-Za-z가-힣α-ωΑ-Ω]/.test(s[i])||(single&&/\d/.test(s[i])))){i=k;return null}   /* r2 처럼 글자 뒤 숫자는 r² 인지 r₂ 인지 몰라 그대로 */
+    return {html,single,plain:plain==null?html:plain}}
+  let out='';
+  while(i<s.length){
+    const k=i;
+    /* 분수 */
+    const a=atom(true);
+    if(a){if(s[i]==='/'){const j=i;i++;const b=atom(false);
+        const ox=x=>x==='O'||x==='X';   /* O/X · X/O 만 글자 그대로(채점 표시) — A/B · F/A 는 분수 */
+        if(b&&!(ox(a.single)&&ox(b.single))){out+='<span class="gm-frac"><span class="n">'+a.html+'</span><span class="d">'+b.html+'</span></span>';continue}
+        i=j}
+      out+=a.plain;continue}
+    i=k;
+    const r=root();if(r!=null){out+=post(r);continue}
+    const c=s[i];
+    if((c==='^'||c==='_')&&i>0){const t=c;i++;const g=script();if(g){out+=(t==='^'?'<sup>':'<sub>')+g.html+(t==='^'?'</sup>':'</sub>');continue}i=k}
+    if(s.startsWith('~=',i)){out+='≒';i+=2;continue}
+    if(s.startsWith('반시계방향',i)){out+='↺';i+=5;continue}   /* 반시계 먼저(「시계방향」을 품어서) */
+    if(s.startsWith('시계방향',i)){out+='↻';i+=4;continue}
+    if(s.startsWith('비례',i)&&(i===0||/\s/.test(s[i-1]))&&(i+2>=s.length||/\s/.test(s[i+2]))){out+='∝';i+=2;continue}
+    if(s.startsWith('=/=',i)){out+='≠';i+=3;continue}
+    out+=esc(c);i++}
+  return out}
 function ggPanelHTML(uid,g,sc){
   return '<div class="ggpan hide'+(g.bang?' bang':'')+'" id="'+sc+'gg-pan-'+ea(uid)+'-'+ea(g.k)+'" data-gbbox="'+ea(uid+'|'+g.k)+'">'
     +'<div class="hd"><span class="ggbang'+(g.bang?' on':'')+'" data-ggbang="'+ea(uid+'|'+g.k)+'" title="중요 표시">!</span>'
     +'<span class="t">'+(Array.isArray(g.parts)&&g.parts.length
-        ? g.parts.map(p=>'<div class="pl">'+(p.l?'<i>'+esc(p.l)+'</i>':'')+esc(p.t)+'</div>').join('')
-        : esc(g.t||''))+'</span>'
+        ? g.parts.map(p=>'<div class="pl">'+(p.l?'<i>'+esc(p.l)+'</i>':'')+ggMath(p.t)+'</div>').join('')
+        : ggMath(g.t||''))+'</span>'
     +'<span class="mut">'+ggOkWord(g.ok)+' · '+ggMD(g.ts)+'</span>'
     +'<button class="lk" data-gged="'+ea(uid+'|'+g.k+'|'+sc)+'">고치기</button>'
     +'<button class="lk red" data-ggdel="'+ea(uid+'|'+g.k+'|'+sc)+'">지우기</button></div>'
@@ -9242,7 +9312,7 @@ function ggRefBoxHTML(uid,sc){
       :list.map(g=>{const kk=ea(uid+'|'+u+'|'+g.k+'|'+sc);
         return '<div class="ggrr'+(g.bang?' bang':'')+'">'
         +'<span class="ggbang'+(g.bang?' on':'')+'" data-ggbang="'+ea(u+'|'+g.k)+'">!</span>'
-        +'<b>'+g.i+'.</b><span class="t">'+esc(ggFlat(g))+'</span>'
+        +'<b>'+g.i+'.</b><span class="t">'+ggMath(ggFlat(g))+'</span>'
         +'<button class="lk" data-ggre="'+kk+'">✎ 여기서 고치기</button></div>'
         +'<div class="ed hide" data-ggre-box="'+kk+'"></div>'
         +(Array.isArray(g.cs)&&g.cs.length?'<div class="ggrc2">'+g.cs.map(c=>{
@@ -9669,7 +9739,7 @@ function ggDelAsk(uid,k,sc){
   b.innerHTML='<div class="panel"><h2>근거 지우기</h2>'
     +(own.length?'<p>이 문항의 근거에 걸린 문항 '+own.length+'개'
       +(ggOf(uid).length===1?' — 마지막 근거라 그 🔗 칩이 흐려집니다':'')+'</p>':'')
-    +'<p><b>근거 '+g.i+'</b> 을(를) 지웁니다.<br><small>'+esc(ggFlat(g).split('\n')[0])+'</small></p>'
+    +'<p><b>근거 '+g.i+'</b> 을(를) 지웁니다.<br><small>'+ggMath(ggFlat(g).split('\n')[0])+'</small></p>'
     +'<button class="btn" id="ggdX">취소</button> <button class="btn pri" id="ggdGo">지우기</button></div>';
   document.body.appendChild(b);
   b.querySelector('#ggdX').onclick=()=>b.remove();
