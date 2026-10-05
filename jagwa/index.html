@@ -322,6 +322,9 @@ select.tl{width:auto;padding:0 6px;font-size:12px;-webkit-appearance:none;text-a
 .gpread .gptb th,.gpread .gptb td{border:1px solid var(--line);padding:5px 8px;
   text-align:left;vertical-align:top}
 .gpread .gptb th{background:var(--paper);font-weight:600}
+.gpread .gpsub{display:block;font-size:.75em;line-height:1.5;color:#55595F;margin-top:1px}
+.gpread b.oxo{color:#1D4ED8}
+.gpread b.oxx{color:#C62828}
 .gpmot{margin:0 0 10px}
 .twhandle{cursor:move;touch-action:none;user-select:none}
 .twgrip{position:sticky;bottom:0;display:block;margin-left:auto;width:22px;height:22px;cursor:nwse-resize;touch-action:none;border-radius:0 0 10px 0;
@@ -3945,6 +3948,9 @@ function gpRender(src){
   }
   return out.join('');
 }
+/* 풀이 글 덧댐(E010 · 10/5) — ① 번호 목록 바로 아랫줄 「↳ …」 = 그 항목 아랫줄 작은 글씨 ② 굵은 O 파랑 · 굵은 X 빨강 */
+function gpPre(src){const L=String(src).split('\n'),o=[];for(const x of L){if(/^\s*↳/.test(x)&&o.length&&/^\s*\d+\.\s+/.test(o[o.length-1])){o[o.length-1]+='\u0001'+x.replace(/^\s*↳\s*/,'')}else o.push(x)}return o.join('\n')}
+function gpPost(h){return h.replace(/\u0001([^<]*)/g,'<span class="gpsub">$1</span>').replace(/<b>O<\/b>/g,'<b class="oxo">O</b>').replace(/<b>X<\/b>/g,'<b class="oxx">X</b>')}
 
 /* ── 모션 (§A-3) ──
    motion/index.json = {"phys":[72]} — 그 과목 목록에 번호가 있을 때만 단추가 선다.
@@ -4004,11 +4010,12 @@ function gptSheet(no){
   const paintQa=()=>{const q=b.querySelector('#gpQa');if(q)q.textContent=gpQaSplit(gptOf(no)).qa};   /* 둘째 줄 왼쪽 — 풀이 글 첫 줄이 QA 꼴이면 그 줄 · 아니면 빈칸 */
   function showRead(){
     if(CARD_LAYER)paintQa();
-    host.innerHTML=`<div class="gpread">${gpRender(CARD_LAYER?gpQaSplit(gptOf(no)).rest:gptOf(no))}</div>
+    host.innerHTML=`<div class="gpread">${gpPost(gpRender(gpPre(CARD_LAYER?gpQaSplit(gptOf(no)).rest:gptOf(no))))}</div>
     <div style="display:flex;gap:6px;justify-content:flex-end">
       <button class="btn sm" type="button" id="gpEdit">고치기</button>
       <button class="btn sm" type="button" id="gpNo">닫기</button>
     </div>`;
+    kx(host.querySelector('.gpread'));   /* ★ E010 — 풀이 글 $…$ 식(KaTeX) */
     host.querySelector('#gpEdit').onclick=()=>showEdit();
     host.querySelector('#gpNo').onclick=close;
   }
