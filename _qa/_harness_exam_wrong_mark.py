@@ -33,6 +33,7 @@ r"""_task_exam_wrong_mark §C 관문 — 실제 1차 시험(61·63회)에서 틀
     진짜 기록 먹이는 길 = 가짜 원격(XRemoteReal)이 api.github.com/…/contents/exam/꼬까.json 자리에 --real 파일 바이트를 줌(기본 SPD_ROOT\exam\꼬까.json · 읽기만 — SPD 클론에 쓰지도 · fetch · pull 도 안 함)
     ⚠ 목차 「지금 목록」(#trq)은 앱에서 #tree 의 hide 가 영영 안 벗겨져(죽은 길) 사용자 눈엔 안 보인다 — 줄 글자(DOM)로만 잰다 · 물리는 앱이 문제를 열어도 안 채움(B2 「문제를 연 채」 에서 잼)
   ★ JG2 add1 검수 고침(2026-10-04 · 본 세션이 가름 — 앱 결함이 아니라 잣대 쪽 · 칸 이름은 그대로 · 옛 줄은 주석으로 남김)
+    B2 「첫 화면 시각」(10/5 · 사용자 「1,2 둘다 고쳐」) — 매 회 새 판을 먼저 열던 차례(새 판만 ≈300 ms 손해)를 몸풀기 두 쪽 + ABBA 6 회(판마다 여섯 · 채팅 10/5 11:0x)로 · 판정식 · 라벨 그대로
     B1 「표시 자리 · 꼴」 목록 카드 — 제목 칸(.sub)이 있는 줄 = 옛 잣대 그대로(표시 바로 뒤가 ★ 또는 .sub) · 제목 칸이 없는 줄(uid_unify §G-1 이 기출 uid 줄의 .sub 를 안 그린다 · 생물 · 지학) = 기출 칩(kindTag .tag.tg) 바로 뒤 · .meta 안
     B2 「늦게 오면」 — 크롬 = 쪽 스크롤 같음 또는 기준 카드 이동 ≤ 1px(크롬의 스크롤 고정이 위쪽 높이 변화를 scrollTop 으로 갚아 화면은 제자리 · 값 칸에 둘 다) · 값 칸에 위쪽 높이 변화 재기(참고 · 판정 아님)
       · WebKit 칸 = --jg2eng chromium,webkit(기본 chromium = 지금처럼 크롬만 · webkit 만 쓰면 그 칸만) — 스크롤 고정이 없어 scrollTop 같음이 증거가 못 되므로 기준 카드 이동 ≤ 1px 만으로 판정
@@ -1678,15 +1679,25 @@ def jg2_b2_late(br, src, subj, eng='chromium', parts='ab'):   # eng = 열린 브
     return ok
 
 
-def jg2_b2_first(br, src, subj, runs=3, delay=2000):
-    """(c) 응답을 2초 늦춰도 첫 화면 시각은 바탕과 같다(±10% — 잡음 바닥 +150ms) · 화면이 기록보다 먼저 — 새 판 · 바탕 번갈아 runs 번 중앙값"""
+# 옛 줄(10/5 사용자 「1,2 둘다 고쳐」 전): def jg2_b2_first(br, src, subj, runs=3, delay=2000): … for i in range(runs): for who, s, arr in (('new', src, tn), ('base', base_src, tb)):
+#   — 매 회 새 판을 먼저 열어 새 판만 늘 ≈300 ms 손해(결정로그 10/5 03:34 · 같은 두 판을 새 판 먼저 +433 ms · 바탕 먼저 −159 ms)
+def jg2_b2_first(br, src, subj, runs=6, delay=2000):   # ★ (10/5 채팅 11:0x 진행 「ABBA · 바탕/새 판 각 여섯 이상」) 4 → 6
+    """(c) 응답을 2초 늦춰도 첫 화면 시각은 바탕과 같다(±10% — 잡음 바닥 +150ms) · 화면이 기록보다 먼저 — 새 판 · 바탕 번갈아 runs 번 중앙값
+    ★ (10/5) 몸풀기 두 쪽(새 판 · 바탕 한 번씩 · 셈 밖 — 브라우저 첫 쪽 찬 시동) + ABBA 차례(회 0 · 3 = 새 판 먼저 · 1 · 2 = 바탕 먼저) — 먼저 여는 몫을 두 판에 같게"""
     if YARD:
         N('JG2-B2', '%s 첫 화면 시각 — 헛잣대 해당 없음' % subj, '바탕끼리 맞대면 거저 참')
         return True
     base_src = jg2_base_src()
     tn, tb, pairs = [], [], []
+    seq = (('new', src, tn), ('base', base_src, tb))
+    for who, s, _ in seq:   # 몸풀기(셈 밖)
+        p = jg2_open(br, s, subj, PC, delay=delay, who=who)
+        try:
+            until(p, "() => window.__ewmH && window.__ewmH.t1 > 0 ? 1 : null", 60000)
+        finally:
+            p.close()
     for i in range(runs):
-        for who, s, arr in (('new', src, tn), ('base', base_src, tb)):
+        for who, s, arr in (seq if i % 4 in (0, 3) else seq[::-1]):   # ABBA
             p = jg2_open(br, s, subj, PC, delay=delay, who=who)
             try:
                 h = until(p, "() => window.__ewmH && window.__ewmH.t1 > 0 ? window.__ewmH : null", 60000)
@@ -1700,7 +1711,7 @@ def jg2_b2_first(br, src, subj, runs=3, delay=2000):
     first = all(a > 0 and b > 0 and a < b for a, b in pairs)
     lim = max(mb * 1.10, mb + 150)
     return T('JG2-B2', '%s 첫 화면 시각(기록 2초 늦춤) — 바탕 ±10%%(잡음 바닥 +150ms) 안 · 화면이 기록보다 먼저' % subj, first and mn <= lim,
-             {'새 판(ms)': tn, '바탕(ms)': tb, '중앙값': [mn, mb], '허용 상한(ms)': round(lim), '(첫 화면, 기록 옴)': pairs, '바탕 판': JGBASE})
+             {'새 판(ms)': tn, '바탕(ms)': tb, '중앙값': [mn, mb], '허용 상한(ms)': round(lim), '(첫 화면, 기록 옴)': pairs, '바탕 판': JGBASE, '차례': '몸풀기 2 + ABBA %d 회' % runs})
 
 
 def jg2_b2_wk(src):
