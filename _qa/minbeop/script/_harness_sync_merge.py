@@ -277,7 +277,7 @@ const KC=['ox_q_fix','ox_q_logic','ox_chap_history','ox_q_geunge','ox_q_reflinks
 const cnt=d=>KC.map(k=>Object.keys((d&&d[k])||{}).length).concat([nCells(d)]);
 const chip=()=>(document.getElementById('rec-chip')||{}).textContent||'';
 const showHome=()=>{ const h=document.getElementById('home-screen'), q=document.getElementById('quiz-screen'); if(h) h.classList.remove('hide'); if(q) q.classList.add('hide'); };
-const dashFix=()=>{ const b=[...document.querySelectorAll('#dashboard-container button')].find(x=>/✎ 정정/.test(x.textContent)); return b?b.textContent.trim():null; };
+const dashFix=()=>{ const b=[...document.querySelectorAll('#dashboard-container button, #fix-chip-slot button')].find(x=>/✎ 정정/.test(x.textContent)); return b?b.textContent.trim():null; };   /* ★ 2026-10-06 (_task_ox_home_tidy §A-3 · §D 2) — 정정 칩이 빠른 실행 줄(#fix-chip-slot)로 옮겨 감 · 옛 자리(#dashboard-container)도 그대로 찾음 */
 const hasFail=typeof recFail!=='undefined';
 say('판 = '+(hasFail?'NEW(recFail 있음)':'HEAD'));
 

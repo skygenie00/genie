@@ -125,7 +125,7 @@ async function G23(){
   await wait(250);
   const box=document.getElementById('q-box-Q9801');
   const tg=box?[...box.querySelectorAll('button[id^="tag-"]')]:[];
-  const emo=tg.map(b=>b.textContent.replace(/\s+\d+$/,'').trim());
+  const emo=tg.map(b=>{ const s=b.querySelector('svg[aria-label]'); return s?({'헷갈림':'🌀','페이크':'⚠️'}[s.getAttribute('aria-label')]||s.getAttribute('aria-label')):b.textContent.replace(/\s+\d+$/,'').trim(); });   /* ★ 2026-10-06 (_task_ox_home_tidy §A-7 · §D 2) — 헷갈림·페이크 단추는 SVG(aria-label) · 옛 이모지 자리로 읽음 */
   T('G23 카드 태그 단추 6 · 이모지 그대로(📍🌀⚠️💡🧠⭐)', tg.length===6&&J(emo)===J(['📍','🌀','⚠️','💡','🧠','⭐']), J(emo));
   const badCls=el=>el.className.split(/\s+/).filter(c=>/^rounded/.test(c)||c==='border'||(/^border-/.test(c)&&c!=='border-0')||(/^bg-/.test(c)&&c!=='bg-transparent')||/^shadow/.test(c));
   const bads=tg.map(badCls).filter(a=>a.length);

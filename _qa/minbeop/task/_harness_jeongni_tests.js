@@ -79,7 +79,7 @@ async function G3(){
   resetLS({});
   loadQuiz(); showHome(); closeAllWins();
   renderDashboard();
-  const jb=[...document.querySelectorAll('button[data-jn]')];
+  const jb=[...document.querySelectorAll('button[data-jn]:not(.trcc)')];   /* ★ 2026-10-06 (_task_ox_home_tidy §A-6) — 서랍 장 줄 📋 칩(.trcc.jn)은 빼고 셈 */
   const on=l=>{ const r=trow(l); return r?r.querySelector('button[data-jn]'):null; };
   const a=on(CH), b=on(CH7), c=on(CH2);
   T('G3 (작은 판) 📋 = 묶음 수 3(1.1 · 1.2 · 변리사 기출 한 해)', jb.length===3, jb.length);

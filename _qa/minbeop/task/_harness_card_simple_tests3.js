@@ -94,7 +94,7 @@ async function G16(){
 async function G17(){
   resetLS({}); loadQuiz(); showHome(); closeAllWins();
   renderDashboard();
-  const h2=()=>[...document.querySelectorAll('#dashboard-container h2')].map(h=>h.textContent.replace(/\s+/g,' ').trim());
+  const h2=()=>[...document.querySelectorAll('#dashboard-container h2')].map(h=>{ const c=h.cloneNode(true); c.querySelectorAll('[data-dfoldbtn]').forEach(e=>e.remove()); return c.textContent.replace(/\s+/g,' ').trim(); });   /* ★ 2026-10-06 (_task_ox_home_tidy §A-5) — 과목 이름 바로 뒤 [N] 접기 단추(h2 안)는 빼고 읽음 */
   T('G17 과목 제목에 📚 0 · 이 하네스 데이터 두 과목 = Ⅰ 민법총칙 · Ⅱ 변리사 기출', J(h2())===J(['Ⅰ 민법총칙','Ⅱ 변리사 기출']), J(h2()));
   quizData.length=0;
   ['민법총칙','물권법','채권총론','채권각론','미분별 문제'].forEach((s,i)=>quizData.push(Object.assign(JSON.parse(J(P.quiz[0])),{id:'QR'+i,subject:s})));

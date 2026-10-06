@@ -22,7 +22,7 @@ async function G4(){
   const want=[...chapUidsOf('민법총칙',CH),...chapUidsOf('민법총칙',CH7)];
   T('G4 행 수·차례 = chapUidsOf 전부(근거·태그·기록 없어도)', J(rows)===J(want)&&rows.length===5, J(rows)+' vs '+J(want));
   const R_=id=>w.querySelector('[data-jnrow="'+id+'"]');
-  const ic=id=>{ const s=R_(id).firstElementChild.querySelector('span.tracking-wide'); return s?s.textContent:''; };
+  const ic=id=>{ const s=R_(id).firstElementChild.querySelector('span.tracking-wide'); return s?[...s.childNodes].map(n=>(n.nodeType===1&&n.matches('svg[aria-label]'))?({'헷갈림':'🌀','페이크':'⚠️'}[n.getAttribute('aria-label')]||''):n.textContent).join(''):''; };   /* ★ 2026-10-06 (_task_ox_home_tidy §A-7) — 정리 창 페이크 아이콘은 SVG(aria-label) · 옛 이모지 자리로 읽음 */
   T('G4 태그 아이콘은 붙은 것만(⚠️⭐ · 💡🧠 · 없음 · 없음)', ic('Q9901')==='⚠️⭐'&&ic('Q9906')==='💡🧠'&&ic('Q9902')===''&&ic('Q9903')==='', J([ic('Q9901'),ic('Q9906'),ic('Q9902'),ic('Q9903')]));
   T('G4 🌀 아이콘 0 · 「마지막」 0', w.textContent.indexOf('🌀')<0&&w.textContent.indexOf('마지막')<0);
   T('G4 연결 근거 본문 0(Q9901 행에 「연결될 근거 글」 없음 · 칩만) · Q9903 행엔 제 근거', R_('Q9901').textContent.indexOf('연결될 근거 글')<0&&R_('Q9903').textContent.indexOf('🔗 1. 연결될 근거 글')>=0&&/🔗 Q9903/.test(R_('Q9901').firstElementChild.textContent));

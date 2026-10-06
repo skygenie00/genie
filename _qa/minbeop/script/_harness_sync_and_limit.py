@@ -500,7 +500,7 @@ async function G15(){
   T('G15 alert 는 안 뜬다', __ALERTS===a0, __ALERTS-a0);
 }
 const showHome=()=>{ const h=document.getElementById('home-screen'), q=document.getElementById('quiz-screen'); if(h) h.classList.remove('hide'); if(q) q.classList.add('hide'); };
-const dashFix=()=>{ const b=[...document.querySelectorAll('#dashboard-container button')].find(x=>/✎ 정정/.test(x.textContent)); return b?b.textContent.trim():null; };
+const dashFix=()=>{ const b=[...document.querySelectorAll('#dashboard-container button, #fix-chip-slot button')].find(x=>/✎ 정정/.test(x.textContent)); return b?b.textContent.trim():null; };   /* ★ 2026-10-06 (_task_ox_home_tidy §A-3 · §D 2) — 정정 칩이 빠른 실행 줄(#fix-chip-slot)로 옮겨 감 · 옛 자리(#dashboard-container)도 그대로 찾음 */
 async function G16(){
   const d={ox_q_fix:{F1:{a:'O',done:false}}}, u={'ox_q_fix|F1':100};
   use('g16', mk(d,u,{},{meta:{lastSync:100}}));
