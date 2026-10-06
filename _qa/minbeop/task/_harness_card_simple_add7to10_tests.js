@@ -82,7 +82,8 @@ async function G22(){
   T('G22 「↪ 그 문제 보기」 → 문항 팝업(oxwin-q-) · 비교 창(oxwin-cmp-) 0', !!w&&!document.getElementById('oxwin-cmp-Q9802'), 'q '+!!w+' · cmp '+!!document.getElementById('oxwin-cmp-Q9802'));
   if(!w){ closeAllWins(); showHome(); return; }
   const btns=[...w.querySelectorAll('button')].map(b=>b.textContent.trim());
-  T('G22 팝업 꼴 — 칩 줄(uid)·지문·qp-gg-box-·「정답·해설 보기」·「✏️ 연결」·「🃏」·「↪ 이 문제로 이동」', w.textContent.indexOf('카드 지문 Q9802')>=0&&w.textContent.indexOf('Q9802')>=0&&!!document.getElementById('qp-gg-box-Q9802')&&btns.indexOf('정답·해설 보기')>=0&&btns.indexOf('✏️ 연결')>=0&&btns.some(t=>t.indexOf('🃏')===0)&&btns.indexOf('↪ 이 문제로 이동')>=0, J(btns));
+  // 옛 줄(10/6 ox_gg_phone §A-4 · 지시서 §B-옛 — 단추 글자 「정답·해설 보기」 → 「정답·해설」 · 「🃏」 · 「↪ 이 문제로 이동」 은 그대로): T('G22 팝업 꼴 — 칩 줄(uid)·지문·qp-gg-box-·「정답·해설 보기」·「✏️ 연결」·「🃏」·「↪ 이 문제로 이동」', … &&btns.indexOf('정답·해설 보기')>=0&& …, J(btns));
+  T('G22 팝업 꼴 — 칩 줄(uid)·지문·qp-gg-box-·「정답·해설」·「✏️ 연결」·「🃏」·「↪ 이 문제로 이동」', w.textContent.indexOf('카드 지문 Q9802')>=0&&w.textContent.indexOf('Q9802')>=0&&!!document.getElementById('qp-gg-box-Q9802')&&btns.indexOf('정답·해설')>=0&&btns.indexOf('✏️ 연결')>=0&&btns.some(t=>t.indexOf('🃏')===0)&&btns.indexOf('↪ 이 문제로 이동')>=0, J(btns));
   T('G22 부제 「… 에서 열었습니다」 없음', w.textContent.indexOf('에서 열었습니다')<0);
   const ans=document.getElementById('qpop-ans-Q9802');
   T('G22 정답 글자는 누르기 전 안 보인다', !!ans&&ans.style.display==='none'&&w.innerText.indexOf('정답 X')<0, ans?ans.style.display:'없음');
