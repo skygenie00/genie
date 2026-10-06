@@ -8,6 +8,11 @@
     <style>
         body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
         .hide { display: none !important; }
+        /* ★ 10/6 시안 — 과목 카드 접기 [N]: 1 = 장 줄(1. 2. …)만 · 2 = 장 줄 + 그 밑 🃏·📋 칩 붙은 줄(묶음 첫 줄) · 0 = 다 펼침 · 머리 없는 장(한 줄짜리)은 그 줄이 장 줄 */
+        [data-dfold="1"] [data-dchap]:has([data-trchap]) [data-trrow],
+        [data-dfold="2"] [data-dchap]:has([data-trchap]) [data-trrow]:not(:has([data-jn])){display:none !important}
+        [data-dfold="1"] [data-dchap]{padding-top:6px;padding-bottom:6px}
+        [data-dfold="1"] [data-trchap]{margin-bottom:0 !important}
         input[type="radio"] { accent-color: #2563eb; width: 0.95rem; height: 0.95rem; cursor: pointer; }
         .ox-label { touch-action: manipulation; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -48,6 +53,10 @@
         .trch{display:flex;gap:5px;align-items:center;padding:4px 10px;cursor:pointer;
               font-weight:800;color:#374151;background:#f9fafb;margin-top:5px;white-space:nowrap;overflow:hidden}
         .trch .n{margin-left:auto;font-size:10px;color:#9ca3af;font-weight:700;flex:none}
+        .trch .trcc{flex:none;font-size:10px;font-weight:700;line-height:1;padding:2px 4px;border-radius:4px;border:1px solid #f5d0fe;background:#fdf4ff;color:#a21caf}
+        .trch .trcc.jn{border-color:#99f6e4;background:#f0fdfa;color:#0f766e}
+        #tree .trhead .trdf{font-size:12px;font-weight:800;color:#6b7280;cursor:pointer;padding:0 2px;user-select:none}
+        .trch>span:nth-child(2){min-width:0;overflow:hidden;text-overflow:ellipsis}   /* 긴 장 이름은 … 로 · 칩이 잘리지 않게 */
         .trch.cur{color:#1d4ed8}
         .trit{padding:3px 10px 3px 20px;cursor:pointer;border-left:3px solid transparent}
         .trit:hover{background:rgba(0,0,0,.04)}
@@ -204,8 +213,10 @@
         <div id="home-screen" class="bg-white rounded-2xl shadow-lg overflow-hidden">
             <!-- 슬림 헤더 (2026-08-17 개편) — 데이터·동기화 도구는 ⚙ 뒤로 -->
             <div class="bg-white px-4 py-3 border-b-2 border-blue-600 flex items-center gap-2 flex-wrap">
-                <h1 class="text-lg font-extrabold text-gray-900">📖 26민공연OX</h1>
-                <span id="data-label" class="text-[11px] font-bold text-gray-500"></span>
+                <span class="flex items-baseline gap-2 min-w-0" style="flex:1 1 auto">
+                <h1 class="text-lg font-extrabold text-gray-900 whitespace-nowrap shrink-0">📖 26민공연OX</h1>
+                <span id="data-label" class="text-[11px] font-bold text-gray-500 min-w-0 truncate"></span>
+                </span>
                 <span class="flex-1"></span>
                 <span id="newdata-chip" onclick="mbLoadNew()" title="서버에 새 문항이 올라왔다 — 눌러서 불러온다" class="text-[11px] font-extrabold text-teal-700 bg-teal-50 border border-teal-300 px-2 py-0.5 rounded cursor-pointer" style="display:none"></span>
                 <span id="exam-chip" onclick="loadExamSettings()" title="다음 시험까지 — zzikkaTT 의 settings.json 을 읽는다(앱에 날짜를 박지 않는다)" class="text-[11px] font-extrabold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded cursor-pointer" style="display:none"></span>
@@ -271,8 +282,10 @@
             <!-- 🗺 진행 히트맵 (2026-08-17 신설) — 지문 1개 = 칸 1개. 클릭하면 그 문제로 이동 -->
             <div class="bg-white px-4 py-2.5 border-b border-gray-200" id="hm-section">
                 <div class="flex flex-wrap items-center gap-2 mb-2">
-                    <span class="text-[11px] font-extrabold text-gray-600">🗺 진행 히트맵</span>
-                    <div id="hm-subjects" class="flex flex-wrap gap-1"></div>
+                    <span class="flex items-center gap-2 flex-nowrap whitespace-nowrap min-w-0">
+                    <span class="text-[11px] font-extrabold text-gray-600">히트맵</span>
+                    <div id="hm-subjects" class="flex flex-nowrap gap-1"></div>
+                    </span>
                     <span class="flex-1"></span>
                     <span id="hm-legend" class="text-[10px] font-bold text-gray-500 flex flex-wrap gap-x-2.5 gap-y-0.5"></span>
                     <button id="hm-toggle" onclick="toggleHeatmap()" class="text-[10px] text-gray-400 hover:text-gray-600 font-bold shrink-0">접기 ▲</button>
@@ -281,8 +294,7 @@
             </div>
 
             <!-- ⚡ 빠른 실행 (약점 · 덜약점) — 2026-08-17 신설 · 8/26 개편 -->
-            <div class="bg-white px-4 py-2.5 border-b border-gray-200 flex flex-wrap items-center gap-2">
-                <span class="text-[11px] font-extrabold text-gray-600 mr-1">⚡ 빠른 실행</span>
+            <div class="bg-white px-4 py-2.5 border-b border-gray-200 flex flex-nowrap items-center gap-2 whitespace-nowrap">
                 <button onclick="startWeakQueue()" class="text-[11px] bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-2.5 py-1 rounded font-bold transition" title="🔴 마지막 풀이가 오답이거나 🌀헷갈림 태그가 달린 지문. 여기서 맞히면 덜약점으로 넘어갑니다">
                     🔥 약점 <span id="weak-count" class="bg-white/70 px-1 rounded"></span>
                 </button>
@@ -290,9 +302,9 @@
                     🌤 덜약점 <span id="semi-count" class="bg-white/70 px-1 rounded"></span>
                 </button>
                 <!-- ★ 09-15 (_task_ox_card_simple_add4) 작은 필터 — 값 문자열은 옛 그대로(회독 열쇠) · 태그 필터와 「3번+ 틀림」은 한 값만 -->
-                <span class="ml-auto flex items-center gap-1">
-                    <span class="text-[10.5px] text-gray-500" style="font-size:10.5px">필터</span>
-                    <select id="review-filter" onchange="renderDashboard()" class="text-[11px] font-bold border border-gray-300 rounded px-2 py-1 bg-white">
+                <span class="ml-auto flex items-center gap-2">
+                <span class="relative inline-flex items-center text-[11px] font-bold text-gray-600 border border-gray-300 rounded px-2 py-1 bg-white cursor-pointer" title="필터">필터 ▾
+                    <select id="review-filter" onchange="renderDashboard()" aria-label="필터" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
                         <option value="all">필터 없음</option>
                         <option value="fake">⚠️ 페이크</option>
                         <option value="concept">💡 개념</option>
@@ -300,6 +312,8 @@
                         <option value="important">⭐ 중요</option>
                         <option value="wrong3">3번+ 틀림</option>
                     </select>
+                </span>
+                <span id="fix-chip-slot"></span>   <!-- ★ 10/6 시안 — 정정 칩 자리(renderDashboard 가 채움) -->
                 </span>
             </div>
 
@@ -914,21 +928,18 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             } finally { mbOmrBusy = false; }
         }
 
-        /* 엑셀의 메모·태그를 localStorage에 반영
-           overwrite=false → 보충만 (엑셀에서 켠 것만 켜고, 빈 메모는 건드리지 않음)
-           overwrite=true  → 엑셀 값 그대로 (엑셀에서 지운 태그·메모는 앱에서도 지워짐) */
+        /* 엑셀의 태그·연결을 localStorage에 반영
+           overwrite=false → 보충만 (엑셀에서 켠 것만 켬)
+           overwrite=true  → 엑셀 값 그대로 (엑셀에서 지운 태그·연결은 앱에서도 지워짐)
+           ★ 2026-10-06 (_task_ox_home_tidy §B) — 「메모」 「논리」 열은 안 읽는다(근거로 흡수 끝 · 앱이 안 씀) */
         function mergeExcelRecords(rows, overwrite) {
             const tags = JSON.parse(localStorage.getItem('ox_q_tags') || '{}');
-            const memos = JSON.parse(localStorage.getItem('ox_q_memos') || '{}');
-            const logics = JSON.parse(localStorage.getItem('ox_q_logic') || '{}');
             const links = JSON.parse(localStorage.getItem('ox_q_links') || '{}');
-            let tc = 0, mc = 0, lc = 0, kc = 0;
+            let tc = 0, kc = 0;
             for (const r of rows) {
                 const uid = String(r.uid || '').trim(); if (!uid) continue;
                 const y = v => String(v || '').trim().toUpperCase() === 'Y';
                 const f = y(r.페이크), c = y(r.개념), m = y(r.암기), i = y(r.중요);
-                const memo = String(r.메모 || '').trim();
-                const logic = String(r.논리 || '').trim();
                 /* 연결: 쉼표/공백 구분 uid 목록. 중복 제거하고 자기 자신은 버린다 */
                 const linkArr = String(r.연결 || '').split(/[,\s]+/).map(s => s.trim()).filter(s => s && s !== uid);
                 const linkUniq = Array.from(new Set(linkArr));
@@ -940,36 +951,27 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     const merged = Array.from(new Set(cur.concat(linkUniq)));
                     if (merged.length !== cur.length) { links[uid] = merged; kc++; }
                 }
-                if (overwrite) { if (logic) { logics[uid] = logic; lc++; } else if (logics[uid]) { delete logics[uid]; lc++; } }
-                else if (logic && !logics[uid]) { logics[uid] = logic; lc++; }
                 if (overwrite) {
                     if (f || c || m || i) { tags[uid] = { fake: f, concept: c, memo: m, important: i }; tc++; }
                     else if (tags[uid]) { delete tags[uid]; tc++; }
-                    if (memo) { memos[uid] = memo; mc++; }
-                    else if (memos[uid]) { delete memos[uid]; mc++; }
                 } else {
                     if (f || c || m || i) {
                         const t = tags[uid] || { fake: false, concept: false, memo: false, important: false };
                         if (f) t.fake = true; if (c) t.concept = true; if (m) t.memo = true; if (i) t.important = true;
                         tags[uid] = t; tc++;
                     }
-                    if (memo && !memos[uid]) { memos[uid] = memo; mc++; }
                 }
             }
             localStorage.setItem('ox_q_tags', JSON.stringify(tags));
-            localStorage.setItem('ox_q_memos', JSON.stringify(memos));
-            localStorage.setItem('ox_q_logic', JSON.stringify(logics));
             localStorage.setItem('ox_q_links', JSON.stringify(links)); useIdxDrop();
-            console.log(`엑셀 기록 ${overwrite ? '덮어쓰기' : '보충'}: 태그 ${tc} / 메모 ${mc} / 논리 ${lc} / 연결 ${kc}`);
+            console.log(`엑셀 기록 ${overwrite ? '덮어쓰기' : '보충'}: 태그 ${tc} / 연결 ${kc}`);
         }
 
-        /* 현재 데이터 + 앱에서 단 메모·태그를 엑셀로 저장 */
+        /* 현재 데이터 + 앱에서 단 태그·연결을 엑셀로 저장 · ★ 2026-10-06 (_task_ox_home_tidy §B) — 「메모」 「논리」 열 = 원본 행 그대로(열은 남김) */
         async function exportExcelFile() {
             const rows = (await dbGet('rows')) || [];
             if (!rows.length) { syncStatus('내보낼 데이터가 없습니다', 'err'); return; }
             const tags = JSON.parse(localStorage.getItem('ox_q_tags') || '{}');
-            const memos = JSON.parse(localStorage.getItem('ox_q_memos') || '{}');
-            const logics = JSON.parse(localStorage.getItem('ox_q_logic') || '{}');
             const links = JSON.parse(localStorage.getItem('ox_q_links') || '{}');
             const qtypes = loadQTypes();
             const out = rows.map(r => {
@@ -977,8 +979,6 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 const t = tags[uid] || {}; const o = Object.assign({}, r);
                 o.페이크 = t.fake ? 'Y' : ''; o.개념 = t.concept ? 'Y' : '';
                 o.암기 = t.memo ? 'Y' : ''; o.중요 = t.important ? 'Y' : (r.중요 || '');
-                if (memos[uid]) o.메모 = memos[uid];
-                if (Object.prototype.hasOwnProperty.call(logics, uid)) o.논리 = logics[uid];
                 /* 연결: 앱에서 편집한 값이 있으면 그것을, 없으면 엑셀 원본(r.연결)을 그대로 유지 */
                 if (Object.prototype.hasOwnProperty.call(links, uid)) o.연결 = (links[uid] || []).join(', ');
                 if (qtypes[uid]) o.유형 = qtypes[uid];   /* 직접 확정한 유형이 자동추출 초안을 덮는다 */
@@ -1054,132 +1054,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (n) console.log(`구버전 기록 ${n}건을 uid로 이식했습니다.`);
         }
 
-        /* ---------- 메모 → 근거 흡수 (2026-09-14 · _task_ox_memo_merge §B) ----------
-           `ox_q_memos[uid]`(문자열 하나)를 그 문항의 근거 목록 **맨 뒤에** 항목 하나로 붙인다(`ggAdd` 와 같은 꼴).
-           ★ 멱등의 열쇠는 `src:'memo'` 다 — 그 uid 에 이미 `src==='memo'` 항목이 있으면 건너뛴다.
-             기기별 표시키만으로 막으면 다른 기기가 옮긴 판이 동기화로 들어왔을 때 두 번 들어간다.
-           ⚠ 표시키 `ox_gg_memo_merged` 는 **기기별**(SYNC_KEYS 밖)이다. 켜져 있으면 다시 돌지 않는다 —
-             계속 돌면 옮긴 항목을 사람이 지워도 다음 시동에 되살아난다.
-           ⚠ `ox_q_memos` 는 **읽기만** 한다(지우면 묘비가 없어 병합이 되살린다 · 엑셀 `메모` 열이 그 값을 쓴다).
-           ⚠ 길이를 재지 않고 통째로 넣는다 — `GG_TMAX` 는 적을 때 거는 문턱이지 저장 꼴의 제약이 아니다.
-           ⚠ 메모 갈래 연결은 근거 갈래에 합집합으로 옮기고 메모 갈래를 비운다(`refPut` 안은 안 고친다).
-           dry=true 면 아무것도 안 쓰고 계획만 돌려준다. */
-        const GG_MERGE_KEY = 'ox_gg_memo_merged';
-        function ggMemoMergeOnce(dry) {
-            if (!dry && localStorage.getItem(GG_MERGE_KEY)) return null;
-            let memos = {};
-            try { memos = JSON.parse(localStorage.getItem('ox_q_memos') || '{}') || {}; } catch (e) { memos = {}; }
-            const out = { moved: [], skipped: [], over: [], links: [] };
-            Object.keys(memos).sort().forEach(uid => {
-                const text = String(memos[uid] == null ? '' : memos[uid]);
-                if (!text.trim()) return;
-                const list = ggOf(uid);
-                if (list.some(g => g && g.src === 'memo')) { out.skipped.push(uid); return; }
-                out.moved.push(uid);
-                if (text.length > GG_TMAX) out.over.push([uid, text.length]);
-                if (dry) return;
-                list.forEach((x, n) => { if (x) x.i = n + 1; });   /* ★ 09-15 (_task_ox_jeongni_popup_add3) — 같은 규칙: 이관받는 문항만 1부터 매긴 뒤 개수+1 */
-                list.push({ k: ggNewKey('g_' + uid + '_'),
-                            i: list.length + 1,
-                            t: text, ok: null, ts: Date.now(), cs: [], src: 'memo' });
-                ggSaveList(uid, list);
-            });
-            const rs = refStore();
-            Object.keys(rs).sort().forEach(uid => {
-                if (!refOf(uid, 'memo').length) return;
-                out.links.push(uid);
-                if (dry) return;
-                refPut(uid, [], refOf(uid, 'logic'), Array.from(new Set(refOf(uid, 'geunge').concat(refOf(uid, 'memo')))));
-            });
-            if (!dry) localStorage.setItem(GG_MERGE_KEY, JSON.stringify({ at: Date.now(), moved: out.moved.length, links: out.links.length }));
-            return out;
-        }
-        /* 시동 때 한 번 — `recBoot` 가 **첫 동기화가 끝난 뒤** 부른다(사용자 확정 9/14).
-           옮긴 것이 있으면 검색줄 수를 고치고 곧바로 한 번 더 동기화한다 — 옮긴 칸이 이 기기에만 오래 있으면
-           그사이 다른 기기가 같은 문항에 적은 것과 칸째로 부딪친다(칸 단위 최신 승).
-           ⚠ 그 동기화는 **force** 다 — 이관 도장이 직전 동기화의 lastSync 와 같은 ms 로 찍히면 recPending 이 0 이 되어
-             「올릴 것 없음」으로 건너뛰고, 그 뒤로 이 기기에서 다른 수정이 없으면 끝내 안 올라간다(9/14 헤드리스 실측). */
-        function ggMemoMergeBoot(hold) {
-            try {
-                const r = ggMemoMergeOnce();
-                if (!r || !(r.moved.length || r.links.length)) return false;
-                console.log('메모 → 근거 이관: 문항 ' + r.moved.length + ' · 연결 ' + r.links.length + (r.over.length ? ' · ' + GG_TMAX + '자 초과 ' + r.over.length : ''));
-                if (hold === true) return true;   /* ★ 09-15 (_task_ox_logic_merge §A-5) — ggMergeBoots 가 논리 흡수까지 마친 뒤 force 동기화를 한 번만 부른다 */
-                if (typeof refreshModeCounts === 'function') refreshModeCounts();
-                syncRecords(true);
-                return true;
-            } catch (e) { console.warn('메모 → 근거 이관 건너뜀:', e && e.message); return false; }
-        }
-
-        /* ---------- 논리 → 근거 흡수 (2026-09-15 · _task_ox_logic_merge §A) ----------
-           메모 흡수(`ggMemoMergeOnce`)를 그대로 본뜬다 — `ox_q_logic[uid]`(글 하나)를 그 문항의 근거 목록 **맨 뒤에** 항목 하나로 붙인다.
-           ★ 멱등의 열쇠는 `src:'logic'` 이다 — 그 uid 에 이미 `src==='logic'` 항목이 있으면 건너뛴다(다른 기기가 옮긴 판이 동기화로 들어와도 두 번 안 들어간다).
-           ⚠ 표시키 `ox_gg_logic_merged` 는 **기기별**(SYNC_KEYS 밖)이다. 켜져 있으면 다시 돌지 않는다(옮긴 항목을 사람이 지워도 다음 시동에 되살아나지 않게).
-           ⚠ `ox_q_logic` 은 **읽기만** 한다(지우면 묘비가 없어 병합이 되살린다 · 엑셀 `논리` 열이 그 값을 쓴다).
-             `excelLogic`(마스터 엑셀의 논리 열)은 옮기지 않는다 — 엑셀은 앱과 상관없이 그대로 둔다(사용자 9/15).
-           ⚠ 길이를 재지 않고 통째로 넣는다(`GG_TMAX` 는 적을 때 거는 문턱이다 · 넘은 것은 `over` 에 세기만 한다).
-           ⚠ 논리 갈래 연결은 근거 갈래에 합집합으로 옮기고 논리 갈래를 비운다(`refPut` 안은 안 고친다 · 메모 갈래는 그대로 둔다).
-           ★ 메모 때와 달리 근거 저장소를 **한 번 풀고 한 번 쓴다** — 9/15 기록의 1,041문항을 `ggSaveList` 로 하나씩 쓰면 문항마다 저장소 전체를
-             두 번 풀고 한 번 써서 시동이 멎는다. 한 번에 쓰니 자리가 모자라 던져도 반쯤 옮긴 판이 남지 않는다(표시키도 안 켜진다 → 다음 시동에 다시).
-           ⚠ 근거 저장소가 JSON 으로 안 풀리면 **던진다** — 빈 {} 로 받아 쓰면 망가진 저장소를 논리 항목만으로 덮는다.
-           dry=true 면 아무것도 안 쓰고 계획만 돌려준다 — { moved, skipped, over, links, had(근거가 이미 있던 문항) }. */
-        const GG_LOGIC_MERGE_KEY = 'ox_gg_logic_merged';
-        function ggLogicMergeOnce(dry) {
-            if (!dry && localStorage.getItem(GG_LOGIC_MERGE_KEY)) return null;
-            let logics = {};
-            try { logics = JSON.parse(localStorage.getItem('ox_q_logic') || '{}') || {}; } catch (e) { logics = {}; }
-            const out = { moved: [], skipped: [], over: [], links: [], had: [] };
-            const st = JSON.parse(localStorage.getItem(GG_KEY) || '{}');
-            if (!st || typeof st !== 'object' || Array.isArray(st)) throw new Error('근거 저장소 꼴이 아니다');
-            const ts = Date.now();
-            Object.keys(logics).sort().forEach(uid => {
-                const text = String(logics[uid] == null ? '' : logics[uid]);
-                if (!text.trim()) return;
-                const list = Array.isArray(st[uid]) ? st[uid] : [];
-                if (list.some(g => g && g.src === 'logic')) { out.skipped.push(uid); return; }
-                out.moved.push(uid);
-                if (list.length) out.had.push(uid);
-                if (text.length > GG_TMAX) out.over.push([uid, text.length]);
-                if (dry) return;
-                list.forEach((x, n) => { if (x) x.i = n + 1; });   /* 메모 흡수와 같은 규칙 — 이관받는 문항만 1부터 매긴 뒤 개수+1 */
-                list.push({ k: ggNewKey('g_' + uid + '_'),
-                            i: list.length + 1,
-                            t: text, ok: null, ts: ts, cs: [], src: 'logic' });
-                st[uid] = list;
-            });
-            if (!dry && out.moved.length) localStorage.setItem(GG_KEY, JSON.stringify(st));
-            const rs = refStore();
-            Object.keys(rs).sort().forEach(uid => {
-                if (!refOf(uid, 'logic').length) return;
-                out.links.push(uid);
-                if (dry) return;
-                refPut(uid, refOf(uid, 'memo'), [], Array.from(new Set(refOf(uid, 'geunge').concat(refOf(uid, 'logic')))));
-            });
-            if (!dry) localStorage.setItem(GG_LOGIC_MERGE_KEY, JSON.stringify({ at: Date.now(), moved: out.moved.length, links: out.links.length }));
-            return out;
-        }
-        /* 시동 때 한 번 — `ggMergeBoots` 가 `ggMemoMergeBoot` **바로 뒤에** 부른다(첫 동기화가 끝난 뒤 · 메모 흡수와 같은 까닭).
-           hold=true 면 옮긴 것이 있어도 동기화를 부르지 않고 true 만 돌려준다 — 동기화는 `ggMergeBoots` 가 한 번 부른다. */
-        function ggLogicMergeBoot(hold) {
-            try {
-                const r = ggLogicMergeOnce();
-                if (!r || !(r.moved.length || r.links.length)) return false;
-                console.log('논리 → 근거 이관: 문항 ' + r.moved.length + ' · 근거가 이미 있던 문항 ' + r.had.length + ' · 연결 ' + r.links.length + (r.over.length ? ' · ' + GG_TMAX + '자 초과 ' + r.over.length : ''));
-                if (hold === true) return true;
-                if (typeof refreshModeCounts === 'function') refreshModeCounts();
-                syncRecords(true);
-                return true;
-            } catch (e) { console.warn('논리 → 근거 이관 건너뜀:', e && e.message); return false; }
-        }
-        /* ★ 09-15 (_task_ox_logic_merge §A-5) — `recBoot` 의 첫 동기화 뒤 한 곳. 메모 → 논리 차례로 옮기고,
-           하나라도 옮겼으면 검색줄 수를 고치고 force 동기화를 **한 번** 부른다(둘이 따로 부르면 한 시동에 force 동기화가 두 번 난다). */
-        function ggMergeBoots() {
-            const a = ggMemoMergeBoot(true);
-            const b = ggLogicMergeBoot(true);
-            if (!(a || b)) return;
-            if (typeof refreshModeCounts === 'function') refreshModeCounts();
-            syncRecords(true);
-        }
+        /* ★ 2026-10-06 (_task_ox_home_tidy §B · 옛 merge_end v2 A1·A2) — 메모·논리 → 근거 흡수 블록(흡수 함수 넷 · 시동 묶음 하나 · 기기별 표시키 둘)과 recBoot 의 시동 부름을 걷었다. 흡수 끝(기록 42664d8 — 흡수 안 된 메모 0 · 논리 0 · 연결 memo·logic 갈래 0) · 남겨 두면 새 기기 첫 시동에 사람이 지운·고친 근거가 되살아난다(메모 11 · 논리 5). 원문 두 저장소는 SYNC_KEYS 에 남는다(앱은 안 읽음). */
 
         /* ---------- 시작 ---------- */
         async function bootData() {
@@ -1755,7 +1630,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const st = (typeof refStore === 'function') ? refStore() : {};
             for (const owner in st) {
                 const r = st[owner] || {};
-                ['geunge', 'memo', 'logic'].forEach(k => (Array.isArray(r[k]) ? r[k] : []).forEach(t => push(k, t, owner)));
+                ['geunge'].forEach(k => (Array.isArray(r[k]) ? r[k] : []).forEach(t => push(k, t, owner)));   /* ★ 2026-10-06 (_task_ox_home_tidy §B) — memo · logic 갈래는 흡수 때 비었다(기록 42664d8 · 315 문항 중 0) */
             }
             let links = {};
             try { links = JSON.parse(localStorage.getItem('ox_q_links') || '{}') || {}; } catch (e) { }
@@ -2215,10 +2090,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             recPaint();
             stampAll();
             clLoad();                                        /* ★ 2026-09-22 (_task_ox_claude_answers §A-2) — Claude 답 받기 · 앱 시작 한 번(토큰이 없어도 불러 실패를 한 번 알린다) */
-            /* ★ 2026-09-14 (_task_ox_memo_merge §B · 사용자 승인) — 메모 → 근거 이관은 **첫 동기화가 끝난 뒤** 한 번.
-               동기화 전에 옮기면 그 칸 도장이 「지금」으로 찍혀, 다른 기기가 그사이 같은 문항에 단 근거를 칸째로 덮는다.
-               토큰이 없거나 오프라인이어도 `syncRecords` 는 끝을 맺는다 — 실패해도 돌도록 두 갈래에 다 건다. */
-            syncRecords().then(ggMergeBoots, ggMergeBoots);   /* ★ 09-15 (_task_ox_logic_merge §A-5) — 메모 → 논리 흡수를 한 곳에서 · 옮긴 게 있으면 force 동기화 한 번 */
+            syncRecords();
             loadExamSettings();
             try { if (typeof ewmLoad === 'function') ewmLoad(); } catch (e) { }   /* ★ exam_wrong_mark — 시험 기록(exam/꼬까.json) 읽기만 · 첫 화면 뒤 한 번 · 기다리지 않는다 */
             mbCheckNew();                                    /* 📥 새 문항 알림 — 딱지만 받는다 */
@@ -2667,17 +2539,26 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             }
             return entries;
         }
+        /* ★ 10/6 시안 — 헷갈림 = 노란 회오리 · 페이크 = 파란 세모 안 빨간 f (첫 화면 회독 칩 · 문제풀이 태그 · 기출뷰 회독 · 정리 창 같은 꼴) */
+        const IC_CONF = '<svg viewBox="0 0 16 16" width="1em" height="1em" style="display:inline-block;vertical-align:-0.15em" aria-label="헷갈림"><path d="M8 8a1 1 0 0 1 2 0a2 2 0 0 1-4 0a3 3 0 0 1 6 0a4 4 0 0 1-8 0a5 5 0 0 1 10 0" fill="none" stroke="#EAB308" stroke-width="1.7" stroke-linecap="round"/></svg>';
+        const IC_FAKE = '<svg viewBox="0 0 16 16" width="1em" height="1em" style="display:inline-block;vertical-align:-0.15em" aria-label="페이크"><path d="M8 1.6 15 14.4H1Z" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5" stroke-linejoin="round"/><text x="8" y="13.2" text-anchor="middle" font-size="9.5" font-weight="900" font-family="Arial,Helvetica,sans-serif" fill="#DC2626">f</text></svg>';
+        /* ★ 10/6 시안 — 과목 카드 접기: [0] 다 펼침 → [1] 장 줄만 → [2] 장 줄 + 🃏·📋 칩 줄 → [0] · 기기별(ox_dash_fold · 동기화 밖) */
+        function dashFoldOf(s) { try { return (JSON.parse(localStorage.getItem('ox_dash_fold') || '{}') || {})[s] || 0; } catch (e) { return 0; } }
+        function dashFold(btn, s) {
+            const card = btn.closest('[data-dfold]'); if (!card) return;
+            const lv = ((+card.getAttribute('data-dfold') || 0) + 1) % 3;
+            card.setAttribute('data-dfold', lv); btn.textContent = '[' + lv + ']';
+            try { const m = JSON.parse(localStorage.getItem('ox_dash_fold') || '{}') || {}; if (lv) m[s] = lv; else delete m[s]; localStorage.setItem('ox_dash_fold', JSON.stringify(m)); } catch (e) {}
+        }
         function renderDashboard() {
             const container = document.getElementById('dashboard-container');
             container.innerHTML = '';
 
             /* §4 정정 입구 — N = done 이 아닌 것(아직 엑셀에 안 옮긴 것) · 0이면 숨긴다 */
             const _fixN = qFixCount();
-            if (_fixN) {
-                const bar = document.createElement('div');
-                bar.className = 'mb-3 flex justify-end';
-                bar.innerHTML = `<button onclick="showFixList()" class="text-[12px] font-bold text-amber-900 bg-amber-50 border border-amber-300 px-2.5 py-1 rounded hover:bg-amber-100 transition" title="정답·해설을 고친 것 모아 보기(엑셀은 사람이 직접 반영)">✎ 정정 ${_fixN}</button>`;
-                container.appendChild(bar);
+            {   /* ★ 10/6 시안 — 정정 칩은 약점·필터 줄 오른쪽 끝(옛 자리 = 목록 위 오른쪽 한 줄) */
+                const _slot = document.getElementById('fix-chip-slot');
+                if (_slot) _slot.innerHTML = _fixN ? `<button onclick="showFixList()" class="text-[11px] font-bold text-amber-900 bg-amber-50 border border-amber-300 px-2 py-1 rounded hover:bg-amber-100 transition" title="정답·해설을 고친 것 모아 보기(엑셀은 사람이 직접 반영)">✎ 정정 ${_fixN}</button>` : '';
             }
             
             const sourceFilter = document.getElementById('source-filter').value;
@@ -2692,10 +2573,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             try { _mcAll = JSON.parse(localStorage.getItem('ox_mem_cards') || '{}'); } catch (e) { _mcAll = {}; }
             
             quizData.forEach(q => {
-                if (!trFilterPass(q, sourceFilter, reviewFilter, qHistory, qTags)) return;   /* ★ 서랍 판 — 판정은 옛 줄 그대로, 자리만 옮겼다 */
+                if (!trFilterPass(q, sourceFilter, reviewFilter, qHistory, qTags)) return;
+                const _hmOne = (typeof hmSubject === 'string' && hmSubject !== 'all');   /* 히트맵 과목 칩 = 목록도 그 과목만(변리사 기출 묶음은 뺌) */
+                if (_hmOne && q.subject !== hmSubject) return;   /* ★ 서랍 판 — 판정은 옛 줄 그대로, 자리만 옮겼다 */
 
                 // 기출 문항은 «변리사 기출» 가상 과목에도 함께 노출 (같은 문항 id 재사용)
-                if (q.examYear) {
+                if (q.examYear && !_hmOne) {
                     const es = '변리사 기출';
                     // 병합 문항은 여러 (연도·회차)에 모두 노출
                     const metas = (q.examMeta && q.examMeta.length) ? q.examMeta : [{ year: q.examYear, round: q.examRound }];
@@ -2768,10 +2651,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 for (const labs of jnGroups.values()) jnFirst.add(labs.find(l => !JN_SUFFIX_RE.test(l)) || labs[0]);
                 const roman = (() => { const i = _romanAll.indexOf(subject); return i < 0 ? '' : (ROMAN_NUM[i] || String(i + 1)); })();   /* ★ add3 · add6 — 숫자 색은 제목 글자와 같은 검정(text-gray-800) */
                 let subjectHtml = `
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div class="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" data-dfold="${dashFoldOf(subject)}">
+                        <div class="bg-gray-50 px-4 py-1 border-b border-gray-200">
                             <h2 class="text-base font-extrabold text-gray-800 flex items-center gap-1.5">
-                                ${roman ? `<span class="text-gray-800 font-black">${roman}</span> ` : ''}${subject}
+                                ${roman ? `<span class="text-gray-800 font-black">${roman}</span> ` : ''}${subject}${subject === '변리사 기출' ? '' : `<button type="button" data-dfoldbtn="1" onclick="dashFold(this,'${escAttr(subject)}')" title="접기 — 누를 때마다 [1] 장 줄만 → [2] 장 줄 + 🃏·📋 칩 줄 → [0] 다 펼침" class="text-[13px] font-extrabold text-gray-500 bg-transparent border-0 p-0 leading-none cursor-pointer">[${dashFoldOf(subject)}]</button>`}
                             </h2>
                         </div>
                         <div class="divide-y divide-gray-100">
@@ -2785,7 +2668,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     const flat = entries.length === 1 && entries[0][1].sub === chapMain;
 
                     subjectHtml += `
-                        <div class="px-4 py-3">
+                        <div class="px-4 py-3" data-dchap="1">
                             ${flat ? '' : `
                             <div class="flex items-baseline gap-2 mb-1.5" data-trchap="${escAttr(subject)}|||${escAttr(chapMain)}">
                                 <span class="font-extrabold text-gray-800 text-sm">${chapMain}</span>
@@ -2812,8 +2695,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                                 const wrongN = h.marks ? Object.values(h.marks).filter(v => v === false).length : (h.total - h.score);
                                 // 🌀·⚠ 는 회독 저장 시점 스냅샷만 표시 — 스냅샷이 없는 옛 기록에 현재 태그를 섞어 보여주면
                                 // 「그 회독 당시 상태」가 아니게 되므로 생략한다 (🔴 는 marks 에서 복원 가능)
-                                const confPart = (typeof h.confuse === 'number') ? `🌀${h.confuse} ` : '';
-                                const fakePart = (typeof h.fake === 'number') ? `⚠${h.fake} ` : '';
+                                const confPart = (typeof h.confuse === 'number') ? `${IC_CONF}${h.confuse} ` : '';
+                                const fakePart = (typeof h.fake === 'number') ? `${IC_FAKE}${h.fake} ` : '';
                                 /* ★ 09-16 (_task_ox_card_simple_add11 §1) — 틀린 수도 X 와 같은 빨강 span 안(add9 는 X 만) · 🌀·⚠ 와 「/전체」는 그대로 */
                                 return `
                                 <button onclick="openCompareModal('${subject}', '${esc}')" title="${hi + 1}회독 (${h.date || ''}) · 클릭하면 회독별 비교 / 기록 삭제"
@@ -3134,8 +3017,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                             </div>
                             
                             <div class="flex flex-wrap gap-1 ml-auto">
-                                <button onclick="toggleTag('${item.id}', 'confuse')" id="tag-confuse-${item.id}" title="헷갈림" class="${TAGCLS} ${confuseStyle}" style="${TAGSTY}${confuseStyle ? ';' + TAG_OFF_STY : ''}">🌀</button>
-                                <button onclick="toggleTag('${item.id}', 'fake')" id="tag-fake-${item.id}" title="페이크" class="${TAGCLS} ${fakeStyle}" style="${TAGSTY}${fakeStyle ? ';' + TAG_OFF_STY : ''}">⚠️</button>
+                                <button onclick="toggleTag('${item.id}', 'confuse')" id="tag-confuse-${item.id}" title="헷갈림" class="${TAGCLS} ${confuseStyle}" style="${TAGSTY}${confuseStyle ? ';' + TAG_OFF_STY : ''}">${IC_CONF}</button>
+                                <button onclick="toggleTag('${item.id}', 'fake')" id="tag-fake-${item.id}" title="페이크" class="${TAGCLS} ${fakeStyle}" style="${TAGSTY}${fakeStyle ? ';' + TAG_OFF_STY : ''}">${IC_FAKE}</button>
                                 <button onclick="toggleTag('${item.id}', 'concept')" id="tag-concept-${item.id}" title="개념" class="${TAGCLS} ${conceptStyle}" style="${TAGSTY}${conceptStyle ? ';' + TAG_OFF_STY : ''}">💡</button>
                                 <button onclick="toggleTag('${item.id}', 'memo')" id="tag-memo-${item.id}" title="암기" class="${TAGCLS} ${memoStyle}" style="${TAGSTY}${memoStyle ? ';' + TAG_OFF_STY : ''}">🧠</button>
                                 ${inExamView ? '' : `<button onclick="toggleTag('${item.id}', 'important')" id="tag-important-${item.id}" title="중요" class="${TAGCLS} ${importantStyle}" style="${TAGSTY}${importantStyle ? ';' + TAG_OFF_STY : ''}">⭐</button>`}
@@ -3847,7 +3730,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            고유 ID 를 외우거나 그 문제로 찾아가지 않아도 되게, 입력칸 옆에서 바로 검색해 넣는다.
            찾는 대상 — uid · 문제 번호 · 본문 · 출처 · 단원 */
         /* ★ `kind` 가 없으면 지금과 **한 글자도 다르지 않게** 군다(옛 부르는 자리를 안 고친다).
-           kind='memo'  : 메모가 비지 않은 문항만 · 메모 글까지 검색
+           (★ 2026-10-06 _task_ox_home_tidy §B — kind='memo'(메모 글 검색) 갈래는 걷었다 · 부르는 자리 0)
            kind='geunge': 근거가 비지 않은 문항만 · 근거 글까지 검색.
              ★ 2026-09-12 add3 — 누르면 **그 문항의 근거가 이 문항에 걸린다**(`addRefId`).
                한동안 `jumpFromSearch` 로 그 문항에 가게 했었는데 연결로 바뀌었다.
@@ -3861,11 +3744,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const term = inp.value.trim();
             if (term.length < 1) { box.classList.add('hide'); box.innerHTML = ''; return; }
             const low = term.toLowerCase();
-            const memos = kind ? JSON.parse(localStorage.getItem('ox_q_memos') || '{}') : null;
             const gst = kind === 'geunge' ? ggStore() : null;   /* ★ 09-15 (_task_ox_card_simple_add10) — 근거 저장소는 한 번만 푼다(옛 판은 문항마다 ggTextOf → ggOf → JSON.parse · 글자 하나에 5,548번) */
             const ggL = q => (gst && Array.isArray(gst[q.id])) ? gst[q.id] : [];
-            const extraOf = q => kind === 'memo' ? String(memos[q.id] || '')
-                               : kind === 'geunge' ? ggTextOfList(ggL(q)) : '';
+            const extraOf = q => kind === 'geunge' ? ggTextOfList(ggL(q)) : '';
             const already = kind
                 ? refPicked(ownerId, kind).map(x => x.toUpperCase())
                 : String((document.getElementById(`${pre}link-input-${ownerId}`) || {}).value || '')
@@ -4091,7 +3972,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         let searchMode = 'q';          // 'q' = 문제 지문, 'm' = 근거·댓글(옛 「메모」 자리 · 값은 그대로) · ★ 09-15 (_task_ox_logic_merge §B-3) 논리 'l' 갈래는 걷었다
 
         /* 근거가 하나라도 있는 문항 수 — 이름은 옛 것 그대로 둔다(부르는 자리를 안 늘린다).
-           ★ 2026-09-14 메모를 근거로 흡수했다. `ox_q_memos` 는 더 세지 않는다(이관 뒤에는 근거 쪽에 있다).
+           ★ 2026-09-14 메모를 근거로 흡수했다. 메모 저장소는 더 세지 않는다(이관 뒤에는 근거 쪽에 있다).
            ⚠ 댓글만 있는 문항은 따로 세지 않는다 — 댓글은 항목 안 `cs` 에 산다(항목이 없으면 댓글도 없다). */
         function memoCount() {
             const st = ggStore();
@@ -4139,7 +4020,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                ★ 09-15 (_task_ox_logic_merge §B-4) — 논리 연결 칸을 걷어 이 함수를 부르는 곳은 근거 갈래뿐이다(숨은 칸에 담던 메모·논리 갈래를 뺐다) */
             if (kind === 'geunge') return ggRefAdd(ownerId, uid, sc);
         }
-        /* 건 uid 의 근거/메모 글(★ 09-15 _task_ox_logic_merge §B-4 — 논리 갈래는 걷었다). 지금 데이터에 없으면 null (부르는 쪽이 문구를 고른다) */
+        /* 건 uid 의 근거 글(★ 09-15 _task_ox_logic_merge §B-4 — 논리 갈래는 걷었다 · ★ 10-06 _task_ox_home_tidy §B — 메모 갈래도 걷었다 · 근거 아니면 빈 글). 지금 데이터에 없으면 null (부르는 쪽이 문구를 고른다) */
         function refTextOf(uid, kind) {
             const q = quizData.find(x => String(x.id) === String(uid));
             if (!q) return null;
@@ -4148,8 +4029,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 return (typeof ggOf === 'function' ? ggOf(uid) : [])
                     .map(g => ((g && g.i) ? g.i + '. ' : '') + String((g && g.t) || '')).join('\n');
             }
-            const memos = JSON.parse(localStorage.getItem('ox_q_memos') || '{}');
-            return String(memos[uid] || '');
+            return '';
         }
         function modeLabel(kind) { return '🔗 근거'; }   /* ★ 09-15 (_task_ox_logic_merge §B-3) — 논리 'l' 갈래는 걷었다 */
 
@@ -5735,11 +5615,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         /* 창에서 끊기 — 갈래마다 저장 자리가 다르다. 끊은 뒤 색인을 버리고 그 창과 그 카드를 다시 그린다. */
         function useUnlink(kind, me, target) {
             if (kind === 'geunge') { ggRefDel(me, target); }
-            else if (kind === 'memo' || kind === 'logic') {
-                const keep = refOf(me, kind).filter(x => String(x).toUpperCase() !== String(target).toUpperCase());
-                refPut(me, kind === 'memo' ? keep : refOf(me, 'memo'), kind === 'logic' ? keep : refOf(me, 'logic'), refOf(me, 'geunge'));
-                if (typeof refreshCard === 'function') refreshCard(me);
-            } else {
+            else {   /* ★ 2026-10-06 (_task_ox_home_tidy §B) — memo · logic 가지 걷음(부르는 kind = geunge 뿐 · 그 밖 = 문제 연결) */
                 let links = {};
                 try { links = JSON.parse(localStorage.getItem('ox_q_links') || '{}') || {}; } catch (e) { }
                 links[me] = (links[me] || []).filter(x => String(x).toUpperCase() !== String(target).toUpperCase());
@@ -10132,7 +10008,7 @@ function toggleHeatmap() {
     try { localStorage.setItem('ox_hm_fold', fold ? '1' : ''); } catch (e) {}
     if (!fold) renderHeatmap();
 }
-function hmSetSubject(s) { hmSubject = s; renderHeatmap(); }
+function hmSetSubject(s) { hmSubject = s; renderHeatmap(); renderDashboard(); }
 function renderHeatmap() {
     const sec = document.getElementById('hm-section');
     const cv = document.getElementById('hm-canvas');
@@ -10871,8 +10747,8 @@ function chapUidsOf(subject, chapLabel) {
     return data.filter(q => q.subject === subject &&
         ((q.subChapter ? q.chapter + ' > ' + q.subChapter : q.chapter) === chapLabel)).map(q => q.id);
 }
-async function openChapCards(subject, chapLabel) {
-    const ids = chapUidsOf(subject, chapLabel);
+async function openChapCards(subject, chapLabel, idsIn) {
+    const ids = idsIn || chapUidsOf(subject, chapLabel);   /* ★ 10/6 시안 — 서랍 장 줄 🃏 는 장 전체 uid 를 넘긴다 */
     const key = 'mcchap-' + String(subject + '|' + chapLabel).replace(/[^A-Za-z0-9가-힣]/g, '_');
     oxWinOpen(key, '🃏 암기노트 · ' + escHtml(chapLabel), escHtml(subject), '<div style="padding:14px;font-size:12px;color:#6b7280">불러오는 중</div>', 600);
     const body = oxWinBody(key);
@@ -10948,7 +10824,7 @@ function jnRowHTML(q) {
     const id = q.id;
     let tg = {};
     try { tg = (JSON.parse(localStorage.getItem('ox_q_tags') || '{}') || {})[id] || {}; } catch (e) { tg = {}; }
-    const icons = [['fake', '⚠️'], ['concept', '💡'], ['memo', '🧠'], ['important', '⭐']].filter(x => tg[x[0]]).map(x => x[1]).join('');   /* 🌀 은 안 그린다 — 기록 아랫줄 △ 가 맡는다 */
+    const icons = [['fake', IC_FAKE], ['concept', '💡'], ['memo', '🧠'], ['important', '⭐']].filter(x => tg[x[0]]).map(x => x[1]).join('');   /* 🌀 은 안 그린다 — 기록 아랫줄 △ 가 맡는다 */
     const txt = refTextOf(id, 'geunge');
     const qText = String(q.q || ''), eText = String(q.exp || '');
     /* add1 — 켜짐: 카드와 같은 data-mark·data-text + markHTML(안에서 이스케이프한다 · escHtml 로 또 감싸지 않는다) · 꺼짐: escHtml 평문 · data-mark 없음 */
@@ -11076,7 +10952,7 @@ function openJeongni(subject, gkey, btn) {
     const _jr = jnBodyHTML(subject, labels), html = _jr.html;   /* ★ add3 §B — 거른 행 · 부제 「거름 …」 */
     const key = 'jn-' + String(subject + '|' + gkey).replace(/[^A-Za-z0-9가-힣]/g, '_');
     const _ey = jnExamYear(subject, labels[0]);   /* ★ 2026-09-26 §F-2 — 「변리사 기출 · 40문항 · 188지문」 */
-    const w = oxWinOpen(key, '📋 정리 · ' + escHtml(jnNameOf(labels[0])), jnSubOf(subject, labels, _jr), html, 600, { resize: true, sizeKey: 'jn' });
+    const w = oxWinOpen(key, '📋 정리 · ' + escHtml((btn && btn.getAttribute && btn.getAttribute('data-jntitle')) || jnNameOf(labels[0])), jnSubOf(subject, labels, _jr), html, 600, { resize: true, sizeKey: 'jn' });
     if (!w) return;
     w.setAttribute('data-jnsubject', subject);
     w.setAttribute('data-jnlabels', labels.join('|||'));
@@ -11251,6 +11127,7 @@ function trBuild(focus) {
 
     head.innerHTML = S.order.map(s =>
         `<button class="${s === subj ? 'on' : ''}" onclick="trPickSubj('${trEsc(s).replace(/'/g, "\\'")}')">${trEsc(s)}</button>`).join('')
+        + `<span class="trdf" role="button" title="접기 — 누를 때마다 [1] 장 줄만 → [2] 장 줄 + 묶음 첫 줄(🃏·📋 줄) → [0] 다 펼침" onclick="trDFold('${trEsc(subj).replace(/'/g, "\\'")}')">[${trDFoldOf(subj)}]</span>`   /* ★ 10/6 시안 — 서랍 접기 [N] */
         + (onQuiz ? `<button class="trnow" onclick="trFocus()" title="지금 푸는 줄로 되돌아간다">지금 자리로</button>` : '');
 
     const chFold = trObj(TR_CH);
@@ -11263,17 +11140,21 @@ function trBuild(focus) {
 
     const chEnts = Object.entries(chapters);
     if (subj === '변리사 기출') exvYearSort(chEnts);   /* ★ add3 §A — 첫 화면과 한 함수(최신 해부터) · 다른 과목은 목차 차례 그대로 */
+    const _dl = trDFoldOf(subj), _jnF = new Set();   /* ★ 10/6 시안 — 서랍 [N]: [2] = 묶음(jnKeyOf) 첫 줄 = 첫 화면 📋 줄과 같은 규칙 */
+    { const g = new Map(); chEnts.forEach(([cm, rws]) => Object.entries(rws).forEach(([lb, r]) => { const k = jnKeyOf(r.sub, lb); if (!g.has(k)) g.set(k, []); g.get(k).push(lb); }));
+      for (const labs of g.values()) _jnF.add(labs.find(l => !JN_SUFFIX_RE.test(l)) || labs[0]); }
     for (const [chapMain, rows] of chEnts) {
         const ents = Object.entries(rows);
         const ck = subj + '|||' + chapMain;
-        const folded = !!chFold[ck];
+        const folded = _dl === 1 ? true : !!chFold[ck];
         const cTot = ents.reduce((n, e) => n + e[1].idsF.length, 0);
         const hasCur = onQuiz && ents.some(e => `${subj}|||${e[0]}` === curRow);
         html += `<div class="trch${hasCur ? ' cur' : ''}" data-trck="${trEsc(ck)}" onclick="trChFold('${trEsc(ck).replace(/'/g, "\\'")}')">`
-             +  `<span>${folded ? '▸' : '▾'}</span><span>${trEsc(chapMain)}</span><span class="n">${cTot}</span>${subj === '변리사 기출' ? '' : ewmNHtml(ewmCountTxt(ents.flatMap(e => e[1].idsF)))}</div>`;   /* ★ ewm_list M1 — 장 머리(그 장 아래 합) · 변리사 기출 = 줄에만 */
+             +  `<span>${folded ? '▸' : '▾'}</span><span>${trEsc(chapMain)}</span><span class="n">${cTot}</span>${trChChips(subj, chapMain, ents)}${subj === '변리사 기출' ? '' : ewmNHtml(ewmCountTxt(ents.flatMap(e => e[1].idsF)))}</div>`;   /* ★ ewm_list M1 — 장 머리(그 장 아래 합) · 변리사 기출 = 줄에만 */
         if (folded) { nLine += ents.length; nQ += cTot; continue; }
         for (const [label, r] of ents) {
             nLine++; nQ += r.idsF.length;
+            if (_dl === 2 && !_jnF.has(label)) continue;   /* ★ 10/6 시안 [2] — 묶음 첫 줄만 */
             const key = subj + '|||' + label;
             const off = r.idsF.length === 0;
             const isCur = (key === curRow);
@@ -11352,6 +11233,16 @@ function trChapOf(chapters, label) {
     return '';
 }
 function trPickSubj(s) { trLSet(TR_SUBJ, s); trBuild(); }
+/* ★ 10/6 시안 — 서랍 접기 [N](과목마다 · 기기별 ox_tr_dfold) · 장 줄 🃏 암기노트 · 📋 정리 칩(장 전체) */
+function trDFoldOf(s) { try { return (JSON.parse(localStorage.getItem('ox_tr_dfold') || '{}') || {})[s] || 0; } catch (e) { return 0; } }
+function trDFold(s) { let m = {}; try { m = JSON.parse(localStorage.getItem('ox_tr_dfold') || '{}') || {}; } catch (e) { } const lv = ((m[s] || 0) + 1) % 3; if (lv) m[s] = lv; else delete m[s]; try { localStorage.setItem('ox_tr_dfold', JSON.stringify(m)); } catch (e) { } trBuild(); }
+function trChIds(s, c) { return s === '변리사 기출' ? chapUidsOf(s, c) : quizData.filter(q => q.subject === s && q.chapter === c).map(q => q.id); }   /* 기출 = 그 해·회 문항(첫 화면 🃏 와 같은 함수) */
+function trChChips(subj, chapMain, ents) {
+    const n = mcTotalOf(trChIds(subj, chapMain));
+    const gk = subj === '변리사 기출' ? jnKeyOf(chapMain, chapMain) : 'ch' + ((/^\d+/.exec(String(chapMain)) || [chapMain])[0]);   /* 기출 = 첫 화면 📋 와 같은 열쇠(해) */
+    return `<button type="button" class="trcc" data-s="${trEsc(subj)}" data-c="${trEsc(chapMain)}" style="opacity:${n ? 1 : .55}" title="이 장의 암기노트" onclick="event.stopPropagation();openChapCards(this.dataset.s,this.dataset.c,trChIds(this.dataset.s,this.dataset.c))">🃏${n ? ' ' + n : ''}</button>`
+        + `<button type="button" class="trcc jn" data-s="${trEsc(subj)}" data-g="${trEsc(gk)}" data-jn="${trEsc(ents.map(e => e[0]).join('|||'))}" data-jntitle="${trEsc(chapMain)}" title="이 장 정리" onclick="event.stopPropagation();openJeongni(this.dataset.s,this.dataset.g,this)">📋</button>`;
+}
 function trChFold(ck) { const f = trObj(TR_CH); if (f[ck]) delete f[ck]; else f[ck] = 1; trLSet(TR_CH, JSON.stringify(f)); trBuild(); }
 function trAttPick(key, i) { trAtt[key] = (trAtt[key] === i) ? -1 : i; trBuild(); }
 
@@ -11434,19 +11325,19 @@ function trFold(on) {
 function trGripWire(dr, g, o) {
     let d = null;
     g.addEventListener('pointerdown', e => {
-        d = { x: e.clientX, w: dr.getBoundingClientRect().width, moved: false };
+        d = { x: e.clientX, w: dr.getBoundingClientRect().width, moved: false, touch: e.pointerType !== 'mouse' };   /* ★ 10/6 시안 ② — 손가락·펜은 끌기 문턱 10px */
         try { g.setPointerCapture(e.pointerId); } catch (_) {}
         e.preventDefault();
     }, { passive: false });
     g.addEventListener('pointermove', e => {
         if (!d) return;
         const dx = e.clientX - d.x;
-        if (Math.abs(dx) >= 4) d.moved = true;
+        if (Math.abs(dx) >= (d.touch ? 10 : 4)) d.moved = true;
         if (d.moved && !(o.folded && o.folded())) o.setW(d.w + dx);
     });
     const up = () => { if (!d) return; const was = d; d = null;
         if (!was.moved) { o.onTap(); return; }
-        if (o.folded && o.folded()) return;
+        if (o.folded && o.folded()) { o.onTap(); return; }   /* ★ 10/6 시안 ① — 접혀 있으면 미끄러져도 떼면 연다 */
         o.onDrop(Math.round(dr.getBoundingClientRect().width)); };
     g.addEventListener('pointerup', up);
     g.addEventListener('pointercancel', up);
@@ -12143,7 +12034,7 @@ function exvDashRight(subject, chapLabel, chapHistory) {
         let bot = '';
         if (c) {
             const wrongN = c.marks ? Object.values(c.marks).filter(v => v === false).length : (c.total - c.score);
-            bot = (typeof c.confuse === 'number' ? '🌀' + c.confuse + ' ' : '') + (typeof c.fake === 'number' ? '⚠' + c.fake + ' ' : '') + `<span class="exv-dx">X${wrongN}</span> /${c.total}`;
+            bot = (typeof c.confuse === 'number' ? IC_CONF + c.confuse + ' ' : '') + (typeof c.fake === 'number' ? IC_FAKE + c.fake + ' ' : '') + `<span class="exv-dx">X${wrongN}</span> /${c.total}`;
         }
         h += `<button type="button" onclick="event.stopPropagation();openCompareModal('${escAttr(subject)}','${esc}')" title="${i + 1}회독${x ? ' · 시험지 ' + escHtml(x.date || '') : ''}${c ? ' · 지문 ' + escHtml(c.date || '') : ''}" class="exv-dround">`
             + `<span>${i + 1}회독</span><span class="exv-dlines">${top ? '<span>' + top + '</span>' : ''}${bot ? '<span class="exv-dbot">' + bot + '</span>' : ''}</span></button>`;
