@@ -81,6 +81,7 @@
         .gg-on{background:#fff5f5 !important;border-left:3px solid #f0a0a0 !important}
         .gg-on > div{background:transparent !important}
         .gg-on .ggb-t{color:#c94f4f !important}
+        .ggb-t, [id*="gg-ein-"]{tab-size:2;-moz-tab-size:2}
         .gg-on-dash{background:#fff5f5;border-left:3px dashed #f0a0a0;color:#c94f4f;border-radius:6px;padding:2px 6px}
         /* 원문자 — 테두리만 굵은 빨강. **채우지 않는다.** ggOkCls 의 틀림/맞음 색은 그대로 두고 그 위에 겹친다. */
         .ggnum-on{border-width:2.5px !important;border-style:solid !important;border-color:#e57373 !important}
@@ -4743,16 +4744,18 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         function ggPanelHTML(uid, g, sc = '') {
             /* ★ 2026-09-16 (§B) — 머리줄 맨 앞에 「!」 · 켜지면 판이 연한 빨강 + 왼쪽 빨간 실선 */
             return `<div id="${sc}gg-pan-${uid}-${g.k}" data-gbbox="${escAttr(uid)}|${escAttr(g.k)}" class="hide mt-1.5 border border-slate-300 rounded-lg bg-slate-50/40 overflow-hidden${g.bang ? ' gg-on' : ''}">
-                <div class="flex items-center gap-2 px-2.5 py-1.5 border-b border-gray-100 bg-gray-50">
-                    ${ggBangHTML(uid, g, sc)}
-                    <span id="${sc}gg-t-${uid}-${g.k}" class="ggb-t flex-1 text-[12.5px] text-gray-800 whitespace-pre-wrap">${escHtml(g.t || '')}</span>
+                <div class="flex flex-wrap items-start gap-x-2 gap-y-1 px-2.5 py-1.5 border-b border-gray-100 bg-gray-50">
+                    <span class="flex items-start gap-2" style="flex:1 1 18rem;min-width:0">${ggBangHTML(uid, g, sc)}
+                    <span id="${sc}gg-t-${uid}-${g.k}" class="ggb-t flex-1 min-w-0 text-[12.5px] text-gray-800 whitespace-pre-wrap">${escHtml(g.t || '')}</span></span>
+                    <span class="ml-auto flex items-center gap-2 whitespace-nowrap">
                     <span class="text-[10.5px] font-bold text-slate-500 whitespace-nowrap">${ggOkWord(g.ok)} · ${ggMD(g.ts)}</span>
                     <button type="button" onclick="ggEdit('${uid}','${g.k}'${ggScA(sc)})" class="text-[11px] font-bold text-blue-600 hover:underline">고치기</button>
                     <button type="button" onclick="ggDel('${uid}','${g.k}'${ggScA(sc)})" class="text-[11px] font-bold text-red-700 hover:underline">지우기</button>
+                    </span>
                 </div>
-                <div id="${sc}gg-edit-${uid}-${g.k}" class="hide flex gap-1.5 px-2.5 py-1.5 border-b border-gray-100">
+                <div id="${sc}gg-edit-${uid}-${g.k}" class="hide flex flex-wrap items-start justify-end gap-1.5 px-2.5 py-1.5 border-b border-gray-100">
                     <textarea id="${sc}gg-ein-${uid}-${g.k}" rows="1" autocomplete="off"
-                        onkeydown="ggEditKey(event,'${uid}','${g.k}'${ggScA(sc)})" oninput="ggFit(this)" style="resize:none;overflow:hidden"
+                        onkeydown="ggEditKey(event,'${uid}','${g.k}'${ggScA(sc)})" oninput="ggFit(this)" style="resize:none;overflow:hidden;flex:1 1 18rem;min-width:0"
                         class="flex-1 border border-blue-300 rounded-lg px-2 py-1 text-[12.5px] outline-none focus:border-blue-500">${escHtml(g.t || '')}</textarea>
                     <button type="button" onclick="ggEditSave('${uid}','${g.k}'${ggScA(sc)})" class="text-[11px] font-bold text-white bg-blue-600 border border-blue-600 rounded-md px-2.5 py-1">저장</button>
                     <button type="button" onclick="ggEdit('${uid}','${g.k}'${ggScA(sc)})" class="text-[11px] font-bold text-slate-600 bg-white border border-slate-300 rounded-md px-2.5 py-1">취소</button>
@@ -10428,7 +10431,7 @@ function qPopToggleAns(id, btn) {
     if (!el) return;
     const on = el.style.display === 'none';
     el.style.display = on ? 'block' : 'none';
-    btn.textContent = on ? '정답·해설 숨기기' : '정답·해설 보기';
+    btn.textContent = '정답·해설';
 }
 function openQPopup(id) {
     const q = (typeof quizData !== 'undefined' ? quizData : []).find(x => x.id === id);
@@ -10453,12 +10456,12 @@ function openQPopup(id) {
         + '<div style="font-size:12px;line-height:1.6;color:#374151;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:9px;white-space:pre-wrap">' + escHtml(String(q.exp || '해설 없음')) + '</div>'
         + '</div>'
         + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;padding-top:9px;border-top:1px dashed #e5e7eb">'
-        + '<button onclick="qPopToggleAns(\'' + id + '\',this)" style="font-size:11.5px;font-weight:700;color:#4f46e5;background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;padding:3px 9px;cursor:pointer">정답·해설 보기</button>'
+        + '<button onclick="qPopToggleAns(\'' + id + '\',this)" style="font-size:11.5px;font-weight:700;color:#4f46e5;background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;padding:3px 9px;cursor:pointer">정답·해설</button>'
         + (same.length ? '<button onclick="showRelated(\'' + id + '\',\'same\')" style="font-size:11.5px;font-weight:700;color:#0f766e;background:#f0fdfa;border:1px solid #99f6e4;border-radius:6px;padding:3px 9px;cursor:pointer">🔗 판 ' + same.length + '</button>' : '')
         + '<span data-lkchips="' + id + '" style="display:contents">' + myLinkChipHTML(q, true) + '</span>'   /* ★ 09-15 (_task_ox_card_simple_add7) — 「↩링크N」「↩백링크N」(카드와 같은 글자) */
         + clBtnHTML(id, true)   /* ★ 2026-09-22 (_task_ox_claude_answers §B-1) — 「✏️ 연결」 바로 앞 · 글자만 */
         + '<button onclick="event.stopPropagation();lwOpen(\'' + id + '\',event)" style="font-size:11.5px;font-weight:700;color:#374151;background:#fff;border:1px solid #d1d5db;border-radius:6px;padding:3px 9px;cursor:pointer">✏️ 연결</button>'   /* ★ add8 — 유사문제 연결 칸(옛 비교 창 「✏️ 연결」 · id 는 qp- 접두사) */
-        + '<button onclick="openMemCard(\'' + id + '\')" style="font-size:11.5px;font-weight:700;color:#a21caf;background:#fdf4ff;border:1px solid #f5d0fe;border-radius:6px;padding:3px 9px;cursor:pointer">🃏 암기카드 ' + (cards || '') + '</button>'
+        + '<button onclick="openMemCard(\'' + id + '\')" style="font-size:11.5px;font-weight:700;color:#a21caf;background:#fdf4ff;border:1px solid #f5d0fe;border-radius:6px;padding:3px 9px;cursor:pointer" title="암기카드">' + mcChipInner(id) + '</button>'
         + '<span style="flex:1"></span>'
         + '<button class="qpgo" onclick="oxWinClose(\'' + key + '\');jumpFromSearch(\'' + id + '\')" style="font-size:12px;font-weight:700;color:#1d4ed8;background:none;border:0;padding:0;cursor:pointer">↪ 이동</button>'   /* ★ 2026-09-27 (_task_ox_linkwin §A-2) — 글자만 · 자리·동작 그대로 */
         + '</div>'
