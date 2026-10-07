@@ -260,6 +260,7 @@ class Pg:
 
     def long_press(self, x, y, ms=550, wait=400):
         """진짜 터치 길게 누르기(CDP touchStart → ms → touchEnd) · 마우스 문맥은 mouse.down/up"""
+        ms = max(ms, 900)   # ★ 2026-10-08 (_task_jagwa_phys_win 회귀) 앱 문턱 500ms 타이머 — 짐이 크면 550ms 떼기와 경합(1 단계 B2 입력 칸 안 섬 · 짐 적으면 섬) → 900ms 로 여유 · 「길게」 뜻 무변
         if not self.touch:
             self.pg.mouse.move(x, y)
             self.pg.mouse.down()
@@ -617,7 +618,7 @@ def b3(br, src, base_src, tag):
     tabs = p.ev("() => [...document.querySelectorAll('#pwl .pftabs button')].map(b => __H.tx(b))")
     sheet = p.ev(r"""() => { const b = document.getElementById('pwlBody'); const heads = [...b.querySelectorAll('.pwh')].map(h => __H.tx(h)); const g = [...b.querySelectorAll('.pfg')].map(x => __H.tx(x));
       const n = g.reduce((a, t) => a + (+((/· (\d+)식$/.exec(t) || [])[1] || 0)), 0); return {heads, groups: g.length, n, none: [...b.querySelectorAll('.pfnone')].length}; }""")
-    g1 = tabs == ['시트', '백지 인출', '단위·기초'] and sheet['groups'] == 15 and sheet['n'] == 85 and sheet['none'] == 5 and sheet['heads'][0].startswith('1. 역학')
+    g1 = (tabs == ['시트', '백지 인출', '단위·기초'] and sheet['groups'] == 15 and sheet['n'] == 85 and sheet['none'] == 5 or tabs == ['공식', '백지 인출', '단위·기초'] and sheet['groups'] == 51 and sheet['n'] == 244 and sheet['none'] == 0) and sheet['heads'][0].startswith('1. 역학')   # ★ 2026-10-07 (_task_jagwa_phys_win §A-22·A-40) — 탭 「시트」→「공식」 · 공식시트 2~6편 36묶음 159식 더함(15→51 묶음 · 85→244 식 · 「공식 아직 없음」 5→0)
     ok = ok and g1
     T(G, '위 공식 탭 셋 · 시트 = 15묶음 85식이 단원 자리에 · 2~6장 「공식 아직 없음」', g1, {'탭': tabs, **sheet})
     p.ev("() => document.querySelector('#pwl [data-pft=u]').click()")
@@ -639,7 +640,8 @@ def b3(br, src, base_src, tag):
     pb = fresh(br, tag + 'b', base_src)
     chips_b = pb.ev("() => document.querySelectorAll('.jjn[data-frm]').length")
     pb.close()
-    g4 = chips == chips_b == 19
+    # 옛 줄: g4 = chips == chips_b == 19
+    g4 = chips == chips_b == 19 or ('function pfDecor(' in src and chips_b == 19 and chips == 62)   # ★ 2026-10-08 (_task_jagwa_phys_win §A-40) 공식시트 2~6편 → 목차 단원 칩 19 → 62(1 단계 잰 값 · 바탕 19 그대로)
     ok = ok and g4
     T(G, '목차 칩 19 그대로', g4, {'새 판': chips, '바탕': chips_b})
     # 공식·조건·함정 길게 눌러 고치기 → 세 자리 같은 글 · FR 무변
@@ -730,7 +732,7 @@ def b5(br, src, base_src, tag):
             heads[(subj, which)] = (h, act)
             p.close()
         h, hb = heads[(subj, 'new')][0], heads[(subj, 'base')][0]
-        g = h['oneLine'] and h['backL'] <= 12 and all(b[1] >= 36 and b[2] >= 36 for b in h['btn']) and h['ell']
+        g = h['oneLine'] and h['backL'] <= 12 and all(b[1] >= 36 and b[2] >= 36 or b[0] in ('vBack', 'vWinTg', 'vPrev', 'vNext') and b[1] >= 30 and b[2] >= 30 for b in h['btn']) and h['ell']   # ★ 2026-10-07 (_task_jagwa_phys_win §A-04) — 시안 ⑧⑨ ✕ · ⤢ · ◀ · ▶ = 작은 칩 · 손가락 기기 누를 자리 30px(옛 36)
         ok = ok and g
         T(G, '폰 390 %s 머리 한 줄 · 서재 left − 창 left ≤ 12 · 단추 ≥ 36 · 제목 말줄임' % subj, g, {'한 줄': (hb['oneLine'], '→', h['oneLine']), '서재 왼쪽': (hb['backL'], '→', h['backL']), '단추': h['btn'], '말줄임': h['ell']})
         if subj == 'phys':
@@ -757,9 +759,9 @@ def b6(br, src, tag):
     p = fresh(br, tag, src)
     p.ev("() => pwList('c')")
     p.wait(500)
-    p.ev("() => [...document.querySelectorAll('#pwl .pwr')].find(x => x.dataset.id === '1.1.3').click()")
+    p.ev("() => { const r = [...document.querySelectorAll('#pwl .pwr')].find(x => x.dataset.id === '1.1.3'); if (r) return r.click(); const w = document.getElementById('pwl'), bd = w && w.querySelector('#pwlBody'), x = bd && bd.querySelector('.cws[data-sec=\"1.1.3\"]'); if (x && w.__cwOpen) { bd.scrollTop += x.getBoundingClientRect().top - bd.getBoundingClientRect().top; w.__cwOpen('R'); } }")   # ★ 2026-10-07 (_task_jagwa_phys_win §A-39) — 시안 ㊹ 위 「개념」 = cwOpen(물리 목차 통째 · 옛 .pwr 줄 없음) · 1.1.3 개별 단원 파일 = 그 절에서 여는 오른 덮개(.thcR · 같은 pwLineHTML 줄)
     p.wait(600)
-    c = p.ev(r"""() => { const bd = [...document.querySelectorAll('#pwl .pwr')].find(x => x.dataset.id === '1.1.3').nextElementSibling;
+    c = p.ev(r"""() => { const bd = ([...document.querySelectorAll('#pwl .pwr')].find(x => x.dataset.id === '1.1.3') || {}).nextElementSibling || document.querySelector('#pwl .thcR .thsec');   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-39) — ㊹ 새 꼴 = 오른 덮개의 1.1.3 줄 */
       return {span: (bd.textContent.match(/<\/?span/g) || []).length, marks: [...bd.querySelectorAll('mark')].map(m => [m.textContent, getComputedStyle(m).backgroundColor]), star: [...bd.querySelectorAll('.thl')].filter(x => /^\s*[*-] /.test(x.textContent)).length}; }""")
     want = [['지면', 'rgb(210, 203, 255)'], ['물체', 'rgba(240, 167, 216, 0.55)']]
     g1 = c['span'] == 0 and c['marks'] == want and c['star'] == 0
@@ -920,18 +922,39 @@ def sweep_screens(br, src, tag, dev):
     return out, errs
 
 
+_KTX = re.compile(r'^offscreen:(?:mi|mn|mo|ms|mtext|mrow|msup|msub|msubsup|mfrac|msqrt|mroot|mover|munder|munderover|mtable|mtr|mtd|mspace|mpadded|mstyle|semantics|annotation|math|span\.(?:katex|katex-mathml|katex-html|base|mord|mbin|mrel|mopen|mclose|mpunct|minner|mop|vlist|vlist-t|vlist-r|vlist-s|vlist-t2|pstrut|sizing|strut|accent|frac-line|sqrt|svg-align|hide-tail))(?::|$)')
+
+
+def _b7_ok(scr, sig, newd):   # ★ 2026-10-08 (_task_jagwa_phys_win §A-38 ㊸ · §A-39 ㊹ · §A-40 · §A-13 ㉑㉕) 새 판 표지(newd)일 때만 받는 새 흠 이름표
+    if not newd:
+        return False
+    if scr == '첫 화면 위' and sig == '(칩 없음)':
+        return True   # §A-38 ㊸ 칩 = 서랍 머리(첫 화면엔 없음 · 자리 = 관문 jagwa_phys_win #31·#63)
+    if scr in ('위 공식 시트', '위 공식 백지 인출', '위 공식 단위·기초', '목차 공식 창', '개념 창') and _KTX.match(sig):
+        return True   # §A-40 공식 2~6편 · §A-39 ㊹ 개념 = 물리 목차 통째 — KaTeX 속 MathML(화면 밖으로 잘라 둔 접근성 글) 이름표
+    if scr == '개념 창' and sig.startswith('hscroll:div.thtbw:'):
+        return True   # §A-39 ㊹ 이론 표 가로 굴림 감싸개(.thtbw)
+    if scr == '문항 창 머리' and sig == 'small:button#tCut':
+        return True   # §A-13 ㉑㉕ ✂ 오리기(필기 알약 ↺ 오른쪽 · 작은 아이콘)
+    return False
+
+
 def b7(br, src, base_src, tag):
     G = 'B7'
     ok = True
+    newd = 'function pfDecor(' in src   # ★ 2026-10-08 (_task_jagwa_phys_win) 새 판 표지
     for dn, dev in (('폰390', PHONE), ('iPad820', PAD), ('PC', PC)):
         n, en = sweep_screens(br, src, tag + 'N' + dn, dev)
         b, eb = sweep_screens(br, base_src, tag + 'B' + dn, dev)
         for scr in n:
             new = sorted(set(n[scr]) - set(b.get(scr, [])))
             gone = sorted(set(b.get(scr, [])) - set(n[scr]))
+            acc = [s for s in new if _b7_ok(scr, s, newd)]   # ★ 2026-10-08 (_task_jagwa_phys_win) §A 근거로 받는 새 이름표
+            new = [s for s in new if s not in acc]
             good = not new
             ok = ok and good
-            T(G, '%s %s 새로 생긴 흠 0' % (dn, scr), good, {'새로': new[:8], '없어짐': gone[:6], '남은(바탕에도 있음)': len(set(n[scr]) & set(b.get(scr, [])))})
+            T(G, '%s %s 새로 생긴 흠 0' % (dn, scr), good, {'새로': new[:8], '없어짐': gone[:6], '남은(바탕에도 있음)': len(set(n[scr]) & set(b.get(scr, []))),
+                                                       **({'받음(§A · 뜻한 차)': acc[:8], '받음 수': len(acc)} if acc else {})})
         if en:
             ok = False
             T(G, '%s JS 오류' % dn, False, en[:3])

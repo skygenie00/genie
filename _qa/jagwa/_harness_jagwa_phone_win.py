@@ -379,14 +379,40 @@ def g4(br, eng):
 
 
 # ── 7 · 8 · 9 [공식]·[개념] · 다 팝업 · 그림 ──
+def _nd_ok(n):   # ★ 2026-10-07 (_task_jagwa_phys_win §A-38 ㊸) 새 판: 폰 칩 = 서랍 머리(.ndpw)에 「공식」「개념」 차례 · 첫 화면 접기 줄엔 없음(자리는 관문 jagwa_phys_win #63)
+    d = n.get('서랍 칩') or {}
+    return bool(n.get('새 설계')) and d.get('nd') == ['공식', '개념'] and d.get('first') == 0
+
+
+def _cw_ok(n):   # ★ 2026-10-07 (_task_jagwa_phys_win §A-39 ㊹) 새 판: 위 「개념」 = cwOpen(물리 목차 통째 + 밀기 덮개) — 창이 서고 절 수 = THEORY 절 수 · 첫 절 「0」(관문 #34 와 같은 뼈대)
+    cw = n.get('개념 cwin') or {}
+    return bool(n.get('새 설계')) and bool(cw) and cw.get('n', 0) > 0 and cw.get('n') == cw.get('total') and cw.get('sec0') == '0'
+
+
+def _cw_note(n):
+    return {'새 설계(§A-39 ㊹ cwOpen)': n.get('개념 cwin'),
+            '옛 칸': '옛 개념 목록(UNITS 51파일 · 블록 수 칩 · 다 팝업 길)이 없어짐 — 새 꼴(밀기 덮개 · 개별 파일 · 절 굴림)은 관문 jagwa_phys_win #34~37 이 잰다'}
+
+
 def g7(br, eng):
     def f(q):
         out = {'head': q.ev("()=>__W.head()")}
+        # ★ 2026-10-07 (_task_jagwa_phys_win §A-38 ㊸ · §A-39 ㊹㊺) 새 판 표지(서랍 머리 칩 .ndpw · cwOpen · pfDecor): 폰 칩이 첫 화면에서 서랍 머리로 감(서랍은 문항 창과 같이 서고 접힌 채 시작) → 칩 대신 pwList 로 바로 연다 · 옛 판은 옛 길 그대로
+        out['새 설계'] = q.ev("()=>typeof cwOpen==='function'&&typeof pfDecor==='function'&&!!document.querySelector('.ndpw')")
+        if out['새 설계']:
+            out['서랍 칩'] = q.ev("()=>({nd:[...document.querySelectorAll('.ndpw .pwchip.ph')].map(__W.tx),first:document.querySelectorAll('#fFold .pwchip').length})")
         c = q.ev("()=>__W.chip('공식')")
         out['공식 칩'] = c
-        if c:
-            q.press(c, 900); out['공식'] = q.ev("()=>__W.list()")
-            if str((out['공식'] or {}).get('title') or '').startswith('📐 공식 · 공식 시트'):   # ★ 합치기(10/1) — physphone A-3 공식 시트: 첫 묶음 줄(.pfg)을 연다
+        if c or out['새 설계']:
+            # 옛 줄: q.press(c, 900); out['공식'] = q.ev("()=>__W.list()")
+            if c:
+                q.press(c, 900)
+            else:
+                q.ev("()=>pwList('f')"); q.wait(900)
+            out['공식'] = q.ev("()=>__W.list()")
+            out['공식 pfw'] = q.ev("()=>!!document.querySelector('#pwl.pfw')")
+            # 옛 줄: if str((out['공식'] or {}).get('title') or '').startswith('📐 공식 · 공식 시트'):
+            if str((out['공식'] or {}).get('title') or '').startswith('📐 공식 · 공식 시트') or out['공식 pfw']:   # ★ 합치기(10/1) — physphone A-3 공식 시트: 첫 묶음 줄(.pfg)을 연다 · ★ 2026-10-07 (_task_jagwa_phys_win §A-39 ㊺) pfDecor 가 머리 글을 걷음 → #pwl.pfw 로도 가른다
                 q.press(q.ev("()=>{const r=document.querySelector('#pwl .pwr.pfg');return r?__W.hit(r):null}"), 1200)
                 out['공식 묶음 0'] = q.ev("()=>{const r=document.querySelector('#pwl .pwr.pfg');const b=r&&r.nextElementSibling;return b?{open:!b.classList.contains('hide'),tri:__W.tx(r.querySelector('.tri')),rows:b.querySelectorAll('.frmrow').length,katex:b.querySelectorAll('.katex').length,groups:document.querySelectorAll('#pwl .pwr.pfg').length,frm:(typeof FRM!=='undefined')?FRM.length:-1}:null}")
                 q.press(q.ev("()=>{const r=document.querySelector('#pwl .pwr.pfg');return r?__W.hit(r):null}"), 600)   # 접어 둔다(뒤 칸 무변)
@@ -394,6 +420,9 @@ def g7(br, eng):
                 q.press(q.ev("()=>__W.rowAt('1.1.1')"), 1200); out['공식 1.1.1'] = q.ev("()=>__W.rowBody('1.1.1')")
         c2 = q.ev("()=>__W.chip('개념')")
         out['개념 칩'] = c2
+        if not c2 and out['새 설계']:   # ★ 2026-10-07 (_task_jagwa_phys_win §A-39 ㊹) 위 「개념」 = cwOpen · 옛 개념 목록 길은 없음 → 새 꼴 뼈대만 잰다(나머지는 관문 #34~37)
+            q.ev("()=>pwList('c')"); q.wait(1200)
+            out['개념 cwin'] = q.ev("()=>{const b=document.getElementById('pwl');if(!b||!b.classList.contains('cwin'))return null;const c=[...b.querySelectorAll('#pwlBody .cws')];return {n:c.length,total:(typeof THEORY!=='undefined'&&THEORY.sec)?THEORY.sec.length:-1,sec0:c[0]?c[0].dataset.sec:null,head:__W.tx(b.querySelector('.bplh'))}}")
         if c2:
             q.press(c2, 900); out['개념'] = q.ev("()=>__W.list()")
             q.press(q.ev("()=>__W.rowAt('1.1.1')"), 1500); out['개념 1.1.1'] = q.ev("()=>__W.rowBody('1.1.1')")
@@ -416,11 +445,11 @@ def g7(br, eng):
     n, b = r['NEW'], r['BASE']
     fr = n['head']['foldR'] or {}
     ch = n['head']['chips']
-    T('7', '%s 폰 칩 둘 「공식」「개념」 — ▾ 바로 오른쪽(같은 줄 · 차례)' % eng, [c['t'] for c in ch] == ['공식', '개념'] and all(abs(c['r']['y'] - fr.get('y', -99)) <= 4 and c['r']['x'] > fr.get('x', 999) for c in ch), {'▾': fr, '칩': ch})
+    T('7', '%s 폰 칩 둘 「공식」「개념」 — ▾ 바로 오른쪽(같은 줄 · 차례)' % eng, _nd_ok(n) or [c['t'] for c in ch] == ['공식', '개념'] and all(abs(c['r']['y'] - fr.get('y', -99)) <= 4 and c['r']['x'] > fr.get('x', 999) for c in ch), {'▾': fr, '칩': ch, **({'서랍 칩(§A-38 ㊸ · 자리 = 관문 #63)': n.get('서랍 칩')} if n.get('새 설계') else {})})
     T('7-헛', '%s 헛잣대 바탕 — 칩 없음' % eng, not b['head']['chips'] and not b.get('공식 칩'), b['head']['chips'])
     L = n.get('공식') or {}
     # ★ 합치기(10/1 하위 에이전트 C) — physphone A-3(97883ef): 물리 위 「공식」 = 공식 시트(FRM 묶음) · 창 자리·크기는 같음 → 공식 시트면 그 꼴로 잰다(옛 목록 창이면 옛 잣대 그대로)
-    sheet = str(L.get('title') or '').startswith('📐 공식 · 공식 시트')
+    sheet = str(L.get('title') or '').startswith('📐 공식 · 공식 시트') or bool(n.get('공식 pfw'))   # ★ 2026-10-07 (_task_jagwa_phys_win §A-39 ㊺) pfDecor 가 머리 글을 걷음 → #pwl.pfw 로도 가른다
     g0 = n.get('공식 묶음 0') or {}
     rect_ok = bool(L.get('rect')) and abs(L['rect']['w'] - 374) <= 1 and abs(L['rect']['h'] - 608) <= 1 and abs(L['rect']['x'] - 8) <= 1
     T('7', '%s [공식] 목록 창 — 머리 「📐 공식 · 전체 · 물리 목차 51단원」 · 51 줄 · 폭 374 · 높이 72%%(608) · 좌 8' % eng,
@@ -433,18 +462,18 @@ def g7(br, eng):
     C = n.get('개념') or {}
     nt = {x['id']: x for x in (C.get('rows') or [])}
     T('7', '%s [개념] 목록 창 — 「💡 개념 · 전체 · 볼트 물리 폴더 51파일」 · 51 줄 · 1.1.2·3.1.3·6.1.3 세모 없음(빈 파일)' % eng,
-      C.get('title') == '💡 개념 · 전체 · 볼트 물리 폴더 51파일' and len(nt) == 51 and all(nt.get(k, {}).get('tri') == '' and nt[k]['none'] for k in ('1.1.2', '3.1.3', '6.1.3')) and nt.get('1.1.1', {}).get('tri') in ('▸', '▾'), {'머리': C.get('title'), '빈': [nt.get(k) for k in ('1.1.2', '3.1.3', '6.1.3')], '편': C.get('heads')})
+      _cw_ok(n) or C.get('title') == '💡 개념 · 전체 · 볼트 물리 폴더 51파일' and len(nt) == 51 and all(nt.get(k, {}).get('tri') == '' and nt[k]['none'] for k in ('1.1.2', '3.1.3', '6.1.3')) and nt.get('1.1.1', {}).get('tri') in ('▸', '▾'), {'머리': C.get('title'), '빈': [nt.get(k) for k in ('1.1.2', '3.1.3', '6.1.3')], '편': C.get('heads')})
     cb = n.get('개념 1.1.1') or {}
-    T('7', '%s [개념] 1.1.1 펼침 — 블록 줄 오른쪽 「5 O2」「1 O1」(기록 사본 기준)' % eng, [x.replace(' ', '') for x in (cb.get('cnt') or [])] == ['5O2', '1O1'], cb)
+    T('7', '%s [개념] 1.1.1 펼침 — 블록 줄 오른쪽 「5 O2」「1 O1」(기록 사본 기준)' % eng, _cw_ok(n) or [x.replace(' ', '') for x in (cb.get('cnt') or [])] == ['5O2', '1O1'], cb if not _cw_ok(n) else _cw_note(n))   # ★ 2026-10-07 (_task_jagwa_phys_win §A-39 ㊹) 옛 개념 목록 블록 수 칩 길 없음
     g = n.get('그림') or {}
-    T('9', '%s [개념] 다 펼침 — 그림 %s 장 깨짐 0 · 새 14 장 보임' % (eng, g.get('n')), g.get('n', 0) >= 68 and not g.get('bad') and g.get('new14') == 14, g)
+    T('9', '%s [개념] 다 펼침 — 그림 %s 장 깨짐 0 · 새 14 장 보임' % (eng, g.get('n')), _cw_ok(n) or g.get('n', 0) >= 68 and not g.get('bad') and g.get('new14') == 14, g if not _cw_ok(n) else _cw_note(n))   # ★ 2026-10-07 (_task_jagwa_phys_win §A-39 ㊹) 옛 개념 목록 다 펼침 길 없음
     p6 = n.get('문제 6') or {}
     sh = [x['id'] for x in (p6.get('sheets') or [])]
     vz = (p6.get('view') or {}).get('z', 0)
     T('8', '%s 다 팝업 — [개념] → 1.1.1 「5 O2」 → 개념 창 → 문제 6 누름 → 문제 창 맨 위(z %s > 곁창) · 목록 창(#pwl)·개념 창 DOM 남음' % (eng, vz),
-      p6.get('VNO') == 6 and not (p6.get('view') or {}).get('hide') and 'pwl' in sh and 'sh-conceptView' in sh and all(vz > x['z'] for x in (p6.get('sheets') or [])), p6)
+      _cw_ok(n) or p6.get('VNO') == 6 and not (p6.get('view') or {}).get('hide') and 'pwl' in sh and 'sh-conceptView' in sh and all(vz > x['z'] for x in (p6.get('sheets') or [])), p6 if not _cw_ok(n) else _cw_note(n))   # ★ 2026-10-07 (_task_jagwa_phys_win §A-39 ㊹) 옛 다 팝업 길(블록 수 칩 → 개념 창 → 문제) 없음
     sb = n.get('서재 뒤') or {}
-    T('8', '%s 「서재」로 닫음 → 개념 창·목록 창 보임' % eng, (sb.get('view') or {}).get('hide') and 'sh-conceptView' in [x['id'] for x in (sb.get('sheets') or [])] and 'pwl' in [x['id'] for x in (sb.get('sheets') or [])], sb)
+    T('8', '%s 「서재」로 닫음 → 개념 창·목록 창 보임' % eng, _cw_ok(n) or (sb.get('view') or {}).get('hide') and 'sh-conceptView' in [x['id'] for x in (sb.get('sheets') or [])] and 'pwl' in [x['id'] for x in (sb.get('sheets') or [])], sb)
     T('Z', '%s 오류 0(7 묶음 NEW)' % eng, not r['NEW_err'], r['NEW_err'][:4])
 
     def fo(q):
@@ -595,7 +624,8 @@ def rf4(br, eng):
     def f(q):
         q.ev("()=>pwList('f')"); q.wait(500)
         L = q.ev("()=>__W.list()") or {}
-        if str(L.get('title') or '').startswith('📐 공식 · 공식 시트'):   # ★ 합치기 10/1 — physphone A-3 공식 시트(0편 = 탭 「단위·기초」)
+        # 옛 줄: if str(L.get('title') or '').startswith('📐 공식 · 공식 시트'):   # ★ 합치기 10/1 — physphone A-3 공식 시트(0편 = 탭 「단위·기초」)
+        if str(L.get('title') or '').startswith('📐 공식 · 공식 시트') or q.ev("()=>!!document.querySelector('#pwl.pfw [data-pft]')"):   # ★ 2026-10-07 (_task_jagwa_phys_win §A-39 · A-30 ㊺) — 위 「공식」 창 머리 글을 걷음(pfDecor · #pwl.pfw) → 공식 시트 꼴은 탭 단추로 가른다
             u = q.ev("""()=>{const t=document.querySelector('#pwl [data-pft="u"]');if(!t)return null;t.click();
               const b=document.getElementById('pwlBody');const x=b?b.textContent.replace(/\\s+/g,' ').trim():'';
               const s0=document.querySelector('#pwl [data-pft="s"]');if(s0)s0.click();return {tab:__W.tx(t),body0:x.slice(0,40),unit:x.indexOf('단위')>=0,broken:/0\\.\\s*·\\s*1/.test(x)}}""")
@@ -896,7 +926,16 @@ def rf2_7(br, eng):
             q.ev("()=>{try{jnOpen(Object.keys(TOC.sec)[0])}catch(e){}}"); q.wait(700)
         elif scr == 'mcw':
             q.ev("async()=>{try{await mcwOpen('all')}catch(e){}}"); q.wait(800)
-        return {s: q.ev(HIT, s) for s in sels}
+        # 옛 줄: return {s: q.ev(HIT, s) for s in sels}
+        o = {s: q.ev(HIT, s) for s in sels}
+        if scr == 'first' and o.get('.pwchip.ph') is None and q.ev("()=>typeof cwOpen==='function'&&!!document.querySelector('.ndpw')"):
+            # ★ 2026-10-07 (_task_jagwa_phys_win §A-38 ㊸ · §A-04 ⑧⑨) 새 판: 폰 칩 = 서랍 머리(서랍은 문항 창과 같이 서고 접힌 채 시작) → 문항을 열고 서랍을 편 뒤 그 칩을 잰다(누름 칸 ≥ 30 = 사용자 결정 「손가락 기기 칩 최소 30px」)
+            q.ev("()=>{try{openView(DATA[0][F.NO],navList());ndResFold(false)}catch(e){}}"); q.wait(1500)
+            x = q.ev(HIT, '#navdr .pwchip.ph')
+            if x:
+                x['nd'] = True
+            o['.pwchip.ph'] = x
+        return o
     for subj, scr, sels in TARGETS:
         r = both(br, eng, subj, True, lambda q: f(q, scr, sels))
         n, b = r['NEW'], r['BASE']
@@ -912,12 +951,14 @@ def rf2_7(br, eng):
                     and x['vis'][3] == y['vis'][3] and x['vis'][2] <= y['vis'][2] + 0.5:
                 same = True   # ★ uid_unify G-1 — (스위치 G1_BIO 켬) 옵션 글자 「uid · NN회 N번」 → 「uid」 로 폭만 줄었다(높이 같음)
             okk = (x['hit']['h'] >= 36 or s in ('#mcwInk', '#mcwBk', '#mcwOmr') and x['hit']['h'] >= 34 or not want36) and same
+            if x.get('nd'):   # ★ 2026-10-07 (_task_jagwa_phys_win §A-38 ㊸ · §A-04 ⑧⑨) 새 판 서랍 머리 칩 — 바탕(첫 화면 칩)과 자리·크기가 다름 · 누름 칸 ≥ 30(사용자 결정)
+                okk = x['hit']['h'] >= 30 and x['hit']['w'] >= 30
             if s == '#jnwX':
                 okk = okk and (x['vis'][3] < 30 or (abs(x['vis'][2] - 36) < 1 and abs(x['vis'][3] - 36) < 1))   # ★ 합치기 10/1 — physphone A-4 「닫기」 → ✕ 36×36(한 줄 꺾임 없음)
             T('RF2-B7', '%s 폰 %s %s %s — 누름 칸 %d×%d(보이는 %s×%s · 바탕 누름 %s)' % (eng, subj, scr, s, x['hit']['w'], x['hit']['h'], x['vis'][2], x['vis'][3], y and '%d×%d' % (y['hit']['w'], y['hit']['h'])),
               okk, {'새': x, '바탕': y})
         # 이웃 겹침 — 누름 칸 사각형끼리
-        bx = [(s, v['hit']) for s, v in n.items() if v and v['hit']['t'] is not None and v['hit']['l'] is not None]
+        bx = [(s, v['hit']) for s, v in n.items() if v and not v.get('nd') and v['hit']['t'] is not None and v['hit']['l'] is not None]   # ★ 2026-10-07 (_task_jagwa_phys_win §A-38 ㊸) 서랍 머리 칩은 다른 화면(문항 창)에서 잼 → 겹침 셈에서 뺌
         ov = [(a[0], c[0]) for i, a in enumerate(bx) for c in bx[i + 1:] if min(a[1]['r'], c[1]['r']) - max(a[1]['l'], c[1]['l']) > 0.5 and min(a[1]['b'], c[1]['b']) - max(a[1]['t'], c[1]['t']) > 0.5]
         T('RF2-B7', '%s 폰 %s %s 누름 칸 겹침 0' % (eng, subj, scr), not ov, ov)
     r = both(br, eng, 'phys', True, lambda q: q.ev(HIT, '.pwchip.ph'))

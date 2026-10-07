@@ -792,9 +792,9 @@ BODY_EARTH = r"""
      {const kids=[...document.querySelectorAll('.vbot .tools>*')];
       const vis=kids.filter(el=>el.offsetParent!==null);
       /* ★ A-6(9/30) · _task_jagwa_claude_slot_add1 §A-2(9/22 · 007fde4) — 맨 오른쪽에 「Claude」(#tGpt)가 하나 더 선다 · 앞 다섯 차례는 그대로 · earth_shell W-2 와 같다 */
-      T('W-2 ★아랫줄에 보이는 것이 여섯(다섯 + 맨 오른쪽 Claude)',vis.length===6,vis.map(el=>el.id||el.className));
+      T('W-2 ★아랫줄에 보이는 것이 여섯(다섯 + 맨 오른쪽 Claude)',vis.length===6||(vis.length===3&&vis.map(el=>el.id).join(',')==='tHist,tCard,tGpt')/* ★ 2026-10-07 (_task_jagwa_phys_win §A-04 ⑥⑪) — 회독 고르개·👁·+회독(#tLayer·#tLayerEye·#tLayerAdd)은 세 과목 다 숨김(회독 창 #hsPop 으로 합침) → 기록 · 🃏 · Claude 셋 */,vis.map(el=>el.id||el.className));
       T('W-2 ★그 여섯 = 회독 층 · +회독 · 👁 · 기록 · 암기카드 · Claude',
-        vis.map(el=>el.id).join(',')==='tLayer,tLayerAdd,tLayerEye,tHist,tCard,tGpt',vis.map(el=>el.id));
+        vis.map(el=>el.id).join(',')==='tLayer,tLayerAdd,tLayerEye,tHist,tCard,tGpt'||vis.map(el=>el.id).join(',')==='tHist,tCard,tGpt'/* ★ 2026-10-07 (_task_jagwa_phys_win §A-04) — 같은 까닭(셋 숨김 · 남은 차례 그대로) */,vis.map(el=>el.id));
       T('W-2 오른쪽 맞춤',getComputedStyle($('.vbot .tools')).justifyContent==='flex-end',
         getComputedStyle($('.vbot .tools')).justifyContent);
       T('W-2 ★굵기 #tW 안 보임 · 값 2',$('#tW').offsetParent===null&&$('#tW').value==='2',
@@ -1632,7 +1632,9 @@ def static_checks():
        # ★ uid_unify A-3(10/4 · gigu/_task_jagwa_uid_unify.md §A 약속 3 「로컬: 기기마다 처음 옮길 때 한 번, IndexedDB kv 에 bak_uid = {at, 통별 옛 값 전부, u, gone}」) —
        #   새 로컬 kv `bak_uid` 하나(SYNC 아님 · SYNC_REF 새 키 0 그대로). 앱에 put('kv','bak_uid',…) 가 있을 때만 허용한다(앱 4785행 · 바탕 4754b1d 는 옛 허용 그대로).
        #   ⚠ 이 잣대는 4754b1d 가 아니라 본판(_base_bp · 고침 전) 대비라 pvjson 은 옛 판에서도 늘 차집합에 든다(위 허용) — 새 FAIL 의 몫은 bak_uid 하나였다.
-       (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set())))) and _sr(s) == _sr(base),
+       # ★ 2026-10-07 (_task_jagwa_phys_win §A-26 · A-30 ㉖) — 물리 오린 것 통 kv 'solx' · 동기화 SYNC_REF.solx 하나씩 더함(앱 글에 SYNC_REF.solx= 가 있을 때만 받음 · 바탕 7520d46 은 옛 판정 그대로)
+       # 옛 줄: (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set())))) and _sr(s) == _sr(base),
+       (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set()) | ({'solx'} if "SYNC_REF.solx=" in s else set())))) and (_sr(s) == _sr(base) or ("SYNC_REF.solx=" in s and _sr(s) == _sr(base) | {'solx'})),
        [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))])
     # ★ A-6(9/30) · shell_bio_phys 수행 결과 §A(9/21 · c9faff2) — 아랫줄 감추기는 교재 문 body[data-book](카드 층 = 지학·생물) · 물리는 add15 #pRow1 규칙(earth_shell Z-17)
     T2('Z-17 아랫줄 감추기는 교재 문(data-book) 안이다',

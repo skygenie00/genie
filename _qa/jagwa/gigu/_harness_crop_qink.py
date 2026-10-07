@@ -72,7 +72,7 @@ TAIL = r"""
 
 # ═══════════════════════════ C. ① 교재 조각 ═══════════════════════════
 BODY_EARTH = r"""
-   await loadEarthData(); draw(); await wait(120);
+   await (async()=>{for(let __i=0;__i<300&&(typeof db==='undefined'||!db);__i++)await new Promise(r=>setTimeout(r,100));return loadEarthData()})()/* ★ 2026-10-08 (_task_jagwa_phys_win 회귀) db 가 설 때까지 — 고정 대기 경합(짐 크면 「db 없음」) · 판정 무변 */; draw(); await wait(120);
    T('C-0 지학 카드 층 · 데이터 적재',CARD_LAYER===true&&SUBJ_ID==='earth'&&DATA.length>0,[SUBJ_ID,DATA.length]);
 
    /* ═══ C-1 저장 자리 ═══ */
@@ -378,7 +378,7 @@ BODY_EARTH = r"""
      T('Q-1 잉크 층이 카드 안에 얹혔다 · viewBox 가 0 0 760 H',!!$('#card #qink')&&/^0 0 760 \d+/.test($('#card #qink').getAttribute('viewBox')),$('#card #qink')&&$('#card #qink').getAttribute('viewBox'));
      /* A-6(a) 9/30 — listpop_add2 §A · §A-4(20a7128): 펜·형광·지우개·↺ 는 머리줄 알약 #inkPill 로 옮겼고(.tools 에는 펜이 없다 — 옛 줄은 빈 표본이라 거저 참) 굵기 #tW 는 숨기고 값 「보통(2)」 */
      T('Q-1 필기 도구가 카드 층에서 살아났다(펜·형광·지우개·↺·회독·👁 · 굵기는 숨김·값 2)',
-       ['#tErase','#tUndo','#tLayer','#tLayerAdd','#tLayerEye'].every(x=>getComputedStyle($(x)).display!=='none')
+       (['#tErase','#tUndo','#tLayer','#tLayerAdd','#tLayerEye'].every(x=>getComputedStyle($(x)).display!=='none')||['#tErase','#tUndo','#tHist'].every(x=>getComputedStyle($(x)).display!=='none')&&['#tLayer','#tLayerAdd','#tLayerEye'].every(x=>getComputedStyle($(x)).display==='none'))   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-04) — 시안 ⑪ 회독 고르개·👁·「+회독」 세 과목 다 숨김(회독 창 #tHist 로 합침) — 새 꼴 = 셋 숨김 · 지우개·↺·회독 보임 */
        &&getComputedStyle($('#tW')).display==='none'&&$('#tW').value==='2'
        &&$$$('#inkPill [data-pen]').length>0&&$$$('#inkPill [data-pen]').every(x=>getComputedStyle(x).display!=='none'),
        ['#tErase','#tUndo','#tW','#tLayer','#tLayerAdd','#tLayerEye'].map(x=>getComputedStyle($(x)).display));
@@ -488,8 +488,8 @@ BODY_EARTH = r"""
      T('Q-4 ↺ 는 지금 회독의 마지막 획을 무른다',QINK.s.length===before-1||before===0,[QINK.s.length,before]);
      /* 「모두 지움」 */
      setTool('erase'); $('#tErase').click(); await wait(200);
-     T('Q-4 지우개 상태에서 다시 누르면 시트 — 「지금 회독만」·「모두 지움」',!!$('#qeL')&&!!$('#qeA'));
-     $('#qeA').click(); await wait(300);
+     T('Q-4 지우개 상태에서 다시 누르면 시트 — 「지금 회독만」·「모두 지움」',(!!$('#qeL')&&!!$('#qeA'))||(!!$('#erPop #eL')&&!!$('#erPop #eA')));   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-16) — 시안 ⑦ 카드 층 qEraseSheet = 지우개 밑 작은 창 erPop(#eL 지금 회독 · #eA 전체) */
+     if($('#qeA'))$('#qeA').click(); else {$('#erPop #eA').click(); $('#erPop #eA').click();}   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-16) — erPop 「전체 회독 지우기」는 두 번 눌러야 지운다 */ await wait(300);
      T('Q-4 「모두 지움」은 전부 지운다',(QINK.s||[]).length===0&&QR===1,[(QINK.s||[]).length,QR]);
      const saved=await get('ink','qink:'+QUIDT);
      T('Q-4 저장소에도 반영된다',!!saved&&(saved.s||[]).length===0);
@@ -835,6 +835,9 @@ def main():
                 for k, ko in (('list', '목록'), ('cnt', '문항 수'), ('brand', '머리 칩 줄')):
                     T2('Y-3 물리 %s 이(가) 고침 전과 글자까지 같다' % ko, snap.get(k) == snap0.get(k),
                        [len(str(snap.get(k))), len(str(snap0.get(k)))])
+                    if snap.get(k) != snap0.get(k):   # ★ 2026-10-07 (_task_jagwa_phys_win 회귀) 진단만 · 판정 무변 — 갈린 두 글을 OUT 에 떠 둔다(무엇이 갈렸는지 줄로 가름)
+                        for nm_, v_ in (('new', snap.get(k)), ('base', snap0.get(k))):
+                            open(os.path.join(OUT, 'y3_%s_%s.html' % (k, nm_)), 'w', encoding='utf-8').write(str(v_))
     lines += static_checks()
     npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
     for x in lines: print(x)

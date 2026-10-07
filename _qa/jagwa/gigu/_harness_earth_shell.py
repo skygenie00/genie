@@ -186,7 +186,7 @@ TAIL = r"""
 # ══════════════════════════════════════════════════════════════════════════
 BODY_EARTH = r"""
    /* ───── 밑준비 ───── */
-   await loadEarthData();
+   await (async()=>{for(let __i=0;__i<300&&(typeof db==='undefined'||!db);__i++)await new Promise(r=>setTimeout(r,100));return loadEarthData()})()/* ★ 2026-10-08 (_task_jagwa_phys_win 회귀) db 가 설 때까지 — 고정 대기 경합(짐 크면 「db 없음」) · 판정 무변 */;
    await until(()=>DATA.length===704,30000);
    ['jagwa.earth.order','jagwa.earth.coll','jagwa.earth.hmfold','jagwa.view.win',
     'jagwa.win.view','jagwa.win.book','jagwa.win.bplist','jagwa.win.mc','jagwa.win.jn']
@@ -790,9 +790,11 @@ BODY_EARTH = r"""
       /* ★ _task_jagwa_claude_slot_add1 §A-2 (2026-09-22) — 맨 오른쪽에 「Claude」(#tGpt)가
          **하나 더 선다.** 다섯 -> 여섯이 이 판이 뜻한 것이고, 앞 다섯의 차례는 그대로여야 한다.
          (묶음 CL2 가 꼴·동작을 따로 잰다) */
-      T('W-2 ★아랫줄에 보이는 것이 여섯(다섯 + 맨 오른쪽 Claude)',vis.length===6,vis.map(el=>el.id||el.className));
+      /* ★ 2026-10-07 (_task_jagwa_phys_win §A-04 ⑪ · ⑥) — 세 과목 아랫줄 회독 고르개·+회독·👁(#tLayer·#tLayerAdd·#tLayerEye) 숨김(회독 창 #hsPop 으로 합침) = 뜻한 차
+         → 새 꼴 = 기록 · 🃏 · Claude 셋도 받는다 · 옛: vis.length===6 · 옛: vis.map(el=>el.id).join(',')==='tLayer,tLayerAdd,tLayerEye,tHist,tCard,tGpt' */
+      T('W-2 ★아랫줄에 보이는 것이 여섯(다섯 + 맨 오른쪽 Claude)',vis.length===6||vis.map(el=>el.id).join(',')==='tHist,tCard,tGpt',vis.map(el=>el.id||el.className));
       T('W-2 ★그 여섯 = 회독 층 · +회독 · 👁 · 기록 · 암기카드 · Claude',
-        vis.map(el=>el.id).join(',')==='tLayer,tLayerAdd,tLayerEye,tHist,tCard,tGpt',vis.map(el=>el.id));
+        ['tLayer,tLayerAdd,tLayerEye,tHist,tCard,tGpt','tHist,tCard,tGpt'].indexOf(vis.map(el=>el.id).join(','))>=0,vis.map(el=>el.id));
       T('W-2 오른쪽 맞춤',getComputedStyle($('.vbot .tools')).justifyContent==='flex-end',
         getComputedStyle($('.vbot .tools')).justifyContent);
       T('W-2 ★굵기 #tW 안 보임 · 값 2',$('#tW').offsetParent===null&&$('#tW').value==='2',
@@ -1523,7 +1525,7 @@ BODY_EARTH = r"""
      {const z=zero[0];
       if(z){const u=z.dataset.sec;
         const fh=$$$('#list .grouphd[data-uhd]').find(h=>h.dataset.uhd===u);
-        T('SQ 지학 0문항 머리 글자 = 첫 화면 그 머리와 같다('+txt(z).slice(0,26)+')',
+        T('SQ 지학 0문항 머리 글자 = 첫 화면 그 머리와 같다('+txt(z).replace(/^▾\s*/,'').slice(0,26)+')',   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-07 ③) — 서랍 단원 머리 앞 ▾(접기) = 뜻한 차 → 항목 이름이 안 갈리게 이름 글자에서만 뗀다(잣대는 .nm 그대로) · 옛: txt(z).slice(0,26) */
           !!fh&&txt(fh).indexOf(txt(z.querySelector('.nm')))>=0,[txt(z),fh?txt(fh):'첫 화면에 없음'])}}
      /* B-2 뒤 — 거르개를 켜면 첫 화면과 같이 사라진다 */
      {const n0=$$$('#ndList .ndsec.nd0').length;
@@ -1578,7 +1580,7 @@ BODY_EARTH = r"""
 """
 
 BODY_BIO = r"""
-   await loadEarthData();
+   await (async()=>{for(let __i=0;__i<300&&(typeof db==='undefined'||!db);__i++)await new Promise(r=>setTimeout(r,100));return loadEarthData()})()/* ★ 2026-10-08 (_task_jagwa_phys_win 회귀) db 가 설 때까지 — 고정 대기 경합(짐 크면 「db 없음」) · 판정 무변 */;
    await until(()=>DATA.length>600,30000);
    ['jagwa.earth.order','jagwa.earth.coll','jagwa.earth.hmfold','jagwa.view.win',
     'jagwa.win.view','jagwa.win.book','jagwa.win.mc','jagwa.win.jn']
@@ -1671,8 +1673,9 @@ BODY_BIO = r"""
      /* 아랫줄 다섯 */
      const vis=[...document.querySelectorAll('.vbot .tools>*')].filter(el=>el.offsetParent!==null);
      /* ★ _task_jagwa_claude_slot_add1 §A-2 (2026-09-22) — 생물도 맨 오른쪽에 #tGpt 가 선다 */
+     /* ★ 2026-10-07 (_task_jagwa_phys_win §A-04 ⑪ · ⑥) — 세 과목 #tLayer·#tLayerAdd·#tLayerEye 숨김 = 뜻한 차 → 새 꼴 기록 · 🃏 · Claude 도 받는다 · 옛: vis.map(el=>el.id).join(',')==='tLayer,tLayerAdd,tLayerEye,tHist,tCard,tGpt' */
      T('B-2 ★아랫줄에 보이는 것 여섯(다섯 + 맨 오른쪽 Claude)',
-       vis.map(el=>el.id).join(',')==='tLayer,tLayerAdd,tLayerEye,tHist,tCard,tGpt',vis.map(el=>el.id));
+       ['tLayer,tLayerAdd,tLayerEye,tHist,tCard,tGpt','tHist,tCard,tGpt'].indexOf(vis.map(el=>el.id).join(','))>=0,vis.map(el=>el.id));
      T('B-2 #tW 안 보임 · 값 2',$('#tW').offsetParent===null&&$('#tW').value==='2');
      /* P 넷째 */
      const boxes=$$$('#card .vox');
@@ -2050,7 +2053,7 @@ BODY_PHYS = r"""
      const pill=document.getElementById('inkPill');
      T('P-2 ★#inkPill 이 .vtop 안이다',!!pill&&!!pill.closest('#view .vtop'));
      T('P-2 ★물리 알약 단추 **여덟**(글상자 없음)',
-       pill&&pill.querySelectorAll('button').length===8,
+       pill&&(pill.querySelectorAll('button').length===8||(pill.querySelectorAll('button').length===9&&!!pill.querySelector('#tCut'))),   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-13 ㉑㉕) — 필기 알약 ↺ 오른쪽에 ✂ 오리기(#tCut) 하나 더 = 뜻한 차 · 옛: pill.querySelectorAll('button').length===8 */
        pill?[...pill.querySelectorAll('button')].map(b=>b.id||b.dataset.pen||b.dataset.hl):null);
      T('P-2 물리에는 글상자 단추 자체가 없다',!document.getElementById('tTxt'));
      T('P-2 알약 높이 ≤ 26px',pill.getBoundingClientRect().height<=26,pill.getBoundingClientRect().height);
@@ -2066,7 +2069,9 @@ BODY_PHYS = r"""
                  'tTheory','tConcept','tTwin','tGpt','tType','tLink'];
      const seen=want.filter(id=>{const b=document.getElementById(id);
        return b&&r1.contains(b)&&b.getBoundingClientRect().width>0});
-     T('P-14 ★한 줄에 열일곱이 다 선다',seen.length===17,
+     /* ★ 2026-10-07 (_task_jagwa_phys_win §A-27 ⑯ · §A-13 ⑥ · §A-04 ⑪㉞㉟㊱) — 물리 아랫줄 #tSol·#tLayer·#tLayerAdd·#tLayerEye·#tType·#tTwin·#tConcept 숨김
+        (할 일은 답풀 한 창 · 회독 창 · 근거 · 🔗 · 이론 덮개로) = 뜻한 차 → 새 꼴 = 그 일곱만 빠진 열(차례 그대로) · 옛: seen.length===17 */
+     T('P-14 ★한 줄에 열일곱이 다 선다',seen.length===17||seen.join(',')===want.filter(x=>['tSol','tLayer','tLayerAdd','tLayerEye','tType','tTwin','tConcept'].indexOf(x)<0).join(','),
        {보임:seen.length,빠짐:want.filter(x=>seen.indexOf(x)<0)});
      T('P-14 ★차례가 「정답…P · (빈칸) · 다섯 · 공식…연결」이다',
        [...r1.children].map(x=>x.id||x.className).filter(x=>x!=='sp').join(',')===want.join(','),
@@ -2078,21 +2083,23 @@ BODY_PHYS = r"""
        const bad=[];
        ['tLayer','tLayerAdd','tLayerEye','tHist','tCard'].forEach(id=>{
          const b=document.getElementById(id); if(!b){bad.push([id,'없음']);return}
+         if(cs(b).display==='none')return;   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-04 ⑪ · §A-13 ⑥) — 숨긴 단추(#tLayer·#tLayerAdd·#tLayerEye)는 꼴을 안 잰다(안 보임) · 옛 판은 다섯 다 보여 그대로 잰다 */
          keys.forEach(k=>{if(cs(b)[k]!==cs(th)[k])bad.push([id,k,cs(b)[k],cs(th)[k]])});
        });
        T('P-14 ★다섯의 계산 스타일 = 「공식」과 같다',bad.length===0,bad.slice(0,5));
        T('P-14 ★「+회독」이 두 줄로 안 꺾인다(높이 = 「공식」)',
+         getComputedStyle(document.getElementById('tLayerAdd')).display==='none'||   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-13 ⑥ · §A-04 ⑪) — 물리 「+회독」 숨김(다시 열면 새 회독 · 회독 창) = 뜻한 차 → 숨었으면 꺾일 일이 없다 */
          Math.abs(document.getElementById('tLayerAdd').getBoundingClientRect().height
                  -th.getBoundingClientRect().height)<=1,
          [document.getElementById('tLayerAdd').getBoundingClientRect().height,
           th.getBoundingClientRect().height]); }
      T('P-2 「정답 ▸」·「풀이 ▸」 글자',
-       txt(document.getElementById('tAns'))==='정답 ▸'&&txt(document.getElementById('tSol'))==='풀이 ▸',
+       (txt(document.getElementById('tAns'))==='정답 ▸'||txt(document.getElementById('tAns'))==='답풀')&&txt(document.getElementById('tSol'))==='풀이 ▸',   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-27 ⑯㉝) — #tAns 글자 「답풀」(정답·풀이 한 창 · #tSol 은 숨김 · 글자 「풀이 ▸」 그대로) = 뜻한 차 · 옛: txt(#tAns)==='정답 ▸' */
        [txt(document.getElementById('tAns')),txt(document.getElementById('tSol'))]);
      {const a=document.getElementById('tAns').getBoundingClientRect();
-      T('P-2 「정답 ▸」 높이 26px(지학 「정답·해설 ▸」 값)',Math.abs(a.height-26)<=1,a.height);
+      T('P-2 「정답 ▸」 높이 26px(지학 「정답·해설 ▸」 값)',Math.abs(a.height-26)<=1||(txt(document.getElementById('tAns'))==='답풀'&&a.height>=14&&a.height<26),a.height);   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-04 ㉝ · §A-27) — 물리 아랫줄 줄임: 「답풀」 = 글자 단추(상자 없음 · height:auto · 11px×1.3 + 위아래 2px ≈ 18px) = 뜻한 차 → 「답풀」이면 14 이상 26 미만 · 옛: Math.abs(a.height-26)<=1 */
       const o=document.getElementById('mO').getBoundingClientRect();
-      T('P-2 O△XP 30×26(지학 값)',Math.abs(o.width-30)<=1&&Math.abs(o.height-26)<=1,[o.width,o.height]);}
+      T('P-2 O△XP 30×26(지학 값)',(Math.abs(o.width-30)<=1&&Math.abs(o.height-26)<=1)||(Math.abs(o.width-24)<=1&&Math.abs(o.height-21)<=1),[o.width,o.height]);}   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-04 ㉝) — 물리 O△XP 칸 줄임 width:24px · height:21px = 뜻한 차 · 옛: 30×26 만 */
      /* ★ add15 §A-3 — 비게 된 아랫줄은 접힌다(DOM 은 남긴다) */
      const vis=[...document.querySelectorAll('.vbot .tools:not(#pRow1)>*')].filter(el=>el.offsetParent!==null);
      T('P-14 ★빈 아랫줄에 보이는 것 0',vis.length===0,vis.map(el=>el.id));
@@ -2602,12 +2609,15 @@ BODY_PHYS = r"""
      const nG=DATA.filter(r=>r[F.SRC]==='변리사').length;
      const nT=DATA.filter(r=>r[F.SRC]&&r[F.SRC]!=='변리사').length;
      const nN=DATA.filter(r=>!r[F.SRC]).length;
-     T('P-11 ★「기출」 딱지 = 변리사 기출만',byTag('기출')===nG,[byTag('기출'),nG]);
+     /* ★ 2026-10-07 (_task_jagwa_phys_win §A-36 ㊴) — 물리 목록 「기출」 칩 자리에 「V3」 글자(.vno · 지학·생물은 kindTag 그대로) = 뜻한 차
+        → 새 꼴(.vno 가 선다) = 「기출」 딱지 0 · 딱지 없는 줄 = 전부 · 옛: byTag('기출')===nG · 옛: …length===nT+nN */
+     const _vno=document.querySelectorAll('#list .item .meta .vno').length>0;
+     T('P-11 ★「기출」 딱지 = 변리사 기출만',byTag('기출')===nG||(_vno&&byTag('기출')===0),[byTag('기출'),nG]);
      /* ★ add18 §A-2 — 「타기출」 딱지를 없앴다. 변리사만 「기출」 · 그 밖은 **딱지 없음** */
      T('P-11 ★「타기출」 딱지 0(add18 §A-2)',byTag('타기출')===0,[byTag('타기출'),nT]);
      T('P-11 ★딱지 없는 줄 = 변리사가 아닌 것 전부('+(nT+nN)+')',
        [...document.querySelectorAll('#list .item')]
-         .filter(x=>![...x.querySelectorAll('.meta .tag')].some(t=>/^(기출|타기출|확인|예상)$/.test(txt(t)))).length===nT+nN,
+         .filter(x=>![...x.querySelectorAll('.meta .tag')].some(t=>/^(기출|타기출|확인|예상)$/.test(txt(t)))).length===(_vno?nG+nT+nN:nT+nN),
        [[...document.querySelectorAll('#list .item')]
          .filter(x=>![...x.querySelectorAll('.meta .tag')].some(t=>/^(기출|타기출|확인|예상)$/.test(txt(t)))).length,nT+nN]);
      { /* 코드 글자 색 — 변리사만 초록 · 그 밖 회색 · 눈에 보일 만큼 다르다 */
@@ -2631,7 +2641,7 @@ BODY_PHYS = r"""
          .filter(x=>x.querySelector(sel)).length;
        const want={
          '난이도 tag.lv': ['.meta .tag[class*="lv"]', DATA.filter(r=>r[F.LV]).length],
-         '볼트 N':        ['.meta .tag.vlt',  DATA.filter(r=>r[F.VLT]).length],
+         '볼트 N':        ['.meta .tag.vlt,.meta .vno',  DATA.filter(r=>r[F.VLT]).length],   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-37 · §A-36 ㊴) — 물리 「볼트 N」 칩(.tag.vlt) 걷고 「기출」 칩 자리에 「V3」 글자(.vno) = 뜻한 차 → 둘 중 있는 쪽을 센다 · 옛: '.meta .tag.vlt' */
          '볼트 기록':      ['.meta .tag.vm',   null],
          '풀이':          ['.meta .tag.sol',  null],
          '🔗 N':          ['.meta .tag.lk',   null],
@@ -3116,7 +3126,7 @@ BODY_PHYS = r"""
 BODY_X = r"""
    /* ═══════════ X — _task_jagwa_earth_bookwin §L (2026-09-24) ═══════════
       바탕 판(24f1a373)에서 돌리면 헛잣대 — 새 기능이 없어 FAIL 해야 한다(main 이 센다). */
-   await loadEarthData();
+   await (async()=>{for(let __i=0;__i<300&&(typeof db==='undefined'||!db);__i++)await new Promise(r=>setTimeout(r,100));return loadEarthData()})()/* ★ 2026-10-08 (_task_jagwa_phys_win 회귀) db 가 설 때까지 — 고정 대기 경합(짐 크면 「db 없음」) · 판정 무변 */;
    await until(()=>DATA.length===704,30000);
    ['jagwa.earth.order','jagwa.earth.coll','jagwa.earth.hmfold','jagwa.view.win',
     'jagwa.win.view','jagwa.win.book','jagwa.win.bplist','jagwa.win.mc','jagwa.win.jn']
@@ -3530,7 +3540,7 @@ BODY_X = r"""
 
 BODY_XSIDE = r"""
    /* ═══════════ X-11 생물·물리 무변 — DOM 글자 스냅숏(새 판 · 바탕 판을 main 이 맞댄다) ═══════════ */
-   if(typeof CARD_LAYER!=='undefined'&&CARD_LAYER){await loadEarthData();await until(()=>DATA.length>600,30000)}else await wait(1500);
+   if(typeof CARD_LAYER!=='undefined'&&CARD_LAYER){await (async()=>{for(let __i=0;__i<300&&(typeof db==='undefined'||!db);__i++)await new Promise(r=>setTimeout(r,100));return loadEarthData()})()/* ★ 2026-10-08 (_task_jagwa_phys_win 회귀) db 가 설 때까지 — 고정 대기 경합(짐 크면 「db 없음」) · 판정 무변 */;await until(()=>DATA.length>600,30000)}else await wait(1500);
    ['jagwa.earth.order','jagwa.earth.coll','jagwa.earth.hmfold','jagwa.view.win',
     'jagwa.win.view','jagwa.win.book','jagwa.win.bplist','jagwa.win.mc','jagwa.win.jn']
      .forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});
@@ -3552,7 +3562,10 @@ BODY_XSIDE = r"""
    snap.subj=SUBJ_ID;
    /* ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2 미리보기 칸(.prev 글 · .pvfig)은 두 판 모두 떼고 맞댄다(physprev 관문 B3 이 그 칸을 잰다) */
    const npv=el=>{if(!el)return el;const c=el.cloneNode(true);c.querySelectorAll('.prev,.pvfig,.jnrow .q').forEach(x=>x.remove());return c};
-   snap.list=$$$('#list .item').slice(0,40).map(x=>tx(npv(x))).join(' || ');
+   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-36 · §A-37 ㊴) — 물리 목록 「기출」 칩 → 「V3」 글자(.vno) · 「볼트 N」 칩(.tag.vlt) 걷음 = 뜻한 차 → 물리만 두 판 모두 그 칸(.vno · .tag.vlt · 기출 딱지)을 떼고 맞댄다
+      옛: snap.list=$$$('#list .item').slice(0,40).map(x=>tx(npv(x))).join(' || '); */
+   const nvk=c=>{if(c&&SUBJ_ID==='phys')c.querySelectorAll('.meta .vno,.meta .tag').forEach(x=>{if(x.classList.contains('vno')||x.classList.contains('vlt')||/^(기출|타기출|확인|예상)$/.test(String(x.textContent||'').trim()))x.remove()});return c};
+   snap.list=$$$('#list .item').slice(0,40).map(x=>tx(nvk(npv(x)))).join(' || ');
    /* ★ A-6(a) 9/30 _task_qa_baseline — phone_win §A-2·§A-6(genie fb89ad2 · 결정로그 9/28 17:20 · 수행 결과 「X-11 phys esh DOM 글자 = §A-2 필터 글자 걷음 · §A-6 칩」):
         접기 단추 「필터 ▾」 → 「▾」 · 물리 [공식]·[개념] 칩(.pwchip) — 칩은 떼고 단추 글자는 「▾」 로 맞춘 뒤 잰다
         (동기화 칩 가림이 「필터」 앞에서만 멈춰, 새 판에선 「▾」 뒤 머리 줄을 통째로 먹던 것도 「▾」 앞에서 멈춘다) */
@@ -3610,7 +3623,7 @@ PHONE = r"""<script>
  async function go(){
   try{
    localStorage.setItem('tt.cfg',JSON.stringify({token:'github_pat_TEST',person:'검산'}));
-   await loadEarthData();
+   await (async()=>{for(let __i=0;__i<300&&(typeof db==='undefined'||!db);__i++)await new Promise(r=>setTimeout(r,100));return loadEarthData()})()/* ★ 2026-10-08 (_task_jagwa_phys_win 회귀) db 가 설 때까지 — 고정 대기 경합(짐 크면 「db 없음」) · 판정 무변 */;
    await until(()=>DATA.length===704,50000);
    FL.past='y';draw();await wait(250);
    await openView(DATA[0][F.NO]); await wait(900);
@@ -3628,7 +3641,7 @@ BODY_XB = r"""
       표본(생물 studyplandata 실측): B21-58-10(uid G58-10 · 교재 11쪽) · B01-38-01(문항 11 — 옛 판에서 「11쪽」 누르면 뜨던 것)
       · 11쪽 「문항 4」 = B18-55-10 2018 · B19-56-02 2019 · B21-58-10 2021 · B26-63-09 2026 · 「대기」 = B03-40-06(uid G40-06 · 교재 2쪽)
       · 교재 조각 1.1.pdf = 인쇄 2~11 · 1.2.pdf = 12~15 */
-   await loadEarthData();
+   await (async()=>{for(let __i=0;__i<300&&(typeof db==='undefined'||!db);__i++)await new Promise(r=>setTimeout(r,100));return loadEarthData()})()/* ★ 2026-10-08 (_task_jagwa_phys_win 회귀) db 가 설 때까지 — 고정 대기 경합(짐 크면 「db 없음」) · 판정 무변 */;
    await until(()=>DATA.length===746,30000);
    ['jagwa.earth.order','jagwa.earth.coll','jagwa.earth.hmfold','jagwa.view.win',
     'jagwa.win.view','jagwa.win.book','jagwa.win.bplist','jagwa.win.mc','jagwa.win.jn']
@@ -4117,7 +4130,10 @@ def static_checks():
     #   마커가 앱에 있는 만큼만 올린다 → 일부만 들어간 판 · 바탕 4754b1d 는 옛 문턱(356)이 그대로다.
     # 옛 줄: _Z13_UID = (('qk(no){', 66), ('var ynUid=', 24), ('ggMath(src){', 5), ('ewmTagHTML(r){', 2))
     #   + 10/5 cand_v fef1655 「+회독」 결함 고침 1 = 카드 층 `#tLayerAdd` 핸들러 한 줄(QR=Math.max(1,…) → QR=Math.max(QR,1,…)) · 마커 = 고친 식
-    _Z13_UID = (('qk(no){', 66), ('var ynUid=', 24), ('ggMath(src){', 5), ('ewmTagHTML(r){', 2), ('QR=Math.max(QR,1,...qRounds())+1', 1))
+    # 옛 줄: _Z13_UID = (('qk(no){', 66), ('var ynUid=', 24), ('ggMath(src){', 5), ('ewmTagHTML(r){', 2), ('QR=Math.max(QR,1,...qRounds())+1', 1))
+    #   + ★ 2026-10-08 _task_jagwa_phys_win §A 47 — 이 판이 갈아 쓴 본판 줄 53(전수 대조: 서재→✕ A-15 · 암기카드→🃏 A-33 · 정답 창 A-26 · 지우개 창→erPop A-16 · twinPeek A-32 · 검색 A-45·46 …) · 마커 = pfDecor(A-39)
+    #   잰 값: 7520d46 454(문턱 454) · fdd7b27 507
+    _Z13_UID = (('qk(no){', 66), ('var ynUid=', 24), ('ggMath(src){', 5), ('ewmTagHTML(r){', 2), ('QR=Math.max(QR,1,...qRounds())+1', 1), ('function pfDecor(', 53))
     T2('Z-13 지운 본판 줄이 거의 없다(손댄 자리뿐)',
        # ★ 합치기 10/1(하위 에이전트 C) — 320 → 356. 늘어난 36줄은 전수로 짚었다(세 판이 갈아 쓴 줄뿐 · 어느 판에도 없는 줄 0):
        #   physphone 22(공식 시트 frmRowHTML 로 옮긴 옛 rowHtml·body.onclick 줄 · #tTheory 「공식」 · 정리 창 「닫기」·이름 칸 · 개념 줄 글 thl)
@@ -4135,7 +4151,11 @@ def static_checks():
        # 옛 줄: (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= {'pvjson'})) and _sr(s) == _sr(base),
        # ★ uid_unify A-3(10/4 · gigu/_task_jagwa_uid_unify.md §A-3 「로컬: 기기마다 처음 옮길 때 한 번, IndexedDB kv 에 bak_uid = {at, 통별 옛 값 전부, u, gone}」) — 새 로컬 kv `bak_uid` 하나(SYNC 아님 · SYNC_REF 새 키 0 그대로).
        #   앱에 put('kv','bak_uid',…) 가 있을 때만 허용한다. ⚠ 이 잣대는 4754b1d 가 아니라 본판(_base_bp · 고침 전) 대비라 pvjson 은 옛 판에서도 늘 차집합에 든다(위 허용) — 새 FAIL 의 몫은 bak_uid 하나였다.
-       (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set())))) and _sr(s) == _sr(base),
+       # 옛 줄: (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set())))) and _sr(s) == _sr(base),
+       # ★ 2026-10-07 (_task_jagwa_phys_win §A-30 ㉖) 물리 오린 것 동기화 = kv 'solx' · SYNC_REF.solx(칸 = 문항 하나 · 늦게 읽는 통 가드 = gg 꼴) — 앱 글에 둘 다 있을 때만 그 키 하나씩 허용
+       (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set())
+                                                                         | ({'solx'} if ("put('kv','solx'" in s and 'SYNC_REF.solx=' in s) else set()))))
+       and (_sr(s) == _sr(base) or (_sr(base) <= _sr(s) and _sr(s) - _sr(base) <= ({'solx'} if ("put('kv','solx'" in s and 'SYNC_REF.solx=' in s) else set()))),
        [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))])
     T2('Z-17 아랫줄 감추기가 카드 층·물리로 갈렸다',
        'body[data-book] .vbot .tools>*{display:none!important}' in s
@@ -4336,6 +4356,12 @@ def main():
                 #   그 낱말만 가리고 나머지 글자는 그대로 맞댄다 — 다른 데가 달라지면 여전히 FAIL 이다.
                 #   바뀌었다는 것 자체는 묶음 CL(_harness_jagwa_claude_slot.py)이 따로 잰다.
                 b1 = b1.replace('GPT', 'Claude')
+                if k == 'vtop' and a1.startswith('✕') and b1.startswith('서재'):
+                    # ★ 2026-10-07 (_task_jagwa_phys_win §A-15 ⑧) — 문항 창 닫기 「서재」 → ✕(세 과목) = 뜻한 차 — 맨 앞 그 글자만 맞춘다(나머지는 그대로 맞댐 · 옛 판은 a1 이 「서재」라 안 탐)
+                    b1 = '✕' + b1[len('서재'):]
+                if k == 'vbot' and '암기카드' not in a1 and '🃏' in a1:
+                    # ★ 2026-10-07 (_task_jagwa_phys_win §A-33) — #tCard 「암기카드」 → 🃏(세 과목) = 뜻한 차 — 그 낱말만 맞춘다(옛 판은 a1 에 「암기카드」가 있어 안 탐)
+                    b1 = b1.replace('암기카드', '🃏', 1)
                 if k == 'vbot':
                     # ★ 합치기 10/1(하위 에이전트 C) — physphone A-3(97883ef 본문 「#tTheory 「공식」 → 「이론」」 · 세 과목 같은 단추) — 그 낱말만 옛 글자로 맞춘다(바탕 판을 돌려도 같게)
                     a1 = a1.replace('👁 이론 개념', '👁 공식 개념', 1)
@@ -4376,6 +4402,9 @@ def main():
                 # ★ uid_unify(10/4 · §G-1 §G-2 §G-3-2 · 위 g1_e1_norm) — 새 판일 때만 · 바탕 쪽 글자에서 뜻한 차이만 뗀다
                 if _G1E:
                     a1, b1 = g1_e1_norm(k, a1, b1)
+                if k == 'view' and 'gfit' in a1.split() and 'gfit' not in b1.split():
+                    # ★ 2026-10-07 (_task_jagwa_phys_win §A-28 ⑮) 글이 창에 다 들면 판에 gfit 클래스(크기 손잡이 자리 · 세 과목) = 뜻한 차 — 그 클래스 한 낱말만 뗀다(나머지 클래스는 그대로 맞댐)
+                    a1 = ' '.join(x for x in a1.split() if x != 'gfit')
                 same = a1 == b1
                 if same or k not in ('list', 'hd', 'card', 'esh', 'vbot', 'vtop'):
                     info = [a1[:170], b1[:170]]

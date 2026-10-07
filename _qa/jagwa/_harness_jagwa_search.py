@@ -317,6 +317,8 @@ def g13(dv, who):
             res[q] = sorted(set(nos) & set(base))
             # ★ physprev(10/1) — A-2-3 미리보기 t 에서 걸린 번호(pvHit · 없으면 빈 목록)
             res[q + '·pv'] = dv.ev("q=>(typeof pvHit==='function')?ES_NOS.filter(n=>{const r=DATA.find(x=>x[F.NO]===n);return !!r&&pvHit(r,q)}):[]", q)
+            # ★ 2026-10-07 (_task_jagwa_phys_win §A-45) — 물리 위 검색이 보이는 제목(titleOf)·고친 제목(pnFix)도 찾음 → 그 둘로 걸린 번호(앱 esPhysHit 글에 titleOf(r) 가 있을 때만 · 바탕 7520d46 은 빈 목록)
+            res[q + '·tt'] = dv.ev("q=>(typeof esPhysHit==='function'&&String(esPhysHit).indexOf('titleOf(r)')>=0)?ES_NOS.filter(n=>{const r=DATA.find(x=>x[F.NO]===n);return !!r&&(String(titleOf(r)).includes(q)||String(pnFix(r)||'').includes(q))}):[]", q)
             lst = dv.ev("()=>__S.cnt()")
             res[q + '·목록'] = lst
         else:
@@ -375,7 +377,8 @@ def main():
                 if not ONLY or 'g13' in ONLY:
                     (okn, vn), (okb, vb) = both(br, eng, 'phys', g13)
                     # ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2-3: 옛 ⊆ 새 · 더 걸린 문항이 모두 미리보기 t 에서 걸림(pvHit)이면 뜻한 바뀜
-                    _pv = lambda q: set(vb.get(q) or []) <= set(vn.get(q) or []) and (set(vn.get(q) or []) - set(vb.get(q) or [])) <= set(vn.get(q + '·pv') or [])
+                    # 옛 줄: _pv = lambda q: set(vb.get(q) or []) <= set(vn.get(q) or []) and (set(vn.get(q) or []) - set(vb.get(q) or [])) <= set(vn.get(q + '·pv') or [])
+                    _pv = lambda q: set(vb.get(q) or []) <= set(vn.get(q) or []) and (set(vn.get(q) or []) - set(vb.get(q) or [])) <= set(vn.get(q + '·pv') or []) | set(vn.get(q + '·tt') or [])   # ★ 2026-10-07 (_task_jagwa_phys_win §A-45) — 더 걸린 것이 미리보기 t 또는 보이는·고친 제목에서 걸렸으면 뜻한 바뀜
                     diff = {q: [vn.get(q), vb.get(q)] for q in vb if vn.get(q) != sorted(vb[q]) and not _pv(q)}
                     pvmore = {q: len(set(vn.get(q) or []) - set(vb.get(q) or [])) for q in vb if vn.get(q) != sorted(vb[q]) and _pv(q)}
                     same_list = len({v for k, v in vn.items() if k.endswith('·목록')}) == 1

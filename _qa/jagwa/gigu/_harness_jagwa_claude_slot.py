@@ -664,7 +664,8 @@ def main():
                          + ' | ' + json.dumps([a, b], ensure_ascii=False))
             continue
         # ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef 본문 「물리 SYNC 키 tfix 하나 더함」) — 물리만 바탕 배열 끝에 tfix 하나를 받는다(생물·지학은 글자까지 같아야)
-        same = a == b or (sub == 'phys' and a == b + ['tfix'])
+        # 옛 줄: same = a == b or (sub == 'phys' and a == b + ['tfix'])
+        same = a == b or (sub == 'phys' and a == b + ['tfix']) or (sub == 'phys' and a[:len(b)] == b and sorted(a[len(b):]) == ['solx', 'tfix'])   # ★ 2026-10-07 (_task_jagwa_phys_win §A-30 ㉖) — 물리만 바탕 배열 끝에 오린 것 solx 하나 더(tfix 와 둘 · 생물·지학은 글자까지 같아야)
         lines.append(('PASS' if same else 'FAIL')
                      + ' | CL-2 [%s] ★SYNC_KEYS 실행값이 바탕과 글자까지 같다(%d칸)' % (ko, len(b))
                      + ('' if same else ' | ' + json.dumps([a, b], ensure_ascii=False)))

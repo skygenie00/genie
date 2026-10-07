@@ -214,6 +214,15 @@ def probe(engine, tag, subj, src, out):
             R['t5_backTag'] = pg.evaluate('(()=>{const b=document.getElementById("vBack");return b?b.tagName:"없음"})()')
             b = pg.evaluate(BOX, '#vBack')
             if b:
+                # ★ 2026-10-07 (_task_jagwa_phys_win §B E5 · 점검표 13) — 펼친 서랍 머리가 #vBack(✕)을 가림 → 누를 자리 요소를 남기고 서랍(#navdr)이 가릴 때만 #ndGrip 톡으로 접고 다시 잰 자리를 톡(옛 판은 안 가려 옛 길 그대로)
+                R['t5_at'] = pg.evaluate("""(p)=>{const a=document.elementFromPoint(p.cx,p.cy);const v=document.getElementById('vBack');
+                  return a?{tag:a.tagName,id:a.id||'',cls:String(a.className||'').slice(0,30),self:!!v&&(a===v||v.contains(a)),dr:!!(a.closest&&a.closest('#navdr'))}:null}""", b)
+                if R['t5_at'] and not R['t5_at'].get('self') and R['t5_at'].get('dr'):
+                    g = pg.evaluate(BOX, '#ndGrip')
+                    if g:
+                        tap(g); pg.wait_for_timeout(700)
+                        b = pg.evaluate(BOX, '#vBack') or b
+                    R['t5_fold'] = bool(g)
                 tap(b); pg.wait_for_timeout(1400)
                 R['t5_closed'] = pg.evaluate('document.getElementById("view").classList.contains("hide")')
             # 📋 창(jnOpen) · 🃏 창 — ✕/닫기 를 톡
@@ -375,7 +384,8 @@ def main():
             I(pre + '4 바탕 판', b4)
             # 5 창 닫기
             T(pre + '★5 문제 창 「서재」를 톡 → 닫힌다(%s)' % n.get('t5_backTag'),
-              n.get('t5_closed') is True, [n.get('t5_backTag'), n.get('t5_closed'), n.get('t5_exc')])
+              n.get('t5_closed') is True, [n.get('t5_backTag'), n.get('t5_closed'), n.get('t5_exc')]
+              + ([{'누를 자리': n.get('t5_at'), '서랍 접음(§B E5 — 펼친 서랍 머리가 ✕ 를 가림)': n.get('t5_fold')}] if n.get('t5_fold') is not None else []))   # ★ 2026-10-07 (_task_jagwa_phys_win §B E5 · 점검표 13) 접었으면 값에 남김
             T(pre + '★5 떠 있는 창의 ✕·「닫기」를 톡 → 닫힌다',
               all((isinstance(x, list) and x[3] == 0) for x in (n.get('t5_sheets') or [[None, None, None, 1]])),
               n.get('t5_sheets'))

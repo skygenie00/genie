@@ -73,7 +73,7 @@ TAIL = r"""
 </script>"""
 
 BODY_EARTH = r"""
-   await loadEarthData(); draw(); await wait(120);
+   await (async()=>{for(let __i=0;__i<300&&(typeof db==='undefined'||!db);__i++)await new Promise(r=>setTimeout(r,100));return loadEarthData()})()/* ★ 2026-10-08 (_task_jagwa_phys_win 회귀) db 가 설 때까지 — 고정 대기 경합(짐 크면 「db 없음」) · 판정 무변 */; draw(); await wait(120);
    T('A-0 지학 카드 층 · 데이터 적재',CARD_LAYER===true&&SUBJ_ID==='earth'&&DATA.length>0,[SUBJ_ID,DATA.length]);
 
    await grp('A-0', async()=>{
@@ -494,7 +494,7 @@ BODY_EARTH = r"""
 """
 
 BODY_BIO = r"""
-   await loadEarthData(); draw(); await wait(120);
+   await (async()=>{for(let __i=0;__i<300&&(typeof db==='undefined'||!db);__i++)await new Promise(r=>setTimeout(r,100));return loadEarthData()})()/* ★ 2026-10-08 (_task_jagwa_phys_win 회귀) db 가 설 때까지 — 고정 대기 경합(짐 크면 「db 없음」) · 판정 무변 */; draw(); await wait(120);
    T('G-0 생물 카드 층',CARD_LAYER===true&&SUBJ_ID==='bio'&&DATA.length>0,[SUBJ_ID,DATA.length]);
    await grp('G-1', async()=>{
      /* A-6(a) 9/30 — 뒤 판이 생물 SYNC_KEYS 끝에 gg·ggref·pick·link 넷을 더했다(_task_jagwa_shell_bio_phys §E-7 · c9faff2 「카드 층 = 넷」) → 옛 20키 앞자리 그대로 · bref 포함 */
@@ -719,6 +719,10 @@ def static_checks():
        and ("'</span><span class=\"ndt\">'+esc(r[F.CODE])+esc(r[F.LV])+'-'+esc(titleOf(r))+'</span>" in s
             or "'</span><span class=\"ndt\">'+esc(r[F.CODE])+esc(r[F.LV])+' · '+esc(titleOf(r))+'</span>" in s
             or ("'</span><span class=\"ndt\">'+esc(r[F.CODE])+esc(r[F.LV])+(ynUid(r)?'':' · '+esc(titleOf(r)))+'</span>" in s
+                and __import__('re').search(r'var ynUid=r.{2}!!\(HASBOOK&&', s) is not None)
+            # ★ 2026-10-07 (_task_jagwa_phys_win §A-41 (51)) — 물리 서랍 줄 제목 = span.ndtt(고친 제목이면 그 글 · pnFix · 길게 눌러 고치기) = 뜻한 차 → 넷째 꼴:
+            #   카드 층(HASBOOK)은 옛 esc(titleOf(r)) 그대로 · 물리만 ndtt 로 감쌈 · ynUid 는 `HASBOOK&&` 그대로(물리는 새 갈래 못 탐) — 옛 세 꼴은 위에 그대로
+            or ("'</span><span class=\"ndt\">'+esc(r[F.CODE])+esc(r[F.LV])+(ynUid(r)?'':' · '+(HASBOOK?esc(titleOf(r)):'<span class=\"ndtt'+(pnFix(r)?' fx':'')+'\" data-pn=\"'+no+'\" title=\"길게 눌러 제목 고치기\">'+esc(pnFix(r)||titleOf(r))+'</span>'))+'</span>" in s
                 and __import__('re').search(r'var ynUid=r.{2}!!\(HASBOOK&&', s) is not None)))
     return out
 
@@ -743,6 +747,9 @@ def main():
                               ('tree', '목차 서랍')):   # add3 — ⓑ 의 물리 짝(2553줄)이 글자까지 같은지
                     T2('Y-2 물리 %s 이(가) 고침 전과 글자까지 같다' % ko, snap.get(k) == snap0.get(k),
                        [len(str(snap.get(k))), len(str(snap0.get(k)))])
+                    if snap.get(k) != snap0.get(k):   # ★ 2026-10-07 (_task_jagwa_phys_win 회귀) 진단만 · 판정 무변 — 갈린 두 글을 OUT 에 떠 둔다(무엇이 갈렸는지 줄로 가름)
+                        for nm_, v_ in (('new', snap.get(k)), ('base', snap0.get(k))):
+                            open(os.path.join(OUT, 'y3_%s_%s.html' % (k, nm_)), 'w', encoding='utf-8').write(str(v_))
     lines += static_checks()
     npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
     for x in lines: print(x)

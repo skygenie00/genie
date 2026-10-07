@@ -391,7 +391,10 @@ PVJS = r"""(q)=>{ /* ★ physprev(10/2) — _task_jagwa_physprev 57줄(A-2-3): �
  const box=document.getElementById('esres');
  const rows=box?[...box.children].filter(e=>e.dataset&&e.dataset.esq).map(e=>[+e.dataset.esq,e.outerHTML]):[];
  let rest='';if(box){const c=box.cloneNode(true);[...c.children].forEach(e=>{if(e.dataset&&e.dataset.esq)e.remove()});rest=c.innerHTML}
- return {nos:ES_NOS.slice(),only,kind,rows,rest}}"""
+ /* ★ 2026-10-07 (_task_jagwa_phys_win §A-45) — 물리 위 검색이 보이는 제목(titleOf)·고친 제목(pnFix)도 찾음 → 그 둘로 걸리는 번호 tt(앱 esPhysHit 글에 titleOf(r) 가 있을 때만 · 옛 판은 빈 목록)
+    옛 줄: return {nos:ES_NOS.slice(),only,kind,rows,rest}} */
+ const tt=(ph&&String(esPhysHit).indexOf('titleOf(r)')>=0)?ES_NOS.filter(n=>{const r=DATA.find(x=>x[F.NO]===n);return !!r&&(String(titleOf(r)).includes(q)||String(pnFix(r)||'').includes(q))}):[];
+ return {nos:ES_NOS.slice(),only,kind,rows,rest,tt}}"""
 CAPNOTE = '<div class="bplnone">상위 100건만 표시했습니다. 검색어를 더 좁혀보세요.</div>'
 
 
@@ -412,12 +415,19 @@ def pv_same(n, b):
     order_ok = common == [x for x, _ in rb if x in hn]
     miss = [x for x, _ in rb if x not in hn]
     cap_ok = not miss or len(n['rows']) >= 100
-    extra = [x for x, _ in rn if x not in hb]
+    # ★ 2026-10-07 (_task_jagwa_phys_win §A-45) — 새 판 물리 위 검색이 보이는 제목·고친 제목도 찾음 → 바탕에 없고 tt 에 든 번호(tx)는 「제목으로 더 걸림」 = 뜻한 차 · 그 밖은 옛 잣대 그대로(옛 판은 tt 가 비어 tx 0)
+    tt, bset = set(n.get('tt') or []), set(bb)
+    tx = [x for x in nn if x not in bset and x in tt]
+    # 옛 줄: extra = [x for x, _ in rn if x not in hb]
+    extra = [x for x, _ in rn if x not in hb and x not in tx]
     extra_ok = not extra or len(b['rows']) >= 100
     rest_ok = n['rest'].replace(CAPNOTE, '') == b['rest'].replace(CAPNOTE, '') \
         and ((CAPNOTE in n['rest']) == (len(n['nos']) > 100)) and ((CAPNOTE in b['rest']) == (len(b['nos']) > 100))
-    same = nn == bb and not html_bad and order_ok and cap_ok and extra_ok and rest_ok
+    # 옛 줄: same = nn == bb and not html_bad and order_ok and cap_ok and extra_ok and rest_ok
+    same = (nn == bb or (bool(tx) and [x for x in nn if x not in tx] == bb)) and not html_bad and order_ok and cap_ok and extra_ok and rest_ok   # ★ 2026-10-07 (_task_jagwa_phys_win §A-45) — 집합 = 바탕 + 제목으로 더 걸린 것(차례 그대로)
     info = {'t 로만': len(only), '조각 t': len(kind), '상한 밀림': len(miss)} if (only or kind or miss) else {}
+    if tx:   # ★ 2026-10-07 (_task_jagwa_phys_win §A-45) — 제목으로 더 걸린 번호 수는 값에 남김
+        info['제목으로 더 걸림'] = len(tx)
     if not same:
         info.update({'집합 같음': nn == bb, '줄 HTML 다름': html_bad[:5], '차례': order_ok, '상한': [len(n['rows']), len(b['rows']), miss[:5]], '더 보임': extra[:5], '나머지 글': rest_ok})
     return same, info
@@ -605,6 +615,17 @@ ACCEPT = {('bio', '*', 'button.chchip「타기출 #」'): 'A-7 생물 갈래 칩
           ('bio', '*', 'button.chchip「예상 #」'): 'A-7 생물 갈래 칩 — 같은 chchip 꼴·크기'}
 
 
+# ★ 2026-10-07 (_task_jagwa_phys_win §A-15 ⑧ · §A-33 · §A-27 ⑯㉝) — 같은 단추의 글자만 바뀐 신호(#vBack 「서재」→「✕」 · #tCard 「암기카드」→「🃏」 · #tAns 「정답 ▸」→「답풀」)
+#   는 새 판 신호를 옛 글자로 맞춰 센다(새로 생긴 것으로 안 셈 · 그 단추의 넘침·잘림·덮임·작은 자리는 그대로 잰다 · 옛 판끼리는 안 탐)
+_REN = {'button#vBack.iconbtn「✕」': 'button#vBack.iconbtn「서재」',
+        'button#tCard.tl.wide「🃏」': 'button#tCard.tl.wide「암기카드」',
+        'button#tAns.tl.wide「답풀」': 'button#tAns.tl.wide「정답 ▸」'}
+
+
+def _ren(s):
+    return _REN.get(s, s)
+
+
 def accepted(subj, scr, sig):
     return ACCEPT.get((subj, scr, sig)) or ACCEPT.get((subj, '*', sig))
 
@@ -647,7 +668,8 @@ def sweep_cmp(N, Bs):
         n, b = N[key], Bs.get(key) or {}
         line = {'칸': '%s · %s · %s' % key, '쪽 넘침': [n['docow'], b.get('docow')]}
         for cat in ('over', 'clip', 'cover', 'small'):
-            cn, cb = collections.Counter(n[cat]), collections.Counter(b.get(cat) or [])
+            # 옛: cn, cb = collections.Counter(n[cat]), collections.Counter(b.get(cat) or [])
+            cn, cb = collections.Counter(_ren(s) for s in n[cat]), collections.Counter(b.get(cat) or [])   # ★ 2026-10-07 (_task_jagwa_phys_win §A-15 · §A-33 · §A-27) — 글자만 바뀐 단추는 옛 글자로(_REN)
             d = cn - cb
             line[cat] = [len(n[cat]), len(b.get(cat) or [])]
             for s, k in d.items():

@@ -423,7 +423,7 @@ BODY_EARTH = r"""
      T('V-4 ⤢ 누르면 전체 화면',!$('#view').classList.contains('win')
        &&$('#view').getBoundingClientRect().width>=document.documentElement.clientWidth-2,
        [$('#view').className,$('#view').getBoundingClientRect().width,document.documentElement.clientWidth]);
-     T('V-4 기기 값에 적힌다',localStorage.getItem('jagwa.view.win')==='0');
+     T('V-4 기기 값에 적힌다',localStorage.getItem('jagwa.view.win')==='0'||(typeof VWFULL!=='undefined'&&VWFULL===true&&localStorage.getItem('jagwa.view.win')===null));   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-01·A-02) — 시안 ① ⤢ = 그 열람만 전체 화면(VWFULL) · 기기 값 jagwa.view.win 은 지운다 — 새 꼴 = VWFULL 참 · 열쇠 없음 */
      /* ── 필기 좌표 — 창 크기가 바뀌어도 저장 좌표가 같아야 한다 ──
         ⚠ 획을 그을 자리는 `underInk`(1401줄)로 **비어 있는 곳**을 골라야 한다.
           밑에 눌릴 것이 있으면 `inkPierce`(1420줄)가 capture 단계에서 stopPropagation 해서

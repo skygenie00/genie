@@ -85,10 +85,10 @@ TESTS = r"""<script>
    {const mx=$('#memoX');if(mx)mx.click();await wait(10);}
    /* ===== ④ 연결 ===== */
    /* ★ A-6(a) 9/30 — 셸 이식(c9faff2 · physRowBuild 앱 9584~9597): 물리 아랫줄 단추는 #pRow1 로 옮겨져 「… 공식 · 개념 · 쌍둥이 · Claude · 유형 · 연결」 차례다 — 연결 바로 앞 = 유형(#tType) */
-   T('④ 뷰어 아랫줄 「연결」(#tLink · #pRow1 · 유형 오른쪽) · 칩 #vLink 숨김(0)',!!$('#tLink')&&$('#tLink').previousElementSibling.id==='tType'&&$('#tLink').textContent==='연결'&&getComputedStyle($('#vLink')).display==='none');
+   T('④ 뷰어 아랫줄 「연결」(#tLink · #pRow1 · 유형 오른쪽) · 칩 #vLink 숨김(0)',!!$('#tLink')&&$('#tLink').previousElementSibling.id==='tType'&&($('#tLink').textContent==='연결'||$('#tLink').textContent==='🔗')&&getComputedStyle($('#vLink')).display==='none');   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-30) — 시안 ㉟ 물리 아랫줄 「연결」 → 🔗 하나(쌍둥이 합침) */
    /* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(앱 8168~8169) — SYNC_KEYS 가 SUBJ.phys.SYNC_KEYS 와 같은 배열이라(앱 4355) 둘 다 14 · SUBJ 소스 글자는 12 그대로(아래 파일 층 잣대) */
-   T('④ SYNC_KEYS 14(끝에 gg·ggref) · 12째 link · SYNC_REF.link · SUBJ.phys 도 같은 배열 14 · 지학 19 · 생물 20(add1 +bref)',/* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef 본문 「물리 SYNC 키 tfix 하나 더함」) — 14 또는 끝에 tfix 하나 */(SYNC_KEYS.length===14||(SYNC_KEYS.length===15&&SYNC_KEYS[14]==='tfix'))&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&SYNC_KEYS[11]==='link'&&SYNC_REF.link.g()===LK&&SUBJ.phys.SYNC_KEYS.length===SYNC_KEYS.length&&SUBJ.earth.SYNC_KEYS.length===19&&SUBJ.bio.SYNC_KEYS.length===20);
-   $('#tLink').click();await wait(40);
+   T('④ SYNC_KEYS 14(끝에 gg·ggref) · 12째 link · SYNC_REF.link · SUBJ.phys 도 같은 배열 14 · 지학 19 · 생물 20(add1 +bref)',/* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef 본문 「물리 SYNC 키 tfix 하나 더함」) — 14 또는 끝에 tfix 하나 */(SYNC_KEYS.length===14||(SYNC_KEYS.length===15&&SYNC_KEYS[14]==='tfix')||(SYNC_KEYS.length===16&&SYNC_KEYS.slice(14).sort().join()==='solx,tfix'))/* ★ 2026-10-07 (_task_jagwa_phys_win §A-30) — 시안 ㉖ 물리 SYNC_KEYS 끝에 solx(오린 것) 하나 더(tfix 와 함께 끝 둘) */&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&SYNC_KEYS[11]==='link'&&SYNC_REF.link.g()===LK&&SUBJ.phys.SYNC_KEYS.length===SYNC_KEYS.length&&SUBJ.earth.SYNC_KEYS.length===19&&SUBJ.bio.SYNC_KEYS.length===20);
+   (typeof relPop==='function'?linkSheet(VNO):$('#tLink').click());await wait(40);   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-30) — 시안 ㊵ 물리 🔗 = 단추 옆 작은 창 #rlPop(큰 연결 창 걷음) — 연결 저장·검색·끊기 옛 잣대는 큰 연결 창(linkSheet · 목록 🔗 칩이 아직 여는 창)을 직접 열어 잰다(mcsheet A-6 선례) */
    /* ★ A-6(a) 9/30 — 셸 add16(0bee72b): 연결 시트(linkSheet)는 「보는 시트」라 떠 있는 창 #sh-link(앱 SHWIN ['linkSheet','link'] · shFloat 이 id 를 sh-<key> 로) · 안의 #lkList·#lkq·#lkres 는 그대로 ·
       phone_win A-5(fb89ad2 · pwBtns): 그 창의 「닫기」(#lkX)는 걷었다 → 아래 닫기는 전부 ✕(.shx) */
    T('④ 연결 창 #sh-link(떠 있는 창 · 셸 add16) · 아직 없다 · 검색 칸',!!$('#sh-link')&&/아직 없다/.test($('#lkList').textContent)&&!!$('#lkq'));
@@ -101,8 +101,8 @@ TESTS = r"""<script>
    T('④ 소단원·본문 검색도 잡힌다',hitSub>=1&&hitBody>=1,[hitSub,hitBody]);
    $('#sh-link .shx').click();await wait(10);   /* ★ A-6(a) 9/30 — 연결 창 「닫기」(#lkX) 걷음(phone_win A-5) → ✕ */
    await openView(b);await wait(60);
-   T('④ B 카드 = 역방향 칩 「🔗 1」 · 시트에 「역방향」(끊기 없음)',$('#vLink').textContent==='🔗 1'&&(()=>{$('#tLink').click();const ok=!!$('#lkList .lkrow[data-no="'+a+'"]')&&!$('#lkList .lkrow[data-no="'+a+'"] .lkdel')&&/역방향/.test($('#lkList .lkrow[data-no="'+a+'"]').textContent);$('#sh-link .shx').click();return ok})());   /* ★ A-6(a) 9/30 — 연결 창 「닫기」 걷음(phone_win A-5) → ✕ */
-   $('#tLink').click();await wait(20);$('#lkList .lkrow[data-no="'+a+'"] b').click();await wait(1200);
+   T('④ B 카드 = 역방향 칩 「🔗 1」 · 시트에 「역방향」(끊기 없음)',$('#vLink').textContent==='🔗 1'&&(()=>{(typeof relPop==='function'?linkSheet(VNO):$('#tLink').click());/* ★ 2026-10-07 (_task_jagwa_phys_win §A-30) — ㊵ 위와 같음 */const ok=!!$('#lkList .lkrow[data-no="'+a+'"]')&&!$('#lkList .lkrow[data-no="'+a+'"] .lkdel')&&/역방향/.test($('#lkList .lkrow[data-no="'+a+'"]').textContent);$('#sh-link .shx').click();return ok})());   /* ★ A-6(a) 9/30 — 연결 창 「닫기」 걷음(phone_win A-5) → ✕ */
+   (typeof relPop==='function'?linkSheet(VNO):$('#tLink').click());await wait(20);$('#lkList .lkrow[data-no="'+a+'"] b').click();await wait(1200);   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-30) — ㊵ 위와 같음 */
    /* ★ A-6(a) 9/30 — 셸 전역 [data-go] 규칙(앱 9384~9400 문서 캡처 · earth_bookwin §A 23줄 「data-go = 문항 번호 규칙 유지」 · 수행 결과 160줄 전수 — 2117 = 연결 시트 줄 코드):
       줄 코드(b data-go)는 twinPeek 대신 그 문항 창을 연다 · 문항이 바뀌면 문항에 매인 창(연결 창)은 닫힌다(add16 SHPERQ · 앱 7860·7876~7881) — 닫을 팝업·창이 없다 */
    T('④ 시트 줄 코드 → 그 문항 창(셸 전역 data-go 규칙 · 연결 창 닫힘)',VNO===a&&!$('#view').classList.contains('hide')&&!$('#sh-link')&&!$('.sheet.twin'),[VNO,!!$('#sh-link'),!!$('.sheet.twin')]);
@@ -113,7 +113,7 @@ TESTS = r"""<script>
    /* 새로고침 상당 · 동기화 도장 */
    LK={};LK=(await get('kv','link'))||{};T('④ 새로고침 상당(kv 되읽기) 유지',JSON.stringify(LK[a])===JSON.stringify([b]));
    stampAll();T('④ 동기화 도장 link|a · recPayload 에 link',!!lsObj(U_KEY)['link|'+a]&&!!recPayload().data.link&&JSON.stringify(recPayload().data.link[a])===JSON.stringify([b]),Object.keys(lsObj(U_KEY)).filter(k=>k.startsWith('link')));
-   await openView(a);await wait(40);$('#tLink').click();await wait(20);$('#lkList .lkrow[data-no="'+b+'"] .lkdel').click();await wait(60);
+   await openView(a);await wait(40);(typeof relPop==='function'?linkSheet(VNO):$('#tLink').click());await wait(20);$('#lkList .lkrow[data-no="'+b+'"] .lkdel').click();await wait(60);   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-30) — ㊵ 위와 같음 */
    T('④ 끊기 → LK 비움 · kv · #vLink 숨김',!LK[a]&&!((await get('kv','link'))||{})[a]&&getComputedStyle($('#vLink')).display==='none');$('#sh-link .shx').click();   /* ★ A-6(a) 9/30 — 연결 창 「닫기」 걷음(phone_win A-5) → ✕ */
    T('④ 쌍둥이 무접촉(twinSheet · TW 비어 있음 · 쌍 칩 없음)',typeof twinSheet==='function'&&Object.keys(TW).length===0&&!$('#list .tag.tw'));
    closeView();
@@ -217,7 +217,7 @@ def main():
     # 판 2 add3(2026-09-08) — 모아보기(지학)에 ctrl+휠 확대가 생겼다. mcardSheet 는 층 **밖**이라
     #   소스 위치만 보면 이 줄이 걸린다. CLAUDE.md 「『물리 무변』은 소스 무접촉이 아니다」에 따라
     #   **가드 안에 있는가**로 갈아 잰다(고친 자리). 물리 뷰어 쪽에는 여전히 wheel 핸들러가 없다.
-    _pre = s.split('/*EARTH:js*/')[0]
+    _pre = s.split('/*EARTH:js*/')[0].replace("box.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();const r=box.getBoundingClientRect();apply(z*(e.deltaY<0?1.12:1/1.12),e.clientX-r.left,e.clientY-r.top)},{passive:false});", '', 1)   # ★ 2026-10-07 (_task_jagwa_phys_win §A-26) — 시안 ㉔ 오린 것 확대·축소(solxZoom)의 Ctrl+휠은 물리 뷰어가 아니라 정답·풀이 창 오린 그림 칸 몫 — 그 한 줄만 빼고 센다(바탕엔 그 줄 없음)
     _z0 = _pre.find('b.__zsetup=()=>{')
     _z1 = _pre.find(chr(10) + '  };' + chr(10), _z0) if _z0 >= 0 else -1
     T2('핀치·Ctrl+휠은 JG 전용 배선(b.__zsetup) 안에만 있다 — 물리 뷰어엔 wheel 핸들러 없음 그대로',

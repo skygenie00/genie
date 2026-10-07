@@ -59,6 +59,9 @@ window.__C={
     걷은 개수 = window.__CUTN */
  cut(c){window.__CUTN=0;if(!window.__CG1||!c)return 0;let n=0;
    c.querySelectorAll('.ewmt').forEach(x=>{x.remove();n++});
+   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-36 · §A-37 ㊴) — 물리 목록 「기출」 칩 자리에 「V3」 글자(.vno) · 「볼트 N」 칩(.tag.vlt) 걷음 = 뜻한 차 →
+      물리(HASBOOK 거짓)만 두 판 모두 그 칸(.vno · .tag.vlt · 기출 딱지)을 걷고 맞댄다(칩 자리는 걷은 DOM 으로 다시 잰다 · 카드 층은 무변) */
+   if(__C.ph())c.querySelectorAll('.item .meta .vno,.item .meta .tag').forEach(x=>{if(x.classList.contains('vno')||x.classList.contains('vlt')||/^(기출|타기출|확인|예상)$/.test(String(x.textContent||'').trim())){x.remove();n++}});
    if(typeof ynUid!=='function'&&typeof HASBOOK!=='undefined'&&HASBOOK)c.querySelectorAll('.item').forEach(it=>{
      if(window.__CG1SUB&&/^[BG][0-9][0-9]-[0-9]+-[0-9]+$/.test(String(it.dataset.uid||'')))it.querySelectorAll('.meta > .sub').forEach(x=>{x.remove();n++});
      it.querySelectorAll('.meta > .tag').forEach(x=>{if(/^[0-9]+회독$/.test(String(x.textContent||'').trim())){x.remove();n++}})});
@@ -109,6 +112,17 @@ def md(t):
     return hashlib.md5(t.encode('utf-8')).hexdigest()[:8] + ':' + str(len(t))
 
 
+NEWPW = False   # ★ 2026-10-08 (_task_jagwa_phys_win §A-37 · §A-40) 새 판 표지 — main 에서 NEW 앱 글에 function pfDecor 가 있으면 참
+
+
+def _tn(t, subj):   # ★ 2026-10-08 (_task_jagwa_phys_win §A-37 · §A-40) 새 판 표지 있을 때만 · 두 판 모두 — 빈칸 접기(세 과목 · row() 템플릿 「볼트 N」 줄 빠짐) · 단원 머리 「🃏📋」 뒤 「공식」 칩 뗌(물리만)
+    # 옛 줄: if not NEWPW or subj != 'phys' or not isinstance(t, str):
+    if not NEWPW or not isinstance(t, str):
+        return t
+    # 옛 줄: return re.sub(r'\s+', ' ', t.replace('🃏📋공식', '🃏📋')).strip()
+    return re.sub(r'\s+', ' ', t.replace('🃏📋공식', '🃏📋') if subj == 'phys' else t).strip()   # ★ 10/8 02:4x — 생물·지학도 같은 템플릿 줄 빠짐(생물 C2·C4 바탕 PASS → 새 판 FAIL 까닭)
+
+
 def open_head(q):
     q.ev(CJS)
     fb = q.ev("()=>__W.at('#fFoldBtn')")
@@ -121,8 +135,11 @@ def phone(br, eng, subj):
     def f(q):
         open_head(q)
         cg1(q, subj)   # ★ uid_unify 옛 잣대 고침 — 새 판과 맞댈 때만 걷는 표시(아니면 옛 잣대 그대로)
-        o = {'over': q.ev("()=>__C.over()"), 'text': md(q.ev("()=>__C.text()")), 'fold': q.ev("()=>document.body.classList.contains('fold')")}
+        # 옛 줄: o = {'over': q.ev("()=>__C.over()"), 'text': md(q.ev("()=>__C.text()")), 'fold': q.ev("()=>document.body.classList.contains('fold')")}
+        o = {'over': q.ev("()=>__C.over()"), 'text': md(_tn(q.ev("()=>__C.text()"), subj)), 'fold': q.ev("()=>document.body.classList.contains('fold')")}
         o['cut'] = q.ev("()=>window.__CUTN||0")   # 이 쪽 목록 글자에서 걷은 개수(.text() 가 마지막으로 걷은 값 · 아무것도 안 걷으면 0)
+        if subj == 'phys':   # ★ 2026-10-07 (_task_jagwa_phys_win 회귀) 진단만 · 판정 무변 — 물리 목록 글자 날것(걷은 뒤 · 맞대기에 안 씀 · 갈리면 main 이 TEMP 에 떠 둔다)
+            o['raw'] = q.ev("()=>__C.text()")
         if subj == 'bio':
             lg = q.ev("()=>__C.longest()")
             o['long'] = lg
@@ -147,7 +164,8 @@ def pc(br, eng, subj):
         cg1(q, subj)   # ★ uid_unify 옛 잣대 고침 — 새 판과 맞댈 때만 걷는 표시(아니면 옛 잣대 그대로)
         ov = q.ev("()=>__C.over()")   # 넘침은 걷기 앞에서 잰다(옛 값 그대로)
         cn = q.ev("()=>__C.cutLive()")   # 새 판과 맞댈 때만 DOM 에서 뜻한 차이를 걷는다(그 밖엔 0) — 칩 자리는 걷은 DOM 으로 다시 잰다
-        return {'tags': q.ev("()=>__C.tags()"), 'text': md(q.ev("()=>__C.text()")), 'over': ov, 'cut': cn}
+        # 옛 줄: return {'tags': q.ev("()=>__C.tags()"), 'text': md(q.ev("()=>__C.text()")), 'over': ov, 'cut': cn}
+        return {'tags': q.ev("()=>__C.tags()"), 'text': md(_tn(q.ev("()=>__C.text()"), subj)), 'over': ov, 'cut': cn}
     return PW.both(br, eng, subj, False, f)
 
 
@@ -155,6 +173,8 @@ def main():
     PW.APPS['NEW'] = io.open(NEWF, encoding='utf-8').read()
     global NEWG1   # ★ uid_unify 옛 잣대 고침 — NEW 앱 글에 ynUid 가 있으면 §G-1·§G-2 새 판(바탕 4754b1d 와 인도 앞 판 eb1113e 는 없다)
     NEWG1 = re.search(r'\b(?:var|let|const|function)\s+ynUid\b', PW.APPS['NEW']) is not None
+    global NEWPW
+    NEWPW = 'function pfDecor(' in PW.APPS['NEW']   # ★ 2026-10-08 (_task_jagwa_phys_win §A-37 · §A-40) 새 판 표지
     PW.APPS['BASE'] = PW.git('show', 'eb1113e:jagwa/index.html').decode('utf-8')   # ★ A-6(d) 9/30 _task_qa_baseline — 헛잣대 바탕 = 인도 앞 판 eb1113e(jagwa_search · 인도 결과 머리 「바탕 genie HEAD eb1113e」) · 인도(95cc766) 뒤 HEAD 는 이 판 자신
     t0 = time.time()
     with sync_playwright() as pw:
@@ -171,6 +191,10 @@ def main():
                         T('C1-헛', '%s 헛잣대 바탕 — 폰 생물 목록이 가로로 넘침' % eng, b['over']['n'] > 0 and b['over']['sw'] > b['over']['W'], b['over'])
                     # 옛 줄: T('C2', '%s 폰 %s — 목록 글자 = 바탕' % (eng, subj), n['text'] == b['text'], [n['text'], b['text']])
                     T('C2', '%s 폰 %s — 목록 글자 = 바탕' % (eng, subj), n['text'] == b['text'], [n['text'], b['text']] + cutinfo(n, b, subj))
+                    if subj == 'phys' and n['text'] != b['text']:   # ★ 2026-10-07 (_task_jagwa_phys_win 회귀) 진단만 · 판정 무변 — 갈린 두 글을 TEMP 에(무엇이 갈렸는지 줄로 가름)
+                        _hd = PW.git('rev-parse', '--short', 'HEAD').decode().strip()
+                        for _k, _v in (('new', n), ('base', b)):
+                            open(os.path.join(os.environ.get('TEMP', '.'), 'cw_%s_%s_phys_%s.txt' % (_hd, eng, _k)), 'w', encoding='utf-8').write(str(_v.get('raw')))
                     if subj == 'bio':
                         lg, lb = n.get('long') or {}, b.get('long') or {}
                         T('C3', '%s 폰 생물 가장 긴 단원 칩 — 화면 안 · 칩 안 두 줄 이상 · 손가락 톡 → 그 단원으로 거름' % eng,
@@ -182,7 +206,8 @@ def main():
                     T('C4', '%s PC %s — 칩 자리·크기 = 바탕(%d 칩) · 목록 글자 = 바탕 · 넘침 0' % (eng, subj, len(rp['NEW']['tags'])),
                       tags_eq(rp['NEW']['tags'], rp['BASE']['tags'], subj) and rp['NEW']['text'] == rp['BASE']['text'] and rp['NEW']['over']['n'] == 0 and len(rp['NEW']['tags']) > 0,
                       # 옛 줄: {'다른 칩': [i for i, (x, y) in enumerate(zip(rp['NEW']['tags'], rp['BASE']['tags'])) if not tags_eq([x], [y], subj)][:5], '글자': [rp['NEW']['text'], rp['BASE']['text']]})
-                      {**{'다른 칩': [i for i, (x, y) in enumerate(zip(rp['NEW']['tags'], rp['BASE']['tags'])) if not tags_eq([x], [y], subj)][:5], '글자': [rp['NEW']['text'], rp['BASE']['text']]}, **cutdict(rp['NEW'], rp['BASE'], subj)})
+                      {**{'다른 칩': [i for i, (x, y) in enumerate(zip(rp['NEW']['tags'], rp['BASE']['tags'])) if not tags_eq([x], [y], subj)][:5], '글자': [rp['NEW']['text'], rp['BASE']['text']]}, **cutdict(rp['NEW'], rp['BASE'], subj),
+                         **({'첫 다른 칩(새·바탕)': next(([x, y] for x, y in zip(rp['NEW']['tags'], rp['BASE']['tags']) if not tags_eq([x], [y], subj)), None)} if subj == 'phys' else {})})   # ★ 2026-10-08 (_task_jagwa_phys_win) 진단만 — 첫 다른 칩 값
             finally:
                 br.close()
     npass = sum(1 for x in RES if x[2]); nfail = sum(1 for x in RES if not x[2])

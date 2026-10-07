@@ -399,7 +399,10 @@ PVJS = r"""(q)=>{ /* ★ physprev(10/2) — _task_jagwa_physprev 57줄(A-2-3): �
  const box=document.getElementById('esres');
  const rows=box?[...box.children].filter(e=>e.dataset&&e.dataset.esq).map(e=>[+e.dataset.esq,e.outerHTML]):[];
  let rest='';if(box){const c=box.cloneNode(true);[...c.children].forEach(e=>{if(e.dataset&&e.dataset.esq)e.remove()});rest=c.innerHTML}
- return {nos:ES_NOS.slice(),only,kind,rows,rest}}"""
+ /* ★ 2026-10-07 (_task_jagwa_phys_win §A-45) — 물리 위 검색이 보이는 제목(titleOf)·고친 제목(pnFix)도 찾음 → 그 둘로 걸리는 번호 tt(앱 esPhysHit 글에 titleOf(r) 가 있을 때만 · 옛 판은 빈 목록)
+    옛 줄: return {nos:ES_NOS.slice(),only,kind,rows,rest}} */
+ const tt=(ph&&String(esPhysHit).indexOf('titleOf(r)')>=0)?ES_NOS.filter(n=>{const r=DATA.find(x=>x[F.NO]===n);return !!r&&(String(titleOf(r)).includes(q)||String(pnFix(r)||'').includes(q))}):[];
+ return {nos:ES_NOS.slice(),only,kind,rows,rest,tt}}"""
 CAPNOTE = '<div class="bplnone">상위 100건만 표시했습니다. 검색어를 더 좁혀보세요.</div>'
 
 
@@ -420,12 +423,19 @@ def pv_same(n, b):
     order_ok = common == [x for x, _ in rb if x in hn]
     miss = [x for x, _ in rb if x not in hn]
     cap_ok = not miss or len(n['rows']) >= 100
-    extra = [x for x, _ in rn if x not in hb]
+    # ★ 2026-10-07 (_task_jagwa_phys_win §A-45) — 새 판 물리 위 검색이 보이는 제목·고친 제목도 찾음 → 바탕에 없고 tt 에 든 번호(tx)는 「제목으로 더 걸림」 = 뜻한 차 · 그 밖은 옛 잣대 그대로(옛 판은 tt 가 비어 tx 0)
+    tt, bset = set(n.get('tt') or []), set(bb)
+    tx = [x for x in nn if x not in bset and x in tt]
+    # 옛 줄: extra = [x for x, _ in rn if x not in hb]
+    extra = [x for x, _ in rn if x not in hb and x not in tx]
     extra_ok = not extra or len(b['rows']) >= 100
     rest_ok = n['rest'].replace(CAPNOTE, '') == b['rest'].replace(CAPNOTE, '') \
         and ((CAPNOTE in n['rest']) == (len(n['nos']) > 100)) and ((CAPNOTE in b['rest']) == (len(b['nos']) > 100))
-    same = nn == bb and not html_bad and order_ok and cap_ok and extra_ok and rest_ok
+    # 옛 줄: same = nn == bb and not html_bad and order_ok and cap_ok and extra_ok and rest_ok
+    same = (nn == bb or (bool(tx) and [x for x in nn if x not in tx] == bb)) and not html_bad and order_ok and cap_ok and extra_ok and rest_ok   # ★ 2026-10-07 (_task_jagwa_phys_win §A-45) — 집합 = 바탕 + 제목으로 더 걸린 것(차례 그대로)
     info = {'t 로만': len(only), '조각 t': len(kind), '상한 밀림': len(miss)} if (only or kind or miss) else {}
+    if tx:   # ★ 2026-10-07 (_task_jagwa_phys_win §A-45) — 제목으로 더 걸린 번호 수는 값에 남김
+        info['제목으로 더 걸림'] = len(tx)
     if not same:
         info.update({'집합 같음': nn == bb, '줄 HTML 다름': html_bad[:5], '차례': order_ok, '상한': [len(n['rows']), len(b['rows']), miss[:5]], '더 보임': extra[:5], '나머지 글': rest_ok})
     return same, info

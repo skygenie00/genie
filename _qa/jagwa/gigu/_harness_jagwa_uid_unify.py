@@ -249,7 +249,7 @@ window.__U={
     c.querySelectorAll('.ewmt').forEach(x=>x.remove());   /* ★ 묶음(add1 시험 틀림 태그)은 이 칸 몫 아님 — JG2 가 잼 */
     o[d.dataset.uid||('#'+i)]=__U.ws(c.outerHTML)});return o},
  drawer(){const o={};document.querySelectorAll('#ndList .ndrow').forEach(d=>{const r=DATA[+d.dataset.no-1];const c=d.cloneNode(true);
-    c.querySelectorAll('.ndt,.ndm,.ndno,.ewmt').forEach(x=>x.remove());c.removeAttribute('data-no');   /* ★ .ewmt = 묶음 add1 태그(JG2 몫) */c.querySelectorAll('[data-nc]').forEach(x=>x.removeAttribute('data-nc'));o[r?r[F.CODE]:('#'+d.dataset.no)]=__U.ws(c.outerHTML)});return o},
+    c.querySelectorAll('.ndt,.ndm,.ndno,.ewmt').forEach(x=>x.remove());c.removeAttribute('data-no');c.removeAttribute('data-sec');/* ★ 2026-10-07 (_task_jagwa_phys_win §A-06) — 시안 ③ 서랍 단원 접기: 줄마다 data-sec(단원 열쇠) · 바탕 4754b1d 엔 없다 */   /* ★ .ewmt = 묶음 add1 태그(JG2 몫) */c.querySelectorAll('[data-nc]').forEach(x=>x.removeAttribute('data-nc'));o[r?r[F.CODE]:('#'+d.dataset.no)]=__U.ws(c.outerHTML)});return o},
  heat(){return [...document.querySelectorAll('#spec i')].map(i=>(i.className||'')+'|'+(i.title||''))},
  cnt(){return ['c0','cO','cQ','cX','cP','cWk','cW'].map(i=>{const e=document.getElementById(i);return e?e.textContent:null})},
  screen(){return {rows:__U.rows(),drawer:__U.drawer(),heat:__U.heat(),cnt:__U.cnt()}},
@@ -815,6 +815,8 @@ def sc_phys(br, eng, app, stat):
 
 def nok(d):
     d = json.loads(json.dumps(d or {}))
+    if d.get('solx') == {}:   # ★ 2026-10-07 (_task_jagwa_phys_win §A-30) — 시안 ㉖ 물리 SYNC_KEYS 에 solx(오린 것) 더함 → 올린 몸통에 빈 통 {} 이 실린다 · 바탕 4754b1d 엔 없는 키라 빈 것만 뺀다(오린 것이 있으면 남아 걸린다)
+        d.pop('solx')
     for v in (d.get('gg') or {}).values():
         for g in (v or []):
             if isinstance(g, dict):
@@ -829,11 +831,35 @@ def j_phys_body(ON, OB):
     return ok, {'data=바탕': canon(nok(a['data'])) == canon(nok(b['data'])), 'u=바탕(gg 도장 뺌)': canon(nu(a['u'])) == canon(nu(b['u'])), 'gone=바탕': canon(a['gone']) == canon(b['gone']), '칸(물리)': ON['keys']}
 
 
+def _b6_norm(rows, kind):   # ★ 2026-10-08 (_task_jagwa_phys_win §A-36·37 · §A-06 · §A-34·35 · §A-41·47 · §A-03) 물리 목록·서랍 줄의 뜻한 차만 뗌(두 판 모두 · 새 판 표지가 있을 때만 부름)
+    out = []
+    for x in rows:
+        if kind == 'list':
+            x = re.sub(r'\s*<span class="vno"[^>]*>[^<]*</span>', '', x)               # §A-36 ㊴ V 글자(새 판)
+            x = re.sub(r'\s*<span class="tag (?:tg|tc|tt|te)">[^<]*</span>', '', x)    # 그 자리 기출·확인·타기출·예상 딱지(바탕)
+            x = re.sub(r'\s*<span class="tag vlt">[^<]*</span>', '', x)                # §A-37 「볼트 N」 칩(바탕)
+        else:
+            x = re.sub(r' data-sec="[^"]*"', '', x)                                     # §A-06 서랍 줄 절 표지(접힌 단원 숨김)
+            x = x.replace('class="ndno ph"', 'class="ndno"')                            # §A-34 번호 칸 ph
+            x = re.sub(r'<i class="ndv"[^>]*>[^<]*</i>', '', x)                         # §A-35 번호 앞 V 글자
+            x = re.sub(r'<span class="ndtt"[^>]*>([^<]*)</span>', r'\1', x)             # §A-41·47 제목 span.ndtt(길게 눌러 고치기)
+            x = re.sub(r'((?:<b class="ndm[^"]*">[^<]*</b>)+)', lambda m: re.findall(r'<b class="ndm[^"]*">[^<]*</b>', m.group(1))[-1], x)   # §A-03 꼬리 회독마다 → 마지막 회독 것만(바탕 꼴)
+        out.append(x)
+    return out
+
+
 def j_phys_screen(ON, OB):
+    # 옛 줄: ok = ON['list'] == OB['list'] and ON['drawer'] == OB['drawer'] and ON['cnt'] == OB['cnt'] and ON['list']['n'] > 0
+    if any('class="ndtt"' in x for x in (ON.get('drawer') or {}).get('rows') or []):   # ★ 2026-10-08 (_task_jagwa_phys_win) 새 판 표지 — 두 판 모두 뜻한 차만 떼고 맞댐(가림은 값에 남김)
+        ON = dict(ON, list=dict(ON['list'], rows=_b6_norm(ON['list']['rows'], 'list')), drawer=dict(ON['drawer'], rows=_b6_norm(ON['drawer']['rows'], 'drawer')), b6mask=True)
+        OB = dict(OB, list=dict(OB['list'], rows=_b6_norm(OB['list']['rows'], 'list')), drawer=dict(OB['drawer'], rows=_b6_norm(OB['drawer']['rows'], 'drawer')))
     ok = ON['list'] == OB['list'] and ON['drawer'] == OB['drawer'] and ON['cnt'] == OB['cnt'] and ON['list']['n'] > 0
     diff = [i for i, (x, y) in enumerate(zip(ON['list']['rows'], OB['list']['rows'])) if x != y]
     ddiff = [i for i, (x, y) in enumerate(zip(ON['drawer']['rows'], OB['drawer']['rows'])) if x != y]
-    return ok, {'목록 줄': [ON['list']['n'], OB['list']['n']], '다른 줄(30 표본)': diff[:4], '서랍 줄': [ON['drawer']['n'], OB['drawer']['n']], '다른 서랍 줄': ddiff[:4], '카운터 같음': ON['cnt'] == OB['cnt']}
+    return ok, {'목록 줄': [ON['list']['n'], OB['list']['n']], '다른 줄(30 표본)': diff[:4], '서랍 줄': [ON['drawer']['n'], OB['drawer']['n']], '다른 서랍 줄': ddiff[:4], '카운터 같음': ON['cnt'] == OB['cnt'],
+                **({'가림(§A · 뜻한 차)': 'V 글자·기출 딱지·볼트 N(목록) · data-sec·ph·V·ndtt·꼬리 마지막 회독(서랍)'} if ON.get('b6mask') else {}),
+                **({'첫 다른 줄': [ON['list']['rows'][diff[0]][:300], OB['list']['rows'][diff[0]][:300]]} if diff else {}),
+                **({'첫 다른 서랍 줄': [ON['drawer']['rows'][ddiff[0]][:300], OB['drawer']['rows'][ddiff[0]][:300]]} if ddiff else {})}   # ★ 2026-10-08 (_task_jagwa_phys_win) 남은 차는 글자로 남김
 
 
 # ══════════ E 시나리오 ══════════

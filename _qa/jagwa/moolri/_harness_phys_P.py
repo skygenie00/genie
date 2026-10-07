@@ -153,29 +153,29 @@ TESTS = r"""<script>
    VNO=3;await showProblem();await wait(20);
    document.dispatchEvent(new KeyboardEvent('keydown',{key:'4',bubbles:true}));await wait(60);
    T('P-1 키 4 → P',lastM(3)==='P'&&hist(3).length===2,hist(3));
-   T('P-1 네비 ndmP 갱신(3)',nrow(3).querySelector('.ndm').classList.contains('ndmP'));
+   T('P-1 네비 ndmP 갱신(3)',nrow(3).querySelector('.ndm').classList.contains('ndmP')||[...nrow(3).querySelectorAll('.ndm')].pop().classList.contains('ndmP')/* ★ 2026-10-07 (_task_jagwa_phys_win §A-03) — 물리 서랍 꼬리도 회독마다 마크(기록 h 차례) → 마지막 칸 = 방금 찍은 P */);
    T('약점 상태를 안 민다 — 3: 없음 그대로 · 1: 약점 그대로',weakState(3)===''&&weakState(1)==='weak');
    document.dispatchEvent(new KeyboardEvent('keydown',{key:'1',bubbles:true}));await wait(60);
    T('키 1 그대로(O)',lastM(3)==='O');
 
    /* ===== 이력 편집 시트 ===== */
    histSheet(6);await wait(20);
-   const hb=[...document.querySelectorAll('.histrow')[1].querySelectorAll('.sel button')].map(b=>b.textContent);
-   T('P-1 이력 편집 시트 넷째 버튼 「패스」',hb.join()==='맞음,헷갈림,틀림,패스',hb);
-   const pon=document.querySelectorAll('.histrow')[1].querySelector('.sel button[data-m=P].on');
-   T('P-1 이력 시트 P on = 검정',!!pon&&bg(pon)===INK,pon&&bg(pon));
-   document.querySelectorAll('.histrow')[1].querySelector('.sel button[data-m=O]').click();await wait(60);
+   const hb=[...(document.querySelectorAll('.histrow')[1]||document.querySelectorAll('#hsPop .hsr')[1]).querySelectorAll('.sel button,.hsm button')].map(b=>b.textContent);   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-18) — 회독 기록 = 작은 창 #hsPop(줄 .hsr · 단추 .hsm button[data-m] · 글자 O △ X P) · 옛 시트(.histrow · .sel)면 옛 그대로 */
+   T('P-1 이력 편집 시트 넷째 버튼 「패스」',hb.join()==='맞음,헷갈림,틀림,패스'||(!!document.getElementById('hsPop')&&hb.join()==='O,△,X,P')/* ★ 2026-10-07 (_task_jagwa_phys_win §A-18) — 새 회독 창 단추 글자 O △ X P(넷째 = P) */,hb);
+   const pon=(document.querySelectorAll('.histrow')[1]||document.querySelectorAll('#hsPop .hsr')[1]).querySelector('.sel button[data-m=P].on,.hsm button[data-m=P].on');   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-18) */
+   T('P-1 이력 시트 P on = 검정',!!pon&&(bg(pon)===INK||(!!document.getElementById('hsPop')&&getComputedStyle(pon).color===INK))/* ★ 2026-10-07 (_task_jagwa_phys_win §A-18 · A-04 #hsPop CSS) — 새 회독 창의 켜진 P = 검정 글자(.ndmP · 바탕은 카드색) */,pon&&bg(pon));
+   (document.querySelectorAll('.histrow')[1]||document.querySelectorAll('#hsPop .hsr')[1]).querySelector('.sel button[data-m=O],.hsm button[data-m=O]').click();await wait(60);   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-18) */
    T('이력 시트에서 P→O 고치기',lastM(6)==='O');
-   document.querySelectorAll('.histrow')[1].querySelector('.sel button[data-m=P]').click();await wait(60);
+   (document.querySelectorAll('.histrow')[1]||document.querySelectorAll('#hsPop .hsr')[1]).querySelector('.sel button[data-m=P],.hsm button[data-m=P]').click();await wait(60);   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-18) */
    T('이력 시트에서 O→P 고치기',lastM(6)==='P');
-   $('#sh-hist .shx').click();await wait(10);   /* ★ A-6(a) 9/30 — 셸 add16(0bee72b): 마크 이력(histSheet)은 떠 있는 창(#sh-hist) · phone_win A-5(fb89ad2 · pwBtns): 그 창의 「닫기」(#hClose)는 걷었다 → ✕ 로 닫는다(phys_twin 첫 바퀴 고침과 같다 · 안 고치면 N-1 을 넘긴 뒤 여기서 다시 터진다) */
+   ($('#sh-hist .shx')||$('#hsPop #hsX')).click();await wait(10);   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-18) — 새 판은 #hsPop 의 ✕(#hsX)로 닫는다 */   /* ★ A-6(a) 9/30 — 셸 add16(0bee72b): 마크 이력(histSheet)은 떠 있는 창(#sh-hist) · phone_win A-5(fb89ad2 · pwBtns): 그 창의 「닫기」(#hClose)는 걷었다 → ✕ 로 닫는다(phys_twin 첫 바퀴 고침과 같다 · 안 고치면 N-1 을 넘긴 뒤 여기서 다시 터진다) */
 
    /* ===== R-1 · again ===== */
    FL.mark='again';T('P-2 again 무변(X 만 센다)',ids().join()===again0,ids());FL.mark='';
    const ST1=JSON.parse(JSON.stringify(ST));delete ST1[6];delete ST1[3];const B=JSON.parse(before);delete B[6];delete B[3];
    T('R-1 P 찍은 문항 밖의 기록 바이트 동일',JSON.stringify(ST1)===JSON.stringify(B));
    T('R-1 note JSON 바이트 동일',JSON.stringify(CMT)===CMT0);
-   T('R-1 SYNC_KEYS 14(10 + mcard · 2026-09-04 · + link 2026-09-05 필터 손질 B-4 · + gg·ggref 2026-09-21 셸 이식) · status·note',/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(앱 8168~8169) · 앞 열둘은 그대로 *//* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef 본문 「물리 SYNC 키 tfix 하나 더함」) — 14 또는 끝에 tfix 하나 */(SYNC_KEYS.length===14||(SYNC_KEYS.length===15&&SYNC_KEYS[14]==='tfix'))&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&SYNC_KEYS[0]==='status'&&SYNC_KEYS[1]==='note'&&SYNC_KEYS[10]==='mcard'&&SYNC_KEYS[11]==='link',SYNC_KEYS);
+   T('R-1 SYNC_KEYS 14(10 + mcard · 2026-09-04 · + link 2026-09-05 필터 손질 B-4 · + gg·ggref 2026-09-21 셸 이식) · status·note',/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(앱 8168~8169) · 앞 열둘은 그대로 *//* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef 본문 「물리 SYNC 키 tfix 하나 더함」) — 14 또는 끝에 tfix 하나 */(SYNC_KEYS.length===14||(SYNC_KEYS.length===15&&SYNC_KEYS[14]==='tfix')||(SYNC_KEYS.length===16&&SYNC_KEYS.slice(14).sort().join()==='solx,tfix')/* ★ 2026-10-07 (_task_jagwa_phys_win §A-30 ㉖) — 물리 SYNC 키 끝에 오린 것 solx 하나 더(tfix 와 둘) */)&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&SYNC_KEYS[0]==='status'&&SYNC_KEYS[1]==='note'&&SYNC_KEYS[10]==='mcard'&&SYNC_KEYS[11]==='link',SYNC_KEYS);
    T('R-1 exportData 함수 있음',typeof exportData==='function');
 
    /* ===== N-2 코멘트 시트 검색 ===== */

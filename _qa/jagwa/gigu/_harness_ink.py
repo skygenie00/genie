@@ -77,6 +77,7 @@ TESTS = r"""<script>
  async function run(){
   try{
    localStorage.setItem('tt.cfg',JSON.stringify({token:'github_pat_TEST',person:'검산'}));
+   for(let __i=0;__i<300&&(typeof db==='undefined'||!db);__i++)await wait(100);   /* ★ 2026-10-08 (_task_jagwa_phys_win) 고정 대기(load+600ms) 대신 IndexedDB(db)가 설 때까지(30 초 한도) — 짐이 크면 600ms 안에 안 열려 「db 없음」 예외(1 단계 셋 다) · 같은 판을 짐 적을 때 돌리면 정상(00:25 진단) */
    await loadEarthData(); draw(); await wait(50);
    T('G-0 지학 카드 층으로 떴다(CARD_LAYER · earth1)',CARD_LAYER===true&&db.name==='earth1'&&DATA.length>0,[CARD_LAYER,db.name,DATA.length]);
    /* inkGet·inkOrphan 은 async 라 Annex B 로 전역에 안 올라온다 — if(CARD_LAYER) 블록 안에서만 산다(부르는 쪽도 그 안이라 문제 없음). 여기선 inkNorm 만 직접 본다. */
@@ -169,7 +170,7 @@ TESTS = r"""<script>
    T('G-4 HAVE 빈 상태에서도 카드 층 문항 필기는 안 막힌다(획 하나 시작됨)',after===before+1,[before,after]);
 
    T('errors 0',(window.__err||[]).length===0,window.__err);
-  }catch(e){T('예외',false,String(e&&e.stack||e))}
+  }catch(e){T('예외',false,String(e&&e.stack||e)+' · 진단 '+JSON.stringify({err:(window.__err||[]).slice(0,6),db:typeof db==='undefined'?'TDZ/없음':(db?db.name:String(db)),ms:Math.round(performance.now()),rs:document.readyState}))}   /* ★ 2026-10-07 (_task_jagwa_phys_win 회귀) 진단만 · 판정 무변 — 옛 줄: }catch(e){T('예외',false,String(e&&e.stack||e))} */
   try{await __nativeFetch('/result',{method:'POST',body:R.join(String.fromCharCode(10))})}catch(e){}
  }
  if(document.readyState==='complete')setTimeout(run,600);else window.addEventListener('load',()=>setTimeout(run,600));

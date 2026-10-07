@@ -85,7 +85,7 @@ BODY_CL2 = r"""
    N('CL2 밑준비 동기화',{끝났나:SYNCED,ST:Object.keys(ST||{}).length,
      회독1:(typeof reps==='function'&&DATA[0])?reps(DATA[0][F.NO]):null});
    await wait(700);
-   if(CARD&&typeof loadEarthData==='function'){try{await loadEarthData()}catch(e){}}
+   if(CARD&&typeof loadEarthData==='function'){try{await (async()=>{for(let __i=0;__i<300&&(typeof db==='undefined'||!db);__i++)await new Promise(r=>setTimeout(r,100));return loadEarthData()})()/* ★ 2026-10-08 (_task_jagwa_phys_win 회귀) db 가 설 때까지 — 고정 대기 경합(짐 크면 「db 없음」) · 판정 무변 */}catch(e){}}
    FL.past='';FL.q='';FL.unit='';FL.bigs=[];FL.subs=[];FL.round='';FL.mark='';FL.lv='';FL.star=false;FL.year='';
    draw(); await wait(700);
    const NO=(DATA[0]||[])[F.NO], NO2=(DATA[1]||[])[F.NO];
@@ -112,7 +112,7 @@ BODY_CL2 = r"""
      N('CL2 실측 아랫줄 보이는 차례',shown);
      if(CARD){
        T('CL2-1 ★보이는 차례가 다섯+Claude 다',
-         JSON.stringify(shown)===JSON.stringify(ROW),shown);
+         (JSON.stringify(shown)===JSON.stringify(ROW)||JSON.stringify(shown)===JSON.stringify(ROW.filter(i=>!/^tLayer/.test(i)))),shown);   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-04) — 시안 ⑪ 회독 고르개·👁·「+회독」 세 과목 다 숨김 → 보이는 차례 = 기록·🃏·Claude */
        T('CL2-1 ★맨 오른쪽이 #tGpt 다',shown[shown.length-1]==='tGpt',shown.slice(-2));
        T('CL2-1 #tGpt 글자가 「Claude」다',txt(document.getElementById('tGpt'))==='Claude',
          txt(document.getElementById('tGpt')));
@@ -125,7 +125,7 @@ BODY_CL2 = r"""
      N('CL2 실측 아랫줄 꼴',st);
      /* 「+회독」이 한 줄인가 */
      const la=document.getElementById('tLayerAdd');
-     T('CL2-2 「+회독」이 한 줄이다(1500px)',!!la&&la.getClientRects().length===1,
+     T('CL2-2 「+회독」이 한 줄이다(1500px)',!!la&&(la.getClientRects().length===1||getComputedStyle(la).display==='none'),   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-04·A-13) — 시안 ⑥ 「+회독」 세 과목 다 숨김(창을 닫았다 열면 새 회독) */
        la?[la.getClientRects().length,txt(la)]:null);
    });
 
@@ -221,7 +221,7 @@ BODY_CL2 = r"""
            sel=document.getElementById('tLayer'), hist=document.getElementById('tHist'),
            card=document.getElementById('tCard');
      T('CL2-3 다섯이 다 눌리는 자리에 있다',
-       [eye,add,sel,hist,card].every(x=>vis(x)&&x.getBoundingClientRect().width>0),
+       ([eye,add,sel,hist,card].every(x=>vis(x)&&x.getBoundingClientRect().width>0)||[hist,card].every(x=>vis(x)&&x.getBoundingClientRect().width>0)&&[eye,add,sel].every(x=>!!x&&getComputedStyle(x).display==='none')),   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-04) — 시안 ⑪ 셋 숨김 · 눌리는 자리 = 기록·🃏(숨긴 셋은 아래 .click() 으로 옛 동작만 잰다) */
        [eye,add,sel,hist,card].map(x=>x?Math.round(x.getBoundingClientRect().width):null));
      const opt0=sel?sel.options.length:0;
      add.click(); await wait(700);
@@ -233,7 +233,7 @@ BODY_CL2 = r"""
      eye.click(); await wait(300);
      killSheets();
      hist.click(); await wait(700);
-     T('CL2-3 「기록」이 창을 연다',$$$('body>.sheet').length>0,$$$('body>.sheet').length);
+     T('CL2-3 「기록」이 창을 연다',$$$('body>.sheet').length>0||!!document.getElementById('hsPop'),$$$('body>.sheet').length);{const hp=document.getElementById('hsPop');if(hp&&hp.__close)hp.__close()}   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-18) — 시안 ⑪ histSheet = 단추 옆 작은 창 #hsPop(시트 아님) · 잰 뒤 닫음 */
      killSheets(); await wait(200);
      card.click(); await wait(800);
      T('CL2-3 「암기카드」가 창을 연다',
@@ -272,7 +272,7 @@ BODY_CL2 = r"""
        const d=ifr.contentDocument;
        const la=d.getElementById('tLayerAdd');
        T('CL2-2 ★380px 에서도 「+회독」이 한 줄이다',
-         !!la&&la.getClientRects().length===1,
+         !!la&&(la.getClientRects().length===1||la.ownerDocument.defaultView.getComputedStyle(la).display==='none'),   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-04·A-13) — 시안 ⑥ 「+회독」 숨김 */
          la?[la.getClientRects().length,String(la.textContent).trim(),
              Math.round(la.getBoundingClientRect().width),
              Math.round(la.getBoundingClientRect().height)]:null);
@@ -310,7 +310,7 @@ PHONE2 = r"""<script>
  async function go(){
   try{
    localStorage.setItem('tt.cfg',JSON.stringify({token:'github_pat_TEST',person:'검산'}));
-   if(typeof HASBOOK!=='undefined'&&HASBOOK&&typeof loadEarthData==='function'){await loadEarthData()}
+   if(typeof HASBOOK!=='undefined'&&HASBOOK&&typeof loadEarthData==='function'){await (async()=>{for(let __i=0;__i<300&&(typeof db==='undefined'||!db);__i++)await new Promise(r=>setTimeout(r,100));return loadEarthData()})()/* ★ 2026-10-08 (_task_jagwa_phys_win 회귀) db 가 설 때까지 — 고정 대기 경합(짐 크면 「db 없음」) · 판정 무변 */}
    await until(()=>DATA.length>0,45000);
    FL.past='';draw();await wait(300);
    await openView(DATA[0][F.NO]); await wait(1200);
@@ -448,7 +448,7 @@ def static_checks():
     for pat, ko, n in [
             (r'const PH=!HASBOOK;', 'PH 정의', 1),
             (r'\(PH&&r\[F\.STAR\]\)', '★ 는 물리 갈래 그대로', 1),
-            (r'\(PH&&r\[F\.VLT\]\)', '볼트 태그는 물리 갈래 그대로', 1),
+            (r'\(PH&&r\[F\.VLT\]\)|PH\?\(r\[F\.VLT\]\?', '볼트 태그는 물리 갈래 그대로', 1),   # ★ 2026-10-07 (_task_jagwa_phys_win §A-36·A-37) — 물리 목록 「볼트 N」 칩 걷고 「기출」 칩 자리에 V 글자(PH?(r[F.VLT]?…) · 물리 갈래 수는 같다
             (r"PH\?\(typeof typeOf==='function'", '유형 태그는 물리 갈래 그대로', 1),
             (r"PH&&r\[F\.SRC\]!=='변리사'", '.nog 는 물리 갈래 그대로', 1),
             (r'function physRowBuild\(\)\{\n  if\(HASBOOK\|\|!SHELL\)return;', 'physRowBuild 머리', 1),
@@ -458,13 +458,14 @@ def static_checks():
         T('CL2-Z %s : 바탕과 같은 수' % ko, a == b and a >= 1, [a, b])
 
     # ── 물리 lk2 규칙의 **선언**이 한 글자도 안 바뀌었나 ──
+    s_lk2 = s.replace('#navdr .ndhead>#ndHead{white-space:nowrap}', '')   # ★ 2026-10-07 (_task_jagwa_phys_win §A-04) — 시안 (52) 서랍 머리 #ndHead 의 {white-space:nowrap} 은 lk2 선언이 아니다 — 그 한 곳만 빼고 센다
     for decl in ['{width:auto;height:auto;padding:4px 8px;border:0;background:none;',
                  'font-size:11.5px;font-weight:600;color:var(--muted);border-radius:6px}',
                  '{white-space:nowrap}',
                  '{appearance:none;-webkit-appearance:none;']:
         T('CL2-Z 물리 lk2 선언 무변 — %s' % decl[:42],
-          s.count(decl) == base.count(decl) and base.count(decl) >= 1,
-          [s.count(decl), base.count(decl)])
+          s_lk2.count(decl) == base.count(decl) and base.count(decl) >= 1,
+          [s_lk2.count(decl), base.count(decl)])
     T('CL2-Z 물리 #pRow1 선택자가 그대로 남아 있다',
       s.count('body[data-layer="pdf"] #pRow1 .lk2') == base.count('body[data-layer="pdf"] #pRow1 .lk2'),
       [s.count('body[data-layer="pdf"] #pRow1 .lk2'),
@@ -525,6 +526,10 @@ def main():
 
     # ── CL2-2 꼴 — 카드 층 여섯이 물리 같은 단추와 같은 계산값인가 ──
     ps = M('phys', 'CL2 실측 아랫줄 꼴')
+    # ★ 2026-10-07 (_task_jagwa_phys_win §A-27) — 새 판 표지: 물리 아랫줄 글자가 「답풀」로 시작(#tAns 글자 단추) · 없으면 옛 맞대기 그대로
+    _slim = str(M('phys', 'CL2 실측 아랫줄 글') or '').startswith('답풀')
+    _SLIMV = {'fontSize': ('11.5px', '11px'), 'paddingTop': ('4px', '2px'), 'paddingBottom': ('4px', '2px'),
+              'paddingLeft': ('8px', '5px'), 'paddingRight': ('8px', '5px')}   # ★ 2026-10-07 (_task_jagwa_phys_win §A-04 ㉝) 물리 아랫줄만 줄임 — (카드 층 = 옛 물리 값, 물리 = 줄인 값)
     for sub, ko in (('earth', '지학'), ('bio', '생물')):
         cs = M(sub, 'CL2 실측 아랫줄 꼴')
         if not ps or not cs:
@@ -539,7 +544,11 @@ def main():
             if not a or not b:
                 bad[i] = 'missing'
                 continue
-            d = {k: [a[k], b[k]] for k in a if k not in skip and a[k] != b[k]}
+            # 옛 줄: d = {k: [a[k], b[k]] for k in a if k not in skip and a[k] != b[k]}
+            if _slim and a.get('display') == 'none' and b.get('display') == 'none':   # ★ 2026-10-07 (_task_jagwa_phys_win §A-04 ⑪) 세 과목 다 숨긴 회독 셋 — 안 보이는 단추 꼴은 안 맞댐
+                continue
+            d = {k: [a[k], b[k]] for k in a if k not in skip and a[k] != b[k]
+                 and not (_slim and k in _SLIMV and (a[k], b[k]) == _SLIMV[k])}   # ★ 2026-10-07 (_task_jagwa_phys_win §A-04 ㉝) 줄인 값 짝만 받음
             if d:
                 bad[i] = d
         lines.append(('PASS' if not bad else 'FAIL')
@@ -574,12 +583,35 @@ def main():
         if a is None or b is None:
             lines.append('FAIL | CL2-6 물리 %s 실측을 못 받았다' % ko)
             continue
+        _mask = ''
+        if _slim and key == 'CL2 실측 목록 25줄' and isinstance(a, str) and isinstance(b, str):
+            # ★ 2026-10-07 (_task_jagwa_phys_win §A-36 ㊴ · §A-37) 물리 목록 「기출」 칩 자리 → V 글자 · 「볼트 N」 칩 걷음 — 새 판 V 글자 · 바탕 기출 딱지(같은 자리) · 「볼트 N」을 떼고 맞댐
+            a = ' || '.join(re.sub(r'^(\S+) V\d+ ', r'\1 ', x) for x in a.split(' || '))
+            b = ' || '.join(re.sub(r' 볼트 \d+(?= )', '', re.sub(r'^(\S+) (?:기출|타기출|확인|예상) ', r'\1 ', x)) for x in b.split(' || '))
+            _mask = 'V 글자 · 기출 딱지 · 볼트 N 뗌'
+        if _slim and key == 'CL2 실측 아랫줄 글' and isinstance(a, str):
+            # ★ 2026-10-07 (_task_jagwa_phys_win §A-27 · §A-33 · §A-30 ㉟ · §A09) 답풀 → 정답 ▸ · 🃏 → 암기카드 · 🔗 → 연결 · 다시 열면 새 회독(고르개 1·2·3회독) → 옛 글자로 맞춤(아래 옛 「이론 → 공식」 줄이 이어 받음)
+            a = re.sub(r'^답풀', '정답 ▸', a)
+            a = re.sub(r'1회독(?:\d+회독)+\+회독', '1회독+회독', a, count=1)
+            a = a.replace('🃏이론개념', '암기카드이론개념', 1).replace('Claude유형🔗', 'Claude유형연결', 1)
+            _mask = '답풀 · 🃏 · 🔗 · 회독 고르개 맞춤'
+        _HID = ('tSol', 'tLayer', 'tLayerAdd', 'tLayerEye', 'tType', 'tTwin', 'tConcept')   # ★ 2026-10-07 (_task_jagwa_phys_win §A-04 ⑪ · §A-13 ⑥ · §A-27 ⑯ · §A-04 ㉞㉟㊱) 물리 아랫줄 숨긴 일곱
+        if _slim and key == 'CL2 실측 아랫줄 보이는 차례' and isinstance(b, list):
+            b = [x for x in b if x not in _HID]
+            _mask = '숨긴 일곱 뺌'
+        if _slim and key == 'CL2 실측 아랫줄 전수 꼴' and isinstance(a, list) and isinstance(b, list):
+            # ★ 2026-10-07 (_task_jagwa_phys_win §A-04 ㉝ · §A-27) 물리 아랫줄 줄임(글자 단추 · 상자 없음)으로 꼴 칸을 다시 칠함 → 차례(id)·보임(숨긴 일곱은 0)만 맞댐 · 꼴 칸은 가림
+            _nf = sum(1 for x, y in zip(a, b) if list(x[2:]) != list(y[2:]))
+            a = [[x[0], x[1]] for x in a]
+            b = [[y[0], 0 if y[0] in _HID else y[1]] for y in b]
+            _mask = '꼴 칸 가림(다른 단추 %d)' % _nf
         if key == 'CL2 실측 아랫줄 글' and isinstance(a, str):
             # ★ 합치기 10/1(하위 에이전트 C) — physphone A-3(97883ef 본문 「#tTheory 「공식」 → 「이론」」) — 그 단추 글자만 옛 글자로 맞춘다(바탕 판을 돌려도 같게)
             a = a.replace('암기카드이론개념', '암기카드공식개념', 1)
         lines.append(('PASS' if a == b else 'FAIL')
                      + ' | CL2-6 ★물리 %s 가 바탕과 같다' % ko
-                     + ('' if a == b else ' | ' + _firstdiff(a, b)))
+                     + ('' if a == b else ' | ' + _firstdiff(a, b))
+                     + ((' | 가림(§A · 뜻한 차): ' + _mask) if _mask else ''))   # ★ 2026-10-07 (_task_jagwa_phys_win) 가린 칸은 판정 줄에 남김
 
     # ── CL2-0 헛잣대 ──
     for sub, ko in (('earth', '지학'), ('bio', '생물')):

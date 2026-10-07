@@ -259,7 +259,7 @@ BODY_VTOP = r"""
    $('#view').classList.remove('hide'); await wait(80);
    const bk=$('#vBack'), b=bk.getBoundingClientRect(), pl=getComputedStyle($('.vtop')).paddingLeft;
    T('V-1 #vBack 이 떠 있다(크기 > 0)',b.width>10&&b.height>10,[b.width,b.height]);
-   T('V-1 마크업 무변 — id·글자·class',bk.id==='vBack'&&bk.textContent==='서재'&&bk.className==='iconbtn',[bk.textContent,bk.className]);
+   T('V-1 마크업 무변 — id·글자·class',bk.id==='vBack'&&(bk.textContent==='서재'||bk.textContent==='✕')&&bk.className==='iconbtn',[bk.textContent,bk.className]);   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-15 ⑧) — 「서재」 → ✕(세 과목) = 뜻한 차 · 옛 글자도 받는다 · 옛: bk.textContent==='서재' */
    /* A-6(a) 9/30 — 뒤 판이 .vtop 에 둘을 더했다 — ⤢ 창↔전체 화면 #vWinTg(gigu/_task_jagwa_earth_listpop.md · a9f9fd4 · 타이머 뒤) · 필기 알약 #inkPill(_task_jagwa_earth_listpop_add2 §A-1
       「.vtop 안 · 제목 오른쪽 · 타이머 왼쪽 · 좁으면 둘째 줄로」 · 20a7128 flex-wrap·row-gap:6px · c9faff2 body[data-shell]) — 옛 여섯의 차례·칸 사이 8px 는 그대로 */
    T('V-1 .vtop 은 여전히 flex · 칸 사이 8px · 옛 단추 차례 그대로(+ 필기 알약·⤢ · 줄 사이 6px)',
@@ -369,7 +369,9 @@ def static_checks():
        '@media (pointer:coarse){.vtop{padding-left:calc(env(safe-area-inset-left) + 66px)}}' in s
        and '.vtop{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 7px) 10px 7px;' in s)
     T2('S-7 #vBack 마크업·onclick 무접촉',
-       '<button class="iconbtn" id="vBack">서재</button>' in s and "$('#vBack').onclick=closeView;" in s)
+       # ★ 2026-10-07 (_task_jagwa_phys_win §A-15 ⑧) — 「서재」 → ✕ · title 「닫기 (서재로)」(세 과목) = 뜻한 차 · 옛 마크업도 받는다 · onclick 무접촉은 그대로 잰다
+       # 옛: '<button class="iconbtn" id="vBack">서재</button>' in s and "$('#vBack').onclick=closeView;" in s)
+       ('<button class="iconbtn" id="vBack">서재</button>' in s or '<button class="iconbtn" id="vBack" title="닫기 (서재로)">✕</button>' in s) and "$('#vBack').onclick=closeView;" in s)
     T2('S-8 판 2 자리(mcardWin·mcardSheet) 무접촉', s.count('mcardWin') >= 1 and s.count('mcardSheet') >= 1)
     T2('S-9 백틱 짝', s.count('`') % 2 == 0)
     return out

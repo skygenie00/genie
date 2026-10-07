@@ -17,6 +17,10 @@ SRC = _roots.genie(r"minbeop\index.html")
 REC = _roots.spd(r"minbeop\기록.json")
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "h_use")
 os.makedirs(OUT, exist_ok=True)
+# ★ 2026-10-06 (사용자 22:07 「해」) — 크롬 프로필 · 띄울 app.html 은 로컬 임시 폴더에(N: 마이박스면 --dump-dom 180 초 초과 되풀이 · 바탕 2,330 초 · 규칙 「크롬 프로필은 절대경로 + 로컬 디스크」) · dom.html · stderr.txt 는 그대로 OUT
+import tempfile
+RUN = os.path.join(tempfile.gettempdir(), 'h_use_count')
+os.makedirs(RUN, exist_ok=True)
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 
 KINDS = ('geunge', 'memo', 'logic', 'links')
@@ -108,11 +112,11 @@ def main():
     #   거기 박히면 스크립트가 아예 안 돌았다(9/14 실측). 마지막 것에 붙인다.
     b = html.rindex('</body>')
     html = html[:b] + tests + html[b:]
-    app = os.path.join(OUT, 'app.html')
+    app = os.path.join(RUN, 'app.html')
     io.open(app, 'w', encoding='utf-8', newline='\n').write(html)
 
     r = subprocess.run([CHROME, '--headless=new', '--disable-gpu', '--no-first-run',
-                        '--user-data-dir=' + os.path.join(OUT, 'prof'),
+                        '--user-data-dir=' + os.path.join(RUN, 'prof'),
                         '--allow-file-access-from-files', '--window-size=1280,900',
                         '--virtual-time-budget=12000', '--dump-dom',
                         'file:///' + app.replace('\\', '/')],

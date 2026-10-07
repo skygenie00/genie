@@ -67,6 +67,7 @@ TESTS = r"""<script>
  async function run(){
   try{
    localStorage.setItem('tt.cfg',JSON.stringify({token:'github_pat_TEST',person:'검산'}));
+   for(let __i=0;__i<300&&(typeof db==='undefined'||!db);__i++)await wait(100);   /* ★ 2026-10-08 (_task_jagwa_phys_win) 고정 대기(load+600ms) 대신 IndexedDB(db)가 설 때까지(30 초 한도) — 짐이 크면 600ms 안에 안 열려 「db 없음」 예외(1 단계 셋 다) · 같은 판을 짐 적을 때 돌리면 정상(00:25 진단) */
    await loadEarthData(); draw(); await wait(80);
    T('O-0 카드 층으로 떴다 · 데이터 적재',CARD_LAYER===true&&DATA.length>0&&(TOC.list||[]).length>0,[SUBJ_ID,DATA.length,(TOC.list||[]).length]);
 
@@ -177,7 +178,7 @@ TESTS = r"""<script>
    });
 
    T('O-0 콘솔 오류 0',(window.__err||[]).length===0,window.__err);
-  }catch(e){T('예외',false,String(e&&e.stack||e))}
+  }catch(e){T('예외',false,String(e&&e.stack||e)+' · 진단 '+JSON.stringify({err:(window.__err||[]).slice(0,6),db:typeof db==='undefined'?'TDZ/없음':(db?db.name:String(db)),ms:Math.round(performance.now()),rs:document.readyState}))}   /* ★ 2026-10-07 (_task_jagwa_phys_win 회귀) 진단만 · 판정 무변 — 옛 줄: }catch(e){T('예외',false,String(e&&e.stack||e))} */
   try{await __nativeFetch('/result',{method:'POST',body:R.join(String.fromCharCode(10))})}catch(e){}
  }
  if(document.readyState==='complete')setTimeout(run,600);else window.addEventListener('load',()=>setTimeout(run,600));
