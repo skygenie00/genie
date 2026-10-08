@@ -4714,7 +4714,7 @@ function showSyncHelp(){
     </div>
     <div class="fld"><label>필기·PDF 를 다른 기기로</label>
       <p style="font-size:12.5px;line-height:1.7;margin:0">
-      <b>필기는 자동이 아닙니다.</b> 옮기려면 설정 → <b>필기·진도만 내보내기 (가벼움)</b> 로 json 을 내려받아 다른 기기에서 <b>백업 파일 불러오기</b> 를 합니다.<br>
+      <b>필기는 이제 자동입니다</b>(토큰이 있으면 기록과 같은 고리 · 올릴 것이 있으면 칩에 「필기 n 대기」). 손으로 옮기려면 설정 → <b>필기·진도만 내보내기 (가벼움)</b> 로 json 을 내려받아 다른 기기에서 <b>백업 파일 불러오기</b> 를 합니다.<br>
       PDF 까지 옮기려면 <b>PDF까지 전부 내보내기 (무거움)</b> 입니다. 수십 MB 라 무겁습니다.
       </p>
       <p style="font-size:11.5px;color:#888;margin:8px 0 0">새 기기라면 설정 → <b>저장소에서 시험지 받기</b> 가 더 쉽습니다. 토큰만 넣었으면 교재 PDF 6개를 저장소에서 받아 옵니다. 이미 받아 둔 것은 다시 받지 않고 <b>바뀐 것만</b> 받습니다.</p>
@@ -5317,6 +5317,7 @@ async function syncRecords(force){
     console.warn('기록 동기화 건너뜀:',recErr);
   }
   recBusy=false;recPaint();
+  try{if(typeof inkKick==='function')inkKick()}catch(e){}   /* ★ ink_sync §A-3-1 — 기록 동기화 끝난 뒤 같은 고리(3 분 · 화면 다시 볼 때 · 칩 누름)에서 필기 동기화 */
 }
 
 /* ---------- 시험 D-day — 날짜를 앱에 박지 않는다 ----------
@@ -5372,6 +5373,7 @@ function recPaint(){
       }
     }
     if(recTie)t+=' · 동률 '+recTie+'건';   /* ★ 09-15 §D-5 — 0 이면 안 보인다 · 진 값은 콘솔 */
+    try{const ik=(typeof inkChip==='function')?inkChip():'';if(ik){t+=' · '+ik;if(typeof INKERR==='string'&&INKERR)bad=true}}catch(e){}   /* ★ ink_sync §A-3-4 — 「필기 n 대기」(n>0 일 때만) · 실패면 오류 글자 · 새 단추 없음 */
     el.textContent=t;
     el.classList.toggle('err',bad);
     el.title=recErr?('기록 동기화 — '+recErr+' · 누르면 다시 맞춘다')
@@ -11386,6 +11388,236 @@ if(typeof showProblem==='function'&&!showProblem.__ewm){
   '.ewmt{font-size:11px;font-weight:800;color:#dc2626;white-space:nowrap;margin-right:3px}',   /* ★ uid_unify_add1 — 서랍·목록·「지금 목록」 표시(.ewmx 꼴 · 누름 없음) */
   '.ewml{font-size:10.5px;color:#8a867d;margin:2px 0 4px;padding-left:4px}'   /* 조판기 H7 .qsub 값 그대로 */
 ].join('\n');document.head.appendChild(s)}catch(e){}})();
+/* ═══ ★ 2026-10-08 필기 동기화(jagwa/_task_jagwa_ink_sync.md §A) — 아이패드 · 폰 · PC 어느 기기에서 쓴 필기든 다른 기기의 같은 자리에 ═══
+   원격 = studyplandata <과목 폴더>/ink/<열쇠의 「:」 를 「~」 로>.json · 열쇠 하나 = 파일 하나(기록.json 에 안 넣음 — 3 분마다 통째 PUT 이라 커지면 안 됨)
+   파일 꼴 {v:1, k:<열쇠>, g:{<무리>:{<획 id>:{t:<더한 시각>, o:<차례 값>, e:<획 글자>}}}, x:{<획 id>:<지운 시각>}}
+     · 무리 = 물리 문항 값은 층 번호("0"·"1"…) · {s:[…]} 꼴 값(카드 qink · 교재 bink · 서브노트 note)은 "s"
+     · e = 획에서 p 를 뺀 칸(이름 차례 · hl 0/1 · w 숫자) JSON + 「|」 + p 를 10000 칸 정수 · 앞 점과의 차 「x,y;…」(같은 점 거름 · 0~1 로 안 자름 · RDP 안 함)
+     · 획 id = 무리 + e 해시(16 자) + 같은 무리 안 같은 e 의 몇 번째 — 같은 획이면 기기가 달라도 같은 id
+     · 지운 획(x ≥ t)은 g 에서 e 를 빼고 t · o 만
+   합치기 = 획 id 마다 「가장 늦은 t > 가장 늦은 x」 면 산다 · 처음(맞춘 모습 없음)은 로컬 획 전부 더함 · 지움 0(이미 쓴 필기가 다 올라감)
+   시계 어긋남 막기 = 지울 때 x = max(지금, 알려진 t + 1) · 다시 더할 때 t = max(지금, 알려진 x + 1)
+   글쓰기 함수(saveInk · qSave · zInkCommit · 지우개 · ↶ · 층 지우기)는 안 고친다 — put('ink') 를 감싸 더러운 열쇠만 적고(INKDIRTY · kv inkdirty)
+   동기화 때 맞춘 모습(kv inksync:<열쇠> = {sha, th, f})과 차이를 셈 · del('ink') 은 원격 무변
+   원격 읽기·쓰기 = Git Data API(ref · commits · trees · blobs) · 고리당 커밋 하나 · 기록 동기화(syncRecords) 끝난 뒤 같은 고리(3 분 · 화면 다시 볼 때) + 문항 창 닫을 때 */
+var INKDIRTY=new Set(),INKADDONLY=new Set(),INKBUSY=false,INKERR='',INKIMPORT=0,INKPTR=0,INKPTRT=0,INKLIST=null,INKLOADED=false,INKBADK=new Set();
+var INKGEN={},INKIMPT=0;   /* ③ 열쇠마다 더러움 표시 번호 · ④ 백업 들이기 시작 시각(0 = 아님) */
+var INKST={req:0,get:0,commit:0,retry:0,up:0,dl:0,cyc:0,skip:0};   /* 하네스 · 결정 로그용 셈 */
+var INK_GRID=10000,INK_UP_MAX=60,INK_DL_MAX=200;
+var putRaw=put;   /* 감싸지 않은 원본 — 내려받은 값 · 동기화 장부는 이것으로 쓴다(더러움 표시 안 함) */
+put=function(s,k,v){const p=putRaw(s,k,v);if(s==='ink')p.then(ok=>{if(ok)try{inkMark(k)}catch(e){}}).catch(()=>{});return p};
+function inkSyncable(k){k=String(k);
+  const pre=CARD_LAYER?/^(qink|bink|note):./.test(k):(/^\d+$/.test(k)||/^note:./.test(k));
+  if(!pre)return false;
+  if(!/^[A-Za-z0-9:_.\-]+$/.test(k)){if(!INKBADK.has(k)){INKBADK.add(k);console.warn('필기 동기화 밖 — 열쇠에 다른 글자',k)}return false}
+  return true}
+function inkMark(k){k=String(k);if(!inkSyncable(k))return;
+  const a=!INKDIRTY.has(k);INKDIRTY.add(k);INKGEN[k]=(INKGEN[k]||0)+1;
+  let b=false;if(inkImporting()&&!INKADDONLY.has(k)){INKADDONLY.add(k);b=true}   /* §A-4 — 들인 열쇠는 더함만 · 지움 0 · 백업 들이기는 importData 감쌈 사슬 맨 끝(uid_unify)이 그동안 UID_BUSY 를 올린다 — importData 는 안 감쌈(phys P6 이 함수 글을 잼) */
+  if(INKLOADED){if(a)putRaw('kv','inkdirty',[...INKDIRTY]);if(b)putRaw('kv','inkaddonly',[...INKADDONLY])}
+  if(a)try{recPaint()}catch(e){}}
+function inkImporting(){if(INKIMPT&&Date.now()-INKIMPT>300000)INKIMPT=0;return INKIMPORT>0||!!INKIMPT}   /* ④ 들이기 중(백업 파일 고르기 ~ 들이기 끝 안내 · 5 분 한도) · 교재 bkImportObj */
+async function inkDirtySave(){if(!INKLOADED)return;await putRaw('kv','inkdirty',[...INKDIRTY]);await putRaw('kv','inkaddonly',[...INKADDONLY])}
+async function inkBootLoad(){   /* 첫 고리에서 한 번 — db 가 열린 뒤 */
+  const d=await get('kv','inkdirty');if(Array.isArray(d))d.forEach(k=>INKDIRTY.add(String(k)));
+  const a=await get('kv','inkaddonly');if(Array.isArray(a))a.forEach(k=>INKADDONLY.add(String(k)));
+  if(!(await get('kv','inkinit'))){   /* 이 기기 첫 동기화 — 지금까지 쌓인 필기 열쇠 전부(허용 목록만) */
+    for(const k of await keys('ink'))if(inkSyncable(k))INKDIRTY.add(String(k));
+    await putRaw('kv','inkinit',Date.now())}
+  INKLOADED=true;await inkDirtySave()}
+/* ── 꼴 ── */
+function inkOkSt(s){return !!s&&typeof s==='object'&&Array.isArray(s.p)&&s.p.length>=2&&s.p.every(n=>typeof n==='number'&&isFinite(n))}
+function inkShape(k,v){k=String(k);   /* 'L' = 물리 {층:[획]} · 'S' = {s:[획]} · '' = 새 꼴 아님(순배열 · 옛 층 꼴 · 모르는 꼴) → 건너뜀 */
+  if(!v||typeof v!=='object'||Array.isArray(v))return '';
+  if(!CARD_LAYER&&/^\d+$/.test(k)){for(const x of Object.keys(v)){if(!/^\d+$/.test(x)||!Array.isArray(v[x])||!v[x].every(inkOkSt))return ''}return 'L'}
+  if(!Array.isArray(v.s)||!v.s.every(inkOkSt))return '';
+  return 'S'}
+function inkShapeOfKey(k){return (!CARD_LAYER&&/^\d+$/.test(String(k)))?'L':'S'}
+function inkEnc(st){const m={};
+  Object.keys(st).filter(x=>x!=='p').sort().forEach(x=>{let v=st[x];if(x==='hl')v=v?1:0;else if(x==='w')v=+v;m[x]=v});
+  const P=st.p||[],out=[];let px=0,py=0,lx=null,ly=null;
+  for(let i=0;i+1<P.length;i+=2){const x=Math.round(P[i]*INK_GRID),y=Math.round(P[i+1]*INK_GRID);
+    if(x===lx&&y===ly)continue;
+    out.push(lx===null?(x+','+y):((x-px)+','+(y-py)));px=x;py=y;lx=x;ly=y}
+  return JSON.stringify(m)+'|'+out.join(';')}
+function inkDec(e){const i=e.lastIndexOf('|'),m=JSON.parse(e.slice(0,i)),b=e.slice(i+1),p=[];let x=0,y=0;
+  if(b)b.split(';').forEach((t,j)=>{const a=t.split(',');const dx=+a[0],dy=+a[1];if(!j){x=dx;y=dy}else{x+=dx;y+=dy}p.push(x/INK_GRID,y/INK_GRID)});
+  const st={};Object.keys(m).forEach(k=>st[k]=m[k]);st.p=p;return st}
+function inkH16(s){let a=0x811c9dc5,b=0x050c5d1f;
+  for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=Math.imul(a^c,0x01000193)>>>0;b=Math.imul(b^c,0x01000193)>>>0;b=(b^(b>>>15))>>>0}
+  return a.toString(16).padStart(8,'0')+b.toString(16).padStart(8,'0')}
+function inkHashText(t){return inkH16(t)+':'+t.length}
+function inkGroups(v,shape){return shape==='L'?Object.keys(v).sort((a,b)=>a-b):['s']}
+function inkEntries(v,shape){const out=[];if(!v)return out;   /* [{g,id,e,st,pos}] */
+  for(const g of inkGroups(v,shape)){const arr=(shape==='L'?v[g]:v.s)||[],seen={};
+    arr.forEach((st,pos)=>{if(!inkOkSt(st))return;const e=inkEnc(st),n=seen[e]=(seen[e]||0)+1;out.push({g,id:g+'.'+inkH16(e)+'.'+(n-1),e,st,pos})})}
+  return out}
+/* 로컬 파일 꼴(§A-2-5) — 지금 로컬 값과 맞춘 모습을 견줘 더함 · 지움을 찍는다 · 로컬에 열쇠가 아예 없으면(undefined) 「모름」 = 지움 안 찍음 */
+function inkLocalForm(v,shape,snap,addOnly,now){
+  const F={g:{},x:{}},S=snap||{g:{},x:{}};
+  for(const g in (S.g||{}))for(const id in S.g[g]){const r=S.g[g][id];(F.g[g]=F.g[g]||{})[id]={t:r.t||0,o:r.o||0}}
+  for(const id in (S.x||{}))F.x[id]=S.x[id];
+  if(v===undefined||v===null)return {F,adds:0,dels:0,unknown:true};
+  const first=!snap,have=new Set();let adds=0,dels=0,seq=0;
+  for(const E of inkEntries(v,shape)){have.add(E.id);const G=(F.g[E.g]=F.g[E.g]||{}),r=G[E.id],xt=F.x[E.id]||0;
+    if(r&&r.t>xt){r.e=E.e;continue}   /* 살아 있던 획 — 그대로 */
+    G[E.id]={t:Math.max(now,xt+1),o:first?E.pos:(now*1000+(seq++)),e:E.e};adds++}   /* 새 획 · 되살림 */
+  if(!addOnly)for(const g in F.g)for(const id in F.g[g]){const r=F.g[g][id];
+    if(r.t>(F.x[id]||0)&&!have.has(id)){F.x[id]=Math.max(now,r.t+1);delete r.e;dels++}}   /* 맞춘 모습엔 살았는데 지금 없음 = 지움 */
+  return {F,adds,dels,unknown:false}}
+function inkMergeF(A,B){const M={g:{},x:{}};   /* 둘 합치기 — g = id 합집합(t · o 큰 쪽 · e 있는 쪽) · x = 큰 쪽 */
+  for(const X of [A,B]){if(!X)continue;
+    for(const g in (X.g||{}))for(const id in X.g[g]){const r=X.g[g][id],G=(M.g[g]=M.g[g]||{}),m=G[id];
+      if(!m)G[id]={t:+r.t||0,o:+r.o||0,e:r.e};
+      else{m.t=Math.max(m.t,+r.t||0);m.o=Math.max(m.o,+r.o||0);if(m.e===undefined&&r.e!==undefined)m.e=r.e}}
+    for(const id in (X.x||{}))M.x[id]=Math.max(M.x[id]||0,+X.x[id]||0)}
+  for(const g in M.g)for(const id in M.g[g]){const m=M.g[g][id];if(m.e===undefined||!(m.t>(M.x[id]||0)))delete m.e}
+  return M}
+function inkAlive(M,g,id){const m=M.g[g][id];return m.e!==undefined&&m.t>(M.x[id]||0)}
+function inkFileText(k,M){const g={},x={};   /* 같은 내용 = 같은 글자(쓸데없는 커밋 막음) */
+  Object.keys(M.g).sort((a,b)=>(a===b?0:(/^\d+$/.test(a)&&/^\d+$/.test(b)?a-b:(a<b?-1:1)))).forEach(gr=>{const G=M.g[gr],o={};
+    Object.keys(G).sort().forEach(id=>{const r=G[id];o[id]=r.e!==undefined?{t:r.t,o:r.o,e:r.e}:{t:r.t,o:r.o}});
+    if(Object.keys(o).length)g[gr]=o});
+  Object.keys(M.x).sort().forEach(id=>x[id]=M.x[id]);
+  return JSON.stringify({v:1,k:String(k),g,x})}
+function inkStrip(M){const f={g:{},x:{}};for(const g in M.g){f.g[g]={};for(const id in M.g[g])f.g[g][id]={t:M.g[g][id].t,o:M.g[g][id].o}}for(const id in M.x)f.x[id]=M.x[id];return f}
+function inkNeedE(M){for(const g in M.g)for(const id in M.g[g]){const m=M.g[g][id];if(m.e===undefined&&m.t>(M.x[id]||0))return true}return false}
+function inkHasAny(M){for(const g in M.g)if(Object.keys(M.g[g]).length)return true;return Object.keys(M.x).length>0}
+/* 합친 꼴 → 로컬 값(o 차례 · 물리는 층 0~최대 빈틈없이 · 로컬 빈 층 그대로 · 이미 있던 획은 그 객체 그대로) */
+function inkToLocal(M,shape,cur){const by={};if(cur)for(const E of inkEntries(cur,shape))by[E.id]=E.st;
+  const live={};
+  for(const g in M.g){const G=M.g[g];
+    live[g]=Object.keys(G).filter(id=>G[id].t>(M.x[id]||0)&&(by[id]||G[id].e!==undefined))
+      .sort((a,b)=>(G[a].o-G[b].o)||(a<b?-1:a>b?1:0)).map(id=>by[id]||inkDec(G[id].e))}
+  if(shape==='L'){let mx=-1;
+    Object.keys(live).forEach(g=>{if(/^\d+$/.test(g)&&live[g].length)mx=Math.max(mx,+g)});
+    if(cur)Object.keys(cur).forEach(g=>{if(/^\d+$/.test(g))mx=Math.max(mx,+g)});
+    const out={};for(let L=0;L<=Math.max(0,mx);L++)out[L]=live[String(L)]||[];return out}
+  const o=Object.assign({},(cur&&typeof cur==='object'&&!Array.isArray(cur))?cur:{});o.s=live.s||[];return o}
+/* ── 메모리 사본(열린 창) — 새 객체로 갈아 끼우지 않고 그 안에서 획을 더하고 뺀다(따로 검수 1) ── */
+function inkMemOf(k){k=String(k);
+  try{if(!CARD_LAYER&&VNO&&String(inkK(VNO))===k&&INK&&typeof INK==='object')return {v:INK,kind:'phys'}}catch(e){}
+  try{if(CARD_LAYER&&QUID&&qKey(QUID)===k&&QINK&&typeof QINK==='object')return {v:QINK,kind:'card'}}catch(e){}
+  try{if(typeof BK==='object'&&BK&&BK.ink&&BK.ink[k]&&typeof BK.ink[k]==='object')return {v:BK.ink[k],kind:'bk'}}catch(e){}
+  try{if(typeof SUB==='object'&&SUB&&SUB.ink&&SUB.ink[k]&&typeof SUB.ink[k]==='object')return {v:SUB.ink[k],kind:'sub'}}catch(e){}
+  return null}
+function inkSigL(v){if(!v||typeof v!=='object')return '';   /* 물리 — 획 있는 층만(빈 층은 메모리에만 서므로 뺌) */
+  return Object.keys(v).filter(L=>Array.isArray(v[L])&&v[L].length).sort().map(L=>L+':'+v[L].length+':'+v[L].reduce((s,x)=>s+((x&&x.p)||[]).length,0)).join('|')}
+async function inkBusyKey(k){const m=inkMemOf(k);if(!m)return false;   /* 그리는 중 · 저장 대기인 열쇠는 이번 고리에서 건너뜀 */
+  if(INKPTR>0&&Date.now()-INKPTRT<20000)return true;
+  if(m.kind==='phys'){try{if(drawing)return true}catch(e){}const sv=await get('ink',k);return inkSigL(INK)!==inkSigL(sv||{})}
+  if(m.kind==='card'){try{if(QDRAW)return true}catch(e){}}
+  return false}
+async function inkApplyLocal(k,mem,cur,nv){
+  if(mem){const v=mem.v;
+    if(mem.kind==='phys'){for(const L in nv){if(Array.isArray(v[L])){const a=nv[L];v[L].length=0;v[L].push(...a)}else v[L]=nv[L]}
+      try{LAYERS=Math.max(LAYERS,Object.keys(v).length)}catch(e){}
+      await putRaw('ink',k,v);try{paintInk();fillLayerSel()}catch(e){}}
+    else{const a=nv.s||[];if(!Array.isArray(v.s))v.s=[];v.s.length=0;v.s.push(...a);await putRaw('ink',k,v);
+      try{if(mem.kind==='card'){qPaint();qFillSel()}
+        else{const Z=mem.kind==='bk'?BK:SUB;const P=mem.kind==='bk'?(BK.pgs||[]):(typeof SUB_PAGES!=='undefined'?SUB_PAGES:[]);const p=P.find(x=>x&&x.key===k);if(p)zInkPaint(Z,p)}}catch(e){}}
+    return}
+  if(JSON.stringify(nv)!==JSON.stringify(cur===undefined?null:cur))await putRaw('ink',k,nv)}
+/* ── GitHub Git Data API ── */
+function inkFileName(k){return String(k).replace(/:/g,'~')+'.json'}
+function inkB64dec(b){const s=atob(String(b||'').replace(/\s/g,'')),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return new TextDecoder('utf-8').decode(u)}
+async function inkGitSha(text){try{if(!(window.crypto&&crypto.subtle))return null;   /* git blob sha = sha1("blob <바이트 수>\0" + 글) */
+  const body=new TextEncoder().encode(text),head=new TextEncoder().encode('blob '+body.length+'\0'),all=new Uint8Array(head.length+body.length);
+  all.set(head);all.set(body,head.length);const h=await crypto.subtle.digest('SHA-1',all);
+  return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('')}catch(e){return null}}
+async function inkGH(method,path,body){INKST.req++;
+  const r=await fetch('https://api.github.com/repos/'+REC_REPO+path,{method,cache:'no-store',
+    headers:{Authorization:'Bearer '+recToken(),Accept:'application/vnd.github+json','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  if(r.status===403||r.status===429){const e=new Error('필기 한도 '+r.status);e.limit=1;throw e}
+  if(r.status===404&&method==='GET')return null;
+  if(r.status===422){const e=new Error(method+' '+path+' 422');e.ff=1;throw e}
+  if(!r.ok)throw new Error(method+' '+path+' '+r.status);
+  return await r.json()}
+async function inkListRemote(){   /* ⓐ 목록 — ref → 커밋 → 뿌리 나무 → 과목 폴더 → ink 폴더(404 = 빈 폴더) */
+  const ref=await inkGH('GET','/git/ref/heads/'+REC_BRANCH);
+  if(!ref||!ref.object||!ref.object.sha)throw new Error('ref 없음');
+  const C=ref.object.sha;
+  if(INKLIST&&INKLIST.C===C)return INKLIST;
+  const cm=await inkGH('GET','/git/commits/'+C);if(!cm||!cm.tree)throw new Error('커밋 없음');
+  const T=cm.tree.sha,fold=String(REC_PATH).split('/')[0],files={};
+  const root=await inkGH('GET','/git/trees/'+T),fe=((root&&root.tree)||[]).find(x=>x.path===fold&&x.type==='tree');
+  if(fe){const ft=await inkGH('GET','/git/trees/'+fe.sha),ie=((ft&&ft.tree)||[]).find(x=>x.path==='ink'&&x.type==='tree');
+    if(ie){const it=await inkGH('GET','/git/trees/'+ie.sha);((it&&it.tree)||[]).forEach(x=>{if(x.type==='blob'&&/\.json$/.test(x.path))files[x.path]=x.sha})}}
+  INKLIST={C,T,files};return INKLIST}
+async function inkCycle(again){
+  const L=await inkListRemote(),now=Date.now(),fold=String(REC_PATH).split('/')[0],work=new Map();
+  let dl=0;
+  for(const name in L.files){const sha=L.files[name],k=name.slice(0,-5).replace(/~/g,':');   /* ⓑ 내려받기 — 원격 sha ≠ 맞춘 모습 sha 인 열쇠만 */
+    if(!inkSyncable(k))continue;
+    const snap=await get('kv','inksync:'+k);
+    if(snap&&snap.sha===sha)continue;
+    if(dl>=INK_DL_MAX){INKST.skip++;continue}
+    if(await inkBusyKey(k)){INKST.skip++;continue}
+    const b=await inkGH('GET','/git/blobs/'+sha);dl++;INKST.dl++;
+    let text='',R=null;try{text=inkB64dec(b&&b.content);R=JSON.parse(text)}catch(e){}
+    if(!R||R.v!==1||String(R.k)!==k||typeof R.g!=='object'){console.warn('필기 파일 꼴 다름 — 건너뜀',name);continue}
+    work.set(k,{name,rsha:sha,R,text,snap:snap||null})}
+  const ups=[];
+  for(const k of new Set([...work.keys(),...INKDIRTY])){   /* ⓒ 올릴 것 — 더러운 열쇠 + 받은 것 가운데 로컬에만 있던 획이 생긴 열쇠 */
+    if(await inkBusyKey(k)){INKST.skip++;continue}
+    const gen=INKGEN[k]||0;   /* ③ 이 뒤에 표시가 다시 서면 더러움을 안 지움 */
+    const name=inkFileName(k),w=work.get(k)||{name,rsha:L.files[name]||null,R:null,text:null,snap:(await get('kv','inksync:'+k))||null};
+    if(!w.R&&w.rsha&&(!w.snap||w.snap.sha!==w.rsha))continue;   /* 원격이 바뀌었는데 이번 고리에 못 받음 — 다음 고리 */
+    const mem=inkMemOf(k),cur=mem?mem.v:await get('ink',k),has=cur!==undefined&&cur!==null;
+    const shape=has?inkShape(k,cur):inkShapeOfKey(k);
+    if(has&&!shape){if((INKGEN[k]||0)===gen)INKDIRTY.delete(k);continue}   /* 새 꼴이 아닌 값 — 앱이 inkGet 으로 바꿔 저장한 뒤에 */
+    if(!has&&!w.R){if((INKGEN[k]||0)===gen){INKDIRTY.delete(k);INKADDONLY.delete(k)}continue}   /* 로컬에 열쇠가 없음(del — 옮김 · 쓸어냄) = 모름 · 원격 무변 */
+    const lf=inkLocalForm(has?cur:undefined,shape,w.snap?w.snap.f:null,INKADDONLY.has(k),now);
+    let M=w.R?inkMergeF(w.R,lf.F):inkMergeF(lf.F,null);
+    if(!w.R&&w.rsha&&inkNeedE(M)){   /* ① 산 획인데 글자(e)가 없음(더함만 · 맞춘 모습만 앎) — 원격을 받아 채움 */
+      const b=await inkGH('GET','/git/blobs/'+w.rsha);INKST.dl++;
+      try{w.text=inkB64dec(b&&b.content);w.R=JSON.parse(w.text)}catch(e){w.R=null}
+      if(!w.R||w.R.v!==1||String(w.R.k)!==k||typeof w.R.g!=='object'){w.R=null;continue}
+      M=inkMergeF(w.R,lf.F)}
+    if(inkNeedE(M))continue;   /* 그래도 글자 없는 산 획 — 이번 고리에 안 올림(남의 획을 지우는 일 막음) */
+    if(w.R){await inkApplyLocal(k,mem,has?cur:undefined,inkToLocal(M,shape,has?cur:null))}
+    const text=inkFileText(k,M);
+    const same=w.R?(text===w.text):(w.rsha?(!!w.snap&&w.snap.th===inkHashText(text)):!inkHasAny(M));
+    if(w.R)await putRaw('kv','inksync:'+k,{sha:w.rsha,th:inkHashText(w.text),f:inkStrip(w.R)});   /* 받은 데까지는 맞춤 */
+    if(same){if((INKGEN[k]||0)===gen){INKDIRTY.delete(k);INKADDONLY.delete(k)}continue}
+    ups.push({k,name,text,M,gen})}
+  await inkDirtySave();
+  if(!ups.length){INKERR='';return}
+  const batch=ups.slice(0,INK_UP_MAX);   /* 한 고리 60 열쇠 — 남으면 다음 고리(칩 「필기 n 대기」) */
+  try{
+    const tr=await inkGH('POST','/git/trees',{base_tree:L.T,tree:batch.map(u=>({path:fold+'/ink/'+u.name,mode:'100644',type:'blob',content:u.text}))});
+    const cm=await inkGH('POST','/git/commits',{message:recWho()+' · 필기 '+batch.length,tree:tr.sha,parents:[L.C]});
+    await inkGH('PATCH','/git/refs/heads/'+REC_BRANCH,{sha:cm.sha,force:false});
+    INKST.commit++;INKST.up+=batch.length;INKLIST=null}
+  catch(e){if(e.ff&&!again){INKST.retry++;INKLIST=null;return await inkCycle(true)}throw e}   /* 422 = 그 사이 다른 커밋 → ⓐ 부터 한 번 더 */
+  for(const u of batch){await putRaw('kv','inksync:'+u.k,{sha:await inkGitSha(u.text),th:inkHashText(u.text),f:inkStrip(u.M)});if((INKGEN[u.k]||0)===u.gen){INKDIRTY.delete(u.k);INKADDONLY.delete(u.k)}}
+  await inkDirtySave();INKERR=''}
+async function syncInk(){
+  if(INKBUSY)return;
+  try{if(!recToken()||navigator.onLine===false)return}catch(e){return}
+  if((typeof UID_BUSY==='number'&&UID_BUSY>0)||inkImporting())return;   /* 시동 옮김 · 기록 병합 · 들이기가 끝난 뒤에만 */
+  INKBUSY=true;INKST.cyc++;
+  try{if(!INKLOADED)await inkBootLoad();await inkCycle(false)}
+  catch(e){INKERR=e&&e.limit?'필기 한도':'필기 실패';console.warn('필기 동기화 건너뜀:',(e&&e.message)||e)}
+  INKBUSY=false;try{recPaint()}catch(e){}}
+function inkKick(){if(!INKBUSY)syncInk()}
+function inkChip(){try{if(!recToken())return ''}catch(e){return ''}   /* 올릴 필기가 있을 때만 — 받기만 실패하면 칩 무변(그물 문제는 기록 칩이 보임) */
+  const n=INKDIRTY.size;if(!n)return '';return INKERR?(INKERR+' · '+n+' 대기'):('필기 '+n+' 대기')}
+/* 그리는 중(손가락 · 펜 눌림) — 열린 자리 열쇠는 그 고리에서 건너뜀 */
+window.addEventListener('pointerdown',()=>{INKPTR++;INKPTRT=Date.now()},true);
+['pointerup','pointercancel'].forEach(t=>window.addEventListener(t,()=>{INKPTR=Math.max(0,INKPTR-1)},true));
+/* ② 문항 창이 숨을 때(✕ · 서재 · 어느 길이든) 올릴 필기가 있으면 한 번(물리 저장 대기 300ms 뒤) — closeView 는 안 감쌈(#vBack.onclick 이 옛 함수를 쥠) */
+try{const V=document.getElementById('view');if(V&&window.MutationObserver){let was=!V.classList.contains('hide');
+  new MutationObserver(()=>{const now=!V.classList.contains('hide');if(was&&!now)setTimeout(()=>{if(INKDIRTY.size)inkKick()},900);was=now}).observe(V,{attributes:true,attributeFilter:['class']})}}catch(e){}
+/* ④ 백업 들이기(설정 → 백업 파일 불러오기 · #fim) — 파일을 고른 때부터 들이기 끝 안내(토스트)까지 들어온 필기는 더함만 · 지움 0 */
+document.addEventListener('change',e=>{try{const f=e.target;if(f&&f.id==='fim'&&f.files&&f.files.length)INKIMPT=Date.now()}catch(_){}},true);
+try{new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes){if(n&&n.classList&&n.classList.contains('toast')){const s=n.textContent||'';
+  if(s==='불러오는 중…')INKIMPT=Date.now();   /* 들이기 시작 안내(importData 첫 줄 · 어느 길로 부르든) — 잉크를 넣기 전 await 에서 이 알림이 먼저 돎 */
+  else if(INKIMPT&&(s==='복원했습니다'||s==='백업 파일을 읽지 못했습니다')){INKIMPT=0;setTimeout(()=>{try{inkKick()}catch(_){}},1500)}}}}).observe(document.body,{childList:true})}catch(e){}
+/* §A-4 — 백업 들이기는 더함만(지움 0) */
+/* (백업 들이기 importData 는 안 감쌈 — 위 ④ 파일 고르기 · 끝 안내로 가름 · phys P6 이 함수 글을 잼) */
+if(typeof bkImportObj==='function'){const _b0=bkImportObj;bkImportObj=async function(){INKIMPORT++;try{return await _b0.apply(this,arguments)}finally{INKIMPORT--}}}
+/* ═══ 필기 동기화 끝 ═══ */
 </script>
 <script>
 /* ===== 학습로그 요약 (2026-08-11 추가) =====================================
