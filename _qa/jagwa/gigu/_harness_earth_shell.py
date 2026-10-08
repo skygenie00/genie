@@ -4133,7 +4133,9 @@ def static_checks():
     # 옛 줄: _Z13_UID = (('qk(no){', 66), ('var ynUid=', 24), ('ggMath(src){', 5), ('ewmTagHTML(r){', 2), ('QR=Math.max(QR,1,...qRounds())+1', 1))
     #   + ★ 2026-10-08 _task_jagwa_phys_win §A 47 — 이 판이 갈아 쓴 본판 줄 53(전수 대조: 서재→✕ A-15 · 암기카드→🃏 A-33 · 정답 창 A-26 · 지우개 창→erPop A-16 · twinPeek A-32 · 검색 A-45·46 …) · 마커 = pfDecor(A-39)
     #   잰 값: 7520d46 454(문턱 454) · fdd7b27 507
-    _Z13_UID = (('qk(no){', 66), ('var ynUid=', 24), ('ggMath(src){', 5), ('ewmTagHTML(r){', 2), ('QR=Math.max(QR,1,...qRounds())+1', 1), ('function pfDecor(', 53))
+    # 옛 줄(10/8 03:15): _Z13_UID = (('qk(no){', 66), ('var ynUid=', 24), ('ggMath(src){', 5), ('ewmTagHTML(r){', 2), ('QR=Math.max(QR,1,...qRounds())+1', 1), ('function pfDecor(', 53))
+    #   + ★ 2026-10-08 _task_jagwa_ink_sync — 사용법 글 「필기는 자동이 아닙니다」 한 줄을 「필기는 이제 자동입니다 …」 로(필기 동기화가 생겨 안내가 틀림) · 마커 = function syncInk( · 잰 값 507 → 508
+    _Z13_UID = (('qk(no){', 66), ('var ynUid=', 24), ('ggMath(src){', 5), ('ewmTagHTML(r){', 2), ('QR=Math.max(QR,1,...qRounds())+1', 1), ('function pfDecor(', 53), ('function syncInk(', 1))
     T2('Z-13 지운 본판 줄이 거의 없다(손댄 자리뿐)',
        # ★ 합치기 10/1(하위 에이전트 C) — 320 → 356. 늘어난 36줄은 전수로 짚었다(세 판이 갈아 쓴 줄뿐 · 어느 판에도 없는 줄 0):
        #   physphone 22(공식 시트 frmRowHTML 로 옮긴 옛 rowHtml·body.onclick 줄 · #tTheory 「공식」 · 정리 창 「닫기」·이름 칸 · 개념 줄 글 thl)

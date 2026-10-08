@@ -13,6 +13,13 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+# --mode gate|regress|smoke (_task_qa_slim2 2026-10-08 · 인자 없으면 gate = 이 판 앞과 같음)
+#   regress = 칸 91 = 회귀 84 · data 6 · 관문만 1(P1 = 그 판이 민법 앱을 안 고쳤다는 인도 가드) — 띄움 한 번 · 시드(실물 기록) · 검사 글은 gate 와 같다 · 결과는 원래 %TEMP%\ttrech
+#   smoke   = 같은 한 번 띄움에서 「P7 민법OX 를 저장소에서 읽는다」(+ 예외 잡이 줄 「하니스가 터짐」 · 「앱이 시동되지 않음」)만 찍는다
+#   N:(마이박스) 크롬 프로필을 TEMP 로 옮기는 까닭 — N: 프로필은 띄움마다 느리다: 9/17 tt 회귀(N: 결과 파일 시각) _harness_timetable 76 초 · tt_race 판마다 76~92 초 /
+#     10/6 use_count N: 프로필 --dump-dom 180 초 초과 되풀이 → 사용자 「해」로 TEMP(결정로그 10/6 21:36 · 22:0x) / 프로필이 TEMP 인 민법 dump-dom 하네스는 띄움당 9~14 초
+#     · 마이박스가 하네스 프로필 폴더 목록을 못 펼쳐 _qa_sync copy 10 분 멈춤 · 실행기 열쇠 셈 멈춤(결정로그 10/2 · 10/4)
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) A-1 · 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다
 import functools, http.server, json, os, shutil, socketserver, subprocess, sys, threading
 
 GENIE = _roots.genie()
@@ -361,6 +368,15 @@ TESTS = r"""<script>
 """
 
 
+_RG_SMOKE = ('P7 민법OX 를 저장소에서 읽는다', '하니스가 터짐', '앱이 시동되지 않음')   # smoke — 처리표 smoke 칸 + 예외 잡이 줄 둘(제목 그대로)
+
+
+def _rg_title(ln):
+    """결과 줄 「PASS | 제목 | 값」의 제목 — smoke 거름(제목 그대로)"""
+    p = ln.split(' | ')
+    return p[1] if len(p) > 1 else ln
+
+
 def build():
     if os.path.isdir(OUT):
         shutil.rmtree(OUT, ignore_errors=True)
@@ -413,6 +429,7 @@ def main():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
 
     chrome = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+    QC.launch('new')   # §B-4 셈 — 새 판 앱 띄움 1(바탕 띄움 없음)
     p = subprocess.Popen([chrome, '--headless=new', '--disable-gpu', '--no-first-run',
                           '--user-data-dir=' + os.path.join(OUT, 'prof'),
                           '--window-size=1280,900',
@@ -441,8 +458,11 @@ def main():
     T2('§3 「한쪽을 고치면 다른 쪽도」 주석이 있다', '한쪽을 고치면 다른 쪽도 고쳐야 한다' in tt)
     T2('§3 「정본은 각 앱, tt 는 사본」 주석이 있다', '정본은 각 앱이고 tt 는 사본이다' in tt)
     T2('P11 파일 전체 백틱 수가 짝', tt.count('`') % 2 == 0, tt.count('`'))
-    T2('P1 minbeop/index.html 무접촉(tt 만 고쳤다)', 'minbeop/index.html' not in tt)
+    if QC.GATE:   # regress — P1(그 판이 민법 앱을 안 고쳤다는 인도 가드 · 처리표 관문만)은 gate 만
+        T2('P1 minbeop/index.html 무접촉(tt 만 고쳤다)', 'minbeop/index.html' not in tt)
 
+    if QC.SMOKE:   # smoke — 처리표 smoke 칸 + 예외 잡이 줄만 찍는다(같은 한 번 띄움 · 나머지 칸은 건넘)
+        lines = [x for x in lines if QC.want(_rg_title(x), smoke=_rg_title(x) in _RG_SMOKE)]
     npass = sum(1 for x in lines if x.startswith('PASS'))
     nfail = len(lines) - npass
     for x in lines:

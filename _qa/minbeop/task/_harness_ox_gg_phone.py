@@ -27,6 +27,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import hashlib, json, os, subprocess, sys, tempfile, threading, time, traceback, urllib.parse   # noqa: E402
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer   # noqa: E402
 try:
@@ -263,6 +264,7 @@ def serve(tag, src):
 
 class Pg:
     def __init__(self, br, tag, src, dev):
+        QC.launch('base' if tag == 'BASE' else 'new')
         self.tag, self.dev = tag, dev
         d = DEV[dev]
         kw = dict(viewport={'width': d['W'], 'height': d['H']})
@@ -326,6 +328,9 @@ def run_one(br, tag, src, dev):
         for sc, nm in (('qp-', '팝업'), ('', '카드')):
             open_panel(p, sc)
             out[nm] = {'head': p.ev("(s) => __GP.head(s)", sc), 'tab0': p.ev("(s) => __GP.tab(s)", sc)}
+            if QC.SMOKE:   # smoke — G1(폰 390 팝업 근거 머리줄) 값까지만 · 고치기 줄 · 카드 · G4 · G6 은 건넘
+                p.close()
+                return out
             p.click(p.ev("([s, w, t]) => __GP.btnAt(s, w, t)", [sc, 'head', '고치기']), 400)
             out[nm]['edit'] = p.ev("(s) => __GP.edit(s)", sc)
             out[nm]['tab'] = p.ev("(s) => __GP.tab(s)", sc)
@@ -415,12 +420,16 @@ def bottom_ok(x):
 
 def main():
     os.makedirs(TMPD, exist_ok=True)
-    sn, sb = app_src(NEW), app_src(BASE)
+    if QC.SMOKE:   # smoke — G1(폰 390 문항 팝업 근거 머리줄 = A-0 smoke 칸) + G8(그 기기 오류 0) 만
+        ONLY[:] = ['G1']
+    if QC.GATE:
+        QC.sub('git:show-app')
+    sn, sb = app_src(NEW), (app_src(BASE) if QC.GATE else None)   # regress — 바탕(65dd4db) 앱 풀기·띄우기 0 · 헛잣대(YARD)는 관문만 · 「= 바탕」 칸은 기준 스냅샷
     print('INFO | 새 판 md5(LF) %s · %s B · 바탕 %s md5(LF) %s · %s B' % (md5lf(sn), len(sn.encode('utf-8')), BASE, sb and md5lf(sb), sb and len(sb.encode('utf-8'))), flush=True)
     R = {}
     with sync_playwright() as pw:
         br = pw.chromium.launch()
-        for dev in DEV:
+        for dev in (DEV if not QC.SMOKE else ['폰390']):   # smoke — 폰 390 한 기기
             for tag, src in (('NEW', sn), ('BASE', sb)):
                 if src is None:
                     continue
@@ -445,7 +454,10 @@ def main():
         for dev, n, b in (('폰390', nP, bP), ('PC1280', nC, bC)):
             a, c = (n or {}).get('G4'), (b or {}).get('G4')
             steps = [s[0] for s in (a or [])]
-            same = bool(a) and bool(c) and json.dumps(a, ensure_ascii=False) == json.dumps(c, ensure_ascii=False)
+            if QC.GATE:
+                same = bool(a) and bool(c) and json.dumps(a, ensure_ascii=False) == json.dumps(c, ensure_ascii=False)
+            else:   # regress — 바탕 판 대신 기준 스냅샷(앞 인도판의 같은 일곱 걸음 · 칸 글 · 저장소 글자 — 시계 · 난수 고정이라 결정적 · md5)
+                same = bool(a) and QC.same('G4@' + dev, hashlib.md5(json.dumps(a, ensure_ascii=False).encode('utf-8')).hexdigest())
             last = (a or [[None, {}]])[-1][1] if a else {}
             T('G4', '%s 근거 칸 동작 무변 — %s · 칸 글 · 저장소 글자 = 바탕' % (dev, ' → '.join(steps)), same and len(steps) == 7 and a[0][1]['span'] == '고친 글 하나 — 저장 단추'
               and a[1][1]['span'] == '고친 글 둘 — Enter' and not a[2][1]['editOpen'] and a[3][1]['on'] and not a[4][1]['on'] and a[5][1]['delWin'] and json.loads(last.get('store') or '{}').get(UID) in (None, []),
@@ -467,6 +479,14 @@ def main():
                   and '↩링크1' in gn['처음']['texts'] and '↩백링크1' in gn['처음']['texts'],
                   {'새 판 단추': gn['처음']['texts'], '바탕 단추': gb['처음']['texts'], '펼침 새/바탕': [[gn[k]['ansOpen'] for k in ('처음', '한 번 누름', '두 번 누름')], [gb[k]['ansOpen'] for k in ('처음', '한 번 누름', '두 번 누름')]],
                    '0 장 문항 새/바탕': [gn['0 장 문항']['mc'], gb['0 장 문항']['mc']]})
+            elif QC.REGRESS and n.get('G6'):   # regress — 「= 바탕」 몫(펼침/접힘 · 다른 단추 글자 · 0 장 문항 단추 글자 · 암기카드 창) = 기준 스냅샷(앞 인도판) · 링크 칩 둘은 NEW 그대로
+                gn = n['G6']
+                keep = lambda L: [t for t in L if t not in ('정답·해설', '정답·해설 보기', '정답·해설 숨기기') and not t.startswith('🃏')]
+                op = [gn['처음']['ansOpen'], gn['한 번 누름']['ansOpen'], gn['두 번 누름']['ansOpen']]
+                T('G6', '%s 정답·해설 펼침/접힘 = 바탕 · 다른 단추 글자(↩링크 · ↩백링크 · Claude · ✏️ 연결 · ↪ 이동) = 바탕 · 암기카드 창 = 바탕' % dev,
+                  op == ['none', 'block', 'none'] and QC.same('G6.btns@' + dev, [keep(gn['처음']['texts']), keep(gn['0 장 문항']['texts'])]) and gn['암기카드 창'] is True
+                  and '↩링크1' in gn['처음']['texts'] and '↩백링크1' in gn['처음']['texts'],
+                  {'새 판 단추': gn['처음']['texts'], '펼침 새': op, '0 장 문항 새': gn['0 장 문항']['mc'], '기준': QC.base_note('G6.btns@' + dev)})
     if want('G7'):
         TB('G7', '폰 390 카드 근거 칸(범위 없음) 머리줄 = G1 값', g1_ok, g(nP, '카드', 'head'), g(bP, '카드', 'head'))
         TB('G7', '폰 390 카드 고치기 줄 = G3 값', g3_phone, g(nP, '카드', 'edit'), g(bP, '카드', 'edit'))
@@ -483,7 +503,12 @@ def main():
     base_msgs = {m for k, v in ERRS.items() if k.startswith('BASE') for m in v}
     for k, v in ERRS.items():
         if k.startswith('NEW'):
-            own = [m for m in v if m not in base_msgs]
+            if QC.GATE:
+                own = [m for m in v if m not in base_msgs]
+            else:   # regress — 「바탕에도 나는 것」 = 기준 스냅샷(앞 인도판에서 난 오류 글) · 스냅샷이 없으면 아무것도 안 뺀다(첫 기록이 제 오류를 덮지 않게)
+                prev = QC.base('G8@' + k, sorted(set(v)))
+                prev = prev if QC.base_note('G8@' + k) == '기준 스냅샷' else []
+                own = [m for m in v if m not in prev]
             T('G8', '%s 페이지 오류 0(pageerror · window error · unhandledrejection · 바탕에도 나는 것 %d)' % (k, len(v) - len(own)), not own, own[:5])
         else:
             N('G8', '%s 페이지 오류' % k, v[:5])
@@ -491,7 +516,7 @@ def main():
     n_fail = sum(1 for r in RES if r[2] is False)
     y_bad = [y for y in YARD if y[2]]
     lines = ['', '=' * 100, '_harness_ox_gg_phone — PASS %d · FAIL %d · %d초' % (n_pass, n_fail, round(time.time() - T0)),
-             '헛잣대(바탕 %s · 같은 차례 · FAIL 이어야 함): %d 칸 중 바탕이 통과한 칸 %d' % (BASE, len(YARD), len(y_bad))]
+             ('헛잣대(바탕 %s · 같은 차례 · FAIL 이어야 함): %d 칸 중 바탕이 통과한 칸 %d' % (BASE, len(YARD), len(y_bad))) if QC.GATE else '헛잣대: regress 는 바탕을 안 띄운다(관문만 · 「= 바탕」 칸은 기준 스냅샷)']
     lines += ['  바탕 통과(헛잣대 실패): %s · %s' % (gg, nm) for gg, nm, _ in y_bad]
     lines += ['단계별 초: ' + ' · '.join('%s %d' % s for s in STEP)]
     lines += ['FAIL: %s · %s' % (r[0], r[1]) for r in RES if r[2] is False]

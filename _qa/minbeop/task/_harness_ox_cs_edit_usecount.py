@@ -13,6 +13,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import http.server, socketserver, threading, subprocess, socket, json, base64, struct, urllib.request, urllib.parse
 import hashlib, io, os, re, shutil, sys, tempfile, time
 sys.stdout.reconfigure(encoding='utf-8')
@@ -140,6 +141,8 @@ def serve(tag, src):
 
 
 def shot(ws, name, rect, pad=8, maxh=1400):
+    if QC.REGRESS:   # regress — 캡처(사용자 눈 확인용 그림 · N: _shots 에 씀)는 관문만(D-8) · 찍지 않는다
+        return None
     if not rect or rect.get('width', 0) <= 0:
         return None
     x = max(0, rect['x'] - pad); y = max(0, rect['y'] - pad)
@@ -157,6 +160,7 @@ READY = "typeof ggLineHTML==='function'&&typeof buildQuizData==='function'&&type
 
 
 def run(tag, src, full):
+    QC.launch('base' if tag == 'HEAD' else 'new')
     ws, proc, srv = serve(tag, src)
     D = {}
     try:
@@ -197,16 +201,30 @@ def run(tag, src, full):
         except Exception:
             pass
         srv.shutdown()
-    time.sleep(1)
+    if QC.GATE:
+        time.sleep(1)
+    else:   # regress — 고정 1 초 대신 크롬 프로세스가 끝나기를 기다림(표지 = 프로세스 끝 · 길어야 10 초 · 다음 판이 없어 프로필 자리 다툼 없음)
+        try:
+            proc.wait(timeout=10)
+        except Exception:
+            pass
     return D
 
 
 def main():
+    if QC.SMOKE:   # smoke — 이 하네스엔 smoke 칸이 없다(A-0 처리표 · _task_qa_slim2) · 크롬을 띄우기 전에 끝낸다(결과 파일에도 그 줄)
+        print('INFO | smoke 칸 없음')
+        io.open(os.path.join(HERE, '_harness_ox_cs_edit_usecount_result.txt'), 'w', encoding='utf-8').write('INFO | smoke 칸 없음\n')
+        sys.exit(0)
     os.makedirs(WORK, exist_ok=True); os.makedirs(SHOTS, exist_ok=True)
     new = io.open(os.path.join(GENIE, REL), encoding='utf-8', newline='').read()
-    head = git('show', 'HEAD:' + REL).decode('utf-8')
-    t0 = time.time()
-    H = run('HEAD', head, False); print('HEAD  %.1fs' % (time.time() - t0))
+    if QC.GATE:
+        QC.sub('git:show-app')
+        head = git('show', 'HEAD:' + REL).decode('utf-8')
+        t0 = time.time()
+        H = run('HEAD', head, False); print('HEAD  %.1fs' % (time.time() - t0))
+    else:   # regress — 바탕(HEAD) 앱 풀기 · 헛잣대 탐침(head_probe) 띄움 0(사슬에선 HEAD = 새 판 · A-0 W3 뜻밖에 4)
+        head, H = None, {}
     t0 = time.time()
     N = run('NEW', new, True); print('NEW   %.1fs' % (time.time() - t0))
     json.dump({'HEAD': H, 'NEW': N}, io.open(os.path.join(WORK, 'raw.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
@@ -215,20 +233,33 @@ def main():
     T = lambda n, c, i=None: L.append(('PASS' if c else 'FAIL') + ' | ' + n + ('' if c or i is None else ' | ' + json.dumps(i, ensure_ascii=False)[:700]))
     I = lambda n, v: L.append('INFO | ' + n + ' | ' + json.dumps(v, ensure_ascii=False)[:900])
     # ── 소스 · 파일
-    hb, nb = head.encode('utf-8'), new.encode('utf-8')
-    T('착수 HEAD = 지시서 §0 (1,040,020 B · 544475326d4d)', len(hb) == 1040020 and hashlib.md5(hb).hexdigest().startswith('544475326d4d'), [len(hb), hashlib.md5(hb).hexdigest()])
-    T('NEW CRLF 0 · U+FFFD 0 (%d B · %s)' % (len(nb), hashlib.md5(nb).hexdigest()), b'\r\n' not in nb and '\ufffd' not in new)
-    sk = lambda s: re.search(r'const SYNC_KEYS = \[(.+?)\];', s, re.S).group(1)
-    T('§G SYNC_KEYS 줄 무변', sk(new) == sk(head))
-    ch = [l for l in git('status', '--porcelain').decode('utf-8').split('\n') if l.strip()]
-    T('§G genie 작업트리 바뀐 파일 = minbeop/index.html 하나 %s' % ch, ch == [' M ' + REL], ch)
+    if QC.REGRESS:   # regress — 착수 md5(고정 옛 판) · 작업트리 diff 는 관문만 · SYNC_KEYS 줄은 기준 스냅샷(md5)
+        nb = new.encode('utf-8')
+        T('NEW CRLF 0 · U+FFFD 0 (%d B · %s)' % (len(nb), hashlib.md5(nb).hexdigest()), b'\r\n' not in nb and '\ufffd' not in new)
+        sk = lambda s: re.search(r'const SYNC_KEYS = \[(.+?)\];', s, re.S).group(1)
+        T('§G SYNC_KEYS 줄 무변', QC.same('§G.synckeys', hashlib.md5(sk(new).encode('utf-8')).hexdigest()[:16]), QC.base_note('§G.synckeys'))
+    if QC.GATE:
+        hb, nb = head.encode('utf-8'), new.encode('utf-8')
+        T('착수 HEAD = 지시서 §0 (1,040,020 B · 544475326d4d)', len(hb) == 1040020 and hashlib.md5(hb).hexdigest().startswith('544475326d4d'), [len(hb), hashlib.md5(hb).hexdigest()])
+        T('NEW CRLF 0 · U+FFFD 0 (%d B · %s)' % (len(nb), hashlib.md5(nb).hexdigest()), b'\r\n' not in nb and '\ufffd' not in new)
+        sk = lambda s: re.search(r'const SYNC_KEYS = \[(.+?)\];', s, re.S).group(1)
+        T('§G SYNC_KEYS 줄 무변', sk(new) == sk(head))
+        ch = [l for l in git('status', '--porcelain').decode('utf-8').split('\n') if l.strip()]
+        T('§G genie 작업트리 바뀐 파일 = minbeop/index.html 하나 %s' % ch, ch == [' M ' + REL], ch)
     for tag, d in (('HEAD', H), ('NEW', N)):
+        if QC.REGRESS and tag == 'HEAD':   # regress — HEAD 판 부트 칸은 관문만(바탕 안 띄움)
+            continue
         T('%s 부트 · 시험 준비(문항 %s) · JS 오류 0 · alert 0' % (tag, (d.get('setup') or {}).get('q')), d.get('ready') is True and (d.get('setup') or {}).get('q') == 5548 and not d.get('err') and not d.get('alerts'),
           [d.get('ready'), (d.get('setup') or {}).get('q'), d.get('err'), d.get('alerts'), (d.get('setup') or {}).get('__exc')])
-    T('§B 옛 useNumHTML 호출(연결 칩 · 문항 %s) 출력 HEAD = NEW' % (N.get('setup') or {}).get('chipOwners'), (N.get('setup') or {}).get('chips') == (H.get('setup') or {}).get('chips') and 'ERR' not in ((N.get('setup') or {}).get('chips') or 'ERR'))
-    # ── 헛잣대
-    h = H.get('head') or {}
-    T('헛잣대 HEAD — 댓글 줄 단추 = [지우기]만 · 찾기 ↩ 0 · 그림 ↩ 0 · slotUsers 없음 · 자리 팝업 ↩ 0', h.get('btns') == ['지우기'] and h.get('searchI') == 0 and h.get('picUse') == 0 and h.get('slotUsers') is False and h.get('popI') == 0, h)
+    if QC.REGRESS:   # regress — 연결 칩 출력(옛 useNumHTML 호출)은 기준 스냅샷(앞 인도판 출력 md5)과 · 헛잣대(HEAD 탐침)는 관문만
+        nch = (N.get('setup') or {}).get('chips')
+        T('§B 옛 useNumHTML 호출(연결 칩 · 문항 %s) 출력 HEAD = NEW' % (N.get('setup') or {}).get('chipOwners'), 'ERR' not in (nch or 'ERR')
+          and QC.same('§B.chips', hashlib.md5(json.dumps(nch, ensure_ascii=False).encode('utf-8')).hexdigest()[:16]), QC.base_note('§B.chips'))
+    if QC.GATE:
+        T('§B 옛 useNumHTML 호출(연결 칩 · 문항 %s) 출력 HEAD = NEW' % (N.get('setup') or {}).get('chipOwners'), (N.get('setup') or {}).get('chips') == (H.get('setup') or {}).get('chips') and 'ERR' not in ((N.get('setup') or {}).get('chips') or 'ERR'))
+        # ── 헛잣대
+        h = H.get('head') or {}
+        T('헛잣대 HEAD — 댓글 줄 단추 = [지우기]만 · 찾기 ↩ 0 · 그림 ↩ 0 · slotUsers 없음 · 자리 팝업 ↩ 0', h.get('btns') == ['지우기'] and h.get('searchI') == 0 and h.get('picUse') == 0 and h.get('slotUsers') is False and h.get('popI') == 0, h)
     # ── §A
     a, ao, ar, asv, ap = N.get('a') or {}, N.get('a_open') or {}, N.get('a_rules') or {}, N.get('a_save') or {}, N.get('a_pop') or {}
     I('§A 시험 문항', {k: a.get(k) for k in ('U', 'GK', 'CK', 'O', 'owners', 'T0')})
@@ -269,8 +300,9 @@ def main():
     T('D-6 칩 넘김에 수가 따라감 — Q4311 %s → %s' % (e.get('b1'), e.get('flip')), (e.get('b1') or [None])[0] == '자리 1 / 2 ▶' and e.get('flip') and e['flip'][0] == ['자리 2 / 2 ▶', '↩1'] and e['flip'][1][0] == '자리 1 / 2 ▶' and e['flip'][1][1] in ('', None), [e.get('b1'), e.get('flip')])
     T('D-6 ↩ 누르면(%s) 뷰어 안 열림(z 10000 겹 +%s) · 목록 창만(%s) · 줄 %s = n+1' % (e.get('clickedIn'), e.get('ovAfter'), e.get('newWins'), len(e.get('winRows') or [])), e.get('ovAfter') == 0 and len(e.get('newWins') or []) == 1 and len(e.get('winRows') or []) == 3, e)
     T('D-6 0 이면 없음 — 겹침 없는 한 자리 문항(%s) 그림에 ↩·아랫줄 0' % e.get('lone'), e.get('lone') and e.get('loneUse') == 0 and e.get('loneNav') == 0, [e.get('lone'), e.get('loneUse'), e.get('loneNav')])
-    I('D-8 캡처', [N.get(k) for k in ('shot_1_row', 'shot_1_edit', 'shot_2', 'shot_3', 'shot_4b', 'shot_4', 'shot_4c')])
-    T('D-8 캡처 ①~④-2 일곱 장 다 찍힘', all(N.get(k) for k in ('shot_1_row', 'shot_1_edit', 'shot_2', 'shot_3', 'shot_4b', 'shot_4', 'shot_4c')))
+    if QC.GATE:   # 캡처 일곱 장(사용자 눈 확인용) — regress 는 안 찍는다(관문만)
+        I('D-8 캡처', [N.get(k) for k in ('shot_1_row', 'shot_1_edit', 'shot_2', 'shot_3', 'shot_4b', 'shot_4', 'shot_4c')])
+        T('D-8 캡처 ①~④-2 일곱 장 다 찍힘', all(N.get(k) for k in ('shot_1_row', 'shot_1_edit', 'shot_2', 'shot_3', 'shot_4b', 'shot_4', 'shot_4c')))
     for l in L:
         print('   ' + l)
     p = sum(1 for l in L if l.startswith('PASS')); f = sum(1 for l in L if l.startswith('FAIL'))

@@ -11,6 +11,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import hashlib, io, json, os, random, re, subprocess, sys
 
 SRC = _roots.genie(r"minbeop\index.html")
@@ -45,6 +46,9 @@ def hand_index(reflinks, links):
 
 
 def main():
+    if QC.SMOKE:   # smoke — 이 하네스엔 smoke 칸이 없다(A-0 처리표 · _task_qa_slim2) · 크롬을 띄우기 전에 끝낸다
+        print('INFO | smoke 칸 없음')
+        return 0
     rec = json.load(io.open(REC, encoding='utf-8'))
     data = rec.get('data') or rec
     reflinks = data.get('ox_q_reflinks') or {}
@@ -115,6 +119,7 @@ def main():
     app = os.path.join(RUN, 'app.html')
     io.open(app, 'w', encoding='utf-8', newline='\n').write(html)
 
+    QC.launch('new')   # 새 판 크롬 한 번(바탕은 안 띄운다 — G5 는 글자 대조)
     r = subprocess.run([CHROME, '--headless=new', '--disable-gpu', '--no-first-run',
                         '--user-data-dir=' + os.path.join(RUN, 'prof'),
                         '--allow-file-access-from-files', '--window-size=1280,900',
@@ -135,9 +140,13 @@ def main():
     # ── G5 무접촉 : git 원본(HEAD)과 블록 단위 문자 대조
     print('=== G5 무접촉 — git HEAD 원본과 블록 대조 ===')
     import subprocess as _sp
-    base = _sp.run(['git', 'show', 'HEAD:minbeop/index.html'],
-                   cwd=_roots.genie(),
-                   capture_output=True).stdout.decode('utf-8', 'replace')
+    if QC.GATE:
+        QC.sub('git:show-app')
+        base = _sp.run(['git', 'show', 'HEAD:minbeop/index.html'],
+                       cwd=_roots.genie(),
+                       capture_output=True).stdout.decode('utf-8', 'replace')
+    else:
+        base = None   # regress — 바탕(HEAD) 앱 풀기 0 · 사슬에선 HEAD = 새 판이라 헛대조였다(A-0 W3 뜻밖에 4) · 블록 글자는 기준 스냅샷(앞 인도판의 블록 md5·길이)과 맞댄다
     cur = io.open(SRC, encoding='utf-8', newline='').read()
 
     def block(text, head):
@@ -160,6 +169,21 @@ def main():
 
     n_bad = 0
     for nm in ('function ggAdd(', 'function ggToggle(', 'function refBoxHTML(', 'function refPut('):
+        if QC.REGRESS:   # regress — 기준 칸: 지금 블록(md5 · 길이) = 바탕 스냅샷 · 지금 앱에 그 함수가 없으면 FAIL 로 적고 다음 칸(gate 는 ValueError 로 죽던 자리 — 10/6 저장본 rc 1)
+            try:
+                b1 = block(cur, nm)
+            except (ValueError, AssertionError):
+                b1 = None
+            cid = 'G5.' + nm.strip('function (')
+            v = [hashlib.md5(b1.encode('utf-8')).hexdigest()[:16], len(b1)] if b1 is not None else None
+            ok = b1 is not None and QC.same(cid, v)
+            if nm == 'function refPut(':
+                print('  %-22s %s  (붙은 것 = useIdxDrop() 한 줄뿐인가)' % (nm.strip('function ('), 'PASS' if ok else 'FAIL'))
+            else:
+                print('  %-22s %s  %d자' % (nm.strip('function ('), 'PASS 문자까지 같다' if ok else 'FAIL 달라졌다', len(b1 or '')))
+            print('INFO | G5 기준 · %s | %s · %s' % (nm.strip('function ('), QC.base_note(cid), '지금 앱에 블록 없음' if b1 is None else '블록 %d자' % len(b1)))
+            if not ok: n_bad += 1
+            continue
         b0, b1 = block(base, nm), block(cur, nm)
         if nm == 'function refPut(':
             # 색인 무효화 한 줄만 붙었는지 — 그 줄을 걷어내면 문자까지 같아야 한다

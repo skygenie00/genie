@@ -15,6 +15,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 _NR = _roots.need_n('민법 task 재료(claude.json)')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
@@ -138,6 +139,7 @@ class S:
 
 
 def open_page(pw_br, eng, tag, src, extra_tag=''):
+    QC.launch('base' if tag == 'BASE' else 'new')
     srv, port = serve('%s_%s%s' % (tag, eng, extra_tag), src)
     ctx = pw_br.new_context(viewport={'width': 1024, 'height': 768}, device_scale_factor=2, is_mobile=True, has_touch=True, user_agent=IPAD_UA)
     ctx.route('**/*', route_filter)
@@ -156,6 +158,9 @@ def main_scenario(s, has):
     R['setup'] = s.js("__HZT.setup(true)")
     R['load'] = s.js("__HZT.load()")
     R['G1'] = s.js("u=>__HZT.card(u)", 'Q0480')
+    if QC.SMOKE:   # smoke — G1(Q0480 카드 Claude 단추)까지 · 오류를 적고 끝(나머지 G2~G13 · G17 은 건넘)
+        R['err'] = s.js("__HZT.errs()")
+        return R
     R['G2card'] = s.js("u=>__HZT.card(u)", 'Q5514')
     R['G2pop'] = s.js("u=>__HZT.pop(u)", 'Q2396')
     R['G6'] = s.js("t=>__HZT.search(t)", '2002다21592')
@@ -340,16 +345,24 @@ def run_g16(base, new):
 def main():
     os.makedirs(WORK, exist_ok=True)
     new = io.open(os.path.join(GENIE, REL), encoding='utf-8', newline='').read()
-    base = git('show', BASE_REV + ':' + REL).decode('utf-8')
+    if QC.GATE:
+        QC.sub('git:show-app')
+    base = git('show', BASE_REV + ':' + REL).decode('utf-8') if QC.GATE else None   # regress — 바탕(846dc1e) 풀기·띄우기 0(헛잣대 · 옛 판 기기 몫은 관문만)
     RES = {}
     for eng in ('webkit', 'chromium'):
+        if QC.SMOKE and eng == 'webkit':   # smoke — Chromium 한 판(G1 은 카드 그리기 칸 · WebKit 은 터치 칸만 · 규칙 57)
+            continue
         for tag, src in (('BASE', base), ('NEW', new)):
+            if QC.REGRESS and tag == 'BASE':   # regress — 바탕 판 main(헛잣대 · 부트)은 관문만
+                continue
             k = '%s/%s' % (eng, tag)
             t0 = time.time(); print('… ' + k, flush=True)
             RES[k] = run_main(eng, tag, src)
             print('   %.1fs%s' % (time.time() - t0, ('  EXC ' + RES[k]['exc']) if RES[k].get('exc') else ''), flush=True)
-    t0 = time.time(); print('… G14·G15·A-2', flush=True); RES['g1415'] = run_g14_g15(new); print('   %.1fs' % (time.time() - t0), flush=True)
-    t0 = time.time(); print('… G16', flush=True); RES['g16'] = run_g16(base, new); print('   %.1fs' % (time.time() - t0), flush=True)
+    if not QC.SMOKE:   # smoke — G14·G15·A-2 는 건넘
+        t0 = time.time(); print('… G14·G15·A-2', flush=True); RES['g1415'] = run_g14_g15(new); print('   %.1fs' % (time.time() - t0), flush=True)
+    if QC.GATE:   # G16 = 옛 판(846dc1e) 기기 B 를 띄워야 잰다(세 기기 동기화) — 관문만
+        t0 = time.time(); print('… G16', flush=True); RES['g16'] = run_g16(base, new); print('   %.1fs' % (time.time() - t0), flush=True)
     json.dump(RES, io.open(os.path.join(WORK, 'raw.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 
     L = []
@@ -357,15 +370,40 @@ def main():
     I = lambda n, v: L.append('INFO | ' + n + ' | ' + json.dumps(v, ensure_ascii=False)[:1400])
     g = lambda d, *ks: __import__('functools').reduce(lambda a, k: (a.get(k) if isinstance(a, dict) else (a[k] if isinstance(a, list) and isinstance(k, int) and -len(a) <= k < len(a) else None)), ks, d)
     ORANGE, GRAY = 'rgb(180, 83, 9)', 'rgb(107, 114, 128)'
+    if QC.SMOKE:   # smoke — [chromium] NEW 부트(문항 5548 · JS 오류 0) · G1(Q0480 카드 「Claude1」) 두 칸
+        d = RES.get('chromium/NEW') or {}
+        errs = (d.get('err') or []) + (d.get('pageerror') or [])
+        T('[%s] %s 부트 · 문항 %s · JS 오류 %d' % ('chromium', 'NEW', g(d, 'setup', 'q'), len(errs)), g(d, 'setup', 'q') == 5548 and not d.get('exc') and not errs,
+          [d.get('exc'), errs[:4]])
+        n, p = d, '[chromium] '
+        b1 = g(n, 'G1', 'btn') or {}
+        T(p + 'G1 Q0480 카드 — 「✏️ 연결」 바로 앞(%s) 주황 「%s」 · 11px · 테두리·바탕 없음 · 높이 %s ↔ 연결 %s'
+          % (g(n, 'G1', 'next'), b1.get('text'), g(b1, 'at', 'h'), g(n, 'G1', 'lnk', 'at', 'h')),
+          b1.get('text') == 'Claude1' and b1.get('color') == ORANGE and b1.get('fs') == '11px' and g(n, 'G1', 'next') == '✏️ 연결'
+          and b1.get('bd', '').startswith('0px') and b1.get('bg') in ('rgba(0, 0, 0, 0)', 'transparent')
+          and abs((g(b1, 'at', 'h') or 0) - (g(n, 'G1', 'lnk', 'at', 'h') or 99)) <= 1.5 and g(n, 'G1', 'n') == 1, n.get('G1'))
+        for l in L:
+            print('   ' + l)
+        p_ = sum(1 for l in L if l.startswith('PASS')); f = sum(1 for l in L if l.startswith('FAIL'))
+        print('\n합계  PASS %d · FAIL %d' % (p_, f))
+        io.open(os.path.join(HERE, '_harness_ox_claude_answers_result.txt'), 'w', encoding='utf-8').write('\n'.join(L) + '\n\n합계  PASS %d · FAIL %d\n' % (p_, f))
+        sys.exit(0 if not f else 1)
 
     # ══ 소스 · 파일
-    bb, nb = base.encode('utf-8'), new.encode('utf-8')
-    T('착수 %s = 지시서 G0-1 (1,063,650 B · md5 94c5ffa1…)' % BASE_REV, len(bb) == 1063650 and hashlib.md5(bb).hexdigest() == BASE_MD5, [len(bb), hashlib.md5(bb).hexdigest()])
+    if QC.REGRESS:   # regress — 착수 md5(고정 옛 판 846dc1e = 지시서 값)는 관문만
+        nb = new.encode('utf-8')
+    if QC.GATE:
+        bb, nb = base.encode('utf-8'), new.encode('utf-8')
+        T('착수 %s = 지시서 G0-1 (1,063,650 B · md5 94c5ffa1…)' % BASE_REV, len(bb) == 1063650 and hashlib.md5(bb).hexdigest() == BASE_MD5, [len(bb), hashlib.md5(bb).hexdigest()])
     T('G17 NEW CRLF 0 · U+FFFD 0 (%d B · md5(LF) %s)' % (len(nb), hashlib.md5(nb).hexdigest()), b'\r\n' not in nb and '\ufffd' not in new)
-    ch = [l for l in git('status', '--porcelain').decode('utf-8').split('\n') if l.strip()]
-    T('genie 작업트리 바뀐 파일 = minbeop/index.html 하나 %s' % ch, ch == [' M ' + REL], ch)
-    sk = lambda s: re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\];', s, re.S).group(1))
-    T('§E-1 SYNC_KEYS = 옛 17키 그대로 + 끝에 ox_cl_fix (18키)', sk(new) == sk(base) + ['ox_cl_fix'] and len(sk(new)) == 18, [len(sk(base)), sk(new)[-3:]])
+    if QC.REGRESS:   # regress — 작업트리 diff 는 관문만 · §E-1 「옛 17키 그대로 + ox_cl_fix」 의 옛 몫 = 기준 스냅샷(앞 인도판 키 목록) · 「18키」 는 그대로(옛 잣대 · 지금 21키라 gate 와 같이 FAIL)
+        sk = lambda s: re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\];', s, re.S).group(1))
+        T('§E-1 SYNC_KEYS = 옛 17키 그대로 + 끝에 ox_cl_fix (18키)', QC.same('§E-1.synckeys', sk(new)) and 'ox_cl_fix' in sk(new) and len(sk(new)) == 18, [len(sk(new)), sk(new)[-3:], QC.base_note('§E-1.synckeys')])
+    if QC.GATE:
+        ch = [l for l in git('status', '--porcelain').decode('utf-8').split('\n') if l.strip()]
+        T('genie 작업트리 바뀐 파일 = minbeop/index.html 하나 %s' % ch, ch == [' M ' + REL], ch)
+        sk = lambda s: re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\];', s, re.S).group(1))
+        T('§E-1 SYNC_KEYS = 옛 17키 그대로 + 끝에 ox_cl_fix (18키)', sk(new) == sk(base) + ['ox_cl_fix'] and len(sk(new)) == 18, [len(sk(base)), sk(new)[-3:]])
     T('§A-2 받는 길 — MB_CL_PATH 상수 · ghRaw(같은 저장소·raw·토큰) · recBoot 한 번 · syncRecords 안 한 번 · localStorage·IndexedDB 에 안 넣는다',
       "const MB_CL_PATH = 'minbeop/claude.json';" in new and 'await ghRaw(MB_CL_PATH)' in new
       and re.search(r'function recBoot\(\) \{\n\s+recPaint\(\);\n\s+stampAll\(\);\n\s+clLoad\(\);', new) is not None
@@ -378,6 +416,8 @@ def main():
     # ══ 세션 부트
     for eng in ('webkit', 'chromium'):
         for tag in ('BASE', 'NEW'):
+            if QC.REGRESS and tag == 'BASE':   # regress — 바탕 판 부트 칸은 관문만
+                continue
             d = RES.get('%s/%s' % (eng, tag)) or {}
             errs = (d.get('err') or []) + (d.get('pageerror') or [])
             T('[%s] %s 부트 · 문항 %s · JS 오류 %d' % (eng, tag, g(d, 'setup', 'q'), len(errs)), g(d, 'setup', 'q') == 5548 and not d.get('exc') and (tag == 'BASE' or not errs),
@@ -395,7 +435,8 @@ def main():
           b1.get('text') == 'Claude1' and b1.get('color') == ORANGE and b1.get('fs') == '11px' and g(n, 'G1', 'next') == '✏️ 연결'
           and b1.get('bd', '').startswith('0px') and b1.get('bg') in ('rgba(0, 0, 0, 0)', 'transparent')
           and abs((g(b1, 'at', 'h') or 0) - (g(n, 'G1', 'lnk', 'at', 'h') or 99)) <= 1.5 and g(n, 'G1', 'n') == 1, n.get('G1'))
-        T(p + 'G1 헛잣대 BASE — 같은 카드에 Claude 단추 없음', g(b, 'G1', 'card') is True and g(b, 'G1', 'btn') is None and g(b, 'G1', 'n') == 0, b.get('G1'))
+        if QC.GATE:   # 헛잣대 BASE — 관문만
+            T(p + 'G1 헛잣대 BASE — 같은 카드에 Claude 단추 없음', g(b, 'G1', 'card') is True and g(b, 'G1', 'btn') is None and g(b, 'G1', 'n') == 0, b.get('G1'))
         b2 = g(n, 'G2card', 'btn') or {}
         T(p + 'G2 Q5514 카드 — 회색 「Claude」 + 주황 「↩」(10px)', b2.get('text') == 'Claude↩' and b2.get('color') == GRAY
           and g(b2, 'kids', 0, 't') == '↩' and g(b2, 'kids', 0, 'color') == ORANGE and g(b2, 'kids', 0, 'fs') == '10px', b2)
@@ -435,19 +476,26 @@ def main():
           and g(n, 'G13win', 'ta') is True and g(n, 'G13after', 'ta') is False, [n.get('G13ta'), g(n, 'G13win', 'msg')])
         # G6 · G7 검색
         s6, s6b = n.get('G6') or {}, b.get('G6') or {}
-        T(p + 'G6 「2002다21592」 → %s · Q0480 · 딱지 %s (BASE %s)' % (s6.get('count'), g(s6, 'rows', 0, 'badges'), s6b.get('count')),
-          s6.get('count') == '1건' and g(s6, 'rows', 0, 'id') == 'Q0480' and g(s6, 'rows', 0, 'badges') == ['Claude'] and g(s6, 'rows', 0, 'cl') is True
-          and g(s6, 'rows', 0, 'blue') is False and s6b.get('count') == '0건', [s6, s6b])
+        if QC.GATE:
+            T(p + 'G6 「2002다21592」 → %s · Q0480 · 딱지 %s (BASE %s)' % (s6.get('count'), g(s6, 'rows', 0, 'badges'), s6b.get('count')),
+              s6.get('count') == '1건' and g(s6, 'rows', 0, 'id') == 'Q0480' and g(s6, 'rows', 0, 'badges') == ['Claude'] and g(s6, 'rows', 0, 'cl') is True
+              and g(s6, 'rows', 0, 'blue') is False and s6b.get('count') == '0건', [s6, s6b])
+        else:   # regress — 「BASE 0건」(헛잣대 몫)은 관문만 · NEW 몫 그대로(칸 글 끝 「(BASE —)」 — id 가 gate 와 다르다 · 처리표 새id)
+            T(p + 'G6 「2002다21592」 → %s · Q0480 · 딱지 %s (BASE —)' % (s6.get('count'), g(s6, 'rows', 0, 'badges')),
+              s6.get('count') == '1건' and g(s6, 'rows', 0, 'id') == 'Q0480' and g(s6, 'rows', 0, 'badges') == ['Claude'] and g(s6, 'rows', 0, 'cl') is True
+              and g(s6, 'rows', 0, 'blue') is False, [s6])
         s7 = n.get('G7') or {}
         T(p + 'G7 「정착물」 → %s · Q0480 · 딱지 %s' % (s7.get('count'), g(s7, 'rows', 0, 'badges')),
           s7.get('count') == '1건' and g(s7, 'rows', 0, 'id') == 'Q0480' and g(s7, 'rows', 0, 'badges') == ['근거', '댓글', 'Claude'], s7)
-        I(p + 'G7 헛잣대 BASE(같은 말 · 딱지 없는 옛 줄)', b.get('G7'))
+        if QC.GATE:   # 헛잣대 BASE — 관문만
+            I(p + 'G7 헛잣대 BASE(같은 말 · 딱지 없는 옛 줄)', b.get('G7'))
         # G8 · G9 단원 목록
         d8, d8b = n.get('G8') or {}, b.get('G8') or {}
         T(p + 'G8 머리 「%s」 · C 단추 주황·밑점선' % d8.get('head'),
           (d8.get('head') or '').endswith('· ! 8 · C1') and g(d8, 'cBtn', 't') == 'C1' and g(d8, 'cBtn', 'off') is False
           and g(d8, 'cBtn', 'color') == ORANGE and g(d8, 'cBtn', 'bb') == 'dashed', d8)
-        T(p + 'G8 헛잣대 BASE — 머리 「%s」(C 없음)' % d8b.get('head'), (d8b.get('head') or '').endswith('· ! 8') and d8b.get('cBtn') is None, d8b)
+        if QC.GATE:   # 헛잣대 BASE — 관문만
+            T(p + 'G8 헛잣대 BASE — 머리 「%s」(C 없음)' % d8b.get('head'), (d8b.get('head') or '').endswith('· ! 8') and d8b.get('cBtn') is None, d8b)
         a8 = n.get('G8after') or {}
         T(p + 'G8 C1 톡 → 단원 %s개(%s) · 머리 「%s」 · 「!」 꺼짐 %s' % (a8.get('units'), a8.get('clUnits'), a8.get('head'), a8.get('flags')),
           n.get('G8tap') is True and a8.get('units') == 1 and a8.get('clUnits') == ['민법총칙 · 4. 권리의 객체 C1'] and a8.get('flags') == [False, True]
@@ -472,12 +520,15 @@ def main():
           sorted(j.get('withChip') or []) == ['Q0474 ↩', 'Q0480 C1', 'Q4336 ↩', 'Q5514 ↩'], j.get('withChip'))
         T(p + 'G11 「정답·해설 ▸」 톡 → 정답 상자 열림(%s) · 다시 톡 → 닫힘(%s)' % (g(n, 'G11open', 'q0480', 'ansHidden'), g(n, 'G11close', 'q0480', 'ansHidden')),
           n.get('G11ans1') is True and g(j, 'q0480', 'ansHidden') is True and g(n, 'G11open', 'q0480', 'ansHidden') is False and g(n, 'G11close', 'q0480', 'ansHidden') is True, [j.get('q0480'), g(n, 'G11open', 'q0480')])
-        T(p + 'G11 헛잣대 BASE — 같은 창 %s행 · 칩 0 · 「정답·해설 ▸」 은 옛 판도 열림(%s→%s)' % (jb.get('rows'), g(jb, 'q0480', 'ansHidden'), g(b, 'G11open', 'q0480', 'ansHidden')),
-          jb.get('rows') == j.get('rows') and not jb.get('withChip') and g(b, 'G11open', 'q0480', 'ansHidden') is False, [jb, b.get('G11open')])
+        if QC.GATE:   # 헛잣대 BASE — 관문만
+            T(p + 'G11 헛잣대 BASE — 같은 창 %s행 · 칩 0 · 「정답·해설 ▸」 은 옛 판도 열림(%s→%s)' % (jb.get('rows'), g(jb, 'q0480', 'ansHidden'), g(b, 'G11open', 'q0480', 'ansHidden')),
+              jb.get('rows') == j.get('rows') and not jb.get('withChip') and g(b, 'G11open', 'q0480', 'ansHidden') is False, [jb, b.get('G11open')])
         T(p + 'G11 C1 칩 톡 → Claude 창(%s) · 크기 기억은 claude 와 jn 따로' % g(n, 'G11win', 'title'),
           n.get('G11chip') is True and g(n, 'G11win', 'win') is True and g(n, 'G11win', 'answers') == ['M001'], [n.get('G11win'), n.get('G11sizeJn')])
         # G17
         for tag, d in (('BASE', b), ('NEW', n)):
+            if QC.REGRESS and tag == 'BASE':   # regress — 바탕 판 파서 칸은 관문만
+                continue
             bad = [x for x in (d.get('G17') or []) if x[2] != 'ok']
             T(p + 'G17 %s 스크립트 블록 %d개 파서 통과(%s · node 대신)' % (tag, len(d.get('G17') or []), 'JSC' if eng == 'webkit' else 'V8'),
               (d.get('G17') or []) and not bad, bad)
@@ -497,19 +548,20 @@ def main():
     T('§A-2 받는 때 — 받는 중에 겹쳐 부르면 한 번만 받는다(%s → %s) · syncRecords 가 돌면 한 번 더(%s)' % (a2.get('gets0'), a2.get('both'), a2.get('gets1')),
       a2.get('gets0') == 0 and a2.get('both') == 1 and a2.get('gets1') == 2 and not a2.get('err'), a2)
     # ══ G16
-    G16 = RES.get('g16') or {}
-    I('G16 흐름 — ① 새 판 A 가 정정을 올림 ② 옛 판 B 가 그 원격을 받아 제 변경과 함께 올림 ③ A 가 다시 맞춤 ④ 정정 없는 새 판 C', {k: G16.get(k) for k in ('P1', 'P2', 'Blocal', 'P3', 'A2', 'C1', 'C2')})
-    T('G16 ① 새 판이 올린 기록에 data.ox_cl_fix.M001 · u 도장', g(G16, 'P1', 'data') is True and g(G16, 'P1', 'fix', 'M001', 'done') is False and g(G16, 'P1', 'u'), G16.get('P1'))
-    T('G16 ② 옛 판 기기는 제 저장소에 ox_cl_fix 를 만들지 않는다(모르는 키 · 병합이 건드리지 않는다)', G16.get('Blocal') is None, G16.get('Blocal'))
-    I('G16 ② 잰 것 — 옛 판(846dc1e) 기기가 올린 기록: data.ox_cl_fix %s · u 도장 %s · data 키 %s개(옛 recPayload 는 제 SYNC_KEYS 17키만 담는다)'
-      % ('있음' if g(G16, 'P2', 'data') else '**없음(빠짐)**', '있음' if g(G16, 'P2', 'u') else '없음', g(G16, 'P2', 'keys')), G16.get('P2'))
-    T('G16 ② 지시서 기대 — 옛 판 기기가 올려도 data.ox_cl_fix 가 남는다(「모르는 키로 두고 지우지 않는다」)',
-      g(G16, 'P2', 'data') is True, G16.get('P2'))
-    T('G16 ③ 새 판 기기 A 가 다음 맞추기에서 되살려 올린다(올림 %s · 옛 판 기기의 변경도 그대로 %s)' % (g(G16, 'P3', 'puts'), g(G16, 'P3', 'tag')),
-      g(G16, 'P3', 'data') is True and g(G16, 'P3', 'fix', 'M001', 'md') == 'A 기기 정정본' and g(G16, 'P3', 'puts') == 1, G16.get('P3'))
-    T('G16 ④ 새 판 기기 C — 빠진 원격에서는 못 받고(%s) 되살린 원격에서 받는다(%s)' % ('M001 없음' if 'M001' not in (G16.get('Clocal1') or '') else 'M001 있음', 'M001' if G16.get('Clocal2') and 'M001' in G16.get('Clocal2') else G16.get('Clocal2')),
-      'M001' not in (G16.get('Clocal1') or '') and 'A 기기 정정본' in (G16.get('Clocal2') or ''), [G16.get('Clocal1'), G16.get('Clocal2')])
-    T('G16 JS 오류 0(세 기기)', not any(G16.get('err') or [[1]]), G16.get('err'))
+    if QC.GATE:   # G16 — 옛 판(846dc1e) 기기 B 가 낀 세 기기 동기화(관문만 · regress 는 run_g16 을 안 부른다)
+        G16 = RES.get('g16') or {}
+        I('G16 흐름 — ① 새 판 A 가 정정을 올림 ② 옛 판 B 가 그 원격을 받아 제 변경과 함께 올림 ③ A 가 다시 맞춤 ④ 정정 없는 새 판 C', {k: G16.get(k) for k in ('P1', 'P2', 'Blocal', 'P3', 'A2', 'C1', 'C2')})
+        T('G16 ① 새 판이 올린 기록에 data.ox_cl_fix.M001 · u 도장', g(G16, 'P1', 'data') is True and g(G16, 'P1', 'fix', 'M001', 'done') is False and g(G16, 'P1', 'u'), G16.get('P1'))
+        T('G16 ② 옛 판 기기는 제 저장소에 ox_cl_fix 를 만들지 않는다(모르는 키 · 병합이 건드리지 않는다)', G16.get('Blocal') is None, G16.get('Blocal'))
+        I('G16 ② 잰 것 — 옛 판(846dc1e) 기기가 올린 기록: data.ox_cl_fix %s · u 도장 %s · data 키 %s개(옛 recPayload 는 제 SYNC_KEYS 17키만 담는다)'
+          % ('있음' if g(G16, 'P2', 'data') else '**없음(빠짐)**', '있음' if g(G16, 'P2', 'u') else '없음', g(G16, 'P2', 'keys')), G16.get('P2'))
+        T('G16 ② 지시서 기대 — 옛 판 기기가 올려도 data.ox_cl_fix 가 남는다(「모르는 키로 두고 지우지 않는다」)',
+          g(G16, 'P2', 'data') is True, G16.get('P2'))
+        T('G16 ③ 새 판 기기 A 가 다음 맞추기에서 되살려 올린다(올림 %s · 옛 판 기기의 변경도 그대로 %s)' % (g(G16, 'P3', 'puts'), g(G16, 'P3', 'tag')),
+          g(G16, 'P3', 'data') is True and g(G16, 'P3', 'fix', 'M001', 'md') == 'A 기기 정정본' and g(G16, 'P3', 'puts') == 1, G16.get('P3'))
+        T('G16 ④ 새 판 기기 C — 빠진 원격에서는 못 받고(%s) 되살린 원격에서 받는다(%s)' % ('M001 없음' if 'M001' not in (G16.get('Clocal1') or '') else 'M001 있음', 'M001' if G16.get('Clocal2') and 'M001' in G16.get('Clocal2') else G16.get('Clocal2')),
+          'M001' not in (G16.get('Clocal1') or '') and 'A 기기 정정본' in (G16.get('Clocal2') or ''), [G16.get('Clocal1'), G16.get('Clocal2')])
+        T('G16 JS 오류 0(세 기기)', not any(G16.get('err') or [[1]]), G16.get('err'))
 
     for l in L:
         print('   ' + l)

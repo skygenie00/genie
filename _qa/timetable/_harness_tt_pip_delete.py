@@ -15,6 +15,16 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+# --mode gate|regress|smoke (_task_qa_slim2 2026-10-08 · 인자 없으면 gate = 이 판 앞과 같음)
+#   regress = 새 판(new) 한 번만 띄운다 — 헛잣대(null = 옛 판 사본 _tt_before.html 띄움 · 처리표 관문만) 0 · 결과 html · 프로필은 원래 %TEMP%\httdel
+#             소스 대조(_rg_static_checks): 옛 판 사본을 안 읽는다 — S-2(confirm 수) · S-4 · S-6 = 바탕 스냅샷(QC.base) · S-7(인도 판 diff 셈) = gate 만 · 나머지 = 새 판 글자
+#             ⚠ 10/8 이 PC N: timetable 에 _tt_before.html 이 없다 → gate 는 static_checks 에서 FileNotFoundError 로 멈춘다(손대지 않음 · 보고)
+#   smoke   = smoke 칸 없음 → 앱을 안 띄우고 「INFO | smoke 칸 없음」 한 줄
+#   JS 안 고정 대기(wait 60~3200 · 실시간 합 ≈7.7 초)는 그대로 — D-4 3200 은 앱 3 초 되돌림 타이머를 재는 것(표지로 못 바꿈)
+#   N:(마이박스) 크롬 프로필을 TEMP 로 옮기는 까닭 — N: 프로필은 띄움마다 느리다: 9/17 tt 회귀(N: 결과 파일 시각) _harness_timetable 76 초 · tt_race 판마다 76~92 초 /
+#     10/6 use_count N: 프로필 --dump-dom 180 초 초과 되풀이 → 사용자 「해」로 TEMP(결정로그 10/6 21:36 · 22:0x) / 프로필이 TEMP 인 민법 dump-dom 하네스는 띄움당 9~14 초
+#     · 마이박스가 하네스 프로필 폴더 목록을 못 펼쳐 _qa_sync copy 10 분 멈춤 · 실행기 열쇠 셈 멈춤(결정로그 10/2 · 10/4)
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) A-1 · 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다
 import hashlib
 import http.server
 import io
@@ -245,14 +255,53 @@ def static_checks():
     return out
 
 
+def _rg_static_checks():
+    """regress — static_checks 의 regress 갈래: 옛 판 사본 BASE(_tt_before.html)를 읽지 않는다.
+    S-1 · S-2(손잡이 글자) · S-3 · S-5 · S-8 = 새 판 글자만(gate 와 같은 식 · 처리표 data) ·
+    S-2(confirm 수) · S-4(고쳐져 있던 자리 수) · S-6(CRLF) = 기준(바탕 스냅샷 QC.base · 처리표 기준) · S-7(지운 줄 수 = 인도 판 diff 셈) = gate 만"""
+    b = io.open(SRC, 'rb').read()
+    s = b.replace(b'\r\n', b'\n').decode('utf-8')
+    out = []
+
+    def T2(n, c, i=''):
+        out.append(('PASS' if c else 'FAIL') + ' | ' + n + ('' if c else ' | ' + str(i)))
+
+    def B2(cid, v):
+        """기준 칸 — (바탕 스냅샷과 같음, 값 끝에 붙일 [새 값, 기준 값, 기준 출처])"""
+        return QC.same(cid, v), [v, QC.base(cid, v), QC.base_note(cid)]
+
+    T2('S-1 modal 의 「삭제」가 두 번 누름이다', "db.textContent='정말 삭제?'" in s and "if(armed){disarm();onDel();close();after();return}" in s)
+    ok, info = B2('S-2.confirm', s.count('confirm('))   # gate = 옛 판 수 − 5 · regress = 바탕 스냅샷 수(confirm 이 다시 붙으면 늘어 걸린다)
+    T2('S-2 onDel 에서 confirm 을 뗐다 — 다섯 자리', ok, info)
+    T2('S-2 세션·생활 블록 손잡이에 confirm 이 없다',
+       "()=>{deleteSession(s);render()},doc,undefined,'이 세션을 지웁니다.'" in s
+       and "()=>{deleteSession(s);render()},doc,undefined,'이 생활 블록을 지웁니다.'" in s)
+    T2('S-3 lifeDelType 은 그 창의 confirm 을 부른다',
+       "if(!((doc&&doc.defaultView)||window).confirm(`프리셋" in s)
+    ok, info = B2('S-4.dvconfirm', s.count("((doc&&doc.defaultView)||window).confirm"))   # gate = 옛 판 수 + 1 · regress = 바탕 스냅샷 수
+    T2('S-4 이미 고쳐져 있던 세 자리는 무접촉', ok, info)
+    T2('S-5 delNote 는 여섯째 선택 인자다(안 주면 종전대로)',
+       'function modal(body,onOk,onDel,doc,okLabel,delNote){' in s)
+    nc = b.count(b'\r\n')
+    ok, info = B2('S-6.crlf', nc)
+    T2('S-6 줄끕이 원본과 같다(이 파일은 LF 다 — jagwa 와 다르다)', nc == 0 and ok, info)   # 새 판 조건(CRLF 0)은 그대로 · 옛 판 조건 → 바탕 스냅샷
+    sw = io.open(os.path.join(GENIE, 'timetable', 'sw.js'), encoding='utf-8', newline='').read()
+    T2('S-8 서비스워커 판을 올렸다(tt-v30)', "const V='tt-v30';" in sw)
+    return out
+
+
 def main():
-    want = sys.argv[1:] or ['new', 'null']
+    if QC.SMOKE:   # smoke — 이 하네스엔 smoke 칸이 없다(처리표 칸 38 · smoke 0) — 앱을 띄우기 전에 끝
+        print('INFO | smoke 칸 없음')
+        sys.exit(0)
+    want = sys.argv[1:] or (['new'] if QC.REGRESS else ['new', 'null'])   # regress — 헛잣대(null = 옛 판 사본 띄움 · 처리표 관문만)는 gate 만
     lines = []
     if 'new' in want:
-        print('[new]'); lines += run(io.open(SRC, encoding='utf-8', newline='').read())
-        lines += static_checks()
-    if 'null' in want:
+        print('[new]'); QC.launch('new'); lines += run(io.open(SRC, encoding='utf-8', newline='').read())   # §B-4 셈 — 새 판 앱 띄움 1
+        lines += static_checks() if QC.GATE else _rg_static_checks()   # regress — 옛 판 사본을 안 읽는 갈래(위 _rg_static_checks)
+    if 'null' in want and QC.GATE:   # regress — 바탕(옛 판) 띄움 0
         print('[null · 헛잣대]')
+        QC.launch('base')   # §B-4 셈 — 옛 판 사본 띄움(gate 만)
         ls0 = run(io.open(BASE, encoding='utf-8', newline='').read())
         fails = [x for x in ls0 if x.startswith('FAIL')]
         for pre, ko in (('D', '본창'), ('P', '흉내 PiP'), ('L', '생활 블록')):

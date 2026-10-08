@@ -16,6 +16,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import io, json, os, re, shutil, subprocess, sys, tempfile, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -82,7 +83,11 @@ def tally(lines, g):
 def main():
     os.makedirs(OUT, exist_ok=True)
     new = io.open(os.path.join(GENIE, REL.replace('/', os.sep)), encoding='utf-8', newline='').read()
-    head = git('show', 'HEAD:' + REL)
+    if QC.GATE:
+        QC.sub('git:show-app')
+        head = git('show', 'HEAD:' + REL)
+    else:
+        head = None   # regress — 바탕(HEAD) 앱 풀기·띄우기 0(사슬에선 HEAD = 새 판 · A-0 W3 뜻밖에 4) · VAL · G11 은 기준 스냅샷
     base = {'subject': '민법총칙', 'chapter': '1. 총칙', 'subChapter': '1.1 민법의 법원', 'subNum': '', 'examMeta': [],
             'caseText': '', 'stem': '', 'status': '', 'excelLogic': '', 'panrye': '', 'source': '변리사 20'}
     quiz = []
@@ -99,6 +104,8 @@ def main():
                              examMeta=[{'year': '2016', 'round': '53', 'no': no, 'opt': opt}], examNo=no, examOpt=opt, examNoBase=no, examOptBase=opt,
                              stem='%d. 다음 설명 중 옳은 것은?' % no))
     P = {'quiz': quiz, 'skip': [x for x in os.environ.get('HZ_SKIP', '').split(',') if x]}
+    if QC.SMOKE:   # smoke — G10(첫 화면 · 문제풀이 · 오류 0 = A-0 smoke 칸)만 · 나머지 게이트는 시험 글의 건너뛰기(P.skip · tests3_add6 LIST)로
+        P['skip'] = [g for g in GATES if g != 'G10']
     js = ''.join(io.open(os.path.join(HERE, f), encoding='utf-8').read() for f in JS_FILES)
     tests = '<script>\n' + js.replace('__P__', json.dumps(P, ensure_ascii=False).replace('</', '<\\/')) + '\n</script>\n'
     res = {}
@@ -106,6 +113,9 @@ def main():
     for tag, src in (('NEW', new), ('HEAD', head)):
         if only and tag != only:
             continue
+        if QC.REGRESS and tag == 'HEAD':   # regress — HEAD(바탕) 판은 헛잣대 몫(관문만) · 같은 입력 글자는 기준 스냅샷과 맞댄다
+            continue
+        QC.launch('base' if tag == 'HEAD' else 'new')
         lines = build_and_run(tag, src, tests)
         res[tag] = lines
         print('=== %s 판 ===' % tag)
@@ -118,32 +128,72 @@ def main():
         print('  합계 PASS %d · FAIL %d' % (sum(1 for x in lines if x.startswith('PASS')), sum(1 for x in lines if x.startswith('FAIL'))))
         print()
 
-    print('=== 회귀 대조 — 같은 입력의 글자 (NEW vs HEAD) ===')
-    vals = {t: [x for x in (res.get(t) or []) if x.startswith('VAL | ')] for t in ('NEW', 'HEAD')}
-    rg = {}
-    for a, b in zip(vals['NEW'], vals['HEAD']):
-        name = a.split(' | ')[1]
-        ok = a == b and name == b.split(' | ')[1]
-        rg.setdefault(name.split('.')[0], []).append(ok)
-        print('  %-28s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
-        if not ok:
-            io.open(os.path.join(OUT, 'val_%s_NEW.txt' % name), 'w', encoding='utf-8').write(a)
-            io.open(os.path.join(OUT, 'val_%s_HEAD.txt' % name), 'w', encoding='utf-8').write(b)
-    cnt_ok = len(vals['NEW']) == len(vals['HEAD']) and len(vals['NEW']) > 0
-    print('  VAL 줄 NEW %d · HEAD %d' % (len(vals['NEW']), len(vals['HEAD'])))
-    print()
+    if QC.SMOKE:   # smoke — G10 칸만 돌았다 · 회귀 대조(VAL) · G11 소스 · 게이트 표는 건넌다
+        nf = res.get('NEW') is None or any(x.startswith('FAIL') for x in res['NEW'])
+        print('  %-4s NEW %-8s' % ('G10', tally(res.get('NEW'), 'G10')))
+        print()
+        print('종합 : %s' % ('ALL PASS' if not nf else 'FAIL 있음'))
+        return 0 if not nf else 1
+    if QC.REGRESS:   # regress — 같은 입력의 글자를 바탕(앞 인도판) 스냅샷과 맞댄다(줄마다 md5 · 길이 · QC.base)
+        import hashlib as _hl
+        print('=== 회귀 대조 — 같은 입력의 글자 (NEW vs 기준 스냅샷) ===')
+        vals = {'NEW': [x for x in (res.get('NEW') or []) if x.startswith('VAL | ')]}
+        rg = {}
+        for a in vals['NEW']:
+            name = a.split(' | ')[1]
+            ok = QC.same('VAL.' + name, [_hl.md5(a.encode('utf-8')).hexdigest()[:16], len(a)])
+            rg.setdefault(name.split('.')[0], []).append(ok)
+            print('  %-28s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
+            if not ok:
+                io.open(os.path.join(OUT, 'val_%s_NEW.txt' % name), 'w', encoding='utf-8').write(a)
+        nb = QC.base('VAL.n', len(vals['NEW']))
+        cnt_ok = len(vals['NEW']) == nb and len(vals['NEW']) > 0
+        print('  VAL 줄 NEW %d · 기준 %d (%s)' % (len(vals['NEW']), nb, QC.base_note('VAL.n')))
+        print()
+    if QC.GATE:
+        print('=== 회귀 대조 — 같은 입력의 글자 (NEW vs HEAD) ===')
+        vals = {t: [x for x in (res.get(t) or []) if x.startswith('VAL | ')] for t in ('NEW', 'HEAD')}
+        rg = {}
+        for a, b in zip(vals['NEW'], vals['HEAD']):
+            name = a.split(' | ')[1]
+            ok = a == b and name == b.split(' | ')[1]
+            rg.setdefault(name.split('.')[0], []).append(ok)
+            print('  %-28s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
+            if not ok:
+                io.open(os.path.join(OUT, 'val_%s_NEW.txt' % name), 'w', encoding='utf-8').write(a)
+                io.open(os.path.join(OUT, 'val_%s_HEAD.txt' % name), 'w', encoding='utf-8').write(b)
+        cnt_ok = len(vals['NEW']) == len(vals['HEAD']) and len(vals['NEW']) > 0
+        print('  VAL 줄 NEW %d · HEAD %d' % (len(vals['NEW']), len(vals['HEAD'])))
+        print()
 
-    print('=== G11 소스 (NEW vs HEAD) ===')
-    Ln, Lh = new.split('\n'), head.split('\n')
-    lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
-    chk = [("pastBadgeHtml 줄 그대로", [s for s in Ln if 'pastBadgeHtml' in s] == [s for s in Lh if 'pastBadgeHtml' in s]),
-           ('긴 줄(>3000자) 전부 글자까지 같다', [s for s in Ln if len(s) > 3000] == [s for s in Lh if len(s) > 3000]),
-           ('SheetJS 줄(가장 긴 줄) 바이트 무변 — 줄 번호가 아니라 글자로 찾는다', max(Ln, key=len) == max(Lh, key=len) and len(max(Ln, key=len)) > 60000),
-           ('SYNC_KEYS 무변', [s for s in Ln if 'const SYNC_KEYS = [' in s] == [s for s in Lh if 'const SYNC_KEYS = [' in s]),
-           ("새 저장소 키 0 (ox_* 글자 집합 같다)", lits(new) == lits(head)),
-           ('G7 openPanel 함수는 남아 있다(IIFE 안 · 소스로 잰다)', new.count('function openPanel()') == 1),
-           ("G7 학습로그 단추를 만드는 줄 0", "btn.textContent = '📝 학습로그';" not in new),
-           ('라디오 name="answer_${item.id}" O·X 한 번씩', new.count('name="answer_${item.id}" value="O"') == 1 and new.count('name="answer_${item.id}" value="X"') == 1)]
+    if QC.REGRESS:   # regress — NEW·HEAD 맞대던 다섯 칸은 기준 스냅샷(앞 인도판 값 · md5)과 · 나머지 셋은 NEW 글자만(gate 와 같은 식)
+        import hashlib as _hl
+        print('=== G11 소스 (NEW vs 기준 스냅샷) ===')
+        Ln = new.split('\n')
+        lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
+        md = lambda xs: _hl.md5('\n'.join(xs).encode('utf-8')).hexdigest()[:16]
+        sj = max(Ln, key=len)
+        chk = [("pastBadgeHtml 줄 그대로", QC.same('G11.pastBadgeHtml', md([s for s in Ln if 'pastBadgeHtml' in s]))),
+               ('긴 줄(>3000자) 전부 글자까지 같다', QC.same('G11.long', md([s for s in Ln if len(s) > 3000]))),
+               ('SheetJS 줄(가장 긴 줄) 바이트 무변 — 줄 번호가 아니라 글자로 찾는다', QC.same('G11.sheetjs', md([sj])) and len(sj) > 60000),
+               ('SYNC_KEYS 무변', QC.same('G11.synckeys', md([s for s in Ln if 'const SYNC_KEYS = [' in s]))),
+               ("새 저장소 키 0 (ox_* 글자 집합 같다)", QC.same('G11.oxlits', lits(new))),
+               ('G7 openPanel 함수는 남아 있다(IIFE 안 · 소스로 잰다)', new.count('function openPanel()') == 1),
+               ("G7 학습로그 단추를 만드는 줄 0", "btn.textContent = '📝 학습로그';" not in new),
+               ('라디오 name="answer_${item.id}" O·X 한 번씩', new.count('name="answer_${item.id}" value="O"') == 1 and new.count('name="answer_${item.id}" value="X"') == 1)]
+        print('  (기준: %s)' % QC.base_note('G11.synckeys'))
+    if QC.GATE:
+        print('=== G11 소스 (NEW vs HEAD) ===')
+        Ln, Lh = new.split('\n'), head.split('\n')
+        lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
+        chk = [("pastBadgeHtml 줄 그대로", [s for s in Ln if 'pastBadgeHtml' in s] == [s for s in Lh if 'pastBadgeHtml' in s]),
+               ('긴 줄(>3000자) 전부 글자까지 같다', [s for s in Ln if len(s) > 3000] == [s for s in Lh if len(s) > 3000]),
+               ('SheetJS 줄(가장 긴 줄) 바이트 무변 — 줄 번호가 아니라 글자로 찾는다', max(Ln, key=len) == max(Lh, key=len) and len(max(Ln, key=len)) > 60000),
+               ('SYNC_KEYS 무변', [s for s in Ln if 'const SYNC_KEYS = [' in s] == [s for s in Lh if 'const SYNC_KEYS = [' in s]),
+               ("새 저장소 키 0 (ox_* 글자 집합 같다)", lits(new) == lits(head)),
+               ('G7 openPanel 함수는 남아 있다(IIFE 안 · 소스로 잰다)', new.count('function openPanel()') == 1),
+               ("G7 학습로그 단추를 만드는 줄 0", "btn.textContent = '📝 학습로그';" not in new),
+               ('라디오 name="answer_${item.id}" O·X 한 번씩', new.count('name="answer_${item.id}" value="O"') == 1 and new.count('name="answer_${item.id}" value="X"') == 1)]
     for name, ok in chk:
         print('  %-40s %s' % (name, 'PASS' if ok else 'FAIL'))
     g11 = all(ok for _, ok in chk)

@@ -15,6 +15,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import io, json, os, re, shutil, subprocess, sys, tempfile, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -128,10 +129,17 @@ def quiz_data():
 
 
 def main():
+    if QC.SMOKE:   # smoke — 이 하네스엔 smoke 칸이 없다(A-0 처리표 · _task_qa_slim2) · 크롬을 띄우기 전에 끝낸다
+        print('INFO | smoke 칸 없음')
+        return 0
     os.makedirs(OUT, exist_ok=True)
     new = io.open(os.path.join(GENIE, REL.replace('/', os.sep)), encoding='utf-8', newline='').read()
-    head = git('show', 'HEAD:' + REL)
-    print('HEAD %s' % git('log', '-1', '--format=%h %s').strip())
+    if QC.GATE:
+        QC.sub('git:show-app')
+        head = git('show', 'HEAD:' + REL)
+        print('HEAD %s' % git('log', '-1', '--format=%h %s').strip())
+    else:
+        head = None   # regress — 바탕(HEAD) 앱 풀기·띄우기 0(사슬에선 HEAD = 새 판 · A-0 W3 뜻밖에 4 · 9) · VAL · SRC 대조는 기준 스냅샷
     phases = [x for x in os.environ.get('HZ_PHASE', 'main,g1,perf').split(',') if x]
     only = os.environ.get('HZ_ONLY')
     skip = [x for x in os.environ.get('HZ_SKIP', '').split(',') if x]
@@ -143,10 +151,13 @@ def main():
     for tag, src in (('NEW', new), ('HEAD', head)):
         if only and tag != only:
             continue
+        if QC.REGRESS and tag == 'HEAD':   # regress — HEAD(바탕) 세 단계(main · g1 · perf)는 헛잣대 · 옛 판 대비 몫(관문만)
+            continue
         lines = []
         if 'main' in phases:
             p = os.path.join(OUT, 'app_main_%s.html' % tag)
             io.open(p, 'w', encoding='utf-8', newline='\n').write(app_html(src, mk(tjs, {'quiz': Q, 'skip': skip, 'phase': 'main'})))
+            QC.launch('base' if tag == 'HEAD' else 'new')
             got = run_chrome('main_%s' % tag, p, ['END'], budget=240000)
             show('%s · main' % tag, got)
             lines += got if got is not None else ['FAIL | G10 main 결과 줄 없음']
@@ -156,32 +167,51 @@ def main():
             wrap = os.path.join(OUT, 'wrap_g1_%s.html' % tag)
             io.open(wrap, 'w', encoding='utf-8', newline='\n').write('<!doctype html><meta charset="utf-8"><body style="margin:0">'
                 + ''.join('<iframe src="app_g1_%s.html#%s" style="display:block;width:%dpx;height:760px;border:0"></iframe>' % (tag, w, px) for w, px in WIDTHS) + '</body>')
+            QC.launch('base' if tag == 'HEAD' else 'new')
             got = run_chrome('g1_%s' % tag, wrap, ['END:%s' % w for w, _ in WIDTHS], budget=120000, win='1320,2400')
             show('%s · g1(iframe 390·768·1280)' % tag, got)
             lines += got if got is not None else ['FAIL | G1 g1 결과 줄 없음']
         if 'perf' in phases:
             p = os.path.join(OUT, 'app_perf_%s.html' % tag)
             io.open(p, 'w', encoding='utf-8', newline='\n').write(app_html(src, mk(pjs, {'n': 5548, 'gg': 1195, 'ggLen': 300})))
+            QC.launch('base' if tag == 'HEAD' else 'new')
             got = run_chrome('perf_%s' % tag, p, ['END'], budget=None, timeout=1500)
             show('%s · perf(실시간)' % tag, got)
             lines += got if got is not None else ['FAIL | G5 perf 결과 줄 없음']
         res[tag] = lines
         meas[tag] = {x.split(' | ')[1]: json.loads(x.split(' | ', 2)[2]) for x in lines if x.startswith('MEAS | ')}
 
-    print('=== 회귀 대조 — 같은 입력의 글자 (NEW vs HEAD) ===')
-    vals = {t: [x for x in (res.get(t) or []) if x.startswith('VAL | ')] for t in ('NEW', 'HEAD')}
-    vok = {}
-    for a, b in zip(vals['NEW'], vals['HEAD']):
-        name = a.split(' | ')[1]
-        ok = a == b and name == b.split(' | ')[1]
-        vok[name] = ok
-        print('  %-24s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
-        if not ok:
-            io.open(os.path.join(OUT, 'val_%s_NEW.txt' % name), 'w', encoding='utf-8').write(a)
-            io.open(os.path.join(OUT, 'val_%s_HEAD.txt' % name), 'w', encoding='utf-8').write(b)
-    cnt_ok = len(vals['NEW']) == len(vals['HEAD'])
-    print('  VAL 줄 NEW %d · HEAD %d' % (len(vals['NEW']), len(vals['HEAD'])))
-    print()
+    if QC.REGRESS:   # regress — 같은 입력의 글자(G4.jeongni · GV 카드 셋)를 바탕(앞 인도판) 스냅샷과 맞댄다(줄마다 md5 · 길이)
+        import hashlib as _hl
+        print('=== 회귀 대조 — 같은 입력의 글자 (NEW vs 기준 스냅샷) ===')
+        vals = {'NEW': [x for x in (res.get('NEW') or []) if x.startswith('VAL | ')]}
+        vok = {}
+        for a in vals['NEW']:
+            name = a.split(' | ')[1]
+            ok = QC.same('VAL.' + name, [_hl.md5(a.encode('utf-8')).hexdigest()[:16], len(a)])
+            vok[name] = ok
+            print('  %-24s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
+            if not ok:
+                io.open(os.path.join(OUT, 'val_%s_NEW.txt' % name), 'w', encoding='utf-8').write(a)
+        nb = QC.base('VAL.n', len(vals['NEW']))
+        cnt_ok = len(vals['NEW']) == nb
+        print('  VAL 줄 NEW %d · 기준 %d (%s)' % (len(vals['NEW']), nb, QC.base_note('VAL.n')))
+        print()
+    if QC.GATE:
+        print('=== 회귀 대조 — 같은 입력의 글자 (NEW vs HEAD) ===')
+        vals = {t: [x for x in (res.get(t) or []) if x.startswith('VAL | ')] for t in ('NEW', 'HEAD')}
+        vok = {}
+        for a, b in zip(vals['NEW'], vals['HEAD']):
+            name = a.split(' | ')[1]
+            ok = a == b and name == b.split(' | ')[1]
+            vok[name] = ok
+            print('  %-24s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
+            if not ok:
+                io.open(os.path.join(OUT, 'val_%s_NEW.txt' % name), 'w', encoding='utf-8').write(a)
+                io.open(os.path.join(OUT, 'val_%s_HEAD.txt' % name), 'w', encoding='utf-8').write(b)
+        cnt_ok = len(vals['NEW']) == len(vals['HEAD'])
+        print('  VAL 줄 NEW %d · HEAD %d' % (len(vals['NEW']), len(vals['HEAD'])))
+        print()
 
     extra = []
     if 'perf' in phases and 'G6' in meas.get('NEW', {}) and 'G6' in meas.get('HEAD', {}):
@@ -205,22 +235,35 @@ def main():
             print('  %s %s' % (t, {w: meas[t].get('G1.' + w) for w, _ in WIDTHS}))
         print()
 
-    print('=== SRC 소스 대조 (NEW vs HEAD · add1) ===')
-    Ln, Lh = new.split('\n'), head.split('\n')
-    lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
+    if QC.REGRESS:   # regress — NEW·HEAD 맞대던 칸(긴 줄 · SheetJS · SYNC_KEYS · ox_* · 무변 함수 33)은 기준 스냅샷(md5)과 · §A~§F 는 NEW 글자만(gate 와 같은 식)
+        import hashlib as _hl
+        print('=== SRC 소스 대조 (NEW vs 기준 스냅샷 · add1) ===')
+        Ln, Lh = new.split('\n'), None
+        lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
+        md = lambda xs: None if xs is None else _hl.md5('\n'.join(xs).encode('utf-8')).hexdigest()[:16]
+    if QC.GATE:
+        print('=== SRC 소스 대조 (NEW vs HEAD · add1) ===')
+        Ln, Lh = new.split('\n'), head.split('\n')
+        lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
     body = lambda sig: '\n'.join(fn_lines(Ln, sig) or [])
     keep = ['function markHTML(', 'function renderMarked(', 'function applyMark(', 'function onSelectMaybe(', 'function offsetsInNode(', 'function loadMarks(',
             'function saveMarks(', 'function normalizeMarks(', 'function openJeongni(', 'function jnRowHTML(', 'function jnBodyHTML(', 'async function syncRecords(',
             'function stampAll(', 'async function dbGet(', 'async function dbPut(', 'function dbOpen(', 'async function dbDel(', 'function toggleTag(', 'function togglePeekExp(',
             'function oxPaint(', 'function ggLineHTML(', 'function gradeCurrentPage(', 'function qiPierce(', 'function qiUnder(', 'function qiSynth(', 'function qiToggle(',
             'function qiTool(', 'function qiToolsPaint(', 'function qiTapSkip(', 'function openQPopup(', 'function yujeOf(', 'function samePanrye(', 'function myLinkChipHTML(']
-    keep_have = [s for s in keep if fn_lines(Lh, s) is not None]
-    keep_diff = [s for s in keep_have if fn_lines(Ln, s) != fn_lines(Lh, s)]
+    if QC.REGRESS:   # regress — 기준 = 앞 인도판의 같은 함수 몸통 md5(그 판에 있던 함수만 · 스냅샷 없으면 지금 값 = 첫 기록)
+        keep_now = {s: md(fn_lines(Ln, s)) for s in keep}
+        keep_base = QC.base('SRC.keep', keep_now)
+        keep_have = [s for s in keep if keep_base.get(s) is not None]
+        keep_diff = [s for s in keep_have if keep_now.get(s) != keep_base.get(s)]
+    if QC.GATE:
+        keep_have = [s for s in keep if fn_lines(Lh, s) is not None]
+        keep_diff = [s for s in keep_have if fn_lines(Ln, s) != fn_lines(Lh, s)]
     rq = body('function renderQuizPage() {').split('\n')
-    chk = [('긴 줄(>3000자) 전부 글자까지 같다', [s for s in Ln if len(s) > 3000] == [s for s in Lh if len(s) > 3000]),
-           ('SheetJS 줄(가장 긴 줄) 바이트 무변', max(Ln, key=len) == max(Lh, key=len) and len(max(Ln, key=len)) > 60000),
-           ('SYNC_KEYS 무변', [s for s in Ln if 'const SYNC_KEYS = [' in s] == [s for s in Lh if 'const SYNC_KEYS = [' in s]),
-           ('ox_* 글자 집합 같다(새 저장소 키 0)', lits(new) == lits(head)),
+    chk = [('긴 줄(>3000자) 전부 글자까지 같다', [s for s in Ln if len(s) > 3000] == [s for s in Lh if len(s) > 3000] if QC.GATE else QC.same('SRC.long', md([s for s in Ln if len(s) > 3000]))),
+           ('SheetJS 줄(가장 긴 줄) 바이트 무변', max(Ln, key=len) == max(Lh, key=len) and len(max(Ln, key=len)) > 60000 if QC.GATE else QC.same('SRC.sheetjs', md([max(Ln, key=len)])) and len(max(Ln, key=len)) > 60000),
+           ('SYNC_KEYS 무변', [s for s in Ln if 'const SYNC_KEYS = [' in s] == [s for s in Lh if 'const SYNC_KEYS = [' in s] if QC.GATE else QC.same('SRC.synckeys', md([s for s in Ln if 'const SYNC_KEYS = [' in s]))),
+           ('ox_* 글자 집합 같다(새 저장소 키 0)', lits(new) == lits(head) if QC.GATE else QC.same('SRC.oxlits', lits(new))),
            ('§A #qcards{width:100%;max-width:900px;margin:0 auto} · transform-origin 0 · qcardsFit 몸통 = return 1 · qiScale 0',
             '#qcards{position:relative;width:100%;max-width:900px;margin:0 auto}' in new and 'transform-origin:top left' not in new
             and [s.strip() for s in (fn_lines(Ln, 'function qcardsFit() {') or [])] == ['function qcardsFit() {', 'return 1;', '}'] and not re.search(r'\bqiScale\b', new)),
@@ -247,7 +290,9 @@ def main():
     print('=== 게이트 표 (NEW / HEAD) ===')
     allok = True
     nl = (res.get('NEW') or []) + extra
-    for g in GATES:
+    if QC.REGRESS:   # regress — G6 은 옛 판(HEAD) 대비 「10 배 빠르다」 한 칸뿐(관문만)이라 표 셈 밖 · G1 헛잣대도 HEAD 몫
+        print('  %-4s regress 건넘(옛 판 대비 전환 시간 · 관문만)' % 'G6')
+    for g in (GATES if QC.GATE else [x for x in GATES if x != 'G6']):
         if g == 'SRC':
             print('  %-4s NEW %-8s' % (g, 'PASS' if g_src else 'FAIL'))
             continue

@@ -14,12 +14,23 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+# --mode gate|regress|smoke (_task_qa_slim2 2026-10-08 · 인자 없으면 gate = 이 판 앞과 같음)
+#   regress = 칸 39 = 회귀 37 · 기준 1(SRC 함수) · 관문만 1(SRC shareHTML 한 줄) — 띄움 한 번 · 시드 · 검사 글은 gate 와 같다 · --out 기본만 %TEMP%\h_tt_claudetab(gate = 하네스 옆 N: h_claudetab)
+#             SRC 무변 대조: git show <--ref> 0 · 「손대지 않는 함수」 = 함수 글자 md5 를 바탕 스냅샷(QC.base)과 · 「shareHTML 은 ai 갈래 한 줄만 다르다」 = gate 만
+#   smoke   = smoke 칸 없음 → 앱을 안 띄우고 「INFO | smoke 칸 없음」 한 줄
+#   N:(마이박스) 크롬 프로필을 TEMP 로 옮기는 까닭 — N: 프로필은 띄움마다 느리다: 9/17 tt 회귀(N: 결과 파일 시각) _harness_timetable 76 초 · tt_race 판마다 76~92 초 /
+#     10/6 use_count N: 프로필 --dump-dom 180 초 초과 되풀이 → 사용자 「해」로 TEMP(결정로그 10/6 21:36 · 22:0x) / 프로필이 TEMP 인 민법 dump-dom 하네스는 띄움당 9~14 초
+#     · 마이박스가 하네스 프로필 폴더 목록을 못 펼쳐 _qa_sync copy 10 분 멈춤 · 실행기 열쇠 셈 멈춤(결정로그 10/2 · 10/4)
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) A-1 · 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다
 import argparse, html as HT, json, os, re, subprocess, sys
 sys.stdout.reconfigure(encoding='utf-8')
 
+if QC.REGRESS:   # regress · smoke — 결과 html · 크롬 프로필(OUT\prof)의 기본 자리를 N:(마이박스) 밖 로컬 임시 폴더로(A-2 · 까닭 = 머리 주석) · --out 을 주면 그 자리 · gate 는 이 판 앞 그대로
+    import tempfile as _rg_tf
+    _RG_OUT = os.path.join(_rg_tf.gettempdir(), 'h_tt_claudetab')
 ap = argparse.ArgumentParser()
 ap.add_argument('--src', default=_roots.genie(r"timetable\index.html"))
-ap.add_argument('--out', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "h_claudetab"))
+ap.add_argument('--out', default=_RG_OUT if QC.REGRESS else os.path.join(os.path.dirname(os.path.abspath(__file__)), "h_claudetab"))
 ap.add_argument('--ref', default='714c685', help='무변 대조 기준 커밋(claudetab 직전 = pvtab 판)')
 A = ap.parse_args()
 SRC, OUT = os.path.abspath(A.src), os.path.abspath(A.out)
@@ -263,7 +274,28 @@ def fn_text(t, sig):
     return '\n'.join(out)
 
 
+def _rg_fn_bad(src, names, tag='SRC.fn'):
+    """regress — 「손대지 않는 함수 N개 = --ref 글자」(처리표 기준)의 regress 갈래: --ref 고정 옛 커밋을 git show 로 풀지 않고
+    함수마다 글자 md5 를 바탕 스냅샷(QC.base · 칸 'SRC.fn|<함수 머리>')과 맞댄다. 못 찾은 함수(fn_text = None)는 gate 처럼 바뀐 것으로 센다(_harness_tt_claudetab.py)"""
+    import hashlib
+    bad = []
+    for n in names:
+        t = fn_text(src, n)
+        ok = QC.same('%s|%s' % (tag, n), None if t is None else hashlib.md5(t.encode('utf-8')).hexdigest())
+        if t is None or not ok:
+            bad.append(n)
+    return bad
+
+
+def _rg_note(names, tag='SRC.fn'):
+    """기준 값이 어디서 왔나(QC.base_note) — 함수마다 같은 스냅샷이라 한 줄로 모은다"""
+    return ' / '.join(sorted({QC.base_note('%s|%s' % (tag, n)) for n in names}))
+
+
 def main():
+    if QC.SMOKE:   # smoke — 이 하네스엔 smoke 칸이 없다(처리표 칸 39 · smoke 0) — 앱을 띄우기 전에 끝
+        print('INFO | smoke 칸 없음')
+        return 0
     src = open(SRC, encoding='utf-8').read()
     assert ANCHOR in src, 'seed anchor not found'
     h = src.replace(ANCHOR, PIN + SEED + ANCHOR, 1)
@@ -271,6 +303,7 @@ def main():
     h = h.replace('</body>', tests + '</body>', 1)
     app = os.path.join(OUT, 'app.html')
     open(app, 'w', encoding='utf-8', newline='\n').write(h)
+    QC.launch('new')   # §B-4 셈 — 새 판 앱 띄움 1(바탕 띄움 없음 · --ref 는 글자 대조만)
     r = subprocess.run([CHROME, '--headless=new', '--disable-gpu', '--no-first-run',
                         '--user-data-dir=' + os.path.join(OUT, 'prof'),
                         '--allow-file-access-from-files', '--window-size=1280,900',
@@ -284,24 +317,33 @@ def main():
     if not lines:
         print('결과 줄 없음 — 부팅 사망? dom %d bytes → %s' % (len(dom), os.path.join(OUT, 'dom.html')))
         return 1
-    g = subprocess.run(['git', '-C', GENIE, 'show', A.ref + ':timetable/index.html'], capture_output=True, timeout=60)
-    if g.returncode == 0:
-        ref = g.stdout.decode('utf-8')
-        # add1 갱신 — shareCmAdd(입력칸 id 인자)·pvTabHTML(잔액 칸 공용 함수화)은 add1 이 일부러 고쳤다. 그 둘은 add1 하네스가 「한 줄만 다르다」로 따로 잰다
+    if QC.GATE:   # gate — --ref 고정 옛 커밋(git show)과 글자 대조(이 판 앞 그대로)
+        QC.sub('git:show-app')   # §B-4 셈 — 옛 커밋 앱 풀기(regress 0)
+        g = subprocess.run(['git', '-C', GENIE, 'show', A.ref + ':timetable/index.html'], capture_output=True, timeout=60)
+        if g.returncode == 0:
+            ref = g.stdout.decode('utf-8')
+            # add1 갱신 — shareCmAdd(입력칸 id 인자)·pvTabHTML(잔액 칸 공용 함수화)은 add1 이 일부러 고쳤다. 그 둘은 add1 하네스가 「한 줄만 다르다」로 따로 잰다
+            names = ['function shMd(', 'function mergeList(', 'function mergeFile(', 'function shareItems(', 'function upsertShare2(', 'function shareFile(',
+                     'function shareKeep(', 'function shareAddText(', 'function shareCmTog(', 'function shareCmDel(',
+                     'function shareDel(', 'function shareEdit(', 'function pvApply(', 'function pvChip(', 'function dayCard(']
+            bad = [n for n in names if fn_text(src, n) is None or fn_text(src, n) != fn_text(ref, n)]
+            lines.append(('PASS' if not bad else 'FAIL') + ' | SRC 손대지 않는 함수 %d개 = %s 과 글자 같음(마크다운·병합·share 읽기쓰기·댓글·⚡탭·dayCard) — 무변 잣대' % (len(names), A.ref)
+                         + ('' if not bad else ' | ' + ', '.join(bad)))
+            a, b = fn_text(src, 'function shareHTML('), fn_text(ref, 'function shareHTML(')
+            da = [x for x in (a or '').split('\n') if x not in (b or '').split('\n')]
+            db = [x for x in (b or '').split('\n') if x not in (a or '').split('\n')]
+            okh = (len(da) == 0 and len(db) == 0) or (len(da) == 1 and len(db) == 1 and "tab==='ai'" in da[0] and "tab==='ai'" in db[0])
+            lines.append(('PASS' if okh else 'FAIL') + ' | SRC shareHTML 은 ai 갈래 한 줄만 다르다(Image·Text·⚡ 갈래 글자 무변) — 무변 잣대'
+                         + ('' if okh else ' | NEW만 %d줄 %s / 옛판만 %d줄 %s' % (len(da), da[:2], len(db), db[:2])))
+        else:
+            lines.append('INFO | SRC 무변 대조 못 함 | git show %s 실패' % A.ref)
+    else:   # regress — git show 0 · 「손대지 않는 함수 N개 = --ref 글자」(처리표 기준) = 함수마다 글자 md5 를 바탕 스냅샷(QC.base)과 맞댄다 · 「shareHTML 은 ai 갈래 한 줄만 다르다」 = gate 만(인도 판 diff 셈 · 처리표 관문만)
         names = ['function shMd(', 'function mergeList(', 'function mergeFile(', 'function shareItems(', 'function upsertShare2(', 'function shareFile(',
                  'function shareKeep(', 'function shareAddText(', 'function shareCmTog(', 'function shareCmDel(',
-                 'function shareDel(', 'function shareEdit(', 'function pvApply(', 'function pvChip(', 'function dayCard(']
-        bad = [n for n in names if fn_text(src, n) is None or fn_text(src, n) != fn_text(ref, n)]
+                 'function shareDel(', 'function shareEdit(', 'function pvApply(', 'function pvChip(', 'function dayCard(']   # gate 의 names 와 같은 목록(바꾸면 둘 다)
+        bad = _rg_fn_bad(src, names)
         lines.append(('PASS' if not bad else 'FAIL') + ' | SRC 손대지 않는 함수 %d개 = %s 과 글자 같음(마크다운·병합·share 읽기쓰기·댓글·⚡탭·dayCard) — 무변 잣대' % (len(names), A.ref)
-                     + ('' if not bad else ' | ' + ', '.join(bad)))
-        a, b = fn_text(src, 'function shareHTML('), fn_text(ref, 'function shareHTML(')
-        da = [x for x in (a or '').split('\n') if x not in (b or '').split('\n')]
-        db = [x for x in (b or '').split('\n') if x not in (a or '').split('\n')]
-        okh = (len(da) == 0 and len(db) == 0) or (len(da) == 1 and len(db) == 1 and "tab==='ai'" in da[0] and "tab==='ai'" in db[0])
-        lines.append(('PASS' if okh else 'FAIL') + ' | SRC shareHTML 은 ai 갈래 한 줄만 다르다(Image·Text·⚡ 갈래 글자 무변) — 무변 잣대'
-                     + ('' if okh else ' | NEW만 %d줄 %s / 옛판만 %d줄 %s' % (len(da), da[:2], len(db), db[:2])))
-    else:
-        lines.append('INFO | SRC 무변 대조 못 함 | git show %s 실패' % A.ref)
+                     + ' | ' + (', '.join(bad) + ' · ' if bad else '') + _rg_note(names))
     for ln in lines:
         print('   ' + ln)
     f = sum(1 for ln in lines if ln.startswith('FAIL'))

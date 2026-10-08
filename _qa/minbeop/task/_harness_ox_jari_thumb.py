@@ -15,6 +15,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다
 import hashlib, io, json, os, re, shutil, subprocess, sys, tempfile, urllib.parse
 
 sys.stdout.reconfigure(encoding='utf-8')
@@ -94,7 +95,9 @@ def payload():
             byuid[r['uid']] = {k: (str(r.get(k, ''))[:300] if k == '해설' else r.get(k, '')) for k in keep}
             order.append(r['uid'])
     ids = order[:8]
-    src = git('show', 'HEAD:' + REL).decode('utf-8')
+    if QC.GATE:
+        QC.sub('git:show-app')
+    src = git('show', 'HEAD:' + REL).decode('utf-8') if QC.GATE else io.open(os.path.join(GENIE, REL), encoding='utf-8').read()   # regress — HEAD 판을 안 푼다: SYNC_KEYS · MBB_VOL 첫 책은 새 판 글에서(사슬 gate 에서도 HEAD = 새 판)
     sk = re.search(r'const SYNC_KEYS = \[(.+?)\];', src, re.S).group(1)
     sync = ','.join(re.findall(r"'([^']+)'", sk))
     m = re.search(r'MBB_VOL\s*=\s*\{([^}]*)\}', src)
@@ -109,26 +112,35 @@ def payload():
 
 def gate_files():
     print('\n=== §0 · D11 가드 · 줄끝 · 무접촉 ===')
-    g = io.open(GPUSH, 'rb').read().decode('cp949', 'replace')
-    paths = re.search(r'^set "PATHS=(.+?)"', g, re.M).group(1).split()
-    add('D11', 'minbeop' in paths, 'ⓐ PATHS(%d) = %s' % (len(paths), ' '.join(paths)))
-    cmds = [l for l in g.split('\n') if not re.match(r'^\s*rem\b', l, re.I) and l.strip()]
-    bad = [l.strip() for l in cmds if re.search(r'\badd\b[^\n]*\s-A\b', l)]
-    add('D11', not bad, 'ⓒ `git add -A` 안 쓴다 (걸린 줄 %s)' % bad)
+    if QC.GATE:   # push 가드(g_push.cmd 글자) — 앱 회귀 아님 · 그 판 인도 가드 = 관문만
+        g = io.open(GPUSH, 'rb').read().decode('cp949', 'replace')
+        paths = re.search(r'^set "PATHS=(.+?)"', g, re.M).group(1).split()
+        add('D11', 'minbeop' in paths, 'ⓐ PATHS(%d) = %s' % (len(paths), ' '.join(paths)))
+        cmds = [l for l in g.split('\n') if not re.match(r'^\s*rem\b', l, re.I) and l.strip()]
+        bad = [l.strip() for l in cmds if re.search(r'\badd\b[^\n]*\s-A\b', l)]
+        add('D11', not bad, 'ⓒ `git add -A` 안 쓴다 (걸린 줄 %s)' % bad)
     app = io.open(os.path.join(GENIE, REL), 'rb').read()
-    head = git('show', 'HEAD:' + REL)
-    add('E-1', hashlib.md5(head).hexdigest() == '209bcf17ec519b4b12e4004498126a04',
-        '착수 HEAD md5 = 지시서 §0 값 (%d B · %s)' % (len(head), hashlib.md5(head).hexdigest()[:12]))
+    if QC.GATE:
+        QC.sub('git:show-app')
+    head = git('show', 'HEAD:' + REL) if QC.GATE else None   # regress — HEAD 판을 안 푼다
+    if QC.GATE:   # 착수 md5 = 지시서 값(고정 옛 판) — 관문만
+        add('E-1', hashlib.md5(head).hexdigest() == '209bcf17ec519b4b12e4004498126a04',
+            '착수 HEAD md5 = 지시서 §0 값 (%d B · %s)' % (len(head), hashlib.md5(head).hexdigest()[:12]))
     add('D11', app.count(b'\r\n') == 0, '앱 작업트리 CRLF %d' % app.count(b'\r\n'))
-    add('E-1', hashlib.md5(app).hexdigest() != hashlib.md5(head).hexdigest(),
-        '끝 판 %d B · md5(LF) %s' % (len(app), hashlib.md5(app).hexdigest()))
-    ch = [l for l in git('diff', '--name-only', 'HEAD').decode('utf-8').split('\n') if l.strip()]
-    add('E-9', ch == [REL], '바뀐 파일은 %s 하나뿐 : %s' % (REL, ch))
+    if QC.GATE:   # 인도 때 작업트리 · HEAD diff 가드 = 관문만(사슬은 깨끗한 워크트리 · HEAD = 새 판)
+        add('E-1', hashlib.md5(app).hexdigest() != hashlib.md5(head).hexdigest(),
+            '끝 판 %d B · md5(LF) %s' % (len(app), hashlib.md5(app).hexdigest()))
+        ch = [l for l in git('diff', '--name-only', 'HEAD').decode('utf-8').split('\n') if l.strip()]
+        add('E-9', ch == [REL], '바뀐 파일은 %s 하나뿐 : %s' % (REL, ch))
     txt = app.decode('utf-8')
-    add('E-9', txt.count('SYNC_KEYS') == head.decode('utf-8').count('SYNC_KEYS')
-        and re.search(r'const SYNC_KEYS = \[(.+?)\];', txt, re.S).group(1)
-        == re.search(r'const SYNC_KEYS = \[(.+?)\];', head.decode('utf-8'), re.S).group(1),
-        'SYNC_KEYS 줄 무변')
+    if QC.GATE:
+        add('E-9', txt.count('SYNC_KEYS') == head.decode('utf-8').count('SYNC_KEYS')
+            and re.search(r'const SYNC_KEYS = \[(.+?)\];', txt, re.S).group(1)
+            == re.search(r'const SYNC_KEYS = \[(.+?)\];', head.decode('utf-8'), re.S).group(1),
+            'SYNC_KEYS 줄 무변')
+    else:   # regress — HEAD 판 대신 기준 스냅샷(앞 인도판 새 판의 「SYNC_KEYS」 낱말 수 · 줄)
+        skv = [txt.count('SYNC_KEYS'), re.search(r'const SYNC_KEYS = \[(.+?)\];', txt, re.S).group(1)]
+        add('E-9', skv == QC.base('E-9/SYNC_KEYS', skv), 'SYNC_KEYS 줄 무변')
     # E-4 — 화면이 없어도 재는 자리: 갈래가 소스에 박혀 있다
     pa = txt[txt.index('function paint()'):txt.index('function boxCss')]
     add('E-4', "if (!isMine && V.mode === 'pick')" in pa,
@@ -143,6 +155,9 @@ def gate_files():
 
 
 def main():
+    if QC.SMOKE:   # smoke 칸 없음(A-0) — 앱을 띄우기 전에 한 줄 찍고 끝
+        print('INFO | smoke 칸 없음 | 자리 그림 · 자리 가져오기 · 댓글 · 회독 표시 하네스 — smoke 칸 없음(A-0) · 앱 안 띄움', flush=True)
+        return 0
     os.makedirs(OUT, exist_ok=True)
     print('OUT =', OUT)
     gate_files()
@@ -154,11 +169,13 @@ def main():
     js = tests.replace('__P__', json.dumps(P, ensure_ascii=False))
 
     outs = {}
-    for tag, src in (('NEW', io.open(os.path.join(GENIE, REL), encoding='utf-8').read()),
-                     ('HEAD', git('show', 'HEAD:' + REL).decode('utf-8'))):
+    for tag, src in ((('NEW', io.open(os.path.join(GENIE, REL), encoding='utf-8').read()),
+                      ('HEAD', git('show', 'HEAD:' + REL).decode('utf-8'))) if QC.GATE else
+                     (('NEW', io.open(os.path.join(GENIE, REL), encoding='utf-8').read()),)):   # regress — 새 판만(HEAD 판 = 헛잣대 · ok/ng 찍기만 · 사슬에선 HEAD = 새 판)
+        QC.launch('new' if tag == 'NEW' else 'base')
         outs[tag] = run(tag, build(tag, src, js))
 
-    for tag in ('NEW', 'HEAD'):
+    for tag in (('NEW', 'HEAD') if QC.GATE else ('NEW',)):
         print('\n=== 헤드리스 결과 (%s) ===' % tag)
         for x in outs[tag]:
             if x.startswith(('PASS', 'FAIL')):

@@ -18,6 +18,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다
 import copy, datetime, hashlib, io, json, os, re, shutil, subprocess, sys, tempfile
 
 GENIE = _roots.genie()
@@ -35,6 +36,12 @@ MISSING = '\x00없음'
 def git(repo, *a):
     r = subprocess.run(['git', '-C', repo, '-c', 'core.quotepath=false'] + list(a), capture_output=True)
     return r.stdout.decode('utf-8', 'replace')
+
+
+def _rg_md5(v):
+    """qa_slim2 regress — 기준 칸 값 줄이기(글 · 덩이 → md5) · gate 에서 안 쓴다"""
+    s = v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, sort_keys=True, default=str)
+    return hashlib.md5(s.encode('utf-8')).hexdigest()
 
 
 def fn_block(text, head):
@@ -129,8 +136,14 @@ def build_and_run(tag, src, seed, tests):
 def main():
     os.makedirs(OUT, exist_ok=True)
     new = io.open(SRC, encoding='utf-8', newline='').read()
-    base = git(GENIE, 'show', 'HEAD:minbeop/index.html')
-    sk = json.loads(re.search(r"const SYNC_KEYS = (\[[^\]]*\]);", base).group(1).replace("'", '"'))
+    if QC.GATE:
+        QC.sub('git:show-app')
+        base = git(GENIE, 'show', 'HEAD:minbeop/index.html')
+        sk = json.loads(re.search(r"const SYNC_KEYS = (\[[^\]]*\]);", base).group(1).replace("'", '"'))
+    else:   # regress · smoke — 바탕(HEAD) 판을 안 푼다(헛잣대 · 사슬에선 HEAD = 새 판) · SYNC_KEYS = 기준 스냅샷(앞 인도판 새 판 값 · 없으면 지금 새 판 = 첫 기록) — gate 의 「HEAD 판 SYNC_KEYS」 자리(파이썬 합치기 규칙 · G12 「SYNC_KEYS 무변」 기댓값)
+        base = None
+        sk = QC.base('sync_merge/SYNC_KEYS', json.loads(re.search(r"const SYNC_KEYS = (\[[^\]]*\]);", new).group(1).replace("'", '"')))
+    QC.sub('git:show-data', 2)   # 실물 입력 = studyplandata 고정 커밋 두 판(14a2d899 · 9a545651) 읽기만 — 바탕 앱 풀기 아님
     pc, ip = json.loads(git(SP, 'show', PC_REV + ':' + REC)), json.loads(git(SP, 'show', IP_REV + ':' + REC))
     ms = lambda iso: int(datetime.datetime.fromisoformat(iso.replace('Z', '+00:00')).timestamp() * 1000)
 
@@ -168,29 +181,39 @@ def main():
                   'ip': {'data': ip['data'], 'u': ip['u'], 'gone': ip['gone'], 'ms': ms(ip['savedAt']), 'savedAt': ip['savedAt']},
                   'want': want}}
     js_json = lambda v: json.dumps(v, ensure_ascii=False).replace('</', '<\\/')
+    if QC.SMOKE:   # smoke(A-4) — G1(도장 없는 원격 칸 받기) · G5(두 기기 번갈아 · 원격 칸 수 안 줆) 두 갈래만 — 나머지 갈래 · G12 소스는 건넘
+        P['only'] = ['G1', 'G5']
     tests = TESTS.replace('__P__', js_json(P))
+    if QC.SMOKE and tests.count('for(const [n,f] of LIST){') == 1:   # smoke 전용 — 주입 글의 갈래 차례에 거름 한 줄(gate · regress 글은 그대로)
+        tests = tests.replace('for(const [n,f] of LIST){', 'for(const [n,f] of LIST){ if(P.only&&P.only.indexOf(n)<0) continue;')
 
     print()
-    print('=== G12 소스 (NEW vs HEAD) ===')
-    nbad = 0
-    for h in ('function stampAll(', 'async function ghPutJson(', 'function recPending(', 'async function recForcePull(',
-              'async function ghSha(', 'async function ghRaw('):
-        same = fn_block(new, h) == fn_block(base, h)
-        nbad += (not same)
-        print('  %-30s %s' % (h, 'PASS 문자까지 같다' if same else 'FAIL 달라졌다'))
-    ck_line = "        const ckey = (k, c) => k + '|' + c;\n"
-    ok_ck = new.count(ck_line) == 1 and base.count(ck_line) == 1
-    nbad += (not ok_ck)
-    print('  %-30s %s' % ('const ckey', 'PASS 문자까지 같다' if ok_ck else 'FAIL'))
-    sk_new = re.search(r"const SYNC_KEYS = (\[[^\]]*\]);", new).group(1)
-    ok_sk = sk_new == re.search(r"const SYNC_KEYS = (\[[^\]]*\]);", base).group(1) and len(sk) == 17
-    nbad += (not ok_sk)
-    print('  %-30s %s' % ('SYNC_KEYS 17키', 'PASS 무변' if ok_sk else 'FAIL'))
-    print('  G12 소스 : %s' % ('ALL OK' if not nbad else '%d개 어긋남' % nbad))
-    print()
+    if QC.want('G12'):
+        print('=== G12 소스 (NEW vs HEAD) ===')
+        nbad = 0
+        for h in ('function stampAll(', 'async function ghPutJson(', 'function recPending(', 'async function recForcePull(',
+                  'async function ghSha(', 'async function ghRaw('):
+            same = (fn_block(new, h) == fn_block(base, h)) if QC.GATE else QC.same('G12/' + h, _rg_md5(fn_block(new, h)))   # regress — 함수 덩이 md5 = 기준 스냅샷
+            nbad += (not same)
+            print('  %-30s %s' % (h, 'PASS 문자까지 같다' if same else 'FAIL 달라졌다'))
+        ck_line = "        const ckey = (k, c) => k + '|' + c;\n"
+        ok_ck = new.count(ck_line) == 1 and (base.count(ck_line) if QC.GATE else QC.base('G12/ckey', new.count(ck_line))) == 1
+        nbad += (not ok_ck)
+        print('  %-30s %s' % ('const ckey', 'PASS 문자까지 같다' if ok_ck else 'FAIL'))
+        sk_new = re.search(r"const SYNC_KEYS = (\[[^\]]*\]);", new).group(1)
+        ok_sk = sk_new == (re.search(r"const SYNC_KEYS = (\[[^\]]*\]);", base).group(1) if QC.GATE else QC.base('G12/SYNC_KEYS_line', sk_new)) and len(sk) == 17
+        nbad += (not ok_sk)
+        print('  %-30s %s' % ('SYNC_KEYS 17키', 'PASS 무변' if ok_sk else 'FAIL'))
+        print('  G12 소스 : %s' % ('ALL OK' if not nbad else '%d개 어긋남' % nbad))
+        if QC.REGRESS:
+            print('  (G12 소스 기댓값 = %s — 바탕 HEAD 판 대신 앞 인도판 새 판 글자)' % QC.base_note('G12/ckey'))
+        print()
+    else:   # smoke — G12 소스는 smoke 칸 아님
+        nbad = 0
 
     res = {}
-    for tag, src in (('NEW', new), ('HEAD', base)):
+    for tag, src in ((('NEW', new), ('HEAD', base)) if QC.GATE else (('NEW', new),)):   # regress · smoke — 새 판만(HEAD 판 = §K 헛잣대 · 사슬에선 HEAD = 새 판)
+        QC.launch('new' if tag == 'NEW' else 'base')
         lines = build_and_run(tag, src, SEED, tests)
         res[tag] = lines
         print('=== %s 판 ===' % tag)
@@ -207,8 +230,8 @@ def main():
         return '%dP/%dF' % (sum(1 for x in ls_ if x.startswith('PASS')), sum(1 for x in ls_ if x.startswith('FAIL')))
 
     print('=== 헛잣대 표 — §K 일곱 게이트 (NEW / HEAD) ===')
-    for g in BASELINE + ('G5-실물', 'G3-2', 'G4', 'G6', 'G8', 'G11', 'G12'):
-        print('  %-8s NEW %-8s HEAD %s%s' % (g, gate(res.get('NEW'), g), gate(res.get('HEAD'), g), '   ← §K 헛잣대' if g in BASELINE else ''))
+    for g in BASELINE + ('G5-실물', 'G3-2', 'G4', 'G6', 'G8', 'G11', 'G12') if not QC.SMOKE else ('G1', 'G5'):
+        print('  %-8s NEW %-8s HEAD %s%s' % (g, gate(res.get('NEW'), g), gate(res.get('HEAD'), g) if QC.GATE else '—(바탕 안 띄움)', '   ← §K 헛잣대' if g in BASELINE else ''))
     nf = sum(1 for x in (res.get('NEW') or []) if x.startswith('FAIL'))
     ok = res.get('NEW') is not None and nf == 0 and not nbad
     print()

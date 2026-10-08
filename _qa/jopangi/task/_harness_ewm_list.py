@@ -45,6 +45,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다(아래 ARG · --real 읽기보다 먼저) · 몸 = _qa_jo_common(QJ)와 한 벌
 import base64, hashlib, json, os, re, subprocess, sys, tempfile, threading, time, traceback, urllib.parse   # noqa: E402
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer   # noqa: E402
 try:
@@ -146,6 +147,14 @@ def app_src(app, x):
 
 def md5lf(s):
     return hashlib.md5(s.replace('\r\n', '\n').encode('utf-8')).hexdigest()
+
+
+_RG_HOST = re.compile(r'(?:127\.0\.0\.1|localhost):\d+')
+
+
+def _rg_msg(m):
+    """qa_slim2 regress — 오류 글을 판 사이에 맞대는 꼴(쪽 자리 「 @줄」 · 포트 뺌 — gate 의 re.sub(' @줄') 에 포트를 더 뺌) · gate 에서 안 쓴다"""
+    return _RG_HOST.sub('<HOST>', re.sub(r' @\d*$', '', str(m)))
 
 
 # ════════════════════════ 시험 기록 — 하네스가 실행 중에 지어냄(값 지어냄 · 파일 안 둠) ════════════════════════
@@ -786,6 +795,7 @@ class Pg:
     """한 쪽 — 앱 · 판(tag) · 폭(w) · 기록 늦춤(delay)"""
 
     def __init__(self, br, app, tag, src, w=1440, delay=0):
+        QC.launch('base' if tag.startswith('BASE') else 'new')   # 태그 BASE · BASE_834 · BASE_late = 바탕 67e423e — regress 에서는 0
         self.app, self.tag, self.w = app, tag, w
         d = DEV[w]
         kw = dict(viewport={'width': d['W'], 'height': d['H']})
@@ -968,17 +978,20 @@ def B1_B2_mb(pn, pb, QM, QMX):
         p.ev("([a, b]) => __ML.setMap(a, b)", [QM, QMX])
         out[p.tag] = {'cmp': p.ev("() => __ML.mapCmp()"), 'dr': p.ev("() => __ML.drawerAll()"), 'da': p.ev("() => __ML.dash()")}
     rn, rb = out['NEW'], out.get('BASE')
-    T('B1', '민법 하네스 지도(문항마스터 파이썬) = 앱 ewmIdx(Q: 문항 열쇠 뺌)', rn['cmp'] and rn['cmp']['nd'] == 0 and rn['cmp']['n'] > 0,
-      {'Q-id': len(QM), '앱과 다름': rn['cmp'], '바탕 앱과 다름': rb and rb['cmp']})
+    if QC.want('B1/mb/map'):
+        T('B1', '민법 하네스 지도(문항마스터 파이썬) = 앱 ewmIdx(Q: 문항 열쇠 뺌)', rn['cmp'] and rn['cmp']['nd'] == 0 and rn['cmp']['n'] > 0,
+          {'Q-id': len(QM), '앱과 다름': rn['cmp'], '바탕 앱과 다름': rb and rb['cmp']})
     for where, key in (('서랍', 'dr'), ('첫 화면', 'da')):
         sn = judge(rn[key]['rows'], ry)
         sb = judge(rb[key]['rows'], ry) if rb else None
         TB('B1', '민법 %s 단원 · 장 줄 「61x1 63x2」 = 하네스 셈(틀림 없는 줄 · 과목 머리 = 0)' % where, ok_rows, brief(sn), brief(sb))
-        T('B1', '민법 %s 줄 열쇠 맞춤(하네스 Q-id 수 = 줄에 적힌 수)' % where, sn['rows'] > 0 and not sn['nmisN'] and not sn['nokeyN'],
-          {'줄': sn['rows'], '수 다름': sn['nmisN'], '보기': sn['nmis'], '열쇠 없음': sn['nokeyN']})
+        if QC.want('B1/mb/keys'):
+            T('B1', '민법 %s 줄 열쇠 맞춤(하네스 Q-id 수 = 줄에 적힌 수)' % where, sn['rows'] > 0 and not sn['nmisN'] and not sn['nokeyN'],
+              {'줄': sn['rows'], '수 다름': sn['nmisN'], '보기': sn['nmis'], '열쇠 없음': sn['nokeyN']})
         N('B1', '민법 %s 중복 · 뺀 줄' % where, {'같은 문제 지문 여럿 걸린 줄(중복 없이 셈)': sn['dedup'], 'ok true · 지운 회차 · 2차 · 점수만이 걸린 줄(뺀 값)': sn['excl'], '수 있는 줄': sn['nz']})
-        TB('B2', '민법 %s 「변리사 기출」 회차 줄 = 그 회 틀린 문제 수 %s' % (where, ry), ok_y, {'y': sn['y'], 'ybadN': sn['ybadN'], 'ybad': sn['ybad']},
-           sb and {'y': sb['y'], 'ybadN': sb['ybadN'], 'ybad': sb['ybad']})
+        if QC.want('B2/mb/round'):
+            TB('B2', '민법 %s 「변리사 기출」 회차 줄 = 그 회 틀린 문제 수 %s' % (where, ry), ok_y, {'y': sn['y'], 'ybadN': sn['ybadN'], 'ybad': sn['ybad']},
+               sb and {'y': sb['y'], 'ybadN': sb['ybadN'], 'ybad': sb['ybad']})
     N('B2', '민법 회차 줄 ↔ 서랍 단원 줄 문제 집합', union_rep(rn['dr']['rows'], wr_of('민법')))
 
 
@@ -1052,6 +1065,13 @@ def B3_jo(pn, pb):
               nn['pop'][1]['n'] == nn['pop'][0]['n'] + 1 and nn['pop'][1]['last'] == bb['pop'][1]['last'] and nn['pop'][1]['ewml'] == 0 and nn['read'].get('tagClick') is False
               and nn['read'].get('curTag') == nn['read'].get('curRow'),
               {'새 판 팝업': nn['pop'], '바탕 팝업': bb['pop'], 'cursor': [nn['read'].get('curTag'), nn['read'].get('curRow')]})
+        elif QC.REGRESS:   # regress — 바탕(67e423e)에서 줄을 눌러 연 창 열쇠 대신 기준 스냅샷(앞 인도판 새 판에서 표시를 눌러 연 창 열쇠) · 새 판 조건은 그대로
+            nn = res['NEW']
+            bl = QC.base('B3/J7/%s/last' % kind, nn['pop'][1]['last'])
+            T('B3', 'J7 %s 표시를 누르면 = 줄 누름(지문 팝업 · 바탕에서 줄을 누른 것과 같은 창) · 펼침 줄 0 · 표시 onclick 없음' % nm,
+              nn['pop'][1]['n'] == nn['pop'][0]['n'] + 1 and nn['pop'][1]['last'] == bl and nn['pop'][1]['ewml'] == 0 and nn['read'].get('tagClick') is False
+              and nn['read'].get('curTag') == nn['read'].get('curRow'),
+              {'새 판 팝업': nn['pop'], '기준 창 열쇠': bl, '기준': QC.base_note('B3/J7/%s/last' % kind), 'cursor': [nn['read'].get('curTag'), nn['read'].get('curRow')]})
 
 
 def B3_mb(pn, pb, QM):
@@ -1138,7 +1158,7 @@ def h_ok(c):
 
 def B5_click_jo(pn, pb):
     law = '특허법'
-    for p in (pn, pb):
+    for p in ((pn, pb) if QC.GATE else (pn,)):
         p.ev("o => __EL.go(o)", {'law': law, 'tab': 'jimun', 'jimunTab': 'ox', 'mok': None, 'oxQ': '', 'jtFold': False, 'jtCh': {}, 'mbCh': {}, 'omr': False})
     cases = (('서랍 단원 줄', '#jtlist > .jtit:not(.jtyit)', '.ewmn', '.l1 > .n', "() => ({ mok: S.mok, tab: S.jimunTab, y: S.year || null })"),
              ('서랍 회차 줄', '#jtlist > .jtyit', '.ewmn', '.l1 > .n', "() => ({ mok: S.mok, tab: S.jimunTab, y: S.year || null })"),
@@ -1150,40 +1170,47 @@ def B5_click_jo(pn, pb):
             T('B5', '조판기 %s 누름 — .ewmn 있는 줄 없음' % nm, False, '')
             continue
         atn = pn.ev("([a, j, b]) => __EV.rowAt(a, j, b)", [rs, j, ins])
-        atb = pb.ev("([a, j, b]) => __EV.rowAt(a, j, b)", [rs, j, alt])
+        atb = None if not QC.GATE else pb.ev("([a, j, b]) => __EV.rowAt(a, j, b)", [rs, j, alt])
         pn.click(atn, 700)
-        pb.click(atb, 700)
-        vn, vb = pn.ev(rd), pb.ev(rd)
+        if QC.GATE:
+            pb.click(atb, 700)
+        vn, vb = pn.ev(rd), (pb.ev(rd) if QC.GATE else None)
+        if QC.REGRESS:   # regress — 바탕(67e423e)에서 그 줄을 누른 뒤 상태 대신 기준 스냅샷(앞 인도판 새 판에서 「61x1」 글자를 누른 뒤 상태)
+            vb = QC.base('B5/누름/조판기/' + nm, vn)
         T('B5', '조판기 %s 의 「61x1」 글자 누름 = 바탕에서 그 줄 누름(같은 일 · 가로챔 0)' % nm, atn and atn.get('on') and vn == vb and (vn.get('mok') or vn.get('y')),
           {'새 판 누른 곳': atn, '새 판 뒤': vn, '바탕 뒤': vb})
-        for p in (pn, pb):
+        for p in ((pn, pb) if QC.GATE else (pn,)):
             p.ev("o => __EL.go(o)", {'law': law, 'tab': 'jimun', 'jimunTab': 'ox', 'mok': None, 'oxQ': '', 'year': None, 'jtFold': False, 'jtCh': {}, 'mbCh': {}, 'omr': False})
 
 
 def B5_click_mb(pn, pb):
-    for p in (pn, pb):
+    for p in ((pn, pb) if QC.GATE else (pn,)):
         p.ev("() => { try { goHome(); } catch (e) {} const t = document.getElementById('tree'); if (t && t.classList.contains('fold') && typeof trFold === 'function') trFold(false); }")
         p.wait(300)
     # 서랍 단원 줄 — trGo(첫 화면 그 줄로 굴리고 칠함)
     rs = '#trlist > .trit'
     subj = pn.ev("() => { const T = trScan(); for (const s of T.order){ trPickSubj(s); if (document.querySelector('#trlist > .trit .ewmn')) return s; } return null; }")
-    pb.ev("(s) => trPickSubj(s)", subj)
+    if QC.GATE:
+        pb.ev("(s) => trPickSubj(s)", subj)
     j = pn.ev("([a, b]) => __EV.rowIdx(a, b)", [rs, '.ewmn'])
     rd = "() => { const r = [...document.querySelectorAll('[data-trrow]')].find(x => x.style.backgroundColor); return { hl: r ? r.getAttribute('data-trrow') : null, home: !document.getElementById('home-screen').classList.contains('hide') }; }"
     if j is not None and j >= 0:
-        for p in (pn, pb):
+        for p in ((pn, pb) if QC.GATE else (pn,)):
             p.ev("() => window.scrollTo(0, 0)")
         atn = pn.ev("([a, j, b]) => __EV.rowAt(a, j, b)", [rs, j, '.ewmn'])
-        atb = pb.ev("([a, j, b]) => __EV.rowAt(a, j, b)", [rs, j, '.l1 > .n'])
+        atb = None if not QC.GATE else pb.ev("([a, j, b]) => __EV.rowAt(a, j, b)", [rs, j, '.l1 > .n'])
         pn.click(atn, 150)
-        pb.click(atb, 150)
-        vn, vb = pn.ev(rd), pb.ev(rd)
+        if QC.GATE:
+            pb.click(atb, 150)
+        vn, vb = pn.ev(rd), (pb.ev(rd) if QC.GATE else None)
+        if QC.REGRESS:   # regress — 바탕에서 그 줄을 누른 뒤 상태 대신 기준 스냅샷(앞 인도판 새 판에서 「61x1」 글자를 누른 뒤 상태)
+            vb = QC.base('B5/누름/민법/서랍', vn)
         T('B5', '민법 서랍 단원 줄(%s) 의 「61x1」 글자 누름 = 바탕에서 그 줄 누름(첫 화면 그 줄로 · 가로챔 0)' % subj, atn and atn.get('on') and vn == vb and vn.get('hl'),
           {'새 판 누른 곳': atn, '새 판 뒤': vn, '바탕 뒤': vb})
     else:
         T('B5', '민법 서랍 누름 — .ewmn 있는 줄 없음', False, subj)
     # 첫 화면 단원 줄 — 줄 누름 없음(바탕 = 수 글자 누름 → 아무 일 없음)
-    for p in (pn, pb):
+    for p in ((pn, pb) if QC.GATE else (pn,)):
         p.ev("() => { try { goHome(); } catch (e) {} const t = document.getElementById('tree'); if (t && innerWidth < 900 && typeof trFold === 'function') trFold(true); }")
         p.wait(300)
     rs = '#dashboard-container [data-trrow]'
@@ -1192,12 +1219,15 @@ def B5_click_mb(pn, pb):
           " win: document.querySelectorAll('.oxwin').length, y: Math.round(scrollY) })")
     if j is not None and j >= 0:
         atn = pn.ev("([a, j, b]) => __EV.rowAt(a, j, b)", [rs, j, '.ewmn'])
-        atb = pb.ev("([a, j]) => { const r = [...document.querySelectorAll(a)][j]; const e = r && [...r.firstElementChild.children].find(x => /^총 \\d+문제$/.test(__EV.txt(x)) || x.hasAttribute('data-exvcount')); if (!e) return null; e.scrollIntoView({ block: 'center' }); return __EV.hit(e); }", [rs, j])
-        bn, bb = pn.ev(rd), pb.ev(rd)
+        atb = None if not QC.GATE else pb.ev("([a, j]) => { const r = [...document.querySelectorAll(a)][j]; const e = r && [...r.firstElementChild.children].find(x => /^총 \\d+문제$/.test(__EV.txt(x)) || x.hasAttribute('data-exvcount')); if (!e) return null; e.scrollIntoView({ block: 'center' }); return __EV.hit(e); }", [rs, j])
+        bn, bb = pn.ev(rd), (pb.ev(rd) if QC.GATE else None)
         pn.click(atn, 500)
-        pb.click(atb, 500)
-        vn, vb = pn.ev(rd), pb.ev(rd)
-        T('B5', '민법 첫 화면 단원 줄 의 「61x1」 글자 누름 = 바탕에서 수 글자 누름(아무 일 없음 · 화면 · 창 · 스크롤 무변)', atn and atn.get('on') and vn == bn and vb == bb and vn['home'],
+        if QC.GATE:
+            pb.click(atb, 500)
+        else:   # ★ 10/8 — gate 는 바탕 누름(500ms) 뒤에 새 판을 잰다 · regress 도 같은 때에 재게(안 기다리면 새 판 화면이 자리 잡기 전 · y 7px)
+            QC.sleep(500, 'gate 의 바탕 누름(500ms) 몫 — 새 판 뒤 상태를 같은 때에 잼', pn.pg)
+        vn, vb = pn.ev(rd), (pb.ev(rd) if QC.GATE else None)
+        T('B5', '민법 첫 화면 단원 줄 의 「61x1」 글자 누름 = 바탕에서 수 글자 누름(아무 일 없음 · 화면 · 창 · 스크롤 무변)', atn and atn.get('on') and vn == bn and (vb == bb if QC.GATE else True) and vn['home'],
           {'새 판 누른 곳': atn, '새 판 앞/뒤': [bn, vn], '바탕 앞/뒤': [bb, vb]})
 
 
@@ -1268,7 +1298,7 @@ def B4_mb(br, srcs, QM, QMX):
 def B6_jo(pn, pb):
     law = '특허법'
     r = {}
-    for p in (pn, pb):
+    for p in ((pn, pb) if QC.GATE else (pn,)):
         p.ev("o => __EL.go(o)", {'law': law, 'tab': 'jimun', 'jimunTab': 'ox', 'mok': None, 'oxQ': '', 'jtFold': False, 'jtCh': {}, 'mbCh': {}, 'omr': False})
         p.ev("([a, b]) => __EL.setMap(a, b)", [wr_of(law), wr_of(law) + wx_of(law)])
         hm = p.ev("() => __EV.cnt('#slot .mbhm')")
@@ -1280,6 +1310,8 @@ def B6_jo(pn, pb):
         omr = p.ev("() => __EV.cnt('.omrwrap')")
         p.ev("o => __EL.go(o)", {'law': law, 'tab': 'jimun', 'jimunTab': 'ox', 'year': None, 'mok': None, 'omr': False})
         r[p.tag] = {'히트맵': hm, '회독 비교': rnd, 'OMR': omr}
+    if QC.REGRESS:   # regress — 바탕(67e423e) 「-X」 수 대신 기준 스냅샷(앞 인도판 새 판 「-X」 수) · 새 판 조건(.ewmn 0 · 자식 > 5)은 그대로
+        r['BASE'] = {k: {'x': QC.base('B6/조판기/' + k, (r['NEW'][k] or {}).get('x')), '기준': QC.base_note('B6/조판기/' + k)} for k in ('히트맵', '회독 비교', 'OMR')}
     for k in ('히트맵', '회독 비교', 'OMR'):
         a, b = r['NEW'][k], r['BASE'][k]
         T('B6', '조판기 %s 에 .ewmn 0 · 「-X」 수 = 바탕' % k, a and a['kids'] > 5 and a['n'] == 0 and b and a['x'] == b['x'], {'새 판': a, '바탕': b})
@@ -1287,7 +1319,7 @@ def B6_jo(pn, pb):
 
 def B6_mb(pn, pb, QM, QMX):
     r = {}
-    for p in (pn, pb):
+    for p in ((pn, pb) if QC.GATE else (pn,)):
         p.ev("([a, b]) => __ML.setMap(a, b)", [QM, QMX])
         p.ev("() => { document.querySelectorAll('.oxwin').forEach(x => x.remove()); try { goHome(); } catch (e) {} }")
         p.wait(300)
@@ -1303,6 +1335,8 @@ def B6_mb(pn, pb, QM, QMX):
         omr = p.ev("() => __EV.cnt('#oxwin-omr')")
         p.ev("() => { document.querySelectorAll('.oxwin').forEach(x => x.remove()); try { goHome(); } catch (e) {} }")
         r[p.tag] = {'히트맵': hm, '회독 비교': cmp, 'OMR': omr, 'cmp': cm}
+    if QC.REGRESS:   # regress — 바탕 「-X」 수 대신 기준 스냅샷(앞 인도판 새 판 「-X」 수)
+        r['BASE'] = {k: {'x': QC.base('B6/민법/' + k, (r['NEW'][k] or {}).get('x')), '기준': QC.base_note('B6/민법/' + k)} for k in ('히트맵', '회독 비교', 'OMR')}
     for k in ('히트맵', '회독 비교', 'OMR'):
         a, b = r['NEW'][k], r['BASE'][k]
         T('B6', '민법 %s 에 .ewmn 0 · 「-X」 수 = 바탕' % k, a and a['kids'] > 5 and a['n'] == 0 and b and a['x'] == b['x'], {'새 판': a, '바탕': b, '비교 단원': r['NEW']['cmp'] if k == '회독 비교' else None})
@@ -1402,6 +1436,9 @@ def B5_B7(br, app, srcs, pages, QM=None, QMX=None):
             if w != 1440:
                 p.close()
         n, b = res['NEW'], res.get('BASE')
+        if QC.REGRESS:   # regress — 바탕(67e423e) 값 대신 기준 스냅샷(앞 인도판 새 판의 같은 폭 · 화면 넘침 · 줄 높이) — B7 넘침 허용폭 · B5 「줄 높이 = 바탕 ±1px」 기댓값 자리
+            b = {scr: dict({'over': QC.base('B7/%s/%d/%s/over' % (app, w, scr), v['over'])}, **({'h': QC.base('B5/%s/%d/%s/h' % (app, w, scr), v['h'])} if 'h' in v else {})) for scr, v in n.items()}
+            N('B7', '%s %d 바탕 값 자리' % (NAME[app], w), QC.base_note('B7/%s/%d/%s/over' % (app, w, next(iter(n)))) if n else None)
         for scr, v in n.items():
             T('B7', '%s %d %s — 「%s」 %d개 겹침 · 잘림 · 가려짐 · 화면 밖 0 · 가로 넘침 %s(바탕 %s)' % (
                 NAME[app], w, scr, '61x1' if scr.startswith(('첫 화면', '서랍')) else '63-13-X', (v['chk'] or {}).get('n', 0),
@@ -1721,7 +1758,7 @@ def main():
     os.makedirs(TMPD, exist_ok=True)
     srcs = {}
     for app in APPS:
-        sn, sb = app_src(app, NEWA[app]), app_src(app, BASE)
+        sn, sb = app_src(app, NEWA[app]), (app_src(app, BASE) if QC.GATE else None)   # regress · smoke — 바탕 67e423e 를 안 푼다(헛잣대 YARD · 「바탕과 같음」 칸은 기준 스냅샷)
         srcs[app] = [('NEW', sn)] + ([('BASE', sb)] if sb else [])
         print('INFO | %s 새 판 md5(LF) %s · %s B · 바탕 %s md5(LF) %s · %s B' % (NAME[app], md5lf(sn), len(sn.encode('utf-8')), BASE,
               sb and md5lf(sb), sb and len(sb.encode('utf-8'))), flush=True)
@@ -1744,6 +1781,8 @@ def main():
                            ('B5', lambda: (B5_style(pn, pb, app), B5_click_jo(pn, pb) if app == 'jo' else B5_click_mb(pn, pb))),
                            ('B7', lambda: B5_B7(br, app, srcs[app], pages, QM, QMX)),
                            ('B4', lambda: B4_jo(br, srcs[app]) if app == 'jo' else B4_mb(br, srcs[app], QM, QMX))):
+                if QC.SMOKE and not (app == 'mb' and gk == 'B1'):   # smoke(A-4) — 민법 B1(단원 · 장 줄 표시)만 + 아래 B0 · 조판기는 B0(쪽 열기 · 오류 0)만
+                    continue
                 if not (want(gk) or (gk == 'B1' and want('B2'))):
                     continue
                 t2 = time.time()
@@ -1756,9 +1795,11 @@ def main():
                 p.close()
         br.close()
     base_msgs = {re.sub(r' @\d*$', '', m) for k, v in ERRS.items() if ' BASE' in k for m in v}
+    if QC.REGRESS:   # regress — 바탕 판을 안 띄웠다: 「바탕에도 나는 오류」 = 기준 스냅샷(앞 인도판 새 판 오류 글 · @줄 · 포트 뺀 꼴)
+        base_msgs = set(QC.base('B0/msgs', sorted({_rg_msg(m) for k, v in ERRS.items() if ' NEW' in k for m in v})))
     for k, v in ERRS.items():
         if ' NEW' in k:
-            own = [m for m in v if re.sub(r' @\d*$', '', m) not in base_msgs]
+            own = [m for m in v if (re.sub(r' @\d*$', '', m) if QC.GATE else _rg_msg(m)) not in base_msgs]
             T('B0', '%s 페이지 오류 0(바탕에도 같은 글로 나는 오류는 값만 · %d)' % (k, len(v) - len(own)), not own, {'새 판만': own[:5], '바탕과 같음': sorted({m for m in v if m not in own})[:3]})
         else:
             N('B0', '%s 페이지 오류' % k, v[:5])

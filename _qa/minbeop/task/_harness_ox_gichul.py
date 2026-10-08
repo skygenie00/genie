@@ -18,6 +18,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다
 import gzip, hashlib, io, json, os, re, shutil, socket, subprocess, sys, tempfile, threading, time, urllib.parse, urllib.request
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -56,6 +57,19 @@ def sha256(b):
     return hashlib.sha256(b).hexdigest()
 
 
+def _rg_md5(v):
+    """qa_slim2 regress — 기준 칸 값 줄이기(항목 글 → md5) · gate 에서 안 쓴다"""
+    s = v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, sort_keys=True, default=str)
+    return hashlib.md5(s.encode('utf-8')).hexdigest()
+
+
+def _rg_smp(g, t, P):
+    """qa_slim2 regress — 표본으로 줄인 칸(시험지 색인 「1~40 각 한 번」)은 값 끝에 「(표본 n/N)」"""
+    if g in ('G3', 'G4') and '1~40 각 한 번' in t:
+        return t + ' (표본 %d/%d)' % (len(P['files']), 1 + len(OCR5))
+    return t
+
+
 # ══════════════════════════════════════════════════════════════════════════
 # G1 · 파일 잣대 (브라우저 없이)
 # ══════════════════════════════════════════════════════════════════════════
@@ -79,14 +93,22 @@ def gate_files():
     add('G1', ok == 13, '13장 sha256·bytes = 클론 파일 = list_patch : %d/13' % ok)
 
     # 나머지 91 항목이 HEAD 판과 한 글자도 안 다른가
-    old = json.loads(git('show', 'HEAD:gichul/pdf/list.json').decode('utf-8'))
-    touched = set(pit)
-    oldm = {x['file']: x for x in old['items']}
-    diff = [x['file'] for x in lst['items']
-            if x['file'] not in touched and json.dumps(oldm.get(x['file']), sort_keys=True, ensure_ascii=False)
-            != json.dumps(x, sort_keys=True, ensure_ascii=False)]
+    if QC.GATE:
+        QC.sub('git:show-data')
+        old = json.loads(git('show', 'HEAD:gichul/pdf/list.json').decode('utf-8'))
+        touched = set(pit)
+        oldm = {x['file']: x for x in old['items']}
+        diff = [x['file'] for x in lst['items']
+                if x['file'] not in touched and json.dumps(oldm.get(x['file']), sort_keys=True, ensure_ascii=False)
+                != json.dumps(x, sort_keys=True, ensure_ascii=False)]
+    else:   # regress — HEAD 판 list.json 대신 기준 스냅샷(앞 인도판 새 판 list.json 항목마다 md5)
+        touched = set(pit)
+        oldm = QC.base('G1/list_items', {x['file']: _rg_md5(json.dumps(x, sort_keys=True, ensure_ascii=False)) for x in lst['items']})
+        diff = [x['file'] for x in lst['items']
+                if x['file'] not in touched and oldm.get(x['file']) != _rg_md5(json.dumps(x, sort_keys=True, ensure_ascii=False))]
     add('G1', not diff, '나머지 %d 항목 무변 (diff %d) %s' % (104 - 13, len(diff), diff[:4]))
-    add('G1', len(old['items']) == 94, 'HEAD 판 count = %d' % len(old['items']))
+    if QC.GATE:   # 헛잣대 — HEAD 판 count 94(그 판에만 뜻) = 관문만
+        add('G1', len(old['items']) == 94, 'HEAD 판 count = %d' % len(old['items']))
     return lst
 
 
@@ -122,6 +144,7 @@ def gate_outside():
     byno = None
     exe = shutil.which('pdftotext')
     if exe:
+        QC.sub('pdftotext')
         r = subprocess.run([exe, '-layout', p, '-'], capture_output=True)
         pages = r.stdout.decode('utf-8', 'replace').split('\f')
         hit = [i + 1 for i, t in enumerate(pages) if re.search(r'^\s*35\s*[.．]', t, re.M)]
@@ -145,21 +168,22 @@ def gate_outside():
 
 def gate_guards():
     print('\n=== D11 가드 · 줄끝 ===')
-    g = io.open(GPUSH, 'rb').read().decode('cp949', 'replace')
-    m = re.search(r'^set "PATHS=(.+?)"', g, re.M)
-    paths = m.group(1).split() if m else []
-    add('D11', 'gichul' in paths and 'minbeop' in paths,
-        'ⓐ PATHS(%d) = %s' % (len(paths), ' '.join(paths)))
-    # ⚠ 스크립트 머리의 rem 주석에 「Never "git add -A"」 라는 글이 있다 — 주석을 빼고 본다
-    cmds = [l for l in g.split('\n') if not re.match(r'^\s*rem\b', l, re.I) and l.strip()]
-    bad_add = [l.strip() for l in cmds if re.search(r'\badd\b[^\n]*\s-A\b', l)]
-    add('D11', not bad_add, 'ⓒ `git add -A` 안 쓴다 (rem 뺀 명령 %d줄 · 걸린 줄 %s)' % (len(cmds), bad_add))
-    stage = [l.strip() for l in cmds if re.search(r'git .*\badd\b', l)]
-    add('D11', len(stage) == 1 and '%%P' in stage[0], '스테이징 줄은 PATHS 하나뿐 : %s' % stage)
-    add('D11', 'gichul/pdf/' in g, 'ⓑ D21 예외(gichul/pdf/)가 스크립트에 있다')
+    if QC.GATE:   # push 가드(g_push.cmd · .gitignore 글자) — 앱 회귀 아님 · 그 판 인도 가드 = 관문만
+        g = io.open(GPUSH, 'rb').read().decode('cp949', 'replace')
+        m = re.search(r'^set "PATHS=(.+?)"', g, re.M)
+        paths = m.group(1).split() if m else []
+        add('D11', 'gichul' in paths and 'minbeop' in paths,
+            'ⓐ PATHS(%d) = %s' % (len(paths), ' '.join(paths)))
+        # ⚠ 스크립트 머리의 rem 주석에 「Never "git add -A"」 라는 글이 있다 — 주석을 빼고 본다
+        cmds = [l for l in g.split('\n') if not re.match(r'^\s*rem\b', l, re.I) and l.strip()]
+        bad_add = [l.strip() for l in cmds if re.search(r'\badd\b[^\n]*\s-A\b', l)]
+        add('D11', not bad_add, 'ⓒ `git add -A` 안 쓴다 (rem 뺀 명령 %d줄 · 걸린 줄 %s)' % (len(cmds), bad_add))
+        stage = [l.strip() for l in cmds if re.search(r'git .*\badd\b', l)]
+        add('D11', len(stage) == 1 and '%%P' in stage[0], '스테이징 줄은 PATHS 하나뿐 : %s' % stage)
+        add('D11', 'gichul/pdf/' in g, 'ⓑ D21 예외(gichul/pdf/)가 스크립트에 있다')
 
-    gi = io.open(os.path.join(GENIE, '.gitignore'), encoding='utf-8').read()
-    add('D11', '!gichul/pdf/*.pdf' in gi, '.gitignore 에 !gichul/pdf/*.pdf')
+        gi = io.open(os.path.join(GENIE, '.gitignore'), encoding='utf-8').read()
+        add('D11', '!gichul/pdf/*.pdf' in gi, '.gitignore 에 !gichul/pdf/*.pdf')
 
     app = io.open(os.path.join(GENIE, REL), 'rb').read()
     add('D11', app.count(b'\r\n') == 0, '앱 작업트리 CRLF %d' % app.count(b'\r\n'))
@@ -168,14 +192,17 @@ def gate_guards():
 
     # 기출서재 앱 무접촉
     # ⚠ autocrlf=true 라 작업트리 md5 와 blob md5 는 원래 다르다 — git 이 보는 diff 로 잰다
-    d = git('diff', '--name-only', 'HEAD', '--', 'index.html').decode('utf-8').strip()
-    add('G5', d == '', '기출서재 genie/index.html 무접촉 (git diff %r)' % d)
+    if QC.GATE:   # git diff HEAD(기출서재 앱 무접촉) — 인도 가드 = 관문만
+        d = git('diff', '--name-only', 'HEAD', '--', 'index.html').decode('utf-8').strip()
+        add('G5', d == '', '기출서재 genie/index.html 무접촉 (git diff %r)' % d)
 
     # ox_q_coords · SYNC_KEYS 무변
     new = io.open(os.path.join(GENIE, REL), encoding='utf-8').read()
-    oldsrc = git('show', 'HEAD:' + REL).decode('utf-8')
+    if QC.GATE:
+        QC.sub('git:show-app')
+    oldsrc = git('show', 'HEAD:' + REL).decode('utf-8') if QC.GATE else None   # regress — HEAD 판을 안 푼다: 줄 · 코드 줄 기댓값 = 기준 스냅샷(앞 인도판 새 판 줄)
     for k in ('const SYNC_KEYS =', "var CO_KEY = 'ox_q_coords'"):
-        a = [l for l in oldsrc.split('\n') if k in l]
+        a = [l for l in oldsrc.split('\n') if k in l] if QC.GATE else QC.base('G5/' + k.strip(), [l for l in new.split('\n') if k in l])
         b = [l for l in new.split('\n') if k in l]
         add('G5', a == b, '%s 줄 무변' % k.strip())
 
@@ -190,7 +217,7 @@ def gate_guards():
                 out.append(t)
         return out
 
-    a, b = code_hits(oldsrc, 'ox_q_coords'), code_hits(new, 'ox_q_coords')
+    a, b = (code_hits(oldsrc, 'ox_q_coords') if QC.GATE else QC.base('G5/ox_q_coords_code', code_hits(new, 'ox_q_coords'))), code_hits(new, 'ox_q_coords')
     add('G5', a == b, 'ox_q_coords 를 쓰는 **코드 줄** 무변 %d -> %d %s'
         % (len(a), len(b), [x[:60] for x in b if x not in a]))
 
@@ -383,12 +410,15 @@ BORDER = []
 
 def main():
     global BORDER
+    if QC.SMOKE:   # smoke 칸 없음(A-0) — 앱을 띄우기 전에 한 줄 찍고 끝
+        print('INFO | smoke 칸 없음 | 기출 칩 → 시험지 · 교재 쪽 · 근거 지울 때 걸린 문항 하네스 — smoke 칸 없음(A-0) · 앱 안 띄움', flush=True)
+        return 0
     os.makedirs(OUT, exist_ok=True)
     print('OUT =', OUT)
 
     lst = gate_files()
     rows, years = gate_years(lst)
-    pt_page = gate_outside()
+    pt_page = gate_outside() if QC.GATE else None   # regress(A-6) — PDF 전쪽 글자 뽑기(pdftotext · pymupdf) 0 · G3 쪽 대조는 기준 스냅샷
     gate_guards()
 
     BORDER = load_border()
@@ -398,13 +428,18 @@ def main():
     srv, port = serve()
     tests = io.open(os.path.join(HERE, '_harness_ox_gichul_tests.js'), encoding='utf-8').read()
     P = payload(rows, years)
+    if QC.REGRESS:   # regress(A-3 표본) — 시험지 색인(pdf.js 전쪽)은 2024(G3) + OCR 다섯 가운데 한 장(씨앗 고정) · 여섯 장 전수는 시험지 · 색인을 건드린 판의 관문(gate)
+        P['files'] = ['2024-1-minbeop.pdf'] + QC.sample(OCR5, 1, 'ox_gichul')
     js = tests.replace('__P__', json.dumps(P, ensure_ascii=False))
 
     new_src = io.open(os.path.join(GENIE, REL), encoding='utf-8').read()
-    head_src = git('show', 'HEAD:' + REL).decode('utf-8')
+    if QC.GATE:
+        QC.sub('git:show-app')
+    head_src = git('show', 'HEAD:' + REL).decode('utf-8') if QC.GATE else None   # regress — HEAD 판을 안 푼다(G7 헛잣대 재료 · 사슬에선 HEAD = 새 판)
 
     outs = {}
-    for tag, src in (('NEW', new_src), ('HEAD', head_src)):
+    for tag, src in ((('NEW', new_src), ('HEAD', head_src)) if QC.GATE else (('NEW', new_src),)):   # regress — 새 판만
+        QC.launch('new' if tag == 'NEW' else 'base')
         url = build(tag, src, js, port)
         outs[tag] = run(tag, url) or []
         io.open(os.path.join(OUT, 'lines_%s.txt' % tag), 'w', encoding='utf-8').write('\n'.join(outs[tag]))
@@ -422,12 +457,12 @@ def main():
     for x in outs['NEW']:
         if x.startswith(('PASS', 'FAIL')):
             g = x.split(' | ')[1].split(' ')[0]
-            add(g, x.startswith('PASS'), x.split(' | ', 1)[1])
+            add(g, x.startswith('PASS'), x.split(' | ', 1)[1] if QC.GATE else _rg_smp(g, x.split(' | ', 1)[1], P))
         elif x.startswith('INFO'):
             print('       ' + x)
 
     # G5 — 교재 테두리 NEW == HEAD
-    vn, vh = vals(outs['NEW']), vals(outs['HEAD'])
+    vn, vh = vals(outs['NEW']), (vals(outs['HEAD']) if QC.GATE else QC.base('G5/border', {k: v for k, v in vals(outs['NEW']).items() if k.startswith('G5.border.')}))   # regress — 교재 테두리 기댓값 = 기준 스냅샷(앞 인도판 새 판 테두리 값)
     bk = [k for k in vn if k.startswith('G5.border.')]
     same = [k for k in bk if vn.get(k) == vh.get(k)]
     add('G5', bk and len(same) == len(bk),
@@ -439,6 +474,8 @@ def main():
     # G3 — 색인 쪽이 pdftotext 와 같은가
     try:
         pg = json.loads(vn.get('page.2024-1-minbeop.pdf', '{}'))
+        if QC.REGRESS:   # regress — pdftotext(앱 밖 PDF 전쪽 뽑기) 대신 기준 스냅샷(앞 인도판 새 판 pdf.js 색인 35번 쪽 — gate 에선 pdftotext 와 같았던 값)
+            pt_page = QC.base('G3/page35', pg.get('35'))
         add('G3', pt_page is not None and str(pg.get('35')) == str(pt_page),
             'pdf.js 색인 35번 쪽 %s = pdftotext %s' % (pg.get('35'), pt_page))
     except Exception as e:
@@ -446,19 +483,20 @@ def main():
 
     # G7 — 헛잣대: 옛 판에서 G2·G3 이 실패해야 한다
     print('\n=== G7 헛잣대 (HEAD 판) ===')
-    hf = [x for x in outs['HEAD'] if x.startswith(('PASS', 'FAIL'))]
-    for g in ('G2', 'G3'):
-        gl = [x for x in hf if x.split(' | ')[1].split(' ')[0] == g]
-        fails = [x for x in gl if x.startswith('FAIL')]
-        add('G7', len(gl) > 0 and len(fails) > 0,
-            '옛 판 %s : %d줄 중 FAIL %d' % (g, len(gl), len(fails)))
-    add('G7', vh.get('SRC.mbExam') == '"undefined"',
-        '옛 판에 mbExam 없음 (%s)' % vh.get('SRC.mbExam'))
+    if QC.GATE:   # 헛잣대(옛 판 = HEAD) — 관문만
+        hf = [x for x in outs['HEAD'] if x.startswith(('PASS', 'FAIL'))]
+        for g in ('G2', 'G3'):
+            gl = [x for x in hf if x.split(' | ')[1].split(' ')[0] == g]
+            fails = [x for x in gl if x.startswith('FAIL')]
+            add('G7', len(gl) > 0 and len(fails) > 0,
+                '옛 판 %s : %d줄 중 FAIL %d' % (g, len(gl), len(fails)))
+        add('G7', vh.get('SRC.mbExam') == '"undefined"',
+            '옛 판에 mbExam 없음 (%s)' % vh.get('SRC.mbExam'))
     add('G7', vn.get('SRC.mbExam') == '"object"',
         '새 판에 mbExam 있음 (%s)' % vn.get('SRC.mbExam'))
 
     # 망 — 바깥으로 안 나갔는가
-    for tag in ('NEW', 'HEAD'):
+    for tag in (('NEW', 'HEAD') if QC.GATE else ('NEW',)):   # regress — 새 판만
         nv = vals(outs[tag]).get('NET.block', '[]')
         add('D11', nv in ('[]', 'null'), '%s 판이 막힌 바깥 주소를 부른 일 %s' % (tag, nv))
 

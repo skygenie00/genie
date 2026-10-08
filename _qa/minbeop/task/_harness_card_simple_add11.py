@@ -13,6 +13,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import hashlib, io, json, os, re, shutil, subprocess, sys, tempfile, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -114,10 +115,17 @@ def fn_lines(L, sig):
 
 
 def main():
+    if QC.SMOKE:   # smoke — 이 하네스엔 smoke 칸이 없다(A-0 처리표 · _task_qa_slim2) · 크롬을 띄우기 전에 끝낸다
+        print('INFO | smoke 칸 없음')
+        return 0
     os.makedirs(OUT, exist_ok=True)
     new = io.open(os.path.join(GENIE, REL.replace('/', os.sep)), encoding='utf-8', newline='').read()
-    head = git('show', 'HEAD:' + REL)
-    print('HEAD %s' % git('log', '-1', '--format=%h %s').strip())
+    if QC.GATE:
+        QC.sub('git:show-app')
+        head = git('show', 'HEAD:' + REL)
+        print('HEAD %s' % git('log', '-1', '--format=%h %s').strip())
+    else:
+        head = None   # regress — 바탕(HEAD) 앱 풀기·띄우기 0(사슬에선 HEAD = 새 판 · A-0 W3 뜻밖에 4) · SRC 대조는 기준 스냅샷
     mp = os.path.join(SP, 'minbeop', '문항마스터.json')
     raw = open(mp, 'rb').read()
     print('studyplandata %s · 앞/뒤 %s · 문항마스터 %d B · md5 %s' % (git('log', '-1', '--format=%h %ad', '--date=iso', cwd=SP).strip(),
@@ -150,6 +158,9 @@ def main():
     tests = '<script>\n' + js.replace('__P__', json.dumps(P, ensure_ascii=False).replace('</', '<\\/')) + '\n</script>\n'
     res = {}
     for tag, src in (('NEW', new), ('HEAD', head)):
+        if QC.REGRESS and tag == 'HEAD':   # regress — HEAD(바탕) 판은 헛잣대 몫(관문만)
+            continue
+        QC.launch('base' if tag == 'HEAD' else 'new')
         lines = run(tag, src, tests)
         res[tag] = lines
         print('=== %s 판 ===' % tag)
@@ -159,20 +170,37 @@ def main():
             print('  합계 PASS %d · FAIL %d' % (sum(1 for x in lines if x.startswith('PASS')), sum(1 for x in lines if x.startswith('FAIL'))))
         print()
 
-    print('=== SRC 소스 대조 (NEW vs HEAD · add11) ===')
-    Ln, Lh = new.split('\n'), head.split('\n')
-    lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
-    jump = lambda L: sorted(s.strip() for s in L if len(s) < 3000 and 'jumpFromSearch(' in s)
-    jd = [s for s in jump(Lh) if s not in jump(Ln)]
-    chk = [('긴 줄(>3000자) 전부 글자까지 같다', [s for s in Ln if len(s) > 3000] == [s for s in Lh if len(s) > 3000]),
-           ('SYNC_KEYS 무변 · ox_* 글자 집합 같다', [s for s in Ln if 'const SYNC_KEYS = [' in s] == [s for s in Lh if 'const SYNC_KEYS = [' in s] and lits(new) == lits(head)),
-           ('§1 배지 X${wrongN} 이 빨강 span 안 · 옛 X</span>${wrongN} 0', '<span class="text-red-600 font-black">X${wrongN}</span> /${h.total}' in new and 'X</span>${wrongN}' not in new),
-           ('§2 jumpFromSearch 함수 무변 · 빠진 호출은 runSearch 결과 단추 하나뿐 %s' % jd, fn_lines(Ln, 'function jumpFromSearch(id) {') == fn_lines(Lh, 'function jumpFromSearch(id) {')
-            and len(jd) == 1 and jd[0].startswith("<button onclick=\"jumpFromSearch('${q.id}')\"")),
-           ("§2 runSearch 결과 단추 = openQPopup + qpScrollTo('gg'|'top') · qpScrollTo 정의 하나", "onclick=\"openQPopup('${q.id}');qpScrollTo('${q.id}','${searchMode === 'm' ? 'gg' : 'top'}')\"" in new
-            and new.count('function qpScrollTo(') == 1),
-           ('§3 jnKeyOf 정규식 ^\\d+(?:\\.\\d+)? · openJeongni·jnLabelsOf 무변', r"function jnKeyOf(sub, chapLabel) { const m = /^\d+(?:\.\d+)?/.exec(String(sub || '')); return m ? m[0] : String(chapLabel); }" in new
-            and fn_lines(Ln, 'function openJeongni(') == fn_lines(Lh, 'function openJeongni(') and fn_lines(Ln, 'function jnLabelsOf(') == fn_lines(Lh, 'function jnLabelsOf('))]
+    if QC.REGRESS:   # regress — NEW·HEAD 맞대던 칸(긴 줄 · SYNC_KEYS·ox_* · openJeongni·jnLabelsOf)은 기준 스냅샷(md5)과 · §1 · §2 runSearch · §3 jnKeyOf 글자는 NEW 만(gate 와 같은 식)
+        import hashlib as _hl   #          §2 jumpFromSearch 「빠진 호출 하나뿐」 = 인도 판 diff 셈(관문만) → 건넘(아래 줄로 적음)
+        print('=== SRC 소스 대조 (NEW vs 기준 스냅샷 · add11) ===')
+        Ln = new.split('\n')
+        lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
+        md = lambda xs: None if xs is None else _hl.md5('\n'.join(xs).encode('utf-8')).hexdigest()[:16]
+        jn2 = [md(fn_lines(Ln, 'function openJeongni(')), md(fn_lines(Ln, 'function jnLabelsOf('))]
+        chk = [('긴 줄(>3000자) 전부 글자까지 같다', QC.same('SRC.long', md([s for s in Ln if len(s) > 3000]))),
+               ('SYNC_KEYS 무변 · ox_* 글자 집합 같다', QC.same('SRC.synckeys', md([s for s in Ln if 'const SYNC_KEYS = [' in s])) and QC.same('SRC.oxlits', lits(new))),
+               ('§1 배지 X${wrongN} 이 빨강 span 안 · 옛 X</span>${wrongN} 0', '<span class="text-red-600 font-black">X${wrongN}</span> /${h.total}' in new and 'X</span>${wrongN}' not in new),
+               ("§2 runSearch 결과 단추 = openQPopup + qpScrollTo('gg'|'top') · qpScrollTo 정의 하나", "onclick=\"openQPopup('${q.id}');qpScrollTo('${q.id}','${searchMode === 'm' ? 'gg' : 'top'}')\"" in new
+                and new.count('function qpScrollTo(') == 1),
+               ('§3 jnKeyOf 정규식 ^\\d+(?:\\.\\d+)? · openJeongni·jnLabelsOf 무변', r"function jnKeyOf(sub, chapLabel) { const m = /^\d+(?:\.\d+)?/.exec(String(sub || '')); return m ? m[0] : String(chapLabel); }" in new
+                and None not in jn2 and QC.same('SRC.jn2', jn2))]
+        print('  %-72s %s' % ('§2 jumpFromSearch 함수 무변 · 빠진 호출은 runSearch 결과 단추 하나뿐', '— regress 건넘(인도 판 diff 셈 · 관문만)'))
+        print('  (기준: %s)' % QC.base_note('SRC.synckeys'))
+    if QC.GATE:
+        print('=== SRC 소스 대조 (NEW vs HEAD · add11) ===')
+        Ln, Lh = new.split('\n'), head.split('\n')
+        lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
+        jump = lambda L: sorted(s.strip() for s in L if len(s) < 3000 and 'jumpFromSearch(' in s)
+        jd = [s for s in jump(Lh) if s not in jump(Ln)]
+        chk = [('긴 줄(>3000자) 전부 글자까지 같다', [s for s in Ln if len(s) > 3000] == [s for s in Lh if len(s) > 3000]),
+               ('SYNC_KEYS 무변 · ox_* 글자 집합 같다', [s for s in Ln if 'const SYNC_KEYS = [' in s] == [s for s in Lh if 'const SYNC_KEYS = [' in s] and lits(new) == lits(head)),
+               ('§1 배지 X${wrongN} 이 빨강 span 안 · 옛 X</span>${wrongN} 0', '<span class="text-red-600 font-black">X${wrongN}</span> /${h.total}' in new and 'X</span>${wrongN}' not in new),
+               ('§2 jumpFromSearch 함수 무변 · 빠진 호출은 runSearch 결과 단추 하나뿐 %s' % jd, fn_lines(Ln, 'function jumpFromSearch(id) {') == fn_lines(Lh, 'function jumpFromSearch(id) {')
+                and len(jd) == 1 and jd[0].startswith("<button onclick=\"jumpFromSearch('${q.id}')\"")),
+               ("§2 runSearch 결과 단추 = openQPopup + qpScrollTo('gg'|'top') · qpScrollTo 정의 하나", "onclick=\"openQPopup('${q.id}');qpScrollTo('${q.id}','${searchMode === 'm' ? 'gg' : 'top'}')\"" in new
+                and new.count('function qpScrollTo(') == 1),
+               ('§3 jnKeyOf 정규식 ^\\d+(?:\\.\\d+)? · openJeongni·jnLabelsOf 무변', r"function jnKeyOf(sub, chapLabel) { const m = /^\d+(?:\.\d+)?/.exec(String(sub || '')); return m ? m[0] : String(chapLabel); }" in new
+                and fn_lines(Ln, 'function openJeongni(') == fn_lines(Lh, 'function openJeongni(') and fn_lines(Ln, 'function jnLabelsOf(') == fn_lines(Lh, 'function jnLabelsOf('))]
     for name, ok in chk:
         print('  %-72s %s' % (name, 'PASS' if ok else 'FAIL'))
     g_src = all(ok for _, ok in chk)

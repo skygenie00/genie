@@ -13,6 +13,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
 _spec = importlib.util.spec_from_file_location('hca', os.path.join(HERE, '_harness_ox_claude_answers.py'))
 h = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(h)
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · 이 파일엔 5줄 머리가 없어 _harness_ox_claude_answers(그 머리가 _roots 자리를 sys.path 에 넣음)를 부른 바로 뒤에 둔다 · 이 파일은 인자를 안 읽는다
 from playwright.sync_api import sync_playwright
 
 SPD = h.SPD
@@ -94,19 +95,27 @@ def run(eng, cljson):
 
 def main():
     global APP
+    if QC.SMOKE:   # smoke 칸 없음(A-0) — 앱을 띄우기 전에 한 줄 찍고 끝(결과 파일에도)
+        print('INFO | smoke 칸 없음 | Claude 답 M002(데이터) 하네스 — smoke 칸 없음(A-0) · 앱 안 띄움', flush=True)
+        io.open(os.path.join(HERE, '_harness_ox_claude_m002_result.txt'), 'w', encoding='utf-8').write('INFO | smoke 칸 없음 | Claude 답 M002(데이터) 하네스 — smoke 칸 없음(A-0) · 앱 안 띄움\n')
+        sys.exit(0)
     os.makedirs(WORK, exist_ok=True)
     APP = io.open(os.path.join(h.GENIE, h.REL), encoding='utf-8', newline='').read()
     git = lambda *a: subprocess.run(['git', '-C', SPD] + list(a), capture_output=True).stdout
-    git('fetch', '-q', 'origin')
-    newb = git('show', 'origin/main:minbeop/claude.json')
-    oldb = git('show', 'ac1b7d06:minbeop/claude.json')
+    if QC.GATE:
+        QC.sub('git:fetch')
+        git('fetch', '-q', 'origin')
+        QC.sub('git:show-data', 2)
+    newb = git('show', 'origin/main:minbeop/claude.json') if QC.GATE else open(os.path.join(SPD, 'minbeop', 'claude.json'), 'rb').read()   # regress — git fetch · show 0: studyplandata 클론 작업트리 파일(SPD_ROOT · 읽기만 · 사슬이 입력으로 추적)
+    oldb = git('show', 'ac1b7d06:minbeop/claude.json') if QC.GATE else b''   # regress — 앞 판 데이터(헛잣대 재료)를 안 읽는다
     pn, po = os.path.join(WORK, 'claude_remote.json'), os.path.join(WORK, 'claude_ac1b7d06.json')
     open(pn, 'wb').write(newb); open(po, 'wb').write(oldb)
     appb = APP.encode('utf-8')
     RES = {}
     for eng in ('webkit', 'chromium'):
-        for tag, p in (('BASE', po), ('NEW', pn)):
+        for tag, p in ((('BASE', po), ('NEW', pn)) if QC.GATE else (('NEW', pn),)):   # regress — 새 데이터만(BASE = 앞 판 데이터 ac1b7d06 = 헛잣대 띄움)
             print('… %s/%s' % (eng, tag), flush=True)
+            QC.launch('new' if tag == 'NEW' else 'base')
             RES[eng + '/' + tag] = run(eng, p)
     json.dump(RES, io.open(os.path.join(WORK, 'raw.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 
@@ -122,12 +131,15 @@ def main():
             else:
                 return None
         return d
-    T('C1 studyplandata 원격(origin/main) minbeop/claude.json — %d B · md5 %s' % (len(newb), hashlib.md5(newb).hexdigest()),
-      len(newb) == WANT_LEN and hashlib.md5(newb).hexdigest() == WANT_MD5, [len(newb), hashlib.md5(newb).hexdigest()])
-    T('헛잣대 재료 ac1b7d06 = 앞 판 배달본(2,048 B · 81bfe236…)', len(oldb) == 2048 and hashlib.md5(oldb).hexdigest() == '81bfe23658ede9aef3a876e9ebde387c')
-    T('앱 코드 무접촉 — genie 작업트리 깨끗 · 앱 = Pages 실물과 같은 blob(1,087,059 B · a32b4202…)',
-      subprocess.run(['git', '-C', h.GENIE, 'status', '--porcelain'], capture_output=True).stdout.strip() == b''
-      and len(appb) == 1087059 and hashlib.md5(appb).hexdigest() == 'a32b4202635387d0b76321bf1444fcd9', [len(appb), hashlib.md5(appb).hexdigest()])
+    if QC.GATE:   # C1(push 한 원격 blob md5 = 고정 값) · 헛잣대 재료 md5 · 앱 무접촉(작업트리 · 고정 blob) — 그 판에만 뜻 = 관문만
+        T('C1 studyplandata 원격(origin/main) minbeop/claude.json — %d B · md5 %s' % (len(newb), hashlib.md5(newb).hexdigest()),
+          len(newb) == WANT_LEN and hashlib.md5(newb).hexdigest() == WANT_MD5, [len(newb), hashlib.md5(newb).hexdigest()])
+        T('헛잣대 재료 ac1b7d06 = 앞 판 배달본(2,048 B · 81bfe236…)', len(oldb) == 2048 and hashlib.md5(oldb).hexdigest() == '81bfe23658ede9aef3a876e9ebde387c')
+        T('앱 코드 무접촉 — genie 작업트리 깨끗 · 앱 = Pages 실물과 같은 blob(1,087,059 B · a32b4202…)',
+          subprocess.run(['git', '-C', h.GENIE, 'status', '--porcelain'], capture_output=True).stdout.strip() == b''
+          and len(appb) == 1087059 and hashlib.md5(appb).hexdigest() == 'a32b4202635387d0b76321bf1444fcd9', [len(appb), hashlib.md5(appb).hexdigest()])
+    else:
+        I('regress — claude.json = studyplandata 클론 작업트리(git fetch · show 0 · 크기 · md5 앞 8)', [len(newb), hashlib.md5(newb).hexdigest()[:8]])
     for eng in ('webkit', 'chromium'):
         n, b = RES.get(eng + '/NEW') or {}, RES.get(eng + '/BASE') or {}
         p = '[%s] ' % eng
@@ -139,8 +151,9 @@ def main():
           c2.get('text') == 'Claude1' and c2.get('color') == ORANGE and gg(n, 'C2', 'next') == '✏️ 연결', n.get('C2'))
         T(p + 'C2 톡 → 창 머리 %s' % gg(n, 'C2win', 'head'),
           n.get('C2tap') is True and gg(n, 'C2win', 'head') == ['M002', '2026-09-22 · 민총 1.2 신의칙', 'Q0035'] and gg(n, 'C2win', 'headUidBtn') is True, n.get('C2win'))
-        T(p + 'C2 헛잣대(앞 판 데이터) — Q0035 는 회색 「%s」' % gg(b, 'C2', 'btn', 'text'),
-          gg(b, 'C2', 'btn', 'text') == 'Claude' and gg(b, 'C2', 'btn', 'color') == GRAY, gg(b, 'C2', 'btn'))
+        if QC.GATE:   # 헛잣대(앞 판 데이터 ac1b7d06) — 관문만
+            T(p + 'C2 헛잣대(앞 판 데이터) — Q0035 는 회색 「%s」' % gg(b, 'C2', 'btn', 'text'),
+              gg(b, 'C2', 'btn', 'text') == 'Claude' and gg(b, 'C2', 'btn', 'color') == GRAY, gg(b, 'C2', 'btn'))
         c3 = {u: gg(n, 'card_' + u, 'btn') or {} for u in ('Q0013', 'Q0012', 'Q0107')}
         T(p + 'C3 Q0013·Q0012·Q0107 카드 — 회색 「Claude」 + 주황 「↩」 %s' % {u: v.get('text') for u, v in c3.items()},
           all(v.get('text') == 'Claude↩' and v.get('color') == GRAY and gg(v, 'kids', 0, 'color') == ORANGE for v in c3.values()), c3)
@@ -148,18 +161,19 @@ def main():
         T(p + 'C3+ 언급 일곱 모두 「Claude↩」(Q0014·Q0036·Q0037·Q0089 포함)',
           all(gg(n, 'card_' + u, 'btn', 'text') == 'Claude↩' for u in ('Q0013', 'Q0014', 'Q0012', 'Q0037', 'Q0036', 'Q0089', 'Q0107')),
           {u: gg(n, 'card_' + u, 'btn', 'text') for u in ('Q0013', 'Q0014', 'Q0012', 'Q0037', 'Q0036', 'Q0089', 'Q0107')})
-        T(p + 'C4 Q0480 카드 — 여전히 「%s」(M001 그대로)' % gg(n, 'card_Q0480', 'btn', 'text'),
-          gg(n, 'card_Q0480', 'btn', 'text') == 'Claude1' and gg(n, 'card_Q0480', 'btn', 'color') == ORANGE, gg(n, 'card_Q0480', 'btn'))
+        if QC.GATE:   # 합침→_harness_ox_claude_answers:G1(같은 카드를 더 엄하게 — 11px · 테두리 0 · 높이 ±1.5 · 두 엔진) — regress 에서 끔
+            T(p + 'C4 Q0480 카드 — 여전히 「%s」(M001 그대로)' % gg(n, 'card_Q0480', 'btn', 'text'),
+              gg(n, 'card_Q0480', 'btn', 'text') == 'Claude1' and gg(n, 'card_Q0480', 'btn', 'color') == ORANGE, gg(n, 'card_Q0480', 'btn'))
         t5 = n.get('C5tbl') or {}
         T(p + 'C5 창 본문 표 — 머리 %s · 몸 %s' % (t5.get('head'), t5.get('body')),
           t5.get('head') == ['갈래', '묻는 것', '답', '근거'] and t5.get('body') == [4, 4, 4] and t5.get('tables') == 1, t5)
         T(p + 'C5 창 본문 Q0013 톡 → openQPopup(\'Q0013\')', n.get('C5tap') is True and n.get('C5pop') is True, [n.get('C5tap'), n.get('C5pop')])
         s6 = n.get('C6') or {}
         T(p + 'C6 근거 검색 「2012다44518」 → %s · %s · 딱지 %s (앞 판 데이터 %s)' % (s6.get('count'), gg(s6, 'rows', 0, 'id'), gg(s6, 'rows', 0, 'badges'), gg(b, 'C6', 'count')),
-          gg(s6, 'rows', 0, 'id') == 'Q0035' and 'Claude' in (gg(s6, 'rows', 0, 'badges') or []) and s6.get('count') == '1건' and gg(b, 'C6', 'count') == '0건', [s6, b.get('C6')])
+          gg(s6, 'rows', 0, 'id') == 'Q0035' and 'Claude' in (gg(s6, 'rows', 0, 'badges') or []) and s6.get('count') == '1건' and (gg(b, 'C6', 'count') == '0건' if QC.GATE else True), [s6, b.get('C6')])   # regress — 「앞 판 데이터 0건」 조건은 헛잣대 몫(뗌)
         d7, a7 = n.get('C7') or {}, n.get('C7after') or {}
         T(p + 'C7 단원 목록 머리 「…%s」 (앞 판 데이터 「…%s」)' % ((d7.get('head') or '')[-12:], (gg(b, 'C7', 'head') or '')[-12:]),
-          (d7.get('head') or '').endswith(' · C2') and gg(d7, 'cBtn', 't') == 'C2' and (gg(b, 'C7', 'head') or '').endswith('· C1'), [d7.get('head'), gg(b, 'C7', 'head')])
+          (d7.get('head') or '').endswith(' · C2') and gg(d7, 'cBtn', 't') == 'C2' and ((gg(b, 'C7', 'head') or '').endswith('· C1') if QC.GATE else True), [d7.get('head'), gg(b, 'C7', 'head')])   # regress — 「앞 판 데이터 · C1」 조건은 헛잣대 몫(뗌)
         T(p + 'C7 C2 톡 → 단원 둘 %s' % a7.get('clUnits'),
           n.get('C7tap') is True and a7.get('units') == 2 and sorted(a7.get('clUnits') or []) == ['민법총칙 · 1.2 신의칙 C1', '민법총칙 · 4. 권리의 객체 C1'], a7)
         j8 = n.get('C8') or {}

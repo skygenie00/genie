@@ -16,6 +16,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 _NR = _roots.need_n('민법 OMR 마스터 엑셀 · minbeop/script')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse, urllib.request
 sys.stdout.reconfigure(encoding='utf-8')
@@ -69,6 +70,57 @@ def say(*a):
 def add(g, ok, msg):
     G.append((g, bool(ok), msg))
     say('  %s %-4s %s' % ('PASS' if ok else 'FAIL', g, msg))
+
+
+def skip(g, why):
+    """regress 에서 끈 칸(관문만) — 그 자리에 「SKIP | 게이트 | 까닭」 한 줄 · 사슬 받개가 같은 게이트 번호를 세어 뒤 칸 id(「G1 #5」 꼴)가 gate 와 같게 남는다 · 판정 셈 G 엔 안 넣는다"""
+    say('SKIP | %s | regress — %s' % (g, why))
+
+
+def g3_years():
+    """G3 「17년 첫 쪽」 표본(A-3) — 2010~2026 전수 대신 첫 · 끝 해 + 씨앗 고정 셋(QC.sample) · 전수는 기출뷰를 건드린 판의 gate 에서"""
+    ys = [str(x) for x in range(2010, 2027)]
+    return [ys[0]] + QC.sample(ys[1:-1], 3, 'exview_g3') + [ys[-1]]
+
+
+def add_rg_a1(RES):
+    """regress — add1 게이트(A1~A9 · 그 모듈은 안 고친다)를 바탕 BASE2 없이 받는 add:
+    「헛잣대 …」 칸 → SKIP 줄(번호 자리 지킴) · A8 [1280] 무변 · A9 단원 카드 = 바탕 → 기준 스냅샷(앞 인도판 값)으로 다시 잰다 · 나머지는 그대로"""
+    N_ = RES.get('a1new_desk') or {}
+
+    def f(g, ok, msg):
+        if msg.startswith('헛잣대'):
+            return skip(g, '헛잣대(바탕 BASE2 0d4144c) · 관문만')
+        if g == 'A8' and msg.startswith('[1280] 무변'):
+            d8n = (N_.get('a8d') or {}).get('2020:24') or {}
+            pos = d8n.get('pos') or []
+            bp = QC.base('A8.pos24@1280', pos) or []
+            same = bool(pos) and len(pos) == len(bp) and all(all(abs(x - y) <= 0.5 for x, y in zip(p, q)) for p, q in zip(pos, bp))
+            return add(g, same and d8n.get('lines') == [1] * 5, '[1280] 무변 — 2020 24번 선지 자리(선지 줄 기준 x·y·폭·높이) 새 판 %s = 기준 %s(%s) · 줄 %s'
+                       % (pos, bp, QC.base_note('A8.pos24@1280'), d8n.get('lines')))
+        if g == 'A9' and msg.startswith('단원 풀기'):
+            a9 = N_.get('a9') or {}
+            s9 = bool(a9) and QC.same('A9.card', a9)
+            return add(g, bool(N_.get('a9_o')) and s9, '단원 풀기 %s 첫 카드 「정답·해설 ▸」 → O page.mouse — 새 판 %s = 기준(%s)'
+                       % ((N_.get('a9_u') or {}).get('label'), a9, QC.base_note('A9.card')))
+        return add(g, ok, msg)
+    return f
+
+
+def add_rg_a2(RES):
+    """regress — add2 게이트(D1~D6 · 그 모듈은 안 고친다)를 바탕 BASE3 없이 받는 add: 「…-헛」 칸 → SKIP 줄 · D6 768 · 1280 「= 바탕」 → 기준 스냅샷"""
+    N_ = RES.get('a2new') or {}
+
+    def f(g, ok, msg):
+        if g.endswith('-헛'):
+            return skip(g, '헛잣대(바탕 BASE3 9d367aa) · 관문만')
+        m = re.match(r'D-6 — (\d+) 폭 24번 선지 자리 = 바탕', msg)
+        if g == 'D6' and m:
+            w = int(m.group(1))
+            a_ = (((N_.get('d6') or {}).get(w) or {}).get('sel') or {}).get('opts')
+            return add(g, bool(a_) and QC.same('D6.opts@%d' % w, a_), msg + ' · 기준 %s' % QC.base_note('D6.opts@%d' % w))
+        return add(g, ok, msg)
+    return f
 
 
 def J(s):
@@ -231,6 +283,7 @@ class S:
 
 
 def open_page(br, tag, src, touch):
+    QC.launch('base' if tag == 'base' else 'new')
     url = build(tag, src)
     if touch:
         ctx = br.new_context(viewport={'width': 1024, 'height': 768}, device_scale_factor=1, is_mobile=True, has_touch=True, user_agent=IPAD_UA)
@@ -271,7 +324,7 @@ def run_desktop(br, tag, src):
     s.js("__HZX.progClear()")
     # G3 — 17년 × 첫 쪽
     R['g3'] = []
-    for y in [str(x) for x in range(2010, 2027)]:
+    for y in ([str(x) for x in range(2010, 2027)] if QC.GATE else g3_years()):   # regress — 표본 해(A-3)
         R['g3'].append({'open': s.js("y=>__HZX.open(y)", y), 'm': s.js("y=>__HZX.g3(y)", y)})
     # 기출뷰 진입 — 첫 화면 2026 줄의 시작 단추를 진짜로 누른다
     s.js("__HZX.home()")
@@ -473,8 +526,12 @@ def gates_paper(R, tag, strict=True):
         if not ok:
             bad.append('%s q%s 발문%s 보기%s/조합%s 풀기줄보임%s/%s 칩줄%s/%s 조합선지%s' % (y, m.get('q'), m.get('stems'), m.get('bogi'), m.get('combo'),
                                                                        m.get('oxVis'), m.get('oxRows'), m.get('chipRowVis'), m.get('boxes'), m.get('sel')))
-    a('G3', len(g3) == 17 and not bad, '17년 첫 쪽 — 문항 5 · 발문 줄 5 · 보기 상자 = 조합형 수 · 조합 선지 다섯 · 채점 전 O·X 줄 computed 숨김 · 칩 줄 보임 %s'
-      % ('모두 맞음' if not bad else '어긋남 %d: %s' % (len(bad), bad[:4])))
+    if QC.GATE:
+        a('G3', len(g3) == 17 and not bad, '17년 첫 쪽 — 문항 5 · 발문 줄 5 · 보기 상자 = 조합형 수 · 조합 선지 다섯 · 채점 전 O·X 줄 computed 숨김 · 칩 줄 보임 %s'
+          % ('모두 맞음' if not bad else '어긋남 %d: %s' % (len(bad), bad[:4])))
+    else:   # regress — 표본 해(첫 · 끝 + 씨앗 셋)만 · 같은 칸(G3 #2) · 값 끝에 (표본 n/17)
+        a('G3', len(g3) == len(g3_years()) and not bad, '17년 첫 쪽 — 문항 5 · 발문 줄 5 · 보기 상자 = 조합형 수 · 조합 선지 다섯 · 채점 전 O·X 줄 computed 숨김 · 칩 줄 보임 %s (표본 %d/17 · %s)'
+          % ('모두 맞음' if not bad else '어긋남 %d: %s' % (len(bad), bad[:4]), len(g3), ','.join(str((x.get('m') or {}).get('y')) for x in g3)))
     miss = {(x.get('m') or {}).get('y'): (x.get('m') or {}).get('miss') for x in g3}
     a('G3', True, '빠진 선지 자리(첫 쪽) %s' % {k: v for k, v in miss.items() if v})
     q36 = R.get('q36') or {}
@@ -577,6 +634,10 @@ def gates_paper(R, tag, strict=True):
 
 def main():
     global PORT
+    if QC.SMOKE:   # smoke — 이 하네스엔 smoke 칸이 없다(A-0 처리표 · _task_qa_slim2) · 앱을 띄우기 전에 끝낸다(결과 파일에도 그 줄)
+        say('INFO | smoke 칸 없음')
+        io.open(RESULT, 'w', encoding='utf-8', newline='\n').write('\n'.join(OUTL) + '\n')
+        return
     os.makedirs(WORK, exist_ok=True)
     os.makedirs(os.path.join(WORK, 'vendor'), exist_ok=True)
     for n in ('pdf.min.js', 'pdf.worker.min.js'):
@@ -593,17 +654,24 @@ def main():
     xl = os.path.join(WORK, 'master.xlsx')
     shutil.copy(MASTER, xl)
     rec = os.path.join(WORK, 'rec.json')
+    QC.sub('git:show-data')   # 기록(데이터) — 바탕 앱 풀기가 아니다
     open(rec, 'wb').write(git('show', 'origin/main:minbeop/기록.json', repo=SPD))
     H.MAP = {'/data/master.json': os.path.join(DATA, '문항마스터.json'), '/data/gkey.json': os.path.join(DATA, '기출키.json'),
              '/data/meta.json': os.path.join(DATA, '문항메타.json'), '/data/rec.json': rec, '/data/master.xlsx': xl}
     srv, PORT = serve()
 
     new = io.open(APP, encoding='utf-8', newline='').read()
-    base = git('show', BASE_REV + ':minbeop/index.html').decode('utf-8')   # 앱 파일을 마지막으로 고친 커밋(이 판을 밀면 HEAD 가 바뀐다)
+    if QC.GATE:
+        QC.sub('git:show-app')
+    base = git('show', BASE_REV + ':minbeop/index.html').decode('utf-8') if QC.GATE else None   # 앱 파일을 마지막으로 고친 커밋(이 판을 밀면 HEAD 가 바뀐다) · regress — 바탕 풀기 0
     say('=== _task_ox_exview_paper 하네스 · %s ===' % time.strftime('%Y-%m-%d %H:%M:%S'))
     say('NEW  %s · %d B · md5 %s · CRLF %d' % (APP, len(new.encode('utf-8')), md5b(new.encode('utf-8')), new.count('\r\n')))
-    bm = md5b(base.encode('utf-8'))
-    say('BASE genie ' + BASE_REV + ' blob · %d B · md5 %s %s' % (len(base.encode('utf-8')), bm, '(= 지시서 바탕)' if bm == BASE_MD5 else '★ 지시서 바탕과 다르다'))
+    if QC.GATE:
+        bm = md5b(base.encode('utf-8'))
+        say('BASE genie ' + BASE_REV + ' blob · %d B · md5 %s %s' % (len(base.encode('utf-8')), bm, '(= 지시서 바탕)' if bm == BASE_MD5 else '★ 지시서 바탕과 다르다'))
+    else:   # regress — 바탕(33be370 · e5ca92e8) 안 풂
+        bm = None
+        say('BASE — regress: 바탕 ' + BASE_REV + ' 안 풂(G0 바탕 md5 · G11 헛잣대 = 관문만 · G10 「= 바탕」 = 기준 스냅샷)')
     say('데이터 %s · 기록 origin/main %d B' % (DATA, os.path.getsize(rec)))
 
     # ── G0 census
@@ -611,7 +679,10 @@ def main():
     nq = sum(len(v) for v in gk['keys'].values())
     pdfs = sorted(f for f in os.listdir(os.path.join(GENIE, 'gichul', 'pdf')) if re.fullmatch(r'\d{4}-1-minbeop\.pdf', f))
     lst = json.load(io.open(os.path.join(GENIE, 'gichul', 'pdf', 'list.json'), encoding='utf-8'))
-    add('G0', bm == BASE_MD5, '바탕 판 md5 %s = e5ca92e8' % bm[:8])
+    if QC.GATE:
+        add('G0', bm == BASE_MD5, '바탕 판 md5 %s = e5ca92e8' % bm[:8])
+    else:
+        skip('G0', '바탕 판 md5 = e5ca92e8(고정 옛 커밋 · 관문만)')
     add('G0', nq == 680 and len(gk['keys']) == 17, '기출키 문항 %d(17년 × 40 = 680) · 해 %d' % (nq, len(gk['keys'])))
     add('G0', len(pdfs) == 19 and pdfs[0].startswith('2008') and pdfs[-1].startswith('2026') and len([i for i in lst.get('items', []) if 'minbeop' in i.get('file', '')]) == 19,
         '민법 시험지 %d장 %s~%s · list.json 민법 %d' % (len(pdfs), pdfs[0][:4], pdfs[-1][:4], len([i for i in lst.get('items', []) if 'minbeop' in i.get('file', '')])))
@@ -685,21 +756,31 @@ def main():
             elif g(r, '조합형') == 'Y' and g(r, '지문').isdigit():
                 dy += 1
         return len(byc), len(byl), lk, dy
-    bak = ['OXminbub_OMR_2026111111.bak_20260926_181726.xlsx']   # §A-0 고치기 전(못 박음 — 뒤 판 백업을 집지 않게)
-    jn, jb = judge(aoa), judge(aoa_of(os.path.join(os.path.dirname(MASTER), bak[-1])))
-    add('G1', jn[:2] == (89, 89) and jn[2:] == (0, 0) and jb[0] == 88 and jb[1] == 89 and jb[2:] == (4, 0),
-        '조합형 칸 판정 %d = 글자 판정 %d · 글자인데 칸≠Y %d · 숫자인데 칸=Y %d — 헛잣대(고치기 전 %s) 칸 %d · 글자 %d · %d · %d' % (jn + (bak[-1][-20:],) + jb))
+    if QC.GATE:
+        bak = ['OXminbub_OMR_2026111111.bak_20260926_181726.xlsx']   # §A-0 고치기 전(못 박음 — 뒤 판 백업을 집지 않게)
+        jn, jb = judge(aoa), judge(aoa_of(os.path.join(os.path.dirname(MASTER), bak[-1])))
+        add('G1', jn[:2] == (89, 89) and jn[2:] == (0, 0) and jb[0] == 88 and jb[1] == 89 and jb[2:] == (4, 0),
+            '조합형 칸 판정 %d = 글자 판정 %d · 글자인데 칸≠Y %d · 숫자인데 칸=Y %d — 헛잣대(고치기 전 %s) 칸 %d · 글자 %d · %d · %d' % (jn + (bak[-1][-20:],) + jb))
+    else:   # regress — 지금 마스터 몫(조합형 칸 판정 = 글자 판정 · data)만 · 헛잣대(고치기 전 백업 엑셀 · 고정 파일)는 관문만 — 백업 엑셀을 안 읽는다
+        jn = judge(aoa)
+        add('G1', jn[:2] == (89, 89) and jn[2:] == (0, 0),
+            '조합형 칸 판정 %d = 글자 판정 %d · 글자인데 칸≠Y %d · 숫자인데 칸=Y %d — 헛잣대(고치기 전 백업 엑셀)는 regress 건넘' % jn)
     # 셀 diff 사슬 — ① 181726(고치기 전) → 210022(§A-0 + 2020-24 뒤) = _exv_master_fix 계획 · ② 210022 → 본판 = _exv_master_fix2(Q5062 꼴 9행) 계획
-    d0 = os.path.dirname(MASTER)
-    env = dict(os.environ, EXV_BAK=os.path.join(d0, 'OXminbub_OMR_2026111111.bak_20260926_181726.xlsx'),
-               EXV_AFTER=os.path.join(d0, 'OXminbub_OMR_2026111111.bak_20260926_210022.xlsx'))
-    for nm, args, e_, note in (('①', [os.path.join(SCRIPT, '_exv_master_fix.py'), '--verify-xl'], env, '§A-0 5칸 + 2020-24 사용자 승인 17칸 · 22열은 Q5062 한 칸'),
-                               ('②', [os.path.join(SCRIPT, '_exv_master_fix2.py'), '--verify-xl'], None, 'Q5062 꼴 9행 18~21열 36칸 + 23열 8칸 · 22열 0칸(사용자 승인 21:00)')):
-        r = subprocess.run([sys.executable] + args, capture_output=True, timeout=900, env=e_)
-        vo = r.stdout.decode('utf-8', 'replace')
-        m = re.search(r'다른 칸 (\d+) · 계획 (\d+) · 어긋남 (\d+) · 빠짐 (\d+)', vo)
-        add('G1', r.returncode == 0 and '판정 = OK' in vo and m and m.group(3) == '0' and m.group(4) == '0',
-            '셀 diff %s(백업 ↔ 뒤 판 전 칸) — 다른 칸 %s = 계획 %s(%s) · 어긋남 %s' % (nm, m and m.group(1), m and m.group(2), note, m and m.group(3)))
+    if QC.GATE:
+        d0 = os.path.dirname(MASTER)
+        env = dict(os.environ, EXV_BAK=os.path.join(d0, 'OXminbub_OMR_2026111111.bak_20260926_181726.xlsx'),
+                   EXV_AFTER=os.path.join(d0, 'OXminbub_OMR_2026111111.bak_20260926_210022.xlsx'))
+        for nm, args, e_, note in (('①', [os.path.join(SCRIPT, '_exv_master_fix.py'), '--verify-xl'], env, '§A-0 5칸 + 2020-24 사용자 승인 17칸 · 22열은 Q5062 한 칸'),
+                                   ('②', [os.path.join(SCRIPT, '_exv_master_fix2.py'), '--verify-xl'], None, 'Q5062 꼴 9행 18~21열 36칸 + 23열 8칸 · 22열 0칸(사용자 승인 21:00)')):
+            QC.sub('python:script')
+            r = subprocess.run([sys.executable] + args, capture_output=True, timeout=900, env=e_)
+            vo = r.stdout.decode('utf-8', 'replace')
+            m = re.search(r'다른 칸 (\d+) · 계획 (\d+) · 어긋남 (\d+) · 빠짐 (\d+)', vo)
+            add('G1', r.returncode == 0 and '판정 = OK' in vo and m and m.group(3) == '0' and m.group(4) == '0',
+                '셀 diff %s(백업 ↔ 뒤 판 전 칸) — 다른 칸 %s = 계획 %s(%s) · 어긋남 %s' % (nm, m and m.group(1), m and m.group(2), note, m and m.group(3)))
+    else:   # regress — 셀 diff 둘 = 고정 백업 엑셀 두 판을 하위 파이썬(_exv_master_fix*.py --verify-xl)으로 맞대는 그 판 몫(관문만)
+        skip('G1', '셀 diff ①(백업 ↔ 뒤 판 · 하위 파이썬 _exv_master_fix.py --verify-xl) · 관문만')
+        skip('G1', '셀 diff ②(백업 ↔ 뒤 판 · 하위 파이썬 _exv_master_fix2.py --verify-xl) · 관문만')
     src_new = new
     def fn_body(src, name):
         i = src.find('function ' + name + '(')
@@ -720,22 +801,54 @@ def main():
             t0 = time.time()
             RES['ipad'] = run_ipad(br, 'ipad', new)
             say('  [ipad] %.0f초 · pageerror %d · 누름 못함 %d' % (time.time() - t0, len(RES['ipad']['errs']), len(RES['ipad']['miss'])))
-        if ONLY in (None, 'base'):
+        if ONLY in (None, 'base') and QC.GATE:   # regress — 바탕 판(e5ca92e8) 책상 띄움 0(G11 헛잣대 · G10 = 바탕 몫)
             t0 = time.time()
             RES['base'] = run_desktop(br, 'base', base)
             say('  [base] %.0f초 · pageerror %d · 누름 못함 %d' % (time.time() - t0, len(RES['base']['errs']), len(RES['base']['miss'])))
         if ONLY in (None, 'a1'):   # add1(9/27) §F — NEW · BASE2(0d4144c) × 책상 · 아이패드 · 폰
             import _harness_ox_exview_paper_add1 as A1
-            base2 = git('show', A1.BASE2_REV + ':minbeop/index.html').decode('utf-8')
-            say('BASE2 genie %s blob · %d B · md5 %s' % (A1.BASE2_REV, len(base2.encode('utf-8')), md5b(base2.encode('utf-8'))[:8]))
-            RES.update(A1.runs(sys.modules[__name__], br, new, base2, say))
+            if QC.GATE:
+                base2 = git('show', A1.BASE2_REV + ':minbeop/index.html').decode('utf-8')
+                say('BASE2 genie %s blob · %d B · md5 %s' % (A1.BASE2_REV, len(base2.encode('utf-8')), md5b(base2.encode('utf-8'))[:8]))
+                RES.update(A1.runs(sys.modules[__name__], br, new, base2, say))
+            else:   # regress — 바탕 BASE2(0d4144c) 풀기·띄우기 0 · NEW 세 판만(A1.runs 의 NEW 갈래와 같은 부름 · 그 모듈은 안 고친다)
+                for kind, fn in (('desk', A1.run_desk), ('ipad', A1.run_ipad), ('phone', A1.run_phone)):
+                    t0 = time.time()
+                    QC.launch('new')
+                    r = RES['a1new_%s' % kind] = fn(sys.modules[__name__], br, 'a1new_%s' % kind, new)
+                    say('  [%s %s] %.0f초 · pageerror %d · 누름 못함 %d' % ('a1new', kind, time.time() - t0, len(r.get('errs') or []), len(r.get('miss') or [])))
         if ONLY in (None, 'a2'):   # add2(9/27) §E — NEW · BASE3(9d367aa) · Chromium 책상·폰 + WebKit 폰·책상
             import _harness_ox_exview_paper_add2 as A2
-            base3 = git('show', A2.BASE3_REV + ':minbeop/index.html').decode('utf-8')
-            say('BASE3 genie %s blob · %d B · md5 %s' % (A2.BASE3_REV, len(base3.encode('utf-8')), md5b(base3.encode('utf-8'))[:8]))
-            RES.update(A2.runs(sys.modules[__name__], br, new, base3, say))
-            RES.update(A2.runs_wk(sys.modules[__name__], pw, new, base3, say))
-        if ONLY == 'a3' or (ONLY is None and ARG('--base4')):   # add3(9/27) §C — NEW · BASE4(앞 인도 판 --base4) · Chromium 책상·아이패드 + WebKit 책상 · --base4 없는 전체 판은 옛 그대로(본판·add1·add2)
+            if QC.GATE:
+                base3 = git('show', A2.BASE3_REV + ':minbeop/index.html').decode('utf-8')
+                say('BASE3 genie %s blob · %d B · md5 %s' % (A2.BASE3_REV, len(base3.encode('utf-8')), md5b(base3.encode('utf-8'))[:8]))
+                RES.update(A2.runs(sys.modules[__name__], br, new, base3, say))
+                RES.update(A2.runs_wk(sys.modules[__name__], pw, new, base3, say))
+            else:   # regress — 바탕 BASE3(9d367aa) 풀기·띄우기 0 · NEW 만(A2.runs · runs_wk 의 NEW 갈래와 같은 부름 · 그 모듈은 안 고친다)
+                M_ = sys.modules[__name__]
+                t0 = time.time()
+                r = {'d1': {}}
+                for d in (0, 1, 2, 4, 8):
+                    QC.launch('new')
+                    r['d1'][d] = A2.d1_run(M_, br, 'a2new', new, d)
+                QC.launch('new')
+                r['d2'] = A2.d2_run(M_, br, 'a2new', new)
+                QC.launch('new')
+                r['d4'] = A2.d4_run(M_, br, 'a2new', new)
+                r['d6'] = {}
+                for w in (390, 768, 1280):
+                    vw = {'width': w, 'height': 844 if w == 390 else 900}
+                    QC.launch('new')
+                    r['d6'][w] = A2.d6_run(M_, br, 'a2new', new, vw, w == 390)
+                RES['a2new'] = r
+                say('  [%s] %.0f초' % ('a2new', time.time() - t0))
+                wk = pw.webkit.launch()
+                try:
+                    QC.launch('new', 2)
+                    RES['a2wk'] = {'d6': A2.d6_run(M_, wk, 'a2wk', new, {'width': 390, 'height': 844}, True, wk=True), 'd4': A2.d4_run(M_, wk, 'a2wk', new, wk=True)}
+                finally:
+                    wk.close()
+        if QC.GATE and (ONLY == 'a3' or (ONLY is None and ARG('--base4'))):   # regress — add3(앞 인도 판 --base4 헛잣대)는 관문만   # add3(9/27) §C — NEW · BASE4(앞 인도 판 --base4) · Chromium 책상·아이패드 + WebKit 책상 · --base4 없는 전체 판은 옛 그대로(본판·add1·add2)
             import _harness_ox_exview_paper_add3 as A3
             A3.BASE4_REV = ARG('--base4')
             if not A3.BASE4_REV:
@@ -744,7 +857,7 @@ def main():
             say('BASE4 genie %s blob · %d B · md5 %s' % (A3.BASE4_REV, len(base4.encode('utf-8')), md5b(base4.encode('utf-8'))[:8]))
             RES.update(A3.runs(sys.modules[__name__], br, new, base4, say))
             RES.update(A3.runs_wk(sys.modules[__name__], pw, new, base4, say))
-        if ONLY == 'lw' or (ONLY is None and ARG('--base5')):   # _task_ox_linkwin(9/27) §B — NEW · BASE5(앞 인도 판 --base5) · Chromium 책상·아이패드 + WebKit 책상
+        if QC.GATE and (ONLY == 'lw' or (ONLY is None and ARG('--base5'))):   # regress — linkwin(--base5 헛잣대)은 관문만   # _task_ox_linkwin(9/27) §B — NEW · BASE5(앞 인도 판 --base5) · Chromium 책상·아이패드 + WebKit 책상
             import _harness_ox_linkwin as LW
             LW.BASE5_REV = ARG('--base5')
             if not LW.BASE5_REV:
@@ -753,7 +866,7 @@ def main():
             say('BASE5 genie %s blob · %d B · md5 %s' % (LW.BASE5_REV, len(base5.encode('utf-8')), md5b(base5.encode('utf-8'))[:8]))
             RES.update(LW.runs(sys.modules[__name__], br, new, base5, say))
             RES.update(LW.runs_wk(sys.modules[__name__], pw, new, base5, say))
-        if ONLY == 'rx' or (ONLY is None and ARG('--base6')):   # _task_ox_revfix0928(9/28) §B — NEW · BASE6(앞 인도 판 --base6) · ✕ 크기(linkwin 모듈) · 받기 실패한 날(add2 모듈) · Chromium + WebKit
+        if QC.GATE and (ONLY == 'rx' or (ONLY is None and ARG('--base6'))):   # regress — revfix0928(--base6 헛잣대)는 관문만   # _task_ox_revfix0928(9/28) §B — NEW · BASE6(앞 인도 판 --base6) · ✕ 크기(linkwin 모듈) · 받기 실패한 날(add2 모듈) · Chromium + WebKit
             import _harness_ox_linkwin as LW
             import _harness_ox_exview_paper_add2 as A2
             b6 = ARG('--base6')
@@ -854,6 +967,14 @@ def main():
                     '단원 풀기 %s %s 첫 쪽 %s장 글자 %d자 바탕과 같음 %s(📍 다 얹힘 %s/%s)' % (a_, b_, un.get('n'), un.get('len', 0), un.get('txt') == ub.get('txt'), un.get('pinsIn'), ub.get('pinsIn')))
                 add('G10', un.get('omr') == ub.get('omr') and un.get('pill') == ub.get('pill') and un.get('omrLen') == ub.get('omrLen'),
                     '　└ 일반 OMR 창 글자·몸통 길이 %s/%s · 알약 %s 같음' % (un.get('omrLen'), ub.get('omrLen'), un.get('pill')))
+    if QC.REGRESS and 'new' in RES:   # regress — G10 단원 풀기 첫 쪽 · 일반 OMR 「= 바탕」 = 기준 스냅샷(앞 인도판 · 글자 md5) · G11(바탕 헛잣대)은 관문만
+        for (a_, b_), un in zip(RES['new'].get('unitLabels') or [], RES['new'].get('unit') or []):
+            cid = 'G10.unit@%s/%s' % (a_, b_)
+            s1 = QC.same(cid + '.txt', [md5b((un.get('txt') or '').encode('utf-8')), un.get('n')])
+            add('G10', s1 and un.get('n', 0) > 0 and un.get('pinsIn'),
+                '단원 풀기 %s %s 첫 쪽 %s장 글자 %d자 바탕과 같음 %s(📍 다 얹힘 %s · 기준 %s)' % (a_, b_, un.get('n'), un.get('len', 0), s1, un.get('pinsIn'), QC.base_note(cid + '.txt')))
+            s2 = QC.same(cid + '.omr', [md5b(json.dumps(un.get('omr'), ensure_ascii=False).encode('utf-8')), un.get('pill'), un.get('omrLen')])
+            add('G10', s2, '　└ 일반 OMR 창 글자·몸통 길이 %s · 알약 %s 같음 %s(기준 %s)' % (un.get('omrLen'), un.get('pill'), s2, QC.base_note(cid + '.omr')))
     # G10 — 옛 길 코드 줄(ox_chap_history · ox_in_progress/PROGRESS_KEY 를 쓰는 줄) 무변
     def code_lines(src, keys_):
         out = []
@@ -866,24 +987,38 @@ def main():
         return out
     blk = io.open(os.path.join(HERE, '_exv_block.js'), encoding='utf-8').read()
     kk = ('ox_chap_history', 'PROGRESS_KEY', "'ox_in_progress'")
-    a0, b0 = code_lines(base, kk), code_lines(new, kk)
-    sa = [x for x in a0 if x.startswith('const SYNC_KEYS')]
-    sb = [x for x in b0 if x.startswith('const SYNC_KEYS')]
-    add('G10', len(sa) == 1 and len(sb) == 1 and sb[0].startswith(sa[0][:-2] + ", 'ox_rec_gone', 'ox_exam_rounds', 'ox_exam_pick'];"),
-        'SYNC_KEYS 줄 = 옛 줄 + 새 키 셋(ox_rec_gone · ox_exam_rounds · ox_exam_pick) 뿐')
-    a0 = [x for x in a0 if not x.startswith('const SYNC_KEYS')]
-    b0 = [x for x in b0 if not x.startswith('const SYNC_KEYS')]
-    blkl = set(code_lines(blk, kk))
-    extra = [x for x in b0 if x not in a0 and x not in blkl]
-    lost = [x for x in a0 if x not in b0]
-    add('G10', not lost and not extra, 'ox_chap_history·ox_in_progress 를 쓰는 옛 코드 줄 %d → %d(블록 %d 줄 말고 더한 줄 %d · 잃은 줄 %d)' % (len(a0), len(b0), len(blkl), len(extra), len(lost)))
+    if QC.REGRESS:   # regress — 옛 판(33be370) 코드 줄 대신 기준 스냅샷(앞 인도판의 같은 줄 목록) · 블록(_exv_block.js) 줄은 그대로 뺀다
+        b0 = code_lines(new, kk)
+        sb = [x for x in b0 if x.startswith('const SYNC_KEYS')]
+        sbase = QC.base('G10.synckeys', sb)
+        add('G10', len(sb) == 1 and sb == sbase and all(k_ in sb[0] for k_ in ("'ox_rec_gone'", "'ox_exam_rounds'", "'ox_exam_pick'")),
+            'SYNC_KEYS 줄 = 옛 줄 + 새 키 셋(ox_rec_gone · ox_exam_rounds · ox_exam_pick) 뿐 — regress: 앞 인도판 줄 그대로 · 새 키 셋 있음(기준 %s)' % QC.base_note('G10.synckeys'))
+        b0 = [x for x in b0 if not x.startswith('const SYNC_KEYS')]
+        a0 = QC.base('G10.chaplines', b0)
+        blkl = set(code_lines(blk, kk))
+        extra = [x for x in b0 if x not in a0 and x not in blkl]
+        lost = [x for x in a0 if x not in b0]
+        add('G10', not lost and not extra, 'ox_chap_history·ox_in_progress 를 쓰는 옛 코드 줄 %d → %d(블록 %d 줄 말고 더한 줄 %d · 잃은 줄 %d · 기준 %s)'
+            % (len(a0), len(b0), len(blkl), len(extra), len(lost), QC.base_note('G10.chaplines')))
+    if QC.GATE:
+        a0, b0 = code_lines(base, kk), code_lines(new, kk)
+        sa = [x for x in a0 if x.startswith('const SYNC_KEYS')]
+        sb = [x for x in b0 if x.startswith('const SYNC_KEYS')]
+        add('G10', len(sa) == 1 and len(sb) == 1 and sb[0].startswith(sa[0][:-2] + ", 'ox_rec_gone', 'ox_exam_rounds', 'ox_exam_pick'];"),
+            'SYNC_KEYS 줄 = 옛 줄 + 새 키 셋(ox_rec_gone · ox_exam_rounds · ox_exam_pick) 뿐')
+        a0 = [x for x in a0 if not x.startswith('const SYNC_KEYS')]
+        b0 = [x for x in b0 if not x.startswith('const SYNC_KEYS')]
+        blkl = set(code_lines(blk, kk))
+        extra = [x for x in b0 if x not in a0 and x not in blkl]
+        lost = [x for x in a0 if x not in b0]
+        add('G10', not lost and not extra, 'ox_chap_history·ox_in_progress 를 쓰는 옛 코드 줄 %d → %d(블록 %d 줄 말고 더한 줄 %d · 잃은 줄 %d)' % (len(a0), len(b0), len(blkl), len(extra), len(lost)))
 
     if any(k.startswith('a1new') for k in RES):
         import _harness_ox_exview_paper_add1 as A1
-        A1.gates(RES, add, say)
+        A1.gates(RES, add if QC.GATE else add_rg_a1(RES), say)   # regress — 헛잣대 칸 SKIP · 「= 바탕」 칸 기준 스냅샷
     if 'a2new' in RES:
         import _harness_ox_exview_paper_add2 as A2
-        A2.gates(RES, add, say)
+        A2.gates(RES, add if QC.GATE else add_rg_a2(RES), say)   # regress — 「-헛」 칸 SKIP · D6 「= 바탕」 기준 스냅샷
     if 'a3new' in RES:
         import _harness_ox_exview_paper_add3 as A3
         A3.gates(RES, add, say)

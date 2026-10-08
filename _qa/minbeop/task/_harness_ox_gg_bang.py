@@ -15,6 +15,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다
 import hashlib, io, json, os, re, shutil, subprocess, sys, tempfile, urllib.parse
 
 sys.stdout.reconfigure(encoding='utf-8')
@@ -110,31 +111,40 @@ def payload():
     for g in gs[:6]:
         more += grp[g][:3]
     ids = list(dict.fromkeys(pick + more))
-    src = git('show', 'HEAD:' + REL).decode('utf-8')
+    if QC.GATE:
+        QC.sub('git:show-app')
+    src = git('show', 'HEAD:' + REL).decode('utf-8') if QC.GATE else io.open(os.path.join(GENIE, REL), encoding='utf-8').read()   # regress — HEAD 판을 안 푼다(새 판 글에서 뽑아 아래 기준 스냅샷과 맞댄다)
     sk = re.search(r'const SYNC_KEYS = \[(.+?)\];', src, re.S).group(1)
     sync = ','.join(re.findall(r"'([^']+)'", sk))
+    if QC.REGRESS:   # regress — G1 「SYNC_KEYS 무변」 기댓값 = 기준 스냅샷(앞 인도판 새 판 SYNC_KEYS · 없으면 지금 새 판 = 첫 기록) — gate 의 「HEAD 판」 자리
+        sync = QC.base('G1/SYNC_KEYS', sync)
     return {'rows': [byuid[u] for u in ids if u in byuid],
             'a': a, 'own': own, 'b': b, 'c': c, 'd': d, 'syncKeys': sync}
 
 
 def gate_files():
     print('\n=== D11 가드 · 줄끝 · 무접촉 ===')
-    g = io.open(GPUSH, 'rb').read().decode('cp949', 'replace')
-    paths = re.search(r'^set "PATHS=(.+?)"', g, re.M).group(1).split()
-    add('D11', 'minbeop' in paths, 'ⓐ PATHS(%d) = %s' % (len(paths), ' '.join(paths)))
-    cmds = [l for l in g.split('\n') if not re.match(r'^\s*rem\b', l, re.I) and l.strip()]
-    bad = [l.strip() for l in cmds if re.search(r'\badd\b[^\n]*\s-A\b', l)]
-    add('D11', not bad, 'ⓒ `git add -A` 안 쓴다 (걸린 줄 %s)' % bad)
+    if QC.GATE:   # push 가드(g_push.cmd 글자) — 앱 회귀 아님 · 그 판 인도 가드 = 관문만
+        g = io.open(GPUSH, 'rb').read().decode('cp949', 'replace')
+        paths = re.search(r'^set "PATHS=(.+?)"', g, re.M).group(1).split()
+        add('D11', 'minbeop' in paths, 'ⓐ PATHS(%d) = %s' % (len(paths), ' '.join(paths)))
+        cmds = [l for l in g.split('\n') if not re.match(r'^\s*rem\b', l, re.I) and l.strip()]
+        bad = [l.strip() for l in cmds if re.search(r'\badd\b[^\n]*\s-A\b', l)]
+        add('D11', not bad, 'ⓒ `git add -A` 안 쓴다 (걸린 줄 %s)' % bad)
     app = io.open(os.path.join(GENIE, REL), 'rb').read()
     add('D11', app.count(b'\r\n') == 0, '앱 작업트리 CRLF %d' % app.count(b'\r\n'))
-    add('D11', hashlib.md5(app).hexdigest() != hashlib.md5(git('show', 'HEAD:' + REL)).hexdigest(),
-        '앱이 실제로 바뀌었다 md5 %s' % hashlib.md5(app).hexdigest()[:12])
-    # 다른 앱 무접촉 (G5)
-    ch = [l for l in git('diff', '--name-only', 'HEAD').decode('utf-8').split('\n') if l.strip()]
-    add('G5', ch == [REL], '바뀐 파일은 %s 하나뿐 : %s' % (REL, ch))
+    if QC.GATE:   # 인도 때 작업트리 · HEAD diff 가드 = 관문만(사슬은 깨끗한 워크트리 · HEAD = 새 판)
+        add('D11', hashlib.md5(app).hexdigest() != hashlib.md5(git('show', 'HEAD:' + REL)).hexdigest(),
+            '앱이 실제로 바뀌었다 md5 %s' % hashlib.md5(app).hexdigest()[:12])
+        # 다른 앱 무접촉 (G5)
+        ch = [l for l in git('diff', '--name-only', 'HEAD').decode('utf-8').split('\n') if l.strip()]
+        add('G5', ch == [REL], '바뀐 파일은 %s 하나뿐 : %s' % (REL, ch))
 
 
 def main():
+    if QC.SMOKE:   # smoke 칸 없음(A-0) — 앱을 띄우기 전에 한 줄 찍고 끝
+        print('INFO | smoke 칸 없음 | 근거 「!」 · 정리 창 「! N」 · 받아 둔 교재 지우기 하네스 — smoke 칸 없음(A-0) · 앱 안 띄움', flush=True)
+        return 0
     os.makedirs(OUT, exist_ok=True)
     print('OUT =', OUT)
     gate_files()
@@ -146,8 +156,10 @@ def main():
     js = tests.replace('__P__', json.dumps(P, ensure_ascii=False))
 
     outs = {}
-    for tag, src in (('NEW', io.open(os.path.join(GENIE, REL), encoding='utf-8').read()),
-                     ('HEAD', git('show', 'HEAD:' + REL).decode('utf-8'))):
+    for tag, src in ((('NEW', io.open(os.path.join(GENIE, REL), encoding='utf-8').read()),
+                      ('HEAD', git('show', 'HEAD:' + REL).decode('utf-8'))) if QC.GATE else
+                     (('NEW', io.open(os.path.join(GENIE, REL), encoding='utf-8').read()),)):   # regress — 새 판만(HEAD 판 = G6 헛잣대 재료 · 사슬에선 HEAD = 새 판)
+        QC.launch('new' if tag == 'NEW' else 'base')
         outs[tag] = run(tag, build(tag, src, js))
 
     def vals(L):
@@ -169,23 +181,25 @@ def main():
         elif x.startswith('INFO'):
             print('       ' + x)
 
-    vn, vh = vals(outs['NEW']), vals(outs['HEAD'])
+    vn, vh = vals(outs['NEW']), (vals(outs['HEAD']) if QC.GATE else {})
     for k in sorted(vn):
         if k.startswith(('G2.', 'G3.', 'G4.', 'G7.', 'SRC.')):
             print('       %-16s %s' % (k, vn[k][:150]))
 
     print('\n=== G6 헛잣대 (HEAD 판) ===')
-    hf = [x for x in outs['HEAD'] if x.startswith(('PASS', 'FAIL'))]
-    for g in ('G1', 'G4'):
-        gl = [x for x in hf if x.split(' | ')[1].split(' ')[0] == g]
-        bad = [x for x in gl if x.startswith('FAIL')]
-        add('G6', len(gl) > 0 and len(bad) > 0, '옛 판 %s : %d줄 중 FAIL %d' % (g, len(gl), len(bad)))
-    add('G6', vh.get('SRC.ggBangToggle') == '"undefined"',
-        '옛 판에 ggBangToggle 없음 (%s)' % vh.get('SRC.ggBangToggle'))
+    if QC.GATE:   # 헛잣대(옛 판 = HEAD) — 관문만
+        hf = [x for x in outs['HEAD'] if x.startswith(('PASS', 'FAIL'))]
+        for g in ('G1', 'G4'):
+            gl = [x for x in hf if x.split(' | ')[1].split(' ')[0] == g]
+            bad = [x for x in gl if x.startswith('FAIL')]
+            add('G6', len(gl) > 0 and len(bad) > 0, '옛 판 %s : %d줄 중 FAIL %d' % (g, len(gl), len(bad)))
+        add('G6', vh.get('SRC.ggBangToggle') == '"undefined"',
+            '옛 판에 ggBangToggle 없음 (%s)' % vh.get('SRC.ggBangToggle'))
     add('G6', vn.get('SRC.ggBangToggle') == '"function"',
         '새 판에 ggBangToggle 있음 (%s)' % vn.get('SRC.ggBangToggle'))
-    add('G6', vh.get('SRC.mbForgetPrompt') == '"undefined"',
-        '옛 판에 mbForgetPrompt 없음 (%s)' % vh.get('SRC.mbForgetPrompt'))
+    if QC.GATE:   # 헛잣대(옛 판) — 관문만
+        add('G6', vh.get('SRC.mbForgetPrompt') == '"undefined"',
+            '옛 판에 mbForgetPrompt 없음 (%s)' % vh.get('SRC.mbForgetPrompt'))
 
     print('\n' + '=' * 68)
     gs = {}

@@ -16,6 +16,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import io, json, os, re, shutil, subprocess, sys, tempfile, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -94,10 +95,17 @@ def fn_lines(L, sig):
 
 
 def main():
+    if QC.SMOKE:   # smoke — 이 하네스엔 smoke 칸이 없다(A-0 처리표 · _task_qa_slim2) · 크롬을 띄우기 전에 끝낸다
+        print('INFO | smoke 칸 없음')
+        return 0
     os.makedirs(OUT, exist_ok=True)
     new = io.open(os.path.join(GENIE, REL.replace('/', os.sep)), encoding='utf-8', newline='').read()
-    head = git('show', 'HEAD:' + REL)
-    print('HEAD %s' % git('log', '-1', '--format=%h %s').strip())
+    if QC.GATE:
+        QC.sub('git:show-app')
+        head = git('show', 'HEAD:' + REL)
+        print('HEAD %s' % git('log', '-1', '--format=%h %s').strip())
+    else:
+        head = None   # regress — 바탕(HEAD) 앱 풀기·띄우기 0(사슬에선 HEAD = 새 판 · A-0 W3 뜻밖에 4) · VAL · SRC 대조는 기준 스냅샷
     base = {'subject': '민법총칙', 'chapter': '1. 총칙', 'subChapter': '1.1 민법의 법원', 'subNum': '', 'examMeta': [],
             'caseText': '', 'stem': '', 'status': '', 'excelLogic': '', 'panrye': '', 'source': '변리사 20'}
     quiz = []
@@ -123,6 +131,9 @@ def main():
     for tag, src in (('NEW', new), ('HEAD', head)):
         if only and tag != only:
             continue
+        if QC.REGRESS and tag == 'HEAD':   # regress — HEAD(바탕) 판은 헛잣대 몫(관문만) · 같은 입력 글자(VAL)는 기준 스냅샷과 맞댄다
+            continue
+        QC.launch('base' if tag == 'HEAD' else 'new')
         lines = build_and_run(tag, src, tests)
         res[tag] = lines
         print('=== %s 판 ===' % tag)
@@ -135,39 +146,81 @@ def main():
         print('  합계 PASS %d · FAIL %d' % (sum(1 for x in lines if x.startswith('PASS')), sum(1 for x in lines if x.startswith('FAIL'))))
         print()
 
-    print('=== 회귀 대조 — 같은 입력의 글자 (NEW vs HEAD) ===')
-    vals = {t: [x for x in (res.get(t) or []) if x.startswith('VAL | ')] for t in ('NEW', 'HEAD')}
-    rg = {}
-    for a, b in zip(vals['NEW'], vals['HEAD']):
-        name = a.split(' | ')[1]
-        ok = a == b and name == b.split(' | ')[1]
-        rg.setdefault(name.split('.')[0], []).append(ok)
-        print('  %-28s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
-        if not ok:
-            io.open(os.path.join(OUT, 'val_%s_NEW.txt' % name), 'w', encoding='utf-8').write(a)
-            io.open(os.path.join(OUT, 'val_%s_HEAD.txt' % name), 'w', encoding='utf-8').write(b)
-    cnt_ok = len(vals['NEW']) == len(vals['HEAD']) and len(vals['NEW']) > 0
-    print('  VAL 줄 NEW %d · HEAD %d' % (len(vals['NEW']), len(vals['HEAD'])))
-    print()
+    if QC.REGRESS:   # regress — 같은 입력의 찾기 결과 글자(G24 VAL)를 바탕(앞 인도판) 스냅샷과 맞댄다(줄마다 md5 · 길이)
+        import hashlib as _hl
+        print('=== 회귀 대조 — 같은 입력의 글자 (NEW vs 기준 스냅샷) ===')
+        vals = {'NEW': [x for x in (res.get('NEW') or []) if x.startswith('VAL | ')]}
+        rg = {}
+        for a in vals['NEW']:
+            name = a.split(' | ')[1]
+            ok = QC.same('VAL.' + name, [_hl.md5(a.encode('utf-8')).hexdigest()[:16], len(a)])
+            rg.setdefault(name.split('.')[0], []).append(ok)
+            print('  %-28s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
+            if not ok:
+                io.open(os.path.join(OUT, 'val_%s_NEW.txt' % name), 'w', encoding='utf-8').write(a)
+        nb = QC.base('VAL.n', len(vals['NEW']))
+        cnt_ok = len(vals['NEW']) == nb and len(vals['NEW']) > 0
+        print('  VAL 줄 NEW %d · 기준 %d (%s)' % (len(vals['NEW']), nb, QC.base_note('VAL.n')))
+        print()
+    if QC.GATE:
+        print('=== 회귀 대조 — 같은 입력의 글자 (NEW vs HEAD) ===')
+        vals = {t: [x for x in (res.get(t) or []) if x.startswith('VAL | ')] for t in ('NEW', 'HEAD')}
+        rg = {}
+        for a, b in zip(vals['NEW'], vals['HEAD']):
+            name = a.split(' | ')[1]
+            ok = a == b and name == b.split(' | ')[1]
+            rg.setdefault(name.split('.')[0], []).append(ok)
+            print('  %-28s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
+            if not ok:
+                io.open(os.path.join(OUT, 'val_%s_NEW.txt' % name), 'w', encoding='utf-8').write(a)
+                io.open(os.path.join(OUT, 'val_%s_HEAD.txt' % name), 'w', encoding='utf-8').write(b)
+        cnt_ok = len(vals['NEW']) == len(vals['HEAD']) and len(vals['NEW']) > 0
+        print('  VAL 줄 NEW %d · HEAD %d' % (len(vals['NEW']), len(vals['HEAD'])))
+        print()
 
-    print('=== SRC 소스 대조 (NEW vs HEAD · add7 §1·§4 · add8 · add9 · add10) ===')
-    Ln, Lh = new.split('\n'), head.split('\n')
-    lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
-    gg_head = sorted(set(re.findall(r'^\s*(?:async\s+)?function (gg[A-Za-z0-9_]*)\s*\(', head, re.M)) - {'ggMaxOf', 'ggLineHTML', 'ggTextOf', 'ggPickLine'})
-    gg_diff = [f for f in gg_head if fn_lines(Ln, 'function %s(' % f) != fn_lines(Lh, 'function %s(' % f) or fn_lines(Ln, 'function %s(' % f) is None]
-    left = [f for f in GONE_FNS if re.search(r'\b%s\s*\(' % f, new)]
-    slq = fn_lines(Ln, 'function showLinkedQuestion(')
-    chk = [('긴 줄(>3000자) 전부 글자까지 같다', [s for s in Ln if len(s) > 3000] == [s for s in Lh if len(s) > 3000]),
-           ('SheetJS 줄(가장 긴 줄) 바이트 무변', max(Ln, key=len) == max(Lh, key=len) and len(max(Ln, key=len)) > 60000),
-           ('SYNC_KEYS 무변', [s for s in Ln if 'const SYNC_KEYS = [' in s] == [s for s in Lh if 'const SYNC_KEYS = [' in s]),
-           ('ox_* 글자 집합 같다(새 저장소 키 0)', lits(new) == lits(head)),
-           ('걷은 함수 7 — 「이름(」 글자 0 %s' % (left or ''), not left),
-           ("linked-badges- 0 · cmp- 0 · 비교 창 범위 0 · sizeKey 'cmp' 0", 'linked-badges-' not in new and 'cmp-' not in new
-            and not re.search(r'(?<![A-Za-z0-9_])cp-', new) and "sizeKey: 'cmp'" not in new),
-           ('showLinkedQuestion = openQPopup 껍데기(oxWinOpen 0)', slq is not None and any('openQPopup(' in s for s in slq) and not any('oxWinOpen(' in s for s in slq)),
-           ('근거 함수 gg* %d개 무변(ggMaxOf·ggLineHTML·ggTextOf·ggPickLine 말고 · ggLogicMergeOnce 포함) %s' % (len(gg_head), gg_diff or ''), not gg_diff and len(gg_head) > 20),
-           ('useUnlink · refPut · refOf · mergeExcelRecords · exportExcelFile 무변',
-            all(fn_lines(Ln, s) == fn_lines(Lh, s) is not None for s in ('function useUnlink(', 'function refPut(', 'function refOf(', 'function mergeExcelRecords(', 'async function exportExcelFile(')))]
+    if QC.REGRESS:   # regress — NEW·HEAD 맞대던 여섯 칸(긴 줄 · SheetJS · SYNC_KEYS · ox_* · gg* 함수 · 다섯 함수)은 기준 스냅샷(앞 인도판 · md5)과 · 나머지는 NEW 글자만(gate 와 같은 식)
+        import hashlib as _hl
+        print('=== SRC 소스 대조 (NEW vs 기준 스냅샷 · add7 §1·§4 · add8 · add9 · add10) ===')
+        Ln = new.split('\n')
+        lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
+        md = lambda xs: None if xs is None else _hl.md5('\n'.join(xs).encode('utf-8')).hexdigest()[:16]
+        gg_new = sorted(set(re.findall(r'^\s*(?:async\s+)?function (gg[A-Za-z0-9_]*)\s*\(', new, re.M)) - {'ggMaxOf', 'ggLineHTML', 'ggTextOf', 'ggPickLine'})
+        gg_now = {f: md(fn_lines(Ln, 'function %s(' % f)) for f in gg_new}
+        gg_head = QC.base('SRC.gg', gg_now)   # 기준 = 앞 인도판의 gg* 함수 이름 → 몸통 md5(스냅샷 없으면 지금 값 = 첫 기록)
+        gg_diff = [f for f in sorted(gg_head) if gg_now.get(f) is None or gg_now.get(f) != gg_head[f]]
+        left = [f for f in GONE_FNS if re.search(r'\b%s\s*\(' % f, new)]
+        slq = fn_lines(Ln, 'function showLinkedQuestion(')
+        f5 = [md(fn_lines(Ln, s)) for s in ('function useUnlink(', 'function refPut(', 'function refOf(', 'function mergeExcelRecords(', 'async function exportExcelFile(')]
+        chk = [('긴 줄(>3000자) 전부 글자까지 같다', QC.same('SRC.long', md([s for s in Ln if len(s) > 3000]))),
+               ('SheetJS 줄(가장 긴 줄) 바이트 무변', QC.same('SRC.sheetjs', md([max(Ln, key=len)])) and len(max(Ln, key=len)) > 60000),
+               ('SYNC_KEYS 무변', QC.same('SRC.synckeys', md([s for s in Ln if 'const SYNC_KEYS = [' in s]))),
+               ('ox_* 글자 집합 같다(새 저장소 키 0)', QC.same('SRC.oxlits', lits(new))),
+               ('걷은 함수 7 — 「이름(」 글자 0 %s' % (left or ''), not left),
+               ("linked-badges- 0 · cmp- 0 · 비교 창 범위 0 · sizeKey 'cmp' 0", 'linked-badges-' not in new and 'cmp-' not in new
+                and not re.search(r'(?<![A-Za-z0-9_])cp-', new) and "sizeKey: 'cmp'" not in new),
+               ('showLinkedQuestion = openQPopup 껍데기(oxWinOpen 0)', slq is not None and any('openQPopup(' in s for s in slq) and not any('oxWinOpen(' in s for s in slq)),
+               ('근거 함수 gg* %d개 무변(ggMaxOf·ggLineHTML·ggTextOf·ggPickLine 말고 · ggLogicMergeOnce 포함) %s' % (len(gg_head), gg_diff or ''), not gg_diff and len(gg_head) > 20),
+               ('useUnlink · refPut · refOf · mergeExcelRecords · exportExcelFile 무변', None not in f5 and QC.same('SRC.fns5', f5))]
+        print('  (기준: %s)' % QC.base_note('SRC.synckeys'))
+    if QC.GATE:
+        print('=== SRC 소스 대조 (NEW vs HEAD · add7 §1·§4 · add8 · add9 · add10) ===')
+        Ln, Lh = new.split('\n'), head.split('\n')
+        lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
+        gg_head = sorted(set(re.findall(r'^\s*(?:async\s+)?function (gg[A-Za-z0-9_]*)\s*\(', head, re.M)) - {'ggMaxOf', 'ggLineHTML', 'ggTextOf', 'ggPickLine'})
+        gg_diff = [f for f in gg_head if fn_lines(Ln, 'function %s(' % f) != fn_lines(Lh, 'function %s(' % f) or fn_lines(Ln, 'function %s(' % f) is None]
+        left = [f for f in GONE_FNS if re.search(r'\b%s\s*\(' % f, new)]
+        slq = fn_lines(Ln, 'function showLinkedQuestion(')
+        chk = [('긴 줄(>3000자) 전부 글자까지 같다', [s for s in Ln if len(s) > 3000] == [s for s in Lh if len(s) > 3000]),
+               ('SheetJS 줄(가장 긴 줄) 바이트 무변', max(Ln, key=len) == max(Lh, key=len) and len(max(Ln, key=len)) > 60000),
+               ('SYNC_KEYS 무변', [s for s in Ln if 'const SYNC_KEYS = [' in s] == [s for s in Lh if 'const SYNC_KEYS = [' in s]),
+               ('ox_* 글자 집합 같다(새 저장소 키 0)', lits(new) == lits(head)),
+               ('걷은 함수 7 — 「이름(」 글자 0 %s' % (left or ''), not left),
+               ("linked-badges- 0 · cmp- 0 · 비교 창 범위 0 · sizeKey 'cmp' 0", 'linked-badges-' not in new and 'cmp-' not in new
+                and not re.search(r'(?<![A-Za-z0-9_])cp-', new) and "sizeKey: 'cmp'" not in new),
+               ('showLinkedQuestion = openQPopup 껍데기(oxWinOpen 0)', slq is not None and any('openQPopup(' in s for s in slq) and not any('oxWinOpen(' in s for s in slq)),
+               ('근거 함수 gg* %d개 무변(ggMaxOf·ggLineHTML·ggTextOf·ggPickLine 말고 · ggLogicMergeOnce 포함) %s' % (len(gg_head), gg_diff or ''), not gg_diff and len(gg_head) > 20),
+               ('useUnlink · refPut · refOf · mergeExcelRecords · exportExcelFile 무변',
+                all(fn_lines(Ln, s) == fn_lines(Lh, s) is not None for s in ('function useUnlink(', 'function refPut(', 'function refOf(', 'function mergeExcelRecords(', 'async function exportExcelFile(')))]
     chk.append(("add9 — 회독 배지 🔴 0 · 빨간 X · styleMap 0 · 옛 태그 채움 class 0 · TAGCLS 새 글자",
                 '🔴${wrongN}' not in new and '<span class="text-red-600 font-black">X</span>${wrongN}' in new and 'styleMap' not in new
                 and 'tag-btn min-w-[24px]' not in new

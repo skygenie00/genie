@@ -4,12 +4,33 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+# --mode gate|regress|smoke (_task_qa_slim2 2026-10-08 · 인자 없으면 gate = 이 판 앞과 같음)
+#   regress = 칸 452(JS 434 · A2 8 · F15 10) 모두 「회귀」 · 「data」(처리표) — 시드 · 검사 글 · 띄움 한 번은 gate 와 같고 결과 html · 크롬 프로필만 %TEMP%\h_tt_timetable(gate = 하네스 옆 N: h)
+#   smoke   = 같은 한 번 띄움에서 「회귀 galHTML」 · 「회귀 ttPageHTML」 · 「A2-1 syncAll 한 바퀴」(+ 예외 잡이 줄 「예외」 · 「A2 예외」)만 찍는다
+#   N:(마이박스) 크롬 프로필을 TEMP 로 옮기는 까닭 — N: 프로필은 띄움마다 느리다: 9/17 tt 회귀(N: 결과 파일 시각) _harness_timetable 76 초 · tt_race 판마다 76~92 초 /
+#     10/6 use_count N: 프로필 --dump-dom 180 초 초과 되풀이 → 사용자 「해」로 TEMP(결정로그 10/6 21:36 · 22:0x) / 프로필이 TEMP 인 민법 dump-dom 하네스는 띄움당 9~14 초
+#     · 마이박스가 하네스 프로필 폴더 목록을 못 펼쳐 _qa_sync copy 10 분 멈춤 · 실행기 열쇠 셈 멈춤(결정로그 10/2 · 10/4)
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) A-1 · 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다
 import json, os, re, shutil, subprocess, sys, tempfile
 from PIL import Image
 
 SRC = _roots.genie(r"timetable\index.html")
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "h")
+if QC.REGRESS:   # regress · smoke — 결과 html · 크롬 프로필을 N:(마이박스) 밖 로컬 임시 폴더로(A-2 · 까닭 = 머리 주석) · gate 는 이 판 앞 그대로
+    OUT = os.path.join(tempfile.gettempdir(), 'h_tt_timetable')
+else:
+    OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "h")
 os.makedirs(OUT, exist_ok=True)
+
+
+_RG_SMOKE = ('회귀 galHTML', '회귀 ttPageHTML', 'A2-1 syncAll 한 바퀴 예외 0(로그 첫 줄 = 완료 · ✗ 없음)', '예외', 'A2 예외')   # smoke — 처리표 smoke 칸 셋 + 예외 잡이 줄 둘(제목 그대로)
+
+
+def _rg_title(ln):
+    """결과 줄 「PASS | 제목 | 값」의 제목 — smoke 거름(제목 그대로)"""
+    p = ln.split(' | ')
+    return p[1] if len(p) > 1 else ln
+
+
 APP = os.path.join(OUT, "app.html")
 
 # 시드 날짜 고정(2026-09-06 사용자 지시) — 시드 계획이 「오늘」기준이라 일요일엔 오늘 칸 계획 행이 없어 F16-4 에서 예외로 멈췄다(뒤 230항 미실행).
@@ -1148,6 +1169,7 @@ open(APP, 'w', encoding='utf-8', newline='\n').write(html)
 prof = os.path.join(OUT, "prof")
 chrome = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 url = 'file:///' + APP.replace('\\', '/')
+QC.launch('new')   # §B-4 셈 — 새 판 앱 띄움 1(바탕 띄움 없음)
 r = subprocess.run([chrome, '--headless=new', '--disable-gpu', '--no-first-run',
                     '--user-data-dir=' + prof, '--allow-file-access-from-files',
                     '--window-size=1280,900',
@@ -1190,6 +1212,8 @@ except Exception as e:
 sw = open(os.path.join(APPDIR, 'sw.js'), encoding='utf-8').read()
 T2('F15-2 sw 프리캐시에 새 아이콘·icon.svg 제거', all(('./' + n) in sw for n in ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'icon-180.png']) and 'icon.svg' not in sw)
 T2('F15-3 본문 스타일에 옛 주황 안 샘(theme-color 만 교체)', head.count('#F57C00') == 0 or '--m8:#F57C00' in head)
+if QC.SMOKE:   # smoke — 처리표 smoke 칸 셋 + 예외 잡이 줄만 찍는다(같은 한 번 띄움 · 나머지 칸은 건넘)
+    lines = [x for x in lines if QC.want(_rg_title(x), smoke=_rg_title(x) in _RG_SMOKE)]
 npass = sum(1 for x in lines if x.startswith('PASS'))
 nfail = len(lines) - npass
 for x in lines: print(x)

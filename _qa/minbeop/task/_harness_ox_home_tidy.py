@@ -28,6 +28,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다(아래 ARG 읽기보다 먼저)
 import hashlib, json, os, re, subprocess, sys, tempfile, threading, time, traceback, urllib.parse   # noqa: E402
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer   # noqa: E402
 try:
@@ -47,6 +48,8 @@ DREV = ARG('--data-rev', '42664d8')   # studyplandata 42664d8 = 10/6 15:46 기�
 SPD = ARG('--spd', _roots.spd())
 ONLY = [x.strip().upper() for x in (ARG('--only', '') or '').split(',') if x.strip()]
 NOBASE = '--no-base' in sys.argv
+if QC.SMOKE:   # smoke(A-4) — C 만(PC p1 화면 하나 · C01 회독 칩 아이콘) + CE(페이지 오류 0) · B1~B5 · 나머지 시험 · 화면 셋은 건넘
+    ONLY = ['C']
 TWCSS = ARG('--tw')
 TMPD = os.path.join(tempfile.gettempdir(), 'h_ox_home_tidy')
 OUTF = ARG('--res', os.path.join(TMPD, '_harness_ox_home_tidy_result.txt'))
@@ -300,6 +303,29 @@ def md5lf(s):
     return hashlib.md5(s.replace('\r\n', '\n').encode('utf-8')).hexdigest()
 
 
+def _rg_md5(v):
+    """qa_slim2 regress — 기준 칸 값 줄이기(글 · 결과 칸 → md5) · gate 에서 안 쓴다"""
+    s = v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, sort_keys=True, default=str)
+    return hashlib.md5(s.encode('utf-8')).hexdigest()
+
+
+_RG_HOST = re.compile(r'(?:127\.0\.0\.1|localhost):\d+')
+
+
+def _rg_msg(m):
+    """qa_slim2 regress — 오류 글을 판 사이에 맞대는 꼴(쪽 자리 「 @줄」 · 포트 뺌) · gate 에서 안 쓴다"""
+    return _RG_HOST.sub('<HOST>', re.sub(r' @\d*$', '', str(m)))
+
+
+# qa_slim2 regress(A-2) — 고정 1000ms 대신 expect 식을 기다리는 C 시험: 누름이 만드는 상태(접기 단계 · 창 · 화면 · 서랍 열림)를 재는 식 = 누르기 전엔 거짓 · 부수 효과 없음(window.__df · __tr 적기만)
+# 나머지 열여덟(누름과 무관한 꼴 칸 — 누르기 전에도 참일 수 있음 · 식 안에 누름 · trFold · trDFold · dispatchEvent · 개수 same 를 뒤에 읽는 칸)은 고정 대기 그대로(QC.sleep · 까닭)
+C_UNTIL = ('폰 서랍 · [N] 1번 → 장 줄만', '폰 서랍 · [N] 2번 → 장 줄 + 묶음 첫 줄', '폰 서랍 · [N] 3번 → 다 펼침',
+           'PC 서랍 · 장 줄 🃏·📋 칩 + 📋 누르면 장 정리 창', 'PC 서랍 · 장 줄 🃏 누르면 장 암기노트 창',
+           '폰 · [N] 1번 → 장 줄만', '폰 · [N] 2번 → 장 줄 + 🃏·📋 칩 줄', '폰 · [N] 3번 → 다 펼침', 'PC · [N] 1번 → 장 줄만',
+           'PC · 서랍 손잡이 → 열림', '폰 · 🔥 약점 → 문제 화면')
+C_UNTIL_JS = "(x) => { try { return !!(0, eval)(x); } catch (e) { return false; } }"
+
+
 def data_files():
     out = {}
     for f in DFILES:
@@ -437,7 +463,7 @@ def boot(sc, setup=None):
         pg.wait_for_function("() => typeof recBusy !== 'undefined' && !recBusy", timeout=60000, polling=250)
     except Exception:
         pass
-    pg.wait_for_timeout(SETTLE)
+    pg.wait_for_timeout(SETTLE) if QC.GATE else QC.sleep(SETTLE, '시동 뒤 안착 2초 — 첫 동기화(recBusy 풀림) 뒤 시안 도구와 같은 자리(앱 표지 없음 · 지시서 §C ready 순서)', pg)
     if setup:
         sc['setup'] = pg.evaluate("(s) => { try { (0, eval)(s); return true; } catch (e) { return 'ERR ' + e; } }", setup)
     sc['boot_sec'] = round(time.time() - t1, 1)
@@ -450,7 +476,7 @@ def idle(pg, extra=1500):
             pg.wait_for_function("() => typeof recBusy !== 'undefined' && !recBusy", timeout=60000, polling=250)
         except Exception:
             pass
-        pg.wait_for_timeout(extra)
+        pg.wait_for_timeout(extra) if QC.GATE else QC.sleep(extra, 'idle — 동기화(recBusy) 풀린 뒤 안착(늦게 붙는 render 의 표지 없음)', pg)
 
 
 def errs_of(sc):
@@ -486,15 +512,18 @@ def run_c(br, tag, src, data):
     S, out = {}, {'tests': [], 'shots': {}}
     t1 = time.time()
     try:
-        for sid, view, setup in SCREENS:
+        for sid, view, setup in (SCREENS if not QC.SMOKE else SCREENS[:1]):   # smoke — PC p1 화면 하나(C01)
+            QC.launch('new' if tag == 'NEW' else 'base')
             S[sid] = open_page(ctx, url, view, sid)
-        for sid, view, setup in SCREENS:
+        for sid, view, setup in (SCREENS if not QC.SMOKE else SCREENS[:1]):
             boot(S[sid], setup)
         out['boot'] = {sid: {'ready': S[sid].get('ready'), 'setup': S[sid].get('setup'), 'sec': S[sid].get('boot_sec')} for sid in S}
         # 「근거 (N)」 글자 vs 실제 memoCount() — 화면 넷이 저장소 하나를 같이 쓰므로 먼저 받은 쪽만 got=true 로 다시 그린다(한 탭 기기와 다름 · 적기만)
         out['label'] = {sid: S[sid]['pg'].evaluate(LABEL_JS) for sid in S}
         STEP.append(('%s 화면 넷 시동' % tag, round(time.time() - t1)))
-        if tag == 'NEW':
+        if QC.SMOKE:
+            pass   # smoke — 그림 안 찍음(화면 하나뿐)
+        elif tag == 'NEW':
             out['shots']['m1_home'] = shot(S['m1'], tag, 'phone_home')
             out['shots']['p1_home'] = shot(S['p1'], tag, 'pc_home')
             out['shots']['p2_drawer'] = shot(S['p2'], tag, 'pc_drawer_open')
@@ -503,6 +532,8 @@ def run_c(br, tag, src, data):
             out['shots']['p1_home'] = shot(S['p1'], tag, 'pc_home')
         t2 = time.time()
         for i, t in enumerate(TESTS, 1):
+            if not QC.want('C%02d' % i, smoke=(i == 1)):   # smoke — C01(PC 회독 칩 헷갈림 · 페이크 아이콘)만
+                continue
             sc = S[t['screen']]
             pg = sc['pg']
             t3 = time.time()
@@ -518,7 +549,12 @@ def run_c(br, tag, src, data):
                     pg.keyboard.type(t['text'], delay=30)
                     if t.get('enter'):
                         pg.keyboard.press('Enter')
-                pg.wait_for_timeout(t.get('wait', 1000))
+                if QC.GATE:
+                    pg.wait_for_timeout(t.get('wait', 1000))
+                elif t['name'] in C_UNTIL:   # regress(A-2) — 누름이 만드는 상태를 expect 식으로 기다림(앱이 그린 DOM = 표지 · 상한 = gate 대기 ms · 못 만나면 gate 와 같은 시간 뒤 아래 판정이 FAIL)
+                    QC.until(pg, C_UNTIL_JS, t.get('wait', 1000), 'C%02d expect 식(누름이 만든 상태)' % i, t['expect'])
+                else:
+                    QC.sleep(t.get('wait', 1000), 'C 시험 고정 대기 — 누름과 무관한 꼴 칸 · 식에 부수 효과 · 뒤에 읽는 개수(same) — 기다릴 표지 없음', pg)
                 ok = pg.evaluate("(x) => { try { return !!(0, eval)(x); } catch (e) { return 'ERR ' + e; } }", t['expect'])
             except Exception as ex:
                 ok = 'ERR ' + str(ex).strip().split('\n')[0][:160]
@@ -660,6 +696,7 @@ def run_b(br, tag, src, data):
         t1 = time.time()
         port = serve((tag, 'nolog'), src, data, with_rec=False)
         ctx = new_ctx(br, B2_SEED)
+        QC.launch('new' if tag == 'NEW' else 'base')
         sc = open_page(ctx, 'http://127.0.0.1:%d/minbeop/index.html' % port, 'pc', 'b2')
         try:
             boot(sc)
@@ -687,6 +724,7 @@ def run_b(br, tag, src, data):
         t1 = time.time()
         port = serve((tag, 'main'), src, data)
         ctx = new_ctx(br, B5_SEED)
+        QC.launch('new' if tag == 'NEW' else 'base')
         sc = open_page(ctx, 'http://127.0.0.1:%d/minbeop/index.html' % port, 'pc', 'b5')
         try:
             boot(sc)
@@ -731,7 +769,7 @@ def judge_c(n, b):
             T('C', '%02d+ %s — 목록 과목 카드 1 개(same %s)' % (t['i'], t['name'], t.get('same')), t.get('same') == 1, {'new': t.get('same'), 'base': bb and bb.get('same')})
             if bb:
                 Y('C', '%02d+ %s 목록 과목 카드 1 개' % (t['i'], t['name']), bb.get('same') == 1)
-    if len(n.get('tests', [])) != len(TESTS):
+    if QC.want('C-n') and len(n.get('tests', [])) != len(TESTS):
         T('C', '시험 수 = 지시서 %d' % len(TESTS), False, len(n.get('tests', [])))
 
 
@@ -781,13 +819,21 @@ def judge_b(sn, sb, n, b):
         tl_ok = (bool(x) and x['a']['t'].get('Q0001', {}).get('fake') is True and {'Q0002', 'Q0003'} <= set(x['a']['k'].get('Q0001') or [])
                  and 'Q0001' not in x['b']['k'] and x['b']['k'].get('Q0292') == ['Q0001'] and (x['b']['t'].get('Q0001') or {}).get('memo') is True)
         dk = lambda o, p: sorted(k for k in set(o) | set(p) if o.get(k) != p.get(k))
-        T('B3', '엑셀 불러오기(보충 → 덮어쓰기) — ox_q_memos · ox_q_logic 무변 · 태그 · 연결은 들어감' + (' · 태그 · 연결 = 바탕과 같음' if y else ''),
-          b3ok(x) and tl_ok and (not y or same_json(tl(x), tl(y))),
-          {'new': x and {'메모 바뀐 칸': dk(x['before']['m'], x['b']['m']) + dk(x['before']['m'], x['a']['m']), '논리 바뀐 칸': dk(x['before']['l'], x['b']['l']) + dk(x['before']['l'], x['a']['l']),
-                         '메모 수': len(x['before']['m']), '논리 수': len(x['before']['l']), **tl(x)},
-           'base': y and {'메모 바뀐 칸(보충 · 덮어쓰기)': [dk(y['before']['m'], y['a']['m']), dk(y['before']['m'], y['b']['m'])],
-                          '논리 바뀐 칸(보충 · 덮어쓰기)': [dk(y['before']['l'], y['a']['l']), dk(y['before']['l'], y['b']['l'])],
-                          '논리 수(시동 때 서버 문항 「논리」 열이 이미 넣음)': len(y['before']['l']), '태그·연결 같음': same_json(tl(x), tl(y)) if x else None}})
+        if QC.GATE:
+            T('B3', '엑셀 불러오기(보충 → 덮어쓰기) — ox_q_memos · ox_q_logic 무변 · 태그 · 연결은 들어감' + (' · 태그 · 연결 = 바탕과 같음' if y else ''),
+              b3ok(x) and tl_ok and (not y or same_json(tl(x), tl(y))),
+              {'new': x and {'메모 바뀐 칸': dk(x['before']['m'], x['b']['m']) + dk(x['before']['m'], x['a']['m']), '논리 바뀐 칸': dk(x['before']['l'], x['b']['l']) + dk(x['before']['l'], x['a']['l']),
+                             '메모 수': len(x['before']['m']), '논리 수': len(x['before']['l']), **tl(x)},
+               'base': y and {'메모 바뀐 칸(보충 · 덮어쓰기)': [dk(y['before']['m'], y['a']['m']), dk(y['before']['m'], y['b']['m'])],
+                              '논리 바뀐 칸(보충 · 덮어쓰기)': [dk(y['before']['l'], y['a']['l']), dk(y['before']['l'], y['b']['l'])],
+                              '논리 수(시동 때 서버 문항 「논리」 열이 이미 넣음)': len(y['before']['l']), '태그·연결 같음': same_json(tl(x), tl(y)) if x else None}})
+        else:   # regress — 바탕 e425f97 태그 · 연결 대신 기준 스냅샷(앞 인도판 새 판 tl(x)) · 새 판 조건(두 저장소 무변 · 태그 · 연결 들어감)은 그대로
+            tb = QC.base('B3/tl', tl(x))
+            T('B3', '엑셀 불러오기(보충 → 덮어쓰기) — ox_q_memos · ox_q_logic 무변 · 태그 · 연결은 들어감 · 태그 · 연결 = 바탕과 같음',
+              b3ok(x) and tl_ok and same_json(tl(x), tb),
+              {'new': x and {'메모 바뀐 칸': dk(x['before']['m'], x['b']['m']) + dk(x['before']['m'], x['a']['m']), '논리 바뀐 칸': dk(x['before']['l'], x['b']['l']) + dk(x['before']['l'], x['a']['l']),
+                             '메모 수': len(x['before']['m']), '논리 수': len(x['before']['l']), **tl(x)},
+               '태그·연결 = 기준': same_json(tl(x), tb) if x else None, '기준': QC.base_note('B3/tl')})
         if y:
             Y('B3', '엑셀 불러오기 두 저장소 무변', b3ok(y))
     if want('B4'):
@@ -800,8 +846,13 @@ def judge_b(sn, sb, n, b):
             return bool(x) and not x.get('err') and x['b']['got1'] == x['b']['want1'] and x['b']['got2'] == x['b']['want2']
 
         short = lambda v: v and {k: v.get(k) for k in ('rows', 'out', 'bad', 'rowsWithMemo', 'rowsWithLogic', 'iMemo', 'iLogic', 'hashA', 'err')}
-        T('B4', '엑셀 내보내기(두 저장소 빔) — 「메모」「논리」 열 남음 · 칸 = 원본 행 그대로(전 행)' + (' · 바탕과 aoa 같음' if y else ''),
-          b4a(x) and (not y or (x['hashA'] == y['hashA'] and x['cols'] == y['cols'])), {'new': short(x), 'base': short(y)})
+        if QC.GATE:
+            T('B4', '엑셀 내보내기(두 저장소 빔) — 「메모」「논리」 열 남음 · 칸 = 원본 행 그대로(전 행)' + (' · 바탕과 aoa 같음' if y else ''),
+              b4a(x) and (not y or (x['hashA'] == y['hashA'] and x['cols'] == y['cols'])), {'new': short(x), 'base': short(y)})
+        else:   # regress — 바탕 e425f97 aoa 대신 기준 스냅샷(앞 인도판 새 판 aoa 해시 · 열)
+            ab = QC.base('B4/aoa', [x.get('hashA'), x.get('cols')] if x else None)
+            T('B4', '엑셀 내보내기(두 저장소 빔) — 「메모」「논리」 열 남음 · 칸 = 원본 행 그대로(전 행) · 바탕과 aoa 같음',
+              b4a(x) and ab is not None and [x['hashA'], x['cols']] == ab, {'new': short(x), '기준 aoa': ab and ab[0], '기준': QC.base_note('B4/aoa')})
         if y:
             Y('B4', '엑셀 내보내기 두 저장소 빔(무변 칸)', b4a(y), True)
         T('B4', '엑셀 내보내기(두 저장소에 다른 글) — 「메모」「논리」 칸 = 원본 행(저장소 글 안 나감)', b4b(x), {'new': x and x.get('b'), 'base': y and y.get('b')})
@@ -810,18 +861,29 @@ def judge_b(sn, sb, n, b):
     if want('B5'):
         x, y = n.get('B5'), (b or {}).get('B5')
         nonvac = bool(x) and not x.get('err') and any(v['n'] for v in x['ls'].values()) and x['sr']['q:선의']['n'] > 0 and x['popup']['shown'] and x['use0'] and len(x['after']['refs']) == len(x['refs0']) - 1
-        T('B5', '근거 연결 검색(geunge) · 문제/근거 검색 · refTextOf · 팝업 근거 칸 · 쓰임 창 · 연결 끊기 — 바탕과 글자까지 같음' + ('' if y else '(바탕 안 돎)'),
-          nonvac and (not y or same_json(x, y)),
-          {'new': x and {'owner': x.get('owner'), 'target': x.get('target'), '찾기 수': x and {k: v['n'] for k, v in (x.get('ls') or {}).items()},
-                         '검색 수': x and {k: v['n'] for k, v in (x.get('sr') or {}).items()}, '끊기 전/뒤': [x.get('refs0'), (x.get('after') or {}).get('refs')]},
-           '바탕과 같음': (same_json(x, y) if (x and y) else None),
-           '다른 칸': (sorted(k for k in set(x) | set(y) if not same_json(x.get(k), y.get(k))) if (x and y) else None)})
+        if QC.GATE:
+            T('B5', '근거 연결 검색(geunge) · 문제/근거 검색 · refTextOf · 팝업 근거 칸 · 쓰임 창 · 연결 끊기 — 바탕과 글자까지 같음' + ('' if y else '(바탕 안 돎)'),
+              nonvac and (not y or same_json(x, y)),
+              {'new': x and {'owner': x.get('owner'), 'target': x.get('target'), '찾기 수': x and {k: v['n'] for k, v in (x.get('ls') or {}).items()},
+                             '검색 수': x and {k: v['n'] for k, v in (x.get('sr') or {}).items()}, '끊기 전/뒤': [x.get('refs0'), (x.get('after') or {}).get('refs')]},
+               '바탕과 같음': (same_json(x, y) if (x and y) else None),
+               '다른 칸': (sorted(k for k in set(x) | set(y) if not same_json(x.get(k), y.get(k))) if (x and y) else None)})
+        else:   # regress — 바탕 e425f97 글자 대신 기준 스냅샷(앞 인도판 새 판 결과 칸마다 md5) · 새 판 조건(nonvac)은 그대로
+            xk = {k: _rg_md5(v) for k, v in (x or {}).items()}
+            xb = QC.base('B5/keys', xk) or {}
+            T('B5', '근거 연결 검색(geunge) · 문제/근거 검색 · refTextOf · 팝업 근거 칸 · 쓰임 창 · 연결 끊기 — 바탕과 글자까지 같음',
+              nonvac and xk == xb,
+              {'new': x and {'owner': x.get('owner'), 'target': x.get('target'), '찾기 수': x and {k: v['n'] for k, v in (x.get('ls') or {}).items()},
+                             '검색 수': x and {k: v['n'] for k, v in (x.get('sr') or {}).items()}, '끊기 전/뒤': [x.get('refs0'), (x.get('after') or {}).get('refs')]},
+               '바탕과 같음': (xk == xb) if x else None, '기준': QC.base_note('B5/keys'),
+               '다른 칸': (sorted(k for k in set(xk) | set(xb) if xk.get(k) != xb.get(k)) if x else None)})
 
 
 def main():
     os.makedirs(TMPD, exist_ok=True)
     sn = app_src(NEW)
-    sb = None if NOBASE else app_src(BASE)
+    sb = None if NOBASE or not QC.GATE else app_src(BASE)   # regress · smoke — 바탕 e425f97 판을 안 푼다(헛잣대 YARD · 「바탕과 같음」 칸은 기준 스냅샷)
+    QC.sub('git:show-data', len(DFILES))   # 데이터 = studyplandata 고정 판(42664d8) 다섯 파일 읽기만 — 바탕 앱 풀기 아님
     data, miss = data_files()
     print('INFO | 새 판 md5(LF) %s · %s B · 바탕 %s md5(LF) %s · %s B · 데이터 studyplandata %s %s' % (
         md5lf(sn), len(sn.encode('utf-8')), BASE, sb and md5lf(sb), sb and len(sb.encode('utf-8')), DREV,
@@ -829,8 +891,10 @@ def main():
     if miss:
         print('데이터 없음 — studyplandata %s 의 %s 를 못 읽음(SPD_ROOT=%s · git fetch 뒤 다시)' % (DREV, miss, SPD), flush=True)
         return 3
-    if sb is None and not NOBASE:
+    if sb is None and not NOBASE and QC.GATE:
         print('INFO | 바탕 %s 를 못 읽음 — 헛잣대 없이 돎' % BASE, flush=True)
+    if QC.REGRESS:
+        print('INFO | %s — 바탕 %s 를 안 띄움(헛잣대 YARD 0) · 「바탕과 같음」 칸(B3 · B4 · B5 · CE) = 기준 스냅샷' % (QC.MODE, BASE), flush=True)
     R = {}
     with sync_playwright() as pw:
         br = pw.chromium.launch()
@@ -848,9 +912,11 @@ def main():
         judge_c(n.get('C', {}), b and b.get('C'))
     judge_b(sn, sb, n.get('B', {}), b and b.get('B'))
     base_msgs = {m for k, v in ERRS.items() if k.startswith('BASE') for m in v}
+    if QC.REGRESS:   # regress — 바탕 판을 안 띄웠다: 「바탕에도 나는 오류」 = 기준 스냅샷(앞 인도판 새 판 오류 글 · 포트 · @줄 뺀 꼴)
+        base_msgs = set(QC.base('CE/msgs', sorted({_rg_msg(m) for k, v in ERRS.items() if k.startswith('NEW') for m in v})))
     for k, v in ERRS.items():
         if k.startswith('NEW'):
-            own = [m for m in v if m not in base_msgs]
+            own = [m for m in v if (m if QC.GATE else _rg_msg(m)) not in base_msgs]
             T('CE', '%s 페이지 오류 0(pageerror · window error · unhandledrejection · 바탕에도 나는 것 %d)' % (k, len(v) - len(own)), not own, own[:5])
         else:
             N('CE', '%s 페이지 오류' % k, v[:5])

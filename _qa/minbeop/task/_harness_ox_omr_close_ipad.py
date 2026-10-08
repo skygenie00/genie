@@ -21,6 +21,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import difflib, hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 from playwright.sync_api import sync_playwright
@@ -203,6 +204,7 @@ class S:
 
 def session(eng, vpk, tag, src):
     w, h = VPS[vpk]
+    QC.launch('base' if tag == 'BASE' else 'new')
     srv, port = serve('%s_%s_%s' % (tag, eng, vpk), src)
     D = {'eng': eng, 'vp': vpk, 'tag': tag}
     t0 = time.time()
@@ -235,71 +237,75 @@ def session(eng, vpk, tag, src):
             R['slot'] = (s.js("__HZT.coords()") or {}).get(u1)
             R['wipe'] = s.wipe()
 
-            # ── S2 = D-2 : 같은 문항을 다시 연다(자리 있음 → view) → 위치 다시 지정 → 영역 지정 → 끌기 → 저장 → 닫기
-            R = D['S2'] = {}
-            R['book'] = s.open_book(u1)
-            R['tapRow'] = s.tap(s.js("u=>__HZT.row(u)", u1))
-            R['ready'] = s.until("m=>__HZT.ready(m)", 'view'); pg.wait_for_timeout(500)
-            R['open'] = s.state()
-            R['re'] = s.tap(s.btn('cd-re'))
-            R['rePick'] = s.until("m=>__HZT.ready(m)", 'pick'); pg.wait_for_timeout(300)
-            R['mds'] = s.mark_drag_save(200, 70)
-            R.update(s.close_and_measure(u1))
-            R['slot'] = (s.js("__HZT.coords()") or {}).get(u1)
-            R['wipe'] = s.wipe()
+            if QC.SMOKE:   # smoke — S1(★D-1 · 손가락 톡 한 번 → 영역 지정 → 저장 → 닫기 한 번)만 · 오류 · alert 만 적고 나머지 손짓(S2 · S3 · S5 · S5c · S4 · D-5)은 건넘
+                D['err'] = s.js("__HZT.errs()")
+                D['alerts'] = s.js("window.__ALERTS")
+            if not QC.SMOKE:
+                # ── S2 = D-2 : 같은 문항을 다시 연다(자리 있음 → view) → 위치 다시 지정 → 영역 지정 → 끌기 → 저장 → 닫기
+                R = D['S2'] = {}
+                R['book'] = s.open_book(u1)
+                R['tapRow'] = s.tap(s.js("u=>__HZT.row(u)", u1))
+                R['ready'] = s.until("m=>__HZT.ready(m)", 'view'); pg.wait_for_timeout(500)
+                R['open'] = s.state()
+                R['re'] = s.tap(s.btn('cd-re'))
+                R['rePick'] = s.until("m=>__HZT.ready(m)", 'pick'); pg.wait_for_timeout(300)
+                R['mds'] = s.mark_drag_save(200, 70)
+                R.update(s.close_and_measure(u1))
+                R['slot'] = (s.js("__HZT.coords()") or {}).get(u1)
+                R['wipe'] = s.wipe()
 
-            # ── S3 = D-3 : 정리OMR 줄을 200ms 안에 두 번 톡(책 창이 뷰어 위라 두 번째 톡도 그 줄에 닿는다) → 저장 → 닫기 한 번
-            R = D['S3'] = {}
-            R['book'] = s.open_book(u3)
-            p = s.js("u=>__HZT.row(u)", u3)
-            t0t = time.time()
-            R['tap1'] = s.tap(p); pg.wait_for_timeout(60); R['tap2'] = s.tap(p)
-            R['gapMs'] = round((time.time() - t0t) * 1000)
-            R['ready'] = s.until("m=>__HZT.ready(m)", 'pick'); pg.wait_for_timeout(1200)
-            R['open'] = s.state()
-            R['mds'] = s.mark_drag_save(150, 80)
-            R.update(s.close_and_measure(u3))
-            R['wipe'] = s.wipe()
+                # ── S3 = D-3 : 정리OMR 줄을 200ms 안에 두 번 톡(책 창이 뷰어 위라 두 번째 톡도 그 줄에 닿는다) → 저장 → 닫기 한 번
+                R = D['S3'] = {}
+                R['book'] = s.open_book(u3)
+                p = s.js("u=>__HZT.row(u)", u3)
+                t0t = time.time()
+                R['tap1'] = s.tap(p); pg.wait_for_timeout(60); R['tap2'] = s.tap(p)
+                R['gapMs'] = round((time.time() - t0t) * 1000)
+                R['ready'] = s.until("m=>__HZT.ready(m)", 'pick'); pg.wait_for_timeout(1200)
+                R['open'] = s.state()
+                R['mds'] = s.mark_drag_save(150, 80)
+                R.update(s.close_and_measure(u3))
+                R['wipe'] = s.wipe()
 
-            # ── S5 = §A-3 : 펜 톡(pointerType pen · 합성기가 60ms 뒤 click) + 진짜 click 을 70ms 뒤 → 뷰어 수 → 닫기 한 번
-            R = D['S5'] = {}
-            R['book'] = s.open_book(u3)
-            p = s.js("u=>__HZT.row(u)", u3)
-            R['pen'] = s.js("([x,y])=>__HZT.pen(x,y)", [p['cx'], p['cy']])
-            pg.wait_for_timeout(70)
-            R['tap'] = s.tap(p)
-            s.until("m=>__HZT.ready(m)", None, 8000); pg.wait_for_timeout(1500)
-            R['res'] = s.js("__HZT.penResult()")
-            R['open'] = s.state()
-            R.update(s.close_and_measure(u3))
-            R['wipe'] = s.wipe()
+                # ── S5 = §A-3 : 펜 톡(pointerType pen · 합성기가 60ms 뒤 click) + 진짜 click 을 70ms 뒤 → 뷰어 수 → 닫기 한 번
+                R = D['S5'] = {}
+                R['book'] = s.open_book(u3)
+                p = s.js("u=>__HZT.row(u)", u3)
+                R['pen'] = s.js("([x,y])=>__HZT.pen(x,y)", [p['cx'], p['cy']])
+                pg.wait_for_timeout(70)
+                R['tap'] = s.tap(p)
+                s.until("m=>__HZT.ready(m)", None, 8000); pg.wait_for_timeout(1500)
+                R['res'] = s.js("__HZT.penResult()")
+                R['open'] = s.state()
+                R.update(s.close_and_measure(u3))
+                R['wipe'] = s.wipe()
 
-            # ── S5c = 헛잣대 : 펜 톡만(진짜 click 없음 = 사파리가 click 을 취소한 경우) → 합성 click 하나 → 뷰어 한 장
-            R = D['S5c'] = {}
-            R['book'] = s.open_book(u3)
-            p = s.js("u=>__HZT.row(u)", u3)
-            R['pen'] = s.js("([x,y])=>__HZT.pen(x,y)", [p['cx'], p['cy']])
-            s.until("m=>__HZT.ready(m)", None, 8000); pg.wait_for_timeout(1500)
-            R['res'] = s.js("__HZT.penResult()")
-            R.update(s.close_and_measure(u3))
-            R['wipe'] = s.wipe()
+                # ── S5c = 헛잣대 : 펜 톡만(진짜 click 없음 = 사파리가 click 을 취소한 경우) → 합성 click 하나 → 뷰어 한 장
+                R = D['S5c'] = {}
+                R['book'] = s.open_book(u3)
+                p = s.js("u=>__HZT.row(u)", u3)
+                R['pen'] = s.js("([x,y])=>__HZT.pen(x,y)", [p['cx'], p['cy']])
+                s.until("m=>__HZT.ready(m)", None, 8000); pg.wait_for_timeout(1500)
+                R['res'] = s.js("__HZT.penResult()")
+                R.update(s.close_and_measure(u3))
+                R['wipe'] = s.wipe()
 
-            # ── S4 = D-4 : 📍 칩으로 연 뷰어도 D-1
-            R = D['S4'] = {}
-            R['pin'] = s.js("u=>__HZT.pin(u)", u2)
-            R['tapPin'] = s.tap(R['pin'])
-            R['ready'] = s.until("m=>__HZT.ready(m)", 'pick'); pg.wait_for_timeout(500)
-            R['open'] = s.state()
-            R['mds'] = s.mark_drag_save(140, 100)
-            R.update(s.close_and_measure(u2))
-            R['slot'] = (s.js("__HZT.coords()") or {}).get(u2)
-            R['wipe'] = s.wipe()
+                # ── S4 = D-4 : 📍 칩으로 연 뷰어도 D-1
+                R = D['S4'] = {}
+                R['pin'] = s.js("u=>__HZT.pin(u)", u2)
+                R['tapPin'] = s.tap(R['pin'])
+                R['ready'] = s.until("m=>__HZT.ready(m)", 'pick'); pg.wait_for_timeout(500)
+                R['open'] = s.state()
+                R['mds'] = s.mark_drag_save(140, 100)
+                R.update(s.close_and_measure(u2))
+                R['slot'] = (s.js("__HZT.coords()") or {}).get(u2)
+                R['wipe'] = s.wipe()
 
-            # ── D-5 : ox_q_coords 전후
-            D['co0'] = s.js("__HZT.co0()")
-            D['co1'] = s.js("__HZT.coords()")
-            D['err'] = s.js("__HZT.errs()")
-            D['alerts'] = s.js("window.__ALERTS")
+                # ── D-5 : ox_q_coords 전후
+                D['co0'] = s.js("__HZT.co0()")
+                D['co1'] = s.js("__HZT.coords()")
+                D['err'] = s.js("__HZT.errs()")
+                D['alerts'] = s.js("window.__ALERTS")
         except Exception as e:
             D['exc'] = str(e)[:600]
         D['pageerror'] = perr
@@ -313,22 +319,54 @@ def session(eng, vpk, tag, src):
     return D
 
 
+def smoke_report(RES, engines):
+    """smoke — A-0 smoke 칸 둘(★D-1 닫기 한 번에 0 · NEW JS 오류 0) · 칸 글은 gate 와 같게(같은 id) · 결과 파일도 gate 와 같은 자리"""
+    L = []
+    T = lambda n, c, i=None: L.append(('PASS' if c else 'FAIL') + ' | ' + n + ('' if c or i is None else ' | ' + json.dumps(i, ensure_ascii=False)[:700]))
+    g = lambda d, *ks: (lambda x: x)(__import__('functools').reduce(lambda a, k: (a or {}).get(k) if isinstance(a, dict) else None, ks, d))
+    ok_closed = lambda R: (g(R, 'after', 'wraps') == 0 and g(R, 'after', 'cdWrap') == 0 and g(R, 'after', 'quiz') is True
+                           and g(R, 'after', 'centerInWrap') is False)
+    for eng in engines:
+        for vpk in SMOKE_VPS:
+            n = RES.get('%s/%s/NEW' % (eng, vpk)) or {}
+            pre = '[%s %s] ' % (eng, vpk)
+            S1 = n.get('S1') or {}
+            T(pre + '★D-1 닫기 **한 번**에 뷰어 0 · #cd-wrap 0 · 문제풀이 화면 보임 · 가운데 점이 뷰어 밖(%s)' % g(S1, 'after', 'center'), ok_closed(S1), S1.get('after') if not n.get('exc') else n.get('exc'))
+            errs = (n.get('err') or []) + (n.get('pageerror') or []) + [e for e in (n.get('consoleError') or [])]
+            T(pre + 'NEW JS 오류 0 · alert %s' % n.get('alerts'), not errs, errs)
+    for l in L:
+        print('   ' + l)
+    p = sum(1 for l in L if l.startswith('PASS')); f = sum(1 for l in L if l.startswith('FAIL'))
+    print('\n합계  PASS %d · FAIL %d' % (p, f))
+    io.open(os.path.join(HERE, '_harness_ox_omr_close_ipad_result.txt'), 'w', encoding='utf-8').write('\n'.join(L) + '\n\n합계  PASS %d · FAIL %d\n' % (p, f))
+    sys.exit(0 if not f else 1)
+
+
+SMOKE_VPS = ['1024x768']   # smoke — 아이패드 가로 한 뷰포트
+
+
 def main():
     os.makedirs(WORK, exist_ok=True)
-    engines = [a for a in sys.argv[1:] if a in ('webkit', 'chromium')] or ['webkit', 'chromium']
-    tags = [a for a in sys.argv[1:] if a in ('BASE', 'NEW')] or ['BASE', 'NEW']
+    engines = [a for a in sys.argv[1:] if a in ('webkit', 'chromium')] or (['webkit', 'chromium'] if not QC.SMOKE else ['webkit'])   # smoke — WebKit(아이패드 터치 칸 · 규칙 57)만
+    tags = [a for a in sys.argv[1:] if a in ('BASE', 'NEW')] or (['BASE', 'NEW'] if QC.GATE else ['NEW'])   # regress — 바탕(007fde4) 세션 0
+    if QC.REGRESS:
+        tags = [t for t in tags if t != 'BASE']
     new = io.open(os.path.join(GENIE, REL), encoding='utf-8', newline='').read()
-    base = git('show', BASE_REV + ':' + REL).decode('utf-8')
+    if QC.GATE:
+        QC.sub('git:show-app')
+    base = git('show', BASE_REV + ':' + REL).decode('utf-8') if QC.GATE else None   # regress — 바탕 앱 풀기 0 · 「= BASE」 칸은 기준 스냅샷
     SRC = {'BASE': base, 'NEW': new}
     RES = {}
     for eng in engines:
-        for vpk in VPS:
+        for vpk in (VPS if not QC.SMOKE else SMOKE_VPS):
             for tag in tags:
                 k = '%s/%s/%s' % (eng, vpk, tag)
                 print('… %s' % k, flush=True)
                 RES[k] = session(eng, vpk, tag, SRC[tag])
                 print('   %.1fs%s' % (RES[k]['secs'], ('  EXC ' + RES[k]['exc']) if RES[k].get('exc') else ''), flush=True)
     json.dump(RES, io.open(os.path.join(WORK, 'raw.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    if QC.SMOKE:   # smoke — ★D-1 · NEW JS 오류 0 두 칸만 판정(소스 칸 · 다른 손짓 칸은 건넘)
+        return smoke_report(RES, engines)
 
     L = []
     T = lambda n, c, i=None: L.append(('PASS' if c else 'FAIL') + ' | ' + n + ('' if c or i is None else ' | ' + json.dumps(i, ensure_ascii=False)[:700]))
@@ -336,14 +374,21 @@ def main():
     g = lambda d, *ks: (lambda x: x)(__import__('functools').reduce(lambda a, k: (a or {}).get(k) if isinstance(a, dict) else None, ks, d))
 
     # ══ 소스 · 파일
-    bb, nb = base.encode('utf-8'), new.encode('utf-8')
-    T('착수 %s = 지시서 §바탕 (1,062,455 B · md5 b1926c8c…)' % BASE_REV, len(bb) == 1062455 and hashlib.md5(bb).hexdigest() == BASE_MD5,
-      [len(bb), hashlib.md5(bb).hexdigest()])
+    if QC.REGRESS:   # regress — 착수 md5(고정 옛 판 = 지시서 값)는 관문만
+        nb = new.encode('utf-8')
+    if QC.GATE:
+        bb, nb = base.encode('utf-8'), new.encode('utf-8')
+        T('착수 %s = 지시서 §바탕 (1,062,455 B · md5 b1926c8c…)' % BASE_REV, len(bb) == 1062455 and hashlib.md5(bb).hexdigest() == BASE_MD5,
+          [len(bb), hashlib.md5(bb).hexdigest()])
     T('NEW CRLF 0 · U+FFFD 0 (%d B · md5(LF) %s)' % (len(nb), hashlib.md5(nb).hexdigest()), b'\r\n' not in nb and '�' not in new)
-    ch = [l for l in git('status', '--porcelain').decode('utf-8').split('\n') if l.strip()]
-    T('genie 작업트리 바뀐 파일 = minbeop/index.html 하나 %s' % ch, ch == [' M ' + REL], ch)
-    sk = lambda s: re.search(r'const SYNC_KEYS = \[(.+?)\];', s, re.S).group(1)
-    T('SYNC_KEYS 줄 무변', sk(new) == sk(base))
+    if QC.REGRESS:   # regress — 작업트리 diff 는 관문만 · SYNC_KEYS 줄 = 기준 스냅샷(md5)
+        sk = lambda s: re.search(r'const SYNC_KEYS = \[(.+?)\];', s, re.S).group(1)
+        T('SYNC_KEYS 줄 무변', QC.same('SYNC_KEYS', hashlib.md5(sk(new).encode('utf-8')).hexdigest()[:16]), QC.base_note('SYNC_KEYS'))
+    if QC.GATE:
+        ch = [l for l in git('status', '--porcelain').decode('utf-8').split('\n') if l.strip()]
+        T('genie 작업트리 바뀐 파일 = minbeop/index.html 하나 %s' % ch, ch == [' M ' + REL], ch)
+        sk = lambda s: re.search(r'const SYNC_KEYS = \[(.+?)\];', s, re.S).group(1)
+        T('SYNC_KEYS 줄 무변', sk(new) == sk(base))
 
     def fn(s, name):
         """함수 본문 — 한 줄짜리면 그 줄, 여러 줄이면 머리에서 들여쓰기 두 칸 `  }` 줄까지"""
@@ -365,16 +410,25 @@ def main():
                 i += 1; out.append('<<' + m.group(1) + '>>'); continue
             out.append(L[i]); i += 1
         return out
-    ob, on = outside(base), outside(new)
-    ops = [o for o in difflib.SequenceMatcher(None, ob, on, autojunk=False).get_opcodes() if o[0] != 'equal']
-    blocks = ['\n'.join(on[o[3]:o[4]]) for o in ops]
-    okb = [o[0] == 'insert' and re.match(r'^\s*/\* ★ 2026-09-22 \(_task_ox_omr_close_ipad §B-[12]\).*?\*/\s*(var V_OPENING = false;)?\s*$', t, re.S) is not None
-           for o, t in zip(ops, blocks)]
-    T('§무접촉 — openViewer·closeViewer·bindDrag 밖에서 바뀐 것 = 이 판 주석 두 덩이 + `var V_OPENING = false;` 한 줄뿐 (덩이 %d · 나머지 %d줄 글자 그대로)'
-      % (len(ops), len(ob)), len(ops) == 2 and all(okb), [o[0] for o in ops] + blocks)
-    same = [nm for nm in ('async function saveRect(', 'function coords()', 'function saveCoords(', 'function docs()', 'async function mbOmrGo(',
-                          'function paint()', 'async function draw()', 'function refAdopt(', 'function assetIds(') if fn(new, nm) == fn(base, nm)]
-    T('저장 길 무접촉 — saveRect·coords·saveCoords·docs·mbOmrGo·paint·draw·refAdopt·assetIds 본문이 BASE 와 한 글자도 같다 (%d/9)' % len(same), len(same) == 9, same)
+    if QC.GATE:   # §무접촉 = 인도 판 diff 셈(바뀐 덩이 둘뿐) — 관문만
+        ob, on = outside(base), outside(new)
+        ops = [o for o in difflib.SequenceMatcher(None, ob, on, autojunk=False).get_opcodes() if o[0] != 'equal']
+        blocks = ['\n'.join(on[o[3]:o[4]]) for o in ops]
+        okb = [o[0] == 'insert' and re.match(r'^\s*/\* ★ 2026-09-22 \(_task_ox_omr_close_ipad §B-[12]\).*?\*/\s*(var V_OPENING = false;)?\s*$', t, re.S) is not None
+               for o, t in zip(ops, blocks)]
+        T('§무접촉 — openViewer·closeViewer·bindDrag 밖에서 바뀐 것 = 이 판 주석 두 덩이 + `var V_OPENING = false;` 한 줄뿐 (덩이 %d · 나머지 %d줄 글자 그대로)'
+          % (len(ops), len(ob)), len(ops) == 2 and all(okb), [o[0] for o in ops] + blocks)
+    if QC.REGRESS:   # regress — 저장 길 아홉 함수 몸통 = 기준 스냅샷(앞 인도판 · md5)
+        nine = ('async function saveRect(', 'function coords()', 'function saveCoords(', 'function docs()', 'async function mbOmrGo(',
+                'function paint()', 'async function draw()', 'function refAdopt(', 'function assetIds(')
+        now9 = [hashlib.md5(fn(new, nm).encode('utf-8')).hexdigest()[:16] for nm in nine]
+        base9 = QC.base('저장길9', now9)
+        same = [nm for nm, a, b_ in zip(nine, now9, base9) if a == b_]
+        T('저장 길 무접촉 — saveRect·coords·saveCoords·docs·mbOmrGo·paint·draw·refAdopt·assetIds 본문이 BASE 와 한 글자도 같다 (%d/9)' % len(same), len(same) == 9, [same, QC.base_note('저장길9')])
+    if QC.GATE:
+        same = [nm for nm in ('async function saveRect(', 'function coords()', 'function saveCoords(', 'function docs()', 'async function mbOmrGo(',
+                              'function paint()', 'async function draw()', 'function refAdopt(', 'function assetIds(') if fn(new, nm) == fn(base, nm)]
+        T('저장 길 무접촉 — saveRect·coords·saveCoords·docs·mbOmrGo·paint·draw·refAdopt·assetIds 본문이 BASE 와 한 글자도 같다 (%d/9)' % len(same), len(same) == 9, same)
     if 'function closeViewer() {\n' in new:
         ov, cv, bd = fn(new, 'async function openViewer('), fn(new, 'function closeViewer()'), fn(new, 'function bindDrag()')
         T('§B-1 openViewer 가 틀을 만들기 **바로 앞**에서 closeViewer() · 틀에 id `cd-wrap` · closeViewer 는 V 의 틀 + #cd-wrap 전부를 뗀다',
@@ -385,18 +439,24 @@ def main():
         T('§B-2 잠금 V_OPENING — 여는 중이면 돌아감 · 자산 목록 await 하나만 감싸 finally 에서 푼다 · 그 뒤 틀을 붙일 때까지 await 0개(끼어들 틈 없음)',
           ov.count('V_OPENING') == 3 and 'if (V_OPENING) return;' in ov and 'try { have = await assetIds(); } finally { V_OPENING = false; }' in ov
           and 'await' not in seg and new.count('V_OPENING') == 4, [ov.count('V_OPENING'), 'await' in seg])
-        T('§B-3 bindDrag 놓을 때 releasePointerCapture 명시(BASE 0회 → NEW 1회 · try 안) · 값·저장 줄 무변',
-          base.count('releasePointerCapture') == 0 and new.count('releasePointerCapture') == 1
-          and 'L.onpointerup = L.onpointercancel = function (e) {\n      try { L.releasePointerCapture(e.pointerId); } catch (_) { }' in bd
-          and bd.replace('function (e) {\n      try { L.releasePointerCapture(e.pointerId); } catch (_) { }   /* ★ §B-3 — 뗄 때 저절로 풀리는 것에만 기대지 않는다 */\n', 'function () {\n')
-          == fn(base, 'function bindDrag()'))
+        if QC.GATE:
+            T('§B-3 bindDrag 놓을 때 releasePointerCapture 명시(BASE 0회 → NEW 1회 · try 안) · 값·저장 줄 무변',
+              base.count('releasePointerCapture') == 0 and new.count('releasePointerCapture') == 1
+              and 'L.onpointerup = L.onpointercancel = function (e) {\n      try { L.releasePointerCapture(e.pointerId); } catch (_) { }' in bd
+              and bd.replace('function (e) {\n      try { L.releasePointerCapture(e.pointerId); } catch (_) { }   /* ★ §B-3 — 뗄 때 저절로 풀리는 것에만 기대지 않는다 */\n', 'function () {\n')
+              == fn(base, 'function bindDrag()'))
+        else:   # regress — 「BASE 0회」 몫(헛잣대)은 관문만 · 「값·저장 줄 무변」 = bindDrag 몸통 md5 기준 스냅샷
+            T('§B-3 bindDrag 놓을 때 releasePointerCapture 명시(BASE 0회 → NEW 1회 · try 안) · 값·저장 줄 무변',
+              new.count('releasePointerCapture') == 1
+              and 'L.onpointerup = L.onpointercancel = function (e) {\n      try { L.releasePointerCapture(e.pointerId); } catch (_) { }' in bd
+              and QC.same('§B-3.bindDrag', hashlib.md5(bd.encode('utf-8')).hexdigest()[:16]), QC.base_note('§B-3.bindDrag'))
     else:
         T('§B 고침이 아직 없다(바탕 판)', False)
 
     # ══ 세션마다
     rows = []
     for eng in engines:
-        for vpk in VPS:
+        for vpk in (VPS if not QC.SMOKE else SMOKE_VPS):
             n, b = RES.get('%s/%s/NEW' % (eng, vpk)) or {}, RES.get('%s/%s/BASE' % (eng, vpk)) or {}
             pre = '[%s %s] ' % (eng, vpk)
             for tag, d in (('BASE', b), ('NEW', n)):
@@ -467,6 +527,11 @@ def main():
                 T(pre + 'D-5 같은 손짓 → BASE·NEW 가 저장한 자리값(doc·쪽·r) 같다(S1 %s)' % pick(n, 'S1', u1),
                   pick(n, 'S1', u1) == pick(b, 'S1', u1) and pick(n, 'S2', u1) == pick(b, 'S2', u1) and pick(n, 'S4', u2) == pick(b, 'S4', u2),
                   [pick(n, 'S1', u1), pick(b, 'S1', u1), pick(n, 'S2', u1), pick(b, 'S2', u1), pick(n, 'S4', u2), pick(b, 'S4', u2)])
+            elif QC.REGRESS:   # regress — 「같은 손짓 → BASE·NEW 같은 자리값」 = 기준 스냅샷(앞 인도판의 S1 · S2 · S4 자리값)
+                pick = lambda d, sc, u: [(x.get('doc'), x.get('page'), x.get('r')) for x in (g(d, sc, 'slot') or [])]
+                pv = [pick(n, 'S1', u1), pick(n, 'S2', u1), pick(n, 'S4', u2)]
+                T(pre + 'D-5 같은 손짓 → BASE·NEW 가 저장한 자리값(doc·쪽·r) 같다(S1 %s)' % pick(n, 'S1', u1),
+                  QC.same(pre + 'D-5', pv), [pv, QC.base_note(pre + 'D-5')])
             errs = (n.get('err') or []) + (n.get('pageerror') or []) + [e for e in (n.get('consoleError') or [])]
             T(pre + 'NEW JS 오류 0 · alert %s' % n.get('alerts'), not errs, errs)
             if 'BASE' in tags:

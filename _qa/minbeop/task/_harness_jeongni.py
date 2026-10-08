@@ -17,6 +17,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import io, json, os, re, shutil, subprocess, sys, tempfile, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -115,7 +116,11 @@ def tally(lines, g):
 def main():
     os.makedirs(OUT, exist_ok=True)
     new = io.open(os.path.join(GENIE, REL.replace('/', os.sep)), encoding='utf-8', newline='').read()
-    head = git('show', 'HEAD:' + REL)
+    if QC.GATE:
+        QC.sub('git:show-app')
+        head = git('show', 'HEAD:' + REL)
+    else:
+        head = None   # regress — 바탕(HEAD) 앱 풀기·띄우기 0(사슬에선 HEAD = 새 판 · A-0 W3 뜻밖에 4) · VAL · G10 소스는 기준 스냅샷
     M = json.load(io.open(os.path.join(SP, 'minbeop', '문항마스터.json'), encoding='utf-8'))
     cen = census(M['rows'])
     print('§0 묶음 기준값(파이썬) : %s · 합 %d' % (json.dumps(cen, ensure_ascii=False), sum(v['groups'] for v in cen.values())))
@@ -138,6 +143,8 @@ def main():
     quiz.append(dict(base, id='Q9906', a='X', subChapter='1.1 민법의 법원(7판신설)', q='더미 지문 Q9906', exp='해설 Q9906', displayNo=6, probNum=6, source='변리사 23'))
     P = {'quiz': quiz, 'rows': rows, 'census': cen, 'censusTotal': sum(v['groups'] for v in cen.values()),
          'skip': [x for x in os.environ.get('HZ_SKIP', '').split(',') if x]}
+    if QC.SMOKE:   # smoke — G1(근거 목록) · G4(정리 창을 연다 — G5 의 앞 단계) · G5(정리 창) 만 · 끝의 「G9 헤드리스 오류 0」 은 LIST 밖이라 늘 돈다
+        P['skip'] = [g for g in GATES if g not in ('G1', 'G4', 'G5')]
     js = ''.join(io.open(os.path.join(HERE, f), encoding='utf-8').read() for f in JS_FILES)
     tests = '<script>\n' + js.replace('__P__', json.dumps(P, ensure_ascii=False).replace('</', '<\\/')) + '\n</script>\n'
     res = {}
@@ -145,7 +152,12 @@ def main():
     for tag, src in (('NEW', new), ('HEAD', head)):
         if only and tag != only:
             continue
+        if QC.REGRESS and tag == 'HEAD':   # regress — HEAD(바탕) 판은 헛잣대 몫(관문만) · 같은 입력 글자(VAL)는 기준 스냅샷과 맞댄다
+            continue
+        QC.launch('base' if tag == 'HEAD' else 'new')
         lines = build_and_run(tag, src, tests)
+        if QC.SMOKE and lines is not None:   # smoke — 앞 단계로만 돈 G4 줄은 판정에서 뺀다(smoke 칸 = G1 · G5 · G9 오류 0 · INFO)
+            lines = [x for x in lines if x.startswith(('INFO', 'VAL')) or gate_of(x) in ('G1', 'G5', 'G9')]
         res[tag] = lines
         print('=== %s 판 ===' % tag)
         if lines is None:
@@ -158,34 +170,77 @@ def main():
         print('  합계 PASS %d · FAIL %d' % (sum(1 for x in lines if x.startswith('PASS')), sum(1 for x in lines if x.startswith('FAIL'))))
         print()
 
-    print('=== 회귀 대조 — 같은 입력의 글자 (NEW vs HEAD) ===')
-    vals = {t: [x for x in (res.get(t) or []) if x.startswith('VAL | ')] for t in ('NEW', 'HEAD')}
-    rg = {}
-    for a, b in zip(vals['NEW'], vals['HEAD']):
-        name = a.split(' | ')[1]
-        ok = a == b and name == b.split(' | ')[1]
-        g = name.split('.')[0]
-        rg.setdefault(g, []).append(ok)
-        print('  %-24s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
-        if not ok:
-            io.open(os.path.join(OUT, 'val_%s_NEW.txt' % name), 'w', encoding='utf-8').write(a)
-            io.open(os.path.join(OUT, 'val_%s_HEAD.txt' % name), 'w', encoding='utf-8').write(b)
-    cnt_ok = len(vals['NEW']) == len(vals['HEAD']) and len(vals['NEW']) > 0
-    print('  VAL 줄 NEW %d · HEAD %d' % (len(vals['NEW']), len(vals['HEAD'])))
-    print()
+    if QC.SMOKE:   # smoke — G1 · G5 · G9(오류 0) 만 · 회귀 대조(VAL) · G10 소스 · 나머지 게이트 표는 건넌다
+        nf = res.get('NEW') is None or any(x.startswith('FAIL') for x in res['NEW'])
+        for g in ('G1', 'G5', 'G9'):
+            print('  %-4s NEW %-8s' % (g, tally(res.get('NEW'), g)))
+        print()
+        print('종합 : %s' % ('ALL PASS' if not nf else 'FAIL 있음'))
+        return 0 if not nf else 1
+    if QC.REGRESS:   # regress — 같은 입력의 글자(G1.l · G6)를 바탕(앞 인도판) 스냅샷과 맞댄다(줄마다 md5 · 길이)
+        import hashlib as _hl
+        print('=== 회귀 대조 — 같은 입력의 글자 (NEW vs 기준 스냅샷) ===')
+        vals = {'NEW': [x for x in (res.get('NEW') or []) if x.startswith('VAL | ')]}
+        rg = {}
+        for a in vals['NEW']:
+            name = a.split(' | ')[1]
+            ok = QC.same('VAL.' + name, [_hl.md5(a.encode('utf-8')).hexdigest()[:16], len(a)])
+            g = name.split('.')[0]
+            rg.setdefault(g, []).append(ok)
+            print('  %-24s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
+            if not ok:
+                io.open(os.path.join(OUT, 'val_%s_NEW.txt' % name), 'w', encoding='utf-8').write(a)
+        nb = QC.base('VAL.n', len(vals['NEW']))
+        cnt_ok = len(vals['NEW']) == nb and len(vals['NEW']) > 0
+        print('  VAL 줄 NEW %d · 기준 %d (%s)' % (len(vals['NEW']), nb, QC.base_note('VAL.n')))
+        print()
+    if QC.GATE:
+        print('=== 회귀 대조 — 같은 입력의 글자 (NEW vs HEAD) ===')
+        vals = {t: [x for x in (res.get(t) or []) if x.startswith('VAL | ')] for t in ('NEW', 'HEAD')}
+        rg = {}
+        for a, b in zip(vals['NEW'], vals['HEAD']):
+            name = a.split(' | ')[1]
+            ok = a == b and name == b.split(' | ')[1]
+            g = name.split('.')[0]
+            rg.setdefault(g, []).append(ok)
+            print('  %-24s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
+            if not ok:
+                io.open(os.path.join(OUT, 'val_%s_NEW.txt' % name), 'w', encoding='utf-8').write(a)
+                io.open(os.path.join(OUT, 'val_%s_HEAD.txt' % name), 'w', encoding='utf-8').write(b)
+        cnt_ok = len(vals['NEW']) == len(vals['HEAD']) and len(vals['NEW']) > 0
+        print('  VAL 줄 NEW %d · HEAD %d' % (len(vals['NEW']), len(vals['HEAD'])))
+        print()
 
-    print('=== G10 소스 (NEW vs HEAD) ===')
-    Ln, Lh = new.split('\n'), head.split('\n')
-    lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
-    chk = [("pastBadgeHtml 줄 그대로", [s for s in Ln if 'pastBadgeHtml' in s] == [s for s in Lh if 'pastBadgeHtml' in s]),
-           ('긴 줄(>3000자) 전부 글자까지 같다', [s for s in Ln if len(s) > 3000] == [s for s in Lh if len(s) > 3000]),
-           ('SheetJS 929줄 바이트 무변', len(Ln) > 928 and Ln[928] == Lh[928] and len(Ln[928]) > 60000),
-           ('SYNC_KEYS 무변', [s for s in Ln if 'const SYNC_KEYS = [' in s] == [s for s in Lh if 'const SYNC_KEYS = [' in s]),
-           ("새 저장소 키 0 (ox_* 글자 집합 같다)", lits(new) == lits(head))]
-    for name, ok in chk:
-        print('  %-36s %s' % (name, 'PASS' if ok else 'FAIL'))
-    if lits(new) != lits(head):
-        print('   더해진 키 %s · 빠진 키 %s' % (sorted(set(lits(new)) - set(lits(head))), sorted(set(lits(head)) - set(lits(new)))))
+    if QC.REGRESS:   # regress — NEW·HEAD 맞대던 다섯 칸은 기준 스냅샷(앞 인도판 · md5 · ox_* 글자 목록)과 · 929 줄 자리(옛 잣대 그대로)는 NEW 길이 조건 + 그 줄 md5
+        import hashlib as _hl
+        print('=== G10 소스 (NEW vs 기준 스냅샷) ===')
+        Ln = new.split('\n')
+        lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
+        md = lambda xs: _hl.md5('\n'.join(xs).encode('utf-8')).hexdigest()[:16]
+        lb = QC.base('G10.oxlits', lits(new))
+        chk = [("pastBadgeHtml 줄 그대로", QC.same('G10.pastBadgeHtml', md([s for s in Ln if 'pastBadgeHtml' in s]))),
+               ('긴 줄(>3000자) 전부 글자까지 같다', QC.same('G10.long', md([s for s in Ln if len(s) > 3000]))),
+               ('SheetJS 929줄 바이트 무변', len(Ln) > 928 and QC.same('G10.line929', md([Ln[928]])) and len(Ln[928]) > 60000),
+               ('SYNC_KEYS 무변', QC.same('G10.synckeys', md([s for s in Ln if 'const SYNC_KEYS = [' in s]))),
+               ("새 저장소 키 0 (ox_* 글자 집합 같다)", lits(new) == lb)]
+        for name, ok in chk:
+            print('  %-36s %s' % (name, 'PASS' if ok else 'FAIL'))
+        if lits(new) != lb:
+            print('   더해진 키 %s · 빠진 키 %s' % (sorted(set(lits(new)) - set(lb)), sorted(set(lb) - set(lits(new)))))
+        print('  (기준: %s)' % QC.base_note('G10.synckeys'))
+    if QC.GATE:
+        print('=== G10 소스 (NEW vs HEAD) ===')
+        Ln, Lh = new.split('\n'), head.split('\n')
+        lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
+        chk = [("pastBadgeHtml 줄 그대로", [s for s in Ln if 'pastBadgeHtml' in s] == [s for s in Lh if 'pastBadgeHtml' in s]),
+               ('긴 줄(>3000자) 전부 글자까지 같다', [s for s in Ln if len(s) > 3000] == [s for s in Lh if len(s) > 3000]),
+               ('SheetJS 929줄 바이트 무변', len(Ln) > 928 and Ln[928] == Lh[928] and len(Ln[928]) > 60000),
+               ('SYNC_KEYS 무변', [s for s in Ln if 'const SYNC_KEYS = [' in s] == [s for s in Lh if 'const SYNC_KEYS = [' in s]),
+               ("새 저장소 키 0 (ox_* 글자 집합 같다)", lits(new) == lits(head))]
+        for name, ok in chk:
+            print('  %-36s %s' % (name, 'PASS' if ok else 'FAIL'))
+        if lits(new) != lits(head):
+            print('   더해진 키 %s · 빠진 키 %s' % (sorted(set(lits(new)) - set(lits(head))), sorted(set(lits(head)) - set(lits(new)))))
     g10 = all(ok for _, ok in chk)
     print()
 

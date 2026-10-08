@@ -13,6 +13,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import http.server, socketserver, threading, subprocess, socket, json, base64, struct, urllib.request, urllib.parse
 import hashlib, io, os, re, shutil, sys, tempfile, time
 sys.stdout.reconfigure(encoding='utf-8')
@@ -143,6 +144,7 @@ READY = "typeof buildQuizData==='function'&&typeof renderQuizPage==='function'&&
 
 
 def run(tag, src):
+    QC.launch('base' if tag == 'HEAD' else 'new')
     ws, proc, srv = serve(tag, src)
     D = {}
     try:
@@ -165,15 +167,29 @@ def run(tag, src):
         except Exception:
             pass
         srv.shutdown()
-    time.sleep(1)
+    if QC.GATE:
+        time.sleep(1)
+    else:   # regress — 고정 1 초 대신 크롬 프로세스가 끝나기를 기다림(표지 = 프로세스 끝 · 길어야 10 초 · 다음 판이 없어 프로필 자리 다툼 없음)
+        try:
+            proc.wait(timeout=10)
+        except Exception:
+            pass
     return D
 
 
 def main():
+    if QC.SMOKE:   # smoke — 이 하네스엔 smoke 칸이 없다(A-0 처리표 · _task_qa_slim2) · 크롬을 띄우기 전에 끝낸다(결과 파일에도 그 줄)
+        print('INFO | smoke 칸 없음')
+        io.open(os.path.join(HERE, '_harness_ox_prev_case_ink_fix17_result.txt'), 'w', encoding='utf-8').write('INFO | smoke 칸 없음\n')
+        sys.exit(0)
     os.makedirs(WORK, exist_ok=True)
     new = io.open(os.path.join(GENIE, REL), encoding='utf-8', newline='').read()
-    head = git('show', BASE_REV + ':' + REL).decode('utf-8')
-    t0 = time.time(); H = run('HEAD', head); print('HEAD  %.1fs' % (time.time() - t0))
+    if QC.GATE:
+        QC.sub('git:show-app')
+        head = git('show', BASE_REV + ':' + REL).decode('utf-8')
+        t0 = time.time(); H = run('HEAD', head); print('HEAD  %.1fs' % (time.time() - t0))
+    else:   # regress — 바탕(a6f01d1 · 고정 옛 판) 앱 풀기 · 띄움 0 — 헛잣대 · 「두 판 같음」 몫은 관문만 · 기준 스냅샷
+        head, H = None, {}
     t0 = time.time(); N = run('NEW', new); print('NEW   %.1fs' % (time.time() - t0))
     json.dump({'HEAD': H, 'NEW': N}, io.open(os.path.join(WORK, 'raw.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 
@@ -183,27 +199,46 @@ def main():
     g = lambda d, k: (d.get(k) or {})
 
     # ══ 소스 · 파일
-    hb, nb = head.encode('utf-8'), new.encode('utf-8')
-    T('착수 %s = 지시서 §0 (1,051,722 B · e34c226b5010)' % BASE_REV,
-      len(hb) == 1051722 and hashlib.md5(hb).hexdigest() == 'e34c226b50100c06cce65aa57b52c77f', [len(hb), hashlib.md5(hb).hexdigest()])
+    if QC.REGRESS:   # regress — 착수 md5(고정 옛 판 = 지시서 값)는 관문만
+        nb = new.encode('utf-8')
+    if QC.GATE:
+        hb, nb = head.encode('utf-8'), new.encode('utf-8')
+        T('착수 %s = 지시서 §0 (1,051,722 B · e34c226b5010)' % BASE_REV,
+          len(hb) == 1051722 and hashlib.md5(hb).hexdigest() == 'e34c226b50100c06cce65aa57b52c77f', [len(hb), hashlib.md5(hb).hexdigest()])
     T('NEW CRLF 0 · U+FFFD 0 (%d B · md5(LF) %s)' % (len(nb), hashlib.md5(nb).hexdigest()), b'\r\n' not in nb and '\ufffd' not in new)
-    sk = lambda s: re.search(r'const SYNC_KEYS = \[(.+?)\];', s, re.S).group(1)
-    T('§E-6 SYNC_KEYS 줄 무변', sk(new) == sk(head))
-    ch = [l for l in git('status', '--porcelain').decode('utf-8').split('\n') if l.strip()]
-    T('§G genie 작업트리 바뀐 파일 = minbeop/index.html 하나 %s' % ch, ch == [' M ' + REL], ch)
-    T('§A 옛 줄(`if (allGraded) …exam-prev-bar…add(\'hide\')`)이 사라졌다',
-      "if (allGraded) document.getElementById('exam-prev-bar').classList.add('hide');" in head
-      and "if (allGraded) document.getElementById('exam-prev-bar').classList.add('hide');" not in new)
-    T('§A `exam-prev-bar` 를 만지는 자리 = 셋 다 `currentPageIndex === 0` (HEAD 는 add(hide) 하나 + toggle 둘)',
-      new.count("exam-prev-bar').classList.toggle('hide', currentPageIndex === 0)") == 3
-      and "exam-prev-bar').classList.add('hide')" not in new,
-      [new.count("exam-prev-bar').classList.toggle('hide', currentPageIndex === 0)"), head.count("exam-prev-bar').classList.toggle('hide', currentPageIndex === 0)")])
-    T('§A 오른쪽 알약 규칙(`hideBar`) 무접촉',
-      "const hideBar = !!allGraded && !!lastGradeResults;\n            document.getElementById('controls-container').classList.toggle('hide', hideBar);" in new)
-    T('§C 필기 열쇠 꼴은 `ink:q:` 그대로 — `qiKey` 무변 · 새 통·새 접두 0',
-      "function qiKey(uid) { return 'ink:q:' + uid; }" in new and new.count("'ink:q:'") == head.count("'ink:q:'"))
+    if QC.REGRESS:   # regress — SYNC_KEYS 줄 · ink:q: 수 = 기준 스냅샷 · 「옛 줄이 바탕에 있었다」 · HEAD 셈 · 작업트리 diff 는 관문만 · 나머지는 NEW 글자(gate 와 같은 식)
+        sk = lambda s: re.search(r'const SYNC_KEYS = \[(.+?)\];', s, re.S).group(1)
+        T('§E-6 SYNC_KEYS 줄 무변', QC.same('§E-6.synckeys', hashlib.md5(sk(new).encode('utf-8')).hexdigest()[:16]), QC.base_note('§E-6.synckeys'))
+        T('§A 옛 줄(`if (allGraded) …exam-prev-bar…add(\'hide\')`)이 사라졌다',
+          "if (allGraded) document.getElementById('exam-prev-bar').classList.add('hide');" not in new)
+        T('§A `exam-prev-bar` 를 만지는 자리 = 셋 다 `currentPageIndex === 0` (HEAD 는 add(hide) 하나 + toggle 둘)',
+          new.count("exam-prev-bar').classList.toggle('hide', currentPageIndex === 0)") == 3
+          and "exam-prev-bar').classList.add('hide')" not in new,
+          [new.count("exam-prev-bar').classList.toggle('hide', currentPageIndex === 0)")])
+        T('§A 오른쪽 알약 규칙(`hideBar`) 무접촉',
+          "const hideBar = !!allGraded && !!lastGradeResults;\n            document.getElementById('controls-container').classList.toggle('hide', hideBar);" in new)
+        T('§C 필기 열쇠 꼴은 `ink:q:` 그대로 — `qiKey` 무변 · 새 통·새 접두 0',
+          "function qiKey(uid) { return 'ink:q:' + uid; }" in new and QC.same('§C.inkq', new.count("'ink:q:'")), QC.base_note('§C.inkq'))
+    if QC.GATE:
+        sk = lambda s: re.search(r'const SYNC_KEYS = \[(.+?)\];', s, re.S).group(1)
+        T('§E-6 SYNC_KEYS 줄 무변', sk(new) == sk(head))
+        ch = [l for l in git('status', '--porcelain').decode('utf-8').split('\n') if l.strip()]
+        T('§G genie 작업트리 바뀐 파일 = minbeop/index.html 하나 %s' % ch, ch == [' M ' + REL], ch)
+        T('§A 옛 줄(`if (allGraded) …exam-prev-bar…add(\'hide\')`)이 사라졌다',
+          "if (allGraded) document.getElementById('exam-prev-bar').classList.add('hide');" in head
+          and "if (allGraded) document.getElementById('exam-prev-bar').classList.add('hide');" not in new)
+        T('§A `exam-prev-bar` 를 만지는 자리 = 셋 다 `currentPageIndex === 0` (HEAD 는 add(hide) 하나 + toggle 둘)',
+          new.count("exam-prev-bar').classList.toggle('hide', currentPageIndex === 0)") == 3
+          and "exam-prev-bar').classList.add('hide')" not in new,
+          [new.count("exam-prev-bar').classList.toggle('hide', currentPageIndex === 0)"), head.count("exam-prev-bar').classList.toggle('hide', currentPageIndex === 0)")])
+        T('§A 오른쪽 알약 규칙(`hideBar`) 무접촉',
+          "const hideBar = !!allGraded && !!lastGradeResults;\n            document.getElementById('controls-container').classList.toggle('hide', hideBar);" in new)
+        T('§C 필기 열쇠 꼴은 `ink:q:` 그대로 — `qiKey` 무변 · 새 통·새 접두 0',
+          "function qiKey(uid) { return 'ink:q:' + uid; }" in new and new.count("'ink:q:'") == head.count("'ink:q:'"))
 
     for tag, d in (('HEAD', H), ('NEW', N)):
+        if QC.REGRESS and tag == 'HEAD':   # regress — HEAD 판 부트 칸은 관문만(바탕 안 띄움)
+            continue
         s = g(d, 'setup')
         T('%s 부트 · 문항 %s · JS 오류 0' % (tag, s.get('q')), d.get('ready') is True and s.get('q') == 5548 and not d.get('err'),
           [d.get('ready'), s.get('q'), d.get('err'), s.get('__exc')])
@@ -212,58 +247,95 @@ def main():
     T('시험 단원 고름 — 3쪽짜리(41~60문항) %s개 · 「◀ 이전」용 %s(%s문항) · 사례용 %s'
       % (pk.get('three'), pk.get('prevUnit'), pk.get('n'), (pk.get('caseUnit') or {}).get('k')),
       pk.get('three', 0) >= 2 and pk.get('prevUnit') and (pk.get('caseUnit') or {}).get('uids'), pk)
-    T('두 판이 같은 단원·같은 사례 묶음을 골랐다(헛잣대가 같은 자리를 잰다)',
-      g(N, 'setup').get('pick') == g(H, 'setup').get('pick'), [g(N, 'setup').get('pick'), g(H, 'setup').get('pick')])
+    if QC.GATE:   # 헛잣대 정합(두 판이 같은 자리를 잰다) — 바탕을 띄울 때만 뜻
+        T('두 판이 같은 단원·같은 사례 묶음을 골랐다(헛잣대가 같은 자리를 잰다)',
+          g(N, 'setup').get('pick') == g(H, 'setup').get('pick'), [g(N, 'setup').get('pick'), g(H, 'setup').get('pick')])
 
     # ══ §E-1 「◀ 이전」
     an, ah = g(N, 'a_prev_normal'), g(H, 'a_prev_normal')
-    I('§E-1 일반 모드 NEW', an); I('§E-1 일반 모드 HEAD', ah)
+    I('§E-1 일반 모드 NEW', an)
+    if QC.GATE:
+        I('§E-1 일반 모드 HEAD', ah)
     T('E-1 일반 — 3쪽(%s문항)·1쪽 %s개 표시·2쪽 %s개 표시 · 두 쪽 다 채점됨' % (an.get('total'), an.get('marked0'), an.get('marked1')),
       an.get('pages') == 3 and an.get('marked0') == 20 and an.get('marked1') == 20 and an.get('allGraded1') is True, an)
     T('E-1 일반 — 첫 쪽은 채점 전에도 「◀ 이전」 없음', an.get('p0_prev_before') is False, an.get('p0_prev_before'))
-    T('E-1 일반 — 채점 전 2쪽에는 옛 판도 「◀ 이전」이 있었다(두 판 같음)',
-      an.get('p1_prev_ungraded') is True and ah.get('p1_prev_ungraded') is True, [an.get('p1_prev_ungraded'), ah.get('p1_prev_ungraded')])
+    if QC.GATE:
+        T('E-1 일반 — 채점 전 2쪽에는 옛 판도 「◀ 이전」이 있었다(두 판 같음)',
+          an.get('p1_prev_ungraded') is True and ah.get('p1_prev_ungraded') is True, [an.get('p1_prev_ungraded'), ah.get('p1_prev_ungraded')])
+    else:   # regress — 「옛 판도」 몫 = 기준 스냅샷(앞 인도판의 같은 값)
+        T('E-1 일반 — 채점 전 2쪽에는 옛 판도 「◀ 이전」이 있었다(두 판 같음)',
+          an.get('p1_prev_ungraded') is True and QC.same('E-1.p1_prev_ungraded', an.get('p1_prev_ungraded')), [an.get('p1_prev_ungraded'), QC.base_note('E-1.p1_prev_ungraded')])
     T('E-1 ★ 일반 — **채점한 2쪽**에 「◀ 이전」이 보이고 진짜 누름으로 눌린다(NEW)',
       an.get('p1_prev_graded') is True and an.get('p1_hit') == 'btn', [an.get('p1_prev_graded'), an.get('p1_hit')])
-    T('E-5 헛잣대 ① — 옛 판(%s)은 채점한 2쪽에 「◀ 이전」이 없다' % BASE_REV,
-      ah.get('p1_prev_graded') is False, [ah.get('p1_prev_graded'), ah.get('p1_hit')])
+    if QC.GATE:   # 헛잣대 ① — 관문만
+        T('E-5 헛잣대 ① — 옛 판(%s)은 채점한 2쪽에 「◀ 이전」이 없다' % BASE_REV,
+          ah.get('p1_prev_graded') is False, [ah.get('p1_prev_graded'), ah.get('p1_hit')])
     T('E-1 일반 — 눌러서 1쪽으로(idx %s→%s) · 1쪽은 채점된 모습(카드 %s · 고른 답 %s) · 1쪽엔 「◀ 이전」 없음'
       % (an.get('idx1b'), an.get('idx0'), an.get('p0_cards'), an.get('p0_checked')),
       an.get('idx0') == 0 and an.get('p0_prev_after') is False and an.get('p0_cards') == 20 and an.get('p0_checked') == 20, an)
-    T('E-1 일반 — 오른쪽 알약(`#controls-container`) 규칙 무접촉(두 판 같음 · %s)' % an.get('ctrl1'),
-      an.get('ctrl1') == ah.get('ctrl1'), [an.get('ctrl1'), ah.get('ctrl1')])
+    if QC.GATE:
+        T('E-1 일반 — 오른쪽 알약(`#controls-container`) 규칙 무접촉(두 판 같음 · %s)' % an.get('ctrl1'),
+          an.get('ctrl1') == ah.get('ctrl1'), [an.get('ctrl1'), ah.get('ctrl1')])
+    else:   # regress — 기준 스냅샷(앞 인도판의 같은 알약 상태)
+        T('E-1 일반 — 오른쪽 알약(`#controls-container`) 규칙 무접촉(두 판 같음 · %s)' % an.get('ctrl1'),
+          QC.same('E-1.ctrl1', an.get('ctrl1')), [an.get('ctrl1'), QC.base_note('E-1.ctrl1')])
 
     rn, rh = g(N, 'a_prev_resume'), g(H, 'a_prev_resume')
-    I('§E-1 이어풀기 복귀 NEW', rn); I('§E-1 이어풀기 복귀 HEAD', rh)
+    I('§E-1 이어풀기 복귀 NEW', rn)
+    if QC.GATE:
+        I('§E-1 이어풀기 복귀 HEAD', rh)
     T('E-1 이어풀기 — 같은 쪽(%s)에서 목록으로 나갔다 다시 들어와 %s쪽(채점 %s개)으로 복귀 · 그 쪽은 전부 채점됨'
       % (rn.get('leaveIdx'), rn.get('idx'), rn.get('marks')),
       rn.get('leaveIdx') == 1 and rn.get('idx') == 1 and rn.get('allGraded') is True, rn)
-    T('E-1 ★ 이어풀기 복귀 — 「◀ 이전」이 보이고 눌린다(NEW) / 옛 판은 없다(헛잣대)',
-      rn.get('prev') is True and rn.get('hit') == 'btn' and rh.get('prev') is False, [rn.get('prev'), rn.get('hit'), rh.get('prev')])
-    T('E-1 이어풀기 — 두 판의 복귀 자리·채점 수가 같다(다른 것은 「◀ 이전」뿐)',
-      rn.get('idx') == rh.get('idx') and rn.get('marks') == rh.get('marks') and rn.get('ctrl') == rh.get('ctrl'), [rn, rh])
+    if QC.GATE:
+        T('E-1 ★ 이어풀기 복귀 — 「◀ 이전」이 보이고 눌린다(NEW) / 옛 판은 없다(헛잣대)',
+          rn.get('prev') is True and rn.get('hit') == 'btn' and rh.get('prev') is False, [rn.get('prev'), rn.get('hit'), rh.get('prev')])
+        T('E-1 이어풀기 — 두 판의 복귀 자리·채점 수가 같다(다른 것은 「◀ 이전」뿐)',
+          rn.get('idx') == rh.get('idx') and rn.get('marks') == rh.get('marks') and rn.get('ctrl') == rh.get('ctrl'), [rn, rh])
+    else:   # regress — NEW 몫만(「옛 판은 없다」 헛잣대 몫은 관문만) · 「두 판 같음」 = 기준 스냅샷(복귀 자리 · 채점 수 · 알약)
+        T('E-1 ★ 이어풀기 복귀 — 「◀ 이전」이 보이고 눌린다(NEW) / 옛 판은 없다(헛잣대)',
+          rn.get('prev') is True and rn.get('hit') == 'btn', [rn.get('prev'), rn.get('hit')])
+        T('E-1 이어풀기 — 두 판의 복귀 자리·채점 수가 같다(다른 것은 「◀ 이전」뿐)',
+          QC.same('E-1.resume', [rn.get('idx'), rn.get('marks'), rn.get('ctrl')]), [rn, QC.base_note('E-1.resume')])
 
     en, eh = g(N, 'a_prev_exam'), g(H, 'a_prev_exam')
-    I('§E-1 기출 NEW', en); I('§E-1 기출 HEAD', eh)
+    I('§E-1 기출 NEW', en)
+    if QC.GATE:
+        I('§E-1 기출 HEAD', eh)
     T('E-1 기출 — %s년(문제 %s · 지문 %s) 2쪽에서 전체 채점 · 전부 채점됨' % (en.get('year'), en.get('nos'), en.get('total')),
       en.get('idx') == 1 and en.get('allGraded') is True and en.get('idxAfter') == 1, en)
-    T('E-1 ★ 기출 — 채점 뒤 그 쪽에 「◀ 이전」이 보이고 눌린다(NEW) / 옛 판은 없다(헛잣대)',
-      en.get('prev_after') is True and en.get('hit') == 'btn' and eh.get('prev_after') is False,
-      [en.get('prev_after'), en.get('hit'), eh.get('prev_after')])
-    T('E-1 기출 — 채점 전에는 두 판 다 보였다(바뀐 것은 채점 뒤뿐)',
-      en.get('prev_before') is True and eh.get('prev_before') is True, [en.get('prev_before'), eh.get('prev_before')])
+    if QC.GATE:
+        T('E-1 ★ 기출 — 채점 뒤 그 쪽에 「◀ 이전」이 보이고 눌린다(NEW) / 옛 판은 없다(헛잣대)',
+          en.get('prev_after') is True and en.get('hit') == 'btn' and eh.get('prev_after') is False,
+          [en.get('prev_after'), en.get('hit'), eh.get('prev_after')])
+        T('E-1 기출 — 채점 전에는 두 판 다 보였다(바뀐 것은 채점 뒤뿐)',
+          en.get('prev_before') is True and eh.get('prev_before') is True, [en.get('prev_before'), eh.get('prev_before')])
+    else:   # regress — NEW 몫만(「옛 판은 없다」는 관문만) · 「두 판 다 보였다」 = 기준 스냅샷
+        T('E-1 ★ 기출 — 채점 뒤 그 쪽에 「◀ 이전」이 보이고 눌린다(NEW) / 옛 판은 없다(헛잣대)',
+          en.get('prev_after') is True and en.get('hit') == 'btn',
+          [en.get('prev_after'), en.get('hit')])
+        T('E-1 기출 — 채점 전에는 두 판 다 보였다(바뀐 것은 채점 뒤뿐)',
+          en.get('prev_before') is True and QC.same('E-1.exam_prev_before', en.get('prev_before')), [en.get('prev_before'), QC.base_note('E-1.exam_prev_before')])
 
     # ══ §E-5 헛잣대 ②③
     pn, ph = g(N, 'probe23'), g(H, 'probe23')
-    I('헛잣대 probe NEW', pn); I('헛잣대 probe HEAD', ph)
-    T('E-5 헛잣대 ② — 옛 판 정정 패널은 칸 셋(%s) · 원문 칸·「가져오기」 없음' % ph.get('fields'),
-      ph.get('panel') is True and ph.get('fields') == ['fixq', 'fixexp'] and ph.get('hasC') is False and ph.get('hasPull') is False, ph)
-    T('E-5 헛잣대 ③ — 옛 판 [종합사례 원문] 상자(%s개)에 덮개 0 · `.case-box` 0' % ph.get('caseDivs'),
-      ph.get('caseDivs', 0) >= 1 and ph.get('boxes') == 0 and ph.get('caseInk') == 0, ph)
-    T('E-2·E-3 NEW — 같은 자리에 원문 칸(%s)·「가져오기」·`.case-box` %s개·상자 덮개 %s개'
-      % (pn.get('fields'), pn.get('boxes'), pn.get('caseInk')),
-      pn.get('fields') == ['fixq', 'fixexp', 'fixc'] and pn.get('hasC') is True
-      and pn.get('boxes', 0) >= 1 and pn.get('caseInk', 0) >= 1 and pn.get('caseDivs') == ph.get('caseDivs'), pn)
+    I('헛잣대 probe NEW', pn)
+    if QC.GATE:
+        I('헛잣대 probe HEAD', ph)
+    if QC.GATE:
+        T('E-5 헛잣대 ② — 옛 판 정정 패널은 칸 셋(%s) · 원문 칸·「가져오기」 없음' % ph.get('fields'),
+          ph.get('panel') is True and ph.get('fields') == ['fixq', 'fixexp'] and ph.get('hasC') is False and ph.get('hasPull') is False, ph)
+        T('E-5 헛잣대 ③ — 옛 판 [종합사례 원문] 상자(%s개)에 덮개 0 · `.case-box` 0' % ph.get('caseDivs'),
+          ph.get('caseDivs', 0) >= 1 and ph.get('boxes') == 0 and ph.get('caseInk') == 0, ph)
+        T('E-2·E-3 NEW — 같은 자리에 원문 칸(%s)·「가져오기」·`.case-box` %s개·상자 덮개 %s개'
+          % (pn.get('fields'), pn.get('boxes'), pn.get('caseInk')),
+          pn.get('fields') == ['fixq', 'fixexp', 'fixc'] and pn.get('hasC') is True
+          and pn.get('boxes', 0) >= 1 and pn.get('caseInk', 0) >= 1 and pn.get('caseDivs') == ph.get('caseDivs'), pn)
+    else:   # regress — 헛잣대 ②③ 은 관문만 · E-2·E-3 의 「원문 상자 수 = 바탕」 몫 = 기준 스냅샷
+        T('E-2·E-3 NEW — 같은 자리에 원문 칸(%s)·「가져오기」·`.case-box` %s개·상자 덮개 %s개'
+          % (pn.get('fields'), pn.get('boxes'), pn.get('caseInk')),
+          pn.get('fields') == ['fixq', 'fixexp', 'fixc'] and pn.get('hasC') is True
+          and pn.get('boxes', 0) >= 1 and pn.get('caseInk', 0) >= 1 and QC.same('E-2·E-3.caseDivs', pn.get('caseDivs')), [pn, QC.base_note('E-2·E-3.caseDivs')])
 
     # ══ §E-2 정정 패널
     bp = g(N, 'b_pull'); I('§E-2 ① 가져오기', bp)
@@ -332,15 +404,22 @@ def main():
       cc.get('before') == 1 and cc.get('dbBefore') == 1 and cc.get('mem') == 0 and cc.get('db') in ('gone', 0), cc)
     T('E-6 새 열쇠 꼴 = `ink:q:case:*` 뿐(새 통·새 키 0) — 새로 생긴 열쇠 %s' % cc.get('newKeys'),
       all(str(k).startswith('ink:q:') for k in (cc.get('newKeys') or [])), cc)
-    T('E-6 `SYNC_KEYS` 두 판 같음 · 시험 뒤에도 같음',
-      cc.get('syncKeys') == g(N, 'setup').get('syncKeys') == g(H, 'setup').get('syncKeys'),
-      [cc.get('syncKeys'), g(H, 'setup').get('syncKeys')])
+    if QC.GATE:
+        T('E-6 `SYNC_KEYS` 두 판 같음 · 시험 뒤에도 같음',
+          cc.get('syncKeys') == g(N, 'setup').get('syncKeys') == g(H, 'setup').get('syncKeys'),
+          [cc.get('syncKeys'), g(H, 'setup').get('syncKeys')])
+    else:   # regress — 「두 판 같음」 = 기준 스냅샷(앞 인도판의 SYNC_KEYS) · 「시험 뒤에도 같음」 은 NEW 그대로
+        T('E-6 `SYNC_KEYS` 두 판 같음 · 시험 뒤에도 같음',
+          cc.get('syncKeys') == g(N, 'setup').get('syncKeys') and QC.same('E-6.syncKeys', g(N, 'setup').get('syncKeys')),
+          [cc.get('syncKeys'), QC.base_note('E-6.syncKeys')])
     T('E-6 뒷정리 — `ox_q_fix` 를 시험 앞으로 되돌렸다', cc.get('fixRestored') is True, cc)
 
     mp = g(N, 'c_mark_probe')
     I('§C-3 「✏️ 표시」 모드에서 원문 글자의 형광펜·밑줄 — 재서 보고만(이번 판에서 만들지 않는다)', mp)
 
     for tag, d in (('HEAD', H), ('NEW', N)):
+        if QC.REGRESS and tag == 'HEAD':   # regress — HEAD 판 오류 칸은 관문만
+            continue
         T('%s JS 오류 0 · alert %s' % (tag, d.get('alerts')), not d.get('err'), d.get('err'))
 
     for l in L:

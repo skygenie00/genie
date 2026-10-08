@@ -9,10 +9,21 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+# --mode gate|regress|smoke (_task_qa_slim2 2026-10-08 · 인자 없으면 gate = 이 판 앞과 같음)
+#   regress = 칸 8 모두 「회귀」(처리표) — 시드 · 검사 글 · 띄움 한 번은 gate 와 같고 결과 html · 크롬 프로필만 %TEMP%\h_tt_yday(gate = 하네스 옆 N: h_yday)
+#   smoke   = 같은 한 번 띄움에서 Y2 · Y4(+ 예외 잡이 줄)만 찍는다
+#   N:(마이박스) 크롬 프로필을 TEMP 로 옮기는 까닭 — N: 프로필은 띄움마다 느리다: 9/17 tt 회귀(N: 결과 파일 시각) _harness_timetable 76 초 · tt_race 판마다 76~92 초 /
+#     10/6 use_count N: 프로필 --dump-dom 180 초 초과 되풀이 → 사용자 「해」로 TEMP(결정로그 10/6 21:36 · 22:0x) / 프로필이 TEMP 인 민법 dump-dom 하네스는 띄움당 9~14 초
+#     · 마이박스가 하네스 프로필 폴더 목록을 못 펼쳐 _qa_sync copy 10 분 멈춤 · 실행기 열쇠 셈 멈춤(결정로그 10/2 · 10/4)
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) A-1 · 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다
 import json, os, re, subprocess, sys
 
 SRC = _roots.genie(r"timetable\index.html")
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "h_yday")
+if QC.REGRESS:   # regress · smoke — 결과 html · 크롬 프로필을 N:(마이박스) 밖 로컬 임시 폴더로(A-2 · 까닭 = 머리 주석) · gate 는 이 판 앞 그대로
+    import tempfile as _rg_tf
+    OUT = os.path.join(_rg_tf.gettempdir(), 'h_tt_yday')
+else:
+    OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "h_yday")
 os.makedirs(OUT, exist_ok=True)
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 ANCHOR = "<script>\n/* ============================================================\n   타임테이블 v1"
@@ -80,6 +91,15 @@ const pre=document.createElement('pre');pre.textContent=R.join('\n');document.bo
 </script>"""
 
 
+_RG_SMOKE = ('Y2 ', 'Y4 ', '하네스가 죽었다')   # smoke — 처리표 smoke 칸(Y2 · Y4) + 예외 잡이 줄의 제목 앞머리
+
+
+def _rg_title(ln):
+    """결과 줄 「PASS | 제목 | 값」의 제목 — smoke 거름(smoke 칸 앞머리)"""
+    p = ln.split(' | ')
+    return p[1] if len(p) > 1 else ln
+
+
 def main():
     html = open(SRC, encoding='utf-8').read()
     assert ANCHOR in html, 'seed anchor not found'
@@ -89,6 +109,7 @@ def main():
     app = os.path.join(OUT, 'app.html')
     open(app, 'w', encoding='utf-8', newline='\n').write(html)
 
+    QC.launch('new')   # §B-4 셈 — 새 판 앱 띄움 1(바탕 띄움 없음)
     r = subprocess.run([CHROME, '--headless=new', '--disable-gpu', '--no-first-run',
                         '--user-data-dir=' + os.path.join(OUT, 'prof'),
                         '--allow-file-access-from-files', '--window-size=1280,900',
@@ -106,6 +127,8 @@ def main():
     if not lines:
         print('결과 줄 없음 — 부팅 사망? dom %d bytes → %s' % (len(dom), os.path.join(OUT, 'dom.html')))
         return 1
+    if QC.SMOKE:   # smoke — 처리표 smoke 칸(Y2 · Y4) + 예외 잡이 줄만 찍는다(같은 한 번 띄움 · 나머지 칸은 건넘)
+        lines = [ln for ln in lines if QC.want(_rg_title(ln), smoke=_rg_title(ln).startswith(_RG_SMOKE))]
     for ln in lines:
         print('   ' + ln)
     f = sum(1 for ln in lines if ln.startswith('FAIL'))

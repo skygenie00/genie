@@ -16,6 +16,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다
 import io, json, os, re, shutil, subprocess, sys, tempfile, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -79,6 +80,13 @@ def tally(lines, g):
     return '%dP/%dF' % (p, len(ls_) - p)
 
 
+def _rg_md5(v):
+    """qa_slim2 regress — 기준 칸 값 줄이기(글 · 줄 묶음 · 함수 덩이 → md5) · gate 에서 안 쓴다"""
+    import hashlib
+    s = v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, sort_keys=True, default=str)
+    return hashlib.md5(s.encode('utf-8')).hexdigest()
+
+
 def fn_lines(L, sig):
     idx = [i for i, s in enumerate(L) if len(s) < 3000 and sig in s]
     if len(idx) != 1:
@@ -108,7 +116,9 @@ def show(tag, lines):
 def main():
     os.makedirs(OUT, exist_ok=True)
     new = io.open(os.path.join(GENIE, REL.replace('/', os.sep)), encoding='utf-8', newline='').read()
-    head = git('show', 'HEAD:' + REL)
+    if QC.GATE:
+        QC.sub('git:show-app')
+    head = git('show', 'HEAD:' + REL) if QC.GATE else None   # regress · smoke — 바탕(HEAD) 판을 안 푼다(헛잣대 · 사슬에선 HEAD = 새 판)
     print('HEAD %s' % git('log', '-1', '--format=%h %s').strip())
     base = {'subject': '민법총칙', 'chapter': '1. 총칙', 'subChapter': '1.1 민법의 법원', 'subNum': '', 'examMeta': [],
             'caseText': '', 'stem': '', 'status': '', 'excelLogic': '', 'panrye': '', 'source': '변리사 20'}
@@ -127,73 +137,124 @@ def main():
                              examMeta=[{'year': '2016', 'round': '53', 'no': no, 'opt': opt}], examNo=no, examOpt=opt, examNoBase=no, examOptBase=opt,
                              stem='%d. 다음 설명 중 옳은 것은?' % no))
     P = {'quiz': quiz, 'skip': [x for x in os.environ.get('HZ_SKIP', '').split(',') if x], 'phase': ''}
+    if QC.SMOKE:   # smoke(A-4) — G1(#qcards 폭 · 지문 줄바꿈) 갈래만 + 끝의 「G10 페이지 오류 0」(갈래 밖 · 늘 찍힘) — G8 을 건너므로 NEW2(다시 연 판)도 안 띄운다
+        P['skip'] = sorted(set(P['skip']) | {'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G10'})
     js = ''.join(io.open(os.path.join(HERE, f), encoding='utf-8').read() for f in JS_FILES)
     mk = lambda PP: '<script>\n' + js.replace('__P__', json.dumps(PP, ensure_ascii=False).replace('</', '<\\/')) + '\n</script>\n'
     tests, tests_reload = mk(P), mk(dict(P, phase='reload'))
     res = {}
     only = os.environ.get('HZ_ONLY')
-    for tag, src in (('NEW', new), ('HEAD', head)):
+    for tag, src in ((('NEW', new), ('HEAD', head)) if QC.GATE else (('NEW', new),)):   # regress · smoke — 새 판만(NEW2 = 같은 새 판을 다시 연 판 · G8)
         if only and tag != only:
             continue
+        QC.launch('new' if tag == 'NEW' else 'base')
         lines = build_and_run(tag, src, tests)
         show(tag, lines)
         if tag == 'NEW' and lines is not None and 'G8' not in P['skip']:
+            QC.launch('new')
             l2 = build_and_run('NEW2', new, tests_reload, prof_of='NEW')
             show('NEW2(같은 프로필로 다시 연 판)', l2)
             lines = lines + (l2 if l2 is not None else ['FAIL | G8 다시 연 판 결과 줄 없음'])
         res[tag] = lines
 
-    print('=== 회귀 대조 — 같은 입력의 글자 (NEW vs HEAD) ===')
-    vals = {t: [x for x in (res.get(t) or []) if x.startswith('VAL | ')] for t in ('NEW', 'HEAD')}
-    rg = {}
-    for a, b in zip(vals['NEW'], vals['HEAD']):
-        name = a.split(' | ')[1]
-        ok = a == b and name == b.split(' | ')[1]
-        rg.setdefault(name.split('.')[0], []).append(ok)
-        print('  %-28s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
-        if not ok:
-            io.open(os.path.join(OUT, 'val_%s_NEW.txt' % name), 'w', encoding='utf-8').write(a)
-            io.open(os.path.join(OUT, 'val_%s_HEAD.txt' % name), 'w', encoding='utf-8').write(b)
-    cnt_ok = len(vals['NEW']) == len(vals['HEAD']) and len(vals['NEW']) > 0
-    print('  VAL 줄 NEW %d · HEAD %d' % (len(vals['NEW']), len(vals['HEAD'])))
-    print()
+    if QC.SMOKE:   # smoke — VAL 대조 · SRC 소스는 smoke 칸 아님(건넘)
+        rg, cnt_ok, g_src = {}, True, True
+    elif QC.GATE:
+        print('=== 회귀 대조 — 같은 입력의 글자 (NEW vs HEAD) ===')
+        vals = {t: [x for x in (res.get(t) or []) if x.startswith('VAL | ')] for t in ('NEW', 'HEAD')}
+        rg = {}
+        for a, b in zip(vals['NEW'], vals['HEAD']):
+            name = a.split(' | ')[1]
+            ok = a == b and name == b.split(' | ')[1]
+            rg.setdefault(name.split('.')[0], []).append(ok)
+            print('  %-28s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
+            if not ok:
+                io.open(os.path.join(OUT, 'val_%s_NEW.txt' % name), 'w', encoding='utf-8').write(a)
+                io.open(os.path.join(OUT, 'val_%s_HEAD.txt' % name), 'w', encoding='utf-8').write(b)
+        cnt_ok = len(vals['NEW']) == len(vals['HEAD']) and len(vals['NEW']) > 0
+        print('  VAL 줄 NEW %d · HEAD %d' % (len(vals['NEW']), len(vals['HEAD'])))
+        print()
 
-    print('=== SRC 소스 대조 (NEW vs HEAD · 지시서 §D 손대지 않는 것) ===')
-    Ln, Lh = new.split('\n'), head.split('\n')
-    lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
-    keep = ['function markHTML(', 'function renderMarked(', 'function applyMark(', 'function onSelectMaybe(', 'function offsetsInNode(',
-            'function loadMarks(', 'function saveMarks(', 'function normalizeMarks(', 'function openJeongni(', 'function jnMarksToggle(', 'function jnRowHTML(',
-            'function jnBodyHTML(', 'async function syncRecords(', 'function stampAll(', 'async function dbGet(', 'async function dbPut(', 'function dbOpen(',
-            'function toggleTag(', 'function togglePeekExp(', 'function oxPaint(', 'function ggLineHTML(', 'function gradeCurrentPage(']
-    keep_have = [s for s in keep if fn_lines(Lh, s) is not None]
-    keep_diff = [s for s in keep_have if fn_lines(Ln, s) != fn_lines(Lh, s)]
-    print('  (대조한 함수 %d · HEAD 에 한 곳으로 없어 뺀 것 %s)' % (len(keep_have), [s for s in keep if s not in keep_have] or '없음'))
-    mbb = sorted(set(re.findall(r'^\s*(?:async\s+)?function (mbb?[A-Z][A-Za-z0-9_]*)\s*\(', head, re.M)))
-    mbb_diff = [f for f in mbb if fn_lines(Ln, 'function %s(' % f) != fn_lines(Lh, 'function %s(' % f)]
-    bi = new.find('★ 09-15 (_task_ox_ink) 문제풀이 필기')
-    be = new.find('// --- 태그 (체크) 토글 기능 ---', bi)
-    blk = new[bi:be] if bi >= 0 and be > bi else ''
-    rq, rqh = fn_lines(Ln, 'function renderQuizPage() {'), fn_lines(Lh, 'function renderQuizPage() {')
-    rq_d = sorted(set(rq or []) ^ set(rqh or []))
-    chk = [('긴 줄(>3000자) 전부 글자까지 같다', [s for s in Ln if len(s) > 3000] == [s for s in Lh if len(s) > 3000]),
-           ('SheetJS 줄(가장 긴 줄) 바이트 무변', max(Ln, key=len) == max(Lh, key=len) and len(max(Ln, key=len)) > 60000),
-           ('SYNC_KEYS 무변', [s for s in Ln if 'const SYNC_KEYS = [' in s] == [s for s in Lh if 'const SYNC_KEYS = [' in s]),
-           ('ox_* 글자 집합 같다(새 저장소 키 0 · 필기는 SYNC 밖)', lits(new) == lits(head)),
-           ('형광펜·정리 창·동기화·IndexedDB 손잡이·카드 조각 함수 %d개 무변 %s' % (len(keep_have), keep_diff or ''), not keep_diff and len(keep_have) >= 18),
-           ('교재뷰 mbBook*·mbb* 함수 %d개 무변 %s' % (len(mbb), mbb_diff or ''), not mbb_diff and len(mbb) > 5),
-           ('renderQuizPage 바뀐 줄 = 지문·해설 <p> 둘 · 묶음 한 줄 · qiAfterRender 한 줄(옛 3줄 ↔ 새 4줄)', len(rq_d) == 7 and sum(1 for s in rq_d if 'qiAfterRender(pageData)' in s or 'id=\\"qcards\\"' in s or 'id="qcards"' in s) == 2),
-           ('필기 덩이 안 localStorage. 0 · ink:q: 키 · dbDel 정의 하나', bool(blk) and 'localStorage.' not in blk and "'ink:q:'" in blk and new.count('async function dbDel(') == 1)]
-    for name, ok in chk:
-        print('  %-64s %s' % (name, 'PASS' if ok else 'FAIL'))
-    if len(rq_d) != 7:
-        for s in rq_d:
-            print('     ± ' + s.strip()[:200])
-    g_src = all(ok for _, ok in chk)
-    print()
+        print('=== SRC 소스 대조 (NEW vs HEAD · 지시서 §D 손대지 않는 것) ===')
+        Ln, Lh = new.split('\n'), head.split('\n')
+        lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
+        keep = ['function markHTML(', 'function renderMarked(', 'function applyMark(', 'function onSelectMaybe(', 'function offsetsInNode(',
+                'function loadMarks(', 'function saveMarks(', 'function normalizeMarks(', 'function openJeongni(', 'function jnMarksToggle(', 'function jnRowHTML(',
+                'function jnBodyHTML(', 'async function syncRecords(', 'function stampAll(', 'async function dbGet(', 'async function dbPut(', 'function dbOpen(',
+                'function toggleTag(', 'function togglePeekExp(', 'function oxPaint(', 'function ggLineHTML(', 'function gradeCurrentPage(']
+        keep_have = [s for s in keep if fn_lines(Lh, s) is not None]
+        keep_diff = [s for s in keep_have if fn_lines(Ln, s) != fn_lines(Lh, s)]
+        print('  (대조한 함수 %d · HEAD 에 한 곳으로 없어 뺀 것 %s)' % (len(keep_have), [s for s in keep if s not in keep_have] or '없음'))
+        mbb = sorted(set(re.findall(r'^\s*(?:async\s+)?function (mbb?[A-Z][A-Za-z0-9_]*)\s*\(', head, re.M)))
+        mbb_diff = [f for f in mbb if fn_lines(Ln, 'function %s(' % f) != fn_lines(Lh, 'function %s(' % f)]
+        bi = new.find('★ 09-15 (_task_ox_ink) 문제풀이 필기')
+        be = new.find('// --- 태그 (체크) 토글 기능 ---', bi)
+        blk = new[bi:be] if bi >= 0 and be > bi else ''
+        rq, rqh = fn_lines(Ln, 'function renderQuizPage() {'), fn_lines(Lh, 'function renderQuizPage() {')
+        rq_d = sorted(set(rq or []) ^ set(rqh or []))
+        chk = [('긴 줄(>3000자) 전부 글자까지 같다', [s for s in Ln if len(s) > 3000] == [s for s in Lh if len(s) > 3000]),
+               ('SheetJS 줄(가장 긴 줄) 바이트 무변', max(Ln, key=len) == max(Lh, key=len) and len(max(Ln, key=len)) > 60000),
+               ('SYNC_KEYS 무변', [s for s in Ln if 'const SYNC_KEYS = [' in s] == [s for s in Lh if 'const SYNC_KEYS = [' in s]),
+               ('ox_* 글자 집합 같다(새 저장소 키 0 · 필기는 SYNC 밖)', lits(new) == lits(head)),
+               ('형광펜·정리 창·동기화·IndexedDB 손잡이·카드 조각 함수 %d개 무변 %s' % (len(keep_have), keep_diff or ''), not keep_diff and len(keep_have) >= 18),
+               ('교재뷰 mbBook*·mbb* 함수 %d개 무변 %s' % (len(mbb), mbb_diff or ''), not mbb_diff and len(mbb) > 5),
+               ('renderQuizPage 바뀐 줄 = 지문·해설 <p> 둘 · 묶음 한 줄 · qiAfterRender 한 줄(옛 3줄 ↔ 새 4줄)', len(rq_d) == 7 and sum(1 for s in rq_d if 'qiAfterRender(pageData)' in s or 'id=\\"qcards\\"' in s or 'id="qcards"' in s) == 2),
+               ('필기 덩이 안 localStorage. 0 · ink:q: 키 · dbDel 정의 하나', bool(blk) and 'localStorage.' not in blk and "'ink:q:'" in blk and new.count('async function dbDel(') == 1)]
+        for name, ok in chk:
+            print('  %-64s %s' % (name, 'PASS' if ok else 'FAIL'))
+        if len(rq_d) != 7:
+            for s in rq_d:
+                print('     ± ' + s.strip()[:200])
+        g_src = all(ok for _, ok in chk)
+        print()
+    else:   # regress — 바탕(HEAD) 판을 안 띄운다: VAL 글자 · 소스 줄 묶음 · 함수 덩이를 기준 스냅샷(앞 인도판 새 판 md5)과 맞댄다 · 「renderQuizPage 바뀐 줄 = 7」 은 인도 판 diff 셈이라 관문만(뺌)
+        print('=== 회귀 대조 — 같은 입력의 글자 (NEW vs 기준 스냅샷) ===')
+        vals = {'NEW': [x for x in (res.get('NEW') or []) if x.startswith('VAL | ')]}
+        rg = {}
+        for a in vals['NEW']:
+            name = a.split(' | ')[1]
+            ok = QC.same('VAL/' + name, _rg_md5(a))
+            rg.setdefault(name.split('.')[0], []).append(ok)
+            print('  %-28s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
+            if not ok:
+                io.open(os.path.join(OUT, 'val_%s_NEW.txt' % name), 'w', encoding='utf-8').write(a)
+        nb = QC.base('VAL/n', len(vals['NEW']))
+        cnt_ok = len(vals['NEW']) == nb and len(vals['NEW']) > 0
+        print('  VAL 줄 NEW %d · 기준 %s(%s)' % (len(vals['NEW']), nb, QC.base_note('VAL/n')))
+        print()
+
+        print('=== SRC 소스 대조 (NEW vs 기준 스냅샷 · 지시서 §D 손대지 않는 것) ===')
+        Ln = new.split('\n')
+        lits = lambda t: sorted(set(re.findall(r"""['"`](ox_[a-z0-9_]+)['"`]""", t)))
+        keep = ['function markHTML(', 'function renderMarked(', 'function applyMark(', 'function onSelectMaybe(', 'function offsetsInNode(',
+                'function loadMarks(', 'function saveMarks(', 'function normalizeMarks(', 'function openJeongni(', 'function jnMarksToggle(', 'function jnRowHTML(',
+                'function jnBodyHTML(', 'async function syncRecords(', 'function stampAll(', 'async function dbGet(', 'async function dbPut(', 'function dbOpen(',
+                'function toggleTag(', 'function togglePeekExp(', 'function oxPaint(', 'function ggLineHTML(', 'function gradeCurrentPage(']
+        kb = QC.base('SRC/keep', {s: _rg_md5(fn_lines(Ln, s)) for s in keep if fn_lines(Ln, s) is not None})   # 기준 = 앞 인도판 새 판에서 한 곳으로 찾은 함수 → 덩이 md5
+        keep_have = [s for s in keep if s in kb]
+        keep_diff = [s for s in keep_have if _rg_md5(fn_lines(Ln, s)) != kb[s]]
+        print('  (대조한 함수 %d · 기준에 한 곳으로 없어 뺀 것 %s · %s)' % (len(keep_have), [s for s in keep if s not in keep_have] or '없음', QC.base_note('SRC/keep')))
+        mb = QC.base('SRC/mbb', {f: _rg_md5(fn_lines(Ln, 'function %s(' % f)) for f in sorted(set(re.findall(r'^\s*(?:async\s+)?function (mbb?[A-Z][A-Za-z0-9_]*)\s*\(', new, re.M)))})
+        mbb = sorted(mb)
+        mbb_diff = [f for f in mbb if _rg_md5(fn_lines(Ln, 'function %s(' % f)) != mb[f]]
+        bi = new.find('★ 09-15 (_task_ox_ink) 문제풀이 필기')
+        be = new.find('// --- 태그 (체크) 토글 기능 ---', bi)
+        blk = new[bi:be] if bi >= 0 and be > bi else ''
+        chk = [('긴 줄(>3000자) 전부 글자까지 같다', QC.same('SRC/long', _rg_md5([s for s in Ln if len(s) > 3000]))),
+               ('SheetJS 줄(가장 긴 줄) 바이트 무변', QC.same('SRC/sheetjs', _rg_md5(max(Ln, key=len))) and len(max(Ln, key=len)) > 60000),
+               ('SYNC_KEYS 무변', QC.same('SRC/SYNC_KEYS', _rg_md5([s for s in Ln if 'const SYNC_KEYS = [' in s]))),
+               ('ox_* 글자 집합 같다(새 저장소 키 0 · 필기는 SYNC 밖)', QC.same('SRC/ox_lits', lits(new))),
+               ('형광펜·정리 창·동기화·IndexedDB 손잡이·카드 조각 함수 %d개 무변 %s' % (len(keep_have), keep_diff or ''), not keep_diff and len(keep_have) >= 18),
+               ('교재뷰 mbBook*·mbb* 함수 %d개 무변 %s' % (len(mbb), mbb_diff or ''), not mbb_diff and len(mbb) > 5),
+               ('필기 덩이 안 localStorage. 0 · ink:q: 키 · dbDel 정의 하나', bool(blk) and 'localStorage.' not in blk and "'ink:q:'" in blk and new.count('async function dbDel(') == 1)]
+        for name, ok in chk:
+            print('  %-64s %s' % (name, 'PASS' if ok else 'FAIL'))
+        g_src = all(ok for _, ok in chk)
+        print()
 
     print('=== 게이트 표 (NEW / HEAD) ===')
     allok = True
-    for g in GATES:
+    for g in GATES if not QC.SMOKE else ['G1']:
         if g == 'SRC':
             print('  %-4s NEW %-8s HEAD —(소스 대조 · D11 가드·Pages 는 push 때)' % (g, 'PASS' if g_src else 'FAIL'))
             continue

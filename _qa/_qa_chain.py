@@ -366,12 +366,16 @@ def argv_tpl(r, app):
 # 전수표 줄에 modes 칸이 있는 jo 하네스만 — argv 의 「{mode}」 자리가 gate 면 빈 것(이 판 앞과 같은 argv) ·
 # regress · smoke 면 --mode <m> --snap-out <out>\snap.json [--snap-in <바탕 저장본 옆 .base.json>].
 # modes 칸이 없는 줄(다른 앱 · 아직 안 고친 하네스)은 열쇠 · argv 가 이 판 앞과 같다(§B-7).
-MODE_APPS = ('jo',)
+# ★ _task_qa_slim2 A-1-1(10/8) — 자과 · 민법 · 시간표도 같은 모드 갈래(그 앱 줄도 modes 칸을 단 것만 · 안 단 줄은 옛 꼴 그대로)
+# 옛 줄: MODE_APPS = ('jo',)
+MODE_APPS = ('jo', 'jagwa', 'minbeop', 'timetable')
 
 
 def mode_of(r, app, ctx):
     ms = r.get('modes') or []
     if app not in MODE_APPS or not ms:
+        return None
+    if '{mode}' not in argv_tpl(r, app):   # ★ _task_qa_slim2(10/8) — 그 사슬 argv 에 {mode} 자리가 없으면 모드 없음(옛 꼴) · 사슬마다 들인 때가 다른 하네스(exam_wrong_mark = jo 만 {mode}) · jo 줄 52 는 다 {mode} 있음(무변)
         return None
     m = getattr(ctx, 'mode', None) or ('regress' if 'regress' in ms else 'gate')
     if m == 'smoke' and 'smoke' not in ms:
@@ -646,13 +650,25 @@ def restore(recs, rootmap, bak, out):
                 cur = open(fp, 'rb').read() if os.path.isfile(fp) else None
                 old = open(b, 'rb').read()
                 if cur != old:
-                    if r == 'n':
-                        nwrite(fp, old)
+                    # 옛 꼴: 쓰기 실패(PermissionError)가 실행 전체를 죽였다 — ★ _task_qa_slim2(10/8 13:15 timetable gate · 잠긴 h\\app.html) 세 번 다시 · 안 되면 left
+                    err = None
+                    for _try in range(3):
+                        try:
+                            if r == 'n':
+                                nwrite(fp, old)
+                            else:
+                                os.makedirs(os.path.dirname(fp), exist_ok=True)
+                                with open(fp, 'wb') as f:
+                                    f.write(old)
+                            err = None
+                            break
+                        except (PermissionError, OSError) as e:
+                            err = e
+                            time.sleep(1)
+                    if err is None:
+                        back.append('%s:%s' % (r, p))
                     else:
-                        os.makedirs(os.path.dirname(fp), exist_ok=True)
-                        with open(fp, 'wb') as f:
-                            f.write(old)
-                    back.append('%s:%s' % (r, p))
+                        left.append('%s:%s(되돌림 실패 %s)' % (r, p, type(err).__name__))
             else:
                 left.append('%s:%s(떠 둔 것 없음)' % (r, p))
         else:
@@ -808,7 +824,8 @@ def run_one(r, app, ctx, c, label='', note='', snap=None):
         r['inputs'] = sorted(set(r['inputs']) | set(ins))
         r['inputs_src'] = '추적'
     if md in (None, 'gate', 'regress'):
-        r['last_sec' if md != 'regress' else 'last_sec_regress'] = sec   # A-1 — regress 시간은 따로(gate last_sec 은 사슬 어림 · 관문 몫)
+        # 옛 줄: r['last_sec' if md != 'regress' else 'last_sec_regress'] = sec   # A-1 — regress 시간은 따로(gate last_sec 은 사슬 어림 · 관문 몫)
+        r[{'regress': 'last_sec_regress', 'smoke': 'last_sec_smoke'}.get(md, 'last_sec')] = sec   # ★ _task_qa_slim2(10/8) — smoke 시간이 gate last_sec 을 덮어쓰던 것 → smoke 는 따로
     key, parts = key_of(r, app, ctx, snap)
     rec = {'harness': r['file'], 'name': name, 'app': app, 'key': key, 'keyparts': parts, 'genie': ctx.head, 'root': ctx.label,
            'when': time.strftime('%Y-%m-%d %H:%M:%S'), 'sec': sec, 'rc': rc, 'src': src, 'counts': counts(items), 'items': items,
@@ -1067,16 +1084,33 @@ def cmd_plan(args, pos):
     bctx.mode = nctx.mode = arg_mode(args)
     try:
         nb = nn = 0
+        # ★ _task_qa_slim2 A-1-4(10/8) — 시간 합: 돌 것마다 last_sec(regress 면 last_sec_regress 먼저) · 잰 적 없으면 따로 셈 · 무리 k(--lanes · 기본 3) 벽시계 = 긴 것부터 고르게(LPT) 나눈 무리 합의 최댓값
+        bs, ns, unk = [], [], []
         for r, bk, nk, sk in plan(app, rows, bctx, nctx):
             if sk:
                 say('%-26s 건넘(%s)' % (rname(r), r['skip']))
                 continue
             has = os.path.exists(res_path(app, bk))
             same = bk == nk
+            nhas = same or os.path.exists(res_path(app, nk))   # 새 판 저장본이 이미 있으면 새 판에서도 안 돎(run --reuse · compare --reuse 와 같음)
             nb += (not has)
-            nn += (not same)
-            say('%-26s 바탕 %s %s · 새 판 %s' % (rname(r), bk, '저장본 있음' if has else '→ 바탕에서 돎', '= 바탕(안 돎)' if same else nk + ' → 새 판에서 돎'))
-        say('== plan · 하네스 %d · 바탕에서 돌 것 %d · 새 판에서 돌 것 %d' % (len(rows), nb, nn))
+            # 옛 줄: nn += (not same)
+            nn += (not nhas)
+            m = mode_of(r, app, nctx)
+            sec = (r.get('last_sec_smoke') if m == 'smoke' else None) or (r.get('last_sec_regress') if m in ('regress', 'smoke') else None) or r.get('last_sec')   # ★ 10/8 smoke 는 smoke 시간 먼저
+            if not has:
+                (bs if sec else unk).append(float(sec or 0))
+            if not nhas:
+                (ns if sec else unk).append(float(sec or 0))
+            say('%-26s 바탕 %s %s · 새 판 %s%s' % (rname(r), bk, '저장본 있음' if has else '→ 바탕에서 돎', '= 바탕(안 돎)' if same else nk + (' 저장본 있음' if nhas else ' → 새 판에서 돎'),
+                                             (' · %.1f 분' % (float(sec) / 60) if sec else ' · 잰 적 없음') if (not has or not nhas) else ''))
+        k = int(args.get('--lanes')) if isinstance(args.get('--lanes'), str) and args.get('--lanes').isdigit() else 3
+        lanes = [0.0] * max(1, k)
+        for s in sorted(bs + ns, reverse=True):
+            lanes[lanes.index(min(lanes))] += s
+        # 옛 줄: say('== plan · 하네스 %d · 바탕에서 돌 것 %d · 새 판에서 돌 것 %d' % (len(rows), nb, nn))
+        say('== plan · 하네스 %d · 바탕에서 돌 것 %d(last_sec 합 %.1f 분) · 새 판에서 돌 것 %d(%.1f 분)%s · 무리 %d 면 벽시계 ≈ %.1f 분' % (
+            len(rows), nb, sum(bs) / 60, nn, sum(ns) / 60, (' · 잰 적 없음 %d(시간 셈 밖)' % len(unk)) if unk else '', k, max(lanes) / 60))
     finally:
         bctx.drop()
         nctx.drop()

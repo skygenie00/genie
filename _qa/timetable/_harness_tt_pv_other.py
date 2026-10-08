@@ -15,12 +15,22 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+# --mode gate|regress|smoke (_task_qa_slim2 2026-10-08 · 인자 없으면 gate = 이 판 앞과 같음)
+#   regress = 칸 48 모두 「회귀」(처리표) — 시드 · 검사 글 · 띄움 한 번은 gate 와 같고 --out 기본만 %TEMP%\h_tt_pvother(gate = 하네스 옆 N: h_pvother)
+#   smoke   = smoke 칸 없음 → 앱을 안 띄우고 「INFO | smoke 칸 없음」 한 줄
+#   N:(마이박스) 크롬 프로필을 TEMP 로 옮기는 까닭 — N: 프로필은 띄움마다 느리다: 9/17 tt 회귀(N: 결과 파일 시각) _harness_timetable 76 초 · tt_race 판마다 76~92 초 /
+#     10/6 use_count N: 프로필 --dump-dom 180 초 초과 되풀이 → 사용자 「해」로 TEMP(결정로그 10/6 21:36 · 22:0x) / 프로필이 TEMP 인 민법 dump-dom 하네스는 띄움당 9~14 초
+#     · 마이박스가 하네스 프로필 폴더 목록을 못 펼쳐 _qa_sync copy 10 분 멈춤 · 실행기 열쇠 셈 멈춤(결정로그 10/2 · 10/4)
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) A-1 · 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다
 import argparse, html as HT, json, os, re, subprocess, sys
 sys.stdout.reconfigure(encoding='utf-8')
 
+if QC.REGRESS:   # regress · smoke — 결과 html · 크롬 프로필(OUT\prof)의 기본 자리를 N:(마이박스) 밖 로컬 임시 폴더로(A-2 · 까닭 = 머리 주석) · --out 을 주면 그 자리 · gate 는 이 판 앞 그대로
+    import tempfile as _rg_tf
+    _RG_OUT = os.path.join(_rg_tf.gettempdir(), 'h_tt_pvother')
 ap = argparse.ArgumentParser()
 ap.add_argument('--src', default=_roots.genie(r"timetable\index.html"))
-ap.add_argument('--out', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "h_pvother"))
+ap.add_argument('--out', default=_RG_OUT if QC.REGRESS else os.path.join(os.path.dirname(os.path.abspath(__file__)), "h_pvother"))
 A = ap.parse_args()
 SRC, OUT = os.path.abspath(A.src), os.path.abspath(A.out)
 os.makedirs(OUT, exist_ok=True)
@@ -265,6 +275,9 @@ const pre=document.createElement('pre');pre.id='PVH';pre.textContent=R.join('\n'
 
 
 def main():
+    if QC.SMOKE:   # smoke — 이 하네스엔 smoke 칸이 없다(처리표 칸 48 · smoke 0) — 앱을 띄우기 전에 끝
+        print('INFO | smoke 칸 없음')
+        return 0
     src = open(SRC, encoding='utf-8').read()
     assert ANCHOR in src, 'seed anchor not found'
     h = src.replace(ANCHOR, PIN + SEED + ANCHOR, 1)
@@ -272,6 +285,7 @@ def main():
     h = h.replace('</body>', tests + '</body>', 1)
     app = os.path.join(OUT, 'app.html')
     open(app, 'w', encoding='utf-8', newline='\n').write(h)
+    QC.launch('new')   # §B-4 셈 — 새 판 앱 띄움 1(--src 를 옛 판으로 주는 헛잣대는 사람이 따로 돌림)
     r = subprocess.run([CHROME, '--headless=new', '--disable-gpu', '--no-first-run',
                         '--user-data-dir=' + os.path.join(OUT, 'prof'),
                         '--allow-file-access-from-files', '--window-size=1280,900',

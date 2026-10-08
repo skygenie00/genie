@@ -15,6 +15,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다
 import hashlib, io, json, os, re, shutil, subprocess, sys, tempfile, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -28,6 +29,12 @@ GATES = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11']
 def git(*a):
     r = subprocess.run(['git', '-C', GENIE, '-c', 'core.quotepath=false'] + list(a), capture_output=True)
     return r.stdout.decode('utf-8', 'replace')
+
+
+def _rg_md5(v):
+    """qa_slim2 regress — 기준 칸 값 줄이기(글 · 줄 묶음 → md5) · gate 에서 안 쓴다"""
+    s = v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, sort_keys=True, default=str)
+    return hashlib.md5(s.encode('utf-8')).hexdigest()
 
 
 def build_and_run(tag, src, tests, budget=90000):
@@ -88,7 +95,9 @@ def tally(lines, g):
 def main():
     os.makedirs(OUT, exist_ok=True)
     new = io.open(os.path.join(GENIE, REL.replace('/', os.sep)), encoding='utf-8', newline='').read()
-    head = git('show', 'HEAD:' + REL)
+    if QC.GATE:
+        QC.sub('git:show-app')
+    head = git('show', 'HEAD:' + REL) if QC.GATE else None   # regress · smoke — 바탕(HEAD) 판을 안 푼다(헛잣대 · 사슬에선 HEAD = 새 판)
     quiz = []
     base = {'a': 'O', 'subject': '민법총칙', 'chapter': '1. 총칙', 'subChapter': '1.1 민법의 법원', 'subNum': '', 'pending': False,
             'examMeta': [], 'caseText': '', 'stem': '', 'status': '', 'excelLogic': ''}
@@ -101,12 +110,15 @@ def main():
                      examYear='2016', examRound='53', examYears=['2016'], examMeta=[{'year': '2016', 'round': '53', 'no': 1, 'opt': 1}],
                      examNo=1, examOpt=1, examNoBase=1, examOptBase=1, stem='다음 설명 중 옳은 것은?'))
     P = {'quiz': quiz, 'skip': [x for x in os.environ.get('HZ_SKIP', '').split(',') if x], 'gradeOnly': bool(os.environ.get('HZ_GRADEONLY'))}
+    if QC.SMOKE:   # smoke(A-4) — G1(근거 목록 → 문항 팝업) 갈래만 + 끝의 「G11 페이지 오류 0」(갈래 밖 · 늘 찍힘) — 나머지 갈래는 건넘(진단용 거름 P.skip 을 그대로 씀)
+        P['skip'] = sorted(set(P['skip']) | {'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G11'})
     tests = TESTS.replace('__P__', json.dumps(P, ensure_ascii=False).replace('</', '<\\/'))
     res = {}
     only = os.environ.get('HZ_ONLY')
-    for tag, src in (('NEW', new), ('HEAD', head)):
+    for tag, src in ((('NEW', new), ('HEAD', head)) if QC.GATE else (('NEW', new),)):   # regress · smoke — 새 판만
         if only and tag != only:
             continue
+        QC.launch('new' if tag == 'NEW' else 'base')
         lines = build_and_run(tag, src, tests)
         res[tag] = lines
         print('=== %s 판 ===' % tag)
@@ -121,32 +133,57 @@ def main():
     # G3 — 같은 조작 → 같은 저장소·같은 카드 글자 (NEW vs HEAD)
     def vals(lines, pfx):
         return [x for x in (lines or []) if x.startswith('VAL | ' + pfx)]
-    g3n, g3h = vals(res.get('NEW'), 'G3.'), vals(res.get('HEAD'), 'G3.')
-    print('=== G3 회귀 — 카드 쪽 같은 조작의 저장소·카드 글자 (NEW vs HEAD) ===')
-    g3 = []
-    for a, b in zip(g3n, g3h):
-        name = a.split(' | ')[1]
-        ok = a == b
-        g3.append(ok)
-        print('  %-34s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
-    g3_ok = bool(g3) and all(g3) and len(g3n) == len(g3h)
-    print('  G3 : %s (%d/%d 걸음)' % ('PASS' if g3_ok else 'FAIL', sum(g3), max(len(g3n), len(g3h))))
-    print()
+    if QC.SMOKE:   # smoke — G3(같은 조작 글자 대조) · G10(소스)는 smoke 칸 아님(건넘)
+        g3_ok = g10 = True
+    elif QC.GATE:
+        g3n, g3h = vals(res.get('NEW'), 'G3.'), vals(res.get('HEAD'), 'G3.')
+        print('=== G3 회귀 — 카드 쪽 같은 조작의 저장소·카드 글자 (NEW vs HEAD) ===')
+        g3 = []
+        for a, b in zip(g3n, g3h):
+            name = a.split(' | ')[1]
+            ok = a == b
+            g3.append(ok)
+            print('  %-34s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
+        g3_ok = bool(g3) and all(g3) and len(g3n) == len(g3h)
+        print('  G3 : %s (%d/%d 걸음)' % ('PASS' if g3_ok else 'FAIL', sum(g3), max(len(g3n), len(g3h))))
+        print()
+    else:   # regress — 바탕(HEAD) 판을 안 띄운다: 같은 조작(시계 · 난수 고정)의 글자를 기준 스냅샷(앞 인도판 새 판 글자 md5 · 걸음 수)과 맞댄다
+        g3n = vals(res.get('NEW'), 'G3.')
+        print('=== G3 회귀 — 카드 쪽 같은 조작의 저장소·카드 글자 (NEW vs 기준 스냅샷) ===')
+        g3 = []
+        for a in g3n:
+            name = a.split(' | ')[1]
+            ok = QC.same('G3/' + name, _rg_md5(a))
+            g3.append(ok)
+            print('  %-34s %s' % (name, 'PASS 글자까지 같다' if ok else 'FAIL 다르다'))
+        g3_ok = bool(g3) and all(g3) and len(g3n) == QC.base('G3/n', len(g3n))
+        print('  G3 : %s (%d/%d 걸음 · %s)' % ('PASS' if g3_ok else 'FAIL', sum(g3), len(g3n), QC.base_note('G3/n')))
+        print()
 
-    # G10 — 소스
-    print('=== G10 소스 (NEW vs HEAD) ===')
-    Ln, Lh = new.split('\n'), head.split('\n')
-    pb = [s for s in Ln if 'pastBadgeHtml' in s] == [s for s in Lh if 'pastBadgeHtml' in s] and new.count("const pastBadgeHtml = '';") == 1
-    lg = [s for s in Ln if len(s) > 3000] == [s for s in Lh if len(s) > 3000]
-    l929 = len(Ln) > 928 and len(Lh) > 928 and Ln[928] == Lh[928] and len(Ln[928]) > 60000
-    sk = [s for s in Ln if 'const SYNC_KEYS = [' in s] == [s for s in Lh if 'const SYNC_KEYS = [' in s]
-    for name, ok in (("pastBadgeHtml = '' 그대로", pb), ('긴 줄(>3000자) 전부 글자까지 같다', lg), ('SheetJS 929줄 바이트 무변', l929), ('SYNC_KEYS 무변', sk)):
-        print('  %-36s %s' % (name, 'PASS' if ok else 'FAIL'))
-    g10 = pb and lg and l929 and sk
-    print()
+    if not QC.SMOKE:
+        # G10 — 소스
+        print('=== G10 소스 (NEW vs HEAD) ===')
+        if QC.GATE:
+            Ln, Lh = new.split('\n'), head.split('\n')
+            pb = [s for s in Ln if 'pastBadgeHtml' in s] == [s for s in Lh if 'pastBadgeHtml' in s] and new.count("const pastBadgeHtml = '';") == 1
+            lg = [s for s in Ln if len(s) > 3000] == [s for s in Lh if len(s) > 3000]
+            l929 = len(Ln) > 928 and len(Lh) > 928 and Ln[928] == Lh[928] and len(Ln[928]) > 60000
+            sk = [s for s in Ln if 'const SYNC_KEYS = [' in s] == [s for s in Lh if 'const SYNC_KEYS = [' in s]
+        else:   # regress — HEAD 판 대신 기준 스냅샷(앞 인도판 새 판 줄 묶음 md5) · 새 판 조건(pastBadgeHtml = '' 하나 · 929줄 > 60000자)은 그대로
+            Ln = new.split('\n')
+            pb = QC.same('G10/pastBadgeHtml', _rg_md5([s for s in Ln if 'pastBadgeHtml' in s])) and new.count("const pastBadgeHtml = '';") == 1
+            lg = QC.same('G10/long', _rg_md5([s for s in Ln if len(s) > 3000]))
+            v929 = _rg_md5(Ln[928]) if len(Ln) > 928 else None
+            l929 = v929 is not None and v929 == QC.base('G10/l929', v929) and len(Ln[928]) > 60000
+            sk = QC.same('G10/SYNC_KEYS', _rg_md5([s for s in Ln if 'const SYNC_KEYS = [' in s]))
+            print('  (기댓값 = %s — 바탕 HEAD 판 대신 앞 인도판 새 판 글자)' % QC.base_note('G10/long'))
+        for name, ok in (("pastBadgeHtml = '' 그대로", pb), ('긴 줄(>3000자) 전부 글자까지 같다', lg), ('SheetJS 929줄 바이트 무변', l929), ('SYNC_KEYS 무변', sk)):
+            print('  %-36s %s' % (name, 'PASS' if ok else 'FAIL'))
+        g10 = pb and lg and l929 and sk
+        print()
 
     print('=== 게이트 표 (NEW / HEAD) ===')
-    for g in GATES:
+    for g in GATES if not QC.SMOKE else ['G1']:
         if g == 'G3':
             print('  %-4s NEW %-8s HEAD —(대조 기준)' % (g, 'PASS' if g3_ok else 'FAIL'))
         elif g == 'G10':

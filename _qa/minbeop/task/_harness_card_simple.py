@@ -16,6 +16,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다
 import io, json, os, re, shutil, subprocess, sys, tempfile, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -80,8 +81,12 @@ def tally(lines, g):
 
 
 def main():
+    if QC.REGRESS:   # regress · smoke(_task_qa_slim2 A-1) — 이 하네스 칸 117 = 합침→_harness_card_simple_add6 115(같은 파이썬 · tests.js · tests2.js · tests3 ≈ tests3_add6) · 뺌 1(G17 「파랑 굵게」 옛 잣대 — add6 이 「검정 굵게」로 같은 자리를 잰다) · 관문만 1(HEAD 판 헛잣대) → 앱을 안 띄운다(바탕 띄움 · git show 0)
+        print('INFO | %s 칸 없음 | 칸 117 = 합침→_harness_card_simple_add6 115 · 뺌 1(G17 옛 잣대) · 관문만 1(HEAD 판 헛잣대) — 앱 안 띄움 · 그 칸은 _harness_card_simple_add6 이 잰다' % QC.MODE, flush=True)
+        return 0
     os.makedirs(OUT, exist_ok=True)
     new = io.open(os.path.join(GENIE, REL.replace('/', os.sep)), encoding='utf-8', newline='').read()
+    QC.sub('git:show-app')
     head = git('show', 'HEAD:' + REL)
     base = {'subject': '민법총칙', 'chapter': '1. 총칙', 'subChapter': '1.1 민법의 법원', 'subNum': '', 'examMeta': [],
             'caseText': '', 'stem': '', 'status': '', 'excelLogic': '', 'panrye': '', 'source': '변리사 20'}
@@ -106,6 +111,7 @@ def main():
     for tag, src in (('NEW', new), ('HEAD', head)):
         if only and tag != only:
             continue
+        QC.launch('new' if tag == 'NEW' else 'base')
         lines = build_and_run(tag, src, tests)
         res[tag] = lines
         print('=== %s 판 ===' % tag)

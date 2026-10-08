@@ -15,6 +15,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2(10/8) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같음) · import 때 --mode · --snap-in · --snap-out 을 sys.argv 에서 뗀다
 _NR = _roots.need_n('민법 task 재료(claude.json · M002.html)')   # env_lanes_fix(9/29) — N: 작업 폴더 · 없으면(클라우드) 「N: 필요 — 클라우드 불가(…)」 종료 코드 3
 import hashlib, http.server, io, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
@@ -62,6 +63,12 @@ def git(*a, repo=GENIE):
     return subprocess.run(['git', '-C', repo, '-c', 'core.quotepath=false'] + list(a), capture_output=True).stdout
 
 
+def _rg_md5(v):
+    """qa_slim2 regress — 기준 칸 값 줄이기(창 본문 html → md5) · gate 에서 안 쓴다"""
+    s = v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, sort_keys=True, default=str)
+    return hashlib.md5(s.encode('utf-8')).hexdigest()
+
+
 def J(s):
     try:
         return json.loads(s) if isinstance(s, str) else s
@@ -88,7 +95,9 @@ def serve(tag, src):
     html = html[:e] + '<script>\n' + TESTS + '\n</script>\n' + html[e:]
     io.open(os.path.join(OUT, 'index.html'), 'w', encoding='utf-8', newline='\n').write(html)
     io.open(os.path.join(OUT, 'evil.html'), 'w', encoding='utf-8', newline='\n').write(EVIL)
-    open(os.path.join(OUT, 'rec.json'), 'wb').write(git('show', 'origin/main:minbeop/기록.json', repo=SPD))
+    if QC.GATE:
+        QC.sub('git:show-data')
+    open(os.path.join(OUT, 'rec.json'), 'wb').write(git('show', 'origin/main:minbeop/기록.json', repo=SPD) if QC.GATE else open(os.path.join(SPD, 'minbeop', '기록.json'), 'rb').read())   # regress — 작업트리 기록.json(읽기만)
     MAP = {'/master.json': os.path.join(SPD, 'minbeop', '문항마스터.json'), '/claude.json': CLJSON, '/M002.html': FIGSRC}
 
     class H(http.server.SimpleHTTPRequestHandler):
@@ -243,6 +252,7 @@ def main_scenario(s, new):
 
 
 def run_main(eng, tag, src):
+    QC.launch('base' if tag == 'BASE' else 'new')
     with sync_playwright() as pw:
         br = getattr(pw, eng).launch()
         s, srv, ctx, errs = open_page(br, eng, tag, src)
@@ -264,6 +274,7 @@ def run_side(new):
             for name, fig in (('D7', '404'), ('D7net', '500'), ('D3', 'evil')):
                 if eng == 'webkit' and name != 'D3':
                     continue
+                QC.launch('new')
                 s, srv, ctx, errs = open_page(br, eng, 'NEW', new, '_' + name, fig)
                 D = {}
                 try:
@@ -294,13 +305,19 @@ def run_side(new):
 
 
 def main():
+    if QC.SMOKE:   # smoke 칸 없음(A-0 · 그림 창 = 두 엔진 · 끌기 · 크게 보기 · 정정이 한 덩어리) — 앱을 띄우기 전에 한 줄 찍고 끝(결과 파일에도)
+        print('INFO | smoke 칸 없음 | Claude 창 「그림」 하네스 — smoke 칸 없음(A-0) · 앱 안 띄움', flush=True)
+        io.open(os.path.join(HERE, '_harness_ox_claude_fig_result.txt'), 'w', encoding='utf-8').write('INFO | smoke 칸 없음 | Claude 창 「그림」 하네스 — smoke 칸 없음(A-0) · 앱 안 띄움\n')
+        return 0
     os.makedirs(WORK, exist_ok=True)
     new = io.open(os.path.join(GENIE, REL), encoding='utf-8', newline='').read()
-    base = git('show', BASE_REV + ':' + REL).decode('utf-8')
+    if QC.GATE:
+        QC.sub('git:show-app')
+    base = git('show', BASE_REV + ':' + REL).decode('utf-8') if QC.GATE else None   # regress — 바탕 7b9e214 판을 안 푼다(헛잣대 · D6 · §C 기댓값은 기준 스냅샷)
     RES = {}
     only = sys.argv[sys.argv.index('--only') + 1] if '--only' in sys.argv else ''
     for eng in ('webkit', 'chromium'):
-        for tag, src in (('BASE', base), ('NEW', new)):
+        for tag, src in ((('BASE', base), ('NEW', new)) if QC.GATE else (('NEW', new),)):   # regress — 새 판만
             k = '%s/%s' % (eng, tag)
             if only and only not in k:
                 continue
@@ -317,13 +334,19 @@ def report(RES, base, new, only):
     L = []
     T = lambda n, c, i=None: L.append(('PASS' if c else 'FAIL') + ' | ' + n + ('' if c or i is None else ' | ' + json.dumps(i, ensure_ascii=False)[:900]))
     I = lambda n, v: L.append('INFO | ' + n + ' | ' + json.dumps(v, ensure_ascii=False)[:1400])
-    bb, nb = base.encode('utf-8'), new.encode('utf-8')
-    T('착수 %s = 지시서 G0-1 (1,087,059 B · md5 a32b4202…)' % BASE_REV, len(bb) == 1087059 and hashlib.md5(bb).hexdigest() == BASE_MD5, [len(bb), hashlib.md5(bb).hexdigest()])
+    bb, nb = base.encode('utf-8') if QC.GATE else None, new.encode('utf-8')
+    if QC.GATE:   # 착수 md5 = 지시서 값(고정 옛 커밋) — 관문만
+        T('착수 %s = 지시서 G0-1 (1,087,059 B · md5 a32b4202…)' % BASE_REV, len(bb) == 1087059 and hashlib.md5(bb).hexdigest() == BASE_MD5, [len(bb), hashlib.md5(bb).hexdigest()])
     T('D11 NEW CRLF 0 · U+FFFD 0 (%d B · md5 %s)' % (len(nb), hashlib.md5(nb).hexdigest()), b'\r\n' not in nb and '\ufffd' not in new)
-    ch = [l for l in git('status', '--porcelain').decode('utf-8').split('\n') if l.strip()]
-    T('genie 작업트리 바뀐 파일 = minbeop/index.html 하나 %s' % ch, ch == [' M ' + REL], ch)
+    if QC.GATE:   # 인도 때 작업트리 diff 가드 — 관문만(사슬은 깨끗한 워크트리)
+        ch = [l for l in git('status', '--porcelain').decode('utf-8').split('\n') if l.strip()]
+        T('genie 작업트리 바뀐 파일 = minbeop/index.html 하나 %s' % ch, ch == [' M ' + REL], ch)
     sk = lambda s: re.findall(r"'([^']+)'", re.search(r'const SYNC_KEYS = \[(.+?)\];', s, re.S).group(1))
-    T('§C SYNC_KEYS 무변(새 저장 키 0)', sk(new) == sk(base), [len(sk(base)), len(sk(new))])
+    if QC.GATE:
+        T('§C SYNC_KEYS 무변(새 저장 키 0)', sk(new) == sk(base), [len(sk(base)), len(sk(new))])
+    else:   # regress — 바탕 7b9e214 대신 기준 스냅샷(앞 인도판 새 판 SYNC_KEYS)
+        skb = QC.base('C/SYNC_KEYS', sk(new))
+        T('§C SYNC_KEYS 무변(새 저장 키 0)', sk(new) == skb, [len(skb), len(sk(new)), QC.base_note('C/SYNC_KEYS')])
     T('§A·§C 그림을 앱이 쓰는 길 0 — CL_FIG 는 메모리 · setItem/lsPut/dbPut 에 그림 없음 · ghPutJson 에 claude_fig 없음',
       not re.search(r"(setItem|lsPut|dbPut|idbPut)\([^)]*(CL_FIG|clfig|claude_fig)", new) and 'ghPutJson(' + "'minbeop/' + f" not in new
       and new.count("ghRaw('minbeop/' + f)") == 1)
@@ -356,7 +379,8 @@ def report(RES, base, new, only):
           fr.get('svg') == 1 and fr.get('title') == 'M002 신의칙 한 장' and fr.get('border') == '0px' and fr.get('radius') == '8px' and a0.get('figMb') == '8px'
           and g(a0, 'big', 't') == '크게 보기' and [g(a0, 'big', k) for k in ('fs', 'fw', 'color', 'bd')] == ['11px', '700', 'rgb(107, 114, 128)', '0px']
           and g(a0, 'big', 'bg') in ('rgba(0, 0, 0, 0)', 'transparent') and g(a0, 'big', 'pos') is not None and g(a0, 'big', 'pos', 0) <= 8 and g(a0, 'big', 'pos', 1) <= 8, a0)
-        T(p + 'D1 헛잣대 BASE — 같은 창에 그림 자리 0 · 요청 %s' % g(b, 'D1gets', 'fig'), g(b, 'D1', 'win') is True and g(b, 'D1', 'a', 0, 'fig') is False and g(b, 'D1gets', 'fig') == 0, b.get('D1'))
+        if QC.GATE:   # 헛잣대(바탕 7b9e214) — 관문만
+            T(p + 'D1 헛잣대 BASE — 같은 창에 그림 자리 0 · 요청 %s' % g(b, 'D1gets', 'fig'), g(b, 'D1', 'win') is True and g(b, 'D1', 'a', 0, 'fig') is False and g(b, 'D1gets', 'fig') == 0, b.get('D1'))
         T(p + 'D2 높이 = 그림 문서 높이 — iframe %s ↔ 문서 %s · 안쪽 넘침 세로 %s 가로 %s(스크롤바 0)'
           % (fr.get('h'), fr.get('docH'), fr.get('overflowY'), fr.get('overflowX')),
           abs((fr.get('h') or 0) - (fr.get('docH') or -99)) <= 2 and (fr.get('overflowY') or 0) <= 0 and (fr.get('overflowX') or 0) <= 0 and (fr.get('h') or 0) > 200, fr)
@@ -397,16 +421,26 @@ def report(RES, base, new, only):
           n.get('D9tap') is True and n.get('D9wait') is True and 'M002' in (d9.get('answers') or []) and g(d9, 'a', 0, 'frame', 'svg') == 1
           and g(d9, 'a', 0, 'order') == ['HEAD', 'FIG', 'TAG', 'MD', 'CORE', 'BAR'] and g(n, 'D9gets', 'fig') == 1, d9)   # D8 에서 M002 정정을 저장했다 — 딱지가 그림 아래에 선다
         n6, b6 = n.get('D6') or {}, b.get('D6') or {}
-        same6 = n6.get('html') is not None and n6.get('html') == b6.get('html')
-        diff6 = ''
-        if not same6 and n6.get('html') and b6.get('html'):
-            x, y = n6['html'], b6['html']
-            i = next((i for i in range(min(len(x), len(y))) if x[i] != y[i]), min(len(x), len(y)))
-            diff6 = ' · 첫 어긋남 %d자 새「%s」 옛「%s」' % (i, x[i:i + 50], y[i:i + 50])
-        T(p + 'D6 Q0480(M001 · fig 없음) 창 본문 = 바탕 판과 글자 하나 안 다름(%d자 ↔ %d자%s) · 그림 요청 %s'
-          % (len(n6.get('html') or ''), len(b6.get('html') or ''), diff6, g(n, 'D6gets', 'fig')),
-          same6 and g(n6, 'a', 0, 'fig') is False and n6.get('answers') == ['M001'], [n6.get('answers'), diff6])
-        for tag, d in (('BASE', b), ('NEW', n)):
+        if QC.GATE:
+            same6 = n6.get('html') is not None and n6.get('html') == b6.get('html')
+            diff6 = ''
+            if not same6 and n6.get('html') and b6.get('html'):
+                x, y = n6['html'], b6['html']
+                i = next((i for i in range(min(len(x), len(y))) if x[i] != y[i]), min(len(x), len(y)))
+                diff6 = ' · 첫 어긋남 %d자 새「%s」 옛「%s」' % (i, x[i:i + 50], y[i:i + 50])
+            T(p + 'D6 Q0480(M001 · fig 없음) 창 본문 = 바탕 판과 글자 하나 안 다름(%d자 ↔ %d자%s) · 그림 요청 %s'
+              % (len(n6.get('html') or ''), len(b6.get('html') or ''), diff6, g(n, 'D6gets', 'fig')),
+              same6 and g(n6, 'a', 0, 'fig') is False and n6.get('answers') == ['M001'], [n6.get('answers'), diff6])
+        else:   # regress — 바탕 7b9e214 창 본문 대신 기준 스냅샷(앞 인도판 새 판 창 본문 md5 · 길이) · 새 판 조건(그림 자리 없음 · 답 M001)은 그대로
+            h6 = n6.get('html')
+            v6 = [_rg_md5(h6), len(h6)] if h6 is not None else None
+            bv6 = QC.base('D6@' + eng, v6)
+            same6 = v6 is not None and v6 == bv6
+            diff6 = '' if same6 or v6 is None else ' · 기준 스냅샷과 다름(md5 %s ↔ %s)' % (v6[0][:8], str((bv6 or ['?'])[0])[:8])
+            T(p + 'D6 Q0480(M001 · fig 없음) 창 본문 = 바탕 판과 글자 하나 안 다름(%d자 ↔ %d자%s) · 그림 요청 %s'
+              % (len(h6 or ''), (bv6 or [None, 0])[1], diff6, g(n, 'D6gets', 'fig')),
+              same6 and g(n6, 'a', 0, 'fig') is False and n6.get('answers') == ['M001'], [n6.get('answers'), diff6, QC.base_note('D6@' + eng)])
+        for tag, d in ((('BASE', b), ('NEW', n)) if QC.GATE else (('NEW', n),)):   # regress — 바탕 D11 은 헛잣대 몫
             bad = [x for x in (J(d.get('D11') or '[]') or []) if x[2] != 'ok']
             T(p + 'D11 %s 스크립트 블록 %d개 파서 통과(%s)' % (tag, len(J(d.get('D11') or '[]') or []), 'JSC' if eng == 'webkit' else 'V8'), (J(d.get('D11') or '[]') or []) and not bad, bad)
     if only:
