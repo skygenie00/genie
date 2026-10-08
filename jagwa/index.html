@@ -4714,7 +4714,7 @@ function showSyncHelp(){
     </div>
     <div class="fld"><label>필기·PDF 를 다른 기기로</label>
       <p style="font-size:12.5px;line-height:1.7;margin:0">
-      <b>필기는 자동이 아닙니다.</b> 옮기려면 설정 → <b>필기·진도만 내보내기 (가벼움)</b> 로 json 을 내려받아 다른 기기에서 <b>백업 파일 불러오기</b> 를 합니다.<br>
+      <b>필기는 이제 자동입니다</b>(토큰이 있으면 기록과 같은 고리 · 올릴 것이 있으면 칩에 「필기 n 대기」). 손으로 옮기려면 설정 → <b>필기·진도만 내보내기 (가벼움)</b> 로 json 을 내려받아 다른 기기에서 <b>백업 파일 불러오기</b> 를 합니다.<br>
       PDF 까지 옮기려면 <b>PDF까지 전부 내보내기 (무거움)</b> 입니다. 수십 MB 라 무겁습니다.
       </p>
       <p style="font-size:11.5px;color:#888;margin:8px 0 0">새 기기라면 설정 → <b>저장소에서 시험지 받기</b> 가 더 쉽습니다. 토큰만 넣었으면 교재 PDF 6개를 저장소에서 받아 옵니다. 이미 받아 둔 것은 다시 받지 않고 <b>바뀐 것만</b> 받습니다.</p>
@@ -5372,8 +5372,8 @@ function recPaint(){
         t='● 동기화됨'+(ago!=null?' '+(ago<1?'방금':ago<60?ago+'분 전':Math.round(ago/60)+'시간 전'):'');
       }
     }
-    if(recTie)t+=' · 동률 '+recTie+'건';
-    try{const ik=(typeof inkChip==='function')?inkChip():'';if(ik){t+=' · '+ik;if(typeof INKERR==='string'&&INKERR)bad=true}}catch(e){}   /* ★ ink_sync §A-3-4 — 「필기 n 대기」(n>0 일 때만) · 실패면 오류 글자 · 새 단추 없음 */   /* ★ 09-15 §D-5 — 0 이면 안 보인다 · 진 값은 콘솔 */
+    if(recTie)t+=' · 동률 '+recTie+'건';   /* ★ 09-15 §D-5 — 0 이면 안 보인다 · 진 값은 콘솔 */
+    try{const ik=(typeof inkChip==='function')?inkChip():'';if(ik){t+=' · '+ik;if(typeof INKERR==='string'&&INKERR)bad=true}}catch(e){}   /* ★ ink_sync §A-3-4 — 「필기 n 대기」(n>0 일 때만) · 실패면 오류 글자 · 새 단추 없음 */
     el.textContent=t;
     el.classList.toggle('err',bad);
     el.title=recErr?('기록 동기화 — '+recErr+' · 누르면 다시 맞춘다')
@@ -11404,7 +11404,7 @@ var INKDIRTY=new Set(),INKADDONLY=new Set(),INKBUSY=false,INKERR='',INKIMPORT=0,
 var INKST={req:0,get:0,commit:0,retry:0,up:0,dl:0,cyc:0,skip:0};   /* 하네스 · 결정 로그용 셈 */
 var INK_GRID=10000,INK_UP_MAX=60,INK_DL_MAX=200;
 var putRaw=put;   /* 감싸지 않은 원본 — 내려받은 값 · 동기화 장부는 이것으로 쓴다(더러움 표시 안 함) */
-put=function(s,k,v){const p=putRaw(s,k,v);if(s==='ink')p.then(ok=>{if(ok)try{inkMark(k)}catch(e){}});return p};
+put=function(s,k,v){const p=putRaw(s,k,v);if(s==='ink')p.then(ok=>{if(ok)try{inkMark(k)}catch(e){}}).catch(()=>{});return p};
 function inkSyncable(k){k=String(k);
   const pre=CARD_LAYER?/^(qink|bink|note):./.test(k):(/^\d+$/.test(k)||/^note:./.test(k));
   if(!pre)return false;
@@ -11412,7 +11412,7 @@ function inkSyncable(k){k=String(k);
   return true}
 function inkMark(k){k=String(k);if(!inkSyncable(k))return;
   const a=!INKDIRTY.has(k);INKDIRTY.add(k);
-  let b=false;if(INKIMPORT>0&&!INKADDONLY.has(k)){INKADDONLY.add(k);b=true}   /* §A-4 — 들인 열쇠는 더함만 · 지움 0 */
+  let b=false;if((INKIMPORT>0||(typeof UID_BUSY==='number'&&UID_BUSY>0))&&!INKADDONLY.has(k)){INKADDONLY.add(k);b=true}   /* §A-4 — 들인 열쇠는 더함만 · 지움 0 · 백업 들이기는 importData 감쌈 사슬 맨 끝(uid_unify)이 그동안 UID_BUSY 를 올린다 — importData 는 안 감쌈(phys P6 이 함수 글을 잼) */
   if(INKLOADED){if(a)putRaw('kv','inkdirty',[...INKDIRTY]);if(b)putRaw('kv','inkaddonly',[...INKADDONLY])}
   if(a)try{recPaint()}catch(e){}}
 async function inkDirtySave(){if(!INKLOADED)return;await putRaw('kv','inkdirty',[...INKDIRTY]);await putRaw('kv','inkaddonly',[...INKADDONLY])}
@@ -11591,8 +11591,8 @@ async function syncInk(){
   catch(e){INKERR=e&&e.limit?'필기 한도':'필기 실패';console.warn('필기 동기화 건너뜀:',(e&&e.message)||e)}
   INKBUSY=false;try{recPaint()}catch(e){}}
 function inkKick(){if(!INKBUSY)syncInk()}
-function inkChip(){try{if(!recToken())return ''}catch(e){return ''}
-  if(INKERR)return INKERR;const n=INKDIRTY.size;return n>0?('필기 '+n+' 대기'):''}
+function inkChip(){try{if(!recToken())return ''}catch(e){return ''}   /* 올릴 필기가 있을 때만 — 받기만 실패하면 칩 무변(그물 문제는 기록 칩이 보임) */
+  const n=INKDIRTY.size;if(!n)return '';return INKERR?(INKERR+' · '+n+' 대기'):('필기 '+n+' 대기')}
 /* 그리는 중(손가락 · 펜 눌림) — 열린 자리 열쇠는 그 고리에서 건너뜀 */
 window.addEventListener('pointerdown',()=>{INKPTR++;INKPTRT=Date.now()},true);
 ['pointerup','pointercancel'].forEach(t=>window.addEventListener(t,()=>{INKPTR=Math.max(0,INKPTR-1)},true));
@@ -11600,7 +11600,7 @@ window.addEventListener('pointerdown',()=>{INKPTR++;INKPTRT=Date.now()},true);
 {const _cv=closeView;closeView=function(){let k=null;try{k=CARD_LAYER?(QUID?qKey(QUID):null):(VNO?String(inkK(VNO)):null)}catch(e){}
   const r=_cv.apply(this,arguments);if(k)setTimeout(()=>{if(INKDIRTY.has(k))inkKick()},900);return r}}
 /* §A-4 — 백업 들이기는 더함만(지움 0) */
-{const _i0=importData;importData=async function(){INKIMPORT++;try{return await _i0.apply(this,arguments)}finally{INKIMPORT--}}}
+/* (백업 들이기 importData 는 안 감쌈 — 위 inkMark 가 UID_BUSY 로 가름) */
 if(typeof bkImportObj==='function'){const _b0=bkImportObj;bkImportObj=async function(){INKIMPORT++;try{return await _b0.apply(this,arguments)}finally{INKIMPORT--}}}
 /* ═══ 필기 동기화 끝 ═══ */
 </script>
