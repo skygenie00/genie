@@ -11611,8 +11611,9 @@ try{const V=document.getElementById('view');if(V&&window.MutationObserver){let w
   new MutationObserver(()=>{const now=!V.classList.contains('hide');if(was&&!now)setTimeout(()=>{if(INKDIRTY.size)inkKick()},900);was=now}).observe(V,{attributes:true,attributeFilter:['class']})}}catch(e){}
 /* ④ 백업 들이기(설정 → 백업 파일 불러오기 · #fim) — 파일을 고른 때부터 들이기 끝 안내(토스트)까지 들어온 필기는 더함만 · 지움 0 */
 document.addEventListener('change',e=>{try{const f=e.target;if(f&&f.id==='fim'&&f.files&&f.files.length)INKIMPT=Date.now()}catch(_){}},true);
-try{new MutationObserver(ms=>{if(!INKIMPT)return;for(const m of ms)for(const n of m.addedNodes){if(n&&n.classList&&n.classList.contains('toast')){const s=n.textContent||'';
-  if(s==='복원했습니다'||s==='백업 파일을 읽지 못했습니다'){INKIMPT=0;setTimeout(()=>{try{inkKick()}catch(_){}},1500)}}}}).observe(document.body,{childList:true})}catch(e){}
+try{new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes){if(n&&n.classList&&n.classList.contains('toast')){const s=n.textContent||'';
+  if(s==='불러오는 중…')INKIMPT=Date.now();   /* 들이기 시작 안내(importData 첫 줄 · 어느 길로 부르든) — 잉크를 넣기 전 await 에서 이 알림이 먼저 돎 */
+  else if(INKIMPT&&(s==='복원했습니다'||s==='백업 파일을 읽지 못했습니다')){INKIMPT=0;setTimeout(()=>{try{inkKick()}catch(_){}},1500)}}}}).observe(document.body,{childList:true})}catch(e){}
 /* §A-4 — 백업 들이기는 더함만(지움 0) */
 /* (백업 들이기 importData 는 안 감쌈 — 위 ④ 파일 고르기 · 끝 안내로 가름 · phys P6 이 함수 글을 잼) */
 if(typeof bkImportObj==='function'){const _b0=bkImportObj;bkImportObj=async function(){INKIMPORT++;try{return await _b0.apply(this,arguments)}finally{INKIMPORT--}}}
