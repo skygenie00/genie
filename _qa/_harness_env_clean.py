@@ -81,12 +81,18 @@ def c4():
     d = jl('c4.json')
     if not d:
         return T('C-4', '재료 없음(c4.json)', False)
+    # 같은 실행기 · 같은 판에서도 판정이 갈린 칸(흔들림 표 _qa_flaky.json — 같은 하네스 · 같은 칸)은 실행기 탓이 아니므로 따로 센다(§B-6 과 같은 꼴)
+    fp = os.path.join(_d_r, '_qa_flaky.json')
+    fl = json.load(open(fp, encoding='utf-8')) if os.path.isfile(fp) else []
+    fls = set((os.path.basename(x['harness'])[:-3].replace('_harness_', ''), x['item']) for x in fl)
     for r in d['rows']:
         if r.get('missing'):
             T('C-4', '%s — 한쪽 결과 없음(%s)' % (r['name'], r['missing']), False); continue
-        T('C-4', '%s — 옛 / 새 실행기 열쇠 같음 %s · 칸 판정 다름 %d · 값 다름 %d · 한쪽만 %d(칸 %d)' % (
-            r['name'], r['key_same'], len(r['st_diff']), len(r['v_diff']), len(r['one_side']), r['items']),
-          r['key_same'] and not r['st_diff'] and not r['v_diff'] and not r['one_side'], {'판정': r['st_diff'][:5], '값': r['v_diff'][:5], '한쪽': r['one_side'][:5]})
+        fk = [i for i in r['st_diff'] if (r['name'], i) in fls]
+        real = [i for i in r['st_diff'] if (r['name'], i) not in fls]
+        T('C-4', '%s — 옛 / 새 실행기 열쇠 같음 %s · 칸 판정 다름 %d(흔들림 표에 있는 칸 %d 은 따로) · 값 다름 %d · 한쪽만 %d(칸 %d)' % (
+            r['name'], r['key_same'], len(real), len(fk), len(r['v_diff']), len(r['one_side']), r['items']),
+          r['key_same'] and not real and not r['v_diff'] and not r['one_side'], {'판정': real[:5], '흔들림': fk[:5], '값': r['v_diff'][:5], '한쪽': r['one_side'][:5]})
 
 
 def main():
