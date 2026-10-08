@@ -8,11 +8,19 @@ r"""_task_jagwa_bio_ocrfix_add2 §B 관문 — 비고·교재문장 전각 → �
 
 쓰기 : python _harness_bio_ocrfix_add2.py [--out 파일]   결과 = _harness_bio_ocrfix_result.txt 끝에 이어 붙인다(--out 이면 그 파일에 새로)
 """
+import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
+_d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
+while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
+    _d_r = _os_r.path.dirname(_d_r)
+_sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
+import tempfile   # noqa: E402 — 옛 남 하네스 속성(HU.tempfile · B.WORK)을 갈음
 import collections, hashlib, io, json, os, re, subprocess, sys, time
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import _harness_bio_ocrfix as B   # noqa: E402
+JG.conf(REFDIR=os.path.join(HERE, '_ocrfix', 'ref'))   # 옛 B 의 REFDIR(같은 폴더 HERE/_ocrfix/ref) — serve_BO 가 읽음 · JG 기본값도 같은 곳
 
 
 def ARG(k, d=None):
@@ -21,7 +29,7 @@ def ARG(k, d=None):
 
 OUTF = ARG('--out', os.path.join(HERE, '_harness_bio_ocrfix_result.txt'))
 BASE_REV, BASE_MD5 = '0675d712', '0fd627d17ba8ed34eb1186af633f042b'
-WORK = os.path.join(B.WORK, 'add2'); os.makedirs(WORK, exist_ok=True)
+WORK = os.path.join(os.path.join(tempfile.gettempdir(), 'h_bio_ocrfix'), 'add2'); os.makedirs(WORK, exist_ok=True)
 BASEQ, NEWQ = os.path.join(WORK, '문항_base.json'), os.path.join(WORK, '문항_new.json')
 FWS = '（）、，：；［］｛｝＜＞！'
 FWT = str.maketrans({c: h for c, h in zip(FWS, '(),,:;[]{}<>!')})
@@ -65,21 +73,24 @@ Object.assign(window.__h,{
 
 
 def launch(pw, eng, app, qjson, tag, touch):
-    srv, port = B.serve(app, qjson, 'bio', tag)
+    srv, port = JG.serve_BO(app, qjson, 'bio', tag)
     br = getattr(pw, eng).launch()
     kw = dict(viewport={'width': 1440, 'height': 950}, device_scale_factor=1)
     if touch:
         kw.update(has_touch=True)
     ctx = br.new_context(**kw)
-    ctx.add_init_script(B.INIT.replace('__SUBJ__', 'bio'))
+    ctx.add_init_script(JG.INIT_BO.replace('__SUBJ__', 'bio'))
     pg = ctx.new_page()
     errs = []
     pg.on('pageerror', lambda e: errs.append(str(e)[:200]))
     pg.goto('http://127.0.0.1:%d/app.html' % port, wait_until='load')
     pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>0', timeout=90000)
-    pg.wait_for_timeout(2500)
-    pg.evaluate(B.JS_HELP)
+    pg.wait_for_timeout(2500) if QC.GATE else QC.until(pg, _RG_SYNCED, 2500, '첫 기록 동기화 끝(SMETA lastSync · recBusy 거짓)')   # regress — 같은 상한의 표지
+    pg.evaluate(JG.JS_HELP)
     pg.evaluate(APPJS)
+    if QC.REGRESS:   # regress — 인도본은 uid 새 꼴 · 표본(TITLES)은 옛 uid 꼴 → __h.row/show/open/prev/item 이 옛 uid 를 새 uid 로 갈아 부른다(앱 무변)
+        pg.evaluate(_RG_OLDU_JS)
+    QC.launch('base' if tag.startswith('a2b') else 'new')
     cdp = ctx.new_cdp_session(pg) if (touch and eng == 'chromium') else None
     return srv, br, pg, cdp, errs
 
@@ -93,7 +104,7 @@ def press(pg, cdp, p):
         cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
     else:
         pg.mouse.click(p['x'], p['y'])
-    pg.wait_for_timeout(900)
+    pg.wait_for_timeout(900) if QC.GATE else QC.sleep(900, '누름 뒤 앱 반응(목록 줄 → 문제 창 열림 · 정답·해설 펼침) — 공통 표지 없음', pg)
     return True
 
 
@@ -118,73 +129,97 @@ def app_flow(pw, eng, app, qjson, tag, touch):
     return out
 
 
+# ── _task_qa_slim2(10/8) regress 도우미 — 이름이 `_rg` · `_RG` 로 시작하는 것 = gate 에서 안 쓰는 갈래 ──
+_RG_SYNCED = "()=>{try{return typeof recBusy!=='undefined'&&!recBusy&&((JSON.parse(localStorage.getItem(SMETA_KEY)||'{}')||{}).lastSync||0)>0}catch(e){return false}}"   # 앱 syncRecords 끝 lsPut(SMETA_KEY,{lastSync})
+_RG_OLDU_JS = r"""()=>{const H=window.__h;if(!H||H.__rgOldu)return 0;const R0=H.row;
+  const nu=u=>{const r=R0(u)||((typeof F!=='undefined'&&F.OLDU!==undefined)?DATA.find(x=>x[F.OLDU]===u):null);return r?r[F.CODE]:u};
+  H.row=u=>R0(nu(u));['show','open','prev','item'].forEach(k=>{const f=H[k];if(typeof f==='function')H[k]=u=>f(nu(u))});H.__rgOldu=1;return 1}"""   # 옛 uid → 앱 F.OLDU 로 새 uid(F.CODE)
+
+
+def _rg_app(pw, app):
+    """regress — 새 앱 + 인도본(굽기 0) · Chromium 마우스 · 손가락 · WebKit 마우스(smoke = Chromium 마우스만) · 바탕 데이터 판(헛잣대) 안 띄움"""
+    qj = _roots.spd('bio', '문항.json')
+    A = {'Chromium 마우스': app_flow(pw, 'chromium', app, qj, 'a2n_m', False)}
+    if not QC.SMOKE:
+        A['Chromium 손가락'] = app_flow(pw, 'chromium', app, qj, 'a2n_t', True)
+        A['WebKit 마우스'] = app_flow(pw, 'webkit', app, qj, 'a2n_w', False)
+    return A
+
+
 def main():
     from playwright.sync_api import sync_playwright
     t0 = time.time()
-    raw = subprocess.run(['git', '-C', B.SPDROOT, 'show', BASE_REV + ':bio/문항.json'], capture_output=True).stdout
-    T('땅값 — 바탕 = studyplandata %s bio/문항.json(add1 인도판 · md5 0fd627d1)' % BASE_REV, hashlib.md5(raw).hexdigest() == BASE_MD5, hashlib.md5(raw).hexdigest())
-    open(BASEQ, 'wb').write(raw); open(NEWQ, 'wb').write(raw)
-    env = dict(os.environ, PYTHONIOENCODING='utf-8', OCRFIX_QJ=NEWQ, OCRFIX_TABLE=B.FIX)
-    r1 = subprocess.run([sys.executable, os.path.join(HERE, '_ocrfix_bio.py'), 'write'], capture_output=True, env=env).stdout.decode('utf-8', 'replace')
-    b1 = open(NEWQ, 'rb').read()
-    r2 = subprocess.run([sys.executable, os.path.join(HERE, '_ocrfix_bio.py'), 'write'], capture_output=True, env=env).stdout.decode('utf-8', 'replace')
-    b2 = open(NEWQ, 'rb').read()
-    now = open(B.QJ, 'rb').read()
-    D0 = json.loads(raw.decode('utf-8')); D1 = json.loads(b1.decode('utf-8'))
-    # ── 1 데이터 ──
-    f0, f1 = sum(fwcount(r) for r in D0), sum(fwcount(r) for r in D1)
-    by0 = collections.Counter(); by1 = collections.Counter()
-    for r in D0:
-        for k, v in r.items():
-            by0[k] += fwcount(v)
-    for r in D1:
-        for k, v in r.items():
-            by1[k] += fwcount(v)
-    T('B-1 바꿈표 글자(13) 모든 칸 0 — 행의 모든 글(보기·참고 안까지)', f1 == 0, {'새': f1, '칸별(새)': {k: v for k, v in by1.items() if v}})
-    T('B-1 헛잣대 — 바탕 320(비고 174 · 교재문장 146)', f0 == 320 and by0.get('비고') == 174 and by0.get('교재문장') == 146, {'바탕': f0, '칸별': {k: v for k, v in by0.items() if v}})
-    src = lambda D: sum(1 for r in D if '출처 ［' in (r.get('비고') or ''))
-    T('B-1 비고 「출처 ［」 0 · 반각 「출처 [」 = 83 + 259', src(D1) == 0 and sum(1 for r in D1 if '출처 [' in (r.get('비고') or '')) == 342, {'전각': src(D1), '반각': sum(1 for r in D1 if '출처 [' in (r.get('비고') or ''))})
-    T('B-1 헛잣대 — 바탕 비고 「출처 ［」 83', src(D0) == 83, src(D0))
-    viol, par = [], []
-    for a, b in zip(D0, D1):
-        if a['uid'] != b['uid'] or list(a.keys()) != list(b.keys()):
-            viol.append((a['uid'], '행·열')); continue
-        for k in a:
-            if k in ('교재문장', '비고'):
-                if b[k] != (a[k].translate(FWT) if isinstance(a[k], str) else a[k]):
-                    viol.append((a['uid'], k))
-                if isinstance(b[k], str) and any(b[k].count(x) != b[k].count(y) for x, y in (('(', ')'), ('[', ']'), ('{', '}'))) \
-                        and all(a[k].count(x) + a[k].count(fx) == a[k].count(y) + a[k].count(fy) for x, y, fx, fy in (('(', ')', '（', '）'), ('[', ']', '［', '］'), ('{', '}', '｛', '｝'))):
-                    par.append('%s:%s' % (a['uid'], k))
-            elif a[k] != b[k]:
-                viol.append((a['uid'], k))
-    T('B-1 고친 칸 밖 바이트 같음(교재문장·비고 = 반각 바꿈만) · 행 746 · 행·열 차례 · 괄호 짝이 새로 틀어진 칸 0', not viol and not par and len(D1) == 746, {'어긋남': viol[:8], '새로 틀어짐': par, '행': len(D1)})
-    ch = sum(1 for a, b in zip(D0, D1) for k in ('교재문장', '비고') if a.get(k) != b.get(k))
-    N('B-1 바뀐 칸 = 교재문장 %d · 비고 %d(글자 %d)' % (sum(1 for a, b in zip(D0, D1) if a.get('교재문장') != b.get('교재문장')), sum(1 for a, b in zip(D0, D1) if a.get('비고') != b.get('비고')), f0 - f1), ch)
-    T('B-1 쓰기 두 번 = 같은 바이트(멱등) · 왕복 무변 · 검산 OK · 두 번째 「바뀐 칸 0」', b1 == b2 and 'OK  json 왕복 무변' in r1 and '검산 OK' in r1 and '바뀐 칸 0' in r2,
-      {'1회': [x for x in r1.splitlines() if x.startswith(('①', '②', '   모든 칸', '옛 md5'))][:4], '2회': [x for x in r2.splitlines() if '바뀐 칸' in x][:1]})
-    # ★ A-6(d) 9/30 — 인도본 = 인도 커밋 b3bb3c3b(add2 인도 · 고침표·스크립트 지금 판으로 다시 만들면 add2 인도본과 같다 · md5 73f4c803) —
-    #   뒤 jagwa_uid(studyplandata 4a011475)가 uid 를 새 꼴로 바꿔 로컬 ≠ 재생성(이 칸 전용 now_dl · 「인도 전이면 로컬 = 바탕」 쪽은 그대로)
-    now_dl = subprocess.run(['git', '-C', B.SPDROOT, 'show', 'b3bb3c3b:bio/문항.json'], capture_output=True).stdout
-    T('B-1 인도본(studyplandata b3bb3c3b bio/문항.json · 고침표·스크립트 지금 판의 인도 = add2) = 재생성(바탕 + 스크립트) — 인도 전이면 로컬 = 바탕', now_dl == b1 or now == raw,
-      {'인도본': hashlib.md5(now_dl).hexdigest()[:8], '로컬': hashlib.md5(now).hexdigest()[:8], '재생성': hashlib.md5(b1).hexdigest()[:8], '바탕': hashlib.md5(raw).hexdigest()[:8]})
+    if QC.GATE:   # 관문만 — 바탕(0675d712 · git show) 땅값 · 굽기(_ocrfix_bio.py write 두 번)
+        raw = subprocess.run(['git', '-C', _roots.spd(), 'show', BASE_REV + ':bio/문항.json'], capture_output=True).stdout
+        T('땅값 — 바탕 = studyplandata %s bio/문항.json(add1 인도판 · md5 0fd627d1)' % BASE_REV, hashlib.md5(raw).hexdigest() == BASE_MD5, hashlib.md5(raw).hexdigest())
+        open(BASEQ, 'wb').write(raw); open(NEWQ, 'wb').write(raw)
+        env = dict(os.environ, PYTHONIOENCODING='utf-8', OCRFIX_QJ=NEWQ, OCRFIX_TABLE=os.path.join(HERE, '_ocrfix', 'ocrfix_bio.json'))
+        r1 = subprocess.run([sys.executable, os.path.join(HERE, '_ocrfix_bio.py'), 'write'], capture_output=True, env=env).stdout.decode('utf-8', 'replace')
+        b1 = open(NEWQ, 'rb').read()
+        r2 = subprocess.run([sys.executable, os.path.join(HERE, '_ocrfix_bio.py'), 'write'], capture_output=True, env=env).stdout.decode('utf-8', 'replace')
+        b2 = open(NEWQ, 'rb').read()
+    now = open(_roots.spd('bio', '문항.json'), 'rb').read()
+    if QC.REGRESS:   # regress — 「새 값」 = studyplandata 인도본 bio/문항.json(굽기 0)
+        raw = None; b1 = now
+    D0 = json.loads(raw.decode('utf-8')) if QC.GATE else []; D1 = json.loads(b1.decode('utf-8'))
+    if QC.want('B-1.data'):   # smoke — 데이터 칸(B-1) 건넘
+        # ── 1 데이터 ──
+        f0, f1 = sum(fwcount(r) for r in D0), sum(fwcount(r) for r in D1)
+        by0 = collections.Counter(); by1 = collections.Counter()
+        for r in D0:
+            for k, v in r.items():
+                by0[k] += fwcount(v)
+        for r in D1:
+            for k, v in r.items():
+                by1[k] += fwcount(v)
+        T('B-1 바꿈표 글자(13) 모든 칸 0 — 행의 모든 글(보기·참고 안까지)', f1 == 0, {'새': f1, '칸별(새)': {k: v for k, v in by1.items() if v}})
+        if QC.GATE:   # 관문만 — 헛잣대(바탕 데이터)
+            T('B-1 헛잣대 — 바탕 320(비고 174 · 교재문장 146)', f0 == 320 and by0.get('비고') == 174 and by0.get('교재문장') == 146, {'바탕': f0, '칸별': {k: v for k, v in by0.items() if v}})
+        src = lambda D: sum(1 for r in D if '출처 ［' in (r.get('비고') or ''))
+        T('B-1 비고 「출처 ［」 0 · 반각 「출처 [」 = 83 + 259', src(D1) == 0 and sum(1 for r in D1 if '출처 [' in (r.get('비고') or '')) == 342, {'전각': src(D1), '반각': sum(1 for r in D1 if '출처 [' in (r.get('비고') or ''))})
+        if QC.GATE:   # 관문만 — 헛잣대(바탕 데이터)
+            T('B-1 헛잣대 — 바탕 비고 「출처 ［」 83', src(D0) == 83, src(D0))
+        if QC.GATE:   # 관문만 — 고친 칸 밖 바이트(바탕 ↔ 굽기 사본) · 멱등 · 인도 커밋(b3bb3c3b · git show) 대조
+            viol, par = [], []
+            for a, b in zip(D0, D1):
+                if a['uid'] != b['uid'] or list(a.keys()) != list(b.keys()):
+                    viol.append((a['uid'], '행·열')); continue
+                for k in a:
+                    if k in ('교재문장', '비고'):
+                        if b[k] != (a[k].translate(FWT) if isinstance(a[k], str) else a[k]):
+                            viol.append((a['uid'], k))
+                        if isinstance(b[k], str) and any(b[k].count(x) != b[k].count(y) for x, y in (('(', ')'), ('[', ']'), ('{', '}'))) \
+                                and all(a[k].count(x) + a[k].count(fx) == a[k].count(y) + a[k].count(fy) for x, y, fx, fy in (('(', ')', '（', '）'), ('[', ']', '［', '］'), ('{', '}', '｛', '｝'))):
+                            par.append('%s:%s' % (a['uid'], k))
+                    elif a[k] != b[k]:
+                        viol.append((a['uid'], k))
+            T('B-1 고친 칸 밖 바이트 같음(교재문장·비고 = 반각 바꿈만) · 행 746 · 행·열 차례 · 괄호 짝이 새로 틀어진 칸 0', not viol and not par and len(D1) == 746, {'어긋남': viol[:8], '새로 틀어짐': par, '행': len(D1)})
+            ch = sum(1 for a, b in zip(D0, D1) for k in ('교재문장', '비고') if a.get(k) != b.get(k))
+            N('B-1 바뀐 칸 = 교재문장 %d · 비고 %d(글자 %d)' % (sum(1 for a, b in zip(D0, D1) if a.get('교재문장') != b.get('교재문장')), sum(1 for a, b in zip(D0, D1) if a.get('비고') != b.get('비고')), f0 - f1), ch)
+            T('B-1 쓰기 두 번 = 같은 바이트(멱등) · 왕복 무변 · 검산 OK · 두 번째 「바뀐 칸 0」', b1 == b2 and 'OK  json 왕복 무변' in r1 and '검산 OK' in r1 and '바뀐 칸 0' in r2,
+              {'1회': [x for x in r1.splitlines() if x.startswith(('①', '②', '   모든 칸', '옛 md5'))][:4], '2회': [x for x in r2.splitlines() if '바뀐 칸' in x][:1]})
+            # ★ A-6(d) 9/30 — 인도본 = 인도 커밋 b3bb3c3b(add2 인도 · 고침표·스크립트 지금 판으로 다시 만들면 add2 인도본과 같다 · md5 73f4c803) —
+            #   뒤 jagwa_uid(studyplandata 4a011475)가 uid 를 새 꼴로 바꿔 로컬 ≠ 재생성(이 칸 전용 now_dl · 「인도 전이면 로컬 = 바탕」 쪽은 그대로)
+            now_dl = subprocess.run(['git', '-C', _roots.spd(), 'show', 'b3bb3c3b:bio/문항.json'], capture_output=True).stdout
+            T('B-1 인도본(studyplandata b3bb3c3b bio/문항.json · 고침표·스크립트 지금 판의 인도 = add2) = 재생성(바탕 + 스크립트) — 인도 전이면 로컬 = 바탕', now_dl == b1 or now == raw,
+              {'인도본': hashlib.md5(now_dl).hexdigest()[:8], '로컬': hashlib.md5(now).hexdigest()[:8], '재생성': hashlib.md5(b1).hexdigest()[:8], '바탕': hashlib.md5(raw).hexdigest()[:8]})
     # ── 2 앱 ──
-    app = io.open(B.SRC, encoding='utf-8', newline='').read()
+    app = io.open(_roots.genie('jagwa', 'index.html'), encoding='utf-8', newline='').read()
     with sync_playwright() as pw:
         A = {'Chromium 마우스': app_flow(pw, 'chromium', app, NEWQ, 'a2n_m', False), 'Chromium 손가락': app_flow(pw, 'chromium', app, NEWQ, 'a2n_t', True),
              'WebKit 마우스': app_flow(pw, 'webkit', app, NEWQ, 'a2n_w', False),
-             '바탕 Chromium': app_flow(pw, 'chromium', app, BASEQ, 'a2b_m', False), '바탕 WebKit': app_flow(pw, 'webkit', app, BASEQ, 'a2b_w', False)}
+             '바탕 Chromium': app_flow(pw, 'chromium', app, BASEQ, 'a2b_m', False), '바탕 WebKit': app_flow(pw, 'webkit', app, BASEQ, 'a2b_w', False)} if QC.GATE else _rg_app(pw, app)   # regress — 새 앱 + 인도본 · 바탕 데이터 판 0
 
     def ok_title(a, u):
         t = ((a.get(u) or {}).get('제목') or {}).get('t') or ''
         return TITLES[u] in t
-    for k in ('Chromium 마우스', 'Chromium 손가락', 'WebKit 마우스'):
+    for k in (('Chromium 마우스', 'Chromium 손가락', 'WebKit 마우스') if not QC.SMOKE else ('Chromium 마우스',)):   # smoke — Chromium 마우스 한 판
         a = A[k]
         notes = {u: ((a.get(u) or {}).get('비고') or {}) for u in TITLES}
         T('B-2 앱 [%s] — 목록 줄 누름 → 문제 창 제목 = 「타기출 · 2014년 서울시」「타기출 · 학력평가」「타기출 · 의대편입」 · 「정답·해설」 누름 → .cnote 보임 · 전각 0' % k,
           all(ok_title(a, u) for u in TITLES) and all(n.get('vis') and not any(c in (n.get('t') or '') for c in FWS) for n in notes.values()) and not a.get('err'),
           {u: [((a.get(u) or {}).get('제목') or {}).get('t'), (notes[u].get('t') or '')[:40], (a.get(u) or {}).get('줄', {}).get('hit') if (a.get(u) or {}).get('줄') else None] for u in TITLES} | {'err': a.get('err')})
-    for k in ('바탕 Chromium', '바탕 WebKit'):
+    for k in (('바탕 Chromium', '바탕 WebKit') if QC.GATE else ()):   # 관문만 — 헛잣대(바탕 데이터로 연 앱)
         b = A[k]
         T('B-2 헛잣대 %s — 바탕 데이터: 제목 「타기출 · SYNAPSE p…」 · .cnote 에 전각' % k,
           all('SYNAPSE p' in (((b.get(u) or {}).get('제목') or {}).get('t') or '') for u in TITLES) and any(any(c in ((((b.get(u) or {}).get('비고') or {}).get('t')) or '') for c in FWS) for u in TITLES),
@@ -192,7 +227,7 @@ def main():
     # ── 기록 ──
     lines = ['', '# ─── add2(9/28 · _task_jagwa_bio_ocrfix_add2) — %s ───' % time.strftime('%Y-%m-%d %H:%M'),
              '바탕 = studyplandata %s bio/문항.json(md5 %s) · 새 = 바탕 + _ocrfix_bio.py(md5 %s) · 앱 genie 작업트리 jagwa/index.html md5(LF) %s'
-             % (BASE_REV, hashlib.md5(raw).hexdigest()[:8], hashlib.md5(b1).hexdigest()[:8], hashlib.md5(open(B.SRC, 'rb').read().replace(b'\r\n', b'\n')).hexdigest()[:8]), '']
+             % (BASE_REV, hashlib.md5(raw).hexdigest()[:8] if QC.GATE else '(regress · 안 읽음)', hashlib.md5(b1).hexdigest()[:8], hashlib.md5(open(_roots.genie('jagwa', 'index.html'), 'rb').read().replace(b'\r\n', b'\n')).hexdigest()[:8]), '']
     for s, n, d in RES:
         dd = d if isinstance(d, str) else json.dumps(d, ensure_ascii=False)
         lines.append('%s | %s | %s' % (s, n, dd[:900]))

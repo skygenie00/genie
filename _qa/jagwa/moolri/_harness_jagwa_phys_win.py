@@ -1,6 +1,13 @@
 # _harness_jagwa_phys_win.py — 관문(시안 v50 시험 90 + 지학·생물 E1~E9) · 틀 = 같은 폴더 _harness_jagwa_physphone.py(serve · route · INIT · --vendor · --spd)
 # 쓰는 법: python _harness_jagwa_phys_win.py <앱 html> <태그(new/base)> <결과 json> [--spd <studyplandata>] [--vendor <폴더>] [--only phys|e]
 # 시험 = 이 파일 옆 _harness_jagwa_phys_win.rows.json · _harness_jagwa_phys_win.tests.json(지시서 §B 의 두 JSON 그대로)
+import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
+_d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
+while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
+    _d_r = _os_r.path.dirname(_d_r)
+_sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import sys, os, json, time, importlib.util
 H = os.path.dirname(os.path.abspath(__file__))
 GENIE = os.environ.get('GENIE_ROOT') or os.path.abspath(os.path.join(H, '..', '..', '..'))   # ★ Code 10/7 로컬 — N: 정본 자리(jagwa\moolri)에선 세 칸 위가 genie 가 아님 · 사슬 실행기가 GENIE_ROOT 를 넣어 줌
@@ -29,12 +36,12 @@ SPD = opt('--spd', os.environ.get('SPD_ROOT', os.path.join(GENIE, '..', 'studypl
 VENDOR = opt('--vendor', os.path.join(H, 'vendor'))
 ONLY = opt('--only', '')
 os.environ['GENIE_ROOT'] = GENIE; os.environ['SPD_ROOT'] = SPD
-sys.argv = ['h', '--vendor', VENDOR, '--spd', SPD]
-spec = importlib.util.spec_from_file_location('hp', os.path.join(H, '_harness_jagwa_physphone.py'))
-hp = importlib.util.module_from_spec(spec); spec.loader.exec_module(hp)
+JG.conf(VENDOR_PP=VENDOR, SPD_PP=SPD, NOTES=os.path.join(os.path.dirname(SPD), 'notes'))   # 옛 hp import 때 argv(--vendor · --spd)와 env SPD_ROOT=SPD 로 정해지던 값을 JG 에 넘김
 from playwright.sync_api import sync_playwright
+_RG_SYNCED = "()=>typeof recBusy!=='undefined'&&!recBusy&&(((lsObj(SMETA_KEY).lastSync||0)>=performance.timeOrigin)||!!recErr)"   # qa_slim2 regress 표지 = 앱 recBoot() 첫 syncRecords 끝(recBusy 거짓 · 이 쪽 열린 뒤 맞춘 시각 또는 recErr) · INIT_PP 가 토큰을 넣어 쪽마다 맞춤
+_RG_SMOKE = (24, 32, 34, 52, 68)   # qa_slim2 smoke 칸(A-0 · 모두 PC 화면 p1)
 src = open(app_path, encoding='utf-8').read()
-port = hp.serve(tag, src)
+port = JG.serve_PP(tag, src)
 OUT = {'tag': tag, 'phys': [], 'e': [], 'errs': {}}
 t0 = time.time()
 if ONLY in ('', 'phys'):
@@ -46,17 +53,21 @@ if ONLY in ('', 'phys'):
     with sync_playwright() as p:
         br = p.chromium.launch(args=['--no-sandbox'])
         ctx = br.new_context(viewport={'width': 1100, 'height': 800})
-        ctx.route('**/*', hp.route_handler(hp.REMOTE))
-        ctx.add_init_script(hp.INIT.replace('__SUBJ__', 'phys').replace('__WHO__', '하네스'))
+        ctx.route('**/*', JG.route_handler(JG.REMOTE))
+        ctx.add_init_script(JG.INIT_PP.replace('__SUBJ__', 'phys').replace('__WHO__', '하네스'))
         P = {}
         for row in rows:
             for s in row['screens']:
+                QC.launch('new')   # 셈(§B-4) — 이 하네스는 바탕 판을 안 띄운다(사슬 tag new)
                 pg = ctx.new_page(); pg.set_default_timeout(90000)
                 W, H = VIEWS[s['view']]; pg.set_viewport_size({'width': W, 'height': H})
                 errs = []; pg.on('pageerror', lambda e, errs=errs: errs.append(str(e)[:200]))
                 pg.goto('http://127.0.0.1:%d/app.html' % port, wait_until='load')
                 pg.wait_for_function(READY, timeout=240000)
-                pg.wait_for_timeout(2500)
+                if QC.GATE:
+                    pg.wait_for_timeout(2500)
+                else:   # regress — 고정 2.5 초 대신 표지(첫 기록 맞춤 끝 · 상한 = 같은 2.5 초)
+                    QC.until(pg, _RG_SYNCED, 2500, 'phys_win 화면 %s 부팅 뒤 첫 syncRecords 끝' % s['id'])
                 try: pg.evaluate(s['setup'])
                 except Exception as e: print('SETUP ERR', s['id'], str(e)[:200])
                 P[s['id']] = (pg, errs)
@@ -85,7 +96,8 @@ if ONLY in ('', 'phys'):
                 try: same = pg.evaluate('s=>document.querySelectorAll(s).length', t['same'])
                 except Exception: pass
             res.append([i, t['name'], ok, raw, note, same])
-            print(i, 'PASS' if ok else 'FAIL', t['name'][:60], raw if not ok else '', note, flush=True)
+            if QC.want(str(i), smoke=i in _RG_SMOKE):   # smoke — 시험은 차례 그대로 다 돌고(앞 상태 지킴) smoke 칸 줄만 찍음
+                print(i, 'PASS' if ok else 'FAIL', t['name'][:60], raw if not ok else '', note, flush=True)
         OUT['errs'] = {k: v[1] for k, v in P.items()}
         br.close()
     OUT['phys'] = res
@@ -99,17 +111,21 @@ def clk(pg, sel, nth=0):
         pg.locator(sel).nth(nth).click(timeout=5000); return ''
     except Exception as e: return 'CLICKFAIL(' + sel + ')'
 
-if ONLY in ('', 'e'):
+if ONLY in ('', 'e') and not QC.SMOKE:   # smoke — E1~E9(지학 · 생물)는 smoke 칸이 아님
     with sync_playwright() as p:
         br = p.chromium.launch(args=['--no-sandbox'])
         for subj in ('earth', 'bio'):
             ctx = br.new_context(viewport={'width': 1100, 'height': 800})
-            ctx.route('**/*', hp.route_handler(hp.REMOTE))
-            ctx.add_init_script(hp.INIT.replace('__SUBJ__', subj).replace('__WHO__', '하네스'))
+            ctx.route('**/*', JG.route_handler(JG.REMOTE))
+            ctx.add_init_script(JG.INIT_PP.replace('__SUBJ__', subj).replace('__WHO__', '하네스'))
+            QC.launch('new')   # 셈(§B-4)
             pg = ctx.new_page(); pg.set_default_timeout(90000)
             pg.goto('http://127.0.0.1:%d/app.html?subj=%s' % (port, subj), wait_until='load')
             pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>0&&typeof draw==="function"', timeout=120000)
-            pg.wait_for_timeout(2500)
+            if QC.GATE:
+                pg.wait_for_timeout(2500)
+            else:   # regress — 고정 2.5 초 대신 표지(첫 기록 맞춤 끝 · 상한 = 같은 2.5 초)
+                QC.until(pg, _RG_SYNCED, 2500, 'phys_win %s 부팅 뒤 첫 syncRecords 끝' % subj)
             out = []
             # E1
             ev(pg, 'ndResFold(false);openView(DATA[0][F.NO],navList())'); pg.wait_for_timeout(2500)

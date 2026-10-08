@@ -9,6 +9,8 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import http.server, os, socketserver, subprocess, sys, threading, hashlib, json, csv, shutil, urllib.parse
 
 GENIE = _roots.genie()
@@ -19,14 +21,7 @@ GIGU = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(os.environ.get('TEMP', '.'), 'earthh'); os.makedirs(OUT, exist_ok=True)
 APP = os.path.join(OUT, 'app.html')
 
-STUB = """<script>try{localStorage.setItem('subj','earth')}catch(e){}</script>
-<script>
-window.katex={render:function(){},renderToString:function(s){return s}};window.renderMathInElement=function(){};
-window.__err=[];
-window.addEventListener('error',e=>{window.__err.push((e.message||'')+' @'+(e.filename||'').split('/').pop()+':'+e.lineno)});
-window.addEventListener('unhandledrejection',e=>{window.__err.push('reject: '+((e.reason&&e.reason.message)||e.reason))});
-</script>
-"""
+STUB = JG.STUB_E   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
 
 TESTS = r"""<script>
 (function(){
@@ -428,6 +423,40 @@ TESTS_PHONE = r"""<script>
 </script>
 """
 
+# ── _task_qa_slim2(10/8) regress 도우미 — 이름이 `_rg` · `_RG` 로 시작하는 것 = gate 에서 안 쓰는 갈래(TESTS · TESTS_PHONE 상수는 글자 그대로) ──
+_RG_PICK = """<script>window.__qcN={};window.__qcPick=function(a,seed,n,key){a=[...a];n=n||10;key=key||(x=>String(x));if(a.length<=n){__qcN[seed]=[a.length,a.length];return a}
+ const pick=new Set([0,a.length-1]);const h=s=>{let x=2166136261;for(const c of String(s)){x^=c.charCodeAt(0);x=Math.imul(x,16777619)>>>0}return x};
+ a.map((x,i)=>[h(seed+'|'+key(x)),i]).sort((p,q)=>p[0]-q[0]||p[1]-q[1]).forEach(p=>{if(pick.size<n)pick.add(p[1])});
+ const out=a.filter((x,i)=>pick.has(i));__qcN[seed]=[out.length,a.length];return out};</script>
+"""   # regress 표본(A-3) — 첫 · 끝 + 씨앗 고정(FNV-1a) · 고른 것은 원래 차례
+_RG_SUBS = (("   let okAll=0,bad=[];for(const it of items.filter(x=>x.dataset.code)){",
+             "   let okAll=0,bad=[];const __qcS=__qcPick(items.filter(x=>x.dataset.code),'B-5',22,x=>x.dataset.code);for(const it of __qcS){   /* regress 표본 — gate 는 115 전수 */"),
+            ("   T('B-5 115 항목 전부 누르면 그 쪽 · .cur 따라감',okAll===115,[okAll,bad.slice(0,5)]);",
+             "   T('B-5 115 항목 전부 누르면 그 쪽 · .cur 따라감',okAll===__qcS.length&&items.filter(x=>x.dataset.code).length===115,[okAll,bad.slice(0,5),'(표본 '+__qcS.length+'/115)']);"))
+
+
+def _rg_tests(t):
+    """regress · smoke — 쪽 안 시험 글을 이 자리에서만 고친다 · smoke = 앞머리(E-3) + B-1 교재 열림 + E-9 JS 오류 0 · regress = B-5 표본 — 자리를 못 찾으면 그대로(= gate 와 같은 전수)"""
+    if QC.SMOKE:
+        i0 = t.find("   T('E-3 문항 704 적재'")
+        b0 = t.find("   /* ===== 판 2 · 교재 모드 B-1~B-8")
+        b1 = t.find("   T('B-1 📖 교재 → #book 열림 · 조각 받음 · 문항 무변'")
+        e0 = t.find("   T('E-9 JS 오류 0'")
+        c0 = t.find("  }catch(e){R.push('FAIL | 하니스가 터짐 | '")
+        if min(i0, b0, b1, e0, c0) < 0:
+            print('NOTE | smoke 자르기 자리 못 찾음 — 통째로 돈다')
+            return t
+        i1, b2, e1 = t.find('\n', i0) + 1, t.find('\n', b1) + 1, t.find('\n', e0) + 1
+        return t[:i1] + t[b0:b2] + t[e0:e1] + t[c0:]
+    for old, new in _RG_SUBS:
+        if t.count(old) == 1:
+            t = t.replace(old, new)
+        else:
+            print('NOTE | regress B-5 표본 자리 %d 번 — 그대로(전수)' % t.count(old))
+            return t
+    return _RG_PICK + t
+
+
 def main():
     phone = 'phone' in sys.argv[1:]; subj = os.environ.get('PHONE_SUBJ', 'earth')
     html = open(SRC, encoding='utf-8', newline='').read()
@@ -446,7 +475,7 @@ def main():
     exp = {'u345': sum(1 for r in qd if r['유형'] == '기출' and str(r['단원']) == '3.4.5'),
            'p208': sum(1 for r in qd if str(r['교재쪽']) == '208' or (r['유형'] == '확인' and str(r['문제쪽']) == '208') or (r['유형'] == '기출' and str(r['해설쪽']) == '208')),
            'pages': [loc(p) for p in (2, 74, 208, 240, 290, 489)]}
-    html = html.replace('</body>', (TESTS_PHONE if phone else TESTS).replace('__EXP__', json.dumps(exp, ensure_ascii=False)) + '</body>', 1)
+    html = html.replace('</body>', ((TESTS_PHONE if phone else TESTS) if QC.GATE else _rg_tests(TESTS_PHONE if phone else TESTS)).replace('__EXP__', json.dumps(exp, ensure_ascii=False)) + '</body>', 1)   # regress · smoke — 쪽 안 시험 글을 이 자리에서만 고쳐 씀
     open(APP, 'w', encoding='utf-8', newline='').write(html)
     # 폰 모드(_task_phys_phone_top.md A-1~A-4): 390×844 iframe 안에서 돈다 — 헤드리스 창은 500px 아래로 안 줄어 미디어 규칙이 안 걸리므로
     open(os.path.join(OUT, 'phone.html'), 'w', encoding='utf-8').write('<!doctype html><meta charset="utf-8"><body style="margin:0;background:#888"><iframe src="app.html" style="width:390px;height:844px;border:0;display:block"></iframe></body>')
@@ -481,6 +510,7 @@ def main():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     chrome = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     prof = os.path.join(OUT, 'prof'); shutil.rmtree(prof, ignore_errors=True)
+    QC.launch('new')   # 셈(§B-4) — 새 판 크롬 한 번(바탕은 본디 안 띄운다)
     p = subprocess.Popen([chrome, '--headless=new', '--disable-gpu', '--no-first-run', '--user-data-dir=' + prof, '--window-size=1400,900',
                           'http://127.0.0.1:%d/%s' % (port, 'phone.html' if phone else 'app.html')], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     import time as _t; _t0=_t.time(); got = done.wait(int(os.environ.get('HARNESS_WAIT','600'))); p.terminate(); print('elapsed %.0fs' % (_t.time()-_t0))
@@ -494,6 +524,10 @@ def main():
         for x in lines: print(x)
         print('\n== 폰(%s) %d PASS / %d FAIL / %d항 ==' % (subj, npass, nfail, len(lines))); sys.exit(0 if nfail == 0 else 2)
     def T2(name, cond, info=''): lines.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
+    if QC.SMOKE:   # smoke — 소스 글 · 파일 셈 칸(E-1 · E-2 · E-3 img · B-5 · B-9 · B-10)은 smoke 칸이 아니다
+        npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
+        for x in lines: print(x)
+        print('\n== smoke %d PASS / %d FAIL / %d항 ==' % (npass, nfail, len(lines))); sys.exit(0 if nfail == 0 else 2)
     s = open(SRC, encoding='utf-8').read()
     T2('E-1(병합 뒤) 물리 동작 무변은 물리 하네스 셋으로 증명 — 여기서는 파일 하나임만 확인', os.path.basename(SRC) == 'index.html' and 'jagwa' in SRC)   # 9/5 자과 서재 이사
     samples = [r['문항'][:18] for r in rows if len(r['문항']) > 30][:5] + [r['해설'][:18] for r in rows if len(r['해설']) > 30][:3]

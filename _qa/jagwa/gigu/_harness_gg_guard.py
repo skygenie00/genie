@@ -27,6 +27,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import hashlib
 import http.server
 import io
@@ -73,7 +74,8 @@ def _ensure_base():
     raise SystemExit('NG  고침 전 사본(md5 %s)을 못 찾았다' % BASE_MD5)
 
 
-BASE = _ensure_base()
+if QC.GATE:   # regress — 고침 전 사본(129eedb) 찾기(없으면 git show) 0 · 그 사본은 바탕 실행 · Z 본판 셈에만 쓴다(gate)
+    BASE = _ensure_base()
 # ★ A-6(9/30) — 이 하네스의 인도 판(근거 가드 · genie 352bff7 · 2026-09-21 01:17 인도 · 358 PASS / 0 FAIL).
 #   생물·물리 「고침 전과 같다」(B-3·Y-3) 가운데 뒤 판(c9faff2 shell_bio_phys …)이 뜻대로 바꾼 칸만 이 판으로 잰다(main 참조).
 DLV_REV = '352bff7'
@@ -1496,6 +1498,8 @@ def build(mode, src_text):
             'phys': 'phys', 'physbase': 'phys'}[mode]
     body = {'earth': BODY_EARTH, 'earthbase': BODY_EARTH,
             'bio': BODY_BIO, 'biobase': BODY_BIO}.get(mode, BODY_PHYS)
+    if QC.SMOKE:   # smoke — 밑준비 + 첫 묶음(A-0 껍데기)까지만(BODY_* 글자는 그대로 · 이 자리에서만 자른다)
+        body = _rg_smoke_cut(body)
     html = src_text
     html = html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js',
                         STUB.replace('__SUBJ__', subj) + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
@@ -1507,6 +1511,7 @@ def build(mode, src_text):
 
 
 def run(mode, secs, src_text):
+    QC.launch('base' if (mode.endswith('base') or src_text is _DLV.get('t')) else 'new')   # 셈(§B-4) — 바탕 · 인도판 실행은 gate 에서만 돈다
     subj = build(mode, src_text)
     spd = os.path.join(SPDROOT, subj)
     done = threading.Event()
@@ -1549,8 +1554,9 @@ def run(mode, secs, src_text):
             if self.path.startswith('/cap'):
                 q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
                 nm = (q.get('n') or ['cap'])[0]
-                open(os.path.join(CAP, nm + '.html'), 'w', encoding='utf-8', newline='').write(
-                    CAPHEAD + body + '</body></html>')
+                if QC.GATE:   # regress — DOM 캡처(사람 눈 확인용 · 게이트 아님 · 하네스 옆 _cap_gg)를 안 쓴다
+                    open(os.path.join(CAP, nm + '.html'), 'w', encoding='utf-8', newline='').write(
+                        CAPHEAD + body + '</body></html>')
                 box.setdefault('caps', []).append(nm)
                 return
             box['txt'] = body; done.set()
@@ -1580,7 +1586,7 @@ def run(mode, secs, src_text):
 def static_checks():
     b = open(SRC, 'rb').read()
     s = b.replace(b'\r\n', b'\n').decode('utf-8')
-    base = open(BASE, 'rb').read().replace(b'\r\n', b'\n').decode('utf-8')
+    base = open(BASE, 'rb').read().replace(b'\r\n', b'\n').decode('utf-8') if QC.GATE else None   # regress — 고침 전 사본 안 읽음(본판 셈 칸 = 기준 스냅샷)
     out = []
 
     def T2(name, cond, info=''):
@@ -1597,7 +1603,7 @@ def static_checks():
     T2('Z-2 새 갈래는 전부 ISEA 문 안이다(과목 문 무변)', "var ISEA=SUBJ_ID==='earth';" in s)
     T2('Z-3 uid 를 안 바꿨다', s.count('r[F.CODE]=') == 0)
     T2('Z-4 지학 SYNC_KEYS 줄 자체는 안 고쳤다(넷은 JS 가 더한다)',
-       s.count("'crop','txt','tfix','bref']") == base.count("'crop','txt','tfix','bref']"))
+       (s.count("'crop','txt','tfix','bref']") == base.count("'crop','txt','tfix','bref']")) if QC.GATE else QC.same('Z-4', s.count("'crop','txt','tfix','bref']")))   # regress — 기준 = 앞 인도판 셈(스냅샷)
     T2('Z-5 Tailwind 를 안 들였다', 'cdn.tailwindcss.com' not in s)
     T2('Z-6 makeFloat 을 **부르는** 자리가 둘 늘었다(🃏 창 · 📋 창)',
        s.count("makeFloat(b,b.querySelector('.bplh'),'mc'") == 1
@@ -1614,13 +1620,15 @@ def static_checks():
     # ★ A-6(9/30) · shell_bio_phys 수행 결과 §A(9/21 · c9faff2) — CSS 지학 문 61 → body[data-shell] 51 · body[data-book] 10 · earth_shell Z-10 과 같은 자리
     T2('Z-10 CSS 는 껍데기 문(data-shell) 안이다', 'body[data-shell] #lib{max-width:56rem' in s)
     T2('Z-11 줄끝이 CRLF 그대로다', b.count(b'\r\n') == b.count(b'\n'))
-    T2('Z-12 본판 대비 늘기만 했다', len(s) > len(base))
+    if QC.GATE:   # 관문만 — 본판(129eedb) 대비 길이(그 판 인도 때 「통째로 지우지 않았나」 · earth_shell Z-12 와 같게)
+        T2('Z-12 본판 대비 늘기만 했다', len(s) > len(base))
     # ★ A-6(9/30) — 인도 검산(이 판이 지운 본판 줄 수)은 두 커밋 사이로 박는다: 바탕 ab49775(_base_bp) ↔ 인도 판 DLV_REV(352bff7 · 셈 8).
     #   지금 SRC 로 세면 뒤 판들(c9faff2 …)이 갈아 쓴 줄까지 센다(9/30 셈 320 — 그 몫은 earth_shell Z-13 이 판마다 전수로 잰다).
-    sD = (_dlv_text() or '').replace('\r\n', '\n')
-    T2('Z-13 지운 본판 줄이 거의 없다(손댄 자리뿐)',
-       bool(sD) and sum(1 for ln in base.split('\n') if ln.strip() and ln not in sD) <= 40,
-       sum(1 for ln in base.split('\n') if ln.strip() and ln not in sD) if sD else '(인도 판을 git 에서 못 꺼냄)')
+    if QC.GATE:   # 관문만 — 고침 전 사본 ↔ 인도판 352bff7(git show) 두 고정 판 사이 지운 줄 셈(그 판에만 뜻)
+        sD = (_dlv_text() or '').replace('\r\n', '\n')
+        T2('Z-13 지운 본판 줄이 거의 없다(손댄 자리뿐)',
+           bool(sD) and sum(1 for ln in base.split('\n') if ln.strip() and ln not in sD) <= 40,
+           sum(1 for ln in base.split('\n') if ln.strip() and ln not in sD) if sD else '(인도 판을 git 에서 못 꺼냄)')
     # ── add2 가 둔 것(그대로) ──
     # ★ A-6(9/30) — 부름 **수**가 아니라 **열쇠 이름**을 맞댄다(9/21 13:43 ⓒ · earth_shell Z-15 와 같은 식).
     #   add7(8fa2462)이 근거 가드에서 SYNC_REF.gg 를 더 읽고(1 → 7) add9(68216cf)가 #navdr 의 put('kv','set') 하나를 걷었다 — 둘 다 있는 키다.
@@ -1634,14 +1642,14 @@ def static_checks():
        #   ⚠ 이 잣대는 4754b1d 가 아니라 본판(_base_bp · 고침 전) 대비라 pvjson 은 옛 판에서도 늘 차집합에 든다(위 허용) — 새 FAIL 의 몫은 bak_uid 하나였다.
        # ★ 2026-10-07 (_task_jagwa_phys_win §A-26 · A-30 ㉖) — 물리 오린 것 통 kv 'solx' · 동기화 SYNC_REF.solx 하나씩 더함(앱 글에 SYNC_REF.solx= 가 있을 때만 받음 · 바탕 7520d46 은 옛 판정 그대로)
        # 옛 줄: (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set())))) and _sr(s) == _sr(base),
-       (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set()) | ({'solx'} if "SYNC_REF.solx=" in s else set())))) and (_sr(s) == _sr(base) or ("SYNC_REF.solx=" in s and _sr(s) == _sr(base) | {'solx'})),
-       [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))])
+       ((_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set()) | ({'solx'} if "SYNC_REF.solx=" in s else set())))) and (_sr(s) == _sr(base) or ("SYNC_REF.solx=" in s and _sr(s) == _sr(base) | {'solx'}))) if QC.GATE else QC.same('Z-15', [sorted(_kv(s)), sorted(_sr(s))]),   # regress — 기준 = 앞 인도판 kv · SYNC_REF 집합(스냅샷)
+       [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))] if QC.GATE else _rg_setdiff('Z-15', [sorted(_kv(s)), sorted(_sr(s))]))
     # ★ A-6(9/30) · shell_bio_phys 수행 결과 §A(9/21 · c9faff2) — 아랫줄 감추기는 교재 문 body[data-book](카드 층 = 지학·생물) · 물리는 add15 #pRow1 규칙(earth_shell Z-17)
     T2('Z-17 아랫줄 감추기는 교재 문(data-book) 안이다',
        'body[data-book] .vbot .tools>*{display:none!important}' in s
        and s.count('.vbot .tools>*{display:none') == 1)
     T2('Z-19 단축키 줄 무변(일부러 죽여 둔 것)',
-       s.count("if(e.key==='1')mark('O')") == base.count("if(e.key==='1')mark('O')")
+       (s.count("if(e.key==='1')mark('O')") == base.count("if(e.key==='1')mark('O')") if QC.GATE else QC.same('Z-19', s.count("if(e.key==='1')mark('O')")))
        and "if(document.querySelector('.sheet'))return;" in s)
     # ── add3 ──
     T2('Z-20 ① setTool 덧씌움이 펜·형광·지우개에서 QTXT 를 끈다',
@@ -1652,7 +1660,7 @@ def static_checks():
        and s.count("b.onclick=()=>{QTXT=!QTXT;") == 1)
     T2('Z-22 ① 본디 setTool 은 한 글자도 안 건드렸다',
        "  TOOL.mode=mode;if(color)TOOL.color=color;TOOL.w=+$('#tW').value;" in s
-       and s.count('function setTool(mode,color,el){') == base.count('function setTool(mode,color,el){'))
+       and (s.count('function setTool(mode,color,el){') == base.count('function setTool(mode,color,el){') if QC.GATE else QC.same('Z-22', s.count('function setTool(mode,color,el){'))))
     # ★ A-6(9/30) · shell_bio_phys §A·§B-2(9/21 · c9faff2) — ggCardHTML 문 = SHELL(세 과목) · 물리 근거 줄은 ggPhysPaint 가 #ggphys 에(earth_shell Z-23 과 같은 문)
     T2('Z-23 ② 근거 덩어리는 **한 겹**이다(.ggtop) · ggCardHTML 문은 SHELL(물리 근거 줄 = #ggphys)',
        s.count("'<div class=\"ggtop\">'") == 1
@@ -1661,9 +1669,9 @@ def static_checks():
     T2('Z-24 ② UNDER_HIT·underInk·inkPierce 는 한 글자도 안 건드렸다(지시서 ⓑ)',
        s.count('const UNDER_HIT=') == 1
        and ".row[data-k],[data-c],[data-tfx],[data-go],[data-page],[data-no],.snt,.trit';" in s
-       and s.count("if(el.closest('select,input,textarea'))return null;")
-           == base.count("if(el.closest('select,input,textarea'))return null;")
-       and s.count('function inkPierce(card){') == base.count('function inkPierce(card){'))
+       and (s.count("if(el.closest('select,input,textarea'))return null;")
+            == base.count("if(el.closest('select,input,textarea'))return null;") if QC.GATE else QC.same('Z-24.closest', s.count("if(el.closest('select,input,textarea'))return null;")))
+       and (s.count('function inkPierce(card){') == base.count('function inkPierce(card){') if QC.GATE else QC.same('Z-24.inkPierce', s.count('function inkPierce(card){'))))
     T2('Z-25 ② PASS_THRU 에 근거 선택자를 **더하기만** 했다',
        ".ggnum,.ggbang,.ggref,.ggres,.gguse,[data-ggown],[data-ggpick],[data-ggrt],[data-ggtog]" in s
        and s.count('const PASS_THRU=') == 1
@@ -1681,8 +1689,8 @@ def static_checks():
        'function ggFindSoon(' in s and 'ggFindSoon(v[0],v[1])' in s
        and "if(i&&!b.classList.contains('hide')){i.focus();ggFindRun(v[0],v[1])}" in s)
     T2('Z-30 ③ 저장 꼴은 무변(gg·ggref)',
-       s.count("put('kv','gg',GG)") == base.count("put('kv','gg',GG)")
-       and s.count("put('kv','ggref',GGREF)") == base.count("put('kv','ggref',GGREF)"))
+       (s.count("put('kv','gg',GG)") == base.count("put('kv','gg',GG)") if QC.GATE else QC.same('Z-30.gg', s.count("put('kv','gg',GG)")))
+       and (s.count("put('kv','ggref',GGREF)") == base.count("put('kv','ggref',GGREF)") if QC.GATE else QC.same('Z-30.ggref', s.count("put('kv','ggref',GGREF)"))))
     # ── add3 근거 통 가드 ──
     T2('Z-40 늦게 읽는 통 셋이 다 가드 안이다',
        'var GG_READY=false;' in s
@@ -1699,18 +1707,44 @@ def static_checks():
        and 'if(!have.has(g.k)){list.push(g);m++}' in s
        and 'localStorage.setItem(GGFIX_K' in s)
     T2('Z-43 저장 꼴·병합 규칙은 안 건드렸다',
-       s.count('function stampAll(){') == base.count('function stampAll(){')
-       and s.count('async function recMerge(remote){') == base.count('async function recMerge(remote){')
-       and s.count('function ggSaveList') == base.count('function ggSaveList')
-       and s.count('var ggSaveList') == base.count('var ggSaveList'))
+       (s.count('function stampAll(){') == base.count('function stampAll(){') if QC.GATE else QC.same('Z-43.stampAll', s.count('function stampAll(){')))
+       and (s.count('async function recMerge(remote){') == base.count('async function recMerge(remote){') if QC.GATE else QC.same('Z-43.recMerge', s.count('async function recMerge(remote){')))
+       and (s.count('function ggSaveList') == base.count('function ggSaveList') if QC.GATE else QC.same('Z-43.ggSaveList.f', s.count('function ggSaveList')))
+       and (s.count('var ggSaveList') == base.count('var ggSaveList') if QC.GATE else QC.same('Z-43.ggSaveList.v', s.count('var ggSaveList'))))
     return out
+
+
+# ── _task_qa_slim2(10/8) regress 도우미 — 이름이 `_rg` 로 시작하는 것 = gate 에서 안 쓰는 갈래 ──
+def _rg_smoke_cut(body):
+    """smoke — 밑준비 + 첫 묶음까지(둘째 `await grp(` 앞에서 자름 · 못 찾으면 통째)"""
+    i1 = body.find('\n   await grp(')
+    i2 = body.find('\n   await grp(', i1 + 1) if i1 >= 0 else -1
+    return (body[:i2] + '\n') if i2 > 0 else body
+
+
+def _rg_cmp(lab, sn, keys, T2):
+    """regress — 바탕(고침 전 사본) 실행을 안 하고 「지금 판」 열쇠 = 새 판 스냅(sn) 값을 기준 스냅샷(앞 인도판 같은 열쇠)과 맞댄다 · 칸 글은 gate 와 같다"""
+    if not sn:
+        return
+    for k, ko in keys:
+        a1 = sn.get(k)
+        b1 = QC.base('%s.%s' % (lab[:3], k), a1)
+        T2(lab % ko, QC.norm(a1) == b1, [str(a1)[:140], str(b1)[:140], QC.base_note('%s.%s' % (lab[:3], k))])
+
+
+def _rg_setdiff(cid, v):
+    """regress — 기준 스냅샷 대비 더해진 · 빠진 낱말(값 v = [목록, 목록 …])"""
+    b = QC.base(cid, v) or [[] for _ in v]
+    return {'더함': [sorted(set(x) - set(y)) for x, y in zip(v, b)], '빠짐': [sorted(set(y) - set(x)) for x, y in zip(v, b)], '기준': QC.base_note(cid)}
 
 
 def main():
     want = [a for a in sys.argv[1:] if a in ('earth', 'bio', 'phys', 'null')] \
            or ['earth', 'bio', 'phys', 'null']
     cur = open(SRC, encoding='utf-8', newline='').read()
-    basetxt = open(BASE, encoding='utf-8', newline='').read()
+    basetxt = open(BASE, encoding='utf-8', newline='').read() if QC.GATE else ''   # regress — 고침 전 사본 안 읽음(바탕 실행 안 함)
+    if QC.SMOKE:   # smoke — 지학 실행 하나(첫 묶음 · 콘솔 오류 0)
+        want = [m for m in want if m == 'earth']
     # ★ uid_unify G-3-2(10/4 · gigu/_task_jagwa_uid_unify.md §G-3-2 「카드 .cmark = 이번 열람 마크만(없으면 .cmark 빈칸)」 · 앱 cmarkHTML) — 카드 층(지학·생물 둘 다)의 카드 머리 오른쪽 마크가
     #   「마크 없음」 대신 빈칸이다. G-1(회·번 걷기)은 채팅 10/4 23:1x 판정 (가)로 지학만이라 생물 회·번은 그대로(vT1 · cmeta 의 titleOf 칩 — 잣대 무변)이고, 이 하나만 뜻한 차이로 남는다.
     #   새 판(앱 글에 cmarkHTML 정의)일 때만 B-3 카드 머리줄에서 **바탕(고침 전 판) 쪽 글자의 끝 「 마크 없음」** 만 뗀다 — 새 판 쪽에 남아 있으면 여전히 FAIL.
@@ -1727,45 +1761,51 @@ def main():
     if 'bio' in want:
         ls, sn = run('bio', W, cur)
         lines += ls
-        ls0, sn0 = run('biobase', W, basetxt)
-        # ★ A-6(9/30) — 인도 검산 「고침 전과 같다」의 「고침 뒤」 쪽을 인도 판(DLV_REV)으로 박는다.
-        #   뒤 판(9/21 c9faff2 shell_bio_phys 「생물·물리에도」 · 그 뒤 판들)이 생물 화면을 뜻대로 바꿨다.
-        #   박는 칸 = 착수 때 FAIL 인 여섯(B3D)뿐 — 나머지 칸은 지금 판(sn)을 그대로 잰다.
-        _dt = _dlv_text()
-        snD = run('bio', W, _dt)[1] if _dt else None
-        B3D = ('list', 'cnt', 'hd', 'count', 'brand', 'view')
-        T2('B-3 고침 전 사본도 끝까지 돌았다', bool(sn and sn0), [bool(sn), bool(sn0)])
-        if sn and sn0:
-            for k, ko in (('list', '목록 25줄'), ('cnt', '문항 수'), ('hd', '묶음 머리'),
-                          ('count', '개수 줄'), ('spec', '히트맵 칸'), ('brand', '머리 칩 줄'),
-                          ('view', '#view 클래스'), ('vT1', '문항 머리'), ('cmeta', '카드 머리줄'),
-                          ('tools', '교재 도구줄'), ('book', '#book 클래스')):
-                sk = (snD or {}) if k in B3D else sn
-                # 옛 줄: T2('B-3 ★생물 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sk.get(k) == sn0.get(k),
-                # 옛 줄:    [str(sk.get(k))[:140], str(sn0.get(k))[:140]])
-                a1, b1 = sk.get(k), sn0.get(k)
-                if _G32 and k == 'cmeta' and isinstance(b1, str):
-                    b1 = re.sub(r' 마크 없음$', '', b1)   # §G-3-2 — 바탕 쪽 글자의 끝 「마크 없음」(새 판은 빈칸)
-                T2('B-3 ★생물 %s 이(가) 고침 전과 **글자까지** 같다' % ko, a1 == b1,
-                   [str(a1)[:140], str(b1)[:140]])
+        if QC.GATE:
+            ls0, sn0 = run('biobase', W, basetxt)
+            # ★ A-6(9/30) — 인도 검산 「고침 전과 같다」의 「고침 뒤」 쪽을 인도 판(DLV_REV)으로 박는다.
+            #   뒤 판(9/21 c9faff2 shell_bio_phys 「생물·물리에도」 · 그 뒤 판들)이 생물 화면을 뜻대로 바꿨다.
+            #   박는 칸 = 착수 때 FAIL 인 여섯(B3D)뿐 — 나머지 칸은 지금 판(sn)을 그대로 잰다.
+            _dt = _dlv_text()
+            snD = run('bio', W, _dt)[1] if _dt else None
+            B3D = ('list', 'cnt', 'hd', 'count', 'brand', 'view')
+            T2('B-3 고침 전 사본도 끝까지 돌았다', bool(sn and sn0), [bool(sn), bool(sn0)])
+            if sn and sn0:
+                for k, ko in (('list', '목록 25줄'), ('cnt', '문항 수'), ('hd', '묶음 머리'),
+                              ('count', '개수 줄'), ('spec', '히트맵 칸'), ('brand', '머리 칩 줄'),
+                              ('view', '#view 클래스'), ('vT1', '문항 머리'), ('cmeta', '카드 머리줄'),
+                              ('tools', '교재 도구줄'), ('book', '#book 클래스')):
+                    sk = (snD or {}) if k in B3D else sn
+                    # 옛 줄: T2('B-3 ★생물 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sk.get(k) == sn0.get(k),
+                    # 옛 줄:    [str(sk.get(k))[:140], str(sn0.get(k))[:140]])
+                    a1, b1 = sk.get(k), sn0.get(k)
+                    if _G32 and k == 'cmeta' and isinstance(b1, str):
+                        b1 = re.sub(r' 마크 없음$', '', b1)   # §G-3-2 — 바탕 쪽 글자의 끝 「마크 없음」(새 판은 빈칸)
+                    T2('B-3 ★생물 %s 이(가) 고침 전과 **글자까지** 같다' % ko, a1 == b1,
+                       [str(a1)[:140], str(b1)[:140]])
+        elif QC.want('B-3'):   # regress — biobase · 인도판 실행 안 함 · 「지금 판」 열쇠 다섯 = 기준 스냅샷(인도판 열쇠 여섯 · 끝까지 돌았다 = gate 만)
+            _rg_cmp('B-3 ★생물 %s 이(가) 고침 전과 **글자까지** 같다', sn, (('spec', '히트맵 칸'), ('vT1', '문항 머리'), ('cmeta', '카드 머리줄'), ('tools', '교재 도구줄'), ('book', '#book 클래스')), T2)
     if 'phys' in want:
         ls, sn = run('phys', W, cur)
         lines += ls
-        ls0, sn0 = run('physbase', W, basetxt)
-        # ★ A-6(9/30) — 인도 검산 「고침 전과 같다」의 「고침 뒤」 쪽을 인도 판(DLV_REV)으로 박는다(생물 B-3 과 같은 까닭).
-        #   박는 칸 = 착수 때 FAIL 인 다섯(Y3D)뿐 — 나머지 칸은 지금 판(sn)을 그대로 잰다.
-        _dt = _dlv_text()
-        snD = run('phys', W, _dt)[1] if _dt else None
-        Y3D = ('list', 'hd', 'count', 'brand', 'vtop')
-        T2('Y-3 고침 전 사본도 끝까지 돌았다', bool(sn and sn0), [bool(sn), bool(sn0)])
-        if sn and sn0:
-            for k, ko in (('list', '목록 25줄'), ('cnt', '문항 수'), ('hd', '묶음 머리'),
-                          ('count', '개수 줄'), ('spec', '히트맵 칸'), ('brand', '머리 칩 줄'),
-                          ('view', '#view 클래스'), ('vtop', '문항 머리줄'), ('book', '#book 클래스')):
-                sk = (snD or {}) if k in Y3D else sn
-                T2('Y-3 ★물리 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sk.get(k) == sn0.get(k),
-                   [str(sk.get(k))[:140], str(sn0.get(k))[:140]])
-    if 'null' in want:
+        if QC.GATE:
+            ls0, sn0 = run('physbase', W, basetxt)
+            # ★ A-6(9/30) — 인도 검산 「고침 전과 같다」의 「고침 뒤」 쪽을 인도 판(DLV_REV)으로 박는다(생물 B-3 과 같은 까닭).
+            #   박는 칸 = 착수 때 FAIL 인 다섯(Y3D)뿐 — 나머지 칸은 지금 판(sn)을 그대로 잰다.
+            _dt = _dlv_text()
+            snD = run('phys', W, _dt)[1] if _dt else None
+            Y3D = ('list', 'hd', 'count', 'brand', 'vtop')
+            T2('Y-3 고침 전 사본도 끝까지 돌았다', bool(sn and sn0), [bool(sn), bool(sn0)])
+            if sn and sn0:
+                for k, ko in (('list', '목록 25줄'), ('cnt', '문항 수'), ('hd', '묶음 머리'),
+                              ('count', '개수 줄'), ('spec', '히트맵 칸'), ('brand', '머리 칩 줄'),
+                              ('view', '#view 클래스'), ('vtop', '문항 머리줄'), ('book', '#book 클래스')):
+                    sk = (snD or {}) if k in Y3D else sn
+                    T2('Y-3 ★물리 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sk.get(k) == sn0.get(k),
+                       [str(sk.get(k))[:140], str(sn0.get(k))[:140]])
+        elif QC.want('Y-3'):   # regress — physbase · 인도판 실행 안 함 · 「지금 판」 열쇠 넷 = 기준 스냅샷(인도판 열쇠 다섯 · 끝까지 돌았다 = gate 만)
+            _rg_cmp('Y-3 ★물리 %s 이(가) 고침 전과 **글자까지** 같다', sn, (('cnt', '문항 수'), ('spec', '히트맵 칸'), ('view', '#view 클래스'), ('book', '#book 클래스')), T2)
+    if 'null' in want and QC.GATE:   # 0-헛잣대(earthbase 고침 전 사본 실행) = gate 만
         ls0, _ = run('earthbase', W, basetxt)
         fails = [x for x in ls0 if x.startswith('FAIL')]
         for pre, ko in (('S', 'add3 근거 통 가드·되살림'),):
@@ -1775,7 +1815,8 @@ def main():
                [x.split(' | ')[1][:70] for x in fails][:8])
         T2('0-헛잣대 HEAD 는 통과가 아니다', len(fails) > 0, len(fails))
 
-    lines += static_checks()
+    if QC.want('Z'):   # smoke — 소스 글 셈(Z)은 smoke 칸이 아니다
+        lines += static_checks()
     npass = sum(1 for x in lines if x.startswith('PASS'))
     nfail = sum(1 for x in lines if x.startswith('FAIL'))
     nnote = sum(1 for x in lines if x.startswith('NOTE'))

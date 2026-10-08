@@ -9,6 +9,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import http.server, os, socketserver, subprocess, sys, threading
 
 SRC = _roots.genie(r"jagwa\index.html")   # 9/5 자과 서재 이사
@@ -261,6 +262,26 @@ TESTS = r"""<script>
 """
 
 
+# ── _task_qa_slim2(10/8) regress · smoke 도우미 — 이름이 `_rg` 로 시작하는 것 = gate 에서 안 쓰는 갈래(TESTS 상수는 글자 그대로) ──
+def _rg_smoke_tests(t):
+    """smoke — 앞머리(시동 시트 · 진리표 · 씨앗) + W-2 약점 칩 + 뷰어 열림 + R-1 JS 오류 0 만(그 자리에서 잘라 씀 · 못 찾으면 통째)"""
+    nl = lambda i: t.find('\n', i) + 1
+    w2 = t.find("   T('W-2 칩 「⚠ 약점 n」 = 진리표 집계(3)'")
+    v0 = t.find("   SET.nav=true;await openView(6);await wait(30);")
+    v1 = t.find("   T('뷰어 열림 · VNO=6 · 서랍 보임'")
+    j0 = t.find("   T('R-1 JS 오류 0'")
+    c0 = t.find("  }catch(e){R.push('FAIL | 하니스가 터짐 | '")
+    if min(w2, v0, v1, j0, c0) < 0:
+        print('NOTE | smoke 자르기 자리 못 찾음 — 통째로 돈다')
+        return t
+    return t[:nl(w2)] + t[v0:nl(v1)] + t[j0:nl(j0)] + t[c0:]
+
+
+def _rg_md5(v):
+    import hashlib as _h
+    return _h.md5(str(v).encode('utf-8')).hexdigest()[:16] if v is not None else None
+
+
 def main():
     html = open(SRC, encoding='utf-8', newline='').read()
     assert '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js' in html
@@ -269,7 +290,7 @@ def main():
     html = html.replace('<script defer src="https://cdnjs', '<script defer data-off="https://cdnjs')
     html = html.replace('<link rel="stylesheet" href="https://cdnjs', '<link rel="off" href="https://cdnjs')
     assert html.rstrip().endswith('</html>')
-    html = html.replace('</body>', TESTS + '</body>', 1)
+    html = html.replace('</body>', (TESTS if not QC.SMOKE else _rg_smoke_tests(TESTS)) + '</body>', 1)   # smoke — 쪽 안 시험 글을 이 자리에서만 잘라 씀
     open(APP, 'w', encoding='utf-8', newline='').write(html)
 
     done = threading.Event()
@@ -293,6 +314,7 @@ def main():
     chrome = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     prof = os.path.join(OUT, 'prof')
     url = 'http://127.0.0.1:%d/app.html' % port
+    QC.launch('new')   # 셈(§B-4) — 새 판 크롬 한 번(바탕은 본디 안 띄운다)
     p = subprocess.Popen([chrome, '--headless=new', '--disable-gpu', '--no-first-run',
                           '--user-data-dir=' + prof, '--window-size=1280,900', url],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -314,15 +336,21 @@ def main():
     def T2(name, cond, info=''):
         lines.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
     s = open(SRC, encoding='utf-8', newline='').read().replace('\r\n', '\n')
+    if QC.SMOKE:   # smoke — 브라우저 밖 소스 칸(R-1 · 기록 꼴 · 무접촉 · 백틱 · CRLF)은 smoke 칸이 아니다
+        npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
+        for x in lines:
+            print(x)
+        print('\n== smoke %d PASS / %d FAIL / %d항 ==' % (npass, nfail, len(lines)))
+        sys.exit(0 if nfail == 0 else 2)
     head = subprocess.run(['git', '-C', os.path.dirname(os.path.dirname(SRC)), 'show', 'HEAD:jagwa/index.html'],
-                          capture_output=True).stdout.decode('utf-8').replace('\r\n', '\n')
+                          capture_output=True).stdout.decode('utf-8').replace('\r\n', '\n') if QC.GATE else None   # regress — HEAD git show 0(소스 대조 셋 = 기준 스냅샷)
     fn = lambda src, name: src.split(name, 1)[1].split('\n}\n', 1)[0] if name in src else None
     line1 = lambda src, key: src.split(key, 1)[1].split('\n', 1)[0] if key in src else None
     T2('R-1 SYNC_KEYS = 과목별 표(병합) · 물리 12 = 기존 10 + mcard + link(9/5 필터 손질)', line1(s, 'const SYNC_KEYS=').startswith("CARD_LAYER?CUR.SYNC_KEYS") and "phys:{DB:'phys535', PDF_DIR:'phys/pdf/', REC_PATH:'phys/기록.json', SYNC_PREFIX:'phys_sync_'," in s and "SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','link']," in s)
-    T2('R-1 exportData 함수 바이트 동일(v2 꼴 무변)', fn(s, 'async function exportData(') == fn(head, 'async function exportData('))
-    T2('R-1 syncRecords 함수 바이트 동일', fn(s, 'async function syncRecords(') == fn(head, 'async function syncRecords('))
+    T2('R-1 exportData 함수 바이트 동일(v2 꼴 무변)', fn(s, 'async function exportData(') == fn(head, 'async function exportData(') if QC.GATE else QC.same('R-1.exportData', _rg_md5(fn(s, 'async function exportData('))))   # regress — 기준 = 앞 인도판 함수 글자 md5
+    T2('R-1 syncRecords 함수 바이트 동일', fn(s, 'async function syncRecords(') == fn(head, 'async function syncRecords(') if QC.GATE else QC.same('R-1.syncRecords', _rg_md5(fn(s, 'async function syncRecords('))))
     T2('상단 검색(pass 의 FL.q 줄) 무변',
-       [l for l in s.split('\n') if 'noteOf(r[F.NO]).includes(FL.q)' in l] == [l for l in head.split('\n') if 'noteOf(r[F.NO]).includes(FL.q)' in l])
+       [l for l in s.split('\n') if 'noteOf(r[F.NO]).includes(FL.q)' in l] == [l for l in head.split('\n') if 'noteOf(r[F.NO]).includes(FL.q)' in l] if QC.GATE else QC.same('상단.FLq', _rg_md5('\n'.join(l for l in s.split('\n') if 'noteOf(r[F.NO]).includes(FL.q)' in l))))
     T2('기록 꼴 주석 그대로(새 키 없음)', "let ST={};            // no -> {h:[{m:'O'|'X'|'Q', t:ts, s:초}]}" in s)
     T2('조판기·화학 무접촉(이 파일은 phys 뿐)', 'minbeop' not in s.replace('민법앱(`minbeop/index.html`)의 실물을 읽고 옮겼다', '').replace('minbeop .clsrc 97~99 · .ggclhd 94~96', '') and 'chem/' not in s)   # ★ 합치기 10/1(하위 에이전트 C) — search_claude(e9de3b8) CSS 주석 한 줄도 뺀다(phys P1 과 같음)   # ★ A-6(a) 9/30 — listpop_add1(cd248a5) 주석 한 줄만 뺀다(phys P1 과 같음)
     T2('P11 파일 전체 백틱 수가 짝', s.count('`') % 2 == 0, s.count('`'))

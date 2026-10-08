@@ -15,6 +15,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import http.server, os, socketserver, subprocess, sys, threading, hashlib, json, shutil, urllib.parse
 
 GENIE = _roots.genie()
@@ -178,13 +179,29 @@ TESTS = r"""<script>
 </script>"""
 
 
+# ── _task_qa_slim2(10/8 · J2) smoke 도우미 — 이름이 `_rg` 로 시작하는 것 = gate 에서 안 쓰는 갈래(TESTS 상수는 글자 그대로) ──
+#   regress = gate 와 같은 걸음(칸 32 모두 회귀 · 바탕 · git · 하위 하네스 0 · db 기다림은 10/8 phys_win 판이 이미 조건으로 바꿈) · 쪽 안 고정 대기(bkOpen 뒤 1500 · 20~60ms)는 TESTS 상수 그대로
+def _rg_smoke_tests(t):
+    """smoke — 앞머리 + G-0 첫 칸(카드 층 부팅) + 교재 208쪽 열기 ~ 층 꼴 한 바퀴 ~ G-2(옛 필기가 SVG 로 되살아남) + errors 0 · 예외 · 결과 보냄
+    (원래 글을 그 자리에서 잘라 씀 · 못 찾으면 통째)"""
+    nl = lambda i: t.find('\n', i) + 1
+    a = t.find("   T('G-0 지학 카드 층으로 떴다(CARD_LAYER · earth1)'")
+    b0 = t.find("   /* 교재 모드를 연다 */")
+    b1 = t.find("   T('G-2 층 꼴: 옛 필기가 화면에 되살아난다(SVG path 2)'")
+    j0 = t.find("   T('errors 0'")
+    if min(a, b0, b1, j0) < 0 or not (a < b0 < b1 < j0):
+        print('NOTE | smoke 자르기 자리 못 찾음 — 통째로 돈다')
+        return t
+    return t[:nl(a)] + t[b0:nl(b1)] + t[j0:]
+
+
 def main():
     html = open(SRC, encoding='utf-8', newline='').read()
     html = html.replace('<script defer src="https://cdnjs', '<script defer data-off="https://cdnjs')
     html = html.replace('<link rel="stylesheet" href="https://cdnjs', '<link rel="off" href="https://cdnjs')
     html = html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js',
                         STUB + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
-    html = html.replace('</body>', TESTS + '</body>', 1)
+    html = html.replace('</body>', (TESTS if not QC.SMOKE else _rg_smoke_tests(TESTS)) + '</body>', 1)   # smoke — 쪽 안 시험 글을 이 자리에서만 잘라 씀
     open(APP, 'w', encoding='utf-8', newline='').write(html)
     shutil.copy(os.path.join(GIGU, '지학_서브노트_빈판_A3.pdf'), os.path.join(OUT, 'blank.pdf'))
 
@@ -220,6 +237,7 @@ def main():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     chrome = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     prof = os.path.join(OUT, 'prof'); shutil.rmtree(prof, ignore_errors=True)
+    QC.launch('new')   # 셈(§B-4) — 새 판 크롬 한 번(바탕은 본디 안 띄운다)
     p = subprocess.Popen([chrome, '--headless=new', '--disable-gpu', '--no-first-run', '--user-data-dir=' + prof,
                           '--window-size=1400,900', 'http://127.0.0.1:%d/app.html' % port],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -235,17 +253,18 @@ def main():
     def T2(name, cond, info=''):
         lines.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
 
-    s = open(SRC, encoding='utf-8').read()
-    T2('G-5 문항 가드는 CARD_LAYER 만 덧붙었다 — 물리 식(lc.id!==IMG && !HAVE[lc.id])은 글자 그대로',
-       "if(!CARD_LAYER&&lc.id!=='IMG'&&!HAVE[lc.id])return;" in s and s.count("!HAVE[lc.id])return;") == 1)
-    T2('G-5 옛 가드(가드 없는 .s.push · get 직접 호출)는 남아 있지 않다',
-       "if(Z.ink[p.key]===undefined)Z.ink[p.key]=(await get('ink',p.key))||{s:[]}" not in s
-       and "zInkLoad=async function(Z,p){Z.ink[p.key]=await inkGet(p.key,p);zInkPaint(Z,p)}" in s)
-    T2('G-5 inkNorm·inkGet·inkOrphan 은 카드 층(if(CARD_LAYER)) 안에 있다 — 물리엔 안 실린다',
-       s.index('if(CARD_LAYER){') < s.index('function inkNorm(') < s.index('/*/EARTH:js*/'))
-    T2('G-5 물리 층에서 바뀐 줄은 문항 가드 한 줄뿐(#inkc 밖 물리 코드 무변)',
-       "if(!CARD_LAYER&&lc.id!=='IMG'" in s and 'inkGet(' not in s[:s.index('if(CARD_LAYER){')])
-    T2('G-5 백틱 짝', s.count('`') % 2 == 0)
+    if QC.want('src'):   # smoke — 브라우저 밖 소스 칸(G-5 다섯 · 문항 가드 · 옛 가드 · 카드 층 자리 · 물리 무변 · 백틱)은 smoke 칸이 아니다
+        s = open(SRC, encoding='utf-8').read()
+        T2('G-5 문항 가드는 CARD_LAYER 만 덧붙었다 — 물리 식(lc.id!==IMG && !HAVE[lc.id])은 글자 그대로',
+           "if(!CARD_LAYER&&lc.id!=='IMG'&&!HAVE[lc.id])return;" in s and s.count("!HAVE[lc.id])return;") == 1)
+        T2('G-5 옛 가드(가드 없는 .s.push · get 직접 호출)는 남아 있지 않다',
+           "if(Z.ink[p.key]===undefined)Z.ink[p.key]=(await get('ink',p.key))||{s:[]}" not in s
+           and "zInkLoad=async function(Z,p){Z.ink[p.key]=await inkGet(p.key,p);zInkPaint(Z,p)}" in s)
+        T2('G-5 inkNorm·inkGet·inkOrphan 은 카드 층(if(CARD_LAYER)) 안에 있다 — 물리엔 안 실린다',
+           s.index('if(CARD_LAYER){') < s.index('function inkNorm(') < s.index('/*/EARTH:js*/'))
+        T2('G-5 물리 층에서 바뀐 줄은 문항 가드 한 줄뿐(#inkc 밖 물리 코드 무변)',
+           "if(!CARD_LAYER&&lc.id!=='IMG'" in s and 'inkGet(' not in s[:s.index('if(CARD_LAYER){')])
+        T2('G-5 백틱 짝', s.count('`') % 2 == 0)
     npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
     for x in lines: print(x)
     print('\n== 잉크 가드 %d PASS / %d FAIL / %d항 ==' % (npass, nfail, len(lines)))

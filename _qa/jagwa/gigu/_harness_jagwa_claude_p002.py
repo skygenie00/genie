@@ -21,19 +21,20 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 _roots.need_n('jagwa/gigu/claude_motion 재료(채팅이 만든 md · html — N: 에만)')
 import io, json, os, re, sys, time, hashlib   # noqa: E402
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-import _harness_jagwa_uid as HU   # noqa: E402  (GENIE_ROOT · SPD_ROOT · Dev · route 사본 · PUT 가로채기)
 
 
 def ARG(k, d=None):
     return sys.argv[sys.argv.index(k) + 1] if k in sys.argv else d
 
 
-GENIE = HU.GENIE; SPD = HU.SPD
+GENIE = _roots.genie(); SPD = _roots.spd()
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jagwa_claude_p002_result.txt'))
 MAT = _roots.n('jagwa', 'gigu', 'claude_motion')   # N: 에만 있는 재료 — _qa 사본으로 돌려도 N: 에서 읽는다(env_lanes_fix A-2)
@@ -70,7 +71,7 @@ def _old_mat(k):   # 번호 k 의 옛 재료 글(earth_<번호>.md)
 #   UIDK(그 앱이 uid 열쇠판인가)가 거짓이면(옛 판 · 바탕) 아래 도우미는 옛 값 그대로 돌려준다 — 옛 줄은 바꾼 자리마다 「# 옛 줄:」 주석으로 남겼다.
 #   값을 박지 않는다 — 번호 → uid 는 문항.json 에서 · 하네스가 박아 둔 code 는 닻(§0-6)으로 맞대 본다.
 import posixpath   # noqa: E402
-UIDK = b'function qk(no)' in HU.git(GENIE, 'show', 'HEAD:jagwa/index.html')   # 앱이 카드 층 기록 열쇠를 uid 로 쓰는 판인가(§A-1 의 qk(no))
+UIDK = b'function qk(no)' in (JG.git_HU(GENIE, 'show', 'HEAD:jagwa/index.html') if QC.GATE else open(os.path.join(GENIE, 'jagwa', 'index.html'), 'rb').read())   # 앱이 카드 층 기록 열쇠를 uid 로 쓰는 판인가(§A-1 의 qk(no)) · regress = 작업트리 앱(git show 0)
 _ITEMS = json.loads(open(os.path.join(SPD, 'earth', '문항.json'), 'rb').read().decode('utf-8'))
 N2U = {str(i + 1): it['uid'] for i, it in enumerate(_ITEMS)}   # 화면 번호(= 문항.json 차례 + 1) → uid
 U2N = {u: n for n, u in N2U.items()}
@@ -243,7 +244,7 @@ def dumps(d):
 
 
 def git1(repo, *a):
-    return HU.git(repo, *a).decode('utf-8', 'replace').strip()
+    return JG.git_HU(repo, *a).decode('utf-8', 'replace').strip()
 
 
 def seed_rev():
@@ -262,24 +263,25 @@ def lane_rev():
 
 
 def recs():
-    head = HU.git(SPD, 'show', 'HEAD:' + RP)
+    head = JG.git_HU(SPD, 'show', 'HEAD:' + RP) if QC.GATE else None   # regress — studyplandata HEAD git show 0(합성은 작업트리 기록으로)
     wt = open(os.path.join(SPD, 'phys', '기록.json'), 'rb').read()
     dw = json.loads(wt.decode('utf-8'))
     if (dw['data'].get('gpt') or {}).get(NO) == MD:
         b = json.loads(wt.decode('utf-8'))   # 바탕 = 지금 기록에서 이 판의 두 칸만 뺀 것(다른 칸은 같게)
         b['data']['gpt'].pop(NO, None); b['u'].pop('gpt|' + NO, None); b.get('gone', {}).pop('gpt|' + NO, None)
         return wt, dumps(b), '적재 뒤 실물'
-    d = json.loads(head.decode('utf-8'))
+    d = json.loads((head if QC.GATE else wt).decode('utf-8'))
     d['data'].setdefault('gpt', {})[NO] = MD; d['u']['gpt|' + NO] = int(time.time() * 1000)
-    return dumps(d), head, '합성(적재 전)'
+    return dumps(d), head if QC.GATE else wt, '합성(적재 전)'
 
 
 def statics():
     mdir = os.path.join(GENIE, 'jagwa', 'motion')
     new = {'motion/' + f: open(os.path.join(mdir, f), 'rb').read() for f in os.listdir(mdir) if os.path.isfile(os.path.join(mdir, f))}
-    base = {}
-    for f in git1(GENIE, 'ls-tree', '--name-only', BASE_REV, 'jagwa/motion/').split():
-        base['motion/' + f.split('/')[-1]] = HU.git(GENIE, 'show', BASE_REV + ':' + f)
+    base = {} if QC.GATE else dict(_RG_SB)   # regress — 바탕 motion git ls-tree · show 0(바탕 index.json = cedc251 값 상수 · 바탕 html 은 바탕 문맥에서만 썼다)
+    if QC.GATE:
+        for f in git1(GENIE, 'ls-tree', '--name-only', BASE_REV, 'jagwa/motion/').split():
+            base['motion/' + f.split('/')[-1]] = JG.git_HU(GENIE, 'show', BASE_REV + ':' + f)
     assert base, 'NG 바탕 motion 을 못 읽었다(%s)' % BASE_REV
     return new, base
 
@@ -341,11 +343,12 @@ def load(dv, app, subj, rec, stat):
     dv.cerr = []
     dv.pg.on('console', lambda m: dv.cerr.append('%s @%s' % (m.text[:160], ((m.location or {}).get('url') or '')[-48:])) if m.type == 'error' else None)
     dv.ev(CJS)
-    dv.ev("()=>__J.sync()"); dv.pg.wait_for_timeout(800)
+    dv.ev("()=>__J.sync()"); dv.pg.wait_for_timeout(800) if QC.GATE else QC.sleep(800, '기록 맞춤(__J.sync) 뒤 GP · 목록 다시 그림 — 끝 표지 없음', dv.pg)
 
 
 def dv_open(br, eng, app, subj, rec, stat):
-    dv = HU.Dev(br, eng)
+    dv = JG.Dev(br, eng)
+    QC.launch('new')
     load(dv, app, subj, rec, stat)
     return dv
 
@@ -367,14 +370,14 @@ def run_side(br, eng, who, app, rec, stat):
         dv.ev("()=>__C.resetFL()"); dv.pg.wait_for_timeout(700)
         out['list'] = dv.ev("()=>__C.listTags()")
         out['gp'] = dv.ev("()=>__C.gpNos()")
-        for no in (97, 72):
+        for no in ((97, 72) if not QC.SMOKE else (97,)):   # smoke — 97 만
             o = {'btn': dv.ev("n=>__C.open(n)", no)}
             o['clicked'] = click(dv, '#tGpt'); dv.pg.wait_for_timeout(900)
             o['sheet'] = dv.ev("()=>__C.sheet()")
             if o['sheet'] and o['sheet']['mot']:
                 click(dv, '#gpMot'); dv.pg.wait_for_timeout(1500)
                 o['frame'] = dv.ev("()=>__C.frame()")
-                if no == 97 and o['frame'] and o['frame'].get('same') and o['frame'].get('canvas'):
+                if no == 97 and o['frame'] and o['frame'].get('same') and o['frame'].get('canvas') and QC.want('B-2.play'):   # smoke — 재생(≈7 초) 건넘
                     try:   # iframe 안 「▶ 재생」 = 진짜 누름(합성 click() 아님) → t 0 → 4(약 6.7초) 끝까지 기다린다
                         dv.pg.frame_locator('#gpMotFrame').locator('#play').click(timeout=15000)
                         t0 = time.time(); now = {}
@@ -389,7 +392,7 @@ def run_side(br, eng, who, app, rec, stat):
             dv.ev("()=>__C.closeSheets()")
             out[no] = o
         nb = {}
-        for n in NEIGH:   # 이웃 번호 — 창은 뜨지만(글 없음 → 고치기 판) 모션 단추는 0
+        for n in (NEIGH if not QC.SMOKE else ()):   # 이웃 번호 — 창은 뜨지만(글 없음 → 고치기 판) 모션 단추는 0 · smoke 건넘
             dv.ev("n=>__C.open(n)", n); click(dv, '#tGpt'); dv.pg.wait_for_timeout(900)
             s = dv.ev("()=>__C.sheet()"); nb[n] = {'sheet': bool(s), 'mot': bool(s and s['mot'])}; dv.ev("()=>__C.closeSheets()")
         out['nb'] = nb
@@ -424,38 +427,73 @@ def earth_side(br, eng, app, stat):
     return o
 
 
+# ── _task_qa_slim2(10/8) regress 도우미 — 이름이 `_rg` · `_RG` 로 시작하는 것 = gate 에서 안 쓰는 갈래 ──
+_RG_SB = {'motion/index.json': b'{"phys":[72],"earth":[149,84]}'}   # 바탕(--base 기본 cedc251) jagwa/motion/index.json — 10/8 git show 로 잼(고정 커밋 · 안 바뀜) · regress 는 git 을 안 부른다
+
+
+def _rg_md5(v):
+    import hashlib as _h
+    return _h.md5(json.dumps(v, ensure_ascii=False, sort_keys=True, default=str).encode('utf-8')).hexdigest()[:16]
+
+
+def _rg_B(eng, N):
+    """regress — 바탕 문맥(바탕 motion · 97 없는 기록) 안 띄움 · 기준 칸이 읽는 바탕 값 = 기준 스냅샷(앞 인도판 새 판 문맥 값) · 바탕 판정(헛잣대) 열은 R 에서 —
+    smoke 는 B-1 만 재고 넘어가므로 스냅샷에 아무것도 안 적는다(빈 틀)"""
+    if QC.SMOKE:
+        return {97: {'btn': {'btn': None}, 'sheet': {}}}
+    f72 = (N.get(72) or {}).get('frame') or {}
+    k72 = ('src', 'status', 'same', 'cv')
+    return {97: {'btn': {'btn': None}, 'sheet': {}},
+            72: {'frame': QC.base('B-2.72.frame@' + eng, {k: f72.get(k) for k in k72}) or {}},
+            'gpText': {'72': QC.base('B-2.72.gp@' + eng, (N.get('gpText') or {}).get('72'))},
+            'keys': QC.base('B-3.keys@' + eng, N.get('keys')),
+            'stores': QC.base('B-3.stores@' + eng, {k: _rg_md5(v) for k, v in (N.get('stores') or {}).items()}) or {},
+            'gp': [x for x in (QC.base('B-3.gp@' + eng, sorted(N.get('gp') or [])) or []) if x != int(NO)],
+            'mot': None, 'list': {'tags': None}}
+
+
+def _rg_earth(br, eng, app, sn):
+    """regress — 지학 149·84 바탕 motion 문맥 안 띄움 · 바탕 쪽 = 기준 스냅샷(앞 인도판 새 판 earth_side)"""
+    En = earth_side(br, eng, app, sn)
+    return En, {k: QC.base('B-2.earth.%d@%s' % (k, eng), En.get(k)) for k in (149, 84)}
+
+
 def main():
     rn, rb, how = recs()
     sn, sb = statics()
     sb_raw = sb   # 옛 번호 이름 그대로(라벨 · 옛 값 표시용) — 아래 sb 는 uid 열쇠판 앱에 먹이려고 지학 모션 이름·목록을 uid 로 옮긴 것(§D-1 · 물리 쪽은 그대로)
     if UIDK:
         sb = uidify(sb)
-    app = HU.git(GENIE, 'show', 'HEAD:jagwa/index.html')
+    app = JG.git_HU(GENIE, 'show', 'HEAD:jagwa/index.html') if QC.GATE else open(os.path.join(GENIE, 'jagwa', 'index.html'), 'rb').read().replace(b'\r\n', b'\n')   # regress — 작업트리 앱(git show 0)
     wt = open(os.path.join(GENIE, 'jagwa', 'index.html'), 'rb').read().replace(b'\r\n', b'\n')
     jn, jb = json.loads(rn.decode('utf-8')), json.loads(rb.decode('utf-8'))
-    SEED, LANE = seed_rev(), lane_rev()
+    SEED, LANE = (seed_rev(), lane_rev()) if QC.GATE else ('', '')   # regress — 이 판 커밋 찾기(git log) 0 · B-5 · A-1(이 판 커밋) 칸은 gate 만
     print('기록 = %s · 앱 = genie HEAD jagwa/index.html(작업트리와 %s) · 이 판 genie 커밋 %s · 적재 커밋 %s' % (
         how, '같음' if wt == app else '다름', LANE or '(커밋 전)', SEED or '(커밋 전)'))
     t0 = time.time()
     base_fail = {}
     with sync_playwright() as pw:
-        for eng in ENGS:
+        for eng in (ENGS if not QC.SMOKE else ([e for e in ENGS if e == 'chromium'] or ENGS[:1])):   # smoke — chromium 한 판
             br = getattr(pw, eng).launch()
             try:
                 N = run_side(br, eng, 'NEW', app, rn, sn)
-                B = run_side(br, eng, 'BASE', app, rb, sb)
+                B = run_side(br, eng, 'BASE', app, rb, sb) if QC.GATE else _rg_B(eng, N)   # regress — 바탕 문맥 안 띄움(기준 값 = 스냅샷)
                 n, b = N[97], B[97]
                 s, sbs = n['sheet'] or {}, b['sheet'] or {}
                 ok1 = n['btn']['btn'] == 'Claude ✓' and n['btn']['vis'] and n['clicked'] and s.get('h2', '').startswith('97번 Claude 풀이') \
                     and s.get('read') and not s.get('edit') and 'PA1109' in s.get('p', '') and 'undefined' not in s.get('p', '')
                 okb1 = b['btn']['btn'] == 'Claude ✓' and bool(sbs.get('read'))
-                R(eng, 'B-1 97 — 툴바 「Claude ✓」 · 창 제목 「97번 Claude 풀이」 · 읽기 판이 먼저(고치기 칸 없음)', ok1, okb1,
+                R(eng, 'B-1 97 — 툴바 「Claude ✓」 · 창 제목 「97번 Claude 풀이」 · 읽기 판이 먼저(고치기 칸 없음)', ok1, okb1 if QC.GATE else None,
                   {'단추': n['btn'], '제목': s.get('h2'), '둘째 줄': s.get('p'), '바탕 단추': b['btn']['btn'], '바탕 읽기 판': sbs.get('read')})
+                if QC.SMOKE:   # smoke — B-1 툴바 · B-2 콘솔 오류 0 만(아래 B-2 칸과 같은 셈)
+                    merr = [x for x in (N['cerr'] or []) if 'motion/' in x]
+                    R(eng, 'B-2 모션 iframe 쪽 콘솔 오류 0 · 앱 페이지 오류 0', not merr and not N['errs'], None, {'모션': merr, '앱 pageerror': N['errs'], '앱 콘솔(참고)': N['cerr'][:4]})
+                    continue
                 head = [x.strip() for x in MD.split('\n\n')[0].replace('**', '').split('\n')]
                 p1 = [x.strip() for x in (s.get('p1') or '').split('\n')]
                 ok2 = all(s.get(k) == v for k, v in WANT.items()) and s.get('script') == 0 and p1 == head
                 R(eng, 'B-1 97 읽기 판 — h3.gph 5(①~⑤) · ul.gpul li 17 · ol.gpol li 5 · <b> 3 · table 0 · script 0 · 원문 첫 문단 = 첫 p', ok2,
-                  all(sbs.get(k) == v for k, v in WANT.items()),
+                  all(sbs.get(k) == v for k, v in WANT.items()) if QC.GATE else None,
                   dict({k: s.get(k) for k in list(WANT) + ['script']}, 첫문단=p1 == head))
                 f = n.get('frame') or {}
                 fa = f.get('after') or {}
@@ -463,7 +501,7 @@ def main():
                     and abs((f.get('h') or 0) - 480) <= 2 and f.get('canvas') == 2 and all((x or 0) > 0 for x in (f.get('cw') or [0])) \
                     and f.get('big') == ['phys_97.html', '_blank']
                 R(eng, 'B-2 97 모션 — 「▶ 모션」 · iframe motion/phys_97.html 200 · 같은 출처 · 480px · iframe 안 canvas 2(폭 잡음) · 「크게 보기」 phys_97.html _blank', ok3,
-                  bool(sbs.get('mot')), {k: f.get(k) for k in ('src', 'status', 'same', 'h', 'canvas', 'cw', 'big')})
+                  bool(sbs.get('mot')) if QC.GATE else None, {k: f.get(k) for k in ('src', 'status', 'same', 'h', 'canvas', 'cw', 'big')})
                 e1a, e2a = fa.get('e1') or '', fa.get('e2') or ''
                 ok4 = (MINUS + '3mv') in e1a and '그대로' in e2a and (MINUS + '3mv') not in (f.get('e1') or '') and fa.get('tout') == 't = 4.00'
                 R(eng, 'B-2 97 모션 재생(iframe 「▶ 재생」 진짜 누름) — 재생 뒤 #e1 에 「−3mv」 · #e2 에 「그대로」 · 재생 앞 #e1 에는 「−3mv」 없음(스크립트가 돌았다)', ok4, None,
@@ -480,9 +518,9 @@ def main():
                 j0 = json.loads(sb['motion/index.json'])
                 want_mp = (j0.get('phys') or []) + [97]
                 R(eng, 'B-2 물리 모션 번호(MOT.phys) = 바탕 %s + 97 로 시작 — 지금 %s' % (j0.get('phys'), mp), (mp or [])[:len(want_mp)] == want_mp,
-                  (mb or [])[:len(want_mp)] == want_mp, {'NEW': mp, 'BASE': mb})
+                  (mb or [])[:len(want_mp)] == want_mp if QC.GATE else None, {'NEW': mp, 'BASE': mb})
                 R(eng, 'B-2 물리 96·98 — 모션 단추 0(창은 뜸)', all(v['sheet'] and not v['mot'] for v in N['nb'].values()), None, N['nb'])
-                En, Eb = earth_side(br, eng, app, sn), earth_side(br, eng, app, sb)
+                En, Eb = (earth_side(br, eng, app, sn), earth_side(br, eng, app, sb)) if QC.GATE else _rg_earth(br, eng, app, sn)   # regress — 바탕 motion 문맥 안 띄움(기준 스냅샷)
                 # 옛 줄: oke = all(En[k]['mot'] and En[k]['status'] == 200 and En[k]['card'] == 1 and En[k]['src'] == 'motion/earth_%d.html' % k for k in (149, 84)) \
                 # 옛 줄: and {k: En[k] for k in (149, 84)} == {k: Eb[k] for k in (149, 84)}
                 oke = all(En[k]['mot'] and En[k]['status'] == 200 and En[k]['card'] == 1 and En[k]['src'] == 'motion/earth_%s.html' % mk(k) for k in (149, 84)) \
@@ -491,13 +529,13 @@ def main():
                 merr = [x for x in (N['cerr'] or []) if 'motion/' in x]
                 R(eng, 'B-2 모션 iframe 쪽 콘솔 오류 0 · 앱 페이지 오류 0', not merr and not N['errs'], None, {'모션': merr, '앱 pageerror': N['errs'], '앱 콘솔(참고)': N['cerr'][:4]})
                 # ── B-3 데이터 ──
-                gk = [k for k in N['keys'] if N['stores'].get(k) != B['stores'].get(k)]
+                gk = [k for k in N['keys'] if N['stores'].get(k) != B['stores'].get(k)] if QC.GATE else [k for k in N['keys'] if _rg_md5(N['stores'].get(k)) != B['stores'].get(k)]   # regress — 기준 스냅샷은 칸마다 md5
                 g72 = (jn['data'].get('gpt') or {}).get('72')
                 body = json.loads(N['body']) if N['body'] else None
                 okb_ = body is None or ((body.get('data', {}).get('gpt') or {}).get(NO) == MD and (body.get('data', {}).get('gpt') or {}).get('72') == g72
                                         and set(body.get('gone') or {}) <= set(jn.get('gone') or {}))
                 ok6 = N['gpText'].get(NO) == MD and N['gpText'].get('72') == g72 and bool(g72) and B['gpText'].get('72') == g72
-                R(eng, 'B-3 빈 기기 — 동기화 뒤 GP[97] = 재료 글자 전수(%d자) · GP[72] = 기록 값 무변(%d자)' % (len(MD), len(g72 or '')), ok6, B['gpText'].get(NO) == MD,
+                R(eng, 'B-3 빈 기기 — 동기화 뒤 GP[97] = 재료 글자 전수(%d자) · GP[72] = 기록 값 무변(%d자)' % (len(MD), len(g72 or '')), ok6, B['gpText'].get(NO) == MD if QC.GATE else None,
                   {'97 길이': len(N['gpText'].get(NO) or ''), '72 같음': N['gpText'].get('72') == g72})
                 R(eng, 'B-3 빈 기기 — gpt 말고 동기화 칸 %d 가 바탕과 같다 · GP 칸 = 바탕 + 97(지워진 칸 0) · 올린 몸통 gpt 97·72 · 묘비 늘지 않음' % len(N['keys']),
                   not gk and N['keys'] == B['keys'] and set(N['gp']) == set(B['gp']) | {97} and okb_, None,
@@ -542,83 +580,88 @@ def main():
                 # ── B-4 목록 ──
                 want = sorted(int(k) for k in (jn['data'].get('gpt') or {}))
                 okl = N['list']['tags'] == want and 97 in want and 72 in want and N['list']['txt'] == ['Claude']
-                R(eng, 'B-4 목록 — .tag.gp 「Claude」 줄 = 기록 gpt 칸 번호 %s(물리 97·72) · 다른 줄 0' % want, okl, B['list']['tags'] == want,
+                R(eng, 'B-4 목록 — .tag.gp 「Claude」 줄 = 기록 gpt 칸 번호 %s(물리 97·72) · 다른 줄 0' % want, okl, B['list']['tags'] == want if QC.GATE else None,
                   {'NEW': N['list'], 'BASE 태그': B['list']['tags']})
-                base_fail[eng] = {'B-1': not okb1, 'B-2': not bool(sbs.get('mot')) and (mb or [])[:len(want_mp)] != want_mp, 'B-4': B['list']['tags'] != want}
+                if QC.GATE:   # 관문만 — B-6 헛잣대 재료
+                    base_fail[eng] = {'B-1': not okb1, 'B-2': not bool(sbs.get('mot')) and (mb or [])[:len(want_mp)] != want_mp, 'B-4': B['list']['tags'] != want}
             finally:
                 br.close()
-    # ── 헛잣대 · 정적 ──
-    for eng, bf in base_fail.items():
-        R(eng, 'B-6 헛잣대 — 바탕(옛 index.json · 97 없는 기록)에서 B-1·B-2·B-4 가 FAIL', all(bf.values()), None, bf)
-    # 앱 무변 — 작업트리 = HEAD · 이 판 genie 커밋이 앱을 안 건드림(커밋 전이면 작업트리에서 바뀐 것이 motion 뿐)
-    if LANE:
-        lf = git1(GENIE, 'diff', '--name-only', LANE + '~1', LANE).split()
-        jx = json.loads(HU.git(GENIE, 'show', LANE + ':jagwa/motion/index.json').decode('utf-8'))
-        j1 = json.loads(HU.git(GENIE, 'show', LANE + '~1:jagwa/motion/index.json').decode('utf-8'))
-        where = 'genie 커밋 %s' % LANE
-    else:
-        lf = [x[3:] for x in HU.git(GENIE, 'status', '--porcelain', '--untracked-files=all', '--', 'jagwa').decode('utf-8', 'replace').split('\n') if x.strip()]   # strip 하면 첫 줄 앞 공백이 빠져 한 글자 더 잘린다(10/1 첫 실행)
-        jx, j1 = json.loads(sn['motion/index.json']), json.loads(HU.git(GENIE, 'show', 'HEAD:jagwa/motion/index.json').decode('utf-8'))
-        where = 'genie 작업트리(커밋 전)'
-    R('-', 'B-5 jagwa/index.html 바이트 무변 — 작업트리 = HEAD · %s 가 바꾼 파일 = motion 둘뿐 %s' % (where, lf),
-      wt == app and sorted(lf) == sorted(['jagwa/motion/index.json', MOTF]), None, hashlib.md5(wt).hexdigest()[:8])
-    R('-', 'A-1 이 판이 남긴 motion/index.json(%s) = 앞 판 값에 phys 97 만 더함 — phys %s → %s · earth %s 무변 · 키 무변' % (where, j1.get('phys'), jx.get('phys'), j1.get('earth')),
-      jx.get('phys') == (j1.get('phys') or []) + [97] and jx.get('earth') == j1.get('earth') and set(jx) == set(j1), None, json.dumps(jx))
-    j, j0 = json.loads(sn['motion/index.json']), json.loads(sb['motion/index.json'])
-    # 옛 줄: R('-', 'A-1 지금 motion/index.json — phys 가 바탕 %s + [97] 로 시작 · earth 가 바탕 %s 로 시작(값·차례 무변 · 뒤 판이 끝에 더한 것만 허용) · 바탕 키 다 있음' % (j0.get('phys'), j0.get('earth')),
-    j0r = json.loads(sb_raw['motion/index.json'])   # 옛 번호 그대로 — 라벨용(판이 달라도 같은 줄 이름) · 조건의 j0 는 uid 로 옮긴 바탕 목록(§D-1)
-    R('-', 'A-1 지금 motion/index.json — phys 가 바탕 %s + [97] 로 시작 · earth 가 바탕 %s 로 시작(값·차례 무변 · 뒤 판이 끝에 더한 것만 허용) · 바탕 키 다 있음' % (j0r.get('phys'), j0r.get('earth')),
-      (j.get('phys') or [])[:len(j0.get('phys') or []) + 1] == (j0.get('phys') or []) + [97] and (j.get('earth') or [])[:len(j0.get('earth') or [])] == (j0.get('earth') or [])
-      and set(j0) <= set(j), False, sn['motion/index.json'].decode().strip())
-    # 적재가 두 칸(+savedAt)만 더했나
-    if SEED:
-        fs = git1(SPD, 'diff', '--name-only', SEED + '~1', SEED).split()
-        old, new = HU.git(SPD, 'show', SEED + '~1:' + RP), HU.git(SPD, 'show', SEED + ':' + RP)
-        where = 'studyplandata 커밋 %s' % SEED
-    else:
-        fs = [x[3:] for x in HU.git(SPD, 'status', '--porcelain').decode('utf-8', 'replace').split('\n') if x.strip()]
-        old, new = HU.git(SPD, 'show', 'HEAD:' + RP), open(os.path.join(SPD, 'phys', '기록.json'), 'rb').read()
-        where = 'studyplandata HEAD → 작업트리(커밋 전)'
-    do, dn = json.loads(old.decode('utf-8')), json.loads(new.decode('utf-8'))
-    if NO in (dn['data'].get('gpt') or {}) and NO not in (do['data'].get('gpt') or {}):
-        x = json.loads(json.dumps(dn)); x['data']['gpt'].pop(NO); x['u'].pop('gpt|' + NO, None)
-        y = json.loads(json.dumps(do))
-        for z in (x, y):
-            z.pop('savedAt', None)
-        R('-', 'B-5 적재(%s) — 바꾼 파일 = phys/기록.json 하나 · data.gpt["97"] = 재료 · u["gpt|97"] 둘(+savedAt)만 더함 · 다른 칸·gone 무변(지학·생물 기록 무변)' % where,
-          x == y and dn['data']['gpt'][NO] == MD and isinstance(dn['u'].get('gpt|' + NO), int) and fs == [RP], None,
-          {'파일': fs, '도장': dn['u'].get('gpt|' + NO), 'savedAt': [do.get('savedAt'), dn.get('savedAt')]})
-    else:
-        R('-', 'B-5 적재(%s) — 아직 적재 전(합성 기록으로 잼)' % where, None, None, '')
-    # 지학 gpt 149·84 · 생물 gpt
-    E = json.loads(open(os.path.join(SPD, 'earth', '기록.json'), 'rb').read().decode('utf-8'))
-    eg = E['data'].get('gpt') or {}
-    Bi = json.loads(open(os.path.join(SPD, 'bio', '기록.json'), 'rb').read().decode('utf-8'))
-    R('-', 'B-5 지학 gpt["149"]·["84"] = 재료 글자 그대로(무변) · 생물 gpt = %s' % json.dumps(Bi['data'].get('gpt')),
-      # 옛 줄: eg.get('149') == mat('earth_149.md') and eg.get('84') == mat('earth_84.md'), None, {'지학 gpt': sorted(eg, key=int)})
-      eg.get('149') == mat('earth_149.md') and eg.get('84') == mat('earth_84.md'), None, {'지학 gpt': sorted(eg, key=lambda z_: (0, int(z_), '') if z_.isdigit() else (1, 0, z_))})   # ★ uid_unify §D-2 — 원격 gpt 에 uid 열쇠 칸이 더해질 수 있다(번호 칸은 그대로)
-    # 모션 파일
-    f = 'motion/phys_97.html'
-    src = open(os.path.join(MAT, 'phys_97.html'), 'rb').read()
-    R('-', 'A-1 %s = 재료 바이트(줄끝만 뺀 대조 · 재료 %d B · md5 %s)' % (f, len(src), hashlib.md5(src).hexdigest()[:8]),
-      (sn.get(f) or b'').replace(b'\r\n', b'\n') == src.replace(b'\r\n', b'\n'), None, len(sn.get(f) or b''))
-    ix = git1(GENIE, 'ls-files', '-s', '--', MOTF).split()
-    if ix:
-        blob = HU.git(GENIE, 'cat-file', '-p', ix[1])
-        R('-', 'A-1 %s git blob = 재료 바이트 그대로(md5 %s)' % (f, hashlib.md5(blob).hexdigest()[:8]), blob == src, None, len(blob))
-    else:
-        R('-', 'A-1 %s — 아직 git 에 안 올림(blob 대조는 스테이징 뒤)' % f, None, None, '')
-    tx = (sn.get(f) or b'').decode('utf-8', 'replace')
-    R('-', '%s — 바깥 스크립트·주소 0 · canvas 2 · .pdf 0(공개 genie · D11)' % f,
-      not re.search(r'<script[^>]*\bsrc\s*=', tx) and not re.findall(r'https?://', tx) and tx.count('<canvas') == 2 and '.pdf' not in tx.lower(), None,
-      re.findall(r'https?://[^\s"\'<>]+', tx)[:3])
-    R('-', 'motion 폴더에 .pdf 0', not [k for k in sn if k.lower().endswith('.pdf')], None, sorted(sn))
+    if QC.want('static'):   # smoke — 엔진 뒤 정적 칸(B-6 · B-5 · A-1 · 재료 · 지학 gpt …) 건넘
+        # ── 헛잣대 · 정적 ──
+        for eng, bf in base_fail.items():
+            R(eng, 'B-6 헛잣대 — 바탕(옛 index.json · 97 없는 기록)에서 B-1·B-2·B-4 가 FAIL', all(bf.values()), None, bf)
+        # 앱 무변 — 작업트리 = HEAD · 이 판 genie 커밋이 앱을 안 건드림(커밋 전이면 작업트리에서 바뀐 것이 motion 뿐)
+        if QC.GATE:   # 관문만 — 이 판 genie 커밋(LANE · git diff/show/status) · 앱 바이트 무변 · 이 판이 남긴 index.json
+            if LANE:
+                lf = git1(GENIE, 'diff', '--name-only', LANE + '~1', LANE).split()
+                jx = json.loads(JG.git_HU(GENIE, 'show', LANE + ':jagwa/motion/index.json').decode('utf-8'))
+                j1 = json.loads(JG.git_HU(GENIE, 'show', LANE + '~1:jagwa/motion/index.json').decode('utf-8'))
+                where = 'genie 커밋 %s' % LANE
+            else:
+                lf = [x[3:] for x in JG.git_HU(GENIE, 'status', '--porcelain', '--untracked-files=all', '--', 'jagwa').decode('utf-8', 'replace').split('\n') if x.strip()]   # strip 하면 첫 줄 앞 공백이 빠져 한 글자 더 잘린다(10/1 첫 실행)
+                jx, j1 = json.loads(sn['motion/index.json']), json.loads(JG.git_HU(GENIE, 'show', 'HEAD:jagwa/motion/index.json').decode('utf-8'))
+                where = 'genie 작업트리(커밋 전)'
+            R('-', 'B-5 jagwa/index.html 바이트 무변 — 작업트리 = HEAD · %s 가 바꾼 파일 = motion 둘뿐 %s' % (where, lf),
+              wt == app and sorted(lf) == sorted(['jagwa/motion/index.json', MOTF]), None, hashlib.md5(wt).hexdigest()[:8])
+            R('-', 'A-1 이 판이 남긴 motion/index.json(%s) = 앞 판 값에 phys 97 만 더함 — phys %s → %s · earth %s 무변 · 키 무변' % (where, j1.get('phys'), jx.get('phys'), j1.get('earth')),
+              jx.get('phys') == (j1.get('phys') or []) + [97] and jx.get('earth') == j1.get('earth') and set(jx) == set(j1), None, json.dumps(jx))
+        j, j0 = json.loads(sn['motion/index.json']), json.loads(sb['motion/index.json'])
+        # 옛 줄: R('-', 'A-1 지금 motion/index.json — phys 가 바탕 %s + [97] 로 시작 · earth 가 바탕 %s 로 시작(값·차례 무변 · 뒤 판이 끝에 더한 것만 허용) · 바탕 키 다 있음' % (j0.get('phys'), j0.get('earth')),
+        j0r = json.loads(sb_raw['motion/index.json'])   # 옛 번호 그대로 — 라벨용(판이 달라도 같은 줄 이름) · 조건의 j0 는 uid 로 옮긴 바탕 목록(§D-1)
+        R('-', 'A-1 지금 motion/index.json — phys 가 바탕 %s + [97] 로 시작 · earth 가 바탕 %s 로 시작(값·차례 무변 · 뒤 판이 끝에 더한 것만 허용) · 바탕 키 다 있음' % (j0r.get('phys'), j0r.get('earth')),
+          (j.get('phys') or [])[:len(j0.get('phys') or []) + 1] == (j0.get('phys') or []) + [97] and (j.get('earth') or [])[:len(j0.get('earth') or [])] == (j0.get('earth') or [])
+          and set(j0) <= set(j), False, sn['motion/index.json'].decode().strip())
+        # 적재가 두 칸(+savedAt)만 더했나
+        if QC.GATE:   # 관문만 — 이 판 적재 커밋(SEED · studyplandata git diff/show/status)
+            if SEED:
+                fs = git1(SPD, 'diff', '--name-only', SEED + '~1', SEED).split()
+                old, new = JG.git_HU(SPD, 'show', SEED + '~1:' + RP), JG.git_HU(SPD, 'show', SEED + ':' + RP)
+                where = 'studyplandata 커밋 %s' % SEED
+            else:
+                fs = [x[3:] for x in JG.git_HU(SPD, 'status', '--porcelain').decode('utf-8', 'replace').split('\n') if x.strip()]
+                old, new = JG.git_HU(SPD, 'show', 'HEAD:' + RP), open(os.path.join(SPD, 'phys', '기록.json'), 'rb').read()
+                where = 'studyplandata HEAD → 작업트리(커밋 전)'
+            do, dn = json.loads(old.decode('utf-8')), json.loads(new.decode('utf-8'))
+            if NO in (dn['data'].get('gpt') or {}) and NO not in (do['data'].get('gpt') or {}):
+                x = json.loads(json.dumps(dn)); x['data']['gpt'].pop(NO); x['u'].pop('gpt|' + NO, None)
+                y = json.loads(json.dumps(do))
+                for z in (x, y):
+                    z.pop('savedAt', None)
+                R('-', 'B-5 적재(%s) — 바꾼 파일 = phys/기록.json 하나 · data.gpt["97"] = 재료 · u["gpt|97"] 둘(+savedAt)만 더함 · 다른 칸·gone 무변(지학·생물 기록 무변)' % where,
+                  x == y and dn['data']['gpt'][NO] == MD and isinstance(dn['u'].get('gpt|' + NO), int) and fs == [RP], None,
+                  {'파일': fs, '도장': dn['u'].get('gpt|' + NO), 'savedAt': [do.get('savedAt'), dn.get('savedAt')]})
+            else:
+                R('-', 'B-5 적재(%s) — 아직 적재 전(합성 기록으로 잼)' % where, None, None, '')
+        # 지학 gpt 149·84 · 생물 gpt
+        E = json.loads(open(os.path.join(SPD, 'earth', '기록.json'), 'rb').read().decode('utf-8'))
+        eg = E['data'].get('gpt') or {}
+        Bi = json.loads(open(os.path.join(SPD, 'bio', '기록.json'), 'rb').read().decode('utf-8'))
+        R('-', 'B-5 지학 gpt["149"]·["84"] = 재료 글자 그대로(무변) · 생물 gpt = %s' % json.dumps(Bi['data'].get('gpt')),
+          # 옛 줄: eg.get('149') == mat('earth_149.md') and eg.get('84') == mat('earth_84.md'), None, {'지학 gpt': sorted(eg, key=int)})
+          eg.get('149') == mat('earth_149.md') and eg.get('84') == mat('earth_84.md'), None, {'지학 gpt': sorted(eg, key=lambda z_: (0, int(z_), '') if z_.isdigit() else (1, 0, z_))})   # ★ uid_unify §D-2 — 원격 gpt 에 uid 열쇠 칸이 더해질 수 있다(번호 칸은 그대로)
+        # 모션 파일
+        f = 'motion/phys_97.html'
+        src = open(os.path.join(MAT, 'phys_97.html'), 'rb').read()
+        R('-', 'A-1 %s = 재료 바이트(줄끝만 뺀 대조 · 재료 %d B · md5 %s)' % (f, len(src), hashlib.md5(src).hexdigest()[:8]),
+          (sn.get(f) or b'').replace(b'\r\n', b'\n') == src.replace(b'\r\n', b'\n'), None, len(sn.get(f) or b''))
+        if QC.GATE:   # 관문만 — 스테이징된 git blob = 재료(git ls-files · cat-file)
+            ix = git1(GENIE, 'ls-files', '-s', '--', MOTF).split()
+            if ix:
+                blob = JG.git_HU(GENIE, 'cat-file', '-p', ix[1])
+                R('-', 'A-1 %s git blob = 재료 바이트 그대로(md5 %s)' % (f, hashlib.md5(blob).hexdigest()[:8]), blob == src, None, len(blob))
+            else:
+                R('-', 'A-1 %s — 아직 git 에 안 올림(blob 대조는 스테이징 뒤)' % f, None, None, '')
+        tx = (sn.get(f) or b'').decode('utf-8', 'replace')
+        R('-', '%s — 바깥 스크립트·주소 0 · canvas 2 · .pdf 0(공개 genie · D11)' % f,
+          not re.search(r'<script[^>]*\bsrc\s*=', tx) and not re.findall(r'https?://', tx) and tx.count('<canvas') == 2 and '.pdf' not in tx.lower(), None,
+          re.findall(r'https?://[^\s"\'<>]+', tx)[:3])
+        R('-', 'motion 폴더에 .pdf 0', not [k for k in sn if k.lower().endswith('.pdf')], None, sorted(sn))
     npass = sum(1 for r in ROWS if r[2] is True); nfail = sum(1 for r in ROWS if r[2] is False)
     print('\n== PASS %d · FAIL %d · %.0f초 · 기록 %s' % (npass, nfail, time.time() - t0, how))
     with io.open(OUTF, 'a', encoding='utf-8') as fo:
         fo.write('\n==== %s · claude_p002 CP2 · 기록 %s · genie HEAD %s · 바탕 %s · 이 판 커밋 %s · studyplandata HEAD %s · 적재 %s · 엔진 %s ====\n' % (
-            time.strftime('%Y-%m-%d %H:%M'), how, git1(GENIE, 'rev-parse', '--short', 'HEAD'), BASE_REV, LANE or '-',
-            git1(SPD, 'rev-parse', '--short', 'HEAD'), SEED or '-', ','.join(ENGS)))
+            time.strftime('%Y-%m-%d %H:%M'), how, git1(GENIE, 'rev-parse', '--short', 'HEAD') if QC.GATE else '(regress · git 0)', BASE_REV, LANE or '-',
+            git1(SPD, 'rev-parse', '--short', 'HEAD') if QC.GATE else '-', SEED or '-', ','.join(ENGS)))
         for eng, nm, okn, okb, v in ROWS:
             fo.write('%s | 바탕 %s | %s · %s | %s\n' % ({True: 'PASS', False: 'FAIL', None: 'INFO'}[okn], {True: 'PASS', False: 'FAIL', None: '—'}[okb], eng, nm,
                      (v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, default=str))[:1200]))

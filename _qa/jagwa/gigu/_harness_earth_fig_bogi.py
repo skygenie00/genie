@@ -27,6 +27,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import hashlib
 import http.server
 import io
@@ -73,7 +74,8 @@ def _ensure_base():
     raise SystemExit('NG  고침 전 사본(md5 %s)을 못 찾았다' % BASE_MD5)
 
 
-BASE = _ensure_base()
+BASE = _ensure_base() if QC.GATE else None   # regress — 고침 전 사본(e6c34eb7) 찾기 · git show 0(그 사본을 쓰는 실행 · 칸은 관문만 · 기준 셋은 스냅샷)
+_RG_SMOKE = ('콘솔 오류 0', 'A-0 그림 칸이 있다', 'B-1 ★길게 누르면 고치기 시트가 뜬다')   # qa_slim2 smoke 칸(A-0)
 SPDROOT = _roots.spd()
 OUT = os.path.join(os.environ.get('TEMP', '.'), 'hlistpop')
 os.makedirs(OUT, exist_ok=True)
@@ -467,6 +469,7 @@ def build(mode, src_text):
 
 
 def run(mode, secs, src_text):
+    QC.launch('new' if mode == 'earth' else 'base')   # 셈(§B-4) — earth 말고는 고정 옛 판(d8a7d2e · 고침 전 사본)
     subj = build(mode, src_text)
     spd = os.path.join(SPDROOT, subj)
     done = threading.Event()
@@ -492,6 +495,7 @@ def run(mode, secs, src_text):
                 if rel == 'earth/기록.json':   # ★ A-6(d) 9/30 둘째 바퀴 — 지학 기록은 인도(d8a7d2e · 9/20 21:36) 바로 앞 기록 커밋 b90a4d52(savedAt 9/20 12:35Z)로 박는다 —
                     #   표본 G52-07 에 사용자가 인도 뒤 남긴 기록(글자 고침 7칸 25a5144b 9/21 00:15 · 〈보기〉 4칸 af848326 9/21 00:21)이 jagwa_uid 옮김(jgMigrate)으로
                     #   표본 새 uid 칸에 들어와 B-0(✎)·A-3(고친 글자 있음) 을 흔든다 · 앞 커밋엔 둘 다 없다(git show 셈)
+                    QC.sub('git:show-data')   # 셈 — studyplandata 고정 커밋 기록(데이터 · 앱 아님)
                     b = subprocess.run(['git', '-C', SPDROOT, 'show', 'b90a4d52:earth/기록.json'], capture_output=True).stdout or b
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/octet-stream')
@@ -544,22 +548,25 @@ def run(mode, secs, src_text):
 def static_checks():
     b = open(SRC, 'rb').read()
     s = b.replace(b'\r\n', b'\n').decode('utf-8')
-    base = open(BASE, 'rb').read().replace(b'\r\n', b'\n').decode('utf-8')
-    # ★ A-6(d) 9/30 둘째 바퀴 — Z-1·Z-2·Z-11 은 이 판(fig_bogi 인도 d8a7d2e)의 패치 꼴을 잰다 — 지금 판은 뒤 판(add2·add3 · shell_bio_phys c9faff2 · …)이 바꿨다
-    s_fb = subprocess.run(['git', '-C', GENIE, 'show', 'd8a7d2e:jagwa/index.html'], capture_output=True).stdout.replace(b'\r\n', b'\n').decode('utf-8')
+    if QC.GATE:   # 고침 전 사본 · 인도판 d8a7d2e = 그 판 패치 꼴을 재는 칸(관문만) · 기준 셋(Z-7 · Z-8 · Z-10)의 바탕
+        base = open(BASE, 'rb').read().replace(b'\r\n', b'\n').decode('utf-8')
+        # ★ A-6(d) 9/30 둘째 바퀴 — Z-1·Z-2·Z-11 은 이 판(fig_bogi 인도 d8a7d2e)의 패치 꼴을 잰다 — 지금 판은 뒤 판(add2·add3 · shell_bio_phys c9faff2 · …)이 바꿨다
+        QC.sub('git:show-app')
+        s_fb = subprocess.run(['git', '-C', GENIE, 'show', 'd8a7d2e:jagwa/index.html'], capture_output=True).stdout.replace(b'\r\n', b'\n').decode('utf-8')
     out = []
 
     def T2(n, c, i=''):
         out.append(('PASS' if c else 'FAIL') + ' | ' + n + ('' if c else ' | ' + str(i)))
 
-    blk = s_fb.find('\nif(CARD_LAYER){\n')
-    end = s_fb.find('\n}\n/*/EARTH:js*/')
-    keys = ['var tfixSlotsOf=', 'var figHid=', 'var tfixLabel=', 'var tfixBKey=']
-    T2('Z-1 새 갈래가 if(CARD_LAYER) 블록 안이다', blk >= 0 and all(blk < s_fb.find(k) < end for k in keys),
-       [(k, s_fb.find(k)) for k in keys if not (blk < s_fb.find(k) < end)])
-    T2('Z-2 새 kv·새 SYNC 키를 안 만들었다 — tfix 한 통뿐',
-       s_fb.count("SYNC_REF.") == base.count("SYNC_REF.") and "put('kv','tfix',TFIX)" in s_fb
-       and s_fb.count("put('kv','") == base.count("put('kv','"))
+    if QC.GATE:   # Z-1 · Z-2 관문만 — 인도판 d8a7d2e 소스
+        blk = s_fb.find('\nif(CARD_LAYER){\n')
+        end = s_fb.find('\n}\n/*/EARTH:js*/')
+        keys = ['var tfixSlotsOf=', 'var figHid=', 'var tfixLabel=', 'var tfixBKey=']
+        T2('Z-1 새 갈래가 if(CARD_LAYER) 블록 안이다', blk >= 0 and all(blk < s_fb.find(k) < end for k in keys),
+           [(k, s_fb.find(k)) for k in keys if not (blk < s_fb.find(k) < end)])
+        T2('Z-2 새 kv·새 SYNC 키를 안 만들었다 — tfix 한 통뿐',
+           s_fb.count("SYNC_REF.") == base.count("SYNC_REF.") and "put('kv','tfix',TFIX)" in s_fb
+           and s_fb.count("put('kv','") == base.count("put('kv','"))
     T2('Z-3 TFIX_SLOTS 에 fig 를 안 넣었다',
        "TFIX_SLOTS=['q','c1','c2','c3','c4','c5','s'];" in s and "'fig'" not in s.split('var tfixSlotsOf=')[1][:200])
     T2('Z-4 tfixAny·tfixHay 가 tfixSlotsOf 를 쓴다',
@@ -567,17 +574,27 @@ def static_checks():
     T2('Z-5 보기 줄이 txtOf 를 지난다', "txtOf(uid,'b'+b.\ud0a4)" in s)
     T2('Z-6 가려 두면 그림을 안 받는다(imgUrl 앞에 문이 있다)',
        "if(r[F.FILE]==='IMG'&&!figHid(uid))imgUrl(uid)" in s)
-    T2('Z-7 DATA 원본·bogi·crop 을 안 건드렸다',
-       s.count('r[F.CODE]=') == 0 and s.count("put('kv','bogi'") == base.count("put('kv','bogi'")
-       and s.count("put('kv','crop'") == base.count("put('kv','crop'"))
-    T2('Z-8 단축키 줄은 한 글자도 안 건드렸다(§C-2 — 일부러 죽여 둔 것)',
-       "if(document.querySelector('.sheet'))return;" in s
-       and s.count("if(e.key==='1')mark('O')") == base.count("if(e.key==='1')mark('O')"))
+    if QC.GATE:
+        T2('Z-7 DATA 원본·bogi·crop 을 안 건드렸다',
+           s.count('r[F.CODE]=') == 0 and s.count("put('kv','bogi'") == base.count("put('kv','bogi'")
+           and s.count("put('kv','crop'") == base.count("put('kv','crop'"))
+        T2('Z-8 단축키 줄은 한 글자도 안 건드렸다(§C-2 — 일부러 죽여 둔 것)',
+           "if(document.querySelector('.sheet'))return;" in s
+           and s.count("if(e.key==='1')mark('O')") == base.count("if(e.key==='1')mark('O')"))
+    else:   # regress — 기준: 바탕 셈 = 앞 인도판 스냅샷
+        _z7 = QC.base('Z-7.kv', [s.count("put('kv','bogi'"), s.count("put('kv','crop'")])
+        T2('Z-7 DATA 원본·bogi·crop 을 안 건드렸다', s.count('r[F.CODE]=') == 0 and [s.count("put('kv','bogi'"), s.count("put('kv','crop'")] == _z7)
+        _z8 = QC.base('Z-8.key', s.count("if(e.key==='1')mark('O')"))
+        T2('Z-8 단축키 줄은 한 글자도 안 건드렸다(§C-2 — 일부러 죽여 둔 것)', "if(document.querySelector('.sheet'))return;" in s and s.count("if(e.key==='1')mark('O')") == _z8)
     T2('Z-9 줄끝이 원본과 같다(CRLF)', b.count(b'\r\n') == b.count(b'\n') and b.count(b'\r\n') > 0)
-    T2('Z-10 본판 대비 늘기만 했다', len(s) > len(base))
-    T2('Z-11 지운 본판 줄이 손댄 자리뿐이다',
-       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s_fb) <= 10,
-       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s_fb))
+    if QC.GATE:
+        T2('Z-10 본판 대비 늘기만 했다', len(s) > len(base))
+        T2('Z-11 지운 본판 줄이 손댄 자리뿐이다',
+           sum(1 for ln in base.split('\n') if ln.strip() and ln not in s_fb) <= 10,
+           sum(1 for ln in base.split('\n') if ln.strip() and ln not in s_fb))
+    else:   # regress — Z-10 기준: 바탕 길이 = 앞 인도판 스냅샷 · 「≥」(같으면 무변) · Z-11(두 고정 판 사이) = 관문만
+        _z10 = QC.base('Z-10.len', len(s))
+        T2('Z-10 본판 대비 늘기만 했다', len(s) >= _z10)
     return out
 
 
@@ -585,10 +602,13 @@ def main():
     want = [a for a in sys.argv[1:] if a in ('earth', 'bio', 'phys', 'null')] \
            or ['earth', 'bio', 'phys', 'null']
     cur = open(SRC, encoding='utf-8', newline='').read()
-    basetxt = open(BASE, encoding='utf-8', newline='').read()
+    if QC.GATE:   # 고정 옛 판 둘(고침 전 사본 · 인도판 d8a7d2e) — 그 판들로 도는 실행 · 칸 = 관문만
+        basetxt = open(BASE, encoding='utf-8', newline='').read()
     # ★ A-6(d) 9/30 둘째 바퀴 — 생물·물리 무변(B·Y)은 이 판 인도판(fig_bogi d8a7d2e)을 고침 전 사본(cd248a5)과 맞댄다 — 지금 판은 뒤 판(shell_bio_phys c9faff2 등)이
     #   생물·물리를 일부러 바꿨다(결정로그 9/20 22:5x [사용자] · 9/21 02:10) · 첫 바퀴 earth_listpop 같은 꼴(a9f9fd4)
-    fbtxt = subprocess.run(['git', '-C', GENIE, 'show', 'd8a7d2e:jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
+    if QC.GATE:
+        QC.sub('git:show-app')
+        fbtxt = subprocess.run(['git', '-C', GENIE, 'show', 'd8a7d2e:jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
     lines = []
     W = int(os.environ.get('HARNESS_WAIT', '1500'))
 
@@ -598,7 +618,7 @@ def main():
     if 'earth' in want:
         ls, _ = run('earth', W, cur)
         lines += ls
-    if 'bio' in want:
+    if 'bio' in want and QC.GATE:   # regress — 생물 무변(B)은 고정 옛 판 둘 사이(관문만)
         ls, sn = run('bio', W, fbtxt)
         lines += ls
         ls0, sn0 = run('biobase', W, basetxt)
@@ -610,7 +630,7 @@ def main():
                           ('tools', '교재 도구줄'), ('book', '#book 클래스')):
                 T2('B-3 ★생물 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sn.get(k) == sn0.get(k),
                    [str(sn.get(k))[:140], str(sn0.get(k))[:140]])
-    if 'phys' in want:
+    if 'phys' in want and QC.GATE:   # regress — 물리 무변(Y)은 고정 옛 판 둘 사이(관문만)
         ls, sn = run('phys', W, fbtxt)
         lines += ls
         ls0, sn0 = run('physbase', W, basetxt)
@@ -621,7 +641,7 @@ def main():
                           ('view', '#view 클래스'), ('vtop', '문항 머리줄'), ('book', '#book 클래스')):
                 T2('Y-3 ★물리 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sn.get(k) == sn0.get(k),
                    [str(sn.get(k))[:140], str(sn0.get(k))[:140]])
-    if 'null' in want:
+    if 'null' in want and QC.GATE:   # regress — 헛잣대(고침 전 사본) 안 돎
         ls0, _ = run('earthbase', W, basetxt)
         fails = [x for x in ls0 if x.startswith('FAIL')]
         for pre, ko in (('A', '§A 그림 가리기'), ('B', '§B 보기 고치기')):
@@ -631,7 +651,10 @@ def main():
                [x.split(' | ')[1][:70] for x in fails][:8])
         T2('0-헛잣대 HEAD 는 통과가 아니다', len(fails) > 0, len(fails))
 
-    lines += static_checks()
+    if not QC.SMOKE:   # smoke — 소스 칸은 smoke 칸이 아님
+        lines += static_checks()
+    if QC.SMOKE:   # smoke — smoke 칸 줄만
+        lines = [x for x in lines if any((x.split(' | ') + ['', ''])[1].startswith(k) for k in _RG_SMOKE)]
     npass = sum(1 for x in lines if x.startswith('PASS'))
     nfail = sum(1 for x in lines if x.startswith('FAIL'))
     nnote = sum(1 for x in lines if x.startswith('NOTE'))

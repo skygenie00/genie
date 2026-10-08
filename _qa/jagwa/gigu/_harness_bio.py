@@ -10,6 +10,8 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import http.server, os, socketserver, subprocess, sys, threading, hashlib, json, csv, shutil, urllib.parse
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _harness_earth as E
@@ -210,12 +212,31 @@ TESTS = E.TESTS.split(' async function run(){')[0].replace("if(m[1]==='zzikkapla
 </script>
 """
 
+# ── _task_qa_slim2(10/8 · J2) smoke 도우미 — 이름이 `_rg` 로 시작하는 것 = gate 에서 안 쓰는 갈래(TESTS 글은 글자 그대로) ──
+#   regress = gate 와 같은 걸음(데스크톱 한 장 · 칸 95 회귀 · 바탕 · git · 하위 하네스 0) · 쪽 안 고정 대기(bookOpen 뒤 2600 · 2400 …)는 TESTS 글 그대로(두 벌 안 둠)
+def _rg_smoke_tests(t):
+    """smoke — 앞머리(E.TESTS 앞부분 · 가짜 GitHub · EXP) + A-1 첫 칸 + A-3 첫 칸(기본 필터 = 기출 270) + §5 첫 칸(📖 교재 모드 열림) + E-9 JS 오류 0 · 예외 · 결과 보냄
+    (원래 글을 그 자리에서 잘라 씀 · 「기록 PUT 없음」 은 정리판 그림 PUT 1 을 전제해 smoke 에서 뺌 · 못 찾으면 통째)"""
+    nl = lambda i: t.find('\n', i) + 1
+    a = t.find("   T('A-1 SUBJ.bio.ready=true")
+    b0 = t.find("   /* ===== A-3 필터 셋 ===== */")
+    b1 = t.find("   T('A-3 기본 필터 = 기출 270")
+    c0 = t.find("   /* ===== §5 교재 모드 ===== */")
+    c1 = t.find("   T('§5 📖 교재 모드 열림")
+    j0 = t.find("   T('E-9 JS 오류 0'")
+    k0 = t.find("  }catch(e){R.push('FAIL | 예외 | '")
+    if min(a, b0, b1, c0, c1, j0, k0) < 0 or not (a < b0 < b1 < c0 < c1 < j0 < k0):
+        print('NOTE | smoke 자르기 자리 못 찾음 — 통째로 돈다')
+        return t
+    return t[:nl(a)] + t[b0:nl(b1)] + t[c0:nl(c1)] + t[j0:nl(j0)] + t[k0:]
+
+
 def main():
-    phone = 'phone' in sys.argv[1:]; subj = os.environ.get('PHONE_SUBJ', 'bio')
+    phone = ('phone' in sys.argv[1:]) if QC.GATE else False; subj = os.environ.get('PHONE_SUBJ', 'bio')   # regress — 폰 꼴(처리안 관문만 P2 둘 · 사슬 argv 에 없음)은 gate 에서만 · regress · smoke 는 데스크톱 칸만
     html = open(SRC, encoding='utf-8', newline='').read()
     html = html.replace('<script defer src="https://cdnjs', '<script defer data-off="https://cdnjs')
     html = html.replace('<link rel="stylesheet" href="https://cdnjs', '<link rel="off" href="https://cdnjs')
-    html = html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', E.STUB.replace("localStorage.setItem('subj','earth')", "localStorage.setItem('subj','%s')" % (subj if phone else 'bio')) + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
+    html = html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', JG.STUB_E.replace("localStorage.setItem('subj','earth')", "localStorage.setItem('subj','%s')" % (subj if phone else 'bio')) + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
     rows = list(csv.DictReader(open(os.path.join(SAENG, '_생물_문항.csv'), encoding='utf-8-sig')))
     idx = json.load(open(os.path.join(SPD, 'pdf', 'index.json'), encoding='utf-8'))
     def loc(p):
@@ -236,7 +257,7 @@ def main():
     PHONE_TESTS = E.TESTS_PHONE.replace("  const path=decodeURIComponent(m[2]);\n  if((opt.method||'GET')==='PUT')",
         "  const path=decodeURIComponent(m[2]);\n  if(m[1]==='zzikkaplan/notes'&&(opt.method||'GET')!=='PUT'){const r=await __nativeFetch('/notes/'+encodeURI(path),{cache:'no-store'});return r.ok?r:{ok:false,status:404,json:async()=>({}),text:async()=>'',arrayBuffer:async()=>new ArrayBuffer(0)}}\n  if((opt.method||'GET')==='PUT')")
     assert PHONE_TESTS != E.TESTS_PHONE, '폰 검사 가짜 GitHub 앵커를 못 찾음'
-    html = html.replace('</body>', (PHONE_TESTS.replace("T('JS 오류 0'", PHONE_EXTRA + "T('JS 오류 0'") if phone else TESTS).replace('__EXP__', json.dumps(exp, ensure_ascii=False)) + '</body>', 1)
+    html = html.replace('</body>', (PHONE_TESTS.replace("T('JS 오류 0'", PHONE_EXTRA + "T('JS 오류 0'") if phone else (TESTS if not QC.SMOKE else _rg_smoke_tests(TESTS))).replace('__EXP__', json.dumps(exp, ensure_ascii=False)) + '</body>', 1)   # smoke — 쪽 안 시험 글을 이 자리에서만 잘라 씀
     open(APP, 'w', encoding='utf-8', newline='').write(html)
     open(os.path.join(OUT, 'phone.html'), 'w', encoding='utf-8').write('<!doctype html><meta charset="utf-8"><body style="margin:0;background:#888"><iframe src="app.html" style="width:390px;height:844px;border:0"></iframe></body>')
 
@@ -252,7 +273,7 @@ def main():
                 b = open(f, 'rb').read(); self.send_response(200); self.send_header('Content-Length', str(len(b))); self.end_headers(); self.wfile.write(b); return
             if p.startswith('/data/'):
                 rel = p[6:]
-                base = SPD if rel.startswith('bio/') else (E.SPD if rel.startswith('earth/') else None)
+                base = SPD if rel.startswith('bio/') else (_roots.spd('earth') if rel.startswith('earth/') else None)
                 if not base: self.send_response(404); self.end_headers(); return
                 f = os.path.join(base, rel.split('/', 1)[1].replace('/', os.sep))
                 if not os.path.isfile(f): self.send_response(404); self.end_headers(); return
@@ -270,6 +291,7 @@ def main():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     chrome = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     prof = os.path.join(OUT, 'prof'); shutil.rmtree(prof, ignore_errors=True)
+    QC.launch('new')   # 셈(§B-4) — 새 판 크롬 한 번(바탕은 본디 안 띄운다)
     p = subprocess.Popen([chrome, '--headless=new', '--disable-gpu', '--no-first-run', '--user-data-dir=' + prof, '--window-size=1400,900',
                           'http://127.0.0.1:%d/%s' % (port, 'phone.html' if phone else 'app.html')], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     import time as _t; _t0 = _t.time(); got = done.wait(int(os.environ.get('HARNESS_WAIT', '600'))); p.terminate(); print('elapsed %.0fs' % (_t.time() - _t0))
@@ -283,16 +305,17 @@ def main():
         for x in lines: print(x)
         print('\n== 폰(%s) %d PASS / %d FAIL / %d항 ==' % (subj, npass, nfail, len(lines))); sys.exit(0 if nfail == 0 else 2)
     def T2(name, cond, info=''): lines.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
-    s = open(SRC, encoding='utf-8').read()
-    samples = [r['문항'][:18] for r in rows if len(r['문항']) > 30][:5] + [r['해설'][:18] for r in rows if len(r['해설']) > 30][:3]
-    T2('D11 앱에 생물 본문 문자열 0(표본 8)', not any(x in s for x in samples), [x for x in samples if x in s])
-    T2('배달 pdf 45 · 25MB 초과 0 · img 196', len(idx) == 45 and all(os.path.getsize(os.path.join(SPD, 'pdf', v['file'])) < 25 * 1048576 for v in idx.values()) and len([f for f in os.listdir(os.path.join(SPD, 'img')) if f.endswith('.jpg') and not f.startswith('ref')]) == 196)   # ★ A-6(d) 9/30 — 참고 그림 ref*.jpg 39 는 bio_ocrfix(studyplandata 550ee2e5 · 9/25)가 같은 폴더에 더한 것 · 문항 그림은 196 그대로
-    T2('백틱 짝', s.count('`') % 2 == 0)
-    lay = s[s.index('/*EARTH:js*/'):s.index('/*/EARTH:js*/')]
-    T2('층 안 EARTH.·earthdata·bio/ 하드코딩 0 · 층 머리 가드 = if(SHELL)(셸 세 과목 · 카드 몫은 if(HASBOOK))', 'EARTH.' not in lay and "'earthdata'" not in lay and "'bio/" not in lay and lay.split('\n')[2] == 'if(SHELL){')   # ★ A-6(a) 9/30 — 셸 이식(c9faff2): 층 머리 if(CARD_LAYER){ → if(SHELL){
-    T2('A-9 물리 F 16 무변 · CIRC5 자리 값 무변 · SUBJ.phys 무변(9/5 필터 손질: SYNC_KEYS 12째 link 반영)', 'const F={NO:0,PG:1,FILE:2,FPG:3,BIG:4,SUB:5,LNO:6,STAR:7,TYPE:8,CODE:9,YEAR:10,SRC:11,LV:12,ANS:13,BODY:14,VLT:15};' in s and s.count("const CIRC5='①②③④⑤';") == 1 and "phys:{DB:'phys535', PDF_DIR:'phys/pdf/', REC_PATH:'phys/기록.json', SYNC_PREFIX:'phys_sync_',\n        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','link'],   /* 2026-09-05 필터 손질 B-4: link = 「연결」(한 방향 · 12째) */\n        TITLE:'물리 535 서재', LOG:'물리535', DATA:'인라인 DATA', NAME:'물리', ready:true}," in s.replace('\r\n', '\n'))
-    T2('A-9 SUBJ.earth = 19 키(add1: +bref) · BOOK_PDF_ADD 11 · ready', "SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg','crop','txt','tfix','bref']," in s and "BOOK_PDF_ADD:11," in s and "TITLE:'지학 기출 서재', LOG:'지학', NAME:'지학', LAYER:true, ready:true}" in s)
-    T2('A-10 제어문자 0 · U+FFFD 0', not any(ord(c) < 32 and c not in '\t\r\n' for c in s) and '\ufffd' not in s)
+    if QC.want('src'):   # smoke — 브라우저 밖 칸(D11 · 배달(data) · 백틱 · 층 머리 · A-9 물리 무변 · A-10)은 smoke 칸이 아니다
+        s = open(SRC, encoding='utf-8').read()
+        samples = [r['문항'][:18] for r in rows if len(r['문항']) > 30][:5] + [r['해설'][:18] for r in rows if len(r['해설']) > 30][:3]
+        T2('D11 앱에 생물 본문 문자열 0(표본 8)', not any(x in s for x in samples), [x for x in samples if x in s])
+        T2('배달 pdf 45 · 25MB 초과 0 · img 196', len(idx) == 45 and all(os.path.getsize(os.path.join(SPD, 'pdf', v['file'])) < 25 * 1048576 for v in idx.values()) and len([f for f in os.listdir(os.path.join(SPD, 'img')) if f.endswith('.jpg') and not f.startswith('ref')]) == 196)   # ★ A-6(d) 9/30 — 참고 그림 ref*.jpg 39 는 bio_ocrfix(studyplandata 550ee2e5 · 9/25)가 같은 폴더에 더한 것 · 문항 그림은 196 그대로
+        T2('백틱 짝', s.count('`') % 2 == 0)
+        lay = s[s.index('/*EARTH:js*/'):s.index('/*/EARTH:js*/')]
+        T2('층 안 EARTH.·earthdata·bio/ 하드코딩 0 · 층 머리 가드 = if(SHELL)(셸 세 과목 · 카드 몫은 if(HASBOOK))', 'EARTH.' not in lay and "'earthdata'" not in lay and "'bio/" not in lay and lay.split('\n')[2] == 'if(SHELL){')   # ★ A-6(a) 9/30 — 셸 이식(c9faff2): 층 머리 if(CARD_LAYER){ → if(SHELL){
+        T2('A-9 물리 F 16 무변 · CIRC5 자리 값 무변 · SUBJ.phys 무변(9/5 필터 손질: SYNC_KEYS 12째 link 반영)', 'const F={NO:0,PG:1,FILE:2,FPG:3,BIG:4,SUB:5,LNO:6,STAR:7,TYPE:8,CODE:9,YEAR:10,SRC:11,LV:12,ANS:13,BODY:14,VLT:15};' in s and s.count("const CIRC5='①②③④⑤';") == 1 and "phys:{DB:'phys535', PDF_DIR:'phys/pdf/', REC_PATH:'phys/기록.json', SYNC_PREFIX:'phys_sync_',\n        SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','link'],   /* 2026-09-05 필터 손질 B-4: link = 「연결」(한 방향 · 12째) */\n        TITLE:'물리 535 서재', LOG:'물리535', DATA:'인라인 DATA', NAME:'물리', ready:true}," in s.replace('\r\n', '\n'))
+        T2('A-9 SUBJ.earth = 19 키(add1: +bref) · BOOK_PDF_ADD 11 · ready', "SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','bogi','unit','bpit','bpg','crop','txt','tfix','bref']," in s and "BOOK_PDF_ADD:11," in s and "TITLE:'지학 기출 서재', LOG:'지학', NAME:'지학', LAYER:true, ready:true}" in s)
+        T2('A-10 제어문자 0 · U+FFFD 0', not any(ord(c) < 32 and c not in '\t\r\n' for c in s) and '\ufffd' not in s)
     npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
     for x in lines: print(x)
     print('\n== %d PASS / %d FAIL / %d항 ==' % (npass, nfail, len(lines))); sys.exit(0 if nfail == 0 else 2)

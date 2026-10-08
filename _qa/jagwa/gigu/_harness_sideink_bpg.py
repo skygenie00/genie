@@ -19,6 +19,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import http.server, os, socketserver, subprocess, sys, threading, hashlib, shutil, urllib.parse
 
 GENIE = _roots.genie()
@@ -196,13 +197,31 @@ TESTS = r"""<script>
 </script>"""
 
 
+# ── _task_qa_slim2(10/8 · J2) smoke 도우미 — 이름이 `_rg` 로 시작하는 것 = gate 에서 안 쓰는 갈래(TESTS 상수는 글자 그대로) ──
+#   regress = gate 와 같은 걸음(칸 38 모두 회귀 · 바탕 · git · 하위 하네스 0) · 쪽 안 고정 대기(bookOpen 뒤 2800 · bkGoto 뒤 1800 …)는 TESTS 상수 그대로(두 벌 안 둠)
+def _rg_smoke_tests(t):
+    """smoke — 앞머리 + S-0 첫 칸(카드 층 · 데이터) + S-A 묶음 앞부분(창 열기 · 획 셋 심기 → ★획 수 = inkGet) + S-A 끝 정리 세 줄 + S-0 콘솔 오류 0 · 예외 · 결과 보냄
+    (모두 원래 글을 그 자리에서 잘라 씀 · 못 찾으면 통째)"""
+    nl = lambda i: t.find('\n', i) + 1
+    a = t.find("   T('S-0 카드 층 · 데이터 적재'")
+    s0 = t.find("   await grp('S-A', async()=>{")
+    s1 = t.find("     T('S-A ★획 수 = inkGet 이 돌려준 수(3)")
+    e0 = t.find("     await del('ink','bink:'+PG);\n     bkClose(); await wait(150);\n   });\n")
+    j0 = t.find("   T('S-0 콘솔 오류 0'")
+    if min(a, s0, s1, e0, j0) < 0 or not (a < s0 < s1 < e0 < j0):
+        print('NOTE | smoke 자르기 자리 못 찾음 — 통째로 돈다')
+        return t
+    e1 = nl(nl(nl(e0)))
+    return t[:nl(a)] + t[s0:nl(s1)] + t[e0:e1] + t[j0:]
+
+
 def main():
     html = open(SRC, encoding='utf-8', newline='').read()
     html = html.replace('<script defer src="https://cdnjs', '<script defer data-off="https://cdnjs')
     html = html.replace('<link rel="stylesheet" href="https://cdnjs', '<link rel="off" href="https://cdnjs')
     html = html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js',
                         STUB.replace('__SUBJ__', SUBJ) + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
-    html = html.replace('</body>', TESTS + '</body>', 1)
+    html = html.replace('</body>', (TESTS if not QC.SMOKE else _rg_smoke_tests(TESTS)) + '</body>', 1)   # smoke — 쪽 안 시험 글을 이 자리에서만 잘라 씀
     open(os.path.join(OUT, 'app.html'), 'w', encoding='utf-8', newline='').write(html)
     shutil.copy(os.path.join(GIGU, '지학_서브노트_빈판_A3.pdf'), os.path.join(OUT, 'blank.pdf'))
 
@@ -234,6 +253,7 @@ def main():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     chrome = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     prof = os.path.join(OUT, 'prof'); shutil.rmtree(prof, ignore_errors=True)
+    QC.launch('new')   # 셈(§B-4) — 새 판 크롬 한 번(바탕은 본디 안 띄운다)
     p = subprocess.Popen([chrome, '--headless=new', '--disable-gpu', '--no-first-run', '--user-data-dir=' + prof,
                           '--window-size=1400,900', 'http://127.0.0.1:%d/app.html' % port],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -249,23 +269,24 @@ def main():
     def T2(name, cond, info=''):
         lines.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
 
-    s = open(SRC, encoding='utf-8').read()
-    ix = lambda t: s.find(t)   # 없으면 -1 — 안 고친 판에서도 예외 없이 FAIL 로 적힌다
-    # A-6(a) 9/30 — 카드 층 블록 문이 if(CARD_LAYER){ → if(SHELL){(세 과목 참)로 바뀌었다(_task_jagwa_shell_bio_phys §A · c9faff2) — 그 블록(/*EARTH:js*/ 바로 뒤)을 잡는다 ·
-    #   물리도 이제 이 함수들을 만든다 — 물리 몫은 bookChip 안 if(!CARD_LAYER) 옛 갈래(아래 「물리 갈래 본문은 글자까지 그대로」)가 지킨다
-    blk = s.find('\nif(SHELL){\n', ix('/*EARTH:js*/'))
-    T2('S-P 물리 무접촉 — bookChip/bookChipSm 은 카드 층 블록(9/21 부터 if(SHELL)) 안이고 물리는 그 안 if(!CARD_LAYER) 옛 갈래를 탄다',
-       blk >= 0 and ix('var bookChip=') > blk and ix('var bookChipSm=') > blk)
-    T2('S-P 물리 갈래 본문은 글자까지 그대로(조건만 CUR.KINDS→CARD_LAYER)',
-       'if(!CARD_LAYER)return r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">교재 ${r[F.BPAGE]}쪽</span>`:\'\';' in s
-       and 'if(!CARD_LAYER)return r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">${r[F.BPAGE]}쪽</span>`:\'\';' in s
-       and 'CUR.KINDS)return r[F.BPAGE]' not in s)
-    T2('S-P 새 코드는 전부 카드 층 블록(9/21 부터 if(SHELL)) 안 (bpgList·bpgWrite·bpInk·bpgChips)',
-       blk >= 0 and all(ix(k) > blk for k in ['function bpgList(', 'function bpgWrite(', 'async function bpInk(', 'function bpgChips(']))
-    T2('S-P 잉크는 inkGet 으로만 잡는다 — bpInk 안에 get(\'ink\' 직접 호출 0',
-       "await inkGet('bink:'+page,{w,h})" in s
-       and (ix('async function bpInk(') < 0 or "get('ink'" not in s[ix('async function bpInk('):ix('function bpgChips(')]))
-    T2('S-P 백틱 짝', s.count('`') % 2 == 0)
+    if QC.want('src'):   # smoke — 브라우저 밖 소스 칸(S-P 다섯 · 물리 무접촉 · 새 코드 자리 · inkGet · 백틱)은 smoke 칸이 아니다
+        s = open(SRC, encoding='utf-8').read()
+        ix = lambda t: s.find(t)   # 없으면 -1 — 안 고친 판에서도 예외 없이 FAIL 로 적힌다
+        # A-6(a) 9/30 — 카드 층 블록 문이 if(CARD_LAYER){ → if(SHELL){(세 과목 참)로 바뀌었다(_task_jagwa_shell_bio_phys §A · c9faff2) — 그 블록(/*EARTH:js*/ 바로 뒤)을 잡는다 ·
+        #   물리도 이제 이 함수들을 만든다 — 물리 몫은 bookChip 안 if(!CARD_LAYER) 옛 갈래(아래 「물리 갈래 본문은 글자까지 그대로」)가 지킨다
+        blk = s.find('\nif(SHELL){\n', ix('/*EARTH:js*/'))
+        T2('S-P 물리 무접촉 — bookChip/bookChipSm 은 카드 층 블록(9/21 부터 if(SHELL)) 안이고 물리는 그 안 if(!CARD_LAYER) 옛 갈래를 탄다',
+           blk >= 0 and ix('var bookChip=') > blk and ix('var bookChipSm=') > blk)
+        T2('S-P 물리 갈래 본문은 글자까지 그대로(조건만 CUR.KINDS→CARD_LAYER)',
+           'if(!CARD_LAYER)return r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">교재 ${r[F.BPAGE]}쪽</span>`:\'\';' in s
+           and 'if(!CARD_LAYER)return r[F.BPAGE]?`<span class="tag page" data-page="${r[F.BPAGE]}">${r[F.BPAGE]}쪽</span>`:\'\';' in s
+           and 'CUR.KINDS)return r[F.BPAGE]' not in s)
+        T2('S-P 새 코드는 전부 카드 층 블록(9/21 부터 if(SHELL)) 안 (bpgList·bpgWrite·bpInk·bpgChips)',
+           blk >= 0 and all(ix(k) > blk for k in ['function bpgList(', 'function bpgWrite(', 'async function bpInk(', 'function bpgChips(']))
+        T2('S-P 잉크는 inkGet 으로만 잡는다 — bpInk 안에 get(\'ink\' 직접 호출 0',
+           "await inkGet('bink:'+page,{w,h})" in s
+           and (ix('async function bpInk(') < 0 or "get('ink'" not in s[ix('async function bpInk('):ix('function bpgChips(')]))
+        T2('S-P 백틱 짝', s.count('`') % 2 == 0)
     npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
     for x in lines: print(x)
     print('\n== 옆칸잉크/교재쪽(%s) %d PASS / %d FAIL / %d항 ==' % (SUBJ, npass, nfail, len(lines)))

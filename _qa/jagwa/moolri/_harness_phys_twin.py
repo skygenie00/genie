@@ -9,6 +9,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import http.server, os, socketserver, subprocess, sys, threading, shutil
 from pypdf import PdfWriter
 
@@ -212,12 +213,29 @@ TESTS = r"""<script>
 </script>
 """
 
+
+# ── _task_qa_slim2(10/8) smoke 도우미 — 이름이 `_rg` 로 시작하는 것 = gate 에서 안 쓰는 갈래(TESTS 상수는 글자 그대로) ──
+def _rg_smoke_tests(t):
+    """smoke — 앞머리(빈 PDF · 필기 씨앗) + T-3 창 손잡이 + M-1 과목 게이트 + JS 오류 0 만(그 자리에서 잘라 씀 · 못 찾으면 통째)"""
+    nl = lambda i: t.find('\n', i) + 1
+    a = t.find("   /* ===== T-1 필기가 그려짐 · 없으면 차 0 ===== */")
+    b0 = t.find("   twinPeek(no);await wait(1000);\n   let panel=$('.sheet.twin .panel')")
+    b1 = t.find("   T('T-3 제목줄 = 손잡이(twhandle) · 모서리 그립 있음'")
+    m0 = t.find("   T('M-1 과목 phys")
+    j0 = t.find("   T('JS 오류 0'")
+    c0 = t.find("  }catch(e){R.push('FAIL | 하니스가 터짐 | '")
+    if min(a, b0, b1, m0, j0, c0) < 0:
+        print('NOTE | smoke 자르기 자리 못 찾음 — 통째로 돈다')
+        return t
+    return t[:a] + t[b0:nl(b1)] + "   $('#twX').click();await wait(20);\n" + t[m0:nl(m0)] + t[j0:nl(j0)] + t[c0:]
+
+
 def main():
     html = open(SRC, encoding='utf-8', newline='').read()
     html = html.replace('<script defer src="https://cdnjs', '<script defer data-off="https://cdnjs')
     html = html.replace('<link rel="stylesheet" href="https://cdnjs', '<link rel="off" href="https://cdnjs')
     html = html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', STUB + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
-    html = html.replace('</body>', TESTS + '</body>', 1)
+    html = html.replace('</body>', (TESTS if not QC.SMOKE else _rg_smoke_tests(TESTS)) + '</body>', 1)   # smoke — 쪽 안 시험 글을 이 자리에서만 잘라 씀
     open(APP, 'w', encoding='utf-8', newline='').write(html)
     w = PdfWriter(); w.add_blank_page(width=400, height=600); w.write(open(os.path.join(OUT, 'blank.pdf'), 'wb'))
     done = threading.Event(); box = {}
@@ -231,6 +249,7 @@ def main():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     chrome = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     prof = os.path.join(OUT, 'prof'); shutil.rmtree(prof, ignore_errors=True)
+    QC.launch('new')   # 셈(§B-4) — 새 판 크롬 한 번(바탕은 본디 안 띄운다)
     p = subprocess.Popen([chrome, '--headless=new', '--disable-gpu', '--no-first-run', '--user-data-dir=' + prof, '--window-size=1400,900',
                           'http://127.0.0.1:%d/app.html' % port], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     got = done.wait(240); p.terminate()
@@ -240,10 +259,11 @@ def main():
     if not got: print('결과 없음 — 240초 안에 검사가 끝나지 않았다'); sys.exit(1)
     lines = [ln for ln in box['txt'].replace('\r', '').split('\n') if ln.strip()]
     def T2(name, cond, info=''): lines.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
-    s = open(SRC, encoding='utf-8', newline='').read().replace('\r\n', '\n')
-    T2('백틱 짝', s.count('`') % 2 == 0, s.count('`'))
-    T2('CRLF 만', open(SRC, 'rb').read().count(b'\r\n') == open(SRC, 'rb').read().count(b'\n'))
-    T2('#ndX 없음(HTML·JS)', 'id="ndX"' not in s and "$('#ndX')" not in s)
+    if QC.want('src'):   # smoke — 소스 글 셈(백틱 · CRLF · #ndX)은 smoke 칸이 아니다
+        s = open(SRC, encoding='utf-8', newline='').read().replace('\r\n', '\n')
+        T2('백틱 짝', s.count('`') % 2 == 0, s.count('`'))
+        T2('CRLF 만', open(SRC, 'rb').read().count(b'\r\n') == open(SRC, 'rb').read().count(b'\n'))
+        T2('#ndX 없음(HTML·JS)', 'id="ndX"' not in s and "$('#ndX')" not in s)
     npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
     for x in lines: print(x)
     print('\n== %d PASS / %d FAIL / %d항 ==' % (npass, nfail, len(lines)))

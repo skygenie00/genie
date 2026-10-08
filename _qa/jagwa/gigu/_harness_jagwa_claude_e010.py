@@ -28,19 +28,20 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 _roots.need_n('jagwa/gigu/claude_motion 재료(채팅이 만든 md — N: 에만)')
 import io, json, os, re, sys, time, hashlib, subprocess, tempfile   # noqa: E402
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-import _harness_jagwa_uid as HU   # noqa: E402  (GENIE_ROOT · SPD_ROOT · Dev · route 사본 · PUT 가로채기)
 
 
 def ARG(k, d=None):
     return sys.argv[sys.argv.index(k) + 1] if k in sys.argv else d
 
 
-GENIE = HU.GENIE; SPD = HU.SPD
+GENIE = _roots.genie(); SPD = _roots.spd()
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jagwa_claude_e010_result.txt'))
 SHOTS = ARG('--shots', os.path.join(tempfile.gettempdir(), 'h_e010'))   # 그림은 N: 밖에(마이박스 잇단 쓰기 · 사슬 되돌리기) — 보고에 쓸 한 장은 손으로 옮긴다
@@ -80,7 +81,7 @@ def dumps(d):
 
 
 def git1(repo, *a):
-    return HU.git(repo, *a).decode('utf-8', 'replace').strip()
+    return JG.git_HU(repo, *a).decode('utf-8', 'replace').strip()
 
 
 def lf(t):
@@ -188,13 +189,16 @@ TITLE = gpt_title(_ITEMS[NO - 1])
 
 
 def recs():
-    head = HU.git(SPD, 'show', 'HEAD:' + RP)
+    head = JG.git_HU(SPD, 'show', 'HEAD:' + RP) if QC.GATE else None   # regress — 작업트리 기록이 「적재 뒤 실물」이면 git show 0(아래 · 아니면 그때 HEAD 를 읽음)
     wt = open(os.path.join(SPD, 'earth', '기록.json'), 'rb').read()
     dw = json.loads(wt.decode('utf-8'))
     if (dw['data'].get('gpt') or {}).get(UID) == MD:
         b = json.loads(wt.decode('utf-8'))   # 바탕 = 지금 기록에서 이 판의 두 칸(+묘비)만 뺀 것
         b['data']['gpt'].pop(UID, None); b['u'].pop('gpt|' + UID, None); b.get('gone', {}).pop('gpt|' + UID, None)
         return wt, dumps(b), '적재 뒤 실물'
+    if head is None and QC.REGRESS:   # regress — 아직 적재 전이면 HEAD 기록에 두 칸을 더한 합성(gate 와 같은 길)
+        QC.sub('git:show-data')
+        head = JG.git_HU(SPD, 'show', 'HEAD:' + RP)
     d = json.loads(head.decode('utf-8'))
     d['data'].setdefault('gpt', {})[UID] = MD; d['u']['gpt|' + UID] = int(time.time() * 1000)
     return dumps(d), head, '합성(적재 전)'
@@ -213,10 +217,59 @@ def seed_rev():
     return L[0] if L else ''
 
 
-LANE = lane_rev()
-BASE_REV = ARG('--base', '') or (git1(GENIE, 'rev-parse', '--short', LANE + '~1') if LANE else git1(GENIE, 'rev-parse', '--short', 'HEAD'))
+if QC.GATE:   # 바탕 커밋 고르기(git log -S · rev-parse) — 헛잣대 · 「= 바탕」 재료
+    QC.sub('git:log')
+    LANE = lane_rev()
+    BASE_REV = ARG('--base', '') or (git1(GENIE, 'rev-parse', '--short', LANE + '~1') if LANE else git1(GENIE, 'rev-parse', '--short', 'HEAD'))
+else:   # regress — 바탕 앱 안 풂(git 0) · 「= 바탕」 칸은 기준 스냅샷
+    LANE, BASE_REV = '', '(regress — 바탕 안 풂)'
 APP_N = open(os.path.join(GENIE, 'jagwa', 'index.html'), 'rb').read().replace(bytes([13, 10]), bytes([10]))
-APP_B = HU.git(GENIE, 'show', BASE_REV + ':jagwa/index.html')
+if QC.GATE:
+    QC.sub('git:show-app')
+    APP_B = JG.git_HU(GENIE, 'show', BASE_REV + ':jagwa/index.html')
+else:
+    APP_B = b''
+
+
+# ── _task_qa_slim2 A-1·A-2(10/8 · J2) regress 갈래 — 이름이 `_rg` · `_RG` 로 시작하는 것 = gate 에서 안 쓰는 도우미(gate 에서 도는 줄은 글자 그대로) ──
+#   regress = NEW 앱 문맥만(N · PN · 폭 넷 · 기록 기기) — 바탕 앱 문맥 셋(X · B0 · PB) · 바탕 커밋 고르기(git log · show) · A-1 패치 재현(하위 파이썬) · A-2 모션 · 적재 커밋 대조 · B-7 헛잣대 = gate 만
+#   R 줄의 「바탕」 칸(X 판정 · 헛잣대) = —(판정 밖) · 「기준」 칸(B-5 빈 기기 · B-6 지학 넷 · 물리 둘 · 목록) = QC.base 스냅샷(앞 인도판의 새 판 값 · 긴 글은 md5)
+#   smoke = chromium 한 판 — B-1(N 문맥 · 다른 글 넷 건넘) · B-4 폭 390 · B-5 기록 있는 기기(동기화 한 바퀴) · 390 그림(눈 확인용)은 regress · smoke 에서 안 찍음
+_RG_KEEP = set(x for x in (os.environ.get('QA_SLIM_KEEP_FIXED') or '').split(',') if x)   # 흔들리는 자리만 고정 대기로 되돌리는 손잡이(자리 이름 쉼표 · * = 전부)
+_RG_GPSHEET = "()=>{const s=[...document.querySelectorAll('.sheet')].pop();return !!s&&!!s.querySelector('.panel > h2')&&(!!s.querySelector('.gpread')||!!s.querySelector('#gpIn'))}"   # 표지 = 「Claude」 누름 뒤 풀이 창(gptSheet 이 동기로 짓는 머리 h2 · 읽기 판 또는 고치기 판)
+
+
+def _rg_md5(v):
+    return hashlib.md5(('' if v is None else (v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, sort_keys=True))).encode('utf-8')).hexdigest()
+
+
+def _rg_wait(dv, ms, js, what):
+    """regress — 고정 대기 대신 앱 표지(상한 = gate 의 ms · 못 만나면 남은 시간을 채워 gate 와 같은 길이) · QA_SLIM_KEEP_FIXED 자리는 고정"""
+    if js is None or what in _RG_KEEP or '*' in _RG_KEEP:
+        QC.sleep(ms, what, dv.pg)
+        return
+    t = time.time()
+    if not QC.until(dv.pg, js, ms, what):
+        left = ms - (time.time() - t) * 1000.0
+        if left > 1:
+            dv.pg.wait_for_timeout(left)
+
+
+def _rg_b5(eng, N, gpn, gpb):
+    """regress — B-5 빈 기기: 바탕 기기(BASE 앱 + BASE 기록) 값 = 기준 스냅샷(앞 인도판의 새 판 값 · 칸 값은 md5) · 판정식은 gate 와 같은 뜻"""
+    body = json.loads(N['body']) if N['body'] else None
+    bgp = (body or {}).get('data', {}).get('gpt') or {}
+    me = {k: v for k, v in N['gp'].items() if k != UID}
+    cur = {'keys': N['keys'], 'stores': {k: _rg_md5(N['stores'].get(k)) for k in N['keys']}, 'gp': {k: _rg_md5(v) for k, v in me.items()},
+           'gone': _rg_md5((body or {}).get('gone') or {}) if body is not None else None}
+    cid = 'B-5@%s' % eng
+    b = QC.base(cid, cur)
+    gk = [k for k in N['keys'] if cur['stores'].get(k) != (b.get('stores') or {}).get(k)]
+    okb_ = (body is None and b.get('gone') is None) or (body is not None and bgp == gpn and cur['gone'] == b.get('gone'))
+    ok5 = bool(N['gp'].get(UID) == MD and me == {k: v for k, v in gpn.items() if k != UID} == gpb and cur['gp'] == (b.get('gp') or {})
+               and not gk and N['keys'] == b.get('keys') and okb_)
+    return ok5, {'길이': len(N['gp'].get(UID) or ''), 'GP 열쇠': sorted(N['gp']), '바탕 GP 열쇠': sorted((b.get('gp') or {})), '다른 칸': gk,
+                 '올린 몸통': 'PUT 없음' if body is None else 'gpt %s' % sorted(bgp), '묘비 같음': okb_, '기준': QC.base_note(cid)}
 
 
 def statics():
@@ -294,10 +347,10 @@ window.__C={
 """
 
 
-class DevW(HU.Dev):
+class DevW(JG.Dev):
     """HU.Dev 와 같고 창 크기만 고른다(§B-4 폭 넷 — 띄운 뒤 창 크기만 바꾸면 떠 있는 창이 옛 자리에 남는다 · 그래서 폭마다 새 문맥)"""
     def __init__(self, br, eng, w, h):
-        self.eng = eng; self.S = HU.Srv()
+        self.eng = eng; self.S = JG.Srv()
         self.ctx = br.new_context(viewport={'width': w, 'height': h}, device_scale_factor=1, has_touch=True)
         OK = ('http://127.0.0.1', 'https://cdnjs.cloudflare.com/', 'https://cdn.jsdelivr.net/', 'https://fonts.googleapis.com/', 'https://fonts.gstatic.com/')
         self.ctx.route('**/*', lambda rt: rt.continue_() if rt.request.url.startswith(OK) else rt.abort())
@@ -313,7 +366,8 @@ def load(dv, app, subj, rec, stat):
 
 
 def dv_open(br, eng, app, subj, rec, stat, wh=None):
-    dv = DevW(br, eng, *wh) if wh else HU.Dev(br, eng)
+    QC.launch('base' if (app is APP_B and app is not APP_N) else 'new')
+    dv = DevW(br, eng, *wh) if wh else JG.Dev(br, eng)
     load(dv, app, subj, rec, stat)
     return dv
 
@@ -330,7 +384,7 @@ def click(dv, sel):
 def open_gpt(dv, no):
     """번호 no 문제 창 → 아랫줄 「Claude」 진짜 누름 → 풀이 창"""
     o = {'btn': dv.ev("n=>__C.open(n)", int(no))}
-    o['clicked'] = click(dv, '#tGpt'); dv.pg.wait_for_timeout(900)
+    o['clicked'] = click(dv, '#tGpt'); dv.pg.wait_for_timeout(900) if QC.GATE else _rg_wait(dv, 900, _RG_GPSHEET, 'e010.gpsheet')
     o['sheet'] = dv.ev("()=>__C.sheet()")
     return o
 
@@ -413,18 +467,18 @@ def ink_all(dv, geo):
 def widths(br, eng, app, rec, stat):
     """§B-4 폭 넷 — 폭마다 새 문맥으로 열고 풀이 창을 띄워 잰다 · 글꼴 상자 겹친 짝은 잉크로 가른다 · 390 은 헛잣대(첫 식 8px 내림)와 그림 한 장"""
     out = {}
-    for w, h in WIDTHS:
+    for w, h in (WIDTHS if not QC.SMOKE else [x for x in WIDTHS if x[0] == 390]):   # smoke — 폭 390 하나
         dv = dv_open(br, eng, app, SUBJ, rec, stat, wh=(w, h))
         try:
             o = open_gpt(dv, NO)
             o['geo'] = dv.ev("()=>__C.geo()") if (o['sheet'] or {}).get('read') else None
             o['ink'] = ink_all(dv, o['geo']) if o['geo'] else []
-            if w <= 480 and o['geo']:
+            if w <= 480 and o['geo'] and QC.want('B-4.null'):   # smoke 칸 아님(헛잣대 흉내)
                 dv.ev("()=>__C.shift(8)"); dv.pg.wait_for_timeout(200)   # 헛잣대 — 첫 식(아래 글자 「물체」「지구」)을 8px 내려 다음 줄과 잉크가 닿게 한다
                 g8 = dv.ev("()=>__C.geo()")
                 o['null'] = {'상자 겹침': (g8 or {}).get('nov'), 'ink': ink_all(dv, g8)}
                 dv.ev("()=>__C.shift(0)"); dv.pg.wait_for_timeout(200)
-            if w <= 480 and o['geo']:
+            if w <= 480 and o['geo'] and QC.GATE:   # 390 그림(사용자 눈 확인용 · 게이트 아님) — regress · smoke 에서 안 찍음
                 os.makedirs(SHOTS, exist_ok=True)
                 f = os.path.join(SHOTS, 'ce10_%d_%s.png' % (w, eng))
                 try:
@@ -475,24 +529,25 @@ def main():
     jn, jb = json.loads(rn.decode('utf-8')), json.loads(rb.decode('utf-8'))
     gpn, gpb = jn['data'].get('gpt') or {}, jb['data'].get('gpt') or {}
     print('기록 = %s · NEW 앱 = genie 작업트리(md5 %s) · BASE 앱 = genie %s(md5 %s) · 이 판 genie 커밋 %s · 적재 커밋 %s · 화면 번호 %d' % (
-        how, hashlib.md5(APP_N).hexdigest()[:8], BASE_REV, hashlib.md5(APP_B).hexdigest()[:8], LANE or '(커밋 전)', seed_rev() or '(적재 전)', NO))
+        how, hashlib.md5(APP_N).hexdigest()[:8], BASE_REV, hashlib.md5(APP_B).hexdigest()[:8], LANE or '(커밋 전)', (seed_rev() or '(적재 전)') if QC.GATE else '(regress — 안 셈)', NO))
     # ── A-0 재료 셈(오프라인) = 지시서 §B-2 · §0-4 숫자 ──
     ex = {k: EXP[k] for k in WANT_TASK}
-    R('-', 'A-0 재료 셈(앱 규칙 gpPre → gpRender 로 셈) = 지시서 §B-2 숫자 %s · QA 첫 줄 = 「%s」 · 제목(문항.json) = 「%s」' % (WANT_TASK, QA_TASK, TITLE_TASK),
+    if QC.want('A-0'):   # smoke 칸 아님(데이터)
+      R('-', 'A-0 재료 셈(앱 규칙 gpPre → gpRender 로 셈) = 지시서 §B-2 숫자 %s · QA 첫 줄 = 「%s」 · 제목(문항.json) = 「%s」' % (WANT_TASK, QA_TASK, TITLE_TASK),
       ex == WANT_TASK and QA_EXP == QA_TASK and TITLE == TITLE_TASK, None, dict(ex, ols=EXP['ols'], qa=QA_EXP, title=TITLE))
     t0 = time.time()
     base_fail = {}
     with sync_playwright() as pw:
-        for eng in ENGS:
+        for eng in (ENGS if not QC.SMOKE else [e for e in ENGS if e == 'chromium'][:1]):   # smoke — chromium 한 판
             br = getattr(pw, eng).launch()
             try:
-                N = side(br, eng, APP_N, rn, stat)                 # NEW 앱 + NEW 기록
-                X = side(br, eng, APP_B, rn, stat)                 # BASE 앱 + NEW 기록 — 헛잣대 칸 · B-6 바탕
-                B0 = side(br, eng, APP_B, rb, stat, others=False)  # BASE 앱 + BASE 기록 — 목록 · GP · 올린 몸통 바탕
-                PN, PB = phys(br, eng, APP_N, stat), phys(br, eng, APP_B, stat)
+                N = side(br, eng, APP_N, rn, stat) if not QC.SMOKE else side(br, eng, APP_N, rn, stat, others=False)   # NEW 앱 + NEW 기록 · smoke — 다른 글 넷 건넘
+                X = side(br, eng, APP_B, rn, stat) if QC.GATE else None                 # BASE 앱 + NEW 기록 — 헛잣대 칸 · B-6 바탕 · regress 0
+                B0 = side(br, eng, APP_B, rb, stat, others=False) if QC.GATE else None  # BASE 앱 + BASE 기록 — 목록 · GP · 올린 몸통 바탕 · regress = 기준 스냅샷
+                PN, PB = (phys(br, eng, APP_N, stat) if not QC.SMOKE else None), (phys(br, eng, APP_B, stat) if QC.GATE else None)
                 W = widths(br, eng, APP_N, rn, stat)
                 D = dev_records(br, eng, APP_N, rb, rn, stat)
-                n, x = N['me'], X['me']
+                n, x = N['me'], (X['me'] if QC.GATE else {'sheet': None, 'read': None})   # regress — 바탕 문맥 없음(아래 「바탕」 칸 = —)
                 s, sx = n['sheet'] or {}, x['sheet'] or {}
                 r, rx = n['read'] or {}, x['read'] or {}
 
@@ -502,7 +557,7 @@ def main():
                                 and (sh.get('h2') or '').rstrip('✕ ') == TITLE == TITLE_TASK and sh.get('sub') and sh.get('qa') == QA_EXP == QA_TASK
                                 and not sh.get('mot') and UID not in (sh.get('motEarth') or []))
                 R(eng, 'B-1 %s(화면 %d) — 아랫줄 맨 오른쪽 「Claude ✓」 · 창 제목 「%s」 · 둘째 줄 왼쪽 「%s」 · 「▶ 모션」 0 · 읽기 판이 먼저' % (UID, NO, TITLE_TASK, QA_TASK),
-                  b1(n, s), b1(x, sx), {'단추': n['btn'], '제목': s.get('h2'), '둘째 줄': s.get('qa'), '모션 단추': s.get('mot'), 'MOT.earth': s.get('motEarth'),
+                  b1(n, s), (b1(x, sx) if QC.GATE else None), {'단추': n['btn'], '제목': s.get('h2'), '둘째 줄': s.get('qa'), '모션 단추': s.get('mot'), 'MOT.earth': s.get('motEarth'),
                                         '읽기 판': s.get('read'), '고치기 판': s.get('edit')})
 
                 # ── B-2 셈 ──
@@ -521,57 +576,58 @@ def main():
                 def g_tx(rr):
                     return bool(rr) and rr.get('dollar') == 0 and rr.get('arrow') == 0 and rr.get('u1') == 0 and rr.get('script') == 0
 
-                R(eng, 'B-2 셈 — h3.gph %d(%s) · ul.gpul li %d · ol.gpol li %d' % (EXP['h3'], EXP['h3t'], EXP['ul'], EXP['ol']), c_base(r), c_base(rx),
-                  {k: r.get(k) for k in ('h3', 'h3t', 'ul', 'ol')})
-                R(eng, 'B-2 span.gpsub %d — 다 ol.gpol li 안 · 절마다 번호 목록 하나 · 항목마다 아랫줄 수 = %s(③ 2~7 번에 하나씩) · 글 = 재료 「↳」 뒤 글' % (EXP['sub'], EXP['ols']),
-                  g_sub(r), g_sub(rx), {'sub': r.get('sub'), '안': r.get('subIn'), 'ols': r.get('ols'), '바탕 ols': rx.get('ols'), '글 같음': r.get('subTx') == EXP['subs']})
-                R(eng, 'B-2 b.oxo %d · b.oxx %d · 꾸밈 없는 굵은 O/X 0' % (EXP['oxo'], EXP['oxx']), g_ox(r), g_ox(rx),
-                  {k: r.get(k) for k in ('oxo', 'oxx', 'bOX', 'bAll')} | {'바탕': {k: rx.get(k) for k in ('oxo', 'oxx', 'bOX')}})
-                R(eng, 'B-2 .katex %d · .katex-error 0' % EXP['katex'], g_kx(r), g_kx(rx),
-                  {'katex': r.get('katex'), 'error': r.get('kerr'), 'KaTeX 실림': r.get('kxReady'), '바탕': [rx.get('katex'), rx.get('kerr')]})
-                R(eng, 'B-2 읽기 판 글에 「$」 0 · 「↳」 0 · U+0001 0 · <script> 0', g_tx(r), g_tx(rx),
-                  {k: r.get(k) for k in ('dollar', 'arrow', 'u1', 'script')} | {'바탕': {k: rx.get(k) for k in ('dollar', 'arrow', 'u1', 'script')}})
+                if QC.want('B-2'):   # smoke 칸 아님(B-2 · B-3 — 읽기 판 셈 · 모양 · smoke = B-1 · B-4 390 · B-5 기록 있는 기기)
+                    R(eng, 'B-2 셈 — h3.gph %d(%s) · ul.gpul li %d · ol.gpol li %d' % (EXP['h3'], EXP['h3t'], EXP['ul'], EXP['ol']), c_base(r), (c_base(rx) if QC.GATE else None),
+                      {k: r.get(k) for k in ('h3', 'h3t', 'ul', 'ol')})
+                    R(eng, 'B-2 span.gpsub %d — 다 ol.gpol li 안 · 절마다 번호 목록 하나 · 항목마다 아랫줄 수 = %s(③ 2~7 번에 하나씩) · 글 = 재료 「↳」 뒤 글' % (EXP['sub'], EXP['ols']),
+                      g_sub(r), (g_sub(rx) if QC.GATE else None), {'sub': r.get('sub'), '안': r.get('subIn'), 'ols': r.get('ols'), '바탕 ols': rx.get('ols'), '글 같음': r.get('subTx') == EXP['subs']})
+                    R(eng, 'B-2 b.oxo %d · b.oxx %d · 꾸밈 없는 굵은 O/X 0' % (EXP['oxo'], EXP['oxx']), g_ox(r), (g_ox(rx) if QC.GATE else None),
+                      {k: r.get(k) for k in ('oxo', 'oxx', 'bOX', 'bAll')} | {'바탕': {k: rx.get(k) for k in ('oxo', 'oxx', 'bOX')}})
+                    R(eng, 'B-2 .katex %d · .katex-error 0' % EXP['katex'], g_kx(r), (g_kx(rx) if QC.GATE else None),
+                      {'katex': r.get('katex'), 'error': r.get('kerr'), 'KaTeX 실림': r.get('kxReady'), '바탕': [rx.get('katex'), rx.get('kerr')]})
+                    R(eng, 'B-2 읽기 판 글에 「$」 0 · 「↳」 0 · U+0001 0 · <script> 0', g_tx(r), (g_tx(rx) if QC.GATE else None),
+                      {k: r.get(k) for k in ('dollar', 'arrow', 'u1', 'script')} | {'바탕': {k: rx.get(k) for k in ('dollar', 'arrow', 'u1', 'script')}})
 
-                # ── B-3 모양 ──
-                def g_col(rr):
-                    return bool(rr) and bool(rr.get('oxoC')) and bool(rr.get('oxxC')) and all(c == COL_O for c in rr['oxoC']) and all(c == COL_X for c in rr['oxxC'])
+                    # ── B-3 모양 ──
+                    def g_col(rr):
+                        return bool(rr) and bool(rr.get('oxoC')) and bool(rr.get('oxxC')) and all(c == COL_O for c in rr['oxoC']) and all(c == COL_X for c in rr['oxxC'])
 
-                def g_fs(rr):
-                    return bool(rr) and len(rr.get('subFs') or []) == EXP['sub'] and all(abs(a - b * 0.75) <= 0.5 for a, b in rr['subFs'])
+                    def g_fs(rr):
+                        return bool(rr) and len(rr.get('subFs') or []) == EXP['sub'] and all(abs(a - b * 0.75) <= 0.5 for a, b in rr['subFs'])
 
-                def g_lab(rr):
-                    G = (rr or {}).get('kgeo') or []
-                    if len(G) != EXP['katex']:
-                        return False
-                    for g in G:
-                        if None in (g.get('labTop'), g.get('labBot'), g.get('mainTop'), g.get('mainBot')):
+                    def g_lab(rr):
+                        G = (rr or {}).get('kgeo') or []
+                        if len(G) != EXP['katex']:
                             return False
-                        if 'underbrace' in g['src']:   # 첫 식 — 묶음 괄호 밑 글자(물체 · 지구)가 본 줄 아래
-                            if not (g['labTop'] >= g['mainBot'] - 1 and g['nsvg'] >= 1):
+                        for g in G:
+                            if None in (g.get('labTop'), g.get('labBot'), g.get('mainTop'), g.get('mainBot')):
                                 return False
-                        elif 'overset' in g['src']:    # 둘째 식 — 위 글자(풍속↓ · 위도↑)가 본 줄 위
-                            if not (g['labTop'] < g['mainTop'] and (g['labTop'] + g['labBot']) / 2 < (g['mainTop'] + g['mainBot']) / 2):
+                            if 'underbrace' in g['src']:   # 첫 식 — 묶음 괄호 밑 글자(물체 · 지구)가 본 줄 아래
+                                if not (g['labTop'] >= g['mainBot'] - 1 and g['nsvg'] >= 1):
+                                    return False
+                            elif 'overset' in g['src']:    # 둘째 식 — 위 글자(풍속↓ · 위도↑)가 본 줄 위
+                                if not (g['labTop'] < g['mainTop'] and (g['labTop'] + g['labBot']) / 2 < (g['mainTop'] + g['mainBot']) / 2):
+                                    return False
+                            else:
                                 return False
-                        else:
-                            return False
-                    return True
+                        return True
 
-                def g_h(rr):
-                    G = (rr or {}).get('kgeo') or []
-                    return len(G) == EXP['katex'] and all((g.get('h') or 0) > (g.get('nh') or 999) for g in G)
+                    def g_h(rr):
+                        G = (rr or {}).get('kgeo') or []
+                        return len(G) == EXP['katex'] and all((g.get('h') or 0) > (g.get('nh') or 999) for g in G)
 
-                R(eng, 'B-3 색 — b.oxo %s · b.oxx %s(계산된 색 · 다 같음)' % (COL_O, COL_X), g_col(r), g_col(rx),
-                  {'O': r.get('oxoC'), 'X': sorted(set(r.get('oxxC') or [])), '글 색': r.get('inkC')})
-                R(eng, 'B-3 .gpsub 글씨 = 그 li 글씨 × 0.75(±0.5px)', g_fs(r), g_fs(rx), r.get('subFs'))
-                kg = [{k: fnum(v) for k, v in g.items() if k in ('lab', 'labTop', 'labBot', 'mainTop', 'mainBot', 'nsvg')} for g in (r.get('kgeo') or [])]
-                R(eng, 'B-3 식 — 위·아래 글자가 붙음(첫 식 「물체」「지구」 = 묶음 괄호 밑 · 본 줄 아래 · 둘째 식 「풍속↓」「위도↑」 = 본 줄 위)', g_lab(r), g_lab(rx), kg)
-                R(eng, 'B-3 식 높이(식 안 글자 · 괄호 범위) > 같은 문단 보통 글 한 줄 글자 높이', g_h(r), g_h(rx),
-                  [{'식': (g.get('src') or '')[:24], '높이': fnum(g.get('h')), '보통 글 한 줄': fnum(g.get('nh'))} for g in (r.get('kgeo') or [])])
-                R(eng, 'B-3 (참고) CSS 줄 높이 · .katex rect 높이(inline · 위·아래 글자 안 듦) — 지시서 「.katex 높이 > 한 줄 높이」 글자 그대로의 값', None, None,
-                  [{'식 높이': fnum(g.get('h')), 'CSS 줄 높이': fnum(g.get('lh')), '.katex rect': fnum(g.get('inlineH')), '> 줄 높이': (g.get('h') or 0) > (g.get('lh') or 0)}
-                   for g in (r.get('kgeo') or [])])
+                    R(eng, 'B-3 색 — b.oxo %s · b.oxx %s(계산된 색 · 다 같음)' % (COL_O, COL_X), g_col(r), (g_col(rx) if QC.GATE else None),
+                      {'O': r.get('oxoC'), 'X': sorted(set(r.get('oxxC') or [])), '글 색': r.get('inkC')})
+                    R(eng, 'B-3 .gpsub 글씨 = 그 li 글씨 × 0.75(±0.5px)', g_fs(r), (g_fs(rx) if QC.GATE else None), r.get('subFs'))
+                    kg = [{k: fnum(v) for k, v in g.items() if k in ('lab', 'labTop', 'labBot', 'mainTop', 'mainBot', 'nsvg')} for g in (r.get('kgeo') or [])]
+                    R(eng, 'B-3 식 — 위·아래 글자가 붙음(첫 식 「물체」「지구」 = 묶음 괄호 밑 · 본 줄 아래 · 둘째 식 「풍속↓」「위도↑」 = 본 줄 위)', g_lab(r), (g_lab(rx) if QC.GATE else None), kg)
+                    R(eng, 'B-3 식 높이(식 안 글자 · 괄호 범위) > 같은 문단 보통 글 한 줄 글자 높이', g_h(r), (g_h(rx) if QC.GATE else None),
+                      [{'식': (g.get('src') or '')[:24], '높이': fnum(g.get('h')), '보통 글 한 줄': fnum(g.get('nh'))} for g in (r.get('kgeo') or [])])
+                    R(eng, 'B-3 (참고) CSS 줄 높이 · .katex rect 높이(inline · 위·아래 글자 안 듦) — 지시서 「.katex 높이 > 한 줄 높이」 글자 그대로의 값', None, None,
+                      [{'식 높이': fnum(g.get('h')), 'CSS 줄 높이': fnum(g.get('lh')), '.katex rect': fnum(g.get('inlineH')), '> 줄 높이': (g.get('h') or 0) > (g.get('lh') or 0)}
+                       for g in (r.get('kgeo') or [])])
                 # ── B-4 폭 넷 ──
-                for w, _h in WIDTHS:
+                for w, _h in (WIDTHS if not QC.SMOKE else [x for x in WIDTHS if x[0] == 390]):   # smoke — 폭 390 하나(위 widths 와 같은 몫)
                     o = W.get(w) or {}
                     g = o.get('geo') or {}
                     rr_ = g.get('rrect') or [0, 0]
@@ -589,17 +645,23 @@ def main():
                         R(eng, 'B-4 헛잣대(폭 %d) — 첫 식을 8px 내리면(상대 위치) 잉크 겹침을 잡는다(빈 행 없는 짝 ≥ 1)' % w,
                           bool(nl_['ink']) and any(not x['갈림'] and x.get('위 잉크') and x.get('아래 잉크') for x in nl_['ink']), None, nl_)
                 # ── B-5 데이터 ──
-                gk = [k for k in N['keys'] if N['stores'].get(k) != B0['stores'].get(k)]
-                body = json.loads(N['body']) if N['body'] else None
-                body0 = json.loads(B0['body']) if B0['body'] else None
-                bgp = (body or {}).get('data', {}).get('gpt') or {}
-                okb_ = (body is None and body0 is None) or (body is not None and bgp == gpn and (body.get('gone') or {}) == ((body0 or {}).get('gone') or {}))
-                ok5 = bool(N['gp'].get(UID) == MD and {k: v for k, v in N['gp'].items() if k != UID} == {k: v for k, v in gpn.items() if k != UID} == B0['gp'] == gpb
-                           and not gk and N['keys'] == B0['keys'] and okb_)
-                R(eng, 'B-5 빈 기기 — 동기화 뒤 GP["%s"] = 재료 글자 전수(%d자) · 다른 gpt 칸 %d = 기록 값 = 바탕 기기 값 · gpt 밖 동기화 칸 %d 바탕과 같음 · 올린 몸통 gpt = 기록 · 묘비 = 바탕 기기' % (
-                    UID, len(MD), len(gpb), len(N['keys'])), ok5, None,
-                  {'길이': len(N['gp'].get(UID) or ''), 'GP 열쇠': sorted(N['gp']), '바탕 GP 열쇠': sorted(B0['gp']), '다른 칸': gk,
-                   '올린 몸통': 'PUT 없음' if body is None else 'gpt %s' % sorted(bgp), '묘비 같음': okb_})
+                if QC.GATE:   # 바탕 기기(BASE 앱 + BASE 기록)와 맞댐
+                    gk = [k for k in N['keys'] if N['stores'].get(k) != B0['stores'].get(k)]
+                    body = json.loads(N['body']) if N['body'] else None
+                    body0 = json.loads(B0['body']) if B0['body'] else None
+                    bgp = (body or {}).get('data', {}).get('gpt') or {}
+                    okb_ = (body is None and body0 is None) or (body is not None and bgp == gpn and (body.get('gone') or {}) == ((body0 or {}).get('gone') or {}))
+                    ok5 = bool(N['gp'].get(UID) == MD and {k: v for k, v in N['gp'].items() if k != UID} == {k: v for k, v in gpn.items() if k != UID} == B0['gp'] == gpb
+                               and not gk and N['keys'] == B0['keys'] and okb_)
+                    R(eng, 'B-5 빈 기기 — 동기화 뒤 GP["%s"] = 재료 글자 전수(%d자) · 다른 gpt 칸 %d = 기록 값 = 바탕 기기 값 · gpt 밖 동기화 칸 %d 바탕과 같음 · 올린 몸통 gpt = 기록 · 묘비 = 바탕 기기' % (
+                        UID, len(MD), len(gpb), len(N['keys'])), ok5, None,
+                      {'길이': len(N['gp'].get(UID) or ''), 'GP 열쇠': sorted(N['gp']), '바탕 GP 열쇠': sorted(B0['gp']), '다른 칸': gk,
+                       '올린 몸통': 'PUT 없음' if body is None else 'gpt %s' % sorted(bgp), '묘비 같음': okb_})
+                else:
+                    if QC.want('B-5.empty'):   # regress — 바탕 기기 값 = 기준 스냅샷(_rg_b5) · smoke 칸 아님
+                        ok5, det5 = _rg_b5(eng, N, gpn, gpb)
+                        R(eng, 'B-5 빈 기기 — 동기화 뒤 GP["%s"] = 재료 글자 전수(%d자) · 다른 gpt 칸 %d = 기록 값 = 바탕 기기 값 · gpt 밖 동기화 칸 %d 바탕과 같음 · 올린 몸통 gpt = 기록 · 묘비 = 바탕 기기' % (
+                        UID, len(MD), len(gpb), len(N['keys'])), ok5, None, det5)
                 bd = D['body'].get('data', {})
                 okd = bool(D['cq'] and D['h'][1] == D['h'][0] + 1 and D['gp1'].get(UID) == MD and {k: v for k, v in D['gp1'].items() if k != UID} == D['gp0'] == gpb
                            and all(D['same'].values()) and D['stK5'] == D['h'][1] and (bd.get('gpt') or {}).get(UID) == MD
@@ -607,59 +669,79 @@ def main():
                 R(eng, 'B-5 기록 있는 기기 — 동기화 뒤 GP["%s"] = 재료 · 다른 gpt 칸 무변 · 다른 동기화 칸 %d 무변 · 내 새 칸(5번 △ 진짜 누름) 안 덮임 · 올린 몸통에 둘 다' % (UID, len(D['keys'])),
                   okd, None, {'다른 칸': [k for k in D['keys'] if not D['same'][k]], 'GP 길이': len(D['gp1'].get(UID) or ''), '5번 회독': D['h'], '누름': D['cq'], 'GP 열쇠': sorted(D['gp1'])})
                 # ── B-6 무변 ──
-                he = {u: (N['html'].get(u) is not None and N['html'].get(u) == X['html'].get(u)) for u in OTHER_EARTH}
-                R(eng, 'B-6 지학 Claude 글 넷(%s) — 읽기 판 innerHTML = 바탕 앱(같은 기록) 바이트 그대로' % ' · '.join(OTHER_EARTH), all(he.values()), None,
-                  {u: [len(N['html'].get(u) or ''), he[u]] for u in OTHER_EARTH})
-                hp = {k: (PN.get(k) is not None and PN.get(k) == PB.get(k)) for k in OTHER_PHYS}
-                R(eng, 'B-6 물리 Claude 글 둘(72 · 97) — 읽기 판 innerHTML = 바탕 앱 바이트 그대로 · GP 같음', all(hp.values()) and PN['gp'] == PB['gp'], None,
-                  {k: [len(PN.get(k) or ''), hp[k]] for k in OTHER_PHYS})
-                want = sorted(B0['list']['tags'] + [NO])
-                R(eng, 'B-6 목록 .tag.gp 「Claude」 줄 = 바탕 %s + %d(%s) 한 줄 · 다른 글자 0' % (B0['list']['tags'], NO, UID),
-                  N['list']['tags'] == want and N['list']['txt'] == ['Claude'], None, {'NEW': N['list']['tags'], '바탕': B0['list']['tags'], '글자': N['list']['txt']})
+                if QC.GATE:   # 바탕 앱 문맥(X · PB · B0)과 맞댐
+                    he = {u: (N['html'].get(u) is not None and N['html'].get(u) == X['html'].get(u)) for u in OTHER_EARTH}
+                    R(eng, 'B-6 지학 Claude 글 넷(%s) — 읽기 판 innerHTML = 바탕 앱(같은 기록) 바이트 그대로' % ' · '.join(OTHER_EARTH), all(he.values()), None,
+                      {u: [len(N['html'].get(u) or ''), he[u]] for u in OTHER_EARTH})
+                    hp = {k: (PN.get(k) is not None and PN.get(k) == PB.get(k)) for k in OTHER_PHYS}
+                    R(eng, 'B-6 물리 Claude 글 둘(72 · 97) — 읽기 판 innerHTML = 바탕 앱 바이트 그대로 · GP 같음', all(hp.values()) and PN['gp'] == PB['gp'], None,
+                      {k: [len(PN.get(k) or ''), hp[k]] for k in OTHER_PHYS})
+                    want = sorted(B0['list']['tags'] + [NO])
+                    R(eng, 'B-6 목록 .tag.gp 「Claude」 줄 = 바탕 %s + %d(%s) 한 줄 · 다른 글자 0' % (B0['list']['tags'], NO, UID),
+                      N['list']['tags'] == want and N['list']['txt'] == ['Claude'], None, {'NEW': N['list']['tags'], '바탕': B0['list']['tags'], '글자': N['list']['txt']})
+                else:
+                    if QC.want('B-6'):   # regress — 지학 넷 · 물리 둘 innerHTML · GP · 목록 줄 = 기준 스냅샷(앞 인도판 같은 칸 새 판 값 · md5) · smoke 칸 아님
+                        he = {u: (N['html'].get(u) is not None and QC.same('B-6.earth/%s@%s' % (u, eng), _rg_md5(N['html'].get(u)))) for u in OTHER_EARTH}
+                        R(eng, 'B-6 지학 Claude 글 넷(%s) — 읽기 판 innerHTML = 바탕 앱(같은 기록) 바이트 그대로' % ' · '.join(OTHER_EARTH), all(he.values()), None,
+                          dict({u: [len(N['html'].get(u) or ''), he[u]] for u in OTHER_EARTH}, 기준=QC.base_note('B-6.earth/%s@%s' % (OTHER_EARTH[0], eng))))
+                        hp = {k: (PN.get(k) is not None and QC.same('B-6.phys/%s@%s' % (k, eng), _rg_md5(PN.get(k)))) for k in OTHER_PHYS}
+                        R(eng, 'B-6 물리 Claude 글 둘(72 · 97) — 읽기 판 innerHTML = 바탕 앱 바이트 그대로 · GP 같음', all(hp.values()) and QC.same('B-6.physgp@%s' % eng, _rg_md5(PN['gp'])), None,
+                          dict({k: [len(PN.get(k) or ''), hp[k]] for k in OTHER_PHYS}, 기준=QC.base_note('B-6.physgp@%s' % eng)))
+                        b0tags = QC.base('B-6.tags@%s' % eng, sorted(t for t in N['list']['tags'] if t != NO))   # 바탕(B0) 줄 = 앞 인도판 새 판의 이 문항 뺀 줄
+                        want = sorted(b0tags + [NO])
+                        R(eng, 'B-6 목록 .tag.gp 「Claude」 줄 = 바탕 %s + %d(%s) 한 줄 · 다른 글자 0' % (b0tags, NO, UID),
+                          N['list']['tags'] == want and N['list']['txt'] == ['Claude'], None, {'NEW': N['list']['tags'], '바탕': b0tags, '글자': N['list']['txt'], '기준': QC.base_note('B-6.tags@%s' % eng)})
                 errs = N['errs'] + [e for e in N['cerr'] if 'katex' in e.lower() or 'gpPre' in e or 'gpPost' in e]
                 R(eng, 'B-6 페이지 오류(pageerror) 0 · 식 · 덧댐 함수 콘솔 오류 0', not errs, None, {'pageerror': N['errs'], '콘솔(참고)': N['cerr'][:4]})
-                base_fail[eng] = {'B-2 아랫줄': not g_sub(rx), 'B-2 O/X': not g_ox(rx), 'B-2 식': not g_kx(rx), 'B-2 글자': not g_tx(rx),
+                if QC.GATE:   # 헛잣대 재료(바탕 판정) — regress 0
+                  base_fail[eng] = {'B-2 아랫줄': not g_sub(rx), 'B-2 O/X': not g_ox(rx), 'B-2 식': not g_kx(rx), 'B-2 글자': not g_tx(rx),
                                   'B-3 색': not g_col(rx), 'B-3 아랫줄 글씨': not g_fs(rx), 'B-3 식 붙음': not g_lab(rx), 'B-3 식 높이': not g_h(rx)}
             finally:
                 br.close()
     # ── 헛잣대 · 정적 ──
-    for eng, bf in base_fail.items():
-        R(eng, 'B-7 헛잣대 — 바탕(%s 앱 · G23-60-06 넣은 기록)에서 B-2(식 · span.gpsub · b.oxo/oxx · 글자)·B-3 가 FAIL' % BASE_REV, all(bf.values()), None, bf)
-    pb, pout = patched_base()
-    R('-', 'A-1 NEW 앱 = 바탕 앱(%s) + 이 판 패치(gpPre · gpPost · showRead 감쌈 · kx 한 줄 · CSS 셋) — 그 밖 바이트 무변 · %s' % (BASE_REV, pout), pb == APP_N, None,
-      {'NEW md5': hashlib.md5(APP_N).hexdigest()[:8], '바탕+패치 md5': hashlib.md5(pb).hexdigest()[:8], 'NEW B': len(APP_N)})
-    jm = json.loads(stat['motion/index.json'].decode('utf-8'))
-    jm0 = json.loads(HU.git(GENIE, 'show', BASE_REV + ':jagwa/motion/index.json').decode('utf-8'))
-    R('-', 'A-2 motion/index.json = 바탕 그대로 · %s 모션 없음(이 판은 모션 무변)' % UID, jm == jm0 and UID not in (jm.get('earth') or []), None, json.dumps(jm))
-    six = {u: gpn.get(u) or '' for u in OTHER_EARTH}
+    if QC.GATE:   # 헛잣대 B-7 · A-1 패치 재현(하위 파이썬 · 바탕 앱) · A-2 모션(바탕 git show) — 그 판에만 뜻 · regress 끔
+        for eng, bf in base_fail.items():
+            R(eng, 'B-7 헛잣대 — 바탕(%s 앱 · G23-60-06 넣은 기록)에서 B-2(식 · span.gpsub · b.oxo/oxx · 글자)·B-3 가 FAIL' % BASE_REV, all(bf.values()), None, bf)
+        pb, pout = patched_base()
+        R('-', 'A-1 NEW 앱 = 바탕 앱(%s) + 이 판 패치(gpPre · gpPost · showRead 감쌈 · kx 한 줄 · CSS 셋) — 그 밖 바이트 무변 · %s' % (BASE_REV, pout), pb == APP_N, None,
+          {'NEW md5': hashlib.md5(APP_N).hexdigest()[:8], '바탕+패치 md5': hashlib.md5(pb).hexdigest()[:8], 'NEW B': len(APP_N)})
+        jm = json.loads(stat['motion/index.json'].decode('utf-8'))
+        jm0 = json.loads(JG.git_HU(GENIE, 'show', BASE_REV + ':jagwa/motion/index.json').decode('utf-8'))
+        R('-', 'A-2 motion/index.json = 바탕 그대로 · %s 모션 없음(이 판은 모션 무변)' % UID, jm == jm0 and UID not in (jm.get('earth') or []), None, json.dumps(jm))
+    six = {u: gpn.get(u) or '' for u in OTHER_EARTH} if not QC.SMOKE else {}   # smoke — 데이터 칸(§0-3 · 물리) 건넘
     P = json.loads(open(os.path.join(SPD, 'phys', '기록.json'), 'rb').read().decode('utf-8'))
     pg = P['data'].get('gpt') or {}
     six.update({'phys %s' % k: pg.get(str(k)) or '' for k in OTHER_PHYS})
     cnt = {k: [v.count('$'), v.count('↳'), v.count('**O**'), v.count('**X**')] for k, v in six.items()}
-    R('-', '§0-3 다른 Claude 글 여섯(기록 값) — 「$」 · 「↳」 · 「**O**」 · 「**X**」 다 0 · 비지 않음', all(v and not any(cnt[k]) for k, v in six.items()), None, cnt)
+    if not QC.SMOKE:
+     R('-', '§0-3 다른 Claude 글 여섯(기록 값) — 「$」 · 「↳」 · 「**O**」 · 「**X**」 다 0 · 비지 않음', all(v and not any(cnt[k]) for k, v in six.items()), None, cnt)
     Bi = json.loads(open(os.path.join(SPD, 'bio', '기록.json'), 'rb').read().decode('utf-8'))
-    R('-', '물리 gpt["72"] · ["97"] = 재료 phys_72.md · phys_97.md 글자 그대로 · 생물 gpt = %s' % json.dumps(Bi['data'].get('gpt'), ensure_ascii=False)[:60],
+    if not QC.SMOKE:
+     R('-', '물리 gpt["72"] · ["97"] = 재료 phys_72.md · phys_97.md 글자 그대로 · 생물 gpt = %s' % json.dumps(Bi['data'].get('gpt'), ensure_ascii=False)[:60],
       pg.get('72') == mat('phys_72.md') and pg.get('97') == mat('phys_97.md'), None, {'물리 gpt': sorted(pg)})
-    SEED = seed_rev()
-    if SEED:
-        fs = git1(SPD, 'diff', '--name-only', SEED + '~1', SEED).split()
-        old, new = HU.git(SPD, 'show', SEED + '~1:' + RP), HU.git(SPD, 'show', SEED + ':' + RP)
-        where = 'studyplandata 커밋 %s' % SEED
+    if QC.GATE:   # A-2 적재 커밋 대조(studyplandata git log · diff · show) — 그 판에만 뜻 · regress 끔
+        SEED = seed_rev()
+        if SEED:
+            fs = git1(SPD, 'diff', '--name-only', SEED + '~1', SEED).split()
+            old, new = JG.git_HU(SPD, 'show', SEED + '~1:' + RP), JG.git_HU(SPD, 'show', SEED + ':' + RP)
+            where = 'studyplandata 커밋 %s' % SEED
+        else:
+            fs = [x_[3:] for x_ in JG.git_HU(SPD, 'status', '--porcelain').decode('utf-8', 'replace').split(NL) if x_.strip()]
+            old, new = JG.git_HU(SPD, 'show', 'HEAD:' + RP), open(os.path.join(SPD, 'earth', '기록.json'), 'rb').read()
+            where = 'studyplandata HEAD → 작업트리(커밋 전)'
+        do, dn = json.loads(old.decode('utf-8')), json.loads(new.decode('utf-8'))
+        if UID in (dn['data'].get('gpt') or {}) and UID not in (do['data'].get('gpt') or {}):
+            a_ = json.loads(json.dumps(dn)); a_['data']['gpt'].pop(UID); a_['u'].pop('gpt|' + UID, None)
+            b_ = json.loads(json.dumps(do))
+            for z in (a_, b_):
+                z.pop('savedAt', None)
+            R('-', 'A-2 적재(%s) — 바꾼 파일 = earth/기록.json 하나 · data.gpt["%s"] = 재료 글자 전수 · u["gpt|%s"] 둘(+savedAt)만 더함 · 다른 칸 · gone 무변' % (where, UID, UID),
+              a_ == b_ and dn['data']['gpt'][UID] == MD and isinstance(dn['u'].get('gpt|' + UID), int) and fs == [RP], None,
+              {'파일': fs, '도장': dn['u'].get('gpt|' + UID), 'savedAt': [do.get('savedAt'), dn.get('savedAt')], '크기': [len(old), len(new)]})
+        else:
+            R('-', 'A-2 적재(%s) — 아직 적재 전(합성 기록으로 잼)' % where, None, None, '')
     else:
-        fs = [x_[3:] for x_ in HU.git(SPD, 'status', '--porcelain').decode('utf-8', 'replace').split(NL) if x_.strip()]
-        old, new = HU.git(SPD, 'show', 'HEAD:' + RP), open(os.path.join(SPD, 'earth', '기록.json'), 'rb').read()
-        where = 'studyplandata HEAD → 작업트리(커밋 전)'
-    do, dn = json.loads(old.decode('utf-8')), json.loads(new.decode('utf-8'))
-    if UID in (dn['data'].get('gpt') or {}) and UID not in (do['data'].get('gpt') or {}):
-        a_ = json.loads(json.dumps(dn)); a_['data']['gpt'].pop(UID); a_['u'].pop('gpt|' + UID, None)
-        b_ = json.loads(json.dumps(do))
-        for z in (a_, b_):
-            z.pop('savedAt', None)
-        R('-', 'A-2 적재(%s) — 바꾼 파일 = earth/기록.json 하나 · data.gpt["%s"] = 재료 글자 전수 · u["gpt|%s"] 둘(+savedAt)만 더함 · 다른 칸 · gone 무변' % (where, UID, UID),
-          a_ == b_ and dn['data']['gpt'][UID] == MD and isinstance(dn['u'].get('gpt|' + UID), int) and fs == [RP], None,
-          {'파일': fs, '도장': dn['u'].get('gpt|' + UID), 'savedAt': [do.get('savedAt'), dn.get('savedAt')], '크기': [len(old), len(new)]})
-    else:
-        R('-', 'A-2 적재(%s) — 아직 적재 전(합성 기록으로 잼)' % where, None, None, '')
+        SEED = ''   # regress — 적재 커밋 안 셈(결과 머리 줄 「적재 -」)
     npass = sum(1 for r_ in ROWS if r_[2] is True); nfail = sum(1 for r_ in ROWS if r_[2] is False)
     print(NL + '== PASS %d · FAIL %d · %.0f초 · 기록 %s' % (npass, nfail, time.time() - t0, how))
     with io.open(OUTF, 'a', encoding='utf-8', newline=NL) as fo:

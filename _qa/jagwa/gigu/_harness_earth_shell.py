@@ -36,6 +36,8 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import hashlib
 import http.server
 import io
@@ -83,105 +85,17 @@ def _ensure_base():
     raise SystemExit('NG  고침 전 사본(md5 %s)을 못 찾았다' % BASE_MD5)
 
 
-BASE = _ensure_base()
+if QC.GATE:   # regress — 본판(129eedb) 사본 찾기(없으면 git show) 0 · 그 사본은 바탕 묶음(earthbase · biobase · physbase) · static_checks 본판 셈에만 쓴다(gate)
+    BASE = _ensure_base()
 SPDROOT = _roots.spd()
 OUT = os.path.join(os.environ.get('TEMP', '.'), 'hlistpop')
 os.makedirs(OUT, exist_ok=True)
 CAP = os.environ.get('LISTPOP_CAP') or os.path.join(HERE, '_cap_bp')
 os.makedirs(CAP, exist_ok=True)
-CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
-
-STUB = """<script>try{localStorage.setItem('subj','__SUBJ__')}catch(e){}</script>
-<script>
-window.katex={render:function(){},renderToString:function(s){return s}};window.renderMathInElement=function(){};
-window.__err=[];
-window.addEventListener('error',e=>{window.__err.push((e.message||'')+' @'+(e.filename||'').split('/').pop()+':'+e.lineno)});
-window.addEventListener('unhandledrejection',e=>{window.__err.push('reject: '+((e.reason&&e.reason.message)||e.reason))});
-</script>
-"""
-
-HEAD = r"""<script>
-(function(){
- const R=[]; const T=(n,c,i)=>R.push((c?'PASS':'FAIL')+' | '+n+(c?'':' | '+JSON.stringify(i===undefined?null:i)));
- const N=(n,i)=>R.push('NOTE | '+n+' | '+JSON.stringify(i===undefined?null:i));
- const __nativeFetch=window.fetch.bind(window);
- window.fetch=async function(url,opt){
-  opt=opt||{};const u=String(url);
-  const m=/api\.github\.com\/repos\/([^\/]+\/[^\/]+)\/contents\/([^?]+)/.exec(u);
-  if(!m){ if(/api\.github\.com\/repos\/zzikkaplan\/notes/.test(u))return {ok:true,status:200,json:async()=>({name:'notes'}),text:async()=>''};
-          if(/^https?:/i.test(u))return {ok:false,status:599,json:async()=>({}),text:async()=>'',arrayBuffer:async()=>new ArrayBuffer(0)};
-          return __nativeFetch(url,opt); }
-  const path=decodeURIComponent(m[2]);
-  if(m[1]==='zzikkaplan/notes')return {ok:false,status:404,json:async()=>({}),text:async()=>'',arrayBuffer:async()=>new ArrayBuffer(0)};
-  if((opt.method||'GET')==='PUT')return {ok:true,status:200,json:async()=>({content:{sha:'x'}}),text:async()=>''};
-  const r=await __nativeFetch('/data/'+encodeURI(path),{cache:'no-store'});
-  if(!r.ok)return {ok:false,status:404,json:async()=>({}),text:async()=>'',arrayBuffer:async()=>new ArrayBuffer(0)};
-  const acc=(opt.headers||{}).Accept||'';
-  if(acc.indexOf('raw')>=0)return r;
-  return {ok:true,status:200,json:async()=>({sha:'sha'}),text:async()=>JSON.stringify({sha:'sha'})};
- };
- const wait=ms=>new Promise(r=>setTimeout(r,ms));
- const until=async(fn,ms)=>{const t0=Date.now();while(Date.now()-t0<(ms||8000)){try{if(fn())return true}catch(e){}await wait(60)}return false};
- setInterval(()=>{try{__nativeFetch('/partial',{method:'POST',body:R.join(String.fromCharCode(10))+String.fromCharCode(10)+'(err) '+JSON.stringify(window.__err||[])})}catch(e){}},3000);
- const grp=async(name,fn)=>{try{await fn()}catch(e){T(name+' 묶음 예외',false,String(e&&e.stack||e).slice(0,300))}};
- const $$$=s=>[...document.querySelectorAll(s)];
- const txt=el=>(el?String(el.textContent||'').replace(/\s+/g,' ').trim():'');
- const nums=()=>$$$('#list .item .num').map(x=>txt(x));
- /* 합성 이벤트 — 앱이 읽는 값(clientX·clientY·pointerType·pointerId·getCoalescedEvents)만 얹은
-    평범한 `Event` 를 쓴다. 앱 코드는 한 글자도 안 고친다 — 읽는 것이 같으니 타는 길도 같다.
-    (`new PointerEvent` 도 이 크롬에서 멀줦하다 — pointerType 까지 실린다. 둘 중 아무거나 된다.) */
- const mkPE=(t,x,y,pt,id)=>{const e=new Event(t,{bubbles:true,cancelable:true});
-   Object.defineProperties(e,{clientX:{get:()=>x},clientY:{get:()=>y},
-     pageX:{get:()=>x},pageY:{get:()=>y},
-     pointerType:{get:()=>(pt||'pen')},pointerId:{get:()=>(id||31)},
-     isPrimary:{get:()=>true},pressure:{get:()=>0.5},button:{get:()=>0},buttons:{get:()=>1},
-     getCoalescedEvents:{value:()=>[]}});
-   return e};
- /* 던진 것이 **닿았는지 확인한다.** 돌려주는 값 = 던진 횟수(0 = 끝내 못 닿음).
-    ⚠ 안 닿는 데에는 까닭이 있다 — `inkPierce`(1420줄)가 그 자리 밑에 눌릴 것이 있으면
-      capture 단계에서 `stopPropagation` 해서 pointerdown 이 `#qink` 까지 안 온다(앱이 일부러 그런 것).
-      그래서 획을 그을 자리는 `underInk` 로 미리 골라야 한다(V-5 참조). 여기 다시 던지기는 더부살이다. */
- const fire=async(el,t,x,y,pt,id)=>{
-   for(let a=1;a<=10;a++){
-     let got=0; const probe=()=>{got=1};
-     el.addEventListener(t,probe,true);
-     el.dispatchEvent(mkPE(t,x,y,pt,id));
-     el.removeEventListener(t,probe,true);
-     if(got)return a;
-     await wait(60);
-   }
-   return 0};
- const drag=async(el,x0,y0,x1,y1,pt)=>{
-   const a=await fire(el,'pointerdown',x0,y0,pt,31);
-   const b=await fire(el,'pointermove',x1,y1,pt,31);
-   const c=await fire(el,'pointerup',x1,y1,pt,31);
-   return [a,b,c]};
- const stackAt=(x,y)=>document.elementsFromPoint(x,y).map(e=>e.id||((e.className&&e.className.baseVal!==undefined?e.className.baseVal:e.className)||e.tagName));
- const cap=async(name,html)=>{try{await __nativeFetch('/cap?n='+encodeURIComponent(name),{method:'POST',body:html})}catch(e){}};
- /* 획 하나 — 점마다 도착을 확인한다(가운데 한 점만 삼켜도 획이 통째로 없어진다) */
- const draw1=async(sv,pts,pt)=>{
-   const n0=((typeof QINK!=='undefined'&&QINK.s)||[]).length;
-   const r=sv.getBoundingClientRect(), tries=[];
-   tries.push(await fire(sv,'pointerdown',r.left+pts[0],r.top+pts[1],pt||'pen',21));
-   for(let i=2;i<pts.length;i+=2)
-     tries.push(await fire(sv,'pointermove',r.left+pts[i],r.top+pts[i+1],pt||'pen',21));
-   tries.push(await fire(sv,'pointerup',r.left+pts[pts.length-2],r.top+pts[pts.length-1],pt||'pen',21));
-   await wait(320);
-   return [tries,((QINK.s||[]).length)===n0+1]};
- async function run(){
-  const snap={};
-  try{
-   localStorage.setItem('tt.cfg',JSON.stringify({token:'github_pat_TEST',person:'검산'}));
-"""
-
-TAIL = r"""
-   T('콘솔 오류 0',(window.__err||[]).length===0,window.__err);
-  }catch(e){T('예외',false,String(e&&e.stack||e))}
-  try{await __nativeFetch('/result',{method:'POST',body:R.join(String.fromCharCode(10))})}catch(e){}
- }
- if(document.readyState==='complete')setTimeout(run,700);else window.addEventListener('load',()=>setTimeout(run,700));
-})();
-</script>"""
+CHROME = JG.CHROME   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
+HEAD = JG.HEAD   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
+STUB = JG.STUB_ES   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
+TAIL = JG.TAIL   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
 
 # ══════════════════════════════════════════════════════════════════════════
 BODY_EARTH = r"""
@@ -3915,6 +3829,8 @@ def build(mode, src_text):
             'x': BODY_X, 'xbase': BODY_X, 'xbio': BODY_XSIDE, 'xbiobase': BODY_XSIDE,
             'xphys': BODY_XSIDE, 'xphysbase': BODY_XSIDE,
             'xb': BODY_XB, 'xbbase': BODY_XB}.get(mode, BODY_PHYS)
+    if QC.REGRESS:   # regress · smoke — 쪽 안 JS 를 이 자리에서만 고쳐 쓴다(BODY_* 글자는 gate 와 같은 것 그대로 · 표본 · 헛잣대 끔 · smoke 자르기)
+        body = _rg_body(mode, body)
     html = src_text
     html = html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js',
                         STUB.replace('__SUBJ__', subj) + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
@@ -3926,6 +3842,7 @@ def build(mode, src_text):
 
 
 def run(mode, secs, src_text):
+    QC.launch('base' if mode.endswith('base') else 'new')   # 셈(§B-4) — 바탕 묶음(…base)은 gate 에서만 돈다
     subj = build(mode, src_text)
     spd = os.path.join(SPDROOT, subj)
     done = threading.Event()
@@ -3968,8 +3885,9 @@ def run(mode, secs, src_text):
             if self.path.startswith('/cap'):
                 q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
                 nm = (q.get('n') or ['cap'])[0]
-                open(os.path.join(CAP, nm + '.html'), 'w', encoding='utf-8', newline='').write(
-                    CAPHEAD + body + '</body></html>')
+                if QC.GATE:   # regress — DOM 캡처(사람 눈 확인용 · 게이트 아님 · 하네스 옆 _cap_bp)를 안 쓴다
+                    open(os.path.join(CAP, nm + '.html'), 'w', encoding='utf-8', newline='').write(
+                        CAPHEAD + body + '</body></html>')
                 box.setdefault('caps', []).append(nm)
                 return
             box['txt'] = body; done.set()
@@ -3999,53 +3917,71 @@ def run(mode, secs, src_text):
 def static_checks():
     b = open(SRC, 'rb').read()
     s = b.replace(b'\r\n', b'\n').decode('utf-8')
-    base = open(BASE, 'rb').read().replace(b'\r\n', b'\n').decode('utf-8')
+    base = open(BASE, 'rb').read().replace(b'\r\n', b'\n').decode('utf-8') if QC.GATE else None   # regress — 본판 사본 안 읽음(본판 셈 칸 = 기준 스냅샷)
     out = []
 
     # ★ add17·add18·add19 — 바탕(`68216cf` = add9 까지 든 판)과 **줄로 맞댄다**.
     #   `_base_bp.html`(129eedb)은 껍데기 앞 판이라 이 셋을 재는 자리가 아예 없다.
-    import subprocess as _sp
-    _prev = None
-    for _rev in ('68216cf', 'HEAD', 'HEAD~1', 'HEAD~2', 'HEAD~3'):
-        try:
-            _b = _sp.run(['git', '-C', GENIE, 'show', _rev + ':jagwa/index.html'],
-                         capture_output=True).stdout
-        except Exception:
-            continue
-        if _b and hashlib.md5(_b.replace(b'\r\n', b'\n')).hexdigest() == '773962ce59842d75d44d32ef3db34c16':
-            _prev = _b.replace(b'\r\n', b'\n').decode('utf-8'); break
+    if QC.GATE:   # regress — 바탕 68216cf(add9 판) git show 0 · 그 판으로 재는 헛잣대 일곱 · 0-바탕 줄 = gate 만(그 판에만 뜻)
+        import subprocess as _sp
+        _prev = None
+        for _rev in ('68216cf', 'HEAD', 'HEAD~1', 'HEAD~2', 'HEAD~3'):
+            try:
+                _b = _sp.run(['git', '-C', GENIE, 'show', _rev + ':jagwa/index.html'],
+                             capture_output=True).stdout
+            except Exception:
+                continue
+            if _b and hashlib.md5(_b.replace(b'\r\n', b'\n')).hexdigest() == '773962ce59842d75d44d32ef3db34c16':
+                _prev = _b.replace(b'\r\n', b'\n').decode('utf-8'); break
 
     def T2(name, cond, info=''):
         out.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
 
-    if _prev is None:
-        out.append('FAIL | 0-바탕(773962ce · add9 까지 든 판)을 못 찾았다 — 헛잣대를 못 잰다')
-    else:
-        P = _prev
-        T2('add17 ★헛잣대 ① 바탕 판에는 확대 단추(#vzOut·#vzFit)가 **있고** 이 판에는 없다',
-           ("id=\"vzOut\"" in P) and ('vzOut' not in s) and ('vzFit' not in s),
-           [P.count('vzOut'), s.count('vzOut'), s.count('vzFit')])
-        T2('add17 ★헛잣대 ② 바탕 판은 `await _ov(...)` **뒤에야** vwApply 다(이 판은 앞에도 있다)',
-           ('cropFor(null);const r=await _ov(no,list);vwApply' in P)
-           and ('try{vwApply(vwOn())}catch(e){}\n     const r=await _ov(no,list);vwApply(vwOn());' in s),
-           [P.count('vwApply(vwOn())'), s.count('vwApply(vwOn())')])
-        T2('add17 ★헛잣대 ③ 바탕 판에는 `#pRow1>#mP` 먹색 규칙이 **없다**(그래서 흰 바탕이었다)',
-           ('#pRow1>#mP{background:var(--ink)' not in P)
-           and ('#pRow1>#mP{background:var(--ink);color:#fff;border-color:var(--ink)}' in s))
-        T2('add18 ★헛잣대 ④ 바탕 판 분류 칩은 **넷**(타기출 포함) · 이 판은 **셋**',
-           ("['p','타기출',nT]" in P) and ("['p','타기출',nT]" not in s)
-           and ("[['','전체',T.length],['y','기출',nY],['n','기본',nN]]" in s))
-        T2('add18 ★헛잣대 ⑤ 바탕 판 물리 `kindOf` 는 `SRC` 가 있으면 「T(타기출)」 딱지 · 이 판은 딱지 없음',
-           ("return r[F.SRC]?'T':'';" in P) and ("return r[F.SRC]?'T':'';" not in s))
-        T2('add18 ★헛잣대 ⑥ 바탕 판에는 유령 누름 막이(tapEat)·톡 조건(TAP_SEL)이 없다',
-           ('tapEat' not in P) and ('TAP_SEL' not in P) and ('function tapEat(' in s) and ('var TAP_SEL=' in s))
+    if QC.GATE:
+        if _prev is None:
+            out.append('FAIL | 0-바탕(773962ce · add9 까지 든 판)을 못 찾았다 — 헛잣대를 못 잰다')
+        else:
+            P = _prev
+            T2('add17 ★헛잣대 ① 바탕 판에는 확대 단추(#vzOut·#vzFit)가 **있고** 이 판에는 없다',
+               ("id=\"vzOut\"" in P) and ('vzOut' not in s) and ('vzFit' not in s),
+               [P.count('vzOut'), s.count('vzOut'), s.count('vzFit')])
+            T2('add17 ★헛잣대 ② 바탕 판은 `await _ov(...)` **뒤에야** vwApply 다(이 판은 앞에도 있다)',
+               ('cropFor(null);const r=await _ov(no,list);vwApply' in P)
+               and ('try{vwApply(vwOn())}catch(e){}\n     const r=await _ov(no,list);vwApply(vwOn());' in s),
+               [P.count('vwApply(vwOn())'), s.count('vwApply(vwOn())')])
+            T2('add17 ★헛잣대 ③ 바탕 판에는 `#pRow1>#mP` 먹색 규칙이 **없다**(그래서 흰 바탕이었다)',
+               ('#pRow1>#mP{background:var(--ink)' not in P)
+               and ('#pRow1>#mP{background:var(--ink);color:#fff;border-color:var(--ink)}' in s))
+            T2('add18 ★헛잣대 ④ 바탕 판 분류 칩은 **넷**(타기출 포함) · 이 판은 **셋**',
+               ("['p','타기출',nT]" in P) and ("['p','타기출',nT]" not in s)
+               and ("[['','전체',T.length],['y','기출',nY],['n','기본',nN]]" in s))
+            T2('add18 ★헛잣대 ⑤ 바탕 판 물리 `kindOf` 는 `SRC` 가 있으면 「T(타기출)」 딱지 · 이 판은 딱지 없음',
+               ("return r[F.SRC]?'T':'';" in P) and ("return r[F.SRC]?'T':'';" not in s))
+            T2('add18 ★헛잣대 ⑥ 바탕 판에는 유령 누름 막이(tapEat)·톡 조건(TAP_SEL)이 없다',
+               ('tapEat' not in P) and ('TAP_SEL' not in P) and ('function tapEat(' in s) and ('var TAP_SEL=' in s))
+            T2('add18 ★ `makeFloat` 끌기에서 단추·링크를 뺀다(iOS 에서 「서재」·✕ 가 죽지 않게)',
+               ("closest('button,a,[data-tool],[data-nodrag],#bktools,input,select,textarea')" in s)
+               and ("closest('button,[data-tool],#bktools,input,select')" in P))
+            T2('add19 ★헛잣대 ⑦ 바탕 판에는 `shellSeq` 가 없고 `navList` 가 `filtered()` 를 그대로 돌려준다',
+               ('function shellSeq(' not in P)
+               and ('const L=filtered(); if(L&&L.length)return L.map(r=>r[F.NO]);' in P)
+               and ('function shellSeq(' in s) and ('function shellL(' in s))
+            T2('add19 ★첫 화면·서랍·넘기기 목록이 **모두** `shellSeq` 를 쓴다(거르개가 한 곳이다)',
+               s.count('shellSeq(') >= 4
+               and 'shellSeq(L,rnd,{coll:true})' in s
+               and s.count("shellSeq(s.L,s.rnd,{coll:false,chips:false})") == 2,
+               [s.count('shellSeq('), s.count("shellSeq(s.L,s.rnd,{coll:false,chips:false})")])
+            T2('add19 옛 몸통(_drawEarthListOld)은 남겨 두되 **아무 데서도 안 부른다**',
+               s.count('_drawEarthListOld') == 2 and '_drawEarthListOld(' in s)
+            T2('add18 물리 목록 `pass` 는 `phPast` 한 함수에 맡긴다(거르개 두 군데 금지 · add12 교훈)',
+               'if(PHCLS()){ if(!phPast(r))return 0; }' in s)
+            T2('add17 배율 값·기억(jagwa.win.view.zoom)·창 크기 따라 그리기는 **그대로 산다**',
+               ("VWZ_K='jagwa.win.view.zoom'" in s) and ('function vzSet(z){' in s)
+               and ('new ResizeObserver(()=>{clearTimeout(VRZT);VRZT=setTimeout(vReflow,150)})' in s))
+
+    else:   # regress — 68216cf 를 안 꺼내므로 헛잣대 일곱 · 0-바탕 줄은 없다 · 같은 갈래 안 새 판 글자 칸 다섯은 그대로 잰다
         T2('add18 ★ `makeFloat` 끌기에서 단추·링크를 뺀다(iOS 에서 「서재」·✕ 가 죽지 않게)',
-           ("closest('button,a,[data-tool],[data-nodrag],#bktools,input,select,textarea')" in s)
-           and ("closest('button,[data-tool],#bktools,input,select')" in P))
-        T2('add19 ★헛잣대 ⑦ 바탕 판에는 `shellSeq` 가 없고 `navList` 가 `filtered()` 를 그대로 돌려준다',
-           ('function shellSeq(' not in P)
-           and ('const L=filtered(); if(L&&L.length)return L.map(r=>r[F.NO]);' in P)
-           and ('function shellSeq(' in s) and ('function shellL(' in s))
+           ("closest('button,a,[data-tool],[data-nodrag],#bktools,input,select,textarea')" in s))   # regress — 바탕(68216cf) 옛 꼴 조건은 고정 옛 판 사실이라 뺌(새 판 조건만)
         T2('add19 ★첫 화면·서랍·넘기기 목록이 **모두** `shellSeq` 를 쓴다(거르개가 한 곳이다)',
            s.count('shellSeq(') >= 4
            and 'shellSeq(L,rnd,{coll:true})' in s
@@ -4069,7 +4005,7 @@ def static_checks():
     T2('Z-2 새 갈래는 전부 ISEA 문 안이다(과목 문 무변)', "var ISEA=SUBJ_ID==='earth';" in s)
     T2('Z-3 uid 를 안 바꿨다', s.count('r[F.CODE]=') == 0)
     T2('Z-4 지학 SYNC_KEYS 줄 자체는 안 고쳤다(넷은 JS 가 더한다)',
-       s.count("'crop','txt','tfix','bref']") == base.count("'crop','txt','tfix','bref']"))
+       (s.count("'crop','txt','tfix','bref']") == base.count("'crop','txt','tfix','bref']")) if QC.GATE else QC.same('Z-4', s.count("'crop','txt','tfix','bref']")))   # regress — 기준 = 앞 인도판 셈(스냅샷)
     T2('Z-5 Tailwind 를 안 들였다', 'cdn.tailwindcss.com' not in s)
     T2('Z-6 makeFloat 을 **부르는** 자리가 둘 늘었다(🃏 창 · 📋 창)',
        s.count("makeFloat(b,b.querySelector('.bplh'),'mc'") == 1
@@ -4093,7 +4029,8 @@ def static_checks():
        [s.count('body[data-subj="earth"]'), s.count('body[data-shell]'), s.count('body[data-book]'),
         s.count('body[data-layer="card"] #jnw .jnrow'), s.count('body[data-layer="card"] .item .prev.')])
     T2('Z-11 줄끝이 CRLF 그대로다', b.count(b'\r\n') == b.count(b'\n'))
-    T2('Z-12 본판 대비 늘기만 했다', len(s) > len(base))
+    if QC.GATE:   # 관문만 — 본판(129eedb) 대비 길이(그 판 인도 때 「통째로 지우지 않았나」)
+        T2('Z-12 본판 대비 늘기만 했다', len(s) > len(base))
     # ⚠ 판이 늘 때마다 **걷은 줄**이 는다(add9 「목차」 단추·옛 목차 서랍·navBuild 갈아끼움 ·
     #   add10 두 칩 · add12 갈래 떨어짐 · add15 아랫줄 규칙). 「통째로 지우지 않았나」를 보는
     #   잣대라 바닥은 남기되 자란 만큼 올린다.
@@ -4133,16 +4070,17 @@ def static_checks():
     # 옛 줄: _Z13_UID = (('qk(no){', 66), ('var ynUid=', 24), ('ggMath(src){', 5), ('ewmTagHTML(r){', 2), ('QR=Math.max(QR,1,...qRounds())+1', 1))
     #   + ★ 2026-10-08 _task_jagwa_phys_win §A 47 — 이 판이 갈아 쓴 본판 줄 53(전수 대조: 서재→✕ A-15 · 암기카드→🃏 A-33 · 정답 창 A-26 · 지우개 창→erPop A-16 · twinPeek A-32 · 검색 A-45·46 …) · 마커 = pfDecor(A-39)
     #   잰 값: 7520d46 454(문턱 454) · fdd7b27 507
-    # 옛 줄(10/8 03:15): _Z13_UID = (('qk(no){', 66), ('var ynUid=', 24), ('ggMath(src){', 5), ('ewmTagHTML(r){', 2), ('QR=Math.max(QR,1,...qRounds())+1', 1), ('function pfDecor(', 53))
-    #   + ★ 2026-10-08 _task_jagwa_ink_sync — 사용법 글 「필기는 자동이 아닙니다」 한 줄을 「필기는 이제 자동입니다 …」 로(필기 동기화가 생겨 안내가 틀림) · 마커 = function syncInk( · 잰 값 507 → 508
-    _Z13_UID = (('qk(no){', 66), ('var ynUid=', 24), ('ggMath(src){', 5), ('ewmTagHTML(r){', 2), ('QR=Math.max(QR,1,...qRounds())+1', 1), ('function pfDecor(', 53), ('function syncInk(', 1))
-    T2('Z-13 지운 본판 줄이 거의 없다(손댄 자리뿐)',
-       # ★ 합치기 10/1(하위 에이전트 C) — 320 → 356. 늘어난 36줄은 전수로 짚었다(세 판이 갈아 쓴 줄뿐 · 어느 판에도 없는 줄 0):
-       #   physphone 22(공식 시트 frmRowHTML 로 옮긴 옛 rowHtml·body.onclick 줄 · #tTheory 「공식」 · 정리 창 「닫기」·이름 칸 · 개념 줄 글 thl)
-       #   · revfix0928_0929 9(recAfterMerge 두 줄 · 서랍 줄 「-」 · makeFloat _pload · qFit avail · recMerge 옛 열쇠 줄 · #bpl z · #omrPad .drag) · search_claude 5(ggHits · 결과 줄)
-       # 옛 줄: sum(1 for ln in base.split('\n') if ln.strip() and ln not in s) <= 356,   # ★ jagwa_search(9/29) 311 → 320 — 이 판이 떼거나 갈아 쓴 본판 줄 9(옛 pass 의 FL.q 덩이 · 입력칸 oninput · fltOn · 지우기 · 개수 칸 · 모드 바꾸기 · ggHits ID · ggResBox 끝) · 곁가지 0   # ★ jagwa_uid(9/29) 302 → 311 — 이 판이 갈아 쓴 줄 9(F 칸 OLDU · buildData 옛uid · 장 글자 셋 · codeShow · 차례 둘 · rowByUid · 번호 찾기 · 시동 jgMigrate) · 곁가지 0
-       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s) <= 356 + sum(n for _mk, n in _Z13_UID if _mk in s),   # ★ uid_unify — 356 + 마커가 있는 만큼(최대 97 = 453)
-       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s))
+    if QC.GATE:   # 관문만 — 본판 줄 전수 대조(문턱을 판마다 손으로 올림 · 그 판 인도 때 뜻)
+        # 옛 줄(10/8 03:15): _Z13_UID = (('qk(no){', 66), ('var ynUid=', 24), ('ggMath(src){', 5), ('ewmTagHTML(r){', 2), ('QR=Math.max(QR,1,...qRounds())+1', 1), ('function pfDecor(', 53))
+        #   + ★ 2026-10-08 _task_jagwa_ink_sync — 사용법 글 「필기는 자동이 아닙니다」 한 줄을 「필기는 이제 자동입니다 …」 로(필기 동기화가 생겨 안내가 틀림) · 마커 = function syncInk( · 잰 값 507 → 508
+        _Z13_UID = (('qk(no){', 66), ('var ynUid=', 24), ('ggMath(src){', 5), ('ewmTagHTML(r){', 2), ('QR=Math.max(QR,1,...qRounds())+1', 1), ('function pfDecor(', 53), ('function syncInk(', 1))
+        T2('Z-13 지운 본판 줄이 거의 없다(손댄 자리뿐)',
+           # ★ 합치기 10/1(하위 에이전트 C) — 320 → 356. 늘어난 36줄은 전수로 짚었다(세 판이 갈아 쓴 줄뿐 · 어느 판에도 없는 줄 0):
+           #   physphone 22(공식 시트 frmRowHTML 로 옮긴 옛 rowHtml·body.onclick 줄 · #tTheory 「공식」 · 정리 창 「닫기」·이름 칸 · 개념 줄 글 thl)
+           #   · revfix0928_0929 9(recAfterMerge 두 줄 · 서랍 줄 「-」 · makeFloat _pload · qFit avail · recMerge 옛 열쇠 줄 · #bpl z · #omrPad .drag) · search_claude 5(ggHits · 결과 줄)
+           # 옛 줄: sum(1 for ln in base.split('\n') if ln.strip() and ln not in s) <= 356,   # ★ jagwa_search(9/29) 311 → 320 — 이 판이 떼거나 갈아 쓴 본판 줄 9(옛 pass 의 FL.q 덩이 · 입력칸 oninput · fltOn · 지우기 · 개수 칸 · 모드 바꾸기 · ggHits ID · ggResBox 끝) · 곁가지 0   # ★ jagwa_uid(9/29) 302 → 311 — 이 판이 갈아 쓴 줄 9(F 칸 OLDU · buildData 옛uid · 장 글자 셋 · codeShow · 차례 둘 · rowByUid · 번호 찾기 · 시동 jgMigrate) · 곁가지 0
+           sum(1 for ln in base.split('\n') if ln.strip() and ln not in s) <= 356 + sum(n for _mk, n in _Z13_UID if _mk in s),   # ★ uid_unify — 356 + 마커가 있는 만큼(최대 97 = 453)
+           sum(1 for ln in base.split('\n') if ln.strip() and ln not in s))
     # ── add2 가 둔 것(그대로) ──
     # ⚠ 부름 **수**가 아니라 **열쇠 이름**을 맞댄다 — 있는 키를 한 번 더 읽는 것은
     #   「새 키」가 아니다(add7 가 가드에서 `SYNC_REF.gg` 를 두 번 더 읽는다).
@@ -4155,10 +4093,10 @@ def static_checks():
        #   앱에 put('kv','bak_uid',…) 가 있을 때만 허용한다. ⚠ 이 잣대는 4754b1d 가 아니라 본판(_base_bp · 고침 전) 대비라 pvjson 은 옛 판에서도 늘 차집합에 든다(위 허용) — 새 FAIL 의 몫은 bak_uid 하나였다.
        # 옛 줄: (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set())))) and _sr(s) == _sr(base),
        # ★ 2026-10-07 (_task_jagwa_phys_win §A-30 ㉖) 물리 오린 것 동기화 = kv 'solx' · SYNC_REF.solx(칸 = 문항 하나 · 늦게 읽는 통 가드 = gg 꼴) — 앱 글에 둘 다 있을 때만 그 키 하나씩 허용
-       (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set())
+       ((_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set())
                                                                          | ({'solx'} if ("put('kv','solx'" in s and 'SYNC_REF.solx=' in s) else set()))))
-       and (_sr(s) == _sr(base) or (_sr(base) <= _sr(s) and _sr(s) - _sr(base) <= ({'solx'} if ("put('kv','solx'" in s and 'SYNC_REF.solx=' in s) else set()))),
-       [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))])
+       and (_sr(s) == _sr(base) or (_sr(base) <= _sr(s) and _sr(s) - _sr(base) <= ({'solx'} if ("put('kv','solx'" in s and 'SYNC_REF.solx=' in s) else set())))) if QC.GATE else QC.same('Z-15', [sorted(_kv(s)), sorted(_sr(s))]),   # regress — 기준 = 앞 인도판 kv · SYNC_REF 집합(스냅샷)
+       [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))] if QC.GATE else _rg_setdiff('Z-15', [sorted(_kv(s)), sorted(_sr(s))]))
     T2('Z-17 아랫줄 감추기가 카드 층·물리로 갈렸다',
        'body[data-book] .vbot .tools>*{display:none!important}' in s
        and 'body[data-layer="pdf"] .vbot .tools:not(#pRow1)>*{display:none!important}' in s)
@@ -4167,7 +4105,7 @@ def static_checks():
        'body[data-layer="pdf"] #pRow1{flex-wrap:nowrap;overflow-x:auto' in s
        and '@container (max-width:560px){#pRow1 .sp' not in s)
     T2('Z-19 단축키 줄 무변(일부러 죽여 둔 것)',
-       s.count("if(e.key==='1')mark('O')") == base.count("if(e.key==='1')mark('O')")
+       (s.count("if(e.key==='1')mark('O')") == base.count("if(e.key==='1')mark('O')") if QC.GATE else QC.same('Z-19', s.count("if(e.key==='1')mark('O')")))
        and "if(document.querySelector('.sheet'))return;" in s)
     # ── add3 ──
     T2('Z-20 ① setTool 덧씌움이 펜·형광·지우개에서 QTXT 를 끈다',
@@ -4178,7 +4116,7 @@ def static_checks():
        and s.count("b.onclick=()=>{QTXT=!QTXT;") == 1)
     T2('Z-22 ① 본디 setTool 은 한 글자도 안 건드렸다',
        "  TOOL.mode=mode;if(color)TOOL.color=color;TOOL.w=+$('#tW').value;" in s
-       and s.count('function setTool(mode,color,el){') == base.count('function setTool(mode,color,el){'))
+       and (s.count('function setTool(mode,color,el){') == base.count('function setTool(mode,color,el){') if QC.GATE else QC.same('Z-22', s.count('function setTool(mode,color,el){'))))
     T2('Z-23 ② 근거 덩어리는 **한 겹**이다(.ggtop) · 물리엔 안 생긴다(ggCardHTML 은 ISEA)',
        s.count("'<div class=\"ggtop\">'") == 1
        and '#card .ggtop{position:relative;z-index:8' in s
@@ -4186,9 +4124,9 @@ def static_checks():
     T2('Z-24 ② UNDER_HIT·underInk·inkPierce 는 한 글자도 안 건드렸다(지시서 ⓑ)',
        s.count('const UNDER_HIT=') == 1
        and ".row[data-k],[data-c],[data-tfx],[data-go],[data-page],[data-no],.snt,.trit';" in s
-       and s.count("if(el.closest('select,input,textarea'))return null;")
-           == base.count("if(el.closest('select,input,textarea'))return null;")
-       and s.count('function inkPierce(card){') == base.count('function inkPierce(card){'))
+       and (s.count("if(el.closest('select,input,textarea'))return null;")
+            == base.count("if(el.closest('select,input,textarea'))return null;") if QC.GATE else QC.same('Z-24.closest', s.count("if(el.closest('select,input,textarea'))return null;")))
+       and (s.count('function inkPierce(card){') == base.count('function inkPierce(card){') if QC.GATE else QC.same('Z-24.inkPierce', s.count('function inkPierce(card){'))))
     T2('Z-25 ② PASS_THRU 에 근거 선택자를 **더하기만** 했다',
        ".ggnum,.ggbang,.ggref,.ggres,.gguse,[data-ggown],[data-ggpick],[data-ggrt],[data-ggtog]" in s
        and s.count('const PASS_THRU=') == 1
@@ -4206,8 +4144,8 @@ def static_checks():
        'function ggFindSoon(' in s and 'ggFindSoon(v[0],v[1])' in s
        and "if(i&&!b.classList.contains('hide')){i.focus();ggFindRun(v[0],v[1])}" in s)
     T2('Z-30 ③ 저장 꼴은 무변(gg·ggref)',
-       s.count("put('kv','gg',GG)") == base.count("put('kv','gg',GG)")
-       and s.count("put('kv','ggref',GGREF)") == base.count("put('kv','ggref',GGREF)"))
+       (s.count("put('kv','gg',GG)") == base.count("put('kv','gg',GG)") if QC.GATE else QC.same('Z-30.gg', s.count("put('kv','gg',GG)")))
+       and (s.count("put('kv','ggref',GGREF)") == base.count("put('kv','ggref',GGREF)") if QC.GATE else QC.same('Z-30.ggref', s.count("put('kv','ggref',GGREF)"))))
     # ── 생물·물리 이식 ──
     T2('Z-31 문이 넷이다 — SHELL · HASBOOK · HASROUND · HASJOGAK',
        'var SHELL=true, HASBOOK=CARD_LAYER, HASJOGAK=!!CUR.JOGAK_PATH;' in s
@@ -4229,19 +4167,19 @@ def static_checks():
        "btn.textContent = '📝 학습로그'" not in s
        and s.count('document.body.appendChild(btn)') == 0
        and s.count('function openPanel()') == 1
-       and s.count('function dayRange(') == base.count('function dayRange('),
+       and (s.count('function dayRange(') == base.count('function dayRange(') if QC.GATE else QC.same('Z-33', s.count('function dayRange('))),
        [s.count('document.body.appendChild(btn)'), s.count('function openPanel()')])
     T2('Z-34 물리 열쇠는 번호로 만든다(F.CODE 에 겹침이 있다)',
        "var GGU = HASBOOK ? (r=>(r?String(r[F.CODE]||''):'')) : (r=>(r?('P'+String(r[F.NO]).padStart(3,'0')):''));" in s)
     T2('Z-35 물리 목차를 DATA 에서 짓는다 · refreshUnits 는 안 부른다',
        'function buildTocFromData(){' in s and 'if(!HASBOOK)buildTocFromData();' in s
-       and s.count('refreshUnits()') in (base.count('refreshUnits()'), base.count('refreshUnits()') + 1))   # ★ jagwa_uid(9/29) — jgMigrate(카드층만 · 물리 안 탐)가 옮긴 뒤 한 번 부른다
+       and (s.count('refreshUnits()') in (base.count('refreshUnits()'), base.count('refreshUnits()') + 1) if QC.GATE else QC.same('Z-35', s.count('refreshUnits()'))))   # ★ jagwa_uid(9/29) — jgMigrate(카드층만 · 물리 안 탐)가 옮긴 뒤 한 번 부른다
     T2('Z-36 필기 엔진·좌표·덮개 규칙은 한 글자도 안 건드렸다',
-       s.count('function qWire(){') == base.count('function qWire(){')
+       (s.count('function qWire(){') == base.count('function qWire(){') if QC.GATE else QC.same('Z-36.qWire', s.count('function qWire(){')))
        and s.count('const UNDER_HIT=') == 1
-       and s.count('function inkPierce(card){') == base.count('function inkPierce(card){')
-       and s.count("if(el.closest('select,input,textarea'))return null;")
-           == base.count("if(el.closest('select,input,textarea'))return null;"))
+       and (s.count('function inkPierce(card){') == base.count('function inkPierce(card){') if QC.GATE else QC.same('Z-36.inkPierce', s.count('function inkPierce(card){')))
+       and (s.count("if(el.closest('select,input,textarea'))return null;")
+            == base.count("if(el.closest('select,input,textarea'))return null;") if QC.GATE else QC.same('Z-36.closest', s.count("if(el.closest('select,input,textarea'))return null;"))))
     T2('Z-37 과목 강조색은 한 변수다 — 지학 값은 그대로',
        ':root{--subj:var(--sea);--subj-soft:var(--sea-soft)}' in s
        and s.count('var(--sea)') == 1 and s.count('var(--subj)') >= 50,
@@ -4319,11 +4257,117 @@ def g1_e1_norm(k, a1, b1):
     return a1, b1
 
 
+# ── _task_qa_slim2(10/8) regress 도우미 — 이름이 `_rg` · `_RG` 로 시작하는 것 = gate 에서 안 쓰는 갈래(gate 에서 도는 줄은 원래 글 그대로 · `if QC.GATE:` 안) ──
+_RG_PICK = """
+   const __qcN={};const __qcPick=(a,seed,n,size)=>{a=[...a];n=n||10;if(a.length<=n){__qcN[seed]=[a.length,a.length];return a}
+     const pick=new Set([0,a.length-1]);
+     if(size){let bi=0,bv=-1;a.forEach((x,i)=>{const v=size(x);if(v>bv){bv=v;bi=i}});pick.add(bi)}
+     const h=s=>{let x=2166136261;for(const c of String(s)){x^=c.charCodeAt(0);x=Math.imul(x,16777619)>>>0}return x};
+     a.map((x,i)=>[h(seed+'|'+x),i]).sort((p,q)=>p[0]-q[0]||p[1]-q[1]).forEach(p=>{if(pick.size<n)pick.add(p[1])});
+     const out=a.filter((x,i)=>pick.has(i));__qcN[seed]=[out.length,a.length];return out};
+"""   # regress 표본(A-3) — 첫 · 끝 · 가장 큰 것 + 씨앗 고정(FNV-1a) · 고른 것은 원래 차례 · 셈은 끝 NOTE 줄(「regress 표본」)
+_RG_SUBS = {   # 몸통 · (옛 글, 새 글, 칸) — 옛 글은 그 몸통에 꼭 한 번(못 찾으면 그대로 = 전수 · NOTE 한 줄)
+    'phys': (("     for(const sec of secs){\n       jnOpen(sec); await wait(120);",
+              "     for(const sec of __qcPick(secs,'P-8',10,s=>DATA.filter(r=>showKind(r)&&unitOf(r[F.NO])===s).length)){   /* regress 표본 — gate 는 절 63 전수 */\n       jnOpen(sec); await wait(120);", 'P-8'),
+             ("       for(const sec of secs){\n         jnOpen(sec); await wait(150);\n         const w=document.getElementById('jnw'); if(!w){bad.push([sec,'창 없음']);continue}",
+              "       for(const sec of __qcPick(secs,'P-9',10,s=>withGG.filter(r=>unitOf(r[F.NO])===s).length)){   /* regress 표본 — gate 는 근거 든 절 전수 */\n         jnOpen(sec); await wait(150);\n         const w=document.getElementById('jnw'); if(!w){bad.push([sec,'창 없음']);continue}", 'P-9'),
+             ("         const secs=Object.keys(TOC.sec).slice(0,20);\n         for(const sec of secs){\n           const want=DATA.filter(r=>showKind(r)&&phPast(r)&&unitOf(r[F.NO])===sec).length;",
+              "         const secs=__qcPick(Object.keys(TOC.sec).slice(0,20),'P-13.'+v,6);   /* regress 표본 — gate 는 분류마다 절 스물 */\n         for(const sec of secs){\n           const want=DATA.filter(r=>showKind(r)&&phPast(r)&&unitOf(r[F.NO])===sec).length;", 'P-13')),
+    'earth': (("     T('SQ 지학 ★헛잣대 — 옛 차례(filtered() 그대로 · add19 앞의 서랍)는 첫 화면과 **다르다**',\n       old.length===first.length&&old.join('|')!==first.join('|'),\n       {n:[old.length,first.length],옛앞:old.slice(0,4),새앞:first.slice(0,4)});",
+               "     /* regress — SQ 헛잣대(옛 차례 흉내 · 관문만) 끔 */", 'SQ-헛'),),
+}
+
+
+def _rg_body(mode, body):
+    """regress · smoke — 쪽 안 JS 몸통을 이 자리에서만 고친다(BODY_* 상수는 gate 와 같은 글자 그대로).
+    smoke: 밑준비 + 첫 묶음(껍데기 A-0 · B-1 · P-1)까지만 · regress: 표본(P-8 · P-9 · P-13) · 헛잣대(SQ) 끔 — 자리를 못 찾으면 그대로(= gate 와 같은 전수) · NOTE 한 줄"""
+    if QC.SMOKE:
+        i1 = body.find('\n   await grp(')
+        i2 = body.find('\n   await grp(', i1 + 1) if i1 >= 0 else -1
+        return (body[:i2] + '\n') if i2 > 0 else body
+    subs = _RG_SUBS.get(mode)
+    if not subs:
+        return body
+    for old, new, tag in subs:
+        n = body.count(old)
+        if n == 1:
+            body = body.replace(old, new)
+        else:
+            print('NOTE | regress %s 자리 %d 번 — 그대로(전수) | %s' % (tag, n, mode))
+    return _RG_PICK + body + "\n   N('regress 표본',__qcN);\n"
+
+
+def _rg_e1_mask(k, a1):
+    """E-1 regress 가림 — gate 가 두 쪽(새 판 · 바탕) 다 가리던 것만(▶ 차례 · 번호 꼴 · 📖 p 표시 · Claude 자리 · 타이머 · 기록 동기화 수 · 회독 옵션 겹침).
+    바탕 쪽만 떼던 것(목차 · 필터 ▾ · GPT · 서재 · 암기카드 · gfit · 👁 이론)은 안 뗀다 — 두 쪽 다 새 판 글자(앞 인도판 · 이 판)다."""
+    if k == 'card':
+        a1 = re.sub(r'이전\d+ / ', '이전· / ', a1)
+    a1 = re.sub(r'\b(G\d\d-\d\d-)0(\d)\b', r'\1\2', a1)
+    if k == 'card':
+        a1 = re.sub(r'(📖 p\d+)[✓✎]', r'\1·', a1)
+    if k == 'vbot' and ' Claude' in a1:
+        a1 = a1.replace(' Claude', '') + ' Claude'
+    a1 = re.sub(r"\d+'\d{2}\"", "·'··\"", a1)
+    for _rx, _to in ((r'\d+회독', '#회독'), (r'근거 \(\d+\)', '근거 (#)'), (r'근거 \d+', '근거 #'),
+                     (r'(안 품|맞음|헷갈림|틀림|덜약점|약점) ?\d+', r'\1 #'),
+                     (r'\d+(?=[OX△P](?:\d+[OX△P])*(?:·\'··"|$| \|\| ))', '#')):
+        a1 = re.sub(_rx, _to, a1)
+    if k == 'vbot':
+        a1 = re.sub(r'(#회독){2,}', '#회독', a1)
+    return a1
+
+
+def _rg_e1(sn, T2):
+    """regress — earthbase(본판 129eedb 고정 사본)를 안 돌리고 E-1 아홉 칸 = 새 판 값(가린 글자)을 기준 스냅샷(앞 인도판 earth 스냅의 같은 칸)과 맞댄다 · 칸 글은 gate 와 같다"""
+    T2('E-1 고침 전 사본도 끝까지 돌았다', bool(sn), [bool(sn), QC.base_note('E-1.list')])
+    if not sn:
+        return
+    for k, ko in (('list', '목록 25줄'), ('cnt', '문항 수'), ('hd', '묶음 머리'),
+                  ('spec', '히트맵 칸'), ('esh', '껍데기 글'), ('view', '#view 클래스'),
+                  ('vtop', '문항 머리줄'), ('vbot', '아랫줄'), ('card', '카드 글 600자')):
+        cid = 'E-1.' + k
+        a1 = _rg_e1_mask(k, str(sn.get(k)))
+        b1 = str(QC.base(cid, a1))
+        same = a1 == b1
+        if same or k not in ('list', 'hd', 'card', 'esh', 'vbot', 'vtop'):
+            info = [a1[:170], b1[:170], QC.base_note(cid)]
+        else:
+            sep = ' || ' if ' || ' in a1 or ' || ' in b1 else ''
+            if sep:
+                A = a1.split(sep); B = b1.split(sep)
+            else:
+                m = next((i for i in range(min(len(a1), len(b1))) if a1[i] != b1[i]), min(len(a1), len(b1)))
+                A = [a1[max(0, m - 30):m + 60]]; B = [b1[max(0, m - 30):m + 60]]
+
+            def _cut(x, y):
+                m = next((j for j in range(min(len(x), len(y))) if x[j] != y[j]), min(len(x), len(y)))
+                return x[max(0, m - 25):m + 55], y[max(0, m - 25):m + 55], m
+            d = [(i,) + _cut(A[i], B[i]) for i in range(min(len(A), len(B))) if A[i] != B[i]]
+            info = {'줄수': [len(A), len(B)], '다른 줄 수': len(d), '처음 둘': d[:2], '기준': QC.base_note(cid)}
+        T2('E-1 ★지학 %s 이(가) 고침 전과 **글자까지** 같다' % ko, same, info)
+
+
+def _rg_xside(m, sa):
+    """regress — x<m>base(바탕 판 24f1a373)를 안 돌리고 X-11 의 바탕 쪽 값 = 기준 스냅샷(앞 인도판 x<m> 스냅) · 사라진 칸도 잡게 칸 이름 목록도 스냅샷"""
+    sa = sa or {}
+    ks = sorted(k for k in sa if k != 'names')
+    kb = QC.base('X-11.%s.keys' % m, ks) or []
+    return {k: QC.base('X-11.%s.%s' % (m, k), sa.get(k)) for k in sorted(set(ks) | set(kb))}
+
+
+def _rg_setdiff(cid, v):
+    """regress — 기준 스냅샷 대비 더해진 · 빠진 낱말(값 v = [목록, 목록 …])"""
+    b = QC.base(cid, v) or [[] for _ in v]
+    return {'더함': [sorted(set(x) - set(y)) for x, y in zip(v, b)], '빠짐': [sorted(set(y) - set(x)) for x, y in zip(v, b)], '기준': QC.base_note(cid)}
+
+
 def main():
     want = [a for a in sys.argv[1:] if a in ('earth', 'bio', 'phys', 'null', 'x', 'xb')] \
            or ['earth', 'bio', 'phys', 'null', 'x', 'xb']
     cur = open(SRC, encoding='utf-8', newline='').read()
-    basetxt = open(BASE, encoding='utf-8', newline='').read()
+    basetxt = open(BASE, encoding='utf-8', newline='').read() if QC.GATE else ''   # regress — 본판 사본 안 읽음(바탕 묶음 안 돎)
+    if QC.SMOKE:   # smoke — 세 과목 첫 묶음(껍데기 A-0 · B-1 · P-1)과 콘솔 오류 0 만(build 가 쪽 안 몸통을 첫 묶음까지 자른다) · 교재 창(x · xb) · 헛잣대(null) · 소스 글 셈은 건넘
+        want = [m for m in want if m in ('earth', 'bio', 'phys')]
     _G1E = bool(re.search(r'\bynUid\s*=', cur)) and not re.search(r'\bynUid\s*=', basetxt)   # ★ uid_unify — 새 판(앱 글에 ynUid)일 때만 E-1 에서 뜻한 차이를 뗀다(바탕 4754b1d 는 옛 잣대 그대로)
     lines = []
     W = int(os.environ.get('HARNESS_WAIT', '1500'))
@@ -4334,112 +4378,115 @@ def main():
     if 'earth' in want:
         ls, sn = run('earth', W, cur)
         lines += ls
-        ls0, sn0 = run('earthbase', W, basetxt)
-        T2('E-1 고침 전 사본도 끝까지 돌았다', bool(sn and sn0), [bool(sn), bool(sn0)])
-        if sn and sn0:
-            for k, ko in (('list', '목록 25줄'), ('cnt', '문항 수'), ('hd', '묶음 머리'),
-                          ('spec', '히트맵 칸'), ('esh', '껍데기 글'), ('view', '#view 클래스'),
-                          ('vtop', '문항 머리줄'), ('vbot', '아랫줄'), ('card', '카드 글 600자')):
-                a1, b1 = str(sn.get(k)), str(sn0.get(k))
-                if k in ('esh', 'vtop'):
-                    # ★ add9 §A-1 — 「목차」 단추를 걷은 것은 **이 판이 뜻한 것**이다.
-                    b1 = b1.replace('목차', '', 1)
-                if k == 'esh':
-                    # ★ A-6(a) 9/30 _task_qa_baseline — phone_win §A-2(genie fb89ad2 · 결정로그 9/28 17:20 · _task_jagwa_phone_win.md 수행 결과 「shell E-1 지학 껍데기 글 = §A-2 필터 글자 걷음」):
-                    #   접기 단추 「필터 ▾」 → 「▾」 — 그 글자만 맞춘다
-                    b1 = b1.replace('필터 ▾', '▾', 1)
-                if k == 'card':
-                    # ★ add19 §A-1 — ▶ 차례가 바뀐 것은 **이 판이 뜻한 것**이다(첫 화면 차례를 따른다).
-                    #   그 자리만 가리고 나머지 글자는 그대로 맞댄다. 바뀌었다는 것은 아래에서 따로 잰다.
-                    rx = re.compile(r'이전\d+ / ')
-                    a1 = rx.sub('이전· / ', a1); b1 = rx.sub('이전· / ', b1)
-                # ★ _task_jagwa_claude_slot §A-1 (2026-09-22) — 「GPT」→「Claude」 는
-                #   **이 판이 뜻한 것**이다(세 과목 공통 창 · 데이터 이름은 무변).
-                #   그 낱말만 가리고 나머지 글자는 그대로 맞댄다 — 다른 데가 달라지면 여전히 FAIL 이다.
-                #   바뀌었다는 것 자체는 묶음 CL(_harness_jagwa_claude_slot.py)이 따로 잰다.
-                b1 = b1.replace('GPT', 'Claude')
-                if k == 'vtop' and a1.startswith('✕') and b1.startswith('서재'):
-                    # ★ 2026-10-07 (_task_jagwa_phys_win §A-15 ⑧) — 문항 창 닫기 「서재」 → ✕(세 과목) = 뜻한 차 — 맨 앞 그 글자만 맞춘다(나머지는 그대로 맞댐 · 옛 판은 a1 이 「서재」라 안 탐)
-                    b1 = '✕' + b1[len('서재'):]
-                if k == 'vbot' and '암기카드' not in a1 and '🃏' in a1:
-                    # ★ 2026-10-07 (_task_jagwa_phys_win §A-33) — #tCard 「암기카드」 → 🃏(세 과목) = 뜻한 차 — 그 낱말만 맞춘다(옛 판은 a1 에 「암기카드」가 있어 안 탐)
-                    b1 = b1.replace('암기카드', '🃏', 1)
-                if k == 'vbot':
-                    # ★ 합치기 10/1(하위 에이전트 C) — physphone A-3(97883ef 본문 「#tTheory 「공식」 → 「이론」」 · 세 과목 같은 단추) — 그 낱말만 옛 글자로 맞춘다(바탕 판을 돌려도 같게)
-                    a1 = a1.replace('👁 이론 개념', '👁 공식 개념', 1)
-                # ★ A-6(a) 9/30 _task_qa_baseline — jagwa_uid(genie 5e18424 + studyplandata 4a011475 · 결정로그 9/29 15:09 · _task_jagwa_uid.md 수행 결과 「남은 차이 … 지학 껍데기 E-1 ×3」):
-                #   ① 보이는 번호가 새 꼴(끝 두 자리 · G25-62-9 → G25-62-09) — 번호 꼴만 옛 꼴(바탕 앱 codeShow)로 맞춘다
-                #   ② 옛 앱은 새 번호 데이터에서 옛 열쇠 기록을 못 봐 카드 「📖 pN✓」(옮긴 교재 쪽 찍음)이 「✎」 로 선다 — 그 표시 한 글자만 가린다 · 나머지 글자는 그대로 맞댄다
-                _rxU = re.compile(r'\b(G\d\d-\d\d-)0(\d)\b')
-                a1 = _rxU.sub(r'\1\2', a1); b1 = _rxU.sub(r'\1\2', b1)
-                if k == 'card':
-                    _rxP = re.compile(r'(📖 p\d+)[✓✎]')
-                    a1 = _rxP.sub(r'\1·', a1); b1 = _rxP.sub(r'\1·', b1)
-                # ★ add1 §A-2 (2026-09-22) — 카드 층에서 「Claude」가 **맨 오른쪽으로 옮겨졌다.**
-                #   아랫줄 글은 숨은 것까지 DOM 차례대로 이어 붙이므로 낱말 자리가 바뀐다.
-                #   자리만 맞춰 놓고 나머지 글자는 그대로 맞댄다(낱말이 사라지면 여전히 FAIL).
-                if k == 'vbot':
-                    for _s in ('a1', 'b1'):
-                        _v = a1 if _s == 'a1' else b1
-                        if ' Claude' in _v:
-                            _v = _v.replace(' Claude', '') + ' Claude'
-                        if _s == 'a1':
-                            a1 = _v
-                        else:
-                            b1 = _v
-                # ★ add1 (2026-09-22) — 목록 줄에 **공부 시간 타이머**(`0'05"`)가 실린다.
-                #   같은 파일끼리도 판마다 1초씩 갈린다(CLAUDE.md 「픽셀·타이머는 게이트가 못 된다」).
-                #   숫자만 가리고 나머지 글자는 그대로 맞댄다.
-                _rxT = re.compile(r"\d+'\d{2}\"")
-                a1 = _rxT.sub("·'··\"", a1); b1 = _rxT.sub("·'··\"", b1)
-                # ★ 9/28 penfinger_add2 회귀 — 기록에서 나오는 숫자는 판마다가 아니라 기록 동기화 시각마다 갈린다
-                #   (한 판만 동기화가 끝나 「6회독↔5회독」 「🔗 근거 (1)↔(18)」 「안 품 286·맞음 27 ↔ 318·1」 — 같은 판을 다시 돌리면 PASS).
-                #   숫자만 가리고 낱말·틀은 그대로 맞댄다(낱말이 사라지거나 줄이 바뀌면 여전히 FAIL).
-                for _rx, _to in ((re.compile(r'\d+회독'), '#회독'), (re.compile(r'근거 \(\d+\)'), '근거 (#)'), (re.compile(r'근거 \d+'), '근거 #'),
-                                 (re.compile(r'(안 품|맞음|헷갈림|틀림|덜약점|약점) ?\d+'), r'\1 #'),
-                                 # ★ A-6(d) 9/30 둘째 바퀴 — 목록 줄 끝 회독 딱지(markBadge · 마지막 넷에 차례 수 「3X4X5P6O」)의 차례 수도 기록 동기화 시각마다 갈린다
-                                 #   (위 「6회독↔5회독」과 같은 것 — G25-62-09 새 3~6 / 바탕 2~5 · 마크 넷 X X P O 는 같다) · 차례 수만 가리고 마크 글자는 그대로 맞댄다
-                                 (re.compile(r'\d+(?=[OX△P](?:\d+[OX△P])*(?:·\'··"|$| \|\| ))'), '#')):
-                    a1 = _rx.sub(_to, a1); b1 = _rx.sub(_to, b1)
-                # ★ uid_unify(10/4 · §G-1 §G-2 §G-3-2 · 위 g1_e1_norm) — 새 판일 때만 · 바탕 쪽 글자에서 뜻한 차이만 뗀다
-                if _G1E:
-                    a1, b1 = g1_e1_norm(k, a1, b1)
-                if k == 'view' and 'gfit' in a1.split() and 'gfit' not in b1.split():
-                    # ★ 2026-10-07 (_task_jagwa_phys_win §A-28 ⑮) 글이 창에 다 들면 판에 gfit 클래스(크기 손잡이 자리 · 세 과목) = 뜻한 차 — 그 클래스 한 낱말만 뗀다(나머지 클래스는 그대로 맞댐)
-                    a1 = ' '.join(x for x in a1.split() if x != 'gfit')
-                same = a1 == b1
-                if same or k not in ('list', 'hd', 'card', 'esh', 'vbot', 'vtop'):
-                    info = [a1[:170], b1[:170]]
-                else:
-                    # 줄 묶음은 **어느 줄이 다른지** 찍는다(앞 170자만 보면 못 가른다)
-                    sep = ' || ' if ' || ' in str(sn.get(k)) else ''
-                    if sep:
-                        A = a1.split(sep); B = b1.split(sep)
-                    else:   # 한 덩어리 글 — 처음 갈리는 자리를 찍는다
-                        a0, b0 = a1, b1
-                        m = next((i for i in range(min(len(a0), len(b0))) if a0[i] != b0[i]), min(len(a0), len(b0)))
-                        A = [a0[max(0, m - 30):m + 60]]; B = [b0[max(0, m - 30):m + 60]]
-                    def _cut(x, y):
-                        m = next((j for j in range(min(len(x), len(y))) if x[j] != y[j]), min(len(x), len(y)))
-                        return x[max(0, m - 25):m + 55], y[max(0, m - 25):m + 55], m
-                    d = [(i,) + _cut(A[i], B[i]) for i in range(min(len(A), len(B))) if A[i] != B[i]]
-                    info = {'줄수': [len(A), len(B)], '다른 줄 수': len(d), '처음 둘': d[:2]}
-                T2('E-1 ★지학 %s 이(가) 고침 전과 **글자까지** 같다' % ko, same, info)
-            # ★ add19 §A-1 헛잣대 — 같은 문항(G62-09)의 ▶ 차례가 **바뀌었다**(첫 화면 차례를 따른다)
-            import re as _re
-            _ix = lambda t: (_re.search(r'이전(\d+) / (\d+)', str(t or '')) or [None, None, None])
-            _n, _o = _ix(sn.get('card')), _ix(sn0.get('card'))
-            T2('E-1 ★add19 — 같은 문항의 ▶ 차례가 옛 판과 **다르다**(새 %s / 옛 %s · 둘 다 총 319)'
-               % (_n[1] if _n[1] else '?', _o[1] if _o[1] else '?'),
-               bool(_n[1]) and bool(_o[1]) and _n[1] != _o[1] and _n[2] == _o[2],
-               [_n[1], _o[1], _n[2], _o[2]])
+        if QC.GATE:
+            ls0, sn0 = run('earthbase', W, basetxt)
+            T2('E-1 고침 전 사본도 끝까지 돌았다', bool(sn and sn0), [bool(sn), bool(sn0)])
+            if sn and sn0:
+                for k, ko in (('list', '목록 25줄'), ('cnt', '문항 수'), ('hd', '묶음 머리'),
+                              ('spec', '히트맵 칸'), ('esh', '껍데기 글'), ('view', '#view 클래스'),
+                              ('vtop', '문항 머리줄'), ('vbot', '아랫줄'), ('card', '카드 글 600자')):
+                    a1, b1 = str(sn.get(k)), str(sn0.get(k))
+                    if k in ('esh', 'vtop'):
+                        # ★ add9 §A-1 — 「목차」 단추를 걷은 것은 **이 판이 뜻한 것**이다.
+                        b1 = b1.replace('목차', '', 1)
+                    if k == 'esh':
+                        # ★ A-6(a) 9/30 _task_qa_baseline — phone_win §A-2(genie fb89ad2 · 결정로그 9/28 17:20 · _task_jagwa_phone_win.md 수행 결과 「shell E-1 지학 껍데기 글 = §A-2 필터 글자 걷음」):
+                        #   접기 단추 「필터 ▾」 → 「▾」 — 그 글자만 맞춘다
+                        b1 = b1.replace('필터 ▾', '▾', 1)
+                    if k == 'card':
+                        # ★ add19 §A-1 — ▶ 차례가 바뀐 것은 **이 판이 뜻한 것**이다(첫 화면 차례를 따른다).
+                        #   그 자리만 가리고 나머지 글자는 그대로 맞댄다. 바뀌었다는 것은 아래에서 따로 잰다.
+                        rx = re.compile(r'이전\d+ / ')
+                        a1 = rx.sub('이전· / ', a1); b1 = rx.sub('이전· / ', b1)
+                    # ★ _task_jagwa_claude_slot §A-1 (2026-09-22) — 「GPT」→「Claude」 는
+                    #   **이 판이 뜻한 것**이다(세 과목 공통 창 · 데이터 이름은 무변).
+                    #   그 낱말만 가리고 나머지 글자는 그대로 맞댄다 — 다른 데가 달라지면 여전히 FAIL 이다.
+                    #   바뀌었다는 것 자체는 묶음 CL(_harness_jagwa_claude_slot.py)이 따로 잰다.
+                    b1 = b1.replace('GPT', 'Claude')
+                    if k == 'vtop' and a1.startswith('✕') and b1.startswith('서재'):
+                        # ★ 2026-10-07 (_task_jagwa_phys_win §A-15 ⑧) — 문항 창 닫기 「서재」 → ✕(세 과목) = 뜻한 차 — 맨 앞 그 글자만 맞춘다(나머지는 그대로 맞댐 · 옛 판은 a1 이 「서재」라 안 탐)
+                        b1 = '✕' + b1[len('서재'):]
+                    if k == 'vbot' and '암기카드' not in a1 and '🃏' in a1:
+                        # ★ 2026-10-07 (_task_jagwa_phys_win §A-33) — #tCard 「암기카드」 → 🃏(세 과목) = 뜻한 차 — 그 낱말만 맞춘다(옛 판은 a1 에 「암기카드」가 있어 안 탐)
+                        b1 = b1.replace('암기카드', '🃏', 1)
+                    if k == 'vbot':
+                        # ★ 합치기 10/1(하위 에이전트 C) — physphone A-3(97883ef 본문 「#tTheory 「공식」 → 「이론」」 · 세 과목 같은 단추) — 그 낱말만 옛 글자로 맞춘다(바탕 판을 돌려도 같게)
+                        a1 = a1.replace('👁 이론 개념', '👁 공식 개념', 1)
+                    # ★ A-6(a) 9/30 _task_qa_baseline — jagwa_uid(genie 5e18424 + studyplandata 4a011475 · 결정로그 9/29 15:09 · _task_jagwa_uid.md 수행 결과 「남은 차이 … 지학 껍데기 E-1 ×3」):
+                    #   ① 보이는 번호가 새 꼴(끝 두 자리 · G25-62-9 → G25-62-09) — 번호 꼴만 옛 꼴(바탕 앱 codeShow)로 맞춘다
+                    #   ② 옛 앱은 새 번호 데이터에서 옛 열쇠 기록을 못 봐 카드 「📖 pN✓」(옮긴 교재 쪽 찍음)이 「✎」 로 선다 — 그 표시 한 글자만 가린다 · 나머지 글자는 그대로 맞댄다
+                    _rxU = re.compile(r'\b(G\d\d-\d\d-)0(\d)\b')
+                    a1 = _rxU.sub(r'\1\2', a1); b1 = _rxU.sub(r'\1\2', b1)
+                    if k == 'card':
+                        _rxP = re.compile(r'(📖 p\d+)[✓✎]')
+                        a1 = _rxP.sub(r'\1·', a1); b1 = _rxP.sub(r'\1·', b1)
+                    # ★ add1 §A-2 (2026-09-22) — 카드 층에서 「Claude」가 **맨 오른쪽으로 옮겨졌다.**
+                    #   아랫줄 글은 숨은 것까지 DOM 차례대로 이어 붙이므로 낱말 자리가 바뀐다.
+                    #   자리만 맞춰 놓고 나머지 글자는 그대로 맞댄다(낱말이 사라지면 여전히 FAIL).
+                    if k == 'vbot':
+                        for _s in ('a1', 'b1'):
+                            _v = a1 if _s == 'a1' else b1
+                            if ' Claude' in _v:
+                                _v = _v.replace(' Claude', '') + ' Claude'
+                            if _s == 'a1':
+                                a1 = _v
+                            else:
+                                b1 = _v
+                    # ★ add1 (2026-09-22) — 목록 줄에 **공부 시간 타이머**(`0'05"`)가 실린다.
+                    #   같은 파일끼리도 판마다 1초씩 갈린다(CLAUDE.md 「픽셀·타이머는 게이트가 못 된다」).
+                    #   숫자만 가리고 나머지 글자는 그대로 맞댄다.
+                    _rxT = re.compile(r"\d+'\d{2}\"")
+                    a1 = _rxT.sub("·'··\"", a1); b1 = _rxT.sub("·'··\"", b1)
+                    # ★ 9/28 penfinger_add2 회귀 — 기록에서 나오는 숫자는 판마다가 아니라 기록 동기화 시각마다 갈린다
+                    #   (한 판만 동기화가 끝나 「6회독↔5회독」 「🔗 근거 (1)↔(18)」 「안 품 286·맞음 27 ↔ 318·1」 — 같은 판을 다시 돌리면 PASS).
+                    #   숫자만 가리고 낱말·틀은 그대로 맞댄다(낱말이 사라지거나 줄이 바뀌면 여전히 FAIL).
+                    for _rx, _to in ((re.compile(r'\d+회독'), '#회독'), (re.compile(r'근거 \(\d+\)'), '근거 (#)'), (re.compile(r'근거 \d+'), '근거 #'),
+                                     (re.compile(r'(안 품|맞음|헷갈림|틀림|덜약점|약점) ?\d+'), r'\1 #'),
+                                     # ★ A-6(d) 9/30 둘째 바퀴 — 목록 줄 끝 회독 딱지(markBadge · 마지막 넷에 차례 수 「3X4X5P6O」)의 차례 수도 기록 동기화 시각마다 갈린다
+                                     #   (위 「6회독↔5회독」과 같은 것 — G25-62-09 새 3~6 / 바탕 2~5 · 마크 넷 X X P O 는 같다) · 차례 수만 가리고 마크 글자는 그대로 맞댄다
+                                     (re.compile(r'\d+(?=[OX△P](?:\d+[OX△P])*(?:·\'··"|$| \|\| ))'), '#')):
+                        a1 = _rx.sub(_to, a1); b1 = _rx.sub(_to, b1)
+                    # ★ uid_unify(10/4 · §G-1 §G-2 §G-3-2 · 위 g1_e1_norm) — 새 판일 때만 · 바탕 쪽 글자에서 뜻한 차이만 뗀다
+                    if _G1E:
+                        a1, b1 = g1_e1_norm(k, a1, b1)
+                    if k == 'view' and 'gfit' in a1.split() and 'gfit' not in b1.split():
+                        # ★ 2026-10-07 (_task_jagwa_phys_win §A-28 ⑮) 글이 창에 다 들면 판에 gfit 클래스(크기 손잡이 자리 · 세 과목) = 뜻한 차 — 그 클래스 한 낱말만 뗀다(나머지 클래스는 그대로 맞댐)
+                        a1 = ' '.join(x for x in a1.split() if x != 'gfit')
+                    same = a1 == b1
+                    if same or k not in ('list', 'hd', 'card', 'esh', 'vbot', 'vtop'):
+                        info = [a1[:170], b1[:170]]
+                    else:
+                        # 줄 묶음은 **어느 줄이 다른지** 찍는다(앞 170자만 보면 못 가른다)
+                        sep = ' || ' if ' || ' in str(sn.get(k)) else ''
+                        if sep:
+                            A = a1.split(sep); B = b1.split(sep)
+                        else:   # 한 덩어리 글 — 처음 갈리는 자리를 찍는다
+                            a0, b0 = a1, b1
+                            m = next((i for i in range(min(len(a0), len(b0))) if a0[i] != b0[i]), min(len(a0), len(b0)))
+                            A = [a0[max(0, m - 30):m + 60]]; B = [b0[max(0, m - 30):m + 60]]
+                        def _cut(x, y):
+                            m = next((j for j in range(min(len(x), len(y))) if x[j] != y[j]), min(len(x), len(y)))
+                            return x[max(0, m - 25):m + 55], y[max(0, m - 25):m + 55], m
+                        d = [(i,) + _cut(A[i], B[i]) for i in range(min(len(A), len(B))) if A[i] != B[i]]
+                        info = {'줄수': [len(A), len(B)], '다른 줄 수': len(d), '처음 둘': d[:2]}
+                    T2('E-1 ★지학 %s 이(가) 고침 전과 **글자까지** 같다' % ko, same, info)
+                # ★ add19 §A-1 헛잣대 — 같은 문항(G62-09)의 ▶ 차례가 **바뀌었다**(첫 화면 차례를 따른다)
+                import re as _re
+                _ix = lambda t: (_re.search(r'이전(\d+) / (\d+)', str(t or '')) or [None, None, None])
+                _n, _o = _ix(sn.get('card')), _ix(sn0.get('card'))
+                T2('E-1 ★add19 — 같은 문항의 ▶ 차례가 옛 판과 **다르다**(새 %s / 옛 %s · 둘 다 총 319)'
+                   % (_n[1] if _n[1] else '?', _o[1] if _o[1] else '?'),
+                   bool(_n[1]) and bool(_o[1]) and _n[1] != _o[1] and _n[2] == _o[2],
+                   [_n[1], _o[1], _n[2], _o[2]])
+        elif QC.want('E-1'):   # regress — earthbase(본판) 안 돎 · E-1 아홉 칸 = 기준 스냅샷(앞 인도판 earth 스냅) · E-1 add19 헛잣대 = gate 만
+            _rg_e1(sn, T2)
     if 'bio' in want:
         ls, _ = run('bio', W, cur)
         lines += ls
     if 'phys' in want:
         ls, _ = run('phys', W, cur)
         lines += ls
-    if 'null' in want:
+    if 'null' in want and QC.GATE:   # 0-헛잣대(biobase · physbase 바탕 묶음) = gate 만
         fails, base_lines = [], []
         for m in ('biobase', 'physbase'):
             l0, _ = run(m, W, basetxt)
@@ -4459,10 +4506,10 @@ def main():
         T2('0-헛잣대 이 판 앞은 통과가 아니다', len(fails) > 0, len(fails))
 
     if 'x' in want:
-        xb = _xbase_text()
+        xb = _xbase_text() if QC.GATE else None   # regress — 교재 창 고침 전 판(24f1a373) git show 0
         ls, snx = run('x', W, cur)
         lines += ls
-        if os.environ.get('XQUICK'):
+        if os.environ.get('XQUICK') or QC.REGRESS:   # regress — xbase(바탕 판) 안 돎 · X-0 헛잣대 = gate 만
             l0, snx0 = [], {}
         else:
             l0, snx0 = run('xbase', W, xb)
@@ -4473,17 +4520,18 @@ def main():
                 st0[nm] = x.split(' | ')[0]
         # 헛잣대 — 새 기능이 없는 바탕 판에서는 이 항목들이 FAIL 해야 한다(지시서 §L 의 헛잣대 줄)
         must = ['X-A1', 'X-B1', 'X-C2', 'X-D3', 'X-E3', 'X-G2', 'X-H2', 'X-I1', 'X-J1']
-        for nm in ([] if os.environ.get('XQUICK') else must):
+        for nm in ([] if os.environ.get('XQUICK') or QC.REGRESS else must):
             T2('X-0 헛잣대 — 바탕 판(24f1a373)에서 %s 가 FAIL' % nm, st0.get(nm) == 'FAIL', st0.get(nm))
-        lines.append('NOTE | X-0 바탕 판 X 항목 | ' + json.dumps({'PASS': sorted(k for k, v in st0.items() if v == 'PASS'),
-                                                               'FAIL': len([1 for v in st0.values() if v == 'FAIL'])}, ensure_ascii=False))
-        a, b = (snx or {}).get('xmcw'), (snx0 or {}).get('xmcw')
+        if QC.GATE:
+            lines.append('NOTE | X-0 바탕 판 X 항목 | ' + json.dumps({'PASS': sorted(k for k, v in st0.items() if v == 'PASS'),
+                                                                   'FAIL': len([1 for v in st0.values() if v == 'FAIL'])}, ensure_ascii=False))
+        a, b = (snx or {}).get('xmcw'), ((snx0 or {}).get('xmcw') if QC.GATE else QC.base('X-F5', (snx or {}).get('xmcw')))   # regress — 기준 = 앞 인도판 x 묶음의 🃏 창 글자 크기(스냅샷)
         T2('X-F5 🃏 창 글자 크기 = 바탕 판(#mcw 무접촉)', a is not None and a == b, [a, b])
         # ★ add1(2026-09-25) — 생물은 이 판이 **뜻한 차이**다(교재 창 이름·목록 창 쪽 줄·머리줄 ◀▶) → XB 묶음이 잰다. 물리만 바탕 판과 맞댄다.
         lines.append('NOTE | X-11 생물 | add1 로 뜻한 차이 — XB 묶음이 잰다(물리만 바탕 판 대조)')
         for m in (() if os.environ.get('XQUICK') else ('phys',)):
             _, sa = run('x' + m, W, cur)
-            _, sb = run('x' + m + 'base', W, xb)
+            _, sb = run('x' + m + 'base', W, xb) if QC.GATE else (None, _rg_xside(m, sa))   # regress — x<m>base(바탕 판) 안 돎 · 바탕 쪽 값 = 기준 스냅샷(앞 인도판 x<m> 스냅)
             sa, sb = sa or {}, sb or {}
             nm = sa.get('names') or {}
             T2('X-11 %s — 새 이름(bkNav·PINFOR·wzHook·INKG_EA·QZ·refPaint·bwSpotsOn)이 안 생긴다' % m,
@@ -4498,7 +4546,7 @@ def main():
     if 'xb' in want:
         ls, _ = run('xb', W, cur)
         lines += ls
-        if not os.environ.get('XQUICK'):
+        if not os.environ.get('XQUICK') and QC.GATE:   # XB-0 헛잣대(xbbase 바탕 묶음 · git show) = gate 만
             l0, _ = run('xbbase', W, _xbbase_text())
             st0 = {}
             for x in l0:
@@ -4511,7 +4559,8 @@ def main():
             lines.append('NOTE | XB-0 바탕 판 XB 항목 | ' + json.dumps({'PASS': sorted(k for k, v in st0.items() if v == 'PASS'),
                                                                  'FAIL': len([1 for v in st0.values() if v == 'FAIL'])}, ensure_ascii=False))
 
-    lines += static_checks()
+    if QC.want('Z'):   # smoke — 소스 글 셈(Z · add17~19)은 smoke 칸이 아니다
+        lines += static_checks()
     npass = sum(1 for x in lines if x.startswith('PASS'))
     nfail = sum(1 for x in lines if x.startswith('FAIL'))
     nnote = sum(1 for x in lines if x.startswith('NOTE'))

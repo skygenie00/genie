@@ -23,6 +23,8 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import json, os, random, re, statistics, subprocess, sys, time   # noqa: E402
 try:
     sys.stdout.reconfigure(encoding='utf-8')
@@ -30,9 +32,6 @@ except Exception:
     pass
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-_ARGV = sys.argv; sys.argv = [sys.argv[0]]   # physphone 은 들어올 때 sys.argv 를 읽는다 — 이 파일 인자를 안 보이게
-import _harness_jagwa_physphone as PP   # noqa: E402  Remote · route · serve · Pg · TOOLS(__H.sweep) · PHONE/PAD/PC
-sys.argv = _ARGV
 
 
 def ARG(k, d=None):
@@ -49,11 +48,22 @@ CHECK = ARG('--check', os.path.join(HERE, '_physprev_check'))
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
 ONLY = [x.strip().upper() for x in (ARG('--only', '') or '').split(',') if x.strip()]
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jagwa_physprev_result.txt'))
-PP.SPD = SPD   # 가짜 원격이 읽는 studyplandata 자리(physphone 모듈 값)
+JG.conf(SPD_PP=SPD)   # 가짜 원격(JG.Remote)이 읽는 studyplandata 자리 — 옛 PP.SPD = SPD(physphone 모듈 값)
 F = dict(NO=0, PG=1, FILE=2, FPG=3, BIG=4, SUB=5, LNO=6, STAR=7, TYPE=8, CODE=9, YEAR=10, SRC=11, LV=12, ANS=13, BODY=14, VLT=15)
 MOFF = {'111': 0, '222': 99, '333': 206, '444': 303, '555': 410, '666': 500}
-RES = PP.RES
-T, N = PP.T, PP.N
+RES = []   # 옛 RES = PP.RES(physphone 의 결과 통) — 제 통(아래 T · N 사본이 여기 담는다)
+# ← jagwa/moolri/_harness_jagwa_physphone.py:355-359 T 사본(글자 그대로 · 갈래 ④ · JG 밖 — 띄우기가 아니라 옮기지 않음)
+def T(g, name, ok, detail=''):
+    RES.append((g, name, bool(ok), detail))
+    d = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False, default=str)
+    print('%s | %s · %s | %s' % ('PASS' if ok else 'FAIL', g, name, d[:700]), flush=True)
+    return ok
+
+# ← jagwa/moolri/_harness_jagwa_physphone.py:362-365 N 사본(글자 그대로 · 갈래 ④ · JG 밖 — 띄우기가 아니라 옮기지 않음)
+def N(g, name, detail=''):
+    RES.append((g, name, None, detail))
+    d = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False, default=str)
+    print('INFO | %s · %s | %s' % (g, name, d[:900]), flush=True)
 RX_HEAD = re.compile(r'답\s*[①-⑤]|PEM\d+|변리사\s*[］\]]')
 RX_TAIL = re.compile(r'[-─—]{3,}\s*[<＜〈]?\s*보\s*기\s*[>＞〉]?\s*[-─—]{3,}')
 
@@ -62,8 +72,51 @@ def want(g):
     return not ONLY or g in ONLY
 
 
+# ── _task_qa_slim2 A-1·A-2(10/8 · J2) regress 갈래 — 이름이 `_rg` · `_RG` 로 시작하는 것 = gate 에서 안 쓰는 도우미(gate 에서 도는 줄은 글자 그대로) ──
+#   regress = NEW 만 띄운다(바탕 d3762af 풀기 · 띄우기 0) · B3-헛 · B4 「바탕은 그 문항 없음」 · B2 표본 PNG(PDF 렌더) · B5 _d11_scan(하위 파이썬 · g_push 가 잼) · B6 📋 정리 창(합침→physphone B7) = gate 만
+#   「= 바탕」 칸(B3 첫 그리기 시간 · B5 바탕에 있던 글 · B6 새로 생긴 흠) = QC.base 기준 스냅샷(앞 인도판의 같은 칸 새 판 값 · 미리보기 글은 md5 만)
+#   smoke = chromium 폰 390 한 판 — B3 첫 화면 · 📋 1.1 칸(+ 그 쪽 JS 오류)
+_RG_KEEP = set(x for x in (os.environ.get('QA_SLIM_KEEP_FIXED') or '').split(',') if x)   # 흔들리는 자리만 고정 대기로 되돌리는 손잡이(자리 이름 쉼표 · * = 전부)
+_RG_JNW = "()=>{const b=document.getElementById('jnw');const p=b&&b.querySelector(':scope>.panel');return !!p&&p.classList.contains('float')}"   # 표지 = jnOpen 끝 makeFloat(동기 · 창 섬)
+
+
+def _rg_cid(name, *parts):
+    return '%s%s' % (name, ''.join('@' + str(x) if i == 0 else '/' + str(x) for i, x in enumerate(parts)))
+
+
+def _rg_wait(p, ms, js, what):
+    """regress — 고정 대기 대신 앱 표지(상한 = gate 의 ms · 못 만나면 남은 시간을 채워 gate 와 같은 길이) · QA_SLIM_KEEP_FIXED 자리는 고정"""
+    if js is None or what in _RG_KEEP or '*' in _RG_KEEP:
+        QC.sleep(ms, what, p.pg)
+        return
+    t = time.time()
+    if not QC.until(p.pg, js, ms, what):
+        left = ms - (time.time() - t) * 1000.0
+        if left > 1:
+            p.pg.wait_for_timeout(left)
+
+
+def _rg_first_draw_ms(br, src, n=5):
+    """regress — first_draw_ms 의 새 판 몫만(바탕 문맥 0) · 같은 차례(다시 열기 n 번 · 첫 번 데움)"""
+    QC.launch('new')
+    pn = JG.fresh(br, 'b3t_new', src, 'phys', JG.PC, remote=Rem())
+    tn, tv = [], []
+    try:
+        pn.ctx.add_init_script(FD_JS)
+        for i in range(n):
+            pn.pg.reload(wait_until='load')
+            pn.pg.wait_for_function("() => window.__fd !== null && window.__fd !== undefined", timeout=90000)
+            pn.wait(1500)
+            tn.append(round(pn.ev("() => window.__fd"), 1))
+            v = pn.ev("() => window.__pv")
+            tv.append(round(v, 1) if v is not None else None)
+    finally:
+        pn.close()
+    return tn, tv
+
+
 def src_of(x):
-    return PP.app_src(x)
+    return JG.app_src(x)
 
 
 def data_of(src):
@@ -80,7 +133,7 @@ def leak(t):
     return ('①' in t and '②' in t) or bool(RX_TAIL.search(t))
 
 
-class Rem(PP.Remote):
+class Rem(JG.Remote):
     """가짜 원격 — phys/미리보기.json 만 --prev 파일로(없으면 404 = 앱은 지금처럼 BODY)"""
     def get(self, repo, path):
         if path.strip('/') == 'phys/미리보기.json' and repo.endswith('/studyplandata'):
@@ -278,8 +331,8 @@ FD_JS = """(()=>{window.__fd=null;window.__pv=null;const mo=new MutationObserver
 def first_draw_ms(br, src, base_src, n=5):
     """PC 첫 화면 처음 그리기 — 새 판·바탕 문맥을 하나씩 열어 시험지를 받아 둔 뒤 번갈아 다시 열기 n 번씩
        · 첫 .item 이 #list 에 든 performance.now()(fd) · 새 판은 첫 .prev.pv(미리보기 갈아 끼움)도(pv)"""
-    pn = PP.fresh(br, 'b3t_new', src, 'phys', PP.PC, remote=Rem())
-    pb = PP.fresh(br, 'b3t_base', base_src, 'phys', PP.PC, remote=Rem())
+    pn = JG.fresh(br, 'b3t_new', src, 'phys', JG.PC, remote=Rem())
+    pb = JG.fresh(br, 'b3t_base', base_src, 'phys', JG.PC, remote=Rem())
     tn, tb, tv = [], [], []
     try:
         for p in (pn, pb):
@@ -302,11 +355,12 @@ def first_draw_ms(br, src, base_src, n=5):
 def b3(br, eng, PV, DATA, src, base_src):
     G = 'B3'
     ok = True
-    for dn, dev in (('폰390', PP.PHONE), ('iPad820', PP.PAD), ('PC1440', PP.PC)):
-        if eng == 'webkit' and dev == PP.PC:
+    for dn, dev in ((('폰390', JG.PHONE), ('iPad820', JG.PAD), ('PC1440', JG.PC)) if not QC.SMOKE else (('폰390', JG.PHONE),)):   # smoke — 폰 390 하나
+        if eng == 'webkit' and dev == JG.PC:
             continue
-        for who, s in (('NEW', src), ('BASE', base_src)):
-            p = PP.fresh(br, '%s_b3_%s_%s' % (eng, dn, who), s, 'phys', dev, eng=eng, remote=Rem())
+        for who, s in ((('NEW', src), ('BASE', base_src)) if QC.GATE else (('NEW', src),)):   # regress — 바탕(B3-헛 재료) 띄움 0
+            QC.launch('new' if who == 'NEW' else 'base')
+            p = JG.fresh(br, '%s_b3_%s_%s' % (eng, dn, who), s, 'phys', dev, eng=eng, remote=Rem())
             try:
                 if who == 'NEW':
                     try:
@@ -328,7 +382,7 @@ def b3(br, eng, PV, DATA, src, base_src):
                 rows = p.ev(ROWS, '#list .item')
                 n, bad, dv = check_rows(rows, PV, DATA, vh)
                 p.ev("() => jnOpen('1.1')")
-                p.wait(900)
+                p.wait(900) if QC.GATE else _rg_wait(p, 900, _RG_JNW, 'B3.jnw')
                 jrows0 = p.ev(ROWS, '#jnw .jnrow')
                 scroll_all(p, '#jnw .panel')
                 jrows = p.ev(ROWS, '#jnw .jnrow')
@@ -343,7 +397,8 @@ def b3(br, eng, PV, DATA, src, base_src):
                 ok = ok and good and lazy_ok
                 T(G, '%s %s 첫 화면 · 📋 1.1 — 빈 줄 0 · 글 = t 전부 · 잘림 0 · 〈보기〉·선택지 0 · 그림 ≤ 44 · ≤ 60%% · 그림 없는 문항 칸 0 · 넘침 0' % (eng, dn), good,
                   {'첫 화면 줄': n, '틀림': bad, '📋 줄': jn, '📋 틀림': jbad, '그림 칸': figs, '그려진 그림(화면 안)': dv, '오류': errs[:3]})
-                T(G, '%s %s 그림은 보일 때만 — 처음 화면 밖 그림 0 · 화면 안 그림은 그려짐' % (eng, dn), lazy_ok, lz)
+                if QC.want('B3.lazy'):   # smoke 칸 아님
+                    T(G, '%s %s 그림은 보일 때만 — 처음 화면 밖 그림 0 · 화면 안 그림은 그려짐' % (eng, dn), lazy_ok, lz)
             else:
                 nb = len(bad.get('글 ≠ t', []))
                 T(G + '-헛', '%s %s 바탕 = 미리보기 없음(헛잣대 — 표본 줄 있음 · 글 ≠ t 인 줄 있음 · 그림 칸 0)' % (eng, dn), n > 0 and nb > 0 and figs == 0,
@@ -353,8 +408,15 @@ def b3(br, eng, PV, DATA, src, base_src):
 
 def b3t(br, src, base_src):
     G = 'B3'
-    tn, tb, tv = first_draw_ms(br, src, base_src)
-    mn, mb = statistics.median(tn[1:]), statistics.median(tb[1:])
+    if QC.GATE:
+        QC.launch('new'); QC.launch('base')
+        tn, tb, tv = first_draw_ms(br, src, base_src)
+        mn, mb = statistics.median(tn[1:]), statistics.median(tb[1:])
+    else:   # regress — 새 판 문맥만(다시 열기 다섯 번 · 첫 번 데움 뺌) · 바탕 가운데 값 = 기준 스냅샷(앞 인도판 같은 칸의 새 판 가운데 값 · 다른 때 잰 값 — 결정 거리)
+        tn, tv = _rg_first_draw_ms(br, src)
+        mn = statistics.median(tn[1:])
+        mb = QC.base('B3.first/mn', mn)
+        tb = ['기준 스냅샷 %s · %s' % (mb, QC.base_note('B3.first/mn'))]
     ok = 0.8 * mb <= mn <= 1.2 * mb
     T(G, 'PC 첫 화면 처음 그리기 시간 = 바탕 ±20%(번갈아 다시 열기 다섯 번씩 · 첫 번 데움 빼고 넷의 가운데 값)', ok,
       {'새 판 ms': tn, '바탕 ms': tb, '비': round(mn / mb, 3) if mb else None})
@@ -389,8 +451,9 @@ def b4(br, eng, PV, DATA, src, base_src):
     words = pick_words(PV, DATA)
     ok = True
     res = {}
-    for who, s in (('NEW', src), ('BASE', base_src)):
-        p = PP.fresh(br, '%s_b4_%s' % (eng, who), s, 'phys', PP.PC, eng=eng, remote=Rem())
+    for who, s in ((('NEW', src), ('BASE', base_src)) if QC.GATE else (('NEW', src),)):   # regress — 「바탕은 그 문항 없음」(헛잣대) 몫 띄움 0 · 판정의 바탕 조건은 빈 값이라 NEW 조건만 남는다
+        QC.launch('new' if who == 'NEW' else 'base')
+        p = JG.fresh(br, '%s_b4_%s' % (eng, who), s, 'phys', JG.PC, eng=eng, remote=Rem())
         try:
             if who == 'NEW':
                 try:
@@ -419,10 +482,11 @@ def b4(br, eng, PV, DATA, src, base_src):
 def b6(br, eng, src, base_src):
     G = 'B6'
     ok = True
-    for dn, dev in (('폰390', PP.PHONE), ('iPad820', PP.PAD), ('PC1440', PP.PC)):
+    for dn, dev in (('폰390', JG.PHONE), ('iPad820', JG.PAD), ('PC1440', JG.PC)):
         got = {}
-        for who, s in (('NEW', src), ('BASE', base_src)):
-            p = PP.fresh(br, '%s_b6_%s_%s' % (eng, dn, who), s, 'phys', dev, eng=eng, remote=Rem())
+        for who, s in ((('NEW', src), ('BASE', base_src)) if QC.GATE else (('NEW', src),)):   # regress — 바탕 훑기 대신 기준 스냅샷(아래)
+            QC.launch('new' if who == 'NEW' else 'base')
+            p = JG.fresh(br, '%s_b6_%s_%s' % (eng, dn, who), s, 'phys', dev, eng=eng, remote=Rem())
             try:
                 if who == 'NEW':
                     try:
@@ -430,15 +494,18 @@ def b6(br, eng, src, base_src):
                     except Exception:
                         pass
                 p.wait(1200)
-                touch = dev != PP.PC
+                touch = dev != JG.PC
                 sw = lambda sel: p.ev("a => __H.sweep(a[0], a[1])", [sel, touch])
                 o = {'첫 화면 목록': sw('#list')}
-                p.ev("() => jnOpen('1.1')")
-                p.wait(1200)
-                o['📋 정리 창'] = sw('#jnw')
+                if QC.GATE:   # 📋 정리 창 훑기 = 합침→physphone B7(같은 __H.sweep #jnw · 같은 기기 셋) — regress 끔
+                    p.ev("() => jnOpen('1.1')")
+                    p.wait(1200)
+                    o['📋 정리 창'] = sw('#jnw')
                 got[who] = (o, p.errs[:])
             finally:
                 p.close()
+        if QC.REGRESS:   # regress — 「새로 생긴 흠」 = 새 판 훑기 − 기준 스냅샷(앞 인도판 같은 칸 훑기)
+            got['BASE'] = ({scr: QC.base(_rg_cid('B6', eng, dn, scr), sorted(set(v))) for scr, v in got['NEW'][0].items()}, [])
         for scr in got['NEW'][0]:
             nn = sorted(set(got['NEW'][0][scr]) - set(got['BASE'][0].get(scr, [])))
             gone = sorted(set(got['BASE'][0].get(scr, [])) - set(got['NEW'][0][scr]))
@@ -454,12 +521,20 @@ def b6(br, eng, src, base_src):
 def b5(PV, src, base_src):
     G = 'B5'
     long_t = [str(v.get('t')) for v in PV.values() if len(str(v.get('t') or '')) >= 12]
+    if QC.REGRESS:   # regress — 「바탕 앱에 이미 있던 글」 = 기준 스냅샷(앞 인도판 앱에 든 t 의 md5 목록 · 글은 안 남김) · 바탕(d3762af) 안 풂
+        import hashlib
+        _h = lambda t: hashlib.md5(t.encode('utf-8')).hexdigest()
+        _bs = set(QC.base('B5.inapp', sorted(_h(t) for t in long_t if t in src)))
+        base_src = ''.join('\n' + t for t in long_t if _h(t) in _bs)   # 판정 줄 · 값 줄이 읽는 「바탕에 있던 글」 꼴(아래 줄 무변)
     inapp = [t[:30] for t in long_t if t in src and t not in base_src]   # 바탕 앱에 이미 있던 글(옛 BODY = 옛 PDF 글자층)은 이 판이 넣은 것이 아니다
     T(G, '이 판이 앱에 넣은 미리보기 글(t ≥ 12자 · 바탕 앱에 없던 것) 0 — 미리보기 재료는 studyplandata(비공개)에만', not inapp,
       {'t 수': len(long_t), '이 판이 넣은 것': inapp[:3], '바탕에도 있던 것(옛 BODY)': sum(1 for t in long_t if t in base_src)})
     ok = not inapp
     scan = os.path.join(NR, '_d11_scan.py') if NR else None
+    if not QC.GATE:   # regress — _d11_scan(하위 파이썬)은 g_push 가 push 마다 스테이징 뒤 잰다(CLAUDE.md 5 ⓓ) · 관문만
+        return ok
     if scan and os.path.isfile(scan) and os.path.isfile(NEWF):
+        QC.sub('python:scan')
         r = subprocess.run([sys.executable, scan, NEWF], capture_output=True, text=True, encoding='utf-8', errors='replace')
         good = r.returncode == 0
         ok = ok and good
@@ -472,7 +547,11 @@ def b5(PV, src, base_src):
 def main():
     from playwright.sync_api import sync_playwright
     t0 = time.time()
-    src, base_src = src_of(NEWF), src_of(BASEF)
+    if QC.GATE:
+        QC.sub('git:show-app')
+        src, base_src = src_of(NEWF), src_of(BASEF)
+    else:   # regress — 바탕(d3762af) 앱 풀기 0
+        src, base_src = src_of(NEWF), None
     DATA = data_of(src)
     if not os.path.isfile(PREVF):
         raise SystemExit('미리보기.json 없음: %s' % PREVF)
@@ -491,14 +570,14 @@ def main():
         tm[g] = tm.get(g, 0) + time.time() - t1
         print('   (%s %.0f초)' % (g, time.time() - t1), flush=True)
 
-    if want('B1'):
+    if want('B1') and not QC.SMOKE:   # smoke — 데이터 칸 건넘
         step('B1', lambda: b1(PV, DATA))
-    if want('B2'):
+    if want('B2') and QC.GATE:   # B2 표본 PNG(원본 PDF 렌더 · 눈 검수) = 관문만
         step('B2', lambda: b2(PV, DATA))
-    if want('B5'):
+    if want('B5') and not QC.SMOKE:
         step('B5', lambda: b5(PV, src, base_src))
     with sync_playwright() as pw:
-        for eng in ENGS:
+        for eng in (ENGS if not QC.SMOKE else [e for e in ENGS if e == 'chromium'][:1]):   # smoke — chromium 한 판
             try:
                 br = getattr(pw, eng).launch()
             except Exception as e:
@@ -507,11 +586,11 @@ def main():
             try:
                 if want('B3'):
                     step('B3', lambda: b3(br, eng, PV, DATA, src, base_src))
-                    if eng == 'chromium':
+                    if eng == 'chromium' and not QC.SMOKE:
                         step('B3', lambda: b3t(br, src, base_src))
-                if want('B4'):
+                if want('B4') and not QC.SMOKE:
                     step('B4', lambda: b4(br, eng, PV, DATA, src, base_src))
-                if want('B6') and eng == 'chromium':
+                if want('B6') and eng == 'chromium' and not QC.SMOKE:
                     step('B6', lambda: b6(br, eng, src, base_src))
             finally:
                 br.close()

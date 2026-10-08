@@ -40,12 +40,13 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 _roots.need_n('jagwa/gigu/claude_motion 재료(채팅이 만든 md · html — N: 에만)')
 import io, json, os, re, sys, time, copy, hashlib, subprocess, tempfile   # noqa: E402
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-import _harness_jagwa_uid as HU   # noqa: E402  (GENIE_ROOT · SPD_ROOT · Srv · INIT · JS · git · route 사본 · PUT 가로채기)
 from playwright.sync_api import sync_playwright   # noqa: E402
 
 
@@ -53,7 +54,7 @@ def ARG(k, d=None):
     return sys.argv[sys.argv.index(k) + 1] if k in sys.argv else d
 
 
-GENIE0 = HU.GENIE; SPD = HU.SPD
+GENIE0 = _roots.genie(); SPD = _roots.spd()
 ROOT = ARG('--root', '') or GENIE0
 REV = ARG('--rev', '')   # NEW 를 작업트리 대신 genie 커밋에서(줄 워크트리가 아직 손질 중일 때 · git show 로 읽기만 — genie 에 쓰지 않는다)
 BASE_REV = ARG('--base', '4754b1d')
@@ -99,12 +100,13 @@ def dumps(d):
 
 
 def git1(repo, *a):
-    return HU.git(repo, *a).decode('utf-8', 'replace').strip()
+    return JG.git_HU(repo, *a).decode('utf-8', 'replace').strip()
 
 
 # ══════════ 고정본 · 앱 · 모션 ══════════
 def gshow(rel, repo=None, rev=None):
-    return HU.git(repo or SPD, 'show', '%s:%s' % (rev or FIXC, rel))
+    QC.sub('git:show-data')   # 고정본(studyplandata eb920627) 읽기 — 결정적 입력 · 바탕 앱 아님(regress 에도 남음)
+    return JG.git_HU(repo or SPD, 'show', '%s:%s' % (rev or FIXC, rel))
 
 
 ITEMS = {s: json.loads(gshow('%s/문항.json' % s).decode('utf-8')) for s in ('earth', 'bio')}
@@ -117,7 +119,7 @@ KIND_G = {s: [r['uid'] for r in ITEMS[s] if UIDRE.match(r['uid'])] for s in ITEM
 
 def app_at(root, rev=None):
     if rev:
-        return HU.git(root, 'show', '%s:jagwa/index.html' % rev).replace(b'\r\n', b'\n')
+        return JG.git_HU(root, 'show', '%s:jagwa/index.html' % rev).replace(b'\r\n', b'\n')
     return open(os.path.join(root, 'jagwa', 'index.html'), 'rb').read().replace(b'\r\n', b'\n')
 
 
@@ -125,7 +127,7 @@ def stat_at(root, rev=None):
     out = {}
     if rev:
         for f in git1(root, 'ls-tree', '--name-only', rev, 'jagwa/motion/').split():
-            out['motion/' + f.split('/')[-1]] = HU.git(root, 'show', '%s:%s' % (rev, f))
+            out['motion/' + f.split('/')[-1]] = JG.git_HU(root, 'show', '%s:%s' % (rev, f))
     else:
         d = os.path.join(root, 'jagwa', 'motion')
         for f in sorted(os.listdir(d)):
@@ -219,7 +221,8 @@ class Overlay(dict):
         if not rel.endswith('.json'):
             return None
         if rel not in self.cache:
-            b = HU.git(SPD, 'show', '%s:%s' % (FIXC, rel))
+            QC.sub('git:show-data')   # 고정본 json 지연 읽기(바탕 앱 아님)
+            b = JG.git_HU(SPD, 'show', '%s:%s' % (FIXC, rel))
             self.cache[rel] = b if b else None
         return self.cache[rel]
 
@@ -296,15 +299,16 @@ window.__U={
 """
 
 
-class Dev2(HU.Dev):
+class Dev2(JG.Dev):
     """기기 하나 — 창 크기 · 손가락 여부를 고를 수 있는 HU.Dev(고정본 json 은 git 에서 · blob 도 통과)"""
     def __init__(self, br, eng, vp=(1280, 900), touch=False):
-        self.eng = eng; self.S = HU.Srv(); self.vp = vp; self.touch = touch
+        self.eng = eng; self.S = JG.Srv(); self.vp = vp; self.touch = touch
         self.ctx = br.new_context(viewport={'width': vp[0], 'height': vp[1]}, device_scale_factor=1, has_touch=touch)
         self.ctx.route('**/*', lambda rt: rt.continue_() if rt.request.url.startswith(OKURL) else rt.abort())
         self.pg = None; self.errs = []; self.cerr = []; self.cdp = None
 
     def load(self, app, subj, rec=None, static=None):
+        QC.launch('base' if (APPS.get('BASE') and app is APPS['BASE'][0] and app is not APPS['NEW'][0]) else 'new')
         self.S.app = app; self.S.spd = SPD
         self.S.rec = Overlay(rec or {}); self.S.static = dict(static or {})
         if self.pg:
@@ -312,7 +316,7 @@ class Dev2(HU.Dev):
         self.ctx.clear_cookies()
         self.pg = self.ctx.new_page(); self.pg.set_default_timeout(25000)   # 행동(locator·click) 시간 제한 — 부팅 기다림은 아래 wait_for_function 이 따로 120초
         self.errs = []; self.cerr = []; self.cdp = None
-        self.pg.add_init_script(HU.INIT.replace('__SUBJ__', subj))
+        self.pg.add_init_script(JG.INIT_HU.replace('__SUBJ__', subj))
         self.pg.on('pageerror', lambda e: self.errs.append('page: ' + str(e)[:200]))
         self.pg.on('console', lambda m: self.cerr.append('%s @%s' % (m.text[:200], ((m.location or {}).get('url') or '')[-48:])) if m.type == 'error' else None)
         self.pg.goto('http://127.0.0.1:%d/app.html' % self.S.port, wait_until='load')
@@ -323,7 +327,7 @@ class Dev2(HU.Dev):
                 self.pg.wait_for_function('DATA.length===%d' % nexp, timeout=120000)
             except Exception as e:
                 self.errs.append('boot wait: ' + repr(e)[:120])
-        self.pg.evaluate(HU.JS); self.pg.evaluate(UJS)
+        self.pg.evaluate(JG.JS_HU); self.pg.evaluate(UJS)
         for _ in range(120):
             if self.ev("()=>__J.ready()"):
                 break
@@ -390,6 +394,8 @@ UIDSET_E = set(N2U['earth'].values())
 
 def OBS(name, fn, br, eng, who, *a, **k):
     """한 시나리오를 (엔진 · 판)마다 한 번만 돈다 — NEW 와 BASE 가 앱·모션까지 같으면 같은 관찰을 두 칸에 쓴다"""
+    if QC.REGRESS and who != 'NEW':   # regress — 바탕(4754b1d) 시나리오 0 · GATE 의 「바탕」 칸 = —(헛잣대 · 판정 밖) · GATE2 = 기준 스냅샷(_rg_gate2)
+        return None
     key = (name, eng, IDENT[who], repr(a), repr(sorted(k.items())))
     if key not in _cache:
         app, stat = APPS[who]
@@ -431,7 +437,69 @@ def GATE(eng, name, jf, ON, OB):
 
 def GATE2(eng, name, jf, ON, OB, show_base=False):
     """NEW ↔ BASE 맞대기 — 바탕 칸 — (바탕끼리 맞대면 거저 참)"""
+    if QC.REGRESS:   # regress — 바탕(OB) 대신 기준 스냅샷(앞 인도판 같은 칸 관찰의 투영 · _rg_gate2)
+        return _rg_gate2(eng, name, jf, ON)
     okn, dn = _run(jf, ON, OB)
+    R(eng, name, okn, None, dn)
+    return okn
+
+
+# ── _task_qa_slim2 A-1·A-2(10/8 · J2) regress 갈래 — 이름이 `_rg` · `_RG` 로 시작하는 것 = gate 에서 안 쓰는 도우미(gate 에서 도는 줄은 글자 그대로) ──
+#   regress = NEW 시나리오만(바탕 4754b1d 앱·모션 풀기 · 바탕 시나리오 0 — OBS) · 옛 판 기기 흉내(olddev · mix · Eold) · 헛잣대 셈(B-7 · E-6 · H-5) · S-6 [BASE] = gate 만
+#   GATE2(NEW ↔ 바탕 맞대기 · 처리안 「기준」) = 앞 인도판 같은 칸 관찰의 투영(QC.base) 과 맞댐 — 판정 함수는 그대로 · 두 쪽에 같은 투영(같음 ⟺ 같음 · 긴 글은 md5)
+#   smoke = chromium 한 번 — B-1 셈 무변(동기화 한 바퀴 · 두 번째 열기 없음) · E-1 창 제목(첫 uid 하나 · 모션 · 이웃 문항 건넘)
+#   고정 대기는 그대로(까닭 = out/a2/J2/_harness_jagwa_uid_unify_표지.md — 문항 바꿈 뒤 showProblem 이 문항 창(sh-gpt …)을 닫는 비동기 · 부팅 뒤 옮김 끝 표지 없음)
+def _rg_md5(s):
+    return hashlib.md5(('' if s is None else (s if isinstance(s, str) else canon(s))).encode('utf-8')).hexdigest()
+
+
+def _rg_proj_screen(O):   # j_screen_eq — 목록·서랍 줄 글 = md5(같음 ⟺ 같음) · 히트맵 · 카운터 그대로
+    s = O['screen']
+    return {'screen': {'rows': {k: _rg_md5(v) for k, v in s['rows'].items()}, 'drawer': {k: _rg_md5(v) for k, v in s['drawer'].items()}, 'heat': s['heat'], 'cnt': s['cnt']}}
+
+
+def _rg_proj_phys_body(O):   # j_phys_body — nok(data) · u(gg 도장 뺌) · gone 의 canon md5(판정 함수가 두 쪽에 같은 거름을 다시 걸어도 그대로)
+    p = O['put'] or {}
+    return {'put': {'data': {'md5': _rg_md5(canon(nok(p.get('data'))))}, 'u': {'md5': _rg_md5(canon({k: v for k, v in (p.get('u') or {}).items() if not k.startswith('gg|')}))},
+                    'gone': {'md5': _rg_md5(canon(p.get('gone') or {}))}}, 'keys': O.get('keys')}
+
+
+def _rg_proj_phys_screen(O):   # j_phys_screen — 30 줄 표본 글 그대로(뜻한 차 거름 _b6_norm 이 글에 걸린다)
+    return {'list': O['list'], 'drawer': O['drawer'], 'cnt': O['cnt']}
+
+
+def _rg_proj_E5(O):   # j_E5 — 창 DOM 글 md5 · 제목 · 모션 줄 · iframe src·200
+    sk = ('h2', 'motBar', 'motBarVis', 'motTx')
+    return {'wins': {no: {'html': _rg_md5(w.get('html')), 'sheet': ({k: w['sheet'].get(k) for k in sk} if w.get('sheet') else None),
+                          'frame': ({k: w['frame'].get(k) for k in ('src', 'status')} if w.get('frame') else None)} for no, w in O['wins'].items()}}
+
+
+def _rg_proj_sweep(O):   # j_sweep — 면마다 넘침·잘림·겹침·가려짐 신호 · 가로 굴림 · 작은 누름
+    return {s: ({k: O[s].get(k) for k in ('over', 'clip', 'ovl', 'cov', 'small', 'hscroll')} if O.get(s) else O.get(s)) for s in ('first', 'card', 'claude', 'claude+mot')}
+
+
+_RG_PROJ = {'j_screen_eq': _rg_proj_screen, 'j_phys_body': _rg_proj_phys_body, 'j_phys_screen': _rg_proj_phys_screen, 'j_E5': _rg_proj_E5,
+            'j_H1_ec': lambda O: {'ec': O.get('ec')}, 'j_H2_phys': lambda O: {'chips': O.get('chips')}, 'j_sweep': _rg_proj_sweep}
+_RG_POST = {'j_E5': lambda b: {'wins': {int(k): v for k, v in (b.get('wins') or {}).items()}} if isinstance(b, dict) else b}   # JSON 왕복이 창 번호 열쇠를 글자로 바꾼다 → 판정 함수가 읽는 수 열쇠로
+
+
+def _rg_gate2(eng, name, jf, ON):
+    """regress — GATE2 의 바탕(OB) = 기준 스냅샷(앞 인도판 같은 칸 관찰의 투영 · QC.base) · 스냅샷이 없으면 새 판 값 자신(첫 기록) · 판정 함수 그대로"""
+    if not isinstance(ON, dict) or '__err' in ON:
+        okn, dn = _run(jf, ON, ON)
+        R(eng, name, okn, None, dn)
+        return okn
+    cid = '%s@%s' % (name.split(' — ')[0], eng)
+    post = _RG_POST.get(jf.__name__, lambda b: b)
+    try:
+        pn = _RG_PROJ[jf.__name__](ON)
+    except Exception as e:
+        R(eng, name, False, None, 'regress 투영 ERR ' + repr(e)[:200])
+        return False
+    pb = post(QC.base(cid, pn))
+    okn, dn = _run(jf, post(QC.norm(pn)), pb)
+    if isinstance(dn, dict):
+        dn = dict(dn, 기준=QC.base_note(cid))
     R(eng, name, okn, None, dn)
     return okn
 
@@ -879,16 +947,16 @@ def sc_E(br, eng, app, stat):
         put = dv.settle()
         O = {'rec': d, 'put': put, 'gpTags': dv.ev("()=>__U.gpTags()"), 'u': dv.ev("()=>__J.u()")}
         wins = {}
-        for uid in MATS:
+        for uid in (MATS if not QC.SMOKE else list(MATS)[:1]):   # smoke — 첫 uid 하나(E-1 제목 칸)
             no = dv.ev("u=>__U.openRow(u)", uid)
             dv.click('#tGpt'); dv.pg.wait_for_timeout(900)
             w = {'no': no, 'sheet': dv.ev("()=>__U.sheet()")}
-            if (w['sheet'] or {}).get('motTx') == '▶ 모션':
+            if (w['sheet'] or {}).get('motTx') == '▶ 모션' and not QC.SMOKE:   # smoke — 모션 건넘
                 dv.click('#gpMot'); dv.pg.wait_for_timeout(1800)
                 w['frame'] = dv.ev("()=>__U.frame()"); w['after'] = dv.ev("()=>__U.sheet()")
             dv.ev("()=>__U.closeSheets()")
             nb = {}
-            for dn in (-1, 1):
+            for dn in ((-1, 1) if not QC.SMOKE else ()):   # smoke — 이웃 문항 건넘
                 dv.ev("n=>openView(n)", no + dn); dv.pg.wait_for_timeout(900)
                 dv.click('#tGpt'); dv.pg.wait_for_timeout(600)
                 s = dv.ev("()=>__U.sheet()")
@@ -1508,8 +1576,8 @@ def static_gates():
     ok_t = all(title_rule(u) == '%s Claude · %s' % (u, TITLE_END[u]) for u in MATS)
     R(eng, 'S-5 제목 규칙(지시서 C-1)을 데이터에서 계산한 값 = C-1 표(%s)' % ' · '.join(TITLE_END.values()), ok_t, None, {u: title_rule(u) for u in MATS})
     # 모션 재료(D-1) — NEW 와 바탕의 motion 폴더(LF 기준 바이트 대조)
-    sb = APPS['BASE'][1]
-    for who in ('NEW', 'BASE'):
+    sb = APPS['BASE'][1] if QC.GATE else None   # regress — 바탕(4754b1d) 모션 폴더 안 풂
+    for who in (('NEW', 'BASE') if QC.GATE else ('NEW',)):   # regress — [BASE] 줄(INFO · 관문만) 건넘
         stt = APPS[who][1]
         try:
             ix = json.loads(stt['motion/index.json'])
@@ -1521,7 +1589,8 @@ def static_gates():
         def _hfix(b0, u):   # ★ 채팅 10/4 23:1x ② — 「크게 보기 ↗」 href 한 곳만 새 이름(그 밖 바이트 무변)
             o = ('href="%s"' % MOTMD5[u][0]).encode()
             return b0.replace(o, ('href="earth_%s.html"' % u).encode()) if b0 and b0.count(o) == 1 else None
-        files_ok = all(('earth_%s.html' % u) in names and stt['motion/earth_%s.html' % u] == _hfix(sb['motion/' + MOTMD5[u][0]], u) for u in MATS)
+        files_ok = all(('earth_%s.html' % u) in names and stt['motion/earth_%s.html' % u] == _hfix(sb['motion/' + MOTMD5[u][0]], u) for u in MATS) if QC.GATE else \
+            all(('earth_%s.html' % u) in names and QC.same('S-6.motion/' + u, md5(stt['motion/earth_%s.html' % u])) for u in MATS)   # regress — 새 이름 파일 바이트 = 기준 스냅샷(앞 인도판 같은 파일 md5 · 바탕 옛 이름 파일 대신)
         href_old = [u for u in MATS if ('earth_%s.html' % u) in names and ('href="%s"' % MOTMD5[u][0]).encode() in stt['motion/earth_%s.html' % u]]
         oldf = [MOTMD5[u][0] for u in MATS if MOTMD5[u][0] in names]
         R(eng, 'S-6 motion(D-1) [%s] — index.json = 지시서 D-1 · earth_<uid>.html 넷 = 옛 earth_<번호>.html 바이트(LF 기준) · 옛 이름 0 · .pdf 0' % who,
@@ -1532,8 +1601,10 @@ def static_gates():
 
 # ══════════ 묶음 ══════════
 def run_B(br, eng):
-    on = OBS('main', sc_main, br, eng, 'NEW'); ob = OBS('main', sc_main, br, eng, 'BASE')
+    on = OBS('main', sc_main, br, eng, 'NEW') if not QC.SMOKE else OBS('main', sc_main, br, eng, 'NEW', second=False); ob = OBS('main', sc_main, br, eng, 'BASE')   # smoke — 두 번째 열기 없음
     GATE(eng, 'B-1 셈 무변 — 지학 원격 사본(고정본)을 실은 빈 기기 열고 동기화 뒤: status · gpt · mcard · 다른 통 칸 수·h 합 = 고정본(지시서 63·66·4·3)', j_B1_count, on, ob)
+    if QC.SMOKE:   # smoke — B-1 셈 무변(동기화 한 바퀴)만
+        return
     GATE(eng, 'B-1 열쇠 — 번호 열쇠 통(status·note·qtype·conc·gpt·twin·ansfix·frm·maskpos·omrpos·mcard·link) 열쇠 전부 uid · 번호 열쇠 0(올린 몸통 · 메모리 · IndexedDB)', j_B1_keys, on, ob)
     GATE(eng, 'B-1 메모리 통 = 올린 몸통(번호 열쇠 통)', j_B1_mem, on, ob)
     GATE(eng, 'B-1 불변 — bogi·unit·bpg·crop·tfix·gg·ggref·pick·bref·bpit·txt 칸 수·값 = 고정본 바이트(bref·bpit 열쇠는 쪽 그대로)', j_B1_stay, on, ob)
@@ -1542,16 +1613,17 @@ def run_B(br, eng):
     GATE(eng, 'B-2 묘비 — 옛 칸 「키|번호」 묘비(지금 시각) · 번호 묘비 status|260 → status|<uid> 비춤 · 원래 묘비 무변 · 다른 묘비 안 늘고 · 옛 도장 안 남음', j_B2_tomb, on, ob)
     GATE(eng, 'B-2 도장 규칙 — status 도장 = h 끝 t(stTime) 그대로(새로 안 찍음)', j_B2_h_stamp, on, ob)
     GATE(eng, 'B-2 그림자 — shadow 의 번호 열쇠 통도 새 열쇠로(번호 열쇠 0 · 올린 몸통과 열쇠 같음)', j_B2_shadow, on, ob)
-    GATE2(eng, 'B-3 화면 무변 — 옮긴 뒤 지학 목록(%d줄 전부 · 고르게 50 포함)·서랍·히트맵·카운터(회독 수·O△X 칩·🃏·근거 칩·Claude 태그)가 바탕 화면과 같다(「N회독」 칩 · 「NN회 N번」 · 서랍 마크 줄만 뺌 — ④ 몫)' % len(ob.get('screen', {}).get('rows', {})) if ob and 'screen' in ob else 'B-3 화면 무변', j_screen_eq, on, ob)
+    GATE2(eng, 'B-3 화면 무변 — 옮긴 뒤 지학 목록(%d줄 전부 · 고르게 50 포함)·서랍·히트맵·카운터(회독 수·O△X 칩·🃏·근거 칩·Claude 태그)가 바탕 화면과 같다(「N회독」 칩 · 「NN회 N번」 · 서랍 마크 줄만 뺌 — ④ 몫)' % len((ob if QC.GATE else on).get('screen', {}).get('rows', {})) if (ob if QC.GATE else on) and 'screen' in (ob if QC.GATE else on) else 'B-3 화면 무변', j_screen_eq, on, ob)   # regress — 바탕 관찰 없음 → 칸 이름의 줄 수는 새 판 관찰에서(gate 와 같은 칸 id)
     GATE(eng, 'B-6 두 번째 열기 — 올린 data·u·gone 이 첫 열기와 같다(옮김 0 · 묘비 비춤 0 · 도장 새로 0) · bak_uid 는 한 번만(두 번째에 안 바뀜)', j_idem, on, ob)
     GATE(eng, 'B-6 bak_uid — 처음 옮길 때 한 번 IndexedDB kv.bak_uid = {at · 통별 옛 값 전부 · u · gone}(옛 값 status 14 가 들어 있다)', j_bak, on, ob)
     # 옛 기록 있는 기기 — 옛 판(바탕)으로 고정본을 받아 둔 기기를 새 판으로 연다(「열 때」 옮김 · 병합 뒤 옮김과 갈래가 다르다)
-    oo = OBS('olddev', sc_main, br, eng, 'NEW', prior_old=True, second=False); oob = OBS('olddev', sc_main, br, eng, 'BASE', prior_old=True, second=False)
-    GATE(eng, 'B-1 옛 기록 있는 기기(열 때 옮김) — 칸 수·h 합 = 고정본 · 번호 열쇠 통 열쇠 전부 uid(올린 몸통·메모리·IndexedDB)', lambda O: (j_B1_count(O)[0] and j_B1_keys(O)[0], {'셈': j_B1_count(O)[1], '열쇠': j_B1_keys(O)[1]}), oo, oob)
-    GATE(eng, 'B-1 옛 기록 있는 기기(열 때 옮김) — 불변 통 = 고정본 바이트', j_B1_stay, oo, oob)
-    GATE(eng, 'B-2 옛 기록 있는 기기(열 때 옮김) — gpt 닻 · status 63칸 h · 도장 그대로', lambda O: (j_B2_gpt(O)[0] and j_B2_h(O)[0], {'gpt': j_B2_gpt(O)[1], 'status·도장': j_B2_h(O)[1]}), oo, oob)
-    GATE(eng, 'B-2 옛 기록 있는 기기(열 때 옮김) — 옛 칸 묘비(지금 시각) · 번호 묘비 비춤 · 늘어난 묘비 0 · 옛 도장 안 남음', j_B2_tomb, oo, oob)
-    GATE(eng, 'B-6 옛 기록 있는 기기(열 때 옮김) — bak_uid 한 번 찍힘 = 옮기기 전 옛 값(번호 열쇠) 사본', j_bak, oo, oob)
+    if QC.GATE:   # 옛 판 기기 흉내(바탕 앱 4754b1d 로 먼저 받아 둠 = 바탕 띄움) — uid 옮김 판에만 뜻 · regress 끔(관문만)
+        oo = OBS('olddev', sc_main, br, eng, 'NEW', prior_old=True, second=False); oob = OBS('olddev', sc_main, br, eng, 'BASE', prior_old=True, second=False)
+        GATE(eng, 'B-1 옛 기록 있는 기기(열 때 옮김) — 칸 수·h 합 = 고정본 · 번호 열쇠 통 열쇠 전부 uid(올린 몸통·메모리·IndexedDB)', lambda O: (j_B1_count(O)[0] and j_B1_keys(O)[0], {'셈': j_B1_count(O)[1], '열쇠': j_B1_keys(O)[1]}), oo, oob)
+        GATE(eng, 'B-1 옛 기록 있는 기기(열 때 옮김) — 불변 통 = 고정본 바이트', j_B1_stay, oo, oob)
+        GATE(eng, 'B-2 옛 기록 있는 기기(열 때 옮김) — gpt 닻 · status 63칸 h · 도장 그대로', lambda O: (j_B2_gpt(O)[0] and j_B2_h(O)[0], {'gpt': j_B2_gpt(O)[1], 'status·도장': j_B2_h(O)[1]}), oo, oob)
+        GATE(eng, 'B-2 옛 기록 있는 기기(열 때 옮김) — 옛 칸 묘비(지금 시각) · 번호 묘비 비춤 · 늘어난 묘비 0 · 옛 도장 안 남음', j_B2_tomb, oo, oob)
+        GATE(eng, 'B-6 옛 기록 있는 기기(열 때 옮김) — bak_uid 한 번 찍힘 = 옮기기 전 옛 값(번호 열쇠) 사본', j_bak, oo, oob)
     # 합성 기록 — 값 속 번호 · 나머지 통
     sn = OBS('syn', sc_syn, br, eng, 'NEW'); sb = OBS('syn', sc_syn, br, eng, 'BASE')
     GATE(eng, 'B-1 합성 기록 — 번호 열쇠 통(note·qtype·conc·twin·ansfix)에 칸을 더해 먹임: 열쇠 uid · 값 속 번호(twin)도 uid · 도장 그대로 · 옛 칸 묘비 · 번호 아닌 열쇠(omrpos「def」)는 그대로', j_syn_mig, sn, sb)
@@ -1577,8 +1649,9 @@ def run_B(br, eng):
         return not diff and not dd and len(a) > 0 and len(O['scr1']['rows']) == len(a) + 1, {'목록 줄 수': [len(a), len(O['scr1']['rows'])], '기록이 따라가지 않은 줄(전수)': diff[:4], '수': len(diff), '서랍 어긋남': dd[:3]}
     GATE(eng, 'B-4 문항 순서 — 가짜 문항을 끼워도 모든 문항(%d줄)의 마크·회독 수·Claude 태그·🃏·근거 칩이 같은 uid 에 붙어 있다' % len(od.get('scr0', {}).get('rows', {})) if 'scr0' in od else 'B-4 순서', j_B4c, od, odb)
     # B-5
-    mx = OBS('mix', sc_mix, br, eng, 'NEW'); mxb = OBS('mix', sc_mix, br, eng, 'BASE')
-    GATE(eng, 'B-5 옛 판 기기 섞기 — A(새 판)가 옮기고 올림 → B(옛 판)가 옛 로컬로 status|84 를 고쳐 올림 → A 가 다시 병합: status|G03-40-05 = B 의 고친 값(도장이 늦어서) · 번호 칸 다시 0 · 반대 차례(B 먼저)도 같은 결과', j_mix, mx, mxb)
+    if QC.GATE:   # 옛 판 기기 섞기(기기 B = 바탕 앱 4754b1d) — uid 옮김 판에만 뜻 · regress 끔(관문만)
+        mx = OBS('mix', sc_mix, br, eng, 'NEW'); mxb = OBS('mix', sc_mix, br, eng, 'BASE')
+        GATE(eng, 'B-5 옛 판 기기 섞기 — A(새 판)가 옮기고 올림 → B(옛 판)가 옛 로컬로 status|84 를 고쳐 올림 → A 가 다시 병합: status|G03-40-05 = B 의 고친 값(도장이 늦어서) · 번호 칸 다시 0 · 반대 차례(B 먼저)도 같은 결과', j_mix, mx, mxb)
     wr = OBS('writes', sc_writes, br, eng, 'NEW'); wrb = OBS('writes', sc_writes, br, eng, 'BASE')
     GATE(eng, 'B-5 새 판은 번호 열쇠를 쓰지 않는다 — 마크(O)·코멘트·Claude 풀이를 진짜 눌러 저장한 뒤 올린 몸통·IndexedDB kv 열쇠 = uid · ink 통 번호 열쇠 0 · 콘솔 오류 0', j_writes, wr, wrb)
     # B-6 생물 · 물리
@@ -1591,8 +1664,14 @@ def run_B(br, eng):
 
 def run_E(br, eng):
     en = OBS('E', sc_E, br, eng, 'NEW'); eb = OBS('E', sc_E, br, eng, 'BASE')
+    if QC.REGRESS:   # regress — 바탕 관찰 없음(아래 'wins' in eb 가드가 바탕 칸을 — 로)
+        eb = {}
     if 'wins' not in en:
         R(eng, 'E-1 창 — 시나리오가 안 돌았다', False, None, en.get('__err'))
+        return
+    if QC.SMOKE:   # smoke — E-1 창 제목(첫 uid 하나)만
+        for uid in list(MATS)[:1]:
+            GATE(eng, 'E-1 창 %s — 제목 = 「%s」(C-1 표 · 「번호」 글자 0)' % (uid, '%s Claude · %s' % (uid, TITLE_END[uid])), lambda O, u=uid: j_E1_title(O, u), en, None)
         return
     for uid in MATS:
         GATE(eng, 'E-1 창 %s — 제목 = 「%s」(C-1 표 · 「번호」 글자 0)' % (uid, '%s Claude · %s' % (uid, TITLE_END[uid])), lambda O, u=uid: j_E1_title(O, u), en, eb if 'wins' in eb else None)
@@ -1603,8 +1682,9 @@ def run_E(br, eng):
     for uid in MATS:
         GATE(eng, 'E-2 읽기 판 %s — h3.gph 5(①~⑤ 차례 · ⑥ 0 · 재료 절 이름과 같음) · 첫 p.gpp 가 <b>Q 로 시작 · QA 줄 본문에 0 · table.gptb 1 · script 0 · 글머리·표·굵게 셈 = 재료 · 본문 줄 전부 보임' % uid, lambda O, u=uid: j_E2(O, u), en, eb if 'wins' in eb else None)
     GATE(eng, 'E-3 기기 둘 — 빈 기기: 동기화 + 옮김 뒤 올린 gpt[uid] = 재료 글자 전수(%d·%d·%d·%d자) · 번호 gpt 칸 0 · 재료 도장 그대로' % tuple(MATS[u][1] for u in MATS), j_E3, en, eb if 'wins' in eb else None)
-    eo = OBS('Eold', sc_E_old, br, eng, 'NEW'); ebo = OBS('Eold', sc_E_old, br, eng, 'BASE')
-    GATE(eng, 'E-3 기기 둘 — 옛 기록 있는 기기(옛 판으로 고정본을 받아 둠 → 새 판): 옛 글(번호 칸)이 새 글을 못 이긴다 · gpt[uid] = 재료 · 번호 칸 0', j_E3_old, eo, ebo)
+    if QC.GATE:   # 옛 기록 있는 기기(바탕 앱 4754b1d 로 먼저 받아 둠 = 바탕 띄움) — uid 옮김 판에만 뜻 · regress 끔(관문만)
+        eo = OBS('Eold', sc_E_old, br, eng, 'NEW'); ebo = OBS('Eold', sc_E_old, br, eng, 'BASE')
+        GATE(eng, 'E-3 기기 둘 — 옛 기록 있는 기기(옛 판으로 고정본을 받아 둠 → 새 판): 옛 글(번호 칸)이 새 글을 못 이긴다 · gpt[uid] = 재료 · 번호 칸 0', j_E3_old, eo, ebo)
     GATE(eng, 'E-4 목록 — .tag.gp 는 네 uid 줄에만', j_E4, en, eb if 'wins' in eb else None)
     ph = OBS('phys', sc_phys, br, eng, 'NEW'); phb = OBS('phys', sc_phys, br, eng, 'BASE')
     GATE2(eng, 'E-5 물리 무변 — 물리 #72 · #97 창 DOM = 바탕(제목 「72번 Claude 풀이」 · 「▶ 모션」 단추 줄 · phys_72.html 200)', j_E5, ph, phb)
@@ -1661,20 +1741,24 @@ def hetjassdae():
 def main():
     t0 = time.time()
     appN = app_at(GENIE0, REV) if REV else app_at(ROOT); statN = stat_at(GENIE0, REV) if REV else stat_at(ROOT)
-    appB = app_at(GENIE0, BASE_REV); statB = stat_at(GENIE0, BASE_REV)
+    if QC.GATE:   # 바탕(4754b1d) 앱 · 모션 풀기(git show · ls-tree) — 헛잣대 · 「= 바탕」 기댓값 재료
+        QC.sub('git:show-app'); QC.sub('git:ls-tree')
+        appB = app_at(GENIE0, BASE_REV); statB = stat_at(GENIE0, BASE_REV)
+    else:   # regress — 바탕 풀기 0 · 바탕 시나리오 0(OBS) · 「= 바탕」 칸 = 기준 스냅샷
+        appB, statB = b'', {}
     APPS['NEW'] = (appN, statN); APPS['BASE'] = (appB, statB)
     ident = lambda a, s: md5(a) + md5(json.dumps({k: md5(v) for k, v in sorted(s.items())}).encode())
     IDENT['NEW'] = ident(appN, statN); IDENT['BASE'] = ident(appB, statB)
     same = IDENT['NEW'] == IDENT['BASE']
     print('NEW = %s jagwa/index.html(LF %d B · md5 %s) · BASE = genie %s(LF %d B · md5 %s) · %s · 고정본 studyplandata %s · 엔진 %s · 묶음 %s' % (
         ('genie 커밋 ' + REV) if REV else ROOT, len(appN), md5(appN)[:8], BASE_REV, len(appB), md5(appB)[:8], '앱·모션 같음(바탕 그대로 돌림 — 헛잣대가 서는지가 곧 이 줄)' if same else '앱 다름', FIXC, ','.join(ENGS), ','.join(ONLY)), flush=True)
-    if 'B' in ONLY or 'E' in ONLY or 'H' in ONLY:
+    if ('B' in ONLY or 'E' in ONLY or 'H' in ONLY) and not QC.SMOKE:   # smoke — 정적 칸 건넘
         static_gates()
     with sync_playwright() as pw:
-        for eng in ENGS:
+        for eng in (ENGS if not QC.SMOKE else [e for e in ENGS if e == 'chromium'][:1]):   # smoke — chromium 한 판
             br = getattr(pw, eng).launch()
             try:
-                for g, fn in (('B', run_B), ('E', run_E), ('H', run_H)):
+                for g, fn in ((('B', run_B), ('E', run_E), ('H', run_H)) if not QC.SMOKE else (('B', run_B), ('E', run_E))):   # smoke — H 묶음 smoke 칸 없음
                     if g in ONLY:
                         print('── %s · %s' % (eng, g), flush=True)
                         try:
@@ -1684,7 +1768,8 @@ def main():
                             R(eng, '%s 묶음 멈춤' % g, False, None, repr(e)[:300] + ' @' + traceback.format_exc().strip().split('\n')[-3][:200])
             finally:
                 br.close()
-    hetjassdae()
+    if QC.GATE:   # 헛잣대 셈(B-7 · E-6 · H-5 — 바탕 칸이 FAIL 인가) — regress 는 바탕 칸이 없어 0
+        hetjassdae()
     for eng in ENGS + ['-']:
         c = {}
         for r in ROWS:

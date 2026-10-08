@@ -15,6 +15,8 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import hashlib, http.server, io, json, os, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 from playwright.sync_api import sync_playwright   # noqa: E402
@@ -48,176 +50,26 @@ def N(grp, name, detail=''):
     print('NOTE | %s · %s | %s' % (grp, name, d[:300]), flush=True)
 
 
-INIT = r"""
-(()=>{
-  try{localStorage.setItem('subj','__SUBJ__')}catch(e){}
-  try{localStorage.setItem('tt.cfg',JSON.stringify({token:'github_pat_TEST',person:'검산'}))}catch(e){}
-  window.__err=[];
-  window.addEventListener('error',e=>{window.__err.push((e.message||'')+' @'+(e.lineno||''))});
-  window.addEventListener('unhandledrejection',e=>{window.__err.push('reject: '+((e.reason&&e.reason.message)||e.reason))});
-  const nf=window.fetch.bind(window);
-  window.fetch=async function(url,opt){
-    opt=opt||{};const u=String(url);
-    const m=/api\.github\.com\/repos\/([^\/]+\/[^\/]+)\/contents\/([^?]+)/.exec(u);
-    if(!m){ if(/^https?:/i.test(u)&&u.indexOf(location.origin)!==0&&!/cdnjs|jsdelivr|googleapis|gstatic/.test(u))
-              return {ok:false,status:599,json:async()=>({}),text:async()=>'',arrayBuffer:async()=>new ArrayBuffer(0)};
-            return nf(url,opt) }
-    const path=decodeURIComponent(m[2]);
-    if((opt.method||'GET')==='PUT')return {ok:true,status:200,json:async()=>({content:{sha:'x'}}),text:async()=>''};
-    const r=await nf('/data/'+encodeURI(path),{cache:'no-store'});
-    if(!r.ok)return {ok:false,status:404,json:async()=>({}),text:async()=>'',arrayBuffer:async()=>new ArrayBuffer(0)};
-    const acc=(opt.headers||{}).Accept||'';
-    if(acc.indexOf('raw')>=0)return r;
-    return {ok:true,status:200,json:async()=>({sha:r.headers.get('X-Sha')||'sha'}),text:async()=>JSON.stringify({sha:r.headers.get('X-Sha')||'sha'})};
-  };
-})();
-"""
-
-JS = r"""
-window.__P={
- tx:e=>e?String(e.textContent||'').replace(/\s+/g,' ').trim():'',
- row:u=>DATA.find(x=>x[F.CODE]===u),
- async open(u){const r=__P.row(u);if(!r)return false;
-   try{FL.q=u;FL.unit='';FL.bigs=[];FL.subs=[];FL.round='';FL.mark='';if(CUR.KINDS)FL.types=new Set(['G','T','E']);else FL.past=isC(r)?'p':'';draw()}catch(e){}
-   await new Promise(res=>setTimeout(res,250));try{await openView(r[F.NO])}catch(e){}await new Promise(res=>setTimeout(res,900));return !!document.getElementById('card')},
- async ans(){const d=document.getElementById('cDet');if(d&&!d.open){d.open=true;await new Promise(res=>setTimeout(res,400))}return !!(d&&d.open)},
- tool(m){try{if(m==='pen')setTool('pen','#16181B',document.querySelector('[data-pen="#16181B"]'));else setTool('view')}catch(e){return 'ERR '+e}
-   return {mode:TOOL.mode,penon:document.getElementById('card').classList.contains('penon')}},
- st(){const w=document.getElementById('cardwrap'),c=document.getElementById('card');const sh=document.getElementById('tfxSheet');
-   return {top:w?Math.round(w.scrollTop):null,sh:w?w.scrollHeight:null,ch:w?w.clientHeight:null,strokes:(QINK&&QINK.s||[]).length,
-     sheet:sh?__P.tx(sh.querySelector('h2')):null,pick:[...c.querySelectorAll('.choices button.pick')].map(b=>+b.dataset.c),
-     ox:[...c.querySelectorAll('.bogi .row .ox button.on')].map(b=>b.closest('.row').dataset.k+b.dataset.v),
-     vox:[...c.querySelectorAll('.vox.on')].map(b=>b.dataset.vmark),det:!!(document.getElementById('cDet')||{}).open,
-     gg:__P.tx(c.querySelector('.ggwrap')).length,mode:TOOL.mode}},
- top(v){const w=document.getElementById('cardwrap');w.scrollTop=v;return Math.round(w.scrollTop)},
- closeSheet(){const s=document.getElementById('tfxSheet');if(s)s.remove();return 1},
- /* 표적 자리 — 그 요소를 창 가운데로 굴린 뒤 안쪽 한 점(fx·fy) · 그 점의 맨 위 요소(덮개면 svg/path)와 덮개를 걷었을 때 밑 요소 */
- at(sel,fx,fy){const c=document.getElementById('card');const e=typeof sel==='string'?c.querySelector(sel):sel;if(!e)return null;
-   const w=document.getElementById('cardwrap');e.scrollIntoView({block:'center'});
-   const r=e.getBoundingClientRect(),x=Math.round(r.left+Math.min(r.width-4,Math.max(4,r.width*(fx==null?.3:fx)))),y=Math.round(r.top+Math.min(r.height-3,Math.max(3,r.height*(fy==null?.5:fy))));
-   const top=document.elementFromPoint(x,y);const ink=c.querySelector('#qink');let under=null;
-   if(ink){const k=ink.style.pointerEvents;ink.style.pointerEvents='none';under=document.elementFromPoint(x,y);ink.style.pointerEvents=k}
-   const nm=q=>q?(q.id?'#'+q.id:'')+(q.tagName||'').toLowerCase()+'.'+String(q.className&&q.className.baseVal!=null?q.className.baseVal:q.className||'').split(' ').join('.'):null;
-   return {x,y,top:nm(top),under:nm(under),inEl:!!under&&(under===e||e.contains(under)),w:Math.round(r.width),h:Math.round(r.height),scroll:Math.round(w.scrollTop)}},
- strokeAt(){const p=[...document.querySelectorAll('#qink path[data-j]')].pop();if(!p)return null;const b=p.getBoundingClientRect();return {x:Math.round(b.left+b.width/2),y:Math.round(b.top+b.height/2)}},
- wrapMid(){const w=document.getElementById('cardwrap').getBoundingClientRect();return {x:Math.round(w.left+w.width*.5),y:Math.round(w.top+w.height*.62)}},
- physDom(){const v=document.getElementById('view');return v?__P.tx(v).replace(/\d+'\d{2}"/g,'').slice(0,4000):''},
- sheets(){return document.querySelectorAll('#tfxSheet').length},
- errs(){return (window.__err||[]).slice(0,10)}
-};
-"""
+P = JG.P   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
 
 
-def serve(app_text, subj, tag):
-    outdir = os.path.join(WORK, 'srv_' + tag); os.makedirs(outdir, exist_ok=True)
-    io.open(os.path.join(outdir, 'app.html'), 'w', encoding='utf-8', newline='').write(app_text)
-    spd = os.path.join(SPDROOT, subj)
-
-    class H(http.server.SimpleHTTPRequestHandler):
-        def __init__(self, *a, **k):
-            super().__init__(*a, directory=outdir, **k)
-
-        def log_message(self, *a, **k):
-            pass
-
-        def do_GET(self):
-            p = urllib.parse.unquote(self.path.split('?')[0])
-            if p.startswith('/data/'):
-                rel = p[6:]
-                if not rel.startswith(subj + '/'):
-                    self.send_response(404); self.end_headers(); return
-                f = os.path.join(spd, rel[len(subj) + 1:].replace('/', os.sep))
-                if not os.path.isfile(f):
-                    self.send_response(404); self.end_headers(); return
-                b = open(f, 'rb').read()
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/octet-stream')
-                self.send_header('Content-Length', str(len(b)))
-                self.send_header('X-Sha', hashlib.sha1(b).hexdigest())
-                self.end_headers(); self.wfile.write(b); return
-            return super().do_GET()
-
-    srv = socketserver.ThreadingTCPServer(('127.0.0.1', 0), H)
-    srv.daemon_threads = True
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
-    return srv, srv.server_address[1]
-
-
-class P:
-    """한 판(BASE·NEW) · 한 과목 — 1180×700(아이패드 가로 · 사파리 막대 뺀 높이쯤 — 지학 G48-03 카드가 820 창에선 76px 밖에 안 굴렀다) · 터치 켬"""
-    def __init__(self, br, app, subj, tag):
-        self.srv, port = serve(app, subj, tag)
-        self.ctx = br.new_context(viewport={'width': 1180, 'height': 700}, device_scale_factor=1, has_touch=True)
-        OKNET = ('http://127.0.0.1', 'https://cdnjs.cloudflare.com/', 'https://cdn.jsdelivr.net/', 'https://fonts.googleapis.com/', 'https://fonts.gstatic.com/')
-        self.ctx.route('**/*', lambda rt: rt.continue_() if rt.request.url.startswith(OKNET) else rt.abort())   # 앱 머리 pdf.js·pdf-lib·KaTeX(CDN)만 연다 · 그 밖 網은 막는다
-        self.ctx.add_init_script(INIT.replace('__SUBJ__', subj))
-        self.pg = self.ctx.new_page()
-        self.pg.set_default_timeout(120000)
-        self.errs = []
-        self.pg.on('pageerror', lambda e: self.errs.append('page: ' + str(e)[:200]))
-        self.pg.goto('http://127.0.0.1:%d/app.html' % port, wait_until='load')
-        self.pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>0', timeout=90000)
-        self.pg.wait_for_timeout(2500)
-        self.pg.evaluate(JS)
-        self.cdp = self.ctx.new_cdp_session(self.pg)
-
-    def ev(self, expr, arg=None):
-        return self.pg.evaluate(expr, arg) if arg is not None else self.pg.evaluate(expr)
-
-    def wait(self, ms):
-        self.pg.wait_for_timeout(ms)
-
-    # ── 손가락(CDP 진짜 터치 · 반지름) ──
-    def _t(self, ty, pts, r):
-        self.cdp.send('Input.dispatchTouchEvent', {'type': ty, 'touchPoints': [{'x': x, 'y': y, 'radiusX': r, 'radiusY': r, 'id': 1} for (x, y) in pts]})
-
-    def fdrag(self, x, y, dx, dy, r=22, n=12):
-        self._t('touchStart', [(x, y)], r)
-        for i in range(1, n + 1):
-            self._t('touchMove', [(x + dx * i / n, y + dy * i / n)], r); self.wait(16)
-        for _ in range(3):   # 끝에서 멈춘 뒤 뗀다(움직이며 떼면 크롬이 다음 톡을 삼킨다)
-            self._t('touchMove', [(x + dx, y + dy)], r); self.wait(30)
-        self._t('touchEnd', [], r); self.wait(250)
-
-    def fhold(self, x, y, ms, r=22):
-        self._t('touchStart', [(x, y)], r); self.wait(ms)
-        self._t('touchEnd', [], r); self.wait(300)
-
-    # ── 펜(CDP 마우스 이벤트 pointerType pen) ──
-    def _p(self, ty, x, y, btn='left', buttons=1):
-        self.cdp.send('Input.dispatchMouseEvent', {'type': ty, 'x': x, 'y': y, 'button': btn, 'buttons': buttons, 'clickCount': 1 if ty != 'mouseMoved' else 0,
-                                                   'pointerType': 'pen', 'force': 0.5})
-
-    def pdrag(self, x0, y0, x1, y1, n=12):
-        self._p('mouseMoved', x0, y0, 'none', 0); self._p('mousePressed', x0, y0)
-        for i in range(1, n + 1):
-            self._p('mouseMoved', x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n); self.wait(16)
-        self._p('mouseReleased', x1, y1, 'left', 0); self.wait(350)
-
-    def phold(self, x, y, ms):
-        self._p('mouseMoved', x, y, 'none', 0); self._p('mousePressed', x, y)
-        for k in range(int(ms / 50)):   # 2px 안에서 떨린다(사람 손)
-            self._p('mouseMoved', x + (1 if k % 2 else 0), y + (1 if k % 3 == 0 else 0)); self.wait(50)
-        self._p('mouseReleased', x, y, 'left', 0); self.wait(400)
-
-    def ptap(self, x, y):
-        self._p('mouseMoved', x, y, 'none', 0); self._p('mousePressed', x, y); self.wait(40)
-        self._p('mouseReleased', x, y, 'left', 0); self.wait(450)
-
-    def close(self):
-        try:
-            self.ctx.close()
-        except Exception:
-            pass
-        try:
-            self.srv.shutdown()
-        except Exception:
-            pass
+# ── qa_slim2(2026-10-08) regress 도우미 — 이름이 `_rg` 로 시작 = gate 에서 안 쓰는 갈래(gate 에서 도는 줄은 원래 글 그대로)
+def _rg_keep_base(keep):
+    """regress — 기준 칸 4b · 6m · 7 의 바탕 값 = 앞 인도판 NEW 값 스냅샷(BASE scen 을 안 돌린다) — keep 의 BASE 자리를 스냅샷으로 채워 아래 비교(eff · == · move)를 그대로 탄다"""
+    for subj in ('bio', 'earth'):
+        for k in ('press', 'mouse'):
+            d = keep.get(k) or {}
+            if 'NEW' + subj in d:
+                d['BASE' + subj] = QC.base('%s.%s' % (k, subj), d['NEW' + subj])
+    ph = keep.get('phys') or {}
+    if 'NEW' in ph:
+        ph['BASE'] = QC.base('phys.7', ph['NEW'])
 
 
 def scen(br, app, tag, subj, keep):
     g = '%s %s' % (tag, subj)
     u = SAMPLE[subj]
+    QC.launch('base' if tag.startswith('BASE') else 'new')   # 셈(§B-4)
     p = P(br, app, subj, tag + subj)
 
     def fresh(tool='view'):
@@ -232,7 +84,8 @@ def scen(br, app, tag, subj, keep):
     try:
         ok = fresh()
         s0 = p.ev("()=>__P.st()")
-        T(g, '0 %s 문제 창 · 정답·해설 펼침 · 창보다 150px 넘게 길다(굴림 잣대가 설 만큼)' % u, ok and s0['det'] and s0['sh'] > s0['ch'] + 150, s0)
+        if QC.want('0'):
+            T(g, '0 %s 문제 창 · 정답·해설 펼침 · 창보다 150px 넘게 길다(굴림 잣대가 설 만큼)' % u, ok and s0['det'] and s0['sh'] > s0['ch'] + 150, s0)
         # ── 1 손가락 굴림 · 반지름 22 · 1 · 보기 도구 · 펜 도구 ──
         got = {}
         for tool in ('view', 'pen'):
@@ -244,8 +97,14 @@ def scen(br, app, tag, subj, keep):
                 if t['sheet']:
                     got['창 %s r%d' % (tool, r)] = t['sheet']; p.ev("()=>__P.closeSheet()")
         T(g, '1 손가락 위로 225px(반지름 22 · 아이패드 손가락) → 굴림 ≥ 150 — 보기·펜 도구 둘 다(헛잣대: 바탕 0)', got['view r22'] >= 150 and got['pen r22'] >= 150, got)
-        T(g, '1b 반지름 1 도 같다(≥ 150)', got['view r1'] >= 150 and got['pen r1'] >= 150, got)
-        T(g, '1c 손가락으로 끄는 동안 글자 고치기 창이 안 뜬다(길게 누르기 시계는 움직이면 꺼진다)', not any(k.startswith('창') for k in got), got)
+        if QC.want('1b'):
+            T(g, '1b 반지름 1 도 같다(≥ 150)', got['view r1'] >= 150 and got['pen r1'] >= 150, got)
+        if QC.want('1c'):
+            T(g, '1c 손가락으로 끄는 동안 글자 고치기 창이 안 뜬다(길게 누르기 시계는 움직이면 꺼진다)', not any(k.startswith('창') for k in got), got)
+        if QC.SMOKE:   # smoke — 1(손가락 굴림) + Z(페이지 오류 0)만
+            er = p.errs + (p.ev("()=>__P.errs()") or [])
+            T(g, 'Z 페이지 오류 0', not er, er[:5])
+            return
         # ── 2 손바닥(ⓑ 그대로) ──
         fresh('pen')
         q = p.ev("()=>__P.at('.q',.3,.5)")
@@ -371,6 +230,7 @@ def scen(br, app, tag, subj, keep):
 
 def scen_phys(br, app, tag, keep):
     g = '%s phys' % tag
+    QC.launch('base' if tag.startswith('BASE') else 'new')   # 셈(§B-4)
     p = P(br, app, 'phys', tag + 'phys')
     try:
         no = p.ev("()=>DATA.find(r=>r[F.FILE]&&r[F.FILE]!=='IMG'||true)[F.NO]")
@@ -418,21 +278,29 @@ def main():
     t0 = time.time()
     new = io.open(NEWF, encoding='utf-8', newline='').read()
     newmd5 = hashlib.md5(new.replace('\r\n', '\n').encode('utf-8')).hexdigest()
-    base = io.open(BASEF, encoding='utf-8', newline='').read() if BASEF else subprocess.run(['git', '-C', GENIE, 'show', BASE_REV + ':jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
-    bmd5 = hashlib.md5(base.replace('\r\n', '\n').encode('utf-8')).hexdigest()
-    T('땅값', 'BASE = bio ocrfix 인도 판(72a65b3 · b988c9c8)', bmd5 == BASE_MD5, bmd5)
+    if QC.GATE:
+        QC.sub('git:show-app')
+        base = io.open(BASEF, encoding='utf-8', newline='').read() if BASEF else subprocess.run(['git', '-C', GENIE, 'show', BASE_REV + ':jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
+        bmd5 = hashlib.md5(base.replace('\r\n', '\n').encode('utf-8')).hexdigest()
+        T('땅값', 'BASE = bio ocrfix 인도 판(72a65b3 · b988c9c8)', bmd5 == BASE_MD5, bmd5)
+    else:   # regress · smoke — 바탕(72a65b3) 앱 풀기 0 · 땅값(바탕 md5) 칸 = 관문만
+        base, bmd5 = None, '(regress — 바탕 안 띄움)'
     run = lambda x: not ONLY or x in ONLY
     keep = {}
     with sync_playwright() as pw:
         br = pw.chromium.launch()
         for subj in ('bio', 'earth'):
             if run(subj):
-                scen(br, base, 'BASE', subj, keep)
+                if QC.GATE:   # BASE scen = 헛잣대 줄(관문만)
+                    scen(br, base, 'BASE', subj, keep)
                 scen(br, new, 'NEW', subj, keep)
-        if run('phys'):
-            scen_phys(br, base, 'BASE', keep)
+        if run('phys') and not QC.SMOKE:   # smoke — 물리 안 돎(smoke 칸 = 지학 · 생물 손가락 굴림)
+            if QC.GATE:
+                scen_phys(br, base, 'BASE', keep)
             scen_phys(br, new, 'NEW', keep)
         br.close()
+    if QC.REGRESS:   # regress — 4b · 6m · 7 바탕 값 = 앞 인도판 NEW 값 스냅샷
+        _rg_keep_base(keep)
     for subj in ('bio', 'earth'):
         a, b = (keep.get('press') or {}).get('BASE' + subj), (keep.get('press') or {}).get('NEW' + subj)
         if a is not None and b is not None:

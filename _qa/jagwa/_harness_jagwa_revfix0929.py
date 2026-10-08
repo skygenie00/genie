@@ -12,28 +12,61 @@ r"""_task_jagwa_revfix0929 §B 관문 — 자과 검수 결함 고침(jagwa_uid 
   --vendor = cdnjs.cloudflare.com/ajax/libs/… 사본 폴더(줄 때만 · cdnjs 가 막힌 곳) · 안 주면 cdnjs 그대로
   ⚠ 자과앱 픽셀 게이트 없음(CLAUDE.md) — DOM 글자 · 자리 · 개수 · 실제 마우스·손가락 누름
 """
+import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
+_d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
+while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
+    _d_r = _os_r.path.dirname(_d_r)
+_sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
+import tempfile   # noqa: E402 — 옛 남 하네스 속성(HU.tempfile · B.WORK)을 갈음
 import io, json, os, re, sys, time, copy
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-_ARGV = sys.argv; sys.argv = [sys.argv[0]]   # 두 하네스는 들어올 때 sys.argv 를 읽는다 — 이 파일 인자를 안 보이게
-import _harness_jagwa_uid as HU      # noqa: E402  Srv · INIT · JS(__J) · git
-import _harness_jagwa_search as HS   # noqa: E402  SJS(__S) · typeq · st · PHQ_JS
-sys.argv = _ARGV
+
+# ← jagwa/_harness_jagwa_search.py:77-87 typeq 사본(글자 그대로 · 갈래 ④ · JG 밖 — 띄우기가 아니라 옮기지 않음)
+def typeq(dv, text, enter=False):
+    loc = dv.pg.locator('#q')
+    if not loc.is_visible():
+        return
+    loc.click()
+    loc.fill('')
+    if text:
+        dv.pg.keyboard.type(text, delay=5)
+    if enter:
+        dv.pg.keyboard.press('Enter')
+    dv.pg.wait_for_timeout(250)
+
+# ← jagwa/_harness_jagwa_search.py:90-91 st 사본(글자 그대로 · 갈래 ④ · JG 밖 — 띄우기가 아니라 옮기지 않음)
+def st(dv):
+    return dv.ev("()=>__S.st()")
+
+# ← jagwa/_harness_jagwa_search.py:297-306 PHQ_JS 사본(글자 그대로 · 갈래 ③ · JG 밖 — 띄우기가 아니라 옮기지 않음)
+PHQ_JS = r"""()=>{const out=[];const pick=(a)=>{for(const x of a){const v=String(x||'').trim();if(v.replace(/\s+/g,'').length>=2&&!out.includes(v)){out.push(v);return}}};
+  const D=DATA;
+  pick([D[0][F.CODE]]);pick([String(D[40][F.CODE]).slice(0,4)]);pick([String(D[200][F.CODE]).toLowerCase()]);pick([D[300][F.CODE]]);
+  pick([D[10][F.SUB]]);pick([D[120][F.SUB]]);pick([D[400][F.SUB]]);
+  [5,77,150,260,333,480].forEach(i=>{const b=String(D[i%D.length][F.BODY]||'').replace(/\s+/g,' ');pick([b.slice(10,15),b.slice(20,24)])});
+  pick(['속력']);pick(['전기장']);pick(['15']);pick(['101']);
+  const t=D.map(r=>typeOf(r[F.NO])).find(a=>a&&a.length);if(t)pick([t[0]]);
+  const g=D.map(r=>String(gptOf(r[F.NO])||'')).find(x=>x.length>8);if(g)pick([g.slice(2,7)]);
+  pick([String(D[99][F.VLT]||'')]);pick(['가속도']);pick(['운동량']);
+  return out.slice(0,20)}"""
 
 
 def ARG(k, d=None):
     return sys.argv[sys.argv.index(k) + 1] if k in sys.argv else d
 
 
-GENIE = HU.GENIE; SPD = HU.SPD
+GENIE = _roots.genie(); SPD = _roots.spd()
 NEWF = ARG('--new', os.path.join(GENIE, 'jagwa', 'index.html'))
 BASEF = ARG('--base', 'HEAD')
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
 ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
 VENDOR = ARG('--vendor')
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jagwa_revfix0929_result.txt'))
-WORK = os.path.join(HU.tempfile.gettempdir(), 'h_jagwa_rf0929')
+WORK = os.path.join(tempfile.gettempdir(), 'h_jagwa_rf0929')
 os.makedirs(WORK, exist_ok=True)
 KEYS = ['bogi', 'unit', 'bpg', 'crop', 'tfix', 'gg', 'ggref', 'pick']
 ROWS = []   # (관문, 엔진, 이름, NEW ok, BASE ok | None, 잰 값)
@@ -49,6 +82,38 @@ def R(g, eng, name, okn, okb, val):
 
 def want(g):
     return not ONLY or g in ONLY
+
+
+# ── qa_slim2(2026-10-08) regress 도우미 — 이름이 `_rg` · `_RG` 로 시작 = gate 에서 안 쓰는 갈래(gate 에서 도는 줄은 원래 글 그대로)
+_RG_BOOT = "()=>__J.ready()&&typeof recBusy!=='undefined'&&!recBusy&&(((window.__PUTS||[]).length>0)||!!recErr)"   # 표지 = 앱 recBoot() 의 첫 syncRecords 끝(recBusy 거짓 · PUT 1 번 이상 또는 recErr) · INIT_HU 가 토큰을 넣어 부팅마다 맞춤 · PUT 을 한다
+
+
+def _rg_cid(eng, *a):
+    """기준 칸 id — 엔진 · 기기 · 과목 · 말을 붙여 한 실행 안에서 겹치지 않게(QC.base)"""
+    return '@'.join([a[0], eng]) + ('/' + '/'.join(str(x) for x in a[1:]) if len(a) > 1 else '')
+
+
+def _rg_pv(x):
+    """b3 물리 한 말의 결과를 스냅샷 꼴로 — 줄 HTML · 나머지 글은 md5(12) · 「상위 100건」 꼬리는 남겨 pv_same 이 그대로 맞댄다"""
+    import hashlib
+    if not isinstance(x, dict):
+        return x
+    h = lambda s: hashlib.md5(str(s).encode('utf-8')).hexdigest()[:12]
+    rest = x.get('rest') or ''
+    return {'nos': list(x.get('nos') or []), 'only': list(x.get('only') or []), 'kind': list(x.get('kind') or []),
+            'rows': [[n, h(t)] for n, t in (x.get('rows') or [])], 'rest': h(rest.replace(CAPNOTE, '')) + (CAPNOTE if CAPNOTE in rest else ''),
+            'tt': list(x.get('tt') or [])}
+
+
+def _rg_ren_sig(v):
+    """b8 바탕 스냅샷(앞 인도판 NEW 훑기)도 새 판과 같은 이름 맞춤(_ren)으로 — sweep_cmp 는 새 판 쪽만 _ren 을 건다"""
+    if not isinstance(v, dict):
+        return v
+    o = dict(v)
+    for cat in ('over', 'clip', 'cover', 'small'):
+        if isinstance(o.get(cat), list):
+            o[cat] = [_ren(s) for s in o[cat]]
+    return o
 
 
 # ══════════ 기기 ══════════
@@ -68,7 +133,7 @@ def _route(rt):
 
 def _init9():
     """HU.INIT + PUT 시각(performance.now) + console.info 자취(__LOG) — 옮김(jgMigrate 끝 줄)과 PUT 의 차례를 잰다"""
-    s = HU.INIT
+    s = JG.INIT_HU
     a = "window.__err=[];window.__PUTS=[];"
     b = "window.__PUTS.push({path,text:"
     assert s.count(a) == 1 and s.count(b) == 1
@@ -82,7 +147,7 @@ INIT9 = _init9()
 class Dev:
     """기기 하나(문맥 하나) — load(앱, 데이터 폴더, 과목, 원격) 로 같은 출처에서 다시 연다 · vp = 창 크기 · touch 폰·iPad"""
     def __init__(self, br, eng, vp=None, mobile=False):
-        self.eng = eng; self.S = HU.Srv()
+        self.eng = eng; self.S = JG.Srv()
         self.vp = vp or {'width': 1553, 'height': 900}
         self.phone = self.vp['width'] <= 480
         self.ctx = br.new_context(viewport=self.vp, device_scale_factor=1, has_touch=True, is_mobile=bool(mobile and eng == 'chromium'))
@@ -90,6 +155,7 @@ class Dev:
         self.pg = None; self.errs = []; self.cdp = None
 
     def load(self, app, spd, subj, rec=None, wait=2500):
+        QC.launch('base' if (APPS.get('BASE') is not None and app is APPS.get('BASE')) else 'new')   # 셈(§B-4) — regress 는 바탕 앱을 안 띄운다
         self.S.app = app; self.S.spd = spd; self.S.rec = dict(rec or {}); self.S.static = {}
         if self.pg:
             self.pg.close()
@@ -98,12 +164,15 @@ class Dev:
         self.pg.on('pageerror', lambda e: self.errs.append('page: ' + str(e)[:200]))
         self.pg.goto('http://127.0.0.1:%d/app.html' % self.S.port, wait_until='load')
         self.pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>0', timeout=120000)
-        self.pg.evaluate(HU.JS); self.pg.evaluate(HS.SJS); self.pg.evaluate(J9)
+        self.pg.evaluate(JG.JS_HU); self.pg.evaluate(JG.SJS); self.pg.evaluate(J9)
         for _ in range(120):
             if self.ev("()=>__J.ready()"):
                 break
             self.pg.wait_for_timeout(250)
-        self.pg.wait_for_timeout(wait)
+        if QC.GATE:
+            self.pg.wait_for_timeout(wait)
+        else:   # regress — 고정 2.5 초 대신 표지(첫 기록 맞춤 끝) · 상한 = 같은 2.5 초(못 만나면 gate 와 같은 시간)
+            QC.until(self.pg, _RG_BOOT, wait, 'revfix0929 부팅 뒤 첫 syncRecords 끝(recBusy 거짓 · PUT 1+ 또는 recErr)')
         self.cdp = self.ctx.new_cdp_session(self.pg) if self.eng == 'chromium' else None
         return self
 
@@ -163,13 +232,14 @@ def old_data():
     d = os.path.join(WORK, 'spd_old')
     if os.path.isfile(os.path.join(d, 'earth', '문항.json')) and os.path.isfile(os.path.join(d, 'bio', '문항.json')):
         return d
-    rev = HU.git(SPD, 'log', '--format=%h', '-1', '--grep=jagwa_uid', '--', 'earth/문항.json').decode().strip() or '4a01147'
+    QC.sub('git:show-data')   # 셈 — studyplandata 옛 데이터(jagwa_uid^) 풀기 · TEMP 에 없을 때만(앱 풀기 아님)
+    rev = JG.git_HU(SPD, 'log', '--format=%h', '-1', '--grep=jagwa_uid', '--', 'earth/문항.json').decode().strip() or '4a01147'
     for s in ('earth', 'bio'):
         os.makedirs(os.path.join(d, s), exist_ok=True)
-        for p in HU.git(SPD, 'ls-tree', '--name-only', rev + '^', s + '/').decode('utf-8').split('\n'):
+        for p in JG.git_HU(SPD, 'ls-tree', '--name-only', rev + '^', s + '/').decode('utf-8').split('\n'):
             p = p.strip().strip('"')
             if p.endswith('.json'):
-                open(os.path.join(d, p.replace('/', os.sep)), 'wb').write(HU.git(SPD, 'show', '%s^:%s' % (rev, p)))
+                open(os.path.join(d, p.replace('/', os.sep)), 'wb').write(JG.git_HU(SPD, 'show', '%s^:%s' % (rev, p)))
     return d
 
 
@@ -182,8 +252,9 @@ def rec_old():
 
 
 def rec_now():
+    QC.sub('git:show-data')   # 셈 — studyplandata origin/main 기록(데이터 · 앱 풀기 아님)
     try:
-        b = HU.git(SPD, 'show', 'origin/main:earth/기록.json')
+        b = JG.git_HU(SPD, 'show', 'origin/main:earth/기록.json')
         return b if b.strip().startswith(b'{') else None
     except Exception:
         return None
@@ -207,7 +278,7 @@ def keycount(body, O2N):
 def app_src(x):
     if os.path.isfile(x):
         return open(x, 'rb').read().replace(b'\r\n', b'\n')
-    return HU.git(GENIE, 'show', '%s:jagwa/index.html' % x)
+    return JG.git_HU(GENIE, 'show', '%s:jagwa/index.html' % x)
 
 
 # ══════════ B-1 · B-2 기록 옮김 ══════════
@@ -351,8 +422,8 @@ ROWJS = r"""()=>{const b=document.getElementById('esres');const rows=b?[...b.que
 
 
 def _sq(dv, w):
-    HS.typeq(dv, w)
-    s = HS.st(dv); x = dv.ev(ROWJS)
+    typeq(dv, w)
+    s = st(dv); x = dv.ev(ROWJS)
     return s, {'건': s['qcnt'], '줄': s['n'], '표시 없는 줄': len(x['none']), '⏎ 줄': x['nl'], '💬 본문': x['body'], '표시 없는 줄 보기': x['none'][:4]}
 
 
@@ -437,10 +508,10 @@ def b3p(br, eng, app):
     """물리 — 걸린 집합(ES_NOS) · 결과 상자 HTML 을 말마다(바탕과 견준다)"""
     dv = Dev(br, eng).load(app, SPD, 'phys', rec={})
     try:
-        Q = dv.ev(HS.PHQ_JS)
+        Q = dv.ev(PHQ_JS)
         res = {}
         for q in Q:
-            HS.typeq(dv, q)
+            typeq(dv, q)
             res[q] = dv.ev(PVJS, q)   # ★ physprev(10/2) — 걸린 집합 · 결과 줄을 번호마다(옛 [ES_NOS, innerHTML] 대신 · 맞대기는 pv_same)
         return res
     finally:
@@ -645,9 +716,9 @@ def sweep(br, eng, app):
                 if dv.ev("()=>{const s=document.getElementById('spec');return !!s&&!__R9.vis(s)}"):
                     dv.ev("()=>{const t=document.getElementById('hmTg');if(t)t.click()}"); dv.pg.wait_for_timeout(400)
                 out[(vn, subj, '히트맵')] = dv.ev(SWEEPJS, touch)
-                HS.typeq(dv, SW_Q[subj][0])
+                typeq(dv, SW_Q[subj][0])
                 out[(vn, subj, '검색 결과')] = dv.ev(SWEEPJS, touch)
-                HS.typeq(dv, '')
+                typeq(dv, '')
                 cd = SW_Q[subj][1]
                 no = dv.ev("c=>__R9.noOf(c)", cd) if cd else dv.ev("()=>DATA[0][F.NO]")
                 dv.ev("n=>__R9.open(n)", no)
@@ -699,14 +770,25 @@ GATES = [
 
 
 def main():
-    APPS['NEW'] = app_src(NEWF); APPS['BASE'] = app_src(BASEF)
+    if QC.SMOKE:   # smoke — 이 하네스엔 smoke 칸이 없다(A-0 처리표 · _task_qa_slim2) · 앱을 띄우기 전에 끝낸다(결과 파일에도 같은 줄)
+        print('INFO | smoke 칸 없음')
+        with io.open(OUTF, 'a', encoding='utf-8') as f:
+            f.write('\n==== %s · jagwa_revfix0929 · smoke ====\nINFO | smoke 칸 없음\n' % time.strftime('%Y-%m-%d %H:%M'))
+        return
+    APPS['NEW'] = app_src(NEWF)
+    if QC.GATE:
+        QC.sub('git:show-app')
+        APPS['BASE'] = app_src(BASEF)
     base_rev = BASEF if not os.path.isfile(BASEF) else os.path.basename(BASEF)
-    try:
-        base_rev = HU.git(GENIE, 'rev-parse', '--short', BASEF).decode().strip() or base_rev
-    except Exception:
-        pass
+    if QC.GATE:
+        try:
+            base_rev = JG.git_HU(GENIE, 'rev-parse', '--short', BASEF).decode().strip() or base_rev
+        except Exception:
+            pass
+    else:
+        base_rev = '(regress — 바탕 안 띄움 · 기준 = 스냅샷)'
     t0 = time.time(); TIMES = []
-    lit = literal_rule()
+    lit = literal_rule() if QC.GATE else None   # INFO(글자 그대로 규칙) = 관문만 — origin/main git show 로만 재고 그 판(옮김 규칙을 정한 판)에만 뜻
     if lit:
         print('INFO | 글자 그대로 규칙(모든 옛 묘비 → 새 열쇠 max)이면 origin/main 원격에서 지워질 새 칸 값 | %s' % json.dumps(lit, ensure_ascii=False))
     with sync_playwright() as pw:
@@ -718,29 +800,42 @@ def main():
                         continue
                     ts = time.time()
                     res = {}
-                    for who in ('NEW', 'BASE'):
+                    for who in (('NEW', 'BASE') if QC.GATE else ('NEW',)):   # regress — 바탕 열(헛잣대 · 판정 밖)은 안 잰다 → 「바탕 —」
                         try:
                             res[who] = fn(br, eng, APPS[who])
                         except Exception as e:
                             res[who] = (False, 'ERR ' + repr(e)[:400])
-                    R(g, eng, name + ('  [바탕 = 기준]' if kind == 'keep' else ''), res['NEW'][0], res['BASE'][0], {'NEW': res['NEW'][1], 'BASE': res['BASE'][1]})
+                    R(g, eng, name + ('  [바탕 = 기준]' if kind == 'keep' else ''), res['NEW'][0], res['BASE'][0] if QC.GATE else None,
+                      {'NEW': res['NEW'][1], 'BASE': res['BASE'][1]} if QC.GATE else {'NEW': res['NEW'][1]})
                     TIMES.append((g, name[:40], round(time.time() - ts)))
                 if want('b3'):
                     ts = time.time()
-                    pn, pb = b3p(br, eng, APPS['NEW']), b3p(br, eng, APPS['BASE'])
-                    # ★ physprev(10/2 하위 에이전트 C) — _task_jagwa_physprev 57줄(A-2-3): 물리 t 로만 걸린 줄 · 조각이 t 인 줄 · 100줄 상한은 pv_same 이 가른다
-                    cmp = {q: pv_same(pn.get(q), pb[q]) for q in pb}
+                    if QC.GATE:
+                        pn, pb = b3p(br, eng, APPS['NEW']), b3p(br, eng, APPS['BASE'])
+                        # ★ physprev(10/2 하위 에이전트 C) — _task_jagwa_physprev 57줄(A-2-3): 물리 t 로만 걸린 줄 · 조각이 t 인 줄 · 100줄 상한은 pv_same 이 가른다
+                        cmp = {q: pv_same(pn.get(q), pb[q]) for q in pb}
+                    else:   # regress — 기준 칸: 바탕 = 앞 인도판 NEW 결과 스냅샷(말마다 · 줄 HTML md5) · pv_same 그대로(뜻한 차 = 미리보기 t · 제목 tt)
+                        pn = b3p(br, eng, APPS['NEW'])
+                        pb = {q: QC.base(_rg_cid(eng, 'b3p', q), _rg_pv(pn[q])) for q in pn}
+                        cmp = {q: pv_same(QC.norm(_rg_pv(pn[q])), pb[q]) for q in pb}
                     diff = [q for q in pb if not cmp[q][0]]
                     R('b3', eng, 'B-3 A-3-4 물리 %d말 — 걸린 집합 · 결과 상자 HTML = 바탕(무변)  [바탕 = 기준]' % len(pb), not diff and len(pb) >= 15, None,
-                      {'말': list(pb), '다른 말': diff, '건': {q: len((pn.get(q) or {}).get('nos') or []) for q in pn}, 'physprev': {q: v[1] for q, v in cmp.items() if v[1]}})
+                      {'말': list(pb), '다른 말': diff, '건': {q: len((pn.get(q) or {}).get('nos') or []) for q in pn}, 'physprev': {q: v[1] for q, v in cmp.items() if v[1]}} if QC.GATE else
+                      {'말': list(pb), '다른 말': diff, '건': {q: len((pn.get(q) or {}).get('nos') or []) for q in pn}, 'physprev': {q: v[1] for q, v in cmp.items() if v[1]},
+                       '기준': sorted({QC.base_note(_rg_cid(eng, 'b3p', q)) for q in pb})})
                     TIMES.append(('b3', '물리 말', round(time.time() - ts)))
                 if want('b8'):
                     ts = time.time()
-                    sn, sb = sweep(br, eng, APPS['NEW']), sweep(br, eng, APPS['BASE'])
+                    if QC.GATE:
+                        sn, sb = sweep(br, eng, APPS['NEW']), sweep(br, eng, APPS['BASE'])
+                    else:   # regress — 기준 칸: 바탕 훑기 = 앞 인도판 NEW 훑기 스냅샷(기기 · 과목 · 화면마다 신호 목록) · 이름 맞춤(_ren)은 두 쪽 다
+                        sn = sweep(br, eng, APPS['NEW'])
+                        sb = {k: _rg_ren_sig(QC.base(_rg_cid(eng, 'b8', *k), v)) for k, v in sn.items() if k[2] != '오류'}
                     rows, newonly, acc = sweep_cmp(sn, sb)
                     errs = {('%s · %s' % (k[0], k[1])): v for k, v in sn.items() if k[2] == '오류' and v}
                     R('b8', eng, 'B-8 화면 훑기 — 서재 목록·히트맵·검색 결과·문항 창 × PC 1440 · 폰 390 · iPad 820 × 세 과목 — 새로 생긴 넘침·잘림·덮임·작은 누름 자리 0',
-                      not newonly and not errs, None, {'새로 생긴 것': newonly, '뜻한 바뀜': acc, '오류': errs, '표': rows})
+                      not newonly and not errs, None, {'새로 생긴 것': newonly, '뜻한 바뀜': acc, '오류': errs, '표': rows} if QC.GATE else
+                      {'새로 생긴 것': newonly, '뜻한 바뀜': acc, '오류': errs, '표': rows, '기준': sorted({QC.base_note(_rg_cid(eng, 'b8', *k)) for k in sn if k[2] != '오류'})})
                     TIMES.append(('b8', '화면 훑기', round(time.time() - ts)))
             finally:
                 br.close()

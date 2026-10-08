@@ -12,6 +12,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import functools, http.server, os, re, socketserver, subprocess, sys, threading
 
 SRC = _roots.genie(r"jagwa\index.html")   # 9/5 자과 서재 이사(phys → jagwa)
@@ -351,6 +352,23 @@ TESTS = r"""<script>
 """
 
 
+# ── _task_qa_slim2(10/8 · J2) smoke 도우미 — 이름이 `_rg` 로 시작하는 것 = gate 에서 안 쓰는 갈래(TESTS 상수는 글자 그대로) ──
+#   regress = gate 와 같은 걸음(칸 73 모두 회귀 · 바탕 · git · 하위 하네스 0 · 쪽 안 기다림은 20~25ms 폴링 · 5ms 하나 — 바꿀 고정 대기 없음)
+def _rg_smoke_tests(t):
+    """smoke — 앞머리(가짜 저장소 · 기기 흉내) + P2 첫 칸(기록.json 생김) + P3 첫 칸(B 가 A 의 문항10 받음 · 동기화 한 바퀴 두 기기) + P10(오류 0) 만
+    (그 자리에서 잘라 씀 · 못 찾으면 통째)"""
+    nl = lambda i: t.find('\n', i) + 1
+    a = t.find("   T('P2 기록.json 이 생겼다'")
+    b0 = t.find("   /* ===== P3 : 두 기기 왕복")
+    b1 = t.find("   T('P3 B 가 A 의 문항10 을 받았다'")
+    j0 = t.find("   T('P10 잡히지 않은 오류 0건'")
+    c0 = t.find("  }catch(e){R.push('FAIL | 하니스가 터짐 | '")
+    if min(a, b0, b1, j0, c0) < 0 or not (a < b0 < b1 < j0 < c0):
+        print('NOTE | smoke 자르기 자리 못 찾음 — 통째로 돈다')
+        return t
+    return t[:nl(a)] + t[b0:nl(b1)] + t[j0:nl(j0)] + t[c0:]
+
+
 def main():
     html = open(SRC, encoding='utf-8', newline='').read()
     assert '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js' in html
@@ -360,7 +378,7 @@ def main():
     html = html.replace('<script defer src="https://cdnjs', '<script defer data-off="https://cdnjs')
     html = html.replace('<link rel="stylesheet" href="https://cdnjs', '<link rel="off" href="https://cdnjs')
     assert html.rstrip().endswith('</html>')
-    html = html.replace('</body>', TESTS + '</body>', 1)
+    html = html.replace('</body>', (TESTS if not QC.SMOKE else _rg_smoke_tests(TESTS)) + '</body>', 1)   # smoke — 쪽 안 시험 글을 이 자리에서만 잘라 씀
     open(APP, 'w', encoding='utf-8', newline='').write(html)
 
     # ⚠ IndexedDB 는 file:// 오리진에서 막힌다 — 이 앱은 IndexedDB 가 뿌리라
@@ -389,6 +407,7 @@ def main():
     chrome = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     prof = os.path.join(OUT, 'prof')
     url = 'http://127.0.0.1:%d/app.html' % port
+    QC.launch('new')   # 셈(§B-4) — 새 판 크롬 한 번(바탕은 본디 안 띄운다)
     p = subprocess.Popen([chrome, '--headless=new', '--disable-gpu', '--no-first-run',
                           '--user-data-dir=' + prof, '--window-size=1280,900', url],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -409,13 +428,14 @@ def main():
     # ---- 브라우저 밖 검사 (파일 층) ----
     def T2(name, cond, info=''):
         lines.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
-    s = open(SRC, encoding='utf-8').read()
-    T2('P5 소스에 ink 동기화가 없다', "'ink'" not in s.split('SYNC_KEYS=')[1].split(']')[0])
-    T2('P1 minbeop 무접촉(이 파일은 phys 뿐)', 'minbeop' not in s.replace('민법앱(`minbeop/index.html`)의 실물을 읽고 옮겼다', '').replace('minbeop .clsrc 97~99 · .ggclhd 94~96', ''))   # ★ 합치기 10/1(하위 에이전트 C) — search_claude(e9de3b8) CSS 주석 「minbeop .clsrc 97~99 · .ggclhd 94~96」(민법 값 출처 표기 · 코드 접촉 아님)도 뺀다   # ★ A-6(a) 9/30 — 지학 listpop_add1(genie cd248a5)이 「민법앱 실물을 읽고 옮겼다」 주석 한 줄을 남김(코드 접촉 아님) — 그 주석만 빼고 잰다
-    T2('A-4 토큰을 HTML 에 박지 않았다', 'github_pat_' not in s.replace('github_pat_\u2026', ''))
-    T2('A-5 도장 10초·동기화 180초', ',10000)' in s and ',180000)' in s)
-    body = s
-    T2('P11 파일 전체 백틱 수가 짝', body.count('`') % 2 == 0, body.count('`'))
+    if QC.want('src'):   # smoke — 브라우저 밖 소스 칸(P5 · P1 · A-4 · A-5 · P11 파일)은 smoke 칸이 아니다
+        s = open(SRC, encoding='utf-8').read()
+        T2('P5 소스에 ink 동기화가 없다', "'ink'" not in s.split('SYNC_KEYS=')[1].split(']')[0])
+        T2('P1 minbeop 무접촉(이 파일은 phys 뿐)', 'minbeop' not in s.replace('민법앱(`minbeop/index.html`)의 실물을 읽고 옮겼다', '').replace('minbeop .clsrc 97~99 · .ggclhd 94~96', ''))   # ★ 합치기 10/1(하위 에이전트 C) — search_claude(e9de3b8) CSS 주석 「minbeop .clsrc 97~99 · .ggclhd 94~96」(민법 값 출처 표기 · 코드 접촉 아님)도 뺀다   # ★ A-6(a) 9/30 — 지학 listpop_add1(genie cd248a5)이 「민법앱 실물을 읽고 옮겼다」 주석 한 줄을 남김(코드 접촉 아님) — 그 주석만 빼고 잰다
+        T2('A-4 토큰을 HTML 에 박지 않았다', 'github_pat_' not in s.replace('github_pat_\u2026', ''))
+        T2('A-5 도장 10초·동기화 180초', ',10000)' in s and ',180000)' in s)
+        body = s
+        T2('P11 파일 전체 백틱 수가 짝', body.count('`') % 2 == 0, body.count('`'))
 
     npass = sum(1 for x in lines if x.startswith('PASS'))
     nfail = len(lines) - npass

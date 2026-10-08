@@ -45,6 +45,7 @@ while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.d
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
 import _qa_jo_common as QJ   # noqa: E402 — _task_qa_slim(10/4) 실행 모드: --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · 새 갈래는 모두 `if QJ.REGRESS:` / `if QJ.GATE:` 안 · regress 는 조판기(jo) 실행에만
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import hashlib, io, json, os, re, statistics, subprocess, sys, tempfile, threading, time, urllib.parse   # noqa: E402
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer   # noqa: E402
 try:
@@ -80,14 +81,15 @@ NAME = {'jo': '조판기', 'mb': '민법OX', 'jg': '자과'}
 
 # ── 도구 하네스 둘 — 저마다 제 인자를 sys.argv 에서 읽는다(돌릴 때만 갈아 끼우고 되돌림) ──
 _argv = sys.argv[:]
-sys.path.insert(0, os.path.join(HERE, 'jopangi', 'task'))
-sys.argv = [_argv[0]] + (['--vendor', os.path.join(VEND, 'pdf.js', '3.11.174')] if VEND else []) + ['--exam', EXAM]
-import _harness_jo_sp_view4 as SV   # noqa: E402
+if 'jo' in APPS:   # ★ _task_qa_slim2(10/8 · 본 세션 결정) — 조판기 도구(sp_view4 → revfix0929b · jo 데이터 읽기)는 --apps 에 jo 가 있을 때만 연다 · jo 가 있으면 옛 길 그대로(jo 사슬 gate 무변) · 민법 · 자과 사슬(--apps mb · jg)은 jo 도구를 안 쓴다(그 사슬 입력에서 jo 파일이 빠진다)
+    sys.path.insert(0, os.path.join(HERE, 'jopangi', 'task'))
+    sys.argv = [_argv[0]] + (['--vendor', os.path.join(VEND, 'pdf.js', '3.11.174')] if VEND else []) + ['--exam', EXAM]
+    import _harness_jo_sp_view4 as SV   # noqa: E402
 sys.path.insert(0, os.path.join(HERE, 'jagwa', 'moolri'))
-sys.argv = [_argv[0]] + (['--vendor', VEND] if VEND else []) + ['--spd', SPD]
-import _harness_jagwa_physphone as PP   # noqa: E402
+JG.conf(SPD_PP=SPD, **({'VENDOR_PP': VEND} if VEND else {}))   # 옛 PP import 때 가린 argv(--vendor VEND · --spd SPD)와 같은 값을 JG 에 넘김
 sys.argv = _argv
-H = SV.H
+if 'jo' in APPS:   # jo 도구를 열었을 때만(위)
+    H = SV.H
 
 
 def git(*a):
@@ -336,7 +338,8 @@ def _jo_book_rows():
     return fj, fm, at
 
 
-JO_FJ, JO_FM, JO_UNIT_IX = _jo_book_rows()
+if 'jo' in APPS:   # 조판기 시험 덧판 — jo 도구가 있을 때만(위)
+    JO_FJ, JO_FM, JO_UNIT_IX = _jo_book_rows()
 
 
 def jo_overlay():
@@ -383,7 +386,8 @@ def jo_expect():
 
 
 EXAM_MODE = {'m': 'ok'}
-_jo_clear0 = SV.REMOTE.clear
+if 'jo' in APPS:   # 조판기 가짜 원격 갈아 끼우기 — jo 도구가 있을 때만(위)
+    _jo_clear0 = SV.REMOTE.clear
 
 
 def _jo_clear():
@@ -393,7 +397,8 @@ def _jo_clear():
             SV.REMOTE.files['exam/꼬까.json'] = EXB   # 가짜 원격 — 시험 기록(지어낸 값) · 404 면 안 넣는다
 
 
-SV.REMOTE.clear = _jo_clear
+if 'jo' in APPS:   # 조판기 가짜 원격 갈아 끼우기 — jo 도구가 있을 때만(위)
+    SV.REMOTE.clear = _jo_clear
 NO_TOKEN = {'tt.cfg': json.dumps({'person': '꼬까'})}
 _TAGN = [0]
 
@@ -655,11 +660,11 @@ def jo_c4(br, src, base_src, tag):
 
 def first_screen(app, br, src, base_src, opener, g, runs=3, delay=5000):
     """첫 화면 시각(쪽 첫머리 기준 · READY 가 처음 참이 된 때) — 새 판 · 바탕 번갈아 runs 번 · 시험 기록 5초 늦게 · 화면이 기록보다 먼저"""
-    if QJ.REGRESS and app == 'jo':
+    if QJ.REGRESS and app in ('jo', 'mb', 'jg'):   # ★ _task_qa_slim2(10/8) — 민법 · 자과 사슬도 regress(옛 줄: app == 'jo')
         runs = 1   # regress(jo) — 표본 1/3: 새 판만 1 번(바탕 판 부팅 3 번 · 새 판 2 번 뺌 — 한 번에 새 판은 기록 5초를 기다려 6 초 안팎)
     tn, tb, before = [], [], []
     for i in range(runs):
-        for who, s, arr in ((('new', src, tn), ('base', base_src, tb)) if (QJ.GATE or app != 'jo') else (('new', src, tn),)):   # regress(jo) — 바탕 판은 안 띄운다
+        for who, s, arr in ((('new', src, tn), ('base', base_src, tb)) if (QJ.GATE or app not in ('jo', 'mb', 'jg')) else (('new', src, tn),)):   # regress(jo · mb · jg) — 바탕 판은 안 띄운다
             QJ.launch(who)
             p = opener(br, s, delay=delay)
             try:
@@ -670,21 +675,21 @@ def first_screen(app, br, src, base_src, opener, g, runs=3, delay=5000):
                     before.append((round((h or {}).get('t1') or 0), round(hh.get('tEx') or 0)))
             finally:
                 p.close()
-    if QJ.GATE or app != 'jo':
+    if QJ.GATE or app not in ('jo', 'mb', 'jg'):
         mn, mb = statistics.median(tn), statistics.median(tb)
     else:
         mn = statistics.median(tn)
         mb = QJ.base('C4-%s@first/mn' % app, mn)   # 바탕 중앙값 = 바탕 판 regress 가 남긴 기준 스냅샷(없으면 첫 기록 = 새 판 자신)
         tb = [mb]
     first = all(a > 0 and b > 0 and a < b for a, b in before)
-    if QJ.REGRESS and app == 'jo':
+    if QJ.REGRESS and app in ('jo', 'mb', 'jg'):
         before = before + ['(표본 1/3 · 새 판만 · 바탕 중앙값 = 기준 스냅샷 · %s)' % QJ.base_note('C4-%s@first/mn' % app)]
     return T(g, '첫 화면 시각 — 새 판 %dms · 바탕 %dms(중앙값 %d번) · 화면이 기록(5초 늦춤)보다 먼저' % (mn, mb, runs),
              first and mn <= mb * 1.25 + 300, {'새 판': tn, '바탕': tb, '(첫 화면, 기록 옴)': before})
 
 
 # ════════════════════════ 민법OX ════════════════════════
-class XRemote(PP.Remote):
+class XRemote(JG.Remote):
     """가짜 원격 — 시험 기록 자리 = 지어낸 값 · 404 둘만(진짜 기록은 안 연다) · 기록(<과목>/기록.json)·settings = 새 기기(메모리만)"""
 
     def __init__(self, mode='ok'):
@@ -701,7 +706,7 @@ class XRemote(PP.Remote):
 
 
 def mb_route(remote):
-    base = PP.route_handler(remote)
+    base = JG.route_handler(remote)
 
     def h(route):
         if route.request.url.startswith('https://cdn.tailwindcss.com') and not TWCSS:
@@ -821,6 +826,7 @@ class MbPg:
 
 
 def mb_open(br, src, dev=PC, delay=0, mode='ok', token=True):
+    QJ.launch('new')   # 셈(§B-4) — gate 의 첫 화면 바탕 띄움도 이 길(바탕 셈은 first_screen 이 따로)
     return MbPg(br, src, dev, token=token, delay=delay, mode=mode)
 
 
@@ -898,6 +904,8 @@ def mb_c1(br, src, tag):
         got = p.ev(MB_IDX)
         ok &= T('C1-mb', '앱 표 = 하네스 셈(Q %d · 표시 %d)' % (len(exp), sum(len(v) for v in exp.values())), got == exp,
                 {'EWM.st': st, '앱': None if got is None else {'Q': len(got), '다른 것': sorted(set(got) ^ set(exp))[:8]}, '하네스': {k: exp[k] for k in sorted(exp)[:6]}})
+        if QJ.SMOKE:   # smoke — C1-mb 앱 표 한 칸만
+            return ok
         nn = [k for k in exp if len(exp[k]) > 1]
         ok &= T('C1-mb', '같은 지문이 61·63 둘 다 = 나란히(%s)' % ', '.join('%s %s' % (k, exp[k]) for k in nn), bool(nn) and got is not None and all(got.get(k) == exp[k] for k in nn), nn)
         for y in ('2024', '2026', '2025', '2023'):
@@ -1026,6 +1034,8 @@ def mb_c4(br, src, base_src, tag):
                 {'EWM.st': st, '기출뷰 2024 표시': n, '쪽 오류': p.errs[:3], 'h': h})
     finally:
         p.close()
+    if QJ.SMOKE:   # smoke — C4-mb 토큰 없음 한 칸만
+        return ok
     p = mb_open(br, src, mode='404')
     try:
         st = ewm_wait(p)
@@ -1087,13 +1097,14 @@ JG_NBR = '#view .vtop button:not(.ewmx), #view .vtop #vT1'
 
 
 def jg_open(br, src, subj='phys', dev=PC, delay=0, mode='ok', token=True):
-    init0 = PP.INIT
+    init0 = JG.INIT_PP
     if not token:
-        PP.INIT = PP.INIT.replace("JSON.stringify({token:'harness-token',person:'__WHO__'})", "JSON.stringify({person:'__WHO__'})")
+        JG.INIT_PP = JG.INIT_PP.replace("JSON.stringify({token:'harness-token',person:'__WHO__'})", "JSON.stringify({person:'__WHO__'})")
     try:
-        p = PP.Pg(br, br.browser_type.name, ntag('ewg'), with_probe('jg', src, delay), subj, dev, who='꼬까', remote=XRemote(mode))
+        QJ.launch('new')   # 셈(§B-4) — gate 의 첫 화면 바탕 띄움도 이 길(바탕 셈은 first_screen 이 따로)
+        p = JG.Pg_PP(br, br.browser_type.name, ntag('ewg'), with_probe('jg', src, delay), subj, dev, who='꼬까', remote=XRemote(mode))
     finally:
-        PP.INIT = init0
+        JG.INIT_PP = init0
     ew(p)
     return p
 
@@ -1101,13 +1112,15 @@ def jg_open(br, src, subj='phys', dev=PC, delay=0, mode='ok', token=True):
 def jg_c1(br, src, tag):
     exp = jg_expect()
     ok = True
-    for subj in ('phys', 'bio', 'earth'):
+    for subj in (('phys', 'bio', 'earth') if not QJ.SMOKE else ('phys',)):   # smoke — 물리 하나
         p = jg_open(br, src, subj)
         try:
             st = ewm_wait(p)
             got = p.ev(JG_OF)
             gm = None if got is None else {c: v for c, v in got}
             ok &= T('C1-jg', '%s 앱 표 = 하네스 셈(%s)' % (subj, ', '.join('%s %s' % (c, v) for c, v in sorted(exp[subj].items()))), gm == exp[subj], {'EWM.st': st, '앱': gm})
+            if QJ.SMOKE:   # smoke — C1-jg 물리 앱 표 한 칸만
+                continue
             for c, v in sorted(exp[subj].items()):
                 r = p.ev(JG_VIEW, [c]) or {}
                 ok &= T('C1-jg', '%s 문제 창 머리 %s — 「%s」' % (subj, c, ' '.join(s + '-X' for s in v)), r.get('marks') == [s + '-X' for s in v], r)
@@ -1191,6 +1204,8 @@ def jg_c3(br, src, tag, census):
 def jg_c4(br, src, base_src, tag):
     ok = True
     for nm, kw, c in (('토큰 없음(물리)', {'subj': 'phys', 'token': False}, 'PA2401'), ('404(기록 없음 · 생물)', {'subj': 'bio', 'mode': '404'}, 'B26-63-01')):
+        if QJ.SMOKE and nm != '토큰 없음(물리)':
+            continue   # smoke = 토큰 없음(물리) 한 칸(표시 0 · 오류 0 · 알림 0)
         p = jg_open(br, src, **kw)
         try:
             st = ewm_wait(p)
@@ -1200,6 +1215,8 @@ def jg_c4(br, src, base_src, tag):
                     {'EWM.st': st, c: r.get('marks'), '쪽 오류': p.errs[:3], 'h': h})
         finally:
             p.close()
+    if QJ.SMOKE:   # smoke — C4-jg 토큰 없음 한 칸만
+        return ok
     ok &= first_screen('jg', br, src, base_src, lambda b, s, delay=0: jg_open(b, s, 'phys', PC, delay=delay), 'C4-jg')
     p = jg_open(br, src, 'bio', delay=8000)   # 생물 = 시험지 PDF 를 안 기다린다(물리는 PDF 여섯을 받는 동안 기록이 와 버린다)
     try:
@@ -1248,7 +1265,7 @@ def jg2_hdr(src):
         real = '있음(%d B)' % os.path.getsize(REAL)
     except Exception:
         real = '없음'
-    N('JG2', '새 판 · 바탕 · 지어낸 기록 · 진짜 기록 사본', {'새 판 md5(LF)': md5lf(src), '바탕': JGBASE, '바탕 md5(LF)': md5lf(jg2_base_src()), '지어낸 기록': os.path.relpath(FX, HERE), '진짜 기록 사본': real, '헛잣대 모드': YARD})
+    N('JG2', '새 판 · 바탕 · 지어낸 기록 · 진짜 기록 사본', {'새 판 md5(LF)': md5lf(src), '바탕': JGBASE, '바탕 md5(LF)': md5lf(jg2_base_src()) if QJ.GATE else '(regress — 안 읽음 · git show 0)', '지어낸 기록': os.path.relpath(FX, HERE), '진짜 기록 사본': real, '헛잣대 모드': YARD})
 
 
 # ── 쪽 첫머리(PROBE 와 같은 것 + 응답 잡아 두기) — D < 0 이면 exam/꼬까.json 응답을 손으로 풀 때까지 잡아 둔다(window.__ewmRelease()) · D ≥ 0 은 PROBE 그대로 ──
@@ -1373,14 +1390,14 @@ class XRemoteReal(XRemote):
 
 def jg2_open(br, src, subj='phys', dev=PC, delay=0, mode='ok', token=True, gate=False, remote=None, who='new'):
     """자과 쪽 하나(jg_open 과 같은 길 · 이 칸만의 쪽 첫머리 PROBE2 + 쪽 도구 EW2) — gate=True 면 시험 기록 응답을 잡아 둔다 · remote = 진짜 기록 사본 등"""
-    init0 = PP.INIT
+    init0 = JG.INIT_PP
     if not token:
-        PP.INIT = PP.INIT.replace("JSON.stringify({token:'harness-token',person:'__WHO__'})", "JSON.stringify({person:'__WHO__'})")
+        JG.INIT_PP = JG.INIT_PP.replace("JSON.stringify({token:'harness-token',person:'__WHO__'})", "JSON.stringify({person:'__WHO__'})")
     try:
         QJ.launch(who)
-        p = PP.Pg(br, br.browser_type.name, ntag('ewg'), with_probe2('jg', src, -1 if gate else delay), subj, dev, who='꼬까', remote=remote or XRemote(mode))
+        p = JG.Pg_PP(br, br.browser_type.name, ntag('ewg'), with_probe2('jg', src, -1 if gate else delay), subj, dev, who='꼬까', remote=remote or XRemote(mode))
     finally:
-        PP.INIT = init0
+        JG.INIT_PP = init0
     ew(p)
     p.ev(EW2)
     return p
@@ -1517,7 +1534,9 @@ def jg2_press(p, kind, code, no):
     at = p.ev("([k, c]) => __EW2.pickTag(k, c)", [kind, code])
     if at:
         at = p.ev("() => __EW2.settleTag()")
-    pressed = press_at(p, at, 900)
+    pressed = press_at(p, at, 900) if QJ.GATE else press_at(p, at, 0)
+    if pressed and not QJ.GATE:   # regress — 누른 뒤 고정 900 대신 표지(그 문제가 열림 = 바로 아래 판정이 읽는 값 · 상한 900)
+        _rg_until(p, _RG_OPENED, 900, 'JG2-B4 누름 → 그 문제 열림', [no])
     st = p.ev("() => __EW2.state()") or {}
     ok = bool(pressed) and bool(no) and st.get('vno') == no and st.get('hide') is False
     p.ev(JG2_CLOSE)
@@ -1574,21 +1593,22 @@ def jg2_b1(br, src):
                         all(z and z.get('row') and z.get('card') and not z.get('d') and not z.get('l') for z in fl.values()), fl)
         finally:
             p.close()
-        pb = jg2_open(br, jg2_base_src(), subj, PC, who='base')   # 헛잣대 — 바탕에 같은 시험 기록으로 같은 셋 자리를 센다
-        try:
-            sb = ewm_wait(pb)
-            pb.wait(1500)
-            cb0 = (pb.ev("() => __EW2.collect()") or {}).get('n') or {}
-            ob = pb.ev(JG2_OPEN, [codes[0]]) or {}
-            cb = pb.ev("() => __EW2.collect()") or {}
-            nb = cb.get('n') or {}
-            N('JG2-B1 BASE', '%s 바탕 .ewmt — 서랍 · 목록 · 지금 목록(문제를 연 뒤)' % subj,
-              {'바탕': JGBASE, 'EWM.st': sb, '서랍': nb.get('drawer'), '목록': nb.get('list'), '지금 목록': nb.get('trq'), '서랍 줄 수': nb.get('drawerRows'), '카드 수': nb.get('listItems'), '지금 목록 줄 수': nb.get('trqRows'), '열기 전 합': cb0.get('all')})
-            ok &= T('JG2-B1', '%s 헛잣대 — 바탕에서 서랍 · 목록 · 지금 목록 표시 모두 0(줄은 있다)' % subj,
-                    nb.get('all') == 0 and (nb.get('drawerRows') or 0) > 0 and (nb.get('listItems') or 0) > 0 and jg2_opened(ob),
-                    {'바탕': JGBASE, '서랍': nb.get('drawer'), '목록': nb.get('list'), '지금 목록': nb.get('trq'), '서랍 줄 수': nb.get('drawerRows'), '카드 수': nb.get('listItems')})
-        finally:
-            pb.close()
+        if QJ.GATE:   # 헛잣대 — 바탕(--jgbase 4754b1d) 띄움 · 바탕 측정 줄(JG2-B1 BASE) · 헛잣대 칸 — regress 끔(관문만)
+            pb = jg2_open(br, jg2_base_src(), subj, PC, who='base')   # 헛잣대 — 바탕에 같은 시험 기록으로 같은 셋 자리를 센다
+            try:
+                sb = ewm_wait(pb)
+                pb.wait(1500)
+                cb0 = (pb.ev("() => __EW2.collect()") or {}).get('n') or {}
+                ob = pb.ev(JG2_OPEN, [codes[0]]) or {}
+                cb = pb.ev("() => __EW2.collect()") or {}
+                nb = cb.get('n') or {}
+                N('JG2-B1 BASE', '%s 바탕 .ewmt — 서랍 · 목록 · 지금 목록(문제를 연 뒤)' % subj,
+                  {'바탕': JGBASE, 'EWM.st': sb, '서랍': nb.get('drawer'), '목록': nb.get('list'), '지금 목록': nb.get('trq'), '서랍 줄 수': nb.get('drawerRows'), '카드 수': nb.get('listItems'), '지금 목록 줄 수': nb.get('trqRows'), '열기 전 합': cb0.get('all')})
+                ok &= T('JG2-B1', '%s 헛잣대 — 바탕에서 서랍 · 목록 · 지금 목록 표시 모두 0(줄은 있다)' % subj,
+                        nb.get('all') == 0 and (nb.get('drawerRows') or 0) > 0 and (nb.get('listItems') or 0) > 0 and jg2_opened(ob),
+                        {'바탕': JGBASE, '서랍': nb.get('drawer'), '목록': nb.get('list'), '지금 목록': nb.get('trq'), '서랍 줄 수': nb.get('drawerRows'), '카드 수': nb.get('listItems')})
+            finally:
+                pb.close()
     return ok
 
 
@@ -1687,6 +1707,8 @@ def jg2_b2_first(br, src, subj, runs=6, delay=2000):   # ★ (10/5 채팅 11:0x 
     if YARD:
         N('JG2-B2', '%s 첫 화면 시각 — 헛잣대 해당 없음' % subj, '바탕끼리 맞대면 거저 참')
         return True
+    if QJ.REGRESS:   # regress — 바탕(4754b1d) 띄움 0 · 새 판만(몸풀기 1 + 3 번 중앙값) · 바탕 중앙값 = 기준 스냅샷(_rg_jg2_first)
+        return _rg_jg2_first(br, src, subj, delay)
     base_src = jg2_base_src()
     tn, tb, pairs = [], [], []
     seq = (('new', src, tn), ('base', base_src, tb))
@@ -1712,6 +1734,46 @@ def jg2_b2_first(br, src, subj, runs=6, delay=2000):   # ★ (10/5 채팅 11:0x 
     lim = max(mb * 1.10, mb + 150)
     return T('JG2-B2', '%s 첫 화면 시각(기록 2초 늦춤) — 바탕 ±10%%(잡음 바닥 +150ms) 안 · 화면이 기록보다 먼저' % subj, first and mn <= lim,
              {'새 판(ms)': tn, '바탕(ms)': tb, '중앙값': [mn, mb], '허용 상한(ms)': round(lim), '(첫 화면, 기록 옴)': pairs, '바탕 판': JGBASE, '차례': '몸풀기 2 + ABBA %d 회' % runs})
+
+
+def _rg_jg2_first(br, src, subj, delay, runs=3):
+    """regress(_task_qa_slim2 · 10/8) — JG2-B2 첫 화면 시각: 새 판만 몸풀기 1 + runs 번 중앙값 · 바탕 중앙값 = 기준 스냅샷(앞 인도판 같은 칸의 새 판 중앙값 · QJ.base) ·
+    칸 이름 · 판정식(±10% · 잡음 바닥 +150ms · 화면이 기록보다 먼저)은 gate 와 같다 — ⚠ 기댓값이 같은 짐에서 잰 바탕이 아니라 다른 때 잰 앞 판 값(결정 거리)"""
+    tn, pairs = [], []
+    p = jg2_open(br, src, subj, PC, delay=delay)   # 몸풀기(셈 밖)
+    try:
+        until(p, "() => window.__ewmH && window.__ewmH.t1 > 0 ? 1 : null", 60000)
+    finally:
+        p.close()
+    for i in range(runs):
+        p = jg2_open(br, src, subj, PC, delay=delay)
+        try:
+            h = until(p, "() => window.__ewmH && window.__ewmH.t1 > 0 ? window.__ewmH : null", 60000)
+            tn.append(round((h or {}).get('t1') or 0))
+            hh = until(p, "() => window.__ewmH && window.__ewmH.tEx > 0 ? window.__ewmH : null", 15000) or {}
+            pairs.append((round((h or {}).get('t1') or 0), round(hh.get('tEx') or 0)))
+        finally:
+            p.close()
+    mn = statistics.median(tn)
+    cid = 'JG2-B2@first/%s' % subj
+    mb = QJ.base(cid, mn)
+    first = all(a > 0 and b > 0 and a < b for a, b in pairs)
+    lim = max(mb * 1.10, mb + 150)
+    return T('JG2-B2', '%s 첫 화면 시각(기록 2초 늦춤) — 바탕 ±10%%(잡음 바닥 +150ms) 안 · 화면이 기록보다 먼저' % subj, first and mn <= lim,
+             {'새 판(ms)': tn, '바탕(ms)': [mb], '중앙값': [mn, mb], '허용 상한(ms)': round(lim), '(첫 화면, 기록 옴)': pairs, '바탕 판': '기준 스냅샷 · %s' % QJ.base_note(cid),
+              '차례': 'regress — 몸풀기 1 + 새 판 %d 회(바탕 띄움 0)' % runs})
+
+
+def _rg_until(p, js, ms, what, arg=None):
+    """regress — 고정 대기 대신 앱 표지(QJ.until · 상한 = gate 의 ms) · 못 만나면(시간 넘김 · 표지 글 오류) 남은 시간을 채워 gate 와 같은 길이"""
+    t = time.time()
+    if not QJ.until(p.pg, js, ms, what, arg):
+        left = ms - (time.time() - t) * 1000.0
+        if left > 1:
+            p.pg.wait_for_timeout(left)
+
+
+_RG_OPENED = "([no]) => typeof VNO !== 'undefined' && VNO === no && !document.getElementById('view').classList.contains('hide')"   # 표지 = 앱 VNO · #view 보임(바로 뒤 판정이 읽는 그 값)
 
 
 def jg2_b2_wk(src):
@@ -1910,8 +1972,9 @@ def main():
     if QJ.GATE:
         bases = {a: app_src(a, BASE) for a in APPS}
     else:
-        # regress · smoke(jo) — 바탕(afd6339) 앱 글은 jo 에서만 안 푼다(git:show-app 0 · 첫 화면 시각의 바탕 중앙값 = 기준 스냅샷) · mb · jg 는 그대로
-        bases = {a: (None if a == 'jo' else app_src(a, BASE)) for a in APPS}
+        # regress · smoke — 바탕(afd6339) 앱 글을 안 푼다(git:show-app 0 · 첫 화면 시각의 바탕 중앙값 = 기준 스냅샷)
+        # 옛 줄(10/4 · jo 만): bases = {a: (None if a == 'jo' else app_src(a, BASE)) for a in APPS}
+        bases = {a: None for a in APPS}   # ★ _task_qa_slim2(10/8) — 민법 · 자과 사슬도
     if YARD:
         srcs = dict(bases)
     print('══ exam_wrong_mark %s · 바탕 %s · 시험 기록 %s(md5 %s)' % ('헛잣대' if YARD else '새 판', BASE, os.path.relpath(FX, HERE), hashlib.md5(EXB).hexdigest()[:8]))
@@ -1920,7 +1983,7 @@ def main():
     N('C0', '틀림 줄(시험 기록 · 하네스 거르기)', ['%s %d-%d' % (x['s'], x['r'], x['i']) for x in WR])
     N('C0', '뺀 줄', ['%s %d-%d %s' % (x['s'], x['r'], x['i'], x['why']) for x in WX])
     if QJ.REGRESS:
-        N('C0', 'regress 갈래(jo)', '조판기 새 판만 · 바탕(%s) 판은 안 띄움 · 첫 화면 시각 = 새 판 1 번 + 바탕 중앙값은 기준 스냅샷(QJ.base) · 민법 · 자과 실행은 gate 그대로' % BASE)
+        N('C0', 'regress 갈래(jo)', '새 판만(%s) · 바탕(%s · JG2 %s) 판은 안 띄움 · 첫 화면 시각 = 새 판 1 번(JG2-B2 = 몸풀기 1 + 3 번) + 바탕 중앙값은 기준 스냅샷(QJ.base) · 헛잣대(JG2-B1 바탕) 끔' % (','.join(APPS), BASE, JGBASE))   # ★ _task_qa_slim2(10/8) — 민법 · 자과도(옛 글: 「… · 민법 · 자과 실행은 gate 그대로」)
     got, times, census = {}, {}, {'jo': [], 'mb': [], 'jg': []}
     with sync_playwright() as pw:
         PWH['pw'] = pw   # (add1 검수) JG2-B2 WebKit 길이 쓴다
@@ -1947,8 +2010,8 @@ def main():
         for g, fn in steps:
             if ONLY and not any(g.upper() == o or g.upper().startswith(o) for o in ONLY):
                 continue
-            if QJ.SMOKE and g not in ('C1-jo', 'C4-jo'):
-                continue   # smoke = 조판기 C1(앱 표 셋) · C4(토큰 없음) 만
+            if QJ.SMOKE and g not in ('C1-jo', 'C4-jo', 'C1-mb', 'C4-mb', 'C1-jg', 'C4-jg'):
+                continue   # smoke = 조판기 C1(앱 표 셋) · C4(토큰 없음) 만 · ★ (10/8) 민법 C1-mb(앱 표) · C4-mb(토큰 없음) · 자과 C1-jg(물리 앱 표) · C4-jg(토큰 없음 물리)
             if YARD and g.startswith('C4'):
                 N(g, '헛잣대 해당 없음', '바탕엔 표시가 없어 「기록 못 받음 = 표시 0」을 가를 수 없다')
                 continue
@@ -1962,7 +2025,7 @@ def main():
             times[g] = round(time.time() - t1)
             print('   (%s %d초)' % (g, times[g]), flush=True)
         br.close()
-        if 'webkit' in ENGS and not YARD and not QJ.SMOKE:
+        if 'webkit' in ENGS and not YARD and not QJ.SMOKE and (QJ.GATE or 'jo' in APPS or 'mb' in APPS):   # regress — WebKit 칸은 jo · mb C3 폰만(자과 사슬 --apps jg 는 띄움만 하던 헛띄움 → 0)
             wk = webkit_try(pw)
             if wk:
                 try:

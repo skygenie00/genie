@@ -17,6 +17,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import hashlib, io, json, os, re, shutil, subprocess, sys, tempfile, datetime
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -38,8 +39,14 @@ GATES = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G7-자동', 'G8', 'G9', 'G9-
 
 
 def git(repo, *a):
+    QC.sub('git:show-data' if repo == SP else 'git:show-app')   # 셈 — studyplandata = 데이터 · genie = 바탕 앱(gate 만)
     r = subprocess.run(['git', '-C', repo, '-c', 'core.quotepath=false'] + list(a), capture_output=True)
     return r.stdout.decode('utf-8', 'replace')
+
+
+def _rg_md5(t):
+    """regress — 기준 칸 값(함수 글자)은 md5(16) 로 스냅샷"""
+    return None if t is None else hashlib.md5(t.encode('utf-8')).hexdigest()[:16]
 
 
 def fn_text(src, head):
@@ -72,6 +79,7 @@ def sk_text(app, src):
 
 
 def build_and_run(tag, src, seed, tests, budget=150000):
+    QC.launch('new' if tag.endswith('_NEW') else 'base')   # 셈(§B-4)
     html = src.replace('\r\n', '\n')
     b = html.index('<body')
     bb = html.index('>', b) + 1
@@ -115,7 +123,8 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     only = sys.argv[1:] or list(APPS)
     ms = lambda iso: int(datetime.datetime.fromisoformat(iso.replace('Z', '+00:00')).timestamp() * 1000)
-    pc, ip = json.loads(git(SP, 'show', PC_REV + ':minbeop/기록.json')), json.loads(git(SP, 'show', IP_REV + ':minbeop/기록.json'))
+    if QC.GATE or 'minbeop' in only:   # regress — 민법 실물 기록 둘은 민법 판(G-실물)만 씀 → 자과 · jo 사슬은 안 읽음(git 0)
+        pc, ip = json.loads(git(SP, 'show', PC_REV + ':minbeop/기록.json')), json.loads(git(SP, 'show', IP_REV + ':minbeop/기록.json'))
     quiz = [{'id': u, 'q': '더미 지문 ' + u + ' 가나다라마바사', 'exp': '더미 해설 ' + u, 'a': 'O', 'subject': '민법총칙',
              'chapter': '1. 총칙', 'subChapter': '1.1 민법의 법원', 'displayNo': i + 1, 'probNum': i + 1, 'subNum': '',
              'source': '변리사 20', 'pending': False, 'examMeta': [], 'caseText': '', 'stem': '', 'status': '', 'excelLogic': ''}
@@ -126,16 +135,26 @@ def main():
         cfg = APPS[app]
         rel = cfg['rel']
         new = io.open(os.path.join(GENIE, rel.replace('/', os.sep)), encoding='utf-8', newline='').read().replace('\r\n', '\n')
-        head = git(GENIE, 'show', 'HEAD:' + rel)
-        vers = [('NEW', new), ('HEAD', head)]
-        if app == 'minbeop':
-            vers.append(('A32', git(GENIE, 'show', A32 + ':' + rel)))
-        for h in FNS:
-            a, b = fn_text(new, h), fn_text(head, h)
-            srcrep.append((app, h.strip('('), a is not None and a == b))
-        srcrep.append((app, 'const ckey', new.count(cfg['ckey']) == 1 and head.count(cfg['ckey']) == 1))
-        sa, sb = sk_text(app, new), sk_text(app, head)
-        srcrep.append((app, 'SYNC_KEYS 정의', sa is not None and sa == sb))
+        if QC.GATE:
+            head = git(GENIE, 'show', 'HEAD:' + rel)
+            vers = [('NEW', new), ('HEAD', head)]
+            if app == 'minbeop':
+                vers.append(('A32', git(GENIE, 'show', A32 + ':' + rel)))
+            for h in FNS:
+                a, b = fn_text(new, h), fn_text(head, h)
+                srcrep.append((app, h.strip('('), a is not None and a == b))
+            srcrep.append((app, 'const ckey', new.count(cfg['ckey']) == 1 and head.count(cfg['ckey']) == 1))
+            sa, sb = sk_text(app, new), sk_text(app, head)
+            srcrep.append((app, 'SYNC_KEYS 정의', sa is not None and sa == sb))
+        else:   # regress — HEAD 판(헛잣대 열) · A32 판 안 풂 · 안 띄움 · G19 소스 = 앞 인도판 스냅샷(md5 · 수)
+            vers = [('NEW', new)]
+            if not QC.SMOKE:   # smoke — G19 소스 대조는 smoke 칸이 아님(표도 안 찍고 종합 셈에도 안 듦)
+                for h in FNS:
+                    a = fn_text(new, h)
+                    srcrep.append((app, h.strip('('), a is not None and QC.same('G19/%s/%s' % (app, h.strip('(')), _rg_md5(a))))
+                srcrep.append((app, 'const ckey', new.count(cfg['ckey']) == 1 and QC.same('G19/%s/ckey' % app, new.count(cfg['ckey']))))
+                sa = sk_text(app, new)
+                srcrep.append((app, 'SYNC_KEYS 정의', sa is not None and QC.same('G19/%s/SYNC_KEYS' % app, _rg_md5(sa))))
         P = {'quiz': quiz} if app == 'minbeop' else {}
         if app == 'minbeop':
             P['real'] = {'pc': {'data': pc['data'], 'u': pc['u'], 'gone': pc['gone'], 'ms': ms(pc['savedAt'])},
@@ -144,6 +163,8 @@ def main():
         tests = TESTS.replace('__APP__', app).replace('__P__', js_json(P))
         for tag, src in vers:
             lines = build_and_run(app + '_' + tag, src, seed, tests)
+            if QC.SMOKE and lines:   # smoke — G2(도장 없는 원격 칸 병합) 줄만
+                lines = [x for x in lines if gate_of(x) == 'G2']
             results[(app, tag)] = lines
             print('=== %s · %s 판 ===' % (app, tag))
             if lines is None:
@@ -154,10 +175,14 @@ def main():
             print('  합계 PASS %d · FAIL %d' % (sum(1 for x in lines if x.startswith('PASS')), sum(1 for x in lines if x.startswith('FAIL'))))
             print()
 
-    print('=== G19 소스 — NEW 와 HEAD 가 문자까지 같아야 하는 것 ===')
-    for app, what, ok in srcrep:
-        print('  %-8s %-24s %s' % (app, what, 'PASS 문자까지 같다' if ok else 'FAIL 달라졌다'))
-    print()
+    if not QC.SMOKE:   # smoke — G19 소스 표 안 찍음(smoke 칸 아님)
+        if QC.GATE:
+            print('=== G19 소스 — NEW 와 HEAD 가 문자까지 같아야 하는 것 ===')
+        else:   # regress — 바탕(HEAD) 대신 기준 스냅샷(앞 인도판 · 글자 md5 · 수)
+            print('=== G19 소스 — NEW 가 기준 스냅샷(앞 인도판 글자 md5 · ckey 수)과 같아야 하는 것 ===')
+        for app, what, ok in srcrep:
+            print('  %-8s %-24s %s' % (app, what, 'PASS 문자까지 같다' if ok else 'FAIL 달라졌다'))
+        print()
     cols = [(a, t) for a in only for t in (('NEW', 'HEAD', 'A32') if a == 'minbeop' else ('NEW', 'HEAD'))]
     print('=== 게이트 표 (P/F) — ★ = §L 헛잣대 열 ===')
     print('  %-8s ' % '게이트' + ' '.join('%-12s' % ('%s·%s' % c) for c in cols))

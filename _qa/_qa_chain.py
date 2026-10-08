@@ -53,7 +53,14 @@ NR = _roots.n_root()                                        # N: 작업 폴더(�
 LIST = os.environ.get('QA_CHAIN_LIST') or os.path.join(HERE, '_qa_chain_list.json')
 HHOME = os.environ.get('QA_CHAIN_HHOME') or HERE                     # 전수표 file 칸의 기준 자리
 TRACE_DIR = os.path.join(HERE, '_qa_trace')
-WORK = os.path.join(tempfile.gettempdir(), 'qa_chain')
+WORK = os.environ.get('QA_CHAIN_WORK') or os.path.join(tempfile.gettempdir(), 'qa_chain')   # ★ env_clean B-3(10/8) — 무리마다 실행기 자리(잠금 · 실행 결과)를 TEMP 사본 없이 가름 · 옛 줄: WORK = os.path.join(tempfile.gettempdir(), 'qa_chain')
+# ★ env_clean B-1 · B-2(10/8) — 하네스마다 임시 폴더 %TEMP%\pa_qa\<실행 id>\<하네스>_<시각>(TEMP · TMP · TMPDIR) · 끝나면 지움 · 실행 시작에 죽은 실행 몫 쓸기
+#   까닭: 하네스의 tempfile · 크롬 · playwright 프로필 · 앱 사본이 %TEMP% 바로 밑에 쌓여 C: 가 찼다(10/8 14:38 여유 0.38 GB · 회귀가 Errno 28 로 죽음)
+BASE_TEMP = tempfile.gettempdir()
+PA = os.environ.get('QA_CHAIN_PA') or os.path.join(BASE_TEMP, 'pa_qa')
+RUN_ID = time.strftime('%Y%m%d-%H%M%S') + '_p%d' % os.getpid()
+PA_SEED = (('h_gichul', 'vendor'), ('h_jagwa', 'vendor'))   # 하네스가 TEMP 에서 찾는 pdf.js 사본 — 있으면 하네스 임시 폴더에 떠 줌(없으면 하네스가 받거나 cdnjs)
+PA_LEFT = []
 RESD = os.environ.get('QA_CHAIN_RES') or (os.path.join(NR, '_qa_results') if NR else os.path.join(WORK, 'results'))
 FLAKY = os.environ.get('QA_CHAIN_FLAKY') or (os.path.join(NR, '_qa_flaky.json') if NR else os.path.join(WORK, '_qa_flaky.json'))
 APPS = {'jo': '조판기', 'jagwa': '자과', 'minbeop': '민법', 'timetable': '시간표', 'gichul': '기출서재', 'chem': '화학', 'root': '맨 위 공용'}
@@ -457,6 +464,96 @@ def lock():
     return lf
 
 
+# ── env_clean B-1 · B-2 · B-5(10/8) — 하네스 임시 폴더 · 쓸기 · 실행 결과 폴더 셋만 ──────────────────────────────
+def _rm_ro(fn, p, exc):
+    try:
+        os.chmod(p, 0o666)
+        fn(p)
+    except Exception:
+        pass
+
+
+def pa_make(name, stamp):
+    """하네스 하나의 임시 폴더 — 씨앗(pdf.js 사본)을 떠 둠"""
+    d = os.path.join(PA, RUN_ID, '%s_%s' % (name, stamp))
+    os.makedirs(d, exist_ok=True)
+    for sub in PA_SEED:
+        src = os.path.join(BASE_TEMP, *sub)
+        if os.path.isdir(src):
+            try:
+                shutil.copytree(src, os.path.join(d, *sub), dirs_exist_ok=True)
+            except Exception:
+                pass
+    return d
+
+
+def pa_drop(d, keep, out):
+    """하네스 임시 폴더 지움 — 전수표 keep 칸(그 폴더 기준 상대 이름)은 out\\kept 로 옮긴 뒤 · 못 지운 것은 다음 실행 쓸기 몫"""
+    for k in keep or []:
+        src = os.path.join(d, *k.split('/'))
+        if os.path.exists(src):
+            try:
+                dst = os.path.join(out, 'kept', *k.split('/'))
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.move(src, dst)
+            except Exception:
+                pass
+    for i in range(3):
+        shutil.rmtree(d, onerror=_rm_ro)
+        if not os.path.exists(d):
+            return True
+        time.sleep(2)
+    PA_LEFT.append(d)
+    say('  ⚠ 하네스 임시 폴더를 다 못 지움(잠김 · 다음 실행 쓸기 몫): %s' % d)
+    return False
+
+
+def pa_sweep(max_age=3600):
+    """실행 시작 쓸기 — pa_qa 아래 실행 폴더 가운데 그 실행기 프로세스가 없고 max_age 초 넘은 것(앞 실행이 죽어 못 지운 몫)"""
+    if not os.path.isdir(PA):
+        return 0
+    n = 0
+    for e in list(os.scandir(PA)):
+        if not e.is_dir() or e.name == RUN_ID:
+            continue
+        m = re.search(r'_p(\d+)$', e.name)
+        pid = int(m.group(1)) if m else 0
+        try:
+            age = time.time() - e.stat().st_mtime
+        except OSError:
+            continue
+        if (pid and _alive(pid)) or age < max_age:
+            continue
+        shutil.rmtree(e.path, onerror=_rm_ro)
+        n += 0 if os.path.exists(e.path) else 1
+    if n:
+        say('  쓸기: 앞 실행이 남긴 하네스 임시 폴더 %d 지움(%s)' % (n, PA))
+    return n
+
+
+def pa_end():
+    """이 실행의 pa_qa 폴더 — 하네스마다 지웠으니 빈 껍데기만 · 남은 것(잠김)은 다음 실행 쓸기 몫"""
+    d = os.path.join(PA, RUN_ID)
+    if os.path.isdir(d):
+        shutil.rmtree(d, onerror=_rm_ro)
+
+
+def out_trim(app, keep=3):
+    """실행 결과 폴더 WORK\\<앱>\\<하네스>\\<시각> — 하네스마다 최근 keep 개만(저장본 · 스냅샷은 N: 에 따로 · 이 폴더를 안 가리킴)"""
+    base = os.path.join(WORK, app)
+    if not os.path.isdir(base):
+        return 0
+    n = 0
+    for h in os.scandir(base):
+        if not h.is_dir():
+            continue
+        ds = sorted((x for x in os.scandir(h.path) if x.is_dir() and re.match(r'^\d{8}-\d{6}$', x.name)), key=lambda x: x.name)
+        for x in (ds[:-keep] if len(ds) > keep else []):
+            shutil.rmtree(x.path, onerror=_rm_ro)
+            n += 0 if os.path.exists(x.path) else 1
+    return n
+
+
 # ── 항목 받개(A-2-2 · 재는 것은 안 바꾸고 출력만 모은다) ─────────────────────────────────────────────
 RX_PIPE = re.compile(r'^\s*(PASS|FAIL|INFO|WARN|SKIP)\s*\|\s?(.*)$')
 RX_END = re.compile(r'^\s*([A-Z][A-Za-z0-9_\-\[\]]{0,15})\s*\|\s*(.*?)\s*\|\s*(PASS|FAIL)\s*$')
@@ -748,6 +845,8 @@ def run_one(r, app, ctx, c, label='', note='', snap=None):
     env.update({'GENIE_ROOT': ctx.root, 'PYTHONUTF8': '1', 'PYTHONIOENCODING': 'utf-8', 'PYTHONDONTWRITEBYTECODE': '1', 'PYTHONUNBUFFERED': '1',
                 'QA_TRACE_OUT': tr, 'QA_TRACE_BAK': bak, 'QA_TRACE_ROOTS': ';'.join('%s=%s' % x for x in roots),
                 'PYTHONPATH': TRACE_DIR + (os.pathsep + env['PYTHONPATH'] if env.get('PYTHONPATH') else '')})
+    hx = pa_make(name, stamp)   # ★ env_clean B-1 — 하네스의 tempfile · 크롬 · playwright 프로필 · 앱 사본이 다 이 밑에(끝나면 지움)
+    env.update({'TEMP': hx, 'TMP': hx, 'TMPDIR': hx})
     for k, v in (r.get('env') or {}).items():
         env[k] = v
     argv = [sys.executable, hfile(r)] + fill(tpl, ctx, app, out, md, snap)
@@ -783,6 +882,7 @@ def run_one(r, app, ctx, c, label='', note='', snap=None):
             wt_note = '⚠ genie 자리 상태가 돌기 전과 다름'
     stdout = open(os.path.join(out, 'stdout.txt'), 'rb').read().decode('utf-8', 'replace')
     stderr = open(os.path.join(out, 'stderr.txt'), 'rb').read().decode('utf-8', 'replace')
+    pa_drop(hx, r.get('keep'), out)   # ★ env_clean B-1 — 결과는 out(N: 저장본) · 하네스 임시 폴더는 여기서 지움(시간 넘김 · 실패 모두 이 줄을 지남)
     src, text = 'stdout', stdout
     want = r.get('res') or 'stdout'
     cands = []
@@ -981,6 +1081,7 @@ def cmd_run(args, pos):
     if not rows:
         raise SystemExit('돌릴 하네스 0 — 앱·범위를 볼 것')
     lf = lock()
+    pa_sweep()   # ★ env_clean B-2
     ctx = ctx_from(args)
     ctx.mode = arg_mode(args)
     runid = time.strftime('%Y%m%d-%H%M') + '_run' + ('_' + args['--label'] if args.get('--label') else '')
@@ -1012,6 +1113,8 @@ def cmd_run(args, pos):
     finally:
         if not args.get('--keep-root'):
             ctx.drop()
+        pa_end()   # ★ env_clean B-1 · B-5
+        out_trim(app)
         try:
             os.remove(lf)
         except Exception:
@@ -1125,6 +1228,7 @@ def cmd_compare(args, pos):
     if not rows:
         raise SystemExit('돌릴 하네스 0')
     lf = lock()
+    pa_sweep()   # ★ env_clean B-2
     bctx = ctx_from(args, 'base')
     nctx = ctx_from(args)
     bctx.mode = nctx.mode = arg_mode(args)
@@ -1190,6 +1294,8 @@ def cmd_compare(args, pos):
     finally:
         bctx.drop()
         nctx.drop()
+        pa_end()   # ★ env_clean B-1 · B-5
+        out_trim(app)
         try:
             os.remove(lf)
         except Exception:

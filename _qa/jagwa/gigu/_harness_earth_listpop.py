@@ -27,6 +27,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import hashlib
 import http.server
 import io
@@ -72,7 +73,8 @@ def _ensure_base():
     raise SystemExit('NG  고침 전 사본(md5 %s)을 못 찾았다' % BASE_MD5)
 
 
-BASE = _ensure_base()
+BASE = _ensure_base() if QC.GATE else None   # regress — 고침 전 사본(2f896bfe) 찾기 · git show 0(그 사본을 쓰는 실행 · 칸은 관문만 · 기준 둘은 스냅샷)
+_RG_SMOKE = ('E-0 지학 카드 층', 'C-1 기출 목록이 319줄', 'V-1 문제를 누르면', '콘솔 오류 0')   # qa_slim2 smoke 칸(A-0)
 SPDROOT = _roots.spd()
 OUT = os.path.join(os.environ.get('TEMP', '.'), 'hlistpop')
 os.makedirs(OUT, exist_ok=True)
@@ -827,6 +829,7 @@ def build(mode, src_text):
 
 
 def run(mode, secs, src_text):
+    QC.launch('new' if mode == 'earth' else 'base')   # 셈(§B-4) — earth 말고는 고정 옛 판(a9f9fd4 · 고침 전 사본)
     subj = build(mode, src_text)
     spd = os.path.join(SPDROOT, subj)
     done = threading.Event()
@@ -900,48 +903,61 @@ def run(mode, secs, src_text):
 def static_checks():
     b = open(SRC, 'rb').read()
     s = b.replace(b'\r\n', b'\n').decode('utf-8')
-    base = open(BASE, 'rb').read().replace(b'\r\n', b'\n').decode('utf-8')
-    # ★ 2026-09-30 A-6 (d) — Z-1·6·7·10·13 은 이 판(listpop 인도 a9f9fd4)의 패치 꼴을 잰다 — 지금 판은 뒤 판(add1 · shell_bio_phys c9faff2 · add16 · phone_win …)이 바꿨다
-    s_lp = subprocess.run(['git', '-C', GENIE, 'show', 'a9f9fd4:jagwa/index.html'], capture_output=True).stdout.replace(b'\r\n', b'\n').decode('utf-8')
+    if QC.GATE:   # 고침 전 사본 · 인도판 a9f9fd4 = 그 판 패치 꼴을 재는 칸(관문만) · 기준 둘(Z-4 · Z-12)의 바탕
+        base = open(BASE, 'rb').read().replace(b'\r\n', b'\n').decode('utf-8')
+        # ★ 2026-09-30 A-6 (d) — Z-1·6·7·10·13 은 이 판(listpop 인도 a9f9fd4)의 패치 꼴을 잰다 — 지금 판은 뒤 판(add1 · shell_bio_phys c9faff2 · add16 · phone_win …)이 바꿨다
+        QC.sub('git:show-app')
+        s_lp = subprocess.run(['git', '-C', GENIE, 'show', 'a9f9fd4:jagwa/index.html'], capture_output=True).stdout.replace(b'\r\n', b'\n').decode('utf-8')
     out = []
 
     def T2(name, cond, info=''):
         out.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
 
-    # ⚠ 「블록이 열린 뒤」만 보면 안 된다 — 닫는 괄호 **뒤**여도 통과한다(9/20 실측 · Y-1 이 잡았다).
-    blk = s_lp.find('\nif(CARD_LAYER){\n')
-    end = s_lp.find('\n}\n/*/EARTH:js*/')
-    keys = ['var ISEA=', 'var codeShow=', 'function ordBar(', 'var CROPFOR=', 'function cropFor(',
-            'function vwApply(', 'function bplOpen(', 'function bplRefresh(']
-    T2('Z-1 새 갈래 여덟이 전부 if(CARD_LAYER) **블록 안**이다 — 물리는 만들지도 않는다',
-       blk >= 0 and end > blk and all(blk < s_lp.find(k) < end for k in keys),
-       [(k, s_lp.find(k), blk, end) for k in keys if not (blk < s_lp.find(k) < end)])
+    if QC.GATE:   # Z-1 관문만 — 인도판 a9f9fd4 소스
+        # ⚠ 「블록이 열린 뒤」만 보면 안 된다 — 닫는 괄호 **뒤**여도 통과한다(9/20 실측 · Y-1 이 잡았다).
+        blk = s_lp.find('\nif(CARD_LAYER){\n')
+        end = s_lp.find('\n}\n/*/EARTH:js*/')
+        keys = ['var ISEA=', 'var codeShow=', 'function ordBar(', 'var CROPFOR=', 'function cropFor(',
+                'function vwApply(', 'function bplOpen(', 'function bplRefresh(']
+        T2('Z-1 새 갈래 여덟이 전부 if(CARD_LAYER) **블록 안**이다 — 물리는 만들지도 않는다',
+           blk >= 0 and end > blk and all(blk < s_lp.find(k) < end for k in keys),
+           [(k, s_lp.find(k), blk, end) for k in keys if not (blk < s_lp.find(k) < end)])
     T2("Z-2 과목 문은 SUBJ_ID==='earth' 다 — CARD_LAYER 로 안 걸었다",
        "var ISEA=SUBJ_ID==='earth';" in s)
     T2('Z-3 uid 를 안 바꿨다 — r[F.CODE] 에 대입하는 자리가 없다',
        s.count('r[F.CODE]=') == 0 and s.count('r[F.CODE] =') == 0)
     SK = ("SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos',"
           "'mcard','bogi','unit','bpit','bpg','crop','txt','tfix','bref']")
-    T2('Z-4 지학 SYNC_KEYS 무변', s.count(SK) == base.count(SK) == 1, [s.count(SK), base.count(SK)])
+    if QC.GATE:
+        T2('Z-4 지학 SYNC_KEYS 무변', s.count(SK) == base.count(SK) == 1, [s.count(SK), base.count(SK)])
+    else:   # regress — 기준: 바탕 글자 수 = 앞 인도판 스냅샷
+        _z4 = QC.base('Z-4.sk', s.count(SK))
+        T2('Z-4 지학 SYNC_KEYS 무변', s.count(SK) == _z4 == 1, [s.count(SK), _z4])
     T2('Z-5 makeFloat 은 **더하기만** 했다(`.panel` 갈래가 그대로 첫째다)',
        "const p=sheet.querySelector('.panel')||(sheet.classList.contains('selfpanel')?sheet:null);" in s)
-    T2('Z-6 makeFloat 을 부르는 자리가 둘 늘었다(문항 창 · 목록 창)',
-       s_lp.count('makeFloat(') == base.count('makeFloat(') + 2,
-       [s_lp.count('makeFloat('), base.count('makeFloat(')])
-    T2('Z-7 「그림」 칩은 지학에서만 안 그린다(줄 자체는 남아 있다)',
-       '>그림</span>' in s_lp and "(!ISEA&&r[F.FILE]==='IMG')" in s_lp)
+    if QC.GATE:   # Z-6 · Z-7 관문만 — 인도판 a9f9fd4 소스
+        T2('Z-6 makeFloat 을 부르는 자리가 둘 늘었다(문항 창 · 목록 창)',
+           s_lp.count('makeFloat(') == base.count('makeFloat(') + 2,
+           [s_lp.count('makeFloat('), base.count('makeFloat(')])
+        T2('Z-7 「그림」 칩은 지학에서만 안 그린다(줄 자체는 남아 있다)',
+           '>그림</span>' in s_lp and "(!ISEA&&r[F.FILE]==='IMG')" in s_lp)
     T2('Z-8 cropOffer 는 CROPFOR||VNO 한 곳에서만 갈린다',
        "const tno=(typeof CROPFOR!=='undefined'&&CROPFOR)||VNO;" in s and s.count('rec(tno)[F.CODE]') == 1)
     T2('Z-9 §F 에서 새로 지은 top-level 함수는 셋이다(bplOpen · bplRefresh · cropFor)',
        s.count('\nfunction bplOpen(') == 1 and s.count('\nfunction bplRefresh(') == 1
        and s.count('\nfunction cropFor(') == 1)
-    T2('Z-10 CSS 는 전부 지학 문 안이다(body[data-subj="earth"] · #view.win · #bpl)',
-       'body[data-subj="earth"] .ordseg{' in s_lp and '#view.win{' in s_lp and '#bpl{' in s_lp)
+    if QC.GATE:   # Z-10 관문만 — 인도판 a9f9fd4 소스
+        T2('Z-10 CSS 는 전부 지학 문 안이다(body[data-subj="earth"] · #view.win · #bpl)',
+           'body[data-subj="earth"] .ordseg{' in s_lp and '#view.win{' in s_lp and '#bpl{' in s_lp)
     T2('Z-11 줄끝이 CRLF 그대로다', b.count(b'\r\n') == b.count(b'\n'))
-    T2('Z-12 원본 대비 늘기만 했다(지운 기능이 없다)', len(s) > len(base))
-    T2('Z-13 지운 원본 줄이 없다 — 손댄 자리 밖은 그대로다',
-       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s_lp) <= 25,
-       sum(1 for ln in base.split('\n') if ln.strip() and ln not in s_lp))
+    if QC.GATE:
+        T2('Z-12 원본 대비 늘기만 했다(지운 기능이 없다)', len(s) > len(base))
+        T2('Z-13 지운 원본 줄이 없다 — 손댄 자리 밖은 그대로다',
+           sum(1 for ln in base.split('\n') if ln.strip() and ln not in s_lp) <= 25,
+           sum(1 for ln in base.split('\n') if ln.strip() and ln not in s_lp))
+    else:   # regress — Z-12 기준: 바탕 길이 = 앞 인도판 스냅샷 · 「≥」(같으면 무변) · Z-13(두 고정 판 사이) = 관문만
+        _z12 = QC.base('Z-12.len', len(s))
+        T2('Z-12 원본 대비 늘기만 했다(지운 기능이 없다)', len(s) >= _z12)
     return out
 
 
@@ -1028,9 +1044,11 @@ def main():
     want = [a for a in sys.argv[1:] if a in ('earth', 'bio', 'phys', 'null')] \
            or ['earth', 'bio', 'phys', 'null']
     cur = open(SRC, encoding='utf-8', newline='').read()
-    basetxt = open(BASE, encoding='utf-8', newline='').read()
-    # ★ 2026-09-30 A-6 (d) — 생물·물리 무변(B·Y)은 이 판 인도판(a9f9fd4)을 고침 전 사본과 맞댄다 — 지금 판은 뒤 판(shell_bio_phys c9faff2 등)이 생물·물리를 일부러 바꿨다
-    lptxt = subprocess.run(['git', '-C', GENIE, 'show', 'a9f9fd4:jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
+    if QC.GATE:   # 고정 옛 판 둘(고침 전 사본 · 인도판 a9f9fd4) — 그 판들로 도는 실행 · 칸 = 관문만
+        basetxt = open(BASE, encoding='utf-8', newline='').read()
+        # ★ 2026-09-30 A-6 (d) — 생물·물리 무변(B·Y)은 이 판 인도판(a9f9fd4)을 고침 전 사본과 맞댄다 — 지금 판은 뒤 판(shell_bio_phys c9faff2 등)이 생물·물리를 일부러 바꿨다
+        QC.sub('git:show-app')
+        lptxt = subprocess.run(['git', '-C', GENIE, 'show', 'a9f9fd4:jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
     lines = []
     W = int(os.environ.get('HARNESS_WAIT', '1500'))
 
@@ -1040,7 +1058,7 @@ def main():
     if 'earth' in want:
         ls, _ = run('earth', W, cur)
         lines += ls
-    if 'bio' in want:
+    if 'bio' in want and QC.GATE:   # regress — 생물 무변(B)은 고정 옛 판 둘 사이(관문만)
         ls, sn = run('bio', W, lptxt)
         lines += ls
         ls0, sn0 = run('biobase', W, basetxt)
@@ -1052,7 +1070,7 @@ def main():
                           ('tools', '교재 도구줄'), ('book', '#book 클래스')):
                 T2('B-3 ★생물 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sn.get(k) == sn0.get(k),
                    [str(sn.get(k))[:140], str(sn0.get(k))[:140]])
-    if 'phys' in want:
+    if 'phys' in want and QC.GATE:   # regress — 물리 무변(Y)은 고정 옛 판 둘 사이(관문만)
         ls, sn = run('phys', W, lptxt)
         lines += ls
         ls0, sn0 = run('physbase', W, basetxt)
@@ -1063,7 +1081,7 @@ def main():
                           ('view', '#view 클래스'), ('vtop', '문항 머리줄'), ('book', '#book 클래스')):
                 T2('Y-3 ★물리 %s 이(가) 고침 전과 **글자까지** 같다' % ko, sn.get(k) == sn0.get(k),
                    [str(sn.get(k))[:140], str(sn0.get(k))[:140]])
-    if 'null' in want:
+    if 'null' in want and QC.GATE:   # regress — 헛잣대(고침 전 사본) 안 돎
         ls0, _ = run('earthbase', W, basetxt)
         fails = [x for x in ls0 if x.startswith('FAIL')]
         for pre, ko in (('C', '§A 코드'), ('M', '§B 모드'), ('V', '§E 문항 창'), ('P', '§F 목록 창')):
@@ -1073,8 +1091,12 @@ def main():
                [x.split(' | ')[1][:70] for x in fails][:8])
         T2('0-헛잣대 HEAD 는 통과가 아니다', len(fails) > 0, len(fails))
 
-    lines += static_checks()
-    lines += data_checks()
+    if not QC.SMOKE:   # smoke — 소스 칸은 smoke 칸이 아님
+        lines += static_checks()
+    if QC.GATE:   # G(데이터 박기 9/20) = 관문만 — 고정 커밋 셋 · 고정 스냅 파일 둘(지금 데이터를 안 잰다)
+        lines += data_checks()
+    if QC.SMOKE:   # smoke — smoke 칸 줄만
+        lines = [x for x in lines if any((x.split(' | ') + ['', ''])[1].startswith(k) for k in _RG_SMOKE)]
     npass = sum(1 for x in lines if x.startswith('PASS'))
     nfail = sum(1 for x in lines if x.startswith('FAIL'))
     nnote = sum(1 for x in lines if x.startswith('NOTE'))

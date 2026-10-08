@@ -35,15 +35,14 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 _roots.need_n('jagwa/gigu/_ggmath_rows.json · studyplandata 근거 글(비공개 기록 — N: 에서만)')
 import hashlib, io, itertools, json, os, random, re, shutil, subprocess, sys, tempfile, time   # noqa: E402
 from html.parser import HTMLParser   # noqa: E402
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-_ARGV = sys.argv; sys.argv = [sys.argv[0]]   # HU 는 들어올 때 sys.argv 를 읽는다
-import _harness_jagwa_uid as HU   # noqa: E402  (Srv · INIT · JS(__J) · git · SPD)
-sys.argv = _ARGV
 
 
 def ARG(k, d=None):
@@ -63,7 +62,7 @@ if (os.sep + '_qa' + os.sep) in (HERE + os.sep):   # genie 공개 저장소의 _
 OUTF = ARG('--res', _DEF_OUT)
 CAP = ARG('--cap', os.path.join(tempfile.gettempdir(), 'h_ggmath', 'cap'))
 WORKD = os.path.join(tempfile.gettempdir(), 'h_ggmath', 'p%d' % os.getpid())   # node 임시 파일 — 실행마다 따로(둘이 겹쳐 돌아도 안 섞임) · 끝에 지움
-SPD = HU.SPD
+SPD = _roots.spd()
 ROWS_F = _roots.n('jagwa', 'gigu', '_ggmath_rows.json')
 ROWS = []
 APPS = {}
@@ -80,12 +79,30 @@ def vs(v, n=420):
 
 def R(eng, name, okn, okb, val):
     """결과 한 줄 — okn = 새 판 · okb = 바탕(헛잣대) · None = INFO(안 센다) · 바탕 None = 「—」(안 잼)"""
+    if QC.REGRESS:   # regress — 바탕(4754b1d) 판을 안 돌린다(node · 장면 · 훑기) → 바탕 칸은 늘 「—」
+        okb = None
     ROWS.append((eng, name, okn, okb, val))
     print('%s | 바탕 %s | %s · %s | %s' % ({True: 'PASS', False: 'FAIL', None: 'INFO'}[okn], {True: 'PASS', False: 'FAIL', None: '—'}[okb], eng, name, vs(val)), flush=True)
 
 
 def git(*a):
-    return HU.git(ROOT, *a)
+    return JG.git_HU(ROOT, *a)
+
+
+# ── qa_slim2(2026-10-08) regress 도우미 — 이름이 `_rg` · `_RG` 로 시작 = gate 에서 안 쓰는 갈래(gate 에서 도는 줄은 원래 글 그대로)
+_RG_BOOT = "()=>__J.ready()&&typeof recBusy!=='undefined'&&!recBusy&&(((window.__PUTS||[]).length>0)||!!recErr)"   # 표지 = 앱 recBoot() 첫 syncRecords 끝(recBusy 거짓 · PUT 1 번 이상 또는 recErr) · INIT_HU 가 토큰을 넣어 부팅마다 맞춤 · PUT 을 한다
+
+
+def _rg_over_base(eng, subj, W, rn):
+    """regress — B-6 「바탕에 없던 새 넘침」 의 바탕 = 앞 인도판 NEW 훑기의 넘침 이름 스냅샷(자리마다) — j_over 가 읽는 꼴(places.<자리>.geo.overflow)로"""
+    pl = {}
+    for kind in PLACES:
+        g = _g(rn, kind)
+        cur = sorted({o['n'] for o in (g or {}).get('overflow', []) if o.get('bad')}) if g else None
+        b = QC.base('B6.over@%s/%s/%d/%s' % (eng, subj, W, kind), cur)
+        if isinstance(b, list):
+            pl[kind] = {'geo': {'overflow': [{'n': n, 'bad': True} for n in b], 'outside': []}}
+    return {'places': pl}
 
 
 def esc_py(s):
@@ -270,6 +287,8 @@ def _wr(path, text):
 
 def run_node(code, inputs, tag):
     """code(= esc 줄 + WORD ~ ggMath) 를 vm 에서 돌려 inputs 마다 (ggMath || esc)(입력) 의 결과 HTML — 함수가 없으면 esc(바탕 = 옛 그림)"""
+    if code is None and QC.REGRESS:   # regress — 바탕 코드(4754b1d) 없음 → 바탕 node 칸 안 돎(빈 결과 · R 의 바탕 칸 = 「—」)
+        return {'out': [{} for _ in inputs], 'hasFn': None, 'initErr': None}
     os.makedirs(WORKD, exist_ok=True)
     cf, inf, outf, jf = [os.path.join(WORKD, '%s_%s' % (tag, n)) for n in ('code.js', 'in.json', 'out.json', 'run.js')]
     _wr(cf, code); _wr(inf, json.dumps(inputs, ensure_ascii=False)); _wr(jf, NODE_JS)
@@ -320,9 +339,13 @@ MUT_ESC = ("out+=esc(c);i++}", "out+=c;i++}")                       # 글자를 
 def load_apps():
     p = os.path.join(ROOT, 'jagwa', 'index.html')
     APPS['NEW'] = open(p, 'rb').read().replace(b'\r\n', b'\n')
-    b = git('show', '%s:jagwa/index.html' % BASE)
-    if not b:
-        b = HU.git(GENIE, 'show', '%s:jagwa/index.html' % BASE)
+    if QC.GATE:
+        QC.sub('git:show-app')
+        b = git('show', '%s:jagwa/index.html' % BASE)
+        if not b:
+            b = JG.git_HU(GENIE, 'show', '%s:jagwa/index.html' % BASE)
+    else:   # regress · smoke — 바탕(4754b1d) 앱 풀기 0 · 바탕 node 칸 · 장면 · 훑기 0
+        b = b''
     APPS['BASE'] = b
 
 
@@ -341,8 +364,9 @@ def b0():
       bool(CODE['NEW']) and meta['NEW']['esc줄'] == 1 and meta['NEW']['ggMath'] == 1,
       bool(CODE['BASE']) and meta['BASE']['esc줄'] == 1 and meta['BASE']['ggMath'] == 1,
       {'NEW': meta['NEW'], '바탕': meta['BASE']})
-    R('node', 'B0 앱 파일 — 새 판 LF %d B · 바탕 %s LF %d B' % (len(APPS['NEW']), BASE, len(APPS['BASE'])), None, None,
-      {'NEW md5': hashlib.md5(APPS['NEW']).hexdigest()[:8], '바탕 md5': hashlib.md5(APPS['BASE']).hexdigest()[:8], 'root HEAD': git('rev-parse', '--short', 'HEAD').decode('utf-8', 'replace').strip()})
+    if QC.GATE:   # 관문만 — INFO(판정 없음) · 바탕 크기 · md5 · git rev-parse
+        R('node', 'B0 앱 파일 — 새 판 LF %d B · 바탕 %s LF %d B' % (len(APPS['NEW']), BASE, len(APPS['BASE'])), None, None,
+          {'NEW md5': hashlib.md5(APPS['NEW']).hexdigest()[:8], '바탕 md5': hashlib.md5(APPS['BASE']).hexdigest()[:8], 'root HEAD': git('rev-parse', '--short', 'HEAD').decode('utf-8', 'replace').strip()})
     CODE['MUT_V8'] = mutate(CODE['NEW'], *MUT_V8)
     CODE['MUT_ESC'] = mutate(CODE['NEW'], *MUT_ESC)
     sy = js_syntax(GJS, 'gjs')
@@ -369,49 +393,50 @@ def b0_static(new, base):
     """B0 정적 칸 — 앱 글(소스)만 본다(브라우저 0): 글자 그대로 · 바뀐 곳 전수 · 이름 충돌 · 자리 다섯"""
     import difflib
     # ① 지시서 A-1 · A-2 「글자 그대로」 — 앱 안 함수 · CSS 가 패치 스크립트의 FN_BLOCK · CSS_BLOCK 과 같다(딱 1 번씩)
-    pb = patch_blocks()
-    if pb and pb.get('FN_BLOCK') and pb.get('CSS_BLOCK'):
-        cn, cb = new.count(pb['FN_BLOCK']), new.count(pb['CSS_BLOCK'])
-        R('node', 'B0 글자 그대로 — 앱 안 ggMath 함수 · CSS 가 지시서 패치(_ggmath_patch.py)의 FN_BLOCK · CSS_BLOCK 과 같음(딱 1 번씩)', cn == 1 and cb == 1,
-          base.count(pb['FN_BLOCK']) == 1 and base.count(pb['CSS_BLOCK']) == 1, {'새 판 FN · CSS 횟수': [cn, cb], '바탕': [base.count(pb['FN_BLOCK']), base.count(pb['CSS_BLOCK'])]})
-    else:
-        R('node', 'B0 글자 그대로 — 패치 스크립트를 못 읽음(건너뜀)', None, None, PATCH_F)
-    # ② 바뀐 곳 전수 — 바탕 대비 차이가 ggMath 함수 · CSS · 자리 다섯(+ gtextH)뿐(저장 · 동기화 · 검색 · 한도 · KaTeX 줄은 한 줄도 안 바뀜 = A-4)
-    a, b = base.split('\n'), new.split('\n')
-    sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
-    rem, add = [], []
-    for tag, i1, i2, j1, j2 in sm.get_opcodes():
-        if tag == 'equal':
-            continue
-        rem += [(i + 1, a[i]) for i in range(i1, i2)]
-        add += [(j + 1, b[j]) for j in range(j1, j2)]
-    addset = {t for _n, t in add}
-    swapped, unmatched, swaps = 0, [], set()
-    for n, r in rem:   # 지운 줄마다 「esc( 한 곳 → ggMath(」 (또는 esc(gtext) → gtextH) 로 바꾼 짝이 더한 줄에 있어야
-        cands = [r[:m.start()] + 'ggMath(' + r[m.end():] for m in re.finditer(r'esc\(', r)] + ([r.replace('esc(gtext)', 'gtextH')] if 'esc(gtext)' in r else [])
-        hit = [c for c in cands if c in addset]
-        if hit:
-            swapped += 1; swaps.update(hit)
+    if QC.GATE:   # 관문만 — ① 지시서 패치 글자 · ② 고정 바탕(4754b1d) 대비 diff 전수 = 그 판 인도 때만 뜻(뒤 판이 같은 자리를 고치면 거짓 FAIL)
+        pb = patch_blocks()
+        if pb and pb.get('FN_BLOCK') and pb.get('CSS_BLOCK'):
+            cn, cb = new.count(pb['FN_BLOCK']), new.count(pb['CSS_BLOCK'])
+            R('node', 'B0 글자 그대로 — 앱 안 ggMath 함수 · CSS 가 지시서 패치(_ggmath_patch.py)의 FN_BLOCK · CSS_BLOCK 과 같음(딱 1 번씩)', cn == 1 and cb == 1,
+              base.count(pb['FN_BLOCK']) == 1 and base.count(pb['CSS_BLOCK']) == 1, {'새 판 FN · CSS 횟수': [cn, cb], '바탕': [base.count(pb['FN_BLOCK']), base.count(pb['CSS_BLOCK'])]})
         else:
-            unmatched.append((n, r.strip()[:60]))
-    fa = next((i for i, l in enumerate(b) if l.startswith('/* ★ jagwa_ggmath (2026-10-04')), None)   # 함수 덩이 = 머리 주석 3 줄 + var WORD ~ ggMath 끝
-    wa = next((i for i, l in enumerate(b) if l.startswith('var WORD=')), None)
-    meta = extract(new)[1]
-    fb = (wa + meta['줄수']) if wa is not None else None
-    stray = []
-    for n, t in add:
-        if t.startswith('.gm-') or t.lstrip().startswith('/* ★ jagwa_ggmath'):
-            continue                                                   # CSS 덩이
-        if fa is not None and fb is not None and fa <= n - 1 < fb:
-            continue                                                   # 함수 덩이
-        if 'gtextH' in t or "esc('\\n'+g.cs.map(c=>'  ↳ '" in t:
-            continue                                                   # 쓰는 문항 창 gtextH(근거 줄 = ggMath · 댓글 줄 = esc)
-        if t in swaps:
-            continue                                                   # 바꾼 줄 자신
-        stray.append((n, t.strip()[:60]))
-    ok = len(rem) == 6 and swapped == 6 and not unmatched and not stray and len(add) > 0
-    R('node', 'B0 바뀐 곳 전수 — 바탕 대비 지운 줄 6(esc → ggMath 자리 다섯 + 패널 두 줄) · 더한 줄은 함수 · CSS · gtextH 뿐(그 밖 한 줄도 안 바뀜)', ok, None,
-      {'지운 줄': len(rem), '바꾼 줄 짝': swapped, '짝 없는 지운 줄': unmatched[:3], '더한 줄': len(add), '밖의 더한 줄': stray[:4]})
+            R('node', 'B0 글자 그대로 — 패치 스크립트를 못 읽음(건너뜀)', None, None, PATCH_F)
+        # ② 바뀐 곳 전수 — 바탕 대비 차이가 ggMath 함수 · CSS · 자리 다섯(+ gtextH)뿐(저장 · 동기화 · 검색 · 한도 · KaTeX 줄은 한 줄도 안 바뀜 = A-4)
+        a, b = base.split('\n'), new.split('\n')
+        sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
+        rem, add = [], []
+        for tag, i1, i2, j1, j2 in sm.get_opcodes():
+            if tag == 'equal':
+                continue
+            rem += [(i + 1, a[i]) for i in range(i1, i2)]
+            add += [(j + 1, b[j]) for j in range(j1, j2)]
+        addset = {t for _n, t in add}
+        swapped, unmatched, swaps = 0, [], set()
+        for n, r in rem:   # 지운 줄마다 「esc( 한 곳 → ggMath(」 (또는 esc(gtext) → gtextH) 로 바꾼 짝이 더한 줄에 있어야
+            cands = [r[:m.start()] + 'ggMath(' + r[m.end():] for m in re.finditer(r'esc\(', r)] + ([r.replace('esc(gtext)', 'gtextH')] if 'esc(gtext)' in r else [])
+            hit = [c for c in cands if c in addset]
+            if hit:
+                swapped += 1; swaps.update(hit)
+            else:
+                unmatched.append((n, r.strip()[:60]))
+        fa = next((i for i, l in enumerate(b) if l.startswith('/* ★ jagwa_ggmath (2026-10-04')), None)   # 함수 덩이 = 머리 주석 3 줄 + var WORD ~ ggMath 끝
+        wa = next((i for i, l in enumerate(b) if l.startswith('var WORD=')), None)
+        meta = extract(new)[1]
+        fb = (wa + meta['줄수']) if wa is not None else None
+        stray = []
+        for n, t in add:
+            if t.startswith('.gm-') or t.lstrip().startswith('/* ★ jagwa_ggmath'):
+                continue                                                   # CSS 덩이
+            if fa is not None and fb is not None and fa <= n - 1 < fb:
+                continue                                                   # 함수 덩이
+            if 'gtextH' in t or "esc('\\n'+g.cs.map(c=>'  ↳ '" in t:
+                continue                                                   # 쓰는 문항 창 gtextH(근거 줄 = ggMath · 댓글 줄 = esc)
+            if t in swaps:
+                continue                                                   # 바꾼 줄 자신
+            stray.append((n, t.strip()[:60]))
+        ok = len(rem) == 6 and swapped == 6 and not unmatched and not stray and len(add) > 0
+        R('node', 'B0 바뀐 곳 전수 — 바탕 대비 지운 줄 6(esc → ggMath 자리 다섯 + 패널 두 줄) · 더한 줄은 함수 · CSS · gtextH 뿐(그 밖 한 줄도 안 바뀜)', ok, None,
+          {'지운 줄': len(rem), '바꾼 줄 짝': swapped, '짝 없는 지운 줄': unmatched[:3], '더한 줄': len(add), '밖의 더한 줄': stray[:4]})
     # ③ 이름 충돌 — WORD · ggMath 정의가 하나씩(뒤엣것이 이겨 조용히 엉뚱하게 그려지는 것 방지)
     def names(t):
         return {'WORD 정의': len(re.findall(r'\b(?:var|let|const|function)\s+WORD\b', t)), 'ggMath 정의': len(re.findall(r'\bfunction\s+ggMath\s*\(|\b(?:var|let|const)\s+ggMath\b', t)),
@@ -426,6 +451,8 @@ def b0_static(new, base):
                 'esc(첫 줄) 남음': t.count("esc(ggFlat(g).split('\\n')[0])")}
     keep = lambda t: {'title ea(ggFlat)': t.count('ea(ggFlat(g))'), '댓글 esc(c.t)': t.count("esc(c.t||'')"), '상자 댓글 esc': t.count("esc((c&&c.t)||'')"), '.gl mark': t.count("'<div class=\"gl\">'+mark(line)+'</div>'")}
     sn, sb, kn, kb = sites(new), sites(base), keep(new), keep(base)
+    if QC.REGRESS:   # regress — 기준 칸: 안 넣음 자리 글자 셈의 바탕 = 앞 인도판 스냅샷(바탕 앱 0)
+        kb = QC.base('B0.keep', kn)
     ok_n = sn['ggMath(p.t)'] == 1 and sn["ggMath(g.t||'')"] == 1 and sn['ggMath(ggFlat(g))'] == 3 and sn['ggMath(첫 줄)'] == 1 and sn['esc(ggFlat(g)) 남음'] == 0 and sn['esc(첫 줄) 남음'] == 0
     R('node', 'B0 자리 다섯(§0-4 표 1~5) — ggMath 호출 p.t 1 · g.t 1 · ggFlat 3 · 지우기 첫 줄 1 · esc(ggFlat) 남음 0', ok_n,
       sb['ggMath(p.t)'] == 1 and sb['esc(ggFlat(g)) 남음'] == 0, {'새 판': sn, '바탕': sb})
@@ -890,10 +917,10 @@ VP = {1440: 900, 900: 1000, 834: 1112, 390: 844}
 SUBJ_KO = {'earth': '지학', 'bio': '생물', 'phys': '물리'}
 
 
-class GDev(HU.Dev):
+class GDev(JG.Dev):
     """기기 하나 — HU.Dev 와 같되 창 크기 · 대화 상자 가로채기 · 쪽 안 도우미 얹기"""
     def __init__(self, br, eng, vp=None):
-        self.eng = eng; self.S = HU.Srv()
+        self.eng = eng; self.S = JG.Srv()
         self.vp = vp or {'width': 1553, 'height': 900}
         mobile = bool(self.vp['width'] <= 1100 and eng == 'chromium')
         self.ctx = br.new_context(viewport=self.vp, device_scale_factor=1, has_touch=True, is_mobile=mobile)
@@ -910,17 +937,18 @@ class GDev(HU.Dev):
             pass
 
     def load(self, app, spd, subj, rec=None, static=None):
+        QC.launch('base' if (APPS.get('BASE') and app is APPS.get('BASE')) else 'new')   # 셈(§B-4)
         self.S.app = app; self.S.spd = spd; self.S.rec = dict(rec or {}); self.S.static = dict(static or {})
         if self.pg:
             self.pg.close()
         self.ctx.clear_cookies()
         self.pg = self.ctx.new_page(); self.pg.set_default_timeout(150000)
-        self.pg.add_init_script(HU.INIT.replace('__SUBJ__', subj))
+        self.pg.add_init_script(JG.INIT_HU.replace('__SUBJ__', subj))
         self.pg.on('pageerror', lambda e: self.errs.append('page: ' + str(e)[:200]))
         self.pg.on('dialog', self._dialog)
         self.pg.goto('http://127.0.0.1:%d/app.html' % self.S.port, wait_until='load')
         self.pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>0', timeout=120000)
-        self.pg.evaluate(HU.JS)
+        self.pg.evaluate(JG.JS_HU)
         for _ in range(120):
             if self.ev("()=>__J.ready()"):
                 break
@@ -929,7 +957,10 @@ class GDev(HU.Dev):
             if not self.ev("()=>typeof recBusy!=='undefined'&&recBusy"):
                 break
             self.pg.wait_for_timeout(250)
-        self.pg.wait_for_timeout(2500)
+        if QC.GATE:
+            self.pg.wait_for_timeout(2500)
+        else:   # regress — 고정 2.5 초 대신 표지(첫 기록 맞춤 끝) · 상한 = 같은 2.5 초
+            QC.until(self.pg, _RG_BOOT, 2500, 'ggmath 부팅 뒤 첫 syncRecords 끝(recBusy 거짓 · PUT 1+ 또는 recErr)')
         self.pg.evaluate(GJS)
 
 
@@ -1131,7 +1162,7 @@ def sweep(br, eng, who, subj, W, cap=True):
                 pr['open'] = {k: o.get(k) for k in ('found', 'note', 'vis')}
                 pr['sh'] = sh1(o, kind)
                 pr['geo'] = dv.ev("()=>__G.geo()")
-                if cap:
+                if cap and QC.GATE:   # regress — 사람 눈용 그림(게이트 아님) 안 찍음
                     rc = dv.ev("()=>__G.shotRect()")
                     if rc:
                         os.makedirs(CAP, exist_ok=True)
@@ -1283,6 +1314,8 @@ def run_browser():
     if do_b7:
         widths = sorted(set(widths) | {1440, 390}, reverse=True)
     SW = [('earth', widths), ('phys', widths)]
+    if QC.SMOKE:   # smoke — 지학 장면 하나(B-4 넣음 자리 식 꼴 · B-3 alert 0)만 · 훑기 안 돎
+        scene_plan, widths = [('earth', {'B4', 'B3'})], []
     shots = []
     with sync_playwright() as pw:
         for eng in ENGS:
@@ -1295,13 +1328,13 @@ def run_browser():
                     for subj, do in scene_plan:
                         print('── %s · 장면 %s %s' % (eng, subj, sorted(do)), flush=True)
                         raws = {}
-                        for who in ('NEW', 'BASE'):
+                        for who in (('NEW', 'BASE') if QC.GATE else ('NEW',)):   # regress — 바탕 장면(헛잣대 판정) 안 돎
                             try:
                                 raws[who] = scene(br, eng, who, subj, do)
                             except Exception as e:
                                 raws[who] = {'subj': subj, 'who': who, 'exc': repr(e)[:300]}
                                 R(eng, 'B-x %s %s 장면 멈춤' % (SUBJ_KO[subj], who), False, None, repr(e)[:400])
-                        rn, rb = raws['NEW'], raws['BASE']
+                        rn, rb = raws['NEW'], raws['BASE'] if QC.GATE else {'exc': '(regress — 바탕 안 띄움)'}
                         if 'B4' in do and 'exc' not in rn:
                             cn = cells_b4(rn, 'NEW')
                             cbm = {}
@@ -1309,6 +1342,8 @@ def run_browser():
                                 for n, o, v in cells_b4(rb, 'BASE'):
                                     cbm[n] = o
                             for n, o, v in cn:
+                                if not QC.want(n, smoke=(' 넣음 ' in n and '안 넣음' not in n)):   # smoke — B-4 넣음 자리 식 꼴만
+                                    continue
                                 R(eng, n, o, cbm.get(n), v)
                         if 'B3' in do and 'exc' not in rn:
                             cbm = {}
@@ -1316,6 +1351,8 @@ def run_browser():
                                 for n, o, v in cells_b3_dom(rb):
                                     cbm[n] = o
                             for n, o, v in cells_b3_dom(rn):
+                                if not QC.want(n, smoke=n.startswith('B-3 alert 0')):   # smoke — B-3 alert 0 만
+                                    continue
                                 R(eng, n, o, cbm.get(n), v)
                         if 'B5' in do and 'exc' not in rn:
                             cn, _x = cells_b5(rn)
@@ -1333,7 +1370,7 @@ def run_browser():
                             print('── %s · 훑기 %s %dpx' % (eng, subj, W), flush=True)
                             sw = {}
                             # 옛 줄: for who in (('NEW', 'BASE') if eng == 'chromium' else ('NEW',)):
-                            for who in ('NEW', 'BASE'):   # ★ 10/4 첫 실행 뒤 — 웹킷도 바탕을 훑어 「바탕에 없던 새 넘침」 을 뺀다(원래 있던 카드 760>758 이 새 넘침으로 셈됐다)
+                            for who in (('NEW', 'BASE') if QC.GATE else ('NEW',)):   # ★ 10/4 첫 실행 뒤 — 웹킷도 바탕을 훑어 「바탕에 없던 새 넘침」 을 뺀다(원래 있던 카드 760>758 이 새 넘침으로 셈됐다) · regress — 바탕 넘침은 스냅샷
                                 try:
                                     sw[who] = sweep(br, eng, who, subj, W)
                                 except Exception as e:
@@ -1350,14 +1387,18 @@ def run_browser():
                                 if pr.get('png'):
                                     shots.append(pr['png'])
                             bok = bool(rb and 'exc' not in rb and rb.get('ctx') and not rb['ctx'].get('err'))   # 바탕 훑기가 잘 돌았나(WebKit 은 안 돎)
+                            if QC.REGRESS:   # regress — 기준 칸: 「바탕에 없던 새 넘침」 의 바탕 = 앞 인도판 NEW 넘침 이름 스냅샷
+                                _rg_ob = _rg_over_base(eng, subj, W, rn)
                             if do_b6:
-                                okn, vn = j_over(rn, rb if bok else None)
+                                okn, vn = j_over(rn, (rb if bok else None) if QC.GATE else _rg_ob)
+                                if QC.REGRESS:
+                                    vn['기준'] = QC.base_note('B6.over@%s/%s/%d/%s' % (eng, subj, W, PLACES[0]))
                                 R(eng, 'B-6 %s %dpx 가로 넘침 0 — 식 칸 · 패널·창 · 식이 창 밖(절대) · 카드 · 쪽(바탕에 없던 새 넘침)' % (sj, W), okn, j_over(rb)[0] if bok else None, vn)
                                 okn, vn = j_kink(rn)
                                 R(eng, 'B-6 %s %dpx √ 위 줄과 꺾임 맞닿음(자리 다섯의 √ 마다 · 식 표본 ≥ 1)' % (sj, W), okn, j_kink(rb)[0] if bok else None, vn)
                                 okn, vn = j_wrap(rn)
                                 if W == 390:
-                                    R(eng, 'B-6 %s %dpx 폰 줄바꿈 됨 — 펼친 근거 · 연결 상자가 두 줄 이상 · 가로로 안 넘침' % (sj, W), bool(okn) and j_over(rn, rb if bok else None)[0],
+                                    R(eng, 'B-6 %s %dpx 폰 줄바꿈 됨 — 펼친 근거 · 연결 상자가 두 줄 이상 · 가로로 안 넘침' % (sj, W), bool(okn) and j_over(rn, (rb if bok else None) if QC.GATE else _rg_ob)[0],
                                       (bool(j_wrap(rb)[0]) and j_over(rb)[0]) if bok else None, vn)
                                 else:
                                     R(eng, 'B-6 %s %dpx 줄 수(참고)' % (sj, W), None, None, vn)
@@ -1377,7 +1418,7 @@ def _fin(t0):
     print('\n== PASS %d · FAIL %d · %.0f초' % (npass, nfail, time.time() - t0))
     try:
         newrev = git('rev-parse', '--short', 'HEAD').decode('utf-8', 'replace').strip()
-        spdrev = HU.git(SPD, 'rev-parse', '--short', 'HEAD').decode('utf-8', 'replace').strip()
+        spdrev = JG.git_HU(SPD, 'rev-parse', '--short', 'HEAD').decode('utf-8', 'replace').strip()
     except Exception:
         newrev = spdrev = '?'
     with io.open(OUTF, 'a', encoding='utf-8') as fo:
@@ -1397,17 +1438,18 @@ def main():
         R('node', 'node 실행 파일 없음 — node 칸 못 돎', False, None, 'PATH 의 node 도 파이썬 playwright 가 싣고 온 node 도 못 찾음')
     else:
         load_apps()
-        if not APPS['NEW'] or not APPS['BASE']:
+        if not APPS['NEW'] or (QC.GATE and not APPS['BASE']):   # regress — 바탕 앱 안 읽음(빈 글)
             R('node', 'B0 앱 읽기 실패 — 새 판 %d B · 바탕 %s %d B' % (len(APPS['NEW']), BASE, len(APPS['BASE'])), False, None, ROOT)
             _fin(t0)
         print('새 판 = %s (LF %d B) · 바탕 = %s (%d B) · studyplandata = %s' % (ROOT, len(APPS['NEW']), BASE, len(APPS['BASE']), SPD), flush=True)
-        b0()
-        if want('B1'):
-            b1()
-        if want('B2'):
-            b2()
-        if want('B3'):
-            b3_text()
+        if not QC.SMOKE:   # smoke — node 칸(B0 ~ B3 글자)은 smoke 칸이 아님 · 브라우저 장면 하나만
+            b0()
+            if want('B1'):
+                b1()
+            if want('B2'):
+                b2()
+            if want('B3'):
+                b3_text()
         if TEXT_ONLY:
             pass
         elif any(want(g) for g in ('B3', 'B4', 'B5', 'B6', 'B7')):

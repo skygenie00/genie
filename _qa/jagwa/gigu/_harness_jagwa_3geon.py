@@ -20,11 +20,13 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import http.server, os, socketserver, subprocess, sys, threading, hashlib, shutil, urllib.parse, json, time
 
 GENIE = _roots.genie()
 SRC = os.path.join(GENIE, 'jagwa', 'index.html')
 BASE = SRC + '.before_3geon'
+_RG_SMOKE = ('콘솔 오류 0', 'E-0 지학 카드 층', 'W-1 ★교재를 부르면 창으로 뜬다')   # qa_slim2 smoke 칸(A-0)
 SPDROOT = _roots.spd()
 GIGU = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(os.environ.get('TEMP', '.'), 'h3geon'); os.makedirs(OUT, exist_ok=True)
@@ -640,6 +642,7 @@ def build(mode, src_text):
 
 
 def run(mode, secs, src_text):
+    QC.launch('base' if mode.endswith('base') else 'new')   # 셈(§B-4)
     subj = build(mode, src_text)
     spd = os.path.join(SPDROOT, subj)
     try: shutil.copy(os.path.join(GIGU, '지학_서브노트_빈판_A3.pdf'), os.path.join(OUT, 'blank.pdf'))
@@ -809,10 +812,10 @@ def main():
     want = [a for a in sys.argv[1:] if a in ('earth', 'bio', 'phys')] or ['earth', 'bio', 'phys']
     cur = open(SRC, encoding='utf-8', newline='').read()
     lines = []
-    for mode in want:
+    for mode in (want if not QC.SMOKE else ['earth']):   # smoke — 지학 실행 하나
         ls, snap = run(mode, int(os.environ.get('HARNESS_WAIT', '900')), cur)
         lines += ls
-        if mode == 'phys' and os.path.exists(BASE):
+        if mode == 'phys' and QC.GATE and os.path.exists(BASE):   # Y-2 = 관문만(고침 전 사본 · 바탕 띄움)
             base = open(BASE, encoding='utf-8', newline='').read()
             ls0, snap0 = run('physbase', int(os.environ.get('HARNESS_WAIT', '900')), base)
             def T2(name, cond, info=''):
@@ -823,7 +826,10 @@ def main():
                               ('tools', '교재 도구줄'), ('pgbar', '교재 칸 머리줄'), ('book', '#book 클래스')):
                     T2('Y-2 ★물리 %s 이(가) 고침 전과 **글자까지** 같다' % ko, snap.get(k) == snap0.get(k),
                        [str(snap.get(k))[:120], str(snap0.get(k))[:120]])
-    lines += static_checks()
+    if not QC.SMOKE:   # smoke — 소스 칸은 smoke 칸이 아님
+        lines += static_checks()
+    if QC.SMOKE:   # smoke — smoke 칸 줄만
+        lines = [x for x in lines if any((x.split(' | ') + ['', ''])[1].startswith(k) for k in _RG_SMOKE)]
     npass = sum(1 for x in lines if x.startswith('PASS'))
     nfail = sum(1 for x in lines if x.startswith('FAIL'))
     for x in lines: print(x)

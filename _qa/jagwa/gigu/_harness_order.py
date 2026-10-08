@@ -18,6 +18,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import http.server, os, socketserver, subprocess, sys, threading, hashlib, shutil, urllib.parse
 
 GENIE = _roots.genie()
@@ -28,6 +29,7 @@ OUT = os.path.join(os.environ.get('TEMP', '.'), 'ordh'); os.makedirs(OUT, exist_
 
 SUBJ = 'bio' if 'bio' in sys.argv[1:] else 'earth'
 SPD = os.path.join(SPDROOT, SUBJ)
+_RG_SMOKE = ('O-0 카드 층으로 떴다', 'O-2 그려진 소단원 머리가 단원순', 'O-0 콘솔 오류 0')   # qa_slim2 smoke 칸(A-0)
 
 STUB = """<script>try{localStorage.setItem('subj','__SUBJ__')}catch(e){}</script>
 <script>
@@ -224,6 +226,7 @@ def main():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     chrome = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     prof = os.path.join(OUT, 'prof'); shutil.rmtree(prof, ignore_errors=True)
+    QC.launch('new')   # 셈(§B-4) — 새 판 한 번(바탕 판 없음)
     p = subprocess.Popen([chrome, '--headless=new', '--disable-gpu', '--no-first-run', '--user-data-dir=' + prof,
                           '--window-size=1400,900', 'http://127.0.0.1:%d/app.html' % port],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -253,6 +256,8 @@ def main():
     T2('O-8 물리 draw 와 PHONE 껍데기는 그대로(카드 층 밖 · 무변)',
        'function draw(){' in s and PHONE in s and s.index(PHONE) < s.index(BLK))
     T2('O-8 백틱 짝', s.count('`') % 2 == 0)
+    if QC.SMOKE:   # smoke — smoke 칸 줄만(O-7 · O-8 소스 칸 · 나머지 쪽 안 칸은 안 찍음)
+        lines = [x for x in lines if any((x.split(' | ') + ['', ''])[1].startswith(k) for k in _RG_SMOKE)]
     npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
     for x in lines: print(x)
     print('\n== 단원순/목차(%s) %d PASS / %d FAIL / %d항 ==' % (SUBJ, npass, nfail, len(lines)))

@@ -18,6 +18,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import http.server, os, socketserver, subprocess, sys, threading, hashlib, shutil, urllib.parse, json, time
 
 GENIE = _roots.genie()
@@ -607,9 +608,41 @@ BODY_PHYS = r"""
 """
 
 
+# ── _task_qa_slim2(10/8 · J2) regress · smoke 도우미 — 이름이 `_rg` 로 시작하는 것 = gate 에서 안 쓰는 갈래(BODY_* 글은 글자 그대로) ──
+#   쪽 안 고정 대기(MCALL 뒤 400 · 시트마다 400~2500 …)는 BODY 글 그대로(두 벌 안 둠) — 처리표 정리 거리(결정 거리 · _done.md)
+def _rg_smoke_body(t):
+    """smoke — 지학 BODY 에서 M-0 첫 칸 + 정의(MCALL · MK) + M-2 묶음 통째(모아보기가 종이 꼴로 열림 · 그린 칸 = 전 문항 — DOM 셈 · 렌더 한 번)만
+    (원래 글을 그 자리에서 잘라 씀 · 못 찾으면 통째)"""
+    a = t.find("   /* ═══ M-1 목록 머리 단추 ═══ */")
+    m0 = t.find("   /* ═══ M-2 머리에서 열면 전 문항 ═══ */")
+    m1 = t.find("   /* ═══ M-3 단원 줄에서 열면 그 절만 ═══ */")
+    if min(a, m0, m1) < 0 or not (a < m0 < m1):
+        print('NOTE | smoke 자르기 자리 못 찾음 — 통째로 돈다')
+        return t
+    return t[:a] + t[m0:m1]
+
+
+def _rg_phys_same(snap, g, keys):
+    """regress — 물리 화면 글자가 「고침 전과 같다」(처리안 기준) = 기준 스냅샷(앞 인도판 새 판의 같은 칸 글자 md5 · 길이) ·
+    바탕(physbase · git show HEAD 블롭) 띄움 0 · 칸 id · 칸 글은 gate 와 같다 · 「고침 전 판도 끝까지 돌았다」(관문만)는 안 찍는다"""
+    out = []
+    for k, ko in keys:
+        nm = '%s 물리 %s 이(가) 고침 전과 글자까지 같다' % (g, ko)
+        cid = '%s.%s@phys' % (g, k)
+        if not snap:   # 새 판 물리 실행이 스냅을 못 보냄 — 기준에 안 적고 FAIL
+            out.append('FAIL | %s | %s' % (nm, ['새 판 스냅 없음', QC.base_note(cid)]))
+            continue
+        v = str(snap.get(k))
+        cur = [hashlib.md5(v.encode('utf-8')).hexdigest(), len(v)]
+        b = QC.base(cid, cur)
+        ok = cur == b
+        out.append(('PASS' if ok else 'FAIL') + ' | ' + nm + ('' if ok else ' | ' + str([cur[1], (b or [None, None])[1], QC.base_note(cid)])))
+    return out
+
+
 def build(mode, src_text):
     subj = {'earth': 'earth', 'bio': 'bio', 'phys': 'phys', 'physbase': 'phys'}[mode]
-    body = {'earth': BODY_EARTH, 'bio': BODY_BIO}.get(mode, BODY_PHYS)
+    body = {'earth': (BODY_EARTH if not QC.SMOKE else _rg_smoke_body(BODY_EARTH)), 'bio': BODY_BIO}.get(mode, BODY_PHYS)   # smoke — 지학 쪽 안 시험 글을 이 자리에서만 잘라 씀
     html = src_text
     html = html.replace('<script defer src="https://cdnjs', '<script defer data-off="https://cdnjs')
     html = html.replace('<link rel="stylesheet" href="https://cdnjs', '<link rel="off" href="https://cdnjs')
@@ -657,6 +690,7 @@ def run(mode, secs, src_text):
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     prof = os.path.join(OUT, 'prof_' + mode); shutil.rmtree(prof, ignore_errors=True)
     t0 = time.time()
+    QC.launch('base' if mode == 'physbase' else 'new')   # 셈(§B-4) — physbase = 바탕(gate 에서만 · regress 0)
     p = subprocess.Popen([CHROME, '--headless=new', '--disable-gpu', '--no-first-run', '--user-data-dir=' + prof,
                           '--window-size=1400,900', 'http://127.0.0.1:%d/app.html' % port],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -728,13 +762,16 @@ def static_checks():
 
 def main():
     want = [a for a in sys.argv[1:] if a in ('earth', 'bio', 'phys')] or ['earth', 'bio', 'phys']
+    if QC.SMOKE:   # smoke — 지학 한 판(M-0 · M-2 모아보기 종이 꼴 · 콘솔 오류 0)만 · bio · phys · physbase 건넘
+        want = ['earth']
     cur = open(SRC, encoding='utf-8', newline='').read()
     lines = []
     for mode in want:
         secs = int(os.environ.get('HARNESS_WAIT', '420'))
         ls, snap = run(mode, secs, cur)
         lines += ls
-        if mode == 'phys':
+        if mode == 'phys' and QC.GATE:   # regress — 바탕(physbase · git show HEAD 블롭) 띄움 0 → 아래 _rg_phys_same(기준 스냅샷)
+            QC.sub('git:show-app')
             base = subprocess.run(['git', '-C', GENIE, 'show', 'HEAD:jagwa/index.html'],
                                   capture_output=True).stdout.decode('utf-8')
             ls0, snap0 = run('physbase', secs, base.replace('\n', '\r\n') if '\r\n' not in base else base)
@@ -745,7 +782,10 @@ def main():
                 for k, ko in (('brand', '머리 칩 줄'), ('list', '목록'), ('cnt', '문항 수'), ('sheet', '모아보기 시트')):
                     T2('Y-4 물리 %s 이(가) 고침 전과 글자까지 같다' % ko, snap.get(k) == snap0.get(k),
                        [len(str(snap.get(k))), len(str(snap0.get(k)))])
-    lines += static_checks()
+        if mode == 'phys' and not QC.GATE:   # regress — Y-4 물리 무변 칸 = 기준 스냅샷(QC.base) · 「Y-4 고침 전(HEAD 블롭) 판도 끝까지 돌았다」(관문만 · 바탕 띄움 건강) 끔
+            lines += _rg_phys_same(snap, 'Y-4', (('brand', '머리 칩 줄'), ('list', '목록'), ('cnt', '문항 수'), ('sheet', '모아보기 시트')))
+    if QC.want('src'):   # smoke — 브라우저 밖 소스 칸(S-*)은 smoke 칸이 아니다
+        lines += static_checks()
     npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
     for x in lines: print(x)
     print('\n== 암기카드/종이 모아보기 %d PASS / %d FAIL / %d항 ==' % (npass, nfail, len(lines)))

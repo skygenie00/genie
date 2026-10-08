@@ -8,18 +8,24 @@ r"""_task_jagwa_search §B 관문 — 자과 서재 검색 = 민법OX 꼴
   관문마다 NEW 는 PASS, BASE 는 FAIL 이어야 한다(헛잣대 열) — 13·15·16 처럼 바탕도 참인 것은 「바탕 = 기준」 으로 적는다
   ⚠ 자과앱 픽셀 게이트 없음(CLAUDE.md) — DOM 글자 · 자리 · 개수 · 실제 마우스·손가락 누름
 """
+import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
+_d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
+while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
+    _d_r = _os_r.path.dirname(_d_r)
+_sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import io, json, os, re, sys, time, subprocess
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import _harness_jagwa_uid as HU   # Srv · Dev · INIT · JS(__J)
 
 
 def ARG(k, d=None):
     return sys.argv[sys.argv.index(k) + 1] if k in sys.argv else d
 
 
-GENIE = HU.GENIE; SPD = HU.SPD
+GENIE = _roots.genie(); SPD = _roots.spd()
 NEWF = ARG('--new', os.path.join(GENIE, 'jagwa', 'index.html'))
 BASEF = ARG('--base', 'HEAD')
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
@@ -28,35 +34,7 @@ OUTF = ARG('--res', os.path.join(HERE, '_harness_jagwa_search_result.txt'))
 ROWS = []   # (관문, 엔진, 이름, NEW ok, BASE ok, 잰 값)
 from playwright.sync_api import sync_playwright   # noqa: E402
 
-SJS = r"""
-window.__S={
- tx:e=>e?String(e.textContent||'').replace(/\s+/g,' ').trim():'',
- cnt(){return __S.tx(document.getElementById('cnt'))},
- st(){const b=document.getElementById('esres'),q=document.getElementById('qCnt');
-   const rows=b?[...b.querySelectorAll('[data-esq]')]:[];
-   return {cnt:__S.cnt(),qcnt:__S.tx(q),esVis:!!b&&!b.classList.contains('hide')&&getComputedStyle(b).display!=='none',
-     n:rows.length,rows:rows.slice(0,120).map(d=>({no:+d.dataset.esq,code:__S.tx(d.querySelector('.cd')),lab:__S.tx(d.querySelector('.gl i')),
-       chat:(d.textContent||'').indexOf('💬')>=0,marks:d.querySelectorAll('mark').length})),
-     note:b?[...b.querySelectorAll('.bplnone')].map(__S.tx):[],nos:(typeof ES_NOS!=='undefined')?ES_NOS.slice():null}},
- byCode(c){const r=DATA.find(x=>String(codeShow(x))===c||x[F.CODE]===c);return r?r[F.NO]:0},
- body(r){return (String(r[F.BODY]||'')+' '+tfixHay(r[F.CODE])).toLowerCase()},
- fields(r){const bg=Array.isArray(r[F.BOGI])?r[F.BOGI]:[],rf=Array.isArray(r[F.REF])?r[F.REF]:[];
-   return [['선택지',(r[F.CH]||[]).join(' ')],['보기',bg.map(b=>(b&&b.내용)||'').join(' ')],['해설',String(r[F.SOL]||'')],['해설2',String(r[F.SOL2]||'')],
-     ['보기 설명',bg.map(b=>(b&&b.설명)||'').join(' ')],['참고',rf.map(x=>((x&&x.제목)||'')+' '+((x&&x.글)||'')).join(' ')],['코멘트',String(noteOf(r[F.NO])||'')]]},
- /* 칸 하나에만 있는 말 — 그 행 본문·앞 칸·ID·출처에 없고, 그 칸에 있는 6~8 글자 */
- sample(lab){for(const r of DATA){const f=__S.fields(r),k=f.findIndex(x=>x[0]===lab);const t=String(f[k][1]||'');if(t.length<12)continue;
-     const pre=__S.body(r)+' '+f.slice(0,k).map(x=>x[1]).join(' ').toLowerCase();
-     for(let i=0;i+7<=t.length;i+=3){const w=t.slice(i,i+7);if(/\s|[()\[\]{}.,·…]/.test(w))continue;
-       if(!pre.includes(w.toLowerCase()))return {q:w,no:r[F.NO],code:String(codeShow(r))}}}
-   return null},
- unitOnly(q){return DATA.filter(r=>{const u=String(unitOf(r[F.NO])||'');if(!u.includes(q))return false;
-   const hay=[__S.body(r),...__S.fields(r).map(x=>x[1]),String(codeShow(r)),String(titleOf(r))].join(' ').toLowerCase();return !hay.includes(q.toLowerCase())}).map(r=>r[F.NO])},
- ggN(){return DATA.filter(r=>!isC(r)&&ggOf(GGU(r)).length>0).length},
- ggUnits(){return new Set(DATA.filter(r=>!isC(r)&&ggOf(GGU(r)).length>0).map(r=>String(unitOf(r[F.NO])||''))).size},
- ggBangN(){return DATA.filter(r=>!isC(r)&&ggBangAny(GGU(r))).length},
- rect(sel){const e=typeof sel==='string'?document.querySelector(sel):sel;if(!e)return null;const b=e.getBoundingClientRect();return {x:b.x,y:b.y,w:b.width,h:b.height,cx:b.x+b.width/2,cy:b.y+Math.min(b.height/2,12)}}
-};
-"""
+SJS = JG.SJS   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
 
 
 def R(g, eng, name, okn, okb, val):
@@ -65,12 +43,34 @@ def R(g, eng, name, okn, okb, val):
           (val if isinstance(val, str) else json.dumps(val, ensure_ascii=False, default=str))[:400]), flush=True)
 
 
+# ── _task_qa_slim2(10/8) regress 도우미 — 이름이 `_rg` · `_RG` 로 시작하는 것 = gate 에서 안 쓰는 갈래(gate 에서 도는 줄은 원래 글 그대로) ──
+_RG_SYNCED = "()=>{try{return typeof recBusy!=='undefined'&&!recBusy&&((JSON.parse(localStorage.getItem(SMETA_KEY)||'{}')||{}).lastSync||0)>0}catch(e){return false}}"   # 앱 syncRecords 끝 lsPut(SMETA_KEY,{lastSync}) — 새 문맥이라 첫 동기화 전엔 0
+
+
+def _rg_load(dv, app, spd, subj, rec=None, static=None):
+    """regress — JG.Dev.load 와 같은 걸음(같은 출처 서버 · INIT_HU · JS_HU)이되 고정 대기 둘 → 표지(같은 상한): __J.ready()(DATA · GG_READY) · 첫 기록 동기화 끝(SMETA lastSync · recBusy 거짓)
+    (JG 는 고치지 않는다 — JG.Dev.load 에 표지 갈래를 두면 이 사본은 걷는다 · 보고 「뿌리」)"""
+    QC.launch('new')
+    dv.S.app = app; dv.S.spd = spd; dv.S.rec = dict(rec or {}); dv.S.static = dict(static or {})
+    if dv.pg:
+        dv.pg.close()
+    dv.ctx.clear_cookies()
+    dv.pg = dv.ctx.new_page(); dv.pg.set_default_timeout(150000)
+    dv.pg.add_init_script(JG.INIT_HU.replace('__SUBJ__', subj))
+    dv.pg.on('pageerror', lambda e: dv.errs.append('page: ' + str(e)[:200]))
+    dv.pg.goto('http://127.0.0.1:%d/app.html' % dv.S.port, wait_until='load')
+    dv.pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>0', timeout=120000)
+    dv.pg.evaluate(JG.JS_HU)
+    QC.until(dv.pg, '()=>__J.ready()', 30000, '__J.ready(DATA · GG_READY)')
+    QC.until(dv.pg, _RG_SYNCED, 2500, '첫 기록 동기화 끝(SMETA lastSync · recBusy 거짓)')
+
+
 def open_dev(br, eng, app, subj, phone=False):
-    dv = HU.Dev(br, eng, phone)
-    dv.load(app, SPD, subj)
+    dv = JG.Dev(br, eng, phone)
+    dv.load(app, SPD, subj) if QC.GATE else _rg_load(dv, app, SPD, subj)   # regress — 띄움 고정 대기 → 표지
     dv.ev(SJS)
     dv.ev("()=>__J.sync()")
-    dv.pg.wait_for_timeout(600)
+    dv.pg.wait_for_timeout(600) if QC.GATE else QC.sleep(600, '기록 맞춤(__J.sync = syncRecords + 400ms) 뒤 다시 그림 — 끝 표지 없음', dv.pg)
     return dv
 
 
@@ -84,7 +84,7 @@ def typeq(dv, text, enter=False):
         dv.pg.keyboard.type(text, delay=5)
     if enter:
         dv.pg.keyboard.press('Enter')
-    dv.pg.wait_for_timeout(250)
+    dv.pg.wait_for_timeout(250) if QC.GATE else QC.sleep(250, '검색 칸 타자 뒤 앱 거름 · 결과 다시 그림(입력 모으기 — 표지 없음)', dv.pg)
 
 
 def st(dv):
@@ -99,14 +99,16 @@ def click_at(dv, sel_or_js, phone=False):
         dv.pg.touchscreen.tap(r['cx'], r['cy'])
     else:
         dv.pg.mouse.click(r['cx'], r['cy'])
-    dv.pg.wait_for_timeout(500)
+    dv.pg.wait_for_timeout(500) if QC.GATE else QC.sleep(500, '누름 뒤 앱 반응 — 누른 자리(결과 줄 · ▶ · ◀ · 분포 · 단원 · ! · 모드 · 접기)마다 효과가 달라 공통 표지 없음', dv.pg)
     return True
 
 
 def both(br, eng, subj, fn, phone=False):
     """같은 관문을 NEW · BASE 에서 — fn(dv, who) → (ok, val)"""
     out = {}
-    for who in ('NEW', 'BASE'):
+    if QC.REGRESS:   # regress — 바탕 안 띄움(바탕 열 —)
+        out['BASE'] = (None, None)
+    for who in (('NEW', 'BASE') if QC.GATE else ('NEW',)):
         dv = open_dev(br, eng, APPS[who], subj, phone)
         try:
             out[who] = fn(dv, who)
@@ -122,6 +124,8 @@ def both(br, eng, subj, fn, phone=False):
 
 def gate(g, eng, name, subj, fn, phone=False):
     if ONLY and g not in ONLY:
+        return
+    if not QC.want(g, smoke=g == 'g1'):   # smoke — g1(생물 「플라스미드」 · 검색 핵심) 하나
         return
     (okn, vn), (okb, vb) = both(HU_BR[0], eng, subj, fn, phone)
     R(g, eng, name, okn, okb, {'NEW': vn, 'BASE': vb})
@@ -355,10 +359,11 @@ HU_BR = [None]
 def main():
     APPS['NEW'] = open(NEWF, 'rb').read().replace(b'\r\n', b'\n')
     # ★ A-6(d) 9/30 _task_qa_baseline — 헛잣대 바탕(기본값 'HEAD')을 인도 앞 판 5e18424(jagwa_uid)로 박는다 — 인도(eb1113e) 뒤 HEAD 의 pass() 는 FL.q 를 안 봐(A-1) g13 「옛 목록 거름」이 577 전부가 된다
-    APPS['BASE'] = HU.git(GENIE, 'show', '5e18424:jagwa/index.html') if BASEF == 'HEAD' else open(BASEF, 'rb').read().replace(b'\r\n', b'\n')
+    if QC.GATE:   # regress — 바탕(5e18424 git show · --base 파일) 풀기 0
+        APPS['BASE'] = JG.git_HU(GENIE, 'show', '5e18424:jagwa/index.html') if BASEF == 'HEAD' else open(BASEF, 'rb').read().replace(b'\r\n', b'\n')
     t0 = time.time()
     with sync_playwright() as pw:
-        for eng in ENGS:
+        for eng in (ENGS if not QC.SMOKE else ([e for e in ENGS if e == 'chromium'] or ENGS[:1])):   # smoke — chromium 한 판(g1)
             br = getattr(pw, eng).launch(); HU_BR[0] = br
             try:
                 gate('g1', eng, '생물 「플라스미드」 — 목록 문항 수 무변 · 결과 상자 · 「N건」 = 줄 수', 'bio', g1)
@@ -374,8 +379,10 @@ def main():
                 gate('g10', eng, '누름 — 그 문항 · ▶ = 다음 결과 · VLIST = 결과 · 닫은 뒤 글·상자·개수 그대로', 'bio', g10)
                 gate('g11', eng, '근거 모드 빈칸 「근거 N개 ▸」 → 분포 → 단원 → ◀ → 「! K」 → 문제 모드 갔다 오면 풀림', 'earth', g11)
                 gate('g12', eng, '근거 모드 ID 하이픈 없이 → 걸림 · 「N건」', 'earth', g12)
-                if not ONLY or 'g13' in ONLY:
+                if (not ONLY or 'g13' in ONLY) and QC.want('g13'):
                     (okn, vn), (okb, vb) = both(br, eng, 'phys', g13)
+                    if QC.REGRESS:   # regress — 바탕(5e18424 · FL.q 로 거른 옛 집합) 자리 = 기준 스냅샷(앞 인도판 새 판의 말마다 걸린 번호) · 아래 비교 규칙(옛 ⊆ 새 · 더 걸린 것 = 미리보기 t · 제목)은 그대로
+                        vb = {q: QC.base('g13.%s@%s' % (q, eng), v) for q, v in (vn or {}).items() if not q.endswith(('·pv', '·tt', '·목록'))} if isinstance(vn, dict) else {}
                     # ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2-3: 옛 ⊆ 새 · 더 걸린 문항이 모두 미리보기 t 에서 걸림(pvHit)이면 뜻한 바뀜
                     # 옛 줄: _pv = lambda q: set(vb.get(q) or []) <= set(vn.get(q) or []) and (set(vn.get(q) or []) - set(vb.get(q) or [])) <= set(vn.get(q + '·pv') or [])
                     _pv = lambda q: set(vb.get(q) or []) <= set(vn.get(q) or []) and (set(vn.get(q) or []) - set(vb.get(q) or [])) <= set(vn.get(q + '·pv') or []) | set(vn.get(q + '·tt') or [])   # ★ 2026-10-07 (_task_jagwa_phys_win §A-45) — 더 걸린 것이 미리보기 t 또는 보이는·고친 제목에서 걸렸으면 뜻한 바뀜
@@ -393,7 +400,7 @@ def main():
     print('\n== PASS %d · FAIL %d · 헛잣대(바탕도 PASS) %d · %.0f초' % (npass, nfail, len(vac), time.time() - t0))
     with io.open(OUTF, 'a', encoding='utf-8') as f:
         f.write('\n==== %s · jagwa_search · NEW %s · 바탕 5e18424 · genie HEAD %s · 엔진 %s ====\n' % (time.strftime('%Y-%m-%d %H:%M'), os.path.basename(NEWF),
-                HU.git(GENIE, 'rev-parse', '--short', 'HEAD').decode().strip(), ','.join(ENGS)))
+                JG.git_HU(GENIE, 'rev-parse', '--short', 'HEAD').decode().strip() if QC.GATE else '(regress · git 0)', ','.join(ENGS)))
         for g, eng, n, okn, okb, v in ROWS:
             f.write('%s | 바탕 %s | %s · %s · %s | %s\n' % ('PASS' if okn else 'FAIL', {True: 'PASS', False: 'FAIL', None: '—'}[okb], g, eng, n,
                     (v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, default=str))[:1500]))

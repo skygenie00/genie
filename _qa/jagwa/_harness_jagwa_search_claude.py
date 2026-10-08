@@ -15,21 +15,24 @@ r"""_task_jagwa_search_claude §B 관문 — 자과 근거 검색에 Claude 풀�
     기대 「Claude」 딱지·조각 = 풀이 md 에서 첫 줄 제 ID 머리를 뗀 글에 그 말이 있을 때(앱과 따로 파이썬으로 셈)
   ⚠ 자과앱 픽셀 게이트 없음(CLAUDE.md) — DOM 글자 · 자리 · 개수 · 실제 마우스·손가락 누름
 """
+import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
+_d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
+while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
+    _d_r = _os_r.path.dirname(_d_r)
+_sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import io, json, os, re, sys, time, copy, collections
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-_ARGV = sys.argv; sys.argv = [sys.argv[0]]   # 두 하네스는 들어올 때 sys.argv 를 읽는다
-import _harness_jagwa_uid as HU      # noqa: E402  Srv · INIT · JS(__J) · git
-import _harness_jagwa_search as HS   # noqa: E402  SJS(__S) · typeq · st
-sys.argv = _ARGV
 
 
 def ARG(k, d=None):
     return sys.argv[sys.argv.index(k) + 1] if k in sys.argv else d
 
 
-GENIE = HU.GENIE; SPD = HU.SPD
+GENIE = _roots.genie(); SPD = _roots.spd()
 NEWF = ARG('--new', os.path.join(GENIE, 'jagwa', 'index.html'))
 BASEF = ARG('--base', 'HEAD')
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
@@ -107,27 +110,32 @@ window.__C9={
 
 class Dev:
     def __init__(self, br, eng, vp=None, mobile=False):
-        self.eng = eng; self.S = HU.Srv()
+        self.eng = eng; self.S = JG.Srv()
         self.vp = vp or {'width': 1553, 'height': 900}
         self.ctx = br.new_context(viewport=self.vp, device_scale_factor=1, has_touch=True, is_mobile=bool(mobile and eng == 'chromium'))
         self.ctx.route('**/*', _route)
         self.pg = None; self.errs = []; self.cdp = None
 
     def load(self, app, subj, rec, wait=2500):
+        QC.launch('new' if app is APPS.get('NEW') else 'base')   # 셈(§B-4) — 바탕(--base) · 고정 옛 판(cedc251 · e9de3b8)은 gate 에서만 띄운다
         self.S.app = app; self.S.spd = SPD; self.S.rec = dict(rec or {}); self.S.static = {}
         if self.pg:
             self.pg.close()
         self.pg = self.ctx.new_page(); self.pg.set_default_timeout(150000)
-        self.pg.add_init_script(HU.INIT.replace('__SUBJ__', subj))
+        self.pg.add_init_script(JG.INIT_HU.replace('__SUBJ__', subj))
         self.pg.on('pageerror', lambda e: self.errs.append('page: ' + str(e)[:200]))
         self.pg.goto('http://127.0.0.1:%d/app.html' % self.S.port, wait_until='load')
         self.pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>0', timeout=120000)
-        self.pg.evaluate(HU.JS); self.pg.evaluate(HS.SJS); self.pg.evaluate(J9)
-        for _ in range(120):
-            if self.ev("()=>__J.ready()"):
-                break
-            self.pg.wait_for_timeout(250)
-        self.pg.wait_for_timeout(wait)
+        self.pg.evaluate(JG.JS_HU); self.pg.evaluate(JG.SJS); self.pg.evaluate(J9)
+        if QC.GATE:
+            for _ in range(120):
+                if self.ev("()=>__J.ready()"):
+                    break
+                self.pg.wait_for_timeout(250)
+            self.pg.wait_for_timeout(wait)
+        else:   # regress — 같은 상한의 표지 기다림: __J.ready()(DATA · GG_READY) → 첫 기록 동기화 끝(앱이 적는 SMETA lastSync 도장 · recBusy 거짓 · 못 만나면 gate 와 같은 시간)
+            QC.until(self.pg, '()=>__J.ready()', 30000, '__J.ready(DATA · GG_READY)')
+            QC.until(self.pg, _RG_SYNCED, wait, '첫 기록 동기화 끝(SMETA lastSync · recBusy 거짓)')
         for _ in range(60):   # 기록 맞춤 끝(풀이 GP 가 들어온 뒤)
             if not self.ev("()=>typeof recBusy!=='undefined'&&recBusy"):
                 break
@@ -147,7 +155,7 @@ class Dev:
             self.cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
         else:
             self.pg.touchscreen.tap(x, y)
-        self.pg.wait_for_timeout(wait)
+        self.pg.wait_for_timeout(wait) if QC.GATE else QC.sleep(wait, '누름 뒤 앱 반응 — 누른 자리(분포 · C · ! · 단원 줄 · 접기)마다 효과가 달라 공통 표지 없음', self.pg)
 
     def click(self, sel, wait=500):
         r = self.ev("s=>{const e=document.querySelector(s);if(!e)return null;e.scrollIntoView({block:'nearest'});return __C9.R(e)}", sel)
@@ -180,7 +188,7 @@ def rec_of(subj, gp_on=True, nogg_no=0, bio_no=0):
     D = rec.setdefault('data', {}); gp = dict(D.get('gpt') or {})
     if subj == 'earth':
         try:
-            now = json.loads(HU.git(SPD, 'show', 'origin/main:earth/기록.json').decode('utf-8'))
+            now = json.loads(JG.git_HU(SPD, 'show', 'origin/main:earth/기록.json').decode('utf-8')) if QC.GATE else _rg_spd_now()   # regress — 한 프로세스에 한 번(데이터 읽기)
             for k in ('84', '149'):
                 v = ((now.get('data') or {}).get('gpt') or {}).get(k)
                 if v:
@@ -220,7 +228,7 @@ def typeq(dv, text):
     dv.ev("()=>{const q=document.getElementById('q');if(q){q.focus();q.value='';q.dispatchEvent(new Event('input',{bubbles:true}))}}")
     if text:
         dv.pg.keyboard.type(text, delay=5)
-    dv.pg.wait_for_timeout(250)
+    dv.pg.wait_for_timeout(250) if QC.GATE else QC.sleep(250, '검색 칸 타자 뒤 앱 거름 · 결과 다시 그림(입력 모으기 — 표지 없음 · 이어 TAP_EAT 표지를 기다림)', dv.pg)
     # 앱 터치 막이(TAP_EAT · 진짜 누름 뒤 1.2초 안에 다시 그리면 다음 진짜 click 하나를 400ms 먹는다)가 풀린 뒤 — 칸을 스크립트로 잡아 그 click 이 없다
     dv.pg.wait_for_function("()=>typeof TAP_EAT==='undefined'||!TAP_EAT||Date.now()>TAP_EAT", timeout=5000)
 
@@ -228,7 +236,7 @@ def typeq(dv, text):
 def app_src(x):
     if os.path.isfile(x):
         return open(x, 'rb').read().replace(b'\r\n', b'\n')
-    return HU.git(GENIE, 'show', '%s:jagwa/index.html' % x)
+    return JG.git_HU(GENIE, 'show', '%s:jagwa/index.html' % x)
 
 
 # ══════════ 관문 ══════════
@@ -533,6 +541,59 @@ def sweep_cmp(N, Bs):
     return rows, newonly, acc
 
 
+# ── _task_qa_slim2(10/8) regress 도우미 — 이름이 `_rg` · `_RG` 로 시작하는 것 = gate 에서 안 쓰는 갈래(gate 에서 도는 줄은 원래 글 그대로) ──
+_RG_SYNCED = "()=>{try{return typeof recBusy!=='undefined'&&!recBusy&&((JSON.parse(localStorage.getItem(SMETA_KEY)||'{}')||{}).lastSync||0)>0}catch(e){return false}}"   # 앱 syncRecords 끝 lsPut(SMETA_KEY,{lastSync}) — 새 문맥이라 첫 동기화 전엔 0
+_RG_NOW = {}
+
+
+def _rg_spd_now():
+    """regress — studyplandata origin/main 지학 기록(84 · 149 풀이)을 한 프로세스에 한 번만 git show(gate 는 기기마다 · 엔진당 ≈10 번) — 데이터 읽기(바탕 앱 풀기 아님)"""
+    if 'v' not in _RG_NOW:
+        QC.sub('git:show-data')
+        _RG_NOW['v'] = json.loads(JG.git_HU(SPD, 'show', 'origin/main:earth/기록.json').decode('utf-8'))
+    return copy.deepcopy(_RG_NOW['v'])
+
+
+def _rg_md5(s):
+    import hashlib
+    return hashlib.md5(str(s).encode('utf-8')).hexdigest()[:16]
+
+
+def _rg_b1(res, eng):
+    """regress — b1 「근거에만 줄 DOM = 바탕 + 딱지」: 새 판 줄 HTML(딱지 뗀 것 · md5)을 기준 스냅샷(앞 인도판 같은 칸)과 맞댄다(바탕 앱 안 띄움)"""
+    v = res['NEW'][1]
+    if not isinstance(v, dict):
+        return
+    hn = [re.sub(r'<span class="clsrc[^"]*">[^<]*</span>', '', h) for h in v.get('근거에만', {}).get('html', [])]
+    cid = 'b1.근거에만@' + eng
+    same = QC.same(cid, [_rg_md5(h) for h in hn]) and len(hn) > 0
+    res['NEW'] = (res['NEW'][0] and same, dict(v, **{'근거에만 DOM = 바탕 + 딱지': same, '기준': QC.base_note(cid)}))
+    res['NEW'][1].get('근거에만', {}).pop('html', None)
+
+
+def _rg_pv_c(v):
+    """b5 결과 하나를 스냅샷 꼴로 줄인다 — 줄 HTML = md5 · 나머지 글 = md5 + 「상위 100건」 꼬리(있으면) · 걸린 번호 셋은 그대로(pv_same 이 같은 규칙으로 맞댐)"""
+    if not isinstance(v, dict):
+        return v
+    rest = v.get('rest') or ''
+    return {'nos': v.get('nos') or [], 'only': v.get('only') or [], 'kind': v.get('kind') or [], 'tt': v.get('tt') or [],
+            'rows': [[x, _rg_md5(h)] for x, h in (v.get('rows') or [])],
+            'rest': _rg_md5(rest.replace(CAPNOTE, '')) + (CAPNOTE if CAPNOTE in rest else '')}
+
+
+def _rg_b5(br, eng):
+    """regress — b5 바탕 결과 = 기준 스냅샷(앞 인도판 새 판 결과 · 말마다) · 새 판도 같은 꼴로 줄여 pv_same 에 넘긴다"""
+    pn = {q: _rg_pv_c(v) for q, v in b5(br, eng, APPS['NEW']).items()}
+    return pn, {q: QC.base('b5.%s@%s' % (q, eng), v) for q, v in pn.items()}
+
+
+def _rg_b6(br, eng):
+    """regress — b6 바탕 훑기 = 기준 스냅샷(앞 인도판 새 판 훑기 · 칸 열쇠 「기기|칸」)"""
+    sn = sweep(br, eng, APPS['NEW'])
+    flat = QC.base('b6@' + eng, {'%s|%s' % k: v for k, v in sn.items()}) or {}
+    return sn, {tuple(k.split('|', 1)): v for k, v in flat.items()}
+
+
 # ══════════ 돌림 ══════════
 GATES = [
     ('b1', 'B-1 A-1 찾기 — 암기 절에만 있는 말 → 149 딱지 「Claude」 · Claude 조각 <mark> · 근거 줄 0 · 둘 다 걸리면 딱지 둘 · 근거에만 = 딱지 「근거」(DOM 은 바탕 + 딱지)', b1),
@@ -610,30 +671,39 @@ def b8_check(RA, RC, gp, hay):
 
 
 def main():
-    APPS['NEW'] = app_src(NEWF); APPS['BASE'] = app_src(BASEF)
+    APPS['NEW'] = app_src(NEWF)
+    if QC.GATE:   # regress — 바탕(--base · git show) 풀기 0
+        APPS['BASE'] = app_src(BASEF)
     _yn = lambda a: re.search(rb'\bynUid\s*=', a) is not None   # ★ uid_unify G-1 — 앱 글에 ynUid(기출 uid 판별)가 있나 · 새 판에만 있으면 바탕 쪽 줄에서 회·번 <b> 를 뗀 뒤 맞댄다
-    STRIP['BASE'] = _yn(APPS['NEW']) and not _yn(APPS['BASE']); STRIP['NEW'] = _yn(APPS['BASE']) and not _yn(APPS['NEW'])
-    base_rev = BASEF
-    try:
-        base_rev = HU.git(GENIE, 'rev-parse', '--short', BASEF).decode().strip() or BASEF
-    except Exception:
-        pass
+    if QC.GATE:   # regress — 두 쪽 다 새 판 글자(앞 인도판 · 이 판)라 G-1 떼기 없음 · git rev-parse 0
+        STRIP['BASE'] = _yn(APPS['NEW']) and not _yn(APPS['BASE']); STRIP['NEW'] = _yn(APPS['BASE']) and not _yn(APPS['NEW'])
+    base_rev = BASEF if QC.GATE else '기준 스냅샷(regress)'
+    if QC.GATE:
+        try:
+            base_rev = JG.git_HU(GENIE, 'rev-parse', '--short', BASEF).decode().strip() or BASEF
+        except Exception:
+            pass
     t0 = time.time(); TIMES = []
     with sync_playwright() as pw:
-        for eng in ENGS:
+        for eng in (ENGS if not QC.SMOKE else ([e for e in ENGS if e == 'chromium'] or ENGS[:1])):   # smoke — chromium 한 판(b2)
             br = getattr(pw, eng).launch()
             try:
-                pick_words(br, eng)
-                print('INFO | 표본 말 | %s' % json.dumps({k: W.get(k) for k in ('cl', 'both', 'both_own', 'gg', 'nogg_no', 'uid149')}, ensure_ascii=False), flush=True)
+                if QC.want('표본 말'):   # smoke — b2 는 표본 말을 안 쓴다
+                    pick_words(br, eng)
+                    print('INFO | 표본 말 | %s' % json.dumps({k: W.get(k) for k in ('cl', 'both', 'both_own', 'gg', 'nogg_no', 'uid149')}, ensure_ascii=False), flush=True)
                 for g, name, fn in GATES:
-                    if not want(g):
+                    if not want(g) or not QC.want(g, smoke=g == 'b2'):
                         continue
                     ts = time.time(); res = {}
-                    for who in ('NEW', 'BASE'):
+                    for who in (('NEW', 'BASE') if QC.GATE else ('NEW',)):   # regress — 새 판만(바탕 판정 열 = —)
                         try:
                             res[who] = fn(br, eng, APPS[who])
                         except Exception as e:
                             res[who] = (False, 'ERR ' + repr(e)[:400])
+                    if QC.REGRESS:
+                        res['BASE'] = (None, None)
+                        if g == 'b1':
+                            _rg_b1(res, eng)
                     if g == 'b1' and isinstance(res['NEW'][1], dict) and isinstance(res['BASE'][1], dict):
                         hn = [re.sub(r'<span class="clsrc[^"]*">[^<]*</span>', '', h) for h in res['NEW'][1].get('근거에만', {}).get('html', [])]
                         hb = [re.sub(r'<span class="clsrc[^"]*">[^<]*</span>', '', h) for h in res['BASE'][1].get('근거에만', {}).get('html', [])]   # fix1 — 바탕이 e9de3b8(딱지 있음)이어도 같은 잣대
@@ -648,9 +718,9 @@ def main():
                             v.get('근거에만', {}).pop('html', None)
                     R(g, eng, name, res['NEW'][0], res['BASE'][0], {'NEW': res['NEW'][1], 'BASE': res['BASE'][1]})
                     TIMES.append((g, round(time.time() - ts)))
-                if want('b5'):
+                if want('b5') and QC.want('b5'):
                     ts = time.time()
-                    pn, pb = b5(br, eng, APPS['NEW']), b5(br, eng, APPS['BASE'])
+                    pn, pb = (b5(br, eng, APPS['NEW']), b5(br, eng, APPS['BASE'])) if QC.GATE else _rg_b5(br, eng)   # regress — 바탕 결과 = 기준 스냅샷
                     # ★ physprev(10/2 하위 에이전트 C) — _task_jagwa_physprev 57줄(A-2-3): 물리 t 로만 걸린 줄 · 조각이 t 인 줄 · 100줄 상한은 pv_same 이 가른다
                     # 옛 줄: cmp = {q: pv_same(pn.get(q), pb[q]) for q in pb}
                     def _g1(v, on):   # ★ uid_unify G-1 — 줄 HTML 에서 지학 기출 uid 줄의 <b>NN회 N번</b> 을 뗀 사본(on 이 거짓이면 그대로)
@@ -666,9 +736,9 @@ def main():
                       {'다른 말': diff, '건': {q: len((pn.get(q) or {}).get('nos') or []) for q in pn}, 'physprev': {q: v[1] for q, v in cmp.items() if v[1]},
                        'G-1(지학 기출 uid 회·번 <b> 걷음만 받음 · 생물은 결정 대기)': {'갈래': STRIP, '받은 접두': G1_PFX, '뗀 줄 수': G1_N['떼어 낸 줄'], '생물 다른 말': [q for q in diff if q.startswith('bio ')]}})
                     TIMES.append(('b5', round(time.time() - ts)))
-                if want('b6'):
+                if want('b6') and QC.want('b6'):
                     ts = time.time()
-                    sn, sb = sweep(br, eng, APPS['NEW']), sweep(br, eng, APPS['BASE'])
+                    sn, sb = (sweep(br, eng, APPS['NEW']), sweep(br, eng, APPS['BASE'])) if QC.GATE else _rg_b6(br, eng)   # regress — 바탕 훑기 = 기준 스냅샷
                     rows, newonly, acc = sweep_cmp(sn, sb)
                     hits = {('%s %s' % k): v for k, v in sn.items() if k[1].startswith('누름')}
                     hok = all(v and v['hit']['h'] >= 36 and v['coarse'] for v in hits.values()) and len(hits) == 4
@@ -676,25 +746,25 @@ def main():
                     R('b6', eng, 'B-6 화면 훑기 — 근거 결과·분포·분포 C·목록 C × PC 1440 · 폰 390 · iPad 820 — 새로 생긴 넘침·잘림·덮임 0 · 「!」·「C」 터치 누름 높이 ≥ 36',
                       not newonly and not errs and hok, None, {'새로 생긴 것': newonly, '뜻한 바뀜': acc, '누름': hits, '오류': errs, '표': rows})
                     TIMES.append(('b6', round(time.time() - ts)))
-                if want('b8'):   # fix1 B-8 — ID 검색 = cedc251(근거 줄 · 딱지 · 조각) · 본문 걸림만 「Claude」
+                if want('b8') and QC.want('b8'):   # fix1 B-8 — ID 검색 = cedc251(근거 줄 · 딱지 · 조각) · 본문 걸림만 「Claude」
                     ts = time.time()
-                    C0 = app_src('cedc251')
+                    C0 = app_src('cedc251') if QC.GATE else None   # regress — cedc251 git show · 띄우기 0
                     rn, gpn, hn, en = search_rows(br, eng, APPS['NEW'], 'earth', IDQ)
-                    rb, _, hb, eb = search_rows(br, eng, APPS['BASE'], 'earth', IDQ)
-                    rc, _, hc, ec = search_rows(br, eng, C0, 'earth', IDQ)
-                    badn, badb = b8_check(rn, rc, gpn, {**hc, **hn}), b8_check(rb, rc, gpn, {**hc, **hb})
+                    rb, _, hb, eb = search_rows(br, eng, APPS['BASE'], 'earth', IDQ) if QC.GATE else (None, None, {}, [])
+                    rc, _, hc, ec = search_rows(br, eng, C0, 'earth', IDQ) if QC.GATE else (QC.base('b8.rows@' + eng, rn), None, {}, [])   # regress — cedc251 자리 = 기준 스냅샷(앞 인도판 새 판 결과 줄)
+                    badn, badb = b8_check(rn, rc, gpn, {**hc, **hn}), (b8_check(rb, rc, gpn, {**hc, **hb}) if QC.GATE else None)
                     R('b8', eng, 'B-8 지학 근거 모드 「G09-46-10」·「G0946 10」·「G03-40-05」 → 결과 줄·근거 줄·딱지 = cedc251(근거 줄 1 · 본문에 없으면 딱지·조각 0)',
-                      not badn and not en, not badb, {'틀린 것(새)': badn, '틀린 것(바탕)': badb, '새': rn, '바탕': rb, 'cedc251': rc,
+                      not badn and not en, (not badb) if QC.GATE else None, {'틀린 것(새)': badn, '틀린 것(바탕)': badb, '새': rn, '바탕': rb, 'cedc251': rc,
                                                    '본문 걸림(머리 뗀 풀이 글)': {q: [no for no in VIS['earth'] if q.lower() in gp_body_plain(gpn.get(str(no), ''), VIS['earth'][no]).lower()] for q in IDQ},
                                                    '머리 줄': {no: str(gpn.get(str(no), '')).split('\n')[0][:60] for no in VIS['earth']}})
                     TIMES.append(('b8', round(time.time() - ts)))
-                if want('b9'):   # fix1 B-9 — 풀이 본문 말 = e9de3b8 그대로(지학 · 물리 72 · 97)
+                if want('b9') and QC.want('b9'):   # fix1 B-9 — 풀이 본문 말 = e9de3b8 그대로(지학 · 물리 72 · 97)
                     ts = time.time()
-                    E9 = app_src('e9de3b8')
+                    E9 = app_src('e9de3b8') if QC.GATE else None   # regress — e9de3b8 git show · 띄우기 0
                     out, ok9 = {}, True
                     for subj in ('earth', 'phys'):
                         rn, gpn, _, en = search_rows(br, eng, APPS['NEW'], subj, BODYQ[subj])
-                        re9, _, _, _ = search_rows(br, eng, E9, subj, BODYQ[subj])
+                        re9, _, _, _ = search_rows(br, eng, E9, subj, BODYQ[subj]) if QC.GATE else (QC.base('b9.%s@%s' % (subj, eng), rn), None, None, None)   # regress — e9de3b8 자리 = 기준 스냅샷(앞 인도판 새 판 결과 줄)
                         nm = lambda X: {q: sorted([r['no'], r['tags'], r['gl'], bool(r['glc'])] for r in X[q]) for q in X}
                         hit = {q: [r for r in rn[q] if 'Claude' in r['tags'] and r['glc']] for q in rn}
                         oks = nm(rn) == nm(re9) and all(hit[q] for q in rn) and not en

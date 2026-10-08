@@ -14,6 +14,8 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import io, json, os, re, sys, time, hashlib, subprocess, shutil, tarfile, http.server, socketserver, threading, urllib.parse, collections, tempfile
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -47,8 +49,8 @@ def N(grp, name, detail=''):
     print('INFO | %s · %s | %s' % (grp, name, (detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False, default=str))[:420]), flush=True)
 
 
-def git(repo, *a):
-    return subprocess.run(['git', '-C', repo, '-c', 'core.quotepath=false'] + list(a), capture_output=True).stdout
+Dev = JG.Dev   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
+git = JG.git_HU   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
 
 
 def base_data():
@@ -64,139 +66,6 @@ def base_data():
     return d
 
 
-INIT = r"""
-(()=>{
-  try{localStorage.setItem('subj','__SUBJ__')}catch(e){}
-  try{localStorage.setItem('tt.cfg',JSON.stringify({token:'github_pat_TEST',person:'검산'}))}catch(e){}
-  window.__err=[];window.__PUTS=[];
-  window.addEventListener('error',e=>{window.__err.push((e.message||'')+' @'+(e.lineno||''))});
-  window.addEventListener('unhandledrejection',e=>{window.__err.push('reject: '+((e.reason&&e.reason.message)||e.reason))});
-  const nf=window.fetch.bind(window);
-  window.fetch=async function(url,opt){
-    opt=opt||{};const u=String(url);
-    const m=/api\.github\.com\/repos\/([^\/]+\/[^\/]+)\/contents\/([^?]+)/.exec(u);
-    if(!m){ if(/^https?:/i.test(u)&&u.indexOf(location.origin)!==0&&!/cdnjs|jsdelivr|googleapis|gstatic/.test(u))
-              return {ok:false,status:599,json:async()=>({}),text:async()=>'',arrayBuffer:async()=>new ArrayBuffer(0)};
-            return nf(url,opt) }
-    const path=decodeURIComponent(m[2]);
-    if((opt.method||'GET')==='PUT'){try{const b=JSON.parse(opt.body);window.__PUTS.push({path,text:decodeURIComponent(escape(atob(b.content)))})}catch(e){window.__PUTS.push({path,err:String(e)})}
-      return {ok:true,status:200,json:async()=>({content:{sha:'x'}}),text:async()=>''}}
-    const r=await nf('/data/'+encodeURI(path),{cache:'no-store'});
-    if(!r.ok)return {ok:false,status:404,json:async()=>({}),text:async()=>'',arrayBuffer:async()=>new ArrayBuffer(0)};
-    const acc=(opt.headers||{}).Accept||'';
-    if(acc.indexOf('raw')>=0)return r;
-    return {ok:true,status:200,json:async()=>({sha:r.headers.get('X-Sha')||'sha'}),text:async()=>JSON.stringify({sha:r.headers.get('X-Sha')||'sha'})};
-  };
-})();
-"""
-
-JS = r"""
-window.__J={
- tx:e=>e?String(e.textContent||'').replace(/\s+/g,' ').trim():'',
- vis(e){return !!e&&e.isConnected&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().height>0},
- ready(){return typeof DATA!=='undefined'&&DATA.length>0&&(typeof GG_READY==='undefined'||GG_READY)},
- puts(){return (window.__PUTS||[]).map(p=>({path:p.path,len:(p.text||'').length}))},
- lastPut(path){const L=(window.__PUTS||[]).filter(p=>p.path===path);return L.length?L[L.length-1].text:null},
- async sync(){try{await syncRecords(true)}catch(e){return 'ERR '+e}await new Promise(r=>setTimeout(r,400));return (window.__PUTS||[]).length},
- mig(){return window.__JGMIG||0},
- u(){try{return JSON.parse(localStorage.getItem(U_KEY)||'{}')}catch(e){return {}}},
- gone(){try{return JSON.parse(localStorage.getItem(GONE_KEY)||'{}')}catch(e){return {}}},
- stores(keys){const o={};keys.forEach(k=>{const v=SYNC_REF[k]?SYNC_REF[k].g():undefined;o[k]=v?JSON.parse(JSON.stringify(v)):null});return o},
- rows(){return DATA.map(r=>[r[F.NO],r[F.CODE],r[F.OLDU]||'',typeof codeShow==='function'?codeShow(r):''])},
- list(){return [...document.querySelectorAll('#list .item')].filter(__J.vis).map(d=>({uid:d.dataset.uid||'',num:__J.tx(d.querySelector('.num'))}))},
- heat(){return [...document.querySelectorAll('[title]')].filter(e=>/회독|^\S+ /.test(e.title)&&e.onclick).slice(0,4000).map(e=>e.title.split(' ')[0])},
- async card(no){try{closeView()}catch(e){}await new Promise(r=>setTimeout(r,150));await openView(no);await new Promise(r=>setTimeout(r,1600));
-   const c=document.getElementById('card');const h=document.getElementById('vT1');
-   const img=c&&c.querySelector('img');
-   return {head:__J.tx(h),card:__J.tx(c).replace(/\s+/g,' '),bogi:c?[...c.querySelectorAll('.bogi .row .ox button.on')].map(b=>b.closest('.row').dataset.k+b.dataset.v):[],
-     tfix:c?c.querySelectorAll('.fx,.fixed').length:0,gg:__J.tx(c&&c.querySelector('.ggwrap')).length,img:!!img,imgOk:img?img.complete&&img.naturalWidth>0:null}},
- heatNos(){const m={};DATA.forEach(r=>m[String(codeShow(r))]=r[F.NO]);return [...document.querySelectorAll('#spec i')].filter(i=>i.title).map(i=>m[i.title.split(' ')[0]]||('?'+i.title.split(' ')[0]))},
- heatCodes(){return [...document.querySelectorAll('#spec i')].filter(i=>i.title).map(i=>i.title.split(' ')[0])},
- memoNos(){try{memoSheet()}catch(e){return 'ERR '+e}const b=document.getElementById('memoSheet');const a=b?[...b.querySelectorAll('.memor')].map(x=>+x.dataset.no):[];if(b)b.remove();return a},
- yearNos(){const ys=[...new Set(DATA.filter(r=>r[F.SRC]==='변리사').map(r=>r[F.YEAR]))].sort();const out=[];const m={};DATA.forEach(r=>m[r[F.CODE]]=r[F.NO]);
-   for(const y of ys.slice(-3)){const n0=document.querySelectorAll('.sheet').length;try{yearSheet(y)}catch(e){return 'ERR '+e}const L=[...document.querySelectorAll('.sheet')];const b=L.length>n0?L[L.length-1]:null;
-     out.push(b?[...b.querySelectorAll('.histrow .rn')].map(x=>m[x.textContent.trim()]||('?'+x.textContent.trim())):[]);if(b)b.remove()}return out},
- ggHeads(){return [...document.querySelectorAll('#esres [data-ggres] .cd')].map(e=>e.textContent.trim())},
- err(){return (window.__err||[]).slice(0,8)}
-};
-"""
-
-
-class Srv:
-    """같은 출처에서 앱·데이터 폴더·기록을 갈아 끼운다"""
-    def __init__(self):
-        self.app = b''; self.spd = SPD; self.rec = {}; self.static = {}
-        me = self
-
-        class Hh(http.server.SimpleHTTPRequestHandler):
-            def log_message(self, *a, **k):
-                pass
-
-            def do_GET(self):
-                p = urllib.parse.unquote(self.path.split('?')[0])
-                if p in ('/', '/app.html'):
-                    b = me.app; ct = 'text/html; charset=utf-8'
-                elif p.startswith('/data/'):
-                    rel = p[6:]
-                    if rel in me.rec:
-                        b = me.rec[rel]
-                    else:
-                        f = os.path.join(me.spd, rel.replace('/', os.sep))
-                        if not os.path.isfile(f):
-                            self.send_response(404); self.end_headers(); return
-                        b = open(f, 'rb').read()
-                    ct = 'application/octet-stream'
-                elif p.lstrip('/') in me.static:   # 앱 옆 파일(motion/…) — 없으면 404
-                    b = me.static[p.lstrip('/')]
-                    ct = 'text/html; charset=utf-8' if p.endswith('.html') else 'application/json' if p.endswith('.json') else 'application/octet-stream'
-                else:
-                    self.send_response(404); self.end_headers(); return
-                self.send_response(200); self.send_header('Content-Type', ct); self.send_header('Content-Length', str(len(b)))
-                self.send_header('X-Sha', hashlib.sha1(b).hexdigest()); self.send_header('Cache-Control', 'no-store'); self.end_headers(); self.wfile.write(b)
-        self.srv = socketserver.ThreadingTCPServer(('127.0.0.1', 0), Hh); self.srv.daemon_threads = True
-        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
-        self.port = self.srv.server_address[1]
-
-
-class Dev:
-    """기기 하나(문맥 하나) — load(앱, 데이터 폴더, 과목) 로 같은 출처에서 다시 연다"""
-    def __init__(self, br, eng, phone=False):
-        self.eng = eng; self.S = Srv()
-        vp = {'width': 390, 'height': 844} if phone else {'width': 1553, 'height': 900}
-        self.ctx = br.new_context(viewport=vp, device_scale_factor=1, has_touch=True)
-        OK = ('http://127.0.0.1', 'https://cdnjs.cloudflare.com/', 'https://cdn.jsdelivr.net/', 'https://fonts.googleapis.com/', 'https://fonts.gstatic.com/')
-        self.ctx.route('**/*', lambda rt: rt.continue_() if rt.request.url.startswith(OK) else rt.abort())
-        self.pg = None; self.errs = []
-
-    def load(self, app, spd, subj, rec=None, static=None):
-        self.S.app = app; self.S.spd = spd; self.S.rec = dict(rec or {}); self.S.static = dict(static or {})
-        if self.pg:
-            self.pg.close()
-        self.ctx.clear_cookies()
-        self.pg = self.ctx.new_page(); self.pg.set_default_timeout(150000)
-        self.pg.add_init_script(INIT.replace('__SUBJ__', subj))
-        self.pg.on('pageerror', lambda e: self.errs.append('page: ' + str(e)[:200]))
-        self.pg.goto('http://127.0.0.1:%d/app.html' % self.S.port, wait_until='load')
-        self.pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>0', timeout=120000)
-        self.pg.evaluate(JS)
-        for _ in range(120):
-            if self.ev("()=>__J.ready()"):
-                break
-            self.pg.wait_for_timeout(250)
-        self.pg.wait_for_timeout(2500)
-
-    def ev(self, expr, arg=None):
-        return self.pg.evaluate(expr, arg) if arg is not None else self.pg.evaluate(expr)
-
-    def close(self):
-        try:
-            self.ctx.close()
-        except Exception:
-            pass
-        try:
-            self.S.srv.shutdown()
-        except Exception:
-            pass
 
 
 # ══════════ 데이터 ══════════
@@ -522,15 +391,88 @@ def b11(br, eng):
     T(G, '%s 생물 기록 빈 채 — 옮김 0 · 올린 data = 바탕' % eng, out['NEW']['mig'] == 0 and out['NEW']['data'] == out['BASE']['data'], {k: v['mig'] for k, v in out.items()})
 
 
+# ── _task_qa_slim2 A-1·A-2(10/8 · J2) regress 갈래 — 이름이 `_rg` 로 시작하는 것 = gate 에서 안 쓰는 도우미(gate 에서 도는 줄은 글자 그대로) ──
+#   이 하네스 = uid 옮김 판(9/27 · 인도됨)의 관문 — m3 · m5 · a679 · a679p · d1(옮김 재현 · git archive HEAD 바탕 데이터 · ⚙ _uid_rename 하위 파이썬)은 그 판에만 뜻 → gate 만
+#   regress = a8 · p10 · b11(NEW 앱 = 바탕 앱 무변 칸 · 처리안 「기준」) 의 NEW 앱 쪽만 + 앞 인도판 같은 칸 값 스냅샷(QC.base · md5) · d1 의 「생물 + 지학 q 그림 394」 파일 셈(data)
+#   a8 의 데이터 = studyplandata 작업트리(gate 의 git archive HEAD 와 같은 데이터 · git 0 — 결정 거리) · smoke 칸 없음(smoke 는 앱 안 띄우고 INFO 한 줄 · rc 0)
+def _rg_md5(v):
+    return hashlib.md5(json.dumps(v, ensure_ascii=False, sort_keys=True, default=str).encode('utf-8')).hexdigest()
+
+
+def _rg_d1_count():
+    """regress — d1 의 data 칸만(studyplandata bio · earth img 의 q 그림 파일 수 · 굽기 · git 0) · 칸 글 = gate 와 같음"""
+    G = 'd1'
+    T(G, '생물 146 = 196 · 지학 198 — 합 394', len([f for f in os.listdir(os.path.join(SPD, 'bio', 'img')) if f.startswith('q')]) + len([f for f in os.listdir(os.path.join(SPD, 'earth', 'img')) if f.startswith('q')]) == 394, '')
+
+
+def _rg_one(br, eng, spd, subj, path, keys):
+    QC.launch('new')
+    dv = Dev(br, eng)
+    try:
+        dv.load(APPS['NEW'], spd, subj); dv.ev("()=>__J.sync()")
+        o = {'data': jl(dv.ev("p=>__J.lastPut(p)", path) or '{}').get('data'), 'mig': dv.ev("()=>__J.mig()")}
+        if 'rows' in keys:
+            o['rows'] = dv.ev("()=>__J.rows()")
+        if 'list' in keys:
+            o['list'] = dv.ev("()=>__J.list()")
+        return o
+    finally:
+        dv.close()
+
+
+def _rg_a8(br, eng):
+    """regress — a8: 새 앱 + 데이터(작업트리) · 보이는 번호 · 목록 · 올린 data(uid 열쇠로 편 꼴) = 기준 스냅샷(앞 인도판 같은 칸 · md5) · 번호 열쇠 0 · 옮김 0"""
+    G = 'a8'
+    n = _rg_one(br, eng, SPD, 'earth', 'earth/기록.json', ('rows', 'list'))
+    un = uidk(APPS['NEW'])
+    cur = {'rows': _rg_md5([x[3] for x in n['rows']]), 'list': _rg_md5(n['list']), 'data': _rg_md5(uidnorm(n['data'], n2u(SPD, 'earth')) if un else n['data'])}
+    b = QC.base('a8@%s' % eng, cur)
+    T(G, '%s 새 앱 + 옛 데이터(옛uid 없음) — 보이는 번호·목록 = 바탕 · 올린 data = 바탕 · 옮김 0' % eng,
+      cur['rows'] == b.get('rows') and cur['list'] == b.get('list') and cur['data'] == b.get('data') and (numkeys(n['data']) == 0 if un else True) and n['mig'] == 0,
+      {'목록 표본': n['list'][:3], '옮김': n['mig'], 'uid 열쇠판': un, '번호 열쇠 남음(새)': numkeys(n['data']), '같음(번호 · 목록 · data)': [cur[k] == b.get(k) for k in ('rows', 'list', 'data')], '기준': QC.base_note('a8@%s' % eng)})
+
+
+def _rg_p10(br, eng):
+    """regress — p10: 물리 올린 data(근거 난수 k 뺌) · 행 번호 · 보이는 번호 = 기준 스냅샷 · 옮김 0"""
+    G = 'p10'
+    n = _rg_one(br, eng, SPD, 'phys', 'phys/기록.json', ('rows',))
+    cur = {'data': _rg_md5(nok(n['data'])), 'rows': _rg_md5([x[1:] for x in n['rows']])}
+    b = QC.base('p10@%s' % eng, cur)
+    T(G, '%s 물리 — 올린 data = 바탕 · 행 번호·보이는 번호 = 바탕 · 옮김 0' % eng,
+      cur['data'] == b.get('data') and cur['rows'] == b.get('rows') and n['mig'] == 0, {'옮김': n['mig'], '기준': QC.base_note('p10@%s' % eng)})
+
+
+def _rg_b11(br, eng):
+    """regress — b11: 생물 기록 빈 채 · 옮김 0 · 올린 data = 기준 스냅샷"""
+    G = 'b11'
+    n = _rg_one(br, eng, SPD, 'bio', 'bio/기록.json', ())
+    cur = {'data': _rg_md5(n['data'])}
+    b = QC.base('b11@%s' % eng, cur)
+    T(G, '%s 생물 기록 빈 채 — 옮김 0 · 올린 data = 바탕' % eng, n['mig'] == 0 and cur['data'] == b.get('data'), {'NEW': n['mig'], '기준': QC.base_note('b11@%s' % eng)})
+
+
 APPS = {}
 
 
 def main():
+    if QC.SMOKE:   # smoke 칸 없음 — 앱을 안 띄우고 끝낸다(결과 파일에도 같은 줄)
+        msg = 'INFO | smoke 칸 없음 | jagwa_uid — uid 옮김 판 관문(m3 · m5 · a679 · d1 = 관문만 · a8 · p10 · b11 = 기준 스냅샷) · smoke 는 띄움 0'
+        print(msg, flush=True)
+        with io.open(OUTF, 'a', encoding='utf-8') as f:
+            f.write('\n==== %s · jagwa_uid · smoke ====\n%s\n== PASS 0 · FAIL 0\n' % (time.strftime('%Y-%m-%d %H:%M'), msg))
+        sys.exit(0)
     os.makedirs(WORK, exist_ok=True)
     APPS['NEW'] = open(NEWF, 'rb').read().replace(b'\r\n', b'\n')
-    APPS['BASE'] = git(GENIE, 'show', 'HEAD:jagwa/index.html')
+    if QC.GATE:
+        QC.sub('git:show-app')
+        APPS['BASE'] = git(GENIE, 'show', 'HEAD:jagwa/index.html')
+    else:   # regress — 바탕 앱(genie HEAD = 사슬에서 새 판 자신) 안 풂 · 「= 바탕」 칸은 기준 스냅샷
+        APPS['BASE'] = None
     t0 = time.time()
-    if not ONLY or 'd1' in ONLY:
+    if (not ONLY or 'd1' in ONLY) and not QC.GATE:   # regress — d1 은 data 칸(q 그림 394)만
+        _rg_d1_count()
+    if (not ONLY or 'd1' in ONLY) and QC.GATE:   # d1 = git archive 바탕 데이터 · ⚙ _uid_rename 하위 파이썬 — 관문만
+        QC.sub('git:archive'); QC.sub('python:bake')
         try:
             d1()
         except Exception as e:
@@ -541,7 +483,7 @@ def main():
             br = getattr(pw, eng).launch()
             try:
                 bodyA = None
-                for k, fn in (('m3', m3), ('m5', None), ('a8', a8), ('a679', a679), ('a679p', None), ('p10', p10), ('b11', b11)):
+                for k, fn in ((('m3', m3), ('m5', None), ('a8', a8), ('a679', a679), ('a679p', None), ('p10', p10), ('b11', b11)) if QC.GATE else (('a8', _rg_a8), ('p10', _rg_p10), ('b11', _rg_b11))):   # regress — 기준 장면 셋(NEW 만 · 스냅샷)
                     if ONLY and k not in ONLY:
                         continue
                     print('── %s · %s' % (eng, k), flush=True)

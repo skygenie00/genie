@@ -12,12 +12,14 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import http.server, os, socketserver, subprocess, sys, threading, shutil
 from pypdf import PdfWriter
 
 SRC = _roots.genie(r"jagwa\index.html")
 OUT = os.path.join(os.environ.get('TEMP', '.'), 'physhF'); os.makedirs(OUT, exist_ok=True)
 APP = os.path.join(OUT, 'app.html')
+_RG_SMOKE = ('① 시작 = 둘 다 꺼짐', 'A1 단원 머리 줄', 'JS 오류 0')   # qa_slim2 smoke 칸(A-0)
 
 STUB = """<script>
 window.katex={render:function(){},renderToString:function(s){return s}};window.renderMathInElement=function(){};
@@ -196,6 +198,7 @@ def main():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     chrome = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     prof = os.path.join(OUT, 'prof'); shutil.rmtree(prof, ignore_errors=True)
+    QC.launch('new')   # 셈(§B-4) — 새 판 한 번(바탕 판 없음)
     p = subprocess.Popen([chrome, '--headless=new', '--disable-gpu', '--no-first-run', '--user-data-dir=' + prof, '--window-size=1400,900',
                           'http://127.0.0.1:%d/app.html' % port], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     got = done.wait(240); p.terminate()
@@ -227,6 +230,8 @@ def main():
        [_pre.count("addEventListener('wheel'"), _z0, _z1])
     # 판 3 ①(2026-09-08) — crop 이 붙어 지학 16 · 생물 17. 물리 12 는 그대로다(고친 자리).
     T2('SUBJ.phys SYNC_KEYS 12 무변 · earth 19 · bio 20 (add1 +bref · SUBJ 블록)', "SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','link']," in s and s.count("'bpit','bpg','crop','txt','tfix','bref'],") == 1 and "'bpg','snote','crop','txt','tfix','bref']," in s)
+    if QC.SMOKE:   # smoke — smoke 칸 줄만
+        lines = [x for x in lines if any((x.split(' | ') + ['', ''])[1].startswith(k) for k in _RG_SMOKE)]
     npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
     for x in lines: print(x)
     print('\n== %d PASS / %d FAIL / %d항 ==' % (npass, nfail, len(lines)))

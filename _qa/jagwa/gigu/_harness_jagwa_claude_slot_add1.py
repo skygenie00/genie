@@ -15,6 +15,13 @@
 
     PYTHONIOENCODING=utf-8 python _harness_jagwa_claude_slot_add1.py
 """
+import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
+_d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
+while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
+    _d_r = _os_r.path.dirname(_d_r)
+_sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import hashlib
 import http.server
 import io
@@ -31,12 +38,11 @@ import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import _harness_earth_shell as E
 
-GENIE = E.GENIE
-SRC = E.SRC
-CHROME = E.CHROME
-SPDROOT = E.SPDROOT
+GENIE = _roots.genie()
+SRC = _roots.genie('jagwa', 'index.html')
+CHROME = JG.CHROME
+SPDROOT = _roots.spd()
 MOTDIR = os.path.join(GENIE, 'jagwa', 'motion')
 OUT = os.path.join(os.environ.get('TEMP', '.'), 'hclaudeadd1')
 os.makedirs(OUT, exist_ok=True)
@@ -49,6 +55,9 @@ def md5lf(b):
     return hashlib.md5(b.replace(b'\r\n', b'\n')).hexdigest()
 
 
+_RG_SMOKE = ('CL2-1 ★보이는 차례가 다섯+Claude 다', 'CL2 콘솔 오류 0')   # qa_slim2 smoke 칸(A-0)
+
+
 def base_text():
     keep = os.path.join(os.environ.get('TEMP', '.'), 'jagwa_base_claude_add1.html')
     if os.path.exists(keep):
@@ -56,6 +65,7 @@ def base_text():
         if md5lf(b) == BASE_MD5:
             return b.replace(b'\r\n', b'\n').decode('utf-8')
     for rev in ('f810502', 'HEAD', 'HEAD~1'):
+        QC.sub('git:show-app')   # 셈 — 바탕 판 풀기(gate 만 부름)
         b = subprocess.run(['git', '-C', GENIE, 'show', rev + ':jagwa/index.html'],
                            capture_output=True).stdout
         if b and md5lf(b) == BASE_MD5:
@@ -323,12 +333,12 @@ PHONE2 = r"""<script>
 
 
 def build(mode, src_text, subj):
-    stub = E.STUB.replace('__SUBJ__', subj)
+    stub = JG.STUB_ES.replace('__SUBJ__', subj)
     anchor = '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js'
     html = src_text.replace(anchor, stub + anchor, 1)
     body = BODY_CL2.replace('__ROW__', json.dumps(ROW))
     open(os.path.join(OUT, 'app.html'), 'w', encoding='utf-8', newline='').write(
-        html.replace('</body>', E.HEAD + body + E.TAIL + '</body>', 1))
+        html.replace('</body>', JG.HEAD + body + JG.TAIL + '</body>', 1))
     open(os.path.join(OUT, 'phone.html'), 'w', encoding='utf-8', newline='').write(
         html.replace('</body>', PHONE2 + '</body>', 1))
     m = os.path.join(OUT, 'motion')
@@ -339,6 +349,7 @@ def build(mode, src_text, subj):
 
 
 def run(mode, subj, src_text, secs=340):
+    QC.launch('base' if mode.endswith('base') else 'new')   # 셈(§B-4)
     build(mode, src_text, subj)
     spd = os.path.join(SPDROOT, subj)
     done = threading.Event()
@@ -428,21 +439,27 @@ def static_checks():
 
     raw = open(SRC, 'rb').read()
     s = raw.replace(b'\r\n', b'\n').decode('utf-8')
-    base = base_text()
+    base = base_text() if QC.GATE else None   # regress — 바탕 셈은 스냅샷(아래 기준 칸)
     # ★ A-6(d) 9/30 _task_qa_baseline — 「사라진 바탕 줄」은 이 판(add1) 인도 검산이다 → 새 쪽을 인도 판 007fde4 로 박는다(두 커밋 사이 f810502 ↔ 007fde4 · 수행 결과 「소스 diff +43 / −9」)
-    s_dl = subprocess.run(['git', '-C', GENIE, 'show', '007fde4:jagwa/index.html'], capture_output=True).stdout.replace(b'\r\n', b'\n').decode('utf-8')
+    if QC.GATE:   # 관문만 — 인도판 007fde4
+        QC.sub('git:show-app')
+        s_dl = subprocess.run(['git', '-C', GENIE, 'show', '007fde4:jagwa/index.html'], capture_output=True).stdout.replace(b'\r\n', b'\n').decode('utf-8')
 
     T('CL2-Z 줄끝이 CRLF 그대로다(외톨이 LF 0)',
       raw.count(b'\r\n') > 9000 and raw.replace(b'\r\n', b'').count(b'\n') == 0,
       [raw.count(b'\r\n'), raw.replace(b'\r\n', b'').count(b'\n')])
-    T('CL2-Z 바탕보다 줄이 늘기만 했다',
-      len(s.split('\n')) > len(base.split('\n')),
-      [len(s.split('\n')), len(base.split('\n'))])
-    gone = [l for l in set(base.split('\n')) - set(s_dl.split('\n')) if l.strip()]   # ★ A-6(d) — 인도 판 007fde4(위 s_dl)
-    T('CL2-Z 사라진 바탕 줄이 열 줄 아래다(손댄 자리뿐)', len(gone) <= 10,
-      [g.strip()[:80] for g in gone])
-    out.append('NOTE | CL2-Z 사라진 바탕 줄 | '
-               + json.dumps([g.strip()[:90] for g in gone], ensure_ascii=False))
+    if QC.GATE:
+        T('CL2-Z 바탕보다 줄이 늘기만 했다',
+          len(s.split('\n')) > len(base.split('\n')),
+          [len(s.split('\n')), len(base.split('\n'))])
+        gone = [l for l in set(base.split('\n')) - set(s_dl.split('\n')) if l.strip()]   # ★ A-6(d) — 인도 판 007fde4(위 s_dl)
+        T('CL2-Z 사라진 바탕 줄이 열 줄 아래다(손댄 자리뿐)', len(gone) <= 10,
+          [g.strip()[:80] for g in gone])
+        out.append('NOTE | CL2-Z 사라진 바탕 줄 | '
+                   + json.dumps([g.strip()[:90] for g in gone], ensure_ascii=False))
+    else:   # regress — 기준: 바탕 줄 수 = 앞 인도판 스냅샷 · 「≥」(같으면 무변) · 사라진 바탕 줄(두 고정 판 사이) = 관문만
+        _nb = QC.base('CL2Z.lines', len(s.split('\n')))
+        T('CL2-Z 바탕보다 줄이 늘기만 했다', len(s.split('\n')) >= _nb, [len(s.split('\n')), _nb])
 
     # ── 물리 몫을 곁가지로 안 건드렸나 ──
     for pat, ko, n in [
@@ -454,7 +471,11 @@ def static_checks():
             (r'function physRowBuild\(\)\{\n  if\(HASBOOK\|\|!SHELL\)return;', 'physRowBuild 머리', 1),
             (r'if\(HASBOOK\)showProblem=async function\(\)\{', '카드 층 showProblem 머리', 1),
             (r'gptSheet', 'gptSheet 이름', 4)]:
-        a, b = len(re.findall(pat, s)), len(re.findall(pat, base))
+        if QC.GATE:
+            a, b = len(re.findall(pat, s)), len(re.findall(pat, base))
+        else:   # regress — 기준: 바탕 셈 = 앞 인도판 스냅샷
+            a = len(re.findall(pat, s))
+            b = QC.base('CL2Z.pat/' + ko, a)
         T('CL2-Z %s : 바탕과 같은 수' % ko, a == b and a >= 1, [a, b])
 
     # ── 물리 lk2 규칙의 **선언**이 한 글자도 안 바뀌었나 ──
@@ -463,13 +484,21 @@ def static_checks():
                  'font-size:11.5px;font-weight:600;color:var(--muted);border-radius:6px}',
                  '{white-space:nowrap}',
                  '{appearance:none;-webkit-appearance:none;']:
-        T('CL2-Z 물리 lk2 선언 무변 — %s' % decl[:42],
-          s_lk2.count(decl) == base.count(decl) and base.count(decl) >= 1,
-          [s_lk2.count(decl), base.count(decl)])
-    T('CL2-Z 물리 #pRow1 선택자가 그대로 남아 있다',
-      s.count('body[data-layer="pdf"] #pRow1 .lk2') == base.count('body[data-layer="pdf"] #pRow1 .lk2'),
-      [s.count('body[data-layer="pdf"] #pRow1 .lk2'),
-       base.count('body[data-layer="pdf"] #pRow1 .lk2')])
+        if QC.GATE:
+            T('CL2-Z 물리 lk2 선언 무변 — %s' % decl[:42],
+              s_lk2.count(decl) == base.count(decl) and base.count(decl) >= 1,
+              [s_lk2.count(decl), base.count(decl)])
+        else:   # regress — 기준: 바탕 셈 = 앞 인도판 스냅샷
+            _bc = QC.base('CL2Z.lk2/' + decl[:42], s_lk2.count(decl))
+            T('CL2-Z 물리 lk2 선언 무변 — %s' % decl[:42], s_lk2.count(decl) == _bc and _bc >= 1, [s_lk2.count(decl), _bc])
+    if QC.GATE:
+        T('CL2-Z 물리 #pRow1 선택자가 그대로 남아 있다',
+          s.count('body[data-layer="pdf"] #pRow1 .lk2') == base.count('body[data-layer="pdf"] #pRow1 .lk2'),
+          [s.count('body[data-layer="pdf"] #pRow1 .lk2'),
+           base.count('body[data-layer="pdf"] #pRow1 .lk2')])
+    else:   # regress — 기준: 바탕 셈 = 앞 인도판 스냅샷
+        _bp = QC.base('CL2Z.prow1', s.count('body[data-layer="pdf"] #pRow1 .lk2'))
+        T('CL2-Z 물리 #pRow1 선택자가 그대로 남아 있다', s.count('body[data-layer="pdf"] #pRow1 .lk2') == _bp, [s.count('body[data-layer="pdf"] #pRow1 .lk2'), _bp])
     T('CL2-Z 카드 층 lk2 선택자가 다섯 곳 생겼다',
       s.count('body[data-book] .vbot .tools .lk2')
       + s.count('body[data-book] .vbot .tools select.lk2') == 5,
@@ -495,7 +524,7 @@ def main():
     print('[src ] md5(LF) %s' % cur)
     if cur == BASE_MD5:
         raise SystemExit('NG  아직 고치기 전 판이다 — _patch_jagwa_claude_slot_add1.py 를 먼저 돌려라')
-    base = base_text()
+    base = base_text() if QC.GATE else None   # regress — 바탕 실행 셋 안 돎
     lines, meas = [], {}
     only = [a for a in sys.argv[1:] if not a.startswith('-')]
 
@@ -508,9 +537,10 @@ def main():
                 except Exception:
                     meas.setdefault(mode, {})[k] = None
 
-    for mode, subj, txt_ in [('earth', 'earth', src), ('bio', 'bio', src), ('phys', 'phys', src),
+    for mode, subj, txt_ in ([('earth', 'earth', src), ('bio', 'bio', src), ('phys', 'phys', src),
                              ('earthbase', 'earth', base), ('biobase', 'bio', base),
-                             ('physbase', 'phys', base)]:
+                             ('physbase', 'phys', base)]
+                             if QC.GATE else ([('earth', 'earth', src)] if QC.SMOKE else [('earth', 'earth', src), ('bio', 'bio', src), ('phys', 'phys', src)])):   # regress — NEW 셋 · smoke — 지학 하나
         if only and mode not in only:
             continue
         r = run(mode, subj, txt_)
@@ -564,11 +594,15 @@ def main():
                          + ' | CL2-5 [%s] 보라 태그 계산 색이 물리와 같다' % ko
                          + ('' if cc == pc else ' | ' + json.dumps([cc, pc])))
         a, b = M(sub, 'CL2 실측 곁가지 표시'), M(sub + 'base', 'CL2 실측 곁가지 표시')
+        if QC.REGRESS and a is not None:   # regress — 기준: 바탕 실측 = 앞 인도판 스냅샷
+            b = QC.base('CL25.side/' + sub, a)
         if a is not None and b is not None:
             lines.append(('PASS' if a == b else 'FAIL')
                          + ' | CL2-5 [%s] ★곁가지 표시(.nog·쌍둥이·연결·유형·★·볼트·난이도) 수가 바탕과 같다' % ko
                          + ('' if a == b else ' | ' + json.dumps([a, b], ensure_ascii=False)))
         a, b = M(sub, 'CL2 실측 서랍'), M(sub + 'base', 'CL2 실측 서랍')
+        if QC.REGRESS and a is not None:   # regress — 기준: 바탕 실측 = 앞 인도판 스냅샷
+            b = QC.base('CL25.drawer/' + sub, a)
         if a is not None and b is not None:
             lines.append(('PASS' if a == b else 'FAIL')
                          + ' | CL2-5 [%s] 상주 서랍이 바탕과 같다' % ko
@@ -580,32 +614,34 @@ def main():
                     ('CL2 실측 아랫줄 전수 꼴', '#pRow1 전수 계산 꼴'),
                     ('CL2 실측 아랫줄 보이는 차례', '아랫줄 보이는 차례')):
         a, b = M('phys', key), M('physbase', key)
+        if QC.REGRESS and a is not None:   # regress — 기준: 바탕 물리 실측 = 앞 인도판 스냅샷(가림 없이 그대로 맞댐 — 아래 가림 넷은 고정 옛 판 대비 몫)
+            b = QC.norm(QC.base('CL26/' + key, a)); a = QC.norm(a)
         if a is None or b is None:
             lines.append('FAIL | CL2-6 물리 %s 실측을 못 받았다' % ko)
             continue
         _mask = ''
-        if _slim and key == 'CL2 실측 목록 25줄' and isinstance(a, str) and isinstance(b, str):
+        if _slim and QC.GATE and key == 'CL2 실측 목록 25줄' and isinstance(a, str) and isinstance(b, str):
             # ★ 2026-10-07 (_task_jagwa_phys_win §A-36 ㊴ · §A-37) 물리 목록 「기출」 칩 자리 → V 글자 · 「볼트 N」 칩 걷음 — 새 판 V 글자 · 바탕 기출 딱지(같은 자리) · 「볼트 N」을 떼고 맞댐
             a = ' || '.join(re.sub(r'^(\S+) V\d+ ', r'\1 ', x) for x in a.split(' || '))
             b = ' || '.join(re.sub(r' 볼트 \d+(?= )', '', re.sub(r'^(\S+) (?:기출|타기출|확인|예상) ', r'\1 ', x)) for x in b.split(' || '))
             _mask = 'V 글자 · 기출 딱지 · 볼트 N 뗌'
-        if _slim and key == 'CL2 실측 아랫줄 글' and isinstance(a, str):
+        if _slim and QC.GATE and key == 'CL2 실측 아랫줄 글' and isinstance(a, str):
             # ★ 2026-10-07 (_task_jagwa_phys_win §A-27 · §A-33 · §A-30 ㉟ · §A09) 답풀 → 정답 ▸ · 🃏 → 암기카드 · 🔗 → 연결 · 다시 열면 새 회독(고르개 1·2·3회독) → 옛 글자로 맞춤(아래 옛 「이론 → 공식」 줄이 이어 받음)
             a = re.sub(r'^답풀', '정답 ▸', a)
             a = re.sub(r'1회독(?:\d+회독)+\+회독', '1회독+회독', a, count=1)
             a = a.replace('🃏이론개념', '암기카드이론개념', 1).replace('Claude유형🔗', 'Claude유형연결', 1)
             _mask = '답풀 · 🃏 · 🔗 · 회독 고르개 맞춤'
         _HID = ('tSol', 'tLayer', 'tLayerAdd', 'tLayerEye', 'tType', 'tTwin', 'tConcept')   # ★ 2026-10-07 (_task_jagwa_phys_win §A-04 ⑪ · §A-13 ⑥ · §A-27 ⑯ · §A-04 ㉞㉟㊱) 물리 아랫줄 숨긴 일곱
-        if _slim and key == 'CL2 실측 아랫줄 보이는 차례' and isinstance(b, list):
+        if _slim and QC.GATE and key == 'CL2 실측 아랫줄 보이는 차례' and isinstance(b, list):
             b = [x for x in b if x not in _HID]
             _mask = '숨긴 일곱 뺌'
-        if _slim and key == 'CL2 실측 아랫줄 전수 꼴' and isinstance(a, list) and isinstance(b, list):
+        if _slim and QC.GATE and key == 'CL2 실측 아랫줄 전수 꼴' and isinstance(a, list) and isinstance(b, list):
             # ★ 2026-10-07 (_task_jagwa_phys_win §A-04 ㉝ · §A-27) 물리 아랫줄 줄임(글자 단추 · 상자 없음)으로 꼴 칸을 다시 칠함 → 차례(id)·보임(숨긴 일곱은 0)만 맞댐 · 꼴 칸은 가림
             _nf = sum(1 for x, y in zip(a, b) if list(x[2:]) != list(y[2:]))
             a = [[x[0], x[1]] for x in a]
             b = [[y[0], 0 if y[0] in _HID else y[1]] for y in b]
             _mask = '꼴 칸 가림(다른 단추 %d)' % _nf
-        if key == 'CL2 실측 아랫줄 글' and isinstance(a, str):
+        if QC.GATE and key == 'CL2 실측 아랫줄 글' and isinstance(a, str):
             # ★ 합치기 10/1(하위 에이전트 C) — physphone A-3(97883ef 본문 「#tTheory 「공식」 → 「이론」」) — 그 단추 글자만 옛 글자로 맞춘다(바탕 판을 돌려도 같게)
             a = a.replace('암기카드이론개념', '암기카드공식개념', 1)
         lines.append(('PASS' if a == b else 'FAIL')
@@ -613,25 +649,29 @@ def main():
                      + ('' if a == b else ' | ' + _firstdiff(a, b))
                      + ((' | 가림(§A · 뜻한 차): ' + _mask) if _mask else ''))   # ★ 2026-10-07 (_task_jagwa_phys_win) 가린 칸은 판정 줄에 남김
 
-    # ── CL2-0 헛잣대 ──
-    for sub, ko in (('earth', '지학'), ('bio', '생물')):
-        b = M(sub + 'base', 'CL2 실측 아랫줄 보이는 차례')
-        if b is None:
-            lines.append('FAIL | CL2-0 헛잣대 [%s] 바탕 실측을 못 받았다' % ko)
-            continue
-        lines.append(('PASS' if (b != ROW and 'tGpt' not in b) else 'FAIL')
-                     + ' | CL2-0 헛잣대 — 바탕 %s 아랫줄에는 #tGpt 가 없다(다섯뿐)' % ko
-                     + ('' if (b != ROW and 'tGpt' not in b) else ' | ' + json.dumps(b)))
-        a, bb = M(sub + 'base', 'CL2 실측 아랫줄 꼴'), M('phys', 'CL2 실측 아랫줄 꼴')
-        if a and bb:
-            skip = ('width', 'height')
-            same = all(all(a[i][k] == bb[i][k] for k in a[i] if k not in skip)
-                       for i in ROW if a.get(i) and bb.get(i))
-            lines.append(('PASS' if not same else 'FAIL')
-                         + ' | CL2-0 헛잣대 — 바탕 %s 꼴은 물리와 **달랐다**(상자 꼴)' % ko
-                         + ('' if not same else ' | 바탕이 이미 같았다면 이 판이 잰 것이 없다'))
+    if QC.GATE:   # CL2-0 헛잣대 = 관문만(바탕 실행)
+        # ── CL2-0 헛잣대 ──
+        for sub, ko in (('earth', '지학'), ('bio', '생물')):
+            b = M(sub + 'base', 'CL2 실측 아랫줄 보이는 차례')
+            if b is None:
+                lines.append('FAIL | CL2-0 헛잣대 [%s] 바탕 실측을 못 받았다' % ko)
+                continue
+            lines.append(('PASS' if (b != ROW and 'tGpt' not in b) else 'FAIL')
+                         + ' | CL2-0 헛잣대 — 바탕 %s 아랫줄에는 #tGpt 가 없다(다섯뿐)' % ko
+                         + ('' if (b != ROW and 'tGpt' not in b) else ' | ' + json.dumps(b)))
+            a, bb = M(sub + 'base', 'CL2 실측 아랫줄 꼴'), M('phys', 'CL2 실측 아랫줄 꼴')
+            if a and bb:
+                skip = ('width', 'height')
+                same = all(all(a[i][k] == bb[i][k] for k in a[i] if k not in skip)
+                           for i in ROW if a.get(i) and bb.get(i))
+                lines.append(('PASS' if not same else 'FAIL')
+                             + ' | CL2-0 헛잣대 — 바탕 %s 꼴은 물리와 **달랐다**(상자 꼴)' % ko
+                             + ('' if not same else ' | 바탕이 이미 같았다면 이 판이 잰 것이 없다'))
 
-    lines += static_checks()
+    if not QC.SMOKE:   # smoke — 소스 칸(CL2-Z)은 smoke 칸이 아님
+        lines += static_checks()
+    if QC.SMOKE:   # smoke — smoke 칸 줄만
+        lines = [x for x in lines if any(k in x for k in _RG_SMOKE)]
     npass = sum(1 for x in lines if x.startswith('PASS'))
     nfail = sum(1 for x in lines if x.startswith('FAIL'))
     nnote = sum(1 for x in lines if x.startswith('NOTE'))

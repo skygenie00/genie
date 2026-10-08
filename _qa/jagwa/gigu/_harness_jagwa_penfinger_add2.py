@@ -14,12 +14,20 @@ r"""_task_jagwa_penfinger_add2 §E 관문 — 펜 도구 두 손가락 확대(D1
 쓰기 : python _harness_jagwa_penfinger_add2.py [--new 파일] [--only chromium,webkit] [--apps BASE2,BASE3,NEW] [--out 결과파일]
         결과 = 본판 결과 파일(_harness_jagwa_penfinger_result.txt) 끝에 이어 붙인다(--out 이 있으면 그 파일에 새로)
 """
+import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
+_d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
+while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
+    _d_r = _os_r.path.dirname(_d_r)
+_sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import hashlib, io, json, os, subprocess, sys, time
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import _harness_jagwa_penfinger as H   # noqa: E402
-import _harness_jagwa_penfinger_add1 as A1   # noqa: E402
+
+# ← jagwa/gigu/_harness_jagwa_penfinger.py:35-35 SAMPLE 사본(글자 그대로 · 갈래 ③ · JG 밖 — 띄우기가 아니라 옮기지 않음)
+SAMPLE = {'bio': 'B20-57-05', 'earth': 'G11-48-03'}   # ★ jagwa_uid(9/29) — 옛 G57-05 · G48-03(문항 번호 새 꼴)
 from playwright.sync_api import sync_playwright   # noqa: E402
 
 
@@ -27,7 +35,7 @@ def ARG(k, d=None):
     return sys.argv[sys.argv.index(k) + 1] if k in sys.argv else d
 
 
-NEWF = ARG('--new', os.path.join(H.GENIE, 'jagwa', 'index.html'))
+NEWF = ARG('--new', os.path.join(_roots.genie(), 'jagwa', 'index.html'))
 OUTF = ARG('--out', os.path.join(HERE, '_harness_jagwa_penfinger_result.txt'))
 ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
 APPS = [x for x in (ARG('--apps', '') or 'BASE2,BASE3,NEW').split(',') if x]
@@ -105,7 +113,7 @@ Object.assign(window.__P,{
 """
 
 
-class P3(A1.P2):
+class P3(JG.P2):
     """한 판 · 한 과목 · 엔진 — add1 P2(820×1180 · 터치 켬) + 두 손가락 · 기록 도구"""
     def __init__(self, br, app, subj, tag, engine, vh=1180):
         super().__init__(br, app, subj, tag, engine, vh)
@@ -120,8 +128,9 @@ class P3(A1.P2):
 
 def scen(br, app, tag, subj, engine):
     g = '%s %s %s' % (tag, engine, subj)
-    u = H.SAMPLE[subj]
+    u = SAMPLE[subj]
     cr = engine == 'chromium'
+    QC.launch('base' if tag.startswith('BASE') else 'new')   # 셈(§B-4)
     p = P3(br, app, subj, 'a2_%s_%s_%s' % (tag, engine, subj), engine)
 
     def fresh(tool='pen', ans=False, pg=None):
@@ -143,6 +152,10 @@ def scen(br, app, tag, subj, engine):
         T(g, '0 %s 문제 창 · 펜 도구(덮개가 카드를 덮는다) · 확대 1' % u,
           ok and s0['mode'] == 'pen' and (p.ev("()=>__P.ink()") or {}).get('penon') and p.ev("()=>__P.zoomGet()") == 1,
           {'mode': s0['mode'], 'ink': p.ev("()=>__P.ink()"), 'z': p.ev("()=>__P.zoomGet()")})
+        if QC.SMOKE:   # smoke — 0(펜 도구 덮개 · 확대 1) + Z(페이지 오류 0)만
+            er = p.errs + (p.ev("()=>__P.errs()") or [])
+            T(g, 'Z 페이지 오류 0', not er, er[:5])
+            return
         if cr:
             # ── 1 D1 — 두 손가락 벌림 900ms(둘째 손가락 40ms 뒤) · ①+⑤ · 문제 글+〈보기〉 ㄴ ──
             r1, ok1 = {}, True
@@ -293,6 +306,7 @@ def scen(br, app, tag, subj, engine):
         if cr:
             # ── 6b D3 — add1 관문 4 다시: 같은 덮개 밑 선택지 — 끌면 굴림(안 골라짐 · 창 0) · 톡 하면 골라짐 ──
             #    (add1 앞 판은 덮개 밑으로 손가락을 한 번도 안 넘겨 끌기는 늘 굴림이다 — 끌기만으로는 헛잣대가 안 선다 · 같은 자리 톡을 짝으로)
+            QC.launch('base' if tag.startswith('BASE') else 'new')   # 셈(§B-4)
             q7 = P3(br, app, subj, 'a2_%s_%s_%s_700' % (tag, engine, subj), engine, vh=700)
             try:
                 fresh('pen', ans=True, pg=q7)
@@ -414,19 +428,24 @@ def main():
     apps, md5s = {}, {}
     new = io.open(NEWF, encoding='utf-8', newline='').read()
     apps['NEW'] = new
-    for nm, rev in (('BASE3', BASE3_REV), ('BASE2', BASE2_REV)):
-        apps[nm] = subprocess.run(['git', '-C', H.GENIE, 'show', rev + ':jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
+    if QC.GATE:
+        for nm, rev in (('BASE3', BASE3_REV), ('BASE2', BASE2_REV)):
+            QC.sub('git:show-app')
+            apps[nm] = subprocess.run(['git', '-C', _roots.genie(), 'show', rev + ':jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
     for nm, t in apps.items():
         md5s[nm] = hashlib.md5(t.replace('\r\n', '\n').encode('utf-8')).hexdigest()
-    T('땅값', 'BASE3 = add1 인도판(d27c43a · 91ebc381) · BASE2 = 본판 인도판(f497f05 · 0c1f47dd) · NEW 는 add2 표시가 있다',
-      md5s['BASE3'].startswith(BASE3_MD5) and md5s['BASE2'] == BASE2_MD5 and '★ penfinger add2' in new and '★ penfinger add2' not in apps['BASE3'],
-      {k: v[:8] for k, v in md5s.items()})
-    engines = [e for e in ('chromium', 'webkit') if not ONLY or e in ONLY]
+    if QC.GATE:
+        T('땅값', 'BASE3 = add1 인도판(d27c43a · 91ebc381) · BASE2 = 본판 인도판(f497f05 · 0c1f47dd) · NEW 는 add2 표시가 있다',
+          md5s['BASE3'].startswith(BASE3_MD5) and md5s['BASE2'] == BASE2_MD5 and '★ penfinger add2' in new and '★ penfinger add2' not in apps['BASE3'],
+          {k: v[:8] for k, v in md5s.items()})
+    else:   # regress · smoke — 바탕 판 둘 풀기 0 · 땅값 칸 = 관문만 · report 머리 줄 자리만 채움
+        md5s.update({'BASE3': '(regress)', 'BASE2': '(regress)'})
+    engines = [e for e in ('chromium', 'webkit') if (not ONLY or e in ONLY) and (e == 'chromium' or not QC.SMOKE)]   # smoke — Chromium 만
     with sync_playwright() as pw:
         for eng in engines:
             br = getattr(pw, eng).launch()
-            for subj in ('bio', 'earth'):
-                for nm in ('BASE2', 'BASE3', 'NEW'):
+            for subj in (('bio', 'earth') if not QC.SMOKE else ('bio',)):   # smoke — 생물 한 번
+                for nm in (('BASE2', 'BASE3', 'NEW') if QC.GATE else ('NEW',)):   # regress — 바탕 판 둘(헛잣대 측정 줄) 안 돎
                     if nm in APPS:
                         scen(br, apps[nm], nm, subj, eng)
             br.close()

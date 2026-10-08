@@ -18,6 +18,8 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import hashlib
 import http.server
 import importlib.util
@@ -39,10 +41,7 @@ SRC = os.path.join(GENIE, 'jagwa', 'index.html')
 BASE_MD5 = '773962ce59842d75d44d32ef3db34c16'      # 68216cf
 
 # 부모 하네스의 `STUB`(과목 고르기·오류 모으기)을 그대로 쓴다 — 두 벌로 갈리지 않게
-_spec = importlib.util.spec_from_file_location('hes', os.path.join(HERE, '_harness_earth_shell.py'))
-_hes = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_hes)
-STUB = _hes.STUB
+STUB = JG.STUB_ES
 
 INIT = r"""
 (()=>{
@@ -111,6 +110,12 @@ def build(subj, src):
     return html
 
 
+# ── qa_slim2(2026-10-08) regress 도우미 — 이름이 `_rg` · `_RG` 로 시작 = gate 에서 안 쓰는 갈래
+_RG_SYNCED = "()=>typeof recBusy!=='undefined'&&!recBusy&&(((lsObj(SMETA_KEY).lastSync||0)>=performance.timeOrigin)||!!recErr)"   # 표지 = 앱 recBoot() 첫 syncRecords 끝(recBusy 거짓 · 이 쪽 열린 뒤 맞춘 시각 또는 recErr) · INIT 이 토큰을 넣어 부팅마다 맞춤
+_RG_VIEW = "()=>{const v=document.getElementById('view');return !!v&&!v.classList.contains('hide')}"   # 표지 = 문항 창(#view) 열림
+_RG_SMOKE = ('두 판 다 부팅했다', '★1 접힌 손잡이', 'JS 오류 0(새 판)')   # smoke 칸 글(A-0 smoke 칸 · 두판부팅 · ★1 · JS)
+
+
 BOX = """(sel)=>{const e=document.querySelector(sel);if(!e)return null;
   const r=e.getBoundingClientRect();return {x:r.left,y:r.top,w:r.width,h:r.height,
   cx:r.left+r.width/2,cy:r.top+r.height/2}}"""
@@ -120,6 +125,7 @@ def probe(engine, tag, subj, src, out):
     """한 엔진·한 판에서 §B 를 잰다. 돌려주는 것 = 잰 값 사전."""
     from playwright.sync_api import sync_playwright
     R = {'engine': engine, 'tag': tag, 'subj': subj}
+    QC.launch('base' if tag == 'BASE' else 'new')   # 셈(§B-4)
     srv, port = serve(subj, build(subj, src), os.path.join(out, tag + '_' + engine + '_' + subj))
     url = 'http://127.0.0.1:%d/app.html' % port
     with sync_playwright() as pw:
@@ -135,7 +141,10 @@ def probe(engine, tag, subj, src, out):
             pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>100', timeout=60000)
         except Exception as e:
             R['boot'] = 'NG ' + str(e)[:120]; br.close(); srv.shutdown(); return R
-        pg.wait_for_timeout(2500)
+        if QC.GATE:
+            pg.wait_for_timeout(2500)
+        else:   # regress — 고정 2.5 초 대신 표지(첫 기록 맞춤 끝) · 상한 = 같은 2.5 초
+            QC.until(pg, _RG_SYNCED, 2500, 'touch_ipad 부팅 뒤 첫 syncRecords 끝(recBusy 거짓 · lastSync ≥ 쪽 열림 또는 recErr)')
         R['n'] = pg.evaluate('DATA.length')
         R['shell'] = pg.evaluate('typeof SHELL!=="undefined"&&SHELL')
         R['res'] = pg.evaluate('!!document.querySelector("#navdr.ndres")')
@@ -160,6 +169,9 @@ def probe(engine, tag, subj, src, out):
             pg.evaluate('ndResFold(false)'); pg.wait_for_timeout(400)
         except Exception as e:
             R['t1_exc'] = str(e)[:160]
+        if QC.SMOKE:   # smoke — 부팅 · ★1 · JS 오류 까지
+            R['err'] = pg.evaluate('(window.__err||[]).slice(0,6)')
+            br.close(); srv.shutdown(); return R
 
         # ── TP-2 손잡이를 끌어 너비를 바꾸고 줄 위에서 뗀다 → 문제 안 뜸 ──
         for who, sel in (('서랍 줄', '#ndList .ndrow'), ('첫 화면 목록 줄', '#list .item')):
@@ -183,7 +195,11 @@ def probe(engine, tag, subj, src, out):
             b = pg.evaluate(BOX, '#ndList .ndrow:nth-child(3)') or pg.evaluate(BOX, '#ndList .ndrow')
             want = pg.evaluate('(()=>{const e=document.querySelector("#ndList .ndrow:nth-child(3)")||document.querySelector("#ndList .ndrow");return e?+e.dataset.no:0})()')
             if b:
-                tap(b); pg.wait_for_timeout(1800)
+                tap(b)
+                if QC.GATE:
+                    pg.wait_for_timeout(1800)
+                else:   # regress — 고정 1.8 초 대신 표지(문항 창 열림 · 상한 = 같은 1.8 초 · 안 열리면 gate 와 같은 시간 뒤 FAIL)
+                    QC.until(pg, _RG_VIEW, 1800, 'touch_ipad TP-3 서랍 줄 톡 → 문항 창 열림')
                 R['t3_open'] = pg.evaluate('!document.getElementById("view").classList.contains("hide")')
                 R['t3_no'] = [pg.evaluate('typeof VNO!=="undefined"?VNO:null'), want]
             pg.evaluate('try{closeView()}catch(e){}'); pg.wait_for_timeout(400)
@@ -323,19 +339,23 @@ def drag_touch(pg, engine, x0, y0, x1, y1):
 def main():
     engines = [a for a in sys.argv[1:] if a in ('chromium', 'webkit')] or ['chromium', 'webkit']
     cur = io.open(SRC, encoding='utf-8', newline='').read()
-    b = subprocess.run(['git', '-C', GENIE, 'show', '68216cf:jagwa/index.html'], capture_output=True).stdout
-    if not b or hashlib.md5(b.replace(b'\r\n', b'\n')).hexdigest() != BASE_MD5:
-        for rev in ('HEAD', 'HEAD~1', 'HEAD~2', 'HEAD~3'):
-            b2 = subprocess.run(['git', '-C', GENIE, 'show', rev + ':jagwa/index.html'], capture_output=True).stdout
-            if b2 and hashlib.md5(b2.replace(b'\r\n', b'\n')).hexdigest() == BASE_MD5:
-                b = b2; break
-    assert b and hashlib.md5(b.replace(b'\r\n', b'\n')).hexdigest() == BASE_MD5, '바탕(773962ce)을 못 찾았다'
-    base = b.decode('utf-8')
+    if QC.GATE:
+        QC.sub('git:show-app')
+        b = subprocess.run(['git', '-C', GENIE, 'show', '68216cf:jagwa/index.html'], capture_output=True).stdout
+        if not b or hashlib.md5(b.replace(b'\r\n', b'\n')).hexdigest() != BASE_MD5:
+            for rev in ('HEAD', 'HEAD~1', 'HEAD~2', 'HEAD~3'):
+                b2 = subprocess.run(['git', '-C', GENIE, 'show', rev + ':jagwa/index.html'], capture_output=True).stdout
+                if b2 and hashlib.md5(b2.replace(b'\r\n', b'\n')).hexdigest() == BASE_MD5:
+                    b = b2; break
+        assert b and hashlib.md5(b.replace(b'\r\n', b'\n')).hexdigest() == BASE_MD5, '바탕(773962ce)을 못 찾았다'
+        base = b.decode('utf-8')
+    else:   # regress · smoke — 바탕(68216cf) 앱 풀기 0 · BASE probe 0
+        base = None
     out = os.path.join(os.environ.get('TEMP', '.'), 'h_touch_ipad')
     D = {}
     for eng in engines:
-        for tag, src in (('NEW', cur), ('BASE', base)):
-            for subj in ('earth', 'phys'):
+        for tag, src in ((('NEW', cur), ('BASE', base)) if QC.GATE else (('NEW', cur),)):   # regress — 바탕 probe(헛잣대 · 증상 재현 INFO) 안 돎
+            for subj in (('earth', 'phys') if not QC.SMOKE else ('earth',)):   # smoke — 지학 하나
                 k = '%s/%s/%s' % (eng, tag, subj)
                 print('… %s' % k, flush=True)
                 try:
@@ -350,38 +370,46 @@ def main():
     g = lambda k: D.get(k) or {}
 
     for eng in engines:
-        for subj in ('earth', 'phys'):
+        for subj in (('earth', 'phys') if not QC.SMOKE else ('earth',)):
             n, o = g('%s/NEW/%s' % (eng, subj)), g('%s/BASE/%s' % (eng, subj))
             pre = 'TP[%s·%s] ' % (eng, subj)
-            T(pre + '두 판 다 부팅했다(문항 %s/%s · 상주 서랍 %s/%s)' % (n.get('n'), o.get('n'), n.get('res'), o.get('res')),
-              n.get('boot') == 'ok' and o.get('boot') == 'ok' and n.get('res') and o.get('res'),
-              [n.get('boot'), o.get('boot'), n.get('res'), o.get('res'), n.get('err0'), o.get('err0')])
+            if QC.GATE:
+                T(pre + '두 판 다 부팅했다(문항 %s/%s · 상주 서랍 %s/%s)' % (n.get('n'), o.get('n'), n.get('res'), o.get('res')),
+                  n.get('boot') == 'ok' and o.get('boot') == 'ok' and n.get('res') and o.get('res'),
+                  [n.get('boot'), o.get('boot'), n.get('res'), o.get('res'), n.get('err0'), o.get('err0')])
+            else:   # regress — 새 판 부팅 조건만(바탕 조건 = 관문만 몫) · 칸 글의 바탕 자리 「—」(새id · 처리표)
+                T(pre + '두 판 다 부팅했다(문항 %s/— · 상주 서랍 %s/—)' % (n.get('n'), n.get('res')),
+                  n.get('boot') == 'ok' and n.get('res'), [n.get('boot'), n.get('res'), n.get('err0')])
             # 1 손잡이 톡
             T(pre + '★1 접힌 손잡이를 톡 → 서랍만 펴지고 **문제가 안 뜬다** · 다시 톡 → 접힘',
               n.get('t1_fold0') is True and n.get('t1_fold1') is False and n.get('t1_view') is False
               and n.get('t1_fold2') is True and n.get('t1_view2') is False,
               {k: n.get(k) for k in ('t1_fold0', 't1_fold1', 't1_view', 't1_fold2', 't1_view2', 't1_exc')})
-            I(pre + '1 바탕 판(같은 손짓)', {k: o.get(k) for k in ('t1_fold0', 't1_fold1', 't1_view', 't1_fold2', 't1_view2', 't1_exc')})
+            if QC.GATE:   # 바탕 판 INFO(증상 재현 표) — 관문만
+                I(pre + '1 바탕 판(같은 손짓)', {k: o.get(k) for k in ('t1_fold0', 't1_fold1', 't1_view', 't1_fold2', 't1_view2', 't1_exc')})
             # 2 너비 끌기
             for who in ('서랍 줄', '첫 화면 목록 줄'):
                 v = n.get('t2_' + who) or {}
                 T(pre + '★2 손잡이를 끌어 너비를 바꾸고 「%s」 위에서 떼도 **문제가 안 뜬다**(너비 %s)' % (who, v.get('w') if isinstance(v, dict) else '?'),
                   isinstance(v, dict) and v.get('view') is False and (v.get('w') or 0) > 300, v)
-                I(pre + '2 바탕 판 「%s」' % who, o.get('t2_' + who))
+                if QC.GATE:
+                    I(pre + '2 바탕 판 「%s」' % who, o.get('t2_' + who))
             # 3 줄 톡
             T(pre + '★3 서랍 줄을 톡 → 그 문항이 열린다(%s)' % (n.get('t3_no')),
               n.get('t3_open') is True and n.get('t3_no') and n['t3_no'][0] == n['t3_no'][1],
               [n.get('t3_open'), n.get('t3_no'), n.get('t3_exc')])
             v3 = n.get('t3_scroll') or {}
             T(pre + '★3 서랍을 쓸어 스크롤하다 떼면 **안 열린다**', isinstance(v3, dict) and v3.get('view') is False, v3)
-            I(pre + '3 바탕 판 쓸기', o.get('t3_scroll'))
+            if QC.GATE:
+                I(pre + '3 바탕 판 쓸기', o.get('t3_scroll'))
             # 4 서랍 = 첫 화면 전체
             a4, b4 = n.get('t4') or {}, o.get('t4') or {}
             T(pre + '★4 한 문항짜리 목록(VLIST %s)으로 열어도 서랍은 **전체**(줄 %s = 첫 화면 %s · 머리 %s)'
               % (a4.get('vlist'), a4.get('rows'), a4.get('items'), a4.get('secs')),
               a4.get('vlist') == 1 and a4.get('rows') == a4.get('items') and (a4.get('rows') or 0) > 50
               and (a4.get('secs') or 0) > 0, a4)
-            I(pre + '4 바탕 판', b4)
+            if QC.GATE:
+                I(pre + '4 바탕 판', b4)
             # 5 창 닫기
             T(pre + '★5 문제 창 「서재」를 톡 → 닫힌다(%s)' % n.get('t5_backTag'),
               n.get('t5_closed') is True, [n.get('t5_backTag'), n.get('t5_closed'), n.get('t5_exc')]
@@ -405,10 +433,11 @@ def main():
                   % (n.get('t6_tag'), n.get('t6_tag2'), n.get('t6_tagWhere')),
                   n.get('t6_tag') == 0 and n.get('t6_tag2') == 0,
                   [n.get('t6_tag'), n.get('t6_tag2'), n.get('t6_tagWhere')])
-                # 헛잣대 — 바탕 판은 칩 넷 · 「타기출」 글자 ≥1
-                T(pre + '★헛잣대 6 — 바탕 판은 칩이 **넷**이고 「타기출」 글자가 있다 %s' % (o.get('t6_chips')),
-                  isinstance(o.get('t6_chips'), list) and len(o['t6_chips']) == 4 and (o.get('t6_tag') or 0) > 0,
-                  [o.get('t6_chips'), o.get('t6_tag')])
+                if QC.GATE:   # 헛잣대 = 관문만(바탕 probe)
+                    # 헛잣대 — 바탕 판은 칩 넷 · 「타기출」 글자 ≥1
+                    T(pre + '★헛잣대 6 — 바탕 판은 칩이 **넷**이고 「타기출」 글자가 있다 %s' % (o.get('t6_chips')),
+                      isinstance(o.get('t6_chips'), list) and len(o['t6_chips']) == 4 and (o.get('t6_tag') or 0) > 0,
+                      [o.get('t6_chips'), o.get('t6_tag')])
             T(pre + 'JS 오류 0(새 판)', not n.get('err'), n.get('err'))
 
     # 재현 여부 — 있는 그대로
@@ -422,7 +451,10 @@ def main():
                 '2 너비 끌고 목록 줄에서 떼니 떴나': (o.get('t2_첫 화면 목록 줄') or {}).get('view') if isinstance(o.get('t2_첫 화면 목록 줄'), dict) else o.get('t2_첫 화면 목록 줄'),
                 '4 서랍이 한 줄이 됐나': (o.get('t4') or {}).get('rows'),
                 '5 「서재」 톡으로 닫혔나': o.get('t5_closed')}
-    I('★ 바탕 판에서 아이패드 증상이 **재현됐는지** — 있는 그대로', rep)
+    if QC.GATE:   # 바탕 판 증상 재현 INFO — 관문만
+        I('★ 바탕 판에서 아이패드 증상이 **재현됐는지** — 있는 그대로', rep)
+    if QC.SMOKE:   # smoke — smoke 칸 줄만 남김(probe 가 TP-1 뒤 끝나 나머지 칸은 안 잼)
+        L = [x for x in L if any(k in x for k in _RG_SMOKE)]
 
     for x in L:
         print('   ' + x)

@@ -25,7 +25,7 @@ sys.path.insert(0, HERE)
 import _roots   # noqa: E402
 import _d11_scan   # noqa: E402
 ROOT = HERE
-SKIP = {'_지울것', '_백업', '_이전', '__pycache__', 'node_modules', '.git', '_qa_slim'}   # _qa_slim = _task_qa_slim 사본 · 결과 폴더(정본 하네스 모음 아님 · 10/4)
+SKIP = {'_지울것', '_백업', '_이전', '__pycache__', 'node_modules', '.git', '_qa_slim', '_qa_slim2'}   # _qa_slim = _task_qa_slim 사본 · 결과 폴더(정본 하네스 모음 아님 · 10/4) · _qa_slim2 = _task_qa_slim2 처리표 · 관문 하네스 · 재료(10/8 · 같은 까닭)
 RX_MAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 RX_PHONE = re.compile(r"(?<!\d)01[016789][-\s.]?\d{3,4}[-\s.]?\d{4}(?!\d)")
 RX_TOKEN = re.compile(r"(ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{30,}|gho_[A-Za-z0-9]{20,})")

@@ -24,6 +24,8 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import base64, hashlib, json, os, re, sys, time, subprocess, tempfile, threading, urllib.parse   # noqa: E402
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer   # noqa: E402
 try:
@@ -46,310 +48,52 @@ ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
 ONLY = [x.strip().upper() for x in (ARG('--only', '') or '').split(',') if x.strip()]
 OUTF = ARG('--res', os.path.join(HERE, '_harness_jagwa_physphone_result.txt'))
 SHOTS = ARG('--shots', os.path.join(tempfile.gettempdir(), 'h_jagwa', 'shots'))
+JG.conf(VENDOR_PP=VENDOR, NOTES=NOTES, SPD_PP=SPD, SHOTS=SHOTS)   # 제 argv 로 정한 값을 JG 에 넘김(route_handler · Remote · Pg_PP.shot 이 읽음)
 YARD = '--yardstick' in sys.argv
-PHONE = (390, 844)
-PAD = (820, 1180)
-PC = (1440, 900)
+PAD = JG.PAD   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
+PC = JG.PC   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
+PHONE = JG.PHONE   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
+Remote = JG.Remote   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
+app_src = JG.app_src   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
+fresh = JG.fresh   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
+git = JG.git_PP   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
+
+RES = []
 
 
-def git(*a):
-    return subprocess.run(['git', '-C', _roots.genie(), '-c', 'core.quotepath=false'] + list(a), capture_output=True).stdout
+# ── qa_slim2(2026-10-08) regress 도우미 — 이름이 `_rg` · `_Rg` · `_RG` 로 시작 = gate 에서 안 쓰는 갈래(gate 에서 도는 줄은 원래 글 그대로)
+_RG_SYNCED = "()=>typeof recBusy!=='undefined'&&!recBusy&&(((lsObj(SMETA_KEY).lastSync||0)>=performance.timeOrigin)||!!recErr)"   # 표지 = 앱 recBoot() 첫 syncRecords 끝(recBusy 거짓 · 이 쪽 열린 뒤 맞춘 시각 lastSync 또는 recErr) · INIT_PP 가 토큰을 넣어 부팅마다 맞춤
 
 
-def app_src(x):
-    """앱 글 — 파일이면 그 파일 · 아니면 genie git 판의 jagwa/index.html"""
-    if os.path.isfile(x):
-        return open(x, 'rb').read().decode('utf-8')
-    b = git('show', x + ':jagwa/index.html')
-    if not b:
-        raise SystemExit('바탕 앱을 못 읽었다: ' + x)
-    return b.decode('utf-8')
-
-
-# ── 가짜 원격(기록) — 과목마다 한 파일 · 처음 = studyplandata 로컬 사본 · PUT = 여기 담김(밖으로 안 나감) ──
-class Remote:
-    def __init__(self):
-        self.files, self.puts = {}, []
-        self.lock = threading.Lock()
-
-    def path_local(self, repo, path):
-        root = NOTES if repo.endswith('/notes') else SPD
-        return os.path.join(root, *[p for p in path.split('/') if p])
-
-    def get(self, repo, path):
-        key = repo + ':' + path
-        with self.lock:
-            if key in self.files:
-                return self.files[key]
-        f = self.path_local(repo, path)
-        if os.path.isfile(f):
-            return open(f, 'rb').read()
-        return None
-
-    def put(self, repo, path, body):
-        key = repo + ':' + path
-        with self.lock:
-            self.files[key] = body
-            self.puts.append((key, len(body), time.time()))
-        return hashlib.sha1(body).hexdigest()
-
-    def rec(self, subj='phys'):
-        b = self.get('zzikkaplan/studyplandata', subj + '/기록.json')
-        return json.loads(b.decode('utf-8')) if b else None
-
-
-REMOTE = Remote()
-OKHOST = ('http://127.0.0.1',)
-
-
-def route_handler(remote):
-    def h(route):
-        req = route.request
-        u = req.url
-        if u.startswith(OKHOST):
-            return route.continue_()
-        m = re.match(r'https://api\.github\.com/repos/([^/]+/[^/]+)/contents/([^?]+)', u)
-        if m:
-            repo, path = m.group(1), urllib.parse.unquote(m.group(2))
-            if req.method == 'PUT':
-                try:
-                    body = json.loads(req.post_data or '{}')
-                    data = base64.b64decode(body.get('content', ''))
-                except Exception:
-                    return route.fulfill(status=422, body='{}', content_type='application/json')
-                sha = remote.put(repo, path, data)
-                return route.fulfill(status=200, body=json.dumps({'content': {'sha': sha}}), content_type='application/json')
-            b = remote.get(repo, path)
-            if b is None:
-                return route.fulfill(status=404, body='{"message":"Not Found"}', content_type='application/json')
-            acc = (req.headers or {}).get('accept', '')
-            if 'raw' in acc:
-                return route.fulfill(status=200, body=b, content_type='application/octet-stream')
-            return route.fulfill(status=200, body=json.dumps({'sha': hashlib.sha1(b).hexdigest(), 'size': len(b)}), content_type='application/json')
-        m = re.match(r'https://cdnjs\.cloudflare\.com/ajax/libs/(.+)$', u.split('?')[0])
-        if m:
-            f = os.path.join(VENDOR, *m.group(1).split('/'))
-            if os.path.isfile(f):
-                ct = 'text/css' if f.endswith('.css') else ('font/woff2' if f.endswith('.woff2') else 'application/javascript')
-                return route.fulfill(status=200, body=open(f, 'rb').read(), content_type=ct)
-            return route.continue_()   # 사본에 없으면 진짜 cdnjs(본 PC 는 열려 있다 · 클라우드는 --vendor 로 다 채운다)
-        return route.abort()
-    return h
-
-
-SERVERS = {}
-
-
-def serve(tag, src):
-    """판마다 서버 하나 — 앱 글(메모리) · /img/ 는 genie jagwa/img"""
-    if tag in SERVERS:
-        return SERVERS[tag][1]
-    body = src.encode('utf-8')
-
-    class Hd(SimpleHTTPRequestHandler):
-        def log_message(self, *a):
-            pass
-
-        def do_GET(self):
-            p = urllib.parse.unquote(urllib.parse.urlsplit(self.path).path)
-            if p in ('/', '/app.html', '/jagwa/', '/jagwa/index.html'):
-                self.send_response(200)
-                self.send_header('Content-Type', 'text/html; charset=utf-8')
-                self.send_header('Content-Length', str(len(body)))
-                self.send_header('Cache-Control', 'no-store')
-                self.end_headers()
-                self.wfile.write(body)
-                return
-            return super().do_GET()
-
-        def translate_path(self, path):
-            p = urllib.parse.unquote(urllib.parse.urlsplit(path).path)
-            for pre in ('/jagwa/', '/'):
-                if p.startswith(pre):
-                    rest = [x for x in p[len(pre):].split('/') if x]
-                    return _roots.genie('jagwa', *rest)
-            return _roots.genie('jagwa', '__없음__')
-
-    srv = ThreadingHTTPServer(('127.0.0.1', 0), Hd)
-    srv.daemon_threads = True
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
-    SERVERS[tag] = (srv, srv.server_address[1])
-    return srv.server_address[1]
-
-
-INIT = r"""
-(()=>{
-  if(!sessionStorage.getItem('__h')){sessionStorage.setItem('__h','1');
-    try{localStorage.setItem('subj','__SUBJ__')}catch(e){}
-    try{localStorage.setItem('tt.cfg',JSON.stringify({token:'harness-token',person:'__WHO__'}))}catch(e){}}
-  window.__err=[];
-  window.addEventListener('error',e=>{window.__err.push((e.message||'')+' @'+(e.lineno||''))});
-  window.addEventListener('unhandledrejection',e=>{window.__err.push('reject: '+((e.reason&&e.reason.message)||e.reason))});
-  window.alert=function(){};window.confirm=function(){return true};window.prompt=function(){return null};
-})();
-"""
-
-
-class Pg:
-    """쪽 하나 = 기기 하나(문맥) — 과목 · 화면 · 손가락 · 누구(tt.cfg person)"""
-
-    def __init__(self, br, eng, tag, src, subj='phys', dev=PHONE, touch=None, who='하네스', remote=None):
-        W, H = dev
-        self.eng, self.dev = eng, dev
-        self.touch = (dev != PC) if touch is None else touch
-        kw = dict(viewport={'width': W, 'height': H}, device_scale_factor=2 if self.touch else 1)
-        if self.touch:
-            kw.update(has_touch=True)
-            if eng != 'webkit':
-                kw.update(is_mobile=W < 700)
-        self.ctx = br.new_context(**kw)
-        self.remote = remote or REMOTE
-        self.ctx.route('**/*', route_handler(self.remote))
-        self.ctx.add_init_script(INIT.replace('__SUBJ__', subj).replace('__WHO__', who))
-        self.pg = self.ctx.new_page()
-        self.pg.set_default_timeout(90000)
-        self.errs = []
-        self.pg.on('pageerror', lambda e: self.errs.append(str(e)[:240]))
-        self.port = serve(tag, src)
-        self.load()
-
-    READY = 'typeof DATA!=="undefined"&&DATA.length>0&&typeof draw==="function"'
-    PDFS = '(document.body.dataset.layer!=="pdf")||(typeof HAVE!=="undefined"&&["111","222","333","444","555","666"].every(f=>HAVE[f]))'
-
-    def load(self):
-        self.pg.goto('http://127.0.0.1:%d/app.html' % self.port, wait_until='load')
-        self._ready()
-
-    def reload(self):
-        self.pg.reload(wait_until='load')
-        self._ready()
+class _RgPg(JG.Pg_PP):
+    """regress — 부팅 뒤 고정 1.5 초 대신 표지(첫 syncRecords 끝 · 상한 = 같은 1.5 초) · 나머지는 JG.Pg_PP 그대로(JG 는 안 고침)"""
 
     def _ready(self):
         self.pg.wait_for_function(self.READY, timeout=90000)
-        try:   # 물리 = 시험지 여섯(route 가 studyplandata 로컬 사본을 준다 · 한 문맥에 한 번 받으면 IndexedDB 에 남는다)
+        try:   # 물리 = 시험지 여섯(JG.Pg_PP._ready 와 같음)
             self.pg.wait_for_function(self.PDFS, timeout=180000)
         except Exception:
             pass
-        self.pg.wait_for_timeout(1500)
-        self.pg.evaluate(TOOLS)
-
-    def ev(self, js, arg=None):
-        return self.pg.evaluate(js, arg)
-
-    def wait(self, ms):
-        self.pg.wait_for_timeout(ms)
-
-    def click(self, x, y, wait=400):
-        self.pg.mouse.click(x, y)
-        self.pg.wait_for_timeout(wait)
-
-    def _cdp(self):
-        if not hasattr(self, '_c'):
-            self._c = self.ctx.new_cdp_session(self.pg)
-        return self._c
-
-    def tap(self, x, y, wait=400, hold=60):
-        if self.eng == 'webkit':
-            self.pg.touchscreen.tap(x, y)
-        else:
-            c = self._cdp()
-            c.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': x, 'y': y, 'radiusX': 6, 'radiusY': 6, 'id': 1}]})
-            self.pg.wait_for_timeout(hold)
-            c.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
-        self.pg.wait_for_timeout(wait)
-
-    def long_press(self, x, y, ms=550, wait=400):
-        """진짜 터치 길게 누르기(CDP touchStart → ms → touchEnd) · 마우스 문맥은 mouse.down/up"""
-        ms = max(ms, 900)   # ★ 2026-10-08 (_task_jagwa_phys_win 회귀) 앱 문턱 500ms 타이머 — 짐이 크면 550ms 떼기와 경합(1 단계 B2 입력 칸 안 섬 · 짐 적으면 섬) → 900ms 로 여유 · 「길게」 뜻 무변
-        if not self.touch:
-            self.pg.mouse.move(x, y)
-            self.pg.mouse.down()
-            self.pg.wait_for_timeout(ms)
-            self.pg.mouse.up()
-        elif self.eng == 'webkit':
-            # Playwright WebKit 은 진짜 터치를 붙잡지 못한다(톡만 · CDP 없음) — jo_revfix0929b 합치기(9/30 Code) 길과 같게:
-            # 같은 자리에 합성 touch 포인터를 ms 동안 누르고(앱 길게 누르기 = pointerdown 뒤 500ms 타이머) 손 뗄 때처럼 touchend 도 보낸다
-            self.pg.evaluate(WK_LONG, [x, y, 'pointerdown'])
-            self.pg.wait_for_timeout(ms)
-            self.pg.evaluate(WK_LONG, [x, y, 'pointerup'])
-        else:
-            self.tap(x, y, wait=0, hold=ms)
-        self.pg.wait_for_timeout(wait)
-
-    def press(self, at, wait=400):
-        if not at or not at.get('on'):
-            return False
-        (self.tap if self.touch else self.click)(at['cx'], at['cy'], wait)
-        return True
-
-    def shot(self, name):
-        try:
-            os.makedirs(SHOTS, exist_ok=True)
-            self.pg.screenshot(path=os.path.join(SHOTS, name + '.png'))
-        except Exception:
-            pass
-
-    def close(self):
-        try:
-            self.ctx.close()
-        except Exception:
-            pass
+        QC.until(self.pg, _RG_SYNCED, 1500, 'physphone 부팅 뒤 첫 syncRecords 끝(recBusy 거짓 · lastSync ≥ 쪽 열림 또는 recErr)')
+        self.pg.evaluate(JG.TOOLS)
 
 
-WK_LONG = r"""([x, y, ty]) => { const t = ty === 'pointerdown' ? document.elementFromPoint(x, y) : (window.__tlT || document.elementFromPoint(x, y));
-  if (ty === 'pointerdown') window.__tlT = t;
-  t.dispatchEvent(new PointerEvent(ty, {bubbles: true, cancelable: true, composed: true, pointerId: 7, pointerType: 'touch', isPrimary: true,
-    clientX: x, clientY: y, button: 0, buttons: ty === 'pointerdown' ? 1 : 0}));
-  if (ty === 'pointerup') t.dispatchEvent(new Event('touchend', {bubbles: true, cancelable: true, composed: true}));
-  return t.tagName; }"""
+def _rg_fresh(br, tag, src, subj='phys', dev=PHONE, eng=None, who='하네스', remote=None):
+    """JG.fresh 와 같은 꼴 + 띄움 셈(§B-4) + 부팅 표지(_RgPg)"""
+    QC.launch('new')
+    return _RgPg(br, eng or br.browser_type.name, tag, src, subj, dev, who=who, remote=remote)
 
-TOOLS = r"""
-window.__H={
- tx:e=>e?String(e.textContent||'').replace(/\s+/g,' ').trim():'',
- vis(e){return !!e&&e.isConnected&&getComputedStyle(e).display!=='none'&&getComputedStyle(e).visibility!=='hidden'&&e.getBoundingClientRect().height>0},
- R(e){if(!e)return null;const r=e.getBoundingClientRect();return {x:Math.round(r.left*10)/10,y:Math.round(r.top*10)/10,w:Math.round(r.width*10)/10,h:Math.round(r.height*10)/10,b:Math.round(r.bottom*10)/10,r:Math.round(r.right*10)/10,cx:r.left+r.width/2,cy:r.top+r.height/2}},
- at(e){if(!e)return null;const r=__H.R(e);let a=document.elementFromPoint(r.cx,r.cy);
-   /* 여러 줄로 감긴 글 칸(inline)은 상자 가운데가 줄 틈일 수 있다 — 그러면 글 줄 상자(getClientRects) 가운데 중 그 칸에 닿는 첫 자리 */
-   if(!(a&&(a===e||e.contains(a))))for(const q of e.getClientRects()){const x=q.left+q.width/2,y=q.top+q.height/2,b=document.elementFromPoint(x,y);if(b&&(b===e||e.contains(b))){r.cx=x;r.cy=y;a=b;break}}
-   return Object.assign(r,{on:!!a&&(a===e||e.contains(a))&&r.cy>0&&r.cy<innerHeight&&r.cx>0&&r.cx<innerWidth,top:a?(a.id?'#'+a.id:a.tagName.toLowerCase()+'.'+String(a.className||'').slice(0,30)):null,t:__H.tx(e).slice(0,30)})},
- hit(e){if(!e)return null;try{e.scrollIntoView({block:'center',inline:'nearest'})}catch(_){}return __H.at(e)},
- /* 누름 영역 — 가운데에서 위·아래·왼·오른으로 elementFromPoint 가 그 요소(또는 안)인 데까지 */
- hitBox(e){if(!e)return null;const r=e.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
-   const on=(x,y)=>{const a=document.elementFromPoint(x,y);return !!a&&(a===e||e.contains(a))};
-   if(!on(cx,cy))return {h:0,w:0,on:false};let u=0,d=0,l=0,rt=0;
-   while(u<60&&on(cx,cy-u-1))u++;while(d<60&&on(cx,cy+d+1))d++;while(l<120&&on(cx-l-1,cy))l++;while(rt<120&&on(cx+rt+1,cy))rt++;
-   return {h:u+d+1,w:l+rt+1,on:true}},
- top(){const c=document.elementFromPoint(innerWidth/2,innerHeight/2);const w=c&&c.closest('#view,.sheet,[id]');return w?(w.id||w.className):null},
- zs(){return ['view','jnw','mcw','pwl'].concat([...document.querySelectorAll('.sheet.shfloat')].map(x=>x.id||x.dataset.shkey||'')).filter(Boolean).map(id=>{const e=document.getElementById(id)||document.querySelector('[data-shkey="'+id+'"]');
-   return e?[id,getComputedStyle(e).zIndex,e.style.zIndex,e.classList.contains('hide')]:null}).filter(Boolean)},
- errs(){return (window.__err||[]).slice(0,8)},
- /* 화면 훑기(규칙 60) — 넘침(가로 굴림 · 화면 밖) · 잘림(숨김인데 말줄임 없이 글이 넘침) · 겹침(누를 것끼리) · 작은 누름(손가락만 · 실제 누름 < 36)
-    이름표 = 태그#id(없으면 태그.갈래:글 · 수는 #) · 떠 있는 층(fixed · sticky)은 겹침에서 뺀다 · 작은 누름은 요소마다 가운데로 굴려 잰다(굴림 자리와 무관) */
- ACT:'button, a[href], [role=button], input, select, textarea, label, .jgo, [data-go], .pwr, .jjn, [data-mc]',
- sweep(sel,touch){const out=[],tx=__H.tx,vis=__H.vis;
-   const sig=e=>{const c=String(e.className&&e.className.baseVal!==undefined?e.className.baseVal:e.className).split(' ').filter(x=>x&&!/^(on|cur|hide|z|sel|fold|fx|lp|ied|open|act)$/.test(x)).slice(0,2).join('.');
-     return e.tagName.toLowerCase()+(e.id?'#'+e.id:(c?'.'+c:'')+':'+tx(e).replace(/\d+/g,'#').slice(0,14))};
-   const se=document.scrollingElement;if(se.scrollWidth>innerWidth+1)out.push('page-hscroll');
-   const roots=[...document.querySelectorAll(sel)].filter(vis);if(!roots.length)return ['(뿌리 없음) '+sel];
-   const all=[];roots.forEach(r=>{all.push(r);r.querySelectorAll('*').forEach(e=>all.push(e))});
-   const V=[...new Set(all)].filter(e=>e.getClientRects().length&&vis(e)).slice(0,6000);
-   V.forEach(e=>{const cs=getComputedStyle(e),ox=cs.overflowX;
-     if((ox==='auto'||ox==='scroll')&&e.scrollWidth>e.clientWidth+1&&e.clientWidth>0&&!e.closest('.katex-display'))out.push('hscroll:'+sig(e));
-     if((ox==='hidden'||ox==='clip')&&e.scrollWidth>e.clientWidth+1&&e.clientWidth>0&&cs.textOverflow!=='ellipsis'&&e.children.length===0&&tx(e))out.push('clip:'+sig(e));
-     const r=e.getBoundingClientRect();if(r.width>0&&(r.right>innerWidth+1||r.left<-1)&&cs.position!=='fixed'&&getComputedStyle(e.parentElement||e).overflowX==='visible')out.push('offscreen:'+sig(e))});
-   const A=V.filter(e=>e.matches(__H.ACT)&&!e.disabled&&getComputedStyle(e).pointerEvents!=='none');
-   const fl=e=>{for(let q=e;q&&q!==document.body;q=q.parentElement){const ps=getComputedStyle(q).position;if(ps==='fixed'||ps==='sticky')return !roots.some(r=>r===q||q.contains(r))}return false};
-   const AS=A.filter(e=>!fl(e));
-   for(let i=0;i<AS.length;i++)for(let j=i+1;j<AS.length;j++){const a=AS[i],b=AS[j];if(a.contains(b)||b.contains(a))continue;
-     const p=a.getBoundingClientRect(),q=b.getBoundingClientRect(),ix=Math.min(p.right,q.right)-Math.max(p.left,q.left),iy=Math.min(p.bottom,q.bottom)-Math.max(p.top,q.top);
-     if(ix>2&&iy>2)out.push('overlap:'+sig(a)+'|'+sig(b))}
-   if(touch)A.slice(0,300).forEach(e=>{if(!fl(e))try{e.scrollIntoView({block:'center',inline:'nearest'})}catch(x){}const h=__H.hitBox(e),r=e.getBoundingClientRect();
-     if(h.on&&((Math.round(r.height)<36&&h.h<36)||(Math.round(r.width)<36&&h.w<36)))out.push('small:'+sig(e))});
-   return [...new Set(out)]}
-};
-"""
 
-RES = []
+if QC.REGRESS:
+    fresh = _rg_fresh   # regress · smoke — 이 하네스 안 fresh 부름 모두(바탕 앱은 regress 에서 안 띄우므로 셈 = new)
+
+
+def _rg_cid(tag, name, *a):
+    """기준 칸 id — 단계 · 엔진(tag 머리 b/wk) · 기기 · 화면을 붙여 한 실행 안에서 겹치지 않게(QC.base)"""
+    return '%s@%s' % (name, tag) + ''.join('/' + str(x) for x in a)
+
+
+_RG_HB = {'oneLine': '—', 'backL': '—', 'ggInCard': None, 'wrapT': None}   # regress — 바탕 머리 값 자리(적기만 하던 값 · 안 잼)
 
 
 def T(g, name, ok, detail=''):
@@ -372,8 +116,6 @@ TX_SAMPLES = ('PEM0101', 'PEM0809', 'PEE0204')   # 교재 문항(연도 0) — �
 NO = "c => { const r = DATA.find(x => x[F.CODE] === c); return r ? r[F.NO] : null; }"
 
 
-def fresh(br, tag, src, subj='phys', dev=PHONE, eng=None, who='하네스', remote=None):
-    return Pg(br, eng or br.browser_type.name, tag, src, subj, dev, who=who, remote=remote)   # 엔진 = 받은 브라우저 종류(WebKit 을 CDP 길로 보내지 않는다)
 
 
 def open_view(p, no, wait=2200):
@@ -452,14 +194,19 @@ def b1(br, src, base_src, tag):
         p.close()
     # 지학 z 순서 = 바탕
     zz = {}
-    for which, s in (('new', src), ('base', base_src)):
+    for which, s in ((('new', src), ('base', base_src)) if QC.GATE else (('new', src),)):   # regress — 바탕 지학 판 안 띄움
         p = fresh(br, tag + 'E' + which, s, 'earth', PHONE)
         p.ev("s => jnOpen(s)", p.ev("() => Object.keys(TOC.sec)[0]"))
         p.wait(500)
         p.press(p.ev("() => __H.hit(document.querySelector('#jnw .jnrow .jgo'))"), 2500)
         zz[which] = (p.ev(ZS), p.ev(CENTER))
         p.close()
-    g4 = zz['new'] == zz['base']
+    if QC.GATE:
+        g4 = zz['new'] == zz['base']
+    else:   # regress — 기준 칸: 지학 z 순서 · 가운데 창 = 앞 인도판 스냅샷
+        zz['base'] = QC.base(_rg_cid(tag, 'B1.ez'), zz['new'])
+        g4 = QC.norm(zz['new']) == zz['base']
+        zz['기준'] = QC.base_note(_rg_cid(tag, 'B1.ez'))
     ok = ok and g4
     T(G, '지학 폰 정리 창 → 문항 창 z 순서 = 바탕', g4, zz)
     return ok
@@ -514,8 +261,12 @@ def earth_ref(pe, re_):
 def b2(br, src, base_src, tag):
     G = 'B2'
     ok = True
-    pn, pb, pe = fresh(br, tag + 'n', src), fresh(br, tag + 'b', base_src), fresh(br, tag + 'e', src, 'earth')
-    rn, rb = jn_all(pn), jn_all(pb)
+    if QC.GATE:
+        pn, pb, pe = fresh(br, tag + 'n', src), fresh(br, tag + 'b', base_src), fresh(br, tag + 'e', src, 'earth')
+        rn, rb = jn_all(pn), jn_all(pb)
+    else:   # regress — 바탕 물리 정리 창(pb) 안 띄움 · 바탕 글자 · 떨어짐 수는 적기만 하던 값(빈칸) · 교재 표본 셋 이름 = 기준 스냅샷
+        pn, pe = fresh(br, tag + 'n', src), fresh(br, tag + 'e', src, 'earth')
+        rn, rb = jn_all(pn), {}
     pe.ev("s => jnOpen(s)", pe.ev("() => Object.keys(TOC.sec)[0]"))
     pe.wait(400)
     re_ = pe.ev(ROWS)
@@ -530,9 +281,15 @@ def b2(br, src, base_src, tag):
     ok = ok and g2
     T(G, '기출 표본 셋 = 「연도 변리사 N번」', g2, [(c, rn.get(nos[c], {}).get('name')) for c, _ in PA_SAMPLES])
     tx = {c: pn.ev(NO, c) for c in TX_SAMPLES}
-    g3 = all(tx[c] and rn.get(tx[c], {}).get('name') == rb.get(tx[c], {}).get('name') for c in TX_SAMPLES)
+    if QC.GATE:
+        g3 = all(tx[c] and rn.get(tx[c], {}).get('name') == rb.get(tx[c], {}).get('name') for c in TX_SAMPLES)
+    else:   # regress — 기준 칸: 교재 표본 셋 이름 = 앞 인도판 스냅샷
+        _nm = [rn.get(tx[c], {}).get('name') for c in TX_SAMPLES]
+        _bn = QC.base(_rg_cid(tag, 'B2.tx'), _nm)
+        g3 = all(tx[c] for c in TX_SAMPLES) and QC.norm(_nm) == _bn
     ok = ok and g3
-    T(G, '교재 표본 셋 = 바탕 이름', g3, [(c, rn.get(tx[c], {}).get('name'), rb.get(tx[c], {}).get('name')) for c in TX_SAMPLES])
+    T(G, '교재 표본 셋 = 바탕 이름', g3, [(c, rn.get(tx[c], {}).get('name'), rb.get(tx[c], {}).get('name')) for c in TX_SAMPLES] if QC.GATE else
+      [[c, n_, b_] for c, n_, b_ in zip(TX_SAMPLES, _nm, _bn if isinstance(_bn, list) else [None] * len(TX_SAMPLES))] + [QC.base_note(_rg_cid(tag, 'B2.tx'))])
     pe.ev("() => { const w = document.getElementById('jnw'); if (w) w.remove(); }")
     en = 0
     for sec in pe.ev("() => Object.keys(TOC.sec)"):
@@ -543,7 +300,8 @@ def b2(br, src, base_src, tag):
     g4 = dn_ == 0 or dn_ <= en
     ok = ok and g4
     T(G, '마크 줄 떨어짐 = 0(또는 지학 수준)', g4, {'새 판 물리': '%d/%d' % (dn_, len(rn)), '바탕 물리': '%d/%d' % (db_, len(rb)), '지학(새 판)': en})
-    pb.close()
+    if QC.GATE:
+        pb.close()
     pe.close()
     # 길게 누르기 = 그 자리 고치기(진짜 터치 550ms)
     p = pn
@@ -637,11 +395,15 @@ def b3(br, src, base_src, tag):
     ok = ok and g3
     T(G, '백지 인출 O/X 기록 7건 보임', g3, {'점': dots, 'FR': nfr})
     chips = p.ev("() => document.querySelectorAll('.jjn[data-frm]').length")
-    pb = fresh(br, tag + 'b', base_src)
-    chips_b = pb.ev("() => document.querySelectorAll('.jjn[data-frm]').length")
-    pb.close()
-    # 옛 줄: g4 = chips == chips_b == 19
-    g4 = chips == chips_b == 19 or ('function pfDecor(' in src and chips_b == 19 and chips == 62)   # ★ 2026-10-08 (_task_jagwa_phys_win §A-40) 공식시트 2~6편 → 목차 단원 칩 19 → 62(1 단계 잰 값 · 바탕 19 그대로)
+    if QC.GATE:
+        pb = fresh(br, tag + 'b', base_src)
+        chips_b = pb.ev("() => document.querySelectorAll('.jjn[data-frm]').length")
+        pb.close()
+        # 옛 줄: g4 = chips == chips_b == 19
+        g4 = chips == chips_b == 19 or ('function pfDecor(' in src and chips_b == 19 and chips == 62)   # ★ 2026-10-08 (_task_jagwa_phys_win §A-40) 공식시트 2~6편 → 목차 단원 칩 19 → 62(1 단계 잰 값 · 바탕 19 그대로)
+    else:   # regress — 기준 칸: 목차 칩 수 = 앞 인도판 스냅샷(바탕 띄움 0)
+        chips_b = QC.base(_rg_cid(tag, 'B3.chips'), chips)
+        g4 = chips == chips_b
     ok = ok and g4
     T(G, '목차 칩 19 그대로', g4, {'새 판': chips, '바탕': chips_b})
     # 공식·조건·함정 길게 눌러 고치기 → 세 자리 같은 글 · FR 무변
@@ -722,8 +484,8 @@ def b5(br, src, base_src, tag):
     G = 'B5'
     ok = True
     heads = {}
-    for subj, code in (('phys', 'PA0801'), ('earth', 'G11-48-03'), ('bio', 'B20-57-05')):
-        for which, s in (('new', src), ('base', base_src)):
+    for subj, code in ((('phys', 'PA0801'), ('earth', 'G11-48-03'), ('bio', 'B20-57-05')) if not QC.SMOKE else (('phys', 'PA0801'),)):   # smoke — 물리 문항 창 머리 하나
+        for which, s in ((('new', src), ('base', base_src)) if QC.GATE else (('new', src),)):   # regress — 바탕 판 안 띄움
             p = fresh(br, tag + subj + which, s, subj, PHONE)
             no = p.ev(NO, code)
             open_view(p, no, 2600)
@@ -731,18 +493,25 @@ def b5(br, src, base_src, tag):
             act = p.ev(GGACT) if subj == 'phys' else None
             heads[(subj, which)] = (h, act)
             p.close()
-        h, hb = heads[(subj, 'new')][0], heads[(subj, 'base')][0]
+        h, hb = heads[(subj, 'new')][0], heads[(subj, 'base')][0] if QC.GATE else _RG_HB   # regress — 바탕 머리 값은 「→」 적기만 하던 값(안 잼)
         g = h['oneLine'] and h['backL'] <= 12 and all(b[1] >= 36 and b[2] >= 36 or b[0] in ('vBack', 'vWinTg', 'vPrev', 'vNext') and b[1] >= 30 and b[2] >= 30 for b in h['btn']) and h['ell']   # ★ 2026-10-07 (_task_jagwa_phys_win §A-04) — 시안 ⑧⑨ ✕ · ⤢ · ◀ · ▶ = 작은 칩 · 손가락 기기 누를 자리 30px(옛 36)
         ok = ok and g
         T(G, '폰 390 %s 머리 한 줄 · 서재 left − 창 left ≤ 12 · 단추 ≥ 36 · 제목 말줄임' % subj, g, {'한 줄': (hb['oneLine'], '→', h['oneLine']), '서재 왼쪽': (hb['backL'], '→', h['backL']), '단추': h['btn'], '말줄임': h['ell']})
-        if subj == 'phys':
-            a, ab = heads[(subj, 'new')][1], heads[(subj, 'base')][1]
-            g2 = h['ggInHead'] and h['ggT'] is not None and h['pillB'] is not None and h['ggT'] > h['pillB'] and h['card'] and h['card'][0] == '0px' and not h['card'][1] and h['wrapT'] < hb['wrapT'] and a == ab
+        if subj == 'phys' and QC.want('B5.ggphys'):
+            if QC.GATE:
+                a, ab = heads[(subj, 'new')][1], heads[(subj, 'base')][1]
+                g2 = h['ggInHead'] and h['ggT'] is not None and h['pillB'] is not None and h['ggT'] > h['pillB'] and h['card'] and h['card'][0] == '0px' and not h['card'][1] and h['wrapT'] < hb['wrapT'] and a == ab
+            else:   # regress — NEW 조건(근거 줄 자리 · 카드 0)은 그대로 · 「PDF top < 바탕」 · 「동작 = 바탕」 은 기준 스냅샷(앞 인도판 PDF top · 근거 동작과 같음 = 무변)
+                a = heads[(subj, 'new')][1]
+                _bw = QC.base(_rg_cid(tag, 'B5.gg'), [h['wrapT'], a])
+                ab = _bw[1] if isinstance(_bw, list) and len(_bw) == 2 else None
+                hb = dict(hb, wrapT=_bw[0] if isinstance(_bw, list) and len(_bw) == 2 else None)
+                g2 = h['ggInHead'] and h['ggT'] is not None and h['pillB'] is not None and h['ggT'] > h['pillB'] and h['card'] and h['card'][0] == '0px' and not h['card'][1] and h['wrapT'] == hb['wrapT'] and QC.norm(a) == ab
             ok = ok and g2
             T(G, '물리 근거 칸 = 필기 도구 아랫줄 · 따로 카드 0 · PDF 쪽이 바탕보다 위 · 근거 입력·＋·🔍 무변', g2,
               {'근거 top / 도구 bottom': (h['ggT'], h['pillB']), '카드(테두리·stage 안)': h['card'], 'PDF top(창 기준)': (hb['wrapT'], '→', h['wrapT']), '동작': (ab, a)})
         if subj == 'earth':
-            g3 = h['ggInCard'] and hb['ggInCard']
+            g3 = h['ggInCard'] and (hb['ggInCard'] if QC.GATE else True)   # regress — 바탕 조건(바탕도 카드 안)은 고정 옛 판 사실이라 뺌 · NEW 조건 그대로
             ok = ok and g3
             T(G, '지학 근거 칸 = 카드 안 그대로', g3, {'새 판': h['ggInCard'], '바탕': hb['ggInCard']})
     return ok
@@ -821,6 +590,13 @@ def b2s(br, src, base_src, tag):
     g2 = dshow == '가 이름'
     ok = ok and g2
     T(G, '새 기기 D 켬 → 받은 이름이 정리 창에 보임', g2, dshow)
+    if QC.SMOKE:   # smoke — 동기화 한 바퀴(A 올림 · D 받음)까지만
+        for q in (A, D):
+            if q.errs:
+                ok = False
+                T(G, 'JS 오류 ' + q.pg.url[-20:], False, q.errs[:3])
+            q.close()
+        return ok
     # 병합 — A 는 둘째 칸을 고치고 D 는 첫 칸을 비운다(묘비) · 서로 다른 칸이라 둘 다 살아야 · 지운 이름은 안 되살아나야
     e2 = edit_name(A, n1, '나 이름')
     e3 = edit_name(D, n0, '')
@@ -836,31 +612,32 @@ def b2s(br, src, base_src, tag):
     ok = ok and g3
     T(G, '두 기기 병합 — A 가 고친 칸 · D 가 지운 칸(묘비) 둘 다 산다 · 지운 이름 안 되살아남', g3,
       {'A': ta, 'D': td, '묘비': {k: v for k, v in (r2.get('gone') or {}).items() if k.startswith('tfix|')}, 'data.tfix': (r2.get('data') or {}).get('tfix')})
-    # 옛 판 기기(바탕 앱 · SYNC_KEYS 에 tfix 없음) 틈
-    B = fresh(br, tag + 'B', base_src, who='옛판B', remote=rm)
-    B.ev(SYNC)
-    B.wait(400)
-    r3 = rm.rec('phys') or {}
-    lost = 'tfix' not in (r3.get('data') or {})
-    kept_u = ('tfix|' + k1) in (r3.get('u') or {})
-    C = fresh(br, tag + 'C', src, who='새판C', remote=rm)
-    c0 = json.loads(C.ev("() => JSON.stringify(TFIX)"))
-    A.ev("async () => { await syncRecords(true); }")
-    A.wait(400)
-    r4 = rm.rec('phys') or {}
-    back = ((r4.get('data') or {}).get('tfix') or {}).get(k1, {}).get('nm') == '나 이름'
-    chip = A.ev("() => __H.tx(document.getElementById('recChip'))")
-    C.ev("async () => { await syncRecords(true); }")
-    C.wait(400)
-    c1 = json.loads(C.ev("() => JSON.stringify(TFIX)"))
-    N(G, '옛 판 기기 틈(잰 것)', {'옛 판 B 올림 뒤 원격 data.tfix': '빠짐' if lost else '남음', '원격 u[tfix|…] 도장': '남음' if kept_u else '빠짐',
-                             '그 사이 새로 켠 새 판 C': c0 or '못 받음(빈 TFIX)', '새 판 A 다음 동기화 뒤 원격 data.tfix': '되살아남' if back else '안 돌아옴',
-                             'A 칩': chip, 'C 다시 동기화 뒤': c1})
-    g4 = kept_u and back and c1.get(k1, {}).get('nm') == '나 이름' and not B.errs and not B.ev("() => __H.errs()")
-    ok = ok and g4
-    T(G, '옛 판 기기 올림 뒤 — 도장 u 남음 · 새 판 기기 다음 동기화에 data.tfix 되살림 · 새 기기 C 받음 · 옛 판 JS 오류 0', g4,
-      {'u 남음': kept_u, '되살림': back, 'C': c1, '옛 판 오류': B.errs[:2]})
-    for q in (A, D, B, C):
+    if QC.GATE:   # 옛 판 기기(바탕 앱) 틈 = 관문만 — 새 SYNC 키(tfix)를 더한 그 판에만 뜻 · 바탕 앱(cedc251)을 띄워야만 서는 칸(regress 바탕 띄움 0)
+        # 옛 판 기기(바탕 앱 · SYNC_KEYS 에 tfix 없음) 틈
+        B = fresh(br, tag + 'B', base_src, who='옛판B', remote=rm)
+        B.ev(SYNC)
+        B.wait(400)
+        r3 = rm.rec('phys') or {}
+        lost = 'tfix' not in (r3.get('data') or {})
+        kept_u = ('tfix|' + k1) in (r3.get('u') or {})
+        C = fresh(br, tag + 'C', src, who='새판C', remote=rm)
+        c0 = json.loads(C.ev("() => JSON.stringify(TFIX)"))
+        A.ev("async () => { await syncRecords(true); }")
+        A.wait(400)
+        r4 = rm.rec('phys') or {}
+        back = ((r4.get('data') or {}).get('tfix') or {}).get(k1, {}).get('nm') == '나 이름'
+        chip = A.ev("() => __H.tx(document.getElementById('recChip'))")
+        C.ev("async () => { await syncRecords(true); }")
+        C.wait(400)
+        c1 = json.loads(C.ev("() => JSON.stringify(TFIX)"))
+        N(G, '옛 판 기기 틈(잰 것)', {'옛 판 B 올림 뒤 원격 data.tfix': '빠짐' if lost else '남음', '원격 u[tfix|…] 도장': '남음' if kept_u else '빠짐',
+                                 '그 사이 새로 켠 새 판 C': c0 or '못 받음(빈 TFIX)', '새 판 A 다음 동기화 뒤 원격 data.tfix': '되살아남' if back else '안 돌아옴',
+                                 'A 칩': chip, 'C 다시 동기화 뒤': c1})
+        g4 = kept_u and back and c1.get(k1, {}).get('nm') == '나 이름' and not B.errs and not B.ev("() => __H.errs()")
+        ok = ok and g4
+        T(G, '옛 판 기기 올림 뒤 — 도장 u 남음 · 새 판 기기 다음 동기화에 data.tfix 되살림 · 새 기기 C 받음 · 옛 판 JS 오류 0', g4,
+          {'u 남음': kept_u, '되살림': back, 'C': c1, '옛 판 오류': B.errs[:2]})
+    for q in ((A, D, B, C) if QC.GATE else (A, D)):
         if q.errs:
             ok = False
             T(G, 'JS 오류 ' + q.pg.url[-20:], False, q.errs[:3])
@@ -875,7 +652,7 @@ def sweep_screens(br, src, tag, dev):
     touch = dev != PC
     out = {}
     sw = lambda sel: p.ev("a => __H.sweep(a[0], a[1])", [sel, touch])
-    shot = lambda k: p.shot('%s_%s' % (tag, k))
+    shot = (lambda k: p.shot('%s_%s' % (tag, k))) if QC.GATE else (lambda k: None)   # regress — 사람 눈용 그림(관문만) 안 찍음
     clear = "() => { ['jnw', 'mcw', 'pwl'].forEach(i => { const w = document.getElementById(i); if (w) w.remove(); }); document.querySelectorAll('.sheet').forEach(s => { if (s.querySelector('.frmpanel')) s.remove(); }); try { closeView(); } catch (e) {} }"
     root = p.ev("() => { const c = [...document.querySelectorAll('.pwchip')].find(__H.vis); if (!c) return null; let e = c.parentElement; while (e && !e.id) e = e.parentElement; return e ? '#' + e.id : null; }")
     out['첫 화면 위'] = sw(root) if root else ['(칩 없음)']
@@ -945,7 +722,10 @@ def b7(br, src, base_src, tag):
     newd = 'function pfDecor(' in src   # ★ 2026-10-08 (_task_jagwa_phys_win) 새 판 표지
     for dn, dev in (('폰390', PHONE), ('iPad820', PAD), ('PC', PC)):
         n, en = sweep_screens(br, src, tag + 'N' + dn, dev)
-        b, eb = sweep_screens(br, base_src, tag + 'B' + dn, dev)
+        if QC.GATE:
+            b, eb = sweep_screens(br, base_src, tag + 'B' + dn, dev)
+        else:   # regress — 기준 칸: 바탕 훑기 = 앞 인도판 NEW 훑기 스냅샷(기기 · 화면마다 이름표 집합 · 바탕 띄움 0)
+            b = {scr: QC.base(_rg_cid(tag, 'B7', dn, scr), sorted(set(n[scr]))) for scr in n}
         for scr in n:
             new = sorted(set(n[scr]) - set(b.get(scr, [])))
             gone = sorted(set(b.get(scr, [])) - set(n[scr]))
@@ -958,7 +738,8 @@ def b7(br, src, base_src, tag):
         if en:
             ok = False
             T(G, '%s JS 오류' % dn, False, en[:3])
-    N(G, '그림', SHOTS)
+    if QC.GATE:
+        N(G, '그림', SHOTS)
     return ok
 
 
@@ -1089,6 +870,7 @@ def reg_root(tag, app_text, head_rev, extra=None):
         if x != 'index.html':
             os.symlink(_roots.genie('jagwa', x), os.path.join(d, 'jagwa', x))
     f = os.path.join(d, 'jagwa', 'index.html')
+    QC.sub('git:show-app')   # 셈 — B8(gate 만) 바탕 판 풀기
     open(f, 'wb').write(app_src(head_rev).encode('utf-8'))
     g = ['git', '-C', d, '-c', 'user.name=h', '-c', 'user.email=h@h']
     subprocess.run(g + ['init', '-q'], capture_output=True)
@@ -1132,6 +914,7 @@ def reg_run(name, parts, args, head_rev, which, app_text, env0, tmp):
     strays = [os.path.join(os.path.dirname(HERE), *x) for x in REG_STRAY.get(name, ())]
     keep = {f: open(f, 'rb').read() for f in strays if os.path.isfile(f)}
     try:
+        QC.sub('python:harness')   # 셈 — B8(gate 만) 하위 하네스 부름
         cp = subprocess.run([sys.executable, '-c', REG_SHIM, hf] + a, capture_output=True, env=env, timeout=1500, cwd=t)
         out = cp.stdout.decode('utf-8', 'replace') + '\n' + cp.stderr.decode('utf-8', 'replace')
     except subprocess.TimeoutExpired as e:
@@ -1218,8 +1001,12 @@ def main():
         base_src = src
         print('헛잣대 — 앱 = %s(착수 판) · B-1~B-6 · B2S 가 저마다 FAIL 해야 통과' % BASE)
     else:
-        src, base_src = app_src(NEW), app_src(BASE)
-        print('관문 _task_jagwa_physphone · 앱 = %s · 바탕 = %s' % (NEW, BASE))
+        if QC.GATE:
+            QC.sub('git:show-app')
+            src, base_src = app_src(NEW), app_src(BASE)
+        else:   # regress · smoke — 바탕(cedc251) 앱 풀기 0 · 기준 칸은 스냅샷
+            src, base_src = app_src(NEW), None
+        print('관문 _task_jagwa_physphone · 앱 = %s · 바탕 = %s' % (NEW, BASE if QC.GATE else '(regress — 바탕 안 띄움 · 기준 = 스냅샷)'))
     got = {}
     tm = {}
     with sync_playwright() as pw:
@@ -1235,6 +1022,8 @@ def main():
         for g, fn in steps:
             if ONLY and g not in ONLY:
                 continue
+            if not QC.want(g, smoke=g in ('B2S', 'B5')):   # smoke — 동기화 한 바퀴(B2S 올림·받음) · 물리 문항 창 머리(B5 물리) 만
+                continue
             if YARD and g == 'B7':
                 N(g, '헛잣대 해당 없음', '화면 훑기 = 새 판 흠 − 바탕 흠 · 바탕끼리 견주면 늘 0(잣대가 아니라 잠금)')
                 continue
@@ -1248,7 +1037,7 @@ def main():
             tm[g] = time.time() - t1
             print('   (%s %.0f초)' % (g, tm[g]), flush=True)
         br.close()
-        if 'webkit' in ENGS and not YARD and (not ONLY or 'WK' in ONLY):
+        if 'webkit' in ENGS and not YARD and not QC.SMOKE and (not ONLY or 'WK' in ONLY):   # smoke — WebKit 안 돎(smoke 칸이 Chromium 폰 폭)
             wk = webkit_try(pw)
             if wk:
                 for g, fn in (('B1', lambda: b1(wk, src, base_src, 'wk1')), ('B2', lambda: b2(wk, src, base_src, 'wk2')), ('B3', lambda: b3(wk, src, base_src, 'wk3')),
@@ -1258,7 +1047,7 @@ def main():
                     except Exception as e:
                         T(g + '-wk', 'WebKit 돌다 멈춤', False, str(e).splitlines()[0][:200])
                 wk.close()
-    if not YARD and (not ONLY or 'B8' in ONLY):
+    if QC.GATE and not YARD and (not ONLY or 'B8' in ONLY):   # B8 = 하위 하네스 일곱을 subprocess 로 통째(새 판 · 바탕 둘) — 관문만 · 그 하네스들은 저마다 사슬에서 돈다
         print('── B8', flush=True)
         t1 = time.time()
         try:
@@ -1267,7 +1056,7 @@ def main():
             got['B8'] = False
             T('B8', '돌다 멈춤', False, str(e).splitlines()[0][:300])
         tm['B8'] = time.time() - t1
-    if not YARD:
+    if QC.GATE and not YARD:   # 늘 같은 글 INFO(B8 몫) — 관문만
         N('B8', 'qa_baseline 판(_qa_chain compare)', '바탕 cedc251 에 _qa_chain 없음 → 안 함')
     lines = []
     print('\n══ 요약 (%.0f초)%s' % (time.time() - t0, ' — 헛잣대' if YARD else ''))

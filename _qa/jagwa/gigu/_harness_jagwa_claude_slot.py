@@ -16,6 +16,13 @@
 
     PYTHONIOENCODING=utf-8 python _harness_jagwa_claude_slot.py
 """
+import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
+_d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
+while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
+    _d_r = _os_r.path.dirname(_d_r)
+_sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import hashlib
 import http.server
 import io
@@ -32,15 +39,14 @@ import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import _harness_earth_shell as E          # STUB · HEAD · TAIL · CHROME 을 그대로 쓴다
 
-GENIE = E.GENIE
-SRC = E.SRC
-CHROME = E.CHROME
-SPDROOT = E.SPDROOT
+GENIE = _roots.genie()
+SRC = _roots.genie('jagwa', 'index.html')
+CHROME = JG.CHROME
+SPDROOT = _roots.spd()
 MAT = os.path.join(HERE, 'claude_motion')
 if not os.path.isdir(MAT):   # ★ 거울 사본(옛 잣대 고침 사본)에서 돌 때 — 재료(채팅이 만든 md · html)는 N: 에만 있다(자리만 · 의미 무변)
-    MAT = E._roots.n('jagwa', 'gigu', 'claude_motion') or MAT
+    MAT = _roots.n('jagwa', 'gigu', 'claude_motion') or MAT
 MOTDIR = os.path.join(GENIE, 'jagwa', 'motion')
 OUT = os.path.join(os.environ.get('TEMP', '.'), 'hclaudeslot')
 os.makedirs(OUT, exist_ok=True)
@@ -57,6 +63,9 @@ def md5lf(b):
     return hashlib.md5(b.replace(b'\r\n', b'\n')).hexdigest()
 
 
+_RG_SMOKE = ('CL-1 목록 보라 태그가 「Claude」다', 'CL-6 ⓐ 빈 기기 — GP[72] 가 원문 글자 그대로 들어왔다', 'CL 콘솔 오류 0')   # qa_slim2 smoke 칸(A-0)
+
+
 def base_text():
     keep = os.path.join(os.environ.get('TEMP', '.'), 'jagwa_base_claude_slot.html')
     for p in (keep,):
@@ -65,6 +74,7 @@ def base_text():
             if md5lf(b) == BASE_MD5:
                 return b.replace(b'\r\n', b'\n').decode('utf-8')
     for rev in ('0c19a60', 'HEAD', 'HEAD~1', 'HEAD~2'):
+        QC.sub('git:show-app')   # 셈 — 바탕 판 풀기(gate 만 부름)
         b = subprocess.run(['git', '-C', GENIE, 'show', rev + ':jagwa/index.html'],
                            capture_output=True).stdout
         if b and md5lf(b) == BASE_MD5:
@@ -380,24 +390,25 @@ BODY_CL = r"""
 def build(mode, src_text, subj):
     html = src_text
     html = html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js',
-                        E.STUB.replace('__SUBJ__', subj)
+                        JG.STUB_ES.replace('__SUBJ__', subj)
                         + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
     body = (BODY_CL.replace('__MD__', json.dumps(MD, ensure_ascii=False))
                    .replace('__NSEC__', str(NSEC)).replace('__NUL__', str(NUL))
                    .replace('__NOL__', str(NOL)))
     open(os.path.join(OUT, 'app.html'), 'w', encoding='utf-8', newline='').write(
-        html.replace('</body>', E.HEAD + body + E.TAIL + '</body>', 1))
-    # 바탕 판에 글을 저장해 두고 새 판으로 넘어가는 쪽(왕복 · CL-2)
-    seed = ("<script>(function(){const t=" + json.dumps(MD, ensure_ascii=False) + ";"
-            "function go(){try{GP[72]=t;saveGP().then(()=>{"
-            "localStorage.setItem('CL_SEEDED','72');location.replace('app.html')})}"
-            "catch(e){localStorage.setItem('CL_SEEDERR',String(e));location.replace('app.html')}}"
-            "window.addEventListener('load',()=>setTimeout(go,2500));})()</script>")
-    open(os.path.join(OUT, 'seed.html'), 'w', encoding='utf-8', newline='').write(
-        base_text().replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js',
-                            E.STUB.replace('__SUBJ__', 'phys')
-                            + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
-                   .replace('</body>', seed + '</body>', 1))
+        html.replace('</body>', JG.HEAD + body + JG.TAIL + '</body>', 1))
+    if QC.GATE:   # 왕복(cross) seed = 바탕 앱(0c19a60) 쪽 — 관문만 · regress 는 안 만든다
+        # 바탕 판에 글을 저장해 두고 새 판으로 넘어가는 쪽(왕복 · CL-2)
+        seed = ("<script>(function(){const t=" + json.dumps(MD, ensure_ascii=False) + ";"
+                "function go(){try{GP[72]=t;saveGP().then(()=>{"
+                "localStorage.setItem('CL_SEEDED','72');location.replace('app.html')})}"
+                "catch(e){localStorage.setItem('CL_SEEDERR',String(e));location.replace('app.html')}}"
+                "window.addEventListener('load',()=>setTimeout(go,2500));})()</script>")
+        open(os.path.join(OUT, 'seed.html'), 'w', encoding='utf-8', newline='').write(
+            base_text().replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js',
+                                JG.STUB_ES.replace('__SUBJ__', 'phys')
+                                + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
+                       .replace('</body>', seed + '</body>', 1))
     # 모션 파일 — 404 판에서는 목록을 안 내놓는다
     m = os.path.join(OUT, 'motion')
     shutil.rmtree(m, ignore_errors=True)
@@ -408,6 +419,7 @@ def build(mode, src_text, subj):
 
 
 def run(mode, subj, src_text, secs=260, start='app.html'):
+    QC.launch('base' if (mode.endswith('base') or mode == 'cross') else 'new')   # 셈(§B-4)
     build(mode, src_text, subj)
     spd = os.path.join(SPDROOT, subj)
     done = threading.Event()
@@ -492,11 +504,13 @@ def static_checks():
 
     raw = open(SRC, 'rb').read()
     s = raw.replace(b'\r\n', b'\n').decode('utf-8')
-    base = base_text()
+    base = base_text() if QC.GATE else None   # regress — 바탕 셈은 스냅샷(아래 기준 칸)
     # ★ A-6(d) 9/30 _task_qa_baseline — 아래 셋(소스 「GPT」 한 줄 · syncGptBtn 수 · 사라진 바탕 줄)은 이 판(claude_slot) 인도 검산이다 → 새 쪽을 인도 판 f810502 로 박는다
     #   (두 커밋 사이 0c19a60 ↔ f810502 · 인도 결과 _harness_jagwa_claude_slot_result_20260922.txt 176/0 · 결정로그 9/22 00:49). 뒤 판이 뜻해서 소스를 바꿨다 —
     #   add1 007fde4 §A-3 syncGptBtn 3→7 · jagwa_search eb1113e A-1 이 옛 기록 주석(add5 · 「GPT」)이 든 FL.q 덩이를 뗌 · 사라진 줄 28 → 110(뒤 판 여럿). 그 밖 칸은 지금 소스(s)
-    s_dl = subprocess.run(['git', '-C', GENIE, 'show', 'f810502:jagwa/index.html'], capture_output=True).stdout.replace(b'\r\n', b'\n').decode('utf-8')
+    if QC.GATE:   # 인도판 f810502 — 그 판 인도 검산(관문만)
+        QC.sub('git:show-app')
+        s_dl = subprocess.run(['git', '-C', GENIE, 'show', 'f810502:jagwa/index.html'], capture_output=True).stdout.replace(b'\r\n', b'\n').decode('utf-8')
 
     # ── 줄끝 ──
     T('CL-Z 줄끝이 CRLF 그대로다(외톨이 LF 0)',
@@ -504,9 +518,10 @@ def static_checks():
       [raw.count(b'\r\n'), raw.replace(b'\r\n', b'').count(b'\n')])
 
     # ── §A-1 보이는 글자 ──
-    vis = [l for l in s_dl.split('\n') if 'GPT' in l]   # ★ A-6(d) — 인도 판 f810502(위 s_dl) · jagwa_search(eb1113e)가 그 주석 줄을 뗐다
-    T('CL-Z 소스에 남은 「GPT」 는 옛 기록 주석 한 줄뿐이다',
-      len(vis) == 1 and 'add5' in vis[0], [v.strip()[:90] for v in vis])
+    if QC.GATE:   # 관문만 — 인도판 f810502 소스 한 줄 셈
+        vis = [l for l in s_dl.split('\n') if 'GPT' in l]   # ★ A-6(d) — 인도 판 f810502(위 s_dl) · jagwa_search(eb1113e)가 그 주석 줄을 뗐다
+        T('CL-Z 소스에 남은 「GPT」 는 옛 기록 주석 한 줄뿐이다',
+          len(vis) == 1 and 'add5' in vis[0], [v.strip()[:90] for v in vis])
 
     # ── 데이터 이름 무변 ──
     for pat, ko in [(r"SYNC_KEYS:\['status'", 'SYNC_KEYS 줄'),
@@ -521,27 +536,37 @@ def static_checks():
                     (r'\bsyncGptBtn\b', 'syncGptBtn')]:
         # 옛 줄: a, b = len(re.findall(pat, s_dl if ko == 'syncGptBtn' else s)), len(re.findall(pat, base))
         _s = re.sub(r'(?m)^const UID_KEYS=\[.*$', '', s) if ko.startswith('SHPERQ') else s   # ★ uid_unify §A 옮김 열쇠 목록 한 줄은 데이터 이름이 아님(10/5)
-        a, b = len(re.findall(pat, s_dl if ko == 'syncGptBtn' else _s)), len(re.findall(pat, base))   # ★ A-6(d) — syncGptBtn 만 인도 판 f810502(add1 §A-3 이 부름 넷을 더함 · 이름은 그대로)
+        if QC.GATE:
+            a, b = len(re.findall(pat, s_dl if ko == 'syncGptBtn' else _s)), len(re.findall(pat, base))   # ★ A-6(d) — syncGptBtn 만 인도 판 f810502(add1 §A-3 이 부름 넷을 더함 · 이름은 그대로)
+        else:   # regress — 기준: 바탕 셈 = 앞 인도판 스냅샷(지금 소스 셈 · syncGptBtn 도 지금 소스 — 인도판 git show 0)
+            a = len(re.findall(pat, _s))
+            b = QC.base('CLZ.name/' + ko, a)
         T('CL-2 데이터 이름 무변 — %s : 바탕과 같은 수다' % ko, a == b and a > 0, [a, b])
 
-    for i, ln in enumerate(base.split('\n')):
+    for i, ln in (enumerate(base.split('\n')) if QC.GATE else QC.base('CLZ.synckeys', [[i, ln] for i, ln in enumerate(s.split('\n')) if 'SYNC_KEYS:[' in ln])):   # regress — 기준: 바탕 SYNC_KEYS 줄 = 앞 인도판 스냅샷(줄 번호 · 글)
         if 'SYNC_KEYS:[' in ln:
             T('CL-2 SYNC_KEYS 줄이 바탕에 있던 그대로다 (%d번째 줄)' % (i + 1),
               ln in s, ln.strip()[:80])
 
     # ── 더하기만 했나 ──
-    T('CL-Z 바탕보다 줄이 늘기만 했다',
-      len(s.split('\n')) >= len(base.split('\n')),
-      [len(s.split('\n')), len(base.split('\n'))])
-    gone = [l for l in set(base.split('\n')) - set(s_dl.split('\n')) if l.strip()]   # ★ A-6(d) — 인도 판 f810502(위 s_dl)
-    T('CL-Z 사라진 바탕 줄은 gptSheet·글자 고친 자리뿐이다 (%d줄)' % len(gone),
-      len(gone) <= 48, [g.strip()[:70] for g in gone[:12]])
-    N('CL-Z 사라진 바탕 줄', [g.strip()[:70] for g in gone])
+    if QC.GATE:
+        T('CL-Z 바탕보다 줄이 늘기만 했다',
+          len(s.split('\n')) >= len(base.split('\n')),
+          [len(s.split('\n')), len(base.split('\n'))])
+    else:   # regress — 기준: 바탕 줄 수 = 앞 인도판 스냅샷(줄이 줄면 FAIL — 결정 거리: 앞 인도판 대비 「늘기만」)
+        _nb = QC.base('CLZ.lines', len(s.split('\n')))
+        T('CL-Z 바탕보다 줄이 늘기만 했다', len(s.split('\n')) >= _nb, [len(s.split('\n')), _nb])
+    if QC.GATE:   # 관문만 — 바탕 0c19a60 · 인도판 f810502 두 고정 판 사이
+        gone = [l for l in set(base.split('\n')) - set(s_dl.split('\n')) if l.strip()]   # ★ A-6(d) — 인도 판 f810502(위 s_dl)
+        T('CL-Z 사라진 바탕 줄은 gptSheet·글자 고친 자리뿐이다 (%d줄)' % len(gone),
+          len(gone) <= 48, [g.strip()[:70] for g in gone[:12]])
+        N('CL-Z 사라진 바탕 줄', [g.strip()[:70] for g in gone])
 
     # ── 새 이름이 겹치지 않았나 ──
     for nm in ['gpRender', 'gpInline', 'gpCells', 'gpIsSep', 'motLoad', 'motHas',
                'GP_SEC', 'GP_UL', 'GP_OL']:
-        T('CL-Z 새 이름 %s 가 바탕에 없던 이름이다' % nm, nm not in base, nm)
+        if QC.GATE:   # 관문만 — 고정 바탕(0c19a60) 소스만 재는 칸
+            T('CL-Z 새 이름 %s 가 바탕에 없던 이름이다' % nm, nm not in base, nm)
         # ⚠ GP_SEC·GP_UL·GP_OL 은 `const A=…, B=…, C=…;` 한 줄이라
         #   `const 이름` 만 보면 뒤 둘을 0으로 센다. 쉼표 선언도 같이 본다.
         decl = re.findall(r'(?:(?:const|var|let|function)\s+|,\s*)' + nm + r'\s*[=(]', s)
@@ -580,7 +605,7 @@ def main():
     print('[src ] md5(LF) %s' % cur)
     if cur == BASE_MD5:
         raise SystemExit('NG  아직 고치기 전 판이다 — _patch_jagwa_claude_slot.py 를 먼저 돌려라')
-    base = base_text()
+    base = base_text() if QC.GATE else None   # regress — 바탕 판 실행 셋 · 왕복 안 돎
     lines = []
     meas = {}
 
@@ -601,7 +626,7 @@ def main():
                     keyset[mode] = None
 
     only = [a for a in sys.argv[1:] if not a.startswith('-')]
-    for mode, subj, txt_, secs, start in [
+    for mode, subj, txt_, secs, start in ([
             ('phys', 'phys', src, 320, 'app.html'),
             ('bio', 'bio', src, 260, 'app.html'),
             ('earth', 'earth', src, 260, 'app.html'),
@@ -609,7 +634,8 @@ def main():
             ('cross', 'phys', src, 300, 'seed.html'),
             ('physbase', 'phys', base, 260, 'app.html'),
             ('biobase', 'bio', base, 260, 'app.html'),
-            ('earthbase', 'earth', base, 260, 'app.html')]:
+            ('earthbase', 'earth', base, 260, 'app.html')]
+            if QC.GATE else ([('phys', 'phys', src, 320, 'app.html')] if QC.SMOKE else [('phys', 'phys', src, 320, 'app.html'), ('bio', 'bio', src, 260, 'app.html'), ('earth', 'earth', src, 260, 'app.html'), ('phys404', 'phys', src, 260, 'app.html')])):   # regress — NEW 넷 · smoke — 물리 하나
         if only and mode not in only:
             continue
         r = run(mode, subj, txt_, secs, start)
@@ -646,19 +672,23 @@ def main():
     #   5308 `PH&&` 걷음)부터 카드 층도 물리처럼 글 넣은 줄에 보라 「Claude」 태그 하나 · 단추 「Claude ✓」 가 선다(바탕 0c19a60 은 태그 0 · 「GPT」) — 새 기대로
     for sub, ko in (('bio', '생물'), ('earth', '지학')):
         a, b = meas.get(sub), meas.get(sub + 'base')
+        if QC.REGRESS and a is not None:   # regress — 기준: 바탕 실측 자리 = 앞 인도판 NEW 실측 스냅샷
+            b = QC.base('CL1.meas/' + sub, a)
         if a is None or b is None:
             continue
-        okt = a['tags'] == ['Claude'] and b['tags'] == []
+        okt = a['tags'] == ['Claude'] and (b['tags'] == [] if QC.GATE else b['tags'] == a['tags'])   # regress — 「바탕 0개」(고정 옛 판 사실) 대신 앞 인도판과 같음
         lines.append(('PASS' if okt else 'FAIL')
                      + ' | CL-1 [%s] 목록 보라 태그 = 글 넣은 줄 「Claude」 하나(add1 §A-5 · 바탕 0개)' % ko
                      + ('' if okt else ' | ' + json.dumps([a['tags'], b['tags']], ensure_ascii=False)))
-        ok = (b['btn'] == 'GPT' and a['btn'] == 'Claude ✓')
+        ok = ((b['btn'] == 'GPT') if QC.GATE else (b['btn'] == a['btn'])) and a['btn'] == 'Claude ✓'   # regress — 「바탕 GPT」 대신 앞 인도판과 같음
         lines.append(('PASS' if ok else 'FAIL')
                      + ' | CL-1 [%s] 툴바 단추 = 바탕 「GPT」 자리에 「Claude ✓」(add1 §A-3 ✓ 따라옴 · 바탕은 ✓ 없음)' % ko
                      + ('' if ok else ' | ' + json.dumps([b['btn'], a['btn']], ensure_ascii=False)))
     # ── SYNC_KEYS **실행값**이 세 과목 다 바탕과 같은 배열인가(§B-2) ──
     for sub, ko in (('phys', '물리'), ('bio', '생물'), ('earth', '지학')):
         a, b = keyset.get(sub), keyset.get(sub + 'base')
+        if QC.REGRESS and a is not None:   # regress — 기준: 바탕 SYNC_KEYS 실행값 = 앞 인도판 스냅샷
+            b = QC.base('CL2.keys/' + sub, a)
         if a is None or b is None:
             lines.append('FAIL | CL-2 [%s] SYNC_KEYS 실행값을 못 받았다' % ko
                          + ' | ' + json.dumps([a, b], ensure_ascii=False))
@@ -679,7 +709,10 @@ def main():
                      + ' | CL-0 헛잣대 — 바탕 물리 목록 태그는 「GPT」 였다'
                      + ('' if pb['tags'] else ' | ' + json.dumps(pb['tags'], ensure_ascii=False)))
 
-    lines += static_checks()
+    if not QC.SMOKE:   # smoke — 소스 칸(CL-Z · CL-2 셈)은 smoke 칸이 아님
+        lines += static_checks()
+    if QC.SMOKE:   # smoke — smoke 칸 줄만
+        lines = [x for x in lines if any(k in x for k in _RG_SMOKE)]
     npass = sum(1 for x in lines if x.startswith('PASS'))
     nfail = sum(1 for x in lines if x.startswith('FAIL'))
     nnote = sum(1 for x in lines if x.startswith('NOTE'))

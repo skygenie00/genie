@@ -17,6 +17,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import http.server, os, socketserver, subprocess, sys, threading, hashlib, shutil, urllib.parse, json, io
 
 GENIE = _roots.genie()
@@ -226,13 +227,28 @@ TESTS = r"""<script>
 </script>"""
 
 
+# ── _task_qa_slim2(10/8) smoke 도우미 — 이름이 `_rg` 로 시작하는 것 = gate 에서 안 쓰는 갈래(TESTS 상수는 글자 그대로) ──
+def _rg_smoke_tests(t):
+    """smoke — 앞머리 + O-0 떴다 + O-C 묶음(카드 창 배경 층) + 끝 O-0 콘솔 오류 0 만(그 자리에서 잘라 씀 · 못 찾으면 통째)"""
+    nl = lambda i: t.find('\n', i) + 1
+    a = t.find("   T('O-0 떴다 · 데이터'")
+    c0 = t.find("   /* ═══ 카드 창 배경 ═══ */")
+    g0 = t.find("   await grp('O-C'")
+    c1 = t.find("\n   await grp(", g0 + 1)
+    e0 = t.rfind("   T('O-0 콘솔 오류 0'")
+    if min(a, c0, g0, c1, e0) < 0 or not (a < c0 < g0 < c1 < e0):
+        print('NOTE | smoke 자르기 자리 못 찾음 — 통째로 돈다')
+        return t
+    return t[:nl(a)] + t[c0:c1 + 1] + t[e0:]
+
+
 def main():
     html = open(SRC, encoding='utf-8', newline='').read()
     html = html.replace('<script defer src="https://cdnjs', '<script defer data-off="https://cdnjs')
     html = html.replace('<link rel="stylesheet" href="https://cdnjs', '<link rel="off" href="https://cdnjs')
     html = html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js',
                         STUB.replace('__SUBJ__', SUBJ) + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
-    html = html.replace('</body>', TESTS + '</body>', 1)
+    html = html.replace('</body>', (TESTS if not QC.SMOKE else _rg_smoke_tests(TESTS)) + '</body>', 1)   # smoke — 쪽 안 시험 글을 이 자리에서만 잘라 씀
     open(os.path.join(OUT, 'app.html'), 'w', encoding='utf-8', newline='').write(html)
 
     done = threading.Event(); box = {}
@@ -263,6 +279,7 @@ def main():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     chrome = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     prof = os.path.join(OUT, 'prof'); shutil.rmtree(prof, ignore_errors=True)
+    QC.launch('new')   # 셈(§B-4) — 새 판 크롬 한 번(바탕은 본디 안 띄운다)
     p = subprocess.Popen([chrome, '--headless=new', '--disable-gpu', '--no-first-run', '--user-data-dir=' + prof,
                           '--window-size=1400,900', 'http://127.0.0.1:%d/app.html' % port],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -278,6 +295,11 @@ def main():
     def T2(name, cond, info=''):
         lines.append(('PASS' if cond else 'FAIL') + ' | ' + name + ('' if cond else ' | ' + str(info)))
 
+    if QC.SMOKE:   # smoke — 소스 글 · 파일 셈 칸(O-P)은 smoke 칸이 아니다
+        npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
+        for x in lines: print(x)
+        print('\n== smoke 조각카드(%s) %d PASS / %d FAIL / %d항 ==' % (SUBJ, npass, nfail, len(lines)))
+        sys.exit(0 if nfail == 0 else 2)
     s = open(SRC, encoding='utf-8').read()
     ix = lambda t: s.find(t)
     # A-6(a) 9/30 — 카드 층 블록 문이 if(CARD_LAYER){ → if(SHELL){ 로 바뀌었다(_task_jagwa_shell_bio_phys §A · c9faff2) — 그 블록(/*EARTH:js*/ 바로 뒤)을 잡는다

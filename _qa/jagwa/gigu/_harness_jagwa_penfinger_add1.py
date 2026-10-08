@@ -12,11 +12,20 @@ r"""_task_jagwa_penfinger_add1 §D 관문 — 펜 도구일 때 손가락 톡(�
 쓰기 : python _harness_jagwa_penfinger_add1.py [--new 파일] [--only chromium,webkit] [--out 결과파일]
         결과 = 본판 결과 파일(_harness_jagwa_penfinger_result.txt) 끝에 이어 붙인다(--out 이 있으면 그 파일에 새로)
 """
+import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
+_d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
+while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
+    _d_r = _os_r.path.dirname(_d_r)
+_sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import hashlib, io, json, os, subprocess, sys, time
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import _harness_jagwa_penfinger as H   # noqa: E402
+
+# ← jagwa/gigu/_harness_jagwa_penfinger.py:35-35 SAMPLE 사본(글자 그대로 · 갈래 ③ · JG 밖 — 띄우기가 아니라 옮기지 않음)
+SAMPLE = {'bio': 'B20-57-05', 'earth': 'G11-48-03'}   # ★ jagwa_uid(9/29) — 옛 G57-05 · G48-03(문항 번호 새 꼴)
 from playwright.sync_api import sync_playwright   # noqa: E402
 
 
@@ -24,7 +33,7 @@ def ARG(k, d=None):
     return sys.argv[sys.argv.index(k) + 1] if k in sys.argv else d
 
 
-NEWF = ARG('--new', os.path.join(H.GENIE, 'jagwa', 'index.html'))
+NEWF = ARG('--new', os.path.join(_roots.genie(), 'jagwa', 'index.html'))
 OUTF = ARG('--out', os.path.join(HERE, '_harness_jagwa_penfinger_result.txt'))
 ONLY = [x for x in (ARG('--only', '') or '').split(',') if x]
 BASE2_REV, BASE2_MD5 = 'f497f05', '0c1f47dd30e0b0c551dfe46948b034bc'
@@ -43,84 +52,13 @@ def N(grp, name, detail=''):
     print('NOTE | %s · %s | %s' % (grp, name, d[:320]), flush=True)
 
 
-JS2 = r"""
-Object.assign(window.__P,{
- vis(el){if(!el||!el.isConnected)return false;const s=getComputedStyle(el);if(s.display==='none'||s.visibility==='hidden')return false;
-   const r=el.getBoundingClientRect();if(!(r.height>0&&r.width>0))return false;return r.bottom>0&&r.right>0&&r.top<innerHeight&&r.left<innerWidth},
- picks(){const c=document.getElementById('card');return [...c.querySelectorAll('.choices button.pick')].map(b=>({c:+b.dataset.c,vis:__P.vis(b)}))},
- ox(k){const c=document.getElementById('card');const row=[...c.querySelectorAll('.bogi .row')].find(r=>r.dataset.k===k);if(!row)return null;
-   return [...row.querySelectorAll('.ox button')].map(b=>({v:b.dataset.v,on:b.classList.contains('on'),vis:__P.vis(b)}))},
- oxRows(){const c=document.getElementById('card');return [...c.querySelectorAll('.bogi .row')].filter(r=>r.querySelector('.ox button')).map(r=>r.dataset.k)},
- sheet(){const s=[...document.querySelectorAll('.sheet')].filter(x=>x.id!=='tfxSheet').pop();return s?{h2:__P.tx(s.querySelector('h2')),vis:__P.vis(s.querySelector('.panel')||s)}:null},
- sheetsAll(){return document.querySelectorAll('.sheet').length},
- closeAll(){document.querySelectorAll('.sheet,#ocrrfz').forEach(x=>x.remove());return 1},
- det(){const d=document.getElementById('cDet');return !!(d&&d.open)},
- detClose(){const d=document.getElementById('cDet');if(d)d.open=false;return 1},
- ink(){const c=document.getElementById('card'),sv=c&&c.querySelector('#qink');if(!sv)return null;const r=sv.getBoundingClientRect();
-   return {h:+sv.getAttribute('height'),cardH:c.scrollHeight,bottom:Math.round(r.bottom),penon:c.classList.contains('penon')}},
- lastStroke(){const ps=[...document.querySelectorAll('#qink path[data-j]')];const p=ps.pop();if(!p)return null;const b=p.getBoundingClientRect();
-   return {n:ps.length+1,w:Math.round(b.width),h:Math.round(b.height),x:Math.round(b.left),y:Math.round(b.top),on:b.bottom>0&&b.top<innerHeight&&b.right>0&&b.left<innerWidth}},
- /* 참고 그림 — 받아질 때까지 기다린 뒤 창 가운데로 굴리고 가운데 점 */
- async refImg(){const t0=Date.now();let im=null;
-   while(Date.now()-t0<15000){im=document.querySelector('#card .rfimg img');if(im&&im.complete&&im.naturalWidth>0)break;await new Promise(r=>setTimeout(r,100))}
-   if(!im||!im.naturalWidth)return null;im.scrollIntoView({block:'center'});await new Promise(r=>setTimeout(r,200));
-   const r=im.getBoundingClientRect();const x=Math.round(r.left+r.width/2),y=Math.round(r.top+r.height/2);const top=document.elementFromPoint(x,y);
-   return {x,y,w:Math.round(r.width),nw:im.naturalWidth,nh:im.naturalHeight,top:top?(top.id||top.tagName.toLowerCase()):null}},
- zoom(){const z=document.getElementById('ocrrfz');if(!z)return null;const im=z.querySelector('img');const r=im.getBoundingClientRect();const s=getComputedStyle(im);
-   const nw=im.naturalWidth,nh=im.naturalHeight;let cw=r.width,chh=r.height;
-   if(s.objectFit==='contain'&&nw&&nh){const k=Math.min(r.width/nw,r.height/nh);cw=nw*k;chh=nh*k}
-   return {vis:__P.vis(z),boxW:Math.round(r.width),boxH:Math.round(r.height),w:Math.round(cw*10)/10,h:Math.round(chh*10)/10,nw,nh,fit:s.objectFit,
-     want:Math.round(Math.min(innerWidth*.96,innerHeight*.92*nw/nh)*10)/10,vw:innerWidth,vh:innerHeight}},
- /* 획을 그을 빈 자리 — 그 요소 안에서 밑에 진짜 단추(PEN_HIT)가 없는 점 */
- penSpot(sel){const c=document.getElementById('card');const e=c.querySelector(sel);if(!e)return null;e.scrollIntoView({block:'center'});
-   const r=e.getBoundingClientRect(),ink=c.querySelector('#qink');
-   for(const fy of [.5,.3,.7])for(const fx of [.2,.35,.5]){const x=Math.round(r.left+r.width*fx),y=Math.round(r.top+r.height*fy);
-     if(y<=0||y>=innerHeight-4)continue;const u=ink?underInk(x,y,ink,PEN_HIT):null;if(!u){const t=document.elementFromPoint(x,y);
-       return {x,y,top:t?(t.id||t.tagName.toLowerCase()):null,inInk:!!(t&&t.closest&&t.closest('#qink'))}}}
-   return null}
-});
-"""
-
-
-class P2(H.P):
-    """한 판 · 한 과목 · 엔진(chromium · webkit) — 820×1180(아이패드 세로) · 터치 켬"""
-    def __init__(self, br, app, subj, tag, engine, vh=1180):
-        self.engine = engine
-        self.srv, port = H.serve(app, subj, tag)
-        self.ctx = br.new_context(viewport={'width': 820, 'height': vh}, device_scale_factor=1, has_touch=True)
-        OKNET = ('http://127.0.0.1', 'https://cdnjs.cloudflare.com/', 'https://cdn.jsdelivr.net/', 'https://fonts.googleapis.com/', 'https://fonts.gstatic.com/',
-                 'blob:', 'data:')   # WebKit 은 blob: 그림 요청도 route 를 지난다 — 막으면 참고 그림이 안 뜬다(9/27 첫 판 「그림 못 받음」)
-        self.ctx.route('**/*', lambda rt: rt.continue_() if rt.request.url.startswith(OKNET) else rt.abort())
-        self.ctx.add_init_script(H.INIT.replace('__SUBJ__', subj))
-        self.pg = self.ctx.new_page()
-        self.pg.set_default_timeout(120000)
-        self.errs = []
-        self.pg.on('pageerror', lambda e: self.errs.append('page: ' + str(e)[:200]))
-        self.pg.goto('http://127.0.0.1:%d/app.html' % port, wait_until='load')
-        self.pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>0', timeout=90000)
-        self.pg.wait_for_timeout(2500)
-        self.pg.evaluate(H.JS)
-        self.pg.evaluate(JS2)
-        self.cdp = self.ctx.new_cdp_session(self.pg) if engine == 'chromium' else None
-
-    def ftap(self, x, y, r=22):
-        if self.cdp:
-            self._t('touchStart', [(x, y)], r); self.wait(60)
-            self._t('touchEnd', [], r)
-        else:
-            self.pg.touchscreen.tap(x, y)
-        self.wait(450)
-
-    def pdown(self, x, y):
-        self._p('mouseMoved', x, y, 'none', 0); self._p('mousePressed', x, y)
-
-    def pup(self, x, y):
-        self._p('mouseReleased', x, y, 'left', 0)
+P2 = JG.P2   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
 
 
 def scen(br, app, tag, subj, engine, keep):
     g = '%s %s %s' % (tag, engine, subj)
-    u = H.SAMPLE[subj]
+    u = SAMPLE[subj]
+    QC.launch('base' if tag.startswith('BASE') else 'new')   # 셈(§B-4)
     p = P2(br, app, subj, '%s_%s_%s' % (tag, engine, subj), engine)
     cr = engine == 'chromium'
 
@@ -146,6 +84,10 @@ def scen(br, app, tag, subj, engine, keep):
         keep.setdefault('1', {})[g] = r1
         T(g, '1 펜 도구 · 안 골라진 선택지(%s) 가운데 손가락 톡 → 고름 표시 보임 · 획 0 · 창 0(헛잣대: 바탕 무반응)' % c1,
           'qink' in (a['top'] or '') and t['pick'] == [c1] and any(x['c'] == c1 and x['vis'] for x in pk) and r1['획'] == 0 and r1['창'] == 0, r1)
+        if QC.SMOKE:   # smoke — 1(손가락 톡) + Z(페이지 오류 0)만
+            er = p.errs + (p.ev("()=>__P.errs()") or [])
+            T(g, 'Z 페이지 오류 0', not er, er[:5])
+            return
         # ── 2 손가락 톡 · 〈보기〉 O 두 번 = 한 번 바뀌고 다시 제자리(실물 기록에 이미 O 가 켜진 줄도 있다 — 켜짐/꺼짐을 처음 상태 기준으로) ──
         fresh('pen', ans=True)
         rows = p.ev("()=>__P.oxRows()") or []
@@ -178,6 +120,7 @@ def scen(br, app, tag, subj, engine, keep):
             #    창 높이 700 으로 새로 연 판 — 1180 에선 지학 G48-03 카드가 문제 창(뜬창 · 860)에 다 들어가 굴릴 자리가 없고,
             #    이미 뜬 창은 뷰포트를 줄여도 안 줄어든다(둘째 판 굴릴 자리 0 → 제자리 누름 850ms = 길게 누르기 창)
             p0 = p
+            QC.launch('base' if tag.startswith('BASE') else 'new')   # 셈(§B-4)
             p = P2(br, app, subj, '%s_%s_%s_700' % (tag, engine, subj), engine, vh=700)
             fresh('pen', ans=True)
             s = p.ev("()=>__P.st()")
@@ -305,16 +248,21 @@ def main():
     t0 = time.time()
     new = io.open(NEWF, encoding='utf-8', newline='').read()
     newmd5 = hashlib.md5(new.replace('\r\n', '\n').encode('utf-8')).hexdigest()
-    base = subprocess.run(['git', '-C', H.GENIE, 'show', BASE2_REV + ':jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
-    bmd5 = hashlib.md5(base.replace('\r\n', '\n').encode('utf-8')).hexdigest()
-    T('땅값', 'BASE2 = 본판 인도판(f497f05 · 0c1f47dd)', bmd5 == BASE2_MD5, bmd5)
+    if QC.GATE:
+        QC.sub('git:show-app')
+        base = subprocess.run(['git', '-C', _roots.genie(), 'show', BASE2_REV + ':jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
+        bmd5 = hashlib.md5(base.replace('\r\n', '\n').encode('utf-8')).hexdigest()
+        T('땅값', 'BASE2 = 본판 인도판(f497f05 · 0c1f47dd)', bmd5 == BASE2_MD5, bmd5)
+    else:   # regress · smoke — 바탕(f497f05) 앱 풀기 0 · 땅값(바탕 md5) 칸 = 관문만
+        base, bmd5 = None, '(regress — 바탕 안 띄움)'
     engines = [e for e in ('chromium', 'webkit') if not ONLY or e in ONLY]
     keep = {}
     with sync_playwright() as pw:
         for eng in engines:
             br = getattr(pw, eng).launch()
             for subj in ('bio', 'earth'):
-                scen(br, base, 'BASE2', subj, eng, keep)
+                if QC.GATE:   # BASE2 scen = 헛잣대 줄(관문만)
+                    scen(br, base, 'BASE2', subj, eng, keep)
                 scen(br, new, 'NEW', subj, eng, keep)
             br.close()
     return report(t0, newmd5, bmd5, engines)

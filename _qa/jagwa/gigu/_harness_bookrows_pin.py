@@ -22,6 +22,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import http.server, os, socketserver, subprocess, sys, threading, hashlib, shutil, urllib.parse, json, time
 
 GENIE = _roots.genie()
@@ -279,10 +280,27 @@ BODY_VTOP = r"""
 """
 
 
+# ── _task_qa_slim2(10/8 · J2) smoke 도우미 — 이름이 `_rg` 로 시작하는 것 = gate 에서 안 쓰는 갈래(BODY_* 글은 글자 그대로) ──
+#   regress = gate 와 같은 걸음(칸 64 모두 회귀 · 다섯 판 다 NEW) · 쪽 안 고정 대기(bkOpen 뒤 2500 · bkGoto 뒤 600 …)는 BODY 글 그대로(두 벌 안 둠)
+def _rg_smoke_body(t):
+    """smoke — 지학 BODY 에서 P-0 첫 칸 + 정의 줄(oldRows · num · PAGES · sig · has · KEEP · restore) + PIN 정의 + P-5 묶음 통째만(원래 글을 그 자리에서 잘라 씀 · 못 찾으면 통째)"""
+    nl = lambda i: t.find('\n', i) + 1
+    a = t.find("   T('P-0 지학 카드 층 · 데이터 적재'")
+    d0 = t.find("   /* 고침 전 규약(판 1 = 네 갈래 합집합)")
+    d1 = t.find("   /* ═══ P-1 고정이 하나도 없으면")
+    pn = t.find("   const PIN=(()=>{let p=1;while(PAGES.indexOf(p)>=0)p++;return p})();")
+    f0 = t.find("   /* ═══ P-5 툴바")
+    f1 = t.find("     $('#bkqX').click(); bkClose(); restore();\n   });\n")
+    if min(a, d0, d1, pn, f0, f1) < 0 or not (a < d0 < d1 < pn < f0 < f1):
+        print('NOTE | smoke 자르기 자리 못 찾음 — 통째로 돈다')
+        return t
+    return t[:nl(a)] + t[d0:d1] + t[pn:nl(pn)] + t[f0:nl(nl(f1))]
+
+
 def build(mode):
     """모드별 app.html 을 만든다."""
     subj = {'earth': 'earth', 'bio': 'bio', 'phys': 'phys', 'fine': 'earth', 'coarse': 'earth'}[mode]
-    body = {'earth': BODY_EARTH, 'bio': BODY_BIO, 'phys': BODY_PHYS}.get(mode)
+    body = {'earth': (BODY_EARTH if not QC.SMOKE else _rg_smoke_body(BODY_EARTH)), 'bio': BODY_BIO, 'phys': BODY_PHYS}.get(mode)   # smoke — 지학 쪽 안 시험 글을 이 자리에서만 잘라 씀
     if body is None:
         body = BODY_VTOP.replace('__MODE__', mode).replace('__WANT__', 'true' if mode == 'coarse' else 'false')
     html = open(SRC, encoding='utf-8', newline='').read()
@@ -333,6 +351,7 @@ def run(mode, secs):
             '--window-size=1400,900'] + (COARSE if mode == 'coarse' else []) + \
            ['http://127.0.0.1:%d/app.html' % port]
     t0 = time.time()
+    QC.launch('new')   # 셈(§B-4) — 새 판 크롬 한 번(판마다 · 바탕은 본디 안 띄운다)
     p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     got = done.wait(secs); p.terminate()
     try: p.wait(10)
@@ -379,6 +398,8 @@ def static_checks():
 
 def main():
     want = [a for a in sys.argv[1:] if a in ('earth', 'bio', 'phys', 'vtop')] or ['earth', 'bio', 'phys', 'vtop']
+    if QC.SMOKE:   # smoke — 지학 한 판(P-0 · P-5 · 콘솔 오류 0)만 · bio · phys · vtop 두 판 건넘
+        want = ['earth']
     lines, vt = [], {}
     for mode in want:
         if mode == 'vtop':
@@ -402,7 +423,8 @@ def main():
             secs = int(os.environ.get('HARNESS_WAIT', '420')) if mode == 'earth' else int(os.environ.get('HARNESS_WAIT_S', '240'))
             ls, _ = run(mode, secs)
             lines += ls
-    lines += static_checks()
+    if QC.want('src'):   # smoke — 브라우저 밖 소스 칸(S-1~S-9)은 smoke 칸이 아니다
+        lines += static_checks()
     npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
     for x in lines: print(x)
     print('\n== 교재쪽 고정/서재 단추 %d PASS / %d FAIL / %d항 ==' % (npass, nfail, len(lines)))

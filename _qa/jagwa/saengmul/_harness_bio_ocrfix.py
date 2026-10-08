@@ -14,6 +14,8 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — 자과 띄우기 헬퍼(_task_qa_slim2 A-1-2 · 옛 남 하네스 import 를 갈음)
 import hashlib, http.server, io, json, os, random, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, urllib.parse
 sys.stdout.reconfigure(encoding='utf-8')
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -26,6 +28,7 @@ LISTS = os.path.join(HERE, '_ocrfix', 'ocrfix_bio_lists.json')
 REFDIR = os.path.join(HERE, '_ocrfix', 'ref')
 SHOTS = os.path.join(HERE, '_ocrfix', 'shots'); os.makedirs(SHOTS, exist_ok=True)
 WORK = os.path.join(tempfile.gettempdir(), 'h_bio_ocrfix'); os.makedirs(WORK, exist_ok=True)
+JG.conf(REFDIR=REFDIR)   # 제 자리(HERE/_ocrfix/ref)를 JG 에 넘김(serve_BO 가 읽음) · WORK_BO 는 기본값 = 제 WORK 와 같은 식
 NEWQ = os.path.join(WORK, '문항_new.json')
 OLDQ = os.path.join(WORK, '문항_old.json')
 OLD_REV, OLD_MD5 = '550ee2e5~1', '8f99c582e009efd8ac53f0c90a5e7bce'   # 고치기 전 판 = studyplandata 인도(550ee2e5) 바로 앞
@@ -45,91 +48,9 @@ def N(name, detail=''):
     print('NOTE | %s | %s' % (name, d[:300]), flush=True)
 
 
-INIT = r"""
-(()=>{
-  try{localStorage.setItem('subj','__SUBJ__')}catch(e){}
-  try{localStorage.setItem('tt.cfg',JSON.stringify({token:'github_pat_TEST',person:'검산'}))}catch(e){}
-  window.__err=[];
-  window.addEventListener('error',e=>{window.__err.push((e.message||'')+' @'+(e.lineno||''))});
-  window.addEventListener('unhandledrejection',e=>{window.__err.push('reject: '+((e.reason&&e.reason.message)||e.reason))});
-  const nf=window.fetch.bind(window);
-  window.fetch=async function(url,opt){
-    opt=opt||{};const u=String(url);
-    const m=/api\.github\.com\/repos\/([^\/]+\/[^\/]+)\/contents\/([^?]+)/.exec(u);
-    if(!m){ if(/^https?:/i.test(u)&&u.indexOf(location.origin)!==0&&!/cdnjs|jsdelivr|googleapis|gstatic/.test(u))
-              return {ok:false,status:599,json:async()=>({}),text:async()=>'',arrayBuffer:async()=>new ArrayBuffer(0)};
-            return nf(url,opt) }
-    const path=decodeURIComponent(m[2]);
-    if((opt.method||'GET')==='PUT')return {ok:true,status:200,json:async()=>({content:{sha:'x'}}),text:async()=>''};
-    const r=await nf('/data/'+encodeURI(path),{cache:'no-store'});
-    if(!r.ok)return {ok:false,status:404,json:async()=>({}),text:async()=>'',arrayBuffer:async()=>new ArrayBuffer(0)};
-    const acc=(opt.headers||{}).Accept||'';
-    if(acc.indexOf('raw')>=0)return r;
-    return {ok:true,status:200,json:async()=>({sha:r.headers.get('X-Sha')||'sha'}),text:async()=>JSON.stringify({sha:r.headers.get('X-Sha')||'sha'})};
-  };
-})();
-"""
-
-
-def serve(app_text, qjson, subj, tag):
-    outdir = os.path.join(WORK, 'srv_' + tag); os.makedirs(outdir, exist_ok=True)
-    io.open(os.path.join(outdir, 'app.html'), 'w', encoding='utf-8', newline='').write(app_text)
-    spd = os.path.join(SPDROOT, subj)
-
-    class H(http.server.SimpleHTTPRequestHandler):
-        def __init__(self, *a, **k):
-            super().__init__(*a, directory=outdir, **k)
-
-        def log_message(self, *a, **k):
-            pass
-
-        def do_GET(self):
-            p = urllib.parse.unquote(self.path.split('?')[0])
-            if p.startswith('/data/'):
-                rel = p[6:]
-                if not rel.startswith(subj + '/'):
-                    self.send_response(404); self.end_headers(); return
-                sub = rel[len(subj) + 1:]
-                if subj == 'bio' and sub == '문항.json' and qjson:
-                    f = qjson
-                elif subj == 'bio' and sub.startswith('img/ref') and os.path.isfile(os.path.join(REFDIR, sub[4:])):
-                    f = os.path.join(REFDIR, sub[4:])
-                else:
-                    f = os.path.join(spd, sub.replace('/', os.sep))
-                if not os.path.isfile(f):
-                    self.send_response(404); self.end_headers(); return
-                b = open(f, 'rb').read()
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/octet-stream')
-                self.send_header('Content-Length', str(len(b)))
-                self.send_header('X-Sha', hashlib.sha1(b).hexdigest())
-                self.end_headers(); self.wfile.write(b); return
-            return super().do_GET()
-
-    srv = socketserver.ThreadingTCPServer(('127.0.0.1', 0), H)
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
-    return srv, srv.server_address[1]
-
-
-JS_HELP = r"""
-window.__h={
- vis:e=>{if(!e)return false;const cs=getComputedStyle(e);const r=e.getBoundingClientRect();return cs.display!=='none'&&cs.visibility!=='hidden'&&r.height>0},
- tx:e=>e?String(e.textContent||'').replace(/\s+/g,' ').trim():'',
- row:u=>DATA.find(x=>x[F.CODE]===u),
- show:async u=>{const r=__h.row(u);if(!r)return false;
-   try{FL.q=u;FL.unit='';FL.bigs=[];FL.subs=[];FL.round='';FL.mark='';if(CUR.KINDS)FL.types=new Set(['G','T','E']);else FL.past=isC(r)?'p':'';draw()}catch(e){}
-   await new Promise(res=>setTimeout(res,250));return true},
- open:async u=>{const r=__h.row(u);if(!r)return false;try{await openView(r[F.NO])}catch(e){}await new Promise(res=>setTimeout(res,700));return true},
- card:()=>{const c=document.getElementById('card');const ch=[...c.querySelectorAll('.choices button')].map(b=>__h.tx(b).replace(/^[①②③④⑤⑥⑦⑧]\s*/,'').replace(/✎$/,'').trim());
-   const bg={},be={},bv={};c.querySelectorAll('.bogi .row').forEach(el=>{const k=el.dataset.k;const t=el.querySelector('.t');if(!t)return;
-     const cl=t.cloneNode(true);cl.querySelectorAll('.tfx,.bexp').forEach(x=>x.remove());bg[k]=__h.tx(cl);
-     const e=t.querySelector('.bexp');be[k]=e?__h.tx(e):null;bv[k]=e?__h.vis(e):null});
-   return {ch,bg,be,bv}},
- prev:u=>{const it=[...document.querySelectorAll('#list .item')].find(x=>x.dataset.uid===u||__h.tx(x.querySelector('.num'))===u);return it?__h.tx(it.querySelector('.prev')):null},
- sumRect:()=>{const s=document.querySelector('#cDet>summary');if(!s)return null;s.scrollIntoView({block:'center'});const r=s.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]},
- hiddenButVisible:()=>[...document.querySelectorAll('[hidden]')].filter(e=>__h.vis(e)).map(e=>(e.id?'#'+e.id:'')+'.'+String(e.className||'').split(' ').join('.')+' '+__h.tx(e).slice(0,30))
-};
-"""
+INIT = JG.INIT_BO   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
+JS_HELP = JG.JS_HELP   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
+serve = JG.serve_BO   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
 
 
 def launch(pw, app_text, qjson, subj, tag):
@@ -140,8 +61,11 @@ def launch(pw, app_text, qjson, subj, tag):
     pg = ctx.new_page()
     pg.goto('http://127.0.0.1:%d/app.html' % port, wait_until='load')
     pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>0', timeout=90000)
-    pg.wait_for_timeout(2500)
+    pg.wait_for_timeout(2500) if QC.GATE else QC.until(pg, _RG_SYNCED, 2500, '첫 기록 동기화 끝(SMETA lastSync · recBusy 거짓)')   # regress — 같은 상한의 표지
     pg.evaluate(JS_HELP)
+    if QC.REGRESS:   # regress — 인도본은 uid 새 꼴 · 하네스(고침표 · 표본 · 칸 글)는 옛 uid 꼴 → __h.row/show/open/prev 가 옛 uid 를 새 uid 로 갈아 부른다(앱 무변)
+        pg.evaluate(_RG_OLDU_JS)
+    QC.launch('new' if tag in ('new', 'new2', 'earthn', 'physn') else 'base')
     return srv, br, pg
 
 
@@ -176,7 +100,7 @@ def probe_rows(pg, uids):
             close_answer(pg)   # 다시 접기
         reclosed = pg.evaluate('__h.card()')
         out[u] = {'prev': prev, 'closed': closed, 'opened': opened, 'reclosed': reclosed,
-                  'tf': pg.evaluate("u=>(typeof TFIX!=='undefined'&&TFIX[u])?Object.keys(TFIX[u]):[]", u)}
+                  'tf': pg.evaluate("u=>(typeof TFIX!=='undefined'&&TFIX[u])?Object.keys(TFIX[u]):[]" if QC.GATE else _RG_TF, u)}
         pg.evaluate("()=>{try{closeView()}catch(e){}}"); pg.wait_for_timeout(150)
     return out
 
@@ -193,66 +117,140 @@ def old_bytes():
     return b
 
 
+# ── _task_qa_slim2(10/8) regress 도우미 — 이름이 `_rg` · `_RG` 로 시작하는 것 = gate 에서 안 쓰는 갈래(gate 에서 도는 줄은 원래 글 그대로) ──
+_RG_SYNCED = "()=>{try{return typeof recBusy!=='undefined'&&!recBusy&&((JSON.parse(localStorage.getItem(SMETA_KEY)||'{}')||{}).lastSync||0)>0}catch(e){return false}}"   # 앱 syncRecords 끝 lsPut(SMETA_KEY,{lastSync})
+_RG_OLDU_JS = r"""()=>{const H=window.__h;if(!H||H.__rgOldu)return 0;const R0=H.row,S0=H.show,O0=H.open,P0=H.prev;
+  const nu=u=>{const r=R0(u)||((typeof F!=='undefined'&&F.OLDU!==undefined)?DATA.find(x=>x[F.OLDU]===u):null);return r?r[F.CODE]:u};
+  H.row=u=>R0(nu(u));H.show=u=>S0(nu(u));H.open=u=>O0(nu(u));H.prev=u=>P0(nu(u));H.__rgOldu=1;return 1}"""   # 옛 uid → 앱 F.OLDU 로 새 uid(F.CODE)
+_RG_TF = "u=>{const r=__h.row(u);const k=r?r[F.CODE]:u;return (typeof TFIX!=='undefined'&&TFIX[k])?Object.keys(TFIX[k]):[]}"   # TFIX 열쇠 = 새 uid
+
+
+def _rg_md5(s):
+    return hashlib.md5(str(s).encode('utf-8')).hexdigest()[:16]
+
+
+def _rg_ck_old(CK, D1):
+    """regress — 인도본(uid 새 꼴)에 돌린 대조 결과의 uid 를 옛 uid(의심 목록 꼴)로 되돌린다 · 옛uid 없는 줄은 그대로"""
+    n2o = {r['uid']: (r.get('옛uid') or r['uid']) for r in D1}
+    f = lambda u: n2o.get(u, u)
+    out = dict(CK)
+    for k in ('d1_bad', 'd2_bad'):
+        out[k] = [[f(x[0])] + list(x[1:]) for x in (CK.get(k) or [])]
+    for k in ('d3_dup', 'd3_empty'):
+        out[k] = [f(u) for u in (CK.get(k) or [])]
+    return out
+
+
+def _rg_h3(uids, by1, A):
+    """smoke — H-3 판정(main 의 같은 셈을 옮긴 것 · gate 판정 줄과 같은 규칙) → (good, bad)"""
+    good, bad = 0, []
+    for u in uids:
+        r = by1[u]; a = A.get(u) or {}; tf = set(a.get('tf') or [])
+        cl = a.get('closed') or {}; op = a.get('opened') or cl
+        want_ch = []
+        for c in (r.get('선택지') or []):
+            parts = [x.strip() for x in re.split(r'\s*[⑥⑦⑧]\s*', str(c or ''))]
+            want_ch += parts[:1] + [x for x in parts[1:] if x]
+        while want_ch and not want_ch[-1]:
+            want_ch.pop()
+        got_ch = cl.get('ch') or []
+        ok_ch = (not any(want_ch)) and not got_ch or [c for i, c in enumerate(got_ch) if 'c%d' % (i + 1) not in tf] == [c for i, c in enumerate(want_ch) if 'c%d' % (i + 1) not in tf]
+        wb = {b['키']: b.get('내용') for b in (r.get('보기') or []) if b.get('내용') and 'b' + b['키'] not in tf}
+        ok_bg = all((cl.get('bg') or {}).get(k) == v for k, v in wb.items())
+        we = {b['키']: b.get('설명') for b in (r.get('보기') or []) if b.get('설명')}
+        ok_be = all(((op.get('be') or {}).get(k) or '').replace(' ', '') == v.replace(' ', '') for k, v in we.items())
+        stem = str(r['문항']).split(' ⏎ ')[0]
+        ok_pv = 'q' in tf or (a.get('prev') is not None and stem[:20].replace(' ', '') in (a.get('prev') or '').replace(' ', ''))
+        if ok_ch and ok_bg and ok_be and ok_pv:
+            good += 1
+        else:
+            bad.append({'u': u, 'ch': None if ok_ch else [got_ch, want_ch], 'bg': None if ok_bg else [cl.get('bg'), wb], 'be': None if ok_be else [op.get('be'), we], 'pv': None if ok_pv else [a.get('prev'), stem[:30]]})
+    return good, bad
+
+
 def main():
     from playwright.sync_api import sync_playwright
     t0 = time.time()
-    raw = old_bytes(); open(OLDQ, 'wb').write(raw)
+    if QC.GATE:   # regress — 옛 데이터(550ee2e5~1 · git show) 0
+        raw = old_bytes(); open(OLDQ, 'wb').write(raw)
     now = open(QJ, 'rb').read()   # studyplandata 로컬 지금 판(인도 뒤면 새 판)
     FX = json.load(open(FIX, encoding='utf-8'))
     LS = json.load(open(LISTS, encoding='utf-8')) if os.path.exists(LISTS) else {}
     # ── H-5 적용 스크립트 — 사본에 두 번(멱등) · 왕복 무변 ──
-    shutil.copy(OLDQ, NEWQ)
-    env = dict(os.environ, PYTHONIOENCODING='utf-8', OCRFIX_QJ=NEWQ, OCRFIX_TABLE=FIX)
-    r1 = subprocess.run([sys.executable, os.path.join(HERE, '_ocrfix_bio.py'), 'write'], capture_output=True, env=env).stdout.decode('utf-8', 'replace')
-    b1 = open(NEWQ, 'rb').read()
-    r2 = subprocess.run([sys.executable, os.path.join(HERE, '_ocrfix_bio.py'), 'write'], capture_output=True, env=env).stdout.decode('utf-8', 'replace')
-    b2 = open(NEWQ, 'rb').read()
-    T('H-4 적용 두 번 = 같은 결과(멱등) · 왕복 무변 · 검산 OK', b1 == b2 and 'OK  json 왕복 무변' in r1 and '검산 OK' in r1 and '바뀐 칸 0' in r2,
-      {'1회': [x for x in r1.splitlines() if '칸' in x or 'md5' in x][:3], '2회': [x for x in r2.splitlines() if '칸' in x][:2]})
+    if QC.GATE:   # 관문만 — 굽기(_ocrfix_bio.py write 두 번 · 하위 파이썬) · regress 는 굽지 않고 인도본을 읽는다
+        shutil.copy(OLDQ, NEWQ)
+        env = dict(os.environ, PYTHONIOENCODING='utf-8', OCRFIX_QJ=NEWQ, OCRFIX_TABLE=FIX)
+        r1 = subprocess.run([sys.executable, os.path.join(HERE, '_ocrfix_bio.py'), 'write'], capture_output=True, env=env).stdout.decode('utf-8', 'replace')
+        b1 = open(NEWQ, 'rb').read()
+        r2 = subprocess.run([sys.executable, os.path.join(HERE, '_ocrfix_bio.py'), 'write'], capture_output=True, env=env).stdout.decode('utf-8', 'replace')
+        b2 = open(NEWQ, 'rb').read()
+        T('H-4 적용 두 번 = 같은 결과(멱등) · 왕복 무변 · 검산 OK', b1 == b2 and 'OK  json 왕복 무변' in r1 and '검산 OK' in r1 and '바뀐 칸 0' in r2,
+          {'1회': [x for x in r1.splitlines() if '칸' in x or 'md5' in x][:3], '2회': [x for x in r2.splitlines() if '칸' in x][:2]})
+    else:
+        b1 = now   # regress — 「새 값」 = studyplandata 인도본 bio/문항.json(굽기 0)
     # ★ A-6(d) 9/30 — 「인도 뒤」 쪽 = 인도 커밋 b3bb3c3b(add2 인도 · 고침표(add1 499)·스크립트(add2 교재문장·비고 반각) 지금 판의 인도본 · md5 73f4c803) —
     #   뒤 jagwa_uid(studyplandata 4a011475)가 uid 를 새 꼴로 바꿔 로컬 ≠ 입힌 결과(이 칸 전용 now_dl · 「인도 전이면 로컬 = 옛 판」 쪽은 그대로)
-    now_dl = subprocess.run(['git', '-C', SPDROOT, 'show', 'b3bb3c3b:bio/문항.json'], capture_output=True).stdout
-    T('H-4b 옛 판에 입힌 결과 = studyplandata 인도본 bio/문항.json(b3bb3c3b · add2 인도 = 고침표·스크립트 지금 판 · 인도 전이면 로컬 = 옛 판)', b1 == now_dl or now == raw,
-      {'옛': hashlib.md5(raw).hexdigest(), '입힌 결과': hashlib.md5(b1).hexdigest(), '인도본 b3bb3c3b': hashlib.md5(now_dl).hexdigest(), '로컬 지금': hashlib.md5(now).hexdigest()})
-    D0 = json.loads(raw.decode('utf-8')); D1 = json.loads(b1.decode('utf-8'))
-    by0 = {r['uid']: r for r in D0}; by1 = {r['uid']: r for r in D1}
+    if QC.GATE:   # 관문만 — 인도 커밋 b3bb3c3b 대조(git show) · 그 판에만 뜻
+        now_dl = subprocess.run(['git', '-C', SPDROOT, 'show', 'b3bb3c3b:bio/문항.json'], capture_output=True).stdout
+        T('H-4b 옛 판에 입힌 결과 = studyplandata 인도본 bio/문항.json(b3bb3c3b · add2 인도 = 고침표·스크립트 지금 판 · 인도 전이면 로컬 = 옛 판)', b1 == now_dl or now == raw,
+          {'옛': hashlib.md5(raw).hexdigest(), '입힌 결과': hashlib.md5(b1).hexdigest(), '인도본 b3bb3c3b': hashlib.md5(now_dl).hexdigest(), '로컬 지금': hashlib.md5(now).hexdigest()})
+        D0 = json.loads(raw.decode('utf-8'))
+    D1 = json.loads(b1.decode('utf-8'))
+    if QC.GATE:
+        by0 = {r['uid']: r for r in D0}
+    by1 = {r['uid']: r for r in D1} if QC.GATE else {(r.get('옛uid') or r['uid']): r for r in D1}   # regress — 인도본(uid 새 꼴)을 옛 uid(고침표 · 표본 · 칸 글이 쓰는 꼴)로 집는다
     # ── H-1 census ──
-    cen = lambda P: subprocess.run([sys.executable, os.path.join(HERE, '_ocrfix', 'ocr_census_bio.py'), P], capture_output=True,
-                                   env=dict(os.environ, PYTHONIOENCODING='utf-8')).stdout.decode('utf-8', 'replace').splitlines()
-    N('H-1 대상 census — 고치기 전', cen(QJ)[:3])
-    N('H-1 대상 census — 고친 뒤(남은 것 · 까닭은 수행 결과)', cen(NEWQ)[:3])
-    T('H-1 고침표 uid 는 모두 문항.json 안 · 참고 상자 수', all(u in by0 for u in FX), {'고침표': len(FX), '참고 행': sum(1 for r in D1 if '참고' in r),
-                                                                    '참고 상자': sum(len(r['참고']) for r in D1 if '참고' in r)})
+    if QC.GATE:   # 관문만 — 옛 데이터 기준 census(하위 둘 · NOTE) · 고침표 uid ⊆ 옛 문항.json
+        cen = lambda P: subprocess.run([sys.executable, os.path.join(HERE, '_ocrfix', 'ocr_census_bio.py'), P], capture_output=True,
+                                       env=dict(os.environ, PYTHONIOENCODING='utf-8')).stdout.decode('utf-8', 'replace').splitlines()
+        N('H-1 대상 census — 고치기 전', cen(QJ)[:3])
+        N('H-1 대상 census — 고친 뒤(남은 것 · 까닭은 수행 결과)', cen(NEWQ)[:3])
+        T('H-1 고침표 uid 는 모두 문항.json 안 · 참고 상자 수', all(u in by0 for u in FX), {'고침표': len(FX), '참고 행': sum(1 for r in D1 if '참고' in r),
+                                                                        '참고 상자': sum(len(r['참고']) for r in D1 if '참고' in r)})
     # ── H-2 D-1 · D-2 · D-3 ──
-    mr = subprocess.run([sys.executable, os.path.join(HERE, '_ocrfix', 'ocr_check_bio.py'), NEWQ], capture_output=True,
-                        env=dict(os.environ, PYTHONIOENCODING='utf-8')).stdout.decode('utf-8', 'replace')
-    try:
-        CK = json.loads(mr.strip().splitlines()[-1])
-    except Exception:
-        CK = {'err': mr[-400:]}
-    sus = sorted(x['uid'] for x in LS.get('정오_의심', []))
-    bad1 = sorted(x[0] for x in CK.get('d1_bad') or [])
-    T('H-2 D-1 정오 대조 — 정답 선택지가 조합형이고 정오가 다 찬 %s 문항 · 어긋남 = 정오 의심 목록 그대로' % CK.get('d1_n'),
-      CK.get('d1_n', 0) > 0 and bad1 == sus, {'n': CK.get('d1_n'), '어긋남': len(bad1), '목록 밖': sorted(set(bad1) - set(sus)), '목록에만': sorted(set(sus) - set(bad1))})
-    sus2 = sorted('%s %s' % (x['uid'], x['키']) for x in LS.get('첫머리_의심', []))
-    bad2 = sorted('%s %s' % (x[0], x[1]) for x in CK.get('d2_bad') or [])
-    T('H-2 D-2 설명 첫머리 O·/X· = 그 키 정오 — 어긋남 = 첫머리 의심 목록 그대로', bad2 == sus2, {'어긋남': len(bad2), '목록 밖': sorted(set(bad2) - set(sus2))[:10]})
-    T('H-2 D-3 조합형 다섯 서로 다름 · 빈 선택지 = 원본 넷·그림 선택지뿐', not CK.get('d3_dup') and sorted(CK.get('d3_empty') or []) == sorted(LS.get('빈칸_원본', [])),
-      {'dup': CK.get('d3_dup'), 'empty 목록 밖': sorted(set(CK.get('d3_empty') or []) - set(LS.get('빈칸_원본', [])))[:10]})
+    if QC.want('H-2'):   # smoke — 데이터 대조(H-2) 건넘
+        if QC.REGRESS:
+            QC.sub('python:check')   # 대조기(굽기 아님) — 인도본에 돌린다
+        mr = subprocess.run([sys.executable, os.path.join(HERE, '_ocrfix', 'ocr_check_bio.py'), NEWQ if QC.GATE else QJ], capture_output=True,
+                            env=dict(os.environ, PYTHONIOENCODING='utf-8')).stdout.decode('utf-8', 'replace')
+        try:
+            CK = json.loads(mr.strip().splitlines()[-1])
+        except Exception:
+            CK = {'err': mr[-400:]}
+        if QC.REGRESS and 'err' not in CK:   # regress — 대조 결과 uid(새 꼴) → 옛 uid(의심 목록 꼴)
+            CK = _rg_ck_old(CK, D1)
+        sus = sorted(x['uid'] for x in LS.get('정오_의심', []))
+        bad1 = sorted(x[0] for x in CK.get('d1_bad') or [])
+        T('H-2 D-1 정오 대조 — 정답 선택지가 조합형이고 정오가 다 찬 %s 문항 · 어긋남 = 정오 의심 목록 그대로' % CK.get('d1_n'),
+          CK.get('d1_n', 0) > 0 and bad1 == sus, {'n': CK.get('d1_n'), '어긋남': len(bad1), '목록 밖': sorted(set(bad1) - set(sus)), '목록에만': sorted(set(sus) - set(bad1))})
+        sus2 = sorted('%s %s' % (x['uid'], x['키']) for x in LS.get('첫머리_의심', []))
+        bad2 = sorted('%s %s' % (x[0], x[1]) for x in CK.get('d2_bad') or [])
+        T('H-2 D-2 설명 첫머리 O·/X· = 그 키 정오 — 어긋남 = 첫머리 의심 목록 그대로', bad2 == sus2, {'어긋남': len(bad2), '목록 밖': sorted(set(bad2) - set(sus2))[:10]})
+        T('H-2 D-3 조합형 다섯 서로 다름 · 빈 선택지 = 원본 넷·그림 선택지뿐', not CK.get('d3_dup') and sorted(CK.get('d3_empty') or []) == sorted(LS.get('빈칸_원본', [])),
+          {'dup': CK.get('d3_dup'), 'empty 목록 밖': sorted(set(CK.get('d3_empty') or []) - set(LS.get('빈칸_원본', [])))[:10]})
     # ── 앱 ──
     new_app = io.open(SRC, encoding='utf-8', newline='').read()
-    head_app = subprocess.run(['git', '-C', GENIE, 'show', 'HEAD:jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
+    head_app = subprocess.run(['git', '-C', GENIE, 'show', 'HEAD:jagwa/index.html'], capture_output=True).stdout.decode('utf-8') if QC.GATE else None   # regress — HEAD 앱 git show 0(R-7 · K-4 = 기준 스냅샷)
     rnd = random.Random(20260925)
     withexp = sorted(u for u in FX if any(b.get('설명') for b in (by1[u].get('보기') or [])) and u not in FIXED)
     pool = sorted(u for u in FX if u not in FIXED)
-    uids = FIXED + rnd.sample(pool, min(20, len(pool)))
-    kset = ['G57-05'] + rnd.sample(withexp, min(20, len(withexp)))
+    uids = FIXED + (rnd.sample(pool, min(20, len(pool))) if not QC.SMOKE else [])   # smoke — 고정 다섯만
+    kset = (['G57-05'] + rnd.sample(withexp, min(20, len(withexp)))) if not QC.SMOKE else []
     with sync_playwright() as pw:
-        srv, br, pg = launch(pw, new_app, NEWQ, 'bio', 'new')
+        srv, br, pg = launch(pw, new_app, NEWQ if QC.GATE else QJ, 'bio', 'new')   # regress — 굽기 사본 대신 인도본
         A = probe_rows(pg, sorted(set(uids) | set(kset)))
+        if QC.SMOKE:   # smoke — H-3 표본(고정 다섯) · 페이지 오류 0 만 재고 끝(main 의 판정과 같은 규칙 · _rg_h3)
+            errN = pg.evaluate('(window.__err||[]).slice(0,8)'); nb = pg.evaluate('DATA.length')
+            br.close(); srv.shutdown()
+            good, bad = _rg_h3(uids, by1, A)
+            T('H-3 앱 — 표본 %d(무작위 20 + G57-05 · G44-01 · G49-01 · T001 · E021) 미리보기 · 선택지 · 〈보기〉 줄 · 〈보기〉 설명 = 새 값(손값 없는 칸)' % len(uids), not bad and nb == len(D1),
+              {'good': good, 'bad': bad[:3], 'n': nb, 'smoke': '고정 다섯만'})
+            T('H-3 페이지 오류 0', not errN, errN)
+            return sum(1 for x in RES if x[0] == 'FAIL')
         # R — G57-05 참고 칸
         pg.evaluate("u=>__h.show(u)", 'G57-05'); pg.evaluate("u=>__h.open(u)", 'G57-05')
-        pg.screenshot(path=os.path.join(SHOTS, 'K_G57-05_닫힘.png'))
+        if QC.GATE:   # regress — 사람 눈 확인용 스크린샷(게이트 아님) 안 찍음
+            pg.screenshot(path=os.path.join(SHOTS, 'K_G57-05_닫힘.png'))
         click_summary(pg); pg.wait_for_timeout(1500)
         R = pg.evaluate(r"""()=>{const c=document.getElementById('card');const rb=[...c.querySelectorAll('.ocrref')];
           const tabs=[...c.querySelectorAll('.soltabs button')].map(b=>__h.tx(b));
@@ -262,7 +260,8 @@ def main():
             lines:rb.map(x=>(x.querySelector('.rft')||{innerHTML:''}).innerHTML.split('<br>').length),
             last:rb.map(x=>{const h=(x.querySelector('.rft')||{innerHTML:''}).innerHTML.split('<br>');return h[h.length-1]}),
             img:img?[img.complete,img.naturalWidth]:null,tabs,syn}}""")
-        pg.screenshot(path=os.path.join(SHOTS, 'K_G57-05_펼침.png'))
+        if QC.GATE:
+            pg.screenshot(path=os.path.join(SHOTS, 'K_G57-05_펼침.png'))
         bt = pg.evaluate(r"""()=>{const b=[...document.querySelectorAll('#card .soltabs button')].find(x=>/크리티컬/.test(x.textContent));
           if(!b)return null;b.scrollIntoView({block:'center'});const r=b.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]}""")
         if bt:
@@ -301,42 +300,49 @@ def main():
         # 헛잣대 · DOM = HEAD(참고 없는 문항)
         # ★ A-6(d) 9/30 — R-0·K-1 헛잣대의 「고치기 전 앱」 = 인도 때 HEAD f583f11(72a65b3 바로 앞) — HEAD 가 72a65b3 을 담은 뒤로 거저 FAIL(결정로그 9/27 09:08 · 9/28 08:27)
         #   R-7·K-4(참고 없는 문항·지학·물리 DOM = HEAD)는 그대로 HEAD 로 잰다
-        base_app = subprocess.run(['git', '-C', GENIE, 'show', 'f583f11:jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
-        srv, br, pg = launch(pw, base_app, NEWQ, 'bio', 'base')
-        B = probe_rows(pg, ['G57-05'] + [u for u in kset if u != 'G57-05'][:5])
-        pg.evaluate("u=>__h.show(u)", 'G57-05'); pg.evaluate("u=>__h.open(u)", 'G57-05'); click_summary(pg); pg.wait_for_timeout(800)
-        RH = pg.evaluate("()=>document.querySelectorAll('#card .ocrref').length")
-        br.close(); srv.shutdown()
-        srv, br, pg = launch(pw, head_app, NEWQ, 'bio', 'head')
-        noref = [u for u in pool if '참고' not in by1[u]][:3]
-        domH = {}
-        for u in noref:
-            pg.evaluate("u=>__h.show(u)", u); pg.evaluate("u=>__h.open(u)", u)
-            domH[u] = pg.evaluate("()=>document.getElementById('card').innerHTML.replace(/blob:[^\"']+/g,'blob:')")
-            pg.evaluate("()=>{try{closeView()}catch(e){}}")
-        br.close(); srv.shutdown()
-        srv, br, pg = launch(pw, new_app, NEWQ, 'bio', 'new2')
+        if QC.GATE:   # 관문만 — f583f11(고치기 전 앱 · R-0 · K-1 헛잣대) · HEAD 앱(R-7 바탕) 띄움 — regress 0
+            base_app = subprocess.run(['git', '-C', GENIE, 'show', 'f583f11:jagwa/index.html'], capture_output=True).stdout.decode('utf-8')
+            srv, br, pg = launch(pw, base_app, NEWQ, 'bio', 'base')
+            B = probe_rows(pg, ['G57-05'] + [u for u in kset if u != 'G57-05'][:5])
+            pg.evaluate("u=>__h.show(u)", 'G57-05'); pg.evaluate("u=>__h.open(u)", 'G57-05'); click_summary(pg); pg.wait_for_timeout(800)
+            RH = pg.evaluate("()=>document.querySelectorAll('#card .ocrref').length")
+            br.close(); srv.shutdown()
+            srv, br, pg = launch(pw, head_app, NEWQ, 'bio', 'head')
+            noref = [u for u in pool if '참고' not in by1[u]][:3]
+            domH = {}
+            for u in noref:
+                pg.evaluate("u=>__h.show(u)", u); pg.evaluate("u=>__h.open(u)", u)
+                domH[u] = pg.evaluate("()=>document.getElementById('card').innerHTML.replace(/blob:[^\"']+/g,'blob:')")
+                pg.evaluate("()=>{try{closeView()}catch(e){}}")
+            br.close(); srv.shutdown()
+        else:
+            noref = [u for u in pool if '참고' not in by1[u]][:3]
+        srv, br, pg = launch(pw, new_app, NEWQ if QC.GATE else QJ, 'bio', 'new2')
         domN = {}
         for u in noref:
             pg.evaluate("u=>__h.show(u)", u); pg.evaluate("u=>__h.open(u)", u)
             domN[u] = pg.evaluate("()=>document.getElementById('card').innerHTML.replace(/blob:[^\"']+/g,'blob:')")
             pg.evaluate("()=>{try{closeView()}catch(e){}}")
         br.close(); srv.shutdown()
+        if QC.REGRESS:   # regress — R-7 바탕(HEAD 앱) 자리 = 기준 스냅샷(앞 인도판 새 판 문항 창 innerHTML md5)
+            domN = {u: _rg_md5(v) for u, v in domN.items()}
+            domH = {u: QC.base('R-7.' + u, v) for u, v in domN.items()}
         # 옛 데이터(헛잣대 — 고친 칸이 어긋나야)
-        srv, br, pg = launch(pw, new_app, OLDQ, 'bio', 'old')
-        O = probe_rows(pg, uids)
-        br.close(); srv.shutdown()
+        if QC.GATE:   # 관문만 — H-3 헛잣대(옛 데이터로 연 앱)
+            srv, br, pg = launch(pw, new_app, OLDQ, 'bio', 'old')
+            O = probe_rows(pg, uids)
+            br.close(); srv.shutdown()
         # 지학·물리 = HEAD(문항 창 · 첫 화면 DOM 글자)
         other = {}
         for subj in ('earth', 'phys'):
             got = []
-            for app in (head_app, new_app):
+            for app in ((head_app, new_app) if QC.GATE else (new_app,)):   # regress — HEAD 앱 안 띄움(K-4 바탕 = 기준 스냅샷)
                 srv, br, pg = launch(pw, app, None, subj, subj + ('h' if app is head_app else 'n'))
                 t = pg.evaluate(r"""async()=>{const L=document.getElementById('list');const a=L?String(L.textContent||'').replace(/\d+'\d{2}"/g,'').replace(/\s+/g,' ').slice(0,4000):'';
                   let c='';try{await openView(DATA[0][F.NO]);await new Promise(x=>setTimeout(x,900));const k=document.getElementById('card')||document.getElementById('view');c=k?String(k.textContent||'').replace(/\s+/g,' ').slice(0,3000):''}catch(e){c='(err '+e+')'}
                   return a+' ||| '+c}""")
                 got.append(t); br.close(); srv.shutdown()
-            other[subj] = got
+            other[subj] = got if QC.GATE else [QC.base('K-4.' + subj, got[0]), got[0]]   # regress — [기준 스냅샷(앞 인도판 새 판 글자), 이 판]
     # ── 판정 ──
     good, bad = 0, []
     for u in uids:
@@ -364,8 +370,9 @@ def main():
       {'good': good, 'bad': bad[:3], 'n': nb})
     g57 = ((A.get('G57-05') or {}).get('opened') or {}).get('be') or {}
     T('H-3 G57-05 ㄷ 설명 = 「X · 생장에 필수적인 유전자들은 … 생장에 필수적인 것은 아니다.」 에서 끝', str(g57.get('ㄷ') or '').startswith('X · 생장에 필수적인 유전자들은') and str(g57.get('ㄷ') or '').endswith('생장에 필수적인 것은 아니다.'), g57.get('ㄷ'))
-    base_bad = sum(1 for u in uids if (O.get(u) or {}).get('closed') != (A.get(u) or {}).get('closed'))
-    T('H-3 헛잣대 — 옛 문항.json 으로는 표본 대부분이 어긋난다', base_bad >= len(uids) // 2, {'어긋남': base_bad, '표본': len(uids)})
+    if QC.GATE:   # 관문만 — 헛잣대
+        base_bad = sum(1 for u in uids if (O.get(u) or {}).get('closed') != (A.get(u) or {}).get('closed'))
+        T('H-3 헛잣대 — 옛 문항.json 으로는 표본 대부분이 어긋난다', base_bad >= len(uids) // 2, {'어긋남': base_bad, '표본': len(uids)})
     T('H-3 페이지 오류 0', not errN, errN)
     # R
     T('R-1 G57-05 펼침 — 참고 칸 1 · 보임 · 제목 「📎 참고 · pBR322(1977년 제작) 플라스미드」',
@@ -376,7 +383,8 @@ def main():
     T('R-5 크리티컬 탭으로 바꿔도 참고 칸 보임(탭 밖)', bool(bt) and R2 == [True], [bt, R2])
     T('R-6 📋 정리 창 「정답·해설 ▸」 펼침에도 참고 칸 · 그림', bool(J2) and J2.get('n') == 1 and J2.get('vis') == [True] and bool(J2.get('img')) and J2['img'][1] > 0, J2)
     T('R-7 참고 없는 문항 문항 창 DOM = HEAD(같은 새 데이터)', bool(noref) and all(domH[u] == domN[u] for u in noref), {u: domH[u] == domN[u] for u in noref})
-    T('R-0 헛잣대 — 고치기 전 앱(f583f11 · 72a65b3 바로 앞)에서 참고 칸 0', RH == 0, RH)
+    if QC.GATE:   # 관문만 — 헛잣대
+        T('R-0 헛잣대 — 고치기 전 앱(f583f11 · 72a65b3 바로 앞)에서 참고 칸 0', RH == 0, RH)
     # K
     kc = [(u, (A.get(u) or {}).get('closed') or {}) for u in kset]
     closed_vis = [(u, sum(1 for v in (c.get('bv') or {}).values() if v)) for u, c in kc]
@@ -385,14 +393,15 @@ def main():
     T('K-2 G57-05 + 무작위 설명 문항 20: 닫힘 보임 0', all(n == 0 for _, n in closed_vis), [x for x in closed_vis if x[1]][:5])
     T('K-2 펼침 보임 = 설명 수', all(a == b for _, a, b in open_ok), [x for x in open_ok if x[1] != x[2]][:5])
     T('K-2 다시 접기 0 · 다른 문항으로 넘어가도 0(문항마다 새로 열 때 닫힘)', all(n == 0 for _, n in recl), [x for x in recl if x[1]][:5])
-    bh = (B.get('G57-05') or {}).get('closed') or {}
-    T('K-1 헛잣대 — 고치기 전 앱(f583f11)에서 G57-05 닫힘인데 설명 보임 3/3(FAIL 이어야 할 옛 동작)', sum(1 for v in (bh.get('bv') or {}).values() if v) == 3, bh.get('bv'))
+    if QC.GATE:   # 관문만 — 헛잣대
+        bh = (B.get('G57-05') or {}).get('closed') or {}
+        T('K-1 헛잣대 — 고치기 전 앱(f583f11)에서 G57-05 닫힘인데 설명 보임 3/3(FAIL 이어야 할 옛 동작)', sum(1 for v in (bh.get('bv') or {}).values() if v) == 3, bh.get('bv'))
     T('K-3 새는 숨김 전수 — [hidden] 인데 화면 기준 보이는 요소 0(첫 화면 · 문항 닫힘·펼침 · 정리 창 · 교재 창)', all(not v for v in leak.values()), leak)
     T('K-4 지학·물리 첫 화면·문항 창 DOM 글자 = HEAD', all(v[0] == v[1] for v in other.values()), {k: [v[0][:80], v[1][:80]] if v[0] != v[1] else '같음' for k, v in other.items()})
     N('K-5 스크린샷(사람 눈 확인 · 게이트 아님)', [os.path.join(SHOTS, 'K_G57-05_닫힘.png'), os.path.join(SHOTS, 'K_G57-05_펼침.png')])
     lines = ['# _harness_bio_ocrfix — %s' % time.strftime('%Y-%m-%d %H:%M'),
              '옛 문항.json md5 %s · 새(사본) md5 %s · 앱 genie 작업트리 jagwa/index.html md5(LF) %s' % (
-                 hashlib.md5(raw).hexdigest(), hashlib.md5(b1).hexdigest(), hashlib.md5(open(SRC, 'rb').read().replace(b'\r\n', b'\n')).hexdigest()), '']
+                 hashlib.md5(raw).hexdigest() if QC.GATE else '(regress · 옛 데이터 안 읽음)', hashlib.md5(b1).hexdigest(), hashlib.md5(open(SRC, 'rb').read().replace(b'\r\n', b'\n')).hexdigest()), '']
     for s, n, d in RES:
         dd = d if isinstance(d, str) else json.dumps(d, ensure_ascii=False)
         lines.append('%s | %s | %s' % (s, n, dd[:900]))

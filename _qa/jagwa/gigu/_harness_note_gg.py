@@ -19,6 +19,7 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import hashlib
 import http.server
 import io
@@ -47,7 +48,7 @@ def _ensure_base():
         b = open(BASE, 'rb').read()
         if hashlib.md5(b.replace(b'\r\n', b'\n')).hexdigest() == BASE_MD5:
             return BASE
-    revs = subprocess.run(['git', '-C', GENIE, 'log', '--format=%H', '-40', '--', 'jagwa/index.html'],
+    revs = subprocess.run(['git', '-C', GENIE, 'log', '--format=%H', '-400', '--', 'jagwa/index.html'],   # ★ 10/8 jagwa_ink_sync — 40 창은 새 판 커밋으로 사본이 41 번째로 밀려 죽었다(옛 줄: '-40')
                           capture_output=True, encoding='utf-8').stdout.split()
     for rev in revs:
         b = subprocess.run(['git', '-C', GENIE, 'show', rev + ':jagwa/index.html'],
@@ -59,7 +60,8 @@ def _ensure_base():
     raise SystemExit('NG  고침 전 사본(md5 %s)을 못 찾았다' % BASE_MD5)
 
 
-_ensure_base()
+if QC.GATE:   # regress — 고침 전 사본 찾기(git log -40 · git show) 0 · 그 사본은 N-4 소스 헛잣대에만 쓴다(gate)
+    _ensure_base()
 MATJ = json.load(io.open(MAT, encoding='utf-8'))
 
 STUB = """<script>try{localStorage.setItem('subj','phys')}catch(e){}</script>
@@ -209,7 +211,7 @@ def build(src_path, tag):
     html = io.open(src_path, encoding='utf-8', newline='').read()
     html = html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js',
                         STUB + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
-    probe = PROBE.replace('__MAT__', json.dumps(MATJ, ensure_ascii=False))
+    probe = (PROBE if not QC.SMOKE else _rg_smoke_probe(PROBE)).replace('__MAT__', json.dumps(MATJ, ensure_ascii=False))   # smoke — 쪽 안 시험 글을 이 자리에서만 잘라 씀
     io.open(os.path.join(OUT, 'app_%s.html' % tag), 'w', encoding='utf-8', newline='').write(
         html.replace('</body>', probe + '</body>', 1))
 
@@ -230,6 +232,7 @@ def run(src_path, tag, secs=120):
     port = srv.server_address[1]
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     prof = os.path.join(OUT, 'prof_' + tag); shutil.rmtree(prof, ignore_errors=True)
+    QC.launch('new')   # 셈(§B-4) — 새 판 크롬 한 번(바탕은 본디 안 띄운다)
     t0 = time.time()
     p = subprocess.Popen([CHROME, '--headless=new', '--disable-gpu', '--no-first-run',
                           '--user-data-dir=' + prof, '--window-size=1500,950',
@@ -248,13 +251,14 @@ def run(src_path, tag, secs=120):
 
 def static():
     s = io.open(SRC, encoding='utf-8', newline='').read().replace('\r\n', '\n')
-    b = io.open(BASE, encoding='utf-8', newline='').read().replace('\r\n', '\n')
+    b = io.open(BASE, encoding='utf-8', newline='').read().replace('\r\n', '\n') if QC.GATE else ''   # regress — 고침 전 사본 안 읽음(헛잣대 칸은 gate 만)
     out = []
     old_timer = "setTimeout(()=>{try{ggEatNotes()}catch(e){console.warn('ggEatNotes',e)}},1200)"
     out.append(('PASS' if old_timer not in s else 'FAIL')
                + ' | N-4 소스 — 1.2초 타이머가 없다 | ' + json.dumps(s.count(old_timer)))
-    out.append(('PASS' if old_timer in b else 'FAIL')
-               + ' | N-4 헛잣대 — 고침 전 판에는 그 타이머가 있다 | ' + json.dumps(b.count(old_timer)))
+    if QC.GATE:   # 관문만 — 헛잣대(고침 전 사본 · md5 cc835f04)
+        out.append(('PASS' if old_timer in b else 'FAIL')
+                   + ' | N-4 헛잣대 — 고침 전 판에는 그 타이머가 있다 | ' + json.dumps(b.count(old_timer)))
     guard = "if(!GG_READY||!(SYNC_REF.gg&&SYNC_REF.gg.g()))return 0;"
     out.append(('PASS' if s.count(guard) >= 2 else 'FAIL')
                + ' | N-4 소스 — 되살림·흡수 둘 다 가드를 본다 | ' + json.dumps(s.count(guard)))
@@ -266,8 +270,19 @@ def static():
     return out
 
 
+# ── _task_qa_slim2(10/8) smoke 도우미 — 이름이 `_rg` 로 시작하는 것 = gate 에서 안 쓰는 갈래(PROBE 상수는 글자 그대로) ──
+def _rg_smoke_probe(t):
+    """smoke — N-1 · N-2 · N-3 블록까지(N-4 재현 앞에서 끊고 묶음 예외 catch 로 잇는다 · 못 찾으면 통째)"""
+    a = t.find("   /* ── N-4 재현(§B-3) ──")
+    c = t.find("  }catch(e){R.push('FAIL | 묶음 예외 | '")
+    if min(a, c) < 0 or a > c:
+        print('NOTE | smoke 자르기 자리 못 찾음 — 통째로 돈다')
+        return t
+    return t[:a] + t[c:]
+
+
 print('== 자과앱 add7 묶음 N — 코멘트 ==')
-lines = run(SRC, 'new') + static()
+lines = run(SRC, 'new') + (static() if QC.want('static') else [])   # smoke — 소스 글 칸(N-4 소스)은 smoke 칸이 아니다
 ng = [x for x in lines if x.startswith('FAIL')]
 print('  %d항 · PASS %d · FAIL %d' % (len(lines), len(lines) - len(ng), len(ng)))
 for x in lines:
