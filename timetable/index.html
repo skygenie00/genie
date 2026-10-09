@@ -974,7 +974,12 @@ const dayStart=()=>settings.dayStart??5;
 function logicalNow(){const d=new Date();const mins=d.getHours()*60+d.getMinutes();let ds=iso(d);let m=mins;if(mins<dayStart()*60){ds=addDays(ds,-1);m=mins+1440;}return{d:ds,m};}
 function today(){return logicalNow().d}
 function curDate(){return ui.date||today()}
-function setDate(d){ui.date=d;LS.set('tt.ui',ui);render()}
+/* 10/10 00:34(사용자 00:26 「해」 · [채팅] 00:34 tt 작은 판) — 보는 날짜를 바꾸면 「이날기록추가」 시각 칸 둘(mA·mB)의 쓰던 글을 버린다(칸 비움 + 화면 기억 _draft 지움 · 본창 · 작은 창).
+   10/9 둘째 판 화면 기억이 칸 id 로만 기억해 날짜를 안 가려, 넣다 만 시각이 옮긴 날 칸에 남았다(그대로 「저장」 = 옮긴 날에 기록).
+   날짜를 바꾸는 길은 다 setDate 하나로 온다(일간 ‹ · 오늘 · › · 날짜 칸 · 리본 이동 창 · 주간 블록 · 월간 칸·점(ttGoDate) · 할일 화면 ‹ 오늘 › · 데일리 모음 「이 날 일간으로」 · 작은 창 리본).
+   같은 날로 「바꿈」(이미 그 날에서 「오늘」 등) = 그대로 둠 · 다른 칸 기억은 안 건드림 · 기억 지움은 draftDrop 한 벌(저장 처리기와 같은 길) */
+function setDate(d){if((d||today())!==curDate())mDayDrop();ui.date=d;LS.set('tt.ui',ui);render()}
+function mDayDrop(){[document,pipWin&&!pipWin.closed?pipWin.document:null].forEach(D=>{if(!D)return;['mA','mB'].forEach(id=>{const el=D.getElementById(id);if(el)el.value=''});draftDrop(['mA','mB'],D)})}
 function setView(v){
  if(v==='week'||v==='month'){const was=ui.view;ui.view='day';LS.set('tt.ui',ui);if(was!=='day')render();ttGo(v);return} // 옛 주간/월간 = 한 페이지의 절 (feedback8 §1)
  if(v==='review'){ui.view='plan';ui.planTab='ach';LS.set('tt.ui',ui);render();return} // 월간계획 해체 (feedback9 §1-4) → 주월계획 달성 탭
