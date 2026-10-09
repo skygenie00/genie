@@ -177,7 +177,9 @@ async function G24(){
   inp.value='공통검색어'; linkSearch('Q9801','geunge');
   const rows=[...box.querySelectorAll('button')].map(b=>{ const m=(b.getAttribute('onclick')||'').match(/,'geunge','(Q\d+)'/); return m?m[1]:'?'; });
   const ord=rows.map(u=>P.quiz.findIndex(q=>q.id===u));
-  T('G24 「공통검색어」 30건에서 자름 · quizData 차례 · 자기(Q9801) 빠짐', rows.length===30&&ord.every((v,i)=>v>=0&&(i===0||ord[i-1]<v))&&rows.indexOf('Q9801')<0, J(rows.slice(0,6))+' … '+rows.length);
+  /* ★ 10/10 _task_search_all §A-1 · §A-2(사용자 10/9 23:52 「검색 결과 다 보이게」 · 클라우드 76a3a03 linkSearch 30 멈춤 걷음 · 처음 100 줄) — 「30건에서 자름」 옛 잣대 → 30 넘게 다 붙음(이 시험 데이터 61) · 차례 · 자기 빠짐은 그대로 */
+  /* 옛 줄: T('G24 「공통검색어」 30건에서 자름 · quizData 차례 · 자기(Q9801) 빠짐', rows.length===30&&ord.every((v,i)=>v>=0&&(i===0||ord[i-1]<v))&&rows.indexOf('Q9801')<0, J(rows.slice(0,6))+' … '+rows.length); */
+  T('G24 「공통검색어」 30건에서 자름 · quizData 차례 · 자기(Q9801) 빠짐', rows.length>30&&ord.every((v,i)=>v>=0&&(i===0||ord[i-1]<v))&&rows.indexOf('Q9801')<0, J(rows.slice(0,6))+' … '+rows.length);
   const oS=window.ggStore, oP=JSON.parse; let nS=0, nP=0, nF=0;
   window.ggStore=function(){ nS++; return oS.apply(this,arguments); };
   JSON.parse=function(){ nP++; return oP.apply(this,arguments); };
@@ -195,7 +197,8 @@ async function G24(){
   inp.dispatchEvent(new FocusEvent('focus'));
   const n2=nL;
   window.linkSearch=oL;
-  T('G24 타자 다섯 번 → 바로는 안 찾고 120ms 모아 한 번 · onfocus 는 즉시', n0===0&&n1===1&&n2===2&&box.querySelectorAll('button').length===30, J({바로:n0,모은뒤:n1,포커스뒤:n2,결과:box.querySelectorAll('button').length}));
+  /* 옛 줄: T('G24 타자 다섯 번 → 바로는 안 찾고 120ms 모아 한 번 · onfocus 는 즉시', n0===0&&n1===1&&n2===2&&box.querySelectorAll('button').length===30, J({바로:n0,모은뒤:n1,포커스뒤:n2,결과:box.querySelectorAll('button').length})); — ★ 10/10 _task_search_all §A-1 결과 30 → 30 넘게 */
+  T('G24 타자 다섯 번 → 바로는 안 찾고 120ms 모아 한 번 · onfocus 는 즉시', n0===0&&n1===1&&n2===2&&box.querySelectorAll('button').length>30, J({바로:n0,모은뒤:n1,포커스뒤:n2,결과:box.querySelectorAll('button').length}));
   const li=document.getElementById('link-search-Q9801'), lb=document.getElementById('link-results-Q9801');
   if(li&&lb){ li.value='Q70'; linkSearch('Q9801'); V('G24.links.Q70', lb.innerHTML); }
   const mi=document.createElement('input'); mi.id='link-search-memo-Q9801'; mi.value='메모'; const mb=document.createElement('div'); mb.id='link-results-memo-Q9801';

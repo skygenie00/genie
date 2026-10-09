@@ -30,6 +30,27 @@ r"""tt앱 — 보는 날짜를 바꾸면 「이날기록추가」 시각 칸 둘
   M1d 웹킷 = fill 뒤 change 가 안 나면(윈도 웹킷 · 첫 실행 잼) 칸을 떠남(blur) — 실기기는 날짜 고르개가 change 를 냄
   모드 = gate(NEW + BASE · 결과 N:\개인\claude\timetable\_tt_mdate\result.txt) · regress(NEW 만 · %TEMP%\h_tt_mdate) · smoke(NEW · PC · M1a · M2 · M3 · M4 · M5 · TX)
   ⚠ 고정 대기 없음 — 앱 표지(curDate() · ui.view · _inUi · syncing · 재그림 표지 · 기록 수 · 알림 글)를 기다린다(QC.until)
+
+  ── 덧판(2026-10-10 02:03 · 02:58 [채팅] · 워크트리 tt_mdate2) — 할일 세 칸 아홉 · 하루 경계 ──
+  근거 = 결정로그 10/10 02:03 [채팅] 「01:58 물음 답 = 같이 비움 · 진행」(사용자 00:26 「해」 · 규칙 ㊢ · 사용자 20:25 「알아서」) · 02:58 [채팅] 「tt 덧판 = cdbce32 위에 02:03 줄 그대로」
+  고친 자리 = timetable/index.html mDayDrop 칸 열하나(M_DAY_IDS = mA · mB + addS_0~2 · addT_0~2 · due_0~2) + dayRoll(지난 today() 기억 · render · syncAll 첫머리 —
+         visibilitychange 는 syncAll 로 옴 · ui.date 빈 화면에서 today() 가 바뀌면 mDayDrop 한 번)
+  BASE 기본값 = cdbce32(724c4ac 판 · mA·mB 비움 · md5 a524629f · 530,320 B) — 위 「BASE = … 7299ec3」 줄은 옛 줄(--base 7299ec3 로 그대로 돌릴 수 있음)
+  헛잣대 세대 — 칸마다 since(그 칸이 PASS 가 되는 판: 1 = 724c4ac mA·mB 비움 · 2 = 이 덧판) · 바탕 세대(바탕 md5 로: 7299ec3 = 0 · cdbce32 = 1 · 모르면 --base-gen 또는 1)
+         since 가 바탕 세대보다 큰 칸만 헛잣대(바탕 FAIL 이어야) · 아니면 「바탕도 같음」 — cdbce32 바탕이면 옛 M1 · M2 · M3b 는 바탕도 같음 · 새 M7 · M9b~e 가 헛잣대
+   M7a~i 할일 세 칸 아홉(a~c addS_0~2 「+ 학습 추가」 · d~f addT_0~2 「+ 할일 추가」 · g~i due_0~2 기한) 칸마다 글/날짜 넣고 Enter 안 누름 →
+         › = 빔 · 다시 ‹(그 날) = 빔 · 화면 기억 없음(PC = 일간 화면 오른쪽 세 칸 · 폰 = 아래 「할일」 화면 ‹ ›)                        [헛잣대 · 세대 2]
+         ⚠ PC 덧판 칸(M7~M11)은 창 1600×900 — 1100 폭 일간은 세 칸이 132px 라 「+ 할일 추가」(addT) 폭 0(기한 칸 110px 가 다 먹음 · 10/10 03:5x 잰 값 · 눌러지지 않음)
+   M8a~b 아홉 칸 쓰던 글 → 날짜 안 바꾸고 a 화면 오감 · b 원격 변경 syncAll = 그대로(둘째 판 동작 무변 · 오늘 따라가는 화면)             [바탕도 같음]
+   M9a   하루 경계 — 오늘 따라가는 화면(ui.date 빈 칸)에 열하나(PC = 일간에 다 · 폰 = 일간 mA·mB 는 화면 기억 + 「할일」 화면 아홉) 쓰던 글 →
+         가짜 시계 달력 자정 넘김(10-10 00:01 · 하루 시작 dayStart 5 시 전이라 today() 무변) → render = 그대로                            [바탕도 같음]
+   M9b~d 이어서 하루 시작 넘김(10-10 05:01 · today() 바뀜 · 시계 옮김과 일으킴은 한 evaluate 안) → b render(사용자 조작 밖) · c visibilitychange ·
+         d syncAll = 열하나 빔 · 화면 기억 없음(c · d 는 동기화 끝난 뒤도 · 폰은 그 뒤 일간으로 가 mA · mB 빔까지)                       [헛잣대 · 세대 2]
+   M9e   (PC) 작은 창(PiP) 칸 + 본창 칸 → 하루 시작 넘김 → render = 둘 다 빔                                                         [헛잣대 · 세대 2]
+   M9i   (참고) 하루 시작 넘김 → visibilitychange · 원격 변경 없음 = 본창을 다시 안 그림(가운데 「오늘」 칸 머리 날짜 = 옛 날) — 앱 기존 동작 · 값만 [INFO]
+   M10   날짜 박힌 화면(ui.date = 10-09) 하루 시작 넘김 → render · syncAll = 열하나 그대로(보는 날짜가 안 바뀜 — 판단)                 [바탕도 같음]
+   M11a~b 다른 칸 기억 그대로 — share 글(shT) · 공통 할일(cmT) · 지은 기억(계획 목록 lsNT · 메모 snMemo) → a 하루 시작 넘김(render) · b 날짜 바꿈(›) [바탕도 같음]
+   M6i 는 그대로 INFO(덧판에서는 빔 — 관문은 M9) · smoke 에 M7 · M9 더함 · 시계 옮긴 칸은 끝에 옮긴 만큼 되돌리고 render(finally)
 """
 import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
 _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
@@ -50,8 +71,12 @@ def ARG(k, d=None):
 
 
 NEWF = ARG('--new', _roots.genie('timetable', 'index.html'))
-BASE = ARG('--base', '7299ec3')
-BASE_MD5 = '4c802bce41beeecb5b0111c2321f0e3f'   # 7299ec3 = 0770d21 timetable/index.html 529,186 B(10/9 23:18 push · tt 둘째 판)
+# 옛 줄: BASE = ARG('--base', '7299ec3')
+# 옛 줄: BASE_MD5 = '4c802bce41beeecb5b0111c2321f0e3f'   # 7299ec3 = 0770d21 timetable/index.html 529,186 B(10/9 23:18 push · tt 둘째 판)
+BASE = ARG('--base', 'cdbce32')   # 덧판(10/10 tt_mdate2) — 헛잣대 = 724c4ac 판(mA·mB 비움 · 7ff353d 합치기 · cdbce32 _qa 커밋 = 같은 앱 바이트)
+BASE_MD5 = 'a524629f798eb91371bc2ce5356f7ebd'   # cdbce32 = 7ff353d = 724c4ac timetable/index.html 530,320 B(10/10 01:5x push · tt 작은 판)
+GEN_MD5 = {'4c802bce41beeecb5b0111c2321f0e3f': 0, 'a524629f798eb91371bc2ce5356f7ebd': 1}   # 바탕 세대 — 0 = 7299ec3(둘째 판) · 1 = cdbce32(mA·mB 비움)
+BASE_GEN = None   # gate 에서 바탕을 꺼낸 뒤 정함(md5 → GEN_MD5 · 모르면 --base-gen 또는 1) · regress · smoke 는 None(바탕 안 띄움)
 ONLY = [x.strip() for x in (ARG('--only', '') or '').split(',') if x.strip()]
 ENGINES = [x.strip() for x in (ARG('--engines', 'chromium,webkit') or '').split(',') if x.strip()]
 DEVS = [x.strip() for x in (ARG('--devs', '') or '').split(',') if x.strip()]
@@ -74,10 +99,15 @@ DEV = {
     'webkit-phone': ('webkit', dict(viewport={'width': 390, 'height': 844}, has_touch=True, is_mobile=True, device_scale_factor=2)),
 }
 PLAN = {   # 기기마다 돌릴 관문(차례대로)
-    'chromium-pc': ['M1a', 'M1b', 'M1c', 'M1d', 'M1e', 'M1f', 'M1g', 'M1h', 'M1j', 'M1k', 'M1l', 'M2', 'M3', 'M3b', 'M4', 'M5', 'M6i', 'TX'],
-    'webkit-phone': ['M1a', 'M1b', 'M1c', 'M1d', 'M1e', 'M1f', 'M1g', 'M1h', 'M1i', 'M1j', 'M2', 'M3', 'M3b', 'M4', 'M5', 'TX'],
+    # 옛 줄:     'chromium-pc': ['M1a', 'M1b', 'M1c', 'M1d', 'M1e', 'M1f', 'M1g', 'M1h', 'M1j', 'M1k', 'M1l', 'M2', 'M3', 'M3b', 'M4', 'M5', 'M6i', 'TX'],
+    # 옛 줄:     'webkit-phone': ['M1a', 'M1b', 'M1c', 'M1d', 'M1e', 'M1f', 'M1g', 'M1h', 'M1i', 'M1j', 'M2', 'M3', 'M3b', 'M4', 'M5', 'TX'],
+    'chromium-pc': ['M1a', 'M1b', 'M1c', 'M1d', 'M1e', 'M1f', 'M1g', 'M1h', 'M1j', 'M1k', 'M1l', 'M2', 'M3', 'M3b', 'M4', 'M5', 'M6i',
+                    'M7', 'M8', 'M9', 'M10', 'M11', 'TX'],   # 덧판 — M7~M11 은 TX 앞
+    'webkit-phone': ['M1a', 'M1b', 'M1c', 'M1d', 'M1e', 'M1f', 'M1g', 'M1h', 'M1i', 'M1j', 'M2', 'M3', 'M3b', 'M4', 'M5',
+                     'M7', 'M8', 'M9', 'M10', 'M11', 'TX'],
 }
-SMOKE_PLAN = {'chromium-pc': ['M1a', 'M2', 'M3', 'M4', 'M5', 'TX']}
+# 옛 줄: SMOKE_PLAN = {'chromium-pc': ['M1a', 'M2', 'M3', 'M4', 'M5', 'TX']}
+SMOKE_PLAN = {'chromium-pc': ['M1a', 'M2', 'M3', 'M4', 'M5', 'M7', 'M9', 'TX']}
 
 # ════════════════════ 시드 ════════════════════
 SHARE0 = {'v': 1, 'items': [
@@ -163,17 +193,28 @@ def J(v, n=1200):
     return json.dumps(v, ensure_ascii=False, default=str)[:n]
 
 
-def rec(S, cid, ok, title, val, hut=False, info=False, void=False):
+# 옛 줄: def rec(S, cid, ok, title, val, hut=False, info=False, void=False):
+def rec(S, cid, ok, title, val, hut=False, info=False, void=False, since=1):
     """hut = True(바탕에서 FAIL 이어야 · 헛잣대) · False(바탕도 PASS · 되돌림 막이) · None(바탕은 참고만)
-       void = True(재려던 길이 안 됨 — 날짜가 안 바뀜 등 · 바탕 FAIL 이어도 「가름」 으로 안 셈)"""
+       void = True(재려던 길이 안 됨 — 날짜가 안 바뀜 등 · 바탕 FAIL 이어도 「가름」 으로 안 셈)
+       since = 그 칸이 PASS 가 되는 판 세대(덧판 10/10 — 1 = 724c4ac mA·mB 비움 · 2 = 덧판 아홉 · 하루 경계) · 바탕 세대 이하면 헛잣대 아님(eff_hut)"""
     st = 'INFO' if info else ('PASS' if ok else 'FAIL')
     if S.base:
         line = '%s | BASE %s · %s %s | %s' % (st, S.dev, cid, title, J(val))
     else:
         line = '%s | %s %s · %s | %s' % (st, cid, S.dev, title, J(val))
-    ROWS.append(dict(cid=cid, dev=S.dev, side='base' if S.base else 'new', st=st, title=title, hut=hut, info=info, void=bool(void)))
+    # 옛 줄: ROWS.append(dict(cid=cid, dev=S.dev, side='base' if S.base else 'new', st=st, title=title, hut=hut, info=info, void=bool(void)))
+    ROWS.append(dict(cid=cid, dev=S.dev, side='base' if S.base else 'new', st=st, title=title, hut=hut, info=info, void=bool(void), since=since))
     out(line)
     return ok
+
+
+def eff_hut(r):
+    """덧판 — 헛잣대 세대: hut True 칸도 since 가 바탕 세대(BASE_GEN) 이하면 False(바탕도 같음이어야) · BASE_GEN 없으면(regress · smoke) 그대로"""
+    h = r.get('hut')
+    if h is True and BASE_GEN is not None and r.get('since', 1) <= BASE_GEN:
+        return False
+    return h
 
 
 # ════════════════════ 가짜 GitHub · 문맥 ════════════════════
@@ -704,8 +745,348 @@ def m6i(S):
     st = mstate(S)
     S.page.evaluate("() => __hkShift(-24 * 3600 * 1000)")
     S.page.evaluate("() => { render(); return 1 }")
-    rec(S, 'M6i', None, '참고 — 날짜 칸이 빈(ui.date null · 설치 뒤 날짜를 한 번도 안 옮긴 기기) 채 하루 경계를 넘김 = setDate 를 안 지나 mA · mB 남음(이 판 범위 밖)',
+    # 옛 줄: rec(S, 'M6i', None, '참고 — 날짜 칸이 빈(ui.date null · 설치 뒤 날짜를 한 번도 안 옮긴 기기) 채 하루 경계를 넘김 = setDate 를 안 지나 mA · mB 남음(이 판 범위 밖)',
+    rec(S, 'M6i', None, '참고 — 날짜 칸이 빈(ui.date null · 설치 뒤 날짜를 한 번도 안 옮긴 기기) 채 하루 경계를 넘김(+24 시간 → render) = 724c4ac 판은 setDate 를 안 지나 mA · mB 남음 · 덧판은 빔(관문 = M9)',
         dict(before=before, date_before=d0, clock=clk, after=st), info=True)
+
+
+# ════════════════════ 덧판(10/10 02:03 · 02:58 [채팅] · tt_mdate2) — 할일 세 칸 아홉 · 하루 경계 ════════════════════
+NINE = ['addS_0', 'addS_1', 'addS_2', 'addT_0', 'addT_1', 'addT_2', 'due_0', 'due_1', 'due_2']
+ELEVEN = ['mA', 'mB'] + NINE
+NINE_VAL = {'addS_0': '어제 학습 쓰던 글', 'addS_1': '오늘 학습 쓰던 글', 'addS_2': '내일 학습 쓰던 글',
+            'addT_0': '어제 할일 쓰던 글', 'addT_1': '오늘 할일 쓰던 글', 'addT_2': '내일 할일 쓰던 글',
+            'due_0': '2026-10-20', 'due_1': '2026-10-21', 'due_2': '2026-10-22'}
+EXP11 = dict(NINE_VAL, mA=TYPED[0], mB=TYPED[1])
+COLN = {'0': '어제', '1': '오늘', '2': '내일'}
+KIND = {'addS': '「+ 학습 추가」', 'addT': '「+ 할일 추가」', 'due': '기한'}
+TODONAV = '#main .ttl .nav button'   # 할일 화면 ‹ 오늘 ›(navBtns)
+D1 = '2026-10-10'
+PC_WIDE = {'width': 1600, 'height': 900}   # 덧판 PC 칸 창(1100 폭 일간 addT 폭 0 — 위 머리글)
+OTHERS_SEED = {'lsNT': '계획 목록 쓰던 글(지은 기억)', 'snMemo': '메모 쓰던 글(지은 기억)'}
+# 칸 상태 — 본창 값(없으면 null) · 작은 창 mA·mB · 화면 기억 열쇠(본창 · 'pip:') · 가운데 「오늘」 칸 머리 날짜 · 가짜 시계
+FST_JS = r"""(ids) => { const g = (D, id) => { const e = D && D.getElementById(id); return e ? e.value : null };
+ let pd = null; try { pd = (pipWin && !pipWin.closed) ? pipWin.document : null } catch (e) {}
+ const v = {}; ids.forEach(id => { v[id] = g(document, id) });
+ const c = document.querySelector('#main .three .col.today');
+ return {date: curDate(), today: today(), uiDate: ui.date || null, view: ui.view, val: v, pA: pd ? g(pd, 'mA') : null, pB: pd ? g(pd, 'mB') : null,
+   draft: ids.concat(ids.map(i => 'pip:' + i)).filter(k => _draft.has(k)).map(k => k + '=' + (_draft.get(k) || {}).v),
+   col: c ? c.getAttribute('data-caldate') : null, clock: new Date().toISOString()} }"""
+# 가짜 시계를 t 로 옮기고 같은 evaluate 안에서 바로 trig(render · vis = visibilitychange · sync = syncAll(true) · none) → 칸 상태 — 사이에 타이머 · 동기화가 못 낌
+ROLL_JS = (r"""([t, trig, ids]) => { const d = new Date(t).getTime() - Date.now(); __hkShift(d);
+ if (trig === 'render') render(); else if (trig === 'vis') document.dispatchEvent(new Event('visibilitychange')); else if (trig === 'sync') syncAll(true);
+ const st = (""" + FST_JS + r""")(ids); st.shift = d; st.trig = trig; return st }""")
+
+
+def fst(S, ids):
+    return S.page.evaluate(FST_JS, ids)
+
+
+def roll(S, t, trig, ids):
+    return S.page.evaluate(ROLL_JS, [t, trig, ids])
+
+
+def clock_mark(S):
+    """시계 옮기기 전 표 — (가짜 시계 ms, 실제 초) · 되돌릴 때 그 사이 흐른 실제 시간만큼 더한 자리로(옮기다 예외가 나도 원래 흐름으로)"""
+    return (S.page.evaluate("() => Date.now()"), time.time())
+
+
+def unroll(S, mark):
+    """가짜 시계 되돌림(표 뒤 흐른 만큼만 더한 원래 흐름) → render(사용자 조작 밖 · 덧판은 여기서 지난 today() 를 다시 맞춤 = mA·mB·아홉 한 번 더 비움) · finally 에서 부름(예외 삼킴)"""
+    try:
+        quiet(S)
+        want = mark[0] + int((time.time() - mark[1]) * 1000)
+        return S.page.evaluate("(w) => { __hkShift(w - Date.now()); render(); return [today(), curDate(), new Date().toISOString()] }", want)
+    except Exception as e:
+        return 'unroll 예외: %s' % str(e)[:120]
+
+
+def t_start(S):
+    """하루 시작(dayStart) 넘긴 시각 · 달력 자정 넘긴 시각(today() 무변)"""
+    ds = S.page.evaluate("() => dayStart()")
+    return ds, D1 + 'T%02d:01:00+09:00' % ds, D1 + 'T00:01:00+09:00'
+
+
+def wide(S):
+    """덧판 PC 칸 — 창을 1600×900 으로(1100 폭 일간은 addT 폭 0 · 폰은 그대로) · 돌려줌 = 창 폭"""
+    if not S.touch and S.page.viewport_size != PC_WIDE:
+        S.page.set_viewport_size(PC_WIDE)
+        QC.until(S.page, "(w) => innerWidth === w", 3000, '창 ' + str(PC_WIDE['width']), arg=PC_WIDE['width'])
+    return S.page.evaluate("() => innerWidth")
+
+
+def lbl(fid):
+    k, n = fid.split('_')
+    return '%s 칸 %s' % (COLN[n], KIND[k])
+
+
+def put9(S, ids):
+    """아홉 칸 중 ids 에 넣음(Enter 안 누름) — 글 칸 = 눌러 포커스 → insert_text(keydown 없음 = 안 더해짐) ·
+       기한(날짜) 칸 = 누르지 않고 fill(크롬 날짜 고르개 잼 · 윈도 웹킷은 type=text)"""
+    hows = []
+    for i in ids:
+        if i.startswith('due_'):
+            l = loc(S, '#' + i)
+            l.scroll_into_view_if_needed(timeout=8000)
+            l.fill(NINE_VAL[i])
+            hows.append(i + ':fill')
+        else:
+            hows.append(i + ':' + put(S, '#' + i, NINE_VAL[i]))
+    return hows
+
+
+def kept(st, ids):
+    """남았나 — 화면에 있는 칸은 값 · 화면에 없는 칸(폰 할일 화면의 mA · mB)은 화면 기억 값 · 돌려줌 = 어긋난 칸"""
+    dr = dict(x.split('=', 1) for x in st['draft'] if not x.startswith('pip:'))
+    return [i for i in ids if (dr.get(i) if st['val'].get(i) is None else st['val'].get(i)) != EXP11[i]]
+
+
+def emptied(st, ids):
+    """비었나 — 화면에 있는 칸 값 '' · 화면 기억(본창 · 작은 창)에 하나도 없음 · 돌려줌 = 어긋난 것"""
+    return [i for i in ids if st['val'].get(i) not in ('', None)] + ['기억:' + x for x in st['draft']]
+
+
+# ── M7 — 아홉 칸 각각: 넣고 › = 빔 · ‹ = 빔 ──
+def m7(S):
+    wide(S)
+    for k, fid in zip('abcdefghi', NINE):
+        try:
+            m7_one(S, 'M7' + k, fid)
+        except Exception as e:
+            ex(S, 'M7' + k, e)
+
+
+def m7_one(S, cid, fid):
+    view, nv = ('todo', TODONAV) if S.touch else ('day', DAYNAV)
+    goto(S, view, {'date': D0, 'wkDate': None, 'moMonth': None}, wait_sel='#' + fid)
+    QC.until(S.page, "(d) => curDate() === d", 5000, '날짜 ' + D0, arg=D0)
+    how = put9(S, [fid])
+    v0 = val(S, '#' + fid)
+    W = "([d, f]) => curDate() === d && _inUi === false && !!document.getElementById(f)"
+    h1 = press(S, (nv, '›'))
+    ok1 = QC.until(S.page, W, 8000, '› 뒤 ' + fid, arg=[D1, fid])
+    s1 = fst(S, [fid])
+    h2 = press(S, (nv, '‹'))
+    ok2 = QC.until(S.page, W, 8000, '‹ 뒤 ' + fid, arg=[D0, fid])
+    s2 = fst(S, [fid])
+    b = ['›:' + x for x in emptied(s1, [fid])] + ['‹:' + x for x in emptied(s2, [fid])]
+    ok = v0 == NINE_VAL[fid] and ok1 and ok2 and not b
+    rec(S, cid, ok, '%s(%s)에 %s 넣고 Enter 안 누름 → %s › = 빔 · 다시 ‹(그 날) = 빔 · 화면 기억 없음'
+        % (fid, lbl(fid), '날짜' if fid.startswith('due_') else '글', '할일 화면' if S.touch else '일간'),
+        dict(bad=b, view=view, put=how, before=v0, next=[h1, ok1, s1], back=[h2, ok2, s2]), hut=True, void=not (ok1 and ok2), since=2)
+
+
+# ── M8 — 날짜 안 바꾸면 아홉 칸 그대로 ──
+def m8(S):
+    wide(S)
+    view = 'todo' if S.touch else 'day'
+    goto(S, view, {'date': None, 'wkDate': None, 'moMonth': None}, wait_sel='#addS_1')
+    QC.until(S.page, "(d) => curDate() === d && !ui.date", 5000, '오늘 따라감', arg=D0)
+    how = put9(S, NINE)
+    v0 = fst(S, NINE)
+    pre = v0['val'] == NINE_VAL
+    try:
+        h1, ok1 = nav(S, 'share')
+        h2, ok2 = nav(S, view)
+        QC.until(S.page, "() => !!document.getElementById('addS_1')", 5000, '아홉 칸 다시')
+        sa = fst(S, NINE)
+        b = kept(sa, NINE)
+        rec(S, 'M8a', pre and ok1 and ok2 and not b and sa['date'] == D0, '아홉 칸 쓰던 글 → 날짜 안 바꾸고 Share 화면 → 다시 %s = 그대로' % LBL[view],
+            dict(bad=b, put=how, before=v0['val'], nav=[h1, ok1, h2, ok2], after=sa))
+    except Exception as e:
+        ex(S, 'M8a', e)
+    try:
+        st = sync(S, share=False)
+        sb = fst(S, NINE)
+        b = kept(sb, NINE)
+        rec(S, 'M8b', pre and sync_ok(st) and not b and sb['date'] == D0, '아홉 칸 쓰던 글 → 날짜 안 바꾸고 원격 변경 syncAll(재그림) = 그대로',
+            dict(bad=b, sync=st, after=sb))
+    except Exception as e:
+        ex(S, 'M8b', e)
+
+
+# ── M9 — 하루 경계(오늘 따라가는 화면) ──
+def m9_fill(S, date=None):
+    """열하나 넣기 — PC = 일간(열하나 다 화면) · 폰 = 일간 mA·mB → 아래 「할일」 화면(아홉 · mA·mB 는 화면 기억) · date None = 오늘 따라감"""
+    goto(S, 'day', {'date': date, 'wkDate': None, 'moMonth': None}, wait_sel='#mA')
+    QC.until(S.page, "([d, u]) => curDate() === d && (ui.date || null) === u", 5000, '날짜 ' + str(date), arg=[date or D0, date])
+    pm, before = put_m(S)
+    hops = None
+    if S.touch:
+        hops = nav(S, 'todo')
+        QC.until(S.page, "() => !!document.getElementById('addS_1')", 5000, '할일 화면 칸')
+    how = put9(S, NINE)
+    quiet(S)
+    st0 = fst(S, ELEVEN)
+    pre = before == TYPED and not kept(st0, ELEVEN) and st0['date'] == (date or D0) and st0['uiDate'] == date
+    return pre, dict(put_m=pm, before=before, nav=hops, put9=how, pre=st0)
+
+
+def phone_day(S):
+    """폰 — 할일 화면에서 일간으로 가 mA · mB(화면 기억이 다시 그려지나) · PC = None"""
+    if not S.touch:
+        return None
+    h, ok = nav(S, 'day')
+    QC.until(S.page, "() => !!document.getElementById('mA')", 5000, 'mA 다시')
+    return dict(nav=[h, ok], st=fst(S, ['mA', 'mB']))
+
+
+def m9(S):
+    wide(S)
+    ds, t_roll, t_mid = t_start(S)
+    where = '할일 화면 아홉 + 일간 mA·mB(화면 기억)' if S.touch else '일간 열하나'
+    # a · b — 달력 자정(today() 무변) → render = 그대로 · 이어서 하루 시작 → render = 빔
+    mk = None
+    try:
+        pre, info = m9_fill(S)
+        mk = clock_mark(S)
+        sa = roll(S, t_mid, 'render', ELEVEN)
+        ba = kept(sa, ELEVEN)
+        rec(S, 'M9a', pre and sa['today'] == D0 and sa['date'] == D0 and not ba,
+            '오늘 따라가는 화면(%s) 쓰던 글 → 달력 자정 넘김(10-10 00:01 · 하루 시작 %d 시 전이라 today() 무변) → render = 그대로' % (where, ds),
+            dict(bad=ba, after=sa, fill=info))
+        sb = roll(S, t_roll, 'render', ELEVEN)
+        bb = emptied(sb, ELEVEN)
+        pdy = phone_day(S)
+        if pdy:
+            bb += ['일간 ' + x for x in emptied(pdy['st'], ['mA', 'mB'])]
+        okd = sb['today'] == D1 and sb['date'] == D1
+        rec(S, 'M9b', pre and okd and not bb, '이어서 하루 시작 넘김(10-10 %02d:01 · today() 바뀜) → render(사용자 조작 밖) = 열하나 빔 · 화면 기억 없음' % ds,
+            dict(bad=bb, after=sb, phone_day=pdy), hut=True, void=not (pre and okd), since=2)
+    except Exception as e:
+        ex(S, 'M9b', e)
+    finally:
+        if mk:
+            unroll(S, mk)
+    # c · d — visibilitychange · syncAll(시계 옮김과 같은 evaluate 안 · 동기화 끝난 뒤도 잼)
+    for cid, trig, nm in (('M9c', 'vis', 'visibilitychange(앱을 다시 봄 → syncAll)'), ('M9d', 'sync', 'syncAll(true)')):
+        mk = None
+        try:
+            pre, info = m9_fill(S)
+            mk = clock_mark(S)
+            s = roll(S, t_roll, trig, ELEVEN)
+            b = emptied(s, ELEVEN)
+            quiet(S)
+            s2 = fst(S, ELEVEN)
+            b2 = emptied(s2, ELEVEN)
+            if cid == 'M9c':
+                rec(S, 'M9i', None, '참고 — 하루 시작 넘김 → visibilitychange · 원격 변경 없음 = 본창을 다시 안 그림(가운데 「오늘」 칸 머리 날짜 = 옛 날 · 앱 기존 동작 · 이 판 범위 밖)',
+                    dict(date=s['date'], col_now=s['col'], col_after_sync=s2['col'], view=s['view']), info=True)
+            pdy = phone_day(S)
+            if pdy:
+                b2 += ['일간 ' + x for x in emptied(pdy['st'], ['mA', 'mB'])]
+            okd = s['today'] == D1 and s['date'] == D1
+            rec(S, cid, pre and okd and not b and not b2,
+                '오늘 따라가는 화면(%s) 쓰던 글 → 하루 시작 넘김(10-10 %02d:01) → %s = 열하나 빔 · 화면 기억 없음(동기화 끝난 뒤도)' % (where, ds, nm),
+                dict(bad=b, bad_after_sync=b2, after=s, after_sync=s2, phone_day=pdy, fill=info), hut=True, void=not (pre and okd), since=2)
+        except Exception as e:
+            ex(S, cid, e)
+        finally:
+            if mk:
+                unroll(S, mk)
+    if not S.touch:
+        m9e(S, t_roll)
+
+
+def m9e(S, t_roll):
+    mk = None
+    try:
+        goto(S, 'day', {'date': None, 'wkDate': None, 'moMonth': None}, wait_sel='#mA')
+        QC.until(S.page, "(d) => curDate() === d && !ui.date", 5000, '오늘 따라감', arg=D0)
+        pm, before = put_m(S)
+        opened = pip_open(S)
+        pv0 = pip_fill(S, '08:00', '08:40')
+        quiet(S)
+        mk = clock_mark(S)
+        s = roll(S, t_roll, 'render', ['mA', 'mB'])
+        b = emptied(s, ['mA', 'mB']) + [k + '=' + str(s[k]) for k in ('pA', 'pB') if s[k] != '']
+        okd = s['today'] == D1 and s['date'] == D1
+        ok = opened and before == TYPED and pv0 == ['08:00', '08:40'] and okd and not b
+        rec(S, 'M9e', ok, '(PC) 작은 창(PiP) 칸 + 본창 칸에 시각 → 하루 시작 넘김 → render = 둘 다 빔 · 화면 기억(mA · pip:mA …) 없음',
+            dict(bad=b, opened=opened, before=before, pip_before=pv0, after=s), hut=True, void=not (opened and okd), since=2)
+    except Exception as e:
+        ex(S, 'M9e', e)
+    finally:
+        if mk:
+            unroll(S, mk)
+        S.page.evaluate(PIP_CLOSE_JS)
+
+
+# ── M10 — 날짜 박힌 화면은 하루가 넘어가도 그대로(판단) ──
+def m10(S):
+    wide(S)
+    ds, t_roll, _ = t_start(S)
+    mk = None
+    try:
+        pre, info = m9_fill(S, D0)
+        mk = clock_mark(S)
+        s1 = roll(S, t_roll, 'render', ELEVEN)
+        s2 = roll(S, t_roll, 'sync', ELEVEN)
+        quiet(S)
+        s3 = fst(S, ELEVEN)
+        b = ['render:' + x for x in kept(s1, ELEVEN)] + ['sync:' + x for x in kept(s2, ELEVEN)] + ['뒤:' + x for x in kept(s3, ELEVEN)]
+        pdy = None
+        if S.touch:
+            h, ok = nav(S, 'day')
+            QC.until(S.page, "() => !!document.getElementById('mA')", 5000, 'mA 다시')
+            pdy = dict(nav=[h, ok], st=fst(S, ['mA', 'mB']))
+            b += ['일간 ' + x for x in kept(pdy['st'], ['mA', 'mB'])]
+        okd = s1['today'] == D1 and s1['date'] == D0 and s3['date'] == D0
+        rec(S, 'M10', pre and okd and not b,
+            '날짜 박힌 화면(ui.date = 10-09 · %s) 쓰던 글 → 하루 시작 넘김(10-10 %02d:01 · today() 바뀜 · 보는 날짜 그대로) → render · syncAll = 열하나 그대로(판단)'
+            % ('할일 화면 아홉 + 일간 mA·mB' if S.touch else '일간 열하나', ds),
+            dict(bad=b, render=s1, sync=s2, after_sync=s3, phone_day=pdy, fill=info))
+    except Exception as e:
+        ex(S, 'M10', e)
+    finally:
+        if mk:
+            unroll(S, mk)
+
+
+# ── M11 — 다른 칸 기억 그대로(하루 경계 · 날짜 바꿈) ──
+def m11(S):
+    wide(S)
+    ds, t_roll, _ = t_start(S)
+    goto(S, 'share', {'shareTab': 'txt', 'date': None, 'wkDate': None, 'moMonth': None}, wait_sel='#shT')
+    T = 'M11 share 글 %s' % S.dev[:2]
+    put(S, '#shT', T)
+    h1, ok1 = nav(S, 'day')
+    QC.until(S.page, "() => !!document.getElementById('cmT') && !!document.getElementById('mA')", 5000, '일간 칸')
+    C = 'M11 공통 글 %s' % S.dev[:2]
+    put(S, '#cmT', C)
+    seed = S.page.evaluate("(o) => { Object.keys(o).forEach(k => _draft.set(k, {v: o[k], dv: ''})); return Object.keys(o).filter(k => _draft.has(k)) }", OTHERS_SEED)
+    pm, before = put_m(S)
+    quiet(S)
+    want = dict(OTHERS_SEED, shT=T, cmT=C)
+    o0 = S.page.evaluate(DRAFT_OTHERS_JS)
+    mk = None
+    try:   # a 하루 시작 넘김(오늘 따라감) → render
+        mk = clock_mark(S)
+        sa = roll(S, t_roll, 'render', ['mA', 'mB', 'cmT'])
+        oa = S.page.evaluate(DRAFT_OTHERS_JS)
+        b = [k for k, v in want.items() if oa.get(k) != v] + ([] if sa['val'].get('cmT') == C else ['cmT 칸'])
+        okd = sa['today'] == D1 and sa['date'] == D1
+        rec(S, 'M11a', ok1 and before == TYPED and okd and not b,
+            '다른 칸 기억 그대로 — share 글(shT) · 공통 할일(cmT) · 지은 기억(계획 목록 lsNT · 메모 snMemo) → 하루 시작 넘김(오늘 따라감 · render) = 값 그대로',
+            dict(bad=b, to_day=[h1, ok1], seed=seed, before=o0, after=oa, m_after=sa))
+    except Exception as e:
+        ex(S, 'M11a', e)
+    finally:
+        if mk:
+            unroll(S, mk)
+    try:   # b 날짜 바꿈(일간 ›)
+        QC.until(S.page, "(d) => curDate() === d && _inUi === false && !!document.getElementById('cmT')", 5000, '되돌림 뒤 일간', arg=D0)
+        ob0 = S.page.evaluate(DRAFT_OTHERS_JS)
+        h2 = press(S, (DAYNAV, '›'))
+        okd = at_day(S, D1)
+        ob, cmb = S.page.evaluate(DRAFT_OTHERS_JS), val(S, '#cmT')
+        h3, ok3 = nav(S, 'share')
+        QC.until(S.page, "() => !!document.getElementById('shT')", 5000, 'shT 다시')
+        shv = val(S, '#shT')
+        b = [k for k, v in want.items() if ob.get(k) != v] + ([] if cmb == C else ['cmT 칸']) + ([] if shv == T else ['shT 칸'])
+        rec(S, 'M11b', okd and ok3 and not b, '다른 칸 기억 그대로 — 같은 넷(지은 기억 포함) → 날짜 바꿈(일간 ›) = 칸 · 화면 기억 값 그대로',
+            dict(bad=b, before=ob0, next=[h2, okd], after=ob, cmT_after=cmb, to_share=[h3, ok3], shT_after=shv))
+    except Exception as e:
+        ex(S, 'M11b', e)
 
 
 def tx(S):
@@ -725,6 +1106,7 @@ RUN = {
     'M1h': lambda S: m1(S, 'M1h', '월간 칸 누름(ttGoDate 10-14)', D0, '2026-10-14', lambda S: press(S, '#sec_month .d[onclick="ttGoDate(\'2026-10-14\')"]')),
     'M1i': m1i, 'M1j': m1j, 'M1k': m1k, 'M1l': m1l,
     'M2': m2, 'M3': m3, 'M3b': m3b, 'M4': m4, 'M5': m5, 'M6i': m6i, 'TX': tx,
+    'M7': m7, 'M8': m8, 'M9': m9, 'M10': m10, 'M11': m11,   # 덧판(10/10 tt_mdate2)
 }
 
 
@@ -758,6 +1140,7 @@ def load_base():
 
 
 def main():
+    global BASE_GEN   # 덧판 — 헛잣대 세대
     t0_ = time.time()
     new = open(NEWF, 'rb').read()
     out('INFO | 판 NEW | %s · %d B · md5 %s · CR %d' % (NEWF, len(new), hashlib.md5(new).hexdigest(), new.count(b'\r')))
@@ -766,6 +1149,8 @@ def main():
         base, bsrc = load_base()
         bm = hashlib.md5(base).hexdigest()
         out('INFO | 판 BASE | %s · %d B · md5 %s%s' % (bsrc, len(base), bm, '' if bm == BASE_MD5 else ' · ⚠ 기대 md5 %s 와 다름' % BASE_MD5))
+        BASE_GEN = int(ARG('--base-gen', GEN_MD5.get(bm, 1)))
+        out('INFO | 바탕 세대 %d(%s) — since 가 이보다 큰 칸만 헛잣대(바탕 FAIL 이어야) · 아니면 바탕도 같음' % (BASE_GEN, '알려진 md5' if bm in GEN_MD5 else '모르는 md5 → --base-gen 또는 1'))
     plan = SMOKE_PLAN if QC.SMOKE else PLAN
     with sync_playwright() as pw:
         for eng in ('chromium', 'webkit'):   # 브라우저는 한 번에 하나 — 크롬 다 끝나고 닫은 뒤 웹킷
@@ -785,7 +1170,8 @@ def main():
                 br.close()
     hut_n = hut_ok = 0
     if QC.GATE:   # 헛잣대 줄 — 바탕에서 FAIL 이어야 할 칸
-        for r in [x for x in ROWS if x['side'] == 'new' and x['hut'] is True and not x['info']]:
+        # 옛 줄: for r in [x for x in ROWS if x['side'] == 'new' and x['hut'] is True and not x['info']]:
+        for r in [x for x in ROWS if x['side'] == 'new' and eff_hut(x) is True and not x['info']]:
             b = [x for x in ROWS if x['side'] == 'base' and x['cid'] == r['cid'] and x['dev'] == r['dev']]
             if not b:
                 continue
@@ -819,7 +1205,8 @@ def summary_table():
     for cid, dev in keys:
         n = [x for x in ROWS if x['cid'] == cid and x['dev'] == dev and x['side'] == 'new']
         b = [x for x in ROWS if x['cid'] == cid and x['dev'] == dev and x['side'] == 'base']
-        hut = n[0]['hut'] if n else (b[0]['hut'] if b else False)
+        # 옛 줄: hut = n[0]['hut'] if n else (b[0]['hut'] if b else False)
+        hut = eff_hut(n[0]) if n else (eff_hut(b[0]) if b else False)   # 덧판 — 헛잣대 세대
         info = any(x['info'] for x in n + b)
         ns = n[0]['st'] if n else '—'
         bs = b[0]['st'] if b else '—'

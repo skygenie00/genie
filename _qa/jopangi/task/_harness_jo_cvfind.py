@@ -394,8 +394,11 @@ def scen_desk(br, src, tag, G):
         p.sk_open(['omr'], ['민사소송법'], Q_JO)
         g5 = grp_of(p.ev("()=>__HC.skGroups()"), '📖 정리')
         KEEP.setdefault('capn', {})[tag] = nj
-        T(g, 'B8e 「%s」 %s건 → 민소 줄 상한 40 · 머리 「📖 정리 — %s건 (앞 40건 · 전부는 정리 탭 검색칸)」' % (Q_JO, nj, nj),
-          bool(g5) and nj.isdigit() and int(nj) > 40 and len(g5['rows']) == 40 and g5['h'] == '📖 정리 — %s건 (앞 40건 · 전부는 정리 탭 검색칸)' % nj, {'머리': g5 and g5['h'], '줄': g5 and len(g5['rows']), 'cvQn': nj})
+        # 옛 줄: T(g, 'B8e 「%s」 %s건 → 민소 줄 상한 40 · 머리 「📖 정리 — %s건 (앞 40건 · 전부는 정리 탭 검색칸)」' % (Q_JO, nj, nj),
+        # 옛 줄:   bool(g5) and nj.isdigit() and int(nj) > 40 and len(g5['rows']) == 40 and g5['h'] == '📖 정리 — %s건 (앞 40건 · 전부는 정리 탭 검색칸)' % nj, {'머리': g5 and g5['h'], '줄': g5 and len(g5['rows']), 'cvQn': nj})
+        # ★ 10/10 _task_search_all §0-3(jo popJimun · skRun 정리 H.slice(0,40)) · §A-1 · §A-2(사용자 10/9 23:52 「검색 결과 다 보이게」) — 상한 40 · 「(앞 40건 · 전부는 정리 탭 검색칸)」 걷음 → 처음 100 줄(min(100, 수)) · 머리 = 「📖 정리 — N건」 · 수 = 정리 탭 검색칸 그대로
+        T(g, 'B8e 「%s」 %s건 → 민소 줄 처음 ≥ min(100, 수)(굴리면 더 붙음) · 머리 「📖 정리 — %s건」(앞 40건 글 없음)' % (Q_JO, nj, nj),
+          bool(g5) and nj.isdigit() and int(nj) > 40 and len(g5['rows']) >= min(100, int(nj)) and g5['h'] == '📖 정리 — %s건' % nj, {'머리': g5 and g5['h'], '줄': g5 and len(g5['rows']), 'cvQn': nj})
         p.pg.keyboard.press('Escape'); p.pg.wait_for_timeout(200)
 
     # ── C ──

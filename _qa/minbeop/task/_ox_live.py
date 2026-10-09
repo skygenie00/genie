@@ -81,6 +81,8 @@ def route(remote):
             if 'raw' in ((req.headers or {}).get('accept', '')):
                 return rt.fulfill(status=200, body=b, content_type='application/octet-stream')
             return rt.fulfill(status=200, body=json.dumps({'sha': hashlib.sha1(b).hexdigest(), 'size': len(b)}), content_type='application/json')
+        if u.startswith('https://cdn.tailwindcss.com') and not CONF['tw']:   # ★ 10/10 로컬 Code — 본 PC 는 cdn 그대로(이 파일 머리 5 줄 · 같은 꼴 하네스 _harness_ox_gg_phone.py 274 줄 선례) · 막으면 Tailwind 가 0 이라 #search-results max-h · overflow 가 없어 resPage 가 첫 그림에 다 붙임(로컬 회귀 S1 · S3 · S5 · R1 거짓 FAIL)
+            return rt.continue_()
         return rt.abort()   # 그 밖 바깥(cdn · 다른 저장소) = 막음
     return h
 
