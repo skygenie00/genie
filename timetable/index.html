@@ -1386,7 +1386,7 @@ setInterval(()=>{if(!run)return;
 },1000);
 const fmtSec=s=>`${pad(Math.floor(s/3600))}:${pad(Math.floor(s/60)%60)}:${pad(s%60)}`;
 function manualSave(doc){doc=doc||document;
- const a=doc.getElementById('mA').value,b=doc.getElementById('mB').value;if(!a||!b){toast('시작·끝을 채워줘');return;}
+ const a=doc.getElementById('mA').value,b=doc.getElementById('mB').value;if(!a||!b){toast('시작·끝을 채워줘');return;}draftDrop(['mA','mB'],doc);   /* 10/9 19:48 — 저장 = 그 문서(본창·작은 창) 칸 기억 지움 */
  const si=selInfo();
  const tm=t=>{const[h,m]=t.split(':').map(Number);let v=h*60+m;if(v<dayStart()*60)v+=1440;return v};
  let A=tm(a),B=tm(b);if(B<=A)B+=1440;
@@ -1407,8 +1407,30 @@ let _inUi=false;['pointerdown','click','keydown','input','change'].forEach(t=>do
 /* 10/9 _task_tt_keep_drafts §A-1 — 포커스 칸 하나 → #main 안 id 있는 글 칸 전부(포커스가 빠진 뒤의 재그림에도 — 다른 데 누름 · 폰 키보드 내림 · 앱 나갔다 옴 → visibilitychange → syncAll).
    포커스 칸 = 9/6 그대로(값·커서·스크롤·포커스). 포커스 아닌 칸 = 빈 칸이 아니고 사용자가 고친 것(value≠defaultValue — 그려진 값 그대로인 칸은 초고가 아님)만 잡고,
    다시 그린 같은 id 칸이 갓 그려진 그대로(value=defaultValue)이고 비었거나 그려진 값이 전과 같을 때만 값을 넣는다(원격이 그 칸 값을 바꿔 그렸으면 안 덮음) · 포커스·커서는 포커스였던 칸만 · _inUi 규칙 그대로. */
-function keepInputGrab(){if(_inUi)return null;const m=$('main');if(!m)return null;const a=document.activeElement,out=[],seen=new Set();m.querySelectorAll('input[id],textarea[id]').forEach(el=>{if(seen.has(el.id))return;seen.add(el.id);if(!(el.tagName==='TEXTAREA'||!/^(checkbox|radio|button|submit|file|hidden|range|color)$/i.test(el.type)))return;const f=el===a;if(!f&&(el.value===''||el.value===el.defaultValue))return;const k={id:el.id,value:el.value,dv:el.defaultValue,f,s:null,e:null,st:0};if(f){try{k.s=el.selectionStart;k.e=el.selectionEnd}catch(_){}k.st=el.scrollTop}out.push(k)});return out.length?out:null}
-function keepInputRestore(ks){if(!ks)return;const m=$('main');if(!m)return;ks.forEach(k=>{const el=document.getElementById(k.id);if(!el||!m.contains(el)||!/^(INPUT|TEXTAREA)$/.test(el.tagName))return;if(k.f){if(el.value!==k.value)el.value=k.value;try{el.focus({preventScroll:true});if(k.s!=null)el.setSelectionRange(k.s,k.e)}catch(_){}el.scrollTop=k.st;return}if(el.value===el.defaultValue&&(el.value===''||el.defaultValue===k.dv))el.value=k.value})}
+/* 10/9 19:48 · 19:50(사용자 19:47 「해」 · tt 둘째 판) — 위 길 하나를 「화면 기억」 으로 넓힘(새 갈래 두 벌 없음):
+   _draft = 메모리 Map(기기 저장 안 함 — 앱을 껐다 켜면 사라짐) · 칸 id → {v 쓰던 값, dv 그 칸이 그려졌던 값} · 작은 창(PiP) 칸은 'pip:'+id · 칸 수정 하나(lsInline 이름·주당·주차 · exInline 비고)는 '#ed'.
+   잡기 = 모든 render(_inUi 탭·칩 누름 포함)·작은 창 그리기 직전에 그려진 글 칸을 훑어, 빈 값·그려진 값 그대로면 기억에서 지움(칸을 손으로 다 지우면 기억도 지움) · 아니면 적음.
+   되살리기 = 다시 그린 같은 id 칸이 갓 그려진 그대로이고 비었거나 그려진 값이 전과 같을 때만 넣음(원격이 바꿔 그린 값이면 그 기억을 버림) · 포커스는 안 옮김
+   (포커스·커서는 9/6 대로 사용자 조작 밖 render 의 본창 포커스 칸만 — 작은 창은 값만 · 다른 창으로 포커스가 튀지 않게). 「올리기·저장」 처리기는 render·await 전에 draftDrop(칸) — 9/6 _inUi 까닭(올린 뒤 되살아남) 지킴.
+   칸 수정('#ed') = render 가 그 칸을 다시 만들지 않아 웹킷은 고치는 중 재그림에 글이 사라졌다(크롬은 지울 때 blur 로 저장되나 칸 글자는 옛 값) →
+   잡을 때 값·커서를 적고 그 칸의 blur 저장을 끊은 뒤, 다시 그린 같은 칸(td onclick 글이 같음)을 그 여는 함수로 다시 열어 넣음 · 저장(blur·Enter)·Esc 에 지움. */
+const _draft=new Map();
+function keepInputGrab(root){root=root||$('main');if(!root)return null;const D=root.ownerDocument,P=D===document?'':'pip:',a=D.activeElement,out=[],seen=new Set();
+ const E=P?null:_draft.get('#ed');if(E&&E.el.isConnected&&root.contains(E.el)){E.v=E.el.value;E.f=!_inUi&&E.el===a;E.s=E.e=null;if(E.f){try{E.s=E.el.selectionStart;E.e=E.el.selectionEnd}catch(_){}}if(E.el.onblur){E.ob=E.el.onblur;E.el.onblur=null}}
+ root.querySelectorAll('input[id],textarea[id]').forEach(el=>{if(seen.has(el.id))return;seen.add(el.id);if(!(el.tagName==='TEXTAREA'||!/^(checkbox|radio|button|submit|file|hidden|range|color)$/i.test(el.type))||el.hasAttribute('data-ed'))return;
+  if(el.value===''||el.value===el.defaultValue)_draft.delete(P+el.id);else _draft.set(P+el.id,{v:el.value,dv:el.defaultValue});
+  if(P||_inUi||el!==a)return;const k={id:el.id,value:el.value,s:null,e:null,st:el.scrollTop};try{k.s=el.selectionStart;k.e=el.selectionEnd}catch(_){}out.push(k)});
+ return out.length?out:null}
+function keepInputRestore(ks,root){root=root||$('main');if(!root)return;const D=root.ownerDocument,P=D===document?'':'pip:',done=new Set();
+ (ks||[]).forEach(k=>{const el=D.getElementById(k.id);if(!el||!root.contains(el)||!/^(INPUT|TEXTAREA)$/.test(el.tagName))return;done.add(k.id);if(el.value!==k.value)el.value=k.value;try{el.focus({preventScroll:true});if(k.s!=null)el.setSelectionRange(k.s,k.e)}catch(_){}el.scrollTop=k.st});
+ root.querySelectorAll('input[id],textarea[id]').forEach(el=>{const d=_draft.get(P+el.id);if(!d||done.has(el.id))return;done.add(el.id);if(el.hasAttribute('data-ed')||el.value!==el.defaultValue)return;if(el.value===''||el.defaultValue===d.dv)el.value=d.v;else _draft.delete(P+el.id)});
+ const E=P?null:_draft.get('#ed');if(!E)return;if(E.el.isConnected){if(E.ob&&!E.el.onblur)E.el.onblur=E.ob;return}
+ const td=[...root.querySelectorAll('td[onclick]')].find(t=>t.getAttribute('onclick')===E.on);if(td)E.re(td,{v:E.v,f:E.f,s:E.s,e:E.e})}
+/* 「올리기·저장」 처리기 — 그 칸을 기억에서 지우고 칸 값을 「그려진 값」 으로 굳힘(이어지는 render 의 잡기가 다시 적지 않게 · 화면 글자는 그대로) · D = 그 칸의 문서(작은 창이면 그 문서) */
+function draftDrop(ids,D){D=D||document;const P=D===document?'':'pip:';[].concat(ids).forEach(id=>{_draft.delete(P+id);const el=D.getElementById(id);if(el&&/^(INPUT|TEXTAREA)$/.test(el.tagName))el.defaultValue=el.value})}
+/* 칸 수정 열기(lsInline · exInline) — 글 칸이면 '#ed' 로 적음 · kp(되살릴 상태)가 있으면 값을 넣고 포커스였을 때만 포커스·커서 → true(여는 함수의 기본 포커스·고름은 건너뜀) */
+function edOpen(el,td,key,re,kp){if(el.tagName!=='INPUT')return false;_draft.set('#ed',{key,el,on:td.getAttribute('onclick'),re,v:kp?kp.v:el.value,f:false,s:null,e:null});if(!kp)return false;el.value=kp.v;if(kp.f){try{el.focus({preventScroll:true});if(kp.s!=null)el.setSelectionRange(kp.s,kp.e)}catch(_){}}return true}
+function edDone(key){const E=_draft.get('#ed');if(E&&E.key===key)_draft.delete('#ed')}
 function render(){const _k=keepInputGrab();applyMonthColor();renderSide();renderMain();renderPnav();fitMinis();fitStMore();planAfterRender();if(typeof pipPaint=='function')pipPaint();if(typeof zoomSt!=='undefined'&&zoomSt)zoomRender();if(typeof pmPopSync=='function')pmPopSync();keepInputRestore(_k);}
 function dday(){const x=nextExam();if(!x)return'';const n=Math.ceil((parse(x.date)-parse(today()))/864e5);return n>=0?`D-${n}`:`D+${-n}`}
 function monthColor(mm){const def=DEF_SETTINGS.monthColors;const a=Array.isArray(settings.monthColors)&&settings.monthColors.length===12?settings.monthColors:def;const i=(+String(mm).slice(-2)||1)-1;return a[i]||def[i]}
@@ -1585,9 +1607,9 @@ function threeHTML(){
   const cm=sharedForCol(x,i).map(s=>`<li class="${s.done?'done':''}"><span class="cb ${s.done?'on':''}" onclick="toggleShared('${s.id}')">${s.done?'✓':''}</span><span onclick="cmEdit('${s.id}')" style="flex:1;cursor:pointer"><b style="color:var(--blue);font-size:9px;border:1px solid var(--blue);border-radius:3px;padding:0 3px">공통</b> ${esc(s.t)}</span>${s.due?dueBadge(s.due):''}</li>`).join('');
   return`<div class="col ${i==1?'today':''}" data-caldate="${x}"><h5>${lab[i]} <small>${dt.getMonth()+1}/${dt.getDate()} ${DAYS[dt.getDay()]}${i==1&&weekNo(x)>=1?' · W'+pad(weekNo(x)):''}</small></h5>
   <div class="sec">학습${i==0?' · 미완료는 이월 가능':i==1?' · 체크 = 완료 · 클릭 = 타이머':''}<span class="rgt">${i==0&&late.length?`<button class="btn" onclick="carryAll('${x}')">오늘로 이월 ${late.length}건</button>`:''}</span></div>${PLAN_ITEMS_DIRECT?planColHTML(x,i):''}<ul>${st.map(li).join('')}</ul>${recLineHTML(x)}
-  <input class="add" id="addS_${i}" placeholder="+ 학습 추가" onkeydown="if(event.key=='Enter'&&this.value.trim()){addTodo('${x}','study',this.value.trim());this.value=''}">
+  <input class="add" id="addS_${i}" placeholder="+ 학습 추가" onkeydown="if(event.key=='Enter'&&this.value.trim()){draftDrop(this.id);addTodo('${x}','study',this.value.trim());this.value=''}">
   <div class="sec">할일</div><ul>${td.map(li).join('')}${cm}</ul>
-  <div style="display:flex;gap:4px;align-items:center"><input class="add" id="addT_${i}" placeholder="+ 할일 추가" style="flex:1" onkeydown="if(event.key=='Enter'&&this.value.trim()){addTodo('${x}','todo',this.value.trim(),document.getElementById('due_${i}').value);this.value='';document.getElementById('due_${i}').value=''}"><input type="date" id="due_${i}" title="기한(선택)" style="border:0;border-bottom:1px dashed #ddd;font-size:10px;width:110px;background:transparent"></div></div>`}).join('')}</div>`;
+  <div style="display:flex;gap:4px;align-items:center"><input class="add" id="addT_${i}" placeholder="+ 할일 추가" style="flex:1" onkeydown="if(event.key=='Enter'&&this.value.trim()){draftDrop([this.id,'due_${i}']);addTodo('${x}','todo',this.value.trim(),document.getElementById('due_${i}').value);this.value='';document.getElementById('due_${i}').value=''}"><input type="date" id="due_${i}" title="기한(선택)" style="border:0;border-bottom:1px dashed #ddd;font-size:10px;width:110px;background:transparent"></div></div>`}).join('')}</div>`;
 }
 function peerLine(){const p=other();if(!p)return'';const s=sessionsOf(p,curDate());const tot=mSum(s);
  const yd=addDays(curDate(),-1);
@@ -1613,7 +1635,7 @@ function sharedTableHTML(){
 function cmAdd(){
  const t=$('cmT').value.trim();if(!t){toast('내용을 적어줘');return;}
  const who=settings.people.filter((n,i)=>$('cmW'+i)&&$('cmW'+i).checked);
- if(!who.length){toast('누가 할지 골라줘');return;}
+ if(!who.length){toast('누가 할지 골라줘');return;}draftDrop(['cmT','cmD']);
  upsertShared({id:uid(),t,due:$('cmD').value||'',who,by:cfg.person,at:today(),done:false,doneAt:null,del:false});render();
 }
 function cmEdit(id){
@@ -2080,7 +2102,7 @@ function pvRowHTML(who,d,e,c,IT){
  return`<div class="pvrow">${head}<select id="${sid}"><option value="">— ${k==='rew'?'포상':'벌칙'} 고르기 —</option>${opts}</select><span class="ops"><button class="btn s" onclick="pvApplySel('${d}','${esc(who)}',${pi})">${k==='rew'?'받음':'수행함'}</button><button class="btn s" onclick="pvOffset('${d}','${part}','${esc(who)}')"${part?'':' disabled'}>상쇄</button></span></div>`}
 function pvItemAdd(pi,k){const who=settings.people[pi];if(!who)return;const n=document.getElementById(`pvN_${pi}_${k}`),w=document.getElementById(`pvW_${pi}_${k}`);
  const t=(n&&n.value||'').trim(),wv=parseInt(w&&w.value,10);
- if(!t){toast('이름을 적어줘');return}if(!(wv>=1)){toast('무게는 1 이상');return}
+ if(!t){toast('이름을 적어줘');return}if(!(wv>=1)){toast('무게는 1 이상');return}draftDrop([`pvN_${pi}_${k}`,`pvW_${pi}_${k}`]);
  upsertShare2({id:uid(),ty:'pv',kind:k,who,t,w:wv,by:cfg.person,at:Date.now(),del:false});render()}
 function pvItemEdit(id){const x=shareFile().data.items.find(z=>z.id===id&&!z.del&&z.ty==='pv');if(!x)return;
  modal(`<h4>✎ ${x.kind==='rew'?'포상':'벌칙'} 항목 <small style="color:#888;font-weight:400">${esc(x.who||'')}</small></h4><div class="row"><label>이름</label><input id="pvEt" value="${esc(x.t||'')}"></div><div class="row"><label>무게</label><input id="pvEw" type="number" min="1" value="${pvW(x)}"></div>`,
@@ -2965,7 +2987,7 @@ document.addEventListener('pointerup',()=>{if(!dsSt)return;const st=dsSt;dsSt=nu
  else if(k==='pjcat')pjCatReorder(st.list.dataset.s,order);
 });
 document.addEventListener('pointercancel',()=>{if(dsSt){dsSt.row.style.opacity='';dsSt=null}});
-function subjPull(){document.querySelectorAll('#subjList input[data-i]').forEach(e=>{const it=settings.subjects[+e.dataset.i];if(it)it[e.dataset.k]=e.value.trim()||e.value})} // 저장 전 입력값 보존
+function subjPull(){document.querySelectorAll('#subjList input[data-i]').forEach(e=>{const it=settings.subjects[+e.dataset.i];if(it)it[e.dataset.k]=e.value.trim()||e.value});draftDrop([...document.querySelectorAll('#subjList input[id]')].map(e=>e.id))} // 저장 전 입력값 보존
 function subjReorder(order){subjPull();settings.subjects=order.map(i=>settings.subjects[+i]).filter(Boolean);saveSettings();toast('과목 순서 저장 — 앱 전체 반영');render()}
 function pjCatReorder(encS,order){const s=decodeURIComponent(encS);const old=(pjmSt.cats[s]||[]).slice();pjmSt.cats[s]=order.map(i=>old[+i]).filter(x=>x!=null);pjFill()}
 /* §2-2 다중선택 삭제 */
@@ -2997,19 +3019,19 @@ function editCatGoal(sEnc,tEnc){const s=decodeURIComponent(sEnc),tag=decodeURICo
 }
 /* 리스트 탭 (feedback10 §2-3): 정렬 · 인라인 수정 · ✕ 삭제 · 맨 아래 새 활동 입력 */
 function lsSortSet(k){const cur=ui.lsSort||{};ui.lsSort={k,dir:cur.k===k?-(cur.dir||1):1};LS.set('tt.ui',ui);render()}
-function lsInline(ev,id,k){ev.stopPropagation();const td=ev.currentTarget;const p=myPlan();const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;
+function lsInline(ev,id,k,kp){ev.stopPropagation();const td=ev.currentTarget;const p=myPlan();const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;
  if(td.querySelector('input,select'))return;
- if(k==='name')td.innerHTML=`<input id="lsIn_name" value="${esc(b.name)}" style="width:120px" onclick="event.stopPropagation()" onkeydown="if(event.key=='Enter')this.blur()" onblur="lsSet('${id}','name',this.value)">`;
- else if(k==='per')td.innerHTML=`<input id="lsIn_per" type="number" value="${b.per||0}" style="width:54px" onclick="event.stopPropagation()" onkeydown="if(event.key=='Enter')this.blur()" onblur="lsSet('${id}','per',this.value)">`;
+ if(k==='name')td.innerHTML=`<input id="lsIn_name" data-ed value="${esc(b.name)}" style="width:120px" onclick="event.stopPropagation()" onkeydown="if(event.key=='Enter')this.blur()" onblur="lsSet('${id}','name',this.value)">`;
+ else if(k==='per')td.innerHTML=`<input id="lsIn_per" data-ed type="number" value="${b.per||0}" style="width:54px" onclick="event.stopPropagation()" onkeydown="if(event.key=='Enter')this.blur()" onblur="lsSet('${id}','per',this.value)">`;
  else if(k==='tag'){const cs=((p.cats||{})[b.s]||[]).slice();if(b.tag&&!cs.includes(b.tag))cs.push(b.tag);
   td.innerHTML=`<select onchange="lsSet('${id}','tag',this.value)" onclick="event.stopPropagation()"><option value="">기타</option>${cs.map(c2=>`<option ${((b.tag||'')===c2)?'selected':''}>${esc(c2)}</option>`).join('')}</select>`;}
- else if(k==='w')td.innerHTML=`<input id="lsIn_w" value="${bandPlaced(b)?b.w1+'~'+b.w2:''}" placeholder="예 26~24 · 빈칸 = 미배치" style="width:96px" onclick="event.stopPropagation()" onkeydown="if(event.key=='Enter')this.blur()" onblur="lsSet('${id}','w',this.value)">`;
- const inp=td.querySelector('input,select');if(inp){inp.focus();if(inp.select)inp.select()}
+ else if(k==='w')td.innerHTML=`<input id="lsIn_w" data-ed value="${bandPlaced(b)?b.w1+'~'+b.w2:''}" placeholder="예 26~24 · 빈칸 = 미배치" style="width:96px" onclick="event.stopPropagation()" onkeydown="if(event.key=='Enter')this.blur()" onblur="lsSet('${id}','w',this.value)">`;
+ const inp=td.querySelector('input,select');if(inp&&!edOpen(inp,td,'ls:'+id+':'+k,(t,q)=>lsInline({stopPropagation(){},currentTarget:t},id,k,q),kp)){inp.focus();if(inp.select)inp.select()}   /* 10/9 19:50 ② — 칸 수정 = 화면 기억 '#ed' · kp = 재그림 뒤 다시 열기 */
 }
 function lsParseW(p,v){const s2=String(v||'').trim();if(!s2)return{w1:null,w2:null};
  const mm=s2.match(/(\d+)\s*[~\-–]?\s*(\d+)?/);if(!mm)return null;
  let L1=+mm[1],L2=mm[2]?+mm[2]:L1;if(pOrdL(p,L1)>pOrdL(p,L2)){const t2=L1;L1=L2;L2=t2}return{w1:L1,w2:L2}}
-function lsSet(id,k,v){planMut(p=>{const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;
+function lsSet(id,k,v){edDone('ls:'+id+':'+k);planMut(p=>{const b=p.bands.find(x=>x.id===id&&!x.del);if(!b)return;
  if(k==='name'){const n=(v||'').trim();if(n)b.name=n}
  else if(k==='per')b.per=Math.max(0,+v||0);
  else if(k==='tag')b.tag=v;
@@ -3020,7 +3042,7 @@ function lsDel(id){const b=myPlan().bands.find(x=>x.id===id&&!x.del);if(!b)retur
 function lsNewAdd(){
  const s=document.getElementById('lsNS').value;const tag=(document.getElementById('lsNT').value||'').trim();
  const name=(document.getElementById('lsNN').value||'').trim();const wv=(document.getElementById('lsNW').value||'').trim();const per=+document.getElementById('lsNP').value||0;
- if(!name){toast('활동 이름을 적어줘');return}
+ if(!name){toast('활동 이름을 적어줘');return}draftDrop(['lsNT','lsNN','lsNW','lsNP']);
  planMut(p=>{const r=lsParseW(p,wv)||{w1:null,w2:null};
   const x={id:uid(),s,tag,name,w1:r.w1,w2:r.w2,per,units:[],note:'',u:Date.now(),del:false};
   p.bands.push(x);syncBaselineFor(p,x)});
@@ -4354,7 +4376,7 @@ function shareCmTog(id){shCmOpen[id]=!shCmOpen[id];render()}
 function shareCmAdd(id,inputId){   // add1 §C — 입력칸 id 를 주면 그 칸에서 읽는다(팝업). 안 주면 종전대로 shC_<id>
  const el=document.getElementById(inputId||('shC_'+id));const t=(el&&el.value||'').trim();
  if(!t){toast('댓글을 써줘');return}
- const x=shareFile().data.items.find(z=>z.id===id&&!z.del);if(!x)return;
+ const x=shareFile().data.items.find(z=>z.id===id&&!z.del);if(!x)return;draftDrop(inputId||('shC_'+id));
  if(!Array.isArray(x.cm))x.cm=[];
  x.cm.push({id:uid(),by:cfg.person,t,at:Date.now(),u:Date.now(),del:false});
  shCmOpen[id]=true;upsertShare2(x);render();}
@@ -4398,7 +4420,7 @@ function aiNewOpen(){aiNewOn=1;render();const el=document.getElementById('aiNew'
 function aiAppAdd(){
  const el=document.getElementById('aiNew');const t=(el&&el.value||'').trim();
  if(!t){toast('앱 이름을 적어줘');return}
- if(aiApps().some(x=>aiNorm(x.t)===aiNorm(t))){toast('이미 있는 앱이야');return}
+ if(aiApps().some(x=>aiNorm(x.t)===aiNorm(t))){toast('이미 있는 앱이야');return}draftDrop('aiNew');
  const id=uid();upsertShare2({id,ty:'app',t,by:cfg.person,at:Date.now(),del:false});
  aiSel.push(id);aiNewOn=0;render()}
 function aiAppDel(id){ // 그 앱이 달린 글이 0 일 때만
@@ -4412,7 +4434,7 @@ function aiAppDel(id){ // 그 앱이 달린 글이 0 일 때만
 function aiPost(){
  const t=(aiDraft||'').trim();
  if(!t){toast('내용을 적어줘');return false}
- if(!aiSel.length){toast('앱을 하나는 골라줘');return false}
+ if(!aiSel.length){toast('앱을 하나는 골라줘');return false}draftDrop('aiT');
  upsertShare2({id:uid(),ty:'ai',t,apps:aiSel.slice(),pin:aiPin?1:0,done:0,by:cfg.person,at:Date.now(),del:false,cm:[]});
  aiDraft='';aiSel=[];aiPin=0;toast('올렸어');render();return true}
 const aiRepaint=()=>{if(aiPopId)aiPopPaint(aiPopId)};                          // 팝업이 열려 있으면 거기도 다시 그린다
@@ -4560,7 +4582,7 @@ async function shareAddImg(){
 }
 function shareAddText(){
  const el=document.getElementById('shT');const t=(el&&el.value||'').trim();
- if(!t){toast('내용을 붙여넣어줘');return}
+ if(!t){toast('내용을 붙여넣어줘');return}draftDrop('shT');
  upsertShare2({id:uid(),ty:'txt',text:t,by:cfg.person,grp:shGrp?'both':'',at:Date.now(),del:false,cm:[]});
  toast('올렸어');render();
 }
@@ -5015,10 +5037,10 @@ function ex2DetailHTML(x){const c=ex2Calc(x);
  <table class="ext exs"><tr><th>과목</th><th>득점</th><th>응시자 평균</th><th>비고</th></tr>${EX_S2.map(s=>{const v=(x.subj||{})[s]||{};return`<tr><td>${s}${s==='디보'?' <small>(평균 제외)</small>':''}</td><td>${r1(exNum(v.score))}</td><td>${r1(exNum(v.avg))}</td><td>${esc(v.note||'')}</td></tr>`}).join('')}
  <tr class="exg"><td>평균(특허·상표·민소)</td><td>${r1(c.mine)}</td><td colspan="2">합격컷 ${r1(x.cut)} → ${c.pass==null?'—':c.pass?'합격':'불합격'}${x.avg!=null&&x.avg!==''?' · 응시자 평균 '+r1(exNum(x.avg)):''}</td></tr></table>${x.note?`<p class="exnote">📝 ${esc(x.note)}</p>`:''}</div>`}
 function exRedo(id,i,v){const x=examGet(id);if(!x||!x.q||!x.q[i])return;x.q[i].redo=x.q[i].redo===v?'':v;upsertExam(x);render()}
-function exInline(td,id,i,k){if(td.querySelector('select,input'))return;const x=examGet(id);if(!x||!x.q||!x.q[i])return;const r=x.q[i];const cur=r[k]||'';let el;   /* add1 §2 — 칸 → 셀렉트/입력 · 고르면·엔터·포커스 아웃 = 저장 · Esc = 취소 */
+function exInline(td,id,i,k,kp){if(td.querySelector('select,input'))return;const x=examGet(id);if(!x||!x.q||!x.q[i])return;const r=x.q[i];const cur=r[k]||'';const key='ex:'+id+':'+i+':'+k;let el;   /* add1 §2 — 칸 → 셀렉트/입력 · 고르면·엔터·포커스 아웃 = 저장 · Esc = 취소 */
  if(k==='note'){el=document.createElement('input');el.value=cur;el.placeholder='비고';el.onkeydown=e=>{if(e.key==='Enter')el.blur();else if(e.key==='Escape'){el.value=cur;el.blur()}}}
  else{el=document.createElement('select');el.innerHTML=`<option value="">—</option>`+(k==='type'?EX_TYPES:EX_WHY).map(v=>`<option ${cur===v?'selected':''}>${v}</option>`).join('');el.onchange=()=>el.blur()}
- el.className='exie';el.onblur=()=>{const v=el.value.trim();if(v!==cur){r[k]=v;upsertExam(x)}render()};td.textContent='';td.appendChild(el);el.focus();if(el.showPicker&&navigator.maxTouchPoints>0){try{el.showPicker()}catch(e){}}}   /* 폰만 바로 펼침(헤드리스 크롬은 showPicker 에서 멈춤 · 9/5) */
+ el.className='exie';el.onblur=()=>{edDone(key);const v=el.value.trim();if(v!==cur){r[k]=v;upsertExam(x)}render()};td.textContent='';td.appendChild(el);if(!edOpen(el,td,key,(t,q)=>exInline(t,id,i,k,q),kp)){el.focus();if(el.showPicker&&navigator.maxTouchPoints>0){try{el.showPicker()}catch(e){}}}}   /* 폰만 바로 펼침(헤드리스 크롬은 showPicker 에서 멈춤 · 9/5) */
 function exQEdit(id,i){const x=examGet(id);if(!x||!x.q||!x.q[i])return;const r=x.q[i];const opt=(list,cur)=>`<option value="">—</option>`+list.map(v=>`<option ${cur===v?'selected':''}>${v}</option>`).join('');
  modal(`<h4>${x.no}회 1차 · ${esc(r.s)} ${r.i}번 <small style="font-weight:400;color:#888">유형·틀린이유·비고는 표 칸에서 바로</small></h4><div class="row"><label>내답</label><select id="exMy">${opt(['1','2','3','4','5'],r.my)}</select><label>정답</label><select id="exAns">${opt(['1','2','3','4','5'],r.ans)}</select></div>
   <div class="row"><label>정답률</label><input id="exRate" inputmode="decimal" value="${r.rate!=null?r.rate:''}" placeholder="%"></div>`,
@@ -5075,7 +5097,7 @@ function tokSheet(){modal(`<h4>🔑 토큰 갱신 · 백업 <small style="font-w
 function setHTML(){
  return`${moreTabs('set')}<div class="ttl"><b>설정</b></div><div class="set">
  <div class="row"><label>나는</label><select onchange="cfg.person=this.value;LS.set('tt.cfg',cfg);render()">${settings.people.map(p=>`<option ${cfg.person==p?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
- <div class="row"><label>GitHub 토큰</label><input type="password" id="tok" value="${esc(cfg.token)}" placeholder="github_pat_…" autocomplete="off"><button class="btn" onclick="cfg.token=$('tok').value.trim();LS.set('tt.cfg',cfg);toast('저장');syncAll()">저장 후 동기화</button></div>
+ <div class="row"><label>GitHub 토큰</label><input type="password" id="tok" value="${esc(cfg.token)}" placeholder="github_pat_…" autocomplete="off"><button class="btn" onclick="cfg.token=$('tok').value.trim();draftDrop('tok');LS.set('tt.cfg',cfg);toast('저장');syncAll()">저장 후 동기화</button></div>
  <div class="row"><label>토큰 만료</label><input type="date" value="${esc(tokExp())}" onchange="tokSetExp(this.value)" style="flex:0 0 140px"><span style="font-size:11px">마지막 백업 ${esc(cfg.lastBackup||'없음')}</span><button class="btn" onclick="tokBackupDone()">백업 완료</button><button class="btn" onclick="tokSheet()">🔑 갱신 안내</button></div>
  <div class="row"><label>저장소</label><span>${REPO} · ${BRANCH} · 이 기기 브라우저에만 저장됨</span></div>
  <div class="row"><label>상태</label><span>${cfg.lastSync?'마지막 동기화 '+new Date(cfg.lastSync).toLocaleString('ko'):'아직 없음'} · 대기 ${listDirty().length}건 <button class="btn" onclick="syncAll()">지금 동기화</button></span></div>
@@ -5099,6 +5121,7 @@ function applySettings(){
  settings.monthColors=[...Array(12)].map((_,i)=>($('mc'+i)&&$('mc'+i).value)||DEF_SETTINGS.monthColors[i]);
  if($('snapM'))settings.snapMode=Object.assign({},settings.snapMode,{[cfg.person]:$('snapM').value});
  document.querySelectorAll('#subjList input[data-i]').forEach(e=>{settings.subjects[+e.dataset.i][e.dataset.k]=e.value.trim()||e.value});
+ draftDrop(['rH','sH',...[...document.querySelectorAll('#examList input[id],#subjList input[id]')].map(e=>e.id)]);   /* 10/9 19:48 — 설정 저장 = 칸 기억 지움 */
  saveSettings();toast('저장');render();
 }
 function addExam(){settings.exams.push({id:uid(),name:'새 시험',date:today(),u:Date.now(),del:false});render()}
@@ -5115,6 +5138,7 @@ function pipPaint(){
  if(!pipWin||pipWin.closed){pipWin=null;return;}
  if(pipWin.document.querySelector('.modal'))return; // 계획관리 팝업 등이 열려 있으면 통째 재그리기 보류 (§9)
  applyMonthColor(pipWin.document);
+ const _k=keepInputGrab(pipWin.document.body);   /* 10/9 19:48 ④ — 작은 창 글 칸(이날기록 mA·mB)도 같은 화면 기억('pip:'+id) */
  const v=ui.pipView||'day';
  const body=v==='week'?weekCardHTML(weekStart(ttWkD()))
   :v==='month'?monthCardHTML(ttMoM())
@@ -5125,6 +5149,7 @@ function pipPaint(){
   nav.innerHTML=[['day','일간'],['week','주간'],['month','월간']].map(([k,n])=>`<span class="${k===v?'on':''}" onclick="pipView('${k}')">${n}</span>`).join('');
   sh.appendChild(nav);}
  fitStMore(); // §7-3(fb17) PiP 도 같은 측정
+ keepInputRestore(_k,pipWin.document.body);
 }
 async function pip(){
  if(!('documentPictureInPicture' in window)){toast('이 브라우저는 작은 창을 지원하지 않아 (크롬·엣지 PC 전용)');return;}
