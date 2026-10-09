@@ -295,8 +295,11 @@ const pre=document.createElement('pre');pre.id='PVH';pre.textContent='\n'+R.join
 </script>"""
 
 
+_DD = re.compile(r"draftDrop\([^()]*\);?")   # ★ 2026-10-09 tt 둘째 판(채팅 19:48 ② · 사용자 19:47) — 처리기에 더한 draftDrop(…) 부름은 함수 글자 대조에서 뺌
+
+
 def fn_text(t, sig):
-    Lx = t.split('\n')
+    Lx = _DD.sub('', t).split('\n')   # 옛 줄: Lx = t.split('\n')
     h = [i for i, s in enumerate(Lx) if sig in s]
     if len(h) != 1:
         return None
