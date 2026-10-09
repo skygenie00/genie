@@ -81,7 +81,8 @@ BODY_EARTH = r"""
      /* A-6(a) 9/30 — 뒤 판이 지학 SYNC_KEYS 끝에 gg·ggref·pick·link 넷을 더했다(gigu/_task_jagwa_earth_listpop_add1.md §G · cd248a5) →
         이 판(pan3 add1)이 더한 bref 가 19째 · 옛 18키가 앞자리 그대로(순서 보존) · 키가 더 늘어도 안 뒤집힌다(본 세션 9/30 판단) */
      T('A-0 지학 SYNC_KEYS 에 bref 가 19째 · 옛 18키 앞자리 그대로',SUBJ.earth.SYNC_KEYS[18]==='bref'&&SUBJ.earth.SYNC_KEYS.slice(0,18).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,bogi,unit,bpit,bpg,crop,txt,tfix',SUBJ.earth.SYNC_KEYS);
-     T('A-0 생물 20 · 물리 12 무변',SUBJ.bio.SYNC_KEYS.length===20&&SUBJ.phys.SYNC_KEYS.length===12,[SUBJ.bio.SYNC_KEYS.length,SUBJ.phys.SYNC_KEYS.length]);
+     /* 옛 줄: T('A-0 생물 20 · 물리 12 무변',SUBJ.bio.SYNC_KEYS.length===20&&SUBJ.phys.SYNC_KEYS.length===12,…) · ★ 2026-10-09 _task_jagwa_gg3 §A-2-3 — 물리 13째 cqx */
+     T('A-0 생물 20 · 물리 12 무변',SUBJ.bio.SYNC_KEYS.length===20&&(SUBJ.phys.SYNC_KEYS.length===12||(SUBJ.phys.SYNC_KEYS.length===13&&SUBJ.phys.SYNC_KEYS[12]==='cqx')),[SUBJ.bio.SYNC_KEYS.length,SUBJ.phys.SYNC_KEYS.length]);
      T('A-0 SYNC_REF 에 bref',!!SYNC_REF.bref&&SYNC_REF.bref.g()===BREF);
      const bad0=BREFBAD; BREF['__X']=[{r:[1,2],to:0}];
      T('A-0 모르는 꼴은 추측해서 덮지 않는다 — BREFBAD 로 센다',brefList('__X').length===0&&BREFBAD>bad0);
@@ -481,7 +482,7 @@ BODY_EARTH = r"""
      /* A-6(a) 9/30 — 뒤 판이 지학 SYNC_KEYS 끝에 넷을 더했다(listpop_add1 §G · cd248a5 — 런타임 push · 생물·물리 SUBJ 표는 지학 실행에서 무변)
         → add3 이 늘리지 않았다 = 지학 옛 19키가 앞자리 그대로 · 생물 20 · 물리 12(표) — 키가 더 늘어도 안 뒤집힌다 */
      T('C-5 ⑪ add3 은 SYNC_KEYS 를 안 늘렸다 — 지학 옛 19키 앞자리 그대로 · 생물 20 · 물리 12',
-       SUBJ.earth.SYNC_KEYS.slice(0,19).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,bogi,unit,bpit,bpg,crop,txt,tfix,bref'&&SUBJ.bio.SYNC_KEYS.length===20&&SUBJ.phys.SYNC_KEYS.length===12,
+       SUBJ.earth.SYNC_KEYS.slice(0,19).join()==='status,note,qtype,conc,gpt,twin,ansfix,frm,maskpos,omrpos,mcard,bogi,unit,bpit,bpg,crop,txt,tfix,bref'&&SUBJ.bio.SYNC_KEYS.length===20&&(SUBJ.phys.SYNC_KEYS.length===12||(SUBJ.phys.SYNC_KEYS.length===13&&SUBJ.phys.SYNC_KEYS[12]==='cqx')),   /* ★ 2026-10-09 _task_jagwa_gg3 §A-2-3 — 물리 13째 cqx · 옛: SUBJ.phys.SYNC_KEYS.length===12 */
        [SUBJ.earth.SYNC_KEYS.length,SUBJ.bio.SYNC_KEYS.length,SUBJ.phys.SYNC_KEYS.length]);
      T('C-5 ⑪ bref 가 지학 19째 그대로',SUBJ.earth.SYNC_KEYS[18]==='bref',SUBJ.earth.SYNC_KEYS[18]);
      /* ⚠ SYNC_REF 는 **과목 전체** 표라 이 과목 SYNC_KEYS 보다 크다(link·snote 등) — 뒤집어 잰다 */

@@ -27,6 +27,7 @@ window.addEventListener('unhandledrejection',e=>{window.__err.push('reject: '+((
 
 TESTS = r"""<script>
 (function(){
+ const __SK=()=>{const s=SYNC_KEYS;return (s[12]==='cqx'&&s.indexOf('cqx')===s.lastIndexOf('cqx'))?s.filter(k=>k!=='cqx'):s};   /* ★ 2026-10-09 _task_jagwa_gg3 §A-2-3 — 물리 SYNC_KEYS 13째 cqx 를 뺀 배열(T-6 · M-1 옛 조건 그대로 재려고) */
  const R=[]; const T=(n,c,i)=>R.push((c?'PASS':'FAIL')+' | '+n+(c?'':' | '+JSON.stringify(i===undefined?null:i)));
  const __nativeFetch=window.fetch.bind(window);
  window.fetch=async function(url,opt){ if(/api\.github\.com/.test(String(url)))return {ok:false,status:404,json:async()=>({}),text:async()=>'',arrayBuffer:async()=>new ArrayBuffer(0)}; return __nativeFetch(url,opt) };
@@ -133,7 +134,7 @@ TESTS = r"""<script>
    $('#view').style.removeProperty('--ndw');SET.ndw=300;ndSetW(SET.ndw);
    T('T-5 새로고침 흉내(SET.ndw → ndSetW) 너비 300',Math.round(dr.getBoundingClientRect().width)===300);
    /* ===== T-6 · T-9 SYNC ===== */
-   T('T-6 SYNC_KEYS 14(필터 손질 9/5: +link 열두째) · mcard 열한째',/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(열셋째·열넷째 · 앱 8168~8169) *//* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef) 물리 SYNC 키 끝에 tfix 하나 */(SYNC_KEYS.length===14||(SYNC_KEYS.length===15&&SYNC_KEYS[14]==='tfix')||(SYNC_KEYS.length===16&&SYNC_KEYS.slice(14).sort().join()==='solx,tfix')/* ★ 2026-10-07 (_task_jagwa_phys_win §A-30 ㉖) — 물리 SYNC 키 끝에 오린 것 solx 하나 더(tfix 와 둘) */)&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&SYNC_KEYS[10]==='mcard'&&SYNC_KEYS[11]==='link'&&SYNC_REF.mcard.g()===MC&&SYNC_REF.link.g()===LK);
+   T('T-6 SYNC_KEYS 14(필터 손질 9/5: +link 열두째) · mcard 열한째',/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(열셋째·열넷째 · 앱 8168~8169) *//* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef) 물리 SYNC 키 끝에 tfix 하나 */(__SK().length===14||(__SK().length===15&&__SK()[14]==='tfix')||(__SK().length===16&&__SK().slice(14).sort().join()==='solx,tfix')/* ★ 2026-10-07 (_task_jagwa_phys_win §A-30 ㉖) — 물리 SYNC 키 끝에 오린 것 solx 하나 더(tfix 와 둘) */)&&__SK()[12]==='gg'&&__SK()[13]==='ggref'&&__SK()[10]==='mcard'&&__SK()[11]==='link'&&SYNC_REF.mcard.g()===MC&&SYNC_REF.link.g()===LK);   /* ★ 2026-10-09 gg3 — __SK() = cqx 뺀 SYNC_KEYS(옛 줄 = SYNC_KEYS 그대로) */
    /* ===== T-7 카드 쓰기 ===== */
    mcardWin(no);await wait(60);
    const mc=$('#mcc');T('T-7 카드 창 = 문제명 · 코멘트 · 캔버스 · 도구',!!$('.mcwin')&&$('.mcwin h2').textContent.includes(String(no))&&!!$('.mcnote')&&!!mc&&$$('.mct [data-t]').length===3);
@@ -188,7 +189,7 @@ TESTS = r"""<script>
    T('T-9 mcard 가 도장을 탄다(u 키 mcard|no)',!!U['mcard|'+no],Object.keys(U).filter(k=>k.startsWith('mcard')));
    delete MC[no];await saveMC();stampAll();
    T('T-9 지우면 묘비(gone)',!!lsObj(GONE_KEY)['mcard|'+no]);
-   T('M-1 과목 phys · IndexedDB phys535 · 저장소 셋(pdf·ink·kv) · SYNC_KEYS 14(9/5 필터 손질 +link · 9/21 셸 +gg·ggref)',SUBJ_ID==='phys'&&db.name==='phys535'&&[...db.objectStoreNames].sort().join()==='ink,kv,pdf'&&/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(앱 8168~8169) *//* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef) 물리 SYNC 키 끝에 tfix 하나 */(SYNC_KEYS.length===14||(SYNC_KEYS.length===15&&SYNC_KEYS[14]==='tfix')||(SYNC_KEYS.length===16&&SYNC_KEYS.slice(14).sort().join()==='solx,tfix')/* ★ 2026-10-07 (_task_jagwa_phys_win §A-30 ㉖) — 물리 SYNC 키 끝에 오린 것 solx 하나 더(tfix 와 둘) */)&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&document.body.dataset.subj==='phys',[db.name,[...db.objectStoreNames]]);
+   T('M-1 과목 phys · IndexedDB phys535 · 저장소 셋(pdf·ink·kv) · SYNC_KEYS 14(9/5 필터 손질 +link · 9/21 셸 +gg·ggref)',SUBJ_ID==='phys'&&db.name==='phys535'&&[...db.objectStoreNames].sort().join()==='ink,kv,pdf'&&/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(앱 8168~8169) *//* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef) 물리 SYNC 키 끝에 tfix 하나 */(__SK().length===14||(__SK().length===15&&__SK()[14]==='tfix')||(__SK().length===16&&__SK().slice(14).sort().join()==='solx,tfix')/* ★ 2026-10-07 (_task_jagwa_phys_win §A-30 ㉖) — 물리 SYNC 키 끝에 오린 것 solx 하나 더(tfix 와 둘) */)&&__SK()[12]==='gg'&&__SK()[13]==='ggref'&&document.body.dataset.subj==='phys',[db.name,[...db.objectStoreNames]]);   /* ★ 2026-10-09 gg3 — __SK() = cqx 뺀 SYNC_KEYS(옛 줄 = SYNC_KEYS 그대로) */
    const gd=id=>getComputedStyle($(id)).display;
    /* ★ A-6(a) 9/30 — 셸 add9 §A-1(68216cf): 「목차」 단추 #btnTree 는 걷었다(없는 요소에 getComputedStyle → 하니스가 터짐) — 그 조건만 「없다」로(첫 바퀴 earth M-4 와 같은 고침) · 옛 #tree 는 숨은 채(treeOpen 빈 함수) */
    T('M-4 게이트(물리): 지학 조각 숨김(ebody·tBook·sub · bookpane 은 ebody 안) · #tree 는 숨은 채(.hide · 상주 서랍이 갈음) · 「목차」 단추 #btnTree 는 걷음(add9 §A-1)',gd('#ebody')==='none'&&gd('#tree')==='none'&&$('#tree').classList.contains('hide')&&$('#bookpane').offsetParent===null&&!$('#btnTree')&&gd('#tBook')==='none'&&gd('#sub')==='none',[gd('#ebody'),gd('#tree'),$('#bookpane').offsetParent,!!$('#btnTree'),gd('#tBook'),gd('#sub')]);

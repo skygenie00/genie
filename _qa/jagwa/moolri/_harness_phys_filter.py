@@ -89,7 +89,7 @@ TESTS = r"""<script>
    /* ★ A-6(a) 9/30 — 셸 이식(c9faff2 · physRowBuild 앱 9584~9597): 물리 아랫줄 단추는 #pRow1 로 옮겨져 「… 공식 · 개념 · 쌍둥이 · Claude · 유형 · 연결」 차례다 — 연결 바로 앞 = 유형(#tType) */
    T('④ 뷰어 아랫줄 「연결」(#tLink · #pRow1 · 유형 오른쪽) · 칩 #vLink 숨김(0)',!!$('#tLink')&&$('#tLink').previousElementSibling.id==='tType'&&($('#tLink').textContent==='연결'||$('#tLink').textContent==='🔗')&&getComputedStyle($('#vLink')).display==='none');   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-30) — 시안 ㉟ 물리 아랫줄 「연결」 → 🔗 하나(쌍둥이 합침) */
    /* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(앱 8168~8169) — SYNC_KEYS 가 SUBJ.phys.SYNC_KEYS 와 같은 배열이라(앱 4355) 둘 다 14 · SUBJ 소스 글자는 12 그대로(아래 파일 층 잣대) */
-   T('④ SYNC_KEYS 14(끝에 gg·ggref) · 12째 link · SYNC_REF.link · SUBJ.phys 도 같은 배열 14 · 지학 19 · 생물 20(add1 +bref)',/* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef 본문 「물리 SYNC 키 tfix 하나 더함」) — 14 또는 끝에 tfix 하나 */(SYNC_KEYS.length===14||(SYNC_KEYS.length===15&&SYNC_KEYS[14]==='tfix')||(SYNC_KEYS.length===16&&SYNC_KEYS.slice(14).sort().join()==='solx,tfix'))/* ★ 2026-10-07 (_task_jagwa_phys_win §A-30) — 시안 ㉖ 물리 SYNC_KEYS 끝에 solx(오린 것) 하나 더(tfix 와 함께 끝 둘) */&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&SYNC_KEYS[11]==='link'&&SYNC_REF.link.g()===LK&&SUBJ.phys.SYNC_KEYS.length===SYNC_KEYS.length&&SUBJ.earth.SYNC_KEYS.length===19&&SUBJ.bio.SYNC_KEYS.length===20);
+   T('④ SYNC_KEYS 14(끝에 gg·ggref) · 12째 link · SYNC_REF.link · SUBJ.phys 도 같은 배열 14 · 지학 19 · 생물 20(add1 +bref)',/* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef 본문 「물리 SYNC 키 tfix 하나 더함」) — 14 또는 끝에 tfix 하나 */(G3V?(()=>{/* ★ 2026-10-09 _task_jagwa_gg3 §A-2-3 — 물리 SYNC_KEYS 13째 cqx · 그 열쇠를 뺀 배열(SK)에 옛 조건 그대로 + cqx 가 13째 하나 */const SK=SYNC_KEYS.filter(k=>k!=='cqx');return SYNC_KEYS[12]==='cqx'&&SYNC_KEYS.indexOf('cqx')===SYNC_KEYS.lastIndexOf('cqx')&&(SK.length===14||(SK.length===15&&SK[14]==='tfix')||(SK.length===16&&SK.slice(14).sort().join()==='solx,tfix'))&&SK[12]==='gg'&&SK[13]==='ggref'&&SK[11]==='link'&&SYNC_REF.link.g()===LK&&SUBJ.phys.SYNC_KEYS.length===SYNC_KEYS.length&&SUBJ.earth.SYNC_KEYS.length===19&&SUBJ.bio.SYNC_KEYS.length===20})():(SYNC_KEYS.length===14||(SYNC_KEYS.length===15&&SYNC_KEYS[14]==='tfix')||(SYNC_KEYS.length===16&&SYNC_KEYS.slice(14).sort().join()==='solx,tfix'))/* ★ 2026-10-07 (_task_jagwa_phys_win §A-30) — 시안 ㉖ 물리 SYNC_KEYS 끝에 solx(오린 것) 하나 더(tfix 와 함께 끝 둘) */&&SYNC_KEYS[12]==='gg'&&SYNC_KEYS[13]==='ggref'&&SYNC_KEYS[11]==='link'&&SYNC_REF.link.g()===LK&&SUBJ.phys.SYNC_KEYS.length===SYNC_KEYS.length&&SUBJ.earth.SYNC_KEYS.length===19&&SUBJ.bio.SYNC_KEYS.length===20));
    (typeof relPop==='function'?linkSheet(VNO):$('#tLink').click());await wait(40);   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-30) — 시안 ㊵ 물리 🔗 = 단추 옆 작은 창 #rlPop(큰 연결 창 걷음) — 연결 저장·검색·끊기 옛 잣대는 큰 연결 창(linkSheet · 목록 🔗 칩이 아직 여는 창)을 직접 열어 잰다(mcsheet A-6 선례) */
    /* ★ A-6(a) 9/30 — 셸 add16(0bee72b): 연결 시트(linkSheet)는 「보는 시트」라 떠 있는 창 #sh-link(앱 SHWIN ['linkSheet','link'] · shFloat 이 id 를 sh-<key> 로) · 안의 #lkList·#lkq·#lkres 는 그대로 ·
       phone_win A-5(fb89ad2 · pwBtns): 그 창의 「닫기」(#lkX)는 걷었다 → 아래 닫기는 전부 ✕(.shx) */
@@ -107,7 +107,8 @@ TESTS = r"""<script>
    (typeof relPop==='function'?linkSheet(VNO):$('#tLink').click());await wait(20);$('#lkList .lkrow[data-no="'+a+'"] b').click();await wait(1200);   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-30) — ㊵ 위와 같음 */
    /* ★ A-6(a) 9/30 — 셸 전역 [data-go] 규칙(앱 9384~9400 문서 캡처 · earth_bookwin §A 23줄 「data-go = 문항 번호 규칙 유지」 · 수행 결과 160줄 전수 — 2117 = 연결 시트 줄 코드):
       줄 코드(b data-go)는 twinPeek 대신 그 문항 창을 연다 · 문항이 바뀌면 문항에 매인 창(연결 창)은 닫힌다(add16 SHPERQ · 앱 7860·7876~7881) — 닫을 팝업·창이 없다 */
-   T('④ 시트 줄 코드 → 그 문항 창(셸 전역 data-go 규칙 · 연결 창 닫힘)',VNO===a&&!$('#view').classList.contains('hide')&&!$('#sh-link')&&!$('.sheet.twin'),[VNO,!!$('#sh-link'),!!$('.sheet.twin')]);
+   if(G3V)R.push('INFO | ④ 시트 줄 코드 → 그 문항 창(셸 전역 data-go 규칙 · 연결 창 닫힘) | gg3 갈음(§A-4 비교 창 — 🔗 연결 줄 = 비교 · 본창 그대로) '+JSON.stringify([VNO,a,!!$('#sh-link'),!!$('.sheet.twin')]));   /* ★ 2026-10-09 _task_jagwa_gg3 §A-4 비교 창(물리) */
+   else T('④ 시트 줄 코드 → 그 문항 창(셸 전역 data-go 규칙 · 연결 창 닫힘)',VNO===a&&!$('#view').classList.contains('hide')&&!$('#sh-link')&&!$('.sheet.twin'),[VNO,!!$('#sh-link'),!!$('.sheet.twin')]);
    closeView();await wait(60);
    const rowB=[...document.querySelectorAll('#list .item')].find(d=>d.querySelector('.num').textContent===codeShow(rec(b)));   /* ★ A-6(a) 9/30 — 셸 목록 줄 .num = 코드(codeShow · add11 §0-3 · phys_P P-1 과 같은 까닭) */
    T('④ 목록 B 줄에 🔗 1 칩(역방향)',!!rowB&&!!rowB.querySelector('.tag.lk')&&rowB.querySelector('.tag.lk').textContent==='🔗 1');
@@ -151,8 +152,11 @@ TESTS = r"""<script>
    await tap(g,gb.left+6,gb.top+200);
    T('A1 탭 → 접힘(13px · 손잡이만 · 내용 숨김) · jagwa.nd.fold.phys=1 · 여백 13 · 손잡이 ›',nd.classList.contains('fold')&&Math.round(nd.getBoundingClientRect().width)===13&&getComputedStyle($('#ndList')).display==='none'&&localStorage.getItem(ND_FOLD_K)==='1'&&getComputedStyle(document.body).paddingLeft==='13px'&&g.textContent==='›',[localStorage.getItem(ND_FOLD_K),nd.getBoundingClientRect().width]);
    await drag(g,6,200,106,200);
-   T('A1 접힌 채 끌기 = 무시(폭 13 그대로 · SET.ndw 없음)',Math.round(nd.getBoundingClientRect().width)===13&&SET.ndw===undefined,[nd.getBoundingClientRect().width,SET.ndw]);
-   await tap(g,6,200);
+   if(G3V){   /* ★ 2026-10-09 _task_jagwa_gg3 §A-4 터치 줄 「접힌 서랍 손잡이 = 4px 넘게 흔들려도 · 오른쪽으로 밀어도 펴기 · 세 과목」 — 접힌 채 오른쪽 끌기 = 펴기(폭 = 기본 236 · SET.ndw 없음) · 옛 칸은 값만 INFO */
+     R.push('INFO | A1 접힌 채 끌기 = 무시(폭 13 그대로 · SET.ndw 없음) | gg3 갈음(§A-4 접힌 손잡이 오른쪽 밀기 = 펴기) '+JSON.stringify([nd.getBoundingClientRect().width,SET.ndw]));
+     T('A1 접힌 채 오른쪽 끌기 = 펴기(gg3 §A-4) · 폭 236 · SET.ndw 없음 · jagwa.nd.fold.phys=0',!nd.classList.contains('fold')&&Math.round(nd.getBoundingClientRect().width)===236&&SET.ndw===undefined&&localStorage.getItem(ND_FOLD_K)==='0',[nd.getBoundingClientRect().width,SET.ndw,localStorage.getItem(ND_FOLD_K)]);
+   }else T('A1 접힌 채 끌기 = 무시(폭 13 그대로 · SET.ndw 없음)',Math.round(nd.getBoundingClientRect().width)===13&&SET.ndw===undefined,[nd.getBoundingClientRect().width,SET.ndw]);
+   if(!G3V)await tap(g,6,200);   /* ★ 2026-10-09 gg3 — 끌기가 이미 폈음(다시 탭하면 도로 접힘) · 아래 칸 = 펼친 상태 그대로 잰다 · 옛 줄: await tap(g,6,200); */
    T('A1 다시 탭 → 펼침 · jagwa.nd.fold.phys=0 · 여백 236',!nd.classList.contains('fold')&&localStorage.getItem(ND_FOLD_K)==='0'&&getComputedStyle(document.body).paddingLeft==='236px');
    await drag(g,gb.left+6,gb.top+200,gb.left+106,gb.top+200);
    T('A1 끌기 +100 → 폭 336 · SET.ndw=336 · kv · 여백 336',Math.round(nd.getBoundingClientRect().width)===336&&SET.ndw===336&&((await get('kv','set'))||{}).ndw===336&&getComputedStyle(document.body).paddingLeft==='336px',[nd.getBoundingClientRect().width,SET.ndw]);
@@ -184,7 +188,9 @@ def main():
     html = html.replace('<script defer src="https://cdnjs', '<script defer data-off="https://cdnjs')
     html = html.replace('<link rel="stylesheet" href="https://cdnjs', '<link rel="off" href="https://cdnjs')
     html = html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', STUB + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
-    html = html.replace('</body>', TESTS + '</body>', 1)
+    # 옛 줄: html = html.replace('</body>', TESTS + '</body>', 1)
+    _g3v = 'window.G3=' in html   # ★ 2026-10-09 _task_jagwa_gg3 판 표지(g3.js · 패치 #35) — 시험 JS 에 G3V 로 넘김
+    html = html.replace('</body>', TESTS.replace('const R=[]; const T=(n,c,i)=>', 'const G3V=' + ('true' if _g3v else 'false') + '; const R=[]; const T=(n,c,i)=>', 1) + '</body>', 1)
     open(APP, 'w', encoding='utf-8', newline='').write(html)
     w = PdfWriter(); w.add_blank_page(width=400, height=600); w.write(open(os.path.join(OUT, 'blank.pdf'), 'wb'))
     done = threading.Event(); box = {}
@@ -229,10 +235,14 @@ def main():
        and "if(JG&&b.__zsetup)b.__zsetup();" in s,
        [_pre.count("addEventListener('wheel'"), _z0, _z1])
     # 판 3 ①(2026-09-08) — crop 이 붙어 지학 16 · 생물 17. 물리 12 는 그대로다(고친 자리).
-    T2('SUBJ.phys SYNC_KEYS 12 무변 · earth 19 · bio 20 (add1 +bref · SUBJ 블록)', "SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','link']," in s and s.count("'bpit','bpg','crop','txt','tfix','bref'],") == 1 and "'bpg','snote','crop','txt','tfix','bref']," in s)
+    _phys12 = "SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','link'],"
+    if 'window.G3=' in s:   # ★ 2026-10-09 _task_jagwa_gg3 §A-2-3 — 물리 SUBJ.phys.SYNC_KEYS 끝에 cqx(13째) · 앞 12 는 무변
+        _phys12 = _phys12[:-2] + ",'cqx'],"
+    T2('SUBJ.phys SYNC_KEYS 12 무변 · earth 19 · bio 20 (add1 +bref · SUBJ 블록)', _phys12 in s and s.count("'bpit','bpg','crop','txt','tfix','bref'],") == 1 and "'bpg','snote','crop','txt','tfix','bref']," in s)
     if QC.SMOKE:   # smoke — smoke 칸 줄만
         lines = [x for x in lines if any((x.split(' | ') + ['', ''])[1].startswith(k) for k in _RG_SMOKE)]
-    npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
+    # 옛 줄: npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
+    npass = sum(1 for x in lines if x.startswith('PASS')); nfail = sum(1 for x in lines if x.startswith('FAIL'))   # ★ 2026-10-09 gg3 — INFO 줄은 FAIL 로 안 셈
     for x in lines: print(x)
     print('\n== %d PASS / %d FAIL / %d항 ==' % (npass, nfail, len(lines)))
     sys.exit(0 if nfail == 0 else 2)

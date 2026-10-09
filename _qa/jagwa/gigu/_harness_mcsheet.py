@@ -228,7 +228,9 @@ BODY_EARTH = r"""
      PE('pointerup',g,gr.left+5-120,gr.top+5-90,'touch');
      await wait(400);
      const r1=document.querySelector('.mcpp').getBoundingClientRect();
-     T('M-11 손가락으로 모서리를 끌면 창 크기가 바뀐다',Math.abs(r1.width-(r0.width-120))<3&&Math.abs(r1.height-(r0.height-90))<3,[r0.width,r1.width,r0.height,r1.height]);
+     /* 옛 줄: T('M-11 손가락으로 모서리를 끌면 창 크기가 바뀐다',Math.abs(r1.width-(r0.width-120))<3&&Math.abs(r1.height-(r0.height-90))<3,…) */
+     /* ★ 2026-10-09 _task_jagwa_gg3 §A-4(makeFloat 첫 높이 ≤ 1/3 · 세 과목) — 첫 높이가 낮아 −90 이 최소 높이 200 에 걸리면 200 을 받음(바탕은 첫 높이가 커서 옛 셈 그대로) */
+     T('M-11 손가락으로 모서리를 끌면 창 크기가 바뀐다',Math.abs(r1.width-(r0.width-120))<3&&Math.abs(r1.height-Math.max(r0.height-90,200))<3,[r0.width,r1.width,r0.height,r1.height]);
      const saved=JSON.parse(localStorage.getItem('jagwa.win.mcsheet')||'null');
      T('M-11 크기를 localStorage(jagwa. 접두사)에 적는다 · SET 에는 안 넣는다',
        !!saved&&Math.abs(saved.w-r1.width)<3&&Math.abs(saved.h-r1.height)<3&&(typeof SET!=='object'||SET.mcsheet===undefined),saved);
@@ -783,10 +785,14 @@ def main():
                     T2('Y-4 물리 %s 이(가) 고침 전과 글자까지 같다' % ko, snap.get(k) == snap0.get(k),
                        [len(str(snap.get(k))), len(str(snap0.get(k)))])
         if mode == 'phys' and not QC.GATE:   # regress — Y-4 물리 무변 칸 = 기준 스냅샷(QC.base) · 「Y-4 고침 전(HEAD 블롭) 판도 끝까지 돌았다」(관문만 · 바탕 띄움 건강) 끔
-            lines += _rg_phys_same(snap, 'Y-4', (('brand', '머리 칩 줄'), ('list', '목록'), ('cnt', '문항 수'), ('sheet', '모아보기 시트')))
+            _y4 = _rg_phys_same(snap, 'Y-4', (('brand', '머리 칩 줄'), ('list', '목록'), ('cnt', '문항 수'), ('sheet', '모아보기 시트')))
+            if 'window.G3=' in cur:   # ★ 2026-10-09 _task_jagwa_gg3 §A-4(물리 첫 화면 · 항목 줄 · 머리 꼴) — 물리 화면을 바꾼 판이라 「물리 무변」 칸은 값 그대로 INFO(옛 줄: lines += _rg_phys_same(…))
+                _y4 = [('INFO' + x[4:] + ' | gg3 갈음(§A-4 물리 화면 꼴 바뀜)') if x.startswith('FAIL') else x for x in _y4]
+            lines += _y4
     if QC.want('src'):   # smoke — 브라우저 밖 소스 칸(S-*)은 smoke 칸이 아니다
         lines += static_checks()
-    npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
+    # 옛 줄: npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
+    npass = sum(1 for x in lines if x.startswith('PASS')); nfail = sum(1 for x in lines if x.startswith('FAIL'))   # ★ 2026-10-09 gg3 — INFO 줄은 FAIL 로 안 셈
     for x in lines: print(x)
     print('\n== 암기카드/종이 모아보기 %d PASS / %d FAIL / %d항 ==' % (npass, nfail, len(lines)))
     sys.exit(0 if nfail == 0 else 2)

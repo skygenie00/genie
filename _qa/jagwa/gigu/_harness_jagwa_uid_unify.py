@@ -911,6 +911,8 @@ def _b6_norm(rows, kind):   # ★ 2026-10-08 (_task_jagwa_phys_win §A-36·37 ·
             x = x.replace('class="ndno ph"', 'class="ndno"')                            # §A-34 번호 칸 ph
             x = re.sub(r'<i class="ndv"[^>]*>[^<]*</i>', '', x)                         # §A-35 번호 앞 V 글자
             x = re.sub(r'<span class="ndtt"[^>]*>([^<]*)</span>', r'\1', x)             # §A-41·47 제목 span.ndtt(길게 눌러 고치기)
+            x = re.sub(r'<i class="ndty">[^<]*</i>', '', x)                             # ★ 2026-10-09 _task_jagwa_gg3 §A-4 「서랍 · O△X 왼쪽 유형 글자 · 물리」(g3.js)
+            x = re.sub(r'<span class="ndox[^"]*" data-ox="\d+">(.*?)</span>', r'\1', x)   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 「서랍 · O△X 누름 = 작은 창 · 근거 있는 문항만 점선(g3has)」 누름 자리 span(g3.js)
             x = re.sub(r'((?:<b class="ndm[^"]*">[^<]*</b>)+)', lambda m: re.findall(r'<b class="ndm[^"]*">[^<]*</b>', m.group(1))[-1], x)   # §A-03 꼬리 회독마다 → 마지막 회독 것만(바탕 꼴)
         out.append(x)
     return out
@@ -1292,6 +1294,14 @@ def j_H2_bio(O):
 
 
 # ── H-3 다음 회독 ──
+def _rowsel(dv, u):   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 「첫 화면 · 카드 = 제목(.sub · 없으면 코드)만 엶 · 세 과목」 — 그 줄의 누를 자리(바탕 cab7b5a 는 줄 아무 데나 = 제목도 엶 · 같은 길)
+    b = '#list .item[data-uid="%s"]' % u
+    for s in (b + ' .sub', b + ' .num'):
+        if dv.ev("s=>!!document.querySelector(s)", s):
+            return s
+    return b
+
+
 def cellinfo(put, uid, no):
     h, kf = cell(put, 'status', uid, no)
     b, _ = cell(put, 'bogi', uid, no)
@@ -1314,7 +1324,8 @@ def sc_H3(br, eng, app, stat, phone=False):
 
         def openq(u):
             for _ in range(3):   # 눌렀는데 안 열렸으면(창이 그대로 닫혀 있음) 한 번 더
-                ok = dv.click('#list .item[data-uid="%s"]' % u, finger=fing); dv.pg.wait_for_timeout(1300)
+                # 옛 줄: ok = dv.click('#list .item[data-uid="%s"]' % u, finger=fing); dv.pg.wait_for_timeout(1300)
+                ok = dv.click(_rowsel(dv, u), finger=fing); dv.pg.wait_for_timeout(1300)   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 「첫 화면 · 카드 = 제목(.sub · 없으면 코드)만 엶 · 세 과목」(사용자 10/8 18:20) — 누를 자리 = 그 줄 제목
                 if dv.ev("u=>{const v=document.getElementById('view');return !v.classList.contains('hide')&&VNO===__U.noOf(u)}", u):
                     return ok
             return False
@@ -1423,12 +1434,14 @@ def sc_H3_dev2(br, eng, app, stat):
     dA = Dev2(br, eng); dB = Dev2(br, eng)
     try:
         dA.load(app, 'earth', rec={RP: RECB['earth']}, static=stat); dA.settle()
-        dA.click('#list .item[data-uid="%s"]' % uid); dA.pg.wait_for_timeout(1300)
+        # 옛 줄: dA.click('#list .item[data-uid="%s"]' % uid); dA.pg.wait_for_timeout(1300)
+        dA.click(_rowsel(dA, uid)); dA.pg.wait_for_timeout(1300)   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 첫 화면 카드 = 제목만 엶
         okA = dA.click('#card .bogi .row[data-k="ㄴ"] .ox button[data-v="X"]')
         sA = dA.ev("()=>__U.snap()")
         putA = dA.settle(RP, 1); raw = dA.putraw()
         dB.load(app, 'earth', rec={RP: raw.encode('utf-8')}, static=stat); dB.settle()
-        dB.click('#list .item[data-uid="%s"]' % uid); dB.pg.wait_for_timeout(1300)
+        # 옛 줄: dB.click('#list .item[data-uid="%s"]' % uid); dB.pg.wait_for_timeout(1300)
+        dB.click(_rowsel(dB, uid)); dB.pg.wait_for_timeout(1300)   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 첫 화면 카드 = 제목만 엶
         sB = dB.ev("()=>__U.snap()")
         return {'okA': okA, 'sA': sA, 'sB': sB, 'wA': cellinfo(putA, uid, int(U2N['earth'][uid]))}
     finally:

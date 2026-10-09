@@ -54,6 +54,7 @@ def N(grp, name, detail=''):
 
 
 APPS = JG.APPS   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
+_GG3 = lambda: 'jagwa.win.view2' in (APPS.get('NEW') or '')   # ★ 2026-10-09 _task_jagwa_gg3 새 판 표지(본창 기억 열쇠 jagwa.win.view2 · 패치 #26 · #27) — 본창 첫 크기 1/2 · 떠 있는 창 첫 높이 1/3 칸은 이 표지일 때 새 식으로 잰다(§A-4 · 사용자 10/8 18:07 · 18:24)
 JS = JG.JS_PW   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
 both = JG.both   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
 git = JG.git_PW   # JG 로 옮김(_task_qa_slim2 A-1-2) — 남은 제 코드가 이 이름을 부른다 · 같은 객체(두 벌 아님)
@@ -115,8 +116,11 @@ def g1(br, eng):
         return {'v0': v0, 'full': v1, 'back': v2}
     r = both(br, eng, 'phys', True, f)
     n, b = r['NEW'], r['BASE']
-    ok = n['v0']['win'] and n['v0']['rect'] and abs(n['v0']['rect']['w'] - 374) <= 1 and abs(n['v0']['rect']['h'] - 726) <= 1 and abs(n['v0']['rect']['x'] - 8) <= 1 and n['v0']['docw'] <= n['v0']['vw']
-    T('1', '%s 폰 390×844 PA0702 문제 창 = 떠 있는 창 폭 374 · 높이 726 · 좌 8 · 가로 넘침 0' % eng, ok, n['v0'])
+    _H1 = max(200, 844 // 2) if _GG3() else 726   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 「문항 본창 · 첫 크기 화면 1/2」(패치 #31 h=max(200,floor(innerHeight/2)) · 폭 · 좌 그대로)
+    # 옛 줄: ok = n['v0']['win'] and n['v0']['rect'] and abs(n['v0']['rect']['w'] - 374) <= 1 and abs(n['v0']['rect']['h'] - 726) <= 1 and abs(n['v0']['rect']['x'] - 8) <= 1 and n['v0']['docw'] <= n['v0']['vw']
+    ok = n['v0']['win'] and n['v0']['rect'] and abs(n['v0']['rect']['w'] - 374) <= 1 and abs(n['v0']['rect']['h'] - _H1) <= 1 and abs(n['v0']['rect']['x'] - 8) <= 1 and n['v0']['docw'] <= n['v0']['vw']
+    # 옛 줄: T('1', '%s 폰 390×844 PA0702 문제 창 = 떠 있는 창 폭 374 · 높이 726 · 좌 8 · 가로 넘침 0' % eng, ok, n['v0'])
+    T('1', '%s 폰 390×844 PA0702 문제 창 = 떠 있는 창 폭 374 · 높이 %d · 좌 8 · 가로 넘침 0' % (eng, _H1), ok, n['v0'])
     if QC.SMOKE:   # smoke — 1(폰 PA0702 문제 창 첫 꼴) · Z(그 쪽 오류 0)만 · ⤢ · PC 칸 건넘
         T('Z', '%s 오류 0(1 묶음 NEW)' % eng, not r['NEW_err'], r['NEW_err'][:4])
         return
@@ -132,7 +136,11 @@ def g1(br, eng):
     r2 = both(br, eng, 'phys', False, fpc)
     if QC.REGRESS:   # regress — 「= 바탕」 = 기준 스냅샷(앞 인도판 같은 칸의 rect) · 1000×774 조건은 그대로
         r2['BASE'] = {'rect': QC.base(_rg_cid('1.pc', eng), r2['NEW']['rect']), '기준': QC.base_note(_rg_cid('1.pc', eng))}
-    T('1', '%s PC 1553×900 문제 창 1000×774 무변(= 바탕)' % eng, r2['NEW']['rect'] == r2['BASE']['rect'] and abs(r2['NEW']['rect']['w'] - 1000) <= 1 and abs(r2['NEW']['rect']['h'] - 774) <= 1, [r2['NEW'], r2['BASE']])
+    if _GG3():   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 — 새 판 PC 본창 첫 크기 = 폭 min(600, 46 %) · 높이 1/2 · 서랍 바로 오른쪽(패치 #24 · #25 · #31) → 「= 바탕 1000×774」 대신 그 식(바탕 판에서는 아래 옛 줄 그대로)
+        _w1, _h1 = min(600, round(1553 * 0.46)), max(200, 900 // 2)
+        T('1', '%s PC 1553×900 문제 창 %d×%d(폭 46 %%≤600 · 높이 1/2 · 서랍 오른쪽)' % (eng, _w1, _h1), abs(r2['NEW']['rect']['w'] - _w1) <= 1 and abs(r2['NEW']['rect']['h'] - _h1) <= 1 and r2['NEW']['rect']['x'] >= 8, [r2['NEW'], r2['BASE']])
+    else:
+        T('1', '%s PC 1553×900 문제 창 1000×774 무변(= 바탕)' % eng, r2['NEW']['rect'] == r2['BASE']['rect'] and abs(r2['NEW']['rect']['w'] - 1000) <= 1 and abs(r2['NEW']['rect']['h'] - 774) <= 1, [r2['NEW'], r2['BASE']])
     for who in ('NEW',):
         T('Z', '%s 오류 0(1 묶음 NEW)' % eng, not r[who + '_err'] and not r2[who + '_err'], (r[who + '_err'] + r2[who + '_err'])[:4])
 
@@ -329,8 +337,11 @@ def g7(br, eng):
     # ★ 합치기(10/1 하위 에이전트 C) — physphone A-3(97883ef): 물리 위 「공식」 = 공식 시트(FRM 묶음) · 창 자리·크기는 같음 → 공식 시트면 그 꼴로 잰다(옛 목록 창이면 옛 잣대 그대로)
     sheet = str(L.get('title') or '').startswith('📐 공식 · 공식 시트') or bool(n.get('공식 pfw'))   # ★ 2026-10-07 (_task_jagwa_phys_win §A-39 ㊺) pfDecor 가 머리 글을 걷음 → #pwl.pfw 로도 가른다
     g0 = n.get('공식 묶음 0') or {}
-    rect_ok = bool(L.get('rect')) and abs(L['rect']['w'] - 374) <= 1 and abs(L['rect']['h'] - 608) <= 1 and abs(L['rect']['x'] - 8) <= 1
-    T('7', '%s [공식] 목록 창 — 머리 「📐 공식 · 전체 · 물리 목차 51단원」 · 51 줄 · 폭 374 · 높이 72%%(608) · 좌 8' % eng,
+    _P7, _H7 = (33, 844 // 3) if _GG3() else (72, 608)   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 「창 크기 · 모든 makeFloat 창 첫 높이 ≤ 화면 1/3 · 세 과목」(패치 #28 · 사용자 10/8 18:07)
+    # 옛 줄: rect_ok = bool(L.get('rect')) and abs(L['rect']['w'] - 374) <= 1 and abs(L['rect']['h'] - 608) <= 1 and abs(L['rect']['x'] - 8) <= 1
+    rect_ok = bool(L.get('rect')) and abs(L['rect']['w'] - 374) <= 1 and abs(L['rect']['h'] - _H7) <= 1 and abs(L['rect']['x'] - 8) <= 1
+    # 옛 줄: T('7', '%s [공식] 목록 창 — 머리 「📐 공식 · 전체 · 물리 목차 51단원」 · 51 줄 · 폭 374 · 높이 72%%(608) · 좌 8' % eng,
+    T('7', '%s [공식] 목록 창 — 머리 「📐 공식 · 전체 · 물리 목차 51단원」 · 51 줄 · 폭 374 · 높이 %d%%(%d) · 좌 8' % (eng, _P7, _H7),
       (L.get('title') == '📐 공식 · 전체 · 물리 목차 51단원' and len(L.get('rows') or []) == 51 and rect_ok) if not sheet else
       (rect_ok and g0.get('groups', 0) > 0 and g0.get('groups') == g0.get('frm')), L if not sheet else {'공식 시트(physphone A-3)': True, 'title': L.get('title'), 'rect': L.get('rect'), '묶음 줄': g0.get('groups'), 'FRM': g0.get('frm')})
     fb = n.get('공식 1.1.1') or {}
@@ -470,7 +481,10 @@ def rf2(br, eng):
     r2 = both(br, eng, 'phys', True, fph)
     if QC.REGRESS:   # regress — 「= 바탕」 = 기준 스냅샷(앞 인도판 같은 칸의 폰 [공식] 목록 창 rect) · 374×608 조건은 그대로
         r2['BASE'] = QC.base(_rg_cid('RF2.ph', eng), r2['NEW'])
-    T('RF2', '%s 폰 [공식] 목록 창 374×608 무변(= 바탕)' % eng, bool(r2['NEW']) and r2['NEW'] == r2['BASE'] and abs(r2['NEW']['w'] - 374) <= 1 and abs(r2['NEW']['h'] - 608) <= 1, [r2['NEW'], r2['BASE']])
+    if _GG3():   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 — 새 판 폰 [공식] 목록 창 첫 높이 = floor(844/3)(1/3 상한 · 패치 #28) → 「= 바탕 374×608」 대신 그 식
+        T('RF2', '%s 폰 [공식] 목록 창 374×%d(첫 높이 1/3)' % (eng, 844 // 3), bool(r2['NEW']) and abs(r2['NEW']['w'] - 374) <= 1 and abs(r2['NEW']['h'] - 844 // 3) <= 1, [r2['NEW'], r2['BASE']])
+    else:
+        T('RF2', '%s 폰 [공식] 목록 창 374×608 무변(= 바탕)' % eng, bool(r2['NEW']) and r2['NEW'] == r2['BASE'] and abs(r2['NEW']['w'] - 374) <= 1 and abs(r2['NEW']['h'] - 608) <= 1, [r2['NEW'], r2['BASE']])
 
 
 OVER = r"""(ids)=>{const ps=ids.map(id=>{const b=document.getElementById(id);const p=b&&b.querySelector('.panel');return p?p.getBoundingClientRect():null});if(ps.some(x=>!x))return {miss:ids.filter((id,i)=>!ps[i])};
@@ -548,6 +562,9 @@ def rf5(br, eng):
       for(let y=r.top+4;y<r.bottom-4;y+=4)for(let x=r.left+40;x<r.right-6;x+=8){if(x>=c.left-2&&x<=c.right+2&&y>=c.top-2&&y<=c.bottom+2)continue;const a=document.elementFromPoint(x,y);
         if(a&&v.contains(a)&&!a.closest('button,a,input,select,[data-tool]'))return {cx:Math.round(x),cy:Math.round(y),on:true,at:(a.id||a.className||a.tagName).slice(0,20)}}return null}"""
     SOL = "()=>{const r=DATA.find(x=>x[F.NO]===VNO&&SOL[x[F.VLT]])||DATA.find(x=>SOL[x[F.VLT]]);if(r)solSheet(r)}"
+    MV = r"""()=>{const v=document.getElementById('view'),s=document.getElementById('sh-sol');const p=s&&s.querySelector('.panel');if(!v||!p)return null;   /* ★ 2026-10-09 gg3 — 곁창 판을 본창 머리 바로 밑 · 본창 왼쪽에서 20 안으로 */
+      const a=v.getBoundingClientRect(),h=v.querySelector('.vtop').getBoundingClientRect();const top=Math.round(h.bottom+12),left=Math.round(Math.max(0,Math.min(innerWidth-p.getBoundingClientRect().width,a.left+20)));
+      p.style.left=left+'px';p.style.top=top+'px';return {left,top}}"""
 
     def f(q):
         no = q.ev("()=>__W.noOf('PA0702')"); q.ev("n=>__W.openNo(n)", no); q.wait(700) if QC.GATE else _rg_wait(q, 700, _RG_VIEW, 'rf5.view')
@@ -559,6 +576,11 @@ def rf5(br, eng):
         q.ev(SOL); q.wait(800) if QC.GATE else _rg_wait(q, 800, _RG_FLOAT, 'rf5.sol', 'sh-sol')
         out['열고'] = q.ev(OV)
         hd = q.ev(HD)
+        if (out['열고'] or {}).get('nov') or not hd:   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 — 새 본창 자리(1/2 · PC 서랍 오른쪽)에서 곁창이 본창과 안 겹치거나(PC) 본창 머리를 다 덮음(폰) → 곁창 판을 본창 머리 바로 밑으로 옮겨 겹치게 하고 같은 잣대(누른 창 맨 위)로 잰다 · 바탕은 겹치고 머리 보여 안 옮김
+            out['곁창 옮김'] = q.ev(MV)
+            q.wait(300) if QC.GATE else QC.sleep(300, '곁창 옮긴 뒤 그리기', q.pg)
+            out['열고'] = q.ev(OV)
+            hd = q.ev(HD)
         q.press(hd, 600)
         out['머리 누름'] = q.ev(OV)
         out['머리 자리'] = hd

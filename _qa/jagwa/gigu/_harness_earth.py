@@ -57,7 +57,7 @@ TESTS = r"""<script>
    T('목차 115 항목 · 16 절',Object.keys(TOC.unit).length===115&&Object.keys(TOC.sec).length===16,[Object.keys(TOC.unit).length,Object.keys(TOC.sec).length]);
    T('E-2 index.json 절 16 + 부록 2',Object.keys(PIECES).length===18,Object.keys(PIECES).length);
    T('설정 블록 · DB earth1 · 경로',EARTH.DB==='earth1'&&PDF_DIR==='earth/pdf/'&&REC_PATH==='earth/기록.json'&&U_KEY==='earth_sync_u');
-   T('M-2 과목 earth · IndexedDB earth1 열림 · SUBJ.phys 값 그대로(SYNC_KEYS 는 9/5 필터 손질로 12 = +link)',SUBJ_ID==='earth'&&db.name==='earth1'&&document.body.dataset.subj==='earth'&&SUBJ.phys.DB==='phys535'&&SUBJ.phys.PDF_DIR==='phys/pdf/'&&SUBJ.phys.REC_PATH==='phys/기록.json'&&SUBJ.phys.SYNC_PREFIX==='phys_sync_'&&SUBJ.phys.SYNC_KEYS.length===12,[db.name,SUBJ_ID]);
+   T('M-2 과목 earth · IndexedDB earth1 열림 · SUBJ.phys 값 그대로(SYNC_KEYS 는 9/5 필터 손질로 12 = +link)',SUBJ_ID==='earth'&&db.name==='earth1'&&document.body.dataset.subj==='earth'&&SUBJ.phys.DB==='phys535'&&SUBJ.phys.PDF_DIR==='phys/pdf/'&&SUBJ.phys.REC_PATH==='phys/기록.json'&&SUBJ.phys.SYNC_PREFIX==='phys_sync_'&&(SUBJ.phys.SYNC_KEYS.length===12||(SUBJ.phys.SYNC_KEYS.length===13&&SUBJ.phys.SYNC_KEYS[12]==='cqx')),[db.name,SUBJ_ID]);   /* ★ 2026-10-09 _task_jagwa_gg3 §A-2-3 — 물리 SYNC_KEYS 13째 cqx · 옛 줄 끝: &&SUBJ.phys.SYNC_KEYS.length===12,[db.name,SUBJ_ID]); */
    T('M-4 게이트(지학): 지학 조각 보임 · 물리 도구 숨김',getComputedStyle($('#ebody')).display!=='none'&&getComputedStyle($('#stage')).display==='none'&&getComputedStyle($('#btnFormula')).display==='none'&&getComputedStyle($('#tTheory')).display==='none'&&getComputedStyle($('#tCard')).display!=='none'&&!$('#btnTree'));   /* ★ A-6(a) 9/30 — 셸 add9 §A-1(68216cf): 「목차」 단추 #btnTree 걷음(없는 요소에 getComputedStyle → 하니스가 터짐 · col 288) */
    T('머리 = 「자과 서재 · 지학」 · <title> 자과 서재(생물 판 2 add4 · 9/5: 앱 이름 하나 · SUBJ.earth.TITLE 은 그대로) · 탭 셀 현재 = 지학',document.title==='자과 서재'&&$('.brand h1').textContent==='자과 서재 · 지학'&&SUBJ.earth.TITLE==='지학 기출 서재'&&$('#subjTabs .on').textContent==='지학',[document.title,$('.brand h1').textContent]);
    const cells=$$('#subjTabs button');
@@ -542,7 +542,8 @@ def main():
     T2('B-9 PDF 층 게이트에 #btnBook·#book·#bkq', 'body[data-layer="pdf"] #btnBook' in s and 'body[data-layer="pdf"] #book' in s and 'body[data-layer="pdf"] #bkq' in s)
     lay = s[s.index('/*EARTH:js*/'):s.index('/*/EARTH:js*/')]
     T2('B-10 층 안 EARTH.·earthdata 0 · 새 코드는 층 머리 if(SHELL) 안(셸 세 과목 · 카드 몫은 if(HASBOOK))', 'EARTH.' not in lay and "'earthdata'" not in lay and lay.split('\n')[2] == 'if(SHELL){')   # ★ A-6(a) 9/30 — 셸 이식(c9faff2): 층 머리 if(CARD_LAYER){ → if(SHELL){
-    T2('B-9 SUBJ.phys 다섯 값 무변(9/5 필터 손질: SYNC_KEYS 12째 link 반영)', "phys:{DB:'phys535', PDF_DIR:'phys/pdf/', REC_PATH:'phys/기록.json', SYNC_PREFIX:'phys_sync_'," in s and "SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','link']," in s)
+    # 옛 줄: T2('B-9 …', … and "SYNC_KEYS:['status',…,'mcard','link']," in s)
+    T2('B-9 SUBJ.phys 다섯 값 무변(9/5 필터 손질: SYNC_KEYS 12째 link 반영)', "phys:{DB:'phys535', PDF_DIR:'phys/pdf/', REC_PATH:'phys/기록.json', SYNC_PREFIX:'phys_sync_'," in s and ("SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','link']," in s or "SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','link','cqx']," in s))   # ★ 2026-10-09 _task_jagwa_gg3 §A-2-3 — 13째 cqx
     npass = sum(1 for x in lines if x.startswith('PASS')); nfail = len(lines) - npass
     for x in lines: print(x)
     print('\n== %d PASS / %d FAIL / %d항 ==' % (npass, nfail, len(lines)))

@@ -19,6 +19,13 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_fix1 A-4(2026-10-09) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · import 때 sys.argv 에서 --mode · --snap-in · --snap-out 을 뗀다(아래 ARG 보다 먼저) · 새 갈래는 모두 QJ.GATE / QJ.REGRESS / QJ.SMOKE 안
+# ── 모드(_task_qa_fix1 A-4 · 꼴 = 10/4 _task_qa_slim · 이 판의 앞 하네스 _harness_jo_2cha_minso_board.py 와 같은 꼴) ──
+#   gate(인자 없음) = 이 판 앞과 같음 — 바탕 f4c91af 를 git show 로 풀어 새 판과 같은 차례로 띄움(헛잣대 · 「바탕과 같음」 칸)
+#   regress = 새 판만 띄움(바탕 git show 0 · 바탕 쪽 띄움 0 · 그림 안 찍음) · 헛잣대 안 돎 · 「바탕과 같음」 칸 셋(B1 그 링크 꼴 · B3 · B4)은 기준 스냅샷
+#             (QJ.base — 실행기가 --snap-in 으로 준 앞 인도판 새 판 값 · 없으면 첫 기록) · 나머지 칸은 새 판 조건 그대로(B2 훑기 · 두 엔진 그대로)
+#   smoke   = regress 가운데 Chromium · B1 만 — 폰 390 민소 2차 GS 회차별 「펴기」 → .main 가로 넘침 0 · 그 링크 줄바꿈 꼴 · 그 링크 꼴 = 기준(쪽 한 번)
+#   셈(§B-4) = P() 마다 QJ.launch('new'|'base') · 바탕 풀기 QJ.sub('git:show-app') — regress · smoke 에서 base · git:show-app = 0
 import hashlib, io, json, os, subprocess, sys, tempfile, threading, time, traceback, urllib.parse   # noqa: E402
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer   # noqa: E402
 try:
@@ -38,6 +45,9 @@ NEW = ARG('--new', _roots.genie('jo', 'index.html'))
 BASE = ARG('--base', 'f4c91af')   # cloud/jo_2cha_minso_board 끝 = 이 판의 바탕
 ONLY = [x.strip().upper() for x in (ARG('--only', '') or '').split(',') if x.strip()]
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
+if QJ.SMOKE:   # smoke(_task_qa_fix1 A-4) — Chromium 만 · 칸 = B1 셋(폰 390 · 민소 2차 GS 회차별 「펴기」 → .main 가로 넘침 0 · 그 링크 줄바꿈 꼴 · 그 링크 꼴 = 기준) — 이 판(fix1)이 고친 바로 그 화면 · 쪽 한 번
+    ONLY = ['B1']
+    ENGS = [x for x in ENGS if x == 'chromium']
 TMPD = os.path.join(tempfile.gettempdir(), 'h_jo_c2fix1')
 OUTF = ARG('--res', os.path.join(TMPD, '_harness_jo_2cha_minso_board_fix1_result.txt'))
 SHOTS = ARG('--shots', os.path.join(TMPD, 'shots'))
@@ -227,6 +237,7 @@ class P:
     """한 쪽(page) — 판(tag) · 기기(dev) · 엔진"""
     def __init__(self, br, eng, tag, src, dev, over=None):
         self.eng, self.tag, self.dev = eng, tag, dev
+        QJ.launch('base' if tag.startswith('BASE') else 'new')   # 셈(§B-4) — 바탕 판 쪽(태그 BASE…)은 'base' · regress · smoke 에서는 0
         d = DEV[dev]
         self.touch = d['touch']
         port = serve(tag, src, over)
@@ -268,6 +279,8 @@ class P:
         return True
 
     def shot(self, name):
+        if QJ.REGRESS:   # regress · smoke — 그림 안 찍음(눈으로 보는 용 · 판정 아님 · 시간)
+            return
         try:
             os.makedirs(SHOTS, exist_ok=True)
             self.pg.screenshot(path=os.path.join(SHOTS, '%s_%s_%s.png' % (self.tag, self.dev, name)))
@@ -315,6 +328,10 @@ def B1(br, eng, sn, sb):
     if vn and vb and vn.get('long') and vb.get('long'):
         a, b = vn['long'], vb['long']
         T(g, '그 링크 꼴 = 바탕(색 · 바탕색 · 밑줄 꼴 · 커서) — 줄바꿈만 다름', all(a[k] == b[k] for k in ('col', 'bg', 'td', 'cur')), {'new': a, 'base': b})
+    if QJ.REGRESS and vn and vn.get('long'):   # 기준 칸(regress · smoke) — 바탕(f4c91af) 대신 기준 스냅샷(앞 인도판 새 판의 같은 링크 꼴 · 색 · 바탕색 · 밑줄 꼴 · 커서) · 새 판에 그 링크가 없으면 위 둘째 칸이 이미 FAIL
+        a = {k: vn['long'][k] for k in ('col', 'bg', 'td', 'cur')}
+        b = QJ.base('B1-꼴@' + eng, a)
+        T(g, '그 링크 꼴 = 바탕(색 · 바탕색 · 밑줄 꼴 · 커서) — 줄바꿈만 다름', QJ.norm(a) == b, {'new': a, 'base': b, '기준': QJ.base_note('B1-꼴@' + eng)})
 
 
 def B2(br, eng, sn):
@@ -353,6 +370,8 @@ def B3(br, eng, sn, sb):
             lv = p.ev("()=>__FX.link(false)")
             n0 = len(p.ev("()=>__FX.pops()"))
             p.tap(lv, 900)
+            if QJ.REGRESS:   # regress · smoke — 이어지는 창을 앱 표지(POPS 에 새 창)로 기다림(최대 5 초) · gate 는 900ms 고정 그대로 — 10/8 gate · 10/9 jo4 regress 에서 WebKit 이 900ms 안에 창을 안 띄운 적 있음(open [] · 같은 칸 FAIL)
+                QJ.until(p.pg, "n=>{try{return POPS.filter(x=>x.isConnected).length>n}catch(e){return false}}", 5000, 'B3 이어지는 창(POPS 새 창)', arg=n0)
             pl = p.ev("()=>__FX.pops()")
             w1 = p.ev("()=>__FX.where()")
             p.ev("()=>{try{closeAllPops(true);}catch(e){}return 1;}")
@@ -378,6 +397,12 @@ def B3(br, eng, sn, sb):
           vn['live'] and vb['live'] and vn['live']['t'] == vb['live']['t'] and vn['live']['row'] == vb['live']['row'] and [x['t'] for x in vn['liveOpen']] == [x['t'] for x in vb['liveOpen']]
           and vn['dead']['t'] == vb['dead']['t'] and vn['deadPops'] == vb['deadPops'] == 0,
           {'new': [vn['live'] and vn['live']['t'], vn['liveOpen'], vn['dead'] and vn['dead']['t']], 'base': [vb['live'] and vb['live']['t'], vb['liveOpen'], vb['dead'] and vb['dead']['t']]})
+    if QJ.REGRESS and vn:   # 기준 칸 — 바탕(f4c91af + 같은 덧판) 대신 기준 스냅샷(앞 인도판 새 판의 같은 링크 글 · 카드 · 이어지는 창 · .dead 글) · .dead 무반응(새 창 0)은 새 판 조건 그대로
+        # 이어지는 창은 창 열쇠(_pk · 'jo|민사소송법|제259조')로 맞댄다 — 제목 글은 누른 뒤 900ms 에 「제259조 — 불러오는 중」 이 끼어 때에 따라 갈림(10/8 gate webkit B3 FAIL 둘 · 10/9 jo4 regress webkit 스냅샷이 「불러오는 중」 — 잼) · 제목은 값으로만
+        a = [vn['live'] and vn['live']['t'], vn['live'] and vn['live']['row'], [x['k'] for x in vn['liveOpen']], vn['dead'] and vn['dead']['t']]
+        b = QJ.base('B3@' + eng, a)
+        T(g, '바탕과 같음 — 같은 링크(글 · 카드) · 이어지는 창 제목 · .dead 무반응', bool(vn['live']) and bool(vn['dead']) and QJ.norm(a) == b and vn['deadPops'] == 0,
+          {'new': a, 'base': b, '창 제목(값만)': [x['t'] for x in vn['liveOpen']], '기준': QJ.base_note('B3@' + eng)})
 
 
 def B4(br, eng, sn, sb):
@@ -400,15 +425,26 @@ def B4(br, eng, sn, sb):
       bool(vn) and vn.get('link') and vn.get('ws') == 'nowrap' and not vn.get('inBw'), vn)
     if vn and vb:
         T(g, '바탕과 같음(같은 카드 · 같은 링크 · white-space · overflow-wrap)', all(vn.get(k) == vb.get(k) for k in ('ck', 'link', 'ws', 'ow')), {'new': vn, 'base': vb})
+    if QJ.REGRESS and vn:   # 기준 칸 — 바탕 대신 기준 스냅샷(앞 인도판 새 판의 같은 카드 · 같은 링크 · white-space · overflow-wrap)
+        a = {k: vn.get(k) for k in ('ck', 'link', 'ws', 'ow')}
+        b = QJ.base('B4@' + eng, a)
+        T(g, '바탕과 같음(같은 카드 · 같은 링크 · white-space · overflow-wrap)', QJ.norm(a) == b, {'new': vn, 'base': b, '기준': QJ.base_note('B4@' + eng)})
 
 
 def main():
     src_new = app_src(NEW)
-    src_base = app_src(BASE)
+    # 옛 줄: src_base = app_src(BASE)
+    if QJ.GATE:
+        QJ.sub('git:show-app')   # 셈 — 바탕 앱 풀기(regress · smoke 는 0)
+    src_base = app_src(BASE) if QJ.GATE else None   # regress · smoke — 바탕(f4c91af)을 안 푼다(git show 0) → 바탕 쪽 띄움 0 · 헛잣대 없음 · 「바탕과 같음」 칸 = 기준 스냅샷
     if not src_new:
         raise SystemExit('앱을 못 읽었다: ' + NEW)
     print('NEW  = %s · md5(LF) %s · %d B(LF)' % (NEW, md5lf(src_new), len(src_new.replace('\r\n', '\n').encode('utf-8'))))
-    print('BASE = %s · %s' % (BASE, ('md5(LF) ' + md5lf(src_base)) if src_base else '못 읽음(안 잼 — 헛잣대·맞대기 없이)'))
+    # 옛 줄: print('BASE = %s · %s' % (BASE, ('md5(LF) ' + md5lf(src_base)) if src_base else '못 읽음(안 잼 — 헛잣대·맞대기 없이)'))
+    if QJ.GATE:
+        print('BASE = %s · %s' % (BASE, ('md5(LF) ' + md5lf(src_base)) if src_base else '못 읽음(안 잼 — 헛잣대·맞대기 없이)'))
+    else:
+        print('BASE = %s · 안 풂(%s — 헛잣대 없음 · 「바탕과 같음」 칸 = 기준 스냅샷)' % (BASE, QJ.MODE))
     os.makedirs(TMPD, exist_ok=True)
     phase = {}
     with sync_playwright() as pw:
@@ -438,6 +474,8 @@ def main():
     for gg in sorted(by):
         oks = by[gg]
         T('헛잣대', gg, not all(oks), '바탕 FAIL %d / %d' % (oks.count(False), len(oks)))
+    if QJ.REGRESS:   # regress · smoke — 바탕을 안 띄웠다(헛잣대는 gate 몫)
+        N('헛잣대', '안 돎 — 바탕 %s 안 띄움(헛잣대는 gate 몫 · 「바탕과 같음」 칸 = 기준 스냅샷)' % BASE, QJ.MODE)
     ok = [r for r in RES if r[2] is True]
     bad = [r for r in RES if r[2] is False]
     lines = ['_harness_jo_2cha_minso_board_fix1 — PASS %d · FAIL %d · %s초' % (len(ok), len(bad), round(time.time() - T0, 1)),

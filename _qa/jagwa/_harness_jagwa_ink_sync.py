@@ -28,12 +28,18 @@ r"""_task_jagwa_ink_sync §B 관문 — 자과 필기(손글씨) 기기끼리 �
   틀 = moolri/_harness_jagwa_physphone.py 의 serve · route · INIT 꼴(옮겨 씀 · 부르지 않음) · 기기 둘 = gigu/_harness_jagwa_uid_unify.py · _harness_jagwa_revfix0929.py 꼴
   결함 후보 재기 X0~X2(--probe 0 이면 안 함) = §B 밖 · INFO 줄(「재현됨」 = 그 결함이 있다) · 합계 PASS/FAIL 에 안 셈
   자리: N: 밖에서 돌릴 때는 PYTHONPATH 에 N:\개인\claude(_roots) · 데이터 = --spd(예 Documents\spd_wt\c42085f)
+  ★ _task_qa_fix1 A-7(10/9) 모드(_qa_common QC · [--mode gate|regress|smoke] · 실행기가 --snap-out 을 줌) — 인자 없음 = gate = 이 판 앞과 같다
+     regress = 새 판만 띄움 · 바탕 앱 풀기(git show) 0 — 관문만(안 돎): 헛잣대 셋(㉠ 바탕 331faa9 · ㉡ · ㉢ 바꾼 판) · I9(옛 판 331faa9 기기 = 고정 옛 판 띄움)
+              · I8(크기 INFO) · X0~X2(결함 후보 INFO) — 판정 칸(I1~I7 · I10~I15 · I15-webkit)은 그대로 · 기준 칸(바탕 값을 기댓값으로 쓰는 칸)은 I9 뿐이라 QC.base 없음
+     smoke = 시동 묶음(물리 · 지학 · 생물 시동 뺌) I1 · I2 + I4 — 올림 · 합침 · 지움 건너감 세 칸 · webkit 안 띄움
+     셈(§B-4) = 기기(브라우저 문맥)마다 QC.launch('new' | 'base' — 바탕 · 바꾼 판 = 새 판 아닌 것) · 바탕 앱 풀기 = QC.sub('git:show-app')
 """
 import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · MBPDF_ROOT)를 위 폴더에서 찾는다
 _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_common as QC   # noqa: E402 — ★ _task_qa_fix1 A-7(10/9) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
 import base64, collections, hashlib, http.server, json, math, mimetypes, os, re, subprocess, sys, tempfile, threading, time, traceback, urllib.parse, urllib.request   # noqa: E402
 try:
     sys.stdout.reconfigure(encoding='utf-8')
@@ -61,6 +67,8 @@ if 'all' in YARD:
     YARD = ['base', 'mem', 'ord']
 if 'none' in YARD:
     YARD = []
+if not QC.GATE:   # ★ _task_qa_fix1 A-7 — regress · smoke: 헛잣대 셋(㉠ 바탕 331faa9 · ㉡ · ㉢ 바꾼 판) = 관문만(새 판 아닌 앱 띄움 0)
+    YARD = []
 WEBKIT = (ARG('--webkit', '1') or '1') != '0'
 OUTF = ARG('--res', os.path.join(WORK, '_harness_jagwa_ink_sync_result.txt'))
 os.makedirs(WORK, exist_ok=True)
@@ -77,6 +85,7 @@ YNAME = {'base': '㉠ 바탕 %s' % BASE, 'mem': '㉡ 메모리 사본 갱신 끔
 P = dict(I1a=75, I1b=202, I1c=203, I2=210, I4=215, I5=21, I6=220, I7=225, I8a=230, I8b=231, I10=5, I12=240,
          I14a=80, I14c=252, I14d=22, I14e=255, X0=260, X1=262, X2=264)
 PROBE = (ARG('--probe', '1') or '1') != '0'   # X0~X2 = 결함 후보 재기(§B 밖 · INFO 줄 · 합계에 안 셈)
+PROBE = PROBE and QC.GATE   # ★ _task_qa_fix1 A-7 — regress · smoke: X0~X2 안 잼(INFO · 판정 없음 = 관문만)
 I11_KEYS = [str(n) for n in range(381, 531)]   # 150 열쇠
 EU = dict(I1='G95-32-01', W='G95-32-07')
 BU = dict(I1='B00-37-01')
@@ -153,7 +162,16 @@ def Y(tid, yard, title, check_ok, val):
     return ok
 
 
+GATE_ONLY = ('I9', 'I8', 'X0', 'X1', 'X2')   # ★ _task_qa_fix1 A-7 — regress · smoke 에서 안 돎(관문만): I9 = 옛 판 331faa9 기기(고정 옛 판 띄움 · git show) · I8 · X0~X2 = INFO(판정 없음)
+SMOKE_IDS = ('I1', 'I2', 'I4')   # ★ smoke 칸 — I1 옛 필기 올라감(물리 · 지학 카드 · 교재 · 서브노트) · I2 두 기기 합집합 · I4 ↶ 건너감(지움이 다른 기기로)
+
+
 def want(tid):
+    # 옛 줄: return not ONLY or tid in ONLY
+    if not QC.GATE and tid in GATE_ONLY:
+        return False
+    if QC.SMOKE and tid not in SMOKE_IDS:
+        return False
     return not ONLY or tid in ONLY
 
 
@@ -1241,6 +1259,7 @@ def t_I9(W, A, B, br, srv):
     C = Dev(br, W, srv, 'C', view='pc', pdfs=set())
     try:
         p0 = len(W.puts)
+        QC.launch('base')   # ★ 셈(§B-4) — 옛 판(331faa9) 기기 C(gate 만 · I9 관문만)
         C.goto('phys', '/base.html')
         C.rec()
         put_base = [p for p in W.puts[p0:] if p['dev'] == 'C' and p['path'] == 'phys/기록.json']
@@ -1250,6 +1269,7 @@ def t_I9(W, A, B, br, srv):
         s1 = A.st()['st']
         valA1 = {k: A.get(k) for k in keysA}
         p1 = len(W.puts)
+        QC.launch('new')   # ★ 셈(§B-4) — 같은 기기 C 를 새 판으로
         C.goto('phys', '/app.html')   # 같은 기기(같은 출처)를 새 판으로
         C.rec()
         put_new = [p for p in W.puts[p1:] if p['dev'] == 'C' and p['path'] == 'phys/기록.json']
@@ -1257,10 +1277,23 @@ def t_I9(W, A, B, br, srv):
         okr = bool(put_base and put_new)
         if okr:
             jb, jn = json.loads(put_base[-1]['text']), json.loads(put_new[-1]['text'])
+            # ★ 2026-10-09 _task_jagwa_gg3 §A-2-3(물리 SYNC_KEYS 에 cqx 더함 · 13째) — 새 판 PUT 의 cqx 는 뜻한 차 · 열쇠 · 값 대조에서 그 열쇠만 뺀다(data · u · gone) · 있고 없음은 값에 적음
+            G3K = ('cqx',)
+            g3k = {k: {'옛 판 PUT data': k in (jb.get('data') or {}), '새 판 PUT data': k in (jn.get('data') or {}),
+                       'u 도장 옛 · 새': [k in (jb.get('u') or {}), k in (jn.get('u') or {})]} for k in G3K if k in (jn.get('data') or {}) or k in (jb.get('data') or {})}
+            def _nog3(j):
+                j = dict(j)
+                for kk in ('data', 'u', 'gone'):
+                    if isinstance(j.get(kk), dict):
+                        j[kk] = {a: b for a, b in j[kk].items() if a not in G3K}
+                return j
+            jb, jn = _nog3(jb), _nog3(jn)
             kb, kn = sorted(jb), sorted(jn)
             dkb, dkn = sorted((jb.get('data') or {})), sorted((jn.get('data') or {}))
             diff = [x for x in sorted(set(kb) | set(kn)) if x != 'savedAt' and jb.get(x) != jn.get(x)]
             cmpd = {'바탕 열쇠': kb, '새 판 열쇠': kn, 'data 열쇠 같음': dkb == dkn, '값 다른 칸(savedAt 뺌)': diff, 'data 칸 수': len(dkn)}
+            if g3k:
+                cmpd['gg3 새 열쇠(§A-2-3 · 대조에서 뺌)'] = g3k
             okr = kb == kn and dkb == dkn and not diff
         same_ink = before == after
         keep = all(cmp_val(valA0[k], valA1[k])[0] for k in keysA)
@@ -1298,6 +1331,7 @@ def t_I10(W, A, B):
 def t_I11(W, br, srv):
     """첫 동기화 나눠 올림 — 기기 E 에 옛 필기 150 열쇠 → 고리 60 · 60 · (403 흉내 = 멈춤) · 30 · 고리당 커밋 1 · 칩 「필기 n 대기」 90 → 30 → 사라짐"""
     E = Dev(br, W, srv, 'E', view='pc', pdfs=set())
+    QC.launch('new')   # ★ 셈(§B-4) — 새 판 기기 E
     try:
         vals = {k: {'0': [ln(0.1 + (int(k) % 7) * 0.05, 0.1, 0.3 + (int(k) % 7) * 0.05, 0.12, n=5)]} for k in I11_KEYS}
         W.limit = 80
@@ -1338,6 +1372,7 @@ def t_I12(W, A, br, srv):
     no, k = P['I12'], str(P['I12'])
     A.ensure('phys')
     D = Dev(br, W, srv, 'D', view='pc', skew_ms=3600000, pdfs=set())
+    QC.launch('new')   # ★ 셈(§B-4) — 새 판 기기 D(시계 +1 시간)
     try:
         d1, d2, d3 = ln(0.10, 0.20, 0.30, 0.20), ln(0.10, 0.30, 0.30, 0.30, c='#B03A2E'), ln(0.10, 0.40, 0.30, 0.40, c='#2456A6')
         D.goto('phys')
@@ -1575,6 +1610,7 @@ def t_I14e(W, A, B):
 def t_I15w(W, br_wk, srv_wk):
     """webkit 폰(390 · 터치 문맥)에서 화면 펜으로 지학 카드에 긋기(합성 pen 포인터 — 앱이 펜만 받음) → 동기화 → 원격에 그 획"""
     Wd = Dev(br_wk, W, srv_wk, 'W', view='phone', eng='webkit', pdfs=set())
+    QC.launch('new')   # ★ 셈(§B-4) — 새 판 webkit 폰 W
     try:
         Wd.goto('earth')
         no = Wd.ev("u=>uidNo(u)", EU['W'])
@@ -1708,6 +1744,7 @@ def x_merge_addonly(W, A, B):
 def app_src(x):
     if os.path.isfile(x):
         return open(x, 'rb').read().decode('utf-8')
+    QC.sub('git:show-app')   # ★ 셈(§B-4) — 바탕 앱 풀기(gate 만)
     b = subprocess.run(['git', '-C', GENIE, '-c', 'core.quotepath=false', 'show', x + ':jagwa/index.html'], capture_output=True).stdout
     if not b:
         raise SystemExit('바탕 앱을 못 읽었다: ' + x)
@@ -1777,14 +1814,17 @@ XTITLES = {
 
 def main():
     new_src = open(NEWF, 'rb').read().decode('utf-8')
-    base_src = app_src(BASE)
+    # 옛 줄: base_src = app_src(BASE)
+    base_src = app_src(BASE) if QC.GATE else None   # ★ _task_qa_fix1 A-7 — regress · smoke: 바탕 앱 안 풂(git show 0) · 쓰는 곳 = 헛잣대 ㉠ · I9 /base.html(둘 다 관문만)
     mem_src, n_mem = patch_ink(new_src, 'if(mem){', 'if(false){')
     ord_src, n_ord = patch_ink(new_src, '.sort((a,b)=>(G[a].o-G[b].o)||(a<b?-1:a>b?1:0))', '.sort()')
     for rel in VEND_FILES:
         vendor_file(rel)
     md5 = lambda s: hashlib.md5(s.replace('\r\n', '\n').encode('utf-8')).hexdigest()[:8]
     INFO('I0', '판 · 자리', {'NEW': NEWF, 'NEW md5(LF)': md5(new_src), '동기화 덩이': 'syncInk' in new_src and 'inkCycle' in new_src,
-                            'BASE': BASE, 'BASE md5(LF)': md5(base_src), 'BASE 에 syncInk': 'function syncInk' in base_src,
+                            # 옛 줄: 'BASE': BASE, 'BASE md5(LF)': md5(base_src), 'BASE 에 syncInk': 'function syncInk' in base_src,
+                            'BASE': BASE, 'BASE md5(LF)': md5(base_src) if base_src is not None else None, 'BASE 에 syncInk': ('function syncInk' in base_src) if base_src is not None else None,
+                            **({} if QC.GATE else {'모드': '%s — 바탕 · 헛잣대 · I9 · I8 · X0~X2 안 돎(관문만)%s' % (QC.MODE, ' · smoke 칸 ' + '·'.join(SMOKE_IDS) if QC.SMOKE else '')}),   # ★ _task_qa_fix1 A-7
                             '㉡ 바꿈': n_mem, '㉢ 바꿈': n_ord, 'SPD': SPD, '재료': MAT_SRC, 'vendor': VENDOR, '받은 vendor': VEND_GOT,
                             '자료 전제(지난 회독 수)': {'읽음': {s: HC[s] is not None for s in HC}, '갈아 끼움': P_REMAP, '어긋남(그 칸 FAIL 은 자료 탓일 수 있음)': P_BAD}})
     from playwright.sync_api import sync_playwright
@@ -1808,6 +1848,7 @@ def main():
             if wk_res is not None:
                 srv_v = AppServer({'/app.html': new_src})
                 V = Dev(br, WW, srv_v, 'V', view='pc', pdfs=set())
+                QC.launch('new')   # ★ 셈(§B-4) — 새 판 기기 V(webkit 획 받는 Chromium PC)
                 try:
                     t = time.time()
                     mem = wk_res.pop('mem', None) if isinstance(wk_res, dict) else None
@@ -1824,13 +1865,16 @@ def main():
             main_ids = [x for x in TITLES if x != 'I15-webkit'] + ['I8'] + (list(XTITLES) if PROBE else [])
             if any(want(x) for x in main_ids):
                 W1 = World('W1')
-                srv = AppServer({'/app.html': new_src, '/base.html': base_src})
+                # 옛 줄: srv = AppServer({'/app.html': new_src, '/base.html': base_src})
+                srv = AppServer(dict({'/app.html': new_src}, **({'/base.html': base_src} if base_src is not None else {})))   # ★ regress · smoke — /base.html 없음(I9 관문만)
                 A = Dev(br, W1, srv, 'A', view='phone', pdfs=set(PDF_NEED))
                 B = Dev(br, W1, srv, 'B', view='pc', pdfs=set(PDF_NEED))
+                QC.launch('new', 2)   # ★ 셈(§B-4) — 새 판 기기 A · B
                 E = None
                 try:
                     t = time.time()
-                    r = boot(W1, A, B, bio=True)
+                    # 옛 줄: r = boot(W1, A, B, bio=True)
+                    r = boot(W1, A, B, bio=True if QC.GATE else want('I15-생물'))   # ★ smoke — 생물 시동 뺌(I15-생물 은 smoke 칸 아님)
                     SECS['new boot'] = round(time.time() - t, 1)
                     INFO('I1', '첫 시동 요청 수(길마다 · 기기마다)', r['req'])
                     ok1, v1, okp1, oke1 = judge_I1(r)
@@ -1915,6 +1959,7 @@ def main():
                 srv_y = AppServer({'/app.html': src})
                 A2 = Dev(br, Wy, srv_y, 'A', view='phone', pdfs=set(PDF_NEED) if yd == 'base' else set())
                 B2 = Dev(br, Wy, srv_y, 'B', view='pc', pdfs=set(PDF_NEED) if yd == 'base' else set())
+                QC.launch('base', 2)   # ★ 셈(§B-4) — 헛잣대 기기 A · B(바탕 · 바꾼 판 = 새 판 아님 · gate 만)
                 try:
                     if yd == 'base':
                         t = time.time()

@@ -957,11 +957,14 @@ BODY_EARTH = r"""
      const sv=$('#card #qink'), rr=sv.getBoundingClientRect();
      const freeAt=(u,v)=>{const x=rr.left+u*rr.width,y=rr.top+v*rr.width;
        if(x<4||y<4||x>document.documentElement.clientWidth-4||y>document.documentElement.clientHeight-4)return false;
+       {const e0=document.elementFromPoint(x,y);if(!e0||!e0.closest('#card'))return false}   /* ★ 2026-10-09 gg3 — 카드 안(머리 밑 자리 뺌) · 옛 줄: …closest('#view')… */   /* ★ 2026-10-09 _task_jagwa_gg3 §A-4 「문항 본창 첫 크기 화면 1/2(세 과목)」 — 카드 아래쪽이 창 밖(굴림 밖)에 잘려 그 자리는 뒤 목록이 맨 위 → 본창 안 보이는 곳만(earth_shell E 와 같은 고침) */
        try{return !underInk(x,y,sv)}catch(e){return false}};
      let pu=0,pv=0,found=false;
-     for(let v=0.03;v<=0.40&&!found;v+=0.03)for(let u=0.03;u<=0.50&&!found;u+=0.03)
+     /* ★ 2026-10-09 _task_jagwa_gg3 §A-4(본창 첫 크기 1/2) — 찾는 범위 아래 끝을 보이는 본창 아래 끝까지(옛 줄: v<=0.40) */
+     const vMax=(()=>{const vb=Math.min(($('#view')||document.body).getBoundingClientRect().bottom,document.documentElement.clientHeight);return Math.max(0.40,(vb-rr.top)/rr.width-0.12)})();
+     for(let v=0.03;v<=vMax&&!found;v+=0.03)for(let u=0.03;u<=0.50&&!found;u+=0.03)
        if(freeAt(u,v)&&freeAt(u+0.14,v+0.05)&&freeAt(u+0.28,v+0.10)){pu=u;pv=v;found=true}
-     T('E-0 획을 그을 빈 자리를 찾았다',found,[pu,pv]);
+     T('E-0 획을 그을 빈 자리를 찾았다',found,[pu,pv,+vMax.toFixed(2)]);
      await draw1(sv,[rr.width*pu,rr.width*pv,rr.width*(pu+0.14),rr.width*(pv+0.05),
                      rr.width*(pu+0.28),rr.width*(pv+0.10)]);
      T('E-0 펜으로 한 획을 그었다',((QINK.s)||[]).length===1,((QINK.s)||[]).length);
@@ -1634,6 +1637,8 @@ def static_checks():
     #   add7(8fa2462)이 근거 가드에서 SYNC_REF.gg 를 더 읽고(1 → 7) add9(68216cf)가 #navdr 의 put('kv','set') 하나를 걷었다 — 둘 다 있는 키다.
     _kv = lambda t: set(re.findall(r"put\('kv','([^']+)'", t))
     _sr = lambda t: set(re.findall(r"SYNC_REF\.([A-Za-z_$][\w$]*)", t))
+    _G3KV = lambda t: ({'cqx'} if "put('kv','cqx'" in t else set())   # ★ 2026-10-09 _task_jagwa_gg3 §A-2 — g3 이은 개념 빼기 · 댓글 통 kv 'cqx'(합친 판 = 물리 SYNC_KEYS 13째 · SYNC_REF 줄) · 앱에 있을 때만 허용
+    _G3SR = lambda t: ({'cqx'} if 'SYNC_REF.cqx' in t else set())
     T2('Z-15 새 kv·새 SYNC 키가 없다',
        # ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2-1 받은 미리보기 표의 기기 사본 kv 'pvjson'(SYNC 아님 · SYNC_REF 새 키 0 그대로)
        # 옛 줄: (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= {'pvjson'})) and _sr(s) == _sr(base),
@@ -1642,8 +1647,10 @@ def static_checks():
        #   ⚠ 이 잣대는 4754b1d 가 아니라 본판(_base_bp · 고침 전) 대비라 pvjson 은 옛 판에서도 늘 차집합에 든다(위 허용) — 새 FAIL 의 몫은 bak_uid 하나였다.
        # ★ 2026-10-07 (_task_jagwa_phys_win §A-26 · A-30 ㉖) — 물리 오린 것 통 kv 'solx' · 동기화 SYNC_REF.solx 하나씩 더함(앱 글에 SYNC_REF.solx= 가 있을 때만 받음 · 바탕 7520d46 은 옛 판정 그대로)
        # 옛 줄: (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set())))) and _sr(s) == _sr(base),
-       ((_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set()) | ({'solx'} if "SYNC_REF.solx=" in s else set())))) and (_sr(s) == _sr(base) or ("SYNC_REF.solx=" in s and _sr(s) == _sr(base) | {'solx'}))) if QC.GATE else QC.same('Z-15', [sorted(_kv(s)), sorted(_sr(s))]),   # regress — 기준 = 앞 인도판 kv · SYNC_REF 집합(스냅샷)
-       [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))] if QC.GATE else _rg_setdiff('Z-15', [sorted(_kv(s)), sorted(_sr(s))]))
+       # 옛 줄: ((_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set()) | ({'solx'} if "SYNC_REF.solx=" in s else set())))) and (_sr(s) == _sr(base) or ("SYNC_REF.solx=" in s and _sr(s) == _sr(base) | {'solx'}))) if QC.GATE else QC.same('Z-15', [sorted(_kv(s)), sorted(_sr(s))]),
+       # 옛 줄: [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))] if QC.GATE else _rg_setdiff('Z-15', [sorted(_kv(s)), sorted(_sr(s))]))
+       ((_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set()) | ({'solx'} if "SYNC_REF.solx=" in s else set()) | _G3KV(s)))) and (_sr(s) - _G3SR(s) == _sr(base) or ("SYNC_REF.solx=" in s and _sr(s) - _G3SR(s) == _sr(base) | {'solx'}))) if QC.GATE else QC.same('Z-15', [sorted(_kv(s) - _G3KV(s)), sorted(_sr(s) - _G3SR(s))]),   # regress — 기준 = 앞 인도판 kv · SYNC_REF 집합(스냅샷) · g3 cqx 뺀 꼴(★ 2026-10-09 _task_jagwa_gg3)
+       [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))] if QC.GATE else _rg_setdiff('Z-15', [sorted(_kv(s) - _G3KV(s)), sorted(_sr(s) - _G3SR(s))]))
     # ★ A-6(9/30) · shell_bio_phys 수행 결과 §A(9/21 · c9faff2) — 아랫줄 감추기는 교재 문 body[data-book](카드 층 = 지학·생물) · 물리는 add15 #pRow1 규칙(earth_shell Z-17)
     T2('Z-17 아랫줄 감추기는 교재 문(data-book) 안이다',
        'body[data-book] .vbot .tools>*{display:none!important}' in s
@@ -1677,7 +1684,8 @@ def static_checks():
        and s.count('const PASS_THRU=') == 1
        and "'[data-tool],#omrPad,#navTg,select,input,textarea,.ogrip,#mask,.tbox,#qtxt," in s)
     T2('Z-26 ③ 쓰임 수는 **한 함수**다 — 정의 1 · 부르는 자리 3',
-       s.count('function ggUseHTML(') == 1 and s.count('ggUseHTML(') == 4,
+       # 옛 줄: s.count('function ggUseHTML(') == 1 and s.count('ggUseHTML(') == 4,
+       s.count('function ggUseHTML(') == 1 and s.count('ggUseHTML(') == 4 + (1 if 'window.G3=' in s else 0),   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 「항목 줄 · 오른쪽 쓰인 수」 — g3.js(패치 #35)가 같은 함수를 한 곳 더 부름 · 정의 1 그대로
        s.count('ggUseHTML('))
     T2('Z-27 ③ 문턱 5 가 박혀 있다(분포로 조정하지 않는다)',
        "const n=ggUseN(uid); if(n<=1)return '';" in s and "(n>=5?' hot':'')" in s)

@@ -15,10 +15,12 @@ import json, os, re, shutil, subprocess, sys, tempfile
 from PIL import Image
 
 SRC = _roots.genie(r"timetable\index.html")
-if QC.REGRESS:   # regress · smoke — 결과 html · 크롬 프로필을 N:(마이박스) 밖 로컬 임시 폴더로(A-2 · 까닭 = 머리 주석) · gate 는 이 판 앞 그대로
-    OUT = os.path.join(tempfile.gettempdir(), 'h_tt_timetable')
-else:
-    OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "h")
+# ★ 2026-10-09 _task_qa_fix1 §A-6 — gate 도 TEMP: gate 1 초 FAIL 까닭 = N: `timetable\h\` 에 새 파일 쓰기가 막힘(app.html 쓰기 PermissionError Errno 13 · 같은 폴더에 시험 파일도 Errno 13 · 10/9 19:3x 잼 · 마이박스 폴더 탓) → 세 모드 다 %TEMP%\h_tt_timetable
+# 옛 줄: if QC.REGRESS:   # regress · smoke — 결과 html · 크롬 프로필을 N:(마이박스) 밖 로컬 임시 폴더로(A-2 · 까닭 = 머리 주석) · gate 는 이 판 앞 그대로
+# 옛 줄:     OUT = os.path.join(tempfile.gettempdir(), 'h_tt_timetable')
+# 옛 줄: else:
+# 옛 줄:     OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "h")
+OUT = os.path.join(tempfile.gettempdir(), 'h_tt_timetable')
 os.makedirs(OUT, exist_ok=True)
 
 

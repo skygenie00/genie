@@ -146,6 +146,9 @@ def touch_drag(p, x, y, dx, dy, steps=10):
 
 
 CENTER = r"""() => { const a = document.elementFromPoint(innerWidth / 2, innerHeight / 2); if (!a) return null; const w = a.closest('#view, #jnw, #mcw, #pwl, .sheet'); return w ? (w.id || w.className) : ('other:' + (a.id || a.className)); }"""
+# ★ 2026-10-09 _task_jagwa_gg3 §A-4(본창 첫 크기 1/2 · 서랍 오른쪽 · 세 과목) — gg3 판은 본창이 화면 가운데를 안 덮을 수 있어 본창 제 가운데 점에서 맨 위 창을 잰다
+CENTERV = r"""() => { const v = document.getElementById('view'); if (!v || v.classList.contains('hide')) return null; const r = v.getBoundingClientRect(); const a = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); if (!a) return null; const w = a.closest('#view, #jnw, #mcw, #pwl, .sheet'); return w ? (w.id || w.className) : ('other:' + (a.id || a.className)); }"""
+_G3V = lambda s: 'jagwa.win.view2' in (s or '')   # ★ 2026-10-09 gg3 판 표지(본창 기억 열쇠 · 패치 ⑥)
 ZS = r"""() => ['view', 'jnw', 'mcw', 'pwl'].map(id => { const e = document.getElementById(id); return e && !e.classList.contains('hide') ? [id, +getComputedStyle(e).zIndex || 0] : null; }).filter(Boolean)"""
 VISPT = r"""(id) => { const w = document.getElementById(id); if (!w) return null; const p = w.querySelector('.panel') || w; const r = p.getBoundingClientRect();
   for (let y = r.top + 6; y < r.bottom - 4; y += 14) for (let x = r.left + 8; x < r.right - 8; x += 20){ const a = document.elementFromPoint(x, y); if (a && w.contains(a) && !a.closest('button, a, input, textarea, [data-go]')) return {cx: x, cy: y, on: true}; } return null; }"""
@@ -163,6 +166,9 @@ def b1(br, src, base_src, tag):
         at = p.ev("() => __H.hit(document.querySelector('#jnw .jnrow .jgo'))")
         p.press(at, 2500)
         c1, z1 = p.ev(CENTER), p.ev(ZS)
+        c1s = c1
+        if _G3V(src):   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 — 본창 제 가운데(옛 화면 가운데 값 c1s 는 값에 같이)
+            c1 = p.ev(CENTERV)
         g1 = c1 == 'view'
         # 뒤 창(정리 창) 누름 — 폰은 문항 창이 다 덮으므로 문항 창 머리를 손가락으로 끌어 내려 정리 창을 드러낸다
         pt = p.ev(VISPT, 'jnw')
@@ -183,11 +189,14 @@ def b1(br, src, base_src, tag):
         at3 = p.ev("() => __H.hit(document.querySelector('#mcw .jgo'))")
         p.press(at3, 2500)
         c3, z3 = p.ev(CENTER), p.ev(ZS)
+        c3s = c3
+        if _G3V(src):   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 — 본창 제 가운데
+            c3 = p.ev(CENTERV)
         g3 = bool(at3) and c3 == 'view'
         ok = ok and g1 and g2 and g3
-        T(G, '%s 물리 정리 창 번호 → 가운데 = 문항 창' % dn, g1, {'가운데': c1, 'z': z1})
+        T(G, '%s 물리 정리 창 번호 → 가운데 = 문항 창' % dn, g1, dict({'가운데': c1, 'z': z1}, **({'gg3 · 본창 제 가운데로 잼(§A-4 본창 1/2)': True, '화면 가운데': c1s} if _G3V(src) else {})))
         T(G, '%s 뒤 정리 창 누름 → 맨 앞' % dn, g2, {'누른 곳': pt and [round(pt['cx']), round(pt['cy'])], 'z': z2})
-        T(G, '%s 🃏 창 「보기」 → 가운데 = 문항 창' % dn, g3, {'가운데': c3, 'z': z3})
+        T(G, '%s 🃏 창 「보기」 → 가운데 = 문항 창' % dn, g3, dict({'가운데': c3, 'z': z3}, **({'gg3 · 본창 제 가운데로 잼(§A-4 본창 1/2)': True, '화면 가운데': c3s} if _G3V(src) else {})))
         if p.errs:
             ok = False
             T(G, '%s JS 오류' % dn, False, p.errs[:3])
@@ -490,14 +499,21 @@ def b5(br, src, base_src, tag):
             no = p.ev(NO, code)
             open_view(p, no, 2600)
             h = p.ev(HEAD)
-            act = p.ev(GGACT) if subj == 'phys' else None
+            # 옛 줄: act = p.ev(GGACT) if subj == 'phys' else None
+            act = p.ev(GGACT) if subj == 'phys' and not ('window.G3=' in s) else None   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 「근거 줄」 — gg3 물리는 옛 ＋ · 🔍 · 입력 칸이 없음(GGACT 가 null.click 으로 멈춤)
             heads[(subj, which)] = (h, act)
             p.close()
         h, hb = heads[(subj, 'new')][0], heads[(subj, 'base')][0] if QC.GATE else _RG_HB   # regress — 바탕 머리 값은 「→」 적기만 하던 값(안 잼)
         g = h['oneLine'] and h['backL'] <= 12 and all(b[1] >= 36 and b[2] >= 36 or b[0] in ('vBack', 'vWinTg', 'vPrev', 'vNext') and b[1] >= 30 and b[2] >= 30 for b in h['btn']) and h['ell']   # ★ 2026-10-07 (_task_jagwa_phys_win §A-04) — 시안 ⑧⑨ ✕ · ⤢ · ◀ · ▶ = 작은 칩 · 손가락 기기 누를 자리 30px(옛 36)
+        g3tm = None
+        if subj == 'phys' and 'window.G3=' in src:   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 「문항 본창 머리 = 한 줄 꼴 · 물리」(패치 42 · 시계 #tm 22px) — #tm 만 크기 조건에서 빼고 값에 적음(위 줄 = 옛 잣대 그대로 · 나머지 조건 무변)
+            g3tm = [b for b in h['btn'] if b[0] == 'tm']
+            g = h['oneLine'] and h['backL'] <= 12 and all(b[1] >= 36 and b[2] >= 36 or b[0] in ('vBack', 'vWinTg', 'vPrev', 'vNext') and b[1] >= 30 and b[2] >= 30 for b in h['btn'] if b[0] != 'tm') and h['ell']
         ok = ok and g
-        T(G, '폰 390 %s 머리 한 줄 · 서재 left − 창 left ≤ 12 · 단추 ≥ 36 · 제목 말줄임' % subj, g, {'한 줄': (hb['oneLine'], '→', h['oneLine']), '서재 왼쪽': (hb['backL'], '→', h['backL']), '단추': h['btn'], '말줄임': h['ell']})
-        if subj == 'phys' and QC.want('B5.ggphys'):
+        T(G, '폰 390 %s 머리 한 줄 · 서재 left − 창 left ≤ 12 · 단추 ≥ 36 · 제목 말줄임' % subj, g, dict({'한 줄': (hb['oneLine'], '→', h['oneLine']), '서재 왼쪽': (hb['backL'], '→', h['backL']), '단추': h['btn'], '말줄임': h['ell']}, **({'gg3 · 시계 #tm 크기 조건 뺌(§A-4 머리 한 줄 꼴 · 패치 42)': g3tm} if g3tm is not None else {})))
+        if subj == 'phys' and QC.want('B5.ggphys') and 'window.G3=' in src:   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 「근거 줄 · 적는 칸 한 줄 · 항목 줄」(시안 v57) — 옛 근거 칸(＋ · 🔍 · 입력)이 g3 세 칸으로 갈음 · 값 그대로 INFO(새 잣대 = jagwa_gg3 관문)
+            N(G, '물리 근거 칸 = 필기 도구 아랫줄 · 따로 카드 0 · PDF 쪽이 바탕보다 위 · 근거 입력·＋·🔍 무변', {'gg3 갈음': '§A-4 근거 줄(g3 세 칸 · 옛 ＋ · 🔍 · 입력 없음)', '근거 top / 도구 bottom': (h['ggT'], h['pillB']), '카드': h['card'], 'PDF top(창 기준)': h['wrapT'], '근거 줄 머리 안': h['ggInHead']})
+        elif subj == 'phys' and QC.want('B5.ggphys'):
             if QC.GATE:
                 a, ab = heads[(subj, 'new')][1], heads[(subj, 'base')][1]
                 g2 = h['ggInHead'] and h['ggT'] is not None and h['pillB'] is not None and h['ggT'] > h['pillB'] and h['card'] and h['card'][0] == '0px' and not h['card'][1] and h['wrapT'] < hb['wrapT'] and a == ab
@@ -713,13 +729,19 @@ def _b7_ok(scr, sig, newd):   # ★ 2026-10-08 (_task_jagwa_phys_win §A-38 ㊸ 
         return True   # §A-39 ㊹ 이론 표 가로 굴림 감싸개(.thtbw)
     if scr == '문항 창 머리' and sig == 'small:button#tCut':
         return True   # §A-13 ㉑㉕ ✂ 오리기(필기 알약 ↺ 오른쪽 · 작은 아이콘)
+    if _B7G3[0] and scr == '문항 창 머리' and sig in ('small:button#g3Fold', 'small:button#tm'):
+        return True   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 「문항 본창 머리 = 한 줄 꼴 · 물리」(시안 v57 · 패치 42) — ▾ 접기(#g3Fold) · 시계(#tm) 작은 칩
     return False
+
+
+_B7G3 = [False]   # ★ 2026-10-09 gg3 판 표지(b7 이 src 로 채움)
 
 
 def b7(br, src, base_src, tag):
     G = 'B7'
     ok = True
     newd = 'function pfDecor(' in src   # ★ 2026-10-08 (_task_jagwa_phys_win) 새 판 표지
+    _B7G3[0] = 'window.G3=' in src   # ★ 2026-10-09 _task_jagwa_gg3 판 표지
     for dn, dev in (('폰390', PHONE), ('iPad820', PAD), ('PC', PC)):
         n, en = sweep_screens(br, src, tag + 'N' + dn, dev)
         if QC.GATE:

@@ -35,6 +35,14 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_fix1 A-4(2026-10-09) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · import 때 sys.argv 에서 --mode · --snap-in · --snap-out 을 뗀다(아래 E import · ARG 보다 먼저 · E 의 QC 와 몸 한 벌) · 새 갈래는 모두 QJ.GATE / QJ.REGRESS / QJ.SMOKE 안
+# ── 모드(_task_qa_fix1 A-4 · 꼴 = 10/4 _task_qa_slim · 뿌리 _harness_ewm_list 의 qa_slim2 꼴과 같은 길) ──
+#   gate(인자 없음) = 이 판 앞과 같음 — 바탕 a1fbc79 를 git show 로 풀어 폭마다 새 판 · 바탕 두 쪽을 같은 차례로(헛잣대 B3 · 「= 바탕」 칸)
+#   regress = 새 판만 띄움(바탕 git show 0 · 바탕 쪽 띄움 0 · 그림 안 찍음) · 헛잣대(B1a~B1d 의 바탕 쪽 · B3) 안 돎 ·
+#             「= 바탕」 칸(B1e 색 · B1f 수 · B1g 줄 높이 · B1i 61x1 · 넘침 값)의 바탕 자리 = 기준 스냅샷 'B1-ref@<폭 상태>'(앞 인도판 새 판 재기 · tots · rows · ewmn · fit · over · tx 만) ·
+#             B1s 는 새 판 조건(일곱 자리 0 · ink 1 · exc 0 · qltot 1 · 기출뷰 머리 1) + A-2 자리 셈 = 기준 'B1s/A-2' · B0 「바탕에도 나는 오류」 = 기준 'B0/msgs'(E._rg_msg 꼴)
+#   smoke   = regress 가운데 1440 한 폭 · B1s · B1a · B1b · B1c · B0 다섯 칸(쪽 하나 · 세 법)
+#   셈(§B-4) = 쪽 띄움은 E.Pg 가 이미 셈(QC.launch) · 바탕 풀기 QJ.sub('git:show-app') — regress · smoke 에서 base · git:show-app = 0
 import json, os, re, subprocess, sys, time, traceback   # noqa: E402
 import _harness_ewm_list as E   # noqa: E402  — 서버 · 가짜 원격 · 시험 기록 · 쪽 만들기(Pg) · 결과 줄 꼴(T · TB · N)을 그대로 쓴다(import 만으로는 아무것도 안 돈다)
 
@@ -212,6 +220,28 @@ def src_census(sn, sb):
     return ok, {'새 판': n, '바탕': b}
 
 
+if QJ.REGRESS:   # regress 기준 스냅샷 꼴(_task_qa_fix1 A-4) — gate 에서는 안 지음
+    def _ref(v):
+        """재기 → 기준 스냅샷 꼴 — 「= 바탕」 칸(B1e · B1f · B1g · B1i · 넘침 값)이 읽는 칸만 · .tot · 줄은 짧은 배열(스냅샷 크기)"""
+        out = {}
+        for law in sorted(v or {}):
+            m = v[law]
+            out[law] = None if not m else {'tots': [[r.get('k'), r.get('nm'), r.get('t'), r.get('c')] for r in (m.get('tots') or [])],
+                                           'rows': [[r.get('k'), r.get('nm'), r.get('h'), r.get('e')] for r in (m.get('rows') or [])],
+                                           'ewmn': m.get('ewmn'), 'fit': m.get('fit'), 'over': m.get('over'), 'tx': m.get('tx')}
+        return out
+
+    def _unref(b):
+        """기준 스냅샷 꼴 → 재기 꼴(판정 함수 j_color_same · j_nums_same · h_all · j_ewmn_same · 넘침 값을 그대로 쓴다) · 세 법 자리를 늘 채움"""
+        out = {}
+        for law in LAWS:
+            m = (b or {}).get(law)
+            out[law] = None if not m else {'tots': [{'k': x[0], 'nm': x[1], 't': x[2], 'c': x[3]} for x in (m.get('tots') or [])],
+                                           'rows': [{'k': x[0], 'nm': x[1], 'h': x[2], 'e': x[3]} for x in (m.get('rows') or [])],
+                                           'ewmn': m.get('ewmn'), 'fit': m.get('fit'), 'over': m.get('over') or {'sw': None, 'iw': None}, 'tx': m.get('tx')}
+        return out
+
+
 # ════════════════════════ 재기 ════════════════════════
 def git_show(root, rev, rel):
     r = subprocess.run(['git', '-C', root, '-c', 'core.quotepath=false', 'show', rev + ':' + rel], capture_output=True)
@@ -240,8 +270,10 @@ def measure(p, w, law, fold):
 
 
 def run_width(br, w, sn, sb):
-    pn, pb = E.Pg(br, 'jo', 'NEW_%d' % w, sn, w), E.Pg(br, 'jo', 'BASE_%d' % w, sb, w)
-    pages = {'NEW': pn, 'BASE': pb}
+    # 옛 줄: pn, pb = E.Pg(br, 'jo', 'NEW_%d' % w, sn, w), E.Pg(br, 'jo', 'BASE_%d' % w, sb, w)
+    pn, pb = E.Pg(br, 'jo', 'NEW_%d' % w, sn, w), (E.Pg(br, 'jo', 'BASE_%d' % w, sb, w) if QJ.GATE else None)   # regress · smoke — 바탕(a1fbc79) 쪽 안 띄움
+    # 옛 줄: pages = {'NEW': pn, 'BASE': pb}
+    pages = {'NEW': pn, 'BASE': pb} if QJ.GATE else {'NEW': pn}
     try:
         for p in pages.values():
             E.N('B0', '조판기 %s %d 기록 받기 EWM.st' % (p.tag.split('_')[0], w), p.ewm_ok())
@@ -253,6 +285,8 @@ def run_width(br, w, sn, sb):
                     M[tag][law] = measure(p, w, law, fold)
             tag_ = '%d%s' % (w, (' ' + sname) if sname else '')
             vn, vb = M['NEW'], M['BASE']
+            if QJ.REGRESS:   # regress · smoke — 바탕 쪽 재기 없음: 헛잣대 칸(B1a~B1d · TB)엔 바탕 None(새 판 조건만 · YARD 0)
+                vb = None
             cnt = lambda v: {k: len(tots(v, k)) for k in ('unit', 'round', 'chap', 'card', 'other')}
             E.N('B1', '조판기 %s 첫 화면 .tot 수(종류별 · 세 법 합)' % tag_, {'새 판': cnt(vn), '바탕': cnt(vb)})
             g = 'B1'
@@ -263,8 +297,12 @@ def run_width(br, w, sn, sb):
             E.TB(g, '조판기 %s 첫 화면 .tot 어디에도 「총」 「문제」 글자 0 · 「총 N문제」 꼴 0' % tag_, j_nochar, vn, vb,
                  show=lambda v: {'.tot 중 총·문제': sum(1 for r in tots(v, 'unit', 'chap', 'card', 'round', 'other') if '총' in r['t'] or '문제' in r['t']),
                                  '글 전체 「총 N문제」': {law: (m or {}).get('tx') for law, m in v.items()}})
+            if QJ.SMOKE:   # smoke — 이 상태는 B1a · B1b · B1c 까지(B1d · 「= 바탕」 칸 · 넘침은 smoke 밖)
+                continue
             E.TB(g, '조판기 %s 장 머리 · 카드 머리(편 · 미분류 · 변리사 기출) .tot 글자 = 숫자만' % tag_, j_head_digits, vn, vb,
                  show=lambda v: {'장 머리': [r['t'] for r in tots(v, 'chap')][:4], '카드 머리': [r['t'] for r in tots(v, 'card')][:4]})
+            if QJ.REGRESS:   # 「= 바탕」 칸(B1e 색 · B1f 수 · B1g 줄 높이 · B1i 61x1 · 넘침 값)부터 바탕 자리 = 기준 스냅샷(앞 인도판 새 판 재기 · 없으면 첫 기록)
+                vb = _unref(QJ.base('B1-ref@%s' % tag_, _ref(vn)))
             E.T('B1', '조판기 %s 장 머리 · 카드 머리 .tot 계산색 = 바탕(회색 무변)' % tag_, j_color_same(vn, vb),
                 {'새 판': sorted({r['c'] for r in tots(vn, 'chap', 'card')}), '바탕': sorted({r['c'] for r in tots(vb, 'chap', 'card')})})
             a, b = key_list(vn, 'unit', 'chap', 'card', 'round', 'other'), key_list(vb, 'unit', 'chap', 'card', 'round', 'other')
@@ -284,6 +322,8 @@ def run_width(br, w, sn, sb):
             else:
                 E.N('B1', '조판기 %s 가로 넘침 값(지시서는 390 만 판정)' % tag_, {'새 판 [sw, iw]': ov, '바탕 [sw, iw]': ovb})
         # 그림(눈으로 보는 용 · 판정 아님) — 특허법 첫 화면
+        if QJ.REGRESS:   # regress · smoke — 그림 안 찍음(판정 아님 · 시간)
+            return
         for tag, p in pages.items():
             go(p, w, '특허법', False)
             p.ev("() => __A1.top()")
@@ -295,13 +335,20 @@ def run_width(br, w, sn, sb):
 
 def summary(t0):
     y_bad = [y for y in E.YARD if y[2]]
-    E.T('B3', '헛잣대 — 바탕(%s)에서 단원 줄 숫자만 · 계산색 · 「총」「문제」 0 · 장 · 카드 머리 숫자만 이 모두 FAIL(%d 칸)' % (BASE, len(E.YARD)),
-        len(E.YARD) > 0 and not y_bad, {'헛잣대 칸': len(E.YARD), '바탕이 통과한 칸': [y[1] for y in y_bad]})
+    # 옛 줄: E.T('B3', '헛잣대 — 바탕(%s)에서 단원 줄 숫자만 · 계산색 · 「총」「문제」 0 · 장 · 카드 머리 숫자만 이 모두 FAIL(%d 칸)' % (BASE, len(E.YARD)),
+    # 옛 줄:     len(E.YARD) > 0 and not y_bad, {'헛잣대 칸': len(E.YARD), '바탕이 통과한 칸': [y[1] for y in y_bad]})
+    if QJ.GATE:
+        E.T('B3', '헛잣대 — 바탕(%s)에서 단원 줄 숫자만 · 계산색 · 「총」「문제」 0 · 장 · 카드 머리 숫자만 이 모두 FAIL(%d 칸)' % (BASE, len(E.YARD)),
+            len(E.YARD) > 0 and not y_bad, {'헛잣대 칸': len(E.YARD), '바탕이 통과한 칸': [y[1] for y in y_bad]})
+    else:   # regress · smoke — 헛잣대(바탕을 띄워야 함)는 gate 몫
+        E.N('B3', '헛잣대 — 안 돎(바탕 %s 안 띄움 · gate 몫)' % BASE, QJ.MODE)
     n_pass = sum(1 for r in E.RES if r[2] is True)
     n_fail = sum(1 for r in E.RES if r[2] is False)
     lines = ['', '=' * 100, '_harness_ewm_list_add1 — PASS %d · FAIL %d · INFO %d · %d초' % (n_pass, n_fail, sum(1 for r in E.RES if r[2] is None), round(time.time() - t0)),
              '헛잣대(바탕 %s · 같은 차례 · FAIL 이어야 함): %d 칸 중 바탕이 통과한 칸 %d' % (BASE, len(E.YARD), len(y_bad))]
     lines += ['  바탕 통과(헛잣대 실패): %s · %s' % (g, nm) for g, nm, _ in y_bad]
+    if QJ.REGRESS:
+        lines += ['모드 = %s — 바탕 %s 안 띄움 · 헛잣대 없음(위 0 칸은 그 뜻) · 「= 바탕」 칸 = 기준 스냅샷' % (QJ.MODE, BASE)]
     lines += ['줄 높이 판정 = %s' % ('모든 줄 ±1px(--strict-h)' if STRICT_H else '새 판 줄이 바탕보다 1px 넘게 높은 줄 0')]
     lines += ['단계별 초: ' + ' · '.join('%s %d' % s for s in STEP)]
     lines += ['FAIL: %s · %s' % (r[0], r[1]) for r in E.RES if r[2] is False]
@@ -325,17 +372,37 @@ def main():
     else:
         npath = JO_ARG or os.path.join(ROOT, 'jo', 'index.html')
         sn = open(npath, 'rb').read().decode('utf-8') if os.path.isfile(npath) else None
-    sb = git_show(ROOT, BASE, 'jo/index.html')
-    if not sn or not sb:
+    # 옛 줄: sb = git_show(ROOT, BASE, 'jo/index.html')
+    if QJ.GATE:
+        QJ.sub('git:show-app')   # 셈 — 바탕 앱 풀기(regress · smoke 는 0)
+    sb = git_show(ROOT, BASE, 'jo/index.html') if QJ.GATE else None   # regress · smoke — 바탕(a1fbc79) 안 풂(git show 0)
+    # 옛 줄: if not sn or not sb:
+    if not sn or (QJ.GATE and not sb):
         print('NG | 소스를 못 읽음 — 새 판 %s(%s) · 바탕 %s(%s) · 위치 %s' % (npath, bool(sn), BASE, bool(sb), ROOT), flush=True)
         return 2
-    print('INFO | 새 판 %s md5(LF) %s · %s B · 바탕 %s md5(LF) %s · %s B' % (npath, E.md5lf(sn), len(sn.encode('utf-8')), BASE, E.md5lf(sb), len(sb.encode('utf-8'))), flush=True)
-    ok, d = src_census(sn, sb)
-    E.T('B1s', '소스 자리 수 — 첫 화면 「총 N문제」 글을 짓던 일곱 자리 0(바탕 7) · .mbur>.l .tot 색 var(--ink)(바탕 var(--exc)) · A-2 자리(qltot · 기출뷰 머리 · OMR) 무변', ok, d)
+    # 옛 줄: print('INFO | 새 판 %s md5(LF) %s · %s B · 바탕 %s md5(LF) %s · %s B' % (npath, E.md5lf(sn), len(sn.encode('utf-8')), BASE, E.md5lf(sb), len(sb.encode('utf-8'))), flush=True)
+    if QJ.GATE:
+        print('INFO | 새 판 %s md5(LF) %s · %s B · 바탕 %s md5(LF) %s · %s B' % (npath, E.md5lf(sn), len(sn.encode('utf-8')), BASE, E.md5lf(sb), len(sb.encode('utf-8'))), flush=True)
+    else:
+        print('INFO | 새 판 %s md5(LF) %s · %s B · 바탕 %s 안 풂(%s — 헛잣대 없음 · 「= 바탕」 칸 = 기준 스냅샷)' % (npath, E.md5lf(sn), len(sn.encode('utf-8')), BASE, QJ.MODE), flush=True)
+    # 옛 줄: ok, d = src_census(sn, sb)
+    # 옛 줄: E.T('B1s', '소스 자리 수 — 첫 화면 「총 N문제」 글을 짓던 일곱 자리 0(바탕 7) · .mbur>.l .tot 색 var(--ink)(바탕 var(--exc)) · A-2 자리(qltot · 기출뷰 머리 · OMR) 무변', ok, d)
+    if QJ.GATE:
+        ok, d = src_census(sn, sb)
+        E.T('B1s', '소스 자리 수 — 첫 화면 「총 N문제」 글을 짓던 일곱 자리 0(바탕 7) · .mbur>.l .tot 색 var(--ink)(바탕 var(--exc)) · A-2 자리(qltot · 기출뷰 머리 · OMR) 무변', ok, d)
+    else:   # regress · smoke — 새 판 조건(일곱 자리 0 · tot ink 1 · exc 0 · qltot 1 · 기출뷰 머리 1) 그대로 · 「바탕 7 · 바탕 exc」 는 헛잣대라 뺌 · A-2 자리 무변 = 기준 스냅샷(앞 인도판 새 판 셈)
+        n2 = src_census(sn, sn)[1]['새 판']
+        a2 = {k: n2[k] for k in ('qltot', '기출뷰 머리', 'OMR 「/ 총」')}
+        b2 = QJ.base('B1s/A-2', a2)
+        E.T('B1s', '소스 자리 수 — 첫 화면 「총 N문제」 글을 짓던 일곱 자리 0(바탕 7) · .mbur>.l .tot 색 var(--ink)(바탕 var(--exc)) · A-2 자리(qltot · 기출뷰 머리 · OMR) 무변',
+            n2['일곱 자리'] == 0 and n2['tot ink'] == 1 and n2['tot exc'] == 0 and n2['qltot'] == 1 and n2['기출뷰 머리'] == 1 and QJ.norm(a2) == b2,
+            {'새 판': n2, '기준(A-2 자리)': b2, '기준 출처': QJ.base_note('B1s/A-2')})
     E.N('기록', '지어낸 시험 기록(하네스 실행 중 · 파일 없음)', {'틀림 줄': ['%s %d-%d' % (x['s'], x['r'], x['i']) for x in E.WR]})
     with E.sync_playwright() as pw:
         br = pw.chromium.launch()
         for w in E.WIDTHS:
+            if QJ.SMOKE and w != 1440:   # smoke — 1440 한 폭만(B1s · B1a · B1b · B1c · B0)
+                continue
             t1 = time.time()
             try:
                 run_width(br, w, sn, sb)
@@ -344,9 +411,12 @@ def main():
             STEP.append(('폭 %d' % w, round(time.time() - t1)))
         br.close()
     base_msgs = {re.sub(r' @\d*$', '', m) for k, v in E.ERRS.items() if ' BASE' in k for m in v}
+    if QJ.REGRESS:   # regress · smoke — 바탕 쪽 안 띄움: 「바탕에도 나는 오류」 = 기준 스냅샷(앞 인도판 새 판 오류 글 · @줄 · 포트 뺀 꼴 — 뿌리 _harness_ewm_list B0 와 같은 길 E._rg_msg)
+        base_msgs = set(QJ.base('B0/msgs', sorted({E._rg_msg(m) for k, v in E.ERRS.items() if ' NEW' in k for m in v})))
     for k, v in E.ERRS.items():
         if ' NEW' in k:
-            own = [m for m in v if re.sub(r' @\d*$', '', m) not in base_msgs]
+            # 옛 줄: own = [m for m in v if re.sub(r' @\d*$', '', m) not in base_msgs]
+            own = [m for m in v if (re.sub(r' @\d*$', '', m) if QJ.GATE else E._rg_msg(m)) not in base_msgs]
             E.T('B0', '%s 페이지 오류 0(바탕에도 같은 글로 나는 오류는 값만 · %d)' % (k, len(v) - len(own)), not own, {'새 판만': own[:5], '바탕과 같음': sorted({m for m in v if m not in own})[:3]})
         else:
             E.N('B0', '%s 페이지 오류' % k, v[:5])

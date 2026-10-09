@@ -29,6 +29,11 @@ r"""_task_jagwa_ggmath §B 관문 「GM」 — 자과앱 근거 칸 수식 꼴 g
     + 안 걸리는 잣대가 아님을 보이는 변이 둘(node): ① v8 꼴(그냥 괄호를 잃음) → B2 ① 이 걸려야 · ② 글자를 esc 안 함 → B3 이 걸려야
   기록 = route 사본(칸 이름만 있는 빈 기록 + 쪽 안에서 앱 함수(saveGG · saveGGREF)로 근거를 심음 · PUT 은 가로채 밖으로 안 나감 · HU 의 INIT) · studyplandata 는 읽기만(fetch · pull · 쓰기 0)
   ⚠ 자과앱 픽셀 IDENTICAL 게이트 없음(CLAUDE.md) — 쌓임 = elementsFromPoint · 그려졌는가 = DOM 개수 · 자리 = getBoundingClientRect · 그림(png)은 사람이 보는 것(게이트 아님)
+  ★ 2026-10-09 옛 잣대 고침(jagwa/_task_jagwa_gg3.md §L-1-1 · §C-1 · 근거 = §A-4 표 「근거 줄」 · 「항목 줄」) — 물리 앱에 g3(window.G3)가 있으면
+    「펼친 근거(panel)」 판 · 번호 칩([data-ggtog]) · 고치기 단추([data-gged])가 없다 → 그 자리 = 항목 줄 #view .g3list .g3r[data-g3k="uid|key|칸"] .g3tx
+    (문항 열 때마다 접힘 #view.g3off → #g3Fold 로 폄 · 연결 상자도 그 안) · 6 번호 칩 title = 「칩 없음」(칩 0 · 항목 줄 있음) · 7 고치기 칸 = 길게 누름 0.55 초 .g3ed textarea ·
+    10 댓글 = 「댓」(.g3cm) 펼친 .g3cmb · B-5 같은 꼴 · B0 소스 셈은 g3.js 덩이(패치 #35 · window.G3 를 둔 <script>) 몫을 빼고 셈
+    g3 없는 앱(바탕 · 지학 · 생물)은 새 갈래를 안 탄다(옛 줄 그대로 · 바꾼 옛 줄은 「옛 줄:」 주석으로 남김)
 """
 import os as _os_r, sys as _sys_r   # env_lanes(9/29) — _roots.py(GENIE_ROOT · SPD_ROOT · N_ROOT)를 위 폴더에서 찾는다
 _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
@@ -389,6 +394,15 @@ def patch_blocks():
     return out
 
 
+def g3_seg(t):
+    """★ gg3(10/9) — 앱 글에서 g3.js 덩이(패치 #35 가 </body> 앞에 넣은 <script> · window.G3 를 둔 것) · 없으면 ''(바탕 · 지학·생물 판과 같은 글)"""
+    i = t.find('window.G3={')
+    if i < 0:
+        return ''
+    a, b = t.rfind('<script', 0, i), t.find('</script>', i)
+    return t[a:b] if (a >= 0 and b > i) else ''
+
+
 def b0_static(new, base):
     """B0 정적 칸 — 앱 글(소스)만 본다(브라우저 0): 글자 그대로 · 바뀐 곳 전수 · 이름 충돌 · 자리 다섯"""
     import difflib
@@ -446,9 +460,17 @@ def b0_static(new, base):
       nb['WORD 정의'] == 1 and nb['ggMath 정의'] == 1 and nb['ggMath 대입'] == 0 and nb['gm- 클래스 CSS'] == 9, {'새 판': nn, '바탕': nb})
     # ④ 자리 — 넣음 다섯은 ggMath · 안 넣음(title · 고치기 칸 · .gl · 댓글)은 esc/ea 그대로
     def sites(t):
-        return {'ggMath(p.t)': t.count("ggMath(p.t)"), "ggMath(g.t||'')": t.count("ggMath(g.t||'')"), 'ggMath(ggFlat(g))': t.count('ggMath(ggFlat(g))'),
-                'ggMath(첫 줄)': t.count("ggMath(ggFlat(g).split('\\n')[0])"), 'esc(ggFlat(g)) 남음': t.count('esc(ggFlat(g))'),
-                'esc(첫 줄) 남음': t.count("esc(ggFlat(g).split('\\n')[0])")}
+        # 옛 줄: return {'ggMath(p.t)': t.count("ggMath(p.t)"), "ggMath(g.t||'')": t.count("ggMath(g.t||'')"), 'ggMath(ggFlat(g))': t.count('ggMath(ggFlat(g))'),
+        # 옛 줄:         'ggMath(첫 줄)': t.count("ggMath(ggFlat(g).split('\\n')[0])"), 'esc(ggFlat(g)) 남음': t.count('esc(ggFlat(g))'),
+        # 옛 줄:         'esc(첫 줄) 남음': t.count("esc(ggFlat(g).split('\\n')[0])")}
+        g3 = g3_seg(t)   # ★ gg3(10/9) — g3.js 덩이(패치 #35)는 자리 다섯 밖(물리 g3 근거 줄 · 작은 창 · 쓰인 문항 창이 ggMath(ggFlat(g)) 를 4 곳 더 부름 · 3 → 7) → 빼고 셈 · 없으면 ''(옛 셈 그대로)
+        t0 = t.replace(g3, '') if g3 else t
+        d = {'ggMath(p.t)': t0.count("ggMath(p.t)"), "ggMath(g.t||'')": t0.count("ggMath(g.t||'')"), 'ggMath(ggFlat(g))': t0.count('ggMath(ggFlat(g))'),
+             'ggMath(첫 줄)': t0.count("ggMath(ggFlat(g).split('\\n')[0])"), 'esc(ggFlat(g)) 남음': t0.count('esc(ggFlat(g))'),
+             'esc(첫 줄) 남음': t0.count("esc(ggFlat(g).split('\\n')[0])")}
+        if g3:
+            d['g3.js 덩이 몫(뺌) ggMath(ggFlat(g))'] = g3.count('ggMath(ggFlat(g))')
+        return d
     keep = lambda t: {'title ea(ggFlat)': t.count('ea(ggFlat(g))'), '댓글 esc(c.t)': t.count("esc(c.t||'')"), '상자 댓글 esc': t.count("esc((c&&c.t)||'')"), '.gl mark': t.count("'<div class=\"gl\">'+mark(line)+'</div>'")}
     sn, sb, kn, kb = sites(new), sites(base), keep(new), keep(base)
     if QC.REGRESS:   # regress — 기준 칸: 안 넣음 자리 글자 셈의 바탕 = 앞 인도판 스냅샷(바탕 앱 0)
@@ -681,6 +703,36 @@ const shape=e=>{
 const secFor=u=>Object.keys(TOC.sec).find(s=>((TOC.sec[s]||{}).units||[]).includes(u))||'';
 const XK=[1,2,3,4,5].map(i=>'g_ggm_x'+i);
 const G={ctx:null,cur:null,shape:shape};
+/* ★ gg3(10/9 · _task_jagwa_gg3 §A-4 「근거 줄」 · 「항목 줄」) — 물리 앱에 g3(window.G3)가 있으면 펼친 근거 판 · 번호 칩 · 고치기 단추가 없다:
+   항목 줄 = #view .g3list .g3r[data-g3k="uid|key|칸"] .g3tx(심은 근거는 칸 f 없음 = 트리거 t) · 문항 열 때마다 접힘(#view.g3off → #g3Fold 로 폄) ·
+   댓글 = 「댓」(.g3cm) 누르면 그 줄 밑 .g3cmb · 고치기 = 길게 누름 0.55 초 → .g3ed textarea — g3 없는 앱(바탕 · 지학 · 생물)은 아래 옛 길 그대로 */
+const g3on=()=>!!(window.G3&&typeof window.G3==='object'&&typeof window.G3.push==='function');
+const g3row=(u,k)=>document.querySelector('#view .g3list .g3r[data-g3k^="'+u+'|'+k+'|"]');
+G.g3on=g3on;
+G.g3unfold=async ()=>{const v=document.getElementById('view'),b=document.getElementById('g3Fold');
+  if(v&&b&&v.classList.contains('g3off')){b.click();await sleep(150)}
+  return !!v&&!v.classList.contains('g3off')};
+G.g3cs=async (u,ks)=>{const out=[];
+  for(const kk of ks){const r=g3row(u,kk);if(!r)continue;
+    const ck=u+'|'+kk+'|qp-'+(String(r.getAttribute('data-g3k')).split('|')[2]||'t'),sel='#view .g3cm[data-g3cm="'+ck+'"]';
+    const b=document.querySelector(sel);if(!b)continue;
+    b.click();await sleep(150);
+    [...document.querySelectorAll('#view .g3cmb [data-ggcs="'+ck+'"] .ggcs .t')].forEach(e=>out.push({txt:tx(e),sh:shape(e)}));
+    const b2=document.querySelector(sel);if(b2&&document.querySelector('#view .g3cmb')){b2.click();await sleep(150)}}
+  return out};
+G.g3edit=async (u,k)=>{
+  const row=g3row(u,k),t=row?row.querySelector('.g3tx'):null;if(!t)return {err:'g3 항목 줄 없음 '+u+'-'+k};
+  try{t.scrollIntoView({block:'center'})}catch(e){}
+  const rc=t.getBoundingClientRect(),x=rc.left+Math.min(8,rc.width/2),y=rc.top+rc.height/2;
+  const pe=ty=>new PointerEvent(ty,{bubbles:true,cancelable:true,composed:true,clientX:x,clientY:y,pointerId:7,pointerType:'mouse',isPrimary:true,button:0,buttons:ty==='pointerup'?0:1});
+  t.dispatchEvent(pe('pointerdown'));await sleep(700);t.dispatchEvent(pe('pointerup'));await sleep(120);
+  let how='길게 누름 0.7초',r2=g3row(u,k),ta=r2?r2.querySelector('.g3ed textarea'):null;
+  if(!ta&&r2&&typeof window.g3EditInline==='function'&&window.g3EditInline(r2)){how='g3EditInline 직접';await sleep(80);ta=r2.querySelector('.g3ed textarea')}
+  const lab=ta?ta.closest('.g3ed').querySelector('input.lab'):null;
+  const out={ta:ta?ta.value:null,lab:lab?lab.value:null,how:how};
+  if(ta){ta.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));await sleep(150)}
+  out.left=document.querySelectorAll('#view .g3list .g3ed').length;
+  return out};
 
 /* 한 절 안에서 근거 없는 문항 넷을 골라(A 식 · B 연결 · X 막힘 · C 입력) 앱의 GG · GGREF 에 심는다 — 앱 함수(saveGG · saveGGREF)로 저장 */
 G.plant=async spec=>{
@@ -718,9 +770,14 @@ G.open=async no=>{
   try{await openView(no)}catch(e){err='ERR '+e}
   /* 물리 PDF 쪽이 안 그려져 showProblem 이 던져도 근거 줄(ggPhysPaint)은 그 뒤 몫이다 — 안 그려졌으면 앱 함수로 그린다(근거 줄만 잰다) */
   if(!HASBOOK&&!document.getElementById('ggphys')){try{ggPhysPaint()}catch(e){}}
-  await sleep(1400);G.noSet();return err||'ok'};
+  /* 옛 줄: await sleep(1400);G.noSet();return err||'ok'}; */
+  await sleep(1400);G.noSet();
+  if(g3on())await G.g3unfold();   /* ★ gg3 — 문항을 열면 근거 줄이 접혀 있다(#view.g3off · 연결 상자도 그 안) → 사람처럼 ▾ 로 편다 */
+  return err||'ok'};
 
 G.pPanel=async (u,k)=>{
+  if(g3on()){const on=await G.g3unfold(),r=g3row(u,k);await sleep(100);   /* ★ gg3 — 펼친 판 · 번호 칩 없음 → 그 항목 줄(편 근거 줄 안) */
+    return r?{how:'g3 항목 줄'+(on?'':' · 접힘'),vis:vis(r),title:null}:{err:'g3 항목 줄 없음 '+u+'-'+k}}
   const p=document.getElementById('qp-gg-pan-'+u+'-'+k);
   if(!p)return {err:'panel 없음 '+u+'-'+k};
   const chip=document.querySelector('[data-ggtog="'+u+'|'+k+'|qp-"]');
@@ -737,6 +794,7 @@ G.items=()=>{
   const c=G.ctx,u=c['u'+cur.tgt];const out={rows:null,cs:null,whole:shape(cur.el)};
   if(cur.kind==='panel'){
     const ks=(cur.tgt==='A')?['g_ggm_a1']:XK;out.rows=[];out.cs=[];
+    if(cur.g3){ks.forEach(kk=>{const r=g3row(u,kk);out.rows.push(shape(r?r.querySelector('.g3tx'):null))});out.cs=(cur.cs||[]).slice()}else   /* ★ gg3 — 항목 줄 .g3tx · 댓글 = 열 때 「댓」 으로 모은 것 · 아래 옛 줄 = g3 없는 앱 */
     ks.forEach(kk=>{const p=document.getElementById('qp-gg-pan-'+u+'-'+kk);
       out.rows.push(shape(p?p.querySelector('.hd .t'):null));
       (p?[...p.querySelectorAll('.ggcs .t')]:[]).forEach(e=>out.cs.push({txt:tx(e),sh:shape(e)}))})}
@@ -751,13 +809,19 @@ G.openPlace=async (kind,tgt)=>{
   const c=G.ctx,n=c['n'+tgt],u=c['u'+tgt],k=(tgt==='A')?'g_ggm_a1':'g_ggm_x1';
   G.closePlace();G.noSet();
   let el=null,clip=null,note='',title=null;
+  let g3=null;   /* ★ gg3 — panel 자리가 g3 항목 줄이면 {cs · chips} */
   if(kind==='panel'){
     note=await G.open(n);
     const ks=(tgt==='A')?['g_ggm_a1']:XK;const hows=[];
     for(const kk of ks){const r=await G.pPanel(u,kk);hows.push(r.how||r.err)}
     note+=' '+hows.join(',');
+    if(g3on()){   /* ★ gg3 — 번호 칩 0 · 펼친 판 = 그 항목 줄 .g3tx(판 = 그 줄) · 댓글은 「댓」 으로 모음(다시 그려지니 줄은 그 뒤에 다시 찾음) */
+      g3={cs:await G.g3cs(u,ks),chips:document.querySelectorAll('#view [data-ggtog^="'+u+'|"]').length};
+      const row=g3row(u,k);clip=row;el=row?row.querySelector('.g3tx'):null;
+    }else{
     const chip=document.querySelector('[data-ggtog="'+u+'|'+k+'|qp-"]');title=chip?chip.getAttribute('title'):null;
     const p=document.getElementById('qp-gg-pan-'+u+'-'+k);clip=p;el=p?p.querySelector('.hd .t'):null;
+    }
   }else if(kind==='refbox'){
     note=await G.open(c.nB);
     const b=document.getElementById('qp-gg-refbox-'+c.uB+'-'+u);
@@ -777,6 +841,7 @@ G.openPlace=async (kind,tgt)=>{
     el=sh?sh.querySelector('small'):null;clip=sh?sh.querySelector('.panel'):null;
   }
   G.cur={kind:kind,tgt:tgt,el:el,clip:clip};
+  if(g3){G.cur.g3=true;G.cur.cs=g3.cs;return {found:!!el,note:note,title:title,vis:vis(el),items:G.items(),g3:true,chips:g3.chips}}   /* ★ gg3 */
   return {found:!!el,note:note,title:title,vis:vis(el),items:G.items()}};
 
 /* 자리 모양 — 가로 넘침 · 줄 수 · 겹침 · 맨 위 요소 · 잘림 · 글자 크기 · √ 꺾임(getBoundingClientRect · elementFromPoint) */
@@ -851,12 +916,14 @@ G.shotRect=()=>{const cur=G.cur;if(!cur)return null;const e=cur.clip||cur.el;if(
 G.editBoxes=async ()=>{
   const c=G.ctx,u=c.uA,k='g_ggm_a1',out={};
   await G.open(c.nA);await G.pPanel(u,k);
+  if(g3on()){out.panel=await G.g3edit(u,k);out.g3=true}else{   /* ★ gg3 — 고치기 단추 없음 → 항목 줄 길게 누름 0.55 초 = 그 자리 고치기 칸(.g3ed textarea · ㄱ·(1) 칸 없음) */
   const eb=document.querySelector('[data-gged="'+u+'|'+k+'|qp-"]');
   if(eb){eb.click();await sleep(150);
     const box=document.querySelector('[data-gged-box="'+u+'|'+k+'|qp-"]');
     const ta=box?box.querySelector('textarea.txt'):null,lab=box?box.querySelector('input.lab'):null;
     out.panel={ta:ta?ta.value:null,lab:lab?lab.value:null,rows:box?box.querySelectorAll('.ggrow').length:0};
     eb.click();await sleep(80)}else out.panel={err:'고치기 단추 없음'};
+  }   /* ★ gg3 — 위 else 닫음 */
   await G.open(c.nB);
   const b=document.getElementById('qp-gg-refbox-'+c.uB+'-'+u);
   if(b&&b.classList.contains('hide')){const chip=document.querySelector('[data-ggrt="'+c.uB+'|'+u+'|qp-"]');if(chip)chip.click();if(b.classList.contains('hide'))b.classList.remove('hide')}
@@ -890,6 +957,12 @@ G.afterAdd=async ()=>{
   if(!g)return {err:'GG 에 안 들어감',n:L.length};
   const sg=SYNC_REF.gg.g()||{};
   const out={n:L.length,t:g.t,parts:g.parts||null,k:g.k,sync:(sg[u]&&sg[u][0])?sg[u][0].t:null};
+  if(g3on()){   /* ★ gg3 — 번호 칩 없음(title 칸 → 칩 0) · 아래 근거 줄 = 그 항목 줄 .g3tx · 고치기 칸 = 길게 누름 */
+    out.g3=true;out.chips=document.querySelectorAll('#view [data-ggtog^="'+u+'|"]').length;out.title=null;
+    const pr=await G.pPanel(u,g.k);out.how=pr.how||pr.err;
+    const r=g3row(u,g.k);out.panel=shape(r?r.querySelector('.g3tx'):null);
+    const e=await G.g3edit(u,g.k);out.edit=e.ta;out.editHow=e.how||e.err;
+    return out}
   const chip=document.querySelector('[data-ggtog^="'+u+'|'+g.k+'|"]');out.title=chip?chip.getAttribute('title'):null;
   const pr=await G.pPanel(u,g.k);out.how=pr.how||pr.err;
   const p=document.getElementById('qp-gg-pan-'+u+'-'+g.k);out.panel=shape(p?p.querySelector('.hd .t'):null);
@@ -1003,7 +1076,8 @@ def scene(br, eng, who, subj, do):
             raw['b3'] = b3
         if 'B5' in do:
             dv.ev("n=>__G.open(n)", ctx['nC'])
-            loc = dv.pg.locator('[data-ggrows="%s|qp-"] .ggrow .txt' % ctx['uC']).first
+            # 옛 줄: loc = dv.pg.locator('[data-ggrows="%s|qp-"] .ggrow .txt' % ctx['uC']).first
+            loc = dv.pg.locator('[data-ggrows="%s|qp-%s"] .ggrow .txt' % (ctx['uC'], 't' if dv.ev("()=>__G.g3on()") else '')).first   # ★ gg3 — 물리 g3 적는 칸 = 「uid|qp-t」(토글 기본 트리거 칸 · g3LineHTML) · 없으면 옛 「uid|qp-」
             loc.fill(FORMULA, timeout=15000)
             loc.press('Enter', timeout=15000)
             dv.pg.wait_for_timeout(1200)
@@ -1068,11 +1142,17 @@ def cells_b4(raw, who):
                     {k: (sh or {}).get(k) for k in ('frac', 'root', 'fn', 'fd', 'ra', 'txt')} if sh else (o or '자리 못 염')))
     # 안 넣음 6 — title
     t6 = (b4.get('panel') or {}).get('title')
-    out.append(('B-4 %s 안 넣음 6 번호 칩 title — 친 글자 그대로(HTML 못 그림)' % sj, t6 == FORMULA, t6))
+    # 옛 줄: out.append(('B-4 %s 안 넣음 6 번호 칩 title — 친 글자 그대로(HTML 못 그림)' % sj, t6 == FORMULA, t6))
+    p6 = b4.get('panel') or {}   # ★ gg3(10/9) — 물리 g3 = 번호 칩 없음(§A-4 항목 줄 v37 「번호·상자 없음」) → 그 문항 번호 칩 0 · 항목 줄 있음(표본 0 거저 참 막이)
+    out.append(('B-4 %s 안 넣음 6 번호 칩 title — 친 글자 그대로(HTML 못 그림)' % sj, (t6 == FORMULA) if not p6.get('g3') else (p6.get('chips') == 0 and bool(p6.get('found'))),
+                t6 if not p6.get('g3') else {'g3': '칩 없음(§A-4 항목 줄 v37 번호·상자 없음)', '번호 칩': p6.get('chips'), '항목 줄': bool(p6.get('found')), 'title': t6}))
     # 안 넣음 7 — 고치기 칸
     ed = raw.get('edit') or {}
     p7, r7 = (ed.get('panel') or {}), (ed.get('refbox') or {})
-    out.append(('B-4 %s 안 넣음 7 고치기 칸 textarea — 친 글자 그대로(펼친 근거 · 연결 상자 둘 다)' % sj, p7.get('ta') == FORMULA and r7.get('ta') == FORMULA and p7.get('lab') == '', {'펼친 근거': p7, '연결 상자': r7}))
+    # 옛 줄: out.append(('B-4 %s 안 넣음 7 고치기 칸 textarea — 친 글자 그대로(펼친 근거 · 연결 상자 둘 다)' % sj, p7.get('ta') == FORMULA and r7.get('ta') == FORMULA and p7.get('lab') == '', {'펼친 근거': p7, '연결 상자': r7}))
+    g7 = bool(ed.get('g3'))   # ★ gg3(10/9) — 물리 g3: 고치기 단추 없음 → 항목 줄 길게 누름 0.55 초 그 자리 고치기 칸(.g3ed textarea · ㄱ·(1) 칸 없음 = lab 없음 · §A-4 근거 줄 · 항목 줄)
+    out.append(('B-4 %s 안 넣음 7 고치기 칸 textarea — 친 글자 그대로(펼친 근거 · 연결 상자 둘 다)' % sj, p7.get('ta') == FORMULA and r7.get('ta') == FORMULA and ((p7.get('lab') is None) if g7 else (p7.get('lab') == '')),
+                {'펼친 근거': p7, '연결 상자': r7} if not g7 else {'펼친 근거(g3 길게 누름 칸)': p7, '연결 상자': r7}))
     # 안 넣음 9 — 검색·찾기 결과 .gl 셋
     se = raw.get('search') or {}
     gls = {}
@@ -1135,10 +1215,14 @@ def cells_b5(raw):
     if not b5 or b5.get('err'):
         return [('B-5 저장 무변 — 입력 뒤 GG 에 들어감', False, b5)], False
     put = b5.get('put') or {}
+    # 옛 줄: ok = (b5.get('n') == 1 and b5.get('t') == FORMULA and not b5.get('parts') and b5.get('sync') == FORMULA and put.get('t') == FORMULA
+    # 옛 줄:       and b5.get('edit') == FORMULA and b5.get('title') == FORMULA)
     ok = (b5.get('n') == 1 and b5.get('t') == FORMULA and not b5.get('parts') and b5.get('sync') == FORMULA and put.get('t') == FORMULA
-          and b5.get('edit') == FORMULA and b5.get('title') == FORMULA)
+          and b5.get('edit') == FORMULA and ((b5.get('title') == FORMULA) if not b5.get('g3') else (b5.get('chips') == 0)))   # ★ gg3(10/9) — 물리 g3 = 번호 칩 없음(title 칸 → 칩 0) · 고치기 칸 = 길게 누름 칸
     out.append(('B-5 저장 무변 — 칸에 쳐서 Enter: GG[uid][0].t · 동기화 올릴 몸(SYNC gg · PUT 몸통) · 고치기 칸 · title 이 친 글자 그대로(근거 하나)', ok,
                 {'GG 개수': b5.get('n'), 'GG t': b5.get('t'), 'SYNC gg': b5.get('sync'), 'PUT 몸통 t': put.get('t'), '고치기 칸': b5.get('edit'), 'title': b5.get('title'), 'PUT 수': put.get('n')}))
+    if b5.get('g3'):   # ★ gg3 — 값에 g3 길(칩 수 · 고치기 길)
+        out[-1][2].update({'g3': '칩 없음 · 고치기 = 길게 누름 칸', '번호 칩': b5.get('chips'), '고치기 길': b5.get('editHow')})
     sh = b5.get('panel')
     out.append(('B-5 입력 → 아래 근거 줄이 수식 꼴 — 펼친 근거에 분수 1 · 루트 1 · ↻', fm_ok(sh), {k: (sh or {}).get(k) for k in ('frac', 'root', 'fn', 'fd', 'ra', 'txt')}))
     return out, True

@@ -60,6 +60,17 @@ BASE_TEMP = tempfile.gettempdir()
 PA = os.environ.get('QA_CHAIN_PA') or os.path.join(BASE_TEMP, 'pa_qa')
 RUN_ID = time.strftime('%Y%m%d-%H%M%S') + '_p%d' % os.getpid()
 PA_SEED = (('h_gichul', 'vendor'), ('h_jagwa', 'vendor'))   # 하네스가 TEMP 에서 찾는 pdf.js 사본 — 있으면 하네스 임시 폴더에 떠 줌(없으면 하네스가 받거나 cdnjs)
+# ★ _task_qa_fix1 A-5(10/9) — 씨앗을 뜨는 자리를 TEMP 밖 공용 사본으로(하네스 쪽 자리 · PA_SEED 상대 꼴은 그대로 · 옛 줄 = 위 PA_SEED 줄과 pa_make 의 「# 옛 줄」)
+#   까닭: 윈도 저장소 센스(켜 둠 · 사용자 10/9 18:27)가 C: 가 찰 때 %TEMP% 를 지우며 h_gichul\vendor 도 지운 것으로 보임(10/8 14:33 jo_cvfind 「pdfjsLib is not defined」 · 9/23 · 10/1 같은 꼴 · 짐작)
+#   공용 사본 = %LOCALAPPDATA%\pa_qa\vendor\<PA_SEED 상대 꼴>(QA_CHAIN_VENDOR 로 바꿈) · 실행 시작(run · compare · run_one 을 바로 부르는 드라이버는 첫 pa_make)에 vendor_check:
+#   받는 씨앗(PA_GET = h_gichul\vendor 의 pdf.js 둘)은 없음 · 크기 · md5 다름(깨짐 · 판 다름)이면 cdnjs 3.11.174 에서 받아 채움 → 받기 실패면 옛 자리(%TEMP%\h_gichul\vendor)가 성하면 그것(사본 자리에도 떠 둠)
+#   → 둘 다 없으면 실행 첫 줄에 경고 한 줄(하네스는 그대로 돎) · 그 밖 씨앗(h_jagwa\vendor)은 자리만 — 사본 자리에 있으면 그것 · 없으면 옛 자리(받지 않음 · 자과 하네스는 없으면 진짜 cdnjs)
+PA_VENDOR = os.environ.get('QA_CHAIN_VENDOR') or os.path.join(os.environ.get('LOCALAPPDATA') or os.path.expanduser('~'), 'pa_qa', 'vendor')
+PDFJS = ('3.11.174', {'pdf.min.js': (320004, '96de323330f8b8336f637a0051835e00'),        # cdnjs 3.11.174 바이트(10/9 19:5x 받아 잼 = 10/8 19:40 손 채움 사본과 같음)
+                      'pdf.worker.min.js': (1087212, 'a53a71a2a5d618ed0f86ebf099db032a')})
+PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/%s/%s'
+PA_GET = {('h_gichul', 'vendor'): PDFJS}   # 받아 채우는 씨앗 — 그 밖 PA_SEED 는 자리만
+PA_SRC = {}   # 씨앗 → 이 실행에서 떠 줄 자리(vendor_check 가 정함 · None = 성한 사본 없음)
 PA_LEFT = []
 RESD = os.environ.get('QA_CHAIN_RES') or (os.path.join(NR, '_qa_results') if NR else os.path.join(WORK, 'results'))
 FLAKY = os.environ.get('QA_CHAIN_FLAKY') or (os.path.join(NR, '_qa_flaky.json') if NR else os.path.join(WORK, '_qa_flaky.json'))
@@ -477,14 +488,113 @@ def pa_make(name, stamp):
     """하네스 하나의 임시 폴더 — 씨앗(pdf.js 사본)을 떠 둠"""
     d = os.path.join(PA, RUN_ID, '%s_%s' % (name, stamp))
     os.makedirs(d, exist_ok=True)
+    if not PA_SRC:
+        vendor_check()   # ★ _task_qa_fix1 A-5 — run_one 을 바로 부르는 드라이버(cmd_run · cmd_compare 밖)도 첫 하네스 앞에서 한 번
     for sub in PA_SEED:
-        src = os.path.join(BASE_TEMP, *sub)
-        if os.path.isdir(src):
+        # 옛 줄: src = os.path.join(BASE_TEMP, *sub)
+        src = PA_SRC.get(sub, os.path.join(BASE_TEMP, *sub))   # ★ _task_qa_fix1 A-5 — 공용 사본(%LOCALAPPDATA%\pa_qa\vendor) · 받기 실패면 옛 자리 · 성한 것 없으면 None(안 뜸 = 옛 꼴의 「없으면」)
+        if src and os.path.isdir(src):
             try:
                 shutil.copytree(src, os.path.join(d, *sub), dirs_exist_ok=True)
             except Exception:
                 pass
     return d
+
+
+def _vend_file_ok(p, size, md5):
+    try:
+        if os.path.getsize(p) != size:
+            return False
+        with open(p, 'rb') as f:
+            return hashlib.md5(f.read()).hexdigest() == md5
+    except OSError:
+        return False
+
+
+def _vend_ok(d, files):
+    """★ _task_qa_fix1 A-5 — 사본 폴더 d 의 파일이 그 판 바이트인가(없음 · 크기 0 · 크기 · md5 다름 = 깨짐 · 판 다름 = 아님)"""
+    return bool(d) and os.path.isdir(d) and all(_vend_file_ok(os.path.join(d, f), sz, md) for f, (sz, md) in files.items())
+
+
+def _vend_put(d, f, data):
+    """d\\f 에 바꿔 넣기 — 임시 이름(공용 사본 밑 _dl · 씨앗 폴더 밖)에 쓰고 os.replace(반쯤 쓴 파일이 씨앗 폴더에 안 남게 · 다른 실행이 같이 넣어도 하나만 이김)"""
+    os.makedirs(d, exist_ok=True)
+    tmpd = os.path.join(PA_VENDOR, '_dl')
+    os.makedirs(tmpd, exist_ok=True)
+    tmp = os.path.join(tmpd, '%s.%d.part' % (f, os.getpid()))
+    with open(tmp, 'wb') as fh:
+        fh.write(data)
+    try:
+        os.replace(tmp, os.path.join(d, f))
+    finally:
+        if os.path.exists(tmp):
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+
+
+def _vend_get(d, ver, files):
+    """cdnjs 에서 받아 d 에 채움(이미 성한 파일은 둠 · 받은 바이트의 크기 · md5 를 맞춘 뒤에만 넣음) — 실패 까닭(없으면 None)"""
+    import urllib.request
+    for f, (sz, md) in files.items():
+        if _vend_file_ok(os.path.join(d, f), sz, md):
+            continue
+        try:
+            data = urllib.request.urlopen(PDFJS_URL % (ver, f), timeout=60).read()
+        except Exception as e:
+            return '%s 받기 %s' % (f, str(e)[:80])
+        if len(data) != sz or hashlib.md5(data).hexdigest() != md:
+            return '%s 받은 바이트가 %s 판과 다름(%d B · md5 %s)' % (f, ver, len(data), hashlib.md5(data).hexdigest()[:8])
+        try:
+            _vend_put(d, f, data)
+        except OSError as e:
+            if not _vend_file_ok(os.path.join(d, f), sz, md):   # 다른 실행이 같은 때 넣었으면 성한 것이 이미 있다
+                return '%s 넣기 %s' % (f, str(e)[:80])
+    return None
+
+
+def vendor_check():
+    """★ _task_qa_fix1 A-5 — 실행 시작에 씨앗마다 떠 줄 자리를 정한다(PA_SRC) · 받는 씨앗은 없음 · 깨짐이면 cdnjs 에서 받아 채움 · 성한 것이 없으면 경고 한 줄"""
+    warn = []
+    for sub in PA_SEED:
+        home = os.path.join(PA_VENDOR, *sub)
+        old = os.path.join(BASE_TEMP, *sub)
+        get = PA_GET.get(sub)
+        if not get:   # 자리만(h_jagwa\vendor) — 사본 자리에 무엇이 있으면 그것 · 없으면 옛 자리(옛 꼴 그대로)
+            try:
+                PA_SRC[sub] = home if os.path.isdir(home) and os.listdir(home) else old
+            except OSError:
+                PA_SRC[sub] = old
+            continue
+        ver, files = get
+        if _vend_ok(home, files):
+            PA_SRC[sub] = home
+            continue
+        try:
+            why = _vend_get(home, ver, files)
+        except Exception as e:
+            why = '받기 %s' % str(e)[:80]
+        if why is None and _vend_ok(home, files):
+            say('  pdf.js 사본 받아 채움(cdnjs %s → %s)' % (ver, home))
+            PA_SRC[sub] = home
+            continue
+        if _vend_ok(old, files):
+            try:   # 옛 자리가 성하면 공용 사본 자리에도 떠 둠(다음 실행부터 TEMP 가 지워져도 됨)
+                for f in files:
+                    with open(os.path.join(old, f), 'rb') as fh:
+                        _vend_put(home, f, fh.read())
+            except Exception:
+                pass
+            PA_SRC[sub] = home if _vend_ok(home, files) else old
+            say('  ⚠ pdf.js 사본: cdnjs 받기 실패(%s) → 옛 자리 %s 를 씀' % (why, old))
+            continue
+        PA_SRC[sub] = None
+        warn.append('%s 없음 · 깨짐(받기 실패: %s · 옛 자리 %s 도 없음 · 깨짐)' % (home, why, old))
+    if warn:
+        say('⚠ pdf.js 사본 없음 — %s · 하네스는 그대로 돎(pdf.js 쓰는 하네스는 「pdfjsLib 없음」 으로 FAIL 날 수 있음 · cdnjs %s 손 채움 = CLAUDE.md 「무더기 FAIL 은 환경부터」)'
+            % (' / '.join(warn), PDFJS[0]))
+    return warn
 
 
 def pa_drop(d, keep, out):
@@ -1081,6 +1191,7 @@ def cmd_run(args, pos):
     if not rows:
         raise SystemExit('돌릴 하네스 0 — 앱·범위를 볼 것')
     lf = lock()
+    vendor_check()   # ★ _task_qa_fix1 A-5 — pdf.js 사본(없음 · 깨짐이면 받아 채움 · 둘 다 없으면 이 줄이 실행 첫 줄 경고)
     pa_sweep()   # ★ env_clean B-2
     ctx = ctx_from(args)
     ctx.mode = arg_mode(args)
@@ -1228,6 +1339,7 @@ def cmd_compare(args, pos):
     if not rows:
         raise SystemExit('돌릴 하네스 0')
     lf = lock()
+    vendor_check()   # ★ _task_qa_fix1 A-5 — pdf.js 사본(없음 · 깨짐이면 받아 채움 · 둘 다 없으면 이 줄이 실행 첫 줄 경고)
     pa_sweep()   # ★ env_clean B-2
     bctx = ctx_from(args, 'base')
     nctx = ctx_from(args)

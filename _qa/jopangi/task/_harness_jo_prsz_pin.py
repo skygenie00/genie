@@ -27,6 +27,14 @@ _d_r = _os_r.path.dirname(_os_r.path.abspath(__file__))
 while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.dirname(_d_r) != _d_r:
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
+import _qa_jo_common as QJ   # noqa: E402 — _task_qa_fix1 A-4(2026-10-09) 실행 모드 --mode gate|regress|smoke(없으면 gate = 이 판 앞과 같다) · import 때 sys.argv 에서 --mode · --snap-in · --snap-out 을 뗀다(아래 ARG 보다 먼저) · 새 갈래는 모두 QJ.GATE / QJ.REGRESS / QJ.SMOKE 안
+# ── 모드(_task_qa_fix1 A-4 · 꼴 = 10/4 _task_qa_slim) ──
+#   gate(인자 없음) = 이 판 앞과 같음 — 바탕 9a40555 를 git show 로 풀어 새 판과 같은 기기 · 같은 차례로 늘 같이 돌림(헛잣대 · 「바탕과 같은 값」 칸)
+#   regress = 새 판만 띄움(바탕 git show 0 · 바탕 쪽 띄움 0 · 그림 안 찍음) · 헛잣대 안 돎 · 「바탕과 같은 값」 칸 넷(B7 · B2 · B4 메모 창 · B4 옆 창)은 기준 스냅샷
+#             (QJ.base — 앞 인도판 새 판 값 · ±1 은 eqv 그대로 · 없으면 첫 기록) · 나머지 칸은 새 판 조건 그대로(B9 훑기 · B0 · 두 엔진 그대로)
+#   smoke   = regress 가운데 Chromium · B1(아이패드 세로 칩 창 손잡이 터치 +150 · +300 · 뗀 뒤 gap 0) · B8(폰 칩 창 열자마자 · +300 · 다시 열기 gap 0) · B0(새 판 페이지 오류 0)
+#             — B1 사슬의 B3 · B6 · B7 · B2 는 QJ.want('B3') 로 끊음(쪽 둘)
+#   셈(§B-4) = P() 마다 QJ.launch('new'|'base') · 바탕 풀기 QJ.sub('git:show-app') — regress · smoke 에서 base · git:show-app = 0
 import hashlib, io, json, os, subprocess, sys, tempfile, threading, time, traceback, urllib.parse   # noqa: E402
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer   # noqa: E402
 try:
@@ -46,6 +54,9 @@ NEW = ARG('--new', _roots.genie('jo', 'index.html'))
 BASE = ARG('--base', '9a40555')   # cloud/jo_popsize 끝 = 이 판의 바탕
 ONLY = [x.strip().upper() for x in (ARG('--only', '') or '').split(',') if x.strip()]
 ENGS = [x for x in (ARG('--eng', 'chromium,webkit') or '').split(',') if x]
+if QJ.SMOKE:   # smoke(_task_qa_fix1 A-4) — Chromium 만 · 칸 = B1(아이패드 세로 4.2.2. 「기출」 칩 창 손잡이 터치 +150 · +300 · 뗀 뒤 gap 0) · B8(폰 칩 창 열자마자 · +300 · 다시 열기 gap 0) · B0(새 판 페이지 오류 0 · ResizeObserver 고리 포함) — B1 사슬의 B3 · B6 · B7 · B2 는 끊음
+    ONLY = ['B1', 'B8']
+    ENGS = [x for x in ENGS if x == 'chromium']
 TMPD = os.path.join(tempfile.gettempdir(), 'h_jo_prsz_pin')
 OUTF = ARG('--res', os.path.join(TMPD, '_harness_jo_prsz_pin_result.txt'))
 SHOTS = ARG('--shots', os.path.join(TMPD, 'shots'))
@@ -241,6 +252,7 @@ class P:
     """한 쪽(page) — 판(tag) · 기기(dev) · 엔진"""
     def __init__(self, br, eng, tag, src, dev):
         self.eng, self.tag, self.dev = eng, tag, dev
+        QJ.launch('base' if tag.startswith('BASE') else 'new')   # 셈(§B-4) — 바탕 판 쪽(태그 BASE…)은 'base' · regress · smoke 에서는 0
         d = DEV[dev]
         self.touch = d['touch']
         port = serve(tag, src)
@@ -323,6 +335,8 @@ class P:
         return True
 
     def shot(self, name):
+        if QJ.REGRESS:   # regress · smoke — 그림 안 찍음(눈으로 보는 용 · 판정 아님 · 시간)
+            return
         try:
             os.makedirs(SHOTS, exist_ok=True)
             self.pg.screenshot(path=os.path.join(SHOTS, '%s_%s_%s.png' % (self.tag, self.dev, name)))
@@ -396,6 +410,8 @@ def B1_3_6_7_2(br, eng, sn, sb):
            lambda v: ok1(v['+150']) and ok1(v['+300']) and ok1(v['뗀 뒤']) and abs(v['뗀 뒤']['h'] - v['열자마자']['h'] - 300) <= 1, vn, vb)
         hb = h1[0][1] and h1[0][1]['h']
         a.shot('B1'); b and b.shot('B1')
+        if not QJ.want('B3'):   # smoke — B1 까지(B3 · B6 · B7 · B2 는 smoke 칸 밖 · gate · regress 는 그대로 이어 잰다)
+            return
         # B3 — ✕ 닫고 같은 칩 다시 → 기억 크기
         def reopen(p):
             p.tap(p.ev("k=>__PZ.closeKey(k)", CHIP), 500)
@@ -422,6 +438,10 @@ def B1_3_6_7_2(br, eng, sn, sb):
         TB('B7' + s, '머리 더블클릭(기억 지움) → 기본 크기(sized 풀림 · 기억 없음) · gap 0', lambda v: v['창'] and not v['창']['sized'] and v['기억'] is None and ok1(v['창']), vn7, vb7, yard=False)
         if vb7:
             T('B7' + s, '바탕과 같은 값(gap · margin-top · 높이)', eqv(vn7['창'], vb7['창']), {'new': vn7['창'], 'base': vb7['창']})
+        if QJ.REGRESS:   # 기준 칸 — 바탕(9a40555) 대신 기준 스냅샷(앞 인도판 새 판 같은 창의 gap · margin-top · 높이 · 수는 ±1)
+            _v7 = vn7['창'] and {k: vn7['창'].get(k) for k in ('gap', 'mt', 'h')}
+            _b7 = QJ.base('B7@' + eng, _v7)
+            T('B7' + s, '바탕과 같은 값(gap · margin-top · 높이)', eqv(_v7, _b7), {'new': vn7['창'], 'base': _b7, '기준': QJ.base_note('B7@' + eng)})
         # B2 — 글 긴 칩 창(칩 수 가장 많은 것) — 굴리기 전 · 끝까지 굴린 뒤
         def longw(p):
             at = p.ev("([n,k,w])=>__PZ.mokRow(n,k,w)", [None, None, 'center'])
@@ -434,6 +454,13 @@ def B1_3_6_7_2(br, eng, sn, sb):
            lambda v: ok1(v['굴리기 전']) and ok1(v['끝까지']) and v['끝까지']['st'] > 0 and v['굴리기 전']['mt'] == '-16px' and v['끝까지']['mt'] == '-16px', l2[0], l2[1], yard=False)
         if l2[1]:
             T('B2' + s, '바탕과 같은 값(gap · margin-top · 높이 · 굴린 자리)', eqv(l2[0]['굴리기 전'], l2[1]['굴리기 전']) and eqv(l2[0]['끝까지'], l2[1]['끝까지'], ('gap', 'mt', 'h', 'st')), {'new': l2[0], 'base': l2[1]})
+        if QJ.REGRESS:   # 기준 칸 — 바탕 대신 기준 스냅샷(앞 인도판 새 판 같은 글 긴 칩 창 · 굴리기 전 gap · margin-top · 높이 · 끝까지 + 굴린 자리)
+            _n2 = l2[0] or {}
+            _v2 = {'칩': _n2.get('칩'), '줄': _n2.get('줄'), '굴리기 전': _n2.get('굴리기 전') and {k: _n2['굴리기 전'].get(k) for k in ('gap', 'mt', 'h')},
+                   '끝까지': _n2.get('끝까지') and {k: _n2['끝까지'].get(k) for k in ('gap', 'mt', 'h', 'st')}}
+            _b2 = QJ.base('B2@' + eng, _v2) or {}
+            T('B2' + s, '바탕과 같은 값(gap · margin-top · 높이 · 굴린 자리)', eqv(_v2['굴리기 전'], _b2.get('굴리기 전')) and eqv(_v2['끝까지'], _b2.get('끝까지'), ('gap', 'mt', 'h', 'st')),
+              {'new': l2[0], 'base': _b2, '기준': QJ.base_note('B2@' + eng)})
         a.shot('B2'); b and b.shot('B2')
     finally:
         a.close(); b and b.close()
@@ -504,6 +531,9 @@ def B4(br, eng, sn, sb):
         T(g, '2차 보드 메모 창(.pop.mpop · 안 sized · sized) gap ≤ 1(설계 1px · 이 판 안 건드림)', okm(mm[0]), {'new': mm[0], 'base': mm[1]})
         if mm[1]:
             T(g, '메모 창 = 바탕과 같은 값', all(eqv(mm[0][k], mm[1][k], ('gap', 'mt', 'h', 'w')) for k in ('안 sized', 'sized(+40 · +60)')), {'new': mm[0], 'base': mm[1]})
+        if QJ.REGRESS:   # 기준 칸 — 바탕 대신 기준 스냅샷(앞 인도판 새 판 메모 창 안 sized · sized 의 gap · margin-top · 높이 · 폭)
+            _bm = QJ.base('B4-메모@' + eng, mm[0]) or {}
+            T(g, '메모 창 = 바탕과 같은 값', all(eqv(mm[0][k], _bm.get(k), ('gap', 'mt', 'h', 'w')) for k in ('안 sized', 'sized(+40 · +60)')), {'new': mm[0], 'base': _bm, '기준': QJ.base_note('B4-메모@' + eng)})
 
         def side(p):
             p.ev("o=>__PZ.go(o)", {'law': '특허법', 'tab': 'jo', 'jo': '제140조', 'mkWin': False, 'ciWin': '', 'joPanel': False})
@@ -521,6 +551,10 @@ def B4(br, eng, sn, sb):
         T(g, '원문 옆 창(wmWin · flex) — ✎ 마크업(높이 줌) · 🔗인(높이 없음) · ↩피(발 줄 wmWinFoot 넣은 뒤) gap 0', all(ok1(v) for v in sd[0].values()) and sd[0]['↩피(발 줄)'].get('foot') is True, {'new': sd[0], 'base': sd[1]})
         if sd[1]:
             T(g, '옆 창 = 바탕과 같은 값', all(eqv(sd[0][k], sd[1][k]) for k in sd[0]), {'new': sd[0], 'base': sd[1]})
+        if QJ.REGRESS:   # 기준 칸 — 바탕 대신 기준 스냅샷(앞 인도판 새 판 옆 창 셋의 gap · margin-top · 높이)
+            _vs = {k: (v and {kk: v.get(kk) for kk in ('gap', 'mt', 'h')}) for k, v in sd[0].items()}
+            _bs = QJ.base('B4-옆창@' + eng, _vs) or {}
+            T(g, '옆 창 = 바탕과 같은 값', all(eqv(sd[0][k], _bs.get(k)) for k in sd[0]), {'new': sd[0], 'base': _bs, '기준': QJ.base_note('B4-옆창@' + eng)})
         a.shot('B4'); b and b.shot('B4')
     finally:
         a.close(); b and b.close()
@@ -578,11 +612,18 @@ def B9(br, eng, sn):
 
 def main():
     src_new = app_src(NEW)
-    src_base = app_src(BASE)
+    # 옛 줄: src_base = app_src(BASE)
+    if QJ.GATE:
+        QJ.sub('git:show-app')   # 셈 — 바탕 앱 풀기(regress · smoke 는 0)
+    src_base = app_src(BASE) if QJ.GATE else None   # regress · smoke — 바탕(9a40555)을 안 푼다(git show 0) → 바탕 쪽 띄움 0 · 헛잣대 없음 · 「바탕과 같음」 칸 = 기준 스냅샷
     if not src_new:
         raise SystemExit('앱을 못 읽었다: ' + NEW)
     print('NEW  = %s · md5(LF) %s · %d B(LF)' % (NEW, md5lf(src_new), len(src_new.replace('\r\n', '\n').encode('utf-8'))))
-    print('BASE = %s · %s' % (BASE, ('md5(LF) ' + md5lf(src_base)) if src_base else '못 읽음(안 잼 — 헛잣대·맞대기 없이)'))
+    # 옛 줄: print('BASE = %s · %s' % (BASE, ('md5(LF) ' + md5lf(src_base)) if src_base else '못 읽음(안 잼 — 헛잣대·맞대기 없이)'))
+    if QJ.GATE:
+        print('BASE = %s · %s' % (BASE, ('md5(LF) ' + md5lf(src_base)) if src_base else '못 읽음(안 잼 — 헛잣대·맞대기 없이)'))
+    else:
+        print('BASE = %s · 안 풂(%s — 헛잣대 없음 · 「바탕과 같음」 칸 = 기준 스냅샷)' % (BASE, QJ.MODE))
     os.makedirs(TMPD, exist_ok=True)
     phase = {}
     with sync_playwright() as pw:
@@ -617,6 +658,8 @@ def main():
     for gg in sorted(by):
         oks = by[gg]
         T('헛잣대', gg, not all(oks), '바탕 FAIL %d / %d' % (oks.count(False), len(oks)))
+    if QJ.REGRESS:   # regress · smoke — 바탕을 안 띄웠다(헛잣대는 gate 몫)
+        N('헛잣대', '안 돎 — 바탕 %s 안 띄움(헛잣대는 gate 몫 · 「바탕과 같음」 칸 = 기준 스냅샷)' % BASE, QJ.MODE)
     ok = [r for r in RES if r[2] is True]
     bad = [r for r in RES if r[2] is False]
     lines = ['_harness_jo_prsz_pin — PASS %d · FAIL %d · %s초' % (len(ok), len(bad), round(time.time() - T0, 1)),

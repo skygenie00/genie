@@ -40,6 +40,10 @@ ROUTE = [('_harness_jo_', 'jopangi/task/'), ('_harness_prec_', 'jopangi/공통/_
 # 사슬 실행기(_task_qa_baseline) — _qa 에도 둔다 · _qa 안 스크립트 아닌 파일은 전수표 하나만
 QA_TOOLS = ['_qa_chain.py', '_qa_chain_list.json', '_qa_trace/sitecustomize.py']
 QA_DATA_OK = {'_qa_chain_list.json'}
+# ★ 2026-10-09 _task_jagwa_gg3 — 클라우드 관문 하네스 jagwa/_harness_jagwa_gg3.py 가 _roots.genie('_qa','jagwa','gg3') 에서 읽는 재료 json 둘(정본 = N: jagwa\gg3\ · _qa 에 같은 바이트로) — 모음 · 받는 데이터에 더함
+QA_MATERIALS = ['jagwa/gg3/patches_gg3.json', 'jagwa/gg3/tests_gg3.json']
+QA_TOOLS += QA_MATERIALS
+QA_DATA_OK |= set(QA_MATERIALS)
 CENSUS = os.path.join(ROOT, '_qa_chain_list.json')
 
 

@@ -118,6 +118,8 @@ HEAD = r"""<script>
  const $$$=s=>[...document.querySelectorAll(s)];
  const txt=el=>(el?String(el.textContent||'').replace(/\s+/g,' ').trim():'');
  const nums=()=>$$$('#list .item .num').map(x=>txt(x));
+ /* ★ 2026-10-09 _task_jagwa_gg3 §A-4 「첫 화면 · 카드 = 제목(.sub · 제목 없으면 코드)만 엶 · 세 과목」(사용자 10/8 18:20 · 패치 #34) — 카드 본문(.prev) 누름은 이제 문항을 안 엶 → 문항을 열 때는 제목을 누른다(바탕 cab7b5a 도 제목 누름 = 엶 · 같은 길) */
+ const openRow=el=>{const t=el.querySelector('.sub')||el.querySelector('.num')||el.querySelector('.prev');t.click()};
  /* 합성 이벤트 — 앱이 읽는 값(clientX·clientY·pointerType·pointerId·getCoalescedEvents)만 얹은
     평범한 `Event` 를 쓴다. 앱 코드는 한 글자도 안 고친다 — 읽는 것이 같으니 타는 길도 같다.
     (`new PointerEvent` 도 이 크롬에서 멀줦하다 — pointerType 까지 실린다. 둘 중 아무거나 된다.) */
@@ -368,7 +370,7 @@ BODY_EARTH = r"""
    await grp('V', async()=>{
      ordSet('unit');FL.q='';draw();await wait(220);
      const row0=$$$('#list .item')[3], want0=txt(row0.querySelector('.num'));
-     row0.querySelector('.prev').click(); await until(()=>VNO!==null,8000); await wait(600);
+     /* 옛 줄: row0.querySelector('.prev').click(); */ openRow(row0); await until(()=>VNO!==null,8000); await wait(600);
      const v=$('#view');
      T('V-1 문제를 누르면 **창**으로 뜬다 — #view.win.float',
        !v.classList.contains('hide')&&v.classList.contains('win')&&v.classList.contains('float'),v.className);
@@ -397,7 +399,7 @@ BODY_EARTH = r"""
        T('V-2 ★그 점이 elementsFromPoint 로 목록에 잡힌다(맨 위가 #view 가 아니다)',
          !!top&&top.closest('#list')!==null&&st.indexOf('view')<0,[st.slice(0,4),pxB,pyB]);
        const wantB=txt(rowB.querySelector('.num')), vno0=VNO;
-       rowB.querySelector('.prev').click(); await until(()=>VNO!==vno0,7000); await wait(500);
+       /* 옛 줄: rowB.querySelector('.prev').click(); */ openRow(rowB); await until(()=>VNO!==vno0,7000); await wait(500);
        T('V-2 ★다른 줄을 누르면 같은 창에서 문제만 바뀐다(VNO 만 바뀜)',
          codeShow(rec(VNO))===wantB&&$('#view').classList.contains('win')&&$$$('#view').length===1
          &&$$$('#view .twgrip').length===1,
@@ -410,7 +412,8 @@ BODY_EARTH = r"""
      await drag(g,gr.left+4,gr.top+4,gr.left+4+100,gr.top+4+60,'mouse'); await wait(260);
      const a2=v.getBoundingClientRect();
      T('V-3 모서리를 끌면 커진다',Math.abs(a2.width-(a1.width+100))<3&&Math.abs(a2.height-(a1.height+60))<3,[a1.width,a1.height,a2.width,a2.height]);
-     const sv=JSON.parse(localStorage.getItem('jagwa.win.view')||'null');
+     /* 옛 줄: const sv=JSON.parse(localStorage.getItem('jagwa.win.view')||'null'); */
+     const sv=JSON.parse(localStorage.getItem('jagwa.win.view2')||localStorage.getItem('jagwa.win.view')||'null');   /* ★ 2026-10-09 _task_jagwa_gg3 §A-4 — 본창 기억 열쇠 jagwa.win.view2(패치 ⑥) · 바탕엔 view2 없음 = 옛 열쇠 */
      T('V-3 크기가 기기 값에 적힌다',!!sv&&Math.abs(sv.w-a2.width)<2&&Math.abs(sv.h-a2.height)<2,sv);
      const w2=a2.width,h2=a2.height;
      closeView(); await wait(240);
@@ -584,7 +587,7 @@ BODY_EARTH = r"""
        !!document.getElementById('bpl')&&VNO===null&&$('#view').classList.contains('hide'),
        [!!document.getElementById('bpl'),VNO,$('#view').className]);
      T('P-5 붙는 문항이 그 문항으로 섰다',CROPFOR===noA,[CROPFOR,noA]);
-     rowA.querySelector('.prev').click(); await until(()=>VNO!==null,8000); await wait(500);
+     /* 옛 줄: rowA.querySelector('.prev').click(); */ openRow(rowA); await until(()=>VNO!==null,8000); await wait(500);
      T('P-5 카드 본문을 누르면 **문항 창**이 뜬다',VNO===noA&&$('#view').classList.contains('win'),[VNO,$('#view').className]);
      T('P-5 문항을 열면 붙는 문항이 비워진다',CROPFOR===null,CROPFOR);
      closeView(); await wait(260);
@@ -633,7 +636,7 @@ BODY_EARTH = r"""
      T('P-8 그 문항을 안 열었다',VNO===null,VNO);
      draw(); await wait(300);
      const rowA2=$$$('#list .item').find(el=>txt(el.querySelector('.num'))==='G25-62-09');
-     rowA2.querySelector('.prev').click(); await until(()=>VNO!==null,8000); await wait(1200);
+     /* 옛 줄: rowA2.querySelector('.prev').click(); */ openRow(rowA2); await until(()=>VNO!==null,8000); await wait(1200);
      T('P-9 ★열면 카드에 조각이 보인다',VNO===noA&&$$$('#card .crbox, #card .cropbox, #card .cropimg, #card canvas').length>0,
        [$$$('#card canvas').length,$('#card .q')?$('#card .q').className:null]);
      T('P-9 문제 칸 글자가 조각에 가려졌다(crophid)',!!$('#card .q.crophid'),$('#card .q')?$('#card .q').className:null);

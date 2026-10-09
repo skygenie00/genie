@@ -1345,6 +1345,8 @@ window.__EW2 = {
     else if (kind === 'list') { const it = itemOf(c); e = it ? it.querySelector('.ewmt') : null; }
     else { const t = trqOf(no); e = t ? t.querySelector('.ewmt') : null; }
     if (!e) return null; e.setAttribute('data-ewp2', '1'); return __EW.hitOf(e); },
+  /* ★ 2026-10-09 _task_jagwa_gg3 §A-4(사용자 10/8 18:20 「첫 화면 · 카드 = 제목만 엶 · 세 과목」) — 표시가 붙은 목록 카드의 제목(.sub · 없으면 코드 .num) 누를 자리(gg3 판 갈음 칸) */
+  pickTitle: c => { const it = itemOf(c); const e = it ? (it.querySelector('.sub') || it.querySelector('.num')) : null; return e ? __EW.hitOf(e) : null; },
   settleTag: async () => { const e = document.querySelector('.ewmt[data-ewp2]'); if (!e) return null; let last = '', same = 0;
     for (let i = 0; i < 60 && same < 3; i++) { await new Promise(r => setTimeout(r, 100)); const r = e.getBoundingClientRect(), k = Math.round(r.left) + ',' + Math.round(r.top); if (k === last) same++; else { same = 0; last = k; } }
     return __EW.hitOf(e); },
@@ -1542,6 +1544,24 @@ def jg2_press(p, kind, code, no):
     p.ev(JG2_CLOSE)
     p.wait(600)
     return {'눌림': bool(pressed), '보임': bool(at and at.get('on')), '열린 문항': st.get('vno'), '기대': no, '창 열림': st.get('hide') is False, 'ok': ok}
+
+
+def jg2_press_title(p, code, no):
+    """★ 2026-10-09 _task_jagwa_gg3 §A-4(사용자 10/8 18:20 「첫 화면 · 카드 = 제목만 엶 · 세 과목」) — 표시가 붙은 목록 카드의 제목을 진짜로 눌러(PC 마우스 · 폰·아이패드 손가락) 그 문제가 열리는지(gg3 판 갈음 칸 · 표시가 제목을 가리지 않는지)"""
+    p.ev(JG2_CLOSE)
+    p.wait(500)
+    at = p.ev("([c]) => __EW2.pickTitle(c)", [code])
+    if at:   # 굴린 뒤 자리가 멎게 한 번 더 잰다
+        p.wait(400)
+        at = p.ev("([c]) => __EW2.pickTitle(c)", [code])
+    pressed = press_at(p, at, 900) if QJ.GATE else press_at(p, at, 0)
+    if pressed and not QJ.GATE:
+        _rg_until(p, _RG_OPENED, 3000, 'JG2-B4 제목 누름 → 그 문제 열림', [no])
+    st = p.ev("() => __EW2.state()") or {}
+    ok = bool(pressed) and bool(no) and st.get('vno') == no and st.get('hide') is False
+    p.ev(JG2_CLOSE)
+    p.wait(600)
+    return {'눌림': bool(pressed), '보임': bool(at and at.get('on')), '누른 것': (at or {}).get('t', '')[:20], '열린 문항': st.get('vno'), '기대': no, '창 열림': st.get('hide') is False, 'ok': ok}
 
 
 # ── B-1 — 지어낸 기록 · 세 자리(서랍 줄 · 목록 카드 · 그 문제를 연 뒤 「지금 목록」 줄) · 과목마다 + 거르개 줄 0 + 헛잣대(바탕에서 셋 다 0) ──
@@ -1886,7 +1906,12 @@ def jg2_b4(br, src):
                         {cd: (None if not cv[cd] or not cv[cd].get('on') else {'넘침 px(켬 · 끔)': [jg2_ov(cv[cd]['on']), jg2_ov(cv[cd]['off'])], '카드 높이(켬 · 끔)': [cv[cd]['on'].get('h'), cv[cd]['off'].get('h')],
                                                                               '표시 가로(왼 · 오른 · 카드 오른)': [cv[cd]['on'].get('tagL'), cv[cd]['on'].get('tagR'), cv[cd]['on'].get('cardR')]}) for cd in codes})
                 pc = {cd: jg2_press(p, 'list', cd, nos[cd]) for cd in codes}
-                ok &= T('JG2-B4', '%s %s 목록 카드 누름 — 표시 글자 위를 눌러도 그 문제가 열림' % (dn, subj), total > 0 and all(pc[cd]['ok'] for cd in codes), pc)
+                if 'window.G3=' in src:   # ★ 2026-10-09 _task_jagwa_gg3 §A-4(사용자 10/8 18:20 「첫 화면 · 카드 = 제목(.sub · 없으면 코드)만 엶 · 세 과목」) — 표시 글자(제목 밖) 누름 = 안 엶이 뜻한 차 · 값 그대로 INFO · 갈음 칸 = 제목 누름 → 열림(옛 줄은 else 아래 그대로)
+                    N('JG2-B4', '%s %s 목록 카드 누름 — 표시 글자 위를 눌러도 그 문제가 열림' % (dn, subj), {'gg3 갈음': '§A-4 첫 화면 카드 = 제목만 엶(표시 글자는 제목 밖)', '값': pc})
+                    pt = {cd: jg2_press_title(p, cd, nos[cd]) for cd in codes}
+                    ok &= T('JG2-B4', '%s %s 목록 카드 제목 누름 — 표시가 붙어도 그 문제가 열림(gg3 · 카드 = 제목만 엶)' % (dn, subj), total > 0 and all(pt[cd]['ok'] for cd in codes), pt)
+                else:
+                    ok &= T('JG2-B4', '%s %s 목록 카드 누름 — 표시 글자 위를 눌러도 그 문제가 열림' % (dn, subj), total > 0 and all(pc[cd]['ok'] for cd in codes), pc)
             finally:
                 p.close()
     return ok

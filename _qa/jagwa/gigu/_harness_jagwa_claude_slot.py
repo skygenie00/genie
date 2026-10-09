@@ -545,8 +545,12 @@ def static_checks():
 
     for i, ln in (enumerate(base.split('\n')) if QC.GATE else QC.base('CLZ.synckeys', [[i, ln] for i, ln in enumerate(s.split('\n')) if 'SYNC_KEYS:[' in ln])):   # regress — 기준: 바탕 SYNC_KEYS 줄 = 앞 인도판 스냅샷(줄 번호 · 글)
         if 'SYNC_KEYS:[' in ln:
+            _ok = ln in s
+            if not _ok and "'link']," in ln and 'SYNC_KEYS:[' in ln:   # ★ 2026-10-09 _task_jagwa_gg3 §A-2-3 — 물리 SYNC_KEYS 끝에 cqx(13째)만 더한 꼴이면 같음(배열 앞 12 무변 · 뒤 주석 글은 안 봄) · 옛 줄: ln in s
+                _arr = ln[ln.index('SYNC_KEYS:['):ln.index("'link'],") + len("'link'],")]
+                _ok = _arr.replace("'link'],", "'link','cqx'],") in s
             T('CL-2 SYNC_KEYS 줄이 바탕에 있던 그대로다 (%d번째 줄)' % (i + 1),
-              ln in s, ln.strip()[:80])
+              _ok, ln.strip()[:80])
 
     # ── 더하기만 했나 ──
     if QC.GATE:
@@ -695,6 +699,8 @@ def main():
             continue
         # ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef 본문 「물리 SYNC 키 tfix 하나 더함」) — 물리만 바탕 배열 끝에 tfix 하나를 받는다(생물·지학은 글자까지 같아야)
         # 옛 줄: same = a == b or (sub == 'phys' and a == b + ['tfix'])
+        if sub == 'phys' and len(a) > 12 and a[12] == 'cqx' and a.count('cqx') == 1 and 'cqx' not in b:   # ★ 2026-10-09 _task_jagwa_gg3 §A-2-3 — 물리 SYNC_KEYS 13째 cqx · 그 열쇠를 빼고 옛 조건 그대로
+            a = [x for x in a if x != 'cqx']
         same = a == b or (sub == 'phys' and a == b + ['tfix']) or (sub == 'phys' and a[:len(b)] == b and sorted(a[len(b):]) == ['solx', 'tfix'])   # ★ 2026-10-07 (_task_jagwa_phys_win §A-30 ㉖) — 물리만 바탕 배열 끝에 오린 것 solx 하나 더(tfix 와 둘 · 생물·지학은 글자까지 같아야)
         lines.append(('PASS' if same else 'FAIL')
                      + ' | CL-2 [%s] ★SYNC_KEYS 실행값이 바탕과 글자까지 같다(%d칸)' % (ko, len(b))

@@ -42,6 +42,11 @@ _RG_SYNCED = "()=>typeof recBusy!=='undefined'&&!recBusy&&(((lsObj(SMETA_KEY).la
 _RG_SMOKE = (24, 32, 34, 52, 68)   # qa_slim2 smoke 칸(A-0 · 모두 PC 화면 p1)
 src = open(app_path, encoding='utf-8').read()
 port = JG.serve_PP(tag, src)
+_G3 = 'window.G3=' in src   # ★ 2026-10-09 _task_jagwa_gg3 — 새 판 표지(g3.js · 패치 #35)
+_G3_SUP = {24: '§A-4 서랍 · 🔍 오른쪽 깔때기 상/중/하(머리 줄 꼴 바뀜)',
+           58: '§A-4 비교 창 · 서랍 번호 = 비교(본창 옆 그림 창 · 시안 v18 · 멈춘 창 자리)', 59: '§A-4 비교 창 · 서랍 번호 = 비교(그림 창 쌓임 · v52)', 62: '§A-4 비교 창 · 그림 창 ✕(v18 · 옛 멈춘 창 ✕ 자리 없음)',
+           76: '§A-4 서랍 · O△X 작은 창 줄 누름 = 목차 말풍선 + <>(v29 · 옛 「창 닫힘 · 이은 문항 큰 창」)',
+           78: '§A-4 근거 줄 · 「근거」 누름 = 작은 창(유형 글자 넷 · 토글 셋 · v29)', 79: '§A-4 근거 줄 · 작은 창 유형 글자 누름 = 켜고 끔(v29)', 80: '§A-4 근거 줄 · 작은 창 닫힘 = 바깥 누름(✕ 없음 · v29)'}
 OUT = {'tag': tag, 'phys': [], 'e': [], 'errs': {}}
 t0 = time.time()
 if ONLY in ('', 'phys'):
@@ -95,6 +100,12 @@ if ONLY in ('', 'phys'):
             if t.get('same'):
                 try: same = pg.evaluate('s=>document.querySelectorAll(s).length', t['same'])
                 except Exception: pass
+            # ★ 2026-10-09 _task_jagwa_gg3 §A-4 — 시안 v57(gg3)이 갈음한 칸은 g3 판에서 INFO(시험은 그대로 돌려 뒤 칸 상태 지킴 · 새 잣대 = jagwa_gg3 관문 G1 시안 시험 109)
+            if _G3 and i in _G3_SUP:
+                res.append([i, t['name'], None, raw, note, same])
+                if QC.want(str(i), smoke=i in _RG_SMOKE):
+                    print('INFO | %d %s | gg3 갈음 — %s · 값 %s %s' % (i, t['name'][:60], _G3_SUP[i], raw, note), flush=True)
+                continue
             res.append([i, t['name'], ok, raw, note, same])
             if QC.want(str(i), smoke=i in _RG_SMOKE):   # smoke — 시험은 차례 그대로 다 돌고(앞 상태 지킴) smoke 칸 줄만 찍음
                 print(i, 'PASS' if ok else 'FAIL', t['name'][:60], raw if not ok else '', note, flush=True)

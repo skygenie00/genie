@@ -869,11 +869,14 @@ BODY_EARTH = r"""
      const sv=$('#card #qink'), rr=sv.getBoundingClientRect();
      const freeAt=(u,v)=>{const x=rr.left+u*rr.width,y=rr.top+v*rr.width;
        if(x<4||y<4||x>document.documentElement.clientWidth-4||y>document.documentElement.clientHeight-4)return false;
+       {const e0=document.elementFromPoint(x,y);if(!e0||!e0.closest('#card'))return false}   /* ★ 2026-10-09 gg3 — 카드 안(머리 밑 자리 뺌) · 옛 줄: …closest('#view')… */   /* ★ 2026-10-09 _task_jagwa_gg3 §A-4 「문항 본창 첫 크기 화면 1/2(세 과목)」 — 카드 아래쪽이 창 밖(굴림 밖)에 잘려 그 자리는 뒤 목록이 맨 위 → 본창 안 보이는 곳만 고른다(바탕은 다 보여 같은 자리) */
        try{return !underInk(x,y,sv)}catch(e){return false}};
      let pu=0,pv=0,found=false;
-     for(let v=0.03;v<=0.40&&!found;v+=0.03)for(let u=0.03;u<=0.50&&!found;u+=0.03)
+     /* ★ 2026-10-09 _task_jagwa_gg3 §A-4(본창 첫 크기 1/2) — 찾는 범위 아래 끝을 보이는 본창 아래 끝까지(옛 줄: v<=0.40) */
+     const vMax=(()=>{const vb=Math.min(($('#view')||document.body).getBoundingClientRect().bottom,document.documentElement.clientHeight);return Math.max(0.40,(vb-rr.top)/rr.width-0.12)})();
+     for(let v=0.03;v<=vMax&&!found;v+=0.03)for(let u=0.03;u<=0.50&&!found;u+=0.03)
        if(freeAt(u,v)&&freeAt(u+0.14,v+0.05)&&freeAt(u+0.28,v+0.10)){pu=u;pv=v;found=true}
-     T('E-0 획을 그을 빈 자리를 찾았다',found,[pu,pv]);
+     T('E-0 획을 그을 빈 자리를 찾았다',found,[pu,pv,+vMax.toFixed(2)]);
      await draw1(sv,[rr.width*pu,rr.width*pv,rr.width*(pu+0.14),rr.width*(pv+0.05),
                      rr.width*(pu+0.28),rr.width*(pv+0.10)]);
      T('E-0 펜으로 한 획을 그었다',((QINK.s)||[]).length===1,((QINK.s)||[]).length);
@@ -2112,7 +2115,7 @@ BODY_PHYS = r"""
       const rows=document.querySelector('#ggphys [data-ggrows]');
       T('P-3 적는 칸이 있다',!!rows);
       rows.querySelector('.txt').value='물리 첫 근거';
-      await ggAdd(A,'qp-',false); await wait(600);
+      /* 옛 줄: await ggAdd(A,'qp-',false); */ await ggAdd(A,(rows.getAttribute('data-ggrows')||'|qp-').split('|')[1],false); await wait(600);   /* ★ 2026-10-09 _task_jagwa_gg3 §A-4 「근거 줄 = 적는 칸 한 줄(칸 셋 qp-t · qp-c · qp-w)」 — 첫 적는 칸(트리거)의 칸 이름으로 넣음 · 바탕은 그 이름이 qp- 라 옛 길 그대로 */
       T('P-3 ★근거가 그 열쇠에 담긴다',ggOf(A).length===1&&ggOf(A)[0].t==='물리 첫 근거',
         [Object.keys(GG),ggOf(A).length]);
       closeView(); await wait(350); draw(); await wait(300);
@@ -2158,6 +2161,8 @@ BODY_PHYS = r"""
        if(P3.img!==null&&P3.byun!==null&&P3.base!==null)break}
      T('P-6 그림 문항이 실제로 있다(재는 자리가 맞는가)',P3.img!==null,P3);
      /* 앞 판 352bff7(66eddc25) 에서 잰 글자 — `_h_add5.py` 가 실물로 한 번 더 맞대 본다 */
+     /* ★ 2026-10-09 _task_jagwa_gg3 §A-4 「문항 본창 머리 = 「V15 65 PA1108하 · 수평포물체운동」 꼴 한 줄 · 물리」(패치 #10) — g3 판(window.G3)이면 #vT1 = V볼트 번호 코드난이도 · 제목(값 = 아래 옛 WANT 둘째 칸의 볼트 · 코드 · 난이도와 첫 칸 제목) */
+     const WANT_G3={15:'V4 15 PA1809상 · 가속도,그래프',6:'V3 6 PA0801중 · 등속 운동, 등가속도 운동',1:'1 PEM0101하 · 등속 운동, 등가속도 운동'};
      const WANT={15:['15. 가속도,그래프 · 15',
                      '1. 역학 › 등속 운동, 등가속도 운동 · Self · 상 · 2018 변리사 · PA1809 · 볼트 4 · 교재 11쪽'],
                  6:['6. 등속 운동, 등가속도 운동 · 6',
@@ -2180,7 +2185,8 @@ BODY_PHYS = r"""
          document.querySelectorAll('#ggphys').length===1,document.querySelectorAll('#ggphys').length);
        const w=WANT[no];
        if(w){
-         T('P-6 ★'+tag+' #vT1 이 앞 판과 글자까지 같다',txt(document.getElementById('vT1'))===w[0],
+         /* 옛 줄: T('P-6 ★'+tag+' #vT1 이 앞 판과 글자까지 같다',txt(document.getElementById('vT1'))===w[0], */
+         T('P-6 ★'+tag+' #vT1 이 앞 판과 글자까지 같다',txt(document.getElementById('vT1'))===((typeof window.G3==='object'&&WANT_G3[no])?WANT_G3[no]:w[0]),
            txt(document.getElementById('vT1')));
          T('P-6 ★'+tag+' #vT2 이 앞 판과 글자까지 같다',txt(document.getElementById('vT2'))===w[1],
            txt(document.getElementById('vT2')));
@@ -2977,7 +2983,8 @@ BODY_PHYS = r"""
         await fn(); await wait(1200); stop=true;
         paths.push([label,mx,want,fr]);
       };
-      await watch('목록 줄',async()=>{const el=$$$('#list .item')[0]; if(el)el.click(); await wait(900)});
+      /* 옛 줄: await watch('목록 줄',async()=>{const el=$$$('#list .item')[0]; if(el)el.click(); await wait(900)}); */
+      await watch('목록 줄',async()=>{const el=$$$('#list .item')[0]; if(el)(el.querySelector('.sub')||el.querySelector('.num')||el).click(); await wait(900)});   /* ★ 2026-10-09 _task_jagwa_gg3 §A-4 「첫 화면 · 카드 = 제목(.sub · 없으면 코드)만 엶 · 세 과목」(사용자 10/8 18:20) */
       await watch('서랍 줄',async()=>{const el=$$$('#ndList .ndrow')[0]; if(el)el.click(); await wait(900)});
       await watch('쌍둥이(한 문항 목록)',async()=>{await openView(DATA[2][F.NO],[DATA[2][F.NO]])});
       /* ▶ 는 창이 이미 떠 있는 채로 넘긴다 — 전체 화면으로 돌아가면 안 된다 */
@@ -3393,7 +3400,8 @@ BODY_X = r"""
      T('X-I2 두 손가락 가운데 아래 글자가 제자리(±4px)',Math.abs(b.left+u*bk-(cx+50))<=4&&Math.abs(b.top+v*bk-cy)<=4,[Math.round(b.left+u*bk-(cx+50)),Math.round(b.top+v*bk-cy)]);
      send(el,'pointermove',cx-40,cy,'touch',102);await wait(80);
      const k2=sc();
-     T('X-I3 오므림 → 작아짐(0.6 밑으로 안 감)',k2<k1&&k2>=0.6*Math.min(1,(W.clientWidth-2)/QCW)-0.001,[k1,k2]);
+     /* 옛 줄: T('X-I3 오므림 → 작아짐(0.6 밑으로 안 감)',k2<k1&&k2>=0.6*Math.min(1,(W.clientWidth-2)/QCW)-0.001,[k1,k2]); */
+     T('X-I3 오므림 → 작아짐(0.6 밑으로 안 감)',k2<k1&&((window.INKG_EA&&INKG_EA.pinch)?INKG_EA.pinch.get()>=0.6-0.001:k2>=0.6*Math.min(1,(W.clientWidth-2)/QCW)-0.001),[k1,k2,(window.INKG_EA&&INKG_EA.pinch)?INKG_EA.pinch.get():null]);   /* ★ 2026-10-09 _task_jagwa_gg3 §A-4 본창 1/2 — 하한은 앱 상대 배율 QZ(0.6~3 · qZoomAt)로 잼 · 절대 scale = QZ × 맞춤(이제 높이로 정해짐) */
      send(el,'pointerup',cx-40,cy,'touch',102);send(el,'pointerup',cx-50,cy,'touch',101);await wait(80);
      const k3=sc();C.dispatchEvent(new WheelEvent('wheel',{deltaY:-120,clientX:cx,clientY:cy,ctrlKey:true,bubbles:true,cancelable:true}));await wait(80);
      const k4=sc();
@@ -3402,13 +3410,15 @@ BODY_X = r"""
      T('X-I5 Ctrl 없는 휠 → 배율 무변',sc()===k4,[k4,sc()]);
      {const P=window.INKG_EA&&INKG_EA.pinch;
       if(P){P.set(2,cx,cy);await wait(80)}
+      const qzA=P?P.get():null;   /* ★ 2026-10-09 _task_jagwa_gg3 §A-4 본창 1/2 — 2배 = 앱 상대 배율 QZ 로 잼(절대 scale 은 맞춤이 높이로 정해져 2배여도 1.5 밑일 수 있음) */
       const kz=sc(),a2=C.getBoundingClientRect(),kk=a2.width/QCW,pt=[200,300];
       const e2={clientX:a2.left+pt[0]*kk,clientY:a2.top+pt[1]*kk};const q2=(typeof qPt==='function')?qPt(e2):null;
       T('X-I6 2배에서 가로 굴림 됨',W.scrollWidth>W.clientWidth+10&&getComputedStyle(W).overflowX==='auto',[W.scrollWidth,W.clientWidth,getComputedStyle(W).overflowX]);
       if(P){P.set(1,cx,cy);await wait(80)}
       const a1=C.getBoundingClientRect(),k1b=a1.width/QCW;
       const e1={clientX:a1.left+pt[0]*k1b,clientY:a1.top+pt[1]*k1b};const q1=(typeof qPt==='function')?qPt(e1):null;
-      T('X-I7 2배에서 그은 자리 = 1배로 돌렸을 때 같은 자리(qPt 카드 좌표)',!!q2&&!!q1&&Math.abs(q2[0]-q1[0])<1&&Math.abs(q2[1]-q1[1])<1&&kz>1.5,[kz,q2,q1])}
+      /* 옛 줄: T('X-I7 2배에서 그은 자리 = 1배로 돌렸을 때 같은 자리(qPt 카드 좌표)',!!q2&&!!q1&&Math.abs(q2[0]-q1[0])<1&&Math.abs(q2[1]-q1[1])<1&&kz>1.5,[kz,q2,q1])} */
+      T('X-I7 2배에서 그은 자리 = 1배로 돌렸을 때 같은 자리(qPt 카드 좌표)',!!q2&&!!q1&&Math.abs(q2[0]-q1[0])<1&&Math.abs(q2[1]-q1[1])<1&&(qzA!=null?qzA>1.5:kz>1.5),[kz,qzA,q2,q1])}
      T('X-I8 화면에 배율 숫자·단추 0',!$$$('#view *').some(e=>e.children.length===0&&/^\s*[−-]?\s*\d{2,3}\s*%\s*$/.test(e.textContent||''))&&!document.getElementById('vzWrap'));
      await closeAll();
    });
@@ -3445,7 +3455,8 @@ BODY_X = r"""
      T('X-J7 되돌리기(비우기) → 셋 다 OCR 원본 · .fx 없음',!(TFIX[uid]&&TFIX[uid].q)&&!!prev()&&txt(prev())===orig.replace(/\s+/g,' ').trim()&&!prev().classList.contains('fx')
        &&!!jq()&&!jq().classList.contains('fx')&&txt($('#card')).indexOf(NEW2)<0,[TFIX[uid],prev()&&txt(prev()).slice(0,30)]);
      closeView();await wait(400);
-     {const q=prev();if(q){const b=q.getBoundingClientRect();send(q,'pointerdown',b.left+8,b.top+6,'mouse',112);await wait(80);send(q,'pointerup',b.left+8,b.top+6,'mouse',112);click(q);await wait(900)}}
+     /* 옛 줄: {const q=prev();if(q){const b=q.getBoundingClientRect();send(q,'pointerdown',b.left+8,b.top+6,'mouse',112);await wait(80);send(q,'pointerup',b.left+8,b.top+6,'mouse',112);click(q);await wait(900)}} */
+     {const q0=prev(),it=q0&&q0.closest('.item'),q=it?(it.querySelector('.sub')||it.querySelector('.num')||q0):q0;if(q){const b=q.getBoundingClientRect();send(q,'pointerdown',b.left+8,b.top+6,'mouse',112);await wait(80);send(q,'pointerup',b.left+8,b.top+6,'mouse',112);click(q);await wait(900)}}   /* ★ 2026-10-09 _task_jagwa_gg3 §A-4 첫 화면 카드 = 제목만 엶 — 짧게 누름 자리 = 그 줄 제목 */
      T('X-J8 짧게 누름 → 문항 열림',VNO===no&&!$('#view').classList.contains('hide'),[VNO,no]);
      await closeAll();{const w=document.getElementById('jnw');if(w)w.remove()}
    });
@@ -4086,6 +4097,8 @@ def static_checks():
     #   「새 키」가 아니다(add7 가 가드에서 `SYNC_REF.gg` 를 두 번 더 읽는다).
     _kv = lambda t: set(re.findall(r"put\('kv','([^']+)'", t))
     _sr = lambda t: set(re.findall(r"SYNC_REF\.([A-Za-z_$][\w$]*)", t))
+    _G3KV = lambda t: ({'cqx'} if "put('kv','cqx'" in t else set())   # ★ 2026-10-09 _task_jagwa_gg3 §A-2 — g3 이은 개념 빼기 · 댓글 통 kv 'cqx'(합친 판 = 물리 SYNC_KEYS 13째 · SYNC_REF 줄) · 앱에 있을 때만 허용
+    _G3SR = lambda t: ({'cqx'} if 'SYNC_REF.cqx' in t else set())
     T2('Z-15 새 kv·새 SYNC 키가 없다',
        # ★ physprev(10/1 하위 에이전트 C) — _task_jagwa_physprev A-2-1 받은 미리보기 표의 기기 사본 kv 'pvjson'(SYNC 아님 · SYNC_REF 새 키 0 그대로)
        # 옛 줄: (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= {'pvjson'})) and _sr(s) == _sr(base),
@@ -4093,10 +4106,14 @@ def static_checks():
        #   앱에 put('kv','bak_uid',…) 가 있을 때만 허용한다. ⚠ 이 잣대는 4754b1d 가 아니라 본판(_base_bp · 고침 전) 대비라 pvjson 은 옛 판에서도 늘 차집합에 든다(위 허용) — 새 FAIL 의 몫은 bak_uid 하나였다.
        # 옛 줄: (_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set())))) and _sr(s) == _sr(base),
        # ★ 2026-10-07 (_task_jagwa_phys_win §A-30 ㉖) 물리 오린 것 동기화 = kv 'solx' · SYNC_REF.solx(칸 = 문항 하나 · 늦게 읽는 통 가드 = gg 꼴) — 앱 글에 둘 다 있을 때만 그 키 하나씩 허용
+       # 옛 줄: ((_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set())
+       # 옛 줄:                                                                  | ({'solx'} if ("put('kv','solx'" in s and 'SYNC_REF.solx=' in s) else set()))))
+       # 옛 줄: and (_sr(s) == _sr(base) or (_sr(base) <= _sr(s) and _sr(s) - _sr(base) <= ({'solx'} if ("put('kv','solx'" in s and 'SYNC_REF.solx=' in s) else set())))) if QC.GATE else QC.same('Z-15', [sorted(_kv(s)), sorted(_sr(s))]),
+       # 옛 줄: [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))] if QC.GATE else _rg_setdiff('Z-15', [sorted(_kv(s)), sorted(_sr(s))]))
        ((_kv(s) == _kv(base) or (_kv(base) <= _kv(s) and _kv(s) - _kv(base) <= ({'pvjson'} | ({'bak_uid'} if "put('kv','bak_uid'" in s else set())
-                                                                         | ({'solx'} if ("put('kv','solx'" in s and 'SYNC_REF.solx=' in s) else set()))))
-       and (_sr(s) == _sr(base) or (_sr(base) <= _sr(s) and _sr(s) - _sr(base) <= ({'solx'} if ("put('kv','solx'" in s and 'SYNC_REF.solx=' in s) else set())))) if QC.GATE else QC.same('Z-15', [sorted(_kv(s)), sorted(_sr(s))]),   # regress — 기준 = 앞 인도판 kv · SYNC_REF 집합(스냅샷)
-       [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))] if QC.GATE else _rg_setdiff('Z-15', [sorted(_kv(s)), sorted(_sr(s))]))
+                                                                         | ({'solx'} if ("put('kv','solx'" in s and 'SYNC_REF.solx=' in s) else set()) | _G3KV(s))))
+       and (_sr(s) == _sr(base) or (_sr(base) <= _sr(s) and _sr(s) - _sr(base) <= (({'solx'} if ("put('kv','solx'" in s and 'SYNC_REF.solx=' in s) else set()) | _G3SR(s))))) if QC.GATE else QC.same('Z-15', [sorted(_kv(s) - _G3KV(s)), sorted(_sr(s) - _G3SR(s))]),   # regress — 기준 = 앞 인도판 kv · SYNC_REF 집합(스냅샷) · g3 cqx 뺀 꼴(★ 2026-10-09 _task_jagwa_gg3)
+       [sorted(_kv(s) - _kv(base)), sorted(_sr(s) - _sr(base))] if QC.GATE else _rg_setdiff('Z-15', [sorted(_kv(s) - _G3KV(s)), sorted(_sr(s) - _G3SR(s))]))
     T2('Z-17 아랫줄 감추기가 카드 층·물리로 갈렸다',
        'body[data-book] .vbot .tools>*{display:none!important}' in s
        and 'body[data-layer="pdf"] .vbot .tools:not(#pRow1)>*{display:none!important}' in s)
@@ -4132,7 +4149,8 @@ def static_checks():
        and s.count('const PASS_THRU=') == 1
        and "'[data-tool],#omrPad,#navTg,select,input,textarea,.ogrip,#mask,.tbox,#qtxt," in s)
     T2('Z-26 ③ 쓰임 수는 **한 함수**다 — 정의 1 · 부르는 자리 3',
-       s.count('function ggUseHTML(') == 1 and s.count('ggUseHTML(') == 4,
+       # 옛 줄: s.count('function ggUseHTML(') == 1 and s.count('ggUseHTML(') == 4,
+       s.count('function ggUseHTML(') == 1 and s.count('ggUseHTML(') == 4 + (1 if 'window.G3=' in s else 0),   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 「항목 줄 · 오른쪽 쓰인 수」 — g3.js(패치 #35)가 같은 함수를 한 곳 더 부름 · 정의 1 그대로
        s.count('ggUseHTML('))
     T2('Z-27 ③ 문턱 5 가 박혀 있다(분포로 조정하지 않는다)',
        "const n=ggUseN(uid); if(n<=1)return '';" in s and "(n>=5?' hot':'')" in s)

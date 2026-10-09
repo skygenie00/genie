@@ -63,8 +63,9 @@ def fwcount(v):
 APPJS = r"""
 Object.assign(window.__h,{
  item(u){const it=[...document.querySelectorAll('#list .item')].find(x=>x.dataset.uid===u||__h.tx(x.querySelector('.num'))===u);if(!it)return null;
-   it.scrollIntoView({block:'center'});const r=it.getBoundingClientRect();const x=r.left+Math.min(r.width/2,60),y=r.top+r.height/2;const t=document.elementFromPoint(x,y);
-   return {x,y,vis:__h.vis(it),hit:!!t&&(t===it||it.contains(t))}},
+   /* ★ 2026-10-09 _task_jagwa_gg3 §A-4 「첫 화면 · 카드 = 제목(.sub · 없으면 코드)만 엶 · 세 과목」(사용자 10/8 18:20) — 누름 자리 = 그 줄 제목(바탕 cab7b5a 는 줄 아무 데나 = 제목도 엶 · 같은 길) · 옛 줄: const r=it.getBoundingClientRect();const x=r.left+Math.min(r.width/2,60),y=r.top+r.height/2; */
+   it.scrollIntoView({block:'center'});const tg=it.querySelector('.sub')||it.querySelector('.num')||it;const r=tg.getBoundingClientRect();const x=r.left+Math.min(r.width/2,60),y=r.top+r.height/2;const t=document.elementFromPoint(x,y);
+   return {x,y,vis:__h.vis(it),hit:!!t&&(t===tg||tg.contains(t))}},
  title(){const t=document.getElementById('vT1');return t?{t:__h.tx(t),vis:__h.vis(t)}:null},
  note(){const c=document.getElementById('card');const n=c&&c.querySelector('.cnote');return n?{t:__h.tx(n),vis:__h.vis(n)}:null},
  sum(){const s=document.querySelector('#cDet>summary');if(!s)return null;s.scrollIntoView({block:'center'});const r=s.getBoundingClientRect();return {x:r.left+Math.min(r.width/2,60),y:r.top+r.height/2}}
