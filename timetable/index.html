@@ -979,7 +979,13 @@ function curDate(){return ui.date||today()}
    날짜를 바꾸는 길은 다 setDate 하나로 온다(일간 ‹ · 오늘 · › · 날짜 칸 · 리본 이동 창 · 주간 블록 · 월간 칸·점(ttGoDate) · 할일 화면 ‹ 오늘 › · 데일리 모음 「이 날 일간으로」 · 작은 창 리본).
    같은 날로 「바꿈」(이미 그 날에서 「오늘」 등) = 그대로 둠 · 다른 칸 기억은 안 건드림 · 기억 지움은 draftDrop 한 벌(저장 처리기와 같은 길) */
 function setDate(d){if((d||today())!==curDate())mDayDrop();ui.date=d;LS.set('tt.ui',ui);render()}
-function mDayDrop(){[document,pipWin&&!pipWin.closed?pipWin.document:null].forEach(D=>{if(!D)return;['mA','mB'].forEach(id=>{const el=D.getElementById(id);if(el)el.value=''});draftDrop(['mA','mB'],D)})}
+/* 10/10 02:03 · 02:58(사용자 00:26 「해」 · [채팅] 02:03 「01:58 물음 답 = 같이 비움 · 진행」 · tt 덧판) — 할일 세 칸(어제·오늘·내일 열)의 「+ 학습 추가」 addS_0~2 · 「+ 할일 추가」 addT_0~2 · 기한 due_0~2 도
+   칸 id 가 날짜가 아니라 열 번호라 쓰던 글이 옮긴 날 같은 열에 남았다(Enter = 그 날에 더함) → mA·mB 와 같이 비움(본창 · 작은 창 · 칸이 없으면 건너뜀 · 화면 기억은 칸이 화면에 없어도 지움).
+   하루 경계 — ui.date 가 빈 화면(오늘을 따라감)은 today() 가 바뀌면(하루 시작 dayStart 시 · 달력 자정 아님) 보는 날짜가 바뀌므로 같은 비움 한 번(dayRoll 을 render · syncAll 첫머리에서 부름 · visibilitychange 는 syncAll 로 옴).
+   ui.date 가 박힌 화면(다른 날을 보는 중)은 하루가 넘어가도 보는 날짜가 그대로라 안 비움 · 다른 칸(share 글 · 공통 할일 · 계획 · 메모) 기억 무변 */
+const M_DAY_IDS=['mA','mB','addS_0','addS_1','addS_2','addT_0','addT_1','addT_2','due_0','due_1','due_2'];
+function mDayDrop(){[document,pipWin&&!pipWin.closed?pipWin.document:null].forEach(D=>{if(!D)return;M_DAY_IDS.forEach(id=>{const el=D.getElementById(id);if(el)el.value=''});draftDrop(M_DAY_IDS,D)})}
+let _dayT=null;function dayRoll(){const t=today();if(_dayT!==null&&t!==_dayT&&!ui.date)mDayDrop();_dayT=t}
 function setView(v){
  if(v==='week'||v==='month'){const was=ui.view;ui.view='day';LS.set('tt.ui',ui);if(was!=='day')render();ttGo(v);return} // 옛 주간/월간 = 한 페이지의 절 (feedback8 §1)
  if(v==='review'){ui.view='plan';ui.planTab='ach';LS.set('tt.ui',ui);render();return} // 월간계획 해체 (feedback9 §1-4) → 주월계획 달성 탭
@@ -1218,7 +1224,7 @@ async function syncFile(path,own,def){
  return chg;
 }
 async function syncAll(silent){
- if(syncing){syncAgain=true;return} if(!cfg.token){if(!silent)toast('설정에서 토큰을 넣어줘');return;}
+ dayRoll();if(syncing){syncAgain=true;return} if(!cfg.token){if(!silent)toast('설정에서 토큰을 넣어줘');return;}
  if(!navigator.onLine){if(!silent)toast('오프라인 — 큐에 보관');return;}
  syncing=true;renderSide();
  let chg=false;const S=async(p,o,d)=>{if(await syncFile(p,o,d))chg=true;};   /* A-2(9/6) — 하나라도 원격에서 바뀐 게 들어왔을 때만 끝에 render() */
@@ -1436,7 +1442,7 @@ function draftDrop(ids,D){D=D||document;const P=D===document?'':'pip:';[].concat
 /* 칸 수정 열기(lsInline · exInline) — 글 칸이면 '#ed' 로 적음 · kp(되살릴 상태)가 있으면 값을 넣고 포커스였을 때만 포커스·커서 → true(여는 함수의 기본 포커스·고름은 건너뜀) */
 function edOpen(el,td,key,re,kp){if(el.tagName!=='INPUT')return false;_draft.set('#ed',{key,el,on:td.getAttribute('onclick'),re,v:kp?kp.v:el.value,f:false,s:null,e:null});if(!kp)return false;el.value=kp.v;if(kp.f){try{el.focus({preventScroll:true});if(kp.s!=null)el.setSelectionRange(kp.s,kp.e)}catch(_){}}return true}
 function edDone(key){const E=_draft.get('#ed');if(E&&E.key===key)_draft.delete('#ed')}
-function render(){const _k=keepInputGrab();applyMonthColor();renderSide();renderMain();renderPnav();fitMinis();fitStMore();planAfterRender();if(typeof pipPaint=='function')pipPaint();if(typeof zoomSt!=='undefined'&&zoomSt)zoomRender();if(typeof pmPopSync=='function')pmPopSync();keepInputRestore(_k);}
+function render(){dayRoll();const _k=keepInputGrab();applyMonthColor();renderSide();renderMain();renderPnav();fitMinis();fitStMore();planAfterRender();if(typeof pipPaint=='function')pipPaint();if(typeof zoomSt!=='undefined'&&zoomSt)zoomRender();if(typeof pmPopSync=='function')pmPopSync();keepInputRestore(_k);}
 function dday(){const x=nextExam();if(!x)return'';const n=Math.ceil((parse(x.date)-parse(today()))/864e5);return n>=0?`D-${n}`:`D+${-n}`}
 function monthColor(mm){const def=DEF_SETTINGS.monthColors;const a=Array.isArray(settings.monthColors)&&settings.monthColors.length===12?settings.monthColors:def;const i=(+String(mm).slice(-2)||1)-1;return a[i]||def[i]}
 /* 보고 있는 달의 색을 --m8 로 (시트·격자·썸네일 전부 이 변수를 씀) */
