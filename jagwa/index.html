@@ -1248,6 +1248,9 @@ body[data-shell] #esh #q{width:14rem;flex:none;font-size:12px;padding:5px 8px;bo
 #esh .seg2{display:flex;gap:4px}
 #esres{background:var(--card);border-bottom:1px solid var(--line);max-height:46vh;overflow:auto;padding:4px 14px 8px}
 #esres.hide{display:none}
+/* ★ search_all(10/10 · _task_search_all §A-2) — 검색 결과 다 보이기(resPage) 「N건」 머리 줄 · 끝 표지(이어 붙임을 지켜보는 자리 · 1px · 안 누름) */
+.rpcnt{font-size:11px;font-weight:700;color:var(--muted);padding:3px 6px}
+.rpmore{display:block;height:1px;margin:0;padding:0;border:0;pointer-events:none}
 /* 히트맵 덩어리 */
 #esh .ehm{display:block}
 #esh .ehmh{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px}
@@ -1563,6 +1566,15 @@ body[data-layer="pdf"] .vbot .tools:not(#pRow1)>*{display:none!important}
   border-radius:5px;padding:2px 6px;resize:none;overflow:hidden}
 .ggrc2 .ggrcl{display:flex;gap:5px;align-items:flex-start}
 .ggrc2 .ggrcl>span{flex:1;min-width:0;white-space:pre-wrap}
+/* ★ ggrr_phone(10/10 · 사용자 10/6 02:32 「글이 왼쪽 반만 · 오른쪽 가운데 단추」 → 10/6 시안 v1 꼴 · 결정로그 10/10 00:36 [채팅]) — 연결한 근거 줄 · 댓글 줄 = 민법 ggPanelHTML 꼴:
+   줄 flex-wrap · 글 덩어리(본문 줄 = .ggtb(! · 번호 · 글) · 댓글 줄 = 첫 span) flex:1 1 18rem;min-width:0 · ✎ 단추 margin-left:auto → 폰 = 글 한 폭 통째 · 단추 아랫줄 오른쪽 · PC 넓으면 한 줄 ·
+   손가락 기기 = ✎ 단추 누를 자리 36(상자 그대로 36 · 투명 자리 아님 — 위아래 줄 단추 · 고치기 칸과 안 겹침) */
+.ggrr{flex-wrap:wrap}
+.ggrr>.ggtb{display:flex;gap:5px;align-items:flex-start;flex:1 1 18rem;min-width:0}
+.ggrefbox .ggrr>.lk,.ggrc2 .ggrcl>.lk{margin-left:auto}
+.ggrc2 .ggrcl{flex-wrap:wrap}
+.ggrc2 .ggrcl>span{flex:1 1 18rem}
+@media (pointer:coarse){.ggrefbox .ggrr>.lk,.ggrc2 .ggrcl>.lk{min-height:36px;min-width:36px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px}}
 /* ══════ add3 (2026-09-20 · _task_jagwa_earth_listpop_add3) ══════ */
 /* ② 근거 덩어리를 필기 덮개 **위**로 — `#qink`(z 6)·`#qtxt`(z 7)보다 위라
    펜 도구가 켜져 있어도 칩·결과 줄·글자칸이 제 손으로 이벤트를 받는다(누름·포커스·펜슬 손글씨).
@@ -2620,10 +2632,15 @@ function linkSheet(no){
       <div class="fld" style="margin-top:12px"><input class="search" id="lkq" placeholder="코드(PA0309) · 소단원 · 본문 · 문항번호로 검색" autocomplete="off"><div class="lkres" id="lkres"></div></div>
       <button class="btn pri" id="lkX" style="margin-top:12px">닫기</button></div>`;
     const res=b.querySelector('#lkres'),inp=b.querySelector('#lkq');
-    const search=()=>{const q0=inp.value.trim(),q=q0.toLowerCase();res.innerHTML='';if(!q)return;
-      const hits=DATA.filter(r=>r[F.NO]!==no&&(String(r[F.CODE]).toLowerCase().includes(q)||r[F.SUB].includes(q0)||String(r[F.BODY]).includes(q0)||String(r[F.NO])===q)).slice(0,40);
-      res.innerHTML=hits.map(r=>{const x=r[F.NO],got=linksOf(no).includes(x);return `<div class="lkhit${got?' got':''}" data-add="${x}"><b>${esc(r[F.CODE])}</b><span>${x}. ${ynUid(r)?'':esc(titleOf(r))+' · '}${esc(r[F.SUB])}</span><small>${got?'이미 넣음':'＋ 연결'}</small></div>`}).join('')||'<p style="font-size:12px">없다.</p>';
-      res.querySelectorAll('[data-add]:not(.got)').forEach(x=>x.onclick=async()=>{await linkSet(no,+x.dataset.add,true);const v=inp.value;draw();b.querySelector('#lkq').value=v;b.querySelector('#lkq').dispatchEvent(new Event('input'));toast(rec(+x.dataset.add)[F.CODE]+' 과 이었습니다')})};
+    /* ★ search_all(10/10) — 끝까지 찾음(옛 .slice(0,40)) · 「N건」 머리 줄 · 처음 100 줄 · 굴리면 100 줄씩(resPage) · 「＋ 연결」 누름 = 같은 일(옛 = 줄마다 onclick · 이제 = 상자 하나가 받음 → 이어 붙은 줄도)
+       옛 줄: const hits=DATA.filter(…).slice(0,40); res.innerHTML=hits.map(…).join('')||없다; res.querySelectorAll('[data-add]:not(.got)').forEach(x=>x.onclick=…) */
+    const search=()=>{const q0=inp.value.trim(),q=q0.toLowerCase();resPageStop(res);res.innerHTML='';if(!q)return;
+      const hits=DATA.filter(r=>r[F.NO]!==no&&(String(r[F.CODE]).toLowerCase().includes(q)||r[F.SUB].includes(q0)||String(r[F.BODY]).includes(q0)||String(r[F.NO])===q));
+      if(!hits.length){res.innerHTML='<p style="font-size:12px">없다.</p>';return}
+      const L0=linksOf(no);
+      resPage(res,hits,r=>{const x=r[F.NO],got=L0.includes(x);return `<div class="lkhit${got?' got':''}" data-add="${x}"><b>${esc(r[F.CODE])}</b><span>${x}. ${ynUid(r)?'':esc(titleOf(r))+' · '}${esc(r[F.SUB])}</span><small>${got?'이미 넣음':'＋ 연결'}</small></div>`},100,'<div class="rpcnt">'+hits.length+'건</div>')};
+    res.onclick=async e=>{const x=e.target.closest('[data-add]:not(.got)');if(!x||!res.contains(x))return;
+      await linkSet(no,+x.dataset.add,true);const v=inp.value;draw();b.querySelector('#lkq').value=v;b.querySelector('#lkq').dispatchEvent(new Event('input'));toast(rec(+x.dataset.add)[F.CODE]+' 과 이었습니다')};
     inp.oninput=search;
     b.querySelectorAll('[data-del]').forEach(x=>x.onclick=async()=>{await linkSet(no,+x.dataset.del,false);draw()});
     b.querySelectorAll('[data-go]').forEach(x=>x.onclick=()=>{const v=document.getElementById('view');if(v&&!v.classList.contains('hide')&&VNO&&VNO!==+x.dataset.go)vSwapOpen(+x.dataset.go);else twinPeek(+x.dataset.go)});   /* 시안 ㉚ — 연결 문항 = 지금 문항 옆에 나란히(비교 · 세 과목 · 사용자 16:50 「비슷한 문제를 나란히」) · 옛 = 지금 문항을 그 문항으로 갈아 끼움(잼) */
@@ -9052,7 +9069,9 @@ function nsPop(anc){{const o=document.getElementById('nsPop');if(o){o.__close();
     const m=new Map();DATA.forEach(r=>{if(esPhysHit(r,q))m.set(r[F.NO],{p:1,line:''})});
     try{ggHits(q,true).forEach(h=>{const s=h.src||{};if(!(s.gg||s.cm||s.cl))return;const o=m.get(h.no)||{p:0,line:''};o.g=1;o.line=h.line||o.line;m.set(h.no,o)})}catch(e){}
     NOS=[...m.keys()].sort((a,z)=>a-z);cnt.textContent=NOS.length+'건';
-    L.innerHTML=NOS.slice(0,80).map(no=>{const r=rec(no),o=m.get(no);return '<div class="nsr" data-no="'+no+'"><b class="nsn">'+no+'</b><span class="nst">'+mk(r[F.CODE],q)+' · '+mk(pnFix(r)||titleOf(r),q)+(o.g&&o.line?'<i class="nsg">🔗 '+mk(String(o.line).replace(/<[^>]*>/g,''),q)+'</i>':(o.g?'<i class="nsg">🔗 근거</i>':''))+'</span></div>'}).join('')+(NOS.length>80?'<div class="rl0">… '+(NOS.length-80)+'건 더</div>':'')+(NOS.length?'':'<div class="rl0">없음</div>');
+    /* ★ search_all(10/10) — 다 보이기(처음 100 줄 · 굴리면 100 줄씩 · 끝 「… N건 더」 걷음) · 옛 줄: L.innerHTML=NOS.slice(0,80).map(…).join('')+(NOS.length>80?「… N건 더」:'')+(NOS.length?'':「없음」) */
+    if(NOS.length)resPage(L,NOS,no=>{const r=rec(no),o=m.get(no);return '<div class="nsr" data-no="'+no+'"><b class="nsn">'+no+'</b><span class="nst">'+mk(r[F.CODE],q)+' · '+mk(pnFix(r)||titleOf(r),q)+(o.g&&o.line?'<i class="nsg">🔗 '+mk(String(o.line).replace(/<[^>]*>/g,''),q)+'</i>':(o.g?'<i class="nsg">🔗 근거</i>':''))+'</span></div>'},100);
+    else{resPageStop(L);L.innerHTML='<div class="rl0">없음</div>'}
     place()};
   inp.oninput=()=>find();
   L.onclick=e=>{const x=e.target.closest('.nsr');if(!x)return;const no=+x.dataset.no,v=document.getElementById('view'),open=v&&!v.classList.contains('hide');
@@ -10018,9 +10037,9 @@ function ggRefBoxHTML(uid,sc){
       :!list.length?'<div class="mut">그 문항에 근거가 없습니다</div>'
       /* add2 §D — 항목마다·댓글마다 「✎ 여기서 고치기」. 키는 `건 문항|그 문항|근거 k|(댓글 ck|)범위` */
       :list.map(g=>{const kk=ea(uid+'|'+u+'|'+g.k+'|'+sc);
-        return '<div class="ggrr'+(g.bang?' bang':'')+'">'
+        return '<div class="ggrr'+(g.bang?' bang':'')+'"><span class="ggtb">'   /* ★ ggrr_phone(10/10) — 「!」 · 번호 · 글 = 한 덩어리(.ggtb · 민법 ggPanelHTML 꼴) */
         +'<span class="ggbang'+(g.bang?' on':'')+'" data-ggbang="'+ea(u+'|'+g.k)+'">!</span>'
-        +'<b>'+g.i+'.</b><span class="t">'+ggMath(ggFlat(g))+'</span>'
+        +'<b>'+g.i+'.</b><span class="t">'+ggMath(ggFlat(g))+'</span></span>'
         +'<button class="lk" data-ggre="'+kk+'">✎ 여기서 고치기</button></div>'
         +'<div class="ed hide" data-ggre-box="'+kk+'"></div>'
         +(Array.isArray(g.cs)&&g.cs.length?'<div class="ggrc2">'+g.cs.map(c=>{
@@ -10293,19 +10312,39 @@ var esGgRows=()=>DATA.filter(r=>!isC(r)&&(ggOf(GGU(r)).length>0||!!gptOf(r[F.NO]
 function esCntPaint(){const c=document.getElementById('qCnt');if(!c)return;
   if(ES_CNT.link)ES_CNT.t='근거 '+esGgOnly().length+'개 ▸';   /* 근거가 늘고 줄면 다시 센다 · Claude 는 안 센다 */
   c.textContent=ES_CNT.t;c.classList.toggle('eslink',!!ES_CNT.link)}
+/* ★ search_all(10/10 · _task_search_all §A-2·3 · 사용자 10/9 23:52 「왜 검색 결과가 이거밖에 안 나와 · 연결에서 검색할 때도 그러더니」) — 검색 결과 다 보이기 한 벌(이 앱의 검색 결과 자리가 다 이것만 쓴다 · ㊜):
+   resPage(상자, 걸린 것 전부, 줄 글 함수, 한 번에 붙일 줄 수, 머리 줄) — 처음 step 줄 → 끝 표지(.rpmore)가 굴리는 상자 끝 200px 안에 들면(IntersectionObserver) 다음 step 줄 · 다 붙으면 표지 걷음 ·
+   같은 상자에 다시 부르면(검색어 바뀜) 옛 관찰자 끊고 처음부터(옛 줄 섞임 0) · 줄 꼴 · 누름 · 형광 · 차례 = 부르는 쪽 줄 함수 그대로 · resPageStop = 끊기만 */
+function resPageStop(box){if(!box)return;box.__rpg=(box.__rpg||0)+1;if(box.__rp){try{box.__rp.disconnect()}catch(e){}box.__rp=null}}
+function resPage(box,hits,rowHTML,step,head){
+  if(!box)return 0;resPageStop(box);
+  const gen=box.__rpg,N=hits.length;step=Math.max(1,step||100);let n=Math.min(step,N);
+  box.innerHTML=(head||'')+hits.slice(0,n).map(rowHTML).join('')+(n<N?'<div class="rpmore"></div>':'');
+  const top=x=>!x||x===document.body||x===document.documentElement;
+  let sc=box;while(!top(sc)){const o=getComputedStyle(sc).overflowY;if(o==='auto'||o==='scroll')break;sc=sc.parentElement}
+  if(sc===box)box.scrollTop=0;   /* 새 말 = 맨 위부터(상자가 제 굴림일 때만 · 시트 판 굴림은 그대로) */
+  if(n>=N)return n;
+  const sent=box.lastElementChild;
+  const more=()=>{if(box.__rpg!==gen||!sent.isConnected)return false;
+    const k=Math.min(n+step,N);sent.insertAdjacentHTML('beforebegin',hits.slice(n,k).map(rowHTML).join(''));n=k;
+    if(n>=N){sent.remove();resPageStop(box);return false}return true};
+  if(typeof IntersectionObserver!=='function'){while(more());return n}
+  const io=new IntersectionObserver(es=>{if(box.__rpg!==gen||!sent.isConnected){io.disconnect();return}
+    if(es.some(e=>e.isIntersecting)&&more()){io.unobserve(sent);io.observe(sent)}},{root:top(sc)?null:sc,rootMargin:'0px 0px 200px 0px'});
+  box.__rp=io;io.observe(sent);return n}
 function esSearch(){
   const box=document.getElementById('esres');if(!box)return;
   const v=String(($('#q')||{}).value||'').trim(),n=v.replace(/\s+/g,'').length;
-  if(n<2){box.classList.add('hide');box.innerHTML='';ES_NOS=[];
+  if(n<2){resPageStop(box);box.classList.add('hide');box.innerHTML='';ES_NOS=[];
     ES_CNT=n===1?{t:'두 글자 이상 입력하세요',link:false}:(GGMODE==='g'?{t:'',link:true}:{t:'',link:false});
     esCntPaint();return}
   if(GGMODE==='g'){ES_NOS=[];ES_CNT={t:(ggResBox(v)||0)+'건',link:false};esCntPaint();return}   /* 근거 모드 = 지금 ggResBox 그대로 + 개수 */
   const hits=[];DATA.forEach(r=>{const h=esHit(r,v);if(h)hits.push([r,h])});   /* 차례 = 데이터 차례 */
   ES_NOS=hits.map(x=>x[0][F.NO]);ES_CNT={t:hits.length+'건',link:false};esCntPaint();
   box.classList.remove('hide');box.scrollTop=0;
-  if(!hits.length){box.innerHTML='<div class="bplnone">검색 결과가 없습니다.</div>';return}
-  box.innerHTML=hits.slice(0,100).map(x=>esRowHTML(x[0],v,x[1])).join('')
-    +(hits.length>100?'<div class="bplnone">상위 100건만 표시했습니다. 검색어를 더 좁혀보세요.</div>':'')}
+  if(!hits.length){resPageStop(box);box.innerHTML='<div class="bplnone">검색 결과가 없습니다.</div>';return}
+  /* ★ search_all(10/10) — 다 보이기(처음 100 줄 · 굴리면 100 줄씩 · 끝 안내 줄 걷음) · 옛 줄: box.innerHTML=hits.slice(0,100).map(x=>esRowHTML(x[0],v,x[1])).join('')+(hits.length>100?「상위 100건만 … 좁혀보세요」 안내 줄:'') */
+  resPage(box,hits,x=>esRowHTML(x[0],v,x[1]),100)}
 /* A-4 「근거 N개 ▸」 → 단원 분포 → 단원 문항 줄 · 「! K」 = 켜진 근거가 있는 문항만(민법 상태 B) */
 var esUK=u=>String(u||'').split('.').map(x=>String(+x||0).padStart(4,'0')).join('.');
 function esDist(){
@@ -10409,10 +10448,10 @@ var ggEatNotes=async function(){
 function ggFindRun(uid,sc){
   const b=document.querySelector('[data-ggfindbox="'+CSS.escape(uid+'|'+sc)+'"]');if(!b)return;
   const q=String((b.querySelector('input')||{}).value||'');
-  const hits=ggHits(q).filter(h=>h.uid!==uid);
-  b.querySelector('.res').innerHTML=hits.length
-    ? hits.slice(0,40).map(h=>ggResRowHTML(h,q,'pick',uid,sc)).join('')
-    : '<div class="bplnone">찾은 근거가 없다</div>'}
+  const hits=ggHits(q).filter(h=>h.uid!==uid),res=b.querySelector('.res');
+  /* ★ search_all(10/10) — 다 보이기 · 「N건」 머리 줄 · 처음 100 줄 · 굴리면 100 줄씩 · 옛 줄: hits.slice(0,40).map(h=>ggResRowHTML(h,q,'pick',uid,sc)).join('') */
+  if(!hits.length){resPageStop(res);res.innerHTML='<div class="bplnone">찾은 근거가 없다</div>';return}
+  resPage(res,hits,h=>ggResRowHTML(h,q,'pick',uid,sc),100,'<div class="rpcnt">'+hits.length+'건</div>')}
 /* add3 ③ — 찾기 칸은 타자마다 돌리지 않고 120ms 모았다 한 번(민법 3470 · 아이패드 입력 밀림).
    상자를 열 때(포커스)는 지금처럼 즉시 돌린다. */
 var _ggFindT={};
