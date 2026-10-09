@@ -113,10 +113,16 @@ Object.assign(window.__P,{
 """
 
 
+# _task_qa_fix1 §A-3(10/9) — 부팅 표지: 카드 층 문항 다 읽음(DATA_V) · 첫 syncRecords 끝(recBusy 거짓 · lastSync ≥ 쪽 열림 또는 recErr) — JG.P2 의 고정 2.5 초 뒤에 regress 에서만 더 기다린다(gate 무변)
+_QF_BOOT = "()=>(typeof CARD_LAYER==='undefined'||!CARD_LAYER||typeof DATA_V==='undefined'||DATA_V>0)&&typeof recBusy!=='undefined'&&!recBusy&&((((typeof lsObj==='function'&&typeof SMETA_KEY!=='undefined')?(lsObj(SMETA_KEY).lastSync||0):0)>=performance.timeOrigin)||(typeof recErr!=='undefined'&&!!recErr))"
+
+
 class P3(JG.P2):
     """한 판 · 한 과목 · 엔진 — add1 P2(820×1180 · 터치 켬) + 두 손가락 · 기록 도구"""
     def __init__(self, br, app, subj, tag, engine, vh=1180):
         super().__init__(br, app, subj, tag, engine, vh)
+        if not QC.GATE:   # ★ _task_qa_fix1 §A-3 — 부하에서 늦는 문항 읽기 · 첫 동기화를 끝까지(표지가 오면 바로 · 상한 15 초)
+            QC.until(self.pg, _QF_BOOT, 15000, 'penfinger_add2 부팅 — 카드 층 문항 다 읽음 · 첫 syncRecords 끝(JG.P2 고정 2.5 초 뒤)')
         self.pg.evaluate(JS3)
         self.pg.evaluate("()=>__P.logOn()")
 
@@ -140,6 +146,8 @@ def scen(br, app, tag, subj, engine):
         if ans:
             q.ev("()=>__P.ans()")
         q.ev("m=>__P.tool(m)", tool); q.wait(300)
+        QC.until(q.pg, "m=>{const c=document.getElementById('card');return !!c&&typeof TOOL!=='undefined'&&TOOL.mode===m&&(m!=='pen'||(!!c.querySelector('#qink')&&c.classList.contains('penon')))}", 5000,
+                 'penfinger_add2 fresh — 문제 창 카드 · 도구 바뀜(펜 = 덮개 #qink · penon) · _task_qa_fix1 §A-3(10/8 웹킷 생물 0 「ink null」 · 고정 300ms 뒤 · 안 오면 상한 뒤 그대로)', arg=tool)
         q.ev("()=>__P.clog()"); q.ev("()=>__P.pdlog()")
         return ok
 
@@ -253,6 +261,9 @@ def scen(br, app, tag, subj, engine):
             p.wait(400)
             d1 = p.ev("()=>__P.det()"); cl = p.ev("()=>__P.clog()")
             on = lambda o: [x['v'] for x in (o or []) if x['on']]
+            if ('O' in on(o1)) == ('O' in on(o0)):   # ★ _task_qa_fix1 §A-3 — 톡 뒤 150ms 에 O 가 아직 안 바뀌었으면(10/8 웹킷 지학 4a 「O [[], []]」) 키 타이밍(dt)은 그대로 두고 O 만 표지로 더 기다려 다시 잰다
+                QC.until(p.pg, "a=>(__P.ox(a[0])||[]).some(x=>x.v==='O'&&x.on)!==a[1]", 3000, 'penfinger_add2 4a 덮개 밑 톡 → 〈보기〉 O 바뀜', arg=[k, 'O' in on(o0)])
+                o1 = p.ev("k=>__P.ox(k)", k)
             r4 = {'톡': 'CDP 톡' if cr else 'touchscreen.tap', '위': a['top'], '밑': a['under'], 'O': [on(o0), on(o1)],
                   '정답·해설': [d0, d1], 'Enter 까지 초': dt, 'click': cl}
             T(g, '4a D4 덮개 밑 톡(〈보기〉 %s O) 직후 %.2f초 키보드 Enter → 「정답·해설」 여닫힘(헛잣대: 웹킷 바탕 d27c43a = 톡 뒤 진짜 click 이 없어 남은 먹기가 키보드 click 을 먹음 · 크롬은 진짜 touch click 이 먹기를 써서 바탕도 안 먹힘 → 크롬 헛잣대는 4b)' % (k, dt),

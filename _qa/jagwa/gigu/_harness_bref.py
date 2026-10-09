@@ -18,6 +18,7 @@ while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.d
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
 import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — _task_qa_fix1 §A-1(10/9) · 쪽 안 기다림 wait 한 벌(JG.WAIT_JS)만 가져다 씀(이 하네스의 다른 정의는 무변)
 import http.server, os, socketserver, subprocess, sys, threading, hashlib, shutil, urllib.parse, json, time
 
 GENIE = _roots.genie()
@@ -53,7 +54,8 @@ HEAD = r"""<script>
   if(acc.indexOf('raw')>=0)return r;
   return {ok:true,status:200,json:async()=>({sha:'sha'}),text:async()=>JSON.stringify({sha:'sha'})};
  };
- const wait=ms=>new Promise(r=>setTimeout(r,ms));
+ /* 옛 줄: const wait=ms=>new Promise(r=>setTimeout(r,ms)); — _task_qa_fix1 §A-1(10/9) 새 정의 = JG.WAIT_JS(_qa_jagwa_common.py 한 벌 · 바로 아래 이어 붙임) */
+""" + JG.WAIT_JS + r"""
  setInterval(()=>{try{__nativeFetch('/partial',{method:'POST',body:R.join(String.fromCharCode(10))+String.fromCharCode(10)+'(err) '+JSON.stringify(window.__err||[])})}catch(e){}},3000);
  const grp=async(name,fn)=>{try{await fn()}catch(e){T(name+' 묶음 예외',false,String(e&&e.stack||e).slice(0,300))}};
  const $$$=s=>[...document.querySelectorAll(s)];

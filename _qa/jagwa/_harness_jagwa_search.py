@@ -62,13 +62,15 @@ def _rg_load(dv, app, spd, subj, rec=None, static=None):
     dv.pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>0', timeout=120000)
     dv.pg.evaluate(JG.JS_HU)
     QC.until(dv.pg, '()=>__J.ready()', 30000, '__J.ready(DATA · GG_READY)')
-    QC.until(dv.pg, _RG_SYNCED, 2500, '첫 기록 동기화 끝(SMETA lastSync · recBusy 거짓)')
+    # 옛 줄: QC.until(dv.pg, _RG_SYNCED, 2500, '첫 기록 동기화 끝(SMETA lastSync · recBusy 거짓)')
+    QC.until(dv.pg, _RG_SYNCED, 15000, '첫 기록 동기화 끝(SMETA lastSync · recBusy 거짓) · _task_qa_fix1 §A-3 상한 15 초(부하에서 늦는 첫 동기화를 끝까지 · 표지가 오면 바로)')
 
 
 def open_dev(br, eng, app, subj, phone=False):
     dv = JG.Dev(br, eng, phone)
     dv.load(app, SPD, subj) if QC.GATE else _rg_load(dv, app, SPD, subj)   # regress — 띄움 고정 대기 → 표지
     dv.ev(SJS)
+    QC.until(dv.pg, "()=>typeof db!=='undefined'&&!!db", 30000, 'IndexedDB 열림(db) — __J.sync 가 쓰기 전에(_task_qa_fix1 §A-3 · 10/8 웹킷 g5 「db.transaction」 페이지 오류)')
     dv.ev("()=>__J.sync()")
     dv.pg.wait_for_timeout(600) if QC.GATE else QC.sleep(600, '기록 맞춤(__J.sync = syncRecords + 400ms) 뒤 다시 그림 — 끝 표지 없음', dv.pg)
     return dv

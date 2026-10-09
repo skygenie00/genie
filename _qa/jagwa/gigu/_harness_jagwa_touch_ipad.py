@@ -112,6 +112,7 @@ def build(subj, src):
 
 # ── qa_slim2(2026-10-08) regress 도우미 — 이름이 `_rg` · `_RG` 로 시작 = gate 에서 안 쓰는 갈래
 _RG_SYNCED = "()=>typeof recBusy!=='undefined'&&!recBusy&&(((lsObj(SMETA_KEY).lastSync||0)>=performance.timeOrigin)||!!recErr)"   # 표지 = 앱 recBoot() 첫 syncRecords 끝(recBusy 거짓 · 이 쪽 열린 뒤 맞춘 시각 또는 recErr) · INIT 이 토큰을 넣어 부팅마다 맞춤
+_QF_DATA = "()=>typeof CARD_LAYER==='undefined'||!CARD_LAYER||typeof DATA_V==='undefined'||DATA_V>0"   # _task_qa_fix1 §A-3(10/9) — 카드 층(지학·생물) 문항.json 다 읽음(buildData 끝 · DATA_V) · 물리 · 옛 판(DATA_V 없음)은 바로 참 · gate · regress 둘 다
 _RG_VIEW = "()=>{const v=document.getElementById('view');return !!v&&!v.classList.contains('hide')}"   # 표지 = 문항 창(#view) 열림
 _RG_SMOKE = ('두 판 다 부팅했다', '★1 접힌 손잡이', 'JS 오류 0(새 판)')   # smoke 칸 글(A-0 smoke 칸 · 두판부팅 · ★1 · JS)
 
@@ -141,10 +142,12 @@ def probe(engine, tag, subj, src, out):
             pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>100', timeout=60000)
         except Exception as e:
             R['boot'] = 'NG ' + str(e)[:120]; br.close(); srv.shutdown(); return R
+        QC.until(pg, _QF_DATA, 30000, 'touch_ipad 과목 문항 다 읽음(카드 층 DATA_V > 0 · _task_qa_fix1 §A-3 · 10/8 웹킷 지학 「r[F.CODE]」 거부 둘 = 문항을 다 읽기 전에 누름)')
         if QC.GATE:
             pg.wait_for_timeout(2500)
         else:   # regress — 고정 2.5 초 대신 표지(첫 기록 맞춤 끝) · 상한 = 같은 2.5 초
-            QC.until(pg, _RG_SYNCED, 2500, 'touch_ipad 부팅 뒤 첫 syncRecords 끝(recBusy 거짓 · lastSync ≥ 쪽 열림 또는 recErr)')
+            # 옛 줄: QC.until(pg, _RG_SYNCED, 2500, 'touch_ipad 부팅 뒤 첫 syncRecords 끝(recBusy 거짓 · lastSync ≥ 쪽 열림 또는 recErr)')
+            QC.until(pg, _RG_SYNCED, 15000, 'touch_ipad 부팅 뒤 첫 syncRecords 끝(recBusy 거짓 · lastSync ≥ 쪽 열림 또는 recErr) · _task_qa_fix1 §A-3 상한 15 초(부하에서 늦는 첫 동기화를 끝까지 · 표지가 오면 바로)')
         R['n'] = pg.evaluate('DATA.length')
         R['shell'] = pg.evaluate('typeof SHELL!=="undefined"&&SHELL')
         R['res'] = pg.evaluate('!!document.querySelector("#navdr.ndres")')

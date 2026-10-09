@@ -78,7 +78,27 @@ window.addEventListener('unhandledrejection',e=>{window.__err.push('reject: '+((
 """
 
 
+# ← _task_qa_fix1 §A-1(2026-10-09) 새 정의 · 쪽 안 기다림 wait(ms) 한 벌 — JG.HEAD(earth_shell · claude_slot · claude_slot_add1 이 씀) · earth_shell PHONE · mcsheet HEAD · bref HEAD 가 이 글을 이어 붙여 쓴다(같은 일 두 벌 없음)
+#   뜻 = ms 기다린 뒤 + 앱이 쉴 때까지(진행 중 IndexedDB 쓰기 0 · requestAnimationFrame 두 번) · 쉼 기다림 최대 5 초 — 부르는 곳(earth_shell 564 · bref 63 · mcsheet 54 · claude_slot 23)은 안 고침
+#   진행 중 쓰기 셈 = 앱의 전역 put · putRaw · del 을 시험 쪽에서 감싸 들어갈 때 +1 · 끝날 때 −1(앱 파일 무변 · 앱의 IndexedDB 쓰기는 readwrite 두 곳 = put · del 뿐 · putRaw = 갈아 끼우기 전 put)
+#   감싸기 = 이 글이 놓일 때(앱 스크립트 뒤) 한 번 + wait 마다 다시 봄(아직 없던 · 뒤에 갈아 끼운 함수) · 시계 = performance.now(가짜 Date.now 하네스와 안 부딪힘)
+#   5 초 넘게 안 끝난 쓰기는 멎은 것으로 보고 안 기다림 · rAF 가 안 오면(숨은 쪽) 250ms 뒤 넘어감 · 셈 = window.__qaIdle {n 부른 수 · ms 쉼 기다림 합 · cap 5 초 다 쓴 수}
+WAIT_JS = r""" const __qaI=window.__qaIdle||(window.__qaIdle={live:new Map(),id:0,n:0,ms:0,cap:0});
+ const __qaHook=()=>{['put','putRaw','del'].forEach(k=>{const f=window[k];if(typeof f!=='function'||f.__qaw)return;
+   const g=function(){const id=++__qaI.id;__qaI.live.set(id,performance.now());let p;
+     try{p=f.apply(this,arguments)}catch(e){__qaI.live.delete(id);throw e}
+     Promise.resolve(p).then(()=>{__qaI.live.delete(id)},()=>{__qaI.live.delete(id)});return p};
+   g.__qaw=1;try{window[k]=g}catch(e){}})};
+ try{__qaHook()}catch(e){}
+ const __qaBusy=()=>{const t=performance.now();for(const t0 of __qaI.live.values())if(t-t0<5000)return true;return false};
+ const __qaRaf2=()=>new Promise(r=>{let d=0;const f=()=>{if(!d){d=1;r()}};try{requestAnimationFrame(()=>requestAnimationFrame(f))}catch(e){f()}setTimeout(f,250)});
+ const wait=async ms=>{await new Promise(r=>setTimeout(r,ms));try{__qaHook()}catch(e){}
+   const t0=performance.now();while(__qaBusy()&&performance.now()-t0<5000)await new Promise(r=>setTimeout(r,10));
+   await __qaRaf2();const dt=performance.now()-t0;__qaI.n++;__qaI.ms+=dt;if(dt>=5000)__qaI.cap++};"""
+
+
 # ← jagwa/gigu/_harness_earth_shell.py:103-175 HEAD · 글자 그대로
+# ← _task_qa_fix1 §A-1(10/9) — 그 가운데 wait 정의 한 줄만 WAIT_JS 로 갈음(옛 줄은 쪽 안 주석으로 그 자리에 남김)
 HEAD = r"""<script>
 (function(){
  const R=[]; const T=(n,c,i)=>R.push((c?'PASS':'FAIL')+' | '+n+(c?'':' | '+JSON.stringify(i===undefined?null:i)));
@@ -99,7 +119,8 @@ HEAD = r"""<script>
   if(acc.indexOf('raw')>=0)return r;
   return {ok:true,status:200,json:async()=>({sha:'sha'}),text:async()=>JSON.stringify({sha:'sha'})};
  };
- const wait=ms=>new Promise(r=>setTimeout(r,ms));
+ /* 옛 줄: const wait=ms=>new Promise(r=>setTimeout(r,ms)); — _task_qa_fix1 §A-1(10/9) 새 정의 = 이 파일 WAIT_JS 한 벌(바로 아래 이어 붙임) */
+""" + WAIT_JS + r"""
  const until=async(fn,ms)=>{const t0=Date.now();while(Date.now()-t0<(ms||8000)){try{if(fn())return true}catch(e){}await wait(60)}return false};
  setInterval(()=>{try{__nativeFetch('/partial',{method:'POST',body:R.join(String.fromCharCode(10))+String.fromCharCode(10)+'(err) '+JSON.stringify(window.__err||[])})}catch(e){}},3000);
  const grp=async(name,fn)=>{try{await fn()}catch(e){T(name+' 묶음 예외',false,String(e&&e.stack||e).slice(0,300))}};

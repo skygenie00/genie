@@ -3528,7 +3528,8 @@ BODY_XSIDE = r"""
 
 PHONE = r"""<script>
 (function(){
- const wait=ms=>new Promise(r=>setTimeout(r,ms));
+ /* 옛 줄: const wait=ms=>new Promise(r=>setTimeout(r,ms)); — _task_qa_fix1 §A-1(10/9) 새 정의 = JG.WAIT_JS(_qa_jagwa_common.py 한 벌 · 바로 아래 이어 붙임) */
+""" + JG.WAIT_JS + r"""
  const until=async(fn,ms)=>{const t0=Date.now();while(Date.now()-t0<(ms||40000)){try{if(fn())return true}catch(e){}await wait(80)}return false};
  const __nf=window.fetch.bind(window);
  window.fetch=async function(url,opt){

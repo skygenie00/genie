@@ -19,6 +19,7 @@ while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.d
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
 import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — _task_qa_fix1 §A-1(10/9) · 쪽 안 기다림 wait 한 벌(JG.WAIT_JS)만 가져다 씀(이 하네스의 다른 정의는 무변)
 import http.server, os, socketserver, subprocess, sys, threading, hashlib, shutil, urllib.parse, json, time
 
 GENIE = _roots.genie()
@@ -54,7 +55,8 @@ HEAD = r"""<script>
   if(acc.indexOf('raw')>=0)return r;
   return {ok:true,status:200,json:async()=>({sha:'sha'}),text:async()=>JSON.stringify({sha:'sha'})};
  };
- const wait=ms=>new Promise(r=>setTimeout(r,ms));
+ /* 옛 줄: const wait=ms=>new Promise(r=>setTimeout(r,ms)); — _task_qa_fix1 §A-1(10/9) 새 정의 = JG.WAIT_JS(_qa_jagwa_common.py 한 벌 · 바로 아래 이어 붙임) */
+""" + JG.WAIT_JS + r"""
  setInterval(()=>{try{__nativeFetch('/partial',{method:'POST',body:R.join(String.fromCharCode(10))+String.fromCharCode(10)+'(err) '+JSON.stringify(window.__err||[])})}catch(e){}},3000);
  const grp=async(name,fn)=>{try{await fn()}catch(e){T(name+' 묶음 예외',false,String(e&&e.stack||e).slice(0,300))}};
  const $$$=s=>[...document.querySelectorAll(s)];
@@ -457,9 +459,28 @@ BODY_EARTH = r"""
      /* ⚠ 톡은 pointerdown+pointerup 짝이다. up 만 쏘면 「손가락이 둘이었나」 표시가 안 풀려 안 잡힌다(실제 손가락과 다르다) */
      const gapEl=document.querySelector('.mcprow')||paper;
      const tap=(el,x,y)=>{PE('pointerdown',el,x,y,'touch');PE('pointerup',el,x,y,'touch')};
-     tap(gapEl,5,5);await wait(70);tap(gapEl,5,5);await wait(250);
+     /* 옛 줄: tap(gapEl,5,5);await wait(70);tap(gapEl,5,5);await wait(250); */
+     /* ★ _task_qa_fix1 §A-2(10/9) — 두 번 톡 사이 간격을 쪽 안 타이머(wait(70) · 짐이 크면 앱 기준 330ms 를 넘겨 두 번 톡으로 안 봄 = 10/8 흔들림 N-5 셋) 대신
+        CDP 진짜 입력으로 — 파이썬이 Input.dispatchTouchEvent 톡 둘을 간격 70ms 명령으로 던진다(/cdp → _cdp_do · 크롬 --remote-debugging-port=0).
+        빈자리 = 종이(.mcpaper) 안 · 칸(.mcard) 밖 · 화면 안 점(둘레 ±12px 도 칸 아님) · 앱이 본 간격 = 진짜 손 뗌(pointerup isTrusted) 두 번 사이 Date.now(앱 잣대와 같은 시계)
+        · 배율이 안 돌아왔는데 그 간격이 앱 기준(330ms) 이상이면 FAIL 이 아니라 「다시 잼」 한 번(400ms 쉬어 앞 톡 시각을 흘려보낸 뒤) · CDP 를 못 쓰면 옛 합성 톡 그대로(값에 「cdp 못 씀」) */
+     const gapAt=()=>{const pr=paper.getBoundingClientRect();
+       const free=(x,y)=>{const e=document.elementFromPoint(x,y);return !!e&&paper.contains(e)&&!e.closest('.mcard')};
+       for(let y=Math.max(pr.top,0)+16;y<Math.min(pr.bottom,innerHeight)-16;y+=6)for(let x=Math.max(pr.left,0)+16;x<Math.min(pr.right,innerWidth)-16;x+=6)
+         if(free(x,y)&&free(x-12,y)&&free(x+12,y)&&free(x,y-12)&&free(x,y+12))return {x:Math.round(x),y:Math.round(y)};
+       return null};
+     const upT=[];const upL=e=>{if(e.isTrusted&&e.pointerType==='touch')upT.push(Date.now())};
+     const tap2=async p=>{upT.length=0;let r;
+       try{r=await (await __nativeFetch('/cdp',{method:'POST',body:JSON.stringify({op:'tap2',x:p.x,y:p.y,gap:70,hold:30})})).json()}catch(e){r={ok:false,err:String(e)}}
+       await wait(250);return Object.assign({},r,{app:upT.length>=2?upT[1]-upT[0]:null,ups:upT.length})};
+     const gp=gapAt(), tr=[];
+     window.addEventListener('pointerup',upL,true);
+     if(gp)tr.push(await tap2(gp));
+     if(gp&&tr[0].ok&&!/scale\(1\)/.test(document.querySelector('.mcz').style.transform)&&tr[0].app!=null&&tr[0].app>=330){await wait(400);tr.push(await tap2(gp))}   /* 다시 잼 */
+     window.removeEventListener('pointerup',upL,true);
+     if(!gp||!tr[0]||!tr[0].ok){tap(gapEl,5,5);await wait(70);tap(gapEl,5,5);await wait(250);tr.push({old:'cdp 못 씀 — 옛 합성 톡'})}   /* CDP 못 씀 — 옛 길 그대로 */
      const t2=document.querySelector('.mcz').style.transform;
-     T('N-5 빈자리를 두 번 톡 → 원래 배율 100%',/scale\(1\)/.test(t2),t2);
+     T('N-5 빈자리를 두 번 톡 → 원래 배율 100%',/scale\(1\)/.test(t2),[t2,gp,tr]);
      T('N-5 그때 칸 크기가 원래 값이다',Math.abs($$$('.mcpaper .mcard')[0].getBoundingClientRect().width-cd0)<1,[$$$('.mcpaper .mcard')[0].getBoundingClientRect().width,cd0]);
      T('N-5 배치는 그때도 그대로',Object.keys(L0).every(k=>layout()[k]===L0[k]));
      /* 칸 위에서는 두 번 톡이 안 잡힌다(짧게 누름과 안 부딪히게) */
@@ -642,6 +663,55 @@ def _rg_phys_same(snap, g, keys):
     return out
 
 
+def _cdp_do(prof, box, body):
+    """★ _task_qa_fix1 §A-2(10/9) — 쪽이 /cdp 로 부른 진짜 입력 · op 'tap2' = 같은 자리 손가락 톡 둘(누름 hold ms · 사이 간격 gap ms 를 파이썬이 명령으로)
+    크롬 = --remote-debugging-port=0 · 자리 = 프로필 DevToolsActivePort · 쪽 = /json/list 의 app.html · 웹소켓 = websocket-client(suppress_origin)
+    돌려줌 = {ok, py(파이썬이 잰 두 손 뗌 사이 ms)} 또는 {ok: False, err} — 쪽이 앱이 본 간격(app)을 붙여 「다시 잼」을 가른다"""
+    try:
+        q = json.loads(body or '{}')
+        if q.get('op') != 'tap2':
+            return {'ok': False, 'err': 'op %r' % q.get('op')}
+        if not box.get('ws'):
+            import urllib.request
+            import websocket
+            port = None
+            for _ in range(100):
+                try:
+                    port = int(open(os.path.join(prof, 'DevToolsActivePort'), encoding='utf-8').read().split()[0]); break
+                except Exception:
+                    time.sleep(0.1)
+            tl = json.loads(urllib.request.urlopen('http://127.0.0.1:%d/json/list' % port, timeout=10).read().decode('utf-8'))
+            t = next(x for x in tl if x.get('type') == 'page' and '/app.html' in x.get('url', ''))
+            box['ws'] = websocket.create_connection(t['webSocketDebuggerUrl'], timeout=30, suppress_origin=True)
+            box['cid'] = 0
+        ws = box['ws']
+
+        def cmd(method, params):
+            box['cid'] += 1
+            i = box['cid']
+            ws.send(json.dumps({'id': i, 'method': method, 'params': params}))
+            while True:
+                m = json.loads(ws.recv())
+                if m.get('id') == i:
+                    if 'error' in m:
+                        raise RuntimeError(json.dumps(m['error'], ensure_ascii=False))
+                    return m.get('result')
+        x, y = float(q['x']), float(q['y'])
+        gap, hold = float(q.get('gap', 70)), float(q.get('hold', 30))
+        pt = {'x': x, 'y': y, 'radiusX': 2, 'radiusY': 2, 'force': 1, 'id': 1}
+        ts = []
+        for k in range(2):
+            if k:
+                time.sleep(gap / 1000.0)
+            cmd('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [pt]})
+            time.sleep(hold / 1000.0)
+            cmd('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
+            ts.append(time.time())
+        return {'ok': True, 'py': round((ts[1] - ts[0]) * 1000)}
+    except Exception as e:
+        return {'ok': False, 'err': repr(e)[:200]}
+
+
 def build(mode, src_text):
     subj = {'earth': 'earth', 'bio': 'bio', 'phys': 'phys', 'physbase': 'phys'}[mode]
     body = {'earth': (BODY_EARTH if not QC.SMOKE else _rg_smoke_body(BODY_EARTH)), 'bio': BODY_BIO}.get(mode, BODY_PHYS)   # smoke — 지학 쪽 안 시험 글을 이 자리에서만 잘라 씀
@@ -680,7 +750,13 @@ def run(mode, secs, src_text):
 
         def do_POST(self):
             n = int(self.headers.get('Content-Length') or 0)
-            body = self.rfile.read(n).decode('utf-8', 'replace'); self.send_response(204); self.end_headers()
+            # 옛 줄: body = self.rfile.read(n).decode('utf-8', 'replace'); self.send_response(204); self.end_headers()
+            body = self.rfile.read(n).decode('utf-8', 'replace')
+            if self.path.startswith('/cdp'):   # ★ _task_qa_fix1 §A-2(10/9) — 쪽이 부른 진짜 입력(N-5 두 번 톡) · 결과 JSON 을 돌려준다
+                out = json.dumps(_cdp_do(prof, box, body), ensure_ascii=False).encode('utf-8')
+                self.send_response(200); self.send_header('Content-Type', 'application/json'); self.send_header('Content-Length', str(len(out)))
+                self.end_headers(); self.wfile.write(out); return
+            self.send_response(204); self.end_headers()
             if self.path.startswith('/partial'): box['partial'] = body; return
             if self.path.startswith('/snap'):
                 try: box['snap'] = json.loads(body)
@@ -693,10 +769,19 @@ def run(mode, secs, src_text):
     prof = os.path.join(OUT, 'prof_' + mode); shutil.rmtree(prof, ignore_errors=True)
     t0 = time.time()
     QC.launch('base' if mode == 'physbase' else 'new')   # 셈(§B-4) — physbase = 바탕(gate 에서만 · regress 0)
+    # 옛 줄: p = subprocess.Popen([CHROME, '--headless=new', '--disable-gpu', '--no-first-run', '--user-data-dir=' + prof,
+    # 옛 줄:                       '--window-size=1400,900', 'http://127.0.0.1:%d/app.html' % port],
+    # 옛 줄:                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p = subprocess.Popen([CHROME, '--headless=new', '--disable-gpu', '--no-first-run', '--user-data-dir=' + prof,
-                          '--window-size=1400,900', 'http://127.0.0.1:%d/app.html' % port],
+                          '--window-size=1400,900', '--remote-debugging-port=0',   # ★ _task_qa_fix1 §A-2(10/9) — N-5 두 번 톡 CDP 진짜 입력(_cdp_do) · 자리 = 프로필 DevToolsActivePort
+                          'http://127.0.0.1:%d/app.html' % port],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    got = done.wait(secs); p.terminate()
+    # 옛 줄: got = done.wait(secs); p.terminate()
+    got = done.wait(secs)
+    try:   # ★ _task_qa_fix1 §A-2 — CDP 웹소켓(있으면) 닫고 크롬을 끈다
+        if box.get('ws'): box['ws'].close()
+    except Exception: pass
+    p.terminate()
     try: p.wait(10)
     except Exception: p.kill()
     srv.shutdown()

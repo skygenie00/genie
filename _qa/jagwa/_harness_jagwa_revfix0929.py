@@ -172,7 +172,8 @@ class Dev:
         if QC.GATE:
             self.pg.wait_for_timeout(wait)
         else:   # regress — 고정 2.5 초 대신 표지(첫 기록 맞춤 끝) · 상한 = 같은 2.5 초(못 만나면 gate 와 같은 시간)
-            QC.until(self.pg, _RG_BOOT, wait, 'revfix0929 부팅 뒤 첫 syncRecords 끝(recBusy 거짓 · PUT 1+ 또는 recErr)')
+            # 옛 줄: QC.until(self.pg, _RG_BOOT, wait, 'revfix0929 부팅 뒤 첫 syncRecords 끝(recBusy 거짓 · PUT 1+ 또는 recErr)')
+            QC.until(self.pg, _RG_BOOT, max(wait, 15000), 'revfix0929 부팅 뒤 첫 syncRecords 끝(recBusy 거짓 · PUT 1+ 또는 recErr) · _task_qa_fix1 §A-3 상한 15 초(부하에서 늦는 첫 동기화를 끝까지 · 표지가 오면 바로)')
         self.cdp = self.ctx.new_cdp_session(self.pg) if self.eng == 'chromium' else None
         return self
 
@@ -624,10 +625,12 @@ def b6(br, eng, app):
                 out[subj] = '단추 없음'; ok = False; continue
             f0 = x['fold']; b = x['btn']
             dv.tap(b['l'] + b['w'] / 2, b['t'] + b['h'] / 2)
+            QC.until(dv.pg, "f=>document.body.classList.contains('fold')!==f", 5000, 'revfix0929 b6 톡 가운데 → 접힘 바뀜(_task_qa_fix1 §A-3 · tap 안 고정 500ms 뒤 · 안 바뀌면 상한 뒤 그대로 잼)', arg=f0)
             f1 = dv.ev("()=>document.body.classList.contains('fold')")
             hx = x['hit']['r'] - 2; hy = (x['hit']['t'] + x['hit']['b']) / 2   # 누름 자리 오른쪽 끝(보이는 원 밖)
             x2 = dv.ev(FOLDJS)
             dv.tap(hx, hy)
+            QC.until(dv.pg, "f=>document.body.classList.contains('fold')!==f", 5000, 'revfix0929 b6 톡 누름 자리 끝 → 접힘 바뀜(_task_qa_fix1 §A-3 · tap 안 고정 500ms 뒤)', arg=f1)
             f2 = dv.ev("()=>document.body.classList.contains('fold')")
             x['톡 가운데'] = [f0, f1]; x['톡 누름 자리 끝(%.0f,%.0f)' % (hx, hy)] = [x2['fold'] if x2 else None, f2]
             out[subj] = x

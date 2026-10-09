@@ -64,6 +64,8 @@ RES = []
 # ── qa_slim2(2026-10-08) regress 도우미 — 이름이 `_rg` · `_Rg` · `_RG` 로 시작 = gate 에서 안 쓰는 갈래(gate 에서 도는 줄은 원래 글 그대로)
 _RG_SYNCED = "()=>typeof recBusy!=='undefined'&&!recBusy&&(((lsObj(SMETA_KEY).lastSync||0)>=performance.timeOrigin)||!!recErr)"   # 표지 = 앱 recBoot() 첫 syncRecords 끝(recBusy 거짓 · 이 쪽 열린 뒤 맞춘 시각 lastSync 또는 recErr) · INIT_PP 가 토큰을 넣어 부팅마다 맞춤
 
+_QF_DATA = "()=>typeof CARD_LAYER==='undefined'||!CARD_LAYER||typeof DATA_V==='undefined'||DATA_V>0"   # _task_qa_fix1 §A-3(10/9) — 카드 층(지학) 문항.json 다 읽음(DATA_V) · 물리 · 옛 판은 바로 참
+
 
 class _RgPg(JG.Pg_PP):
     """regress — 부팅 뒤 고정 1.5 초 대신 표지(첫 syncRecords 끝 · 상한 = 같은 1.5 초) · 나머지는 JG.Pg_PP 그대로(JG 는 안 고침)"""
@@ -74,7 +76,9 @@ class _RgPg(JG.Pg_PP):
             self.pg.wait_for_function(self.PDFS, timeout=180000)
         except Exception:
             pass
-        QC.until(self.pg, _RG_SYNCED, 1500, 'physphone 부팅 뒤 첫 syncRecords 끝(recBusy 거짓 · lastSync ≥ 쪽 열림 또는 recErr)')
+        # 옛 줄: QC.until(self.pg, _RG_SYNCED, 1500, 'physphone 부팅 뒤 첫 syncRecords 끝(recBusy 거짓 · lastSync ≥ 쪽 열림 또는 recErr)')
+        QC.until(self.pg, _QF_DATA, 30000, 'physphone 부팅 — 카드 층 문항 다 읽음(DATA_V · 물리 = 바로 참) · _task_qa_fix1 §A-3')
+        QC.until(self.pg, _RG_SYNCED, 15000, 'physphone 부팅 뒤 첫 syncRecords 끝(recBusy 거짓 · lastSync ≥ 쪽 열림 또는 recErr) · _task_qa_fix1 §A-3 상한 15 초(부하에서 늦는 첫 동기화를 끝까지 · 표지가 오면 바로)')
         self.pg.evaluate(JG.TOOLS)
 
 

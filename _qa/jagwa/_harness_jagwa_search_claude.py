@@ -135,7 +135,8 @@ class Dev:
             self.pg.wait_for_timeout(wait)
         else:   # regress — 같은 상한의 표지 기다림: __J.ready()(DATA · GG_READY) → 첫 기록 동기화 끝(앱이 적는 SMETA lastSync 도장 · recBusy 거짓 · 못 만나면 gate 와 같은 시간)
             QC.until(self.pg, '()=>__J.ready()', 30000, '__J.ready(DATA · GG_READY)')
-            QC.until(self.pg, _RG_SYNCED, wait, '첫 기록 동기화 끝(SMETA lastSync · recBusy 거짓)')
+            # 옛 줄: QC.until(self.pg, _RG_SYNCED, wait, '첫 기록 동기화 끝(SMETA lastSync · recBusy 거짓)')
+            QC.until(self.pg, _RG_SYNCED, max(wait, 15000), '첫 기록 동기화 끝(SMETA lastSync · recBusy 거짓) · _task_qa_fix1 §A-3 상한 15 초(부하에서 늦는 첫 동기화를 끝까지 · 표지가 오면 바로)')
         for _ in range(60):   # 기록 맞춤 끝(풀이 GP 가 들어온 뒤)
             if not self.ev("()=>typeof recBusy!=='undefined'&&recBusy"):
                 break
@@ -509,7 +510,10 @@ def sweep(br, eng, app):
                 dv.click('#fFoldBtn')
             dv.ev("()=>__C9.gmode()"); dv.pg.wait_for_timeout(300)
             typeq(dv, W['both']); out[(vn, '근거 검색 결과')] = dv.ev(SWEEPJS, touch)
-            typeq(dv, ''); dv.click('#qCnt'); out[(vn, '분포')] = dv.ev(SWEEPJS, touch)
+            # 옛 줄: typeq(dv, ''); dv.click('#qCnt'); out[(vn, '분포')] = dv.ev(SWEEPJS, touch)
+            typeq(dv, ''); dv.click('#qCnt')
+            QC.until(dv.pg, "()=>!!document.querySelector('#esres .esdh .esb')&&!!document.querySelector('#esres .esdh .esc')", 5000, 'search_claude b6 분포 머리(! · C) 그려짐(_task_qa_fix1 §A-3 · 10/8 폰 누름 ! · C null)')
+            out[(vn, '분포')] = dv.ev(SWEEPJS, touch)
             if touch:
                 out[(vn, '누름 !')] = dv.ev(HITJS, '#esres .esdh .esb'); out[(vn, '누름 C')] = dv.ev(HITJS, '#esres .esdh .esc')
             dv.click('#esres .esdh .esc'); out[(vn, '분포 C')] = dv.ev(SWEEPJS, touch)
