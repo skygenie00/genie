@@ -92,7 +92,12 @@
         .gg-on .ggb-t{color:#c94f4f !important}
         .ggb-t, [id*="gg-ein-"]{tab-size:2;-moz-tab-size:2}
         /* ★ 2026-10-10 (_task_cloud_batch_1010 ③) — 연결한 근거 줄 「✎ 여기서 고치기」 손가락 누를 자리 36px(겉모양 무변 · 손가락 기기만) */
-        @media (pointer:coarse){ .ggrefed{position:relative} .ggrefed::before{content:"";position:absolute;left:-6px;right:-6px;top:50%;height:36px;margin-top:-18px} }
+        /* 옛 줄: @media (pointer:coarse){ .ggrefed{position:relative} .ggrefed::before{content:"";position:absolute;left:-6px;right:-6px;top:50%;height:36px;margin-top:-18px} } */
+        /* ★ 2026-10-10 ox_fix([채팅] 03:50 ㉠ · 어긴 문구 = 채팅 00:36 「겹침 0 · 「여기서 고치기」 누름 = 고치기 칸 열림」) — iPad 한 줄 꼴(✎ 사이 20~28px)에서 36px 띠가 아랫줄 띠에 덮여
+           ✎ 가운데 +3px 톡에 아랫줄 고치기 칸이 열리던 것: 띠를 그 줄(.ggrefrow) 안으로 가둠 — 띠 = 단추 위 · 아래 20px · 줄 상자 밖은 overflow-y:clip 으로 잘림(이웃 줄 띠와 겹침 0) ·
+           폰(단추가 글 아랫줄 · 줄 아래끝 = 단추 아래끝) = 단추 + 위 20px ≈ 38 · iPad 한 줄 꼴 = 그 줄 높이(줄 사이만큼) · 겉모양 무변 · 손가락 기기만 · clip 못 하는 옛 브라우저는 옛 36px 띠 */
+        @media (pointer:coarse){ .ggrefed{position:relative} .ggrefed::before{content:"";position:absolute;left:-6px;right:-6px;top:50%;height:36px;margin-top:-18px}
+            @supports (overflow-y:clip){ .ggrefrow{overflow-y:clip} .ggrefed::before{top:-20px;bottom:-20px;height:auto;margin-top:0} } }
         .gg-on-dash{background:#fff5f5;border-left:3px dashed #f0a0a0;color:#c94f4f;border-radius:6px;padding:2px 6px}
         /* 원문자 — 테두리만 굵은 빨강. **채우지 않는다.** ggOkCls 의 틀림/맞음 색은 그대로 두고 그 위에 겹친다. */
         .ggnum-on{border-width:2.5px !important;border-style:solid !important;border-color:#e57373 !important}
@@ -4974,7 +4979,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             /* ★ 2026-09-16 (§B) — 항목 맨 앞에 「!」 · 켜지면 왼쪽 선이 **점선**(상자 틀과 맞춤) */
             /* ★ 2026-10-10 (_task_cloud_batch_1010 ③) — 본문 줄 · 댓글 줄 = ggPanelHTML(10/6 ox_gg_phone) 꼴: 줄 flex-wrap · 글 덩어리 flex 1 1 18rem · min-width 0 · 「✎ 여기서 고치기」 ml-auto */
             return `<div data-gbbox="${escAttr(u)}|${escAttr(g.k)}" data-gbdash="1" class="mt-1${g.bang ? ' gg-on-dash' : ''}">`
-                + `<div class="flex flex-wrap items-start gap-x-1.5 gap-y-1">`
+                + `<div class="ggrefrow flex flex-wrap items-start gap-x-1.5 gap-y-1">`   /* ★ 10/10 ox_fix — ggrefrow = 손가락 누를 띠를 이 줄 안으로(CSS .ggrefrow · 옛: class="flex flex-wrap …") */
                 + `<span class="flex items-start gap-1.5" style="flex:1 1 18rem;min-width:0">`
                 + ggBangHTML(u, g, sc)
                 + `<span title="${ggOkWord(g.ok)}" style="flex:none;display:inline-block;width:7px;height:7px;border-radius:9999px;margin-top:8px;background:${dot}"></span>`
@@ -4985,7 +4990,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 + cs.map((c, n) => {
                     if (!c) return '';
                     const ck = String(c.k || n);
-                    return `<div class="flex flex-wrap items-start gap-x-1.5 gap-y-1 pl-3"><div style="flex:1 1 18rem;min-width:0">${ggCsHTML([c])}</div>${edBtn(ck)}</div>`
+                    return `<div class="ggrefrow flex flex-wrap items-start gap-x-1.5 gap-y-1 pl-3"><div style="flex:1 1 18rem;min-width:0">${ggCsHTML([c])}</div>${edBtn(ck)}</div>`   /* ★ 10/10 ox_fix — ggrefrow(옛: class="flex flex-wrap … pl-3") */
                         + editor(ck, c.t);
                 }).join('')
                 + `</div>`;
