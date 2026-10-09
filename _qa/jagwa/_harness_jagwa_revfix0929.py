@@ -101,7 +101,8 @@ def _rg_pv(x):
     h = lambda s: hashlib.md5(str(s).encode('utf-8')).hexdigest()[:12]
     rest = x.get('rest') or ''
     return {'nos': list(x.get('nos') or []), 'only': list(x.get('only') or []), 'kind': list(x.get('kind') or []),
-            'rows': [[n, h(t)] for n, t in (x.get('rows') or [])], 'rest': h(rest.replace(CAPNOTE, '')) + (CAPNOTE if CAPNOTE in rest else ''),
+            # 옛 줄: 'rows': [[n, h(t)] for n, t in (x.get('rows') or [])], 'rest': h(rest.replace(CAPNOTE, '')) + (CAPNOTE if CAPNOTE in rest else ''),
+            'rows': [[n, h(t)] for n, t in (x.get('rows') or [])], 'rest': h(_untail(rest)) + ''.join(y for y in TAILS if y in rest),   # ★ search_all(10/10 · §A-2) — 꼬리(옛 CAPNOTE · 새 RPMORE)는 글자 그대로 남김(옛 판 값은 옛 줄과 같은 바이트)
             'tt': list(x.get('tt') or [])}
 
 
@@ -468,6 +469,24 @@ PVJS = r"""(q)=>{ /* ★ physprev(10/2) — _task_jagwa_physprev 57줄(A-2-3): �
  const tt=(ph&&String(esPhysHit).indexOf('titleOf(r)')>=0)?ES_NOS.filter(n=>{const r=DATA.find(x=>x[F.NO]===n);return !!r&&(String(titleOf(r)).includes(q)||String(pnFix(r)||'').includes(q))}):[];
  return {nos:ES_NOS.slice(),only,kind,rows,rest,tt}}"""
 CAPNOTE = '<div class="bplnone">상위 100건만 표시했습니다. 검색어를 더 좁혀보세요.</div>'
+# ★ search_all(10/10 · jagwa_batch d914ece) — 근거: _task_search_all §A-2 「「상위 N건만 … 좁혀보세요」 글은 걷음 · 처음 100 줄 → 굴리면 다음 100 줄」 · 사용자 10/9 23:52 「왜 검색 결과가 이거밖에 안 나와」
+#   새 판 esSearch = resPage(첫 100 줄 + 끝 표지 .rpmore · 굴리면 다음 100 줄) · 안내 줄(CAPNOTE) 0 → 「100 건 넘음 꼬리」 = 옛 판 CAPNOTE 또는 새 판 RPMORE 하나(둘 다 = 잘못)
+#   나머지 글은 두 꼬리를 다 떼고 맞댐(바탕 스냅샷이 옛 판 CAPNOTE 여도 · 새 판 RPMORE 여도 같은 잣대 · 줄 HTML · 집합 · 차례 잣대는 그대로)
+RPMORE = '<div class="rpmore"></div>'
+TAILS = (CAPNOTE, RPMORE)
+
+
+def _tail_n(rest):
+    """★ search_all(10/10) — 꼬리 수(0 = 100 건 안 · 1 = 100 건 넘음 꼬리 하나 · 2 = 옛 안내 줄과 새 끝 표지가 같이 = 잘못)"""
+    return sum(1 for t in TAILS if t in (rest or ''))
+
+
+def _untail(rest):
+    """★ search_all(10/10) — 나머지 글에서 꼬리(CAPNOTE · RPMORE)를 뗀 것"""
+    rest = rest or ''
+    for t in TAILS:
+        rest = rest.replace(t, '')
+    return rest
 
 
 def pv_same(n, b):
@@ -493,8 +512,10 @@ def pv_same(n, b):
     # 옛 줄: extra = [x for x, _ in rn if x not in hb]
     extra = [x for x, _ in rn if x not in hb and x not in tx]
     extra_ok = not extra or len(b['rows']) >= 100
-    rest_ok = n['rest'].replace(CAPNOTE, '') == b['rest'].replace(CAPNOTE, '') \
-        and ((CAPNOTE in n['rest']) == (len(n['nos']) > 100)) and ((CAPNOTE in b['rest']) == (len(b['nos']) > 100))
+    # 옛 줄: rest_ok = n['rest'].replace(CAPNOTE, '') == b['rest'].replace(CAPNOTE, '') \
+    # 옛 줄:     and ((CAPNOTE in n['rest']) == (len(n['nos']) > 100)) and ((CAPNOTE in b['rest']) == (len(b['nos']) > 100))
+    rest_ok = _untail(n['rest']) == _untail(b['rest']) \
+        and (_tail_n(n['rest']) == (1 if len(n['nos']) > 100 else 0)) and (_tail_n(b['rest']) == (1 if len(b['nos']) > 100 else 0))   # ★ search_all(10/10 · §A-2) — 꼬리 = CAPNOTE(옛 판) 또는 RPMORE(새 판) 하나
     # 옛 줄: same = nn == bb and not html_bad and order_ok and cap_ok and extra_ok and rest_ok
     same = (nn == bb or (bool(tx) and [x for x in nn if x not in tx] == bb)) and not html_bad and order_ok and cap_ok and extra_ok and rest_ok   # ★ 2026-10-07 (_task_jagwa_phys_win §A-45) — 집합 = 바탕 + 제목으로 더 걸린 것(차례 그대로)
     info = {'t 로만': len(only), '조각 t': len(kind), '상한 밀림': len(miss)} if (only or kind or miss) else {}

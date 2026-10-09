@@ -228,8 +228,16 @@ def g9(dv, who):
         s = st(dv)
         if s['nos'] is not None and len(s['nos']) > 100 or (s['qcnt'].endswith('건') and int(s['qcnt'][:-1] or 0) > 100):
             break
-    ok = s['n'] == 100 and any('상위 100건만' in x for x in s['note'])
-    return ok, {'말': q, '개수': s['qcnt'], '줄': s['n'], '안내': s['note'][-1:] if s['note'] else []}
+    # 옛 줄: ok = s['n'] == 100 and any('상위 100건만' in x for x in s['note'])
+    # 옛 줄: return ok, {'말': q, '개수': s['qcnt'], '줄': s['n'], '안내': s['note'][-1:] if s['note'] else []}
+    # ★ search_all(10/10 · jagwa_batch d914ece) — 근거: _task_search_all §A-2 「「상위 N건만 … 좁혀보세요」 글은 걷음 · 처음 100 줄 → 굴리면 다음 100 줄」 · 사용자 10/9 23:52 「왜 검색 결과가 이거밖에 안 나와」
+    #   새 판(앱에 resPage 함수 = 표지) = 첫 100 줄 + 끝 표지 .rpmore 하나(굴리면 다음 100 줄 · 끝까지 다 붙는지는 _harness_jagwa_search_all 이 잰다) · 안내 줄 0 / 옛 판 = 100 줄 + 안내 줄(옛 잣대 그대로)
+    rp = dv.ev("()=>{const b=document.getElementById('esres');return {rp:typeof resPage==='function',more:b?b.querySelectorAll(':scope>.rpmore').length:0}}")
+    if rp['rp']:
+        ok = s['n'] == 100 and rp['more'] == 1 and not any('상위 100건만' in x for x in s['note'])
+    else:
+        ok = s['n'] == 100 and any('상위 100건만' in x for x in s['note'])
+    return ok, {'말': q, '개수': s['qcnt'], '줄': s['n'], '안내': s['note'][-1:] if s['note'] else [], '새 판 꼴(resPage · 끝 표지 수)': [rp['rp'], rp['more']]}
 
 
 def g10(dv, who):
