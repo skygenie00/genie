@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 r"""_task_cloud_batch_1010 로컬 몫 — 민법OX 한 판(클라우드 ① 76a3a03 · 합친 후보 56836b8)의 WebKit 칸 관문(앱은 고치지 않는다)
 
-  python _harness_ox_batch_webkit.py [--mode gate|regress|smoke] [--new <앱>] [--base <판 = 7299ec3>] [--only W1,W2,…] [--dev 폰,iPad]
-                                     [--spd <studyplandata>] [--data-rev <판 = 3065ca0 · '' = 작업트리>] [--rec-rev <판 = ddc6ea7>] [--tw <Tailwind 사본>] [--res <결과>] [--shots <그림>]
+  python _harness_ox_batch_webkit.py [--mode gate|regress|smoke] [--new <앱>] [--base <판 = 7299ec3>] [--base2 <판 = 56836b8>] [--only W1,W2,…] [--dev 폰,iPad]
+                                     [--w5-eng webkit,chromium] [--spd <studyplandata>] [--data-rev <판 = 3065ca0 · '' = 작업트리>] [--rec-rev <판 = ddc6ea7>] [--tw <Tailwind 사본>]
+                                     [--res <결과>] [--shots <그림>]
 
   NEW  = genie 작업트리 minbeop/index.html(GENIE_ROOT) · BASE = 바탕 7299ec3(헛잣대 — gate 만 · W1 · W2 · W4 · W5 FAIL 이어야)
+  BASE2 = 56836b8(합친 후보 · ox_fix 앞 판 — gate 만 · W5 만) — W5 ② iPad 헛잣대는 이 판이다: 7299ec3 은 띠가 없어 「잘못 열림 0」 이라
+          그 칸의 헛잣대가 못 된다(10/10 [채팅] 03:50 ㉠ · 56836b8 = iPad ✎ +3px 톡에 아랫줄 칸 열림) · W5 ① 「겉모양 무변」 도 이 판과 그림으로 맞댐
   엔진 = WebKit 하나(playwright webkit = iPhone · iPad Safari 엔진) — 클라우드 관문 셋(_harness_ox_search_all · _queue_compare · _ggref_phone)은 Chromium 만이라 못 잰 칸
   기기 = 폰 390×844 · iPad 820×1180(has_touch · is_mobile(되면) · DPR 2)
   누름 = touchscreen.tap(**진짜 터치**) · 굴림 = 마우스 휠(되면 · 굴림 통 보이는 가운데) 아니면 그 통 scrollTop 을 끝으로 + scroll 사건
@@ -25,11 +28,13 @@ r"""_task_cloud_batch_1010 로컬 몫 — 민법OX 한 판(클라우드 ① 76a3
     W3 「대위」 둘째 100 줄까지 굴리는 중 검색 칸 진짜 톡 → 「상계」 — 옛 줄 0 · 새 결과 첫 100 줄 = 기대 앞 100 · 통 맨 위(0) · 새 결과 끝까지 = 기대
     W4 ⚡ 채점 창 실데이터(기록 ddc6ea7 · ⚡ 약점 10/10 회독 17 문항 다시 그림 = 클라우드 Q2 와 같은 길) — 지난 결과 빨강 3(2) · 5 · 158 · 83 · 초록 13 ·
        계속 틀림 3(2) · 극복함 5 · 158 · 83 · 148 어느 쪽도 아님 · 빨강 칩 진짜 톡 = 그 문항 팝업 · 회독 비교 창 같은 값 · 하네스가 기록에서 따로 센 값 = 지시서 값
-    W5 연결한 근거 펼침(문항 팝업 근거 줄 🔗 칩 진짜 톡) — 줄 둘:
+    W5 연결한 근거 펼침(문항 팝업 근거 줄 🔗 칩 진짜 톡) — 줄 둘 · 엔진 = WebKit + Chromium(coarse · has_touch · 같은 W5 코드 · --w5-eng):
        ① 꼴 · 누름 — 단추 줄 오른끝 · 글 ↔ 단추 네모 겹침 0 · 누를 것마다 가운데 맨 위 = 제 것 · ✎ 진짜 톡 = 고치기 칸 열림(글 = 저장된 글) · 「취소」 진짜 톡 = 닫힘 ·
-          단추 네모 위 13px 진짜 톡 = 열림 · 폰 = 글 폭 / 줄 폭 ≥ 0.90 · iPad = 글 폭 INFO(넓으면 한 줄)
-       ② ✎ 누를 자리 — 줄마다 elementsFromPoint 맨 위로 찔러 잰 폭 · 높이 ≥ 36 · 이웃 ✎ 의 36px 띠(.ggrefed::before · (pointer:coarse))와 겹친 짝 0 ·
-          (INFO) 덮인 띠 자리 진짜 톡 → 어느 줄 고치기 칸이 열리나
+          폰 = 단추 네모 위 13px 진짜 톡 = 열림 · 글 폭 / 줄 폭 ≥ 0.90 · iPad = 글 폭 · 13px 위 INFO(한 줄 꼴이면 13px 위는 윗줄 자리) ·
+          gate = 상자 그림 = 56836b8(겉모양 무변 · 허용 = 앤티앨리어싱 차 ≤ 4 · 화소 ≤ 64 · PNG_TOL)
+       ② ✎ 누를 자리 — 줄마다 elementsFromPoint 맨 위로 찔러 잰 폭 ≥ 36 · 높이 폰 ≥ 36 · iPad ≥ min(36, 그 줄 높이) − 2(줄 사이만큼) ·
+          ✎ 끼리 침범 0(그 줄 안 · 가운데 ±18 겨냥 자리를 다른 ✎ 가 맨 위로 덮은 데 0) · ✎ 가운데 ±3px(위 · 아래) 진짜 톡 = 그 줄 고치기 칸 ·
+          헛잣대 = 폰 7299ec3(띠 없음 = 18) · iPad 56836b8(띠 겹침 = +3px 톡 아랫줄 칸)
     W0 페이지 오류 0(pageerror · error · unhandledrejection — 칸마다 띄운 쪽 모두)
     (INFO) WK 환경 — 웹킷 판 · is_mobile · (pointer:coarse) · (hover:none) · maxTouchPoints · Tailwind 실림 · 휠 굴림 됨
   모드(QC): gate = 바탕도 띄워 헛잣대 · regress = 새 판만 · smoke = 새 판 폰 W1(모바일) · W5 만
@@ -69,10 +74,16 @@ REC_REV = ARG('--rec-rev', 'ddc6ea7')     # _task_ox_queue_compare §B-2 실데�
 GATE = QC.GATE                            # gate = 바탕을 띄워 헛잣대 · regress · smoke = 새 판만(바탕 풀기 · 띄우기 0)
 if GATE:
     QC.sub('git:show-app')
+BASE2 = ARG('--base2', '56836b8')        # W5 만 — ox_fix 앞 판(합친 후보) = iPad ✎ 띠 겹침 판
+W5ENG = [x.strip() for x in (ARG('--w5-eng', '') or '').split(',') if x.strip()] or (['webkit'] if QC.SMOKE else ['webkit', 'chromium'])
 SRC = {'NEW': OL.app_src(NEWF)}
 if GATE:
     SRC['BASE'] = OL.app_src(BASE)
 VERS = tuple(SRC)
+if GATE:
+    QC.sub('git:show-app')
+    SRC['B2'] = OL.app_src(BASE2)
+VERS5 = VERS + (('B2',) if GATE else ())
 TERM, TERM2 = '대위', '상계'
 LW_CANDS = ['대리', '취소', '소멸시효', '채권자', '계약', '무효', '등기', '점유']   # 클라우드 S2 와 같은 후보 · 100 넘는 첫 말(이어 붙음까지)
 GG_CANDS = ['취소', '등기', '변제', '보증', '손해', '효력', '무효', '채권자']       # 클라우드 S3 와 같은 후보 · 100 넘고 300 안쪽 첫 말
@@ -84,7 +95,7 @@ EXP2 = {'n': 17, 'red': ['Q5517', 'Q5681', 'Q0705', 'Q0684'], 'red_lab': ['3(2)'
         'always': ['Q5517'], 'fixed': ['Q5681', 'Q0705', 'Q0684'], 'neither': 'Q0695'}
 RES, LINES, STEP, BOOTS = [], [], {}, []
 ENV = {'mobile': None}
-ERRS = {v: [] for v in VERS}
+ERRS = {v: [] for v in VERS5}
 T0 = time.time()
 
 
@@ -96,10 +107,14 @@ def _s(v):
     return v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, default=str)
 
 
-def R(g, name, new, base=None, d='', yard=True):
-    RES.append(dict(g=g, name=name, new=new, base=base, yard=yard, d=d))
+def R(g, name, new, base=None, d='', yard=True, b2=None, ycol='BASE'):
+    """ycol = 헛잣대 열(BASE = 7299ec3 · B2 = 56836b8) — 헛잣대 셈은 그 열의 판정으로"""
+    yv = b2 if ycol == 'B2' else base
+    RES.append(dict(g=g, name=name, new=new, base=base, b2=b2, ycol=ycol, ybase=yv, yard=yard, d=d))
     tag = 'INFO' if new is None else ('PASS' if new else 'FAIL')
-    yb = '' if base is None else (' · 바탕 ' + (('PASS(바탕도 같음)' if yard else 'PASS(바탕 = 기준)') if base else 'FAIL'))
+    yb = '' if base is None else (' · 바탕 ' + ((('PASS(바탕도 같음)' if ycol == 'BASE' else 'PASS') if yard else 'PASS(바탕 = 기준)') if base else 'FAIL'))
+    if b2 is not None:
+        yb += ' · %s %s' % (BASE2, ('PASS' + ('(헛잣대 · 같음)' if ycol == 'B2' and yard else '')) if b2 else ('FAIL' + ('(헛잣대)' if ycol == 'B2' else '')))
     ln = '%s | %s · %s%s | %s' % (tag, g, name, yb, _s(d)[:1800])
     LINES.append(ln)
     print(ln, flush=True)
@@ -153,7 +168,7 @@ window.__W={
    if(!__W.own(e,cx,cy))return {h:0,w:0,on:false,top:__W.sig(document.elementsFromPoint(cx,cy)[0])};let u=0,d=0,l=0,rt=0;
    while(u<60&&__W.own(e,cx,cy-u-1))u++;while(d<60&&__W.own(e,cx,cy+d+1))d++;while(l<160&&__W.own(e,cx-l-1,cy))l++;while(rt<160&&__W.own(e,cx+rt+1,cy))rt++;
    /* 막은 것 — 36px 띠(가운데 ±18) 안에서 끊겼으면 그 자리 맨 위가 무엇인가(다른 ✎ = 이웃 줄 누를 자리가 덮음) */
-   const by=a=>{if(!a)return 'null';const x=a.closest&&a.closest('.ggrefed');return x&&x!==e?'다른 ✎':__W.sig(a)};
+   const by=a=>{if(!a)return 'null';const x=a.closest&&a.closest('button[onclick^="ggRefEdit("]');return x&&x!==e?'다른 ✎':__W.sig(a)};   /* ✎ = onclick 으로 가름(7299ec3 엔 .ggrefed 없음) */
    return {h:u+d+1,w:l+rt+1,up:u,down:d,on:true,cutUp:u<17?by(document.elementsFromPoint(cx,cy-u-1)[0]):null,cutDown:d<17?by(document.elementsFromPoint(cx,cy+d+1)[0]):null}},
  env(){const sr=document.getElementById('search-results'),cs=sr?getComputedStyle(sr):null;
    return {coarse:matchMedia('(pointer:coarse)').matches,anyCoarse:matchMedia('(any-pointer:coarse)').matches,hoverNone:matchMedia('(hover:none)').matches,
@@ -176,7 +191,7 @@ class WL:
     """웹킷 기기 하나 = 문맥 하나 — OL 서버 · 가짜 원격 · INIT · __H 그대로 · 톡 = touchscreen.tap(진짜 터치) · 굴림 = 휠(되면) 아니면 scrollTop"""
 
     def __init__(self, br, tag, dev, label, remote=None, wait_sync=True, mobile=True):
-        QC.launch('base' if tag == 'BASE' else 'new')
+        QC.launch('new' if tag == 'NEW' else 'base')   # BASE(7299ec3) · B2(56836b8) = 바탕 띄움
         self.tag, self.dev, self.label = tag, dev, label
         kw = dict(viewport={'width': dev['W'], 'height': dev['H']}, device_scale_factor=2, has_touch=True)
         if mobile and ENV['mobile'] is not False:
@@ -647,13 +662,19 @@ MEASURE_JS = r"""(sel)=>{const box=document.querySelector(sel);if(!box||!__H.vis
    out.rows.push({kind:r.classList.contains('pl-3')?'댓글':'본문',ratio:+((right-L)/W).toFixed(3),W:Math.round(W),btn:[+bb.width.toFixed(1),+bb.height.toFixed(1)],
      hit:[hb.w,hb.h],cut:[hb.cutUp,hb.cutDown],sameLine:bb.top<k0.top+6,atRight:Math.abs((rb.right-pr-(parseFloat(cs.borderRightWidth)||0))-bb.right)<=1.5,inter,
      up13:{own:__W.own(btn,cx,cy-13),outPx:+(bb.top-(cy-13)).toFixed(1)},
-     css:ri===0?{row:cs.display+' '+cs.flexWrap,text:kcs.flexGrow+' '+kcs.flexShrink+' '+kcs.flexBasis+' min-w '+kcs.minWidth,btnML:bcs.marginLeft,before:{c:bf.content,h:bf.height,pos:bf.position}}:undefined})});
- /* 띠 겹침 — 한 굴림 상태에서 ✎ 들의 가운데 사이(세로) · 넓힌 누를 자리(::before 높이 · 좌우 6px)가 서로 겹친 짝 수 */
- const eds=rows.map(r=>r.querySelector(':scope > button[onclick^="ggRefEdit("]'));if(eds.length)eds[0].scrollIntoView({block:'center'});
- const bh=eds.length?(parseFloat(getComputedStyle(eds[0],'::before').height)||0):0,R=eds.map(b=>b.getBoundingClientRect());let pairs=0;
- for(let i=0;i<R.length;i++)for(let j=i+1;j<R.length;j++){const a=R[i],b=R[j],ha=Math.max(a.height,bh),hb2=Math.max(b.height,bh),ca=a.top+a.height/2,cb=b.top+b.height/2;
-   if(Math.abs(ca-cb)<(ha+hb2)/2-0.5&&Math.min(a.right,b.right)-Math.max(a.left,b.left)+(bh?12:0)>0.5)pairs++}
- out.band={h:bh,pairs,gaps:R.slice(1).map((b,i)=>+((b.top+b.height/2)-(R[i].top+R[i].height/2)).toFixed(1))};
+     rowH:+rb.height.toFixed(1),
+     css:ri===0?{row:cs.display+' '+cs.flexWrap+' · overflow-y '+cs.overflowY,text:kcs.flexGrow+' '+kcs.flexShrink+' '+kcs.flexBasis+' min-w '+kcs.minWidth,btnML:bcs.marginLeft,before:{c:bf.content,h:bf.height,top:bf.top,pos:bf.position}}:undefined})});
+ /* ✎ 끼리 침범 — 줄 i 의 겨냥 자리(그 줄 상자 안 · ✎ 가운데 ±18 · ✎ 가운데 · 왼끝 +2 · 오른끝 −2 세 세로줄)를 1px 마다 찔러 맨 위가 다른 ✎ 인 데(그 ✎ 줄 번호)
+    · ✎ 가운데 사이(세로) — 띠 높이 계산 꼴 무관(겹침은 맨 위로만 잰다 · 옛 셈 = ::before 높이 가운데 맞춤 기하 짝은 걷음: 띠를 줄 상자로 자르면 기하가 거짓) */
+ const eds=rows.map(r=>r.querySelector(':scope > button[onclick^="ggRefEdit("]'));
+ rows.forEach((r,i)=>{const b=eds[i];b.scrollIntoView({block:'center'});const bb=b.getBoundingClientRect(),rb=r.getBoundingClientRect(),cy=bb.top+bb.height/2;
+   /* 줄 경계 1.5px 는 뺌 — 잘림 네모는 화소에 맞춰 붙어 경계 한 줄은 이웃 줄 몫으로 잡힐 수 있다(분수 좌표) */
+   const y0=Math.max(cy-18,rb.top+1.5),y1=Math.min(cy+18,rb.bottom-1.5),xs=[bb.left+bb.width/2,bb.left+2,bb.right-2],hit=new Set();let n=0,lo=null,hi=null;
+   for(let y=y0;y<=y1;y+=1)for(const x of xs){n++;const a=document.elementsFromPoint(x,y)[0];const e=a&&a.closest&&a.closest('button[onclick^="ggRefEdit("]');
+     if(e&&e!==b){const j=eds.indexOf(e);hit.add(j>=0?j+1:'?');const o=+(y-rb.top).toFixed(1);lo=lo===null?o:Math.min(lo,o);hi=hi===null?o:Math.max(hi,o)}}
+   out.rows[i].conf=[...hit];out.rows[i].confN=n;if(hit.size)out.rows[i].confAt=[lo,hi,+rb.height.toFixed(1)]});
+ if(eds.length)eds[0].scrollIntoView({block:'center'});const R=eds.map(b=>b.getBoundingClientRect());
+ out.band={h:eds.length?getComputedStyle(eds[0],'::before').height:null,gaps:R.slice(1).map((b,i)=>+((b.top+b.height/2)-(R[i].top+R[i].height/2)).toFixed(1))};
  [...box.querySelectorAll('button,[onclick]')].filter(__H.vis).forEach(e=>{e.scrollIntoView({block:'center'});const b=e.getBoundingClientRect(),x=b.left+b.width/2,y=b.top+b.height/2;
    if(!__W.own(e,x,y))out.over.push((e.tagName+'.'+String(e.className).slice(0,18))+' → '+__W.sig(document.elementsFromPoint(x,y)[0]))});
  out.coarse=matchMedia('(pointer:coarse)').matches;return out}"""
@@ -671,8 +692,9 @@ def edit_box_sel(t):
     return ('#qp-refgg-cedit-' if t['ck'] is not None else '#qp-refgg-edit-') + eid, ('#qp-refgg-cein-' if t['ck'] is not None else '#qp-refgg-ein-') + eid
 
 
-def press_test(p, box):
-    """✎ 진짜 톡 → 칸 열림 · 글 = 저장된 글 · 「취소」 진짜 톡 → 닫힘 · 단추 네모 위 13px 진짜 톡 → 열림(넓힌 누를 자리)"""
+def press_test(p, box, phone=True):
+    """✎ 진짜 톡 → 칸 열림 · 글 = 저장된 글 · 「취소」 진짜 톡 → 닫힘 · 단추 네모 위 13px 진짜 톡 → 열림(넓힌 누를 자리 · 폰만 잣대 —
+    iPad 한 줄 꼴은 13px 위가 윗줄 자리라 INFO: ox_fix 뒤엔 윗줄 칸이 열리는 게 맞다)"""
     out = []
     for i, t in enumerate(p.ev(PRESS_JS, box)[:3]):
         esel, isel = edit_box_sel(t)
@@ -693,49 +715,99 @@ def press_test(p, box):
         r2 = p.ev(NTH_RECT, [box, i])
         edge = None
         if r2:
-            own = p.ev("([s,i,x,y])=>{const b=(" + ED_JS + ")(s)[i];return !!b&&__W.own(b,x,y)}", [box, i, r2['cx'], r2['cy'] - 13])
-            p.tap_xy(r2['cx'], r2['cy'] - 13)
-            eo = QC.until(p.pg, OPEN_JS, 3000, 'W5 단추 네모 위 13px 톡 → 고치기 칸', arg=esel)
-            edge = {'단추 높이': r2['h'], '네모 밖(px)': round(13 - r2['h'] / 2, 1), '그 점 맨 위 = 단추': own, '열림': eo}
-            if eo:
-                p.ev("(e)=>{const b=document.querySelector(e);const x=b?[...b.querySelectorAll('button')].find(z=>/취소/.test(z.textContent)):null;if(x)x.click()}", esel)
-                p.wait(200, 'W5 고치기 칸 닫음(뒷정리)')
-        out.append({'줄': row, '톡 → 열림': op, '글 = 저장된 글': same, '취소 톡 → 닫힘': closed, '네모 위 13px': edge, '톡 여백': at.get('margin')})
-    ok = bool(out) and all(x.get('톡 → 열림') and x.get('글 = 저장된 글') and x.get('취소 톡 → 닫힘') and (x.get('네모 위 13px') or {}).get('열림') for x in out)
+            pt = p.ev("([s,i,x,y])=>{const b=(" + ED_JS + ")(s)[i];return {own:!!b&&__W.own(b,x,y),top:__W.sig(document.elementsFromPoint(x,y)[0])}}", [box, i, r2['cx'], r2['cy'] - 13])
+            own = pt['own']
+            if own:   # 그 점 맨 위가 이 ✎ 일 때만 진짜 톡 — 남의 자리(윗줄 ✎ · 상자 머리 「× 연결 끊기」 등)를 누르면 상자가 바뀐다(10/10 iPad 잼)
+                p.tap_xy(r2['cx'], r2['cy'] - 13)
+                eo = QC.until(p.pg, OPEN_JS, 3000, 'W5 단추 네모 위 13px 톡 → 고치기 칸', arg=esel)
+            else:
+                eo = False
+            edge = {'단추 높이': r2['h'], '네모 밖(px)': round(13 - r2['h'] / 2, 1), '그 점 맨 위 = 단추': own, '열림': eo} if own else \
+                   {'단추 높이': r2['h'], '네모 밖(px)': round(13 - r2['h'] / 2, 1), '그 점 맨 위 = 단추': False, '그 점 맨 위': pt['top'], '톡': '안 함(남의 자리)', '열림': False}
+            p.ev(CLOSE_ALL, p.ev(EDS_JS, box))   # 뒷정리
+            p.wait(200, 'W5 고치기 칸 닫음(뒷정리)')
+        out.append({'줄': row, '톡 → 열림': op, '글 = 저장된 글': same, '취소 톡 → 닫힘': closed, '네모 위 13px' + ('' if phone else '(INFO)'): edge, '톡 여백': at.get('margin')})
+    ok = bool(out) and all(x.get('톡 → 열림') and x.get('글 = 저장된 글') and x.get('취소 톡 → 닫힘') and (not phone or (x.get('네모 위 13px') or {}).get('열림')) for x in out)
     return ok, out
 
 
 OPEN_IDX = r"""(L)=>L.findIndex(e=>{const b=document.querySelector(e);return !!b&&!b.classList.contains('hide')})"""
 CLOSE_ALL = r"""(L)=>L.forEach(e=>{const b=document.querySelector(e);if(b&&!b.classList.contains('hide')){const x=[...b.querySelectorAll('button')].find(z=>/취소/.test(z.textContent));if(x)x.click()}})"""
+EDS_JS = r"""(sel)=>(""" + ED_JS + r""")(sel).map(b=>{const m=/ggRefEdit\(([^)]*)\)/.exec(b.getAttribute('onclick')||'');const a=m?m[1].split(',').map(x=>x.trim().replace(/^'|'$/g,'')):[];
+  const ck=(a[3]&&a[3]!=='undefined')?a[3]:null,eid=a[0]+'-'+a[1]+'-'+a[2]+(ck!==null?'-'+ck:'');return (ck!==null?'#qp-refgg-cedit-':'#qp-refgg-edit-')+eid})"""   # ✎ 차례대로 그 줄 고치기 칸 자리
 
 
-def mistap(p, box, m):
-    """(INFO) 누를 자리가 이웃 ✎ 띠에 덮인 줄 — 제 띠(가운데 ±18) 안 덮인 점을 진짜 톡 → 어느 줄 고치기 칸이 열리나"""
+def tap3(p, box):
+    """✎ 마다 가운데 위 3px · 아래 3px 진짜 톡 → 열린 고치기 칸 = 그 줄인가(10/10 [채팅] 03:50 ㉠ 관문 · 56836b8 iPad = 본문 ✎ +3px 에 아랫줄 칸)"""
+    eds = p.ev(EDS_JS, box)
     out = []
-    tg = p.ev(PRESS_JS, box)
-    eds = [edit_box_sel(t)[0] for t in tg]
-    for i, r in enumerate((m or {}).get('rows') or []):
-        cu, cd = (r.get('cut') or [None, None])
-        if '다른 ✎' not in (cu, cd) or i >= len(eds):
-            continue
-        rc = p.ev(NTH_RECT, [box, i])
-        if not rc:
-            continue
-        hb = p.ev("([s,i])=>__W.hitExt((" + ED_JS + ")(s)[i])", [box, i])
-        dy = (hb['down'] + 2) if cd == '다른 ✎' else -(hb['up'] + 2)
-        if abs(dy) > 17:
-            continue
-        p.tap_xy(rc['cx'], rc['cy'] + dy)
-        p.wait(350, 'W5 덮인 띠 톡 → 열린 칸')
-        j = p.ev(OPEN_IDX, eds)
-        out.append({'줄': i + 1, '누른 점(가운데 +px)': dy, '열린 칸': ('제 줄' if j == i else ('%d번 줄(%s)' % (j + 1, '아래 줄' if j > i else '위 줄')) if j >= 0 else '없음')})
+    for i in range(len(eds)):
+        for dy in (-3, 3):
+            p.ev(CLOSE_ALL, eds)
+            rc = p.ev(NTH_RECT, [box, i])
+            if not rc:
+                out.append({'줄': i + 1, 'dy': dy, '열린 칸': '단추 없음'})
+                continue
+            p.tap_xy(rc['cx'], rc['cy'] + dy)
+            QC.until(p.pg, "(L)=>L.some(e=>{const b=document.querySelector(e);return !!b&&!b.classList.contains('hide')})", 1500, 'W5 ±3px 톡 → 고치기 칸', arg=eds)
+            j = p.ev(OPEN_IDX, eds)
+            out.append({'줄': i + 1, 'dy': dy, '열린 칸': ('제 줄' if j == i else ('%d번 줄' % (j + 1)) if j >= 0 else '없음')})
         p.ev(CLOSE_ALL, eds)
-        p.wait(200, 'W5 덮인 띠 톡 뒷정리')
+        p.wait(150, 'W5 ±3px 톡 뒷정리')
     return out
 
 
-def w5(br, v, dev):
-    p = WL(br, v, dev, 'W5')
+def box_png(p, box):
+    """상자 그림(겉모양 무변 맞댐 · 출력 안 함) — 상자를 가운데로 · 0.7 초 가라앉힘(Tailwind cdn 이 새로 생긴 클래스를 늦게 만든다) ·
+    0.25 초 사이 두 번 같을 때까지(최대 8 번)"""
+    try:
+        p.ev("(s)=>{const b=document.querySelector(s);if(b)b.scrollIntoView({block:'center'})}", box)
+    except Exception:
+        return None
+    p.wait(700, 'W5 상자 그림 전 가라앉힘(늦게 생기는 Tailwind 클래스 · 10/10 웹킷 iPad 그림 흔들림 1 번)')
+    last = None
+    for _ in range(8):
+        try:
+            b = p.pg.locator(box).screenshot(animations='disabled')
+        except Exception:
+            return None
+        if b == last:
+            return b
+        last = b
+        p.pg.wait_for_timeout(250)
+    return last
+
+
+PNG_TOL = (4, 64)   # 겉모양 무변 허용 — 화소 값 차 ≤ 4(256 단계) · 다른 화소 ≤ 64(DPR 2) = 눈에 안 보이는 앤티앨리어싱만 —
+                    # 10/10 잼: Chromium 폰 점선 테두리 끝 8 화소 · 차 1(늘 같음) · 웹킷 iPad 상자 둥근 모서리 4 화소 · 차 4(흔들림 — 같은 판끼리 다시 재면 0) · 글자 잘림 · 줄 밀림은 이보다 훨씬 큼
+
+
+def png_same(a, b):
+    """같음 = True(바이트 같음 또는 허용 안) · 다름 = False · 잰 값 = (판정, {다른 화소 · 최대 차 · 네모})"""
+    if a is None or b is None:
+        return None, {'그림': '없음'}
+    if a == b:
+        return True, {'다른 화소': 0}
+    try:
+        from PIL import Image, ImageChops
+        import io
+        ia, ib = Image.open(io.BytesIO(a)).convert('RGB'), Image.open(io.BytesIO(b)).convert('RGB')
+        if ia.size != ib.size:
+            return False, {'크기': [ia.size, ib.size]}
+        d = ImageChops.difference(ia, ib)
+        bb = d.getbbox()
+        if not bb:
+            return True, {'다른 화소': 0}
+        dc = d.crop(bb)
+        px = [q for q in (dc.get_flattened_data() if hasattr(dc, 'get_flattened_data') else dc.getdata()) if q != (0, 0, 0)]   # Pillow 14 에서 getdata 걷힘
+        mx = max(max(q) for q in px)
+        return (mx <= PNG_TOL[0] and len(px) <= PNG_TOL[1]), {'다른 화소': len(px), '최대 차': mx, '네모(DPR2)': list(bb)}
+    except Exception as e:
+        return False, {'오류': str(e)[:80]}
+
+
+def w5(br, v, dev, eng='webkit'):
+    p = WL(br, v, dev, 'W5' + ('' if eng == 'webkit' else '·' + eng))
     res = []
     try:
         picks = p.ev(PICK_JS)
@@ -754,10 +826,11 @@ def w5(br, v, dev):
             ready = QC.until(p.pg, ROW_READY, 4000, 'W5 줄 꼴(Tailwind 클래스 생김)', arg=box) if vis else False
             m = p.ev(MEASURE_JS, box) if vis else None
             sw = p.ev(SWEEP_JS, box) if vis else ['상자 안 펴짐']
-            p.shot('w5_%s_%s_%s' % (v, dev['name'], uid))
-            pr = press_test(p, box) if vis else (False, [])
-            mt = mistap(p, box, m) if vis else []
-            res.append({'문항': uid, '연결': u, '댓글': ncs, '칩 톡 자리': bool(at and at.get('on')), '펴짐': vis, '줄 꼴 준비': ready, '잼': m, '훑기': sw, '누름': pr, '덮인 띠 톡': mt})
+            png = box_png(p, box) if (vis and GATE) else None   # 겉모양 무변 맞댐(누르기 전 · gate 만)
+            p.shot('w5_%s_%s_%s_%s' % (eng, v, dev['name'], uid))
+            pr = press_test(p, box, dev['name'] == '폰') if vis else (False, [])
+            t3 = tap3(p, box) if vis else []
+            res.append({'문항': uid, '연결': u, '댓글': ncs, '칩 톡 자리': bool(at and at.get('on')), '펴짐': vis, '줄 꼴 준비': ready, '잼': m, '훑기': sw, '누름': pr, '±3px': t3, 'png': png})
             p.ev("(o)=>{try{oxWinClose('q-'+o)}catch(e){}const w=document.getElementById('oxwin-q-'+o);if(w)w.remove()}", uid)
             p.wait(300, 'W5 팝업 닫음')
         errs = p.errors()
@@ -774,18 +847,24 @@ def w5(br, v, dev):
          '한 줄(단추 = 글 첫 줄)': sum(1 for _, r in rows if r['sameLine']),
          '단추 네모(첫 줄)': rows[0][1]['btn'] if rows else None, '줄 폭': sorted({r['W'] for _, r in rows}), '(pointer:coarse)': coarse,
          '칩 톡 · 펴짐 · 줄 꼴': [(x['칩 톡 자리'], x['펴짐'], x['줄 꼴 준비']) for x in res], '계산 꼴(첫 줄)': rows[0][1].get('css') if rows else None,
-         '네모 위 13px 점 맨 위 = 단추': [r['up13'] for _, r in rows][:7], '어긋난 줄(글 폭 · 겹침 · 오른끝)': bad[:6], '가려진 누를 것': over[:4],
+         '네모 위 13px 점 맨 위 = 단추' + ('' if phone else '(INFO)'): [r['up13'] for _, r in rows][:7], '어긋난 줄(글 폭 · 겹침 · 오른끝)': bad[:6], '가려진 누를 것': over[:4],
          '누름': [{'문항': x['문항'], '줄': x['누름'][1]} for x in res], '훑기(INFO)': [(x['문항'], x['훑기']) for x in res if x['훑기']], '오류': errs[:3]}
     ok = (len(res) == 3 and bool(rows) and all(x['펴짐'] and x['칩 톡 자리'] for x in res) and not bad and not over and coarse
           and all(x['누름'][0] for x in res) and not errs)
-    # 누를 자리 줄 — 줄마다 ✎ 누를 자리 ≥ 36 · 이웃 ✎ 띠와 겹침 0(손가락 기기 · (pointer:coarse) 36px 띠)
-    small = [(q, r['kind'], r['hit'], r['cut']) for q, r in rows if min(r['hit']) < 36]
-    pairs = [(x['문항'], (x['잼'] or {}).get('band', {}).get('pairs'), (x['잼'] or {}).get('band', {}).get('gaps')) for x in res if x['잼']]
+    # ② 누를 자리 — 폭 ≥ 36 · 높이 폰 ≥ 36 · iPad ≥ min(36, 그 줄 높이) − 2(줄 사이만큼 · [채팅] 03:50 ㉠) · ✎ 끼리 침범 0 · ±3px 톡 = 그 줄 칸
+    need = (lambda r: 36) if phone else (lambda r: min(36.0, r.get('rowH') or 0) - 2)
+    small = [(q, r['kind'], r['hit'], r.get('rowH'), r['cut']) for q, r in rows if r['hit'][0] < 36 or r['hit'][1] < need(r)]
+    conf = [(q, i + 1, r['kind'], r.get('conf'), r.get('confAt')) for q, rr in [(x['문항'], (x['잼'] or {}).get('rows') or []) for x in res] for i, r in enumerate(rr) if r.get('conf')]
+    t3bad = [(x['문항'], t) for x in res for t in x['±3px'] if t['열린 칸'] != '제 줄']
+    t3n = sum(len(x['±3px']) for x in res)
     dh = {'줄': len(rows), '누를 자리 폭 · 높이(최소)': [min((r['hit'][0] for _, r in rows), default=None), min((r['hit'][1] for _, r in rows), default=None)],
-          '36 못 미친 줄(문항 · 줄 · 폭×높이 · 막은 것 위/아래)': small[:7], '띠 높이': ((res[0]['잼'] or {}).get('band') or {}).get('h') if res else None,
-          '띠 겹친 짝(문항 · 짝 · ✎ 가운데 사이 px)': pairs, '덮인 띠 톡(INFO)': [(x['문항'], x['덮인 띠 톡']) for x in res if x['덮인 띠 톡']], '(pointer:coarse)': coarse}
-    ok_h = bool(rows) and not small and all(not pr[1] for pr in pairs) and coarse
-    return (ok, d), (ok_h, dh)
+          '줄마다(문항 · 줄 · 폭×높이 · 줄 높이)': [(q, r['kind'], r['hit'], r.get('rowH')) for q, r in rows][:7],
+          '못 미친 줄(문항 · 줄 · 폭×높이 · 줄 높이 · 막은 것 위/아래)': small[:7], '띠(::before 높이 · ✎ 가운데 사이 px)': [(x['문항'], ((x['잼'] or {}).get('band') or {}).get('h'), ((x['잼'] or {}).get('band') or {}).get('gaps')) for x in res],
+          '✎ 끼리 침범(문항 · 줄 · 덮은 ✎ 줄)': conf, '±3px 톡(톡 수 · 그 줄 아님)': [t3n, t3bad[:6]], '(pointer:coarse)': coarse,
+          '잣대': '폭 ≥ 36 · 높이 ' + ('≥ 36' if phone else '≥ min(36, 줄 높이) − 2(줄 사이만큼)') + ' · 침범 0 · ±3px 톡 = 그 줄'}
+    ok_h = bool(rows) and not small and not conf and t3n == 2 * len(rows) and not t3bad and coarse
+    pngs = {x['문항']: x['png'] for x in res}
+    return (ok, d), (ok_h, dh), pngs
 
 
 # ---------- 차례 ----------
@@ -804,9 +883,53 @@ def main():
             ('W2', '연결 창 찾기(lwOpen) — 100 넘는 말 · 셈 보임 · 처음 100 · 끝까지 굴려 다 붙음 · 차례', w2_link, True),
             ('W2', '근거 창 찾기(문항 팝업 🔍 톡 · linkSearch) — 100 넘는 말 · 셈 · 처음 100 · 끝까지 다 · 차례 · 칸 다시 톡 = 줄 · 자리 그대로', w2_geunge, True),
             ('W3', '「%s」 굴리는 중 검색 칸 톡 → 「%s」 — 옛 줄 0 · 첫 100 = 기대 앞 100 · 맨 위 · 끝까지 = 기대' % (TERM, TERM2), w3, None),
-            ('W4', '⚡ 채점 창 실데이터 %s — 빨강 3(2) · 5 · 158 · 83 · 초록 13 · 계속 틀림 3(2) · 극복함 5 · 158 · 83 · 빨강 칩 톡 = 팝업 · 회독 비교 창 같음' % REC_REV, None, True),
-            ('W5', ['연결한 근거 펼침(🔗 칩 톡) — 줄 오른끝 · 글 ↔ 단추 겹침 0 · 누를 것 가운데 = 제 것 · 톡 = 고치기 칸(글 = 저장된 글) · 취소 = 닫힘 · 네모 위 13px 톡 = 열림 · (폰) 글 폭 ≥ 0.90',
-                    '연결한 근거 ✎ 누를 자리 — 줄마다 ≥ 36(elementsFromPoint 맨 위) · 이웃 ✎ 36px 띠와 겹침 0'], w5, True)]
+            ('W4', '⚡ 채점 창 실데이터 %s — 빨강 3(2) · 5 · 158 · 83 · 초록 13 · 계속 틀림 3(2) · 극복함 5 · 158 · 83 · 빨강 칩 톡 = 팝업 · 회독 비교 창 같음' % REC_REV, None, True)]
+    W5N = ['연결한 근거 펼침(🔗 칩 톡) — 줄 오른끝 · 글 ↔ 단추 겹침 0 · 누를 것 가운데 = 제 것 · 톡 = 고치기 칸(글 = 저장된 글) · 취소 = 닫힘 · (폰) 네모 위 13px 톡 = 열림 · 글 폭 ≥ 0.90'
+           + (' · 그림 = %s(겉모양 무변)' % BASE2 if GATE else ''),
+           '연결한 근거 ✎ 누를 자리 — 폭 ≥ 36 · 높이 폰 ≥ 36 · iPad 줄 사이만큼 · ✎ 끼리 침범 0 · ✎ 가운데 ±3px 톡 = 그 줄 칸']
+
+    def run_w5(br, eng, dev):
+        """W5 — 새 판 · 바탕(7299ec3) · 56836b8(gate) 을 한 엔진 · 한 기기로 · 줄 둘(① 꼴 · 누름 / ② 누를 자리)"""
+        t1 = time.time()
+        res = {}
+        for v in VERS5:
+            try:
+                res[v] = w5(br, v, dev, eng)
+            except Exception as e:
+                bad = (False, {'하네스 오류': str(e)[:300], 'tb': traceback.format_exc()[-700:]})
+                res[v] = (bad, bad, {})
+        if 'B2' in res:   # gate — 상자 그림 새 판 = 56836b8(투명 띠 · 줄 clip 은 그림을 안 바꿔야 · 허용 = PNG_TOL)
+            cmp = {u: png_same(res['NEW'][2].get(u), res['B2'][2].get(u)) for u in (res['NEW'][2] or {})}
+            ok1, d1 = res['NEW'][0]
+            okp = bool(cmp) and all(x[0] is True for x in cmp.values())
+            if not okp and OL.CONF['shots']:   # 다르면 두 그림을 남김(--shots · 글이 든 그림이라 출력 안 함)
+                try:
+                    os.makedirs(OL.CONF['shots'], exist_ok=True)
+                    for u in cmp:
+                        for tg in ('NEW', 'B2'):
+                            bb = res[tg][2].get(u)
+                            if bb:
+                                open(os.path.join(OL.CONF['shots'], 'w5png_%s_%s_%s_%s.png' % (eng, dev['name'], u, tg)), 'wb').write(bb)
+                except Exception:
+                    pass
+            res['NEW'] = ((ok1 and okp, dict(d1, **{'그림 = %s(겉모양 무변 · 허용 차 ≤ %d · 화소 ≤ %d)' % ((BASE2,) + PNG_TOL): {u: x[1] for u, x in cmp.items()}})),
+                          res['NEW'][1], res['NEW'][2])
+        phone = dev['name'] == '폰'
+        devn = dev['name'] + ('' if eng == 'webkit' else '·' + {'chromium': 'Chromium'}.get(eng, eng))
+        for ni, nm in enumerate(W5N):
+            b = res['BASE'][ni][0] if 'BASE' in res else None
+            b2 = res['B2'][ni][0] if 'B2' in res else None
+            if ni == 1 and not phone:   # ② iPad — 헛잣대 = 56836b8(7299ec3 은 띠가 없어 「잘못 열림 0」 = 이 칸 헛잣대가 못 됨)
+                ycol, y = 'B2', True
+            else:
+                ycol, y = 'BASE', (True if phone else (b is False))   # ① iPad 는 바탕도 같으면 「바탕 = 기준」
+            dd = {k: x[ni][1] for k, x in res.items()}
+            if ni == 1 and not phone and GATE:
+                dd['헛잣대 열'] = '%s — 7299ec3 은 ✎ 띠가 없어 이 칸(잘못 열림 · 침범)이 늘 0 · 56836b8 = 띠 겹침 판([채팅] 03:50 ㉠)' % BASE2
+            R('W5', '%s %s' % (devn, nm), res['NEW'][ni][0], b, dd, yard=y, b2=b2, ycol=ycol)
+        k = 'W5·%s' % devn
+        STEP[k] = round(STEP.get(k, 0) + (time.time() - t1) / 60, 2)
+
     with sync_playwright() as pw:
         br = pw.webkit.launch()
         ENV['webkit'] = br.version
@@ -815,21 +938,26 @@ def main():
                 if not want(cid) or (QC.SMOKE and cid == 'W1' and fn is not w1):   # smoke = 모바일 W1 만(휠 갈래 뺌)
                     continue
                 t1 = time.time()
-                names = name if isinstance(name, list) else [name]
                 res = {}
                 for v in VERS:
                     try:
-                        r = w4(br, v, dev, rec_b, exp_py) if cid == 'W4' else fn(br, v, dev)
-                        res[v] = list(r) if len(names) > 1 else [r]
+                        res[v] = w4(br, v, dev, rec_b, exp_py) if cid == 'W4' else fn(br, v, dev)
                     except Exception as e:
-                        res[v] = [(False, {'하네스 오류': str(e)[:300], 'tb': traceback.format_exc()[-700:]})] * len(names)
-                for ni, nm in enumerate(names):   # W5 = 줄 둘(꼴 · 누름 / 누를 자리)
-                    b = res['BASE'][ni][0] if 'BASE' in res else None
-                    y = yard if yard is not None else (b is False)   # W3 = 바탕도 같으면 「바탕 = 기준」(헛잣대 셈 밖)
-                    R(cid, '%s %s' % (dev['name'], nm), res['NEW'][ni][0], b, {k: x[ni][1] for k, x in res.items()}, yard=y)
+                        res[v] = (False, {'하네스 오류': str(e)[:300], 'tb': traceback.format_exc()[-700:]})
+                b = res['BASE'][0] if 'BASE' in res else None
+                y = yard if yard is not None else (b is False)   # W3 = 바탕도 같으면 「바탕 = 기준」(헛잣대 셈 밖)
+                R(cid, '%s %s' % (dev['name'], name), res['NEW'][0], b, {k: x[1] for k, x in res.items()}, yard=y)
                 k = '%s·%s' % (cid, dev['name'])
                 STEP[k] = round(STEP.get(k, 0) + (time.time() - t1) / 60, 2)
+            if want('W5') and 'webkit' in W5ENG:
+                run_w5(br, 'webkit', dev)
         br.close()
+        if want('W5') and 'chromium' in W5ENG:   # 같은 W5 코드를 Chromium(coarse · has_touch · is_mobile)으로 — 웹킷을 닫은 뒤(브라우저 하나씩)
+            brc = pw.chromium.launch()
+            ENV['chromium'] = brc.version
+            for dev in DEVS:
+                run_w5(brc, 'chromium', dev)
+            brc.close()
     bN = (not ERRS['BASE']) if 'BASE' in ERRS else None
     R('W0', '페이지 오류 0(칸마다 띄운 쪽 모두 · pageerror · error · unhandledrejection)', not ERRS['NEW'], bN,
       {k: (e or '0') for k, e in ERRS.items()}, yard=(bN is False))
@@ -840,9 +968,10 @@ def main():
           {'tailwind': ev.get('tailwind'), '검색 결과 통': ev.get('searchBoxCss'), 'tw': OL.CONF['tw']}, yard=False)
     R('WK', '환경(INFO)', None, None, ENV)
     nf = [r for r in RES if r['new'] is False]
-    yd = [r for r in RES if r['yard'] and r['base'] is not None and r['new'] is not None]
+    yd = [r for r in RES if r['yard'] and r['ybase'] is not None and r['new'] is not None]
     R('합계', '합계', None, None, {'PASS': sum(1 for r in RES if r['new'] is True), 'FAIL': len(nf), 'FAIL 칸': [r['g'] + ' ' + r['name'][:28] for r in nf],
-                                  '헛잣대(바탕 FAIL)': '%d/%d' % (sum(1 for r in yd if r['base'] is False), len(yd)), '단계(분)': STEP, '전체(분)': round((time.time() - T0) / 60, 1)})
+                                  '헛잣대(헛잣대 열 FAIL · W5 ② iPad = %s)' % BASE2: '%d/%d' % (sum(1 for r in yd if r['ybase'] is False), len(yd)),
+                                  '단계(분)': STEP, '전체(분)': round((time.time() - T0) / 60, 1)})
     try:
         os.makedirs(os.path.dirname(os.path.abspath(OUTF)), exist_ok=True)
         with open(OUTF, 'w', encoding='utf-8') as f:
