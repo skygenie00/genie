@@ -4951,7 +4951,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     + `<span class="flex-1">🔗 연결한 근거 · ${escHtml(u)}</span>`
                     + `<button type="button" onclick="showLinkedQuestion('${escAttr(u)}','${escAttr(uid)}')"`
                     + ` class="font-bold text-blue-600 hover:underline">↪ 그 문제 보기</button>`
-                    + `<button type="button" onclick="ggRefDel('${escAttr(uid)}','${escAttr(u)}'${ggScA(sc)})"`
+                    + `<button type="button" onclick="ggRefDelAsk('${escAttr(uid)}','${escAttr(u)}'${ggScA(sc)})"`   /* ★ 10/10 ox_del — 되묻고 끊기(옛: onclick="ggRefDel(…)") */
                     + ` class="font-bold text-red-700 hover:underline">× 연결 끊기</button></div>`
                     + body + `</div>`;
             }).join('');
@@ -5076,6 +5076,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const panel = document.getElementById(`${sc}gg-search-${ownerId}`);
             if (panel) panel.classList.add('hide');
             ggBoxRefresh(ownerId, sc);          /* ★ 09-15 §B */
+        }
+        /* ★ 2026-10-10 ox_del(사용자 08:3x 「더하기」) — 「× 연결 끊기」 단추만 되묻는다: iPad 한 줄 꼴에선 본문 ✎ 바로 윗줄이라
+           빗누르면 되묻지 않고 바로 끊겼다 · 끊는 몸 = ggRefDel 그대로 · 쓰임 창 켜고 끄기 길(useUnlink)은 되묻지 않음(무변) */
+        function ggRefDelAsk(ownerId, uid, sc = '') {
+            if (!confirm('이 문항에서 「' + uid + '」 근거 연결을 끊습니다.\n' + uid + ' 의 근거 글은 그대로 남습니다. 계속할까요?')) return;
+            ggRefDel(ownerId, uid, sc);
         }
         function ggRefDel(ownerId, uid, sc = '') {
             refPut(ownerId, refOf(ownerId, 'memo'), refOf(ownerId, 'logic'),
