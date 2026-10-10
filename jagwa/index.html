@@ -3169,7 +3169,7 @@ let saveT;function saveInk(){clearTimeout(saveT);saveT=setTimeout(()=>put('ink',
 /* ---------------- 레이어 ---------------- */
 function fillLayerSel(){
   const s=$('#tLayer');s.innerHTML='';
-  Object.keys(INK).map(Number).sort((a,b)=>a-b).forEach(L=>{
+  Object.keys(INK).map(Number).sort((a,b)=>a-b).filter(L=>L===LAYER||(INK[L]||[]).length).forEach(L=>{   /* 10/10 recfix — 빈 층(지운 회독 · 안 쓴 층)은 안 보임 · 지금 층은 늘 */
     const o=document.createElement('option');o.value=L;o.textContent=(L+1)+'회독';s.appendChild(o)});
   s.value=LAYER;
 }
@@ -4033,14 +4033,24 @@ function tmReset(){clearInterval(TM.iv);TM.iv=null;TM.sec=0;
   $('#tm').textContent='0:00';$('#tm').classList.toggle('hide',!SET.timer);
   if(SET.timer)tmRun();else tmStop()}
 /* 사용자 10/10 17:53 — 시계 길게 누름(0.55 초) = 0:00 으로 · 가던 시계는 0:00 부터 계속 · 멈춘 시계는 멈춘 채 0:00 · 누른 뒤 뗀 톡은 멈춤/계속으로 안 셈 · 8px 넘게 움직이면 취소 */
-let TMLP=null,TMLPeat=false;
+/* 10/10 recfix(사용자 21:52) — 누른 채 시계 밖으로 끌거나 밖에서 떼도 취소(마우스는 포인터가 안 붙잡혀 시계 밖 pointermove 가 안 왔다 → 0:00 · 다음 스페이스 먹힘)
+   · 그 누름 동안만 문서에서 pointermove · pointerup 을 봄 · 끌어 취소 · 밖에서 뗌 · 길게 누름(0:00) = 뒤따르는 click 한 번만 먹음(멈춤/계속 안 셈)
+     — 그 click = 진짜 click(detail ≥ 1) 또는 톡 보정(__tapDown 길)이 손 뗀 60ms 뒤 만든 합성 click(detail 0 · 뗀 자리 좌표 · 폰 길게 누름 뒤는 이것)
+   · 먹는 표는 다음 누름 · 0.4 초 뒤 늘 풀리고 스페이스(.click() = detail 0 · 좌표 0)는 안 먹음(WebKit 은 끈 뒤 click 을 안 낸다 — 표가 남아도 스페이스 · 다음 톡은 정상) */
+let TMLP=null,TMLPeat=false,TMLPeatT=0;
+function tmEat(){TMLPeat=true;clearTimeout(TMLPeatT);TMLPeatT=setTimeout(()=>{TMLPeat=false},400)}
+function tmLpMove(e){if(!TMLP||e.pointerId!==TMLP.id)return;if(Math.hypot(e.clientX-TMLP.x,e.clientY-TMLP.y)>8){clearTimeout(TMLP.t);TMLP.moved=true}}
+function tmLpUp(e){if(!TMLP||e.pointerId!==TMLP.id)return;clearTimeout(TMLP.t);
+  const r=$('#tm').getBoundingClientRect(), out=e.type==='pointercancel'||e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom;
+  if(TMLP.fired||TMLP.moved||out)tmEat();
+  TMLP=null;document.removeEventListener('pointermove',tmLpMove,true);document.removeEventListener('pointerup',tmLpUp,true);document.removeEventListener('pointercancel',tmLpUp,true)}
 $('#tm').addEventListener('pointerdown',e=>{if(e.button>0)return;TMLPeat=false;if(TMLP)clearTimeout(TMLP.t);
-  TMLP={x:e.clientX,y:e.clientY,t:setTimeout(()=>{TMLP=null;TMLPeat=true;TM.sec=0;$('#tm').textContent='0:00'},550)}});
-['pointerup','pointercancel'].forEach(tp=>$('#tm').addEventListener(tp,()=>{if(TMLP){clearTimeout(TMLP.t);TMLP=null}}));
-$('#tm').addEventListener('pointermove',e=>{if(TMLP&&Math.hypot(e.clientX-TMLP.x,e.clientY-TMLP.y)>8){clearTimeout(TMLP.t);TMLP=null}});
+  const lp={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false,fired:false};
+  lp.t=setTimeout(()=>{if(TMLP!==lp||lp.moved)return;lp.fired=true;TM.sec=0;$('#tm').textContent='0:00'},550);TMLP=lp;
+  document.addEventListener('pointermove',tmLpMove,true);document.addEventListener('pointerup',tmLpUp,true);document.addEventListener('pointercancel',tmLpUp,true)});
 $('#tm').addEventListener('contextmenu',e=>e.preventDefault());
-$('#tm').onclick=()=>{
-  if(TMLPeat){TMLPeat=false;return}
+$('#tm').onclick=e=>{
+  if(TMLPeat&&e&&(e.detail||e.clientX||e.clientY)){TMLPeat=false;return}   /* 10/10 recfix — 먹는 것은 그 누름이 낳은 click 하나뿐(진짜 = detail ≥ 1 · 톡 보정 합성 = 뗀 자리 좌표) · 스페이스(.click() · detail 0 · 좌표 0)는 늘 멈춤/계속 */
   if(TM.iv){tmStop();toast('타이머 멈춤 — 다시 누르면 이어서')}
   else{tmRun();if(TM.sec)toast('타이머 계속')}
 };
@@ -4706,6 +4716,17 @@ syncMarkBtns=function(){_syncMarkBtns0();syncOmr();navSync()};   /* 마크·이�
 $('#tHist').onclick=()=>histSheet(VNO);
 
 /* 회독 기록 고치기 — 표시를 바꾸거나 지울 수 있다 */
+/* 10/10 recfix(사용자 22:59) — 물리 회독 기록 i 를 지우면 그 회독 필기 층이 비었으면(없거나 획 0) 걷고 i 뒤 층을 한 칸씩 당긴다(기록 차례와 층 차례를 맞춤)
+   · 획이 있으면 층은 그대로(필기는 안 지움) · 저장 = saveInk 와 같은 길(put ink) · 지금 문항이 아니면 저장된 필기를 읽어 같은 셈 */
+async function inkDropLayer(no,i){
+  const cur=VNO===no, M=cur?INK:await get('ink',inkK(no));
+  if(!M||(M[i]||[]).length)return false;
+  const ks=Object.keys(M).map(Number).sort((a,b)=>a-b);if(!ks.some(L=>L>=i))return false;
+  const N={};ks.forEach(L=>{if(L<i)N[L]=M[L];else if(L>i)N[L-1]=M[L]});if(!Object.keys(N).length)N[0]=[];
+  if(cur){INK=N;LAYERS=Math.max(1,Object.keys(INK).length);if(LAYER>i)LAYER--;LAYER=Math.max(0,Math.min(LAYER,LAYERS-1));fillLayerSel();paintInk();saveInk()}
+  else await put('ink',inkK(no),N);
+  return true;
+}
 function histSheet(no){   /* 시안 ⑪ — 회독 기록 창 = 단추 옆 작은 창 · 회독 고르개·👁 를 여기로 합침 · 「회독 기록 추가」 걷음(사용자 10/7 11:33)
      줄 = 「N회독 · O △ X P · 시간 · ✕」 · 「N회독」 누름 = 그 회독 필기 보기(옛 고르개) · 머리 「지난 필기 같이」 = 옛 👁(반대 뜻)
      세 과목 한 함수 — 필기 쪽만 갈린다(물리 INK 층 LAYER · 카드 층 획 r = QR) */
@@ -4723,16 +4744,17 @@ function histSheet(no){   /* 시안 ⑪ — 회독 기록 창 = 단추 옆 작�
     const h=hist(no), n=Math.max(h.length, viewing?inkN():0);
     let rows='';
     for(let i=0;i<n;i++){const x=h[i];
+      if(!HASBOOK&&!x&&!(viewing&&(INK[i]||[]).length))continue;   /* 10/10 recfix — 물리: 기록도 필기도 없는 회독 줄(지운 회독의 빈 층 · 「지금 풀이 · 기록 전」 빈 줄)은 안 보임 · 번호 = i+1 그대로 */
       rows+='<div class="hsr'+(viewing&&i===inkCur()?' cur':'')+'" data-i="'+i+'"><button class="hsn"'+(viewing?'':' disabled')+' title="이 회독 필기 보기">'+(i+1)+'회독</button>'+
         (x?'<span class="hsm">'+['O','Q','X','P'].map(k=>'<button data-m="'+k+'" class="ndm ndm'+k+(x.m===k?' on':'')+'">'+mGlyph(k)+'</button>').join('')+'</span>'+
            '<span class="sec">'+(x.a?esc(String(x.a))+' ':'')+(x.s?secFmt(x.s):'')+'</span><button class="rm" title="이 회독 기록 지우기">✕</button>'
           :'<span class="hsnow">지금 풀이 · 기록 전</span>')+'</div>'}
-    b.innerHTML='<div class="erh">'+no+'번 회독'+(viewing?'<label class="hse"><input type="checkbox" id="hsEye"'+(hideOn()?'':' checked')+'>지난 필기 같이</label>':'')+
+    b.innerHTML='<div class="erh">'+(viewing?'<label class="hse"><input type="checkbox" id="hsEye"'+(hideOn()?'':' checked')+'>지난 필기 같이</label>':'')+
       '<button class="erx" id="hsX" title="닫기">✕</button></div>'+(rows||'<p class="hsnone">아직 기록이 없습니다.</p>');
     b.querySelectorAll('.hsr').forEach(r=>{const i=+r.dataset.i, x=h[i];
       const nb=r.querySelector('.hsn'); if(nb)nb.onclick=()=>{if(!viewing)return;inkSet(i);build()};
       r.querySelectorAll('.hsm button').forEach(btn=>btn.onclick=async()=>{x.m=btn.dataset.m;ST[qk(no)]={h};await saveST();build();after()});
-      const rm=r.querySelector('.rm'); if(rm)rm.onclick=async()=>{h.splice(i,1);h.length?ST[qk(no)]={h}:delete ST[qk(no)];await saveST();build();after()}});
+      const rm=r.querySelector('.rm'); if(rm)rm.onclick=async()=>{h.splice(i,1);h.length?ST[qk(no)]={h}:delete ST[qk(no)];await saveST();if(!HASBOOK)await inkDropLayer(no,i);build();after()}});   /* 10/10 recfix — 물리: 그 회독 빈 필기 층도 걷음 */
     const ey=b.querySelector('#hsEye'); if(ey)ey.onchange=()=>hideSet(!ey.checked);
     b.querySelector('#hsX').onclick=close;
   };
@@ -4942,6 +4964,7 @@ $('#q').addEventListener('keydown',e=>{if(e.key==='Enter'&&typeof SHELL!=='undef
 document.addEventListener('keydown',e=>{
   const t=e.target;                       /* 입력칸 안에서는 단축키를 꺼 둔다 */
   if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return;
+  if(e.key===' '&&!HASBOOK&&!document.querySelector('.sheet:not(.hide)')&&!$('#view').classList.contains('hide')){e.preventDefault();$('#tm').click();return}   /* 10/10 recfix — 물리 스페이스 = 시계 멈춤/계속(R5 · 사용자 ⑤): 아래 가늠쇠가 늘 있는 숨은 창 #book · #bkq(class="sheet hide")까지 세어 단축키가 늘 꺼져 있었다 → 스페이스만 보이는 창으로 셈 · 1~4 · ← → · Esc · 카드 층은 옛 그대로(점검표 12 「카드 층은 ② 만」 · earth_shell V-6 「무변」) */
   if(document.querySelector('.sheet'))return;      /* 팝업이 떠 있으면 O/△/X 오발 방지 */
   if($('#view').classList.contains('hide'))return;
   if(e.key==='ArrowRight')go(1);if(e.key==='ArrowLeft')go(-1);
@@ -5035,7 +5058,9 @@ function stampAll(){
     const old=shadow[k]||{};
     for(const c in cur){
       if(JSON.stringify(cur[c])!==JSON.stringify(old[c])){
-        u[ckey(k,c)]=(k==='status'?stTime(cur[c]):0)||now;
+        /* 10/10 recfix — status 도장 = 남은 마지막 기록 시각이 앞 도장보다 새것일 때만(새 기록) · 아니면(기록 지움 · 마크 바꿈) 지금 — 옛 줄: u[ckey(k,c)]=(k==='status'?stTime(cur[c]):0)||now;
+           까닭: 지움 · 바꿈의 도장이 옛 시각 · 같은 시각이 되어 recMerge 에서 원격(옛 기록)이 이겨 지운 기록이 다음 동기화에 되살아났다 */
+        if(k==='status'){const t=stTime(cur[c]),pu=u[ckey(k,c)]||0;u[ckey(k,c)]=t>pu?t:now}else u[ckey(k,c)]=now;
         delete gone[ckey(k,c)];n++;
       }
     }
@@ -6554,8 +6579,11 @@ pickChoice=async function(k){
 /* 물리 mark() 위에: 사용자가 직접 찍은 마크는 같은 열람 중의 자동 마크를 갈아 끼운다(우선) */
 mark=async function(m){
   const h=hist(VNO).slice();
+  const _l=h[h.length-1];
+  if(_l&&_l.t>=VSEEN&&!_l.auto&&!HASBOOK&&_l.a){h.pop();h.push({m,t:Date.now(),s:TM.sec||_l.s||0,a:_l.a})}   /* 10/10 recfix — 물리: 같은 열람에서 OMR 로 고른 기록(a) 뒤 마크 = 그 기록을 갈아 끼움(한 풀이 = 회독 하나 · 고른 답 남김) */
+  else{
   if(h.length&&h[h.length-1].auto&&h[h.length-1].t>=VSEEN)h.pop();
-  h.push({m,t:Date.now(),s:TM.sec||0});
+  h.push({m,t:Date.now(),s:TM.sec||0});}
   ST[qk(VNO)]={h};await saveST();tmStop();syncMarkBtns();
   toast(`${h.length}회독 · ${MLABEL[m]||m}${TM.sec?' · '+secFmt(TM.sec):''}`);
   if(SET.autoNext)setTimeout(()=>go(1),380);
