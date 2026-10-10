@@ -222,6 +222,7 @@ body.vopen:not(.vwin) #navTg.ndres{display:block;z-index:62}
 .soldel.arm{color:#fff;background:var(--red);border-color:var(--red)}
 .solz{margin:8px 0;border:1px solid var(--line);border-radius:8px;overflow:auto;background:#fff;touch-action:pan-x pan-y;max-height:70vh}
 .solz .solcv{margin:0;border:0;border-radius:0;max-width:none}
+.sheet .panel .solz>img.solpic{margin:0;border:0;border-radius:0;max-width:none;-webkit-user-drag:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 /* 시안 ⑮ — 곁창(문항 창 옆에 뜨는 정답·쌍둥이·Claude·유형·연결·이론·개념 창) 크기 모서리가 글 밑에 붙던 것(.twgrip sticky = 글이 창보다 짧으면 글 끝 자리)
    → 글이 창 안에 다 들어갈 때(gfit · makeFloat 가 잰다)만 모서리를 창 오른쪽 아래에 박음 · 글이 길면 옛 sticky 그대로 · 판 안 글 간격 무변(사용자 12:26 「원래 간격」) */
 .sheet.shfloat>.panel.float.gfit>.twgrip{position:absolute;right:0;bottom:0;z-index:3}
@@ -367,6 +368,8 @@ body[data-layer="pdf"] #view #pRow1>#tConcept{display:none!important}
 #list .item .meta .vno{font-size:12px;font-weight:600;color:#4338CA;letter-spacing:0}
 .ndt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
 .ndm{font-weight:800;font-size:11px}
+.ndm[data-s]{position:relative;display:inline-block;min-width:19px;text-align:center;padding-bottom:7px;margin-bottom:-6px}
+.ndm[data-s]::after{content:attr(data-s);position:absolute;left:-2px;right:-2px;bottom:0;text-align:center;font-size:7px;line-height:7px;font-weight:500;color:var(--muted);white-space:nowrap;letter-spacing:-.2px;pointer-events:none}
 .ndmO{color:var(--teal)}.ndmQ{color:var(--amber)}.ndmX{color:var(--red)}.ndmP{color:var(--ink)}
 .ndtail{display:flex;gap:5px;align-items:center;flex:none}
 .ndw{width:7px;height:7px;border-radius:50%;background:#F3E39A;border:1px solid #D9C45A;display:inline-block}
@@ -403,6 +406,7 @@ body[data-layer="pdf"] #view #pRow1>#tConcept{display:none!important}
 #tm{font:600 14px/1 var(--mono);padding:7px 9px;border:1px solid var(--line);border-radius:8px;
   background:var(--card);min-width:56px;text-align:center}
 #tm.off{color:#B9BCC1;border-style:dashed}
+#tm{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}   /* 길게 누름(0:00) 때 글자 고르기 · 메뉴 안 뜨게 */
 .histrow{display:flex;align-items:center;gap:8px;padding:9px 2px;border-bottom:1px solid var(--line)}
 .histrow .rn{font:600 12px/1 var(--mono);color:var(--muted);width:38px}
 .histrow .sel{display:flex;gap:5px;flex:1}
@@ -3646,14 +3650,16 @@ function ansSheet(no){   /* 시안 ⑯⑰⑱ — 정답 · 풀이 한 창 · 머
     ${s?`<p>볼트 ${r[F.VLT]}. ${esc(s.f)} · 그림 ${gsv.length}장${del.size?` · <a href="#" class="solundel">지운 그림 ${del.size} 되살리기</a>`:''}</p>
     ${s.t?`<div class="thsec"><div class="cblk">${esc(s.t)}</div></div>`:''}`
       :`<p class="solnone" style="font-size:12px;color:var(--muted)">볼트 풀이 노트 없음</p>`}
-    ${gsv.map(g=>`<div class="solw"><a href="img/${g}.jpg" target="_blank" rel="noopener"><img class="solpic" src="img/${g}.jpg" alt="풀이" loading="lazy"
-       onerror="this.parentNode.outerHTML='<div class=&quot;solmiss&quot;>그림 미등록 — ${g}.jpg</div>'"></a><button type="button" class="soldel" data-g="${g}" title="이 그림 지우기(볼트 파일은 그대로 · 이 앱에서만 안 보임)">✕</button></div>`).join('')}
+    ${gsv.map(g=>`<div class="solw"><div class="solz"><img class="solpic" src="img/${g}.jpg" alt="풀이" loading="lazy" draggable="false"
+       onerror="this.parentNode.outerHTML='<div class=&quot;solmiss&quot;>그림 미등록 — ${g}.jpg</div>'"></div><button type="button" class="soldel" data-g="${g}" title="이 그림 지우기(볼트 파일은 그대로 · 이 앱에서만 안 보임)">✕</button></div>`).join('')}
     ${caps.map((cc,i)=>`<div class="solw solcap"><div class="solz"><canvas class="solcv" data-i="${i}"></canvas></div><button type="button" class="soldel" data-ci="${i}" title="이 오린 것 지우기">✕</button></div>`).join('')}
     <div class="solrow">${s?'<button type="button" class="soltx" id="sbObs" title="옵시디언에서 이 풀이 노트 열기">옵시디언</button>':''}${PQR[no]?`<a class="soltx solcafe" href="https://m.site.naver.com/${PQR[no]}" target="_blank" rel="noopener" title="문제 PDF 의 QR 코드 = 네이버 카페 해설">카페해설</a>`:`<a class="soltx solcafe" href="https://cafe.naver.com/physicsnexp" target="_blank" rel="noopener" title="QR 없는 문항 — 카페에서 검색어로 찾기">카페해설</a><span class="solq">검색어 ${esc(r[F.CODE])}</span>`}</div>
     <button class="btn" style="margin-top:6px">닫기</button></div>`;
     {const ob=b.querySelector('#sbObs'); if(ob)ob.onclick=e=>{e.stopPropagation();location.href=obsFind(r[F.VLT]+'. '+s.f)}}
     try{kx(b)}catch(e){}
     b.querySelectorAll('.solcv').forEach(cv=>{const cc=caps[+cv.dataset.i];if(cc){setTimeout(()=>solxDraw(cv,cc),0);solxZoom(cv,cc)}   /* 창에 붙은 뒤 폭으로 그림 */});
+    /* 사용자 10/10 17:53 — 볼트 풀이 그림도 오린 것과 같은 손짓으로 창 안에서 확대·축소(두 손가락 · Ctrl+휠 · 두 번 톡 = 처음 크기) · 눌러도 그림만 따로 뜨지 않음(옛 링크는 홈 화면 앱에서 뒤로가기 없이 갇혔다) */
+    b.querySelectorAll('.solz>.solpic').forEach(im=>{im.addEventListener('dragstart',e=>e.preventDefault());solxZoom(im,null)});
     b.querySelectorAll('.soldel').forEach(x=>x.onclick=async e=>{e.preventDefault();e.stopPropagation();
       if(!x.classList.contains('arm')){x.classList.add('arm');x.textContent='한 번 더 누르면 지움';return}
       const o=SOLX[key]=SOLX[key]||{};
@@ -3720,7 +3726,7 @@ function solxZoom(cv,it){const box=cv.parentNode;let z=1,pts=new Map(),d0=0,z0=1
   const apply=(nz,fx,fy)=>{nz=Math.max(1,Math.min(5,nz));const sl=box.scrollLeft,st=box.scrollTop,ow=cv.clientWidth||1;
     z=nz;cv.style.width=(z*100)+'%';const k=(cv.clientWidth||1)/ow;
     box.scrollLeft=(sl+fx)*k-fx;box.scrollTop=(st+fy)*k-fy;
-    clearTimeout(rt);rt=setTimeout(()=>solxDraw(cv,it),180)};
+    clearTimeout(rt);if(it)rt=setTimeout(()=>solxDraw(cv,it),180)};   /* it 없음 = 볼트 풀이 그림(img · 다시 그릴 것 없음 · 10/10) */
   box.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();const r=box.getBoundingClientRect();apply(z*(e.deltaY<0?1.12:1/1.12),e.clientX-r.left,e.clientY-r.top)},{passive:false});
   box.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;pts.set(e.pointerId,[e.clientX,e.clientY]);
     if(pts.size===2){const[a,b]=[...pts.values()];d0=Math.hypot(a[0]-b[0],a[1]-b[1]);z0=z}
@@ -3792,7 +3798,7 @@ function secHTML(sec){
     if(n.t==='tb')return `<div class="thtbw"><table class="thtb">`+n.rows.map((rw,ri)=>`<tr>`+rw.map(c=>{const tg=(ri===0&&n.hd)?'th':'td';return `<${tg}>${esc(c)}</${tg}>`}).join('')+`</tr>`).join('')+`</table></div>`;
     const img=n.g?`<div class="thpicbox"><a href="img/${n.g}.jpg" target="_blank" rel="noopener"><img class="thpic" src="img/${n.g}.jpg" alt="그림" loading="lazy" style="max-width:min(100%,${Math.max(240,(n.gw||300)*1.5)}px)" onerror="this.parentNode.parentNode.innerHTML='<span class=&quot;thimg&quot;>그림 (미등록)</span>'"></a></div>`:'';
     const ref=(n.r||[]).map(x=>`<span class="thref" data-ref="${esc(x)}">↗ ${esc(x)}</span>`).join('');
-    const txt=(String(n.x||'')+ref).trim()?`<div class="thl i${n.i}${n.s?' star':''}">${thTxt(n.x)}${ref}</div>`:'';   /* ★ physphone A-6 */
+    const txt=(String(n.x||'')+ref).trim()?`<div class="thl i${n.i}${n.s?' star':''}" data-bx="${String(n.x||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}">${thTxt(n.x)}${ref}</div>`:'';   /* ★ physphone A-6 · 10/10 data-bx = 그 줄 볼트 글(근거 개념 창에서 줄 고르기) */
     return txt+img;
   }).join('')+'</div>';
 }
@@ -4026,7 +4032,15 @@ function tmRun(){if(TM.iv)return;$('#tm').classList.remove('off');
 function tmReset(){clearInterval(TM.iv);TM.iv=null;TM.sec=0;
   $('#tm').textContent='0:00';$('#tm').classList.toggle('hide',!SET.timer);
   if(SET.timer)tmRun();else tmStop()}
+/* 사용자 10/10 17:53 — 시계 길게 누름(0.55 초) = 0:00 으로 · 가던 시계는 0:00 부터 계속 · 멈춘 시계는 멈춘 채 0:00 · 누른 뒤 뗀 톡은 멈춤/계속으로 안 셈 · 8px 넘게 움직이면 취소 */
+let TMLP=null,TMLPeat=false;
+$('#tm').addEventListener('pointerdown',e=>{if(e.button>0)return;TMLPeat=false;if(TMLP)clearTimeout(TMLP.t);
+  TMLP={x:e.clientX,y:e.clientY,t:setTimeout(()=>{TMLP=null;TMLPeat=true;TM.sec=0;$('#tm').textContent='0:00'},550)}});
+['pointerup','pointercancel'].forEach(tp=>$('#tm').addEventListener(tp,()=>{if(TMLP){clearTimeout(TMLP.t);TMLP=null}}));
+$('#tm').addEventListener('pointermove',e=>{if(TMLP&&Math.hypot(e.clientX-TMLP.x,e.clientY-TMLP.y)>8){clearTimeout(TMLP.t);TMLP=null}});
+$('#tm').addEventListener('contextmenu',e=>e.preventDefault());
 $('#tm').onclick=()=>{
+  if(TMLPeat){TMLPeat=false;return}
   if(TM.iv){tmStop();toast('타이머 멈춤 — 다시 누르면 이어서')}
   else{tmRun();if(TM.sec)toast('타이머 계속')}
 };
@@ -4045,9 +4059,10 @@ $('#vBack').onclick=closeView;
 function ndTail(no){const m=lastM(no), w=weakState(no), c=noteOf(no);
   /* ★ uid_unify G-2 — 카드 층 = 회독마다 마크(h 항목 차례대로 · 「O △ O」) · 물리 = 마지막 하나(무변) */
   /* 시안 ② — 물리도 회독마다 마크(기록 h 차례대로) · 기록 없는 옛 마크만 있으면 그 하나 */
-  const _hm=hist(no).map(x=>x&&x.m).filter(Boolean), ms=(HASBOOK||_hm.length)?_hm:(m?[m]:[]);
+  const _hh=hist(no).filter(x=>x&&x.m), _hm=_hh.map(x=>x.m), ms=(HASBOOK||_hm.length)?_hm:(m?[m]:[]);
+  /* 사용자 10/10 17:53 — O X 밑에 아주 작은 글자로 걸린 시간(그 회독 기록 s · 없거나 0 이면 안 씀) · ::after 라 마크 글자(textContent)는 그대로 */
   return ewmTagHTML(rec(no))+(w==='less'?'<i class="ndw" title="덜약점"></i>':'')+
-    ms.map(k=>'<b class="ndm ndm'+k+'">'+mGlyph(k)+'</b>').join('')+
+    ms.map((k,i)=>{const sc=(_hh.length&&_hh[i]&&+_hh[i].s)||0;return '<b class="ndm ndm'+k+'"'+(sc>0?' data-s="'+tmFmt(sc)+'"':'')+'>'+mGlyph(k)+'</b>'}).join('')+
     (c?'<b class="ndc" data-nc="'+no+'" title="코멘트">\uD83D\uDDD2</b>':'')}
 /* ★ add9 §A — 상주 서랍. 목록은 **첫 화면 목록 그대로**(`filtered()`)라 편 칩·분류·검색을
    바꾸면 같이 좁아진다. 단원이 바뀌는 자리에 얇은 머리 줄을 끼워 옛 「목차」 단추가 하던
@@ -11880,6 +11895,9 @@ if(typeof bkImportObj==='function'){const _b0=bkImportObj;bkImportObj=async func
 #gguw .g3bk{font-size:12.5px;line-height:1.55;margin-top:4px}
 #gguw .g3bk .thl{margin:0}
 .ndox{display:inline-flex;gap:4px;align-items:center;cursor:pointer;border-radius:5px;padding:0 2px}
+/* 10/10 — 근거 개념 창 줄 고르기 · 고른 줄 = 옅은 청록 바탕 + 왼쪽 띠 */
+#gguw.g3sel #gguwMk .thl[data-bx]{cursor:pointer;border-radius:4px}
+#gguw.g3sel #gguwMk .thl.on{background:rgba(15,138,118,.15);box-shadow:inset 3px 0 0 var(--teal)}
 .ndox:hover,.ndox.on{background:rgba(128,128,128,.16)}
 .ndty{font-style:normal;font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap}
 #g3Pop{position:fixed;z-index:97;width:min(260px,calc(100vw - 16px));background:var(--card);border:1px solid var(--line);border-radius:8px;
@@ -12207,6 +12225,19 @@ function g3Users(f,key){
 function g3UseHTML(f,uid,g){
   var n=g3Users(f,g3Key(g)).length; if(n<1)return '';   /* 댓글 v49(사용자 02:00 「하나만 연결됐어도 1부터 뜨게 해」) — 옛 = 2 넘어야 보임 */
   return '<i class="gguse g3use'+(n>=5?' hot':'')+'" data-g3use="'+ea(f+'|'+uid+'|'+g.k)+'" title="이 칸을 쓰는 문항 '+n+'">'+n+'</i>'}
+/* 사용자 10/10 18:30 — 근거 공식·개념 줄 = 개념 창에서 고른 줄(g.sl · 볼트 글 그대로)이 있으면 그 줄들을 합쳐 · 없으면 옛 그대로 블록 첫 줄 */
+function g3CText(g,b){var sl=(g&&Array.isArray(g.sl))?g.sl.filter(Boolean):[];if(sl.length)return sl.map(function(x){return g3T(x)}).join('<br>');return b?g3T(b.lines[0].x):ggMath(ggFlat(g))}
+/* 개념 창(근거 줄을 눌러 뜬 창)의 줄을 누르면 고름 · 다시 누르면 뺌 · 고른 줄은 창 차례대로 합쳐 근거에 · 다 빼면 옛 그대로(블록 첫 줄) */
+function g3SelWire(uid,k){var b=document.getElementById('gguw');if(!b)return;b.classList.add('g3sel');
+  var mark=function(){var g=ggItem(uid,k),sl=(g&&Array.isArray(g.sl))?g.sl:[];b.querySelectorAll('#gguwMk .thl[data-bx]').forEach(function(el){el.classList.toggle('on',sl.indexOf(el.getAttribute('data-bx'))>=0)})};
+  mark();var mk=b.querySelector('#gguwMk');if(mk)new MutationObserver(mark).observe(mk,{childList:true});
+  b.addEventListener('click',async function(e){var el=e.target.closest&&e.target.closest('#gguwMk .thl[data-bx]');if(!el||e.target.closest('.thref,a,button,img'))return;
+    var list=ggOf(uid).slice(),g=list.find(function(x){return x&&x.k===k});if(!g)return;
+    var x=el.getAttribute('data-bx'),sl=Array.isArray(g.sl)?g.sl.slice():[],i=sl.indexOf(x);if(i>=0)sl.splice(i,1);else sl.push(x);
+    var ord=[].slice.call(b.querySelectorAll('#gguwMk .thl[data-bx]')).map(function(z){return z.getAttribute('data-bx')});
+    sl.sort(function(a,c){var ia=ord.indexOf(a),ic=ord.indexOf(c);return (ia<0?1e9:ia)-(ic<0?1e9:ic)});
+    if(sl.length){g.sl=sl;g.t=sl.join('\n')}else{delete g.sl;var b0=g.ref?g3Blk(g.ref):null;if(b0)g.t=b0.text}
+    g.ts=Date.now();await ggSaveList(uid,list);ggRepaint(uid);mark()},true)}
 function g3BlkLines(b,max){
   return b.lines.slice(0,max||99).map(function(x){return '<div class="thl i'+(x.i||0)+'">'+g3T(x.x)+'</div>'}).join('')}
 /* 댓글 v12(사용자 16:18 「트리거·주의점은 한 줄씩 차지하고 내용이 보이게 · 공식은 볼트 블록이면 블록 전부 보이게」) — 칩 대신 항목마다 한 줄: 번호 · 글(공식·개념 = 블록 줄 전부 · 굵게) · 쓰인 수
@@ -12222,7 +12253,7 @@ function g3ChipHTML(uid,g,f,n){
   var box=open?'<div class="g3cmb"><div data-ggcs="'+ea(ck)+'">'+ggCsHTML(g.cs,g.k,uid,sc)+'</div><div class="cin"><textarea rows="1" data-ggcin="'+ea(ck)+'"></textarea><button class="lk" data-ggreply="'+ea(ck)+'">달기</button></div></div>':'';
   if(f==='c'){
     var b=g.ref?g3Blk(g.ref):null;
-    var body='<span class="g3tx">'+(b?g3T(b.lines[0].x):ggMath(ggFlat(g)))+'</span>';
+    var body='<span class="g3tx">'+g3CText(g,b)+'</span>';   /* 10/10 — 고른 줄 합쳐 */
     return '<div class="g3it g3r g3cc" data-f="c" data-g3c="'+ea(uid+'|'+g.k)+'" data-g3k="'+ea(uid+'|'+g.k+'|c')+'">'+bang+body+g3UseHTML(f,uid,g)+cm+del+'</div>'+box}
   return '<div class="g3it g3r" data-f="'+f+'" data-g3k="'+ea(uid+'|'+g.k+'|'+f)+'">'+bang+'<span class="g3tx">'+ggMath(ggFlat(g))+'</span>'+g3UseHTML(f,uid,g)+cm+del+'</div>'+box}
 var G3CMOPEN=null;
@@ -12413,7 +12444,8 @@ function g3UseWin(f,uid,k,o){
       /* 댓글 v14(사용자 16:20 「블록 내용은 필요 없어 · 앞에서 이미 보임」) — 창 머리 = 절 번호 · 절 이름만 */
       :'<div class="ln"><span class="cd">'+G3L[f]+'</span></div><div class="gg">'+ggMath(ggFlat(g))+'</div>')+'</div>';
   g3UseWinOpen(uid,head,'이 '+(f==='c'?'블록':'글')+'을 '+G3L[f]+' 칸에 쓴 문항 '+owners.length,owners,
-    function(){return ''},   /* 댓글 v51(사용자 10:59 「걷어」 · 스레드 63575dc9) — 지금 문항 줄 「고치기·댓글」(옛 하얀 판 길 · 칸 옮기기 같이 없어짐 = 사용자 알고 고름) 걷음 */b0?b0.sec:'',(g.ref?String(g.ref).replace(/^U:\^/,''):''),!!(o&&o.list))}
+    function(){return ''},   /* 댓글 v51(사용자 10:59 「걷어」 · 스레드 63575dc9) — 지금 문항 줄 「고치기·댓글」(옛 하얀 판 길 · 칸 옮기기 같이 없어짐 = 사용자 알고 고름) 걷음 */b0?b0.sec:'',(g.ref?String(g.ref).replace(/^U:\^/,''):''),!!(o&&o.list));
+  if(f==='c'&&b0&&!(o&&o.list))g3SelWire(uid,k)}   /* 10/10 — 개념 창 줄 고르기(사용자 18:30) */
 /* 댓글 v32(사용자 21:32 「『공식·개념』 이라는 건 같은데 왜 하나는 첫 번째(쓰인 문항 창) · 하나는 두 번째(개념 창)가 떠」) — 이은 개념 줄 누름도 근거 블록과 같은 창:
    머리 = 절 번호 · 절 이름 · 「이 블록을 공식·개념 칸에 쓴 문항 N」(근거로 쓴 문항 + 교재·개념 잇기로 이은 문항) · 지금 문항 줄 = 「개념 연결 고치기」 · 밀기 같음 */
 function g3UseWinQ(uid,ck,o){var c=(typeof CB!=='undefined')&&CB[ck];if(!c)return;
@@ -12540,7 +12572,7 @@ function g3PopToggle(no,ox){
           /* 댓글 v29(사용자 19:59 · 20:01 「공식·개념 그 자체 누르면 속한 목차를 작게 호버처럼 · 오른쪽 위 <> 누르면 문제 창에서 공식·개념 누르면 나오는 창처럼」 · 「1.2.6 숫자는 지워」) — 절 번호 걷음 · 누름 = 목차 말풍선 */
           /* 댓글 v35(사용자 21:58 「오른쪽에 근거 창에서처럼 작게 이 개념 쓰인 문항 숫자」) — 근거 줄과 같은 셈 · 같은 규칙(2 넘어야 보임) */
           if(g.__cq){var nq=g3QUsers(g.__cq,g.__cq.k);if(nq.indexOf(uid)<0)nq.push(uid);return '<div class="it g3cqp g3pc" data-g3pc="'+ea('q|'+uid+'|'+g.__cq.k)+'" data-sec="'+ea(g.__cq.n||'')+'">'+g3CqBody(g.__cq)+(nq.length>=1?'<i class="g3pn" title="이 개념을 쓴 문항 '+nq.length+'">'+nq.length+'</i>':'')+'</div>'}
-          if(f==='c'&&g.ref){var b=g3Blk(g.ref);if(b){var nc=g3Users('c',g3Key(g)).length;return '<div class="it g3pc" data-g3pc="'+ea('c|'+uid+'|'+g.k)+'" data-sec="'+ea(g3SecName(b.sec))+'">'+g3T(b.lines[0].x)+(nc>=1?'<i class="g3pn" title="이 칸을 쓰는 문항 '+nc+'">'+nc+'</i>':'')+'</div>'}}
+          if(f==='c'&&g.ref){var b=g3Blk(g.ref);if(b){var nc=g3Users('c',g3Key(g)).length;return '<div class="it g3pc" data-g3pc="'+ea('c|'+uid+'|'+g.k)+'" data-sec="'+ea(g3SecName(b.sec))+'">'+g3CText(g,b)+(nc>=1?'<i class="g3pn" title="이 칸을 쓰는 문항 '+nc+'">'+nc+'</i>':'')+'</div>'}}
           return '<div class="it">'+ggMath(ggFlat(g))+'</div>'}).join('')+'</div>'}).join(''):'<div class="g3pf"><span class="none">근거 없음</span></div>')
     ;   /* 댓글 v5(사용자 14:42 「문제는 서랍에서 누르면 됨 · 열기 없애」) — 「열기」 걷음 */
   p.onclick=function(e){e.stopPropagation();var go=e.target.closest('.g3pgo');if(go){var a=go.getAttribute('data-g3pc').split('|');g3PopClose();
