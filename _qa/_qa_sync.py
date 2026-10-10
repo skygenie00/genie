@@ -44,6 +44,10 @@ QA_DATA_OK = {'_qa_chain_list.json'}
 QA_MATERIALS = ['jagwa/gg3/patches_gg3.json', 'jagwa/gg3/tests_gg3.json']
 QA_TOOLS += QA_MATERIALS
 QA_DATA_OK |= set(QA_MATERIALS)
+# ★ 2026-10-10 _task_qa_bigguard — 실행기가 부르는 _tools(건드린 하네스 고르기 · 공용 층 이름표) — 모음에 넣는다(안 넣으면 copy 가 _qa 에서 지움 · check 가 json 을 「스크립트 아닌 것」으로 셈)
+QA_BIGGUARD = ['_tools/qa_affected.py', '_tools/shared_names.py', '_tools/shared_names.json']
+QA_TOOLS += QA_BIGGUARD
+QA_DATA_OK |= {'_tools/shared_names.json'}
 CENSUS = os.path.join(ROOT, '_qa_chain_list.json')
 
 

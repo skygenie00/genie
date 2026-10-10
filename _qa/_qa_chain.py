@@ -4,15 +4,24 @@
   python _qa_chain.py census [--write]      N: 정본 하네스(_qa_sync.harnesses) ↔ 전수표(_qa_chain_list.json) 줄 — 빠진 것 · 없어진 것
                                             --write = 빠진 줄을 기본값(태그 「미분류」)으로 더한다 — 태그 · 무엇 · 인자 꼴은 사람이 채운다
   python _qa_chain.py check                 전수표 검사 — 줄 수 = 하네스 수(앱마다) · 무엇 · 태그 · 입력 빈칸 0 · 어긋나면 종료 코드 1
-  python _qa_chain.py run <앱> [--scope 태그,…] [--only 이름,…] [--rev <커밋> | --root <genie 자리>] [--label 이름] [--reuse]
+  python _qa_chain.py run <앱> [--scope 태그,…] [--only 이름,…] [--rev <커밋> | --root <genie 자리>] [--label 이름] [--fresh --why "<까닭>"] [--budget 분]
         그 앱 사슬(전수표 chains 에 그 앱이 든 하네스 · 태그로 거름)을 차례로 돌린다 — 겹쳐 돌리지 않는다(잠금 파일)
         --rev  = genie 그 커밋을 분리 워크트리(<genie>\\.claude\\worktrees\\qa_<커밋7>)로 꺼내 그 자리에서(⚙ 가 본 폴더를 바꿔도 안 흔들림)
         --root = 그 자리 그대로(줄 워크트리 · 안 커밋한 고침 포함) · 둘 다 없으면 GENIE_ROOT(없으면 본 폴더) 그대로
-        --reuse = 같은 열쇠 저장본이 있으면 안 돌린다 · --label = 같은 열쇠가 있어도 <열쇠>@<label>.json 으로 따로 둔다(되풀이 잣대)
-  python _qa_chain.py compare <앱> [--scope …] [--only …] [--rev <새 커밋> | --root <새 판 자리>] [--base <바탕 커밋 = main>] [--no-flaky]
+        ★ 기본 = 같은 열쇠 저장본이 있으면 안 돌린다(옛 --reuse · 이제 늘) · 다시 돌리려면 --fresh --why "<까닭>" 둘 다(--why 없으면 거부 · 종료 코드 2 · 까닭은 실행 기록에)
+        --label = 같은 열쇠가 있어도 <열쇠>@<label>.json 으로 따로 둔다(되풀이 잣대 — 저장본이 있으면 이것도 --fresh --why)
+  python _qa_chain.py compare <앱> [--affected <바탕>..<새 판>] [--scope …] [--only …] [--all --why "<까닭>"] [--rev <새 커밋> | --root <새 판 자리>] [--base <바탕 커밋 = main>]
+                                  [--no-flaky] [--fresh --why "<까닭>"] [--budget 분]
         규칙 (57) 회귀 — 하네스마다 바탕 열쇠 저장본과 새 판 결과를 값으로 맞댄다(A-4) · 저장본이 없거나 입력이 바뀐 하네스만 바탕에서 돌린다(A-3)
-        · 새 판 열쇠 = 바탕 열쇠(입력 같음)면 새 판에서도 안 돌린다 · 새 FAIL · FAIL 값 바뀜이 나온 하네스만 한 번 더(A-5 흔들림)
-  python _qa_chain.py plan <앱> [--scope …] [--only …] [--rev|--root …] [--base …]   compare 가 무엇을 돌릴지만(안 돌림)
+        · 새 판 열쇠 = 바탕 열쇠(입력 같음)면 새 판에서도 안 돌린다 · 새 판 저장본이 있으면 그것(기본) · 새 FAIL · FAIL 값 바뀜이 나온 하네스만 한 번 더(A-5 흔들림)
+        ★ 기본 = --affected(바탕..새 판 diff 로 건드린 하네스만 · _tools/qa_affected.py) — 첫 줄 「== 고름: …」 에 까닭
+          공용 층(_tools/shared_names.json · 부르는 자리 ≥ 3 · localStorage/indexedDB/fetch/PUT 든 함수)을 건드린 판만 그 앱 전체 · 전체를 손으로 = --all --why · --only 는 그대로
+  python _qa_chain.py plan <앱> [--affected …] [--scope …] [--only …] [--all] [--rev|--root …] [--base …]   compare 가 무엇을 돌릴지만(안 돌림 · 덩어리 셈까지)
+  ★ 덩어리(_task_qa_bigguard C · 10/10) — run · compare 는 돌기 전에 어림(실행기 하나 = 차례로 · 무리 1)을 셈 → 90 분 넘으면 ≤ 80 분 덩어리로 나눠 덩어리마다 하위 프로세스
+        · 하네스 하나 끝날 때마다 저장본 · _qa_results\\<앱>\\_run_state.json(덩어리 · 끝난 것 · 남은 것 · 시작 · 어림) → 꺼지거나 죽어도 같은 명령을 다시 부르면 끝난 하네스는 건넘
+        · --budget 분(기본 100 · 0 = 없음) — 이 부름에서 다음 덩어리까지 돌면 넘치면 멈추고 종료 코드 4(「같은 명령을 다시」)
+  ★ 끝 어림(_task_qa_bigguard D) — 시작 때 · 하네스마다 _qa_results\\<앱>\\_eta.txt 를 덮어씀(N:\\개인\\claude\\_code_now.md 에 「회귀」 칸이 있으면 그 칸도)
+        남은 하네스 수 · 남은 last_sec 합 ÷ 무리 수 = 끝 어림 · 실제−어림 · 시작 어림보다 30 분 넘게 밀리면 머리에 「★ 밀림 +N 분 · 까닭(가장 늦은 하네스 셋)」
   python _qa_chain.py show <앱> [--scope …] [--rev|--root …]                          그 판 열쇠의 저장본 요약
   python _qa_chain.py diff <앱> <실행 기록 A> <실행 기록 B>                            두 실행 기록(_qa_results\\<앱>\\_runs\\*.json)을 항목 값으로 맞댄다
   python _qa_chain.py reparse <앱>                                                    저장본 원문을 지금 받개로 다시 읽는다(받개를 고친 뒤)
@@ -79,6 +88,15 @@ FOLDER_APP = {'jopangi': 'jo', 'jagwa': 'jagwa', 'minbeop': 'minbeop', 'timetabl
 APP_FILE = {'jo': 'jo/index.html', 'jagwa': 'jagwa/index.html', 'minbeop': 'minbeop/index.html', 'timetable': 'timetable/index.html',
             'gichul': 'gichul/index.html', 'chem': 'chem/index.html'}
 ST = ('PASS', 'FAIL', 'INFO', 'WARN', 'SKIP')
+# ★ _task_qa_bigguard(10/10) — 덩어리 · 끝 어림 · 건드린 하네스(_tools)
+TOOLS = os.path.join(HERE, '_tools')                                 # qa_affected.py · shared_names.py(.json)
+CHUNK_OVER = 90 * 60                                                 # 어림이 이것을 넘으면 덩어리로 나눔(초)
+CHUNK_MAX = 80 * 60                                                  # 덩어리 하나 위 끝(초)
+BUDGET_MIN = 100                                                     # 한 부름 시간 예산(분 · 다음 덩어리까지 돌면 넘치면 멈춤 · 종료 코드 4)
+SLIP_MIN = 30                                                        # 끝 어림이 시작 어림보다 이만큼(분) 넘게 밀리면 「★ 밀림」
+UNKNOWN_SEC = 600                                                    # last_sec 잰 적 없는 하네스의 덩어리 셈 몫(초)
+NOW_MD = os.environ.get('QA_CHAIN_NOW') or (os.path.join(NR, '_code_now.md') if NR else None)   # 「회귀」 칸 — 모래상자는 QA_CHAIN_NOW
+PARENT = os.environ.get('QA_CHAIN_PARENT')                           # 덩어리 하위 프로세스 = 부른 실행기 pid(잠금 넘겨받음)
 
 
 def say(*a):
@@ -451,9 +469,13 @@ def _alive(pid):
     if os.name != 'nt':
         try:
             os.kill(pid, 0)
-            return True
         except OSError:
             return False
+        try:   # ★ _task_qa_bigguard(10/10) — 죽은 채 안 거둬진 프로세스(좀비 · 덩어리 하위가 부른 쪽과 같이 죽음)는 산 것이 아니다
+            with open('/proc/%d/stat' % pid, 'rb') as f:
+                return f.read().rsplit(b')', 1)[-1].split()[0] != b'Z'
+        except (OSError, IndexError):
+            return True
     k = ctypes.windll.kernel32
     h = k.OpenProcess(0x1000, False, pid)
     if not h:
@@ -467,12 +489,28 @@ def _alive(pid):
 def lock():
     os.makedirs(WORK, exist_ok=True)
     lf = os.path.join(WORK, 'lock.json')
-    old = jload(lf)
-    if old and old.get('pid') != os.getpid() and _alive(old.get('pid', 0)):
+    try:
+        old = jload(lf)
+    except ValueError:   # 반쯤 쓴 잠금 파일
+        old = None
+    # ★ _task_qa_bigguard C — 덩어리 하위 프로세스는 부른 실행기(QA_CHAIN_PARENT)가 쥔 잠금을 넘겨받는다(부른 쪽이 죽어도 하위가 살아 있으면 다음 부름이 겹치지 않게 하위 pid 를 적음)
+    if old and old.get('pid') != os.getpid() and _alive(old.get('pid', 0)) and not (PARENT and str(old.get('pid')) == PARENT):
         raise SystemExit('NG 다른 사슬이 돈다(pid %s · %s · %s) — 겹쳐 돌리지 않는다' % (old['pid'], old.get('when'), old.get('cmd')))
     with open(lf, 'w', encoding='utf-8') as f:
-        json.dump({'pid': os.getpid(), 'when': time.strftime('%Y-%m-%d %H:%M:%S'), 'cmd': ' '.join(sys.argv[1:])}, f, ensure_ascii=False)
+        json.dump({'pid': os.getpid(), 'when': time.strftime('%Y-%m-%d %H:%M:%S'), 'cmd': ' '.join(sys.argv[1:]), 'parent': PARENT}, f, ensure_ascii=False)
     return lf
+
+
+def unlock(lf):
+    """잠금 풀기 — 덩어리 하위 프로세스면 부른 실행기(살아 있으면)에게 되돌려 줌"""
+    try:
+        if PARENT and _alive(int(PARENT)):
+            with open(lf, 'w', encoding='utf-8') as f:
+                json.dump({'pid': int(PARENT), 'when': time.strftime('%Y-%m-%d %H:%M:%S'), 'cmd': '(덩어리 끝 · 부른 실행기에 되돌림)'}, f, ensure_ascii=False)
+        else:
+            os.remove(lf)
+    except Exception:
+        pass
 
 
 # ── env_clean B-1 · B-2 · B-5(10/8) — 하네스 임시 폴더 · 쓸기 · 실행 결과 폴더 셋만 ──────────────────────────────
@@ -1159,7 +1197,7 @@ def parse_args(av):
     while i < len(av):
         a = av[i]
         if a.startswith('--'):
-            if i + 1 < len(av) and not av[i + 1].startswith('--') and a not in ('--reuse', '--write', '--no-flaky', '--keep-root', '--dry'):
+            if i + 1 < len(av) and not av[i + 1].startswith('--') and a not in ('--reuse', '--write', '--no-flaky', '--keep-root', '--dry', '--fresh', '--all'):
                 out[a] = av[i + 1]
                 i += 2
                 continue
@@ -1184,52 +1222,370 @@ def arg_mode(args):
     return m
 
 
+# ── ★ _task_qa_bigguard(10/10) A · B · C · D ─────────────────────────────────────────────────────
+def why_of(args):
+    w = args.get('--why')
+    return w.strip() if isinstance(w, str) and w.strip() else ''
+
+
+def refuse(what):
+    """A — 까닭 없는 다시 돌기 · 손으로 전체 = 거부(종료 코드 2)"""
+    say('NG %s 는 --why "<까닭>" 와 같이 준다 — 까닭 없이 저장본을 버리고 다시(전체) 돌리지 않는다(종료 코드 2 · _task_qa_bigguard A)' % what)
+    return 2
+
+
+def budget_of(args):
+    v = args.get('--budget')
+    try:
+        return float(v) if isinstance(v, str) else float(BUDGET_MIN)
+    except ValueError:
+        return float(BUDGET_MIN)
+
+
+def sec_est(r, app, ctx):
+    """하네스 어림(초) — 그 모드 시간 먼저(smoke · regress) · 잰 적 없으면 None"""
+    m = mode_of(r, app, ctx)
+    return (r.get('last_sec_smoke') if m == 'smoke' else None) or (r.get('last_sec_regress') if m in ('regress', 'smoke') else None) or r.get('last_sec')
+
+
+def runnable_here(r):
+    """여기서 돌 수 있나(skip 아님 · 클라우드면 N: 입력이 _qa 사본에 다 있음) — run_one 의 건넘과 같은 셈"""
+    if r.get('skip'):
+        return False
+    if NR:
+        return True
+    return not [x for x in (r.get('inputs') or []) if x.startswith('n:') and not os.path.exists(os.path.join(HERE, *x[2:].replace('/**', '').split('/')))]
+
+
+def affected_range(args):
+    """--affected <바탕>..<새 판> → --base · --rev(이미 다른 값이면 None = 어긋남)"""
+    v = args.get('--affected')
+    if not isinstance(v, str) or '..' not in v:
+        return True
+    a, b = v.split('..', 1)
+    if (args.get('--base') and args['--base'] != a) or (args.get('--rev') and args['--rev'] != b) or (b and args.get('--root')):
+        say('NG --affected %s 가 --base · --rev · --root 와 어긋남' % v)
+        return None
+    if a:
+        args['--base'] = a
+    if b:
+        args['--rev'] = b
+    return True
+
+
+def pick_rows(args, app, rows0, bctx, nctx):
+    """B — 돌릴 하네스 고르기: --only 그대로 · --all = 전체(까닭) · 기본 = 건드린 하네스만(공용 층이면 전체) → (줄들, 첫 줄, 정보)"""
+    if lst(args.get('--only')):
+        return rows0, '== 고름: --only 그대로 %d' % len(rows0), {'mode': 'only'}
+    if args.get('--all'):
+        return rows0, '== 고름: 전체 %d — 손으로(--all · 까닭: %s)' % (len(rows0), why_of(args) or '없음'), {'mode': 'all', 'why': why_of(args)}
+    if TOOLS not in sys.path:
+        sys.path.insert(0, TOOLS)
+    import qa_affected as QA
+    out = QA.affected(app, rows0, bctx, nctx, HHOME, lambda r: sec_est(r, app, nctx), runnable_here)
+    return out['rows'], '== 고름: ' + out['why'], {'mode': 'affected', 'full': out['full'], 'pick': out['pick'], 'hit': out.get('hit') or {},
+                                                  'changed': len(out['changed'])}
+
+
+# ── C · D: 덩어리 상태 · 끝 어림 ──
+def state_path(app):
+    return os.path.join(RESD, app, '_run_state.json')
+
+
+def state_load(app):
+    try:
+        return jload(state_path(app))
+    except ValueError:
+        return None
+
+
+def state_save(app, st):
+    st['remaining'] = [n for n in st.get('plan', {}) if n not in st.get('finished', {})]
+    s = jdump(st)
+    nwrite(state_path(app), s) if NR else _w(state_path(app), s)
+
+
+def state_sig(cmd, app, bctx, nctx, rows, args):
+    d = {'cmd': cmd, 'app': app, 'base': bctx.head if bctx else None, 'new': nctx.head, 'root': None if nctx.rev else nctx.root,
+         'dirty': {} if nctx.rev else {p: nctx.blob(p) for p in sorted(nctx.dirty())}, 'rows': sorted(rname(r) for r in rows),
+         'mode': nctx.mode, 'fresh': bool(args.get('--fresh')), 'label': args.get('--label') if isinstance(args.get('--label'), str) else ''}
+    return hashlib.sha1(json.dumps(d, sort_keys=True, ensure_ascii=False).encode('utf-8')).hexdigest()[:16]
+
+
+def plan_items(cmd, app, rows, bctx, nctx, fresh):
+    """돌 것 — [(이름, 어림 초)]: run = 저장본 없음(--fresh 면 늘) · compare = 바탕 저장본 없음 + 새 판 열쇠가 다르고 저장본 없음(둘 다면 두 몫)"""
+    items = []
+    for r in rows:
+        if not runnable_here(r):
+            continue
+        sec = float(sec_est(r, app, nctx) or UNKNOWN_SEC)
+        if cmd == 'run':
+            k, _ = key_of(r, app, nctx)
+            if fresh or not os.path.exists(res_path(app, k)):
+                items.append((rname(r), sec))
+            continue
+        bk, _ = key_of(r, app, bctx)
+        nk, _ = key_of(r, app, nctx)
+        t = (sec if (fresh or not os.path.exists(res_path(app, bk))) else 0) + (sec if (nk != bk and (fresh or not os.path.exists(res_path(app, nk)))) else 0)
+        if t:
+            items.append((rname(r), t))
+    return items
+
+
+def chunk_split(items):
+    """≤ 80 분 덩어리 — 차례 그대로 채움(80 분 넘는 하네스 하나는 혼자 한 덩어리)"""
+    out, cur, t = [], [], 0.0
+    for n, sec in items:
+        if cur and t + sec > CHUNK_MAX:
+            out.append(cur)
+            cur, t = [], 0.0
+        cur.append(n)
+        t += sec
+    if cur:
+        out.append(cur)
+    return out
+
+
+def state_begin(cmd, app, args, rows, bctx, nctx):
+    """C — 같은 명령이 끊겼으면 그 상태를 이어 씀 · 아니면 새 어림 · 덩어리"""
+    fresh = bool(args.get('--fresh'))
+    sig = state_sig(cmd, app, bctx, nctx, rows, args)
+    old = state_load(app)
+    if old and old.get('sig') == sig and not old.get('done'):
+        old['resumed'] = int(old.get('resumed') or 0) + 1
+        old['resume_at'] = time.strftime('%Y-%m-%d %H:%M:%S')
+        old['pid'] = os.getpid()
+        state_save(app, old)
+        say('== 이어 돎(끊긴 자리부터) — %s 시작 · 끝난 하네스 %d/%d · 덩어리 %d · %d 번째 부름' % (
+            old.get('start'), len(old.get('finished') or {}), len(old.get('plan') or {}), len(old.get('chunks') or []), old['resumed'] + 1))
+        return old
+    items = plan_items(cmd, app, rows, bctx, nctx, fresh)
+    total = sum(x for _, x in items)
+    est = dict(items)
+    chunks = chunk_split(items) if total > CHUNK_OVER else ([[n for n, _ in items]] if items else [])
+    now = time.time()
+    st = {'v': 1, 'sig': sig, 'cmd': cmd, 'app': app, 'argv': sys.argv[1:], 'run': RUN_ID, 'pid': os.getpid(),
+          'base': bctx.head if bctx else None, 'new': nctx.head, 'start': time.strftime('%Y-%m-%d %H:%M:%S'), 'start_ts': now, 'lanes': 1,
+          'est_total_sec': round(total, 1), 'eta0_ts': now + total, 'eta0': time.strftime('%Y-%m-%d %H:%M', time.localtime(now + total)),
+          'chunked': total > CHUNK_OVER, 'chunks': [{'i': i + 1, 'rows': ch, 'est_sec': round(sum(est[n] for n in ch), 1), 'state': 'todo'} for i, ch in enumerate(chunks)],
+          'plan': est, 'plan0': dict(est), 'finished': {}, 'fresh': fresh, 'why': why_of(args), 'budget_min': budget_of(args), 'done': False}
+    state_save(app, st)
+    return st
+
+
+def eta_text(st, now=None):
+    """D — 남은 하네스 수 · 남은 last_sec 합 ÷ 무리 수 = 끝 어림 · 실제−어림 · 30 분 넘게 밀리면 머리에 「★ 밀림」"""
+    now = now or time.time()
+    plan, plan0, fin = st.get('plan') or {}, st.get('plan0') or {}, st.get('finished') or {}
+    lanes = max(1, int(st.get('lanes') or 1))
+    rem = [n for n in plan if n not in fin]
+    rem_sec = sum(float(plan[n] or 0) for n in rem)
+    end = now + rem_sec / lanes
+    eta0 = float(st.get('eta0_ts') or end)
+    d_est = sum(float(plan0.get(n) or 0) for n in fin)
+    d_act = sum(float((fin[n] or {}).get('sec') or 0) for n in fin)
+    hm = lambda t: time.strftime('%m/%d %H:%M', time.localtime(t))
+    slip = (end - eta0) / 60
+    head = ''
+    if slip > SLIP_MIN:
+        con = []
+        for n in plan:
+            v = (float((fin[n] or {}).get('sec') or 0) if n in fin else float(plan[n] or 0)) - float(plan0.get(n) or 0)
+            if v > 0:
+                con.append((v, n))
+        con.sort(reverse=True)
+        why = ' · '.join('%s +%.0f 분' % (n, v / 60) for v, n in con[:3]) or '하네스 탓 아님 — 멈춘 동안(다시 부를 때까지)'
+        head = '★ 밀림 +%.0f 분 · 까닭(%s) · ' % (slip, why)
+    return head + '회귀 %s %s · 남은 하네스 %d/%d · 남은 last_sec 합 %.1f 분 ÷ 무리 %d → 끝 어림 %s · 시작 어림 %s · 지금까지 실제−어림 %+.1f 분(끝난 %d) · %s 갱신' % (
+        st.get('app'), st.get('cmd'), len(rem), len(plan), rem_sec / 60, lanes, hm(end), hm(eta0), (d_act - d_est) / 60, len(fin), time.strftime('%H:%M:%S'))
+
+
+RX_NOW_COLON = re.compile(r'^([ \t]*[-*]?[ \t]*\**회귀\**[ \t]*[:：][ \t]*)([^\r\n]*)', re.M)
+RX_NOW_CELL = re.compile(r'^([ \t]*\|[ \t]*\**회귀\**[ \t]*\|)([^|\r\n]*)', re.M)
+
+
+def now_write(line):
+    """N:\\개인\\claude\\_code_now.md 의 「회귀」 칸(「회귀: …」 줄 · 「| 회귀 | … |」 칸)을 덮어씀 — 파일 · 칸이 없으면 안 건드림(False)"""
+    if not NOW_MD or not os.path.isfile(NOW_MD):
+        return False
+    try:
+        t = open(NOW_MD, 'rb').read().decode('utf-8')
+    except (OSError, UnicodeDecodeError):
+        return False
+    m = RX_NOW_COLON.search(t)
+    if m:
+        t2 = t[:m.start(2)] + line + t[m.end(2):]
+    else:
+        m = RX_NOW_CELL.search(t)
+        if not m:
+            return False
+        t2 = t[:m.start(2)] + ' ' + line.replace('|', '/') + ' ' + t[m.end(2):]
+    if t2 != t:
+        try:
+            nwrite(NOW_MD, t2) if NR else _w(NOW_MD, t2)
+        except (OSError, SystemExit):
+            return False
+    return True
+
+
+def eta_write(app, st, line=None):
+    """끝 어림 줄 → _qa_results\\<앱>\\_eta.txt(덮어씀) · _code_now.md 「회귀」 칸(있으면)"""
+    line = line or eta_text(st)
+    p = os.path.join(RESD, app, '_eta.txt')
+    try:
+        nwrite(p, line + '\n') if NR else _w(p, line + '\n')
+    except (OSError, SystemExit):
+        pass
+    now_write(line)
+    return line
+
+
+def state_mark(app, name, rec):
+    """하네스 하나 끝 — 상태 파일(덩어리 하위 프로세스와 같이 씀 · 되읽어 합침)에 끝난 것 · 끝 어림 다시 씀"""
+    st = state_load(app)
+    if not st or name not in (st.get('plan') or {}) or st.get('done'):
+        return None
+    st.setdefault('finished', {})[name] = {'sec': round(float(rec.get('sec') or 0), 1), 'when': time.strftime('%Y-%m-%d %H:%M:%S'),
+                                           'key': rec.get('key'), 'ran': not rec.get('reused'), 'pid': os.getpid()}
+    state_save(app, st)
+    return eta_write(app, st)
+
+
+def state_end(app, st0, recs_sec):
+    st = state_load(app) or st0
+    st['done'] = True
+    st['end'] = time.strftime('%Y-%m-%d %H:%M:%S')
+    took = (time.time() - float(st.get('start_ts') or time.time())) / 60
+    state_save(app, st)
+    line = '회귀 %s %s · 끝 %s · 걸림 %.0f 분(어림 %.0f 분 · 돈 하네스 %d · 부름 %d 번)' % (
+        app, st.get('cmd'), time.strftime('%m/%d %H:%M'), took, float(st.get('est_total_sec') or 0) / 60,
+        sum(1 for v in (st.get('finished') or {}).values() if v.get('ran')), int(st.get('resumed') or 0) + 1)
+    eta_write(app, st, line)
+    return line
+
+
+def passthru(args, bctx, nctx):
+    """덩어리 하위 프로세스 인자 — 판은 푼 커밋으로(그 사이 main 이 움직여도 같은 판)"""
+    out = []
+    if bctx is not None:
+        out += ['--base', bctx.head]
+    out += ['--rev', nctx.head] if nctx.rev else ['--root', nctx.root]
+    for k in ('--mode', '--label', '--why'):
+        if isinstance(args.get(k), str):
+            out += [k, args[k]]
+    for k in ('--fresh', '--no-flaky'):
+        if args.get(k):
+            out.append(k)
+    return out
+
+
+def run_chunks(cmd, app, args, st, bctx, nctx):
+    """C — 덩어리마다 하위 프로세스(같은 명령 + --only <그 덩어리 남은 것>) · 하네스마다 저장본 · 상태는 하위가 씀
+       시간 예산(--budget · 기본 100 분)을 다음 덩어리가 넘기면 멈춤 → 종료 코드 4(같은 명령을 다시 부르면 이어 돎)"""
+    budget = budget_of(args) * 60
+    t0, ran, n = time.time(), 0, len(st.get('chunks') or [])
+    for ch in st.get('chunks') or []:
+        cur = state_load(app) or st
+        left = [x for x in ch['rows'] if x not in (cur.get('finished') or {})]
+        if not left:
+            continue
+        est = sum(float((cur.get('plan') or {}).get(x) or 0) for x in left)
+        if ran and budget and (time.time() - t0) + est > budget:
+            say('★ 덩어리 %d/%d 부터 남음(어림 %.0f 분 · 이 부름 %.0f 분 지남 · 예산 %.0f 분) — 같은 명령을 다시 부를 것(끝난 하네스는 건넘 · %s)' % (
+                ch['i'], n, est / 60, (time.time() - t0) / 60, budget / 60, state_path(app)))
+            return 4
+        argv = [sys.executable, os.path.abspath(__file__), cmd, app, '--only', ','.join(left), '--_chunk', '%d/%d' % (ch['i'], n)] + passthru(args, bctx, nctx)
+        say('== 덩어리 %d/%d — 하네스 %d · 어림 %.0f 분 · 하위 프로세스' % (ch['i'], n, len(left), est / 60))
+        rc = subprocess.call(argv, env=dict(os.environ, QA_CHAIN_PARENT=str(os.getpid())))
+        ran += 1
+        cur = state_load(app) or st
+        for c2 in cur.get('chunks') or []:
+            if c2['i'] == ch['i']:
+                c2['state'] = 'done' if all(x in (cur.get('finished') or {}) for x in c2['rows']) else 'cut rc=%s' % rc
+                c2['rc'] = rc
+        state_save(app, cur)
+        if rc not in (0, 2):
+            say('NG 덩어리 %d/%d 하위 프로세스 종료 코드 %s — 멈춤(같은 명령을 다시 부르면 끝난 하네스는 건너고 이어 돎)' % (ch['i'], n, rc))
+            return rc
+    return 0
+
+
 def cmd_run(args, pos):
     app = pos[0]
+    fresh = bool(args.get('--fresh'))
+    if fresh and not why_of(args):
+        return refuse('--fresh')   # ★ A — 다시 돌기 = --fresh --why 둘 다
+    chunk = args.get('--_chunk') if isinstance(args.get('--_chunk'), str) else ''
     c = census_load()
     rows = rows_for(c, app, lst(args.get('--scope')), lst(args.get('--only')))
     if not rows:
         raise SystemExit('돌릴 하네스 0 — 앱·범위를 볼 것')
-    lf = lock()
-    vendor_check()   # ★ _task_qa_fix1 A-5 — pdf.js 사본(없음 · 깨짐이면 받아 채움 · 둘 다 없으면 이 줄이 실행 첫 줄 경고)
-    pa_sweep()   # ★ env_clean B-2
     ctx = ctx_from(args)
     ctx.mode = arg_mode(args)
-    runid = time.strftime('%Y%m%d-%H%M') + '_run' + ('_' + args['--label'] if args.get('--label') else '')
-    say('== run %s · 하네스 %d · genie %s (%s) · %s · 모드 %s' % (app, len(rows), ctx.head[:7], ctx.root or '분리 워크트리 — 돌릴 때 꺼냄', runid,
-                                                          ctx.mode or ('regress(jo 기본)' if app in MODE_APPS else '없음')))
+    lab = args.get('--label', '') if isinstance(args.get('--label'), str) else ''
+    lf = lock()   # 잠금 먼저 — 다른 사슬이 도는데 상태 파일(_run_state.json)을 덮지 않게
     recs, t0 = [], time.time()
     try:
+        st = (state_load(app) or {}) if chunk else state_begin('run', app, args, rows, None, ctx)   # ★ C — 같은 명령이 끊겼으면 이어 씀
+        if not chunk:
+            say('== 끝 어림: ' + eta_write(app, st))   # ★ D — 시작 때 첫 어림
+        vendor_check()   # ★ _task_qa_fix1 A-5 — pdf.js 사본(없음 · 깨짐이면 받아 채움 · 둘 다 없으면 이 줄이 실행 첫 줄 경고)
+        pa_sweep()   # ★ env_clean B-2
+        runid = time.strftime('%Y%m%d-%H%M') + '_run' + ('_' + args['--label'] if args.get('--label') else '')
+        say('== run %s%s · 하네스 %d · genie %s (%s) · %s · 모드 %s%s' % (app, (' 덩어리 ' + chunk) if chunk else '', len(rows), ctx.head[:7], ctx.root or '분리 워크트리 — 돌릴 때 꺼냄', runid,
+                                                              ctx.mode or ('regress(jo 기본)' if app in MODE_APPS else '없음'),
+                                                              (' · 다시(--fresh · 까닭: %s)' % why_of(args)) if fresh else ' · 저장본 있으면 안 돎(기본)'))
+        if not chunk and st.get('chunked'):
+            rc = run_chunks('run', app, args, st, None, ctx)   # ★ C — 덩어리마다 하위 프로세스(하네스마다 저장본 · 상태)
+            if rc:
+                return rc
+            names = [rname(r) for r in rows]
+            c = census_load()                                    # 하위 프로세스가 고친 전수표(입력 · last_sec)를 다시 읽는다
+            byn = {rname(r): r for r in c['rows']}
+            rows = [byn[n] for n in names if n in byn]
+            st = state_load(app) or st
+        fin = st.get('finished') or {}
         for r in rows:
-            if args.get('--reuse') and not r.get('skip'):
-                k, _ = key_of(r, app, ctx)
-                old = load_rec(app, k)
+            name = rname(r)
+            if not r.get('skip'):
+                old = None
+                if fresh:   # 이 다시 돌기에서 이미 끝난 것(끊겼다 이어 돎 · 덩어리 뒤 마무리)만 저장본
+                    if name in fin and fin[name].get('key'):
+                        old = load_rec(app, fin[name]['key'], lab) or load_rec(app, fin[name]['key'])
+                else:       # ★ A — 기본 = 같은 열쇠 저장본이 있으면 안 돎
+                    k, _ = key_of(r, app, ctx)
+                    old = load_rec(app, k)
                 if old:
-                    old['reused'] = True
+                    old['reused'] = not (name in fin and fin[name].get('ran'))
                     recs.append(old)
-                    say('%s %-26s 저장본 그대로(열쇠 %s)' % (time.strftime('%H:%M:%S'), old['name'], k))
+                    say('%s %-26s %s(열쇠 %s)' % (time.strftime('%H:%M:%S'), old['name'], '저장본 그대로' if old['reused'] else '이 실행 덩어리에서 돎', old.get('key')))
                     continue
-            rec = run_one(r, app, ctx, c, label=args.get('--label', '') if isinstance(args.get('--label'), str) else '')
+            rec = run_one(r, app, ctx, c, label=lab, note=('다시(--fresh): ' + why_of(args)) if fresh else '')
             recs.append(rec)
             say(line_of(rec))
             if not rec.get('skip'):
                 census_save(c)
+            line = state_mark(app, name, rec)   # ★ D — 하네스마다 끝 어림
+            if line and not chunk:
+                say('   ' + line)
         _hcache_save()
-        man = save_run(app, runid, recs, {'genie': ctx.head, 'root': ctx.root or ('qa_' + ctx.head[:7]), 'scope': args.get('--scope', ''), 'sec': round(time.time() - t0)})
+        if chunk:
+            say('== 덩어리 %s 끝 · 하네스 %d · %d초' % (chunk, len(recs), time.time() - t0))
+            return 0
+        man = save_run(app, runid, recs, {'genie': ctx.head, 'root': ctx.root or ('qa_' + ctx.head[:7]), 'scope': args.get('--scope', ''), 'sec': round(time.time() - t0),
+                                          'fresh': fresh, 'why': why_of(args), 'state': st.get('sig'), 'chunks': len(st.get('chunks') or []) if st.get('chunked') else 0})
         tot = {}
         for x in recs:
             for k, v in (x.get('counts') or {}).items():
                 tot[k] = tot.get(k, 0) + v
         say('== 끝 · %d초 · PASS %d · FAIL %d · INFO %d · 실행 기록 %s' % (time.time() - t0, tot.get('PASS', 0), tot.get('FAIL', 0), tot.get('INFO', 0), man))
+        say('== ' + state_end(app, st, None))
     finally:
         if not args.get('--keep-root'):
             ctx.drop()
         pa_end()   # ★ env_clean B-1 · B-5
         out_trim(app)
-        try:
-            os.remove(lf)
-        except Exception:
-            pass
+        unlock(lf)
     return 0
 
 
@@ -1291,12 +1647,16 @@ def plan(app, rows, bctx, nctx):
 
 def cmd_plan(args, pos):
     app = pos[0]
+    if affected_range(args) is None:
+        return 2
     c = census_load()
-    rows = rows_for(c, app, lst(args.get('--scope')), lst(args.get('--only')))
+    rows0 = rows_for(c, app, lst(args.get('--scope')), lst(args.get('--only')))
     bctx = ctx_from(args, 'base')
     nctx = ctx_from(args)
     bctx.mode = nctx.mode = arg_mode(args)
     try:
+        rows, pline, _ = pick_rows(args, app, rows0, bctx, nctx)   # ★ B — compare 와 같은 고르기
+        say(pline)
         nb = nn = 0
         # ★ _task_qa_slim2 A-1-4(10/8) — 시간 합: 돌 것마다 last_sec(regress 면 last_sec_regress 먼저) · 잰 적 없으면 따로 셈 · 무리 k(--lanes · 기본 3) 벽시계 = 긴 것부터 고르게(LPT) 나눈 무리 합의 최댓값
         bs, ns, unk = [], [], []
@@ -1306,12 +1666,11 @@ def cmd_plan(args, pos):
                 continue
             has = os.path.exists(res_path(app, bk))
             same = bk == nk
-            nhas = same or os.path.exists(res_path(app, nk))   # 새 판 저장본이 이미 있으면 새 판에서도 안 돎(run --reuse · compare --reuse 와 같음)
+            nhas = same or os.path.exists(res_path(app, nk))   # 새 판 저장본이 이미 있으면 새 판에서도 안 돎(run · compare 기본과 같음)
             nb += (not has)
             # 옛 줄: nn += (not same)
             nn += (not nhas)
-            m = mode_of(r, app, nctx)
-            sec = (r.get('last_sec_smoke') if m == 'smoke' else None) or (r.get('last_sec_regress') if m in ('regress', 'smoke') else None) or r.get('last_sec')   # ★ 10/8 smoke 는 smoke 시간 먼저
+            sec = sec_est(r, app, nctx)   # ★ 10/8 smoke 는 smoke 시간 먼저(sec_est 로 묶음 · 10/10)
             if not has:
                 (bs if sec else unk).append(float(sec or 0))
             if not nhas:
@@ -1320,11 +1679,21 @@ def cmd_plan(args, pos):
                                              (' · %.1f 분' % (float(sec) / 60) if sec else ' · 잰 적 없음') if (not has or not nhas) else ''))
         k = int(args.get('--lanes')) if isinstance(args.get('--lanes'), str) and args.get('--lanes').isdigit() else 3
         lanes = [0.0] * max(1, k)
-        for s in sorted(bs + ns, reverse=True):
-            lanes[lanes.index(min(lanes))] += s
+        for x in sorted(bs + ns, reverse=True):
+            lanes[lanes.index(min(lanes))] += x
         # 옛 줄: say('== plan · 하네스 %d · 바탕에서 돌 것 %d · 새 판에서 돌 것 %d' % (len(rows), nb, nn))
         say('== plan · 하네스 %d · 바탕에서 돌 것 %d(last_sec 합 %.1f 분) · 새 판에서 돌 것 %d(%.1f 분)%s · 무리 %d 면 벽시계 ≈ %.1f 분' % (
             len(rows), nb, sum(bs) / 60, nn, sum(ns) / 60, (' · 잰 적 없음 %d(시간 셈 밖)' % len(unk)) if unk else '', k, max(lanes) / 60))
+        # ★ C — 실행기 하나(차례로 · 무리 1) 어림과 덩어리(compare 가 돌기 전에 같은 셈을 한다 · 잰 적 없는 하네스 = 600 초로 셈)
+        items = plan_items('compare', app, rows, bctx, nctx, bool(args.get('--fresh')))
+        tot = sum(x for _, x in items)
+        if tot > CHUNK_OVER:
+            est = dict(items)
+            chs = chunk_split(items)
+            say('== 실행기 하나(차례로) 어림 %.1f 분 > %d 분 → 덩어리 %d(≤ %d 분): %s' % (tot / 60, CHUNK_OVER // 60, len(chs), CHUNK_MAX // 60,
+                ' · '.join('%d) %d 하네스 %.0f 분' % (i + 1, len(ch), sum(est[n] for n in ch) / 60) for i, ch in enumerate(chs))))
+        else:
+            say('== 실행기 하나(차례로) 어림 %.1f 분 ≤ %d 분 → 덩어리 없이 한 번에' % (tot / 60, CHUNK_OVER // 60))
     finally:
         bctx.drop()
         nctx.drop()
@@ -1333,33 +1702,60 @@ def cmd_plan(args, pos):
 
 def cmd_compare(args, pos):
     app = pos[0]
+    fresh = bool(args.get('--fresh'))
+    if fresh and not why_of(args):
+        return refuse('--fresh')   # ★ A
+    if args.get('--all') and not why_of(args):
+        return refuse('--all')     # ★ B — 전체를 손으로 = --all --why
+    if affected_range(args) is None:
+        return 2
+    chunk = args.get('--_chunk') if isinstance(args.get('--_chunk'), str) else ''
     c = census_load()
     scope = lst(args.get('--scope'))
-    rows = rows_for(c, app, scope, lst(args.get('--only')))
-    if not rows:
+    rows0 = rows_for(c, app, scope, lst(args.get('--only')))
+    if not rows0:
         raise SystemExit('돌릴 하네스 0')
-    lf = lock()
-    vendor_check()   # ★ _task_qa_fix1 A-5 — pdf.js 사본(없음 · 깨짐이면 받아 채움 · 둘 다 없으면 이 줄이 실행 첫 줄 경고)
-    pa_sweep()   # ★ env_clean B-2
     bctx = ctx_from(args, 'base')
     nctx = ctx_from(args)
     bctx.mode = nctx.mode = arg_mode(args)
-    runid = time.strftime('%Y%m%d-%H%M') + '_compare'
-    say('== compare %s · 하네스 %d · 바탕 %s · 새 판 %s (%s) · 범위 %s · 모드 %s' % (app, len(rows), bctx.head[:7], nctx.head[:7], nctx.root or '분리 워크트리', scope or '전체',
-                                                                  nctx.mode or ('regress(jo 기본)' if app in MODE_APPS else '없음')))
+    rows, pline, pinfo = pick_rows(args, app, rows0, bctx, nctx)
+    say(pline)   # ★ B — 첫 줄 = 고른 까닭(공용 층이면 전체 · 아니면 건드린 하네스 · smoke 하나)
+    lf = lock()   # 잠금 먼저 — 다른 사슬이 도는데 상태 파일을 덮지 않게
     t0 = time.time()
     rep = []
     try:
+        st = (state_load(app) or {}) if chunk else state_begin('compare', app, args, rows, bctx, nctx)
+        if not chunk:
+            say('== 끝 어림: ' + eta_write(app, st))   # ★ D
+        vendor_check()   # ★ _task_qa_fix1 A-5 — pdf.js 사본(없음 · 깨짐이면 받아 채움 · 둘 다 없으면 이 줄이 실행 첫 줄 경고)
+        pa_sweep()   # ★ env_clean B-2
+        runid = time.strftime('%Y%m%d-%H%M') + '_compare'
+        say('== compare %s%s · 하네스 %d/%d · 바탕 %s · 새 판 %s (%s) · 범위 %s · 모드 %s%s' % (app, (' 덩어리 ' + chunk) if chunk else '', len(rows), len(rows0), bctx.head[:7], nctx.head[:7],
+                                                                      nctx.root or '분리 워크트리', scope or '전체',
+                                                                      nctx.mode or ('regress(jo 기본)' if app in MODE_APPS else '없음'),
+                                                                      (' · 다시(--fresh · 까닭: %s)' % why_of(args)) if fresh else ' · 저장본 있으면 안 돎(기본)'))
+        if not chunk and st.get('chunked'):
+            rc = run_chunks('compare', app, args, st, bctx, nctx)   # ★ C
+            if rc:
+                return rc
+            names = [rname(r) for r in rows]
+            c = census_load()
+            byn = {rname(r): r for r in c['rows']}
+            rows = [byn[n] for n in names if n in byn]
+            st = state_load(app) or st
+        fin = st.get('finished') or {}
         for r in rows:
+            name = rname(r)
             if r.get('skip'):
-                rep.append({'name': rname(r), 'skip': r['skip']})
-                say('%s %-26s 건넘(%s)' % (time.strftime('%H:%M:%S'), rname(r), r['skip']))
+                rep.append({'name': name, 'skip': r['skip']})
+                say('%s %-26s 건넘(%s)' % (time.strftime('%H:%M:%S'), name, r['skip']))
                 continue
+            use = (not fresh) or (name in fin)   # ★ A — 저장본 씀(기본) · --fresh 면 이 실행에서 끝난 것만
             bk, _ = key_of(r, app, bctx)
-            base = load_rec(app, bk)
+            base = load_rec(app, bk) if use else None
             bsec = 0
             if base is None:
-                base = run_one(r, app, bctx, c, note='compare 바탕')
+                base = run_one(r, app, bctx, c, note='compare 바탕' + ((' · 다시: ' + why_of(args)) if fresh else ''))
                 census_save(c)
                 bsec = base.get('sec', 0)
                 say(line_of(base) + ' [바탕]')
@@ -1372,23 +1768,36 @@ def cmd_compare(args, pos):
             nsec = 0
             if nk0 == bk:
                 new = base
-                say('%s %-26s 새 판 입력 = 바탕 입력(열쇠 %s) — 안 돎' % (time.strftime('%H:%M:%S'), rname(r), nk0))
+                say('%s %-26s 새 판 입력 = 바탕 입력(열쇠 %s) — 안 돎' % (time.strftime('%H:%M:%S'), name, nk0))
             else:
-                new = load_rec(app, nk) if args.get('--reuse') else None
+                # 옛 줄: new = load_rec(app, nk) if args.get('--reuse') else None
+                new = load_rec(app, nk) if use else None   # ★ A — 새 판 저장본도 기본으로 씀(옛 --reuse)
                 if new is None:
-                    new = run_one(r, app, nctx, c, note='compare 새 판', snap=sp)
+                    new = run_one(r, app, nctx, c, note='compare 새 판' + ((' · 다시: ' + why_of(args)) if fresh else ''), snap=sp)
                     census_save(c)
                     nsec = new.get('sec', 0)
                     say(line_of(new) + ' [새 판]')
+                else:
+                    say('%s %-26s 새 판 저장본 그대로(열쇠 %s)' % (time.strftime('%H:%M:%S'), name, nk))
             if base.get('skip') or new.get('skip'):
-                rep.append({'name': rname(r), 'skip': base.get('skip') or new.get('skip')})
+                rep.append({'name': name, 'skip': base.get('skip') or new.get('skip')})
+                state_mark(app, name, {'sec': bsec + nsec})
                 continue
             cl = classify(base['items'], new['items'])
             fl = []
             if not args.get('--no-flaky') and (cl['새 FAIL'] or cl['FAIL 값 바뀜']) and new is not base:
-                again = run_one(r, app, nctx, c, label='again', note='흔들림 확인', snap=sp)
-                say(line_of(again) + ' [한 번 더]')
-                nsec += again.get('sec', 0)
+                again = load_rec(app, new.get('key', nk), 'again') if use else None
+                if again is not None and (again.get('when') or '') < (new.get('when') or ''):
+                    again = None   # 이 새 판 결과보다 앞선 「한 번 더」는 안 씀
+                if again is None:
+                    again = run_one(r, app, nctx, c, label='again', note='흔들림 확인', snap=sp)
+                    say(line_of(again) + ' [한 번 더]')
+                    nsec += again.get('sec', 0)
+                else:
+                    say('%s %-26s 한 번 더 저장본 그대로(%s)' % (time.strftime('%H:%M:%S'), name, again.get('when')))
+                if chunk:   # 덩어리 하위 프로세스는 「한 번 더」를 돌려 저장만 — 흔들림 가르기 · _qa_flaky.json 적기는 마무리(부른 실행기)가 한 번
+                    state_mark(app, name, {'sec': bsec + nsec, 'key': new.get('key')})
+                    continue
                 A = {x['id']: x for x in again['items']}
                 for cat in ('새 FAIL', 'FAIL 값 바뀜'):
                     keep = []
@@ -1400,19 +1809,25 @@ def cmd_compare(args, pos):
                         else:
                             keep.append((b, n))
                     cl[cat] = keep
-            rep.append({'name': rname(r), 'file': r['file'], 'bkey': bk, 'nkey': new.get('key'), 'bsec': bsec, 'nsec': nsec, 'cl': cl, 'fl': fl,
+            rep.append({'name': name, 'file': r['file'], 'bkey': bk, 'nkey': new.get('key'), 'bsec': bsec, 'nsec': nsec, 'cl': cl, 'fl': fl,
                         'same_key': new is base})
+            line = state_mark(app, name, {'sec': bsec + nsec, 'key': new.get('key')})   # ★ D — 하네스마다 끝 어림
+            if line and not chunk:
+                say('   ' + line)
         _hcache_save()
     finally:
         bctx.drop()
         nctx.drop()
         pa_end()   # ★ env_clean B-1 · B-5
         out_trim(app)
-        try:
-            os.remove(lf)
-        except Exception:
-            pass
-    return report(app, runid, rep, bctx, nctx, scope, time.time() - t0)
+        unlock(lf)
+    if chunk:
+        say('== 덩어리 %s 끝 · 하네스 %d · %d초' % (chunk, len(rep), time.time() - t0))
+        return 0
+    rc = report(app, runid, rep, bctx, nctx, scope, time.time() - t0, extra={'pick': pline, 'fresh': fresh, 'why': why_of(args), 'mode': pinfo.get('mode'),
+                                                                             'full': pinfo.get('full'), 'chunks': len(st.get('chunks') or []) if st.get('chunked') else 0})
+    say('== ' + state_end(app, st, None))
+    return rc
 
 
 def fmt_pair(b, n):
@@ -1421,8 +1836,14 @@ def fmt_pair(b, n):
     return '바탕 %s %s\n        새 판 %s %s' % ((b or {}).get('st', '-'), bv[:400], (n or {}).get('st', '-'), nv[:400])
 
 
-def report(app, runid, rep, bctx, nctx, scope, sec):
-    L = ['== compare %s · 바탕 %s · 새 판 %s · 범위 %s · %d초' % (app, bctx.head[:7], nctx.head[:7], ','.join(scope) if scope else '전체', sec), '']
+def report(app, runid, rep, bctx, nctx, scope, sec, extra=None):
+    extra = extra or {}
+    L = ['== compare %s · 바탕 %s · 새 판 %s · 범위 %s · %d초' % (app, bctx.head[:7], nctx.head[:7], ','.join(scope) if scope else '전체', sec)]
+    if extra.get('pick'):
+        L.append(extra['pick'])   # ★ _task_qa_bigguard B — 고른 까닭
+    if extra.get('fresh'):
+        L.append('== 다시(--fresh) 까닭: %s' % extra.get('why'))   # ★ A — 까닭은 실행 기록에
+    L.append('')
     tot = {k: 0 for k in ('새 FAIL', 'FAIL 값 바뀜', '원래 FAIL', '새 PASS', '사라진 항목', '새 항목', '바탕 측정 바뀜')}
     nfl = 0
     L.append('하네스별 — 새 FAIL · FAIL 값 바뀜 · 원래 FAIL · 새 PASS · 사라진 · 새 항목 · 흔들림 · 바탕 돎(초) · 새 판 돎(초)')
@@ -1460,6 +1881,7 @@ def report(app, runid, rep, bctx, nctx, scope, sec):
     p = os.path.join(RESD, app, '_runs', runid + '.txt')
     nwrite(p, txt) if NR else _w(p, txt)
     man = {'run': runid, 'app': app, 'base': bctx.head, 'new': nctx.head, 'scope': scope, 'sec': round(sec), 'tot': tot, 'flaky': nfl,
+           'pick': extra.get('pick', ''), 'pick_mode': extra.get('mode'), 'fresh': bool(extra.get('fresh')), 'why': extra.get('why', ''), 'chunks': extra.get('chunks', 0),
            'rows': [{'name': x['name'], 'skip': x.get('skip', ''), 'bkey': x.get('bkey'), 'nkey': x.get('nkey'), 'bsec': x.get('bsec'), 'nsec': x.get('nsec'),
                      'n': {k: len(v) for k, v in x['cl'].items() if k != '같음'} if x.get('cl') else {},
                      'ids': {k: [(n or b)['id'] for b, n in v] for k, v in x['cl'].items() if k not in ('같음', '원래 FAIL')} if x.get('cl') else {},
