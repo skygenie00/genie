@@ -1998,17 +1998,27 @@ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/p
 
 /* ---------------- IndexedDB ---------------- */
 let db;
+/* ★ dbready(2026-10-10 · 사용자 08:4x 「고쳐」) — db 가 열리기 전에 온 get·put·del·keys·all 은 시동 약속 DBREADY 하나를 기다렸다가 지금 길로 간다(dbw 한 벌).
+   까닭 = 웹킷(아이폰·아이패드) 페이지 오류 「undefined is not an object (evaluating 'db.transaction')」 — 생물 정리판 snIndex 1.5 초 타이머(SN_ON)가
+   웹킷의 db 열림(헤드리스 실측 2 초 안팎)을 앞질러 tx 가 던졌다(그 읽기 · 쓰기는 사라졌다).
+   푸는 때 = 시동(아래 「시작」)이 db 를 열고 통을 다 읽고 첫 그림을 그린 뒤(dbGo) — db 열림 바로 뒤가 아니다:
+   시동이 읽기 전에 온 쓰기(서랍 손잡이 → put('kv','set',SET) 의 기본값 등)가 저장된 값을 먼저 덮으면 SET.renum 을 잃어 물리 번호 재배열이 다시 돈다 ·
+   시동 전 동기화가 덜 읽은 통으로 돈다 — 그래서 시동이 다 읽은 뒤에 보낸다. db 가 이미 열렸으면 기다림 없이 지금 길 그대로.
+   시동이 멎으면(열기 실패 포함) 거절 — 읽기(get·keys·all)는 지금처럼 오류로 끝나고(빈 값이 「읽었다」가 되어 늦게 읽는 통 가드를 지나지 않게) · 쓰기(put·del)는 0.
+   옛 꼴: get·put·del·keys·all 이 곧바로 new Promise(…tx(…)…) — 그 몸은 글자 그대로 dbw(()=>…) 안에 있다 */
+let dbGo,dbNo;const DBREADY=new Promise((ok,no)=>{dbGo=ok;dbNo=no});DBREADY.catch(()=>{});
+function dbw(f,w){return db?f():DBREADY.then(f,w?()=>0:undefined)}
 function open(){return new Promise((ok,no)=>{
   const r=indexedDB.open(CUR.DB,1);
   r.onupgradeneeded=e=>{const d=e.target.result;
     d.createObjectStore('pdf');d.createObjectStore('ink');d.createObjectStore('kv');};
   r.onsuccess=e=>{db=e.target.result;ok()};r.onerror=()=>no(r.error);});}
 function tx(s,m){return db.transaction(s,m).objectStore(s)}
-function get(s,k){return new Promise(ok=>{const r=tx(s,'readonly').get(k);r.onsuccess=()=>ok(r.result);r.onerror=()=>ok(null)})}
-function put(s,k,v){return new Promise(ok=>{const r=tx(s,'readwrite').put(v,k);r.onsuccess=()=>ok(1);r.onerror=()=>ok(0)})}
-function del(s,k){return new Promise(ok=>{const r=tx(s,'readwrite').delete(k);r.onsuccess=()=>ok(1);r.onerror=()=>ok(0)})}
-function keys(s){return new Promise(ok=>{const r=tx(s,'readonly').getAllKeys();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>ok([])})}
-function all(s){return new Promise(ok=>{const r=tx(s,'readonly').getAll();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>ok([])})}
+function get(s,k){return dbw(()=>new Promise(ok=>{const r=tx(s,'readonly').get(k);r.onsuccess=()=>ok(r.result);r.onerror=()=>ok(null)}))}
+function put(s,k,v){return dbw(()=>new Promise(ok=>{const r=tx(s,'readwrite').put(v,k);r.onsuccess=()=>ok(1);r.onerror=()=>ok(0)}),1)}
+function del(s,k){return dbw(()=>new Promise(ok=>{const r=tx(s,'readwrite').delete(k);r.onsuccess=()=>ok(1);r.onerror=()=>ok(0)}),1)}
+function keys(s){return dbw(()=>new Promise(ok=>{const r=tx(s,'readonly').getAllKeys();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>ok([])}))}
+function all(s){return dbw(()=>new Promise(ok=>{const r=tx(s,'readonly').getAll();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>ok([])}))}
 
 /* ---------------- 상태 ---------------- */
 /* ═══ ★ uid_unify A-1 (2026-10-04 · gigu/_task_jagwa_uid_unify.md) — 카드 층(지학·생물)의 기록 열쇠 = uid ═══
@@ -5476,10 +5486,11 @@ function recBoot(){
   if(CARD_LAYER)await loadEarthData();
   if(CARD_LAYER)try{await jgMigrate('boot')}catch(e){console.warn('jgMigrate',e)}   /* ★ jagwa_uid — 데이터 선 뒤 · 도장·올림 전 */
   draw();
+  dbGo();   /* ★ dbready — 통을 다 읽고 첫 그림까지 그렸다 → db 열리기 전에 와서 기다리던 get·put·del·keys·all 을 푼다(위 「IndexedDB」 절) */
   try{recBoot()}catch(e){console.warn('기록 동기화 시동 실패',e)}
   await ensureFiles();
   if(!CARD_LAYER&&!Object.keys(HAVE).length)setTimeout(()=>$('#btnSet').click(),400);
-})();
+})().catch(e=>{dbNo(e);throw e});   /* ★ dbready — 시동이 멎으면(열기 실패 포함) 기다리던 부름을 끝낸다(걸려 멈추지 않게) · 오류는 지금처럼 그대로 던진다 */
 /* ═══════ 쌍둥이 미리보기 필기 · 떠 있는 창 · 손필기 암기카드 (2026-09-04 · _task_phys_twin_drawer.md) ═══════ */
 /* §1 미리보기 캔버스 위에 그 문항의 필기(ink)를 그린다 — paintInk 와 같은 규칙(옛 층 0.30 · 형광 0.32 · 굵기 (hl?9:w)*scale/2 · HIDEOLD 존중) · 읽기 전용 */
 async function peekInk(no,cv,R){
