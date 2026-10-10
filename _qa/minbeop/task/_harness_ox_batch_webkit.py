@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 r"""_task_cloud_batch_1010 로컬 몫 — 민법OX 한 판(클라우드 ① 76a3a03 · 합친 후보 56836b8)의 WebKit 칸 관문(앱은 고치지 않는다)
 
-  python _harness_ox_batch_webkit.py [--mode gate|regress|smoke] [--new <앱>] [--base <판 = 7299ec3>] [--base2 <판 = 56836b8>] [--only W1,W2,…] [--dev 폰,iPad]
-                                     [--w5-eng webkit,chromium] [--spd <studyplandata>] [--data-rev <판 = 3065ca0 · '' = 작업트리>] [--rec-rev <판 = ddc6ea7>] [--tw <Tailwind 사본>]
-                                     [--res <결과>] [--shots <그림>]
+  python _harness_ox_batch_webkit.py [--mode gate|regress|smoke] [--new <앱>] [--base <판 = 7299ec3>] [--base2 <판 = 56836b8>] [--base3 <판 = d48e4a8>] [--only W1,W2,…]
+                                     [--dev 폰,iPad] [--w5-eng webkit,chromium] [--w6-eng webkit,chromium] [--spd <studyplandata>] [--data-rev <판 = 3065ca0 · '' = 작업트리>]
+                                     [--rec-rev <판 = ddc6ea7>] [--tw <Tailwind 사본>] [--res <결과>] [--shots <그림>]
 
   NEW  = genie 작업트리 minbeop/index.html(GENIE_ROOT) · BASE = 바탕 7299ec3(헛잣대 — gate 만 · W1 · W2 · W4 · W5 FAIL 이어야)
   BASE2 = 56836b8(합친 후보 · ox_fix 앞 판 — gate 만 · W5 만) — W5 ② iPad 헛잣대는 이 판이다: 7299ec3 은 띠가 없어 「잘못 열림 0」 이라
           그 칸의 헛잣대가 못 된다(10/10 [채팅] 03:50 ㉠ · 56836b8 = iPad ✎ +3px 톡에 아랫줄 칸 열림) · W5 ① 「겉모양 무변」 도 이 판과 그림으로 맞댐
+  BASE3 = d48e4a8(main · ox_fix 들어간 판 · ox_del 앞 — gate 만 · W6 만) — 「× 연결 끊기」 가 되묻지 않고 바로 끊는 판 = W6 헛잣대(사용자 10/10 08:3x 「더하기」)
   엔진 = WebKit 하나(playwright webkit = iPhone · iPad Safari 엔진) — 클라우드 관문 셋(_harness_ox_search_all · _queue_compare · _ggref_phone)은 Chromium 만이라 못 잰 칸
   기기 = 폰 390×844 · iPad 820×1180(has_touch · is_mobile(되면) · DPR 2)
   누름 = touchscreen.tap(**진짜 터치**) · 굴림 = 마우스 휠(되면 · 굴림 통 보이는 가운데) 아니면 그 통 scrollTop 을 끝으로 + scroll 사건
@@ -35,6 +36,10 @@ r"""_task_cloud_batch_1010 로컬 몫 — 민법OX 한 판(클라우드 ① 76a3
        ② ✎ 누를 자리 — 줄마다 elementsFromPoint 맨 위로 찔러 잰 폭 ≥ 36 · 높이 폰 ≥ 36 · iPad ≥ min(36, 그 줄 높이) − 2(줄 사이만큼) ·
           ✎ 끼리 침범 0(그 줄 안 · 가운데 ±18 겨냥 자리를 다른 ✎ 가 맨 위로 덮은 데 0) · ✎ 가운데 ±3px(위 · 아래) 진짜 톡 = 그 줄 고치기 칸 ·
           헛잣대 = 폰 7299ec3(띠 없음 = 18) · iPad 56836b8(띠 겹침 = +3px 톡 아랫줄 칸)
+    W6 「× 연결 끊기」 되묻기(ox_del · WebKit + Chromium · --w6-eng · 진짜 confirm 창 = OL.INIT 의 「늘 참」 을 걷고 page.on('dialog') 로 받음) —
+       × 진짜 톡 = 되묻기 한 번(confirm · 글에 「연결을 끊」 · 그 문항 ID) · 「취소」 = 연결 그대로(refOf · 상자 · stampAll 도장 무변) ·
+       「확인」 = 끊김(refOf · 상자 없음 · 도장/묘비 · syncRecords 뒤 원격 기록.json 에서 빠짐) · iPad 한 줄 꼴 본문 ✎ 위 빗누름(맨 위 = ×) = 되묻기만 · 안 끊김 ·
+       쓰임 창(useWin → useUnlink) 끊기 = 되묻기 없이 끊김(무변) · 헛잣대 = d48e4a8(되묻기 없이 바로 끊김)
     W0 페이지 오류 0(pageerror · error · unhandledrejection — 칸마다 띄운 쪽 모두)
     (INFO) WK 환경 — 웹킷 판 · is_mobile · (pointer:coarse) · (hover:none) · maxTouchPoints · Tailwind 실림 · 휠 굴림 됨
   모드(QC): gate = 바탕도 띄워 헛잣대 · regress = 새 판만 · smoke = 새 판 폰 W1(모바일) · W5 만
@@ -84,6 +89,12 @@ if GATE:
     QC.sub('git:show-app')
     SRC['B2'] = OL.app_src(BASE2)
 VERS5 = VERS + (('B2',) if GATE else ())
+BASE3 = ARG('--base3', 'd48e4a8')        # W6 만 — ox_del 앞 판(main · ox_fix 들어간 판) = 「× 연결 끊기」 되묻지 않고 바로 끊음
+W6ENG = [x.strip() for x in (ARG('--w6-eng', '') or '').split(',') if x.strip()] or ['webkit', 'chromium']
+if GATE:
+    QC.sub('git:show-app')
+    SRC['B3'] = OL.app_src(BASE3)
+VERS6 = ('NEW', 'B3') if GATE else ('NEW',)
 TERM, TERM2 = '대위', '상계'
 LW_CANDS = ['대리', '취소', '소멸시효', '채권자', '계약', '무효', '등기', '점유']   # 클라우드 S2 와 같은 후보 · 100 넘는 첫 말(이어 붙음까지)
 GG_CANDS = ['취소', '등기', '변제', '보증', '손해', '효력', '무효', '채권자']       # 클라우드 S3 와 같은 후보 · 100 넘고 300 안쪽 첫 말
@@ -95,7 +106,7 @@ EXP2 = {'n': 17, 'red': ['Q5517', 'Q5681', 'Q0705', 'Q0684'], 'red_lab': ['3(2)'
         'always': ['Q5517'], 'fixed': ['Q5681', 'Q0705', 'Q0684'], 'neither': 'Q0695'}
 RES, LINES, STEP, BOOTS = [], [], {}, []
 ENV = {'mobile': None}
-ERRS = {v: [] for v in VERS5}
+ERRS = {v: [] for v in VERS5 + (('B3',) if GATE else ())}
 T0 = time.time()
 
 
@@ -107,14 +118,15 @@ def _s(v):
     return v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, default=str)
 
 
-def R(g, name, new, base=None, d='', yard=True, b2=None, ycol='BASE'):
-    """ycol = 헛잣대 열(BASE = 7299ec3 · B2 = 56836b8) — 헛잣대 셈은 그 열의 판정으로"""
-    yv = b2 if ycol == 'B2' else base
-    RES.append(dict(g=g, name=name, new=new, base=base, b2=b2, ycol=ycol, ybase=yv, yard=yard, d=d))
+def R(g, name, new, base=None, d='', yard=True, b2=None, ycol='BASE', b3=None):
+    """ycol = 헛잣대 열(BASE = 7299ec3 · B2 = 56836b8 · B3 = d48e4a8) — 헛잣대 셈은 그 열의 판정으로"""
+    yv = b2 if ycol == 'B2' else (b3 if ycol == 'B3' else base)
+    RES.append(dict(g=g, name=name, new=new, base=base, b2=b2, b3=b3, ycol=ycol, ybase=yv, yard=yard, d=d))
     tag = 'INFO' if new is None else ('PASS' if new else 'FAIL')
     yb = '' if base is None else (' · 바탕 ' + ((('PASS(바탕도 같음)' if ycol == 'BASE' else 'PASS') if yard else 'PASS(바탕 = 기준)') if base else 'FAIL'))
-    if b2 is not None:
-        yb += ' · %s %s' % (BASE2, ('PASS' + ('(헛잣대 · 같음)' if ycol == 'B2' and yard else '')) if b2 else ('FAIL' + ('(헛잣대)' if ycol == 'B2' else '')))
+    for bv, lab, col in ((b2, BASE2, 'B2'), (b3, BASE3, 'B3')):
+        if bv is not None:
+            yb += ' · %s %s' % (lab, ('PASS' + ('(헛잣대 · 같음)' if ycol == col and yard else '')) if bv else ('FAIL' + ('(헛잣대)' if ycol == col else '')))
     ln = '%s | %s · %s%s | %s' % (tag, g, name, yb, _s(d)[:1800])
     LINES.append(ln)
     print(ln, flush=True)
@@ -190,8 +202,8 @@ ERR_JS = "(()=>(window.__err||[]).slice(0,8))()"
 class WL:
     """웹킷 기기 하나 = 문맥 하나 — OL 서버 · 가짜 원격 · INIT · __H 그대로 · 톡 = touchscreen.tap(진짜 터치) · 굴림 = 휠(되면) 아니면 scrollTop"""
 
-    def __init__(self, br, tag, dev, label, remote=None, wait_sync=True, mobile=True):
-        QC.launch('new' if tag == 'NEW' else 'base')   # BASE(7299ec3) · B2(56836b8) = 바탕 띄움
+    def __init__(self, br, tag, dev, label, remote=None, wait_sync=True, mobile=True, pre_init=''):
+        QC.launch('new' if tag == 'NEW' else 'base')   # BASE(7299ec3) · B2(56836b8) · B3(d48e4a8) = 바탕 띄움
         self.tag, self.dev, self.label = tag, dev, label
         kw = dict(viewport={'width': dev['W'], 'height': dev['H']}, device_scale_factor=2, has_touch=True)
         if mobile and ENV['mobile'] is not False:
@@ -207,6 +219,8 @@ class WL:
         self.mobile = bool(kw.get('is_mobile'))
         self.remote = remote or DRemote()
         self.ctx.route(re.compile(r'^https?://'), route_wk(self.remote))   # http(s) 만 — blob: · data: 는 route 밖
+        if pre_init:   # OL.INIT 앞 — 예: 진짜 confirm 을 잡아 둠(OL.INIT 이 confirm = 늘 참 으로 갈아 끼우기 전)
+            self.ctx.add_init_script(pre_init)
         self.ctx.add_init_script(OL.INIT)
         self.pg = self.ctx.new_page()
         self.pg.set_default_timeout(120000)
@@ -867,6 +881,127 @@ def w5(br, v, dev, eng='webkit'):
     return (ok, d), (ok_h, dh), pngs
 
 
+# ---------- W6 — 「× 연결 끊기」 되묻기(사용자 10/10 08:3x 「더하기」 · ox_del) ----------
+NAT_CONFIRM = "window.__natConfirm = window.confirm;"   # OL.INIT 가 confirm 을 「늘 참」 으로 갈기 전 진짜 것을 잡아 둠 → 칸에서 되돌려 진짜 되묻기 창(page.on('dialog'))
+LINKED_JS = r"""([o,u])=>refOf(o,'geunge').map(x=>String(x).toUpperCase()).includes(String(u).toUpperCase())"""
+XBTN_JS = r"""(box)=>{const b=document.querySelector(box);if(!b||!__H.vis(b))return null;const x=[...b.querySelectorAll('button')].find(z=>/연결 끊기/.test(z.textContent));return x?__W.safe(x):null}"""
+STAMP_JS = r"""(o)=>{try{stampAll()}catch(e){}const u=JSON.parse(localStorage.getItem('ox_sync_u')||'{}'),g=JSON.parse(localStorage.getItem('ox_sync_gone')||'{}'),k='ox_q_reflinks|'+o;
+ return {u:u[k]||null,gone:g[k]||null,now:Date.now()}}"""   # 앱 도장(stampAll · 10 초마다 도는 것)을 지금 한 번 — 그 칸 도장 · 묘비
+MISS_JS = r"""(box)=>{const b=document.querySelector(box);if(!b)return null;
+ const ed=[...b.querySelectorAll('button[onclick^="ggRefEdit("]')].find(x=>__H.vis(x)&&/고치기/.test(x.textContent));const xb=[...b.querySelectorAll('button')].find(x=>/연결 끊기/.test(x.textContent));
+ if(!ed||!xb)return null;ed.scrollIntoView({block:'center'});const r=ed.getBoundingClientRect(),cx=r.left+r.width/2,xr=xb.getBoundingClientRect();
+ for(let dy=1;dy<=24;dy++){const y=r.top-dy,a=document.elementsFromPoint(cx,y)[0];if(a&&(a===xb||xb.contains(a)))return {x:cx,y:y,dy:dy,gap:+(r.top-xr.bottom).toFixed(1)}}
+ return {none:true,gap:+(r.top-xr.bottom).toFixed(1)}}"""   # 본문 ✎ 위로 1~24px 찔러 맨 위가 「× 연결 끊기」 인 첫 점(iPad 한 줄 꼴 = 빗누름 자리 · 폰 = 없음)
+CLOSE_WINS = r"""(()=>{document.querySelectorAll('[id^="oxwin-"]').forEach(w=>{try{oxWinClose(w.id.slice(6))}catch(e){}if(w.isConnected)w.remove()})})()"""
+
+
+def w6(br, v, dev, eng='webkit'):
+    """× 진짜 톡 → 되묻기 창(진짜 confirm · page.on('dialog') · 한 번 · 글) · 「취소」 = 연결 그대로(기록 · 화면 · 도장) · 「확인」 = 끊김(기록 · 화면 · 도장 · 원격 PUT) ·
+    (iPad) 본문 ✎ 위 빗누름 = 되묻기만 · 쓰임 창(useWin → useUnlink) 끊기 = 되묻기 없이 끊김"""
+    p = WL(br, v, dev, 'W6' + ('' if eng == 'webkit' else '·' + eng), pre_init=NAT_CONFIRM)
+    DLG, ANS = [], {'v': False}
+
+    def on_dlg(dg):
+        DLG.append({'종류': dg.type, '글': dg.message})
+        try:
+            dg.accept() if ANS['v'] else dg.dismiss()
+        except Exception:
+            pass
+    p.pg.on('dialog', on_dlg)
+    out = {}
+    try:
+        p.ev("()=>{if(window.__natConfirm)window.confirm=window.__natConfirm}")   # OL.INIT 의 「늘 참」 걷음 — 진짜 되묻기 창
+        picks = p.ev(PICK_JS)
+        if len(picks) < 2:
+            return False, {'까닭': '연결한 근거 표본 둘 못 고름', '표본': picks}
+        _n, _g, uid, u = picks[0]
+        _n2, _g2, uid2, u2 = picks[1]
+        out['표본(톡 · 쓰임 창)'] = [[uid, u], [uid2, u2]]
+        p.ev("(o)=>{openQPopup(o)}", uid)
+        QC.until(p.pg, "(o)=>!!document.getElementById('oxwin-q-'+o)", 5000, 'W6 문항 팝업', arg=uid)
+        p.wait(500, 'W6 팝업 그림 가라앉힘')
+        at = p.ev("(s)=>__W.safe(document.querySelector(s))", '#qp-gg-refchip-%s-%s' % (uid, u))
+        if at and at.get('on'):
+            p.tap(at)
+        else:
+            p.ev("([o,u])=>{ggRefToggle(o,u,'qp-')}", [uid, u])
+        box = '#qp-refgg-box-%s-%s' % (uid, u)
+        QC.until(p.pg, "(s)=>{const b=document.querySelector(s);return !!b&&__H.vis(b)}", 3000, 'W6 연결 상자', arg=box)
+        st0 = p.ev(STAMP_JS, uid)
+        # A — × 진짜 톡 · 「취소」
+        ANS['v'] = False
+        n0 = len(DLG)
+        xa = p.ev(XBTN_JS, box)
+        if xa and xa.get('on'):
+            p.tap(xa)
+        p.wait(500, 'W6 × 톡 뒤')
+        stA = p.ev(STAMP_JS, uid)
+        out['A × 톡 · 취소'] = {'톡 자리': bool(xa and xa.get('on')), '되묻기 수': len(DLG) - n0, '글': [d['글'] for d in DLG[n0:]][:2], '종류': [d['종류'] for d in DLG[n0:]][:2],
+                              '연결 그대로(기록)': p.ev(LINKED_JS, [uid, u]), '상자 그대로(화면)': p.ev("(s)=>{const b=document.querySelector(s);return !!b&&__H.vis(b)}", box),
+                              '도장 무변': [stA['u'], stA['gone']] == [st0['u'], st0['gone']]}
+        # B — (iPad 한 줄 꼴) 본문 ✎ 조금 위 빗누름 · 「취소」
+        mp = p.ev(MISS_JS, box)
+        if mp and not mp.get('none'):
+            ANS['v'] = False
+            n0 = len(DLG)
+            p.tap_xy(mp['x'], mp['y'])
+            p.wait(500, 'W6 빗누름 톡 뒤')
+            out['B ✎ 위 빗누름 · 취소'] = {'점(✎ 위 px)': mp['dy'], '✎ ↔ × 틈(px)': mp['gap'], '되묻기 수': len(DLG) - n0, '연결 그대로(기록)': p.ev(LINKED_JS, [uid, u]),
+                                      '상자 그대로(화면)': p.ev("(s)=>{const b=document.querySelector(s);return !!b&&__H.vis(b)}", box)}
+        else:
+            out['B ✎ 위 빗누름 · 취소'] = {'없음(✎ 위 24px 안에 × 없음)': True, '✎ ↔ × 틈(px)': (mp or {}).get('gap')}
+        # C — × 진짜 톡 · 「확인」
+        ANS['v'] = True
+        n0 = len(DLG)
+        xc = p.ev(XBTN_JS, box)
+        if xc and xc.get('on'):
+            p.tap(xc)
+        p.wait(600, 'W6 × 톡 · 확인 뒤')
+        stC = p.ev(STAMP_JS, uid)
+        okst = bool((stC['u'] and stC['u'] >= st0['now']) or (stC['gone'] and stC['gone'] >= st0['now']))
+        p.ev("async()=>{try{await syncRecords(true)}catch(e){}}")
+        rb = p.remote.files.get('minbeop/기록.json')
+        rem = None
+        if rb:
+            try:
+                rd = json.loads(rb.decode('utf-8'))
+                rl = (rd.get('data') or {}).get('ox_q_reflinks') or {}
+                rl = json.loads(rl) if isinstance(rl, str) else rl
+                rem = str(u).upper() not in [str(x).upper() for x in ((rl.get(uid) or {}).get('geunge') or [])]
+            except Exception as e:
+                rem = '읽기 오류 ' + str(e)[:60]
+        out['C × 톡 · 확인'] = {'톡 자리': bool(xc and xc.get('on')), '되묻기 수': len(DLG) - n0, '끊김(기록)': not p.ev(LINKED_JS, [uid, u]),
+                              '상자 없음(화면)': not p.ev("(s)=>{const b=document.querySelector(s);return !!b&&__H.vis(b)}", box),
+                              '도장 · 묘비(동기화 칸)': okst, '원격 기록에서 빠짐(syncRecords)': rem}
+        # D — 쓰임 창 켜고 끄기 길(useUnlink) — 되묻지 않음
+        p.ev(CLOSE_WINS)
+        p.wait(300, 'W6 창 닫음')
+        ANS['v'] = False
+        n0 = len(DLG)
+        p.ev("([t,m])=>{useWin('geunge',t,m)}", [u2, uid2])
+        QC.until(p.pg, "(t)=>!!document.getElementById('oxwin-use-geunge-'+t)", 4000, 'W6 쓰임 창', arg=u2)
+        p.wait(400, 'W6 쓰임 창 그림')
+        ua = p.ev("(t)=>{const w=document.getElementById('oxwin-use-geunge-'+t);const b=w?w.querySelector('button[onclick^=\"useUnlink(\"]'):null;return b?__W.safe(b):null}", u2)
+        if ua and ua.get('on'):
+            p.tap(ua)
+        p.wait(500, 'W6 쓰임 창 끊기 톡 뒤')
+        out['D 쓰임 창 끊기(useUnlink)'] = {'톡 자리': bool(ua and ua.get('on')), '되묻기 수': len(DLG) - n0, '끊김(기록)': not p.ev(LINKED_JS, [uid2, u2])}
+        errs = p.errors()
+        out['오류'] = errs[:3]
+    finally:
+        p.close()
+    phone = dev['name'] == '폰'
+    a, b_, c, d4 = out.get('A × 톡 · 취소') or {}, out.get('B ✎ 위 빗누름 · 취소') or {}, out.get('C × 톡 · 확인') or {}, out.get('D 쓰임 창 끊기(useUnlink)') or {}
+    u_ = (out.get('표본(톡 · 쓰임 창)') or [[None, '']])[0][1]
+    msg_ok = len(a.get('글') or []) == 1 and '연결을 끊' in a['글'][0] and str(u_) in a['글'][0] and (a.get('종류') or [''])[0] == 'confirm'
+    b_ok = (('없음(✎ 위 24px 안에 × 없음)' in b_) if phone else False) or (b_.get('되묻기 수') == 1 and b_.get('연결 그대로(기록)') is True and b_.get('상자 그대로(화면)') is True)
+    ok = (a.get('톡 자리') and a.get('되묻기 수') == 1 and msg_ok and a.get('연결 그대로(기록)') is True and a.get('상자 그대로(화면)') is True and a.get('도장 무변') is True
+          and b_ok and c.get('톡 자리') and c.get('되묻기 수') == 1 and c.get('끊김(기록)') is True and c.get('상자 없음(화면)') is True and c.get('도장 · 묘비(동기화 칸)') is True
+          and c.get('원격 기록에서 빠짐(syncRecords)') is True and d4.get('톡 자리') and d4.get('되묻기 수') == 0 and d4.get('끊김(기록)') is True and not out.get('오류'))
+    out['잣대'] = '× 톡 = 되묻기 한 번(confirm · 글에 「연결을 끊」 · 그 문항 ID) · 취소 = 그대로 · 확인 = 끊김 · ' + ('폰 = 빗누름 자리 없음' if phone else 'iPad = ✎ 위 빗누름 = 되묻기만') + ' · 쓰임 창 = 되묻기 없이 끊김'
+    return bool(ok), out
+
+
 # ---------- 차례 ----------
 def main():
     os.makedirs(TMPD, exist_ok=True)
@@ -930,6 +1065,25 @@ def main():
         k = 'W5·%s' % devn
         STEP[k] = round(STEP.get(k, 0) + (time.time() - t1) / 60, 2)
 
+    W6N = '「× 연결 끊기」 되묻기 — × 톡 = 되묻기 한 번(글) · 취소 = 그대로(기록 · 화면 · 도장) · 확인 = 끊김(기록 · 화면 · 도장 · 원격) · iPad ✎ 위 빗누름 = 되묻기만 · 쓰임 창 끊기 = 되묻기 없이'
+
+    def run_w6(br, eng, dev):
+        """W6 — 새 판 · d48e4a8(gate · 헛잣대 = 되묻기 없이 바로 끊김) 을 한 엔진 · 한 기기로"""
+        t1 = time.time()
+        res = {}
+        for v in VERS6:
+            try:
+                res[v] = w6(br, v, dev, eng)
+            except Exception as e:
+                res[v] = (False, {'하네스 오류': str(e)[:300], 'tb': traceback.format_exc()[-700:]})
+        devn = dev['name'] + ('' if eng == 'webkit' else '·' + {'chromium': 'Chromium'}.get(eng, eng))
+        dd = {k: x[1] for k, x in res.items()}
+        if 'B3' in res:
+            dd['헛잣대 열'] = '%s(main · ox_fix 들어간 판) — 「× 연결 끊기」 가 되묻지 않고 바로 끊음' % BASE3
+        R('W6', '%s %s' % (devn, W6N), res['NEW'][0], None, dd, yard=True, b3=(res['B3'][0] if 'B3' in res else None), ycol='B3')
+        k = 'W6·%s' % devn
+        STEP[k] = round(STEP.get(k, 0) + (time.time() - t1) / 60, 2)
+
     with sync_playwright() as pw:
         br = pw.webkit.launch()
         ENV['webkit'] = br.version
@@ -951,12 +1105,18 @@ def main():
                 STEP[k] = round(STEP.get(k, 0) + (time.time() - t1) / 60, 2)
             if want('W5') and 'webkit' in W5ENG:
                 run_w5(br, 'webkit', dev)
+            if want('W6') and 'webkit' in W6ENG:
+                run_w6(br, 'webkit', dev)
         br.close()
-        if want('W5') and 'chromium' in W5ENG:   # 같은 W5 코드를 Chromium(coarse · has_touch · is_mobile)으로 — 웹킷을 닫은 뒤(브라우저 하나씩)
+        c5, c6 = want('W5') and 'chromium' in W5ENG, want('W6') and 'chromium' in W6ENG and not QC.SMOKE
+        if c5 or c6:   # 같은 W5 · W6 코드를 Chromium(coarse · has_touch · is_mobile)으로 — 웹킷을 닫은 뒤(브라우저 하나씩)
             brc = pw.chromium.launch()
             ENV['chromium'] = brc.version
             for dev in DEVS:
-                run_w5(brc, 'chromium', dev)
+                if c5:
+                    run_w5(brc, 'chromium', dev)
+                if c6:
+                    run_w6(brc, 'chromium', dev)
             brc.close()
     bN = (not ERRS['BASE']) if 'BASE' in ERRS else None
     R('W0', '페이지 오류 0(칸마다 띄운 쪽 모두 · pageerror · error · unhandledrejection)', not ERRS['NEW'], bN,
