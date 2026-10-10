@@ -12,7 +12,7 @@ r"""_task_jagwa_ansz_1010 §B 관문 [클라우드] — 자과 물리 답풀 그
     A 답풀(13번 · 그림 1)  A1 PC 그림 누름 = 새 창 · 이동 0 · 창 그대로  A2 Ctrl+휠 위 두 번 = 폭 > 1.15 배 · 칸 안 굴림  A3 두 번 누름 = 처음 폭
                            A4 폰 그림 톡 = 이동 0  A5 폰 두 손가락 벌리기 = 그림만 > 1.5 배 · visualViewport.scale = 1
     C 시계  C1 PC 가던 시계 0.8 초 누름 = 0:00 부터 계속  C2 짧게 = 멈춤  C3 멈춘 시계 길게 = 0:00 멈춘 채  C4 누른 채 20px 끌기 = 안 바뀜(바탕도 같음)
-            C5 스페이스 = 켜고 끄기 그대로(바탕도 같음)  C6 폰 손가락 0.8 초 = 0:00 부터 계속  C7 폰 톡 = 멈춤
+            C5 스페이스 = 시계 그대로(안 먹음 · 사용자 9/20 「문항 화면 단축키는 일부러 죽임」 · 바탕도 같음 · nospace 10/11 에 「먹음」 → 「안 먹음」)  C6 폰 손가락 0.8 초 = 0:00 부터 계속  C7 폰 톡 = 멈춤
     D 서랍(1번 줄)  D1 .ndm data-s = 기록 h[i].s(m:ss)  D2 ::after content = 그 값  D3 ::after 7px  D4 .ndm 글자 한 자  D5 줄 높이 바탕 + 2px 안
     G 근거(108번 PA2001 · 블록 U:^01ad5c 를 G3.push)  G1 넣은 직후 = 「(1) 탄성충돌」(옛 그대로)  G2 근거 줄 누름 = #gguw.g3sel · 고를 줄 ≥ 3
             G3 블록 둘째 · 셋째 줄 누름 = g.sl 2 · 근거 <br> 1 · 「운동량 보존」 있음 · 「탄성충돌」 없음(서랍 작은 창 g3Pop 도)  G4 다시 누름 = 뺌  G5 다 빼면 옛 그대로  G6 폰 손가락 G1~G5
@@ -101,7 +101,8 @@ PINCH_JS = r"""([x,y,d0,d1,n])=>{const el=document.elementFromPoint(x,y),box=el&
 
 
 def close_sheets(p):
-    p.ev("(()=>{document.querySelectorAll('.sheet').forEach(s=>s.remove())})()")
+    # nospace(10/11) — 늘 있는 숨은 창 #book · #bkq(class="sheet hide")는 남김: 지우면 단축키 가늠쇠(querySelector('.sheet'))가 풀려 실제 앱에 없는 상태가 됨(C5)
+    p.ev("(()=>{document.querySelectorAll('.sheet').forEach(s=>{if(s.id!=='book'&&s.id!=='bkq')s.remove()})})()")
     p.wait(200)
 
 
@@ -335,7 +336,7 @@ def j_C(o):
     r['C4'] = (a.get('run') and b.get('txt') != '0:00' and b.get('sec', 0) >= a.get('sec', 0),   # 안 바뀜 = 0:00 으로 안 감(손 뗀 자리가 시계 안이면 짧은 누름 = 멈춤은 옛 그대로)
                {'전': [a.get('txt'), a.get('run')], '뒤': [b.get('txt'), b.get('run')]})
     c5 = (o.get('C5') or {}).get('켜짐 차례(전 · 스페이스 · 스페이스)') or []
-    r['C5'] = (len(c5) == 3 and c5[0] != c5[1] and c5[1] != c5[2], {'켜짐 차례': c5})
+    r['C5'] = (len(c5) == 3 and c5[0] == c5[1] == c5[2], {'켜짐 차례': c5})   # nospace(10/11) — 스페이스 = 안 먹음(옛 기대 = 켜고 끄기)
     C6 = o.get('C6') or {}
     t0, t1, t2 = C6.get('전') or {}, C6.get('뗀 직후') or {}, C6.get('1.3 초 뒤') or {}
     r['C6'] = (t0.get('run') and t0.get('sec', 0) >= 2 and t1.get('txt') == '0:00' and t1.get('run') and t2.get('run') and 1 <= t2.get('sec', 0) <= 3,
@@ -390,7 +391,7 @@ def j_S(o, base_s):
 NAMES = {'A1': 'PC 그림 누름 = 새 창 · 이동 0 · 창 그대로', 'A2': 'PC Ctrl+휠 위 두 번 = 그림 폭 > 1.15 배 · 칸 안 굴림', 'A3': 'PC 두 번 누름 = 처음 폭',
          'A4': '폰 384 그림 톡 = 이동 0', 'A5': '폰 두 손가락 벌리기 = 그림만 > 1.5 배 · visualViewport.scale = 1',
          'C1': 'PC 가던 시계 0.8 초 누름 = 0:00 부터 계속', 'C2': 'PC 짧게 누름 = 멈춤', 'C3': 'PC 멈춘 시계 길게 = 0:00 멈춘 채',
-         'C4': 'PC 누른 채 20px 끌기 = 안 바뀜', 'C5': '스페이스 = 켜고 끄기 그대로', 'C6': '폰 손가락 0.8 초 = 0:00 부터 계속', 'C7': '폰 톡 = 멈춤',
+         'C4': 'PC 누른 채 20px 끌기 = 안 바뀜', 'C5': '스페이스 = 시계 그대로(안 먹음 · 사용자 9/20 단축키 일부러 죽임)', 'C6': '폰 손가락 0.8 초 = 0:00 부터 계속', 'C7': '폰 톡 = 멈춤',
          'D1': '서랍 1번 줄 .ndm data-s = 기록 h[i].s(m:ss)', 'D2': '::after content = 그 값', 'D3': '::after 7px', 'D4': '.ndm 글자 한 자(textContent 그대로)',
          'D5': '줄 높이 = 바탕 + 2px 안', 'G1': '근거 넣은 직후 = 「(1) 탄성충돌」(옛 그대로)', 'G2': '근거 줄 누름 = #gguw.g3sel · 고를 줄 ≥ 3',
          'G3': '블록 둘째 · 셋째 줄 누름 = g.sl 2 · <br> 1 · 「운동량 보존」 있음 · 「탄성충돌」 없음 · 서랍 작은 창도', 'G4': '셋째 다시 누름 = 뺌(g.sl 1)',

@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 r"""_task_jagwa_recfix_1010 §B 관문 [클라우드] — 자과 물리 회독 기록: 지운 기록 되살아남 · 남는 「N회독」 줄 · OMR 뒤 마크 둘 · 창 머리 번호 · 시계 끌기
 
-  python _harness_jagwa_recfix.py [--new <앱>] [--base <판 = df8402a>] [--eng chromium,webkit] [--only R1,R2,R3,R4,R5,S]
+  python _harness_jagwa_recfix.py [--new <앱>] [--base <판 = df8402a | 6a1580d>] [--eng chromium,webkit] [--only R1,R2,R3,R4,R5,S]
                                   [--spd <studyplandata>] [--notes <notes>] [--vendor <cdnjs 사본>] [--res <결과>]
 
   NEW = genie 작업트리 jagwa/index.html · BASE = 바탕 main df8402a(헛잣대 — 새 칸은 바탕 FAIL · 「옛 그대로」 칸은 바탕도 같음)
+        · --base 6a1580d(_task_jagwa_nospace_1011 헛잣대 = 물리 스페이스를 되살린 판) = 새 칸은 R5e 하나 · 나머지는 그 판에 이미 있어 「바탕도 같음」
   엔진 = Chromium · WebKit(새 판 · 바탕 둘 다) · PC 1100×800 마우스 · 폰 384×844 hasTouch(Chromium = CDP 손가락 · WebKit = 시계에 합성 touch 포인터 — 손가락 포인터는 그 요소에 붙잡힘)
   데이터 = studyplandata 현행 route 사본(JG) · 원격 = 가짜 GitHub(메모리 · PUT 밖으로 안 나감) · 시험 기록 = 기록 없는 물리 문항에 지어낸 회독(개인 기록 값은 출력에 안 옮김 · D11)
   관문:
@@ -13,8 +14,10 @@ r"""_task_jagwa_recfix_1010 §B 관문 [클라우드] — 자과 물리 회독 �
        → 원격을 옛 3 으로 되돌리고 다시 동기화해도 그대로 · R2d 다 지움 = 묘비(옛 그대로 · 바탕도 같음)
     R3 빈 층 — 기록 2 · 층 0~2(층 1 · 2 빈) → 둘째 ✕ → 창 다시 열기 = 빈 「N회독」 줄 0 · #tLayer 빈 층 0(지금 층 빼고) · R3b 층 1 에 획이 있으면 그 줄 남음 · 획 그대로
     R4 OMR 뒤 마크 — 물리 문항 OMR 고름 → △ = 기록 +1 만(마지막 = Q · 고른 답 그대로) → 다시 열어 △ = +1 · R4b 카드 층(지학) 자동 마크 → 마크 = 하나(옛 그대로)
-    R5 시계 — R5a PC 마우스 가던 시계 누른 채 40px 밖으로 끌어 밖에서 뗌(0.3 초) · R5b 1 초 → 0:00 아님 · 가던 채 · 스페이스 = 멈춤 · 스페이스 = 계속
-            R5c 폰 손가락 같은 몸짓(0.3 초 · 1 초) · R5d 제자리 길게 0.8 초 = 0:00(ansz 그대로 · 바탕도 같음)
+    R5 시계 — R5a PC 마우스 가던 시계 누른 채 40px 밖으로 끌어 밖에서 뗌(0.3 초) · R5b 1 초 → 0:00 아님 · 가던 채 · 다음 시계 톡(마우스 click) = 멈춤 · 또 톡 = 계속
+            R5c 폰 손가락 같은 몸짓(0.3 초 · 1 초 · 톡 = 손가락 톡) · R5d 제자리 길게 0.8 초 = 0:00(ansz 그대로 · 바탕도 같음)
+            R5e 물리 문항 창 스페이스 = 시계 그대로(가던 · 멈춘 둘 다 · 포커스 뗀 뒤 = 앱 단축키 길) — 사용자 9/20 「문항 화면 단축키는 일부러 죽임」(_task_jagwa_nospace_1011)
+            R5x 참고(판정 밖) — 시계를 마우스로 누른 뒤(그 단추에 포커스) 스페이스 = 브라우저 기본 단추 누름이 멈춤/계속을 바꾸나
     S 겉 무변 — 기록 있는 문항(1번)의 기록 창(문항 창 밖에서 엶) 줄 수 · 마크 · 시간 글 = 바탕(실제 기록이라 줄 수 + md5 지문만 적음 · D11)
   모드 — gate = 바탕 띄움 · regress · smoke = 새 판만(S = 기준 스냅샷 · smoke = R5)
 """
@@ -90,6 +93,9 @@ LAYER_JS = r"""()=>({opts:[...document.querySelectorAll('#tLayer option')].map(o
 TM_JS = r"""()=>{const t=document.getElementById('tm'),r=t.getBoundingClientRect();return {txt:t.textContent,run:!!TM.iv,sec:TM.sec,cx:r.left+r.width/2,cy:r.top+r.height/2,w:r.width,h:r.height}}"""
 TM_TOUCH = r"""([ty,x,y])=>{const t=document.getElementById('tm');   // 손가락 포인터 = 누른 요소에 붙잡힘(암묵 capture) — 합성 이벤트도 그 요소로
   t.dispatchEvent(new PointerEvent(ty,{bubbles:true,cancelable:true,composed:true,pointerId:9,pointerType:'touch',isPrimary:true,clientX:x,clientY:y,button:0,buttons:ty==='pointerup'?0:1}));return true}"""
+
+
+TM_PHASE = r"""(()=>{tmStop();tmRun();return TM.sec})()"""   # 가던 시계 1 초 틱 자리를 지금으로 — 초는 그대로(멈춤 → 계속)
 
 
 def close_all(p):
@@ -239,14 +245,32 @@ def run(br, eng, ver):
     return o
 
 
-def clock_state(p):
+def clock_state(p, touch=False):
+    """뗀 뒤 상태 → 다음 시계 톡(PC = 마우스 click · 폰 = 손가락 톡) = 멈춤 · 또 톡 = 계속 — nospace(10/11): 스페이스는 일부러 죽인 단축키라 톡으로 잼"""
     s0 = p.ev(TM_JS)
-    p.ev("(()=>{const a=document.activeElement;if(a&&a.blur)a.blur()})()")
-    p.pg.keyboard.press('Space'); p.wait(350)
+    tap = (lambda: p.tap(s0['cx'], s0['cy'], wait=450)) if touch else (lambda: p.click(s0['cx'], s0['cy'], wait=450))
+    tap()
     s1 = p.ev(TM_JS)
-    p.pg.keyboard.press('Space'); p.wait(350)
+    tap()
     s2 = p.ev(TM_JS)
-    return {'뗀 뒤': [s0['txt'], s0['run'], s0['sec']], '스페이스': s1['run'], '또 스페이스': s2['run']}
+    return {'뗀 뒤': [s0['txt'], s0['run'], s0['sec']], '톡': s1['run'], '또 톡': s2['run']}
+
+
+def space_state(p):
+    """R5e — 포커스 뗀 뒤 스페이스: 가던 시계 · 멈춘 시계(톡으로 멈춤) 둘 다 그대로여야 · R5x 참고 = 시계를 누른 채 포커스 둔 뒤 스페이스"""
+    blur = "(()=>{const a=document.activeElement;if(a&&a.blur)a.blur()})()"
+    p.ev("(()=>{if(!TM.iv)tmRun()})()"); p.wait(1300)
+    p.ev(blur)
+    a0 = p.ev(TM_JS); p.pg.keyboard.press('Space'); p.wait(450); a1 = p.ev(TM_JS)
+    p.click(a1['cx'], a1['cy'], wait=450)
+    p.ev(blur)
+    b0 = p.ev(TM_JS); p.pg.keyboard.press('Space'); p.wait(450); b1 = p.ev(TM_JS)
+    p.click(b1['cx'], b1['cy'], wait=450)                       # 다시 계속(톡) — 이때 시계 단추에 포커스가 남음(엔진마다)
+    x0 = p.ev(TM_JS); f = p.ev("(()=>document.activeElement&&document.activeElement.id||'')()")
+    p.pg.keyboard.press('Space'); p.wait(450); x1 = p.ev(TM_JS)
+    p.ev(blur)
+    p.ev("(()=>{if(!TM.iv)tmRun()})()")
+    return {'가던': [a0['run'], a1['run']], '멈춘': [b0['run'], b1['run']], '포커스 뒤(참고)': {'포커스': f, '전': x0['run'], '스페이스 뒤': x1['run']}}
 
 
 def clock_pc(p):
@@ -260,8 +284,10 @@ def clock_pc(p):
             p.pg.mouse.move(t0['cx'], t0['cy'] + 8 * i); p.wait(20)
         p.wait(max(0, int(hold * 1000) - 100))
         p.pg.mouse.up(); p.wait(700)
-        out['%.1f' % hold] = dict(clock_state(p), 전=[t0['txt'], t0['run']])
+        out['%.1f' % hold] = dict(clock_state(p), 전=[t0['txt'], t0['run'], t0['sec']])
+    out['스페이스'] = space_state(p)
     p.ev("(()=>{if(!TM.iv)tmRun()})()"); p.wait(2300)
+    p.ev(TM_PHASE); p.wait(1600)   # 1 초 틱 자리를 다시 맞춤 — 누름(0.55 초에 0:00) ~ 읽기(뗀 뒤) 사이에 틱이 끼면 0:01 로 읽힘(앱 무관 · 잼 자리)
     t0 = p.ev(TM_JS)
     p.pg.mouse.move(t0['cx'], t0['cy']); p.pg.mouse.down(); p.wait(800); p.pg.mouse.up(); p.wait(60)
     t1 = p.ev(TM_JS); p.wait(1100); t2 = p.ev(TM_JS)
@@ -290,8 +316,9 @@ def clock_ph(q, eng):
             q.wait(max(0, int(hold * 1000) - 100))
             q.ev(TM_TOUCH, ['pointerup', x, y + 40])
         q.wait(700)
-        out['%.1f' % hold] = dict(clock_state(q), 전=[t0['txt'], t0['run']])
+        out['%.1f' % hold] = dict(clock_state(q, touch=True), 전=[t0['txt'], t0['run'], t0['sec']])
     q.ev("(()=>{if(!TM.iv)tmRun()})()"); q.wait(2300)
+    q.ev(TM_PHASE); q.wait(1600)
     t0 = q.ev(TM_JS)
     q.long_press(t0['cx'], t0['cy'], ms=800, wait=60)
     t1 = q.ev(TM_JS); q.wait(1100); t2 = q.ev(TM_JS)
@@ -303,7 +330,9 @@ def clock_ph(q, eng):
 def j_clock(x):
     x = x or {}
     s = x.get('뗀 뒤') or [None, None, 0]
-    return bool(x) and s[0] != '0:00' and s[1] is True and x.get('스페이스') is False and x.get('또 스페이스') is True
+    pre = x.get('전') or [None, None, 0]
+    # 0:00 으로 안 감 = 뗀 뒤 초 ≥ 끌기 전 초(옛 판은 끄는 동안 0:00 → 읽을 때 1 초 틱이 끼어 0:01 일 수 있어 「0:00 아님」 만으론 못 가름)
+    return bool(x) and s[0] != '0:00' and (s[2] or 0) >= (pre[2] if len(pre) > 2 and pre[2] is not None else 0) and s[1] is True and x.get('톡') is False and x.get('또 톡') is True
 
 
 def judge(o, base_s):
@@ -355,6 +384,8 @@ def judge(o, base_s):
         lp = [pc.get('제자리 0.8') or {}, ph.get('제자리 0.8') or {}]
         r['R5d'] = (all(z.get('뗀 직후', [None])[0] == '0:00' and z.get('뗀 직후', [0, 0])[1] is True and (z.get('1.1 초 뒤') or [0, 0])[1] is True for z in lp),
                     {'PC': lp[0], '폰': lp[1]})
+        sp = pc.get('스페이스') or {}
+        r['R5e'] = (sp.get('가던') == [True, True] and sp.get('멈춘') == [False, False], {'가던(전 · 스페이스 뒤)': sp.get('가던'), '멈춘(전 · 스페이스 뒤)': sp.get('멈춘')})
     if want('S'):
         r['S'] = (bool(o.get('S')) and o.get('S') == base_s, {'새 판': o.get('S'), '바탕': base_s})
     return r
@@ -364,10 +395,19 @@ NAMES = {'R1': '기록 창 머리 = 「번 회독」 0 · 「지난 필기 같�
          'R2b': '가운데 ✕ → 같음', 'R2c': '마크 X→O 바꿈 → 같음(바꾼 마크가 이김)', 'R2d': '다 지움 = 묘비(옛 그대로)',
          'R3': '둘째 ✕(층 1 · 2 빈) → 다시 연 기록 창 = 빈 「N회독」 줄 0 · #tLayer 빈 층 0(지금 층 빼고)', 'R3b': '층 1 에 획 → 그 줄 남음 · 획 그대로',
          'R4': '물리 OMR 고름 → △ = 기록 +1 만(마지막 Q · 고른 답 그대로) → 다시 열어 △ = +1', 'R4b': '카드 층(지학) 자동 마크 → △ = 하나(옛 그대로)',
-         'R5a': 'PC 마우스 가던 시계 누른 채 40px 밖으로 끌어 밖에서 뗌 0.3 초 → 0:00 아님 · 가던 채 · 스페이스 멈춤 · 또 계속',
-         'R5b': 'PC 같은 몸짓 1 초 → 같음', 'R5c': '폰 손가락 같은 몸짓(0.3 초 · 1 초) → 같음', 'R5d': '제자리 길게 0.8 초 = 0:00 · 가던 채(PC · 폰 · ansz 그대로)',
+         'R5a': 'PC 마우스 가던 시계 누른 채 40px 밖으로 끌어 밖에서 뗌 0.3 초 → 0:00 아님 · 가던 채 · 다음 시계 톡 멈춤 · 또 톡 계속',
+         'R5b': 'PC 같은 몸짓 1 초 → 같음', 'R5c': '폰 손가락 같은 몸짓(0.3 초 · 1 초 · 손가락 톡) → 같음', 'R5d': '제자리 길게 0.8 초 = 0:00 · 가던 채(PC · 폰 · ansz 그대로)',
+         'R5e': '물리 문항 창 스페이스 = 시계 그대로(가던 · 멈춘 둘 다 · 사용자 9/20 단축키 일부러 죽임)',
          'S': '기록 있는 문항(1번)의 기록 창 줄 수 · 마크 · 시간 글 = 바탕'}
-INVAR = {'R2d', 'R4b', 'R5d', 'S'}   # 옛 그대로여야 하는 칸 — 헛잣대 셈 밖(R5c 는 아래에서 바탕 결과로 가름)
+INVAR = {'R2d', 'R4b', 'R5d', 'R5e', 'S'}   # 옛 그대로여야 하는 칸 — 헛잣대 셈 밖(R5c 는 아래에서 바탕 결과로 가름 · R5e = 6a1580d 앞 판은 스페이스가 안 먹음)
+NEWC = {'6a1580d': {'R5e'}}   # 바탕마다 「새 칸」(바탕 FAIL 이어야) — nospace(10/11): 6a1580d = 물리 스페이스를 되살린 판 · 그 밖 칸은 그 판에 이미 있음
+
+
+def is_inv(c, b):
+    nc = next((v for k, v in NEWC.items() if BASE.startswith(k)), None)
+    if nc is not None:
+        return c not in nc
+    return c in INVAR or (c == 'R5c' and b is not None and b[0])   # 손가락은 옛 판도 포인터가 붙잡혀 이미 됨 — 바탕도 같으면 「바탕도 같음」
 
 
 def main():
@@ -405,9 +445,13 @@ def main():
             if n is None:
                 continue
             b = jb.get(c) if GATE else None
-            inv = c in INVAR or (c == 'R5c' and b is not None and b[0])   # 손가락은 옛 판도 포인터가 붙잡혀 이미 됨 — 바탕도 같으면 「바탕도 같음」
+            inv = is_inv(c, b)
             R('%s[%s]' % (c, eng), NAMES[c], bool(n[0]), None if b is None else bool(b[0]),
               {'새 판': n[1], '바탕': b[1]} if b is not None else n[1], yard=not inv)
+        if want('R5'):   # R5x 참고(판정 밖) — 시계 단추에 포커스가 남은 채 스페이스 = 브라우저 기본 단추 누름(앱 단축키 아님)
+            gx = lambda v: (((res.get((v, eng)) or {}).get('R5pc') or {}).get('스페이스') or {}).get('포커스 뒤(참고)')
+            R('R5x[%s]' % eng, '참고(판정 밖) — 시계를 마우스로 누른 뒤(그 단추 포커스) 스페이스 = 브라우저 기본 단추 누름', None, None,
+              {'새 판': gx('NEW'), '바탕': gx('BASE')} if GATE else gx('NEW'))
     newp = [x for x in RES if x['new'] is not None]
     yard = [x for x in RES if x['base'] is not None and x['yard']]
     R('B9', '합 — 새 판 PASS %d · FAIL %d · 헛잣대(새 칸 바탕 FAIL) %d/%d · %.1f 분' % (
