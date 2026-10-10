@@ -13,3 +13,7 @@
 6. main 에 `_qa/cloud_batch/` 를 다시 만들지 않는다.
 
 공개 저장소다 — 개인 기록 · 교재 글 · 결과 값에 사용자 기록이 섞인 것은 넣지 않는다(D11 · 시험 자료는 지어낸 값).
+
+## WebKit(사용자 10/10 14:39 · 19:41 「클라우드에서도 WebKit」)
+
+세션을 시작하거나 지시서를 받으면 맨 먼저 WebKit 을 세운다 — `ls -d /opt/pw-browsers/webkit-* ~/.cache/ms-playwright/webkit-*` → `~/.cache` 에만 있으면 `/opt/pw-browsers/` 에 같은 이름으로 `ln -s` · 둘 다 없으면 `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers python3 -m playwright install --with-deps webkit` → `p.webkit.launch()` 로 잰 결과(버전 또는 오류 첫 줄)를 그 판 커밋 글 첫 줄에. 서면 터치·아이패드 관문은 WebKit 으로도 돈다(로컬로 넘기지 않음).
