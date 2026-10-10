@@ -329,7 +329,8 @@ def main():
                             if QC.GATE:
                                 d = same_head(nm['head'], bm['head'] if bm else None)
                             else:
-                                d = [] if QC.same('%s.head@%s' % (g, tg), nm['head']) else ['스냅샷과 다름']
+                                # 옛 줄: d = [] if QC.same('%s.head@%s' % (g, tg), nm['head']) else ['스냅샷과 다름']
+                                d = same_head(nm['head'], QC.base('%s.head@%s' % (g, tg), nm['head']))   # 10/10 10:4x — 관문과 같은 잣대(겉 상자 ±0.05px · 시계 #tm 글 뺌) · 옛 줄 = 스냅샷 통째 같음이라 시계 글(0:33 ↔ 0:38)만으로 거짓 FAIL(jgfA 156f109 t4 일곱)
                             extra = {}
                             if g in ('t6', 't7') and bm:
                                 hn, hb2 = hits_of(nm), hits_of(bm)
