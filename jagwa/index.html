@@ -11935,6 +11935,17 @@ if(typeof bkImportObj==='function'){const _b0=bkImportObj;bkImportObj=async func
 #g3Pop .g3pf .v{flex:1;min-width:0;word-break:break-word}
 #g3Pop .g3pf .it+.it{margin-top:2px}
 #g3Pop .none{color:var(--muted)}
+#g3Pop .g3ptop{display:flex;align-items:flex-start;gap:6px;padding:1px 0 5px}
+#g3Pop .g3ptop .pvfig{flex:1;min-width:0;max-width:none;margin-top:0}
+#g3Pop .g3ptop .sp{flex:1}
+#g3Pop .g3lks{flex:none;display:flex;gap:4px}
+#g3Pop .g3lk{font:inherit;font-size:11px;font-weight:800;line-height:1.3;padding:1px 6px;border:1px solid var(--line);border-radius:10px;background:var(--card);cursor:pointer}
+#g3Pop .g3lk.f{color:#1e3a8a}#g3Pop .g3lk.b{color:#4d7c0f}
+#g3Pop .g3lk.on{background:var(--subj-soft)}
+#g3Pop .g3lkl{border-top:1px solid rgba(128,128,128,.15);padding:2px 0 4px}
+#g3Pop .g3lkr{padding:3px 2px;cursor:pointer;font-size:11.5px;border-radius:4px}
+#g3Pop .g3lkr:hover{background:var(--subj-soft)}
+#g3Pop .g3lkr b{color:var(--blue);margin-right:5px;font-weight:700}
 #g3Pop .fix{display:inline-block;margin-top:5px;padding:2px 9px;border:1px solid var(--line);border-radius:6px;font-size:11.5px;color:var(--blue);background:var(--card)}
 #navdr .ndhead .ndlvb{font:inherit;font-size:11px;font-weight:800;padding:2px 4px;border:0;background:none;color:var(--muted);line-height:0;display:inline-flex;align-items:center;cursor:pointer;border-radius:5px}
 #navdr .ndhead .ndlvb:hover{color:var(--ink)}
@@ -12584,6 +12595,14 @@ function g3PopClose(){var p=document.getElementById('g3Pop');if(p)p.remove();
   document.querySelectorAll('#ndList .ndox.on').forEach(function(x){x.classList.remove('on')});G3P=null;
   document.removeEventListener('pointerdown',g3PopOut,true)}
 function g3PopOut(e){var p=document.getElementById('g3Pop');if(p&&!p.contains(e.target)&&!(e.target.closest&&e.target.closest('.ndox')))g3PopClose()}
+function g3PopTop(no,r){if(HASBOOK)return '';   /* 사용자 10/11 11:29 — 물리 서랍 O X 누른 작은 창 맨 위 = 그 문제 그림(목록 미리보기 그림 그대로) · 오른쪽 = 연결 🔗N(이 문제가 이은 것) · ↩N(이 문제를 이은 것) 숫자만 · 누르면 목록 */
+  var fig=(typeof pvFigHTML==='function')?pvFigHTML(r):'', fw=(LK[no]||[]).map(Number).filter(function(x){return x!==no&&rec(x)}), bk=[];
+  for(var k in LK)if(+k!==no&&(LK[k]||[]).map(Number).indexOf(no)>=0&&rec(+k))bk.push(+k);
+  bk.sort(function(a,b){return a-b});
+  if(!fig&&!fw.length&&!bk.length)return '';
+  return '<div class="g3ptop">'+(fig||'<span class="sp"></span>')+'<span class="g3lks">'
+    +(fw.length?'<button type="button" class="g3lk f" data-n="'+fw.join(',')+'" title="이 문제가 연결한 문항">🔗'+fw.length+'</button>':'')
+    +(bk.length?'<button type="button" class="g3lk b" data-n="'+bk.join(',')+'" title="이 문제를 연결한 문항">↩'+bk.length+'</button>':'')+'</span></div>'}
 function g3PopToggle(no,ox){
   if(G3P===no){g3PopClose();return}
   g3PopClose(); try{ndPopClose()}catch(e){} G3P=no; ox.classList.add('on');
@@ -12592,7 +12611,7 @@ function g3PopToggle(no,ox){
   cq.forEach(function(c){by.c.push({__cq:c})});
   var p=document.createElement('div');p.id='g3Pop';
   /* 댓글 v29(사용자 19:59 「서랍에서 몇 번인지 다 보이니까 이 줄 없애」) — 머리 줄 「코드 · N번」 걷음 */
-  p.innerHTML=''
+  p.innerHTML=g3PopTop(no,r)
     /* 댓글 v3(사용자 14:18 「팝업에서 트리거·공식개념 같은 글자 없이」) — 칸 이름 없이 칸 차례(트리거 → 공식·개념 → 주의점)로 · 빈 칸은 안 세움 · 칸 사이 얇은 선 */
     +((list.length||cq.length)?G3F.filter(function(x){return by[x[0]].length}).map(function(x){var f=x[0];
       return '<div class="g3pf" data-f="'+f+'">'+by[f].map(function(g){
@@ -12602,14 +12621,20 @@ function g3PopToggle(no,ox){
           if(f==='c'&&g.ref){var b=g3Blk(g.ref);if(b){var nc=g3Users('c',g3Key(g)).length;return '<div class="it g3pc" data-g3pc="'+ea('c|'+uid+'|'+g.k)+'" data-sec="'+ea(g3SecName(b.sec))+'">'+g3CText(g,b)+(nc>=1?'<i class="g3pn" title="이 칸을 쓰는 문항 '+nc+'">'+nc+'</i>':'')+'</div>'}}
           return '<div class="it">'+ggMath(ggFlat(g))+'</div>'}).join('')+'</div>'}).join(''):'<div class="g3pf"><span class="none">근거 없음</span></div>')
     ;   /* 댓글 v5(사용자 14:42 「문제는 서랍에서 누르면 됨 · 열기 없애」) — 「열기」 걷음 */
-  p.onclick=function(e){e.stopPropagation();var go=e.target.closest('.g3pgo');if(go){var a=go.getAttribute('data-g3pc').split('|');g3PopClose();
+  p.onclick=function(e){e.stopPropagation();
+    var lkr=e.target.closest('.g3lkr');if(lkr){var tn=+lkr.dataset.no;g3PopClose();if(typeof twinPeek==='function')twinPeek(tn);return}   /* 10/11 — 연결 목록 줄 = 그 문항 팝업(연결 창 줄과 같은 길) */
+    var lkb=e.target.closest('.g3lk');if(lkb){var ol=p.querySelector('.g3lkl'),was=ol&&ol.__b===lkb;if(ol)ol.remove();p.querySelectorAll('.g3lk.on').forEach(function(x){x.classList.remove('on')});if(was)return;
+      var L=document.createElement('div');L.className='g3lkl';L.__b=lkb;lkb.classList.add('on');
+      L.innerHTML=lkb.dataset.n.split(',').map(Number).map(function(x){var q=rec(x);return q?'<div class="g3lkr" data-no="'+x+'"><b>'+esc(codeShow(q))+'</b>'+esc(titleOf(q))+'</div>':''}).join('');
+      p.querySelector('.g3ptop').after(L);return}
+    var go=e.target.closest('.g3pgo');if(go){var a=go.getAttribute('data-g3pc').split('|');g3PopClose();
       if(a[0]==='q')g3UseWinQ(a[1],a.slice(2).join('|'));else g3UseWin('c',a[1],a.slice(2).join('|'));return}
     var pn=e.target.closest('.g3pn');if(pn){var it0=pn.closest('.g3pc');if(it0){var a2=it0.getAttribute('data-g3pc').split('|');g3PopClose();   /* v50 — 작은 창 쓰인 수 누름 = 근거 줄 숫자와 같은 문항 목록 창 */
       if(a2[0]==='q')g3UseWinQ(a2[1],a2.slice(2).join('|'),{list:true});else g3UseWin('c',a2[1],a2.slice(2).join('|'),{list:true});return}}
     var it=e.target.closest('.g3pc'),old=p.querySelector('.g3ptip');if(old){var same=old.__it===it;old.remove();if(same)return}if(!it)return;
     var tp=document.createElement('div');tp.className='g3ptip';tp.__it=it;tp.innerHTML='<span class="t">'+esc(it.getAttribute('data-sec')||'')+'</span><button type="button" class="g3pgo" title="창으로" data-g3pc="'+ea(it.getAttribute('data-g3pc'))+'">&lt;&gt;</button>';
     it.appendChild(tp)};
-  document.body.appendChild(p);
+  document.body.appendChild(p);try{if(typeof pvWatch==='function')pvWatch(p)}catch(_){}   /* 10/11 — 그림은 목록과 같은 길(그려 둔 것 다시 씀 · 없으면 보일 때 그림) */
   var rr=ox.getBoundingClientRect(), dr=document.getElementById('navdr').getBoundingClientRect(), w=p.offsetWidth;
   p.style.left=Math.max(8,Math.min(dr.right+6,window.innerWidth-w-8))+'px';
   var top=(dr.right+6+w>window.innerWidth-8)?rr.bottom+4:rr.top-6;
