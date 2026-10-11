@@ -777,8 +777,11 @@ OPEN = r"""async no=>{await __K.open(no);return __K.phys()}"""
 DRAW = r"""async a=>{if(String(VNO)!==String(a.no))await __K.open(a.no);
   if(a.layer!==null&&a.layer!==undefined){let g=0;while(!(String(a.layer) in INK)&&g++<12){document.getElementById('tLayerAdd').click();await __K.sleep(60)}
     const s=document.getElementById('tLayer');s.value=String(a.layer);s.onchange({target:s})}
+  if(a.snap&&typeof itSnap==='function')itSnap();   /* ★ cardfit(10/11) §2 B-4 — 펜 획처럼 긋기 앞 스냅숏(↺ = 그 문항 창에서 한 일) · 옛 판엔 없음 */
   for(const st of a.strokes)(INK[LAYER]=INK[LAYER]||[]).push(JSON.parse(JSON.stringify(st)));
   paintInk();saveInk();await __K.sleep(a.wait||500);return __K.phys()}"""
+
+UNDO = r"""()=>{const t=document.getElementById('tTools');if(t)t.click();document.getElementById('tUndo').click();if(t&&typeof tlClose==='function')tlClose();return 1}"""   # ★ cardfit §2 B-1 — ↺ 은 ⋯ 메뉴 안(⋯ 먼저 · 옛 판 = 알약 ↺ 그대로)
 
 LAYER_SEL = r"""L=>{const s=document.getElementById('tLayer');s.value=String(L);s.onchange({target:s});return typeof LAYER!=='undefined'&&!CARD_LAYER?LAYER:QR}"""
 
@@ -1112,11 +1115,11 @@ def t_I4(W, A, B):
     A.ensure('phys')
     B.ensure('phys')
     b1 = ln(0.20, 0.20, 0.45, 0.24, c='#B03A2E')
-    B.ev(DRAW, {'no': no, 'layer': None, 'strokes': [b1]})
+    B.ev(DRAW, {'no': no, 'layer': None, 'strokes': [b1], 'snap': True})
     B.ink()
     A.ink()
     got1 = sig(b1) in [x[1] for x in mset(A.get(k))]
-    B.ev("()=>{document.getElementById('tUndo').click();return 1}")
+    B.ev(UNDO)
     B.wait(600)
     sb = B.ev("()=>__K.phys()")
     B.ink()
@@ -1595,15 +1598,19 @@ def t_I14e(W, A, B):
     av = A.get(k)
     ord_ok = [sig(x) for x in (av or {}).get('0', [])] == [sig(x) for x in drawn]
     A.ev(OPEN, no)
-    A.ev("()=>{document.getElementById('tUndo').click();return 1}")
+    snapu = A.ev("()=>typeof itSnap==='function'")   # ★ cardfit(10/11) §2 B-4 — ↺ = 그 문항 창에서 한 일(스냅숏) · 다른 기기에서 온 획은 「한 일」 아님 → A 가 이 창에서 마지막 획을 긋고 ↺(잣대 뜻 = 동기화 뒤 ↺ 이 마지막에 그은 획만 뺌 · 받은 차례 그대로)
+    if snapu:
+        a6 = ln(0.10, 0.46, 0.35, 0.46, c='#8A6D1B')
+        A.ev(DRAW, {'no': no, 'layer': 0, 'strokes': [a6], 'snap': True, 'wait': 350})
+    A.ev(UNDO)
     A.wait(600)
     A.ink()
     B.ink()
     av2, bv2 = A.get(k), B.get(k)
     sa, sb = [sig(x) for x in (av2 or {}).get('0', [])], [sig(x) for x in (bv2 or {}).get('0', [])]
-    want_ = [sig(x) for x in drawn[:4]]
+    want_ = [sig(x) for x in (drawn if snapu else drawn[:4])]
     ok = ord_ok and sa == want_ and sb == want_
-    return ok, {'A 받은 차례 = 그은 차례': ord_ok, 'A ↶ 뒤 = 앞 넷': sa == want_, 'B 같은 차례': sb == want_,
+    return ok, {'A 받은 차례 = 그은 차례': ord_ok, ('A 이 창 획 ↺ 뒤 = 받은 다섯(cardfit 스냅숏 되돌리기)' if snapu else 'A ↶ 뒤 = 앞 넷'): sa == want_, 'B 같은 차례': sb == want_,
                 'A 차례(색)': [s[0] for s in sa], '바람(색)': [s[0] for s in want_], 'id 차례 마지막 = 처음 그은 획': ids[order[0]] == max(ids)}
 
 

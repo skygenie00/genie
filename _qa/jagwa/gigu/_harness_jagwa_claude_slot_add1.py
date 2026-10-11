@@ -122,8 +122,9 @@ BODY_CL2 = r"""
      N('CL2 실측 아랫줄 보이는 차례',shown);
      if(CARD){
        T('CL2-1 ★보이는 차례가 다섯+Claude 다',
-         (JSON.stringify(shown)===JSON.stringify(ROW)||JSON.stringify(shown)===JSON.stringify(ROW.filter(i=>!/^tLayer/.test(i)))),shown);   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-04) — 시안 ⑪ 회독 고르개·👁·「+회독」 세 과목 다 숨김 → 보이는 차례 = 기록·🃏·Claude */
-       T('CL2-1 ★맨 오른쪽이 #tGpt 다',shown[shown.length-1]==='tGpt',shown.slice(-2));
+         (JSON.stringify(shown)===JSON.stringify(ROW)||JSON.stringify(shown)===JSON.stringify(ROW.filter(i=>!/^tLayer/.test(i)))
+          ||(!!document.getElementById('tTools')&&JSON.stringify(shown)===JSON.stringify(['tAns','mO','mQ','mX','mP','tHist','tCard','tGpt','tLink']))),shown);   /* ★ cardfit(10/11) §2 A-8 — 아랫줄 = 정답 O △ X P … 🃏 · Claude · 🔗(물리 꼴) */   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-04) — 시안 ⑪ 회독 고르개·👁·「+회독」 세 과목 다 숨김 → 보이는 차례 = 기록·🃏·Claude */
+       T('CL2-1 ★맨 오른쪽이 #tGpt 다',shown[shown.length-1]==='tGpt'||(!!document.getElementById('tTools')&&shown.slice(-2).join()==='tGpt,tLink'),shown.slice(-2));   /* ★ cardfit A-8 — 맨 오른쪽 🔗 · 그 앞 Claude */
        T('CL2-1 #tGpt 글자가 「Claude」다',txt(document.getElementById('tGpt'))==='Claude',
          txt(document.getElementById('tGpt')));
        /* DOM 차례도 같아야 한다(보이는 것만 추려서) */

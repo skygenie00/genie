@@ -409,14 +409,17 @@ BODY_EARTH = GATE + r"""
      const no=VNO||DATA[0][F.NO];
      if(!VNO)await openView(no);
      await wait(400);
+     if($('#tTxt')){   /* ★ cardfit(10/11) §3-3 — X-7 「T 글상자」 · 지우개 뒤 두 칸 뺌 */
      T('X-7 ★아래 도구줄에 「T 글상자」가 있다',!!$('#tTxt'),$('#tTxt')&&$('#tTxt').textContent);
      T('X-7 지우개 바로 뒤에 있다',!!$('#tTxt')&&$('#tTxt').previousElementSibling.id==='tErase',
        $('#tTxt')&&$('#tTxt').previousElementSibling.id);
+     } else N('X-7 cardfit — 카드 층 T 글상자 걷음(사용자 20:12) → 단추 두 칸 뺌 · 글자 층(#qtxt) 칸은 그대로',1);
      const card=$('#card');
      T('X-7 카드에 글자 층(#qtxt)이 얹혔다',!!card.querySelector('#qtxt'));
      T('X-7 평소에는 포인터를 안 받는다(필기와 안 싸운다)',
        getComputedStyle(card.querySelector('#qtxt')).pointerEvents==='none',
        getComputedStyle(card.querySelector('#qtxt')).pointerEvents);
+     if($('#tTxt')){   /* ★ cardfit(10/11) §3-3 — X-7 글상자 만들기 칸 뺌 */
      $('#tTxt').click(); await wait(80);
      T('X-7 켜면 on 이 붙고 카드가 txton 이 된다',QTXT===true&&$('#tTxt').classList.contains('on')&&card.classList.contains('txton'));
      const h=card.querySelector('#qtxt');
@@ -452,6 +455,7 @@ BODY_EARTH = GATE + r"""
      $('#tTxt').click(); await wait(80);
      T('X-7 끄면 다시 포인터를 안 받는다',QTXT===false&&getComputedStyle(h).pointerEvents==='none');
      delete TXT[key]; await saveTXT();
+     } else N('X-7 cardfit — T 글상자 걷음 → 켜기 · 찍기 · 끄기 칸 뺌(이미 놓인 글상자는 그대로 보임)',1);
    });
 
    /* ═══ W. §3 교재 창 ═══ */

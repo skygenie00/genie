@@ -204,7 +204,8 @@ BODY_EARTH = r"""
    {const rec0=JSON.parse(await (await __nativeFetch('/data/earth/%EA%B8%B0%EB%A1%9D.json')).text());
     UN=rec0.data.unit||{};BPG=rec0.data.bpg||{};MC=rec0.data.mcard||{};CROP=rec0.data.crop||{};
     await put('kv','unit',UN);await put('kv','bpg',BPG);await put('kv','mcard',MC);await put('kv','crop',CROP);
-    refreshUnits();}
+    refreshUnits();
+    try{if(CARD_LAYER&&window.G3&&HASBOOK&&typeof uidMigrate==='function')await uidMigrate('data')}catch(e){}}   /* ★ cardfit(10/11) §6 — 카드 층이 gg3 를 타는 판만: 실은 손값(옛 번호 열쇠 mcard)을 앱이 읽어 들일 때처럼 uid 로 옮김 — 안 그러면 C 묶음이 우연한 저장 도장(uidGuard) 때를 탐(흔들림) · 바탕은 옛 길 그대로(바탕 카드 층엔 window.G3 없음 · 바탕 C 묶음은 옛 하네스로도 흔들림 — C-1 바탕도 FAIL) */
    draw(); await wait(300);
    N('밑준비',{subj:SUBJ_ID,ISEA:ISEA,DATA:DATA.length,기출:DATA.filter(r=>!isC(r)).length});
 
@@ -413,6 +414,7 @@ BODY_EARTH = r"""
 
    /* ══════════ 5. §D 근거 ══════════ */
    await grp('G', async()=>{
+     if(window.G3&&HASBOOK){N('G cardfit(10/11) — 카드 층 근거 줄 = 물리 gg3 꼴(옛 .ggrow 적는 칸 · ＋ 병렬 · ㄱ(1) 라벨 · .ggnum · 🔍 ggfind 걷음 · 정답·해설 · O 칩 = 아랫줄) → 이 묶음 뺌 · 새 꼴 = _harness_jagwa_cardfit A9 · A13 · A16~A18 · C1~C7',1);return}   /* ★ cardfit(10/11) §3-3 — 옛 카드 층 근거 줄 묶음(바탕은 옛 그대로 돎) */
      const A='G25-62-09', B='G02-39-02';   /* ★ A-6(9/30) · jagwa_uid(9/29 · 5e18424) — 근거·연결 열쇠 = 새 번호(옛 G62-09·G39-02) */
      const noA=rowByUid(A)[F.NO], noB=rowByUid(B)[F.NO];
      GG={};GGREF={};await saveGG();await saveGGREF();
@@ -589,14 +591,16 @@ BODY_EARTH = r"""
      await openView(no); await wait(600);
      /* .vbot */
      T('V-3 .vbot 에서 #mO·#mQ·#mX·#tNote 가 안 보인다',
-       ['#mO','#mQ','#mX','#tNote'].every(q=>$(q)&&$(q).offsetParent===null),
+       (document.getElementById('tTools')   /* ★ cardfit(10/11) §2 A-8 — 아랫줄 = 정답 O △ X P …(물리 꼴) → O △ X 는 아랫줄에 보이고 #tNote 만 안 보임(옛 판은 옛 잣대) */
+         ?(['#mO','#mQ','#mX'].every(q=>$(q)&&$(q).offsetParent!==null&&$(q).classList.contains('cardin'))&&$('#tNote').offsetParent===null)
+         :['#mO','#mQ','#mX','#tNote'].every(q=>$(q)&&$(q).offsetParent===null)),
        ['#mO','#mQ','#mX','#tNote'].map(q=>$(q)?getComputedStyle($(q)).display:'(없음)'));
      /* ⚠ add2 §A·§B 가 필기 도구를 머리줄 알약으로 옮기고 #mP 를 근거 아랫줄로 옮겼다 */
      T('V-3 필기 도구는 머리줄 알약에 있고 그래도 보인다',
        !!$('#inkPill #tErase')&&$('#inkPill #tErase').offsetParent!==null,
        [!!$('#inkPill'),$('#tErase')?getComputedStyle($('#tErase')).display:'(없음)']);
      T('V-3 #mP 는 근거 아랫줄로 갔다 · #tHist 는 아랫줄에 남는다',
-       !!$('#mP')&&$('#mP').offsetParent===null&&!!$('#card .vox.vP')
+       (document.getElementById('tTools')?(!!$('#mP')&&$('#mP').offsetParent!==null&&$('#mP').classList.contains('cardin')):(!!$('#mP')&&$('#mP').offsetParent===null&&!!$('#card .vox.vP')))   /* ★ cardfit A-8 — P 도 아랫줄 */
        &&!!$('#tHist')&&$('#tHist').offsetParent!==null,
        [$('#mP')?getComputedStyle($('#mP')).display:'(없음)',!!$('#card .vox.vP')]);
      T('V-4 「✏️ 연결」이 있고 linkSheet 를 그대로 쓴다',!!$('#card #cLink')&&typeof linkSheet==='function');
@@ -702,11 +706,12 @@ BODY_EARTH = r"""
      T('W-1 ★#inkPill 이 .vtop 안이다',!!pill&&!!pill.closest('#view .vtop'),
        pill?String(pill.parentElement&&pill.parentElement.className):'(없음)');
      const pb=pill?[...pill.querySelectorAll('button')]:[];
-     T('W-1 ★단추 아홉(펜 3 · 형광 3 · 지우개 · 글상자 · ↺)',pb.length===9,
+     const CF=!!document.getElementById('tTools');   /* ★ cardfit(10/11) §3-3 — 알약 ↺ = ⋯(#tTools) 메뉴 안 · 카드 층 T 글상자(#tTxt) 걷음(사용자 20:12) → 펜 3 · 형광 3 · 지우개 · ⋯ = 여덟(옛 판은 옛 잣대) */
+     T('W-1 ★단추 아홉(펜 3 · 형광 3 · 지우개 · 글상자 · ↺)',pb.length===(CF?8:9),
        pb.map(b=>b.id||b.dataset.pen||b.dataset.hl));
      T('W-1 그 아홉이 옮겨 온 그 단추들이다',
        !!pill&&pill.querySelectorAll('[data-pen]').length===3&&pill.querySelectorAll('[data-hl]').length===3
-       &&!!pill.querySelector('#tErase')&&!!pill.querySelector('#tTxt')&&!!pill.querySelector('#tUndo'));
+       &&!!pill.querySelector('#tErase')&&(CF?(!!pill.querySelector('#tTools')&&!!document.querySelector('#tlMenu #tUndo')):(!!pill.querySelector('#tTxt')&&!!pill.querySelector('#tUndo'))));
      T('W-1 칸막이 둘(펜│형광│도구)',pill&&pill.querySelectorAll('.sep').length===2,
        pill?pill.querySelectorAll('.sep').length:null);
      T('W-1 ★알약 높이 ≤ 26px',pill.getBoundingClientRect().height<=26,pill.getBoundingClientRect().height);
@@ -753,16 +758,19 @@ BODY_EARTH = r"""
         ((QINK.s)||[]).length===n0+1&&!!st&&st.c==='#7FD1AE'&&st.hl===1,[((QINK.s)||[]).length,st&&st.c,st&&st.hl]);
       /* ↺ */
       const nn=((QINK.s)||[]).length;
-      pill.querySelector('#tUndo').click(); await until(()=>((QINK.s)||[]).length===nn-1,5000);
+      if(CF){$('#tTools').click(); await wait(150); $('#tlMenu #tUndo').click()} else pill.querySelector('#tUndo').click();   /* ★ cardfit §3-3 — ↺ 는 ⋯ 메뉴 안(⋯ 먼저) */
+      await until(()=>((QINK.s)||[]).length===nn-1,5000);
       T('W-1 ↺ 가 마지막 획을 무른다(옮기기 전과 같다)',((QINK.s)||[]).length===nn-1,[nn,((QINK.s)||[]).length]);
       /* 지우개 · 글상자 */
       pill.querySelector('#tErase').click(); await wait(150);
       T('W-1 지우개를 고르면 TOOL.mode=erase',TOOL.mode==='erase',TOOL.mode);
+      if(!CF){   /* ★ cardfit(10/11) §3-3 — W-1 글상자 두 칸 뺌(#tTxt 걷음) */
       pill.querySelector('#tTxt').click(); await wait(200);
       T('W-1 글상자 단추가 QTXT 를 켠다',QTXT===true&&pill.querySelector('#tTxt').classList.contains('on'),
         [QTXT,pill.querySelector('#tTxt').className]);
       pill.querySelector('#tTxt').click(); await wait(200);
       T('W-1 다시 누르면 꺼진다',QTXT===false,QTXT);
+      } else N('W-1 cardfit — 카드 층 T 글상자 걷음 → 글상자 켜기 · 끄기 두 칸 뺌',1);
       setTool('view'); qWire(); await wait(100);
       await del('ink','qink:'+uid); await qLoad(uid); await wait(150);}
 
@@ -794,9 +802,9 @@ BODY_EARTH = r"""
      {const kids=[...document.querySelectorAll('.vbot .tools>*')];
       const vis=kids.filter(el=>el.offsetParent!==null);
       /* ★ A-6(9/30) · _task_jagwa_claude_slot_add1 §A-2(9/22 · 007fde4) — 맨 오른쪽에 「Claude」(#tGpt)가 하나 더 선다 · 앞 다섯 차례는 그대로 · earth_shell W-2 와 같다 */
-      T('W-2 ★아랫줄에 보이는 것이 여섯(다섯 + 맨 오른쪽 Claude)',vis.length===6||(vis.length===3&&vis.map(el=>el.id).join(',')==='tHist,tCard,tGpt')/* ★ 2026-10-07 (_task_jagwa_phys_win §A-04 ⑥⑪) — 회독 고르개·👁·+회독(#tLayer·#tLayerEye·#tLayerAdd)은 세 과목 다 숨김(회독 창 #hsPop 으로 합침) → 기록 · 🃏 · Claude 셋 */,vis.map(el=>el.id||el.className));
+      T('W-2 ★아랫줄에 보이는 것이 여섯(다섯 + 맨 오른쪽 Claude)',vis.length===6||(vis.length===3&&vis.map(el=>el.id).join(',')==='tHist,tCard,tGpt')||vis.map(el=>el.id).join(',')==='tAns,mO,mQ,mX,mP,tHist,tCard,tGpt,tLink'/* ★ cardfit(10/11) §2 A-8 — 아랫줄 = 정답 O △ X P … 🃏 · Claude · 🔗 */ /* ★ 2026-10-07 (_task_jagwa_phys_win §A-04 ⑥⑪) — 회독 고르개·👁·+회독(#tLayer·#tLayerEye·#tLayerAdd)은 세 과목 다 숨김(회독 창 #hsPop 으로 합침) → 기록 · 🃏 · Claude 셋 */,vis.map(el=>el.id||el.className));
       T('W-2 ★그 여섯 = 회독 층 · +회독 · 👁 · 기록 · 암기카드 · Claude',
-        vis.map(el=>el.id).join(',')==='tLayer,tLayerAdd,tLayerEye,tHist,tCard,tGpt'||vis.map(el=>el.id).join(',')==='tHist,tCard,tGpt'/* ★ 2026-10-07 (_task_jagwa_phys_win §A-04) — 같은 까닭(셋 숨김 · 남은 차례 그대로) */,vis.map(el=>el.id));
+        vis.map(el=>el.id).join(',')==='tLayer,tLayerAdd,tLayerEye,tHist,tCard,tGpt'||vis.map(el=>el.id).join(',')==='tHist,tCard,tGpt'||vis.map(el=>el.id).join(',')==='tAns,mO,mQ,mX,mP,tHist,tCard,tGpt,tLink'/* ★ cardfit A-8 */ /* ★ 2026-10-07 (_task_jagwa_phys_win §A-04) — 같은 까닭(셋 숨김 · 남은 차례 그대로) */,vis.map(el=>el.id));
       T('W-2 오른쪽 맞춤',getComputedStyle($('.vbot .tools')).justifyContent==='flex-end',
         getComputedStyle($('.vbot .tools')).justifyContent);
       T('W-2 ★굵기 #tW 안 보임 · 값 2',$('#tW').offsetParent===null&&$('#tW').value==='2',
@@ -807,7 +815,7 @@ BODY_EARTH = r"""
         &&!document.querySelector('.vbot .tools #tErase')&&!document.querySelector('.vbot .tools #tTxt'),
         [document.querySelectorAll('.vbot .tools [data-pen]').length,
          !!document.querySelector('.vbot .tools #tErase')]);
-      T('W-2 #mP 는 아랫줄에서 숨는다(근거 아랫줄로 갔다)',$('#mP')&&$('#mP').offsetParent===null,
+      T('W-2 #mP 는 아랫줄에서 숨는다(근거 아랫줄로 갔다)',document.getElementById('tTools')?(!!$('#mP')&&$('#mP').offsetParent!==null&&$('#mP').classList.contains('cardin')):($('#mP')&&$('#mP').offsetParent===null),   /* ★ cardfit(10/11) §2 A-8 — P 도 아랫줄(정답 O △ X P) */
         $('#mP')?getComputedStyle($('#mP')).display:'(없음)');}
      /* +회독 → 층 +1 · 그 층에 그은 획이 그 층에 */
      {const r0=QR;
@@ -968,6 +976,7 @@ BODY_EARTH = r"""
      await draw1(sv,[rr.width*pu,rr.width*pv,rr.width*(pu+0.14),rr.width*(pv+0.05),
                      rr.width*(pu+0.28),rr.width*(pv+0.10)]);
      T('E-0 펜으로 한 획을 그었다',((QINK.s)||[]).length===1,((QINK.s)||[]).length);
+     if(tTxt){   /* ★ cardfit(10/11) §3-3 — E-1 글상자 칸 뺌 */
      /* 글상자 켜기 */
      const b0=nBox();
      tTxt.click(); await wait(300);
@@ -982,11 +991,14 @@ BODY_EARTH = r"""
         top?(top.id||top.className):null);
       await fire(card.querySelector('#qtxt'),'pointerdown',x,y,'pen',41); await wait(350);
       T('E-1 ★글상자 모드에서 톡 = 글상자 +1',nBox()===b0+1,[b0,nBox()]);}
+     } else N('E-1 cardfit — 카드 층 T 글상자 걷음 → E-1 뺌',1);
      /* 지우개 — ①의 본문 */
      tEr.click(); await wait(300);
+     if(tTxt){   /* ★ cardfit(10/11) §3-3 — E-2 글상자(QTXT · txton) 두 칸 뺌 */
      T('E-2 ★지우개를 고르면 QTXT 가 꺼진다',QTXT===false,QTXT);
      T('E-2 ★#card.txton 없음 · #tTxt.on 없음',
        !card.classList.contains('txton')&&!tTxt.classList.contains('on'),[card.className,tTxt.className]);
+     }
      T('E-2 지우개가 켜졌다(TOOL.mode=erase · penon)',TOOL.mode==='erase'&&card.classList.contains('penon'),
        [TOOL.mode,card.className]);
      {const x=rr.left+rr.width*(pu+0.14), y=rr.top+rr.width*(pv+0.05);
@@ -1001,6 +1013,7 @@ BODY_EARTH = r"""
       await fire(sv,'pointerup',x,y,'pen',42); await wait(400);
       T('E-2 ★획 위를 누르면 획 −1',((QINK.s)||[]).length===ns-1,[ns,((QINK.s)||[]).length]);
       T('E-2 ★그때 글상자는 +0',nBox()===nb,[nb,nBox()]);}
+     if(tTxt){   /* ★ cardfit(10/11) §3-3 — E-3 · E-4 글상자 칸 뺌 */
      /* 펜·형광도 같다 */
      tTxt.click(); await wait(250);
      T('E-3 글상자 다시 켬',QTXT===true);
@@ -1017,6 +1030,7 @@ BODY_EARTH = r"""
       const h=card.querySelector('#qtxt');
       await fire(h,'pointerdown',x,y,'pen',43); await wait(300);
       T('E-4 ★꺼진 채 톡하면 글상자 +0',nBox()===nb,[nb,nBox()]);}
+     } else N('E-3 · E-4 cardfit — 카드 층 T 글상자 걷음 → 뺌',1);
      T('E-5 이미 선 글상자를 누르는 길은 그대로다(.tbox 는 고치기)',
        String(qTxtWire).indexOf(".closest('.tbox')")>=0);
      setTool('view'); qWire(); await wait(120);
@@ -1026,6 +1040,7 @@ BODY_EARTH = r"""
 
    /* ══════════ 10. add3 ② 펜으로 근거 줄이 눌린다 ══════════ */
    await grp('N', async()=>{
+     if(window.G3&&HASBOOK){N('N cardfit(10/11) — 카드 층 근거 줄 = 물리 gg3 꼴(옛 .ggrow 적는 칸 · ＋ 병렬 · ㄱ(1) 라벨 · .ggnum · 🔍 ggfind 걷음 · 정답·해설 · O 칩 = 아랫줄) → 이 묶음 뺌 · 새 꼴 = _harness_jagwa_cardfit A9 · A13 · A16~A18 · C1~C7',1);return}   /* ★ cardfit(10/11) §3-3 — 옛 카드 층 근거 줄 묶음(바탕은 옛 그대로 돎) */
      const A='G02-39-02', U='G25-62-09';   /* ★ A-6(9/30) · jagwa_uid — 근거·연결 열쇠 = 새 번호(옛 G39-02·G62-09) */
      GG={};GGREF={};
      GG[U]=[{k:'g_n1',i:1,t:'ㄱ 남의 근거',ok:'O',ts:1,cs:[{k:'c_n1',t:'댓글',ts:1}]}];
@@ -1177,6 +1192,7 @@ BODY_EARTH = r"""
 
    /* ══════════ 11. add3 ③ 쓰임 수 · 쓰임 목록 창 · 찾기 결과 줄 ══════════ */
    await grp('U', async()=>{
+     if(window.G3&&HASBOOK){N('U cardfit(10/11) — 카드 층 근거 줄 = 물리 gg3 꼴(옛 .ggrow 적는 칸 · ＋ 병렬 · ㄱ(1) 라벨 · .ggnum · 🔍 ggfind 걷음 · 정답·해설 · O 칩 = 아랫줄) → 이 묶음 뺌 · 새 꼴 = _harness_jagwa_cardfit A9 · A13 · A16~A18 · C1~C7',1);return}   /* ★ cardfit(10/11) §3-3 — 옛 카드 층 근거 줄 묶음(바탕은 옛 그대로 돎) */
      const T0='G25-62-09';   /* ★ A-6(9/30) · jagwa_uid — 근거·연결 열쇠 = 새 번호(옛 G62-09) · pool·ggHits 는 새 번호 */
      const pool=DATA.filter(r=>!isC(r)&&r[F.CODE]!==T0).map(r=>r[F.CODE]);
      const mk=n=>{GGREF={};pool.slice(0,n).forEach(u=>{GGREF[u]=[T0]})};
@@ -1406,6 +1422,7 @@ BODY_BIO = r"""
       모습(snap)은 이미 다 찍은 뒤라 대조에는 안 섞인다. */
    await openView(DATA[0][F.NO]); await wait(900);
    {const b=document.getElementById('tTxt');
+    if(!document.getElementById('tTools'))   /* ★ cardfit(10/11) §3-3 — 생물 T 글상자 걷음(사용자 20:12) → 이 칸 뺌 */
     if(!b)T('B-4 생물에도 글상자 단추가 있다',false);
     else{b.click(); await wait(300);
       const on1=(typeof QTXT!=='undefined')&&QTXT===true;
@@ -1661,7 +1678,7 @@ def static_checks():
     # ── add3 ──
     T2('Z-20 ① setTool 덧씌움이 펜·형광·지우개에서 QTXT 를 끈다',
        "if(mode==='pen'||mode==='hl'||mode==='erase')QTXT=false;" in s
-       and s.count('setTool=function(mode)') == 1)
+       and s.count('setTool=function(mode)') - s.count("setTool=function(mode){if(mode!=='lasso')lsOff();") == 1)   # ★ cardfit(10/11) §3-3 — ⋯ 필기 도구 덧씌움(세 과목 한 벌) 하나는 셈 밖
     T2('Z-21 ① 글상자를 켜면 필기 도구를 놓는다(#tTxt 쪽)',
        "if(QTXT){TOOL.mode='view';" in s
        and s.count("b.onclick=()=>{QTXT=!QTXT;") == 1)

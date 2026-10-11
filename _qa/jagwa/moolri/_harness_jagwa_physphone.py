@@ -513,8 +513,13 @@ def b5(br, src, base_src, tag):
         if subj == 'phys' and 'window.G3=' in src:   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 「문항 본창 머리 = 한 줄 꼴 · 물리」(패치 42 · 시계 #tm 22px) — #tm 만 크기 조건에서 빼고 값에 적음(위 줄 = 옛 잣대 그대로 · 나머지 조건 무변)
             g3tm = [b for b in h['btn'] if b[0] == 'tm']
             g = h['oneLine'] and h['backL'] <= 12 and all(b[1] >= 36 and b[2] >= 36 or b[0] in ('vBack', 'vWinTg', 'vPrev', 'vNext') and b[1] >= 30 and b[2] >= 30 for b in h['btn'] if b[0] != 'tm') and h['ell']
+        cfh = None
+        if subj != 'phys' and 'function cardAnsSheet(' in src and ('phys', 'new') in heads:   # ★ cardfit(10/11) §2 A-9 「창 머리 = 물리 꼴(한 줄 · 테두리 없는 아이콘 · 높이 물리 값)」 — 카드 층 단추 잣대 = 같은 판 물리 머리 단추 이상(−1) · 물리 칸 잣대는 위 그대로
+            pb = {b[0]: b[1:] for b in heads[('phys', 'new')][0]['btn']}
+            cfh = {b[0]: [b[1], b[2], '물리', pb.get(b[0])] for b in h['btn']}
+            g = h['oneLine'] and h['backL'] <= 12 and h['ell'] and all(v[3] is not None and v[0] >= v[3][0] - 1 and v[1] >= v[3][1] - 1 for v in cfh.values())
         ok = ok and g
-        T(G, '폰 390 %s 머리 한 줄 · 서재 left − 창 left ≤ 12 · 단추 ≥ 36 · 제목 말줄임' % subj, g, dict({'한 줄': (hb['oneLine'], '→', h['oneLine']), '서재 왼쪽': (hb['backL'], '→', h['backL']), '단추': h['btn'], '말줄임': h['ell']}, **({'gg3 · 시계 #tm 크기 조건 뺌(§A-4 머리 한 줄 꼴 · 패치 42)': g3tm} if g3tm is not None else {})))
+        T(G, '폰 390 %s 머리 한 줄 · 서재 left − 창 left ≤ 12 · 단추 ≥ 36 · 제목 말줄임' % subj, g, dict({'한 줄': (hb['oneLine'], '→', h['oneLine']), '서재 왼쪽': (hb['backL'], '→', h['backL']), '단추': h['btn'], '말줄임': h['ell']}, **({'gg3 · 시계 #tm 크기 조건 뺌(§A-4 머리 한 줄 꼴 · 패치 42)': g3tm} if g3tm is not None else {}), **({'cardfit §2 A-9 카드 층 머리 = 물리 꼴 · 단추 ≥ 물리 머리 값': cfh} if cfh is not None else {})))
         if subj == 'phys' and QC.want('B5.ggphys') and 'window.G3=' in src:   # ★ 2026-10-09 _task_jagwa_gg3 §A-4 「근거 줄 · 적는 칸 한 줄 · 항목 줄」(시안 v57) — 옛 근거 칸(＋ · 🔍 · 입력)이 g3 세 칸으로 갈음 · 값 그대로 INFO(새 잣대 = jagwa_gg3 관문)
             N(G, '물리 근거 칸 = 필기 도구 아랫줄 · 따로 카드 0 · PDF 쪽이 바탕보다 위 · 근거 입력·＋·🔍 무변', {'gg3 갈음': '§A-4 근거 줄(g3 세 칸 · 옛 ＋ · 🔍 · 입력 없음)', '근거 top / 도구 bottom': (h['ggT'], h['pillB']), '카드': h['card'], 'PDF top(창 기준)': h['wrapT'], '근거 줄 머리 안': h['ggInHead']})
         elif subj == 'phys' and QC.want('B5.ggphys'):

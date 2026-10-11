@@ -366,7 +366,7 @@ def g7(br, eng):
     T('Z', '%s 오류 0(7 묶음 NEW)' % eng, not r['NEW_err'], r['NEW_err'][:4])
 
     def fo(q):
-        return q.ev("()=>({chips:document.querySelectorAll('.pwchip').length,pw:__W.has('pwList')})")
+        return q.ev("()=>({chips:document.querySelectorAll('.pwchip:not(.ndsrch)').length,srch:document.querySelectorAll('.pwchip.ndsrch').length,pw:__W.has('pwList')})")   # ★ cardfit(10/11) §2 A-3 — 카드 층 서랍 🔍(.ndsrch) = 세 과목 · 공식·개념 칩만 물리
     for subj in ('bio', 'earth'):
         ro = both(br, eng, subj, True, fo)
         T('7', '%s %s — 칩 없음(물리만)' % (eng, subj), ro['NEW']['chips'] == 0, ro['NEW'])

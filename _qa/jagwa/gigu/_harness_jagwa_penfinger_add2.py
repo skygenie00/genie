@@ -136,6 +136,7 @@ def scen(br, app, tag, subj, engine):
     g = '%s %s %s' % (tag, engine, subj)
     u = SAMPLE[subj]
     cr = engine == 'chromium'
+    cfit = 'function cardAnsSheet(' in app   # ★ cardfit(10/11) §2 A-8 — 카드 안 「정답·해설 ▸」(#cDet) 숨김 · 아랫줄 「정답」(#tAns) = 정답·해설 곁창(#sh-ans · 카드의 .sol 을 옮겨 보임) — 4a · 6a · 6b 는 그 길로(§3-3 「카드 층 꼴 바뀜」 · 잣대 뜻 그대로)
     QC.launch('base' if tag.startswith('BASE') else 'new')   # 셈(§B-4)
     p = P3(br, app, subj, 'a2_%s_%s_%s' % (tag, engine, subj), engine)
 
@@ -228,12 +229,22 @@ def scen(br, app, tag, subj, engine):
             r3 = {}
             for tool in ('pen', 'view'):
                 fresh(tool, ans=True)
-                im = p.ev("()=>__P.refImg()")
+                if cfit:   # ★ cardfit(10/11) §2 A-8 — 해설(참고 그림 든 .sol) = 아랫줄 「정답」 곁창(#sh-ans) → 「정답」 손가락 톡으로 열고 그 안 그림(카드 덮개 밖)
+                    ta = p.ev(r"""()=>{const e=document.getElementById('tAns');if(!e)return null;const r=e.getBoundingClientRect();const x=Math.round(r.left+r.width/2),y=Math.round(r.top+r.height/2),t=document.elementFromPoint(x,y);return {x,y,on:!!t&&(t===e||e.contains(t))}}""")
+                    if ta and ta['on']:
+                        p.ftap(ta['x'], ta['y']); p.wait(500)
+                    im = p.ev(r"""async()=>{const t0=Date.now();let im=null;while(Date.now()-t0<15000){im=document.querySelector('#sh-ans .rfimg img');if(im&&im.complete&&im.naturalWidth>0)break;await new Promise(r=>setTimeout(r,100))}
+                      if(!im||!im.naturalWidth)return null;im.scrollIntoView({block:'center'});await new Promise(r=>setTimeout(r,200));const r=im.getBoundingClientRect();const x=Math.round(r.left+r.width/2),y=Math.round(r.top+r.height/2);const top=document.elementFromPoint(x,y);
+                      return {x,y,w:Math.round(r.width),nw:im.naturalWidth,nh:im.naturalHeight,top:top?(top.id||top.tagName.toLowerCase()):null}}""")
+                else:
+                    im = p.ev("()=>__P.refImg()")
                 if not im:
                     r3[tool] = '그림 못 받음'; continue
                 p.ftap(im['x'], im['y']); z = p.ev("()=>__P.zoom3()")
                 p.ftap(8, 8); z2 = p.ev("()=>__P.zoom3()")
                 r3[tool] = {'그림 위': im['top'], '크게': z, '바깥 톡 뒤': z2}
+                if cfit:
+                    r3[tool]['cardfit'] = '해설 = 정답 곁창(#sh-ans) 안 그림'
                 p.ev("()=>__P.closeAll3()")
             good = lambda v: isinstance(v, dict) and bool(v.get('크게')) and v['크게'].get('vis') and v['크게']['bg'] == 'rgb(255, 255, 255)' \
                 and v['크게']['rad'] == ['6px'] * 4 and abs(v['크게']['boxW'] - v['크게']['w']) <= 1 and abs(v['크게']['boxH'] - v['크게']['h']) <= 1 \
@@ -248,7 +259,7 @@ def scen(br, app, tag, subj, engine):
         if rows:
             k = rows[0]
             a = p.ev("s=>__P.at(s,.5,.5)", '.bogi .row[data-k="%s"] .ox button[data-v="O"]' % k)
-            o0 = p.ev("k=>__P.ox(k)", k); d0 = p.ev("()=>__P.det()")
+            o0 = p.ev("k=>__P.ox(k)", k); d0 = p.ev("()=>!!document.getElementById('sh-ans')" if cfit else "()=>__P.det()")
             p.ev("()=>__P.clog()")
             if cr:
                 p.t2('touchStart', [(1, a['x'], a['y'])]); p.wait(60); p.t2('touchEnd', [])
@@ -256,16 +267,16 @@ def scen(br, app, tag, subj, engine):
                 p.pg.touchscreen.tap(a['x'], a['y'])
             t_up = time.time(); p.wait(150)
             o1 = p.ev("k=>__P.ox(k)", k)
-            p.ev("()=>{const b=document.getElementById('cDetBtn');b.focus();return document.activeElement===b}")   # 키보드 초점만 — 누름은 진짜 키
+            p.ev("b=>{const e=document.getElementById(b);e.focus();return document.activeElement===e}", 'tAns' if cfit else 'cDetBtn')   # 키보드 초점만 — 누름은 진짜 키 · cardfit = 아랫줄 「정답」(곁창)
             p.pg.keyboard.press('Enter'); dt = round(time.time() - t_up, 3)
             p.wait(400)
-            d1 = p.ev("()=>__P.det()"); cl = p.ev("()=>__P.clog()")
+            d1 = p.ev("()=>!!document.getElementById('sh-ans')" if cfit else "()=>__P.det()"); cl = p.ev("()=>__P.clog()")
             on = lambda o: [x['v'] for x in (o or []) if x['on']]
             if ('O' in on(o1)) == ('O' in on(o0)):   # ★ _task_qa_fix1 §A-3 — 톡 뒤 150ms 에 O 가 아직 안 바뀌었으면(10/8 웹킷 지학 4a 「O [[], []]」) 키 타이밍(dt)은 그대로 두고 O 만 표지로 더 기다려 다시 잰다
                 QC.until(p.pg, "a=>(__P.ox(a[0])||[]).some(x=>x.v==='O'&&x.on)!==a[1]", 3000, 'penfinger_add2 4a 덮개 밑 톡 → 〈보기〉 O 바뀜', arg=[k, 'O' in on(o0)])
                 o1 = p.ev("k=>__P.ox(k)", k)
             r4 = {'톡': 'CDP 톡' if cr else 'touchscreen.tap', '위': a['top'], '밑': a['under'], 'O': [on(o0), on(o1)],
-                  '정답·해설': [d0, d1], 'Enter 까지 초': dt, 'click': cl}
+                  ('정답 곁창(#sh-ans · cardfit 아랫줄 「정답」)' if cfit else '정답·해설'): [d0, d1], 'Enter 까지 초': dt, 'click': cl}
             T(g, '4a D4 덮개 밑 톡(〈보기〉 %s O) 직후 %.2f초 키보드 Enter → 「정답·해설」 여닫힘(헛잣대: 웹킷 바탕 d27c43a = 톡 뒤 진짜 click 이 없어 남은 먹기가 키보드 click 을 먹음 · 크롬은 진짜 touch click 이 먹기를 써서 바탕도 안 먹힘 → 크롬 헛잣대는 4b)' % (k, dt),
               (('O' in on(o1)) != ('O' in on(o0))) and d1 != d0 and dt < 0.65, r4)
         else:
@@ -293,7 +304,42 @@ def scen(br, app, tag, subj, engine):
         # ── 6a D3 — add1 관문 3a 다시: 펼친 해설 안 덮개 **밑** 단추(생물 = 해설 탭 · 지학 = 교재/부록 쪽 칩) 손가락 톡 → 제 동작 ──
         fresh('pen', ans=True)
         hq = p.ev("()=>__P.qsvg()")   # 덮개를 펼친 카드 높이로(add1 앞 판 f497f05 는 펼쳐도 안 늘어난다 — 「덮개 밑」 조건을 세 판 같게)
-        if subj == 'bio':
+        if cfit:   # ★ cardfit §2 A-8 — 해설 = 정답 곁창(덮개 밖) · 아랫줄 「정답」 손가락 톡으로 열고 그 안 단추를 손가락 톡(제 동작은 같은 잣대)
+            SH = r"""(sel)=>{const w=document.getElementById(sel?'sh-ans':'tAns');const e=sel?(w&&w.querySelector(sel)):w;if(!e)return null;e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();
+              const x=Math.round(r.left+r.width/2),y=Math.round(r.top+r.height/2),t=document.elementFromPoint(x,y);return {x,y,top:__P.nm(t),on:!!t&&(t===e||e.contains(t))&&r.height>0}}"""
+            ta = p.ev(SH, '')
+            if ta and ta['on']:
+                p.ftap(ta['x'], ta['y']); p.wait(500)
+            sh = p.ev("()=>!!document.getElementById('sh-ans')")
+            if subj == 'bio':
+                TABS = r"""()=>{const w=document.getElementById('sh-ans');if(!w)return [];return [...w.querySelectorAll('.soltabs button')].map(b=>{const x=w.querySelector('.soltx[data-st="'+b.dataset.st+'"]');
+                  return {st:b.dataset.st,t:__P.tx(b),on:b.classList.contains('on'),txVis:x?(!x.hidden&&x.getBoundingClientRect().height>0):null}})}"""
+                tabs = p.ev(TABS) or []
+                off = next((x for x in tabs if not x['on']), None)
+                if off:
+                    a = p.ev(SH, '.soltabs button[data-st="%s"]' % off['st'])
+                    if a and a['on']:
+                        p.ftap(a['x'], a['y'])
+                    t6 = p.ev(TABS)
+                    hit = next((x for x in t6 if x['st'] == off['st']), {})
+                    T(g, '6a D3 펼친 해설 탭 「%s」(덮개 밑) 손가락 톡 → 그 탭 켜짐 · 그 해설 보임(헛잣대: add1 앞 판 f497f05 = 무반응)' % off['t'],
+                      bool(a and a['on']) and hit.get('on') and hit.get('txVis'), {'cardfit': '해설 = 정답 곁창(#sh-ans · 아랫줄 「정답」 손가락 톡) · 덮개 밖', '「정답」': ta, '곁창': sh, '위': a and a['top'], '탭': [tabs, t6]})
+                else:
+                    N(g, '6a 해설 탭 없음(cardfit 곁창)', {'「정답」': ta, '곁창': sh, '탭': tabs})
+            else:
+                a = p.ev(SH, '.sol .jump .tag.page')
+                if a:
+                    b0 = p.ev("()=>__P.bookVis()")
+                    if a['on']:
+                        p.ftap(a['x'], a['y']); p.wait(600)
+                    b1 = p.ev("()=>__P.bookVis()")
+                    T(g, '6a D3 펼친 해설 「교재/부록 쪽」 칩(덮개 밑) 손가락 톡 → 교재 창 보임(헛잣대: add1 앞 판 f497f05 = 무반응)',
+                      a['on'] and not (b0 or {}).get('vis') and (b1 or {}).get('vis'), {'cardfit': '해설 = 정답 곁창(#sh-ans · 아랫줄 「정답」 손가락 톡) · 덮개 밖', '「정답」': ta, '곁창': sh, '위': a['top'], '교재 창': [b0, b1]})
+                    p.ev("()=>__P.closeAll3()")
+                else:
+                    N(g, '6a 교재/부록 쪽 칩 없음(cardfit 곁창)', {'「정답」': ta, '곁창': sh})
+            p.ev("()=>{const w=document.getElementById('sh-ans');if(w)w.remove();return 1}")
+        elif subj == 'bio':
             tabs = p.ev("()=>__P.solTabs()") or []
             off = next((x for x in tabs if not x['on']), None)
             if off:
@@ -318,7 +364,7 @@ def scen(br, app, tag, subj, engine):
             # ── 6b D3 — add1 관문 4 다시: 같은 덮개 밑 선택지 — 끌면 굴림(안 골라짐 · 창 0) · 톡 하면 골라짐 ──
             #    (add1 앞 판은 덮개 밑으로 손가락을 한 번도 안 넘겨 끌기는 늘 굴림이다 — 끌기만으로는 헛잣대가 안 선다 · 같은 자리 톡을 짝으로)
             QC.launch('base' if tag.startswith('BASE') else 'new')   # 셈(§B-4)
-            q7 = P3(br, app, subj, 'a2_%s_%s_%s_700' % (tag, engine, subj), engine, vh=700)
+            q7 = P3(br, app, subj, 'a2_%s_%s_%s_700' % (tag, engine, subj), engine, vh=500 if cfit else 700)   # ★ cardfit — 해설이 곁창으로 나가 카드가 짧음(820×700 굴릴 자리 지학 0 · 생물 25) → 500(굴릴 자리 ≥ 40)
             try:
                 fresh('pen', ans=True, pg=q7)
                 s = q7.ev("()=>__P.st()"); c4 = unpicked(s)

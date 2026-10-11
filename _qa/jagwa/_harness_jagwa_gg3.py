@@ -869,7 +869,12 @@ def g5(br):
                 R('G5', pre + '-밀기', pre + ' 서랍 손가락 밀기 = 펴짐 · 접힘', sw_ok(n), sw_ok(b) if b else None, {'새': n.get('서랍 밀기'), '바탕': (b or {}).get('서랍 밀기')})
             gn, gb = n.get('근거 줄') or {}, (b or {}).get('근거 줄') or {}
             same = (not gn.get('g3') and not gn.get('g3box') and gn.get('n', 0) >= 1 and gn.get('sig') == gb.get('sig')) if b else None
-            R('G5', pre + '-근거줄', pre + ' 근거 줄 = 원래 그대로(G3 안 돎 · .g3box 0 · 누름 대상 전수 = 바탕)', same, None,
+            cfg = gn.get('g3') and 'function cardAnsSheet(' in SRC['NEW']   # ★ cardfit(10/11) §2 A-1 · A-13 — 카드 층도 gg3 덩어리 탐: 근거 줄 옛 ＋ · 🔍 걷음 · 「근거」 왼쪽 ▸/▾ 적은 근거 접기(.g3fb) · 나머지 누름 대상 = 바탕(새 꼴 잣대 = _harness_jagwa_cardfit A)
+            if cfg and b:
+                sb_ = sorted(x for x in (gb.get('sig') or []) if '[data-ggfind]' not in x and '[data-ggplus]' not in x)
+                sn_ = sorted(x for x in (gn.get('sig') or []) if not x.startswith('button.g3fb'))
+                same = gn.get('n', 0) >= 1 and sn_ == sb_ and any(x.startswith('button.g3fb') for x in gn.get('sig') or [])
+            R('G5', pre + '-근거줄', pre + (' 근거 줄 = cardfit 꼴(G3 돎 · 옛 ＋ · 🔍 걷음 · ▸ 적은 근거 접기 · 나머지 누름 대상 = 바탕)' if cfg else ' 근거 줄 = 원래 그대로(G3 안 돎 · .g3box 0 · 누름 대상 전수 = 바탕)'), same, None,
               {'새': {'n': gn.get('n'), 'G3': gn.get('g3'), '대상 수': len(gn.get('sig') or [])}, '다른 대상': sorted(set(gn.get('sig') or []) ^ set(gb.get('sig') or []))[:8]}, yard=False)
             same2 = (n.get('필기 도구') == (b or {}).get('필기 도구') and n.get('정리OMR') == (b or {}).get('정리OMR')) if b else None
             R('G5', pre + '-필기', pre + ' 카드 층 필기 도구 · 정리OMR 탭 = 바탕', same2, None, {'새': [n.get('필기 도구'), n.get('정리OMR')], '바탕': [(b or {}).get('필기 도구'), (b or {}).get('정리OMR')]}, yard=False)

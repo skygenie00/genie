@@ -264,7 +264,8 @@ BODY_VTOP = r"""
    /* A-6(a) 9/30 — 뒤 판이 .vtop 에 둘을 더했다 — ⤢ 창↔전체 화면 #vWinTg(gigu/_task_jagwa_earth_listpop.md · a9f9fd4 · 타이머 뒤) · 필기 알약 #inkPill(_task_jagwa_earth_listpop_add2 §A-1
       「.vtop 안 · 제목 오른쪽 · 타이머 왼쪽 · 좁으면 둘째 줄로」 · 20a7128 flex-wrap·row-gap:6px · c9faff2 body[data-shell]) — 옛 여섯의 차례·칸 사이 8px 는 그대로 */
    T('V-1 .vtop 은 여전히 flex · 칸 사이 8px · 옛 단추 차례 그대로(+ 필기 알약·⤢ · 줄 사이 6px)',
-     getComputedStyle($('.vtop')).display==='flex'&&getComputedStyle($('.vtop')).columnGap==='8px'&&getComputedStyle($('.vtop')).rowGap==='6px'&&
+     getComputedStyle($('.vtop')).display==='flex'&&getComputedStyle($('.vtop')).columnGap==='8px'&&(getComputedStyle($('.vtop')).rowGap==='6px'||(!!document.getElementById('tTools')&&getComputedStyle($('.vtop')).rowGap==='2px'))&&   /* ★ cardfit(10/11) §2 A-9 — 카드 층 창 머리 = 물리 꼴(줄 사이 2px) */
+     
      [...$('.vtop').children].map(e=>e.id||e.className).join(',')==='vBack,title,vLink,inkPill,tm,vWinTg,vPrev,vNext',
      [getComputedStyle($('.vtop')).display,getComputedStyle($('.vtop')).gap,[...$('.vtop').children].map(e=>e.id||e.className).join(',')]);
    /* 가림 — 그 자리에서 맨 위가 #vBack 인가 */

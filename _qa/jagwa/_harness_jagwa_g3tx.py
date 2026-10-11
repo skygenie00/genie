@@ -312,7 +312,7 @@ def main():
         if not T:
             return False, o
         sv = [x for x in T['저장'] if x['t'] == P1 + '\n' + P2]
-        ms = [x for x in T['잼'] if x['txt'] == P1 + '\n' + P2]
+        ms = [x for x in T['잼'] if (x['txt'] or '').replace('\n', '') == P1 + P2]   # ★ cardfit add1(10/11) — 여러 줄 근거는 줄마다 .ggl 칸(글자에 \n 없음 · 보이는 두 줄은 같음)
         per = {x['f']: {'줄 수': x['lines'], '둘째 top − 첫 top': round((x['tops'].get(P2) or 0) - (x['tops'].get(P1) or 0), 1),
                         '단추 = 첫 줄': all(b is not None and b[1] < (x['tx'][1] + 14) for b in (x['bang'], x['cm'], x['del']))} for x in ms}
         pop = T['서랍 작은 창'] or []

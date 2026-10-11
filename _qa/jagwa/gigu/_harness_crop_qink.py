@@ -828,7 +828,8 @@ def static_checks():
        'QINK=await inkGet(qKey(uid),{w:QCW,h:QCW})' in s and 'pathD(st.p,QCW,QCW)' in s)
     T2('S-22 물리 #tLayer·#tUndo·#tErase 핸들러 원본 무변(카드 층은 뒤에 다시 맬 뿐)',
        "$('#tLayer').onchange=e=>{LAYER=+e.target.value;paintInk()};" in s
-       and "$('#tUndo').onclick=()=>{const a=INK[LAYER];if(a&&a.length){a.pop();paintInk();saveInk()}};" in s
+       and ("$('#tUndo').onclick=()=>{const a=INK[LAYER];if(a&&a.length){a.pop();paintInk();saveInk()}};" in s
+            or "$('#tUndo').onclick=()=>{if(typeof itUndo==='function')return itUndo();const a=INK[LAYER];if(a&&a.length){a.pop();paintInk();saveInk()}};" in s)   # ★ cardfit(10/11) §3-3 — ↺ = ⋯ 메뉴 안 itUndo(패치 64)
        and "$('#tErase').onclick=()=>{ if(TOOL.mode==='erase')eraseSheet(); else setTool('erase'); };" in s)
     T2('S-23 카드 폭을 박았다 — 좁으면 통째로 줄인다(글이 다시 흐르지 않는다)',
        '#card{position:relative;width:760px;max-width:760px;transform-origin:top left}' in s

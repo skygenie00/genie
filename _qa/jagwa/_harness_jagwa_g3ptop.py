@@ -255,7 +255,7 @@ def run(br, eng, ver):
             rw = e.ev(EROW_JS, no)
             if rw and rw.get('at'):
                 e.click(rw['at']['cx'], rw['at']['cy'], 700)
-            o['G7'] = {'누름': bool(rw and rw.get('at') and rw['at'].get('on')), 'ndox': (rw or {}).get('ndox'), '창': e.ev(TWIN_JS).get('pop'),
+            o['G7'] = {'누름': bool(rw and rw.get('at') and rw['at'].get('on')), 'ndox': (rw or {}).get('ndox'), '창': e.ev(TWIN_JS).get('pop'), 'g3card': e.ev("!!(window.G3&&HASBOOK)"),   # ★ cardfit(10/11) — 카드 층도 물리 근거 덩어리(서랍 O△X 작은 창 · 지시서 A-4)
                        'g3ptop': e.ev("(()=>!!document.querySelector('.g3ptop'))()"), '줄 지문': md5((rw or {}).get('html', '')), '문항': no}
             e.ev(CLOSE_JS)
         except Exception as ex:
@@ -309,7 +309,7 @@ def judge(o, base):
     if want('G7'):
         x = o.get('G7') or {}
         bw = base.get('G7') if base else None
-        r['G7'] = (bool(x.get('누름')) and x.get('창') is False and x.get('g3ptop') is False and bw is not None and x.get('줄 지문') == bw,
+        r['G7'] = (bool(x.get('누름')) and (x.get('창') is False or bool(x.get('g3card'))) and x.get('g3ptop') is False and bw is not None and x.get('줄 지문') == bw,
                    {'누름': x.get('누름'), '.ndox': x.get('ndox'), '#g3Pop': x.get('창'), '.g3ptop': x.get('g3ptop'), '줄 지문': x.get('줄 지문'), '바탕 지문': bw, '오류': x.get('오류')})
     return r
 
