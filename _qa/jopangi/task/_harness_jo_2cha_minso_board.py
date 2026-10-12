@@ -333,6 +333,68 @@ def S_(x):
     return json.dumps(x, ensure_ascii=False, default=str)[:500]
 
 
+# ★ unitall(10/12 · _task_jo_2cha_unitall_1012 회귀) — 단원별 주단원 · 걸침 걷음 판(앱에 c2uUnits 가 있음)은 한 문제 = 짚은 단원마다 한 줄 · 단원 = 설문 ∪ 주 ∪ 목차노트 인용 ·
+#   인용으로 든 단원은 ✎ 창 · 손값으로 못 뺌(지시서 정한 것 ②) → 그 판의 기댓값은 jo/data 에서 같은 규칙으로 셈(앱 값을 잣대로 안 씀) · 옛 판(바탕)은 옛 잣대 그대로
+def unitall(p):
+    return bool(p.ev("()=>typeof c2uUnits==='function'"))
+
+
+_C2UD = {}
+
+
+def c2u_data():
+    """카드(코드) → 단원(설문 ∪ 주 ∪ 인용) · 인용 없는 카드 · 편 머리(번호 하나 · ==편==) — 2cha_단원_민소 · note_민소 · note_backlink · 2cha_보드 격자"""
+    if _C2UD:
+        return _C2UD
+    jl = lambda f: json.load(open(os.path.join(DATA, f), encoding='utf-8'))
+    U, N, Bk, BD = jl('2cha_단원_민소.json')['문제'], jl('note_민소.json'), jl('note_backlink.json'), jl('2cha_보드.json')['기출|민소']
+    ids = {}
+    for k in Bk:
+        i = k.find('#^')
+        if i >= 0:
+            ids.setdefault(k[:i], []).append(k[i + 2:])
+    cite = {}
+    for f, L in ids.items():
+        if f not in N:
+            continue
+        for x in [x for i in L for x in ((Bk.get(f + '#^' + i) or {}).get('기출') or [])]:
+            if f not in cite.setdefault(x, []):
+                cite[x].append(f)
+    num = lambda n: (re.match(r'^(\d+(?:\.\d+)*)\.?\s*', n) or [None, ''])[1] or ''
+    per, nocite = {}, []
+    for k, xs in (BD.get('격자') or {}).items():
+        r, c = k.split('|')
+        for x in xs:
+            yr = x.get('연도'); code = (str(yr)[2:] + '-' if yr else '') + r + '-' + str(int(c))
+            a = U.get(code) or {}; out = []
+            for sv in a.get('설문') or []:
+                for u in sv.get('단원') or []:
+                    if u.get('n') and u['n'] not in out:
+                        out.append(u['n'])
+            if a.get('주') and a['주'] not in out:
+                out.insert(0, a['주'])
+            for n in cite.get(x['파일'], []):
+                if n not in out:
+                    out.append(n)
+            per[code] = out
+            if not cite.get(x['파일']):
+                nocite.append(code)
+    py = {num(n) for n in N if re.search(r'==.+?==', n) and num(n) and '.' not in num(n)}
+    _C2UD.update(per=per, nocite=sorted(nocite), py=py, num=num)
+    return _C2UD
+
+
+def c2u_expect(prefix):
+    """그 회차(코드 앞글자)만 거른 단원별 보드 기댓값 — 편 띠 · 단원 머리 · 줄(앱 c2UnitEl 규칙: 머리 = 줄 있는 단원 · 편 띠 = 그 편 첫 번호에 줄 있는 단원이 있고 편 머리 노트가 있을 때)"""
+    d = c2u_data(); by = {}
+    for code, us in d['per'].items():
+        if code.startswith(prefix):
+            for n in us:
+                by.setdefault(n, []).append(code)
+    firsts = {d['num'](n).split('.')[0] for n in by if d['num'](n)}
+    return {'bands': len(firsts & d['py']), 'heads': len(by), 'rows': sum(len(v) for v in by.values())}
+
+
 def expand(p, code, want=True):
     """그 줄 본문이 want 가 되게 제목을 누른다(떠 있는 작은 메뉴는 먼저 닫는다 — 사람도 Esc·바깥 누름으로 닫고 누른다)"""
     p.ev("()=>{try{if(typeof c2FlyClose==='function')c2FlyClose();}catch(e){}return 1;}")
@@ -373,8 +435,14 @@ def B1(p):
     p.click(p.ev("t=>__C2.fmenuItem(t)", '15-52'))
     b3 = p.board()
     ont = [s['t'] for s in b3['seg'] if s['on']]
-    T(g, '15-52 고름 → 단원별 편 4 · 단원 4 · 줄 4 · 단추 「단원별 · 15-52」', b3['bands'] == 4 and b3['heads'] == 4 and b3['rows'] == 4 and ont == ['단원별 · 15-52'],
-      {k: b3[k] for k in ('bands', 'heads', 'rows', 'seg')})
+    if unitall(p):   # ★ unitall — 한 문제 = 짚은 단원마다 한 줄 → 편 · 단원 · 줄 = 데이터로 센 값(그 회차 문제 넷의 단원 전부)
+        ex = c2u_expect('15-52-')
+        T(g, '15-52 고름 → 단원별 편 %(bands)d · 단원 %(heads)d · 줄 %(rows)d(데이터로 셈 · unitall) · 단추 「단원별 · 15-52」' % ex, b3['bands'] == ex['bands'] and b3['heads'] == ex['heads'] and b3['rows'] == ex['rows'] and ont == ['단원별 · 15-52'],
+          {k: b3[k] for k in ('bands', 'heads', 'rows', 'seg')})
+    else:
+        # 옛(unitall 전): 주단원 자리만 — 편 4 · 단원 4 · 줄 4
+        T(g, '15-52 고름 → 단원별 편 4 · 단원 4 · 줄 4 · 단추 「단원별 · 15-52」', b3['bands'] == 4 and b3['heads'] == 4 and b3['rows'] == 4 and ont == ['단원별 · 15-52'],
+          {k: b3[k] for k in ('bands', 'heads', 'rows', 'seg')})
     rb = [s for s in b3['seg'] if s['t'].startswith('회차별')]
     p.click(p.ev("()=>{const b=[...document.querySelectorAll('#ordSeg button')].find(x=>x.textContent.indexOf('회차별')===0);return b?(()=>{const r=b.getBoundingClientRect();return {cx:r.left+r.width/2,cy:r.top+r.height/2,on:true};})():null;}"))
     b4 = p.board()
@@ -426,13 +494,16 @@ def B2(p, pb):
 
 def B3(p):
     g = 'B3'
-    p.ev("()=>{localStorage.setItem('jopangi.c2unit',JSON.stringify({'민소|08-45-1':{main:'',s:{'(1)':[]},t:Date.now(),by:'햄찌PC'}}));return 1;}")   # 「단원 없음」 묶음 하나(합성 손값)
+    UA = unitall(p)
+    k0 = '민소|' + (c2u_data()['nocite'][0] if UA else '08-45-1')   # ★ unitall — 인용으로 든 단원은 손값으로 못 빼니(정한 것 ②) 「단원 없음」 합성 손값은 목차노트 인용 없는 카드에(옛(unitall 전) = 08-45-1 · 인용 둘)
+    p.ev("k=>{const o={};o[k]={main:'',s:{'(1)':[]},t:Date.now(),by:'햄찌PC'};localStorage.setItem('jopangi.c2unit',JSON.stringify(o));return 1;}", k0)   # 「단원 없음」 묶음 하나(합성 손값)
+    # 옛(unitall 전): p.ev("()=>{localStorage.setItem('jopangi.c2unit',JSON.stringify({'민소|08-45-1':{main:'',s:{'(1)':[]},t:Date.now(),by:'햄찌PC'}}));return 1;}")
     b = p.go({'c2ord': 'unit', 'c2lv': {'unit': 3, 'round': 2}, 'c2sec': {}, 'c2rl': {}})
     seq = [(b['lv'], b['bodies'], b['rows'], b['heads'], b['bands'])]
     for _ in range(4):
         p.click(p.ev("()=>__C2.at('#slot .uzstep.c2lv')"), 900)
         x = p.board(); seq.append((x['lv'], x['bodies'], x['rows'], x['heads'], x['bands']))
-    nb = p.ev("()=>{let n=0;const B=(BODYKEY===S.boardKind+'_'+PLAW()&&BODY)||{};document.querySelectorAll('#slot .c2row[data-ck]').forEach(r=>{const f=r.dataset.ck.split('|').slice(2).join('|');const rec=B[f];if(rec&&(rec.행||[]).some(x=>x.co!=='question'))n++;});return n;}")
+    nb = p.ev("ua=>{let n=0;const B=(BODYKEY===S.boardKind+'_'+PLAW()&&BODY)||{};document.querySelectorAll(ua?'#slot .c2row[data-ck], #slot .c2row[data-ckx]':'#slot .c2row[data-ck]').forEach(r=>{const f=(r.dataset.ck||r.dataset.ckx).split('|').slice(2).join('|');const rec=B[f];if(rec&&(rec.행||[]).some(x=>x.co!=='question'))n++;});return n;}", UA)   # ★ unitall — 같은 문제가 단원마다 줄(둘째 줄부터 data-ckx) · 본문도 줄마다 → 본문 셈 = 모든 줄(옛(unitall 전) = data-ck 줄만)
     ok = (seq[0][0] == '펴기' and seq[1][0] == '접기1' and seq[1][1] == nb and nb > 50 and seq[1][2] > 70 and seq[2][2] == 0 and seq[2][3] == 0 and seq[2][4] == 9
           and seq[3][3] > 0 and seq[3][2] == 0 and seq[4][2] > 70 and seq[4][1] == 0 and seq[4][0] == '펴기')
     T(g, '처음 「펴기」(unit 3) → all(본문 펴짐 · 「접기1」 · ⑦ 만인 카드는 보드 본문 없음) → 1(편 띠만) → 2(단원 머리) → 3(줄 · 본문 0)', ok, [seq, nb])
@@ -854,7 +925,12 @@ def B12(p):
     p.go({'c2ord': 'unit'}, True)
     ovt = p.ev("n=>{const h=[...document.querySelectorAll('#slot .c2uh')].find(x=>x.dataset.unit===n);return h?(h.querySelector('.ov')||{}).textContent||'':null;}", nm)
     rows = p.ev("n=>__C2.unitRows(n)", '1.3.1.{법정}직사토(보독관)') or []
-    T(g, '단원별 보드 — 주단원 자리 그대로(1.3.1 아래 24-61-2) · 더한 단원 머리 걸침 셈에 24-61-2', '24-61-2' in ' '.join(rows) and bool(ovt) and '걸침' in ovt, [rows[:6], nm, ovt])
+    if unitall(p):   # ★ unitall — 주단원 · 걸침 걷음: 더한 단원(+) 도 이 문제 단원 → 그 머리 아래 24-61-2 줄이 서고 걸침 단추 없음 · 1.3.1 아래에도 그대로
+        rows_n = p.ev("n=>__C2.unitRows(n)", nm) or []
+        T(g, '단원별 보드 — 1.3.1 아래 24-61-2 · 더한 단원 머리 아래 24-61-2 줄 · 걸침 단추 0(unitall)', '24-61-2' in ' '.join(rows) and '24-61-2' in ' '.join(rows_n) and ovt == '', [rows[:6], nm, rows_n[:4], ovt])
+    else:
+        # 옛(unitall 전): 주단원 자리 그대로 · 더한 단원 머리 「걸침 N ▸」 셈에 24-61-2
+        T(g, '단원별 보드 — 주단원 자리 그대로(1.3.1 아래 24-61-2) · 더한 단원 머리 걸침 셈에 24-61-2', '24-61-2' in ' '.join(rows) and bool(ovt) and '걸침' in ovt, [rows[:6], nm, ovt])
     p.click(p.ev("c=>__C2.addedX(c)", '24-61-2'))
     r4 = p.ev("c=>__C2.rowInfo(c)", '24-61-2'); hv2 = p.ev("()=>__C2.unitLS()").get('민소|24-61-2')
     T(g, '✕ → 3 · 손값 = 자동값과 같아져 {auto:true}', len(r4['uchips']) == 3 and hv2 and hv2.get('auto') is True, [len(r4['uchips']), hv2])

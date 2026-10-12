@@ -9037,7 +9037,8 @@ function c2Code(c){ return (c.yr ? String(c.yr).slice(2) + '-' : '') + c.row + '
 async function c2uLoad(subj){
   if (C2U[subj] !== undefined) return C2U[subj];
   try{ C2U[subj] = await get('2cha_단원_' + subj + '.json'); }catch(e){ C2U[subj] = null; }   /* 데이터 없는 법 = 세션에 한 번만 404 */
-  if (C2U[subj]){ try{ const { N } = await noteData(); C2UNS[subj] = new Set(Object.keys(N || {})); }catch(e){} }
+  if (C2U[subj]){ try{ const { N, B } = await noteData(); C2UNS[subj] = new Set(Object.keys(N || {}));
+    const m = mokCite(B, N), inv = {}; Object.keys(m).forEach(f => { if (!(N || {})[f]) return; m[f].기출.forEach(x => { (inv[x] = inv[x] || []).push(f); }); }); C2UCITE[subj] = inv; }catch(e){} }   /* ★ 주단원 걷음 — 카드 → 인용 노트 */
   return C2U[subj]; }
 function c2UnitReady(){ return S.boardKind === '기출' && !!C2U[SHORT[S.law]]; }
 function c2UnitWhy(){ return S.boardKind === 'GS' ? 'GS 단원 데이터 없음' : ((SHORT[S.law] || '') + ' 기출 단원 데이터 없음'); }
@@ -9062,6 +9063,11 @@ function c2uSrc(eff, n){ const s = [];
   return s.join('·') || (eff && eff.hand ? '손' : '—'); }
 function c2uNoteOk(subj, n){ const ns = C2UNS[subj]; return !ns || !ns.size || ns.has(n); }
 function c2uAll(subj){ return [...(C2UNS[subj] || [])].filter(n => c2uNum(n)).sort(c2uCmp); }
+/* ★ 단원별 주단원 걷음(10/12 사용자 「주단원 둘 필요 없음 · 기출이 들어간 단원은 단원별에 다 · 목차노트 단원명 있는 것은 다」)
+   이 문제 단원 = 단원 데이터 설문 단원 전부(손값이면 손값 · c2uTouched) + 목차노트가 이 카드를 인용한 노트(note_backlink · 목차노트 「기출 N」 칩과 같은 셈 = mokCite) */
+const C2UCITE = {};   /* 법 → 카드 파일 이름 → [노트 이름] */
+function c2uCiteOf(subj, file){ const M = C2UCITE[subj]; return (M && M[file]) || []; }
+function c2uUnits(subj, c, eff){ const out = c2uTouched(eff); c2uCiteOf(subj, c.file).forEach(n => { if (out.indexOf(n) < 0) out.push(n); }); return out; }
 function c2uChip(subj, n, eff){
   const ok = c2uNoteOk(subj, n), s = el('span', 'c2uc' + (ok ? '' : ' nonote')); s.dataset.unit = n;
   s.appendChild(el('b', '', c2uNum(n))); s.appendChild(el('span', 't', c2uName(n).slice(0, 10)));
@@ -9075,12 +9081,12 @@ function c2uChips(box, c, o){
   const plus = (H && Array.isArray(H.s['(+)'])) ? H.s['(+)'].map(String) : [];
   const show = !!(S.c2uv || {})[c.ck]; let n = 0;
   if (eff){
-    const names = (o.mode === 'unit' ? c2uTouched(eff).filter(x => x !== eff.main) : (eff.main ? [eff.main] : [])).filter(x => plus.indexOf(x) < 0);
+    const names = c2uUnits(o.subj, c, eff).filter(x => x !== o.unit && plus.indexOf(x) < 0);   /* ★ 주단원 걷음 — 칩 = 이 문제 단원 전부 · 단원별에선 지금 머리 단원만 뺀다 */
     n += names.length;
     if (show){ names.forEach(x => box.appendChild(c2uChip(o.subj, x, eff)));
       if (eff.hand){ const h = el('span', 'c2uhand', '✓손'); h.title = '손값 — ' + (eff.by || '') + ' ' + clTs(eff.t); box.appendChild(h); } }
   }
-  plus.forEach(x => { n++; if (!show) return; const ch = c2uChip(o.subj, x, eff); ch.classList.add('added'); ch.title = x + ' · 내가 더함';
+  plus.filter(x => x !== o.unit).forEach(x => { n++; if (!show) return; const ch = c2uChip(o.subj, x, eff); ch.classList.add('added'); ch.title = x + ' · 내가 더함';
     const t = ch.querySelector('.t'); if (t) t.textContent = c2uName(x).slice(0, 12);
     const xb = el('button', 'x', '✕'); xb.type = 'button'; xb.title = '빼기'; xb.onclick = e => { e.stopPropagation(); c2uMinus(c, o.subj, x); }; ch.appendChild(xb); box.appendChild(ch); });
   const b = el('button', 'c2ue' + (show ? ' on' : ''), '단원 ' + n + (show ? ' ▾' : ' ▸')); b.type = 'button';
@@ -9094,7 +9100,7 @@ function c2uChips(box, c, o){
    o = { mode:'round'|'unit', subj:<단원 데이터가 있는 법 · 없으면 셋째 칸 비움>, alt:회차 번갈음, over:걸침 흐린 줄, main:그 줄의 주단원 } */
 function c2RowEl(c, o){ o = o || {}; const hot = /⚠|누락/.test(c.x.논점 || '');
   const r = el('div', 'cell c2row' + (hot ? ' hot' : '') + (c.pass ? '' : ' dim') + (!o.over && S.cha2Sel === c.ck ? ' sel' : '') + (o.over ? ' c2ov' : '') + (o.alt ? ' alt' : ''));
-  if (o.over) r.dataset.ckx = c.ck; else r.dataset.ck = c.ck;   /* 걸침 줄은 data-ck 를 안 단다 — c2Mark·보드 스크롤 따라감은 주 줄로만 */
+  if (o.over || o.dup) r.dataset.ckx = c.ck; else r.dataset.ck = c.ck;   /* ★ 주단원 걷음 — 같은 문제 둘째 줄부터(dup)도 data-ck 를 안 단다 */   /* 걸침 줄은 data-ck 를 안 단다 — c2Mark·보드 스크롤 따라감은 주 줄로만 */
   const rec = (o.bodies || {})[c.file] || null;   /* ★ 2cha_minso_board — 그 카드 본문(두루마리 · 제목 펴기 · 깊이) */
   const cd = el('div', 'c2code c2qok', c2Code(c)); cd.title = '눌러서 카드 창(문제·해설·채점)';
   cd.onclick = e => { e.stopPropagation(); popCard4(S.boardKind, c.file, e, 1); };   /* ★ 2cha_minso_board A-5-3 — 코드 숫자 = 카드 창(줄 누름과 같은 창 · 다시 = 닫힘) */
@@ -9162,25 +9168,22 @@ function c2uHead(subj, n, cnt, ov, on){ const ok = c2uNoteOk(subj, n), h = el('d
 function c2UnitEl(shown, years, subj, bodies){ const L = shown.filter(c => c.row); if (!L.length) return null;
   const desc = S.yearSort !== 'asc', cmp = c2OrdCmp(desc);
   const w = el('div', 'c2list c2unit'); { const lh = c2ListHead(years, desc); if (lh) w.appendChild(lh); }
-  const byMain = {}, over = {}, none = [];
-  L.forEach(c => { const eff = c2uEff(subj, c2Code(c));
-    if (!eff || !eff.main){ none.push(c); return; }
-    (byMain[eff.main] = byMain[eff.main] || []).push(c);
-    c2uTouched(eff).forEach(n => { if (n !== eff.main) (over[n] = over[n] || []).push({ c: c, main: eff.main }); }); });
-  const names = [...new Set(c2uAll(subj).concat(Object.keys(byMain)))];
+  const byU = {}, none = [];   /* ★ 주단원 걷음 — 한 문제 = 짚은 단원마다 한 줄(주 · 걸침 가름 없음) */
+  L.forEach(c => { const us = c2uUnits(subj, c, c2uEff(subj, c2Code(c)));
+    if (!us.length){ none.push(c); return; }
+    us.forEach(n => { (byU[n] = byU[n] || []).push(c); }); });
+  const names = [...new Set(c2uAll(subj).concat(Object.keys(byU)))];
   const numbered = names.filter(n => c2uNum(n)).sort(c2uCmp).concat(names.filter(n => !c2uNum(n)).sort());
-  const hasPy = {}; Object.keys(byMain).forEach(n => { hasPy[c2uNum(n).split('.')[0]] = 1; });
-  const open = S.c2uOpen || {};
+  const hasPy = {}; Object.keys(byU).forEach(n => { hasPy[c2uNum(n).split('.')[0]] = 1; });
+  const seen = new Set();   /* 같은 문제가 여러 단원에 서면 처음 그린 줄만 data-ck(c2Mark · 보드 스크롤 따라감 · 메모 창) · 나머지 data-ckx */
   numbered.forEach(n => {
     const num = c2uNum(n), py = c2uPyeon(n);
-    if (py && num && num.indexOf('.') < 0 && hasPy[num]) w.appendChild(c2uBand(n, py));   /* 편 띠 = 그 편에 주단원 문제가 하나라도 있으면 */
-    const rows = byMain[n]; if (!rows || !rows.length) return;                            /* 문제 0 인 단원 머리는 안 세운다 */
-    if (!c2SecOpen('p|' + num.split('.')[0])) return;                                      /* ★ 2cha_minso_board A-3 — 접힌 편의 단원 머리·줄은 안 만든다 */
-    const ov = over[n] || [], k = subj + '|' + n;
-    w.appendChild(c2uHead(subj, n, rows.length, ov.length, !!open[k]));
-    if (!c2SecOpen('u|' + n)) return;                                                     /* 접힌 단원의 줄은 안 만든다 */
-    rows.sort(cmp).forEach(c => w.appendChild(c2RowEl(c, { mode: 'unit', subj: subj, bodies: bodies })));
-    if (open[k]) ov.sort((a, b) => cmp(a.c, b.c)).forEach(x => w.appendChild(c2RowEl(x.c, { mode: 'unit', subj: subj, over: true, main: x.main, bodies: bodies })));
+    if (py && num && num.indexOf('.') < 0 && hasPy[num]) w.appendChild(c2uBand(n, py));   /* 편 띠 = 그 편에 문제가 하나라도 있으면 */
+    const rows = byU[n]; if (!rows || !rows.length) return;                               /* 문제 0 인 단원 머리는 안 세운다 */
+    if (!c2SecOpen('p|' + num.split('.')[0])) return;
+    w.appendChild(c2uHead(subj, n, rows.length, 0, false));
+    if (!c2SecOpen('u|' + n)) return;
+    rows.sort(cmp).forEach(c => { const dup = seen.has(c.ck); seen.add(c.ck); w.appendChild(c2RowEl(c, { mode: 'unit', subj: subj, unit: n, dup: dup, bodies: bodies })); });
   });
   if (none.length){ const h = el('div', 'c2uh c2unone'); h.appendChild(el('span', 'nm', '단원 없음')); h.appendChild(el('span', 'n', '문제 ' + none.length));
     h.title = '단원 데이터에 없는 카드 — ✎ 단원 으로 붙인다'; w.appendChild(h);
@@ -9214,7 +9217,7 @@ function c2uWin(c, subj, ev){
     if (c.x && c.x.논점) body.appendChild(el('div', 'c2w-sub', c.x.논점));
     const now = c2uHand(subj, code);
     body.appendChild(el('div', 'c2w-st', now ? ('손값 · ' + (now.by || '') + ' · ' + clTs(now.t)) : (A ? '자동값(⚙ 매핑)' : '단원 데이터 없음 — 손으로 붙인다')));
-    const mr = el('div', 'c2w-main'); mr.appendChild(el('span', 'lb', '주단원'));
+    const mr = el('div', 'c2w-main'); mr.style.display = 'none'; mr.appendChild(el('span', 'lb', '주단원'));   /* ★ 주단원 걷음 — 고르는 줄 안 보임 */
     const U = union(); if (!U.length) mr.appendChild(el('span', 'c2w-none', '단원이 없다 — 아래 ＋ 단원 으로 더한다'));
     U.forEach(n => { const ok = c2uNoteOk(subj, n), b = el('button', 'c2w-rad' + (st.main === n ? ' on' : '') + (ok ? '' : ' nonote')); b.type = 'button'; b.dataset.n = n;
       b.appendChild(el('b', '', c2uNum(n))); b.appendChild(document.createTextNode(c2uName(n).slice(0, 14)));
@@ -9267,7 +9270,7 @@ function c2uWin(c, subj, ev){
     w.appendChild(inp); w.appendChild(list); fill(); return w; }
   function save(){
     const U = union();
-    if (U.length && U.indexOf(st.main) < 0){ const g = body.querySelector('.c2w-msg'); if (g) g.textContent = '주단원을 골라라 — 이 문제에 든 단원 가운데 하나'; return; }
+    if (U.indexOf(st.main) < 0) st.main = (A && U.indexOf(A.주) >= 0) ? A.주 : (U[0] || '');   /* ★ 주단원 걷음 — 고르는 칸 없음 · 저장 칸 main 은 옛 판 호환(자동 주가 남아 있으면 그것) */
     if (sig() === orig){ closeOne(p); return; }   /* 고친 게 없으면 손값을 안 만든다 */
     const s0 = {}; st.s.forEach(r => { s0[r.no] = r.u.slice(); });
     const all = c2uHandAll(); all[subj + '|' + code] = { main: U.length ? st.main : '', s: s0, t: Date.now(), by: syncWho() || '' };
@@ -9905,7 +9908,7 @@ function c2uPick(btn, c, subj){ const code = c2Code(c), have = new Set(c2uTouche
     if (!n) ul.appendChild(el('div', 'u0', '없음')); };
   inp.addEventListener('input', fill); ['pointerdown', 'mousedown'].forEach(nm => inp.addEventListener(nm, e => e.stopPropagation()));
   inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') c2FlyClose(); });
-  fill(); c2FlyOpen(m); c2FlyBelow(m, btn.getBoundingClientRect(), Math.min(300, innerWidth - 16), 220, 380, true);
+  fill(); c2FlyOpen(m); c2FlyBelow(m, btn.getBoundingClientRect(), Math.min(300, innerWidth - 16), 220, Math.min(380, Math.floor(innerHeight / 3)), true);   /* ★ unitall(10/12) U11 — 처음 뜬 「+」 고르개 높이 ≤ 화면 1/3(PC 900 = 300 · 폰 844 = 281 · 아이패드 1180 = 380 그대로 · 안은 굴림) */
   setTimeout(() => { try{ inp.focus(); }catch(e){} }, 0); }
 
 /* ── A-12 보드 검색 — 지금 법 기출·GS·사례(c2Idx) · 찾을 글 = 파일 이름 + 본문 줄 + 콜아웃(⑦·📄) 제목·원문 + 임베드 이름 · 낱말 모두 ── */
