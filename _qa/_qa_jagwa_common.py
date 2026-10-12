@@ -269,7 +269,7 @@ REMOTE = Remote()
 
 
 # ← jagwa/moolri/_harness_jagwa_physphone.py:102-102 OKHOST · 글자 그대로
-OKHOST = ('http://127.0.0.1',)
+OKHOST = ('http://127.0.0.1', 'blob:', 'data:')   # ★ theorybar(10/12) §2 — WebKit 은 blob: · data: 그림 요청도 route 를 지난다(Chromium 은 안 지남) · 막으면 카드 그림이 안 풀림(naturalWidth 0 · 카드가 짧아 빈 띠 · 굴릴 틈 0) · 바깥 망은 그대로 막음(cardfit 관문 하네스 · penfinger P2 OKNET 과 같은 뜻)
 
 
 # ← jagwa/moolri/_harness_jagwa_physphone.py:105-137 route_handler · 글자 그대로 · 이름 바꿈 VENDOR→VENDOR_PP
