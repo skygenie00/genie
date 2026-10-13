@@ -12,12 +12,12 @@ r"""작은 고침 공용 관문 — 규칙 (96) ④(사용자 10/10 14:13 「작
      "base": "d9961b8",                    ← --base 없을 때
      "settle_ms": 5000,                    ← 화면 setup 뒤 기다림
      "prelude": "화면마다 setup 앞에 돌릴 JS(문 · 도우미 함수 정의)",
-     "screens": {"p1": {"subj": "earth", "dev": "pc"|"ph", "setup": "엔진에서 돌릴 JS(식 · async 가능)"}, …},
+     "screens": {"p1": {"subj": "earth", "dev": "pc"|"ph"|"pad", "setup": "엔진에서 돌릴 JS(식 · async 가능)"}, …},
      "tests": [{"name", "screen",
                 "act": "click"|"long"|"type"|"none",   ← click = PC 마우스 · 폰 손가락 톡 / long = 길게(hold ms · 기본 800) / type = 누르고 글 넣기
                 "sel": CSS(엔진 기준), "nth": 0, "hold": 800, "text": "", "enter": false, "wait": 600,
                 "expect": "엔진에서 참일 JS 식",
-                "yard": true}]}                        ← 바탕에서 FAIL 이어야 하는 칸(헛잣대) · false = 바탕도 PASS 여야(무변 칸)
+                "yard": true, "eng": ["webkit"]}]}      ← eng 없으면 다 · yard = 바탕에서 FAIL 이어야 하는 칸(헛잣대) · false = 바탕도 PASS 여야(무변 칸)
   칸은 명세 차례대로 · 같은 화면 칸은 같은 쪽에서 이어서(앞 칸이 바꾼 상태 위에서) 잰다.
   엔진: chromium = PC 마우스 · 폰 CDP 손가락 / webkit = PC 마우스 · 폰 touchscreen.tap · 길게 = 합성 touch 포인터(공용 WK_LONG).
   결과: 줄마다 「PASS|FAIL | 칸 · 엔진 · 바탕 …」 + 끝에 합계 · 종료 코드 = FAIL 수(바탕 칸은 yard 와 다르면 FAIL 로 셈).
@@ -57,7 +57,7 @@ NOTES = ARG('--notes', os.path.join(os.path.dirname(_roots.spd()), 'notes'))
 VENDOR = ARG('--vendor', os.path.join(TMPD, 'vendor'))
 JG.conf(VENDOR_PP=VENDOR, SPD_PP=SPD, NOTES=NOTES, SHOTS=os.path.join(TMPD, 'shots'))
 SETTLE = int(SPEC.get('settle_ms', 5000))
-DEV = {'pc': (1100, 800), 'ph': (384, 740)}
+DEV = {'pc': (1100, 800), 'ph': (384, 740), 'pad': (820, 1180)}   # pad = 아이패드 세로 · 손가락
 SRC = {'NEW': JG.app_src(NEWF)}
 if not NOBASE:
     SRC['BASE'] = JG.app_src(BASE)
@@ -79,7 +79,7 @@ def want(t):
 
 def run_screen(br, eng, ver, sid, tests):
     sc = SPEC['screens'][sid]
-    touch = sc.get('dev', 'pc') == 'ph'
+    touch = sc.get('dev', 'pc') in ('ph', 'pad')
     p = JG.Pg_PP(br, eng, 'sg-%s-%s-%s-%s' % (ver, eng, sid, int(time.time() * 1000) % 100000), SRC[ver], sc.get('subj', 'phys'),
                  DEV[sc.get('dev', 'pc')], touch=touch, remote=JG.Remote())
     res = {}
@@ -99,9 +99,20 @@ def run_screen(br, eng, ver, sid, tests):
                     at = p.ev(LOC_JS, [t['sel'], t.get('nth', 0)])
                     if not at:
                         raise RuntimeError('누를 것 없음: ' + t['sel'])
-                    p.wait(150)
-                    at = p.ev(LOC_JS, [t['sel'], t.get('nth', 0)]) or at
-                    if act == 'long':
+                    for _ in range(12):   # 굴림(부드러운 굴림 · 창 맞춤)이 멈출 때까지 — 자리가 1px 안으로 두 번 같으면 누름
+                        p.wait(150)
+                        at2 = p.ev(LOC_JS, [t['sel'], t.get('nth', 0)]) or at
+                        if abs(at2['x'] - at['x']) < 1 and abs(at2['y'] - at['y']) < 1:
+                            break
+                        at = at2
+                    at = at2
+                    if act == 'long' and touch and eng == 'chromium':
+                        # Chromium 폰 손가락 길게 = CDP 터치(누름 ≥ 900ms) · ⚠ 카드가 줄어든(scale ≈0.45) 화면의 8~9px 줄은 Chromium 터치가 옆 근거 글을 잡음(10/14 잼) — 그런 칸은 명세에 "eng": ["webkit"]
+                        c = p._cdp()
+                        c.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': at['x'], 'y': at['y'], 'id': 1}]})
+                        p.wait(max(int(t.get('hold', 800)), 900))
+                        c.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
+                    elif act == 'long':
                         p.long_press(at['x'], at['y'], ms=int(t.get('hold', 800)), wait=0)
                     elif act in ('click', 'type'):
                         if touch:
@@ -139,7 +150,9 @@ def main():
             br = getattr(pw, eng).launch()
             try:
                 for sid in order:
-                    T = [t for t in tests if t['screen'] == sid]
+                    T = [t for t in tests if t['screen'] == sid and eng in t.get('eng', ENGS)]   # 칸 "eng": ["webkit"] = 그 엔진에서만
+                    if not T:
+                        continue
                     rn = run_screen(br, eng, 'NEW', sid, T)
                     dob = (not NOBASE) and eng in BASE_ENGS
                     rb = run_screen(br, eng, 'BASE', sid, T) if dob else {}
