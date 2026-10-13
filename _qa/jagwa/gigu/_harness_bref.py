@@ -761,6 +761,12 @@ def static_checks():
             # ★ 2026-10-07 (_task_jagwa_phys_win §A-41 (51)) — 물리 서랍 줄 제목 = span.ndtt(고친 제목이면 그 글 · pnFix · 길게 눌러 고치기) = 뜻한 차 → 넷째 꼴:
             #   카드 층(HASBOOK)은 옛 esc(titleOf(r)) 그대로 · 물리만 ndtt 로 감쌈 · ynUid 는 `HASBOOK&&` 그대로(물리는 새 갈래 못 탐) — 옛 세 꼴은 위에 그대로
             or ("'</span><span class=\"ndt\">'+esc(r[F.CODE])+esc(r[F.LV])+(ynUid(r)?'':' · '+(HASBOOK?esc(titleOf(r)):'<span class=\"ndtt'+(pnFix(r)?' fx':'')+'\" data-pn=\"'+no+'\" title=\"길게 눌러 제목 고치기\">'+esc(pnFix(r)||titleOf(r))+'</span>'))+'</span>" in s
+                and __import__('re').search(r'var ynUid=r.{2}!!\(HASBOOK&&', s) is not None)
+            # ★ 2026-10-13 (_task_jagwa_bundles_1013 쌍 17) — 서랍 줄 꼬리가 ndtTail(r,no) 한 함수로(카드 층도 고친 제목이면 파랑 span) = 뜻한 차 → 다섯째 꼴:
+            #   줄 식이 ndtTail 을 부르고 · ndtTail 카드 층 빈 제목 갈래 = 옛 글자(ynUid 면 '' · 아니면 ' · '+titleOf) · 물리 갈래 = 넷째 꼴 span 글자 그대로 · ynUid 는 `HASBOOK&&` 그대로(물리는 새 갈래 못 탐)
+            or ("'</span><span class=\"ndt\">'+esc(r[F.CODE])+esc(r[F.LV])+ndtTail(r,no)+'</span>" in s
+                and "if(HASBOOK&&!fx)return ynUid(r)?'':' · '+esc(titleOf(r));" in s
+                and "return ' · <span class=\"ndtt'+(fx?' fx':'')+'\" data-pn=\"'+no+'\" title=\"길게 눌러 제목 고치기\">'+esc(fx||titleOf(r))+'</span>'" in s
                 and __import__('re').search(r'var ynUid=r.{2}!!\(HASBOOK&&', s) is not None)))
     return out
 

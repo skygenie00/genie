@@ -3023,7 +3023,7 @@ async function vSwap(b){
 async function showProblem(){
   const r=rec(VNO), loc=locate(r);
   navSync();
-  $('#vT1').innerHTML=(r[F.VLT]?'<i class="ndv">V'+esc(String(r[F.VLT]))+'</i> ':'')+VNO+' '+esc(r[F.CODE])+esc(r[F.LV])+' · '+esc((typeof pnFix==='function'&&pnFix(r))||titleOf(r));   /* 시안 gg3 v16 — 머리 제목 = 서랍 줄 제목 꼴 한 줄 */
+  $('#vT1').innerHTML=(r[F.VLT]?'<i class="ndv">V'+esc(String(r[F.VLT]))+'</i> ':'')+VNO+' '+esc(r[F.CODE])+esc(r[F.LV])+' · '+'<span class="vtt'+((typeof pnFix==='function'&&pnFix(r))?' fx':'')+'" data-pn="'+VNO+'" title="길게 누르면 제목 고치기">'+esc((typeof pnFix==='function'&&pnFix(r))||titleOf(r))+'</span>';   /* ★ 10/13 사용자 「문제 창 제목 줄 길게 누르면 수정 · 목차 서랍에도 바로」 — 제목 칸 = 서랍 줄 제목과 같은 저장(TFIX P번호 nm) · 시안 gg3 v16 — 머리 제목 = 서랍 줄 제목 꼴 한 줄 */
   linkChip();
   $('#vT2').textContent=`${bigLabel(r[F.BIG])} › ${r[F.SUB]}`+(r[F.TYPE]?` · ${r[F.TYPE]}`:'')+` · ${r[F.LV]}`+(r[F.YEAR]?` · ${r[F.YEAR]} ${r[F.SRC]}`:'')+` · ${r[F.CODE]}`+(r[F.VLT]?` · 볼트 ${r[F.VLT]}`:'')+` · 교재 ${r[F.PG]}쪽`;
   // ink
@@ -4183,6 +4183,8 @@ function navBuild(){
     const dot=hd.querySelector('.dot'); if(dot)dot.className='dot '+((typeof trDot==='function')?trDot(st.m):'');
     const nn=hd.querySelector('.n'); if(nn)nn.textContent=st.n;
     hd.classList.toggle('nd0',!rows.length);
+    {const b0=hd.querySelector('.ndbd');if(b0)b0.remove();const bd=bdOfSec(hd.dataset.sec,rows);   /* ★ 묶음 — 목차 줄 오른쪽 [N] */
+     if(bd){const i=document.createElement('i');i.className='ndbd';i.dataset.bd=bd.n;i.title='묶음 '+bd.n+' · '+bd.nm+' — 누르면 왜 묶나';i.textContent='['+bd.n+']';hd.appendChild(i)}}
     hd=null; rows=[];
   };
   seq.forEach(it=>{
@@ -4191,7 +4193,7 @@ function navBuild(){
       nQ++; rows.push(no);
       const d=document.createElement('div');d.className='ndrow';d.dataset.no=no;
       if(hd){d.dataset.sec=hd.dataset.sec;if(ndSecSet().has(String(hd.dataset.sec)))d.classList.add('ndoff')}   /* 시안 ③ */
-      d.innerHTML='<span class="ndno'+(HASBOOK?'':' ph')+'">'+((!HASBOOK&&r[F.VLT])?'<i class="ndv" title="볼트 '+r[F.VLT]+'">V'+r[F.VLT]+'</i>':'')+no+'</span><span class="ndt">'+esc(r[F.CODE])+esc(r[F.LV])+(ynUid(r)?'':' · '+(HASBOOK?esc(titleOf(r)):'<span class="ndtt'+(pnFix(r)?' fx':'')+'" data-pn="'+no+'" title="길게 눌러 제목 고치기">'+esc(pnFix(r)||titleOf(r))+'</span>'))+'</span><span class="ndtail">'+ndTail(no)+'</span>';   /* ★ revfix0929 A-5 — 번호 · 출처(「G25-62-09 · 62회 9번」 · 옛 「-」는 새 번호 뒤에서 「G25-62-09-62」로 읽혔다) */
+      d.innerHTML='<span class="ndno'+(HASBOOK?'':' ph')+'">'+((!HASBOOK&&r[F.VLT])?'<i class="ndv" title="볼트 '+r[F.VLT]+'">V'+r[F.VLT]+'</i>':'')+no+'</span><span class="ndt">'+esc(r[F.CODE])+esc(r[F.LV])+ndtTail(r,no)+'</span><span class="ndtail">'+ndTail(no)+'</span>';   /* ★ revfix0929 A-5 — 번호 · 출처(「G25-62-09 · 62회 9번」 · 옛 「-」는 새 번호 뒤에서 「G25-62-09-62」로 읽혔다) */
       frag.appendChild(d); return}
     if(!it.uhd)return;                       /* 편·절 머리는 서랍에 안 세운다 */
     flushSec();
@@ -6091,6 +6093,15 @@ var GGU = HASBOOK ? (r=>(r?String(r[F.CODE]||''):'')) : (r=>(r?('P'+String(r[F.N
 var unitOf=no=>{const r=rec(no);const u=UN[r[F.CODE]];return (u===undefined||u===null)?(r[F.UNIT]||''):u};
 var unitName=c=>TOC.unit[c]?TOC.unit[c].name:(TOC.sec[c]?TOC.sec[c].name:(TOC.ch[c]?TOC.ch[c].name:''));
 var unitLabel=c=>c?(c+' '+unitName(c)).trim():'미분류';
+/* ★ 묶음(10/13 사용자 「_phys_bundles.md 읽고 물리 앱에 묶음 반영 · 단원 이름·문항 범위 기준」 · 자과study 10/13 표 · 검산 24 묶음 · 63 단원 · 577 문항 · 빠짐 0 · 겹침 0 = 채팅이 DATA 로 다시 셈)
+   한 묶음 = 같이 풀 단원들 · 맞춤 = 단원 이름(DATA 6째 칸 F.SUB) — 「1.11」 같은 번호는 읽기용 · 물리만(카드 층 = 묶음 없음)
+   서랍 단원 머리(목차 줄) 오른쪽 [N] · 누르면 「왜 묶나」 작은 창(서랍 O X 근거 창 꼴 · 서랍 옆) */
+var BUNDLES=window.BUNDLES=[{"n":1,"nm":"운동학 — 등가속도","why":"전부 등가속도 식 (포물체 = x·y 따로)","u":[["1.1","등속 운동, 등가속도 운동","#1-15"],["1.2","중력가속도 운동","#16-22"],["1.7","2차원 운동","#62-72"]]},{"n":2,"nm":"힘 그림 — 방향별 합","why":"힘 그림 → 방향별 합","u":[["1.3","힘과 가속도, 작용반작용","#23-32"],["1.4","벡터의 분해와 합성","#33-38"],["1.5","힘의 종류(중력·장력·탄성력·수직항력·마찰력)","#39-57"],["1.6","힘의 평형과 등속 운동","#58-61"]]},{"n":3,"nm":"일과 에너지","why":"E보존","u":[["1.8","일과 에너지","#73-94"]]},{"n":4,"nm":"충격량·충돌","why":"충격량 = 운동량 변화","u":[["1.9","충격량과 운동량","#95-101"],["1.10","충돌 현상과 운동량 보존","#102-122"]]},{"n":5,"nm":"원운동","why":"중심 방향 힘 합 = 구심력","u":[["1.11","등속 원운동","#123-135"],["1.12","수직 원운동","#136-142"]]},{"n":6,"nm":"회전 에너지·각운동량","why":"I → ½Iω² → L=Iω","u":[["1.13","질량과 회전질량","#143-145"],["1.14","회전 운동과 역학적 에너지 보존","#146-154"],["1.15","각운동량 보존법칙","#155-161"]]},{"n":7,"nm":"토크·평형·질량중심","why":"토크 τ · 질량중심 (1.20 특별한 예제 = 질량중심·벽돌 평형 문제라 여기)","u":[["1.16","회전과 평형상태","#162-171"],["1.17","회전력과 각가속도, 가속도","#172-179"],["1.20","특별한 예제","#192-195"]]},{"n":8,"nm":"주기 운동","why":"만유인력 = 구심력 · 단진동 주기","u":[["1.18","만유인력","#180-183"],["1.19","단진동 운동","#184-191"]]},{"n":9,"nm":"유체","why":"부력 · 베르누이","u":[["2.1","정지 유체와 부력","#196-207"],["2.2","움직이는 유체와 베르누이 방정식","#208-209"]]},{"n":10,"nm":"열 주고받기","why":"열량 · 열전도 · 열팽창","u":[["3.1","얻은 열, 잃은 열","#210-216"],["3.2","열전도","#217-220"],["3.3","열팽창","#221-223"]]},{"n":11,"nm":"기체·P-V","why":"PV=nRT · U=3/2nRT","u":[["3.4","기체 분자의 운동","#224-234"],["3.5","P-V 그래프, 일과 열","#235-250"]]},{"n":12,"nm":"엔트로피·열기관","why":"순환 · 효율","u":[["3.6","엔트로피와 열역학 제2법칙","#251-264"],["3.7","열기관과 열효율","#265-273"]]},{"n":13,"nm":"파동 기본·간섭","why":"v=fλ · 파동 겹치기 (도플러·맥놀이 포함)","u":[["4.1","파동의 표현","#274-281"],["4.2","파동의 간섭","#282-284"],["4.3","정상파","#285-295"],["4.7","도플러 효과, 맥놀이","#326-333"]]},{"n":14,"nm":"경로차 간섭","why":"슬릿 · 광로차","u":[["4.4","단일 슬릿, 이중 슬릿 실험","#296-307"],["4.6","파동의 반사 후 간섭, 광로차","#318-325"]]},{"n":15,"nm":"기하광학","why":"굴절 · 거울과 렌즈","u":[["4.5","파동의 굴절","#308-317"],["4.8","거울과 렌즈","#334-344"]]},{"n":16,"nm":"직류 회로","why":"저항 · 전위 분석 · 키르히호프 · 전력","u":[["5.1","저항과 전기회로","#345-353"],["5.2","회로의 전위 분석","#354-361"],["5.3","전위와 키르히호프의 법칙","#362-366"],["5.4","전력과 전기에너지","#367-375"]]},{"n":17,"nm":"축전기","why":"축전기 용량 · 축전기 회로","u":[["5.5","축전기 용량","#376-383"],["5.6","축전기와 전기회로","#384-393"]]},{"n":18,"nm":"전기력·전기장·전위","why":"쿨롱 → E → V","u":[["5.7","전기력과 전기 위치에너지","#394-402"],["5.13","점전하의 전기력과 전기 위치에너지","#466-471"],["5.14","전기장","#472-489"],["5.15","전위","#490-493"]]},{"n":19,"nm":"자기장·자기력","why":"오른손 · 자기력","u":[["5.8","자기장","#403-418"],["5.9","전선이 받는 자기력","#419-426"],["5.10","전하가 받는 자기력","#427-440"]]},{"n":20,"nm":"유도·코일·교류","why":"유도 → 코일 → 교류 (5.12 는 유도·교류에 이어져 여기)","u":[["5.11","전자기 유도","#441-457"],["5.12","축전기와 코일","#458-465"],["5.16","교류 회로","#494-499"]]},{"n":21,"nm":"광자","why":"E=hf","u":[["6.1","전자기파","#500-504"],["6.3","빛과 입자의 상호작용","#515-518"],["6.4","콤프턴 효과","#519-521"],["6.5","광전 효과","#522-529"]]},{"n":22,"nm":"물질파·우물","why":"드브로이 파장 → 우물 속 정상파","u":[["6.2","물질파","#505-514"],["6.6","무한 퍼텐셜 우물","#530-538"]]},{"n":23,"nm":"원자·양자","why":"에너지 준위","u":[["6.7","수소원자","#539-549"],["6.8","양자역학","#550-562"]]},{"n":24,"nm":"핵·상대성","why":"E=mc²","u":[["6.9","핵물리","#563-574"],["6.10","상대성 이론","#575-577"]]}];
+var BDU={};BUNDLES.forEach(b=>b.u.forEach(x=>{BDU[x[1]]=b}));
+function bdOfSec(sec,rows){if(typeof HASBOOK!=='undefined'&&HASBOOK)return null;
+  const nm=String(unitName(sec)||'');if(BDU[nm])return BDU[nm];
+  for(const n of rows||[]){const r=rec(n);if(r&&BDU[r[F.SUB]])return BDU[r[F.SUB]]}
+  return null}
 var unitPage=c=>TOC.unit[c]?TOC.unit[c].p:(TOC.sec[c]?TOC.sec[c].p:'');
 var secOf=c=>c.split('.').slice(0,2).join('.');
 var chOf=c=>c.split('.')[0];
@@ -6547,7 +6558,7 @@ if(HASBOOK)showProblem=async function(){
   if(NR_V!==VSEEN){NR_V=VSEEN;if(nrCarryMem(r)){try{await Promise.all([saveST(),saveBG()])}catch(e){console.warn('nrCarry 저장',e)}}}   /* 새 열람 한 번만 — 같은 열람 안의 다시 그리기에서는 안 돈다 */
   navSync();
   const u=unitOf(VNO);
-  $('#vT1').textContent=VNO+' '+codeShow(r)+' · '+(u?String(unitLabel(u)).replace(/^[\d.]+\s*/,''):titleOf(r));   /* 물리 머리 꼴 — 번호 · 코드 · 소단원 이름 한 줄(둘째 줄은 물리처럼 숨김 · 사용자 10/11) */
+  {const fx=(typeof pnFix==='function')?pnFix(r):'';$('#vT1').innerHTML=esc(VNO+' '+codeShow(r))+' · <span class="vtt'+(fx?' fx':'')+'" data-pn="'+VNO+'" title="길게 누르면 제목 고치기">'+esc(fx||vtOrig(r))+'</span>'}   /* ★ 10/13 사용자 「문제 창 제목 길게 눌러 고치기 · 지학 · 생물에도」 — 제목 칸 = 물리와 같은 span.vtt · 같은 길게 누름(SHELL) · 저장 = TFIX[uid].nm(지학 · 생물 SYNC tfix 에 이미 있음 · 새 키 없음) · 원래 = 소단원 이름(없으면 titleOf) */   /* 물리 머리 꼴 — 번호 · 코드 · 소단원 이름 한 줄(둘째 줄은 물리처럼 숨김 · 사용자 10/11) */
   $('#vT2').textContent=`${r[F.BIG]} › ${unitLabel(u)} · 교재 ${bpgOf(r)||'?'}쪽`+(r[F.ORIG]?` · 변시 ${r[F.ORIG]}회 원형`:'');
   CARD.open=false;
   renderCard(r);
@@ -7722,7 +7733,7 @@ var txtOf=(uid,slot)=>{const f=tfixRaw(uid,slot); return f||txtOrig(uid,slot)};
 var tfixOn=(uid,slot)=>!!tfixRaw(uid,slot);
 var tfixAny=uid=>tfixSlotsOf(uid).some(k=>tfixRaw(uid,k));
 /* 검색이 훑을 것 — 원본과 고친 글자를 **둘 다**. 고친 뒤 옛 낱말로 못 찾게 되면 안 된다. */
-var tfixHay=uid=>tfixSlotsOf(uid).map(k=>tfixRaw(uid,k)).filter(Boolean).join(' ');
+var tfixHay=uid=>tfixSlotsOf(uid).concat(['nm']).map(k=>tfixRaw(uid,k)).filter(Boolean).join(' ');   /* ★ 10/13 — 고친 제목(nm)도 찾음 · 「고친 글자 있음」(tfixAny)엔 안 넣음 */
 var saveTFIX=()=>put('kv','tfix',TFIX);
 var tfixSet=async function(uid,slot,v){
   const o=Object.assign({},TFIX[uid]||{});
@@ -11394,7 +11405,7 @@ if(HASBOOK){
 if(SHELL&&!HASBOOK&&SYNC_KEYS.indexOf('tfix')<0)SYNC_KEYS.push('tfix');
 var PN_SLOT='nm';
 var pnUid=r=>GGU(r);
-var pnFix=r=>(r&&!HASBOOK)?tfixRaw(pnUid(r),PN_SLOT):'';
+var pnFix=r=>r?tfixRaw(pnUid(r),PN_SLOT):'';   /* ★ 10/13 — 카드 층도(열쇠 = uid · 칸 nm 은 글자 고치기 칸(TFIX_SLOTS)과 안 겹침 · 「고친 글자 있음」 에 안 낌) */
 /* 기출(F.YEAR > 0) = 「연도 출처 N번」 — 변리사 PAyyNN 의 NN = 시험 문번(해마다 1~10 한 벌 · 2002~2026 250문항 겹침 0 실측 · 시험지 쪽 머리에도 PA 코드가 찍힌다) ·
    다른 출처 기출(MD·PT 기출 PEMxxNN · 72)은 끝 두 자리가 교재 차례라 번호를 안 붙인다(「2012 MD기출」) · 교재 문항(연도 0) = 원래 이름(titleOf) */
 function pnAuto(r){const y=+r[F.YEAR]||0;if(!y)return titleOf(r);
@@ -11406,9 +11417,20 @@ function pnPaint(no){const r=rec(no);if(!r)return;const fx=pnFix(r);
   try{draw()}catch(e){}}   /* 첫 화면 목록 줄도 같은 이름 */
 /* 시안 (51) (사용자 19:45 서랍 댓글 「uid 오른쪽 제목들 길게 누르면 내가 수정할 수 있게 · 수정한 것도 검색에 잡히게」) — 서랍 줄 제목(uid 오른쪽 · 옛 titleOf = 볼트 제목/소단원) 길게 누름 = 그 자리 고치기(정리 창 이름·공식 칸과 같은 iedOpen) ·
    저장 = 첫 화면 목록 제목이 쓰는 같은 칸 TFIX['P번호'].nm(pnFix · SYNC tfix · 기기끼리 맞춤) → 서랍·목록·정리 창 모두 그 제목 · 비우면 원래로 · 위 검색·목록 검색에 고친 제목·보이는 제목이 걸림 */
-function ndTitlePaint(no){const r=rec(no);if(!r)return;const fx=pnFix(r);document.querySelectorAll('#navdr .ndtt[data-pn="'+no+'"]').forEach(x=>{if(x.classList.contains('ied'))return;x.textContent=fx||titleOf(r);x.classList.toggle('fx',!!fx)})}
+/* ★ 10/13 — 문제 창 제목 원래 글 = 물리 titleOf · 카드 층 = 머리가 보이던 소단원 이름(단원 없으면 titleOf) */
+function vtOrig(r){if(!HASBOOK)return titleOf(r);const u=unitOf(r[F.NO]);return u?String(unitLabel(u)).replace(/^[\d.]+\s*/,''):titleOf(r)}
+/* 서랍 줄 꼬리 — 물리 = 늘 제목 span(길게 고치기) · 카드 층 = 고친 제목이 있으면 파랑 span(길게 고치기) · 없으면 옛 그대로(지학 기출 = uid 만 · 그 밖 = titleOf 글) */
+function ndtTail(r,no){const fx=pnFix(r);
+  if(HASBOOK&&!fx)return ynUid(r)?'':' · '+esc(titleOf(r));
+  return ' · <span class="ndtt'+(fx?' fx':'')+'" data-pn="'+no+'" title="길게 눌러 제목 고치기">'+esc(fx||titleOf(r))+'</span>'}
+function ndTitlePaint(no){const r=rec(no);if(!r)return;const fx=pnFix(r);
+  document.querySelectorAll('#vT1 .vtt[data-pn="'+no+'"]').forEach(x=>{if(x.classList.contains('ied'))return;x.textContent=fx||vtOrig(r);x.classList.toggle('fx',!!fx)});
+  if(HASBOOK){document.querySelectorAll('#ndList .ndrow[data-no="'+no+'"] .ndt').forEach(x=>{if(x.querySelector('.ied'))return;x.innerHTML=esc(r[F.CODE])+esc(r[F.LV])+ndtTail(r,no)});return}   /* 카드 층 = 줄 꼬리를 다시 그림(고친 제목이 생기거나 비면 span 이 생기고 없어짐) */
+  document.querySelectorAll('#navdr .ndtt[data-pn="'+no+'"]').forEach(x=>{if(x.classList.contains('ied'))return;x.textContent=fx||titleOf(r);x.classList.toggle('fx',!!fx)})}
 function ndEdit(el){const no=+el.dataset.pn,r=rec(no);if(!r)return;
-  iedOpen(el,pnFix(r),titleOf(r),async v=>{await tfixSet(pnUid(r),PN_SLOT,v);ndTitlePaint(no);pnPaint(no)})}
+  iedOpen(el,pnFix(r),vtOrig(r),async v=>{await tfixSet(pnUid(r),PN_SLOT,v);ndTitlePaint(no);pnPaint(no)})}
+function vtEdit(el){const no=+el.dataset.pn,r=rec(no);if(!r)return;{const tp=document.getElementById('g3Tip');if(tp)tp.remove()}   /* 잘린 제목 말풍선 걷음(g3TipHide 는 gg3 덩어리 안 함수라 여기서 못 부름 · 10/13 시안 v6 잼 = 말풍선이 고치는 칸을 가림) */   /* ★ 10/13 — 문제 창 제목 줄 = 서랍 줄 제목과 같은 칸 · 저장하면 서랍 · 첫 화면 목록 · 정리 창 같이 */
+  iedOpen(el,pnFix(r),vtOrig(r),async v=>{await tfixSet(pnUid(r),PN_SLOT,v);ndTitlePaint(no);pnPaint(no)})}
 function pnEdit(el){const no=+el.dataset.pn,r=rec(no);if(!r)return;
   iedOpen(el,pnFix(r),pnAuto(r),async v=>{await tfixSet(pnUid(r),PN_SLOT,v);pnPaint(no)})}
 /* 공식 칸 — 열쇠 'F|'+frKey(원래 공식) · 칸 f(공식)·c(조건)·t(함정) · 원문 FRM · 볼트 「0. 공식시트 역학」 무변 */
@@ -11460,15 +11482,15 @@ function iedOpen(el,cur,orig,save){
 /* 길게 누르기(500ms · 8px 넘게 움직이면 취소) = 그 자리 고치기 · 짧게 누름은 무변 · 길게 누른 뒤 click 한 번은 먹는다
    500ms = 「길게」로 잡힘(테두리 표시) · 칸은 **손을 뗄 때** 연다 — 누르고 있는 동안 열면 손 뗌이 새 칸 위 톡(합성 mousedown)이 되어 입력 칸 포커스가 날아간다(9/30 관문 실측)
    · 아이패드는 사용자 동작(손 뗌) 안에서 focus 해야 자판이 뜬다 · 그 손 뗌의 touchend 는 막아(preventDefault) 합성 마우스 톡·포커스 옮김을 없앤다 */
-if(SHELL){const SEL='#jnw .jnrow .pnm,.frcell,#navdr .ndtt';   /* 시안 (51) — 서랍 줄 제목도 길게 눌러 고치기 */let lp=null,lpT=-1e9;
-  const fire=el=>{if(!el.isConnected)return;if(el.classList.contains('pnm'))pnEdit(el);else if(el.classList.contains('ndtt'))ndEdit(el);else frEdit(el)};
+if(SHELL){const SEL='#jnw .jnrow .pnm,.frcell,#navdr .ndtt,#vT1';   /* ★ 10/13 — 문제 창 제목 줄도(줄 통째 = 폰에서 제목이 … 로 잘려 안 보여도 잡힘) */   /* 시안 (51) — 서랍 줄 제목도 길게 눌러 고치기 */let lp=null,lpT=-1e9;
+  const fire=el=>{if(!el.isConnected)return;if(el.id==='vT1'){const v=el.querySelector('.vtt');if(v)vtEdit(v);return}if(el.classList.contains('pnm'))pnEdit(el);else if(el.classList.contains('ndtt'))ndEdit(el);else frEdit(el)};
   const drop=L=>{clearTimeout(L.tm);L.el.classList.remove('lp','lpok')};
-  document.addEventListener('pointerdown',e=>{const el=e.target&&e.target.closest&&e.target.closest(SEL);if(!el||el.classList.contains('ied'))return;
+  document.addEventListener('pointerdown',e=>{const el=e.target&&e.target.closest&&e.target.closest(SEL);if(!el||el.classList.contains('ied')||e.target.closest('.ied'))return;   /* ★ 10/13 — 고치는 칸 안 누름은 길게 누름 아님 */
     if(lp)drop(lp);
-    lp={el,x:e.clientX,y:e.clientY,long:false};el.classList.add('lp');
+    lp={el,x:e.clientX,y:e.clientY,long:false,t0:performance.now()};el.classList.add('lp');
     lp.tm=setTimeout(()=>{if(!lp)return;lp.long=true;lp.el.classList.add('lpok')},500)},true);
   document.addEventListener('pointermove',e=>{if(lp&&Math.hypot(e.clientX-lp.x,e.clientY-lp.y)>8){drop(lp);lp=null}},true);
-  const up=e=>{if(!lp)return;const L=lp;lp=null;drop(L);if(!L.long)return;
+  const up=e=>{if(!lp)return;const L=lp;lp=null;drop(L);if(!L.long&&performance.now()-L.t0>=500)L.long=true;if(!L.long)return;   /* ★ 10/13 — 바쁜 화면에서 500ms 타이머가 늦게 돌아도(시안 거울 실측 · 타이머가 손 뗀 뒤에 돎) 누른 시간으로 가름 */
     lpT=performance.now();if(e.type==='pointerup')fire(L.el)};
   document.addEventListener('pointerup',up,true);document.addEventListener('pointercancel',up,true);
   document.addEventListener('touchend',e=>{if(performance.now()-lpT<120&&e.cancelable)e.preventDefault()},{capture:true,passive:false});
@@ -11547,6 +11569,9 @@ function thTxt(x){let s=String(x==null?'':x),pre='';
   '#jnw .jnrow .pnm.fx::after{content:" ✎";font-weight:800}',
   '.item .sub.pnfx .pnpen{font-style:normal;font-weight:800}',
   '#jnw .jnrow .pnm.lp,.frcell.lp{background:var(--subj-soft);border-radius:4px}',
+  '#vT1 .vtt{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}','#vT1 .vtt.fx{color:#4F86D9}','#vT1{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}','#vT1.lp{background:var(--subj-soft);border-radius:4px}','#vT1.lpok{box-shadow:0 0 0 1.5px var(--subj);border-radius:4px}',
+  '#vT1:has(.ied){white-space:normal;overflow:visible}','#vT1 .vtt.ied{display:inline-flex;width:min(100%,22em)}','#vT1 .vtt.ied .iedin{flex:1;width:auto;min-width:0;max-width:none;font-size:13px;padding:3px 6px}',
+  '#vT1 .iedok,#navdr .ndtt .iedok{min-width:24px;min-height:24px;width:24px;height:24px;font-size:13px;border-radius:6px}','#vT1 .vtt.ied .iedin,#navdr .ndtt.ied .iedin{height:24px;line-height:16px;padding:2px 6px;border-width:1px}',   /* 댓글 10/13 17:46 「칩이 왜 이렇게 커?」 — 제목 고치는 ✓ · 칸 = 머리 줄 단추 높이(24) */   /* ★ 10/13 — 문제 창 제목 고치기 */
   '#jnw .jnrow .pnm.lpok,.frcell.lpok{box-shadow:0 0 0 1.5px var(--subj)}',   /* 500ms 넘김 = 손 떼면 고치기 칸 */
   '.frcell.fx{color:#3F72C4}','.frcell.fx::after{content:" ✎";color:#4F86D9;font-weight:800;font-size:10.5px}',
   '.ied{display:inline-flex;align-items:center;gap:4px;max-width:100%;vertical-align:middle}',
@@ -12212,6 +12237,14 @@ document.addEventListener('pointerup',lsUp,{capture:true});document.addEventList
 #g3Pop .g3pf .v{flex:1;min-width:0;word-break:break-word}
 #g3Pop .g3pf .it+.it{margin-top:2px}
 #g3Pop .none{color:var(--muted)}
+.ndsec .ndbd{flex:none;font-style:normal;font-size:10.5px;font-weight:800;color:#4F86D9;cursor:pointer;padding:3px 4px;margin:-3px -4px -3px 0;border-radius:4px}
+.ndsec .ndbd:hover,.ndsec .ndbd.on{background:rgba(79,134,217,.14)}
+#bdPop{position:fixed;z-index:97;width:min(260px,calc(100vw - 16px));background:var(--card);border:1px solid var(--line);border-radius:8px;
+  box-shadow:0 4px 14px rgba(0,0,0,.14);padding:7px 9px;font-size:12px;line-height:1.45;box-sizing:border-box}
+#bdPop .bdh{font-weight:700;color:var(--ink)}#bdPop .bdh b{color:#4F86D9}#bdPop .bdh .bdc{font-weight:600;font-size:11px;color:var(--muted);white-space:nowrap}
+#bdPop .bdw{padding:3px 0 5px;color:var(--ink)}
+#bdPop .bdu{border-top:1px solid rgba(128,128,128,.15);padding-top:4px;font-size:11px;color:var(--muted)}
+#bdPop .bdr b{font-weight:700}#bdPop .bdr .rg{white-space:nowrap}#bdPop .bdr.cur{color:var(--ink);font-weight:700}
 #g3Pop .g3ptop{display:flex;align-items:flex-start;gap:6px;padding:1px 0 5px}
 #g3Pop .g3ptop .pvfig{flex:1;min-width:0;max-width:none;margin-top:0}
 #g3Pop .g3ptop .sp{flex:1}
@@ -12906,7 +12939,7 @@ function g3PopTop(no,r){   /* 사용자 10/11 11:29 — 물리 서랍 O X 누른
     +(bk.length?'<button type="button" class="g3lk b" data-n="'+bk.join(',')+'" title="이 문제를 연결한 문항">↩'+bk.length+'</button>':'')+'</span></div>'}
 function g3PopToggle(no,ox){
   if(G3P===no){g3PopClose();return}
-  g3PopClose(); try{ndPopClose()}catch(e){} G3P=no; ox.classList.add('on');
+  g3PopClose(); try{ndPopClose()}catch(e){} try{bdPopClose()}catch(e){} G3P=no; ox.classList.add('on');
   var r=rec(no), uid=GGU(r), list=ggOf(uid), by={t:[],c:[],w:[]}, cq=g3Cq(uid);
   list.forEach(function(g){if(g)by[g3f(g)].push(g)});
   cq.forEach(function(c){by.c.push({__cq:c})});
@@ -12942,6 +12975,31 @@ function g3PopToggle(no,ox){
   p.style.top=Math.max(8,Math.min(top,window.innerHeight-p.offsetHeight-8))+'px';
   setTimeout(function(){document.addEventListener('pointerdown',g3PopOut,true)},0)}
 window.g3PopToggle=g3PopToggle;
+/* ★ 묶음 — 서랍 목차 줄 [N] 누름 = 「왜 묶나」 작은 창(서랍 O X 근거 창 #g3Pop 과 같은 자리 · 꼴) · 같은 [N] 다시 · 바깥 누름 = 닫힘 · 지금 단원 줄 굵게 */
+var BDP=null;
+function bdPopClose(){var p=document.getElementById('bdPop');if(p)p.remove();
+  document.querySelectorAll('#ndList .ndbd.on').forEach(function(x){x.classList.remove('on')});BDP=null;document.removeEventListener('pointerdown',bdPopOut,true)}
+function bdPopOut(e){var p=document.getElementById('bdPop');if(p&&!p.contains(e.target)&&!(e.target.closest&&e.target.closest('.ndbd')))bdPopClose()}
+function bdPopToggle(n,el){var key=n+'|'+((el.closest('.ndsec')||{}).dataset||{}).sec;
+  if(BDP===key){bdPopClose();return}
+  bdPopClose();try{g3PopClose()}catch(e){}try{ndPopClose()}catch(e){}
+  var b=BUNDLES.find(function(x){return x.n===n});if(!b)return;BDP=key;el.classList.add('on');
+  var hs=el.closest('.ndsec'),cur=hs?String(unitName(hs.dataset.sec)||''):'';
+  var p=document.createElement('div');p.id='bdPop';
+  var C=function(ns){var a=0,e=0;DATA.forEach(function(r){if(ns.indexOf(r[F.SUB])<0)return;if(/^PA/.test(String(r[F.CODE])))a++;else e++});return a+'+'+e+'='+(a+e)};   /* 댓글 10/13 17:46 「기출 · PEM 글자 안 써도 돼 · 앞 숫자 = 기출 · 뒤 = PEM」 */   /* 댓글 10/13 16:01 「범위 말고 문제 수 · 기출 개수+PEM 개수=N · 묶음 이름 오른쪽에 묶음 총 문제 수도」 — DATA 로 셈(PA = 기출 · 나머지 PE* = PEM) */
+  p.innerHTML='<div class="bdh"><b>['+b.n+']</b> '+esc(b.nm)+' <span class="bdc">'+C(b.u.map(function(x){return x[1]}))+'</span></div><div class="bdw">'+esc(b.why)+'</div>'
+    +'<div class="bdu">'+b.u.map(function(x){return '<div class="bdr'+(x[1]===cur?' cur':'')+'"><b>'+esc(x[0])+'</b> '+esc(x[1])+' <span class="rg">'+C([x[1]])+'</span></div>'}).join('')+'</div>';
+  p.onclick=function(e){e.stopPropagation()};
+  document.body.appendChild(p);
+  var rr=el.getBoundingClientRect(),dr=document.getElementById('navdr').getBoundingClientRect(),w=p.offsetWidth;
+  p.style.left=Math.max(8,Math.min(dr.right+6,window.innerWidth-w-8))+'px';
+  var top=(dr.right+6+w>window.innerWidth-8)?rr.bottom+4:rr.top-6;
+  p.style.top=Math.max(8,Math.min(top,window.innerHeight-p.offsetHeight-8))+'px';
+  setTimeout(function(){document.addEventListener('pointerdown',bdPopOut,true)},0)}
+window.bdPopToggle=bdPopToggle;
+/* [N] 누름은 창 잡기 단계에서 먼저 — 목차 줄 누름(첫 화면 스크롤) · ▾ 접기와 안 섞임 */
+window.addEventListener('click',function(e){var bd=e.target&&e.target.closest&&e.target.closest('#ndList .ndbd');if(!bd)return;
+  e.stopPropagation();e.preventDefault();bdPopToggle(+bd.dataset.bd,bd)},true);
 /* O△X 누름은 창(window) 잡기 단계에서 먼저 받는다 — 폰은 서랍 줄 누름이면 서랍을 접는 문서 잡기 손이 있어(앱) 그 앞에서 멈춤 */
 window.addEventListener('click',function(e){var ox=e.target&&e.target.closest&&e.target.closest('#ndList .ndox');if(!ox)return;
   e.stopPropagation();e.preventDefault();g3PopToggle(+ox.dataset.ox,ox)},true);
@@ -12984,7 +13042,7 @@ window.g3LvPop=g3LvPop;
 function g3TipHide(){var t=document.getElementById('g3Tip');if(t)t.remove()}
 window.addEventListener('click',function(e){var tt=e.target&&e.target.closest&&e.target.closest('#view .vtop .title');
   if(!tt){if(!(e.target.closest&&e.target.closest('#g3Tip')))g3TipHide();return}
-  var t1=document.getElementById('vT1');if(!t1)return;
+  var t1=document.getElementById('vT1');if(!t1)return;if(t1.querySelector('.ied'))return;   /* ★ 10/13 — 제목 고치는 중엔 말풍선 안 띄움 */
   if(document.getElementById('g3Tip')){g3TipHide();return}
   if(t1.scrollWidth<=t1.clientWidth+1)return;   /* 안 잘렸으면 그대로 */
   var b=t1.getBoundingClientRect(),d=document.createElement('div');d.id='g3Tip';d.textContent=t1.textContent;document.body.appendChild(d);
@@ -13037,7 +13095,7 @@ window.addEventListener('click',function(e){var t=e.target;if(!t||!t.closest)ret
    잼(옛 v19 · PC 1100 · 서랍 펴짐): 본창 66 = 792×688 가운데 → 숫자 63 누름(vSwapOpen) → 화면을 칸 둘로 다시 나눠 66 = 왼 칸 멈춘 창(432×203) · 63 = 오른 칸 본창(432×800) — 본창이 새 문항으로 갈리고 크기·자리도 바뀜
    고침: ① 숫자 · 연결 · ↗ 로 여는 비교 문항 = 본창을 건드리지 않고 그 문항 쪽을 따로 그려(쪽 + 바로 전 회독 필기 + 답 가리개 · 문제 덩어리만) 본창 옆 빈 자리(넓은 쪽 · 폭 ≤480)에 작은 창으로
    ② 작은 창을 누르면 = 본창 자리·크기 그대로 내용만 바뀜(그 문항 = 비교 열람 · 옛 본창 내용 = 작은 창 자리) ③ PC 본창 첫 크기 = 폭 46 %(≤600) · 높이 86 % · 서랍 바로 오른쪽 · 기억 열쇠 jagwa.win.view2(옛 큰 크기 기억은 안 읽음) */
-function g3TitleOf(no){var r=rec(no);if(!r)return no+'번';if(HASBOOK)return codeShow(r)+(ynUid(r)?'':' · '+titleOf(r));return (r[F.VLT]?'V'+r[F.VLT]+' ':'')+no+' '+r[F.CODE]+r[F.LV]+' · '+((typeof pnFix==='function'&&pnFix(r))||titleOf(r))}
+function g3TitleOf(no){var r=rec(no);if(!r)return no+'번';if(HASBOOK){const fx=(typeof pnFix==='function')?pnFix(r):'';return codeShow(r)+(fx?' · '+fx:(ynUid(r)?'':' · '+titleOf(r)))}   /* ★ 10/13 — 고친 제목 */return (r[F.VLT]?'V'+r[F.VLT]+' ':'')+no+' '+r[F.CODE]+r[F.LV]+' · '+((typeof pnFix==='function'&&pnFix(r))||titleOf(r))}
 async function g3Render(no){try{
   var r=rec(no),loc=locate(r),cv=document.createElement('canvas'),R=null,g;
   if(loc.id==='IMG'){var im=await new Promise(function(ok){var x=new Image();x.onload=function(){ok(x)};x.onerror=function(){ok(null)};x.src='img/'+loc.img+'.jpg'});if(!im)return '';
