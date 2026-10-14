@@ -9,7 +9,7 @@
 
 ## 할 일(차례대로 · 이것만)
 1. `git fetch origin main cloud/inbox` · 바탕 = main **c5a3b3a**(`jagwa/index.html` LF md5 **951a9bff** · `jagwa/theory_fix.json` 있음 · `_qa/_qa_small_gate.py` md5 **867625c3**) — 다르면 멈추고 커밋 없이 이 줄만 알림.
-2. `cloud/inbox` 의 `_qa/cloud_batch/jagwa_secline_1014/` 에서 둘을 꺼냄: `app_patches.txt`(md5 ac85c6f2) · `spec_secline.json`(1127ddc9).
+2. `cloud/inbox` 의 `_qa/cloud_batch/jagwa_secline_1014/` 에서 둘을 꺼냄: `app_patches.txt`(md5 ac85c6f2) · `spec_secline.json`(a216eeda).
 3. `python _qa/_qa_apply_patches.py app_patches.txt jagwa/index.html --expect 1cfa31d7` — 멈추면(종료 2 · 3) 그 줄만 알림.
 4. 관문: `python _qa/_qa_small_gate.py --spec spec_secline.json --new jagwa/index.html --base c5a3b3a --eng chromium,webkit --base-eng chromium`(`--vendor` · `--spd` · `--notes` 는 지난 판과 같이).
    - 명세 = 채팅 시안(PC · 폰 8 칸) 그대로 · 바탕 c5a3b3a = 6 칸 FAIL(`yard: true`) · 「환경 안 \\」 2 칸은 바탕도 PASS(`yard: false`) — 시안 거울로 새 8/8 PASS · 바탕 6 FAIL 잼.
