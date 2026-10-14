@@ -12634,6 +12634,18 @@ function g3SelWire(uid,k){var b=document.getElementById('gguw');if(!b)return;b.c
     sl.sort(function(a,c){var ia=ord.indexOf(a),ic=ord.indexOf(c);return (ia<0?1e9:ia)-(ic<0?1e9:ic)});
     if(sl.length){g.sl=sl;g.t=sl.filter(function(z){return !/^G:/.test(z)}).join('\n')||'그림'}   /* 10/14 — 저장 글엔 그림 이름 안 넣음 */else{delete g.sl;var b0=g.ref?g3Blk(g.ref):null;if(b0)g.t=b0.text}
     g.ts=Date.now();await ggSaveList(uid,list);ggRepaint(uid);mark()},true)}
+/* ★ 10/14 — 교재 이은 개념 줄 = 블록 찾기로 넣은 근거(GG 공식·개념 항목 · ref U:^개념 id)와 한 갈래로 합침
+   누르면: 같은 열쇠로 근거 항목을 만들고(블록 줄 전부 = 고른 줄 · 보이던 그대로) · 그 줄 댓글(cqx c) · 차례(cqx o 의 q:키 자리)를 옮긴 뒤 · 넣은 근거 창(g3UseWin · 줄 고르기 g3SelWire)을 엶
+   = P123 · P110 처럼 블록 찾기로 넣은 줄과 같은 동작(줄 고르기 · 고치기 · 끌기 · 댓글 · 쓰인 수) · 교재 이음(CL) 자체는 안 건드림 */
+async function g3CqJoin(uid,ck,c,b0){if(!G3CQX_READY)await G3CQX_P;
+  var cl=g3CqxCell(g3CqxQ(uid)),gs=ggOf(uid).filter(function(g){return g&&g3f(g)==='c'}),cq=g3Cq(uid);
+  var o0=(cl&&Array.isArray(cl.o)&&cl.o.length)?cl.o.slice():gs.map(function(g){return 'g:'+g.k}).concat(cq.map(function(x){return 'q:'+x.k}));
+  var sl=b0.lines.map(function(z){return String(z.x||'').trim()?z.x:(z.g?'G:'+z.g:'')}).filter(Boolean);
+  var g=await g3Push(uid,'c',{t:sl.filter(function(z){return !/^G:/.test(z)}).join('\n')||b0.text,ref:'U:^'+c.i,sl:sl.length?sl:null});if(!g)return;
+  var cs=cl&&cl.c&&Array.isArray(cl.c[ck])?cl.c[ck]:[];
+  if(cs.length){var L=ggOf(uid).slice(),gg=L.find(function(x){return x&&x.k===g.k});if(gg){gg.cs=(Array.isArray(gg.cs)?gg.cs:[]).concat(cs.map(function(x){return {k:x.k,t:x.t,ts:x.ts}}));await ggSaveList(uid,L)}}
+  var cl1=g3CqxCell(g3CqxQ(uid),1);if(cl1){var j=o0.indexOf('q:'+ck);if(j>=0)o0[j]='g:'+g.k;else o0.push('g:'+g.k);cl1.o=o0;if(cl1.c&&cl1.c[ck])delete cl1.c[ck];await g3CqxSave()}
+  ggRepaint(uid);g3UseWin('c',uid,g.k)}
 function g3BlkLines(b,max){
   return b.lines.slice(0,max||99).map(function(x){return (String(x.x||'').trim()?'<div class="thl i'+(x.i||0)+'">'+g3T(x.x)+'</div>':'')+(x.g?'<div class="thl i'+(x.i||0)+'">'+g3Img(x.g)+'</div>':'')}).join('')}   /* 10/14 — 찾기 목록에 그림도 */
 /* 댓글 v12(사용자 16:18 「트리거·주의점은 한 줄씩 차지하고 내용이 보이게 · 공식은 볼트 블록이면 블록 전부 보이게」) — 칩 대신 항목마다 한 줄: 번호 · 글(공식·개념 = 블록 줄 전부 · 굵게) · 쓰인 수
@@ -12868,6 +12880,7 @@ function g3UseWin(f,uid,k,o){
 /* 댓글 v32(사용자 21:32 「『공식·개념』 이라는 건 같은데 왜 하나는 첫 번째(쓰인 문항 창) · 하나는 두 번째(개념 창)가 떠」) — 이은 개념 줄 누름도 근거 블록과 같은 창:
    머리 = 절 번호 · 절 이름 · 「이 블록을 공식·개념 칸에 쓴 문항 N」(근거로 쓴 문항 + 교재·개념 잇기로 이은 문항) · 지금 문항 줄 = 「개념 연결 고치기」 · 밀기 같음 */
 function g3UseWinQ(uid,ck,o){if(HASBOOK)return;   /* CB = 물리 개념 표 · 카드 층 안 씀 */var c=(typeof CB!=='undefined')&&CB[ck];if(!c)return;
+  if(!(o&&o.list)&&c.i){var jb=g3Blk('U:^'+c.i);if(jb){g3CqJoin(uid,ck,c,jb);return}}   /* ★ 10/14 사용자 「근거에서 왜 줄마다 선택 안 돼 · PA1603」 — 교재 이은 개념 줄 누름 = 블록 찾기로 넣은 근거와 같은 항목으로 합침(같은 열쇠 U:^개념 · 그 뒤 모든 손 = 한 갈래) */
   var m=String(c.n||'').match(/^\s*([\d.]+?)\.?\s+(.*)$/),cd=m?m[1]:String(c.n||''),un=m?m[2]:'';
   var set=g3QUsers(c,ck);if(set.indexOf(uid)<0)set.push(uid);var owners=ggUseSort(set);
   var head='<div class="gguh"><div class="ln"><span class="cd">'+esc(cd)+'</span><span class="un">'+esc(un)+'</span></div></div>';
