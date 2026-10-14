@@ -1283,6 +1283,7 @@ body[data-shell] #list{padding:0 14px}
 body[data-shell] #esh .ehead #btnTree,
 body[data-shell] #esh .ehead #btnBook,
 body[data-shell] #esh .ehead #btnSet{font-size:11px;font-weight:700;padding:4px 10px;border-radius:4px}
+body[data-shell] #esh .ehead #btnBook::before{content:none}   /* ★ 10/14 사용자 「폰에서 교재 칩 아이콘이 두 개」 — 폰 꾸밈(#btnBook 글자 0 + ::before 📖)이 셸 머리줄 글자 크기(11px)에 덮여 글 「📖 교재」 와 ::before 📖 가 둘 다 보였음 · 셸에선 글만 */
 /* add1 이 빠뜨린 값(§C) — 두 칩이 `.chip` 둘째 규칙(필터 칩 · 12.5px · 둥근 테두리)을 먹고 있었다 */
 body[data-shell] #esh .ehead #examChip{font-size:11px;font-weight:800;padding:2px 8px;border-radius:4px}
 body[data-shell] #esh .ehead #recChip{font-size:11px;font-weight:700;padding:0;border:0;
@@ -3861,7 +3862,7 @@ function secHTML(sec){
   return `<div class="thsec"><h3>${sec.id}. ${esc(sec.t)}</h3>`+sec.b.map(n=>{
     if(n.t==='br')return '<div class="thbr"></div>';
     if(n.t==='tb')return `<div class="thtbw"><table class="thtb">`+n.rows.map((rw,ri)=>`<tr>`+rw.map(c=>{const tg=(ri===0&&n.hd)?'th':'td';return `<${tg}>${esc(c)}</${tg}>`}).join('')+`</tr>`).join('')+`</table></div>`;
-    const img=n.g?`<div class="thpicbox"><div class="solz thz" style="max-width:min(100%,${Math.max(240,(n.gw||300)*1.5)}px)"><img class="thpic" draggable="false" src="img/${n.g}.jpg" alt="그림" loading="lazy" onerror="this.parentNode.parentNode.innerHTML='<span class=&quot;thimg&quot;>그림 (미등록)</span>'"></div></div>`:'';
+    const img=n.g?`<div class="thpicbox" data-bx="G:${esc(n.g)}"><div class="solz thz" style="max-width:min(100%,${Math.max(240,(n.gw||300)*1.5)}px)"><img class="thpic" draggable="false" src="img/${n.g}.jpg" alt="그림" loading="lazy" onerror="this.parentNode.parentNode.innerHTML='<span class=&quot;thimg&quot;>그림 (미등록)</span>'"></div></div>`:'';
     const ref=(n.r||[]).map(x=>`<span class="thref" data-ref="${esc(x)}">↗ ${esc(x)}</span>`).join('');
     const txt=(String(n.x||'')+ref).trim()?`<div class="thl i${n.i}${n.s?' star':''}" data-bx="${String(n.x||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}">${thTxt(n.x)}${ref}</div>`:'';   /* ★ physphone A-6 · 10/10 data-bx = 그 줄 볼트 글(근거 개념 창에서 줄 고르기) */
     return txt+img;
@@ -11491,8 +11492,8 @@ function iedOpen(el,cur,orig,save){
 /* 길게 누르기(500ms · 8px 넘게 움직이면 취소) = 그 자리 고치기 · 짧게 누름은 무변 · 길게 누른 뒤 click 한 번은 먹는다
    500ms = 「길게」로 잡힘(테두리 표시) · 칸은 **손을 뗄 때** 연다 — 누르고 있는 동안 열면 손 뗌이 새 칸 위 톡(합성 mousedown)이 되어 입력 칸 포커스가 날아간다(9/30 관문 실측)
    · 아이패드는 사용자 동작(손 뗌) 안에서 focus 해야 자판이 뜬다 · 그 손 뗌의 touchend 는 막아(preventDefault) 합성 마우스 톡·포커스 옮김을 없앤다 */
-if(SHELL){const SEL='#jnw .jnrow .pnm,.frcell,#navdr .ndtt,#vT1,#g3Pop .g3lkr,#rlPop .rlr[data-lw],.ggcs[data-gce]';   /* ★ 10/13 — 서랍 근거 작은 창 연결 줄 길게 = 까닭 적기 */   /* ★ 10/13 — 문제 창 제목 줄도(줄 통째 = 폰에서 제목이 … 로 잘려 안 보여도 잡힘) */   /* 시안 (51) — 서랍 줄 제목도 길게 눌러 고치기 */let lp=null,lpT=-1e9;
-  const fire=el=>{if(!el.isConnected)return;if(el.classList.contains('g3lkr')||el.classList.contains('rlr')){lkwEdit(el);return}if(el.dataset&&el.dataset.gce){const v=el.dataset.gce.split('|');ggCsEditOpen(v[0],v[1],v[2]);return}if(el.id==='vT1'){const v=el.querySelector('.vtt');if(v)vtEdit(v);return}if(el.classList.contains('pnm'))pnEdit(el);else if(el.classList.contains('ndtt'))ndEdit(el);else frEdit(el)};
+if(SHELL){const SEL='#jnw .jnrow .pnm,.frcell,#navdr .ndtt,#ndList .ndrow .ndt,#vT1,#g3Pop .g3lkr,#rlPop .rlr[data-lw],.ggcs[data-gce]';   /* ★ 10/13 — 서랍 근거 작은 창 연결 줄 길게 = 까닭 적기 */   /* ★ 10/13 — 문제 창 제목 줄도(줄 통째 = 폰에서 제목이 … 로 잘려 안 보여도 잡힘) */   /* 시안 (51) — 서랍 줄 제목도 길게 눌러 고치기 */let lp=null,lpT=-1e9;
+  const fire=el=>{if(!el.isConnected)return;if(el.classList.contains('ndt')&&el.closest('#ndList .ndrow')){const no=+el.closest('.ndrow').dataset.no,r=rec(no);if(!r)return;let t=el.querySelector('.ndtt');if(!t){el.innerHTML=esc(r[F.CODE])+esc(r[F.LV])+' · <span class="ndtt" data-pn="'+no+'"></span>';t=el.querySelector('.ndtt')}ndEdit(t);const mo=new MutationObserver(()=>{if(!t.classList.contains('ied')){mo.disconnect();ndTitlePaint(no)}});mo.observe(t,{attributes:true,attributeFilter:['class']});return}   /* ★ 10/14 사용자 「생물 · 지학 목차 서랍에서 제목 눌러도 수정 안 돼」 — 서랍 줄 어디를 길게 눌러도 그 줄 제목 고치기 · 카드 층 = 고친 제목 없으면 옛 꼬리(「2024년 자과 21번」 · 지학 기출 = 없음) 자리에 고치는 칸(옛 글은 안 보임 · 그만두면 옛 그대로) · 물리도 코드 자리 길게 = 같음 · 사용자 시안 댓글 11:21 「생물에서 2024년 자과 21번을 없애고 제목을 쓰고 싶은 거야」 */if(el.classList.contains('g3lkr')||el.classList.contains('rlr')){lkwEdit(el);return}if(el.dataset&&el.dataset.gce){const v=el.dataset.gce.split('|');ggCsEditOpen(v[0],v[1],v[2]);return}if(el.id==='vT1'){const v=el.querySelector('.vtt');if(v)vtEdit(v);return}if(el.classList.contains('pnm'))pnEdit(el);else if(el.classList.contains('ndtt'))ndEdit(el);else frEdit(el)};
   const drop=L=>{clearTimeout(L.tm);L.el.classList.remove('lp','lpok')};
   document.addEventListener('pointerdown',e=>{const el=e.target&&e.target.closest&&e.target.closest(SEL);if(!el||el.classList.contains('ied')||e.target.closest('.ied'))return;   /* ★ 10/13 — 고치는 칸 안 누름은 길게 누름 아님 */
     if(lp)drop(lp);
@@ -12236,6 +12237,10 @@ document.addEventListener('pointerup',lsUp,{capture:true});document.addEventList
 /* 10/10 — 근거 개념 창 줄 고르기 · 고른 줄 = 옅은 청록 바탕 + 왼쪽 띠 */
 #gguw.g3sel #gguwMk .thl[data-bx]{cursor:pointer;border-radius:4px}
 #gguw.g3sel #gguwMk .thl.on{background:rgba(15,138,118,.15);box-shadow:inset 3px 0 0 var(--teal)}
+#gguw.g3sel #gguwMk .thpicbox[data-bx]{cursor:pointer;border-radius:6px}
+#gguw.g3sel #gguwMk .thpicbox.on{background:rgba(15,138,118,.15);box-shadow:inset 3px 0 0 var(--teal)}   /* 10/14 — 고른 그림 */
+.g3pic{display:inline-block;vertical-align:top}.g3pic img{display:block;max-width:100%;max-height:120px;width:auto;border:1px solid var(--line);border-radius:6px;background:#fff}
+.g3sug .g3pic img{max-height:56px}
 .ndox:hover,.ndox.on{background:rgba(128,128,128,.16)}
 .ndty{font-style:normal;font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap}
 #g3Pop{position:fixed;z-index:97;width:min(260px,calc(100vw - 16px));background:var(--card);border:1px solid var(--line);border-radius:8px;
@@ -12577,10 +12582,12 @@ function g3Blocks(){
         var hit=ul.filter(function(l){return nl.indexOf(l)>=0}).length/ul.length;if(hit>bs){bs=hit;best=u}});
       var u=bs>=0.5?best:null;if(u)used[u.key]=1;
       TB.push({key:u?u.key:('T:'+s.id+'#'+n),a:u?u.a:'',cbk:u?u.cbk:'',sec:String(s.id),st:ut[String(s.id)]||String(s.t||'').replace(/\$/g,''),lines:cur.slice(),
-        text:cur.map(function(x){return g3plain(x.x)}).join('\n')});n++;cur=[]};
-    (s.b||[]).forEach(function(b){if(b.t==='br'){flush();return}
-      if(b.t==='p'&&String(b.x||'').trim()){if(!(b.i|0)&&cur.length)flush();cur.push(b)}});
-    flush()});
+        text:cur.filter(function(x){return String(x.x||'').trim()}).map(function(x){return g3plain(x.x)}).join('\n')});n++;cur=[]};   /* 10/14 — 글(찾기 · 저장 글)은 글 줄만 = 옛 그대로 */
+    var pend=[],tail=function(){if(!pend.length)return;var lb=TB[TB.length-1];if(lb&&lb.sec===String(s.id))lb.lines=lb.lines.concat(pend);pend=[]};   /* ★ 10/14 사용자 「통짜 물리목차 그림은 보이는데 왜 근거로 못 넣어」 — 그림만 있는 줄도 블록에(앞 글 줄 블록 · 블록 첫머리면 다음 글 줄과 · 블록 번호 n 무변 = 옛 근거 열쇠 그대로) */
+    (s.b||[]).forEach(function(b){if(b.t==='br'){flush();tail();return}
+      if(b.t==='p'&&String(b.x||'').trim()){if(!(b.i|0)&&cur.length)flush();if(pend.length){cur=pend.concat(cur);pend=[]}cur.push(b)}
+      else if(b.t==='p'&&b.g){if(cur.length)cur.push(b);else pend.push(b)}});
+    flush();tail()});
   UB.forEach(function(u){if(!used[u.key]){u.hid=1;TB.push(u)}});
   return TB}
 var g3Blk=function(ref){return g3Blocks().find(function(b){return b.key===ref})||null};
@@ -12605,20 +12612,21 @@ function g3UseHTML(f,uid,g){
   var n=g3Users(f,g3Key(g)).length; if(n<1)return '';   /* 댓글 v49(사용자 02:00 「하나만 연결됐어도 1부터 뜨게 해」) — 옛 = 2 넘어야 보임 */
   return '<i class="gguse g3use'+(n>=5?' hot':'')+'" data-g3use="'+ea(f+'|'+uid+'|'+g.k)+'" title="이 칸을 쓰는 문항 '+n+'">'+n+'</i>'}
 /* 사용자 10/10 18:30 — 근거 공식·개념 줄 = 개념 창에서 고른 줄(g.sl · 볼트 글 그대로)이 있으면 그 줄들을 합쳐 · 없으면 옛 그대로 블록 첫 줄 */
-function g3CText(g,b){var sl=(g&&Array.isArray(g.sl))?g.sl.filter(Boolean):[];if(sl.length)return sl.map(function(x){return g3T(x)}).join('<br>');return b?g3T(b.lines[0].x):ggMath(ggFlat(g))}
+function g3Img(nm){return '<span class="g3pic"><img src="img/'+ea(String(nm))+'.jpg" alt="그림" loading="lazy" draggable="false"></span>'}   /* ★ 10/14 — 근거 칸 그림(통짜 물리목차 그림 · 작게) */
+function g3CText(g,b){var sl=(g&&Array.isArray(g.sl))?g.sl.filter(Boolean):[];if(sl.length)return sl.map(function(x){return /^G:/.test(x)?g3Img(x.slice(2)):g3T(x)}).join('<br>');var t0=b?b.lines.find(function(x){return String(x.x||'').trim()}):null;return t0?g3T(t0.x):(b&&b.lines[0]&&b.lines[0].g?g3Img(b.lines[0].g):ggMath(ggFlat(g)))}   /* 10/14 — 고른 줄 'G:그림' = 그림 · 안 고르면 블록 첫 글 줄(그림이 앞이어도) */
 /* 개념 창(근거 줄을 눌러 뜬 창)의 줄을 누르면 고름 · 다시 누르면 뺌 · 고른 줄은 창 차례대로 합쳐 근거에 · 다 빼면 옛 그대로(블록 첫 줄) */
 function g3SelWire(uid,k){var b=document.getElementById('gguw');if(!b)return;b.classList.add('g3sel');
-  var mark=function(){var g=ggItem(uid,k),sl=(g&&Array.isArray(g.sl))?g.sl:[];b.querySelectorAll('#gguwMk .thl[data-bx]').forEach(function(el){el.classList.toggle('on',sl.indexOf(el.getAttribute('data-bx'))>=0)})};
+  var mark=function(){var g=ggItem(uid,k),sl=(g&&Array.isArray(g.sl))?g.sl:[];b.querySelectorAll('#gguwMk [data-bx]').forEach(function(el){el.classList.toggle('on',sl.indexOf(el.getAttribute('data-bx'))>=0)})};   /* 10/14 — 그림 상자(data-bx 'G:그림')도 */
   mark();var mk=b.querySelector('#gguwMk');if(mk)new MutationObserver(mark).observe(mk,{childList:true});
-  b.addEventListener('click',async function(e){var el=e.target.closest&&e.target.closest('#gguwMk .thl[data-bx]');if(!el||e.target.closest('.thref,a,button,img'))return;
+  b.addEventListener('click',async function(e){var el=e.target.closest&&e.target.closest('#gguwMk [data-bx]');if(!el||e.target.closest('.thref,a,button')||(e.target.closest('img')&&!el.classList.contains('thpicbox')))return;   /* 10/14 — 그림 누름 = 그 그림 고르기 */
     var list=ggOf(uid).slice(),g=list.find(function(x){return x&&x.k===k});if(!g)return;
     var x=el.getAttribute('data-bx'),sl=Array.isArray(g.sl)?g.sl.slice():[],i=sl.indexOf(x);if(i>=0)sl.splice(i,1);else sl.push(x);
-    var ord=[].slice.call(b.querySelectorAll('#gguwMk .thl[data-bx]')).map(function(z){return z.getAttribute('data-bx')});
+    var ord=[].slice.call(b.querySelectorAll('#gguwMk [data-bx]')).map(function(z){return z.getAttribute('data-bx')});
     sl.sort(function(a,c){var ia=ord.indexOf(a),ic=ord.indexOf(c);return (ia<0?1e9:ia)-(ic<0?1e9:ic)});
-    if(sl.length){g.sl=sl;g.t=sl.join('\n')}else{delete g.sl;var b0=g.ref?g3Blk(g.ref):null;if(b0)g.t=b0.text}
+    if(sl.length){g.sl=sl;g.t=sl.filter(function(z){return !/^G:/.test(z)}).join('\n')||'그림'}   /* 10/14 — 저장 글엔 그림 이름 안 넣음 */else{delete g.sl;var b0=g.ref?g3Blk(g.ref):null;if(b0)g.t=b0.text}
     g.ts=Date.now();await ggSaveList(uid,list);ggRepaint(uid);mark()},true)}
 function g3BlkLines(b,max){
-  return b.lines.slice(0,max||99).map(function(x){return '<div class="thl i'+(x.i||0)+'">'+g3T(x.x)+'</div>'}).join('')}
+  return b.lines.slice(0,max||99).map(function(x){return (String(x.x||'').trim()?'<div class="thl i'+(x.i||0)+'">'+g3T(x.x)+'</div>':'')+(x.g?'<div class="thl i'+(x.i||0)+'">'+g3Img(x.g)+'</div>':'')}).join('')}   /* 10/14 — 찾기 목록에 그림도 */
 /* 댓글 v12(사용자 16:18 「트리거·주의점은 한 줄씩 차지하고 내용이 보이게 · 공식은 볼트 블록이면 블록 전부 보이게」) — 칩 대신 항목마다 한 줄: 번호 · 글(공식·개념 = 블록 줄 전부 · 굵게) · 쓰인 수
    누름: 트리거·주의점 줄 = 고치기·댓글 판 펴기(옛 번호 칩과 같음) · 공식·개념 줄 = 그 블록 + 쓰인 문항 창 */
 /* 댓글 v37(사용자 22:21 · 66 근거 줄 항목 「여기 부분 다 작은 창에서 보이던 것처럼 · 길게 누르면 고치기 · 삭제는 오른쪽 x · 왼쪽 ! 는 그대로」) —
