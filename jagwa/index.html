@@ -10970,10 +10970,13 @@ function ggPhysPaint(){
   /* ★ physphone A-5 — 근거 칸 = 문항 창 머리(.vtop) 안 · 필기 도구 줄 바로 아랫줄(order 10 · 온 폭) · 따로 카드(여백·테두리) 걷음 · 기능 무변 · 머리 끌기에서 뺀다(data-nodrag) */
   box.setAttribute('data-nodrag','1');
   {const vt=document.querySelector('#view .vtop');if(vt){if(box.parentNode!==vt)vt.appendChild(box)}else if(box.parentNode!==st||st.firstChild!==box)st.insertBefore(box,st.firstChild)}
+  /* ★ 10/15 — 근거 칸 높이 = 문항 창 높이의 45% 까지(떠 있는 창은 화면보다 낮음 · 창 크기 바꾸면 따라감) · 넘치면 칸 안에서 굴림 */
+  ggphysFit();try{if(!window.__ggRO&&window.ResizeObserver){var vw0=document.getElementById('view');if(vw0){window.__ggRO=new ResizeObserver(ggphysFit);window.__ggRO.observe(vw0)}}}catch(e){}
   box.innerHTML='<div class="ggtop"><div class="ggwrap">'+ggLineHTML(GGU(r),'qp-')+'</div></div>';
   try{ggRowsSync(box.querySelector('.ggrows'))}catch(e){}
   try{if(window.g3After)g3After()}catch(e){}
 }
+function ggphysFit(){var b=document.getElementById('ggphys'),v=document.getElementById('view');if(!b||!v||b.parentNode!==v.querySelector('.vtop'))return;var h=v.clientHeight||window.innerHeight;b.style.maxHeight=Math.max(120,Math.round(h*0.45))+'px'}
 function physRowBuild(){
   if(HASBOOK||!SHELL)return;
   const vb=document.querySelector('.vbot'), tb=document.querySelector('.vbot .tools');
@@ -11607,7 +11610,7 @@ function thTxt(x){let s=String(x==null?'':x),pre='';
   '@container (max-width:640px){#view .vtop #inkPill{order:9;margin-left:auto}#view .vtop .title{min-width:40px}}',
   '@media (pointer:coarse){#view .vtop>.iconbtn,#view .vtop>#vLink{min-height:36px;min-width:36px}#view .vtop>#tm{min-height:36px}}',   /* #tm 은 제 최소 폭 56 그대로 */
   /* A-5 물리 근거 칸 = 머리 안 · 필기 도구 줄 바로 아랫줄 · 따로 카드 걷음 */
-  '#view .vtop>#ggphys{order:10;flex:0 0 100%;max-width:none;margin:0;padding:0;box-sizing:border-box}',
+  '#view .vtop>#ggphys{order:10;flex:0 0 100%;max-width:none;margin:0;padding:0;box-sizing:border-box;max-height:45vh;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}',   /* ★ 10/15 01:30 사용자 「근거 길 때 문제 창에서 손으로 못 올림」 — 근거 칸은 창 머리(.vtop · 끌기 손잡이 · touch-action none) 안이라 굴릴 칸이 없어 창보다 길면 넘쳐 잘림 + 문제 칸이 0 으로 눌림 → 근거 칸만 화면 45% 까지 · 넘치면 그 안에서 손가락 · 휠로 굴림(머리 끌기는 data-nodrag 로 이미 뺌) */
   '#view .vtop>#ggphys .ggtop{background:none;border:0;border-radius:0;padding:0}',
   /* A-6 형광 · 글머리 점 */
   '.thl mark.thmk{color:inherit;padding:0 1px;border-radius:2px}','.thl .thdot{color:var(--muted);font-weight:700}'
@@ -12248,7 +12251,7 @@ document.addEventListener('pointerup',lsUp,{capture:true});document.addEventList
 .ndox:hover,.ndox.on{background:rgba(128,128,128,.16)}
 .ndty{font-style:normal;font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap}
 #g3Pop{position:fixed;z-index:97;width:min(260px,calc(100vw - 16px));background:var(--card);border:1px solid var(--line);border-radius:8px;
-  box-shadow:0 4px 14px rgba(0,0,0,.14);padding:7px 9px;font-size:12px;line-height:1.45;box-sizing:border-box}
+  box-shadow:0 4px 14px rgba(0,0,0,.14);padding:7px 9px;font-size:12px;line-height:1.45;box-sizing:border-box;max-height:calc(100vh - 16px);overflow-y:auto;overscroll-behavior:contain}   /* ★ 10/15 01:30 사용자 「근거들이 길 때 작은 창에서도 문제 창에서도 손으로 위로 올릴 수 없어?」 — 화면보다 길면 창 안에서 굴림(연결 창 #rlPop 과 같은 꼴) */
 #g3Pop .hd{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
 #g3Pop .g3pf{display:flex;gap:6px;padding:3px 0;border-top:1px solid rgba(128,128,128,.15)}
 #g3Pop .g3pf .l{flex:none;width:52px;font-size:10.5px;font-weight:800;color:#4A5661;padding-top:1px}
