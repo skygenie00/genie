@@ -7,7 +7,7 @@
 - 시간 = ≈6 분(선례 = jagwa_cqjoin_1014 착수 → push 5 분 · 관문 8 칸 3.0 분 → 이번 6 칸)
 
 ## 할 일(차례대로 · 이것만)
-1. `git fetch origin main cloud/inbox` · 바탕 = main **bffcf20**(`jagwa/index.html` LF md5 **951a9bff** · `_qa/_qa_small_gate.py` md5 **867625c3**) — 다르면 멈추고 커밋 없이 이 줄만 알림.
+1. `git fetch origin main cloud/inbox` · 바탕 = main **c5a3b3a**(bffcf20 + theory_fix.json 만 바뀜 · `jagwa/index.html` LF md5 **951a9bff** · `_qa/_qa_small_gate.py` md5 **867625c3**) — 다르면 멈추고 커밋 없이 이 줄만 알림.
 2. `cloud/inbox` 의 `_qa/cloud_batch/jagwa_kxnl_1014/` 에서 둘을 꺼냄: `app_patches.txt`(md5 b4c3df53) · `spec_kxnl.json`(10aad335).
 3. `python _qa/_qa_apply_patches.py app_patches.txt jagwa/index.html --expect da1c14ba` — 멈추면(종료 2 · 3) 그 줄만 알림.
 4. 관문: `python _qa/_qa_small_gate.py --spec spec_kxnl.json --new jagwa/index.html --base bffcf20 --eng chromium,webkit --base-eng chromium`(`--vendor` · `--spd` · `--notes` 는 지난 판과 같이).
