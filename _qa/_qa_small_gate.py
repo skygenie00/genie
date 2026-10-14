@@ -14,7 +14,7 @@ r"""작은 고침 공용 관문 — 규칙 (96) ④(사용자 10/10 14:13 「작
      "prelude": "화면마다 setup 앞에 돌릴 JS(문 · 도우미 함수 정의)",
      "screens": {"p1": {"subj": "earth", "dev": "pc"|"ph"|"pad", "setup": "엔진에서 돌릴 JS(식 · async 가능)"}, …},
      "tests": [{"name", "screen",
-                "act": "click"|"long"|"type"|"none",   ← click = PC 마우스 · 폰 손가락 톡 / long = 길게(hold ms · 기본 800) / type = 누르고 글 넣기
+                "act": "click"|"long"|"type"|"dbl"|"none",   ← click = PC 마우스 · 폰 손가락 톡 / long = 길게(hold ms · 기본 800) / type = 누르고 글 넣기 / dbl = 두 번 톡톡(10/14)
                 "sel": CSS(엔진 기준), "nth": 0, "hold": 800, "text": "", "enter": false, "wait": 600,
                 "expect": "엔진에서 참일 JS 식",
                 "yard": true, "eng": ["webkit"]}]}      ← eng 없으면 다 · yard = 바탕에서 FAIL 이어야 하는 칸(헛잣대) · false = 바탕도 PASS 여야(무변 칸)
@@ -64,8 +64,12 @@ if not NOBASE:
 LINES, FAILS = [], [0]
 
 LOC_JS = r"""([sel, nth]) => { const L = document.querySelectorAll(sel), e = L[nth || 0]; if (!e) return null;
-  e.scrollIntoView({block: 'center', inline: 'nearest'}); const r = e.getBoundingClientRect();
-  return {x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height} }"""
+  /* 10/14 — 누를 점이 다른 것(떠 있는 문항 창 등)에 가려 있으면 굴림 자리를 바꿔 본다(center → start → end) · 다 가리면 hid = 가린 것 */
+  let r, hit = null;
+  for (const b of ['center', 'start', 'end']) { e.scrollIntoView({block: b, inline: 'nearest'}); r = e.getBoundingClientRect();
+    hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); if (hit && (hit === e || e.contains(hit))) { hit = null; break } }
+  return {x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height,
+          hid: hit ? (hit.tagName + (hit.id ? '#' + hit.id : '')) : ''} }"""
 
 
 def out(s):
@@ -106,6 +110,8 @@ def run_screen(br, eng, ver, sid, tests):
                             break
                         at = at2
                     at = at2
+                    if at.get('hid'):
+                        raise RuntimeError('누를 점이 가려짐: ' + t['sel'] + ' 위 = ' + at['hid'])   # 10/14 — 「누를 것 없음」 과 갈라 적음
                     if act == 'long' and touch and eng == 'chromium':
                         # Chromium 폰 손가락 길게 = CDP 터치(누름 ≥ 900ms) · ⚠ 카드가 줄어든(scale ≈0.45) 화면의 8~9px 줄은 Chromium 터치가 옆 근거 글을 잡음(10/14 잼) — 그런 칸은 명세에 "eng": ["webkit"]
                         c = p._cdp()
@@ -114,6 +120,13 @@ def run_screen(br, eng, ver, sid, tests):
                         c.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
                     elif act == 'long':
                         p.long_press(at['x'], at['y'], ms=int(t.get('hold', 800)), wait=0)
+                    elif act == 'dbl':   # 10/14 — 두 번 톡톡(마우스 = 두 번 누름 · 손가락 = 두 번 톡 · 사이 120ms)
+                        for _k in range(2):
+                            if touch:
+                                p.tap(at['x'], at['y'], wait=0)
+                            else:
+                                p.click(at['x'], at['y'], wait=0)
+                            p.wait(120)
                     elif act in ('click', 'type'):
                         if touch:
                             p.tap(at['x'], at['y'], wait=0)

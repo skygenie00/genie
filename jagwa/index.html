@@ -5098,7 +5098,7 @@ const SYNC_REF={
   snote  :{g:()=>SN,   s:v=>{SN=v}},
   crop   :{g:()=>CROP, s:v=>{CROP=v}},
   txt    :{g:()=>TXT,  s:v=>{TXT=v}},
-  tfix   :{g:()=>TFIX, s:v=>{TFIX=v}},
+  tfix   :{g:()=>TFIX, s:v=>{TFIX=v;try{pnBlkPaint()}catch(e){}}},
   bref   :{g:()=>BREF, s:v=>{BREF=v}},
   /* ★ jagwa_gg3 §A-2 — 이은 개념 빼기·댓글(g3.js 감쌈 안 G3CQX) · 늦게 읽는 통: kv 'cqx' 를 다 읽기 전 g() = null(ansfix·gg 와 같은 길) · 물리만(카드 층 SYNC_KEYS 엔 없다) */
   cqx    :{g:()=>window.g3CqxGet?g3CqxGet():null, s:v=>window.g3CqxSet&&g3CqxSet(v)}
@@ -5595,8 +5595,8 @@ function recBoot(){
   FR=(await get('kv','frm'))||{};
   MC=(await get('kv','mcard'))||{};
   LK=(await get('kv','link'))||{};
-  if(!CARD_LAYER)TFIX=(await get('kv','tfix'))||{};   /* ★ physphone A-2 — 물리도 고친 글(이름 nm · 공식 칸 f·c·t) · 동기화보다 먼저 읽는다(늦게 읽는 통 가드가 필요 없다) */
-  if(CARD_LAYER){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};BP=(await get('kv','bpit'))||{};BPG=(await get('kv','bpg'))||{};SN=(await get('kv','snote'))||{};CROP=(await get('kv','crop'))||{};TXT=(await get('kv','txt'))||{};TFIX=(await get('kv','tfix'))||{};BREF=(await get('kv','bref'))||{};}
+  if(!CARD_LAYER)TFIX=(await get('kv','tfix'))||{};try{pnBlkPaint()}catch(e){}   /* ★ physphone A-2 — 물리도 고친 글(이름 nm · 공식 칸 f·c·t) · 동기화보다 먼저 읽는다(늦게 읽는 통 가드가 필요 없다) */
+  if(CARD_LAYER){BG=(await get('kv','bogi'))||{};UN=(await get('kv','unit'))||{};BP=(await get('kv','bpit'))||{};BPG=(await get('kv','bpg'))||{};SN=(await get('kv','snote'))||{};CROP=(await get('kv','crop'))||{};TXT=(await get('kv','txt'))||{};TFIX=(await get('kv','tfix'))||{};BREF=(await get('kv','bref'))||{};try{pnBlkPaint()}catch(e){}}
   const moved=await renumber();
   if(moved)setTimeout(()=>toast('문항 번호 재배열 — 기록 '+moved+'건을 옮겼습니다'),900);
   await loadHave();
@@ -8663,14 +8663,14 @@ importData=async function(f){if(!f)return;let txt;try{txt=await f.text();const j
     if(c.bogi){BG=c.bogi;await put('kv','bogi',BG)}if(c.unit){UN=c.unit;await put('kv','unit',UN)}if(c.bpit){BP=c.bpit;await put('kv','bpit',BP)}if(c.bpg){BPG=c.bpg;await put('kv','bpg',BPG)}
     if(c.crop){CROP=c.crop;await put('kv','crop',CROP)}
     if(c.txt){TXT=c.txt;await put('kv','txt',TXT)}
-    if(c.tfix){TFIX=c.tfix;await put('kv','tfix',TFIX)}
+    if(c.tfix){TFIX=c.tfix;await put('kv','tfix',TFIX);try{pnBlkPaint()}catch(e){}}
     if(c.bref){BREF=c.bref;await put('kv','bref',BREF)}
     if(c.snote){SN=c.snote;await put('kv','snote',SN)}if(c.mcard){MC=c.mcard;await put('kv','mcard',MC)}
 
     /* ⚠ put 을 직접 부르지 않는다 — 저장 꼴 관문(Z-9·Z-15·Z-30)이 그 글자를 하나로 못 박았다 */
     if(j.gg){GG=j.gg;await saveGG()}
     if(j.ggref){GGREF=j.ggref;await saveGGREF()}
-    if(!HASBOOK&&j.tfix){TFIX=j.tfix;await saveTFIX()}   /* ★ physphone A-2 */
+    if(!HASBOOK&&j.tfix){TFIX=j.tfix;await saveTFIX();try{pnBlkPaint()}catch(e){}}   /* ★ physphone A-2 */
   }catch(e){toast('백업 파일을 읽지 못했습니다');return}
   await _imp0(new Blob([txt],{type:'application/json'}));if(DATA.length)refreshUnits();
 };
@@ -12241,6 +12241,7 @@ document.addEventListener('pointerup',lsUp,{capture:true});document.addEventList
 #gguw.g3sel #gguwMk .thpicbox.on{background:rgba(15,138,118,.15);box-shadow:inset 3px 0 0 var(--teal)}   /* 10/14 — 고른 그림 */
 .g3pic{display:inline-block;vertical-align:top}.g3pic img{display:block;max-width:100%;max-height:120px;width:auto;border:1px solid var(--line);border-radius:6px;background:#fff}
 .g3sug .g3pic img{max-height:56px}
+.g3sug mark{background:#FFE07A;color:inherit;border-radius:2px;padding:0 1px}.g3s .sec .g3hd{font-weight:400}   /* 10/14 — 항목 블록 결과 · 낱말 노랑 */
 .ndox:hover,.ndox.on{background:rgba(128,128,128,.16)}
 .ndty{font-style:normal;font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap}
 #g3Pop{position:fixed;z-index:97;width:min(260px,calc(100vw - 16px));background:var(--card);border:1px solid var(--line);border-radius:8px;
@@ -12434,6 +12435,7 @@ document.addEventListener('pointerup',lsUp,{capture:true});document.addEventList
 
 /* 댓글 v35 — 작은 창 공식·개념 줄 오른쪽 위 쓰인 문항 수(근거 줄 g3use 꼴 · 작게) */
 #g3Pop .g3pc{padding-right:16px}
+#g3Pop .g3pt{position:relative;padding-right:16px}   /* 10/14 — 트리거 · 주의점 줄 오른쪽 위 쓰인 수 */
 #g3Pop .g3pn{position:absolute;right:0;top:1px;font-style:normal;font-size:10.5px;font-weight:700;color:var(--muted);line-height:1.3}
 
 /* 댓글 v36 — 쓰인 문항 창 본문 = 절 이론 · 쓴 블록 점선 테두리 · 쓰인 문항 목록 = 오른쪽 덮개 */
@@ -12456,6 +12458,10 @@ document.addEventListener('pointerup',lsUp,{capture:true});document.addEventList
 .g3f .g3list .g3it.g3r{display:flex;align-items:flex-start;gap:5px;padding:1px 0;border:0;border-radius:0;background:none;font-size:12.5px;line-height:1.5;color:#2B3138;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .g3f .g3list .g3it.g3r:hover{border:0;background:rgba(128,128,128,.06)}
 .g3f .g3list .g3it.g3r.g3cc .g3tx{color:#1F2329;font-weight:600}
+.g3f .g3list .g3dh{flex:none;align-self:stretch;width:8px;margin-left:-3px;position:relative;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}.g3f .g3list .g3dh::before{content:'';position:absolute;left:3px;top:3px;bottom:3px;width:2px;border-radius:1px;background:#C9CED4}   /* 10/14 — 끌기 손잡이 = 세로줄 하나 */
+.g3f .g3list .g3r.g3drag{opacity:.65;position:relative;z-index:5;background:var(--card)}
+.g3f .g3list .g3r.g3dpb,.g3f .g3list .g3drop.g3dpb{box-shadow:0 -2px 0 var(--teal)}.g3f .g3list .g3r.g3dpa,.g3f .g3list .g3drop.g3dpa{box-shadow:0 2px 0 var(--teal)}
+.g3f .g3list .g3drop{font-size:11px;color:var(--muted);border:1px dashed var(--line);border-radius:4px;padding:2px 6px;margin:2px 0}
 .g3f .g3list .g3it.g3r .g3bkl{font-weight:400}
 .g3f .g3list .g3it.g3r .g3cql.h{font-weight:600}
 .g3r .g3bg{flex:none;width:10px;text-align:center;font-size:11px;font-weight:900;color:#C7CBD0;cursor:pointer;line-height:1.7;background:none;border:0;padding:0;margin:0}
@@ -12649,8 +12655,8 @@ function g3ChipHTML(uid,g,f,n){
   if(f==='c'){
     var b=g.ref?g3Blk(g.ref):null;
     var body='<span class="g3tx">'+g3CText(g,b)+'</span>';   /* 10/10 — 고른 줄 합쳐 */
-    return '<div class="g3it g3r g3cc" data-f="c" data-g3c="'+ea(uid+'|'+g.k)+'" data-g3k="'+ea(uid+'|'+g.k+'|c')+'">'+bang+body+g3UseHTML(f,uid,g)+cm+del+'</div>'+box}
-  return '<div class="g3it g3r" data-f="'+f+'" data-g3k="'+ea(uid+'|'+g.k+'|'+f)+'">'+bang+'<span class="g3tx">'+ggMathL(ggFlat(g))+'</span>'+g3UseHTML(f,uid,g)+cm+del+'</div>'+box}
+    return '<div class="g3it g3r g3cc" data-f="c" data-g3c="'+ea(uid+'|'+g.k)+'" data-g3k="'+ea(uid+'|'+g.k+'|c')+'">'+'<span class="g3dh" title="끌어서 차례 · 칸 바꾸기"></span>'+bang+body+g3UseHTML(f,uid,g)+cm+del+'</div>'+box}
+  return '<div class="g3it g3r" data-f="'+f+'" data-g3k="'+ea(uid+'|'+g.k+'|'+f)+'">'+'<span class="g3dh" title="끌어서 차례 · 칸 바꾸기"></span>'+bang+'<span class="g3tx">'+ggMathL(ggFlat(g))+'</span>'+g3UseHTML(f,uid,g)+cm+del+'</div>'+box}
 var G3CMOPEN=null;
 /* 댓글 v47(사용자 00:56 「이것도 공식·개념인데 왜 여기엔 댓 · x 표시 안 돼」) — 이은 개념 줄에도 「댓」 · x
    이은 개념은 전부 교재가 이어 둔 것(CL 343 · 개념 잇기 CX 0 · 잼)이라 근거 항목(GG)이 아님 → 문항마다 「뺀 개념」 · 「개념 댓글」 을 기기 저장소 kv 'cqx' 에 따로 둠
@@ -12711,7 +12717,7 @@ function g3CqHTML(uid,c,n){var nq=g3QUsers(c,c.k);if(nq.indexOf(uid)<0)nq.push(u
   var cm='<button type="button" class="g3cm'+(cs.length?' has':'')+(open?' on':'')+'" data-g3cqcm="'+ea(key)+'" title="댓글'+(cs.length?' '+cs.length:'')+'">댓</button>';
   var del='<button type="button" class="g3del" data-g3cqdel="'+ea(key)+'" title="이 문항에서 빼기" aria-label="빼기">✕</button>';
   var box=open?'<div class="g3cmb"><div>'+(cs.length?cs.map(function(x){return '<div class="ggcs"><span class="d">'+ggMD(x.ts)+'</span><span class="t">'+esc(x.t)+'</span><button class="lk red" data-g3cqcd="'+ea(key+'|'+x.k)+'">지우기</button></div>'}).join(''):'<div class="ggcs-0">댓글 없음</div>')+'</div><div class="cin"><textarea rows="1" data-g3cqin="'+ea(key)+'"></textarea><button class="lk" data-g3cqreply="'+ea(key)+'">달기</button></div></div>':'';
-  return '<div class="g3it g3r g3cc g3cq" data-f="c" data-g3cq="'+ea(key)+'" title="이어 둔 개념 — 누르면 쓰인 문항"><span class="g3bg0"></span><div class="g3bkl">'+g3CqBody(c)+'</div>'+(nq.length>=1?'<i class="gguse g3use g3pn0" data-g3useq="'+ea(key)+'" title="이 개념을 쓴 문항 '+nq.length+'">'+nq.length+'</i>':'')+cm+del+'</div>'+box}
+  return '<div class="g3it g3r g3cc g3cq" data-f="c" data-g3cq="'+ea(key)+'" title="이어 둔 개념 — 누르면 쓰인 문항"><span class="g3dh" title="끌어서 차례 바꾸기"></span><span class="g3bg0"></span><div class="g3bkl">'+g3CqBody(c)+'</div>'+(nq.length>=1?'<i class="gguse g3use g3pn0" data-g3useq="'+ea(key)+'" title="이 개념을 쓴 문항 '+nq.length+'">'+nq.length+'</i>':'')+cm+del+'</div>'+box}
 function g3TyHTML(uid){var r=rowByUid(uid);if(!r||typeof TYPES==='undefined')return '';var no=r[F.NO],cur=typeOf(no),fx=typeFixed(no);
   return '<span class="g3ty">'+TYPES.map(function(t){var on=cur.indexOf(t)>=0;return '<button type="button" class="'+(on?'on':'')+(on&&!fx?' dr':'')+'" data-g3ty="'+ea(uid+'|'+t)+'">'+esc(t)+'</button>'}).join('')+'</span>'}
 function g3LineHTML(uid,sc){
@@ -12726,7 +12732,7 @@ function g3LineHTML(uid,sc){
     +'<div class="ggline g3f" data-g3f="'+f+'"><span class="lb g3lb">근거'+ggUseHTML(uid,'↩',uid)+'</span>'
     +'<span class="refchips">'+ggRefChipsHTML(uid,sc)+'</span>'
     /* 댓글 v7(사용자 15:41 「토글에 맞는 것만 뜨지 말고 · 트리거 초록 · 공식 파랑 · 주의점 주황 바탕 · 입력한 것은 토글 상관없이 다 뜨게」) — 칩은 세 칸 다(트리거 → 공식·개념 → 주의점 차례 · 칸마다 번호) · 색 = 칸 · 토글은 적을 칸만 고름 */
-    +((list.length||cq.length)?'<div class="chips g3list">'+G3F.map(function(x){return by[x[0]].map(function(g,i){return g3ChipHTML(uid,g,x[0],i+1)}).join('')+(x[0]==='c'?cq.map(function(c,i){return g3CqHTML(uid,c,by.c.length+i+1)}).join(''):'')}).filter(function(h){return h}).map(function(h){return '<div class="g3grp">'+h+'</div>'}).join('')+'</div>':'')
+    +((list.length||cq.length)?'<div class="chips g3list">'+G3F.map(function(x){return (x[0]==='c'?g3COrd(uid,by.c,cq):by[x[0]].map(function(g,i){return g3ChipHTML(uid,g,x[0],i+1)}).join(''))}).filter(function(h){return h}).map(function(h){return '<div class="g3grp">'+h+'</div>'}).join('')+'</div>':'')
     +'<span class="ggrows" data-ggrows="'+ea(uid+'|qp-'+f)+'">'+row+'</span>'
     +'<button class="pl save hide" data-ggsave="'+ea(uid+'|qp-'+f)+'">저장</button>'
     +'<div class="g3sug hide"></div></div>'
@@ -12767,10 +12773,11 @@ window.g3LineHTML=g3LineHTML; window.g3After=g3After;
 async function g3Push(uid,f,o){
   /* 댓글 v6(사용자 14:48 「이건 왜 3 개나」) — 같은 칸에 같은 블록·같은 글은 두 번 안 넣음(이미 있으면 그대로) */
   var dup=ggOf(uid).find(function(x){return x&&g3f(x)===f&&(f==='c'&&o.ref?x.ref===o.ref:g3norm(ggFlat(x))===g3norm(o.t))});
-  if(dup){G3SAVED=Date.now();ggRepaint(uid);return dup}
+  if(dup){if(f==='c'&&o.sl){var sl0=Array.isArray(dup.sl)?dup.sl.slice():[],n0=sl0.length;o.sl.forEach(function(z){if(sl0.indexOf(z)<0)sl0.push(z)});if(sl0.length>n0){var L0=ggOf(uid).slice();dup.sl=sl0;dup.t=sl0.filter(function(z){return !/^G:/.test(z)}).join('\n')||dup.t;dup.ts=Date.now();G3SAVED=Date.now();await ggSaveList(uid,L0);ggRepaint(uid);return dup}}   /* 10/14 — 같은 블록 다른 항목 = 고른 줄에 더함 */
+    G3SAVED=Date.now();ggRepaint(uid);return dup}
   var list=ggOf(uid).slice(); list.forEach(function(x,n){if(x&&x.i!==n+1)x.i=n+1});
   var g={k:ggNewKey('g_'),i:list.length+1,t:o.t,ok:ggMarkNow(rowByUid(uid)[F.NO]),ts:Date.now(),cs:[],f:f};
-  if(o.parts)g.parts=o.parts; if(o.ref)g.ref=o.ref; if(o.src)g.src=o.src;
+  if(o.parts)g.parts=o.parts; if(o.ref)g.ref=o.ref; if(o.src)g.src=o.src; if(o.sl)g.sl=o.sl;
   list.push(g); G3SAVED=Date.now(); await ggSaveList(uid,list); ggRepaint(uid); return g}
 var _add0=ggAdd0;
 ggAdd0=async function(uid,sc,keepFocus,box){
@@ -12784,7 +12791,10 @@ ggAdd0=async function(uid,sc,keepFocus,box){
   return 1};
 /* 찾기 — 칸에 치면 바로 아래 목록(2 칸 = 이론 블록 · 1·3 칸 = 다른 문항이 그 칸에 쓴 글) */
 function g3SugList(uid,f,q){
-  if(f==='c'&&!HASBOOK)return g3BlkFind(q).map(function(b){return {ref:b.key,b:b,n:g3Users('c',b.key).length}});
+  if(f==='c'&&!HASBOOK){   /* ★ 10/14 사용자 「블록이 다 보이고 그 블록 안에 노란색 · 병진으로 찾으면 (1) 구름운동… 블록 다 보이고 병진에만 노랑」 — 결과 한 칸 = 낱말이 든 항목 블록 통째((1)(2)… 항목 = 그 줄부터 같은 들임 다음 항목 앞까지 · 그림 포함) · 낱말 노랑 */
+    var ws0=g3norm(q).split(' ').filter(Boolean),R=[];
+    if(ws0.length)g3Blocks().forEach(function(b){if(b.hid||R.length>=8)return;g3Items(b).forEach(function(it){if(R.length>=8)return;var t=g3norm(it.lines.map(function(x){return g3plain(x.x)}).join(' '));if(ws0.every(function(w){return t.indexOf(w)>=0}))R.push({ref:b.key,b:b,it:it,n:g3Users('c',b.key).length})})});
+    return R}
   var ws=g3norm(q).split(' ').filter(Boolean), m={};
   /* 댓글 v38(사용자 22:23 「트리거랑 주의점은 검색 범위 같게 · 주의점에 쓴 것도 트리거에서 · 트리거에 쓴 것도 주의점에서」) — 1·3 칸은 두 칸 글을 같이 찾음 · 이 문항 같은 칸에 이미 있는 글만 뺌 */
   for(var u in GG){(GG[u]||[]).forEach(function(g){if(!g)return;var gf=g3f(g);if(gf==='c'&&!HASBOOK)return;if(HASBOOK&&((gf==='c')!==(f==='c')))return;var k=g3norm(ggFlat(g));if(!k)return;
@@ -12792,6 +12802,12 @@ function g3SugList(uid,f,q){
     var e=(m[k]=m[k]||{t:ggFlat(g),us:[],mine:false,src:null,s0:Infinity}),gs=ggSrcOf(g),sr=gs?g.src:(u+'|'+g.k),s0=gs?(gs.ts||0):(g.ts||0);if(s0<e.s0){e.s0=s0;e.src=sr}   /* 같은 글 묶음의 임자 = 가장 먼저 적은 것(이미 이어 둔 것은 그 임자) */if(m[k].us.indexOf(u)<0)m[k].us.push(u);if(String(u)===String(uid)&&gf===f)m[k].mine=true})}
   return Object.keys(m).map(function(k){return {t:m[k].t,n:m[k].us.length,mine:m[k].mine,us:m[k].us,src:m[k].src}})
     .filter(function(x){return !x.mine}).sort(function(a,b){return b.n-a.n}).slice(0,8)}
+function g3Items(b){var L=b.lines,lv=99,out=[],cur=null;   /* 10/14 — 블록 안 항목: 머리 줄 밑 가장 얕은 들임 줄마다 새 항목 */
+  for(var k=1;k<L.length;k++)if(String(L[k].x||'').trim())lv=Math.min(lv,L[k].i|0);
+  L.forEach(function(x,k){var tx=String(x.x||'').trim();if(k===0||(tx&&(x.i|0)<=lv)){cur={k:k,lines:[]};out.push(cur)}cur.lines.push(x)});
+  return out}
+function g3Mark(h,q){var ws=String(q||'').trim().split(/\s+/).filter(Boolean).map(function(w){return w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')});if(!ws.length)return h;var re=new RegExp('('+ws.join('|')+')','gi');
+  return ('>'+h).replace(/>([^<]*)/g,function(m,t){return '>'+t.replace(re,'<mark>$1</mark>')}).slice(1)}   /* 10/14 — 찾은 낱말 노랑(태그 밖 글만) */
 function g3Sug(t){
   var line=t.closest('.g3f'); if(!line)return;
   var f=line.dataset.g3f, sug=line.querySelector('.g3sug'), q=String(t.value||'').trim();
@@ -12799,8 +12815,9 @@ function g3Sug(t){
   if(!q){sug.classList.add('hide');sug.innerHTML='';sug.__l=[];return}
   var L=g3SugList(uid,f,q); sug.__l=L; sug.__uid=uid; sug.__f=f;
   sug.innerHTML=L.length?L.map(function(x,i){
-    if(f==='c'&&!HASBOOK)return '<div class="g3s'+(i===0?' on':'')+'" data-i="'+i+'"><div class="sec">'+esc(x.b.sec+'. '+x.b.st)
-      +(x.n?' <i class="g3n">'+x.n+'</i>':'')+'</div><div class="bt">'+g3BlkLines(x.b,3)+'</div></div>';
+    if(f==='c'&&!HASBOOK){var hd=x.it.k>0?String(g3plain(x.b.lines[0].x)).replace(/\$[^$]*\$/g,'').trim():'';
+      return '<div class="g3s'+(i===0?' on':'')+'" data-i="'+i+'"><div class="sec">'+esc(x.b.sec+'. '+x.b.st)+(hd?' <span class="g3hd">› '+esc(hd)+'</span>':'')
+      +(x.n?' <i class="g3n">'+x.n+'</i>':'')+'</div><div class="bt">'+g3Mark(g3BlkLines({lines:x.it.lines}),q)+'</div></div>'}
     return '<div class="g3s" data-i="'+i+'"><span class="bt1">'+esc(x.t)+'</span> <i class="g3n">'+x.n+'</i>'
       +(x.us&&x.us.length?'<div class="g3so">'+x.us.slice(0,8).map(function(u){var r=rowByUid(u);return r?'<span class="g3ttl" data-gguugo="'+ea(String(u))+'" title="그 문제 보기"><span class="cd">'+esc(codeShow(r))+'</span><span class="un">'+esc(ggWhere(r))+'</span></span>':''}).join('')+(x.us.length>8?'<span class="un">… '+(x.us.length-8)+'</span>':'')+'</div>':'')   /* 세 과목 근거 찾기 = 그 글을 쓴 문항 uid 칩 · 단원명(쓰인 문항 창 꼴) · uid 누름 = 비교 창(사용자 10/11) */
       +'</div>'}).join('')
@@ -12810,7 +12827,8 @@ async function g3Pick(sug,i){
   var x=(sug.__l||[])[i]; if(!x)return;
   var uid=sug.__uid,f=sug.__f;
   var q0=sug.closest('.g3f')&&sug.closest('.g3f').querySelector('.ggrows .txt');G3LASTQ=q0?String(q0.value).trim():null;
-  if(f==='c'&&!HASBOOK)await g3Push(uid,'c',{t:x.b.text,ref:x.ref}); else await g3Push(uid,f,{t:x.t,src:x.src});   /* 10/12 — 카드 층 2 칸은 블록이 아니라 글 목록(g3SugList) · 블록 갈래는 물리만(TypeError 막음) */   /* 같은 근거 — 임자를 가리킴 */
+  if(f==='c'&&!HASBOOK){var sl1=x.it.k>0?x.it.lines.map(function(z){return String(z.x||'').trim()?z.x:(z.g?'G:'+z.g:'')}).filter(Boolean):null;   /* 10/14 — 고른 항목 블록 = 근거 줄(개념 창 줄 고르기와 같은 칸 g.sl · 블록 머리 항목이면 옛 그대로) */
+    await g3Push(uid,'c',{t:sl1?sl1.filter(function(z){return !/^G:/.test(z)}).join('\n'):x.b.text,ref:x.ref,sl:sl1})} else await g3Push(uid,f,{t:x.t,src:x.src});   /* 10/12 — 카드 층 2 칸은 블록이 아니라 글 목록(g3SugList) · 블록 갈래는 물리만(TypeError 막음) */   /* 같은 근거 — 임자를 가리킴 */
   var t=document.querySelector('[data-ggrows="'+CSS.escape(uid+'|qp-'+f)+'"] .txt'); if(t)t.focus()}
 document.addEventListener('input',function(e){var t=e.target;if(t&&t.matches&&t.matches('.g3f .ggrows[data-ggrows] .txt'))g3Sug(t)},true);
 /* 시안 거울 탓 막기 — 적은 직후 다시 그린 칸에 떨어져 나간 옛 칸의 change 가 옛 글을 되붙이지 않게(앱에선 떨어진 칸이라 일 없음) */
@@ -12921,7 +12939,7 @@ document.addEventListener('click',async function(e){
   if(el=t.closest('[data-g3cqcd]')){e.stopPropagation();var a3=el.getAttribute('data-g3cqcd').split('|');if(!G3CQX_READY)await G3CQX_P;var cl3=g3CqxCell(g3CqxQ(a3[0]));if(cl3&&cl3.c[a3[1]]){cl3.c[a3[1]]=cl3.c[a3[1]].filter(function(x){return x.k!==a3[2]});if(!cl3.c[a3[1]].length)delete cl3.c[a3[1]]}await g3CqxSave();ggRepaint(a3[0]);return}
   if(el=t.closest('[data-g3cqdel]')){e.stopPropagation();g3CqDelAsk(el.getAttribute('data-g3cqdel'));return}
   if(el=t.closest('[data-g3cm]')){e.stopPropagation();var ck0=el.getAttribute('data-g3cm');G3CMOPEN=(G3CMOPEN===ck0)?null:ck0;ggRepaint(ck0.split('|')[0]);if(G3CMOPEN){var ta0=document.querySelector('[data-ggcin="'+CSS.escape(ck0)+'"]');if(ta0)ta0.focus()}return}
-  if(t.closest('.g3r .g3bg,.g3r .g3del,.g3r .g3ed,.g3cmb'))return;   /* 댓글 v37 — ! · x · 고치기 칸은 줄 누름(쓰인 문항 창) 아님 */
+  if(t.closest('.g3r .g3bg,.g3r .g3del,.g3r .g3ed,.g3cmb,.g3r .g3dh'))return;   /* 댓글 v37 — ! · x · 고치기 칸은 줄 누름(쓰인 문항 창) 아님 */
   if(el=t.closest('.g3s')){e.stopPropagation();var sug=el.closest('.g3sug');await g3Pick(sug,+el.dataset.i);return}
   if(el=t.closest('[data-g3sel]')){e.stopPropagation();var v0=el.getAttribute('data-g3sel').split('|');g3Sel(v0[0],v0[1]);return}
   if(el=t.closest('[data-g3ty]')){e.stopPropagation();var ty=el.getAttribute('data-g3ty').split('|'),r0=rowByUid(ty[0]);if(!r0)return;var no0=r0[F.NO],cur0=new Set(typeOf(no0));cur0.has(ty[1])?cur0.delete(ty[1]):cur0.add(ty[1]);
@@ -12982,7 +13000,7 @@ function g3PopToggle(no,ox){
           /* 댓글 v35(사용자 21:58 「오른쪽에 근거 창에서처럼 작게 이 개념 쓰인 문항 숫자」) — 근거 줄과 같은 셈 · 같은 규칙(2 넘어야 보임) */
           if(g.__cq){var nq=g3QUsers(g.__cq,g.__cq.k);if(nq.indexOf(uid)<0)nq.push(uid);return '<div class="it g3cqp g3pc" data-g3pc="'+ea('q|'+uid+'|'+g.__cq.k)+'" data-sec="'+ea(g.__cq.n||'')+'">'+g3CqBody(g.__cq)+(nq.length>=1?'<i class="g3pn" title="이 개념을 쓴 문항 '+nq.length+'">'+nq.length+'</i>':'')+'</div>'}
           if(f==='c'&&g.ref){var b=g3Blk(g.ref);if(b){var nc=g3Users('c',g3Key(g)).length;return '<div class="it g3pc" data-g3pc="'+ea('c|'+uid+'|'+g.k)+'" data-sec="'+ea(g3SecName(b.sec))+'">'+g3CText(g,b)+(nc>=1?'<i class="g3pn" title="이 칸을 쓰는 문항 '+nc+'">'+nc+'</i>':'')+'</div>'}}
-          return '<div class="it">'+ggMathL(ggFlat(g))+'</div>'}).join('')+'</div>'}).join(''):'<div class="g3pf"><span class="none">근거 없음</span></div>')
+          var nt=g3Users(f,g3Key(g)).length;return '<div class="it'+(nt>=1?' g3pt':'')+'">'+ggMathL(ggFlat(g))+(nt>=1?'<i class="g3pn" title="이 칸을 쓰는 문항 '+nt+'">'+nt+'</i>':'')+'</div>'}).join('')   /* ★ 10/14 사용자 15:19 「작은 창에서도 트리거 · 주의점 옆에 인용 숫자 · 공식·개념은 되어 있는데」 — 근거 줄 쓰인 수와 같은 셈(g3Users · 1 부터) */+'</div>'}).join(''):'<div class="g3pf"><span class="none">근거 없음</span></div>')
     ;   /* 댓글 v5(사용자 14:42 「문제는 서랍에서 누르면 됨 · 열기 없애」) — 「열기」 걷음 */
   p.onclick=function(e){e.stopPropagation();
     if(e.target.closest('.ied'))return;   /* ★ 10/13 — 까닭 적는 칸 안 누름 */
@@ -13278,19 +13296,54 @@ window.g3AfPop=g3AfPop;window.g3AfClose=g3AfClose;
 /* 댓글 v37 — 근거 줄 항목 길게 누름(0.55 초 · 10px 안 움직임) = 그 자리 고치기: 글 칸 + ✓(Enter = 저장 · Esc = 그만) · 볼트 블록(공식 · ref)은 고칠 글이 없어 안 열림 */
 var G3ELP=0;
 (function(){var tm=0,st=null;var stop=function(){if(tm){clearTimeout(tm);tm=0}st=null};
-  document.addEventListener('pointerdown',function(e){if(st&&e.pointerId!==st.id)return;stop();if(e.button>0)return;var it=e.target.closest&&e.target.closest('#view .g3list .g3r[data-g3k]');if(!it||e.target.closest('.g3bg,.g3del,.gguse,.g3ed,.g3cm'))return;
+  document.addEventListener('pointerdown',function(e){if(st&&e.pointerId!==st.id)return;stop();if(e.button>0)return;var it=e.target.closest&&e.target.closest('#view .g3list .g3r[data-g3k]');if(!it||e.target.closest('.g3bg,.g3del,.gguse,.g3ed,.g3cm,.g3dh'))return;
     st={x:e.clientX,y:e.clientY,it:it,id:e.pointerId};tm=setTimeout(function(){tm=0;if(!st)return;var it0=st.it;st=null;if(g3EditInline(it0))G3ELP=Date.now()},550)},true);
   document.addEventListener('pointermove',function(e){if(st&&e.pointerId===st.id&&Math.hypot(e.clientX-st.x,e.clientY-st.y)>10)stop()},true);
   document.addEventListener('pointerup',function(e){if(tm&&st&&e.pointerId===st.id)stop()},true);document.addEventListener('pointercancel',stop,true);
   document.addEventListener('click',function(e){if(G3ELP&&Date.now()-G3ELP<1200&&e.target.closest&&e.target.closest('#view .g3list')&&!e.target.closest('.g3ed')){G3ELP=0;e.preventDefault();e.stopImmediatePropagation()}},true);
   document.addEventListener('contextmenu',function(e){if(e.target.closest&&e.target.closest('#view .g3list .g3r'))e.preventDefault()},true)})();
+/* ★ 10/14 사용자 「근거에 입력한 것들 드래그로 순서 바꾸게 · 공식·개념끼리 · 트리거랑 주의점 사이에서도 · 주의점에 쓴 걸 트리거로 옮기려니까 연결이 다 끊어지고 새로 입력해야 하잖아」 · 13:59 「⠿ 너무 넓어 · 세로줄 하나로 · 이은 개념은 왜 순서 못 바꿔」
+   줄 왼쪽 세로줄을 끌어 놓음 = 차례 바꾸기 · 공식·개념(입력한 것 + 교재가 이어 둔 개념)끼리 · 트리거 ↔ 주의점 서로 오감(그 칸이 비었으면 「…로 옮기기」 자리)
+   트리거 · 주의점 = 근거 항목을 그대로 옮김(열쇠 k · 댓글 · 같은 근거 이음 src · ! 그대로 = 새로 적지 않음) · 공식·개념 차례 = 문항 칸 cqx 의 o(['g:항목 열쇠' | 'q:개념 열쇠'] · 물리 동기화 칸 cqx 에 이미 있음 = 새 저장 칸 0) · PC 마우스 · 폰 손가락 같은 길(pointer) */
+function g3COrd(uid,gs,cq){var cl=g3CqxCell(g3CqxQ(uid)),o=(cl&&Array.isArray(cl.o))?cl.o:[];
+  var E=gs.map(function(g,i){return {k:'g:'+g.k,h:g3ChipHTML(uid,g,'c',i+1),n:i}}).concat(cq.map(function(c,i){return {k:'q:'+c.k,h:g3CqHTML(uid,c,gs.length+i+1),n:gs.length+i}}));
+  if(o.length)E.sort(function(a,b){var ia=o.indexOf(a.k),ib=o.indexOf(b.k);if(ia<0&&ib<0)return a.n-b.n;if(ia<0)return 1;if(ib<0)return -1;return ia-ib});   /* 차례에 없는 것(새로 넣은 것) = 뒤 */
+  return E.map(function(e){return e.h}).join('')}
+var G3DRAG=0;
+(function(){var D=null;
+  var rk=function(r){var g=r.getAttribute('data-g3k'),q=r.getAttribute('data-g3cq');return g?'g:'+g.split('|')[1]:(q?'q:'+q.split('|').slice(1).join('|'):'')};
+  var clr=function(d){if(!d)return;d.list.querySelectorAll('.g3dpa,.g3dpb').forEach(function(x){x.classList.remove('g3dpa','g3dpb')});d.it.classList.remove('g3drag');d.it.style.transform='';d.ph.forEach(function(x){x.remove()})};
+  document.addEventListener('pointerdown',function(e){var h=e.target.closest&&e.target.closest('#view .g3list .g3dh');if(!h||e.button>0)return;var it=h.closest('.g3r[data-g3k],.g3r[data-g3cq]'),list=it&&it.closest('.g3list');if(!it||!list)return;
+    e.preventDefault();e.stopPropagation();G3DRAG=Date.now();var a=(it.getAttribute('data-g3k')||it.getAttribute('data-g3cq')).split('|');
+    D={id:e.pointerId,it:it,list:list,uid:a[0],k:a[1],f:it.getAttribute('data-f'),y0:e.clientY,on:false,tgt:null,after:false,ph:[]};try{h.setPointerCapture(e.pointerId)}catch(_){}},true);
+  document.addEventListener('pointermove',function(e){if(!D||e.pointerId!==D.id)return;
+    if(!D.on){if(Math.abs(e.clientY-D.y0)<4)return;D.on=true;D.it.classList.add('g3drag');
+      if(D.f!=='c')['t','w'].forEach(function(ff){if(!D.list.querySelector('.g3r[data-g3k][data-f="'+ff+'"]')){var ph=document.createElement('div');ph.className='g3drop';ph.setAttribute('data-f',ff);ph.textContent=G3L[ff]+'로 옮기기';if(ff==='t')D.list.insertBefore(ph,D.list.firstChild);else D.list.appendChild(ph);D.ph.push(ph)}})}
+    e.preventDefault();D.it.style.transform='translateY('+(e.clientY-D.y0)+'px)';
+    var cand=[].slice.call(D.list.querySelectorAll('.g3r[data-g3k],.g3r[data-g3cq]')).filter(function(r){var rf=r.getAttribute('data-f');return r!==D.it&&(D.f==='c'?rf==='c':(rf==='t'||rf==='w'))}).concat(D.ph);
+    var best=null,bd=1e9;cand.forEach(function(r){var b=r.getBoundingClientRect(),d=Math.abs(e.clientY-(b.top+b.bottom)/2);if(d<bd){bd=d;best=r}});
+    D.list.querySelectorAll('.g3dpa,.g3dpb').forEach(function(x){x.classList.remove('g3dpa','g3dpb')});D.tgt=best;
+    if(best){var bb=best.getBoundingClientRect();D.after=e.clientY>(bb.top+bb.bottom)/2;best.classList.add(D.after?'g3dpa':'g3dpb')}},true);
+  var end=async function(e){if(!D||e.pointerId!==D.id)return;var d=D;D=null;var tgt=d.tgt,after=d.after,on=d.on,nf=tgt?tgt.getAttribute('data-f'):null;clr(d);
+    G3DRAG=Date.now();if(!on||!tgt||e.type==='pointercancel')return;
+    if(d.f==='c'){   /* 공식·개념 — 보이는 차례를 그대로 문항 칸 cqx o 에 */
+      var rs=[].slice.call(d.list.querySelectorAll('.g3r[data-g3k][data-f="c"],.g3r[data-g3cq]')).filter(function(r){return r!==d.it}),ti=rs.indexOf(tgt);if(ti<0)return;rs.splice(after?ti+1:ti,0,d.it);
+      if(!G3CQX_READY)await G3CQX_P;var cl=g3CqxCell(g3CqxQ(d.uid),1);if(!cl)return;cl.o=rs.map(rk).filter(Boolean);await g3CqxSave();ggRepaint(d.uid);return}
+    var tk=tgt.getAttribute('data-g3k')?tgt.getAttribute('data-g3k').split('|')[1]:null;
+    var list=ggOf(d.uid).slice(),g=list.find(function(x){return x&&x.k===d.k});if(!g)return;
+    list.splice(list.indexOf(g),1);
+    if(tk){var tg=list.find(function(x){return x&&x.k===tk}),tj=list.indexOf(tg);list.splice(tj<0?list.length:(after?tj+1:tj),0,g)}else list.push(g);
+    g.f=nf;list.forEach(function(x,n){if(x)x.i=n+1});
+    await ggSaveList(d.uid,list);ggRepaint(d.uid)};
+  document.addEventListener('pointerup',end,true);document.addEventListener('pointercancel',end,true);
+  window.addEventListener('click',function(e){if(G3DRAG&&Date.now()-G3DRAG<600){G3DRAG=0;e.preventDefault();e.stopImmediatePropagation()}},true)})();   /* 10/14 사용자 「끌어서 넣을 때 왜 자꾸 창 떠」 — 놓은 뒤 따라오는 click 을 창 단계(window) 맨 앞에서 먹음(문서 단계 근거 줄 누름 = 개념 · 쓰인 문항 창보다 먼저) · 손잡이를 누르기만 해도 창 안 뜸 */
 function g3EditInline(it){var a=it.getAttribute('data-g3k').split('|'),uid=a[0],k=a[1],g=ggItem(uid,k);if(!g)return false;if(g3f(g)==='c'&&g.ref)return false;
   var tx=it.querySelector('.g3tx');if(!tx)return false;
   var ed=document.createElement('span');ed.className='g3ed';ed.innerHTML='<textarea rows="1"></textarea><button type="button" class="g3ok" title="저장">✓</button>';
   var ta=ed.querySelector('textarea');ta.value=ggFlat(g);tx.replaceWith(ed);ta.focus();try{ta.setSelectionRange(ta.value.length,ta.value.length)}catch(e){}
   var fit=function(){ta.style.height='auto';ta.style.height=ta.scrollHeight+'px'};fit();ta.addEventListener('input',fit);
-  var gi=g.i,gfx=g3f(g);var save=async function(){var v=ta.value.trim();if(!v){ggRepaint(uid);return}var list=ggOf(uid),gg=list.find(function(x){return x&&x.k===k})||list.find(function(x){return x&&x.i===gi&&g3f(x)===gfx});if(gg){const s=ggSrcOf(gg),root=s?gg.src:(uid+'|'+gg.k);if(s){s.t=v;delete s.parts}gg.t=v;delete gg.parts;
-    for(const u2 in GG)(GG[u2]||[]).forEach(x=>{if(x&&x.src===root){x.t=v;delete x.parts}});   /* 같은 근거 — 임자와 이어 둔 것 모두 같은 글 */
+  var gi=g.i,gfx=g3f(g);var save=async function(){var v=ta.value.trim();if(!v){ggRepaint(uid);return}var list=ggOf(uid),gg=list.find(function(x){return x&&x.k===k})||list.find(function(x){return x&&x.i===gi&&g3f(x)===gfx});if(gg){const ok0=g3Key(gg),s=ggSrcOf(gg),root=s?gg.src:(uid+'|'+gg.k);   /* ★ 10/14 사용자 「PA0305 첫 근거를 {4.충돌} 로 고쳤더니 연결됐던 것들이랑 분리됐어」 — 고치기 전 이 근거와 같은 칸 · 같은 글(쓰인 수로 이어 보이던 것 = g3Key)이던 근거도 다 같은 글로(10/11 이음 src 생기기 전 글만 같은 사본 18 문항 · 원격 기록 잼) */if(s){s.t=v;delete s.parts}gg.t=v;delete gg.parts;
+    for(const u2 in GG)(GG[u2]||[]).forEach(x=>{if(x&&x!==gg&&(x.src===root||(!x.src&&g3f(x)===gfx&&g3Key(x)===ok0))){x.t=v;delete x.parts}});   /* 같은 근거 — 임자와 이어 둔 것 모두 같은 글 */
     await ggSaveList(uid,list)}ggRepaint(uid)};
   ed.addEventListener('click',function(e){e.stopPropagation();if(e.target.closest('.g3ok'))save()});
   ed.addEventListener('pointerdown',function(e){e.stopPropagation()});
@@ -13319,6 +13372,22 @@ window.g3ConSheet=g3ConSheet;window.g3CmOpen=function(v){G3CMOPEN=v};window.g3Su
 /* 댓글 v52(사용자 11:30 「진짜 앱 쓰는 데 불편할 점」 · 채팅 잼) — 근거를 처음 적거나 다 지워도 서랍 O△X 점선 밑줄(v39)이 서랍을 다시 그릴 때까지 안 바뀌던 것 → 근거 다시 그릴 때(ggRepaint) 그 문항 서랍 줄도 바로 */
 (function(){if(typeof ggRepaint!=='function')return;var _rp=ggRepaint;
   window.ggRepaint=ggRepaint=function(uid){var r=_rp.apply(this,arguments);try{var row=rowByUid(uid);if(row){var o=document.querySelector('#ndList .ndrow[data-no="'+row[F.NO]+'"] .ndox');if(o)o.classList.toggle('g3has',ggOf(uid).filter(Boolean).length>0||g3Cq(uid).length>0)}}catch(e){}return r}})();
+/* ★ 10/14 사용자 15:19 「목차 서랍에서 수정해서 파란색 된 제목 중 검은색으로 바꾸고 싶은 것 · 두 번 톡톡 = 검은색 · 다시 두 번 톡톡 = 파란색」 —
+   서랍 줄의 고친 제목(.ndtt · 고친 제목 nm 있는 줄만) 톡 두 번(400ms · 24px 안 · 마우스 · 손가락 같이) = 칸 TFIX[uid].nmk '1' 켬 / 끔(nm 과 같은 동기화 통 tfix · 「고친 글자 있음」 에 안 낌 · 제목 글자 무변)
+   · 검은색 = 그 제목이 보이는 곳(서랍 · 문제 창 머리 · 첫 화면 목록 = .fx[data-pn]) 다 같이 · 첫 톡은 옛 그대로(줄 누름 = 그 문항) */
+function pnBlkPaint(){var st=document.getElementById('pnBlkCss');if(!st){st=document.createElement('style');st.id='pnBlkCss';document.head.appendChild(st)}
+  var a=[];try{for(var u in TFIX){if(TFIX[u]&&TFIX[u].nmk){var r=rowByUid(u);if(r)a.push('.fx[data-pn="'+r[F.NO]+'"]')}}}catch(e){}
+  st.textContent=a.length?a.join(',')+'{color:inherit!important}':''}
+window.pnBlkPaint=pnBlkPaint;
+(function(){var _ts=tfixSet;tfixSet=async function(uid,slot){var ok=await _ts.apply(this,arguments);if(slot==='nmk'||slot===PN_SLOT)pnBlkPaint();return ok};
+  var T=null;
+  document.addEventListener('pointerup',function(e){var el=e.target&&e.target.closest&&e.target.closest('#navdr .ndtt[data-pn],#ndList .ndtt[data-pn]');
+    if(!el||el.classList.contains('ied')||e.button>0){T=null;return}
+    var no=+el.dataset.pn,r=rec(no);if(!r||!pnFix(r)){T=null;return}
+    var now=Date.now();
+    if(T&&T.no===no&&now-T.t<400&&Math.hypot(e.clientX-T.x,e.clientY-T.y)<24){T=null;var u=pnUid(r);tfixSet(u,'nmk',tfixRaw(u,'nmk')?'':'1');return}
+    T={no:no,t:now,x:e.clientX,y:e.clientY}},true);
+  pnBlkPaint()})();
 
 })();
 </script>
