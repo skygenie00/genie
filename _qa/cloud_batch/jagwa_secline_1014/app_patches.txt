@@ -1,0 +1,41 @@
+⟦1 찾기⟧
+function kx(el){
+⟦1 바꿈⟧
+/* ★ 10/14 21:31 사용자 「② 강체 각운동량 : L = / Iω 이런 거 왜 이렇게 떨어져 있어」 — 볼트 글 $L=\\I\omega$ 의 \\ 를 KaTeX 는 인라인에서도 줄바꿈으로 그림(옵시디언 MathJax 는 환경 밖 \\ 를 무시) → 환경(\begin) 밖 \\ 는 빈칸으로(옵시디언과 같게) · katex.renderToString · katex.render(자동 그리기 kx) 둘 다 */
+function kxNL(t){t=String(t);return /\\begin\{/.test(t)?t:t.replace(/\\\\/g,' ')}
+(function kxWrap(){var k=window.katex;if(!k){setTimeout(kxWrap,50);return}if(k.__nl)return;k.__nl=1;var R=k.renderToString,D=k.render;k.renderToString=function(t,o){return R.call(k,kxNL(t),o)};k.render=function(t,el,o){return D.call(k,kxNL(t),el,o)}})();
+function kx(el){
+⟦2 찾기⟧
+function g3SecMark(secId,id){var ts=(typeof secById==='function')?secById(String(secId)):null,us=null;try{us=UNITS.sec.find(function(x){return String(x.id)===String(secId)})}catch(e){}
+  var norm=function(x){return String(x||'').replace(/★/g,'').replace(/\\\\/g,'\\').replace(/\s+/g,'')};
+  var grp=[];if(id&&us){var k=us.b.findIndex(function(n){return n.a===id});if(k>=0){var a0=k,a1=k;while(a0>0&&us.b[a0-1].t!=='br')a0--;while(a1<us.b.length-1&&us.b[a1+1].t!=='br')a1++;grp=us.b.slice(a0,a1+1)}}
+⟦2 바꿈⟧
+/* ★ 10/14 22:20 사용자 「이 짝짓기 세 번째인 거 알아?」 — 옛 개별 단원 파일블록(^id) ↔ 통짜 「물리 목차」 줄 짝 = 이 함수 하나(점선 · 근거 줄 · 서랍 작은 창 · 넣은 뒤 개념 창이 같이 씀) · \\ 는 빼고 맞댐(볼트 \\I → I 고친 뒤에도 짝) */
+function g3SecHit(secId,id){var ts=(typeof secById==='function')?secById(String(secId)):null,us=null;try{us=UNITS.sec.find(function(x){return String(x.id)===String(secId)})}catch(e){}
+  var norm=function(x){return String(x||'').replace(/★/g,'').replace(/\\\\/g,'').replace(/\s+/g,'')};
+  var grp=[];if(id&&us){var k=us.b.findIndex(function(n){return n.a===id});if(k>=0){var a0=k,a1=k;while(a0>0&&us.b[a0-1].t!=='br')a0--;while(a1<us.b.length-1&&us.b[a1+1].t!=='br')a1++;grp=us.b.slice(a0,a1+1)}}
+  var hit=[];if(ts&&grp.length){grp.forEach(function(gn){var t=norm(gn.x);ts.b.forEach(function(n,i){if(hit.indexOf(i)>=0)return;if((t&&norm(n.x)===t)||(!t&&gn.g&&n.g===gn.g))hit.push(i)})});hit.sort(function(a,b){return a-b})}
+  var all=[];if(hit.length)for(var i=hit[0];i<=hit[hit.length-1];i++)all.push(i);
+  return {ts:ts,us:us,grp:grp,all:all}}
+function g3SecLines(H){return (H&&H.ts&&H.all.length)?H.all.map(function(i){return H.ts.b[i]}).filter(function(n){return n&&n.t==='p'&&(String(n.x||'').trim()||n.g)}):[]}
+function g3SecMark(secId,id){var H=g3SecHit(secId,id),ts=H.ts,us=H.us,grp=H.grp;
+⟦3 찾기⟧
+  if(ts&&grp.length){var hit=[];grp.forEach(function(gn){var t=norm(gn.x);ts.b.forEach(function(n,i){if(hit.indexOf(i)>=0)return;if((t&&norm(n.x)===t)||(!t&&gn.g&&n.g===gn.g))hit.push(i)})});
+    if(hit.length){hit.sort(function(a,b){return a-b});var all=[];for(var i=hit[0];i<=hit[hit.length-1];i++)all.push(i);return render(ts,all)}}
+⟦3 바꿈⟧
+  if(H.all.length)return render(ts,H.all);
+⟦4 찾기⟧
+function g3CqBody(c){var nd=g3TheoryNode(c.i),t=String(c.t||''),x=String(c.x||''),h='';
+⟦4 바꿈⟧
+function g3CqBody(c){var nd=g3TheoryNode(c.i),t=String(c.t||''),x=String(c.x||''),h='';
+  /* ★ 10/14 — 옛 개별 단원 파일블록 줄도 통짜 글로(점선과 같은 짝 g3SecHit) · 짝 없으면 옛 글 그대로 */
+  var L=c.i?g3SecLines(g3SecHit(String(c.n||'').split(' ')[0].replace(/\.$/,''),c.i)):[];
+  if(L.length){var m0=Math.min.apply(null,L.map(function(n){return n.i|0}));return L.map(function(n,j){var pl='padding-left:'+(((n.i|0)-m0)*12)+'px';return (String(n.x||'').trim()?'<div class="g3cql'+(j===0?' h':'')+'" style="'+pl+'">'+g3T(n.x)+'</div>':'')+(n.g?'<div class="g3cql" style="'+pl+'"><img class="g3cqimg" draggable="false" src="img/'+ea(n.g)+'.jpg" alt=""></div>':'')}).join('')}
+⟦5 찾기⟧
+UB.forEach(function(u){if(!used[u.key]){u.hid=1;TB.push(u)}});
+⟦5 바꿈⟧
+UB.forEach(function(u){if(!used[u.key]){u.hid=1;
+    /* ★ 10/14 — 찾기 블록과 짝 못 지은 옛 개별 단원 파일블록(그 줄을 넣으면 근거 · 개념 창 줄이 됨)도 글은 통짜에서(점선과 같은 짝) · 열쇠 무변 */
+    var L=u.a?g3SecLines(g3SecHit(u.sec,u.a)):[];if(L.length){u.lines=L;u.text=L.filter(function(z){return String(z.x||'').trim()}).map(function(z){return g3plain(z.x)}).join('\n')}
+    TB.push(u)}});
+⟦끝⟧
