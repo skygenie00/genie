@@ -3853,6 +3853,9 @@ const conceptsOf=r=>conceptKeys(r).map(k=>({k,...CB[k]}));
 const secById=id=>THEORY.sec.find(x=>x.id===id);
 const secsFor=r=>{const a=(THEORY.map[r[F.BIG]+'|'+r[F.SUB]]||[]).map(secById).filter(Boolean);const b=secById('0');return (a.length&&b)?a.concat([b]):a;};
 
+/* ★ 10/14 21:31 사용자 「② 강체 각운동량 : L = / Iω 이런 거 왜 이렇게 떨어져 있어」 — 볼트 글 $L=\\I\omega$ 의 \\ 를 KaTeX 는 인라인에서도 줄바꿈으로 그림(옵시디언 MathJax 는 환경 밖 \\ 를 무시) → 환경(\begin) 밖 \\ 는 빈칸으로(옵시디언과 같게) · katex.renderToString · katex.render(자동 그리기 kx) 둘 다 */
+function kxNL(t){t=String(t);return /\\begin\{/.test(t)?t:t.replace(/\\\\/g,' ')}
+(function kxWrap(){var k=window.katex;if(!k){setTimeout(kxWrap,50);return}if(k.__nl)return;k.__nl=1;var R=k.renderToString,D=k.render;k.renderToString=function(t,o){return R.call(k,kxNL(t),o)};k.render=function(t,el,o){return D.call(k,kxNL(t),el,o)}})();
 function kx(el){
   if(!window.renderMathInElement)return;
   try{renderMathInElement(el,{delimiters:[{left:'$',right:'$',display:false}],
@@ -12597,7 +12600,10 @@ function g3Blocks(){
       if(b.t==='p'&&String(b.x||'').trim()){if(!(b.i|0)&&cur.length)flush();if(pend.length){cur=pend.concat(cur);pend=[]}cur.push(b)}
       else if(b.t==='p'&&b.g){if(cur.length)cur.push(b);else pend.push(b)}});
     flush();tail()});
-  UB.forEach(function(u){if(!used[u.key]){u.hid=1;TB.push(u)}});
+  UB.forEach(function(u){if(!used[u.key]){u.hid=1;
+    /* ★ 10/14 — 찾기 블록과 짝 못 지은 옛 개별 단원 파일블록(그 줄을 넣으면 근거 · 개념 창 줄이 됨)도 글은 통짜에서(점선과 같은 짝) · 열쇠 무변 */
+    var L=u.a?g3SecLines(g3SecHit(u.sec,u.a)):[];if(L.length){u.lines=L;u.text=L.filter(function(z){return String(z.x||'').trim()}).map(function(z){return g3plain(z.x)}).join('\n')}
+    TB.push(u)}});
   return TB}
 var g3Blk=function(ref){return g3Blocks().find(function(b){return b.key===ref})||null};
 function g3SecName(id){var S=[];try{S.push(THEORY)}catch(e){}try{S.push(UNITS)}catch(e){}for(var q=0;q<S.length;q++){try{var x=S[q].sec.find(function(z){return String(z.id)===String(id)});if(x)return x.id+'. '+x.t}catch(e){}}return String(id||'')}
@@ -12723,6 +12729,9 @@ function g3Cq(uid){try{var r=rowByUid(uid);if(!r||typeof conceptsOf!=='function'
 /* 댓글 v24(사용자 19:24 「그 개념이 그대로 보여야지」) — 이은 개념 = 볼트 물리 목차 그 블록 그대로(이론 THEORY 의 ^id 블록 · 줄 · 들여쓰기 · 수식 · 그림) */
 function g3TheoryNode(id){var S=[];try{S.push(UNITS)}catch(e){}try{S.push(THEORY)}catch(e){}for(var q=0;q<S.length;q++){try{var sec=S[q].sec;for(var i=0;i<sec.length;i++){var b=sec[i].b||[];for(var j=0;j<b.length;j++)if(b[j].a===id)return b[j]}}catch(e){}}return null}   /* 볼트 개별 물리 파일(UNITS) 먼저 · 물리 목차(THEORY) */
 function g3CqBody(c){var nd=g3TheoryNode(c.i),t=String(c.t||''),x=String(c.x||''),h='';
+  /* ★ 10/14 — 옛 개별 단원 파일블록 줄도 통짜 글로(점선과 같은 짝 g3SecHit) · 짝 없으면 옛 글 그대로 */
+  var L=c.i?g3SecLines(g3SecHit(String(c.n||'').split(' ')[0].replace(/\.$/,''),c.i)):[];
+  if(L.length){var m0=Math.min.apply(null,L.map(function(n){return n.i|0}));return L.map(function(n,j){var pl='padding-left:'+(((n.i|0)-m0)*12)+'px';return (String(n.x||'').trim()?'<div class="g3cql'+(j===0?' h':'')+'" style="'+pl+'">'+g3T(n.x)+'</div>':'')+(n.g?'<div class="g3cql" style="'+pl+'"><img class="g3cqimg" draggable="false" src="img/'+ea(n.g)+'.jpg" alt=""></div>':'')}).join('')}
   if(x)h=x.split('\n').map(function(l,j){var m=(l.match(/^\t*/)||[''])[0].length;return '<div class="g3cql'+(j===0?' h':'')+'" style="padding-left:'+(m*12)+'px">'+g3T(l.replace(/^\t+/,''))+'</div>'}).join('');
   else if(t&&t!==c.i)h='<div class="g3cql h">'+g3T(t)+'</div>';
   if(nd&&nd.g)h+='<img class="g3cqimg" draggable="false" src="img/'+nd.g+'.jpg" alt="">';
@@ -12935,16 +12944,21 @@ function g3UseWinOpen(uid,head,sepTxt,owners,meBtn,secId,markId,listMode){
   try{if(typeof THEORY!=='undefined'&&THEORY.sec){b.classList.add('g3cw');g3CwDecor(b,rowByUid(uid),null,secId||'',{rHTML:function(){return rows},   /* 댓글 v43(사용자 23:10 「이 줄 없애」) — 「이 블록을 … 쓴 문항 N」 줄 걷음 */after:function(R){try{if(typeof pvWatch==='function')pvWatch(R)}catch(e){}},
     onSec:function(sec){var w=b.querySelector('#gguwSec'),wm=b.querySelector('#gguwMk');if(!w||!wm)return;wm.innerHTML=g3SecMark(sec.id,String(sec.id)===String(secId)?markId:'');kx(wm);var c=b.querySelector('.gguh .cd'),u=b.querySelector('.gguh .un');if(c)c.textContent=sec.id;if(u)u.textContent=sec.t;var m=w.querySelector('.g3mk');w.scrollTop=m?Math.max(0,m.offsetTop-8):0}})}}catch(e){console.warn('gguw 밀기',e)}}
 /* 그 절 이론(물리 목차 THEORY)을 그리고 블록(^id · 볼트 개별 파일 UNITS 에 있음)을 점선으로 — 목차 노트엔 ^id 가 없어 같은 글(★·빈칸·\\ 무시)·같은 그림으로 찾음 · 못 찾으면 개별 파일 절을 그려 그 블록 */
-function g3SecMark(secId,id){var ts=(typeof secById==='function')?secById(String(secId)):null,us=null;try{us=UNITS.sec.find(function(x){return String(x.id)===String(secId)})}catch(e){}
-  var norm=function(x){return String(x||'').replace(/★/g,'').replace(/\\\\/g,'\\').replace(/\s+/g,'')};
+/* ★ 10/14 22:20 사용자 「이 짝짓기 세 번째인 거 알아?」 — 옛 개별 단원 파일블록(^id) ↔ 통짜 「물리 목차」 줄 짝 = 이 함수 하나(점선 · 근거 줄 · 서랍 작은 창 · 넣은 뒤 개념 창이 같이 씀) · \\ 는 빼고 맞댐(볼트 \\I → I 고친 뒤에도 짝) */
+function g3SecHit(secId,id){var ts=(typeof secById==='function')?secById(String(secId)):null,us=null;try{us=UNITS.sec.find(function(x){return String(x.id)===String(secId)})}catch(e){}
+  var norm=function(x){return String(x||'').replace(/★/g,'').replace(/\\\\/g,'').replace(/\s+/g,'')};
   var grp=[];if(id&&us){var k=us.b.findIndex(function(n){return n.a===id});if(k>=0){var a0=k,a1=k;while(a0>0&&us.b[a0-1].t!=='br')a0--;while(a1<us.b.length-1&&us.b[a1+1].t!=='br')a1++;grp=us.b.slice(a0,a1+1)}}
+  var hit=[];if(ts&&grp.length){grp.forEach(function(gn){var t=norm(gn.x);ts.b.forEach(function(n,i){if(hit.indexOf(i)>=0)return;if((t&&norm(n.x)===t)||(!t&&gn.g&&n.g===gn.g))hit.push(i)})});hit.sort(function(a,b){return a-b})}
+  var all=[];if(hit.length)for(var i=hit[0];i<=hit[hit.length-1];i++)all.push(i);
+  return {ts:ts,us:us,grp:grp,all:all}}
+function g3SecLines(H){return (H&&H.ts&&H.all.length)?H.all.map(function(i){return H.ts.b[i]}).filter(function(n){return n&&n.t==='p'&&(String(n.x||'').trim()||n.g)}):[]}
+function g3SecMark(secId,id){var H=g3SecHit(secId,id),ts=H.ts,us=H.us,grp=H.grp;
   var render=function(sec,hit){var d=document.createElement('div');d.innerHTML=secHTML(sec);var box=d.firstElementChild;if(!box)return d.innerHTML;if(!hit.length)return d.innerHTML;
     var kids=[].slice.call(box.children).slice(1),els=[],c=0;sec.b.forEach(function(n,i){var cnt=(n.t==='br'||n.t==='tb')?1:((String(n.x||'')+((n.r||[]).length?'r':'')).trim()?1:0)+(n.g?1:0);var mine=kids.slice(c,c+cnt);c+=cnt;if(hit.indexOf(i)>=0)els=els.concat(mine)});
     if(!els.length)return d.innerHTML;var w=document.createElement('div');w.className='g3mk';els[0].parentNode.insertBefore(w,els[0]);els.forEach(function(e){w.appendChild(e)});return d.innerHTML};
   /* 10/12 사용자 「왜 여긴 점선 테두리 안 쳐지고 포커싱도 안 돼」 — 통짜에만 있는 블록(열쇠 T:절#n)도 그 블록 줄(다음 들임 0 줄 앞까지 · 그림 포함)에 점선 테두리 · 그 자리로 굴림 */
   if(id&&/^T:/.test(String(id))&&ts){var tb=g3Blk(String(id)),i0=tb?ts.b.indexOf(tb.lines[0]):-1;if(i0>=0){var i1=i0+1;while(i1<ts.b.length&&ts.b[i1].t!=='br'&&!(ts.b[i1].t==='p'&&!(ts.b[i1].i|0)&&String(ts.b[i1].x||'').trim()))i1++;var allT=[];for(var q=i0;q<i1;q++)allT.push(q);return render(ts,allT)}}
-  if(ts&&grp.length){var hit=[];grp.forEach(function(gn){var t=norm(gn.x);ts.b.forEach(function(n,i){if(hit.indexOf(i)>=0)return;if((t&&norm(n.x)===t)||(!t&&gn.g&&n.g===gn.g))hit.push(i)})});
-    if(hit.length){hit.sort(function(a,b){return a-b});var all=[];for(var i=hit[0];i<=hit[hit.length-1];i++)all.push(i);return render(ts,all)}}
+  if(H.all.length)return render(ts,H.all);
   if(us&&grp.length){var k2=us.b.indexOf(grp[0]),all2=[];for(var j=k2;j<k2+grp.length;j++)all2.push(j);return render(us,all2)}
   return ts?secHTML(ts):''}
 window.g3UseWin=g3UseWin;
