@@ -1,0 +1,62 @@
+⟦1 찾기⟧
+    (s.b||[]).forEach(function(b){if(b.t==='br'){flush();return}
+      if(b.t==='p'&&String(b.x||'').trim()){if(!(b.i|0)&&cur.length)flush();cur.push(b)}});
+    flush()});
+⟦1 바꿈⟧
+    var pend=[],tail=function(){if(!pend.length)return;var lb=TB[TB.length-1];if(lb&&lb.sec===String(s.id))lb.lines=lb.lines.concat(pend);pend=[]};   /* ★ 10/14 사용자 「통짜 물리목차 그림은 보이는데 왜 근거로 못 넣어」 — 그림만 있는 줄도 블록에(앞 글 줄 블록 · 블록 첫머리면 다음 글 줄과 · 블록 번호 n 무변 = 옛 근거 열쇠 그대로) */
+    (s.b||[]).forEach(function(b){if(b.t==='br'){flush();tail();return}
+      if(b.t==='p'&&String(b.x||'').trim()){if(!(b.i|0)&&cur.length)flush();if(pend.length){cur=pend.concat(cur);pend=[]}cur.push(b)}
+      else if(b.t==='p'&&b.g){if(cur.length)cur.push(b);else pend.push(b)}});
+    flush();tail()});
+⟦2 찾기⟧
+      TB.push({key:u?u.key:('T:'+s.id+'#'+n),a:u?u.a:'',cbk:u?u.cbk:'',sec:String(s.id),st:ut[String(s.id)]||String(s.t||'').replace(/\$/g,''),lines:cur.slice(),
+        text:cur.map(function(x){return g3plain(x.x)}).join('\n')});n++;cur=[]};
+⟦2 바꿈⟧
+      TB.push({key:u?u.key:('T:'+s.id+'#'+n),a:u?u.a:'',cbk:u?u.cbk:'',sec:String(s.id),st:ut[String(s.id)]||String(s.t||'').replace(/\$/g,''),lines:cur.slice(),
+        text:cur.filter(function(x){return String(x.x||'').trim()}).map(function(x){return g3plain(x.x)}).join('\n')});n++;cur=[]};   /* 10/14 — 글(찾기 · 저장 글)은 글 줄만 = 옛 그대로 */
+⟦3 찾기⟧
+function g3CText(g,b){var sl=(g&&Array.isArray(g.sl))?g.sl.filter(Boolean):[];if(sl.length)return sl.map(function(x){return g3T(x)}).join('<br>');return b?g3T(b.lines[0].x):ggMath(ggFlat(g))}
+⟦3 바꿈⟧
+function g3Img(nm){return '<span class="g3pic"><img src="img/'+ea(String(nm))+'.jpg" alt="그림" loading="lazy" draggable="false"></span>'}   /* ★ 10/14 — 근거 칸 그림(통짜 물리목차 그림 · 작게) */
+function g3CText(g,b){var sl=(g&&Array.isArray(g.sl))?g.sl.filter(Boolean):[];if(sl.length)return sl.map(function(x){return /^G:/.test(x)?g3Img(x.slice(2)):g3T(x)}).join('<br>');var t0=b?b.lines.find(function(x){return String(x.x||'').trim()}):null;return t0?g3T(t0.x):(b&&b.lines[0]&&b.lines[0].g?g3Img(b.lines[0].g):ggMath(ggFlat(g)))}   /* 10/14 — 고른 줄 'G:그림' = 그림 · 안 고르면 블록 첫 글 줄(그림이 앞이어도) */
+⟦4 찾기⟧
+  return b.lines.slice(0,max||99).map(function(x){return '<div class="thl i'+(x.i||0)+'">'+g3T(x.x)+'</div>'}).join('')}
+⟦4 바꿈⟧
+  return b.lines.slice(0,max||99).map(function(x){return (String(x.x||'').trim()?'<div class="thl i'+(x.i||0)+'">'+g3T(x.x)+'</div>':'')+(x.g?'<div class="thl i'+(x.i||0)+'">'+g3Img(x.g)+'</div>':'')}).join('')}   /* 10/14 — 찾기 목록에 그림도 */
+⟦5 찾기⟧
+    const img=n.g?`<div class="thpicbox"><div class="solz thz"
+⟦5 바꿈⟧
+    const img=n.g?`<div class="thpicbox" data-bx="G:${esc(n.g)}"><div class="solz thz"
+⟦6 찾기⟧
+b.querySelectorAll('#gguwMk .thl[data-bx]').forEach(function(el){el.classList.toggle('on',sl.indexOf(el.getAttribute('data-bx'))>=0)})};
+⟦6 바꿈⟧
+b.querySelectorAll('#gguwMk [data-bx]').forEach(function(el){el.classList.toggle('on',sl.indexOf(el.getAttribute('data-bx'))>=0)})};   /* 10/14 — 그림 상자(data-bx 'G:그림')도 */
+⟦7 찾기⟧
+var el=e.target.closest&&e.target.closest('#gguwMk .thl[data-bx]');if(!el||e.target.closest('.thref,a,button,img'))return;
+⟦7 바꿈⟧
+var el=e.target.closest&&e.target.closest('#gguwMk [data-bx]');if(!el||e.target.closest('.thref,a,button')||(e.target.closest('img')&&!el.classList.contains('thpicbox')))return;   /* 10/14 — 그림 누름 = 그 그림 고르기 */
+⟦8 찾기⟧
+    var ord=[].slice.call(b.querySelectorAll('#gguwMk .thl[data-bx]')).map(function(z){return z.getAttribute('data-bx')});
+⟦8 바꿈⟧
+    var ord=[].slice.call(b.querySelectorAll('#gguwMk [data-bx]')).map(function(z){return z.getAttribute('data-bx')});
+⟦9 찾기⟧
+    if(sl.length){g.sl=sl;g.t=sl.join('\n')}
+⟦9 바꿈⟧
+    if(sl.length){g.sl=sl;g.t=sl.filter(function(z){return !/^G:/.test(z)}).join('\n')||'그림'}   /* 10/14 — 저장 글엔 그림 이름 안 넣음 */
+⟦10 찾기⟧
+#gguw.g3sel #gguwMk .thl.on{background:rgba(15,138,118,.15);box-shadow:inset 3px 0 0 var(--teal)}
+⟦10 바꿈⟧
+#gguw.g3sel #gguwMk .thl.on{background:rgba(15,138,118,.15);box-shadow:inset 3px 0 0 var(--teal)}
+#gguw.g3sel #gguwMk .thpicbox[data-bx]{cursor:pointer;border-radius:6px}
+#gguw.g3sel #gguwMk .thpicbox.on{background:rgba(15,138,118,.15);box-shadow:inset 3px 0 0 var(--teal)}   /* 10/14 — 고른 그림 */
+.g3pic{display:inline-block;vertical-align:top}.g3pic img{display:block;max-width:100%;max-height:120px;width:auto;border:1px solid var(--line);border-radius:6px;background:#fff}
+.g3sug .g3pic img{max-height:56px}
+⟦11 찾기⟧
+if(SHELL){const SEL='#jnw .jnrow .pnm,.frcell,#navdr .ndtt,
+⟦11 바꿈⟧
+if(SHELL){const SEL='#jnw .jnrow .pnm,.frcell,#navdr .ndtt,#ndList .ndrow .ndt,
+⟦12 찾기⟧
+  const fire=el=>{if(!el.isConnected)return;
+⟦12 바꿈⟧
+  const fire=el=>{if(!el.isConnected)return;if(el.classList.contains('ndt')&&el.closest('#ndList .ndrow')){const no=+el.closest('.ndrow').dataset.no,r=rec(no);if(!r)return;let t=el.querySelector('.ndtt');if(!t){el.innerHTML=esc(r[F.CODE])+esc(r[F.LV])+' · <span class="ndtt" data-pn="'+no+'"></span>';t=el.querySelector('.ndtt')}ndEdit(t);const mo=new MutationObserver(()=>{if(!t.classList.contains('ied')){mo.disconnect();ndTitlePaint(no)}});mo.observe(t,{attributes:true,attributeFilter:['class']});return}   /* ★ 10/14 사용자 「생물 · 지학 목차 서랍에서 제목 눌러도 수정 안 돼」 — 서랍 줄 어디를 길게 눌러도 그 줄 제목 고치기 · 카드 층 = 고친 제목 없으면 옛 꼬리(「2024년 자과 21번」 · 지학 기출 = 없음) 자리에 고치는 칸(옛 글은 안 보임 · 그만두면 옛 그대로) · 물리도 코드 자리 길게 = 같음 · 사용자 시안 댓글 11:21 「생물에서 2024년 자과 21번을 없애고 제목을 쓰고 싶은 거야」 */
+⟦끝⟧
