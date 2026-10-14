@@ -1,0 +1,163 @@
+{
+"app": "jagwa",
+"base": "833cabe",
+"settle_ms": 8000,
+"screens": {
+"p1": {
+"subj": "phys",
+"dev": "pc",
+"setup": "(async function(){var wait=function(m){return new Promise(function(z){setTimeout(z,m)})};try{ndResFold(false)}catch(e){};\nawait tfixSet('P110','nm','③시안 제목 가');await tfixSet('P110','nmk','');\nopenView(110,navList());await wait(2500);try{ndResFold(false)}catch(e){};\nvar x=document.querySelector('#navdr .ndtt[data-pn=\"110\"]');if(x)x.scrollIntoView({block:'start'})})()"
+},
+"m1": {
+"subj": "phys",
+"dev": "ph",
+"setup": "(async function(){var wait=function(m){return new Promise(function(z){setTimeout(z,m)})};try{ndResFold(false)}catch(e){};\nawait tfixSet('P110','nm','③시안 제목 가');await tfixSet('P110','nmk','');\nopenView(110,navList());await wait(2500);try{ndResFold(false)}catch(e){};\nvar x=document.querySelector('#navdr .ndtt[data-pn=\"110\"]');if(x)x.scrollIntoView({block:'start'})})()"
+}
+},
+"tests": [
+{
+"name": "PC 서랍 제목 길게 = 고치는 칸 · 테두리 틀 파랑",
+"screen": "p1",
+"wait": 800,
+"expect": "(()=>{const f=document.querySelector('#navdr .ndtt .pnfr');return !!f&&!f.classList.contains('blk')&&getComputedStyle(f).backgroundColor==='rgb(79, 134, 217)'})()",
+"yard": true,
+"act": "long",
+"hold": 800,
+"sel": "#navdr .ndtt[data-pn=\"110\"]"
+},
+{
+"name": "PC 테두리 누름 = 틀 검정 · 저장",
+"screen": "p1",
+"wait": 100,
+"expect": "(sel=>{const f=document.querySelector(sel);if(!f)return 'no frame';const b=f.getBoundingClientRect(),x=b.left+2,y=b.top+b.height/2,t=document.elementFromPoint(x,y);if(t!==f)return 'edge='+(t&&t.className);t.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,clientX:x,clientY:y,pointerId:5,isPrimary:true,pointerType:'touch'}));return true})('#navdr .ndtt .pnfr')",
+"yard": true,
+"act": "none"
+},
+{
+"name": "PC 누른 뒤 확인(틀 검정 · nmk · 칸 그대로 열림)",
+"screen": "p1",
+"wait": 700,
+"expect": "(()=>{const f=document.querySelector('#navdr .ndtt .pnfr');return !!f&&f.classList.contains('blk')&&getComputedStyle(f).backgroundColor==='rgb(31, 35, 41)'&&tfixRaw('P110','nmk')==='1'})()",
+"yard": true,
+"act": "none"
+},
+{
+"name": "PC Enter = 서랍 제목 검정",
+"screen": "p1",
+"wait": 800,
+"expect": "(n=>{const e=document.querySelector('#navdr .ndtt[data-pn=\"'+n+'\"]');return e?getComputedStyle(e).color:'없음'})(110)!=='rgb(79, 134, 217)'&&(n=>{const e=document.querySelector('#navdr .ndtt[data-pn=\"'+n+'\"]');return e?getComputedStyle(e).color:'없음'})(110)!=='없음'&&!document.querySelector('.pnfr')",
+"yard": true,
+"act": "type",
+"sel": "#navdr .ndtt .iedin",
+"text": "",
+"enter": true
+},
+{
+"name": "PC 문제 창 제목 길게 = 틀 검정",
+"screen": "p1",
+"wait": 800,
+"expect": "(()=>{const f=document.querySelector('#vT1 .pnfr');return !!f&&f.classList.contains('blk')})()",
+"yard": true,
+"act": "long",
+"hold": 800,
+"sel": "#vT1"
+},
+{
+"name": "PC 문제 창 틀 누름 = 파랑",
+"screen": "p1",
+"wait": 100,
+"expect": "(sel=>{const f=document.querySelector(sel);if(!f)return 'no frame';const b=f.getBoundingClientRect(),x=b.left+2,y=b.top+b.height/2,t=document.elementFromPoint(x,y);if(t!==f)return 'edge='+(t&&t.className);t.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,clientX:x,clientY:y,pointerId:5,isPrimary:true,pointerType:'touch'}));return true})('#vT1 .pnfr')",
+"yard": true,
+"act": "none"
+},
+{
+"name": "PC 누른 뒤 확인(틀 파랑 · nmk 끔 · 서랍 제목 파랑)",
+"screen": "p1",
+"wait": 700,
+"expect": "(()=>{const f=document.querySelector('#vT1 .pnfr');return !!f&&!f.classList.contains('blk')&&!tfixRaw('P110','nmk')&&(n=>{const e=document.querySelector('#navdr .ndtt[data-pn=\"'+n+'\"]');return e?getComputedStyle(e).color:'없음'})(110)==='rgb(79, 134, 217)'})()",
+"yard": true,
+"act": "none"
+},
+{
+"name": "PC 두 번 톡톡 = 색 그대로(걷음)",
+"screen": "p1",
+"wait": 900,
+"expect": "(()=>{if(window.IED)try{IED.done(false)}catch(e){};return !tfixRaw('P110','nmk')})()",
+"yard": true,
+"act": "dbl",
+"sel": "#navdr .ndtt[data-pn=\"110\"]"
+},
+{
+"name": "폰 서랍 제목 길게 = 고치는 칸 · 테두리 틀 파랑",
+"screen": "m1",
+"wait": 800,
+"expect": "(()=>{const f=document.querySelector('#navdr .ndtt .pnfr');return !!f&&!f.classList.contains('blk')&&getComputedStyle(f).backgroundColor==='rgb(79, 134, 217)'})()",
+"yard": true,
+"act": "long",
+"hold": 800,
+"sel": "#navdr .ndtt[data-pn=\"110\"]"
+},
+{
+"name": "폰 테두리 누름 = 틀 검정 · 저장",
+"screen": "m1",
+"wait": 100,
+"expect": "(sel=>{const f=document.querySelector(sel);if(!f)return 'no frame';const b=f.getBoundingClientRect(),x=b.left+2,y=b.top+b.height/2,t=document.elementFromPoint(x,y);if(t!==f)return 'edge='+(t&&t.className);t.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,clientX:x,clientY:y,pointerId:5,isPrimary:true,pointerType:'touch'}));return true})('#navdr .ndtt .pnfr')",
+"yard": true,
+"act": "none"
+},
+{
+"name": "폰 누른 뒤 확인(틀 검정 · nmk · 칸 그대로 열림)",
+"screen": "m1",
+"wait": 700,
+"expect": "(()=>{const f=document.querySelector('#navdr .ndtt .pnfr');return !!f&&f.classList.contains('blk')&&getComputedStyle(f).backgroundColor==='rgb(31, 35, 41)'&&tfixRaw('P110','nmk')==='1'})()",
+"yard": true,
+"act": "none"
+},
+{
+"name": "폰 Enter = 서랍 제목 검정",
+"screen": "m1",
+"wait": 800,
+"expect": "(n=>{const e=document.querySelector('#navdr .ndtt[data-pn=\"'+n+'\"]');return e?getComputedStyle(e).color:'없음'})(110)!=='rgb(79, 134, 217)'&&(n=>{const e=document.querySelector('#navdr .ndtt[data-pn=\"'+n+'\"]');return e?getComputedStyle(e).color:'없음'})(110)!=='없음'&&!document.querySelector('.pnfr')",
+"yard": true,
+"act": "type",
+"sel": "#navdr .ndtt .iedin",
+"text": "",
+"enter": true
+},
+{
+"name": "폰 서랍 제목 다시 길게 = 틀 검정",
+"screen": "m1",
+"wait": 800,
+"expect": "(()=>{const f=document.querySelector('#navdr .ndtt .pnfr');return !!f&&f.classList.contains('blk')})()",
+"yard": true,
+"act": "long",
+"hold": 800,
+"sel": "#navdr .ndtt[data-pn=\"110\"]"
+},
+{
+"name": "폰 틀 다시 누름 = 파랑",
+"screen": "m1",
+"wait": 100,
+"expect": "(sel=>{const f=document.querySelector(sel);if(!f)return 'no frame';const b=f.getBoundingClientRect(),x=b.left+2,y=b.top+b.height/2,t=document.elementFromPoint(x,y);if(t!==f)return 'edge='+(t&&t.className);t.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,clientX:x,clientY:y,pointerId:5,isPrimary:true,pointerType:'touch'}));return true})('#navdr .ndtt .pnfr')",
+"yard": true,
+"act": "none"
+},
+{
+"name": "폰 누른 뒤 확인(틀 파랑 · nmk 끔 · 서랍 제목 파랑)",
+"screen": "m1",
+"wait": 700,
+"expect": "(()=>{const f=document.querySelector('#navdr .ndtt .pnfr');return !!f&&!f.classList.contains('blk')&&!tfixRaw('P110','nmk')&&(n=>{const e=document.querySelector('#navdr .ndtt[data-pn=\"'+n+'\"]');return e?getComputedStyle(e).color:'없음'})(110)==='rgb(79, 134, 217)'})()",
+"yard": true,
+"act": "none"
+},
+{
+"name": "폰 두 번 톡톡 = 색 그대로(걷음)",
+"screen": "m1",
+"wait": 900,
+"expect": "(()=>{if(window.IED)try{IED.done(false)}catch(e){};return !tfixRaw('P110','nmk')})()",
+"yard": false,
+"act": "dbl",
+"sel": "#navdr .ndtt[data-pn=\"110\"]"
+}
+]
+}
