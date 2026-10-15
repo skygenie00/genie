@@ -2649,7 +2649,7 @@ async function twinLink(a,b,on){
     if(CARD_LAYER){const kx=qk(x),ky=qk(y),s=new Set(TW[kx]||[]);on?s.add(ky):s.delete(ky);const v=[...s].sort();v.length?TW[kx]=v:delete TW[kx];return}   /* ★ uid_unify — 열쇠·값 모두 uid */
     const s=new Set(TW[x]||[]);on?s.add(y):s.delete(y);
     const v=[...s].sort((p,q)=>p-q); v.length?TW[x]=v:delete TW[x];};
-  add(a,b);add(b,a);await saveTW();
+  add(a,b);add(b,a);await saveTW();try{linkChip()}catch(e){}   /* ★ 10/15 — 쌍둥이 잇기 · 끊기 뒤 문제 창 칩 수 다시 */
 }
 /* 쌍둥이 미리보기 — 그 문제로 옮기지 않고 팝업으로 보여 준다 */
 /* 쌍둥이 · 코멘트 검색 결과가 같이 쓴다 — 그림 + 코멘트 전문 + 마지막 마크. onGo = 「이 문제로 가기」 직전에 부른다(코멘트 시트 닫기) */
@@ -2701,7 +2701,7 @@ const linksOf=no=>{
 async function linkSet(a,b,on){
   if(CARD_LAYER){const ka=qk(a),kb=qk(b),st=new Set(LK[ka]||[]);on?st.add(kb):st.delete(kb);const v=[...st].sort();v.length?LK[ka]=v:delete LK[ka];await saveLK();linkChip();if($('#view').classList.contains('hide'))draw();return}   /* ★ uid_unify */
   const st=new Set(LK[a]||[]);on?st.add(b):st.delete(b);const v=[...st].sort((p,q)=>p-q);v.length?LK[a]=v:delete LK[a];await saveLK();linkChip();if($('#view').classList.contains('hide'))draw()}
-function linkChip(){const c=$('#vLink');if(!c)return;const n=VNO?linksOf(VNO).length:0;c.textContent=n?'🔗 '+n:'🔗';c.classList.toggle('on',n>0)}
+function linkChip(){const c=$('#vLink');if(!c)return;const n=VNO?linksOf(VNO).length:0,t=(VNO&&typeof twinsOf==='function')?twinsOf(VNO).length:0;c.textContent=(n?'🔗 '+n:'🔗')+(t?' · 쌍 '+t:'');c.classList.toggle('on',n>0||t>0)}   /* ★ 10/15 — 쌍둥이 수도(누르면 연결 · 쌍둥이 탭 창 그대로) */
 function linkSheet(no){
   const b=document.createElement('div');b.className='sheet';b.id='linkSheet';
   const draw=()=>{const fw=CARD_LAYER?(LK[qk(no)]||[]).map(uidNo):(LK[no]||[]),all=linksOf(no);
@@ -12271,7 +12271,7 @@ document.addEventListener('pointerup',lsUp,{capture:true});document.addEventList
 #g3Pop .g3ptop .sp{flex:1}
 #g3Pop .g3lks{flex:none;display:flex;gap:4px}
 #g3Pop .g3lk{font:inherit;font-size:11px;font-weight:800;line-height:1.3;padding:1px 6px;border:1px solid var(--line);border-radius:10px;background:var(--card);cursor:pointer}
-#g3Pop .g3lk.f{color:#1e3a8a}#g3Pop .g3lk.b{color:#4d7c0f}
+#g3Pop .g3lk.f{color:#1e3a8a}#g3Pop .g3lk.b{color:#4d7c0f}#g3Pop .g3lk.t{color:#A65B12}
 #g3Pop .g3lk.on{background:var(--subj-soft)}
 #g3Pop .g3lkl{border-top:1px solid rgba(128,128,128,.15);padding:2px 0 4px}
 #g3Pop .g3lkr{padding:3px 2px;cursor:pointer;font-size:11.5px;border-radius:4px}
@@ -13013,10 +13013,11 @@ function g3PopTop(no,r){   /* 사용자 10/11 11:29 — 물리 서랍 O X 누른
   if(HASBOOK){for(var k0 in LK)if((LK[k0]||[]).indexOf(qk(no))>=0){var x0=uidNo(k0);if(x0&&x0!==no&&rec(x0)&&bk.indexOf(x0)<0)bk.push(x0)}}
   else for(var k in LK)if(+k!==no&&(LK[k]||[]).map(Number).indexOf(no)>=0&&rec(+k))bk.push(+k);
   bk.sort(function(a,b){return a-b});
-  if(!fig&&!fw.length&&!bk.length)return '';
+  var tw=(typeof twinsOf==='function')?twinsOf(no).filter(function(x){return rec(x)}):[];   /* ★ 10/15 14:34 사용자 「문제 연결 링크는 작은 창 · 문제 창 줄에 나타나는데 왜 쌍둥이 연결은 안 나타나」 — 쌍둥이(TW · 연결 LK 와 따로 저장)도 같은 줄에 「쌍N」(첫 화면 쌍 칩 색) · 누르면 같은 목록 */
+  if(!fig&&!fw.length&&!bk.length&&!tw.length)return '';
   return '<div class="g3ptop">'+(fig||'<span class="sp"></span>')+'<span class="g3lks">'
     +(fw.length?'<button type="button" class="g3lk f" data-n="'+fw.join(',')+'" title="이 문제가 연결한 문항">🔗'+fw.length+'</button>':'')
-    +(bk.length?'<button type="button" class="g3lk b" data-n="'+bk.join(',')+'" title="이 문제를 연결한 문항">↩'+bk.length+'</button>':'')+'</span></div>'}
+    +(bk.length?'<button type="button" class="g3lk b" data-n="'+bk.join(',')+'" title="이 문제를 연결한 문항">↩'+bk.length+'</button>':'')+(tw.length?'<button type="button" class="g3lk t" data-n="'+tw.join(',')+'" title="쌍둥이 문항">쌍'+tw.length+'</button>':'')+'</span></div>'}
 function g3PopToggle(no,ox){
   if(G3P===no){g3PopClose();return}
   g3PopClose(); try{ndPopClose()}catch(e){} try{bdPopClose()}catch(e){} G3P=no; ox.classList.add('on');
