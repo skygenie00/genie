@@ -12475,6 +12475,8 @@ document.addEventListener('pointerup',lsUp,{capture:true});document.addEventList
 .g3f .g3list .g3it.g3r .g3cql.h{font-weight:600}
 .g3r .g3bg{flex:none;width:10px;text-align:center;font-size:11px;font-weight:900;color:#C7CBD0;cursor:pointer;line-height:1.7;background:none;border:0;padding:0;margin:0}
 .g3r .g3bg.on{color:var(--red)}
+.g3f .g3list .g3r.bang .g3dh::before{background:var(--red)}   /* ★ 10/17 14:56 사용자 「! 누르면 원래 왼쪽 세로선도 빨개졌었어 · 목차 서랍 작은 창에서도 ! 누른 근거는 왼쪽에 붉은 세로선」 */
+#g3Pop .g3pf .it.bang{border-left:3px solid var(--red);padding-left:5px}
 .g3r .g3bg0{flex:none;width:10px}
 .g3r .g3del{flex:none;margin-left:2px;border:0;background:none;color:#B4B9BF;font-size:11px;line-height:1.6;padding:0 2px;cursor:pointer}
 .g3r .g3del:hover{color:var(--red)}
@@ -12680,8 +12682,8 @@ function g3ChipHTML(uid,g,f,n){
   if(f==='c'){
     var b=g.ref?g3Blk(g.ref):null;
     var body='<span class="g3tx">'+g3CText(g,b)+'</span>';   /* 10/10 — 고른 줄 합쳐 */
-    return '<div class="g3it g3r g3cc" data-f="c" data-g3c="'+ea(uid+'|'+g.k)+'" data-g3k="'+ea(uid+'|'+g.k+'|c')+'">'+'<span class="g3dh" title="끌어서 차례 · 칸 바꾸기"></span>'+bang+body+g3UseHTML(f,uid,g)+cm+del+'</div>'+box}
-  return '<div class="g3it g3r" data-f="'+f+'" data-g3k="'+ea(uid+'|'+g.k+'|'+f)+'">'+'<span class="g3dh" title="끌어서 차례 · 칸 바꾸기"></span>'+bang+'<span class="g3tx">'+ggMathL(ggFlat(g))+'</span>'+g3UseHTML(f,uid,g)+cm+del+'</div>'+box}
+    return '<div class="g3it g3r g3cc'+(g.bang?' bang':'')+'" data-gbbox="'+ea(uid+'|'+g.k)+'" data-f="c" data-g3c="'+ea(uid+'|'+g.k)+'" data-g3k="'+ea(uid+'|'+g.k+'|c')+'">'+'<span class="g3dh" title="끌어서 차례 · 칸 바꾸기"></span>'+bang+body+g3UseHTML(f,uid,g)+cm+del+'</div>'+box}
+  return '<div class="g3it g3r'+(g.bang?' bang':'')+'" data-gbbox="'+ea(uid+'|'+g.k)+'" data-f="'+f+'" data-g3k="'+ea(uid+'|'+g.k+'|'+f)+'">'+'<span class="g3dh" title="끌어서 차례 · 칸 바꾸기"></span>'+bang+'<span class="g3tx">'+ggMathL(ggFlat(g))+'</span>'+g3UseHTML(f,uid,g)+cm+del+'</div>'+box}
 var G3CMOPEN=null;
 /* 댓글 v47(사용자 00:56 「이것도 공식·개념인데 왜 여기엔 댓 · x 표시 안 돼」) — 이은 개념 줄에도 「댓」 · x
    이은 개념은 전부 교재가 이어 둔 것(CL 343 · 개념 잇기 CX 0 · 잼)이라 근거 항목(GG)이 아님 → 문항마다 「뺀 개념」 · 「개념 댓글」 을 기기 저장소 kv 'cqx' 에 따로 둠
@@ -13034,8 +13036,8 @@ function g3PopToggle(no,ox){
           /* 댓글 v29(사용자 19:59 · 20:01 「공식·개념 그 자체 누르면 속한 목차를 작게 호버처럼 · 오른쪽 위 <> 누르면 문제 창에서 공식·개념 누르면 나오는 창처럼」 · 「1.2.6 숫자는 지워」) — 절 번호 걷음 · 누름 = 목차 말풍선 */
           /* 댓글 v35(사용자 21:58 「오른쪽에 근거 창에서처럼 작게 이 개념 쓰인 문항 숫자」) — 근거 줄과 같은 셈 · 같은 규칙(2 넘어야 보임) */
           if(g.__cq){var nq=g3QUsers(g.__cq,g.__cq.k);if(nq.indexOf(uid)<0)nq.push(uid);return '<div class="it g3cqp g3pc" data-g3pc="'+ea('q|'+uid+'|'+g.__cq.k)+'" data-sec="'+ea(g.__cq.n||'')+'">'+g3CqBody(g.__cq)+(nq.length>=1?'<i class="g3pn" title="이 개념을 쓴 문항 '+nq.length+'">'+nq.length+'</i>':'')+'</div>'}
-          if(f==='c'&&g.ref){var b=g3Blk(g.ref);if(b){var nc=g3Users('c',g3Key(g)).length;return '<div class="it g3pc" data-g3pc="'+ea('c|'+uid+'|'+g.k)+'" data-sec="'+ea(g3SecName(b.sec))+'">'+g3CText(g,b)+(nc>=1?'<i class="g3pn" title="이 칸을 쓰는 문항 '+nc+'">'+nc+'</i>':'')+'</div>'}}
-          var nt=g3Users(f,g3Key(g)).length;return '<div class="it'+(nt>=1?' g3pt':'')+'">'+ggMathL(ggFlat(g))+(nt>=1?'<i class="g3pn" title="이 칸을 쓰는 문항 '+nt+'">'+nt+'</i>':'')+'</div>'}).join('')   /* ★ 10/14 사용자 15:19 「작은 창에서도 트리거 · 주의점 옆에 인용 숫자 · 공식·개념은 되어 있는데」 — 근거 줄 쓰인 수와 같은 셈(g3Users · 1 부터) */+'</div>'}).join(''):'<div class="g3pf"><span class="none">근거 없음</span></div>')
+          if(f==='c'&&g.ref){var b=g3Blk(g.ref);if(b){var nc=g3Users('c',g3Key(g)).length;return '<div class="it g3pc'+(g.bang?' bang':'')+'" data-gbbox="'+ea(uid+'|'+g.k)+'" data-g3pc="'+ea('c|'+uid+'|'+g.k)+'" data-sec="'+ea(g3SecName(b.sec))+'">'+g3CText(g,b)+(nc>=1?'<i class="g3pn" title="이 칸을 쓰는 문항 '+nc+'">'+nc+'</i>':'')+'</div>'}}
+          var nt=g3Users(f,g3Key(g)).length;return '<div class="it'+(nt>=1?' g3pt':'')+(g.bang?' bang':'')+'" data-gbbox="'+ea(uid+'|'+g.k)+'">'+ggMathL(ggFlat(g))+(nt>=1?'<i class="g3pn" title="이 칸을 쓰는 문항 '+nt+'">'+nt+'</i>':'')+'</div>'}).join('')   /* ★ 10/14 사용자 15:19 「작은 창에서도 트리거 · 주의점 옆에 인용 숫자 · 공식·개념은 되어 있는데」 — 근거 줄 쓰인 수와 같은 셈(g3Users · 1 부터) */+'</div>'}).join(''):'<div class="g3pf"><span class="none">근거 없음</span></div>')
     ;   /* 댓글 v5(사용자 14:42 「문제는 서랍에서 누르면 됨 · 열기 없애」) — 「열기」 걷음 */
   p.onclick=function(e){e.stopPropagation();
     if(e.target.closest('.ied'))return;   /* ★ 10/13 — 까닭 적는 칸 안 누름 */
