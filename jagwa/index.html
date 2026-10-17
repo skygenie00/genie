@@ -381,6 +381,8 @@ body[data-layer="pdf"] #view #pRow1>#tConcept{display:none!important}
 .ndrow{display:flex;gap:6px;align-items:baseline;padding:5px 10px 5px 10px;font-size:11.5px;cursor:pointer;line-height:1.4;border-left:3px solid transparent}
 .ndrow:hover{background:rgba(128,128,128,.1)}
 .ndrow.cur{background:rgba(46,125,111,.12);border-left-color:var(--teal)}
+.ndrow.ndbang{border-left-color:var(--red)}
+.thl.thbang,.thpicbox.thbang{box-shadow:inset 3px 0 0 var(--red)}
 .ndno{min-width:24px;text-align:right;color:var(--muted);font-weight:700}
 /* ㊴ 물리 — 서랍 번호 앞 작은 볼트 번호(V3) · 번호 줄 맞춤은 칸 폭으로 */
 /* ㊽ (사용자 19:38 「왼쪽 여백 너무 많은 거 아니야 · 굳이 왜」) — 옛 ㊴ = 번호 칸을 24 → 46px 로 넓혀 「V3 + 번호」를 오른쪽 끝에 맞춤 → V 없는 줄(327/577)도 번호 앞이 비었음(「1」 앞 52px) ·
@@ -3862,12 +3864,14 @@ function kx(el){
     throwOnError:false,errorColor:'#B03A2E'})}catch(e){}
 }
 function secHTML(sec){
+  const BN=(typeof window.g3BangNodes==='function')?window.g3BangNodes():null;   /* ★ 10/17 17:12 사용자 「공식·개념에도 ! 해 놨으면 통짜 물리 목차 창에서도 왼쪽에 빨간 세로줄 · 이 창 열리는 어느 곳에서도」 — 이 함수가 통짜 절을 그리는 한 곳 */
   return `<div class="thsec"><h3>${sec.id}. ${esc(sec.t)}</h3>`+sec.b.map(n=>{
+    const bg=(BN&&BN.has(n))?' thbang':'';
     if(n.t==='br')return '<div class="thbr"></div>';
     if(n.t==='tb')return `<div class="thtbw"><table class="thtb">`+n.rows.map((rw,ri)=>`<tr>`+rw.map(c=>{const tg=(ri===0&&n.hd)?'th':'td';return `<${tg}>${esc(c)}</${tg}>`}).join('')+`</tr>`).join('')+`</table></div>`;
-    const img=n.g?`<div class="thpicbox" data-bx="G:${esc(n.g)}"><div class="solz thz" style="max-width:min(100%,${Math.max(240,(n.gw||300)*1.5)}px)"><img class="thpic" draggable="false" src="img/${n.g}.jpg" alt="그림" loading="lazy" onerror="this.parentNode.parentNode.innerHTML='<span class=&quot;thimg&quot;>그림 (미등록)</span>'"></div></div>`:'';
+    const img=n.g?`<div class="thpicbox${bg}" data-bx="G:${esc(n.g)}"><div class="solz thz" style="max-width:min(100%,${Math.max(240,(n.gw||300)*1.5)}px)"><img class="thpic" draggable="false" src="img/${n.g}.jpg" alt="그림" loading="lazy" onerror="this.parentNode.parentNode.innerHTML='<span class=&quot;thimg&quot;>그림 (미등록)</span>'"></div></div>`:'';
     const ref=(n.r||[]).map(x=>`<span class="thref" data-ref="${esc(x)}">↗ ${esc(x)}</span>`).join('');
-    const txt=(String(n.x||'')+ref).trim()?`<div class="thl i${n.i}${n.s?' star':''}" data-bx="${String(n.x||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}">${thTxt(n.x)}${ref}</div>`:'';   /* ★ physphone A-6 · 10/10 data-bx = 그 줄 볼트 글(근거 개념 창에서 줄 고르기) */
+    const txt=(String(n.x||'')+ref).trim()?`<div class="thl i${n.i}${n.s?' star':''}${bg}" data-bx="${String(n.x||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}">${thTxt(n.x)}${ref}</div>`:'';   /* ★ physphone A-6 · 10/10 data-bx = 그 줄 볼트 글(근거 개념 창에서 줄 고르기) */
     return txt+img;
   }).join('')+'</div>';
 }
@@ -4196,6 +4200,7 @@ function navBuild(){
       const r=it.r, no=r[F.NO];
       nQ++; rows.push(no);
       const d=document.createElement('div');d.className='ndrow';d.dataset.no=no;
+      try{if(ggBangAny(GGU(r)))d.classList.add('ndbang')}catch(_){}   /* ★ 10/17 17:12 사용자 「! 근거 있는 문제는 목차 서랍에서도 문항 왼쪽에 빨간 세로줄」 */
       if(hd){d.dataset.sec=hd.dataset.sec;if(ndSecSet().has(String(hd.dataset.sec)))d.classList.add('ndoff')}   /* 시안 ③ */
       d.innerHTML='<span class="ndno'+(HASBOOK?'':' ph')+'">'+((!HASBOOK&&r[F.VLT])?'<i class="ndv" title="볼트 '+r[F.VLT]+'">V'+r[F.VLT]+'</i>':'')+no+'</span><span class="ndt">'+esc(r[F.CODE])+esc(r[F.LV])+ndtTail(r,no)+'</span><span class="ndtail">'+ndTail(no)+'</span>';   /* ★ revfix0929 A-5 — 번호 · 출처(「G25-62-09 · 62회 9번」 · 옛 「-」는 새 번호 뒤에서 「G25-62-09-62」로 읽혔다) */
       frag.appendChild(d); return}
@@ -10331,6 +10336,7 @@ var ggBangToggle=async function(uid,k){
 function ggBangPaint(uid){
   const on={};ggOf(uid).forEach(g=>{if(g&&g.bang)on[g.k]=1});
   const any=Object.keys(on).length>0;
+  try{const r0=rowByUid(uid),x0=r0&&document.querySelector('#ndList .ndrow[data-no="'+r0[F.NO]+'"]');if(x0)x0.classList.toggle('ndbang',any)}catch(e){}   /* ★ 10/17 — ! 켜고 끄면 서랍 줄 세로줄도 그 자리 */
   const mine=(el,at)=>{const v=String(el.getAttribute(at)||'').split('|');return v[0]===String(uid)?(v[1]||''):null};
   document.querySelectorAll('[data-ggbang]').forEach(el=>{const k=mine(el,'data-ggbang');if(k===null)return;
     el.classList.toggle('on',!!on[k])});
@@ -12967,6 +12973,11 @@ function g3SecMark(secId,id){var H=g3SecHit(secId,id),ts=H.ts,us=H.us,grp=H.grp;
   if(H.all.length)return render(ts,H.all);
   if(us&&grp.length){var k2=us.b.indexOf(grp[0]),all2=[];for(var j=k2;j<k2+grp.length;j++)all2.push(j);return render(us,all2)}
   return ts?secHTML(ts):''}
+/* ★ 10/17 17:12 — ! 켠 공식·개념 근거(어느 문항이든)의 통짜 줄 = 점선(g3SecMark)과 같은 짝 길(T: = 그 블록 줄 · U: = g3SecHit) · secHTML 이 그 줄에 thbang */
+function g3BangNodes(){var S=new Set();try{if(HASBOOK||typeof GG==='undefined')return S;for(var u in GG){(GG[u]||[]).forEach(function(g){if(!g||!g.bang||g3f(g)!=='c'||!g.ref)return;var b=g3Blk(g.ref);if(!b)return;var id=String(g.ref);
+  if(/^T:/.test(id)){var ts=secById(String(b.sec));if(!ts)return;var i0=ts.b.indexOf(b.lines[0]);if(i0<0)return;var i1=i0+1;while(i1<ts.b.length&&ts.b[i1].t!=='br'&&!(ts.b[i1].t==='p'&&!(ts.b[i1].i|0)&&String(ts.b[i1].x||'').trim()))i1++;for(var q=i0;q<i1;q++)S.add(ts.b[q]);return}
+  var H=g3SecHit(b.sec,id.replace(/^U:\^/,''));if(H&&H.ts)H.all.forEach(function(i){S.add(H.ts.b[i])})})}}catch(e){}return S}
+window.g3BangNodes=g3BangNodes;
 window.g3UseWin=g3UseWin;
 document.addEventListener('click',async function(e){
   var t=e.target; if(!t||!t.closest)return; var el;
@@ -13408,7 +13419,7 @@ window.g3CqxSet=function(v){G3CQX=(v&&typeof v==='object'&&!Array.isArray(v))?v:
 window.g3ConSheet=g3ConSheet;window.g3CmOpen=function(v){G3CMOPEN=v};window.g3SugList=g3SugList;window.g3SecMark=g3SecMark;window.g3Users=g3Users;window.g3Key=g3Key;
 /* 댓글 v52(사용자 11:30 「진짜 앱 쓰는 데 불편할 점」 · 채팅 잼) — 근거를 처음 적거나 다 지워도 서랍 O△X 점선 밑줄(v39)이 서랍을 다시 그릴 때까지 안 바뀌던 것 → 근거 다시 그릴 때(ggRepaint) 그 문항 서랍 줄도 바로 */
 (function(){if(typeof ggRepaint!=='function')return;var _rp=ggRepaint;
-  window.ggRepaint=ggRepaint=function(uid){var r=_rp.apply(this,arguments);try{var row=rowByUid(uid);if(row){var o=document.querySelector('#ndList .ndrow[data-no="'+row[F.NO]+'"] .ndox');if(o)o.classList.toggle('g3has',ggOf(uid).filter(Boolean).length>0||g3Cq(uid).length>0)}}catch(e){}return r}})();
+  window.ggRepaint=ggRepaint=function(uid){var r=_rp.apply(this,arguments);try{var row=rowByUid(uid);if(row){var o=document.querySelector('#ndList .ndrow[data-no="'+row[F.NO]+'"] .ndox');if(o)o.classList.toggle('g3has',ggOf(uid).filter(Boolean).length>0||g3Cq(uid).length>0);var x1=document.querySelector('#ndList .ndrow[data-no="'+row[F.NO]+'"]');if(x1)x1.classList.toggle('ndbang',ggBangAny(uid))}}catch(e){}return r}})();
 /* ★ 10/14 사용자 15:19 「목차 서랍에서 수정해서 파란색 된 제목 중 검은색으로 바꾸고 싶은 것 · 두 번 톡톡 = 검은색 · 다시 두 번 톡톡 = 파란색」 —
    서랍 줄의 고친 제목(.ndtt · 고친 제목 nm 있는 줄만) 톡 두 번(400ms · 24px 안 · 마우스 · 손가락 같이) = 칸 TFIX[uid].nmk '1' 켬 / 끔(nm 과 같은 동기화 통 tfix · 「고친 글자 있음」 에 안 낌 · 제목 글자 무변)
    · 검은색 = 그 제목이 보이는 곳(서랍 · 문제 창 머리 · 첫 화면 목록 = .fx[data-pn]) 다 같이 · 첫 톡은 옛 그대로(줄 누름 = 그 문항) */
