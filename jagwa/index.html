@@ -2529,7 +2529,7 @@ const PYEARS=[...new Set(DATA.filter(r=>r[F.SRC]==='변리사').map(r=>r[F.YEAR]
 function pass(r){
   if(FL.bigs.length&&!FL.bigs.includes(r[F.BIG]))return 0;
   if(FL.subs.length&&!FL.subs.includes(r[F.SUB]))return 0;
-  if(FL.lv&&r[F.LV]!==FL.lv)return 0;
+  if(FL.lv&&(FL.lv==='중하'?(r[F.LV]!=='중'&&r[F.LV]!=='하'):r[F.LV]!==FL.lv))return 0;   /* ★ 10/18 16:08 사용자 「목차 서랍 상중하 필터를 중하는 묶어줘」 — '중하' = 중 또는 하 */
   if(FL.type&&r[F.TYPE]!==FL.type)return 0;
   if(FL.past==='y'&&r[F.SRC]!=='변리사')return 0;
   if(FL.past==='p'&&(!r[F.SRC]||r[F.SRC]==='변리사'))return 0;
@@ -2573,7 +2573,7 @@ function drawFilters(){
       a.appendChild(brk());
     }});
   const e=$('#fEtc');e.innerHTML='';
-  [['상','lv'],['중','lv'],['하','lv']].forEach(([v,k])=>e.appendChild(chip(v,FL[k]===v,()=>{FL[k]=FL[k]===v?'':v;draw()})));
+  [['상','lv'],['중하','lv']].forEach(([v,k])=>e.appendChild(chip(v,FL[k]===v,()=>{FL[k]=FL[k]===v?'':v;draw()})));
   e.appendChild(chip('변리사 기출',FL.past==='y',()=>{FL.past=FL.past==='y'?'':'y';draw()},
     DATA.filter(r=>r[F.SRC]==='변리사').length));
   e.appendChild(chip('기본',FL.past==='n',()=>{FL.past=FL.past==='n'?'':'n';draw()},
@@ -6360,7 +6360,7 @@ function pass(r){
      카드 층 `pass` 가 물리 `pass`(1779)를 덮으면서 난이도·연도·★중요·「기본」·유형·개념이
      **조용히 안 걸렸다**(고르개는 켜지는데 목록은 577 그대로 — 2026-09-21 하네스 실측).
      값·상태 변수는 그대로 쓰고 **조건만 되살린다.** 지학·생물은 그 값이 늘 비어 있어 무변이다. */
-  if(FL.lv&&String(r[F.LV]||'')!==FL.lv)return 0;
+  if(FL.lv&&(FL.lv==='중하'?['중','하'].indexOf(String(r[F.LV]||''))<0:String(r[F.LV]||'')!==FL.lv))return 0;   /* ★ 10/18 — '중하' = 중 또는 하 */
   if(FL.star&&!r[F.STAR])return 0;
   if(FL.year&&!(r[F.SRC]==='변리사'&&String(r[F.YEAR])===FL.year))return 0;
   /* ★ add18 §A-1 — 물리(분류 칩이 있는 과목)는 **`phPast` 한 함수**에 맡긴다.
@@ -9674,7 +9674,7 @@ function ebarFilters(esh){
   if(lv.length){
     const s=mk('fLv','select','fsel');
     s.innerHTML='<option value="">난이도 ▾</option>'
-      +lv.map(v=>'<option value="'+v+'">'+v+' '+DATA.filter(r=>String(r[F.LV]||'')===v).length+'</option>').join('');
+      +((lv.indexOf('중')>=0||lv.indexOf('하')>=0)?['상','중하'].filter(v=>v!=='상'||lv.indexOf('상')>=0):lv).map(v=>'<option value="'+v+'">'+v+' '+DATA.filter(r=>{const l=String(r[F.LV]||'');return v==='중하'?(l==='중'||l==='하'):l===v}).length+'</option>').join('');   /* ★ 10/18 16:30 사용자 「첫 화면 난이도도 같이」 — 상 · 중하 */
     s.value=String(FL.lv||'');
     s.classList.toggle('dim',!FL.lv);
     s.onchange=()=>{FL.lv=s.value;draw()};
@@ -13119,14 +13119,14 @@ window.addEventListener('click',function(e){var ox=e.target&&e.target.closest&&e
    (서랍 머리 폭 235 에 셋을 늘어놓으면 24px 넘침 = 잰 값 → 단추 하나 · 고른 동안은 그 글자) */
 var FUN='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>';
 function g3LvSync(){var b=document.getElementById('ndLv');if(!b)return;
-  b.classList.toggle('on',!!FL.lv);b.innerHTML=FL.lv?esc(FL.lv):FUN;b.title=FL.lv?('난이도 '+FL.lv+'만 · 누르면 바꾸기'):'난이도 상·중·하';
+  b.classList.toggle('on',!!FL.lv);b.innerHTML=FL.lv?esc(FL.lv):FUN;b.title=FL.lv?('난이도 '+FL.lv+'만 · 누르면 바꾸기'):'난이도 상 · 중하';
   document.querySelectorAll('#ndLvPop .ndlv').forEach(function(x){x.classList.toggle('on',FL.lv===x.dataset.lv)})}
 function g3LvPopClose(){var p=document.getElementById('ndLvPop');if(p)p.remove();document.removeEventListener('pointerdown',g3LvOut,true)}
 function g3LvOut(e){var p=document.getElementById('ndLvPop');if(p&&!p.contains(e.target)&&e.target.id!=='ndLv'&&!(e.target.closest&&e.target.closest('#ndLv')))g3LvPopClose()}
 function g3LvPop(btn){
   if(document.getElementById('ndLvPop')){g3LvPopClose();return}
   var p=document.createElement('div');p.id='ndLvPop';
-  p.innerHTML=['상','중','하'].map(function(v){var n=DATA.filter(function(r){return !isC(r)&&String(r[F.LV]||'')===v}).length;
+  p.innerHTML=['상','중하'].map(function(v){var n=DATA.filter(function(r){var l=String(r[F.LV]||'');return !isC(r)&&(v==='중하'?(l==='중'||l==='하'):l===v)}).length;   /* ★ 10/18 16:08 사용자 「중하는 묶어줘」 — 서랍 고르개 = 상 · 중하 */
     return '<button type="button" class="ndlv" data-lv="'+v+'">'+v+'<i>'+n+'</i></button>'}).join('');
   p.onclick=function(e){e.stopPropagation();var x=e.target.closest('.ndlv');if(!x)return;var v=x.dataset.lv;
     FL.lv=(FL.lv===v?'':v);draw();try{navBuild()}catch(_){};g3LvSync()};
