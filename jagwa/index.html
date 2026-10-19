@@ -5410,7 +5410,7 @@ function recPayload(remote){
          data:data,u:u,gone:gone};
 }
 function recPending(){   /* ★ recstore — 안 올린 칸 = 행 도장 · 묘비가 마지막 맞춤보다 새것(옛 줄: localStorage u · gone) */
-  const last=(lsObj(SMETA_KEY)).lastSync||0;
+  const last=recLast();   /* 옛 줄: const last=(lsObj(SMETA_KEY)).lastSync||0; */
   let n=0;
   for(const k in REC_SNAP){const sn=REC_SNAP[k];for(const c in sn){const x=sn[c];if(Math.max(x.u||0,x.g||0)>last)n++}}
   return n;
@@ -5444,7 +5444,11 @@ async function ghPutJson(path,text,sha){
 }
 
 /* ---------- 동기화 ---------- */
-let recBusy=false, recErr='', recTie=0;   /* recTie — 2026-09-15 §D-5 · 이 세션에서 값으로 가른 동률 수(메모리에만 · 새 키 0) */
+let recBusy=false, recErr='', recTie=0;
+/* ★ 10/19 20:40 사용자 「아이패드 대기 44 · 눌러 맞추면 '동기화됨 방금' 뒤 다시 대기」 — 잰 것: 대기 수 = 원격에서 18:4x 뒤 도장 찍힌 칸 수와 딱 같음(20:40 44 · 21:04 47) = 이 기기가 읽는 마지막 맞춘 시각(localStorage phys_sync_meta)이 18:4x 로 되돌아감 · 기록 값은 기기마다 같음(올린 글 바이트 같음)
+   ⇒ 마지막 맞춘 시각을 메모리 · IndexedDB(kv 'recsync_last')에도 두고 셋 중 큰 값을 쓴다(대기 칩 · 「동기화됨 N분 전」 만 · 병합 · 올리기는 이 값을 안 씀) */
+var REC_LAST=0;
+function recLast(){const l=(lsObj(SMETA_KEY)).lastSync||0;return Math.max(l,REC_LAST||0)}   /* recTie — 2026-09-15 §D-5 · 이 세션에서 값으로 가른 동률 수(메모리에만 · 새 키 0) */
 /* ★ jagwa_uid A-5 — 생물·지학 기록 옮김(옛 uid → 새 uid) · 멱등 · 옛 데이터(옛uid 0) = 아무것도 안 함 */
 var jgSortKey=r=>String((r&&(r[F.OLDU]||r[F.CODE]))||'');
 var JG_O2N=null;
@@ -5657,7 +5661,7 @@ async function syncRecords(force){
       res=await ghPutJson(REC_PATH,JSON.stringify(payload),sha);
       if(res==='conflict')throw new Error('두 번 다 충돌');
     }
-    lsPut(SMETA_KEY,{lastSync:Date.now(),remoteSha:res});
+    {const t=Date.now();REC_LAST=t;rawPut('kv','recsync_last',t).catch(()=>{});lsPut(SMETA_KEY,{lastSync:t,remoteSha:res})}   /* 옛 줄: lsPut(SMETA_KEY,{lastSync:Date.now(),remoteSha:res}); */
   }catch(e){
     /* ⚠ 조용히 넘어가되 **칩에는 남긴다.**
        8/29 에 조용한 실패 때문에 원인을 세 번 잘못 짚었다. */
@@ -5715,7 +5719,7 @@ function recPaint(){
       const p=recPending();
       if(p)t='● 대기 '+p+'건';
       else{
-        const last=(lsObj(SMETA_KEY)).lastSync||0;
+        const last=recLast();   /* 옛 줄: const last=(lsObj(SMETA_KEY)).lastSync||0; */
         const ago=last?Math.round((Date.now()-last)/60000):null;
         t='● 동기화됨'+(ago!=null?' '+(ago<1?'방금':ago<60?ago+'분 전':Math.round(ago/60)+'시간 전'):'');
       }
@@ -5736,6 +5740,7 @@ function recBoot(){
   const c=$('#recChip');if(c)c.onclick=()=>syncRecords(true);
   const e=$('#examChip');if(e)e.onclick=()=>loadExamSettings();
   recBcOpen();   /* ★ recstore — 탭 사이 칸 알림 받기 */
+  rawGet('kv','recsync_last').then(v=>{if(typeof v==='number'&&v>REC_LAST){REC_LAST=v;recPaint()}}).catch(()=>{});   /* ★ 10/19 — 마지막 맞춘 시각(IndexedDB 사본) */
   recPaint();
   stampAll();    /* ★ recstore — 칩 · uid 가드만(도장은 쓸 때) */
   syncRecords();
