@@ -127,7 +127,10 @@ def r2_one(p, rem, no, kind):
     k, ts = sd['k'], sd['t']
     o['sync1'] = p.ev(SYNC_JS)
     r1 = rrec(rem, k)
-    o['원격 1'] = r1 and {'n': r1['n'], 'u=셋째': r1['u'] == ts[2]}
+    # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B · [채팅] 덧 3) — 도장 = 저장할 때 recWrite 가 찍음(기록을 적은 시각) · 옛 판 = 동기화 때 stampAll 이 회독 칸을 남은 마지막 기록 시각(stTime)으로
+    #   행 판 = 도장 ≥ 셋째 기록 시각 · 옛 판 = 옛 줄 그대로(== 셋째) · 라벨 그대로 · 옛 줄: o['원격 1'] = r1 and {'n': r1['n'], 'u=셋째': r1['u'] == ts[2]}
+    rec_app = p.ev("()=>typeof recLegacyView==='function'")
+    o['원격 1'] = r1 and {'n': r1['n'], 'u=셋째': ((r1['u'] or 0) >= ts[2]) if rec_app else r1['u'] == ts[2]}
     snap = rem.files.get(RKEY)
     open_q(p, no)
     p.ev(OPEN_SHEET, no); p.wait(300)

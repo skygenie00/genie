@@ -20,6 +20,7 @@ while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.d
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
 import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) 기록 저장 잣대 한 벌(REC_JS · window.__REC)
 import hashlib
 import http.server
 import io
@@ -150,8 +151,9 @@ PROBE = r"""<script>
         **되살림이 그것을 안 건드리는지**(§A-3) 본다. */
      { const g0={};Object.keys(MAT.note).forEach(no=>{g0['note|'+no]=MAT.u['note|'+no]||1});
        localStorage.setItem(GONE_KEY,JSON.stringify(g0));
+       for(const x of Object.keys(g0))await __REC.tomb('note',x.slice(5),g0[x]);   /* ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 행 판 = 묘비 행(JG.REC_JS · 옛 판 0) */
        await ggRestoreNotes_f6cee06();
-       let gone={};try{gone=JSON.parse(localStorage.getItem(GONE_KEY)||'{}')}catch(e){}
+       let gone=__REC.gone();   /* ★ recstore — 묘비 = 행 · 옛 줄: let gone={};try{gone=JSON.parse(localStorage.getItem(GONE_KEY)||'{}')}catch(e){} */
        const payload={};SYNC_KEYS.forEach(k=>{const v=SYNC_REF[k].g();if(v)payload[k]=v});
        const nGG=Object.keys(payload.gg||{}).length;
        const nNote=Object.keys(payload.note||{}).length;
@@ -213,7 +215,7 @@ def build(src_path, tag):
                         STUB + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
     probe = (PROBE if not QC.SMOKE else _rg_smoke_probe(PROBE)).replace('__MAT__', json.dumps(MATJ, ensure_ascii=False))   # smoke — 쪽 안 시험 글을 이 자리에서만 잘라 씀
     io.open(os.path.join(OUT, 'app_%s.html' % tag), 'w', encoding='utf-8', newline='').write(
-        html.replace('</body>', probe + '</body>', 1))
+        html.replace('</body>', '<script>' + JG.REC_JS + '</script>' + probe + '</body>', 1))   # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — JG.REC_JS 를 시험 글 앞에(옛 줄: html.replace('</body>', probe + '</body>', 1))
 
 
 def run(src_path, tag, secs=120):

@@ -348,7 +348,11 @@ def main():
     line1 = lambda src, key: src.split(key, 1)[1].split('\n', 1)[0] if key in src else None
     T2('R-1 SYNC_KEYS = 과목별 표(병합) · 물리 12 = 기존 10 + mcard + link(9/5 필터 손질)', line1(s, 'const SYNC_KEYS=').startswith("CARD_LAYER?CUR.SYNC_KEYS") and "phys:{DB:'phys535', PDF_DIR:'phys/pdf/', REC_PATH:'phys/기록.json', SYNC_PREFIX:'phys_sync_'," in s and "SYNC_KEYS:['status','note','qtype','conc','gpt','twin','ansfix','frm','maskpos','omrpos','mcard','link']," in s)
     T2('R-1 exportData 함수 바이트 동일(v2 꼴 무변)', fn(s, 'async function exportData(') == fn(head, 'async function exportData(') if QC.GATE else QC.same('R-1.exportData', _rg_md5(fn(s, 'async function exportData('))))   # regress — 기준 = 앞 인도판 함수 글자 md5
-    T2('R-1 syncRecords 함수 바이트 동일', fn(s, 'async function syncRecords(') == fn(head, 'async function syncRecords(') if QC.GATE else QC.same('R-1.syncRecords', _rg_md5(fn(s, 'async function syncRecords('))))
+    if 'function recLegacyView(' in s:   # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B) — §B 가 syncRecords 를 일부러 고침 → 행 판 = §B 줄(recFlush · jgPushGuard(recPayload)) 이 있는지 · 옛 판 = 아래 옛 줄 그대로
+        _f = fn(s, 'async function syncRecords(') or ''
+        T2('R-1 syncRecords 함수 바이트 동일', 'await recFlush()' in _f and 'jgPushGuard(recPayload(' in _f)
+    else:
+        T2('R-1 syncRecords 함수 바이트 동일', fn(s, 'async function syncRecords(') == fn(head, 'async function syncRecords(') if QC.GATE else QC.same('R-1.syncRecords', _rg_md5(fn(s, 'async function syncRecords('))))
     T2('상단 검색(pass 의 FL.q 줄) 무변',
        [l for l in s.split('\n') if 'noteOf(r[F.NO]).includes(FL.q)' in l] == [l for l in head.split('\n') if 'noteOf(r[F.NO]).includes(FL.q)' in l] if QC.GATE else QC.same('상단.FLq', _rg_md5('\n'.join(l for l in s.split('\n') if 'noteOf(r[F.NO]).includes(FL.q)' in l))))
     T2('기록 꼴 주석 그대로(새 키 없음)', "let ST={};            // no -> {h:[{m:'O'|'X'|'Q', t:ts, s:초}]}" in s)

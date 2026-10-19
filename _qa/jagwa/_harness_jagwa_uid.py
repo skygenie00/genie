@@ -23,6 +23,8 @@ sys.path.insert(0, HERE)
 import _uid_rule as UR
 
 
+_SYNCW = "async()=>{for(let i=0;i<400&&typeof recBusy!=='undefined'&&recBusy;i++)await new Promise(r=>setTimeout(r,100));return await __J.sync()}"   # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B) — 돌고 있는 동기화가 끝난 뒤 __J.sync(상한 40 초 · 바탕 · 새 판 같음) · 옛 줄: dv.ev("()=>__J.sync()") 12 곳
+
 def ARG(k, d=None):
     return sys.argv[sys.argv.index(k) + 1] if k in sys.argv else d
 
@@ -129,10 +131,10 @@ def m3(br, eng):
     dv = Dev(br, eng)
     try:
         dv.load(APPS['BASE'], BD, 'earth')
-        dv.ev("()=>__J.sync()")
+        dv.ev(_SYNCW)
         before = {'stores': dv.ev("k=>__J.stores(k)", KEYS), 'u': dv.ev("()=>__J.u()")}
         dv.load(APPS['NEW'], SPD, 'earth')
-        dv.ev("()=>__J.sync()"); dv.pg.wait_for_timeout(1500); dv.ev("()=>__J.sync()")
+        dv.ev(_SYNCW); dv.pg.wait_for_timeout(1500); dv.ev(_SYNCW)
         mig = dv.ev("()=>__J.mig()")
         body = jl(dv.ev("p=>__J.lastPut(p)", 'earth/기록.json') or '{}')
         after = {'stores': dv.ev("k=>__J.stores(k)", KEYS), 'u': dv.ev("()=>__J.u()"), 'gone': dv.ev("()=>__J.gone()")}
@@ -155,7 +157,7 @@ def m3(br, eng):
         # 멱등 — 두 번째 열림: 옮김 0 · 도장 새로 0 · 올린 몸통 = 첫 판
         u1 = dv.ev("()=>__J.u()")
         dv.load(APPS['NEW'], SPD, 'earth')
-        dv.ev("()=>__J.sync()")
+        dv.ev(_SYNCW)
         u2 = dv.ev("()=>__J.u()"); mig2 = dv.ev("()=>__J.mig()")
         body2 = jl(dv.ev("p=>__J.lastPut(p)", 'earth/기록.json') or '{}')
         newst = [x for x in u2 if u2[x] != u1.get(x)]
@@ -175,14 +177,14 @@ def m5(br, eng, bodyA):
     O2N = {r['옛uid']: r['uid'] for r in jl(os.path.join(SPD, 'earth', '문항.json'))}
     dv = Dev(br, eng)
     try:
-        dv.load(APPS['BASE'], BD, 'earth'); dv.ev("()=>__J.sync()")
+        dv.load(APPS['BASE'], BD, 'earth'); dv.ev(_SYNCW)
         # B 가 옛 판에서 한 칸을 만짐(옛 열쇠 · 새 판 A 보다 앞선 도장) + A 가 새 열쇠로 더 늦게 만진 칸
         k0 = next(iter((bodyA['data'].get('unit') or {}).keys()))
         o0 = next(o for o, n in O2N.items() if n == k0)
         dv.ev("a=>{UN[a[0]]='9.9';put('kv','unit',UN);const u=JSON.parse(localStorage.getItem(U_KEY)||'{}');u['unit|'+a[0]]=1000;localStorage.setItem(U_KEY,JSON.stringify(u));const s=JSON.parse(localStorage.getItem(SHADOW_KEY)||'{}');(s.unit=s.unit||{})[a[0]]='9.9';localStorage.setItem(SHADOW_KEY,JSON.stringify(s));}", [o0])
         A = json.loads(json.dumps(bodyA)); A['data']['unit'][k0] = '8.8'; A['u']['unit|' + k0] = int(time.time() * 1000)
         dv.load(APPS['NEW'], SPD, 'earth', rec={'earth/기록.json': json.dumps(A, ensure_ascii=False).encode('utf-8')})
-        dv.ev("()=>__J.sync()"); dv.pg.wait_for_timeout(1500); dv.ev("()=>__J.sync()")
+        dv.ev(_SYNCW); dv.pg.wait_for_timeout(1500); dv.ev(_SYNCW)
         st = dv.ev("k=>__J.stores(k)", KEYS)
         dup = {k: sum(1 for c in (st.get(k) or {}) if c in O2N) for k in KEYS}
         same = {k: sorted((st.get(k) or {}).keys()) == sorted((A['data'].get(k) or {}).keys()) for k in KEYS}
@@ -260,7 +262,7 @@ def a8(br, eng):
     for who in ('NEW', 'BASE'):
         dv = Dev(br, eng)
         try:
-            dv.load(APPS[who], BD, 'earth'); dv.ev("()=>__J.sync()")
+            dv.load(APPS[who], BD, 'earth'); dv.ev(_SYNCW)
             out[who] = {'rows': dv.ev("()=>__J.rows()"), 'list': dv.ev("()=>__J.list()"), 'data': jl(dv.ev("p=>__J.lastPut(p)", 'earth/기록.json') or '{}').get('data'), 'mig': dv.ev("()=>__J.mig()")}
         finally:
             dv.close()
@@ -291,7 +293,7 @@ def a679(br, eng, phone=False):
         for who, app, spd in (('NEW', APPS['NEW'], SPD), ('BASE', APPS['BASE'], BD)):
             dv = Dev(br, eng, phone)
             try:
-                dv.load(app, spd, subj); dv.ev("()=>__J.sync()"); dv.pg.wait_for_timeout(800)
+                dv.load(app, spd, subj); dv.ev(_SYNCW); dv.pg.wait_for_timeout(800)
                 ev = {'list': dv.ev("()=>__J.list()"), 'rows': dv.ev("()=>__J.rows()"), 'heat': dv.ev("()=>__J.heatNos()"), 'heatc': dv.ev("()=>__J.heatCodes()"),
                       'memo': dv.ev("()=>__J.memoNos()"), 'year': dv.ev("()=>__J.yearNos()")}
                 try:
@@ -368,7 +370,7 @@ def p10(br, eng):
     for who in ('NEW', 'BASE'):
         dv = Dev(br, eng)
         try:
-            dv.load(APPS[who], SPD, 'phys'); dv.ev("()=>__J.sync()")
+            dv.load(APPS[who], SPD, 'phys'); dv.ev(_SYNCW)
             out[who] = {'data': jl(dv.ev("p=>__J.lastPut(p)", 'phys/기록.json') or '{}').get('data'), 'rows': dv.ev("()=>__J.rows()"), 'mig': dv.ev("()=>__J.mig()")}
         finally:
             dv.close()
@@ -384,7 +386,7 @@ def b11(br, eng):
     for who, spd in (('NEW', SPD), ('BASE', BD)):
         dv = Dev(br, eng)
         try:
-            dv.load(APPS[who], spd, 'bio'); dv.ev("()=>__J.sync()")
+            dv.load(APPS[who], spd, 'bio'); dv.ev(_SYNCW)
             out[who] = {'data': jl(dv.ev("p=>__J.lastPut(p)", 'bio/기록.json') or '{}').get('data'), 'mig': dv.ev("()=>__J.mig()")}
         finally:
             dv.close()
@@ -409,7 +411,7 @@ def _rg_one(br, eng, spd, subj, path, keys):
     QC.launch('new')
     dv = Dev(br, eng)
     try:
-        dv.load(APPS['NEW'], spd, subj); dv.ev("()=>__J.sync()")
+        dv.load(APPS['NEW'], spd, subj); dv.ev(_SYNCW)
         o = {'data': jl(dv.ev("p=>__J.lastPut(p)", path) or '{}').get('data'), 'mig': dv.ev("()=>__J.mig()")}
         if 'rows' in keys:
             o['rows'] = dv.ev("()=>__J.rows()")

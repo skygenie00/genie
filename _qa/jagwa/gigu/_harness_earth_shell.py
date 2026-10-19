@@ -1251,19 +1251,21 @@ BODY_EARTH = r"""
      const ls=k=>{try{return JSON.parse(localStorage.getItem(k)||'{}')}catch(e){return {}}};
      const UID='G24-61-07';
      const one=[{k:'g_t',i:1,t:'시험 근거',ok:'O',ts:1,cs:[]}];
-     const clean=()=>{['u','gone','shadow'].forEach(x=>{});
+     const clean=async()=>{['u','gone','shadow'].forEach(x=>{});
        const sh=ls(SHADOW_KEY);delete sh.gg;lsPut(SHADOW_KEY,sh);
        const g=ls(GONE_KEY);delete g['gg|'+UID];lsPut(GONE_KEY,g);
-       const u=ls(U_KEY);delete u['gg|'+UID];lsPut(U_KEY,u)};
-     clean();
+       const u=ls(U_KEY);delete u['gg|'+UID];lsPut(U_KEY,u);
+       await __REC.forget('gg',UID)};   /* ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 행 판 = 그 칸 행 · 바탕도 지움(JG.REC_JS · 옛 판 0) · 옛 줄: const clean=()=>{…;lsPut(U_KEY,u)}; */
+     await clean();   /* ★ recstore — 옛 줄: clean(); */
      /* ── 흉내: 그림자에는 근거 한 칸, 통은 아직 안 읽혔다 ── */
      GG={}; GG_READY=false;
      {const sh=ls(SHADOW_KEY);sh.gg={};sh.gg[UID]=one;lsPut(SHADOW_KEY,sh)}
+     await __REC.seed('gg',UID,one,1);   /* ★ recstore — 행 판 = 그림자 대신 그 칸 행 하나 · 이 탭 바탕(통은 아직 안 읽힘 · g() = null) · 옛 판 0 */
      T('S-0 통이 아직 안 읽힌 상태다',GG_READY===false&&SYNC_REF.gg.g()===null,
        [GG_READY,SYNC_REF.gg.g()]);
      stampAll();
-     T('S-1 ★안 읽힌 통에는 **묘비를 안 찍는다**',!ls(GONE_KEY)['gg|'+UID],ls(GONE_KEY)['gg|'+UID]);
-     T('S-1 그림자도 그대로 남는다',!!(ls(SHADOW_KEY).gg||{})[UID]);
+     T('S-1 ★안 읽힌 통에는 **묘비를 안 찍는다**',!__REC.gone()['gg|'+UID],__REC.gone()['gg|'+UID]);   /* ★ recstore — 묘비 · 그림자 = 행 · 이 탭 바탕(JG.REC_JS) · 옛 줄: ls(GONE_KEY) 두 곳 · ls(SHADOW_KEY) */
+     T('S-1 그림자도 그대로 남는다',!!(__REC.shadow().gg||{})[UID]);
      /* ── 밀 때 원격 것 그대로 ── */
      {const remote={data:{gg:{}},u:{},gone:{}}; remote.data.gg[UID]=one;
       const pay=recPayload(remote);
@@ -1279,11 +1281,11 @@ BODY_EARTH = r"""
      GG={}; GG[UID]=one; GG_READY=true;
      T('S-4 읽은 뒤에는 g() 가 값을 낸다',SYNC_REF.gg.g()!==null);
      stampAll();
-     T('S-4 ★칸이 그대로면 묘비가 안 찍힌다',!ls(GONE_KEY)['gg|'+UID]);
-     GG={}; stampAll();
+     T('S-4 ★칸이 그대로면 묘비가 안 찍힌다',!__REC.gone()['gg|'+UID]);   /* ★ recstore — 옛 줄: ls(GONE_KEY) */
+     GG={}; if(__REC.has())await saveGG(); else stampAll();   /* ★ recstore — 행 판 = 지움은 저장(put 한 문)에서 묘비(stampAll 은 칩만) · 옛 줄: GG={}; stampAll(); */
      T('S-5 ★진짜로 지우면 묘비는 그대로 찍힌다(가드가 지우기를 막지 않는다)',
-       !!ls(GONE_KEY)['gg|'+UID],ls(GONE_KEY)['gg|'+UID]);
-     clean();
+       !!__REC.gone()['gg|'+UID],__REC.gone()['gg|'+UID]);   /* ★ recstore — 옛 줄: ls(GONE_KEY) 두 곳 */
+     await clean();   /* ★ recstore — 옛 줄: clean(); */
      /* ── 되살림 한 벌 ── */
      {GG={};GG_READY=true;await saveGG();
       try{localStorage.removeItem(GGFIX_K)}catch(e){}
@@ -3863,7 +3865,7 @@ def build(mode, src_text):
     html = html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js',
                         STUB.replace('__SUBJ__', subj) + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
     open(os.path.join(OUT, 'app.html'), 'w', encoding='utf-8', newline='').write(
-        html.replace('</body>', HEAD + body + TAIL + '</body>', 1))
+        html.replace('</body>', '<script>' + JG.REC_JS + '</script>' + HEAD + body + TAIL + '</body>', 1))   # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — JG.REC_JS 를 시험 글 앞에(옛 줄: html.replace('</body>', HEAD + body + TAIL + '</body>', 1))
     open(os.path.join(OUT, 'phone.html'), 'w', encoding='utf-8', newline='').write(
         html.replace('</body>', PHONE + '</body>', 1))
     return subj
@@ -4208,7 +4210,9 @@ def static_checks():
        "var GGU = HASBOOK ? (r=>(r?String(r[F.CODE]||''):'')) : (r=>(r?('P'+String(r[F.NO]).padStart(3,'0')):''));" in s)
     T2('Z-35 물리 목차를 DATA 에서 짓는다 · refreshUnits 는 안 부른다',
        'function buildTocFromData(){' in s and 'if(!HASBOOK)buildTocFromData();' in s
-       and (s.count('refreshUnits()') in (base.count('refreshUnits()'), base.count('refreshUnits()') + 1) if QC.GATE else QC.same('Z-35', s.count('refreshUnits()'))))   # ★ jagwa_uid(9/29) — jgMigrate(카드층만 · 물리 안 탐)가 옮긴 뒤 한 번 부른다
+       # 옛 줄: and (s.count('refreshUnits()') in (base.count('refreshUnits()'), base.count('refreshUnits()') + 1) if QC.GATE else QC.same('Z-35', s.count('refreshUnits()'))))   # ★ jagwa_uid(9/29) — jgMigrate(카드층만 · 물리 안 탐)가 옮긴 뒤 한 번 부른다
+       # ★ recstore(10/19 · jagwa_recstore_1019 §C) — 다른 탭에서 받은 칸을 그리는 recAdopted 의 카드 층 가드 자리(if(CARD_LAYER&&…)refreshUnits() · 물리 안 탐) 하나는 빼고 셈(옛 판 = 0 개라 무변)
+       and ((lambda _n: _n in (base.count('refreshUnits()'), base.count('refreshUnits()') + 1) if QC.GATE else QC.same('Z-35', _n))(s.count('refreshUnits()') - s.count("try{if(CARD_LAYER&&typeof refreshUnits==='function'&&DATA.length)refreshUnits()}catch(e){}"))))
     T2('Z-36 필기 엔진·좌표·덮개 규칙은 한 글자도 안 건드렸다',
        (s.count('function qWire(){') == base.count('function qWire(){') if QC.GATE else QC.same('Z-36.qWire', s.count('function qWire(){')))
        and s.count('const UNDER_HIT=') == 1

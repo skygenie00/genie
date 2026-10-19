@@ -28,6 +28,7 @@ while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.d
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
 import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) 기록 저장 잣대 한 벌(REC_JS · window.__REC)
 import hashlib
 import http.server
 import io
@@ -1340,17 +1341,19 @@ BODY_EARTH = r"""
      const ls=k=>{try{return JSON.parse(localStorage.getItem(k)||'{}')}catch(e){return {}}};
      const UID='G24-61-07';   /* ★ A-6(9/30) · jagwa_uid — 되살림 파일(earth/근거_되살림_20260921.json) 열쇠도 새 번호(studyplandata 4a011475 · 옛 G61-07) */
      const one=[{k:'g_t',i:1,t:'시험 근거',ok:'O',ts:1,cs:[]}];
-     const clean=()=>{const sh=ls(SHADOW_KEY);delete sh.gg;lsPut(SHADOW_KEY,sh);
+     const clean=async()=>{const sh=ls(SHADOW_KEY);delete sh.gg;lsPut(SHADOW_KEY,sh);
        const g=ls(GONE_KEY);delete g['gg|'+UID];lsPut(GONE_KEY,g);
-       const u=ls(U_KEY);delete u['gg|'+UID];lsPut(U_KEY,u)};
-     clean();
+       const u=ls(U_KEY);delete u['gg|'+UID];lsPut(U_KEY,u);
+       await __REC.forget('gg',UID)};   /* ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 행 판 = 그 칸 행 · 바탕도 지움(JG.REC_JS · 옛 판 0) · 옛 줄: const clean=()=>{…;lsPut(U_KEY,u)}; */
+     await clean();   /* ★ recstore — 옛 줄: clean(); */
      GG={}; GG_READY=false;
      {const sh=ls(SHADOW_KEY);sh.gg={};sh.gg[UID]=one;lsPut(SHADOW_KEY,sh)}
+     await __REC.seed('gg',UID,one,1);   /* ★ recstore — 행 판 = 그림자 대신 그 칸 행 하나 · 이 탭 바탕(통은 아직 안 읽힘 · g() = null) · 옛 판 0 */
      T('S-0 통이 아직 안 읽힌 상태다',GG_READY===false&&SYNC_REF.gg.g()===null,
        [GG_READY,SYNC_REF.gg.g()]);
      stampAll();
-     T('S-1 ★안 읽힌 통에는 **묘비를 안 찍는다**',!ls(GONE_KEY)['gg|'+UID],ls(GONE_KEY)['gg|'+UID]);
-     T('S-1 그림자도 그대로 남는다',!!(ls(SHADOW_KEY).gg||{})[UID]);
+     T('S-1 ★안 읽힌 통에는 **묘비를 안 찍는다**',!__REC.gone()['gg|'+UID],__REC.gone()['gg|'+UID]);   /* ★ recstore — 묘비 · 그림자 = 행 · 이 탭 바탕(JG.REC_JS) · 옛 줄: ls(GONE_KEY) 두 곳 · ls(SHADOW_KEY) */
+     T('S-1 그림자도 그대로 남는다',!!(__REC.shadow().gg||{})[UID]);
      {const remote={data:{gg:{}},u:{},gone:{}}; remote.data.gg[UID]=one;
       const pay=recPayload(remote);
       T('S-2 ★안 읽힌 통은 **원격 것 그대로** 실어 보낸다(빈 객체로 안 지운다)',
@@ -1363,11 +1366,11 @@ BODY_EARTH = r"""
      GG={}; GG[UID]=one; GG_READY=true;
      T('S-4 읽은 뒤에는 g() 가 값을 낸다',SYNC_REF.gg.g()!==null);
      stampAll();
-     T('S-4 ★칸이 그대로면 묘비가 안 찍힌다',!ls(GONE_KEY)['gg|'+UID]);
-     GG={}; stampAll();
+     T('S-4 ★칸이 그대로면 묘비가 안 찍힌다',!__REC.gone()['gg|'+UID]);   /* ★ recstore — 옛 줄: ls(GONE_KEY) */
+     GG={}; if(__REC.has())await saveGG(); else stampAll();   /* ★ recstore — 행 판 = 지움은 저장(put 한 문)에서 묘비(stampAll 은 칩만) · 옛 줄: GG={}; stampAll(); */
      T('S-5 ★진짜로 지우면 묘비는 그대로 찍힌다(가드가 지우기를 막지 않는다)',
-       !!ls(GONE_KEY)['gg|'+UID],ls(GONE_KEY)['gg|'+UID]);
-     clean();
+       !!__REC.gone()['gg|'+UID],__REC.gone()['gg|'+UID]);   /* ★ recstore — 옛 줄: ls(GONE_KEY) 두 곳 */
+     await clean();   /* ★ recstore — 옛 줄: clean(); */
      {GG={};GG_READY=true;await saveGG();
       try{localStorage.removeItem(GGFIX_K)}catch(e){}
       const n1=await ggFixEat(); await wait(350);
@@ -1524,7 +1527,7 @@ def build(mode, src_text):
     html = html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js',
                         STUB.replace('__SUBJ__', subj) + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
     open(os.path.join(OUT, 'app.html'), 'w', encoding='utf-8', newline='').write(
-        html.replace('</body>', HEAD + body + TAIL + '</body>', 1))
+        html.replace('</body>', '<script>' + JG.REC_JS + '</script>' + HEAD + body + TAIL + '</body>', 1))   # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — JG.REC_JS 를 시험 글 앞에(옛 줄: html.replace('</body>', HEAD + body + TAIL + '</body>', 1))
     open(os.path.join(OUT, 'phone.html'), 'w', encoding='utf-8', newline='').write(
         html.replace('</body>', PHONE + '</body>', 1))
     return subj
@@ -1723,10 +1726,13 @@ def static_checks():
        and 'SYNC_REF.ggref={g:()=>GG_READY?GGREF:null' in s
        and 'if(HASBOOK)SYNC_REF.pick={g:()=>GG_READY?PICK:null' in s)   # ★ A-6(9/30) · shell_bio_phys §E-7(9/21 · c9faff2) — pick 은 교재가 있는 카드 층만(가드 GG_READY?…:null 그대로)
     T2('Z-41 `g()` 를 읽는 자리가 다 null 을 「아직 모름」으로 다룬다',
+       # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B) — 행 판은 stampAll 몸 · 병합의 통째 put 이 없어지고 같은 가드가 새 줄에 있음(recFlush · recMerge0 「if(!cur||!REC_SNAP[k])continue;」 2 · recPayload 「if(v&&sn){…} else data[k]=(remote…)||{}」 · recDiff 「const known=had&&memo!==null;」) · 옛 판 = 아래 옛 식 그대로
+       (s.count('if(!cur||!REC_SNAP[k])continue;') >= 2 and 'if(v&&sn){' in s and 'else data[k]=(remote&&remote.data&&remote.data[k])||{}' in s and 'const known=had&&memo!==null;' in s)
+       if 'function recLegacyView(' in s else (
        s.count('const cur=SYNC_REF[k].g();\n    if(!cur)continue;') == 2
        and "const v=SYNC_REF[k].g(); if(v)await put('kv',k,v)" in s
        and 'const now=SYNC_REF[k].g(); if(!now)continue;' in s
-       and "data[k]=v||((remote&&remote.data&&remote.data[k])||{})" in s)
+       and "data[k]=v||((remote&&remote.data&&remote.data[k])||{})" in s))
     T2('Z-42 되살림은 멱등이다(기기 표시 + 없는 k 만)',
        "var GGFIX_K='jagwa.ggfix.20260921.'+SUBJ_ID;" in s
        and 'if(!have.has(g.k)){list.push(g);m++}' in s

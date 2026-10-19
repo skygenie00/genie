@@ -13,6 +13,7 @@ while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.d
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
 import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) 기록 저장 잣대 한 벌(REC_JS · window.__REC)
 import http.server, os, socketserver, subprocess, sys, threading, shutil
 from pypdf import PdfWriter
 
@@ -115,7 +116,7 @@ TESTS = r"""<script>
    rowB.querySelector('.tag.lk').click();await wait(30);T('④ 목록 칩 → 연결 시트(B)',/* ★ A-6(a) 9/30 — 연결 창 = #sh-link(셸 add16) · 「닫기」 걷음(phone_win A-5) → ✕ */!!$('#sh-link')&&/'+b+'번 연결/.test($('#sh-link h2').textContent)||(!!$('#sh-link')&&$('#sh-link h2').textContent.startsWith(b+'번')));$('#sh-link .shx').click();
    /* 새로고침 상당 · 동기화 도장 */
    LK={};LK=(await get('kv','link'))||{};T('④ 새로고침 상당(kv 되읽기) 유지',JSON.stringify(LK[a])===JSON.stringify([b]));
-   stampAll();T('④ 동기화 도장 link|a · recPayload 에 link',!!lsObj(U_KEY)['link|'+a]&&!!recPayload().data.link&&JSON.stringify(recPayload().data.link[a])===JSON.stringify([b]),Object.keys(lsObj(U_KEY)).filter(k=>k.startsWith('link')));
+   stampAll();T('④ 동기화 도장 link|a · recPayload 에 link',!!__REC.u()['link|'+a]&&!!recPayload().data.link&&JSON.stringify(recPayload().data.link[a])===JSON.stringify([b]),Object.keys(__REC.u()).filter(k=>k.startsWith('link')));   /* ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 도장 = 행(JG.REC_JS) · 옛 줄: lsObj(U_KEY) 두 곳 */
    await openView(a);await wait(40);(typeof relPop==='function'?linkSheet(VNO):$('#tLink').click());await wait(20);$('#lkList .lkrow[data-no="'+b+'"] .lkdel').click();await wait(60);   /* ★ 2026-10-07 (_task_jagwa_phys_win §A-30) — ㊵ 위와 같음 */
    T('④ 끊기 → LK 비움 · kv · #vLink 숨김',!LK[a]&&!((await get('kv','link'))||{})[a]&&getComputedStyle($('#vLink')).display==='none');$('#sh-link .shx').click();   /* ★ A-6(a) 9/30 — 연결 창 「닫기」 걷음(phone_win A-5) → ✕ */
    T('④ 쌍둥이 무접촉(twinSheet · TW 비어 있음 · 쌍 칩 없음)',typeof twinSheet==='function'&&Object.keys(TW).length===0&&!$('#list .tag.tw'));
@@ -190,7 +191,7 @@ def main():
     html = html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', STUB + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
     # 옛 줄: html = html.replace('</body>', TESTS + '</body>', 1)
     _g3v = 'window.G3=' in html   # ★ 2026-10-09 _task_jagwa_gg3 판 표지(g3.js · 패치 #35) — 시험 JS 에 G3V 로 넘김
-    html = html.replace('</body>', TESTS.replace('const R=[]; const T=(n,c,i)=>', 'const G3V=' + ('true' if _g3v else 'false') + '; const R=[]; const T=(n,c,i)=>', 1) + '</body>', 1)
+    html = html.replace('</body>', '<script>' + JG.REC_JS + '</script>' + TESTS.replace('const R=[]; const T=(n,c,i)=>', 'const G3V=' + ('true' if _g3v else 'false') + '; const R=[]; const T=(n,c,i)=>', 1) + '</body>', 1)   # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 기록 저장 잣대(JG.REC_JS)를 시험 글 앞에(옛 줄 = 이 줄에서 '<script>' + JG.REC_JS + '</script>' + 만 뺀 것)
     open(APP, 'w', encoding='utf-8', newline='').write(html)
     w = PdfWriter(); w.add_blank_page(width=400, height=600); w.write(open(os.path.join(OUT, 'blank.pdf'), 'wb'))
     done = threading.Event(); box = {}

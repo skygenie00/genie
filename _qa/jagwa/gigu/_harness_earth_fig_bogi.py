@@ -219,7 +219,9 @@ BODY_EARTH = r"""
      /* 저장소 왕복(새로고침·동기화 흉내) */
      {const kept=JSON.parse(JSON.stringify(TFIX));TFIX={};TFIX=(await get('kv','tfix'))||{};
       T('A-2 kv tfix 에 남는다(새로고침 뒤 유지)',(TFIX[UF]||{}).fig==='0',TFIX[UF]);
-      T('A-2 동기화가 싣는 꼴 그대로다(SYNC_REF.tfix)',JSON.stringify(SYNC_REF.tfix.g())===JSON.stringify(kept))}
+      /* ★ recstore(10/19 · jagwa_recstore_1019 §A · §B) — 행 판은 행(열쇠 차례)에서 다시 지은 객체 → 열쇠 차례 무관 맞대기 · 옛 줄: T('A-2 …',JSON.stringify(SYNC_REF.tfix.g())===JSON.stringify(kept)) */
+      {const cn=x=>Array.isArray(x)?'['+x.map(cn).join(',')+']':(x&&typeof x==='object')?'{'+Object.keys(x).sort().map(k=>JSON.stringify(k)+':'+cn(x[k])).join(',')+'}':JSON.stringify(x);
+       T('A-2 동기화가 싣는 꼴 그대로다(SYNC_REF.tfix)',cn(SYNC_REF.tfix.g())===cn(kept))}}
      T('A-3 ★fig 는 「고친 글자 있음」에 안 낀다',tfixAny(UF)===false,[tfixAny(UF),TFIX[UF]]);
      T('A-3 ★fig 는 검색 글에 안 낀다',String(tfixHay(UF)).indexOf('0')<0&&tfixHay(UF)==='',JSON.stringify(tfixHay(UF)));
      T('A-3 TFIX_SLOTS·tfixSlotsOf 에 fig 가 없다',

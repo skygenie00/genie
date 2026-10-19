@@ -223,7 +223,8 @@ window.__R9={
  async open(no){try{closeView()}catch(e){}await new Promise(r=>setTimeout(r,200));await openView(no);await new Promise(r=>setTimeout(r,1500));return !document.getElementById('view').classList.contains('hide')},
  log(){return (window.__LOG||[]).slice()},
  puts(){return (window.__PUTS||[]).map(p=>({t:p.t,path:p.path,text:p.text}))},
- ls(){const o={};[U_KEY,GONE_KEY,SHADOW_KEY].forEach(k=>o[k]=localStorage.getItem(k)||'');return o}
+ ls(){if(window.__REC&&__REC.has())return {rec:JSON.stringify([__REC.u(),__REC.gone(),__REC.shadow()])};   /* ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 행 판 = 도장 · 묘비 · 그림자(행 · JG.REC_JS) · 옛 판 = 아래 옛 줄 그대로 */
+  const o={};[U_KEY,GONE_KEY,SHADOW_KEY].forEach(k=>o[k]=localStorage.getItem(k)||'');return o}
 };
 """
 

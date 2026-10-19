@@ -357,11 +357,15 @@ class DevW(JG.Dev):
         self.pg = None; self.errs = []
 
 
+SYNCED_JS = r"""()=>typeof recBusy!=='undefined'&&!recBusy&&((JSON.parse(localStorage.getItem(SMETA_KEY)||'{}')||{}).lastSync||0)>0"""   # ★ recstore(10/19 · jagwa_recstore_1019 §A · 결정로그 06:59) — 첫 동기화 끝 표지(바탕 · 새 판 같음)
+
+
 def load(dv, app, subj, rec, stat):
     dv.load(app, SPD, subj, rec={'%s/기록.json' % subj: rec} if rec else None, static=stat)
     dv.cerr = []
     dv.pg.on('console', lambda m: dv.cerr.append('%s @%s' % (m.text[:160], ((m.location or {}).get('url') or '')[-48:])) if m.type == 'error' else None)
     dv.ev(CJS)
+    QC.until(dv.pg, SYNCED_JS, 40000, 'claude_e010 — 열고 나서 첫 동기화 끝(행 판 이 환경 웹킷 ≈17 초 · 그 뒤 __J.sync 가 진짜로 한 번 더 돎)')   # ★ recstore(10/19 · jagwa_recstore_1019 §A · 결정로그 06:59) — 옛 판 = 곧장 __J.sync(첫 동기화가 돌고 있으면 바로 돌아옴)
     dv.ev("()=>__J.sync()"); dv.pg.wait_for_timeout(800)
 
 

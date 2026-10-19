@@ -122,6 +122,9 @@ def _tn(t, subj):   # ★ 2026-10-08 (_task_jagwa_phys_win §A-37 · §A-40) 새
     return re.sub(r'\s+', ' ', t.replace('🃏📋공식', '🃏📋') if subj == 'phys' else t).strip()   # ★ 10/8 02:4x — 생물·지학도 같은 템플릿 줄 빠짐(생물 C2·C4 바탕 PASS → 새 판 FAIL 까닭)
 
 
+SYNCED_JS = r"""()=>typeof recBusy!=='undefined'&&!recBusy&&((JSON.parse(localStorage.getItem(SMETA_KEY)||'{}')||{}).lastSync||0)>0"""   # ★ recstore(10/19 · jagwa_recstore_1019 §A · 결정로그 06:59) — 첫 동기화 끝 표지(바탕 · 새 판 같음)
+
+
 def open_head(q):
     q.ev(CJS)
     fb = q.ev("()=>__W.at('#fFoldBtn')")
@@ -132,6 +135,7 @@ def open_head(q):
 
 def phone(br, eng, subj):
     def f(q):
+        QC.until(q.pg, SYNCED_JS, 40000, 'chipwrap 폰 — 빈 기기 첫 동기화 끝(행 판 이 환경 웹킷 ≈17 초)')   # ★ recstore(10/19 · jagwa_recstore_1019 §A · 결정로그 06:59) — 옛 판 = 열고 고정 기다림 뒤 곧장
         open_head(q)
         cg1(q, subj)   # ★ uid_unify 옛 잣대 고침 — 새 판과 맞댈 때만 걷는 표시(아니면 옛 잣대 그대로)
         # 옛 줄: o = {'over': q.ev("()=>__C.over()"), 'text': md(q.ev("()=>__C.text()")), 'fold': q.ev("()=>document.body.classList.contains('fold')")}
@@ -158,6 +162,7 @@ def tags_eq(a, b, subj):
 
 def pc(br, eng, subj):
     def f(q):
+        QC.until(q.pg, SYNCED_JS, 40000, 'chipwrap PC — 빈 기기 첫 동기화 끝(행 판 이 환경 웹킷 ≈17 초)')   # ★ recstore(10/19 · jagwa_recstore_1019 §A · 결정로그 06:59) — 옛 판 = 열고 고정 기다림 뒤 곧장
         q.ev(CJS); q.wait(300)
         # 옛 줄: return {'tags': q.ev("()=>__C.tags()"), 'text': md(q.ev("()=>__C.text()")), 'over': q.ev("()=>__C.over()")}
         cg1(q, subj)   # ★ uid_unify 옛 잣대 고침 — 새 판과 맞댈 때만 걷는 표시(아니면 옛 잣대 그대로)

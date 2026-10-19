@@ -18,6 +18,7 @@ while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.d
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
 import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) 자과 기록 저장 잣대 한 벌(REC_JS · window.__REC)
 import hashlib, io, json, os, re, shutil, subprocess, sys, tempfile, datetime
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -142,6 +143,9 @@ def main():
                 vers.append(('A32', git(GENIE, 'show', A32 + ':' + rel)))
             for h in FNS:
                 a, b = fn_text(new, h), fn_text(head, h)
+                if app == 'jagwa' and h == 'function stampAll(' and 'function recLegacyView(' in new:   # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — stampAll = 칩만(도장 몸 걷음) → 도장 안 찍음으로 잼 · 옛 줄 = 아래 append
+                    srcrep.append((app, h.strip('('), a is not None and 'lsPut(U_KEY' not in a and 'lsPut(GONE_KEY' not in a))
+                    continue
                 srcrep.append((app, h.strip('('), a is not None and a == b))
             srcrep.append((app, 'const ckey', new.count(cfg['ckey']) == 1 and head.count(cfg['ckey']) == 1))
             sa, sb = sk_text(app, new), sk_text(app, head)
@@ -151,6 +155,9 @@ def main():
             if not QC.SMOKE:   # smoke — G19 소스 대조는 smoke 칸이 아님(표도 안 찍고 종합 셈에도 안 듦)
                 for h in FNS:
                     a = fn_text(new, h)
+                    if app == 'jagwa' and h == 'function stampAll(' and 'function recLegacyView(' in new:   # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — stampAll = 칩만(도장 몸 걷음) → 도장 안 찍음으로 잼 · 옛 줄 = 아래 append(글자 md5 = 앞 인도판)
+                        srcrep.append((app, h.strip('('), a is not None and 'lsPut(U_KEY' not in a and 'lsPut(GONE_KEY' not in a))
+                        continue
                     srcrep.append((app, h.strip('('), a is not None and QC.same('G19/%s/%s' % (app, h.strip('(')), _rg_md5(a))))
                 srcrep.append((app, 'const ckey', new.count(cfg['ckey']) == 1 and QC.same('G19/%s/ckey' % app, new.count(cfg['ckey']))))
                 sa = sk_text(app, new)
@@ -161,6 +168,8 @@ def main():
                          'ip': {'data': ip['data'], 'u': ip['u'], 'gone': ip['gone'], 'ms': ms(ip['savedAt']), 'savedAt': ip['savedAt']}}
         seed = SEED.replace('__PATH__', cfg['path']).replace('__IDB__', IDB_STOP if app == 'jagwa' else '')
         tests = TESTS.replace('__APP__', app).replace('__P__', js_json(P))
+        if app == 'jagwa':   # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 기록 저장 잣대(JG.REC_JS)를 시험 글 앞에
+            tests = '<script>' + JG.REC_JS + '</script>' + tests
         for tag, src in vers:
             lines = build_and_run(app + '_' + tag, src, seed, tests)
             if QC.SMOKE and lines:   # smoke — G2(도장 없는 원격 칸 병합) 줄만
@@ -244,9 +253,11 @@ const say=s=>R.push('INFO | '+String(s).replace(/\n/g,'⏎'));
 const V=(k,v)=>R.push('VAL | '+k+' | '+JSON.stringify(v===undefined?null:v).slice(0,1500));
 const J=v=>JSON.stringify(v);
 const canon=v=>{ if(Array.isArray(v)) return '['+v.map(canon).join(',')+']'; if(v&&typeof v==='object') return '{'+Object.keys(v).sort().map(k=>J(k)+':'+canon(v[k])).join(',')+'}'; return J(v); };
-const lsO=k=>{try{return JSON.parse(localStorage.getItem(k)||'{}')||{}}catch(e){return {}}};
+const lsO=k=>{if(APP==='jagwa'&&window.__REC&&typeof AD!=='undefined'&&AD){if(k===AD.U)return __REC.u();if(k===AD.G)return __REC.gone();if(k===AD.S)return __REC.shadow()}   /* ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 자과 도장 · 묘비 · 그림자 = 공용 __REC(행 판 = 행 · 이 탭 바탕 · 옛 판 = 아래 옛 줄과 같음) */
+  try{return JSON.parse(localStorage.getItem(k)||'{}')||{}}catch(e){return {}}};
 const TOK={'tt.cfg':JSON.stringify({token:'harness-token',person:'하네스'})};
 let AD;
+const RECJ=(APP==='jagwa'&&typeof recLegacyView==='function');   /* ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 행 판 자과 */
 if(APP==='minbeop'){
   AD={U:U_KEY,G:GONE_KEY,S:SHADOW_KEY,M:SMETA_KEY,K:'ox_q_fix',K2:'ox_q_logic',H:'ox_chap_history',
       base:Object.assign({},TOK,{'ox_uid_migrated':'1','ox_gg_okreset':'1','ox_gg_memo_merged':'{"at":1,"moved":0,"links":0}','ox_auto_important_v2':'1'}),
@@ -265,13 +276,28 @@ if(APP==='minbeop'){
       write:(k,v)=>SYNC_REF[k].s(JSON.parse(J(v))),
       chip:()=>(document.getElementById('recChip')||{}).textContent||'', val:s=>s};
   window.put=function(s,k,v){ __PUTS.push([s,k,JSON.stringify(v)]); return Promise.resolve(1); };
+  if(RECJ){   /* ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 행 판 자과: 기기 = 메모리 가짜 행(__ROWS) + 이 탭 바탕(REC_SNAP) · IndexedDB 는 그대로 끔 */
+    window.__ROWS={}; window.__RW=[];
+    const cpy=o=>JSON.parse(JSON.stringify(o));
+    const grp=k=>{const m={};for(const id in __ROWS){const x=__ROWS[id];if(k==null)(m[x.k]=m[x.k]||{})[x.c]=x;else if(x.k===k)m[x.c]=x}return m};
+    const wr=x=>{const o=recRowObj(x);__ROWS[o.k+'|'+o.c]=o;__RW.push([o.k,o.c,o.v===undefined?null:o.v])};
+    recLock=function(fn){const p=REC_Q.then(fn,fn);REC_Q=p.catch(()=>{});return p};   /* db 없음(열기 끔) — DBREADY 를 기다리지 않는다 */
+    recRowsRaw=k=>Promise.resolve(cpy(grp(k)));
+    recRowsAll=()=>Promise.resolve(cpy(grp(null)));
+    recTxRW=(k,fn)=>{let res=null;try{res=fn(cpy(grp(k)))||{out:[]};(res.out||[]).forEach(wr)}catch(e){console.error('가짜 행 쓰기',e);res=null}return Promise.resolve(res)};
+    recPutRows=list=>{list.forEach(wr);return Promise.resolve(1)};
+    recMigrateStore=()=>Promise.resolve();
+    window.put=function(s,k,v){ __PUTS.push([s,k,JSON.stringify(v)]); return recIsKey(s,k)?recWrite(k,v):Promise.resolve(1); };   /* 기록 통 = 한 문(recWrite → 가짜 행) */
+    AD.write=(k,v)=>{SYNC_REF[k].s(JSON.parse(J(v)));return put('kv',k,SYNC_REF[k].g())};   /* 쓰기 = 저장(옛 판은 메모리만 · 도장은 stampAll 이 찍었다) */
+  }
 }
 const K=AD.K, val=AD.val;
 const lsDump=()=>{const o={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);o[k]=localStorage.getItem(k);}return o;};
 const DEV={}; let CURD=null;
-const snap=()=>{const s={ls:lsDump()}; if(APP==='jagwa'){s.mem={};SYNC_KEYS.forEach(k=>s.mem[k]=J(SYNC_REF[k].g()||{}));} return s;};
+const snap=()=>{const s={ls:lsDump()}; if(APP==='jagwa'){s.mem={};SYNC_KEYS.forEach(k=>s.mem[k]=J(SYNC_REF[k].g()||{}));} if(RECJ){s.rows=J(__ROWS);s.rsnap=J(REC_SNAP);} return s;};   /* ★ recstore — 행 판 = 가짜 행 · 이 탭 바탕도 */
 const restore=s=>{ localStorage.clear(); for(const k in s.ls) localStorage.setItem(k,s.ls[k]);
   if(APP==='jagwa') SYNC_KEYS.forEach(k=>SYNC_REF[k].s(JSON.parse((s.mem&&s.mem[k])||'{}')));
+  if(RECJ){ __ROWS=JSON.parse(s.rows||'{}'); REC_SNAP=JSON.parse(s.rsnap||'{}'); }   /* ★ recstore — 행 판 = 그 기기 행 · 이 탭 바탕 */
   if(APP==='jo'){ try{recDropCache()}catch(e){} } };
 const use=(name,init)=>{ if(CURD) DEV[CURD]=snap(); restore(init||DEV[name]); CURD=name; };
 const fresh=(pairs)=>{ CURD=null; for(const n in pairs) DEV[n]=pairs[n]; };
@@ -281,6 +307,12 @@ const mk=(data,u,gone,opts)=>{ opts=opts||{}; const s={ls:Object.assign({},AD.ba
     if(APP==='jo'&&k===AD.EQ) s.ls[k]=J(Object.keys(v).map(x=>v[x])); else s.ls[k]=J(v); });
   if(APP==='jagwa'){ s.mem={}; SYNC_KEYS.forEach(k=>s.mem[k]=J((data&&data[k])||{})); }
   s.ls[AD.U]=J(u||{}); s.ls[AD.G]=J(gone||{}); s.ls[AD.S]=J(opts.shadow||sh); s.ls[AD.M]=J(opts.meta||{lastSync:0});
+  if(RECJ){ const rows={}, rs={};   /* ★ recstore — 행 판 = 그림자 칸 → 행 + 이 탭 바탕(u = 그 칸 도장 · 없으면 0) · 묘비 → 묘비 행(data 밖 도장만 있는 칸은 행이 없다) */
+    SYNC_KEYS.forEach(k=>{ const shv=(opts.shadow&&opts.shadow[k])||sh[k]||{}; rs[k]={};
+      for(const c in shv){ const uu=(u||{})[k+'|'+c]||0; rows[k+'|'+c]={k:k,c:c,v:shv[c],u:uu,g:0}; rs[k][c]={j:J(shv[c]),u:uu,g:0}; } });
+    for(const kc in (gone||{})){ const i=kc.indexOf('|'), k=kc.slice(0,i), c=kc.slice(i+1); if(SYNC_KEYS.indexOf(k)<0) continue;
+      rows[kc]={k:k,c:c,u:0,g:gone[kc]}; (rs[k]=rs[k]||{})[c]={u:0,g:gone[kc]}; }
+    s.rows=J(rows); s.rsnap=J(rs); }
   return s; };
 const rec=(data,u,gone)=>{ const d={}; for(const k in (data||{})){ const v=data[k]; d[k]=(APP==='jo'&&k===AD.EQ)?Object.keys(v).map(x=>v[x]):v; }
   return {v:1,savedAt:new Date().toISOString(),by:'하네스원격',data:d,u:u||{},gone:gone||{}}; };
@@ -575,7 +607,7 @@ async function G18jo(){
   T('G18 수정 큐 캐시(eqAll)가 새 배열을 본다', typeof eqAll==='function'&&!!ks&&eqAll().map(x=>x.k).join(',')===ks.join(','), typeof eqAll==='function'?eqAll().map(x=>x.k).join(','):'없음');
 }
 async function G18ja(){
-  __PUTS.length=0;
+  __PUTS.length=0; if(RECJ) __RW.length=0;   /* ★ recstore — 행 판 = 쓴 행 */
   const d={note:{'5':'내 코멘트'},status:{'5':{h:[{m:'O',t:1000,s:3}]}}}, u={'note|5':1000,'status|5':1000};
   remSet(rec({note:{'5':'내 코멘트','6':'원격 새 코멘트'},status:{'5':{h:[{m:'O',t:1000,s:3}]}}}, {'note|5':1000,'note|6':2000,'status|5':1000}, {}));
   use('g18ja', mk(d,u,{},{meta:{lastSync:1000}}));
@@ -583,8 +615,14 @@ async function G18ja(){
   const kv=__PUTS.filter(x=>x[0]==='kv').map(x=>x[1]);
   const np=__PUTS.find(x=>x[0]==='kv'&&x[1]==='note');
   V('G18',{puts:__PUTS.map(x=>[x[0],x[1],x[2].slice(0,80)])});
+  if(RECJ){   /* ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 행 판 = IndexedDB 에 쓰는 것은 칸 행(병합이 쓴 행) · 옛 판 = 아래 옛 줄 둘 그대로 */
+    const ks=[...new Set(__RW.map(x=>x[0]))], nr=__RW.find(x=>x[0]==='note'&&x[1]==='6');
+    T('G18 자과앱 dirty — 받은 키(note)만 IndexedDB 에 쓴다(status 는 안 쓴다)', J(ks)===J(['note']), J(__RW.map(x=>x[0]+'|'+x[1])));
+    T('G18 IndexedDB 에 쓴 값에 받은 칸이 들어 있다', !!nr&&nr[2]==='원격 새 코멘트', nr?J(nr):'없음');
+  }else{
   T('G18 자과앱 dirty — 받은 키(note)만 IndexedDB 에 쓴다(status 는 안 쓴다)', J(kv)===J(['note']), J(kv));
   T('G18 IndexedDB 에 쓴 값에 받은 칸이 들어 있다', !!np&&JSON.parse(np[2])['6']==='원격 새 코멘트', np?np[2]:'없음');
+  }
   T('G18 메모리 전역(SYNC_REF.note)도 받은 칸을 가졌다', (SYNC_REF.note.g()||{})['6']==='원격 새 코멘트', J(SYNC_REF.note.g()));
   const sh=lsO(AD.S), uu=lsO(AD.U);
   T('G18 그림자에 받은 칸이 들어갔다(다음 stampAll 이 오인하지 않는다)', (sh.note||{})['6']==='원격 새 코멘트', J(sh.note));

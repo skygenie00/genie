@@ -10,6 +10,7 @@ while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.d
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
 import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) 기록 저장 잣대 한 벌(REC_JS · window.__REC)
 import http.server, os, socketserver, subprocess, sys, threading, shutil
 from pypdf import PdfWriter
 
@@ -185,10 +186,10 @@ TESTS = r"""<script>
    ptr($('.sheet .mcard[data-no="'+no+'"]'),'pointerdown',0,0);await wait(550);
    T('T-8 길게 누르면 그 문제로',VNO===no&&!$('#view').classList.contains('hide'),VNO);
    /* ===== T-9 동기화 도장 ===== */
-   stampAll();const U=lsObj(U_KEY);
+   stampAll();const U=__REC.u();   /* ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 도장 = 행(JG.REC_JS) · 옛 줄: lsObj(U_KEY) */
    T('T-9 mcard 가 도장을 탄다(u 키 mcard|no)',!!U['mcard|'+no],Object.keys(U).filter(k=>k.startsWith('mcard')));
    delete MC[no];await saveMC();stampAll();
-   T('T-9 지우면 묘비(gone)',!!lsObj(GONE_KEY)['mcard|'+no]);
+   T('T-9 지우면 묘비(gone)',!!__REC.gone()['mcard|'+no]);   /* ★ recstore — 묘비 = 행 · 옛 줄: lsObj(GONE_KEY) */
    T('M-1 과목 phys · IndexedDB phys535 · 저장소 셋(pdf·ink·kv) · SYNC_KEYS 14(9/5 필터 손질 +link · 9/21 셸 +gg·ggref)',SUBJ_ID==='phys'&&db.name==='phys535'&&[...db.objectStoreNames].sort().join()==='ink,kv,pdf'&&/* ★ A-6(a) 9/30 — 셸 본판 §E-7(c9faff2): 물리 SYNC_KEYS 끝에 gg·ggref(앱 8168~8169) *//* ★ 합치기 10/1(하위 에이전트 C) — physphone A-2(97883ef) 물리 SYNC 키 끝에 tfix 하나 */(__SK().length===14||(__SK().length===15&&__SK()[14]==='tfix')||(__SK().length===16&&__SK().slice(14).sort().join()==='solx,tfix')/* ★ 2026-10-07 (_task_jagwa_phys_win §A-30 ㉖) — 물리 SYNC 키 끝에 오린 것 solx 하나 더(tfix 와 둘) */)&&__SK()[12]==='gg'&&__SK()[13]==='ggref'&&document.body.dataset.subj==='phys',[db.name,[...db.objectStoreNames]]);   /* ★ 2026-10-09 gg3 — __SK() = cqx 뺀 SYNC_KEYS(옛 줄 = SYNC_KEYS 그대로) */
    const gd=id=>getComputedStyle($(id)).display;
    /* ★ A-6(a) 9/30 — 셸 add9 §A-1(68216cf): 「목차」 단추 #btnTree 는 걷었다(없는 요소에 getComputedStyle → 하니스가 터짐) — 그 조건만 「없다」로(첫 바퀴 earth M-4 와 같은 고침) · 옛 #tree 는 숨은 채(treeOpen 빈 함수) */
@@ -236,7 +237,8 @@ def main():
     html = html.replace('<script defer src="https://cdnjs', '<script defer data-off="https://cdnjs')
     html = html.replace('<link rel="stylesheet" href="https://cdnjs', '<link rel="off" href="https://cdnjs')
     html = html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', STUB + '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js', 1)
-    html = html.replace('</body>', (TESTS if not QC.SMOKE else _rg_smoke_tests(TESTS)) + '</body>', 1)   # smoke — 쪽 안 시험 글을 이 자리에서만 잘라 씀
+    # 옛 줄: html = html.replace('</body>', (TESTS if not QC.SMOKE else _rg_smoke_tests(TESTS)) + '</body>', 1)   # smoke — 쪽 안 시험 글을 이 자리에서만 잘라 씀
+    html = html.replace('</body>', '<script>' + JG.REC_JS + '</script>' + (TESTS if not QC.SMOKE else _rg_smoke_tests(TESTS)) + '</body>', 1)   # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 기록 저장 잣대(JG.REC_JS)를 시험 글 앞에 · smoke 자르기 그대로
     open(APP, 'w', encoding='utf-8', newline='').write(html)
     w = PdfWriter(); w.add_blank_page(width=400, height=600); w.write(open(os.path.join(OUT, 'blank.pdf'), 'wb'))
     done = threading.Event(); box = {}

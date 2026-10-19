@@ -2086,8 +2086,10 @@ function open(){return new Promise((ok,no)=>{
     d.createObjectStore('pdf');d.createObjectStore('ink');d.createObjectStore('kv');};
   r.onsuccess=e=>{db=e.target.result;ok()};r.onerror=()=>no(r.error);});}
 function tx(s,m){return db.transaction(s,m).objectStore(s)}
-function get(s,k){return dbw(()=>new Promise(ok=>{const r=tx(s,'readonly').get(k);r.onsuccess=()=>ok(r.result);r.onerror=()=>ok(null)}))}
-function put(s,k,v){return dbw(()=>new Promise(ok=>{const r=tx(s,'readwrite').put(v,k);r.onsuccess=()=>ok(1);r.onerror=()=>ok(0)}),1)}
+function rawGet(s,k){return dbw(()=>new Promise(ok=>{const r=tx(s,'readonly').get(k);r.onsuccess=()=>ok(r.result);r.onerror=()=>ok(null)}))}   /* ★ recstore — 옛 get 몸 그대로(통째 값 · 기록 통 밖) */
+function rawPut(s,k,v){return dbw(()=>new Promise(ok=>{const r=tx(s,'readwrite').put(v,k);r.onsuccess=()=>ok(1);r.onerror=()=>ok(0)}),1)}   /* ★ recstore — 옛 put 몸 그대로 */
+function get(s,k){return (typeof recIsKey==='function'&&recIsKey(s,k))?recLoad(k):rawGet(s,k)}   /* ★ jagwa_recstore_1019 — 기록 통(SYNC_KEYS)은 칸 단위 행에서(아래 「기록 저장」) */
+function put(s,k,v){return (typeof recIsKey==='function'&&recIsKey(s,k))?recWrite(k,v):rawPut(s,k,v)}   /* ★ jagwa_recstore_1019 — 기록 통은 한 문으로 칸 단위 행에(바뀐 칸만 · 통째 덮기 없음) */
 function del(s,k){return dbw(()=>new Promise(ok=>{const r=tx(s,'readwrite').delete(k);r.onsuccess=()=>ok(1);r.onerror=()=>ok(0)}),1)}
 function keys(s){return dbw(()=>new Promise(ok=>{const r=tx(s,'readonly').getAllKeys();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>ok([])}))}
 function all(s){return dbw(()=>new Promise(ok=>{const r=tx(s,'readonly').getAll();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>ok([])}))}
@@ -5131,35 +5133,185 @@ function recSaveToken(t){
   try{localStorage.setItem('tt.cfg',JSON.stringify(c))}catch(e){}
 }
 
-/* ---------- 도장 찍기 ----------
-   저장하는 자리를 하나도 고치지 않는다. 그림자와 대조해 여기 한 곳에서 찍는다.
-   ⚠ 알려진 한계 — 도장은 「바꾼 순간」이 아니라 최대 10초 뒤다.
-   ⚠ 회독은 예외 — status[문항].h[].t 가 진짜 시각이다. 새로 만들지 않는다. */
+/* ═══ ★ jagwa_recstore_1019 — 기록 저장 = 칸 단위 행 · 한 문(put) · 이 탭 바탕 대비 세 갈래 합치기 ═══
+   까닭(10/18 사고): 같은 브라우저 두 탭 — 낡은 탭이 ① 저장할 때 기록 통째를 IndexedDB 에 덮고 ② 도장(옛 stampAll)이
+   「그림자에 있고 메모리에 없는 칸 = 지움 · 다른 칸 = 새로 고침」 으로 짐작해 원격 32 칸을 지웠다. 이 판은 둘을 코드에서 없앤다.
+   · 행 = kv 통 안 열쇠 'rec:'+통+'|'+칸 → {k,c,v,u,g}(v = 칸 값 · 지웠으면 없음 · u = 그 칸을 마지막으로 바꾼 시각 · g = 묘비 시각 · 0 = 산 칸)
+     새 통은 안 만든다 — indexedDB.open(CUR.DB,1) 판을 올리면 다른 탭이 열고 있을 때 versionchange 가 막힌다.
+   · put('kv',k,obj) 에서 k 가 SYNC_KEYS 면 recWrite(k,obj) — 칸마다 내 것(obj) · 바탕(REC_SNAP = 이 탭이 마지막으로 행에서 읽거나 쓴 판) ·
+     그쪽(지금 행)을 대어 바뀐 칸만 쓴다. 「메모리에 없는 칸 = 지움」 은 바탕과 대어서만 — 이 탭이 못 본 칸은 지움이 되지 않는다.
+   · get('kv',k)(k 가 SYNC_KEYS) = 행에서 산 칸만 객체로(처음이면 옛 통째 값을 칸마다 행으로 한 번 옮긴다 · 옛 값은 안 지운다).
+   · 메모리(ST · CMT · QT … · 읽는 자리 · 저장 자리)는 그대로 캐시 · localStorage u/gone/shadow 는 안 쓴다(옮긴 뒤에도 안 지움 = 옛 판 앱용).
+   · 탭 사이 = BroadcastChannel 그 칸만 + 보임 · focus · pageshow 때 행 다시 읽기 · 새로고침 없음.
+   · 탭 사이 원자 = 읽고 쓰는 일(쓰기 · 병합 · 옮기기 · 묘비 비춤)마다 IndexedDB readwrite 트랜잭션 하나 — 같은 통 readwrite 는 브라우저가 탭 사이에도 차례로 세운다
+     (지시서의 navigator.locks 대신 · 잰 값: 웹킷 자물쇠 50 번 754 ms · 트랜잭션 둘→하나 1,528→772 ms · 자물쇠 없는 브라우저에서도 원자) · 이 탭 안 차례 = REC_Q */
+var REC_ON=true, REC_SNAP={}, REC_MIG={}, REC_Q=Promise.resolve(), REC_BC=null, REC_DRAW=0, REC_DRAWK=new Set();
+var REC_TAB=Math.random().toString(36).slice(2)+Date.now().toString(36);
+const REC_PFX='rec:', REC_HI=String.fromCharCode(65535);
+const recRK=(k,c)=>REC_PFX+k+'|'+c;
+const recJ=v=>v===undefined?undefined:JSON.stringify(v);
+const recHas=(o,c)=>!!o&&Object.prototype.hasOwnProperty.call(o,c);
+const recRange=k=>k==null?IDBKeyRange.bound(REC_PFX,REC_PFX+REC_HI):IDBKeyRange.bound(REC_PFX+k+'|',REC_PFX+k+'|'+REC_HI);
+function recIsKey(s,k){try{return REC_ON&&s==='kv'&&typeof k==='string'&&k.indexOf(REC_PFX)!==0&&SYNC_KEYS.indexOf(k)>=0}catch(e){return false}}   /* SYNC_KEYS 가 서기 전(구문 읽는 중)이면 옛 길 */
+function recRowsOf(list,k){const m={};(list||[]).forEach(x=>{if(!x||x.k==null||x.c==null)return;if(k!=null){if(x.k===k)m[x.c]=x}else (m[x.k]=m[x.k]||{})[x.c]=x});return m}
+function recRowsRaw(k){   /* 통 k 의 행 {칸:row} · 못 읽으면 null */
+  return dbw(()=>new Promise(ok=>{let r;try{r=tx('kv','readonly').getAll(recRange(k))}catch(e){ok(null);return}
+    r.onsuccess=()=>ok(recRowsOf(r.result,k));r.onerror=()=>ok(null)}))}
+function recRowsAll(){   /* 모든 통의 행 {통:{칸:row}} · 못 읽으면 null */
+  return dbw(()=>new Promise(ok=>{let r;try{r=tx('kv','readonly').getAll(recRange(null))}catch(e){ok(null);return}
+    r.onsuccess=()=>ok(recRowsOf(r.result,null));r.onerror=()=>ok(null)}))}
+const recRowObj=x=>{const o={k:x.k,c:x.c,u:x.u||0,g:x.g||0};if(!o.g&&x.v!==undefined)o.v=x.v;return o};
+/* 읽고-쓰기 한 트랜잭션: 통 k(또는 null = 모든 통)의 행을 읽어 fn(rows) — fn 은 동기로 {out:[행…], …} 를 돌려주고, 그 줄을 같은 트랜잭션에서 쓴다 · 끝나면 그 결과 · 실패 null */
+function recTxRW(k,fn){
+  return dbw(()=>new Promise(ok=>{let t,res=null;try{t=db.transaction('kv','readwrite')}catch(e){ok(null);return}
+    const s=t.objectStore('kv');
+    let q;try{q=s.getAll(recRange(k))}catch(e){ok(null);return}
+    q.onsuccess=()=>{try{res=fn(recRowsOf(q.result,k))||{out:[]};(res.out||[]).forEach(x=>s.put(recRowObj(x),recRK(x.k,x.c)))}
+      catch(e){res=null;console.error('기록 행 쓰기 실패',k,e);try{t.abort()}catch(_){}}};
+    t.oncomplete=()=>ok(res);t.onerror=t.onabort=()=>ok(null)}),1)}
+function recPutRows(list){   /* [{k,c,v,u,g}] — 한 트랜잭션 · 끝나면 1 */
+  if(!list.length)return Promise.resolve(1);
+  return dbw(()=>new Promise(ok=>{let t;try{t=db.transaction('kv','readwrite')}catch(e){ok(0);return}
+    const s=t.objectStore('kv');
+    try{list.forEach(x=>s.put(recRowObj(x),recRK(x.k,x.c)))}catch(e){try{t.abort()}catch(_){}ok(0);return}
+    t.oncomplete=()=>ok(1);t.onerror=t.onabort=()=>ok(0)}),1)}
+function recLock(fn){const go=()=>{const p=REC_Q.then(fn,fn);REC_Q=p.catch(()=>{});return p};return db?go():DBREADY.then(go,go)}   /* 이 탭 안 차례(쓰기 · 병합 · 다시 읽기 · 옮기기 · 메모리 · 바탕을 차례로 고친다) · db 가 열리기 전에 온 부름은 DBREADY 뒤에 줄에 선다 — 줄 안에서 기다리면 시동의 통 읽기(같은 줄 · dbGo 앞)가 막혀 dbGo 가 안 와 교착(10/19 dbready 하네스 실측) · 시동이 멎으면(열기 실패) 그대로 돌아 읽기는 오류 · 쓰기는 0 */
+const recSnapOf=x=>x?{j:x.g?undefined:recJ(x.v),u:x.u||0,g:x.g||0}:undefined;
+/* 회독 합치기(§D) — 두 기기 · 두 탭이 같은 문항을 같이 바꿈 → h 를 (t,m) 로 합집합(t 오름차순 · 같은 t·m 하나 · 내 것 먼저) */
+function recStMerge(a,b){const ha=(a&&a.h)||[],hb=(b&&b.h)||[],seen=new Set(),h=[];
+  ha.concat(hb).forEach(x=>{if(!x)return;const id=(x.t||0)+'|'+x.m;if(seen.has(id))return;seen.add(id);h.push(x)});
+  h.sort((p,q)=>(p.t||0)-(q.t||0));return Object.assign({},b||{},a||{},{h})}
+/* 받은 칸을 메모리에 들인 뒤 — 통 setter 곁일(tfix 그리기 · cqx 칠하기 등) · 화면은 100 ms 묶음(열린 창 · 스크롤 그대로) */
+function recAdopted(k,cells){
+  try{const ref=SYNC_REF[k],cur=ref&&ref.g&&ref.g();if(cur&&ref.s)ref.s(cur)}catch(e){}
+  REC_DRAWK.add(k);if(REC_DRAW)return;
+  REC_DRAW=setTimeout(()=>{REC_DRAW=0;const ks=[...REC_DRAWK];REC_DRAWK.clear();
+    try{if(ks.indexOf('conc')>=0)buildCQ()}catch(e){}
+    try{if(CARD_LAYER&&typeof refreshUnits==='function'&&DATA.length)refreshUnits()}catch(e){}
+    try{draw()}catch(e){}try{renderSettings()}catch(e){}try{recPaint()}catch(e){}},100)}
+/* 다른 탭이 쓴 행을 이 탭 메모리 · 바탕에 들인다 — 이 탭이 아직 안 쓴 고침(메모리 ≠ 바탕)은 그대로 둔다(다음 recWrite 가 가른다) */
+function recAdoptRows(k,rows,cur,snap){
+  const base=REC_SNAP[k]||{},adopt=[];
+  const cells=new Set(Object.keys(rows).concat(Object.keys(base)));
+  for(const c of cells){const b=base[c],r=rows[c];
+    if(b&&r&&(r.u||0)===b.u&&(r.g||0)===b.g)continue;
+    const bj=b&&!b.g?b.j:undefined,tj=r&&!r.g?recJ(r.v):undefined,mj=recHas(cur,c)?recJ(cur[c]):undefined;
+    if(mj!==bj)continue;
+    snap[c]=r?recSnapOf(r):{j:undefined,u:0,g:0};
+    if(tj!==bj){if(tj===undefined)delete cur[c];else cur[c]=r.v;adopt.push(c)}}
+  return adopt}
+function recPull(ks,why){return recLock(()=>recPull0(ks,why))}
+async function recPull0(ks,why){
+  const all=await recRowsAll();if(!all)return 0;let n=0;
+  for(const k of (ks||SYNC_KEYS)){
+    if(SYNC_KEYS.indexOf(k)<0||!REC_SNAP[k])continue;   /* 아직 안 읽은 통 — 읽을 때 행에서 바로 */
+    const ref=SYNC_REF[k],cur=ref&&ref.g&&ref.g();if(!cur)continue;
+    const snap=Object.assign({},REC_SNAP[k]),adopt=recAdoptRows(k,all[k]||{},cur,snap);
+    REC_SNAP[k]=snap;if(adopt.length){n+=adopt.length;recAdopted(k,adopt)}}
+  window.__recPull=(window.__recPull||0)+n;
+  return n}
+function recBcOpen(){try{if(!REC_BC&&typeof BroadcastChannel==='function'){REC_BC=new BroadcastChannel(CUR.SYNC_PREFIX+'rec');
+  REC_BC.onmessage=e=>{const d=e&&e.data;if(!d||d.from===REC_TAB||!d.k)return;recPull([].concat(d.k),'bc').catch(()=>{})}}}catch(e){}return REC_BC}
+function recBcast(k,cells){try{const b=recBcOpen();if(b)b.postMessage({k:k,cells:cells,from:REC_TAB})}catch(e){}}
+/* 옮기기(한 번 · 저절로): 통 k 의 행이 0 이면 옛 kv 통째 값 → 칸마다 행(u = localStorage U_KEY 의 그 칸 도장 · 없으면 1) ·
+   GONE_KEY 묘비 → 묘비 행. 짐작 없음 — 그림자와 다른 칸을 새로 찍지도, 그림자에만 있는 칸을 지우지도 않는다.
+   옛 통째 값 · localStorage 는 안 지운다(되돌릴 길 · 옛 판 앱). 끝 = kv 'recv:'+k(통마다 · 늦게 읽는 통도 제 때에) · 표지 · 행 · 옛 값 읽기와 쓰기 = 한 트랜잭션 */
+function recMigrateStore(k){
+  if(REC_MIG[k])return Promise.resolve();
+  const u=lsObj(U_KEY),gone=lsObj(GONE_KEY),pre=k+'|';
+  return dbw(()=>new Promise(ok=>{let t,n=-1;try{t=db.transaction('kv','readwrite')}catch(e){ok();return}
+    const s=t.objectStore('kv');
+    const qm=s.get('recv:'+k);
+    qm.onsuccess=()=>{if(qm.result){n=0;return}
+      const qr=s.getAll(recRange(k));
+      qr.onsuccess=()=>{const rows=recRowsOf(qr.result,k);
+        const qw=s.get(k);
+        qw.onsuccess=()=>{const whole=qw.result,out=[];   /* 행이 이미 있는 칸은 안 건드린다(행이 진실) · 없는 칸만 옛 값에서 채운다 */
+          if(whole&&typeof whole==='object')for(const c of Object.keys(whole))if(!rows[c])out.push({k:k,c:c,v:whole[c],u:u[ckey(k,c)]||1,g:0});
+          for(const x of Object.keys(gone)){if(x.indexOf(pre)!==0)continue;const c=x.slice(pre.length);if(rows[c]||(whole&&recHas(whole,c)))continue;out.push({k:k,c:c,u:0,g:gone[x]})}
+          out.forEach(x=>s.put(recRowObj(x),recRK(x.k,x.c)));
+          s.put({at:Date.now(),n:out.length,had:Object.keys(rows).length},'recv:'+k);n=out.length}}};
+    t.oncomplete=()=>{REC_MIG[k]=1;if(n>0){console.info('기록 행 옮김',k,n);window.__RECMIG=(window.__RECMIG||0)+n}ok()};
+    t.onerror=t.onabort=()=>ok()}),1)}   /* 못 씀 — 다음 열기 때 다시(REC_MIG 안 켬) */
+/* 열 때(get) — 행에서 산 칸만 객체로. 이미 읽은 통이면 바탕을 갈지 않고 그쪽 고침만 들인 뒤 행 그대로를 준다(못 본 칸이 지움이 되지 않게) */
+function recLoad(k){return recLock(async()=>{
+  await recMigrateStore(k);
+  if(REC_SNAP[k])await recPull0([k],'get');
+  const rows=await recRowsRaw(k);
+  if(!rows)return rawGet('kv',k);   /* 행을 못 읽음 — 옛 길(통째 값) · 바탕은 안 세운다(쓰기는 지움 짐작 없이) */
+  const o={};for(const c in rows){const x=rows[c];if(!x.g&&x.v!==undefined)o[c]=x.v}
+  if(!REC_SNAP[k]){const snap={};for(const c in rows)snap[c]=recSnapOf(rows[c]);REC_SNAP[k]=snap}
+  return o})}
+/* 쓰기(put 한 문) — opt.stamp{칸:u} · opt.tomb{칸:g} = 옮기기가 옛 도장 · 묘비 시각을 그대로 쓸 때 */
+function recWrite(k,obj,opt){return recLock(()=>recWrite0(k,obj,opt||{}))}
+function recDiff(k,obj,rows,memo,had,opt){   /* 동기 — 행(rows)을 읽은 트랜잭션 안에서 */
+  const known=had&&memo!==null;   /* 바탕을 아는 통만 「없는 칸 = 지움」 — 아직 행에서 안 읽은 통 · 늦게 읽는 통이 아직이면(g() = null) 지움으로 보지 않는다 */
+  let base=REC_SNAP[k];if(!base){base={};for(const c in rows)base[c]=recSnapOf(rows[c])}   /* 안 읽은 통 = 지금 행을 바탕으로(그 통의 바탕은 안 세운다 — 읽을 때 세운다) */
+  const snap=Object.assign({},base),now=Date.now(),out=[],adopt=[],stamp=opt.stamp||{},tomb=opt.tomb||{};
+  const cells=new Set(Object.keys(obj).concat(Object.keys(base),Object.keys(rows)));
+  for(const c of cells){
+    const b=base[c],r=rows[c],bj=b&&!b.g?b.j:undefined;
+    const mj=recHas(obj,c)?recJ(obj[c]):undefined;
+    const same=b&&r&&(r.u||0)===b.u&&(r.g||0)===b.g;
+    const tj=same?bj:(r&&!r.g?recJ(r.v):undefined);
+    if(mj===bj){   /* 내가 안 바꿈 — 그쪽이 바꿨으면(ⓑ · ⓓ) 들인다(안 씀) */
+      if(!same&&r){snap[c]=recSnapOf(r);if(tj!==bj){if(tj===undefined)delete obj[c];else obj[c]=r.v;adopt.push(c)}}
+      continue}
+    if(mj===undefined&&!known)continue;
+    const my=mj===undefined?(tomb[c]||now):(stamp[c]||now);
+    if(tj!==bj&&tj!==mj){   /* ⓔ 둘 다 바꿈 */
+      if(k==='status'&&mj!==undefined&&tj!==undefined){const m=recStMerge(obj[c],r.v),u=Math.max(my,r.u||0);obj[c]=m;out.push({k:k,c:c,v:m,u:u,g:0});snap[c]={j:recJ(m),u:u,g:0};adopt.push(c);continue}
+      const ru=r?Math.max(r.u||0,r.g||0):0;
+      if(ru>my){snap[c]=recSnapOf(r);if(tj===undefined)delete obj[c];else obj[c]=r.v;adopt.push(c);continue}}   /* 그쪽 도장이 더 늦음 — 그쪽 */
+    if(tj===mj&&r){snap[c]=recSnapOf(r);continue}   /* 그쪽이 이미 같은 값 */
+    if(mj===undefined){out.push({k:k,c:c,u:0,g:my});snap[c]={j:undefined,u:0,g:my}}   /* ⓒ 이 탭이 지움 → 묘비 */
+    else{out.push({k:k,c:c,v:obj[c],u:my,g:0});snap[c]={j:mj,u:my,g:0}}}   /* ⓐ 이 탭이 바꿈 */
+  return{out:out,adopt:adopt,snap:snap}}
+async function recWrite0(k,obj,opt){
+  if(!obj||typeof obj!=='object')return 0;
+  await recMigrateStore(k);   /* 안 읽은 통에 먼저 쓰더라도 옛 통째 값이 행으로 옮겨진 뒤에(한 번 · 그 뒤로는 바로 돎) */
+  const ref=SYNC_REF[k],memo=ref&&ref.g?ref.g():null,had=!!REC_SNAP[k];
+  const res=await recTxRW(k,rows=>recDiff(k,obj,rows,memo,had,opt));
+  if(!res){console.error('기록 행 저장 실패',k);return 0}
+  if(had)REC_SNAP[k]=res.snap;
+  window.__recLast={k:k,w:res.out.length,a:res.adopt.length};
+  if(res.out.length)recBcast(k,res.out.map(x=>x.c));
+  if(res.adopt.length&&memo===obj)recAdopted(k,res.adopt);
+  return 1}
+/* 아직 안 쓴 메모리 고침을 행으로(동기화 앞 · 저장 자리 밖에서 메모리만 바꾼 칸이 있어도 잃지 않게) — 바뀐 칸 0 이면 안 씀 */
+async function recFlush(){let n=0;
+  for(const k of SYNC_KEYS){const ref=SYNC_REF[k],cur=ref&&ref.g&&ref.g();if(!cur||!REC_SNAP[k])continue;
+    try{await recWrite(k,cur);n+=((window.__recLast||{}).w||0)}catch(e){console.warn('recFlush',k,e)}}
+  return n}
+const recStamp=(k,c)=>{const x=(REC_SNAP[k]||{})[c];return x?(x.u||0):0};
+/* 옛 꼴 보기(진단 · 하네스) — 바탕(행)에서 지은 {u,gone,shadow} · localStorage 와 같은 모양 */
+function recLegacyView(){const u={},gone={},shadow={};
+  for(const k in REC_SNAP){const sn=REC_SNAP[k],sh=shadow[k]={};for(const c in sn){const x=sn[c];
+    if(x.g)gone[ckey(k,c)]=x.g;else{if(x.u)u[ckey(k,c)]=x.u;if(x.j!==undefined)sh[c]=JSON.parse(x.j)}}}
+  return{u:u,gone:gone,shadow:shadow}}
+/* 옛 열쇠 묘비 비춤(jgTombMirror · uidTombMirror)을 행에 — 새 칸에 아무 자취(메모리 값 · 행)가 없을 때만 · 같은 시각 · 한 트랜잭션 */
+function recTombMirrorLocal(fn){return recLock(async()=>{
+  const res=await recTxRW(null,all=>{
+    const G={};for(const k in all)for(const c in all[k])if(all[k][c].g)G[ckey(k,c)]=all[k][c].g;
+    const before=new Set(Object.keys(G));
+    const t=fn(G,(k,nw,kn)=>{const cur=SYNC_REF[k]&&SYNC_REF[k].g&&SYNC_REF[k].g();return !cur||!REC_SNAP[k]||recHas(cur,nw)||!!(all[k]&&all[k][nw])});
+    const out=[];if(t)for(const x of Object.keys(G)){if(before.has(x))continue;const p=csplit(x);if(SYNC_KEYS.indexOf(p[0])<0||!REC_SNAP[p[0]])continue;out.push({k:p[0],c:p[1],u:0,g:G[x]})}
+    return{out:out,t:t}});
+  if(!res)return 0;
+  res.out.forEach(r=>{REC_SNAP[r.k][r.c]={j:undefined,u:0,g:r.g}});
+  return res.t||0})}
+/* 올리기 막이 — 원격 파일이 있는데(sha) 못 읽었으면 그 번은 안 올린다(다음 맞추기에 · tabguard5 ⟦6⟧⟦7⟧⟦8⟧ 그대로 · 사람 손 0) */
+function jgPushGuard(payload,remote,sha){if(sha&&!remote)throw new Error('원격 기록을 못 읽어 이번엔 안 올림');return payload}
+
+/* ---------- 도장 찍기 → 없앴다(★ recstore) ----------
+   도장은 쓸 때(recWrite) 행에 찍힌다. 옛 이름 stampAll 은 부르던 자리(10 초 주기 · 시동 · 하네스)를 위해 남기고 칩만 다시 그린다 —
+   메모리와 그림자를 대어 지움 · 새로 고침을 짐작하던 몸은 걷었다(사고 뿌리 ②). uid 가드(번호 열쇠로 쓴 칸 → uid)는 그대로.
+   옛 몸(지우지 않고 주석): for(k of SYNC_KEYS){cur=g();old=shadow[k];다른 칸 → u=now · 그림자에만 있는 칸 → gone=now}; lsPut(U_KEY…GONE_KEY…SHADOW_KEY) */
 const stTime=v=>{const h=(v||{}).h;return(h&&h.length)?(h[h.length-1].t||0):0};
 function stampAll(){
-  if(CARD_LAYER&&!UID_BUSY&&DATA_V){try{uidGuard()}catch(e){console.error('uidGuard',e)}}   /* ★ uid_unify A-4 — 번호 열쇠로 쓴 칸은 도장 찍기 전에 막는다 */
-  const now=Date.now();
-  const u=lsObj(U_KEY),gone=lsObj(GONE_KEY),shadow=lsObj(SHADOW_KEY);
-  let n=0;
-  for(const k of SYNC_KEYS){
-    const cur=SYNC_REF[k].g();
-    if(!cur)continue;                       /* ansfix — 아직 안 읽혔다 */
-    const old=shadow[k]||{};
-    for(const c in cur){
-      if(JSON.stringify(cur[c])!==JSON.stringify(old[c])){
-        /* 10/10 recfix — status 도장 = 남은 마지막 기록 시각이 앞 도장보다 새것일 때만(새 기록) · 아니면(기록 지움 · 마크 바꿈) 지금 — 옛 줄: u[ckey(k,c)]=(k==='status'?stTime(cur[c]):0)||now;
-           까닭: 지움 · 바꿈의 도장이 옛 시각 · 같은 시각이 되어 recMerge 에서 원격(옛 기록)이 이겨 지운 기록이 다음 동기화에 되살아났다 */
-        if(k==='status'){const t=stTime(cur[c]),pu=u[ckey(k,c)]||0;u[ckey(k,c)]=t>pu?t:now}else u[ckey(k,c)]=now;
-        delete gone[ckey(k,c)];n++;
-      }
-    }
-    for(const c in old){
-      if(!(c in cur)){gone[ckey(k,c)]=now;delete u[ckey(k,c)];n++}
-    }
-    shadow[k]=cur;
-  }
-  lsPut(U_KEY,u);lsPut(GONE_KEY,gone);lsPut(SHADOW_KEY,shadow);
-  return n;
+  if(CARD_LAYER&&!UID_BUSY&&DATA_V){try{uidGuard()}catch(e){console.error('uidGuard',e)}}   /* ★ uid_unify A-4 */
+  try{recPaint()}catch(e){}
+  return 0;
 }
 
 /* ---------- 병합 — 칸 단위 최신 승 · 묘비 · 그림자 갱신 (민법OX 와 같은 규칙) ----------
@@ -5173,69 +5325,81 @@ function stampAll(){
      ⑤ 그림자는 병합이 손댄 **칸만** 갈아 끼운다. `dirty` 는 키 단위라 그것으로 그림자를 갈면 같은 키(status 등) 안에서
         내려받는 사이 적은 칸이 도장을 못 받는다 — 칸 목록(touched)을 따로 모은다. `dirty` 는 IndexedDB 쓰기·화면 갱신에 그대로 쓴다.
      took·del 은 값이 실제로 바뀐 칸만 · ahead = 내가 이겼는데 원격 값이 다른 칸 */
-async function recMerge(remote){
-  const u=lsObj(U_KEY),gone=lsObj(GONE_KEY),shadow=lsObj(SHADOW_KEY);
+/* ★ recstore — 같은 규칙을 행에서: 내 도장 = 이 탭 바탕(행)의 u · g · 받은 칸은 행에 쓰고(u = 원격 u) 메모리에 들임 · 바탕 갱신 · 탭 알림.
+   ① 은 「메모리 ≠ 바탕(이 탭이 아직 안 쓴 고침)」 · 먼저 다른 탭이 쓴 행을 들인 뒤 원격을 맞댄다 · ④ status 동률은 회독 h 합치기(§D) ·
+   행 읽기 · 판정 · 쓰기 = 한 readwrite 트랜잭션(탭 사이 원자). 옛 몸(localStorage u/gone/shadow · 통째 put)은 걷음 — 판정 줄은 같다 */
+async function recMerge(remote){return recLock(()=>recMerge0(remote))}
+async function recMerge0(remote){
   const rU=remote.u||{},rD=remote.data||{},rG=Object.assign({},remote.gone||{});
   /* ★ revfix0929 A-1-3 — 원격의 옛 열쇠 묘비(옛 판 기기가 늦게 올린 것 포함)를 새 열쇠에도 비춘다 · 규칙 = jgTombMirror(새 칸에 자취 0 일 때만) · 원격 객체는 안 고친다 */
   try{jgTombMirror(rG,(k,nw,kn)=>Object.prototype.hasOwnProperty.call(rD[k]||{},nw)||rU[kn]!=null)}catch(e){console.warn('jgTombMirror',e)}
-  try{uidTombMirror(rG,(k,nw,kn)=>Object.prototype.hasOwnProperty.call(rD[k]||{},nw)||rU[kn]!=null)}catch(e){console.warn('uidTombMirror',e)}   /* ★ uid_unify A-2 — 원격의 번호 열쇠 묘비(옛 판 기기가 늦게 올린 것 포함)를 uid 칸에도 · 규칙 = jgTombMirror(새 칸에 자취 0 일 때만) */
+  try{uidTombMirror(rG,(k,nw,kn)=>Object.prototype.hasOwnProperty.call(rD[k]||{},nw)||rU[kn]!=null)}catch(e){console.warn('uidTombMirror',e)}   /* ★ uid_unify A-2 */
   const byKey={};
   const add=s=>{const p=csplit(s);if(!byKey[p[0]])byKey[p[0]]=new Set();byKey[p[0]].add(p[1])};
   Object.keys(rU).forEach(add);Object.keys(rG).forEach(add);
-  let took=0,kept=0,del=0,tie=0,ahead=0;const dirty={},touched={};
-  const has=(o,c)=>!!o&&Object.prototype.hasOwnProperty.call(o,c);
-  const J=v=>JSON.stringify(v);
-  for(const k of SYNC_KEYS){
-    const cur=SYNC_REF[k].g();
-    if(!cur)continue;
-    const old=shadow[k]||{},rd=rD[k]||{};
-    const cells=byKey[k]||new Set();
-    Object.keys(rd).forEach(c=>cells.add(c));
-    const mark=c=>{dirty[k]=1;(touched[k]=touched[k]||[]).push(c)};
-    for(const c of cells){
-      const ck=ckey(k,c);
-      if(J(cur[c])!==J(old[c])){kept++;continue}                        /* ① */
-      const mine=Math.max(u[ck]||0,gone[ck]||0);
-      const theirs=Math.max(rU[ck]||0,rG[ck]||0);
-      const rv=has(rd,c)?rd[c]:undefined;
-      if(theirs<mine){kept++;if(J(cur[c])!==J(rv))ahead++;continue}      /* ② 내 쪽이 이긴다 */
-      if((rG[ck]||0)>=(rU[ck]||0)&&(rG[ck]||0)>0){
-        /* ② 원격이 지웠다 — ★ 지운 것이 되살아나면 안 된다 */
-        if(c in cur){delete cur[c];del++;mark(c)}
-        gone[ck]=rG[ck];delete u[ck];continue;
+  let took=0,kept=0,del=0,tie=0,ahead=0;const dirty={},touched={},adopted={};
+  const has=recHas,J=recJ;
+  const res=await recTxRW(null,all=>{
+    const out=[];
+    for(const k of SYNC_KEYS){
+      const cur=SYNC_REF[k].g();
+      if(!cur||!REC_SNAP[k])continue;   /* 아직 안 읽은 통 — 옛 판과 같이 건너뜀(올릴 때는 원격 것 그대로 실림) */
+      const snap=Object.assign({},REC_SNAP[k]);
+      const ad=recAdoptRows(k,all[k]||{},cur,snap);   /* 다른 탭이 쓴 행 먼저 */
+      if(ad.length){dirty[k]=1;adopted[k]=ad}
+      const rd=rD[k]||{};
+      const cells=byKey[k]||new Set();
+      Object.keys(rd).forEach(c=>cells.add(c));
+      const mark=c=>{dirty[k]=1;(touched[k]=touched[k]||[]).push(c)};
+      for(const c of cells){
+        const ck=ckey(k,c),s0=snap[c],sj=s0&&!s0.g?s0.j:undefined;
+        if(J(cur[c])!==sj){kept++;continue}                                  /* ① 이 탭이 아직 안 쓴 고침 — 받지도 지우지도 않는다 */
+        const myU=s0?(s0.u||0):0,myG=s0?(s0.g||0):0,mine=Math.max(myU,myG);
+        const theirs=Math.max(rU[ck]||0,rG[ck]||0);
+        const rv=has(rd,c)?rd[c]:undefined;
+        if(theirs<mine){kept++;if(J(cur[c])!==J(rv))ahead++;continue}       /* ② 내 쪽이 이긴다 */
+        if((rG[ck]||0)>=(rU[ck]||0)&&(rG[ck]||0)>0){
+          /* ② 원격이 지웠다 — ★ 지운 것이 되살아나면 안 된다 */
+          if(c in cur){delete cur[c];del++;mark(c)}
+          if(!s0||s0.g!==rG[ck]){out.push({k:k,c:c,u:0,g:rG[ck]});snap[c]={j:undefined,u:0,g:rG[ck]}}
+          continue;
+        }
+        if(theirs===0){if(!(c in cur)&&has(rd,c)){cur[c]=rv;out.push({k:k,c:c,v:rv,u:1,g:0});snap[c]={j:J(rv),u:1,g:0};took++;mark(c)}else kept++;continue}   /* ③ */
+        if(theirs>mine){if(has(rd,c)){if(!has(cur,c)||J(cur[c])!==J(rv)){cur[c]=rv;took++;mark(c)}out.push({k:k,c:c,v:rv,u:rU[ck],g:0});snap[c]={j:J(rv),u:rU[ck],g:0}}continue}   /* ② 원격이 이긴다 */
+        /* ④ 동률 — 내 묘비는 원격 묘비와 같게 이긴다(어느 기기에서 먼저 눌러도 결과가 같게) */
+        if(myG>=myU){kept++;continue}
+        const sL=has(cur,c)?J(cur[c]):'',sR=has(rd,c)?J(rv):'';
+        if(sL===sR){kept++;continue}
+        tie++;
+        if(k==='status'&&has(cur,c)&&has(rd,c)){   /* ★ recstore §D — 회독은 더 긴 쪽이 아니라 h 합집합(두 기기가 같이 더한 회독을 둘 다 남김) */
+          const m=recStMerge(cur[c],rv),mj=J(m);
+          if(mj!==sL){cur[c]=m;out.push({k:k,c:c,v:m,u:myU,g:0});snap[c]={j:mj,u:myU,g:0};took++;mark(c)}else{kept++;ahead++}
+          continue}
+        const rWin=sR.length>sL.length||(sR.length===sL.length&&sR>sL);   /* ⚠ 「내 것을 두고 도장 +1」 금지 — 두 기기가 서로 +1 하며 튕긴다 */
+        console.warn('기록 동기화 동률 — 도장이 같은데 값이 달라 더 많이 담은 쪽을 남긴다',ck,
+          '내 것 '+sL.length+'자 · 원격 '+sR.length+'자 → '+(rWin?'원격':'내 것'),'· 버린 값',rWin?sL:sR);
+        if(rWin){cur[c]=rv;out.push({k:k,c:c,v:rv,u:myU,g:0});snap[c]={j:sR,u:myU,g:0};took++;mark(c)}else{kept++;ahead++}
       }
-      if(theirs===0){if(!(c in cur)&&has(rd,c)){cur[c]=rv;u[ck]=1;took++;mark(c)}else kept++;continue}   /* ③ */
-      if(theirs>mine){if(has(rd,c)){if(!has(cur,c)||J(cur[c])!==J(rv)){cur[c]=rv;took++;mark(c)}u[ck]=rU[ck];delete gone[ck]}continue}   /* ② 원격이 이긴다 */
-      /* ④ 동률 — 내 묘비는 원격 묘비와 같게 이긴다(어느 기기에서 먼저 눌러도 결과가 같게) */
-      if((gone[ck]||0)>=(u[ck]||0)){kept++;continue}
-      const sL=has(cur,c)?J(cur[c]):'',sR=has(rd,c)?J(rv):'';
-      if(sL===sR){kept++;continue}
-      tie++;
-      const rWin=sR.length>sL.length||(sR.length===sL.length&&sR>sL);   /* ⚠ 「내 것을 두고 도장 +1」 금지 — 두 기기가 서로 +1 하며 튕긴다 */
-      console.warn('기록 동기화 동률 — 도장이 같은데 값이 달라 더 많이 담은 쪽을 남긴다',ck,
-        '내 것 '+sL.length+'자 · 원격 '+sR.length+'자 → '+(rWin?'원격':'내 것'),'· 버린 값',rWin?sL:sR);
-      if(rWin){cur[c]=rv;took++;mark(c)}else{kept++;ahead++}
+      REC_SNAP[k]=snap;
     }
-  }
-  lsPut(U_KEY,u);lsPut(GONE_KEY,gone);
-  for(const k in dirty){const v=SYNC_REF[k].g(); if(v)await put('kv',k,v)}   /* add3 §C-2 — 안 읽힌 통은 IndexedDB 에도 안 쓴다 */
-  /* ★ 그림자도 같이 갱신한다 — 안 하면 다음 stampAll 이
-     「원격에서 받은 것」을 「내가 바꾼 것」으로 오인해 도장을 새로 찍는다.
-     ★ 2026-09-15 §C — 단 손댄 칸만(⑤). IndexedDB 를 기다린 뒤라 그림자를 다시 읽어 칸마다 갈음한다(충돌 재시도로 두 번 불려도 같다). */
-  const sh=lsObj(SHADOW_KEY);
-  for(const k in touched){const now=SYNC_REF[k].g(); if(!now)continue; const _n0=now,sk=sh[k]||(sh[k]={});touched[k].forEach(c=>{if(has(now,c))sk[c]=now[c];else delete sk[c]})}
-  lsPut(SHADOW_KEY,sh);
+    return{out:out}});
+  if(!res)throw new Error('기록 행을 못 읽거나 못 씀');
+  for(const k in adopted)recAdopted(k,adopted[k]);
+  for(const k in touched)recBcast(k,touched[k]);
   return{took,kept,del,tie,ahead,dirty:Object.keys(dirty)};
 }
 
 function recPayload(remote){
-  /* ★ 2026-09-21 (add3 §C-2) — 아직 안 읽힌 통(`g()` 가 null)은 **원격 것 그대로** 실어 보낸다.
-     `||{}` 로 빈 객체를 보내면 그 키의 원격 칸이 통째로 지워진다(근거 소실의 두 번째 길). */
-  const data={};SYNC_KEYS.forEach(k=>{const v=SYNC_REF[k].g();
-    data[k]=v||((remote&&remote.data&&remote.data[k])||{})});
+  /* ★ recstore — 행(이 탭 바탕 = 동기화 앞에 행을 다시 읽어 맞춤)에서 짓는다: data = 산 칸 · u = 행 u · gone = 행 g.
+     localStorage U_KEY · GONE_KEY · SHADOW_KEY 는 안 쓴다(옮긴 뒤에도 안 지움 · 옛 판용).
+     ★ 2026-09-21 (add3 §C-2) — 아직 안 읽힌 통(`g()` 가 null · 바탕 없음)은 **원격 것 그대로** 실어 보낸다(빈 객체로 원격 칸을 지우지 않는다).
+     옛 줄: data[k]=v||((remote&&remote.data&&remote.data[k])||{}) · u=lsObj(U_KEY) · gone=lsObj(GONE_KEY) */
+  const data={},u={},gone={};
+  SYNC_KEYS.forEach(k=>{const v=SYNC_REF[k].g(),sn=REC_SNAP[k];
+    if(v&&sn){const o={};for(const c in sn){const x=sn[c];if(x.g)gone[ckey(k,c)]=x.g;else{if(x.u)u[ckey(k,c)]=x.u;if(x.j!==undefined)o[c]=JSON.parse(x.j)}}data[k]=o}
+    else data[k]=(remote&&remote.data&&remote.data[k])||{}});
   /* ★ 2026-09-15 (_task_ox_sync_and_limit §E) — `remote` 를 주면 도장·묘비를 원격과 합집합으로(같은 칸은 큰 시각 ·
      한 칸이 둘 다면 큰 쪽만 · 동률은 묘비). 인자가 없으면 옛 판과 같다. */
-  const u=lsObj(U_KEY),gone=lsObj(GONE_KEY);
   if(remote){
     const rU=remote.u||{},rG=remote.gone||{};
     for(const x in rU)if(!((u[x]||0)>=rU[x]))u[x]=rU[x];
@@ -5245,12 +5409,10 @@ function recPayload(remote){
   return{v:1,savedAt:new Date().toISOString(),by:recWho(),
          data:data,u:u,gone:gone};
 }
-function recPending(){
+function recPending(){   /* ★ recstore — 안 올린 칸 = 행 도장 · 묘비가 마지막 맞춤보다 새것(옛 줄: localStorage u · gone) */
   const last=(lsObj(SMETA_KEY)).lastSync||0;
-  const u=lsObj(U_KEY),g=lsObj(GONE_KEY);
   let n=0;
-  for(const x in u)if(u[x]>last)n++;
-  for(const x in g)if(g[x]>last)n++;
+  for(const k in REC_SNAP){const sn=REC_SNAP[k];for(const c in sn){const x=sn[c];if(Math.max(x.u||0,x.g||0)>last)n++}}
   return n;
 }
 
@@ -5290,27 +5452,30 @@ function jgO2N(){if(JG_O2N&&JG_O2N.__n===DATA.length)return JG_O2N;const m={__n:
   DATA.forEach(r=>{const o=r[F.OLDU];if(o&&o!==r[F.CODE]){m[o]=String(r[F.CODE]);m.__any=true}});return JG_O2N=m}
 const JG_KEYS=['bogi','unit','bpg','crop','tfix','gg','ggref','pick'];
 async function jgMigrate(why){
+  /* ★ recstore — 옮김 = 새 칸 행(u = 옛 칸 도장 그대로) + 옛 칸 묘비 행(g = 지금) · 규칙 · 멱등은 옛 판 그대로 · 도장 · 묘비는 행(이 탭 바탕)에서 읽는다
+     옛 줄: const u=lsObj(U_KEY),gone=lsObj(GONE_KEY),shadow=lsObj(SHADOW_KEY) … put('kv',k,cur) … lsPut(U_KEY,u);lsPut(GONE_KEY,gone);lsPut(SHADOW_KEY,shadow) */
   if(!CARD_LAYER||!DATA.length)return 0;const M=jgO2N();if(!M.__any)return 0;
-  const u=lsObj(U_KEY),gone=lsObj(GONE_KEY),shadow=lsObj(SHADOW_KEY),now=Date.now(),has=(o,c)=>!!o&&Object.prototype.hasOwnProperty.call(o,c);
+  const now=Date.now(),has=recHas;
   let n=0;const touched=[];
   for(const k of JG_KEYS){if(!SYNC_REF[k])continue;const cur=SYNC_REF[k].g();if(!cur)continue;   /* 늦게 읽는 통이 아직이면 null — 건너뛴다(9/20 묘비 사고) */
-    let ch=false;const sh=shadow[k];
+    const sn=REC_SNAP[k]||{},opt={stamp:{},tomb:{}};
+    let ch=false;
     for(const o of Object.keys(cur)){const nw=M[o];if(!nw||typeof nw!=='string')continue;
-      const ko=ckey(k,o),kn=ckey(k,nw);
-      /* ★ revfix0929 A-1-2 — 그 칸 묘비(옛·새 어느 쪽이든)가 값 도장보다 새로우면(같아도 — 바탕 병합에서 묘비가 이기는 것과 같게) 옮기지 않고 지운다 */
-      const tb=Math.max(gone[ko]||0,gone[kn]||0);
-      if(tb>0&&tb>=(u[ko]||0)){delete cur[o];delete u[ko];if(sh)delete sh[o];gone[ko]=tb;ch=true;n++;continue}
-      if(has(cur,nw)){const so=u[ko]||0,sn=u[kn]||0;
-        if(so>sn){console.warn('jagwa uid 옮김 — 옛·새 둘 다 · 옛 칸 도장이 늦어 이김',k,o,'→',nw,'버린 값',JSON.stringify(cur[nw]));cur[nw]=cur[o];u[kn]=so;if(sh&&has(sh,o))sh[nw]=sh[o]}
+      const so=sn[o]||{},snw=sn[nw]||{},uo=so.u||0;
+      /* ★ revfix0929 A-1-2 — 그 칸 묘비(옛·새 어느 쪽이든)가 값 도장보다 새로우면(같아도) 옮기지 않고 지운다 */
+      const tb=Math.max(so.g||0,snw.g||0);
+      if(tb>0&&tb>=uo){delete cur[o];opt.tomb[o]=tb;ch=true;n++;continue}
+      if(has(cur,nw)){const un=snw.u||0;
+        if(uo>un){console.warn('jagwa uid 옮김 — 옛·새 둘 다 · 옛 칸 도장이 늦어 이김',k,o,'→',nw,'버린 값',JSON.stringify(cur[nw]));cur[nw]=cur[o];opt.stamp[nw]=uo}
         else console.warn('jagwa uid 옮김 — 옛·새 둘 다 · 새 칸이 이김',k,o,'→',nw,'버린 값',JSON.stringify(cur[o]));}
-      else{cur[nw]=cur[o];if(u[ko])u[kn]=u[ko];if(sh&&has(sh,o)&&!has(sh,nw))sh[nw]=sh[o]}   /* 도장·그림자 = 옛 칸 그대로(새로 안 찍는다) */
-      delete cur[o];delete u[ko];if(sh)delete sh[o];gone[ko]=Math.max(gone[ko]||0,now);ch=true;n++}
+      else{cur[nw]=cur[o];if(uo)opt.stamp[nw]=uo}   /* 도장 = 옛 칸 그대로(새로 안 찍는다) */
+      delete cur[o];opt.tomb[o]=Math.max(so.g||0,now);ch=true;n++}
     if(k==='ggref')for(const c of Object.keys(cur)){const a=cur[c];if(!Array.isArray(a)||!a.some(x=>typeof M[x]==='string'))continue;
-      const b=a.map(x=>typeof M[x]==='string'?M[x]:x);if(sh&&has(sh,c)&&JSON.stringify(sh[c])===JSON.stringify(a))sh[c]=b;cur[c]=b;ch=true;n++}   /* 값 속 uid — 도장 그대로 · 더 긴 값이라 동률 병합에서 이긴다 */
-    if(ch){touched.push(k);try{await put('kv',k,cur)}catch(e){console.warn('jgMigrate put',k,e)}}}
+      cur[c]=a.map(x=>typeof M[x]==='string'?M[x]:x);if(sn[c]&&sn[c].u)opt.stamp[c]=sn[c].u;ch=true;n++}   /* 값 속 uid — 도장 그대로 · 더 긴 값이라 동률 병합에서 이긴다 */
+    if(ch){touched.push(k);try{if(recIsKey('kv',k))await recWrite(k,cur,opt);else await rawPut('kv',k,cur)}catch(e){console.warn('jgMigrate put',k,e)}}}
   /* ★ revfix0929 A-1-1 — 이미 있는 옛 열쇠 묘비를 새 열쇠에 · 옛 묘비는 그대로(옛 판 기기용) · 안 읽힌 통은 다음 번(gg)에 */
-  const t=jgTombMirror(gone,(k,nw,kn)=>{const c=SYNC_REF[k]&&SYNC_REF[k].g();return !c||has(c,nw)||u[kn]!=null});
-  if(n||t){lsPut(U_KEY,u);lsPut(GONE_KEY,gone);lsPut(SHADOW_KEY,shadow);console.info('jagwa uid 옮김',why,n,touched,'묘비 비춤',t);window.__JGMIG=(window.__JGMIG||0)+n;
+  let t=0;try{t=await recTombMirrorLocal(jgTombMirror)}catch(e){console.warn('jgTombMirror local',e)}
+  if(n||t){console.info('jagwa uid 옮김',why,n,touched,'묘비 비춤',t);window.__JGMIG=(window.__JGMIG||0)+n;
     if(n)try{if(typeof refreshUnits==='function')refreshUnits()}catch(e){}}
   return n}
 /* ★ revfix0929 A-1 — 옛 열쇠 묘비 「칸|옛uid」 → 「칸|새uid」(같은 시각). 새 칸에 아무 자취(값 · 도장 · 묘비)가 없을 때만 비춘다.
@@ -5353,50 +5518,55 @@ function uidTombMirror(G,live){
     const nw=uidCell(k,x.slice(i+1));if(!nw)continue;const kn=ckey(k,nw);
     if(G[kn]!=null||live(k,nw,kn))continue;G[kn]=G[x];t++}
   return t}
-/* 메모리에서 옮긴다(await 없음 — 통 열셋이 한 번에 선다) · 돌려주는 flush() 가 도장·묘비·그림자(localStorage)를 쓴다 — 부르는 쪽이 IndexedDB 에 통을 쓴 뒤에 부른다(jgMigrate 와 같은 차례) */
+/* ★ recstore — 메모리만 옮기고 통마다 쓰기 옵션(stamp = 옛 칸 도장 그대로 · tomb = 옛 칸 묘비 시각)을 돌려준다 · 쓰기는 부르는 쪽이 recWrite(행)로
+   도장 · 묘비는 이 탭 바탕(행)에서 읽는다 · flush() 는 남겨 두되 할 일 없음(옛 판: localStorage u/gone/shadow 쓰기) · 묘비 비춤은 부르는 쪽이 recTombMirrorLocal */
 function uidMigrateMem(why){
   if(!CARD_LAYER||!DATA_V)return null;
-  const u=lsObj(U_KEY),gone=lsObj(GONE_KEY),shadow=lsObj(SHADOW_KEY),now=Date.now(),has=(o,c)=>!!o&&Object.prototype.hasOwnProperty.call(o,c);
-  let n=0,v=0;const touched=[],moved=[],unk=[];
+  const now=Date.now(),has=recHas;
+  let n=0,v=0;const touched=[],moved=[],unk=[],opts={};
   for(const k of UID_KEYS){
     const ref=SYNC_REF[k];if(!ref)continue;const cur=ref.g();if(!cur||typeof cur!=='object')continue;   /* 늦게 읽는 통이 아직이면 null — 건너뛴다(9/20 묘비 사고) */
-    const sync=SYNC_KEYS.indexOf(k)>=0,sh=sync?shadow[k]:null;
+    const sync=SYNC_KEYS.indexOf(k)>=0,sn=(sync&&REC_SNAP[k])||{},opt=opts[k]={stamp:{},tomb:{}};
     let ch=false;
     for(const o of Object.keys(cur)){
       const nw=uidCell(k,o);
       if(!nw){if(uidNumLike(k,o))unk.push(k+'|'+o);continue}
-      const ko=ckey(k,o),kn=ckey(k,nw);
-      if(sync){const tb=Math.max(gone[ko]||0,gone[kn]||0);
-        if(tb>0&&tb>=(u[ko]||0)){delete cur[o];delete u[ko];if(sh)delete sh[o];gone[ko]=tb;ch=true;n++;moved.push(ko);continue}}   /* 묘비가 값 도장보다 새로우면(같아도 — 병합에서 묘비가 이기는 것과 같게) 옮기지 않고 지운다 */
-      if(has(cur,nw)){const so=sync?(u[ko]||0):0,sn=sync?(u[kn]||0):0;
-        if(so>sn){console.warn('uid 열쇠 옮김 — 번호·uid 둘 다 · 번호 칸 도장이 늦어 이김',k,o,'→',nw,'버린 값',JSON.stringify(cur[nw]));cur[nw]=cur[o];u[kn]=so;if(sh&&has(sh,o))sh[nw]=sh[o]}
+      const ko=ckey(k,o),so=sn[o]||{},snw=sn[nw]||{},uo=sync?(so.u||0):0;
+      if(sync){const tb=Math.max(so.g||0,snw.g||0);
+        if(tb>0&&tb>=uo){delete cur[o];opt.tomb[o]=tb;ch=true;n++;moved.push(ko);continue}}   /* 묘비가 값 도장보다 새로우면(같아도 — 병합에서 묘비가 이기는 것과 같게) 옮기지 않고 지운다 */
+      if(has(cur,nw)){const un=sync?(snw.u||0):0;
+        if(uo>un){console.warn('uid 열쇠 옮김 — 번호·uid 둘 다 · 번호 칸 도장이 늦어 이김',k,o,'→',nw,'버린 값',JSON.stringify(cur[nw]));cur[nw]=cur[o];opt.stamp[nw]=uo}
         else console.warn('uid 열쇠 옮김 — 번호·uid 둘 다 · uid 칸이 이김',k,o,'→',nw,'버린 값',JSON.stringify(cur[o]))}
-      else{cur[nw]=cur[o];if(sync&&u[ko])u[kn]=u[ko];if(sh&&has(sh,o)&&!has(sh,nw))sh[nw]=sh[o]}   /* 도장·그림자 = 옛 칸 그대로(새로 안 찍는다) */
-      delete cur[o];if(sync){delete u[ko];if(sh)delete sh[o];gone[ko]=Math.max(gone[ko]||0,now)}
+      else{cur[nw]=cur[o];if(sync&&uo)opt.stamp[nw]=uo}   /* 도장 = 옛 칸 그대로(새로 안 찍는다) */
+      delete cur[o];if(sync)opt.tomb[o]=Math.max(so.g||0,now);
       ch=true;n++;moved.push(ko)}
-    if(k==='twin'||k==='link')for(const c of Object.keys(cur)){const b=uidVal(cur[c]);if(!b)continue;   /* 값 속 번호 — 도장은 그대로 · 그림자가 옛 값과 같으면 그림자도(ggref 와 같다) */
-      if(sh&&has(sh,c)&&JSON.stringify(sh[c])===JSON.stringify(cur[c]))sh[c]=b;cur[c]=b;ch=true;v++}
+    if(k==='twin'||k==='link')for(const c of Object.keys(cur)){const b=uidVal(cur[c]);if(!b)continue;   /* 값 속 번호 — 도장은 그대로 */
+      cur[c]=b;if(sync&&sn[c]&&sn[c].u)opt.stamp[c]=sn[c].u;ch=true;v++}
     if(ch)touched.push(k)}
-  const t=uidTombMirror(gone,(k,nw,kn)=>{const c=SYNC_REF[k]&&SYNC_REF[k].g();return !c||has(c,nw)||u[kn]!=null});
   if(unk.length){const fresh=unk.filter(x=>!UID_UNK.has(x));if(fresh.length){fresh.forEach(x=>UID_UNK.add(x));console.warn('uid 열쇠 옮김 — 표 밖 번호(옮기지 않고 그대로 둔다)',fresh.slice(0,20),fresh.length)}}
-  if(!n&&!v&&!t)return {n:0,v:0,t:0,touched:[],moved:[],why:why,flush(){}};
-  return {n:n,v:v,t:t,touched:touched,moved:moved,why:why,flush(){lsPut(U_KEY,u);lsPut(GONE_KEY,gone);lsPut(SHADOW_KEY,shadow)}}}
+  return {n:n,v:v,t:0,touched:touched,moved:moved,why:why,opts:opts,flush(){}}}
 var UID_BAK=0, UID_Q=Promise.resolve();
+async function uidWriteStores(c){   /* 옮긴 통 쓰기 — SYNC 통 = 행(옛 도장 · 묘비 시각 그대로) · 그 밖(link 등 기기 하나 값) = 통째 */
+  let ok=true;
+  for(const k of c.touched){const d=SYNC_REF[k].g();if(!d)continue;let r=0;
+    try{r=recIsKey('kv',k)?await recWrite(k,d,c.opts[k]):await rawPut('kv',k,d)}catch(e){r=0}
+    if(!r){ok=false;console.error('uid 옮김 — kv 저장 실패',k)}}
+  return ok}
 async function uidMigrateRun(why){
   if(!CARD_LAYER||!DATA_V)return 0;
   let need=false;
   if(!UID_BAK&&uidScan()>0){let b=null;try{b=await get('kv','bak_uid')}catch(e){}if(b)UID_BAK=1;else need=true}   /* 처음 옮길 때 한 번 — 이미 있으면 다시 안 찍는다 */
   let snap=null;
-  if(need){snap={at:Date.now(),stores:{},u:lsObj(U_KEY),gone:lsObj(GONE_KEY)};   /* 옮기기 전 값 — 아래 uidMigrateMem 이 바꾸기 전에 뜬다 */
+  if(need){const L=recLegacyView();snap={at:Date.now(),stores:{},u:L.u,gone:L.gone};   /* 옮기기 전 값 — 도장 · 묘비 = 행(옛 줄: lsObj(U_KEY) · lsObj(GONE_KEY)) */
     for(const k of UID_KEYS){const ref=SYNC_REF[k],cur=ref&&ref.g();if(cur&&typeof cur==='object')snap.stores[k]=JSON.parse(JSON.stringify(cur))}}
   const c=uidMigrateMem(why);
   let n=0;
   if(c){
     if(snap&&(c.n||c.v)){try{if(await put('kv','bak_uid',snap))UID_BAK=1;else console.error('uid 옮김 — bak_uid 저장 실패')}catch(e){console.error('uid 옮김 — bak_uid',e)}}
-    let ok=true;
-    for(const k of c.touched){const d=SYNC_REF[k].g();if(!d)continue;let r=0;try{r=await put('kv',k,d)}catch(e){r=0}if(!r){ok=false;console.error('uid 옮김 — kv 저장 실패',k)}}
-    if(ok){c.flush();n=c.n+c.v;
-      if(c.n||c.v||c.t){console.info('uid 열쇠 옮김',why,c.n,c.v,c.touched,'묘비 비춤',c.t);window.__UIDMIG=(window.__UIDMIG||0)+n}
+    const ok=await uidWriteStores(c);
+    let t=0;try{t=await recTombMirrorLocal(uidTombMirror)}catch(e){console.warn('uidTombMirror local',e)}
+    if(ok){n=c.n+c.v;
+      if(c.n||c.v||t){console.info('uid 열쇠 옮김',why,c.n,c.v,c.touched,'묘비 비춤',t);window.__UIDMIG=(window.__UIDMIG||0)+n}
       if(c.touched.indexOf('conc')>=0){try{buildCQ()}catch(e){}}}
   }
   if(why==='data'){try{n+=await uidMigrateInk()}catch(e){console.warn('uidMigrateInk',e)}}
@@ -5441,7 +5611,7 @@ async function uidMigrateImport(){
 function uidGuard(){
   if(!uidScan())return 0;
   const c=uidMigrateMem('guard');if(!c||!(c.n||c.v))return 0;
-  c.flush();c.touched.forEach(k=>{const d=SYNC_REF[k].g();if(d)put('kv',k,d)});
+  uidWriteStores(c).catch(e=>console.warn('uidGuard 쓰기',e));   /* ★ recstore — 행으로(옛 줄: c.flush();c.touched.forEach(k=>{…put('kv',k,d)})) */
   console.error('uid 열쇠 — 번호 열쇠로 쓴 칸이 있다(막음 · uid 로 옮김)',c.moved.slice(0,10),c.n+c.v);
   window.__UIDGUARD=(window.__UIDGUARD||0)+c.n+c.v;
   return c.n+c.v}
@@ -5465,24 +5635,26 @@ async function syncRecords(force){
   recBusy=true;recErr='';recPaint();
   try{
     await loadAfix();                 /* ⚠ AFIX 가 null 이면 빈 ansfix 를 올려 원격을 깎는다 */
-    stampAll();
+    await recFlush();                 /* ★ recstore — 메모리에서 아직 안 쓴 칸을 행으로(옛 줄: stampAll()) */
     let sha=await ghSha(REC_PATH);
     let remote=null;
     if(sha){
       const txt=await ghRaw(REC_PATH);
       if(txt){try{remote=JSON.parse(txt)}catch(e){console.warn('원격 기록 파싱 실패',e)}}
-      if(remote){UID_BUSY++;try{const m=await recMerge(remote);recTie+=m.tie||0;try{await recAfterMerge(m)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}finally{UID_BUSY--}}   /* ★ revfix0929 A-2 — 옮김 끝 → 도장 → payload · ★ uid_unify — 병합 도중(번호 칸이 잠깐 들어온다)에는 stampAll 가드가 안 돈다 */
+      if(remote){UID_BUSY++;try{const m=await recMerge(remote);recTie+=m.tie||0;try{await recAfterMerge(m)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}finally{UID_BUSY--}}   /* ★ revfix0929 A-2 — 옮김 끝 → payload · ★ uid_unify — 병합 도중(번호 칸이 잠깐 들어온다)에는 가드가 안 돈다 */
     }
-    stampAll();
-    let res=await ghPutJson(REC_PATH,JSON.stringify(recPayload(remote)),sha);
+    await recPull(null,'sync');       /* ★ recstore — 다른 탭이 쓴 행까지 들인 바탕으로 짓는다(옛 줄: stampAll()) */
+    let payload=jgPushGuard(recPayload(remote),remote,sha);   /* ★ recstore — 원격이 있는데 못 읽었으면 이번엔 안 올림 */
+    let res=await ghPutJson(REC_PATH,JSON.stringify(payload),sha);
     if(res==='conflict'){                                  /* 한 번만 재시도 */
       sha=await ghSha(REC_PATH);
       const txt2=await ghRaw(REC_PATH);
       let remote2=null;
       if(txt2){try{remote2=JSON.parse(txt2)}catch(e){}}
       if(remote2){UID_BUSY++;try{const m2=await recMerge(remote2);recTie+=m2.tie||0;try{await recAfterMerge(m2)}catch(e){console.warn('병합 뒤 화면 갱신 실패',e)}}finally{UID_BUSY--}}
-      stampAll();
-      res=await ghPutJson(REC_PATH,JSON.stringify(recPayload(remote2)),sha);
+      await recPull(null,'sync');
+      payload=jgPushGuard(recPayload(remote2),remote2,sha);
+      res=await ghPutJson(REC_PATH,JSON.stringify(payload),sha);
       if(res==='conflict')throw new Error('두 번 다 충돌');
     }
     lsPut(SMETA_KEY,{lastSync:Date.now(),remoteSha:res});
@@ -5563,17 +5735,20 @@ function recPaint(){
 function recBoot(){
   const c=$('#recChip');if(c)c.onclick=()=>syncRecords(true);
   const e=$('#examChip');if(e)e.onclick=()=>loadExamSettings();
+  recBcOpen();   /* ★ recstore — 탭 사이 칸 알림 받기 */
   recPaint();
-  stampAll();
+  stampAll();    /* ★ recstore — 칩 · uid 가드만(도장은 쓸 때) */
   syncRecords();
   loadExamSettings();
   try{ewmLoad()}catch(e){}   /* ★ exam_wrong_mark — 시험 기록(exam/꼬까.json) 읽기만 · 첫 그리기 뒤 한 번 · 기다리지 않는다 */
-  setInterval(()=>{if(document.visibilityState==='visible'){stampAll();recPaint()}},10000);
+  setInterval(()=>{if(document.visibilityState==='visible'){stampAll()}},10000);   /* ★ recstore — 칩만(옛 줄: stampAll();recPaint() — 도장) */
   setInterval(()=>{if(document.visibilityState==='visible')syncRecords()},180000);
   document.addEventListener('visibilitychange',()=>{
-    if(document.visibilityState==='visible')syncRecords();
-    else stampAll();
+    if(document.visibilityState==='visible'){recPull(null,'vis').catch(()=>{}).then(()=>syncRecords())}   /* ★ recstore — 알림을 놓친 탭(얼림 · 잠듦)은 보일 때 행을 다시 읽어 들인다(쓰지 않음) */
+    else recPaint();   /* 옛 줄: stampAll() */
   });
+  window.addEventListener('focus',()=>{recPull(null,'focus').catch(()=>{})});
+  window.addEventListener('pageshow',e=>{if(e&&e.persisted)recPull(null,'pageshow').catch(()=>{})});
   window.addEventListener('online',recPaint);
   window.addEventListener('offline',recPaint);
 }
@@ -9139,7 +9314,8 @@ if(SHELL&&SUBJ_ID==='phys'){
     catch(e){console.warn('solx load',e);try{recErr='오린 것 통을 못 읽었다 — 동기화에서 뺐다';recPaint()}catch(_){}}})();
   const _rmSolx=recMerge;
   recMerge=function(remote){const before=JSON.stringify(SOLX);const r=_rmSolx.apply(this,arguments);
-    try{if(JSON.stringify(SOLX)!==before){const w=document.getElementById('sh-ans');if(w){w.remove();ansSheet(VNO)}}}catch(e){}
+    const after=()=>{try{if(JSON.stringify(SOLX)!==before){const w=document.getElementById('sh-ans');if(w){w.remove();ansSheet(VNO)}}}catch(e){}};   /* ★ recstore — 병합이 행을 읽은 뒤(비동기) 메모리를 바꾸므로 끝난 뒤에 견준다(옛 줄: 부른 바로 뒤 try{…}) */
+    Promise.resolve(r).then(after,()=>{});
     return r};
 }
 /* 시안 ㉘ (사용자 15:01 「왼쪽 서랍도 터치하면 맨 위」) — 서랍을 만지면 창 띠(70~79) 위 80 · 창을 만지거나 서랍 문항 줄을 눌러 창이 열리면 제자리(59) */
@@ -10615,7 +10791,7 @@ var ggEatNotes=async function(){
     const uid=GGU(r); if(!uid)continue;
     const list=ggOf(uid).slice();
     if(list.some(g=>String(g.t||'').trim()===t)){moved.push(no);continue}   /* 이미 옮겼다 */
-    let ts=Date.now();try{const u=lsObj(U_KEY);if(u['note|'+no])ts=u['note|'+no]}catch(e){}
+    let ts=Date.now();try{const u0=recStamp('note',no);if(u0)ts=u0}catch(e){}   /* ★ recstore — 도장 = 행(옛 줄: lsObj(U_KEY)['note|'+no]) */
     list.push({k:ggNewKey('g_'),i:list.length+1,t:t,ok:null,ts:ts,cs:[],src:'note'});
     GG[uid]=list; moved.push(no);
   }

@@ -124,6 +124,7 @@ class Dev:
         self.pg = self.ctx.new_page(); self.pg.set_default_timeout(150000)
         self.pg.add_init_script(JG.INIT_HU.replace('__SUBJ__', subj))
         self.pg.on('pageerror', lambda e: self.errs.append('page: ' + str(e)[:200]))
+        t_open = int(time.time() * 1000)   # ★ recstore(10/19 · jagwa_recstore_1019 덧 8) — 이 열기 시각(regress 첫 동기화 표지가 이 뒤 도장만 받게)
         self.pg.goto('http://127.0.0.1:%d/app.html' % self.S.port, wait_until='load')
         self.pg.wait_for_function('typeof DATA!=="undefined"&&DATA.length>0', timeout=120000)
         self.pg.evaluate(JG.JS_HU); self.pg.evaluate(JG.SJS); self.pg.evaluate(J9)
@@ -136,7 +137,10 @@ class Dev:
         else:   # regress — 같은 상한의 표지 기다림: __J.ready()(DATA · GG_READY) → 첫 기록 동기화 끝(앱이 적는 SMETA lastSync 도장 · recBusy 거짓 · 못 만나면 gate 와 같은 시간)
             QC.until(self.pg, '()=>__J.ready()', 30000, '__J.ready(DATA · GG_READY)')
             # 옛 줄: QC.until(self.pg, _RG_SYNCED, wait, '첫 기록 동기화 끝(SMETA lastSync · recBusy 거짓)')
-            QC.until(self.pg, _RG_SYNCED, max(wait, 15000), '첫 기록 동기화 끝(SMETA lastSync · recBusy 거짓) · _task_qa_fix1 §A-3 상한 15 초(부하에서 늦는 첫 동기화를 끝까지 · 표지가 오면 바로)')
+            # 옛 줄(상한): QC.until(self.pg, _RG_SYNCED, max(wait, 15000), …)   ★ recstore(10/19 · jagwa_recstore_1019 §A · 결정로그 06:59) — 이 환경 웹킷 행 판 첫 동기화 ≈17 초
+            # 옛 줄(이 열기 앞 도장도 받음): QC.until(self.pg, _RG_SYNCED, max(wait, 40000), '첫 기록 동기화 끝(SMETA lastSync · recBusy 거짓) · _task_qa_fix1 §A-3 상한 15 초(부하에서 늦는 첫 동기화를 끝까지 · 표지가 오면 바로)')
+            QC.until(self.pg, _RG_SYNCED_SINCE % t_open, max(wait, 40000), '첫 기록 동기화 끝(SMETA lastSync · recBusy 거짓) · _task_qa_fix1 §A-3 상한 15 초(부하에서 늦는 첫 동기화를 끝까지 · 표지가 오면 바로)')   # ★ recstore(10/19 · jagwa_recstore_1019 덧 8) — 같은 문맥 두 번째 열기(b5 생물 · b4 생물 · earth_dev 첫 열기)는 첫 열기의 lastSync 가 남아 곧장 참이었음 → 이 열기 뒤 도장
+            QC.until(self.pg, _RG_DATA_IN, 30000, '카드 층 문항 다 읽음(buildData · DATA_V)')   # ★ recstore(10/19 · jagwa_recstore_1019 덧 8) — 카드 층은 시동 때 파일 안 물리 행(577)으로 떴다가 그 과목 문항으로 갈아 끼움 · __J.ready() 는 물리 행으로도 참(탐침: 새 판 웹킷 생물 1.8 초 · 바탕 1.3 초)
         for _ in range(60):   # 기록 맞춤 끝(풀이 GP 가 들어온 뒤)
             if not self.ev("()=>typeof recBusy!=='undefined'&&recBusy"):
                 break
@@ -527,7 +531,12 @@ def sweep(br, eng, app):
         dv, gp = earth_dev(br, eng, app, vp=vp, mobile=mob)
         try:
             if dv.ev("()=>document.body.classList.contains('fold')&&!!document.getElementById('fFoldBtn')"):
-                dv.click('#fFoldBtn')
+                # 옛 줄: dv.click('#fFoldBtn')
+                for _k in range(3 if QC.REGRESS else 1):   # ★ recstore(10/19 · jagwa_recstore_1019 덧 8) — 첫 동기화 끝 직후 목록 다시 그림 → #list 지켜보기(80 ms 뒤 ndResident → tapEat)가 이 누름의 pointerdown 과 click 사이에 끼면 앱 막이(add18 §B-2 · 바탕과 같은 코드)가 접기 click 을 먹어 접힌 채 남음(#qCnt 안 보임 · 누름이 서랍 손잡이에 떨어짐 → 분포 · 누름 칸 빔 · rs1019d 바탕 1 · 새 판 4 · 탐침 1/8) → 펴졌는지 보고 아니면 막이가 풀린 뒤 다시 누름(재는 칸 무변 · gate 는 옛 줄 그대로 한 번)
+                    dv.click('#fFoldBtn')
+                    if not dv.ev("()=>document.body.classList.contains('fold')"):
+                        break
+                    dv.pg.wait_for_function("()=>typeof TAP_EAT==='undefined'||!TAP_EAT||Date.now()>TAP_EAT", timeout=5000)
             dv.ev("()=>__C9.gmode()"); dv.pg.wait_for_timeout(300)
             typeq(dv, W['both']); out[(vn, '근거 검색 결과')] = dv.ev(SWEEPJS, touch)
             # 옛 줄: typeq(dv, ''); dv.click('#qCnt'); out[(vn, '분포')] = dv.ev(SWEEPJS, touch)
@@ -567,6 +576,8 @@ def sweep_cmp(N, Bs):
 
 # ── _task_qa_slim2(10/8) regress 도우미 — 이름이 `_rg` · `_RG` 로 시작하는 것 = gate 에서 안 쓰는 갈래(gate 에서 도는 줄은 원래 글 그대로) ──
 _RG_SYNCED = "()=>{try{return typeof recBusy!=='undefined'&&!recBusy&&((JSON.parse(localStorage.getItem(SMETA_KEY)||'{}')||{}).lastSync||0)>0}catch(e){return false}}"   # 앱 syncRecords 끝 lsPut(SMETA_KEY,{lastSync}) — 새 문맥이라 첫 동기화 전엔 0
+_RG_SYNCED_SINCE = "()=>{try{return typeof recBusy!=='undefined'&&!recBusy&&((JSON.parse(localStorage.getItem(SMETA_KEY)||'{}')||{}).lastSync||0)>=%d}catch(e){return false}}"   # ★ recstore(10/19 · jagwa_recstore_1019 덧 8) — _RG_SYNCED 와 같되 이 열기(%d = 열기 시각 ms) 뒤에 찍힌 lastSync 만
+_RG_DATA_IN = "()=>typeof CARD_LAYER==='undefined'||!CARD_LAYER||(typeof DATA_V!=='undefined'&&DATA_V>0)"   # ★ recstore(10/19 · jagwa_recstore_1019 덧 8) — 앱 표지(DATA_V = buildData 횟수 · 앱 주석 「문항(buildData)을 아직 못 읽었다 — 그때까지 카드 층의 DATA 는 물리 인라인 행」)
 _RG_NOW = {}
 
 

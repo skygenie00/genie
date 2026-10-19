@@ -531,7 +531,7 @@ def sc_main(br, eng, app, stat, recb=None, subj='earth', second=True, prior_old=
         O = {'T0': T0, 'T1': T1, 'put': put1, 'keys': keys, 'stores': dv.ev("k=>__U.stores(k)", keys), 'u': dv.ev("()=>__J.u()"), 'gone': dv.ev("()=>__J.gone()"),
              'screen': dv.ev("()=>__U.screen()"), 'bak': dv.ev("async()=>{const v=await get('kv','bak_uid');return v?JSON.stringify(v):null}"),
              'mig': dv.ev("()=>__J.mig()"), 'cnt': dv.ev("()=>__U.cnt2()"), 'errs': dv.errs[:4], 'cerr': list(dv.cerr)[:4],
-             'shadow': dv.ev("()=>{try{return JSON.parse(localStorage.getItem(SHADOW_KEY)||'{}')}catch(e){return {}}}"),
+             'shadow': dv.ev("()=>__J.shadow()"),   # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 그림자 = 행 판 이 탭 바탕 · 옛 판 localStorage(JG.REC_JS) · 옛 줄: dv.ev("()=>{try{return JSON.parse(localStorage.getItem(SHADOW_KEY)||'{}')}catch(e){return {}}}")
              'idb': dv.ev("k=>__U.idb(k)", [k for k in keys if k in NUMK + STAYK]), 'ink': dv.ev("()=>__U.inkKeys()")}
         if second and raw1:
             dv.load(app, subj, rec={path: raw1.encode('utf-8')}, static=stat)

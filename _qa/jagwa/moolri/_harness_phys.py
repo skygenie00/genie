@@ -13,6 +13,7 @@ while not _os_r.path.isfile(_os_r.path.join(_d_r, '_roots.py')) and _os_r.path.d
     _d_r = _os_r.path.dirname(_d_r)
 _sys_r.path.append(_d_r); import _roots   # noqa: E402
 import _qa_common as QC   # noqa: E402 — _task_qa_slim2 A-1(10/8) · --mode gate|regress|smoke · --snap-in · --snap-out 을 뗀다 · gate = 인자 없음 = 이 판 앞과 같다
+import _qa_jagwa_common as JG   # noqa: E402 — ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) 기록 저장 잣대 한 벌(REC_JS · window.__REC)
 import functools, http.server, os, re, socketserver, subprocess, sys, threading
 
 SRC = _roots.genie(r"jagwa\index.html")   # 9/5 자과 서재 이사(phys → jagwa)
@@ -72,6 +73,7 @@ TESTS = r"""<script>
  async function becomeFreshDevice(){
   ['phys_sync_u','phys_sync_gone','phys_sync_shadow','phys_sync_meta'].forEach(k=>localStorage.removeItem(k));
   ST={};CMT={};QT={};CX={};GP={};TW={};AFIX={};FR={};MPOS={};OPOS={};
+  await __REC.fresh();   /* ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 행 판 = IndexedDB 칸 행 · 옮김 표지 · 통째 값 · 이 탭 바탕도 백지(옛 판 = 위 사이드카 지움과 같음 · JG.REC_JS) */
   for(const k of SYNC_KEYS)await put('kv',k,{});
  }
  const mark=(no,m,t,s)=>{ST[no]=ST[no]||{h:[]};ST[no].h.push({m:m,t:t||Date.now(),s:s||0})};
@@ -127,23 +129,25 @@ TESTS = r"""<script>
    await wait(5);
    delete CMT['10'];await put('kv','note',CMT);   /* A 에서 지운다 */
    stampAll();
-   T('P4-2 묘비가 찍혔다', !!lsObj('phys_sync_gone')['note|10'], lsObj('phys_sync_gone'));
-   T('P4-2 그림자에서도 빠졌다', !('10' in (lsObj('phys_sync_shadow').note||{})), lsObj('phys_sync_shadow').note);
+   T('P4-2 묘비가 찍혔다', !!__REC.gone()['note|10'], __REC.gone());   /* ★ recstore — 묘비 = 행(JG.REC_JS) · 옛 줄: lsObj('phys_sync_gone') 두 곳 */
+   T('P4-2 그림자에서도 빠졌다', !('10' in (__REC.shadow().note||{})), __REC.shadow().note);   /* ★ recstore — 그림자 = 이 탭 바탕 · 옛 줄: lsObj('phys_sync_shadow') 두 곳 */
    await syncRecords(true);
    F=JSON.parse(REPO['phys/기록.json'].text);
    T('P4-3 원격에서도 메모가 빠졌다', !('10' in F.data.note), F.data.note);
    T('P4-3 원격 묘비가 실렸다', !!F.gone['note|10']);
 
    await becomeFreshDevice();                     /* 기기 B — 옛 메모를 들고 있다고 가정 */
-   CMT['10']='메모 하나';await put('kv','note',CMT);
    /* B 의 도장은 「지운 시각」보다 앞이어야 되살아나는지 볼 수 있다 */
+   if(__REC.has()){CMT['10']='메모 하나';await __REC.stamp('note',CMT,{'10':1})}   /* ★ recstore — 행 판 = 행에 옛 도장 1 로(JG.REC_JS) · 옛 판 = 아래 옛 줄 셋 그대로 */
+   else{
+   CMT['10']='메모 하나';await put('kv','note',CMT);
    const uu=lsObj('phys_sync_u');uu['note|10']=1;lsPut('phys_sync_u',uu);
-   const sh=lsObj('phys_sync_shadow');sh.note={'10':'메모 하나'};lsPut('phys_sync_shadow',sh);
+   const sh=lsObj('phys_sync_shadow');sh.note={'10':'메모 하나'};lsPut('phys_sync_shadow',sh);}
    await syncRecords(true);
    T('P4-4 B 의 옛 메모가 되살아나지 않는다', !('10' in CMT), CMT);
    stampAll();
-   T('P4-5 다음 도장이 되레 되살리지 않는다', !('10' in CMT) && !lsObj('phys_sync_u')['note|10'],
-     {CMT:CMT,u:lsObj('phys_sync_u')['note|10']});
+   T('P4-5 다음 도장이 되레 되살리지 않는다', !('10' in CMT) && !__REC.u()['note|10'],   /* ★ recstore — 도장 = 행 · 옛 줄: lsObj('phys_sync_u') 두 곳 */
+     {CMT:CMT,u:__REC.u()['note|10']});
    await syncRecords(true);
    F=JSON.parse(REPO['phys/기록.json'].text);
    T('P4-6 왕복 뒤에도 원격이 깨끗하다', !('10' in F.data.note), F.data.note);
@@ -378,7 +382,8 @@ def main():
     html = html.replace('<script defer src="https://cdnjs', '<script defer data-off="https://cdnjs')
     html = html.replace('<link rel="stylesheet" href="https://cdnjs', '<link rel="off" href="https://cdnjs')
     assert html.rstrip().endswith('</html>')
-    html = html.replace('</body>', (TESTS if not QC.SMOKE else _rg_smoke_tests(TESTS)) + '</body>', 1)   # smoke — 쪽 안 시험 글을 이 자리에서만 잘라 씀
+    # 옛 줄: html = html.replace('</body>', (TESTS if not QC.SMOKE else _rg_smoke_tests(TESTS)) + '</body>', 1)   # smoke — 쪽 안 시험 글을 이 자리에서만 잘라 씀
+    html = html.replace('</body>', '<script>' + JG.REC_JS + '</script>' + (TESTS if not QC.SMOKE else _rg_smoke_tests(TESTS)) + '</body>', 1)   # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 기록 저장 잣대(JG.REC_JS)를 시험 글 앞에 · smoke 자르기 그대로
     open(APP, 'w', encoding='utf-8', newline='').write(html)
 
     # ⚠ IndexedDB 는 file:// 오리진에서 막힌다 — 이 앱은 IndexedDB 가 뿌리라

@@ -111,8 +111,9 @@ SNAP_JS = r"""async q=>{const t=s=>String(s||'').replace(/\s+/g,' ').trim(),c=do
   const e=document.getElementById('q');let es=null;
   if(e&&q){e.value=q;e.dispatchEvent(new Event('input',{bubbles:true}));es=(typeof ES_NOS!=='undefined'&&ES_NOS)?ES_NOS.slice():null}
   let kv=null;try{kv=(await keys('kv')).map(String).sort()}catch(x){kv='ERR '+x}
+  let kvl=null;try{kvl=await new Promise(ok=>{const r=db.transaction('kv','readonly').objectStore('kv').getAll(IDBKeyRange.bound('rec:','rec:'+String.fromCharCode(65535)));r.onsuccess=()=>{const s=new Set();(r.result||[]).forEach(x=>{if(x&&!x.g&&x.v!==undefined)s.add(x.k)});ok([...s].sort())};r.onerror=()=>ok(null)})}catch(x){kvl=null}   /* ★ recstore(10/19 · jagwa_recstore_1019 §A · 결정로그 06:59) — 산 칸 있는 기록 통(행 판 · 옛 판 = 빈 목록) */
   return {data:(typeof DATA!=='undefined')?DATA.length:null,cnt:t(c&&c.textContent),list:(window.__J&&__J.list)?__J.list():null,
-    st:JSON.parse(JSON.stringify(ST)),set:JSON.parse(JSON.stringify(SET)),kv:kv,es:es,
+    st:JSON.parse(JSON.stringify(ST)),set:JSON.parse(JSON.stringify(SET)),kv:kv,kvLive:kvl,es:es,
     stS:await get('kv','status'),setS:await get('kv','set'),probe:await get('kv','dbready_probe'),gone:await get('kv','dbready_gone'),
     lastSync:((JSON.parse(localStorage.getItem(SMETA_KEY)||'{}')||{}).lastSync||0)}}"""
 ERRS_JS = "()=>(window.__err||[]).slice(0,20)"
@@ -252,9 +253,16 @@ class Run:
 def d4vals(v):
     """D4 무변 값(보통 부팅) — 시각 · 기기마다 갈리는 것(lastSync · ink* 열쇠)은 뺌"""
     kv = v.get('kv') if isinstance(v.get('kv'), list) else ['ERR']
+    # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3) — 기록 = kv 통 안 칸 행 'rec:<통>|<칸>' · 통마다 옮김 표지 'recv:<통>'
+    #   행은 그 통 이름으로 셈(옛 판의 통째 값 열쇠 자리) · 표지는 뺌 · 옛 판 = rec: · recv: 0 이라 무변
+    # 옛 줄(고침 2 판): kv = sorted(set(k for k in kv if not str(k).startswith('rec:') and not str(k).startswith('recv:')) | {str(k)[4:].split('|', 1)[0] for k in kv if str(k).startswith('rec:')}) if kv != ['ERR'] else kv
+    live = v.get('kvLive') if isinstance(v.get('kvLive'), list) else None   # ★ recstore(10/19 · jagwa_recstore_1019 §A · 결정로그 06:59) — 산 칸 있는 통만(묘비 행만 있는 통 = 옛 판은 묘비를 localStorage 에 둬 kv 에 없던 것)
+    kv = sorted(set(k for k in kv if not str(k).startswith('rec:') and not str(k).startswith('recv:')) | (set(live) if live is not None else {str(k)[4:].split('|', 1)[0] for k in kv if str(k).startswith('rec:')})) if kv != ['ERR'] else kv
     return {'data': v.get('data'), 'cnt': v.get('cnt'), 'list_n': len(v.get('list') or []), 'list': md5(v.get('list')),
             'st_n': len(v.get('st') or {}), 'st': md5(v.get('st')), 'set': md5(v.get('set')),
-            'kv': [k for k in kv if not k.startswith('ink') and not k.startswith('dbready')], 'es_n': len(v.get('es') or []), 'es': md5(v.get('es'))}
+            # 옛 줄: 'kv': [k for k in kv if not k.startswith('ink') and not k.startswith('dbready')], 'es_n': …
+            # ★ recstore(10/19) — pdfhash(시험지 받기 끝 표지 · 기록 통 아님)도 뺌: 받기가 「찍는 순간」 앞뒤로 끝나는 때 차이(행 판 이 환경 웹킷 첫 동기화 ≈17 초 → 받기가 먼저 끝남 · 웹킷 폰 물리 세 번 다)
+            'kv': [k for k in kv if not k.startswith('ink') and not k.startswith('dbready') and k != 'pdfhash'], 'es_n': len(v.get('es') or []), 'es': md5(v.get('es'))}
 
 
 def judge5(run):

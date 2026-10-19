@@ -569,8 +569,50 @@ INIT_HU = r"""
 """
 
 
+# ★ recstore(2026-10-19 · jagwa_recstore_1019 §A · §B-3 · [채팅] 덧 3 04:1x ②) — 기록 저장 잣대 한 벌(같은 함수 두 벌 금지 · 하네스는 이것만 부른다)
+#   앱에 칸 행이 있으면(recLegacyView) 행 쪽 = 이 탭 바탕 REC_SNAP(쓰기 · 읽기 · 병합마다 행과 같이 바뀜) · IndexedDB rec: 행 ·
+#   없으면(바탕 · 옛 판 앱) 옛 localStorage u/gone/shadow 그대로(바탕 결과 무변).
+#   u() · gone() · shadow() = 읽기 · fresh() = 새 기기(행 · 옮김 표지 · 기록 통 통째 값 · 이 탭 바탕 비움 — 옛 판 = localStorage u/gone/shadow 지움) ·
+#   stamp(k,obj,{칸:u}) = 옛 도장 붙여 저장(행 판만 · recWrite stamp) · seed(k,c,v,u) = 행 하나 심기 · tomb(k,c,g) = 묘비 행 심기 · forget(k,c) = 그 칸 자취(행 · 바탕) 지우기
+#   — stamp · seed · tomb · forget 은 행 판에서만 일함(옛 판 = 0 · 옛 하네스 줄이 그대로 돎)
+REC_JS = r"""(()=>{if(window.__REC)return;
+ const ls=k=>{try{return JSON.parse(localStorage.getItem(k)||'{}')||{}}catch(e){return {}}};
+ const has=()=>typeof recLegacyView==='function'&&typeof REC_SNAP!=='undefined';
+ const HI=String.fromCharCode(65535);
+ const rw=fn=>new Promise(ok=>{let t;try{t=db.transaction('kv','readwrite')}catch(e){ok(0);return}
+   try{fn(t.objectStore('kv'))}catch(e){try{t.abort()}catch(_){}ok(0);return}t.oncomplete=()=>ok(1);t.onerror=t.onabort=()=>ok(0)});
+ window.__REC={
+  has:has,
+  u(){return has()?recLegacyView().u:ls(U_KEY)},
+  gone(){return has()?recLegacyView().gone:ls(GONE_KEY)},
+  shadow(){return has()?recLegacyView().shadow:ls(SHADOW_KEY)},
+  async fresh(){[U_KEY,GONE_KEY,SHADOW_KEY].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});
+   if(!has())return 0;
+   const ok=await rw(s=>{s.delete(IDBKeyRange.bound('rec:','rec:'+HI));s.delete(IDBKeyRange.bound('recv:','recv:'+HI));SYNC_KEYS.forEach(k=>s.delete(k))});
+   Object.keys(REC_SNAP).forEach(k=>{REC_SNAP[k]={}});Object.keys(REC_MIG).forEach(k=>{delete REC_MIG[k]});return ok},
+  async stamp(k,obj,st){if(!has())return 0;return recWrite(k,obj,{stamp:st})},
+  async seed(k,c,v,u){if(!has())return 0;const ok=await recPutRows([{k:k,c:c,v:v,u:u||1,g:0}]);(REC_SNAP[k]=REC_SNAP[k]||{})[c]={j:JSON.stringify(v),u:u||1,g:0};return ok},
+  async tomb(k,c,g){if(!has())return 0;const ok=await recPutRows([{k:k,c:c,u:0,g:g}]);(REC_SNAP[k]=REC_SNAP[k]||{})[c]={j:undefined,u:0,g:g};return ok},
+  async forget(k,c){if(!has())return 0;const ok=await rw(s=>s.delete('rec:'+k+'|'+c));if(REC_SNAP[k])delete REC_SNAP[k][c];return ok}
+ }})();
+"""
+
+
+def freshDevice(page):
+    """새 기기 — 행 판 = IndexedDB rec: 행 · 옮김 표지 · 기록 통 통째 값 · 이 탭 바탕 비움 / 옛 판 = localStorage u/gone/shadow 지움(REC_JS)"""
+    page.evaluate(REC_JS)
+    return page.evaluate("()=>__REC.fresh()")
+
+
+def readStamps(page, k=None):
+    """도장 · 묘비 · 그림자 {u, gone, shadow} — 행 판 = 행(이 탭 바탕) / 옛 판 = localStorage(REC_JS) · k = 'u' | 'gone' | 'shadow' 하나만"""
+    page.evaluate(REC_JS)
+    v = page.evaluate("()=>({u:__REC.u(),gone:__REC.gone(),shadow:__REC.shadow()})")
+    return v if k is None else v.get(k)
+
+
 # ← jagwa/_harness_jagwa_uid.py:93-122 JS · 글자 그대로 · 이름 바꿈 JS→JS_HU
-JS_HU = r"""
+JS_HU = REC_JS + r"""
 window.__J={
  tx:e=>e?String(e.textContent||'').replace(/\s+/g,' ').trim():'',
  vis(e){return !!e&&e.isConnected&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().height>0},
@@ -579,8 +621,9 @@ window.__J={
  lastPut(path){const L=(window.__PUTS||[]).filter(p=>p.path===path);return L.length?L[L.length-1].text:null},
  async sync(){try{await syncRecords(true)}catch(e){return 'ERR '+e}await new Promise(r=>setTimeout(r,400));return (window.__PUTS||[]).length},
  mig(){return window.__JGMIG||0},
- u(){try{return JSON.parse(localStorage.getItem(U_KEY)||'{}')}catch(e){return {}}},
- gone(){try{return JSON.parse(localStorage.getItem(GONE_KEY)||'{}')}catch(e){return {}}},
+ u(){return __REC.u()},   /* ★ recstore — 행 판 = 행 · 옛 판 = 옛 줄: try{return JSON.parse(localStorage.getItem(U_KEY)||'{}')}catch(e){return {}} */
+ gone(){return __REC.gone()},   /* ★ recstore — 옛 줄: try{return JSON.parse(localStorage.getItem(GONE_KEY)||'{}')}catch(e){return {}} */
+ shadow(){return __REC.shadow()},   /* ★ recstore — 그림자(행 판 = 이 탭 바탕 값 · 옛 판 = localStorage SHADOW_KEY) */
  stores(keys){const o={};keys.forEach(k=>{const v=SYNC_REF[k]?SYNC_REF[k].g():undefined;o[k]=v?JSON.parse(JSON.stringify(v)):null});return o},
  rows(){return DATA.map(r=>[r[F.NO],r[F.CODE],r[F.OLDU]||'',typeof codeShow==='function'?codeShow(r):''])},
  list(){return [...document.querySelectorAll('#list .item')].filter(__J.vis).map(d=>({uid:d.dataset.uid||'',num:__J.tx(d.querySelector('.num'))}))},

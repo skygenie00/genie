@@ -60,6 +60,7 @@ if ONLY in ('', 'phys'):
         ctx = br.new_context(viewport={'width': 1100, 'height': 800})
         ctx.route('**/*', JG.route_handler(JG.REMOTE))
         ctx.add_init_script(JG.INIT_PP.replace('__SUBJ__', 'phys').replace('__WHO__', '하네스'))
+        ctx.add_init_script(JG.REC_JS)   # ★ recstore(10/19 · jagwa_recstore_1019 §A · §B · [채팅] 덧 3) — 기록 저장 잣대 한 벌(window.__REC) · 시험 JSON ㉖ 두 칸이 부름
         P = {}
         for row in rows:
             for s in row['screens']:
