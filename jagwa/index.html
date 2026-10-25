@@ -12773,7 +12773,7 @@ function g3Blocks(){
     (s.b||[]).forEach(function(b){
       if(b.t==='br'){flush();return}
       if(b.t==='tb'){flush();cur=(b.rows||[]).map(function(rw){return {t:'p',i:0,x:rw.join(' | ')}});flush();return}
-      if(b.t==='p'&&String(b.x||'').trim())cur.push(b)});
+      if(b.t==='p'&&String(b.x||'').trim())cur.push(b);else if(b.t==='p'&&b.a){if(cur.length){if(!cur.some(function(x){return x.a}))cur[cur.length-1]=Object.assign({},cur[cur.length-1],{a:b.a})}else UB.push({key:'U:^'+b.a,a:b.a,cbk:(Object.keys(CB).find(function(q){return CB[q].i===b.a})||''),sec:String(s.id),st:String(s.t||''),lines:[b],text:''})}});   /* ★ 10/25 사용자 「340 개념·공식 줄 단위 선택 안 돼」 — 볼트 ^id 가 블록 끝 그림 줄(글 없음)에 붙은 블록 = 그 id 를 블록 열쇠로(줄 · 블록 번호 #n 무변 = 옛 근거 열쇠 그대로) · 그림만 있는 블록 = U:^id 블록 하나 더(#n 안 셈) · 못 찾으면 옛 창으로 조용히 가던 26 블록 */
     flush()});
   /* 10/12 사용자 「근거에서 공식·개념 검색할 때 통짜에서 검색되게」 — 찾기 = 통짜 「물리 목차」(THEORY) · 블록 = 절 안 들임 0 줄부터 다음 들임 0 줄 앞까지
      개별 파일 블록과 줄이 반 넘게 같으면 그 열쇠(U:^id)를 그대로 씀 → 이미 넣은 근거 · 개념 잇기(CB) 셈이 그대로 이어짐 · 못 맞춘 개별 파일 블록은 찾기에서만 뺌(옛 근거는 그대로 보임) */
