@@ -898,6 +898,7 @@ table.mdt td,table.mdt th{white-space:normal;vertical-align:top;min-width:40px}t
 .c2r li.c2r-miss>b{font-weight:700;margin-right:4px}
 .c2r table.c2r-st td.c2r-n,.c2r table.c2r-st th.c2r-n{text-align:left}
 .c2r table.c2r-st td.c2r-n>b{font-size:17px;font-weight:800;display:block;margin-bottom:3px}
+.c2r .c2r-real{font-size:13px;font-weight:700;color:#1a7f37;margin:0 0 4px}
 .c2r table.c2r-cmp td{font-size:13px;width:50%}
 .c2r table.c2r-cmp td.c2r-pn{width:80px;white-space:nowrap;color:var(--c2r-dim);font-weight:700}
 .c2r table.c2r-cmp .c2r-h5{font-weight:700;margin:6px 0 2px}
@@ -4846,6 +4847,7 @@ function cha2ReportEl(recs,cur,opt){
  hr.appendChild(E('th','c2r-n','예측점수 ('+F(bpT)+')'));tb.appendChild(hr);
  ppl.forEach(p=>{const tr=A(E('tr'),A(E('td'),E('b','',p),E('span','c2r-src',SRC(Object.values((r0.목차원천||{})[p]||{})[0]))));let pred=0,pany=false,nomok=0;
   recs.forEach(r=>{const td=E('td','c2r-n'+(isCur(r)?' c2r-cur':''));const pv=(r.예측합||{})[p];td.appendChild(E('b','',pv!=null?F(pv):'—'));   /* add1 B-4 — 칸 = 문 예측합 */
+   {const RQ=opt.real?opt.real(p):null,ri=/^\d+$/.test(String(r.번호))?+r.번호-1:-1;if(RQ&&RQ.q&&ri>=0&&RQ.q[ri]!=null)td.appendChild(E('div','c2r-real','실제 '+F(RQ.q[ri])));}   /* 실제시험점수 — exam JSON subj[과목].q(문항 ÷3) */
    if(pv!=null){pred+=pv;pany=true;}
    nomok+=(r.설문||[]).filter(q=>!q.몫).length;
    const miss=(r.누락||{})[p]||{},dap=(r.답틀||{})[p]||{};
@@ -4854,7 +4856,7 @@ function cha2ReportEl(recs,cur,opt){
     td.appendChild(d);});
    if((miss._||[]).length||dap._){const d=E('div','c2r-sl','설문 미배정');const mc=MC(miss._);if(mc)A(d,' ',E('u','','누락('+mc+')'));if(dap._)A(d,' ',E('i','','답틀'));td.appendChild(d);}
    tr.appendChild(td);});
-  const tt=E('td','c2r-n c2r-tot',pany?F(pred):'—');if(nomok)tt.appendChild(E('div','c2r-rg','몫 없음 '+nomok));tr.appendChild(tt);tb.appendChild(tr);});
+  const tt=E('td','c2r-n c2r-tot',pany?F(pred):'—');{const RQ=opt.real?opt.real(p):null;if(RQ&&RQ.score!=null)tt.appendChild(E('div','c2r-real','실제 '+F(RQ.score)))}if(nomok)tt.appendChild(E('div','c2r-rg','몫 없음 '+nomok));tr.appendChild(tt);tb.appendChild(tr);});
  A(S1,A(E('div','c2r-wrap'),tb),E('div','c2r-tags','누락 = 해설 요소 중 안 쓴 것의 수(조 = 조문·이론 · 판 = 판례 · 사 = 사안 포섭이 틀림 — 반대 방향이거나, 결론은 맞는데 근거가 틀린 것 · ? = 갈래 미정) · 답틀 = 결론이 해설과 반대 · 예측점수 = 채점기준 3-3(요소 몫 × 판정 · 천장)'+((r0.문제수&&recs.length<r0.문제수)?' · ⚠ 카드 없는 문제 '+(r0.문제수-recs.length)+'개는 이 표에 없다':'')));
  /* ② 목차 */
  const S2=A(E('section','c2r-sec c2r-toc'),A(E('h2'),E('span','','② 목차'),'해설 목차 — 채점자 · 각자 쓴 목차 그대로 · 나란히'));
@@ -4964,10 +4966,10 @@ function anaGrade2(it,subj,q){const f=(anaIdx().grades||[]).find(x=>x.no===it.no
  const cur=recs.find(r=>{const m=/-(\d+)$/.exec(r.기출||'');return m&&+m[1]===+q});return cur?{recs:recs,cur:cur}:null}
 function anaSum2(r,who){return (r.설문||[]).map(q=>{const es=((r.누락||{})[who]||{})[q.n]||[];const c={};es.forEach(e=>{const k=e.k||'?';c[k]=(c[k]||0)+1});const mc=['조','판','사','?'].filter(k=>c[k]).map(k=>k+c[k]).join('');
  const parts=[];if(((r.답틀||{})[who]||{})[q.n])parts.push('답틀');if(mc)parts.push(mc+' 누락');return`<span>설${esc(String(q.라벨||'').replace(/^설문/,''))} ${esc(parts.join(' · ')||'ok')}</span>`}).join(' | ')}
-function anaReportHTML(it,pk,g2){const k='a2r|'+it.id+'|'+pk;C2R_Q[k]={recs:g2.recs,cur:g2.cur.번호};
+function anaReportHTML(it,pk,g2){const k='a2r|'+it.id+'|'+pk;C2R_Q[k]={recs:g2.recs,cur:g2.cur.번호,no:it.no,subj:pk.replace(/\d$/,'')};
  return`<div class="anaprob"><div class="ttl anapt"><b>${esc(pk)} · 채점결과분석 <span>${esc(g2.cur.원본||'')}</span></b><div class="r"><button class="btn" onclick="anaUI('prob','')">닫기</button></div></div><div class="c2rmount" data-k="${esc(k)}"></div></div>`}
 function c2rMount(root){(root||document).querySelectorAll('.c2rmount').forEach(n=>{const q=C2R_Q[n.dataset.k];if(!q)return;
- n.replaceWith(cha2ReportEl(q.recs,q.cur,{md:t=>{const d=document.createElement('div');d.className='mdv c2r-md';d.innerHTML=mdBlock(String(t||'').split('\n').map(l=>l.replace(/^#{3,6} /,'### ')),{});return d},note:(f,id)=>{const a=document.createElement('a');a.className='c2r-bl';a.href='obsidian://open?vault=PA%27s%20archive&file='+encodeURIComponent(f)+(id?'%23%5E'+encodeURIComponent(id):'');a.target='_blank';a.rel='noopener';a.title=f+(id?'#^'+id:'');a.textContent=f;return a}}))})}
+ n.replaceWith(cha2ReportEl(q.recs,q.cur,{real:q.subj?(p=>{const x=examGet(exId(q.no,2,p));const s=x&&x.subj&&x.subj[q.subj];return s?{q:s.q||null,score:exNum(s.score)}:null}):null,md:t=>{const d=document.createElement('div');d.className='mdv c2r-md';d.innerHTML=mdBlock(String(t||'').split('\n').map(l=>l.replace(/^#{3,6} /,'### ')),{});return d},note:(f,id)=>{const a=document.createElement('a');a.className='c2r-bl';a.href='obsidian://open?vault=PA%27s%20archive&file='+encodeURIComponent(f)+(id?'%23%5E'+encodeURIComponent(id):'');a.target='_blank';a.rel='noopener';a.title=f+(id?'#^'+id:'');a.textContent=f;return a}}))})}
 /* ---- 시험전략 (add3 · 9/6) — 층(1차/2차) 칩 + 과목 칩 · 고정 절 접힘 · 상단 카드 접힘(ui.stratCard) · 절 기억(ui.stratOpen) ---- */
 const ST_SUBJ=/^(산재|물리|생물|지학|화학|민법|민소|특허|상표|디보)/;
 function stratLayers(md){const L=String(md||'').replace(/\r\n/g,'\n').split('\n');const out=[];let cur=null;L.forEach(ln=>{if(/^# /.test(ln)){cur={lines:[ln]};out.push(cur);return}if(!cur){cur={lines:[]};out.push(cur)}cur.lines.push(ln)});
