@@ -3474,9 +3474,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (Math.hypot(e.clientX - dn.x, e.clientY - dn.y) > 8) return;
             const t = e.target;
             if (qiTapSkip(t)) return;
+            const upAt = performance.now();   /* ★ 11/03 (_task_ox_pentap_1103) 사용자 「연결 끊기 되묻는 창이 두 번」 — 진짜 click 이 이 뗌 뒤에 났는지로 가름(자과 「댓글 v52」 upAt 그대로) · 옛 = 타이머가 돈 때 기준 350ms → 누른 일이 무거우면(되묻는 창 · confirm 이 멈춘 동안) 타이머가 늦어 click 을 한 번 더 만듦 */
             setTimeout(() => {                                             /* 진짜 click 을 먼저 기다린다 */
                 const now = performance.now(), last = __qiTapLast.get(t);
-                if (last !== undefined && now - last < 350) return;          /* 이미 났다 — 겹치지 않는다 */
+                if (last !== undefined && (now - last < 350 || last >= upAt)) return;          /* 이미 났다 — 겹치지 않는다 */
                 __qiTapLast.set(t, now);
                 try { t.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, clientX: e.clientX, clientY: e.clientY })); } catch (err) { console.warn(err); }
             }, 60);
