@@ -11535,6 +11535,39 @@ function trGripWire(dr, g, o) {
     addEventListener('resize', () => { const v = parseInt(trLS(TR_W, ''), 10); if (v > 0) trSetW(v); });
     setTimeout(() => { try { trBuild(); trSpy(); } catch (e) { console.warn('[tr]', e); } }, 300);
 })();
+/* ★ 11/03 사용자 「민법앱에서도 자과앱처럼 목차서랍이 밀어서 닫히고 열리게」 — 자과 #navdr 밀기(10/9 시안 v56 · v57) 그대로:
+   접혀 있을 때 = 화면 왼쪽 반에서 시작해 오른쪽으로 60px 넘게(가로 > 세로 × 1.5 · 0.8 초 안) 밀면 펴짐 · 펴 있을 때 = 서랍 안에서 왼쪽으로 60px 넘게 밀면 접힘.
+   안 받는 자리(자과 SKIP 꼴) = 문항 창 등 작은 창(.oxwin) · 손잡이 · 글칸 · 그림판 · 필기(qink) · 교재 자리 고르기 · 그림 확대 · 가로로 굴러가는 줄(칩 줄 등 · 그 줄 밀기와 겹치지 않게) · 첫 화면 히트맵(#hm-canvas · 누르기만 씀)은 밀기 받음.
+   접고 펴기 = trFold(펼침 기억 TR_FOLD 그대로) · 손잡이 누르기 · 끌기 무변 */
+(function trSwipe() {
+    const dr = document.getElementById('tree');
+    if (!dr) return;
+    const SKIP = '.oxwin,#trGrip,input,textarea,select,canvas:not(#hm-canvas),.qink,#qcards.penon,[id^="mbbwrap-"],.mc-zoom';
+    const hScroll = el => { for (let x = el; x && x !== document.body; x = x.parentElement) { if (x.scrollWidth > x.clientWidth + 1) { const o = getComputedStyle(x).overflowX; if (o === 'auto' || o === 'scroll') return true; } } return false; };
+    let s = null;
+    document.addEventListener('touchstart', e => {
+        s = null;
+        if (e.touches.length !== 1) return;
+        const t = e.target, T = e.touches[0];
+        if (dr.classList.contains('fold')) {
+            if (t.closest && t.closest(SKIP)) return;
+            if (T.clientX > window.innerWidth * 0.5) return;
+            if (t.nodeType === 1 && hScroll(t)) return;
+            s = { x: T.clientX, y: T.clientY, open: true, t: Date.now() };
+        } else if (t.closest && t.closest('#tree') && !t.closest('#trGrip')) {
+            s = { x: T.clientX, y: T.clientY, open: false, t: Date.now() };
+        }
+    }, { capture: true, passive: true });
+    document.addEventListener('touchend', e => {
+        if (!s) return;
+        const T = e.changedTouches[0], dx = T.clientX - s.x, dy = T.clientY - s.y, o = s;
+        s = null;
+        if (Date.now() - o.t > 800) return;
+        if (o.open && dx > 60 && Math.abs(dx) > 1.5 * Math.abs(dy)) trFold(false);
+        else if (!o.open && dx < -60 && Math.abs(dx) > 1.5 * Math.abs(dy)) trFold(true);
+    }, { capture: true, passive: true });
+    document.addEventListener('touchcancel', () => { s = null; }, { capture: true, passive: true });
+})();
 </script>
 <script>
 /* ══════════ ★ 2026-09-26 (_task_ox_exview_paper) 기출뷰 = 시험지 · OMR 오지선다 + 시계 · 첫 화면 회독 칩 · 기록 칸 지우기(묘비) · 정리 창 기출 칩 ══════════
