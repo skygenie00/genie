@@ -4167,7 +4167,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                        연결한 근거가 있으면 첫 줄에 `🔗 <uid>` 칩을 미리 붙인다 — ggRefChipsHTML 의 칩과 같은 class · onclick 없음(행 전체가 단추다) */
                     const go = 'openQPopup';
                     /* ★ 09-15 (_task_ox_jeongni_popup §A) — 칩 끝에 쓰임 수(fieldRefChipsHTML) · 근거(m) 상자는 줄바꿈 그대로(whitespace-pre-wrap)·글 전부(220자 자르기 없음) */
-                    const refChips = fieldRefChipsHTML(q.id);
+                    const refChips = `<span data-fieldref="${escAttr(q.id)}" style="display:contents">${fieldRefChipsHTML(q.id)}</span>`;   /* ★ 11/03 _task_ox_csdrag_1103 §B — 걸기 · 끊기 뒤 이 칸만 갈음(ggRefPaintOthers) */
                     const txtBox =
                         `<div class="mt-1 border-l-2 pl-2 py-1 ${GG_BANG_ONLY ? '' : cls} whitespace-pre-wrap" style="white-space:pre-wrap${GG_BANG_ONLY ? ';background:#fff5f5;color:#c94f4f;border-color:#f0a0a0' : ''}">${icon} ${escHtml(String(txt))}</div>`;   /* 인라인 = Tailwind CDN 이 나중에 생긴 클래스를 늦게 만드는 것 대비 */
                     /* ★ 2026-09-22 (_task_ox_claude_answers §C-3) — 평소 = 근거 상자 아래 Claude 상자(직접 답이 있을 때) · 근거 없이 Claude 답만 있는 문항은 근거 상자를 안 그린다
@@ -4561,7 +4561,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (!Array.isArray(cs) || !cs.length) return '<div class="text-[11.5px] text-gray-400 py-1">댓글 없음</div>';
             const del = (gk != null && guid != null);
             return cs.map((c, n) => `<div class="flex gap-1.5 py-1 border-b border-dashed border-gray-100 text-[12px] text-slate-700"${del ? ` data-ck="${escAttr(String(c.k || n))}" data-gk="${escAttr(String(gk))}" data-guid="${escAttr(String(guid))}"` : ''}>
-                <span class="text-[10px] font-bold text-gray-400 whitespace-nowrap pt-0.5">${ggMD(c.ts)}</span>
+                ${del ? '<span class="ggcsdh" title="끌어서 차례 바꾸기"></span>' : ''}                <span class="text-[10px] font-bold text-gray-400 whitespace-nowrap pt-0.5">${ggMD(c.ts)}</span>
                 <span class="whitespace-pre-wrap">${escHtml(c.t || '')}</span>
                 ${c.from ? `<span role="button" title="이 댓글을 단 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(c.from))}')" class="flex-none self-start cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap pt-0.5">${escHtml(String(c.from))}</span>` : ''}
                 ${del ? `<button type="button" onclick="ggCsEdit(this)" title="고치기" aria-label="고치기" class="ml-auto flex-none self-start inline-flex items-center justify-center w-6 h-6 -my-1 rounded-md text-[11px] font-bold text-blue-600 hover:bg-blue-50">✎</button><button type="button" onclick="ggCsDel(this)" title="지우기" aria-label="지우기" class="flex-none self-start inline-flex items-center justify-center w-6 h-6 -my-1 rounded-md text-[11px] font-bold text-red-700 hover:bg-red-50">✕</button>` : ''}
@@ -5049,7 +5049,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 + cs.map((c, n) => {
                     if (!c) return '';
                     const ck = String(c.k || n);
-                    return `<div class="ggrefrow flex flex-wrap items-start gap-x-1.5 gap-y-1 pl-3" data-ck="${a(ck)}" data-gk="${a(g.k)}" data-guid="${a(u)}"><div style="flex:1 1 18rem;min-width:0">${ggCsHTML([c])}</div>${edBtn(ck)}`
+                    return `<div class="ggrefrow flex flex-wrap items-start gap-x-1.5 gap-y-1 pl-3" data-ck="${a(ck)}" data-gk="${a(g.k)}" data-guid="${a(u)}"><span class="ggcsdh" title="끌어서 차례 바꾸기"></span><div style="flex:1 1 18rem;min-width:0">${ggCsHTML([c])}</div>${edBtn(ck)}`
                         + `<button type="button" onclick="ggCsDel(this)" title="지우기" aria-label="지우기" class="flex-none inline-flex items-center justify-center w-6 h-6 -my-1 rounded-md text-[11px] font-bold text-red-700 hover:bg-red-50">✕</button></div>`   /* ★ 11/03 사용자 시안 댓글 「왜 여기서는 댓글 지우기 버튼이 없어?」 — 옛 A-4(9/18 · 연결 상자 댓글 줄 = 지우기 없음)를 걷음 · 지우기 = 원래 근거(u) 댓글 하나 · 옛 ggCsDel 되묻는 창 그대로 */   /* ★ 10/10 ox_fix — ggrefrow(옛: class="flex flex-wrap … pl-3") */
                         + editor(ck, c.t);
                 }).join('')
@@ -5064,6 +5064,63 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const cs = (g && Array.isArray(g.cs)) ? g.cs : [];
             return cs.find(x => x && x.k === ck) || (/^\d+$/.test(String(ck)) ? (cs[+ck] || null) : null);
         }
+        /* ★ 11/03 (_task_ox_csdrag_1103) 사용자 18:30 「여기 댓글들 자과앱에서처럼 드래그로 순서 조정」 — 근거 댓글 줄 왼쪽 세로줄 손잡이(.ggcsdh)를 끌어 차례 바꿈
+           꼴 = 자과 근거 줄 끌기(jagwa g3dh · 10/14 v2: 세로줄 하나 8px · 4px 넘게 움직여야 끌기 · 놓을 자리 위/아래 청록 줄 · 놓은 뒤 따라오는 click 한 번 먹음 · pointer = 마우스 · 손가락)
+           자리 = 원래 근거 판 댓글(gg-cs) · 다른 문항의 「연결한 근거」 상자 댓글(ggrefrow) — 같은 근거(guid · gk)의 댓글끼리만 · 저장 = 그 근거 항목 g.cs 차례만 바꿈(글 · k · ts · from 그대로 · 새 저장 키 0)
+           놓은 뒤 = 떠 있는 원래 근거 판 댓글 칸(범위 셋) · 같은 근거를 연결한 상자(ggRefOwnersRepaint · 펼침 지킴) 바로 */
+        function ggCsMove(uid, gk, cks) {
+            const list = ggOf(uid), g = list.find(x => x && x.k === gk);
+            if (!g || !Array.isArray(g.cs) || g.cs.length < 2) return false;
+            const objs = cks.map(ck => ggCsOf(g, ck)).filter(Boolean);
+            const next = objs.concat(g.cs.filter(c => objs.indexOf(c) < 0));
+            if (next.length !== g.cs.length || next.every((c, n) => c === g.cs[n])) return false;
+            g.cs = next;
+            ggSaveList(uid, list);
+            GG_SCOPES.forEach(s => { const b = document.getElementById(`${s}gg-cs-${uid}-${gk}`); if (b) b.innerHTML = ggCsHTML(g.cs, gk, uid); });
+            ggRefOwnersRepaint(uid);
+            return true;
+        }
+        var GGCS_DRAG = 0;
+        (function () {
+            try { const s = document.createElement('style'); s.textContent = [
+                '.ggcsdh{flex:none;align-self:stretch;width:8px;margin-left:-3px;position:relative;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}',
+                '.ggcsdh::before{content:"";position:absolute;left:3px;top:3px;bottom:3px;width:2px;border-radius:1px;background:#C9CED4}',
+                '.ggcsdrag{opacity:.65;position:relative;z-index:5;background:#fff}',
+                '.ggcsdpb{box-shadow:0 -2px 0 #0d9488}', '.ggcsdpa{box-shadow:0 2px 0 #0d9488}'
+            ].join('\n'); document.head.appendChild(s); } catch (e) { }
+            let D = null;
+            const rowsOf = (row) => { const gk = row.getAttribute('data-gk'), gu = row.getAttribute('data-guid'), p = row.parentElement;
+                return p ? [...p.children].filter(r => r.hasAttribute('data-ck') && r.getAttribute('data-gk') === gk && r.getAttribute('data-guid') === gu) : []; };
+            const clr = (d) => { if (!d) return; d.rows.forEach(r => r.classList.remove('ggcsdpa', 'ggcsdpb')); d.it.classList.remove('ggcsdrag'); d.it.style.transform = ''; };
+            document.addEventListener('pointerdown', e => {
+                const h = e.target.closest && e.target.closest('.ggcsdh'); if (!h || e.button > 0) return;
+                const it = h.closest('[data-ck][data-gk][data-guid]'); if (!it) return;
+                const rows = rowsOf(it); if (rows.length < 2) return;
+                e.preventDefault(); e.stopPropagation(); GGCS_DRAG = Date.now();
+                D = { id: e.pointerId, it, rows, y0: e.clientY, on: false, tgt: null, after: false };
+                try { h.setPointerCapture(e.pointerId); } catch (_) { }
+            }, true);
+            document.addEventListener('pointermove', e => {
+                if (!D || e.pointerId !== D.id) return;
+                if (!D.on) { if (Math.abs(e.clientY - D.y0) < 4) return; D.on = true; D.it.classList.add('ggcsdrag'); }
+                e.preventDefault(); D.it.style.transform = 'translateY(' + (e.clientY - D.y0) + 'px)';
+                let best = null, bd = 1e9;
+                D.rows.forEach(r => { if (r === D.it) return; const b = r.getBoundingClientRect(), d = Math.abs(e.clientY - (b.top + b.bottom) / 2); if (d < bd) { bd = d; best = r; } });
+                D.rows.forEach(r => r.classList.remove('ggcsdpa', 'ggcsdpb')); D.tgt = best;
+                if (best) { const bb = best.getBoundingClientRect(); D.after = e.clientY > (bb.top + bb.bottom) / 2; best.classList.add(D.after ? 'ggcsdpa' : 'ggcsdpb'); }
+            }, true);
+            const end = e => {
+                if (!D || e.pointerId !== D.id) return;
+                const d = D; D = null; clr(d); GGCS_DRAG = Date.now();
+                if (!d.on || !d.tgt || e.type === 'pointercancel') return;
+                const rs = d.rows.filter(r => r !== d.it), ti = rs.indexOf(d.tgt); if (ti < 0) return;
+                rs.splice(d.after ? ti + 1 : ti, 0, d.it);
+                ggCsMove(d.it.getAttribute('data-guid'), d.it.getAttribute('data-gk'), rs.map(r => r.getAttribute('data-ck')));
+            };
+            document.addEventListener('pointerup', end, true);
+            document.addEventListener('pointercancel', end, true);
+            window.addEventListener('click', e => { if (GGCS_DRAG && Date.now() - GGCS_DRAG < 600) { GGCS_DRAG = 0; e.preventDefault(); e.stopImmediatePropagation(); } }, true);   /* 놓은 뒤 따라오는 click 한 번(자과 G3DRAG 그대로) */
+        })();
         function ggRefEdit(uid, u, k, ck, sc = '') {
             const isC = ck !== undefined;
             const eid = `${uid}-${u}-${k}` + (isC ? `-${ck}` : '');
@@ -5176,6 +5233,14 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 panel.classList.add('hide'); panel.classList.remove('gglive');
             }
             ggBoxRefresh(ownerId, sc);          /* ★ 09-15 §B */
+            ggRefPaintOthers(ownerId, sc);
+        }
+        /* ★ 11/03 (_task_ox_csdrag_1103 §B) 사용자 18:35 「Q0594 정리 목록 창에서 팝업으로 띄운 다음 기존 근거 연결 끊고 다른 연결 추가했는데 정리 목록 창에서는 왜 바로 반영 안 돼?」
+           — 까닭(잼): 걸기 · 끊기는 누른 범위(sc)의 칩 · 연결 상자만 다시 그리고(ggRefPaint) 다른 범위는 근거 줄 gg-box 만 갈음(ggBoxRefresh) → 정리 창 행(jn-gg-refchips · jn-reflink-geunge)
+           · 근거 정리 목록 행 칩(fieldRefChipsHTML · 감싼 칸 없음)은 다시 열 때까지 옛 연결(숫자만 useNumRepaint 로 바뀜) → 범위 셋 모두 ggRefPaint(없는 칸은 지나감 · 펼침 지킴) · 목록 행 칩 = data-fieldref 칸 갈음 */
+        function ggRefPaintOthers(ownerId, sc = '') {
+            GG_SCOPES.forEach(s => { if (s !== sc) ggRefPaint(ownerId, s); });
+            document.querySelectorAll(`[data-fieldref="${CSS.escape(String(ownerId))}"]`).forEach(e => { e.innerHTML = fieldRefChipsHTML(ownerId); });
         }
         /* ★ 2026-10-10 ox_del(사용자 08:3x 「더하기」) — 「× 연결 끊기」 단추만 되묻는다: iPad 한 줄 꼴에선 본문 ✎ 바로 윗줄이라
            빗누르면 되묻지 않고 바로 끊겼다 · 끊는 몸 = ggRefDel 그대로 · 쓰임 창 켜고 끄기 길(useUnlink)은 되묻지 않음(무변) */
@@ -5188,6 +5253,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                    refOf(ownerId, 'geunge').filter(x => String(x).toUpperCase() !== String(uid).toUpperCase()));
             ggRefPaint(ownerId, sc);
             ggBoxRefresh(ownerId, sc);          /* ★ 09-15 §B */
+            ggRefPaintOthers(ownerId, sc);
         }
         function ggSearchToggle(uid, sc = '') {
             const b = document.getElementById(`${sc}gg-search-${uid}`);
