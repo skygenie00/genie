@@ -1318,7 +1318,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            **「마스터 엑셀에 자동 반영하지 않는다」** 쪽이 확정된 것이고(2026-08-31 사용자 확인),
            기기 사이에 보이는 것은 별개다. 옛 백업 파일도 이 목록으로 읽히므로 호환이 유지된다. */
         /* ★ 2026-09-22 (_task_ox_claude_answers §E-1) — `ox_cl_fix`(Claude 답 정정 · 내 글이라 기기 사이로 건너간다)를 끝에 더했다. 병합은 칸 단위 규칙 그대로(한 칸 = M 번호 하나). */
-        const SYNC_KEYS = ['ox_q_history', 'ox_q_tags', 'ox_q_memos', 'ox_q_logic', 'ox_q_links', 'ox_q_marks', 'ox_chap_history', 'ox_in_progress', 'ox_q_coords', 'ox_omr_docs', 'ox_q_last', 'ox_q_type', 'ox_weak_stage', 'ox_mem_cards', 'ox_q_fix', 'ox_q_reflinks', 'ox_q_geunge', 'ox_cl_fix', 'ox_rec_gone', 'ox_exam_rounds', 'ox_exam_pick'];   /* ★ 2026-09-26 (_task_ox_exview_paper §E·§B) — 기록 칸 묘비 · 시험지 회독 · 고른 답(시계는 기기별이라 뺌) */
+        const SYNC_KEYS = ['ox_q_history', 'ox_q_tags', 'ox_q_memos', 'ox_q_logic', 'ox_q_links', 'ox_q_marks', 'ox_chap_history', 'ox_in_progress', 'ox_q_coords', 'ox_omr_docs', 'ox_q_last', 'ox_q_type', 'ox_weak_stage', 'ox_mem_cards', 'ox_q_fix', 'ox_q_reflinks', 'ox_q_geunge', 'ox_cl_fix', 'ox_rec_gone', 'ox_exam_rounds', 'ox_exam_pick', 'ox_q_lkwhy'];   /* ★ 11/03 _task_ox_lkwhy_1103 — 연결 이유(칸 = 문항 짝) · ★ 2026-09-26 (_task_ox_exview_paper §E·§B) — 기록 칸 묘비 · 시험지 회독 · 고른 답(시계는 기기별이라 뺌) */
 
         function syncStatus(msg, tone) {
             const el = document.getElementById('sync-status');
@@ -5798,6 +5798,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                             : ''}
                     </div>
                     <div class="text-[12px] text-gray-800">${escHtml(String(q.q)).slice(0, 80)}…</div>
+                    ${(kind === 'mine' || kind === 'back') && lwWhy(id, rid) ? `<div class="lkwhy" style="margin-top:2px;font-size:11px;line-height:16px;color:#3730a3;white-space:pre-wrap;word-break:break-all">${escHtml(lwWhy(id, rid))}</div>` : ''}
                 </button>`;
             }).join('') || `<div class="px-3 py-3 text-[12px] text-gray-500 text-center">연결된 지문이 없습니다</div>`;
             const title = kind === 'same' ? `🔗 같은 판례 지문 (${escHtml(item.panrye)})`
@@ -5812,8 +5813,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 : kind === 'yujeback'
                 ? '이 지문이 유제로 달려 있는 본문 — 누르면 그 자리에서 창으로 열립니다'
                 : kind === 'back'
-                ? '이 문제를 연결해 둔 다른 문제 — 누르면 창으로 열립니다'
-                : '직접 연결해둔 문제 — 누르면 그 자리에서 창으로 열립니다';
+                ? ''   /* ★ 11/03 _task_ox_lkwhy_1103 · 시안 댓글 「나를 연결한 문제 창도 똑같이」 — 안내 줄 걷음 */
+                : '';   /* ★ 11/03 _task_ox_lkwhy_1103 · 시안 댓글 「이 설명 문구 지우고 문제 밑에 작게 연결 이유」 — 「내가 연결한 문제」 창 머리 밑 안내 줄 걷음(빈 글 = oxWinOpen 이 줄을 안 만듦) */
             /* 2026-08-26 — 전면 덮개를 걷고 떠 있는 창으로 바꿨다. 여러 개를 같이 띄울 수 있다 */
             oxWinOpen('rel-' + kind + '-' + id, title, note, rows, 520);
         }
@@ -12515,7 +12516,19 @@ function lwAdd(owner, id) {
     lwSave(owner, lwMine(owner).concat([id]));
     return true;
 }
-function lwDel(owner, id) { const u = String(id).trim().toUpperCase(); lwSave(owner, lwMine(owner).filter(x => String(x).trim().toUpperCase() !== u)); }
+function lwDel(owner, id) { const u = String(id).trim().toUpperCase(); lwSave(owner, lwMine(owner).filter(x => String(x).trim().toUpperCase() !== u)); if (!lwHas(id, owner)) lwWhySet(owner, id, ''); }
+/* ★ 11/03 (_task_ox_lkwhy_1103 · 시안 「민법OX 연결 창(115번 Q1069)」 v5) — 연결 이유: 연결 창 걸린 연결 줄 「연」 → 적는 칸 · 「내가 / 나를 연결한 문제」 창 문제 밑 작게
+   저장 = 새 키 ox_q_lkwhy(SYNC_KEYS · 칸 단위 병합 · 묘비 그대로) { "<문항>~<문항>"(대문자 · 차례 정렬): { t, ts } } — 자과 lkwKey('L|' + 두 uid 정렬 · tfix 'w') 와 같은 짝 열쇠(어느 쪽에서 걸어도 한 이유)
+   연결을 풀어 양쪽 다 안 걸렸으면 그 이유도 지움 */
+function lwWhyKey(a, b) { return [String(a).trim().toUpperCase(), String(b).trim().toUpperCase()].sort().join('~'); }
+function lwWhyAll() { try { return JSON.parse(localStorage.getItem('ox_q_lkwhy') || '{}') || {}; } catch (e) { return {}; } }
+function lwWhy(a, b) { const r = lwWhyAll()[lwWhyKey(a, b)]; return r && r.t ? String(r.t) : ''; }
+function lwWhySet(a, b, t) {
+    const all = lwWhyAll(), k = lwWhyKey(a, b), s = String(t || '').trim();
+    if (s) { if (all[k] && all[k].t === s) return; all[k] = { t: s, ts: Date.now() }; } else { if (!(k in all)) return; delete all[k]; }
+    localStorage.setItem('ox_q_lkwhy', JSON.stringify(all));
+    try { linkChipsRepaint(); } catch (e) { }   /* 떠 있는 「내가 / 나를 연결한 문제」 창도 새 이유로(같은 자리) */
+}
 /* 줄 하나 — 민법 linkSearch 줄 꼴(ID 칩 · N번 · 과목·단원 · 본문 앞 70자) · 번호 = 점선 밑줄(누르면 문제 창) */
 function lwNo(q) { return `${q.displayNo ?? q.probNum}${q.subNum || ''}번`; }
 function lwRowEl(q, owner, cur, onPick) {
@@ -12587,13 +12600,12 @@ function lwOpen(owner, ev) {
         const x = head.querySelector(':scope > button'); if (x) { x.textContent = '✕'; x.title = '닫기'; x.className = 'cfx'; x.style.cssText = ''; }
     }
     const body = w.querySelector('.cfbd');
-    body.appendChild(lwEl('div', 'cflb', '🔗 연결할 문제 찾기 — 번호 · 본문 · 출처 · 단원'));
+    /* ★ 11/03 _task_ox_lkwhy_1103(사용자 시안 댓글 「이런 설명 문구 없어도 돼 · 맨 밑 『결과를 누르면…』 문구도 지워」) — 머리 안내 줄(cflb) · 바닥 안내 줄(cfft) 걷음 · 찾기 칸 안 글(placeholder) 그대로 */
     const inp = lwEl('input', 'cfq'); inp.type = 'text'; inp.setAttribute('autocomplete', 'off');
     inp.placeholder = '🔍 찾아서 넣기 — 번호·본문·출처로 검색 (예: 취소, 31, 2015)';
     body.appendChild(inp);
     const rs = lwEl('div', 'cfrs'); rs.hidden = true; body.appendChild(rs);
     const cur = lwEl('div', 'cfcurw'); body.appendChild(cur);
-    body.appendChild(lwEl('div', 'cfft', '결과를 누르면 바로 연결된다(저장 단추 없음) · ✕ = 연결 풀기'));
     const paintCur = () => {
         cur.innerHTML = '';
         const my = lwMine(owner);
@@ -12603,10 +12615,25 @@ function lwOpen(owner, ev) {
         my.forEach(id => {
             const line = lwEl('div', 'cfcr');
             const q = quizData.find(x => String(x.id).trim().toUpperCase() === String(id).trim().toUpperCase());
-            line.appendChild(q ? lwRowEl(q, owner, true) : lwRowEl({ id: id, q: '지금 불러온 데이터에 없는 문항', subject: '', subChapter: '' }, owner, true));
+            const row = q ? lwRowEl(q, owner, true) : lwRowEl({ id: id, q: '지금 불러온 데이터에 없는 문항', subject: '', subChapter: '' }, owner, true);
+            line.appendChild(row);
+            /* ★ 11/03 _task_ox_lkwhy_1103 · 시안 댓글 「그냥 X 로만 · 윗줄로 · 『연』 글자 단추 → 연결 이유 칸」 — 윗줄(ID · 번호 줄) 오른쪽 끝 = 연 · ✕(글자만) · 이유 = 본문 줄 밑 */
+            const why = lwWhy(owner, id), acts = lwEl('span', 'cfact');
+            const yb = lwEl('button', 'cfyb' + (why ? ' on' : ''), '연'); yb.type = 'button'; yb.title = why ? '연결 이유 고치기' : '연결 이유 적기';
             const xx = lwEl('button', 'cfxx', '✕'); xx.type = 'button'; xx.title = '연결 풀기';
             xx.onclick = e2 => { e2.stopPropagation(); lwDel(owner, id); paintCur(); paintFind(); };
-            line.appendChild(xx);
+            acts.appendChild(yb); acts.appendChild(xx);
+            row.querySelector('.cfl1').appendChild(acts);
+            if (why) row.appendChild(lwEl('div', 'cfwy', why));
+            const wr = lwEl('div', 'cfwr'); wr.hidden = true;
+            const wi = lwEl('input', 'cfwi'); wi.type = 'text'; wi.maxLength = 300; wi.value = why; wi.setAttribute('autocomplete', 'off');
+            wi.placeholder = '연결 이유 — Enter 로 넣기 · 비우고 넣으면 지움';
+            const wb = lwEl('button', 'cfwb', '넣기'); wb.type = 'button';
+            const go = () => { lwWhySet(owner, id, wi.value); paintCur(); };
+            wi.onkeydown = e3 => { if (e3.key === 'Enter' && !e3.isComposing) { e3.preventDefault(); go(); } else if (e3.key === 'Escape') wr.hidden = true; };
+            wb.onclick = e3 => { e3.stopPropagation(); go(); };
+            yb.onclick = e3 => { e3.stopPropagation(); wr.hidden = !wr.hidden; if (!wr.hidden) { try { wi.focus(); } catch (e4) { } } lwFit(w); };
+            wr.appendChild(wi); wr.appendChild(wb); row.appendChild(wr);
             bx.appendChild(line);
         });
         lwFit(w);
@@ -12663,7 +12690,15 @@ function lwOpen(owner, ev) {
     '#oxwin-lk .cfcl{font-size:12px;font-weight:800;color:#374151;margin:10px 0 4px}',
     '#oxwin-lk .cfcur{background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}',
     '#oxwin-lk .cfcr{display:flex;align-items:center;gap:6px;border-bottom:1px solid #f3f4f6}',
-    '#oxwin-lk .cfxx{flex:none;margin-right:6px;padding:2px 9px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font:700 12px system-ui,"Malgun Gothic",sans-serif;cursor:pointer}',
+    '#oxwin-lk .cfact{margin-left:auto;display:inline-flex;align-items:center;gap:2px;margin-top:-5px;margin-bottom:-5px}',
+    '#oxwin-lk .cfyb,#oxwin-lk .cfxx{flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border:0;border-radius:6px;background:none;font:800 11px system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;cursor:pointer}',
+    '#oxwin-lk .cfyb{color:#94a3b8}', '#oxwin-lk .cfyb.on{color:#1d4ed8}', '#oxwin-lk .cfxx{color:#6b7280;font-weight:700}',
+    '#oxwin-lk .cfyb:hover,#oxwin-lk .cfxx:hover{background:#eff6ff}',
+    '#oxwin-lk .cfwy{margin-top:3px;font-size:11.5px;line-height:17px;color:#3730a3;white-space:pre-wrap;word-break:break-all}',
+    '#oxwin-lk .cfwr{display:flex;gap:4px;margin-top:4px}', '#oxwin-lk .cfwr[hidden]{display:none}',
+    '#oxwin-lk .cfwi{flex:1;min-width:0;box-sizing:border-box;padding:5px 8px;border:1px solid #c7d2fe;border-radius:6px;background:#fff;font:12.5px "Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#000;outline:none}',
+    '#oxwin-lk .cfwi:focus{border-color:#6366f1}',
+    '#oxwin-lk .cfwb{flex:none;padding:0 9px;border:1px solid #c7d2fe;border-radius:6px;background:#eef2ff;color:#3730a3;font:700 11.5px system-ui,"Malgun Gothic",sans-serif;cursor:pointer}',
     '#oxwin-lk .cfft{margin-top:7px;font-size:10.5px;color:#9ca3af}',
     /* 문항 팝업 「↪ 이동」 = 글자만 */
     'button.qpgo{background:none !important;border:0 !important;padding:0 !important;color:#1d4ed8 !important;font-size:12px !important;font-weight:700 !important;cursor:pointer}'
