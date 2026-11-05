@@ -137,7 +137,8 @@
            (맨 아래까지 내려 sticky 가 풀려야만 눌렸다 — 사용자 보고 9/21). 알약·단추만 누름을 받게 되돌린다. */
         #reopen-grade-bar,#exam-prev-bar,#controls-container{pointer-events:none}
         #reopen-grade-bar>*,#exam-prev-bar>*,#controls-container>*{pointer-events:auto}
-    </style>
+    .ggrefrow.ggme{outline:1.5px solid #3b82f6;outline-offset:1px;border-radius:6px;background:#fff}   /* ★ 11/05 사용자 「문제 창에서 이 문제의 댓글은 테두리 쳐서」 — 연결한 근거 상자에서 이 문항이 단 댓글(from = 이 문항) */
+</style>
     <style id="exv-css">
 /* ★ 2026-09-26 (_task_ox_exview_paper) 기출뷰 = 시험지 · OMR 시계 · 첫 화면 회독 상자 · 기록 칸 · 정리 창 — Tailwind 임의 클래스(text-[..]) 대신 여기 고정 CSS(CDN 이 새 자리 소수 크기를 늦게 만든다) */
 .exv-paper .exv-q{background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:14px 14px 10px;margin:0 0 12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
@@ -4564,7 +4565,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             return cs.map((c, n) => `<div class="flex gap-1.5 py-1 border-b border-dashed border-gray-100 text-[12px] text-slate-700"${del ? ` data-ck="${escAttr(String(c.k || n))}" data-gk="${escAttr(String(gk))}" data-guid="${escAttr(String(guid))}"` : ''}>
                 ${del ? '<span class="ggcsdh" title="끌어서 차례 바꾸기"></span>' : ''}                <span class="text-[10px] font-bold text-gray-400 whitespace-nowrap pt-0.5">${ggMD(c.ts)}</span>
                 <span class="whitespace-pre-wrap">${escHtml(c.t || '')}</span>
-                ${c.from ? `<span role="button" title="이 댓글을 단 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(c.from))}')" class="flex-none self-start cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap pt-0.5">${escHtml(String(c.from))}</span>` : ''}
+                ${c.from ? `<span role="button" title="이 댓글을 단 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(c.from))}')" class="flex-none self-start cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap pt-0.5">${escHtml(String(c.from))}</span>` : ''}${Array.isArray(c.sh) ? c.sh.map(s => `<span role="button" title="이 댓글을 같이 쓰는 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(s))}')" class="ggshid flex-none self-start cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap pt-0.5">${escHtml(String(s))}</span>`).join('') : ''}
                 ${del ? `<button type="button" onclick="ggCsEdit(this)" title="고치기" aria-label="고치기" class="ml-auto flex-none self-start inline-flex items-center justify-center w-6 h-6 -my-1 rounded-md text-[11px] font-bold text-blue-600 hover:bg-blue-50">✎</button><button type="button" onclick="ggCsDel(this)" title="지우기" aria-label="지우기" class="flex-none self-start inline-flex items-center justify-center w-6 h-6 -my-1 rounded-md text-[11px] font-bold text-red-700 hover:bg-red-50">✕</button>` : ''}
             </div>`).join('');
         }
@@ -5050,7 +5051,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 + cs.map((c, n) => {
                     if (!c) return '';
                     const ck = String(c.k || n);
-                    return `<div class="ggrefrow flex flex-wrap items-start gap-x-1.5 gap-y-1 pl-3" data-ck="${a(ck)}" data-gk="${a(g.k)}" data-guid="${a(u)}"><span class="ggcsdh" title="끌어서 차례 바꾸기"></span><div style="flex:1 1 18rem;min-width:0">${ggCsHTML([c])}</div>${edBtn(ck)}`
+                    return `<div class="ggrefrow${(String(c.from || '') === String(uid) || (Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0)) ? ' ggme' : ''} flex flex-wrap items-start gap-x-1.5 gap-y-1 pl-3" data-ck="${a(ck)}" data-gk="${a(g.k)}" data-guid="${a(u)}"${(String(c.from || '') === String(uid) || (Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0)) ? ' title="이 문제에서 단 · 같이 쓰는 댓글"' : ''}><span class="ggcsdh" title="끌어서 차례 바꾸기"></span><div style="flex:1 1 18rem;min-width:0">${ggCsHTML([c])}</div>${String(c.from || '') !== String(uid) ? `<button type="button" onclick="ggCsShare(${arg(ck)})" title="${(Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0) ? '이 문항과 같이 쓰기 그만' : '이 댓글을 이 문항에서도 같이 쓰기(이 문항 ID 더함)'}" class="ggcsh flex-none inline-flex items-center justify-center w-6 h-6 -my-1 rounded-md text-[13px] font-extrabold text-teal-700 hover:bg-teal-50">${(Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0) ? '−' : '+'}</button>` : ''}${edBtn(ck)}`
                         + `<button type="button" onclick="ggCsDel(this)" title="지우기" aria-label="지우기" class="flex-none inline-flex items-center justify-center w-6 h-6 -my-1 rounded-md text-[11px] font-bold text-red-700 hover:bg-red-50">✕</button></div>`   /* ★ 11/03 사용자 시안 댓글 「왜 여기서는 댓글 지우기 버튼이 없어?」 — 옛 A-4(9/18 · 연결 상자 댓글 줄 = 지우기 없음)를 걷음 · 지우기 = 원래 근거(u) 댓글 하나 · 옛 ggCsDel 되묻는 창 그대로 */   /* ★ 10/10 ox_fix — ggrefrow(옛: class="flex flex-wrap … pl-3") */
                         + editor(ck, c.t);
                 }).join('')
@@ -5165,6 +5166,19 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             ggRefOwnersRepaint(u);              /* 같은 근거를 연결한 문항 상자(이 상자 포함 · 펼침 지킴) */
             const box = document.getElementById(`${sc}refgg-cm-${id}`); if (box) box.classList.remove('hide');
             const ni = document.getElementById(`${sc}refgg-cin-${id}`); if (ni) { ni.value = ''; ggFit(ni); ni.focus(); }
+        }
+        /* ★ 11/05 사용자 「+ 버튼 둬서 다른 문제에서 댓글도 공유 · 누르면 댓글에 그 문제 uid 추가 · 그 문제에서도 이 댓글 단 것처럼 같은 작동」 — 연결 상자 댓글 줄(다른 문항이 단 것) 「+」 = 그 댓글 c.sh 에 이 문항(uid) 더함 · 「−」 = 뺌
+           더한 문항 = 단 문항(from)과 같게 봄: 문항 창 테두리 · 정리 창 줄 밑 「↳ 🔗」 · 댓글 끝 ID 칩. 저장 = 원래 근거(u) 목록(ggSaveList) · 다시 그림 = ggRefReply 와 같은 길 */
+        function ggCsShare(uid, u, k, ck, sc = '') {
+            const list = ggOf(u), g = list.find(x => x && x.k === k), c = g ? ggCsOf(g, ck) : null;
+            if (!c || String(c.from || '') === String(uid)) return;
+            const sh = Array.isArray(c.sh) ? c.sh.slice() : [], i = sh.indexOf(String(uid));
+            if (i >= 0) sh.splice(i, 1); else sh.push(String(uid));
+            if (sh.length) c.sh = sh; else delete c.sh;
+            ggSaveList(u, list);
+            GG_SCOPES.forEach(s => { const b = document.getElementById(`${s}gg-cs-${u}-${k}`); if (b) b.innerHTML = ggCsHTML(g.cs, k, u); });
+            ggRefOwnersRepaint(u);
+            document.querySelectorAll('[data-jngg]').forEach(x => { const id = x.getAttribute('data-jngg'); const h = jnGgHTML(id); if (h) x.outerHTML = h; });
         }
         function ggRefEditKey(e, uid, u, k, ck, sc = '') { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ggRefEditSave(uid, u, k, ck, sc); } }
         function ggRefEditSave(uid, u, k, ck, sc = '') {
@@ -11153,6 +11167,19 @@ function jnRecHTML(uid) {
         + `<div class="flex items-center gap-0.5">${bottom}</div></div>`
         + `</div>`;
 }
+/* ★ 11/05 사용자 「민법앱에서도 지학 파트처럼 정리 목록 창에서 근거에 댓글 단 것도 그 문제에서 보이게」 — 옛 근거 글 상자(🔗 1. … 2. …) 그대로 · 근거 줄마다 그 밑에 댓글(↳ 글 · 다른 문항에서 단 것 = 끝에 그 문항 ID)
+   + 이 문항에서 연결한 근거(refOf geunge)에 단 댓글(from = 이 문항)도 「↳ 🔗연결 문항 ID 글」 로 · 댓글 ! = 왼쪽 빨간 세로줄 · 저장 · 글 무변(보이는 자리만) */
+function jnGgHTML(id, txt) {
+    const ok = c => c && String(c.t || '').trim();
+    const fromChip = f => f ? ` <span role="button" title="이 댓글을 단 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(f))}')" class="cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2">${escHtml(String(f))}</span>` : '';
+    const line = (c, pre) => `<div class="jncs pl-3 text-[11.5px] leading-snug text-slate-600" style="white-space:pre-wrap${c.bang ? ';box-shadow:inset 2px 0 0 #dc2626' : ''}">↳ ${pre || ''}${escHtml(String(c.t))}${pre ? '' : fromChip(c.from)}</div>`;
+    const own = ggOf(id).filter(g => g && String(g.t || '').trim());
+    const h = own.map((g, n) => `<div>${n ? '' : '🔗 '}${g.i ? g.i + '. ' : ''}${escHtml(String(g.t || ''))}</div>` + (Array.isArray(g.cs) ? g.cs.filter(ok).map(c => line(c)).join('') : '')).join('');
+    const lk = (refOf(id, 'geunge') || []).map(u => ggOf(u).filter(Boolean).map(g => (Array.isArray(g.cs) ? g.cs : []).filter(c => ok(c) && (String(c.from) === String(id) || (Array.isArray(c.sh) && c.sh.indexOf(String(id)) >= 0)))
+        .map(c => line(c, `<span role="button" title="연결한 근거의 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(u)}','${escAttr(id)}')" class="cursor-pointer font-bold text-blue-600">🔗${escHtml(u)}</span> `)).join('')).join('')).join('');
+    if (!h && !lk) return '';
+    return `<div data-jngg="${escHtml(id)}" class="mt-1 border-l-2 pl-2 py-1 text-[12px] leading-relaxed text-blue-900 bg-blue-50 border-blue-400 whitespace-pre-wrap" style="white-space:pre-wrap">${h}${lk}</div>`;
+}
 function jnRowHTML(q) {
     const id = q.id;
     let tg = {};
@@ -11178,7 +11205,7 @@ function jnRowHTML(q) {
         + `<span class="ml-auto">${jnRecHTML(id)}</span>`
         + `</div>`
         + `<div class="mt-1 text-[12.5px] leading-relaxed text-gray-800" style="font-size:12.5px"${qAttr}>${qHTML}</div>`
-        + (txt ? `<div class="mt-1 border-l-2 pl-2 py-1 text-[12px] leading-relaxed text-blue-900 bg-blue-50 border-blue-400 whitespace-pre-wrap" style="white-space:pre-wrap">🔗 ${escHtml(String(txt))}</div>` : '')
+        + jnGgHTML(id, txt)   /* ★ 11/05 사용자 「민법도 지학처럼 정리 목록 창에서 근거에 댓글 단 것도 그 문제에서」 */
         + `<div id="jn-reflink-geunge-${escHtml(id)}">${ggRefBoxHTML(id, 'jn-')}</div>`   /* ★ 09-15 §E — 내 근거 상자 바로 아래(없으면 지문 아래) · 처음 접힘 */
         + `<button type="button" onclick="event.stopPropagation();jnAnsToggle(this)" class="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded px-2 py-0.5 mt-1">정답·해설 ▸</button>`
         + clChipHTML(id)   /* ★ 2026-09-22 (_task_ox_claude_answers §D) — 「정답·해설 ▸」 바로 뒤 · 답 없는 행은 안 그린다 */
