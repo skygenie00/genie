@@ -6881,7 +6881,7 @@ var VSEEN=0;
 var CHOX=CARD_LAYER;
 var chHasQ=(no,hh,i)=>{const e=hh[i],q=o=>!!o&&Object.keys(o).some(k=>k!=='_v'&&o[k]==='Q');if(!e)return false;if(q(e.b))return true;if(i!==hh.length-1)return false;
   const r=rec(no),bg=r?BG[r[F.CODE]]:null;return !!bg&&(+bg._v||0)<=(+e.t||0)&&q(bg)};
-var jmHasCm=(r,k)=>{const uid=GGU(r);return ggOf(uid).some(g=>{if(!g)return false;const s=ggSrcOf(g),own=(Array.isArray(g.cs)?g.cs:[]),oc=s&&Array.isArray(s.cs)?s.cs.filter(c=>c&&String(c.from)===String(uid)):[];return own.concat(oc).some(c=>c&&c.jm===k)})};
+var jmHasCm=(r,k)=>{const uid=GGU(r);return ggOf(uid).some(g=>{if(!g)return false;const s=ggSrcOf(g),own=(Array.isArray(g.cs)?g.cs:[]).filter(c=>c&&(!c.from||String(c.from)===String(uid))),oc=s&&Array.isArray(s.cs)?s.cs.filter(c=>c&&String(c.from)===String(uid)):[];return own.concat(oc).some(c=>c&&c.jm===k)})};
 var jmDotHTML=(r,k)=>jmHasCm(r,k)?'<button type="button" class="jmdot on" title="이 지문에 단 근거 댓글 있음 · 누르면 더 달기">댓</button>':'<button type="button" class="jmdot" title="이 지문을 근거 댓글로">•</button>';   /* ★ 11/05 사용자 「댓글 단 지문은 오른쪽 점이 『댓』 글자로」 */
 pickChoice=async function(k){
   const r=rec(VNO);if(!r)return;
@@ -13579,7 +13579,7 @@ async function g3JmSave(uid,gk,k,jt,t){var list=ggOf(uid).slice(),g=list.find(fu
 function g3JmBox(row,dot){var o=row.nextElementSibling;if(o&&o.classList.contains('jmbox')){o.remove();return}document.querySelectorAll('#card .jmbox').forEach(function(x){x.remove()});
   var r=rec(VNO);if(!r)return;var uid=GGU(r),k=String(row.getAttribute('data-k')||''),jt=/^c[0-9]+$/.test(k)?((CIRC[+k.slice(1)-1]||k)+' '+txtOf(r[F.CODE],k)):(k+'. '+txtOf(r[F.CODE],'b'+k));
   var L=ggOf(uid).filter(Boolean),b=document.createElement('div');b.className='jmbox';b.setAttribute('data-jmk',k);
-  var jmc=function(g){var s=ggSrcOf(g),cs=s?(Array.isArray(s.cs)?s.cs:[]).filter(function(c){return c&&String(c.from)===String(uid)}):(Array.isArray(g.cs)?g.cs:[]);return cs.filter(function(c){return c&&c.jm===k}).map(function(c){return '<div class="jmc">↳ '+esc(c.t)+(c.jo?' <b class="ggjo '+c.jo+'">'+c.jo+'</b>':'')+'</div>'}).join('')};   /* ★ 11/05 사용자 「댓글 단 뒤 다시 『댓』 누르면 고른 근거 밑에 댓글 단 것도」 */
+  var jmc=function(g){var s=ggSrcOf(g),cs=s?(Array.isArray(s.cs)?s.cs:[]).filter(function(c){return c&&String(c.from)===String(uid)}):(Array.isArray(g.cs)?g.cs:[]).filter(function(c){return c&&(!c.from||String(c.from)===String(uid))});return cs.filter(function(c){return c&&c.jm===k}).map(function(c){return '<div class="jmc">↳ '+esc(c.t)+(c.jo?' <b class="ggjo '+c.jo+'">'+c.jo+'</b>':'')+'</div>'}).join('')};   /* ★ 11/05 사용자 「댓글 단 뒤 다시 『댓』 누르면 고른 근거 밑에 댓글 단 것도」 */
   b.innerHTML=L.length?L.map(function(g){return '<div class="jmi" role="button" data-jmg="'+ea(g.k)+'">'+esc(String(ggFlat(g)||'').split('\n')[0])+'</div>'+jmc(g)}).join('')+'<textarea rows="1" class="jmin" placeholder="근거를 고르고 댓글 — Enter 저장 · Shift+Enter 줄바꿈"></textarea>':'<div class="jm0">이 문항에 적은 근거가 없다 — 근거를 먼저 적는다</div>';
   row.after(b);
   var ta=b.querySelector('.jmin');
