@@ -193,9 +193,7 @@ def d1():
         # A-6(d) 9/30 — 「바뀐 줄」(인도 검산)만 새 쪽 = p8sol 인도 커밋 6073142 · 재료 표 = 인도 때 판(N: 저장소 e51d8d9 · 지금 파일은 revfix0929 6c67b58 이 320→304 로) — 뒤 판 revfix0928night A-9 병합 67 · revfix0929 A-1 16 줄이 지금 원장을 바꿈. 위 chg(「ox 무변」)·bn(「판8.s7」·표본)은 지금 데이터 그대로
         import subprocess
         new_d = jl(M.git('show', '6073142:jo/data/jimun_7pan.json'))
-        # 옛 줄(11/03 ngit_off ㉠ 로 걷음 — N: git claude-git 없앰):
-        # src_d = jl(subprocess.run(['git', '--git-dir=' + os.path.join(os.path.dirname(_roots.n_root() or ''), 'claude-git'), 'show', 'e51d8d9:jopangi/특상디/_p8up/_p8sol.json'], capture_output=True).stdout)
-        src_d = jl(open(os.path.join(_roots.n_root() or '', 'jopangi', 'task', '_fixed', '_p8sol_e51d8d9.json'), 'rb').read())   # ★ 11/03 ngit_off ㉠ — 인도 때 재료 표 = 고정 파일(옛 N: git e51d8d9 블롭 그대로 · md5 60c69fdd)
+        src_d = jl(subprocess.run(['git', '--git-dir=' + os.path.join(os.path.dirname(_roots.n_root() or ''), 'claude-git'), 'show', 'e51d8d9:jopangi/특상디/_p8up/_p8sol.json'], capture_output=True).stdout)
         bn_d = {z['id']: z for z in new_d['지문']}
         want_d = {i for i, v in src_d['rows'].items() if v['cat'] in ('명칭만', '바뀜', '잘림')} | {i for i, v in src_d['new'].items() if v['sol8'] and not v['유제']}
         chg_d, extra_d, badkey_d = set(), [], []

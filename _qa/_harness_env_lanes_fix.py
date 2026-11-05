@@ -331,9 +331,6 @@ def b4():
 
 # ══════════ B-6 N: git 에 남기기(A-6) ══════════
 def b6():
-    # ★ 11/03 ngit_off ㉠ — N: git(claude-git) 없앰 → B-6(N: git 추적) 건넘 · 옛 몸은 아래 그대로(돌지 않음 · 지우기 0)
-    N('B-6', 'N: git 에 남기기(A-6) — 건넘(N: git 없음 · 11/03 ngit_off)', '')
-    return
     GIT = ['git', '-c', 'core.excludesFile=N:/개인/claude/gitignore', '-c', 'core.quotepath=false', '--git-dir=N:/개인/claude-git', '--work-tree=N:/개인/claude']
     tracked = set(subprocess.run(GIT + ['ls-files'], capture_output=True).stdout.decode('utf-8').split('\n'))
     want = [l.strip() for l in open(os.path.join(os.path.dirname(ORIG), 'a6_commit_list.txt'), encoding='utf-8') if l.strip()]
