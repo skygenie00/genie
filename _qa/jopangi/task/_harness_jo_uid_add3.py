@@ -235,9 +235,11 @@ def d5():
         QJ.sub('python:bake')
         out = subprocess.run([sys.executable, os.path.join(HERE, '_uid_add3_data.py')], capture_output=True, env=dict(os.environ, PYTHONIOENCODING='utf-8')).stdout.decode('utf-8', 'replace')
         T(G, '멱등 — _uid_add3_data.py 드라이런 = 고칠 칸 0 · 새 줄 0 · 판독 덧자료 0', u'고칠 칸 0' in out and u'새 줄 0' in out and u'더할 줄 0' in out, out[-300:])
-        head = subprocess.run(NGIT + ['show', 'HEAD:jopangi/특상디/_1차객_원장.csv'], capture_output=True).stdout.decode('utf-8-sig')
-        hb = sum(1 for r in csv.DictReader(io.StringIO(head)) if u'uid_add3(9/28)' in (r[u'로그'] or ''))
-        N(G, 'N: 저장소 HEAD 원장의 add3 줄 수(인도 전 = 0 · 인도 뒤 = 이 판)', hb)
+        # 옛 줄(11/03 ngit_off ㉠ — N: git 없앰 · 이 INFO 줄은 건넘):
+        # head = subprocess.run(NGIT + ['show', 'HEAD:jopangi/특상디/_1차객_원장.csv'], capture_output=True).stdout.decode('utf-8-sig')
+        # hb = sum(1 for r in csv.DictReader(io.StringIO(head)) if u'uid_add3(9/28)' in (r[u'로그'] or ''))
+        # N(G, 'N: 저장소 HEAD 원장의 add3 줄 수(인도 전 = 0 · 인도 뒤 = 이 판)', hb)
+        N(G, 'N: 저장소 HEAD 원장의 add3 줄 수 — 건넘(N: git 없음 · 11/03 ngit_off)', '')
 
 
 # ══════════ 앱 관문 ══════════

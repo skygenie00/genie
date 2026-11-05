@@ -1,0 +1,58 @@
+⟦1 찾기⟧
+        + (txt ? `<div class="mt-1 border-l-2 pl-2 py-1 text-[12px] leading-relaxed text-blue-900 bg-blue-50 border-blue-400 whitespace-pre-wrap" style="white-space:pre-wrap">🔗 ${escHtml(String(txt))}</div>` : '')
+⟦1 바꿈⟧
+        + jnGgHTML(id, txt)   /* ★ 11/05 사용자 「민법도 지학처럼 정리 목록 창에서 근거에 댓글 단 것도 그 문제에서」 */
+⟦2 찾기⟧
+function jnRowHTML(q) {
+⟦2 바꿈⟧
+/* ★ 11/05 사용자 「민법앱에서도 지학 파트처럼 정리 목록 창에서 근거에 댓글 단 것도 그 문제에서 보이게」 — 옛 근거 글 상자(🔗 1. … 2. …) 그대로 · 근거 줄마다 그 밑에 댓글(↳ 글 · 다른 문항에서 단 것 = 끝에 그 문항 ID)
+   + 이 문항에서 연결한 근거(refOf geunge)에 단 댓글(from = 이 문항)도 「↳ 🔗연결 문항 ID 글」 로 · 댓글 ! = 왼쪽 빨간 세로줄 · 저장 · 글 무변(보이는 자리만) */
+function jnGgHTML(id, txt) {
+    const ok = c => c && String(c.t || '').trim();
+    const fromChip = f => f ? ` <span role="button" title="이 댓글을 단 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(f))}')" class="cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2">${escHtml(String(f))}</span>` : '';
+    const line = (c, pre) => `<div class="jncs pl-3 text-[11.5px] leading-snug text-slate-600" style="white-space:pre-wrap${c.bang ? ';box-shadow:inset 2px 0 0 #dc2626' : ''}">↳ ${pre || ''}${escHtml(String(c.t))}${pre ? '' : fromChip(c.from)}</div>`;
+    const own = ggOf(id).filter(g => g && String(g.t || '').trim());
+    const h = own.map((g, n) => `<div>${n ? '' : '🔗 '}${g.i ? g.i + '. ' : ''}${escHtml(String(g.t || ''))}</div>` + (Array.isArray(g.cs) ? g.cs.filter(ok).map(c => line(c)).join('') : '')).join('');
+    const lk = (refOf(id, 'geunge') || []).map(u => ggOf(u).filter(Boolean).map(g => (Array.isArray(g.cs) ? g.cs : []).filter(c => ok(c) && (String(c.from) === String(id) || (Array.isArray(c.sh) && c.sh.indexOf(String(id)) >= 0)))
+        .map(c => line(c, `<span role="button" title="연결한 근거의 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(u)}','${escAttr(id)}')" class="cursor-pointer font-bold text-blue-600">🔗${escHtml(u)}</span> `)).join('')).join('')).join('');
+    if (!h && !lk) return '';
+    return `<div data-jngg="${escHtml(id)}" class="mt-1 border-l-2 pl-2 py-1 text-[12px] leading-relaxed text-blue-900 bg-blue-50 border-blue-400 whitespace-pre-wrap" style="white-space:pre-wrap">${h}${lk}</div>`;
+}
+function jnRowHTML(q) {
+⟦3 찾기⟧
+return `<div class="ggrefrow flex flex-wrap items-start gap-x-1.5 gap-y-1 pl-3" data-ck="${a(ck)}" data-gk="${a(g.k)}" data-guid="${a(u)}">
+⟦3 바꿈⟧
+return `<div class="ggrefrow${(String(c.from || '') === String(uid) || (Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0)) ? ' ggme' : ''} flex flex-wrap items-start gap-x-1.5 gap-y-1 pl-3" data-ck="${a(ck)}" data-gk="${a(g.k)}" data-guid="${a(u)}"${(String(c.from || '') === String(uid) || (Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0)) ? ' title="이 문제에서 단 · 같이 쓰는 댓글"' : ''}>
+⟦4 찾기⟧
+m-prev-bar>*,#controls-container>*{pointer-events:auto}
+    </style>
+⟦4 바꿈⟧
+m-prev-bar>*,#controls-container>*{pointer-events:auto}
+    .ggrefrow.ggme{outline:1.5px solid #3b82f6;outline-offset:1px;border-radius:6px;background:#fff}   /* ★ 11/05 사용자 「문제 창에서 이 문제의 댓글은 테두리 쳐서」 — 연결한 근거 상자에서 이 문항이 단 댓글(from = 이 문항) */
+</style>
+⟦5 찾기⟧
+<div style="flex:1 1 18rem;min-width:0">${ggCsHTML([c])}</div>${edBtn(ck)}`
+⟦5 바꿈⟧
+<div style="flex:1 1 18rem;min-width:0">${ggCsHTML([c])}</div>${String(c.from || '') !== String(uid) ? `<button type="button" onclick="ggCsShare(${arg(ck)})" title="${(Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0) ? '이 문항과 같이 쓰기 그만' : '이 댓글을 이 문항에서도 같이 쓰기(이 문항 ID 더함)'}" class="ggcsh flex-none inline-flex items-center justify-center w-6 h-6 -my-1 rounded-md text-[13px] font-extrabold text-teal-700 hover:bg-teal-50">${(Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0) ? '−' : '+'}</button>` : ''}${edBtn(ck)}`
+⟦6 찾기⟧
+        function ggRefEditKey(e, uid, u, k, ck, sc = '') {
+⟦6 바꿈⟧
+        /* ★ 11/05 사용자 「+ 버튼 둬서 다른 문제에서 댓글도 공유 · 누르면 댓글에 그 문제 uid 추가 · 그 문제에서도 이 댓글 단 것처럼 같은 작동」 — 연결 상자 댓글 줄(다른 문항이 단 것) 「+」 = 그 댓글 c.sh 에 이 문항(uid) 더함 · 「−」 = 뺌
+           더한 문항 = 단 문항(from)과 같게 봄: 문항 창 테두리 · 정리 창 줄 밑 「↳ 🔗」 · 댓글 끝 ID 칩. 저장 = 원래 근거(u) 목록(ggSaveList) · 다시 그림 = ggRefReply 와 같은 길 */
+        function ggCsShare(uid, u, k, ck, sc = '') {
+            const list = ggOf(u), g = list.find(x => x && x.k === k), c = g ? ggCsOf(g, ck) : null;
+            if (!c || String(c.from || '') === String(uid)) return;
+            const sh = Array.isArray(c.sh) ? c.sh.slice() : [], i = sh.indexOf(String(uid));
+            if (i >= 0) sh.splice(i, 1); else sh.push(String(uid));
+            if (sh.length) c.sh = sh; else delete c.sh;
+            ggSaveList(u, list);
+            GG_SCOPES.forEach(s => { const b = document.getElementById(`${s}gg-cs-${u}-${k}`); if (b) b.innerHTML = ggCsHTML(g.cs, k, u); });
+            ggRefOwnersRepaint(u);
+            document.querySelectorAll('[data-jngg]').forEach(x => { const id = x.getAttribute('data-jngg'); const h = jnGgHTML(id); if (h) x.outerHTML = h; });
+        }
+        function ggRefEditKey(e, uid, u, k, ck, sc = '') {
+⟦7 찾기⟧
+${escHtml(String(c.from))}</span>` : ''}
+⟦7 바꿈⟧
+${escHtml(String(c.from))}</span>` : ''}${Array.isArray(c.sh) ? c.sh.map(s => `<span role="button" title="이 댓글을 같이 쓰는 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(s))}')" class="ggshid flex-none self-start cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap pt-0.5">${escHtml(String(s))}</span>`).join('') : ''}
+⟦끝⟧
