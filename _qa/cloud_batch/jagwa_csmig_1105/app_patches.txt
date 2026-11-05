@@ -1,0 +1,30 @@
+⟦1 찾기⟧
+ggCsHTML(s0.cs,s0.k,su,sc):'';   /* ★ 11/05 — 이어 둔 항목 = 임자 댓글 먼저 */
+⟦1 바꿈⟧
+ggCsHTML(s0.cs.map(function(c){return c&&!c.from?Object.assign({},c,{from:su}):c}),s0.k,su,sc):'';   /* ★ 11/05 — 이어 둔 항목 = 임자 댓글 먼저 · 18:01 출처 없는 옛 임자 댓글 = 임자 문항 ID */
+⟦2 찾기⟧
+else{var s=ggSrcOf(g);cs=((s&&Array.isArray(s.cs))?s.cs:[]).concat((g&&Array.isArray(g.cs))?g.cs:[])}
+⟦2 바꿈⟧
+else{var s=ggSrcOf(g),su=s?String(g.src).split('|')[0]:'';cs=((s&&Array.isArray(s.cs))?s.cs.map(function(c){return c&&!c.from&&su!==uid?Object.assign({},c,{from:su}):c}):[]).concat((g&&Array.isArray(g.cs))?g.cs:[])}   /* ★ 11/05 18:01 — 출처 없는 옛 임자 댓글 = 임자 ID */
+⟦3 찾기⟧
+window.g3RefMig=g3RefMig;
+
+⟦3 바꿈⟧
+window.g3RefMig=g3RefMig;
+/* ★ 11/05 18:01 사용자 「앱 고치기 전에 단 댓글엔 소급 적용 안 됐어」 — 고치기 전 이어 둔 항목(g.src = 임자)에 단 댓글은 그 문제 사본 cs 에만 남아 임자 · 다른 연결 문제에 안 보임
+   → 동기화 뒤 한 번: 사본 cs 를 임자 근거 cs 로 옮김(from = 그 문제 · 같은 k 는 건넘) · 사본 cs 비움 · 임자 없으면 그대로 */
+async function g3CsMig(){if(!CARD_LAYER||g3CsMig.busy)return 0;g3CsMig.busy=1;var n=0,touch={};
+  try{for(var u in GG){var L=GG[u];if(!Array.isArray(L))continue;
+      for(var i=0;i<L.length;i++){var x=L[i];if(!x||!x.src||x.src==='note'||!Array.isArray(x.cs)||!x.cs.length)continue;
+        var a=String(x.src).split('|'),o=a[0],k=a.slice(1).join('|');if(o===u)continue;var og=ggItem(o,k);if(!og)continue;
+        if(!Array.isArray(og.cs))og.cs=[];
+        x.cs.forEach(function(c){if(!c||og.cs.some(function(y){return y&&y.k===c.k}))return;og.cs.push(Object.assign({},c,{from:c.from||u}));n++});
+        x.cs=[];touch[u]=1;touch[o]=1}}
+    for(var t in touch)await ggSaveList(t,ggOf(t).slice());
+    Object.keys(touch).forEach(function(t){try{ggRepaint(t)}catch(_){}});try{navSync()}catch(_){}}
+  finally{g3CsMig.busy=0}
+  g3CsMig.n=n;return n}
+window.g3CsMig=g3CsMig;
+{var _sr1=syncRecords;syncRecords=async function(){var r=await _sr1.apply(this,arguments);try{if(CARD_LAYER&&!recErr&&!g3CsMig.did){g3CsMig.did=1;if(await g3CsMig())setTimeout(function(){try{syncRecords(true)}catch(_){}},400)}}catch(_){}return r}}
+
+⟦끝⟧
