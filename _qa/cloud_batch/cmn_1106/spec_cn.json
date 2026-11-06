@@ -1,0 +1,46 @@
+{
+ "app": "jagwa",
+ "base": "4e5cc52",
+ "settle_ms": 3000,
+ "screens": {
+  "p1": {
+   "subj": "earth",
+   "dev": "pc",
+   "setup": "(async function(){var wait=function(m){return new Promise(function(z){setTimeout(z,m)})};for(var q_=0;q_<120&&!(typeof DATA!=='undefined'&&DATA.length>0&&typeof GG!=='undefined'&&Object.keys(GG).length>20&&document.querySelectorAll('#ndList .ndrow').length>50);q_++)await wait(500);for(var q1=0;q1<60&&!(window.g3CsMig&&window.g3CsMig.did);q1++)await wait(500);await wait(1500);return 'ok'})()"
+  }
+ },
+ "tests": [
+  {
+   "name": "PC 한 근거 댓글 수 한도 없음(지문 점 댓글 · 카드 댓글 같은 값)",
+   "screen": "p1",
+   "act": "none",
+   "wait": 100,
+   "yard": true,
+   "expect": "GG_CN===Infinity||GG_CN"
+  },
+  {
+   "name": "PC 이어 둔 근거에서 단 댓글(ggReply → 임자 근거) · 임자 20 개 찬 근거에 21 번째",
+   "screen": "p1",
+   "act": "none",
+   "wait": 200,
+   "yard": true,
+   "expect": "(async()=>{let lu=null,li=null;for(const r of DATA){const u=GGU(r);const x=ggOf(u).find(y=>y&&ggSrcOf(y));if(x){lu=u;li=x;break}}if(!li)return 'no link';const a=String(li.src).split('|'),su=a[0],sk=a.slice(1).join('|');const g2=ggOf(su).find(x=>x&&x.k===sk);g2.cs=Array.from({length:20},(_,i)=>({k:'c_gate'+i,t:'관문 시험 댓글 '+i,ts:1}));const ta=document.createElement('textarea');ta.setAttribute('data-ggcin',lu+'|'+li.k+'|');ta.value='관문 21번째';document.body.appendChild(ta);await ggReply(lu,li.k,'');await new Promise(z=>setTimeout(z,300));const n=ggOf(su).find(x=>x&&x.k===sk).cs.length;ta.remove();return n===21||JSON.stringify({n:n})})()"
+  },
+  {
+   "name": "PC 카드 「댓」 적는 칸 Enter 길(ggReply) · 20 개 찬 근거에 21 번째 · 안내 없음",
+   "screen": "p1",
+   "act": "none",
+   "wait": 200,
+   "yard": true,
+   "expect": "(async()=>{const u='G26-63-07';const g=ggOf(u).find(x=>x&&!ggSrcOf(x));if(!g)return 'no item';g.cs=Array.from({length:20},(_,i)=>({k:'c_gate'+i,t:'관문 시험 댓글 '+i,ts:1}));const ta=document.createElement('textarea');ta.setAttribute('data-ggcin',u+'|'+g.k+'|');ta.value='관문 21번째';document.body.appendChild(ta);await ggReply(u,g.k,'');await new Promise(z=>setTimeout(z,300));const n=ggOf(u).find(x=>x&&x.k===g.k).cs.length;ta.remove();return n===21||JSON.stringify({n:n})})()"
+  },
+  {
+   "name": "PC 글자 한도 그대로(근거 4000 · 댓글 2000 · 바탕과 같음)",
+   "screen": "p1",
+   "act": "none",
+   "wait": 100,
+   "yard": false,
+   "expect": "GG_TMAX===4000&&GG_CMAX===2000"
+  }
+ ]
+}
