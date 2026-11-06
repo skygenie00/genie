@@ -1,0 +1,33 @@
+⟦1 찾기⟧
+var bogiOf=uid=>BG[uid]||{};
+⟦1 바꿈⟧
+var CHV=null,CHV_NO=null,CHV_SEEN=0;   /* ★ 11/06 21:45 사용자 「지난 회독 지문 O△X · 고른 답도 보이게 · 고칠 수 있게」 — 회독 창 「N회독」 누름 = 그 회독 기록 h[i] 의 b(지문 · 〈보기〉 O△X) · a(고른 답)를 카드에 그림 · 그동안 O△X 누름 = h[i].b 고침(저장 칸 무변 · status) · 그 열람(VSEEN) 그 문항(VNO) 동안만 · 지금 회독은 BG 그대로 */
+var chvEnt=()=>{if(!HASBOOK||CHV===null||CHV_NO!==VNO||CHV_SEEN!==VSEEN)return null;const e=hist(VNO)[CHV];return(e&&(+e.t||0)<VSEEN)?e:null};
+var bogiOf=uid=>{const e=chvEnt();if(e){const r=rec(VNO);if(r&&r[F.CODE]===uid)return e.b||{}}return BG[uid]||{}};
+function chvPaint(){const c=$('#card'),r=rec(VNO);if(!c||!r)return;const bg=bogiOf(r[F.CODE]),e=chvEnt(),pk=e?String(e.a||''):lastPick(VNO);
+  c.querySelectorAll('.bogi .row,.chox .chr').forEach(rw=>{const k=rw.dataset.k;rw.querySelectorAll('.ox button').forEach(x=>x.classList.toggle('on',x.dataset.v===bg[k]))});
+  c.querySelectorAll('.choices button[data-c]').forEach(b=>b.classList.toggle('pick',b.dataset.c===pk));
+  try{markWrong()}catch(_){}}
+function chvSet(i){CHV=i;CHV_NO=VNO;CHV_SEEN=VSEEN;chvPaint()}
+⟦2 찾기⟧
+  if(NR_V!==VSEEN){NR_V=VSEEN;if(nrCarryMem(r)){try{await Promise.all([saveST(),saveBG()])}catch(e){console.warn('nrCarry 저장',e)}}}
+⟦2 바꿈⟧
+  if(NR_V!==VSEEN){NR_V=VSEEN;if(nrCarryMem(r)){try{await Promise.all([saveST(),saveBG()])}catch(e){console.warn('nrCarry 저장',e)}}}
+  CHV=null;   /* ★ 11/06 — 카드를 다시 그리면(qLoad 가 필기도 지금 회독으로) 지난 회독 보기도 지금 회독으로 */
+⟦3 찾기⟧
+    const rowEl=b.closest('.row'),k=rowEl.dataset.k,v=b.dataset.v;
+⟦3 바꿈⟧
+    const rowEl=b.closest('.row'),k=rowEl.dataset.k,v=b.dataset.v;
+    {const pe=chvEnt();if(pe){const pb=Object.assign({},pe.b||{});if(pb[k]===v)delete pb[k];else pb[k]=v;if(Object.keys(pb).length)pe.b=pb;else delete pe.b;ST[qk(VNO)]={h:hist(VNO)};await saveST();chvPaint();if(CHOX)try{navSync()}catch(_){}return}}   /* ★ 11/06 — 지난 회독 보는 중 = 그 회독 b 고침 */
+⟦4 찾기⟧
+const nb=r.querySelector('.hsn'); if(nb)nb.onclick=()=>{if(!viewing)return;inkSet(i);build()};
+⟦4 바꿈⟧
+const nb=r.querySelector('.hsn'); if(nb)nb.onclick=()=>{if(!viewing)return;inkSet(i);if(HASBOOK)try{chvSet(i)}catch(_){}build()};   /* ★ 11/06 — 카드 층: 그 회독 O△X · 고른 답도 */
+⟦5 찾기⟧
+pickChoice=async function(k){
+  const r=rec(VNO);if(!r)return;
+⟦5 바꿈⟧
+pickChoice=async function(k){
+  const r=rec(VNO);if(!r)return;
+  if(chvEnt()){CHV=null;chvPaint()}   /* ★ 11/06 — 지난 회독 보다가 답을 고르면 지금 회독 O△X 로 돌아와 지금 회독에 기록(옛 그대로) */
+⟦끝⟧
