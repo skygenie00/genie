@@ -7,7 +7,7 @@ var bogiOf=uid=>{const e=chvEnt();if(e){const r=rec(VNO);if(r&&r[F.CODE]===uid)r
 function chvPaint(){const c=$('#card'),r=rec(VNO);if(!c||!r)return;const bg=bogiOf(r[F.CODE]),e=chvEnt(),pk=e?String(e.a||''):lastPick(VNO);
   c.querySelectorAll('.bogi .row,.chox .chr').forEach(rw=>{const k=rw.dataset.k;rw.querySelectorAll('.ox button').forEach(x=>x.classList.toggle('on',x.dataset.v===bg[k]))});
   c.querySelectorAll('.choices button[data-c]').forEach(b=>b.classList.toggle('pick',b.dataset.c===pk));
-  try{markWrong()}catch(_){}}
+  try{markWrong();markAns()}catch(_){}}
 function chvSet(i){CHV=i;CHV_NO=VNO;CHV_SEEN=VSEEN;chvPaint()}
 ⟦2 찾기⟧
   if(NR_V!==VSEEN){NR_V=VSEEN;if(nrCarryMem(r)){try{await Promise.all([saveST(),saveBG()])}catch(e){console.warn('nrCarry 저장',e)}}}
@@ -30,4 +30,15 @@ pickChoice=async function(k){
 pickChoice=async function(k){
   const r=rec(VNO);if(!r)return;
   if(chvEnt()){CHV=null;chvPaint()}   /* ★ 11/06 — 지난 회독 보다가 답을 고르면 지금 회독 O△X 로 돌아와 지금 회독에 기록(옛 그대로) */
+⟦6 찾기⟧
+    el.classList.toggle('wrong',CARD.open&&!!v&&v!=='Q'&&!!a&&v!==a);
+    el.classList.toggle('right',CARD.open&&!!v&&v!=='Q'&&!!a&&v===a);
+⟦6 바꿈⟧
+    const _sh=CARD.open||!!chvEnt();   /* ★ 11/06 22:11 사용자 「틀렸는데 그럼 정답은 뭔데 · 테두리 안 해?」 — 지난 회독 보는 중이면 해설을 안 펴도 맞음 · 틀림 */
+    el.classList.toggle('wrong',_sh&&!!v&&v!=='Q'&&!!a&&v!==a);
+    el.classList.toggle('right',_sh&&!!v&&v!=='Q'&&!!a&&v===a);
+⟦7 찾기⟧
+  $('#card').querySelectorAll('.choices button').forEach(b=>b.classList.toggle('ans',CARD.open&&b.dataset.c===String(r[F.ANS])));
+⟦7 바꿈⟧
+  $('#card').querySelectorAll('.choices button').forEach(b=>b.classList.toggle('ans',(CARD.open||!!chvEnt())&&b.dataset.c===String(r[F.ANS])));   /* ★ 11/06 22:11 — 지난 회독 보는 중이면 해설을 안 펴도 정답 테두리 */
 ⟦끝⟧
