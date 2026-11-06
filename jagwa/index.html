@@ -4862,7 +4862,7 @@ function histSheet(no){   /* 시안 ⑪ — 회독 기록 창 = 단추 옆 작�
     b.innerHTML='<div class="erh">'+(viewing?'<label class="hse"><input type="checkbox" id="hsEye"'+(hideOn()?'':' checked')+'>지난 필기 같이</label>':'')+
       '<button class="erx" id="hsX" title="닫기">✕</button></div>'+(rows||'<p class="hsnone">아직 기록이 없습니다.</p>');
     b.querySelectorAll('.hsr').forEach(r=>{const i=+r.dataset.i, x=h[i];
-      const nb=r.querySelector('.hsn'); if(nb)nb.onclick=()=>{if(!viewing)return;inkSet(i);build()};
+      const nb=r.querySelector('.hsn'); if(nb)nb.onclick=()=>{if(!viewing)return;inkSet(i);if(HASBOOK)try{chvSet(i)}catch(_){}build()};   /* ★ 11/06 — 카드 층: 그 회독 O△X · 고른 답도 */
       r.querySelectorAll('.hsm button').forEach(btn=>btn.onclick=async()=>{x.m=btn.dataset.m;ST[qk(no)]={h};await saveST();build();after()});
       const rm=r.querySelector('.rm'); if(rm)rm.onclick=async()=>{h.splice(i,1);h.length?ST[qk(no)]={h}:delete ST[qk(no)];await saveST();await inkDropLayer(no,i);build();after()}});   /* 10/10 recfix · cardfit §3-1 — 세 과목: 그 회독 빈 필기(물리 층 · 카드 층 획 r)도 걷음 */
     const ey=b.querySelector('#hsEye'); if(ey)ey.onchange=()=>hideSet(!ey.checked);
@@ -6735,7 +6735,14 @@ var ocrRefPaint=root=>{if(!root)return;
       el.querySelector('img').onclick=e=>{e.stopPropagation();const z=document.createElement('div');z.id='ocrrfz';
         z.innerHTML='<img alt="참고 그림" src="'+u+'">';{const im=z.querySelector('img'),fz=()=>{if(im.naturalWidth&&im.naturalHeight)im.style.setProperty('--ar',String(im.naturalWidth/im.naturalHeight))};if(im.complete)fz();else im.addEventListener('load',fz)}   /* ★ penfinger add2 §B — 그림 비율(폭 = min(96vw, 92vh × 비율)) */const x=()=>{z.remove();removeEventListener('keydown',k,true)};
         const k=ev=>{if(ev.key==='Escape'){ev.stopPropagation();x()}};z.onclick=x;addEventListener('keydown',k,true);document.body.appendChild(z)}})})};
-var bogiOf=uid=>BG[uid]||{};
+var CHV=null,CHV_NO=null,CHV_SEEN=0;   /* ★ 11/06 21:45 사용자 「지난 회독 지문 O△X · 고른 답도 보이게 · 고칠 수 있게」 — 회독 창 「N회독」 누름 = 그 회독 기록 h[i] 의 b(지문 · 〈보기〉 O△X) · a(고른 답)를 카드에 그림 · 그동안 O△X 누름 = h[i].b 고침(저장 칸 무변 · status) · 그 열람(VSEEN) 그 문항(VNO) 동안만 · 지금 회독은 BG 그대로 */
+var chvEnt=()=>{if(!HASBOOK||CHV===null||CHV_NO!==VNO||CHV_SEEN!==VSEEN)return null;const e=hist(VNO)[CHV];return(e&&(+e.t||0)<VSEEN)?e:null};
+var bogiOf=uid=>{const e=chvEnt();if(e){const r=rec(VNO);if(r&&r[F.CODE]===uid)return e.b||{}}return BG[uid]||{}};
+function chvPaint(){const c=$('#card'),r=rec(VNO);if(!c||!r)return;const bg=bogiOf(r[F.CODE]),e=chvEnt(),pk=e?String(e.a||''):lastPick(VNO);
+  c.querySelectorAll('.bogi .row,.chox .chr').forEach(rw=>{const k=rw.dataset.k;rw.querySelectorAll('.ox button').forEach(x=>x.classList.toggle('on',x.dataset.v===bg[k]))});
+  c.querySelectorAll('.choices button[data-c]').forEach(b=>b.classList.toggle('pick',b.dataset.c===pk));
+  try{markWrong();markAns()}catch(_){}}
+function chvSet(i){CHV=i;CHV_NO=VNO;CHV_SEEN=VSEEN;chvPaint()}
 /* ★ uid_unify G-3-2 — 새 열람의 첫 그리기 앞: 지난 회독에서 만진 〈보기〉 O△X 는 그 회독 h 끝 항목의 b 로 옮기고 BG 칸을 비운다(지우지 않는다 — 값은 b 에 산다).
    「이 회독에서 만졌나」 = BG[uid]._v(만진 열람의 VSEEN)가 마지막 회독 시각(h 끝 t)보다 뒤인가 — 뒤면(답 체크 없이 보기만 하고 닫은 것) 그대로 이어 간다.
    회독 기록이 없으면 옮길 곳이 없어 그대로 둔다 · _v 없는 옛 칸(업데이트 앞 것)은 0 으로 쳐 마지막 회독으로 옮긴다 · 메모리만 바꾼다(저장은 부르는 쪽) → 바꿨으면 true
@@ -6762,7 +6769,8 @@ if(HASBOOK)showProblem=async function(){
   const r=rec(VNO); if(!r)return;
   /* ★ uid_unify G-3-1 — VNO 가 직전과 다르면 새 열람(openView·go 말고도 서랍 줄·목차 트리·단원 거르개·목록 창·.cqi 로 VNO 를 바꾸는 길 전부) */
   if(VNO!==VSEEN_NO){VSEEN=Date.now();VSEEN_NO=VNO;if(window.G3CMP!==VNO)window.G3CMP=null}   /* 비교 표시는 그 열람 동안만(물리 v18) */
-  if(NR_V!==VSEEN){NR_V=VSEEN;if(nrCarryMem(r)){try{await Promise.all([saveST(),saveBG()])}catch(e){console.warn('nrCarry 저장',e)}}}   /* 새 열람 한 번만 — 같은 열람 안의 다시 그리기에서는 안 돈다 */
+  if(NR_V!==VSEEN){NR_V=VSEEN;if(nrCarryMem(r)){try{await Promise.all([saveST(),saveBG()])}catch(e){console.warn('nrCarry 저장',e)}}}
+  CHV=null;   /* ★ 11/06 — 카드를 다시 그리면(qLoad 가 필기도 지금 회독으로) 지난 회독 보기도 지금 회독으로 */   /* 새 열람 한 번만 — 같은 열람 안의 다시 그리기에서는 안 돈다 */
   navSync();
   const u=unitOf(VNO);
   {const fx=(typeof pnFix==='function')?pnFix(r):'';$('#vT1').innerHTML=esc(dispNo(VNO)+' '+codeShow(r))+' · <span class="vtt'+(fx?' fx':'')+'" data-pn="'+VNO+'" title="길게 누르면 제목 고치기">'+esc(fx||vtOrig(r))+'</span>'}   /* ★ 10/13 사용자 「문제 창 제목 길게 눌러 고치기 · 지학 · 생물에도」 — 제목 칸 = 물리와 같은 span.vtt · 같은 길게 누름(SHELL) · 저장 = TFIX[uid].nm(지학 · 생물 SYNC tfix 에 이미 있음 · 새 키 없음) · 원래 = 소단원 이름(없으면 titleOf) */   /* 물리 머리 꼴 — 번호 · 코드 · 소단원 이름 한 줄(둘째 줄은 물리처럼 숨김 · 사용자 10/11) */
@@ -6820,6 +6828,7 @@ function renderCard(r){
    if(fs)fs.onclick=async e=>{e.stopPropagation();await tfixSet(uid,'fig','');showProblem()};}
   c.querySelectorAll('.ox button').forEach(b=>b.onclick=async()=>{
     const rowEl=b.closest('.row'),k=rowEl.dataset.k,v=b.dataset.v;
+    {const pe=chvEnt();if(pe){const pb=Object.assign({},pe.b||{});if(pb[k]===v)delete pb[k];else pb[k]=v;if(Object.keys(pb).length)pe.b=pb;else delete pe.b;ST[qk(VNO)]={h:hist(VNO)};await saveST();chvPaint();if(CHOX)try{navSync()}catch(_){}return}}   /* ★ 11/06 — 지난 회독 보는 중 = 그 회독 b 고침 */
     const cur=(BG[uid]||{})[k];
     BG[uid]=Object.assign({},BG[uid]||{});
     if(cur===v)delete BG[uid][k];else BG[uid][k]=v;
@@ -6865,14 +6874,15 @@ function markWrong(){
   const r=rec(VNO);if(!r)return;const bg=bogiOf(r[F.CODE]);
   $('#card').querySelectorAll('.bogi .row').forEach(el=>{
     const v=bg[el.dataset.k],a=el.dataset.ans;
-    el.classList.toggle('wrong',CARD.open&&!!v&&v!=='Q'&&!!a&&v!==a);
-    el.classList.toggle('right',CARD.open&&!!v&&v!=='Q'&&!!a&&v===a);
+    const _sh=CARD.open||!!chvEnt();   /* ★ 11/06 22:11 사용자 「틀렸는데 그럼 정답은 뭔데 · 테두리 안 해?」 — 지난 회독 보는 중이면 해설을 안 펴도 맞음 · 틀림 */
+    el.classList.toggle('wrong',_sh&&!!v&&v!=='Q'&&!!a&&v!==a);
+    el.classList.toggle('right',_sh&&!!v&&v!=='Q'&&!!a&&v===a);
     el.querySelectorAll('.bexp').forEach(x=>{x.hidden=!CARD.open});   /* 생물: 보기 설명은 해설을 열면 */
   });
 }
 function markAns(){
   const r=rec(VNO);if(!r)return;
-  $('#card').querySelectorAll('.choices button').forEach(b=>b.classList.toggle('ans',CARD.open&&b.dataset.c===String(r[F.ANS])));
+  $('#card').querySelectorAll('.choices button').forEach(b=>b.classList.toggle('ans',(CARD.open||!!chvEnt())&&b.dataset.c===String(r[F.ANS])));   /* ★ 11/06 22:11 — 지난 회독 보는 중이면 해설을 안 펴도 정답 테두리 */
 }
 /* 선택지를 고르면 정답표와 대조해 O/X 를 자동으로 찍는다(a = 고른 번호 · auto 표시). 같은 열람 중에는 마지막 자동 항목을 갈아 끼운다. */
 var VSEEN=0;
@@ -6885,6 +6895,7 @@ var jmHasCm=(r,k)=>{const uid=GGU(r);return ggOf(uid).some(g=>{if(!g)return fals
 var jmDotHTML=(r,k)=>jmHasCm(r,k)?'<button type="button" class="jmdot on" title="이 지문에 단 근거 댓글 있음 · 누르면 더 달기">댓</button>':'<button type="button" class="jmdot" title="이 지문을 근거 댓글로">•</button>';   /* ★ 11/05 사용자 「댓글 단 지문은 오른쪽 점이 『댓』 글자로」 */
 pickChoice=async function(k){
   const r=rec(VNO);if(!r)return;
+  if(chvEnt()){CHV=null;chvPaint()}   /* ★ 11/06 — 지난 회독 보다가 답을 고르면 지금 회독 O△X 로 돌아와 지금 회독에 기록(옛 그대로) */
   const h=hist(VNO).slice();
   if(h.length&&h[h.length-1].auto&&h[h.length-1].t>=VSEEN)h.pop();
   const ok=r[F.ANS]&&String(k)===String(r[F.ANS]);
