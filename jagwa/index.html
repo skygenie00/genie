@@ -13270,7 +13270,7 @@ ndTail=function(no){
   return base.slice(0,st)+'<span class="ndox'+(hasG?' g3has':'')+'" data-ox="'+no+'">'+(ty.length?'<i class="ndty">'+esc(ty.join('·'))+'</i>':'')
     +marks+'</span>'+base.slice(end)};
 /* ★ 11/05 00:27 사용자 「목차 서랍 작은 창에서 댓글도 보이게」 */
-function g3PopCsHTML(uid,g){var cs=[];if(g&&g.__cq){var cl=g3CqxCell(g3CqxQ(uid));cs=(cl&&cl.c&&Array.isArray(cl.c[g.__cq.k]))?cl.c[g.__cq.k]:[]}else{var s=ggSrcOf(g),su=s?String(g.src).split('|')[0]:'';cs=((s&&Array.isArray(s.cs))?s.cs.map(function(c){return c&&!c.from&&su!==uid?Object.assign({},c,{from:su}):c}):[]).concat((g&&Array.isArray(g.cs))?g.cs:[])}   /* ★ 11/05 18:01 — 출처 없는 옛 임자 댓글 = 임자 ID */
+function g3PopCsHTML(uid,g){var cs=[];if(g&&g.__cq){var cl=g3CqxCell(g3CqxQ(uid));cs=(cl&&cl.c&&Array.isArray(cl.c[g.__cq.k]))?cl.c[g.__cq.k]:[]}else{var s=ggSrcOf(g),su=s?String(g.src).split('|')[0]:'';cs=((s&&Array.isArray(s.cs))?s.cs.filter(function(c){return c&&String(c.from||su)===String(uid)}):[]).concat((g&&Array.isArray(g.cs))?g.cs.filter(function(c){return c&&String(c.from||uid)===String(uid)}):[]).map(function(c){return Object.assign({},c,{from:''})})}   /* ★ 11/06 11:20 사용자 「목차서랍 작은 창은 원래 자기 문제에서 단 댓글만」(11/05 00:20 · 00:52 결정) — 작은 창 · 정리 창 = 이 문항이 단 댓글만(임자 근거 cs 의 from = 이 문항 + 제 사본 cs) · 출처 칩 없음(다 제 것) · 카드 근거 상자는 다 보임 그대로 */
   return cs.filter(function(c){return c&&c.t}).map(function(c){return '<div class="g3prc'+(c.bang?' bang':'')+'">↳ '+(c.jt?'<span class="ggjt">「'+esc(c.jt)+'」</span>'+(c.jo?'<b class="ggjo '+c.jo+'">'+c.jo+'</b>':''):'')+esc(c.t)+ggFromHTML(c)+'</div>'}).join('')}window.g3PopCsHTML=g3PopCsHTML;
 var G3P=null;
 function g3PopClose(){var p=document.getElementById('g3Pop');if(p)p.remove();
