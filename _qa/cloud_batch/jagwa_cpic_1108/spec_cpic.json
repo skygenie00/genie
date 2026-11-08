@@ -1,0 +1,67 @@
+{
+ "app": "jagwa",
+ "base": "06ac7e1",
+ "settle_ms": 3000,
+ "screens": {
+  "p1": {
+   "subj": "phys",
+   "dev": "pc",
+   "setup": "(async function(){var wait=function(m){return new Promise(function(z){setTimeout(z,m)})};document.querySelectorAll('body>.sheet').forEach(function(x){x.remove()});openView(555,navList());await wait(2500)})()"
+  },
+  "m1": {
+   "subj": "phys",
+   "dev": "ph",
+   "setup": "(async function(){var wait=function(m){return new Promise(function(z){setTimeout(z,m)})};document.querySelectorAll('body>.sheet').forEach(function(x){x.remove()});openView(555,navList());await wait(2500)})()"
+  },
+  "p2": {
+   "subj": "phys",
+   "dev": "pc",
+   "setup": "(async function(){var wait=function(m){return new Promise(function(z){setTimeout(z,m)})};document.querySelectorAll('body>.sheet').forEach(function(x){x.remove()});openView(72,navList());await wait(2500)})()"
+  }
+ },
+ "tests": [
+  {
+   "name": "PC 555 Claude 누름 = 그림 바로 보임(단추 없이 · 다 읽힘)",
+   "screen": "p1",
+   "act": "click",
+   "sel": "#tGpt",
+   "wait": 2500,
+   "expect": "(()=>{var im=document.querySelector('body>.sheet .gppic img.solpic');return (!!im&&im.complete&&im.naturalWidth===993&&/img\\/claude\\/phys_555\\.jpg$/.test(im.getAttribute('src'))&&im.getBoundingClientRect().height>50)||String(im&&[im.getAttribute('src'),im.naturalWidth])})()",
+   "yard": true
+  },
+  {
+   "name": "PC 555 그림이 창 머리 아래 · 글 칸 위",
+   "screen": "p1",
+   "act": "none",
+   "wait": 200,
+   "expect": "(()=>{var w=document.querySelector('body>.sheet .gppic'),h=document.querySelector('body>.sheet #gpBody');return !!(w&&h&&(w.compareDocumentPosition(h)&Node.DOCUMENT_POSITION_FOLLOWING))})()",
+   "yard": true
+  },
+  {
+   "name": "PC 555 ▶ 모션 단추 안 섬",
+   "screen": "p1",
+   "act": "none",
+   "wait": 200,
+   "expect": "(()=>{var m=document.querySelector('body>.sheet #gpMotBar');return !m||getComputedStyle(m).display==='none'})()",
+   "yard": false
+  },
+  {
+   "name": "폰 555 Claude 톡 = 그림 보임 · 창 폭 안",
+   "screen": "m1",
+   "act": "click",
+   "sel": "#tGpt",
+   "wait": 2500,
+   "expect": "(()=>{var im=document.querySelector('body>.sheet .gppic img.solpic');if(!im)return 'no img';var r=im.getBoundingClientRect(),p=im.closest('.panel').getBoundingClientRect();return (im.naturalWidth===993&&r.width>100&&r.width<=p.width+1)||JSON.stringify([r.width,p.width])})()",
+   "yard": true
+  },
+  {
+   "name": "PC 72 Claude = 그림 없음 · ▶ 모션 그대로",
+   "screen": "p2",
+   "act": "click",
+   "sel": "#tGpt",
+   "wait": 2500,
+   "expect": "(()=>{var m=document.querySelector('body>.sheet #gpMotBar');return !document.querySelector('body>.sheet .gppic')&&!!m&&getComputedStyle(m).display!=='none'})()",
+   "yard": false
+  }
+ ]
+}
