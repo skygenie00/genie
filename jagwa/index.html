@@ -4586,6 +4586,13 @@ function gptSheet(no){
     <div id="gpBody"></div></div>`;
   document.body.appendChild(b);
   const host=b.querySelector('#gpBody');
+  /* Claude 그림(사용자 11/08 「클로드 누르면 바로 저 그림」) — motion/index.json 「pic」{과목:[번호|uid]} 에 있으면 img/claude/<과목>_<번호|uid>.jpg 를 창 머리 아래 바로 보임 · 단추 없음 · 답풀 그림과 같은 창 안 확대(solxZoom) */
+  motLoad().then(()=>{try{const k=CARD_LAYER?qk(no):+no,P=MOT&&MOT.pic&&MOT.pic[SUBJ_ID];
+    if(!host.isConnected||!Array.isArray(P)||P.indexOf(k)<0||host.parentNode.querySelector('.gppic'))return;   /* host 로 찾음 — PC 는 곁창(shFloat)이 판을 옮겨 b 가 떨어진다 */
+    const w=document.createElement('div');w.className='gppic';
+    w.innerHTML='<div class="solz"><img class="solpic" src="img/claude/'+SUBJ_ID+'_'+k+'.jpg" alt="Claude 그림" draggable="false"></div>';
+    const mb=host.parentNode.querySelector('#gpMotBox')||host;mb.parentNode.insertBefore(w,mb);
+    const im=w.querySelector('img');im.addEventListener('dragstart',e=>e.preventDefault());solxZoom(im,null)}catch(e){console.warn('Claude 그림',e)}});
   const close=()=>b.remove();
   const done=v=>{
     if($('#view').classList.contains('hide'))draw(); else syncGptBtn();
