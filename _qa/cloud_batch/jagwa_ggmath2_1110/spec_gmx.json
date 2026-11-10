@@ -1,0 +1,86 @@
+{
+ "app": "jagwa",
+ "base": "ee45405",
+ "settle_ms": 3000,
+ "screens": {
+  "p1": {
+   "subj": "earth",
+   "dev": "pc",
+   "setup": "(async function(){var wait=function(m){return new Promise(function(z){setTimeout(z,m)})};for(var q_=0;q_<120&&!(typeof DATA!=='undefined'&&DATA.length>0&&typeof GG!=='undefined'&&Object.keys(GG).length>20&&document.querySelectorAll('#ndList .ndrow').length>50);q_++)await wait(500);for(var q1=0;q1<60&&!(window.g3CsMig&&window.g3CsMig.did);q1++)await wait(500);await wait(1500);return 'ok'})()"
+  }
+ },
+ "tests": [
+  {
+   "name": "PC 댓글 글 = 근거 글과 같은 수식 바꿈(^ 위첨자 · 분수 · 비례)",
+   "act": "none",
+   "wait": 100,
+   "yard": true,
+   "expect": "(()=>{const h=ggCsHTML([{k:'c_gm1',t:'P^2 비례 r^3 · (500/100)',ts:1}],'g_x','G23-60-08','');return h.includes('<sup>2</sup>')&&h.includes('gm-frac')&&h.includes('∝')||h.slice(0,300)})()",
+   "screen": "p1"
+  },
+  {
+   "name": "PC 서랍 작은 창 댓글도 수식 바꿈",
+   "act": "none",
+   "wait": 100,
+   "yard": true,
+   "expect": "(()=>{const h=g3PopCsHTML('G23-60-08',{k:'g_x',cs:[{k:'c_gm2',t:'r^3 비례 P^2',ts:1}]});return h.includes('<sup>3</sup>')||h.slice(0,300)})()",
+   "screen": "p1"
+  },
+  {
+   "name": "PC 고친 〈보기〉 칸(288 = G18-55-10 ㄴ · r_A · 10^(7/5)) = 카드에서 아래첨자 · 분수 지수",
+   "act": "none",
+   "wait": 1500,
+   "yard": true,
+   "expect": "(async()=>{await tfixSet('G18-55-10','bㄴ','A의 절대등급이 8등급이면 r_A = 10^(7/5) pc이다.');const r=rowByUid('G18-55-10');VNO=r[F.NO];await showProblem();await new Promise(z=>setTimeout(z,800));const t=document.querySelector('#card .bogi .row[data-k=\"ㄴ\"] .t');const h=t?t.innerHTML:'';return h.includes('<sub>A</sub>')&&h.includes('gm-frac')||h.slice(0,300)})()",
+   "screen": "p1"
+  },
+  {
+   "name": "PC 안 고친 칸(원래 OCR 글) = 그대로(8km/s 가 분수로 안 바뀜)",
+   "act": "none",
+   "wait": 100,
+   "yard": false,
+   "expect": "(()=>typeof txtH!=='function'||txtH('G25-62-01','c1')===esc(txtOf('G25-62-01','c1')))()",
+   "screen": "p1"
+  },
+  {
+   "name": "PC 고친 칸이라도 낱말(시계방향 · 비례)은 그대로 · 수식만",
+   "act": "none",
+   "wait": 800,
+   "yard": true,
+   "expect": "(async()=>{if(typeof txtH!=='function')return 'no txtH';await tfixSet('G95-32-01','c4','풍향이 시계방향으로 변화해 간다 비례');const h=txtH('G95-32-01','c4');return h.includes('시계방향')&&h.includes('비례')&&!h.includes('↻')||h})()",
+   "screen": "p1"
+  },
+  {
+   "name": "PC 댓글 지문(고친 칸 ㄴ) = 고친 글 수식으로",
+   "act": "none",
+   "wait": 100,
+   "yard": true,
+   "expect": "(()=>{const h=ggCsHTML([{k:'c_gm3',t:'거리지수',ts:1,from:'G18-55-10',jm:'ㄴ',jt:'ㄴ. A의 절대등급이 8등급이면 rA = 10⁷⁄⁵ pc이다.'}],'g_x','G18-55-10','');return /class=\"ggjt\"[^>]*>「ㄴ\\. A의[^」]*<sub>A<\\/sub>/.test(h)||h.slice(0,400)})()",
+   "screen": "p1"
+  },
+  {
+   "name": "PC 댓글 지문(안 고친 칸 ㄱ) = 옛 그대로",
+   "act": "none",
+   "wait": 100,
+   "yard": false,
+   "expect": "(()=>{const h=ggCsHTML([{k:'c_gm4',t:'x',ts:1,from:'G18-55-10',jm:'ㄱ',jt:'ㄱ. rA가 rB보다 크다.'}],'g_x','G18-55-10','');return h.includes('「ㄱ. rA가 rB보다 크다.」')||h.slice(0,300)})()",
+   "screen": "p1"
+  },
+  {
+   "name": "PC 고친 제목(P^2 비례 r^3) = 서랍 줄 · 문제 창 제목 수식",
+   "act": "none",
+   "wait": 1500,
+   "yard": true,
+   "expect": "(async()=>{const r=rowByUid('G23-60-08');const no=r[F.NO];await tfixSet(pnUid(r),PN_SLOT,'케플러 P^2 비례 r^3');ndTitlePaint(no);VNO=no;await showProblem();await new Promise(z=>setTimeout(z,800));const a=ndtTail(r,no),v=document.querySelector('#vT1 .vtt');return a.includes('<sup>2</sup>')&&!!v&&v.innerHTML.includes('<sup>2</sup>')||JSON.stringify({a:a.slice(0,200),v:v&&v.innerHTML.slice(0,200)})})()",
+   "screen": "p1"
+  },
+  {
+   "name": "PC 근거 글 바꿈 그대로(시계방향 → ↻ · 근거 · 댓글 글)",
+   "act": "none",
+   "wait": 100,
+   "yard": false,
+   "expect": "ggMath('시계방향')==='↻'&&ggMath('P^2').includes('<sup>2</sup>')",
+   "screen": "p1"
+  }
+ ]
+}
