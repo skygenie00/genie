@@ -21,14 +21,14 @@ if(!GGM_RAW&&s.startsWith('=/=',i))
 ⟦6 찾기⟧
 function ggMathL(src){
 ⟦6 바꿈⟧
-/* ★ 11/10 사용자 「지학 댓글엔 왜 ^3 · 분수가 안 바뀌어 · 제목도 · 288 ㄱㄴㄷ 지문도」 — 근거 글만 거치던 수식 바꿈(ggMath)을 댓글 글 · 댓글 지문 · 제목 · 카드 지문에도
-   댓글 글 = 근거 글과 같게(모든 과목 · 낱말 바꿈 포함) / 제목 = 지학만 ggMath / 카드 문항 · 〈보기〉 · 선택지 · 댓글 지문 = 지학 · 사용자가 길게 눌러 고친 칸(tfix)만 · 수식만(낱말 바꿈 없음 · 원래 OCR 글은 그대로 — km/s 같은 단위가 분수로 바뀌지 않게) */
+/* ★ 11/10 사용자 19:33 「지학 댓글엔 왜 ^3 · 분수가 안 바뀌어 · 제목도 · 288 ㄱㄴㄷ 지문도」 · 20:01 「km/s 말고 바뀌어야 하는 건 바뀌어야」 — 근거 글만 거치던 수식 바꿈(ggMath)을 댓글 글 · 댓글 지문 · 제목 · 카드 지문에도
+   댓글 글 = 근거 글과 같게(모든 과목 · 낱말 바꿈 포함) / 제목 = 지학만 ggMath / 카드 문항 · 〈보기〉 · 선택지 · 댓글 지문 = 지학 · 원래 글 · 고친 글 모두 ggMathQ(GGM_RAW = 수식만 · 낱말 바꿈 없음 · 숫자+글자(8km · 3g)는 분수로 안 묶음 = 단위 그대로 · rA → r_A · ⁷⁄⁵ → 위 분수) */
 var GGM_RAW=false;function ggMathQ(x){GGM_RAW=true;try{return ggMath(String(x==null?'':x))}finally{GGM_RAW=false}}
-function txtH(uid,sl){const t=txtOf(uid,sl);return (SUBJ_ID==='earth'&&tfixOn(uid,sl))?ggMathQ(t):esc(t)}
+function txtH(uid,sl){const t=txtOf(uid,sl);return SUBJ_ID==='earth'?ggMathQ(t):esc(t)}
 function ttlH(t){return SUBJ_ID==='earth'?ggMath(String(t==null?'':t)):esc(t)}
 function jtH(c,uid){const u=String((c&&c.from)||uid||''),k=c&&c.jm?String(c.jm):'',sl=k?(/^c\d+$/.test(k)?k:'b'+k):'';
   if(SUBJ_ID==='earth'&&sl&&u&&tfixOn(u,sl))return esc(/^c\d+$/.test(k)?((CIRC[+k.slice(1)-1]||k)+' '):(k+'. '))+ggMathQ(txtOf(u,sl));
-  return esc(c.jt)}
+  return SUBJ_ID==='earth'?ggMathQ(c.jt):esc(c.jt)}
 function ggMathL(src){
 ⟦7 찾기⟧
 (c.jt?'<span class="ggjt" title="누르면 O X 고르기">「'+esc(c.jt)+'」</span>'+(c.jo?'<b class="ggjo '+c.jo+'">'+c.jo+'</b>':''):'')+esc(c.t||'')+'</span>'
@@ -86,4 +86,31 @@ x.innerHTML=ttlH(pnName(r));x.classList.toggle('fx',!!fx)
 title="길게 눌러 이름 고치기">'+esc(pnName(r))+'</span>')
 ⟦20 바꿈⟧
 title="길게 눌러 이름 고치기">'+ttlH(pnName(r))+'</span>')
+⟦21 찾기⟧
+if(m){i+=m[0].length;html=esc(m[0])}
+⟦21 바꿈⟧
+if(m){if(GGM_RAW&&m[2]){i=k;return null}i+=m[0].length;html=esc(m[0])}   /* ★ 11/10 RAW — 숫자 뒤 글자(8km · 3g)는 단위 → 분수 칸 안 만듦 */
+⟦22 찾기⟧
+if(plain==null)html=post(html);
+⟦22 바꿈⟧
+if(GGM_RAW){const u=/^[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]+(?!⁄)/.exec(s.slice(i));if(u){i+=u[0].length;html+=esc(u[0])}}   /* ★ 11/10 RAW — OCR 위첨자 글자(10² · R²)는 그 칸에 붙임 */
+    if(plain==null)html=post(html);
+⟦23 찾기⟧
+    i=k;
+    const r=root();
+⟦23 바꿈⟧
+    i=k;
+    if(GGM_RAW){let m=/^[a-z][A-Z](?![A-Za-z])/.exec(s.slice(i));if(m&&(i===0||!/[A-Za-z]/.test(s[i-1]))){out+=esc(m[0][0])+'<sub>'+esc(m[0][1])+'</sub>';i+=2;continue}   /* ★ 11/10 RAW — 낱자 소문자+대문자(rA · nH) = 아래첨자 */
+      m=/^([⁰¹²³⁴⁵⁶⁷⁸⁹]+)⁄([⁰¹²³⁴⁵⁶⁷⁸⁹]+)/.exec(s.slice(i));if(m){const d=x=>[...x].map(ch=>'⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(ch)).join('');out+='<sup><span class="gm-frac"><span class="n">'+d(m[1])+'</span><span class="d">'+d(m[2])+'</span></span></sup>';i+=m[0].length;continue}}   /* ⁷⁄⁵ = 위 분수 */
+    const r=root();
+⟦24 찾기⟧
+var ggBangAny=uid=>ggOf(uid).some(g=>g&&(g.bang||(Array.isArray(g.cs)&&g.cs.some(c=>c&&c.bang))));
+⟦24 바꿈⟧
+var ggBangAny=uid=>{const u=String(uid||'');return ggOf(uid).some(g=>g&&(g.bang||(Array.isArray(g.cs)&&g.cs.some(c=>c&&c.bang&&String(c.from||u)===u))))||ggBangFrom(u)};
+/* ★ 11/10 사용자 20:00 「댓글 ! 눌렀는데 왜 그 문항 서랍 줄에 빨간 줄 안 생겨」 · 20:04 「283 은 댓글 ! 도 없는데 왜 빨간 줄」 — 댓글 ! 는 그 댓글을 단 문항((c.from||임자))에만 셈(11/06 보이기 규칙과 같게) · 다른 문항에서 단 댓글은 임자 근거 칸에 저장(from = 단 문항)되므로 임자 칸들을 훑어 셈 */
+function ggBangFrom(u){if(!u||typeof GG==='undefined')return false;for(const k in GG){if(k===u)continue;const L=GG[k];if(!Array.isArray(L))continue;for(const g of L){if(g&&Array.isArray(g.cs)&&g.cs.some(c=>c&&c.bang&&String(c.from||'')===u))return true}}return false}
+⟦25 찾기⟧
+c.bang=true;await ggSaveList(uid,list);ggCsRepaint(uid,gk);ggBangPaint(uid);
+⟦25 바꿈⟧
+c.bang=true;await ggSaveList(uid,list);ggCsRepaint(uid,gk);ggBangPaint(uid);try{if(c.from&&String(c.from)!==String(uid))ggBangPaint(String(c.from))}catch(e){}   /* ★ 11/10 — 댓글 단 문항 서랍 줄 세로줄도 그 자리 */
 ⟦끝⟧

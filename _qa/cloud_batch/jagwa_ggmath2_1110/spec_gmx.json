@@ -27,6 +27,22 @@
    "screen": "p1"
   },
   {
+   "name": "PC 안 고친 〈보기〉 칸(288 = G18-55-10 ㄴ · rA = 10⁷⁄⁵) = 카드에서 아래첨자 · 위 분수",
+   "screen": "p1",
+   "act": "none",
+   "wait": 1500,
+   "yard": true,
+   "expect": "(async()=>{if(typeof tfixOn==='function'&&tfixOn('G18-55-10','bㄴ'))return 'tfix 있음(데이터 바뀜)';const r=rowByUid('G18-55-10');VNO=r[F.NO];await showProblem();await new Promise(z=>setTimeout(z,800));const t=document.querySelector('#card .bogi .row[data-k=\"ㄴ\"] .t'),q=document.querySelector('#card .bogi .row[data-k=\"ㄱ\"] .t');const h=t?t.innerHTML:'',g=q?q.innerHTML:'';return h.includes('r<sub>A</sub>')&&h.includes('<sup><span class=\"gm-frac\"><span class=\"n\">7</span><span class=\"d\">5</span>')&&g.includes('r<sub>B</sub>')||(h+' | '+g).slice(0,300)})()"
+  },
+  {
+   "name": "PC 안 고친 선택지(G1-006C ① 「1/4 배」) = 분수",
+   "screen": "p1",
+   "act": "none",
+   "wait": 100,
+   "yard": true,
+   "expect": "(()=>{if(typeof txtH!=='function')return 'no txtH';const h=txtH('G1-006C','c1');return h.includes('<span class=\"gm-frac\"><span class=\"n\">1</span><span class=\"d\">4</span>')||h})()"
+  },
+  {
    "name": "PC 고친 〈보기〉 칸(288 = G18-55-10 ㄴ · r_A · 10^(7/5)) = 카드에서 아래첨자 · 분수 지수",
    "act": "none",
    "wait": 1500,
@@ -35,7 +51,7 @@
    "screen": "p1"
   },
   {
-   "name": "PC 안 고친 칸(원래 OCR 글) = 그대로(8km/s 가 분수로 안 바뀜)",
+   "name": "PC 단위(5~8km/s · 4km/s) = 그대로(분수로 안 바뀜)",
    "act": "none",
    "wait": 100,
    "yard": false,
@@ -59,11 +75,11 @@
    "screen": "p1"
   },
   {
-   "name": "PC 댓글 지문(안 고친 칸 ㄱ) = 옛 그대로",
+   "name": "PC 댓글 지문(안 고친 칸 ㄱ · rA · rB) = 아래첨자",
    "act": "none",
    "wait": 100,
-   "yard": false,
-   "expect": "(()=>{const h=ggCsHTML([{k:'c_gm4',t:'x',ts:1,from:'G18-55-10',jm:'ㄱ',jt:'ㄱ. rA가 rB보다 크다.'}],'g_x','G18-55-10','');return h.includes('「ㄱ. rA가 rB보다 크다.」')||h.slice(0,300)})()",
+   "yard": true,
+   "expect": "(()=>{const h=ggCsHTML([{k:'c_gm4',t:'x',ts:1,from:'G18-55-10',jm:'ㄱ',jt:'ㄱ. rA가 rB보다 크다.'}],'g_x','G18-55-10','');return h.includes('「ㄱ. r<sub>A</sub>가 r<sub>B</sub>보다 크다.」')||h.slice(0,300)})()",
    "screen": "p1"
   },
   {
@@ -81,6 +97,30 @@
    "yard": false,
    "expect": "ggMath('시계방향')==='↻'&&ggMath('P^2').includes('<sup>2</sup>')",
    "screen": "p1"
+  },
+  {
+   "name": "PC 댓글 ! 셈 = 댓글 단 문항에만(임자 칸 남의 ! 는 임자에 안 셈)",
+   "screen": "p1",
+   "act": "none",
+   "wait": 100,
+   "yard": true,
+   "expect": "(()=>{GG['GX-OWN']=[{k:'g_tx',t:'시험 근거',cs:[{k:'c_tx',t:'시험 댓글',ts:1,bang:true,from:'GX-CM'}]}];const a=ggBangAny('GX-OWN'),b=ggBangAny('GX-CM');delete GG['GX-OWN'];return a===false&&b===true||JSON.stringify({a,b})})()"
+  },
+  {
+   "name": "PC 283(G23-60-09) 서랍 줄 = 남의 댓글 ! 만 있으면 빨간 줄 없음",
+   "screen": "p1",
+   "act": "none",
+   "wait": 100,
+   "yard": true,
+   "expect": "(()=>{const O='G23-60-09',L=ggOf(O);const own=L.some(g=>g&&(g.bang||(g.cs||[]).some(c=>c&&c.bang&&String(c.from||O)===O))),oth=L.some(g=>g&&(g.cs||[]).some(c=>c&&c.bang&&c.from&&String(c.from)!==O));if(own||!oth)return 'data 바뀜 own='+own+' oth='+oth;const r=rowByUid(O),x=document.querySelector('#ndList .ndrow[data-no=\"'+r[F.NO]+'\"]');return !!x&&!x.classList.contains('ndbang')||'row '+(!!x)})()"
+  },
+  {
+   "name": "PC 다른 문항에서 단 댓글 ! 켬 → 단 문항 서랍 줄 빨간 줄(그 자리)",
+   "screen": "p1",
+   "act": "none",
+   "wait": 800,
+   "yard": true,
+   "expect": "(async()=>{const O='G23-60-09',C='G25-62-01';const r=rowByUid(C),x=document.querySelector('#ndList .ndrow[data-no=\"'+r[F.NO]+'\"]');if(!x)return 'no row';if(x.classList.contains('ndbang'))return '처음부터 빨간 줄(데이터 바뀜)';const g=ggOf(O)[0];g.cs=(g.cs||[]).concat([{k:'c_gt',t:'시험 댓글',ts:1,from:C}]);await ggCsBang(O,g.k,'c_gt');await new Promise(z=>setTimeout(z,300));return x.classList.contains('ndbang')||'안 칠함'})()"
   }
  ]
 }
