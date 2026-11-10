@@ -3788,9 +3788,9 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                                               : 'text-yellow-800 bg-yellow-50 border-yellow-400';
                 const ftxt = kind === 'geunge' ? ggPickLine(q.id, low, ggL(q)) : extraOf(q);
                 /* 2026-09-14 — 근거는 `↳ 댓글` 줄이 잘리지 않게 **줄마다** 90자로 자른다(다른 갈래는 옛 그대로) */
-                const fshow = kind === 'geunge' ? String(ftxt).split('\n').map(x => x.slice(0, 90)).join('\n') : String(ftxt).slice(0, 90);
+                const fshow = kind === 'geunge' ? String(ftxt).split('\n').map(x => x.charAt(0) === '「' ? x : x.slice(0, 90)).join('\n') : String(ftxt).slice(0, 90);   /* ★ 11/10 — 「지문」 줄은 안 자름(판단 재료) */
                 const fline = kind
-                    ? `<div class="border-l-2 pl-2 ${fcls} text-[11.5px] mt-0.5 whitespace-pre-wrap">${escHtml(fshow)}</div>`
+                    ? `<div class="border-l-2 pl-2 ${fcls} text-[11.5px] mt-0.5 whitespace-pre-wrap">${kind === 'geunge' ? fshow.split('\n').map(x => mark(x, term)).join('\n') : escHtml(fshow)}</div>`   /* ★ 11/10 — 근거 갈래는 줄마다 찾은 낱말 표시 */
                     : '';
                 const call = kind ? `addRefId('${ownerId}','${kind}','${q.id}'${ggScA(pre)})` : `addLinkId('${ownerId}','${q.id}'${ggScA(pre)})`;
                 return `<button onclick="${call}" class="block w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-indigo-50 transition ${on ? 'opacity-50' : ''}">
@@ -5003,6 +5003,16 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         /* 걸린 조각 — 본문에서 걸리면 `i. 본문`, 댓글에서 걸리면 `i. 본문` + 줄바꿈 + `↳ 댓글`.
            미리보기 줄이라 본문·댓글 안의 줄바꿈은 한 칸으로 누른다. 아무 데도 안 걸리면 첫 항목(옛 동작 그대로). */
         function ggPickLine(uid, low, given) {   /* ★ add10 — given = 이미 푼 목록(찾기 루프) · 없으면 옛 그대로 저장소에서 */
+            /* ★ 11/10 사용자 20:48 「검색이 제일 중요 · 뭘 봐야 목적 달성?」 — 찾는 까닭 = 지금 지문과 같은 쟁점의 근거를 찾아 연결 · 그 근거를 어느 지문에 왜 O/X 로 썼는지 보고 판단
+               → 걸린 근거마다 「i. 근거」 · 그 밑 걸린 댓글 하나하나 = 「단 문항 지문」 O/X 줄 + 「↳ 댓글」 줄(옛 = 첫 근거 하나 + 첫 댓글 하나 · 지문 · O/X 없음) · 아무 데도 안 걸리면 옛 그대로 */
+            if (low) {
+                const L0 = Array.isArray(given) ? given : ggOf(uid), h0 = v => String(v || '').toLowerCase().includes(low), o0 = v => String(v || '').replace(/\s*\n\s*/g, ' ');
+                const qq = id => { const q = (typeof quizData !== 'undefined' ? quizData : []).find(x => String(x.id) === String(id)); return q ? o0(q.q) : ''; }, out = [];
+                L0.forEach(g => { if (!g) return; const cs = (Array.isArray(g.cs) ? g.cs : []).filter(c => c && h0(c.t)); if (!h0(g.t) && !cs.length) return;
+                    out.push(g.i + '. ' + o0(g.t));
+                    cs.forEach(c => { const j = qq(c.from || uid), o = String(c.jo || '').toUpperCase(); if (j) out.push('「' + j + '」' + (o === 'O' || o === 'X' ? ' ' + o : '')); out.push('↳ ' + o0(c.t)); }); });
+                if (out.length) return out.join('\n');
+            }
             const list = Array.isArray(given) ? given : ggOf(uid);
             const has = v => String(v || '').toLowerCase().includes(low);
             const one = v => String(v || '').replace(/\s*\n\s*/g, ' ');
@@ -6209,7 +6219,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     const st = Math.max(0, i - 30);
                     expSnip = (st > 0 ? '…' : '') + e.slice(st, st + 170) + (e.length > st + 170 ? '…' : '');
                 }
-                const gpk = (searchMode === 'm') ? ggPickLine(q.id, low).split('\n↳ ') : null;   /* 걸린 조각 — 본문 한 줄 + (댓글에서 걸렸으면) ↳ 한 줄 */
+                const gpk = (searchMode === 'm') ? ggPickLine(q.id, low).split('\n') : null;   /* ★ 11/10 — 줄 하나하나(근거 · 「지문」 O/X · ↳ 댓글) */   /* 걸린 조각 — 본문 한 줄 + (댓글에서 걸렸으면) ↳ 한 줄 */
                 /* ★ 2026-09-22 (_task_ox_claude_answers §C-1) — 어디서 걸렸는지 딱지(근거 · 댓글 · Claude · 여럿이면 여럿) · Claude 에서만 걸린 문항은 근거 상자를 안 그린다 */
                 const srcM = (searchMode === 'm') ? clSrcOf(q.id, low) : null;
                 const body = (searchMode === 'q')
@@ -6218,7 +6228,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                            <div class="mt-1 text-emerald-900 bg-emerald-50 border-l-2 border-emerald-400 pl-2 py-1">💬 ${mark(expSnip, term)}</div>`
                         : mark(q.q, term))
                     : `<span class="text-gray-500">${escHtml(q.q).slice(0, 60)}…</span>
-                       ${(srcM.gg || srcM.cm) ? `<div class="mt-1 pl-2 py-1 border-l-2 ${ggPickBang(q.id, low) ? '' : 'text-blue-900 bg-blue-50 border-blue-400'}"${ggPickBang(q.id, low) ? ' style="background:#fff5f5;color:#c94f4f;border-color:#f0a0a0"' : ''}>🔗 ${mark(gpk[0], term)}${gpk.length > 1 ? `<div class="mt-0.5">↳ ${mark(gpk[1], term)}</div>` : ''}</div>` : ''}${srcM.cl.length ? `<div class="mt-1 pl-2 py-1 border-l-2" style="background:#fff7ed;color:#b45309;border-color:#fdba74">${mark(clSnip(srcM.cl[0], low), term)}</div>` : ''}`;
+                       ${(srcM.gg || srcM.cm) ? `<div class="mt-1 pl-2 py-1 border-l-2 ${ggPickBang(q.id, low) ? '' : 'text-blue-900 bg-blue-50 border-blue-400'}"${ggPickBang(q.id, low) ? ' style="background:#fff5f5;color:#c94f4f;border-color:#f0a0a0"' : ''}>🔗 ${mark(gpk[0], term)}${gpk.slice(1).map(x => `<div class="mt-0.5${x.charAt(0) === '「' ? ' text-slate-600 text-[11px]' : ''}">${mark(x, term)}</div>`).join('')}</div>` : ''}${srcM.cl.length ? `<div class="mt-1 pl-2 py-1 border-l-2" style="background:#fff7ed;color:#b45309;border-color:#fdba74">${mark(clSnip(srcM.cl[0], low), term)}</div>` : ''}`;
                 /* ★ 09-16 (_task_ox_card_simple_add11 §2) — 결과를 누르면 단원으로 옮기지 않고 문항 팝업(검색 칸은 그대로) · 근거 탭은 팝업을 그 문항 근거 줄까지 굴린다 · 「↪ 이 문제로 이동」은 팝업 안에 그대로 */
                 return `
                     <button onclick="openQPopup('${q.id}');qpScrollTo('${q.id}','${searchMode === 'm' ? 'gg' : 'top'}')" class="w-full text-left px-4 py-2 border-b border-gray-100 hover:bg-blue-50 transition">
@@ -11227,11 +11237,12 @@ function jnRecHTML(uid) {
 function jnGgHTML(id, txt) {
     const ok = c => c && String(c.t || '').trim();
     const fromChip = f => f ? ` <span role="button" title="이 댓글을 단 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(f))}')" class="cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2">${escHtml(String(f))}</span>` : '';
-    const line = (c, tail) => `<div class="jncs pl-3 text-[10.5px] leading-snug text-slate-600" style="white-space:pre-wrap${c.bang ? ';box-shadow:inset 2px 0 0 #dc2626' : ''}">↳ ${escHtml(String(c.t))}${c.jo === 'O' || c.jo === 'X' ? ` <b class="ggjo ggjo-${c.jo === 'O' ? 'o' : 'x'}">${c.jo}</b>` : ''}${tail || fromChip(c.from)}</div>`;
+    /* ★ 11/10 사용자 20:32 「민법 정리 목록에서 왜 댓글 지문 안 보여」 — 카드 댓글 줄(ggCsHTML → ggFromHead)과 같게 댓글 위 줄에 「단 문항 지문」(+ O/X 는 지문 오른쪽 한 번 · 글 뒤 O/X 는 걷음 = 카드와 같음) · 근거 임자 · 근거 키를 넘겨 지문 누름(O/X)도 카드와 같은 길 */
+    const line = (c, tail, gu, gk) => `<div class="jncs pl-3 text-[10.5px] leading-snug text-slate-600" style="white-space:pre-wrap${c.bang ? ';box-shadow:inset 2px 0 0 #dc2626' : ''}">${ggFromHead(c, gu, gk)}↳ ${escHtml(String(c.t))}${tail || fromChip(c.from)}</div>`;
     const own = ggOf(id).filter(g => g && String(g.t || '').trim());
-    const h = own.map((g, n) => `<div>${escHtml(String(g.t || ''))}</div>` + (Array.isArray(g.cs) ? g.cs.filter(ok).map(c => line(c)).join('') : '')).join('');
+    const h = own.map((g, n) => `<div>${escHtml(String(g.t || ''))}</div>` + (Array.isArray(g.cs) ? g.cs.filter(ok).map(c => line(c, '', id, g.k)).join('') : '')).join('');
     const lk = (refOf(id, 'geunge') || []).map(u => ggOf(u).filter(Boolean).map(g => (Array.isArray(g.cs) ? g.cs : []).filter(c => ok(c) && (String(c.from) === String(id) || (Array.isArray(c.sh) && c.sh.indexOf(String(id)) >= 0)))
-        .map(c => line(c, ` <span role="button" title="연결한 근거의 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(u)}','${escAttr(id)}')" class="cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2">${escHtml(u)}</span>`)).join('')).join('')).join('');
+        .map(c => line(c, ` <span role="button" title="연결한 근거의 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(u)}','${escAttr(id)}')" class="cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2">${escHtml(u)}</span>`, u, g.k)).join('')).join('')).join('');
     if (!h && !lk) return '';
     return `<div data-jngg="${escHtml(id)}" class="mt-1 border-l-2 pl-2 py-1 text-[11.5px] leading-relaxed text-blue-900 bg-blue-50 border-blue-400 whitespace-pre-wrap" style="white-space:pre-wrap">${h}${lk}</div>`;
 }

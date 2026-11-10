@@ -10592,6 +10592,13 @@ function ggBangPaint(uid){
   ggChipPaint()}
 /* 🔍 근거에서 찾기 — 본문(병렬 줄) → 댓글 → 코드 (민법 ggPickLine) */
 function ggPickLine(uid,low){
+  /* ★ 11/10 사용자 20:48 「검색이 제일 중요 · 뭘 봐야 목적 달성?」 — 민법과 같게: 걸린 근거마다 「i. 근거」 · 그 밑 걸린 댓글 하나하나 = 「댓글 지문(c.jt)」 O/X 줄 + 「↳ 댓글」 줄
+     (옛 = 첫 근거 하나 + 첫 댓글 하나 · 지문 · O/X 없음) · 지문 점 없이 단 옛 댓글은 지문 줄 없이 ↳ 만 · 아무 데도 안 걸리면 옛 그대로 */
+  if(low){const L0=ggOf(uid),h0=v=>String(v||'').toLowerCase().includes(low),o0=v=>String(v||'').replace(/\s*\n\s*/g,' '),out=[];
+    L0.forEach(g=>{if(!g)return;const cs=(Array.isArray(g.cs)?g.cs:[]).filter(c=>c&&h0(c.t));if(!h0(ggFlat(g))&&!cs.length)return;
+      out.push(g.i+'. '+o0(ggFlat(g)));
+      cs.forEach(c=>{const j=o0(c.jt),o=String(c.jo||'').toUpperCase();if(j)out.push('「'+j+'」'+(o==='O'||o==='X'?' '+o:''));out.push('↳ '+o0(c.t))})});
+    if(out.length)return out.join('\n')}
   const list=ggOf(uid);
   const has=v=>String(v||'').toLowerCase().includes(low);
   const one=v=>String(v||'').replace(/\s*\n\s*/g,' ');
@@ -10622,10 +10629,10 @@ function ggResRowHTML(h,q,mode,me,sc){
   const r=rec(h.no);
   const on=(mode==='pick'&&me&&ggRefOf(me).indexOf(h.uid)>=0);
   const mark=t=>{const low=String(q||'').toLowerCase();
-    if(mode!=='go'||!low)return esc(t);
+    if(!low)return esc(t);   /* ★ 11/10 — 카드 안 찾기(pick)도 찾은 낱말 표시(민법과 같게 · 결과 보고 고르는 자리) */
     const i=String(t).toLowerCase().indexOf(low);if(i<0)return esc(t);
     return esc(t.slice(0,i))+'<mark>'+esc(t.slice(i,i+low.length))+'</mark>'+esc(t.slice(i+low.length))};
-  const line=String(h.line||'').split('\n').map(x=>x.slice(0,90)).join('\n');
+  const line=String(h.line||'').split('\n').map(x=>x.charAt(0)==='「'?x:x.slice(0,90)).join('\n');   /* ★ 11/10 — 「지문」 줄은 안 자름(판단 재료) */
   return '<div class="ggres g3'+(on?' on':'')+'" '
     +(mode==='pick'?'data-ggpick="'+ea(String(me)+'|'+h.uid+'|'+String(sc||''))+'"'
                    :'data-ggres="'+h.no+'"')+'>'
@@ -10639,7 +10646,7 @@ function ggResRowHTML(h,q,mode,me,sc){
     +'<div class="qq">'+esc(String(txtOf(h.uid,'q')).slice(0,70))+'…</div>'
     /* ★ jagwa_search_claude — Claude 에서만 걸린 문항(또는 근거 없는 문항)은 근거 줄 대신 Claude 조각(민법 clSnip · <mark>) · 둘 다 걸리면 둘 다(민법 꼴)
        h.nogl = 근거 줄 안 그림 · h.box = 아래 붙일 주황 상자(분포 목록 · A-3) */
-    +((h.nogl||(mode==='go'&&h.src&&(!h.line||(h.src.cl&&!h.src.gg&&!h.src.cm&&!h.src.id))))?'':'<div class="gl">'+mark(line)+'</div>')   /* ★ jagwa_search_claude_fix1 — ID 로 걸린 줄은 근거 줄 그대로 */
+    +((h.nogl||(mode==='go'&&h.src&&(!h.line||(h.src.cl&&!h.src.gg&&!h.src.cm&&!h.src.id))))?'':'<div class="gl">'+line.split('\n').map(mark).join('\n')+'</div>')   /* ★ jagwa_search_claude_fix1 — ID 로 걸린 줄은 근거 줄 그대로 */
     +((mode==='go'&&h.src&&gptOf(h.no)&&(h.src.cl||!h.line))?'<div class="glc">'+mark(gpSnip(h.no,String(q||'').toLowerCase().trim()))+'</div>':'')
     +(h.box||'')+'</div>'}
 function ggResLine(h,q){return ggResRowHTML(h,q,'go','','')}
