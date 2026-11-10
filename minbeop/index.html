@@ -4040,7 +4040,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             });
             GG_SCOPES.forEach(s => {
                 const ln = document.getElementById(`${s}gg-line-${U}`), lab = ln && ln.firstElementChild;
-                if (lab && /^근거/.test(lab.textContent || '')) lab.innerHTML = `근거${useLabelHTML(kind, U)} :`;
+                if (lab && /^근거/.test(lab.textContent || '')) { const cs0 = document.querySelectorAll(`[id="${s}gg-chips-${U}"] [data-gbnum]`); if (cs0.length) { cs0.forEach(c0 => { const oi = c0.querySelector('i[onclick*="useWin"]'); if (oi) oi.remove(); c0.insertAdjacentHTML('beforeend', useLabelHTML(kind, U)); }); lab.innerHTML = '근거'; } else lab.innerHTML = `근거${useLabelHTML(kind, U)}`; }   /* ★ 시안 — 「↩N」 = 첫 근거 칩 안(근거가 없으면 라벨 옆 그대로) */
             });
             const uw = document.getElementById('oxwin-use-' + kind + '-' + U);   /* 숫자를 눌러 띄운 「이 근거를 걸어 둔 문항 N」 창이 떠 있으면 그 창도(제목 수 · 목록) */
             if (uw) { const m = /useUnlink\('[^']*','([^']*)'/.exec(uw.innerHTML); oxWinRedraw('use-' + kind + '-' + U, () => useWin(kind, U, m ? m[1] : '')); }
@@ -4314,11 +4314,67 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             });
         }
         function ggStore() { if (GG_PAGE) return GG_PAGE; try { return JSON.parse(localStorage.getItem(GG_KEY) || '{}'); } catch (e) { return {}; } }
+(function(){try{var st=document.createElement('style');st.textContent='.ggfrom{display:block;font-size:10.5px;color:#475569;margin-bottom:1px;white-space:pre-wrap}.ggjt{cursor:pointer;font-weight:700;color:#1e3a8a}.ggcbg{flex:none;width:10px;text-align:center;font-size:11px;font-weight:900;color:#C7CBD0;cursor:pointer;line-height:1.5}.ggcbg.on{color:#dc2626}.ggcsbang{box-shadow:inset 2px 0 0 #dc2626}.ggjt:hover{text-decoration:underline dotted}.ggjo{margin-left:4px;font-weight:900}.ggjo-o{color:#2563eb}.ggjo-x{color:#dc2626}.ggjox{display:inline-flex;gap:3px;margin-left:4px;vertical-align:middle}.ggjox b{cursor:pointer;border:1px solid #cbd5e1;border-radius:4px;padding:0 6px;font-weight:900;background:#fff}.ggjox b[data-jo=O]{color:#2563eb}.ggjox b[data-jo=X]{color:#dc2626}.ggme .ggfrom{color:#1e3a8a;font-weight:700}';document.head.appendChild(st)}catch(e){}})();
+        /* ★ 시안 — 댓글 줄 = 그 댓글을 단 문항 글(줄이지 않음) · 글 누르면 O/X 고름 · 고른 O/X 를 그 댓글(jo)에 저장 · 같은 것 다시 누르면 지움(지학 g3JoSet 그대로) · 단 문항 = c.from(없으면 그 근거 문항) */
+        function ggFromHead(c,guid,gk){const id=(c&&c.from)||guid;if(!id)return '';const q=(typeof quizData!=='undefined'?quizData:[]).find(x=>String(x.id)===String(id));if(!q)return '';const o=String(c.jo||'').toUpperCase();return '<span class="ggfrom"><span class="ggjt" data-jg="'+escAttr(String(guid||''))+'" data-jk="'+escAttr(String(gk||''))+'" data-jc="'+escAttr(String(c.k||''))+'" title="눌러 O/X 표시">「'+escHtml(String(q.q||''))+'」</span>'+(o==='O'||o==='X'?'<b class="ggjo ggjo-'+(o==='O'?'o':'x')+'">'+o+'</b>':'')+'</span>'}
+        function ggJoSet(guid,gk,ck,v){const list=ggOf(guid).slice(),g=list.find(x=>x&&x.k===gk);if(!g||!Array.isArray(g.cs))return;const c=g.cs.find(x=>x&&String(x.k)===String(ck));if(!c)return;if(c.jo===v)delete c.jo;else c.jo=v;ggSaveList(guid,list);GG_SCOPES.forEach(s=>{const b=document.getElementById(`${s}gg-cs-${guid}-${gk}`);if(b)b.innerHTML=ggCsHTML(g.cs,gk,guid)});ggRefOwnersRepaint(guid)}
+        function ggCbgHTML(c,guid,gk){if(!guid||!gk||!c)return '';return '<span class="ggcbg'+(c.bang?' on':'')+'" data-ggcbang="'+escAttr(String(guid)+'|'+String(gk)+'|'+String(c.k||''))+'" title="중요 표시">!</span>'}
+        function ggCsBangSet(guid,gk,ck){const list=ggOf(guid).slice(),g=list.find(x=>x&&x.k===gk);if(!g||!Array.isArray(g.cs))return;const c=g.cs.find(x=>x&&String(x.k)===String(ck));if(!c)return;if(c.bang)delete c.bang;else c.bang=true;ggSaveList(guid,list);GG_SCOPES.forEach(s=>{const b=document.getElementById(`${s}gg-cs-${guid}-${gk}`);if(b)b.innerHTML=ggCsHTML(g.cs,gk,guid)});ggRefOwnersRepaint(guid)}
+        window.addEventListener('click',function(e){if(performance.now()-(window.ggLpT||-1e9)<700)return;const t=e.target;if(!t||!t.closest)return;const cb=t.closest('[data-ggcbang]');if(cb){e.stopPropagation();e.preventDefault();const v=String(cb.getAttribute('data-ggcbang')).split('|');ggCsBangSet(v[0],v[1],v.slice(2).join('|'));return}const jb=t.closest('.ggjox b');if(jb){e.stopPropagation();e.preventDefault();const j=jb.parentNode.previousElementSibling;if(j&&j.classList.contains('ggjt'))ggJoSet(j.getAttribute('data-jg'),j.getAttribute('data-jk'),j.getAttribute('data-jc'),jb.getAttribute('data-jo'));return}const j=t.closest('.ggjt');if(!j)return;e.stopPropagation();e.preventDefault();const nx=j.nextElementSibling;if(nx&&nx.classList.contains('ggjox')){nx.remove();return}const x=document.createElement('span');x.className='ggjox';x.innerHTML='<b data-jo="O">O</b><b data-jo="X">X</b>';j.after(x)},true);
+(function(){try{var st=document.createElement('style');st.textContent='.ggjmdot{flex:none;width:12px;height:16px;padding:0;border:0;background:none;color:#9AA3AD;font-size:12px;line-height:1;cursor:pointer}.ggrefdash{background-image:repeating-linear-gradient(to bottom,#60a5fa 0 7px,transparent 7px 11px);background-size:1.5px 100%;background-repeat:no-repeat;background-position:0 0}.ggrefcm{margin-left:3px;font-size:10px;font-weight:800;color:#1d4ed8}.ggjmdot:hover{color:#2563eb}.ggjmdot.on{font-size:10.5px;font-weight:800;color:#2563eb;width:20px}.ggjmbox{margin:4px 0 6px;padding:6px 8px;border:1px solid #bfdbfe;border-radius:8px;background:#f8fbff;font-size:12px}.ggjmbox.need .jmi{background:#FDECEC}.ggjmbox .jmi{padding:4px 6px;border-radius:6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ggjmbox .jmi:hover{background:#eff6ff}.ggjmbox .jmi.on{background:#2563eb;color:#fff}.ggjmbox .jmin{width:100%;box-sizing:border-box;margin-top:5px;border:1px solid #cbd5e1;border-radius:6px;padding:4px 6px;font:inherit;font-size:12px;resize:none}.ggjmbox .jm0{color:#64748b}.ggjmbox .jmc{padding:1px 6px 2px 16px;font-size:11.5px;color:#3B5E7C;white-space:pre-wrap}';document.head.appendChild(st)}catch(e){}})();
+        /* ★ 시안 — 근거 줄 「:」 → 점(지학 jmDotHTML 꼴) · 누르면 근거 줄 바로 밑 칸(아래가 밀림): 이 문항 근거 + 연결한 근거 첫 줄 목록 · 고르고 Enter = 그 근거 댓글(연결 근거 = 원래 문항 목록에 from = 이 문항 · ggRefReply 꼴 / 자기 근거 = ggReply 꼴) · jm 표시 · 이 문항에서 점으로 단 댓글 있으면 점 = 「댓」 · Shift+Enter 줄바꿈 · Esc 닫기 */
+                function ggJmDotHTML(uid,sc){return '<button type="button" class="ggjmdot" data-jmu="'+escAttr(String(uid))+'" data-jms="'+escAttr(String(sc||''))+'" title="이 지문을 근거 댓글로">•</button>'}
+        /* ★ 시안(사용자 11/10 14:09 「그 문항에서 그 근거에 댓글 달았으면 그때 『댓』 · 점은 안 바꿈」) — 근거 칩 「댓」 = 이 문항에서 그 근거에 단(또는 같이 쓰는) 댓글이 있을 때만 · 자기 근거는 단 문항 없는 옛 댓글도 이 문항 것 */
+        function ggMeCm(uid,g,own){const me=String(uid);return !!g&&Array.isArray(g.cs)&&g.cs.some(c=>c&&((own&&!c.from)||String(c.from||'')===me||(Array.isArray(c.sh)&&c.sh.indexOf(me)>=0)))}
+        function ggCmMarkPaint(uid){GG_SCOPES.forEach(sc=>ggOf(uid).forEach(g=>{if(!g)return;const c=document.getElementById(sc+'gg-chip-'+uid+'-'+g.k);if(!c)return;const o=c.querySelector('.ggrefcm');if(o)o.remove();if(ggMeCm(uid,g,true)){const i=c.querySelector('i');const s='<span class="ggrefcm">댓</span>';if(i)i.insertAdjacentHTML('beforebegin',s);else c.insertAdjacentHTML('beforeend',s)}}))}
+        function ggJmSave(uid,u,gk,t,sc){const me=String(uid);const list=ggOf(u).slice(),g=list.find(x=>x&&x.k===gk);if(!g||!t||t.length>GG_CMAX)return false;if(!Array.isArray(g.cs))g.cs=[];if(g.cs.length>=GG_CN)return false;const c={k:ggNewKey('c_'+u+'_'),t:t,ts:Date.now(),jm:'q'};if(u!==me)c.from=me;g.cs.push(c);ggSaveList(u,list);GG_SCOPES.forEach(s=>{const bx=document.getElementById(`${s}gg-cs-${u}-${gk}`);if(bx)bx.innerHTML=ggCsHTML(g.cs,gk,u)});ggRefOwnersRepaint(u);
+          if(u===me){ggBoxRefresh(u,sc);ggCmMarkPaint(u);const p=document.getElementById(`${sc}gg-pan-${u}-${gk}`);if(p&&p.classList.contains('hide'))ggToggle(u,gk,sc)}else{const p=document.getElementById(`${sc}refgg-box-${me}-${u}`);if(p&&p.classList.contains('hide'))ggRefToggle(me,u,sc)}return true}
+        function ggJmBox(line,dot){const nx=line.nextElementSibling;if(nx&&nx.classList.contains('ggjmbox')){nx.remove();return}document.querySelectorAll('.ggjmbox').forEach(x=>x.remove());
+          const uid=dot.getAttribute('data-jmu'),sc=dot.getAttribute('data-jms')||'',me=String(uid);const L=[];ggOf(uid).forEach(g=>{if(g)L.push({u:me,g:g})});refOf(uid,'geunge').forEach(u=>ggOf(u).forEach(g=>{if(g)L.push({u:String(u),g:g})}));
+          const jmc=(u,g)=>(g.cs||[]).filter(c=>c&&((u===me&&!c.from)||String(c.from||'')===me||(Array.isArray(c.sh)&&c.sh.indexOf(me)>=0))).map(c=>'<div class="jmc">↳ '+escHtml(String(c.t||''))+(c.jo==='O'||c.jo==='X'?' <b class="ggjo ggjo-'+(c.jo==='O'?'o':'x')+'">'+c.jo+'</b>':'')+'</div>').join('');
+          const b=document.createElement('div');b.className='ggjmbox';
+          b.innerHTML=L.length?L.map(x=>'<div class="jmi" role="button" data-jmu2="'+escAttr(x.u)+'" data-jmg="'+escAttr(String(x.g.k))+'">'+escHtml(String(x.g.t||'').split('\n')[0])+'</div>'+jmc(x.u,x.g)).join('')+'<textarea rows="1" class="jmin" placeholder="근거를 고르고 댓글 — Enter 저장 · Shift+Enter 줄바꿈"></textarea>':'<div class="jm0">이 문항에 적은 근거가 없다 — 근거를 먼저 적는다</div>';
+          line.after(b);const ta=b.querySelector('.jmin');
+          b.addEventListener('click',function(e){const it=e.target.closest('.jmi');if(!it)return;e.stopPropagation();b.querySelectorAll('.jmi').forEach(x=>x.classList.toggle('on',x===it));if(ta)ta.focus()});
+          if(ta){ta.addEventListener('input',function(){try{ggFit(ta)}catch(_){}});
+            ta.addEventListener('keydown',function(e){if(e.key==='Escape'){b.remove();return}if(e.key!=='Enter'||e.shiftKey||e.isComposing)return;e.preventDefault();e.stopPropagation();
+              const on=b.querySelector('.jmi.on'),t=String(ta.value||'').trim();if(!on){b.classList.add('need');setTimeout(()=>b.classList.remove('need'),900);return}if(!t)return;
+              if(ggJmSave(me,on.getAttribute('data-jmu2'),on.getAttribute('data-jmg'),t,sc)){b.remove()}})}}
+        window.addEventListener('click',function(e){const d=e.target&&e.target.closest&&e.target.closest('.ggjmdot');if(!d)return;e.stopPropagation();e.preventDefault();const line=d.parentNode;if(line)ggJmBox(line,d)},true);
+(function(){try{var st=document.createElement('style');st.textContent='.ggrowmeta{flex:none;align-self:flex-start;display:flex;flex-direction:column;align-items:flex-end;gap:2px}.ggrowmeta button{width:22px!important;height:20px!important}.ggcsmeta{flex:none;align-self:flex-start;display:flex;flex-direction:column;align-items:flex-end;gap:2px;padding-top:1px}.ggcsd{font-size:9.5px;font-weight:700;color:#9ca3af;white-space:nowrap;line-height:1.2}.ggcsmeta .ggcsx,.ggcsmeta .ggcsh{display:inline-flex;align-items:center;justify-content:center;width:22px;height:20px;margin:0;border-radius:6px;font-size:11px;font-weight:700}.ggcsmeta .ggcsh{font-size:13px;font-weight:800}.ggcslp{background:#eff6ff}.ggied{display:block!important}.ggied .ggiedin{display:block;width:100%;box-sizing:border-box;margin:0;padding:0;border:0;outline:0;background:#f8fbff;box-shadow:0 1px 0 #93c5fd;border-radius:0;font:inherit;color:inherit;line-height:inherit;letter-spacing:inherit;white-space:pre-wrap;resize:none;overflow:hidden}.gg-on{background:transparent!important;border-left:1px solid rgb(203 213 225)!important}.gg-on > div:first-child{background:#fff5f5!important;box-shadow:inset 3px 0 0 #f0a0a0}.gg-on-dash{background:transparent!important;border-left:0!important;color:inherit!important;padding:0!important}.gg-on-dash > .ggrefrow:first-child{background:#fff5f5;box-shadow:inset 3px 0 0 #f0a0a0;color:#c94f4f;border-radius:6px;padding:2px 6px}@media (min-width:600px){.ggcsmeta,.ggrowmeta{flex-direction:row!important;align-items:center!important;gap:6px!important}}.ggb-t{font-size:11.5px!important}.ggjmbox{font-size:11px}[id*="gg-pan-"] button[title="지우기"],[id*="refgg-box-"] button[title="지우기"],[id*="refgg-box-"] button[title="연결 끊기"]{font-size:11px!important;font-weight:400!important;color:#6E7278!important;background:none!important}';document.head.appendChild(st)}catch(e){}})();
+        /* ★ 시안 — 댓글 줄 길게 누름(550ms · 8px 넘게 움직이면 그만 · 누르는 동안 옅은 파랑) = 고치기: 근거 판 줄 = ggCsEdit · 연결 상자 줄 = ggRefEdit · 단추 · 문항 글(O/X) · ! · 끌기 손잡이 위에서는 안 함 · 열린 뒤 따라오는 click 한 번 먹음 */
+        let GIED=null;
+        function ggIed(el,orig,save){if(GIED)GIED.done(true);const keep=el.innerHTML;orig=String(orig||'');el.classList.add('ggied');el.innerHTML='';const ta=document.createElement('textarea');ta.className='ggiedin';ta.rows=1;ta.value=orig;el.appendChild(ta);let open=true,pd=null;
+          const pdn=e=>{pd=el.contains(e.target)?null:{x:e.clientX,y:e.clientY,t:performance.now()}};
+          const pmv=e=>{if(pd&&Math.hypot(e.clientX-pd.x,e.clientY-pd.y)>8)pd=null};
+          const pup=e=>{const p=pd;pd=null;if(p&&performance.now()-p.t<700&&!el.contains(e.target)){let go=()=>{go=null;done(true)};document.addEventListener('click',()=>setTimeout(()=>{if(go)go()},0),{capture:true,once:true});setTimeout(()=>{if(go)go()},450)}};   /* ★ 누른 것(! · 칩 · 단추)이 먼저 제 일 → 그 뒤 저장(손 뗄 때 바로 저장하면 다시 그려져 누른 단추가 사라짐) · click 이 안 오면 0.45 초 뒤 */   /* ★ 밖을 톡 = 저장 · 굴림 · 끌기(8px 넘게 움직임) · 길게 = 아무 일 없음 */
+          const done=commit=>{if(!open)return;open=false;if(GIED&&GIED.el===el)GIED=null;document.removeEventListener('pointerdown',pdn,true);document.removeEventListener('pointermove',pmv,true);document.removeEventListener('pointerup',pup,true);const v=String(ta.value||'').trim();el.classList.remove('ggied');el.innerHTML=keep;if(commit&&v&&v!==orig.trim())save(v)};
+          GIED={el,done};ta.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();done(true)}else if(e.key==='Escape'){e.preventDefault();done(false)}});ta.addEventListener('input',()=>{try{ggFit(ta)}catch(_){}});
+          setTimeout(()=>{if(open){document.addEventListener('pointerdown',pdn,true);document.addEventListener('pointermove',pmv,true);document.addEventListener('pointerup',pup,true)}},0);
+          try{ggFit(ta)}catch(_){};ta.focus();try{ta.setSelectionRange(ta.value.length,ta.value.length)}catch(_){}}
+        (function(){let lp=null,lpT=-1e9;const SEL='[data-ggrefce],[data-ggcslong],[data-ggrefbe],[data-ggbe]';const skip=t=>t.closest('button,a,textarea,input,[role=button],.ggjox,.ggcbg,.ggcsdh,.ggbang');
+          const drop=L=>{if(L){clearTimeout(L.tm);L.el.classList.remove('ggcslp')}};
+          const fire=r2=>{if(!r2||!r2.isConnected)return;const v=r2.getAttribute('data-ggrefce'),vb=r2.getAttribute('data-ggrefbe'),vo=r2.getAttribute('data-ggbe');
+            if(v||r2.hasAttribute('data-ggcslong')){const ct=r2.querySelector('.ggct');const guid=r2.getAttribute('data-guid'),gk=r2.getAttribute('data-gk'),ck=r2.getAttribute('data-ck');const g=ggOf(guid).find(x=>x&&x.k===gk),c=g?ggCsOf(g,ck):null;if(!ct||!c)return;
+              ggIed(ct,c.t,t=>{const L=ggOf(guid).slice(),g2=L.find(x=>x&&x.k===gk),c2=g2?ggCsOf(g2,ck):null;if(!c2||t.length>GG_CMAX)return;c2.t=t;ggSaveList(guid,L);GG_SCOPES.forEach(s=>{const bx=document.getElementById(`${s}gg-cs-${guid}-${gk}`);if(bx)bx.innerHTML=ggCsHTML(g2.cs,gk,guid)});ggRefOwnersRepaint(guid)});return}
+            if(vb){const p=vb.split('|');const sp=r2.querySelector('[id*="refgg-t-"]');const g=ggOf(p[1]).find(x=>x&&x.k===p[2]);if(!sp||!g)return;ggIed(sp,g.t,t=>{const inp=document.getElementById((p[3]||'')+'refgg-ein-'+p[0]+'-'+p[1]+'-'+p[2]);if(!inp)return;inp.value=t;ggRefEditSave(p[0],p[1],p[2],undefined,p[3]||'')});return}
+            if(vo){const p=vo.split('|');const g=ggOf(p[0]).find(x=>x&&x.k===p[1]);if(!g)return;ggIed(r2,g.t,t=>{const inp=document.getElementById((p[2]||'')+'gg-ein-'+p[0]+'-'+p[1]);if(!inp)return;inp.value=t;ggEditSave(p[0],p[1],p[2]||'')})}};
+          window.ggLpT=-1e9;
+          window.addEventListener('pointerdown',e=>{const t=e.target;if(!t||!t.closest||skip(t))return;const r=t.closest(SEL);if(!r||r.querySelector('.ggied')||r.classList.contains('ggied'))return;if(lp)drop(lp);lp={el:r,x:e.clientX,y:e.clientY,long:false,t0:performance.now()};r.classList.add('ggcslp');lp.tm=setTimeout(()=>{if(lp)lp.long=true},550)},true);
+          window.addEventListener('pointermove',e=>{if(lp&&Math.hypot(e.clientX-lp.x,e.clientY-lp.y)>8){drop(lp);lp=null}},true);
+          const up=e=>{if(!lp)return;const L=lp;lp=null;drop(L);if(!L.long&&performance.now()-L.t0>=550)L.long=true;if(!L.long||e.type!=='pointerup')return;lpT=performance.now();window.ggLpT=lpT;fire(L.el)};
+          window.addEventListener('pointerup',up,true);window.addEventListener('pointercancel',up,true);
+          window.addEventListener('touchend',e=>{if(performance.now()-lpT<120&&e.cancelable)e.preventDefault()},{capture:true,passive:false});
+          window.addEventListener('click',e=>{if(performance.now()-lpT<700){lpT=-1e9;e.stopPropagation();e.preventDefault()}},true);
+          window.addEventListener('contextmenu',e=>{const t=e.target;if(t&&t.closest&&t.closest(SEL))e.preventDefault()},true)})();
+        function ggJnRepaint(u){const rows=document.querySelectorAll('[data-jnrow]');if(!rows.length)return;try{qpCacheOpen()}catch(_){};try{rows.forEach(r=>{const id=r.getAttribute('data-jnrow');if(u&&id!==String(u)&&!(refOf(id,'geunge')||[]).some(x=>String(x)===String(u)))return;const h=jnGgHTML(id,refTextOf(id,'geunge'));const o=r.querySelector('[data-jngg]');if(o){if(h)o.outerHTML=h;else o.remove()}else if(h){const a=r.querySelector('[id="jn-reflink-geunge-'+id+'"]');if(a)a.insertAdjacentHTML('beforebegin',h)}})}catch(e){}try{qpCacheClose()}catch(_){}}
+        window.addEventListener('storage',e=>{if(e.key==='ox_q_geunge')ggJnRepaint()});
         function ggOf(uid) { const a = ggStore()[uid]; return Array.isArray(a) ? a : []; }
         function ggSaveList(uid, list) {
             const o = ggStore();
             if (list && list.length) o[uid] = list; else delete o[uid];
             localStorage.setItem(GG_KEY, JSON.stringify(o));
+            setTimeout(() => { if (typeof ggJnRepaint === 'function') ggJnRepaint(uid); }, 0);   /* ★ 시안 — 떠 있는 정리 창 근거 줄(! · O/X · 댓글)도 바로 */
         }
         function ggNewKey(p) { return p + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6); }
         function ggItem(uid, k) { return ggOf(uid).find(g => g && g.k === k) || null; }
@@ -4433,7 +4489,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 }
                 const p = document.getElementById(sc + 'gg-pan-' + uid + '-' + g.k);
                 const meta = p && p.children[0] && p.children[0].children[1];
-                if (meta) meta.textContent = ggOkWord(g.ok) + ' · ' + ggMD(g.ts);
+                /* ★ 시안 — 머리 「맞음 · 날짜」 걷음(사용자 11/10 15:34) · 옛 줄은 머리 둘째 칸(댓 · ✕ 묶음)을 글로 덮었음 */
             });
         }
 
@@ -4554,19 +4610,19 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const bn = g.bang ? ' ggnum-on' + ((g.ok === true || g.ok === false) ? '' : ' ggnum-on-n') : '';
             const bok = (g.ok === true || g.ok === false) ? ' data-gbok="1"' : '';
             return `<span id="${sc}gg-chip-${uid}-${g.k}" data-gbnum="${escAttr(uid)}|${escAttr(g.k)}"${bok} onclick="ggToggle('${uid}','${g.k}'${ggScA(sc)})" title="${escHtml(g.t || '')}"
-                class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4 border ${ggOkCls(g.ok)}${bn}">${g.i}</span>`;
+                class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4 border ${ggOkCls(g.ok)}${bn}">${g.i}${ggMeCm(uid, g, true) ? '<span class="ggrefcm">댓</span>' : ''}${useLabelHTML('geunge', uid)}</span>`;   /* ★ 시안(사용자 11/10 14:05 「↩N 을 지금 1 표시된 그 근거로」) — 이 문항 근거가 쓰인 문항 수 = 첫 근거 칩 안 */
         }
         /* ★ 2026-09-18 (_task_ox_jari_thumb §C) — 줄 끝 🔗 를 뺐다(연결은 본문 줄 🔍 로만) · 그 자리에 「지우기」.
            ⚠ `gk` 가 없으면 지우기를 안 단다 — 연결 상자(`ggRefBoxHTML`)는 **남의 문항** 댓글을 그리는 자리라
              거기서 지우면 엉뚱한 문항의 댓글이 지워진다(그 줄엔 제 ✎ 가 따로 있다). */
-        function ggCsHTML(cs, gk, guid) {
+        function ggCsHTML(cs, gk, guid, gk2, tail) {
             if (!Array.isArray(cs) || !cs.length) return '<div class="text-[11.5px] text-gray-400 py-1">댓글 없음</div>';
             const del = (gk != null && guid != null);
-            return cs.map((c, n) => `<div class="flex gap-1.5 py-1 border-b border-dashed border-gray-100 text-[12px] text-slate-700"${del ? ` data-ck="${escAttr(String(c.k || n))}" data-gk="${escAttr(String(gk))}" data-guid="${escAttr(String(guid))}"` : ''}>
-                ${del ? '<span class="ggcsdh" title="끌어서 차례 바꾸기"></span>' : ''}                <span class="text-[10px] font-bold text-gray-400 whitespace-nowrap pt-0.5">${ggMD(c.ts)}</span>
-                <span class="whitespace-pre-wrap">${escHtml(c.t || '')}</span>
-                ${c.from ? `<span role="button" title="이 댓글을 단 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(c.from))}')" class="flex-none self-start cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap pt-0.5">${escHtml(String(c.from))}</span>` : ''}${Array.isArray(c.sh) ? c.sh.map(s => `<span role="button" title="이 댓글을 같이 쓰는 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(s))}')" class="ggshid flex-none self-start cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap pt-0.5">${escHtml(String(s))}</span>`).join('') : ''}
-                ${del ? `<button type="button" onclick="ggCsEdit(this)" title="고치기" aria-label="고치기" class="ml-auto flex-none self-start inline-flex items-center justify-center w-6 h-6 -my-1 rounded-md text-[11px] font-bold text-blue-600 hover:bg-blue-50">✎</button><button type="button" onclick="ggCsDel(this)" title="지우기" aria-label="지우기" class="flex-none self-start inline-flex items-center justify-center w-6 h-6 -my-1 rounded-md text-[11px] font-bold text-red-700 hover:bg-red-50">✕</button>` : ''}
+            /* ★ 시안(사용자 11/10 13:51 「가로 너무 좁아 · 지학처럼 길게 누르면 고치기 · 연필 지우고 · uid 밑으로 날짜 · ✕ 세로로」) — 글 칸 = 남는 폭 다 · 오른쪽 세로 칸 = 단 문항 ID · 같이 쓰는 ID · 날짜 · (연결 상자 + ·) ✕ · ✎ 걷음 → 줄 길게 누름 = 고치기(지학 10/13 ggCsEditOpen 꼴) */
+            return cs.map((c, n) => `<div class="flex gap-1.5 py-1 border-b border-dashed border-gray-100 text-[10.5px] text-slate-700${c.bang ? ' ggcsbang' : ''}"${del ? ` data-ck="${escAttr(String(c.k || n))}" data-gk="${escAttr(String(gk))}" data-guid="${escAttr(String(guid))}" data-ggcslong="1"` : ''}>
+                ${del ? '<span class="ggcsdh" title="끌어서 차례 바꾸기"></span>' : ''}${ggCbgHTML(c, guid, gk ?? gk2)}
+                <span class="whitespace-pre-wrap flex-1 min-w-0">${ggFromHead(c, guid, gk ?? gk2)}<span class="ggct">${escHtml(c.t || '')}</span></span>
+                <span class="ggcsmeta">${c.from ? `<span role="button" title="이 댓글을 단 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(c.from))}')" class="cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap">${escHtml(String(c.from))}</span>` : ''}${Array.isArray(c.sh) ? c.sh.map(s => `<span role="button" title="이 댓글을 같이 쓰는 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(s))}')" class="ggshid cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap">${escHtml(String(s))}</span>`).join('') : ''}<span class="ggcsd">${ggMD(c.ts)}</span>${del ? `<button type="button" onclick="ggCsDel(this)" title="지우기" aria-label="지우기" class="ggcsx text-red-700 hover:bg-red-50">✕</button>` : (tail || '')}</span>
             </div>`).join('');
         }
         /* [댓글 지우기] — 근거 지우기(`ggDel`)가 되묻으므로 **같게** 되묻는다(§C-2).
@@ -4606,7 +4662,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 if (b) b.innerHTML = ggCsHTML(g.cs, gk, uid);
             });
             ggBoxRefresh(uid, sc);
-            ggRefOwnersRepaint(uid);            /* ★ 11/03 — 이 근거를 연결한 문항 상자(댓글 줄)도 바로 */
+            ggCmMarkPaint(uid); ggRefOwnersRepaint(uid);            /* ★ 11/03 — 이 근거를 연결한 문항 상자(댓글 줄)도 바로 */
         }
         /* ★ 2026-09-18 (_task_ox_cs_edit_usecount §A) — 댓글 「고치기」. 그 줄의 글 칸을 편집 칸(근거 고치기 칸 gg-edit 과 같은 꼴)으로 바꾸고
            저장하면 **그 댓글 t 만** 바꾼다(ts·k·본문·ok·bang·다른 댓글·연결 무변 — ggRefEditSave 가 댓글 t 를 고치는 자리와 같다).
@@ -4675,11 +4731,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             return `<div id="${sc}gg-pan-${uid}-${g.k}" data-gbbox="${escAttr(uid)}|${escAttr(g.k)}" class="hide mt-1.5 border border-slate-300 rounded-lg bg-slate-50/40 overflow-hidden${g.bang ? ' gg-on' : ''}">
                 <div class="flex flex-wrap items-start gap-x-2 gap-y-1 px-2.5 py-1.5 border-b border-gray-100 bg-gray-50">
                     <span class="flex items-start gap-2" style="flex:1 1 18rem;min-width:0">${ggBangHTML(uid, g, sc)}
-                    <span id="${sc}gg-t-${uid}-${g.k}" class="ggb-t flex-1 min-w-0 text-[12.5px] text-gray-800 whitespace-pre-wrap">${escHtml(g.t || '')}</span></span>
+                    <span id="${sc}gg-t-${uid}-${g.k}" data-ggbe="${escAttr(uid)}|${escAttr(g.k)}|${escAttr(sc)}" class="ggb-t flex-1 min-w-0 text-[12.5px] text-gray-800 whitespace-pre-wrap">${escHtml(g.t || '')}</span></span>
                     <span class="ml-auto flex items-center gap-2 whitespace-nowrap">
-                    <span class="text-[10.5px] font-bold text-slate-500 whitespace-nowrap">${ggOkWord(g.ok)} · ${ggMD(g.ts)}</span>
+                    
                     <button type="button" onclick="ggCmToggle('${uid}','${g.k}'${ggScA(sc)})" title="댓글${(g.cs || []).length ? ' ' + g.cs.length : ''} · 달기" aria-label="댓글" class="inline-flex items-center justify-center w-6 h-6 rounded-md text-[11px] font-extrabold ${(g.cs || []).length ? 'text-blue-700' : 'text-slate-400'} hover:bg-blue-50">댓</button>
-                    <button type="button" onclick="ggEdit('${uid}','${g.k}'${ggScA(sc)})" title="고치기" aria-label="고치기" class="inline-flex items-center justify-center w-6 h-6 rounded-md text-[11px] font-bold leading-none hover:bg-blue-50 text-blue-600">✎</button>
+                    
                     <button type="button" onclick="ggDel('${uid}','${g.k}'${ggScA(sc)})" title="지우기" aria-label="지우기" class="inline-flex items-center justify-center w-6 h-6 rounded-md text-[11px] font-bold leading-none hover:bg-red-50 text-red-700">✕</button>
                     </span>
                 </div>
@@ -4705,7 +4761,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const list = ggOf(uid);
             return `<div id="${sc}gg-box-${uid}" class="mt-2">
                 <div id="${sc}gg-line-${uid}" class="flex items-center gap-1 flex-wrap">
-                    <span class="text-[11px] font-extrabold text-slate-600 whitespace-nowrap">근거${useLabelHTML('geunge', uid)} :</span>
+                    <span class="text-[11px] font-extrabold text-slate-600 whitespace-nowrap">근거${list.some(Boolean) ? '' : useLabelHTML('geunge', uid)}</span>${ggJmDotHTML(uid, sc)}
                     <span id="${sc}gg-chips-${uid}" class="flex items-center gap-1 flex-wrap">${list.map(g => ggChipHTML(uid, g, sc)).join('')}</span>
                     <span id="${sc}gg-refchips-${uid}" class="flex items-center gap-1 flex-wrap">${ggRefChipsHTML(uid, sc)}</span>
                     <textarea id="${sc}gg-in-${uid}" rows="1" placeholder="" autocomplete="off"
@@ -4932,7 +4988,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (box) box.innerHTML = ggCsHTML(g.cs, k, uid);
             inp.value = '';
             inp.focus();
-            ggBoxRefresh(uid, sc);              /* ★ 09-15 §B */
+            ggBoxRefresh(uid, sc); ggCmMarkPaint(uid);              /* ★ 09-15 §B */
         }
 
         /* ---------- 🔍 근거 검색 — 새로 짓지 않고 `linkSearch` 에 갈래를 붙였다 ---------- */
@@ -4987,7 +5043,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 return `<span id="${sc}gg-refchip-${uid}-${u}" data-gbref="${escAttr(u)}" onclick="${sc === 'jn-' ? 'event.stopPropagation();' : ''}ggRefToggle('${escAttr(uid)}','${escAttr(u)}'${ggScA(sc)})"`
                     + ` title="연결한 근거 · ${escHtml(u)}"`
                     + ` class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4`
-                    + ` border border-dashed text-blue-800 bg-blue-50 border-blue-400 ${gone ? 'opacity-40' : ''}${ggBangAny(u) ? ' ggchip-on' : ''}">🔗 ${escHtml(u)}`
+                    + ` border border-dashed text-blue-800 bg-blue-50 border-blue-400 ${gone ? 'opacity-40' : ''}${ggBangAny(u) ? ' ggchip-on' : ''}">🔗${ggOf(u).some(g => ggMeCm(uid, g)) ? '<span class="ggrefcm">댓</span>' : ''}`
                     + useNumHTML('geunge', u, uid) + `</span>`;
             }).join('');
         }
@@ -5005,14 +5061,13 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                            : !list.length ? '<div class="text-slate-500">그 문항에 근거가 없습니다</div>'
                            : list.map(g => g ? ggRefRowHTML(uid, u, g, sc, list.length === 1) : '').join('');   /* ★ 11/03 — 한 항목이면 solo(손 단추는 머리 줄) */
                 /* ★ 2026-09-16 (§B) — 그 문항 근거 중 켜진 게 하나라도 있으면 상자 테두리도 붉은 점선 */
-                return `<div id="${sc}refgg-box-${uid}-${u}" data-gbrefbox="${escAttr(u)}" class="hide mt-1.5 text-[12.5px] text-blue-900 bg-blue-50`
-                    + ` border-l-4 border-dashed border-blue-400 rounded-lg px-2.5 py-2 leading-relaxed${ggBangAny(u) ? ' ggrefbox-on' : ''}">`
-                    + `<div class="flex items-center gap-2 text-[11px] font-extrabold text-blue-800 opacity-80 mb-0.5">`
-                    + `<span class="flex-1">🔗 <span role="button" title="그 문제 보기" onclick="showLinkedQuestion('${escAttr(u)}','${escAttr(uid)}')"`
-                    + ` class="cursor-pointer text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid">${escHtml(u)}</span></span>`   /* ★ 11/03 사용자 시안 댓글 「(머리 「연결한 근거」 글자도 지움) 그 문제 보기 아이콘 없애고 uid 나타난 부분을 그 문제 보기 누른 것처럼」 · 「연결 끊기 · 여기서 고치기 글자 없애고 아이콘만」 */
-                    + (list.length === 1 && list[0] ? ggRefActBtns(uid, u, list[0], sc) : '')   /* ★ 11/03 사용자 「위에 X 랑 한 줄로」 — 한 항목이면 댓 · ✎ 을 ✕ 와 한 줄 */
+                return `<div id="${sc}refgg-box-${uid}-${u}" data-gbrefbox="${escAttr(u)}" class="hide mt-1.5 text-[11.5px] text-blue-900 bg-blue-50`
+                    + ` ggrefdash rounded-lg px-2.5 py-2 leading-relaxed${ggBangAny(u) ? ' ggrefbox-on' : ''}">`
+                    + (list.length === 1 && list[0] ? '' : `<div class="flex items-center gap-2 text-[11px] font-extrabold text-blue-800 opacity-80 mb-0.5">`
+                    + `<span class="flex-1"></span>`   /* ★ 11/03 사용자 시안 댓글 「(머리 「연결한 근거」 글자도 지움) 그 문제 보기 아이콘 없애고 uid 나타난 부분을 그 문제 보기 누른 것처럼」 · 「연결 끊기 · 여기서 고치기 글자 없애고 아이콘만」 */
+                    + ''   /* ★ 11/03 사용자 「위에 X 랑 한 줄로」 — 한 항목이면 댓 · ✎ 을 ✕ 와 한 줄 */
                     + `<button type="button" onclick="ggRefDelAsk('${escAttr(uid)}','${escAttr(u)}'${ggScA(sc)})"`   /* ★ 10/10 ox_del — 되묻고 끊기(옛: onclick="ggRefDel(…)") */
-                    + ` title="연결 끊기" aria-label="연결 끊기" class="inline-flex items-center justify-center w-6 h-6 rounded-md text-[11px] font-bold leading-none hover:bg-red-50 font-bold text-red-700">✕</button></div>`
+                    + ` title="연결 끊기" aria-label="연결 끊기" class="inline-flex items-center justify-center w-6 h-6 rounded-md text-[11px] font-bold leading-none hover:bg-red-50 font-bold text-red-700">✕</button></div>`)
                     + body + `</div>`;
             }).join('');
         }
@@ -5039,20 +5094,19 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             /* ★ 2026-09-16 (§B) — 항목 맨 앞에 「!」 · 켜지면 왼쪽 선이 **점선**(상자 틀과 맞춤) */
             /* ★ 2026-10-10 (_task_cloud_batch_1010 ③) — 본문 줄 · 댓글 줄 = ggPanelHTML(10/6 ox_gg_phone) 꼴: 줄 flex-wrap · 글 덩어리 flex 1 1 18rem · min-width 0 · 「✎ 여기서 고치기」 ml-auto */
             return `<div data-gbbox="${escAttr(u)}|${escAttr(g.k)}" data-gbdash="1" class="mt-1${g.bang ? ' gg-on-dash' : ''}">`
-                + `<div class="ggrefrow flex flex-wrap items-start gap-x-1.5 gap-y-1">`   /* ★ 10/10 ox_fix — ggrefrow = 손가락 누를 띠를 이 줄 안으로(CSS .ggrefrow · 옛: class="flex flex-wrap …") */
-                + `<span class="flex items-start gap-1.5" style="flex:1 1 18rem;min-width:0">`
+                + `<div class="ggrefrow flex items-start gap-x-1.5 gap-y-1" data-ggrefbe="${a(uid)}|${a(u)}|${a(g.k)}|${a(sc)}">`   /* ★ 10/10 ox_fix — ggrefrow = 손가락 누를 띠를 이 줄 안으로(CSS .ggrefrow · 옛: class="flex flex-wrap …") */
+                + `<span class="flex items-start gap-1.5" style="flex:1 1 0;min-width:0">`
                 + ggBangHTML(u, g, sc)
                 /* ★ 11/03 사용자 시안 댓글 「동그라미 빼 주고 글자들 그만큼 왼쪽으로」 — 풀이 상태 색 점(ok) 걷음(옛: 7px 점 · title 맞음/틀림/안 품) · 상태는 원래 근거 판 「안 품 · 날짜」 에 그대로 */
-                + `<span class="flex-none font-extrabold">${escHtml(String(g.i))}.</span>`
+                + ''
                 + `<span id="${sc}refgg-t-${id}" class="flex-1 min-w-0 whitespace-pre-wrap">${escHtml(g.t || '')}</span></span>`
-                + (solo ? '' : `<span class="ml-auto flex-none flex items-center gap-0.5">${ggRefActBtns(uid, u, g, sc)}</span>`)   /* ★ 11/03 시안 댓글 「『댓』 하나 · 연결한 다른 문제에서도 댓」 · 「위 X 랑 한 줄로」 — 원래 근거가 한 항목(solo)이면 댓 · ✎ 은 상자 머리 ✕ 줄로 */
+                + `<span class="ggrowmeta"><span role="button" title="이 근거의 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${a(u)}','${a(uid)}')" class="ggrefuid cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 whitespace-nowrap">${escHtml(u)}</span>${ggRefActBtns(uid, u, g, sc)}${solo ? `<button type="button" onclick="ggRefDelAsk('${a(uid)}','${a(u)}'${ggScA(sc)})" title="연결 끊기" aria-label="연결 끊기" class="inline-flex items-center justify-center rounded-md text-[11px] font-bold leading-none hover:bg-red-50 text-red-700">✕</button>` : ''}</span>`   /* ★ 11/03 시안 댓글 「『댓』 하나 · 연결한 다른 문제에서도 댓」 · 「위 X 랑 한 줄로」 — 원래 근거가 한 항목(solo)이면 댓 · ✎ 은 상자 머리 ✕ 줄로 */
                 + `</div>`
                 + editor(undefined, g.t)
                 + cs.map((c, n) => {
                     if (!c) return '';
                     const ck = String(c.k || n);
-                    return `<div class="ggrefrow${(String(c.from || '') === String(uid) || (Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0)) ? ' ggme' : ''} flex flex-wrap items-start gap-x-1.5 gap-y-1 pl-3" data-ck="${a(ck)}" data-gk="${a(g.k)}" data-guid="${a(u)}"${(String(c.from || '') === String(uid) || (Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0)) ? ' title="이 문제에서 단 · 같이 쓰는 댓글"' : ''}><span class="ggcsdh" title="끌어서 차례 바꾸기"></span><div style="flex:1 1 18rem;min-width:0">${ggCsHTML([c])}</div>${String(c.from || '') !== String(uid) ? `<button type="button" onclick="ggCsShare(${arg(ck)})" title="${(Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0) ? '이 문항과 같이 쓰기 그만' : '이 댓글을 이 문항에서도 같이 쓰기(이 문항 ID 더함)'}" class="ggcsh flex-none inline-flex items-center justify-center w-6 h-6 -my-1 rounded-md text-[13px] font-extrabold text-teal-700 hover:bg-teal-50">${(Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0) ? '−' : '+'}</button>` : ''}${edBtn(ck)}`
-                        + `<button type="button" onclick="ggCsDel(this)" title="지우기" aria-label="지우기" class="flex-none inline-flex items-center justify-center w-6 h-6 -my-1 rounded-md text-[11px] font-bold text-red-700 hover:bg-red-50">✕</button></div>`   /* ★ 11/03 사용자 시안 댓글 「왜 여기서는 댓글 지우기 버튼이 없어?」 — 옛 A-4(9/18 · 연결 상자 댓글 줄 = 지우기 없음)를 걷음 · 지우기 = 원래 근거(u) 댓글 하나 · 옛 ggCsDel 되묻는 창 그대로 */   /* ★ 10/10 ox_fix — ggrefrow(옛: class="flex flex-wrap … pl-3") */
+                    return `<div class="ggrefrow${(String(c.from || '') === String(uid) || (Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0)) ? ' ggme' : ''} flex flex-wrap items-start gap-x-1.5 gap-y-1" data-ck="${a(ck)}" data-gk="${a(g.k)}" data-guid="${a(u)}" data-ggrefce="${a(uid)}|${a(u)}|${a(g.k)}|${a(ck)}|${a(sc)}"${(String(c.from || '') === String(uid) || (Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0)) ? ' title="이 문제에서 단 · 같이 쓰는 댓글"' : ''}><span class="ggcsdh" title="끌어서 차례 바꾸기"></span><div style="flex:1 1 0;min-width:0">${ggCsHTML([c], undefined, u, g.k, (String(c.from || '') !== String(uid) ? `<button type="button" onclick="ggCsShare(${arg(ck)})" title="${(Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0) ? '이 문항과 같이 쓰기 그만' : '이 댓글을 이 문항에서도 같이 쓰기(이 문항 ID 더함)'}" class="ggcsh flex-none inline-flex items-center justify-center w-6 h-6 -my-1 rounded-md text-[13px] font-extrabold text-teal-700 hover:bg-teal-50">${(Array.isArray(c.sh) && c.sh.indexOf(String(uid)) >= 0) ? '−' : '+'}</button>` : '') + `<button type="button" onclick="ggCsDel(this)" title="지우기" aria-label="지우기" class="ggcsx text-red-700 hover:bg-red-50">✕</button>`)}</div></div>`   /* ★ 11/03 사용자 시안 댓글 「왜 여기서는 댓글 지우기 버튼이 없어?」 — 옛 A-4(9/18 · 연결 상자 댓글 줄 = 지우기 없음)를 걷음 · 지우기 = 원래 근거(u) 댓글 하나 · 옛 ggCsDel 되묻는 창 그대로 */   /* ★ 10/10 ox_fix — ggrefrow(옛: class="flex flex-wrap … pl-3") */
                         + editor(ck, c.t);
                 }).join('')
                 + `<div id="${sc}refgg-cm-${id}" class="hide flex gap-1.5 mt-1 pl-3">`
@@ -5142,8 +5196,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const a = v => escAttr(String(v == null ? '' : v));
             const arg = `'${a(uid)}','${a(u)}','${a(g.k)}'` + (sc ? `,undefined${ggScA(sc)}` : '');
             const n = Array.isArray(g.cs) ? g.cs.length : 0;
-            return `<button type="button" onclick="ggRefCmToggle(${arg})" title="댓글${n ? ' ' + n : ''} · 이 문항에서 달기" aria-label="댓글" class="flex-none inline-flex items-center justify-center w-6 h-6 rounded-md text-[11px] font-extrabold ${n ? 'text-blue-700' : 'text-slate-400'} hover:bg-blue-50">댓</button>`
-                + `<button type="button" onclick="ggRefEdit(${arg})" title="여기서 고치기" aria-label="여기서 고치기" class="ggrefed flex-none inline-flex items-center justify-center w-6 h-6 rounded-md text-[11px] font-bold text-blue-600 hover:bg-blue-50">✎</button>`;
+            return `<button type="button" onclick="ggRefCmToggle(${arg})" title="댓글${n ? ' ' + n : ''} · 이 문항에서 달기" aria-label="댓글" class="flex-none inline-flex items-center justify-center w-6 h-6 rounded-md text-[11px] font-extrabold ${n ? 'text-blue-700' : 'text-slate-400'} hover:bg-blue-50">댓</button>`;
         }
         function ggRefCmToggle(uid, u, k, ck, sc = '') {
             const b = document.getElementById(`${sc}refgg-cm-${uid}-${u}-${k}`);
@@ -5831,8 +5884,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 const where = q.subject ? q.subject + ' · ' + q.subChapter : '';
                 const act = isMe
                     ? '<button onclick="useUnlink(\'' + escAttr(kind) + '\',\'' + escAttr(String(rid)) + '\',\'' + escAttr(String(target)) + '\')" style="flex:none;font-size:11px;font-weight:700;color:#b91c1c;background:none;border:0;cursor:pointer">× 연결 끊기</button>'
-                    : '<button onclick="openQPopup(\'' + escAttr(String(q.id)) + '\')" style="flex:none;font-size:11px;font-weight:700;color:#2563eb;background:none;border:0;cursor:pointer">↪ 그 문제 보기</button>';
-                return '<div style="padding:8px 11px;border-bottom:1px solid #f1f5f9;' + (isMe ? 'background:#fefce8' : '') + '">'
+                    : '';   /* ★ 시안 — 「↪ 그 문제 보기」 글자 걷음 · 줄을 누르면 그 문제(openQPopup) */
+                return '<div' + (isMe ? '' : ' data-usego="1" role="button" title="그 문제 보기" onclick="openQPopup(\'' + escAttr(String(q.id)) + '\')"') + ' style="padding:8px 11px;border-bottom:1px solid #f1f5f9;' + (isMe ? 'background:#fefce8' : 'cursor:pointer') + '">'
                     + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'
                     + '<span style="font-size:10px;font-weight:700;color:#6b7280;background:#f9fafb;border:1px solid #e5e7eb;padding:1px 6px;border-radius:4px">' + escHtml(String(q.id)) + '</span>'
                     + '<span style="font-size:10px;font-weight:700;color:#4338ca">' + escHtml(where) + '</span>'
@@ -5842,7 +5895,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             }).join('') || '<div style="padding:12px;font-size:12px;color:#6b7280;text-align:center">걸어 둔 문항이 없습니다</div>';
             oxWinOpen('use-' + kind + '-' + target,
                 (USE_ICON[kind] || '🔗') + ' ' + escHtml(String(target)) + ' 의 ' + escHtml(lab) + '를 쓰는 문항 ' + owners.length,
-                '누르면 그 문제가 창으로 열립니다', head + sep + rows, 560);
+                '', head + rows, 560);   /* ★ 시안(사용자 11/10 14:16) — 설명 문구 · 「이 근거를 걸어 둔 문항 N」 줄(머리 제목과 겹침) 걷음 */
         }
         /* 창에서 끊기 — 갈래마다 저장 자리가 다르다. 끊은 뒤 색인을 버리고 그 창과 그 카드를 다시 그린다. */
         function useUnlink(kind, me, target) {
@@ -8553,10 +8606,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     var co = coords(), tags = J('ox_q_tags', '{}');
     document.querySelectorAll('[id^="tag-coord-"]').forEach(function (b) {
       var id = b.id.slice('tag-coord-'.length), st = pinState(id, co, tags);
-      b.className = 'tag-btn min-w-[22px] h-[22px] px-0.5 inline-flex items-center justify-center bg-transparent border-0 text-[13px] ' + pinStyle(st);
-      b.style.filter = pinFilter(st);   /* ★ add9 — 꺼짐만 회색·흐림 */
-      b.textContent = pinInner(id, co);
-      b.title = pinTitle(id, co, st);
+      var cn = 'tag-btn min-w-[22px] h-[22px] px-0.5 inline-flex items-center justify-center bg-transparent border-0 text-[13px] ' + pinStyle(st), fl = pinFilter(st), tx = pinInner(id, co), ti = pinTitle(id, co, st);
+      /* ★ 11/10 — 바뀔 때만 쓴다: 같은 글을 다시 써도 childList 가 일어나 위 MutationObserver → schedule → refreshPins 가 끝없이 돌았다(쉬는 동안 4 초에 900 번) */
+      if (b.className !== cn) b.className = cn;
+      if (b.style.filter !== fl) b.style.filter = fl;
+      if (b.textContent !== tx) b.textContent = tx;
+      if (b.title !== ti) b.title = ti;
     });
   }
   function injectPins() {
@@ -11172,13 +11227,13 @@ function jnRecHTML(uid) {
 function jnGgHTML(id, txt) {
     const ok = c => c && String(c.t || '').trim();
     const fromChip = f => f ? ` <span role="button" title="이 댓글을 단 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(f))}')" class="cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2">${escHtml(String(f))}</span>` : '';
-    const line = (c, pre) => `<div class="jncs pl-3 text-[11.5px] leading-snug text-slate-600" style="white-space:pre-wrap${c.bang ? ';box-shadow:inset 2px 0 0 #dc2626' : ''}">↳ ${pre || ''}${escHtml(String(c.t))}${pre ? '' : fromChip(c.from)}</div>`;
+    const line = (c, tail) => `<div class="jncs pl-3 text-[10.5px] leading-snug text-slate-600" style="white-space:pre-wrap${c.bang ? ';box-shadow:inset 2px 0 0 #dc2626' : ''}">↳ ${escHtml(String(c.t))}${c.jo === 'O' || c.jo === 'X' ? ` <b class="ggjo ggjo-${c.jo === 'O' ? 'o' : 'x'}">${c.jo}</b>` : ''}${tail || fromChip(c.from)}</div>`;
     const own = ggOf(id).filter(g => g && String(g.t || '').trim());
-    const h = own.map((g, n) => `<div>${n ? '' : '🔗 '}${g.i ? g.i + '. ' : ''}${escHtml(String(g.t || ''))}</div>` + (Array.isArray(g.cs) ? g.cs.filter(ok).map(c => line(c)).join('') : '')).join('');
+    const h = own.map((g, n) => `<div>${escHtml(String(g.t || ''))}</div>` + (Array.isArray(g.cs) ? g.cs.filter(ok).map(c => line(c)).join('') : '')).join('');
     const lk = (refOf(id, 'geunge') || []).map(u => ggOf(u).filter(Boolean).map(g => (Array.isArray(g.cs) ? g.cs : []).filter(c => ok(c) && (String(c.from) === String(id) || (Array.isArray(c.sh) && c.sh.indexOf(String(id)) >= 0)))
-        .map(c => line(c, `<span role="button" title="연결한 근거의 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(u)}','${escAttr(id)}')" class="cursor-pointer font-bold text-blue-600">🔗${escHtml(u)}</span> `)).join('')).join('')).join('');
+        .map(c => line(c, ` <span role="button" title="연결한 근거의 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(u)}','${escAttr(id)}')" class="cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2">${escHtml(u)}</span>`)).join('')).join('')).join('');
     if (!h && !lk) return '';
-    return `<div data-jngg="${escHtml(id)}" class="mt-1 border-l-2 pl-2 py-1 text-[12px] leading-relaxed text-blue-900 bg-blue-50 border-blue-400 whitespace-pre-wrap" style="white-space:pre-wrap">${h}${lk}</div>`;
+    return `<div data-jngg="${escHtml(id)}" class="mt-1 border-l-2 pl-2 py-1 text-[11.5px] leading-relaxed text-blue-900 bg-blue-50 border-blue-400 whitespace-pre-wrap" style="white-space:pre-wrap">${h}${lk}</div>`;
 }
 function jnRowHTML(q) {
     const id = q.id;
