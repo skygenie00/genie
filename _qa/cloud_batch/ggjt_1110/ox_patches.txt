@@ -1,0 +1,44 @@
+⟦1 찾기⟧
+    const line = (c, tail) => `<div class="jncs pl-3 text-[10.5px] leading-snug text-slate-600" style="white-space:pre-wrap${c.bang ? ';box-shadow:inset 2px 0 0 #dc2626' : ''}">↳ ${escHtml(String(c.t))}${c.jo === 'O' || c.jo === 'X' ? ` <b class="ggjo ggjo-${c.jo === 'O' ? 'o' : 'x'}">${c.jo}</b>` : ''}
+⟦1 바꿈⟧
+    /* ★ 11/10 사용자 20:32 「민법 정리 목록에서 왜 댓글 지문 안 보여」 — 카드 댓글 줄(ggCsHTML → ggFromHead)과 같게 댓글 위 줄에 「단 문항 지문」(+ O/X 는 지문 오른쪽 한 번 · 글 뒤 O/X 는 걷음 = 카드와 같음) · 근거 임자 · 근거 키를 넘겨 지문 누름(O/X)도 카드와 같은 길 */
+    const line = (c, tail, gu, gk) => `<div class="jncs pl-3 text-[10.5px] leading-snug text-slate-600" style="white-space:pre-wrap${c.bang ? ';box-shadow:inset 2px 0 0 #dc2626' : ''}">${ggFromHead(c, gu, gk)}↳ ${escHtml(String(c.t))}
+⟦2 찾기⟧
+(Array.isArray(g.cs) ? g.cs.filter(ok).map(c => line(c)).join('') : '')).join('');
+⟦2 바꿈⟧
+(Array.isArray(g.cs) ? g.cs.filter(ok).map(c => line(c, '', id, g.k)).join('') : '')).join('');
+⟦3 찾기⟧
+underline-offset-2">${escHtml(u)}</span>`)).join('')).join('')).join('');
+⟦3 바꿈⟧
+underline-offset-2">${escHtml(u)}</span>`, u, g.k)).join('')).join('')).join('');
+⟦4 찾기⟧
+        function ggPickLine(uid, low, given) {   /* ★ add10 — given = 이미 푼 목록(찾기 루프) · 없으면 옛 그대로 저장소에서 */
+⟦4 바꿈⟧
+        function ggPickLine(uid, low, given) {   /* ★ add10 — given = 이미 푼 목록(찾기 루프) · 없으면 옛 그대로 저장소에서 */
+            /* ★ 11/10 사용자 20:48 「검색이 제일 중요 · 뭘 봐야 목적 달성?」 — 찾는 까닭 = 지금 지문과 같은 쟁점의 근거를 찾아 연결 · 그 근거를 어느 지문에 왜 O/X 로 썼는지 보고 판단
+               → 걸린 근거마다 「i. 근거」 · 그 밑 걸린 댓글 하나하나 = 「단 문항 지문」 O/X 줄 + 「↳ 댓글」 줄(옛 = 첫 근거 하나 + 첫 댓글 하나 · 지문 · O/X 없음) · 아무 데도 안 걸리면 옛 그대로 */
+            if (low) {
+                const L0 = Array.isArray(given) ? given : ggOf(uid), h0 = v => String(v || '').toLowerCase().includes(low), o0 = v => String(v || '').replace(/\s*\n\s*/g, ' ');
+                const qq = id => { const q = (typeof quizData !== 'undefined' ? quizData : []).find(x => String(x.id) === String(id)); return q ? o0(q.q) : ''; }, out = [];
+                L0.forEach(g => { if (!g) return; const cs = (Array.isArray(g.cs) ? g.cs : []).filter(c => c && h0(c.t)); if (!h0(g.t) && !cs.length) return;
+                    out.push(g.i + '. ' + o0(g.t));
+                    cs.forEach(c => { const j = qq(c.from || uid), o = String(c.jo || '').toUpperCase(); if (j) out.push('「' + j + '」' + (o === 'O' || o === 'X' ? ' ' + o : '')); out.push('↳ ' + o0(c.t)); }); });
+                if (out.length) return out.join('\n');
+            }
+⟦5 찾기⟧
+const gpk = (searchMode === 'm') ? ggPickLine(q.id, low).split('\n↳ ') : null;
+⟦5 바꿈⟧
+const gpk = (searchMode === 'm') ? ggPickLine(q.id, low).split('\n') : null;   /* ★ 11/10 — 줄 하나하나(근거 · 「지문」 O/X · ↳ 댓글) */
+⟦6 찾기⟧
+${gpk.length > 1 ? `<div class="mt-0.5">↳ ${mark(gpk[1], term)}</div>` : ''}
+⟦6 바꿈⟧
+${gpk.slice(1).map(x => `<div class="mt-0.5${x.charAt(0) === '「' ? ' text-slate-600 text-[11px]' : ''}">${mark(x, term)}</div>`).join('')}
+⟦7 찾기⟧
+const fshow = kind === 'geunge' ? String(ftxt).split('\n').map(x => x.slice(0, 90)).join('\n') : String(ftxt).slice(0, 90);
+⟦7 바꿈⟧
+const fshow = kind === 'geunge' ? String(ftxt).split('\n').map(x => x.charAt(0) === '「' ? x : x.slice(0, 90)).join('\n') : String(ftxt).slice(0, 90);   /* ★ 11/10 — 「지문」 줄은 안 자름(판단 재료) */
+⟦8 찾기⟧
+? `<div class="border-l-2 pl-2 ${fcls} text-[11.5px] mt-0.5 whitespace-pre-wrap">${escHtml(fshow)}</div>`
+⟦8 바꿈⟧
+? `<div class="border-l-2 pl-2 ${fcls} text-[11.5px] mt-0.5 whitespace-pre-wrap">${kind === 'geunge' ? fshow.split('\n').map(x => mark(x, term)).join('\n') : escHtml(fshow)}</div>`   /* ★ 11/10 — 근거 갈래는 줄마다 찾은 낱말 표시 */
+⟦끝⟧
