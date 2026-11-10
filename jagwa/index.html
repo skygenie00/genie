@@ -6780,7 +6780,7 @@ if(HASBOOK)showProblem=async function(){
   CHV=null;   /* ★ 11/06 — 카드를 다시 그리면(qLoad 가 필기도 지금 회독으로) 지난 회독 보기도 지금 회독으로 */   /* 새 열람 한 번만 — 같은 열람 안의 다시 그리기에서는 안 돈다 */
   navSync();
   const u=unitOf(VNO);
-  {const fx=(typeof pnFix==='function')?pnFix(r):'';$('#vT1').innerHTML=esc(dispNo(VNO)+' '+codeShow(r))+' · <span class="vtt'+(fx?' fx':'')+'" data-pn="'+VNO+'" title="길게 누르면 제목 고치기">'+esc(fx||vtOrig(r))+'</span>'}   /* ★ 10/13 사용자 「문제 창 제목 길게 눌러 고치기 · 지학 · 생물에도」 — 제목 칸 = 물리와 같은 span.vtt · 같은 길게 누름(SHELL) · 저장 = TFIX[uid].nm(지학 · 생물 SYNC tfix 에 이미 있음 · 새 키 없음) · 원래 = 소단원 이름(없으면 titleOf) */   /* 물리 머리 꼴 — 번호 · 코드 · 소단원 이름 한 줄(둘째 줄은 물리처럼 숨김 · 사용자 10/11) */
+  {const fx=(typeof pnFix==='function')?pnFix(r):'';$('#vT1').innerHTML=esc(dispNo(VNO)+' '+codeShow(r))+' · <span class="vtt'+(fx?' fx':'')+'" data-pn="'+VNO+'" title="길게 누르면 제목 고치기">'+ttlH(fx||vtOrig(r))+'</span>'}   /* ★ 10/13 사용자 「문제 창 제목 길게 눌러 고치기 · 지학 · 생물에도」 — 제목 칸 = 물리와 같은 span.vtt · 같은 길게 누름(SHELL) · 저장 = TFIX[uid].nm(지학 · 생물 SYNC tfix 에 이미 있음 · 새 키 없음) · 원래 = 소단원 이름(없으면 titleOf) */   /* 물리 머리 꼴 — 번호 · 코드 · 소단원 이름 한 줄(둘째 줄은 물리처럼 숨김 · 사용자 10/11) */
   try{linkChip()}catch(e){}   /* ★ 10/13 — 카드 층도 머리 🔗 N(물리 showProblem 과 같이) */
   $('#vT2').textContent=`${r[F.BIG]} › ${unitLabel(u)} · 교재 ${bpgOf(r)||'?'}쪽`+(r[F.ORIG]?` · 변시 ${r[F.ORIG]}회 원형`:'');
   CARD.open=false;
@@ -6797,7 +6797,7 @@ function renderCard(r){
   const sol=String(txtOf(uid,'s')||'').split('⏎').map(esc).join('<br>')+(tfixOn(uid,'s')?'<i class="tfx">✎</i>':''),sol2=String(r[F.SOL2]||'').split('⏎').map(esc).join('<br>');   /* 판 3 ④ — 해설도 txtOf 를 지난다 */
   const c=$('#card');
   c.innerHTML=`<div class="cmeta">
-      ${kindTag(r)}${ynUid(r)?'':`<span class="tag">${esc(titleOf(r))}</span>`}
+      ${kindTag(r)}${ynUid(r)?'':`<span class="tag">${ttlH(titleOf(r))}</span>`}
       <span class="tag unit" id="cUnit" title="누르면 목차에서 표시">${esc(u?unitLabel(u):(isC(r)?'미매칭':'미분류'))}</span>
       ${isC(r)||!u?`<span class="tag match" id="cMatch">매칭</span>`:`<span class="tag match sm" id="cMatch" title="단원 고치기">✎</span>`}
       ${bookChip(r)}
@@ -6805,16 +6805,16 @@ function renderCard(r){
       ${snChip(r)}
       <span class="sp"></span><span class="cmark">${cmarkHTML(no)}</span>
     </div>
-    <div class="q${cropHas(uid,'q')?' crophid':''}${tfixOn(uid,'q')?' fixed':''}" data-tfx="q">${esc(txtOf(uid,'q'))}${tfixOn(uid,'q')?'<i class="tfx" title="고친 글자 — 길게 누르면 다시 고치기">✎</i>':''}</div>${cropBoxHtml(uid,'q')}
+    <div class="q${cropHas(uid,'q')?' crophid':''}${tfixOn(uid,'q')?' fixed':''}" data-tfx="q">${txtH(uid,'q')}${tfixOn(uid,'q')?'<i class="tfx" title="고친 글자 — 길게 누르면 다시 고치기">✎</i>':''}</div>${cropBoxHtml(uid,'q')}
     ${r[F.FILE]!=='IMG'?'':(figHid(uid)
         ? `<button type="button" class="figshow" id="cFigShow" title="가려 둔 원본 그림을 다시 본다">🖼 원본 그림 보이기</button>`
         : `<div class="fig" id="cFig"><span class="figw"><span class="ld">그림 받는 중…</span></span><button type="button" class="cx" id="cFigX" title="원본 그림 가리기">✕</button></div>`)}
     ${(r[F.BOGI]||[]).length?`<div class="bogi">${r[F.BOGI].map(b=>`<div class="row" data-k="${b.키}" data-ans="${b.정오}">
-        <span class="k">${b.키}.</span><span class="t${tfixOn(uid,'b'+b.키)?' fixed':''}" data-tfx="b${b.키}">${esc(txtOf(uid,'b'+b.키))}${tfixOn(uid,'b'+b.키)?'<i class="tfx" title="고친 글자 — 길게 누르면 다시 고치기">✎</i>':''}${CUR.SOL_LABELS&&b.설명?`<span class="bexp" hidden>${esc(b.설명)}</span>`:''}</span>
+        <span class="k">${b.키}.</span><span class="t${tfixOn(uid,'b'+b.키)?' fixed':''}" data-tfx="b${b.키}">${txtH(uid,'b'+b.키)}${tfixOn(uid,'b'+b.키)?'<i class="tfx" title="고친 글자 — 길게 누르면 다시 고치기">✎</i>':''}${CUR.SOL_LABELS&&b.설명?`<span class="bexp" hidden>${esc(b.설명)}</span>`:''}</span>
         ${ox&&b.정오?`<div class="ox">${['O','Q','X'].map(v=>`<button class="${v}${bg[b.키]===v?' on':''}" data-v="${v}">${MG[v]}</button>`).join('')}</div>`+(CARD_LAYER?jmDotHTML(r,b.키):''):''}
       </div>`).join('')}</div>`:''}
-    ${ch.some(x=>x)?(CHOX&&!ox?`<div class="choices chox">${ch.map((t,i)=>`<div class="row chr" data-k="c${i+1}"><button data-c="${i+1}" data-tfx="c${i+1}" class="${pick===String(i+1)?'pick':''}${tfixOn(uid,'c'+(i+1))?' fixed':''}">${CIRC[i]} ${esc(txtOf(uid,'c'+(i+1)))}${tfixOn(uid,'c'+(i+1))?'<i class="tfx">✎</i>':''}</button><div class="ox">${['O','Q','X'].map(v=>`<button class="${v}${bg['c'+(i+1)]===v?' on':''}" data-v="${v}">${MG[v]}</button>`).join('')}</div>${jmDotHTML(r,'c'+(i+1))}</div>`).join('')}</div>`   /* ★ 11/05 사용자 「이 지문들 세로 한 줄로 · 각각 O△X · 하나라도 △ 면 정답 △」 · 12:27 「ㄱㄴㄷ 에 O△X 있는 데는 안 붙여도 · 세로 안 해도」 — 지학 · 생물(〈보기〉 O△X 없는 문항만): 선택지 한 줄에 하나 · 줄마다 O△X(〈보기〉 O△X 와 같은 칸 BG[uid].c1… · 회독마다 b 로 옮김 그대로) */
-      :`<div class="choices">${ch.map((t,i)=>`<button data-c="${i+1}" data-tfx="c${i+1}" class="${pick===String(i+1)?'pick':''}${tfixOn(uid,'c'+(i+1))?' fixed':''}">${CIRC[i]} ${esc(txtOf(uid,'c'+(i+1)))}${tfixOn(uid,'c'+(i+1))?'<i class="tfx">✎</i>':''}</button>`).join('')}</div>`):''}
+    ${ch.some(x=>x)?(CHOX&&!ox?`<div class="choices chox">${ch.map((t,i)=>`<div class="row chr" data-k="c${i+1}"><button data-c="${i+1}" data-tfx="c${i+1}" class="${pick===String(i+1)?'pick':''}${tfixOn(uid,'c'+(i+1))?' fixed':''}">${CIRC[i]} ${txtH(uid,'c'+(i+1))}${tfixOn(uid,'c'+(i+1))?'<i class="tfx">✎</i>':''}</button><div class="ox">${['O','Q','X'].map(v=>`<button class="${v}${bg['c'+(i+1)]===v?' on':''}" data-v="${v}">${MG[v]}</button>`).join('')}</div>${jmDotHTML(r,'c'+(i+1))}</div>`).join('')}</div>`   /* ★ 11/05 사용자 「이 지문들 세로 한 줄로 · 각각 O△X · 하나라도 △ 면 정답 △」 · 12:27 「ㄱㄴㄷ 에 O△X 있는 데는 안 붙여도 · 세로 안 해도」 — 지학 · 생물(〈보기〉 O△X 없는 문항만): 선택지 한 줄에 하나 · 줄마다 O△X(〈보기〉 O△X 와 같은 칸 BG[uid].c1… · 회독마다 b 로 옮김 그대로) */
+      :`<div class="choices">${ch.map((t,i)=>`<button data-c="${i+1}" data-tfx="c${i+1}" class="${pick===String(i+1)?'pick':''}${tfixOn(uid,'c'+(i+1))?' fixed':''}">${CIRC[i]} ${txtH(uid,'c'+(i+1))}${tfixOn(uid,'c'+(i+1))?'<i class="tfx">✎</i>':''}</button>`).join('')}</div>`):''}
     ${ggCardHTML(r)}
     <details id="cDet"><summary>정답 · 해설${r[F.SOLPG]&&!CUR.KINDS?` (부록 ${r[F.SOLPG]}쪽)`:''}</summary>
       <div class="sol"><b>정답 ${r[F.ANS]?CIRC[+r[F.ANS]-1]||r[F.ANS]:'—'}</b>${cropBoxHtml(uid,'s')}<span class="solwrap${cropHas(uid,'s')?' crophid':''}">${solHtml(r,sol,sol2)}</span>${ocrRefHtml(r)}
@@ -9650,7 +9650,9 @@ var ggFixEat=async function(){
   return n};
 
 var ggOf=uid=>{const a=GG[uid];return Array.isArray(a)?a:[]};
-var ggBangAny=uid=>ggOf(uid).some(g=>g&&(g.bang||(Array.isArray(g.cs)&&g.cs.some(c=>c&&c.bang))));   /* ★ 11/05 — 댓글 ! 도 「! 있는 문항」(서랍 줄 빨간 세로줄 등 · 근거 ! 와 같은 셈) */
+var ggBangAny=uid=>{const u=String(uid||'');return ggOf(uid).some(g=>g&&(g.bang||(Array.isArray(g.cs)&&g.cs.some(c=>c&&c.bang&&String(c.from||u)===u))))||ggBangFrom(u)};
+/* ★ 11/10 사용자 20:00 「댓글 ! 눌렀는데 왜 그 문항 서랍 줄에 빨간 줄 안 생겨」 · 20:04 「283 은 댓글 ! 도 없는데 왜 빨간 줄」 — 댓글 ! 는 그 댓글을 단 문항((c.from||임자))에만 셈(11/06 보이기 규칙과 같게) · 다른 문항에서 단 댓글은 임자 근거 칸에 저장(from = 단 문항)되므로 임자 칸들을 훑어 셈 */
+function ggBangFrom(u){if(!u||typeof GG==='undefined')return false;for(const k in GG){if(k===u)continue;const L=GG[k];if(!Array.isArray(L))continue;for(const g of L){if(g&&Array.isArray(g.cs)&&g.cs.some(c=>c&&c.bang&&String(c.from||'')===u))return true}}return false}   /* ★ 11/05 — 댓글 ! 도 「! 있는 문항」(서랍 줄 빨간 세로줄 등 · 근거 ! 와 같은 셈) */
 var pkOf=uid=>{const a=PICK[uid];return Array.isArray(a)?a:[]};
 /* 🃏 한 장 = 손필기 한 장 + 찍은 자리 개수. **`crop`(문제·해설 칸에 붙인 통째 칸)은 카드가 아니다.** */
 var mcCountOf=no=>{const r=rec(no);if(!r)return 0;
@@ -10229,7 +10231,7 @@ function jnRowHTML(r){
     +'<div class="h">'+(bp?'<button class="tag page" data-bpl="'+no+'">📖 p'+bp+'</button>':'')
     +'<button class="jgo" data-go="'+no+'">'+esc(codeShow(r))+'</button>'
     +(HASBOOK?(ynUid(r)?'':'<span class="mut">'+esc(titleOf(r))+'</span>')
-      :'<span class="mut pnm'+(pnFix(r)?' fx':'')+'" data-pn="'+no+'" title="길게 눌러 이름 고치기">'+esc(pnName(r))+'</span>')   /* ★ physphone A-2 — 물리 이름 = 기출 「연도 출처 N번」 · 교재 = 원래 이름 · 고친 이름(TFIX nm) · 길게 눌러 그 자리 고치기 */
+      :'<span class="mut pnm'+(pnFix(r)?' fx':'')+'" data-pn="'+no+'" title="길게 눌러 이름 고치기">'+ttlH(pnName(r))+'</span>')   /* ★ physphone A-2 — 물리 이름 = 기출 「연도 출처 N번」 · 교재 = 원래 이름 · 고친 이름(TFIX nm) · 길게 눌러 그 자리 고치기 */
     +(mcCountOf(no)?'<span class="jcard" style="cursor:default">🃏 '+mcCountOf(no)+'</span>':'')
     +'<span class="ggrc">'+ggRefChipsHTML(gu,'jn-')+'</span>'
     /* ★ add10 §A-4 — 마크는 첫 화면 줄과 **같은 묶음**(`markBadge`) */
@@ -10356,7 +10358,7 @@ function ggFromHTML(c){if(!c||!c.from)return '';const r=rowByUid(c.from),no=r?r[
 function ggCsHTML(cs,gk,uid,sc){
   if(!Array.isArray(cs)||!cs.length)return '<div class="ggcs-0">댓글 없음</div>';
   return cs.map(c=>{const kk=ea(uid+'|'+gk+'|'+String(c.k||'')+'|'+sc);return '<div class="ggcs'+(c.bang?' bang':'')+'" data-ck="'+ea(String(c.k||''))+'"'+(gk!=null?' data-gk="'+ea(String(gk))+'" data-guid="'+ea(String(uid))+'"':'')+(gk!=null&&SHELL?' data-gce="'+kk+'" title="길게 누르면 고치기"':'')+'>'+(gk!=null?'<span class="ggcsdh" title="끌어서 차례 바꾸기"></span><span class="ggcbg'+(c.bang?' on':'')+'" data-ggcbang="'+ea(uid+'|'+gk+'|'+String(c.k||''))+'" title="중요 표시">!</span>':'')
-    +'<span class="d">'+ggMD(c.ts)+'</span><span class="t">'+(c.jt?'<span class="ggjt" title="누르면 O X 고르기">「'+esc(c.jt)+'」</span>'+(c.jo?'<b class="ggjo '+c.jo+'">'+c.jo+'</b>':''):'')+esc(c.t||'')+'</span>'+ggFromHTML(c)
+    +'<span class="d">'+ggMD(c.ts)+'</span><span class="t">'+(c.jt?'<span class="ggjt" title="누르면 O X 고르기">「'+jtH(c,uid)+'」</span>'+(c.jo?'<b class="ggjo '+c.jo+'">'+c.jo+'</b>':''):'')+ggMath(String(c.t||''))+'</span>'+ggFromHTML(c)
     +(gk!=null?(SHELL?'':'<button class="lk" data-ggce="'+kk+'">고치기</button>')
       +'<button class="ggcx" data-ggcd="'+kk+'" title="지우기" aria-label="지우기">✕</button>':'')
     +'</div>'}).join('')}   /* ★ 10/13 시안 댓글 「길게 눌러서 수정 · 지우기도 x 만」 — 고치기 = 길게 누름(SHELL 길게 누름 블록 · 옛 「고치기」 단추는 SHELL 아닌 판만) · 지우기 = ✕ */
@@ -10366,6 +10368,14 @@ function ggCsHTML(cs,gk,uid,sc){
 /* 근거 들여쓰기(사용자 10/11 23:52 「스페이스로 줄 맞춰 둔 것 · 들여쓰기가 안 보임」) — 여러 줄 · 앞 빈칸 글만 줄마다 나눔:
    줄 앞 빈칸(탭 = 4 칸) = 그 폭만큼 들임 · 줄이 넘쳐 꺾이면 들인 자리 밑으로(매단 들여쓰기) · 줄 안 빈칸 여럿 = 그대로(pre-wrap)
    한 줄 · 앞 빈칸 없는 글 = 옛 그대로 ggMath */
+/* ★ 11/10 사용자 19:33 「지학 댓글엔 왜 ^3 · 분수가 안 바뀌어 · 제목도 · 288 ㄱㄴㄷ 지문도」 · 20:01 「km/s 말고 바뀌어야 하는 건 바뀌어야」 — 근거 글만 거치던 수식 바꿈(ggMath)을 댓글 글 · 댓글 지문 · 제목 · 카드 지문에도
+   댓글 글 = 근거 글과 같게(모든 과목 · 낱말 바꿈 포함) / 제목 = 지학만 ggMath / 카드 문항 · 〈보기〉 · 선택지 · 댓글 지문 = 지학 · 원래 글 · 고친 글 모두 ggMathQ(GGM_RAW = 수식만 · 낱말 바꿈 없음 · 숫자+글자(8km · 3g)는 분수로 안 묶음 = 단위 그대로 · rA → r_A · ⁷⁄⁵ → 위 분수) */
+var GGM_RAW=false;function ggMathQ(x){GGM_RAW=true;try{return ggMath(String(x==null?'':x))}finally{GGM_RAW=false}}
+function txtH(uid,sl){const t=txtOf(uid,sl);return SUBJ_ID==='earth'?ggMathQ(t):esc(t)}
+function ttlH(t){return SUBJ_ID==='earth'?ggMath(String(t==null?'':t)):esc(t)}
+function jtH(c,uid){const u=String((c&&c.from)||uid||''),k=c&&c.jm?String(c.jm):'',sl=k?(/^c\d+$/.test(k)?k:'b'+k):'';
+  if(SUBJ_ID==='earth'&&sl&&u&&tfixOn(u,sl))return esc(/^c\d+$/.test(k)?((CIRC[+k.slice(1)-1]||k)+' '):(k+'. '))+ggMathQ(txtOf(u,sl));
+  return SUBJ_ID==='earth'?ggMathQ(c.jt):esc(c.jt)}
 function ggMathL(src){const s=String(src==null?'':src);if(s.indexOf('\n')<0&&!/^[ \t]/.test(s))return ggMath(s);
   return s.split('\n').map(function(l){const m=/^[ \t]*/.exec(l)[0],r=l.slice(m.length);
     return '<span class="ggl">'+(m?'<span class="ggi">'+m.replace(/\t/g,'    ')+'</span>':'')+'<span class="ggt">'+(r?ggMath(r):'\u200b')+'</span></span>'}).join('')}
@@ -10396,9 +10406,10 @@ function ggMath(src){
       const tail=post('');   /* 괄호는 분수 칸일 때만 빠진다(가로줄이 묶음) · 그냥 괄호·첨자 붙은 괄호는 그대로 보인다 */
       html=tail?'('+g.html+')'+tail:g.html;plain='('+g.html+')'+tail}
     else{let m=/^\d+(\.\d+)?([A-Za-zα-ωΑ-Ω]*)/.exec(s.slice(i));
-      if(m){i+=m[0].length;html=esc(m[0])}
+      if(m){if(GGM_RAW&&m[2]){i=k;return null}i+=m[0].length;html=esc(m[0])}   /* ★ 11/10 RAW — 숫자 뒤 글자(8km · 3g)는 단위 → 분수 칸 안 만듦 */
       else if((m=/^Δ?[A-Za-zα-ωΑ-Ω]/.exec(s.slice(i)))){single=m[0];i+=single.length;html=esc(single)}
       else return null}
+    if(GGM_RAW){const u=/^[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]+(?!⁄)/.exec(s.slice(i));if(u){i+=u[0].length;html+=esc(u[0])}}   /* ★ 11/10 RAW — OCR 위첨자 글자(10² · R²)는 그 칸에 붙임 */
     if(plain==null)html=post(html);
     if(i<s.length&&(/[A-Za-z가-힣α-ωΑ-Ω]/.test(s[i])||(single&&/\d/.test(s[i])))){i=k;return null}   /* r2 처럼 글자 뒤 숫자는 r² 인지 r₂ 인지 몰라 그대로 */
     return {html,single,plain:plain==null?html:plain}}
@@ -10413,14 +10424,16 @@ function ggMath(src){
         i=j}
       out+=a.plain;continue}
     i=k;
+    if(GGM_RAW){let m=/^[a-z][A-Z](?![A-Za-z])/.exec(s.slice(i));if(m&&(i===0||!/[A-Za-z]/.test(s[i-1]))){out+=esc(m[0][0])+'<sub>'+esc(m[0][1])+'</sub>';i+=2;continue}   /* ★ 11/10 RAW — 낱자 소문자+대문자(rA · nH) = 아래첨자 */
+      m=/^([⁰¹²³⁴⁵⁶⁷⁸⁹]+)⁄([⁰¹²³⁴⁵⁶⁷⁸⁹]+)/.exec(s.slice(i));if(m){const d=x=>[...x].map(ch=>'⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(ch)).join('');out+='<sup><span class="gm-frac"><span class="n">'+d(m[1])+'</span><span class="d">'+d(m[2])+'</span></span></sup>';i+=m[0].length;continue}}   /* ⁷⁄⁵ = 위 분수 */
     const r=root();if(r!=null){out+=post(r);continue}
     const c=s[i];
     if((c==='^'||c==='_')&&i>0){const t=c;i++;const g=script();if(g){out+=(t==='^'?'<sup>':'<sub>')+g.html+(t==='^'?'</sup>':'</sub>');continue}i=k}
-    if(s.startsWith('~=',i)){out+='≒';i+=2;continue}
-    if(s.startsWith('반시계방향',i)){out+='↺';i+=5;continue}   /* 반시계 먼저(「시계방향」을 품어서) */
-    if(s.startsWith('시계방향',i)){out+='↻';i+=4;continue}
-    if(s.startsWith('비례',i)&&(i===0||/\s/.test(s[i-1]))&&(i+2>=s.length||/\s/.test(s[i+2]))){out+='∝';i+=2;continue}
-    if(s.startsWith('=/=',i)){out+='≠';i+=3;continue}
+    if(!GGM_RAW&&s.startsWith('~=',i)){out+='≒';i+=2;continue}
+    if(!GGM_RAW&&s.startsWith('반시계방향',i)){out+='↺';i+=5;continue}   /* 반시계 먼저(「시계방향」을 품어서) */
+    if(!GGM_RAW&&s.startsWith('시계방향',i)){out+='↻';i+=4;continue}
+    if(!GGM_RAW&&s.startsWith('비례',i)&&(i===0||/\s/.test(s[i-1]))&&(i+2>=s.length||/\s/.test(s[i+2]))){out+='∝';i+=2;continue}
+    if(!GGM_RAW&&s.startsWith('=/=',i)){out+='≠';i+=3;continue}
     out+=esc(c);i++}
   return out}
 function ggPanelHTML(uid,g,sc){
@@ -10935,7 +10948,7 @@ var ggReply=async function(uid,k,sc){
   const i2=document.querySelector('[data-ggcin="'+CSS.escape(uid+'|'+k+'|'+sc)+'"]');
   if(i2){i2.value='';ggFit(i2);i2.focus()}}
 /* ★ 11/05 사용자 「댓글도 끌기로 댓글끼리 위치 조정」 — 민법 ox_csdrag(11/03 · 자과 근거 줄 끌기 g3dh 꼴) 그대로: 댓글 줄 왼쪽 세로줄(.ggcsdh) · 4px 넘게 움직여야 끌기 · 놓을 자리 청록 줄 · 같은 근거(guid · gk) 댓글끼리 · 저장 = 그 근거 g.cs 차례만(글 · k · ts · from 그대로 · 새 저장 칸 0) · 놓은 뒤 click 한 번 먹음 */
-var ggCsBang=async function(uid,gk,ck){const list=ggOf(uid).slice(),g=list.find(x=>x&&x.k===gk),c=g?ggCsOf(g,ck):null;if(!c)return;if(c.bang)delete c.bang;else c.bang=true;await ggSaveList(uid,list);ggCsRepaint(uid,gk);ggBangPaint(uid);try{ggRepaint(uid)}catch(e){}try{var rv=rec(VNO),uv=rv?GGU(rv):'';if(uv&&uv!==uid)ggRepaint(uv)}catch(e){}};   /* ★ 11/05 — 다른 문항 댓글 줄 ! = 지금 문항 상자도 다시 그림 */   /* ★ 11/05 — 댓글 ! (c.bang · 근거 g.bang 꼴 · 새 저장 칸 0) */
+var ggCsBang=async function(uid,gk,ck){const list=ggOf(uid).slice(),g=list.find(x=>x&&x.k===gk),c=g?ggCsOf(g,ck):null;if(!c)return;if(c.bang)delete c.bang;else c.bang=true;await ggSaveList(uid,list);ggCsRepaint(uid,gk);ggBangPaint(uid);try{if(c.from&&String(c.from)!==String(uid))ggBangPaint(String(c.from))}catch(e){}   /* ★ 11/10 — 댓글 단 문항 서랍 줄 세로줄도 그 자리 */try{ggRepaint(uid)}catch(e){}try{var rv=rec(VNO),uv=rv?GGU(rv):'';if(uv&&uv!==uid)ggRepaint(uv)}catch(e){}};   /* ★ 11/05 — 다른 문항 댓글 줄 ! = 지금 문항 상자도 다시 그림 */   /* ★ 11/05 — 댓글 ! (c.bang · 근거 g.bang 꼴 · 새 저장 칸 0) */
 var ggCsMove=async function(uid,gk,cks){const list=ggOf(uid).slice(),g=list.find(x=>x&&x.k===gk);if(!g||!Array.isArray(g.cs)||g.cs.length<2)return false;
   const objs=cks.map(ck=>ggCsOf(g,ck)).filter(Boolean),next=objs.concat(g.cs.filter(c=>objs.indexOf(c)<0));if(next.length!==g.cs.length||next.every((c,n)=>c===g.cs[n]))return false;
   g.cs=next;await ggSaveList(uid,list);ggCsRepaint(uid,gk);ggRepaint(uid);try{var rv=rec(VNO),uv=rv?GGU(rv):'';if(uv&&uv!==uid)ggRepaint(uv)}catch(e){}return true};   /* ★ 11/05 — 다른 문항 댓글 끌기 = 지금 문항 상자도 */
@@ -11682,7 +11695,7 @@ function pnAuto(r){const y=+r[F.YEAR]||0;if(!y)return titleOf(r);
   return (y+' '+String(r[F.SRC]||'')).trim()+(m?' '+(+m[1])+'번':'')}
 var pnName=r=>pnFix(r)||pnAuto(r);
 function pnPaint(no){const r=rec(no);if(!r)return;const fx=pnFix(r);
-  document.querySelectorAll('#jnw .jnrow .pnm[data-pn="'+no+'"]').forEach(x=>{x.textContent=pnName(r);x.classList.toggle('fx',!!fx)});
+  document.querySelectorAll('#jnw .jnrow .pnm[data-pn="'+no+'"]').forEach(x=>{x.innerHTML=ttlH(pnName(r));x.classList.toggle('fx',!!fx)});
   try{draw()}catch(e){}}   /* 첫 화면 목록 줄도 같은 이름 */
 /* 시안 (51) (사용자 19:45 서랍 댓글 「uid 오른쪽 제목들 길게 누르면 내가 수정할 수 있게 · 수정한 것도 검색에 잡히게」) — 서랍 줄 제목(uid 오른쪽 · 옛 titleOf = 볼트 제목/소단원) 길게 누름 = 그 자리 고치기(정리 창 이름·공식 칸과 같은 iedOpen) ·
    저장 = 첫 화면 목록 제목이 쓰는 같은 칸 TFIX['P번호'].nm(pnFix · SYNC tfix · 기기끼리 맞춤) → 서랍·목록·정리 창 모두 그 제목 · 비우면 원래로 · 위 검색·목록 검색에 고친 제목·보이는 제목이 걸림 */
@@ -11690,12 +11703,12 @@ function pnPaint(no){const r=rec(no);if(!r)return;const fx=pnFix(r);
 function vtOrig(r){if(!HASBOOK)return titleOf(r);const u=unitOf(r[F.NO]);return u?String(unitLabel(u)).replace(/^[\d.]+\s*/,''):titleOf(r)}
 /* 서랍 줄 꼬리 — 물리 = 늘 제목 span(길게 고치기) · 카드 층 = 고친 제목이 있으면 파랑 span(길게 고치기) · 없으면 옛 그대로(지학 기출 = uid 만 · 그 밖 = titleOf 글) */
 function ndtTail(r,no){const fx=pnFix(r);
-  if(HASBOOK&&!fx)return ynUid(r)?'':' · '+esc(titleOf(r));
-  return ' · <span class="ndtt'+(fx?' fx':'')+'" data-pn="'+no+'" title="길게 눌러 제목 고치기">'+esc(fx||titleOf(r))+'</span>'}
+  if(HASBOOK&&!fx)return ynUid(r)?'':' · '+ttlH(titleOf(r));
+  return ' · <span class="ndtt'+(fx?' fx':'')+'" data-pn="'+no+'" title="길게 눌러 제목 고치기">'+ttlH(fx||titleOf(r))+'</span>'}
 function ndTitlePaint(no){const r=rec(no);if(!r)return;const fx=pnFix(r);
-  document.querySelectorAll('#vT1 .vtt[data-pn="'+no+'"]').forEach(x=>{if(x.classList.contains('ied'))return;x.textContent=fx||vtOrig(r);x.classList.toggle('fx',!!fx)});
+  document.querySelectorAll('#vT1 .vtt[data-pn="'+no+'"]').forEach(x=>{if(x.classList.contains('ied'))return;x.innerHTML=ttlH(fx||vtOrig(r));x.classList.toggle('fx',!!fx)});
   if(HASBOOK){document.querySelectorAll('#ndList .ndrow[data-no="'+no+'"] .ndt').forEach(x=>{if(x.querySelector('.ied'))return;x.innerHTML=esc(r[F.CODE])+esc(r[F.LV])+ndtTail(r,no)});return}   /* 카드 층 = 줄 꼬리를 다시 그림(고친 제목이 생기거나 비면 span 이 생기고 없어짐) */
-  document.querySelectorAll('#navdr .ndtt[data-pn="'+no+'"]').forEach(x=>{if(x.classList.contains('ied'))return;x.textContent=fx||titleOf(r);x.classList.toggle('fx',!!fx)})}
+  document.querySelectorAll('#navdr .ndtt[data-pn="'+no+'"]').forEach(x=>{if(x.classList.contains('ied'))return;x.innerHTML=ttlH(fx||titleOf(r));x.classList.toggle('fx',!!fx)})}
 function ndEdit(el){const no=+el.dataset.pn,r=rec(no);if(!r)return;
   iedOpen(el,pnFix(r),vtOrig(r),async v=>{await tfixSet(pnUid(r),PN_SLOT,v);ndTitlePaint(no);pnPaint(no)})}
 function vtEdit(el){const no=+el.dataset.pn,r=rec(no);if(!r)return;{const tp=document.getElementById('g3Tip');if(tp)tp.remove()}   /* 잘린 제목 말풍선 걷음(g3TipHide 는 gg3 덩어리 안 함수라 여기서 못 부름 · 10/13 시안 v6 잼 = 말풍선이 고치는 칸을 가림) */   /* ★ 10/13 — 문제 창 제목 줄 = 서랍 줄 제목과 같은 칸 · 저장하면 서랍 · 첫 화면 목록 · 정리 창 같이 */
@@ -13289,7 +13302,7 @@ ndTail=function(no){
     +marks+'</span>'+base.slice(end)};
 /* ★ 11/05 00:27 사용자 「목차 서랍 작은 창에서 댓글도 보이게」 */
 function g3PopCsHTML(uid,g){var cs=[];if(g&&g.__cq){var cl=g3CqxCell(g3CqxQ(uid));cs=(cl&&cl.c&&Array.isArray(cl.c[g.__cq.k]))?cl.c[g.__cq.k]:[]}else{var s=ggSrcOf(g),su=s?String(g.src).split('|')[0]:'';cs=((s&&Array.isArray(s.cs))?s.cs.filter(function(c){return c&&String(c.from||su)===String(uid)}):[]).concat((g&&Array.isArray(g.cs))?g.cs.filter(function(c){return c&&String(c.from||uid)===String(uid)}):[]).map(function(c){return Object.assign({},c,{from:''})})}   /* ★ 11/06 11:20 사용자 「목차서랍 작은 창은 원래 자기 문제에서 단 댓글만」(11/05 00:20 · 00:52 결정) — 작은 창 · 정리 창 = 이 문항이 단 댓글만(임자 근거 cs 의 from = 이 문항 + 제 사본 cs) · 출처 칩 없음(다 제 것) · 카드 근거 상자는 다 보임 그대로 */
-  return cs.filter(function(c){return c&&c.t}).map(function(c){return '<div class="g3prc'+(c.bang?' bang':'')+'">↳ '+(c.jt?'<span class="ggjt">「'+esc(c.jt)+'」</span>'+(c.jo?'<b class="ggjo '+c.jo+'">'+c.jo+'</b>':''):'')+esc(c.t)+ggFromHTML(c)+'</div>'}).join('')}window.g3PopCsHTML=g3PopCsHTML;
+  return cs.filter(function(c){return c&&c.t}).map(function(c){return '<div class="g3prc'+(c.bang?' bang':'')+'">↳ '+(c.jt?'<span class="ggjt">「'+jtH(c,uid)+'」</span>'+(c.jo?'<b class="ggjo '+c.jo+'">'+c.jo+'</b>':''):'')+ggMath(String(c.t))+ggFromHTML(c)+'</div>'}).join('')}window.g3PopCsHTML=g3PopCsHTML;
 var G3P=null;
 function g3PopClose(){var p=document.getElementById('g3Pop');if(p)p.remove();
   document.querySelectorAll('#ndList .ndox.on').forEach(function(x){x.classList.remove('on')});G3P=null;
