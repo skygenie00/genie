@@ -1,0 +1,84 @@
+{
+ "app": "minbeop",
+ "base": "a4aa63e",
+ "settle_ms": 7000,
+ "ready": "typeof quizData!=='undefined'&&quizData.length>0&&document.querySelectorAll('#hm-subjects button').length>1&&document.getElementById('trlist').children.length>0",
+ "screens": {
+  "p3": {
+   "dev": "pc",
+   "setup": "new Promise(r=>setTimeout(r,3000)).then(()=>(function(){try{trFold(true)}catch(e){};var q=quizData.find(function(x){return x.id==='Q1064'});openJeongni(q.subject,jnKeyOf(q.subChapter,q.subChapter?(q.chapter+' > '+q.subChapter):q.chapter));setTimeout(function(){var c=document.getElementById('jn-gg-refchip-Q1064-Q0598');if(c)c.click();setTimeout(function(){var r=document.querySelector('[data-jnrow=\"Q1064\"]');if(r)r.scrollIntoView({block:'start'})},300)},900)})())"
+  },
+  "m3": {
+   "dev": "ph",
+   "setup": "new Promise(r=>setTimeout(r,3000)).then(()=>(function(){try{trFold(true)}catch(e){};var q=quizData.find(function(x){return x.id==='Q1064'});openJeongni(q.subject,jnKeyOf(q.subChapter,q.subChapter?(q.chapter+' > '+q.subChapter):q.chapter));setTimeout(function(){var c=document.getElementById('jn-gg-refchip-Q1064-Q0598');if(c)c.click();setTimeout(function(){var r=document.querySelector('[data-jnrow=\"Q1064\"]');if(r)r.scrollIntoView({block:'start'})},300)},900)})())"
+  }
+ },
+ "tests": [
+  {
+   "name": "PC 정리 창 Q1064 근거 줄 댓글마다 위 줄에 「단 문항 지문」(카드와 같은 ggFromHead)",
+   "screen": "p3",
+   "act": "none",
+   "wait": 10,
+   "yard": true,
+   "expect": "(()=>{const L=[...document.querySelectorAll('[data-jngg=\\\"Q1064\\\"] .jncs')];const q=quizData.find(x=>x.id==='Q1064');return L.length>0&&L.every(l=>{const j=l.querySelector('.ggfrom .ggjt');return !!j&&l.firstElementChild&&l.firstElementChild.classList.contains('ggfrom')})&&L.some(l=>l.querySelector('.ggjt').textContent==='「'+q.q+'」')||'jncs '+L.length})()"
+  },
+  {
+   "name": "PC 정리 창 연결 근거 댓글(끝 Q0598) 도 지문 · 끝 문항 칩 그대로",
+   "screen": "p3",
+   "act": "none",
+   "wait": 10,
+   "yard": true,
+   "expect": "(()=>{const L=[...document.querySelectorAll('[data-jngg=\\\"Q1064\\\"] .jncs')].filter(l=>/Q0598$/.test(l.textContent.trim()));return L.length>0&&L.every(l=>!!l.querySelector('.ggjt'))})()"
+  },
+  {
+   "name": "PC (준비) 지금 O/X 적어 둠",
+   "screen": "p3",
+   "act": "none",
+   "wait": 10,
+   "expect": "(()=>{window.__jo0=JSON.stringify((()=>{const id='Q1064',ok=c=>c&&String(c.t||'').trim();const a=[];ggOf(id).filter(g=>g&&String(g.t||'').trim()).forEach(g=>(g.cs||[]).filter(ok).forEach(c=>a.push(c)));(refOf(id,'geunge')||[]).forEach(u=>ggOf(u).filter(Boolean).forEach(g=>(g.cs||[]).filter(c=>ok(c)&&(String(c.from)===id||(Array.isArray(c.sh)&&c.sh.indexOf(id)>=0))).forEach(c=>a.push(c))));return a})().map(c=>c.jo||''));return true})()"
+  },
+  {
+   "name": "PC 정리 창 지문 톡 → O/X 고르개(카드와 같음)",
+   "screen": "p3",
+   "act": "click",
+   "sel": "[data-jngg=\"Q1064\"] .jncs .ggjt",
+   "nth": 0,
+   "wait": 400,
+   "yard": true,
+   "expect": "!!document.querySelector('[data-jngg=\\\"Q1064\\\"] .jncs .ggjox')"
+  },
+  {
+   "name": "PC 고르개 X 톡 → 저장 · 그 줄 지문 오른쪽에 바로",
+   "screen": "p3",
+   "act": "click",
+   "sel": "[data-jngg=\"Q1064\"] .jncs .ggjox b[data-jo=\"X\"]",
+   "nth": 0,
+   "wait": 800,
+   "yard": true,
+   "expect": "(()=>{const A=(()=>{const id='Q1064',ok=c=>c&&String(c.t||'').trim();const a=[];ggOf(id).filter(g=>g&&String(g.t||'').trim()).forEach(g=>(g.cs||[]).filter(ok).forEach(c=>a.push(c)));(refOf(id,'geunge')||[]).forEach(u=>ggOf(u).filter(Boolean).forEach(g=>(g.cs||[]).filter(c=>ok(c)&&(String(c.from)===id||(Array.isArray(c.sh)&&c.sh.indexOf(id)>=0))).forEach(c=>a.push(c))));return a})();const now=JSON.stringify(A.map(c=>c.jo||''));const L=[...document.querySelectorAll('[data-jngg=\\\"Q1064\\\"] .jncs')];const n=A.filter(c=>c.jo==='O'||c.jo==='X').length,f=L.reduce((s,l)=>s+l.querySelectorAll('.ggfrom .ggjo').length,0);return now!==window.__jo0&&f===n||JSON.stringify({now,was:window.__jo0,n,f})})()"
+  },
+  {
+   "name": "PC 정리 창 X 고른 뒤 O/X 는 지문 오른쪽 한 번만(글 뒤 O/X 없음)",
+   "screen": "p3",
+   "act": "none",
+   "wait": 10,
+   "yard": true,
+   "expect": "(()=>{const L=[...document.querySelectorAll('[data-jngg=\\\"Q1064\\\"] .jncs')];const A=(()=>{const id='Q1064',ok=c=>c&&String(c.t||'').trim();const a=[];ggOf(id).filter(g=>g&&String(g.t||'').trim()).forEach(g=>(g.cs||[]).filter(ok).forEach(c=>a.push(c)));(refOf(id,'geunge')||[]).forEach(u=>ggOf(u).filter(Boolean).forEach(g=>(g.cs||[]).filter(c=>ok(c)&&(String(c.from)===id||(Array.isArray(c.sh)&&c.sh.indexOf(id)>=0))).forEach(c=>a.push(c))));return a})();const n=A.filter(c=>c.jo==='O'||c.jo==='X').length;const m=L.reduce((s,l)=>s+l.querySelectorAll('.ggjo').length,0),f=L.reduce((s,l)=>s+l.querySelectorAll('.ggfrom .ggjo').length,0);return n>0&&A.length===L.length&&m===n&&f===n||JSON.stringify({A:A.length,L:L.length,n,m,f})})()"
+  },
+  {
+   "name": "폰 정리 창 Q1064 댓글 지문 보임 · 줄 가로 안 넘침",
+   "screen": "m3",
+   "act": "none",
+   "wait": 10,
+   "yard": true,
+   "expect": "(()=>{const r=document.querySelector('[data-jnrow=\"Q1064\"]');const L=[...document.querySelectorAll('[data-jngg=\\\"Q1064\\\"] .jncs')];return !!r&&L.length>0&&L.every(l=>!!l.querySelector('.ggjt')&&l.scrollWidth<=l.clientWidth+1)&&r.scrollWidth<=r.clientWidth+1||'no'})()"
+  },
+  {
+   "name": "PC 정리 창 Q1064 댓글 줄 수 = 보일 댓글 수(무변)",
+   "screen": "p3",
+   "act": "none",
+   "wait": 10,
+   "expect": "(()=>{const A=(()=>{const id='Q1064',ok=c=>c&&String(c.t||'').trim();const a=[];ggOf(id).filter(g=>g&&String(g.t||'').trim()).forEach(g=>(g.cs||[]).filter(ok).forEach(c=>a.push(c)));(refOf(id,'geunge')||[]).forEach(u=>ggOf(u).filter(Boolean).forEach(g=>(g.cs||[]).filter(c=>ok(c)&&(String(c.from)===id||(Array.isArray(c.sh)&&c.sh.indexOf(id)>=0))).forEach(c=>a.push(c))));return a})();const L=document.querySelectorAll('[data-jngg=\"Q1064\"] .jncs');return A.length>0&&A.length===L.length||A.length+'/'+L.length})()"
+  }
+ ]
+}
