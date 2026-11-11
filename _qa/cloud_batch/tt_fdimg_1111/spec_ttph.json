@@ -14,14 +14,14 @@
  },
  "tests": [
   {
-   "name": "PC 보기 창 ✎ → 편집 창에 「사진 추가」 칸",
+   "name": "PC 보기 창 ✎ → 편집 창에 「사진」 줄(지금 사진 · ◀ ▶ ✕) · 「사진 추가」 칸",
    "screen": "p1",
    "act": "click",
    "sel": "#foodV button.btn",
    "nth": 0,
    "wait": 400,
    "yard": true,
-   "expect": "!!document.getElementById('fdF')&&document.getElementById('fdF').type==='file'&&!!document.getElementById('fdN')"
+   "expect": "!!document.getElementById('fdF')&&document.getElementById('fdF').type==='file'&&!!document.getElementById('fdImgs')&&/사진 없음/.test(document.getElementById('fdImgs').textContent)"
   },
   {
    "name": "PC 사진 둘 고르고 저장 → imgs 2 · 썸네일 · 경로 food/img/<id>_…",
@@ -56,6 +56,70 @@
    "expect": "(async()=>{const v=document.getElementById('foodV');if(v)v.remove();foodView('gatefd1');await new Promise(r=>setTimeout(r,300));return document.querySelectorAll('#foodV .box > img').length===3||document.querySelectorAll('#foodV .box > img').length})()"
   },
   {
+   "name": "PC (준비) 편집 창 다시 열기 → 사진 셋 작은 그림",
+   "screen": "p1",
+   "act": "none",
+   "wait": 100,
+   "yard": true,
+   "expect": "(async()=>{const v=document.getElementById('foodV');if(v)v.remove();window.__im=foodFile().data.items.find(z=>z.id==='gatefd1').imgs.slice();foodEdit('gatefd1');await new Promise(r=>setTimeout(r,300));return document.querySelectorAll('#fdImgs .fdim').length===3&&document.querySelectorAll('#fdImgs img').length===3})()"
+  },
+  {
+   "name": "PC 첫 사진 ▶ 톡 → 첫째 · 둘째 자리 바뀜(창 안)",
+   "screen": "p1",
+   "act": "click",
+   "sel": "#fdImgs .fdmv",
+   "nth": 1,
+   "wait": 300,
+   "yard": true,
+   "expect": "fdWork[0]===window.__im[1]&&fdWork[1]===window.__im[0]&&fdWork[2]===window.__im[2]"
+  },
+  {
+   "name": "PC 셋째 사진 ✕ 톡 → 창 안에서 빠짐(둘)",
+   "screen": "p1",
+   "act": "click",
+   "sel": "#fdImgs .fdrm",
+   "nth": 2,
+   "wait": 300,
+   "yard": true,
+   "expect": "fdWork.length===2&&document.querySelectorAll('#fdImgs .fdim').length===2"
+  },
+  {
+   "name": "PC 저장 → 순서 · 빼기 반영 · 첫 사진 바뀌어 옛 썸네일 버림 · 카드 = 새 첫 사진",
+   "screen": "p1",
+   "act": "click",
+   "sel": "#mOk",
+   "wait": 600,
+   "yard": true,
+   "expect": "(()=>{const x=foodFile().data.items.find(z=>z.id==='gatefd1');return JSON.stringify(x.imgs)===JSON.stringify([window.__im[1],window.__im[0]])&&x.thumb===''&&foodCards([x],[]).includes('data-img=\"'+window.__im[1]+'\"')||JSON.stringify({i:x.imgs,t:x.thumb})})()"
+  },
+  {
+   "name": "PC (준비) 편집 창 다시",
+   "screen": "p1",
+   "act": "none",
+   "wait": 100,
+   "yard": true,
+   "expect": "(async()=>{foodEdit('gatefd1');await new Promise(r=>setTimeout(r,300));return document.querySelectorAll('#fdImgs .fdim').length===2})()"
+  },
+  {
+   "name": "PC ✕ 톡(창 안에서만 빠짐)",
+   "screen": "p1",
+   "act": "click",
+   "sel": "#fdImgs .fdrm",
+   "nth": 0,
+   "wait": 300,
+   "yard": true,
+   "expect": "fdWork.length===1"
+  },
+  {
+   "name": "PC 「취소」 → 사진 그대로 둘",
+   "screen": "p1",
+   "act": "click",
+   "sel": "#mNo",
+   "wait": 400,
+   "yard": true,
+   "expect": "(()=>{const x=foodFile().data.items.find(z=>z.id==='gatefd1');return (x.imgs||[]).length===2&&x.imgs[0]===window.__im[1]})()"
+  },
+  {
    "name": "폰 ✎ → 「사진 추가」 칸 보임 · 창 가로 안 넘침",
    "screen": "m1",
    "act": "click",
@@ -64,6 +128,14 @@
    "wait": 400,
    "yard": true,
    "expect": "(()=>{const f=document.getElementById('fdF');if(!f)return 'no';const b=f.closest('.box');const r=f.getBoundingClientRect();return r.width>0&&r.right<=innerWidth+1&&b.scrollWidth<=b.clientWidth+1})()"
+  },
+  {
+   "name": "폰 사진 둘 고르고 저장 → 편집 창 다시 = 작은 그림 둘 · 가로 안 넘침 · 단추 높이 24 이상",
+   "screen": "m1",
+   "act": "none",
+   "wait": 100,
+   "yard": true,
+   "expect": "((async(n)=>{const i=document.getElementById('fdF');const dt=new DataTransfer();for(let k=0;k<n;k++){const c=document.createElement('canvas');c.width=40;c.height=30;const g=c.getContext('2d');g.fillStyle=k?'#36c':'#c63';g.fillRect(0,0,40,30);const b=await new Promise(r=>c.toBlob(r,'image/png'));dt.items.add(new File([b],'gate'+k+'.png',{type:'image/png'}))}i.files=dt.files;document.getElementById('mOk').click();await new Promise(r=>setTimeout(r,2500));const x=foodFile().data.items.find(z=>z.id==='gatefd1');return x}))(2).then(async x=>{foodEdit('gatefd1');await new Promise(r=>setTimeout(r,300));const b=document.getElementById('fdImgs');if(!b)return 'no';const box=b.closest('.box');const bs=[...b.querySelectorAll('button')];return b.querySelectorAll('.fdim').length===2&&box.scrollWidth<=box.clientWidth+1&&bs.every(z=>z.getBoundingClientRect().height>=24&&z.getBoundingClientRect().right<=innerWidth+1)||'w '+box.scrollWidth+'/'+box.clientWidth})"
   }
  ]
 }
