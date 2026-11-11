@@ -1,0 +1,69 @@
+{
+ "app": "timetable",
+ "base": "61f8bda",
+ "settle_ms": 1500,
+ "screens": {
+  "p1": {
+   "dev": "pc",
+   "setup": "(async()=>{upsertFood({id:'gatefd1',name:'관문 음식',date:'2025-01-01',recipe:'',note:'',imgs:[],thumb:'',by:'꼬까',del:false});foodView('gatefd1');await new Promise(r=>setTimeout(r,300));return 'ok'})()"
+  },
+  "m1": {
+   "dev": "ph",
+   "setup": "(async()=>{upsertFood({id:'gatefd1',name:'관문 음식',date:'2025-01-01',recipe:'',note:'',imgs:[],thumb:'',by:'꼬까',del:false});foodView('gatefd1');await new Promise(r=>setTimeout(r,300));return 'ok'})()"
+  }
+ },
+ "tests": [
+  {
+   "name": "PC 보기 창 ✎ → 편집 창에 「사진 추가」 칸",
+   "screen": "p1",
+   "act": "click",
+   "sel": "#foodV button.btn",
+   "nth": 0,
+   "wait": 400,
+   "yard": true,
+   "expect": "!!document.getElementById('fdF')&&document.getElementById('fdF').type==='file'&&!!document.getElementById('fdN')"
+  },
+  {
+   "name": "PC 사진 둘 고르고 저장 → imgs 2 · 썸네일 · 경로 food/img/<id>_…",
+   "screen": "p1",
+   "act": "none",
+   "wait": 100,
+   "yard": true,
+   "expect": "((async(n)=>{const i=document.getElementById('fdF');const dt=new DataTransfer();for(let k=0;k<n;k++){const c=document.createElement('canvas');c.width=40;c.height=30;const g=c.getContext('2d');g.fillStyle=k?'#36c':'#c63';g.fillRect(0,0,40,30);const b=await new Promise(r=>c.toBlob(r,'image/png'));dt.items.add(new File([b],'gate'+k+'.png',{type:'image/png'}))}i.files=dt.files;document.getElementById('mOk').click();await new Promise(r=>setTimeout(r,2500));const x=foodFile().data.items.find(z=>z.id==='gatefd1');return x}))(2).then(x=>!!x&&x.imgs.length===2&&x.imgs.every(p=>/^food\\/img\\/gatefd1_[0-9a-z]+_[12]\\.jpg$/.test(p))&&x.thumb==='food/thumb/gatefd1.jpg'||JSON.stringify(x&&{imgs:x.imgs,thumb:x.thumb}))"
+  },
+  {
+   "name": "PC 다시 편집해 사진 하나 더 → 뒤에 붙음 · 옛 사진 · 썸네일 그대로",
+   "screen": "p1",
+   "act": "none",
+   "wait": 100,
+   "yard": true,
+   "expect": "(async()=>{const x0=foodFile().data.items.find(z=>z.id==='gatefd1');const old=x0?x0.imgs.slice():[];foodEdit('gatefd1');await new Promise(r=>setTimeout(r,200));const x=await ((async(n)=>{const i=document.getElementById('fdF');const dt=new DataTransfer();for(let k=0;k<n;k++){const c=document.createElement('canvas');c.width=40;c.height=30;const g=c.getContext('2d');g.fillStyle=k?'#36c':'#c63';g.fillRect(0,0,40,30);const b=await new Promise(r=>c.toBlob(r,'image/png'));dt.items.add(new File([b],'gate'+k+'.png',{type:'image/png'}))}i.files=dt.files;document.getElementById('mOk').click();await new Promise(r=>setTimeout(r,2500));const x=foodFile().data.items.find(z=>z.id==='gatefd1');return x}))(1);return !!x&&x.imgs.length===old.length+1&&old.every((p,i)=>x.imgs[i]===p)&&x.thumb==='food/thumb/gatefd1.jpg'||JSON.stringify(x&&x.imgs)})()"
+  },
+  {
+   "name": "PC 사진 없이 이름만 고쳐 저장 → 이름 바뀜 · 사진 그대로(무변)",
+   "screen": "p1",
+   "act": "none",
+   "wait": 100,
+   "yard": false,
+   "expect": "(async()=>{const x0=foodFile().data.items.find(z=>z.id==='gatefd1');const n=(x0.imgs||[]).length;foodEdit('gatefd1');await new Promise(r=>setTimeout(r,200));document.getElementById('fdN').value='관문 음식 둘';document.getElementById('mOk').click();await new Promise(r=>setTimeout(r,300));const x=foodFile().data.items.find(z=>z.id==='gatefd1');return x.name==='관문 음식 둘'&&(x.imgs||[]).length===n})()"
+  },
+  {
+   "name": "PC 보기 창 다시 열면 붙인 사진 셋 보임",
+   "screen": "p1",
+   "act": "none",
+   "wait": 100,
+   "yard": true,
+   "expect": "(async()=>{const v=document.getElementById('foodV');if(v)v.remove();foodView('gatefd1');await new Promise(r=>setTimeout(r,300));return document.querySelectorAll('#foodV .box > img').length===3||document.querySelectorAll('#foodV .box > img').length})()"
+  },
+  {
+   "name": "폰 ✎ → 「사진 추가」 칸 보임 · 창 가로 안 넘침",
+   "screen": "m1",
+   "act": "click",
+   "sel": "#foodV button.btn",
+   "nth": 0,
+   "wait": 400,
+   "yard": true,
+   "expect": "(()=>{const f=document.getElementById('fdF');if(!f)return 'no';const b=f.closest('.box');const r=f.getBoundingClientRect();return r.width>0&&r.right<=innerWidth+1&&b.scrollWidth<=b.clientWidth+1})()"
+  }
+ ]
+}
