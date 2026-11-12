@@ -27,6 +27,8 @@
         #qcards .question-box{position:relative}
         #qcards .case-text{position:relative}   /* ★ fix17 §C — [종합사례 원문] 글칸도 덮개(.qink)를 받는다 */
         #qcards .qink{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:6;overflow:visible;display:none}
+        #qcards .qinkl{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:7;overflow:visible;will-change:transform}   /* ★ 11/12 — 긋는 중 획만 그리는 층 */
+        #qcards .qink path{pointer-events:none}   /* ★ 11/12 — 펜이 움직일 때마다 브라우저가 획 하나하나에 닿았는지 재던 것을 끔(누름은 덮개 svg 가 받음 · 지우개는 좌표로 찾음) — 잼: 획 300 개 카드 점 하나 ≈300ms → 14ms */
         #qcards.penon .qink{display:block;pointer-events:auto;touch-action:pan-y pinch-zoom;cursor:crosshair}
         #qcards.penon{touch-action:pan-y}
         #qcards.penon .question-box p,#qcards.penon .question-box span{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -44,6 +46,23 @@
         #tree .trhead button{padding:2px 7px;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;
               font-weight:700;color:#6b7280;background:#fff;white-space:nowrap}
         #tree .trhead button.on{background:#1f2937;border-color:#1f2937;color:#fff}
+        /* ★ 11/12 — 서랍 찾기(자과 #nsPop 꼴 그대로) */
+        #tree .trhead button.trsb{padding:2px 4px;border:0;background:none;color:#6b7280;line-height:0;display:inline-flex;align-items:center}
+        #tree .trhead button.trsb:hover{color:#111827}
+        #trSrPop{position:fixed;z-index:96;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.18);padding:8px;width:300px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;box-sizing:border-box;font-size:12px}
+        #trSrPop .erh{display:flex;align-items:center;gap:8px;color:#6b7280;font-size:11.5px;min-height:18px}
+        #trSrPop .erx{margin-left:auto;border:0;background:none;color:#6b7280;cursor:pointer;font-size:12px;padding:2px 4px}
+        #trSrPop .rlq{display:block;width:100%;box-sizing:border-box;margin:4px 0 2px;border:1px solid #e5e7eb;border-radius:6px;padding:4px 6px;font:inherit;font-size:12px;background:#fff;color:#111827;outline:0}
+        #trSrPop .nsl{max-height:60vh;overflow:auto}
+        #trSrPop .nsr{display:flex;gap:6px;align-items:baseline;padding:4px 2px;border-top:1px solid #e5e7eb;cursor:pointer}
+        #trSrPop .nsr:hover{background:#f8fafc}
+        #trSrPop .nsn{min-width:26px;text-align:right;color:#6b7280;font-weight:700;flex:none}
+        #trSrPop .nst{flex:1;min-width:0;color:#111827;line-height:1.45}
+        #trSrPop .nsw{display:block;font-size:10px;color:#9ca3af}
+        #trSrPop .nsg{display:block;font-style:normal;color:#1e3a8a;font-size:11px;white-space:pre-wrap;border-left:2px solid #93c5fd;padding-left:5px;margin-top:2px}
+        #trSrPop .nsg.ex{color:#065f46;border-color:#6ee7b7}
+        #trSrPop mark{background:#FFF1A8;color:inherit;padding:0}
+        #trSrPop .rl0{color:#A9ACB1;padding:4px 2px;border-top:1px solid #e5e7eb}
         #tree .trhead button.trnow{margin-left:auto;color:#1d4ed8;border-color:#bfdbfe;background:#eff6ff}
         /* ★ 11/03 사용자 「아이패드에서 … 단추랑 겹쳐서 안 눌려 · 지금 [민법총칙] 단추 자리만큼 오른쪽으로」 — 터치 기기(아이패드 · 폰)는 첫 단추 앞을 옛 [민법총칙] 단추 폭 + 사이(60px)만큼 비움 · 마우스 PC 무변 */
         @media (pointer:coarse){#tree .trhead>button:first-child{margin-left:60px}}
@@ -1503,16 +1522,16 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         }
         /* §C-1 근거 검색 — 이 문항이 어디서 걸렸나(근거 본문 · 댓글 · Claude 답 = 정정본 우선 + core · 걸리는 단위는 answers[M].uid 문항) */
         function clHitsOf(uid, low) {
-            return (CL_BY_UID[uid] || []).filter(m => (clMdOf(m) + '\n' + String((clAns(m) || {}).core || '')).toLowerCase().includes(low));
+            return (CL_BY_UID[uid] || []).filter(m => srHas(clMdOf(m) + '\n' + String((clAns(m) || {}).core || ''), low));
         }
         function clSrcOf(uid, low) {
-            const has = v => String(v || '').toLowerCase().includes(low), gl = ggOf(uid);
+            const has = v => srHas(v, low), gl = ggOf(uid);
             return { gg: gl.some(g => g && has(g.t)), cm: gl.some(g => g && Array.isArray(g.cs) && g.cs.some(c => c && has(c.t))), cl: clHitsOf(uid, low) };
         }
         function clSnip(m, low) {                    /* 걸린 자리 앞뒤 한 줄 — 표·목록 기호는 뺀다 */
             const t = (clMdOf(m) + ' ' + String((clAns(m) || {}).core || '')).replace(/\*\*/g, '').replace(/^#+\s*/gm, '').replace(/^\s*-\s+/gm, '')
                 .replace(/-{3,}/g, ' ').replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
-            const i = t.toLowerCase().indexOf(low), s = Math.max(0, i - 30);
+            const i = srIdx(t, low), s = Math.max(0, i - 30);
             return (s ? '…' : '') + t.slice(s, s + 90) + (s + 90 < t.length ? '…' : '');
         }
         /* §C-3 문항 목록 Claude 상자 — 평소 「C n · core」 · Claude 만 보기면 답마다 「Claude · core」(시안 mockup_ox_claude_search) */
@@ -2551,7 +2570,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             return entries;
         }
         /* ★ 10/6 시안 — 헷갈림 = 노란 회오리 · 페이크 = 파란 세모 안 빨간 f (첫 화면 회독 칩 · 문제풀이 태그 · 기출뷰 회독 · 정리 창 같은 꼴) */
-        const IC_CONF = '<svg viewBox="0 0 16 16" width="1em" height="1em" style="display:inline-block;vertical-align:-0.15em" aria-label="헷갈림"><path d="M8 8a1 1 0 0 1 2 0a2 2 0 0 1-4 0a3 3 0 0 1 6 0a4 4 0 0 1-8 0a5 5 0 0 1 10 0" fill="none" stroke="#EAB308" stroke-width="1.7" stroke-linecap="round"/></svg>';
+        const IC_CONF = '<svg viewBox="0 0 16 16" width="1em" height="1em" style="display:inline-block;vertical-align:-0.15em" aria-label="헷갈림"><path d="M8 8a1.6 1.6 0 0 1 3.2 0a3.2 3.2 0 0 1-6.4 0a4.8 4.8 0 0 1 9.6 0a6.4 6.4 0 0 1-9.2 5.75" fill="none" stroke="#CA8A04" stroke-width="1.5" stroke-linecap="round"/></svg>';   /* ★ 11/12 사용자 「소용돌이가 그냥 원처럼 보여」 — 옛 = 고리 간격 1 · 굵기 1.7 이라 붙어 보임 → 간격 1.6 · 굵기 1.5 · 진한 색 */
         const IC_FAKE = '<svg viewBox="0 0 16 16" width="1em" height="1em" style="display:inline-block;vertical-align:-0.15em" aria-label="페이크"><path d="M8 1.6 15 14.4H1Z" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5" stroke-linejoin="round"/><text x="8" y="13.2" text-anchor="middle" font-size="9.5" font-weight="900" font-family="Arial,Helvetica,sans-serif" fill="#DC2626">f</text></svg>';
         /* ★ 10/6 시안 — 과목 카드 접기: [0] 다 펼침 → [1] 장 줄만 → [2] 장 줄 + 🃏·📋 칩 줄 → [0] · 기기별(ox_dash_fold · 동기화 밖) */
         function dashFoldOf(s) { try { return (JSON.parse(localStorage.getItem('ox_dash_fold') || '{}') || {})[s] || 0; } catch (e) { return 0; } }
@@ -3257,6 +3276,26 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 + '<path class="qlive" fill="none" stroke-linecap="round" stroke-linejoin="round"' + ve + '/>';
             return S.length;
         }
+        /* ★ 11/12 — 긋는 중 층 · 획 하나 붙이기 */
+        function qiLiveEl(sv) {
+            let lv = sv.__lv;
+            if (!lv || !lv.isConnected) {
+                const NS = 'http://www.w3.org/2000/svg';
+                lv = document.createElementNS(NS, 'svg'); lv.setAttribute('class', 'qinkl'); lv.setAttribute('viewBox', sv.getAttribute('viewBox') || '0 0 1 1000'); lv.setAttribute('preserveAspectRatio', sv.getAttribute('preserveAspectRatio') || 'xMinYMin slice');
+                const p = document.createElementNS(NS, 'path'); p.setAttribute('fill', 'none'); p.setAttribute('stroke-linecap', 'round'); p.setAttribute('stroke-linejoin', 'round'); p.setAttribute('vector-effect', 'non-scaling-stroke'); lv.appendChild(p);
+                if (!sv.parentNode) return null; sv.parentNode.insertBefore(lv, sv.nextSibling); sv.__lv = lv;
+            }
+            return lv.firstChild;
+        }
+        function qiLiveClear(sv) { const lv = sv && sv.__lv; if (lv && lv.firstChild) lv.firstChild.setAttribute('d', ''); }
+        function qiAppend(sv, j, st) {
+            try {
+                const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                p.setAttribute('data-j', j); p.setAttribute('d', qiPathD(st.p)); p.setAttribute('stroke', st.c); p.setAttribute('stroke-width', st.w); p.setAttribute('fill', 'none');
+                p.setAttribute('stroke-linecap', 'round'); p.setAttribute('stroke-linejoin', 'round'); p.setAttribute('vector-effect', 'non-scaling-stroke'); if (st.hl) p.setAttribute('opacity', '0.32');
+                const l = sv.querySelector('.qlive'); if (l) sv.insertBefore(p, l); else sv.appendChild(p); return true;
+            } catch (e) { return false; }
+        }
         function qiSave(uid) {
             clearTimeout(_qiSaveT[uid]);
             _qiSaveT[uid] = setTimeout(async () => {
@@ -3429,7 +3468,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     D.d = (D.d || qiPathD(D.p.slice(0, 2))) + add;
                     if (!QI_RAF) QI_RAF = requestAnimationFrame(() => {
                         QI_RAF = 0;
-                        const l = sv.querySelector('.qlive'); if (!l || !QI_DRAW) return;
+                        const l = qiLiveEl(sv); if (!l || !QI_DRAW) return;   /* ★ 11/12 사용자 「펜 필기가 왜 이렇게 느려」 — 긋는 중 획을 따로 층(svg.qinkl)에: 옛 = 같은 svg 의 .qlive 를 고칠 때마다 그 카드 획 전부를 다시 칠함(잼: 획 300 개 카드에서 점 하나에 ≈300ms) */
                         l.setAttribute('d', QI_DRAW.d); l.setAttribute('stroke', QI_DRAW.c); l.setAttribute('stroke-width', QI_DRAW.w); l.setAttribute('opacity', QI_DRAW.hl ? '0.32' : '1');
                     });
                 }
@@ -3445,7 +3484,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 const g = (QI[uid] = QI[uid] || { w: QI_W, s: [] });
                 g.w = Math.round(D.W);                                  /* ★ add1 — 그린 폭(마지막 획의 폭)을 묶음에 적는다 · 그리기에는 안 쓴다 */
                 g.s.push({ c: D.c, w: D.w, hl: D.hl, p: p.map(v => +v.toFixed(4)) });
-                qiPaint(uid); qiSave(uid);
+                qiLiveClear(sv); if (!qiAppend(sv, g.s.length - 1, g.s[g.s.length - 1])) qiPaint(uid); qiSave(uid);   /* ★ 11/12 — 끝난 획 하나만 붙임(옛 = 획마다 전부 다시 지음) */
             };
             sv.addEventListener('pointerup', up);
             sv.addEventListener('pointercancel', up);
@@ -3467,7 +3506,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             return !!(t.closest(QI_TAP_SKIP) || t.closest(QI_INK_SKIP));
         }
         document.addEventListener('pointerdown', e => { if (e.pointerType !== 'pen' || e.__syn) return; __qiTapDown.set(e.pointerId, { x: e.clientX, y: e.clientY, t: e.target }); }, true);
-        document.addEventListener('click', e => { if (e.target) __qiTapLast.set(e.target, performance.now()); }, true);   /* 시계는 performance.now — 350ms 창만 잰다(단조 · 기기 시각을 안 건드린다) */
+        window.addEventListener('click', e => { if (e.target) __qiTapLast.set(e.target, performance.now()); }, true);   /* ★ 11/12 사용자 「정리 창 지문 O/X 펜으로 안 됨 · 근거 점 펜으로 누르면 깜박」 — document → window 캡처(맨 먼저 듣는다): 지문 O/X · 근거 점 · 댓글 ! 는 window 캡처에서 stopPropagation 해서 여기까지 안 왔고 → 진짜 click 이 없는 줄 알고 60ms 뒤 click 을 한 번 더 만들어 열렸다 닫혔다 */   /* 시계는 performance.now — 350ms 창만 잰다(단조 · 기기 시각을 안 건드린다) */
         document.addEventListener('pointerup', e => {
             if (e.__syn || e.pointerType !== 'pen') return;
             const dn = __qiTapDown.get(e.pointerId); __qiTapDown.delete(e.pointerId);
@@ -3772,7 +3811,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 if (kind && !String(extra).trim()) continue;       /* 비어 있으면 후보가 아니다 */
                 const no = `${q.displayNo ?? q.probNum}${q.subNum || ''}`;
                 const hay = [q.id, no, q.q, q.source, q.subject, q.subChapter, extra].map(v => String(v || '').toLowerCase());
-                if (hay.some(h => h.includes(low))) hits.push(q);
+                if (hay.some(h => srHas(h, low))) hits.push(q);
             }
             if (!hits.length) {
                 resPageStop(box);
@@ -5006,7 +5045,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             /* ★ 11/10 사용자 20:48 「검색이 제일 중요 · 뭘 봐야 목적 달성?」 — 찾는 까닭 = 지금 지문과 같은 쟁점의 근거를 찾아 연결 · 그 근거를 어느 지문에 왜 O/X 로 썼는지 보고 판단
                → 걸린 근거마다 「i. 근거」 · 그 밑 걸린 댓글 하나하나 = 「단 문항 지문」 O/X 줄 + 「↳ 댓글」 줄(옛 = 첫 근거 하나 + 첫 댓글 하나 · 지문 · O/X 없음) · 아무 데도 안 걸리면 옛 그대로 */
             if (low) {
-                const L0 = Array.isArray(given) ? given : ggOf(uid), h0 = v => String(v || '').toLowerCase().includes(low), o0 = v => String(v || '').replace(/\s*\n\s*/g, ' ');
+                const L0 = Array.isArray(given) ? given : ggOf(uid), h0 = v => srHas(v, low), o0 = v => String(v || '').replace(/\s*\n\s*/g, ' ');
                 const qq = id => { const q = (typeof quizData !== 'undefined' ? quizData : []).find(x => String(x.id) === String(id)); return q ? o0(q.q) : ''; }, out = [];
                 L0.forEach(g => { if (!g) return; const cs = (Array.isArray(g.cs) ? g.cs : []).filter(c => c && h0(c.t)); if (!h0(g.t) && !cs.length) return;
                     out.push(g.i + '. ' + o0(g.t));
@@ -5014,7 +5053,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 if (out.length) return out.join('\n');
             }
             const list = Array.isArray(given) ? given : ggOf(uid);
-            const has = v => String(v || '').toLowerCase().includes(low);
+            const has = v => srHas(v, low);
             const one = v => String(v || '').replace(/\s*\n\s*/g, ' ');
             let hit = list.find(g => g && has(g.t)) || null, c = null;
             if (!hit) {
@@ -5031,7 +5070,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
              그래서 여기서는 **켜짐 색만** 보이고 토글은 없다 — 켜고 끄는 곳은 판과 연결 상자다. */
         function ggPickBang(uid, low, given) {
             const list = Array.isArray(given) ? given : ggOf(uid);
-            const has = v => String(v || '').toLowerCase().includes(low);
+            const has = v => srHas(v, low);
             let hit = list.find(g => g && has(g.t)) || null;
             if (!hit) hit = list.find(g => g && Array.isArray(g.cs) && g.cs.some(y => y && has(y.t))) || null;
             hit = hit || list[0];
@@ -6097,14 +6136,36 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             document.body.appendChild(d);
         }
 
-        function mark(text, term) {
-            const t = escHtml(text);
-            if (!term) return t;
-            const idx = t.toLowerCase().indexOf(term.toLowerCase());
-            if (idx < 0) return t;
-            return t.slice(0, idx)
-                 + '<mark class="bg-yellow-200 rounded px-0.5">' + t.slice(idx, idx + term.length) + '</mark>'
-                 + t.slice(idx + term.length);
+        /* ★ 11/12 사용자 「검색할 때 단어 단위로 띄어쓰기해도 그 단어 단위로 다 검색 · 제반 사정」 — 찾는 글을 띄어쓰기로 나눈 낱말이 모두 들어 있으면 걸림(차례 · 사이 글 무관) · 띄어쓰기만 다른 것(제반사정 ↔ 제반 사정)도 걸림 */
+        function srHas(v, low) {
+            const hay = String(v == null ? '' : v).toLowerCase(); low = String(low || '');
+            if (!low) return false;
+            if (hay.includes(low)) return true;
+            const tk = low.split(/\s+/).filter(Boolean);
+            if (tk.length > 1 && tk.every(x => hay.includes(x))) return true;
+            const a = low.replace(/\s+/g, ''); return !!a && hay.replace(/\s+/g, '').includes(a);
+        }
+        function srIdx(v, low) {   /* 걸린 첫 자리(조각 보여 줄 때) */
+            const hay = String(v == null ? '' : v).toLowerCase(); let i = hay.indexOf(low); if (i >= 0) return i;
+            for (const x of String(low).split(/\s+/).filter(Boolean)) { const k = hay.indexOf(x); if (k >= 0 && (i < 0 || k < i)) i = k; } return i;
+        }
+        /* ★ 11/12 사용자 「어디에든지 글 작성할 때 Tab = 스페이스 여러 번 · 다 적용」 — 여러 줄 글 칸(textarea 전부 · 근거 · 댓글 · 그 자리 고치기 · 메모 · 연결 이유 …)에서 Tab = 빈칸 넷(자과 11/05 와 같음 · 칸 밖으로 안 나감) · Shift · Ctrl · Alt · Cmd + Tab 은 옛 그대로 */
+        window.addEventListener('keydown', e => {
+            if (e.key !== 'Tab' || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+            const t = e.target; if (!t || t.tagName !== 'TEXTAREA' || t.readOnly || t.disabled) return;
+            e.preventDefault(); e.stopPropagation();
+            try { t.setRangeText('    ', t.selectionStart, t.selectionEnd, 'end'); } catch (_) { t.value += '    '; }
+            try { t.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) { }
+        }, true);
+        function mark(text, term) {   /* 날글에서 찾고 조각마다 escHtml — &amp; 같은 글자 표기 안을 건드리지 않는다 */
+            const raw = String(text == null ? '' : text);
+            if (!term) return escHtml(raw);
+            const tk = String(term).split(/\s+/).filter(Boolean); if (!tk.length) return escHtml(raw);
+            const rx = x => [...x].map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*');
+            let re; try { re = new RegExp('(?:' + tk.map(rx).concat(tk.length > 1 ? [rx(tk.join(''))] : []).sort((a, b) => b.length - a.length).join('|') + ')', 'gi'); } catch (e) { return escHtml(raw); }
+            let out = '', i = 0, m;
+            while ((m = re.exec(raw))) { if (!m[0]) { re.lastIndex++; continue; } out += escHtml(raw.slice(i, m.index)) + '<mark class="bg-yellow-200 rounded px-0.5">' + escHtml(m[0]) + '</mark>'; i = m.index + m[0].length; }
+            return out + escHtml(raw.slice(i));
         }
 
         /* ★ 2026-10-10 (_task_search_all §A) — 검색 결과는 자르지 않는다: 처음 step 줄 · 목록 끝 앞 200px 에 닿으면 다음 step 줄을 이어 붙임(IntersectionObserver)
@@ -6182,8 +6243,8 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 // 문제 본문 + 해설 본문 + uid(q0261) + 출처(변리사15) 를 모두 본다
                 const lowNS = low.replace(/\s+/g, '');
                 hits = quizData.filter(q => {
-                    if (!q.pending && String(q.q).toLowerCase().includes(low)) return true;
-                    if (!q.pending && String(q.exp || '').toLowerCase().includes(low)) return true;
+                    if (!q.pending && srHas(q.q, low)) return true;
+                    if (!q.pending && srHas(q.exp, low)) return true;
                     if (lowNS && String(q.id || '').toLowerCase().includes(lowNS)) return true;
                     if (lowNS && String(q.source || '').toLowerCase().replace(/\s+/g, '').includes(lowNS)) return true;
                     return false;
@@ -6192,7 +6253,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 /* ★ 2026-09-14 — 「메모」 갈래를 「근거」로 갈았다. 항목 본문 `t` 와 그 항목의 댓글 `cs[].t` 를 다 본다.
                    ⚠ 저장소는 한 번만 푼다(문항마다 `ggOf` 를 부르면 5,548 번 JSON 을 푼다). */
                 const gst = ggStore();
-                const hasLow = v => String(v || '').toLowerCase().includes(low);
+                const hasLow = v => srHas(v, low);
                 hits = quizData.filter(q => (Array.isArray(gst[q.id]) ? gst[q.id] : []).some(g => g &&
                     (hasLow(g.t) || (Array.isArray(g.cs) && g.cs.some(c => c && hasLow(c.t)))))
                     || clHitsOf(q.id, low).length > 0);   /* ★ 2026-09-22 (_task_ox_claude_answers §C-1) — Claude 답(정정본 우선 + core)까지 · 걸리는 단위는 answers[M].uid 문항 */
@@ -6210,12 +6271,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 const where = q.examYear
                     ? `${q.examYear}년 ${q.examNo}번${q.examOpt ? '(' + q.examOpt + ')' : ''}`
                     : `${q.subject} · ${q.subChapter}`;
-                const inQ = String(q.q).toLowerCase().includes(low);
-                const inExp = !inQ && String(q.exp || '').toLowerCase().includes(low);
+                const inQ = srHas(q.q, low);
+                const inExp = !inQ && srHas(q.exp, low);
                 let expSnip = '';
                 if (inExp) {
                     const e = String(q.exp || '');
-                    const i = e.toLowerCase().indexOf(low);
+                    const i = srIdx(e, low);
                     const st = Math.max(0, i - 30);
                     expSnip = (st > 0 ? '…' : '') + e.slice(st, st + 170) + (e.length > st + 170 ? '…' : '');
                 }
@@ -6882,6 +6943,24 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             chapterSaved = chapKey;
             try { stampAll(); } catch (e) {}                   /* 저장 뒤 도장 — 창을 닫기 전에 회독 칸이 도장 없이 남지 않게(채점 직후 stampAll 은 저장 앞이었다) */
         }
+        /* ★ 11/12 사용자 「5.법률행위 1번 풀이 기록이 없는데 히트맵은 칠해짐 · 다시 안 돌려?」 — 회독 기록(marks)에서 빠진 채점 되살리기(기기마다 한 번)
+           잼: 9/21 01:41 에 첫 쪽 20 문항을 채점(ox_q_history · ox_q_last) → 그날 12:06 부터 나머지를 풀어 저장한 1 회독 marks 에는 그 20 이 없음(labels 109 · marks 89)
+           규칙 = 단원 회독(⚡빠른실행 아님)의 labels 에는 있는데 marks 에 없는 문항 중, 채점 값이 있고 마지막 채점 시각이 그 회독 날 앞뒤 하루 안인 것만 그 값으로 채움 · score = 맞은 수 다시 셈 · 다른 칸 무변 */
+        function recBackfill1112() {
+            try {
+                if (localStorage.getItem('ox_fix_rec1112')) return;
+                const h = JSON.parse(localStorage.getItem('ox_chap_history') || '{}'); if (!h || !Object.keys(h).length) return;   /* 아직 기록을 못 받은 기기 — 다음에 */
+                const last = JSON.parse(localStorage.getItem('ox_q_last') || '{}'), hist = JSON.parse(localStorage.getItem('ox_q_history') || '{}');
+                let n = 0;
+                Object.keys(h).forEach(k => { if (k.indexOf('⚡') === 0 || !Array.isArray(h[k])) return;
+                    h[k].forEach(a => { if (!a || !a.marks || !a.labels) return; const d = recStripDay(a.date); if (!d) return; let f = 0;
+                        Object.keys(a.labels).forEach(id => { if (id in a.marks) return; const v = hist[id], t = +last[id] || 0; if ((v === true || v === false) && t >= d.getTime() - 864e5 && t < d.getTime() + 864e5) { a.marks[id] = v; f++; } });
+                        if (f) { a.score = Object.keys(a.marks).filter(id => a.marks[id] === true).length; n += f; } }); });
+                if (n) { localStorage.setItem('ox_chap_history', JSON.stringify(h)); try { clearWrongCache(); } catch (e) { } try { stampAll(); } catch (e) { } }
+                localStorage.setItem('ox_fix_rec1112', String(n));
+            } catch (e) { console.warn(e); }
+        }
+        setTimeout(recBackfill1112, 12000);
         function finishChapterLeave() {
             // 진행중 상태 종료 (goHome이 다시 저장하지 않도록 세션·화면도 비움)
             currentSessionMarks = {};
@@ -11555,6 +11634,7 @@ function trBuild(focus) {
     head.innerHTML = S.order.map(s =>
         `<button class="${s === subj ? 'on' : ''}" title="${trEsc(s)}" onclick="trPickSubj('${trEsc(s).replace(/'/g, "\\'")}')">${trEsc(TR_SHORT[s] || s)}</button>`).join('')
         + `<span class="trdf" role="button" title="접기 — 누를 때마다 [1] 장 줄만 → [2] 장 줄 + 묶음 첫 줄(🃏·📋 줄) → [0] 다 펼침" onclick="trDFold('${trEsc(subj).replace(/'/g, "\\'")}')">[${trDFoldOf(subj)}]</span>`   /* ★ 10/6 시안 — 서랍 접기 [N] */
+        + `<button type="button" class="trsb" title="찾기 — 지문 · 근거 · 댓글" onclick="event.stopPropagation();trSrPop(this)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg></button>`   /* ★ 11/12 사용자 「목차 서랍에서도 검색 · 자과앱 서랍 검색 기능처럼」 */
         + (onQuiz ? `<button class="trnow" onclick="trFocus()" title="지금 푸는 줄로 되돌아간다">지금 자리로</button>` : '');
 
     const chFold = trObj(TR_CH);
@@ -11660,6 +11740,49 @@ function trChapOf(chapters, label) {
     return '';
 }
 function trPickSubj(s) { trLSet(TR_SUBJ, s); trBuild(); }
+/* ★ 11/12 — 서랍 찾기: 자과 nsPop(서랍 머리 돋보기 → 그 밑 작은 창 · 「N건」 · ✕ · 입력 한 줄 · 처음 100 줄 · 굴리면 100 줄씩 · 바깥 누르면 닫힘) 그대로
+   찾는 것 = 지문 · 해설 · ID · 출처 + 근거 글 · 근거 댓글(위 검색 줄 「문제」 + 「근거」 를 한 번에 · 모든 과목) · 근거로 걸리면 🔗 근거 줄(「지문」 O/X · ↳ 댓글) · 찾은 말 표시
+   번호 누름 = 문항 창(찾기 창 그대로 · 여러 개) · 줄 누름 = 문항 창 + 찾기 창 닫힘 · 서랍은 그대로(폰 폭은 서랍이 화면을 덮어 접음) */
+function trSrPop(anc) {
+    { const o = document.getElementById('trSrPop'); if (o) { o.__close(); return; } }
+    const b = document.createElement('div'); b.id = 'trSrPop';
+    b.innerHTML = '<div class="erh"><span class="nsc"></span><button class="erx" title="닫기">✕</button></div><input class="rlq" placeholder="지문·근거·댓글 찾기" autocomplete="off"><div class="nsl"></div>';
+    const inp = b.querySelector('.rlq'), L = b.querySelector('.nsl'), cnt = b.querySelector('.nsc');
+    const find = () => {
+        const term = String(inp.value || '').trim(), low = term.toLowerCase();
+        if (term.length < 2) { resPageStop(L); L.innerHTML = ''; cnt.textContent = term.length === 1 ? '두 글자부터' : ''; place(); return; }
+        let gst = {}; try { gst = ggStore() || {}; } catch (e) { gst = {}; }
+        const ggHit = q => (Array.isArray(gst[q.id]) ? gst[q.id] : []).some(g => g && (srHas(g.t, low) || (Array.isArray(g.cs) && g.cs.some(c => c && srHas(c.t, low)))));
+        const lowNS = low.replace(/\s+/g, '');
+        const hits = quizData.filter(q => (!q.pending && (srHas(q.q, low) || srHas(q.exp, low))) || (lowNS && String(q.id || '').toLowerCase().includes(lowNS)) || (lowNS && String(q.source || '').toLowerCase().replace(/\s+/g, '').includes(lowNS)) || ggHit(q));
+        cnt.textContent = hits.length + '건';
+        if (hits.length) resPage(L, hits, q => {
+            const where = q.examYear ? `${q.examYear}년 ${q.examNo}번${q.examOpt ? '(' + q.examOpt + ')' : ''}` : `${q.subject} · ${q.subChapter}`;
+            const gg = ggHit(q), inQ = srHas(q.q, low), inExp = !inQ && srHas(q.exp, low), qt = String(q.q || '');
+            let ex = ''; if (inExp) { const e = String(q.exp || ''), i = srIdx(e, low), st = Math.max(0, i - 20); ex = (st > 0 ? '…' : '') + e.slice(st, st + 120) + (e.length > st + 120 ? '…' : ''); }
+            return '<div class="nsr" data-id="' + escHtml(q.id) + '" data-gg="' + (gg && !inQ ? 1 : 0) + '"><b class="nsn">' + escHtml(String(q.displayNo ?? q.probNum) + (q.subNum || '')) + '</b><span class="nst"><span class="nsw">' + mark(String(q.id), term) + ' · ' + escHtml(where) + '</span>'
+                + (inQ ? mark(qt, term) : escHtml(qt.slice(0, 60)) + (qt.length > 60 ? '…' : ''))
+                + (inExp ? '<i class="nsg ex">💬 ' + mark(ex, term) + '</i>' : '')
+                + (gg ? '<i class="nsg">🔗 ' + ggPickLine(q.id, low, gst[q.id]).split('\n').map(x => mark(x, term)).join('\n') + '</i>' : '') + '</span></div>';
+        }, 100, { key: term });
+        else { resPageStop(L); L.innerHTML = '<div class="rl0">없음</div>'; }
+        place();
+    };
+    let tm = null; inp.oninput = () => { clearTimeout(tm); tm = setTimeout(find, 150); };
+    L.onclick = e => {
+        const x = e.target.closest('.nsr'); if (!x) return;
+        const id = x.dataset.id, keep = !!e.target.closest('.nsn');
+        if (!keep) close();
+        try { openQPopup(id); qpScrollTo(id, x.dataset.gg === '1' ? 'gg' : 'top'); } catch (err) { console.warn(err); }
+        if (!keep) { try { if (window.innerWidth < 600) trFold(true); } catch (err) { } }
+    };
+    const out = e => { if (!b.contains(e.target) && !(anc && anc.contains && anc.contains(e.target)) && !(e.target.closest && e.target.closest('.trsb')) && !(e.target.closest && e.target.closest('.oxwin'))) close(); };   /* 열어 둔 문항 창을 만지는 동안은 그대로(번호로 여러 개 열어 볼 때) */
+    const close = () => { clearTimeout(tm); resPageStop(L); b.remove(); document.removeEventListener('pointerdown', out, true); }; b.__close = close;
+    b.querySelector('.erx').onclick = close;
+    const place = () => { if (!b.isConnected) return; const r = anc && anc.isConnected ? anc.getBoundingClientRect() : { left: 8, bottom: 8 }; const w = b.offsetWidth, h = b.offsetHeight, H = window.innerHeight;
+        b.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, Math.round(r.left))) + 'px'; b.style.top = Math.max(8, Math.min(Math.round(r.bottom + 6), H - h - 8)) + 'px'; };
+    document.body.appendChild(b); try { b.style.zIndex = ++_oxWinZ; } catch (e) { } place(); setTimeout(() => { document.addEventListener('pointerdown', out, true); try { inp.focus(); } catch (e) { } }, 0);
+}
 /* ★ 10/6 시안 — 서랍 접기 [N](과목마다 · 기기별 ox_tr_dfold) · 장 줄 🃏 암기노트 · 📋 정리 칩(장 전체) */
 function trDFoldOf(s) { try { return (JSON.parse(localStorage.getItem('ox_tr_dfold') || '{}') || {})[s] || 0; } catch (e) { return 0; } }
 function trDFold(s) { let m = {}; try { m = JSON.parse(localStorage.getItem('ox_tr_dfold') || '{}') || {}; } catch (e) { } const lv = ((m[s] || 0) + 1) % 3; if (lv) m[s] = lv; else delete m[s]; try { localStorage.setItem('ox_tr_dfold', JSON.stringify(m)); } catch (e) { } trBuild(); }
@@ -12707,16 +12830,24 @@ function lwRowEl(q, owner, cur, onPick) {
     if (onPick) b.onclick = onPick;
     return b;
 }
+/* ★ 11/12 — 지문에서 안 걸리고 근거 · 댓글에서 걸린 줄은 그 근거 줄(근거 · 「지문」 O/X · ↳ 댓글)을 밑에 보임 */
+function lwRowGg(b, q, term) {
+    try { const low = String(term || '').trim().toLowerCase(); if (!low || srHas(q.q, low) || !ggOf(q.id).some(g => g && (srHas(g.t, low) || (Array.isArray(g.cs) && g.cs.some(c => c && srHas(c.t, low)))))) return b;
+        const d = lwEl('div', 'cftx'); d.style.cssText = 'white-space:pre-wrap;color:#1e3a8a;border-left:2px solid #60a5fa;padding-left:6px;margin-top:2px';
+        d.innerHTML = ggPickLine(q.id, low).split('\n').map(x => mark(x, term)).join('\n'); b.appendChild(d); } catch (e) { }
+    return b;
+}
 /* 찾기 — 지금 linkSearch 대상·차례 그대로(uid · 번호 · 본문 · 출처 · 과목 · 단원 · 1자부터) · 10/10 30 건 멈춤 걷음(다 찾음) */
 function lwFind(owner, term) {
     const low = String(term || '').trim().toLowerCase(), hits = [];
     if (!low) return hits;
+    let gst = null; try { gst = ggStore(); } catch (e) { gst = null; }
     for (let i = 0; i < quizData.length; i++) {   /* ★ 10/10 (_task_search_all §A-1) — 끝까지 찾음(옛 30 건 멈춤 걷음) */
         const q = quizData[i];
         if (String(q.id) === String(owner)) continue;
         const no = `${q.displayNo ?? q.probNum}${q.subNum || ''}`;
-        const hay = [q.id, no, q.q, q.source, q.subject, q.subChapter].map(v => String(v || '').toLowerCase());
-        if (hay.some(h => h.includes(low))) hits.push(q);
+        const hay = [q.id, no, q.q, q.source, q.subject, q.subChapter, (gst && Array.isArray(gst[q.id])) ? ggTextOfList(gst[q.id]) : ''].map(v => String(v || '').toLowerCase());   /* ★ 11/12 사용자 「연결 검색할 때 댓글도 검색」 — 그 문항 근거 글 · 근거 댓글도 */
+        if (hay.some(h => srHas(h, low))) hits.push(q);
     }
     return hits;
 }
@@ -12804,12 +12935,12 @@ function lwOpen(owner, ev) {
         const hits = lwFind(owner, term);
         rs.hidden = false;
         if (!hits.length) { resPageStop(rs); rs.innerHTML = ''; rs.appendChild(lwEl('div', 'cfnone', '찾는 문제가 없습니다')); return; }
-        resPage(rs, hits, q => lwRowEl(q, owner, false, () => {   /* ★ 10/10 (_task_search_all §A) — 셈 맨 위 · 100 줄씩 이어 붙임 */
+        resPage(rs, hits, q => lwRowGg(lwRowEl(q, owner, false, () => {   /* ★ 10/10 (_task_search_all §A) — 셈 맨 위 · 100 줄씩 이어 붙임 */
             if (!lwAdd(owner, q.id)) return;
             exvToast('🔗 연결했다 — ' + q.id + ' ' + lwNo(q));
             inp.value = ''; resPageStop(rs); rs.innerHTML = ''; rs.hidden = true;
             paintCur();
-        }), 100, { head: '<div class="cfcnt">' + hits.length + '건</div>', key: term });
+        }), q, term), 100, { head: '<div class="cfcnt">' + hits.length + '건</div>', key: term });
         lwFit(w);
     };
     let tm = null;
