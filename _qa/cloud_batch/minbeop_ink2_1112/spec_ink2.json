@@ -1,0 +1,94 @@
+{
+ "app": "minbeop",
+ "base": "891750e",
+ "settle_ms": 3000,
+ "ready": "typeof quizData!=='undefined'&&quizData.length>0&&document.querySelectorAll('#hm-subjects button').length>1&&document.getElementById('trlist').children.length>0",
+ "screens": {
+  "p1": {
+   "dev": "pc",
+   "setup": "new Promise(r=>setTimeout(r,3000)).then(()=>{(function(){try{trFold(true)}catch(e){};var q=quizData.find(function(x){return x.id==='Q1064'});startQuiz(q.subject,q.subChapter?(q.chapter+' > '+q.subChapter):q.chapter);var i=currentFilteredData.findIndex(function(x){return x.id==='Q1064'});if(i>=0&&typeof PAGE_SIZE!=='undefined'){currentPageIndex=Math.floor(i/PAGE_SIZE);renderQuizPage()}setTimeout(function(){var c=document.querySelector('[id=\"gg-refchip-Q1064-Q0598\"]');if(c)c.click();setTimeout(function(){var b=document.getElementById('q-box-Q1064');if(b){b.scrollIntoView({block:'start'});window.scrollBy(0,-110)}},300)},800)})();}).then(()=>new Promise(r=>setTimeout(r,1500)))"
+  },
+  "m1": {
+   "dev": "ph",
+   "setup": "new Promise(r=>setTimeout(r,3000)).then(()=>{(function(){try{trFold(true)}catch(e){};var q=quizData.find(function(x){return x.id==='Q1064'});startQuiz(q.subject,q.subChapter?(q.chapter+' > '+q.subChapter):q.chapter);var i=currentFilteredData.findIndex(function(x){return x.id==='Q1064'});if(i>=0&&typeof PAGE_SIZE!=='undefined'){currentPageIndex=Math.floor(i/PAGE_SIZE);renderQuizPage()}setTimeout(function(){var c=document.querySelector('[id=\"gg-refchip-Q1064-Q0598\"]');if(c)c.click();setTimeout(function(){var b=document.getElementById('q-box-Q1064');if(b){b.scrollIntoView({block:'start'});window.scrollBy(0,-110)}},300)},800)})();}).then(()=>new Promise(r=>setTimeout(r,1500)))"
+  }
+ },
+ "tests": [
+  {
+   "name": "PC (준비) 필기모드 켬",
+   "screen": "p1",
+   "act": "click",
+   "sel": "#ink-toggle",
+   "nth": 0,
+   "wait": 900,
+   "yard": false,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');return !!sv&&!cardMarksOn&&getComputedStyle(sv).pointerEvents==='auto'})()"
+  },
+  {
+   "name": "PC 굴림 없이 비스듬히 한 획 = 옛 그대로(점 13 · 가로 120 · 세로 24 · 긋는 층 비움)",
+   "screen": "p1",
+   "act": "none",
+   "wait": 300,
+   "yard": false,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';document.body.style.paddingBottom='1600px';const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});QI['Q1064']={w:900,s:[]};qiPaint('Q1064');const de=document.documentElement,ov0=de.style.overflow,bar=innerWidth-de.clientWidth>=1,s0=scrollY,W=r.width;sv.dispatchEvent(mk('pointerdown',X,Y));for(let k=1;k<=12;k++)sv.dispatchEvent(mk('pointermove',X+k*10,Y+k*2));sv.dispatchEvent(mk('pointerup',X+120,Y+24));const S=QI['Q1064'].s,p=S[0]&&S[0].p;const o={n:S.length,pts:p?p.length/2:0,du:p?+((p[p.length-2]-p[0])*W).toFixed(1):null,dv:p?+((p[p.length-1]-p[1])*W).toFixed(1):null,after:de.style.overflow,live:(document.querySelector('#q-box-Q1064 .qinkl path')||{getAttribute(){return ''}}).getAttribute('d')};window.scrollTo(scrollX,s0);document.body.style.paddingBottom='';QI['Q1064']={w:900,s:[]};qiPaint('Q1064');qiSave('Q1064');return (o.n===1&&o.pts===13&&Math.abs(o.du-120)<=1&&Math.abs(o.dv-24)<=1&&o.after===ov0&&!o.live)||JSON.stringify(o)})()"
+  },
+  {
+   "name": "PC 긋는 중 화면이 40px 굴러가도 획이 펜 끝을 따라감(끝점 ↔ 펜 자리 1.5px 안) · 떼면 굴림 잠금 풀림",
+   "screen": "p1",
+   "act": "none",
+   "wait": 300,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';document.body.style.paddingBottom='1600px';const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});QI['Q1064']={w:900,s:[]};qiPaint('Q1064');const de=document.documentElement,ov0=de.style.overflow,bar=innerWidth-de.clientWidth>=1,s0=scrollY,W=r.width;sv.dispatchEvent(mk('pointerdown',X,Y));const lock=de.style.overflow;for(let k=1;k<=5;k++)sv.dispatchEvent(mk('pointermove',X+k*6,Y));window.scrollBy(0,40);const d=scrollY-s0;for(let k=6;k<=20;k++)sv.dispatchEvent(mk('pointermove',X+k*6,Y));sv.dispatchEvent(mk('pointerup',X+120,Y));const S=QI['Q1064'].s,p=S[0]&&S[0].p,r2=sv.getBoundingClientRect();const o={n:S.length,d:d,dv:p?+((p[p.length-1]-p[1])*W).toFixed(1):null,gap:p?+(r2.top+p[p.length-1]*W-Y).toFixed(1):null,lock:lock,bar:bar,after:de.style.overflow};window.scrollTo(scrollX,s0);document.body.style.paddingBottom='';QI['Q1064']={w:900,s:[]};qiPaint('Q1064');qiSave('Q1064');return (o.n===1&&o.d===40&&Math.abs(o.dv-40)<=1.5&&Math.abs(o.gap)<=1.5&&o.lock===(bar?ov0:'hidden')&&o.after===ov0)||JSON.stringify(o)})()"
+  },
+  {
+   "name": "PC 지우개도 굴러간 만큼 맞춰 그 획을 지움",
+   "screen": "p1",
+   "act": "none",
+   "wait": 300,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';document.body.style.paddingBottom='1600px';const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});QI['Q1064']={w:900,s:[]};qiPaint('Q1064');const de=document.documentElement,ov0=de.style.overflow,bar=innerWidth-de.clientWidth>=1,s0=scrollY,W=r.width;QI['Q1064']={w:900,s:[{c:'#16181B',w:2,hl:0,p:[(X+60-r.left)/W,(Y+40-r.top)/W,(X+90-r.left)/W,(Y+40-r.top)/W]}]};qiPaint('Q1064');const keep=QI_TOOL.mode;QI_TOOL.mode='erase';sv.dispatchEvent(mk('pointerdown',X,Y));window.scrollBy(0,40);const d=scrollY-s0;sv.dispatchEvent(mk('pointermove',X+62,Y));const n=QI['Q1064'].s.length;sv.dispatchEvent(mk('pointerup',X+62,Y));QI_TOOL.mode=keep;window.scrollTo(scrollX,s0);document.body.style.paddingBottom='';QI['Q1064']={w:900,s:[]};qiPaint('Q1064');qiSave('Q1064');return (d===40&&n===0)||('d='+d+' n='+n)})()"
+  },
+  {
+   "name": "폰 (준비) 필기모드 켬",
+   "screen": "m1",
+   "act": "click",
+   "sel": "#ink-toggle",
+   "nth": 0,
+   "wait": 900,
+   "yard": false,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');return !!sv&&!cardMarksOn&&getComputedStyle(sv).pointerEvents==='auto'})()"
+  },
+  {
+   "name": "폰 굴림 없이 비스듬히 한 획 = 옛 그대로(점 13 · 가로 120 · 세로 24 · 긋는 층 비움)",
+   "screen": "m1",
+   "act": "none",
+   "wait": 300,
+   "yard": false,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';document.body.style.paddingBottom='1600px';const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});QI['Q1064']={w:900,s:[]};qiPaint('Q1064');const de=document.documentElement,ov0=de.style.overflow,bar=innerWidth-de.clientWidth>=1,s0=scrollY,W=r.width;sv.dispatchEvent(mk('pointerdown',X,Y));for(let k=1;k<=12;k++)sv.dispatchEvent(mk('pointermove',X+k*10,Y+k*2));sv.dispatchEvent(mk('pointerup',X+120,Y+24));const S=QI['Q1064'].s,p=S[0]&&S[0].p;const o={n:S.length,pts:p?p.length/2:0,du:p?+((p[p.length-2]-p[0])*W).toFixed(1):null,dv:p?+((p[p.length-1]-p[1])*W).toFixed(1):null,after:de.style.overflow,live:(document.querySelector('#q-box-Q1064 .qinkl path')||{getAttribute(){return ''}}).getAttribute('d')};window.scrollTo(scrollX,s0);document.body.style.paddingBottom='';QI['Q1064']={w:900,s:[]};qiPaint('Q1064');qiSave('Q1064');return (o.n===1&&o.pts===13&&Math.abs(o.du-120)<=1&&Math.abs(o.dv-24)<=1&&o.after===ov0&&!o.live)||JSON.stringify(o)})()"
+  },
+  {
+   "name": "폰 긋는 중 화면이 40px 굴러가도 획이 펜 끝을 따라감(끝점 ↔ 펜 자리 1.5px 안) · 떼면 굴림 잠금 풀림",
+   "screen": "m1",
+   "act": "none",
+   "wait": 300,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';document.body.style.paddingBottom='1600px';const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});QI['Q1064']={w:900,s:[]};qiPaint('Q1064');const de=document.documentElement,ov0=de.style.overflow,bar=innerWidth-de.clientWidth>=1,s0=scrollY,W=r.width;sv.dispatchEvent(mk('pointerdown',X,Y));const lock=de.style.overflow;for(let k=1;k<=5;k++)sv.dispatchEvent(mk('pointermove',X+k*6,Y));window.scrollBy(0,40);const d=scrollY-s0;for(let k=6;k<=20;k++)sv.dispatchEvent(mk('pointermove',X+k*6,Y));sv.dispatchEvent(mk('pointerup',X+120,Y));const S=QI['Q1064'].s,p=S[0]&&S[0].p,r2=sv.getBoundingClientRect();const o={n:S.length,d:d,dv:p?+((p[p.length-1]-p[1])*W).toFixed(1):null,gap:p?+(r2.top+p[p.length-1]*W-Y).toFixed(1):null,lock:lock,bar:bar,after:de.style.overflow};window.scrollTo(scrollX,s0);document.body.style.paddingBottom='';QI['Q1064']={w:900,s:[]};qiPaint('Q1064');qiSave('Q1064');return (o.n===1&&o.d===40&&Math.abs(o.dv-40)<=1.5&&Math.abs(o.gap)<=1.5&&o.lock===(bar?ov0:'hidden')&&o.after===ov0)||JSON.stringify(o)})()"
+  },
+  {
+   "name": "폰 지우개도 굴러간 만큼 맞춰 그 획을 지움",
+   "screen": "m1",
+   "act": "none",
+   "wait": 300,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';document.body.style.paddingBottom='1600px';const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});QI['Q1064']={w:900,s:[]};qiPaint('Q1064');const de=document.documentElement,ov0=de.style.overflow,bar=innerWidth-de.clientWidth>=1,s0=scrollY,W=r.width;QI['Q1064']={w:900,s:[{c:'#16181B',w:2,hl:0,p:[(X+60-r.left)/W,(Y+40-r.top)/W,(X+90-r.left)/W,(Y+40-r.top)/W]}]};qiPaint('Q1064');const keep=QI_TOOL.mode;QI_TOOL.mode='erase';sv.dispatchEvent(mk('pointerdown',X,Y));window.scrollBy(0,40);const d=scrollY-s0;sv.dispatchEvent(mk('pointermove',X+62,Y));const n=QI['Q1064'].s.length;sv.dispatchEvent(mk('pointerup',X+62,Y));QI_TOOL.mode=keep;window.scrollTo(scrollX,s0);document.body.style.paddingBottom='';QI['Q1064']={w:900,s:[]};qiPaint('Q1064');qiSave('Q1064');return (d===40&&n===0)||('d='+d+' n='+n)})()"
+  },
+  {
+   "name": "폰 긋는 동안 굴림 잠금 · 펜이 취소돼도 풀림 · 그은 획은 남음",
+   "screen": "m1",
+   "act": "none",
+   "wait": 300,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';document.body.style.paddingBottom='1600px';const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});QI['Q1064']={w:900,s:[]};qiPaint('Q1064');const de=document.documentElement,ov0=de.style.overflow,bar=innerWidth-de.clientWidth>=1,s0=scrollY,W=r.width;sv.dispatchEvent(mk('pointerdown',X,Y));const lock=de.style.overflow;for(let k=1;k<=10;k++)sv.dispatchEvent(mk('pointermove',X+k*6,Y));sv.dispatchEvent(mk('pointercancel',X+60,Y));const o={n:QI['Q1064'].s.length,lock:lock,bar:bar,after:de.style.overflow};window.scrollTo(scrollX,s0);document.body.style.paddingBottom='';QI['Q1064']={w:900,s:[]};qiPaint('Q1064');qiSave('Q1064');return (o.n===1&&o.lock==='hidden'&&o.after===ov0)||JSON.stringify(o)})()"
+  }
+ ]
+}
