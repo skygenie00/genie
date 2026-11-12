@@ -1,0 +1,270 @@
+{
+ "app": "minbeop",
+ "base": "891750e",
+ "settle_ms": 3000,
+ "ready": "typeof quizData!=='undefined'&&quizData.length>0&&document.querySelectorAll('#hm-subjects button').length>1&&document.getElementById('trlist').children.length>0",
+ "screens": {
+  "p1": {
+   "dev": "pc",
+   "setup": "new Promise(r=>setTimeout(r,3000)).then(()=>{(function(){try{trFold(true)}catch(e){};var q=quizData.find(function(x){return x.id==='Q1064'});startQuiz(q.subject,q.subChapter?(q.chapter+' > '+q.subChapter):q.chapter);var i=currentFilteredData.findIndex(function(x){return x.id==='Q1064'});if(i>=0&&typeof PAGE_SIZE!=='undefined'){currentPageIndex=Math.floor(i/PAGE_SIZE);renderQuizPage()}setTimeout(function(){var c=document.querySelector('[id=\"gg-refchip-Q1064-Q0598\"]');if(c)c.click();setTimeout(function(){var b=document.getElementById('q-box-Q1064');if(b){b.scrollIntoView({block:'start'});window.scrollBy(0,-110)}},300)},800)})();}).then(()=>new Promise(r=>setTimeout(r,1500)))"
+  },
+  "m1": {
+   "dev": "ph",
+   "setup": "new Promise(r=>setTimeout(r,3000)).then(()=>{(function(){try{trFold(true)}catch(e){};var q=quizData.find(function(x){return x.id==='Q1064'});startQuiz(q.subject,q.subChapter?(q.chapter+' > '+q.subChapter):q.chapter);var i=currentFilteredData.findIndex(function(x){return x.id==='Q1064'});if(i>=0&&typeof PAGE_SIZE!=='undefined'){currentPageIndex=Math.floor(i/PAGE_SIZE);renderQuizPage()}setTimeout(function(){var c=document.querySelector('[id=\"gg-refchip-Q1064-Q0598\"]');if(c)c.click();setTimeout(function(){var b=document.getElementById('q-box-Q1064');if(b){b.scrollIntoView({block:'start'});window.scrollBy(0,-110)}},300)},800)})();}).then(()=>new Promise(r=>setTimeout(r,1500)))"
+  }
+ },
+ "tests": [
+  {
+   "name": "PC (준비) 필기모드 켬",
+   "screen": "p1",
+   "act": "click",
+   "sel": "#ink-toggle",
+   "nth": 0,
+   "wait": 900,
+   "yard": false,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');return !!sv&&!cardMarksOn&&getComputedStyle(sv).pointerEvents==='auto'})()"
+  },
+  {
+   "name": "PC 비스듬히 한 획 = 저장 값 옛 그대로(점 13 · 가로 120 · 세로 24)",
+   "screen": "p1",
+   "act": "none",
+   "wait": 300,
+   "yard": false,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();line(X,Y,10,2,12);const S=QI['Q1064'].s,p=S[0]&&S[0].p;const o={n:S.length,pts:p?p.length/2:0,du:p?+((p[p.length-2]-p[0])*W).toFixed(1):null,dv:p?+((p[p.length-1]-p[1])*W).toFixed(1):null};clear();qiSave('Q1064');return (o.n===1&&o.pts===13&&Math.abs(o.du-120)<=1&&Math.abs(o.dv-24)<=1)||JSON.stringify(o)})()"
+  },
+  {
+   "name": "PC 끝난 획(그 카드 둘째 획부터) = 문서(DOM) 안 바뀜 · svg path 0 · 그림판에 그 자리만 칠해짐 · 다 지우면 비움",
+   "screen": "p1",
+   "act": "none",
+   "wait": 300,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();line(X,Y+2,4,0,3);clear();const mo=new MutationObserver(()=>{});mo.observe(document.documentElement,{childList:true,subtree:true});line(X,Y,10,2,12);const rec=mo.takeRecords().length;mo.disconnect();const o={rec:rec,paths:sv.querySelectorAll('path[data-j]').length,on:px(X+60,Y+12),off:px(X+60,Y+26),n:QI['Q1064'].s.length};clear();const cl=px(X+60,Y+12);qiSave('Q1064');return (o.rec===0&&o.paths===0&&o.on>200&&o.off===0&&o.n===1&&cl===0)||JSON.stringify(o)+' cl='+cl})()"
+  },
+  {
+   "name": "PC 톡 = 점 하나 그림판에",
+   "screen": "p1",
+   "act": "none",
+   "wait": 300,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();sv.dispatchEvent(mk('pointerdown',X,Y));sv.dispatchEvent(mk('pointerup',X,Y));const o={n:QI['Q1064'].s.length,a:px(X,Y)};clear();qiSave('Q1064');return (o.n===1&&o.a>100)||JSON.stringify(o)})()"
+  },
+  {
+   "name": "PC 형광 획 = 반투명(알파 60~110)",
+   "screen": "p1",
+   "act": "none",
+   "wait": 300,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();const kc=QI_TOOL.color,kw=QI_TOOL.w,kh=QI_TOOL.hl;QI_TOOL.hl=1;QI_TOOL.w=14;line(X,Y,10,0,10);QI_TOOL.color=kc;QI_TOOL.w=kw;QI_TOOL.hl=kh;const a=px(X+50,Y);const st=QI['Q1064'].s[0];clear();qiSave('Q1064');return (!!st&&!!st.hl&&a>60&&a<110)||('a='+a+' hl='+(st&&st.hl))})()"
+  },
+  {
+   "name": "PC 획 301 개 그리기 · 지우개로 한 획 = 그 획만 사라지고 나머지 300 그대로",
+   "screen": "p1",
+   "act": "none",
+   "wait": 300,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};const S=[];for(let j=0;j<300;j++){const u=(X-r.left+(j%60)*2)/W,v=(Y-r.top+30+Math.floor(j/60)*2)/W;S.push({c:'#16181B',w:2,hl:0,p:[u,v,u+0.002,v]})}S.push({c:'#dc2626',w:2,hl:0,p:[(X-r.left)/W,(Y-r.top)/W,(X-r.left+100)/W,(Y-r.top)/W]});QI['Q1064']={w:900,s:S};const t0=performance.now();qiPaint('Q1064');const ms=performance.now()-t0;const a=px(X+50,Y);const keep=QI_TOOL.mode;QI_TOOL.mode='erase';sv.dispatchEvent(mk('pointerdown',X+2,Y));sv.dispatchEvent(mk('pointerup',X+2,Y));QI_TOOL.mode=keep;const o={a:a,b:px(X+50,Y),n:QI['Q1064'].s.length,old:px(X+1,Y+30),paths:sv.querySelectorAll('path[data-j]').length,ms:Math.round(ms)};clear();qiSave('Q1064');return (o.a>200&&o.b===0&&o.n===300&&o.old>100&&o.paths===0)||JSON.stringify(o)})()"
+  },
+  {
+   "name": "PC (준비) 한 획 긋고 카드 높이 +160",
+   "screen": "p1",
+   "act": "none",
+   "wait": 200,
+   "yard": false,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();line(X,Y,10,2,12);host.style.minHeight=(host.clientHeight+160)+'px';window.__h0=host.clientHeight;return true})()"
+  },
+  {
+   "name": "PC 카드가 길어지면 그림판도 맞춰 다시 · 획 그대로",
+   "screen": "p1",
+   "act": "none",
+   "wait": 700,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};const c=cvOf();const o={c:!!c,h:host.clientHeight,ch:c?Math.round(c.height/(c.width/host.clientWidth)):0,on:px(X+60,Y+12),n:QI['Q1064'].s.length};host.style.minHeight='';clear();qiSave('Q1064');return (o.c&&Math.abs(o.ch-o.h)<=1&&o.on>200&&o.n===1)||JSON.stringify(o)})()"
+  },
+  {
+   "name": "PC 긋는 중 화면이 40px 굴러가도 획이 펜 끝을 따라감(끝점 ↔ 펜 자리 1.5px 안)",
+   "screen": "p1",
+   "act": "none",
+   "wait": 300,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();document.body.style.paddingBottom='1600px';const s0=scrollY;sv.dispatchEvent(mk('pointerdown',X,Y));for(let k=1;k<=5;k++)sv.dispatchEvent(mk('pointermove',X+k*6,Y));window.scrollBy(0,40);const d=scrollY-s0;for(let k=6;k<=20;k++)sv.dispatchEvent(mk('pointermove',X+k*6,Y));sv.dispatchEvent(mk('pointerup',X+120,Y));const S=QI['Q1064'].s,p=S[0]&&S[0].p,r2=sv.getBoundingClientRect();const o={n:S.length,d:d,dv:p?+((p[p.length-1]-p[1])*W).toFixed(1):null,gap:p?+(r2.top+p[p.length-1]*W-Y).toFixed(1):null,ov:document.documentElement.style.overflow};window.scrollTo(scrollX,s0);document.body.style.paddingBottom='';clear();qiSave('Q1064');return (o.n===1&&o.d===40&&Math.abs(o.dv-40)<=1.5&&Math.abs(o.gap)<=1.5&&o.ov==='')||JSON.stringify(o)})()"
+  },
+  {
+   "name": "PC 펜 쓴 직후 = 「쓰는 중」(무거운 주기 일 미룸)",
+   "screen": "p1",
+   "act": "none",
+   "wait": 200,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();line(X,Y,10,2,12);const b=(typeof qiBusy==='function')?qiBusy():'no fn';clear();qiSave('Q1064');return b===true||('busy='+b)})()"
+  },
+  {
+   "name": "PC 2.7 초 쉬면 「쓰는 중」 풀림",
+   "screen": "p1",
+   "act": "none",
+   "wait": 2700,
+   "yard": true,
+   "expect": "(()=>{return (typeof qiBusy==='function'&&qiBusy()===false)||'busy still'})()"
+  },
+  {
+   "name": "PC 획 없는 다른 카드에는 그림판을 안 만듦",
+   "screen": "p1",
+   "act": "none",
+   "wait": 100,
+   "yard": true,
+   "expect": "(()=>{const b=[...document.querySelectorAll('#qcards .question-box')].filter(x=>x.id!=='q-box-Q1064');const n=b.filter(x=>x.querySelector('canvas.qinkc')).length;return (typeof qiCv==='function'&&b.length>0&&n===0)||('cv='+n+'/'+b.length)})()"
+  },
+  {
+   "name": "PC (준비) 한 획 긋고 저장",
+   "screen": "p1",
+   "act": "none",
+   "wait": 900,
+   "yard": false,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();line(X,Y,10,2,12);qiSave('Q1064');window.__kx=[X+60,Y+12];return QI['Q1064'].s.length===1})()"
+  },
+  {
+   "name": "PC 형광펜 보기로 돌아가면 그림판 숨김(획은 저장돼 있음)",
+   "screen": "p1",
+   "act": "click",
+   "sel": "#ink-toggle",
+   "nth": 0,
+   "wait": 1200,
+   "yard": true,
+   "expect": "(()=>{const c=document.querySelector('#q-box-Q1064 canvas.qinkc');const n=((QI['Q1064']||{}).s||[]).length;return (!!c&&cardMarksOn&&getComputedStyle(c).display==='none'&&n===1)||(c?'shown n='+n:'no cv n='+n)})()"
+  },
+  {
+   "name": "PC 다시 필기모드 = 저장된 획이 그림판에 다시 보임 · 덮개가 펜 받음",
+   "screen": "p1",
+   "act": "click",
+   "sel": "#ink-toggle",
+   "nth": 0,
+   "wait": 1200,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};const c=cvOf();const a=px(window.__kx[0],window.__kx[1]);const ok=!!c&&!cardMarksOn&&getComputedStyle(c).display==='block'&&getComputedStyle(sv).pointerEvents==='auto'&&QI['Q1064'].s.length===1;clear();qiSave('Q1064');return (ok&&a>0)||('a='+a+' n='+QI['Q1064'].s.length)})()"
+  },
+  {
+   "name": "폰 (준비) 필기모드 켬",
+   "screen": "m1",
+   "act": "click",
+   "sel": "#ink-toggle",
+   "nth": 0,
+   "wait": 900,
+   "yard": false,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');return !!sv&&!cardMarksOn&&getComputedStyle(sv).pointerEvents==='auto'})()"
+  },
+  {
+   "name": "폰 비스듬히 한 획 = 저장 값 옛 그대로(점 13 · 가로 120 · 세로 24)",
+   "screen": "m1",
+   "act": "none",
+   "wait": 300,
+   "yard": false,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();line(X,Y,10,2,12);const S=QI['Q1064'].s,p=S[0]&&S[0].p;const o={n:S.length,pts:p?p.length/2:0,du:p?+((p[p.length-2]-p[0])*W).toFixed(1):null,dv:p?+((p[p.length-1]-p[1])*W).toFixed(1):null};clear();qiSave('Q1064');return (o.n===1&&o.pts===13&&Math.abs(o.du-120)<=1&&Math.abs(o.dv-24)<=1)||JSON.stringify(o)})()"
+  },
+  {
+   "name": "폰 끝난 획(그 카드 둘째 획부터) = 문서(DOM) 안 바뀜 · svg path 0 · 그림판에 그 자리만 칠해짐 · 다 지우면 비움",
+   "screen": "m1",
+   "act": "none",
+   "wait": 300,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();line(X,Y+2,4,0,3);clear();const mo=new MutationObserver(()=>{});mo.observe(document.documentElement,{childList:true,subtree:true});line(X,Y,10,2,12);const rec=mo.takeRecords().length;mo.disconnect();const o={rec:rec,paths:sv.querySelectorAll('path[data-j]').length,on:px(X+60,Y+12),off:px(X+60,Y+26),n:QI['Q1064'].s.length};clear();const cl=px(X+60,Y+12);qiSave('Q1064');return (o.rec===0&&o.paths===0&&o.on>200&&o.off===0&&o.n===1&&cl===0)||JSON.stringify(o)+' cl='+cl})()"
+  },
+  {
+   "name": "폰 톡 = 점 하나 그림판에",
+   "screen": "m1",
+   "act": "none",
+   "wait": 300,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();sv.dispatchEvent(mk('pointerdown',X,Y));sv.dispatchEvent(mk('pointerup',X,Y));const o={n:QI['Q1064'].s.length,a:px(X,Y)};clear();qiSave('Q1064');return (o.n===1&&o.a>100)||JSON.stringify(o)})()"
+  },
+  {
+   "name": "폰 형광 획 = 반투명(알파 60~110)",
+   "screen": "m1",
+   "act": "none",
+   "wait": 300,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();const kc=QI_TOOL.color,kw=QI_TOOL.w,kh=QI_TOOL.hl;QI_TOOL.hl=1;QI_TOOL.w=14;line(X,Y,10,0,10);QI_TOOL.color=kc;QI_TOOL.w=kw;QI_TOOL.hl=kh;const a=px(X+50,Y);const st=QI['Q1064'].s[0];clear();qiSave('Q1064');return (!!st&&!!st.hl&&a>60&&a<110)||('a='+a+' hl='+(st&&st.hl))})()"
+  },
+  {
+   "name": "폰 획 301 개 그리기 · 지우개로 한 획 = 그 획만 사라지고 나머지 300 그대로",
+   "screen": "m1",
+   "act": "none",
+   "wait": 300,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};const S=[];for(let j=0;j<300;j++){const u=(X-r.left+(j%60)*2)/W,v=(Y-r.top+30+Math.floor(j/60)*2)/W;S.push({c:'#16181B',w:2,hl:0,p:[u,v,u+0.002,v]})}S.push({c:'#dc2626',w:2,hl:0,p:[(X-r.left)/W,(Y-r.top)/W,(X-r.left+100)/W,(Y-r.top)/W]});QI['Q1064']={w:900,s:S};const t0=performance.now();qiPaint('Q1064');const ms=performance.now()-t0;const a=px(X+50,Y);const keep=QI_TOOL.mode;QI_TOOL.mode='erase';sv.dispatchEvent(mk('pointerdown',X+2,Y));sv.dispatchEvent(mk('pointerup',X+2,Y));QI_TOOL.mode=keep;const o={a:a,b:px(X+50,Y),n:QI['Q1064'].s.length,old:px(X+1,Y+30),paths:sv.querySelectorAll('path[data-j]').length,ms:Math.round(ms)};clear();qiSave('Q1064');return (o.a>200&&o.b===0&&o.n===300&&o.old>100&&o.paths===0)||JSON.stringify(o)})()"
+  },
+  {
+   "name": "폰 (준비) 한 획 긋고 카드 높이 +160",
+   "screen": "m1",
+   "act": "none",
+   "wait": 200,
+   "yard": false,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();line(X,Y,10,2,12);host.style.minHeight=(host.clientHeight+160)+'px';window.__h0=host.clientHeight;return true})()"
+  },
+  {
+   "name": "폰 카드가 길어지면 그림판도 맞춰 다시 · 획 그대로",
+   "screen": "m1",
+   "act": "none",
+   "wait": 700,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};const c=cvOf();const o={c:!!c,h:host.clientHeight,ch:c?Math.round(c.height/(c.width/host.clientWidth)):0,on:px(X+60,Y+12),n:QI['Q1064'].s.length};host.style.minHeight='';clear();qiSave('Q1064');return (o.c&&Math.abs(o.ch-o.h)<=1&&o.on>200&&o.n===1)||JSON.stringify(o)})()"
+  },
+  {
+   "name": "폰 긋는 중 화면이 40px 굴러가도 획이 펜 끝을 따라감(끝점 ↔ 펜 자리 1.5px 안)",
+   "screen": "m1",
+   "act": "none",
+   "wait": 300,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();document.body.style.paddingBottom='1600px';const s0=scrollY;sv.dispatchEvent(mk('pointerdown',X,Y));for(let k=1;k<=5;k++)sv.dispatchEvent(mk('pointermove',X+k*6,Y));window.scrollBy(0,40);const d=scrollY-s0;for(let k=6;k<=20;k++)sv.dispatchEvent(mk('pointermove',X+k*6,Y));sv.dispatchEvent(mk('pointerup',X+120,Y));const S=QI['Q1064'].s,p=S[0]&&S[0].p,r2=sv.getBoundingClientRect();const o={n:S.length,d:d,dv:p?+((p[p.length-1]-p[1])*W).toFixed(1):null,gap:p?+(r2.top+p[p.length-1]*W-Y).toFixed(1):null,ov:document.documentElement.style.overflow};window.scrollTo(scrollX,s0);document.body.style.paddingBottom='';clear();qiSave('Q1064');return (o.n===1&&o.d===40&&Math.abs(o.dv-40)<=1.5&&Math.abs(o.gap)<=1.5&&o.ov==='')||JSON.stringify(o)})()"
+  },
+  {
+   "name": "폰 펜 쓴 직후 = 「쓰는 중」(무거운 주기 일 미룸)",
+   "screen": "m1",
+   "act": "none",
+   "wait": 200,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();line(X,Y,10,2,12);const b=(typeof qiBusy==='function')?qiBusy():'no fn';clear();qiSave('Q1064');return b===true||('busy='+b)})()"
+  },
+  {
+   "name": "폰 2.7 초 쉬면 「쓰는 중」 풀림",
+   "screen": "m1",
+   "act": "none",
+   "wait": 2700,
+   "yard": true,
+   "expect": "(()=>{return (typeof qiBusy==='function'&&qiBusy()===false)||'busy still'})()"
+  },
+  {
+   "name": "폰 획 없는 다른 카드에는 그림판을 안 만듦",
+   "screen": "m1",
+   "act": "none",
+   "wait": 100,
+   "yard": true,
+   "expect": "(()=>{const b=[...document.querySelectorAll('#qcards .question-box')].filter(x=>x.id!=='q-box-Q1064');const n=b.filter(x=>x.querySelector('canvas.qinkc')).length;return (typeof qiCv==='function'&&b.length>0&&n===0)||('cv='+n+'/'+b.length)})()"
+  },
+  {
+   "name": "폰 (준비) 한 획 긋고 저장",
+   "screen": "m1",
+   "act": "none",
+   "wait": 900,
+   "yard": false,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};clear();line(X,Y,10,2,12);qiSave('Q1064');window.__kx=[X+60,Y+12];return QI['Q1064'].s.length===1})()"
+  },
+  {
+   "name": "폰 형광펜 보기로 돌아가면 그림판 숨김(획은 저장돼 있음)",
+   "screen": "m1",
+   "act": "click",
+   "sel": "#ink-toggle",
+   "nth": 0,
+   "wait": 1200,
+   "yard": true,
+   "expect": "(()=>{const c=document.querySelector('#q-box-Q1064 canvas.qinkc');const n=((QI['Q1064']||{}).s||[]).length;return (!!c&&cardMarksOn&&getComputedStyle(c).display==='none'&&n===1)||(c?'shown n='+n:'no cv n='+n)})()"
+  },
+  {
+   "name": "폰 다시 필기모드 = 저장된 획이 그림판에 다시 보임 · 덮개가 펜 받음",
+   "screen": "m1",
+   "act": "click",
+   "sel": "#ink-toggle",
+   "nth": 0,
+   "wait": 1200,
+   "yard": true,
+   "expect": "(()=>{const sv=document.getElementById('ink-Q1064');if(!sv)return 'no svg';const host=sv.parentNode;const r=sv.getBoundingClientRect();let X=0,Y=0;for(let y=r.top+12;y<r.bottom-40&&!X;y+=8)for(let x=r.left+20;x<r.right-150;x+=30){if(y>0&&y<innerHeight-60&&!qiUnder(x,y,sv)&&!qiUnder(x+60,y,sv)&&!qiUnder(x+124,y+26,sv)){X=x;Y=y;break}}if(!X)return 'no spot';const mk=(t,x,y)=>new PointerEvent(t,{pointerType:'pen',pointerId:9,isPrimary:true,bubbles:true,cancelable:true,clientX:x,clientY:y,buttons:1});const W=r.width;const cvOf=()=>host.querySelector('canvas.qinkc');const px=(x,y)=>{const c=cvOf();if(!c)return -1;const k=c.width/host.clientWidth;const d=c.getContext('2d').getImageData(Math.round((x-r.left)*k)-1,Math.round((y-r.top)*k)-1,3,3).data;let a=0;for(let i=3;i<d.length;i+=4)a=Math.max(a,d[i]);return a};const line=(x0,y0,dx,dy,n)=>{sv.dispatchEvent(mk('pointerdown',x0,y0));for(let k=1;k<=n;k++)sv.dispatchEvent(mk('pointermove',x0+dx*k,y0+dy*k));sv.dispatchEvent(mk('pointerup',x0+dx*n,y0+dy*n))};const clear=()=>{QI['Q1064']={w:900,s:[]};qiPaint('Q1064')};const c=cvOf();const a=px(window.__kx[0],window.__kx[1]);const ok=!!c&&!cardMarksOn&&getComputedStyle(c).display==='block'&&getComputedStyle(sv).pointerEvents==='auto'&&QI['Q1064'].s.length===1;clear();qiSave('Q1064');return (ok&&a>0)||('a='+a+' n='+QI['Q1064'].s.length)})()"
+  }
+ ]
+}
