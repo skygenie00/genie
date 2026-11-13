@@ -1340,7 +1340,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            **「마스터 엑셀에 자동 반영하지 않는다」** 쪽이 확정된 것이고(2026-08-31 사용자 확인),
            기기 사이에 보이는 것은 별개다. 옛 백업 파일도 이 목록으로 읽히므로 호환이 유지된다. */
         /* ★ 2026-09-22 (_task_ox_claude_answers §E-1) — `ox_cl_fix`(Claude 답 정정 · 내 글이라 기기 사이로 건너간다)를 끝에 더했다. 병합은 칸 단위 규칙 그대로(한 칸 = M 번호 하나). */
-        const SYNC_KEYS = ['ox_q_history', 'ox_q_tags', 'ox_q_memos', 'ox_q_logic', 'ox_q_links', 'ox_q_marks', 'ox_chap_history', 'ox_in_progress', 'ox_q_coords', 'ox_omr_docs', 'ox_q_last', 'ox_q_type', 'ox_weak_stage', 'ox_mem_cards', 'ox_q_fix', 'ox_q_reflinks', 'ox_q_geunge', 'ox_cl_fix', 'ox_rec_gone', 'ox_exam_rounds', 'ox_exam_pick', 'ox_q_lkwhy'];   /* ★ 11/03 _task_ox_lkwhy_1103 — 연결 이유(칸 = 문항 짝) · ★ 2026-09-26 (_task_ox_exview_paper §E·§B) — 기록 칸 묘비 · 시험지 회독 · 고른 답(시계는 기기별이라 뺌) */
+        const SYNC_KEYS = ['ox_q_history', 'ox_q_tags', 'ox_q_memos', 'ox_q_logic', 'ox_q_links', 'ox_q_marks', 'ox_chap_history', 'ox_in_progress', 'ox_q_coords', 'ox_omr_docs', 'ox_q_last', 'ox_q_type', 'ox_weak_stage', 'ox_mem_cards', 'ox_q_fix', 'ox_q_reflinks', 'ox_q_geunge', 'ox_cl_fix', 'ox_rec_gone', 'ox_exam_rounds', 'ox_exam_pick', 'ox_q_lkwhy', 'ox_q_omr'];   /* ★ 11/03 _task_ox_lkwhy_1103 — 연결 이유(칸 = 문항 짝) · ★ 2026-09-26 (_task_ox_exview_paper §E·§B) — 기록 칸 묘비 · 시험지 회독 · 고른 답(시계는 기기별이라 뺌) */
 
         function syncStatus(msg, tone) {
             const el = document.getElementById('sync-status');
@@ -3049,7 +3049,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                                 ${typeof mcChipHTML === 'function' ? mcChipHTML(item) : ''}
                             </div>
                             
-                            <div class="flex flex-wrap gap-1 ml-auto">
+                            <div class="flex flex-wrap gap-1 ml-auto">${omrMarkHTML(item.id)}
                                 <button onclick="toggleTag('${item.id}', 'confuse')" id="tag-confuse-${item.id}" title="헷갈림" class="${TAGCLS} ${confuseStyle}" style="${TAGSTY}${confuseStyle ? ';' + TAG_OFF_STY : ''}">${IC_CONF}</button>
                                 <button onclick="toggleTag('${item.id}', 'fake')" id="tag-fake-${item.id}" title="페이크" class="${TAGCLS} ${fakeStyle}" style="${TAGSTY}${fakeStyle ? ';' + TAG_OFF_STY : ''}">${IC_FAKE}</button>
                                 <button onclick="toggleTag('${item.id}', 'concept')" id="tag-concept-${item.id}" title="개념" class="${TAGCLS} ${conceptStyle}" style="${TAGSTY}${conceptStyle ? ';' + TAG_OFF_STY : ''}">💡</button>
@@ -3702,6 +3702,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (n) console.log(`기출 정답번호 ${n}개 지문에 중요 태그를 부여했습니다.`);
         }
 
+        /* ★ 11/13 사용자 14:24 「미리 헷갈림 눌러 둔 것 걷고 · 대신 문제 풀이 창 헷갈림 태그 왼쪽에 세모나 / 표시」 · 14:48 「그냥 세모 표시만 해 놔도 돼」 — 종이 OMR 에 손으로 표시한 문항을 헷갈림 태그 바로 왼쪽에 △ 글자로만 보임(누름 없음 · 태그 · 헷갈림 셈 무관)
+           ox_q_omr = { uid: 't' } · 기기 사이로 같이 감(SYNC_KEYS · 칸 = 문항) */
+        function omrMarkHTML(id) {
+            let m = ''; try { m = String((JSON.parse(localStorage.getItem('ox_q_omr') || '{}') || {})[id] || ''); } catch (e) { }
+            return m ? '<span class="omrmk" title="OMR 에 표시한 문항">△</span>' : '';
+        }
         function toggleTag(id, type) {
             let qTags = JSON.parse(localStorage.getItem('ox_q_tags') || '{}');
             if (!qTags[id]) qTags[id] = { fake: false, concept: false, memo: false, important: false };
@@ -4387,10 +4393,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 (function(){try{var st=document.createElement('style');st.textContent='.ggfrom{display:block;font-size:10.5px;color:#475569;margin-bottom:1px;white-space:pre-wrap}.ggjt{cursor:pointer;font-weight:700;color:#1e3a8a}.ggcbg{flex:none;width:10px;text-align:center;font-size:11px;font-weight:900;color:#C7CBD0;cursor:pointer;line-height:1.5}.ggcbg.on{color:#dc2626}.ggcsbang{box-shadow:inset 2px 0 0 #dc2626}.ggjt:hover{text-decoration:underline dotted}.ggjo{margin-left:4px;font-weight:900}.ggjo-o{color:#2563eb}.ggjo-x{color:#dc2626}.ggjox{display:inline-flex;gap:3px;margin-left:4px;vertical-align:middle}.ggjox b{cursor:pointer;border:1px solid #cbd5e1;border-radius:4px;padding:0 6px;font-weight:900;background:#fff}.ggjox b[data-jo=O]{color:#2563eb}.ggjox b[data-jo=X]{color:#dc2626}.ggme .ggfrom{color:#1e3a8a;font-weight:700}';document.head.appendChild(st)}catch(e){}})();
         /* ★ 시안 — 댓글 줄 = 그 댓글을 단 문항 글(줄이지 않음) · 글 누르면 O/X 고름 · 고른 O/X 를 그 댓글(jo)에 저장 · 같은 것 다시 누르면 지움(지학 g3JoSet 그대로) · 단 문항 = c.from(없으면 그 근거 문항) */
         function ggFromHead(c,guid,gk){const id=(c&&c.from)||guid;if(!id)return '';const q=(typeof quizData!=='undefined'?quizData:[]).find(x=>String(x.id)===String(id));if(!q)return '';const o=String(c.jo||'').toUpperCase();return '<span class="ggfrom"><span class="ggjt" data-jg="'+escAttr(String(guid||''))+'" data-jk="'+escAttr(String(gk||''))+'" data-jc="'+escAttr(String(c.k||''))+'" title="눌러 O/X 표시">「'+escHtml(String(q.q||''))+'」</span>'+(o==='O'||o==='X'?'<b class="ggjo ggjo-'+(o==='O'?'o':'x')+'">'+o+'</b>':'')+'</span>'}
-        function ggJoSet(guid,gk,ck,v){const list=ggOf(guid).slice(),g=list.find(x=>x&&x.k===gk);if(!g||!Array.isArray(g.cs))return;const c=g.cs.find(x=>x&&String(x.k)===String(ck));if(!c)return;if(c.jo===v)delete c.jo;else c.jo=v;ggSaveList(guid,list);GG_SCOPES.forEach(s=>{const b=document.getElementById(`${s}gg-cs-${guid}-${gk}`);if(b)b.innerHTML=ggCsHTML(g.cs,gk,guid)});ggRefOwnersRepaint(guid)}
+        function ggJoSet(guid,gk,ck,v,sh){const list=ggOf(guid).slice(),g=list.find(x=>x&&x.k===gk);if(!g||!Array.isArray(g.cs))return;let c=g.cs.find(x=>x&&String(x.k)===String(ck));if(!c)return;if(sh){c=c.shx&&c.shx[sh];if(!c)return}if(c.jo===v)delete c.jo;else c.jo=v;ggSaveList(guid,list);GG_SCOPES.forEach(s=>{const b=document.getElementById(`${s}gg-cs-${guid}-${gk}`);if(b)b.innerHTML=ggCsHTML(g.cs,gk,guid)});ggRefOwnersRepaint(guid)}
         function ggCbgHTML(c,guid,gk){if(!guid||!gk||!c)return '';return '<span class="ggcbg'+(c.bang?' on':'')+'" data-ggcbang="'+escAttr(String(guid)+'|'+String(gk)+'|'+String(c.k||''))+'" title="중요 표시">!</span>'}
         function ggCsBangSet(guid,gk,ck){const list=ggOf(guid).slice(),g=list.find(x=>x&&x.k===gk);if(!g||!Array.isArray(g.cs))return;const c=g.cs.find(x=>x&&String(x.k)===String(ck));if(!c)return;if(c.bang)delete c.bang;else c.bang=true;ggSaveList(guid,list);GG_SCOPES.forEach(s=>{const b=document.getElementById(`${s}gg-cs-${guid}-${gk}`);if(b)b.innerHTML=ggCsHTML(g.cs,gk,guid)});ggRefOwnersRepaint(guid)}
-        window.addEventListener('click',function(e){if(performance.now()-(window.ggLpT||-1e9)<700)return;const t=e.target;if(!t||!t.closest)return;const cb=t.closest('[data-ggcbang]');if(cb){e.stopPropagation();e.preventDefault();const v=String(cb.getAttribute('data-ggcbang')).split('|');ggCsBangSet(v[0],v[1],v.slice(2).join('|'));return}const jb=t.closest('.ggjox b');if(jb){e.stopPropagation();e.preventDefault();const j=jb.parentNode.previousElementSibling;if(j&&j.classList.contains('ggjt'))ggJoSet(j.getAttribute('data-jg'),j.getAttribute('data-jk'),j.getAttribute('data-jc'),jb.getAttribute('data-jo'));return}const j=t.closest('.ggjt');if(!j)return;e.stopPropagation();e.preventDefault();const nx=j.nextElementSibling;if(nx&&nx.classList.contains('ggjox')){nx.remove();return}const x=document.createElement('span');x.className='ggjox';x.innerHTML='<b data-jo="O">O</b><b data-jo="X">X</b>';j.after(x)},true);
+        window.addEventListener('click',function(e){if(performance.now()-(window.ggLpT||-1e9)<700)return;const t=e.target;if(!t||!t.closest)return;const cb=t.closest('[data-ggcbang]');if(cb){e.stopPropagation();e.preventDefault();const v=String(cb.getAttribute('data-ggcbang')).split('|');ggCsBangSet(v[0],v[1],v.slice(2).join('|'));return}const jb=t.closest('.ggjox b');if(jb){e.stopPropagation();e.preventDefault();const j=jb.parentNode.previousElementSibling;if(j&&j.classList.contains('ggjt'))ggJoSet(j.getAttribute('data-jg'),j.getAttribute('data-jk'),j.getAttribute('data-jc'),jb.getAttribute('data-jo'),j.getAttribute('data-jsh'));return}const j=t.closest('.ggjt');if(!j)return;e.stopPropagation();e.preventDefault();const nx=j.nextElementSibling;if(nx&&nx.classList.contains('ggjox')){nx.remove();return}const x=document.createElement('span');x.className='ggjox';x.innerHTML='<b data-jo="O">O</b><b data-jo="X">X</b>';j.after(x)},true);
 (function(){try{var st=document.createElement('style');st.textContent='.ggjmdot{flex:none;width:12px;height:16px;padding:0;border:0;background:none;color:#9AA3AD;font-size:12px;line-height:1;cursor:pointer}.ggrefdash{background-image:repeating-linear-gradient(to bottom,#60a5fa 0 7px,transparent 7px 11px);background-size:1.5px 100%;background-repeat:no-repeat;background-position:0 0}.ggrefcm{margin-left:3px;font-size:10px;font-weight:800;color:#1d4ed8}.ggjmdot:hover{color:#2563eb}.ggjmdot.on{font-size:10.5px;font-weight:800;color:#2563eb;width:20px}.ggjmbox{margin:4px 0 6px;padding:6px 8px;border:1px solid #bfdbfe;border-radius:8px;background:#f8fbff;font-size:12px}.ggjmbox.need .jmi{background:#FDECEC}.ggjmbox .jmi{padding:4px 6px;border-radius:6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ggjmbox .jmi:hover{background:#eff6ff}.ggjmbox .jmi.on{background:#2563eb;color:#fff}.ggjmbox .jmin{width:100%;box-sizing:border-box;margin-top:5px;border:1px solid #cbd5e1;border-radius:6px;padding:4px 6px;font:inherit;font-size:12px;resize:none}.ggjmbox .jm0{color:#64748b}.ggjmbox .jmc{padding:1px 6px 2px 16px;font-size:11.5px;color:#3B5E7C;white-space:pre-wrap}';document.head.appendChild(st)}catch(e){}})();
         /* ★ 시안 — 근거 줄 「:」 → 점(지학 jmDotHTML 꼴) · 누르면 근거 줄 바로 밑 칸(아래가 밀림): 이 문항 근거 + 연결한 근거 첫 줄 목록 · 고르고 Enter = 그 근거 댓글(연결 근거 = 원래 문항 목록에 from = 이 문항 · ggRefReply 꼴 / 자기 근거 = ggReply 꼴) · jm 표시 · 이 문항에서 점으로 단 댓글 있으면 점 = 「댓」 · Shift+Enter 줄바꿈 · Esc 닫기 */
                 function ggJmDotHTML(uid,sc){return '<button type="button" class="ggjmdot" data-jmu="'+escAttr(String(uid))+'" data-jms="'+escAttr(String(sc||''))+'" title="이 지문을 근거 댓글로">•</button>'}
@@ -4411,7 +4417,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
               const on=b.querySelector('.jmi.on'),t=String(ta.value||'').trim();if(!on){b.classList.add('need');setTimeout(()=>b.classList.remove('need'),900);return}if(!t)return;
               if(ggJmSave(me,on.getAttribute('data-jmu2'),on.getAttribute('data-jmg'),t,sc)){b.remove()}})}}
         window.addEventListener('click',function(e){const d=e.target&&e.target.closest&&e.target.closest('.ggjmdot');if(!d)return;e.stopPropagation();e.preventDefault();const line=d.parentNode;if(line)ggJmBox(line,d)},true);
-(function(){try{var st=document.createElement('style');st.textContent='.ggrowmeta{flex:none;align-self:flex-start;display:flex;flex-direction:column;align-items:flex-end;gap:2px}.ggrowmeta button{width:22px!important;height:20px!important}.ggcsmeta{flex:none;align-self:flex-start;display:flex;flex-direction:column;align-items:flex-end;gap:2px;padding-top:1px}.ggcsd{font-size:9.5px;font-weight:700;color:#9ca3af;white-space:nowrap;line-height:1.2}.ggcsmeta .ggcsx,.ggcsmeta .ggcsh{display:inline-flex;align-items:center;justify-content:center;width:22px;height:20px;margin:0;border-radius:6px;font-size:11px;font-weight:700}.ggcsmeta .ggcsh{font-size:13px;font-weight:800}.ggcslp{background:#eff6ff}.ggied{display:block!important}.ggied .ggiedin{display:block;width:100%;box-sizing:border-box;margin:0;padding:0;border:0;outline:0;background:#f8fbff;box-shadow:0 1px 0 #93c5fd;border-radius:0;font:inherit;color:inherit;line-height:inherit;letter-spacing:inherit;white-space:pre-wrap;resize:none;overflow:hidden}.gg-on{background:transparent!important;border-left:1px solid rgb(203 213 225)!important}.gg-on > div:first-child{background:#fff5f5!important;box-shadow:inset 3px 0 0 #f0a0a0}.gg-on-dash{background:transparent!important;border-left:0!important;color:inherit!important;padding:0!important}.gg-on-dash > .ggrefrow:first-child{background:#fff5f5;box-shadow:inset 3px 0 0 #f0a0a0;color:#c94f4f;border-radius:6px;padding:2px 6px}@media (min-width:600px){.ggcsmeta,.ggrowmeta{flex-direction:row!important;align-items:center!important;gap:6px!important}}.ggb-t{font-size:11.5px!important}.ggjmbox{font-size:11px}[id*="gg-pan-"] button[title="지우기"],[id*="refgg-box-"] button[title="지우기"],[id*="refgg-box-"] button[title="연결 끊기"]{font-size:11px!important;font-weight:400!important;color:#6E7278!important;background:none!important}';document.head.appendChild(st)}catch(e){}})();
+(function(){try{var st=document.createElement('style');st.textContent='.ggrowmeta{flex:none;align-self:flex-start;display:flex;flex-direction:column;align-items:flex-end;gap:2px}.ggrowmeta button{width:22px!important;height:20px!important}.ggcsmeta{flex:none;align-self:flex-start;display:flex;flex-direction:column;align-items:flex-end;gap:2px;padding-top:1px}.ggshrow{flex:0 0 100%;display:flex;gap:6px;align-items:flex-start;box-sizing:border-box;padding-top:2px}.ggshrow .ggshid{flex:none}.ggshpad{display:none}@media (min-width:600px){.ggshpad{display:inline-flex;flex:none;align-items:center;gap:6px;visibility:hidden}.ggshpad i{display:inline-block;width:22px;height:1px}}.ggshrow .ggshl{flex:1 1 0;min-width:0;white-space:pre-wrap}.ggshrow .ggjt{cursor:pointer;font-weight:700;color:#1e3a8a}.ggshrow .ggsht{margin-left:5px}.ggshid{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.ggshxbox .ggshxj{font-size:11px;font-weight:700;color:#1e3a8a;white-space:pre-wrap}.omrmk{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:22px;font-size:15px;font-weight:900;line-height:1;color:#d97706;-webkit-user-select:none;user-select:none}.ggcsd{font-size:9.5px;font-weight:700;color:#9ca3af;white-space:nowrap;line-height:1.2}.ggcsmeta .ggcsx,.ggcsmeta .ggcsh{display:inline-flex;align-items:center;justify-content:center;width:22px;height:20px;margin:0;border-radius:6px;font-size:11px;font-weight:700}.ggcsmeta .ggcsh{font-size:13px;font-weight:800}.ggcslp{background:#eff6ff}.ggied{display:block!important}.ggied .ggiedin{display:block;width:100%;box-sizing:border-box;margin:0;padding:0;border:0;outline:0;background:#f8fbff;box-shadow:0 1px 0 #93c5fd;border-radius:0;font:inherit;color:inherit;line-height:inherit;letter-spacing:inherit;white-space:pre-wrap;resize:none;overflow:hidden}.gg-on{background:transparent!important;border-left:1px solid rgb(203 213 225)!important}.gg-on > div:first-child{background:#fff5f5!important;box-shadow:inset 3px 0 0 #f0a0a0}.gg-on-dash{background:transparent!important;border-left:0!important;color:inherit!important;padding:0!important}.gg-on-dash > .ggrefrow:first-child{background:#fff5f5;box-shadow:inset 3px 0 0 #f0a0a0;color:#c94f4f;border-radius:6px;padding:2px 6px}@media (min-width:600px){.ggcsmeta,.ggrowmeta{flex-direction:row!important;align-items:center!important;gap:6px!important}}.ggb-t{font-size:11.5px!important}.ggjmbox{font-size:11px}[id*="gg-pan-"] button[title="지우기"],[id*="refgg-box-"] button[title="지우기"],[id*="refgg-box-"] button[title="연결 끊기"]{font-size:11px!important;font-weight:400!important;color:#6E7278!important;background:none!important}';document.head.appendChild(st)}catch(e){}})();
         /* ★ 시안 — 댓글 줄 길게 누름(550ms · 8px 넘게 움직이면 그만 · 누르는 동안 옅은 파랑) = 고치기: 근거 판 줄 = ggCsEdit · 연결 상자 줄 = ggRefEdit · 단추 · 문항 글(O/X) · ! · 끌기 손잡이 위에서는 안 함 · 열린 뒤 따라오는 click 한 번 먹음 */
         let GIED=null;
         function ggIed(el,orig,save){if(GIED)GIED.done(true);const keep=el.innerHTML;orig=String(orig||'');el.classList.add('ggied');el.innerHTML='';const ta=document.createElement('textarea');ta.className='ggiedin';ta.rows=1;ta.value=orig;el.appendChild(ta);let open=true,pd=null;
@@ -4422,7 +4428,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
           GIED={el,done};ta.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();done(true)}else if(e.key==='Escape'){e.preventDefault();done(false)}});ta.addEventListener('input',()=>{try{ggFit(ta)}catch(_){}});
           setTimeout(()=>{if(open){document.addEventListener('pointerdown',pdn,true);document.addEventListener('pointermove',pmv,true);document.addEventListener('pointerup',pup,true)}},0);
           try{ggFit(ta)}catch(_){};ta.focus();try{ta.setSelectionRange(ta.value.length,ta.value.length)}catch(_){}}
-        (function(){let lp=null,lpT=-1e9;const SEL='[data-ggrefce],[data-ggcslong],[data-ggrefbe],[data-ggbe]';const skip=t=>t.closest('button,a,textarea,input,[role=button],.ggjox,.ggcbg,.ggcsdh,.ggbang');
+        (function(){let lp=null,lpT=-1e9;const SEL='[data-ggrefce],[data-ggcslong],[data-ggrefbe],[data-ggbe]';const skip=t=>t.closest('button,a,textarea,input,[role=button],.ggjox,.ggcbg,.ggcsdh,.ggbang,.ggshrow,.ggshxbox');
           const drop=L=>{if(L){clearTimeout(L.tm);L.el.classList.remove('ggcslp')}};
           const fire=r2=>{if(!r2||!r2.isConnected)return;const v=r2.getAttribute('data-ggrefce'),vb=r2.getAttribute('data-ggrefbe'),vo=r2.getAttribute('data-ggbe');
             if(v||r2.hasAttribute('data-ggcslong')){const ct=r2.querySelector('.ggct');const guid=r2.getAttribute('data-guid'),gk=r2.getAttribute('data-gk'),ck=r2.getAttribute('data-ck');const g=ggOf(guid).find(x=>x&&x.k===gk),c=g?ggCsOf(g,ck):null;if(!ct||!c)return;
@@ -4685,14 +4691,74 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         /* ★ 2026-09-18 (_task_ox_jari_thumb §C) — 줄 끝 🔗 를 뺐다(연결은 본문 줄 🔍 로만) · 그 자리에 「지우기」.
            ⚠ `gk` 가 없으면 지우기를 안 단다 — 연결 상자(`ggRefBoxHTML`)는 **남의 문항** 댓글을 그리는 자리라
              거기서 지우면 엉뚱한 문항의 댓글이 지워진다(그 줄엔 제 ✎ 가 따로 있다). */
+        /* ★ 11/13 사용자 14:24 「이미 달린 댓글에 + 하면 uid 만 들어가는데 · 그 uid 를 길게 누르면 지문이랑 지학처럼 추가 댓글도 달 수 있게」
+           — 같이 쓰는 문항 ID(c.sh 의 uid 칩)를 길게 누름(550ms) → 그 줄 밑 칸: 그 문항 지문 + 적는 칸 · Enter = 그 댓글에 붙음(c.shx[uid] = {t: 같이 쓴 글(없으면 지문만), jo: O/X}) · Esc = 닫기
+             붙은 뒤 = 그 댓글 줄 안 밑 한 줄 「그 문항 지문」 O/X 글 … 문항 ID(오른쪽 끝 · 원래 댓글 ID 칸 밑) · 다시 길게 누르면 글 고치기 · 톡 = 그 문제(그대로) · 「−」(같이 쓰기 그만) = 붙인 것도 같이 빠짐
+             c.sh(uid 목록) 꼴은 그대로 · 새 저장 키 0(근거 댓글 안 칸 shx) */
+        function ggShxHTML(c, guid, gk, del, tail) {
+            const sh = c && Array.isArray(c.sh) ? c.sh : [], X = (c && c.shx) || {};
+            if (!sh.some(s => X[s])) return '';
+            /* 자리 맞춤: 글 = 댓글 글 바로 밑(손잡이 · ! 칸만큼 들임) · 문항 ID = 원래 댓글 ID 바로 밑(넓은 화면은 오른쪽 칸이 가로 한 줄이라 그 뒤 것들(안 붙인 ID · 날짜 · 단추) 폭만큼 안 보이는 채움) */
+            const ind = (del ? 11 : 0) + ((guid && gk) ? 16 : 0), nb = del ? 1 : (String(tail || '').match(/<button/g) || []).length;
+            const pad = `<span class="ggshpad" aria-hidden="true">${sh.filter(s => !X[s]).map(s => `<span class="text-[10.5px] font-bold whitespace-nowrap">${escHtml(String(s))}</span>`).join('')}<span class="ggcsd">${ggMD(c.ts)}</span>${'<i></i>'.repeat(nb)}</span>`;
+            return sh.filter(s => X[s]).map(s => {
+                const q = (typeof quizData !== 'undefined' ? quizData : []).find(x => String(x.id) === String(s)), e = X[s] || {}, o = String(e.jo || '').toUpperCase();
+                return `<div class="ggshrow" style="padding-left:${ind}px" data-shrow="${escAttr(String(s))}"><span class="ggshl"><span class="ggjt" data-jg="${escAttr(String(guid || ''))}" data-jk="${escAttr(String(gk || ''))}" data-jc="${escAttr(String(c.k || ''))}" data-jsh="${escAttr(String(s))}" title="눌러 O/X 표시">「${escHtml(q ? String(q.q || '') : String(s))}」</span>${(o === 'O' || o === 'X') ? `<b class="ggjo ggjo-${o === 'O' ? 'o' : 'x'}">${o}</b>` : ''}${e.t ? `<span class="ggsht">${escHtml(String(e.t))}</span>` : ''}</span><span role="button" data-shu="${escAttr(String(s))}" title="이 댓글을 같이 쓰는 문항 · 누르면 그 문제 · 길게 누르면 붙인 글 고치기" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(s))}')" class="ggshid cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap">${escHtml(String(s))}</span>${pad}</div>`;
+            }).join('');
+        }
+        function ggShxSave(guid, gk, ck, s, t) {
+            const list = ggOf(guid).slice(), g = list.find(x => x && x.k === gk), c = g ? ggCsOf(g, ck) : null;
+            if (!c || !Array.isArray(c.sh) || c.sh.indexOf(String(s)) < 0) return false;
+            const X = Object.assign({}, c.shx || {}), e = Object.assign({}, X[s] || {});
+            if (t) e.t = t; else delete e.t;
+            X[s] = e; c.shx = X;
+            ggSaveList(guid, list);
+            GG_SCOPES.forEach(sc => { const b = document.getElementById(`${sc}gg-cs-${guid}-${gk}`); if (b) b.innerHTML = ggCsHTML(g.cs, gk, guid); });
+            ggRefOwnersRepaint(guid);
+            document.querySelectorAll('[data-jngg]').forEach(x => { const id = x.getAttribute('data-jngg'); const h = jnGgHTML(id); if (h) x.outerHTML = h; });
+            return true;
+        }
+        function ggShxBox(chip) {
+            const row = chip.closest('[data-ck][data-gk][data-guid]'); if (!row) return;
+            const s = chip.getAttribute('data-shu'), guid = row.getAttribute('data-guid'), gk = row.getAttribute('data-gk'), ck = row.getAttribute('data-ck');
+            const o = row.nextElementSibling, same = o && o.classList.contains('ggshxbox') && o.getAttribute('data-shbox') === s;
+            document.querySelectorAll('.ggshxbox').forEach(x => x.remove()); if (same) return;
+            const g = ggOf(guid).find(x => x && x.k === gk), c = g ? ggCsOf(g, ck) : null; if (!c) return;
+            const q = (typeof quizData !== 'undefined' ? quizData : []).find(x => String(x.id) === String(s)), e = (c.shx && c.shx[s]) || null;
+            const b = document.createElement('div'); b.className = 'ggjmbox ggshxbox'; b.setAttribute('data-shbox', s);
+            b.innerHTML = `<div class="ggshxj">「${escHtml(q ? String(q.q || '') : String(s))}」</div><textarea rows="1" class="jmin" placeholder="이 지문과 같이 붙일 댓글 — Enter 저장 · 비우고 Enter = 지문만 · Shift+Enter 줄바꿈"></textarea>`;
+            row.after(b);
+            const ta = b.querySelector('.jmin'); if (e && e.t) ta.value = e.t;
+            try { ggFit(ta); } catch (_) { } ta.focus(); try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (_) { }
+            b.addEventListener('click', ev => ev.stopPropagation());
+            ta.addEventListener('input', () => { try { ggFit(ta); } catch (_) { } });
+            ta.addEventListener('keydown', ev => {
+                if (ev.key === 'Escape') { b.remove(); return; }
+                if (ev.key !== 'Enter' || ev.shiftKey || ev.isComposing) return;
+                ev.preventDefault(); ev.stopPropagation();
+                const t = String(ta.value || '').trim(); if (t.length > GG_CMAX) return;
+                if (ggShxSave(guid, gk, ck, s, t)) b.remove();
+            });
+        }
+        (function () {
+            let L = null, eat = -1e9, foc = null;
+            const drop = () => { if (L) { clearTimeout(L.tm); L = null; } };
+            document.addEventListener('pointerdown', e => { drop(); const tg = e.target && e.target.closest ? e.target : null; if (!tg || tg.closest('.ggjox')) return;
+                const r = tg.closest('.ggshrow'), t = r ? r.querySelector('.ggshid[data-shu]') : tg.closest('.ggshid[data-shu]'); if (!t) return;   /* 붙은 줄은 어디를 길게 눌러도(글 · 지문 · ID) 그 줄 고치기 */
+                L = { el: t, x: e.clientX, y: e.clientY, tm: setTimeout(() => { const el = L && L.el; L = null; eat = performance.now(); if (el && el.isConnected) { try { ggShxBox(el); foc = document.querySelector('.ggshxbox .jmin'); } catch (_) { } } }, 550) }; }, true);
+            document.addEventListener('pointermove', e => { if (L && (Math.abs(e.clientX - L.x) > 8 || Math.abs(e.clientY - L.y) > 8)) drop(); }, true);
+            ['pointerup', 'pointercancel'].forEach(n => document.addEventListener(n, () => { drop(); if (foc) { try { if (foc.isConnected) foc.focus(); } catch (_) { } foc = null; } }, true));   /* 손 뗄 때 한 번 더 커서(아이패드 자판은 손 동작 안에서 커서를 둬야 뜸) */
+            document.addEventListener('click', e => { if (performance.now() - eat < 900 && e.target && e.target.closest && e.target.closest('.ggshid,.ggshrow')) { e.stopImmediatePropagation(); e.stopPropagation(); e.preventDefault(); eat = -1e9; } }, true);   /* 길게 누른 뒤 따라오는 톡 한 번은 먹음(그 문제로 안 감 · O/X 고르개 안 뜸) */
+            document.addEventListener('contextmenu', e => { if (e.target && e.target.closest && e.target.closest('.ggshid[data-shu]')) e.preventDefault(); }, true);
+        })();
         function ggCsHTML(cs, gk, guid, gk2, tail) {
             if (!Array.isArray(cs) || !cs.length) return '<div class="text-[11.5px] text-gray-400 py-1">댓글 없음</div>';
             const del = (gk != null && guid != null);
             /* ★ 시안(사용자 11/10 13:51 「가로 너무 좁아 · 지학처럼 길게 누르면 고치기 · 연필 지우고 · uid 밑으로 날짜 · ✕ 세로로」) — 글 칸 = 남는 폭 다 · 오른쪽 세로 칸 = 단 문항 ID · 같이 쓰는 ID · 날짜 · (연결 상자 + ·) ✕ · ✎ 걷음 → 줄 길게 누름 = 고치기(지학 10/13 ggCsEditOpen 꼴) */
-            return cs.map((c, n) => `<div class="flex gap-1.5 py-1 border-b border-dashed border-gray-100 text-[10.5px] text-slate-700${c.bang ? ' ggcsbang' : ''}"${del ? ` data-ck="${escAttr(String(c.k || n))}" data-gk="${escAttr(String(gk))}" data-guid="${escAttr(String(guid))}" data-ggcslong="1"` : ''}>
+            return cs.map((c, n) => `<div class="flex flex-wrap gap-x-1.5 py-1 border-b border-dashed border-gray-100 text-[10.5px] text-slate-700${c.bang ? ' ggcsbang' : ''}"${del ? ` data-ck="${escAttr(String(c.k || n))}" data-gk="${escAttr(String(gk))}" data-guid="${escAttr(String(guid))}" data-ggcslong="1"` : ''}>
                 ${del ? '<span class="ggcsdh" title="끌어서 차례 바꾸기"></span>' : ''}${ggCbgHTML(c, guid, gk ?? gk2)}
                 <span class="whitespace-pre-wrap flex-1 min-w-0">${ggFromHead(c, guid, gk ?? gk2)}<span class="ggct">${escHtml(c.t || '')}</span></span>
-                <span class="ggcsmeta">${c.from ? `<span role="button" title="이 댓글을 단 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(c.from))}')" class="cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap">${escHtml(String(c.from))}</span>` : ''}${Array.isArray(c.sh) ? c.sh.map(s => `<span role="button" title="이 댓글을 같이 쓰는 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(s))}')" class="ggshid cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap">${escHtml(String(s))}</span>`).join('') : ''}<span class="ggcsd">${ggMD(c.ts)}</span>${del ? `<button type="button" onclick="ggCsDel(this)" title="지우기" aria-label="지우기" class="ggcsx text-red-700 hover:bg-red-50">✕</button>` : (tail || '')}</span>
+                <span class="ggcsmeta">${c.from ? `<span role="button" title="이 댓글을 단 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(c.from))}')" class="cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap">${escHtml(String(c.from))}</span>` : ''}${Array.isArray(c.sh) ? c.sh.filter(s => !(c.shx && c.shx[s])).map(s => `<span role="button" data-shu="${escAttr(String(s))}" title="이 댓글을 같이 쓰는 문항 · 누르면 그 문제 · 길게 누르면 그 문항 지문 · 댓글 붙이기" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(s))}')" class="ggshid cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap">${escHtml(String(s))}</span>`).join('') : ''}<span class="ggcsd">${ggMD(c.ts)}</span>${del ? `<button type="button" onclick="ggCsDel(this)" title="지우기" aria-label="지우기" class="ggcsx text-red-700 hover:bg-red-50">✕</button>` : (tail || '')}</span>${ggShxHTML(c, guid, gk ?? gk2, del, tail)}
             </div>`).join('');
         }
         /* [댓글 지우기] — 근거 지우기(`ggDel`)가 되묻으므로 **같게** 되묻는다(§C-2).
@@ -5302,11 +5368,21 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         }
         /* ★ 11/05 사용자 「+ 버튼 둬서 다른 문제에서 댓글도 공유 · 누르면 댓글에 그 문제 uid 추가 · 그 문제에서도 이 댓글 단 것처럼 같은 작동」 — 연결 상자 댓글 줄(다른 문항이 단 것) 「+」 = 그 댓글 c.sh 에 이 문항(uid) 더함 · 「−」 = 뺌
            더한 문항 = 단 문항(from)과 같게 봄: 문항 창 테두리 · 정리 창 줄 밑 「↳ 🔗」 · 댓글 끝 ID 칩. 저장 = 원래 근거(u) 목록(ggSaveList) · 다시 그림 = ggRefReply 와 같은 길 */
-        function ggCsShare(uid, u, k, ck, sc = '') {
+        function ggCsShare(uid, u, k, ck, sc = '', go) {
             const list = ggOf(u), g = list.find(x => x && x.k === k), c = g ? ggCsOf(g, ck) : null;
             if (!c || String(c.from || '') === String(uid)) return;
             const sh = Array.isArray(c.sh) ? c.sh.slice() : [], i = sh.indexOf(String(uid));
-            if (i >= 0) sh.splice(i, 1); else sh.push(String(uid));
+            if (i >= 0 && !go && c.shx && c.shx[String(uid)] && c.shx[String(uid)].t) {   /* ★ 11/13 검토 — 붙여 쓴 글이 있으면 댓글 지우기(ggCsDel)처럼 되묻는다 · 지문만 붙인 것 · ID 만인 것은 바로 */
+                const wkey = 'ggshoff-' + uid + '-' + ck, bs = 'font-size:11.5px;font-weight:700;border-radius:6px;padding:4px 11px;cursor:pointer';
+                oxWinOpen(wkey, '같이 쓰기 그만', uid, '<div style="padding:12px 14px"><div style="font-size:12.5px;font-weight:800;color:#111827">이 댓글에 붙여 쓴 글도 같이 지워집니다.</div>'
+                    + `<div style="font-size:12px;color:#4b5563;line-height:1.55;margin-top:4px">${escHtml(String(c.shx[String(uid)].t).split('\n')[0])}</div>`
+                    + '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:12px;padding-top:9px;border-top:1px dashed #e5e7eb">'
+                    + `<button type="button" onclick="oxWinClose('${wkey}')" style="${bs};color:#374151;background:#f9fafb;border:1px solid #d1d5db">취소</button>`
+                    + `<button type="button" class="ggshgo" onclick="oxWinClose('${wkey}');ggCsShare('${escAttr(String(uid))}','${escAttr(String(u))}','${escAttr(String(k))}','${escAttr(String(ck))}','${escAttr(String(sc))}',1)" style="${bs};color:#fff;background:#dc2626;border:1px solid #b91c1c">그만</button>`
+                    + '</div></div>', 340);
+                return;
+            }
+            if (i >= 0) { sh.splice(i, 1); if (c.shx) { delete c.shx[String(uid)]; if (!Object.keys(c.shx).length) delete c.shx; } } else sh.push(String(uid));
             if (sh.length) c.sh = sh; else delete c.sh;
             ggSaveList(u, list);
             GG_SCOPES.forEach(s => { const b = document.getElementById(`${s}gg-cs-${u}-${k}`); if (b) b.innerHTML = ggCsHTML(g.cs, k, u); });
@@ -8750,7 +8826,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         e.preventDefault(); e.stopPropagation();
         openViewer(id, omrSlots(coords(), id).length ? 'view' : 'pick');
       };
-      btn.parentNode.insertBefore(b, btn);
+      { let ref = btn; while (ref.previousElementSibling && ref.previousElementSibling.classList.contains('omrmk')) ref = ref.previousElementSibling; btn.parentNode.insertBefore(b, ref); }   /* ★ 11/13 — OMR 표시(△)가 헷갈림 바로 왼쪽에 붙어 있게: 좌표 단추는 그 표시들 앞 */
       btn.addEventListener('click', function () { setTimeout(refreshPins, 30); });
     });
   }
@@ -11352,7 +11428,7 @@ function jnGgHTML(id, txt) {
     const own = ggOf(id).filter(g => g && String(g.t || '').trim());
     const h = own.map((g, n) => `<div>${escHtml(String(g.t || ''))}</div>` + (Array.isArray(g.cs) ? g.cs.filter(ok).map(c => line(c, '', id, g.k)).join('') : '')).join('');
     const lk = (refOf(id, 'geunge') || []).map(u => ggOf(u).filter(Boolean).map(g => (Array.isArray(g.cs) ? g.cs : []).filter(c => ok(c) && (String(c.from) === String(id) || (Array.isArray(c.sh) && c.sh.indexOf(String(id)) >= 0)))
-        .map(c => line(c, ` <span role="button" title="연결한 근거의 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(u)}','${escAttr(id)}')" class="cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2">${escHtml(u)}</span>`, u, g.k)).join('')).join('')).join('');
+        .map(c => (c.shx && c.shx[String(id)] && c.shx[String(id)].t) ? Object.assign({}, c, { t: String(c.t) + '\n' + String(c.shx[String(id)].t) }) : c).map(c => line(c, ` <span role="button" title="연결한 근거의 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(u)}','${escAttr(id)}')" class="cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2">${escHtml(u)}</span>`, u, g.k)).join('')).join('')).join('');
     if (!h && !lk) return '';
     return `<div data-jngg="${escHtml(id)}" class="mt-1 border-l-2 pl-2 py-1 text-[11.5px] leading-relaxed text-blue-900 bg-blue-50 border-blue-400 whitespace-pre-wrap" style="white-space:pre-wrap">${h}${lk}</div>`;
 }
