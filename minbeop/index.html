@@ -227,7 +227,7 @@
 .jx-cell{display:inline-flex;align-items:center;justify-content:center;width:18px;height:16px;font-size:11px;font-weight:800;border:1px solid;border-radius:4px;padding:0;cursor:pointer}
 .jx-cell.o{color:#1d4ed8;background:#eff6ff;border-color:#93c5fd}.jx-cell.x{color:#b91c1c;background:#fef2f2;border-color:#fca5a5}.jx-cell.na{color:#9ca3af;background:#fff;border-color:#d1d5db;border-style:dashed}
 .jx-info{margin-left:6px;font-size:11px;font-weight:400;color:#6b7280}
-.gglive:not(:has(button)){display:none}.gglive>div:first-child,.gglive>input{display:none}.gglive button.ggsel{background:#e0e7ff !important;outline:2px solid #6366f1}
+.gglive:not(:has(button)){display:none}.gglive>div:first-child,.gglive>input{display:none}.gglive button.ggsel,.ggseg.ggsel{background:#e0e7ff !important;outline:2px solid #6366f1}.ggseg{cursor:pointer}@media (hover:hover){.ggseg:hover{background:#dbeafe}}.ggseg:active{background:#bfdbfe}
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen py-3 px-2">
@@ -1674,6 +1674,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         function useIdx() { return USE_IDX || (USE_IDX = useIdxBuild()); }
         function useOwners(kind, uid) { return (useIdx()[kind] || {})[String(uid)] || []; }
         function useCount(kind, uid) { return useOwners(kind, uid).length; }
+        function useOwnersG(uid, k) { const U = String(uid), K = String(k); return useOwners('geunge', U).filter(o => { const ks = refGk(o, U); return !ks || ks.indexOf(K) >= 0; }); }   /* ★ 11/13 — 그 근거 하나를 건 문항(옛 연결 = 전부 건 것이라 같이 셈) */
         function useIdxDrop() { USE_IDX = null; }  // 다음에 물을 때 다시 짓는다
 
         /* ⚠ lsPut 은 동기화 병합(SYNC_KEYS.forEach)·원격 덮기가 다 거치는 문이다.
@@ -1734,6 +1735,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
            ★ 2026-09-15 (_task_ox_sync_and_limit §D) — 판정 차례: 내가 더 새것 → 둔다 · 원격 묘비(도장과 같은 시각이어도) → 지운다 ·
              원격·내게 도장 없음 → 내게 없으면 받는다(도장 1) · 원격이 더 새것 → 받는다 · **도장이 같으면 값으로**(§D-5).
              tie = 도장이 같은데 값이 달랐던 칸 · ahead = 내가 이겼는데 원격 값이 다른 칸(올릴 것 — §F). */
+        let REC_GT = {};   /* ★ 11/13 — 이번 받기에서 받거나 지운 근거 칸(문항) · 연결 칸: 받은 뒤 그 자리만 갈음(recGgRepaint) */
         function recMerge(remote) {
             const u = lsObj(U_KEY), gone = lsObj(GONE_KEY), shadow = lsObj(SHADOW_KEY);
             const rU = remote.u || {}, rG = remote.gone || {}, rD = remote.data || {};
@@ -1742,7 +1744,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             Object.keys(rU).forEach(add); Object.keys(rG).forEach(add);
             let took = 0, kept = 0, del = 0, tie = 0, ahead = 0;
             const touched = {};                                  /* §C — 키 → [병합이 받거나 지운 칸] */
-            const touch = (k, c) => { (touched[k] = touched[k] || []).push(c); };
+            const touch = (k, c) => { (touched[k] = touched[k] || []).push(c); if (k === 'ox_q_geunge' || k === 'ox_q_reflinks') (REC_GT[k] = REC_GT[k] || {})[c] = 1; };
             const has = (o, c) => !!o && Object.prototype.hasOwnProperty.call(o, c);
             const J = v => JSON.stringify(v);
             for (const k of SYNC_KEYS) {
@@ -2010,7 +2012,36 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (got) {
                 const home = document.getElementById('home-screen');
                 if (home && !home.classList.contains('hide')) { clearWrongCache(); applyAutoImportant(); renderDashboard(); refreshModeCounts(); }
+                else { try { recGgRepaint(REC_GT); } catch (e) { console.warn('[recGgRepaint]', e); } }
             }
+            REC_GT = {};
+        }
+        /* ★ 11/13 사용자 20:14 「(민법 채팅이 Q0244 근거를 고쳤는데) 아이패드 Q0727 문제 창에서 연결 근거로 보고 있는 것이 바로 안 바뀌더라」
+           — 까닭(잼): 동기화로 받은 것이 있어도 첫 화면일 때만 다시 그림(§H · 푸는 중엔 고른 답이 날아가서) → 문제 화면에 떠 있는 근거 줄 · 연결 상자는 그 카드를 다시 열 때까지 옛 글
+           → 받은 근거 칸(문항) · 연결 칸만 그 자리에서 갈음: 그 근거를 건 문항들의 연결 칩 · 연결 상자(ggRefPaint · 펼침 지킴) · 그 문항 제 근거 줄(ggLineHTML · 펼친 판 · 상자 지킴) · 정리 창 줄 · ↩N
+             카드 · 고른 답은 안 건드림 · 그 자리에서 적거나 고치는 중(커서 · 그 자리 고치기 · 치다 만 글)인 칸은 건너뜀(다음 받기 때 갈음) */
+        function recGgRepaint(gt) {
+            const G = Object.keys((gt && gt.ox_q_geunge) || {}), R = Object.keys((gt && gt.ox_q_reflinks) || {});
+            if (!G.length && !R.length) return;
+            useIdxDrop();
+            const ae = document.activeElement, shown = p => !!p && !p.classList.contains('hide');
+            const busy = el => !!el && ((!!ae && el.contains(ae) && /^(TEXTAREA|INPUT)$/.test(ae.tagName || '')) || !!el.querySelector('.ggied')
+                || [...el.querySelectorAll('textarea')].some(t => t.offsetParent && String(t.value || '').trim()));
+            const owners = new Set(R);
+            G.forEach(u => useOwners('geunge', u).forEach(o => owners.add(o)));
+            G.forEach(u => GG_SCOPES.forEach(s => {
+                const box = document.getElementById(`${s}gg-box-${u}`);
+                if (!box || busy(box)) return;
+                const openP = [...box.querySelectorAll(`[id^="${s}gg-pan-${u}-"]`)].filter(shown).map(p => p.id.slice(`${s}gg-pan-${u}-`.length));
+                const openR = refOf(u, 'geunge').filter(t => shown(document.getElementById(`${s}refgg-box-${u}-${t}`)));
+                box.outerHTML = ggLineHTML(u, s);
+                openP.forEach(k => { const p = document.getElementById(`${s}gg-pan-${u}-${k}`); if (p && !shown(p)) ggToggle(u, k, s); });
+                openR.forEach(t => { const p = document.getElementById(`${s}refgg-box-${u}-${t}`); if (p && !shown(p)) ggRefToggle(u, t, s); });
+                owners.delete(u);
+            }));
+            owners.forEach(o => GG_SCOPES.forEach(s => { const bx = document.getElementById(`${s}reflink-geunge-${o}`); if (bx && !busy(bx)) ggRefPaint(o, s); }));
+            G.forEach(u => { try { ggJnRepaint(u); } catch (e) { } });
+            G.concat(R).forEach(u => { try { useNumRepaint('geunge', u); } catch (e) { } });
         }
 
         /* ---------- §C 첫 판 — 사람이 한 번 민다 ---------- */
@@ -3857,7 +3888,10 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 return;
             }
             resPage(box, hits, q => {
-                const on = already.indexOf(String(q.id).toUpperCase()) !== -1;
+                const on0 = already.indexOf(String(q.id).toUpperCase()) !== -1;
+                const segs = kind === 'geunge' ? ggPickSegs(q.id, low, ggL(q)) : null, onKs = (segs && on0) ? refGk(ownerId, q.id) : null;   /* ★ 11/13 — 근거 낱개 */
+                const segOn = sg => on0 && (!onKs || onKs.indexOf(sg.k) >= 0);
+                const on = segs ? (on0 && segs.every(segOn)) : on0;
                 const where = `${q.subject || ''} · ${q.subChapter || ''}`;
                 /* 그 글 한 줄 — `showFieldList` 가 쓰는 바로 그 클래스다(새로 짓지 않는다) */
                 const fcls = kind === 'geunge' ? 'text-blue-800 bg-blue-50 border-blue-400'
@@ -3865,10 +3899,13 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 const ftxt = kind === 'geunge' ? ggPickLine(q.id, low, ggL(q)) : extraOf(q);
                 /* 2026-09-14 — 근거는 `↳ 댓글` 줄이 잘리지 않게 **줄마다** 90자로 자른다(다른 갈래는 옛 그대로) */
                 const fshow = kind === 'geunge' ? String(ftxt).split('\n').map(x => x.charAt(0) === '「' ? x : x.slice(0, 90)).join('\n') : String(ftxt).slice(0, 90);   /* ★ 11/10 — 「지문」 줄은 안 자름(판단 재료) */
-                const fline = kind
+                const fline = segs
+                    ? segs.map(sg => `<div role="button" data-ggseg="${escAttr(sg.k)}" title="이 근거만 연결" onclick="event.stopPropagation();addRefId('${ownerId}','geunge','${q.id}','${pre}','${escAttr(sg.k)}')" class="ggseg border-l-2 pl-2 ${fcls} text-[11.5px] mt-0.5 whitespace-pre-wrap${(segOn(sg) && !on) ? ' opacity-50' : ''}">${sg.txt.split('\n').map(x => mark(x.charAt(0) === '「' ? x : x.slice(0, 90), term)).join('\n')}${(segOn(sg) && !on) ? ' <span class="text-[10px] font-bold text-green-700">이미 넣음</span>' : ''}</div>`).join('')
+                    : kind
                     ? `<div class="border-l-2 pl-2 ${fcls} text-[11.5px] mt-0.5 whitespace-pre-wrap">${kind === 'geunge' ? fshow.split('\n').map(x => mark(x, term)).join('\n') : escHtml(fshow)}</div>`   /* ★ 11/10 — 근거 갈래는 줄마다 찾은 낱말 표시 */
                     : '';
-                const call = kind ? `addRefId('${ownerId}','${kind}','${q.id}'${ggScA(pre)})` : `addLinkId('${ownerId}','${q.id}'${ggScA(pre)})`;
+                const call = segs ? `addRefId('${ownerId}','geunge','${q.id}','${pre}','${escAttr(segs.map(sg => sg.k).join(','))}')`   /* ★ 11/13 — 줄 머리 = 보이는 근거들만 */
+                    : kind ? `addRefId('${ownerId}','${kind}','${q.id}'${ggScA(pre)})` : `addLinkId('${ownerId}','${q.id}'${ggScA(pre)})`;
                 return `<button onclick="${call}" class="block w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-indigo-50 transition ${on ? 'opacity-50' : ''}">
                     <div class="flex items-center gap-1.5 mb-0.5">
                         <span class="text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">ID ${q.id}</span>
@@ -4078,6 +4115,17 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const a = r && r[kind];
             return Array.isArray(a) ? a.filter(Boolean) : [];
         }
+        /* ★ 11/13 사용자 19:45 「이 근거만 연결하고 싶은데 왜 위 근거도 같이 붙어 · 각각 되라고 말했던 것 같은데」(11/10 14:54 「↩N 각각으로」)
+           — 근거 낱개 연결: `ox_q_reflinks[문항].gk = {대상 문항: [근거 k …]}` = 그 대상 문항의 근거 가운데 이 문항에 건 것만 · 칸이 없으면 옛 연결 = 그 문항 근거 전부(옛 기록 그대로 읽힘)
+             `geunge`(대상 문항 ID 목록) 꼴은 그대로 · 새 저장 키 0 · SYNC_KEYS 무변(연결 칸 = 문항 단위 통째로 실림) */
+        function refGk(id, u) { const r = refStore()[id], m = r && r.gk, a = m && m[String(u)]; return (Array.isArray(a) && a.length) ? a.map(String) : null; }
+        function refGkSet(id, u, arr) {
+            const st = refStore(), r = st[id]; if (!r) return;
+            const U = String(u), a = Array.isArray(arr) ? Array.from(new Set(arr.map(String).filter(Boolean))) : [];
+            if (a.length) { r.gk = r.gk || {}; r.gk[U] = a; } else if (r.gk) { delete r.gk[U]; if (!Object.keys(r.gk).length) delete r.gk; }
+            localStorage.setItem('ox_q_reflinks', JSON.stringify(st)); useIdxDrop();
+        }
+        function ggOfL(id, u) { const all = ggOf(u), ks = refGk(id, u); return ks ? all.filter(g => g && ks.indexOf(String(g.k)) >= 0) : all; }
         /* ★ add3 — 셋째 갈래 `geunge` 를 더했다. **넷째 인자를 주지 않으면 지금 값을 그대로 둔다** —
            옛 부르는 두 자리(`saveMemoAndLink`·`cmpSave`)를 한 글자도 안 고치려고 그렇게 했다.
            ⚠ 새 저장소 키를 만들지 않는다. `ox_q_reflinks` 한 칸 안에 갈래만 늘었다. */
@@ -4090,10 +4138,12 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const g = Array.from(new Set((gSrc || []).map(x => String(x).trim()).filter(x => x && x !== id)));
             if (!m.length && !l.length && !g.length) delete st[id];
             else {
+                const _gk0 = (st[id] && st[id].gk) || null;
                 st[id] = {};
                 if (m.length) st[id].memo = m;
                 if (l.length) st[id].logic = l;
                 if (g.length) st[id].geunge = g;
+                if (_gk0) { const k2 = {}; g.forEach(t => { if (Array.isArray(_gk0[t]) && _gk0[t].length) k2[t] = _gk0[t]; }); if (Object.keys(k2).length) st[id].gk = k2; }   /* ★ 11/13 — 근거 낱개 거름 칸 */
             }
             localStorage.setItem('ox_q_reflinks', JSON.stringify(st));
             useIdxDrop();                          /* 쓰임 색인 — 저장 로직은 위 그대로다 */
@@ -4110,16 +4160,17 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 if (ch.getAttribute('data-gbref') !== U) return;
                 const old = ch.querySelector('i[onclick*="useWin"]');
                 let me = '';
-                if (old) { const m = /useWin\('[^']*','[^']*','([^']*)'\)/.exec(old.getAttribute('onclick') || ''); if (m) me = m[1]; old.remove(); }
+                if (old) { const m = /useWin\('[^']*','[^']*','([^']*)'/.exec(old.getAttribute('onclick') || ''); if (m) me = m[1]; old.remove(); }
                 else if (ch.id && ch.id.indexOf('gg-refchip-') >= 0 && ch.id.endsWith('-' + U)) me = ch.id.slice(ch.id.indexOf('gg-refchip-') + 11, ch.id.length - U.length - 1);
                 ch.insertAdjacentHTML('beforeend', useNumHTML(kind, U, me));
             });
             GG_SCOPES.forEach(s => {
                 const ln = document.getElementById(`${s}gg-line-${U}`), lab = ln && ln.firstElementChild;
-                if (lab && /^근거/.test(lab.textContent || '')) { const cs0 = document.querySelectorAll(`[id="${s}gg-chips-${U}"] [data-gbnum]`); if (cs0.length) { cs0.forEach(c0 => { const oi = c0.querySelector('i[onclick*="useWin"]'); if (oi) oi.remove(); c0.insertAdjacentHTML('beforeend', useLabelHTML(kind, U)); }); lab.innerHTML = '근거'; } else lab.innerHTML = `근거${useLabelHTML(kind, U)}`; }   /* ★ 시안 — 「↩N」 = 첫 근거 칩 안(근거가 없으면 라벨 옆 그대로) */
+                if (lab && /^근거/.test(lab.textContent || '')) { const cs0 = document.querySelectorAll(`[id="${s}gg-chips-${U}"] [data-gbnum]`); if (cs0.length) { cs0.forEach(c0 => { const oi = c0.querySelector('i[onclick*="useWin"]'); if (oi) oi.remove(); c0.insertAdjacentHTML('beforeend', useLabelHTML(kind, U, (c0.getAttribute('data-gbnum') || '').split('|')[1])); }); lab.innerHTML = '근거'; } else lab.innerHTML = `근거${useLabelHTML(kind, U)}`; }   /* ★ 시안 — 「↩N」 = 첫 근거 칩 안(근거가 없으면 라벨 옆 그대로) */
             });
             const uw = document.getElementById('oxwin-use-' + kind + '-' + U);   /* 숫자를 눌러 띄운 「이 근거를 걸어 둔 문항 N」 창이 떠 있으면 그 창도(제목 수 · 목록) */
             if (uw) { const m = /useUnlink\('[^']*','([^']*)'/.exec(uw.innerHTML); oxWinRedraw('use-' + kind + '-' + U, () => useWin(kind, U, m ? m[1] : '')); }
+            document.querySelectorAll('[id^="oxwin-use-' + kind + '-' + U + '-"]').forEach(w2 => { const key = w2.id.slice(6), gk2 = key.slice(('use-' + kind + '-' + U).length + 1), m2 = /useUnlink\('[^']*','([^']*)'/.exec(w2.innerHTML); oxWinRedraw(key, () => useWin(kind, U, m2 ? m2[1] : '', gk2)); });   /* ★ 11/13 — 근거 하나 기준 창도 */
         }
         /* ★ 11/03 — 떠 있는 목록 창을 같은 자리 · 크기 · 겹침 순서 · 굴린 자리로 새로 그림(제목의 수까지 · oxWinOpen 은 있던 창이면 몸만 바꾸고 앞으로 올림) */
         function oxWinRedraw(key, fn) {
@@ -4137,11 +4188,11 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (el) return String(el.value || '').split(',').map(x => x.trim()).filter(Boolean);
             return refOf(id, kind);
         }
-        function addRefId(ownerId, kind, uid, sc = '') {
+        function addRefId(ownerId, kind, uid, sc = '', gk) {
             /* ★ add3 §2-B — 근거는 문항 카드에 바로 붙은 🔍 라 **저장 버튼이 없다.** 누르는 즉시 넣는다.
                숨은 칸(`refgeunge-input-…`)도 없으므로 여기서 갈라 준다. ★ 09-15 — 근거 갈래는 범위(sc)도 넘긴다
                ★ 09-15 (_task_ox_logic_merge §B-4) — 논리 연결 칸을 걷어 이 함수를 부르는 곳은 근거 갈래뿐이다(숨은 칸에 담던 메모·논리 갈래를 뺐다) */
-            if (kind === 'geunge') return ggRefAdd(ownerId, uid, sc);
+            if (kind === 'geunge') return ggRefAdd(ownerId, uid, sc, gk);
         }
         /* 건 uid 의 근거 글(★ 09-15 _task_ox_logic_merge §B-4 — 논리 갈래는 걷었다 · ★ 10-06 _task_ox_home_tidy §B — 메모 갈래도 걷었다 · 근거 아니면 빈 글). 지금 데이터에 없으면 null (부르는 쪽이 문구를 고른다) */
         function refTextOf(uid, kind) {
@@ -4406,7 +4457,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         function ggJmSave(uid,u,gk,t,sc){const me=String(uid);const list=ggOf(u).slice(),g=list.find(x=>x&&x.k===gk);if(!g||!t||t.length>GG_CMAX)return false;if(!Array.isArray(g.cs))g.cs=[];if(g.cs.length>=GG_CN)return false;const c={k:ggNewKey('c_'+u+'_'),t:t,ts:Date.now(),jm:'q'};if(u!==me)c.from=me;g.cs.push(c);ggSaveList(u,list);GG_SCOPES.forEach(s=>{const bx=document.getElementById(`${s}gg-cs-${u}-${gk}`);if(bx)bx.innerHTML=ggCsHTML(g.cs,gk,u)});ggRefOwnersRepaint(u);
           if(u===me){ggBoxRefresh(u,sc);ggCmMarkPaint(u);const p=document.getElementById(`${sc}gg-pan-${u}-${gk}`);if(p&&p.classList.contains('hide'))ggToggle(u,gk,sc)}else{const p=document.getElementById(`${sc}refgg-box-${me}-${u}`);if(p&&p.classList.contains('hide'))ggRefToggle(me,u,sc)}return true}
         function ggJmBox(line,dot){const nx=line.nextElementSibling;if(nx&&nx.classList.contains('ggjmbox')){nx.remove();return}document.querySelectorAll('.ggjmbox').forEach(x=>x.remove());
-          const uid=dot.getAttribute('data-jmu'),sc=dot.getAttribute('data-jms')||'',me=String(uid);const L=[];ggOf(uid).forEach(g=>{if(g)L.push({u:me,g:g})});refOf(uid,'geunge').forEach(u=>ggOf(u).forEach(g=>{if(g)L.push({u:String(u),g:g})}));
+          const uid=dot.getAttribute('data-jmu'),sc=dot.getAttribute('data-jms')||'',me=String(uid);const L=[];ggOf(uid).forEach(g=>{if(g)L.push({u:me,g:g})});refOf(uid,'geunge').forEach(u=>ggOfL(uid,u).forEach(g=>{if(g)L.push({u:String(u),g:g})}));
           const jmc=(u,g)=>(g.cs||[]).filter(c=>c&&((u===me&&!c.from)||String(c.from||'')===me||(Array.isArray(c.sh)&&c.sh.indexOf(me)>=0))).map(c=>'<div class="jmc">↳ '+escHtml(String(c.t||''))+(c.jo==='O'||c.jo==='X'?' <b class="ggjo ggjo-'+(c.jo==='O'?'o':'x')+'">'+c.jo+'</b>':'')+'</div>').join('');
           const b=document.createElement('div');b.className='ggjmbox';
           b.innerHTML=L.length?L.map(x=>'<div class="jmi" role="button" data-jmu2="'+escAttr(x.u)+'" data-jmg="'+escAttr(String(x.g.k))+'">'+escHtml(String(x.g.t||'').split('\n')[0])+'</div>'+jmc(x.u,x.g)).join('')+'<textarea rows="1" class="jmin" placeholder="근거를 고르고 댓글 — Enter 저장 · Shift+Enter 줄바꿈"></textarea>':'<div class="jm0">이 문항에 적은 근거가 없다 — 근거를 먼저 적는다</div>';
@@ -4686,7 +4737,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const bn = g.bang ? ' ggnum-on' + ((g.ok === true || g.ok === false) ? '' : ' ggnum-on-n') : '';
             const bok = (g.ok === true || g.ok === false) ? ' data-gbok="1"' : '';
             return `<span id="${sc}gg-chip-${uid}-${g.k}" data-gbnum="${escAttr(uid)}|${escAttr(g.k)}"${bok} onclick="ggToggle('${uid}','${g.k}'${ggScA(sc)})" title="${escHtml(g.t || '')}"
-                class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4 border ${ggOkCls(g.ok)}${bn}">${g.i}${ggMeCm(uid, g, true) ? '<span class="ggrefcm">댓</span>' : ''}${useLabelHTML('geunge', uid)}</span>`;   /* ★ 시안(사용자 11/10 14:05 「↩N 을 지금 1 표시된 그 근거로」) — 이 문항 근거가 쓰인 문항 수 = 첫 근거 칩 안 */
+                class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4 border ${ggOkCls(g.ok)}${bn}">${g.i}${ggMeCm(uid, g, true) ? '<span class="ggrefcm">댓</span>' : ''}${useLabelHTML('geunge', uid, g.k)}</span>`;   /* ★ 시안(사용자 11/10 14:05 「↩N 을 지금 1 표시된 그 근거로」) — 이 문항 근거가 쓰인 문항 수 = 첫 근거 칩 안 */
         }
         /* ★ 2026-09-18 (_task_ox_jari_thumb §C) — 줄 끝 🔗 를 뺐다(연결은 본문 줄 🔍 로만) · 그 자리에 「지우기」.
            ⚠ `gk` 가 없으면 지우기를 안 단다 — 연결 상자(`ggRefBoxHTML`)는 **남의 문항** 댓글을 그리는 자리라
@@ -4931,7 +4982,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (lp && e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); ggLiveHide(uid, sc); return; }   /* 창 닫는 문서 Esc 까지 가지 않게(ggCsEditCancel 과 같음) — 목록만 닫고 문항 창은 둠 */
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                const on = lp && lp.querySelector('button.ggsel');
+                const on = lp && lp.querySelector('.ggsel');
                 if (on) { on.click(); return; }
                 ggAdd(uid, true, sc); ggFit(e.target); ggLiveHide(uid, sc);
             }
@@ -5138,6 +5189,16 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         }
         /* 걸린 조각 — 본문에서 걸리면 `i. 본문`, 댓글에서 걸리면 `i. 본문` + 줄바꿈 + `↳ 댓글`.
            미리보기 줄이라 본문·댓글 안의 줄바꿈은 한 칸으로 누른다. 아무 데도 안 걸리면 첫 항목(옛 동작 그대로). */
+        /* ★ 11/13 — 찾기 결과 한 줄(문항) 안 근거마다 따로 누르는 칸: [{k, txt}] · 낱말이 근거 · 댓글에 걸렸으면 걸린 근거만(ggPickLine 과 같은 줄) · 문항 글 · ID 로만 걸렸으면 그 문항 근거 전부 */
+        function ggPickSegs(uid, low, given) {
+            const L0 = (Array.isArray(given) ? given : ggOf(uid)).filter(Boolean), h0 = v => srHas(v, low), o0 = v => String(v || '').replace(/\s*\n\s*/g, ' ');
+            const qq = id => { const q = (typeof quizData !== 'undefined' ? quizData : []).find(x => String(x.id) === String(id)); return q ? o0(q.q) : ''; }, out = [];
+            if (low) L0.forEach(g => { const cs = (Array.isArray(g.cs) ? g.cs : []).filter(c => c && h0(c.t)); if (!h0(g.t) && !cs.length) return;
+                const ln = [g.i + '. ' + o0(g.t)];
+                cs.forEach(c => { const j = qq(c.from || uid), o = String(c.jo || '').toUpperCase(); if (j) ln.push('「' + j + '」' + (o === 'O' || o === 'X' ? ' ' + o : '')); ln.push('↳ ' + o0(c.t)); });
+                out.push({ k: String(g.k), txt: ln.join('\n') }); });
+            return out.length ? out : L0.map(g => ({ k: String(g.k), txt: g.i + '. ' + o0(g.t) }));
+        }
         function ggPickLine(uid, low, given) {   /* ★ add10 — given = 이미 푼 목록(찾기 루프) · 없으면 옛 그대로 저장소에서 */
             /* ★ 11/10 사용자 20:48 「검색이 제일 중요 · 뭘 봐야 목적 달성?」 — 찾는 까닭 = 지금 지문과 같은 쟁점의 근거를 찾아 연결 · 그 근거를 어느 지문에 왜 O/X 로 썼는지 보고 판단
                → 걸린 근거마다 「i. 근거」 · 그 밑 걸린 댓글 하나하나 = 「단 문항 지문」 O/X 줄 + 「↳ 댓글」 줄(옛 = 첫 근거 하나 + 첫 댓글 하나 · 지문 · O/X 없음) · 아무 데도 안 걸리면 옛 그대로 */
@@ -5189,7 +5250,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 return `<span id="${sc}gg-refchip-${uid}-${u}" data-gbref="${escAttr(u)}" onclick="${sc === 'jn-' ? 'event.stopPropagation();' : ''}ggRefToggle('${escAttr(uid)}','${escAttr(u)}'${ggScA(sc)})"`
                     + ` title="연결한 근거 · ${escHtml(u)}"`
                     + ` class="cursor-pointer select-none text-[11px] font-extrabold rounded-full px-2 py-0 leading-4`
-                    + ` border border-dashed text-blue-800 bg-blue-50 border-blue-400 ${gone ? 'opacity-40' : ''}${ggBangAny(u) ? ' ggchip-on' : ''}">🔗${ggOf(u).some(g => ggMeCm(uid, g)) ? '<span class="ggrefcm">댓</span>' : ''}`
+                    + ` border border-dashed text-blue-800 bg-blue-50 border-blue-400 ${gone ? 'opacity-40' : ''}${ggBangAny(u) ? ' ggchip-on' : ''}">🔗${ggOfL(uid, u).some(g => ggMeCm(uid, g)) ? '<span class="ggrefcm">댓</span>' : ''}`
                     + useNumHTML('geunge', u, uid) + `</span>`;
             }).join('');
         }
@@ -5202,14 +5263,14 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         function ggRefBoxHTML(uid, sc = '') {
             return refOf(uid, 'geunge').map(u => {
                 const gone = refTextOf(u, 'geunge') === null;
-                const list = gone ? [] : ggOf(u);
+                const list = gone ? [] : ggOfL(uid, u);   /* ★ 11/13 — 이 문항에 건 근거만 */
                 const body = gone ? '<div class="text-slate-500">지금 데이터에 없음</div>'
                            : !list.length ? '<div class="text-slate-500">그 문항에 근거가 없습니다</div>'
-                           : list.map(g => g ? ggRefRowHTML(uid, u, g, sc, list.length === 1) : '').join('');   /* ★ 11/03 — 한 항목이면 solo(손 단추는 머리 줄) */
+                           : list.map(g => g ? ggRefRowHTML(uid, u, g, sc, true) : '').join('');   /* ★ 11/03 — 한 항목이면 solo(손 단추는 머리 줄) */
                 /* ★ 2026-09-16 (§B) — 그 문항 근거 중 켜진 게 하나라도 있으면 상자 테두리도 붉은 점선 */
                 return `<div id="${sc}refgg-box-${uid}-${u}" data-gbrefbox="${escAttr(u)}" class="hide mt-1.5 text-[11.5px] text-blue-900 bg-blue-50`
                     + ` ggrefdash rounded-lg px-2.5 py-2 leading-relaxed${ggBangAny(u) ? ' ggrefbox-on' : ''}">`
-                    + (list.length === 1 && list[0] ? '' : `<div class="flex items-center gap-2 text-[11px] font-extrabold text-blue-800 opacity-80 mb-0.5">`
+                    + (list.some(Boolean) ? '' : `<div class="flex items-center gap-2 text-[11px] font-extrabold text-blue-800 opacity-80 mb-0.5">`   /* ★ 11/13 — 근거 줄마다 ✕(그 근거만 끊기)라 머리 ✕ 줄은 근거가 안 보일 때만 */
                     + `<span class="flex-1"></span>`   /* ★ 11/03 사용자 시안 댓글 「(머리 「연결한 근거」 글자도 지움) 그 문제 보기 아이콘 없애고 uid 나타난 부분을 그 문제 보기 누른 것처럼」 · 「연결 끊기 · 여기서 고치기 글자 없애고 아이콘만」 */
                     + ''   /* ★ 11/03 사용자 「위에 X 랑 한 줄로」 — 한 항목이면 댓 · ✎ 을 ✕ 와 한 줄 */
                     + `<button type="button" onclick="ggRefDelAsk('${escAttr(uid)}','${escAttr(u)}'${ggScA(sc)})"`   /* ★ 10/10 ox_del — 되묻고 끊기(옛: onclick="ggRefDel(…)") */
@@ -5246,7 +5307,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 /* ★ 11/03 사용자 시안 댓글 「동그라미 빼 주고 글자들 그만큼 왼쪽으로」 — 풀이 상태 색 점(ok) 걷음(옛: 7px 점 · title 맞음/틀림/안 품) · 상태는 원래 근거 판 「안 품 · 날짜」 에 그대로 */
                 + ''
                 + `<span id="${sc}refgg-t-${id}" class="flex-1 min-w-0 whitespace-pre-wrap">${escHtml(g.t || '')}</span></span>`
-                + `<span class="ggrowmeta"><span role="button" title="이 근거의 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${a(u)}','${a(uid)}')" class="ggrefuid cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 whitespace-nowrap">${escHtml(u)}</span>${ggRefActBtns(uid, u, g, sc)}${solo ? `<button type="button" onclick="ggRefDelAsk('${a(uid)}','${a(u)}'${ggScA(sc)})" title="연결 끊기" aria-label="연결 끊기" class="inline-flex items-center justify-center rounded-md text-[11px] font-bold leading-none hover:bg-red-50 text-red-700">✕</button>` : ''}</span>`   /* ★ 11/03 시안 댓글 「『댓』 하나 · 연결한 다른 문제에서도 댓」 · 「위 X 랑 한 줄로」 — 원래 근거가 한 항목(solo)이면 댓 · ✎ 은 상자 머리 ✕ 줄로 */
+                + `<span class="ggrowmeta"><span role="button" title="이 근거의 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${a(u)}','${a(uid)}')" class="ggrefuid cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 whitespace-nowrap">${escHtml(u)}</span>${ggRefActBtns(uid, u, g, sc)}${solo ? `<button type="button" data-ggrefx="${a(g.k)}" onclick="ggRefDelAsk('${a(uid)}','${a(u)}','${a(sc)}','${a(g.k)}')" title="이 근거 연결 끊기" aria-label="이 근거 연결 끊기" class="inline-flex items-center justify-center rounded-md text-[11px] font-bold leading-none hover:bg-red-50 text-red-700">✕</button>` : ''}</span>`   /* ★ 11/03 시안 댓글 「『댓』 하나 · 연결한 다른 문제에서도 댓」 · 「위 X 랑 한 줄로」 — 원래 근거가 한 항목(solo)이면 댓 · ✎ 은 상자 머리 ✕ 줄로 */
                 + `</div>`
                 + editor(undefined, g.t)
                 + cs.map((c, n) => {
@@ -5441,11 +5502,19 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             if (box) box.innerHTML = ggRefBoxHTML(uid, sc);
             open.forEach(u => ggRefToggle(uid, u, sc));
         }
-        function ggRefAdd(ownerId, uid, sc = '') {
+        function ggRefAdd(ownerId, uid, sc = '', gk) {   /* ★ 11/13 — gk = 걸 근거 k(여럿이면 쉼표) · 안 주면 옛 그대로 그 문항 근거 전부 */
             if (String(uid).toUpperCase() === String(ownerId).toUpperCase()) return;
             const cur = refOf(ownerId, 'geunge');
-            if (cur.map(x => String(x).toUpperCase()).indexOf(String(uid).toUpperCase()) === -1) cur.push(String(uid));
+            const _had = cur.map(x => String(x).toUpperCase()).indexOf(String(uid).toUpperCase()) !== -1;
+            if (!_had) cur.push(String(uid));
             refPut(ownerId, refOf(ownerId, 'memo'), refOf(ownerId, 'logic'), cur);
+            const _ks = String(gk || '').split(',').map(x => x.trim()).filter(Boolean);
+            if (_ks.length) {
+                const _o = refGk(ownerId, uid);
+                if (!_had) refGkSet(ownerId, uid, _ks);                                   /* 새 연결 = 고른 근거만 */
+                else if (_o) refGkSet(ownerId, uid, _o.concat(_ks));                      /* 이미 낱개로 건 문항 = 근거 더함 · 옛 연결(전부)은 그대로 */
+                useNumRepaint('geunge', uid);
+            }
             ggRefPaint(ownerId, sc);
             const sb = document.getElementById(`${sc}link-search-geunge-${ownerId}`);
             if (sb) sb.value = '';
@@ -5468,12 +5537,16 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         }
         /* ★ 2026-10-10 ox_del(사용자 08:3x 「더하기」) — 「× 연결 끊기」 단추만 되묻는다: iPad 한 줄 꼴에선 본문 ✎ 바로 윗줄이라
            빗누르면 되묻지 않고 바로 끊겼다 · 끊는 몸 = ggRefDel 그대로 · 쓰임 창 켜고 끄기 길(useUnlink)은 되묻지 않음(무변) */
-        function ggRefDelAsk(ownerId, uid, sc = '') {
-            if (!confirm('이 문항에서 「' + uid + '」 근거 연결을 끊습니다.\n' + uid + ' 의 근거 글은 그대로 남습니다. 계속할까요?')) return;
-            ggRefDel(ownerId, uid, sc);
+        function ggRefDelAsk(ownerId, uid, sc = '', gk) {
+            const _one = !!gk && ggOfL(ownerId, uid).filter(Boolean).length > 1;   /* ★ 11/13 — 보이는 근거가 둘 이상이면 그 근거 하나만 */
+            if (!confirm(_one ? '이 문항에서 「' + uid + '」 의 이 근거 하나만 연결을 끊습니다.\n근거 글은 그대로 남습니다. 계속할까요?'
+                              : '이 문항에서 「' + uid + '」 근거 연결을 끊습니다.\n' + uid + ' 의 근거 글은 그대로 남습니다. 계속할까요?')) return;
+            ggRefDel(ownerId, uid, sc, gk);
         }
-        function ggRefDel(ownerId, uid, sc = '') {
-            refPut(ownerId, refOf(ownerId, 'memo'), refOf(ownerId, 'logic'),
+        function ggRefDel(ownerId, uid, sc = '', gk) {
+            const _rest = gk ? ggOfL(ownerId, uid).filter(g => g && String(g.k) !== String(gk)).map(g => String(g.k)) : [];
+            if (_rest.length) { refGkSet(ownerId, uid, _rest); useNumRepaint('geunge', uid); }   /* ★ 11/13 — 남는 근거가 있으면 그 근거만 뺌(옛 연결 = 전부 → 나머지 낱개) */
+            else refPut(ownerId, refOf(ownerId, 'memo'), refOf(ownerId, 'logic'),
                    refOf(ownerId, 'geunge').filter(x => String(x).toUpperCase() !== String(uid).toUpperCase()));
             ggRefPaint(ownerId, sc);
             ggBoxRefresh(ownerId, sc);          /* ★ 09-15 §B */
@@ -5508,7 +5581,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
             const r = document.getElementById(`${sc}link-results-geunge-${uid}`); if (r) { resPageStop(r); r.innerHTML = ''; r.classList.add('hide'); }
         }
         function ggLiveMove(b, d) {
-            const bs = [...b.querySelectorAll('button')]; if (!bs.length) return;
+            let bs = [...b.querySelectorAll('.ggseg')]; if (!bs.length) bs = [...b.querySelectorAll('button')]; if (!bs.length) return;   /* ★ 11/13 — 근거 칸마다 */
             let i = bs.findIndex(x => x.classList.contains('ggsel'));
             if (i >= 0) bs[i].classList.remove('ggsel');
             i = i < 0 ? (d > 0 ? 0 : bs.length - 1) : (i + d + bs.length) % bs.length;
@@ -5999,26 +6072,29 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         }
         /* 칩 옆 숫자. 칩 본체의 onclick 을 가로채지 않는다(stopPropagation). */
         function useNumHTML(kind, uid, me, pre) {   /* ★ 2026-09-18 (_task_ox_cs_edit_usecount §B) — pre = 숫자 앞 글자(근거 찾기 결과 줄 「↩」) · 안 주면 옛 출력 그대로 */
-            const n = useCount(kind, uid);
+            const _ks = (kind === 'geunge' && me) ? refGk(me, uid) : null, _g1 = (_ks && _ks.length === 1) ? _ks[0] : '';   /* ★ 11/13 — 근거 하나만 건 연결 칩 = 그 근거를 건 문항 수 */
+            const n = _g1 ? useOwnersG(uid, _g1).length : useCount(kind, uid);
             if (n <= 1) return '';
-            return '<i onclick="event.stopPropagation();useWin(\'' + escAttr(kind) + '\',\'' + escAttr(String(uid)) + '\',\'' + escAttr(String(me || '')) + '\')"'
+            return '<i onclick="event.stopPropagation();useWin(\'' + escAttr(kind) + '\',\'' + escAttr(String(uid)) + '\',\'' + escAttr(String(me || '')) + '\'' + (_g1 ? ',\'' + escAttr(_g1) + '\'' : '') + ')"'
                 + ' title="이 ' + (USE_LABEL[kind] || '') + '를 쓰는 문항 ' + n + '" style="' + useNumStyle(n) + '">' + (pre || '') + n + '</i>';
         }
         /* 라벨 옆 수 — `근거 ↩4 :` 꼴. 자기 UID 로 조회한다(§0). */
-        function useLabelHTML(kind, uid) {
-            const n = useCount(kind, uid);
+        function useLabelHTML(kind, uid, gk) {   /* ★ 11/13 — gk = 그 근거 하나(「↩N 각각」) */
+            const n = (kind === 'geunge' && gk) ? useOwnersG(uid, gk).length : useCount(kind, uid);
             if (n <= 1) return '';
-            return '<i onclick="event.stopPropagation();useWin(\'' + escAttr(kind) + '\',\'' + escAttr(String(uid)) + '\',\'' + escAttr(String(uid)) + '\')"'
+            return '<i onclick="event.stopPropagation();useWin(\'' + escAttr(kind) + '\',\'' + escAttr(String(uid)) + '\',\'' + escAttr(String(uid)) + '\'' + ((kind === 'geunge' && gk) ? ',\'' + escAttr(String(gk)) + '\'' : '') + ')"'
                 + ' title="이 문항의 ' + (USE_LABEL[kind] || '') + '가 쓰인 문항 ' + n + '" style="' + useNumStyle(n) + '">↩' + n + '</i>';
         }
 
         /* ★ 쓰임 목록 창 — 새 창틀을 만들지 않고 oxWinOpen 을 그대로 쓴다(§4).
            me = 지금 보는 문항(있으면 그 줄을 노랑 + 연결 끊기로 바꾼다). */
-        function useWin(kind, target, me) {
-            const owners = useOwners(kind, target);
+        function useWin(kind, target, me, gk) {
+            gk = (kind === 'geunge' && gk) ? String(gk) : '';   /* ★ 11/13 — gk = 그 근거 하나 기준(창도 근거마다 따로) */
+            const owners = gk ? useOwnersG(target, gk) : useOwners(kind, target);
             const lab = USE_LABEL[kind] || '';
             const q0 = quizData.find(x => String(x.id) === String(target));
-            const txt = (kind === 'links') ? '' : String((typeof refTextOf === 'function' ? refTextOf(target, kind) : '') || '');
+            const _g1 = gk ? ggOf(target).find(g => g && String(g.k) === gk) : null;
+            const txt = (kind === 'links') ? '' : _g1 ? (((_g1.i) ? _g1.i + '. ' : '') + String(_g1.t || '')) : String((typeof refTextOf === 'function' ? refTextOf(target, kind) : '') || '');
             const where0 = q0 ? (q0.subject ? q0.subject + ' · ' + q0.subChapter : '') : '지금 데이터에 없음';
             const head = '<div style="padding:9px 11px;background:#eff6ff;border-bottom:1px solid #dbeafe">'
                 + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'
@@ -6039,7 +6115,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 const isMe = me && String(rid) === String(me);
                 const where = q.subject ? q.subject + ' · ' + q.subChapter : '';
                 const act = isMe
-                    ? '<button onclick="useUnlink(\'' + escAttr(kind) + '\',\'' + escAttr(String(rid)) + '\',\'' + escAttr(String(target)) + '\')" style="flex:none;font-size:11px;font-weight:700;color:#b91c1c;background:none;border:0;cursor:pointer">× 연결 끊기</button>'
+                    ? '<button onclick="useUnlink(\'' + escAttr(kind) + '\',\'' + escAttr(String(rid)) + '\',\'' + escAttr(String(target)) + '\'' + (gk ? ',\'' + escAttr(gk) + '\'' : '') + ')" style="flex:none;font-size:11px;font-weight:700;color:#b91c1c;background:none;border:0;cursor:pointer">× 연결 끊기</button>'
                     : '';   /* ★ 시안 — 「↪ 그 문제 보기」 글자 걷음 · 줄을 누르면 그 문제(openQPopup) */
                 return '<div' + (isMe ? '' : ' data-usego="1" role="button" title="그 문제 보기" onclick="openQPopup(\'' + escAttr(String(q.id)) + '\')"') + ' style="padding:8px 11px;border-bottom:1px solid #f1f5f9;' + (isMe ? 'background:#fefce8' : 'cursor:pointer') + '">'
                     + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'
@@ -6049,13 +6125,13 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                     + '<span style="flex:1"></span>' + act + '</div>'
                     + '<div style="font-size:12px;color:#374151;line-height:1.5">' + escHtml(String(q.q)).slice(0, 80) + '…</div></div>';
             }).join('') || '<div style="padding:12px;font-size:12px;color:#6b7280;text-align:center">걸어 둔 문항이 없습니다</div>';
-            oxWinOpen('use-' + kind + '-' + target,
+            oxWinOpen('use-' + kind + '-' + target + (gk ? '-' + gk : ''),
                 (USE_ICON[kind] || '🔗') + ' ' + escHtml(String(target)) + ' 의 ' + escHtml(lab) + '를 쓰는 문항 ' + owners.length,
                 '', head + rows, 560);   /* ★ 시안(사용자 11/10 14:16) — 설명 문구 · 「이 근거를 걸어 둔 문항 N」 줄(머리 제목과 겹침) 걷음 */
         }
         /* 창에서 끊기 — 갈래마다 저장 자리가 다르다. 끊은 뒤 색인을 버리고 그 창과 그 카드를 다시 그린다. */
-        function useUnlink(kind, me, target) {
-            if (kind === 'geunge') { ggRefDel(me, target); }
+        function useUnlink(kind, me, target, gk) {
+            if (kind === 'geunge') { ggRefDel(me, target, '', gk); }
             else {   /* ★ 2026-10-06 (_task_ox_home_tidy §B) — memo · logic 가지 걷음(부르는 kind = geunge 뿐 · 그 밖 = 문제 연결) */
                 let links = {};
                 try { links = JSON.parse(localStorage.getItem('ox_q_links') || '{}') || {}; } catch (e) { }
@@ -6064,7 +6140,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
                 localStorage.setItem('ox_q_links', JSON.stringify(links));
             }
             useIdxDrop();
-            useWin(kind, target, me);              /* 그 창의 수를 그 자리에서 다시 그린다 */
+            useWin(kind, target, me, gk);              /* 그 창의 수를 그 자리에서 다시 그린다 */
         }
 
         function showRelated(id, kind) {
@@ -11427,7 +11503,7 @@ function jnGgHTML(id, txt) {
     const line = (c, tail, gu, gk) => `<div class="jncs pl-3 text-[10.5px] leading-snug text-slate-600" style="white-space:pre-wrap${c.bang ? ';box-shadow:inset 2px 0 0 #dc2626' : ''}">${ggFromHead(c, gu, gk)}↳ ${escHtml(String(c.t))}${tail || fromChip(c.from)}</div>`;
     const own = ggOf(id).filter(g => g && String(g.t || '').trim());
     const h = own.map((g, n) => `<div>${escHtml(String(g.t || ''))}</div>` + (Array.isArray(g.cs) ? g.cs.filter(ok).map(c => line(c, '', id, g.k)).join('') : '')).join('');
-    const lk = (refOf(id, 'geunge') || []).map(u => ggOf(u).filter(Boolean).map(g => (Array.isArray(g.cs) ? g.cs : []).filter(c => ok(c) && (String(c.from) === String(id) || (Array.isArray(c.sh) && c.sh.indexOf(String(id)) >= 0)))
+    const lk = (refOf(id, 'geunge') || []).map(u => ggOfL(id, u).filter(Boolean).map(g => (Array.isArray(g.cs) ? g.cs : []).filter(c => ok(c) && (String(c.from) === String(id) || (Array.isArray(c.sh) && c.sh.indexOf(String(id)) >= 0)))
         .map(c => (c.shx && c.shx[String(id)] && c.shx[String(id)].t) ? Object.assign({}, c, { t: String(c.t) + '\n' + String(c.shx[String(id)].t) }) : c).map(c => line(c, ` <span role="button" title="연결한 근거의 문항 · 누르면 그 문제" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(u)}','${escAttr(id)}')" class="cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2">${escHtml(u)}</span>`, u, g.k)).join('')).join('')).join('');
     if (!h && !lk) return '';
     return `<div data-jngg="${escHtml(id)}" class="mt-1 border-l-2 pl-2 py-1 text-[11.5px] leading-relaxed text-blue-900 bg-blue-50 border-blue-400 whitespace-pre-wrap" style="white-space:pre-wrap">${h}${lk}</div>`;

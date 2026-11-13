@@ -3466,6 +3466,7 @@ function recDropCache(){
   if (typeof BKTREC !== 'undefined') BKTREC = null;   /* ★ mbsame_add3 §A-7 — 빈칸 종류 */
   if (typeof QFIXREC !== 'undefined') QFIXREC = null;   /* ★ jo_cardfix §A-7 — 정정 글 칸 */
   if (typeof MKONREC !== 'undefined') MKONREC = null;   /* ★ jo_wonmun §A-3 — 마크업 켠 것 */
+  try { GGREC = null; GRREC = null; } catch (e) { }   /* ★ 11/13 — 근거 · 근거 연결 사본(잼: 이 둘은 안 비워서, 받은 뒤 근거를 하나 고치면 옛 사본 통째가 다시 써져 받은 근거가 덮임) */
 }
 function recDelete(k){
   try{ localStorage.removeItem(k); }catch(e){}
@@ -3604,6 +3605,7 @@ function stampAll(){
      ⑤ 그림자는 병합이 손댄 칸만 갈아 끼운다 — 전 층을 갈면 내려받는 사이 적은 칸이 도장을 영영 못 받는다
      took·del 은 값이 실제로 바뀐 칸만 · ahead = 내가 이겼는데 원격 값이 다른 칸(올릴 것 · §F)
    ⚠ editq 는 배열이라 칸 사상(cellsOf/cellsPut)을 거친다 — 칸 = 항목 k. */
+let REC_GT = {};   /* ★ 11/13 — 이번 받기에서 받거나 지운 근거 칸 · 연결 칸: 받은 뒤 그 자리만 갈음(recGgRepaint) */
 function recMerge(remote){
   const u = sObj(SU_KEY), gone = sObj(SG_KEY), shadow = sObj(SS_KEY);
   const rU = remote.u || {}, rG = remote.gone || {}, rD = remote.data || {};
@@ -3620,7 +3622,7 @@ function recMerge(remote){
     const rd = (k === EQ_KEY && Array.isArray(rD[k])) ? (() => { const o = {}; rD[k].forEach(it => { if (it && it.k) o[it.k] = it; }); return o; })() : (rD[k] || {});
     Object.keys(rd).forEach(c => cells.add(c));
     let changed = false;
-    const mark = c => { changed = true; (touched[k] = touched[k] || []).push(c); };
+    const mark = c => { changed = true; (touched[k] = touched[k] || []).push(c); if (k === REC_PRE + 'gg' || k === REC_PRE + 'ggref') (REC_GT[k] = REC_GT[k] || {})[c] = 1; };
     for (const c of cells){
       const ck = ckey(k, c);
       if (J(cur[c]) !== J(old[c])){ kept++; continue; }                 /* ① */
@@ -3799,6 +3801,19 @@ async function syncRecords(force){
     sPut(SM_KEY, meta);
   }catch(e){ recLastErr = e.message || String(e); console.warn('기록 동기화 건너뜀:', recLastErr); }   /* ⚠ 오류창 금지 */
   recBusy = false; recPaint();
+  try { recGgRepaint(); } catch (e) { console.warn('[recGgRepaint]', e); }
+}
+/* ★ 11/13 사용자 20:14(민법) 「다른 데서 고친 근거가 문제 창의 연결 근거에 바로 안 바뀌더라」 — 조판기도 받은 뒤 다시 그리는 줄이 없어 떠 있는 근거 줄 · 연결 상자가 옛 글
+   → 받은 근거 칸 · 연결 칸의 지문만 그 자리 갈음(ggRepaint = 그 지문 카드 · 그 근거를 건 카드 · 정리 창 · 펼친 판 지킴) · 카드 · 고른 답 무변 · 적거나 고치는 중(커서 · 치다 만 글)인 칸은 건너뜀(다음 받기 때) */
+function ggHostBusy(h){ const ae = document.activeElement;
+  return !!h && ((!!ae && h.contains(ae) && (/^(TEXTAREA|INPUT)$/.test(ae.tagName || '') || ae.isContentEditable)) || [...h.querySelectorAll('textarea')].some(t => t.offsetParent && String(t.value || '').trim())); }
+function recGgRepaint(){
+  const gt = REC_GT; REC_GT = {};
+  const G = Object.keys(gt[REC_PRE + 'gg'] || {}), R = Object.keys(gt[REC_PRE + 'ggref'] || {}).map(c => c.indexOf('~gk|') === 0 ? c.slice(4) : c);
+  if (!G.length && !R.length) return;
+  GGREC = null; GRREC = null;
+  ggRepaint._soft = 1;
+  try { Array.from(new Set(G.concat(R))).forEach(u => ggRepaint(u)); } finally { ggRepaint._soft = 0; }
 }
 let recTouchT = null;
 function recTouch(){ clearTimeout(recTouchT); recTouchT = setTimeout(() => { stampAll(); recPaint(); syncRecords(); }, 4000); }
@@ -11559,9 +11574,24 @@ function ggRefPut(uid, list){
   GRREC = A; lsWrite(GR_KEY, A, '근거 연결');
 }
 function ggOwners(t){ const A = grAll(), out = []; for (const k in A){ if ((A[k] || []).indexOf(t) >= 0) out.push(k); } return out; }
-function ggRefAdd(me, t){ if (me === t) return; const a = ggRefOf(me).slice();
-  if (a.indexOf(t) < 0) a.push(t); ggRefPut(me, a); }
-function ggRefDel(me, t){ ggRefPut(me, ggRefOf(me).filter(x => x !== t)); }
+/* ★ 11/13 사용자 19:45(민법) 「이 근거만 연결하고 싶은데 왜 위 근거도 같이 붙어 · 각각 되라고」 · 20:28 「민법앱이랑 조판기앱 지시서」 — 근거 낱개 연결(민법 gk 꼴)
+   같은 통(jopangi.ggref)의 칸 `~gk|<건 지문>` = ['<대상 지문>|<근거 k>', …] = 그 대상의 근거 가운데 건 것만 · 그 대상 줄이 없으면 옛 연결 = 그 지문 근거 전부
+   값이 배열이라 옛 판 기기의 ggOwners(…indexOf) 도 그대로 돈다 · 새 저장 키 0 · SYNC_KEYS 무변 */
+const ggGkCell = me => '~gk|' + me;
+const ggGkT = x => { const s = String(x), i = s.lastIndexOf('|'); return [s.slice(0, i), s.slice(i + 1)]; };
+function ggRefGk(me, t){ const ks = ggRefOf(ggGkCell(me)).map(ggGkT).filter(p => p[0] === String(t)).map(p => p[1]); return ks.length ? ks : null; }
+function ggRefGkSet(me, t, ks){ const rest = ggRefOf(ggGkCell(me)).filter(x => ggGkT(x)[0] !== String(t));
+  ggRefPut(ggGkCell(me), rest.concat(Array.from(new Set((ks || []).map(String).filter(Boolean))).map(k => t + '|' + k))); }
+function ggOfL(me, t){ const all = ggOf(t), ks = ggRefGk(me, t); return ks ? all.filter(g => g && ks.indexOf(String(g.k)) >= 0) : all; }
+function ggOwnersG(t, k){ return ggOwners(t).filter(o => { const ks = ggRefGk(o, t); return !ks || ks.indexOf(String(k)) >= 0; }); }
+function ggRefAdd(me, t, gk){ if (me === t) return; const a = ggRefOf(me).slice(), had = a.indexOf(t) >= 0;
+  if (!had){ a.push(t); ggRefPut(me, a); }
+  if (gk){ const o = ggRefGk(me, t); if (!had) ggRefGkSet(me, t, [gk]); else if (o) ggRefGkSet(me, t, o.concat([String(gk)])); } }   /* 새 연결 = 고른 근거만 · 낱개로 건 지문이면 더함 · 옛 연결(전부)은 그대로 */
+function ggRefDel(me, t, gk){
+  const rest = gk ? ggOfL(me, t).filter(g => g && String(g.k) !== String(gk)).map(g => String(g.k)) : [];
+  if (rest.length){ ggRefGkSet(me, t, rest); return; }                    /* 남는 근거가 있으면 그 근거만 뺌(옛 연결 = 전부 → 나머지 낱개) */
+  if (ggRefGk(me, t)) ggRefGkSet(me, t, []);
+  ggRefPut(me, ggRefOf(me).filter(x => x !== t)); }
 
 const ggNewKey = p => p + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
 const ggItem = (uid, k) => ggOf(uid).find(g => g && g.k === k) || null;
@@ -11609,26 +11639,26 @@ function ggParse(t){
 
 /* ── 쓰임 수 — 1 이하 안 그림 · 2〜4 회색 · 5 이상 빨강(민법 9/14 확정 · 문턱 고정) ── */
 function ggUseN(uid){ return ggOwners(uid).length; }
-function ggUseEl(uid, me){
-  const n = ggUseN(uid); if (n <= 1) return null;
+function ggUseEl(uid, me, gk){   /* ★ 11/13 — gk = 그 근거 하나(근거마다 따로 셈) */
+  const n = gk ? ggOwnersG(uid, gk).length : ggUseN(uid); if (n <= 1) return null;
   const i = el('i', 'gguse' + (n >= 5 ? ' hot' : ''), String(n));
   i.title = '이 지문의 근거를 쓰는 지문 ' + n;
-  i.onclick = ev => { ev.stopPropagation(); ggUseWin(uid, me || ''); };
+  i.onclick = ev => { ev.stopPropagation(); ggUseWin(uid, me || '', gk); };
   return i;
 }
 function ggWho(uid){ const c = (OXPOOL || {})[uid]; return (c && c.name) ? c.name : oxKeyDisp(uid); }
 function ggText(uid){ const c = (OXPOOL || {})[uid]; return String((c && c.t) || ''); }
 /* 쓰임 목록 창 — 새 창틀을 안 만든다. 조판기 popShell 을 그대로 쓴다(§24 손잡이가 따라온다) */
-function ggUseWin(target, me){
-  const _pk = 'cell|🔗 근거를 쓰는 지문 — ' + ggWho(target);
+function ggUseWin(target, me, gk){
+  const _pk = 'cell|🔗 근거를 쓰는 지문 — ' + ggWho(target) + (gk ? '|' + gk : '');
   if (popToggle(_pk)) return;
   const body = popShell('cell', '🔗 ' + ggWho(target) + ' 의 근거를 쓰는 지문', _pk);
   showPop(null);
-  const owners = ggOwners(target);
+  const owners = gk ? ggOwnersG(target, gk) : ggOwners(target);
   const hd = el('div', 'ggrefbox');
   hd.appendChild(el('div', 'rh', ggWho(target)));
   hd.appendChild(el('div', 'gt', ggText(target).slice(0, 120)));
-  const gt = ggOf(target).map(g => g.i + '. ' + ggFlat(g)
+  const gt = ggOf(target).filter(g => g && (!gk || String(g.k) === String(gk))).map(g => g.i + '. ' + ggFlat(g)
     + ((g.cs || []).length ? '\n' + g.cs.map(c => '  ↳ ' + String((c && c.t) || '')).join('\n') : '')).join('\n');
   if (gt) hd.appendChild(el('div', 'gt', gt));
   body.appendChild(hd);
@@ -11642,7 +11672,7 @@ function ggUseWin(target, me){
     const sp = el('span'); sp.style.flex = '1'; l1.appendChild(sp);
     if (String(u) === String(me)){
       const x = el('button', 'lk red', '× 연결 끊기');
-      x.onclick = () => { ggRefDel(u, target); closeAllPops(); render(); };
+      x.onclick = () => { ggRefDel(u, target, gk); closeAllPops(); render(); };
       l1.appendChild(x);
     } else {
       const g = el('button', 'lk', '↪ 그 지문 보기');
@@ -11662,6 +11692,7 @@ function ggRepaint(uid){
   if (!ggRepaint._in){ ggRepaint._in = 1; try { ggOwners(uid).forEach(o => { if (o !== uid) ggRepaint(o); }); } finally { ggRepaint._in = 0; } }   /* ★ 11/12 — 이 근거를 연결해 둔 카드의 연결 상자도 새 글로(민법 refrepaint) */
   const hosts = document.querySelectorAll('[data-ggu="' + CSS.escape(String(uid)) + '"]'); if (!hosts.length) return;   /* ★ 11/10 — 같은 문항 카드가 한 화면에 둘이면(상표 OX · S 줄 등) 둘 다 새로 · 옛 = 첫 칸만 */
   hosts.forEach(host => {
+  if (ggRepaint._soft && ggHostBusy(host)) return;   /* ★ 11/13 — 받은 뒤 갈음은 적는 중인 칸을 건너뜀 */
   const autos = host._autos || [];
   const op = new Set([...host.querySelectorAll('.ggpan')].filter(p => p.style.display === 'block').map(p => p.dataset.gbbox));   /* ★ 11/10 — 고치거나 더해도 펼친 근거 판 그대로(통째 다시 지은 뒤 다시 펼침) */
   const rb0 = host.querySelector('.ggrefbox'), rbHid = !!(rb0 && rb0.style.display === 'none' && rb0.childNodes.length);
@@ -11723,13 +11754,13 @@ function ggFill(box, uid, autos){
   /* 연결해 온 근거 칩 */
   const rc = el('span', 'refchips');
   ggRefOf(uid).forEach(t => {
-    const c = el('span', 'ggrefchip' + (ggOf(t).some(g => g && g.bang) ? ' bang' : ''), '🔗' + (ggOf(t).length || '')); c.dataset.gbref = t;   /* ★ jo_cardfix §A-6 */
-    c.title = ggWho(t) + ' 의 근거 ' + ggOf(t).length + '개 — 누르면 아래 상자에서 펴고 접는다';
+    const c = el('span', 'ggrefchip' + (ggOfL(uid, t).some(g => g && g.bang) ? ' bang' : ''), '🔗' + (ggOfL(uid, t).length || '')); c.dataset.gbref = t;   /* ★ jo_cardfix §A-6 */
+    c.title = ggWho(t) + ' 의 근거 ' + ggOfL(uid, t).length + '개 — 누르면 아래 상자에서 펴고 접는다';
     c.onclick = ev => { ev.stopPropagation();
       const rb = box.querySelector('.ggrefbox');
       if (rb) rb.style.display = rb.style.display === 'none' ? '' : 'none'; };
     rc.appendChild(c);
-    const u2 = ggUseEl(t, uid); if (u2) rc.appendChild(u2);
+    const _k1 = ggRefGk(uid, t), u2 = ggUseEl(t, uid, (_k1 && _k1.length === 1) ? _k1[0] : ''); if (u2) rc.appendChild(u2);
   });
   line.appendChild(rc);
   const ta = el('textarea', 'in'); ta.rows = 1; ta.setAttribute('autocomplete', 'off');
@@ -11912,7 +11943,7 @@ function ggJmBox(box, line, uid){
   const old = box.querySelector('.ggjmbox'); if (old){ old.remove(); return; }
   const me = String(uid), L = [];
   ggOf(uid).forEach(g => { if (g) L.push({ u: me, g: g }); });
-  ggRefOf(uid).forEach(t => ggOf(t).forEach(g => { if (g) L.push({ u: String(t), g: g }); }));
+  ggRefOf(uid).forEach(t => ggOfL(uid, t).forEach(g => { if (g) L.push({ u: String(t), g: g }); }));
   const b = el('div', 'ggjmbox');
   if (!L.length){ b.appendChild(el('div', 'jm0', '이 지문에 적은 근거가 없다 — 근거를 먼저 적는다')); line.after(b); return; }
   let pick = null;
@@ -12019,7 +12050,7 @@ function jnGgBox(k){
     });
     w.appendChild(gb);
   }
-  ggRefOf(k).forEach(t => { const L = ggOf(t), d = el('div', 'jngg ref', '🔗 ' + ggWho(t) + ' — ' + L.map(g => g.i + '. ' + ggFlat(g)).join(' / '));
+  ggRefOf(k).forEach(t => { const L = ggOfL(k, t), d = el('div', 'jngg ref', '🔗 ' + ggWho(t) + ' — ' + L.map(g => g.i + '. ' + ggFlat(g)).join(' / '));
     L.forEach(g => (Array.isArray(g.cs) ? g.cs : []).filter(c => vis(c, t)).forEach(c => d.appendChild(jnGcLine(t, (c.shx && c.shx[me] && c.shx[me].t) ? Object.assign({}, c, { t: String(c.t || '') + '\n' + String(c.shx[me].t) }) : c, L.length > 1 ? g.i + '. ' : ''))));
     w.appendChild(d); });
   return w;
@@ -12165,10 +12196,10 @@ function ggRefBox(uid){
   const box = el('div', 'ggrefbox ggrefbox2');
   if (!refs.length){ box.style.display = 'none'; return box; }
   refs.forEach(t => {
-    const L = ggOf(t).filter(Boolean), solo = L.length === 1;
+    const L = ggOfL(uid, t).filter(Boolean), solo = L.length >= 1;   /* ★ 11/13 — 건 근거만 · 근거 줄마다 ✕(그 근거만 끊기) · 따로 선 ✕ 줄은 근거가 안 보일 때만 */
     const r = el('div', 'ggrefrow' + (L.some(g => g.bang) ? ' bang' : '')); r.dataset.gbrefbox = t;   /* ★ jo_cardfix §A-6 */
-    const xBtn = () => { const x = el('button', 'ggrefx', '✕'); x.type = 'button'; x.title = '연결 끊기';
-      x.onclick = ev => { ev.stopPropagation(); if (!confirm('연결을 끊는다 — ' + ggWho(t) + '\n(그 지문의 근거 글은 그대로 남는다)')) return; ggRefDel(uid, t); ggRepaint(uid); ggRepaint(t); }; return x; };
+    const xBtn = g0 => { const one = !!g0 && L.length > 1; const x = el('button', 'ggrefx', '✕'); x.type = 'button'; x.title = g0 ? '이 근거 연결 끊기' : '연결 끊기'; if (g0) x.dataset.ggrefx = g0.k;
+      x.onclick = ev => { ev.stopPropagation(); if (!confirm((one ? '이 근거 하나만 연결을 끊는다 — ' : '연결을 끊는다 — ') + ggWho(t) + '\n(그 지문의 근거 글은 그대로 남는다)')) return; ggRefDel(uid, t, g0 ? g0.k : ''); ggRepaint(uid); ggRepaint(t); }; return x; };
     const idBtn = () => { const b = el('button', 'ggrefuid', oxKeyDisp(t)); b.type = 'button'; b.title = ggWho(t) + ' — 누르면 그 지문'; b.onclick = ev => { ev.stopPropagation(); linkGo(t); }; return b; };
     if (!solo){ const hd = el('div', 'ggrefhd'); if (!L.length) hd.appendChild(idBtn()); hd.appendChild(xBtn()); r.appendChild(hd); }
     if (!L.length) r.appendChild(el('div', 'gt0', '그 지문에 근거가 없다'));
@@ -12185,9 +12216,9 @@ function ggRefBox(uid){
         ggRepaint(t); ggRepaint(uid); toast('원본을 고쳤다 — 사본은 안 만든다'); });
       const cs = Array.isArray(g.cs) ? g.cs : [];
       const meta = el('span', 'ggrowmeta'); meta.appendChild(idBtn());
-      const u2 = ggUseEl(t, uid); if (u2) meta.appendChild(u2);
+      const u2 = ggUseEl(t, uid, g.k); if (u2) meta.appendChild(u2);
       const cb = el('button', 'ggrefcb' + (cs.length ? ' on' : ''), '댓'); cb.type = 'button'; cb.title = '댓글' + (cs.length ? ' ' + cs.length : '') + ' · 이 지문에서 달기';
-      meta.appendChild(cb); if (solo) meta.appendChild(xBtn());
+      meta.appendChild(cb); if (solo) meta.appendChild(xBtn(g));
       gr.appendChild(meta); r.appendChild(gr);
       cs.forEach(c => { if (c) r.appendChild(ggCsRow(t, g, c, uid)); });   /* 그 근거 댓글 다 · 이 지문에서 단 것 · 같이 쓰는 것 = 파란 테두리(민법 ggme) */
       const ci = el('div', 'ggcsin ggrefcin'); const cta = el('textarea'); cta.rows = 1; cta.placeholder = oxKeyDisp(uid) + ' 에서 댓글 — 원래 근거(' + oxKeyDisp(t) + ')에 달림';
@@ -12223,11 +12254,12 @@ function ggFindRun(me, q, host){
   if (!hits.length){ host.appendChild(el('div', 'ggres', '찾은 것이 없다')); return; }
   host.appendChild(el('div', 'rpcnt', hits.length + '건'));   /* ★ _task_search_all(10/10) — 셈은 늘 · 처음 100 줄(옛 60) → 굴리면 100 씩(resPage) · 「… 60개까지만」 걷음 */
   resPage(host, hits, h => {
-    const r = el('div', 'ggres');
+    const r = el('div', 'ggres'); r.dataset.ggseg = h.uid + '|' + h.g.k;
     const l1 = el('div', 'l1');
     l1.appendChild(el('span', '', ggWho(h.uid)));
-    const u2 = ggUseEl(h.uid, me); if (u2) l1.appendChild(u2);
-    if (mine.indexOf(h.uid) >= 0) l1.appendChild(el('span', 'got', '이미 넣음'));
+    const u2 = ggUseEl(h.uid, me, h.g.k); if (u2) l1.appendChild(u2);
+    const _ks = mine.indexOf(h.uid) >= 0 ? ggRefGk(me, h.uid) : null, _in = mine.indexOf(h.uid) >= 0 && (!_ks || _ks.indexOf(String(h.g.k)) >= 0);   /* ★ 11/13 — 근거 낱개: 이 근거를 이미 걸었나 */
+    if (_in) l1.appendChild(el('span', 'got', '이미 넣음'));
     r.appendChild(l1);
     r.appendChild(el('div', 'qq', ggText(h.uid).slice(0, 70)));
     r.appendChild(ggMarkInto(el('div', 'gl'), h.g.i + '. ' + ggFlat(h.g), s));
@@ -12237,8 +12269,8 @@ function ggFindRun(me, q, host){
       r.appendChild(ggMarkInto(el('div', 'gc'), '↳ ' + String(c.t || ''), s)); });
     r.addEventListener('mousedown', ev => { if (host.parentNode && host.parentNode.classList.contains('live')) ev.preventDefault(); });   /* 치는 대로 찾기 — 줄을 눌러도 근거 칸 초점 그대로(blur 저장이 먼저 돌아 줄이 사라지지 않게) */
     r.onclick = () => {
-      if (mine.indexOf(h.uid) >= 0){ toast('이미 넣은 지문이다'); return; }
-      ggRefAdd(me, h.uid); { const bx = ggHost(me), ti = bx && bx.querySelector('.ggline textarea.in'); if (ti && host.parentNode && host.parentNode.classList.contains('live')) ti.value = ''; }   /* 치는 대로 찾기에서 골랐으면 친 글은 지움(근거로 안 들어가게) */
+      if (_in){ toast('이미 넣은 근거다'); return; }
+      ggRefAdd(me, h.uid, h.g.k); { const bx = ggHost(me), ti = bx && bx.querySelector('.ggline textarea.in'); if (ti && host.parentNode && host.parentNode.classList.contains('live')) ti.value = ''; }   /* 치는 대로 찾기에서 골랐으면 친 글은 지움(근거로 안 들어가게) */
       ggRepaint(me); ggRepaint(h.uid); toast('근거를 끌어왔다 — ' + ggWho(h.uid));
     };
     return r;
