@@ -22492,5 +22492,49 @@ TM.p = tmLoad().then(() => tmRerender()).catch(() => { TM.st = 'none'; });
   'body.c2on .main::-webkit-scrollbar,body.c2on .pop::-webkit-scrollbar,body.c2on .pop .pb::-webkit-scrollbar,body.c2on .c2srp::-webkit-scrollbar,body.c2on .c2srp .srl::-webkit-scrollbar,body.c2on .c2upick::-webkit-scrollbar,body.c2on .c2upick .ul::-webkit-scrollbar,body.c2on .c2lkm::-webkit-scrollbar{display:none;width:0;height:0}'
 ].join('\n'); document.head.appendChild(s); }catch(e){} })();
 </script>
+<script>
+/* ★ 11/14 사용자 03:26 「10 분 캐시 설정? 왜 이렇게」 · 03:28 「넣어」 — 새 판 스스로 받기
+   앱이 열릴 때 · 돌아올 때(보이게 될 때) 서버의 이 파일이 지금 화면의 것과 다르면 새 판으로 다시 연다.
+   까닭 = GitHub Pages 가 모든 파일에 cache-control max-age=600 을 붙여 기기가 받은 때부터 10 분은 옛 판을 들고 있음(머리글은 못 바꿈).
+   견줌 = 파일 글 전체(ETag 는 다른 앱만 올라간 배포에도 바뀜 → ETag 가 달라진 때만 글을 받아 견줌) · 글 칸에 커서가 있거나 손을 대고 있거나 저장 중이면 건너뜀(다음에 돌아올 때 다시 봄)
+   저장 꼴 · 원격 쓰기 0 · 받기만(HEAD 한 번 · 달라졌을 때만 GET 한 번) */
+(function () {
+  try { if (!/^https?:$/.test(location.protocol)) return; } catch (_) { return; }
+  var U = location.pathname, base = null, etag = '', busy = false, last = 0, tDown = 0, again = 0;
+  function sig(t) { var h = 0, i = 0, n = t.length; for (; i < n; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return n + ':' + h; }
+  function typing() { var a = document.activeElement; return !!a && a !== document.body && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || !!a.isContentEditable); }
+  function saving() { try { return (typeof recBusy !== 'undefined' && !!recBusy) || (typeof syncing !== 'undefined' && !!syncing); } catch (_) { return false; } }
+  window.addEventListener('pointerdown', function () { tDown = Date.now(); }, true);
+  ['pointerup', 'pointercancel'].forEach(function (n) { window.addEventListener(n, function () { tDown = 0; }, true); });
+  function go(s) {
+    var K = 'appver_tried', tried = ''; try { tried = sessionStorage.getItem(K) || ''; } catch (_) { }
+    if (tried === s + '|2') return;   /* 두 길 다 해 봄 — 더 돌지 않음 */
+    if (tried === s + '|1') { try { sessionStorage.setItem(K, s + '|2'); } catch (_) { } location.replace(U + '?v=' + Date.now() + location.hash); return; }   /* 다시 열었는데도 옛 판 → 주소에 꼬리를 붙여 새로 받음 */
+    try { sessionStorage.setItem(K, s + '|1'); } catch (_) { }
+    fetch(U, { cache: 'reload' }).catch(function () { }).then(function () { location.reload(); });   /* 이 주소의 캐시를 새 판으로 갈고 다시 엶 */
+  }
+  function check(force) {
+    if (busy || base === null) return;
+    if (document.visibilityState && document.visibilityState !== 'visible') return;
+    var now = Date.now(); if (!force && now - last < 5000) return; last = now; busy = true;
+    fetch(U, { method: 'HEAD', cache: 'no-store' }).then(function (r) {
+      var e = (r && r.ok && r.headers.get('etag')) || '';
+      if (e && etag && e === etag) return null;   /* 배포가 없었음 */
+      return fetch(U, { cache: 'no-store' }).then(function (r2) { if (!r2 || !r2.ok) return null; var e2 = r2.headers.get('etag') || e; return r2.text().then(function (t) { return { s: sig(t), e: e2 }; }); });
+    }).then(function (o) {
+      busy = false; if (!o) return;
+      if (o.s === base) { etag = o.e || etag; return; }   /* 다른 앱만 올라간 배포 = 이 파일은 그대로 */
+      if (typing() || (tDown && Date.now() - tDown < 10000)) return;   /* 적는 중 · 손 대는 중 → 다음에 돌아올 때 */
+      if (saving()) { if (again++ < 5) setTimeout(function () { check(true); }, 3000); return; }
+      go(o.s);
+    }).catch(function () { busy = false; });
+  }
+  fetch(U + location.search, { cache: 'force-cache' }).then(function (r) { if (!r || !r.ok) return null; etag = r.headers.get('etag') || ''; return r.text(); })
+    .then(function (t) { if (t == null) return; base = sig(t); check(true); }).catch(function () { });
+  document.addEventListener('visibilitychange', function () { check(false); });
+  window.addEventListener('pageshow', function () { check(false); });
+  window.addEventListener('focus', function () { check(false); });
+})();
+</script>
 </body>
 </html>
