@@ -1503,7 +1503,7 @@ span.nc.me{text-decoration:underline dotted 1px;text-underline-offset:3px}
 /* ★ 11/12 — 민법 지학식 근거 꼴(댓글 줄 = 위 「단 지문」 + O/X · 밑 ↳ 댓글 · 오른쪽 ID · 날짜 · ! · 고치기 · ✕ / 근거 점 · 점 칸 / 치는 대로 찾기 / 찾은 말 표시) */
 .ggcs.ggcs2{align-items:flex-start;flex-wrap:wrap;row-gap:0}
 .ggcs2 .ggshrow{flex:0 0 100%;display:flex;gap:6px;align-items:flex-start;box-sizing:border-box;padding:2px 0 0 27px}.ggcs2 .ggshl{flex:1 1 0;min-width:0;white-space:pre-wrap;font-size:10.5px;color:#475569}.ggcs2 .ggshrow .ggsht{margin-left:5px;font-size:11.5px;color:#334155}.ggcs2 .ggshrow .ggshid{flex:none}.ggshid{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-.ggshpad{display:inline-flex;flex:none;align-items:center;gap:6px;visibility:hidden;pointer-events:none}@media (max-width:599px){.ggshpad{display:none}}.ggshxbox .ggshxj{font-size:11px;font-weight:700;color:#1e3a8a;white-space:pre-wrap}
+.ggshpad{display:inline-flex;flex:none;align-items:center;gap:6px;visibility:hidden;pointer-events:none}@media (max-width:599px){.ggshpad{display:none}}.ggshn{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;margin:0;padding:0 5px;box-sizing:border-box;border:1px solid #bfdbfe;border-radius:9px;background:#eff6ff;color:#2563eb;font-family:inherit;font-size:10.5px;font-weight:800;line-height:1;cursor:pointer;white-space:nowrap;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}.ggshpop{position:fixed;z-index:2147482000;box-sizing:border-box;max-height:33vh;overflow-y:auto;display:flex;flex-direction:column;align-items:flex-start;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 4px 14px rgba(15,23,42,.18);padding:3px 10px}.ggshpop .ggshid{display:block;margin:0;padding:4px 0;border:0;background:none;font-family:inherit;font-size:10px;font-weight:700;color:var(--exc);text-decoration:underline dotted;cursor:pointer;white-space:nowrap;text-align:left}@media (pointer:coarse){.ggshpop .ggshid{padding:7px 2px}}.ggshxbox .ggshxj{font-size:11px;font-weight:700;color:#1e3a8a;white-space:pre-wrap}
 .ggcs.ggcs2.bang{box-shadow:inset 2px 0 0 var(--rule);padding-left:6px}
 .ggcs2 .ggcsm{flex:1;min-width:0}
 .ggcs2 .ggfrom{display:block;font-size:11px;color:#3d4a5c;font-weight:700;margin-bottom:1px;white-space:pre-wrap}
@@ -11874,15 +11874,23 @@ function ggCsRow(owner, g, c, me){
     const w = el('button', 'lk ggcsw', oxKeyDisp(String(c.from))); w.title = ggWho(String(c.from)) + ' 에서 단 댓글 — 누르면 그 지문';
     w.onclick = ev => { ev.stopPropagation(); linkGo(String(c.from)); }; meta.appendChild(w);
   }
+  else if (String(me) !== String(owner)){   /* ★ 11/14 사용자 02:17 「지문은 뜨는데 uid 가 안 붙어 있다」 — 연결 상자(다른 지문에서 봄)에서는 임자 지문이 스스로 단 댓글에도 임자 지문 ID · 제 근거 판은 그대로 */
+    const w = el('button', 'lk ggcsw', oxKeyDisp(String(owner))); w.title = ggWho(String(owner)) + ' 에서 단 댓글 — 누르면 그 지문';
+    w.onclick = ev => { ev.stopPropagation(); linkGo(String(owner)); }; meta.appendChild(w);
+  }
   meta.appendChild(el('span', 'd', ggMD(c.ts)));
   const bg = el('button', 'ggcbg' + (c.bang ? ' on' : ''), '!'); bg.title = '중요 표시';
   bg.onclick = ev => { ev.stopPropagation(); if (ggCsMut(owner, g.k, c.k, cc => { if (cc.bang) delete cc.bang; else cc.bang = true; })) ggRepaint(owner); };
   r.insertBefore(bg, main);   /* ★ 민법 꼴 — 「!」 = 줄 왼쪽 글자(켜면 빨강) */
   /* ★ 11/13 사용자 15:07 「1차객 특상디에도 민법 앱 댓글 기능 고친 것」 — 같이 쓰는 지문 ID 를 길게 누름 → 그 줄 밑 칸(그 지문 + 적는 칸) · Enter = 그 댓글에 붙음(c.shx[지문] = {t: 같이 쓴 글(없으면 지문만), jo: O/X}) · 붙은 뒤 = 댓글 줄 안 밑 한 줄(「지문」 O/X 글 … ID) · c.sh 꼴 그대로 */
-  const SHX = c.shx || {}, shRows = [];
+  const SHX = c.shx || {}, shRows = [], shU = [];
   (Array.isArray(c.sh) ? c.sh : []).forEach(s0 => { const s = String(s0), w2 = el('button', 'lk ggcsw ggshid', oxKeyDisp(s)); w2.title = ggWho(s) + ' 에서 같이 쓰는 댓글 — 누르면 그 지문 · 길게 누르면 그 지문 · 댓글 붙이기'; w2.onclick = ev => { ev.stopPropagation(); linkGo(s); };
     w2.dataset.gglp = '1'; w2.dataset.shu = s; w2._lp = () => ggShxBox(r, owner, g, c, s);
-    if (SHX[s]) shRows.push([s, w2]); else meta.insertBefore(w2, meta.querySelector('.d')); });
+    if (SHX[s]) shRows.push([s, w2]); else shU.push(w2); });
+  /* ★ 11/14 사용자 01:32 「+ 로 달리는 uid 가 가로로 너무 늘어난다 · 2 개 이상이면 갯수 숫자로 · 숫자 누르면 uid 리스트 팝업 작게 · 심플하게」 · 01:43 「조판기 1차객도」 — 같이 쓰는 지문 ID(지문 · 글을 안 붙인 것)가 2 개 이상이면 숫자 하나 · 누르면 그 밑 작은 목록 창(ID 톡 = 그 지문 · 길게 누름 = 지문 · 글 붙이기 = 그대로) · 1 개면 지금처럼 · 저장 꼴 무변 */
+  if (shU.length < 2) shU.forEach(w2 => meta.insertBefore(w2, meta.querySelector('.d')));
+  else { const nb = el('button', 'ggshn', String(shU.length)); nb.title = '같이 쓰는 지문 ' + shU.length + ' · 누르면 목록';
+    nb.onclick = ev => { ev.stopPropagation(); ggShnTog(nb, shU); }; meta.insertBefore(nb, meta.querySelector('.d')); }
   /* ★ 11/12 둘째 — 「고치기」 단추 걷음 → 댓글 줄을 길게 눌러 그 자리에서(민법 ggcslong) */
   r.dataset.gglp = '1'; tx.title = '길게 눌러 고치기';
   r._lp = () => joIed(tx, String(c.t || ''), s => { if (s.length > GG_CMAX){ toast(GG_CMAX + '자까지 · 지금 ' + s.length + '자', 1); return; }
@@ -11916,12 +11924,27 @@ function ggCsRow(owner, g, c, me){
     if (e.t) l.appendChild(el('span', 'ggsht', String(e.t)));
     sr.appendChild(l); sr.appendChild(w2);
     /* 문항 ID = 원래 댓글 ID 바로 밑: 넓은 화면은 오른쪽 칸이 가로 한 줄이라 그 뒤 것들(안 붙인 ID · 날짜 · 단추) 폭만큼 안 보이는 채움 */
-    const pad = el('span', 'ggshpad'); pad.setAttribute('aria-hidden', 'true'); const hasFrom = c.from && String(c.from) !== String(owner);
+    const pad = el('span', 'ggshpad'); pad.setAttribute('aria-hidden', 'true'); const hasFrom = (c.from && String(c.from) !== String(owner)) || String(me) !== String(owner);
     [...meta.children].forEach((ch, n) => { if (hasFrom && n === 0) return; const k = ch.cloneNode(true); k.removeAttribute('title'); k.tabIndex = -1; pad.appendChild(k); });
     sr.appendChild(pad); r.appendChild(sr); });
   return r;
 }
+function ggShnClose(){ document.querySelectorAll('.ggshpop').forEach(x => x.remove()); }
+function ggShnTog(btn, ids){
+  const o = document.querySelector('.ggshpop'), same = o && o._btn === btn; ggShnClose(); if (same) return;
+  const p = el('div', 'ggshpop'); p._btn = btn; ids.forEach(w => p.appendChild(w));   /* 진짜 ID 단추를 옮겨 담음 — 톡 · 길게 누름이 그대로 */
+  p.addEventListener('click', () => setTimeout(ggShnClose, 0), true);
+  document.body.appendChild(p);
+  const r = btn.getBoundingClientRect(), w = p.offsetWidth, h = p.offsetHeight;
+  let T = r.bottom + 3; if (T + h > innerHeight - 4) T = Math.max(4, r.top - h - 3);
+  p.style.left = Math.max(4, Math.min(r.right - w, innerWidth - w - 4)) + 'px'; p.style.top = T + 'px';
+}
+document.addEventListener('pointerdown', e => { const p = document.querySelector('.ggshpop'); if (!p) return; const t = e.target; if (!(t && t.closest && t.closest('.ggshpop,.ggshn')) || !p._btn.isConnected) ggShnClose(); }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') ggShnClose(); }, true);
+window.addEventListener('scroll', e => { if (!(e.target && e.target.closest && e.target.closest('.ggshpop'))) ggShnClose(); }, true);
+window.addEventListener('resize', ggShnClose);
 function ggShxBox(r, owner, g, c, s){
+  ggShnClose();
   const nx = r.nextElementSibling, same = nx && nx.classList.contains('ggshxbox') && nx.dataset.shbox === s;
   document.querySelectorAll('.ggshxbox').forEach(x => x.remove()); if (same) return;
   const e = (c.shx && c.shx[s]) || null, b = el('div', 'ggjmbox ggshxbox'); b.dataset.shbox = s;
