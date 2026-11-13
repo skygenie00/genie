@@ -1,0 +1,398 @@
+{
+ "app": "jagwa",
+ "base": "133b0bd",
+ "settle_ms": 3000,
+ "screens": {
+  "p1": {
+   "subj": "earth",
+   "dev": "pc",
+   "setup": "(async function(){var wait=function(m){return new Promise(function(z){setTimeout(z,m)})};for(var q_=0;q_<120&&!(typeof DATA!=='undefined'&&DATA.length>0&&typeof GG!=='undefined'&&Object.keys(GG).length>20&&document.querySelectorAll('#ndList .ndrow').length>50);q_++)await wait(500);for(var q1=0;q1<60&&!(window.g3CsMig&&window.g3CsMig.did);q1++)await wait(500);await wait(1500);return await (async function(){var wait=function(m){return new Promise(function(z){setTimeout(z,m)})};try{TOOL.mode='view'}catch(e){};var r=rowByUid('G00-37-06');openView(r[F.NO],navList());for(var q=0;q<30&&!document.querySelector('#card .row .jmdot');q++)await wait(400);await wait(600);var sh=document.getElementById('view');if(sh){sh.style.left='250px';sh.style.top='8px';sh.style.width='840px';sh.style.height='780px';try{window.dispatchEvent(new Event('resize'))}catch(e){}}await wait(700);var cd=document.getElementById('card'),fb=cd&&cd.querySelector('.g3fb');if(cd&&cd.classList.contains('g3fold')&&fb)fb.click();await wait(700);window.__U='G00-37-06';})()})()"
+  },
+  "m1": {
+   "subj": "earth",
+   "dev": "ph",
+   "setup": "(async function(){var wait=function(m){return new Promise(function(z){setTimeout(z,m)})};for(var q_=0;q_<120&&!(typeof DATA!=='undefined'&&DATA.length>0&&typeof GG!=='undefined'&&Object.keys(GG).length>20&&document.querySelectorAll('#ndList .ndrow').length>50);q_++)await wait(500);for(var q1=0;q1<60&&!(window.g3CsMig&&window.g3CsMig.did);q1++)await wait(500);await wait(1500);return await (async function(){var wait=function(m){return new Promise(function(z){setTimeout(z,m)})};try{TOOL.mode='view'}catch(e){};var r=rowByUid('G00-37-06');openView(r[F.NO],navList());for(var q=0;q<30&&!document.querySelector('#card .row .jmdot');q++)await wait(400);await wait(600);var cd=document.getElementById('card'),fb=cd&&cd.querySelector('.g3fb');if(cd&&cd.classList.contains('g3fold')&&fb)fb.click();await wait(700);window.__U='G00-37-06';})()})()"
+  },
+  "b1": {
+   "subj": "bio",
+   "dev": "pc",
+   "setup": "(async function(){var wait=function(m){return new Promise(function(z){setTimeout(z,m)})};for(var q_=0;q_<120&&!(typeof DATA!=='undefined'&&DATA.length>0&&typeof GG!=='undefined'&&true&&document.querySelectorAll('#ndList .ndrow').length>50);q_++)await wait(500);await wait(1500);return await (async function(){var wait=function(m){return new Promise(function(z){setTimeout(z,m)})};try{TOOL.mode='view'}catch(e){};var L=navList(),r=null;for(var i=0;i<Math.min(12,L.length);i++){openView(L[i],L);for(var q=0;q<12&&!(VNO===L[i]&&document.querySelector('#card .row'));q++)await wait(300);await wait(500);if(document.querySelectorAll('#card .row .jmdot').length>=2){r=rec(L[i]);break}}if(!r)return;var u=GGU(r);window.__BU=u;if(!ggOf(u).length){await ggSaveList(u,[{k:'g_sian1',i:1,t:'지어낸 근거(시안)',ts:Date.now(),cs:[{k:'c_sian1',t:'지어낸 댓글(시안)',ts:Date.now()}]}]);try{ggRepaint(u)}catch(e){}}var sh=document.getElementById('view');if(sh){sh.style.left='250px';sh.style.top='8px';sh.style.width='840px';sh.style.height='780px';try{window.dispatchEvent(new Event('resize'))}catch(e){}}await wait(700);var cd=document.getElementById('card'),fb=cd&&cd.querySelector('.g3fb');if(cd&&cd.classList.contains('g3fold')&&fb)fb.click();await wait(700);})()})()"
+  }
+ },
+ "tests": [
+  {
+   "name": "PC 댓글 줄마다 단 문항 ID 밑에 「+」 · 지금 「댓」 = ③ 하나",
+   "screen": "p1",
+   "wait": 10,
+   "expect": "(()=>{const rows=[...document.querySelectorAll('#card .ggcs[data-ck]')];const d=[...document.querySelectorAll('#card .row .jmdot')].map(x=>x.textContent).join('');return rows.length===6&&rows.every(r=>{const w=r.querySelector('.ggfw');return w&&w.querySelector('.ggfrom')&&w.querySelector('.ggjp')&&w.querySelector('.ggjp').getBoundingClientRect().top>=w.querySelector('.ggfrom').getBoundingClientRect().bottom-2})&&d==='••댓••'||(rows.length+' '+d)})()",
+   "act": "none",
+   "yard": true
+  },
+  {
+   "name": "PC 첫 댓글 「+」 톡 → 그 줄 바로 밑에 이 문항 지문 다섯 + 적는 칸",
+   "screen": "p1",
+   "wait": 400,
+   "expect": "(()=>{const r=document.querySelector('#card .ggcs[data-ck]'),b=r.nextElementSibling;return !!b&&b.classList.contains('jpbox')&&b.querySelectorAll('.jmi').length===5&&!!b.querySelector('textarea.jmin')&&/^① /.test(b.querySelector('.jmi').textContent)})()",
+   "act": "click",
+   "sel": "#card .ggcs .ggjp",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "PC 지문 ① 고름 → 그 지문 켜짐 · 적는 칸에 커서",
+   "screen": "p1",
+   "wait": 300,
+   "expect": "(()=>{const b=document.querySelector('#card .jpbox');return b.querySelectorAll('.jmi.on').length===1&&b.querySelector('.jmi.on').getAttribute('data-jpk')==='c1'&&document.activeElement===b.querySelector('.jmin')})()",
+   "act": "click",
+   "sel": "#card .jpbox .jmi",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "PC 아무것도 안 쓰고 Enter → 그 댓글에 지문 ① 만 붙음(지문 · 이 문항 ID · ✕) · 칸 닫힘 · ① 점이 「댓」",
+   "screen": "p1",
+   "wait": 700,
+   "expect": "(()=>{const x=(()=>{const u=window.__U,g0=ggOf(u).find(x=>x&&x.src),a=String(g0.src).split('|');return {su:a[0],sk:a.slice(1).join('|'),g:ggItem(a[0],a.slice(1).join('|'))}})(),c=x.g.cs[0],r=document.querySelector('#card .ggcs[data-ck]'),s=r.querySelector('.ggsh');const d=[...document.querySelectorAll('#card .row .jmdot')].map(q=>q.textContent).join('');return Array.isArray(c.sh)&&c.sh.length===1&&c.sh[0].u===window.__U&&c.sh[0].jm==='c1'&&x.g.cs.length===6&&!!s&&/「① /.test(s.textContent)&&s.querySelector('.ggfrom').textContent===codeShow(rowByUid(window.__U))&&!!s.querySelector('.ggshx')&&!document.querySelector('#card .jpbox')&&d==='댓•댓••'||(JSON.stringify(c.sh)+' '+d)})()",
+   "act": "type",
+   "sel": "#card .jpbox .jmin",
+   "nth": 0,
+   "text": "",
+   "enter": true,
+   "yard": true
+  },
+  {
+   "name": "PC 붙인 지문 톡 → O X 고르개",
+   "screen": "p1",
+   "wait": 300,
+   "expect": "!!document.querySelector('#card .ggsh .ggjox b[data-jo=\"X\"]')",
+   "act": "click",
+   "sel": "#card .ggsh .ggjt",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "PC X 고름 → 붙인 지문 줄에만 X(원래 댓글 지문 O/X 그대로)",
+   "screen": "p1",
+   "wait": 600,
+   "expect": "(()=>{const x=(()=>{const u=window.__U,g0=ggOf(u).find(x=>x&&x.src),a=String(g0.src).split('|');return {su:a[0],sk:a.slice(1).join('|'),g:ggItem(a[0],a.slice(1).join('|'))}})(),c=x.g.cs[0];window.__jo0=window.__jo0;const s=document.querySelector('#card .ggsh');return c.sh[0].jo==='X'&&!!s.querySelector('.ggjo.X')&&String(c.jo||'')===String(window.__c0jo||c.jo||'')})()",
+   "act": "click",
+   "sel": "#card .ggsh .ggjox b[data-jo=\"X\"]",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "PC 둘째 댓글 「+」 → 지문 ② 고름",
+   "screen": "p1",
+   "wait": 300,
+   "expect": "!!document.querySelector('#card .jpbox .jmi[data-jpk=\"c2\"]')",
+   "act": "click",
+   "sel": "#card .ggcs[data-ck] .ggjp",
+   "nth": 1,
+   "yard": true
+  },
+  {
+   "name": "PC (이어서) 지문 ② 톡",
+   "screen": "p1",
+   "wait": 300,
+   "expect": "document.querySelector('#card .jpbox .jmi.on').getAttribute('data-jpk')==='c2'",
+   "act": "click",
+   "sel": "#card .jpbox .jmi",
+   "nth": 1,
+   "yard": true
+  },
+  {
+   "name": "PC 댓글 치고 Enter → 새 댓글 줄이 안 생기고 그 댓글 안에 합쳐짐(지문 ② + 글 + 이 문항 ID + ✕) · 댓글 수 그대로 6 · ② 점이 「댓」",
+   "screen": "p1",
+   "wait": 800,
+   "expect": "(()=>{const x=(()=>{const u=window.__U,g0=ggOf(u).find(x=>x&&x.src),a=String(g0.src).split('|');return {su:a[0],sk:a.slice(1).join('|'),g:ggItem(a[0],a.slice(1).join('|'))}})(),c=x.g.cs[1],e=(c.sh||[])[0]||{};const d=[...document.querySelectorAll('#card .row .jmdot')].map(q=>q.textContent).join('');const rows=[...document.querySelectorAll('#card .ggcs[data-ck]')],s=rows[1].querySelector('.ggsh');return x.g.cs.length===6&&rows.length===6&&(c.sh||[]).length===1&&e.t==='시험 댓글(지어낸 글)'&&e.jm==='c2'&&e.u===window.__U&&/^② /.test(e.jt)&&!!s&&/「② /.test(s.textContent)&&s.querySelector('.ggsht').textContent==='시험 댓글(지어낸 글)'&&s.querySelector('.ggfrom').textContent===codeShow(rowByUid(window.__U))&&!!s.querySelector('.ggshx')&&!document.querySelector('#card .jpbox')&&d==='댓댓댓••'||(x.g.cs.length+' '+rows.length+' '+d+' '+JSON.stringify(c.sh).slice(0,160))})()",
+   "act": "type",
+   "sel": "#card .jpbox .jmin",
+   "nth": 0,
+   "text": "시험 댓글(지어낸 글)",
+   "enter": true,
+   "yard": true
+  },
+  {
+   "name": "PC 합쳐진 줄 = 그 댓글 줄 안 · 글은 댓글 글 바로 밑 · 붙인 문항 ID 는 오른쪽 끝(원래 댓글 ID 바로 밑 · 오른쪽 끝 맞춤) · ✕ 는 댓글 ✕ 밑 · 「+」 는 ID 들 맨 밑",
+   "screen": "p1",
+   "wait": 10,
+   "expect": "(r=>{const q=x=>r.querySelector(x),l=q('.ggsh .ggshl').getBoundingClientRect(),u=q('.ggsh>.ggfrom').getBoundingClientRect(),pu=q('.ggfw .ggfrom').getBoundingClientRect(),px=q('.ggcx').getBoundingClientRect(),sx=q('.ggsh>.ggshx').getBoundingClientRect(),jp=r.querySelector(':scope>.ggjp').getBoundingClientRect(),a=r.getBoundingClientRect(),t=q('.t').getBoundingClientRect();const ok=Math.abs(u.right-pu.right)<=1&&u.top>=pu.bottom-2&&Math.abs(u.top-l.top)<=4&&u.left>=l.right-1&&Math.abs(l.left-t.left)<=1&&l.top>=t.bottom-2&&Math.abs(sx.left-px.left)<=2&&jp.top>=u.bottom-2&&Math.abs(jp.right-u.right)<=1&&l.bottom<=a.bottom+1&&jp.bottom<=a.bottom+1&&!r.querySelector('.ggfw .ggjp');return ok||JSON.stringify({u:[u.left,u.right,u.top],pu:[pu.right,pu.bottom],l:[l.left,l.right,l.top],t:[t.left,t.bottom],sx:sx.left,px:px.left,jp:[jp.right,jp.top],a:a.bottom})})([...document.querySelectorAll('#card .ggcs[data-ck]')][1])",
+   "act": "none",
+   "yard": true
+  },
+  {
+   "name": "PC 첫 댓글(지문만 붙인 줄)도 같은 맞춤",
+   "screen": "p1",
+   "wait": 10,
+   "expect": "(r=>{const q=x=>r.querySelector(x),l=q('.ggsh .ggshl').getBoundingClientRect(),u=q('.ggsh>.ggfrom').getBoundingClientRect(),pu=q('.ggfw .ggfrom').getBoundingClientRect(),px=q('.ggcx').getBoundingClientRect(),sx=q('.ggsh>.ggshx').getBoundingClientRect(),jp=r.querySelector(':scope>.ggjp').getBoundingClientRect(),a=r.getBoundingClientRect(),t=q('.t').getBoundingClientRect();const ok=Math.abs(u.right-pu.right)<=1&&u.top>=pu.bottom-2&&Math.abs(u.top-l.top)<=4&&u.left>=l.right-1&&Math.abs(l.left-t.left)<=1&&l.top>=t.bottom-2&&Math.abs(sx.left-px.left)<=2&&jp.top>=u.bottom-2&&Math.abs(jp.right-u.right)<=1&&l.bottom<=a.bottom+1&&jp.bottom<=a.bottom+1&&!r.querySelector('.ggfw .ggjp');return ok||JSON.stringify({u:[u.left,u.right,u.top],pu:[pu.right,pu.bottom],l:[l.left,l.right,l.top],t:[t.left,t.bottom],sx:sx.left,px:px.left,jp:[jp.right,jp.top],a:a.bottom})})([...document.querySelectorAll('#card .ggcs[data-ck]')][0])",
+   "act": "none",
+   "yard": true
+  },
+  {
+   "name": "PC 같은 댓글 「+」 다시 → 이미 붙인 ② 고름 → 적는 칸에 쓴 글이 들어옴",
+   "screen": "p1",
+   "wait": 300,
+   "expect": "!!document.querySelector('#card .jpbox .jmi.has[data-jpk=\"c2\"]')",
+   "act": "click",
+   "sel": "#card .ggcs[data-ck] .ggjp",
+   "nth": 1,
+   "yard": true
+  },
+  {
+   "name": "PC (이어서) ② 톡 → 적는 칸 = 쓴 글",
+   "screen": "p1",
+   "wait": 300,
+   "expect": "document.querySelector('#card .jpbox .jmin').value==='시험 댓글(지어낸 글)'",
+   "act": "click",
+   "sel": "#card .jpbox .jmi",
+   "nth": 1,
+   "yard": true
+  },
+  {
+   "name": "PC (이어서) 글 더 치고 Enter → 그 줄 글만 바뀜(줄 하나 그대로)",
+   "screen": "p1",
+   "wait": 800,
+   "expect": "(()=>{const x=(()=>{const u=window.__U,g0=ggOf(u).find(x=>x&&x.src),a=String(g0.src).split('|');return {su:a[0],sk:a.slice(1).join('|'),g:ggItem(a[0],a.slice(1).join('|'))}})(),c=x.g.cs[1];return x.g.cs.length===6&&c.sh.length===1&&c.sh[0].t.includes('시험 댓글(지어낸 글)')&&c.sh[0].t.includes('고침')&&document.querySelectorAll('#card .ggsh').length===2||JSON.stringify(c.sh)})()",
+   "act": "type",
+   "sel": "#card .jpbox .jmin",
+   "nth": 0,
+   "text": " 고침",
+   "enter": true,
+   "yard": true
+  },
+  {
+   "name": "PC 「+」 는 글자보다 넓게 눌림(왼쪽 6px 밖도 「+」 · 위쪽 ID 는 안 덮음)",
+   "screen": "p1",
+   "wait": 1200,
+   "expect": "(()=>{const r=[...document.querySelectorAll('#card .ggcs[data-ck]')][2],b=r.querySelector('.ggjp'),q=b.getBoundingClientRect(),u=r.querySelector('.ggfw .ggfrom').getBoundingClientRect();const at=(x,y)=>{const e=document.elementFromPoint(x,y);return e&&e.closest('.ggjp')===b};const up=document.elementFromPoint(u.left+u.width/2,u.bottom-3);return at(q.left-6,q.top+q.height/2)&&at(q.right+6,q.top+q.height/2)&&!!up&&!!up.closest('.ggfrom')||JSON.stringify([q.left,q.top,q.width,q.height])})()",
+   "act": "none",
+   "yard": true
+  },
+  {
+   "name": "PC 붙인 줄 글 길게 누름 → 그 줄 밑 칸 · 그 지문 고른 채 · 쓴 글 들어옴(댓글 글 고치기 칸은 안 열림)",
+   "screen": "p1",
+   "wait": 1800,
+   "expect": "(()=>{const r=[...document.querySelectorAll('#card .ggcs[data-ck]')][1],b=r.nextElementSibling;return !!b&&b.classList.contains('jpbox')&&b.querySelector('.jmi.on').getAttribute('data-jpk')==='c2'&&b.querySelector('.jmin').value.includes('시험 댓글(지어낸 글)')&&!document.querySelector('#card textarea.ggedin')&&!document.querySelector('#card .ggjox')||(b?b.className:'no box')+' '+!!document.querySelector('#card textarea.ggedin')})()",
+   "act": "long",
+   "sel": "#card .ggcs[data-ck] .ggsht",
+   "nth": 0,
+   "hold": 800,
+   "yard": true
+  },
+  {
+   "name": "PC (이어서) Esc → 칸 닫힘 · 글 그대로",
+   "screen": "p1",
+   "wait": 400,
+   "expect": "(()=>{const ta=document.querySelector('#card .jpbox .jmin');if(ta)ta.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));return (()=>{const x=(()=>{const u=window.__U,g0=ggOf(u).find(x=>x&&x.src),a=String(g0.src).split('|');return ggItem(a[0],a.slice(1).join('|'))})();return !document.querySelector('#card .jpbox')&&x.cs[1].sh[0].t.includes('고침')&&x.cs[1].sh.length===1})()})()",
+   "act": "none",
+   "yard": true
+  },
+  {
+   "name": "PC 붙인 줄 있는 댓글 글 길게 누름 → 그 자리 고치기 칸(넓게) · 있던 그대로",
+   "screen": "p1",
+   "wait": 1800,
+   "expect": "(()=>{const r=[...document.querySelectorAll('#card .ggcs[data-ck]')][1],ta=r.querySelector('textarea.ggedin');return !!ta&&ta.getBoundingClientRect().width>250||(ta?ta.getBoundingClientRect().width:'no ta')})()",
+   "act": "long",
+   "sel": "#card .ggcs[data-ck] .t",
+   "nth": 1,
+   "hold": 800,
+   "yard": false
+  },
+  {
+   "name": "PC (이어서) 취소 → 댓글 줄 · 붙인 줄 그대로",
+   "screen": "p1",
+   "wait": 500,
+   "expect": "(()=>{const r=[...document.querySelectorAll('#card .ggcs[data-ck]')][1];return !r.querySelector('textarea')&&r.querySelectorAll('.ggsh').length===1&&document.querySelectorAll('#card .ggsh').length===2||JSON.stringify({ta:!!r.querySelector('textarea'),n:r.querySelectorAll('.ggsh').length,all:document.querySelectorAll('#card .ggsh').length,h:r.outerHTML.slice(0,300)})})()",
+   "act": "click",
+   "sel": "#card .ggcs .cedit button",
+   "nth": 1,
+   "yard": true
+  },
+  {
+   "name": "PC 셋째(새) 댓글 말고 넷째 댓글 「+」 → ④ 붙이기(준비)",
+   "screen": "p1",
+   "wait": 300,
+   "expect": "!!document.querySelector('#card .jpbox')",
+   "act": "click",
+   "sel": "#card .ggcs[data-ck] .ggjp",
+   "nth": 3,
+   "yard": true
+  },
+  {
+   "name": "PC (이어서) 지문 ④ 톡",
+   "screen": "p1",
+   "wait": 300,
+   "expect": "document.querySelector('#card .jpbox .jmi.on').getAttribute('data-jpk')==='c4'",
+   "act": "click",
+   "sel": "#card .jpbox .jmi",
+   "nth": 3,
+   "yard": true
+  },
+  {
+   "name": "PC (이어서) 빈 Enter → ④ 붙음 · ④ 점 「댓」",
+   "screen": "p1",
+   "wait": 700,
+   "expect": "(()=>{const d=[...document.querySelectorAll('#card .row .jmdot')].map(q=>q.textContent).join('');return document.querySelectorAll('#card .ggsh').length===3&&d==='댓댓댓댓•'||d})()",
+   "act": "type",
+   "sel": "#card .jpbox .jmin",
+   "nth": 0,
+   "text": "",
+   "enter": true,
+   "yard": true
+  },
+  {
+   "name": "PC 붙인 ④ 의 ✕ → 그 지문만 빠짐 · ④ 점 도로 「•」 · 댓글은 그대로",
+   "screen": "p1",
+   "wait": 700,
+   "expect": "(()=>{const x=(()=>{const u=window.__U,g0=ggOf(u).find(x=>x&&x.src),a=String(g0.src).split('|');return {su:a[0],sk:a.slice(1).join('|'),g:ggItem(a[0],a.slice(1).join('|'))}})();const d=[...document.querySelectorAll('#card .row .jmdot')].map(q=>q.textContent).join('');return document.querySelectorAll('#card .ggsh').length===2&&x.g.cs.length===6&&!x.g.cs[3].sh&&d==='댓댓댓••'||d})()",
+   "act": "click",
+   "sel": "#card .ggsh .ggshx",
+   "nth": 2,
+   "yard": true
+  },
+  {
+   "name": "PC ① 「댓」 톡 → 점 칸에 붙인 댓글(↳ 글 · X)도 보임",
+   "screen": "p1",
+   "wait": 400,
+   "expect": "(()=>{const x=(()=>{const u=window.__U,g0=ggOf(u).find(x=>x&&x.src),a=String(g0.src).split('|');return {su:a[0],sk:a.slice(1).join('|'),g:ggItem(a[0],a.slice(1).join('|'))}})(),b=document.querySelector('#card .jmbox:not(.jpbox)');const m=b&&[...b.querySelectorAll('.jmc')];return !!b&&m.length===1&&m[0].textContent.includes(x.g.cs[0].t)&&!!m[0].querySelector('.ggjo.X')||(m?m.length:'no box')})()",
+   "act": "click",
+   "sel": "#card .row.chr[data-k=\"c1\"] .jmdot",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "PC (정리) 점 칸 닫기 · 서랍 작은 창 · 정리 창 글(이 문항 댓글)에 붙인 지문 ① 댓글도 · 검색 줄에도 지문 줄",
+   "screen": "p1",
+   "wait": 400,
+   "expect": "(()=>{const x=(()=>{const u=window.__U,g0=ggOf(u).find(x=>x&&x.src),a=String(g0.src).split('|');return {su:a[0],sk:a.slice(1).join('|'),g:ggItem(a[0],a.slice(1).join('|'))}})(),u=window.__U,g0=ggOf(u).find(q=>q&&q.src);const h=g3PopCsHTML(u,g0);const d=document.createElement('div');d.innerHTML=h;const L=[...d.querySelectorAll('.g3prc')].map(q=>q.textContent);const pk=ggPickLine(x.su,x.g.cs[0].t.slice(0,6).toLowerCase());return !document.querySelector('#card .jmbox')&&L.some(q=>/「① /.test(q)&&q.includes(x.g.cs[0].t))&&L.some(q=>/「② /.test(q)&&q.includes('시험 댓글'))&&/「① [^」]*」 X/.test(pk)&&/「② [^」]*」\\n↳ 시험 댓글/.test(String(ggPickLine(x.su,'시험 댓글')))||JSON.stringify({L:L.map(q=>q.slice(0,30)),pk:String(pk).slice(0,200),p2:String(ggPickLine(x.su,'시험 댓글')).slice(0,200)})})()",
+   "act": "click",
+   "sel": "#card .row.chr[data-k=\"c1\"] .jmdot",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "PC 정리 창(이 문항 절) 줄 머리 = 목차 서랍 앞 번호 + 문항 ID · 「📖 p쪽」 단추 없음 · 줄마다 서랍 번호와 같은 수",
+   "screen": "p1",
+   "wait": 600,
+   "expect": "(()=>{const u=window.__U,r=rowByUid(u),no=r[F.NO],un=unitOf(no),sec=Object.keys(TOC.sec).find(k=>((TOC.sec[k]||{}).units||[]).includes(un));if(!document.getElementById('jnw'))jnOpen(sec);const row=document.querySelector('#jnw .jnrow[data-no=\"'+no+'\"]'),h=row&&row.querySelector('.h'),n=h&&h.querySelector('.jnno'),nd=document.querySelector('#ndList .ndrow[data-no=\"'+no+'\"] .ndno');const all=[...document.querySelectorAll('#jnw .jnrow')];const ok=!!n&&n.textContent===String(dispNo(no))&&(!nd||nd.textContent.trim()===n.textContent)&&/^\\d+$/.test(n.textContent)&&h.firstElementChild===n&&n.nextElementSibling.classList.contains('jgo')&&!document.querySelector('#jnw .jnrow .h .tag.page')&&all.length>0&&all.every(x=>x.querySelector('.h>.jnno')&&x.querySelector('.h>.jnno').textContent===String(dispNo(+x.getAttribute('data-no'))))&&h.scrollWidth<=h.clientWidth+1;return ok||JSON.stringify({n:n&&n.textContent,d:dispNo(no),nd:nd&&nd.textContent,pg:!!document.querySelector('#jnw .jnrow .h .tag.page'),rows:all.length})})()",
+   "act": "none",
+   "yard": true
+  },
+  {
+   "name": "PC 정리 창 줄의 문항 ID 톡 → 그 문항 열림(있던 그대로)",
+   "screen": "p1",
+   "wait": 900,
+   "expect": "(()=>{const f=document.querySelector('#jnw .jnrow');return !!f&&VNO===+f.getAttribute('data-no')||VNO})()",
+   "act": "click",
+   "sel": "#jnw .jnrow .jgo",
+   "nth": 0,
+   "yard": false
+  },
+  {
+   "name": "PC (정리) 정리 창 닫고 249 다시 엶",
+   "screen": "p1",
+   "wait": 400,
+   "expect": "(()=>{openView(rowByUid(window.__U)[F.NO],navList());return !document.getElementById('jnw')})()",
+   "act": "click",
+   "sel": "#jnwX",
+   "nth": 0,
+   "yard": false
+  },
+  {
+   "name": "폰 댓글 줄마다 「+」 · 가로 안 넘침",
+   "screen": "m1",
+   "wait": 10,
+   "expect": "(()=>{const c=document.getElementById('card'),r=[...document.querySelectorAll('#card .ggcs[data-ck]')];window.__n0=document.querySelectorAll('#card .ggsh').length;return r.length>=6&&r.every(x=>x.querySelectorAll('.ggjp').length===1)&&c.scrollWidth<=c.clientWidth+2||(r.length+' '+c.scrollWidth+'/'+c.clientWidth)})()",
+   "act": "none",
+   "yard": true
+  },
+  {
+   "name": "폰 마지막 댓글 「+」 톡 → 지문 칸",
+   "screen": "m1",
+   "wait": 400,
+   "expect": "document.querySelectorAll('#card .jpbox .jmi').length===5",
+   "act": "click",
+   "sel": "#card .ggcs[data-ck]:last-of-type .ggjp",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "폰 지문 ⑤ 톡 → 켜짐",
+   "screen": "m1",
+   "wait": 300,
+   "expect": "document.querySelector('#card .jpbox .jmi.on').getAttribute('data-jpk')==='c5'",
+   "act": "click",
+   "sel": "#card .jpbox .jmi",
+   "nth": 4,
+   "yard": true
+  },
+  {
+   "name": "폰 정리 창 줄 머리 = 서랍 앞 번호 + 문항 ID · 「📖」 단추 없음 · 줄 머리 가로 안 넘침(재고 닫음)",
+   "screen": "m1",
+   "wait": 400,
+   "expect": "(()=>{const u=window.__U,r=rowByUid(u),no=r[F.NO],un=unitOf(no),sec=Object.keys(TOC.sec).find(k=>((TOC.sec[k]||{}).units||[]).includes(un));if(!document.getElementById('jnw'))jnOpen(sec);const row=document.querySelector('#jnw .jnrow[data-no=\"'+no+'\"]'),h=row&&row.querySelector('.h'),n=h&&h.querySelector('.jnno'),nd=document.querySelector('#ndList .ndrow[data-no=\"'+no+'\"] .ndno');const all=[...document.querySelectorAll('#jnw .jnrow')];const ok=!!n&&n.textContent===String(dispNo(no))&&(!nd||nd.textContent.trim()===n.textContent)&&/^\\d+$/.test(n.textContent)&&h.firstElementChild===n&&n.nextElementSibling.classList.contains('jgo')&&!document.querySelector('#jnw .jnrow .h .tag.page')&&all.length>0&&all.every(x=>x.querySelector('.h>.jnno')&&x.querySelector('.h>.jnno').textContent===String(dispNo(+x.getAttribute('data-no'))))&&h.scrollWidth<=h.clientWidth+1;const w=document.getElementById('jnw');if(w)w.remove();return ok||JSON.stringify({n:n&&n.textContent,d:dispNo(no),nd:nd&&nd.textContent,pg:!!document.querySelector('#jnw .jnrow .h .tag.page'),rows:all.length})})()",
+   "act": "none",
+   "yard": true
+  },
+  {
+   "name": "폰 글 치고 Enter → 마지막 댓글 안에 합쳐짐(⑤ + 글) · ⑤ 점 「댓」 · 가로 안 넘침",
+   "screen": "m1",
+   "wait": 800,
+   "expect": "(()=>{const c=document.getElementById('card');const d=[...document.querySelectorAll('#card .row.chr .jmdot')][4].textContent;const rs=[...document.querySelectorAll('#card .ggcs[data-ck]')],lr=rs[rs.length-1],ls=[...lr.querySelectorAll('.ggsh')].pop();const a=lr.getBoundingClientRect(),b=ls&&ls.querySelector('.ggshl').getBoundingClientRect(),u=ls&&ls.querySelector(':scope>.ggfrom').getBoundingClientRect(),pu=lr.querySelector('.ggfw .ggfrom').getBoundingClientRect();return !!ls&&/「⑤ /.test(ls.textContent)&&ls.textContent.includes('폰 시험 글')&&b.right<=u.left+1&&b.bottom<=a.bottom+1&&Math.abs(u.right-pu.right)<=1&&u.top>=pu.bottom-2&&u.right<=a.right+1&&!document.querySelector('#card .jpbox')&&d==='댓'&&c.scrollWidth<=c.clientWidth+2||(d+' '+c.scrollWidth+'/'+c.clientWidth)})()",
+   "act": "type",
+   "sel": "#card .jpbox .jmin",
+   "nth": 0,
+   "text": "폰 시험 글(지어낸 글) 조금 길게 써서 줄이 넘어가도 그 댓글 안에서 꺾이는지 본다",
+   "enter": true,
+   "yard": true
+  },
+  {
+   "name": "생물 PC 댓글 줄에 「+」 · 지문 점 있음(카드 층 같은 코드)",
+   "screen": "b1",
+   "wait": 10,
+   "expect": "(()=>{const r=[...document.querySelectorAll('#card .ggcs[data-ck]')],d=[...document.querySelectorAll('#card .row .jmdot')];window.__d0=d.map(x=>x.textContent).join('');return SUBJ_ID==='bio'&&r.length>=1&&r.every(x=>x.querySelectorAll('.ggjp').length===1)&&d.length>=2||(SUBJ_ID+' '+r.length+' '+d.length)})()",
+   "act": "none",
+   "yard": true
+  },
+  {
+   "name": "생물 PC 첫 댓글 「+」 톡 → 이 문항 지문 목록 + 적는 칸",
+   "screen": "b1",
+   "wait": 400,
+   "expect": "(()=>{const b=document.querySelector('#card .jpbox');return !!b&&b.querySelectorAll('.jmi').length===document.querySelectorAll('#card .row .jmdot').length&&!!b.querySelector('.jmin')})()",
+   "act": "click",
+   "sel": "#card .ggcs[data-ck] .ggjp",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "생물 PC 첫 지문 톡 → 켜짐",
+   "screen": "b1",
+   "wait": 300,
+   "expect": "document.querySelectorAll('#card .jpbox .jmi.on').length===1",
+   "act": "click",
+   "sel": "#card .jpbox .jmi",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "생물 PC 글 치고 Enter → 그 댓글 안에 합쳐짐(지문 + 글 + 이 문항 ID · ID 는 오른쪽 끝) · 그 지문 점 「댓」",
+   "screen": "b1",
+   "wait": 900,
+   "expect": "(()=>{const u=window.__BU,g=ggOf(u)[0],c=(ggSrcOf(g)||g).cs[0],r=document.querySelector('#card .ggcs[data-ck]'),s=r.querySelector('.ggsh');const d=[...document.querySelectorAll('#card .row .jmdot')].map(x=>x.textContent);const a=r.getBoundingClientRect(),uu=s&&s.querySelector(':scope>.ggfrom').getBoundingClientRect();return !!s&&Array.isArray(c.sh)&&c.sh.length===1&&c.sh[0].u===u&&c.sh[0].t==='시험 댓글(지어낸 글)'&&s.querySelector('.ggsht').textContent==='시험 댓글(지어낸 글)'&&d[0]==='댓'&&d.filter(x=>x==='댓').length===window.__d0.split('댓').length&&!document.querySelector('#card .jpbox')&&uu.right<=a.right+1&&document.querySelectorAll('#card .ggcs[data-ck]').length>=1||JSON.stringify([c.sh||null,d])})()",
+   "act": "type",
+   "sel": "#card .jpbox .jmin",
+   "nth": 0,
+   "text": "시험 댓글(지어낸 글)",
+   "enter": true,
+   "yard": true
+  },
+  {
+   "name": "생물 PC 정리 창 줄 머리 = 목차 서랍 앞 번호 + 문항 ID · 「📖 p쪽」 단추 없음",
+   "screen": "b1",
+   "wait": 600,
+   "expect": "(()=>{const r=rec(VNO),no=r[F.NO],un=unitOf(no),sec=Object.keys(TOC.sec).find(k=>((TOC.sec[k]||{}).units||[]).includes(un));jnOpen(sec);const all=[...document.querySelectorAll('#jnw .jnrow')];const ok=all.length>0&&all.every(x=>{const n=x.querySelector('.h>.jnno');return n&&x.querySelector('.h').firstElementChild===n&&n.textContent===String(dispNo(+x.getAttribute('data-no')))})&&!document.querySelector('#jnw .jnrow .h .tag.page')&&!!document.querySelector('#jnw .jnrow[data-no=\\\"'+no+'\\\"]');const w=document.getElementById('jnw');if(w)w.remove();return ok||all.length})()",
+   "act": "none",
+   "yard": true
+  }
+ ]
+}

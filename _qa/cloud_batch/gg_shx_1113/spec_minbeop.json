@@ -1,0 +1,256 @@
+{
+ "app": "minbeop",
+ "base": "133b0bd",
+ "settle_ms": 3000,
+ "ready": "typeof quizData!=='undefined'&&quizData.length>0&&document.querySelectorAll('#hm-subjects button').length>1&&document.getElementById('trlist').children.length>0",
+ "screens": {
+  "p1": {
+   "dev": "pc",
+   "setup": "new Promise(r=>setTimeout(r,3000)).then(()=>{(function(){try{localStorage.setItem('ox_q_omr',JSON.stringify({Q1064:'t',Q0786:'t'}))}catch(e){};try{trFold(true)}catch(e){};var q=quizData.find(function(x){return x.id==='Q1064'});startQuiz(q.subject,q.subChapter?(q.chapter+' > '+q.subChapter):q.chapter);var i=currentFilteredData.findIndex(function(x){return x.id==='Q1064'});if(i>=0&&typeof PAGE_SIZE!=='undefined'){currentPageIndex=Math.floor(i/PAGE_SIZE);renderQuizPage()}setTimeout(function(){var c=document.querySelector('[id=\"gg-refchip-Q1064-Q0598\"]');if(c)c.click();setTimeout(function(){var b=document.getElementById('q-box-Q1064');if(b){b.scrollIntoView({block:'start'});window.scrollBy(0,-110)}},300)},800)})();}).then(()=>new Promise(r=>setTimeout(r,1500)))"
+  },
+  "m1": {
+   "dev": "ph",
+   "setup": "new Promise(r=>setTimeout(r,3000)).then(()=>{(function(){try{localStorage.setItem('ox_q_omr',JSON.stringify({Q1064:'t',Q0786:'t'}))}catch(e){};try{trFold(true)}catch(e){};var q=quizData.find(function(x){return x.id==='Q1064'});startQuiz(q.subject,q.subChapter?(q.chapter+' > '+q.subChapter):q.chapter);var i=currentFilteredData.findIndex(function(x){return x.id==='Q1064'});if(i>=0&&typeof PAGE_SIZE!=='undefined'){currentPageIndex=Math.floor(i/PAGE_SIZE);renderQuizPage()}setTimeout(function(){var c=document.querySelector('[id=\"gg-refchip-Q1064-Q0598\"]');if(c)c.click();setTimeout(function(){var b=document.getElementById('q-box-Q1064');if(b){b.scrollIntoView({block:'start'});window.scrollBy(0,-110)}},300)},800)})();}).then(()=>new Promise(r=>setTimeout(r,1500)))"
+  }
+ },
+ "tests": [
+  {
+   "name": "PC 문제 풀이 창 — 헷갈림 태그 바로 왼쪽에 △: Q1064 · Q0786 · 표시 없는 문항(Q0596 · Q0595)은 없음",
+   "screen": "p1",
+   "wait": 10,
+   "expect": "(()=>{const M=id=>{const b=document.getElementById('tag-confuse-'+id);if(!b)return null;const m=[];let p=b.previousElementSibling;while(p&&p.classList.contains('omrmk')){m.unshift(p);p=p.previousElementSibling}const pin=document.getElementById('tag-coord-'+id);return {t:m.map(x=>x.textContent).join(''),ok:b.parentNode.querySelectorAll('.omrmk').length===m.length&&(!pin||!m.length||pin.getBoundingClientRect().right<=m[0].getBoundingClientRect().left+1)&&m.every(x=>x.getBoundingClientRect().right<=b.getBoundingClientRect().left+1&&Math.abs((x.getBoundingClientRect().top+x.getBoundingClientRect().bottom)/2-(b.getBoundingClientRect().top+b.getBoundingClientRect().bottom)/2)<=4)}};const a=M('Q1064'),b=M('Q0786'),d=M('Q0596'),e=M('Q0595');window.__cf=JSON.parse(localStorage.getItem('ox_q_tags')||'{}');return a.t==='△'&&a.ok&&b.t==='△'&&b.ok&&d.t===''&&e.t===''&&document.querySelectorAll('.omrmk').length===2||JSON.stringify([a,b,d,e])})()",
+   "act": "none",
+   "yard": true
+  },
+  {
+   "name": "PC 표시(△)를 눌러도 아무 일 없음(태그 그대로)",
+   "screen": "p1",
+   "wait": 300,
+   "expect": "JSON.stringify(JSON.parse(localStorage.getItem('ox_q_tags')||'{}'))===JSON.stringify(window.__cf)&&document.querySelectorAll('.omrmk').length===2",
+   "act": "click",
+   "sel": "#q-box-Q1064 .omrmk",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "PC 연결 상자 — 다른 문항이 단 댓글 줄 「+」 톡 → 오른쪽 칸에 이 문항 ID 만(지금과 같음)",
+   "screen": "p1",
+   "wait": 500,
+   "expect": "(()=>{const r=document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0bcmht_65h1\\\"]'),c=(()=>{const g=ggOf('Q0598').find(x=>x&&Array.isArray(x.cs)&&x.cs.some(c=>c&&c.k==='c_Q0598_mw0bcmht_65h1'));return g.cs.find(c=>c.k==='c_Q0598_mw0bcmht_65h1')})();window.__ow=document.querySelectorAll('.oxwin').length;window.__jo1=String(c.jo||'');return c.sh.indexOf('Q1064')>=0&&!c.shx&&!!r.querySelector('.ggcsmeta .ggshid[data-shu=\\\"Q1064\\\"]')&&!r.querySelector('.ggshrow')&&r.querySelector('.ggcsh').textContent.trim()==='−'})()",
+   "act": "click",
+   "sel": "#q-box-Q1064 .ggrefrow[data-ck=\"c_Q0598_mw0bcmht_65h1\"] .ggcsh",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "PC 그 ID 길게 누름 → 그 줄 밑에 칸: 이 문항 지문 + 적는 칸(커서) · 그 문제로 안 넘어감",
+   "screen": "p1",
+   "wait": 500,
+   "expect": "(()=>{const r=document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0bcmht_65h1\\\"]'),b=r.nextElementSibling;return !!b&&b.classList.contains('ggshxbox')&&b.querySelector('.ggshxj').textContent.includes(String(quizData.find(x=>x.id==='Q1064').q||'').slice(0,12))&&document.activeElement===b.querySelector('.jmin')&&document.querySelectorAll('.oxwin').length===window.__ow||(b?b.className+' '+document.querySelectorAll('.oxwin').length:'no box')})()",
+   "act": "click",
+   "sel": "#q-box-Q1064 .ggrefrow[data-ck=\"c_Q0598_mw0bcmht_65h1\"] .ggshid",
+   "nth": 0,
+   "hold": 800,
+   "yard": true
+  },
+  {
+   "name": "PC 댓글 치고 Enter → 그 댓글 줄 안 밑 한 줄(이 문항 지문 + 글 + ID) · 오른쪽 칸 ID 는 그 줄로 옮김 · 칸 닫힘",
+   "screen": "p1",
+   "wait": 800,
+   "expect": "(()=>{const r=document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0bcmht_65h1\\\"]'),c=(()=>{const g=ggOf('Q0598').find(x=>x&&Array.isArray(x.cs)&&x.cs.some(c=>c&&c.k==='c_Q0598_mw0bcmht_65h1'));return g.cs.find(c=>c.k==='c_Q0598_mw0bcmht_65h1')})(),s=r.querySelector('.ggshrow[data-shrow=\\\"Q1064\\\"]');return !!s&&c.shx&&c.shx.Q1064&&c.shx.Q1064.t==='시험 댓글(지어낸 글)'&&c.sh.indexOf('Q1064')>=0&&s.querySelector('.ggjt').textContent.includes(String(quizData.find(x=>x.id==='Q1064').q||'').slice(0,12))&&s.querySelector('.ggsht').textContent==='시험 댓글(지어낸 글)'&&s.querySelector('.ggshid').textContent==='Q1064'&&!r.querySelector('.ggcsmeta .ggshid')&&!document.querySelector('.ggshxbox')&&r.querySelectorAll('.ggshrow').length===1||JSON.stringify(c.shx||null)})()",
+   "act": "type",
+   "sel": "#q-box-Q1064 .ggshxbox .jmin",
+   "nth": 0,
+   "text": "시험 댓글(지어낸 글)",
+   "enter": true,
+   "yard": true
+  },
+  {
+   "name": "PC 붙은 줄 자리 — 글은 댓글 글 바로 밑(왼쪽 맞춤) · 문항 ID 는 오른쪽 끝(원래 댓글 ID 와 오른쪽 끝 같음 · 그 밑)",
+   "screen": "p1",
+   "wait": 10,
+   "expect": "(()=>{const r=document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0bcmht_65h1\\\"]'),s=r.querySelector('.ggshrow'),l=s.querySelector('.ggshl').getBoundingClientRect(),u=s.querySelector('.ggshid').getBoundingClientRect(),m=r.querySelector('.ggcsmeta'),mr=m.getBoundingClientRect(),f=m.querySelector('span[role=button]').getBoundingClientRect(),ct=r.querySelector('.ggct').parentNode.getBoundingClientRect(),a=r.getBoundingClientRect();const ok=Math.abs(u.right-f.right)<=2&&u.top>=f.bottom-1&&Math.abs(l.left-ct.left)<=2&&l.top>=ct.bottom-2&&Math.abs(u.top-l.top)<=4&&l.right<=u.left+1&&l.bottom<=a.bottom+1&&u.bottom<=a.bottom+1&&!m.querySelector('.ggshid');return ok||JSON.stringify({u:[u.left,u.right,u.top],f:[f.right,f.bottom],l:[l.left,l.right,l.top],ct:[ct.left,ct.bottom],a:[a.left,a.right,a.bottom]})})()",
+   "act": "none",
+   "yard": true
+  },
+  {
+   "name": "PC 붙은 지문 톡 → O X 고르개",
+   "screen": "p1",
+   "wait": 300,
+   "expect": "!!document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0bcmht_65h1\\\"]').querySelector('.ggshrow .ggjox b[data-jo=\\\"X\\\"]')",
+   "act": "click",
+   "sel": "#q-box-Q1064 .ggrefrow[data-ck=\"c_Q0598_mw0bcmht_65h1\"] .ggshrow .ggjt",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "PC X 고름 → 붙은 줄에만 X(원래 댓글 지문 O/X 그대로)",
+   "screen": "p1",
+   "wait": 600,
+   "expect": "(()=>{const r=document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0bcmht_65h1\\\"]'),c=(()=>{const g=ggOf('Q0598').find(x=>x&&Array.isArray(x.cs)&&x.cs.some(c=>c&&c.k==='c_Q0598_mw0bcmht_65h1'));return g.cs.find(c=>c.k==='c_Q0598_mw0bcmht_65h1')})();return c.shx.Q1064.jo==='X'&&String(c.jo||'')===window.__jo1&&!!r.querySelector('.ggshrow .ggjo-x')&&c.shx.Q1064.t==='시험 댓글(지어낸 글)'||JSON.stringify(c.shx)})()",
+   "act": "click",
+   "sel": "#q-box-Q1064 .ggrefrow[data-ck=\"c_Q0598_mw0bcmht_65h1\"] .ggshrow .ggjox b[data-jo=\"X\"]",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "PC 붙은 줄의 글을 길게 누름 → 그 줄 고치기 칸(쓴 글 들어옴 · 커서) · 댓글 글 고치기 칸은 안 열림 · O X 고르개 안 뜸",
+   "screen": "p1",
+   "wait": 700,
+   "expect": "(()=>{const r=document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0bcmht_65h1\\\"]'),b=r.nextElementSibling;return !!b&&b.classList.contains('ggshxbox')&&b.querySelector('.jmin').value==='시험 댓글(지어낸 글)'&&document.activeElement===b.querySelector('.jmin')&&!document.querySelector('.ggiedin')&&!r.querySelector('.ggjox')||(b?b.className:'no box')+' '+!!document.querySelector('.ggiedin')})()",
+   "act": "click",
+   "sel": "#q-box-Q1064 .ggrefrow[data-ck=\"c_Q0598_mw0bcmht_65h1\"] .ggshrow .ggsht",
+   "nth": 0,
+   "hold": 800,
+   "yard": true
+  },
+  {
+   "name": "PC (이어서) 글 더 치고 Enter → 그 줄 글만 바뀜(O/X 그대로 · 줄 하나)",
+   "screen": "p1",
+   "wait": 800,
+   "expect": "(()=>{const r=document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0bcmht_65h1\\\"]'),c=(()=>{const g=ggOf('Q0598').find(x=>x&&Array.isArray(x.cs)&&x.cs.some(c=>c&&c.k==='c_Q0598_mw0bcmht_65h1'));return g.cs.find(c=>c.k==='c_Q0598_mw0bcmht_65h1')})();return c.shx.Q1064.t.includes('시험 댓글(지어낸 글)')&&c.shx.Q1064.t.includes('고침')&&c.shx.Q1064.jo==='X'&&r.querySelectorAll('.ggshrow').length===1||JSON.stringify(c.shx)})()",
+   "act": "type",
+   "sel": "#q-box-Q1064 .ggshxbox .jmin",
+   "nth": 0,
+   "text": " 고침",
+   "enter": true,
+   "yard": true
+  },
+  {
+   "name": "PC 둘째 댓글 「+」 → ID",
+   "screen": "p1",
+   "wait": 500,
+   "expect": "!!document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0cilyx_h34k\\\"]').querySelector('.ggcsmeta .ggshid[data-shu=\\\"Q1064\\\"]')",
+   "act": "click",
+   "sel": "#q-box-Q1064 .ggrefrow[data-ck=\"c_Q0598_mw0cilyx_h34k\"] .ggcsh",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "PC (이어서) 그 ID 길게 누름 → 칸",
+   "screen": "p1",
+   "wait": 500,
+   "expect": "(()=>{const b=document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0cilyx_h34k\\\"]').nextElementSibling;return !!b&&b.classList.contains('ggshxbox')})()",
+   "act": "click",
+   "sel": "#q-box-Q1064 .ggrefrow[data-ck=\"c_Q0598_mw0cilyx_h34k\"] .ggcsmeta .ggshid",
+   "nth": 0,
+   "hold": 800,
+   "yard": true
+  },
+  {
+   "name": "PC (이어서) 아무것도 안 쓰고 Enter → 지문만 붙음(글 없음)",
+   "screen": "p1",
+   "wait": 800,
+   "expect": "(()=>{const r=document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0cilyx_h34k\\\"]'),c=(()=>{const g=ggOf('Q0598').find(x=>x&&Array.isArray(x.cs)&&x.cs.some(c=>c&&c.k==='c_Q0598_mw0cilyx_h34k'));return g.cs.find(c=>c.k==='c_Q0598_mw0cilyx_h34k')})(),s=r.querySelector('.ggshrow');return !!s&&!!c.shx&&!!c.shx.Q1064&&!c.shx.Q1064.t&&s.querySelector('.ggjt').textContent.includes(String(quizData.find(x=>x.id==='Q1064').q||'').slice(0,12))&&!s.querySelector('.ggsht')&&!document.querySelector('.ggshxbox')||JSON.stringify(c.shx||null)})()",
+   "act": "type",
+   "sel": "#q-box-Q1064 .ggshxbox .jmin",
+   "nth": 0,
+   "text": "",
+   "enter": true,
+   "yard": true
+  },
+  {
+   "name": "PC 둘째 줄(지문만)도 같은 자리 맞춤",
+   "screen": "p1",
+   "wait": 10,
+   "expect": "(()=>{const r=document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0cilyx_h34k\\\"]'),s=r.querySelector('.ggshrow'),l=s.querySelector('.ggshl').getBoundingClientRect(),u=s.querySelector('.ggshid').getBoundingClientRect(),m=r.querySelector('.ggcsmeta'),mr=m.getBoundingClientRect(),f=m.querySelector('span[role=button]').getBoundingClientRect(),ct=r.querySelector('.ggct').parentNode.getBoundingClientRect(),a=r.getBoundingClientRect();const ok=Math.abs(u.right-f.right)<=2&&u.top>=f.bottom-1&&Math.abs(l.left-ct.left)<=2&&l.top>=ct.bottom-2&&Math.abs(u.top-l.top)<=4&&l.right<=u.left+1&&l.bottom<=a.bottom+1&&u.bottom<=a.bottom+1&&!m.querySelector('.ggshid');return ok||JSON.stringify({u:[u.left,u.right,u.top],f:[f.right,f.bottom],l:[l.left,l.right,l.top],ct:[ct.left,ct.bottom],a:[a.left,a.right,a.bottom]})})()",
+   "act": "none",
+   "yard": true
+  },
+  {
+   "name": "PC 정리 창 글(이 문항 줄) — 같이 쓰는 댓글에 붙여 쓴 글도 같이",
+   "screen": "p1",
+   "wait": 10,
+   "expect": "(()=>{const h=jnGgHTML('Q1064')||'';const d=document.createElement('div');d.innerHTML=h;const c=(()=>{const g=ggOf('Q0598').find(x=>x&&Array.isArray(x.cs)&&x.cs.some(c=>c&&c.k==='c_Q0598_mw0bcmht_65h1'));return g.cs.find(c=>c.k==='c_Q0598_mw0bcmht_65h1')})();return [...d.querySelectorAll('.jncs')].some(x=>x.textContent.includes(String(c.t).slice(0,10))&&x.textContent.includes('시험 댓글(지어낸 글)'))||d.textContent.slice(0,200)})()",
+   "act": "none",
+   "yard": true
+  },
+  {
+   "name": "PC 근거 칩 「댓」 = 같이 쓰는 댓글이 있어 켜짐(그대로)",
+   "screen": "p1",
+   "wait": 10,
+   "expect": "ggMeCm('Q1064',ggOf('Q0598').find(g=>g&&Array.isArray(g.cs)&&g.cs.some(c=>c&&c.k==='c_Q0598_mw0bcmht_65h1')),false)===true",
+   "act": "none",
+   "yard": false
+  },
+  {
+   "name": "PC 붙여 쓴 글이 있는 첫 댓글 「−」 → 되묻는 창(붙여 쓴 글도 지워진다) · 아직 그대로",
+   "screen": "p1",
+   "wait": 600,
+   "expect": "(()=>{const c=(()=>{const g=ggOf('Q0598').find(x=>x&&Array.isArray(x.cs)&&x.cs.some(c=>c&&c.k==='c_Q0598_mw0bcmht_65h1'));return g.cs.find(c=>c.k==='c_Q0598_mw0bcmht_65h1')})(),w=[...document.querySelectorAll('.oxwin')].find(x=>x.textContent.includes('같이 쓰기 그만'));return !!w&&w.textContent.includes('시험 댓글(지어낸 글)')&&c.sh.indexOf('Q1064')>=0&&!!c.shx&&!!document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0bcmht_65h1\\\"]').querySelector('.ggshrow')||!!w})()",
+   "act": "click",
+   "sel": "#q-box-Q1064 .ggrefrow[data-ck=\"c_Q0598_mw0bcmht_65h1\"] .ggcsh",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "PC (이어서) 「그만」 → ID · 붙인 줄 다 빠짐 · 창 닫힘",
+   "screen": "p1",
+   "wait": 700,
+   "expect": "(()=>{const r=document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0bcmht_65h1\\\"]'),c=(()=>{const g=ggOf('Q0598').find(x=>x&&Array.isArray(x.cs)&&x.cs.some(c=>c&&c.k==='c_Q0598_mw0bcmht_65h1'));return g.cs.find(c=>c.k==='c_Q0598_mw0bcmht_65h1')})();return !(c.sh&&c.sh.indexOf('Q1064')>=0)&&!c.shx&&!r.querySelector('.ggshrow')&&!r.querySelector('.ggshid[data-shu=\\\"Q1064\\\"]')&&r.querySelector('.ggcsh').textContent.trim()==='+'&&document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0cilyx_h34k\\\"]').querySelectorAll('.ggshrow').length===1&&![...document.querySelectorAll('.oxwin')].some(x=>x.textContent.includes('같이 쓰기 그만'))||JSON.stringify([c.sh||null,c.shx||null])})()",
+   "act": "click",
+   "sel": ".oxwin .ggshgo",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "PC 지문만 붙인 둘째 댓글 「−」 → 되묻지 않고 바로 빠짐",
+   "screen": "p1",
+   "wait": 600,
+   "expect": "(()=>{const r=document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0cilyx_h34k\\\"]'),c=(()=>{const g=ggOf('Q0598').find(x=>x&&Array.isArray(x.cs)&&x.cs.some(c=>c&&c.k==='c_Q0598_mw0cilyx_h34k'));return g.cs.find(c=>c.k==='c_Q0598_mw0cilyx_h34k')})();return !(c.sh&&c.sh.indexOf('Q1064')>=0)&&!c.shx&&!r.querySelector('.ggshrow')&&![...document.querySelectorAll('.oxwin')].some(x=>x.textContent.includes('같이 쓰기 그만'))||JSON.stringify([c.sh||null,c.shx||null])})()",
+   "act": "click",
+   "sel": "#q-box-Q1064 .ggrefrow[data-ck=\"c_Q0598_mw0cilyx_h34k\"] .ggcsh",
+   "nth": 0,
+   "yard": false
+  },
+  {
+   "name": "폰 문제 풀이 창 — 헷갈림 왼쪽 △ · 가로 안 넘침",
+   "screen": "m1",
+   "wait": 10,
+   "expect": "(()=>{const b=document.getElementById('tag-confuse-Q1064'),m=b.previousElementSibling,b2=document.getElementById('tag-confuse-Q0786'),m2=b2&&b2.previousElementSibling;return !!m&&m.classList.contains('omrmk')&&m.textContent==='△'&&m.getBoundingClientRect().right<=b.getBoundingClientRect().left+1&&Math.abs(m.getBoundingClientRect().top-b.getBoundingClientRect().top)<=6&&(!b2||(m2.classList.contains('omrmk')&&m2.textContent==='△'))&&document.documentElement.scrollWidth<=innerWidth+1||(document.documentElement.scrollWidth+'/'+innerWidth)})()",
+   "act": "none",
+   "yard": true
+  },
+  {
+   "name": "폰 셋째 댓글 「+」 → ID",
+   "screen": "m1",
+   "wait": 500,
+   "expect": "!!document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0u9eu5_qzel\\\"]').querySelector('.ggshid[data-shu=\\\"Q1064\\\"]')",
+   "act": "click",
+   "sel": "#q-box-Q1064 .ggrefrow[data-ck=\"c_Q0598_mw0u9eu5_qzel\"] .ggcsh",
+   "nth": 0,
+   "yard": true
+  },
+  {
+   "name": "폰 (이어서) 그 ID 길게 누름 → 칸",
+   "screen": "m1",
+   "wait": 500,
+   "expect": "(()=>{const b=document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0u9eu5_qzel\\\"]').nextElementSibling;return !!b&&b.classList.contains('ggshxbox')&&document.activeElement===b.querySelector('.jmin')})()",
+   "act": "click",
+   "sel": "#q-box-Q1064 .ggrefrow[data-ck=\"c_Q0598_mw0u9eu5_qzel\"] .ggshid",
+   "nth": 0,
+   "hold": 800,
+   "yard": true
+  },
+  {
+   "name": "폰 (이어서) 긴 글 치고 Enter → 그 댓글 밑 한 줄 · 줄 안에서 꺾임 · 가로 안 넘침",
+   "screen": "m1",
+   "wait": 800,
+   "expect": "(()=>{const r=document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0u9eu5_qzel\\\"]'),s=r.querySelector('.ggshrow'),a=r.getBoundingClientRect();if(!s)return 'no row';const l=s.querySelector('.ggshl').getBoundingClientRect(),u=s.querySelector('.ggshid').getBoundingClientRect();return s.textContent.includes('폰 시험 글')&&l.right<=u.left+1&&u.right<=a.right+1&&l.bottom<=a.bottom+1&&document.documentElement.scrollWidth<=innerWidth+1||JSON.stringify([l.right,u.left,u.right,a.right,document.documentElement.scrollWidth,innerWidth])})()",
+   "act": "type",
+   "sel": "#q-box-Q1064 .ggshxbox .jmin",
+   "nth": 0,
+   "text": "폰 시험 글(지어낸 글) 조금 길게 써서 줄이 넘어가도 그 댓글 안에서 꺾이는지 본다",
+   "enter": true,
+   "yard": true
+  },
+  {
+   "name": "폰 붙은 줄 자리 맞춤(글 왼쪽 · ID 오른쪽 끝)",
+   "screen": "m1",
+   "wait": 10,
+   "expect": "(()=>{const r=document.querySelector('#q-box-Q1064 .ggrefrow[data-ck=\\\"c_Q0598_mw0u9eu5_qzel\\\"]'),s=r.querySelector('.ggshrow'),l=s.querySelector('.ggshl').getBoundingClientRect(),u=s.querySelector('.ggshid').getBoundingClientRect(),m=r.querySelector('.ggcsmeta'),mr=m.getBoundingClientRect(),f=m.querySelector('span[role=button]').getBoundingClientRect(),ct=r.querySelector('.ggct').parentNode.getBoundingClientRect(),a=r.getBoundingClientRect();const ok=Math.abs(u.right-f.right)<=2&&u.top>=f.bottom-1&&Math.abs(l.left-ct.left)<=2&&l.top>=ct.bottom-2&&Math.abs(u.top-l.top)<=4&&l.right<=u.left+1&&l.bottom<=a.bottom+1&&u.bottom<=a.bottom+1&&!m.querySelector('.ggshid');return ok||JSON.stringify({u:[u.left,u.right,u.top],f:[f.right,f.bottom],l:[l.left,l.right,l.top],ct:[ct.left,ct.bottom],a:[a.left,a.right,a.bottom]})})()",
+   "act": "none",
+   "yard": true
+  }
+ ]
+}
