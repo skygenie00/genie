@@ -1,0 +1,51 @@
+⟦1 찾기⟧
+        /* ★ 11/13 사용자 21:52 「자기 근거이지만 (다른 문항이 단) 댓글에 + 로 올리고 싶어」
+⟦1 바꿈⟧
+        /* ★ 11/14 사용자 01:32 「댓글에 + 로 달리는 uid 가 가로로 너무 늘어난다 · 2 개 이상이면 uid 갯수 숫자로 · 그 숫자 누르면 uid 리스트 팝업이 작게 · 심플하게」
+           — 같이 쓰는 문항 ID(c.sh 중 지문 · 글을 안 붙인 것)가 2 개 이상이면 오른쪽 칸에 숫자 하나 · 누르면 그 밑에 작은 ID 목록 창(ID 톡 = 그 문제 · 길게 누름 = 지문 · 글 붙이기 = 지금 그대로)
+             1 개면 지금처럼 ID 그대로 · 단 문항 ID(from) · 지문 붙은 줄은 그대로 · 저장 꼴 무변(그리기만) */
+        (function () { try { const st = document.createElement('style'); st.textContent = '.ggshn{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;padding:0 5px;box-sizing:border-box;border:1px solid #bfdbfe;border-radius:9px;background:#eff6ff;color:#2563eb;font-size:10.5px;font-weight:800;line-height:1;cursor:pointer;white-space:nowrap;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}.ggshhold{display:none!important}.ggshpop{position:fixed;z-index:2147482000;box-sizing:border-box;max-height:33vh;overflow-y:auto;display:flex;flex-direction:column;align-items:flex-start;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 4px 14px rgba(15,23,42,.18);padding:3px 10px}.ggshpop .ggshid{display:block;padding:4px 0}@media (pointer:coarse){.ggshpop .ggshid{padding:7px 2px}}'; document.head.appendChild(st); } catch (_) { } })();
+        function ggShIdsHTML(c) {
+            const U = (c && Array.isArray(c.sh)) ? c.sh.filter(s => !(c.shx && c.shx[s])) : [];
+            const chips = U.map(s => `<span role="button" data-shu="${escAttr(String(s))}" title="이 댓글을 같이 쓰는 문항 · 누르면 그 문제 · 길게 누르면 그 문항 지문 · 댓글 붙이기" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(s))}')" class="ggshid cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap">${escHtml(String(s))}</span>`).join('');
+            return U.length < 2 ? chips : `<span role="button" class="ggshn" title="이 댓글을 같이 쓰는 문항 ${U.length} · 누르면 목록" onclick="event.stopPropagation();ggShnTog(this)">${U.length}</span><span class="ggshhold">${chips}</span>`;
+        }
+        function ggShnClose() { document.querySelectorAll('.ggshpop').forEach(x => x.remove()); }
+        function ggShnTog(btn) {
+            const o = document.querySelector('.ggshpop'), same = o && o._btn === btn; ggShnClose(); if (same) return;
+            const hold = btn.nextElementSibling; if (!hold || !hold.classList.contains('ggshhold')) return;
+            const p = document.createElement('div'); p.className = 'ggshpop'; p._btn = btn; p._hold = hold;
+            p.innerHTML = [...hold.querySelectorAll('.ggshid[data-shu]')].map(x => x.outerHTML).join('');
+            p.addEventListener('click', () => setTimeout(ggShnClose, 0), true);   /* ID 톡 = 그 문제가 뜨고 목록은 닫힘(잡는 단계 — ID 의 onclick 이 번짐을 막음) */
+            document.body.appendChild(p);
+            const r = btn.getBoundingClientRect(), w = p.offsetWidth, h = p.offsetHeight;
+            let T = r.bottom + 3; if (T + h > innerHeight - 4) T = Math.max(4, r.top - h - 3);
+            p.style.left = Math.max(4, Math.min(r.right - w, innerWidth - w - 4)) + 'px'; p.style.top = T + 'px';
+        }
+        /* 목록 창 안 ID → 그 댓글 줄에 숨겨 둔 원래 ID(길게 누름이 그 댓글 줄을 찾게) */
+        function ggShnSrc(el) {
+            const p = el && el.closest ? el.closest('.ggshpop') : null; if (!p || !p._hold) return el;
+            const s = el.getAttribute('data-shu'); return [...p._hold.querySelectorAll('.ggshid[data-shu]')].find(x => x.getAttribute('data-shu') === s) || el;
+        }
+        document.addEventListener('pointerdown', e => { const p = document.querySelector('.ggshpop'); if (!p) return; const t = e.target; if (!(t && t.closest && t.closest('.ggshpop,.ggshn')) || !p._btn.isConnected) ggShnClose(); }, true);
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') ggShnClose(); }, true);
+        window.addEventListener('scroll', e => { if (!(e.target && e.target.closest && e.target.closest('.ggshpop'))) ggShnClose(); }, true);
+        window.addEventListener('resize', ggShnClose);
+        /* ★ 11/13 사용자 21:52 「자기 근거이지만 (다른 문항이 단) 댓글에 + 로 올리고 싶어」
+⟦2 찾기⟧
+${Array.isArray(c.sh) ? c.sh.filter(s => !(c.shx && c.shx[s])).map(s => `<span role="button" data-shu="${escAttr(String(s))}" title="이 댓글을 같이 쓰는 문항 · 누르면 그 문제 · 길게 누르면 그 문항 지문 · 댓글 붙이기" onclick="event.stopPropagation();showLinkedQuestion('${escAttr(String(s))}')" class="ggshid cursor-pointer text-[10.5px] font-bold text-blue-600 underline decoration-dotted underline-offset-2 hover:decoration-solid whitespace-nowrap">${escHtml(String(s))}</span>`).join('') : ''}<span class="ggcsd">${ggMD(c.ts)}</span>${del ? ggCsOwnSh(
+⟦2 바꿈⟧
+${ggShIdsHTML(c)}<span class="ggcsd">${ggMD(c.ts)}</span>${del ? ggCsOwnSh(
+⟦3 찾기⟧
+<span class="ggshpad" aria-hidden="true">${sh.filter(s => !X[s]).map(s => `<span class="text-[10.5px] font-bold whitespace-nowrap">${escHtml(String(s))}</span>`).join('')}<span class="ggcsd">
+⟦3 바꿈⟧
+<span class="ggshpad" aria-hidden="true">${(u => u.length >= 2 ? `<span class="ggshn">${u.length}</span>` : u.map(s => `<span class="text-[10.5px] font-bold whitespace-nowrap">${escHtml(String(s))}</span>`).join(''))(sh.filter(s => !X[s]))}<span class="ggcsd">
+⟦4 찾기⟧
+const r = tg.closest('.ggshrow'), t = r ? r.querySelector('.ggshid[data-shu]') : tg.closest('.ggshid[data-shu]'); if (!t) return;
+⟦4 바꿈⟧
+const r = tg.closest('.ggshrow'), t = r ? r.querySelector('.ggshid[data-shu]') : ggShnSrc(tg.closest('.ggshid[data-shu]')); if (!t) return;
+⟦5 찾기⟧
+if (el && el.isConnected) { try { ggShxBox(el); foc = document.querySelector('.ggshxbox .jmin'); } catch (_) { } }
+⟦5 바꿈⟧
+if (el && el.isConnected) { try { ggShnClose(); ggShxBox(el); foc = document.querySelector('.ggshxbox .jmin'); } catch (_) { } }
+⟦끝⟧
