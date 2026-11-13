@@ -11888,7 +11888,8 @@ function ggCsRow(owner, g, c, me){
   r._lp = () => joIed(tx, String(c.t || ''), s => { if (s.length > GG_CMAX){ toast(GG_CMAX + '자까지 · 지금 ' + s.length + '자', 1); return; }
     if (ggCsMut(owner, g.k, c.k, cc => { cc.t = s; })) ggRepaint(owner); });
   /* ★ 11/12 둘째 — 댓글 같이 쓰기(민법 ggCsShare): 연결 상자에서 이 지문이 단 것이 아닌 댓글에 「+」 → 이 지문 것으로도(정리 창 · 점 칸에 같이) · 「−」 = 빼기 */
-  if (String(me) !== String(owner) && String(c.from || '') !== String(me)){
+  /* ★ 11/13 사용자 21:52 「자기 근거이지만 (다른 지문이 단) 댓글에 + 로 올리고 싶어」 — 제 근거 판에서도: 다른 지문이 단 댓글이면 근거 임자 지문도 「+」(임자가 스스로 단 댓글 = from 없음 에는 없음) · 저장 꼴 그대로 */
+  if (String(c.from || '') !== String(me) && (String(me) !== String(owner) || !!c.from)){
     const on = Array.isArray(c.sh) && c.sh.indexOf(String(me)) >= 0;
     const sb = el('button', 'ggcsh' + (on ? ' on' : ''), on ? '−' : '+'); sb.title = on ? '이 지문에서 같이 쓰기 빼기' : '이 지문에서도 같이 쓰기';
     sb.onclick = ev => { ev.stopPropagation();
@@ -11951,7 +11952,7 @@ function ggJmBox(box, line, uid){
     const it = el('div', 'jmi', String(ggFlat(x.g) || '').split('\n')[0]); it.setAttribute('role', 'button'); it.dataset.jmu = x.u; it.dataset.jmg = x.g.k;
     it.onclick = ev => { ev.stopPropagation(); pick = x; b.querySelectorAll('.jmi').forEach(z => z.classList.toggle('on', z === it)); ta.focus(); };
     b.appendChild(it);
-    (x.g.cs || []).filter(c => ggCsMine(c, x.u, me) && (x.u !== me || !c.from)).forEach(c => b.appendChild(el('div', 'jmc', '↳ ' + String(c.t || '') + (c.jo === 'O' || c.jo === 'X' ? ' ' + c.jo : ''))));
+    (x.g.cs || []).filter(c => ggCsMine(c, x.u, me) && (x.u !== me || !c.from || (Array.isArray(c.sh) && c.sh.indexOf(String(me)) >= 0))).forEach(c => b.appendChild(el('div', 'jmc', '↳ ' + String(c.t || '') + (c.jo === 'O' || c.jo === 'X' ? ' ' + c.jo : ''))));
   });
   const ta = el('textarea', 'jmin'); ta.rows = 1; ta.placeholder = '근거를 고르고 댓글 — Enter 저장 · Shift+Enter 줄바꿈';
   ta.oninput = () => ggFit(ta);
@@ -12046,7 +12047,7 @@ function jnGgBox(k){
       gb.appendChild(document.createTextNode(g.i + '. '));
       const gt = el('span', g.bang ? 'bang' : ''); gt.dataset.gbline = k + '|' + g.k; mkcPaint(gt, k, 'g' + g.k, ggFlat(g)); gb.appendChild(gt);
       const cs = (Array.isArray(g.cs) ? g.cs : []).filter(c => vis(c, k)); blk = cs.length > 0;
-      cs.forEach(c => gb.appendChild(jnGcLine(k, c, '')));
+      cs.forEach(c => gb.appendChild(jnGcLine(k, (c.shx && c.shx[me] && c.shx[me].t) ? Object.assign({}, c, { t: String(c.t || '') + '\n' + String(c.shx[me].t) }) : c, '')));   /* 임자 지문이 붙여 쓴 글도 연결한 지문 줄과 같게 */
     });
     w.appendChild(gb);
   }
