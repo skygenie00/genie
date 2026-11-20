@@ -2246,7 +2246,7 @@ function weekKey(plan,ws){const L=wLabelOf(plan,ws);return L!=null?'W'+pad(L):ws
 function weekCard(who,ws){
  const wplan=planView(who);const wl=wLabelOf(wplan,ws);
  const days=[...Array(7)].map((_,i)=>addDays(ws,i));
- {const mw=mimiOf(who,'week',ws);if(mw&&days.every(x=>!snapOf(who,x)&&!sessionsOf(who,x).length)){const t=days.reduce((a,x)=>{const hs=histOf(who,x);return a+(hs?hs.min:0)},0);return`<div class="card mimi" onclick="mimiView('${who}','week','${ws}')" style="cursor:pointer"><div class="th full">${mimiImg(who,mw[0])}</div><div class="lb"><span>${ws.slice(2).replace(/-/g,'/')}~${days[6].slice(8)} 주간${wl!=null?' · W'+pad(wl):''}</span><b style="margin-left:auto">${t?dur(t):''}</b></div></div>`}}
+ {const mw=mimiOf(who,'week',ws);if(mw&&days.every(x=>{const s=snapOf(who,x);return(!s||s.src==='notion-mimi')&&!sessionsOf(who,x).length})){const t=mw[0].tot!=null?mw[0].tot:days.reduce((a,x)=>{const hs=histOf(who,x);return a+(hs?hs.min:0)},0);/* 노션에서 옮긴 날뿐인 주 = 노션 주간 그림 그대로 · 총시간 = 그림 Total(11/20 사용자 「주간 · 월간 칸도 노션 그림과 완벽하게 똑같이」) */return`<div class="card mimi" onclick="mimiView('${who}','week','${ws}')" style="cursor:pointer"><div class="th full">${mimiImg(who,mw[0])}</div><div class="lb"><span>${ws.slice(2).replace(/-/g,'/')}~${days[6].slice(8)} 주간${wl!=null?' · W'+pad(wl):''}</span><b style="margin-left:auto">${t?dur(t):''}</b></div></div>`}}
  const hOnly=x=>{const hs=histOf(who,x);return hs&&!snapOf(who,x)&&!sessionsOf(who,x).length?hs:null}; // 시간층만 있는 날
  const miss=days.filter(x=>!snapOf(who,x)&&!hOnly(x)).length;
  const tot=days.reduce((a,x)=>{const sn=snapOf(who,x);if(sn)return a+(sn.total||0);const hs=hOnly(x);return a+(hs?hs.min:0)},0);
@@ -2255,7 +2255,7 @@ function weekCard(who,ws){
 }
 function monthCard(who,m){
  const fd=parse(m+'-01');const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();
- {const mw=mimiOf(who,'month',m);const ds=[...Array(nd)].map((_,i)=>`${m}-${pad(i+1)}`);if(mw&&ds.every(x=>!snapOf(who,x)&&!sessionsOf(who,x).length)){const t=ds.reduce((a,x)=>{const hs=histOf(who,x);return a+(hs?hs.min:0)},0);return`<div class="card mimi" onclick="mimiView('${who}','month','${m}')" style="cursor:pointer"><div class="th full">${mimiImg(who,mw[0])}</div><div class="lb"><span>${m.slice(2).replace('-','.')} 월간</span><b style="margin-left:auto">${t?dur(t):''}</b></div></div>`}}
+ {const mw=mimiOf(who,'month',m);const ds=[...Array(nd)].map((_,i)=>`${m}-${pad(i+1)}`);if(mw&&ds.every(x=>{const s=snapOf(who,x);return(!s||s.src==='notion-mimi')&&!sessionsOf(who,x).length})){const t=mw[0].tot!=null?mw[0].tot:ds.reduce((a,x)=>{const hs=histOf(who,x);return a+(hs?hs.min:0)},0);return`<div class="card mimi" onclick="mimiView('${who}','month','${m}')" style="cursor:pointer"><div class="th full">${mimiImg(who,mw[0])}</div><div class="lb"><span>${m.slice(2).replace('-','.')} 월간</span><b style="margin-left:auto">${t?dur(t):''}</b></div></div>`}}
  let tot=0,miss=0;
  for(let i=1;i<=nd;i++){const x=`${m}-${pad(i)}`;const sn=snapOf(who,x);
   if(sn)tot+=sn.total||0;
@@ -2367,6 +2367,7 @@ function galRecMonths(){
  settings.people.forEach(p=>{
   Object.keys(histDaysOf(p)).forEach(d=>set.add(ym(d)));
   Object.keys(mimiIdx(p).daily||{}).forEach(d=>set.add(ym(d))); // 노션 MiMi 그림 있는 달
+  Object.keys(mimiIdx(p).week||{}).forEach(d=>set.add(ym(d)));Object.keys(mimiIdx(p).month||{}).forEach(d=>set.add(ym(shiftMonth(d,-1)))); // 노션 주간 · 월말 그림 있는 달(날 그림을 tt 스냅으로 옮긴 사람 · 해)
   ['sessions','snaps'].forEach(kind=>{const pre=`tt.f.${kind}/${p}/`;
    Object.keys(localStorage).filter(k=>k.startsWith(pre)).forEach(k=>{const mo=k.slice(pre.length).slice(0,7);if(!/^\d{4}-\d{2}$/.test(mo))return;
     const f=LS.get(k);const dt=f&&f.data;if(!dt)return;
