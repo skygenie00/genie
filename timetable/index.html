@@ -337,7 +337,8 @@ button{cursor:pointer}
  .cmt .cmby{display:none}
  .ribbon{margin:0 20px 8px}
  .paper{grid-template-columns:1fr}
- .pnav{display:grid;grid-template-columns:repeat(3,1fr);position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);z-index:40;padding-bottom:env(safe-area-inset-bottom)}
+ .pnav .psync{flex:none;padding:5px 0 4px;line-height:1.35;color:#2a8a2a;font-size:10px}.pnav .psync.dirty{color:#c60;font-weight:700}
+ .pnav{display:grid;grid-template-columns:repeat(3,1fr) 58px;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);z-index:40;padding-bottom:env(safe-area-inset-bottom)}
  .pnav div{text-align:center;padding:11px 0 9px;font-size:11px;color:#777}
  .pnav div.on{color:#111;font-weight:700}
  .topsel{display:inline-block;border:1px solid #ccc;border-radius:4px;padding:3px 6px;background:#fff}
@@ -694,6 +695,9 @@ tr:hover .lsx{color:#c33}
 .gh{font-size:9px;color:#999;padding:4px 2px 2px}
 .gigrid{display:grid;grid-template-columns:1fr 1fr;gap:1px}
 .gi{display:flex;align-items:center;gap:5px;font-size:11px;padding:3px 4px;border-radius:4px;cursor:pointer}
+.gy{display:flex;align-items:flex-start;gap:4px;padding:4px 0;border-bottom:1px solid #f2f2f2}
+.gyh{flex:none;width:24px;font-size:12px;font-weight:700;color:#222;padding:3px 0}
+.gim{display:flex;flex-wrap:wrap;gap:2px 4px;min-width:0}
 .gi:hover{background:#f2f4f7}
 /* ----- feedback12 ----- */
 .dragh{cursor:grab;color:#bbb;font-size:11px;user-select:none;touch-action:none;padding:0 2px;flex:none}
@@ -1100,6 +1104,19 @@ function upsertRecs(list){
  f.dirty=true;saveF(p,f);scheduleSync();}
 function histDaysOf(who){const f=loadF(histPath(who),{v:1,days:{}});return f.data.days||{}}
 function histOf(who,d){const h=histDaysOf(who)[d];return(h&&h.min)?h:null}
+/* ★ 2026-11-20 노션 MiMi 시간표 그림(2023-07 ~ · 기록 저장소 mimi/<사람>/index.json + 그림 · 사용자 「그냥 그림으로 넣어」)
+   그 날 · 주 · 달에 tt 기록(스냅 · 세션)이 없을 때만 데일리 모음 칸에 그림 · 누르면 크게 · 색인은 세션마다 한 번 받음 */
+const MIMI={},mimiBusy={};
+function mimiIdx(who){if(MIMI[who])return MIMI[who];if(!mimiBusy[who]&&cfg.token){mimiBusy[who]=1;ghGetRaw(`mimi/${who}/index.json`).then(t=>{MIMI[who]=t?JSON.parse(t):{};if(ui.view==='gal')render()}).catch(()=>{mimiBusy[who]=0})}return{}}
+function mimiOf(who,kind,key){const ix=mimiIdx(who)[kind]||{};
+ if(kind==='week'){for(let i=0;i<7;i++){const a=ix[addDays(key,i)];if(a)return a}return null} // 노션 주간 = 그 주 일요일(가끔 월요일) 날짜
+ if(kind==='month')return ix[shiftMonth(key+'-01',1)]||null; // 노션 월말 = 다음 달 1일 날짜
+ return ix[key]||null}
+function mimiMin(e){const m=/(\d+)h(\d+)?/.exec((e&&e.st)||'');return m?parseInt(m[1])*60+parseInt(m[2]||0):null}
+function mimiImg(who,e){return`<img data-img="mimi/${esc(who)}/${esc(e.f)}" alt="" style="width:100%;height:100%;object-fit:contain;background:#fff">`}
+function mimiView(who,kind,key){const a=mimiOf(who,kind,key)||[];
+ modal(`<h4 style="margin-bottom:6px">${esc(who)} · 노션 MiMi ${kind==='week'?'주간 ':kind==='month'?'월간 ':''}${esc(key)}</h4>${a.map(e=>`<img class="mimibig" data-img="mimi/${esc(who)}/${esc(e.f)}" alt="" style="width:100%;display:block;margin-bottom:6px">`).join('')}`,()=>{},null,null,'닫기');
+ wideModal();fillImgs()}
 /* 기록 앱 목록 — 새 앱(조판기 등) 추가 = 여기 한 줄 (§2-b 하드코딩 금지) · subj = §4 과목 매핑도 이 한 곳
    remote = 비공개 저장소의 기록 파일(기기·브라우저 상관없음 · 🔑 토큰 필요) — **먼저 이걸 읽는다**
    origin = 같은 기기 IndexedDB 직접 읽기(물러날 길) · fmt 는 REC_READERS 의 갈래 이름 */
@@ -1477,12 +1494,12 @@ function renderSide(){
  const stat=syncing?'⟳ 동기화 중':cfg.token?(dirty?`● 대기 ${dirty}건`:`● 동기화됨${ago!=null?' '+(ago<1?'방금':ago<60?ago+'분 전':Math.round(ago/60)+'시간 전'):''}`):'○ 토큰 없음';
  $('side').innerHTML=`<div class="who" onclick="switchPerson()">${esc(cfg.person)} <span>▾</span></div>
  ${NAV.map(g=>`<div class="grp">${g.group}</div>${g.items.map(([k,n])=>`<div class="i ${v==k?'on':''}" onclick="setView('${k}')">${n}</div>`).join('')}`).join('')}
- <div class="st ${dirty?'dirty':''}" onclick="syncAll()" style="cursor:pointer">${stat}<br>${esc((nextExam()||{}).name||'')} ${dday()}</div>${tokChipHTML()}`;
+ <div class="st ${dirty?'dirty':''}" onclick="syncAll()" style="cursor:pointer">${stat}<br>${esc((nextExam()||{}).name||'')} ${dday()}</div>${tokChipHTML()}`;if($('pnav'))renderPnav();
 }
 function renderPnav(){
  const v=ui.view;const tab=v=='todo'?'todo':(MORE_KEYS.includes(v)||v=='review')?'more':'tt'; // §1(fb14) 같은 상수 — arch·share 도 「더보기」로 잡힘
  const nb=sharedItems().filter(x=>!x.done&&(x.who||[]).includes(cfg.person)).length;
- $('pnav').innerHTML=`<div class="${tab=='tt'?'on':''}" onclick="setView('day')">타임테이블</div><div class="${tab=='todo'?'on':''}" onclick="setView('todo')">할일${nb?` <b class="bdg">${nb}</b>`:''}</div><div class="${tab=='more'?'on':''}" onclick="setView(ui.view=='set'?'set':'gal')">더보기</div>`;
+ $('pnav').innerHTML=`<div class="${tab=='tt'?'on':''}" onclick="setView('day')">타임테이블</div><div class="${tab=='todo'?'on':''}" onclick="setView('todo')">할일${nb?` <b class="bdg">${nb}</b>`:''}</div><div class="${tab=='more'?'on':''}" onclick="setView(ui.view=='set'?'set':'gal')">더보기</div>${(()=>{const n=listDirty().length;return`<div class="psync ${n?'dirty':''}" onclick="syncAll()" title="지금 동기화">${syncing?'⟳':cfg.token?(n?'● '+n:'●'):'○'}<br>동기화</div>`})()}`;
 }
 function switchPerson(){const p=settings.people;const i=p.indexOf(cfg.person);cfg.person=p[(i+1)%p.length];LS.set('tt.cfg',cfg);toast(cfg.person+' 로 전환 — 토큰은 본인 것으로');render();}
 function renderMain(){
@@ -2213,6 +2230,8 @@ function dayCard(who,x){
  const dlab=`${x.slice(2).replace(/-/g,'/')} (${DAYS[dt.getDay()]})`;
  if(!sn){
   const hs=histOf(who,x);
+  const mm=!sessionsOf(who,x).length&&mimiOf(who,'daily',x); // 노션 MiMi 그림(tt 기록 없는 날)
+  if(mm){const t=hs?hs.min:mimiMin(mm[0]);return`<div class="card mimi" onclick="mimiView('${who}','daily','${x}')" style="cursor:pointer"><div class="th full">${mimiImg(who,mm[0])}</div><div class="lb" style="background:${footBg(t||0)};color:#111"><span>${dlab}${mm.length>1?' · '+mm.length+'장':''}</span><span style="color:#666">${ddayAt(x)}</span><b style="margin-left:auto">${t!=null?dur(t):''}</b></div></div>`}
   if(hs&&!sessionsOf(who,x).length){ // 시간층만 있는 날짜 — 시각 정보가 없으니 썸네일 없이 빈 칸 + Total · est 는 ≈ · 앱 세션 있으면 앱 실측 우선(시간층 무시)
    return`<div class="card hist" title="${esc('노션 이전분 ('+(hs.q==='est'?'시간대 어림':hs.q==='gas'?'GAS 분':'정확')+')'+(hs.raw?' · '+hs.raw:''))}"><div class="th"></div><div class="lb" style="background:${footBg(hs.min)};color:#111"><span>${dlab}</span><span style="color:#666">${ddayAt(x)}</span><b style="margin-left:auto">${hs.q==='est'?'≈':''}${dur(hs.min)}</b></div></div>`;
   }
@@ -2227,6 +2246,7 @@ function weekKey(plan,ws){const L=wLabelOf(plan,ws);return L!=null?'W'+pad(L):ws
 function weekCard(who,ws){
  const wplan=planView(who);const wl=wLabelOf(wplan,ws);
  const days=[...Array(7)].map((_,i)=>addDays(ws,i));
+ {const mw=mimiOf(who,'week',ws);if(mw&&days.every(x=>!snapOf(who,x)&&!sessionsOf(who,x).length)){const t=days.reduce((a,x)=>{const hs=histOf(who,x);return a+(hs?hs.min:0)},0);return`<div class="card mimi" onclick="mimiView('${who}','week','${ws}')" style="cursor:pointer"><div class="th full">${mimiImg(who,mw[0])}</div><div class="lb"><span>${ws.slice(2).replace(/-/g,'/')}~${days[6].slice(8)} 주간${wl!=null?' · W'+pad(wl):''}</span><b style="margin-left:auto">${t?dur(t):''}</b></div></div>`}}
  const hOnly=x=>{const hs=histOf(who,x);return hs&&!snapOf(who,x)&&!sessionsOf(who,x).length?hs:null}; // 시간층만 있는 날
  const miss=days.filter(x=>!snapOf(who,x)&&!hOnly(x)).length;
  const tot=days.reduce((a,x)=>{const sn=snapOf(who,x);if(sn)return a+(sn.total||0);const hs=hOnly(x);return a+(hs?hs.min:0)},0);
@@ -2235,6 +2255,7 @@ function weekCard(who,ws){
 }
 function monthCard(who,m){
  const fd=parse(m+'-01');const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();
+ {const mw=mimiOf(who,'month',m);const ds=[...Array(nd)].map((_,i)=>`${m}-${pad(i+1)}`);if(mw&&ds.every(x=>!snapOf(who,x)&&!sessionsOf(who,x).length)){const t=ds.reduce((a,x)=>{const hs=histOf(who,x);return a+(hs?hs.min:0)},0);return`<div class="card mimi" onclick="mimiView('${who}','month','${m}')" style="cursor:pointer"><div class="th full">${mimiImg(who,mw[0])}</div><div class="lb"><span>${m.slice(2).replace('-','.')} 월간</span><b style="margin-left:auto">${t?dur(t):''}</b></div></div>`}}
  let tot=0,miss=0;
  for(let i=1;i<=nd;i++){const x=`${m}-${pad(i)}`;const sn=snapOf(who,x);
   if(sn)tot+=sn.total||0;
@@ -2323,6 +2344,7 @@ function thumb(sess,weekly){
  return`<div class="thumb"><div class="rb">${parseInt(sess[0]?.d.slice(8)||'')}</div><div class="rows">${rows}</div><div class="side2">${names.map(n=>`<span style="color:${subjColor(n)}">■</span> ${esc(n)}`).join('<br>')||'—'}</div><span class="tot">${dur(t)}</span></div>`;
 }
 function galHTML(){
+ setTimeout(()=>fillImgs(),0); // 노션 MiMi 그림 칸(img[data-img])
  const m=ui.galMonth||ym(today());const t0=today();const first=parse(m+'-01');const last=new Date(first.getFullYear(),first.getMonth()+1,0);
  const end=ym(t0)===m?parseInt(t0.slice(8)):last.getDate();
  const monthOver=m<ym(t0);
@@ -2332,10 +2354,10 @@ function galHTML(){
    if(dt.getDay()===0&&x<t0)g+=weekCard(who,weekStart(x)); // 일요일이 지나면 그 주(월~일) 칸
    g+=dayCard(who,x);
   }return g};
- const months=[];for(let i=0;i<12;i++)months.push(ym(shiftMonth(t0+'',-i))); // §3(fb13) 탭 = 최근 12달
+ const months=[];{const Y=m.slice(0,4);let x=Y===t0.slice(0,4)?ym(t0):Y+'-12';while(x.slice(0,4)===Y){months.push(x);x=ym(shiftMonth(x+'-01',-1))}} // 탭 = 보고 있는 달의 그 해 달만
  const people=settings.people;
  return`${moreTabs('gal')}<div class="ttl"><b>데일리 모음</b><div class="r"><button class="btn" onclick="recImportModal()" title="민법OX·물리535 문항 기록 가져오기 (§1 fb13 — 설정에서 이사)">📥 학습기록 가져오기</button>${navBtns("galMonth(-1)","galMonth(1)","galMonth(0)")} ${m.replace('-','.')}</div></div>
- <div class="views" style="position:relative">${months.map(x=>{const mo=parseInt(x.slice(5));return`<span class="${x==m?'on':''}" onclick="ui.galMonth='${x}';LS.set('tt.ui',ui);render()" style="display:inline-flex;align-items:center;gap:4px"><i class="galdot" style="background:conic-gradient(#222 ${(mo/12*360).toFixed(0)}deg,#fff 0)"></i>${x.slice(2,4)}.${mo}월</span>`}).join('')}<span class="galddw"><span onclick="galMonthModal()" title="과거 달 찾기 — 기록 있는 달만 (§8 fb12 가운데 팝업)" style="cursor:pointer">🔍 지난 달</span></span></div>
+ <div class="views" style="position:relative">${months.map(x=>{const mo=parseInt(x.slice(5));return`<span class="${x==m?'on':''}" onclick="ui.galMonth='${x}';LS.set('tt.ui',ui);render()" style="display:inline-flex;align-items:center;gap:4px"><i class="galdot" style="background:conic-gradient(#222 ${(mo/12*360).toFixed(0)}deg,#fff 0)"></i>${x.slice(2,4)}.${mo}월</span>`}).join('')}<span class="galddw"><span onclick="galMonthModal()" title="지난 달 찾기 — 해마다 · 달마다" style="cursor:pointer;font-weight:700">지난 달</span></span></div>
  <div class="gal">${people.map(p=>{const st=snapMonthStats(p,m);return`<div><div class="colh">${esc(p)} <small>${parseInt(m.slice(5))}월 ${dur(st.tot)}${st.miss?` · 미반영 ${st.miss}`:''}</small></div><div class="grid3">${col(p)}</div></div>`}).join('')}</div>`;
 }
 function galMonth(n){ui.galMonth=n==0?ym(today()):ym(shiftMonth((ui.galMonth||ym(today()))+'-01',n));LS.set('tt.ui',ui);render();syncAll(true)}
@@ -2344,6 +2366,7 @@ function galRecMonths(){
  const set=new Set();
  settings.people.forEach(p=>{
   Object.keys(histDaysOf(p)).forEach(d=>set.add(ym(d)));
+  Object.keys(mimiIdx(p).daily||{}).forEach(d=>set.add(ym(d))); // 노션 MiMi 그림 있는 달
   ['sessions','snaps'].forEach(kind=>{const pre=`tt.f.${kind}/${p}/`;
    Object.keys(localStorage).filter(k=>k.startsWith(pre)).forEach(k=>{const mo=k.slice(pre.length).slice(0,7);if(!/^\d{4}-\d{2}$/.test(mo))return;
     const f=LS.get(k);const dt=f&&f.data;if(!dt)return;
@@ -2353,21 +2376,19 @@ function galRecMonths(){
  return[...set].sort().reverse(); // 최신 → 옛날
 }
 function galMonthModal(){ // §3(fb13): 탭이 최근 12달을 맡으니 팝업 = 그 이전(옛날) 달 전용
- const cut=ym(shiftMonth(today(),-11));
- const older=galRecMonths().filter(x=>x<cut);
- const item=x=>{const mo=parseInt(x.slice(5));return`<div class="gi" data-m="${x}" onclick="galPick('${x}')"><i class="galdot" style="background:conic-gradient(#222 ${(mo/12*360).toFixed(0)}deg,#fff 0)"></i>${x.slice(2,4)}.${mo}월</div>`};
+ const rec=galRecMonths();const older=[];if(rec.length){const lo=rec[rec.length-1];let x=ym(today());while(x>=lo){older.push(x);x=ym(shiftMonth(x+'-01',-1))}}
+ const item=x=>{const mo=parseInt(x.slice(5));return`<div class="gi" data-m="${x}" onclick="galPick('${x}')"><i class="galdot" style="background:conic-gradient(#222 ${(mo/12*360).toFixed(0)}deg,#fff 0)"></i>${mo}월</div>`};
  const m=document.createElement('div');m.className='modal';m.id='galDD';
- m.innerHTML=`<div class="box" style="max-width:340px;display:flex;flex-direction:column;max-height:76vh"><h4 style="flex:none">지난 달 찾기 <small style="color:#888;font-weight:400">탭(최근 12달) 이전 · 기록 있는 달만</small></h4>
- <input class="gq" placeholder="달 검색 (예: 24.11 · 23)" oninput="galDDFilter(this.value)" style="flex:none;border:1px solid #ddd;border-radius:5px;padding:5px 7px;font-size:11px;margin-bottom:6px">
+ m.innerHTML=`<div class="box" style="max-width:340px;display:flex;flex-direction:column;max-height:76vh"><h4 style="flex:none;display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="flex:none">지난 달 검색</span><input class="gq" placeholder="달 검색 (예: 24.11 · 23)" oninput="galDDFilter(this.value)" style="flex:1;min-width:0;border:1px solid #ddd;border-radius:5px;padding:5px 7px;font-size:11px;font-weight:400"></h4>
  <div style="flex:1;min-height:0;overflow:auto">
- ${older.length?`<div class="gh">지난 기록 (최신 → 옛날)</div><div class="gigrid">${older.map(item).join('')}</div>`:'<div class="gh">탭 이전의 기록 있는 달이 없어</div>'}
+ ${older.length?[...new Set(older.map(x=>x.slice(0,4)))].map(y=>`<div class="gy" data-y="${y}"><b class="gyh">${y.slice(2)}.</b><div class="gim">${older.filter(x=>x.slice(0,4)===y).map(item).join('')}</div></div>`).join(''):'<div class="gh">기록 있는 달이 없어</div>'}
  </div>
  <div class="acts" style="flex:none"><button class="btn" onclick="document.getElementById('galDD').remove()">닫기</button></div></div>`;
  m.addEventListener('click',e=>{if(e.target===m)m.remove()});
  document.body.appendChild(m);
  const q=m.querySelector('.gq');if(q)q.focus();
 }
-function galDDFilter(q){q=(q||'').trim();document.querySelectorAll('#galDD .gi').forEach(el=>{const mo=el.dataset.m;const lab=mo.slice(2).replace('-','.')+'|'+mo+'|'+mo.slice(2,4)+'.'+parseInt(mo.slice(5));el.style.display=!q||lab.includes(q)?'':'none'})}
+function galDDFilter(q){q=(q||'').trim();document.querySelectorAll('#galDD .gi').forEach(el=>{const mo=el.dataset.m;const lab=mo.slice(2).replace('-','.')+'|'+mo+'|'+mo.slice(2,4)+'.'+parseInt(mo.slice(5));const h=!!q&&lab.includes(q);el.style.background=h?'#fff3b0':'';el.style.fontWeight=h?'700':''});const f=q&&[...document.querySelectorAll('#galDD .gi')].find(el=>el.style.fontWeight==='700');if(f)f.scrollIntoView({block:'nearest'})}
 function galPick(mo){ui.galMonth=mo;LS.set('tt.ui',ui);const d=document.getElementById('galDD');if(d)d.remove();render();syncAll(true)}
 /* ----- 계획 엔진 -----
    주차 셀법 (feedback7 §1-2): 격자는 월요일 기준 7일 · 번호는 d2(종료·시험)가 든 주에 앵커.
@@ -4229,7 +4250,7 @@ async function ghImg(path){
  if(IMG_CACHE.has(path))return IMG_CACHE.get(path);
  const r=await fetch(`https://api.github.com/repos/${REPO}/contents/${encodeURI(path)}?ref=${BRANCH}`,{headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json'}});
  if(!r.ok)throw new Error('img '+r.status);
- const j=await r.json();const u='data:image/jpeg;base64,'+(j.content||'').replace(/\n/g,'');
+ const j=await r.json();const u='data:image/'+(/\.png$/i.test(path)?'png':'jpeg')+';base64,'+(j.content||'').replace(/\n/g,'');
  IMG_CACHE.set(path,u);return u;
 }
 function fillImgs(scope){[...(scope||document).querySelectorAll('img[data-img]')].forEach(async el=>{const p=el.dataset.img;el.removeAttribute('data-img');try{el.src=await ghImg(p)}catch(e){el.alt='×';el.style.background='#f4f4f4'}})}
