@@ -1472,7 +1472,7 @@ function dday(){const x=nextExam();if(!x)return'';const n=Math.ceil((parse(x.dat
 function monthColor(mm){const def=DEF_SETTINGS.monthColors;const a=Array.isArray(settings.monthColors)&&settings.monthColors.length===12?settings.monthColors:def;const i=(+String(mm).slice(-2)||1)-1;return a[i]||def[i]}
 /* 보고 있는 달의 색을 --m8 로 (시트·격자·썸네일 전부 이 변수를 씀) */
 function applyMonthColor(doc){
- const mm=ui.view==='gal'?(ui.galMonth||ym(today())):ym(curDate());
+ const mm=(ui.view==='gal'&&!(doc&&doc!==document))?(ui.galMonth||ym(today())):ym(curDate()); // 작은 창(오늘 타임테이블) = 보는 달 색을 안 따름 — 11/20 사용자 「23년 달 누를 때마다 현재 타임테이블 테두리 색이 변해」
  const c=monthColor(mm.slice(5,7));
  (doc||document).documentElement.style.setProperty('--m8',c);
  /* ⚠ §1(fb15): theme-color 는 더 이상 달별 색으로 덮지 않는다 — 앱 테마색 = 파스텔 하늘색 고정(폰 상태바).
@@ -2357,7 +2357,7 @@ function galHTML(){
  const months=[];{const Y=m.slice(0,4);let x=Y===t0.slice(0,4)?ym(t0):Y+'-12';while(x.slice(0,4)===Y){months.push(x);x=ym(shiftMonth(x+'-01',-1))}} // 탭 = 보고 있는 달의 그 해 달만
  const people=settings.people;
  return`${moreTabs('gal')}<div class="ttl"><b>데일리 모음</b><div class="r"><button class="btn" onclick="recImportModal()" title="민법OX·물리535 문항 기록 가져오기 (§1 fb13 — 설정에서 이사)">📥 학습기록 가져오기</button>${navBtns("galMonth(-1)","galMonth(1)","galMonth(0)")} ${m.replace('-','.')}</div></div>
- <div class="views" style="position:relative">${months.map(x=>{const mo=parseInt(x.slice(5));return`<span class="${x==m?'on':''}" onclick="ui.galMonth='${x}';LS.set('tt.ui',ui);render()" style="display:inline-flex;align-items:center;gap:4px"><i class="galdot" style="background:conic-gradient(#222 ${(mo/12*360).toFixed(0)}deg,#fff 0)"></i>${x.slice(2,4)}.${mo}월</span>`}).join('')}<span class="galddw"><span onclick="galMonthModal()" title="지난 달 찾기 — 해마다 · 달마다" style="cursor:pointer;font-weight:700">지난 달</span></span></div>
+ <div class="views" style="position:relative">${months.map(x=>{const mo=parseInt(x.slice(5));return`<span class="${x==m?'on':''}" onclick="ui.galMonth='${x}';LS.set('tt.ui',ui);render();syncAll(true)" style="display:inline-flex;align-items:center;gap:4px"><i class="galdot" style="background:conic-gradient(#222 ${(mo/12*360).toFixed(0)}deg,#fff 0)"></i>${x.slice(2,4)}.${mo}월</span>`}).join('')}<span class="galddw"><span onclick="galMonthModal()" title="지난 달 찾기 — 해마다 · 달마다" style="cursor:pointer;font-weight:700">지난 달</span></span></div>
  <div class="gal">${people.map(p=>{const st=snapMonthStats(p,m);return`<div><div class="colh">${esc(p)} <small>${parseInt(m.slice(5))}월 ${dur(st.tot)}${st.miss?` · 미반영 ${st.miss}`:''}</small></div><div class="grid3">${col(p)}</div></div>`}).join('')}</div>`;
 }
 function galMonth(n){ui.galMonth=n==0?ym(today()):ym(shiftMonth((ui.galMonth||ym(today()))+'-01',n));LS.set('tt.ui',ui);render();syncAll(true)}
