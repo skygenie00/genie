@@ -295,7 +295,7 @@ button{cursor:pointer}
 .aiopen{padding:2px 0 8px}
 @media(max-width:760px){.aisplit{grid-template-columns:1fr}.aiboard{height:380px}}
 @media(max-width:640px){.ainote{grid-template-columns:20px 1fr}.aiarc .r{grid-template-columns:1fr auto auto}}
-.card .lb b{font-weight:800;font-size:11px}
+.card .lb b{font-weight:800;font-size:11px;white-space:nowrap}.card .lb{flex-wrap:wrap;column-gap:4px}.card .lb>span{word-break:keep-all}
 .mthumb{width:100%;height:84px;display:grid;grid-template-rows:14px 1fr;gap:2px}
 .mthumb .rb2{background:var(--m8);color:#fff;text-align:center;font-weight:700;font-size:8px;letter-spacing:.15em;line-height:14px}
 .mthumb .mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:#fff;padding:2px}
@@ -1112,6 +1112,8 @@ function mimiOf(who,kind,key){const ix=mimiIdx(who)[kind]||{};
  if(kind==='week'){for(let i=0;i<7;i++){const a=ix[addDays(key,i)];if(a)return a}return null} // 노션 주간 = 그 주 일요일(가끔 월요일) 날짜
  if(kind==='month')return ix[shiftMonth(key+'-01',1)]||null; // 노션 월말 = 다음 달 1일 날짜
  return ix[key]||null}
+function mimiDay(who,x){if(snapOf(who,x)||sessionsOf(who,x).length)return null;const mm=mimiOf(who,'daily',x);return mm?mm[0]:null} /* 노션 그림 칸 날(스냅 · 세션 없음) */
+function mimiDayMin(who,md,x){if(md.tot!=null)return md.tot;const hs=histOf(who,x);return hs?hs.min:(mimiMin(md)||0)} /* 그 날 칸 총시간 = 그림 Total(색인 tot · 11/20 사용자 「노션 그림 완벽히 똑같이」) > 시간층 > 노션 공부시간 */
 function mimiMin(e){const m=/(\d+)h(\d+)?/.exec((e&&e.st)||'');return m?parseInt(m[1])*60+parseInt(m[2]||0):null}
 function mimiImg(who,e){return`<img data-img="mimi/${esc(who)}/${esc(e.f)}" alt="" style="width:100%;height:100%;object-fit:contain;background:#fff">`}
 function mimiView(who,kind,key){const a=mimiOf(who,kind,key)||[];
@@ -2220,7 +2222,7 @@ function ddayAt(d){const xs=(settings.exams||[]).filter(x=>!x.del&&x.date).sort(
 function snapMonthStats(who,m){const fd=parse(m+'-01');const nd=new Date(fd.getFullYear(),fd.getMonth()+1,0).getDate();const t0=today();let tot=0,miss=0;
  for(let i=1;i<=nd;i++){const x=`${m}-${pad(i)}`;const sn=snapOf(who,x);
   if(sn)tot+=sn.total||0;
-  else{const hs=histOf(who,x);if(hs&&!sessionsOf(who,x).length)tot+=hs.min;else if(x<t0)miss++;}} // 시간층 날짜 = 합계에만 · 미반영 아님
+  else{const hs=histOf(who,x);const md=mimiDay(who,x);if(md)tot+=mimiDayMin(who,md,x);else if(hs&&!sessionsOf(who,x).length)tot+=hs.min;else if(x<t0)miss++;}} // 시간층 날짜 = 합계에만 · 미반영 아님
  return{tot,miss}}
 function ttSnap(ss){const s0=dayStart()*60;let h='';for(let r=0;r<24;r++){const a=s0+r*60,b=a+60;let bars='';ss.forEach(x=>{const L=Math.max(x.a,a),R=Math.min(x.b,b);if(R>L)bars+=`<b style="left:${(L-a)/60*100}%;width:${(R-L)/60*100}%;background:${x.life?'#c9ccd1':subjColor(x.s)}${x.nt?NT_HATCH:''}"></b>`});h+=`<span>${pad((a/60)%24)}</span><div class="r">${bars}</div>`}return h}
 function snapSess(sn,d){return(sn.ss||[]).map(z=>({s:z[0],a:z[1],b:z[2],nt:z[3],life:z[4]||(z[0]==='생활'?1:0),d}))} // life = §10 빗금 (옛 스냅은 이름 폴백)
@@ -2231,7 +2233,7 @@ function dayCard(who,x){
  if(!sn){
   const hs=histOf(who,x);
   const mm=!sessionsOf(who,x).length&&mimiOf(who,'daily',x); // 노션 MiMi 그림(tt 기록 없는 날)
-  if(mm){const t=hs?hs.min:mimiMin(mm[0]);return`<div class="card mimi" onclick="mimiView('${who}','daily','${x}')" style="cursor:pointer"><div class="th full">${mimiImg(who,mm[0])}</div><div class="lb" style="background:${footBg(t||0)};color:#111"><span>${dlab}${mm.length>1?' · '+mm.length+'장':''}</span><span style="color:#666">${ddayAt(x)}</span><b style="margin-left:auto">${t!=null?dur(t):''}</b></div></div>`}
+  if(mm){const t=mm[0].tot!=null?mm[0].tot:hs?hs.min:mimiMin(mm[0]);return`<div class="card mimi" onclick="mimiView('${who}','daily','${x}')" style="cursor:pointer"><div class="th full">${mimiImg(who,mm[0])}</div><div class="lb" style="background:${footBg(t||0)};color:#111"><span>${dlab}${mm.length>1?' · '+mm.length+'장':''}</span><b style="margin-left:auto">${t!=null?dur(t):''}</b></div></div>`}
   if(hs&&!sessionsOf(who,x).length){ // 시간층만 있는 날짜 — 시각 정보가 없으니 썸네일 없이 빈 칸 + Total · est 는 ≈ · 앱 세션 있으면 앱 실측 우선(시간층 무시)
    return`<div class="card hist" title="${esc('노션 이전분 ('+(hs.q==='est'?'시간대 어림':hs.q==='gas'?'GAS 분':'정확')+')'+(hs.raw?' · '+hs.raw:''))}"><div class="th"></div><div class="lb" style="background:${footBg(hs.min)};color:#111"><span>${dlab}</span><span style="color:#666">${ddayAt(x)}</span><b style="margin-left:auto">${hs.q==='est'?'≈':''}${dur(hs.min)}</b></div></div>`;
   }
@@ -2240,7 +2242,7 @@ function dayCard(who,x){
  }
  const dirty=mine&&snapDirtyChk(who,x,sn);
  const pc=pvChip(who,x,sn);   /* 미반영(.card.empty)·시간층(.card.hist) 칸은 위에서 이미 돌아갔다 */
- return`<div class="card" onclick="snapView('${who}','${x}')" style="cursor:pointer"><div class="th full" style="position:relative">${miniSheet(snapSheetHTML(x,sn,who))}${dirty?'<span class="snapbadge mod">반영 후 수정됨</span>':''}</div><div class="lb" style="background:${footBg(sn.total||0)};color:#111"><span>${dlab}${memoOf(who,'days',x,sn.memo)?' ✎':''}</span><span style="color:#666">${ddayAt(x)}</span>${pc}<b style="margin-left:${pc?'6px':'auto'}">${dur(sn.total||0)}</b></div></div>`;
+ return`<div class="card" onclick="snapView('${who}','${x}')" style="cursor:pointer"><div class="th full" style="position:relative">${miniSheet(snapSheetHTML(x,sn,who))}${dirty?'<span class="snapbadge mod">반영 후 수정됨</span>':''}</div><div class="lb" style="background:${footBg(sn.total||0)};color:#111"><span>${dlab}${memoOf(who,'days',x,sn.memo)?' ✎':''}</span><span style="color:#666">${sn.src==='notion-mimi'?'':ddayAt(x)}</span>${pc}<b style="margin-left:${pc?'6px':'auto'}">${dur(sn.total||0)}</b></div></div>`;
 }
 function weekKey(plan,ws){const L=wLabelOf(plan,ws);return L!=null?'W'+pad(L):ws} // 프로젝트 셀법 라벨 키 · 범위 밖은 날짜 키
 function weekCard(who,ws){
@@ -2248,8 +2250,8 @@ function weekCard(who,ws){
  const days=[...Array(7)].map((_,i)=>addDays(ws,i));
  {const mw=mimiOf(who,'week',ws);if(mw&&days.every(x=>{const s=snapOf(who,x);return(!s||s.src==='notion-mimi')&&!sessionsOf(who,x).length})){const t=mw[0].tot!=null?mw[0].tot:days.reduce((a,x)=>{const hs=histOf(who,x);return a+(hs?hs.min:0)},0);/* 노션에서 옮긴 날뿐인 주 = 노션 주간 그림 그대로 · 총시간 = 그림 Total(11/20 사용자 「주간 · 월간 칸도 노션 그림과 완벽하게 똑같이」) */return`<div class="card mimi" onclick="mimiView('${who}','week','${ws}')" style="cursor:pointer"><div class="th full">${mimiImg(who,mw[0])}</div><div class="lb"><span>${ws.slice(2).replace(/-/g,'/')}~${days[6].slice(8)} 주간${wl!=null?' · W'+pad(wl):''}</span><b style="margin-left:auto">${t?dur(t):''}</b></div></div>`}}
  const hOnly=x=>{const hs=histOf(who,x);return hs&&!snapOf(who,x)&&!sessionsOf(who,x).length?hs:null}; // 시간층만 있는 날
- const miss=days.filter(x=>!snapOf(who,x)&&!hOnly(x)).length;
- const tot=days.reduce((a,x)=>{const sn=snapOf(who,x);if(sn)return a+(sn.total||0);const hs=hOnly(x);return a+(hs?hs.min:0)},0);
+ const miss=days.filter(x=>!snapOf(who,x)&&!hOnly(x)&&!mimiDay(who,x)).length;
+ const tot=days.reduce((a,x)=>{const sn=snapOf(who,x);if(sn)return a+(sn.total||0);const md=mimiDay(who,x);if(md)return a+mimiDayMin(who,md,x);const hs=hOnly(x);return a+(hs?hs.min:0)},0);
  const memo=(snapFileF(who,ym(ws)).data.weeks[weekKey(wplan,ws)]||{}).memo;
  return`<div class="card" onclick="snapViewW('${who}','${ws}')" style="cursor:pointer"><div class="th full">${miniSheet(snapWeekSheetHTML(who,ws))}</div><div class="lb"><span>${ws.slice(2).replace(/-/g,'/')}~${days[6].slice(8)} 주간${wl!=null?' · W'+pad(wl):''}${memo?' ✎':''}${miss?` <span style="color:#c60">미반영 ${miss}</span>`:''}</span><b style="margin-left:auto">${dur(tot)}</b></div></div>`;
 }
@@ -2259,7 +2261,7 @@ function monthCard(who,m){
  let tot=0,miss=0;
  for(let i=1;i<=nd;i++){const x=`${m}-${pad(i)}`;const sn=snapOf(who,x);
   if(sn)tot+=sn.total||0;
-  else{const hs=histOf(who,x);if(hs&&!sessionsOf(who,x).length)tot+=hs.min;else miss++}}
+  else{const hs=histOf(who,x);const md=mimiDay(who,x);if(md)tot+=mimiDayMin(who,md,x);else if(hs&&!sessionsOf(who,x).length)tot+=hs.min;else miss++}}
  const memo=(snapFileF(who,m).data.months[m]||{}).memo;
  return`<div class="card" onclick="snapViewM('${who}','${m}')" style="cursor:pointer"><div class="th full">${miniSheet(snapMonthSheetHTML(who,m))}</div><div class="lb"><span>${m.slice(2).replace('-','.')} 월간${memo?' ✎':''}${miss?` <span style="color:#c60">미반영 ${miss}</span>`:''}</span><b style="margin-left:auto">${dur(tot)}</b></div></div>`;
 }
